@@ -52,7 +52,7 @@ module ModFaceFlux
 
   ! Direction of the face
   integer :: iDimFace
-  
+
   ! index of the face 
   integer :: iFace, jFace, kFace
 
@@ -71,7 +71,7 @@ module ModFaceFlux
   real :: CmaxDt, UnLeft, UnRight
   real :: Unormal_I(nFluid), UnLeft_I(nFluid), UnRight_I(nFluid)
   real :: bCrossArea_D(3)
-  real :: Enormal                !^CFG IF BORISCORR
+  real :: Enormal
 
   ! Variables for normal resistivity
   real :: EtaJx, EtaJy, EtaJz, Eta = -1.0
@@ -80,8 +80,189 @@ module ModFaceFlux
   real :: InvDxyz, HallCoeff, HallUnLeft, HallUnRight, &
        HallJx, HallJy, HallJz
 
+  ! These are variables for pure MHD solvers (Roe and HLLD)
+  ! Number of MHD fluxes including the pressure and energy fluxes
+  integer, parameter :: nFluxMhd = 9
+
+  ! Named conservative MHD variable indexes + pressure
+  integer, parameter :: RhoMhd_=1, RhoUn_=2, RhoUt1_=3, RhoUt2_=4, &
+       B1n_=5, B1t1_=6, B1t2_=7, eMhd_=8, pMhd_=9
+
+  ! Variables for rotated coordinate system (n is normal to face)
+  real :: Normal_D(3), Tangent1_D(3), Tangent2_D(3)   !^CFG IF COVARIANT 
+  real :: B0n, B0t1, B0t2
+  real :: UnL, Ut1L, Ut2L, B1nL, B1t1L, B1t2L
+  real :: UnR, Ut1R, Ut2R, B1nR, B1t1R, B1t2R
+
   character(len=*), private, parameter :: NameMod="ModFaceFlux"
 contains
+  !=========================================================================
+  subroutine rotate_state_vectors
+
+    ! Rotate the vector variables B0*, StateLeft_V(B*_), StateLeft_V(U*_)
+    ! StateRight_V(B*_), StateRight_V(U*_) into normal and
+    ! tangential components with respect to the face.
+    ! Store the rotated vector components in scalar variables UnL, Ut1L, ....
+    ! Also store the transformation for rotating back.
+    ! Current implementation is for a single ion fluid.
+
+    if(UseCovariant)then                           !^CFG IF COVARIANT BEGIN
+       ! Obtain the base vectors of the face aligned coordinate system
+       Normal_D(x_) = AreaX / Area
+       Normal_D(y_) = AreaY / Area
+       Normal_D(z_) = AreaZ / Area
+       if(Normal_D(z_) < 0.5)then
+          ! Tangent1 = Normal x (0,0,1)
+          Tangent1_D(x_) =  Normal_D(y_)
+          Tangent1_D(y_) = -Normal_D(x_)
+          Tangent1_D(z_) = 0.0
+          ! Tangent2 = Normal x Tangent1
+          Tangent2_D(x_) =  Normal_D(z_)*Normal_D(x_)
+          Tangent2_D(y_) =  Normal_D(z_)*Normal_D(y_)
+          Tangent2_D(z_) = -Normal_D(x_)**2 - Normal_D(y_)**2
+       else
+          ! Tangent1 = Normal x (1,0,0)
+          Tangent1_D(x_) = 0.0
+          Tangent1_D(y_) =  Normal_D(z_)
+          Tangent1_D(z_) = -Normal_D(y_)
+          ! Tangent2 = Normal x Tangent1
+          Tangent2_D(x_) = -Normal_D(y_)**2 - Normal_D(z_)**2
+          Tangent2_D(y_) =  Normal_D(x_)*Normal_D(y_)
+          Tangent2_D(z_) =  Normal_D(x_)*Normal_D(z_)
+       end if
+       ! B0 on the face
+       B0n   = sum(Normal_D  *(/B0x, B0y, B0z/))
+       B0t1  = sum(Tangent1_D*(/B0x, B0y, B0z/))
+       B0t2  = sum(Tangent2_D*(/B0x, B0y, B0z/))
+       ! Left face
+       UnL   = sum(Normal_D  *StateLeft_V(Ux_:Uz_))
+       Ut1L  = sum(Tangent1_D*StateLeft_V(Ux_:Uz_))
+       Ut2L  = sum(Tangent2_D*StateLeft_V(Ux_:Uz_))
+       B1nL  = sum(Normal_D  *StateLeft_V(Bx_:Bz_))
+       B1t1L = sum(Tangent1_D*StateLeft_V(Bx_:Bz_))
+       B1t2L = sum(Tangent2_D*StateLeft_V(Bx_:Bz_))
+       ! Right face
+       UnR   = sum(Normal_D  *StateRight_V(Ux_:Uz_))
+       Ut1R  = sum(Tangent1_D*StateRight_V(Ux_:Uz_))
+       Ut2R  = sum(Tangent2_D*StateRight_V(Ux_:Uz_))
+       B1nR  = sum(Normal_D  *StateRight_V(Bx_:Bz_))
+       B1t1R = sum(Tangent1_D*StateRight_V(Bx_:Bz_))
+       B1t2R = sum(Tangent2_D*StateRight_V(Bx_:Bz_))
+    else                                                !^CFG END COVARIANT
+       select case (iDimFace)
+       case (x_) ! x face
+          ! B0 on the face
+          B0n  = B0x
+          B0t1 = B0y
+          B0t2 = B0z
+          ! Left face
+          UnL   =  StateLeft_V(Ux_)
+          Ut1L  =  StateLeft_V(Uy_)
+          Ut2L  =  StateLeft_V(Uz_)
+          B1nL  =  StateLeft_V(Bx_)
+          B1t1L =  StateLeft_V(By_)
+          B1t2L =  StateLeft_V(Bz_)
+          ! Right face
+          UnR   =  StateRight_V(Ux_)
+          Ut1R  =  StateRight_V(Uy_)
+          Ut2R  =  StateRight_V(Uz_)
+          B1nR  =  StateRight_V(Bx_)
+          B1t1R =  StateRight_V(By_)
+          B1t2R =  StateRight_V(Bz_)
+       case (y_) ! y face
+          ! B0 on the face
+          B0n  = B0y
+          B0t1 = B0z
+          B0t2 = B0x
+          ! Left face
+          UnL   =  StateLeft_V(Uy_)
+          Ut1L  =  StateLeft_V(Uz_)
+          Ut2L  =  StateLeft_V(Ux_)
+          B1nL  =  StateLeft_V(By_)
+          B1t1L =  StateLeft_V(Bz_)
+          B1t2L =  StateLeft_V(Bx_)
+          ! Right face
+          UnR   =  StateRight_V(Uy_)
+          Ut1R  =  StateRight_V(Uz_)
+          Ut2R  =  StateRight_V(Ux_)
+          B1nR  =  StateRight_V(By_)
+          B1t1R =  StateRight_V(Bz_)
+          B1t2R =  StateRight_V(Bx_)
+       case (z_) ! z face
+          ! B0 on the face
+          B0n  = B0z
+          B0t1 = B0x
+          B0t2 = B0y
+          ! Left face
+          UnL   =  StateLeft_V(Uz_)
+          Ut1L  =  StateLeft_V(Ux_)
+          Ut2L  =  StateLeft_V(Uy_)
+          B1nL  =  StateLeft_V(Bz_)
+          B1t1L =  StateLeft_V(Bx_)
+          B1t2L =  StateLeft_V(By_)
+          ! Right face
+          UnR   =  StateRight_V(Uz_)
+          Ut1R  =  StateRight_V(Ux_)
+          Ut2R  =  StateRight_V(Uy_)
+          B1nR  =  StateRight_V(Bz_)
+          B1t1R =  StateRight_V(Bx_)
+          B1t2R =  StateRight_V(By_)
+       end select
+    end if                                           !^CFG IF COVARIANT
+  end subroutine rotate_state_vectors
+  !==========================================================================
+  subroutine rotate_flux_vector(FluxRot_V, Flux_V)
+    real, intent(in)   :: FluxRot_V(:)
+    real, intent(inout):: Flux_V(:)
+
+    ! Rotate n,t1,t2 components back to x,y,z components
+    if(UseCovariant)then                             !^CFG IF COVARIANT BEGIN
+       Flux_V(RhoUx_) = Normal_D(x_)  *FluxRot_V(RhoUn_)  &
+            +           Tangent1_D(x_)*FluxRot_V(RhoUt1_) &
+            +           Tangent2_D(x_)*FluxRot_V(RhoUt2_)
+       Flux_V(RhoUy_) = Normal_D(y_)  *FluxRot_V(RhoUn_)  &
+            +           Tangent1_D(y_)*FluxRot_V(RhoUt1_) &
+            +           Tangent2_D(y_)*FluxRot_V(RhoUt2_)
+       Flux_V(RhoUz_) = Normal_D(z_)  *FluxRot_V(RhoUn_)  &
+            +           Tangent1_D(z_)*FluxRot_V(RhoUt1_) &
+            +           Tangent2_D(z_)*FluxRot_V(RhoUt2_)
+
+       Flux_V(Bx_   ) = Normal_D(x_)  *FluxRot_V(B1n_)  &
+            +           Tangent1_D(x_)*FluxRot_V(B1t1_) &
+            +           Tangent2_D(x_)*FluxRot_V(B1t2_)
+       Flux_V(By_   ) = Normal_D(y_)  *FluxRot_V(B1n_)  &
+            +           Tangent1_D(y_)*FluxRot_V(B1t1_) &
+            +           Tangent2_D(y_)*FluxRot_V(B1t2_)
+       Flux_V(Bz_   ) = Normal_D(z_)  *FluxRot_V(B1n_)  &
+            +           Tangent1_D(z_)*FluxRot_V(B1t1_) &
+            +           Tangent2_D(z_)*FluxRot_V(B1t2_)
+    else                                             !^CFG END COVARIANT
+       select case (iDimFace)
+       case (x_)
+          Flux_V(RhoUx_ ) = FluxRot_V(RhoUn_)
+          Flux_V(RhoUy_ ) = FluxRot_V(RhoUt1_)
+          Flux_V(RhoUz_ ) = FluxRot_V(RhoUt2_)
+          Flux_V(Bx_    ) = FluxRot_V(B1n_)
+          Flux_V(By_    ) = FluxRot_V(B1t1_)
+          Flux_V(Bz_    ) = FluxRot_V(B1t2_)
+       case (y_)
+          Flux_V(RhoUx_ ) = FluxRot_V(RhoUt2_)
+          Flux_V(RhoUy_ ) = FluxRot_V(RhoUn_)
+          Flux_V(RhoUz_ ) = FluxRot_V(RhoUt1_)
+          Flux_V(Bx_    ) = FluxRot_V(B1t2_)
+          Flux_V(By_    ) = FluxRot_V(B1n_)
+          Flux_V(Bz_    ) = FluxRot_V(B1t1_)
+       case (z_)
+          Flux_V(RhoUx_ ) = FluxRot_V(RhoUt1_)
+          Flux_V(RhoUy_ ) = FluxRot_V(RhoUt2_)
+          Flux_V(RhoUz_ ) = FluxRot_V(RhoUn_)
+          Flux_V(Bx_    ) = FluxRot_V(B1t1_)
+          Flux_V(By_    ) = FluxRot_V(B1t2_)
+          Flux_V(Bz_    ) = FluxRot_V(B1n_)
+       end select
+    end if                                           !^CFG IF COVARIANT
+
+  end subroutine rotate_flux_vector
   !===========================================================================
   subroutine calc_face_flux(DoResChangeOnly, iBlock)
 
@@ -401,7 +582,7 @@ contains
     case(z_)
        call set_cell_values_z
     end select
-       
+
   end subroutine set_cell_values
   !===========================================================================
   subroutine set_cell_values_x
@@ -417,7 +598,7 @@ contains
     end if                                 !^CFG END COVARIANT
 
     call set_cell_values_common
- 
+
   end subroutine set_cell_values_x
 
   !===========================================================================
@@ -592,19 +773,22 @@ contains
 
     end if
 
-    call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
-         StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, HallUnLeft)
+    if(.not.DoHlld)then
+       ! All solvers, except HLLD, use left and right fluxes and avarage state
+       call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
+            StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, HallUnLeft)
+       
+       call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
+            StateRightCons_V, FluxRight_V, UnRight_I, EnRight, HallUnRight)
 
-    call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
-         StateRightCons_V, FluxRight_V, UnRight_I, EnRight, HallUnRight)
+       State_V = 0.5*(StateLeft_V + StateRight_V)
+    end if
 
     if(UseRS7)then
        iFluid=1
        call modify_flux(FluxLeft_V,UnLeft_I(1))
        call modify_flux(FluxRight_V,UnRight_I(1))
     end if
-    ! All the solvers below use the average state
-    State_V = 0.5*(StateLeft_V + StateRight_V)
 
     if(UseMultiIon)then
        ! Calculate bCrossArea_D to be used for J in the J x B source term
@@ -765,33 +949,321 @@ contains
     !==========================================================================
     subroutine hlld_flux
 
-      use ModVarIndexes, ONLY: B_, Energy_
+      use ModVarIndexes
+      use ModPhysics, ONLY: Inv_Gm1, gm1
+      use ModNumConst, ONLY: cTiny
 
-      real :: Cleft,  CleftStateLeft, CleftStateRight
-      real :: Cright, CrightStateLeft, CrightStateRight
-      real :: WeightLeft, WeightRight, Diffusion
+      implicit none
+
+      ! Rotated flux for vector variables
+      real :: FluxRot_V(nFluxMhd)
+
+      ! Needed as an argument for get_physical_flux
+      real :: StateCons_V(nFlux), HallUn
+
+      ! Left and right state (scalars and extra variables only)
+      real :: DsL, DsRhoL, RhoL, pL, eL, PbL, PtotL, uDotB1L, Bt1L, Bt2L
+      real :: DsR, DsRhoR, RhoR, pR, eR, PbR, PtotR, uDotB1R, Bt1R, Bt2R
+
+      ! First left and right intermediate states
+      real :: sL1, InvSLUn, SqRhoL1, Ut1L1, Ut2L1, B1t1L1, B1t2L1, uDotB1L1
+      real :: sR1, InvSRUn, SqRhoR1, Ut1R1, Ut2R1, B1t1R1, B1t2R1, uDotB1R1
+      real :: SqRhoLR1
+
+      ! Total pressure in all intermediate states
+      real :: Ptot12
+
+      ! Intermediate HLLD state
+      real :: Rho, Un, Ut1, Ut2, B1n, B1t1, B1t2, p, e
+      real :: RhoUn, uDotB1, Bn, Bt1, Bt2
+
+      ! Resistivity                                  !^CFG IF DISSFLUX
+      real :: FluxBx, FluxBy, FluxBz, B1x, B1y, B1z  !^CFG IF DISSFLUX
+
+      real :: Tmp, B1n2, Bn2, SignBn
+
+      real :: sL, CleftStateLeft, CleftStateRight
+      real :: sR, CrightStateLeft, CrightStateRight
+
+      integer, parameter :: ScalarMax_ = max(ScalarFirst_, ScalarLast_)
+      real :: Scalar_V(ScalarFirst_:ScalarMax_)
+      integer :: iVar
       !-----------------------------------------------------------------------
 
       ! This is the choice made in the hlld_tmp code. May not be the best.
       call get_speed_max(StateLeft_V,  B0x, B0y, B0z, &
            Cleft =CleftStateLeft, Cright = CrightStateLeft)
+
       call get_speed_max(StateRight_V, B0x, B0y, B0z, &
            Cleft =CleftStateRight, Cright=CrightStateRight)
-      call get_speed_max(State_V, B0x, B0y, B0z, Cmax = Cmax)
 
-      Cleft  = min(CleftStateLeft, CleftStateRight)
-      Cright = max(CrightStateLeft, CrightStateRight)
+      sL = min(CleftStateLeft,  CleftStateRight) 
+      sR = max(CrightStateLeft, CrightStateRight)
 
-      if(iDimFace == x_)then
-         call hlld_tmp(StateLeft_V, StateRight_V, Cleft, Cright, Flux_V)
-         Flux_V = Area*Flux_V
-      else
-         Flux_V = 0.0
+      Cmax   = max(sR, -sL)
+      CmaxDt = Cmax
+
+      if(DoTestCell)then
+         write(*,*)'hlld: StateLeft =',StateLeft_V
+         write(*,*)'hlld: StateRight=',StateRight_V
+         write(*,*)'hlld: sL, sR    =',sL,sR
+      endif
+
+      if(sL >= 0.) then
+         call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
+              StateCons_V, Flux_V, Unormal_I, Enormal, HallUn)
+         RETURN
       end if
 
-      ! Average the normal speed
-      Unormal_I = 0.5*(UnLeft_I + UnRight_I)
-      Enormal   = 0.5*(EnLeft + EnRight)                !^CFG IF BORISCORR
+      if(sR <= 0.) then 
+         call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
+              StateCons_V, Flux_V, Unormal_I, Enormal, HallUn)
+         RETURN
+      end if
+
+      ! Remove the area from sL and sR
+      sL = sL/Area
+      sR = sR/Area
+
+      ! Scalar variables
+      RhoL = StateLeft_V(Rho_)
+      pL   = StateLeft_V(p_)
+      RhoR = StateRight_V(Rho_)
+      pR   = StateRight_V(p_)
+
+      ! Rotate vector variables into a coordinate system orthogonal to the face
+      call rotate_state_vectors
+
+      ! Use average normal field
+      B1n    = 0.5*(B1nL + B1nR)
+      B1n2   = B1n**2
+
+      ! Full magnetic field
+      Bn     = B1n   + B0n
+      Bt1L   = B1t1L + B0t1
+      Bt2L   = B1t2L + B0t2
+      Bt1R   = B1t1R + B0t1
+      Bt2R   = B1t2R + B0t2
+      Bn2    = Bn**2
+
+      ! Sign of the total normal field
+      SignBn = sign(1., Bn)
+
+      ! Magnetic pressures
+      PbL = 0.5*(B1n2 + B1t1L**2 + B1t2L**2)
+      PbR = 0.5*(B1n2 + B1t1R**2 + B1t2R**2)
+
+      ! Total pressure including B1.B0 term
+      PtotL = pL + PbL + B1n*B0n + B1t1L*B0t1 + B1t2L*B0t2
+      PtotR = pR + PbR + B1n*B0n + B1t1R*B0t1 + B1t2R*B0t2
+
+      ! Propagation speed relative to bulk speed
+      DsL = sL - UnL
+      DsR = sR - UnR
+
+      ! HLLD speed is used in all intermediate states for Un
+      DsRhoL = DsL*RhoL
+      DsRhoR = DsR*RhoR
+      Tmp = 1./(DsRhoR - DsRhoL)
+      Un  = (DsRhoR*UnR - DsRhoL*UnL - PtotR + PtotL)*Tmp
+
+      ! Total pressure in all intermediate states
+      Ptot12 =(DsRhoR*PtotL - DsRhoL*PtotR + DsRhoR*DsRhoL*(UnR - UnL))*Tmp
+
+      if(DoTestCell)write(*,*)'hlld: Un = ',Un
+
+      if(Un >= 0.)then
+         ! Density and scalars for left intermediate states
+         InvSLUn = 1.0/(sL-Un)
+         Rho     = DsRhoL*InvSLUn
+         do iVar = ScalarFirst_, ScalarLast_
+            Scalar_V(iVar) = StateLeft_V(iVar)*DsL*InvSLUn
+         end do
+
+         ! Tangential velocity and magnetic field 
+         ! for the outer intermediate left state
+         Tmp = DsRhoL*(sL-Un) - Bn2
+         if(Tmp < cTiny) then
+            Ut1L1  = Ut1L
+            Ut2L1  = Ut2L
+            B1t1L1 = B1t1L
+            B1t2L1 = B1t2L
+         else
+            Tmp    = 1.0/Tmp
+            Ut1L1  = Ut1L - Bn*Bt1L*(Un - UnL)*Tmp
+            Ut2L1  = Ut2L - Bn*Bt2L*(Un - UnL)*Tmp
+            B1t1L1 = Bt1L*(DsRhoL*DsL - Bn2)*Tmp - B0t1
+            B1t2L1 = Bt2L*(DsRhoL*DsL - Bn2)*Tmp - B0t2
+         end if
+
+         ! Calculate energy of outer left intermediate state
+         eL = Inv_Gm1*pL + PbL + 0.5*RhoL*(UnL**2 + Ut1L**2 + Ut2L**2)
+         UdotB1L  = UnL*B1n + Ut1L *B1t1L  + Ut2L *B1t2L
+         UdotB1L1 = Un *B1n + Ut1L1*B1t1L1 + Ut2L1*B1t2L1
+         e = (DsL*eL - PtotL*UnL + Ptot12*Un + Bn*(uDotB1L - uDotB1L1))*InvSLUn
+
+         ! Left going Alfven speed
+         SqRhoL1 = sqrt(Rho)
+         sL1     = Un - abs(Bn)/SqRhoL1
+
+         if(DoTestCell)write(*,*)'hlld: sL1=',sL1
+
+         ! Check sign of left going Alfven wave
+         if(sL1 >= 0.) then
+            ! Use first left intermediate state
+            Ut1    = Ut1L1
+            Ut2    = Ut2L1
+            B1t1   = B1t1L1
+            B1t2   = B1t2L1
+            uDotB1 = uDotB1L1
+         else
+            ! Calculate some values for first right intermediate state
+            SqRhoR1 = sqrt(DsRhoR/(sR-Un))
+            Tmp = DsRhoR*(sR-Un) - Bn2
+            if(Tmp < cTiny) then
+               Ut1R1  = Ut1R
+               Ut2R1  = Ut2R
+               B1t1R1 = B1t1R
+               B1t2R1 = B1t2R
+            else
+               Tmp    = 1.0/Tmp
+               Ut1R1  = Ut1R - Bn*Bt1R*(Un-UnR)*Tmp
+               Ut2R1  = Ut2R - Bn*Bt2R*(Un-UnR)*Tmp
+               B1t1R1 = Bt1R*(DsRhoR*DsR - Bn2)*Tmp - B0t1
+               B1t2R1 = Bt2R*(DsRhoR*DsR - Bn2)*Tmp - B0t2
+            end if
+
+            ! second left intermediate state
+            Tmp      = 1./(SqRhoL1 + SqRhoR1)
+            SqRhoLR1 = SqRhoL1*SqRhoR1*SignBn
+            Ut1 =(SqRhoL1*Ut1L1  + SqRhoR1*Ut1R1  + (B1t1R1-B1t1L1)*SignBn)*Tmp
+            Ut2 =(SqRhoL1*Ut2L1  + SqRhoR1*Ut2R1  + (B1t2R1-B1t2L1)*SignBn)*Tmp
+            B1t1=(SqRhoL1*B1t1R1 + SqRhoR1*B1t1L1 + (Ut1R1-Ut1L1)*SqRhoLR1)*Tmp
+            B1t2=(SqRhoL1*B1t2R1 + SqRhoR1*B1t2L1 + (Ut2R1-Ut2L1)*SqRhoLR1)*Tmp
+            uDotB1 = Un*B1n + Ut1*B1t1 + Ut2*B1t2
+
+            ! Modify energy density with difference between 1st and 2nd states
+            e      = e - SqRhoL1*(uDotB1L1 - uDotB1)*SignBn
+         end if
+      else  ! Un < 0
+         ! Density and scalars for right intermediate states
+         InvSRUn = 1.0/(sR-Un)
+         Rho     = DsRhoR*InvSRUn
+         do iVar = ScalarFirst_, ScalarLast_
+            Scalar_V(iVar) = StateRight_V(iVar)*DsR*InvSRUn
+         end do
+
+         ! Tangential velocity and magnetic field 
+         ! for the outer intermediate right state
+         Tmp = DsRhoR*(sR-Un) - Bn2
+         if(Tmp < cTiny) then
+            Ut1R1  = Ut1R
+            Ut2R1  = Ut2R
+            B1t1R1 = B1t1R
+            B1t2R1 = B1t2R
+         else
+            Tmp    = 1.0/Tmp
+            Ut1R1  = Ut1R - Bn*Bt1R*(Un - UnR)*Tmp
+            Ut2R1  = Ut2R - Bn*Bt2R*(Un - UnR)*Tmp
+            B1t1R1 = Bt1R*(DsRhoR*DsR - Bn2)*Tmp - B0t1
+            B1t2R1 = Bt2R*(DsRhoR*DsR - Bn2)*Tmp - B0t2
+         end if
+
+         ! Calculate energy of outer right intermediate state
+         eR = Inv_Gm1*pR + PbR + 0.5*RhoR*(UnR**2 + Ut1R**2 + Ut2R**2)
+         UdotB1R  = UnR*B1n + Ut1R*B1t1R + Ut2R*B1t2R
+         UdotB1R1 = Un*B1n + Ut1R1*B1t1R1 + Ut2R1*B1t2R1
+         e = (DsR*eR - PtotR*UnR + Ptot12*Un + Bn*(uDotB1R - uDotB1R1))*InvSRUn
+
+         ! Right going Alfven speed
+         SqRhoR1 = sqrt(Rho)
+         sR1     = Un + abs(Bn)/SqRhoR1
+
+         if(DoTestCell)write(*,*)'hlld: sR1=',sR1
+
+         if(sR1 <= 0.) then
+            ! Use first right intermediate state
+            Ut1    = Ut1R1
+            Ut2    = Ut2R1
+            B1t1   = B1t1R1
+            B1t2   = B1t2R1
+            uDotB1 = uDotB1R1
+         else
+            ! Calculate some values for the first left intermediate state
+            SqRhoL1 = sqrt(DsRhoL/(sL-Un))
+            Tmp = DsRhoL*(sL-Un) - Bn2
+            if(Tmp < cTiny) then
+               Ut1L1  = Ut1L
+               Ut2L1  = Ut2L
+               B1t1L1 = B1t1L
+               B1t2L1 = B1t2L
+            else
+               Tmp  = 1.0/Tmp
+               Ut1L1  = Ut1L - Bn*Bt1L*(Un - UnL)*Tmp
+               Ut2L1  = Ut2L - Bn*Bt2L*(Un - UnL)*Tmp
+               B1t1L1 = Bt1L*(DsRhoL*DsL - Bn2)*Tmp - B0t1
+               B1t2L1 = Bt2L*(DsRhoL*DsL - Bn2)*Tmp - B0t2
+            end if
+
+            ! Second right intermediate state
+            Tmp      = 1./(SqRhoL1 + SqRhoR1)
+            SqRhoLR1 = SqRhoL1*SqRhoR1*SignBn
+            Ut1 =(SqRhoL1*Ut1L1 + SqRhoR1*Ut1R1 + (B1t1R1-B1t1L1)*SignBn)*Tmp
+            Ut2 =(SqRhoL1*Ut2L1 + SqRhoR1*Ut2R1 + (B1t2R1-B1t2L1)*SignBn)*Tmp
+            B1t1=(SqRhoL1*B1t1R1 + SqRhoR1*B1t1L1 + (Ut1R1-Ut1L1)*SqRhoLR1)*Tmp
+            B1t2=(SqRhoL1*B1t2R1 + SqRhoR1*B1t2L1 + (Ut2R1-Ut2L1)*SqRhoLR1)*Tmp
+            uDotB1 = Un*B1n + Ut1*B1t1 + Ut2*B1t2
+
+            ! Modify energy density with difference between 1st and 2nd states
+            e   = e + SqRhoR1*(uDotB1R1 - uDotB1)*SignBn
+         end if
+      end if
+
+      ! Calculate flux from HLLD state but use pTot12 instead of p+B^2/2
+      ! Note that p derived from e is always positive, 
+      ! but p derived from pTot12 may not be
+      RhoUn  = Rho*Un
+      Bt1 = B1t1 + B0t1
+      Bt2 = B1t2 + B0t2
+      p = gm1*(e - 0.5*(B1n2 + B1t1**2 + B1t2**2 + Rho*(Un**2+Ut1**2+Ut2**2)))
+
+      if(DoTestCell)write(*,*)'hlld: State,pTot12=',&
+           Rho,Un,Ut1,Ut2,B1n,B1t1,B1t2,p,pTot12
+
+      Flux_V(Rho_)       = RhoUn
+      FluxRot_V(RhoUn_)  = RhoUn*Un  - B1n*Bn  - B0n*B1n + pTot12
+      FluxRot_V(RhoUt1_) = RhoUn*Ut1 - B1n*Bt1 - B0n*B1t1
+      FluxRot_V(RhoUt2_) = RhoUn*Ut2 - B1n*Bt2 - B0n*B1t2
+      FluxRot_V(B1n_)    = -0.5*max(sR, -sL)*(B1nR - B1nL) !!! Rusanov flux
+      FluxRot_V(B1t1_)   = Un*Bt1 - Ut1*Bn
+      FluxRot_V(B1t2_)   = Un*Bt2 - Ut2*Bn
+      Flux_V(p_)         = p*Un
+      Flux_V(Energy_)    = Un*(e + pTot12) - Bn*uDotB1
+
+      ! Rotate fluxes of vector variables back
+      call rotate_flux_vector(FluxRot_V, Flux_V)
+
+      Flux_V = Area*Flux_V
+
+      if(Eta > 0.0)then                          !^CFG IF DISSFLUX BEGIN
+         ! Add flux corresponding to curl Eta.J to induction equation
+         FluxBx = AreaY*EtaJz - AreaZ*EtaJy
+         FluxBy = AreaZ*EtaJx - AreaX*EtaJz
+         FluxBz = AreaX*EtaJy - AreaY*EtaJx
+
+         Flux_V(Bx_) = Flux_V(Bx_) + FluxBx
+         Flux_V(By_) = Flux_V(By_) + FluxBy
+         Flux_V(Bz_) = Flux_V(Bz_) + FluxBz
+         
+         ! Rotate back B1 of the HLLD state into the grid coordinates
+         B1x = Normal_D(x_)*B1n + Tangent1_D(x_)*B1t1 + Tangent2_D(x_)*B1t2
+         B1y = Normal_D(y_)*B1n + Tangent1_D(y_)*B1t1 + Tangent2_D(y_)*B1t2
+         B1z = Normal_D(z_)*B1n + Tangent1_D(z_)*B1t1 + Tangent2_D(z_)*B1t2
+
+         ! add B1.dB1/dt = div(B1 x EtaJ) term to the energy equation
+         Flux_V(Energy_) = Flux_V(Energy_) &
+              + B1x*FluxBx + B1y*FluxBy + B1z*FluxBz
+      end if                                     !^CFG END DISSFLUX
 
     end subroutine hlld_flux
     !^CFG END HLLDFLUX
@@ -1058,7 +1530,7 @@ contains
          UxPlus = InvNumDens* sum(NumDens_I*Ux_I)
          UyPlus = InvNumDens* sum(NumDens_I*Uy_I)
          UzPlus = InvNumDens* sum(NumDens_I*Uz_I)
-         
+
          UnPlus = UxPlus*AreaX + UyPlus*AreaY + UzPlus*AreaZ
       else
          ! For single ion fluid the mass and charge average is the same
@@ -1558,272 +2030,6 @@ contains
 
 end module ModFaceFlux
 
-!^CFG IF HLLDFLUX BEGIN
-!==============================================================================
-subroutine hlld_tmp(PrimLeft_V, PrimRight_V, sL, sR, Flux_V)
-
-  use ModFaceFlux, ONLY: DoTestCell, FluxLeft_V, FluxRight_V, nFlux
-  use ModVarIndexes
-  use ModPhysics, ONLY: Inv_Gm1
-  use ModNumConst, ONLY: cTiny
-
-  implicit none
-
-  real, intent(in):: PrimLeft_V(nVar), PrimRight_V(nVar)
-  real, intent(in):: sL, sR
-  real, intent(out):: Flux_V(nFlux)
-
-  ! Left and right state
-  real :: DsL, RhoL, UxL, UyL, UzL, BxL, ByL, BzL, pL, eL, PbL, PtotL, uDotBL
-  real :: DsR, RhoR, UxR, UyR, UzR, BxR, ByR, BzR, pR, eR, PbR, PtotR, uDotBR
-
-  ! HLL speed
-  real :: sM           
-
-  ! First left and right intermediate states
-  real :: sL1, RhoL1, SqRhoL1, UyL1, UzL1, ByL1, BzL1, DeL1, uDotBL1
-  real :: sR1, RhoR1, SqRhoR1, UyR1, UzR1, ByR1, BzR1, DeR1, uDotBR1
-  real :: SqRhoLR1
-
-  ! Total pressure in all intermediate states
-  real :: Ptot12
-
-  ! Second left or right intermediate state 
-  real :: Uy2, Uz2, By2, Bz2, De2, uDotB2
-
-  real :: Tmp, Bx, SignBx
-  !----------------------------------------------------------------------------
-
-  if(DoTestCell)write(*,*)'hlld sL,sR=',sL,sR
-
-  if(sL > 0.) then
-     Flux_V = FluxLeft_V
-     RETURN
-  end if
-
-  if(sR < 0.) then
-     Flux_V = FluxRight_V
-     RETURN
-  end if
-
-  RhoL = PrimLeft_V(Rho_)
-  UxL  = PrimLeft_V(Ux_)
-  UyL  = PrimLeft_V(Uy_)
-  UzL  = PrimLeft_V(Uz_)
-  BxL  = PrimLeft_V(Bx_)
-  ByL  = PrimLeft_V(By_)
-  BzL  = PrimLeft_V(Bz_)
-  pL   = PrimLeft_V(p_)
-
-  RhoR = PrimRight_V(Rho_)
-  UxR  = PrimRight_V(Ux_)
-  UyR  = PrimRight_V(Uy_)
-  UzR  = PrimRight_V(Uz_)
-  BxR  = PrimRight_V(Bx_)
-  ByR  = PrimRight_V(By_)
-  BzR  = PrimRight_V(Bz_)
-  pR   = PrimRight_V(p_)
-
-  if(DoTestCell)then
-     write(*,*)'hlld: PrimL=',PrimLeft_V
-     write(*,*)'hlld: PrimR=',PrimRight_V
-  endif
-
-  PbL = 0.5*(BxL**2 + ByL**2 + BzL**2)
-  PbR = 0.5*(BxR**2 + ByR**2 + BzR**2)
-
-  PtotL = pL + PbL
-  PtotR = pR + PbR
-
-  DsR = sR - UxR
-  DsL = sL - UxL
-
-  ! HLLD speed is used in all intermediate states for Ux
-  Tmp = 1./(DsR*RhoR - DsL*RhoL)
-  sM  = (DsR*RhoR*UxR - DsL*RhoL*UxL - PtotR + PtotL)*Tmp
-
-  ! Total pressure in all intermediate states
-  Ptot12 =(DsR*RhoR*PtotL - DsL*RhoL*PtotR + RhoL*RhoR*DsR*DsL*(UxR - UxL))*Tmp
-
-  if(DoTestCell)write(*,*)'sM = ',sM
-
-  if(sM >= 0.)then
-     ! Left energy density
-     eL = Inv_Gm1*pL + PbL + 0.5*RhoL*(UxL**2 + UyL**2 + UzL**2)
-
-     ! Tangential velocity and magnetic field for the first intermediate state
-     Tmp = RhoL*DsL*(sL-sM) - BxL**2
-     if(Tmp < cTiny) then
-        UyL1 = UyL
-        UzL1 = UzL
-        ByL1 = ByL
-        BzL1 = BzL
-     else
-        Tmp  = 1.0/Tmp
-        UyL1 = UyL - BxL*ByL*(sM-UxL)*Tmp
-        UzL1 = UzL - BxL*BzL*(sM-UxL)*Tmp
-        ByL1 = ByL*(RhoL*DsL**2-BxL**2)*Tmp
-        BzL1 = BzL*(RhoL*DsL**2-BxL**2)*Tmp
-     end if
-
-     ! U.B and energy difference
-     UdotBL  = UxL*BxL + UyL*ByL + UzL*BzL
-     UdotBL1 = sM*BxL + UyL1*ByL1 + UzL1*BzL1
-     DeL1    = (sM*(eL+Ptot12) - UxL*(eL+PtotL) + BxL*(UdotBL-UdotBL1))/(sL-sM)
-
-     ! Left going Alfven speed
-     RhoL1   = RhoL*DsL/(sL-sM)
-     SqRhoL1 = sqrt(RhoL1)
-     sL1     = sM - abs(BxL)/SqRhoL1
-
-     if(DoTestCell)write(*,*)'sL1=',sL1
-
-     ! Check sign of left going Alfven wave
-     if(sL1 >= 0.) then
-        ! Use first left intermediate state
-        ! Note: sM = UxL1, BxL1 = BxL
-        Flux_V(Rho_)   = FluxLeft_V(Rho_)   + sL*(RhoL1      - RhoL)
-        Flux_V(RhoUx_) = FluxLeft_V(RhoUx_) + sL*(sM*RhoL1   - UxL*RhoL)
-        Flux_V(RhoUy_) = FluxLeft_V(RhoUy_) + sL*(UyL1*RhoL1 - UyL*RhoL)
-        Flux_V(RhoUz_) = FluxLeft_V(RhoUz_) + sL*(UzL1*RhoL1 - UzL*RhoL)
-        Flux_V(Bx_)    = 0.
-        Flux_V(By_)    = FluxLeft_V(By_)    + sL*(ByL1       - ByL)
-        Flux_V(Bz_)    = FluxLeft_V(Bz_)    + sL*(BzL1       - BzL)
-        Flux_V(Energy_)= FluxLeft_V(Energy_)+ sL*DeL1
-        RETURN
-     end if
-
-     ! first right intermediate state
-     RhoR1   = RhoR*DsR/(sR-sM)
-     SqRhoR1 = sqrt(RhoR1)
-     Tmp = RhoR*DsR*(sR-sM) - BxR**2
-     if(Tmp < cTiny) then
-        UyR1 =UyR
-        UzR1 =UzR
-        ByR1 = ByR
-        BzR1 = BzR
-     else
-        UyR1 = UyR-BxR*ByR*(sM-UxR)/Tmp
-        UzR1 = UzR-BxR*BzR*(sM-UxR)/Tmp
-        ByR1 = ByR*(RhoR*DsR**2-BxR**2)/Tmp
-        BzR1 = BzR*(RhoR*DsR**2-BxR**2)/Tmp
-     end if
-
-     if(DoTestCell)write(*,*)'ByR1=',ByR1
-
-     Bx     = 0.5*(BxL+BxR)
-     SignBx = sign(1., Bx)
-
-     Tmp      = 1./(SqRhoL1 + SqRhoR1)
-     SqRhoLR1 = SqRhoL1*SqRhoR1*SignBx
-     Uy2    = (SqRhoL1*UyL1 + SqRhoR1*UyR1 + (ByR1 - ByL1)*SignBx)*Tmp
-     Uz2    = (SqRhoL1*UzL1 + SqRhoR1*UzR1 + (BzR1 - BzL1)*SignBx)*Tmp
-     By2    = (SqRhoL1*ByR1 + SqRhoR1*ByL1 + (UyR1 - UyL1)*SqRhoLR1)*Tmp
-     Bz2    = (SqRhoL1*BzR1 + SqRhoR1*BzL1 + (UzR1 - UzL1)*SqRhoLR1)*Tmp
-     UdotB2 = sM*Bx + Uy2*By2 + Uz2*Bz2
-     
-     if(DoTestCell)write(*,*)'By2=',By2
-
-     ! second left intermediate state
-     De2  = -SqRhoL1*(UdotBL1 - UdotB2)*SignBx
-     Flux_V(Rho_)   = FluxLeft_V(Rho_)   + sL*(RhoL1      - RhoL)
-     Flux_V(RhoUx_) = FluxLeft_V(RhoUx_) + sL*(sM*RhoL1   - UxL*RhoL)
-     Flux_V(RhoUy_) = FluxLeft_V(RhoUy_) + sL*(UyL1*RhoL1 - UyL*RhoL) &
-          + SL1*RhoL1*(Uy2-UyL1)
-     Flux_V(RhoUz_) = FluxLeft_V(RhoUz_) + sL*(UzL1*RhoL1 - UzL*RhoL) &
-          + SL1*RhoL1*(Uz2-UzL1) 
-     Flux_V(Bx_)    = 0.
-     Flux_V(By_)    = FluxLeft_V(By_)    + sL*(ByL1 - ByL) + sL1*(By2 - ByL1) 
-     Flux_V(Bz_)    = FluxLeft_V(Bz_)    + sL*(BzL1 - BzL) + sL1*(Bz2 - BzL1) 
-     Flux_V(Energy_)= FluxLeft_V(Energy_)+ sL*DeL1         + sL1*De2
-
-  else  ! sM < 0
-     ! Right energy density
-     eR = Inv_Gm1*pR + PbR + 0.5*RhoR*(UxR**2 + UyR**2 + UzR**2)
-
-     ! Tangential velocity and magnetic field for the first intermediate state
-     Tmp = RhoR*DsR*(sR-sM) - BxR**2
-     if(Tmp < cTiny) then
-        UyR1 =UyR
-        UzR1 =UzR
-        ByR1=ByR
-        BzR1=BzR
-     else
-        UyR1 =UyR-BxR*ByR*(sM-UxR)/Tmp
-        UzR1 =UzR-BxR*BzR*(sM-UxR)/Tmp
-        ByR1=ByR*(RhoR*DsR**2-BxR**2)/Tmp
-        BzR1=BzR*(RhoR*DsR**2-BxR**2)/Tmp
-     end if
-
-     ! U.B and energy difference
-     UdotBR  = UxR*BxR + UyR*ByR + UzR*BzR
-     UdotBR1 = sM*BxR + UyR1*ByR1 + UzR1*BzR1
-     DeR1    = (sM*(eR+Ptot12) - UxR*(eR+PtotR) + BxR*(UdotBR-UdotBR1))/(sR-sM)
-
-     ! Right going Alfven speed
-     RhoR1   = RhoR*DsR/(sR-sM)
-     SqRhoR1 = sqrt(RhoR1)
-     sR1     = sM + abs(BxR)/SqRhoR1
-
-     if(DoTestCell)write(*,*)'sR1=',sR1
-
-     if(sR1 <= 0.) then
-        ! Use first right intermediate state
-        Flux_V(Rho_)   = FluxRight_V(Rho_)   + sR*(RhoR1 - RhoR)
-        Flux_V(RhoUx_) = FluxRight_V(RhoUx_) + sR*(sM*RhoR1   - UxR*RhoR)
-        Flux_V(RhoUy_) = FluxRight_V(RhoUy_) + sR*(UyR1*RhoR1 - UyR*RhoR)
-        Flux_V(RhoUz_) = FluxRight_V(RhoUz_) + sR*(UzR1*RhoR1 - UzR*RhoR)
-        Flux_V(Bx_)    = 0.
-        Flux_V(By_)    = FluxRight_V(By_)    + sR*(ByR1 - ByR)
-        Flux_V(Bz_)    = FluxRight_V(Bz_)    + sR*(BzR1 - BzR)
-        Flux_V(Energy_)= FluxRight_V(Energy_)+ sR*DeR1
-        RETURN
-     end if
-     ! first left intermediate state
-     RhoL1   = RhoL*DsL/(sL-sM)
-     SqRhoL1 = sqrt(RhoL1)
-     Tmp = RhoL*DsL*(sL-sM) - BxL**2
-     if(Tmp < cTiny) then
-        UyL1 = UyL
-        UzL1 = UzL
-        ByL1 = ByL
-        BzL1 = BzL
-     else
-        Tmp  = 1.0/Tmp
-        UyL1 = UyL - BxL*ByL*(sM-UxL)*Tmp
-        UzL1 = UzL - BxL*BzL*(sM-UxL)*Tmp
-        ByL1 = ByL*(RhoL*DsL**2-BxL**2)*Tmp
-        BzL1 = BzL*(RhoL*DsL**2-BxL**2)*Tmp
-     end if
-
-     Bx     = 0.5*(BxL+BxR)
-     SignBx = sign(1., Bx)
-
-     Tmp      = 1./(SqRhoL1 + SqRhoR1)
-     SqRhoLR1 = SqRhoL1*SqRhoR1*SignBx
-     Uy2    = (SqRhoL1*UyL1 + SqRhoR1*UyR1 + (ByR1 - ByL1)*SignBx)*Tmp
-     Uz2    = (SqRhoL1*UzL1 + SqRhoR1*UzR1 + (BzR1 - BzL1)*SignBx)*Tmp
-     By2    = (SqRhoL1*ByR1 + SqRhoR1*ByL1 + (UyR1 - UyL1)*SqRhoLR1)*Tmp
-     Bz2    = (SqRhoL1*BzR1 + SqRhoR1*BzL1 + (UzR1 - UzL1)*SqRhoLR1)*Tmp
-     UdotB2 = sM*Bx + Uy2*By2 + Uz2*Bz2
-
-     ! Second right intermediate state
-     De2  = SqRhoR1*(UdotBR1 - UdotB2)*SignBx
-     Flux_V(Rho_)   = FluxRight_V(Rho_)    + sR*(RhoR1      - RhoR)
-     Flux_V(RhoUx_) = FluxRight_V(RhoUx_)  + sR*(sM*RhoR1   - UxR*RhoR)
-     Flux_V(RhoUy_) = FluxRight_V(RhoUy_)  + sR*(UyR1*RhoR1 - UyR*RhoR) &
-          + SR1*RhoR1*(Uy2-UyR1)
-     Flux_V(RhoUz_) = FluxRight_V(RhoUz_)  + sR*(UzR1*RhoR1 - UzR*RhoR) &
-          + SR1*RhoR1*(Uz2-UzR1)
-     Flux_V(Bx_)    = 0.
-     Flux_V(By_)    = FluxRight_V(By_)     + sR*(ByR1-ByR) + sR1*(By2-ByR1) 
-     Flux_V(Bz_)    = FluxRight_V(Bz_)     + sR*(BzR1-BzR) + SR1*(Bz2-BzR1)
-     Flux_V(Energy_)= FluxRight_V(Energy_) + sR*DeR1       + SR1*De2
-  end if
-
-end subroutine hlld_tmp
-
-!^CFG END HLLDFLUX
 !^CFG IF ROEFLUX BEGIN
 !==============================================================================
 subroutine roe_solver(Flux_V)
@@ -1832,7 +2038,12 @@ subroutine roe_solver(Flux_V)
        nFlux, IsBoundary, iDimFace, &
        iFace, jFace, kFace, Area, Area2, AreaX, AreaY, AreaZ, DoTestCell, &
        StateLeft_V,  StateRight_V, FluxLeft_V, FluxRight_V, &
-       StateLeftCons_V, StateRightCons_V, B0x, B0y, B0z, CmaxDt, Unormal_I
+       StateLeftCons_V, StateRightCons_V, CmaxDt, Unormal_I, &
+       nFluxMhd, RhoMhd_, RhoUn_, RhoUt1_, RhoUt2_, &
+       B1n_, B1t1_, B1t2_, eMhd_, pMhd_, B0n, B0t1, B0t2, &
+       UnL, Ut1L, Ut2L, B1nL, B1t1L, B1t2L, &
+       UnR, Ut1R, Ut2R, B1nR, B1t1R, B1t2R, &
+       rotate_state_vectors, rotate_flux_vector
 
   use ModVarIndexes, ONLY: nVar, Rho_, RhoUx_, RhoUy_, RhoUz_, &
        Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_, Energy_, ScalarFirst_, ScalarLast_
@@ -1847,13 +2058,6 @@ subroutine roe_solver(Flux_V)
 
   real,    intent(out):: Flux_V(nFlux)
 
-  ! Number of MHD fluxes including the pressure and energy fluxes
-  integer, parameter :: nFluxMhd = 9
-
-  ! Named conservative MHD variable indexes + pressure
-  integer, parameter :: RhoMhd_=1, RhoUn_=2, RhoUt1_=3, RhoUt2_=4, &
-       B1n_=5, B1t1_=6, B1t2_=7, eMhd_=8, pMhd_=9
-
   ! Number of MHD waves including the divB wave
   integer, parameter :: nWave=8
 
@@ -1864,27 +2068,16 @@ subroutine roe_solver(Flux_V)
   ! Loop variables
   integer :: iFlux, iVar, iWave
 
-  ! Left face
-  real :: RhoL,UnL,Ut1L,Ut2L
-  real :: BnL,Bt1L,Bt2L,BbL
-  real :: B1nL,B1t1L,B1t2L,Bb1L
-  real :: pL,eL,aL,CsL,CfL
+  ! Left and right face
+  real :: RhoL, BnL, Bt1L, Bt2L, BbL, Bb1L, pL, eL, aL, CsL, CfL
+  real :: RhoR, BnR, Bt1R, Bt2R, BbR, Bb1R, pR, eR, aR, CsR, CfR
 
-  ! Right face
-  real :: RhoR,UnR,Ut1R,Ut2R
-  real :: BnR,Bt1R,Bt2R,BbR
-  real :: B1nR,B1t1R,B1t2R
-  real :: pR,eR,aR,CsR,CfR
-
-  ! Average (hat)
+  ! Roe average (hat)
   real :: RhoH,UnH,Ut1H,Ut2H
   real :: BnH,Bt1H,Bt2H,BbH
   real :: B1nH,B1t1H,B1t2H,Bb1H
   real :: pH,eH,UuH
   real :: aH,CsH,CfH
-
-  ! More face variables
-  real :: B0n,B0t1,B0t2
 
   real :: BetaY, BetaZ, AlphaS, AlphaF
 
@@ -1908,153 +2101,25 @@ subroutine roe_solver(Flux_V)
   ! Misc. scalar variables
   real :: SignBnH, Tmp1, Tmp2, Tmp3, Gamma1A2Inv, DtInvVolume, AreaFace
 
-  real :: Normal_D(3), Tangent1_D(3), Tangent2_D(3)   !^CFG IF COVARIANT 
   real :: dRhoU_D(3), dB1_D(3)                        !^CFG IF COVARIANT
   !---------------------------------------------------------------------------
-
-  if(UseCovariant)then                                !^CFG IF COVARIANT BEGIN
-     ! Obtain the base vectors of the face aligned coordinate system
-     Normal_D(x_) = AreaX / Area
-     Normal_D(y_) = AreaY / Area
-     Normal_D(z_) = AreaZ / Area
-     if(Normal_D(z_) < 0.5)then
-        ! Tangent1 = Normal x (0,0,1)
-        Tangent1_D(x_) =  Normal_D(y_)
-        Tangent1_D(y_) = -Normal_D(x_)
-        Tangent1_D(z_) = 0.0
-        ! Tangent2 = Normal x Tangent1
-        Tangent2_D(x_) =  Normal_D(z_)*Normal_D(x_)
-        Tangent2_D(y_) =  Normal_D(z_)*Normal_D(y_)
-        Tangent2_D(z_) = -Normal_D(x_)**2 - Normal_D(y_)**2
-     else
-        ! Tangent1 = Normal x (1,0,0)
-        Tangent1_D(x_) = 0.0
-        Tangent1_D(y_) =  Normal_D(z_)
-        Tangent1_D(z_) = -Normal_D(y_)
-        ! Tangent2 = Normal x Tangent1
-        Tangent2_D(x_) = -Normal_D(y_)**2 - Normal_D(z_)**2
-        Tangent2_D(y_) =  Normal_D(x_)*Normal_D(y_)
-        Tangent2_D(z_) =  Normal_D(x_)*Normal_D(z_)
-     end if
-     ! B0 on the face
-     B0n   = sum(Normal_D  *(/B0x, B0y, B0z/))
-     B0t1  = sum(Tangent1_D*(/B0x, B0y, B0z/))
-     B0t2  = sum(Tangent2_D*(/B0x, B0y, B0z/))
-     ! Left face
-     UnL   = sum(Normal_D  *StateLeft_V(Ux_:Uz_))
-     Ut1L  = sum(Tangent1_D*StateLeft_V(Ux_:Uz_))
-     Ut2L  = sum(Tangent2_D*StateLeft_V(Ux_:Uz_))
-     B1nL  = sum(Normal_D  *StateLeft_V(Bx_:Bz_))
-     B1t1L = sum(Tangent1_D*StateLeft_V(Bx_:Bz_))
-     B1t2L = sum(Tangent2_D*StateLeft_V(Bx_:Bz_))
-     ! Right face
-     UnR   = sum(Normal_D  *StateRight_V(Ux_:Uz_))
-     Ut1R  = sum(Tangent1_D*StateRight_V(Ux_:Uz_))
-     Ut2R  = sum(Tangent2_D*StateRight_V(Ux_:Uz_))
-     B1nR  = sum(Normal_D  *StateRight_V(Bx_:Bz_))
-     B1t1R = sum(Tangent1_D*StateRight_V(Bx_:Bz_))
-     B1t2R = sum(Tangent2_D*StateRight_V(Bx_:Bz_))
-     ! Jump
-     dRhoU_D = StateRightCons_V(RhoUx_:RhoUz_) - StateLeftCons_V(RhoUx_:RhoUz_)
-     dCons_V(RhoUn_)  = sum(Normal_D  *dRhoU_D)
-     dCons_V(RhoUt1_) = sum(Tangent1_D*dRhoU_D)
-     dCons_V(RhoUt2_) = sum(Tangent2_D*dRhoU_D)
-     dB1_D   = StateRightCons_V(Bx_:Bz_) - StateLeftCons_V(Bx_:Bz_)
-     dCons_V(B1n_)    = sum(Normal_D  *dB1_D)
-     dCons_V(B1t1_)   = sum(Tangent1_D*dB1_D)
-     dCons_V(B1t2_)   = sum(Tangent2_D*dB1_D)
-
-  else                                                !^CFG END COVARIANT
-     select case (iDimFace)
-     case (x_) ! x face
-        ! B0 on the face
-        B0n  = B0x
-        B0t1 = B0y
-        B0t2 = B0z
-        ! Left face
-        UnL   =  StateLeft_V(Ux_)
-        Ut1L  =  StateLeft_V(Uy_)
-        Ut2L  =  StateLeft_V(Uz_)
-        B1nL  =  StateLeft_V(Bx_)
-        B1t1L =  StateLeft_V(By_)
-        B1t2L =  StateLeft_V(Bz_)
-        ! Right face
-        UnR   =  StateRight_V(Ux_ )
-        Ut1R  =  StateRight_V(Uy_ )
-        Ut2R  =  StateRight_V(Uz_ )
-        B1nR  =  StateRight_V(Bx_ )
-        B1t1R =  StateRight_V(By_ )
-        B1t2R =  StateRight_V(Bz_ )
-        ! Jump
-        dCons_V(RhoUn_)  = StateRightCons_V(RhoUx_) - StateLeftCons_V(RhoUx_)
-        dCons_V(RhoUt1_) = StateRightCons_V(RhoUy_) - StateLeftCons_V(RhoUy_)
-        dCons_V(RhoUt2_) = StateRightCons_V(RhoUz_) - StateLeftCons_V(RhoUz_)
-        dCons_V(B1n_)    = StateRightCons_V(Bx_)    - StateLeftCons_V(Bx_)
-        dCons_V(B1t1_)   = StateRightCons_V(By_)    - StateLeftCons_V(By_)
-        dCons_V(B1t2_)   = StateRightCons_V(Bz_)    - StateLeftCons_V(Bz_)
-     case (y_) ! y face
-        ! B0 on the face
-        B0n  = B0y
-        B0t1 = B0z
-        B0t2 = B0x
-        ! Left face
-        UnL   =  StateLeft_V(Uy_ )
-        Ut1L  =  StateLeft_V(Uz_ )
-        Ut2L  =  StateLeft_V(Ux_ )
-        B1nL  =  StateLeft_V(By_ )
-        B1t1L =  StateLeft_V(Bz_ )
-        B1t2L =  StateLeft_V(Bx_ )
-        ! Right face
-        UnR   =  StateRight_V(Uy_ )
-        Ut1R  =  StateRight_V(Uz_ )
-        Ut2R  =  StateRight_V(Ux_ )
-        B1nR  =  StateRight_V(By_ )
-        B1t1R =  StateRight_V(Bz_ )
-        B1t2R =  StateRight_V(Bx_ )
-        ! Jump
-        dCons_V(RhoUn_)  = StateRightCons_V(RhoUy_) - StateLeftCons_V(RhoUy_)
-        dCons_V(RhoUt1_) = StateRightCons_V(RhoUz_) - StateLeftCons_V(RhoUz_)
-        dCons_V(RhoUt2_) = StateRightCons_V(RhoUx_) - StateLeftCons_V(RhoUx_)
-        dCons_V(B1n_)    = StateRightCons_V(By_)    - StateLeftCons_V(By_)
-        dCons_V(B1t1_)   = StateRightCons_V(Bz_)    - StateLeftCons_V(Bz_)
-        dCons_V(B1t2_)   = StateRightCons_V(Bx_)    - StateLeftCons_V(Bx_)
-     case (z_) ! z face
-        ! B0 on the face
-        B0n  = B0z
-        B0t1 = B0x
-        B0t2 = B0y
-        ! Left face
-        UnL   =  StateLeft_V(Uz_ )
-        Ut1L  =  StateLeft_V(Ux_ )
-        Ut2L  =  StateLeft_V(Uy_ )
-        B1nL  =  StateLeft_V(Bz_ )
-        B1t1L =  StateLeft_V(Bx_ )
-        B1t2L =  StateLeft_V(By_ )
-        ! Right face
-        UnR   =  StateRight_V(Uz_ )
-        Ut1R  =  StateRight_V(Ux_ )
-        Ut2R  =  StateRight_V(Uy_ )
-        B1nR  =  StateRight_V(Bz_ )
-        B1t1R =  StateRight_V(Bx_ )
-        B1t2R =  StateRight_V(By_ )
-        ! Jump
-        dCons_V(RhoUn_ ) = StateRightCons_V(RhoUz_) - StateLeftCons_V(RhoUz_)
-        dCons_V(RhoUt1_) = StateRightCons_V(RhoUx_) - StateLeftCons_V(RhoUx_)
-        dCons_V(RhoUt2_) = StateRightCons_V(RhoUy_) - StateLeftCons_V(RhoUy_)
-        dCons_V(B1n_)    = StateRightCons_V(Bz_)    - StateLeftCons_V(Bz_)
-        dCons_V(B1t1_)   = StateRightCons_V(Bx_)    - StateLeftCons_V(Bx_)
-        dCons_V(B1t2_)   = StateRightCons_V(By_)    - StateLeftCons_V(By_)
-     end select
-  end if                                           !^CFG IF COVARIANT
-
   ! Scalar variables
-  RhoL  =  StateLeft_V(rho_)
-  pL    =  StateLeft_V(P_ )
-  RhoR  =  StateRight_V(rho_)
-  pR    =  StateRight_V(P_  )
+  RhoL  =  StateLeft_V(Rho_)
+  pL    =  StateLeft_V(p_ )
+  RhoR  =  StateRight_V(Rho_)
+  pR    =  StateRight_V(p_  )
+
+  ! Rotate vector variables into a coordinate system orthogonal to the face
+  call rotate_state_vectors
 
   ! Jump in scalar conservative variables
-  dCons_V(RhoMhd_) = StateRightCons_V(Rho_)    - StateLeftCons_V(Rho_)
+  dCons_V(RhoMhd_) = RhoR      - RhoL
+  dCons_V(RhoUn_ ) = RhoR*UnR  - RhoL*UnL
+  dCons_V(RhoUt1_) = RhoR*Ut1R - RhoL*Ut1L
+  dCons_V(RhoUt2_) = RhoR*Ut2R - RhoL*Ut2L
+  dCons_V(B1n_   ) = B1nR      - B1nL
+  dCons_V(B1t1_  ) = B1t1R     - B1t1L
+  dCons_V(B1t2_  ) = B1t2R     - B1t2L
   dCons_V(eMhd_)   = StateRightCons_V(Energy_) - StateLeftCons_V(Energy_)
 
   ! Derived variables
@@ -2509,52 +2574,8 @@ subroutine roe_solver(Flux_V)
   Flux_V(P_     ) = Diffusion_V(pMhd_)
   Flux_V(Energy_) = Diffusion_V(eMhd_)
 
-  ! Rotate n,t1,t2 components back to x,y,z components
-  if(UseCovariant)then                                 !^CFG IF COVARIANT BEGIN
-     Flux_V(RhoUx_) = Normal_D(x_)  *Diffusion_V(RhoUn_)  &
-          +           Tangent1_D(x_)*Diffusion_V(RhoUt1_) &
-          +           Tangent2_D(x_)*Diffusion_V(RhoUt2_)
-     Flux_V(RhoUy_) = Normal_D(y_)  *Diffusion_V(RhoUn_)  &
-          +           Tangent1_D(y_)*Diffusion_V(RhoUt1_) &
-          +           Tangent2_D(y_)*Diffusion_V(RhoUt2_)
-     Flux_V(RhoUz_) = Normal_D(z_)  *Diffusion_V(RhoUn_)  &
-          +           Tangent1_D(z_)*Diffusion_V(RhoUt1_) &
-          +           Tangent2_D(z_)*Diffusion_V(RhoUt2_)
-
-     Flux_V(Bx_   ) = Normal_D(x_)  *Diffusion_V(B1n_)  &
-          +           Tangent1_D(x_)*Diffusion_V(B1t1_) &
-          +           Tangent2_D(x_)*Diffusion_V(B1t2_)
-     Flux_V(By_   ) = Normal_D(y_)  *Diffusion_V(B1n_)  &
-          +           Tangent1_D(y_)*Diffusion_V(B1t1_) &
-          +           Tangent2_D(y_)*Diffusion_V(B1t2_)
-     Flux_V(Bz_   ) = Normal_D(z_)  *Diffusion_V(B1n_)  &
-          +           Tangent1_D(z_)*Diffusion_V(B1t1_) &
-          +           Tangent2_D(z_)*Diffusion_V(B1t2_)
-  else                                                 !^CFG END COVARIANT
-     select case (iDimFace)
-     case (x_)
-        Flux_V(RhoUx_ ) = Diffusion_V(RhoUn_)
-        Flux_V(RhoUy_ ) = Diffusion_V(RhoUt1_)
-        Flux_V(RhoUz_ ) = Diffusion_V(RhoUt2_)
-        Flux_V(Bx_    ) = Diffusion_V(B1n_)
-        Flux_V(By_    ) = Diffusion_V(B1t1_)
-        Flux_V(Bz_    ) = Diffusion_V(B1t2_)
-     case (y_)
-        Flux_V(RhoUx_ ) = Diffusion_V(RhoUt2_)
-        Flux_V(RhoUy_ ) = Diffusion_V(RhoUn_)
-        Flux_V(RhoUz_ ) = Diffusion_V(RhoUt1_)
-        Flux_V(Bx_    ) = Diffusion_V(B1t2_)
-        Flux_V(By_    ) = Diffusion_V(B1n_)
-        Flux_V(Bz_    ) = Diffusion_V(B1t1_)
-     case (z_)
-        Flux_V(RhoUx_ ) = Diffusion_V(RhoUt1_)
-        Flux_V(RhoUy_ ) = Diffusion_V(RhoUt2_)
-        Flux_V(RhoUz_ ) = Diffusion_V(RhoUn_)
-        Flux_V(Bx_    ) = Diffusion_V(B1t1_)
-        Flux_V(By_    ) = Diffusion_V(B1t2_)
-        Flux_V(Bz_    ) = Diffusion_V(B1n_)
-     end select
-  end if                                               !^CFG IF COVARIANT
+  ! Rotate fluxes of vector variables back
+  call rotate_flux_vector(Diffusion_V, Flux_V)
 
   ! The diffusive flux for the advected scalar variables is simply
   ! 0.5*|Velocity|*(U_R - U_L)
