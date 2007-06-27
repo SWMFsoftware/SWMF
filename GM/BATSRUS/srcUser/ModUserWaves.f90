@@ -5,7 +5,8 @@ module ModUser
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_set_ics,                    &
-       IMPLEMENTED3 => user_get_log_var
+       IMPLEMENTED3 => user_get_log_var,                &
+       IMPLEMENTED4 => user_get_b0
 
   use ModVarIndexes, ONLY: nVar
 
@@ -191,5 +192,15 @@ contains
        call stop_mpi('Unknown user logvar='//TypeVar)
     end select
   end subroutine user_get_log_var
+
+  !=====================================================================
+  subroutine user_get_b0(x, y, z, B0_D)
+
+    real, intent(in) :: x, y, z
+    real, intent(out):: B0_D(3)
+
+    B0_D = (/0.2, 0.3, 0.4/)
+
+  end subroutine user_get_b0
 
 end module ModUser
