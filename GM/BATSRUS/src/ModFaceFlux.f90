@@ -42,8 +42,9 @@ module ModFaceFlux
   logical :: DoHlld              !^CFG IF HLLDFLUX
   logical :: DoAw                !^CFG IF AWFLUX
   logical :: DoRoeOld            !^CFG IF ROEFLUX
-  logical :: DORoe               !^CFG IF ROEFLUX
+  logical :: DoRoe               !^CFG IF ROEFLUX
 
+  logical :: UseLindeFix
   logical :: DoTestCell
   logical :: IsBoundary
 
@@ -292,11 +293,16 @@ contains
     if(DoTestMe)call print_values
 
     DoLf     = TypeFlux == 'Rusanov'     !^CFG IF RUSANOVFLUX
-    DoHLL    = TypeFlux == 'Linde'       !^CFG IF LINDEFLUX
+    DoHll    = TypeFlux == 'Linde'       !^CFG IF LINDEFLUX
     DoHlld   = TypeFlux == 'HLLD'        !^CFG IF HLLDFLUX
     DoAw     = TypeFlux == 'Sokolov'     !^CFG IF AWFLUX
     DoRoeOld = TypeFlux == 'RoeOld'      !^CFG IF ROEFLUX
     DoRoe    = TypeFlux == 'Roe'         !^CFG IF ROEFLUX
+
+    UseLindeFix = .false. &
+         .or. DoHll      &               !^CFG IF LINDEFLUX
+         .or. DoHllD     &               !^CFG IF HLLDFLUX
+         .or. DoAw                       !^CFG IF AWFLUX
 
     ! Make sure that Hall MHD recalculates the magnetic field 
     ! in the current block that will be used for the Hall term
@@ -737,10 +743,7 @@ contains
             DissipationFlux_V, cMax, Unormal_I(1),     &
             IsBoundary, .false.)
     end if
-    if(UseRS7 &
-         .or. DoHll &               !^CFG IF LINDEFLUX
-         .or. DoAw  &               !^CFG IF AWFLUX
-         )then
+    if(UseRS7 .or. UseLindeFix)then
        ! Sokolov's algorithm
        ! Calculate and store the jump in the normal magnetic field
        DiffBn    = 0.5* &
@@ -811,7 +814,7 @@ contains
     if(DoRoeOld) call roe_solver(Flux_V)        !^CFG IF ROEFLUX
     if(DoRoe)    call roe_solver_new            !^CFG IF ROEFLUX
 
-    if(UseRS7.and.(.not.DoRoe))then
+    if(UseRS7.and. .not.DoRoe)then
        call stop_mpi('Second order RS7 is implemented for Roe solver only')
        !cDivBWave=max(abs(AreaX*UL_D(x_)+AreaY*UL_D(y_)+AreaZ*UL_D(z_)),&
        !     abs(AreaX*UR_D(x_)+AreaY*UR_D(y_)+AreaZ*UR_D(z_)))
@@ -821,6 +824,15 @@ contains
        !
        ! Fix the energy diffusion
        !Flux_V(Energy_) = Flux_V(Energy_) - cDivBWave*DiffE
+    end if
+    if(.not.UseRS7 .and. UseLindeFix)then
+       ! Linde's idea: use Lax-Friedrichs flux for Bn
+       Flux_V(Bx_) = Flux_V(Bx_) - cMax*DiffBx
+       Flux_V(By_) = Flux_V(By_) - cMax*DiffBy
+       Flux_V(Bz_) = Flux_V(Bz_) - cMax*DiffBz
+
+       ! Fix the energy diffusion
+       Flux_V(Energy_) = Flux_V(Energy_) - cMax*DiffE
     end if
 
     ! Increase maximum speed with resistive diffusion speed if necessary
@@ -890,17 +902,8 @@ contains
       Flux_V = &
            (WeightRight*FluxRight_V + WeightLeft*FluxLeft_V &
            - Diffusion*(StateRightCons_V - StateLeftCons_V))
-      if(.not.UseRS7)then
-         ! Linde's idea: use Lax-Friedrichs flux for Bn
-         Flux_V(Bx_) = Flux_V(Bx_) - cMax*DiffBx
-         Flux_V(By_) = Flux_V(By_) - cMax*DiffBy
-         Flux_V(Bz_) = Flux_V(Bz_) - cMax*DiffBz
 
-         ! Fix the energy diffusion
-         Flux_V(Energy_) = Flux_V(Energy_) - cMax*DiffE
-      end if
-
-      ! Average the normal speed
+      ! Weighted average of the normal speed
       Unormal_I = WeightRight*UnRight_I + WeightLeft*UnLeft_I
       Enormal   = WeightRight*EnRight   + WeightLeft*EnLeft !^CFG IF BORISCORR
 
@@ -929,16 +932,7 @@ contains
       Flux_V = &
            (WeightRight*FluxRight_V + WeightLeft*FluxLeft_V &
            - Diffusion*(StateRightCons_V - StateLeftCons_V))
-      if(.not.UseRS7)then
-         ! Linde's idea: use Lax-Friedrichs flux for Bn
-         Flux_V(Bx_) = Flux_V(Bx_) - cMax*DiffBx
-         Flux_V(By_) = Flux_V(By_) - cMax*DiffBy
-         Flux_V(Bz_) = Flux_V(Bz_) - cMax*DiffBz
 
-         ! Sokolov's algorithm !!!
-         ! Fix the energy diffusion
-         Flux_V(Energy_) = Flux_V(Energy_) - cMax*DiffE
-      end if
       ! Weighted average of the normal speed and electric field
       Unormal_I = WeightRight*UnRight_I + WeightLeft*UnLeft_I
       Enormal   = WeightRight*EnRight   + WeightLeft*EnLeft !^CFG IF BORISCORR
@@ -1234,16 +1228,17 @@ contains
       FluxRot_V(RhoUn_)  = RhoUn*Un  - B1n*Bn  - B0n*B1n + pTot12
       FluxRot_V(RhoUt1_) = RhoUn*Ut1 - B1n*Bt1 - B0n*B1t1
       FluxRot_V(RhoUt2_) = RhoUn*Ut2 - B1n*Bt2 - B0n*B1t2
-      FluxRot_V(B1n_)    = -0.5*max(sR, -sL)*(B1nR - B1nL) !!! Rusanov flux
+      FluxRot_V(B1n_)    = 0.0
       FluxRot_V(B1t1_)   = Un*Bt1 - Ut1*Bn
       FluxRot_V(B1t2_)   = Un*Bt2 - Ut2*Bn
-      Flux_V(p_)         = p*Un
+      Flux_V(p_)         = Un*p
       Flux_V(Energy_)    = Un*(e + pTot12) - Bn*uDotB1
 
       ! Rotate fluxes of vector variables back
       call rotate_flux_vector(FluxRot_V, Flux_V)
 
-      Flux_V = Area*Flux_V
+      Flux_V    = Area*Flux_V
+      Unormal_I = Area*Un
 
       if(Eta > 0.0)then                          !^CFG IF DISSFLUX BEGIN
          ! Add flux corresponding to curl Eta.J to induction equation
