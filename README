@@ -23,7 +23,7 @@ cd SWMF
 # !!! Opening the tar ball !!!
 mkdir SWMF
 cd SWMF
-tar -xzf {path_to_file}/SWMF_v2.1.tgz
+tar -xzf {path_to_file}/SWMF_v{version_number}.tgz
 
 
 ################
