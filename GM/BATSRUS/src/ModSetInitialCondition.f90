@@ -116,6 +116,13 @@ subroutine set_ics
                       State_VGB(iRho,i,j,k,iBlock) * &
                       State_VGB(iUx:iUz,i,j,k,iBlock)
               end do
+              ! Remove B0 from B (if any)
+              State_VGB(Bx_,i,j,k,iBlock)=State_VGB(Bx_,i,j,k,iBlock) - &
+                   B0xCell_BLK(i,j,k,iBlock)
+              State_VGB(By_,i,j,k,iBlock)=State_VGB(By_,i,j,k,iBlock) - &
+                   B0yCell_BLK(i,j,k,iBlock)
+              State_VGB(Bz_,i,j,k,iBlock)=State_VGB(Bz_,i,j,k,iBlock) - &
+                   B0zCell_BLK(i,j,k,iBlock)
            end if
 
         end do; end do; end do
