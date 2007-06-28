@@ -48,12 +48,12 @@ if($Table =~ /test/i){
     &execute($testbatsrus,"-beta -rusanov -idltecamr");   #^CFG IF RUSANOVFLUX
     &execute($testbatsrus,"-beta -linde");                #^CFG IF LINDEFLUX
     &execute($testbatsrus,"-beta -sokolov -idltecamr");   #^CFG IF AWFLUX
-    &execute($testbatsrus,"-beta -roe");                  #^CFG IF ROEFLUX
+    &execute($testbatsrus,"-beta -roeold");               #^CFG IF ROEFLUX
 
     &execute($testbatsrus,"-Conservative=r6 -rusanov");   #^CFG IF RUSANOVFLUX
     &execute($testbatsrus,"-Conservative=adapt -linde");  #^CFG IF LINDEFLUX
     &execute($testbatsrus,"-Conservative=r6 -sokolov");   #^CFG IF AWFLUX
-    &execute($testbatsrus,"-Conservative=r6 -roe");       #^CFG IF ROEFLUX
+    &execute($testbatsrus,"-Conservative=r6 -roeold");    #^CFG IF ROEFLUX
 
                                                     #^CFG IF BORISCORR BEGIN
     &execute($testbatsrus,"-borisfull -rusanov");         #^CFG IF RUSANOVFLUX
@@ -65,7 +65,7 @@ if($Table =~ /test/i){
     &execute($testbatsrus,"-borissimple -linde");         #^CFG IF LINDEFLUX
                                                     #^CFG END SIMPLEBORIS
 
-    &execute($testbatsrus,"-ta -Conservative=r6 -idltecamr");
+    &execute($testbatsrus,"-ta -hlld -Conservative=r6 -idltecamr");
     &execute($testbatsrus,"-ta -Conservative=r6",         #^CFG IF BORISCORR 
 		 "-borisfull");                           #^CFG IF BORISCORR 
     &execute($testbatsrus,"-ta -Conservative=r6",         #^CFG IF SIMPLEBORIS
@@ -73,7 +73,7 @@ if($Table =~ /test/i){
     &execute($testbatsrus,"-Inner=float,reflect"); 
 
     &execute($testbatsrus,"-Limiter=mc -Resist=hall");
-    &execute($testbatsrus,"-Message=dir");
+    &execute($testbatsrus,"-Limiter=mc3 -hlld -Message=dir");
     &execute($testbatsrus,"-ta -Stage=2 -partimpl05 -Limiter=mc3",
 	     "-hall -logsatmove");
 
@@ -83,16 +83,16 @@ if($Table =~ /test/i){
 
     &execute($testbatsrus,"-ta -Stage=2 -partimpl05");    #^CFG IF IMPLICIT
 
-    &execute($testbatsrus,"-Limiter=beta",
+    &execute($testbatsrus,"-Limiter=mc3 -hlld",
 		"-Restart=saveone -Length=restartsave");
 
-    &execute($testbatsrus,"-Limiter=beta",
+    &execute($testbatsrus,"-Limiter=mc3 -hlld",
 		"-Restart=read -Length=restartread");
 
-    &execute($testbatsrus,"-ta -Conservative=r6",
+    &execute($testbatsrus,"-ta -Conservative=r6 -hlld",
 		"-Restart=save -Length=restartsave");
 
-    &execute($testbatsrus,"-ta -Conservative=r6",
+    &execute($testbatsrus,"-ta -Conservative=r6 -hlld",
 		"-Restart=read -Length=restartread");
 
     &execute($testbatsrus,"-ta -Corotation=ideal,updateb0");
