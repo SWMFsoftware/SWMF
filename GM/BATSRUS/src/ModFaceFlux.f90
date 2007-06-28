@@ -776,7 +776,7 @@ contains
 
     end if
 
-    if(.not.DoHlld)then
+    if(.not.DoHlld)then                                !^CFG IF HLLDFLUX
        ! All solvers, except HLLD, use left and right fluxes and avarage state
        call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
             StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, HallUnLeft)
@@ -785,7 +785,7 @@ contains
             StateRightCons_V, FluxRight_V, UnRight_I, EnRight, HallUnRight)
 
        State_V = 0.5*(StateLeft_V + StateRight_V)
-    end if
+    end if                                             !^CFG IF HLLDFLUX
 
     if(UseRS7)then
        iFluid=1
