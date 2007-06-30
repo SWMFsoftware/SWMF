@@ -2553,7 +2553,8 @@ going through the Sun.  The variables which control the direction of
 the lines of sight and the grid position and resolution are the
 following:
 \begin{verbatim}
- ObsPosX,ObsPosY,ObsPosZ- the position of the observer
+ ObsPosX,ObsPosY,ObsPosZ- the position of the observer in (rotated) 
+                          HGI coordinates (SC and IH) or the GM coordinates
  OffsetAngle            - the angle between the image plane normal direction
                           and the Sun's direction from the observer position
  rSizeImage             - the radius of the LOS image
