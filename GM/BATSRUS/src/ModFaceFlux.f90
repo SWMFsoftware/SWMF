@@ -785,13 +785,12 @@ contains
             StateRightCons_V, FluxRight_V, UnRight_I, EnRight, HallUnRight)
 
        State_V = 0.5*(StateLeft_V + StateRight_V)
-    end if                                             !^CFG IF HLLDFLUX
 
-    if(UseRS7)then
-       iFluid=1
-       call modify_flux(FluxLeft_V,UnLeft_I(1))
-       call modify_flux(FluxRight_V,UnRight_I(1))
-    end if
+       if(UseRS7)then
+          call modify_flux(FluxLeft_V,UnLeft_I(1))
+          call modify_flux(FluxRight_V,UnRight_I(1))
+       end if
+    end if                                             !^CFG IF HLLDFLUX
 
     if(UseMultiIon)then
        ! Calculate bCrossArea_D to be used for J in the J x B source term
@@ -814,7 +813,7 @@ contains
     if(DoRoeOld) call roe_solver(Flux_V)        !^CFG IF ROEFLUX
     if(DoRoe)    call roe_solver_new            !^CFG IF ROEFLUX
 
-    if(UseRS7.and. .not.DoRoe)then
+    if(UseRS7 .and. .not.DoRoe .and. .not.DoHlld)then
        call stop_mpi('Second order RS7 is implemented for Roe solver only')
        !cDivBWave=max(abs(AreaX*UL_D(x_)+AreaY*UL_D(y_)+AreaZ*UL_D(z_)),&
        !     abs(AreaX*UR_D(x_)+AreaY*UR_D(y_)+AreaZ*UR_D(z_)))
@@ -1006,12 +1005,14 @@ contains
       if(sL >= 0.) then
          call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
               StateCons_V, Flux_V, Unormal_I, Enormal, HallUn)
+         if(UseRs7)call modify_flux(Flux_V, Unormal_I(1))
          RETURN
       end if
 
       if(sR <= 0.) then 
          call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
               StateCons_V, Flux_V, Unormal_I, Enormal, HallUn)
+         if(UseRs7)call modify_flux(Flux_V, Unormal_I(1))
          RETURN
       end if
 
@@ -1231,7 +1232,7 @@ contains
       FluxRot_V(B1n_)    = 0.0
       FluxRot_V(B1t1_)   = Un*Bt1 - Ut1*Bn
       FluxRot_V(B1t2_)   = Un*Bt2 - Ut2*Bn
-      Flux_V(p_)         = Un*p
+      Flux_V(p_)         = 0.5*(sR*UnL*pL - sL*UnR*pR  + sR*sL*(pR-pL))/(sR-sL)
       Flux_V(Energy_)    = Un*(e + pTot12) - Bn*uDotB1
 
       ! Rotate fluxes of vector variables back
@@ -1239,6 +1240,8 @@ contains
 
       Flux_V    = Area*Flux_V
       Unormal_I = Area*Un
+
+      if(UseRs7)call modify_flux(Flux_V, Unormal_I(1))
 
       if(Eta > 0.0)then                          !^CFG IF DISSFLUX BEGIN
          ! Add flux corresponding to curl Eta.J to induction equation
