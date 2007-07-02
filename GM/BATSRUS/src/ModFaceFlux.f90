@@ -813,7 +813,9 @@ contains
     if(DoRoeOld) call roe_solver(Flux_V)        !^CFG IF ROEFLUX
     if(DoRoe)    call roe_solver_new            !^CFG IF ROEFLUX
 
-    if(UseRS7 .and. .not.DoRoe .and. .not.DoHlld)then
+    if(UseRS7 .and. .not.DoRoe &
+         .and. .not.DoHlld &                    !^CFG IF HLLDFLUX
+         )then
        call stop_mpi('Second order RS7 is implemented for Roe solver only')
        !cDivBWave=max(abs(AreaX*UL_D(x_)+AreaY*UL_D(y_)+AreaZ*UL_D(z_)),&
        !     abs(AreaX*UR_D(x_)+AreaY*UR_D(y_)+AreaZ*UR_D(z_)))
