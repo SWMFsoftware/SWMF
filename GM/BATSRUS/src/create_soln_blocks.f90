@@ -595,6 +595,7 @@ contains
     integer :: iBLK, iShift,jShift,kShift
     integer :: i, j, k, iF, jF, kF, iVar
     logical :: IsTrue_III(2,2,2)
+    !-----------------------------------------------------------------------
 
     number_send_requests = 0
 
@@ -615,34 +616,34 @@ contains
        else
           ! Exclude non-true (body) cells from the restriction 
           ! if there are any true cells
-          do      k=1,nK/2; kF = 2*k-1; &
-               do j=1,nJ/2; jF = 2*j-1; &
-               do i=1,nI/2; iF = 2*i-1
+          do       k=1,nK/2; kF = 2*k-1 
+             do    j=1,nJ/2; jF = 2*j-1
+                do i=1,nI/2; iF = 2*i-1
 
-             ! Set the true cell info for the fine cells to be restricted
-             if(iCube == 1)then
-                ! For the remaining fine block use the saved array
-                IsTrue_III = IsTrueCellF_C(iF:iF+1,jF:jF+1,kF:kF+1)
-             else
-                ! For the other fine blocks use the original array
-                IsTrue_III = true_cell(iF:iF+1,jF:jF+1,kF:kF+1,iBLK)
-             end if
+                   ! Set true cell info for the fine cells to be restricted
+                   if(iCube == 1)then
+                      ! For the remaining fine block use the saved array
+                      IsTrue_III = IsTrueCellF_C(iF:iF+1,jF:jF+1,kF:kF+1)
+                   else
+                      ! For the other fine blocks use the original array
+                      IsTrue_III = true_cell(iF:iF+1,jF:jF+1,kF:kF+1,iBLK)
+                   end if
 
-             if(all(IsTrue_III) .or. .not. any(IsTrue_III)) then
-                do iVar = 1, nVar
-                   restricted_soln_blks(iVar,i,j,k,iCube) = cEighth * &
-                        sum(State_VGB(iVar,iF:iF+1,jF:jF+1,kF:kF+1,iBLK))
+                   if(all(IsTrue_III) .or. .not. any(IsTrue_III)) then
+                      do iVar = 1, nVar
+                         restricted_soln_blks(iVar,i,j,k,iCube) = cEighth * &
+                              sum(State_VGB(iVar,iF:iF+1,jF:jF+1,kF:kF+1,iBLK))
+                      end do
+                   else
+                      do iVar = 1, nVar
+                         restricted_soln_blks(iVar,i,j,k,iCube) = &
+                              sum(State_VGB(iVar,iF:iF+1,jF:jF+1,kF:kF+1,iBLK)&
+                              , MASK = IsTrue_III)/count(IsTrue_III)
+                      end do
+                   end if
                 end do
-             else
-                do iVar = 1, nVar
-                   restricted_soln_blks(iVar,i,j,k,iCube) = &
-                        sum(State_VGB(iVar,iF:iF+1,jF:jF+1,kF:kF+1,iBLK), &
-                        MASK = IsTrue_III)/count(IsTrue_III)
-                end do
-             end if
-          end do; &
-               end do; &
-               end do
+             end do
+          end do
        end if
        if (icube > 1 .and. iProc /= remaining_PE) then
           itag = iBLK
