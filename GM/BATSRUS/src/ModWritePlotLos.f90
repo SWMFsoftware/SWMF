@@ -428,12 +428,6 @@ contains
 
   subroutine set_plotvar_los(iPlotfile)
 
-    use ModProcMH
-    use ModIO
-    use ModGeometry
-    use ModIO, ONLY : mu_los, TypeLosImage
-    implicit none
-
     integer, intent(in) :: iPlotFile
 
     ! Local variables
@@ -783,8 +777,6 @@ contains
   subroutine dimensionalize_plotvar_los(iplotfile)
 
     use ModPhysics, ONLY : No2Io_V, No2Si_V, UnitX_, UnitU_, UnitRho_
-    use ModIO
-    implicit none
 
     integer, intent(in) :: iPlotFile
 
