@@ -11,7 +11,7 @@ module ModFaceValue
   private ! except
 
   logical, public :: UseAccurateResChange = .false.
-  logical, public :: UseTvdResChange      = .false.
+  logical, public :: UseTvdResChange      = .true.
   logical, public :: DoLimitMomentum      = .false.  !^CFG IF BORISCORR
 
   real,             public :: BetaLimiter
