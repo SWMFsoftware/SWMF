@@ -23,6 +23,13 @@ my $testbatsrus = "$Dir"."TestBatsrus.pl ".
 
 my $Table  =$ARGV[0];
 
+my $Empty = "-Planet=earth_simple -Grid=earth_211 -Length=tiny_simple".
+    " -B0source=empty -Cfl=empty -Conservative=empty".
+    " -Corotation=empty -Divb=empty -Reschange=empty".
+    " -Implicit=empty".                                    #^CFG IF IMPLICIT
+    "-Inner=empty -Message=empty -Outer=empty".
+    "-Stage=empty -Time=empty -Timestep=empty -Upstream=empty";
+
 ###########################################################################
 if($Table =~ /test/i){
 ###########################################################################
@@ -33,13 +40,7 @@ if($Table =~ /test/i){
 }elsif($Table =~ /empty/i){
 ###########################################################################
 
-    &execute($testbatsrus,
-             "-Planet=earth_simple -Grid=earth_211 -Length=tiny_simple",
-	     "-B0source=empty -Cfl=empty -Conservative=empty",
-	     "-Corotation=empty -Divb=empty",
-	     "-Implicit=empty",                           #^CFG IF IMPLICIT
-	     "-Inner=empty -Message=empty -Outer=empty",
-	     "-Stage=empty -Time=empty -Timestep=empty -Upstream=empty");
+    &execute($testbatsrus, $Empty);
 
 ###########################################################################
 }elsif($Table =~ /func/i){
@@ -48,7 +49,7 @@ if($Table =~ /test/i){
     &execute($testbatsrus,"-beta -rusanov -idltecamr");   #^CFG IF RUSANOVFLUX
     &execute($testbatsrus,"-beta -linde");                #^CFG IF LINDEFLUX
     &execute($testbatsrus,"-beta -sokolov -idltecamr");   #^CFG IF AWFLUX
-    &execute($testbatsrus,"-beta -roeold");               #^CFG IF ROEFLUX
+    &execute($testbatsrus,"-mc -roe -Reschange=tvd");     #^CFG IF ROEFLUX
 
     &execute($testbatsrus,"-Conservative=r6 -rusanov");   #^CFG IF RUSANOVFLUX
     &execute($testbatsrus,"-Conservative=adapt -linde");  #^CFG IF LINDEFLUX
@@ -75,7 +76,7 @@ if($Table =~ /test/i){
     &execute($testbatsrus,"-Limiter=mc -Resist=hall");
     &execute($testbatsrus,"-Limiter=mc3 -hlld -Message=dir");
     &execute($testbatsrus,"-ta -Stage=2 -partimpl05 -Limiter=mc3",
-	     "-hall -logsatmove");
+	     "-hall -logsatmove -Reschange=accurate");
 
     &execute($testbatsrus,"-ta -Stage=2 -constrain");     #^CFG IF CONSTRAINB
     &execute($testbatsrus,"-ta -Stage=2 -project");       #^CFG IF PROJECTION
@@ -103,13 +104,7 @@ if($Table =~ /test/i){
 
     &execute($testbatsrus,"-Plottype=los");
 
-    &execute($testbatsrus,
-	     "-Planet=earth_simple -Grid=earth_211 -Length=tiny_simple",
-	     "-B0source=empty -Cfl=empty -Conservative=empty",
-	     "-Corotation=empty -Divb=empty",
-	     "-Implicit=empty",                           #^CFG IF IMPLICIT
-	     "-Inner=empty -Message=empty -Outer=empty",
-	     "-Stage=empty -Time=empty -Timestep=empty -Upstream=empty");
+    &execute($testbatsrus, $Empty);
 
     &execute($testbatsrus,"-Plottype=raynew");
 
