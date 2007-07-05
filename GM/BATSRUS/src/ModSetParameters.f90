@@ -397,12 +397,12 @@ subroutine MH_set_parameters(TypeAction)
      case("#PARTIMPL", "#PARTIMPLICIT")
         call read_var('UsePartImplicit2',UsePartImplicit2)
      case("#IMPLSCHEME", "#IMPLICITSCHEME")
-        call read_var('nOrderImpl',nORDER_impl)
+        call read_var('nOrderImpl',nOrder_Impl)
         call read_var('TypeFluxImpl',FluxTypeImpl,IsUpperCase=.true.)
      case("#IMPLSTEP", "#IMPLICITSTEP")
         call read_var('ImplCoeff ',ImplCoeff0)
-        call read_var('UseBDF2   ',UseBDF2)
-        call read_var('ImplSource',implsource)
+        call read_var('UseBDF2   ',UseBdf2)
+        call read_var('ImplSource',ImplSource)
      case("#IMPLCHECK", "#IMPLICITCHECK")
         call read_var('RejectStepLevel' ,   RejectStepLevel)
         call read_var('RejectStepFactor',   RejectStepFactor)
@@ -2162,7 +2162,7 @@ contains
        if(iProc==0)write(*,'(a)')NameSub//&
             ' WARNING: cannot use TVD or accurate schemes at res. change' // &
             ' with ConstrainB'
-       if(UseStrict)call stop_mpi('Correct PARAM.in!')
+       !if(UseStrict)call stop_mpi('Correct PARAM.in!')
        if(iProc==0)write(*,*)NameSub// &
             ' setting UseTvdReschange=F UseAccurateResChange=F'
        UseTvdReschange      = .false.
@@ -2403,7 +2403,8 @@ contains
     MaxBoundary=min(MaxBoundary,Top_)
     MinBoundary=max(MinBoundary,body2_)
 
-    DoOneCoarserLayer = .not. (UseTvdResChange .or. UseAccurateResChange)
+    DoOneCoarserLayer = .not. (nOrder==2 .and. &
+         (UseTvdResChange .or. UseAccurateResChange))
     DoLimitMomentum = &                                !^CFG IF BORISCORR
          boris_correction .and. DoOneCoarserLayer      !^CFG IF BORISCORR
 
