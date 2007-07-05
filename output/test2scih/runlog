@@ -3,13 +3,13 @@ CON_world::setup_from_file SWMF_WARNING for IH iProcLast= 999 changed to    1
 #=============================================================================#
 # ID  Version                                               nproc proc0 stride#
 #-----------------------------------------------------------------------------#
-# CON SWMF by Univ. of Michigan                version 2.20     2     0     1 #
+# CON SWMF by Univ. of Michigan                version 2.30     2     0     1 #
 #-----------------------------------------------------------------------------#
 # SC  SC_BATSRUS (Univ. of Michigan)           version 8.00     2     0     1 #
 # IH  IH_BATSRUS (Univ. of Michigan)           version 8.00     2     0     1 #
 #=============================================================================#
 CON_io::read_inputs: iSession=  1
-ModReadParam::read_file: read and broadcast nLine= 266 lines of text
+ModReadParam::read_file: read and broadcast nLine= 284 lines of text
 
 #DESCRIPTION
 Input file for creating a steady state solar corona		StringDescription
@@ -30,8 +30,7 @@ F			DoTimeAccurate
 F			DoSaveRestart
 
 #BEGIN_COMP IH -------------------------------------------------------------
-IH: init_mod_restart_file: setting TypeRestartOutFile = block
- IH_set_parameters: READ iSession = 1  iLine= 24  nLine = 97
+ IH_set_parameters: READ iSession = 1  iLine= 24  nLine = 115
 IH:
 IH:#BODY
 IH:T			UseBody (default/unchanged)
@@ -104,6 +103,17 @@ IH:2			nOrder (default/unchanged)
 IH:Sokolov			TypeFlux
 IH:mc			TypeLimiter
 IH:1.2			BetaLimiter		LimiterBeta
+IH:
+IH:#SATELLITE
+IH:1		nSatellite
+IH:MHD file		StringSatellite
+IH:100		DnOutput
+IH:36000.0		DtOutput
+IH:IH/earth_traj.dat		NameTrajectoryFile
+IH:
+IH:#STEADYSTATESATELLITE
+IH:-432000.0                -5 days		SatelliteTimeStart
+IH:432000.0                 +5 days		SatelliteTimeEnd
 #END_COMP IH ---------------------------------------------------------------
 
 #COMPONENT
@@ -111,8 +121,7 @@ IH		NameComp (default/unchanged)
 F		UseComp
 
 #BEGIN_COMP SC --------------------------------------------------------------
-SC: init_mod_restart_file: setting TypeRestartOutFile = block
- SC_set_parameters: READ iSession = 1  iLine= 104  nLine = 218
+ SC_set_parameters: READ iSession = 1  iLine= 122  nLine = 236
 SC:
 SC:#COORDSYSTEM
 SC:HGR                     TypeCoordSystem (default/unchanged)
@@ -209,7 +218,7 @@ SC:mc                      TypeLimiter
 SC:1.2			LimiterBeta
 SC:
 SC:#TVDRESCHANGE
-SC:T                       UseTvdResChange
+SC:T                       UseTvdResChange (default/unchanged)
 SC:
 SC:#RESCHANGEBOUNDARY
 SC:T		SaveBoundaryCells
@@ -328,16 +337,16 @@ SC:
 SORTED TIMING at step       0 SC on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-SWMF                      0.77    100.00         1         1
+SWMF                      0.38    100.00         1         1
 -------------------------------------------------------------------------------
-SETUP                     0.77    100.00         1         1
-exch_msgs                 0.31     39.81         1         1
-SC_load_balance           0.02      1.98         1         1
+SETUP                     0.38    100.00         1         1
+SC_load_balance           0.08     22.49         1         1
+exch_msgs                 0.01      1.82         1         1
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
-SC: First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   6.4208965848102373E-02
-Progress:      10 steps,   0.00000     s simulation time,      5.01 s CPU time
-Progress:      20 steps,   0.00000     s simulation time,     11.01 s CPU time
+SC: First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   6.4208965848102040E-02
+Progress:      10 steps,   0.00000     s simulation time,      0.90 s CPU time
+Progress:      20 steps,   0.00000     s simulation time,      1.79 s CPU time
 SC: >>>>>>>>>>>>>>>>>>>> SC_amr <<<<<<<<<<<<<<<<<<<<
 SC: SC_parallel_refine starting to refine  8  block(s) on PE 0
 SC: renumber_octree: finished renumbering 120  blocks.
@@ -347,12 +356,12 @@ SC: |  SC_amr:  Total number of blocks used =  120
 SC: |  SC_amr:  Total number of cells =  7680
 SC: |  Smallest cell dx:    1.5000000000000000   Largest cell dx:    3.0000000000000000
 SC: |
-Timing for last SC_amr (SC_run):    1.05 sec
+Timing for last SC_amr (SC_run):    0.15 sec
 Timing for last SC_load_balance (SC_amr):    0.00 sec
 SC: >>>>>>>>>>>>>>>>>>>> SC_amr <<<<<<<<<<<<<<<<<<<<
-Progress:      30 steps,   0.00000     s simulation time,     17.26 s CPU time
-Progress:      40 steps,   0.00000     s simulation time,     24.61 s CPU time
-Progress:      50 steps,   0.00000     s simulation time,     33.42 s CPU time
+Progress:      30 steps,   0.00000     s simulation time,      2.95 s CPU time
+Progress:      40 steps,   0.00000     s simulation time,      4.38 s CPU time
+Progress:      50 steps,   0.00000     s simulation time,      5.94 s CPU time
 SC: >>>>>>>>>>>>>>>>>>>> SC_amr <<<<<<<<<<<<<<<<<<<<
 SC: SC_parallel_refine starting to refine  35  block(s) on PE 0
      SC_fixRefinementLevels found  38  blocks to refine
@@ -364,12 +373,12 @@ SC: |  SC_amr:  Total number of blocks used =  631
 SC: |  SC_amr:  Total number of cells =  40384
 SC: |  Smallest cell dx:    0.7500000000000000   Largest cell dx:    3.0000000000000000
 SC: |
-Timing for last SC_amr (SC_run):   17.27 sec
-Timing for last SC_load_balance (SC_amr):   13.45 sec
+Timing for last SC_amr (SC_run):    0.50 sec
+Timing for last SC_load_balance (SC_amr):    0.02 sec
 SC: >>>>>>>>>>>>>>>>>>>> SC_amr <<<<<<<<<<<<<<<<<<<<
-Progress:      60 steps,   0.00000     s simulation time,     60.10 s CPU time
-Progress:      70 steps,   0.00000     s simulation time,    123.25 s CPU time
-Progress:      80 steps,   0.00000     s simulation time,    184.45 s CPU time
+Progress:      60 steps,   0.00000     s simulation time,      8.01 s CPU time
+Progress:      70 steps,   0.00000     s simulation time,     14.00 s CPU time
+Progress:      80 steps,   0.00000     s simulation time,     20.15 s CPU time
 SC: >>>>>>>>>>>>>>>>>>>> SC_amr <<<<<<<<<<<<<<<<<<<<
 SC: SC_parallel_refine starting to refine  176  block(s) on PE 0
      SC_fixRefinementLevels found  50  blocks to refine
@@ -381,24 +390,24 @@ SC: |  SC_amr:  Total number of blocks used =  2213
 SC: |  SC_amr:  Total number of cells =  141632
 SC: |  Smallest cell dx:    0.3750000000000000   Largest cell dx:    3.0000000000000000
 SC: |
-Timing for last SC_amr (SC_run):   38.83 sec
-Timing for last SC_load_balance (SC_amr):   28.86 sec
+Timing for last SC_amr (SC_run):    1.49 sec
+Timing for last SC_load_balance (SC_amr):    0.06 sec
 SC: >>>>>>>>>>>>>>>>>>>> SC_amr <<<<<<<<<<<<<<<<<<<<
-Progress:      90 steps,   0.00000     s simulation time,    280.51 s CPU time
-Progress:     100 steps,   0.00000     s simulation time,    418.32 s CPU time
+Progress:      90 steps,   0.00000     s simulation time,     27.74 s CPU time
+Progress:     100 steps,   0.00000     s simulation time,     48.16 s CPU time
 -------------------------------------------------------------------------------
 TIMING TREE of depth 2 from step       0 to     100 SC on PE    0
 name                  #iter  #calls      sec   s/iter   s/call  percent
 -------------------------------------------------------------------------------
-SWMF                      1       1   418.32  418.323  418.323   100.00
+SWMF                      1       1    48.16   48.164   48.164   100.00
 -------------------------------------------------------------------------------
-SC_run                  100     100   418.32    4.183    4.183   100.00
+SC_run                  100     100    48.16    0.482    0.482   100.00
 -------------------------------------------------------------------------------
  ----- End of Session    1  ------
 CON_io::read_inputs: iSession=  2
 
 #BEGIN_COMP SC --------------------------------------------------------------
- SC_set_parameters: READ iSession = 2  iLine= 227  nLine = 231
+ SC_set_parameters: READ iSession = 2  iLine= 245  nLine = 249
 SC:
 SC:#AMR
 SC:-1			DnRefine
@@ -412,25 +421,25 @@ SC:-1			DnRefine
  SC_set_parameters: CHECK iSession = 2
   
  ----- Starting Session  2  ------
-Progress:     110 steps,   0.00000     s simulation time,    561.53 s CPU time
-Progress:     120 steps,   0.00000     s simulation time,    699.55 s CPU time
-Progress:     130 steps,   0.00000     s simulation time,    837.96 s CPU time
-Progress:     140 steps,   0.00000     s simulation time,    977.01 s CPU time
-Progress:     150 steps,   0.00000     s simulation time,   1117.19 s CPU time
-Progress:     160 steps,   0.00000     s simulation time,   1254.21 s CPU time
-Progress:     170 steps,   0.00000     s simulation time,   1392.43 s CPU time
-Progress:     180 steps,   0.00000     s simulation time,   1531.04 s CPU time
-Progress:     190 steps,   0.00000     s simulation time,   1670.27 s CPU time
-Progress:     200 steps,   0.00000     s simulation time,   1810.87 s CPU time
+Progress:     110 steps,   0.00000     s simulation time,     68.97 s CPU time
+Progress:     120 steps,   0.00000     s simulation time,     89.44 s CPU time
+Progress:     130 steps,   0.00000     s simulation time,    109.90 s CPU time
+Progress:     140 steps,   0.00000     s simulation time,    130.48 s CPU time
+Progress:     150 steps,   0.00000     s simulation time,    151.06 s CPU time
+Progress:     160 steps,   0.00000     s simulation time,    171.58 s CPU time
+Progress:     170 steps,   0.00000     s simulation time,    192.18 s CPU time
+Progress:     180 steps,   0.00000     s simulation time,    212.74 s CPU time
+Progress:     190 steps,   0.00000     s simulation time,    233.32 s CPU time
+Progress:     200 steps,   0.00000     s simulation time,    253.90 s CPU time
 -------------------------------------------------------------------------------
 TIMING TREE of depth 2 from step     100 to     200 SC on PE    0
 name                  #iter  #calls      sec   s/iter   s/call  percent
 -------------------------------------------------------------------------------
-SWMF                      1       1  1392.55 1392.545 1392.545   100.00
+SWMF                      1       1   205.73  205.733  205.733   100.00
 -------------------------------------------------------------------------------
-SC_run                  100     100  1386.78   13.868   13.868    99.59
-exch_msgs                 1       1     5.76    5.759    5.759     0.41
-#others                                 0.00    0.002              0.00
+SC_run                  100     100   205.40    2.054    2.054    99.84
+exch_msgs                 1       1     0.33    0.326    0.326     0.16
+#others                                 0.00    0.003              0.00
 -------------------------------------------------------------------------------
  ----- End of Session    2  ------
 CON_io::read_inputs: iSession=  3
@@ -452,6 +461,7 @@ IH                      NameTarget
 #RUN #########################################################################
  SC_set_parameters: CHECK iSession = 3
   
+IH: IH_read_satellite_input_files reading: IH/earth_traj.dat
  IH_set_parameters: CHECK iSession = 3
   
  ----- Starting Session  3  ------
@@ -550,27 +560,27 @@ F			UseComp
  IH_set_parameters: CHECK iSession = 4
   
  ----- Starting Session  4  ------
-Progress:     210 steps,   0.00000     s simulation time,   1935.24 s CPU time
-Progress:     220 steps,   0.00000     s simulation time,   2016.25 s CPU time
-Progress:     230 steps,   0.00000     s simulation time,   2096.86 s CPU time
-Progress:     240 steps,   0.00000     s simulation time,   2177.47 s CPU time
-Progress:     250 steps,   0.00000     s simulation time,   2257.88 s CPU time
-Progress:     260 steps,   0.00000     s simulation time,   2341.30 s CPU time
-Progress:     270 steps,   0.00000     s simulation time,   2422.92 s CPU time
-Progress:     280 steps,   0.00000     s simulation time,   2505.53 s CPU time
-Progress:     290 steps,   0.00000     s simulation time,   2589.34 s CPU time
+Progress:     210 steps,   0.00000     s simulation time,    270.86 s CPU time
+Progress:     220 steps,   0.00000     s simulation time,    281.73 s CPU time
+Progress:     230 steps,   0.00000     s simulation time,    292.79 s CPU time
+Progress:     240 steps,   0.00000     s simulation time,    303.65 s CPU time
+Progress:     250 steps,   0.00000     s simulation time,    314.50 s CPU time
+Progress:     260 steps,   0.00000     s simulation time,    325.41 s CPU time
+Progress:     270 steps,   0.00000     s simulation time,    336.27 s CPU time
+Progress:     280 steps,   0.00000     s simulation time,    347.31 s CPU time
+Progress:     290 steps,   0.00000     s simulation time,    358.17 s CPU time
 IH:saved ifile= 3 type=x=0_mhd    at n_step=    100
 IH:saved ifile= 4 type=y=0_mhd    at n_step=    100
 IH:saved ifile= 5 type=z=0_mhd    at n_step=    100
-Progress:     300 steps,   0.00000     s simulation time,   2671.77 s CPU time
+Progress:     300 steps,   0.00000     s simulation time,    369.29 s CPU time
 -------------------------------------------------------------------------------
 TIMING TREE of depth 2 from step     201 to     300 IH on PE    0
 name                  #iter  #calls      sec   s/iter   s/call  percent
 -------------------------------------------------------------------------------
-SWMF                      1       1   813.31  813.313  813.313   100.00
+SWMF                      1       1   108.42  108.424  108.424   100.00
 -------------------------------------------------------------------------------
-exch_msgs                 1       1     3.57    3.565    3.565     0.44
-IH_run                   99      99   809.75    8.179    8.179    99.56
+exch_msgs                 1       1     0.09    0.094    0.094     0.09
+IH_run                   99      99   108.33    1.094    1.094    99.91
 -------------------------------------------------------------------------------
 
     Finished Numerical Simulation
@@ -583,34 +593,35 @@ IH: error report: no errors...
 SORTED TIMING from step       0 to     300 IH on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-SWMF                   2671.77    100.00         1         1
+SWMF                    369.33    100.00         1         1
 -------------------------------------------------------------------------------
-advance                2571.25     96.24       301       301
-exch_msgs              2224.62     83.26       308       613
-SC_run                 1819.02     68.08       201       201
+advance                 348.22     94.28       301       301
+SC_run                  255.69     69.23       201       201
 -------------------------------------------------------------------------------
-IH_run                  817.89     30.61       100       100
-calc_fluxes             125.41      4.69       301    287552
-calc_facevalues         119.90      4.49       301    287552
-SC_amr                   57.14      2.14         3         3
-SC_load_balance          42.31      1.58         3         3
-SC_update_states         34.87      1.31       201    269952
-SC_calc_sources          19.82      0.74       201    269952
-calc_face_bfo            17.96      0.67       271    172132
-SC_update_check          12.34      0.46       201       402
-SC_IH_couple             12.18      0.46         1         1
-barrier-expl2            11.91      0.45       301       602
-IH_calc_sources          10.04      0.38       100     17600
-save_logfile              8.28      0.31       301       301
-calc_fluxes_bfo           7.52      0.28       271    172132
-IH_update_check           6.40      0.24       100       200
-IH_update_states          5.87      0.22       100     17600
-IH_SC_couple              3.19      0.12         1         1
-IH_set_BCs                1.94      0.07       100       800
-send_cons_flux            1.52      0.06       301       602
-int_domain                1.46      0.05       301       301
-barrier-expl1             1.22      0.05       301       602
-save_plot                 0.22      0.01         1         3
-SC_set_BCs                0.18      0.01       141      5124
-IH_load_balance           0.07      0.00         1         1
+IH_run                  109.37     29.61       100       100
+calc_facevalues          88.94     24.08       301    287552
+calc_fluxes              82.08     22.22       301    287552
+exch_msgs                60.47     16.37       308       613
+SC_update_states         26.45      7.16       201    269952
+calc_face_bfo            18.09      4.90       271    172132
+SC_calc_sources          15.44      4.18       201    269952
+save_logfile             14.44      3.91       301       301
+SC_update_check          11.77      3.19       201       402
+IH_calc_sources          10.67      2.89       100     17600
+barrier-expl2             8.74      2.37       301       602
+IH_update_states          7.32      1.98       100     17600
+IH_update_check           5.71      1.55       100       200
+calc_fluxes_bfo           5.08      1.37       271    172132
+int_domain                2.29      0.62       301       301
+send_cons_flux            2.19      0.59       301       602
+SC_amr                    2.13      0.58         3         3
+IH_SC_couple              1.52      0.41         1         1
+IH_set_BCs                1.37      0.37       100       800
+SC_IH_couple              1.17      0.32         1         1
+barrier-expl1             0.35      0.09       301       602
+SC_set_BCs                0.19      0.05       141      5124
+save_plot                 0.16      0.04         1         3
+IH_load_balance           0.10      0.03         1         1
+save_satellite            0.10      0.03         1         1
+SC_load_balance           0.09      0.02         3         3
 -------------------------------------------------------------------------------
