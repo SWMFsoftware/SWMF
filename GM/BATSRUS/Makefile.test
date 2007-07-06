@@ -212,7 +212,7 @@ test_titan_start:
 	make test_titan_check
 
 test_titan_compile:
-	./Config.pl -u=Titan -e=MhdTitan -g=4,4,4,2000,200
+	./Config.pl -u=Titan -e=MhdTitan -g=6,6,6,1000,200
 	make
 	make PIDL
 
@@ -319,7 +319,7 @@ test_venus_start:
 	make test_venus_check
 
 test_venus_compile:
-	./Config.pl -u=Venus -e=MhdMars -g=4,4,4,2000,200
+	./Config.pl -u=Venus -e=MhdMars -g=6,6,6,1000,200
 	make
 	make PIDL
 
