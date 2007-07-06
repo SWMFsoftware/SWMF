@@ -873,7 +873,7 @@ contains
              State_VGB(:,i,j,k,globalBLK)   =  CellState_VI(:,body1_)
           else
              State_VGB(:,i,j,k,globalBLK)   = CellState_VI(:,1)
-             State_VGB(Bx_:Bz_,i,j,k,globalBLK)=0.0
+             !State_VGB(Bx_:Bz_,i,j,k,globalBLK)=0.0
           end if
        end do;end do; end do;
 
@@ -940,16 +940,22 @@ contains
 
           State_VGB(rho_,i,j,k,globalBLK)   =&
                sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,globalBLK))
-          State_VGB(ux_:uz_,i,j,k,globalBLK)   = 0.0
+          
+          if (R_BLK(i,j,k,globalBLK)< 2.0*Rbody)&
+               State_VGB(Bx_:Bz_,i,j,k,globalBLK)=0.0
+          
+          !State_VGB(ux_:uz_,i,j,k,globalBLK)   = 0.0
           !&
           !               CellState_VI(ux_:Uz_,1)/CellState_VI(rho_,1)&
           !               *State_VGB(rho_,i,j,k,globalBLK)
           State_VGB(P_,i,j,k,globalBLK)= &
                sum(State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,globalBLK)&
                /MassSpecies_V(SpeciesFirst_:SpeciesLast_))*KT0          
+          
           if(R_BLK(i,j,k,globalBLK).gt.2.0)&
                State_VGB(P_,i,j,k,globalBLK)= &
                max(SW_p, State_VGB(P_,i,j,k,globalBLK))
+          
 
           if(oktest_me.and.&
                globalBLK==Blktest.and.i==itest.and.j==jtest.and.k==ktest)then
