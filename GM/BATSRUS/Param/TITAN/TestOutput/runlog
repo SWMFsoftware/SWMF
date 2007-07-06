@@ -1,16 +1,17 @@
-
+ 
  BATSRUS: Block Adaptive Tree Solar-Wind Roe Upwind Scheme
           for 3D Heliospheric Flows
  University of Michigan, 1995-2007
-
- BATSRUS version 7.80 is running as GM on    1 PE(s)
-
+ 
+ BATSRUS version 8.00 is running as GM on    2 PE(s)
+ 
+ EQUATIONS:   Titan MHD
  USER MODULE: Titan 7 species MHD code, Yingjuan Ma 1.10
-
+ 
 ModReadParam::read_file: read and broadcast nLine= 194 lines of text
- ----- Starting Session  1  ------
- init_mod_restart_file: setting TypeRestartOutFile = block
- GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 194
+ ----- Starting Session            1  ------
+ GM_set_parameters: READ iSession =           1  iLine=           0  nLine =
+         194
 
 #NORMALIZATION
 SOLARWIND		TypeNormalization
@@ -132,17 +133,18 @@ fixed                   TypeBcTop (default/unchanged)
 #USETITANINPUT
 CassiniTA	        Solarmax: CassiniTA:Solarmin		SolarCondition
 T                       Including impact ionization		UseImpact
-  VARIABLES = "Te(k)" "N2" "CH4" "H2"                                                                
- tmp_hR(num_Ri)   2.7050000000000000E+03
- tmp_hn(num_nu)   3.0050000000000000E+03
- tmp_hT(num_Te)   9.5715000000000000E+04
+  VARIABLES = "Te(k)" "N2" "CH4" "H2"                                           
+                      
+ tmp_hR(num_Ri)   2705.00000000000     
+ tmp_hn(num_nu)   3005.00000000000     
+ tmp_hT(num_Te)   95715.0000000000     
 
 #UPSTREAM
 0.1                     Proton density(cm^-3)		SW_LP_dim
-0.05                     N^+ density(cm^-3)		SW_LP_dim
+0.05                     N^+ density(cm^-3)		SW_MP_dim
 500.0                   plasma temperature(eV) 200+50		plas_T_ev
- AverageIonMass=   5.3333333333333330
- plas_T=   1.0884375000000000E+06
+ MassFluid_I(1)=   5.33333333333333     
+ plas_T=   1088437.50000000     
 
 #USECOSSZA
 T		UseCosSZA (default/unchanged)
@@ -155,7 +157,9 @@ T			DoReplaceDensity (default/unchanged)
 5.0			SpeciesPercentCheck
 
 #RESTARTOUTFILE
-block			TypeRestartInFile		TypeRestartOutFile (default/unchanged)
+  VARIABLES = "Te(k)" "N2" "CH4" "H2"                                           
+                      
+block			TypeRestartInFile		TypeRestartOutFile
 
 #SAVERESTART
 F			DoSaveRestart
@@ -187,38 +191,82 @@ z=0 MHD idl             StringPlot
 #STOP
 50			MaxIteration
 -1.0			tSimulationMax (default/unchanged)
- GM_set_parameters: CHECK iSession = 1
+ GM_set_parameters: CHECK iSession =           1
   
- tmp_ion(:,1)=   4.1956998760000000E-05   0.5948973894000000   2.4289999010000001   3.0220000740000001   1.8966035460000001E+02   5.3880322269999999E+02   8.2421002199999987E+02
- BodyRhoSpecies_dim_II(iSpecies,1)=   1.0230866028539277E-05   2.7557508040227021   8.5329236535273125   5.6536787576969498   3.4493753247825438   1.4659013856325371E+03   1.4727414903685337E+03
- BATS_setup starting initial refinement level  1
- parallel_refine starting to refine  8  block(s) on PE 0
- BATS_setup starting initial refinement level  2
- parallel_refine starting to refine  8  block(s) on PE 0
- BATS_setup starting initial refinement level  3
- parallel_refine starting to refine  64  block(s) on PE 0
-     FixRefinementLevels found  8  blocks to refine
- parallel_refine starting to refine  8  block(s) on PE 0
- renumber_octree: finished renumbering 624  blocks.
-     total blocks =  624
- itest,jtest,ktest,blktest= 1 1 1 1
- coefx=   0.8919893698731839   0.8919893698731839   0.8919893698731839   0.8919893698731839   0.8919893698731839   0.8919893698731839   0.8919893698731839
- coefy=   0.2438417029554780   4.6323128208750246   3.5129370116542100   1.8708400460803396   1.8187118399400820E-02   2.7206618740822486   1.7868521991455886
- cosSZA=   0.3364840548097761
- n= 7
- rhoSpecies_GBI(i,j,k,globalBLK,1:nSpecies)=   0.1250000000000000  19.1555080960310136   1.0532152396795264E+02   1.7882783895991733E+02   1.0800551555589796E+04   5.2628548760423721E+04   7.3665392503644849E+04
- CosSZAB_I(:)   1.0000000000000000   0.9396926207859084   0.7660444431189780   0.5000000000000001   0.3420201433256688   0.1736481776669304   8.7155742747658138E-02   6.1230317691118863E-17  -8.7155742747658013E-02  -0.1736481776669303  -0.3420201433256687  -0.4999999999999998  -1.0000000000000000
- dtm, dtmp1,m=  -1.9940185867887266   2.1110214647881973 -1073748352
- p_BLK(testcell)=   0.3867026227554510
- tmp_ion(:,n)=   1.5843300210000000E-04   1.2086615560000000   3.2469999789999999   5.6919999120000000   2.1976063539999998E+02   6.7314398190000009E+02   8.9263494869999988E+02
-
+ tmp_ion(:,1)=  4.195699876000000E-005  0.594897389400000     
+   2.42899990100000        3.02200007400000        189.660354600000     
+   538.803222700000        824.210022000000     
+ BodyRhoSpecies_dim_II(iSpecies,1)=  1.023086602853928E-005
+   2.75575080402270        8.53292365352731        5.65367875769695     
+   3.44937532478254        1465.90138563254        1472.74149036853     
+ tmp_ion(:,1)=  4.195699876000000E-005  0.594897389400000     
+   2.42899990100000        3.02200007400000        189.660354600000     
+   538.803222700000        824.210022000000     
+ BodyRhoSpecies_dim_II(iSpecies,1)=  1.023086602853928E-005
+   2.75575080402270        8.53292365352731        5.65367875769695     
+   3.44937532478254        1465.90138563254        1472.74149036853     
+ BATS_setup starting initial refinement level            1
+ parallel_refine starting to refine            8  block(s) on PE 0
+ BATS_setup starting initial refinement level            2
+ parallel_refine starting to refine            8  block(s) on PE 0
+ BATS_setup starting initial refinement level            3
+ parallel_refine starting to refine           64  block(s) on PE 0
+     FixRefinementLevels found            8  blocks to refine
+ parallel_refine starting to refine            8  block(s) on PE 0
+ renumber_octree: finished renumbering         624  blocks.
+     total blocks =          624
+ itest,jtest,ktest,blktest=           1           1           1           1
+ coefx=  0.902374299222751       0.902374299222751       0.902374299222751     
+  0.902374299222751       0.902374299222751       0.902374299222751     
+  0.902374299222751     
+ coefy=  0.243841702955478        4.63231282087502        3.51293701165421     
+   1.87084004608034       1.818711839940082E-002   2.72066187408225     
+   1.78685219914559     
+ cosSZA=  0.352061448834126     
+ n=           5
+ rhoSpecies_GBI(i,j,k,globalBLK,1:nSpecies)=  0.125000000000000     
+   14.6397655967351        85.5775563197058        126.457965004034     
+   9643.91666421629        46876.4344963765        72639.8092932112     
+ CosSZAB_I(:)   1.00000000000000       0.939692620785908     
+  0.766044443118978       0.500000000000000       0.342020143325669     
+  0.173648177666930       8.715574274765812E-002  6.123233995736766E-017
+ -8.715574274765824E-002 -0.173648177666930      -0.342020143325669     
+ -0.500000000000000       -1.00000000000000     
+ dtm, dtmp1,m=  0.000000000000000E+000  0.000000000000000E+000           0
+ p_BLK(testcell)=  0.362548210330118     
+ tmp_ion(:,n)=  9.580360347000000E-005  0.891976475700000     
+   2.61400008200000        3.99900007200000        194.222518900000     
+   593.395019500000        870.199096700000     
+ itest,jtest,ktest,blktest=           1           1           1           1
+ coefx=  0.645865623589952       0.645865623589952       0.645865623589952     
+  0.645865623589952       0.645865623589952       0.645865623589952     
+  0.645865623589952     
+ coefy=  0.243841702955478        4.63231282087502        3.51293701165421     
+   1.87084004608034       1.818711839940082E-002   2.72066187408225     
+   1.78685219914559     
+ cosSZA= -3.270156461507156E-002
+ n=           5
+ rhoSpecies_GBI(i,j,k,globalBLK,1:nSpecies)=  0.125000000000000     
+   10.7269970297938        61.2513031735706        90.5110578787496     
+   6902.53950666435        33551.3518323312        51991.2366376405     
+ CosSZAB_I(:)   1.00000000000000       0.939692620785908     
+  0.766044443118978       0.500000000000000       0.342020143325669     
+  0.173648177666930       8.715574274765812E-002  6.123233995736766E-017
+ -8.715574274765824E-002 -0.173648177666930      -0.342020143325669     
+ -0.500000000000000       -1.00000000000000     
+ dtm, dtmp1,m=  0.000000000000000E+000  0.000000000000000E+000           0
+ p_BLK(testcell)=  0.259500636855010     
+ tmp_ion(:,n)=  9.580360347000000E-005  0.891976475700000     
+   2.61400008200000        3.99900007200000        194.222518900000     
+   593.395019500000        870.199096700000     
+ 
     Begin Numerical Simulation
     --------------------------
-
-
+ 
+ 
     Planetary Parameters
     --------------------
-
+ 
           Name:            TITAN  (---!---Defaults Modified---!---)  
           Radius:           2.57500E+06
           Mass:             1.34600E+23
@@ -226,24 +274,24 @@ z=0 MHD idl             StringPlot
           Rotation Period: Not Rotating
           Orbit Period:     1.37765E+06
           Iono Height:      0.00000E+00
-
+ 
     Physical Parameters
     -------------------
-
+ 
           I/O Unit type: PLANETARY            Normalization: SOLARWIND
-
+ 
           gamma:         1.66666667
-
+ 
           rBody:         1.28155E+00, rPlanet:     2.57500E+06
-            Body_N_dim:  1.00000E+06, Body_T_dim:  3.00000E+02
-          Bdp:           0.00000E+00, Tilt:       -0.00000E+00
+          BodyNDim:      1.00000E+06, BodyTDim:    3.00000E+02
+          Bdp:           0.00000E+00, Tilt:        0.00000E+00
           Gravity is used, gBody= -2.32918E-04
-
+ 
           body2: .false.
-
+ 
           cLIGHTfactor:  1.00000E+00, cLIGHT:      2.44984E+03
-
-
+ 
+ 
           SW_n_dim   [/cc  ]:        0.150000,  SW_n:         0.187500
           SW_Rho_dim [Mp/cc]:        0.800000,  SW_Rho:       1.000000
           SW_Ux_dim  [km/s ]:      120.000000,  SW_Ux:        0.980622
@@ -254,87 +302,96 @@ z=0 MHD idl             StringPlot
           SW_By_dim  [nT   ]:        0.000000,  SW_By:        0.000000
           SW_Bz_dim  [nT   ]:       -5.000000,  SW_Bz:       -0.996424
           SW_T_dim   [K    ]:  1088437.500000
-
+ 
     MHD Numerical Solution Parameters
     ---------------------------------
-
+ 
           2nd-Order Scheme
           with limiter minmod
           Steady state calculation
           Linde Flux Function
           Explicit Time Stepping
-
+ 
     Other Runtime Parameters
     ------------------------
-
- Available processors: nProc =  1
-
+ 
+ Available processors: nProc =            2
+ 
  After initial grid setup:
-   nBlockMax =  624  nBLK =  2000
-   Total number of blocks used =  624
-   Total number of cells =  39936
-   Smallest cell dx:    3.6205210937500003E-02   Largest cell dx:    0.1448208437500000
-
+   nBlockMax =          596  nBLK =         1000
+   Total number of blocks used =          624
+   Total number of cells =       134784
+   Smallest cell dx:   2.413680729166667E-002   Largest cell dx: 
+  9.654722916666668E-002
+ 
  root blocks:        4       2       1
- nCells:             4       4       4
+ nCells:             6       6       6
  x:               -32.00000000     96.00000000
  y:               -64.00000000     64.00000000
  z:               -64.00000000     64.00000000
  multistage:         2
  cfl:               0.80000000
-
+ 
 -------------------------------------------------------------------------------
 SORTED TIMING at step       0    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                   3.70    100.00         1         1
+BATSRUS                   1.33    100.00         1         1
 -------------------------------------------------------------------------------
-setup                     3.70    100.00         1         1
-exch_msgs                 0.34      9.19         1         1
+setup                     1.33    100.00         1         1
+exch_msgs                 0.13      9.88         1         1
+load_balance              0.11      8.45         1         1
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
- First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   1.4648437500000000E-03
-Speed is   8069.6 c/s/p after     59.1 s at N =      10
-Speed is   7985.6 c/s/p after    109.3 s at N =      20
-Speed is   8066.0 c/s/p after    159.4 s at N =      30
-Speed is   8051.6 c/s/p after    209.6 s at N =      40
-Speed is   8111.1 c/s/p after    259.8 s at N =      50
-
+ First error for Time step reduction, min(factor) (PE=           0 ) at iter=
+           1  with value=  1.464843750000000E-003
+Speed is  39779.2 c/s/p after     19.2 s at N =      10
+Speed is  38077.6 c/s/p after     36.8 s at N =      20
+Speed is  40183.2 c/s/p after     53.9 s at N =      30
+Speed is  42012.0 c/s/p after     70.7 s at N =      40
+Speed is  42363.9 c/s/p after     87.3 s at N =      50
+ 
     Finished Numerical Simulation
     -----------------------------
   Message passing for plot files ...
  Starting assign_node_numbers ...
-  nBlockALL= 624  NodesPerBlock= 125  unreduced total= 78000  nNodeALL= 43712
+  nBlockALL=         624  NodesPerBlock=         343  unreduced total=
+      214032  nNodeALL=      143232
 saved ifile= 3 type=x=0_mhd    at n_step=     50
 saved ifile= 4 type=y=0_mhd    at n_step=     50
 saved ifile= 5 type=z=0_mhd    at n_step=     50
 saved ifile= 6 type=x=0_mhd    at n_step=     50
 saved ifile= 7 type=y=0_mhd    at n_step=     50
 saved ifile= 8 type=z=0_mhd    at n_step=     50
-
+ 
     Finished Saving Output Files
     ----------------------------
 -------------------------------------------------------------------------------
 SORTED TIMING from step       0 to      50    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                 272.44    100.00         1         1
+BATSRUS                  91.80    100.00         1         1
 -------------------------------------------------------------------------------
-advance                 256.48     94.14        50        50
-calc_sources             76.56     28.10        50     62400
-calc_facevalues          63.48     23.30        50     62400
-calc_fluxes              56.95     20.90        50     62400
-exch_msgs                20.82      7.64        51       101
-update_states            15.61      5.73        50     62400
-update_check             13.23      4.86        50       100
-save_plot                12.10      4.44         1         6
-set_BCs                   3.32      1.22        50     14800
-save_logfile              3.30      1.21        50        50
-calc_face_bfo             3.18      1.17        50     16000
-calc_fluxes_bfo           1.06      0.39        50     16000
-send_cons_flux            0.21      0.08        50       100
+advance                  85.59     93.23        50        50
+calc_fluxes              35.56     38.74        50     31200
+calc_sources             19.04     20.74        50     31200
+calc_facevalues          12.13     13.22        50     31200
+exch_msgs                 8.39      9.14        51       101
+save_plot                 3.92      4.27         1         6
+update_check              3.27      3.56        50       100
+update_states             3.07      3.34        50     31200
+save_logfile              1.75      1.91        50        50
+barrier-expl2             1.60      1.74        50       100
+calc_face_bfo             0.70      0.77        50      8000
+set_BCs                   0.64      0.70        50      7400
+barrier-expl1             0.39      0.42        50       100
+calc_fluxes_bfo           0.33      0.36        50      8000
+send_cons_flux            0.07      0.08        50       100
 -------------------------------------------------------------------------------
 Error_report for Time step reduction, min(factor)
- OCCURED first= 1  last= 16  count_max= 20  count_sum= 20
- VALUES min=   1.4648437500000000E-03  max=   0.7500000000000000  mean=   0.3109130859375000  last=   0.7500000000000000  last_sum=   0.7500000000000000
-
+ OCCURED first=           1  last=           5  count_max=          10 
+  count_sum=          10
+ VALUES min=  1.464843750000000E-003  max=  0.375000000000000       mean=
+  0.207861328125000       last=  0.375000000000000       last_sum=
+  0.375000000000000     
+ 
