@@ -27,8 +27,8 @@ my $Empty = "-Planet=earth_simple -Grid=earth_211 -Length=tiny_simple".
     " -B0source=empty -Cfl=empty -Conservative=empty".
     " -Corotation=empty -Divb=empty -Reschange=empty".
     " -Implicit=empty".                                    #^CFG IF IMPLICIT
-    "-Inner=empty -Message=empty -Outer=empty".
-    "-Stage=empty -Time=empty -Timestep=empty -Upstream=empty";
+    " -Inner=empty -Message=empty -Outer=empty".
+    " -Stage=empty -Time=empty -Timestep=empty -Upstream=empty";
 
 ###########################################################################
 if($Table =~ /test/i){
