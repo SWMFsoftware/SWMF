@@ -368,11 +368,11 @@ subroutine IO_GetNonGridBasedPotential(PotentialOut, iError)
         endif
 
         if (index(EIE_NameOfEFieldModel,'weimer96') > 0) then
-           call start_timing("weimer")
+           call timing_start("weimer")
            call WEIEPOT96(iYear, iMonth, iDay, iHour, iMinute, IOr_NeedSWV, &
                 IOr_NeedIMFBy, IOr_NeedIMFBz, iHemisphere, iChange, &
                 Lat, MLT, ETheta, EPhi, Potential)
-           call end_timing("weimer")
+           call timing_stop("weimer")
            Potential = Potential * 1000.0
            iChange = 0
         endif
