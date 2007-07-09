@@ -11,12 +11,12 @@ include ../../../Makefile.conf
 # OBJECT FILE FOR THE WRAPPER
 
 OBJ_WRAPPER = \
-	IE_wrapper.o
+	PS_wrapper.o
 
 #
 #	Making library
 #
-MY_LIB = ${LIBDIR}/libIE.a
+MY_LIB = ${LIBDIR}/libPS.a
 
 
 LIB:
@@ -29,7 +29,7 @@ ${MY_LIB}: ${OBJ_WRAPPER} ${MAKEFILE_COMP_SELECT}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJ_WRAPPER}
 
-IE_wrapper.o: ${LIBRARYDIR}/CON_comp_info.o
+PS_wrapper.o: ${LIBRARYDIR}/CON_comp_info.o
 
 #
 #	cleaning
