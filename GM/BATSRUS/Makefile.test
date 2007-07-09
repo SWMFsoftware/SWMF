@@ -334,7 +334,7 @@ test_venus_run:
 	cd ${TESTDIR}; ./PostProc.pl -M -o VenusTest
 
 test_venus_check:
-	${SCRIPTDIR}/DiffNum.pl -r=1e-5 \
+	${SCRIPTDIR}/DiffNum.pl -r=1e-5 -a=1e-17 \
 		Param/VENUS/TestOutput/log_n000001.log \
 		${TESTDIR}/VenusTest/GM/log_n000001.log > test_venus.diff
 	ls -l test_venus.diff
