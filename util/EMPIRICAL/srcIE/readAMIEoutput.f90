@@ -2,6 +2,7 @@ subroutine readAMIEoutput(iBLK, IsMirror, iError)
 
   use ModAMIE_Interface
   use ModEIEFiles
+  use ModTimeConvert, ONLY: time_int_to_real
 
   implicit none
 

@@ -2,6 +2,7 @@ subroutine readMHDoutput(iBLK, iError)
 
   use ModMHD_Interface
   use ModEIEFiles
+  use ModTimeConvert, ONLY: time_int_to_real
 
   implicit none
 

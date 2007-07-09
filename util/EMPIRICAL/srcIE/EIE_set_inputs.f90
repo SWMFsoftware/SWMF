@@ -126,6 +126,7 @@ contains
   end subroutine read_in_real
 
   subroutine read_in_time(variable)
+    use ModTimeConvert, ONLY: time_int_to_real
     real*8 :: variable
     integer, dimension(7) :: itime
     iline = iline + 1

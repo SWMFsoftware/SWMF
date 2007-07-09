@@ -3,7 +3,8 @@ program GetEIE
 
   use ModKind
   use ModErrors
-
+  use ModTimeConvert, ONLY: time_int_to_real
+  
   implicit none
 
   character (len=100), dimension(100) :: Lines

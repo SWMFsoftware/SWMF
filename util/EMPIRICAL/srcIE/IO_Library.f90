@@ -277,6 +277,7 @@ subroutine IO_GetNonGridBasedPotential(PotentialOut, iError)
 
   use ModEIE_Interface
   use ModErrors
+  use ModTimeConvert, ONLY: time_real_to_int
 
   implicit none
 

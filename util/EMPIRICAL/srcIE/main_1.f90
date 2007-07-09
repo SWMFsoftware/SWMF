@@ -1,6 +1,7 @@
 program Interface
 
   use ModEIE_Interface
+  use ModTimeConvert, ONLY: time_int_to_real
 
   implicit none
 
