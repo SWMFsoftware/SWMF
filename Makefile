@@ -177,7 +177,7 @@ ESMF_SWMF: LIB
 NOMPI: ENV_CHECK
 	cd ${NOMPIDIR}; make LIB
 
-#^CMG IF GM BEGIN
+#^CMP IF GM BEGIN
 #	Post processing codes for BATSRUS plot files
 #
 PSPH:	ENV_CHECK
