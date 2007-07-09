@@ -21,7 +21,9 @@ LIBSHARE   = ${LIBDIR}/libSHARE.a
 # Utility libraries:  #
 #######################
 
-LIBTIMING = ${LIBDIR}/libTIMING.a
+LIBTIMING      = ${LIBDIR}/libTIMING.a
+LIBINDICES     = ${LIBDIR}/libINDICES.a
+LIBEMPIRICALIE = ${LIBDIR}/libEMPIRICALIE.a
 
 #######################
 # CON infrastructure: #
@@ -56,6 +58,8 @@ LIBSC = ${LIBDIR}/libSC.a       #^CMP IF SC
 LIBSP = ${LIBDIR}/libSP.a       #^CMP IF SP
 
 LIBUA = ${LIBDIR}/libUA.a	#^CMP IF UA
+
+LIBPS = ${LIBDIR}/libPS.a	#^CMP IF PS
 
 #######################
 # Interface part of   #
@@ -107,6 +111,8 @@ EXEOBJECT = swmf.o
 # The order of compilation:
 # - SHAREDIR  : contains shared library               --> libSHARE.a
 # - TIMINGDIR : contains TIMING software library      --> libTIMING.a
+# - INDICESDIR: contains INDICES software library     --> libINDICES.a
+# - EMPIRICALDIR: contains empirical models software library --> libEMPIRICAL.a
 # - LIBRARYDIR: the CON "infrastructure"              --> libLIBRARY.a
 # - COUPLERDIR: the coupling toolkit                  --> libCOUPLER.a
 # - GMDIR .. UADIR: the physics components            --> libGM.a ... libUA.a
@@ -117,6 +123,8 @@ EXEOBJECT = swmf.o
 LIB:
 	@cd ${SHAREDIR};     make LIB
 	@cd ${TIMINGDIR};    make LIB
+	@cd ${DATAREADINDICESDIR};   make LIB
+	@cd ${EMPIRICALIEDIR}; make LIB
 	@cd ${LIBRARYDIR};   make LIB
 	@cd ${COUPLERDIR};   make LIB
 	@cd ${GMDIR};        make LIB	#^CMP IF GM
@@ -128,6 +136,7 @@ LIB:
 	@cd ${SCDIR};        make LIB   #^CMP IF SC
 	@cd ${SPDIR};        make LIB   #^CMP IF SP
 	@cd ${UADIR};        make LIB	#^CMP IF UA
+	@cd ${PSDIR};        make LIB	#^CMP IF PS
 	@cd ${INTERFACEDIR}; make LIB
 	@make DEPEND
 	make ${MY_LIB}
@@ -155,6 +164,8 @@ AR_X = ar -x
 # Extract object files from libraries and collect them into SWMFLIB
 ${SWMFLIB}:	${LIBSHARE} \
 		${LIBTIMING} \
+		${LIBINDICES} \
+		${LIBEMPIRICALIE} \
 		${LIBLIBRARY} \
 		${LIBCOUPLER} \
 		${LIBINTERFACE} \
@@ -167,23 +178,27 @@ ${SWMFLIB}:	${LIBSHARE} \
 		${LIBRB} \
 		${LIBSC} \
 		${LIBSP} \
-		${LIBUA}
-	@rm -rf Tmp_*
-	@mkdir Tmp_SHARE;     cd Tmp_SHARE;     ${AR_X} ${LIBSHARE}
-	@mkdir Tmp_TIMING;    cd Tmp_TIMING;    ${AR_X} ${LIBTIMING} 
-	@mkdir Tmp_LIBRARY;   cd Tmp_LIBRARY;   ${AR_X} ${LIBLIBRARY}
-	@mkdir Tmp_COUPLER;   cd Tmp_COUPLER;   ${AR_X} ${LIBCOUPLER}
-	@mkdir Tmp_INTERFACE; cd Tmp_INTERFACE; ${AR_X} ${LIBINTERFACE}
-	@mkdir Tmp_CONTROL;   cd Tmp_CONTROL;   ${AR_X} ${LIBCONTROL}
-	@mkdir Tmp_LIBGM;     cd Tmp_LIBGM;     ${AR_X} ${LIBGM} #^CMP IF GM
-	@mkdir Tmp_LIBIE;     cd Tmp_LIBIE;     ${AR_X} ${LIBIE} #^CMP IF IE
-	@mkdir Tmp_LIBIH;     cd Tmp_LIBIH;     ${AR_X} ${LIBIH} #^CMP IF IH
-	@mkdir Tmp_LIBIM;     cd Tmp_LIBIM;     ${AR_X} ${LIBIM} #^CMP IF IM
-	@mkdir Tmp_LIBPW;     cd Tmp_LIBPW;     ${AR_X} ${LIBPW} #^CMP IF PW
-	@mkdir Tmp_LIBRB;     cd Tmp_LIBRB;     ${AR_X} ${LIBRB} #^CMP IF RB
-	@mkdir Tmp_LIBSC;     cd Tmp_LIBSC;     ${AR_X} ${LIBSC} #^CMP IF SC
-	@mkdir Tmp_LIBSP;     cd Tmp_LIBSP;     ${AR_X} ${LIBSP} #^CMP IF SP
-	@mkdir Tmp_LIBUA;     cd Tmp_LIBUA;     ${AR_X} ${LIBUA} #^CMP IF UA
+		${LIBUA} \
+		${LIBPS}
+	rm -rf Tmp_*
+	mkdir Tmp_SHARE;       cd Tmp_SHARE;       ${AR_X} ${LIBSHARE}
+	mkdir Tmp_TIMING;      cd Tmp_TIMING;      ${AR_X} ${LIBTIMING} 
+	mkdir Tmp_INDICES;     cd Tmp_INDICES;     ${AR_X} ${LIBINDICES} 
+	mkdir Tmp_EMPIRICALIE; cd Tmp_EMPIRICALIE; ${AR_X} ${LIBEMPIRICALIE} 
+	mkdir Tmp_LIBRARY;     cd Tmp_LIBRARY;   ${AR_X} ${LIBLIBRARY}
+	mkdir Tmp_COUPLER;     cd Tmp_COUPLER;   ${AR_X} ${LIBCOUPLER}
+	mkdir Tmp_INTERFACE;   cd Tmp_INTERFACE; ${AR_X} ${LIBINTERFACE}
+	mkdir Tmp_CONTROL;     cd Tmp_CONTROL;   ${AR_X} ${LIBCONTROL}
+	mkdir Tmp_LIBGM;       cd Tmp_LIBGM;     ${AR_X} ${LIBGM} #^CMP IF GM
+	mkdir Tmp_LIBIE;       cd Tmp_LIBIE;     ${AR_X} ${LIBIE} #^CMP IF IE
+	mkdir Tmp_LIBIH;       cd Tmp_LIBIH;     ${AR_X} ${LIBIH} #^CMP IF IH
+	mkdir Tmp_LIBIM;       cd Tmp_LIBIM;     ${AR_X} ${LIBIM} #^CMP IF IM
+	mkdir Tmp_LIBPW;       cd Tmp_LIBPW;     ${AR_X} ${LIBPW} #^CMP IF PW
+	mkdir Tmp_LIBRB;       cd Tmp_LIBRB;     ${AR_X} ${LIBRB} #^CMP IF RB
+	mkdir Tmp_LIBSC;       cd Tmp_LIBSC;     ${AR_X} ${LIBSC} #^CMP IF SC
+	mkdir Tmp_LIBSP;       cd Tmp_LIBSP;     ${AR_X} ${LIBSP} #^CMP IF SP
+	mkdir Tmp_LIBUA;       cd Tmp_LIBUA;     ${AR_X} ${LIBUA} #^CMP IF UA
+	mkdir Tmp_LIBPS;       cd Tmp_LIBPS;     ${AR_X} ${LIBPS} #^CMP IF PS
 	rm -f ${SWMFLIB}
 	@echo '${AR} ${SWMFLIB} Tmp_*/*.o'
 	@${AR} ${SWMFLIB} Tmp_*/*.o
