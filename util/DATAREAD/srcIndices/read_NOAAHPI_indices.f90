@@ -4,6 +4,8 @@ subroutine read_NOAAHPI_Indices(iOutputError)
 
   use ModKind
   use ModIndices
+  use ModTimeConvert, ONLY: time_real_to_int
+
   implicit none
 
   integer, intent(out) :: iOutputError
@@ -125,6 +127,8 @@ contains
   end subroutine read_values
 
   subroutine merge_hpi_data
+
+    use ModTimeConvert, ONLY: time_int_to_real
 
     itime = 0
 

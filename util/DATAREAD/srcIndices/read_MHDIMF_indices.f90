@@ -4,6 +4,7 @@ subroutine read_MHDIMF_Indices(iOutputError)
 
   use ModKind
   use ModIndices
+  use ModTimeConvert, ONLY: time_int_to_real
   implicit none
 
   integer, intent(out) :: iOutputError
@@ -24,8 +25,6 @@ subroutine read_MHDIMF_Indices(iOutputError)
   real (Real8_) :: time_now, TimeDelay
 
   integer, dimension(7) :: itime
-
-  integer, external :: jday
 
   iOutputError = 0
 

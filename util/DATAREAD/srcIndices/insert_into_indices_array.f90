@@ -2,6 +2,8 @@
 subroutine Insert_into_Indices_Array(array, label_)
 
   use ModIndices
+  use ModTimeConvert, ONLY: time_int_to_real
+  implicit none
 
   real, dimension(6,MaxIndicesEntries), intent(in) :: array
   real, dimension(MaxIndicesEntries) :: index_value
@@ -10,8 +12,8 @@ subroutine Insert_into_Indices_Array(array, label_)
   real*8 :: time_now, dt_min
   integer, dimension(7) :: itime
 
-  integer :: iStart, iEnd, j
-  real    :: f107a
+  integer :: iStart, iEnd, i, j, nPts, nPtsSub
+  real    :: dt, f107a
 
   npts = Number_of_Points(array)
 

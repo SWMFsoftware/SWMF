@@ -4,12 +4,14 @@ subroutine read_NGDC_Indices(iOutputError)
 
   use ModKind
   use ModIndices
+  use CON_geopack, ONLY: CON_recalc, GsmGse_DD, JulianDay
+  use ModTimeConvert, ONLY: time_real_to_int
   implicit none
 
   integer, intent(out) :: iOutputError
 
   integer :: ierror, year, month, i, j, npts, npts_hpi, k
-  integer :: idir, input_coor_system, iday 
+  integer :: input_coor_system, iday 
   logical :: done, found
 
   ! One line of input
@@ -20,12 +22,9 @@ subroutine read_NGDC_Indices(iOutputError)
   real (Real8_), dimension(MaxIndicesEntries) :: ut_new, ut_keep, ut_tmp
   real, dimension(MaxIndicesEntries)   :: data_new, data_keep, data_tmp
 
-  real :: xgse, ygse, zgse, xgsm, ygsm, zgsm
   real (Real8_) :: time_now
 
   integer, dimension(7) :: itime
-
-  integer, external :: jday
 
   iOutputError = 0
 
@@ -172,23 +171,17 @@ subroutine read_NGDC_Indices(iOutputError)
 
   if (Input_Coor_System == GSE_) then
 
-     idir = -1
-
      do i=1,nIndices_V(imf_bx_)
 
         time_now = IndexTimes_TV(i,imf_bx_)
         call time_real_to_int(time_now, itime)
 
-        iday = jday(itime(1),itime(2),itime(3))
-        call RECALC(itime(1),iday,itime(4),itime(5),itime(6))
+        iday = JulianDay(itime(1),itime(2),itime(3))
+        call CON_recalc(itime(1),iday,itime(4),itime(5),itime(6),0)
 
-        xgse = Indices_TV(i,imf_bx_)
-        ygse = Indices_TV(i,imf_by_)
-        zgse = Indices_TV(i,imf_bz_)
-        call GSMGSE(XGSM,YGSM,ZGSM,XGSE,YGSE,ZGSE,idir)
-        Indices_TV(i,imf_bx_) = xgsm
-        Indices_TV(i,imf_by_) = ygsm
-        Indices_TV(i,imf_bz_) = zgsm
+        ! Convert from GSE to GSM
+        Indices_TV(i,imf_bx_:imf_bz_) = &
+             matmul(GsmGse_DD, Indices_TV(i,imf_bx_:imf_bz_))
 
      enddo
 
@@ -252,6 +245,8 @@ contains
   end subroutine read_values
 
   subroutine merge_hpi_data
+
+    use ModTimeConvert, ONLY: time_int_to_real
 
     itime = 0
 
