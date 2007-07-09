@@ -334,6 +334,7 @@ rundir: ENV_CHECK
 	cd ${SCDIR}; make rundir                 #^CMP IF SC
 	cd ${SPDIR}; make rundir                 #^CMP IF SP
 	cd ${UADIR}; make rundir                 #^CMP IF UA
+	cd ${PSDIR}; make rundir                 #^CMP IF PS
 	@touch CON/Scripts/${OS}/TMP_${MACHINE}
 	cp CON/Scripts/${OS}/*${MACHINE}* ${RUNDIR}/
 	@rm -rf ${RUNDIR}/TMP_${MACHINE} CON/Scripts/${OS}/TMP_${MACHINE}
