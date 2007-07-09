@@ -33,6 +33,7 @@ OBJECTS = \
 	hmr89.o\
 	iz94.o\
 	ihp.o\
+	merge_str.o\
 	MHD_Library.o
 
 DEPEND:
