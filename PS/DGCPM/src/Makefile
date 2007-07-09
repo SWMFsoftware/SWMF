@@ -75,11 +75,4 @@ dgcpm010:
 dgcpm.exe:	${MODULES} ${OBJECTS_010} dgcpm_main_010.o
 	$(COMPILE.f90) $(LFLAGS) -o dgcpm.exe ${MODULES} ${OBJECTS_010} dgcpm_main_010.o
 
-clean:
-	/bin/rm -f *.o *.mod *.exe
-
-distclean:
-	/bin/rm -f *.o *.mod *.exe
-
-# keep this line
-
+distclean: clean

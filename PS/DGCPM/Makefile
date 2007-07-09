@@ -1,5 +1,3 @@
-
-include ../../Makefile.conf
 include ../../Makefile.def
 
 install:
