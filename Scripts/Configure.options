@@ -53,6 +53,7 @@ UA			ON NEEDS IE		#^CMP IF UA
 PW			ON			#^CMP IF PW
 RB                      ON                      #^CMP IF RB
 SP			ON			#^CMP IF SP
+PS			ON			#^CMP IF PS
 
 #						#^CMP IF _FALSE_ BEGIN
 # This is always OFF and 
