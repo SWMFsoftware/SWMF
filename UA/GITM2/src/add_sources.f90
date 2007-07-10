@@ -4,7 +4,7 @@ subroutine add_sources
   use ModGITM
   use ModSources
   use ModInputs
-  use ModUser
+  use ModUserGITM
 
   implicit none
 

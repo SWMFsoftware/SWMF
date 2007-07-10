@@ -1,5 +1,5 @@
 
-module ModUser
+module ModUserGITM
 
   use ModGITM
 
@@ -12,4 +12,4 @@ module ModUser
   integer :: nVarsUser3d=0
   integer :: nVarsUser2d=0
 
-end module ModUser
+end module ModUserGITM

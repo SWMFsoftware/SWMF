@@ -1,7 +1,7 @@
 
 ! ----------------------------------------------------------------
 ! If you want to output some specific variables, then do that here.
-! In ModUser, there are two variables defined, UserData2D and UserData3D.
+! In ModUserGITM, there are two variables defined, UserData2D and UserData3D.
 ! To output variables:
 ! 1. Figure out which variable you want to output.
 ! 2. Go into the code where the variable is set and copy it into
@@ -14,7 +14,7 @@
 !    Lon, Lat, and Alt). Change nVarsUser3d or nVarsUser2d in the 
 !    subroutines towards the top of this file.
 ! 6. If you add more than 40 variables, you probably should check 
-!    nUserOutputs in ModUser.f90 and make sure that this number is
+!    nUserOutputs in ModUserGITM.f90 and make sure that this number is
 !    larger than the number of variables that you added.
 ! 7. Recompile and run. Debug. Repeat 7.
 ! ----------------------------------------------------------------
@@ -25,7 +25,7 @@
 
 subroutine set_nVarsUser3d
 
-  use ModUser
+  use ModUserGITM
 
   ! Make sure to include Lat, Lon, and Alt
 
@@ -42,7 +42,7 @@ end subroutine set_nVarsUser3d
 
 subroutine set_nVarsUser2d
 
-  use ModUser
+  use ModUserGITM
 
   ! Make sure to include Lat, Lon, and Alt
 
@@ -59,7 +59,7 @@ end subroutine set_nVarsUser2d
 
 subroutine output_header_user(cType, iOutputUnit_)
 
-  use ModUser
+  use ModUserGITM
 
   implicit none
 
@@ -125,7 +125,7 @@ end subroutine output_header_user
 subroutine output_3dUser(iBlock, iOutputUnit_)
 
   use ModGITM
-  use ModUser
+  use ModUserGITM
 
   implicit none
 
@@ -153,7 +153,7 @@ end subroutine output_3dUser
 subroutine output_2dUser(iBlock, iOutputUnit_)
 
   use ModGITM
-  use ModUser
+  use ModUserGITM
 
   implicit none
 

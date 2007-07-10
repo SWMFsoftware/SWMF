@@ -53,7 +53,7 @@ subroutine output(dir, iBlock, iOutputType)
   use ModTime
   use ModInputs
   use ModSources
-  use ModUser, only: nVarsUser2d, nVarsUser3d
+  use ModUserGITM, only: nVarsUser2d, nVarsUser3d
 
   implicit none
 

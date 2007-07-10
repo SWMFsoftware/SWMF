@@ -8,7 +8,7 @@ subroutine aurora(iBlock)
   use ModTime, only : tSimulation
   use ModInputs
   use ModConstants
-  use ModUser
+  use ModUserGITM
 
   implicit none
 

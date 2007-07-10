@@ -4,7 +4,7 @@ subroutine get_potential(iBlock)
   use ModTime
   use ModIndicesInterfaces
   use ModInputs
-  use ModUser
+  use ModUserGITM
 
   implicit none
 
