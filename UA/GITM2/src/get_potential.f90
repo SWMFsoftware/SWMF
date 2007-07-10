@@ -99,9 +99,9 @@ subroutine get_potential(iBlock)
      Lines(10) = ""
      Lines(11) = "#END"
 
-     call IE_set_inputs(Lines)
+     call EIE_set_inputs(Lines)
 
-     call IE_Initialize(iError)
+     call EIE_Initialize(iError)
 
      if (iError /= 0) then
         write(*,*) &
