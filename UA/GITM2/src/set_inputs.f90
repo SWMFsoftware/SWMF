@@ -367,6 +367,16 @@ subroutine set_inputs
               write(*,*) "KappaTemp0    (thermal conductivity, real)"
            endif
 
+        case ("#VERTICALSOURCES")
+           call read_in_logical(UseEddyInSolver, iError)
+           call read_in_logical(UseNeutralFrictionInSolver, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #VERTICALSOURCES:'
+              write(*,*) '#VERTICALSOURCES'
+              write(*,*) "UseEddyInSolver              (logical)"
+              write(*,*) "UseNeutralFrictionInSolver   (logical)"
+           endif
+
         case ("#DIFFUSION")
            call read_in_logical(UseDiffusion, iError)
            if (UseDiffusion .and. iError == 0) then
