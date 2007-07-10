@@ -163,10 +163,15 @@ subroutine mhd_trace (Lat,Lon,re,iLat,iLon,np, &
   nAlt = iAlt-1 + MinAlt
 
   ! Fill in points below rBody
-  call trace_dipole(Re,Lat,nAlt,MinAlt,FieldLength_I,Bfield_I,RadialDist_I,Ro1)
+  if (IsFoundLine) &
+       call trace_dipole(Re,Lat,nAlt,MinAlt,FieldLength_I,&
+                         Bfield_I,RadialDist_I,Ro1)
   
   ! Field lines fully inside rBody
   if (Lat <= Latmin) then
+     nAlt=2*MinAlt
+     call trace_dipole(Re,Lat,nAlt,MinAlt,FieldLength_I,&
+                       Bfield_I,RadialDist_I,Ro1)
      xmlt1= (Lon-cPi)*12./cPi   ! mlt in hr           
      if (xmlt1.lt.0.) xmlt1=xmlt1+24.
      bo1=Bfield_I(nAlt/2)
