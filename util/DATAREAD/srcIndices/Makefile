@@ -18,7 +18,9 @@ OBJECTS = \
 	read_MHDIMF_indices.o\
 	insert_into_indices_array.o\
 	indices_set_inputs.o\
-	indices_library.o
+	indices_library.o\
+	IO_library.o\
+	IO_set_inputs.o
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl -I${SHAREDIR} ${MODULES}
