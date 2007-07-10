@@ -101,10 +101,10 @@ sub get_settings{
 sub install_code{
 
     return unless $Compiler =~ /ifort/ and $OS =~ /Linux/;
-    # Fix object list for Linux/ifort compiler (this is not kosher)
+    # Unfix object list for Linux/ifort compiler (this is not kosher)
     @ARGV = ($SrcMakefile);
     while (<>){
-	s/-lSHARE (.*ModIons.o)/-lSHARE/;
+	s/-lSHARE.*ModIons.o/-lSHARE/;
 	print;
     }
 }
