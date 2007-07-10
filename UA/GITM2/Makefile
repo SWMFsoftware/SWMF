@@ -4,8 +4,8 @@ include Makefile.def
 
 ABDIR   = srcSphereAB
 EDDIR   = srcRudy
-IEDIR   = srcIE
-IODIR   = srcIO
+IEDIR   = ${EMPIRICALIEDIR}
+IODIR   = ${DATAREADINDICESDIR}
 MAINDIR = src
 
 PLANET=earth
@@ -39,8 +39,7 @@ GITM2 = ${DIR}/UA/GITM2
 LIB:
 	cd $(ABDIR)     ; make                                         LIB
 	cd $(EDDIR)     ; make LIBPREV=${GITM2}/${ABDIR}/libSphere.a   LIBADD
-	cd $(IODIR)     ; make LIBPREV=${GITM2}/${EDDIR}/libABIEED.a   LIBADD
-	cd $(MAINDIR)   ; make LIBPREV=${GITM2}/${IODIR}/libABIEEDIO.a LIB
+	cd $(MAINDIR)   ; make LIBPREV=${GITM2}/${EDDIR}/libABIEED.a   LIB
 	cd srcInterface ; make LIBPREV=${GITM2}/${MAINDIR}/libUA.a     LIB
 
 nompirun:
