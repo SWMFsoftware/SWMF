@@ -121,6 +121,9 @@ subroutine mhd_trace (Lat,Lon,re,iLat,iLon,np, &
   real,   intent(out) :: RadialDist_I(np),FieldLength_I(np),Bfield_I(np),&
                          volume1,ro1,xmlt1,bo1
   integer,intent(out) :: nAlt
+
+  ! Number of points covering the gap from 1 Re to rBody 
+  integer, parameter :: MinAlt = 25
   
   integer, parameter :: nd=3
   integer ::i,j,n,ii,iopt,ind(np),iPoint,iAlt
@@ -135,8 +138,9 @@ subroutine mhd_trace (Lat,Lon,re,iLat,iLon,np, &
   !----------------------------------------------------------------------------
   
   ! Put BufferLine_VI indexed by line number into StateLine_CIIV
-  
-  iAlt = 1
+
+  ! Start after MinAlt points inside rBody
+  iAlt = MinAlt
   IsFoundLine=.false.
   UseDipole  =.false.
   FieldTrace: do iPoint = 1,nPoint
@@ -155,12 +159,14 @@ subroutine mhd_trace (Lat,Lon,re,iLat,iLon,np, &
      endif
   end do FieldTrace
 
-  nAlt = iAlt-1
+  ! Add points for the other end inside rBody
+  nAlt = iAlt-1 + MinAlt
+
+  ! Fill in points below rBody
+  call trace_dipole(Re,Lat,nAlt,MinAlt,FieldLength_I,Bfield_I,RadialDist_I,Ro1)
   
-  ! If Lat <= LatMin degrees then use dipole values
+  ! Field lines fully inside rBody
   if (Lat <= Latmin) then
-     nAlt=100
-     call trace_dipole(re,Lat,nAlt,FieldLength_I,Bfield_I,RadialDist_I,ro1)
      xmlt1= (Lon-cPi)*12./cPi   ! mlt in hr           
      if (xmlt1.lt.0.) xmlt1=xmlt1+24.
      bo1=Bfield_I(nAlt/2)
@@ -175,13 +181,19 @@ subroutine mhd_trace (Lat,Lon,re,iLat,iLon,np, &
   endif
 
   if (.not. UseDipole) then
-     ro1=sqrt(sum(StateIntegral_IIV(iLat+1,iLon,1:2)**2.0))
+     ro1=sqrt(sum(StateIntegral_IIV(iLat,iLon,1:2)**2.0))
+     !if (iLat==23 .and. iLon==3 )
+     !write(*,*) 'Lat,Lon,iLat,iLon,iLineIndex_II(iLon,iLat)',Lat*180.0/cPi,Lon*180.0/cPi,&
+     !     iLat,iLon,iLineIndex_II(iLon,iLat)
+     !write(*,*) 'ro1,StateIntegral_IIV(iLat,iLon,1:2),maxval(RadialDist_I(1:nAlt))',&
+     !     ro1,StateIntegral_IIV(iLat,iLon,1:2),maxval(RadialDist_I(1:nAlt))
+     
      xmlt1=&
-          (atan2(-StateIntegral_IIV(iLat+1,iLon,2),-StateIntegral_IIV(iLat+1,iLon,1))&
+          (atan2(-StateIntegral_IIV(iLat,iLon,2),-StateIntegral_IIV(iLat,iLon,1))&
           -cPi)&
           *12./cPi   ! mlt in hr
-     if (xmlt1.lt.0.) xmlt1=xmlt1+24.
-     bo1=StateIntegral_IIV(iLat+1,iLon,3)
+     if (xmlt1 < 0.) xmlt1=xmlt1+24.
+     bo1=StateIntegral_IIV(iLat,iLon,3)
   endif
   
   ! Calculate the flux tube volume per magnetic flux (volume1)
@@ -192,49 +204,7 @@ subroutine mhd_trace (Lat,Lon,re,iLat,iLon,np, &
      yint(ii)=1./Bmid
   enddo
   call closed(1,n,yint,dss,ss)  ! use closed form
-  if (i.ge.1.and.i.le.ir) volume1=ss*re   ! volume / flux
+  if (i >= 1 .and. i <= ir) volume1=ss*re   ! volume / flux
   
-  end subroutine mhd_trace
+end subroutine mhd_trace
 
-!==============================================================================
-
-subroutine trace_dipole(Re,LatStart,nStep,LineLength_I,Bfield_I,RadialDist_I,L)
-  implicit none
-  
-  integer,intent(in) :: nStep
-  real,   intent(in) :: Re,LatStart
-  real,   intent(out):: LineLength_I(nStep),Bfield_I(nStep),L,&
-                        RadialDist_I(nStep)
-  
-  real, parameter :: MagCoef = 7.84e15   ! nT m^3
-  real    :: Lat,dLat
-  integer :: iStep
-  !----------------------------------------------------------------------------
-
-  dLat = (2.0*LatStart)/nStep
-  LineLength_I(1) = 0.0
-  Lat = LatStart
-
-  L   = 1.0 / cos(LatStart)**2.0
-
-  Bfield_I(1) = MagCoef * sqrt(1+3.0*(sin(Lat))**2.0) &
-          / (Re*L*cos(Lat)**2.0)**3.0  
-  
-  do iStep=2,nStep
-     Lat = Lat-dLat
-     
-     ! Line length determined from: 
-     ! ds/dLat = L*Re*cos(Lat)*sqrt[1+3*sin(Lat)^2]
-     LineLength_I(iStep) = LineLength_I(iStep-1) &
-          + dLat * L * cos(Lat)*sqrt(1.0+3.0*(sin(Lat))**2.0)
-     
-     ! Equation of Earth Dipole field strength:
-     !B = mu * M /4/pi/r^3 *sqrt[1+3*sin(Lat)^2]
-     Bfield_I(iStep) = MagCoef * sqrt(1+3.0*(sin(Lat))**2.0) &
-          / (Re*L*cos(Lat)**2.0)**3.0  
-     
-     RadialDist_I(iStep) = L*cos(Lat)**2.0
-  enddo
-  
-     
-end subroutine trace_dipole
