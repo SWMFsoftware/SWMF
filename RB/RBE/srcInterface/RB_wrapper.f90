@@ -90,11 +90,11 @@ subroutine RB_set_grid
   call set_grid_descriptor( RB_,                 & ! component index
        nDim=2,                                   & ! dimensionality
        nRootBlock_D=(/1,1/),                     & ! single block
-       nCell_D=(/ir+1, ip/),                     & ! size of cell based grid
+       nCell_D=(/ir+2, ip/),                     & ! size of cell based grid
        XyzMin_D=(/cHalf, cHalf/),                & ! min gen.coords for cells
-       XyzMax_D=(/ir+1.5,ip-0.5/),               & ! max gen.coords for cells
+       XyzMax_D=(/ir+2.5,ip-0.5/),               & ! max gen.coords for cells
        TypeCoord='SMG',                          & ! solar magnetic coord
-       Coord1_I=cRadToDeg*xlati(0:ir),           & ! latitude in degrees
+       Coord1_I=cRadToDeg*xlati(0:ir+1),           & ! latitude in degrees
        Coord2_I=cRadToDeg*phi,                   & ! longitude in degrees
        Coord3_I=Radius_I,                        & ! radial size in meters
        IsPeriodic_D=(/.false.,.true./))            ! periodic in longitude
@@ -234,7 +234,7 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   
   if (.not.allocated(StateLine_VI)) then
      allocate(StateLine_VI(nVarLine,nPointLine),&
-          StateIntegral_IIV(iSizeIn,jSizeIn,nIntegralIn))
+          StateIntegral_IIV(0:iSizeIn-1,jSizeIn,nIntegralIn))
   endif
   
   StateLine_VI      = BufferLine_VI
@@ -245,6 +245,7 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   StateLine_VI(2,:) = StateLine_VI(2,:) / rEarth ! m --> Earth Radii
   StateLine_VI(3,:) = StateLine_VI(3,:) / rEarth ! m --> Earth Radii
 
+  !Solar wind values
   StateIntegral_IIV(1,:,4) = StateIntegral_IIV(1,:,4)*1.0e-6      !m^-3 -->/cc
   StateIntegral_IIV(2,:,4) = abs(StateIntegral_IIV(2,:,4))*1.0e-3 !m/s-->km/s
   StateIntegral_IIV(3,:,4) = abs(StateIntegral_IIV(3,:,4))*1.0e-3 !m/s-->km/s
@@ -253,15 +254,14 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   ! create an index array on the first call
   if (IsFirstCall) then
      n = 0
-     do iLat = 0, nLat
-        do iLon = 1, nLon
+     do iLon = 1, nLon
+        do iLat = 0, nLat+1
            n = n+1
            iLineIndex_II(iLon,iLat) = n
         end do
      end do
      IsFirstCall = .false.
   endif
-
 
 end subroutine RB_put_from_gm
 !============================================================================
