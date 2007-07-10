@@ -1,7 +1,5 @@
-
 ABDIR   = ../srcSphereAB
 EDDIR   = ../srcRudy
-IEDIR   = ${EMPIRICALIEDIR}
 IODIR   = ${DATAREADINDICESDIR}
 
 SEARCH_EXTRA = -I${ABDIR} -I${IODIR}
@@ -100,7 +98,7 @@ ${EXE}:	${OBJECTS} ${MODULES} main.o
 	${LINK.f90} ${Lflag1} -o ${EXE} main.o ${OBJECTS} ${MODULES}\
 	-L${ABDIR} -lSphere -L${EDDIR} -lED \
 	-L${LIBDIR} -lEMPIRICALIE -lINDICES \
-	-lSHARE ${IEDIR}/ModEIEConductance.o ${EDDIR}/ModIons.o
+	-lSHARE ${EMPIRICALIEDIR}/ModEIEConductance.o ${EDDIR}/ModIons.o
 
 POST:	PostProcess.f90
 	${LINK.f90} ${PRECISION} ${DEBUG} -o PostProcess.exe PostProcess.f90
