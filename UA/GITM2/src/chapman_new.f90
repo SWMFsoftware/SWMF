@@ -49,6 +49,7 @@ subroutine chapman_integrals(iBlock)
         do iLat = 1, nLats
 
            do iAlt = nAlts, 1, -1
+
               if (iAlt < nAlts) then
                  Integrals(iLon,iLat,iAlt,iSpecies) = &
                       Integrals(iLon,iLat,iAlt+1,iSpecies) + &
@@ -73,6 +74,8 @@ subroutine chapman_integrals(iBlock)
                  erfcy(iLon,iLat,iAlt,iSpecies) = f / (g + y)
               endif
            enddo
+
+           write(*,*) iSpecies, iLon, iLat, Integrals(iLon,iLat,1,iSpecies)
 
         enddo
      enddo

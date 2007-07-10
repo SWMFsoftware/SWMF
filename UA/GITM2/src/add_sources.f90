@@ -26,7 +26,6 @@ subroutine add_sources
      !! To turn off AuroralHeating, turn Use=AuroralHeating.false. in UAM.in
      !! To turn off Conduction, turn UseConduction=.false. in UAM.in
      
-
      Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) = &
           Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) + Dt * ( &
           EuvHeating(1:nLons, 1:nLats, 1:nAlts, iBlock) &
@@ -49,10 +48,22 @@ subroutine add_sources
                    temperature(iLon, iLat, iAlt, iBlock) = &
                    temperature(iLon, iLat, iAlt-1, iBlock)
               do iAlt = 2, nAlts
-                 if (temperature(iLon, iLat, iAlt, iBlock) < 0.0) &
-                      temperature(iLon, iLat, iAlt, iBlock) = &
-                      (temperature(iLon, iLat, iAlt-1, iBlock) +  &
-                      temperature(iLon, iLat, iAlt+1, iBlock))/2.0
+                 if (temperature(iLon, iLat, iAlt, iBlock) < 0.0) then
+                    temperature(iLon, iLat, iAlt, iBlock) = &
+                         (temperature(iLon, iLat, iAlt-1, iBlock) +  &
+                         temperature(iLon, iLat, iAlt+1, iBlock))/2.0
+
+                    write(*,*) "Sources : ", &
+                         temperature(iLon, iLat, iAlt, iBlock), &
+                         EuvHeating(iLon, iLat, iAlt, iBlock) * dt, &
+                         RadCooling(iLon, iLat, iAlt, iBlock) * dt, &
+                         AuroralHeating(iLon, iLat, iAlt) * dt, &
+                         JouleHeating(iLon, iLat, iAlt) * dt, &
+                         Conduction(iLon, iLat, iAlt), &
+                         ChemicalHeatingRate(iLon, iLat, iAlt)
+                    stop
+
+                 endif
               enddo
            enddo
         enddo

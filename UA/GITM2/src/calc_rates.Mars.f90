@@ -82,7 +82,7 @@ trouble = .false.
                   trouble = .true.
             endif
 
-            do iSpecies = 1,nSpeciesTotal
+            do iSpecies = 1,nSpecies !Total
                  if( .not. (NDensityS(iLon,iLat,iAlt,iSpecies,iBlock) < 0.0) .and. &
                      .not. (NDensityS(iLon,iLat,iAlt,iSpecies,iBlock) > 0.0) ) then
               	   write(*,*)'NDensityS(',iLon,iLat,iAlt,iSpecies,iBlock,') = ',&
@@ -121,8 +121,7 @@ trouble = .false.
                   NDensity(iLon,iLat,iAlt,iBlock)
                   trouble = .true.
             endif
-           
-            
+
           enddo
         enddo
       enddo
@@ -172,7 +171,7 @@ trouble = .false.
           NDensityS(:,:,:,iSpecies,iBlock)/mnd
   enddo
 
-  MMM_3D(1:nLons,1:nLats,1:nAlts,iBlock) = MeanMajorMass(1:nLons,1:nLats,1:nAlts)/AMU
+!  MMM_3D(1:nLons,1:nLats,1:nAlts,iBlock) = MeanMajorMass(1:nLons,1:nLats,1:nAlts)/AMU
 
 ! Once again, in the corners, the meanmajormass is 0.
 
@@ -370,7 +369,7 @@ trouble = .false.
 
      ViscCoef(:,:,iAlt) =  kmmix(1:nLons,1:nLats,iAlt)
 
-     Visc_3D(:,:,iAlt,iBlock) =  kmmix(1:nLons,1:nLats,iAlt)
+!     Visc_3D(:,:,iAlt,iBlock) =  kmmix(1:nLons,1:nLats,iAlt)
 
 
 ! -------------------------------------------------------------------------------

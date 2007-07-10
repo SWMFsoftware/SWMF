@@ -130,8 +130,8 @@ subroutine output(dir, iBlock, iOutputType)
        iStep, iTimeArray(1:6)
 
   call calc_physics(iBlock)
-  call chapman_integrals(iBlock)
   call calc_rates(iBlock)
+  call chapman_integrals(iBlock)
   if (.not. Is1D) call calc_efield(iBlock)
 
   iBLK = iStartBLK + iBlock

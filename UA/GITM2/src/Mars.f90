@@ -523,7 +523,7 @@ subroutine calc_eddy_diffusion_coefficient(iBlock)
      do iLat = 1, nLats
         do iLon = 1, nLons
 
-           KappaEddyDiffusion(iLon,iLat,iAlt) = min(1.00e+03, &
+           KappaEddyDiffusion(iLon,iLat,iAlt,iBlock) = min(1.00e+03, &
                 (EddyDiffusionCoef*sqrt(NDensity(iLon,iLat,1,iBlock)/ &
                 NDensity(iLon,iLat,iAlt,iBlock)) ) )
 

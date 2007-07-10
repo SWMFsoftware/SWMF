@@ -260,8 +260,6 @@ subroutine advance_vertical_1stage( &
 
   if (UseNeutralFriction .and. UseNeutralFrictionInSolver) then
 
-     write(*,*) "Calc Friction in Vertical Solver"
-
      do iAlt = 1, nAlts
         nVel(iAlt,:) = NewVertVel(iAlt,:)
      enddo

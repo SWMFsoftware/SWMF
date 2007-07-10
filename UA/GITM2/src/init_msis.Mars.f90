@@ -57,8 +57,6 @@ subroutine init_msis
   integer :: iiLon,iiLat,iiAlt
   integer :: iLon,iLat,iAlt, iSpecies, iIon
 
-  write(*,*) "here!"
-
   do iBlock = 1, nBlocks
 
      write(*,*) '==> Now Initializing Mars Background Composition', iBlock   
