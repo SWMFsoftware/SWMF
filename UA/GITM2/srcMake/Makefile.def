@@ -9,4 +9,6 @@ LIBDIR    = ${UADIR}/src
 RUNDIR    = ${UADIR}/run
 BINDIR    = ${UADIR}/src
 SHAREDIR  = ${UADIR}/share/Library/src
+EMPIRICALIEDIR     = ${UADIR}/util/EMPIRICAL/srcIE
+DATAREADINDICESDIR = ${UADIR}/util/DATAREAD/srcIndices
 
