@@ -127,11 +127,11 @@ public:
   }; 
 
   double Measure() {
-    static array_1d<DataType> x_1d(1);
-    static array_1d<DataType> x1_2d(2),x2_2d(2);
-    static array_1d<DataType> x1_3d(3),x2_3d(3),x3_3d(3);
-
     if (measure_value>0.0) return measure_value;
+
+    array_1d<DataType> x_1d(1);
+    array_1d<DataType> x1_2d(2),x2_2d(2);
+    array_1d<DataType> x1_3d(3),x2_3d(3),x3_3d(3);
 
     switch (DIM) {
     case 0 :

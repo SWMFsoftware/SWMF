@@ -69,10 +69,10 @@ public:
   }; 
 //===================================================
   double Measure() {
+    if (measure>0.0) return measure;
+
     array_1d<DataType> x_2d(2);
     array_1d<DataType> x1_3d(3),x2_3d(3);
-
-    if (measure>0.0) return measure;
 
     switch(DIM) {
     case 1:  
