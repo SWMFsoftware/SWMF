@@ -190,7 +190,7 @@ end module rbe_time
 Module ModGmRb
   use rbe_grid,ONLY: nLat => ir, nLon => ip
   real, allocatable :: StateLine_VI(:,:),StateIntegral_IIV(:,:,:)
-  integer :: iLineIndex_II(nLon,0:nLat),nPoint
+  integer :: iLineIndex_II(nLon,0:nLat+1),nPoint
   
 end Module ModGmRb
 !=============================================================================
@@ -759,17 +759,19 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
         xli(i)=rc/cos(xlati1)/cos(xlati1)
         phi1=phi(j)+pi                  ! +x corresponing to noon
 
-
         if (imod.le.2) call tsy_trace(re,rc,xlati1,phi1,t,ps,parmod,imod,np, &
              npf1,dssa,bba,volume1,ro1,xmlt1,bo1,ra)
         if (imod.eq.3) call MHD_trace(xlati1,phi1,re,i,j,np, &
              npf1,dssa,bba,volume1,ro1,xmlt1,bo1,ra)
-        
-        !if (i==25 .and. j==21 )write(*,*) 'xlati1,npf1,volume1,ro1',xlati1*180.0/3.14,npf1,volume1,ro1
-        !if (i==25 .and. j==21 )write(*,*) 'bba(1:npf1)',bba(1:npf1)
-        !if (i==25 .and. j==21 )write(*,*) 'dssa(1:npf1)',dssa(1:npf1)
-        !if (i==25 .and. j==21 )write(*,*) 'ra(1:npf1)',ra(1:npf1)
 
+!        if (i==25 .and. j==21 )write(*,*) 'xlati1,npf1,volume1,ro1',xlati1*180.0/3.14,npf1,volume1,ro1
+!        if (i==25 .and. j==21 )write(*,*) 'ra(33)',ra(33)
+!        if (i==25 .and. j==21 ) then
+!           write(*,*) 'iii,ra(iii),dssa,bba(iii)'
+!           do iii=1,npf1
+!              write(*,*) iii,ra(iii),dssa(iii),bba(iii)
+!           enddo
+!        endif
 !        if (npf1 /= 0) then
 !           write(*,*) 'bba(1),dssa(1),ro1,xmlt1,bo1,ra(1),volume1'
 !           write(*,*) bba(1),dssa(1),ro1,xmlt1,bo1,ra(1),volume1
@@ -873,11 +875,12 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
         !  rm(1)                       rm(m)                               rm(n+1)
         !  bm(1)                       bm(m)                               bm(n+1)
 
+        
         ! Field line integration using Taylor expansion method
         call timing_start('rbe_taylor')
         sumBn(0:nTaylor)=0.
         sumhBn(0:nTaylor)=0.
-        do m=im2-1,1,-1
+        do m=im2-1,1,-1 !im2 = middle of field line
            ! search for the southern conjugate point
            n8=npf
            SEARCH: do ii=m,n
@@ -887,11 +890,13 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
               endif
            enddo SEARCH
            n7=n8-1
-
+           
+                      
            ! field line integration at the northern hemisphere
            bs_n=1.
            do iTaylor=0,nTaylor
               bsndss=bs_n*dss(m)
+              ! Sum_m=1^im2-1 (ds*B^n)
               sumBn(iTaylor)=sumBn(iTaylor)+bsndss
               sumhBn(iTaylor)=sumhBn(iTaylor)+hden(rs(m))*bsndss
               bs_n=bs_n*bs(m)
@@ -904,6 +909,7 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
               bs_n=1.
               do iTaylor=0,nTaylor
                  bsndss=bs_n*dss(mir)
+                 ! Sum_m=im2^n7-1 (ds*B^n)
                  sumBn(iTaylor)=sumBn(iTaylor)+bsndss
                  sumhBn(iTaylor)=sumhBn(iTaylor)+hden(rs(mir))*bsndss
                  bs_n=bs_n*bs(mir)
@@ -912,12 +918,14 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
 
            ! add the partial segment near the southern conjugate point
            dssp=dss(n7)*(bm1(m)-bm1(n7))/(bm1(n8)-bm1(n7)) ! partial ds
+           bsp =0.5*(bm1(m)+bm1(n7))
            bs_n=1.
            do iTaylor=0,nTaylor
               bsndss=bs_n*dssp
+              ! Sum_m=1^n7-1 (ds*B^n) + correction
               BnI(iTaylor,m)=sumBn(iTaylor)+bsndss
               hBnI(iTaylor,m)=sumhBn(iTaylor)+hden(rs(n7))*bsndss
-              bs_n=bs_n*bs(n7)
+              bs_n=bs_n*bsp
            enddo
 
            n70=n7
@@ -931,9 +939,12 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
            bm_n=1.
            do iTaylor=0,nTaylor
               BnIbm_n=BnI(iTaylor,m)/bm_n
-              !if (i==25 .and. j==21 ) write(*,*) 'BnIbm_n,BnI(iTaylor,m),bm_n,bm1(m),i,j',BnIbm_n,BnI(iTaylor,m),bm_n,bm1(m),i,j
+              
+              ! ss = int_s(1)^s(m) sqrt(B(m)-B(s)) ds
               ss=ss+a_I(iTaylor)*BnIbm_n
+              ! ss1 = int_s(1)^s(m) 1/sqrt(B(m)-B(s)) ds              
               ss1=ss1+b_I(iTaylor)*BnIbm_n
+              ! ss2 = int_s(1)^s(m) n_H(s)/sqrt(B(m)-B(s)) ds              
               ss2=ss2+b_I(iTaylor)*hBnI(iTaylor,m)/bm_n
               bm_n=bm_n*bm1(m)
            enddo
