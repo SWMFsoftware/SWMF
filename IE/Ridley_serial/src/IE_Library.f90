@@ -260,12 +260,3 @@ subroutine SPS_put_into_ie(Buffer_II, iSize, jSize, NameVar, iBlock)
 
 end subroutine SPS_put_into_ie
 
-subroutine merge_str(String1,String2)
-
-  implicit none
-  character(len=*), intent(in):: String1
-  character(len=*), intent(inout):: String2
-
-  String2 = trim(String1)//String2
-
-end subroutine merge_str
