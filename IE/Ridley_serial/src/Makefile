@@ -29,8 +29,6 @@ MODULES = \
 	IE_ModIo.o\
 	ModIonosphere.o\
 	ModProcIE.o\
-	ModAMIE_Interface.o\
-	ModErrors.o\
 	ModIE_Interface.o\
 	ModFiles.o\
 	ModConductance.o
@@ -42,24 +40,13 @@ MODULES = \
 OBJECTS = \
 	IE_solve.o\
 	IE_wrapper.o\
-	IE_End.o\
 	IE_Initialize.o\
 	IE_Library.o\
-	IO_Library.o\
-	AMIE_Library.o\
-	readAMIEoutput.o\
         iono_conductances.o\
 	iono_currents.o\
         iono_solver.o\
 	Create_Region2_Currents.o\
-        ionosphere.o\
-	wei01.o\
-	wei96.o\
-	weicom.o\
-	mh86.o\
-	hmr89.o\
-	iz94.o\
-	ihp.o
+        ionosphere.o
 
 #
 #	Libraries
