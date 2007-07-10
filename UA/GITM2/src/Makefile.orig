@@ -1,8 +1,8 @@
 
 ABDIR   = ../srcSphereAB
 EDDIR   = ../srcRudy
-IEDIR   = ../srcIE
-IODIR   = ../srcIO
+IEDIR   = ${EMPIRICALIEDIR}
+IODIR   = ${DATAREADINDICESDIR}
 
 SEARCH_EXTRA = -I${ABDIR} -I${IODIR}
 
@@ -98,8 +98,9 @@ GITM:	DEPEND
 
 ${EXE}:	${OBJECTS} ${MODULES} main.o
 	${LINK.f90} ${Lflag1} -o ${EXE} main.o ${OBJECTS} ${MODULES}\
-	-L${ABDIR} -lSphere -L${IODIR} -lindices -L${IEDIR} -lIE\
-	-L${EDDIR} -lED -L${LIBDIR} -lSHARE ${IEDIR}/ModConductance.o ${EDDIR}/ModIons.o
+	-L${ABDIR} -lSphere -L${EDDIR} -lED \
+	-L${LIBDIR} -lEMPIRICALIE -lINDICES \
+	-lSHARE ${IEDIR}/ModEIEConductance.o ${EDDIR}/ModIons.o
 
 POST:	PostProcess.f90
 	${LINK.f90} ${PRECISION} ${DEBUG} -o PostProcess.exe PostProcess.f90
