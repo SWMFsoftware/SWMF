@@ -103,6 +103,7 @@ module ModInputs
 
   logical :: UseEddyInSolver = .false.
   logical :: UseNeutralFrictionInSolver = .false.
+  real    :: MaximumVerticalVelocity = 1000.0
 
   !\
   ! These are logicals to turn off and on forcing terms:

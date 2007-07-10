@@ -276,8 +276,8 @@ subroutine advance_vertical_1stage( &
 
      do iSpecies=1,nSpecies
 
-        NewVertVel(iAlt, iSpecies) = max(-1000.0, NewVertVel(iAlt, iSpecies))
-        NewVertVel(iAlt, iSpecies) = min( 1000.0, NewVertVel(iAlt, iSpecies))
+        NewVertVel(iAlt, iSpecies) = max(-MaximumVerticalVelocity, NewVertVel(iAlt, iSpecies))
+        NewVertVel(iAlt, iSpecies) = min( MaximumVerticalVelocity, NewVertVel(iAlt, iSpecies))
 
         NewVel_GD(iAlt,iUp_) = NewVel_GD(iAlt,iUp_) + &
              NewVertVel(iAlt, iSpecies) * &

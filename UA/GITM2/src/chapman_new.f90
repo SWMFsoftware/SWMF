@@ -75,8 +75,6 @@ subroutine chapman_integrals(iBlock)
               endif
            enddo
 
-           write(*,*) iSpecies, iLon, iLat, Integrals(iLon,iLat,1,iSpecies)
-
         enddo
      enddo
 
