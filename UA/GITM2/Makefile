@@ -97,7 +97,7 @@ test:
 test_compile:
 	make clean
 	./Config.pl -Earth -g=9,9,50,4
-	make GITM IEDIR=`pwd`/srcIE
+	make GITM
 
 TESTDIR = run_test
 
