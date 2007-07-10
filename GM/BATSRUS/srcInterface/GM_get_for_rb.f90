@@ -51,7 +51,7 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVar, &
   use ModMain, ONLY: Time_Simulation
 
   use ModGmRbCoupling, ONLY: &
-       process_integrated_data, &
+       RB_lat, RB_lon, &
        write_integrated_data_tec, write_integrated_data_idl, &
        MHD_SUM_vol, MHD_Xeq, MHD_Yeq, MHD_Beq, MHD_SUM_rho, MHD_SUM_p, NoValue
 
@@ -81,6 +81,8 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVar, &
 
   logical :: DoTestTec, DoTestIdl
   logical :: DoTest, DoTestMe
+
+  integer :: iLat,iLon
   !--------------------------------------------------------------------------
 
   if(NameVar /= 'Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:IMF') &
@@ -130,6 +132,14 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVar, &
      BufferLine_VI(4,iPoint) = &
           sqrt(sum(Buffer_VI(4+Bx_:4+Bz_,iPoint)**2))       ! |B|
   end do
+
+!  write(*,*) 'iLat, iLon, RB_lat(iLat), RB_lon(iLon),MHD_Xeq(iLat,iLon),MHD_Yeq(iLat,iLon), RayResult_VII(Z0x_:Z0y_,iLat,iLon)'
+!  do iLon=1,jSizeIn
+!     do iLat=1,iSizeIn
+!        write(*,'(2i3,6f13.5)') iLat, iLon, RB_lat(iLat), RB_lon(iLon), &
+!             MHD_Xeq(iLat,iLon),MHD_Yeq(iLat,iLon), RayResult_VII(Z0x_:Z0y_,iLat,iLon)
+!     enddo
+!  enddo
      
   deallocate(RayIntegral_VII, RayResult_VII, Buffer_VI)
   call line_clean
@@ -137,15 +147,19 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVar, &
   ! Output before processing
   if(DoTest .or. DoTestTec)call write_integrated_data_tec
   if(DoTest .or. DoTestIdl)call write_integrated_data_idl
-  call process_integrated_data
-  ! Output after processing
-  if(DoTest .or. DoTestTec)call write_integrated_data_tec
-  if(DoTest .or. DoTestIdl)call write_integrated_data_idl
 
   ! Put results into output buffer
   Buffer_IIV(:,:,1)  = MHD_Xeq
   Buffer_IIV(:,:,2)  = MHD_Yeq
-  Buffer_IIV(:,:,3)  = MHD_Beq
+  Buffer_IIV(:,:,3)  = MHD_Beq * No2Si_V(UnitB_)
+  
+!  write(*,*) 'iLat, iLon, RB_lat(iLat), RB_lon(iLon),MHD_Xeq(iLat,iLon),MHD_Yeq(iLat,iLon), Buffer_IIV(:,:,1:2)'
+!  do iLon=1,jSizeIn
+!     do iLat=1,iSizeIn
+!        write(*,'(2i3,6f13.5)') iLat, iLon, RB_lat(iLat), RB_lon(iLon), &
+!             MHD_Xeq(iLat,iLon),MHD_Yeq(iLat,iLon), Buffer_IIV(iLat,iLon,1:2)
+!     enddo
+!  enddo
 
   ! Send solar wind values in the array of the extra integral
   ! This is a temporary solution. RB should use MHD_SUM_rho and MHD_SUM_p
