@@ -84,8 +84,8 @@ subroutine advance_vertical_1stage( &
   use ModPlanet
   use ModSizeGitm
   use ModVertical, only : &
-       Heating, KappaNS, nDensityS, KappaTemp, Centrifugal, Coriolis, &
-       MeanMajorMass_1d, gamma_1d
+       Heating, KappaNS, KappaTemp, Centrifugal, Coriolis, &
+       MeanMajorMass_1d, gamma_1d, EddyCoef_1d
   use ModTime
   use ModInputs
   use ModConstants
@@ -121,6 +121,15 @@ subroutine advance_vertical_1stage( &
   real :: NewSumRho, NewLogSumRho, rat, ed
 
   integer :: iAlt, iSpecies, jSpecies, iDim
+
+  real, dimension(-1:nAlts+2)    :: NT
+  real, dimension(-1:nAlts+2,nSpecies) :: LogCon
+  real, dimension(1:nAlts,nSpecies)    :: GradLogCon, DiffLogCon
+  real, dimension(-1:nAlts+2,nSpecies) :: EddyVel
+  real, dimension(1:nAlts,nSpecies)    :: GradEddyVel, DivEddyVel, DiffEddyVel
+
+  real :: nVel(1:nAlts,1:nSpecies)
+
   !--------------------------------------------------------------------------
 
   NS = exp(LogNS)
@@ -130,13 +139,20 @@ subroutine advance_vertical_1stage( &
   TempKoM = Temp
   Pressure1D = sum(NS,dim=2) * Temp * Boltzmanns_Constant
 
+  if (UseEddyInSolver) then
+     NT(-1:nAlts+2) = exp(LogNum(-1:nAlts+2))
+     do iAlt = -1, nAlts+2
+        LogCon(iAlt,:) = alog( abs(NS(iAlt,:)/NT(iAlt)) )
+     enddo
+  endif
+
   call calc_rusanov_alts(LogRho ,GradLogRho,  DiffLogRho)
   call calc_rusanov_alts(LogNum ,GradLogNum,  DiffLogNum)
   call calc_rusanov_alts(Temp   ,GradTemp,    DiffTemp)
   do iDim = 1, 3
      call calc_rusanov_alts(Vel_GD(:,iDim), &
           GradVel_CD(:,iDim),DiffVel_CD(:,iDim))
-  end do
+  enddo
 
   ! Add geometrical correction to gradient and obtain divergence
   DivVel = GradVel_CD(:,iUp_) + 2*Vel_GD(1:nAlts,iUp_)/RadialDistance(1:nAlts)
@@ -152,6 +168,31 @@ subroutine advance_vertical_1stage( &
      DiffVertVel(:,iSpecies) = DiffTmp
      DivVertVel(:,iSpecies) = GradVertVel(:,iSpecies) + &
           2*VertVel(1:nAlts,iSpecies)/RadialDistance(1:nAlts)
+
+     if (UseEddyInSolver) then
+
+        call calc_rusanov_alts( LogCon(:,iSpecies), GradTmp, DiffTmp)
+        GradLogCon(:,iSpecies) = GradTmp
+        DiffLogCon(:,iSpecies) = DiffTmp
+
+        EddyVel(1:nAlts,iSpecies) = -EddyCoef_1d(1:nAlts) * &
+             GradLogCon(1:nAlts,iSpecies)
+
+        EddyVel(-1:0,iSpecies) = EddyVel(1,iSpecies)
+        EddyVel(nAlts+1:nAlts+2,iSpecies) = EddyVel(nAlts,iSpecies)
+
+        call calc_rusanov_alts(EddyVel(:,iSpecies),GradTmp, DiffTmp)
+        GradEddyVel(:,iSpecies) = GradTmp
+        DiffEddyVel(:,iSpecies) = DiffTmp
+        DivEddyVel(1:nAlts,iSpecies) = GradEddyVel(1:nAlts,iSpecies) + &
+             2*EddyVel(1:nAlts,iSpecies)/RadialDistance(1:nAlts)
+
+     else
+
+        EddyVel(:,iSpecies) = 0.0
+        DivEddyVel(:,iSpecies) = 0.0
+
+     endif
 
   enddo
 
@@ -170,7 +211,9 @@ subroutine advance_vertical_1stage( &
      do iSpecies=1,nSpecies
         NewLogNS(iAlt,iSpecies) = LogNS(iAlt,iSpecies) - Dt * &
              (DivVertVel(iAlt,iSpecies) + &
-             VertVel(iAlt,iSpecies) * GradLogNS(iAlt,iSpecies) ) &
+             VertVel(iAlt,iSpecies) * GradLogNS(iAlt,iSpecies) + &
+             DivEddyVel(iAlt,iSpecies) + &
+             EddyVel(iAlt,iSpecies) * GradLogNS(iAlt,iSpecies)) &
              + Dt * DiffLogNS(iAlt,iSpecies)
      enddo
 
@@ -211,6 +254,30 @@ subroutine advance_vertical_1stage( &
                 Coriolis * Vel_GD(iAlt,iEast_))
         endif
 
+     enddo
+
+  enddo
+
+  if (UseNeutralFriction .and. UseNeutralFrictionInSolver) then
+
+     write(*,*) "Calc Friction in Vertical Solver"
+
+     do iAlt = 1, nAlts
+        nVel(iAlt,:) = NewVertVel(iAlt,:)
+     enddo
+
+     call calc_neutral_friction(nVel)
+
+     do iAlt = 1,nAlts
+        NewVertVel(iAlt,:) = nVel(iAlt,:) 
+     enddo
+
+  endif
+
+  do iAlt = 1, nAlts
+
+     do iSpecies=1,nSpecies
+
         NewVertVel(iAlt, iSpecies) = max(-1000.0, NewVertVel(iAlt, iSpecies))
         NewVertVel(iAlt, iSpecies) = min( 1000.0, NewVertVel(iAlt, iSpecies))
 
@@ -219,6 +286,10 @@ subroutine advance_vertical_1stage( &
              (Mass(iSpecies) * NS(iAlt,iSpecies) / Rho(iAlt))
 
      enddo
+
+  enddo
+
+  do iAlt = 1, nAlts
 
      ! dVphi/dt = - (V grad V)_phi
      NewVel_GD(iAlt,iEast_) = NewVel_GD(iAlt,iEast_) - Dt * &

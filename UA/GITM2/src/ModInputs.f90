@@ -101,6 +101,9 @@ module ModInputs
   character (len=iCharLen_) :: IonIonizationFilename
   character (len=iCharLen_) :: IonHeatingRateFilename
 
+  logical :: UseEddyInSolver = .false.
+  logical :: UseNeutralFrictionInSolver = .false.
+
   !\
   ! These are logicals to turn off and on forcing terms:
   !/

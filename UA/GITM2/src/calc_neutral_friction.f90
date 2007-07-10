@@ -1,61 +1,46 @@
 
-subroutine calc_neutral_friction(iBlock)
+subroutine calc_neutral_friction(nVel)
 
   use ModGITM
   use ModSources
   use ModPlanet, only: Diff0, DiffExp
-  use ModInputs, only:f107a
+  use ModInputs, only: UseNeutralFriction
+  use ModVertical, only: Temp, NDensityS_1D
 
   implicit none
 
-  integer, intent(in) :: iBlock
-  integer :: iAlt, iLat, iLon
-  real :: RealTemp(-1:nAlts+2), de(4,4)
+  real,intent(inout) :: nVel(1:nAlts,1:nSpecies)
+
+  integer :: iSpecies, jSpecies
+  real :: CoefMatrix(nSpecies, nSpecies), kTOverM
+  real :: Matrix(nSpecies, nSpecies)
+  real :: Vel(nSpecies), Parity, Fraction=1.0, n0 = 1.28E+19
+  integer :: iPivot(nSpecies)
+
+  integer :: iAlt
 
   call report("calc_neutral_friction",2)
 
-  NeutralFriction = 0.0
+  if (.not.UseNeutralFriction) return
 
-  do iLon = 1, nLons
-     do iLat = 1, nLats
+  do iAlt = 1, nAlts
 
-        RealTemp = Temperature(iLon, iLat, :, iBlock) * &
-             TempUnit(iLon, iLat, :)
-
-        do iAlt = 1, nAlts
-
-           call calc_friction
-
-        enddo
-     enddo
-  enddo
-
-contains
-
-  subroutine calc_friction
-
-    integer :: iSpecies, jSpecies
-    real :: CoefMatrix(nSpecies, nSpecies), kTOverM
-    real :: Matrix(nSpecies, nSpecies)
-    real :: Vel(nSpecies), Parity, Fraction=1.0, n0 = 1.28E+19
-    integer :: iPivot(nSpecies)
-
-    Vel = VerticalVelocity(iLon,iLat,iAlt,:,iBlock)
+    Vel = nVel(iAlt,:)
 
     CoefMatrix = 0.0
 
     n0 = 1.28e19
 
     do iSpecies = 1, nSpecies
-       kTOverM = Boltzmanns_Constant * RealTemp(iAlt) / Mass(iSpecies)
+       kTOverM = Boltzmanns_Constant * Temp(iAlt) / Mass(iSpecies)
        do jSpecies = 1, nSpecies
           if (jSpecies == iSpecies) cycle
 
           CoefMatrix(iSpecies, jSpecies) = &
                kTOverM * &
-               NDensityS(iLon, iLat, iAlt, jSpecies, iBlock) / &
+               NDensityS_1D(iAlt, jSpecies) / &
                (Diff0(iSpecies, jSpecies) &
-               * (RealTemp(iAlt) / RealTemp(1)) &
+               * (Temp(iAlt) / Temp(1)) &
                ** DiffExp(iSpecies, jSpecies) &
                * N0)
 
@@ -75,9 +60,8 @@ contains
     call ludcmp(Matrix, nSpecies, nSpecies, iPivot, Parity)
     call lubksb(Matrix, nSpecies, nSpecies, iPivot, Vel)
 
-    NeutralFriction(iLon, iLat, iAlt, :) = &
-         Vel - VerticalVelocity(iLon,iLat,iAlt,:,iBlock)
+    nVel(iAlt, :) = Vel
 
-  end subroutine calc_friction
+ enddo
 
 end subroutine calc_neutral_friction

@@ -72,16 +72,20 @@ subroutine init_b0
 
               if (B0(iLon,iLat,iAlt,iMag_,iBlock) == 0.0) then
                  B0(iLon,iLat,iAlt,iMag_,iBlock) = 1.0e-10
-              endif
+                 DipAngle(iLon,iLat,iAlt, iBlock) = 0.0
+                 DecAngle(iLon,iLat,iAlt, iBlock) = 0.0
+              else
 
-              ! Calculate the magnetic dip angle, the magnetic 
-              ! declination angle, and sines and cosines
-              ! For now, only have positive sin of the dip angle 
-              ! (and the magnetic dip angle)
+                 ! Calculate the magnetic dip angle, the magnetic 
+                 ! declination angle, and sines and cosines
+                 ! For now, only have positive sin of the dip angle 
+                 ! (and the magnetic dip angle)
               
-              DipAngle(iLon,iLat,iAlt, iBlock) = &
-                   atan (abs(zmag)/sqrt(xmag**2+ymag**2) )
-              DecAngle(iLon,iLat,iAlt, iBlock) = atan2(ymag,xmag) * 180.0/pi
+                 DipAngle(iLon,iLat,iAlt, iBlock) = &
+                      atan (abs(zmag)/sqrt(xmag**2+ymag**2) )
+                 DecAngle(iLon,iLat,iAlt, iBlock) = atan2(ymag,xmag) * 180.0/pi
+
+              endif
 
            enddo
         enddo
@@ -278,6 +282,10 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
         alat = GeoLat
         alon = GeoLon
 
+        d1 = 0.0
+        d2 = 0.0
+        LShell0 = r
+
      endif
 
   end if
@@ -294,9 +302,13 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
   CapD(iUp_)    =    d1(iEast_ )*d2(iNorth_) - d2(iEast_ )*d1(iNorth_)
   CapDMag = sqrt(sum(CapD*CapD))
 
-  d3(iEast_ ) = by / CapDMag
-  d3(iNorth_) = bx / CapDMag
-  d3(iUp_   ) = bz / CapDMag
+  if (CapDMag > 0.0) then
+     d3(iEast_ ) = by / CapDMag
+     d3(iNorth_) = bx / CapDMag
+     d3(iUp_   ) = bz / CapDMag
+  else
+     d3 = 0.0
+  endif
 
   e1(iEast_)  =    d2(iNorth_)*d3(iUp_   ) - d3(iNorth_)*d2(iUp_   )
   e1(iNorth_) = - (d2(iEast_ )*d3(iUp_   ) - d3(iEast_ )*d2(iUp_   ))

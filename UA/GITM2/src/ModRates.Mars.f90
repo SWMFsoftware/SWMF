@@ -34,7 +34,7 @@ module ModRates
   integer, parameter  :: iRrK1_     =  1
   integer, parameter  :: nRrTempDep = 2
 
-  real :: RrTempDep(nLons, nLats, nAlts, nRrTempInd)
+  real :: RrTempDep(nLons, nLats, nAlts, nRrTempDep)
 
 !    Collision Frequencies
 
@@ -44,7 +44,7 @@ module ModRates
 
   integer, parameter  :: nCf = 3
 
-  real :: Cf(nLons, nLats, nAlts, nRrTempInd)
+  real :: Cf(nLons, nLats, nAlts, nCf)
 
 contains
 

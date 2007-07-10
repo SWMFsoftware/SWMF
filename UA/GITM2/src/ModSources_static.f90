@@ -13,7 +13,8 @@ module ModSources
        AuroralHeating, JouleHeating, IonPrecipHeating
 
   real, dimension(nLons, nLats, nAlts,nBlocksMax) :: &
-       EuvHeating,eEuvHeating
+       EuvHeating,eEuvHeating, &
+       RadCooling, RadCoolingRate, RadCoolingErgs, EuvHeatingErgs
 
   !\
   ! Stuff for auroral energy deposition and ionization
@@ -37,6 +38,8 @@ module ModSources
   real :: Diffusion(nLons, nLats, nAlts, nSpecies)
   real :: NeutralFriction(nLons, nLats, nAlts, nSpecies)
   real :: IonNeutralFriction(nLons, nLats, nAlts, nSpecies)
+
+  real :: KappaEddyDiffusion(nLons, nLats, -1:nAlts+2, nBlocksMax)
 
 contains
   !=========================================================================

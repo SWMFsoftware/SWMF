@@ -21,10 +21,17 @@ subroutine add_sources
 
      call calc_GITM_sources(iBlock)
 
+     !! To turn off EuvHeating, turn UseSolarHeating=.false. in UAM.in
+     !! To turn off JouleHeating, turn UseJouleHeating=.false. in UAM.in
+     !! To turn off AuroralHeating, turn Use=AuroralHeating.false. in UAM.in
+     !! To turn off Conduction, turn UseConduction=.false. in UAM.in
+     
+
      Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) = &
           Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) + Dt * ( &
           EuvHeating(1:nLons, 1:nLats, 1:nAlts, iBlock) &
-          - NOCooling - OCooling + AuroralHeating + JouleHeating) + &
+          - RadCooling(1:nLons, 1:nLats, 1:nAlts, iBlock) &
+          + AuroralHeating + JouleHeating) + &
           Conduction + ChemicalHeatingRate
 
      !-------------------------------------------
@@ -74,10 +81,15 @@ iAlt = 10
           maxval(JouleHeating(:,:,iAlt))*dt, &
           maxval(Conduction(:,:,iAlt))
 
+     !! To turn off IonDrag, turn UseIonDrag=.false. in UAM.in
+
      Velocity(1:nLons, 1:nLats, 1:nAlts, :, iBlock) = &
           Velocity(1:nLons, 1:nLats, 1:nAlts, :, iBlock) + Dt * ( &
           IonDrag) + Viscosity
-     
+
+     !! To turn off IonDrag, turn UseIonDrag=.false. in UAM.in
+     !! To turn off NeutralFriction, turn UseNeutralFriction=.false. in UAM.in
+
      do iSpecies = 1, nSpecies
         VerticalVelocity(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock) = &
              VerticalVelocity(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock) + &
@@ -86,6 +98,8 @@ iAlt = 10
      enddo
 
      call calc_electron_temperature(iBlock)
+
+     !! To turn off Diffusion, turn UseDiffusion=.false. in UAM.in
 
      do iSpecies = 1, nSpecies
         NDensityS(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock) =  &

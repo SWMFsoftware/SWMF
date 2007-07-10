@@ -4,6 +4,7 @@ subroutine calc_GITM_sources(iBlock)
   use ModInputs
   use ModSources
   use ModGITM
+  use ModVertical, only: Temp, NDensityS_1D
 
   implicit none
 
@@ -22,7 +23,6 @@ subroutine calc_GITM_sources(iBlock)
   real :: Omega(nLons, nLats, nAlts)
   real :: RhoI(nLons, nLats, nAlts)
   real :: ReducedMass(nLons, nLats, nAlts)
-  real :: KappaEddyDiffusion(-1:nLons+2, -1:nLats+2, -1:nAlts+2)
   real :: ScaleHeight(-1:nLons+2, -1:nLats+2, -1:nAlts+2)
   real :: TmpGradient(nLons, nLats, nAlts,3)
 
@@ -34,7 +34,9 @@ subroutine calc_GITM_sources(iBlock)
 
   real :: dtsub, dttotal, dtsubmax, dtr
 
-  real :: diffusion_velocity(nLons, nLats, nAlts,nspecies)
+  real :: diffusion_velocity(nLons, nLats, 0:nAlts+1,nspecies)
+
+  real :: nVel(1:nAlts, nSpecies)
 
   call report("calc_GITM_sources",1)
 
@@ -156,79 +158,40 @@ subroutine calc_GITM_sources(iBlock)
 !!---------------------------------------------
 
   if (UseDiffusion)then
-     KappaEddyDiffusion=0.
-     do iAlt = -1, nAlts+2
 
-        do iLat = 1, nLats
-           do iLon = 1, nLons
+     call calc_eddy_diffusion_coefficient(iBlock)
 
-              if (pressure(iLon,iLat,iAlt,iBlock) >EddyDiffusionPressure0) then
-                 KappaEddyDiffusion(iLon,iLat,iAlt) = EddyDiffusionCoef
-
-              else if (pressure(iLon,iLat,iAlt,iBlock) > &
-                   EddyDiffusionPressure1) then
-
-                 KappaEddyDiffusion(iLon,iLat,iAlt) = EddyDiffusionCoef * &
-                      (pressure(iLon,iLat,iAlt,iBlock) - &
-                      EddyDiffusionPressure1)/&
-                      (EddyDiffusionPressure0 - EddyDiffusionPressure1)
-
-              endif
-           enddo
-        enddo
-     enddo
-
-     LogNum(:,:,:) = log(NDensity(:,:,:,iblock))
-     do iSpecies = 1, nSpecies
-        do iAlt = 1, nAlts
-           do iLat = 1, nLats
-              do iLon = 1, nLons
-                 Diffusion_velocity(iLon,iLat,iAlt,iSpecies) =      &
-                      -KappaEddyDiffusion(iLon,iLat,iAlt)* &
-                      (logNS(iLon,iLat,iAlt+1,iSpecies,iBlock)- &
-                      logNS(iLon,iLat,iAlt-1,iSpecies,iBlock)- &
-                      logNum(iLon,iLat,iAlt+1)+ &
-                      logNum(iLon,iLat,iAlt-1))/(2*dalt(iAlt))
+     if (.not.UseEddyInSolver) then
+             
+        LogNum(:,:,:) = log(NDensity(:,:,:,iblock))
+        do iSpecies = 1, nSpecies
+           do iAlt = 0, nAlts+1
+              do iLat = 1, nLats
+                 do iLon = 1, nLons
+                    Diffusion_velocity(iLon,iLat,iAlt,iSpecies) =      &
+                         -KappaEddyDiffusion(iLon,iLat,iAlt,iBlock)* &
+                         (logNS(iLon,iLat,iAlt+1,iSpecies,iBlock)- &
+                         logNS(iLon,iLat,iAlt-1,iSpecies,iBlock)- &
+                         logNum(iLon,iLat,iAlt+1)+ &
+                         logNum(iLon,iLat,iAlt-1))/(2*dalt(iAlt))
+                 enddo
               enddo
            enddo
         enddo
-     enddo
 
-     do iSpecies = 1, nSpecies
-        do iAlt = 2, nAlts-1
-           do iLat = 1, nLats
-              do iLon = 1, nLons
+        do iSpecies = 1, nSpecies
+           do iAlt = 1, nAlts
+              do iLat = 1, nLats
+                 do iLon = 1, nLons
 
-                 diffusion(ilon,ilat,iAlt,ispecies) =      &
-                      (NdensityS(ilon,ilat,iAlt+1,ispecies,iBlock)  *&
-                      diffusion_velocity(ilon,ilat,iAlt+1,ispecies)  -&
-                      NdensityS(ilon,ilat,iAlt-1,ispecies,iBlock)*&
-                      diffusion_velocity(ilon,ilat,iAlt-1,ispecies))/&
-                      (2*dalt(iAlt))
+                    diffusion(ilon,ilat,iAlt,ispecies) =      &
+                         (NdensityS(ilon,ilat,iAlt+1,ispecies,iBlock)  *&
+                         diffusion_velocity(ilon,ilat,iAlt+1,ispecies)  -&
+                         NdensityS(ilon,ilat,iAlt-1,ispecies,iBlock)*&
+                         diffusion_velocity(ilon,ilat,iAlt-1,ispecies))/&
+                         (2*dalt(iAlt))
 
-              enddo
-           enddo
-        enddo
-     enddo
-
-
-     do iSpecies = 1, nSpecies
-           do iLat = 1, nLats
-              do iLon = 1, nLons
-
-                 diffusion(ilon,ilat,1,ispecies) =      &
-                      (NdensityS(ilon,ilat,2,ispecies,iBlock)  *&
-                      diffusion_velocity(ilon,ilat,2,ispecies)  -&
-                      NdensityS(ilon,ilat,1,ispecies,iBlock)*&
-                      diffusion_velocity(ilon,ilat,1,ispecies))/&
-                      (dalt(1))
-
-                 diffusion(ilon,ilat,nAlts,ispecies) =      &
-                      (NdensityS(ilon,ilat,nAlts,ispecies,iBlock)  *&
-                      diffusion_velocity(ilon,ilat,nAlts,ispecies)  -&
-                      NdensityS(ilon,ilat,nAlts-1,ispecies,iBlock)*&
-                      diffusion_velocity(ilon,ilat,nAlts-1,ispecies))/&
-                      (dalt(nAlts))
+                 enddo
               enddo
            enddo
         enddo
@@ -236,6 +199,10 @@ subroutine calc_GITM_sources(iBlock)
      else 
         Diffusion = 0.0
      end if
+
+  else
+     Diffusion = 0.0
+  endif 
 
 
   !\
@@ -284,9 +251,24 @@ subroutine calc_GITM_sources(iBlock)
   ! ---------------------------------------------------------------
   !/
 
-  if (UseNeutralFriction) then
+  if (UseNeutralFriction .and. .not.UseNeutralFrictionInSolver) then
 
-     call calc_neutral_friction(iBlock)
+     do iLat = 1, nLats
+        do iLon = 1, nLons
+
+           Temp = Temperature(iLon, iLat, :, iBlock)*TempUnit(iLon, iLat, :)
+           nVel = VerticalVelocity(iLon,iLat,1:nAlts,:,iBlock)
+           NDensityS_1D = NDensityS(iLon,iLat,1:nAlts,:,iBlock)
+
+           call calc_neutral_friction(nVel)
+
+           do iAlt = 1, nAlts
+              NeutralFriction(iLon, iLat, iAlt, :) = &
+                   nVel(iAlt,:) - VerticalVelocity(iLon,iLat,iAlt,:,iBlock)
+           enddo
+
+        enddo
+     enddo
 
   else
 
@@ -373,12 +355,8 @@ subroutine calc_GITM_sources(iBlock)
 
   call calc_ion_v(iBlock)
 
-  ! These sources are for Earth only, so let's zero them out before
-  ! we call planet specific sources...
-  NOCooling = 0.0
-  OCooling  = 0.0
-
-  ! This routine is located in the planet.f90 file
+  ! This includes Radiative Cooling....
+  RadCooling = 0.0
   call calc_planet_sources(iBlock)
 
   call calc_chemistry(iBlock)

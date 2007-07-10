@@ -1,6 +1,8 @@
 
 subroutine calc_electron_temperature(iBlock)
 
+!  Take values from empirical datasets fropm Viking (settei.F)
+
   use ModGITM
 
   implicit none

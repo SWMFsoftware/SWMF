@@ -19,7 +19,10 @@ module ModVertical
   real, dimension(-1:nAlts+2,nIonsAdvect) :: NewLogINS
   real, dimension(-1:nAlts+2,nIonsAdvect) :: LogINS
 
-  real, dimension(-1:nAlts+2, nSpecies) :: LogNS, NDensityS, VertVel
+  real, dimension(-1:nAlts+2) :: EddyCoef_1d
+
+  real, dimension(-1:nAlts+2, nSpecies) :: LogNS, VertVel
+  real, dimension(nAlts, nSpecies) :: NDensityS_1D
 
   real, dimension(0:nAlts+1) :: cMax
 

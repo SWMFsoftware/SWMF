@@ -137,6 +137,8 @@ subroutine calc_planet_sources(iBlock)
 
   endif
 
+  RadCooling(1:nLons,1:nLats,1:nAlts,iBlock) = OCooling + NOCooling
+
 end subroutine calc_planet_sources
 
 !---------------------------------------------------------------------
@@ -171,4 +173,45 @@ subroutine init_heating_efficiency
   enddo
 
 end subroutine init_heating_efficiency
+
+!---------------------------------------------------------------------
+! Calculate Eddy Diffusion Coefficient
+!---------------------------------------------------------------------
+
+subroutine calc_eddy_diffusion_coefficient(iBlock)
+
+  use ModSizeGITM
+  use ModGITM, only: pressure
+  use ModInputs, only: EddyDiffusionPressure0,EddyDiffusionPressure1, &
+       EddyDiffusionCoef
+  use ModSources, only: KappaEddyDiffusion
+
+  implicit none
+
+  integer, intent(in) :: iBlock
+  integer :: iAlt, iLat, iLon
+
+  KappaEddyDiffusion=0.
+  do iAlt = -1, nAlts+2
+
+     do iLat = 1, nLats
+        do iLon = 1, nLons
+
+           if (pressure(iLon,iLat,iAlt,iBlock) >EddyDiffusionPressure0) then
+              KappaEddyDiffusion(iLon,iLat,iAlt,iBlock) = EddyDiffusionCoef
+              
+           else if (pressure(iLon,iLat,iAlt,iBlock) > &
+                EddyDiffusionPressure1) then
+
+              KappaEddyDiffusion(iLon,iLat,iAlt,iBlock) = EddyDiffusionCoef * &
+                   (pressure(iLon,iLat,iAlt,iBlock) - &
+                   EddyDiffusionPressure1)/&
+                   (EddyDiffusionPressure0 - EddyDiffusionPressure1)
+
+           endif
+        enddo
+     enddo
+  enddo
+
+end subroutine calc_eddy_diffusion_coefficient
 

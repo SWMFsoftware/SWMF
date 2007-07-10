@@ -15,6 +15,8 @@ module ModConstants
   real, parameter :: Speed_Light            = 2.9979e8              ! m/s
   real, parameter :: Univ_Gas_Constant      = Avogadros_Number*   &
                                               Boltzmanns_Constant   ! J/(moleK)
+  real, parameter :: RGAS                   = Univ_Gas_Constant*   &
+                                              1.0E+07               !erg/(moleK)
   real, parameter :: pi                     = 3.141592653589793
   real, parameter :: twopi = 2*pi
 

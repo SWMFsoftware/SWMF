@@ -3,7 +3,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   use ModGITM
   use ModPlanet, only: nSpecies, OmegaBody, nIonsAdvect
   use ModConstants, only: pi
-  use ModSources, only: EUVHeating, VerticalTempSource
+  use ModSources, only: EUVHeating, VerticalTempSource, KappaEddyDiffusion
   use ModInputs, only: UseIonAdvection, iDebugLevel
   use ModVertical, ONLY: &
        LogRho, &
@@ -18,7 +18,8 @@ subroutine advance_vertical(iLon,iLat,iBlock)
        IVel, Lat, Lon, &
        VertVel, &
        MeanMajorMass_1d, &
-       gamma_1d
+       gamma_1d, &
+       EddyCoef_1d
 
   implicit none
 
@@ -27,6 +28,8 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   integer :: iIon, iSpecies, iAlt, iDim
 
 !  KappaTemp1 = KappaTemp(iLon,iLat,:,iBlock)
+
+  EddyCoef_1d(1:nAlts) = KappaEddyDiffusion(iLon,iLat,1:nAlts,iBlock)
 
   
   if (minval(NDensityS(iLon,iLat,:,1:nSpecies,iBlock)) <= 0.0) then

@@ -235,13 +235,17 @@ program PostProcess
      enddo
   enddo
 
-  do iAlt = 1, nAltsTotal
-     do iLat = 1, nLatsTotal
-        do iLon = 1, nLonsTotal
-           write(iOutputUnit_) AllData(iLon,iLat,iAlt,:)
-        enddo
-     enddo
+  do iVar = 1, nVars
+     write(iOutputUnit_) AllData(:,:,:,iVar)
   enddo
+
+!  do iAlt = 1, nAltsTotal
+!     do iLat = 1, nLatsTotal
+!        do iLon = 1, nLonsTotal
+!           write(iOutputUnit_) AllData(iLon,iLat,iAlt,:)
+!        enddo
+!     enddo
+!  enddo
 
   write(*,*) "Output :"
   write(*,*) "  nLons, nLats, nAlts : ", nLonsTotal, nLatsTotal, nAltsTotal

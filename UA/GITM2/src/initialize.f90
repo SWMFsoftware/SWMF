@@ -116,20 +116,12 @@ subroutine initialize_gitm(TimeIn)
      enddo
   endif
 
-!   Gravity =  -Gravitational_Constant
-
   if (iDebugLevel > 2) then
      do iAlt=-1,nAlts+2
         write(*,*) "===>Altitude : ", &
              iAlt, Altitude(iAlt), RadialDistance(iAlt), Gravity(iAlt)
      end do
   endif
-
-!!!!!!
-!  write(*,*) "GRAVITY is set to -10!!!!!!!"
-!  Gravity = -10.0
-!!!  Mass = 22.5 * AMU
-!!!!!!
 
   if (Is1D) then
      Latitude(0,1)  = Latitude(1,1) - 1.0 * pi/180.0
@@ -209,7 +201,6 @@ subroutine initialize_gitm(TimeIn)
   InvDLonDist_GB = 1.0/dLonDist_GB
   InvDLonDist_FB = 1.0/dLonDist_FB
 
-
   ! Precalculate the tangent of the latitude
   TanLatitude(:,1:nBlocks) = min(abs(tan(Latitude(:,1:nBlocks))),100.0) * &
        sign(1.0,Latitude(:,1:nBlocks))
@@ -222,7 +213,7 @@ subroutine initialize_gitm(TimeIn)
      IVelocity = 0.0
      VerticalVelocity = 0.0
 
-     if (UseMsis .and. IsEarth) then
+     if (UseMsis) then
         call init_msis
      else
 
