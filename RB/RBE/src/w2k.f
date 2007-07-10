@@ -44,7 +44,7 @@ c     Jan. 30, 2002
 
 *
 
-* The function BOUNDARYLAT(gMLT) can be used to get the latitude of the boundary
+* The function BOUNDARYLAT_2k(gMLT) can be used to get the latitude of the boundary
 
 *   where the potential goes to zero.  This boundary is a function of MLT, and
 
@@ -74,7 +74,7 @@ c     Jan. 30, 2002
 
 ************************ Copyright 1996,2001 Dan Weimer/MRC ***********************
 
-	SUBROUTINE DLEGENDRE(x,lmax,mmax,Plm,dPlm)
+	SUBROUTINE DLEGENDRE_2k(x,lmax,mmax,Plm,dPlm)
 
 * compute Double Precision Associate Legendre Function P_l^m(x), as well as optional
 
@@ -131,7 +131,7 @@ c     Jan. 30, 2002
 
 	IF(lmax .LT. 0 .OR. mmax .LT. 0 .OR. mmax .GT. lmax )THEN
 
-	  Print *,'Bad arguments to DLegendre'
+	  Print *,'Bad arguments to DLegendre_2k'
 
 	  RETURN
 
@@ -315,36 +315,36 @@ c     Jan. 30, 2002
 
 ************************ Copyright 1996,2001 Dan Weimer/MRC ***********************
 
-	FUNCTION FSVal(omega,MaxN,FSC)
-
-* Fourier Series Value
-
-* Return value of Sine/Cosine Fourier series for N terms up to MaxN
-
-* at angle omega, given the F.S. coeficients in array FSC
-
-        implicit real*8 (a-h,o-z)
-	REAL*8 omega,FSC(0:1,0:*)
-
-	INTEGER MaxN,n
-
-	REAL*8 Y,theta
-
-	Y=0.
-
-	DO n=0,MaxN
-
-	  theta=omega*n
-
-	  Y=Y + FSC(0,n)*COS(theta) + FSC(1,n)*SIN(theta)
-
-	ENDDO
-
-	FSVal=Y
-
-	RETURN
-
-	END
+*	FUNCTION FSVal(omega,MaxN,FSC)
+*
+** Fourier Series Value
+*
+** Return value of Sine/Cosine Fourier series for N terms up to MaxN
+*
+** at angle omega, given the F.S. coeficients in array FSC
+*
+*        implicit real*8 (a-h,o-z)
+*	REAL*8 omega,FSC(0:1,0:*)
+*
+*	INTEGER MaxN,n
+*
+*	REAL*8 Y,theta
+*
+*	Y=0.
+*
+*	DO n=0,MaxN
+*
+*	  theta=omega*n
+*
+*	  Y=Y + FSC(0,n)*COS(theta) + FSC(1,n)*SIN(theta)
+*
+*	ENDDO
+*
+*	FSVal=Y
+*
+*	RETURN
+*
+*	END
 
 ************************ Copyright 1996,2001 Dan Weimer/MRC ***********************
 
@@ -652,7 +652,7 @@ c       PRINT *,Copyright
 
 ****************** Copyright 1996, 2001, Dan Weimer/MRC ***********************
 
-	FUNCTION BoundaryLat(gmlt)
+	FUNCTION BoundaryLat_2k(gmlt)
 
         implicit real*8 (a-h,o-z)
 	REAL*8 gmlt
@@ -664,7 +664,7 @@ c       PRINT *,Copyright
         integer*4 MaxL,MaxM,MaxN
 	COMMON /SetW2kCoef/Coef,BoundFit,pi,dpi,MaxL,MaxM,MaxN
 
-	BoundaryLat=FSVal(gmlt*pi/12.,MaxN,BoundFit)
+	BoundaryLat_2k=FSVal(gmlt*pi/12.,MaxN,BoundFit)
 
 	RETURN
 
@@ -705,7 +705,7 @@ c       PRINT *,Copyright
 
 
 
-	blat=BoundaryLat(gmlt)
+	blat=BoundaryLat_2k(gmlt)
 
 	IF(glat .GT. blat)THEN
 
@@ -725,11 +725,11 @@ c       PRINT *,Copyright
 
 	  ct=DCOS(x)
 	  dPlm(:,:)=0.D0
-	  CALL DLegendre(ct,MaxL,MaxM,Plm,dPlm)
+	  CALL DLegendre_2k(ct,MaxL,MaxM,Plm,dPlm)
 
 !Also find value at outer boundary at angle Pi, or cos(pi)=-1.
 
-	  CALL DLegendre(-1.D0,MaxL,MaxM,OPlm,dPlm)
+	  CALL DLegendre_2k(-1.D0,MaxL,MaxM,OPlm,dPlm)
 
 	  DO l=1,MaxL
 
