@@ -13,6 +13,7 @@ module ModErrors
   integer, parameter :: ecHPINotSet_       = 11
   integer, parameter :: ecKpNotSet_        = 12
   integer, parameter :: ecEFieldModelNotFound_ = 13
+  integer, parameter :: ecAuroralModelNotFound_ = 14
 
   integer, parameter :: nErrorsMax = 1000
 
@@ -37,6 +38,8 @@ contains
     cErrorCodes(ecKpNotSet_)       = "Kp has not been set"
     cErrorCodes(ecEFieldModelNotFound_) = &
          "The Selected Electric Field model is unknown"
+    cErrorCodes(ecAuroralModelNotFound_) = &
+         "The Selected Auroral model is unknown"
 
   end subroutine set_error_codes
 
