@@ -43,6 +43,7 @@ OBJECTS_EXE = rbe_main.o
 LIBSHARE  = ${LIBDIR}/libSHARE.a
 LIBTIMING = ${LIBDIR}/libTIMING.a
 LIBNOMPI  = ${LIBDIR}/libNOMPI.a
+LIBEMPIRICALIE = ${LIBDIR}/libEMPIRICALIE.a
 
 # Libraries should be compiled first, because modules are used in main
 ${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
@@ -61,7 +62,8 @@ ${EXE}: ${OBJECTS_EXE}
 		ar -x ../${MY_LIB}; \
 		ar -x ${LIBTIMING}; \
 		ar -x ${LIBSHARE}; \
-		ar -x ${LIBNOMPI}
+		ar -x ${LIBNOMPI}; \
+		ar -x ${LIBEMPIRICALIE};
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} Tmp_/*.o ${LBLAS} ${Lflag2}
 	rm -rf Tmp_
 
