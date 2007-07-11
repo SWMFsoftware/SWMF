@@ -10,3 +10,4 @@ SHAREDIR  = ${RBDIR}/share/Library/src
 
 NOMPIDIR  = ${RBDIR}/util/NOMPI/src
 TIMINGDIR = ${RBDIR}/util/TIMING/src
+EMPIRICALIEDIR = ${RBDIR}/util/EMPIRICAL/srcIE
