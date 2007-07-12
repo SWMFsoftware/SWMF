@@ -112,9 +112,11 @@ contains
 
   !===========================================================================
 
-  subroutine put_point(iBlock, Value)
+  subroutine put_point(iBlock, Value, DoAllowReplace)
     integer, intent(in) :: iBlock
     real,    intent(in) :: Value
+    logical, intent(in), optional :: DoAllowReplace
+
     character (len=*), parameter :: NameSub=NameMod//'::put_point'
     !------------------------------------------------------------------------
     if(DoDebug)then
@@ -122,15 +124,18 @@ contains
             write(*,*)NameSub,' called'
     endif
 
-    if(UseData_B(iBlock)) then
+    if(UseData_B(iBlock) .and. .not. present(DoAllowReplace)) then
        write(*,*)NameSub,' ERROR for iBlock=',iBlock
        call stop_mpi('UseData_B=.true. in '//NameSub)
     end if
 
-    if(nData_B(iBlock) < 0)call init_block(iBlock,1)
-    if(nData_B(iBlock)+1 > size(Data_B(iBlock) % Array_I)) &
-         call extend_array(iBlock,1)
-    nData_B(iBlock) = nData_B(iBlock)+1
+    if(iData_B(iBlock)+1 > nData_B(iBlock) &
+         .or. .not.present(DoAllowReplace))then
+       if(nData_B(iBlock) < 0)call init_block(iBlock,1)
+       if(nData_B(iBlock)+1 > size(Data_B(iBlock) % Array_I)) &
+            call extend_array(iBlock,1)
+       nData_B(iBlock) = nData_B(iBlock)+1
+    end if
 
     iData_B(iBlock) = iData_B(iBlock)+1
     Data_B(iBlock) % Array_I(iData_B(iBlock)) = Value
@@ -144,10 +149,11 @@ contains
 
   !===========================================================================
 
-  subroutine put_array(iBlock, nValue, Value_I)
+  subroutine put_array(iBlock, nValue, Value_I, DoAllowReplace)
     integer, intent(in) :: iBlock
     integer, intent(in) :: nValue
     real,    intent(in) :: Value_I(nValue)
+    logical, intent(in), optional :: DoAllowReplace
 
     integer :: i
     character (len=*), parameter :: NameSub=NameMod//'::put_array'
@@ -157,29 +163,32 @@ contains
             write(*,*)NameSub,' called with nValue=',nValue
     endif
 
-    if(UseData_B(iBlock)) then
+    if(UseData_B(iBlock) .and. .not. present(DoAllowReplace)) then
        write(*,*)NameSub,' ERROR for iBlock=',iBlock
        call stop_mpi('UseData_B=.true. in '//NameSub)
     end if
 
-    if(nData_B(iBlock) < 0)call init_block(iBlock,1)
-    if(nData_B(iBlock)+nValue > size(Data_B(iBlock) % Array_I)) &
-         call extend_array(iBlock, nValue)
-    nData_B(iBlock) = nData_B(iBlock)+nValue
+    if(iData_B(iBlock) + nValue > nData_B(iBlock) &
+         .or. .not.present(DoAllowReplace))then
+       if(nData_B(iBlock) < 0)call init_block(iBlock,1)
+       if(nData_B(iBlock)+nValue > size(Data_B(iBlock) % Array_I)) &
+            call extend_array(iBlock, nValue)
+       nData_B(iBlock) = nData_B(iBlock)+nValue
+    end if
 
     i = iData_B(iBlock)
+    iData_B(iBlock) = i + nValue
     Data_B(iBlock) % Array_I(i+1:i+nValue) = Value_I
-
-    iData_B(iBlock) = i+nValue
 
   end subroutine put_array
 
   !===========================================================================
 
-  subroutine put_array2(iBlock, nI, nJ, Value_II)
+  subroutine put_array2(iBlock, nI, nJ, Value_II, DoAllowReplace)
     integer, intent(in) :: iBlock
     integer, intent(in) :: nI, nJ
     real,    intent(in) :: Value_II(nI, nJ)
+    logical, intent(in), optional :: DoAllowReplace
 
     integer :: i, j, nValue
     character (len=*), parameter :: NameSub=NameMod//'::put_array2'
@@ -189,33 +198,37 @@ contains
             write(*,*)NameSub,' called with nI, nJ=',nI, nJ
     endif
 
-    if(UseData_B(iBlock)) then
+    if(UseData_B(iBlock) .and. .not. present(DoAllowReplace)) then
        write(*,*)NameSub,' ERROR for iBlock=',iBlock
        call stop_mpi('UseData_B=.true. in '//NameSub)
     end if
 
     nValue = nI*nJ
-    if(nData_B(iBlock) < 0)call init_block(iBlock,1)
-    if(nData_B(iBlock)+nValue > size(Data_B(iBlock) % Array_I)) &
-         call extend_array(iBlock, nValue)
-    nData_B(iBlock) = nData_B(iBlock)+nValue
+
+    if(iData_B(iBlock) + nValue > nData_B(iBlock) &
+         .or. .not.present(DoAllowReplace))then
+       if(nData_B(iBlock) < 0)call init_block(iBlock,1)
+       if(nData_B(iBlock)+nValue > size(Data_B(iBlock) % Array_I)) &
+            call extend_array(iBlock, nValue)
+       nData_B(iBlock) = nData_B(iBlock)+nValue
+    end if
 
     i = iData_B(iBlock)
     do j = 1, nJ
        Data_B(iBlock) % Array_I(i+1:i+nI) = Value_II(:,j)
        i = i+nI
     end do
-
     iData_B(iBlock) = i
 
   end subroutine put_array2
 
   !===========================================================================
 
-  subroutine put_array3(iBlock, nI, nJ, nK, Value_III)
+  subroutine put_array3(iBlock, nI, nJ, nK, Value_III, DoAllowReplace)
     integer, intent(in) :: iBlock
     integer, intent(in) :: nI, nJ, nK
     real,    intent(in) :: Value_III(nI, nJ, nK)
+    logical, intent(in), optional :: DoAllowReplace
 
     integer :: i, j, k, nValue
     character (len=*), parameter :: NameSub=NameMod//'::put_array3'
@@ -225,33 +238,37 @@ contains
             write(*,*)NameSub,' called with nI, nJ, nK=',nI, nJ, nK
     endif
 
-    if(UseData_B(iBlock)) then
+    if(UseData_B(iBlock) .and. .not. present(DoAllowReplace)) then
        write(*,*)NameSub,' ERROR for iBlock=',iBlock
        call stop_mpi('UseData_B=.true. in '//NameSub)
     end if
 
     nValue = nI*nJ*nK
-    if(nData_B(iBlock) < 0)call init_block(iBlock,1)
-    if(nData_B(iBlock)+nValue > size(Data_B(iBlock) % Array_I)) &
-         call extend_array(iBlock, nValue)
-    nData_B(iBlock) = nData_B(iBlock)+nValue
+
+    if(iData_B(iBlock) + nValue > nData_B(iBlock) &
+         .or. .not.present(DoAllowReplace))then
+       if(nData_B(iBlock) < 0)call init_block(iBlock,1)
+       if(nData_B(iBlock)+nValue > size(Data_B(iBlock) % Array_I)) &
+            call extend_array(iBlock, nValue)
+       nData_B(iBlock) = nData_B(iBlock)+nValue
+    end if
 
     i = iData_B(iBlock)
     do k = 1, nK; do j = 1, nJ
        Data_B(iBlock) % Array_I(i+1:i+nI) = Value_III(:,j,k)
        i = i+nI
     end do; end do
-
     iData_B(iBlock) = i
 
   end subroutine put_array3
 
   !===========================================================================
 
-  subroutine put_array4(iBlock, nI, nJ, nK, nL, Value_IIII)
+  subroutine put_array4(iBlock, nI, nJ, nK, nL, Value_IIII, DoAllowReplace)
     integer, intent(in) :: iBlock
     integer, intent(in) :: nI, nJ, nK, nL
     real,    intent(in) :: Value_IIII(nI, nJ, nK, nL)
+    logical, intent(in), optional :: DoAllowReplace
 
     integer :: i, j, k, l, nValue
     character (len=*), parameter :: NameSub=NameMod//'::put_array4'
@@ -267,17 +284,20 @@ contains
     end if
 
     nValue = nI*nJ*nK*nL
-    if(nData_B(iBlock) < 0)call init_block(iBlock,1)
-    if(nData_B(iBlock)+nValue > size(Data_B(iBlock) % Array_I)) &
-         call extend_array(iBlock, nValue)
-    nData_B(iBlock) = nData_B(iBlock)+nValue
+
+    if(iData_B(iBlock) + nValue > nData_B(iBlock) &
+         .or. .not.present(DoAllowReplace))then
+       if(nData_B(iBlock) < 0)call init_block(iBlock,1)
+       if(nData_B(iBlock)+nValue > size(Data_B(iBlock) % Array_I)) &
+            call extend_array(iBlock, nValue)
+       nData_B(iBlock) = nData_B(iBlock)+nValue
+    end if
 
     i = iData_B(iBlock)
     do l = 1, nL; do k = 1, nK; do j = 1, nJ
        Data_B(iBlock) % Array_I(i+1:i+nI) = Value_IIII(:,j,k,l)
        i = i+nI
     end do; end do; end do
-
     iData_B(iBlock) = i
 
   end subroutine put_array4
@@ -308,9 +328,10 @@ contains
 
   !===========================================================================
 
-  subroutine get_point(iBlock, Value)
+  subroutine get_point(iBlock, Value, DoNotAdvance)
     integer, intent(in) :: iBlock
     real,    intent(out):: Value
+    logical, intent(in), optional :: DoNotAdvance
 
     character(len=*), parameter :: NameSub = NameMod//'::get_point'
     !------------------------------------------------------------------------
@@ -334,8 +355,9 @@ contains
     if(iData_B(iBlock) >= nData_B(iBlock)) iData_B(iBlock) = 0
 
     ! Jump to next element and obtain value
-    iData_B(iBlock) = iData_B(iBlock) + 1
-    Value = Data_B(iBlock) % Array_I(iData_B(iBlock))
+    Value = Data_B(iBlock) % Array_I(iData_B(iBlock) + 1)
+
+    if(.not.present(DoNotAdvance)) iData_B(iBlock) = iData_B(iBlock) + 1
 
     if(DoDebug)then
        if(iProc==ProcTest .and. iBlock==BlkTest) &
@@ -345,10 +367,11 @@ contains
 
   !===========================================================================
 
-  subroutine get_array(iBlock, nValue, Value_I)
+  subroutine get_array(iBlock, nValue, Value_I, DoNotAdvance)
     integer, intent(in) :: iBlock
     integer, intent(in) :: nValue
     real,    intent(out):: Value_I(nValue)
+    logical, intent(in), optional :: DoNotAdvance
 
     integer :: i
 
@@ -378,16 +401,17 @@ contains
     Value_I = Data_B(iBlock) % Array_I(i+1:i+nValue)
 
     ! Adjust index
-    iData_B(iBlock) = i + nValue
+    if(.not.present(DoNotAdvance)) iData_B(iBlock) = i + nValue
 
   end subroutine get_array
 
   !===========================================================================
 
-  subroutine get_array2(iBlock, nI, nJ, Value_II)
+  subroutine get_array2(iBlock, nI, nJ, Value_II, DoNotAdvance)
     integer, intent(in) :: iBlock
     integer, intent(in) :: nI, nJ
     real,    intent(out):: Value_II(nI, nJ)
+    logical, intent(in), optional :: DoNotAdvance
 
     integer :: i, j, nValue
 
@@ -421,16 +445,17 @@ contains
     end do
 
     ! Adjust index
-    iData_B(iBlock) = i
+    if(.not.present(DoNotAdvance)) iData_B(iBlock) = i
 
   end subroutine get_array2
 
   !===========================================================================
 
-  subroutine get_array3(iBlock, nI, nJ, nK, Value_III)
+  subroutine get_array3(iBlock, nI, nJ, nK, Value_III, DoNotAdvance)
     integer, intent(in) :: iBlock
     integer, intent(in) :: nI, nJ, nK
     real,    intent(out):: Value_III(nI, nJ, nK)
+    logical, intent(in), optional :: DoNotAdvance
 
     integer :: i, j, k, nValue
 
@@ -464,16 +489,17 @@ contains
     end do; end do
 
     ! Adjust index
-    iData_B(iBlock) = i
+    if(.not.present(DoNotAdvance)) iData_B(iBlock) = i
 
   end subroutine get_array3
   
   !===========================================================================
 
-  subroutine get_array4(iBlock, nI, nJ, nK, nL, Value_IIII)
+  subroutine get_array4(iBlock, nI, nJ, nK, nL, Value_IIII, DoNotAdvance)
     integer, intent(in) :: iBlock
     integer, intent(in) :: nI, nJ, nK, nL
     real,    intent(out):: Value_IIII(nI, nJ, nK, nL)
+    logical, intent(in), optional :: DoNotAdvance
 
     integer :: i, j, k, l, nValue
 
@@ -507,7 +533,7 @@ contains
     end do; end do; end do
 
     ! Adjust index
-    iData_B(iBlock) = i
+    if(.not.present(DoNotAdvance)) iData_B(iBlock) = i
 
   end subroutine get_array4
   
@@ -585,9 +611,11 @@ contains
     if(nData /= -1)write(*,*)'n_block_data(2) failed, n=',nData,' should be -1'
     nData = n_block_data()
     if(nData /= 1)write(*,*)'n_block_data() failed, n=',nData,' should be 1'
+    i = iData_B(1)
+    if(i /= 1)write(*,*)'put_block_data failed, iData=',i,' should be 1'
 
-    ! Put 3 values as an array
-    call put_block_data(1,3,(/2.0, 3.0, 4.0/))
+    ! Put 3 values as an array (the optional argument should not matter now)
+    call put_block_data(1,3,(/2.0, 3.0, 4.0/)) !, DoAllowReplace=.true.)
 
     nData = n_block_data(1)
     if(nData /= 4)write(*,*)'n_block_data(1) failed, n=',nData,' should be 4'
@@ -632,9 +660,13 @@ contains
          write(*,*)'get_block_data failed, value =',Value,' should be 1'
 
     ! Get back next 3 values as an array
-    call get_block_data(1,3,Value_I)
+    call get_block_data(1,3,Value_I, DoNotAdvance=.true.)
     if(any(Value_I /= (/2.0, 3.0, 4.0/))) &
-         write(*,*)'get_block_data failed, value_I=',Value_I,' should be 2,3,4'
+         write(*,*)'get_block_data do not advance failed, value_I=',&
+         Value_I,' should be 2,3,4'
+
+    ! Replace next 3 values as an array
+    call put_block_data(1,3,(/2.1, 3.1, 4.1/), DoAllowReplace=.true.)
 
     ! Get back next 6 values as a 2D array
     call get_block_data(1,2,3,Value_II)
