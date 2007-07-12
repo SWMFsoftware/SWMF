@@ -253,3 +253,8 @@ distclean: clean
 	rm -f ModAdvance.f90 ModCT.f90 ModGeometry.f90 ModImplicit.f90 \
 		ModNodes.f90 ModRaytrace.f90
 
+
+test_block_data: ModBlockData.o test_block_data.o
+	${LINK.f90} -o test_block_data.exe ModBlockData.o test_block_data.o \
+		${Lflag2}
+	./test_block_data.exe
