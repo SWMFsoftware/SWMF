@@ -54,10 +54,14 @@ public:
     }
   }; 
 
-  void GetInputStr(char* str,int n){
+  bool eof() {
+    return (!feof(fd)) ? false : true;
+  };
+
+  bool GetInputStr(char* str,int n){
     int i,j;
 
-    do {
+    if (!feof(fd)) do {
       line++;
       fgets(str,n,fd);
 
@@ -68,11 +72,18 @@ public:
       for (i=0;str[i]!='\0';i++) if (str[i]=='!') str[i]='\0';
     } while ((str[0]=='\0')&&(!feof(fd)));
 
+    if (feof(fd)!=0) {
+      str[0]='\0',init_str[0]='\0';  
+      return false; 
+    }
+
     for(i=0;str[i]!='\0';i++) {
       init_str[i]=str[i];
       if ((str[i]>='a')&&(str[i]<='z')) str[i]=str[i]-32;
     }
     init_str[i]='\0';
+ 
+    return true;
   }; 
 
   void error() {
