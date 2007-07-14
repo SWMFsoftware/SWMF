@@ -1,6 +1,0 @@
-#UPSTREAM_INPUT_FILE
-T                                                     UseUpstreamInputFile
-GM/Param/TESTSUITE/Inputfiles/IMF_ppulse_inc20.dat       UpstreamFileName
-0.0                                                   Satellite_Y_Pos
-0.0                                                   Satellite_Z_Pos
-
