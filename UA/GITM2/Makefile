@@ -49,19 +49,16 @@ nompirun:
 clean:
 	@touch src/Makefile.DEPEND src/Makefile.RULES
 	@cd $(ABDIR);    make clean
-	@cd $(IEDIR);    make clean
 	@cd $(EDDIR);    make clean
-	@cd $(IODIR);    make clean
 	@cd $(MAINDIR);  make clean
 	@cd srcInterface;make clean
 	@(if [ -d share ]; then cd share; make clean; fi);
+	@(if [ -d util ];  then cd util;  make clean; fi);
 
 distclean:
 	@touch src/Makefile.DEPEND src/Makefile.RULES
 	@cd $(ABDIR);    make clean
-	@cd $(IEDIR);    make clean
 	@cd $(EDDIR);    make clean
-	@cd $(IODIR);    make clean
 	@cd $(MAINDIR);  make distclean
 	@cd srcInterface;make distclean
 	rm -f src/Makefile src/ModSize.f90 *~
