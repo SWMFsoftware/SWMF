@@ -458,7 +458,7 @@ public:
     j0=(DIM>=2) ? (long int)((x[1]-Xmin[1])/dX[1]) : 0;
     k0=(DIM>=3) ? (long int)((x[2]-Xmin[2])/dX[2]) : 0;
 
-    for (SearchLevel=0;;SearchLevel++) {
+    for (SearchLevel=0;SearchLevel<=(long int)(SearchMaskLength/10.0);SearchLevel++) {
 
       //get the range of the variation of the indexes
       imin=(i0-SearchLevel>0) ? i0-SearchLevel : 0;
