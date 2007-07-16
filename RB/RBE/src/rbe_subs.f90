@@ -710,6 +710,7 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
   parameter (nTaylor=10)
   real a_I(0:nTaylor),b_I(0:nTaylor),sumBn(0:nTaylor),sumhBn(0:nTaylor), &
        BnI(0:nTaylor,np),hBnI(0:nTaylor,np)
+  integer :: iLatTest = -1, iLonTest=-1
   !--------------------------------------------------------------------------
 
   a_I(0)=1.
@@ -764,19 +765,11 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
         if (imod.eq.3) call MHD_trace(xlati1,phi1,re,i,j,np, &
              npf1,dssa,bba,volume1,ro1,xmlt1,bo1,ra)
 
-!        if (i==25 .and. j==21 )write(*,*) 'xlati1,npf1,volume1,ro1',xlati1*180.0/3.14,npf1,volume1,ro1
-!        if (i==25 .and. j==21 )write(*,*) 'ra(33)',ra(33)
-!        if (i==25 .and. j==21 ) then
-!           write(*,*) 'iii,ra(iii),dssa,bba(iii)'
-!           do iii=1,npf1
-!              write(*,*) iii,ra(iii),dssa(iii),bba(iii)
-!           enddo
-!        endif
-!        if (npf1 /= 0) then
-!           write(*,*) 'bba(1),dssa(1),ro1,xmlt1,bo1,ra(1),volume1'
-!           write(*,*) bba(1),dssa(1),ro1,xmlt1,bo1,ra(1),volume1
-!           call con_stop()
-!        endif
+        
+        if (i==iLatTest .and. j==iLonTest) then
+           write(*,*) npf1,xlati1*180.0/3.14,xmlt1,ro1
+           call RB_plot_fieldline(npf1,i,j,dssa,ra,bba) 
+        endif
 
         if (i.ge.1) then
            
@@ -811,8 +804,7 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
         if (xmlt1.gt.xmltlim.and.xmlt1.lt.(24.-xmltlim).and.&
              abs(xmlt1-xmlt(j)).gt.xmltlim) then   ! big warping in mlt
            irm(j)=i-1
-
-        !if (i.gt.1) then
+           !if (i.gt.1) then
        !   if (ro(i,j).lt.ro(i-1,j)) ro(i,j)=ro(i-1,j)
        !endif
        !if (iout.ge.2) then
