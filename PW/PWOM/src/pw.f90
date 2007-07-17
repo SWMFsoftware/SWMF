@@ -286,8 +286,7 @@ subroutine PW_advance_line
        iUnitGraphics=iUnitGraphics(iLine),NameRestart=NameRestart(iLine),  &
        iLine=iLine,Time=Time,MaxLineTime=MaxLineTime,TypeSolver=TypeSolver,&
        IsVariableDt=IsVariableDt,IsRestart=IsRestart,DToutput=DToutput,    &
-       nAlt=nAlt,DoLog=DoLog,nStep=nStep,IsImplicit=IsImplicit,            &
-       IsImplicitAll=IsImplicitAll)
+       nAlt=nAlt,DoLog=DoLog,nStep=nStep)
     
   call polar_wind
   

@@ -35,9 +35,15 @@ subroutine PW_set_parameters(NameAction)
         call read_var('DtPlotElectrodynamics',DtPlotElectrodynamics)
      case('#SCHEME')
         call read_var('TypeSolver',TypeSolver)
-        call read_var('IsImplicit',IsImplicit)
-        call read_var('IsImplicitAll',IsImplicitAll)
-        call read_var('DtVertical',DtVertical)        
+        call read_var('DtVertical',DtVertical)
+        call read_var('IsFullyImplicit'   ,IsFullyImplicit)
+        if(IsFullyImplicit)then
+           IsPointImplicit = .false.
+           IsPointImplicitAll = .false.
+        else
+           call read_var('IsPointImplicit'   ,IsPointImplicit)
+           call read_var('IsPointImplicitAll',IsPointImplicitAll)
+        end if
      case('#RESTART')
         call read_var('IsRestart',IsRestart)
      case('#MOTION')
