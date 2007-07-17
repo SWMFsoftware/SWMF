@@ -1,6 +1,9 @@
 #ECHO
 T			DoEcho
 
+#TEST
+RB_put_from_gm
+
 #DESCRIPTION
 Run GM and RB/RBE
 
@@ -51,7 +54,7 @@ F			UseRotation
 0.0		trans
 
 #BMODEL
-1		iModel
+3		iModel
 1		FixedB
 
 #CONVECT
@@ -86,7 +89,7 @@ T                       UseBody
  128.			zMax
 
 #GRIDRESOLUTION
-2.0                     Resolution
+1.0                     Resolution
 initial                 NameArea
 
 #INCLUDE
