@@ -1,5 +1,5 @@
+subroutine polar_wind
 
-Subroutine POLAR_WIND
   ! Discussion:
   ! This subroutine solves the polar wind solution along a given field line
   ! called by advance_line. A. Glocer
@@ -13,7 +13,7 @@ Subroutine POLAR_WIND
   ! ALF1(x) AND FLUX1(x) ARRAY, x=1->4. MODIFIFIED BY DICK AND STEVE 6-90.
   !
   
-  Use ModPWOM, only: DtVertical,nLine,IsStandAlone,DoSavePlot,iLine
+  use ModPWOM, only: DtVertical,nLine,IsStandAlone,DoSavePlot,iLine,IsFullyImplicit
   use ModIoUnit, ONLY: UnitTmp_
   use ModCommonVariables
   use ModFieldLine
@@ -21,22 +21,25 @@ Subroutine POLAR_WIND
   
   !     define the output files and attaching units
   character*100 :: NameRestart
-  Logical,save  :: IsFirstCall=.true.
-  Real Jr
-  real  :: NewState_GV(-1:maxGrid,nVar)
+  logical,save  :: IsFirstCall=.true.
+  real    :: Jr
+  real    :: NewState_GV(-1:maxGrid,nVar)
+
   !-----------------------------------------------------------------------
   
-  Call get_field_line(State_GV(1:maxGrid,:),                       &
+  call get_field_line(State_GV(1:maxGrid,:),                       &
        GMLAT,GMLONG,Jr,wHorizontal,                                &
        iUnitOutput=iUnitOutput, iUnitGraphics=iUnitGraphics,       &
        NameRestart=NameRestart,                                    &
        iLine=iLine, Time=Time,MaxLineTime=Tmax,                    &
        TypeSolver=TypeSolver,IsVariableDT=IsVariableDT,            &
        IsRestart=IsRestart,DToutput=DToutput,nAlt=nDim,DoLog=DoLog,&
-       nStep=nStep,IsImplicit=IsImplicit,IsImplicitAll=IsImplicitAll)
+       nStep=nStep)
   
   DT=DtVertical
-    
+  DtImpl = Dt
+  DtExpl = Dt*0.1
+
   CURR(1)      = Jr
   
   NTS = 1
@@ -64,23 +67,24 @@ Subroutine POLAR_WIND
   !******************************************************************************
   
   TIMELOOP: DO
-     !     If (UseFullImplicit) then
-     !        call implicit_solver
-     !     else
-     !       advect and add collisional and chemistry sources
-     !       calculate heatflux for ions and update ion temp.
-     !       calculate heatflux for electrons, update electron temp.
-     !       update boundaries
-     !       calculate collisional and chemistry source
-     !       calculate electric field with new electron temp.
-
-
-     call advect
-
+     If (IsFullyImplicit) then
+        call PW_implicit_update
+     else
+        !       advect and add collisional and chemistry sources
+        !       calculate heatflux for ions and update ion temp.
+        !       calculate heatflux for electrons, update electron temp.
+        !       update boundaries
+        !       calculate collisional and chemistry source
+        !       calculate electric field with new electron temp.
+        
+        
+        call advect
+     endif
+     
      CALL PW_iheat_flux
-
+     
      CALL PW_eheat_flux
-
+     
      CALL PW_set_upper_bc
      CALL COLLIS(NDIM)
      CALL PW_calc_efield         
@@ -99,15 +103,16 @@ Subroutine POLAR_WIND
      CALL PW_iheat_flux
 
      CALL PW_eheat_flux
+     If (IsFullyImplicit) then
+        call PW_implicit_update
+     else
+        CALL advect
+     endif
 
-     CALL advect
-!     write(*,*) 7,Time,State_GV(2,Th_),State_GV(2,To_),State_GV(2,Te_)
-
-     !     endif
-     
      !    finish update by calculating boundaries, collision source 
      !    and electric field
      !    these will be used in the next time step
+
      CALL PW_set_upper_bc
      CALL COLLIS(NDIM)
      CALL PW_calc_efield
