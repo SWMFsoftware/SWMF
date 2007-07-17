@@ -94,7 +94,7 @@ test_rb:
 
 test_rb_compile:
 	./Config.pl -v=Empty,RB/RBE,GM/BATSRUS
-	./Config.pl -g=GM:8,8,8,720,70 -o=GM:e=Mhd,u=Default
+	./Config.pl -g=GM:8,8,8,770,1 -o=GM:e=Mhd,u=Default
 	make SWMF
 
 test_rb_rundir:
