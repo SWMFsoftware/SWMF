@@ -22,13 +22,13 @@ module ModCommonVariables
   PARAMETER (NEI=10)
   PARAMETER (NF=4)
   
-  Real wHorizontal
-  CHARACTER(7) TypeSolver
-  Logical :: IsImplicit,DoLog, IsImplicitAll = .false.
+  real :: wHorizontal
+  character(len=7) :: TypeSolver
+  logical :: DoLog
 
-  Real AR12top(2),AR23top(2),CellVolumeTop(2)
+  real :: AR12top(2),AR23top(2),CellVolumeTop(2)
 
-  REAL cMax_O(MaxGrid), cMax_H(MaxGrid),cMax_e(MaxGrid),&
+  real :: cMax_O(MaxGrid), cMax_H(MaxGrid),cMax_e(MaxGrid),&
        cfl(MaxGrid), cfl_O(MaxGrid), cfl_H(MaxGrid),cfl_e(MaxGrid),&
        MaxCfl,cfl_dt
   
