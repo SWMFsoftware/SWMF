@@ -316,11 +316,12 @@ for n=0,ntime-1 do begin
 
     ; Make gif file
     gimg = tvrd(0,0)
-    write_gif,fhead+'_'+fmiddle+'.gif',gimg,red(0:255),green(0:255), $ 
-              blue(0:255),/multiple
+    write_tiff,fhead+'_'+fmiddle+strtrim(n,2)+'.tiff',gimg,red=red(0:255),$
+      green=green(0:255),blue=blue(0:255) ;,/multiple
 endfor
 
-write_gif,fhead+'_'+fmiddle+'.gif',/close
+;write_tiff,fhead+'_'+fmiddle+'.tiff',red=red(0:255),$
+;      green=green(0:255),blue=blue(0:255);,/close
 read,'Do you want to continue?  (y)yes, (n)no => ',yon
 if (yon eq 'y') then goto,new_plot
 
