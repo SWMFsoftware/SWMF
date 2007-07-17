@@ -16,7 +16,6 @@ MODULES = \
 METHODS = \
 	pw.o\
 	polar_wind.o\
-	implicit.o\
 	set_parameters.o\
 	initialize.o\
 	solver.o\
@@ -34,6 +33,7 @@ METHODS = \
 	print_electrodynamics.o\
 	write_restart.o\
 	set_upper_bc.o\
+	implicit_subs.o\
 	${OBJECTS_PLANET}
 
 LIBOBJECTS = ${MODULES} ${METHODS}
