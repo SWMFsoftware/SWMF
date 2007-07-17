@@ -17,7 +17,7 @@ subroutine rusanov_solver(iIon, &
   real, intent(in)         :: Rgas,DtIn
   real, intent(in)         :: OldState_GV(-1:MaxGrid,4)
   real, dimension(MaxGrid), intent(in)  :: RhoSource_C, RhoUSource_C, eSource_C
-  real, intent(out)         :: UpdateState_GV(-1:MaxGrid,4)
+  real, intent(out)        :: UpdateState_GV(-1:MaxGrid,4)
 
   real, dimension(-1:MaxGrid+2) :: OldRho_G, OldU_G, OldP_G
   real, dimension(MaxGrid+1)    :: LeftRho_F, LeftU_F, LeftP_F
@@ -25,10 +25,7 @@ subroutine rusanov_solver(iIon, &
   real, dimension(MaxGrid+1)    :: RhoFlux_F, RhoUFlux_F, eFlux_F
   real, dimension(MaxGrid)      :: NewRho_C, NewU_C, NewP_C, NewT_C
   real, dimension(MaxGrid)      :: OldRho_C, OldU_C, OldP_C, OldT_C
-
-
   !---------------------------------------------------------------------------
-
 
   OldRho_G(-1:nDim+2) = OldState_GV(-1:nDim+2,1)
   OldU_G  (-1:nDim+2) = OldState_GV(-1:nDim+2,2)
@@ -131,7 +128,9 @@ subroutine update_state( iIon,&
      NewRho_C, NewU_C, NewP_C, NewT_C)
 
   use ModCommonVariables
+  use ModPWOM, ONLY: IsPointImplicit, IsPointImplicitAll
   implicit none
+
   integer, intent(in)                   :: iIon  
   real, intent(in)                      :: Rgas,DtIn 
   real, dimension(MaxGrid), intent(in)  :: OldRho_C, OldU_C, OldP_C, OldT_C
@@ -173,10 +172,10 @@ subroutine update_state( iIon,&
 
      NewP_C(i) = gMin1*(NewE(i) - 0.5 * NewU_C(i)**2 * NewRho_C(i))
 
-     If (IsImplicit) then
+     If (IsPointImplicit) then
         !If is ImplictAll = T then treat ions and neutral contributions
         !with point implicit. Else Just treat neutrals with point implicit
-        If (IsImplicitAll) then
+        If (IsPointImplicitAll) then
            MinSpecies = 1
         else
            MinSpecies = 5
