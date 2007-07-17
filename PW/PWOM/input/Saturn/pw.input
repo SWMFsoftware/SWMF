@@ -7,9 +7,10 @@ T		SaveFirst
 
 #SCHEME
 Rusanov		TypeSolver
-T		IsImplicit
-F		IsImplicitAll
-.01		DtVertical
+0.01		DtVertical
+F		IsFullyImplicit
+T		IsPointImplicit
+F		IsPointImplicitAll
 
 #MOTION
 F		IsMoveFluxTube
