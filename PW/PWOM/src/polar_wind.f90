@@ -17,6 +17,7 @@ subroutine polar_wind
   use ModIoUnit, ONLY: UnitTmp_
   use ModCommonVariables
   use ModFieldLine
+  use ModPwImplicit, only: PW_implicit_update
   INTEGER NOTP(100)
   
   !     define the output files and attaching units

@@ -11,6 +11,7 @@ MODULES = \
 	ModPW.o\
 	ModNeutralPW.o\
 	ModPass.o\
+	ModPwImplicit.o\
 	ModGmPressure.o
 
 METHODS = \
@@ -33,7 +34,6 @@ METHODS = \
 	print_electrodynamics.o\
 	write_restart.o\
 	set_upper_bc.o\
-	implicit_subs.o\
 	${OBJECTS_PLANET}
 
 LIBOBJECTS = ${MODULES} ${METHODS}

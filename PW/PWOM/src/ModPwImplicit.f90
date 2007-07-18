@@ -138,21 +138,13 @@ module ModPwImplicit
     State_GV(nDim+1,pE_)=RGAS_I(nIon)*State_GV(nDim+1,Te_)*State_GV(nDim+1,RhoE_)  
 
 
-    !  !these are sound speeds
-    !  do iIon=1,nIon
-    !     SoundSpeed_GI(nDim+1,iIon) = &
-    !          SQRT(&
-    !           GAMMA*State_GV(nDim+1,iP_I(iIon)) / State_GV(nDim+1,iRho_I(iIon))&
-    !          )
-    !  enddo
-
     call  PW_upper_heat_conduction
 
   end subroutine PW_update_boundary
   
+  !============================================================================
   subroutine PW_implicit_update
     
-    use PW_ModImplicit,     ONLY: PW_calc_residual, PW_update_boundary
     use ModLinearSolver,    ONLY: implicit_solver
     use ModCommonVariables, ONLY: Dt,nDim,nVar,State_GV
     
