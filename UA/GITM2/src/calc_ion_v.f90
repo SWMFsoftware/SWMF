@@ -18,6 +18,7 @@ subroutine calc_ion_v(iBlock)
   real, dimension(1:nLons, 1:nLats, 1:nAlts, 3) ::           &
                   PressureGradient, Force, BLocal, &
                   ForceCrossB
+  !---------------------------------------------------------------------------
 
   call report("Ion Forcing Terms",1)
   call start_timing("Ion Forcing")
@@ -46,7 +47,7 @@ subroutine calc_ion_v(iBlock)
   if (UseIonGravity) then
      do iAlt = 1, nAlts
         Force(:,:,iAlt,iUp_) = Force(:,:,iAlt,iUp_) + &
-             IRho(:,:,iAlt) * gravity(iAlt)
+             IRho(:,:,iAlt) * Gravity_GB(1:nLons,1:nLats,iAlt,iBlock)
      enddo
   endif
 
@@ -80,10 +81,12 @@ subroutine calc_ion_v(iBlock)
        B0(1:nLons,1:nLats,1:nAlts,iMag_,iBlock)
   gpDotB = sum(PressureGradient(1:nLons,1:nLats,1:nAlts,:) * &
        BLocal, dim=4) / B0(1:nLons,1:nLats,1:nAlts,iMag_,iBlock)
+
   do iLon = 1,nLons
      do iLat = 1,nLats
-        gDotB(iLon,iLat,:) = gravity(1:nAlts)*BLocal(iLon,iLat,1:nAlts,iUp_)/&
-             B0(iLon,iLat,1:nAlts,iMag_,iBlock)
+        gDotB(iLon,iLat,:) = Gravity_GB(iLon, iLat, 1:nAlts, iBlock) &
+             * BLocal(iLon,iLat,1:nAlts,iUp_) &
+             /     B0(iLon,iLat,1:nAlts,iMag_,iBlock)
      enddo
   enddo
 
@@ -140,7 +143,6 @@ subroutine calc_ion_v(iBlock)
           + Nie * ForceCrossB(:,:,:,iDir) &
           ) / (RhoNu**2 + Nie**2 * B02)
   enddo
-
   IVelocity(:,:,:,:,iBlock) = min( 3000.0, IVelocity(:,:,:,:,iBlock))
   IVelocity(:,:,:,:,iBlock) = max(-3000.0, IVelocity(:,:,:,:,iBlock))
 

@@ -74,6 +74,7 @@ subroutine calc_GITM_sources(iBlock)
      ! euv, such as solar zenith angles, and local time.
 
      call calc_physics(iBlock)
+
      call euv_ionization_heat(iBlock)
 
   endif
@@ -173,7 +174,8 @@ subroutine calc_GITM_sources(iBlock)
                          (logNS(iLon,iLat,iAlt+1,iSpecies,iBlock)- &
                          logNS(iLon,iLat,iAlt-1,iSpecies,iBlock)- &
                          logNum(iLon,iLat,iAlt+1)+ &
-                         logNum(iLon,iLat,iAlt-1))/(2*dalt(iAlt))
+                         logNum(iLon,iLat,iAlt-1)) &
+                         /(2*dAlt_GB(iLon,iLat,iAlt,iBlock))
                  enddo
               enddo
            enddo
@@ -189,7 +191,7 @@ subroutine calc_GITM_sources(iBlock)
                          diffusion_velocity(ilon,ilat,iAlt+1,ispecies)  -&
                          NdensityS(ilon,ilat,iAlt-1,ispecies,iBlock)*&
                          diffusion_velocity(ilon,ilat,iAlt-1,ispecies))/&
-                         (2*dalt(iAlt))
+                         (2*dAlt_GB(iLon,iLat,iAlt,iBlock))
 
                  enddo
               enddo
@@ -258,7 +260,7 @@ subroutine calc_GITM_sources(iBlock)
 
            Temp = Temperature(iLon, iLat, :, iBlock)*TempUnit(iLon, iLat, :)
            nVel = VerticalVelocity(iLon,iLat,1:nAlts,:,iBlock)
-           NDensityS_1D = NDensityS(iLon,iLat,1:nAlts,:,iBlock)
+           NDensityS_1D = NDensityS(iLon,iLat,1:nAlts,1:nSpecies,iBlock)
 
            call calc_neutral_friction(nVel)
 
@@ -301,21 +303,25 @@ subroutine calc_GITM_sources(iBlock)
      if (.not.Is1D) then
         do iLon = 1, nLons
            do iLat = 1, nLats
+              !!! THIS IS WRONG, VisCoef/Rho should multiply ALL !!!
               Viscosity(iLon,iLat,1:nAlts,iUp_) = &
-                   ((Velocity(iLon-1,iLat,1:nAlts,iUp_,iBlock) - &
-                   Velocity(iLon,iLat,1:nAlts,iUp_,iBlock))/ &
-                   dLonDist_GB(iLon, iLat, 1:nAlts, iBlock) + &
-                   (Velocity(iLon+1,iLat,1:nAlts,iUp_,iBlock) - &
-                   Velocity(iLon,iLat,1:nAlts,iUp_,iBlock))/ &
-                   dLonDist_GB(iLon,iLat, 1:nAlts, iBlock)) / 2.0 + &
-                   ((Velocity(iLon,iLat-1,1:nAlts,iUp_,iBlock) - &
-                   Velocity(iLon,iLat,1:nAlts,iUp_,iBlock))/ &
-                   dLatDist_GB(iLat, 1:nAlts, iBlock) + &
-                   (Velocity(iLon,iLat-1,1:nAlts,iUp_,iBlock) - &
-                   Velocity(iLon,iLat,1:nAlts,iUp_,iBlock))/ &
-                   dLatDist_GB(iLat, 1:nAlts, iBlock)) / 2.0 * &
-                   ViscCoef(iLon, iLat,1:nAlts) / &
-                   Rho(iLon, iLat, 1:nAlts, iBlock)
+                   ((Velocity(iLon-1,iLat,1:nAlts,iUp_,iBlock) &
+                   - Velocity(iLon,iLat,1:nAlts,iUp_,iBlock) &
+                   )*InvDLonDist_GB(iLon, iLat, 1:nAlts, iBlock) &
+                   +(Velocity(iLon+1,iLat,1:nAlts,iUp_,iBlock)  &
+                   - Velocity(iLon,iLat,1:nAlts,iUp_,iBlock) &
+                   )*InvDLonDist_GB(iLon,iLat, 1:nAlts, iBlock) &
+                   ) * 0.5 &
+                   +( &
+                   (Velocity(iLon,iLat-1,1:nAlts,iUp_,iBlock) &
+                   - Velocity(iLon,iLat,1:nAlts,iUp_,iBlock) &
+                   )*InvDLatDist_GB(iLon, iLat, 1:nAlts, iBlock) &
+                   +(Velocity(iLon,iLat-1,1:nAlts,iUp_,iBlock) &
+                   - Velocity(iLon,iLat,1:nAlts,iUp_,iBlock) &
+                   )*InvdLatDist_GB(iLon, iLat, 1:nAlts, iBlock) &
+                   ) * 0.5 &
+                   * ViscCoef(iLon, iLat,1:nAlts)    &
+                   / Rho(iLon, iLat, 1:nAlts, iBlock)
               do iAlt = 1, nAlts
                  if (abs(Viscosity(iLon,iLat,iAlt,iUp_)) > &
                       dtr*abs(velocity(iLon,iLat,iAlt,iUp_,iBlock))) then

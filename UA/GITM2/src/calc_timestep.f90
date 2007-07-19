@@ -49,7 +49,7 @@ subroutine calc_timestep_horizontal
                    cMax_GDB(iLon, iLat, iAlt, iEast_,  iBlock) / &
                    dLonDist_GB(iLon,iLat,iAlt,iBlock) + &
                    cMax_GDB(iLon, iLat, iAlt, iNorth_, iBlock) / &
-                   dLatDist_GB(iLat,iAlt,iBlock)))
+                   dLatDist_GB(iLon,iLat,iAlt,iBlock)))
 
               if (UseIonAdvection) &
                    DtLocal = min(DtLocal, Cfl / ( &
@@ -58,7 +58,7 @@ subroutine calc_timestep_horizontal
                    dLonDist_GB(iLon,iLat,iAlt,iBlock) + &
                    (abs(IVelocity(iLon, iLat, iAlt, iNorth_, iBlock))+ &
                    cSound_H(iLon, iLat))/ &
-                   dLatDist_GB(iLat,iAlt,iBlock))/2.0)
+                   dLatDist_GB(iLon,iLat,iAlt,iBlock))/2.0)
 
            end do
         end do
@@ -121,7 +121,8 @@ subroutine calc_timestep_vertical
 
            DtLocal = min(DtLocal, &
                 Cfl / &
-                maxval(cMax_GDB(iLon,iLat,1:nAlts,iUp_,iBlock)/dAlt(1:nAlts)))
+                maxval(cMax_GDB(iLon,iLat,1:nAlts,iUp_,iBlock)&
+                /      dAlt_GB(iLon,iLat,1:nAlts,iBlock)))
 
            if (UseIonAdvection) then
 
@@ -130,7 +131,7 @@ subroutine calc_timestep_vertical
 
               DtLocal = min(DtLocal, &
                    Cfl / &
-                   maxval(cm/dAlt(1:nAlts)))
+                   maxval(cm/dAlt_GB(iLon,iLat,1:nAlts,iBlock)))
 
            endif
 

@@ -1,10 +1,3 @@
-
-!\
-! ------------------------------------------------------------
-! calc_physics
-! ------------------------------------------------------------
-!/
-
 subroutine calc_physics(iBlock)
 
   use ModGITM
@@ -118,8 +111,10 @@ subroutine calc_physics(iBlock)
   call calc_scaled_euv
 
   do iAlt = 1, nAlts
-     xSolar(:,:,iAlt) = RadialDistance(iAlt) * cosSZA(:,:,iBlock)
-     ySolar(:,:,iAlt) = RadialDistance(iAlt) * sinSZA(:,:,iBlock)
+     xSolar(:,:,iAlt) = RadialDistance_GB(1:nLons,1:nLats,iAlt,iBlock) &
+          * cosSZA(:,:,iBlock)
+     ySolar(:,:,iAlt) = RadialDistance_GB(1:nLons,1:nLats,iAlt,iBlock) &
+          * sinSZA(:,:,iBlock)
   enddo
 
 end subroutine calc_physics

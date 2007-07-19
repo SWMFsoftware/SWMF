@@ -5,13 +5,11 @@ module ModEUV
 
   implicit none
 
-  real :: HeatingEfficiency(nAlts), eHeatingEfficiency(nAlts)
-
   real, dimension(nLons, nLats, nAlts) :: &
        xSolar, ySolar
 
-  real, dimension(nLons, nLats, nAlts,nBlocksMax) :: &
-       EuvIonRate
+  real, dimension(nLons, nLats, nAlts, nBlocksMax) :: &
+       HeatingEfficiency_CB, eHeatingEfficiency_CB, EuvIonRate
 
   real, dimension(nLons, nLats, nAlts, nIons,nBlocksMax) :: &
        EuvIonRateS, EuvDissRateS

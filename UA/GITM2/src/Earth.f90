@@ -147,30 +147,27 @@ end subroutine calc_planet_sources
 
 subroutine init_heating_efficiency
 
-  use ModGITM, only: nAlts, altitude
-  use ModEUV, only: HeatingEfficiency, eHeatingEfficiency
+  use ModGITM, only: nLons, nLats, nAlts, nBlocks, Altitude_GB
+  use ModEUV, only: HeatingEfficiency_CB, eHeatingEfficiency_CB
 
   implicit none
 
-  integer :: iAlt
+  integer :: iLon, iLat, iAlt
+  !------------------------------------------------------------------
+  HeatingEfficiency_CB(:,:,:,1:nBlocks) = max(0.1, &
+       0.40 - &
+       5.56e-5*(Altitude_GB(1:nLons,1:nLats,1:nAlts,1:nBlocks)/1000 - 165)**2)
 
-  do iAlt=1,nAlts
-
-     HeatingEfficiency(iAlt) = &
-          max(0.40-5.56e-5*(Altitude(iAlt)/1000.-165.)**2,0.1)
-
-     if (altitude(iAlt)/1000. > 150.) then
-        eHeatingEfficiency(iAlt)= &
-             MIN(0.04+0.05*(altitude(iAlt)/1000.-150.)/100., 0.4)
-        
-        eHeatingEfficiency(iAlt)= 0.04
-
-     else
-        eHeatingEfficiency(iAlt)= &
-             MAX(0.05+0.07*(altitude(iAlt)/1000.-200.)/100., 0.000001)
-     endif
-     
-  enddo
+  where(Altitude_GB(1:nLons,1:nLats,1:nAlts,1:nBlocks)/1000. > 150.)
+     eHeatingEfficiency_CB(:,:,:,1:nBlocks) = 0.04
+!!! min(0.4, &
+!!!     0.04 + &
+!!!     0.05*(Altitude_GB(1:nLons,1:nLats,1:nAlts,1:nBlocks)/1000 - 150)/100)
+  elsewhere        
+     eHeatingEfficiency_CB(:,:,:,1:nBlocks) = max(0.000001, &
+          0.05 + &
+          0.07*(Altitude_GB(1:nLons,1:nLats,1:nAlts,1:nBlocks)/1000 - 200)/100)
+  end where
 
 end subroutine init_heating_efficiency
 

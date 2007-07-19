@@ -9,7 +9,7 @@ subroutine calc_efield(iBlock)
   integer, intent(in) :: iBlock
 
   integer :: i, j, k, imax, jmax, kmax
-  real :: maxi, dLon
+  real :: maxi
   real :: p1, p2
 
   call report("Electric Field",2)
@@ -22,14 +22,20 @@ subroutine calc_efield(iBlock)
 
   do k=1,nAlts
      do i=1,nLats
-        dlon = 2*(Longitude(2,iBlock) - Longitude(1,iBlock)) * &
-             RadialDistance(k) * max(abs(cos(Latitude(i,iBlock))),0.17)
         do j=1,nLons
            EField(j,i,k,iEast_) = &
-                -(Potential(j+1,i,k,iBlock)-Potential(j-1,i,k,iBlock)) / dLon
+               -(Potential(j+1,i,k,iBlock)-Potential(j-1,i,k,iBlock)) &
+!!!                *0.5*InvdLonDist_GB(j,i,k,iBlock)
+!!! This was wrong for nonuniform longitude grid !!! 
+!!! max(0.17 is different from max(0.1 in initialize.f90 ???
+           / (2*(Longitude(2,iBlock) - Longitude(1,iBlock)) * &
+           RadialDistance_GB(j,i,k,iBlock) &
+           * max(abs(cos(Latitude(i,iBlock))),0.17))
+!!! End of change
+
            EField(j,i,k,iNorth_)= &
-                -(Potential(j,i+1,k,iBlock)-Potential(j,i-1,k,iBlock)) / &
-                (dLatDist_GB(i, k, iBlock)*2)
+                -(Potential(j,i+1,k,iBlock)-Potential(j,i-1,k,iBlock)) &
+                *0.5*InvdLatDist_GB(j,i,k,iBlock)
 
            if (k < nAlts) then
               p1 = (potential(j,i,k+2,iBlock) + potential(j,i,k+1,iBlock) + &
@@ -48,8 +54,7 @@ subroutine calc_efield(iBlock)
            p1 = potential(j,i,k+1,iBlock)
            p2 = potential(j,i,k-1,iBlock)
 
-           EField(j,i,k,iUp_) =   &
-                -(P1-P2) / (altitude(k+1) - altitude(k-1))
+           EField(j,i,k,iUp_) = -(P1-P2) / (2*dAlt_GB(j,i,k,iBlock))
 
         enddo
      enddo

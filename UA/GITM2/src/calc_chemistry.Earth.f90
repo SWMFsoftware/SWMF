@@ -32,6 +32,14 @@ subroutine calc_chemistry(iBlock)
 
   logical :: UseNeutralConstituent(nSpeciesTotal)
   logical :: UseIonConstituent(nIons)
+  !---------------------------------------------------------------------------
+
+  if (iDebugLevel > 3) then
+     do iIon = 1, nIons
+        write(*,*) "====> start calc_chemistry: Max Ion Density: ", iIon, &
+             maxval(IDensityS(1:nLons,1:nLats,(nAlts*4)/5,iIon,iBlock))
+     enddo
+  endif
 
   UseNeutralConstituent = .true.
   UseIonConstituent     = .true.
@@ -1384,13 +1392,13 @@ subroutine calc_chemistry(iBlock)
 
   if (iDebugLevel > 3) then
      do iIon = 1, nIons
-        write(*,*) "====> Max Ion Density: ", iIon, &
+        write(*,*) "====> calc_chemistry: Max Ion Density: ", iIon, &
              maxval(IDensityS(1:nLons,1:nLats,(nAlts*4)/5,iIon,iBlock))
      enddo
   endif
 
   if (iDebugLevel > 2) &
-       write(*,*) "===> Average Dt for this timestep : ", &
+       write(*,*) "===> calc_chemistry: Average Dt for this timestep : ", &
        (Dt*nLats*nLons*nAlts)/nIters
 
   call end_timing("calc_chemistry")

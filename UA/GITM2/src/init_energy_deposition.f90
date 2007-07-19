@@ -2,7 +2,7 @@
 subroutine init_energy_deposition
 
   use ModInputs, only: iDebugLevel
-  use ModGITM, only: Altitude
+  use ModGITM, only: Altitude_GB
   use ModSources
 
   implicit none
@@ -58,7 +58,8 @@ subroutine init_energy_deposition
 
   do iAlt = 1, nAlts
 
-     a = Altitude(iAlt)
+     !!! This is a temporary solution !!!
+     a = Altitude_GB(1,1,iAlt,1)
 
      i = 1
      IsDone = .false.

@@ -19,7 +19,8 @@ subroutine advance_vertical(iLon,iLat,iBlock)
        VertVel, &
        MeanMajorMass_1d, &
        gamma_1d, &
-       EddyCoef_1d
+       EddyCoef_1d, &
+       Gravity_G, Altitude_G, dAlt_C, InvRadialDistance_C, dAlt_F, InvDAlt_F
 
   implicit none
 
@@ -74,6 +75,19 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   Lat = Latitude(iLat, iBlock) * 180.0/pi
   Lon = Longitude(iLon, iBlock) * 180.0/pi
 
+  ! Cell centered variables
+  Gravity_G           = Gravity_GB(iLon, iLat, :, iBlock)
+  Altitude_G          = Altitude_GB(iLon, iLat, :, iBlock)
+  dAlt_C              = dAlt_GB(iLon, iLat, 1:nAlts, iBlock)
+  InvRadialDistance_C = InvRadialDistance_GB(iLon, iLat, 1:nAlts, iBlock)
+
+  ! Face centered variables
+  ! This is the distance between cell centers. 
+  ! Note that face(i) is between cells i and i-1 (like in BATSRUS)
+  dAlt_F(0:nAlts+2)   = Altitude_G(0:nAlts+2) - Altitude_G(-1:nAlts+1)
+  dAlt_F(-1)          = dAlt_F(0)
+  InvDAlt_F           = 1.0/dAlt_F
+
   call advance_vertical_1d
 
   Rho(iLon,iLat,:,iBlock)                  = exp(LogRho)
@@ -107,7 +121,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
            if (LogNS1(iAlt,iSpecies) > 75.0) then
               write(*,*) "iSpecies, iBlock, Alt,Lon, Lat, maxval : ",&
                    iSpecies,iBlock,&
-                   altitude(iAlt)/1000.0, &
+                   Altitude_GB(iLon,iLat,iAlt,iBlock)/1000.0, &
                    longitude(iLon,iBlock)*180/pi, &
                    latitude(iLat,iBlock)*180/pi, LogNS1(iAlt,ispecies)
            endif
@@ -133,7 +147,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
 !              if (LogINS(iAlt,iSpecies) > 75.0) then
 !                 write(*,*) "iSpecies, iBlock, Alt,Lon, Lat, maxval : ",&
 !                      iSpecies,iBlock,&
-!                      altitude(iAlt)/1000.0, &
+!                      Altitude_GB(iLon,iLat,iAlt,iBlock)/1000.0, &
 !                      longitude(iLon,iBlock)*180/pi, &
 !                      latitude(iLat,iBlock)*180/pi, LogINS(iAlt,ispecies)
 !              endif

@@ -26,12 +26,12 @@ end subroutine fill_photo
 
 subroutine init_heating_efficiency
 
-  use ModEUV, only: HeatingEfficiency, eHeatingEfficiency
+  use ModEUV, only: HeatingEfficiency_CB, eHeatingEfficiency_CB
 
   implicit none
 
-  HeatingEfficiency  = 0.22
-  eHeatingEfficiency = 0.0
+  HeatingEfficiency_CB  = 0.22
+  eHeatingEfficiency_CB = 0.0
 
   call init_radcool
 

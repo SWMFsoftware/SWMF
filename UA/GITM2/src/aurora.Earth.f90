@@ -1,6 +1,3 @@
-! ----------------------------------------------------------------------
-! ----------------------------------------------------------------------
-
 subroutine aurora(iBlock)
 
   use ModGITM
@@ -44,7 +41,8 @@ subroutine aurora(iBlock)
 
   if (UseIonPrecipitation) call interpolate_ions( &
        nLons, nLats, nAlts, &
-       Longitude(1:nLons,iBlock), Latitude(1:nLats,iBlock), Altitude(1:nAlts),&
+       Longitude(1:nLons,iBlock), Latitude(1:nLats,iBlock), &
+       Altitude_GB(1:nLons, 1:nLats, 1:nAlts, iBlock),&
        IonPrecipitationBulkIonRate, IonPrecipitationHeatingRate)
 
   do i=1,nLats

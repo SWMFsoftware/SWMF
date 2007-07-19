@@ -1,4 +1,3 @@
-
 subroutine chapman_integrals(iBlock)
 
   use ModGITM
@@ -53,20 +52,23 @@ subroutine chapman_integrals(iBlock)
               if (iAlt < nAlts) then
                  Integrals(iLon,iLat,iAlt,iSpecies) = &
                       Integrals(iLon,iLat,iAlt+1,iSpecies) + &
-                      NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)*dAlt(iAlt)
+                      NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)&
+                      *dAlt_GB(iLon,iLat,iAlt,iBlock)
               else
                  ScaleHeightS = &
-                      Temperature(iLon,iLat,iAlt,iBlock)*TempUnit(iLon,iLat,iAlt) * &
-                      Boltzmanns_Constant / (-Gravity(iAlt) * Mass(iSpecies))
+                      Temperature(iLon,iLat,iAlt,iBlock) &
+                      * TempUnit(iLon,iLat,iAlt) * Boltzmanns_Constant &
+                      / (-Gravity_GB(iLon,iLat,iAlt,iBlock) * Mass(iSpecies))
                  Integrals(iLon,iLat,iAlt,iSpecies) = &
                       NDensityS(iLon,iLat,iAlt,iSpecies, iBlock) * ScaleHeightS
               endif
               ScaleHeightS = &
-                   Temperature(iLon,iLat,iAlt,iBlock)*TempUnit(iLon,iLat,iAlt) * &
-                   Boltzmanns_Constant / (-Gravity(iAlt) * Mass(iSpecies))
+                   Temperature(iLon,iLat,iAlt,iBlock) &
+                   *TempUnit(iLon,iLat,iAlt) * Boltzmanns_Constant &
+                   / (-Gravity_GB(iLon,iLat,iAlt,iBlock) * Mass(iSpecies))
               xp(iLon,iLat,iAlt,iSpecies) = &
                    sqrt(0.5 * pi * &
-                   RadialDistance(iAlt) / ScaleHeightS)
+                   RadialDistance_GB(iLon, iLat, iAlt, iBlock) / ScaleHeightS)
               y = xp(iLon,iLat,iAlt,iSpecies) * abs(cosSZA(iLon,iLat,iBlock))
               if (y < 8) then
                  erfcy(iLon,iLat,iAlt,iSpecies) = (a+b*y) / (c+d*y+y**2)
@@ -97,12 +99,13 @@ subroutine chapman_integrals(iBlock)
 
               else
 
-                 y = RadialDistance(iAlt)*abs(cos(SZA(iLon,iLat,iBlock)-pi/2))
+                 y = RadialDistance_GB(iLon, iLat, iAlt, iBlock) &
+                      *abs(cos(SZA(iLon,iLat,iBlock)-pi/2))
 
-                 if (y > RadialDistance(2)) then
+                 if (y > RadialDistance_GB(iLon, iLat, 2, iBlock)) then
 
                     iiAlt = iAlt
-                    do while (RadialDistance(iiAlt-1) > y)
+                    do while (RadialDistance_GB(iLon, iLat, iiAlt-1, iBlock)>y)
                        iiAlt = iiAlt - 1
                     enddo
 
@@ -110,8 +113,9 @@ subroutine chapman_integrals(iBlock)
                     ! here, but the integral is going to be huge anyways...
 
                     ScaleHeightS = &
-                         Temperature(iLon,iLat,iiAlt,iBlock)*TempUnit(iLon,iLat,iiAlt) * &
-                         Boltzmanns_Constant/(-Gravity(iiAlt)*Mass(iSpecies))
+                         Temperature(iLon,iLat,iiAlt,iBlock) &
+                         *TempUnit(iLon,iLat,iiAlt) * Boltzmanns_Constant &
+                         / (-Gravity_GB(iLon,iLat,iiAlt,iBlock)*Mass(iSpecies))
 
                     ! xp is evaluated at the tangent point, which is where
                     ! at a radial distance of r*cos(sza)

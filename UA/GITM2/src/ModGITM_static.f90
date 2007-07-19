@@ -10,16 +10,13 @@ module ModGITM
 
   integer :: iCommGITM, iProc, nProcs
 
-  real, dimension(-1:nAlts+2) :: Altitude, dAlt, RadialDistance, Gravity, &
-       InvRadialDistance, InvDAlt, dAlt_F, InvDAlt_F
-
   real, dimension(-1:nLons+2,-1:nLats+2,-1:nAlts+2,nBlocksMax) :: &
        dLonDist_GB, InvDLonDist_GB, &
-       dLonDist_FB, InvDLonDist_FB
-
-  real, dimension(-1:nLats+2,-1:nAlts+2,nBlocksMax) :: &
+       dLonDist_FB, InvDLonDist_FB, &
        dLatDist_GB, InvDLatDist_GB, &
-       dLatDist_FB, InvDLatDist_FB
+       dLatDist_FB, InvDLatDist_FB, &
+       Altitude_GB, dAlt_GB, RadialDistance_GB, InvRadialDistance_GB, &
+       Gravity_GB
 
   real, dimension(-1:nLons+2, nBlocksMax) :: Longitude
   real, dimension(-1:nLats+2, nBlocksMax) :: Latitude, TanLatitude

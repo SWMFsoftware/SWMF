@@ -1,8 +1,3 @@
-
-!----------------------------------------------------------------
-!
-!----------------------------------------------------------------
-
 integer function bad_outputtype()
 
   use ModInputs, only : OutputType, nOutputTypes
@@ -196,7 +191,7 @@ subroutine output(dir, iBlock, iOutputType)
   case ('2DMEL')
 
      nvars_to_write = 18
-     if (iBLK == 1) call output_2dmel
+     if (iBLK == 1) call output_2dmel(iBlock)
 
   case ('2DUSR')
 
@@ -548,7 +543,7 @@ subroutine output_3dall(iBlock)
            write(iOutputUnit_)       &
                 Longitude(iLon,iBlock), &
                 Latitude(iLat,iBlock), &
-                altitude(iAlt),&
+                Altitude_GB(iLon,iLat,iAlt,iBlock),&
                 Rho(iLon,iLat,iAlt,iBlock),&
                 NDensityS(iLon,iLat,iAlt,:,iBlock), &
                 Temperature(iLon,iLat,iAlt,iBlock)*TempUnit(iLon,iLat,iAlt),&
@@ -587,7 +582,7 @@ subroutine output_3dneu(iBlock)
            write(iOutputUnit_)       &
                 Longitude(iLon,iBlock), &
                 Latitude(iLat,iBlock), &
-                altitude(iAlt),&
+                Altitude_GB(iLon,iLat,iAlt,iBlock),&
                 Rho(iLon,iLat,iAlt,iBlock),&
                 NDensityS(iLon,iLat,iAlt,:,iBlock), &
                 Temperature(iLon,iLat,iAlt,iBlock)*TempUnit(iLon,iLat,iAlt),&
@@ -622,7 +617,7 @@ subroutine output_3dion(iBlock)
            write(iOutputUnit_)          &
                 Longitude(iLon,iBlock),               &
                 Latitude(iLat,iBlock),                &
-                altitude(iAlt),                       &
+                Altitude_GB(iLon,iLat,iAlt,iBlock),   &
                 IDensityS(iLon,iLat,iAlt,:,iBlock),   &
                 eTemperature(iLon,iLat,iAlt,iBlock),  &
                 ITemperature(iLon,iLat,iAlt,iBlock),  &
@@ -654,7 +649,7 @@ subroutine output_2dgel(iBlock)
         write(iOutputUnit_)       &
              Longitude(iLon,iBlock), &
              Latitude(iLat,iBlock),&
-             Altitude(iAlt),&
+             Altitude_GB(iLon,iLat,iAlt,iBlock), &
              Potential(iLon,iLat,iAlt,iBlock), &
              PedersenConductance(iLon,iLat,iBlock), &
              HallConductance(iLon,iLat,iBlock), &
@@ -670,10 +665,8 @@ subroutine output_2dgel(iBlock)
 end subroutine output_2dgel
 
 !----------------------------------------------------------------
-!
-!----------------------------------------------------------------
 
-subroutine output_2dmel
+subroutine output_2dmel(iBlock)
   
   use ModElectrodynamics
   use ModConstants, only:Pi
@@ -682,8 +675,9 @@ subroutine output_2dmel
 
   implicit none
 
-  integer :: iOff, iSpecies, iIon, nVars_to_Write, nGCs
-  integer :: iAlt, iLat, iLon, iiAlt, iiLat, iiLon
+  integer, intent(in) :: iBlock
+  integer :: iAlt, iLat, iLon
+  !--------------------------------------------------------------------------
 
   iAlt = 1
   do iLat=1,nMagLats
@@ -691,7 +685,7 @@ subroutine output_2dmel
         write(iOutputUnit_)       &
              MagLonMC(iLon,iLat)*Pi/180.0, &
              MagLatMC(iLon,iLat)*Pi/180.0, &
-             Altitude(iAlt),&
+             Altitude_GB(iLon,iLat,iAlt,iBlock), &
              MagLocTimeMC(iLon,iLat)*Pi/180.0, &
              GeoLatMC(iLon,iLat), &
              GeoLonMC(iLon,iLat), &
@@ -741,7 +735,7 @@ subroutine output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
           rLon*Longitude(iiLon,iBlock)+(1-rLon)*Longitude(iiLon+1,iBlock)
      Vars(2) = &
           rLat*Latitude(iiLat,iBlock)+(1-rLat)*Latitude(iiLat+1,iBlock)
-     Vars(3) = altitude(iAlt)
+     Vars(3) = Altitude_GB(iiLon, iiLat, iAlt, iBlock)
 
      Tmp = Rho(0:nLons+1,0:nLats+1,iAlt,iBlock)
      Vars(4) = inter(Tmp,iiLon,iiLat,rlon,rlat)
@@ -808,7 +802,6 @@ contains
           (1-rLon)*(1-rLat)*Variable(iiLon+1,iiLat+1)
 
   end function inter
-
 
 end subroutine output_1dall
 

@@ -138,7 +138,7 @@ subroutine output_3dUser(iBlock, iOutputUnit_)
            write(iOutputUnit_)       &
                 Longitude(iLon,iBlock), &
                 Latitude(iLat,iBlock), &
-                altitude(iAlt),&
+                Altitude_GB(iLon, iLat, iAlt, iBlock),&
                 UserData3D(iLon,iLat,iAlt,1:nVarsUser3d-3,iBlock)
         enddo
      enddo
@@ -166,7 +166,7 @@ subroutine output_2dUser(iBlock, iOutputUnit_)
         write(iOutputUnit_)       &
              Longitude(iLon,iBlock), &
              Latitude(iLat,iBlock), &
-             altitude(iAlt),&
+             Altitude_GB(iLon, iLat, iAlt, iBlock),&
              UserData2D(iLon,iLat,iAlt,1:nVarsUser2d-3,iBlock)
      enddo
   enddo

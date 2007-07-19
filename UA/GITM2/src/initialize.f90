@@ -65,7 +65,7 @@ subroutine initialize_gitm(TimeIn)
 
   call init_euv
 
-  Gravity = 0.0
+  Gravity_GB = 0.0
 
   if (.not. DoRestart) then
 
@@ -73,53 +73,46 @@ subroutine initialize_gitm(TimeIn)
         call init_altitude
      else
         ! Uniform grid
-        dAlt = (AltMax-AltMin)/nAlts
         do iAlt=-1,nAlts+2
-           Altitude(iAlt) = AltMin + (iAlt-0.5)*dAlt(iAlt)
+           Altitude_GB(:,:,iAlt,1:nBlocks) = &
+                AltMin + (iAlt-0.5)*(AltMax-AltMin)/nAlts
         enddo
      endif
 
-  else
+  end if
 
-     do iAlt = 0,nAlts+1
-        ! Cell interface is taken to be half way between cell centers
-        ! so the cell size is half of the cell center distance
-        ! between cells i-1 and i+1: 
-        dAlt(iAlt) = (Altitude(iAlt+1) - Altitude(iAlt-1))/2.0
-     enddo
-     dAlt(-1) = dAlt(0)
-     dAlt(nAlts+2) = dAlt(nAlts+1)
+  ! Calculate vertical cell sizes
+  do iAlt = 0,nAlts+1
+     ! Cell interface is taken to be half way between cell centers
+     ! so the cell size is half of the cell center distance
+     ! between cells i-1 and i+1: 
+     dAlt_GB(:,:,iAlt,1:nBlocks) = 0.5* &
+          ( Altitude_GB(:,:,iAlt+1,1:nBlocks) &
+          - Altitude_GB(:,:,iAlt-1,1:nBlocks))
+  enddo
+  dAlt_GB(:,:,-1,1:nBlocks)      = dAlt_GB(:,:,0,1:nBlocks)
+  dAlt_GB(:,:,nAlts+2,1:nBlocks) = dAlt_GB(:,:,nAlts+1,1:nBlocks)
 
-  endif
+  RadialDistance_GB(:,:,:,1:nBlocks)    = rBody + Altitude_GB(:,:,:,1:nBlocks)
+  InvRadialDistance_GB(:,:,:,1:nBlocks) = 1/RadialDistance_GB(:,:,:,1:nBlocks)
 
-  ! This is the cell size and its inverse
-  InvDAlt   = 1.0/dAlt
-
-  ! This is the distance between cell centers. 
-  ! Note that face(i) is between cells i and i-1 (like in BATSRUS)
-  dAlt_F(0:nAlts+2) = Altitude(0:nAlts+2) - Altitude(-1:nAlts+1)
-  dAlt_F(-1)        = dAlt_F(0)
-  InvDAlt_F         = 1.0/dAlt_F
-
-  RadialDistance = RBody + Altitude
-  InvRadialDistance = 1.0/RadialDistance
-
-  Gravity = &
-       -Gravitational_Constant*&
-       (RBody/RadialDistance) ** 2
+  Gravity_GB(:,:,:,1:nBlocks) = -Gravitational_Constant &
+       *(rBody*InvRadialDistance_GB(:,:,:,1:nBlocks)) ** 2
 
   if (UseStretchedAltitude) then
+!!! How is this formula derived ???
      do iAlt=1,nAlts
-        Gravity(iAlt) = &
-             -Gravitational_Constant*&
-             (RBody/((RadialDistance(iAlt)+RadialDistance(iAlt+1))/2)) ** 2
+        Gravity_GB(:,:,iAlt,:) = -Gravitational_Constant &
+             *(rBody*2 / ( RadialDistance_GB(:,:,iAlt,:) &
+             +             RadialDistance_GB(:,:,iAlt+1,:))) ** 2
      enddo
   endif
 
   if (iDebugLevel > 2) then
      do iAlt=-1,nAlts+2
         write(*,*) "===>Altitude : ", &
-             iAlt, Altitude(iAlt), RadialDistance(iAlt), Gravity(iAlt)
+             iAlt, Altitude_GB(1,1,iAlt,1), RadialDistance_GB(1,1,iAlt,1), &
+             Gravity_GB(1,1,iAlt,1)
      end do
   endif
 
@@ -143,57 +136,56 @@ subroutine initialize_gitm(TimeIn)
   dLonDist_FB = 1.0
 
   ! Precalculate the physical size of cells in the Lat and Lon directions
-  do iLat = 0, nLats+1
+  do iBlock = 1, nBlocks
      do iAlt = -1, nAlts+2
-        do iBlock = 1, nBlocks
-
-           ! This is the cell size assuming that cell interface is half way
-           dLatDist_GB(iLat, iAlt, iBlock) = 0.5 * &
-                (Latitude(iLat+1, iBlock) - Latitude(iLat-1, iBlock)) * &
-                RadialDistance(iAlt)           
-           ! This is the distance between neighboring cells
-           ! Note that face(i) is between cells i and i-1 (like in BATSRUS)
-           dLatDist_FB(iLat, iAlt, iBlock) = &
-                (Latitude(iLat, iBlock) - Latitude(iLat-1, iBlock)) * &
-                RadialDistance(iAlt)           
-
-           ! The longitude grid is uniform in angle
+        do iLat = 0, nLats+1
            do iLon = 0, nLons+1
+              ! This is the cell size assuming that cell interface is half way
+              dLatDist_GB(iLon, iLat, iAlt, iBlock) = 0.5 * &
+                (Latitude(iLat+1, iBlock) - Latitude(iLat-1, iBlock)) * &
+                RadialDistance_GB(iLon, iLat, iAlt, iBlock)
+
+              ! This is the distance between neighboring cells
+              ! Note that face(i) is between cells i and i-1 (like in BATSRUS)
+              dLatDist_FB(iLon, iLat, iAlt, iBlock) = &
+                   (Latitude(iLat, iBlock) - Latitude(iLat-1, iBlock)) * &
+                   0.5*(RadialDistance_GB(iLon, iLat  , iAlt, iBlock) &
+                   +    RadialDistance_GB(iLon, iLat-1, iAlt, iBlock))
+              
+              ! This is the cell size assuming that cell interface is half way
               dLonDist_GB(iLon, iLat, iAlt, iBlock) = 0.5 * &
                    (Longitude(iLon+1,iBlock) - Longitude(iLon-1,iBlock)) * &
-                   RadialDistance(iAlt)* &
+                   RadialDistance_GB(iLon, iLat, iAlt, iBlock)* &
                    max(abs(cos(Latitude(iLat,iBlock))),0.01)
+
+              ! This is the distance between neighboring cells
               dLonDist_FB(iLon, iLat, iAlt, iBlock) = &
                    (Longitude(iLon,iBlock) - Longitude(iLon-1,iBlock)) * &
-                   RadialDistance(iAlt)* &
-                   max(abs(cos(Latitude(iLat,iBlock))),0.01)
+                   0.5*(RadialDistance_GB(iLon,   iLat, iAlt, iBlock) &
+                   +    RadialDistance_GB(iLon-1, iLat, iAlt, iBlock)) &
+                   *max(abs(cos(Latitude(iLat,iBlock))),0.01)
            enddo
 
+           ! Fill in longitude ghost cells
            dLonDist_FB(-1, iLat, iAlt, iBlock) = &
                 dLonDist_FB(0, iLat, iAlt, iBlock)
            dLonDist_FB(nLons+2, iLat, iAlt, iBlock) = &
                 dLonDist_FB(nLons+1, iLat, iAlt, iBlock)
-
+           dLatDist_FB(-1, iLat, iAlt, iBlock) = &
+                dLatDist_FB(0, iLat, iAlt, iBlock)
+           dLatDist_FB(nLons+2, iLat, iAlt, iBlock) = &
+                dLatDist_FB(nLons+1, iLat, iAlt, iBlock)
         enddo
+        ! Fill in latitude ghost cells
+        dLonDist_FB(:, -1, iAlt, iBlock) = &
+             dLonDist_FB(:, 0, iAlt, iBlock)
+        dLonDist_FB(:, nLats+2, iAlt, iBlock) = &
+             dLonDist_FB(:, nLats+1, iAlt, iBlock)
+        dLatDist_FB(:, -1, iAlt, iBlock) = &
+             dLatDist_FB(:, 0, iAlt, iBlock)
+        dLatDist_FB(:, nLats+2, iAlt, iBlock) = &
+             dLatDist_FB(:, nLats+1, iAlt, iBlock)
      enddo
-  enddo
-
-  ! Fill in 2nd ghost cells
-  dLatDist_GB(-1, :, 1:nBlocks)      = dLatDist_GB(0, :, 1:nBlocks)
-  dLatDist_GB(nLats+2, :, 1:nBlocks) = dLatDist_GB(nLats+1, :, 1:nBlocks)
-
-  dLatDist_FB(-1, :, 1:nBlocks)      = dLatDist_FB(0, :, 1:nBlocks)
-  dLatDist_FB(nLats+2, :, 1:nBlocks) = dLatDist_FB(nLats+1, :, 1:nBlocks)
-
-  do iLon = -1, nLons+2
-     dLonDist_GB(iLon, -1, :, 1:nBlocks)      = &
-          dLonDist_GB(iLon, 0, :, 1:nBlocks)
-     dLonDist_GB(iLon, nLats+2, :, 1:nBlocks) = &
-          dLonDist_GB(iLon, nLats+1, :, 1:nBlocks)
-     dLonDist_FB(iLon, -1, :, 1:nBlocks)      = &
-          dLonDist_GB(iLon, 0, :, 1:nBlocks)
-     dLonDist_FB(iLon, nLats+2, :, 1:nBlocks) = &
-          dLonDist_GB(iLon, nLats+1, :, 1:nBlocks)
   enddo
 
   InvDLatDist_GB = 1.0/dLatDist_GB
@@ -224,7 +216,7 @@ subroutine initialize_gitm(TimeIn)
         do iBlock = 1, nBlocks
 
            do iAlt=-1,nAlts+2
-              call get_temperature(0.0, 0.0, Altitude(iAlt), t, h)
+              call get_temperature(0.0, 0.0, Altitude_GB(:,:,iAlt,iBlock), t, h)
               Temperature(:,:,iAlt,iBlock)  = t/TempUnit_const
               eTemperature(:,:,iAlt,iBlock) = t
               iTemperature(:,:,iAlt,iBlock) = t
@@ -232,14 +224,9 @@ subroutine initialize_gitm(TimeIn)
            
            do iAlt=-1,nAlts+2
 
-              if (iAlt > -1) then
-                 InvScaleHeight(:,:,iAlt,iBlock)  =  &
-                      -Gravity(iAlt) / &
-                      Temperature(:,:,iAlt,iBlock)
-              else
-                 InvScaleHeight(:,:,iAlt,iBlock)  =  &
-                      -Gravity(iAlt)/Temperature(:,:,iAlt,iBlock)
-              endif
+              InvScaleHeight(:,:,iAlt,iBlock)  =  &
+                   -Gravity_GB(:,:,iAlt,iBlock) / &
+                   Temperature(:,:,iAlt,iBlock)
 
               Rho(:,:,iAlt,iBlock) = 0.0
 
@@ -247,38 +234,31 @@ subroutine initialize_gitm(TimeIn)
 
               do iSpecies = 1, nSpecies
 
-                 if (iAlt > -1) then
-                    InvScaleHeightS = -Gravity(iAlt) * &
-                         Mass(iSpecies) / &
-                         (Temperature(:,:,iAlt,iBlock)*TempUnit_const* &
-                         Boltzmanns_Constant)
-                 else
-                    InvScaleHeightS = -Gravity(iAlt) * &
-                         Mass(iSpecies) / &
-                         (Temperature(:,:,iAlt,iBlock)*TempUnit_const* &
-                         Boltzmanns_Constant)
-                 endif
+                 InvScaleHeightS = -Gravity_GB(:,:,iAlt,iBlock) * &
+                      Mass(iSpecies) / &
+                      (Temperature(:,:,iAlt,iBlock)*TempUnit_const* &
+                      Boltzmanns_Constant)
 
                  if(iAlt < 2)then
                     LogNS(:,:,iAlt,iSpecies,iBlock) = &
-                         - (Altitude(iAlt)-AltMin)*InvScaleHeightS + &
-                         LogNS0(iSpecies)
-                 endif
-                 if(iAlt > 1 .and. iAlt < nAlts+2)then
+                         - (Altitude_GB(:,:,iAlt,iBlock)-AltMin) &
+                         * InvScaleHeightS + LogNS0(iSpecies)
+                 elseif(iAlt > 1 .and. iAlt < nAlts+2)then
                     LogNS(:,:,iAlt,iSpecies,iBlock) = &
                          LogNS(:,:,iAlt-1,iSpecies,iBlock) &
-                         -(Altitude(iAlt)-Altitude(iAlt-1))*InvScaleHeightS &
-                         -(Temperature(:,:,iAlt+1,iBlock) - &
-                          Temperature(:,:,iAlt-1,iBlock))/ &
-                          (2.0*Temperature(:,:,iAlt,iBlock))
-                 endif
-                 if(iAlt == nAlts+2)then
+                         -(Altitude_GB(:,:,iAlt  ,iBlock) &
+                         - Altitude_GB(:,:,iAlt-1,iBlock))*InvScaleHeightS &
+                         -(Temperature(:,:,iAlt+1,iBlock)   &
+                         - Temperature(:,:,iAlt-1,iBlock))  &
+                         /(2.0*Temperature(:,:,iAlt,iBlock))
+                 else
                     LogNS(:,:,iAlt,iSpecies,iBlock) = &
                          LogNS(:,:,iAlt-1,iSpecies,iBlock) &
-                         -(Altitude(iAlt)-Altitude(iAlt-1))*InvScaleHeightS &
-                         -(Temperature(:,:,iAlt,iBlock) - &
-                          Temperature(:,:,iAlt-1,iBlock))/ &
-                          (Temperature(:,:,iAlt,iBlock))
+                         -(Altitude_GB(:,:,iAlt  ,iBlock) &
+                         - Altitude_GB(:,:,iAlt-1,iBlock))*InvScaleHeightS &
+                         -(Temperature(:,:,iAlt  ,iBlock)  &
+                         - Temperature(:,:,iAlt-1,iBlock)) &
+                         /(Temperature(:,:,iAlt,iBlock))
                  endif
 
                  NewSumRho      = NewSumRho + &

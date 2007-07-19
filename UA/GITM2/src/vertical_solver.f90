@@ -79,13 +79,14 @@ subroutine advance_vertical_1stage( &
 
   ! With fluxes and sources based on LogRho..Temp, update NewLogRho..NewTemp
 
-  use ModGITM, only: RadialDistance, &
-       Dt, iO_, dAlt, Gravity, Altitude, iEast_, iNorth_, iUp_, TempUnit
+  use ModGITM, only: &
+       Dt, iO_, iEast_, iNorth_, iUp_, TempUnit
   use ModPlanet
   use ModSizeGitm
   use ModVertical, only : &
        Heating, KappaNS, KappaTemp, Centrifugal, Coriolis, &
-       MeanMajorMass_1d, gamma_1d, EddyCoef_1d
+       MeanMajorMass_1d, gamma_1d, EddyCoef_1d, InvRadialDistance_C, &
+       Gravity_G
   use ModTime
   use ModInputs
   use ModConstants
@@ -155,7 +156,7 @@ subroutine advance_vertical_1stage( &
   enddo
 
   ! Add geometrical correction to gradient and obtain divergence
-  DivVel = GradVel_CD(:,iUp_) + 2*Vel_GD(1:nAlts,iUp_)/RadialDistance(1:nAlts)
+  DivVel = GradVel_CD(:,iUp_) + 2*Vel_GD(1:nAlts,iUp_)*InvRadialDistance_C
 
   do iSpecies=1,nSpecies
 
@@ -167,7 +168,7 @@ subroutine advance_vertical_1stage( &
      GradVertVel(:,iSpecies) = GradTmp
      DiffVertVel(:,iSpecies) = DiffTmp
      DivVertVel(:,iSpecies) = GradVertVel(:,iSpecies) + &
-          2*VertVel(1:nAlts,iSpecies)/RadialDistance(1:nAlts)
+          2*VertVel(1:nAlts,iSpecies)*InvRadialDistance_C
 
      if (UseEddyInSolver) then
 
@@ -185,7 +186,7 @@ subroutine advance_vertical_1stage( &
         GradEddyVel(:,iSpecies) = GradTmp
         DiffEddyVel(:,iSpecies) = DiffTmp
         DivEddyVel(1:nAlts,iSpecies) = GradEddyVel(1:nAlts,iSpecies) + &
-             2*EddyVel(1:nAlts,iSpecies)/RadialDistance(1:nAlts)
+             2*EddyVel(1:nAlts,iSpecies)*InvRadialDistance_C
 
      else
 
@@ -229,8 +230,8 @@ subroutine advance_vertical_1stage( &
 !     NewVel_GD(iAlt,iUp_) = NewVel_GD(iAlt,iUp_) - Dt * &
 !          (Vel_GD(iAlt,iUp_)*GradVel_CD(iAlt,iUp_) &
 !          - (Vel_GD(iAlt,iNorth_)**2 + Vel_GD(iAlt,iEast_)**2) &
-!          / RadialDistance(iAlt) &
-!          - Gravity(iAlt)) &
+!          * InvRadialDistance_C(iAlt) &
+!          - Gravity_G(iAlt)) &
 !          + Dt * DiffVel_CD(iAlt,iUp_)
 
      NewVel_GD(iAlt,iUp_) = 0.0
@@ -241,16 +242,16 @@ subroutine advance_vertical_1stage( &
         NewVertVel(iAlt, iSpecies) = VertVel(iAlt, iSpecies) - Dt * &
              (VertVel(iAlt,iSpecies)*GradVertVel(iAlt,iSpecies) &
              - (Vel_GD(iAlt,iNorth_)**2 + Vel_GD(iAlt,iEast_)**2) &
-             / RadialDistance(iAlt) + &
+             * InvRadialDistance_C(iAlt) + &
              Temp(iAlt)*gradLogNS(iAlt,iSpecies) * Boltzmanns_Constant / &
              Mass(iSpecies) + &
              gradtemp(iAlt) * Boltzmanns_Constant / Mass(iSpecies) &
-             - Gravity(iAlt)) &
+             - Gravity_G(iAlt)) &
              + Dt * DiffVertVel(iAlt,iSpecies)
 
         if (UseCoriolis) then
            NewVertVel(iAlt,ispecies) = NewVertVel(iAlt,ispecies) + Dt * ( &
-                Centrifugal * RadialDistance(iAlt) + &
+                Centrifugal / InvRadialDistance_C(iAlt) + &
                 Coriolis * Vel_GD(iAlt,iEast_))
         endif
 
@@ -307,7 +308,7 @@ subroutine advance_vertical_1stage( &
         NewTemp(iAlt)   = NewTemp(iAlt) - Dt * &
              (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
              (Gamma_1d(iAlt) - 1.0) * Temp(iAlt)*DivVel(iAlt))&
-             + Dt * (Gamma_1d(iAlt) - 1.0) * (- gravity(iAlt)) * &
+             + Dt * (Gamma_1d(iAlt) - 1.0) * (- Gravity_G(iAlt)) * &
              ed * GradLogRho(iAlt) &
              + Dt * DiffTemp(iAlt)
      else
@@ -335,8 +336,7 @@ end subroutine advance_vertical_1stage
 subroutine calc_rusanov_alts(Var, GradVar, DiffVar)
 
   use ModSizeGitm
-  use ModGITM, only : dAlt, Altitude
-  use ModVertical, only : cmax
+  use ModVertical, only : dAlt_C, cMax
   implicit none
 
   real, intent(in) :: Var(-1:nAlts+2)
@@ -350,12 +350,12 @@ subroutine calc_rusanov_alts(Var, GradVar, DiffVar)
   ! Gradient based on averaged Left/Right values
   GradVar = 0.5 * &
        (VarLeft(2:nAlts+1)+VarRight(2:nAlts+1) - &
-       VarLeft(1:nAlts)-VarRight(1:nAlts))/dAlt(1:nAlts)
+       VarLeft(1:nAlts)-VarRight(1:nAlts))/dAlt_C
 
   ! Rusanov/Lax-Friedrichs diffusive term
   DiffFlux = 0.5 * max(cMax(0:nAlts),cMax(1:nAlts+1)) * (VarRight - VarLeft)
 
-  DiffVar = (DiffFlux(2:nAlts+1) - DiffFlux(1:nAlts))/dAlt(1:nAlts)
+  DiffVar = (DiffFlux(2:nAlts+1) - DiffFlux(1:nAlts))/dAlt_C
 
 end subroutine calc_rusanov_alts
 
@@ -367,7 +367,7 @@ end subroutine calc_rusanov_alts
 
 subroutine calc_facevalues_alts(Var, VarLeft, VarRight)
 
-  use ModGitm, only: dAlt_F, InvDAlt_F
+  use ModVertical, only: dAlt_F, InvDAlt_F
   use ModSizeGITM, only: nAlts
   use ModInputs, only: UseMinMod, UseMC
   use ModLimiterGitm

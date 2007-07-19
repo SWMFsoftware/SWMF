@@ -10,11 +10,11 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
 
   use ModSizeGitm, only: nAlts
   use ModPlanet, only: nSpecies, nIonsAdvect, Mass, nIons, IsEarth,iN2_
-  use ModGITM, only: gravity, TempUnit, dAlt, iEast_, iNorth_, iUp_, Altitude
+  use ModGITM, only: TempUnit, iEast_, iNorth_, iUp_
   use ModInputs
   use ModConstants
   use ModTime, only: UTime, iJulianDay,currenttime
-  use ModVertical, only: Lat, Lon
+  use ModVertical, only: Lat, Lon, Gravity_G, Altitude_G, dAlt_F
   use ModIndicesInterfaces, only: get_HPI
 
   implicit none
@@ -53,7 +53,7 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
      if (iError > 0) hp = 40.0
      Ap = min(200.,max(-40.72 + 1.3 * HP, 10.))
      do iAlt = -1, 0
-        Alt = Altitude(iAlt)/1000.0
+        Alt = Altitude_G(iAlt)/1000.0
         Lst = mod(UTime/3600.0+Lon/15.0,24.0)
 
         call msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
@@ -115,9 +115,8 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
 
   do iAlt = nAlts+1, nAlts+2
      InvScaleHgt  =  &
-          -(Gravity(iAlt-1)+Gravity(iAlt)) / 2 / Temp(iAlt)
-     LogRho(iAlt) = &
-          LogRho(iAlt-1)-(Altitude(iAlt)-Altitude(iAlt-1))*InvScaleHgt
+          -(Gravity_G(iAlt-1)+Gravity_G(iAlt)) / 2 / Temp(iAlt)
+     LogRho(iAlt) = LogRho(iAlt-1) - dAlt_F(iAlt)*InvScaleHgt
   enddo
 
   ! Limit the slope of the ion density
@@ -134,17 +133,16 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
 
   do iSpecies=1,nSpecies
      do iAlt = nAlts+1, nAlts+2
-        InvScaleHeightS = -Gravity(iAlt) * &
+        InvScaleHeightS = -Gravity_G(iAlt) * &
              Mass(iSpecies) / (Temp(iAlt)*Boltzmanns_Constant)
         LogNS(iAlt,iSpecies) = &
-             LogNS(iAlt-1,iSpecies) &
-             -(Altitude(iAlt)-Altitude(iAlt-1))*InvScaleHeightS
+             LogNS(iAlt-1,iSpecies) - dAlt_F(iAlt)*InvScaleHeightS
         if (LogNS(nAlts+1,iSpecies) > 75.0 .or. &
              LogNS(nAlts+2,iSpecies) > 75.0) then
            write(*,*) "======> bcs : ", iSpecies, 1.0e-3/InvScaleHeightS, &
-                Gravity(nAlts), Mass(iSpecies), Temp(nAlts), &
+                Gravity_G(nAlts), Mass(iSpecies), Temp(nAlts), &
                 LogNS(nAlts,iSpecies), LogNS(nAlts+1,iSpecies), &
-                dAlt(nAlts), LogNS(nAlts+2,iSpecies)
+                dAlt_F(nAlts), LogNS(nAlts+2,iSpecies)
         endif
      enddo
   enddo

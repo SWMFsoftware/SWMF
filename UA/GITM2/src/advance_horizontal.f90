@@ -32,7 +32,7 @@ subroutine advance_horizontal(iBlock)
   real :: NewNum_CV(nLons,nLats, nSpecies)
   real :: NewVertVel_CV(nLons,nLats, nSpecies)
   real :: NewINum_CV(nLons,nLats, nIonsAdvect)
-
+  !----------------------------------------------------------------------------
   MaxDiff = 0.0
 
   call report("advance_horizontal",2)
@@ -151,7 +151,8 @@ stop
   end do
 
   if (iDebugLevel > 2) &
-       write(*,*) "===> MaxDiff : ", MaxDiff, maxval(abs(IVel_CD)), &
+       write(*,*) "===> advance_horizontal, MaxDiff, IVel, IDens, Dt : ", &
+       MaxDiff, maxval(abs(IVel_CD)), &
        maxval(IDensityS(1:nLons,1:nLats,1:nAlts,1:nIonsAdvect,iBlock)), dt
 
 contains
@@ -210,7 +211,7 @@ contains
        DivVel_C(:,iLat) = &
             GradLatVel_CD(:,iLat,iNorth_) + GradLonVel_CD(:,iLat,iEast_) &
             - TanLatitude(iLat,iBlock) * Vel_CD(1:nLons,iLat,iNorth_) * &
-            InvRadialDistance(iAlt)
+            InvRadialDistance_GB(1:nLons,iLat,iAlt,iBlock)
     end do
 
     do iSpc = 1,nSpecies
@@ -291,7 +292,7 @@ contains
                Vel_CD(iLon,iLat,iEast_ )*GradLonVel_CD(iLon,iLat,iEast_) + &
                Vel_CD(iLon,iLat,iEast_)*(Vel_CD(iLon,iLat,iUp_) &
                - TanLatitude(iLat,iBlock)*Vel_CD(iLon,iLat,iNorth_)) &
-               * InvRadialDistance(iAlt) + &
+               * InvRadialDistance_GB(iLon,iLat,iAlt,iBlock) + &
                GradLonTemp_C(iLon,iLat) + & 
                GradLonRho_C(iLon,iLat)*Temp_C(iLon,iLat)/Rho_C(iLon,iLat)) &
                + Dt * (&
@@ -307,7 +308,7 @@ contains
                Vel_CD(iLon,iLat,iEast_ )*GradLonVel_CD(iLon,iLat,iNorth_) + &
                (Vel_CD(iLon,iLat,iNorth_)*Vel_CD(iLon,iLat,iUp_) &
                + TanLatitude(iLat,iBlock)*Vel_CD(iLon,iLat,iEast_)**2 &
-               ) * InvRadialDistance(iAlt) + &
+               ) * InvRadialDistance_GB(iLon,iLat,iAlt,iBlock) + &
                GradLatTemp_C(iLon,iLat) + & 
                GradLatRho_C(iLon,iLat)*Temp_C(iLon,iLat)/Rho_C(iLon,iLat)) &
                + Dt * ( &
@@ -347,14 +348,16 @@ contains
 
              NewVel_CD(iLon,iLat,iNorth_) = NewVel_CD(iLon,iLat,iNorth_) - &
                   Dt*( &
-                  CentrifugalParameter * RadialDistance(iAlt) &
+                  CentrifugalParameter &
+                  * RadialDistance_GB(iLon,iLat,iAlt,iBlock) &
                   + CoriolisSin * Vel_CD(iLon,iLat,iEast_))
           endif
 
           ! dT/dt = -(V.grad T + (gamma - 1) T div V
 
           NewTemp_C(iLon,iLat) = NewTemp_C(iLon,iLat) - Dt * ( &
-               (gamma_c(iLon,iLat)-1) * Temp_C(iLon,iLat) * DivVel_C(iLon,iLat) &
+               (gamma_c(iLon,iLat)-1) * Temp_C(iLon,iLat) &
+               * DivVel_C(iLon,iLat) &
                + GradLatTemp_C(iLon,iLat)*Vel_CD(iLon,iLat,iNorth_) & 
                + GradLonTemp_C(iLon,iLat)*Vel_CD(iLon,iLat,iEast_)) & 
                + Dt * (DiffLonTemp_C(iLon,iLat)+DiffLatTemp_C(iLon,iLat))
@@ -385,11 +388,11 @@ contains
 
     ! Calculate gradient and diffusive flux with respect to latitude
 
-    InvdLat = InvDLatDist_GB(1:nLats,iAlt,iBlock)
-
     do iLon = 1, nLons
 
-       call calc_facevalues_lats(iAlt, iBlock, Var(iLon,:), &
+       InvdLat = InvDLatDist_GB(iLon, 1:nLats,iAlt,iBlock)
+
+       call calc_facevalues_lats(iLon, iAlt, iBlock, Var(iLon,:), &
             VarSouth, VarNorth)
 
        ! Gradient based on averaged Left/Right values
@@ -412,7 +415,7 @@ contains
 
   end subroutine calc_rusanov_lats
 
-  !=====================================================================
+  !===========================================================================
   subroutine calc_rusanov_lons(Var, GradVar, DiffVar)
 
     use ModSizeGitm
@@ -429,13 +432,15 @@ contains
     integer :: iLat
 
     real :: InvdLat(nLats), InvdLon(nLons)
+    !--------------------------------------------------------------------------
 
     ! Calculate gradient and diffusive flux with respect to longitude
     do iLat = 1, nLats
 
        InvdLon = InvDLonDist_GB(1:nLons,iLat,iAlt,iBlock)
 
-       call calc_facevalues_lons(Var(:,iLat), VarWest, VarEast,iLat,iAlt,iBlock)
+       call calc_facevalues_lons(iLat, iAlt, iBlock, &
+            Var(:,iLat), VarWest, VarEast)
 
        ! Gradient based on averaged West/East values
 
@@ -458,11 +463,9 @@ contains
 
 end subroutine advance_horizontal
 
-!=====================================================================
-!
-!=====================================================================
+!=============================================================================
 
-subroutine calc_facevalues_lats(iAlt, iBlock, Var, VarLeft, VarRight)
+subroutine calc_facevalues_lats(iLon, iAlt, iBlock, Var, VarLeft, VarRight)
 
   use ModSizeGITM, only: nLats
   use ModGITM, only: dLatDist_FB, InvDLatDist_FB
@@ -471,43 +474,41 @@ subroutine calc_facevalues_lats(iAlt, iBlock, Var, VarLeft, VarRight)
 
   implicit none
   
-  integer, intent(in) :: iAlt, iBlock
+  integer, intent(in) :: iLon, iAlt, iBlock
   real, intent(in)    :: Var(-1:nLats+2)
   real, intent(out)   :: VarLeft(1:nLats+1), VarRight(1:nLats+1)
 
   real :: dVarUp, dVarDown, dVarLimited(0:nLats+1)
 
   integer :: i
+  !---------------------------------------------------------------------------
 
   if (UseMinMod) then 
      do i=0,nLats+1
-        dVarUp         = (Var(i+1) - Var(i))  *InvDLatDist_FB(i+1,iAlt,iBlock)
-        dVarDown       = (Var(i)   - Var(i-1))*InvDLatDist_FB(i  ,iAlt,iBlock)
+        dVarUp   = (Var(i+1) - Var(i))  *InvDLatDist_FB(iLon,i+1,iAlt,iBlock)
+        dVarDown = (Var(i)   - Var(i-1))*InvDLatDist_FB(iLon,i  ,iAlt,iBlock)
         dVarLimited(i) = Limiter_minmod(dVarUp, dVarDown)
      end do
   endif
 
   if (UseMC) then
      do i=0,nLats+1
-        dVarUp        = (Var(i+1) - Var(i))   * InvDLatDist_FB(i+1,iAlt,iBlock)
-        dVarDown      = (Var(i)   - Var(i-1)) * InvDLatDist_FB(i  ,iAlt,iBlock)
+        dVarUp   = (Var(i+1) - Var(i))   * InvDLatDist_FB(iLon,i+1,iAlt,iBlock)
+        dVarDown = (Var(i)   - Var(i-1)) * InvDLatDist_FB(iLon,i  ,iAlt,iBlock)
         dVarLimited(i)= Limiter_mc(dVarUp, dVarDown)
      end do
   endif
 
   do i=1,nLats+1
-     VarLeft(i)  = Var(i-1) + 0.5*dVarLimited(i-1)*dLatDist_FB(i,iAlt,iBlock)
-     VarRight(i) = Var(i)   - 0.5*dVarLimited(i)  *dLatDist_FB(i,iAlt,iBlock)
+     VarLeft(i) =Var(i-1)+0.5*dVarLimited(i-1)*dLatDist_FB(iLon,i,iAlt,iBlock)
+     VarRight(i)=Var(i)  -0.5*dVarLimited(i)  *dLatDist_FB(iLon,i,iAlt,iBlock)
   end do
 
 end subroutine calc_facevalues_lats
 
+!=============================================================================
 
-!=====================================================================
-!
-!=====================================================================
-
-subroutine calc_facevalues_lons(Var, VarLeft, VarRight,iLat,iAlt,iBlock)
+subroutine calc_facevalues_lons(iLat, iAlt, iBlock, Var, VarLeft, VarRight)
 
   use ModSizeGITM, only: nLons
   use ModGITM, only: dLonDist_FB, InvDLonDist_FB
@@ -526,23 +527,23 @@ subroutine calc_facevalues_lons(Var, VarLeft, VarRight,iLat,iAlt,iBlock)
 
   if (UseMinMod) then 
      do i=0,nLons+1
-        dVarUp         = (Var(i+1) - Var(i))  *InvDLonDist_FB(i+1,iLat,iAlt,iBlock)
-        dVarDown       = (Var(i)   - Var(i-1))*InvDLonDist_FB(i  ,iLat,iAlt,iBlock)
+        dVarUp   = (Var(i+1) - Var(i))  *InvDLonDist_FB(i+1,iLat,iAlt,iBlock)
+        dVarDown = (Var(i)   - Var(i-1))*InvDLonDist_FB(i  ,iLat,iAlt,iBlock)
         dVarLimited(i) = Limiter_minmod(dVarUp, dVarDown)
      end do
   endif
 
   if (UseMC) then
      do i=0,nLons+1
-        dVarUp        = (Var(i+1) - Var(i))  *InvDLonDist_FB(i+1,iLat,iAlt,iBlock)
-        dVarDown      = (Var(i)   - Var(i-1))*InvDLonDist_FB(i  ,iLat,iAlt,iBlock)
+        dVarUp   = (Var(i+1) - Var(i))  *InvDLonDist_FB(i+1,iLat,iAlt,iBlock)
+        dVarDown = (Var(i)   - Var(i-1))*InvDLonDist_FB(i  ,iLat,iAlt,iBlock)
         dVarLimited(i)= Limiter_mc(dVarUp, dVarDown)
      end do
   endif
 
   do i=1,nLons+1
-     VarLeft(i)  = Var(i-1) + 0.5*dVarLimited(i-1)*dLonDist_FB(i,iLat,iAlt,iBlock)
-     VarRight(i) = Var(i)   - 0.5*dVarLimited(i)  *dLonDist_FB(i,iLat,iAlt,iBlock)
+     VarLeft(i) =Var(i-1)+0.5*dVarLimited(i-1)*dLonDist_FB(i,iLat,iAlt,iBlock)
+     VarRight(i)=Var(i)  -0.5*dVarLimited(i)  *dLonDist_FB(i,iLat,iAlt,iBlock)
   end do
 
 end subroutine calc_facevalues_lons

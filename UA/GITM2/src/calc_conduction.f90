@@ -1,8 +1,7 @@
-
 subroutine calc_conduction(iBlock, Quantity, Diff, MulFac, dTdt_cond)
 
   use ModSizeGitm
-  use ModGITM, only: Altitude, Latitude, Longitude, dt
+  use ModGITM, only: dAlt_GB, Latitude, Longitude, dt
   use ModConstants
 
   implicit none
@@ -57,9 +56,8 @@ subroutine calc_conduction(iBlock, Quantity, Diff, MulFac, dTdt_cond)
 
         do iAlt = 1, nAlts
 
-           beta(iAlt) = (dt / &
-                MulFac(iLon, iLat, iAlt)) / &
-                (((Altitude(iAlt+1) - Altitude(iAlt-1))/2)**2)
+           beta(iAlt) = (dt / MulFac(iLon, iLat, iAlt)) &
+                / dAlt_GB(iLon, iLat, iAlt, iBlock)**2
 
            dk(iAlt) = ( &
                 Diff(iLon,iLat,iAlt+1) - &
@@ -136,8 +134,8 @@ subroutine calc_conduction(iBlock, Quantity, Diff, MulFac, dTdt_cond)
                    (solution(iLon,iLat,iAlt+1) &
                    + solution(iLon,iLat,iAlt-1) &
                    - 2*solution(iLon,iLat,iAlt))) *  &
-                   MulFac(iLon, iLat, iAlt) / &
-                   (((Altitude(iAlt+1) - Altitude(iAlt-1))/2)**2) * dt
+                   Dt * MulFac(iLon, iLat, iAlt) / &
+                   dAlt_GB(iLon, iLat, iAlt, iBlock)**2
 
               if (abs(solution(iLon,iLat,iAlt) - tempold(iAlt)) > 1.0e-2) then
                  write(*,*) "Error : ", iLon, iLat, iAlt, &

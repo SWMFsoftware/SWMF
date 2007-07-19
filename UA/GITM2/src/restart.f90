@@ -61,7 +61,7 @@ subroutine write_restart(dir)
 
      write(iRestartUnit_) Longitude(:,iBlock)
      write(iRestartUnit_) Latitude(:,iBlock)
-     write(iRestartUnit_) Altitude
+     write(iRestartUnit_) Altitude_GB(:,:,:,iBlock)
 
      do iSpecies=1,nSpeciesTotal
         write(iRestartUnit_) NDensityS(:,:,:,iSpecies,iBlock)
@@ -117,7 +117,7 @@ subroutine read_restart(dir)
      if (iDebugLevel > 4) write(*,*) "=====> Reading Latitude"
      read(iRestartUnit_) Latitude(:,iBlock)
      if (iDebugLevel > 4) write(*,*) "=====> Reading Altitude"
-     read(iRestartUnit_) Altitude
+     read(iRestartUnit_) Altitude_GB(:,:,:,iBlock)
 
      do iSpecies=1,nSpeciesTotal
         if (iDebugLevel > 3) &

@@ -1,4 +1,3 @@
-
 subroutine divergence(InArray, OutArray, iBlock)
 
   ! This routine calculates the gradient of a scalar quantity.
@@ -9,8 +8,8 @@ subroutine divergence(InArray, OutArray, iBlock)
   ! and "OutArray" have the ghostcells defined.
 
   use ModSizeGitm
-  use ModGITM, only: Latitude, Longitude, RadialDistance
-
+  use ModGITM, only: Latitude, Longitude, &
+       RadialDistance_GB, InvRadialDistance_GB
   use ModConstants
 
   implicit none
@@ -33,6 +32,7 @@ subroutine divergence(InArray, OutArray, iBlock)
   real :: maxi, maxt, cosmaxt, tanmaxt
 
   integer :: i,j,k
+  !----------------------------------------------------------------------------
 
   maxt = 80.0 * pi / 180.0
   cosmaxt = cos(maxt)
@@ -42,17 +42,21 @@ subroutine divergence(InArray, OutArray, iBlock)
      do j = 0, nLats+1
 
         k = 1
-        dr(i,j,k) = RadialDistance(k+1) - RadialDistance(k)
+        dr(i,j,k) = RadialDistance_GB(i,j,k+1,iBlock) &
+             -      RadialDistance_GB(i,j,k  ,iBlock)
 
         do k=2,nAlts-1
-           drp(i,j,k) = RadialDistance(k+1) - RadialDistance(k)
-           drm(i,j,k) = RadialDistance(k)   - RadialDistance(k-1)
+           drp(i,j,k) = RadialDistance_GB(i,j,k+1,iBlock) &
+                -       RadialDistance_GB(i,j,k  ,iBlock)
+           drm(i,j,k) = RadialDistance_GB(i,j,k  ,iBlock) &
+                -       RadialDistance_GB(i,j,k-1,iBlock)
            drmodrp(i,j,k) = drm(i,j,k)/drp(i,j,k)
            drr2(i,j,k) = drmodrp(i,j,k) * drmodrp(i,j,k)
         enddo
 
         k = nAlts
-        dr(i,j,k) = RadialDistance(k) - RadialDistance(k-1)
+        dr(i,j,k) = RadialDistance_GB(i,j,k  ,iBlock) &
+             -      RadialDistance_GB(i,j,k-1,iBlock)
         
         do k = 1, nAlts
            dtm(i,j,k) = Latitude(j,iBlock) - Latitude(j-1,iBlock)
@@ -74,7 +78,7 @@ subroutine divergence(InArray, OutArray, iBlock)
            maxi = max(cos(Latitude(j,iBlock)),cosmaxt) ! this is 80 degrees...
            OutArray(i,j,k) = ((InArray(i+1,j,k) - InArray(i-1,j,k)) / &
                 (Longitude(i+1,iBlock) - Longitude(i-1,iBlock)))/ &
-                (maxi*RadialDistance(k))
+                (maxi*RadialDistance_GB(i,j,k,iBlock))
         enddo
      enddo
   enddo
@@ -92,12 +96,12 @@ subroutine divergence(InArray, OutArray, iBlock)
            OutArray(i,j,k) = OutArray(i,j,k) + &
                 ((dtr2(i,j,k)*InArray(i,j+1,k) - InArray(i,j-1,k) - &
                   (dtr2(i,j,k)-1)*InArray(i,j,k)) / &
-                 (dtr2(i,j,k)*dtp(i,j,k) + dtm(i,j,k))) / &
-                 RadialDistance(k)
+                 (dtr2(i,j,k)*dtp(i,j,k) + dtm(i,j,k))) &
+                 *InvRadialDistance_GB(i,j,k,iBlock)
 
            maxi = max(tan(Latitude(j,iBlock)),tanmaxt) ! this is 80 degrees...
            OutArray(i,j,k) = OutArray(i,j,k) + &
-                maxi*InArray(i,j,k)/RadialDistance(k)
+                maxi*InArray(i,j,k)*InvRadialDistance_GB(i,j,k,iBlock)
 
         enddo
      enddo
@@ -115,10 +119,11 @@ subroutine divergence(InArray, OutArray, iBlock)
         k = 1
         OutArray(i,j,k) = OutArray(i,j,k) + &
              (InArray(i,j,k+1) - InArray(i,j,k)) / &
-             (RadialDistance(k+1) - RadialDistance(k))
+             ( RadialDistance_GB(i,j,k+1,iBlock) &
+             - RadialDistance_GB(i,j,k,iBlock))
 
         OutArray(i,j,k) = OutArray(i,j,k) + &
-             2.0 * InArray(i,j,k) / RadialDistance(k)
+             2.0 * InArray(i,j,k) * InvRadialDistance_GB(i,j,k,iBlock)
 
         do k = 2, nAlts-1
 
@@ -128,17 +133,18 @@ subroutine divergence(InArray, OutArray, iBlock)
                 (drr2(i,j,k)*drp(i,j,k) + drm(i,j,k))
 
            OutArray(i,j,k) = OutArray(i,j,k) + &
-                2.0 * InArray(i,j,k) / RadialDistance(k)
+                2.0 * InArray(i,j,k) * InvRadialDistance_GB(i,j,k,iBlock)
 
         enddo
 
         k = nAlts
         OutArray(i,j,k) = OutArray(i,j,k) + &
              (InArray(i,j,k) - InArray(i,j,k-1)) / &
-             (RadialDistance(k) - RadialDistance(k-1))
+             ( RadialDistance_GB(i,j,k  ,iBlock) &
+             - RadialDistance_GB(i,j,k-1,iBlock))
 
         OutArray(i,j,k) = OutArray(i,j,k) + &
-             2.0 * InArray(i,j,k) / RadialDistance(k)
+             2.0 * InArray(i,j,k) * InvRadialDistance_GB(i,j,k,iBlock)
 
      enddo
   enddo

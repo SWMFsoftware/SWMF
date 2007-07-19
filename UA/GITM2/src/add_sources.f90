@@ -61,7 +61,7 @@ subroutine add_sources
                          JouleHeating(iLon, iLat, iAlt) * dt, &
                          Conduction(iLon, iLat, iAlt), &
                          ChemicalHeatingRate(iLon, iLat, iAlt)
-                    stop
+                    call stop_gitm('Negative Temperature Found')
 
                  endif
               enddo
@@ -72,7 +72,7 @@ subroutine add_sources
      if (iDebugLevel > 2 .and. Is1D) then
 !        do iAlt = 1,nAlts
 iAlt = 10
-           write(*,*) "===> MaxVal Temp Sources : ", iAlt, dt,&
+           write(*,*) "===> Temp Sources : ", iAlt, dt,&
                 EuvHeating(1, 1, iAlt, iBlock)*dt, &
 !                NOCooling(1,1,iAlt)*dt, &
 !                OCooling(1,1,iAlt)*dt, &
@@ -85,12 +85,13 @@ iAlt = 10
 
      iAlt = nAlts-2
      if (iDebugLevel > 2) &
-          write(*,*) "===> MaxVal Temp Sources : ", &
-          maxval(EuvHeating(1:nLons, 1:nLats, iAlt, iBlock))*dt, &
-          maxval(NOCooling(:,:,iAlt))*dt, maxval(OCooling(:,:,iAlt))*dt, &
-          maxval(AuroralHeating(:,:,iAlt))*dt, &
-          maxval(JouleHeating(:,:,iAlt))*dt, &
-          maxval(Conduction(:,:,iAlt))
+          write(*,*) "===> Sum Temp Sources : ", &
+          sum(EuvHeating(1:nLons, 1:nLats, iAlt, iBlock))*dt, &
+          sum(NOCooling(:,:,iAlt))*dt, &
+          sum(OCooling(:,:,iAlt))*dt, &
+          sum(AuroralHeating(:,:,iAlt))*dt, &
+          sum(JouleHeating(:,:,iAlt))*dt, &
+          sum(Conduction(:,:,iAlt))
 
      !! To turn off IonDrag, turn UseIonDrag=.false. in UAM.in
 

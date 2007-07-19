@@ -111,7 +111,8 @@ subroutine calc_rates(iBlock)
           -Temperature(1:nLons,1:nLats,iAlt,iBlock) * &
           TempUnit(1:nLons,1:nLats,iAlt) * &
           Boltzmanns_Constant / ( &
-          Gravity(iAlt) * MeanMajorMass(1:nLons,1:nLats,iiAlt))
+          Gravity_GB(1:nLons,1:nLats,iAlt,iBlock) &
+          * MeanMajorMass(1:nLons,1:nLats,iiAlt))
 
      do iLat = 1, nLats
         do iLon = 1, nLons

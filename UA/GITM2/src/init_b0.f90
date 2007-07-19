@@ -1,9 +1,3 @@
-
-!\
-! ----------------------------------------------------------------------
-! ----------------------------------------------------------------------
-!/
-
 subroutine init_b0
 
   use ModSizeGitm
@@ -33,7 +27,7 @@ subroutine init_b0
               GeoLat = Latitude(iLat,iBlock)*180.0/pi
               GeoLon = Longitude(iLon,iBlock)*180.0/pi
 
-              GeoAlt = altitude(iAlt)/1000.0
+              GeoAlt = Altitude_GB(iLon, iLat, iAlt, iBlock)/1000.0
 
               if (GeoLat > 90.0) then
                  GeoLat = 180.0 - GeoLat
@@ -137,6 +131,7 @@ subroutine get_magfield(GeoLat,GeoLon,GeoAlt,xmag,ymag,zmag)
 
 end subroutine get_magfield
 
+!==============================================================================
 
 subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
      d1,d2,d3,e1,e2,e3,CapDMag)
@@ -160,11 +155,13 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
   real :: bx, by, bz, twodegrees
   real :: alatp, alatm, alonp, alonm, sinIm
   integer, external :: jday
-
+  !--------------------------------------------------------------------------
   date = iStartTime(1) + float(iJulianDay)/float(jday(iStartTime(1),12,31))
 
   twodegrees = 2.0 * pi / 180.0
-  r = (RadialDistance(-1)-5000.0) / RBody
+
+  !!! This is temporary only !!!
+  r = (RadialDistance_GB(1,1,-1,1)-5000.0) / RBody
 
   if (UseApex .and. IsEarth) then
 

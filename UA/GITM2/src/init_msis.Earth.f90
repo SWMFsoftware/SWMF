@@ -1,7 +1,3 @@
-!--------------------------------------------------------------
-!
-!--------------------------------------------------------------
-
 subroutine get_msis_temperature(lon, lat, alt, t, h)
 
   use ModTime
@@ -131,7 +127,7 @@ subroutine init_msis
               geo_lat = Latitude(iLat,iBlock)*180.0/pi
               geo_lon = Longitude(iLon,iBlock)*180.0/pi
 
-              geo_alt = altitude(iAlt)/1000.0
+              geo_alt = Altitude_GB(iLon, iLat, iAlt, iBlock)/1000.0
               geo_lst = mod(utime/3600.0+geo_lon/15.0,24.0)
 
               !

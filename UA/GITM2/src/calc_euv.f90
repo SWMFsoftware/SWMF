@@ -104,8 +104,8 @@ subroutine euv_ionization_heat(iBlock)
 
      enddo
 
-     EuvHeating(:,:,iAlt,iBlock) = EHeat * HeatingEfficiency(iAlt)
-     eEuvHeating(:,:,iAlt,iBlock) = EHeat * eHeatingEfficiency(iAlt)
+     EuvHeating(:,:,iAlt,iBlock)  = EHeat*HeatingEfficiency_CB(:,:,iAlt,iBlock)
+     eEuvHeating(:,:,iAlt,iBlock) = EHeat*eHeatingEfficiency_CB(:,:,iAlt,iBlock)
 
   enddo
 

@@ -1,9 +1,3 @@
-
-!\
-! --------------------------------------------------------------------
-! --------------------------------------------------------------------
-!/
-
 subroutine UA_fill_electrodynamics(UAr2_fac, UAr2_ped, UAr2_hal, &
             UAr2_lats, UAr2_mlts)
 
@@ -95,7 +89,8 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      endif
 
      date = iStartTime(1) + float(iJulianDay)/float(jday(iStartTime(1),12,31))
-     gAlt = Altitude(1)/1000.0
+     !!! Is this OK ???
+     gAlt = Altitude_GB(1,1,1,1)/1000.0
 
      do i=1,nMagLons+1
         if (iDebugLevel > 1) &
@@ -198,9 +193,9 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
      do k=1,nAlts
         PedersenConductance(:,:,iBlock) = PedersenConductance(:,:,iBlock) + &
-             Sigma_Pedersen(:,:,k)*dAlt(k)
+             Sigma_Pedersen(:,:,k)*dAlt_GB(:,:,k,iBlock)
         HallConductance(:,:,iBlock)     = HallConductance(:,:,iBlock)     + &
-             Sigma_Hall(:,:,k)    *dAlt(k)
+             Sigma_Hall(:,:,k)    *dAlt_GB(:,:,k,iBlock)
      enddo
 
      ! We need to calculate the rotation matrix.  
@@ -318,7 +313,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
      DivJuAlt = 0.0
      do k=1,nAlts
-        DivJuAlt(:,:) = DivJuAlt(:,:) + DivJu(:,:,k)*dAlt(k)
+        DivJuAlt(:,:) = DivJuAlt(:,:) + DivJu(:,:,k)*dAlt_GB(:,:,k,iBlock)
      enddo
 
      PedersenFieldLine = 0.0
@@ -352,7 +347,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
               GeoLon = mod(GeoLon + pi,twopi)
            endif
 
-           GeoAlt = Altitude(1)
+           GeoAlt = Altitude_GB(iLon,iLat,1,iBlock)
            IsDone = .false.
            len = 250.0
            xAlt = 1.0
@@ -425,12 +420,14 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
               else
                  bmag = sqrt(xmag*xmag + ymag*ymag + zmag*zmag)
                  GeoAlt = GeoAlt + abs(zmag)/bmag * len
-                 if (GeoAlt > Altitude(nAlts)) then
+                 if (GeoAlt > Altitude_GB(iLon,iLat,nAlts,iBlock)) then
                     IsDone = .true.
                  else
-                    if (GeoAlt > Altitude(iAlt+1)) iAlt = iAlt+1
-                    xAlt = (GeoAlt - Altitude(iAlt)) / &
-                         (Altitude(iAlt+1) - Altitude(iAlt))
+                    if (GeoAlt > Altitude_GB(iLon,iLat,iAlt+1,iBlock)) &
+                         iAlt = iAlt+1
+                    xAlt = (GeoAlt - Altitude_GB(iLon,iLat,iAlt,iBlock)) / &
+                         ( Altitude_GB(iLon,iLat,iAlt+1,iBlock) &
+                         - Altitude_GB(iLon,iLat,iAlt  ,iBlock))
                     GeoLat = GeoLat + signz*xmag/bmag * len/(RBody + GeoAlt)*pi
                     GeoLon = GeoLon + &
                          signz*ymag/bmag * len/(RBody + GeoAlt)*pi/cos(GeoLon)
@@ -1013,7 +1010,7 @@ contains
 !             cdip = abs(cos(dip))
 !
 !             ! Length in altitude
-!             length = dAlt(k) * sdip
+!             length = dAlt_GB(ii,jj,k,iBlock) * sdip
 !
 !             ! Length in latitude
 !             length = length + &
