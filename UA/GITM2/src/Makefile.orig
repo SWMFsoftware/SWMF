@@ -100,8 +100,8 @@ ${EXE}:	${OBJECTS} ${MODULES} main.o
 	-L${LIBDIR} -lEMPIRICALIE -lINDICES \
 	-lSHARE ${EMPIRICALIEDIR}/ModEIEConductance.o ${EDDIR}/ModIons.o
 
-POST:	PostProcess.f90
-	${LINK.f90} ${PRECISION} ${DEBUG} -o PostProcess.exe PostProcess.f90
+POST:	PostProcess.o
+	${LINK.f90} ${Lflag2} -o PostProcess.exe PostProcess.o
 
 STATIC:
 	cp -f ModGITM_static.f90    ModGITM.f90
