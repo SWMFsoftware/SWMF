@@ -81,38 +81,73 @@ rundir:
 		ln -s UA/* .; \
 	fi);
 
-test:
-	@echo "test_compile..." > test.diff
-	make test_compile
-	@echo "test_rundir..." >> test.diff
-	make test_rundir
-	@echo "test_run..." >> test.diff
-	make test_run
-	@echo "test_check..." >> test.diff
-	make test_check
-
-test_compile:
-	make clean
-	./Config.pl -Earth -g=9,9,50,4
-	make GITM
 
 TESTDIR = run_test
 
 MPIRUN = mpirun -np 2
 
-test_rundir:
+test:
+	-@(make test_earth)
+
+#	-@(make test_mars)
+
+test_earth:
+	@echo "test_earth_compile..." > test_earth.diff
+	make test_earth_compile
+	@echo "test_earth_rundir..." >> test_earth.diff
+	make test_earth_rundir
+	@echo "test_earth_run..." >> test_earth.diff
+	make test_earth_run
+	@echo "test_earth_check..." >> test_earth.diff
+	make test_earth_check
+
+test_earth_compile:
+	make clean
+	./Config.pl -Earth -g=9,9,50,4
+	make GITM
+
+test_earth_rundir:
 	rm -rf ${TESTDIR}
 	make rundir RUNDIR=${TESTDIR} STANDALONE=YES UADIR=`pwd`
 	cd ${TESTDIR}; cp UA/DataIn/UAM.in.test.noAPEX UAM.in
 
-test_run:
+test_earth_run:
 	cd ${TESTDIR}; ${MPIRUN} ./GITM.exe > runlog
 
-test_check:
+test_earth_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/UA/data/log00000002.dat \
-		srcData/log00000002.dat.noAPEX > test.diff)
-	ls -l test.diff
+		srcData/log00000002.dat.noAPEX > test_earth.diff)
+	ls -l test_earth.diff
+
+test_mars:
+	@echo "test_mars_compile..." > test_mars.diff
+	make test_mars_compile
+	@echo "test_mars_rundir..." >> test_mars.diff
+	make test_mars_rundir
+	@echo "test_mars_run..." >> test_mars.diff
+	make test_mars_run
+	@echo "test_mars_check..." >> test_mars.diff
+	make test_mars_check
+
+test_mars_compile:
+	make clean
+	./Config.pl -Mars -g=9,9,50,4
+	make GITM
+
+test_mars_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR} STANDALONE=YES UADIR=`pwd`
+	cd ${TESTDIR}; cp UA/DataIn/UAM.in.Mars UAM.in
+
+test_mars_run:
+	cd ${TESTDIR}; ${MPIRUN} ./GITM.exe > runlog
+
+test_mars_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/UA/data/log00000002.dat \
+		srcData/log00000002.dat.Mars > test_mars.diff)
+	ls -l test_mars.diff
 
 dist:
 	make distclean
