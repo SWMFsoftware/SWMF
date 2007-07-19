@@ -88,8 +88,8 @@ MPIRUN = mpirun -np 2
 
 test:
 	-@(make test_earth)
-
-#	-@(make test_mars)
+	-@(make test_mars)
+	ls -l *.diff
 
 test_earth:
 	@echo "test_earth_compile..." > test_earth.diff
