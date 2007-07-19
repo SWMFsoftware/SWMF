@@ -275,8 +275,9 @@ amax=1.
 amin=-1.
 
 ; Setup window
-x_wsize=570
-y_wsize=400
+!p.charsize=3
+x_wsize=1140
+y_wsize=800
 window,1,xpos=200,ypos=100,xsize=x_wsize,ysize=y_wsize
 !p.color=blackc
 
@@ -315,8 +316,12 @@ for n=0,ntime-1 do begin
     xyouts,0.5,0.85,elabel+' keV '+species,size=2.,alignment=0.5,/normal
 
     ; Make gif file
-    gimg = tvrd(0,0)
-    write_tiff,fhead+'_'+fmiddle+strtrim(n,2)+'.tiff',gimg,red=red(0:255),$
+    gimg = tvrd(0,0,order=0,true=1)
+    
+    ;write_tiff,fhead+'_'+fmiddle+strtrim(n,2)+'.tif',gimg,red=red(0:255),$
+    ;  green=green(0:255),blue=blue(0:255) ;,/multiple
+
+    write_image,fhead+'_'+fmiddle+strtrim(n,2)+'.tif','TIFF',gimg,red=red(0:255),$
       green=green(0:255),blue=blue(0:255) ;,/multiple
 endfor
 
