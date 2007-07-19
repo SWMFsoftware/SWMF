@@ -95,7 +95,7 @@ GITM:	DEPEND
 	@echo "${EXE} has been created"
 
 ${EXE}:	${OBJECTS} ${MODULES} main.o
-	${LINK.f90} ${Lflag1} -o ${EXE} main.o ${OBJECTS} ${MODULES}\
+	${LINK.f90} ${Lflag1} -o ${EXE} main.o ${OBJECTS} ${MODULES} \
 	-L${ABDIR} -lSphere -L${EDDIR} -lED \
 	-L${LIBDIR} -lEMPIRICALIE -lINDICES \
 	-lSHARE ${EMPIRICALIEDIR}/ModEIEConductance.o ${EDDIR}/ModIons.o
