@@ -4,7 +4,7 @@
 ! ----------------------------------------------------------------------------
 !/
 
-subroutine rusanov_solver(iIon, &
+subroutine rusanov_solver(iIon, nCell,&
      Rgas, DtIn,&
      OldState_GV,&
      RhoSource_C, RhoUSource_C, eSource_C, &
@@ -13,67 +13,55 @@ subroutine rusanov_solver(iIon, &
   use ModCommonVariables
   implicit none
 
-  integer, intent(in)      :: iIon
+  integer, intent(in)      :: iIon,nCell
   real, intent(in)         :: Rgas,DtIn
-  real, intent(in)         :: OldState_GV(-1:MaxGrid,4)
-  real, dimension(MaxGrid), intent(in)  :: RhoSource_C, RhoUSource_C, eSource_C
-  real, intent(out)        :: UpdateState_GV(-1:MaxGrid,4)
+  real, intent(in)         :: OldState_GV(-1:nCell+2,4)
+  real, dimension(nCell), intent(in)  :: RhoSource_C, RhoUSource_C, eSource_C
+  real, intent(out)        :: UpdateState_GV(-1:nCell+2,4)
 
-  real, dimension(-1:MaxGrid+2) :: OldRho_G, OldU_G, OldP_G
-  real, dimension(MaxGrid+1)    :: LeftRho_F, LeftU_F, LeftP_F
-  real, dimension(MaxGrid+1)    :: RightRho_F, RightU_F, RightP_F
-  real, dimension(MaxGrid+1)    :: RhoFlux_F, RhoUFlux_F, eFlux_F
-  real, dimension(MaxGrid)      :: NewRho_C, NewU_C, NewP_C, NewT_C
-  real, dimension(MaxGrid)      :: OldRho_C, OldU_C, OldP_C, OldT_C
+  integer,parameter    :: Rho_=1,U_=2,P_=3,T_=4
+  real, allocatable    :: LeftRho_F(:), LeftU_F(:), LeftP_F(:)
+  real, allocatable    :: RightRho_F(:), RightU_F(:), RightP_F(:)
+  real, allocatable    :: RhoFlux_F(:), RhoUFlux_F(:), eFlux_F(:)
   !---------------------------------------------------------------------------
+  if (.not.allocated(LeftRho_F)) then
+     allocate(LeftRho_F(nCell+1), LeftU_F(nCell+1), LeftP_F(nCell+1),&
+          RightRho_F(nCell+1), RightU_F(nCell+1), RightP_F(nCell+1),&
+          RhoFlux_F(nCell+1), RhoUFlux_F(nCell+1), eFlux_F(nCell+1))
+  endif
 
-  OldRho_G(-1:nDim+2) = OldState_GV(-1:nDim+2,1)
-  OldU_G  (-1:nDim+2) = OldState_GV(-1:nDim+2,2)
-  OldP_G  (-1:nDim+2) = OldState_GV(-1:nDim+2,3)
-
- ! OldRho_G(-1) = OldState_GV(0,1)
- ! OldU_G  (-1) = OldState_GV(0,2)
- ! OldP_G  (-1) = OldState_GV(0,3)
-
-
-
-  OldRho_C(1:nDim)=OldRho_G(1:nDim)
-  OldU_C  (1:nDim)=OldU_G  (1:nDim)
-  OldP_C  (1:nDim)=OldP_G  (1:nDim)
-
-  
   UpdateState_GV=OldState_GV
 
   ! get the face values
-  call calc_facevalues(nDim, OldRho_G, LeftRho_F, RightRho_F)
-  call calc_facevalues(nDim, OldU_G, LeftU_F, RightU_F)
-  call calc_facevalues(nDim, OldP_G, LeftP_F, RightP_F)
+  call calc_facevalues(nCell, OldState_GV(-1:nCell+2,Rho_), LeftRho_F, RightRho_F)
+  call calc_facevalues(nCell, OldState_GV(-1:nCell+2,U_), LeftU_F, RightU_F)
+  call calc_facevalues(nCell, OldState_GV(-1:nCell+2,P_), LeftP_F, RightP_F)
 
   !get the rusanov flux
-  call rusanov_flux( DtIn,&
+  call rusanov_flux( DtIn,nCell,&
        LeftRho_F, LeftU_F, LeftP_F, &
        RightRho_F, RightU_F, RightP_F, &
        RhoFlux_F, RhoUFlux_F, eFlux_F)
 
   ! update the cells one timestep 
-  call update_state( iIon,&
+  call update_state( iIon,nCell,&
        Rgas, DtIn,&
-       OldRho_C, OldU_C, OldP_C, OldT_C, &
+       OldState_GV(1:nCell,Rho_), OldState_GV(1:nCell,U_), &
+       OldState_GV(1:nCell,P_), OldState_GV(1:nCell,T_), &
        LeftRho_F, RightRho_F,LeftU_F, RightU_F,LeftP_F, RightP_F, &
        RhoFlux_F, RhoUFlux_F, eFlux_F, &
        RhoSource_C, RhoUSource_C, eSource_C, &
-       NewRho_C, NewU_C, NewP_C, NewT_C)
+       UpdateState_GV(1:nCell,Rho_), UpdateState_GV(1:nCell,U_), &
+       UpdateState_GV(1:nCell,P_), UpdateState_GV(1:nCell,T_))
 
-  UpdateState_GV(1:nDim,1) = NewRho_C(1:nDim)
-  UpdateState_GV(1:nDim,2) = NewU_C(1:nDim)
-  UpdateState_GV(1:nDim,3) = NewP_C(1:nDim)
-  UpdateState_GV(1:nDim,4) = NewT_C(1:nDim)
-
+      deallocate(LeftRho_F, LeftU_F, LeftP_F,&
+          RightRho_F, RightU_F, RightP_F,&
+          RhoFlux_F, RhoUFlux_F, eFlux_F)
 end subroutine rusanov_solver
 
 !==============================================================================
 
-subroutine rusanov_flux( DtIn, &
+subroutine rusanov_flux( DtIn, nCell,&
      LeftRho_F, LeftU_F, LeftP_F, &
      RightRho_F, RightU_F, RightP_F, &
      RhoFlux_F, RhoUFlux_F, eFlux_F)
@@ -81,21 +69,22 @@ subroutine rusanov_flux( DtIn, &
   use ModCommonVariables
   implicit none
 
-  real, intent(in) :: DtIn
-  real, dimension(MaxGrid+1), intent(in) :: &
-       LeftRho_F, LeftU_F, LeftP_F, &
-       RightRho_F, RightU_F, RightP_F
-  real, dimension(MaxGrid+1), intent(out) :: RhoFlux_F, RhoUFlux_F, eFlux_F
+  real, intent(in)   :: DtIn
+  integer,intent(in) :: nCell
+  real, dimension(nCell+1), intent(in) :: LeftRho_F, LeftU_F, LeftP_F, &
+                                          RightRho_F, RightU_F, RightP_F
+  real, dimension(nCell+1), intent(out) :: RhoFlux_F, RhoUFlux_F, eFlux_F
   real    :: GammaOverGammaMinus1, InvGammaMinus1, RightE, LeftE, Coeff
   integer :: i
   !----------------------------------------------------------------------------
+
   InvGammaMinus1       = 1.0/(Gamma - 1.0)
   GammaOverGammaMinus1 = Gamma/(Gamma - 1.0)
 
   Coeff = 0.47*DRBND/DtIn
 !  Coeff = 0.5/dtr1
   
-  do i=1,nDim+1
+  do i=1,nCell+1
      RhoFlux_F(i)  = 0.5*(LeftRho_F(i) *LeftU_F(i) &
           +               RightRho_F(i)*RightU_F(i))  &
           - Coeff * (RightRho_F(i) - LeftRho_F(i))
@@ -119,7 +108,7 @@ end subroutine rusanov_flux
 
 !==============================================================================
 
-subroutine update_state( iIon,&
+subroutine update_state( iIon,nCell,&
      Rgas,DtIn,&
      OldRho_C, OldU_C, OldP_C, OldT_C, &
      LeftRho_F, RightRho_F,LeftU_F, RightU_F,LeftP_F, RightP_F, &
@@ -131,17 +120,17 @@ subroutine update_state( iIon,&
   use ModPWOM, ONLY: IsPointImplicit, IsPointImplicitAll
   implicit none
 
-  integer, intent(in)                   :: iIon  
+  integer, intent(in)                   :: iIon,nCell  
   real, intent(in)                      :: Rgas,DtIn 
-  real, dimension(MaxGrid), intent(in)  :: OldRho_C, OldU_C, OldP_C, OldT_C
-  real, dimension(MaxGrid+1), intent(in):: LeftRho_F, LeftU_F, LeftP_F
-  real, dimension(MaxGrid+1), intent(in):: RightRho_F, RightU_F, RightP_F
-  real, dimension(MaxGrid+1), intent(in):: RhoFlux_F, RhoUFlux_F, eFlux_F
-  real, dimension(MaxGrid), intent(in)  :: RhoSource_C, RhoUSource_C, eSource_C
-  real, dimension(MaxGrid), intent(out) :: NewRho_C, NewU_C, NewP_C,NewT_C
-  real, dimension(MaxGrid) :: NewRhoU, NewE
+  real, dimension(nCell), intent(in)  :: OldRho_C, OldU_C, OldP_C, OldT_C
+  real, dimension(nCell+1), intent(in):: LeftRho_F, LeftU_F, LeftP_F
+  real, dimension(nCell+1), intent(in):: RightRho_F, RightU_F, RightP_F
+  real, dimension(nCell+1), intent(in):: RhoFlux_F, RhoUFlux_F, eFlux_F
+  real, dimension(nCell), intent(in)  :: RhoSource_C, RhoUSource_C, eSource_C
+  real, dimension(nCell), intent(out) :: NewRho_C, NewU_C, NewP_C,NewT_C
+  real, allocatable :: NewRhoU(:), NewE(:)
   real :: InvGammaMinus1,SumCollisionFreq,SumHTxCol,SumMFxCol
-  real, dimension(MaxGrid) :: NewRhoUSource_C, ExplicitRhoU_C
+  real, allocatable :: NewRhoUSource_C(:), ExplicitRhoU_C(:)
   real :: CollisionNeutral1, CollisionNeutral2, &
           CollisionNeutral3,Collisionneutral4
   real :: CollisionCoefT1, CollisionCoefM1, CollisionCoefT2, CollisionCoefM2,&
@@ -149,9 +138,14 @@ subroutine update_state( iIon,&
   real :: ModifyESource
   integer :: i,iSpecies,MinSpecies
   !----------------------------------------------------------------------------
+  
+  if (.not. allocated(NewRhoU)) then
+     allocate(NewRhoU(nCell), NewE(nCell),NewRhoUSource_C(nCell), ExplicitRhoU_C(nCell))
+  endif
+  
   InvGammaMinus1 = 1.0/(Gamma - 1.0)
 
-  do i=1,nDim
+  do i=1,nCell
  !    ImpliciteSource_C(i)=0.0
      NewRho_C(i) = OldRho_C(i) &
           - DtIn * (Ar23(i)*RhoFlux_F(i+1)-Ar12(i)*RhoFlux_F(i)) &
@@ -220,5 +214,5 @@ subroutine update_state( iIon,&
      
      NewT_C(i)=NewP_C(i)/Rgas/NewRho_C(i)
   end do
-
+  deallocate(NewRhoU, NewE,NewRhoUSource_C, ExplicitRhoU_C)
 end subroutine update_state
