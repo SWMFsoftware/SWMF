@@ -132,7 +132,7 @@ test_mars:
 
 test_mars_compile:
 	make clean
-	./Config.pl -Mars -g=9,9,50,4
+	./Config.pl -Mars -g=9,9,40,4
 	make GITM
 
 test_mars_rundir:
