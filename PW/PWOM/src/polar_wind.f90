@@ -157,11 +157,11 @@ contains
 
       else if (TypeSolver == 'Rusanov') then
          do iIon=1,nIon-1
-            call rusanov_solver(iIon,RGAS_I(iIon),dt,   &
-                 State_GV(:,iRho_I(iIon):iT_I(iIon)),&
+            call rusanov_solver(iIon,nDim,RGAS_I(iIon),dt,   &
+                 State_GV(-1:nDim+2,iRho_I(iIon):iT_I(iIon)),&
                  Source_CV(:,iRho_I(iIon)), Source_CV(:,iU_I(iIon)),&
                  Source_CV(:,iP_I(iIon)),  &
-                 NewState_GV(:,iRho_I(iIon):iT_I(iIon)))
+                 NewState_GV(-1:nDim+2,iRho_I(iIon):iT_I(iIon)))
          enddo
       endif
             
