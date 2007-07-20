@@ -1,9 +1,13 @@
 
 SUBROUTINE PW_calc_efield
-  use ModCommonVariables
+  use ModCommonVariables,only: nDim,nIon,iRho_I,iU_I,iP_I,MassElecIon_I,&
+       Source_CV,State_GV,uE_,pE_,DrBnd,Mass_I,Efield,Centrifugal,GRAVTY,&
+       dArea,CurrMx,MaxGrid,Te_
+  implicit none
   
-  REAL PR_GI(0:MaxGrid,nIon),&
-       PR(0:MaxGrid),EZ(0:MaxGrid),eNumDens
+  integer :: iIon, K
+  real    :: PR_GI(0:MaxGrid,nIon),&
+             PR(0:MaxGrid),EZ(0:MaxGrid),eNumDens,Dz,Ez1,Dnom
   
   !----------------------------------------------------------------------------
   
