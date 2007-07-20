@@ -260,7 +260,12 @@ subroutine calc_GITM_sources(iBlock)
 
            Temp = Temperature(iLon, iLat, :, iBlock)*TempUnit(iLon, iLat, :)
            nVel = VerticalVelocity(iLon,iLat,1:nAlts,:,iBlock)
-           NDensityS_1D = NDensityS(iLon,iLat,1:nAlts,1:nSpecies,iBlock)
+
+           !Loop is needed to make the NAG f95 v5.0 compiler happy for Mac OSX
+           do iSpecies = 1, nSpecies; do iAlt = 1, nAlts
+              NDensityS_1D(iAlt, iSpecies) = &
+                   NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)
+           end do; end do
 
            call calc_neutral_friction(nVel)
 
