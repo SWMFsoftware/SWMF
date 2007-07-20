@@ -118,33 +118,39 @@ public:
     return measure;
   };
 //===================================================
-  void RandomPosition(float* x) {
-    double xtmp[3];
-    int i;
-
-    RandomPosition(xtmp);
-    for (i=0;i<DIM-1;i++) x[i]=xtmp[i];
-  }; 
-    
-
-  void RandomPosition(double* x) {
-    double f1,f2;
+  template <class T> void RandomPosition(T* x) {
 
     switch (DIM) {
     case 3 :
-      f1=rnd(); if (f1<0.001) f1=0.001; if (f1>0.999) f1=0.999; f1=sqrt(f1);
-      f2=rnd(); if (f2<0.001) f2=0.001; if (f2>0.999) f2=0.999;
-      x[0]=f1*(1.0-f2);
-      x[1]=f1*f2;
+      x[0]=1.0-sqrt(rnd());
+      x[1]=rnd()*(1.0-x[0]); 
+
+      if (x[0]<0.00001E0) x[0]=0.00001E0;
+      if (x[0]>0.99999E0) x[0]=0.99999E0;
+
+      if (x[1]<0.00001E0) x[1]=0.00001E0;
+      if (x[1]>0.99999E0) x[1]=0.99999E0;
+
+exit(__LINE__,__FILE__,"RandomPosition does'nt works correctly");
       return;
     case 2 :
-      f1=rnd(); if (f1<0.001) f1=0.001; if (f1>0.999) f1=0.999;
-      x[0]=f1;
+      if (SymmetryMode==no_symmetry) x[0]=rnd();     
+      else if (SymmetryMode==cylindrical_symmetry) {
+        register double dr,l,nd0[2],nd1[2],e[2];
+
+        node[0]->GetX(nd0);node[1]->GetX(nd1);
+        e[0]=nd1[0]-nd0[0],e[1]=nd1[1]-nd0[1];
+        l=sqrt(e[0]*e[0]+e[1]*e[1]);
+        dr=e[1]; 
+
+        x[0]=(fabs(dr/l)<1.0E-8) ? rnd() : (-nd0[1]+sqrt(pow(nd0[1],2)+2.0*dr*rnd()*(nd0[1]+dr/2.0)))/dr;    
+      }
+
+      if (x[0]<0.00001E0) x[0]=0.00001E0; 
+      if (x[0]>0.99999E0) x[0]=0.99999E0;
       return;
     default :
-      printf("proc. Cface::RandomPosition()\n");
-      printf("wrong DIM value: DIM=%i\n",DIM);
-      exit(__LINE__,__FILE__);
+      exit(__LINE__,__FILE__,"wrong DIM value");
     }
 
   };
