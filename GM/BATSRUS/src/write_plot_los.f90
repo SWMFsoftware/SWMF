@@ -15,7 +15,7 @@ subroutine write_plot_los(iFile)
   !           January  2004 fix to accept 0 in LOS vector
   !           January  2004 fixed declaration for norm_los(3), r_Pix(3) 
   !           February 2004 fix integration and make 2nd order accurate
-  !                         fix save_file in mainf.90 update ghost cells
+  !                         fix save_file in main.f90 update ghost cells
   !                         include forgotten plot_pars1=plot_pars(ifile)
   !                         flags for PB and LW and limb darkening parameter
   !                         improved block-line distance calculation
@@ -32,7 +32,7 @@ subroutine write_plot_los(iFile)
   !                         change in the parameters: satellite_position, 
   !                         offset_angle   
   !                         Cartesian grid and circular image centered
-  !                         at the Sun (no offset anle)
+  !                         at the Sun (no offset angle)
 
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,n_step,time_simulation,unusedBLK, &
