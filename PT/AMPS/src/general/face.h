@@ -143,7 +143,7 @@ exit(__LINE__,__FILE__,"RandomPosition does'nt works correctly");
         l=sqrt(e[0]*e[0]+e[1]*e[1]);
         dr=e[1]; 
 
-        x[0]=(fabs(dr/l)<1.0E-8) ? rnd() : (-nd0[1]+sqrt(pow(nd0[1],2)+2.0*dr*rnd()*(nd0[1]+dr/2.0)))/dr;    
+        x[0]=(fabs(dr/l)<1.0E-8) ? rnd() : (-nd0[1]+sqrt(pow(nd0[1],2)+2.0*dr*rnd()*(nd0[1]+dr/2.0)))/dr/2.0;    
       }
 
       if (x[0]<0.00001E0) x[0]=0.00001E0; 
