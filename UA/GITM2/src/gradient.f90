@@ -1,12 +1,12 @@
 
-subroutine UAM_Gradient(InArray, OutArray, iBlock)
+subroutine UAM_Gradient(Array_G, Gradient_CD, iBlock)
 
   ! This routine calculates the gradient of a scalar quantity.
   ! It assumes that it is working with a single block, but needs the
   ! variable "iBlock" because it has to figure out where it is in the
   ! grid.  This can be generalized by feeding in the specific grid
-  ! for the given variable.  It is also assumed that the "InArray"
-  ! and "OutArray" have the ghostcells defined.
+  ! for the given variable.  It is also assumed that the "Array_G"
+  ! and "Gradient_CD" have the ghostcells defined.
 
 
   use ModSizeGitm, only : nLons, nLats, nAlts
@@ -16,10 +16,8 @@ subroutine UAM_Gradient(InArray, OutArray, iBlock)
   implicit none
 
   integer, intent(in) :: iBlock
-  real, dimension(-1:nLons+2,-1:nLats+2, -1:nAlts+2), intent(in)  :: InArray
-  real, dimension(nLons,nLats,nAlts, 3), intent(out) :: OutArray
-
-  real :: InArray1D(0:nAlts+1), OutArray1D(nAlts)
+  real, dimension(-1:nLons+2,-1:nLats+2, -1:nAlts+2), intent(in)  :: Array_G
+  real, dimension(nLons,nLats,nAlts, 3), intent(out) :: Gradient_CD
 
   ! These are delta altitude variables for a nonuniform grid:
   real :: Drp, Drm, DrmOverDrp, Drr2, Bottom
@@ -31,7 +29,7 @@ subroutine UAM_Gradient(InArray, OutArray, iBlock)
 
   integer :: iLat, iLon, iAlt
   !---------------------------------------------------------------------------
-  OutArray = 0.0
+  Gradient_CD = 0.0
 
   !\
   ! East First
@@ -47,8 +45,8 @@ subroutine UAM_Gradient(InArray, OutArray, iBlock)
         maxi = max(cos(Latitude(iLat,iBlock)),0.17)  
         do iAlt = 1, nAlts
            do iLon = 1, nLons
-              OutArray(iLon,iLat,iAlt, iEast_) = &
-                   ((InArray(iLon+1,iLat,iAlt) - InArray(iLon-1,iLat,iAlt)) / &
+              Gradient_CD(iLon,iLat,iAlt, iEast_) = &
+                   ((Array_G(iLon+1,iLat,iAlt) - Array_G(iLon-1,iLat,iAlt)) / &
                    (Longitude(iLon+1,iBlock) - Longitude(iLon-1,iBlock)))/ &
                    (maxi*RadialDistance_GB(iLon, iLat, iAlt, iBlock))
            enddo
@@ -75,10 +73,10 @@ subroutine UAM_Gradient(InArray, OutArray, iBlock)
      do iAlt = 1, nAlts
         do iLat = 1, nLats
            do iLon = 1, nLons
-              OutArray(iLon, iLat, iAlt, iNorth_) = &
-                   ((dtr2(iLat)*InArray(iLon,iLat+1,iAlt) - &
-                                InArray(iLon,iLat-1,iAlt) - &
-                   (dtr2(iLat)-1)*InArray(iLon,iLat,iAlt)) / &
+              Gradient_CD(iLon, iLat, iAlt, iNorth_) = &
+                   ((dtr2(iLat)*Array_G(iLon,iLat+1,iAlt) - &
+                                Array_G(iLon,iLat-1,iAlt) - &
+                   (dtr2(iLat)-1)*Array_G(iLon,iLat,iAlt)) / &
                    (dtr2(iLat)*dtp(iLat) + dtm(iLat))) / &
                    RadialDistance_GB(iLon, iLat, iAlt, iBlock)
            enddo
@@ -105,10 +103,10 @@ subroutine UAM_Gradient(InArray, OutArray, iBlock)
               Drr2       = DrmOverDrp**2
               Bottom     = Drm*(1+DrmOverDrp)
 
-              OutArray(iLon,iLat,iAlt,iUp_) = &
-                   (     Drr2*InArray(iLon,iLat,iAlt+1) &
-                   -          InArray(iLon,iLat,iAlt-1) &
-                   - (Drr2-1)*InArray(iLon,iLat,iAlt)) / Bottom
+              Gradient_CD(iLon,iLat,iAlt,iUp_) = &
+                   (     Drr2*Array_G(iLon,iLat,iAlt+1) &
+                   -          Array_G(iLon,iLat,iAlt-1) &
+                   - (Drr2-1)*Array_G(iLon,iLat,iAlt)) / Bottom
               
            enddo
         enddo
