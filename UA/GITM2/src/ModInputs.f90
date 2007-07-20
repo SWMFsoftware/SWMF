@@ -69,6 +69,8 @@ module ModInputs
   real :: StretchingPercentage = 0.0
   real :: StretchingFactor = 1.0
 
+  logical :: UseTopography = .false.
+
   real :: TempMax = 1000.0
   real :: TempMin =  200.0
   real :: TempWidth    =  25.0*1e3

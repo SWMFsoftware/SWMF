@@ -562,6 +562,15 @@ subroutine set_inputs
               IsDone = .true.
            endif
 
+        case("#TOPOGRAPHY")
+           call read_in_logical(UseTopography, iError)
+           if(iError /= 0) then
+              write(*,*) 'Incorrect format for #TOPOGRAPHY:'
+              write(*,*) '#TOPOGRAPHY'
+              write(*,*) 'UseTopography (logical)'
+              IsDone = .true.
+           endif
+
         case ("#RESTART")
            call read_in_logical(DoRestart, iError)
            if (iError /= 0) then

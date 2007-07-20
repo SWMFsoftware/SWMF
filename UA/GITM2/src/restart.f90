@@ -1,8 +1,4 @@
 
-!------------------------------------------------------------------------
-!
-!------------------------------------------------------------------------
-
 subroutine write_restart(dir)
 
   use ModGITM
@@ -61,7 +57,11 @@ subroutine write_restart(dir)
 
      write(iRestartUnit_) Longitude(:,iBlock)
      write(iRestartUnit_) Latitude(:,iBlock)
-     write(iRestartUnit_) Altitude_GB(:,:,:,iBlock)
+     if(UseTopography)then
+        write(iRestartUnit_) Altitude_GB(:,:,:,iBlock)
+     else
+        write(iRestartUnit_) Altitude_GB(1,1,:,iBlock)
+     end if
 
      do iSpecies=1,nSpeciesTotal
         write(iRestartUnit_) NDensityS(:,:,:,iSpecies,iBlock)
@@ -85,9 +85,7 @@ subroutine write_restart(dir)
 
 end subroutine write_restart
 
-!------------------------------------------------------------------------
-!
-!------------------------------------------------------------------------
+!=============================================================================
 
 subroutine read_restart(dir)
 
@@ -100,8 +98,8 @@ subroutine read_restart(dir)
 
   character (len=*), intent(in) :: dir
   character (len=5) :: cBlock
-  integer :: iBlock, i, iSpecies
-
+  integer :: iBlock, i, iSpecies, iAlt
+  !---------------------------------------------------------------------------
   call report("read_restart",1)
 
   do iBlock = 1, nBlocks
@@ -117,6 +115,15 @@ subroutine read_restart(dir)
      if (iDebugLevel > 4) write(*,*) "=====> Reading Latitude"
      read(iRestartUnit_) Latitude(:,iBlock)
      if (iDebugLevel > 4) write(*,*) "=====> Reading Altitude"
+
+     if(UseTopography)then
+        read(iRestartUnit_) Altitude_GB(:,:,:,iBlock)
+     else
+        read(iRestartUnit_) Altitude_GB(1,1,:,iBlock)
+        do iAlt = -1, nAlts+2
+           Altitude_GB(:,:,iAlt,iBlock) = Altitude_GB(1,1,iAlt,iBlock)
+        end do
+     end if
      read(iRestartUnit_) Altitude_GB(:,:,:,iBlock)
 
      do iSpecies=1,nSpeciesTotal
