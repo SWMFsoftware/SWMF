@@ -21,10 +21,12 @@ subroutine initialize_gitm(TimeIn)
   real :: InvScaleHeightS(-1:nLons+2,-1:nLats+2)
 
   real :: LogRho(-1:nLons+2,-1:nLats+2), NewSumRho(-1:nLons+2,-1:nLats+2)
+  real :: GradAlt_CD(nLons, nLats, nAlts, 3)
 
   real :: TempUnit_const, t, h
 
   logical :: IsThere, IsOk, IsDone, IsFirstTime = .true.
+  !----------------------------------------------------------------------------
 
   if (.not.IsFirstTime) return
 
@@ -196,6 +198,20 @@ subroutine initialize_gitm(TimeIn)
   ! Precalculate the tangent of the latitude
   TanLatitude(:,1:nBlocks) = min(abs(tan(Latitude(:,1:nBlocks))),100.0) * &
        sign(1.0,Latitude(:,1:nBlocks))
+
+
+  if(UseTopography)then
+     !!! Do we want to divide by R and R*max(cos,0.17)
+     !!! What about the maxi tricks ??? Why is that there???
+     do iBlock = 1, nBlocks
+        call UAM_gradient(Altitude_GB, GradAlt_CD)
+        dAltDLon_CB(:,:,:,iBlock) = GradAlt_CD(:,:,:,iEast_)
+        dAltDLat_CB(:,:,:,iBlock) = GradAlt_CD(:,:,:,iNorth_)
+     end do
+  else
+     dAltDLon_CB = 0.
+     dAltDLat_CB = 0.
+  end if
 
   call init_heating_efficiency
 

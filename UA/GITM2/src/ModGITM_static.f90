@@ -18,6 +18,9 @@ module ModGITM
        Altitude_GB, dAlt_GB, RadialDistance_GB, InvRadialDistance_GB, &
        Gravity_GB
 
+  ! Topography
+  real, dimension(nLons,nLats,nAlts,nBlocksMax) :: dAltDLon_CB, dAltDLat_CB
+
   real, dimension(-1:nLons+2, nBlocksMax) :: Longitude
   real, dimension(-1:nLats+2, nBlocksMax) :: Latitude, TanLatitude
 
