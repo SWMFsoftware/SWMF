@@ -190,7 +190,7 @@ contains
 
     real :: CoriolisSin, CoriolisCos, CentrifugalParameter
 
-    real :: RhoTest, coslat(nLats), sinlat(nLats)
+    real :: RhoTest, CosLat(nLats), SinLat(nLats)
 
     integer :: iLon, iLat
 
@@ -235,7 +235,7 @@ contains
     end do
 
     sinlat = sin(Latitude(1:nLats,iBlock))
-    coslat = cos(Latitude(1:nLats,iBlock))
+    CosLat = CosLatitude(1:nLats,iBlock)
 
     do iLat=1,nLats
 

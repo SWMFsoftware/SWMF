@@ -1,17 +1,17 @@
 
 subroutine UAM_Gradient(Array_G, Gradient_CD, iBlock)
 
-  ! This routine calculates the gradient of a scalar quantity.
-  ! It assumes that it is working with a single block, but needs the
+  ! This routine calculates the gradients of a scalar quantity 
+  ! in spherical coordinates. It is working with a single block, but needs the
   ! variable "iBlock" because it has to figure out where it is in the
-  ! grid.  This can be generalized by feeding in the specific grid
-  ! for the given variable.  It is also assumed that the "Array_G"
-  ! and "Gradient_CD" have the ghostcells defined.
+  ! grid. It is assumed that in Array_G the ghostcells are defined.
 
 
   use ModSizeGitm, only : nLons, nLats, nAlts
-  use ModGITM, only : Latitude, Longitude, RadialDistance_GB, &
-       iEast_, iNorth_, iUp_
+  use ModGITM, only : Longitude, Latitude, CosLatitude, &
+       GradLonP_CB, GradLon0_CB, GradLonM_CB, &
+       GradLatP_CB, GradLat0_CB, GradLatM_CB, &
+       RadialDistance_GB, InvRadialDistance_GB, iEast_, iNorth_, iUp_
 
   implicit none
 
@@ -22,10 +22,8 @@ subroutine UAM_Gradient(Array_G, Gradient_CD, iBlock)
   ! These are delta altitude variables for a nonuniform grid:
   real :: Drp, Drm, DrmOverDrp, Drr2, Bottom
 
-  ! These are delta theta (i.e. latitude) variables for a nonuniform grid:
-  real, dimension(nLats) :: dtm, dtp, dtmodtp, dtr2, dt
 
-  real :: maxi
+  real :: InvCosLat
 
   integer :: iLat, iLon, iAlt
   !---------------------------------------------------------------------------
@@ -37,18 +35,16 @@ subroutine UAM_Gradient(Array_G, Gradient_CD, iBlock)
 
   if (nLons > 1) then
 
-     !!! This is not second order for non-uniform longitudes !!!
-
      do iLat = 1, nLats
-        ! this is 80 degrees...
-        !!! Why not saving CosLatitude_GB ???
-        maxi = max(cos(Latitude(iLat,iBlock)),0.17)  
+        !!! angle is limited to 80 degrees. Why ???
+        InvCosLat = 1./max(CosLatitude(iLat,iBlock),0.17)  
         do iAlt = 1, nAlts
            do iLon = 1, nLons
-              Gradient_CD(iLon,iLat,iAlt, iEast_) = &
-                   ((Array_G(iLon+1,iLat,iAlt) - Array_G(iLon-1,iLat,iAlt)) / &
-                   (Longitude(iLon+1,iBlock) - Longitude(iLon-1,iBlock)))/ &
-                   (maxi*RadialDistance_GB(iLon, iLat, iAlt, iBlock))
+              Gradient_CD(iLon, iLat, iAlt, iEast_) = &
+                   (GradLonM_CB(iLon, iBlock)*Array_G(iLon-1,iLat,iAlt) &
+                   +GradLon0_CB(iLon, iBlock)*Array_G(iLon  ,iLat,iAlt) &
+                   +GradLonP_CB(iLon, iBlock)*Array_G(iLon+1,iLat,iAlt) &
+                   )*InvRadialDistance_GB(iLon, iLat, iAlt, iBlock)*InvCosLat
            enddo
         enddo
      enddo
@@ -60,25 +56,14 @@ subroutine UAM_Gradient(Array_G, Gradient_CD, iBlock)
   !/
 
   if (nLats > 1) then
-
-     !!! This could be optimized a lot !!!
-
-     do iLat = 1, nLats
-        dtm(iLat) = Latitude(iLat,iBlock) - Latitude(iLat-1,iBlock)
-        dtp(iLat) = Latitude(iLat+1,iBlock) - Latitude(iLat,iBlock)
-        dtmodtp(iLat) = dtm(iLat) / dtp(iLat)
-        dtr2(iLat) = dtmodtp(iLat) * dtmodtp(iLat)
-     enddo
-
      do iAlt = 1, nAlts
         do iLat = 1, nLats
            do iLon = 1, nLons
               Gradient_CD(iLon, iLat, iAlt, iNorth_) = &
-                   ((dtr2(iLat)*Array_G(iLon,iLat+1,iAlt) - &
-                                Array_G(iLon,iLat-1,iAlt) - &
-                   (dtr2(iLat)-1)*Array_G(iLon,iLat,iAlt)) / &
-                   (dtr2(iLat)*dtp(iLat) + dtm(iLat))) / &
-                   RadialDistance_GB(iLon, iLat, iAlt, iBlock)
+                   (GradLatM_CB(iLat, iBlock)*Array_G(iLon,iLat-1,iAlt) &
+                   +GradLat0_CB(iLat, iBlock)*Array_G(iLon,iLat  ,iAlt) &
+                   +GradLatP_CB(iLat, iBlock)*Array_G(iLon,iLat+1,iAlt) &
+                   )*InvRadialDistance_GB(iLon, iLat, iAlt, iBlock)
            enddo
         enddo
      enddo

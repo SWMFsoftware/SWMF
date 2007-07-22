@@ -39,8 +39,8 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   endif
 
   Heating     = EuvHeating(iLon,iLat,:,iBlock)
-  Centrifugal = (cos(Latitude(iLat,iBlock)) * OmegaBody)**2
-  Coriolis    = 2 * cos(Latitude(iLat,iBlock)) * OmegaBody
+  Centrifugal = (CosLatitude(iLat,iBlock) * OmegaBody)**2
+  Coriolis    = 2 * CosLatitude(iLat,iBlock) * OmegaBody
   LogRho  = log(Rho(iLon,iLat,:,iBlock))
   do iDim = 1, 3 
      Vel_GD(:,iDim)  = Velocity(iLon,iLat,:,iDim,iBlock)

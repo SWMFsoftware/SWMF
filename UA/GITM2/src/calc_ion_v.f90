@@ -18,6 +18,8 @@ subroutine calc_ion_v(iBlock)
   real, dimension(1:nLons, 1:nLats, 1:nAlts, 3) ::           &
                   PressureGradient, Force, BLocal, &
                   ForceCrossB
+
+  real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2):: Pressure_G
   !---------------------------------------------------------------------------
 
   call report("Ion Forcing Terms",1)
@@ -27,8 +29,8 @@ subroutine calc_ion_v(iBlock)
 
   if (iDebugLevel > 4) write(*,*) "=====> pressure gradient", iproc
 
-  call UAM_Gradient(IPressure(:,:,:,iBlock)+ePressure(:,:,:,iBlock), &
-       PressureGradient, iBlock)
+  Pressure_G = IPressure(:,:,:,iBlock)+ePressure(:,:,:,iBlock)
+  call UAM_Gradient(Pressure_G, PressureGradient, iBlock)
 
   PressureGradient(:,:,nAlts,iUp_) = PressureGradient(:,:,nAlts-1,iUp_)
 

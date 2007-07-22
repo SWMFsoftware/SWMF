@@ -26,6 +26,8 @@ subroutine initialize_gitm(TimeIn)
   real :: TempUnit_const, t, h
 
   logical :: IsThere, IsOk, IsDone, IsFirstTime = .true.
+
+  real :: DistM, DistP, Ratio2, InvDenom
   !----------------------------------------------------------------------------
 
   if (.not.IsFirstTime) return
@@ -130,6 +132,12 @@ subroutine initialize_gitm(TimeIn)
      Longitude(3,1)  = Longitude(2,1) + 1.0 * pi/180.0
   endif
 
+  ! Precalculate the limited tangent and unlimited cosine of the latitude
+  TanLatitude(:,1:nBlocks) = min(abs(tan(Latitude(:,1:nBlocks))),100.0) * &
+       sign(1.0,Latitude(:,1:nBlocks))
+
+  CosLatitude(:,1:nBlocks) = cos(Latitude(:,1:nBlocks))
+
   ! This is done so we don't get a /0 below.
 
   dLatDist_GB = 1.0
@@ -158,14 +166,14 @@ subroutine initialize_gitm(TimeIn)
               dLonDist_GB(iLon, iLat, iAlt, iBlock) = 0.5 * &
                    (Longitude(iLon+1,iBlock) - Longitude(iLon-1,iBlock)) * &
                    RadialDistance_GB(iLon, iLat, iAlt, iBlock)* &
-                   max(abs(cos(Latitude(iLat,iBlock))),0.01)
+                   max(abs(CosLatitude(iLat,iBlock)),0.01)
 
               ! This is the distance between neighboring cells
               dLonDist_FB(iLon, iLat, iAlt, iBlock) = &
                    (Longitude(iLon,iBlock) - Longitude(iLon-1,iBlock)) * &
                    0.5*(RadialDistance_GB(iLon,   iLat, iAlt, iBlock) &
                    +    RadialDistance_GB(iLon-1, iLat, iAlt, iBlock)) &
-                   *max(abs(cos(Latitude(iLat,iBlock))),0.01)
+                   *max(abs(CosLatitude(iLat,iBlock)),0.01)
            enddo
 
            ! Fill in longitude ghost cells
@@ -195,13 +203,32 @@ subroutine initialize_gitm(TimeIn)
   InvDLonDist_GB = 1.0/dLonDist_GB
   InvDLonDist_FB = 1.0/dLonDist_FB
 
-  ! Precalculate the tangent of the latitude
-  TanLatitude(:,1:nBlocks) = min(abs(tan(Latitude(:,1:nBlocks))),100.0) * &
-       sign(1.0,Latitude(:,1:nBlocks))
+  ! Precalculate the coefficients for the gradient calculation
+  do iBlock = 1, nBlocks
+     do iLon = 1, nLons
+        DistM    = Longitude(iLon,iBlock) - Longitude(iLon-1,iBlock)
+        DistP    = Longitude(iLon+1,iBlock) - Longitude(iLon,iBlock)
+        Ratio2   = (DistM / DistP)**2
+        InvDenom = 1.0/(Ratio2*DistP + DistM)
 
+        GradLonP_CB(iLon, iBlock) =  InvDenom*Ratio2
+        GradLon0_CB(iLon, iBlock) =  InvDenom*(1-Ratio2)
+        GradLonM_CB(iLon, iBlock) = -InvDenom
+     enddo
+
+     do iLat = 1, nLats
+        DistM    = Latitude(iLat,iBlock) - Latitude(iLat-1,iBlock)
+        DistP    = Latitude(iLat+1,iBlock) - Latitude(iLat,iBlock)
+        Ratio2   = (DistM / DistP)**2
+        InvDenom = 1.0/(Ratio2*DistP + DistM)
+
+        GradLatP_CB(iLat, iBlock) =  InvDenom*Ratio2
+        GradLat0_CB(iLat, iBlock) =  InvDenom*(1-Ratio2)
+        GradLatM_CB(iLat, iBlock) = -InvDenom
+     enddo
+  end do
 
   if(UseTopography)then
-     !!! Do we want to divide by R and R*max(cos,0.17)
      !!! What about the maxi tricks ??? Why is that there???
      do iBlock = 1, nBlocks
         call UAM_gradient(Altitude_GB, GradAlt_CD)

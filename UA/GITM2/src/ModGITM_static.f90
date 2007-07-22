@@ -22,7 +22,10 @@ module ModGITM
   real, dimension(nLons,nLats,nAlts,nBlocksMax) :: dAltDLon_CB, dAltDLat_CB
 
   real, dimension(-1:nLons+2, nBlocksMax) :: Longitude
-  real, dimension(-1:nLats+2, nBlocksMax) :: Latitude, TanLatitude
+  real, dimension(-1:nLats+2, nBlocksMax) :: Latitude, TanLatitude, CosLatitude
+
+  real, dimension(nLons, nBlocksMax) :: GradLonM_CB, GradLon0_CB, GradLonP_CB
+  real, dimension(nLats, nBlocksMax) :: GradLatM_CB, GradLat0_CB, GradLatP_CB
 
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocksMax) :: &
        Rho, Temperature, InvScaleHeight, Pressure, &

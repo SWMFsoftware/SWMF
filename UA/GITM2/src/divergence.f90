@@ -8,7 +8,7 @@ subroutine divergence(InArray, OutArray, iBlock)
   ! and "OutArray" have the ghostcells defined.
 
   use ModSizeGitm
-  use ModGITM, only: Latitude, Longitude, &
+  use ModGITM, only: Latitude, CosLatitude, Longitude, &
        RadialDistance_GB, InvRadialDistance_GB
   use ModConstants
 
@@ -75,7 +75,7 @@ subroutine divergence(InArray, OutArray, iBlock)
   do i = 0, nLons+1
      do j = 0, nLats+1
         do k = 1, nAlts
-           maxi = max(cos(Latitude(j,iBlock)),cosmaxt) ! this is 80 degrees...
+           maxi = max(CosLatitude(j,iBlock),cosmaxt) ! this is 80 degrees...
            OutArray(i,j,k) = ((InArray(i+1,j,k) - InArray(i-1,j,k)) / &
                 (Longitude(i+1,iBlock) - Longitude(i-1,iBlock)))/ &
                 (maxi*RadialDistance_GB(i,j,k,iBlock))

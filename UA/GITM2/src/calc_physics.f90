@@ -99,7 +99,7 @@ subroutine calc_physics(iBlock)
      do iLat = 1, nLats
         sza(iLon, iLat,iBlock) =  &
              acos(SinDec*sin(Latitude(iLat,iBlock)) + &
-             CosDec*cos(Latitude(iLat,iBlock)) * &
+             CosDec*CosLatitude(iLat,iBlock) * &
              cos(pi*(LocalTime(iLon)-HoursPerDay/2)/(HoursPerDay/2)))
      enddo
   enddo
