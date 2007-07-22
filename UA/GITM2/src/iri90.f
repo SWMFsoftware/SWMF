@@ -1035,6 +1035,12 @@ C
       OARR(6)=HME
       OARR(7)=NMD
       OARR(8)=HMD
+
+      !!! These were never set ???
+      hhalf = 0.0 
+      Vner  = 0.0
+      Xteti = 0.0
+
       OARR(9)=HHALF
       OARR(10)=B0
       OARR(11)=VNER
@@ -2629,6 +2635,7 @@ c -----------------------------------------------------------------
 		ALOGF = ALOG10(XNMF2)
 		ALOGEF = ALOG10(XNME) - ALOGF
 		XHALF=XNMF2/2.
+
 		XX(1) = HHALF
  		XX(2) = HV1
 		XX(3) = HV2
@@ -2647,6 +2654,7 @@ c
 c geometric paramters for LAY -------------------------------------
 c difference to earlier version:  HXL(3) = HV2 + SCL(3)
 c
+
 		SCL0 = 0.7 * ( 0.216 * ( HMF2 - HHALF ) + 56.8 )
 		SCL(1) = 0.8 * SCL0
 		SCL(2) = 10.
@@ -2660,7 +2668,7 @@ c
 	    IF(NIGHT) GOTO 7711
 		NUMCON = 8
 		HXL(1) = 0.9 * HMF2
-		  HXL1T  = HHALF
+                HXL1T  = HHALF
 		HXL(2) = HMF1
 		HXL(4) = HME - SCL(4)
 		XX(6) = HMF1
@@ -2672,6 +2680,7 @@ c
 	   	WW(8) = 500.
 c without F-region ----------------------------------------------
 		IF(XNMF1.GT.0) GOTO 100
+
 			HXL(2)=(HMF2+HHALF)/2.
 			YY(6) = 0.
 			WW(6) = 0.
