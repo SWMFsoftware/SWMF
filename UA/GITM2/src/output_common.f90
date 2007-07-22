@@ -531,28 +531,30 @@ subroutine output_3dall(iBlock)
   implicit none
 
   integer, intent(in) :: iBlock
-  integer :: iOff, iSpecies, iIon
-  integer :: iAlt, iLat, iLon, iiAlt, iiLat, iiLon
+  integer :: iAlt, iLat, iLon, iiAlt, iiLat, iiLon, i
 
   do iAlt=-1,nAlts+2
+     !!! Why ???
      iiAlt = max(min(iAlt,nAlts),1)
      do iLat=-1,nLats+2
+        !!! Why ???
         iiLat = min(max(iLat,1),nLats)
         do iLon=-1,nLons+2
+           !!! Why ???
            iiLon = min(max(iLon,1),nLons)
            write(iOutputUnit_)       &
                 Longitude(iLon,iBlock), &
                 Latitude(iLat,iBlock), &
                 Altitude_GB(iLon,iLat,iAlt,iBlock),&
                 Rho(iLon,iLat,iAlt,iBlock),&
-                NDensityS(iLon,iLat,iAlt,:,iBlock), &
+                (NDensityS(iLon,iLat,iAlt,i,iBlock),i=1,nSpeciesTotal), &
                 Temperature(iLon,iLat,iAlt,iBlock)*TempUnit(iLon,iLat,iAlt),&
-                velocity(iLon,iLat,iAlt,:,iBlock) , &
-                VerticalVelocity(iLon,iLat,iAlt,:,iBlock), &
-                IDensityS(iLon,iLat,iAlt,:,iBlock),&
+                (Velocity(iLon,iLat,iAlt,i,iBlock),i=1,3), &
+                (VerticalVelocity(iLon,iLat,iAlt,i,iBlock),i=1,nSpecies), &
+                (IDensityS(iLon,iLat,iAlt,i,iBlock),i=1,nIons), &
                 eTemperature(iLon,iLat,iAlt,iBlock)  ,&
                 ITemperature(iLon,iLat,iAlt,iBlock)  ,&
-                Ivelocity(iLon,iLat,iAlt,:,iBlock)
+                (Ivelocity(iLon,iLat,iAlt,i,iBlock),i=1,3)
         enddo
      enddo
   enddo
