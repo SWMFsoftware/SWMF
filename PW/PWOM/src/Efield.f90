@@ -1,9 +1,12 @@
 
-SUBROUTINE PW_calc_efield
+SUBROUTINE PW_calc_efield(nCell,State_GV)
   use ModCommonVariables,only: nDim,nIon,iRho_I,iU_I,iP_I,MassElecIon_I,&
-       Source_CV,State_GV,uE_,pE_,DrBnd,Mass_I,Efield,Centrifugal,GRAVTY,&
-       dArea,CurrMx,MaxGrid,Te_
+       Source_CV,uE_,pE_,DrBnd,Mass_I,Efield,Centrifugal,GRAVTY,&
+       dArea,CurrMx,MaxGrid,Te_,nVar
   implicit none
+  
+  integer,intent(in) :: nCell
+  real,   intent(in) :: State_GV(-1:nCell+2,nVar)
   
   integer :: iIon, K
   real    :: PR_GI(0:MaxGrid,nIon),&
@@ -26,7 +29,7 @@ SUBROUTINE PW_calc_efield
   enddo
   
   !PR = sum( M_e/M_species *(P_thermal(k) + rho(k) * u(k)^2))
-  PR(:)=State_GV(0:maxGrid,pE_)+PR_GI(:,nIon)+PR(:)
+  PR(0:nDim+1)=State_GV(0:nDim+1,pE_)+PR_GI(0:nDim+1,nIon)+PR(0:nDim+1)
   
   EZ(1:nDim)=Source_CV(1:nDim,uE_)
   
