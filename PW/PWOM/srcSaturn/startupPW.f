@@ -393,7 +393,7 @@ C      READ(5,3) NCNPRT
       ALTMIN=ALTMIN/1.E5
       ALTMAX=ALTMAX/1.E5
       ETOP1=ETOP*1.23E-6/DRBND
-      CALL COLLIS(NDIM)
+      CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
       CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))
 
       if (DoLog) then

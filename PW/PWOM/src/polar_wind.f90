@@ -87,7 +87,7 @@ subroutine polar_wind
      CALL PW_eheat_flux
      
      CALL PW_set_upper_bc
-     CALL COLLIS(NDIM)
+     CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
      CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
      TIME=TIME+DT
 
@@ -115,7 +115,7 @@ subroutine polar_wind
      !    these will be used in the next time step
 
      CALL PW_set_upper_bc
-     CALL COLLIS(NDIM)
+     CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
      CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
      
      TIME=TIME+DT
