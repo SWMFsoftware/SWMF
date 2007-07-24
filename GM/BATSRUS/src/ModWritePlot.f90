@@ -45,7 +45,7 @@ subroutine write_plot_common(ifile)
   character (LEN=500) :: allnames
   character (LEN=500) :: unitstr_TEC, unitstr_IDL
   character (LEN=4) :: file_extension
-  character (LEN=40) :: file_format
+  character (LEN=500) :: file_format
   character (len=80) :: filename_n, filename_s
   character (len=1) :: NorthOrSouth
 
