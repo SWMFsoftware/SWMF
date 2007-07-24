@@ -19,9 +19,9 @@ module ModMultiFluid
   integer, parameter :: iRhoUxIon_I(nIonFluid) = iRhoUx_I(1:nIonFluid)
   integer, parameter :: iRhoUyIon_I(nIonFluid) = iRhoUy_I(1:nIonFluid)
   integer, parameter :: iRhoUzIon_I(nIonFluid) = iRhoUz_I(1:nIonFluid)
-  integer, parameter :: iUxIon_I(nIonFluid)    = iRhoUxIon_I
-  integer, parameter :: iUyIon_I(nIonFluid)    = iRhoUyIon_I
-  integer, parameter :: iUzIon_I(nIonFluid)    = iRhoUzIon_I
+  integer, parameter :: iUxIon_I(nIonFluid)    = iRhoUx_I(1:nIonFluid)
+  integer, parameter :: iUyIon_I(nIonFluid)    = iRhoUy_I(1:nIonFluid)
+  integer, parameter :: iUzIon_I(nIonFluid)    = iRhoUz_I(1:nIonFluid)
   integer, parameter :: iPIon_I(nIonFluid)     = iP_I(1:nIonFluid)
 
 contains
