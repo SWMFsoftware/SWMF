@@ -397,7 +397,7 @@ C      READ(5,3) NCNPRT
       ETOP1=ETOP*1.23E-6/DRBND
       CALL COLLIS(NDIM)
 
-      CALL PW_CALC_EFIELD
+      CALL PW_CALC_EFIELD(nDim,State_GV(-1:nDim+2,:))
 
       !write log
       if (DoLog) then

@@ -88,7 +88,7 @@ subroutine polar_wind
      
      CALL PW_set_upper_bc
      CALL COLLIS(NDIM)
-     CALL PW_calc_efield         
+     CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
      TIME=TIME+DT
 
 
@@ -116,7 +116,7 @@ subroutine polar_wind
 
      CALL PW_set_upper_bc
      CALL COLLIS(NDIM)
-     CALL PW_calc_efield
+     CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
      
      TIME=TIME+DT
      NSTEP=NSTEP+1
