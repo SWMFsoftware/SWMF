@@ -666,6 +666,22 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('MuLimbDarkening',mu_los)
               ! read the number of pixels
               call read_var('nPix',n_pix_r(ifile))            
+           elseif (index(plot_string,'rfr')>0) then
+              ! Refractive radiowave image 
+              plot_area='rfr'
+              ! Observer position
+              call read_var('ObsPosX', ObsPos_DI(1,ifile))
+              call read_var('ObsPosY', ObsPos_DI(2,ifile))
+              call read_var('ObsPosZ', ObsPos_DI(3,ifile))
+              ! read number of radiowave frequencies, i.e. # of plots
+              !call read_var('nRadioFrequency', nRadioFrequency)
+              call read_var('StringRadioFrequency', &
+                   StringRadioFrequency_I(iFile))
+              call read_var('X_Size_Image', X_Size_Image(ifile))
+              call read_var('Y_Size_Image', Y_Size_Image(ifile))
+              ! read the number of pixels
+              call read_var('n_Pix_X', n_Pix_X(ifile))            
+              call read_var('n_Pix_Y', n_Pix_Y(ifile))            
            elseif (index(plot_string,'ion')>0) then
               plot_area='ion'
            else
@@ -805,6 +821,11 @@ subroutine MH_set_parameters(TypeAction)
               plot_dimensional(ifile) = index(plot_string,'SOL')>0
               plot_vars(ifile)='wl pb' ! white light
               plot_pars(ifile)='mu'
+           elseif(index(plot_string,'RWI')>0.or.index(plot_string,'rwi')>0)then 
+              plot_var='rwi'
+              plot_dimensional(ifile) = .false.
+              plot_vars(ifile)='' ! Intensity
+              plot_pars(ifile)=''
            elseif(index(plot_string,'pos')>0.or.index(plot_string,'POS')>0)then
               plot_var='pos'
               plot_dimensional(ifile) = index(plot_string,'POS')>0

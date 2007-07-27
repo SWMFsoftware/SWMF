@@ -2157,9 +2157,6 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 ! in the file GM/BATSRUS/ModIO.f90.
 </command>
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-
 <command name="STEADYSTATESATELLITE" if="$_IsFirstSession">
 	<parameter name="SatelliteTimeStart" type="real" default="0" />
 	<parameter name="SatelliteTimeEnd" type="real" default="0" />
@@ -2193,8 +2190,6 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 ! For more than one satellite (two satellites in the above given example), the start and 
 ! end times should be set for all of them. 
 </command>
-
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 <command name="SAVEPLOT">
 	<parameter name="nPlotFile" type="integer" min="0" max="100"
@@ -2419,6 +2414,17 @@ blk MHD tec		StringPlot  ! general block Tecplot (ONLY!) plot
 1d  BBK tec		StringPlot ! 1d plot with BLK data, Tecplot (ONLY!)
 1000			DnSavePlot
 -1.			DtSavePlot
+rfr rwi tec             StringPlot
+10                      DnSavePlot
+-1.0                    DtSavePlot
+150.0                   ObsPosX
+145.7                   ObsPosY 
+50.0                    ObsPosZ
+10MHz, 42.3MHz, 100MHz     StringRadioFrequency
+20.0                    X_Size_Image
+20.0                    Y_Size_Image
+200                     n_Pix_X
+200                     n_Pix_Y
 
 Default is nPlotFile=0. \\
 
@@ -2427,13 +2433,15 @@ StringPlot must contain the following 3 parts in arbitrary order
 \begin{verbatim}
 plotarea plotvar plotform
 
-plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin', 'blk', '1d'
-plotvar  = 'mhd', 'ful', 'raw', 'ray', 'flx', 'sol', 'pos', 'var', 'bbk' - normalized
-plotvar  = 'MHD', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'pos', 'VAR', 'BBK' - dimensional
+plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin', 'blk', '1d' 'rfr'
+plotvar  = 'mhd', 'ful', 'raw', 'ray', 'flx', 'sol', 'pos', 'var', 'bbk' 'rwi' - normalized
+plotvar  = 'MHD', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'pos', 'VAR', 'BBK' 'RWI' - dimensional
 plotform = 'tec', 'idl'
 \end{verbatim}
-NOTES: The plotvar option 'sol' is only valid for plotarea 'los' and
-       the plotvar option 'pos' is only valid for plotarea 'lin'.\\
+NOTES: The plotvar option 'sol' is only valid for plotarea 'los';
+       the plotvar option 'pos' is only valid for plotarea 'lin'.
+       the plotvar option 'rwi' is only valid for plotarea 'rfr'.
+\\
 
 \noindent
 The plotarea string defines the 1, 2, or 3D volume of the plotting area:
@@ -2450,6 +2458,7 @@ sph   - spherical surface cut at the given radius
 los   - line of sight integrated plot
 lin   - one dimensional plot along a field or stream line
 blk   - 3D single block cell centered data, block specified point location
+rfr   - radiotelescope pixel image plot
 \end{verbatim}
 The plotvar string defines the plot variables and the equation parameters.
 It also controls whether or not the variables will be plotted in dimensional
@@ -2473,6 +2482,8 @@ values or as non-dimensional values:
  'sol' - vars: wl pb
          pars: mu
  'bbk' - vars: dx pe blk blkall
+         pars: 
+ 'rfr' - vars: Intensity
          pars: 
 \end{verbatim}
 The plot_string is always followed by the plotting frequencies
@@ -2553,10 +2564,8 @@ going through the Sun.  The variables which control the direction of
 the lines of sight and the grid position and resolution are the
 following:
 \begin{verbatim}
- ObsPosX,ObsPosY,ObsPosZ- the position of the observer in (rotated) 
-                          HGI coordinates (SC and IH) or the GM coordinates
- OffsetAngle            - the angle between the image plane normal direction
-                          and the Sun's direction from the observer position
+ ObsPosX,ObsPosY,ObsPosZ - the position of the observer in (rotated) 
+                           HGI coordinates (SC and IH) or the GM coordinates
  rSizeImage             - the radius of the LOS image
  xOffset, yOffset       - offset relative to the observer projected onto 
                           the image plane 
@@ -2570,6 +2579,37 @@ following:
 \noindent
 The possible values for NameVars with plotarea 'los' 
 are listed in subroutine set_plotvar_los in write_plot_los.f90. \\
+
+
+The radiotelescope pixel image (plotarea 'rfr') plots present the
+plasma emissivity integrals along the ray trajectories within a 2D
+Cartesian square shaped grid. The radiowave rays with the frequencies 
+on the order of tens of MegaHertz undergo significant refraction
+when travelling through non-uniform space plasmas; hence the name
+'rfr'. The radio wave raytracing is performed by a modification of 
+the Boris's algorithm. The image plane center coincides with
+the origin of the computational domain (usually the center of the Sun).
+The observer's position is specified at an arbitrary point of the
+solar system. The image plane is always orthogonal to the straight
+line connecting the observer with the center of the sun.
+The following variables specify the observer's position, the image 
+plane size, the resolution, and the radio frequencies at which 
+the plasma emissivity is integrated:
+\begin{verbatim}
+ ObsPosX,ObsPosY,ObsPosZ - the position of the observer in (rotated) 
+                           HGI coordinates (SC and IH) or the GM coordinates
+ StringRadioFrequency    - set of frequencies. The number of frequencies
+			   determines the number of plots, one for each
+			   frequency. A frequency is specified as a number 
+			   followed by a frequency unit. The units are
+			   Hz, kHz, MHz, GHz, or THz.
+ X_Size_Image, Y_Size_Image - X and Y dimensions of the image plane in 
+			      solar radii
+ n_Pix_X,  n_Pix_Y       - the number of pixels in X and Y directions
+\end{verbatim}
+
+\noindent
+The only possible values for NameVars with plotarea 'rfr' is 'rwi'. \\ 
 
 \noindent
 The possible values for NameVars for other plot areas

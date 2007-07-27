@@ -765,6 +765,11 @@ contains
           call write_plot_los(iFile)
        end if
 
+       if(index(plot_type(iFile),'rfr')>0) then
+          IsFound = .true.
+          call write_plot_radiowave(iFile)
+       end if
+
        !^CFG IF RAYTRACE BEGIN
        if(index(plot_type(iFile),'lin')>0) then
           IsFound = .true.
