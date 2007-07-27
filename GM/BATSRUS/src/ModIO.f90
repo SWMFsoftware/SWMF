@@ -48,6 +48,16 @@ Module ModIO
   real :: offset_angle(maxfile)
   real, dimension(3,maxfile) :: ObsPos_DI
 
+  ! Variables for radiowave image
+  ! ObsPos_DI is borrowed from the LOS plot
+  integer, parameter :: nPlotRfrFreqMax=20
+  integer, dimension(MaxFile) :: n_Pix_X, n_Pix_Y
+  real,    dimension(MaxFile) :: X_Size_Image, Y_Size_Image
+  ! String read from PARAM.in, like '1500kHz, 11MHz, 42.7MHz, 1.08GHz':
+  character(len=100), dimension(MaxFile) :: StringRadioFrequency_I  
+  real, dimension(MaxFile,nPlotRfrFreqMax) :: RadioFrequency_II
+
+
   ! Maximum number of plot variables
   integer, parameter :: nPlotvarMax = 30
 

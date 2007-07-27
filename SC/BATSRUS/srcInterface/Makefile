@@ -14,7 +14,10 @@ OBJECTS = \
 	SC_get_for_sp.o\
 	SC_put_from_ih.o\
 	SC_wrapper.o\
-	update_lagrangian_grid.o
+	update_lagrangian_grid.o\
+	ModDensityAndGradient.o\
+	ModRadioWaveImage.o\
+	ModRadioWaveRaytracing.o\
 
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src
 

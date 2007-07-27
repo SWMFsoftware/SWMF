@@ -34,6 +34,9 @@ OBJECTS = \
 	GM_put_from_ih_buffer.o\
 	GM_wrapper.o\
 	update_lagrangian_grid.o\
+	ModDensityAndGradient.o\
+	ModRadioWaveImage.o\
+	ModRadioWaveRaytracing.o\
 	$(OBJ_IH) $(OBJ_IM) $(OBJ_RB) $(OBJ_IE) $(OBJ_RFUTIL) $(OBJ_PW)
 
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src
