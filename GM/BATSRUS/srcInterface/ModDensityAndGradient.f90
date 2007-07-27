@@ -8,7 +8,8 @@ module ModDensityAndGradient
   use CON_global_message_pass
   use CON_integrator
   use ModMain, ONLY: nDim
-  use ModProcMH, ONLY: iProc
+  use ModProcMH, ONLY: iProc,iComm
+  use ModMpi
   !DESCRIPTION:
   !This file is an instantiation of the general advance_vector routine
   !as applied for extracting the data for the plasma density and its gradient
@@ -42,51 +43,43 @@ contains
     ! on the numeric grid size
     !
     integer,intent(in)::nRay
-    !call stop_MPI('+++stop_MPI: in get_plasma_density, '// &
-    !     'before call timing_start() ')
+    integer::iError
+ 
     call timing_start('get_plasma_density')
-    !call stop_MPI('+++stop_MPI: in get_plasma_density, '// &
-    !     'before if(DoInit)then ')
     if(DoInit)then
        DoInit=.false.
-    !   call stop_MPI('+++stop_MPI: in get_plasma_density, '// &
-    !        'call set_standard_grid_descriptor(&')
        call set_standard_grid_descriptor(&
             MH_DomainDecomposition,GridDescriptor=MhGrid)
-    !   call stop_MPI('+++stop_MPI: in get_plasma_density, '// &
-    !        'call call init_router_for_vector(&')
+   
        call init_router_for_vector(&
             NameVector=NameVector,&
             SourceGD=MhGrid,&
             LineDD=LineDD,&
             LineGD=LineGrid,&
             Router=Router)
-    !   call stop_MPI('+++stop_MPI: in get_plasma_density, '// &
-    !        'before call check_if_can_integrate(NameVector)')
        call check_if_can_integrate(NameVector)
     end if
-    !call stop_MPI('+++stop_MPI: in get_plasma_density, '// &
-    !     'before call set_router(&')
+ 
     call set_router(& 
          GridDescriptorSource=MhGrid,&
          GridDescriptorTarget=LineGrid,&
          Router=Router,&
          NameMappingVector=NameVector,&
          interpolate=interpolation_fix_reschange)
-    !call stop_MPI('+++stop_MPI: in get_plasma_density, '// &
-    !     'before call global_message_pass(Router=Router,& ')
+   
     call global_message_pass(Router=Router,&
          nVar=nDim+1+1,&
          fill_buffer=get_density_local,&
          apply_buffer=put_density_value)
-    ! call stop_MPI('+++stop_MPI: in get_plasma_density, '// &
-    !     'before call bcast_global_vector(&')
-   call bcast_global_vector(&
-         NameVector,&
-         0,&
-         Router%iComm)
-    ! call stop_MPI('+++stop_MPI: in get_plasma_density, '// &
-    !     'before call timing_stop()')
+
+    call MPI_BCAST(GradDensity_DI(1,1),3*nRay,MPI_REAL,0,iComm,iError)
+    call MPI_BCAST(Density_I(1),         nRay,MPI_REAL,0,iComm,iError)
+    call MPI_BCAST(DeltaSNew_I(1),       nRay,MPI_REAL,0,iComm,iError)
+    !call bcast_global_vector(&
+    !      NameVector,&
+    !      0,&
+    !      Router%iComm)
+  
     call timing_stop('get_plasma_density')
   end subroutine get_plasma_density
   !================================================
