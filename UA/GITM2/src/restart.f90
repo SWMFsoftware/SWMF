@@ -124,7 +124,7 @@ subroutine read_restart(dir)
            Altitude_GB(:,:,iAlt,iBlock) = Altitude_GB(1,1,iAlt,iBlock)
         end do
      end if
-     read(iRestartUnit_) Altitude_GB(:,:,:,iBlock)
+!     read(iRestartUnit_) Altitude_GB(:,:,:,iBlock)
 
      do iSpecies=1,nSpeciesTotal
         if (iDebugLevel > 3) &
