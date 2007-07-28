@@ -117,7 +117,7 @@ contains !=========================================================
     integer, dimension(nXPixel*nYPixel) :: RayInsideIntSphere_I
     logical :: deb = .false.
     real, parameter :: ProtonChargeSGSe = 4.8e-10 !SGSe
-
+    logical,save::DoAllocate=.true.
     nRay = nXPixel*nYPixel
 
     !
@@ -180,15 +180,16 @@ contains !=========================================================
                + Slope_DII(:,i,j)*ObservToIntSphereDist_II(i,j)
        end do
     end do
-
-    !
-    ! Global vector of ray positions
-    !
-    NameVector = NameThisComp//'_Pos_DI'
-    call allocate_vector(NameVector, 3, nRay)
-    call associate_with_global_vector(Position_DI, NameVector)
-    allocate(Density_I(nRay), GradDensity_DI(3,nRay),DeltaSNew_I(nRay))
-
+    if(DoAllocate)then
+       DoAllocate=.false.
+       !
+       ! Global vector of ray positions
+       !
+       NameVector = NameThisComp//'_Pos_DI'
+       call allocate_vector(NameVector, 3, nRay)
+       call associate_with_global_vector(Position_DI, NameVector)
+       allocate(Density_I(nRay), GradDensity_DI(3,nRay),DeltaSNew_I(nRay))
+    end if
     !
     ! Do emissivity integration inside of the integration sphere 
     !
