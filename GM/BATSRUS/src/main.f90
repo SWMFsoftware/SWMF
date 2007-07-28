@@ -336,7 +336,7 @@ end function logvar_ionosphere
 subroutine update_lagrangian_grid(tStart,tFinal)
   implicit none
   real,intent(in)::tStart,tFinal
-  call stop_mpi('ERROR: update_lagrangian_grid is for SWMF')
+  ! call stop_mpi('ERROR: update_lagrangian_grid is for SWMF')
 end subroutine update_lagrangian_grid
 !============================================================================
 subroutine save_advected_points
