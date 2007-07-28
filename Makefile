@@ -374,6 +374,8 @@ IH/BATSRUS/src/Makefile:
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
 		update_lagrangian_grid.f90 \
+		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
+		ModDensityAndGradient.f90\
 		../../../IH/BATSRUS/srcInterface
 	cp IH/BATSRUS_share/src/IH_*.f90 IH/BATSRUS/srcInterface
 	cp GM/BATSRUS/srcUser/*.f90 IH/BATSRUS/srcUser/

@@ -12,6 +12,9 @@ OBJECTS = \
 	ModGridDescriptor.o\
 	ModBuffer.o\
 	update_lagrangian_grid.o\
+	ModRadioWaveImage.o\
+	ModRadioWaveRaytracing.o\
+	ModDensityAndGradient.o\
 	IH_set_buffer_grid.o\
 	IH_get_for_gm.o\
 	IH_get_for_sc.o\
