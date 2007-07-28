@@ -176,6 +176,9 @@ contains !=========================================================
 
     nCall = nCall + 1
 
+    if (iProc .eq. 0) write(*,*) '+++ ray_path(): nCall = ', nCall
+
+
     do iRay = 1, nRay
        Position_DI(:,iRay) = Position_DI(:,iRay) + &
             Slope_DI(:,iRay)*cHalf*DeltaS_I(iRay) 
@@ -194,8 +197,8 @@ contains !=========================================================
 
     call get_plasma_density(nRay)
 
-    write(*,*) '++++!!!!!Just after call get_plasma_density(nRay)'// &
-         '!!!!!!!!!!!!!!!!!!!!!, nCall = ', nCall
+    !write(*,*) '++++!!!!!Just after call get_plasma_density(nRay)'// &
+    !     '!!!!!!!!!!!!!!!!!!!!!, nCall = ', nCall
 
     !if (nCall .eq. 2) call stop_MPI( &
     !     '++++++++++++++++stop_MPI: Preved 5 from'// &
@@ -211,8 +214,8 @@ contains !=========================================================
 
     RayFlag_I = Density_I .ge. DensityCr   ! .true. indicates "bad ray"
 
-    if (iProc .eq. 0) write(*,*) 'Density_I(55) =', Density_I(55)
-    if (iProc .eq. 0) write(*,*) 'GradDensity_DI(:,55) = ',GradDensity_DI(:,55)
+    !if (iProc .eq. 0) write(*,*) 'Density_I(55) =', Density_I(55)
+    !if (iProc .eq. 0) write(*,*)'GradDensity_DI(:,55) = ',GradDensity_DI(:,55)
 
     do iRay = 1, nRay
 

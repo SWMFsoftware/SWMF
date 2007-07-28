@@ -210,7 +210,7 @@ contains !=========================================================
     do while(nRayInsideIntSphere .gt. 0)
        nIteration = nIteration + 1
 
-       write(*,*) 'ray_bunch_intensity(): nIteration = ', nIteration
+       !write(*,*) 'ray_bunch_intensity(): nIteration = ', nIteration
 
        SolarDistSqr_I = sum(Position_DI**2,1)
        where(SolarDistSqr_I .gt. rIntegrationSqr) 
@@ -220,10 +220,10 @@ contains !=========================================================
 
        nRayInsideIntSphere = sum(RayInsideIntSphere_I)
 
-    if (nIteration .eq. 2) call stop_MPI( &
-         '+++##%#%$@#$#! stop_MPI: Preved 8 from'// &
-         ' ModRadioWaveImage, ray_bunch_intensity() before '// &
-         ' call ray_path(), nIter=2')
+    !if (nIteration .eq. 2) call stop_MPI( &
+    !     '+++##%#%$@#$#! stop_MPI: Preved 8 from'// &
+    !     ' ModRadioWaveImage, ray_bunch_intensity() before '// &
+    !     ' call ray_path(), nIter=2')
 
        call ray_path(get_plasma_density, nRay, ExcludeRay_I, Slope_DI, &
             DeltaS_I, Tolerance, DensityCr, Intensity_I, RayFlag_I, NewEntry)
