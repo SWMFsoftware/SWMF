@@ -307,9 +307,11 @@ subroutine CON_set_do_test(String,DoTest,DoTestMe)
   logical          , intent(out) :: DoTest, DoTestMe
   call set_oktest(String,DoTest,DoTestMe)
 end subroutine CON_set_do_test
+
 !============================================================================
 ! The subroutines and functions below are defined in srcInterface for SWMF. 
 !============================================================================
+
 subroutine calc_inner_bc_velocity
   call stop_mpi( &
        'ERROR: calc_inner_bc_velocity should be called in SWMF only');
@@ -334,13 +336,16 @@ end function logvar_ionosphere
 subroutine update_lagrangian_grid(tStart,tFinal)
   implicit none
   real,intent(in)::tStart,tFinal
-  return
+  call stop_mpi('ERROR: update_lagrangian_grid is for SWMF')
 end subroutine update_lagrangian_grid
 !============================================================================
 subroutine save_advected_points
-  implicit none
-  return
+  call stop_mpi('ERROR: save_advected_points is for SWMF')
 end subroutine save_advected_points
+!============================================================================
+subroutine get_ray_bunch_intensity
+  call stop_mpi('ERROR: get_ray_bunch_intensity is for SWMF')
+end subroutine get_ray_bunch_intensity
 !============================================================================
 subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
   implicit none
