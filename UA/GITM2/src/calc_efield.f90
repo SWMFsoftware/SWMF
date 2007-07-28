@@ -20,18 +20,13 @@ subroutine calc_efield(iBlock)
 
   maxi = 0.0
 
+  !!! This is only first order accurate for stretched grids ???
   do k=1,nAlts
      do i=1,nLats
         do j=1,nLons
            EField(j,i,k,iEast_) = &
                -(Potential(j+1,i,k,iBlock)-Potential(j-1,i,k,iBlock)) &
-!!!                *0.5*InvdLonDist_GB(j,i,k,iBlock)
-!!! This was wrong for nonuniform longitude grid !!! 
-!!! max(0.17 is different from max(0.1 in initialize.f90 ???
-           / (2*(Longitude(2,iBlock) - Longitude(1,iBlock)) * &
-           RadialDistance_GB(j,i,k,iBlock) &
-           * max(abs(cos(Latitude(i,iBlock))),0.17))
-!!! End of change
+                *0.5*InvdLonDist_GB(j,i,k,iBlock)
 
            EField(j,i,k,iNorth_)= &
                 -(Potential(j,i+1,k,iBlock)-Potential(j,i-1,k,iBlock)) &

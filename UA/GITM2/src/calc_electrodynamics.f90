@@ -17,9 +17,6 @@ subroutine UA_fill_electrodynamics(UAr2_fac, UAr2_ped, UAr2_hal, &
 end subroutine UA_fill_electrodynamics
 
 !\
-! --------------------------------------------------------------------
-! --------------------------------------------------------------------
-!/
 
 subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
@@ -53,7 +50,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
        JuDotB, sigmap_d1d1_d, sigmap_d2d2_d, sigmap_d1d2_d, sigmah, &
        ue1, ue2, kmp, kml
 
-  real :: aLat, aLon, gLat, gLon, Date, gAlt, sLat, sLon, gLatMC, gLonMC
+  real :: aLat, aLon, gLat, gLon, Date, sLat, sLon, gLatMC, gLonMC
 
   logical :: IsDone, IsFirstTime = .true.
 
@@ -89,8 +86,6 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      endif
 
      date = iStartTime(1) + float(iJulianDay)/float(jday(iStartTime(1),12,31))
-     !!! Is this OK ???
-     gAlt = Altitude_GB(1,1,1,1)/1000.0
 
      do i=1,nMagLons+1
         if (iDebugLevel > 1) &
@@ -117,7 +112,8 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
                  sLat = -100.0
               endif
 
-              call apex_to_geo(date, aLat, aLon, gAlt, gLat, gLon, sLat, sLon)
+              call apex_to_geo(date, aLat, aLon, AltMinIono, &
+                   gLat, gLon, sLat, sLon)
 
               GeoLatMC(i,j) = gLat*pi/180.0
               GeoLonMC(i,j) = gLon*pi/180.0
@@ -804,8 +800,6 @@ contains
 
     real :: dip, dec, length, mfac, lfac, gmlt, gmlt2, cdip, sdip, mt
 
-    real :: gLat, gLon, gAlt, mLonMC
-
     logical :: IsFound
 
     juline = 0.0
@@ -874,8 +868,6 @@ contains
     integer :: ii, jj
 
     real :: dip, dec, length, mfac, lfac, gmlt, gmlt2, cdip, sdip, mt
-
-    real :: gLat, gLon, gAlt, mLonMC
 
     logical :: IsFound
 

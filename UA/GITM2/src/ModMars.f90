@@ -129,6 +129,8 @@ module ModPlanet
   real , Dimension(-1:nAlts + 2,nSpeciesTotal) :: InNDensityS 
   real , Dimension(-1:nAlts + 2,nIons) :: InIDensityS
 
+  real, parameter:: AltMinIono=100.0 ! in km
+
 contains
 
   subroutine init_planet

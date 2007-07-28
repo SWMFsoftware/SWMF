@@ -1,3 +1,4 @@
+
 subroutine calc_electron_temperature(iBlock)
 
   use ModSizeGitm
@@ -67,10 +68,7 @@ subroutine calc_electron_temperature(iBlock)
   do iLon=1,nlons
      do iLat=1,nLats
         do iAlt = 1, nAlts
-           dz2(iAlt) = &
-                ((Altitude_GB(iLon,iLat,iAlt+1,iBlock) &
-                - Altitude_GB(iLon,iLat,iAlt-1,iBlock))*0.5)**2
-
+           dz2(iAlt) = dAlt_GB(iLon,iLat,iAlt,iBlock)**2
 
 !!$              a(iAlt) = Ke(iLon,iLat,iAlt,iBlock)- &
 !!$                   dKe(iLon,iLat,iAlt,iBlock)/2.                
@@ -105,10 +103,9 @@ subroutine calc_electron_temperature(iBlock)
         !!! Why is the altitude difference face centered ???
 
         r(nAlts)=&!-0.00005* &
-             -flux(ilon,ilat)/Ke(ilon,ilat,k,iBlock)* &
-             (Altitude_GB(iLon,iLat,nAlts,  iBlock) &
-             -Altitude_GB(iLon,iLat,nAlts-1,iBlock))-    &
-             eTemperature(ilon,ilat,nalts,iblock)
+             -flux(ilon,ilat)/Ke(ilon,ilat,k,iBlock) &
+             *dAlt_GB(iLon,iLat,nAlts,iBlock) &
+             -eTemperature(ilon,ilat,nalts,iblock)
 
         call tridag(a,b,c,r,u)
 
@@ -154,11 +151,12 @@ subroutine calc_electron_temperature(iBlock)
         r(1)=-Temperature(iLon,iLat,1,iBlock)*TempUnit(iLon,iLat,1)
 
         c(nAlts)=0
+
+        !!! Why is this repeated ???
         r(nAlts)=&!-0.00005* &
-             -flux(ilon,ilat)/Ke(iLon,iLat,k,iBlock)* &
-             ( Altitude_GB(iLon,iLat,nAlts,  iBlock) &
-             - Altitude_GB(iLon,iLat,nAlts-1,iBlock))-    &
-             eTemperature(iLon,iLat,nAlts,iBlock)
+             -flux(ilon,ilat)/Ke(iLon,iLat,k,iBlock) &
+             *dAlt_GB(iLon,iLat,nAlts,iBlock) &
+             -eTemperature(iLon,iLat,nAlts,iBlock)
 
 
         call tridag(a,b,c,r,u)

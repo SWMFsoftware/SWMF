@@ -104,11 +104,9 @@ subroutine initialize_gitm(TimeIn)
        *(rBody*InvRadialDistance_GB(:,:,:,1:nBlocks)) ** 2
 
   if (UseStretchedAltitude) then
-!!! How is this formula derived ???
      do iAlt=1,nAlts
         Gravity_GB(:,:,iAlt,:) = -Gravitational_Constant &
-             *(rBody*2 / ( RadialDistance_GB(:,:,iAlt,:) &
-             +             RadialDistance_GB(:,:,iAlt+1,:))) ** 2
+             *(rBody/RadialDistance_GB(:,:,iAlt,:))**2 
      enddo
   endif
 
