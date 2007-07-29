@@ -56,18 +56,13 @@ subroutine write_plot_radiowave(iFile)
   logical :: oktest, oktest_me, DoTiming, DoTimingMe
   integer :: neqpar=1, nplotvar=1
   !--------------------------------------------------------
-  
-  if (iProc .eq. 0) write(*,*) 'Preved 1'
 
+  !
   ! Initialize
   !
   call set_oktest('write_plot_radiowave', oktest,oktest_me)
   call set_oktest('rfr_timing', DoTiming, DoTimingMe)
   call timing_start('write_plot_radiowave')
-
-  
-  if (iProc .eq. 0) write(*,*) 'Preved 2'
-
 
   !
   ! Set file specific parameters 
@@ -91,9 +86,6 @@ subroutine write_plot_radiowave(iFile)
   XPixelSize = (XUpper - XLower)/nXPixel
   YPixelSize = (YUpper - YLower)/nYPixel
 
-  
-  if (iProc .eq. 0) write(*,*) 'Preved 3'
-
   call parse_freq_string(StringRadioFrequency_I(iFile), RadioFrequency_I, &
        strFreqNames_I, nFreq) 
   strFreq = ''
@@ -107,7 +99,7 @@ subroutine write_plot_radiowave(iFile)
              trim(strFreq), '"'
      end if
   end do
-  
+
   if (iProc .eq. 0) write(*,*) 'Preved 4'
 
 
@@ -195,8 +187,16 @@ subroutine write_plot_radiowave(iFile)
           nXPixel, nYPixel, Intensity_III(:,:,iFreq))
 
      if (iProc .eq. 0) write(*,*) 'RAYTRACE END'
-  write(*,*) &
-       '+++++++++++++ Preved XXX from write_plot_radiowave!!!, iFile=',iFile 
+     !if (iProc .eq. 0) then
+     !   do iPixel = 1, nXPixel
+     !      XPixel = XLower + (real(iPixel) - cHalf)*XPixelSize
+     !      do jPixel = 1, nYPixel
+     !         YPixel = YLower + (real(jPixel) - cHalf)*YPixelSize
+     !         write(*,fmt="(30(E14.6))") XPixel, YPixel, &
+     !              Intensity_III(jPixel,iPixel,1:nFreq)
+     !      end do
+     !   end do
+     !end if
   end do
 
   if (DoTiming) call timing_stop('rfr_raytrace_loop')
@@ -234,7 +234,7 @@ subroutine write_plot_radiowave(iFile)
 
      write(*,*) 'filename = ', filename
 
-     open(unit_tmp, file=filename, status="replace", err=999)
+     open(unit_tmp, file=filename, status="replace", err=999) !OPEN OPEN
 
      !
      ! Write the file header
@@ -284,7 +284,9 @@ subroutine write_plot_radiowave(iFile)
            end do
         end do
      end select
-     close(unit_tmp)
+
+     close(unit_tmp)  !CLOSE CLOSE CLOSE CLOSE CLOSE CLOSE CLOSE CLOSE CLOSE
+
   end if  !iProc ==0
 
   if (DoTiming) call timing_stop('rfr_save_plot')
@@ -295,11 +297,11 @@ subroutine write_plot_radiowave(iFile)
 
   call timing_stop('write_plot_radiowave')
 
-  close(unit_tmp)
+  return
 
 999 continue
 
-  !call stop_mpi("Error in opening or writing file in write_plot_radiowave")
+  call stop_mpi("Error in opening or writing file in write_plot_radiowave")
 
 end subroutine write_plot_radiowave
 

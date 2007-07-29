@@ -153,7 +153,7 @@ contains !=========================================================
     real :: ParabLen, GradDielPerm
     real, save :: Tolerance, ToleranceSqr, DensityCrInv, AbsoluteMinimumStep
     real, save :: AbsRho2GOverCm3
-    integer :: i, j, iRay, nCall
+    integer, save :: i, j, iRay, nCall
 
     if (NewEntry) then
        NewEntry = .false.
@@ -196,9 +196,6 @@ contains !=========================================================
     !     ' call get_plasma_density(), nCall=2')
 
     call get_plasma_density(nRay)
-
-    !write(*,*) '++++!!!!!Just after call get_plasma_density(nRay)'// &
-    !     '!!!!!!!!!!!!!!!!!!!!!, nCall = ', nCall
 
     !if (nCall .eq. 2) call stop_MPI( &
     !     '++++++++++++++++stop_MPI: Preved 5 from'// &

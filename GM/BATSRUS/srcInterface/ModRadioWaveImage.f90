@@ -106,7 +106,7 @@ contains !=========================================================
     real, dimension(nXPixel*nYPixel) :: Intensity_I, RayPath_I,DeltaS_I
     logical, dimension(nXPixel*nYPixel) :: RayFlag_I         
     !.true. if a ray is OK; .false. otherwise
-    logical :: NewEntry           
+    logical, save :: NewEntry = .true.
     ! Must be set to .true. before a call to ray_path() with new value of nRay
     real :: OneAU = 215.0, Tolerance = 0.01, DeltaS = 1.0
     real :: MaxRayPath = 60.
@@ -117,8 +117,12 @@ contains !=========================================================
     integer, dimension(nXPixel*nYPixel) :: RayInsideIntSphere_I
     logical :: deb = .false.
     real, parameter :: ProtonChargeSGSe = 4.8e-10 !SGSe
-    logical,save::DoAllocate=.true.
-    nRay = nXPixel*nYPixel
+    logical, save :: DoAllocate = .true.
+
+    !
+    ! Total number of rays and pixels in the raster
+    !
+    nRay = nXPixel*nYPixel  
 
     !
     ! Calculate the critical density from the frequency
@@ -180,16 +184,20 @@ contains !=========================================================
                + Slope_DII(:,i,j)*ObservToIntSphereDist_II(i,j)
        end do
     end do
+
+    !
+    ! Initial allocation of the global vector of ray positions
+    ! and other dynamic arrays
+    !
     if(DoAllocate)then
        DoAllocate=.false.
-       !
-       ! Global vector of ray positions
-       !
+       ! Symbolic name of the global vector:
        NameVector = NameThisComp//'_Pos_DI'
        call allocate_vector(NameVector, 3, nRay)
        call associate_with_global_vector(Position_DI, NameVector)
        allocate(Density_I(nRay), GradDensity_DI(3,nRay),DeltaSNew_I(nRay))
     end if
+
     !
     ! Do emissivity integration inside of the integration sphere 
     !
@@ -197,7 +205,7 @@ contains !=========================================================
     Slope_DI = reshape(Slope_DII, (/3, nRay/))
     Intensity_I = 0
     RayFlag_I = .false.
-    NewEntry = .true.
+    !NewEntry = .true.
     ExcludeRay_I = .false.
     RayInsideIntSphere_I = 1
     DeltaS_I = DeltaS
@@ -221,20 +229,20 @@ contains !=========================================================
 
        nRayInsideIntSphere = sum(RayInsideIntSphere_I)
 
-    !if (nIteration .eq. 2) call stop_MPI( &
-    !     '+++##%#%$@#$#! stop_MPI: Preved 8 from'// &
-    !     ' ModRadioWaveImage, ray_bunch_intensity() before '// &
-    !     ' call ray_path(), nIter=2')
+       !if (nIteration .eq. 2) call stop_MPI( &
+       !     '+++##%#%$@#$#! stop_MPI: Preved 8 from'// &
+       !     ' ModRadioWaveImage, ray_bunch_intensity() before '// &
+       !     ' call ray_path(), nIter=2')
 
        call ray_path(get_plasma_density, nRay, ExcludeRay_I, Slope_DI, &
             DeltaS_I, Tolerance, DensityCr, Intensity_I, RayFlag_I, NewEntry)
        RayPath_I = RayPath_I + DeltaS_I
        MinRayPath = minval(RayPath_I)
 
-    !if (nIteration .eq. 1) call stop_MPI( &
-    !     '+++##%#%$@#$#! stop_MPI: Preved 6 from'// &
-    !     ' ModRadioWaveImage, ray_bunch_intensity() after '// &
-    !     ' call ray_path(), nIter=1')
+       !if (nIteration .eq. 1) call stop_MPI( &
+       !     '+++##%#%$@#$#! stop_MPI: Preved 6 from'// &
+       !     ' ModRadioWaveImage, ray_bunch_intensity() after '// &
+       !     ' call ray_path(), nIter=1')
 
 
     end do
