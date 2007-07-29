@@ -340,7 +340,7 @@ subroutine update_lagrangian_grid(tStart,tFinal)
 end subroutine update_lagrangian_grid
 !============================================================================
 subroutine save_advected_points
-  call stop_mpi('ERROR: save_advected_points is for SWMF')
+  ! call stop_mpi('ERROR: save_advected_points is for SWMF')
 end subroutine save_advected_points
 !============================================================================
 subroutine get_ray_bunch_intensity
