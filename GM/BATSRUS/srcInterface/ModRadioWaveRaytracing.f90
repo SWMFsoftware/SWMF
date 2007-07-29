@@ -153,7 +153,8 @@ contains !=========================================================
     real :: ParabLen, GradDielPerm
     real, save :: Tolerance, ToleranceSqr, DensityCrInv, AbsoluteMinimumStep
     real, save :: AbsRho2GOverCm3
-    integer, save :: i, j, iRay, nCall
+    real, save :: PerCentProcessedRays
+    integer, save :: i, j, iRay, nCall, MidRay
 
     if (NewEntry) then
        NewEntry = .false.
@@ -171,13 +172,15 @@ contains !=========================================================
        ! One (ten-thousandth) hundredth of average step
        AbsRho2GOverCm3 = No2Si_V(UnitRho_)*1e-3
        if (iProc .eq. 0) write(*,*) 'First Entry to ray_path()'
+       MidRay = int(nRay/2)
        nCall = 0
     end if
 
     nCall = nCall + 1
+    PerCentProcessedRays = real(count(.not.ExcludeRay_I))/real(nRay)*100.0
 
-    if (iProc .eq. 0) write(*,*) '+++ ray_path(): nCall = ', nCall
-
+    if (iProc .eq. 0) write(*,*) '+++ ray_path(): nCall = ', nCall, &
+         ';  entering get_plasma_density()...'
 
     do iRay = 1, nRay
        Position_DI(:,iRay) = Position_DI(:,iRay) + &
@@ -190,18 +193,15 @@ contains !=========================================================
     ! from all relevant processors
     !
 
-    !if (nCall .eq. 1) call stop_MPI( &
-    !     '++++++++++++++++stop_MPI: Preved 5 from'// &
-    !     ' ModRadioWaveRaytracing before '// &
-    !     ' call get_plasma_density(), nCall=2')
-
     call get_plasma_density(nRay)
 
-    !if (nCall .eq. 2) call stop_MPI( &
-    !     '++++++++++++++++stop_MPI: Preved 5 from'// &
-    !     ' ModRadioWaveRaytracing after '// &
-    !     ' call get_plasma_density()')
-
+    if (iProc .eq. 0) write(*,*)'+++ ray_path(): exit from get_plasma_density'
+    if ((iProc .eq. 0) .and. (mod(nCall,100) .eq. 0)) then
+       write(*,*) 'Processing ', PerCentProcessedRays, ' % of all rays'
+       write(*,*) 'minval(DeltaS_I) = ', minval(DeltaS_I)
+       write(*,*) 'Density_I(nRay/2) =', Density_I(MidRay)
+       write(*,*) 'GradDensity_DI(:,nRay/2) = ',GradDensity_DI(:,MidRay)
+    end if !(iProc .eq. 0)
 
     !
     ! Convert into g/cm^3

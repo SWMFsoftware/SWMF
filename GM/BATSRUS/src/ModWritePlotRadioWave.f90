@@ -175,6 +175,8 @@ subroutine write_plot_radiowave(iFile)
 
      if (oktest_me) write(*,*) 'rIntegration = ', rIntegration
 
+     if (iProc .eq. 0) write(*,*) 'RAYTRACE START: RadioFrequency = ', &
+          RadioFrequency_I(iFreq)
      if (iProc .eq. 0) write(*,*) 'RAYTRACE START: DensityCr = ', DensityCr
      if (iProc .eq. 0) write(*,*) 'RAYTRACE START: RadiusCr = ', RadiusCr
      if (iProc .eq. 0) write(*,*) 'RAYTRACE START: ImagePlaneDiagRadius = ', &
