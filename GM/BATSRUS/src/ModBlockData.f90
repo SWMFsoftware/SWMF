@@ -278,7 +278,7 @@ contains
             write(*,*)NameSub,' called with nI, nJ, nK=',nI, nJ, nK, nL
     endif
 
-    if(UseData_B(iBlock)) then
+    if(UseData_B(iBlock) .and. .not. present(DoAllowReplace)) then
        write(*,*)NameSub,' ERROR for iBlock=',iBlock
        call stop_mpi('UseData_B=.true. in '//NameSub)
     end if

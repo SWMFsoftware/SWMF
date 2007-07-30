@@ -1,13 +1,18 @@
-! You must set UseUserInitSession, UseUserSetIcs and UseUserOuterBcs 
-! to .true. for this user module to be effective.
+! Note that for some reason that I don't understand yet, this user file 
+! will only work with the normalization type set to "solarwind".  You 
+! should set this in the PARAM.in file.
+
+
 
 !========================================================================
 Module ModUser
   use ModNumConst, ONLY: cHalf,cTwo,cThree,&
        cFour,cE1,cHundred,cHundredth,cZero,&
        cOne,cTiny
-  use ModSize,     ONLY: nI,nJ,nK,gcn,nBLK
+  use ModSize,     ONLY: nI,nJ,nK,gcn,nBLK,MaxBlock
   use ModVarIndexes, ONLY: nVar
+  use ModMain, ONLY: iTest, jTest, kTest, BlkTest, ProcTest, n_step
+  use ModProcMH, ONLY: iProc
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_init_session,               &
        IMPLEMENTED2 => user_set_ics,                    &
@@ -21,6 +26,7 @@ Module ModUser
   integer, public :: MaxSumMhdVar=nVar !(8+2)
   real :: tSumStart, tSumEnd
   real :: StateSum_VC(nVar,nI, nJ, nK)
+  logical :: IsRestartSum(MaxBlock)
  
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: &
@@ -93,18 +99,17 @@ contains
     end where
 
 
-    !\
-    ! Initiallize the arrays that contain the time average of the State 
-    ! variables with the initial conditions of the cells
-    !/
-    tSumStart = Time_Simulation
-    StateSum_VC = 0.0
-    if(iBlock /= iBlockLast)then
-       iBlockLast = iBlock
-       call put_block_data(iBlock, MaxSumMhdVar, nI, nJ, nK, StateSum_VC)
-    end if
-
-
+!    !\
+!    ! Initiallize the arrays that contain the time average of the State 
+!    ! variables with the initial conditions of the cells
+!    !/
+!    tSumStart = Time_Simulation
+!    StateSum_VC = 0.0
+!    if(iBlock /= iBlockLast)then
+!       iBlockLast = iBlock
+!       call put_block_data(iBlock, MaxSumMhdVar, nI, nJ, nK, StateSum_VC)
+!    end if
+!
   end subroutine user_set_ics
 
 
@@ -128,12 +133,13 @@ contains
 
     !-------------------------------------------------------------------
 
-    if(TypeBc=='vary'.and.time_accurate)then
+    if(TypeBc=='uservary'.and.time_accurate)then
        call BC_solar_wind(time_now)
     else
        call BC_fixed(1,nVar,CellState_VI(:,iSide))
        call BC_fixed_B
     end if
+
 
     ! Note that the above code does not set the extra density species (vary)
     ! or sets them to undefined values (fixed). 
@@ -157,6 +163,7 @@ contains
 
     implicit none
     integer,intent(in):: iStage,iBlock
+    integer :: iBlockLast = -1
 
     !--------------------------------------------------------------------------
 
@@ -170,13 +177,31 @@ contains
     ! time steps later to get the average state value
     !/
     tSumEnd = Time_Simulation
-    if(use_block_data(iBlock))then
-       call get_block_data(iBlock, MaxSumMhdVar, nI, nJ, nK, &
-            StateSum_VC, DoNotAdvance=.true.)
-       StateSum_VC = StateSum_VC + State_VGB(:,1:nI,1:nJ,1:nK,iBlock)*dt
-!       StateSum_VC = StateSum_VC
-       call put_block_data(iBlock, MaxSumMhdVar, nI, nJ, nK, &
-            StateSum_VC, DoAllowReplace=.true.)
+    if(iBlock /= iBlockLast)then
+       iBlockLast = iBlock
+       if(use_block_data(iBlock))then
+          call get_block_data(iBlock, MaxSumMhdVar, nI, nJ, nK, &
+               StateSum_VC, DoNotAdvance=.true.)
+
+          !reset the block data for summing over the next period if it was just printed
+          if (IsRestartSum(iBlock)) then
+             IsRestartSum(iBlock) = .false.
+             StateSum_VC = 0.0
+             tSumStart = Time_Simulation
+             tSumEnd = tSumStart
+          else
+             StateSum_VC = StateSum_VC + State_VGB(:,1:nI,1:nJ,1:nK,iBlock)*dt
+          end if
+          call put_block_data(iBlock, MaxSumMhdVar, nI, nJ, nK, &
+               StateSum_VC, DoAllowReplace=.true.)
+
+       else
+          IsRestartSum(iBlock) = .false.
+          tSumStart = Time_Simulation
+          StateSum_VC = 0.0
+          call put_block_data(iBlock, MaxSumMhdVar, nI, nJ, nK, StateSum_VC)
+
+       end if
     end if
 
   end subroutine user_update_states
@@ -209,9 +234,9 @@ contains
     logical,          intent(out):: IsFound
 
     integer :: iUnitVar
+    integer :: iBlockLast = -1
 
     character (len=*), parameter :: Name='user_set_plot_var'
-
     logical :: oktest,oktest_me
 
     !------------------------------------------------------------------------  
@@ -221,74 +246,88 @@ contains
        oktest=.false.; oktest_me=.false.
     end if
 
-    ! Get the averaged data from the Block storage arrays
-    call get_block_data(iBlock, MaxSumMhdVar, nI, nJ, nK, &
-         StateSum_VC, DoNotAdvance=.true.)
+    !If we are in this routine then reset the logical that tell the sum to start over
+    IsRestartSum = .true.
 
-    select case(NameVar)
-    case('rhoave')
-       NameTecVar = '<`r>'
-       iUnitVar   = UnitRho_
-       PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(rho_,:,:,:)
-    case('rhoswave')
-       NameTecVar = '<`r>'
-       iUnitVar   = UnitRho_
-       PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(rhosw_,:,:,:)
-    case('rhoionave')
-       NameTecVar = '<`r>'
-       iUnitVar   = UnitRho_
-       PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(rhoion_,:,:,:)
-    case('bx') 
-       NameTecVar = '<B_x>'
-       iUnitVar   = UnitB_
-       PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(Bx_,:,:,:)
-    case('by') 
-       NameTecVar = '<B_y>'
-       iUnitVar   = UnitB_
-       PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(By_,:,:,:)
-    case('bz') 
-       NameTecVar = '<B_z>'
-       iUnitVar   = UnitB_
-       PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(Bz_,:,:,:)
-    case('ux') 
-       NameTecVar = '<U_x>'
-       iUnitVar   = UnitU_
-       PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(RhoUx_,:,:,:)/ &
-            StateSum_VC(Rho_,:,:,:)
-    case('uy') 
-       NameTecVar = '<U_y>'
-       iUnitVar   = UnitU_
-       PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(RhoUy_,:,:,:)/ &
-            StateSum_VC(Rho_,:,:,:)
-    case('uz') 
-       NameTecVar = '<U_z>'
-       iUnitVar   = UnitU_
-       PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(RhoUz_,:,:,:)/ &
-            StateSum_VC(Rho_,:,:,:)
-    case('p','pth')
-       NameTecVar = '<p>'
-       iUnitVar   = UnitP_
-       PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(p_,:,:,:)
-    case default
-       call stop_mpi(Name//': unimplemented variable='//NameVar)
-    end select
+    ! Get the averaged data from the Block storage arrays if this block has not been read yet
+    ! if it has just use the already saved StateSum_VC which should have the right info in it
+    if(iBlock /= iBlockLast) then
+       iBlockLast = iBlock
+       if(use_block_data(iBlock)) &
+          call get_block_data(iBlock, MaxSumMhdVar, nI, nJ, nK, StateSum_VC)
+    end if
 
-    UsePlotVarBody = .true.
-    PlotVarBody    = 0.0
+    ! Now load the plot arrays
+    if(use_block_data(iBlock))then
 
-    ! The Sum variables store the summation over time.  We want averages so divide by
-    ! the elapsed time.
-    PlotVar_G = PlotVar_G/(tSumEnd-tSumStart)
-
-    if(IsDimensional) PlotVar_G = PlotVar_G*No2Io_V(iUnitVar)
-
-    !reset the block data for summing over the next period
-    StateSum_VC = 0.0
-    tSumStart = Time_Simulation
-    tSumEnd = tSumStart
-    call put_block_data(iBlock, MaxSumMhdVar, nI, nJ, nK, &
-         StateSum_VC, DoAllowReplace=.true.)
+       isFound = .true.
     
+       select case(NameVar)
+       case('rhoave')
+          NameTecVar = '<`r>'
+          iUnitVar   = UnitRho_
+          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(rho_,:,:,:)
+       case('rhoswave')
+          NameTecVar = '<`rsw>'
+          iUnitVar   = UnitRho_
+          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(rhosw_,:,:,:)
+       case('rhoionave')
+          NameTecVar = '<`rion>'
+          iUnitVar   = UnitRho_
+          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(rhoion_,:,:,:)
+       case('bxave') 
+          NameTecVar = '<B_x>'
+          iUnitVar   = UnitB_
+          ! Note: here we add B0x to the summed B1.  We have to multiply by the time because the
+          ! summed variables have been multiplied by dt in the summation.
+          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(Bx_,:,:,:)+B0xCell_BLK(1:nI,1:nJ,1:nK,iBlock)*(tSumEnd-tSumStart)
+       case('byave') 
+          NameTecVar = '<B_y>'
+          iUnitVar   = UnitB_
+          ! Note: here we add B0y to the summed B1.  We have to multiply by the time because the
+          ! summed variables have been multiplied by dt in the summation.
+          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(By_,:,:,:)+B0yCell_BLK(1:nI,1:nJ,1:nK,iBlock)*(tSumEnd-tSumStart)
+       case('bzave') 
+          NameTecVar = '<B_z>'
+          iUnitVar   = UnitB_
+          ! Note: here we add B0z to the summed B1.  We have to multiply by the time because the
+          ! summed variables have been multiplied by dt in the summation.
+          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(Bz_,:,:,:)+B0zCell_BLK(1:nI,1:nJ,1:nK,iBlock)*(tSumEnd-tSumStart)
+       case('uxave') 
+          NameTecVar = '<U_x>'
+          iUnitVar   = UnitU_
+          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(RhoUx_,:,:,:)/ &
+               StateSum_VC(Rho_,:,:,:)
+       case('uyave') 
+          NameTecVar = '<U_y>'
+          iUnitVar   = UnitU_
+          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(RhoUy_,:,:,:)/ &
+               StateSum_VC(Rho_,:,:,:)
+       case('uzave') 
+          NameTecVar = '<U_z>'
+          iUnitVar   = UnitU_
+          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(RhoUz_,:,:,:)/ &
+               StateSum_VC(Rho_,:,:,:)
+       case('pave','pthave')
+          NameTecVar = '<p>'
+          iUnitVar   = UnitP_
+          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(p_,:,:,:)
+       case default
+          IsFound = .false.
+          call stop_mpi(Name//': unimplemented variable='//NameVar)
+       end select
+    
+       UsePlotVarBody = .true.
+       PlotVarBody    = 0.0
+    
+       ! The Sum variables store the summation over time.  We want averages so divide by
+       ! the elapsed time.
+       PlotVar_G = PlotVar_G/((tSumEnd-tSumStart)*Io2No_V(UnitT_))
+    
+       if(IsDimensional) PlotVar_G = PlotVar_G*No2Io_V(iUnitVar)
+    
+    end if
+          
   end subroutine user_set_plot_var
 
 
