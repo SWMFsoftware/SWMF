@@ -15,26 +15,35 @@ subroutine rusanov_solver(iIon, nCell,&
 
   integer, intent(in)      :: iIon,nCell
   real, intent(in)         :: Rgas,DtIn
-  real, intent(in)         :: OldState_GV(-1:nCell+2,4)
+  real, intent(in)         :: OldState_GV(-1:nCell+2,3)
   real, dimension(nCell), intent(in)  :: RhoSource_C, RhoUSource_C, eSource_C
-  real, intent(out)        :: UpdateState_GV(-1:nCell+2,4)
+  real, intent(out)        :: UpdateState_GV(-1:nCell+2,3)
 
   integer,parameter    :: Rho_=1,U_=2,P_=3,T_=4
   real, allocatable    :: LeftRho_F(:), LeftU_F(:), LeftP_F(:)
   real, allocatable    :: RightRho_F(:), RightU_F(:), RightP_F(:)
   real, allocatable    :: RhoFlux_F(:), RhoUFlux_F(:), eFlux_F(:)
+  real, allocatable    :: T_C(:)
+  integer :: i
   !---------------------------------------------------------------------------
+
+
   if (.not.allocated(LeftRho_F)) then
      allocate(LeftRho_F(nCell+1), LeftU_F(nCell+1), LeftP_F(nCell+1),&
           RightRho_F(nCell+1), RightU_F(nCell+1), RightP_F(nCell+1),&
-          RhoFlux_F(nCell+1), RhoUFlux_F(nCell+1), eFlux_F(nCell+1))
+          RhoFlux_F(nCell+1), RhoUFlux_F(nCell+1), eFlux_F(nCell+1),&
+          T_C(nCell))
   endif
+  
+  T_C(1:nCell)=OldState_GV(1:nCell,3)/Rgas/OldState_GV(1:nCell,1)
 
   UpdateState_GV=OldState_GV
 
   ! get the face values
   call calc_facevalues(nCell, OldState_GV(-1:nCell+2,Rho_), LeftRho_F, RightRho_F)
+
   call calc_facevalues(nCell, OldState_GV(-1:nCell+2,U_), LeftU_F, RightU_F)
+
   call calc_facevalues(nCell, OldState_GV(-1:nCell+2,P_), LeftP_F, RightP_F)
 
   !get the rusanov flux
@@ -47,16 +56,17 @@ subroutine rusanov_solver(iIon, nCell,&
   call update_state( iIon,nCell,&
        Rgas, DtIn,&
        OldState_GV(1:nCell,Rho_), OldState_GV(1:nCell,U_), &
-       OldState_GV(1:nCell,P_), OldState_GV(1:nCell,T_), &
+       OldState_GV(1:nCell,P_), T_C(1:nCell), &
        LeftRho_F, RightRho_F,LeftU_F, RightU_F,LeftP_F, RightP_F, &
        RhoFlux_F, RhoUFlux_F, eFlux_F, &
        RhoSource_C, RhoUSource_C, eSource_C, &
        UpdateState_GV(1:nCell,Rho_), UpdateState_GV(1:nCell,U_), &
-       UpdateState_GV(1:nCell,P_), UpdateState_GV(1:nCell,T_))
+       UpdateState_GV(1:nCell,P_), T_C)
 
       deallocate(LeftRho_F, LeftU_F, LeftP_F,&
           RightRho_F, RightU_F, RightP_F,&
-          RhoFlux_F, RhoUFlux_F, eFlux_F)
+          RhoFlux_F, RhoUFlux_F, eFlux_F,T_C)
+
 end subroutine rusanov_solver
 
 !==============================================================================
@@ -143,6 +153,7 @@ subroutine update_state( iIon,nCell,&
      allocate(NewRhoU(nCell), NewE(nCell),NewRhoUSource_C(nCell), ExplicitRhoU_C(nCell))
   endif
   
+
   InvGammaMinus1 = 1.0/(Gamma - 1.0)
 
   do i=1,nCell
