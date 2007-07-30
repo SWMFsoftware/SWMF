@@ -70,6 +70,13 @@ subroutine polar_wind
   TIMELOOP: DO
      If (IsFullyImplicit) then
         call PW_implicit_update
+
+        CALL PW_set_upper_bc
+        
+        CALL PW_iheat_flux
+        
+        CALL PW_eheat_flux
+        
      else
         !       advect and add collisional and chemistry sources
         !       calculate heatflux for ions and update ion temp.
@@ -80,15 +87,17 @@ subroutine polar_wind
         
         
         call advect
+        CALL PW_iheat_flux
+        
+        CALL PW_eheat_flux
+     
+        CALL PW_set_upper_bc
+        CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
+        CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
+        
      endif
+
      
-     CALL PW_iheat_flux
-     
-     CALL PW_eheat_flux
-     
-     CALL PW_set_upper_bc
-     CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
-     CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
      TIME=TIME+DT
 
 
@@ -101,22 +110,30 @@ subroutine polar_wind
      
      !       Reverse order of advection and implicit temperature update
      
-     CALL PW_iheat_flux
-
-     CALL PW_eheat_flux
+ 
      If (IsFullyImplicit) then
+        CALL PW_iheat_flux
+
+        CALL PW_eheat_flux
+        
         call PW_implicit_update
-     else
-        CALL advect
-     endif
+        
+        call PW_set_upper_bc
+        
+    else
+       CALL PW_iheat_flux
+       
+       CALL PW_eheat_flux
+       CALL advect
+       CALL PW_set_upper_bc
+       CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
+       CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
+    endif
 
      !    finish update by calculating boundaries, collision source 
      !    and electric field
      !    these will be used in the next time step
 
-     CALL PW_set_upper_bc
-     CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
-     CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
      
      TIME=TIME+DT
      NSTEP=NSTEP+1
@@ -158,10 +175,15 @@ contains
       else if (TypeSolver == 'Rusanov') then
          do iIon=1,nIon-1
             call rusanov_solver(iIon,nDim,RGAS_I(iIon),dt,   &
-                 State_GV(-1:nDim+2,iRho_I(iIon):iT_I(iIon)),&
+                 State_GV(-1:nDim+2,iRho_I(iIon):iP_I(iIon)),&
                  Source_CV(:,iRho_I(iIon)), Source_CV(:,iU_I(iIon)),&
                  Source_CV(:,iP_I(iIon)),  &
-                 NewState_GV(-1:nDim+2,iRho_I(iIon):iT_I(iIon)))
+                 NewState_GV(-1:nDim+2,iRho_I(iIon):iP_I(iIon)))
+            !get T from p and rho
+            NewState_GV(1:nDim,iT_I(iIon))=&
+                 NewState_GV(1:nDim,iP_I(iIon))&
+                 /Rgas_I(iIon)&
+                 /NewState_GV(1:nDim,iRho_I(iIon))
          enddo
       endif
             
