@@ -64,12 +64,8 @@ end subroutine calc_rusanov
 subroutine calc_facevalues(nDim, Var_G, VarLeft_F, VarRight_F)
 
   use ModParameters
+  use ModPWOM, Only: Beta
   implicit none
-
-  real, parameter ::  Beta = 1.0              ! 1 <= Beta <= 2
-
-  
-
 
   integer, intent(in)    :: nDim
   real,    intent(in) :: Var_G(-1:MaxGrid+2)
