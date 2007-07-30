@@ -299,6 +299,8 @@ contains
     DoRoeOld = TypeFlux == 'RoeOld'      !^CFG IF ROEFLUX
     DoRoe    = TypeFlux == 'Roe'         !^CFG IF ROEFLUX
 
+    UseRS7 = DoRoe ! This is always true in the current implementation
+
     UseLindeFix = .false. &
          .or. DoHll      &               !^CFG IF LINDEFLUX
          .or. DoHllD     &               !^CFG IF HLLDFLUX
