@@ -154,6 +154,7 @@ contains !=========================================================
     real, save :: Tolerance, ToleranceSqr, DensityCrInv, AbsoluteMinimumStep
     real, save :: AbsRho2GOverCm3
     real, save :: PerCentProcessedRays
+    real, save :: minDeltaS, maxDeltaS, minDensity, maxDensity
     integer, save :: i, j, iRay, nCall, MidRay
 
     if (NewEntry) then
@@ -183,6 +184,7 @@ contains !=========================================================
          ';  entering get_plasma_density()...'
 
     do iRay = 1, nRay
+       if (ExcludeRay_I(iRay)) CYCLE  ! Do not process the rays that are done
        Position_DI(:,iRay) = Position_DI(:,iRay) + &
             Slope_DI(:,iRay)*cHalf*DeltaS_I(iRay) 
        ! Now Position_DI moved by 1/2 DeltaS !!!
@@ -195,13 +197,6 @@ contains !=========================================================
 
     call get_plasma_density(nRay)
 
-    if (iProc .eq. 0) write(*,*)'+++ ray_path(): exit from get_plasma_density'
-    if ((iProc .eq. 0) .and. (mod(nCall,100) .eq. 0)) then
-       write(*,*) 'Processing ', PerCentProcessedRays, ' % of all rays'
-       write(*,*) 'minval(DeltaS_I) = ', minval(DeltaS_I)
-       write(*,*) 'Density_I(nRay/2) =', Density_I(MidRay)
-       write(*,*) 'GradDensity_DI(:,nRay/2) = ',GradDensity_DI(:,MidRay)
-    end if !(iProc .eq. 0)
 
     !
     ! Convert into g/cm^3
@@ -209,10 +204,33 @@ contains !=========================================================
     Density_I = Density_I*AbsRho2GOverCm3
     GradDensity_DI = GradDensity_DI*AbsRho2GOverCm3
 
-    RayFlag_I = Density_I .ge. DensityCr   ! .true. indicates "bad ray"
+    RayFlag_I = Density_I .ge. DensityCr       ! .true. indicates "bad ray"
+    ExcludeRay_I = ExcludeRay_I .or. RayFlag_I ! "bad rays" are done
 
-    !if (iProc .eq. 0) write(*,*) 'Density_I(55) =', Density_I(55)
-    !if (iProc .eq. 0) write(*,*)'GradDensity_DI(:,55) = ',GradDensity_DI(:,55)
+    if (iProc .eq. 0) write(*,*)'+++ ray_path(): exit from get_plasma_density'
+    if ((iProc .eq. 0) .and. (mod(nCall,10) .eq. 0)) then
+       minDeltaS =  99999999999.
+       maxDeltaS = -99999999999.
+       minDensity =  99999999999.
+       maxDensity = -99999999999.
+       do i = 1, nRay
+          if (ExcludeRay_I(i)) CYCLE 
+          if (DeltaS_I(i) .lt. minDeltaS) minDeltaS = DeltaS_I(i)
+          if (DeltaS_I(i) .gt. maxDeltaS) maxDeltaS = DeltaS_I(i)
+          if (Density_I(i) .lt. minDensity) minDensity = Density_I(i)
+          if (Density_I(i) .gt. maxDensity) maxDensity = Density_I(i)
+       end do
+       write(*,*) 'Processing ', PerCentProcessedRays, ' % of all rays'
+       write(*,*) '# of bad rays: ', count(RayFlag_I)
+       write(*,*) 'minval(DeltaS_I) = ', minDeltaS
+       write(*,*) 'maxval(DeltaS_I) = ', maxDeltaS
+       write(*,*) 'minval(DeltaSNew_I) = ', minval(DeltaSNew_I)
+       write(*,*) 'maxval(DeltaSNew_I) = ', maxval(DeltaSNew_I)
+       write(*,*) 'minval(Density_I) = ', minDensity
+       write(*,*) 'maxval(Density_I) = ', maxDensity
+       write(*,*) 'Density_I(nRay/2) =', Density_I(MidRay)
+       write(*,*) 'GradDensity_DI(:,nRay/2) = ',GradDensity_DI(:,MidRay)
+    end if !(iProc .eq. 0)
 
     do iRay = 1, nRay
 
