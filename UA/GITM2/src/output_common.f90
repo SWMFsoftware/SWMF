@@ -185,7 +185,7 @@ subroutine output(dir, iBlock, iOutputType)
 
   case ('2DGEL')
 
-     nvars_to_write = 12
+     nvars_to_write = 13
      call output_2dgel(iBlock)
 
   case ('2DMEL')
@@ -290,7 +290,8 @@ contains
        write(iOutputUnit_,"(I7,A1,a)")  9, " ", "DivJuAlt"
        write(iOutputUnit_,"(I7,A1,a)") 10, " ", "Pedersen FL Conductance"
        write(iOutputUnit_,"(I7,A1,a)") 11, " ", "Hall FL Conductance"
-       write(iOutputUnit_,"(I7,A1,a)") 12, " ", "FL Length"
+       write(iOutputUnit_,"(I7,A1,a)") 12, " ", "DivJu FL"
+       write(iOutputUnit_,"(I7,A1,a)") 13, " ", "FL Length"
 
     endif
 
@@ -660,6 +661,7 @@ subroutine output_2dgel(iBlock)
              DivJuAlt(iLon,iLat), &
              PedersenFieldLine(iLon, iLat), &
              HallFieldLine(iLon, iLat), &
+             DivJuFieldLine(iLon, iLat), &
              LengthFieldLine(iLon, iLat)
      enddo
   enddo
