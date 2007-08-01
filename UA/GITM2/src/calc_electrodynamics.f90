@@ -50,6 +50,9 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
        JuDotB, sigmap_d1d1_d, sigmap_d2d2_d, sigmap_d1d2_d, sigmah, &
        ue1, ue2, kmp, kml
 
+  real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3) :: &
+       Gradient_GC
+
   real :: aLat, aLon, gLat, gLon, Date, sLat, sLon, gLatMC, gLonMC
 
   logical :: IsDone, IsFirstTime = .true.
@@ -187,7 +190,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      PedersenConductance(:,:,iBlock) = 0.0
      HallConductance(:,:,iBlock)     = 0.0
 
-     do k=1,nAlts
+     do k=-1,nAlts+2
         PedersenConductance(:,:,iBlock) = PedersenConductance(:,:,iBlock) + &
              Sigma_Pedersen(:,:,k)*dAlt_GB(:,:,k,iBlock)
         HallConductance(:,:,iBlock)     = HallConductance(:,:,iBlock)     + &
@@ -201,7 +204,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      ! for us, we need to come up with a more complicated formulation.
 
      call report("Starting Conductances",2)
-     do k=1,nAlts
+     do k=-1,nAlts+2
         do j=-1,nLats+2
            do i=-1,nLons+2
 
@@ -290,22 +293,14 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
           SigmaR(:,:,:,iUp_,iUp_)    * UxB(:,:,:,iUp_)
 
      ! We want to take the divergence of Ju perpendicular to the
-     ! magnetic field line.  So, let us first subtract out the 
-     ! component of Ju that is along the field line.
-
-
-     JuDotB = 0.0
-     do iDir = 1, 3
-        JuDotB = JuDotB + &
-             Ju(:,:,:,iDir) * B0(:,:,:,iDir,iBlock)/B0(:,:,:,iMag_,iBlock)
-     enddo
+     ! magnetic field line.  
 
      do iDir = 1, 3
-        Ju(:,:,:,iDir) = Ju(:,:,:,iDir) - &
-             JuDotB * B0(:,:,:,iDir,iBlock)/B0(:,:,:,iMag_,iBlock)
+        call UAM_Gradient_GC(Ju(:,:,:,iDir), Gradient_GC, iBlock)
+        DivJu(:,:,:) = Gradient_GC(:,:,1:nAlts,iDir) - &
+             Gradient_GC(:,:,1:nAlts,iDir) * &
+             B0(:,:,1:nAlts,iDir,iBlock)/B0(:,:,1:nAlts,iMag_,iBlock)
      enddo
-
-     call divergence(Ju, DivJu, iBlock)
 
      DivJuAlt = 0.0
      do k=1,nAlts
@@ -378,7 +373,6 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
               kdml_s     = &
                           xAlt  * kml(iLon, iLat, iAlt) + &
                    (1.0 - xAlt) * kml(iLon, iLat, iAlt+1)
-
 
               ped = &
                           xAlt  * Sigma_Pedersen(iLon, iLat, iAlt) + &
