@@ -151,7 +151,7 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
   real, intent(out) :: e1(3), e2(3), e3(3)
 
   real :: CapD(3)
-  real :: date, bmag, LShell, r3, MagPot, r, LShell0, mag
+  real :: date, bmag, LShell, r3, MagPot, rBelow, LShell0, mag
   real :: bx, by, bz, twodegrees
   real :: alatp, alatm, alonp, alonm, sinIm
   integer, external :: jday
@@ -160,8 +160,7 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
 
   twodegrees = 2.0 * pi / 180.0
 
-  !!! This is temporary only !!!
-  r = (RadialDistance_GB(1,1,-1,1)-5000.0) / RBody
+  rBelow = (2*RadialDistance_GB(1,1,-1,1) - RadialDistance_GB(1,1,1,1)) / RBody
 
   if (UseApex .and. IsEarth) then
 
@@ -170,7 +169,7 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
 
      LShell0 = LShell
 
-     alat = acos(sqrt(r/LShell))*180.0/pi * sign(1.0,aLat)
+     alat = acos(sqrt(rBelow/LShell))*180.0/pi * sign(1.0,aLat)
      xmag =  xmag * 1.0e-9
      ymag =  ymag * 1.0e-9
      zmag = -zmag * 1.0e-9
@@ -184,11 +183,11 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
      ! Latitudinal component
      call APEX(DATE,GeoLat+1.0,GeoLon,GeoAlt,LShell, &
           alatp,alonp,bmag,xmag,ymag,zmag,MagPot)
-     alatp = acos(sqrt(r/LShell))*180.0/pi * sign(1.0,aLatp)
+     alatp = acos(sqrt(rBelow/LShell))*180.0/pi * sign(1.0,aLatp)
      
      call APEX(DATE,GeoLat-1.0,GeoLon,GeoAlt,LShell, &
           alatm,alonm,bmag,xmag,ymag,zmag,MagPot)
-     alatm = acos(sqrt(r/LShell))*180.0/pi * sign(1.0,aLatm)
+     alatm = acos(sqrt(rBelow/LShell))*180.0/pi * sign(1.0,aLatm)
 
      d1(iNorth_) = (alonp - alonm)/twodegrees
      d2(iNorth_) = (alatp - alatm)/twodegrees
@@ -196,11 +195,11 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
      ! Longitudinal component
      call APEX(DATE,GeoLat,GeoLon+1,GeoAlt,LShell, &
           alatp,alonp,bmag,xmag,ymag,zmag,MagPot)
-     alatp = acos(sqrt(r/LShell))*180.0/pi * sign(1.0,aLatp)
+     alatp = acos(sqrt(rBelow/LShell))*180.0/pi * sign(1.0,aLatp)
      
      call APEX(DATE,GeoLat,GeoLon-1,GeoAlt,LShell, &
           alatm,alonm,bmag,xmag,ymag,zmag,MagPot)
-     alatm = acos(sqrt(r/LShell))*180.0/pi * sign(1.0,aLatm)
+     alatm = acos(sqrt(rBelow/LShell))*180.0/pi * sign(1.0,aLatm)
 
      d1(iEast_) = (alonp - alonm)/(twodegrees * cos(GeoLat*pi/180.0))
      d2(iEast_) = (alatp - alatm)/(twodegrees * cos(GeoLat*pi/180.0))
@@ -208,15 +207,15 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
      ! Altitude component
      call APEX(DATE,GeoLat,GeoLon,GeoAlt+1,LShell, &
           alatp,alonp,bmag,xmag,ymag,zmag,MagPot)
-     alatp = acos(sqrt(r/LShell))*180.0/pi * sign(1.0,aLatp)
+     alatp = acos(sqrt(rBelow/LShell))*180.0/pi * sign(1.0,aLatp)
      
      call APEX(DATE,GeoLat,GeoLon,GeoAlt-1,LShell, &
           alatm,alonm,bmag,xmag,ymag,zmag,MagPot)
-     alatm = acos(sqrt(r/LShell))*180.0/pi * sign(1.0,aLatm)
+     alatm = acos(sqrt(rBelow/LShell))*180.0/pi * sign(1.0,aLatm)
 
-     if (r/LShell > 1.0) then
+     if (rBelow/LShell > 1.0) then
 
-        write(*,*) 'Reference Altitude in init_b0 : ', r*RBody/1000.0, ' km'
+        write(*,*) 'Reference Altitude in init_b0 : ',rBelow*RBody/1000.0,' km'
         write(*,*) 'This seems to be too high.  Please change the first few'
         write(*,*) 'lines in get_magfield_all.'
         call stop_gitm("Must Stop!!")
@@ -230,7 +229,7 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
      ! leaving the subroutine....
      call APEX(DATE,GeoLat,GeoLon,GeoAlt,LShell, &
           alat,alon,bmag,xmag,ymag,zmag,MagPot)
-     alat = acos(sqrt(r/LShell))*180.0/pi * sign(1.0,aLat)
+     alat = acos(sqrt(rBelow/LShell))*180.0/pi * sign(1.0,aLat)
      xmag =  xmag * 1.0e-9
      ymag =  ymag * 1.0e-9
      zmag = -zmag * 1.0e-9
@@ -281,7 +280,7 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
 
         d1 = 0.0
         d2 = 0.0
-        LShell0 = r
+        LShell0 = rBelow
 
      endif
 
@@ -289,9 +288,9 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
 
   ! Finish Eqn. 3.8-3.10 from Richmond 1995
 
-  sinIm = 2 * sin(alat*pi/180.0) * sqrt(4.0 - 3.0 * r/LShell0)
+  sinIm = 2 * sin(alat*pi/180.0) * sqrt(4.0 - 3.0 * rBelow/LShell0)
 
-  d1 = (d1 * pi / 180.0) * sqrt(r/LShell0) !* sign(1.0,aLat)
+  d1 = (d1 * pi / 180.0) * sqrt(rBelow/LShell0) !* sign(1.0,aLat)
   d2 = - (d2 * pi / 180.0) * sinIm
 
   CapD(iEast_)  =    d1(iNorth_)*d2(iUp_   ) - d2(iNorth_)*d1(iUp_   )
