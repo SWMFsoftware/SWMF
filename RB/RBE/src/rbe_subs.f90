@@ -758,13 +758,14 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
         iout=0
         xlati1=xlati(i)
         xli(i)=rc/cos(xlati1)/cos(xlati1)
-        phi1=phi(j)+pi                  ! +x corresponing to noon
-
-        if (imod.le.2) call tsy_trace(re,rc,xlati1,phi1,t,ps,parmod,imod,np, &
-             npf1,dssa,bba,volume1,ro1,xmlt1,bo1,ra)
+        if (imod.le.2) then
+           phi1=phi(j)+pi                  ! +x corresponing to noon          
+           call tsy_trace(re,rc,xlati1,phi1,t,ps,parmod,imod,np, &
+                npf1,dssa,bba,volume1,ro1,xmlt1,bo1,ra)
+        endif
         if (imod.eq.3) call MHD_trace(xlati1,phi1,re,i,j,np, &
              npf1,dssa,bba,volume1,ro1,xmlt1,bo1,ra)
-
+        
         
         if (i==iLatTest .and. j==iLonTest) then
            write(*,*) npf1,xlati1*180.0/3.14,xmlt1,ro1
