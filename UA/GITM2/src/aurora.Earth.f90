@@ -12,8 +12,9 @@ subroutine aurora(iBlock)
   integer, intent(in) :: iBlock
 
   real :: alat, hpi, ped, hal, av_kev, eflx_ergs, a,b, maxi
-  real :: Factor,temp_ED, avee, eflux
-  integer :: i, j, k, n, iError
+  real :: Factor,temp_ED, avee, eflux, p
+  integer :: i, j, k, n, iError, iED
+  logical :: IsDone
 
   real, dimension(nLons,nLats,nAlts) :: temp, AuroralBulkIonRate, &
        IonPrecipitationBulkIonRate, IonPrecipitationHeatingRate
@@ -69,7 +70,29 @@ subroutine aurora(iBlock)
            call R_ELEC_EDEP (ED_Flux, 30, ED_Energies, 3, ED_Ion, 7)
            call R_ELEC_EDEP (ED_Flux, 30, ED_Energies, 3, ED_Heating, 11)
 
+           iED = 1
+
            do k = 1, nAlts
+
+              p = alog(Pressure(j,i,k,iBlock))
+
+              IsDone = .false.
+              do while (.not.IsDone)
+                 if (ED_grid(iED) >= p .and. ED_grid(iED+1) <= p) then
+                    IsDone = .true.
+                    ED_Interpolation_Index(k) = iED
+                    ED_Interpolation_Weight(k) = (ED_grid(iED) - p) /  &
+                         (ED_grid(iED) - ED_grid(iED+1))
+                 else
+                    if (iED == ED_N_Alts-1) then
+                       IsDone = .true.
+                       ED_Interpolation_Weight(k) = 1.0
+                       ED_Interpolation_Index(k) = ED_N_Alts - 1
+                    else
+                       iED = iED + 1
+                    endif
+                 endif
+              enddo
 
               n = ED_Interpolation_Index(k)
               AuroralBulkIonRate(j,i,k) = ED_Ion(n) - &

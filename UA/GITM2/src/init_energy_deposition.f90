@@ -54,32 +54,10 @@ subroutine init_energy_deposition
   endif
 
   if (iDebugLevel > 2) write(*,*) "===> ED_Get_Grid"
-  call ED_Get_Grid(ED_grid, .false., ierr)
+  call ED_Get_Grid(ED_grid, .true., ierr)
 
-  do iAlt = 1, nAlts
-
-     !!! This is a temporary solution !!!
-     a = Altitude_GB(1,1,iAlt,1)
-
-     i = 1
-     IsDone = .false.
-     do while (.not.IsDone)
-        if (ED_grid(i) <= a .and. ED_grid(i+1) >= a) then
-           IsDone = .true.
-           ED_Interpolation_Index(iAlt) = i
-           ED_Interpolation_Weight(iAlt) = (ED_grid(i) - a) /  &
-                (ED_grid(i) - ED_grid(i+1))
-        else
-           if (i == ED_N_Alts-1) then
-              IsDone = .true.
-              ED_Interpolation_Weight(iAlt) = 1.0
-              ED_Interpolation_Index(iAlt) = ED_N_Alts - 1
-           else
-              i = i + 1
-           endif
-        endif
-     enddo
-
+  do iAlt = 1, ED_N_Alts
+     ED_grid(iAlt) = alog(ED_grid(iAlt))
   enddo
 
   call ED_Get_Energies(ED_Energies)
