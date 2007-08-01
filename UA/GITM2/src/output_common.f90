@@ -647,7 +647,7 @@ subroutine output_2dgel(iBlock)
 
   iAlt = 1
   do iLat=1,nLats
-     do iLon=1,nLons+1
+     do iLon=1,nLons
         write(iOutputUnit_)       &
              Longitude(iLon,iBlock), &
              Latitude(iLat,iBlock),&
