@@ -172,7 +172,7 @@ subroutine mhd_trace (Lat,Lon,re,iLat,iLon,np, &
      nAlt=2*MinAlt
      call trace_dipole(Re,Lat,nAlt,MinAlt,FieldLength_I,&
                        Bfield_I,RadialDist_I,Ro1)
-     xmlt1= (Lon-cPi)*12./cPi   ! mlt in hr           
+     xmlt1= (Lon)*12./cPi   ! mlt in hr           
      if (xmlt1.lt.0.) xmlt1=xmlt1+24.
      bo1=Bfield_I(nAlt/2)
      IsFoundLine = .true.
@@ -195,7 +195,7 @@ subroutine mhd_trace (Lat,Lon,re,iLat,iLon,np, &
      
      xmlt1=&
           (atan2(-StateIntegral_IIV(iLat,iLon,2),-StateIntegral_IIV(iLat,iLon,1))&
-          -cPi)&
+          )&
           *12./cPi   ! mlt in hr
      if (xmlt1 < 0.) xmlt1=xmlt1+24.
      bo1=StateIntegral_IIV(iLat,iLon,3)
