@@ -94,8 +94,8 @@ subroutine RB_set_grid
        XyzMin_D=(/cHalf, cHalf/),                & ! min gen.coords for cells
        XyzMax_D=(/ir+2.5,ip-0.5/),               & ! max gen.coords for cells
        TypeCoord='SMG',                          & ! solar magnetic coord
-       Coord1_I=cRadToDeg*xlati(0:ir+1),           & ! latitude in degrees
-       Coord2_I=cRadToDeg*phi,                   & ! longitude in degrees
+       Coord1_I=cRadToDeg*xlati(0:ir+1),         & ! latitude in degrees
+       Coord2_I=mod(cRadToDeg*phi+180.0,360.0),  & ! longitude in degrees
        Coord3_I=Radius_I,                        & ! radial size in meters
        IsPeriodic_D=(/.false.,.true./))            ! periodic in longitude
 
