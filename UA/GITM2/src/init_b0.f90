@@ -62,7 +62,8 @@ subroutine init_b0
               b0_e1(iLon,iLat,iAlt,:,iBlock) = e1
               b0_e2(iLon,iLat,iAlt,:,iBlock) = e2
               b0_e3(iLon,iLat,iAlt,:,iBlock) = e3
-              b0_cD(iLon,iLat,iAlt,iBlock) = cD
+              b0_cD(iLon,iLat,iAlt,iBlock)   = cD
+              b0_Be3(iLon,iLat,iAlt,iBlock)  = B0(iLon,iLat,iAlt,iMag_,iBlock)/cD
 
               if (B0(iLon,iLat,iAlt,iMag_,iBlock) == 0.0) then
                  B0(iLon,iLat,iAlt,iMag_,iBlock) = 1.0e-10
@@ -288,7 +289,7 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
 
   ! Finish Eqn. 3.8-3.10 from Richmond 1995
 
-  sinIm = 2 * sin(alat*pi/180.0) * sqrt(4.0 - 3.0 * rBelow/LShell0)
+  sinIm = 2 * sin(alat*pi/180.0) / sqrt(4.0 - 3.0 * rBelow/LShell0)
 
   d1 = (d1 * pi / 180.0) * sqrt(rBelow/LShell0) !* sign(1.0,aLat)
   d2 = - (d2 * pi / 180.0) * sinIm

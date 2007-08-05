@@ -15,16 +15,13 @@ subroutine calc_electron_temperature(iBlock)
   integer, external :: jday
 
   integer, intent(in) :: iBlock
-  integer :: i,j,k,N, CLAWIter,iLon,iLat,iAlt
-
-  real, dimension(1:2) :: msis_temp
-  real, dimension(1:8) :: msis_dens
+  integer :: i,j,k,N,iLon,iLat,iAlt
 
   real :: NA,ddalt,h,kbc,omega,temp_A, temp_B
 
   real,dimension(nAlts) :: a,b,c,r,u,dz2
 
-  real,dimension(nLons,nLats) ::flux
+  real,dimension(nLons,nLats) :: flux
 
   integer, dimension(7) :: iTime
 
@@ -33,18 +30,15 @@ subroutine calc_electron_temperature(iBlock)
 
   integer :: iError,DoY
 
-  real, dimension(nLons,                 &
-       nLats,                  &
-       1:nAlts) :: TOld,Conduction,Te_Advection,        &
-       Heating, cooling,expansion,        &
+  real, dimension(nLons, nLats, nAlts) :: &
+       TOld, Conduction, Te_Advection,        &
+       Heating, cooling, expansion,        &
        qD_N2,qD_O2,qD_O,qD_Total,f,g,hh,T0,T1,  &
        ZZ,Dx1,Dx2,Dx3,Ex1,Ex2,Ex3,ABT,d,Ki2,Ke2,   &
        lnA, Temp_T,   &
        Temp_vel,Grad_Vx,Grad_Vy,Grad_Vz,          &
        Grad_Qx,Grad_Qy,Grad_Qz,Temp_cooling, tmp,source_last,&
        IJouleHeating
-
-
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -59,10 +53,13 @@ subroutine calc_electron_temperature(iBlock)
   kbc=1.381e-23
   NA=6.0221e23
 
+  call report("Calc_etemp_sources",5)
   call calc_etemp_sources(Heating,cooling,iBlock)
 
+  call report("electron t coeff conductivity",5)
   call Coeff_Conductivity(iBlock)
 
+  call report("electron t boundary conditions",5)
   call Boundary_Conditions(flux,iBlock)
 
   do iLon=1,nlons
@@ -122,13 +119,17 @@ subroutine calc_electron_temperature(iBlock)
 
 
 
+  call report("Calc_etemp_sources (again)",5)
   call calc_etemp_sources(Heating,cooling,iBlock)
 
+  call report("electron t coeff conductivity (again)",5)
   call Coeff_Conductivity(iBlock)
 
+  call report("electron t boundary conditions (again)",5)
   call Boundary_Conditions(flux,iBlock)
 
 
+  call report("electron t loop (again)",5)
 
   do iLon=1,nlons
      do iLat=1,nLats
@@ -515,7 +516,9 @@ contains
   !----------------------------------------------------
 
 end subroutine calc_electron_temperature
+
 !===============================================================================
+
 subroutine calc_etemp_sources(Heating,Cooling,iBlock)
 
   use ModSizeGitm
@@ -534,38 +537,26 @@ subroutine calc_etemp_sources(Heating,Cooling,iBlock)
   real, intent(out)::Heating(nLons, nLats, nAlts)
   real, intent(out)::Cooling(nLons, nLats, nAlts)
 
-
-  integer :: i,j,k,N, CLAWIter
-
-  real, dimension(1:2) :: msis_temp
-  real, dimension(1:8) :: msis_dens
+  integer :: i,j,k,N
 
   real :: R,NA,ddalt,c,h,kbc,omega
   real :: c1,c2,c3,E1,E2,E3,AA1,AA2,AA3,B1,B2,B3 
-
-
-  integer, dimension(7) :: iTime
 
   integer :: nSteps, isteps
   real :: DtSub
 
   integer :: iError,DoY
 
-  real, dimension(nLons,                 &
-       nLats,                  &
-       1:nAlts) :: TOld,        &
+  real, dimension(nLons, nLats, nAlts) :: TOld,        &
        SolarHeating,eJouleHeating,expansion,        &
        f,g,hh,T0,T1,  &
        ZZ,Dx1,Dx2,Dx3,Ex1,Ex2,Ex3,ABT,d,Ki2,Ke2,   &
        lnA,Lrot_E_N2,Lrot_E_O2,Lvib_e_N2,         &
        Lvib_e_O2,Lf_e_O, L_e_O1D, L_e_i,Temp_T
 
+  real, dimension(-1:nLons+2,-1:nLats+2,-1:nAlts+2, nSpeciesTotal) :: Temp_NDensity
 
-  real, dimension(-1:nLons+2,-1:nLats+2,-1:nAlts+2, &
-       nSpeciesTotal) :: Temp_NDensity
-
-  real, dimension(-1:nLons+2,-1:nLats+2,-1:nAlts+2, &
-       nIons) :: Temp_IDensity
+  real, dimension(-1:nLons+2,-1:nLats+2,-1:nAlts+2, nIons) :: Temp_IDensity
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -591,6 +582,7 @@ subroutine calc_etemp_sources(Heating,Cooling,iBlock)
   do i=1,nLons
      do j=1,nLats
         do k = 1, nAlts
+
            !     write(*,*)'It is Ok----------1' 
 
 

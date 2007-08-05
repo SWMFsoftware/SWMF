@@ -358,6 +358,9 @@ subroutine initialize_gitm(TimeIn)
 
   call calc_pressure
 
+  ! The iLon and iLat are dummy variables...
+  call UA_calc_electrodynamics(iLon,iLat)
+
 !  do iBlock = 1, nBlocks
 !     call calc_rates(iBlock)
 !  enddo

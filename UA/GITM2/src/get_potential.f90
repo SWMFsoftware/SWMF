@@ -18,7 +18,7 @@ subroutine get_potential(iBlock)
   logical :: UseIMF = .false.
   logical :: UseHPI = .false.
 
-  real, dimension(-1:nLons+2,-1:nLats+2) :: TempPotential, Grid
+  real, dimension(-1:nLons+2,-1:nLats+2) :: TempPotential, Grid, Dynamo
 
   character (len=100), dimension(100) :: Lines
   character (len=100) :: TimeLine
@@ -221,12 +221,20 @@ subroutine get_potential(iBlock)
            call stop_gitm("Stopping in get_potential")
         endif
 
+        if (UseDynamo) then
+           call get_dynamo_potential( &
+                MLT(-1:nLons+2,-1:nLats+2,iAlt), &
+                MLatitude(-1:nLons+2,-1:nLats+2,iAlt,iBlock), dynamo)
+           TempPotential = TempPotential + dynamo
+        endif
+
         Potential(:,:,iAlt,iBlock) = TempPotential
 
         !----------------------------------------------
         ! Another example of user output
 
         if (iAlt == 1) then 
+
            UserData2d(1:nLons,1:nLats,1,1,iBlock) = &
                 TempPotential(1:nLons,1:nLats)/1000.0
         endif
@@ -303,3 +311,70 @@ subroutine get_potential(iBlock)
   call end_timing("Get AMIE Potential")
 
 end subroutine get_potential
+
+
+subroutine get_dynamo_potential(mlts, lats, pot)
+
+  use ModGITM
+  use ModElectrodynamics
+
+  implicit none
+
+  real, dimension(-1:nLons+2,-1:nLats+2), intent(in) :: mlts, lats
+  real, dimension(-1:nLons+2,-1:nLats+2), intent(out) :: pot
+
+  integer :: iLon, iLat, iL, iM
+  real    :: dM, dL, LatIn, MLTIn
+
+  pot = 0.0
+
+  do iLon = -1, nLons+2 
+     do iLat = -1, nLats+2 
+
+        LatIn = lats(iLon, iLat)
+        MLTIn = mod(mlts(iLon, iLat)+24.0,24.0)
+
+        iM = 1
+        do while (iM < nMagLons)
+           iL = 1
+           do while (iL < nMagLats)
+
+              !\
+              ! Check to see if the point is within the current cell
+              !/
+
+              if (LatIn <  MagLatMC(iM,iL+1) .and. &
+                   LatIn >= MagLatMC(iM,iL) .and. &
+                   MLTIn <  MagLocTimeMC(iM+1,iL) .and. &
+                   MLTIn >= MagLocTimeMC(iM,iL)) then
+
+                 dM=(MLTIn              -MagLocTimeMC(iM,iL))/&
+                    (MagLocTimeMC(iM+1,iL)-MagLocTimeMC(iM,iL))
+                 dL=(LatIn        -MagLatMC(iM,iL))/&
+                    (MagLatMC(iM,iL+1)-MagLatMC(iM,iL))
+
+                 pot(iLon, iLat) = &
+                      (1.0 - dM) * (1.0 - dL) * DynamoPotentialMC(iM  , iL  ) + &
+                      (1.0 - dM) * (      dL) * DynamoPotentialMC(iM  , iL+1) + &
+                      (      dM) * (      dL) * DynamoPotentialMC(iM+1, iL+1) + &
+                      (      dM) * (1.0 - dL) * DynamoPotentialMC(iM+1, iL  )
+
+
+                 iL = nMagLats
+                 iM = nMagLons
+
+              endif
+
+              iL = iL + 1
+
+           enddo
+
+           iM = iM + 1
+
+        enddo
+
+     enddo
+
+  enddo
+
+end subroutine get_dynamo_potential

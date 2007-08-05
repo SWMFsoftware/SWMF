@@ -2,6 +2,7 @@
 subroutine add_sources
 
   use ModGITM
+  use ModTime
   use ModSources
   use ModInputs
   use ModUserGITM
@@ -9,8 +10,18 @@ subroutine add_sources
   implicit none
 
   integer :: iBlock, iLon, iLat, iAlt, iSpecies
+  logical :: IsFirstTime=.true.
 
   call report("add_sources",2)
+
+  if (UseDynamo .and. .not. Is1D) then
+     if (floor((tSimulation-dt)/DtPotential) /= &
+          floor((tsimulation)/DtPotential) .or. IsFirstTime) then
+        ! The iLon and iLat are dummy variables...
+        call UA_calc_electrodynamics(iLon,iLat)
+        IsFirstTime = .false.
+     endif
+  endif
 
   do iBlock = 1, nBlocks
 

@@ -125,6 +125,8 @@ module ModInputs
   logical :: UseNeutralDrag         = .true.
   logical :: UseExB                 = .true.
 
+  logical :: UseDynamo              = .true.
+
   logical :: UseSolarHeating   = .true.
   logical :: UseJouleHeating   = .true.
   logical :: UseAuroralHeating = .true.

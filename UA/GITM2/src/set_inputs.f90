@@ -413,7 +413,7 @@ subroutine set_inputs
            call read_in_logical(UseGravity, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #THERMO:'
-              write(*,*) '#THERMO'
+              write(*,*) '#FORCING'
               write(*,*) "UsePressureGradient (logical)"
               write(*,*) "UseIonDrag          (logical)"
               write(*,*) "UseNeutralFriction  (logical)"
@@ -428,6 +428,7 @@ subroutine set_inputs
            call read_in_logical(UseIonPressureGradient, iError)
            call read_in_logical(UseIonGravity, iError)
            call read_in_logical(UseNeutralDrag, iError)
+           call read_in_logical(UseDynamo, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #IONFORCING:'
               write(*,*) '#IONFORCING'
@@ -435,6 +436,7 @@ subroutine set_inputs
               write(*,*) "UseIonPressureGradient (logical)"
               write(*,*) "UseIonGravity          (logical)"
               write(*,*) "UseNeutralDrag         (logical)"
+              write(*,*) "UseDynamo              (logical)"
               IsDone = .true.
            endif
 

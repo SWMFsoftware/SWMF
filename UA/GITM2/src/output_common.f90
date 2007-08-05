@@ -190,7 +190,7 @@ subroutine output(dir, iBlock, iOutputType)
 
   case ('2DMEL')
 
-     nvars_to_write = 18
+     nvars_to_write = 25
      if (iBLK == 1) call output_2dmel(iBlock)
 
   case ('2DUSR')
@@ -312,6 +312,13 @@ contains
        write(iOutputUnit_,"(I7,A1,a)") 16, " ", "Sigma LP"
        write(iOutputUnit_,"(I7,A1,a)") 17, " ", "K^D_{m\phi}"
        write(iOutputUnit_,"(I7,A1,a)") 18, " ", "K^D_{m\lamda}"
+       write(iOutputUnit_,"(I7,A1,a)") 19, " ", "Solver A"
+       write(iOutputUnit_,"(I7,A1,a)") 20, " ", "Solver B"
+       write(iOutputUnit_,"(I7,A1,a)") 21, " ", "Solver C"
+       write(iOutputUnit_,"(I7,A1,a)") 22, " ", "Solver D"
+       write(iOutputUnit_,"(I7,A1,a)") 23, " ", "Solver E"
+       write(iOutputUnit_,"(I7,A1,a)") 24, " ", "Solver S"
+       write(iOutputUnit_,"(I7,A1,a)") 25, " ", "DynamoPotential"
 
     endif
 
@@ -697,14 +704,21 @@ subroutine output_2dmel(iBlock)
              SigmaHallMC(iLon,iLat), &
              DivJuAltMC(iLon,iLat), &
              LengthMC(iLon,iLat), &
-             SigmaHHMC(iLon,iLat), &
+             SigmaPPMC(iLon,iLat), &
              SigmaLLMC(iLon,iLat), &
              SigmaHHMC(iLon,iLat), &
              SigmaCCMC(iLon,iLat), &
-             SigmaLPMC(iLon,iLat), &
              SigmaPLMC(iLon,iLat), &
-             KDmpMC(iLon,iLat), &
-             KdmlMC(iLon,iLat)
+             SigmaLPMC(iLon,iLat), &
+             KDpmMC(iLon,iLat), &
+             KdlmMC(iLon,iLat), &
+             solver_a_mc(iLon,iLat), &
+             solver_b_mc(iLon,iLat), &
+             solver_c_mc(iLon,iLat), &
+             solver_d_mc(iLon,iLat), &
+             solver_e_mc(iLon,iLat), &
+             solver_s_mc(iLon,iLat), &
+             DynamoPotentialMC(iLon,iLat)
      enddo
   enddo
 

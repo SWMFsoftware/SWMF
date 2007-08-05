@@ -75,6 +75,7 @@ module ModGITM
   real :: b0_e2(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3, nBlocksMax)
   real :: b0_e3(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3, nBlocksMax)
   real :: b0_cD(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocksMax)
+  real :: b0_Be3(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocksMax)
 
   real :: cMax_GDB(0:nLons+1, 0:nLats+1, 0:nAlts+1, 3, nBlocksMax)
 
