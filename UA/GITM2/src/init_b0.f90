@@ -154,7 +154,7 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
   real :: CapD(3)
   real :: date, bmag, LShell, r3, MagPot, rBelow, LShell0, mag
   real :: bx, by, bz, twodegrees
-  real :: alatp, alatm, alonp, alonm, sinIm
+  real :: alatp, alatm, alonp, alonm, sinIm, londiff
   integer, external :: jday
   !--------------------------------------------------------------------------
   date = iStartTime(1) + float(iJulianDay)/float(jday(iStartTime(1),12,31))
@@ -190,19 +190,35 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
           alatm,alonm,bmag,xmag,ymag,zmag,MagPot)
      alatm = acos(sqrt(rBelow/LShell))*180.0/pi * sign(1.0,aLatm)
 
-     d1(iNorth_) = (alonp - alonm)/twodegrees
+     londiff = alonp - alonm
+     do while (londiff > 70.0)
+        londiff = londiff - 90.0
+     enddo
+     do while (londiff < -70.0)
+        londiff = londiff + 90.0
+     enddo
+     
+     d1(iNorth_) = londiff/twodegrees
      d2(iNorth_) = (alatp - alatm)/twodegrees
 
      ! Longitudinal component
-     call APEX(DATE,GeoLat,GeoLon+1,GeoAlt,LShell, &
+     call APEX(DATE,GeoLat,mod(GeoLon+1,360.0),GeoAlt,LShell, &
           alatp,alonp,bmag,xmag,ymag,zmag,MagPot)
      alatp = acos(sqrt(rBelow/LShell))*180.0/pi * sign(1.0,aLatp)
      
-     call APEX(DATE,GeoLat,GeoLon-1,GeoAlt,LShell, &
+     call APEX(DATE,GeoLat,mod(GeoLon-1+360,360.0),GeoAlt,LShell, &
           alatm,alonm,bmag,xmag,ymag,zmag,MagPot)
      alatm = acos(sqrt(rBelow/LShell))*180.0/pi * sign(1.0,aLatm)
 
-     d1(iEast_) = (alonp - alonm)/(twodegrees * cos(GeoLat*pi/180.0))
+     londiff = alonp - alonm
+     do while (londiff > 70.0)
+        londiff = londiff - 90.0
+     enddo
+     do while (londiff < -70.0)
+        londiff = londiff + 90.0
+     enddo
+     
+     d1(iEast_) = (londiff)/(twodegrees * cos(GeoLat*pi/180.0))
      d2(iEast_) = (alatp - alatm)/(twodegrees * cos(GeoLat*pi/180.0))
 
      ! Altitude component
@@ -223,7 +239,15 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
 
      endif
 
-     d1(iUp_) = (RBody+GeoAlt)*(alonp - alonm)/(2000.0)
+     londiff = alonp - alonm
+     do while (londiff > 70.0)
+        londiff = londiff - 90.0
+     enddo
+     do while (londiff < -70.0)
+        londiff = londiff + 90.0
+     enddo
+     
+     d1(iUp_) = (RBody+GeoAlt)*(londiff)/(2000.0)
      d2(iUp_) = (RBody+GeoAlt)*(alatp - alatm)/(2000.0)
 
      ! Redo the initial calculation to get everything right before

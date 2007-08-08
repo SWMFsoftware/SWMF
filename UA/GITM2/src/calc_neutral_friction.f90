@@ -19,7 +19,7 @@ subroutine calc_neutral_friction(nVel)
 
   integer :: iAlt
 
-  call report("calc_neutral_friction",2)
+  call report("calc_neutral_friction",4)
 
   if (.not.UseNeutralFriction) return
 

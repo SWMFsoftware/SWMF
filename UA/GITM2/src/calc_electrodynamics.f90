@@ -55,8 +55,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   real :: aLat, aLon, gLat, gLon, Date, sLat, sLon, gLatMC, gLonMC
 
-  real :: residual
-  real, dimension(:,:), allocatable :: oldpotmc
+  real :: residual, oldresidual
 
   logical :: IsDone, IsFirstTime = .true.
 
@@ -150,7 +149,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
      do i=1,nMagLons+1
         if (iDebugLevel > 1) &
-             write(*,*) "==>Calculating Apex->Geo", i, nMagLons+1
+             write(*,*) "==> Calculating Apex->Geo", i, nMagLons+1
         do j=1,nMagLats
 
            MagLatMC(i,j)     = 180.0 * (float(j)-0.5) / float(nMagLats) - 90.0
@@ -281,12 +280,6 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
         HallConductance(:,:,iBlock)     = HallConductance(:,:,iBlock)     + &
              Sigma_Hall(:,:,k)    *dAlt_GB(:,:,k,iBlock)
      enddo
-
-     ! We need to calculate the rotation matrix.  
-     ! I am simply using the formula on
-     ! page 89 of Kelley, but this really only works for a magnetic field 
-     ! with east-west (geographic) component.  Since this is not true
-     ! for us, we need to come up with a more complicated formulation.
 
      call report("Starting Conductances",2)
      do k=-1,nAlts+2
@@ -486,6 +479,19 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
                    (1.0-xAlt) * DivJu(iLon, iLat, iAlt+1)
 
               SigmaPP(iLon, iLat) = SigmaPP(iLon, iLat) + len * sp_d1d1_d
+
+              if(SigmaPP(iLon, iLat) > 1000.) write(*,*) "integrating :",&
+                   iLon, iLat, iAlt, SigmaPP(iLon, iLat), len, sp_d1d1_d, &
+                   Sigma_Pedersen(iLon, iLat, iAlt), &
+                   b0_d1(iLon,iLat,iAlt,1:3,iBlock), &
+                   b0_cD(iLon,iLat,iAlt,iBlock), iBlock, iProc
+
+              if(SigmaPP(iLon, iLat) > 1000.) write(*,*) "neighbor :",&
+                   iLon, iLat, iAlt, SigmaPP(iLon, iLat), len, sp_d1d1_d, &
+                   Sigma_Pedersen(iLon-1, iLat, iAlt), &
+                   b0_d1(iLon-1,iLat,iAlt,1:3,iBlock), &
+                   b0_cD(iLon-1,iLat,iAlt,iBlock), iBlock, iProc
+
               SigmaLL(iLon, iLat) = SigmaLL(iLon, iLat) + len * sp_d2d2_d
               SigmaHH(iLon, iLat) = SigmaHH(iLon, iLat) + len * sh
               SigmaCC(iLon, iLat) = SigmaCC(iLon, iLat) + len * sp_d1d2_d
@@ -564,6 +570,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
               sinim = abs(2.0 * sin(MagLatMC(i,j)*pi/180) / &
                    sqrt(4.0 - 3.0 * cos(MagLatMC(i,j)*pi/180)))
+
               SigmaPPMC(i,j) = spp * sinim
               SigmaLLMC(i,j) = sll / sinim
               SigmaHHMC(i,j) = shh
@@ -586,7 +593,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   enddo
   
-  if (iDebugLevel > 2) write(*,*) "Beginning Sum of Electrodynamics"
+  if (iDebugLevel > 2) write(*,*) "===> Beginning Sum of Electrodynamics"
 
   DivJuAltMC(nMagLons+1,:) = DivJuAltMC(1,:)
   SigmaHallMC(nMagLons+1,:) = SigmaHallMC(1,:)
@@ -706,9 +713,23 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   solver_s_mc = 4 * deltalmc**2 * deltapmc**2 * (RBody) * &
        (dkdlmdlMC + dKDpmdpMC)
 
-!  OldPotMc = 0.0
+  solver_d_mc = 2.0 * deltalmc**2 * deltapmc * ( &
+       sign(1.0, MagLatMC) * ( dSigmaPLdpMC )&
+       - sin(MagLatMC*pi/180) * sigmallmc)
+  solver_e_mc = 2.0 * sign(1.0, MagLatMC) * deltalmc * deltapmc**2 * ( &
+       dSigmaLPdlMC)
 
-  do i = 1, 1000
+  solver_d_mc(:,42:49) = 0.0
+  solver_e_mc(:,42:49) = 0.0
+
+  OldPotMc = 0.0
+  DynamoPotentialMC = 0.0
+
+  oldresidual = 1.0e32
+  residual    = 1.0e31
+  i = 0
+
+  do while (oldresidual > residual .and. i < 500)
 
      do iLat = 2, nMagLats-1
         do iLon = 1, nMagLons+1
@@ -740,15 +761,23 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
         enddo
      enddo
 
-!    residual = sum(abs(DynamoPotentialMC-OldPotMC))
-!     write(*,*) "Residual : ", i, residual
+!     DynamoPotentialMC(1,:) = sum(DynamoPotentialMC(2,:))/(nMagLons+1)
 
-!     OldPotMC = DynamoPotentialMC
+     oldresidual = residual
+
+     residual = sum(abs(DynamoPotentialMC-OldPotMC))
+     i = i + 1
+
+     if (iDebugLevel > 1) &
+          write(*,*) "==> Dynamo Residual : ", i, sum(abs(DynamoPotentialMC)), &
+          maxval(DynamoPotentialMC)-minval(DynamoPotentialMC), residual
+
+     OldPotMC = DynamoPotentialMC
 
   enddo
 
   if (iDebugLevel > 0) &
-       write(*,*) "CPCP of Dynamo : ", &
+       write(*,*) "=> CPCP of Dynamo : ", &
        maxval(dynamopotentialmc)-minval(dynamopotentialmc)
 
   do iLat = 1, nMagLats
@@ -865,6 +894,10 @@ contains
     call interpolate_local(KDlm, mfac, lfac, ii, jj, kdlline)
     
     call interpolate_local(b0_be3(:,:,1,iBlock), mfac, lfac, ii, jj, be3)
+
+    if (sppline > 1000.) write(*,*) "sppline : ", &
+         mfac, lfac, ii, jj, sppline, &
+         SigmaPP(ii,jj), SigmaPP(ii+1, jj), SigmaPP(jj+1,ii), SigmaPP(ii+1,jj+1)
 
   end subroutine find_mag_point
 

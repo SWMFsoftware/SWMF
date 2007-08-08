@@ -50,6 +50,8 @@ module ModElectrodynamics
        solver_s_mc, deltalmc, deltapmc, &
        dSigmaLLdlMC, dSigmaLPdlMC, dSigmaPLdpMC, dSigmaPPdpMC, &
        dKDpmdpMC, dKDlmdlMC, DynamoPotentialMC
+
+  real, dimension(:,:), allocatable :: oldpotmc
   
   integer :: nMagLats = 90  ! 2 degrees
   integer :: nMagLons = 72  ! 5 degrees
