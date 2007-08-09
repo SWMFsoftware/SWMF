@@ -223,7 +223,7 @@ subroutine get_potential(iBlock)
 
         if (UseDynamo) then
            call get_dynamo_potential( &
-                MLT(-1:nLons+2,-1:nLats+2,iAlt), &
+                MLongitude(-1:nLons+2,-1:nLats+2,iAlt,iBlock), &
                 MLatitude(-1:nLons+2,-1:nLats+2,iAlt,iBlock), dynamo)
            TempPotential = TempPotential + dynamo
         endif
@@ -313,18 +313,18 @@ subroutine get_potential(iBlock)
 end subroutine get_potential
 
 
-subroutine get_dynamo_potential(mlts, lats, pot)
+subroutine get_dynamo_potential(lons, lats, pot)
 
   use ModGITM
   use ModElectrodynamics
 
   implicit none
 
-  real, dimension(-1:nLons+2,-1:nLats+2), intent(in) :: mlts, lats
+  real, dimension(-1:nLons+2,-1:nLats+2), intent(in) :: lons, lats
   real, dimension(-1:nLons+2,-1:nLats+2), intent(out) :: pot
 
   integer :: iLon, iLat, iL, iM
-  real    :: dM, dL, LatIn, MLTIn, mltup, mltdown, dmlt
+  real    :: dM, dL, LatIn, LonIn, iError
 
   logical :: IsFound
 
@@ -336,13 +336,7 @@ subroutine get_dynamo_potential(mlts, lats, pot)
      do iLat = -1, nLats+2 
 
         LatIn = lats(iLon, iLat)
-        MLTIn = mod(mlts(iLon, iLat)+24.0,24.0)
-
-        mltup = 0.0
-        mltdown = 0.0
-
-        if (MLTIn > 23.5) mltup   = MagLocTimeMC(2,1)-MagLocTimeMC(1,1)-0.00001
-        if (MLTIn <  0.5) mltdown = MagLocTimeMC(2,1)-MagLocTimeMC(1,1)-0.00001
+        LonIn = mod(lons(iLon, iLat)+360.0,360.0)
 
         IsFound = .false.
 
@@ -357,14 +351,11 @@ subroutine get_dynamo_potential(mlts, lats, pot)
 
               if (LatIn <  MagLatMC(iM,iL+1) .and. &
                    LatIn >= MagLatMC(iM,iL) .and. &
-                   MLTIn <  MagLocTimeMC(iM+1,iL)+mltup .and. &
-                   MLTIn >= MagLocTimeMC(iM,iL)-mltdown) then
+                   LonIn <  MagLonMC(iM+1,iL) .and. &
+                   LonIn >= MagLonMC(iM,iL)) then
 
-                 dmlt = MagLocTimeMC(iM+1,iL)-MagLocTimeMC(iM,iL)
-                 if (dmlt >  23.0) dmlt = dmlt - 24.0
-                 if (dmlt < -23.0) dmlt = dmlt + 24.0
-
-                 dM=(MLTIn-MagLocTimeMC(iM,iL))/dmlt
+                 dM=  (LonIn            -MagLonMC(iM,iL)) / &
+                      (MagLonMC(iM+1,iL)-MagLonMC(iM,iL))
 
                  dL=(LatIn        -MagLatMC(iM,iL))/&
                     (MagLatMC(iM,iL+1)-MagLatMC(iM,iL))
@@ -408,8 +399,10 @@ subroutine get_dynamo_potential(mlts, lats, pot)
 
         if (.not.IsFound) then 
            write(*,*) "Could not find point : ", &
-                LatIn, lats(iLon, iLat), MLTIn, mlts(iLon, iLat)
+                LatIn, lats(iLon, iLat), LonIn, lons(iLon, iLat)
+
         endif
+
 
      enddo
 
