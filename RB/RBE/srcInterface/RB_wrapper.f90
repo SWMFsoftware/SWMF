@@ -11,7 +11,8 @@ subroutine RB_set_param(CompInfo, TypeAction)
   use CON_comp_info
   use ModUtilities
   use ModReadParam
-
+  use CON_coupler, ONLY: Couple_CC, GM_, RB_
+  use rbe_cread2,  ONLY: UseGm
   implicit none
 
   character (len=*), intent(in)     :: TypeAction ! which action to perform
@@ -25,6 +26,9 @@ subroutine RB_set_param(CompInfo, TypeAction)
   integer :: iProc, nProc, iComm
 
   !------------------------------------------------------------------------
+
+  UseGm = Couple_CC(GM_, RB_) % DoThis
+  
   !if(iProc>=0)then
   !   call RB_write_prefix;  
   !   write(iUnitOut,*) NameSub,' TypeAction= ',TypeAction, &
@@ -113,6 +117,7 @@ subroutine RB_init_session(iSession, TimeSimulation)
   use rbe_constant
   use rbe_cread2
   use rbe_cgrid
+
   implicit none
 
   integer,  intent(in) :: iSession         ! session number (starting from 1)
@@ -187,11 +192,10 @@ end subroutine RB_save_restart
 
 subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
             BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
-  
   use ModGmRb
-  use rbe_grid,ONLY: nLat => ir, nLon => ip
+  use rbe_grid,    ONLY: nLat => ir, nLon => ip
   use rbe_constant,ONLY: rEarth => re
-  
+  use rbe_cread2,  ONLY: xnswa,vswa,bxw,byw,bzw,nsw,iyear,iday
   implicit none
 
   integer, intent(in) :: iSizeIn, jSizeIn, nIntegralIn
@@ -246,10 +250,18 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   StateLine_VI(3,:) = StateLine_VI(3,:) / rEarth ! m --> Earth Radii
 
   !Solar wind values
-  StateIntegral_IIV(1,:,4) = StateIntegral_IIV(1,:,4)*1.0e-6      !m^-3 -->/cc
-  StateIntegral_IIV(2,:,4) = abs(StateIntegral_IIV(2,:,4))*1.0e-3 !m/s-->km/s
-  StateIntegral_IIV(3,:,4) = abs(StateIntegral_IIV(3,:,4))*1.0e-3 !m/s-->km/s
-  StateIntegral_IIV(4,:,4) = abs(StateIntegral_IIV(4,:,4))*1.0e-3 !m/s-->km/s
+  xnswa(1) = Integral_IIV(1,1,4)*1.0e-6                   !m^-3 -->/cc
+  vswa (1) = sqrt(sum(Integral_IIV(2:4,1,4)**2.0))*1.0e-3 !m/s-->km/s
+  
+  bxw(1) = Integral_IIV(5,1,4)*1.0e9      !T --> nT
+  byw(1) = Integral_IIV(6,1,4)*1.0e9      !T --> nT
+  bzw(1) = Integral_IIV(7,1,4)*1.0e9      !T --> nT
+
+  nsw = 1
+  
+  iyear=2002
+  iday=1
+    
 
   ! create an index array on the first call
   if (IsFirstCall) then
