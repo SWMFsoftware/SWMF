@@ -116,7 +116,7 @@ module rbe_cread2
        iprint,ntime,iconvect,init,il,ie,iplsp
   character (len=8)::  storm
 
-  logical :: IsStandAlone=.false.
+  logical :: IsStandAlone=.false.,UseGm=.false.
 end module rbe_cread2
 !=============================================================================
 module rbe_cgrid
@@ -219,9 +219,8 @@ subroutine rbe_init
      call timing_stop('rbe_grids')
   endif
   call timing_start('rbe_field')
-  call fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,&
-       phi,w,si,xmass,xme,xmp,dsth,tdst,byw,bzw,timf,xnswa,vswa,&
-       tsw,ndst,nimf,nsw,js,iyear,iday,imod)
+  call fieldpara(t,dt,c,q,rc,re,xlati,xmlt,&
+       phi,w,si,xmass,xme,xmp)
   call timing_stop('rbe_field')
   call timing_start('rbe_initial')
   call initial(itype,ekev,xjac,ro,gride,c,xmass,d4,js,irm,&
@@ -231,15 +230,14 @@ subroutine rbe_init
 
   call timing_start('rbe_convection')
   call convection(t,tstart,ps,xlati,phi,dphi,re,&
-       rc,xme,xnsw0,vsw0,Bx0,By0,Bz0,nimf,timf,&
-       bxw,byw,bzw,nsw,tsw,xnswa,vswa,iconvect,itype)
+       rc,xme,xnsw0,vsw0,Bx0,By0,Bz0)
   call timing_stop('rbe_convection')
   call timing_start('rbe_vdrift')
   call Vdrift(re,rc,xme,dphi,xlati,ekev,potent,js,irm,iw1,iw2)
   call timing_stop('rbe_vdrift')
   call timing_start('rbe_boundary')
-  call boundary(t,tstart,f2,v,xjac,xmass,ekev,p,xktd,xnd,js,tsw,xnswa,&
-       vswa,nsw,e_max,vswb0,xnswb0,outname,st2,itype,ibset,irm,iba)
+  call boundary(t,tstart,f2,v,xjac,xmass,ekev,p,xktd,xnd,&
+       e_max,vswb0,xnswb0,outname,st2,itype,ibset,irm,iba)
   call timing_stop('rbe_boundary')
 
   ! Setup for the plasmasphere model
@@ -295,9 +293,8 @@ subroutine rbe_run
   if (t.eq.tstart .and. itype.eq.1) call rbe_save_restart
 
   if (t.gt.(tstart-trans).and.ires.eq.1.and.mod(t,tf).eq.0.) then
-     call fieldpara(t,tf,dt,c,q,rc,re,xlati,&
-          xmlt,phi,w,si,xmass,xme,xmp,dsth,tdst,byw,bzw,timf,xnswa,vswa,&
-          tsw,ndst,nimf,nsw,js,iyear,iday,imod)
+     call fieldpara(t,dt,c,q,rc,re,xlati,&
+          xmlt,phi,w,si,xmass,xme,xmp)
      if (iplsp.eq.1) then
         call setfluxtubevol(colat,ir,xmltd,ip+1,volume)
         call setxygrid(colat,ir,xmltd,ip+1,xo,yo,gridoc)
@@ -308,11 +305,10 @@ subroutine rbe_run
 
   if (t.gt.(tstart-trans)) then
      call convection(t,tstart,ps,xlati,phi,dphi,re,&
-          rc,xme,xnsw0,vsw0,Bx0,By0,Bz0,nimf,timf,&
-          bxw,byw,bzw,nsw,tsw,xnswa,vswa,iconvect,itype)
+          rc,xme,xnsw0,vsw0,Bx0,By0,Bz0)
      call Vdrift(re,rc,xme,dphi,xlati,ekev,potent,js,irm,iw1,iw2)
-     call boundary(t,tstart,f2,v,xjac,xmass,ekev,p,xktd,xnd,js,tsw,xnswa,&
-          vswa,nsw,e_max,vswb0,xnswb0,outname,st2,itype,ibset,irm,iba)
+     call boundary(t,tstart,f2,v,xjac,xmass,ekev,p,xktd,xnd,&
+          e_max,vswb0,xnswb0,outname,st2,itype,ibset,irm,iba)
   endif
 
   !        if (js.eq.1.and.t.ge.tstart) call diffusee(f2,dt,ekev,bo,ro,w,dw,
@@ -333,9 +329,8 @@ subroutine rbe_run
   t=t+dt
 
   if (ires.eq.1.and.mod(t,tf).eq.0.) then
-     call fieldpara(t,tf,dt,c,q,rc,re,xlati,&
-          xmlt,phi,w,si,xmass,xme,xmp,dsth,tdst,byw,bzw,timf,xnswa,vswa,&
-          tsw,ndst,nimf,nsw,js,iyear,iday,imod)
+     call fieldpara(t,dt,c,q,rc,re,xlati,&
+          xmlt,phi,w,si,xmass,xme,xmp)
      if (iplsp.eq.1) then
         call setfluxtubevol(colat,ir,xmltd,ip+1,volume)
         call setxygrid(colat,ir,xmltd,ip+1,xo,yo,gridoc)
@@ -345,12 +340,11 @@ subroutine rbe_run
   endif
 
   call convection(t,tstart,ps,xlati,phi,dphi,re,&
-       rc,xme,xnsw0,vsw0,Bx0,By0,Bz0,nimf,timf,&
-       bxw,byw,bzw,nsw,tsw,xnswa,vswa,iconvect,itype)
+       rc,xme,xnsw0,vsw0,Bx0,By0,Bz0)
   call Vdrift(re,rc,xme,dphi,xlati,ekev,potent,js,irm,iw1,iw2)
 
-  call boundary(t,tstart,f2,v,xjac,xmass,ekev,p,xktd,xnd,js,tsw,xnswa,&
-       vswa,nsw,e_max,vswb0,xnswb0,outname,st2,itype,ibset,irm,iba)
+  call boundary(t,tstart,f2,v,xjac,xmass,ekev,p,xktd,xnd,&
+       e_max,vswb0,xnswb0,outname,st2,itype,ibset,irm,iba)
 
   if (js.eq.2) then
      call charexchange(f2,achar,irm,iw1,iw2)  
@@ -475,86 +469,87 @@ subroutine readInputData
   endif
 
   !.....open file to read the SW-IMF data   
-  open(unit=UnitTmp_,file=storm//'.SWIMF',status='old')
-  read(UnitTmp_,*) iyear,iday,ihour        ! time corresponding to t=0
-  read(UnitTmp_,*) swlag    ! time in sec for sw travel from s/c to subsolar point
-
-  read(UnitTmp_,*) nsw
-  read(UnitTmp_,'(a80)') header
-  j=1
-  do i=1,nsw
-     read(UnitTmp_,*) idy,month,iyr,ihr,minu,sec,xnsw1(i),vsw1(i)        
-     call modd_dayno(iyr,month,idy,iday1,j)                     
-     tsw(i)=swlag+(iday1-iday)*86400.+(ihr-ihour)*3600.+minu*60.+sec 
-  enddo
-  do i=1,nsw                   ! smooth solar wind data
-     tti=tsw(i)-tf1
-     ttf=tsw(i)+tf1
-     call locate(tsw,nsw,tti,j1)
-     call locate(tsw,nsw,ttf,j_2)
-     j2=j_2+1
-     if (j1.eq.0) j1=1
-     if (j2.gt.nsw) j2=nsw
-     xnswa(i)=0.
-     vswa(i)=0.
-     do j=j1,j2
-        xnswa(i)=xnswa(i)+xnsw1(j)/(j2-j1+1)       
-        vswa(i)=vswa(i)+vsw1(j)/(j2-j1+1)
+  if (.not. UseGm)then
+     open(unit=UnitTmp_,file=storm//'.SWIMF',status='old')
+     read(UnitTmp_,*) iyear,iday,ihour        ! time corresponding to t=0
+     read(UnitTmp_,*) swlag    ! time in sec for sw travel from s/c to subsolar point
+     
+     read(UnitTmp_,*) nsw
+     read(UnitTmp_,'(a80)') header
+     j=1
+     do i=1,nsw
+        read(UnitTmp_,*) idy,month,iyr,ihr,minu,sec,xnsw1(i),vsw1(i)        
+        call modd_dayno(iyr,month,idy,iday1,j)                     
+        tsw(i)=swlag+(iday1-iday)*86400.+(ihr-ihour)*3600.+minu*60.+sec 
      enddo
-  enddo
-
-  read(UnitTmp_,*) nimf
-  if (nsw.gt.nswmax.or.nimf.gt.nswmax) then
-     write(6,*) 'RBE Error: nsw.gt.nswmax.or.nimf.gt.nswmax'
-     call CON_stop('RBE ERROR')
+     do i=1,nsw                   ! smooth solar wind data
+        tti=tsw(i)-tf1
+        ttf=tsw(i)+tf1
+        call locate(tsw,nsw,tti,j1)
+        call locate(tsw,nsw,ttf,j_2)
+        j2=j_2+1
+        if (j1.eq.0) j1=1
+        if (j2.gt.nsw) j2=nsw
+        xnswa(i)=0.
+        vswa(i)=0.
+        do j=j1,j2
+           xnswa(i)=xnswa(i)+xnsw1(j)/(j2-j1+1)       
+           vswa(i)=vswa(i)+vsw1(j)/(j2-j1+1)
+        enddo
+     enddo
+     
+     read(UnitTmp_,*) nimf
+     if (nsw.gt.nswmax.or.nimf.gt.nswmax) then
+        write(6,*) 'RBE Error: nsw.gt.nswmax.or.nimf.gt.nswmax'
+        call CON_stop('RBE ERROR')
+     endif
+     read(UnitTmp_,'(a80)') header
+     j=1
+     do i=1,nimf
+        read(UnitTmp_,*) idy,month,iyr,ihr,minu,sec,bxw1(i),byw1(i),bzw1(i)
+        call modd_dayno(iyr,month,idy,iday1,j)                     
+        timf(i)=swlag+(iday1-iday)*86400.+(ihr-ihour)*3600.+minu*60.+sec 
+     enddo
+     do i=1,nimf                  ! smooth IMF data
+        tti=timf(i)-tf1
+        ttf=timf(i)+tf1
+        call locate(timf,nimf,tti,j1)
+        call locate(timf,nimf,ttf,j_2)
+        j2=j_2+1
+        if (j1.eq.0) j1=1
+        if (j2.gt.nimf) j2=nimf
+        bxw(i)=0.
+        byw(i)=0.
+        bzw(i)=0.
+        do j=j1,j2
+           bxw(i)=bxw(i)+bxw1(j)/(j2-j1+1)
+           byw(i)=byw(i)+byw1(j)/(j2-j1+1)
+           bzw(i)=bzw(i)+bzw1(j)/(j2-j1+1)
+        enddo
+     enddo
+     close(UnitTmp_)
+     
+     ! Read Dst (symH) data
+     open(unit=UnitTmp_,file=storm//'.symH',status='old')
+     read(UnitTmp_,*) nhour
+     ndst=nhour*60                      ! 1-minute resolution         
+     if (ndst.gt.ndstmax) then
+        print *,'Error: ndst.gt.ndstmax'
+        call CON_stop('RBE ERROR')
+     endif
+     j=1
+     do i=1,nhour
+        read(UnitTmp_,'(14x,2i2,1x,i2,13x,60i6)') month,idy,ihr,isymH
+        call modd_dayno(iyr,month,idy,iday1,j)
+        tdst0=(iday1-iday)*86400.+(ihr-ihour)*3600.
+        do k=1,60
+           m=(i-1)*60+k
+           tdst(m)=tdst0+k*60.+30.
+           dsth(m)=float(isymH(k))
+        enddo
+     enddo
+     close(UnitTmp_)
   endif
-  read(UnitTmp_,'(a80)') header
-  j=1
-  do i=1,nimf
-     read(UnitTmp_,*) idy,month,iyr,ihr,minu,sec,bxw1(i),byw1(i),bzw1(i)
-     call modd_dayno(iyr,month,idy,iday1,j)                     
-     timf(i)=swlag+(iday1-iday)*86400.+(ihr-ihour)*3600.+minu*60.+sec 
-  enddo
-  do i=1,nimf                  ! smooth IMF data
-     tti=timf(i)-tf1
-     ttf=timf(i)+tf1
-     call locate(timf,nimf,tti,j1)
-     call locate(timf,nimf,ttf,j_2)
-     j2=j_2+1
-     if (j1.eq.0) j1=1
-     if (j2.gt.nimf) j2=nimf
-     bxw(i)=0.
-     byw(i)=0.
-     bzw(i)=0.
-     do j=j1,j2
-        bxw(i)=bxw(i)+bxw1(j)/(j2-j1+1)
-        byw(i)=byw(i)+byw1(j)/(j2-j1+1)
-        bzw(i)=bzw(i)+bzw1(j)/(j2-j1+1)
-     enddo
-  enddo
-  close(UnitTmp_)
-
-  ! Read Dst (symH) data
-  open(unit=UnitTmp_,file=storm//'.symH',status='old')
-  read(UnitTmp_,*) nhour
-  ndst=nhour*60                      ! 1-minute resolution         
-  if (ndst.gt.ndstmax) then
-     print *,'Error: ndst.gt.ndstmax'
-     call CON_stop('RBE ERROR')
-  endif
-  j=1
-  do i=1,nhour
-     read(UnitTmp_,'(14x,2i2,1x,i2,13x,60i6)') month,idy,ihr,isymH
-     call modd_dayno(iyr,month,idy,iday1,j)
-     tdst0=(iday1-iday)*86400.+(ihr-ihour)*3600.
-     do k=1,60
-        m=(i-1)*60+k
-        tdst(m)=tdst0+k*60.+30.
-        dsth(m)=float(isymH(k))
-     enddo
-  enddo
-  close(UnitTmp_)
-
 end subroutine readInputData
 
 !***********************************************************************
@@ -687,12 +682,13 @@ end subroutine grids
 ! at mirror point, etc, for given magnetic moment, K and position for a
 ! given magnetic field configuration.             
 !***********************************************************************
-subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
-     xmass,xme,xmp,dsth,tdst,byw,bzw,timf,xnswa,vswa,tsw,&
-     ndst,nimf,nsw,js,iyear,iday,imod)
+subroutine fieldpara(t,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
+     xmass,xme,xmp)
   use rbe_grid
   use ModSort, ONLY: sort_quick
   use rbe_cfield
+  use rbe_cread2, ONLY: tf,dsth,tdst,byw,bzw,timf,xnswa,vswa,tsw,&
+       ndst,nimf,nsw,js,iyear,iday,imod,UseGm
 
   common/geopack/aa(10),sps,cps,bb(3),ps,cc(11),kk(2),dd(8)
 
@@ -701,9 +697,8 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
   real time1,time2
   real xlati(0:ir+1),phi(ip),w(0:iw+1),si(0:ik+1),xmass(ns),&
        si3(np),bm1(np),rm(np),rs(np),xa(np),ya(np),za(np),aza(np),dss(np),&
-       yint(np),yint1(np),yint2(np),h3(np),bs(np),bba(np),dsth(ndst),&
-       tdst(ndst),byw(nimf),bzw(nimf),timf(nimf),xnswa(nsw),vswa(nsw),&
-       tsw(nsw),x1(ir),xmlt(ip),bme(0:ir,ip,ik),xli(0:ir),x0(nd),xend(nd),&
+       yint(np),yint1(np),yint2(np),h3(np),bs(np),bba(np),&
+       x1(ir),xmlt(ip),bme(0:ir,ip,ik),xli(0:ir),x0(nd),xend(nd),&
        f(nd),xwrk(4,nd),ra(np),dssa(np),tya3(np)
   integer ind(np)
   ! coeff and integrals in Taylor expansion
@@ -731,25 +726,26 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
   n5=16                ! no. of point below the surface of the Earth
   npmax=np-2*n5
 
-  !  Determine parmod
-  call TsyParmod(t,tf,tsw,xnswa,vswa,nsw,tdst,dsth,ndst,timf,byw,bzw,&
-       nimf,xmp,imod,parmod)
-
-  !  Call recalc to calculate the dipole tilt
-  isec=mod(ifix(t),60)
-  min1=ifix(t)/60
-  minu=mod(min1,60)
-  ihour1=ifix(t)/3600
-  ihour=mod(ihour1,24)
-  iday1=iday+ifix(t)/86400
-  if (imod.le.2) then     
-     ps=0.                ! force ps = 0 when using Tsy models
-     cps=cos(ps)
-     sps=sin(ps)
-  else
-     call recalc(iyear,iday1,ihour,min,isec)
+  if (imod <= 2) then
+     !  Determine parmod
+     call TsyParmod(t,tf,tsw,xnswa,vswa,nsw,tdst,dsth,ndst,timf,byw,bzw,&
+          nimf,xmp,imod,parmod)
+     
+     !  Call recalc to calculate the dipole tilt
+     isec=mod(ifix(t),60)
+     min1=ifix(t)/60
+     minu=mod(min1,60)
+     ihour1=ifix(t)/3600
+     ihour=mod(ihour1,24)
+     iday1=iday+ifix(t)/86400
+     if (imod.le.2) then     
+        ps=0.                ! force ps = 0 when using Tsy models
+        cps=cos(ps)
+        sps=sin(ps)
+     else
+        call recalc(iyear,iday1,ihour,min,isec)
+     endif
   endif
-
   !  Start field line tracing.  
   call timing_start('rbe_trace')
   LONGITUDE: do j=1,ip
@@ -1498,13 +1494,13 @@ end subroutine diffusea_a
 !  Routine calculates the velocities of convection
 !****************************************************************************
 subroutine convection(t,tstart,ps,xlati,phi,dphi,re,&
-     rc,xme,xnsw0,vsw0,Bx0,By0,Bz0,nimf,timf,&
-     bxw,byw,bzw,nsw,tsw,xnswa,vswa,iconvect,itype)
+     rc,xme,xnsw0,vsw0,Bx0,By0,Bz0)
 
   use rbe_convect
-
-  real xlati(0:ir+1),phi(ip),timf(nimf),bxw(nimf),byw(nimf),bzw(nimf),&
-       tsw(nsw),xnswa(nsw),vswa(nsw)
+  use rbe_cread2,ONLY:nimf,timf,&
+       bxw,byw,bzw,nsw,tsw,xnswa,vswa,iconvect,itype,UseGm
+  
+  real xlati(0:ir+1),phi(ip)
   logical UseAL
 
   pi=acos(-1.)
@@ -1521,17 +1517,26 @@ subroutine convection(t,tstart,ps,xlati,phi,dphi,re,&
         by=By0
         bz=Bz0
      else
-        t1=t
-        if (t1.lt.tsw(1)) t1=tsw(1)
-        if (t1.gt.tsw(nsw)) t1=tsw(nsw)
-        call lintp(tsw,xnswa,nsw,t1,xnsw)
-        call lintp(tsw,vswa,nsw,t1,vsw)
-        t1=t
-        if (t1.lt.timf(1)) t1=timf(1)
-        if (t1.gt.timf(nimf)) t1=timf(nimf)
-        call lintp(timf,bxw,nimf,t1,bx)
-        call lintp(timf,byw,nimf,t1,by)
-        call lintp(timf,bzw,nimf,t1,bz)
+        if (UseGm)then
+           xnsw=xnswa(1)
+           vsw=vswa(1)
+           bx=bxw(1)
+           by=byw(1)
+           bz=bzw(1)
+           t1=t
+        else
+           t1=t
+           if (t1.lt.tsw(1)) t1=tsw(1)
+           if (t1.gt.tsw(nsw)) t1=tsw(nsw)
+           call lintp(tsw,xnswa(1:nsw),nsw,t1,xnsw)
+           call lintp(tsw,vswa(1:nsw),nsw,t1,vsw)
+           t1=t
+           if (t1.lt.timf(1)) t1=timf(1)
+           if (t1.gt.timf(nimf)) t1=timf(nimf)
+           call lintp(timf,bxw(1:nimf),nimf,t1,bx)
+           call lintp(timf,byw(1:nimf),nimf,t1,by)
+           call lintp(timf,bzw(1:nimf),nimf,t1,bz)
+        endif
      endif
      angle=atan2(by,bz)*180./pi       ! degrees from northward toward +Y
      Bt=sqrt(by*by+bz*bz)             ! Magnitude of IMF in Y-Z plane in nT
@@ -1769,14 +1774,15 @@ end subroutine initial
 !  Rountine finds the instantaneous boundary conditions on the dayside and
 !  nightside side.
 !***************************************************************************
-subroutine boundary(t,tstart,f2,v,xjac,xmass,ekev,p,xktd,xnd,js,tsw,xnswa,&
-     vswa,nsw,e_max,vswb0,xnswb0,outname,st2,itype,ibset,irm,iba)
+subroutine boundary(t,tstart,f2,v,xjac,xmass,ekev,p,xktd,xnd,e_max,&
+     vswb0,xnswb0,outname,st2,itype,ibset,irm,iba)
 
   use rbe_cboundary
+  use rbe_cread2, ONLY:js,tsw,xnswa,vswa,nsw,UseGm 
   use ModIoUnit, ONLY: UnitTmp_
 
   real v(ir,ip,iw,ik),xjac(ir,iw),ekev(0:ir,ip,iw,ik),p(ir,ip,iw,ik),&
-       xmass(ns),f2(ir,ip,iw,ik),tsw(nsw),xnswa(nsw),vswa(nsw)
+       xmass(ns),f2(ir,ip,iw,ik)
   integer iba(ip),irm(ip)
   character outname*8,st2*2
 
@@ -1794,11 +1800,16 @@ subroutine boundary(t,tstart,f2,v,xjac,xmass,ekev,p,xktd,xnd,js,tsw,xnswa,&
      vswb=vswb0
      xnswb=xnswb0
   else
-     t1=t-2.*3600.                             ! 2 hours lag from SW to PS
-     if (t1.lt.tsw(1)) t1=tsw(1)
-     if (t1.gt.tsw(nsw)) t1=tsw(nsw)
-     call lintp(tsw,xnswa,nsw,t1,xnswb)
-     call lintp(tsw,vswa,nsw,t1,vswb)       ! vsw in km/s
+     if (UseGM) then
+        xnswb = xnswa(1)
+        vswb  = vswa(1)
+     else
+        t1=t-2.*3600.                             ! 2 hours lag from SW to PS
+        if (t1.lt.tsw(1)) t1=tsw(1)
+        if (t1.gt.tsw(nsw)) t1=tsw(nsw)
+        call lintp(tsw,xnswa(1:nsw),nsw,t1,xnswb)
+        call lintp(tsw,vswa(1:nsw),nsw,t1,vswb)       ! vsw in km/s
+     endif
   endif
   xnn=(0.02*xnswb+0.316)*sqrt(xmass(js)/xmass(2))*1.e6      ! xnn in m^-3
   if (js.eq.1) xktn=0.016*vswb-2.4          ! e- kT or Eo in keV
