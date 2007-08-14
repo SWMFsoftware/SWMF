@@ -73,7 +73,7 @@ subroutine polar_wind
 
         CALL PW_set_upper_bc
         
-        CALL PW_iheat_flux
+!        CALL PW_iheat_flux
         
         CALL PW_eheat_flux
         
@@ -112,7 +112,7 @@ subroutine polar_wind
      
  
      If (IsFullyImplicit) then
-        CALL PW_iheat_flux
+ !       CALL PW_iheat_flux
 
         CALL PW_eheat_flux
         
@@ -178,6 +178,7 @@ contains
                  State_GV(-1:nDim+2,iRho_I(iIon):iP_I(iIon)),&
                  Source_CV(:,iRho_I(iIon)), Source_CV(:,iU_I(iIon)),&
                  Source_CV(:,iP_I(iIon)),  &
+                 HeatCon_GI(0:nCell+1,iIon), &
                  NewState_GV(-1:nDim+2,iRho_I(iIon):iP_I(iIon)))
             !get T from p and rho
             NewState_GV(1:nDim,iT_I(iIon))=&
