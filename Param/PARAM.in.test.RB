@@ -39,7 +39,7 @@ F			UseRotation
 2000f223	OutName
 
 #RESTART
-1		iType
+F		IsRestart
 
 #TIMESTEP
 3.0		Dt
@@ -48,23 +48,23 @@ F			UseRotation
 0.0		tStart
 
 #SPECIES
-1		js
+e		NameSpecies
 
 #STARTUPTIME
 0.0		trans
 
 #BMODEL
-3		iModel
-1		FixedB
+MHD		NameModel
+F		UseFixedB
 
-#CONVECT
+#IEMODEL
 1		iConvect
 
-#STORM
+#INPUTDATA
 2000_223
 
 #PLASMASPHERE
-0		PlasmaSphere
+F		UsePlasmaSphere
 
 #END_COMP RB ###############################################################
 

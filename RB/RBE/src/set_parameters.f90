@@ -13,7 +13,8 @@ subroutine RB_set_parameters(NameAction)
   character (len=100)           :: NameCommand
   character (len=*), intent(in) :: NameAction
   character (len=*), parameter  :: NameSub = 'RB_set_parameters'
-
+  logical :: IsRestart,UseFixedB,UsePlasmaSphere
+  character (len=100) :: NameSpecies,NameModel
   !\
   ! Description:
   ! This subroutine gets the inputs for RBE
@@ -35,26 +36,61 @@ subroutine RB_set_parameters(NameAction)
         call read_var('DtSavePlot',tint)   ! output results every tint seconds
         call read_var('OutName',OutName)
      case('#RESTART')
-        call read_var('iType',iType)       ! 1=initial run,  2=continuous run
+        call read_var('IsRestart',IsRestart) !T:Continuous run
+                                             !F:Initial run
+        if (IsRestart) then
+           iType = 2
+        else
+           iType = 1
+        endif
      case('#TIMESTEP')
         call read_var('Dt',Dt)             ! time step in s. 
                                            ! Summer 2006: read dt from *.dat
      case('#STARTTIME')
         call read_var('tStart',tStart)
      case('#SPECIES')
-        call read_var('js',js)             ! species: 1=RB e-, 2=RB H+
+        call read_var('NameSpecies',NameSpecies)
+        if (NameSpecies == 'e') then       ! species: 1=RB e-, 2=RB H+
+           js=1
+        elseif(NameSpecies == 'H')then
+           js =2
+        else
+           call con_stop('Error: Species not found')
+        endif
      case('#STARTUPTIME')
         call read_var('tStartup',trans)    ! startup time in sec when itype=1
      case('#BMODEL')
-        call read_var('iModel',iMod)       ! 1=t96_01, 2=t0UnitTmp__s, 3=MHD
-        call read_var('FixedB',ires)       ! 0=fixed B config or 
-                                           ! 1=changing B config
-     case('#CONVECT')
+        
+        call read_var('NameModel',NameModel)!t96,t04,MHD
+        call read_var('UseFixedB',UseFixedB)!T=fixed B config or 
+                                            !F=changing B config
+        if (NameModel == 't96') then
+           iMod=1
+        elseif(NameModel == 't04') then
+           iMod=2
+        elseif(NameModel == 'MHD')then
+           iMod=3
+        else
+           call con_stop('Error: Model not found') 
+        endif
+        
+        if (UseFixedB) then
+           ires = 0
+        else
+           ires = 1
+        endif
+       
+     case('#IEMODEL')
         call read_var('iConvect',iConvect) ! 1=Weimer, 2=MHD
-     case('#STORM')
+     case('#INPUTDATA')
         call read_var('NameStorm',storm)
      case('#PLASMASPHERE')
-        call read_var('PlasmaSphere',iplsp)! 0=no plasmasphere, 1=plasmasphere
+        call read_var('UsePlasmaSphere',UsePlasmaSphere)
+        if(UsePlasmaSphere)then
+           iplsp=1
+        else
+           iplsp=0
+        endif
 
      endselect
 
