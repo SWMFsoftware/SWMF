@@ -845,7 +845,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   write(*,*) "prehepta"
   ! A -> LU
 
-  write(*,*) "pre : ",
+  write(*,*) "pre : ", &
        sum(b),sum(abs(b)),sum(x),sum(d_I),sum(e_I),sum(f_I),&
        sum(e1_I),sum(f1_I)
 
