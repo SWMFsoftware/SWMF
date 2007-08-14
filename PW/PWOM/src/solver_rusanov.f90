@@ -35,14 +35,14 @@ subroutine rusanov_solver(iIon, nCell,&
      allocate(LeftRho_F(nCell+1), LeftU_F(nCell+1), LeftP_F(nCell+1),&
           RightRho_F(nCell+1), RightU_F(nCell+1), RightP_F(nCell+1),&
           RhoFlux_F(nCell+1), RhoUFlux_F(nCell+1), eFlux_F(nCell+1),&
-          T_G(-1:nCell+1),Heat1_G(-1:nCell+1),HeatSource_C(nCell), &
+          T_G(-1:nCell+2),Heat1_G(-1:nCell+1),HeatSource_C(nCell), &
           eTotalSource_C(nCell))
   endif
   eTotalSource_C = eSource_C
 
   ! get temperature from pressure and density, and calculate heat flow
   ! source term for the fully implicit case.
-  T_G(-1:nCell+1)=OldState_GV(-1:nCell+1,3)/Rgas/OldState_GV(-1:nCell+1,1)
+  T_G(-1:nCell+2)=OldState_GV(-1:nCell+2,3)/Rgas/OldState_GV(-1:nCell+2,1)
   
   if (IsFullyImplicit)then
      do iCell = 0,nCell+1
