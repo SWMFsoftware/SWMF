@@ -10,7 +10,7 @@ module ModPwImplicit
   subroutine PW_calc_residual(nOrder, DtIn, nCell, nVar, StateIn_GV, Resid_CV)
 
     use ModCommonVariables, ONLY: iRho_I,iU_I,iP_I,iT_I,Source_CV,RGAS_I, &
-         MassElecIon_I,nIon,RhoE_,uE_,Te_,pE_,Curr
+         MassElecIon_I,nIon,RhoE_,uE_,Te_,pE_,Curr,HeatCon_GI
     implicit none
     integer, intent(in) :: nOrder, nCell, nVar
     real,    intent(in) :: DtIn
@@ -74,7 +74,8 @@ module ModPwImplicit
           call rusanov_solver(iIon,nCell,RGAS_I(iIon),DtIn,   &
                StateIn_GV(-1:nCell+2,iRho(iIon):iP(iIon)),&
                Source_CV(1:nCell,iRho_I(iIon)), Source_CV(1:nCell,iU_I(iIon)),&
-               Source_CV(1:nCell,iP_I(iIon)),  &
+               Source_CV(1:nCell,iP_I(iIon)),&
+               HeatCon_GI(0:nCell+1,iIon), &
                NewState_GV(-1:nCell+2,iRho(iIon):iP(iIon)))
        enddo
 !    endif
@@ -110,21 +111,42 @@ module ModPwImplicit
        T_C(iIon) = &
             State_GV(nCell,iP(iIon))/Rgas_I(iIon)/State_GV(nCell,iRho(iIon))
 
-       State_GV(nCell+1:nCell+2,iU(iIon)) = State_GV(nCell,iU(iIon))
+       !State_GV(nCell+1:nCell+2,iU(iIon)) = State_GV(nCell,iU(iIon))
               
        ! cBoltzmann [cgs] = 1.0e7 * cBoltzmann [SI] 
        ScaleHeight_I(iIon) =&
             1.0e7*cBoltzmann*( T_C(iIon)+Te )&
             /(abs(Gravty(nCell))*Mass_I(iIon))
 
-       State_GV(nCell+1:nCell+2,iP(iIon)) = &
-            State_GV(nCell,iP(iIon))*exp(-DrBnd/ScaleHeight_I(iIon))
+       !State_GV(nCell+1:nCell+2,iP(iIon)) = &
+       !     State_GV(nCell,iP(iIon))*0.99999!*exp(-DrBnd/ScaleHeight_I(iIon))
 
+       State_GV(nCell+1,iP(iIon)) = &
+            State_GV(nCell  ,iP(iIon))*exp(-DrBnd/ScaleHeight_I(iIon))
+       
+       State_GV(nCell+2,iP(iIon)) = &
+            2.0*State_GV(nCell+1  ,iP(iIon))-State_GV(nCell,iP(iIon))
+
+!       State_GV(nCell+2,iP(iIon)) = &
+!            State_GV(nCell+1,iP(iIon))*.99999999999!*exp(-DrBnd/ScaleHeight_I(iIon))*0.1
+       
+       !set density bv to satisfy EOS
        State_GV(nCell+1,iRho(iIon)) = &
             State_GV(nCell+1,iP(iIon)) / Rgas_I(iIon) / T_C(iIon)
 
        State_GV(nCell+2,iRho(iIon)) = &
             State_GV(nCell+2,iP(iIon)) / Rgas_I(iIon) / T_C(iIon)
+
+       !set velocity bc to conserve flux Rho(n+1) * U(n+1) = Rho(n) * U(n)
+       State_GV(nCell+1,iU(iIon)) = &
+            State_GV(nCell,iRho(iIon))* State_GV(nCell,iU(iIon))&
+            /State_GV(nCell+1,iRho(iIon))
+       State_GV(nCell+2,iU(iIon)) = &
+            State_GV(nCell+1,iRho(iIon))* State_GV(nCell+1,iU(iIon))&
+            /State_GV(nCell+2,iRho(iIon))
+       
+       
+
     enddo
 
 
