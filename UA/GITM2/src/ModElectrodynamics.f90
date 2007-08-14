@@ -16,7 +16,7 @@ module ModElectrodynamics
   ! This is the field-line integral of the conductance and divergence
   real, dimension(-1:nLons+2,-1:nLats+2) :: &
        SigmaPP, SigmaLL, SigmaHH, SigmaCC, SigmaPL, SigmaLP, &
-       KDpm, KDlm
+       KDpm, KDlm, Kpm, Klm
 
   ! This is the field aligned integral in magnetic coordinates
   real, dimension(:,:), allocatable :: DivJuAltMC
@@ -32,8 +32,8 @@ module ModElectrodynamics
   real, dimension(:,:), allocatable :: SigmaPLMC
   real, dimension(:,:), allocatable :: SigmaLPMC
 
-  real, dimension(:,:), allocatable :: KDpmMC
-  real, dimension(:,:), allocatable :: KDlmMC
+  real, dimension(:,:), allocatable :: KDpmMC, kpmMC
+  real, dimension(:,:), allocatable :: KDlmMC, klmMC
 
   ! These are the magnetic coordinates
   real, dimension(:,:), allocatable :: MagLatMC
@@ -49,10 +49,14 @@ module ModElectrodynamics
        solver_a_mc, solver_b_mc, solver_c_mc, solver_d_mc, solver_e_mc, &
        solver_s_mc, deltalmc, deltapmc, &
        dSigmaLLdlMC, dSigmaLPdlMC, dSigmaPLdpMC, dSigmaPPdpMC, &
-       dKDpmdpMC, dKDlmdlMC, DynamoPotentialMC
+       dKDpmdpMC, dKDlmdlMC, DynamoPotentialMC, &
+       dKpmdpMC, dKlmdlMC
 
   real, dimension(:,:), allocatable :: oldpotmc
   
+   real, dimension(:), allocatable :: & 
+        x,y,rhs,b,d_I,e_I,e1_I,f_I,f1_I
+
   integer :: nMagLats = 90  ! 2 degrees
   integer :: nMagLons = 72  ! 5 degrees
 

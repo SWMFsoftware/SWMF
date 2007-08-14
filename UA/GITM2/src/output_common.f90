@@ -211,7 +211,7 @@ subroutine output(dir, iBlock, iOutputType)
 
   !! Now write the header file
 
-  if (iProc == 0 .and. iBlock == nBlocks) then 
+  if ((iProc == 0 .and. iBlock == nBlocks) .or. iOutputType == -1) then 
 
      if (iOutputType == -1) then
         open(unit=iOutputUnit_, &
@@ -775,7 +775,7 @@ subroutine output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
      enddo
 
      iOff = 8+nSpeciesTotal
-     do iSpecies = 1, nSpecies
+     do iSpecies = 1, nIons
         Tmp = VerticalVelocity(0:nLons+1,0:nLats+1,iAlt,iSpecies,iBlock)
         Vars(iOff+iSpecies) = inter(Tmp,iiLon,iiLat,rlon,rlat)
      enddo
@@ -791,7 +791,7 @@ subroutine output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
      Vars(iOff)   = inter(Tmp,iiLon,iiLat,rlon,rlat)
 
      iOff = iOff+1
-     Tmp = ITemperature(0:nLons+1,0:nLats+1,iAlt,iBlock)
+     Tmp = iTemperature(0:nLons+1,0:nLats+1,iAlt,iBlock)
      Vars(iOff) = inter(Tmp,iiLon,iiLat,rlon,rlat)
 
      iOff = iOff+1
