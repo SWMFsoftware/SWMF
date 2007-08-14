@@ -7,24 +7,27 @@
 subroutine rusanov_solver(iIon, nCell,&
      Rgas, DtIn,&
      OldState_GV,&
-     RhoSource_C, RhoUSource_C, eSource_C, &
-     UpdateState_GV)
+     RhoSource_C, RhoUSource_C, eSource_C,&
+     HeatCon_G,UpdateState_GV)
   
   use ModCommonVariables
+  use ModPWOM, ONLY: IsFullyImplicit 
   implicit none
 
   integer, intent(in)      :: iIon,nCell
   real, intent(in)         :: Rgas,DtIn
   real, intent(in)         :: OldState_GV(-1:nCell+2,3)
   real, dimension(nCell), intent(in)  :: RhoSource_C, RhoUSource_C, eSource_C
-  real, intent(out)        :: UpdateState_GV(-1:nCell+2,3)
-
+  real, intent(in)  :: HeatCon_G(0:nCell+1)
+  real,          intent(out) :: UpdateState_GV(-1:nCell+2,3)
+  
+  
   integer,parameter    :: Rho_=1,U_=2,P_=3,T_=4
   real, allocatable    :: LeftRho_F(:), LeftU_F(:), LeftP_F(:)
   real, allocatable    :: RightRho_F(:), RightU_F(:), RightP_F(:)
   real, allocatable    :: RhoFlux_F(:), RhoUFlux_F(:), eFlux_F(:)
-  real, allocatable    :: T_C(:)
-  integer :: i
+  real, allocatable    :: T_G(:),Heat1_G(:),HeatSource_C(:),eTotalSource_C(:)
+  integer :: i,iCell
   !---------------------------------------------------------------------------
 
 
@@ -32,15 +35,33 @@ subroutine rusanov_solver(iIon, nCell,&
      allocate(LeftRho_F(nCell+1), LeftU_F(nCell+1), LeftP_F(nCell+1),&
           RightRho_F(nCell+1), RightU_F(nCell+1), RightP_F(nCell+1),&
           RhoFlux_F(nCell+1), RhoUFlux_F(nCell+1), eFlux_F(nCell+1),&
-          T_C(nCell))
+          T_G(-1:nCell+1),Heat1_G(-1:nCell+1),HeatSource_C(nCell), &
+          eTotalSource_C(nCell))
+  endif
+  eTotalSource_C = eSource_C
+
+  ! get temperature from pressure and density, and calculate heat flow
+  ! source term for the fully implicit case.
+  T_G(-1:nCell+1)=OldState_GV(-1:nCell+1,3)/Rgas/OldState_GV(-1:nCell+1,1)
+  
+  if (IsFullyImplicit)then
+     do iCell = 0,nCell+1
+        Heat1_G(iCell) = &
+             HeatCon_G(iCell) * (T_G(iCell+1)-T_G(iCell-1)) / (2.0*DrBnd)
+     enddo
+     do iCell = 1,nCell
+        HeatSource_C(iCell) = &
+             (Heat1_G(iCell+1) - Heat1_G(iCell-1)) / (2.0*DrBnd)
+     enddo
+     ! Add heat flux to energy source
+     eTotalSource_C = eSource_C+HeatSource_C
   endif
   
-  T_C(1:nCell)=OldState_GV(1:nCell,3)/Rgas/OldState_GV(1:nCell,1)
-
+  ! Save the old state
   UpdateState_GV=OldState_GV
 
   ! get the face values
-  call calc_facevalues(nCell, OldState_GV(-1:nCell+2,Rho_), LeftRho_F, RightRho_F)
+  call calc_facevalues(nCell,OldState_GV(-1:nCell+2,Rho_),LeftRho_F,RightRho_F)
 
   call calc_facevalues(nCell, OldState_GV(-1:nCell+2,U_), LeftU_F, RightU_F)
 
@@ -56,16 +77,17 @@ subroutine rusanov_solver(iIon, nCell,&
   call update_state( iIon,nCell,&
        Rgas, DtIn,&
        OldState_GV(1:nCell,Rho_), OldState_GV(1:nCell,U_), &
-       OldState_GV(1:nCell,P_), T_C(1:nCell), &
+       OldState_GV(1:nCell,P_), T_G(1:nCell), &
        LeftRho_F, RightRho_F,LeftU_F, RightU_F,LeftP_F, RightP_F, &
        RhoFlux_F, RhoUFlux_F, eFlux_F, &
-       RhoSource_C, RhoUSource_C, eSource_C, &
+       RhoSource_C, RhoUSource_C, eTotalSource_C,&
        UpdateState_GV(1:nCell,Rho_), UpdateState_GV(1:nCell,U_), &
-       UpdateState_GV(1:nCell,P_), T_C)
+       UpdateState_GV(1:nCell,P_), T_G(1:nCell))
 
       deallocate(LeftRho_F, LeftU_F, LeftP_F,&
           RightRho_F, RightU_F, RightP_F,&
-          RhoFlux_F, RhoUFlux_F, eFlux_F,T_C)
+          RhoFlux_F, RhoUFlux_F, eFlux_F,T_G,Heat1_G,HeatSource_C,&
+          eTotalSource_C)
 
 end subroutine rusanov_solver
 
@@ -123,7 +145,7 @@ subroutine update_state( iIon,nCell,&
      OldRho_C, OldU_C, OldP_C, OldT_C, &
      LeftRho_F, RightRho_F,LeftU_F, RightU_F,LeftP_F, RightP_F, &
      RhoFlux_F, RhoUFlux_F, eFlux_F, &
-     RhoSource_C, RhoUSource_C, eSource_C, &
+     RhoSource_C, RhoUSource_C, eSource_C,&
      NewRho_C, NewU_C, NewP_C, NewT_C)
 
   use ModCommonVariables
