@@ -789,7 +789,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
        dSigmaPPdpMC / cos(MagLatMC*pi/180) + dSigmaLPdlMC)
 !  solver_s_mc =  4 * deltalmc**2 * deltapmc**2 * (RBody) * &
 !       (dkdlmdlMC + dKDpmdpMC - dklmdlMC - dkpmdpMC)
-  solver_s_mc = - 4 * deltalmc**2 * deltapmc**2 * (RBody) * &
+  solver_s_mc = 4 * deltalmc**2 * deltapmc**2 * (RBody) * &
        (dkdlmdlMC + dKDpmdpMC)
 
 !  solver_d_mc(:,42:49) = 0.0
@@ -801,24 +801,24 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   ! Fill in the diagonal vectors
   iI = 0
 
-  nX = nMagLats * nMagLons
+  nX = (nMagLats-2) * (nMagLons-1)
 
   allocate( x(nX), y(nX), rhs(nX), b(nX), &
        d_I(nX), e_I(nX), e1_I(nX), f_I(nX), f1_I(nX) )
 
   do iLat=2,nMagLats-1
-     do iLon=1,nMagLons
+     do iLon=2,nMagLons
 
         iI = iI + 1
 
         ! Right hand side
-        b(iI)    = solver_s_mc(iLon, iLat)
+        b(iI)    = -solver_s_mc(iLon, iLat)
 
         ! Initial Guess
         x(iI)    = DynamoPotentialMC(iLon, iLat)
 
         ! i,j
-        d_I(iI)  = 2*solver_a_mc(iLon, iLat)+2*solver_b_mc(iLon, iLat)
+        d_I(iI)  = -2*(solver_a_mc(iLon, iLat)+solver_b_mc(iLon, iLat))
 
         ! ilon-1, ilat
         e_I(iI)  = solver_a_mc(iLon, iLat)-solver_d_mc(iLon, iLat)
@@ -834,7 +834,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
         if (iLat == 2)          e1_I(iI) = 0.0
         if (iLat == nMagLats-1) f1_I(iI) = 0.0
-        if (iLon == 1)          e_I(iI)  = 0.0
+        if (iLon == 2)          e_I(iI)  = 0.0
         if (iLon == nMagLons)   f_I(iI)  = 0.0
 
      end do
@@ -842,26 +842,24 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   Rhs = b
 
-  write(*,*) "prehepta"
-  ! A -> LU
+!!!  write(*,*) "prehepta"
+!!!  ! A -> LU
+!!!
+!!!  write(*,*) "pre : ", &
+!!!       sum(b),sum(abs(b)),sum(x),sum(d_I),sum(e_I),sum(f_I),&
+!!!       sum(e1_I),sum(f1_I)
+!!!
+!!!  call prehepta(nX,1,nMagLons,nX,-0.5,d_I,e_I,f_I,e1_I,f1_I)
+!!!
+!!!  ! Left side preconditioning: U^{-1}.L^{-1}.A.x = U^{-1}.L^{-1}.rhs
+!!!
+!!!  ! rhs'=U^{-1}.L^{-1}.rhs
+!!!  write(*,*) "Lhepta"
+!!!  call Lhepta(       nX,1,nMagLons,nX,b,d_I,e_I,e1_I)
+!!!  write(*,*) "Uhepta"
+!!!  call Uhepta(.true.,nX,1,nMagLons,nX,b,    f_I,f1_I)
 
-  write(*,*) "pre : ", &
-       sum(b),sum(abs(b)),sum(x),sum(d_I),sum(e_I),sum(f_I),&
-       sum(e1_I),sum(f1_I)
-
-
-
-  call prehepta(nX,1,nMagLons,nX,-0.5,d_I,e_I,f_I,e1_I,f1_I)
-
-  ! Left side preconditioning: U^{-1}.L^{-1}.A.x = U^{-1}.L^{-1}.rhs
-
-  ! rhs'=U^{-1}.L^{-1}.rhs
-  write(*,*) "Lhepta"
-  call Lhepta(       nX,1,nMagLons,nX,b,d_I,e_I,e1_I)
-  write(*,*) "Uhepta"
-  call Uhepta(.true.,nX,1,nMagLons,nX,b,    f_I,f1_I)
-
-  MaxIteration = 100
+  MaxIteration = 500
   nIteration = 0
   iError = 0
   if (iDebugLevel > 2) then
@@ -870,17 +868,26 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      DoTestMe = .false.
   endif
 
+  Residual = 0.01
   write(*,*) "gmres"
   call gmres(matvec_gitm,b,x,.false.,nX,&
-       MaxIteration,Residual,'abs',nIteration,iError,DoTestMe)
+       MaxIteration,Residual,'rel',nIteration,iError,DoTestMe)
 
+  write(*,*) "gmres : ",MaxIteration,Residual, nIteration, iError
+
+  iI = 0
   do iLat=2,nMagLats-1
-     do iLon=1,nMagLons
+     do iLon=2,nMagLons
         iI = iI + 1
         DynamoPotentialMC(iLon, iLat) = x(iI)
      enddo
   enddo
 
+  DynamoPotentialMC(1,:) = DynamoPotentialMC(nMagLons,:)
+  DynamoPotentialMC(nMagLons+1,:) = DynamoPotentialMC(2,:)
+
+  DynamoPotentialMC(:,1) = 0.0
+  DynamoPotentialMC(:,nMagLats) = 0.0
 
 !!  oldresidual = 1.0e32
 !!  residual    = 1.0e31
@@ -945,7 +952,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 !!!      enddo
 !!!   enddo
 
-  if (iDebugLevel > 0) &
+!!!  if (iDebugLevel > 0) &
        write(*,*) "=> CPCP of Dynamo : ", &
        maxval(dynamopotentialmc)-minval(dynamopotentialmc)
 
@@ -1286,7 +1293,7 @@ subroutine matvec_gitm(x_I, y_I, n)
   ! Put 1D vector into 2D solution
   i = 0;
   do iLat = 2, nMagLats-1
-     do iLon = 1, nMagLons
+     do iLon = 2, nMagLons
         i = i+1
         x_G(iLon, iLat) = x_I(i)
      enddo
@@ -1296,14 +1303,18 @@ subroutine matvec_gitm(x_I, y_I, n)
   x_G(:,nMagLats) = 0.0
 
   ! Apply periodic boundary conditions in Psi direction
-  x_G(:,nMagLons+1) = x_G(:,1)
+!  x_G(:,nMagLons+1) = x_G(:,2)
+!  x_G(:,1) = x_G(:,nMagLons)
+
+  x_G(:,nMagLons+1) = 0.0
+  x_G(:,1) = 0.0
 
   i = 0;
   do iLat = 2, nMagLats-1
      do iLon = 2, nMagLons
         i = i+1
         y_I(i) = &
-             (2*solver_a_mc(iLon, iLat)+2*solver_b_mc(iLon, iLat)) * &
+             -(2*solver_a_mc(iLon, iLat)+2*solver_b_mc(iLon, iLat)) * &
              x_G(iLon   , iLat  ) + &
              ( solver_a_mc(iLon, iLat)+solver_d_mc(iLon, iLat)) * &
              x_G(iLon+1 , iLat  ) + &
@@ -1325,9 +1336,9 @@ subroutine matvec_gitm(x_I, y_I, n)
      end do
   end do
 
-  ! Preconditioning: y'= U^{-1}.L^{-1}.y
-  call Lhepta(       n,1,nMagLons,n,y_I,d_I,e_I,e1_I)
-  call Uhepta(.true.,n,1,nMagLons,n,y_I,    f_I,f1_I)
+!!!  ! Preconditioning: y'= U^{-1}.L^{-1}.y
+!!!  call Lhepta(       n,1,nMagLons,n,y_I,d_I,e_I,e1_I)
+!!!  call Uhepta(.true.,n,1,nMagLons,n,y_I,    f_I,f1_I)
 
 end subroutine matvec_gitm
 
