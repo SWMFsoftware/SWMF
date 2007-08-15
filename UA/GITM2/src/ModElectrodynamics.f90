@@ -58,7 +58,7 @@ module ModElectrodynamics
         x,y,rhs,b,d_I,e_I,e1_I,f_I,f1_I
 
   integer :: nMagLats = 90  ! 2 degrees
-  integer :: nMagLons = 72  ! 5 degrees
+  integer :: nMagLons = 90  ! 4 degrees
 
   !----------------------------------------------------------------------
   ! These are in geographic coordinates : 

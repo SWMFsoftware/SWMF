@@ -795,19 +795,19 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 !  solver_d_mc(:,42:49) = 0.0
 !  solver_e_mc(:,42:49) = 0.0
 
-  OldPotMc = 0.0
+!  OldPotMc = 0.0
   DynamoPotentialMC = 0.0
 
   ! Fill in the diagonal vectors
   iI = 0
 
-  nX = (nMagLats-2) * (nMagLons-1)
+  nX = (nMagLats-2) * (nMagLons)
 
   allocate( x(nX), y(nX), rhs(nX), b(nX), &
        d_I(nX), e_I(nX), e1_I(nX), f_I(nX), f1_I(nX) )
 
   do iLat=2,nMagLats-1
-     do iLon=2,nMagLons
+     do iLon=1,nMagLons
 
         iI = iI + 1
 
@@ -834,7 +834,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
         if (iLat == 2)          e1_I(iI) = 0.0
         if (iLat == nMagLats-1) f1_I(iI) = 0.0
-        if (iLon == 2)          e_I(iI)  = 0.0
+        if (iLon == 1)          e_I(iI)  = 0.0
         if (iLon == nMagLons)   f_I(iI)  = 0.0
 
      end do
@@ -869,22 +869,22 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   endif
 
   Residual = 0.01
-  write(*,*) "gmres"
-  call gmres(matvec_gitm,b,x,.false.,nX,&
+  call gmres(matvec_gitm,b,x,.true.,nX,&
        MaxIteration,Residual,'rel',nIteration,iError,DoTestMe)
 
-  write(*,*) "gmres : ",MaxIteration,Residual, nIteration, iError
+  if (iDebugLevel > 0) &
+       write(*,*) "=> gmres : ",MaxIteration,Residual, nIteration, iError
 
   iI = 0
   do iLat=2,nMagLats-1
-     do iLon=2,nMagLons
+     do iLon=1,nMagLons
         iI = iI + 1
         DynamoPotentialMC(iLon, iLat) = x(iI)
      enddo
   enddo
 
-  DynamoPotentialMC(1,:) = DynamoPotentialMC(nMagLons,:)
-  DynamoPotentialMC(nMagLons+1,:) = DynamoPotentialMC(2,:)
+!  DynamoPotentialMC(1,:) = DynamoPotentialMC(nMagLons,:)
+  DynamoPotentialMC(nMagLons+1,:) = DynamoPotentialMC(1,:)
 
   DynamoPotentialMC(:,1) = 0.0
   DynamoPotentialMC(:,nMagLats) = 0.0
@@ -901,7 +901,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 !!           iLm = iLon-1
 !!           if (iLm == 0) iLm = nMagLons
 !!           iLp = iLon+1
-!!           if (iLm == nMagLons+1) iLm = 0
+!!           if (iLp == nMagLons+1) iLp = 0
 !!
 !!           DynamoPotentialMC(iLon, iLat) = solver_s_mc(iLon, iLat) + ( &
 !!                ( solver_a_mc(iLon, iLat)+solver_d_mc(iLon, iLat)) * &
@@ -952,7 +952,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 !!!      enddo
 !!!   enddo
 
-!!!  if (iDebugLevel > 0) &
+  if (iDebugLevel > 0) &
        write(*,*) "=> CPCP of Dynamo : ", &
        maxval(dynamopotentialmc)-minval(dynamopotentialmc)
 
@@ -1286,14 +1286,14 @@ subroutine matvec_gitm(x_I, y_I, n)
   real, intent(in) :: x_I(n)        ! vector of unknowns
   real, intent(out):: y_I(n)        ! y = A.x
 
-  integer :: iLat, iLon, i
+  integer :: iLat, iLon, i, iLm, iLp
   real :: x_G(nMagLons+1, nMagLats) ! 2D array with ghost cells
   !-------------------------------------------------------------------------
 
   ! Put 1D vector into 2D solution
   i = 0;
   do iLat = 2, nMagLats-1
-     do iLon = 2, nMagLons
+     do iLon = 1, nMagLons
         i = i+1
         x_G(iLon, iLat) = x_I(i)
      enddo
@@ -1303,35 +1303,37 @@ subroutine matvec_gitm(x_I, y_I, n)
   x_G(:,nMagLats) = 0.0
 
   ! Apply periodic boundary conditions in Psi direction
-!  x_G(:,nMagLons+1) = x_G(:,2)
-!  x_G(:,1) = x_G(:,nMagLons)
-
-  x_G(:,nMagLons+1) = 0.0
-  x_G(:,1) = 0.0
+  x_G(nMagLons+1,:) = x_G(1,:)
 
   i = 0;
   do iLat = 2, nMagLats-1
-     do iLon = 2, nMagLons
+     do iLon = 1, nMagLons
         i = i+1
+
+        iLm = iLon-1
+        if (iLm == 0) iLm = nMagLons
+        iLp = iLon+1
+        if (iLp == nMagLons+1) iLp = 0
+
         y_I(i) = &
              -(2*solver_a_mc(iLon, iLat)+2*solver_b_mc(iLon, iLat)) * &
              x_G(iLon   , iLat  ) + &
              ( solver_a_mc(iLon, iLat)+solver_d_mc(iLon, iLat)) * &
-             x_G(iLon+1 , iLat  ) + &
+             x_G(iLp , iLat  ) + &
              ( solver_b_mc(iLon, iLat)+solver_e_mc(iLon, iLat)) * &
              x_G(iLon  , iLat+1) + &
 !             ( solver_c_mc(iLon, iLat)                        ) * &
-!             x_G(iLon+1, iLat+1) + &
+!             x_G(iLp, iLat+1) + &
 !             (-solver_c_mc(iLon, iLat)                        ) * &
-!             x_G(iLon+1, iLat-1) + &
+!             x_G(iLp, iLat-1) + &
              ( solver_a_mc(iLon, iLat)-solver_d_mc(iLon, iLat)) * &
-             x_G(iLon-1, iLat  ) + &
+             x_G(iLm, iLat  ) + &
              ( solver_b_mc(iLon, iLat)-solver_e_mc(iLon, iLat)) * &
              x_G(iLon  , iLat-1)
 !             (-solver_c_mc(iLon, iLat)                        ) * &
-!             x_G(iLon-1, iLat+1) + &
+!             x_G(iLm, iLat+1) + &
 !             ( solver_c_mc(iLon, iLat)                        ) * &
-!             x_G(iLon-1, iLat-1)
+!             x_G(iLm, iLat-1)
 
      end do
   end do
