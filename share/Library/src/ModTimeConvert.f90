@@ -113,7 +113,7 @@ contains
     if(Time % iYear < iYearMin .or. Time % iYear > iYearMax) RETURN
     if(Time % iMonth > 12 .or. Time % iMonth < 1) RETURN
     if(Time % iMonth == 2) call fix_february(Time % iYear)
-    if(Time % iDay < 1 .or. Time % iDay > nDayInMonth_I(Time % iMonth)) RETURN
+!    if(Time % iDay < 1 .or. Time % iDay > nDayInMonth_I(Time % iMonth)) RETURN
     if(Time % iHour < 0   .or. Time % iHour   > 23) RETURN
     if(Time % iMinute < 0 .or. Time % iMinute > 59) RETURN
     if(Time % iSecond < 0 .or. Time % iSecond > 59) RETURN
