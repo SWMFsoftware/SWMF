@@ -3,7 +3,7 @@
 !  velocity. 
 !******************************************************************************
 subroutine PW_get_electrodynamics
-
+  use ModNumConst, ONLY: cTwoPi
   use ModIoUnit, ONLY: UnitTmp_
   use ModPWOM
   use ModNumConst, ONLY:cDegToRad
@@ -40,6 +40,7 @@ subroutine PW_get_electrodynamics
 !******************************************************************************
 !  Calc Bfield components
 !******************************************************************************
+  OmegaPlanet    = cTwoPi/24.0/3600.
   rPlanet        = 6378000.0
   rLowerBoundary = rPlanet+110.0e3
   MagMoment      = 7.84e15
@@ -112,7 +113,7 @@ subroutine PW_get_electrodynamics
   Er_C(:,:) = 0.0
 
 !******************************************************************************
-!  Calc VelocityExB drift from E and B
+!  Calc VelocityExB drift from E and B, add corotation velocity to uExBphi_C
 !******************************************************************************
   
 
@@ -124,7 +125,8 @@ subroutine PW_get_electrodynamics
         
         uExBphi_C(iPhi,iTheta)   = &
              (-Etheta_C(iPhi,iTheta)*Br_G(iPhi,iTheta)) &
-             / BmagnitudeSquared_G(iPhi,iTheta)
+             / BmagnitudeSquared_G(iPhi,iTheta) &
+             + OmegaPlanet*rPlanet*sin(Theta_G(iPhi,iTheta)) !corotation
         
         uExBr_C(iPhi,iTheta)     = &
              (-Ephi_C(iPhi,iTheta)*Btheta_G(iPhi,iTheta)) &
