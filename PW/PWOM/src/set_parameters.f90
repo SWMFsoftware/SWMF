@@ -3,18 +3,20 @@ subroutine PW_set_parameters(NameAction)
   use ModIoUnit, ONLY: UnitTmp_, io_unit_new
   use ModPwom
   use ModReadParam
+  use ModCommonVariables, ONLY: IYD,F107,F107A,AP
   implicit none
 
   character (len=100)           :: NameCommand
   character (len=*), intent(in) :: NameAction
   character (len=*), parameter  :: NameSub = 'PW_set_parameters'
-
+  
   !****************************************************************************
   ! This subroutine gets the inputs for PWOM
   !****************************************************************************
 
   real:: ddt1, xxx
   integer:: ns
+  integer:: iYear, iDOY
   !---------------------------------------------------------------------------
   
   do
@@ -27,6 +29,24 @@ subroutine PW_set_parameters(NameAction)
         else
            write(*,*)'PWOM WARNING: #STOP command is ignored in the framework'
         end if
+     case('#STARTTIME')
+        if(IsStandAlone)then
+           call read_var('iYear',iYear)
+           call read_var('iDOY',iDOY)
+           IYD=iYear*1000+iDOY
+        else
+           write(*,*)'PWOM WARNING: #STARTTIME command is ignored in the framework'
+        end if
+     case('#MSISPARAM')
+        call read_var('F107' ,F107)
+        call read_var('F107A',F107A)
+        call read_var('AP(1)',AP(1))
+        call read_var('AP(2)',AP(2))
+        call read_var('AP(3)',AP(3))
+        call read_var('AP(4)',AP(4))
+        call read_var('AP(5)',AP(5))
+        call read_var('AP(6)',AP(6))
+        call read_var('AP(7)',AP(7))
      case('#SAVEPLOT')
         call read_var('DtSavePlot',DtOutput)
         call read_var('SaveFirst',DoSavePlot)
