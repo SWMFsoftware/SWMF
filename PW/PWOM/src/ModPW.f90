@@ -20,7 +20,7 @@ module ModPWOM
   integer :: iTheta, iPhi, iUnitSouth,iUnitNorth,i,iLine=0
   integer, dimension(MaxLine)::iLineGlobal
 
-  real    ::   Bcoef,MagMoment,rPlanet,Dtheta,Dphi,rLowerBoundary
+  real    ::   Bcoef,MagMoment,rPlanet,OmegaPlanet,Dtheta,Dphi,rLowerBoundary
 
   integer :: nLine,nLog=0
 
