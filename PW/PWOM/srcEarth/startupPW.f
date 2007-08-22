@@ -214,18 +214,22 @@ CALEX IYD=year_day of year
 C END
       CALL GGM(IART,GLONG,GLAT,GMLONG,GMLAT)
       
-      iDay  = mod(IYD,1000)+floor(Time/24.0/3600.0)
-      iYear = IYD/1000
-      if(iDay > 364) then
-         iDay = mod(iDay,364)
-         iYear= iYear+1
-         IYD = iYear*1000+iDay
+      if (.not.UseStaticAtmosphere) then
+         iDay  = mod(IYD,1000)+floor(Time/24.0/3600.0)
+         iYear = IYD/1000
+         if(iDay > 364) then
+            iDay = mod(iDay,364)
+            iYear= iYear+1
+            IYD = iYear*1000+iDay
+         else
+            IYD = iYear*1000+iDay
+         endif
+         
+         SEC=mod(Time,24.0*3600.0)
+         !mod((STL-GLONG/15.)*3600.,24.*3600.)
       else
-         IYD = iYear*1000+iDay
+         SEC=0.0
       endif
-      
-      SEC=mod(Time,24.0*3600.0)
-      !mod((STL-GLONG/15.)*3600.,24.*3600.)
       STL=SEC/3600+GLONG/15
       DO 49 I=1,7
 c      AP(I)=50.

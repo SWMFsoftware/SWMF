@@ -95,6 +95,7 @@ module ModCommonVariables
   INTEGER NPT1,NPT2,NPT3,NPT4,NPT5,NPT6,NCL,NTS
   REAL  H0,H1E1,H1O1,H1H1,H1E2,H1O2,H1H2,H2,H3,H4 &
        ,HLPE,HLPE0,HLPO,HLPH,HLPHE
+  Logical :: UseStaticAtmosphere=.false.
   INTEGER :: IYD=76183,IART=1
   REAL    ::UT,SEC,GLAT,GLONG,STL,F107A=60.,F107=60.,GMLAT,GMLONG
   real    :: AP(7)=(/4.,4.,4.,4.,4.,4.,4./)

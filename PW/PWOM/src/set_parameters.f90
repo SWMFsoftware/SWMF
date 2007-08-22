@@ -3,7 +3,7 @@ subroutine PW_set_parameters(NameAction)
   use ModIoUnit, ONLY: UnitTmp_, io_unit_new
   use ModPwom
   use ModReadParam
-  use ModCommonVariables, ONLY: IYD,F107,F107A,AP
+  use ModCommonVariables, ONLY: IYD,F107,F107A,AP,UseStaticAtmosphere
   implicit none
 
   character (len=100)           :: NameCommand
@@ -38,6 +38,7 @@ subroutine PW_set_parameters(NameAction)
            write(*,*)'PWOM WARNING: #STARTTIME command is ignored in the framework'
         end if
      case('#MSISPARAM')
+        call read_var('UseStaticAtmosphere' ,UseStaticAtmosphere)
         call read_var('F107' ,F107)
         call read_var('F107A',F107A)
         call read_var('AP(1)',AP(1))
