@@ -48,13 +48,13 @@ subroutine PW_print_electrodynamics
              + uExBr_C(iPhi,iTheta)  *cos(Theta_G(iPhi,iTheta)) 
         
         x(iPhi,iTheta)  =  &
-             rLowerBoundary*sin(Theta_G(iPhi,iTheta))*cos(Phi_G(iPhi,iTheta))
+             1.0*sin(Theta_G(iPhi,iTheta))*cos(Phi_G(iPhi,iTheta))
         
         y(iPhi,iTheta)  =  &
-             rLowerBoundary*sin(Theta_G(iPhi,iTheta))*sin(Phi_G(iPhi,iTheta))
+             1.0*sin(Theta_G(iPhi,iTheta))*sin(Phi_G(iPhi,iTheta))
         
         z(iPhi,iTheta)  =  &
-             rLowerBoundary*cos(Theta_G(iPhi,iTheta))
+             1.0*cos(Theta_G(iPhi,iTheta))
         
         Ex(iPhi,iTheta) =  & 
              Etheta_C(iPhi,iTheta)*cos(Theta_G(iPhi,iTheta)) &
