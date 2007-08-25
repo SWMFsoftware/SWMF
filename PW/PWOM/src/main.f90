@@ -53,6 +53,12 @@ program pw
 
         call PW_advance_line
      enddo
+     !Output the electrodynamics info
+     if (DoPlotElectrodynamics) then
+        if (floor(Time/DtPlotElectrodynamics) &
+             /= floor((Time-DtHorizontal)/DtPlotElectrodynamics) ) &
+             call PW_print_electrodynamics
+     endif
   enddo TIMELOOP
 
 

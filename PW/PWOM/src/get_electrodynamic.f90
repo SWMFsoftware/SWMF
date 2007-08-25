@@ -7,6 +7,8 @@ subroutine PW_get_electrodynamics
   use ModIoUnit, ONLY: UnitTmp_
   use ModPWOM
   use ModNumConst, ONLY:cDegToRad
+  use ModAurora , ONLY: set_Emax,set_theta0
+  use ModCommonVariables,ONLY:Ap
   implicit none
 
   real :: dTheta1, dPhi1
@@ -148,5 +150,7 @@ subroutine PW_get_electrodynamics
      Jr_G(:,:) = 0.0
   endif
 
-
+  !set auroral heating 
+  call set_theta0(nPhi,nTheta,uExBphi_C,uExBtheta_C,Theta_G)
+  call set_Emax(Ap(1))
 end subroutine PW_get_electrodynamics

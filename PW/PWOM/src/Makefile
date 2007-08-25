@@ -12,7 +12,8 @@ MODULES = \
 	ModNeutralPW.o\
 	ModPass.o\
 	ModPwImplicit.o\
-	ModGmPressure.o
+	ModGmPressure.o\
+	ModAurora.o
 
 METHODS = \
 	pw.o\

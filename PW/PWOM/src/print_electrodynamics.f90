@@ -2,10 +2,12 @@ subroutine PW_print_electrodynamics
 
   use ModIoUnit, ONLY: UnitTmp_
   use ModPWOM
-  use ModNumConst, ONLY:cDegToRad
+  use ModNumConst, ONLY:cDegToRad,cRadToDeg,cPi
+  use ModAurora, ONLY:get_etop
   implicit none
 
-  real,dimension(:,:),allocatable  :: Ux,Uy,Uz,x,y,z,Ex,Ey,Ez
+  real,dimension(:,:),allocatable  :: Ux,Uy,Uz,x,y,z,Ex,Ey,Ez,Etop_C
+  real :: Lat,Lon
   integer :: TimeOut
   Character(len=100) :: NameElectrodynamics
 !-----------------------------------------------------------------------------
@@ -21,7 +23,8 @@ subroutine PW_print_electrodynamics
        z (nPhi, nTheta), &
        Ex(nPhi, nTheta), &
        Ey(nPhi, nTheta), &
-       Ez(nPhi, nTheta))
+       Ez(nPhi, nTheta), &
+       Etop_C(nPhi, nTheta))
 
 !******************************************************************************
 !  Write output, use cartesian coords for output
@@ -55,7 +58,9 @@ subroutine PW_print_electrodynamics
         
         z(iPhi,iTheta)  =  &
              1.0*cos(Theta_G(iPhi,iTheta))
-        
+        Lat = (0.5*cPi-Theta_G(iPhi,iTheta))*cRadToDeg
+        Lon = Phi_G(iPhi,iTheta)*cRadToDeg
+        Etop_C(iPhi,iTheta) = get_etop(Lat,Lon)
         Ex(iPhi,iTheta) =  & 
              Etheta_C(iPhi,iTheta)*cos(Theta_G(iPhi,iTheta)) &
              * cos(Phi_G(iPhi,iTheta))                     &
@@ -81,7 +86,7 @@ subroutine PW_print_electrodynamics
        'PW/Electrodynamics_Time',TimeOut,'.dat'
   open(UnitTmp_,FILE=NameElectrodynamics)
   write(UnitTmp_,*) &
-     'VARIABLES = "X", "Y", "Z", "Ux", "Uy", "Uz", "V", "Ex", "Ey", "Ez", "Jr"'
+     'VARIABLES = "X", "Y", "Z", "Ux", "Uy", "Uz", "V", "Ex", "Ey", "Ez", "Jr", "Etop"'
   
   write(UnitTmp_,*) 'Zone I=', nPhi, ', J=', nTheta,', DATAPACKING=POINT'
   
@@ -92,7 +97,7 @@ subroutine PW_print_electrodynamics
              ux(iPhi,iTheta),uy(iPhi,iTheta),uz(iPhi,iTheta),  &
              Potential_G(iPhi,iTheta),                         &
              Ex(iPhi,iTheta), Ey(iPhi,iTheta), Ez(iPhi,iTheta),&
-             Jr_G(iPhi,iTheta)
+             Jr_G(iPhi,iTheta),Etop_C(iPhi,iTheta)
         
      enddo
   enddo
@@ -108,6 +113,7 @@ subroutine PW_print_electrodynamics
        z , &
        Ex, &
        Ey, &
-       Ez)
+       Ez, &
+       Etop_C)
 
 end subroutine PW_print_electrodynamics
