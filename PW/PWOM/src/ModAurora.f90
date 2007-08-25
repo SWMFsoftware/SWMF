@@ -3,7 +3,7 @@ Module ModAurora
   save
   
   real :: Theta0,dtheta=0.174532925199 !10 degrees
-  real,parameter :: E0=5.0e-3 !ergs/cm**2
+  real,parameter :: E0=10.0e-3 !ergs/cm**2
   real :: Emax
 
 
