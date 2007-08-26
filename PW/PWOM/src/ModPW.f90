@@ -53,7 +53,7 @@ module ModPWOM
   real   ::  DtHorizontalOrig = 50.0, DtHorizontal=50.0, Time, TimeMax
 
   logical::  DoMoveLine=.true., UseJr=.true., UseCentrifugal=.true.
-  logical::  UseIE=.false.
+  logical::  UseIE=.false.,UseAurora=.false.
   logical::  DoPlotElectrodynamics=.false.
   logical::  DoSavePlot=.true.
   character(len=100) :: NamePhiNorth, NamePhiSouth
