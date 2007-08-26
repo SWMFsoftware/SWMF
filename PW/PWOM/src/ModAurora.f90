@@ -3,7 +3,7 @@ Module ModAurora
   save
   
   real :: Theta0,dtheta=0.174532925199 !10 degrees
-  real,parameter :: E0=10.0e-3 !ergs/cm**2
+  real,parameter :: E0=30.0e-3 !ergs/cm**2
   real :: Emax
 
 
@@ -11,6 +11,35 @@ contains
   !============================================================================
   
   real function get_etop(GmLat,GmLon)
+    !returns topside electron energy input
+    use ModNumConst, ONLY:cPi,cDegToRad
+    
+    real,intent(in) :: GmLat,GmLon
+    real :: Theta,Phi,DeltaTheta,DeltaPhi
+    real :: eTopMax
+    !--------------------------------------------------------------------------
+    Theta=cPi/2-GmLat*cDegToRad
+    Phi = GmLon*cDegToRad
+    eTopMax = 10.0*E0
+    ! If point is inside aurora return auroral etop value, else return default
+    
+    if(Theta > Theta0-dtheta/2 .and. Theta < Theta0+dtheta/2 &
+         .and. phi > 0.5*cPi .and. phi < 1.5*cPi) then
+       DeltaTheta = abs(Theta-Theta0)
+       DeltaPhi = abs(Phi - cPi)
+       get_etop = &
+            (1 - 2.0*DeltaPhi/cPi)*(eTopMax-(eTopMax-E0)*DeltaTheta/dtheta)
+       
+    else
+       get_etop = E0
+    endif
+    
+  end function get_etop
+  
+  !============================================================================
+  !============================================================================
+  
+  real function get_eflux(GmLat,GmLon)
     !returns topside electron energy input
     use ModNumConst, ONLY:cPi,cDegToRad
     
@@ -26,13 +55,42 @@ contains
          .and. phi > 0.5*cPi .and. phi < 1.5*cPi) then
        DeltaTheta = abs(Theta-Theta0)
        DeltaPhi = abs(Phi - cPi)
-       get_etop = (1 - 2.0*DeltaPhi/cPi)*(Emax-(Emax-E0)*DeltaTheta/dtheta)
+       get_eflux = (1 - 2.0*DeltaPhi/cPi)*(Emax-(Emax-E0)*DeltaTheta/dtheta)
        
     else
-       get_etop = E0
+       get_eflux = E0
     endif
     
-  end function get_etop
+  end function get_eflux
+  
+  !============================================================================
+  !============================================================================
+  
+  real function get_eAverageE(GmLat,GmLon)
+    !returns average precipitating energy
+    use ModNumConst, ONLY:cPi,cDegToRad
+    
+    real,intent(in) :: GmLat,GmLon
+    real :: Theta,Phi,DeltaTheta,DeltaPhi
+    real,parameter:: AveE0=.2, AveEmax=.75
+    !--------------------------------------------------------------------------
+    Theta=cPi/2-GmLat*cDegToRad
+    Phi = GmLon*cDegToRad
+    
+    ! If point is inside aurora return auroral etop value, else return default
+    
+    if(Theta > Theta0-dtheta/2 .and. Theta < Theta0+dtheta/2 &
+         .and. phi > 0.5*cPi .and. phi < 1.5*cPi) then
+       DeltaTheta = abs(Theta-Theta0)
+       DeltaPhi = abs(Phi - cPi)
+       get_eAverageE = &
+            (1 - 2.0*DeltaPhi/cPi)*(AveEmax-(AveEmax-AveE0)*DeltaTheta/dtheta)
+       
+    else
+       get_eAverageE = AveE0
+    endif
+    
+  end function get_eAverageE
   
   !============================================================================
   
