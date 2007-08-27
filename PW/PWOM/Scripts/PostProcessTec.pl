@@ -18,6 +18,10 @@ my $nHeader=5;
 my $pi=3.14159;
 my $rPlanet=1.0;
 
+print STDOUT "Enter Alt Slice For Output: ";
+my $AltSlice = <STDIN>;
+chop($AltSlice);
+
 my @plot_file = sort glob "plots_iline????.out";
 
 for $file (@plot_file) {
@@ -65,7 +69,7 @@ SNAPSHOT:{
     for $iAlt (1..$nData){
 		    
 	# open a file for output
-	if($iAlt eq 380){
+	if($iAlt eq $AltSlice){
 	    open OUT, ">plot_snapshot${iPlotString}_iAlt${iAlt}.dat";
 	}
 	print "Save into plot_snapshot${iPlot}_iAlt${iAlt}.dat\n" if $Verbose;
@@ -79,7 +83,7 @@ SNAPSHOT:{
 	
 	
 	my $header = "Variables = $variables";
-	if($iAlt eq 380){
+	if($iAlt eq $AltSlice){
 	    print OUT $header;
 	}
 	# write data into files
@@ -116,7 +120,7 @@ SNAPSHOT:{
 	    $line=$line."\n";
 	    
 	    # write out line
-	    if($iAlt eq 380){
+	    if($iAlt eq $AltSlice){
 		print OUT $line;
 	    }
 	}
