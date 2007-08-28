@@ -3,7 +3,7 @@ CALEX This subroutine calculates the collision frequencies and
 CALEX then calculates the momentum and energy collision terms
       SUBROUTINE COLLIS(N,StateIn_GV)
       use ModCommonVariables
-
+      
       integer, intent(in) :: N 
       real,    intent(in) :: StateIn_GV(-1:N+2,nVar)
       
@@ -191,10 +191,10 @@ CALEX energy collision term
       dU2_II(Ion1_,Ion4_)=UOXEL*UOXEL
       dU2_II(Ion4_,Ion1_)=dU2_II(Ion1_,Ion4_)
       
-      dU2_II(Ion1_,Neutral1_:Neutral5_)=StateIn_GV(I,uO_)**2
-      dU2_II(Ion2_,Neutral1_:Neutral5_)=StateIn_GV(I,uH_)**2
-      dU2_II(Ion3_,Neutral1_:Neutral5_)=StateIn_GV(I,uHe_)**2
-      dU2_II(Ion4_,Neutral1_:Neutral5_)=StateIn_GV(I,uE_)**2
+      dU2_II(Ion1_,Neutral1_:Neutral5_)=StateIn_GV(I,uO_)**2 +uJoule2*1.0e4
+      dU2_II(Ion2_,Neutral1_:Neutral5_)=StateIn_GV(I,uH_)**2 +uJoule2*1.0e4
+      dU2_II(Ion3_,Neutral1_:Neutral5_)=StateIn_GV(I,uHe_)**2+uJoule2*1.0e4
+      dU2_II(Ion4_,Neutral1_:Neutral5_)=StateIn_GV(I,uE_)**2 +uJoule2*1.0e4
       
 
 CALEX these are temperature differences needed in order to calculate
