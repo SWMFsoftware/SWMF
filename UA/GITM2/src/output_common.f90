@@ -73,7 +73,13 @@ subroutine output(dir, iBlock, iOutputType)
      cType = "1DALL"
   else
      cType = OutputType(iOutputType)
-     if (cType(1:2) == "3D" .and. Is1D) cType(1:2) = "1D"
+     if (cType(1:2) == "3D" .and. Is1D) then 
+        cType(1:2) = "1D"
+        iiLat = 1
+        iiLon = 1
+        rLon = 1.0
+        rLat = 1.0
+     endif
   endif
 
   if (iOutputType == -1) then
@@ -745,6 +751,8 @@ subroutine output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
   real :: Tmp(0:nLons+1,0:nLats+1)
   integer :: iAlt, iiAlt, iOff, iIon, iSpecies, iDir
 
+  write(*,*) iiLon, iiLat, rLon, rLat
+
   do iAlt=-1,nAlts+2
 
      iiAlt = max(min(iAlt,nAlts),1)
@@ -775,13 +783,13 @@ subroutine output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
      enddo
 
      iOff = 8+nSpeciesTotal
-     do iSpecies = 1, nIons
+     do iSpecies = 1, nSpecies
         Tmp = VerticalVelocity(0:nLons+1,0:nLats+1,iAlt,iSpecies,iBlock)
         Vars(iOff+iSpecies) = inter(Tmp,iiLon,iiLat,rlon,rlat)
      enddo
 
      iOff = 8+nSpeciesTotal+nSpecies
-     do iIon = 1, 3
+     do iIon = 1, nIons
         Tmp = IDensityS(0:nLons+1,0:nLats+1,iAlt,iIon,iBlock)
         Vars(iOff+iIon) = inter(Tmp,iiLon,iiLat,rlon,rlat)
      enddo
