@@ -13,7 +13,8 @@ MODULES = \
 	ModPass.o\
 	ModPwImplicit.o\
 	ModGmPressure.o\
-	ModAurora.o
+	ModAurora.o\
+	ModPwTime.o
 
 METHODS = \
 	pw.o\
