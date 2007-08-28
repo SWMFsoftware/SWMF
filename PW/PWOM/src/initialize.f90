@@ -5,11 +5,18 @@ subroutine PW_initialize
   use ModIoUnit, ONLY: io_unit_new,UnitTmp_
   use ModPwom
   use ModCommonPlanet,ONLY: nIon,iRho_I,iU_I,iP_I,iT_I
+  use ModCommonVariables, ONLY:IYD
+  use ModTimeConvert, ONLY: time_int_to_real
+  use ModPwTime
   implicit none
 
   ! Temporary variables
   real:: ddt1, xxx
   integer:: ns, iPe, iError,iIon
+  integer:: iYear, iDOY
+
+  integer, external :: julianday
+  
   !---------------------------------------------------------------------------
   !***************************************************************************
   !  Set the number of fieldlines that each processor solves for
@@ -26,6 +33,16 @@ subroutine PW_initialize
   do iPe = 1, nProc - 1
      nLineBefore_P(iPe) = sum(nLine_P(0:iPe-1))
   end do
+
+  !\
+  ! Set the Time parameters
+  !/
+  iYear = iStartTime(1)
+  iDOY  = julianday(iStartTime(1),iStartTime(2),iStartTime(3)) 
+  IYD=mod(iYear,100)*1000+iDOY
+  call time_int_to_real(iStartTime,CurrentTime)
+  StartTime=CurrentTime
+  
 
   !**************************************************************************
   !  Define file names and unit numbers, and open for reading and writing.
@@ -106,6 +123,8 @@ subroutine PW_initialize
      end do
      Time=0.0
   endif
+  
+  CurrentTime=StartTime+Time
 
   !****************************************************************************
   ! Use Get_GITM to bring in neutral atmosphere from GITM
@@ -130,3 +149,34 @@ subroutine PW_initialize
   end if
 
 end subroutine PW_initialize
+
+!=============================================================================
+integer function julianday(year, mon, day) result(Julian_Day)
+  
+  implicit none
+  
+  integer :: i
+  integer, dimension(1:12) :: dayofmon
+  integer :: year, mon, day
+  
+  dayofmon(1) = 31
+  dayofmon(2) = 28
+  dayofmon(3) = 31
+  dayofmon(4) = 30
+  dayofmon(5) = 31
+  dayofmon(6) = 30
+  dayofmon(7) = 31
+  dayofmon(8) = 31
+  dayofmon(9) = 30
+  dayofmon(10) = 31
+  dayofmon(11) = 30
+  dayofmon(12) = 31
+  
+  if (mod(year,4).eq.0) dayofmon(2) = dayofmon(1) + 1
+  Julian_Day = 0
+  do i = 1, mon-1
+     Julian_Day = Julian_Day + dayofmon(i)
+  enddo
+  Julian_Day = Julian_Day + day
+  
+end function julianday
