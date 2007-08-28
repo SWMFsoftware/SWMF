@@ -3,7 +3,8 @@ subroutine PW_set_parameters(NameAction)
   use ModIoUnit, ONLY: UnitTmp_, io_unit_new
   use ModPwom
   use ModReadParam
-  use ModCommonVariables, ONLY: IYD,F107,F107A,AP,UseStaticAtmosphere
+  use ModCommonVariables, ONLY: F107,F107A,AP,UseStaticAtmosphere
+  use ModPwTime
   implicit none
 
   character (len=100)           :: NameCommand
@@ -15,8 +16,8 @@ subroutine PW_set_parameters(NameAction)
   !****************************************************************************
 
   real:: ddt1, xxx
-  integer:: ns
-  integer:: iYear, iDOY
+  integer:: ns,iDate
+
   !---------------------------------------------------------------------------
   
   do
@@ -31,9 +32,11 @@ subroutine PW_set_parameters(NameAction)
         end if
      case('#STARTTIME')
         if(IsStandAlone)then
-           call read_var('iYear',iYear)
-           call read_var('iDOY',iDOY)
-           IYD=iYear*1000+iDOY
+           !read in iYear,iMonth,iDay,iHour,iMinute,iSecond into iStartTime
+           do iDate=1,6
+              call read_var('iStartTime',iStartTime(iDate))
+           enddo
+           
         else
            write(*,*)'PWOM WARNING: #STARTTIME command is ignored in the framework'
         end if
@@ -99,3 +102,4 @@ subroutine PW_set_parameters(NameAction)
   
 
 end subroutine PW_set_parameters
+
