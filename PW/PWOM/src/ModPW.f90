@@ -27,6 +27,10 @@ module ModPWOM
   ! The number of lines on each processor and on the processors with lower rank
   integer, allocatable :: nLine_P(:), nLineBefore_P(:)
 
+  !Joule Heating parameters
+  real    :: uJoule2
+  logical :: UseJouleHeating=.false.
+
   ! ionosphere variables
   integer :: nTheta = -1, nPhi = -1
   real, dimension(:,:), allocatable :: &
