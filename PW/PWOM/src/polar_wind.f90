@@ -29,7 +29,7 @@ subroutine polar_wind
   !-----------------------------------------------------------------------
   
   call get_field_line(State_GV(1:maxGrid,:),                       &
-       GMLAT,GMLONG,Jr,wHorizontal,                                &
+       GMLAT,GMLONG,Jr,wHorizontal,uJoule2=uJoule2,                &
        iUnitOutput=iUnitOutput, iUnitGraphics=iUnitGraphics,       &
        NameRestart=NameRestart,                                    &
        iLine=iLine, Time=Time,MaxLineTime=Tmax,                    &

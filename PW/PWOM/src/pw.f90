@@ -171,6 +171,15 @@ subroutine move_line
   JrLine_I(iLine)     = bilinear(Jr_G, 0,nPhi+1,0,nTheta+1, &
        (/ PhiLine_I(iLine)/Dphi,ThetaLine_I(iLine)/Dtheta /) )
  
+  ! save ExB velocity to get joule heating
+  if (UseJouleHeating) then
+     uJoule2 = (&
+       UthetaLine_I(iLine)**2.0&
+       +(UphiLine_I(iLine) - OmegaPlanet*rPlanet*sin(ThetaLine_I(iLine)))**2.0)
+  else
+     uJoule2 = 0.0
+  endif
+  
   xLineOld_I(iLine) = xLine_I(iLine)
   yLineOld_I(iLine) = yLine_I(iLine)
   zLineOld_I(iLine) = zLine_I(iLine)
@@ -282,7 +291,7 @@ subroutine PW_advance_line
   call put_field_line(&
        State_CVI(:,:,iLine),&
        GeoMagLat_I(iLine),GeoMagLon_I(iLine),JrLine_I(iLine),              &
-       OmegaLine_I(iLine), iUnitOutput=iUnitOutput(iLine),                 &
+       OmegaLine_I(iLine), uJoule2=uJoule2,iUnitOutput=iUnitOutput(iLine), &
        iUnitGraphics=iUnitGraphics(iLine),NameRestart=NameRestart(iLine),  &
        iLine=iLine,Time=Time,MaxLineTime=MaxLineTime,TypeSolver=TypeSolver,&
        IsVariableDt=IsVariableDt,IsRestart=IsRestart,DToutput=DToutput,    &
