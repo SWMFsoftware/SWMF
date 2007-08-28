@@ -67,8 +67,6 @@ OBJ4=project_B.o proj_cg.o proj_bicgstab.o #	^CFG IF PROJECTION
 
 OBJ10=  calc_heat_flux.o set_resistivity.o ModResistivity.o #^CFG IF DISSFLUX
 
-OBJ12= write_plot_los.o write_plot_sph.o write_plot_radiowave.o
-
 OBJ14=covariant.o                           #^CFG IF COVARIANT
 
 OBJ15=clean_divb.o                          #^CFG IF DIVBDIFFUSE
@@ -115,9 +113,12 @@ OBJECTS = \
 	write_plot_common.o\
 	write_plot_idl.o\
 	write_plot_tec.o\
+	write_plot_los.o \
+	write_plot_sph.o \
+	write_plot_radiowave.o \
 	write_progress.o\
 	${OBJ1} ${OBJ2} ${OBJ3} ${OBJ3B} ${OBJ4} \
-	${OBJ10} ${OBJ11} ${OBJ12} ${OBJ14} ${OBJ15}
+	${OBJ10} ${OBJ11} ${OBJ14} ${OBJ15}
 
 
 # Default user module
