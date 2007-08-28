@@ -11,7 +11,7 @@ module ModFieldLine
 
   logical :: IsRestartPW, IsVariableDtPW, DoLogPW
   real    :: TimePW,MaxLineTimePW,DToutputPW, DTpolarwindPW,GeoMagLatPW,&
-       GeoMagLonPW,JrPW,nDimPW
+       GeoMagLonPW,JrPW,nDimPW,uJoule2PW
   real    :: wHorizontalPW
   integer :: nStepPw,iUnitInputPW,      &
        iUnitOutputPW,iUnitGraphicsPW,                 &
@@ -27,7 +27,7 @@ contains
   !***************************************************************************
 
   subroutine put_field_line(State_CV, &
-       GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,                  &
+       GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,uJoule2,                  &
        iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
        MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput,nAlt,DoLog,&
        nStep,r_C)
@@ -36,10 +36,10 @@ contains
     use ModCommonPlanet,ONLY: nVar
     
     real, intent(in) :: State_CV(maxGrid,nVar)
-    real, optional, intent(in) :: Time,MaxLineTime,DToutput
+    real, optional, intent(in) :: Time,MaxLineTime,DToutput,uJoule2
     real, optional, intent(in) :: r_C(maxGrid)
-    real,    intent(in)     :: GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal              
-    integer, optional,intent(in)     :: iUnitOutput,iUnitGraphics,iLine,nAlt,nStep
+    real,    intent(in)     :: GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal  
+    integer, optional,intent(in)  :: iUnitOutput,iUnitGraphics,iLine,nAlt,nStep
     character*100,optional,intent(in):: NameRestart
     character(7),optional,intent(in)::TypeSolver
     logical,optional,intent(in) :: IsVariableDt,IsRestart,DoLog
@@ -67,6 +67,7 @@ contains
     if (present(DoLog))         DoLogPW        = DoLog
     if (present(nStep))         nStepPW        = nStep
     if (present(r_c))           rPw_C(:)       = r_C(:)
+    if (present(uJoule2))       uJoule2PW      = uJoule2
 
   end subroutine put_field_line
 
@@ -75,7 +76,7 @@ contains
   !***************************************************************************
 
   subroutine get_field_line(State_CV,& 
-       GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,                  &
+       GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,uJoule2,                  &
        iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
        MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput, nAlt,DoLog,&
        nStep,r_C)
@@ -91,7 +92,7 @@ contains
     character*100,optional,intent(out):: NameRestart
     character(7),optional,intent(out):: TypeSolver
     logical,optional,intent(out)      :: IsVariableDt,IsRestart,DoLog
-    real, optional, intent(out)       :: Time,MaxLineTime,DToutput
+    real, optional, intent(out)       :: Time,MaxLineTime,DToutput,uJoule2
     real, optional, intent(out)        :: r_C(maxGrid)
     integer, optional,intent(out)     :: iUnitOutput,iUnitGraphics,iLine,nAlt,nStep
     !--------------------------------------------------------------------------
@@ -119,6 +120,7 @@ contains
     if (present(DoLog))         DoLog=DoLogPW
     if (present(nStep))         nStep        = nStepPW
     if (present(r_C))           r_C(:)       = rPw_C(:)
+    if (present(uJoule2))       uJoule2      = uJoule2PW
   end subroutine get_field_line
 
 end module ModFieldLine
