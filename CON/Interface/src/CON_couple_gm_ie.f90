@@ -202,6 +202,9 @@ contains
     ! General coupling variables
     !/
 
+    ! Number of variables to pass
+    integer, parameter :: nVar=1
+
     ! Name of this interface
     character (len=*), parameter :: NameSub='couple_gm_ie'
 
@@ -214,7 +217,7 @@ contains
 
 
     ! Buffer for the field aligned current on the 2D IE grid
-    real, dimension(:,:), allocatable :: Buffer_II
+    real, dimension(:,:,:), allocatable :: Buffer_IIV
 
     ! MPI related variables
 
@@ -257,7 +260,7 @@ contains
        !\
        ! Allocate buffers for the variables both in GM and IE
        !/
-       allocate(Buffer_II(iSize, jSize), stat=iError)
+       allocate(Buffer_IIV(iSize, jSize, 1), stat=iError)
        call check_allocate(iError,NameSub//": "//NameVar_B(iBlock))
 
        !\
@@ -265,28 +268,28 @@ contains
        ! The result will be on the root processor of GM
        !/
        if(is_proc(GM_)) &
-            call GM_get_for_ie(Buffer_II, iSize, jSize, NameVar_B(iBlock))
+            call GM_get_for_ie(Buffer_IIV, iSize, jSize, nVar, NameVar_B(iBlock))
        !\
        ! Transfer variables from GM to IE
        !/
        if(iProcTo /= i_proc0(GM_))then
-          nSize = iSize*jSize
+          nSize = iSize*jSize*nVar
           if(is_proc0(GM_)) &
-               call MPI_send(Buffer_II, nSize, MPI_REAL, iProcTo,&
+               call MPI_send(Buffer_IIV, nSize, MPI_REAL, iProcTo,&
                1, i_comm(), iError)
           if(i_proc() == iProcTo) &
-               call MPI_recv(Buffer_II, nSize, MPI_REAL, i_proc0(GM_),&
+               call MPI_recv(Buffer_IIV, nSize, MPI_REAL, i_proc0(GM_),&
                1,i_comm(), iStatus_I, iError)
        end if
        !\
        ! Put variables into IE
        !/
        if(i_proc() == iProcTo )&
-            call IE_put_from_gm(Buffer_II, iSize, jSize, NameVar_B(iBlock))
+            call IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar, NameVar_B(iBlock))
        !\
        ! Deallocate buffer to save memory
        !/
-       deallocate(Buffer_II)
+       deallocate(Buffer_IIV)
     end do
 
     if(DoTest)write(*,*)NameSub,' finished, iProc=',iProcWorld

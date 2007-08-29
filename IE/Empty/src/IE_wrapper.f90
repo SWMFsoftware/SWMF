@@ -107,12 +107,12 @@ end subroutine IE_get_for_gm
 
 !==============================================================================
 
-subroutine IE_put_from_gm(Buffer_IV,nPoint,nVar,NameVar)
+subroutine IE_put_from_gm(Buffer_IIV,iSize,jSize,nVar,NameVar)
 
   implicit none
   character (len=*),parameter :: NameSub='IE_put_from_gm'
-  integer,          intent(in) :: nPoint, nVar
-  real,             intent(in) :: Buffer_IV(nPoint,nVar)
+  integer,          intent(in) :: iSize, jSize, nVar
+  real,             intent(in) :: Buffer_IIV(iSize,jSize,nVar)
   character(len=*) ,intent(in) :: NameVar
 
 

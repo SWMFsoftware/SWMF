@@ -174,7 +174,7 @@ end module ModFieldAlignedCurrent
 
 !==============================================================================
 
-subroutine GM_get_for_ie(Buffer_II,iSize,jSize,NameVar)
+subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar,NameVar)
 
   use ModFieldAlignedCurrent,ONLY: FieldAlignedCurrent_II, &
        init_mod_field_aligned_current, calc_field_aligned_current
@@ -183,8 +183,8 @@ subroutine GM_get_for_ie(Buffer_II,iSize,jSize,NameVar)
 
   character (len=*), parameter :: NameSub='GM_get_for_ie'
 
-  integer, intent(in) :: iSize, jSize
-  real, intent(out), dimension(iSize, jSize) :: Buffer_II
+  integer, intent(in) :: iSize, jSize, nVar
+  real, intent(out), dimension(iSize, jSize, nVar) :: Buffer_IIV
   character (len=*), intent(in) :: NameVar
 
   logical :: DoTest, DoTestMe
@@ -198,9 +198,9 @@ subroutine GM_get_for_ie(Buffer_II,iSize,jSize,NameVar)
   select case(NameVar)
   case('JrNorth')
      call calc_field_aligned_current
-     Buffer_II = FieldAlignedCurrent_II(1:iSize,:)
+     Buffer_IIV(:,:,1) = FieldAlignedCurrent_II(1:iSize,:)
   case('JrSouth')
-     Buffer_II = FieldAlignedCurrent_II(iSize:2*iSize-1,:)
+     Buffer_IIV(:,:,1) = FieldAlignedCurrent_II(iSize:2*iSize-1,:)
   case default
      call CON_stop(NameSub//' invalid NameVar='//NameVar)
   end select

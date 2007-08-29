@@ -136,11 +136,11 @@ end subroutine GM_get_for_rb
 
 !==============================================================================
 
-subroutine GM_get_for_ie(Buffer_II,iSize,jSize,NameVar)
+subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar,NameVar)
   implicit none
 
-  integer, intent(in) :: iSize,jSize
-  real, intent(out), dimension(iSize,jSize) :: Buffer_II
+  integer, intent(in) :: iSize,jSize,nVar
+  real, intent(out), dimension(iSize,jSize,nVar) :: Buffer_IIV
   character (len=*), intent(in) :: NameVar
 
   character (len=*), parameter :: NameSub='GM_get_for_ie'

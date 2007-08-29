@@ -500,7 +500,7 @@ subroutine IE_get_for_ua(Buffer_II,iSize,jSize,NameVar,NameHem,tSimulation)
 end subroutine IE_get_for_ua
 
 !==============================================================================
-subroutine IE_put_from_gm(Buffer_II, iSize, jSize, NameVar)
+subroutine IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar, NameVar)
 
   use IE_ModMain, ONLY: IsNewInput, LatBoundaryGm
   use ModProcIE
@@ -508,8 +508,8 @@ subroutine IE_put_from_gm(Buffer_II, iSize, jSize, NameVar)
 
   implicit none
   character (len=*), parameter :: NameSub = 'IE_put_from_gm'
-  integer,          intent(in) :: iSize, jSize
-  real,             intent(in) :: Buffer_II(iSize, jSize)
+  integer,          intent(in) :: iSize, jSize, nVar
+  real,             intent(in) :: Buffer_IIV(iSize, jSize, nVar)
   character(len=*), intent(in) :: NameVar
 
   integer :: iError
@@ -524,13 +524,13 @@ subroutine IE_put_from_gm(Buffer_II, iSize, jSize, NameVar)
 
   case('JrNorth')
      if (iProc /= 0) RETURN
-     LatBoundaryGm                  = Buffer_II(iSize,1)
-     Iono_North_Jr                  = Buffer_II
+     LatBoundaryGm                  = Buffer_IIV(iSize,1,1)
+     Iono_North_Jr                  = Buffer_IIV(:,:,1)
      Iono_North_Jr(iSize-1:iSize,1) = 0.0
   case('JrSouth')
      if (iProc /= nProc-1) RETURN
-     LatBoundaryGm                  = Buffer_II(1,1)
-     Iono_South_Jr                  = Buffer_II
+     LatBoundaryGm                  = Buffer_IIV(1,1,1)
+     Iono_South_Jr                  = Buffer_IIV(:,:,1)
      Iono_South_Jr(1:2,1)           = 0.0
   case default
      call CON_stop(NameSub//' SWMF_ERROR invalid NameVar='//NameVar)
