@@ -71,7 +71,7 @@ subroutine PW_initialize
           'PW/plots/plots_iline',iLineGlobal(iLine),'.out'
 
      iUnitGraphics(iLine)  = io_unit_new()
-     open(iUnitGraphics(iLine),FILE=NameGraphics(iLine))
+     open(iUnitGraphics(iLine),FILE=NameGraphics(iLine),STATUS='replace')
      
      !Setup log files
      if (nLog == -1) then
