@@ -40,8 +40,9 @@ subroutine PW_set_parameters(NameAction)
         else
            write(*,*)'PWOM WARNING: #STARTTIME command is ignored in the framework'
         end if
+     case('#STATICATMOSPHERE')
+        call read_var('UseStaticAtmosphere', UseStaticAtmosphere)
      case('#MSISPARAM')
-        call read_var('UseStaticAtmosphere' ,UseStaticAtmosphere)
         call read_var('F107' ,F107)
         call read_var('F107A',F107A)
         call read_var('AP(1)',AP(1))
