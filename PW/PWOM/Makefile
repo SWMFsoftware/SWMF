@@ -133,6 +133,7 @@ run:
 		cd ${RUNDIR}; \
 			ln -s ${BINDIR}/PWOM.exe .; \
 			cp ${PWDIR}/input/${PLANET}/pw.input .; \
+			cp ${SCRIPTDIR}/PostProc.pl .; \
 			touch core ; chmod 444 core ; \
 			ln -s PW/* .; \
 	fi)
