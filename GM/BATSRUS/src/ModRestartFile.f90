@@ -368,9 +368,9 @@ contains
          time_simulation, dt,                 ' time_simulation, dt'
 
     write(unit_tmp,'(a)')'Io2Si_V='
-    write(unit_tmp,'(100es13.5),a)') Io2Si_V
+    write(unit_tmp,'(100es13.5)') Io2Si_V
     write(unit_tmp,'(a)')'No2Io_V='
-    write(unit_tmp,'(100es13.5),a)') No2Io_V
+    write(unit_tmp,'(100es13.5)') No2Io_V
 
     close(unit_tmp)
 
