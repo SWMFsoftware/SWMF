@@ -75,7 +75,10 @@ subroutine polar_wind
         
 !        CALL PW_iheat_flux
         
+        CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
         CALL PW_eheat_flux
+        CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
+        CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
         
      else
         !       advect and add collisional and chemistry sources
@@ -113,13 +116,15 @@ subroutine polar_wind
  
      If (IsFullyImplicit) then
  !       CALL PW_iheat_flux
-
+        CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
+        call PW_set_upper_bc
         CALL PW_eheat_flux
         
         call PW_implicit_update
         
         call PW_set_upper_bc
-        
+        CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
+        CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
     else
        CALL PW_iheat_flux
        
