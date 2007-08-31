@@ -36,7 +36,7 @@
 ; calculating derivatives in 2D for general grids
 ;    grad,div,curl,grad_rz,div_rz,curl_rz, filledge,intedge,intedge_rz
 ; taking a part of an array or coarsen an array
-;    triplet, quadruplet, coarse
+;    triplet, quadruplet, coarsen
 ; eliminating degenerate dimensions from an array
 ;    reform2
 ; converting logfile time or date+time into hours, getting other functions
@@ -2366,10 +2366,10 @@ return,filledge(-((intedge_rz(v,rc,zc)+intedge(u,rc^2))/vol2 - v)/2/r)
 end
 
 ;==========================================
-function coarse,a,boxsize
+function coarsen,a,boxsize
 ;
 ; Produce a coarser array from "a" by averaging out cells in a box.
-; The box size can be defined by a scalar (n long interval, n*n squarle,
+; The box size can be defined by a scalar (n long interval, n*n square,
 ; or ,n*n*n cube) or as an
 ; array of the same dimension as "a" (n1*n2 rectangle or n1*n2*n3 brick)
 
