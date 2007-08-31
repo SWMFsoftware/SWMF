@@ -11,6 +11,8 @@ module ModPwImplicit
 
     use ModCommonVariables, ONLY: iRho_I,iU_I,iP_I,iT_I,Source_CV,RGAS_I, &
          MassElecIon_I,nIon,RhoE_,uE_,Te_,pE_,Curr,HeatCon_GI
+    use ModPWOM, ONLY: beta
+
     implicit none
     integer, intent(in) :: nOrder, nCell, nVar
     real,    intent(in) :: DtIn
@@ -19,7 +21,7 @@ module ModPwImplicit
 
     real, allocatable    :: NewState_GV(:,:)
     integer              :: iIon,k
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     if (.not. allocated(NewState_GV)) allocate(NewState_GV(-1:nCell+2, nVar))
 
@@ -70,16 +72,21 @@ module ModPwImplicit
 !       enddo
 !
 !    else if (nOrder == 2) then
-       do iIon=1,nIon-1
-          call rusanov_solver(iIon,nCell,RGAS_I(iIon),DtIn,   &
-               StateIn_GV(-1:nCell+2,iRho(iIon):iP(iIon)),&
-               Source_CV(1:nCell,iRho_I(iIon)), Source_CV(1:nCell,iU_I(iIon)),&
-               Source_CV(1:nCell,iP_I(iIon)),&
-               HeatCon_GI(0:nCell+1,iIon), &
-               NewState_GV(-1:nCell+2,iRho(iIon):iP(iIon)))
-       enddo
-!    endif
 
+    if(nOrder == 1)then
+       beta = 0.0
+    else
+       beta = 1.5
+    end if
+
+    do iIon=1,nIon-1
+       call rusanov_solver(iIon,nCell,RGAS_I(iIon),DtIn,   &
+            StateIn_GV(-1:nCell+2,iRho(iIon):iP(iIon)),&
+            Source_CV(1:nCell,iRho_I(iIon)), Source_CV(1:nCell,iU_I(iIon)),&
+            Source_CV(1:nCell,iP_I(iIon)),&
+            HeatCon_GI(0:nCell+1,iIon), &
+            NewState_GV(-1:nCell+2,iRho(iIon):iP(iIon)))
+    enddo
 
     Resid_CV(1:nCell,:) = NewState_GV(1:nCell,:)
 
@@ -89,7 +96,7 @@ module ModPwImplicit
 
   end subroutine PW_calc_residual
 
-  !=============================================================================
+  !============================================================================
 
   subroutine PW_update_boundary(nCell, nVar, State_GV)
 
@@ -106,8 +113,14 @@ module ModPwImplicit
 
     real    :: ScaleHeight_I(nIon-1),XHTM,T_C(nIon)
     integer :: iIon
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     do iIon = 1,nIon-1
+       
+       ! Lower boundary is fixed, copy it from StateOrig_GV
+       State_GV(-1:0,iRho(iIon):iP(iIon)) = &
+            StateOrig_GV(-1:0,iRho_I(iIon):iP_I(iIon))
+
+       ! Upper boundary requires temperature and scaleheight
        T_C(iIon) = &
             State_GV(nCell,iP(iIon))/Rgas_I(iIon)/State_GV(nCell,iRho(iIon))
 
@@ -145,8 +158,6 @@ module ModPwImplicit
             State_GV(nCell+1,iRho(iIon))* State_GV(nCell+1,iU(iIon))&
             /State_GV(nCell+2,iRho(iIon))
        
-       
-
     enddo
 
 
@@ -175,14 +186,11 @@ module ModPwImplicit
                                   RhoE_,uE_,iRho_I,iU_I,iP_I,iT_I,&
                                   MassElecIon_I,&
                                   Curr,nCell => nDim,Rgas_I
-    use ModPWOM, ONLY: Beta
     
     real                :: ImplPar = 0.005, DtExpl, DtImpl
     real,allocatable    :: ReducedState_GV(:,:)
     integer :: k,iIon, nVarReduced
     !--------------------------------------------------------------------------
-    
-    Beta = 1.5
     
     DtImpl = Dt
     DtExpl = 0.01
