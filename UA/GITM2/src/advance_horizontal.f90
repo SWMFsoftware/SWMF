@@ -4,7 +4,7 @@ subroutine advance_horizontal(iBlock)
   use ModSizeGitm
   use ModPlanet, only : nSpecies, nIonsAdvect, OmegaBody
   use ModGITM
-  use ModInputs, only : UseIonAdvection, iDebugLevel
+  use ModInputs, only : UseIonAdvection, iDebugLevel, UseTopography
   use ModSources, only : HorizontalTempSource
   
   implicit none
@@ -32,6 +32,9 @@ subroutine advance_horizontal(iBlock)
   real :: NewNum_CV(nLons,nLats, nSpecies)
   real :: NewVertVel_CV(nLons,nLats, nSpecies)
   real :: NewINum_CV(nLons,nLats, nIonsAdvect)
+
+  ! Vertical derivative of current variable (needed for topography only)
+  real :: dVarDAlt_C(nLons,nLats) 
   !----------------------------------------------------------------------------
   MaxDiff = 0.0
 
@@ -192,15 +195,30 @@ contains
 
     real :: RhoTest, CosLat(nLats), SinLat(nLats)
 
-    integer :: iLon, iLat
+    real :: HalfInvDAlt_C(nLons, nLats)
 
+    integer :: iLon, iLat
+    !--------------------------------------------------------------------------
+    if(UseTopography)then
+       HalfInvDAlt_C = 0.5/dAlt_GB(1:nLons,1:nLats,iAlt,iBlock)
+
+       dVarDAlt_C = HalfInvDAlt_C * &
+            ( Rho(1:nLons,1:nLats,iAlt+1,iBlock) &
+            - Rho(1:nLons,1:nLats,iAlt-1,iBlock) )
+    end if
     call calc_rusanov_lons( Rho_C,  GradLonRho_C,  DiffLonRho_C)
     call calc_rusanov_lats( Rho_C,  GradLatRho_C,  DiffLatRho_C)
 
+    if(UseTopography) dVarDAlt_C = HalfInvDAlt_C * &
+         ( Temperature(1:nLons,1:nLats,iAlt+1,iBlock) &
+         - Temperature(1:nLons,1:nLats,iAlt-1,iBlock) )
     call calc_rusanov_lons( Temp_C, GradLonTemp_C, DiffLonTemp_C)
     call calc_rusanov_lats( Temp_C, GradLatTemp_C, DiffLatTemp_C)
 
     do iDim = 1,3
+       if(UseTopography) dVarDAlt_C = HalfInvDAlt_C * &
+            ( Velocity(1:nLons,1:nLats,iAlt+1,iDim,iBlock) &
+            - Velocity(1:nLons,1:nLats,iAlt-1,iDim,iBlock) )
        call calc_rusanov_lons(Vel_CD(:,:,iDim), &
             GradLonVel_CD(:,:,iDim), DiffLonVel_CD(:,:,iDim))
        call calc_rusanov_lats(Vel_CD(:,:,iDim), &
@@ -215,11 +233,17 @@ contains
     end do
 
     do iSpc = 1,nSpecies
+       if(UseTopography) dVarDAlt_C = HalfInvDAlt_C * &
+            ( nDensityS(1:nLons,1:nLats,iAlt+1,iSpc,iBlock) &
+            - nDensityS(1:nLons,1:nLats,iAlt-1,iSpc,iBlock) )
        call calc_rusanov_lons(Num_CV(:,:,iSpc), &
             GradLonNum_CV(:,:,iSpc), DiffLonNum_CV(:,:,iSpc))
        call calc_rusanov_lats(Num_CV(:,:,iSpc), &
             GradLatNum_CV(:,:,iSpc), DiffLatNum_CV(:,:,iSpc))
 
+       if(UseTopography) dVarDAlt_C = HalfInvDAlt_C * &
+            ( VerticalVelocity(1:nLons,1:nLats,iAlt+1,iSpc,iBlock) &
+            - VerticalVelocity(1:nLons,1:nLats,iAlt-1,iSpc,iBlock) )
        call calc_rusanov_lons( VertVel_CV(:,:,iSpc), &
             GradLonVertVel_CV(:,:,iSpc), DiffLonVertVel_CV(:,:,iSpc))
        call calc_rusanov_lats( VertVel_CV(:,:,iSpc), &
@@ -228,19 +252,22 @@ contains
     end do
 
     do iSpc = 1,nIonsAdvect
+       if(UseTopography) dVarDAlt_C = HalfInvDAlt_C * &
+            ( IDensityS(1:nLons,1:nLats,iAlt+1,iSpc,iBlock) &
+            - IDensityS(1:nLons,1:nLats,iAlt-1,iSpc,iBlock) )
        call calc_rusanov_lons(INum_CV(:,:,iSpc), &
             GradLonINum_CV(:,:,iSpc), DiffLonINum_CV(:,:,iSpc))
        call calc_rusanov_lats(INum_CV(:,:,iSpc), &
             GradLatINum_CV(:,:,iSpc), DiffLatINum_CV(:,:,iSpc))
     end do
 
-    sinlat = sin(Latitude(1:nLats,iBlock))
+    SinLat = sin(Latitude(1:nLats,iBlock))
     CosLat = CosLatitude(1:nLats,iBlock)
 
     do iLat=1,nLats
 
-       CoriolisSin = sinLat(iLat) * 2 * OmegaBody
-       CoriolisCos = cosLat(iLat) * 2 * OmegaBody
+       CoriolisSin = SinLat(iLat) * 2 * OmegaBody
+       CoriolisCos = CosLat(iLat) * 2 * OmegaBody
 
        CentrifugalParameter = OmegaBody**2 * cosLat(iLat) * &
             sinLat(iLat)
@@ -413,6 +440,9 @@ contains
 
     end do
 
+    if(UseTopography) &
+         GradVar = GradVar - dVarDAlt_C * dAltDLat_CB(:,:,iAlt,iBlock)
+
   end subroutine calc_rusanov_lats
 
   !===========================================================================
@@ -458,6 +488,9 @@ contains
             (DiffFlux(2:nLons+1) - DiffFlux(1:nLons)) * InvdLon
 
     end do
+
+    if(UseTopography) &
+         GradVar = GradVar - dVarDAlt_C * dAltDLon_CB(:,:,iAlt,iBlock)
 
   end subroutine calc_rusanov_lons
 
