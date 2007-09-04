@@ -229,7 +229,7 @@ subroutine initialize_gitm(TimeIn)
   if(UseTopography)then
      !!! What about the maxi tricks ??? Why is that there???
      do iBlock = 1, nBlocks
-        call UAM_gradient(Altitude_GB, GradAlt_CD)
+        call UAM_gradient(Altitude_GB, GradAlt_CD, iBlock)
         dAltDLon_CB(:,:,:,iBlock) = GradAlt_CD(:,:,:,iEast_)
         dAltDLat_CB(:,:,:,iBlock) = GradAlt_CD(:,:,:,iNorth_)
      end do
