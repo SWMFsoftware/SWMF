@@ -56,14 +56,17 @@ subroutine init_b0
               B0(iLon,iLat,iAlt,iMag_,iBlock)   = &
                    sqrt(xmag*xmag + ymag*ymag + zmag*zmag)
 
-              b0_d1(iLon,iLat,iAlt,:,iBlock) = d1
-              b0_d2(iLon,iLat,iAlt,:,iBlock) = d2
-              b0_d3(iLon,iLat,iAlt,:,iBlock) = d3
-              b0_e1(iLon,iLat,iAlt,:,iBlock) = e1
-              b0_e2(iLon,iLat,iAlt,:,iBlock) = e2
-              b0_e3(iLon,iLat,iAlt,:,iBlock) = e3
-              b0_cD(iLon,iLat,iAlt,iBlock)   = cD
-              b0_Be3(iLon,iLat,iAlt,iBlock)  = B0(iLon,iLat,iAlt,iMag_,iBlock)/cD
+              if(UseDynamo)then
+                 b0_d1(iLon,iLat,iAlt,:,iBlock) = d1
+                 b0_d2(iLon,iLat,iAlt,:,iBlock) = d2
+                 b0_d3(iLon,iLat,iAlt,:,iBlock) = d3
+                 b0_e1(iLon,iLat,iAlt,:,iBlock) = e1
+                 b0_e2(iLon,iLat,iAlt,:,iBlock) = e2
+                 b0_e3(iLon,iLat,iAlt,:,iBlock) = e3
+                 b0_cD(iLon,iLat,iAlt,iBlock)   = cD
+                 b0_Be3(iLon,iLat,iAlt,iBlock)  = &
+                      B0(iLon,iLat,iAlt,iMag_,iBlock)/cD
+              end if
 
               if (B0(iLon,iLat,iAlt,iMag_,iBlock) == 0.0) then
                  B0(iLon,iLat,iAlt,iMag_,iBlock) = 1.0e-10
