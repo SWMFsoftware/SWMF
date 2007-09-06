@@ -4,13 +4,10 @@ module ModUserTD99
   use ModConst
   use ModMain,       ONLY: x_,y_,z_,nByteReal
   use ModVarIndexes, ONLY: Ux_,Uy_,Uz_,Bx_,By_,Bz_
-  use ModPhysics,    ONLY: No2Si_V,No2Io_V,UnitX_,UnitRho_,UnitU_,UnitB_,UnitJ_
+  use ModPhysics,    ONLY: Si2No_V, No2Si_V,No2Io_V,UnitX_,UnitRho_,UnitU_,UnitB_,UnitJ_
 
   implicit none
   save
-  !----------------------------------------------------------------------
-  ! Additional normalization units::
-  real:: No2SiUnitI,No2IoUnitI
   !----------------------------------------------------------------------
   ! Variables related to the position of the flux rope::
   real, parameter:: Li_TD99=cHalf
@@ -161,26 +158,14 @@ contains
          rot_matrix_z
     use ModIO,             ONLY: iUnitOut, write_prefix
     !--------------------------------------------------------------------
-    real:: AlphaRope,LInduct,WFRope,FootSepar
-    !--------------------------------------------------------------------
-    !\
-    ! Define the SI normalization units here::
-    !/
-    !--------------------------------------------------------------------
-    No2SiUnitI   = No2Si_V(UnitJ_)*No2Si_V(UnitX_)**2 ! in [A]
-    !--------------------------------------------------------------------
-    !\
-    ! Define the USER normalization units here::
-    !/
-    !--------------------------------------------------------------------
-    No2IoUnitI = 1.0E+6*No2SiUnitI      ! in [microA]
+    real:: AlphaRope,LInduct,WFRope,FootSepar,ItubeDim
     !--------------------------------------------------------------------
     !\
     ! Compute the magnetic energy, WFRope, associated with the portion
     ! of the flux rope current that is above the solar surface::
     !/
     !--------------------------------------------------------------------
-    InvH0_TD99 = cGravitation*Msun/Rsun/No2Si_V(UnitU_)**2       ! in [-]
+    InvH0_TD99 = cGravitation*Msun/Rsun*Si2No_V(UnitU_)**2       ! in [-]
     AlphaRope  = cTwo*acos(d_TD99/Rtube_TD99)             ! in [rad]
     FootSepar  = Rtube_TD99*sin(AlphaRope/cTwo)/cE6       ! in [Mm]
     LInduct    = cMu*(AlphaRope/cTwo/cPi)*Rtube_TD99*log(cTwo**3*&
@@ -199,10 +184,11 @@ contains
     !--------------------------------------------------------------------
     ! Flux rope::
     !--------------------------------------------------------------------
-    Rtube_TD99 = Rtube_TD99/No2Si_V(UnitX_)
-    atube_TD99 = atube_TD99/No2Si_V(UnitX_)
-    Itube_TD99 = Itube_TD99/No2SiUnitI
-    Rho0_TD99  = Rho0_TD99/No2Si_V(UnitRho_)
+    Rtube_TD99 = Rtube_TD99*Si2No_V(UnitX_)
+    atube_TD99 = atube_TD99*Si2No_V(UnitX_)
+    ItubeDim   = Itube_TD99
+    Itube_TD99 = ItubeDim*Si2No_V(UnitJ_)*Si2No_V(UnitX_)**2 ! in [A]
+    Rho0_TD99  = Rho0_TD99*Si2No_V(UnitRho_)
     !--------------------------------------------------------------------
     ! Save the maximum value of the current for possible use in
     ! varied_current case::
@@ -211,9 +197,9 @@ contains
     !--------------------------------------------------------------------
     ! Strapping field::
     !--------------------------------------------------------------------
-    d_TD99     = d_TD99/No2Si_V(UnitX_)
-    L_TD99     = L_TD99/No2Si_V(UnitX_)
-    q_TD99     = q_TD99/(No2Si_V(UnitB_)*No2Si_V(UnitX_)**2)
+    d_TD99     = d_TD99*Si2No_V(UnitX_)
+    L_TD99     = L_TD99*Si2No_V(UnitX_)
+    q_TD99     = q_TD99*Si2No_V(UnitB_)*Si2No_V(UnitX_)**2
     !--------------------------------------------------------------------
     !\
     ! Construct the rotational matrix, RotateTD99_DD, to position the
@@ -255,7 +241,7 @@ contains
             atube_TD99*No2Si_V(UnitX_)/cE6,'[Mm]'
        call write_prefix; write(iUnitOut,*) 'atube/Rtube = ',atube_TD99/Rtube_TD99,'[-]'
        call write_prefix; write(iUnitOut,*) 'Itube_TD99  = ',Itube_TD99,'[I0] ',          &
-            Itube_TD99*No2SiUnitI,'[A]'
+            ItubeDim,'[A]'
        call write_prefix; write(iUnitOut,*) 'aratio_TD99 = ',aratio_TD99,'[-]'
        call write_prefix; write(iUnitOut,*) 'Mass_TD99   = ',Mass_TD99*cE3,'[g] ',        &
             'InvH0_TD99  = ',InvH0_TD99,'[1/X0]' 
@@ -292,7 +278,7 @@ contains
             (L_TD99**2+Rtube_TD99**2)**(-(cOne+cHalf))     / &
             (alog(cTwo*cFour*Rtube_TD99/atube_TD99)        - &
             (cOne+cHalf)+Li_TD99/cTwo)                           ! in [-]
-       WFRope    = LInduct*(Itube_TD99*No2SiUnitI)**2/cTwo*cE6*cE1 ! in [ergs]
+       WFRope    = LInduct*(ItubeDim)**2/cTwo*cE6*cE1 ! in [ergs]
     endif
     if (DoEquilItube.and.iProc==0) then
        call write_prefix; write(iUnitOut,*) ''
@@ -340,13 +326,13 @@ contains
     !--------------------------------------------------------------------
     if (present(TimeNow)) then
        RPlus_D(x_) = RFace_D(x_)-L_TD99 - &
-            VTransX*(TimeNow-CurrentStartTime)/No2Si_V(UnitX_)
+            VTransX*(TimeNow-CurrentStartTime)*Si2No_V(UnitX_)
        RMins_D(x_) = RFace_D(x_)+L_TD99 + &
-            VTransX*(TimeNow-CurrentStartTime)/No2Si_V(UnitX_)
+            VTransX*(TimeNow-CurrentStartTime)*Si2No_V(UnitX_)
        RPlus_D(y_) = RFace_D(y_)        - &
-            VTransY*(TimeNow-CurrentStartTime)/No2Si_V(UnitX_)
+            VTransY*(TimeNow-CurrentStartTime)*Si2No_V(UnitX_)
        RMins_D(y_) = RFace_D(y_)        + &
-            VTransY*(TimeNow-CurrentStartTime)/No2Si_V(UnitX_)
+            VTransY*(TimeNow-CurrentStartTime)*Si2No_V(UnitX_)
     else
        RPlus_D(x_) = RFace_D(x_)-L_TD99
        RMins_D(x_) = RFace_D(x_)+L_TD99
@@ -444,9 +430,9 @@ contains
        !/
        !-----------------------------------------------------------------
        if (present(TimeNow)) then
-          UTranC_D(x_) = (VTransX/No2Si_V(UnitU_))*BqZOverBqZ0 * &
+          UTranC_D(x_) = (VTransX*Si2No_V(UnitU_))*BqZOverBqZ0 * &
                sign(cOne,BqField_D(z_))*exp(-BqZFunction)
-          UTranC_D(y_) = (VTransY/No2Si_V(UnitU_))*BqZOverBqZ0 * &
+          UTranC_D(y_) = (VTransY*Si2No_V(UnitU_))*BqZOverBqZ0 * &
                sign(cOne,BqField_D(z_))*exp(-BqZFunction)
           UTranC_D(z_) = cZero
        else
@@ -1000,7 +986,7 @@ contains
     use ModGeometry,   ONLY: R_BLK
     use ModAdvance,    ONLY: nFaceValueVars,State_VGB
     use ModPhysics,    ONLY: CosThetaTilt,SinThetaTilt,g,inv_g,      &
-         inv_gm1,OmegaBody,No2Io_V, UnitB_
+         inv_gm1,OmegaBody
     use ModNumConst,   ONLY: cZero,cHalf,cOne,cTwo,cTolerance,cTiny
 
     use ModBlockData, ONLY: use_block_data, put_block_data, get_block_data
@@ -1139,7 +1125,7 @@ contains
     use ModVarIndexes
     use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK
     use ModNumConst
-    use ModPhysics,    ONLY: g,inv_g,No2Io_V,UnitB_,GBody,BodyTdim_I
+    use ModPhysics,    ONLY: g,inv_g,GBody,BodyTdim_I
     use ModExpansionFactors,  ONLY: UMin,T0
     implicit none
 
