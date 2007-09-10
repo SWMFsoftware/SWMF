@@ -581,7 +581,8 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
   use ModIO, ONLY: NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I, &
        plot_dimensional, Plot_
   use ModNumConst, ONLY: cTiny
-  use ModHallResist, ONLY: UseHallResist, hall_factor
+  use ModHallResist, ONLY: UseHallResist, hall_factor, &
+       IsNewBlockHall, get_face_current
   use ModPointImplicit, ONLY: UsePointImplicit_B
   use ModMultiFluid, ONLY: extract_fluid_name, &
        TypeFluid, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I
@@ -602,8 +603,14 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
   integer :: i,j,k,l, ip1,im1,jp1,jm1,kp1,km1
   real :: xfactor,yfactor,zfactor
 
+  integer:: iDir, Di, Dj, Dk
+  real :: Jx, Jy, Jz
+
   logical :: IsFound
   !-------------------------------------------------------------------------
+
+  ! Recalculate magnetic field in block for face currents (if needed)
+  IsNewBlockHall = .true.
 
   do iVar = 1, nPlotVar
      NamePlotVar = plotvarnames(iVar)
@@ -854,6 +861,35 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
            end if                                  !^CFG END COVARIANT
            continue
         end if                                     !^CFG IF COVARIANT
+     case('jxe','jye','jze','jxw','jyw','jzw', &
+          'jxs','jys','jzs','jxn','jyn','jzn', &
+          'jxb','jyb','jzb','jxt','jyt','jzt')
+        Di=0; Dj=0; Dk=0
+        select case(String(3:3))
+        case('e')
+           iDir=1
+        case('w')
+           iDir=1; Di=1
+        case('s')
+           iDir=2
+        case('n')
+           iDir=2; Dj=1
+        case('b')
+           iDir=3
+        case('t')
+           iDir=3; Dk=1
+        end select
+        do k=1,nK; do j=1,nJ; do i=1,nI
+           call get_face_current(iDir, i+Di, j+Dj, k+Dk, iBlk, Jx, Jy, Jz)
+           select case(String(2:2))
+           case('x')
+              PlotVar(i,j,k,iVar)=Jx
+           case('y')
+              PlotVar(i,j,k,iVar)=Jy
+           case('z')
+              PlotVar(i,j,k,iVar)=Jz
+           end select
+        end do; end do; end do
      case('enumx')
         PlotVar(1:nI,1:nJ,1:nK,iVar)= Ex_CB(:,:,:,iBLK)
      case('enumy')
@@ -1295,7 +1331,10 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitTemperature_)
      case('ux','uy','uz')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitU_)
-     case('jx','jy','jz','jr')
+     case('jx','jy','jz','jr',&
+          'jxe','jye','jze','jxw','jyw','jzw', &
+          'jxs','jys','jzs','jxn','jyn','jzn', &
+          'jxb','jyb','jzb','jxt','jyt','jzt')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitJ_)
      case('ex','ey','ez','er','enumx','enumy','enumz')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitElectric_)
@@ -1645,7 +1684,10 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
         NameUnit = NameIdlUnit_V(UnitTemperature_)
      case('ux','uy','uz','ur')
         NameUnit = NameIdlUnit_V(UnitU_)
-     case('jx','jy','jz','jr') 
+     case('jx','jy','jz','jr',&
+          'jxe','jye','jze','jxw','jyw','jzw', &
+          'jxs','jys','jzs','jxn','jyn','jzn', &
+          'jxb','jyb','jzb','jxt','jyt','jzt')
         NameUnit = NameIdlUnit_V(UnitJ_)
      case('ex','ey','ez','er','enumx','enumy','enumz')
         NameUnit = NameIdlUnit_V(UnitElectric_)
