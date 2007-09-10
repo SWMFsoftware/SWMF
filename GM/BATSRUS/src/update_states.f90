@@ -46,30 +46,24 @@ subroutine update_states(iStage,iBlock)
   end if
 
   !^CFG IF DEBUGGING BEGIN
-  if(index(test_string,'fixrho ')>0) then
-     State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)=&
-          StateOld_VCB(rho_,:,:,:,iBlock)
-  end if
+  if(index(test_string,'fixrho ')>0) &
+       State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock)=StateOld_VCB(Rho_,:,:,:,iBlock)
 
-  if(index(test_string,'fixrhoU ')>0) then
-     State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock)=&
-          StateOld_VCB(rhoUx_,:,:,:,iBlock)
-     State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBlock)=&
-          StateOld_VCB(rhoUy_,:,:,:,iBlock)
-     State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock)=&
-          StateOld_VCB(rhoUz_,:,:,:,iBlock)
-  endif
-
-  if(index(test_string,'fixB ')>0) then
-     State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)=&
-          StateOld_VCB(Bx_,:,:,:,iBlock)
-     State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)=&
-          StateOld_VCB(By_,:,:,:,iBlock)
-     State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)=&
-          StateOld_VCB(Bz_,:,:,:,iBlock)
-  endif
-
-  if(index(test_string,'fixE ')>0) then
+  if(index(test_string,'fixrho ')>0)   State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock)&
+       =                            StateOld_VCB(Rho_,:,:,:,iBlock)
+  if(index(test_string,'fixrhoux ')>0) State_VGB(RhoUx_,1:nI,1:nJ,1:nK,iBlock)&
+       =                            StateOld_VCB(RhoUx_,:,:,:,iBlock)
+  if(index(test_string,'fixrhouy ')>0) State_VGB(RhoUy_,1:nI,1:nJ,1:nK,iBlock)&
+       =                            StateOld_VCB(RhoUy_,:,:,:,iBlock)
+  if(index(test_string,'fixrhouz ')>0) State_VGB(RhoUz_,1:nI,1:nJ,1:nK,iBlock)&
+       =                            StateOld_VCB(RhoUz_,:,:,:,iBlock)
+  if(index(test_string,'fixbx ')>0)    State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)&
+       =                            StateOld_VCB(Bx_,:,:,:,iBlock)
+  if(index(test_string,'fixby ')>0)    State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)&
+       =                            StateOld_VCB(By_,:,:,:,iBlock)
+  if(index(test_string,'fixbz ')>0)    State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)&
+       =                            StateOld_VCB(Bz_,:,:,:,iBlock)
+  if(index(test_string,'fixe ')>0 .or. index(test_string,'fixp ')>0) then
      Energy_GBI(1:nI,1:nJ,1:nK,iBlock,:)=EnergyOld_CBI(:,:,:,iBlock,:)
      do iFluid=1, nFluid
         call select_fluid
