@@ -203,7 +203,7 @@ contains
 
     use ModAdvance, ONLY: State_VGB, B_, Bx_, By_, Bz_
     use ModParallel, ONLY:neiLeast,neiLwest,neiLsouth, &
-         neiLnorth,neiLtop,neiLbot,BlkNeighborLev
+         neiLnorth,neiLtop,neiLbot,BlkNeighborLev,NOBLK
 
     integer, intent(in):: iBlock
 
@@ -230,7 +230,8 @@ contains
        ! then average out the 8 fine cells so that the
        ! general interpolation formulas remain 2nd order
        ! accurate
-       if( BlkNeighborLev(iSide,jSide,kSide,iBlock) /= 1 .and. ( &
+       if(  BlkNeighborLev(iSide,jSide,kSide,iBlock) /= 1 .and. &
+            BlkNeighborLev(iSide,jSide,kSide,iBlock) /= NOBLK .and. ( &
             BlkNeighborLev(iSide,0,0,iBlock) == 1 .or. &
             BlkNeighborLev(0,jSide,0,iBlock) == 1 .or. &
             BlkNeighborLev(0,0,kSide,iBlock) == 1)) then
@@ -359,7 +360,11 @@ contains
     ! Do 12 edges
     ! 4 X edges
     do kSide = -1,1,2; do jSide = -1,1,2
-       if(BlkNeighborLev(0, jSide, kSide, iBlock) /= 1)CYCLE
+       if(  BlkNeighborLev(0, jSide, kSide, iBlock) /= 1 .and. .not. ( &
+            BlkNeighborLev(0, jSide, kSide, iBlock) == NOBLK .and. ( &
+            BlkNeighborLev(0, jSide, 0, iBlock) == 1 .or. &
+            BlkNeighborLev(0, 0, kSide, iBlock) == 1))) CYCLE
+
        j1=1; if(jSide==1) j1=nJ; j2 = j1-jSide; jC = j1+jSide
        k1=1; if(kSide==1) k1=nK; k2 = k1-kSide; kC = k1+kSide
        do i1 = 1,nI,2; do i2 = i1, i1+1
@@ -376,7 +381,11 @@ contains
     end do;end do
     ! 4 Y edges
     do kSide = -1,1,2; do iSide = -1,1,2
-       if(BlkNeighborLev(iSide, 0, kSide, iBlock) /= 1)CYCLE
+       if(  BlkNeighborLev(iSide, 0, kSide, iBlock) /= 1 .and. .not. ( &
+            BlkNeighborLev(iSide, 0, kSide, iBlock) == NOBLK .and. ( &
+            BlkNeighborLev(iSide, 0, 0, iBlock) == 1 .or. &
+            BlkNeighborLev(0, 0, kSide, iBlock) == 1))) CYCLE
+
        i1=1; if(iSide==1) i1=nI; i2 = i1-iSide; iC = i1+iSide
        k1=1; if(kSide==1) k1=nK; k2 = k1-kSide; kC = k1+kSide
        do j1 = 1, nJ, 2; do j2 = j1, j1+1
@@ -393,7 +402,11 @@ contains
     end do;end do
     ! 4 Z edges
     do jSide = -1,1,2; do iSide = -1,1,2
-       if(BlkNeighborLev(iSide, jSide, 0, iBlock) /= 1)CYCLE
+       if(  BlkNeighborLev(iSide, jSide, 0, iBlock) /= 1.and. .not. ( &
+            BlkNeighborLev(iSide, jSide, 0, iBlock) == NOBLK .and. ( &
+            BlkNeighborLev(iSide, 0, 0, iBlock) == 1 .or. &
+            BlkNeighborLev(0, jSide, 0, iBlock) == 1))) CYCLE
+
        i1=1; if(iSide==1) i1=nI; i2 = i1-iSide; iC = i1+iSide
        j1=1; if(jSide==1) j1=nJ; j2 = j1-jSide; jC = j1+jSide
        do k1 = 1, nK, 2 ; do k2 = k1, k1 + 1
@@ -692,7 +705,6 @@ contains
 
     real, parameter :: cTwoThird = 2.0/3.0, cFourThird = 4.0/3.0
 
-    logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='get_face_current'
 
     integer, intent(in):: iDir, i, j, k, iBlock
@@ -704,6 +716,9 @@ contains
     real :: jLeft_D(3), jRight_D(3)
 
     real :: AverageMassFace
+
+    logical :: DoTest, DoTestMe
+    integer :: i1,j1,k1
     !-------------------------------------------------------------------------
     if(iProc==ProcTest.and.iBlock==BlkTest.and. &
              (i==iTest.or.i==iTest+1.and.iDir==x_) .and. &
@@ -820,6 +835,15 @@ contains
     end if                             !^CFG IF COVARIANT
 
     if(DoTestMe)then
+       write(*,*)NameSub,': iDir,i,j,k,iBlock=',iDir,i,j,k,iBlock
+       write(*,*)NameSub,': iL,jL,kL,iR,jR,kR=',iL,jL,kL,iR,jR,kR
+       write(*,*)NameSub,': Ax,Bx,Cx=',Ax,Bx,Cx
+       write(*,*)NameSub,': Ay,By,Cy=',Ay,By,Cy
+       write(*,*)NameSub,': Az,Bz,Cz=',Az,Bz,Cz
+       do k1=k-1,k+1; do j1=j-1,j+1; do i1=i-1,i+1
+          write(*,*)NameSub,': i,j,k,b_DG(x_:z_)=',&
+               i1,j1,k1,b_DG(x_:z_,i1,j1,k1)
+       end do; end do; end do
        write(*,*)NameSub,': Jx=',Jx
        write(*,*)NameSub,': Jy=',Jy
        write(*,*)NameSub,': Jz=',Jz
