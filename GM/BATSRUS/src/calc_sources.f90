@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-!^CFG FILE NOT COVARIANT
+
 subroutine calc_sources
   use ModProcMH
   use ModMain
@@ -562,7 +562,7 @@ end subroutine calc_sources
 !=============================================================================
 
 subroutine calc_divb
-  use ModMain, ONLY : &
+  use ModMain, ONLY : &              
        UseDivbDiffusion,&            !^CFG IF DIVBDIFFUSE
        nI,nJ,nK,globalBLK,test_string
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
@@ -571,8 +571,7 @@ subroutine calc_divb
        LeftState_VY,RightState_VY,&
        LeftState_VZ,RightState_VZ
   use ModNumConst
-  use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,&
-       fAx_BLK,fAy_BLK,fAz_BLK,vInv_CB 
+  use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK 
   implicit none
 
   !\
@@ -592,20 +591,20 @@ subroutine calc_divb
      ! left and right values
      
      DivB1_GB(1:nI,1:nJ,1:nK,globalBLK) = &
-          cHalf * vInv_CB(:,:,:,globalBLK) *( &
-          fAx_BLK(globalBLK)*((LeftState_VX(Bx_,2:nI+1,1:nJ,1:nK)+    &
-          RightState_VX(Bx_,2:nI+1,1:nJ,1:nK))-   &
-          (LeftState_VX(Bx_,1:nI,1:nJ,1:nK)+    &
-          RightState_VX(Bx_,1:nI,1:nJ,1:nK)))+  &
-          fAy_BLK(globalBLK)*((LeftState_VY(By_,1:nI,2:nJ+1,1:nK)+    &
-          RightState_VY(By_,1:nI,2:nJ+1,1:nK))-   &
-          (LeftState_VY(By_,1:nI,1:nJ,1:nK)+    &
-          RightState_VY(By_,1:nI,1:nJ,1:nK)))+  &
-          fAz_BLK(globalBLK)*((LeftState_VZ(Bz_,1:nI,1:nJ,2:nK+1)+    &
-          RightState_VZ(Bz_,1:nI,1:nJ,2:nK+1))-   &
-          (LeftState_VZ(Bz_,1:nI,1:nJ,1:nK)+    &
-          RightState_VZ(Bz_,1:nI,1:nJ,1:nK))))
-  endif
+          cHalf *( &
+          ((LeftState_VX(Bx_,2:nI+1,1:nJ,1:nK)+    &
+            RightState_VX(Bx_,2:nI+1,1:nJ,1:nK))-   &
+           (LeftState_VX(Bx_,1:nI,1:nJ,1:nK)+    &
+            RightState_VX(Bx_,1:nI,1:nJ,1:nK))  )/dx_BLK(globalBLK)+  &
+          ((LeftState_VY(By_,1:nI,2:nJ+1,1:nK)+    &
+            RightState_VY(By_,1:nI,2:nJ+1,1:nK))-   &
+           (LeftState_VY(By_,1:nI,1:nJ,1:nK)+    &
+            RightState_VY(By_,1:nI,1:nJ,1:nK))  )/dy_BLK(globalBLK)+  &
+          ((LeftState_VZ(Bz_,1:nI,1:nJ,2:nK+1)+    &
+            RightState_VZ(Bz_,1:nI,1:nJ,2:nK+1))-   &
+           (LeftState_VZ(Bz_,1:nI,1:nJ,1:nK)+    &
+            RightState_VZ(Bz_,1:nI,1:nJ,1:nK))  )/dz_BLK(globalBLK) )
+  endif                                         
 end subroutine calc_divb
 
 !==============================================================================

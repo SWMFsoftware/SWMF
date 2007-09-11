@@ -6,7 +6,8 @@ module ModFaceFlux
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
   use ModVarIndexes, ONLY: nVar, NameVar_V, UseMultiSpecies, UseMultiIon, &
        nFluid, nIonFluid, TypeFluid_I
-  use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK, dx_BLK, dy_BLK, dz_BLK
+  use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK      !^CFG IF NOT COVARIANT
+  use ModGeometry,   ONLY: dx_BLK, dy_BLK, dz_BLK
   use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, true_cell
 
   use ModGeometry,   ONLY: UseCovariant, &                !^CFG IF COVARIANT 
@@ -561,7 +562,7 @@ contains
     iDimFace   = iDim
 
     if(UseCovariant) RETURN    !^CFG IF COVARIANT
-
+                               !^CFG IF NOT COVARIANT BEGIN
     select case(iDim)
     case(x_)
        Area    = fAx_BLK(iBlockFace)
@@ -577,7 +578,7 @@ contains
        InvDxyz = 1./dz_BLK(iBlockFace)
     end select
     Area2 = Area**2
-
+                               !^CFG END COVARIANT
   end subroutine set_block_values
   !===========================================================================
   subroutine set_cell_values
