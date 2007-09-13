@@ -701,6 +701,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
      case('n','t','temp')
         ! Calculate the number density
         if(UseMultiSpecies)then
+           PlotVar(:,:,:,iVar)=0.0
            do jVar = SpeciesFirst_, SpeciesLast_
               PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) + &
                    State_VGB(jVar,:,:,:,iBLK)/MassSpecies_V(jVar)
