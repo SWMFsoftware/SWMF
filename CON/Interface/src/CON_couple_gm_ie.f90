@@ -203,6 +203,8 @@ contains
     !/
 
     ! Number of variables to pass
+    ! Set to nVar=1 for pre-September 2007 compatibility.
+    ! Set to nVar=4 to include new ray-tracing values.
     integer, parameter :: nVar=1
 
     ! Name of this interface
@@ -260,7 +262,7 @@ contains
        !\
        ! Allocate buffers for the variables both in GM and IE
        !/
-       allocate(Buffer_IIV(iSize, jSize, 1), stat=iError)
+       allocate(Buffer_IIV(iSize, jSize, nVar), stat=iError)
        call check_allocate(iError,NameSub//": "//NameVar_B(iBlock))
 
        !\

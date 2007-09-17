@@ -176,8 +176,13 @@ end module ModFieldAlignedCurrent
 
 subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar,NameVar)
 
+  use ModIeGrid
   use ModFieldAlignedCurrent,ONLY: FieldAlignedCurrent_II, &
        init_mod_field_aligned_current, calc_field_aligned_current
+  use ModRaytrace, ONLY: RayResult_VII, RayIntegral_VII, &
+       InvB_, RhoInvB_, pInvB_, xEnd_, CLOSEDRAY
+  use ModNumConst, ONLY: cRadToDeg
+  use ModPhysics, ONLY: No2Si_V, UnitP_, UnitRho_, UnitB_
 
   implicit none
 
@@ -187,6 +192,9 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar,NameVar)
   real, intent(out), dimension(iSize, jSize, nVar) :: Buffer_IIV
   character (len=*), intent(in) :: NameVar
 
+  real :: Radius
+  real, allocatable, dimension(:), save :: IE_half_lat, IE_half_lon
+
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
   call CON_set_do_test(NameSub,DoTest, DoTestMe)
@@ -195,12 +203,64 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar,NameVar)
   if(.not.allocated(FieldAlignedCurrent_II)) &
        call init_mod_field_aligned_current(iSize, jSize)
 
+  if(.not.allocated(IE_half_lat)) &
+       allocate(IE_half_lat(iSize), IE_half_lon(jSize))
+
+  ! Initialize to zero
+  Buffer_IIV = 0.
+
   select case(NameVar)
   case('JrNorth')
      call calc_field_aligned_current
      Buffer_IIV(:,:,1) = FieldAlignedCurrent_II(1:iSize,:)
+     if(nVar>1) then
+        ! Load grid and convert to lat-lon in degrees
+        IE_half_lat = 90.0 - cRadToDeg * ThetaIono_I(1:iSize)
+        IE_half_lon =        cRadToDeg * PhiIono_I
+        Radius = (6378.+100.)/6378.
+        call integrate_ray_accurate(iSize, jSize, IE_half_lat, IE_half_lon, Radius, &
+             'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b')
+        where(RayResult_VII(InvB_,:,:)>0.)
+           RayResult_VII(RhoInvB_,:,:)=RayResult_VII(RhoInvB_,:,:)/RayResult_VII(InvB_,:,:)
+           RayResult_VII(pInvB_,:,:)=RayResult_VII(pInvB_,:,:)/RayResult_VII(InvB_,:,:)
+        end where
+        where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
+           RayResult_VII(   InvB_,:,:) = -1.*No2Si_V(UnitB_)
+           RayResult_VII(rhoInvB_,:,:) = 0.
+           RayResult_VII(  pInvB_,:,:) = 0.
+        end where
+        Buffer_IIV(:,:,2) = RayResult_VII(   InvB_,:,:) / No2Si_V(UnitB_)
+        Buffer_IIV(:,:,3) = RayResult_VII(rhoInvB_,:,:) * No2Si_V(UnitRho_)
+        Buffer_IIV(:,:,4) = RayResult_VII(  pInvB_,:,:) * No2Si_V(UnitP_)
+        deallocate(RayIntegral_VII, RayResult_VII)
+     end if
   case('JrSouth')
      Buffer_IIV(:,:,1) = FieldAlignedCurrent_II(iSize:2*iSize-1,:)
+
+     if(nVar>1) then
+        ! Load grid and convert to lat-lon in degrees
+! This should be correct for southern hemisphere when ray tracing there works.
+!         IE_half_lat = 180.0 - cRadToDeg * ThetaIono_I(iSize:2*iSize-1)
+! This is needed to mirror the northern hemisphere for now
+        IE_half_lat = cRadToDeg * ThetaIono_I(iSize:2*iSize-1) - 90.
+        IE_half_lon =         cRadToDeg * PhiIono_I
+        Radius = (6378.+100.)/6378.
+        call integrate_ray_accurate(iSize, jSize, IE_half_lat, IE_half_lon, Radius, &
+             'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b')
+        where(RayResult_VII(InvB_,:,:)>0.)
+           RayResult_VII(RhoInvB_,:,:)=RayResult_VII(RhoInvB_,:,:)/RayResult_VII(InvB_,:,:)
+           RayResult_VII(pInvB_,:,:)=RayResult_VII(pInvB_,:,:)/RayResult_VII(InvB_,:,:)
+        end where
+        where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
+           RayResult_VII(   InvB_,:,:) = -1.*No2Si_V(UnitB_)
+           RayResult_VII(rhoInvB_,:,:) = 0.
+           RayResult_VII(  pInvB_,:,:) = 0.
+        end where
+        Buffer_IIV(:,:,2) = RayResult_VII(   InvB_,:,:) / No2Si_V(UnitB_)
+        Buffer_IIV(:,:,3) = RayResult_VII(rhoInvB_,:,:) * No2Si_V(UnitRho_)
+        Buffer_IIV(:,:,4) = RayResult_VII(  pInvB_,:,:) * No2Si_V(UnitP_)
+        deallocate(RayIntegral_VII, RayResult_VII)
+     end if
   case default
      call CON_stop(NameSub//' invalid NameVar='//NameVar)
   end select

@@ -103,6 +103,12 @@ module ModIonosphere
        IONO_NORTH_Fake_JR,                          & !Region 2 current
        IONO_SOUTH_Fake_JR
 
+  real, dimension(1:IONO_nTheta,1:IONO_nPsi) ::     &
+       IONO_NORTH_invB,IONO_SOUTH_invB,             & !Ray tracing 1/B integral
+       IONO_NORTH_rho, IONO_SOUTH_rho,              & !Ray tracing density integral
+       IONO_NORTH_p,   IONO_SOUTH_p                   !Ray tracing pressure integral
+       
+
   ! Pentadiagonal matrix for the Poisson equation
   real, dimension(1:IONO_nTheta,1:IONO_nPsi) :: C_A, C_B, C_C, C_D, C_E
   real, dimension(:), allocatable :: d_I, e_I, f_I, e1_I, f1_I

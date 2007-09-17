@@ -527,16 +527,77 @@ subroutine IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar, NameVar)
      LatBoundaryGm                  = Buffer_IIV(iSize,1,1)
      Iono_North_Jr                  = Buffer_IIV(:,:,1)
      Iono_North_Jr(iSize-1:iSize,1) = 0.0
+     if(nVar>1)then
+        Iono_North_invB           = Buffer_IIV(:,:,2)
+        Iono_North_rho            = Buffer_IIV(:,:,3)
+        Iono_North_p              = Buffer_IIV(:,:,4)
+!         call write_dataN
+     end if
   case('JrSouth')
      if (iProc /= nProc-1) RETURN
      LatBoundaryGm                  = Buffer_IIV(1,1,1)
      Iono_South_Jr                  = Buffer_IIV(:,:,1)
      Iono_South_Jr(1:2,1)           = 0.0
+     if(nVar>1)then
+        Iono_South_invB           = Buffer_IIV(:,:,2)
+        Iono_South_rho            = Buffer_IIV(:,:,3)
+        Iono_South_p              = Buffer_IIV(:,:,4)
+!         call write_dataS
+     end if
   case default
      call CON_stop(NameSub//' SWMF_ERROR invalid NameVar='//NameVar)
   end select
 
   if(DoTest)write(*,*)NameSub,' finished'
+
+  contains
+
+    !============================================================================
+    !write values to North plot file
+    subroutine write_dataN
+      use ModIoUnit, ONLY: UNITTMP_
+      CHARACTER (LEN=80) :: filename
+      integer :: i,j
+      integer, save :: nCall=0
+      !-------------------------------------------------------------------------
+
+      nCall=nCall+1
+      write(filename,'(a,i5.5,a)')"gm2ie_debugN_",nCall,".dat"
+      OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown')
+      write(UNITTMP_,'(a)') 'TITLE="gm2ie debugN values"'
+      write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Theta", "Psi", "JR", "1/B", "rho", "p"'
+      write(UNITTMP_,'(a,i3.3,a,i4,a,i4,a)') &
+           'ZONE T="PE=',iProc,'", I=',jsize,', J=',isize,', K=1, F=POINT'
+      do i=1,isize; do j=1,jsize
+         write(UNITTMP_,'(2i4,6G14.6)') j,i, &
+              Iono_North_Theta(i,j),Iono_North_Psi(i,j),Iono_North_Jr(i,j), &
+              Iono_North_invB(i,j),Iono_North_rho(i,j),Iono_North_p(i,j)
+      end do; end do
+      CLOSE(UNITTMP_)
+    end subroutine write_dataN
+
+    !write values to South plot file
+    subroutine write_dataS
+      use ModIoUnit, ONLY: UNITTMP_
+      CHARACTER (LEN=80) :: filename
+      integer :: i,j
+      integer, save :: nCall=0
+      !-------------------------------------------------------------------------
+      
+      nCall=nCall+1
+      write(filename,'(a,i5.5,a)')"gm2ie_debugS_",nCall,".dat"
+      OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown')
+      write(UNITTMP_,'(a)') 'TITLE="gm2ie debugS values"'
+      write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Theta", "Psi", "JR", "1/B", "rho", "p"'
+      write(UNITTMP_,'(a,i3.3,a,i4,a,i4,a)') &
+           'ZONE T="PE=',iProc,'", I=',jsize,', J=',isize,', K=1, F=POINT'
+      do i=1,isize; do j=1,jsize
+         write(UNITTMP_,'(2i4,6G14.6)') j,i, &
+              Iono_South_Theta(i,j),Iono_South_Psi(i,j),Iono_South_Jr(i,j), &
+              Iono_South_invB(i,j),Iono_South_rho(i,j),Iono_South_p(i,j)
+      end do; end do
+      CLOSE(UNITTMP_)
+    end subroutine write_dataS
 
 end subroutine IE_put_from_gm
 
