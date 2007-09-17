@@ -531,7 +531,7 @@ subroutine IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar, NameVar)
         Iono_North_invB           = Buffer_IIV(:,:,2)
         Iono_North_rho            = Buffer_IIV(:,:,3)
         Iono_North_p              = Buffer_IIV(:,:,4)
-!         call write_dataN
+        if(DoTest) call write_dataN
      end if
   case('JrSouth')
      if (iProc /= nProc-1) RETURN
@@ -542,7 +542,7 @@ subroutine IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar, NameVar)
         Iono_South_invB           = Buffer_IIV(:,:,2)
         Iono_South_rho            = Buffer_IIV(:,:,3)
         Iono_South_p              = Buffer_IIV(:,:,4)
-!         call write_dataS
+        if(DoTest) call write_dataS
      end if
   case default
      call CON_stop(NameSub//' SWMF_ERROR invalid NameVar='//NameVar)
