@@ -1,5 +1,5 @@
 !*****************************************************************************
-subroutine tsy_trace(re,rc,xlati1,phi1,t,ps,parmod,imod,np, &
+subroutine tsy_trace(iLat,re,rc,xlati1,phi1,t,ps,parmod,imod,np, &
      npf1,dssa,bba,volume1,ro1,xmlt1,bo1,ra)
 !*****************************************************************************
 ! Routine does field line tracing in Tsyganenko field. For a given xlati1 and
@@ -18,7 +18,8 @@ subroutine tsy_trace(re,rc,xlati1,phi1,t,ps,parmod,imod,np, &
   
   integer, parameter :: nd=3
   integer imod,np,npf1,i,j,n,ii,iopt,ind(np)
-  real, intent(out)   :: ra(np) 
+  integer, intent(in) :: iLat  
+  real, intent(out)   :: ra(np)
   integer:: ieq
   real re,rc,xlati1,phi1,t,ps,parmod(10),dssa(np),bba(np),volume1,ro1,xmlt1,bo1
   real xa(np),ya(np),za(np),pi,x0(3),xend(3),f(3),t0,tend,h,h1,aza(np)
@@ -82,7 +83,7 @@ subroutine tsy_trace(re,rc,xlati1,phi1,t,ps,parmod,imod,np, &
            yint(ii)=1./b_mid
         enddo
         call closed(1,n,yint,dss,ss)  ! use closed form
-        if (i.ge.1.and.i.le.ir) volume1=ss*re   ! volume / flux
+        if (iLat.ge.1.and.iLat.le.ir) volume1=ss*re   ! volume / flux
         exit trace      ! finish tracing this field line
      endif
 
@@ -209,7 +210,7 @@ subroutine mhd_trace (Lat,Lon,re,iLat,iLon,np, &
      yint(ii)=1./Bmid
   enddo
   call closed(1,n,yint,dss,ss)  ! use closed form
-  if (i >= 1 .and. i <= ir) volume1=ss*re   ! volume / flux
+  if (iLat >= 1 .and. iLat <= ir) volume1=ss*re   ! volume / flux
   
 end subroutine mhd_trace
 
