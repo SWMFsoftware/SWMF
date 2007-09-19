@@ -1454,12 +1454,7 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 ! The maximum number of lines of data allowed in the input file is 50,000.  
 ! However, this can be modified by changing the variable Max_Satellite_Npts 
 ! in the file GM/BATSRUS/ModIO.f90.
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'SATELLITE','if' => '$_IsFirstSession'},'type' => 'e'},{'content' => '
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-
-','type' => 't'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'SatelliteTimeStart','default' => '0','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'SatelliteTimeEnd','default' => '0','type' => 'real'},'type' => 'e'},{'content' => '
+','type' => 't'}],'name' => 'command','attrib' => {'name' => 'SATELLITE','if' => '$_IsFirstSession'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'SatelliteTimeStart','default' => '0','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'SatelliteTimeEnd','default' => '0','type' => 'real'},'type' => 'e'},{'content' => '
 #STEADYSTATESATELLITE
 -86400.0                     SatelliteTimeStart [sec]
 86400.0                      SatelliteTimeEnd   [sec]
@@ -1489,11 +1484,7 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 !
 ! For more than one satellite (two satellites in the above given example), the start and 
 ! end times should be set for all of them. 
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'STEADYSTATESATELLITE','if' => '$_IsFirstSession'},'type' => 'e'},{'content' => '
-
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-','type' => 't'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'min' => '0','max' => '100','name' => 'nPlotFile','default' => '0','type' => 'integer'},'type' => 'e'},{'content' => [{'content' => [{'content' => [{'content' => [],'name' => 'option','attrib' => {'value' => 'tec','name' => 'TECPLOT'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'idl','name' => 'IDL'},'type' => 'e'}],'name' => 'part','attrib' => {'required' => 'T','input' => 'select','name' => 'plotform','type' => 'string'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'option','attrib' => {'value' => '3d/3d_','name' => '3D'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'x=0'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'y=0','default' => 'T'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'z=0'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'sph'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'los'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'lin'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'cut'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'slc','if' => '$plotform =~ /\\btec\\b/'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'dpl','if' => '$plotform =~ /\\btec\\b/'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'blk','if' => '$plotform =~ /\\btec\\b/'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => '1d/1d_','name' => '1D','if' => '$plotform =~ /\\btec\\b/'},'type' => 'e'}],'name' => 'part','attrib' => {'required' => 'T','input' => 'select','name' => 'plotarea','type' => 'string'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'option','attrib' => {'value' => 'MHD','name' => 'MHD vars. dimensional'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'FUL','name' => 'All vars. dimensional'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'RAW','name' => 'Raw vars. dimensional'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'RAY','name' => 'Ray tracing vars. dim.'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'FLX','name' => 'Flux vars. dimensional'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'SOL','name' => 'Solar vars. dimensional'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'POS','name' => 'Position vars. dimensional','if' => '$plotarea eq \'lin\''},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'VAR','name' => 'Select dimensional vars.'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'BBK','name' => 'Basic Block vars. dimensional'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'mhd','name' => 'MHD vars. scaled'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'ful','name' => 'All vars. scaled'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'raw','name' => 'Raw vars. scaled'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'ray','name' => 'Ray tracing vars. scaled'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'flx','name' => 'Flux vars. scaled'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'sol','name' => 'Solar vars. scaled'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'pos','name' => 'Position vars. scaled','if' => '$plotarea eq \'lin\''},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'var','name' => 'Select scaled vars.'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'bbk','name' => 'Basic Block vars. scaled'},'type' => 'e'}],'name' => 'part','attrib' => {'required' => 'T','input' => 'select','name' => 'plotvar','type' => 'string'},'type' => 'e'}],'name' => 'parameter','attrib' => {'min' => '3','max' => '3','name' => 'StringPlot','type' => 'strings'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '-1','name' => 'DnSavePlot','type' => 'integer'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '-1','name' => 'DtSavePlot','type' => 'real'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'xMinCut','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '$xMinCut','name' => 'xMaxCut','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'yMinCut','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '$yMinCut','name' => 'yMaxCut','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'zMinCut','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '$zMinCut','name' => 'zMaxCut','type' => 'real'},'type' => 'e'}],'name' => 'if','attrib' => {'expr' => '$plotarea =~ /\\bdpl|cut|slc\\b/'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'xPoint','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'yPoint','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'zPoint','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'xNormal','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'yNormal','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'zNormal','type' => 'real'},'type' => 'e'}],'name' => 'if','attrib' => {'expr' => '$plotarea =~ /\\bslc\\b/'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'xPoint','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'yPoint','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'zPoint','type' => 'real'},'type' => 'e'}],'name' => 'if','attrib' => {'expr' => '$plotarea =~ /\\bblk\\b/'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '0','name' => 'Radius','default' => '10','type' => 'real','if' => '$plotarea =~ /\\bsph\\b/'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'ObsPosX','default' => '-215','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'ObsPosY','default' => '0','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'ObsPosZ','default' => '0','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '-89','max' => '89','name' => 'OffsetAngle','default' => '0','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '0','name' => 'rSizeImage','default' => '32','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'xOffset','default' => '0','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'yOffset','default' => '0','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '0','name' => 'rOccult','default' => '2','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '0','max' => '1','name' => 'MuLimbDarkening','default' => '0.5','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '2','name' => 'nPix','default' => '200','type' => 'integer'},'type' => 'e'}],'name' => 'if','attrib' => {'expr' => '$plotarea =~ /\\blos\\b/'},'type' => 'e'},{'content' => [{'content' => [{'content' => [],'name' => 'option','attrib' => {'value' => 'A','name' => 'Advected B'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'B','default' => 'T'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'U'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'J'},'type' => 'e'}],'name' => 'parameter','attrib' => {'input' => 'select','name' => 'NameLine','type' => 'string'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'IsSingleLine','default' => 'F','type' => 'logical'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '1','max' => '20','name' => 'nLine','default' => '1','type' => 'integer'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'xStartLine','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'yStartLine','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'zStartLine','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'IsParallel','type' => 'logical'},'type' => 'e'}],'name' => 'for','attrib' => {'to' => '$nLine','from' => '1'},'type' => 'e'}],'name' => 'if','attrib' => {'expr' => '$plotarea =~ /\\blin\\b/'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '-1.0','name' => 'DxSavePlot','default' => '-1.0','type' => 'real','if' => '($plotform=~/\\bidl\\b/ and $plotarea!~/\\b(sph|los|lin)\\b/)'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'length' => '100','name' => 'NameVars','type' => 'string'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'length' => '100','name' => 'NamePars','type' => 'string'},'type' => 'e'}],'name' => 'if','attrib' => {'expr' => '$plotvar =~ /\\bvar\\b/i'},'type' => 'e'}],'name' => 'for','attrib' => {'to' => '$nPlotFile','from' => '1'},'type' => 'e'},{'content' => '
+','type' => 't'}],'name' => 'command','attrib' => {'name' => 'STEADYSTATESATELLITE','if' => '$_IsFirstSession'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'min' => '0','max' => '100','name' => 'nPlotFile','default' => '0','type' => 'integer'},'type' => 'e'},{'content' => [{'content' => [{'content' => [{'content' => [],'name' => 'option','attrib' => {'value' => 'tec','name' => 'TECPLOT'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'idl','name' => 'IDL'},'type' => 'e'}],'name' => 'part','attrib' => {'required' => 'T','input' => 'select','name' => 'plotform','type' => 'string'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'option','attrib' => {'value' => '3d/3d_','name' => '3D'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'x=0'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'y=0','default' => 'T'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'z=0'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'sph'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'los'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'lin'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'cut'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'slc','if' => '$plotform =~ /\\btec\\b/'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'dpl','if' => '$plotform =~ /\\btec\\b/'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'blk','if' => '$plotform =~ /\\btec\\b/'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => '1d/1d_','name' => '1D','if' => '$plotform =~ /\\btec\\b/'},'type' => 'e'}],'name' => 'part','attrib' => {'required' => 'T','input' => 'select','name' => 'plotarea','type' => 'string'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'option','attrib' => {'value' => 'MHD','name' => 'MHD vars. dimensional'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'FUL','name' => 'All vars. dimensional'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'RAW','name' => 'Raw vars. dimensional'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'RAY','name' => 'Ray tracing vars. dim.'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'FLX','name' => 'Flux vars. dimensional'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'SOL','name' => 'Solar vars. dimensional'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'POS','name' => 'Position vars. dimensional','if' => '$plotarea eq \'lin\''},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'VAR','name' => 'Select dimensional vars.'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'BBK','name' => 'Basic Block vars. dimensional'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'mhd','name' => 'MHD vars. scaled'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'ful','name' => 'All vars. scaled'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'raw','name' => 'Raw vars. scaled'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'ray','name' => 'Ray tracing vars. scaled'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'flx','name' => 'Flux vars. scaled'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'sol','name' => 'Solar vars. scaled'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'pos','name' => 'Position vars. scaled','if' => '$plotarea eq \'lin\''},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'var','name' => 'Select scaled vars.'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'value' => 'bbk','name' => 'Basic Block vars. scaled'},'type' => 'e'}],'name' => 'part','attrib' => {'required' => 'T','input' => 'select','name' => 'plotvar','type' => 'string'},'type' => 'e'}],'name' => 'parameter','attrib' => {'min' => '3','max' => '3','name' => 'StringPlot','type' => 'strings'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '-1','name' => 'DnSavePlot','type' => 'integer'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '-1','name' => 'DtSavePlot','type' => 'real'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'xMinCut','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '$xMinCut','name' => 'xMaxCut','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'yMinCut','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '$yMinCut','name' => 'yMaxCut','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'zMinCut','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '$zMinCut','name' => 'zMaxCut','type' => 'real'},'type' => 'e'}],'name' => 'if','attrib' => {'expr' => '$plotarea =~ /\\bdpl|cut|slc\\b/'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'xPoint','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'yPoint','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'zPoint','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'xNormal','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'yNormal','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'zNormal','type' => 'real'},'type' => 'e'}],'name' => 'if','attrib' => {'expr' => '$plotarea =~ /\\bslc\\b/'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'xPoint','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'yPoint','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'zPoint','type' => 'real'},'type' => 'e'}],'name' => 'if','attrib' => {'expr' => '$plotarea =~ /\\bblk\\b/'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '0','name' => 'Radius','default' => '10','type' => 'real','if' => '$plotarea =~ /\\bsph\\b/'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'ObsPosX','default' => '-215','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'ObsPosY','default' => '0','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'ObsPosZ','default' => '0','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '-89','max' => '89','name' => 'OffsetAngle','default' => '0','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '0','name' => 'rSizeImage','default' => '32','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'xOffset','default' => '0','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'yOffset','default' => '0','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '0','name' => 'rOccult','default' => '2','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '0','max' => '1','name' => 'MuLimbDarkening','default' => '0.5','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '2','name' => 'nPix','default' => '200','type' => 'integer'},'type' => 'e'}],'name' => 'if','attrib' => {'expr' => '$plotarea =~ /\\blos\\b/'},'type' => 'e'},{'content' => [{'content' => [{'content' => [],'name' => 'option','attrib' => {'value' => 'A','name' => 'Advected B'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'B','default' => 'T'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'U'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'J'},'type' => 'e'}],'name' => 'parameter','attrib' => {'input' => 'select','name' => 'NameLine','type' => 'string'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'IsSingleLine','default' => 'F','type' => 'logical'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '1','max' => '20','name' => 'nLine','default' => '1','type' => 'integer'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'xStartLine','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'yStartLine','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'zStartLine','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'IsParallel','type' => 'logical'},'type' => 'e'}],'name' => 'for','attrib' => {'to' => '$nLine','from' => '1'},'type' => 'e'}],'name' => 'if','attrib' => {'expr' => '$plotarea =~ /\\blin\\b/'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'min' => '-1.0','name' => 'DxSavePlot','default' => '-1.0','type' => 'real','if' => '($plotform=~/\\bidl\\b/ and $plotarea!~/\\b(sph|los|lin)\\b/)'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'length' => '100','name' => 'NameVars','type' => 'string'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'length' => '100','name' => 'NamePars','type' => 'string'},'type' => 'e'}],'name' => 'if','attrib' => {'expr' => '$plotvar =~ /\\bvar\\b/i'},'type' => 'e'}],'name' => 'for','attrib' => {'to' => '$nPlotFile','from' => '1'},'type' => 'e'},{'content' => '
 #SAVEPLOT
 10			nPlotfile
 3d  MHD tec		StringPlot ! 3d plot with MHD data
@@ -1579,6 +1570,17 @@ blk MHD tec		StringPlot  ! general block Tecplot (ONLY!) plot
 1d  BBK tec		StringPlot ! 1d plot with BLK data, Tecplot (ONLY!)
 1000			DnSavePlot
 -1.			DtSavePlot
+rfr rwi tec             StringPlot
+10                      DnSavePlot
+-1.0                    DtSavePlot
+150.0                   ObsPosX
+145.7                   ObsPosY 
+50.0                    ObsPosZ
+10MHz, 42.3MHz, 100MHz     StringRadioFrequency
+20.0                    X_Size_Image
+20.0                    Y_Size_Image
+200                     n_Pix_X
+200                     n_Pix_Y
 
 Default is nPlotFile=0. \\\\
 
@@ -1587,13 +1589,15 @@ StringPlot must contain the following 3 parts in arbitrary order
 \\begin{verbatim}
 plotarea plotvar plotform
 
-plotarea = \'3d\' , \'x=0\', \'y=0\', \'z=0\', \'cut\', \'dpl\', \'slc\', \'sph\', \'los\', \'lin\', \'blk\', \'1d\'
-plotvar  = \'mhd\', \'ful\', \'raw\', \'ray\', \'flx\', \'sol\', \'pos\', \'var\', \'bbk\' - normalized
-plotvar  = \'MHD\', \'FUL\', \'RAW\', \'RAY\', \'FLX\', \'SOL\', \'pos\', \'VAR\', \'BBK\' - dimensional
+plotarea = \'3d\' , \'x=0\', \'y=0\', \'z=0\', \'cut\', \'dpl\', \'slc\', \'sph\', \'los\', \'lin\', \'blk\', \'1d\' \'rfr\'
+plotvar  = \'mhd\', \'ful\', \'raw\', \'ray\', \'flx\', \'sol\', \'pos\', \'var\', \'bbk\' \'rwi\' - normalized
+plotvar  = \'MHD\', \'FUL\', \'RAW\', \'RAY\', \'FLX\', \'SOL\', \'pos\', \'VAR\', \'BBK\' \'RWI\' - dimensional
 plotform = \'tec\', \'idl\'
 \\end{verbatim}
-NOTES: The plotvar option \'sol\' is only valid for plotarea \'los\' and
-       the plotvar option \'pos\' is only valid for plotarea \'lin\'.\\\\
+NOTES: The plotvar option \'sol\' is only valid for plotarea \'los\';
+       the plotvar option \'pos\' is only valid for plotarea \'lin\'.
+       the plotvar option \'rwi\' is only valid for plotarea \'rfr\'.
+\\\\
 
 \\noindent
 The plotarea string defines the 1, 2, or 3D volume of the plotting area:
@@ -1610,6 +1614,7 @@ sph   - spherical surface cut at the given radius
 los   - line of sight integrated plot
 lin   - one dimensional plot along a field or stream line
 blk   - 3D single block cell centered data, block specified point location
+rfr   - radiotelescope pixel image plot
 \\end{verbatim}
 The plotvar string defines the plot variables and the equation parameters.
 It also controls whether or not the variables will be plotted in dimensional
@@ -1633,6 +1638,8 @@ values or as non-dimensional values:
  \'sol\' - vars: wl pb
          pars: mu
  \'bbk\' - vars: dx pe blk blkall
+         pars: 
+ \'rfr\' - vars: Intensity
          pars: 
 \\end{verbatim}
 The plot_string is always followed by the plotting frequencies
@@ -1713,9 +1720,8 @@ going through the Sun.  The variables which control the direction of
 the lines of sight and the grid position and resolution are the
 following:
 \\begin{verbatim}
- ObsPosX,ObsPosY,ObsPosZ- the position of the observer
- OffsetAngle            - the angle between the image plane normal direction
-                          and the Sun\'s direction from the observer position
+ ObsPosX,ObsPosY,ObsPosZ - the position of the observer in (rotated) 
+                           HGI coordinates (SC and IH) or the GM coordinates
  rSizeImage             - the radius of the LOS image
  xOffset, yOffset       - offset relative to the observer projected onto 
                           the image plane 
@@ -1729,6 +1735,37 @@ following:
 \\noindent
 The possible values for NameVars with plotarea \'los\' 
 are listed in subroutine set_plotvar_los in write_plot_los.f90. \\\\
+
+
+The radiotelescope pixel image (plotarea \'rfr\') plots present the
+plasma emissivity integrals along the ray trajectories within a 2D
+Cartesian square shaped grid. The radiowave rays with the frequencies 
+on the order of tens of MegaHertz undergo significant refraction
+when travelling through non-uniform space plasmas; hence the name
+\'rfr\'. The radio wave raytracing is performed by a modification of 
+the Boris\'s algorithm. The image plane center coincides with
+the origin of the computational domain (usually the center of the Sun).
+The observer\'s position is specified at an arbitrary point of the
+solar system. The image plane is always orthogonal to the straight
+line connecting the observer with the center of the sun.
+The following variables specify the observer\'s position, the image 
+plane size, the resolution, and the radio frequencies at which 
+the plasma emissivity is integrated:
+\\begin{verbatim}
+ ObsPosX,ObsPosY,ObsPosZ - the position of the observer in (rotated) 
+                           HGI coordinates (SC and IH) or the GM coordinates
+ StringRadioFrequency    - set of frequencies. The number of frequencies
+			   determines the number of plots, one for each
+			   frequency. A frequency is specified as a number 
+			   followed by a frequency unit. The units are
+			   Hz, kHz, MHz, GHz, or THz.
+ X_Size_Image, Y_Size_Image - X and Y dimensions of the image plane in 
+			      solar radii
+ n_Pix_X,  n_Pix_Y       - the number of pixels in X and Y directions
+\\end{verbatim}
+
+\\noindent
+The only possible values for NameVars with plotarea \'rfr\' is \'rwi\'. \\\\ 
 
 \\noindent
 The possible values for NameVars for other plot areas
@@ -2421,7 +2458,14 @@ The ray tracing is always redone if the grid changes due to an AMR.
 
 Default values are UseAccurateIntegral = .true., UseAccurateTrace = .false.,
 DtExchangeRay = 0.1 and DnRaytrace=1.
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'RAYTRACE'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'min' => '1','name' => 'TauCoupleIm','type' => 'real'},'type' => 'e'},{'content' => '
+','type' => 't'}],'name' => 'command','attrib' => {'name' => 'RAYTRACE'},'type' => 'e'},{'content' => [{'content' => '
+
+#RAYTRACE4IE
+
+This command will activate accurate ray tracing on closed fieldlines for
+coupling with the IE module.  If not set, then only Jr is sent.  If set, then
+Jr as well as 1/B, average rho, and average p on closed fieldlines are passed.
+','type' => 't'}],'name' => 'command','attrib' => {'name' => 'RAYTRACE4IE'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'min' => '1','name' => 'TauCoupleIm','type' => 'real'},'type' => 'e'},{'content' => '
 
 #IM
 20.0			TauCoupleIm

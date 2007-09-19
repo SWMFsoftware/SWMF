@@ -513,6 +513,7 @@ subroutine ionosphere_write_output(iFile, iBlock)
   integer, parameter :: all_vars = 1
   integer, parameter :: min_vars = 2
   integer, parameter :: uam_vars = 3                     !^CFG  IF TIEGCM
+  integer, parameter :: aur_vars = 4
 
   integer :: output_type, variables, year
 
@@ -532,6 +533,8 @@ subroutine ionosphere_write_output(iFile, iBlock)
      variables = all_vars
   case('uam')                                   !^CFG  IF TIEGCM
      variables = uam_vars                       !^CFG  IF TIEGCM
+  case('aur')
+     variables = aur_vars
   end select
 
   select case(plot_form(ifile))
@@ -587,11 +590,13 @@ subroutine ionosphere_write_output(iFile, iBlock)
         write(iUnit, '(a)')  'NUMERICAL VALUES'
         select case(variables)
         case(min_vars)
-           write(iUnit, '(I5,a)')           6, ' nvars'
+           write(iUnit, '(I5,a)')  6, ' nvars'
         case(all_vars)
-           write(iUnit, '(I5,a)')           20, ' nvars'
-        case(uam_vars)                                      !^CFG  IF TIEGCM
-           write(iUnit, '(I5,a)')           9, ' nvars'     !^CFG  IF TIEGCM
+           write(iUnit, '(I5,a)') 20, ' nvars'
+        case(uam_vars)                             !^CFG  IF TIEGCM
+           write(iUnit, '(I5,a)')  9, ' nvars'     !^CFG  IF TIEGCM
+        case(aur_vars)
+           write(iUnit, '(I5,a)') 11, ' nvars'
         end select
         write(iUnit, '(I5,a)') IONO_nTheta, ' nTheta'
         write(iUnit, '(I5,a)')   IONO_nPsi, ' nPhi'
@@ -602,7 +607,6 @@ subroutine ionosphere_write_output(iFile, iBlock)
 
         select case(variables)
         case(min_vars)
-
            write(iUnit, '(I5,a)')  1, ' Theta [deg]'
            write(iUnit, '(I5,a)')  2, ' Psi [deg]'
            write(iUnit, '(I5,a)')  3, ' SigmaH [mhos]'
@@ -611,7 +615,6 @@ subroutine ionosphere_write_output(iFile, iBlock)
            write(iUnit, '(I5,a)')  6, ' Phi [kV]'
 
         case(all_vars)
-
            write(iUnit, '(I5,a)')  1, ' X [Re]'
            write(iUnit, '(I5,a)')  2, ' Y [Re]'
            write(iUnit, '(I5,a)')  3, ' Z [Re]'
@@ -643,6 +646,20 @@ subroutine ionosphere_write_output(iFile, iBlock)
            write(iUnit, '(I5,a)')  7, ' E-Flux [W/m2]'
            write(iUnit, '(I5,a)')  8, ' Ave-E [eV]'
            write(iUnit, '(I5,a)')  9, ' Phi [kV]'        !^CFG END TIEGCM
+
+        case(aur_vars)
+           write(iUnit, '(I5,a)')  1, ' Theta [deg]'
+           write(iUnit, '(I5,a)')  2, ' Psi [deg]'
+           write(iUnit, '(I5,a)')  3, ' SigmaH [mhos]'
+           write(iUnit, '(I5,a)')  4, ' SigmaP [mhos]'
+           write(iUnit, '(I5,a)')  5, ' Jr [mA/m^2]'
+           write(iUnit, '(I5,a)')  6, ' Phi [kV]'
+           write(iUnit, '(I5,a)')  7, ' E-Flux [W/m2]'
+           write(iUnit, '(I5,a)')  8, ' Ave-E [eV]'
+           write(iUnit, '(I5,a)')  9, ' RT 1/B [1/T]'
+           write(iUnit, '(I5,a)') 10, ' RT Rho [amu/cm^3]'
+           write(iUnit, '(I5,a)') 11, ' RT P [Pa]'
+
         end select
 
         write(iUnit, *) ' '
@@ -678,13 +695,11 @@ subroutine ionosphere_write_output(iFile, iBlock)
              Time_Array(1:7),', BTiltDeg=',ThetaTilt*180.0/cPi,0.,'"'
 
         if (variables == min_vars) then
-
            write(iUnit, *)  'VARIABLES= "Theta [deg]","Psi [deg]"'
            write(iUnit, *)  ' "SigmaH [S]","SigmaP [S]"'
            write(iUnit, *)  ' "JR [`mA/m^2]","PHI [kV]"'
 
         elseif (variables == all_vars) then
-
            write(iUnit, *)  'VARIABLES= "X [R]","Y [R]","Z [R]"'
            write(iUnit, *)  ' "Theta [deg]","Psi [deg]"'
            write(iUnit, *)  ' "SigmaH [S]","SigmaP [S]"'
@@ -700,6 +715,15 @@ subroutine ionosphere_write_output(iFile, iBlock)
            write(iUnit, *)  ' "SigmaH [S]","SigmaP [S]"'
            write(iUnit, *)  ' "JR [`mA/m^2]","JR (NW) [`mA/m^2]",'
            write(iUnit, *)  ' "PHI [kV]"'               !^CFG END TIEGCM
+
+        elseif (variables == aur_vars) then
+           write(iUnit, *)  'VARIABLES= "Theta [deg]","Psi [deg]"'
+           write(iUnit, *)  ' "SigmaH [S]","SigmaP [S]"'
+           write(iUnit, *)  ' "JR [`mA/m^2]","PHI [kV]"'
+           write(iUnit, *)  ' "E-Flux [W/m2]"'
+           write(iUnit, *)  ' "Ave-E [eV]"'
+           write(iUnit, *)  ' "RT 1/B [1/T]","RT Rho [amu/cm^3]","RT P [Pa]"'
+
         endif
 
         write(iUnit,'(a)') 'ZONE T="IonN '//textNandT//'"'
@@ -718,6 +742,7 @@ subroutine ionosphere_write_output(iFile, iBlock)
                    1.0e-03*IONO_NORTH_PHI(i,j)
            end do
         end do
+
      elseif (variables == all_vars) then
         do j = 1, IONO_nPsi
            do i = 1, IONO_nTheta
@@ -737,6 +762,7 @@ subroutine ionosphere_write_output(iFile, iBlock)
                    1.0e-03*IONO_NORTH_Uz(i,j)
            end do
         end do
+
      elseif (variables == uam_vars) then              !^CFG  IF TIEGCM BEGIN
         do j = 1, IONO_nPsi
            do i = 1, IONO_nTheta
@@ -751,6 +777,21 @@ subroutine ionosphere_write_output(iFile, iBlock)
                    1.0e-03*IONO_NORTH_PHI(i,j)
            end do
         end do                                        !^CFG END TIEGCM
+
+     elseif (variables == aur_vars) then
+        do j = 1, IONO_nPsi
+           do i = 1, IONO_nTheta
+              write(iUnit,fmt="(11(E13.5))")  &
+                   cRadToDeg*IONO_NORTH_Theta(i,j), &
+                   cRadToDeg*IONO_NORTH_Psi(i,j), &
+                   IONO_NORTH_SigmaH(i,j),IONO_NORTH_SigmaP(i,j), &
+                   1.0e06*IONO_NORTH_JR(i,j),   &
+                   1.0e-03*IONO_NORTH_PHI(i,j), &
+                   IONO_NORTH_EFlux(i,j), &
+                   IONO_NORTH_Ave_E(i,j), &
+                   IONO_NORTH_invB(i,j),IONO_NORTH_rho(i,j),IONO_NORTH_p(i,j)
+           end do
+        end do
      endif
 
   case(2) ! South writes data only
@@ -775,6 +816,7 @@ subroutine ionosphere_write_output(iFile, iBlock)
                    1.0e-03*IONO_SOUTH_PHI(i,j)
            end do
         end do
+
      elseif (variables == all_vars) then
         do j = 1, IONO_nPsi
            do i = 1, IONO_nTheta
@@ -794,6 +836,7 @@ subroutine ionosphere_write_output(iFile, iBlock)
                    1.0e-03*IONO_SOUTH_Uz(i,j)
            end do
         end do
+
      elseif (variables == uam_vars) then        !^CFG  IF TIEGCM BEGIN
         do j = 1, IONO_nPsi
            do i = 1, IONO_nTheta
@@ -808,6 +851,21 @@ subroutine ionosphere_write_output(iFile, iBlock)
                    1.0e-03*IONO_SOUTH_PHI(i,j)
            end do
         end do                                           !^CFG END TIEGCM
+
+     elseif (variables == aur_vars) then
+        do j = 1, IONO_nPsi
+           do i = 1, IONO_nTheta
+              write(iUnit,fmt="(11(E13.5))")  &
+                   cRadToDeg*IONO_SOUTH_Theta(i,j), &
+                   cRadToDeg*IONO_SOUTH_Psi(i,j), &
+                   IONO_SOUTH_SigmaH(i,j),IONO_SOUTH_SigmaP(i,j), &
+                   1.0e06*IONO_SOUTH_JR(i,j),   &
+                   1.0e-03*IONO_SOUTH_PHI(i,j), &
+                   IONO_SOUTH_EFlux(i,j), &
+                   IONO_SOUTH_Ave_E(i,j), &
+                   IONO_SOUTH_invB(i,j),IONO_SOUTH_rho(i,j),IONO_SOUTH_p(i,j)
+           end do
+        end do
      endif
   case default
      call CON_stop(NameSub//' invalid iBlock value')

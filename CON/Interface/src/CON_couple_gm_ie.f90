@@ -203,9 +203,7 @@ contains
     !/
 
     ! Number of variables to pass
-    ! Set to nVar=1 for pre-September 2007 compatibility.
-    ! Set to nVar=4 to include new ray-tracing values.
-    integer, parameter :: nVar=1
+    integer, parameter :: nVar=4
 
     ! Name of this interface
     character (len=*), parameter :: NameSub='couple_gm_ie'
