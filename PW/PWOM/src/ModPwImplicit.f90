@@ -182,7 +182,7 @@ module ModPwImplicit
   subroutine PW_implicit_update
     
     use ModLinearSolver,    ONLY: implicit_solver
-    use ModCommonVariables, ONLY: Dt,nDim,nVar,State_GV,nIon,&
+    use ModCommonVariables, ONLY: Dt,DrBnd,nDim,nVar,State_GV,nIon,&
                                   RhoE_,uE_,iRho_I,iU_I,iP_I,iT_I,&
                                   MassElecIon_I,&
                                   Curr,nCell => nDim,Rgas_I
@@ -193,7 +193,10 @@ module ModPwImplicit
     !--------------------------------------------------------------------------
     
     DtImpl = Dt
-    DtExpl = 0.01
+    DtExpl = 0.001*(DrBnd/2.0e6)
+
+    write(*,*)'DtImpl, DtExpl=',DtImpl, DtExpl
+
     nVarReduced = 3*(nIon-1)
 
     if (.not.allocated(ReducedState_GV)) then
@@ -212,7 +215,7 @@ module ModPwImplicit
     Te = State_GV(nCell,iT_I(nIon))
     
     ! Get the implicit update for the independent variables 
-    call implicit_solver(ImplPar, DtExpl, DtImpl, nDim, nVarReduced, &
+    call implicit_solver(ImplPar, DtImpl, DtExpl, nDim, nVarReduced, &
          ReducedState_GV(-1:nDim+2,:), &
          PW_calc_residual, PW_update_boundary)
     
