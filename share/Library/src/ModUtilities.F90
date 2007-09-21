@@ -164,6 +164,10 @@ contains
     call flush(iUnit) 
 #endif
 
+#ifdef compmpif90
+    call flush(iUnit) 
+#endif
+
 #ifdef sysOSF1
     call flush(iUnit) 
 #endif
