@@ -1,6 +1,3 @@
-OS=Darwin
-PWDIR=/Users/aglocer/polarwind/PWOM_aurora
-COMPILER=f95
 # Local Makefile.def
 
 localdefault: help # default target
@@ -11,6 +8,6 @@ RUNDIR    = ${PWDIR}/run
 BINDIR    = ${PWDIR}/bin
 SHAREDIR  = ${PWDIR}/share/Library/src
 
-TIMINGDIR    = ${PWDIR}/util/TIMING/src
+TIMINGDIR = ${PWDIR}/util/TIMING/src
 EMPIRICALIEDIR = ${PWDIR}/util/EMPIRICAL/srcIE
 DATAREADINDICESDIR = ${PWDIR}/util/DATAREAD/srcIndices
