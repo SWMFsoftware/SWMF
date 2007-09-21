@@ -97,6 +97,9 @@ module ModRaytrace
   ! Number of rays found to be open based on the neighbors
   integer      :: nOpen
 
+  ! Logical for raytracing in IE coupling
+  logical :: DoTrace4IE = .false.
+
   ! ----------- Variables for extracting variables along the ray --------
   logical :: DoExtractState = .false., DoExtractUnitSi = .false.
 
