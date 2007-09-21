@@ -26,7 +26,8 @@ subroutine rusanov_solver(iIon, nCell,&
   real, allocatable    :: LeftRho_F(:), LeftU_F(:), LeftP_F(:)
   real, allocatable    :: RightRho_F(:), RightU_F(:), RightP_F(:)
   real, allocatable    :: RhoFlux_F(:), RhoUFlux_F(:), eFlux_F(:)
-  real, allocatable    :: T_G(:),Heat1_G(:),HeatSource_C(:),eTotalSource_C(:)
+  real, allocatable    :: T_G(:),Heat1_G(:),HeatSource_C(:),eTotalSource_C(:),&
+                          Heat1_F(:)
   integer :: i,iCell
   !---------------------------------------------------------------------------
 
@@ -35,8 +36,8 @@ subroutine rusanov_solver(iIon, nCell,&
      allocate(LeftRho_F(nCell+1), LeftU_F(nCell+1), LeftP_F(nCell+1),&
           RightRho_F(nCell+1), RightU_F(nCell+1), RightP_F(nCell+1),&
           RhoFlux_F(nCell+1), RhoUFlux_F(nCell+1), eFlux_F(nCell+1),&
-          T_G(-1:nCell+2),Heat1_G(-1:nCell+1),HeatSource_C(nCell), &
-          eTotalSource_C(nCell))
+          T_G(-1:nCell+2),Heat1_G(-1:nCell+1),Heat1_F(0:nCell),     &
+          HeatSource_C(nCell),eTotalSource_C(nCell))
   endif
   eTotalSource_C = eSource_C
 
@@ -49,9 +50,14 @@ subroutine rusanov_solver(iIon, nCell,&
         Heat1_G(iCell) = &
              HeatCon_G(iCell) * (T_G(iCell+1)-T_G(iCell-1)) / (2.0*DrBnd)
      enddo
+     !get facevalues
+     do iCell = 0,nCell
+        Heat1_F(iCell) = (Heat1_G(iCell+1)+Heat1_G(iCell))/2.0
+     enddo
      do iCell = 1,nCell
         HeatSource_C(iCell) = &
-             (Heat1_G(iCell+1) - Heat1_G(iCell-1)) / (2.0*DrBnd)
+             (Ar23(iCell)*Heat1_F(iCell) - Ar12(iCell)*Heat1_F(iCell-1)) &
+             / (CellVolume_C(iCell))
      enddo
      ! Add heat flux to energy source
      eTotalSource_C = eSource_C+HeatSource_C
@@ -86,7 +92,7 @@ subroutine rusanov_solver(iIon, nCell,&
 
       deallocate(LeftRho_F, LeftU_F, LeftP_F,&
           RightRho_F, RightU_F, RightP_F,&
-          RhoFlux_F, RhoUFlux_F, eFlux_F,T_G,Heat1_G,HeatSource_C,&
+          RhoFlux_F, RhoUFlux_F, eFlux_F,T_G,Heat1_G,Heat1_F,HeatSource_C,&
           eTotalSource_C)
 
 end subroutine rusanov_solver
