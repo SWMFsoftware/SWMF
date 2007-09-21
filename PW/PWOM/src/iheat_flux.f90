@@ -2,11 +2,14 @@ SUBROUTINE PW_iheat_flux
   
   use ModCommonVariables
   use ModCommonPlanet,ONLY: nIon
-  
+  use ModPWOM,ONLY: UseIonHeat  
   REAL C1(MaxGrid),C2(MaxGrid),C3(MaxGrid),C4(MaxGrid),&
        D1(MaxGrid),D2(MaxGrid),&
        D3(MaxGrid),D4(MaxGrid)
   REAL YL(MaxGrid),YK(MaxGrid)
+  !----------------------------------------------------------------------------
+
+  if (.not.UseIonHeat) return
   
   do iIon=1,nIon-1
      
