@@ -5,7 +5,7 @@ module ModPWOM
   implicit none
 
   logical :: IsStandAlone = .false.
-
+  logical :: UseIonHeat=.true.,UseEleHeat=.true.,UseExplicitHeat=.false.
   integer :: iUnitOut
   character (len=7) :: StringPrefix=''
 
@@ -38,7 +38,8 @@ module ModPWOM
        Jr_G,Potential_G,Br_G,Btheta_G,  &
        BmagnitudeSquared_G, &
        Ephi_C,Etheta_C,Er_C, uExBtheta_C,&
-       uExBphi_C,uExBr_C
+       uExBphi_C,uExBr_C,ElectronEnergyFlux_C,&
+       ElectronAverageEnergy_C
 
 
   real, dimension(MaxLine) ::            &
@@ -117,7 +118,9 @@ contains
          Er_C(iSize, jSize), & 
          uExBtheta_C(iSize, jSize), &
          uExBphi_C(iSize, jSize), &
-         uExBr_C(iSize, jSize))
+         uExBr_C(iSize, jSize),&
+         ElectronEnergyFlux_C(iSize,jSize),&
+         ElectronAverageEnergy_C(iSize,jSize))
 
   end subroutine allocate_ie_variables
 
