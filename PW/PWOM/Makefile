@@ -21,9 +21,11 @@ install: bin
 	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
 
 PWOM:
-	@cd ${SHAREDIR}; make LIB
-	@cd ${TIMINGDIR};make LIB
-	@cd src;         make PWOM
+	cd ${SHAREDIR};           make LIB
+	cd ${TIMINGDIR};          make LIB
+	cd ${EMPIRICALIEDIR};     make LIB
+	cd ${DATAREADINDICESDIR}; make LIB
+	cd src;                   make PWOM
 
 LIB:
 	cd src; make LIB
@@ -133,7 +135,6 @@ run:
 		cd ${RUNDIR}; \
 			ln -s ${BINDIR}/PWOM.exe .; \
 			cp ${PWDIR}/input/${PLANET}/pw.input .; \
-			cp ${SCRIPTDIR}/PostProc.pl .; \
 			touch core ; chmod 444 core ; \
 			ln -s PW/* .; \
 	fi)
