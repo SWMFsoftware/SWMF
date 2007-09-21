@@ -81,7 +81,7 @@ C                                                                      C
 C      READ (5,2) DRBND
 CALEX DRBND=altitude step? I think the units here are in cm not meters
 CALEX like most of the code.
-      DRBND=2.E6
+!      DRBND=2.E6
 
 CALEX RN=lower boundary of the simulation? 
 CALEX RAD=radial distance of cell centers?      
@@ -1514,27 +1514,32 @@ c         State_GV(K,pE_)=State_GV(0,pE_)H
 c         State_GV(K,Te_)=State_GV(0,Te_)
 
 
-         State_GV(K,RhoH_)=1.*State_GV(0,RhoH_)*exp(-1.*real(K)/90.)
-         State_GV(K,uO_)=20.
-         State_GV(K,pO_)=1.*State_GV(0,Po_)*exp(-1.*real(K)/90.)
-         State_GV(K,RhoO_)=1.*State_GV(0,RhoO_)*exp(-1.*real(K)/90.)
-c         State_GV(K,To_)=State_GV(0,To_)
+         State_GV(K,RhoH_)=1.*State_GV(k-1,RhoH_)*exp(-DrBnd/10000.0e5)
+         State_GV(K,uO_)=1.
+         State_GV(K,pO_)=1.*State_GV(k-1,Po_)*exp(-1.*DrBnd/10000.0e5)
+         State_GV(K,RhoO_)=1.*State_GV(k-1,RhoO_)*exp(-1.*DrBnd/10000.0e5)
+c         State_GV(K,To_)=State_GV(k-1,To_)
          State_GV(K,To_)=State_GV(K,pO_)/(1.38e-16*State_GV(K,RhoO_)/Mass_I(Ion1_))
-         State_GV(K,uH_)=40.
-         State_GV(K,pH_)=1.*State_GV(0,pH_)*exp(-1.*real(K)/90.)
-c         State_GV(K,Th_)=State_GV(0,Th_)*exp(-1.*real(K)/9000.)
+         State_GV(K,uH_)=10.
+         State_GV(K,pH_)=1.*State_GV(k-1,pH_)*exp(-1.*DrBnd/10000.0e5)
+c         State_GV(K,Th_)=State_GV(k-1,Th_)*exp(-1.*DrBnd/9000.)
          State_GV(K,Th_)=State_GV(K,pH_)/(1.38e-16*State_GV(K,RhoH_)/Mass_I(Ion2_))
          State_GV(K,uHe_)=4.
-         State_GV(K,pHe_)=1.*State_GV(0,pHe_)*exp(-1.*real(K)/90.)
-         State_GV(K,RhoHe_)=1.*State_GV(0,RhoHe_)*exp(-1.*real(K)/90.)
-c         State_GV(K,The_)=State_GV(0,The_)
+         State_GV(K,pHe_)=1.*State_GV(k-1,pHe_)*exp(-1.*DrBnd/10000.0e5)
+         State_GV(K,RhoHe_)=1.*State_GV(k-1,RhoHe_)*exp(-1.*DrBnd/10000.0e5)
+c         State_GV(K,The_)=State_GV(k-1,The_)
          State_GV(K,The_)=State_GV(K,pHe_)/(1.38e-16*State_GV(K,RhoHe_)/Mass_I(Ion3_))
-         State_GV(K,RhoE_)=1.*State_GV(0,RhoE_)*exp(-1.*real(K)/90.)
+         State_GV(K,RhoE_)=1.*State_GV(k-1,RhoE_)*exp(-1.*DrBnd/10000.0e5)
          State_GV(K,uE_)=1.
-         State_GV(K,pE_)=1.*State_GV(0,pE_)*exp(-1.*real(K)/90.)
-c         State_GV(K,Te_)=State_GV(0,Te_)
-         State_GV(K,Te_)=State_GV(K,pE_)/(1.38e-16*State_GV(K,RhoE_)/Mass_I(Ion4_))
-
+         State_GV(K,pE_)=1.*State_GV(k-1,pE_)*exp(-1.*DrBnd/10000.0e5)
+c         State_GV(K,Te_)=State_GV(k-1,Te_)
+         if (k < nDim-20)then
+            State_GV(K,Te_)=State_GV(K,pE_)/(1.38e-16*State_GV(K,RhoE_)/Mass_I(Ion4_))
+         else
+            State_GV(K,Te_)=(1030.-780.)/(20.)**2.*(real(k-(nDim-20)))**2.+780.
+            State_GV(K,pE_)=State_GV(k,Te_)*Rgas_I(nIon)*State_GV(K,RhoE_)
+         endif
+         
       enddo
 
       RETURN
