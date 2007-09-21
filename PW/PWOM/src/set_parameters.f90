@@ -3,20 +3,25 @@ subroutine PW_set_parameters(NameAction)
   use ModIoUnit, ONLY: UnitTmp_, io_unit_new
   use ModPwom
   use ModReadParam
-  use ModCommonVariables, ONLY: F107,F107A,AP,UseStaticAtmosphere
+  use ModCommonVariables, ONLY: F107,F107A,AP,UseStaticAtmosphere,DrBnd
   use ModPwTime
   implicit none
+  
 
+  character (len=100) :: cLine
+  character (len=100) :: cTempLine
+  character (len=100), dimension(100) :: cTempLines
   character (len=100)           :: NameCommand
   character (len=*), intent(in) :: NameAction
   character (len=*), parameter  :: NameSub = 'PW_set_parameters'
+  real :: Vx, Bx, Bz, By, HPI
   
   !****************************************************************************
   ! This subroutine gets the inputs for PWOM
   !****************************************************************************
 
   real:: ddt1, xxx
-  integer:: ns,iDate
+  integer:: ns,iDate,iError
 
   !---------------------------------------------------------------------------
   
@@ -86,6 +91,7 @@ subroutine PW_set_parameters(NameAction)
         DtHorizontalOrig = DtHorizontal
      case('#VERTICALGRID')
         call read_var('nPoints',nAlt)
+        call read_var('DeltaR',DrBnd)
      case('#FIELDLINE')
         call read_var('nTotalLine',nTotalLine)
      case('#LOG')
@@ -96,9 +102,49 @@ subroutine PW_set_parameters(NameAction)
         call read_var('StringTest',StringTest)
         call read_var('iProcTest', iProcTest)
         call read_var('iLinetest', iLineTest)
+     case('#HEAT')
+        call read_var('UseIonHeat',UseIonHeat)
+        call read_var('UseEleHeat',UseEleHeat)
+        if (UseEleHeat) then
+           call read_var('UseExplicitHeat',UseExplicitHeat)
+        else
+           UseExplicitHeat = .false.
+        endif
+        
+        
+     case ("#MHD_INDICES")
+        cTempLines(1) = NameCommand
+        call read_var('UpstreamFile',cTempLine)
+        cTempLines(2) = cTempLine
+        cTempLines(3) = " "
+        cTempLines(4) = "#END"
+        
+        call IO_set_inputs(cTempLines)
+        call read_MHDIMF_Indices(iError)
+     case ("#SOLARWIND")
+        call read_var('bx',bx)
+        call read_var('by',by)
+        call read_var('bz',bz)
+        call read_var('vx',vx)
+        call IO_set_imf_by_single(by)
+        call IO_set_imf_bz_single(bz)
+        call IO_set_sw_v_single(abs(vx))
+        
+     case ("#HPI")
+        call read_var('HemisphericPower', HPI)
+        call IO_set_hpi_single(HPI)
+        
+     case ("#NOAAHPI_INDICES")
+        cTempLines(1) = cLine
+        call read_var('NameHpiFile',cTempLine)
+        cTempLines(2) = cTempLine
+        cTempLines(3) = " "
+        cTempLines(4) = "#END"
+        call IO_set_inputs(cTempLines)
+        call read_NOAAHPI_Indices(iError)
+        
+        
      endselect
-
-
   enddo
   
 
