@@ -1,4 +1,7 @@
 include ../Makefile.def
+
+SEARCH_EXTRA = -I${DATAREADINDICESDIR} -I${EMPIRICALIEDIR}
+
 include ../Makefile.conf
 include Makefile.planet
 include Makefile.DEPEND
@@ -25,6 +28,7 @@ METHODS = \
 	cvmgp.o\
 	Efield.o\
 	eheat_flux.o\
+	eheat_flux_explicit.o\
 	iheat_flux.o\
 	calcdt.o\
 	diffusion.o\
@@ -36,6 +40,7 @@ METHODS = \
 	print_electrodynamics.o\
 	write_restart.o\
 	set_upper_bc.o\
+	get_weimer_potential.o\
 	${OBJECTS_PLANET}
 
 LIBOBJECTS = ${MODULES} ${METHODS}
@@ -66,7 +71,9 @@ PWOM: DEPEND
 	@echo "PWOM.exe has been created"
 
 ${EXE}: ${EXEOBJECTS}
-	${LINK.f90} ${Lflag1} -o ${EXE} ${EXEOBJECTS} -L${LIBDIR} -lSHARE -lTIMING
+	${LINK.f90} ${Lflag1} -o ${EXE} ${EXEOBJECTS} \
+	-L${LIBDIR} -lEMPIRICALIE -lINDICES -lSHARE -lTIMING  \
+        ${EMPIRICALIEDIR}/ModEIEConductance.o 
 
 distclean: clean
 	rm -f PLANET *_planet.f get_rate.f90 \
