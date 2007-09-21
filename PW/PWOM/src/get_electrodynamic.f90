@@ -11,34 +11,37 @@ subroutine PW_get_electrodynamics
   use ModCommonVariables,ONLY:Ap
   implicit none
 
+  logical,save :: IsFirst = .true., UseWeimer=.false.
   real :: dTheta1, dPhi1
   !---------------------------------------------------------------------------
   
 
-  if (IsStandAlone .or. .not. UseIE) then
+  if (IsStandAlone .or. .not. UseIE .and. .not.UseWeimer) then
      open(UnitTmp_, FILE=NamePhiNorth)  
-     call allocate_ie_variables(257, 65)
-     do iPhi=1,nPhi
-        do iTheta=1,nTheta
-           read(unit=UnitTmp_,fmt='(6(1PE13.5))') &
-               Theta_G(iPhi,iTheta),Phi_G(iPhi,iTheta),SigmaH_G(iPhi,iTheta),&
-               SigmaP_G(iPhi,iTheta),Jr_G(iPhi,iTheta),Potential_G(iPhi,iTheta)
-           
+     if(IsFirst)then
+        call allocate_ie_variables(257, 65)
+        do iPhi=1,nPhi
+           do iTheta=1,nTheta
+              read(unit=UnitTmp_,fmt='(6(1PE13.5))') &
+                   Theta_G(iPhi,iTheta),Phi_G(iPhi,iTheta),SigmaH_G(iPhi,iTheta),&
+                   SigmaP_G(iPhi,iTheta),Jr_G(iPhi,iTheta),Potential_G(iPhi,iTheta)
+              
+           enddo
         enddo
-     enddo
-     !  Change angles to radians
-     Theta_G(:,:) = Theta_G(:,:)*cDegToRad
-     Phi_G  (:,:) = Phi_G  (:,:)*cDegToRad
-     close(UnitTmp_)
+        !  Change angles to radians
+        Theta_G(:,:) = Theta_G(:,:)*cDegToRad
+        Phi_G  (:,:) = Phi_G  (:,:)*cDegToRad
+        close(UnitTmp_)   
+     endif
+     !  Convert potential from kilovolts to Volts
+     Potential_G(:,:) = Potential_G(:,:)*1.0e3
+  elseif (UseIE) then
+     Potential_G(:,:) = Potential_G(:,:)*1.0e3
+  elseif (UseWeimer) then
+     call get_weimer_potential
   endif
   
-
-
-
-!******************************************************************************
-!  Convert potential from kilovolts to Volts
-!******************************************************************************
-  Potential_G(:,:) = Potential_G(:,:)*1.0e3
+  
 !******************************************************************************
 !  Calc Bfield components
 !******************************************************************************
