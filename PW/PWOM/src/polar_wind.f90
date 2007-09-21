@@ -13,7 +13,8 @@ subroutine polar_wind
   ! ALF1(x) AND FLUX1(x) ARRAY, x=1->4. MODIFIFIED BY DICK AND STEVE 6-90.
   !
   
-  use ModPWOM, only: DtVertical,nLine,IsStandAlone,DoSavePlot,iLine,IsFullyImplicit
+  use ModPWOM, only: DtVertical,nLine,IsStandAlone,DoSavePlot,iLine,&
+       IsFullyImplicit,UseExplicitHeat
   use ModIoUnit, ONLY: UnitTmp_
   use ModCommonVariables
   use ModFieldLine
@@ -91,9 +92,13 @@ subroutine polar_wind
         
         call advect
         CALL PW_iheat_flux
-        
-        CALL PW_eheat_flux
-     
+        !BEGIN KLUGE
+        !HeatCon_GI(:,nIon) = 0.0
+        !Source_CV(:,iRho_I(nIon))  = 0.0
+        !Source_CV(:,iP_I(nIon))    = 0.0
+        !State_GV(-1:nDim+2,iU_I(nIon)) = 0.0
+        !END KLUDGE
+        if (.not.UseExplicitHeat) call PW_eheat_flux
         CALL PW_set_upper_bc
         CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
         CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
@@ -125,15 +130,20 @@ subroutine polar_wind
         call PW_set_upper_bc
         CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
         CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
-    else
-       CALL PW_iheat_flux
-       
-       CALL PW_eheat_flux
-       CALL advect
-       CALL PW_set_upper_bc
-       CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
-       CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
-    endif
+     else
+        CALL PW_iheat_flux
+        !BEGIN KLUGE
+        !HeatCon_GI(:,nIon) = 0.0
+        !Source_CV(:,iRho_I(nIon))  = 0.0
+        !Source_CV(:,iP_I(nIon))    = 0.0
+        !State_GV(-1:nDim+2,iU_I(nIon)) = 0.0
+        !END KLUDGE
+        if (.not.UseExplicitHeat) call PW_eheat_flux
+        CALL advect
+        CALL PW_set_upper_bc
+        CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
+        CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
+     endif
 
      !    finish update by calculating boundaries, collision source 
      !    and electric field
@@ -192,24 +202,52 @@ contains
                  /NewState_GV(1:nDim,iRho_I(iIon))
          enddo
       endif
-            
-      State_GV(:,:) = NewState_GV(:,:)
-
-      ! Set electron density and velocity
-      State_GV(1:nDim,RhoE_)=0.0
-      State_GV(1:nDim,uE_)  =0.0
-      do k=1,nDim
-         do iIon=1,nIon-1
-            State_GV(K,RhoE_) = &
-                 State_GV(k,RhoE_)+MassElecIon_I(iIon)*State_GV(K,iRho_I(iIon))
-            State_GV(K,uE_)= &
-                 State_GV(k,uE_)+ &
-                 (MassElecIon_I(iIon)*State_GV(K,iRho_I(iIon))&
-                  *State_GV(K,iU_I(iIon)))
+      
+      if (UseExplicitHeat) then
+         call PW_eheat_flux_explicit(nDim,RGAS_I(nIon),dt,   &
+              State_GV(-1:nDim+2,iRho_I(nIon):iP_I(nIon)),&
+              Source_CV(:,iRho_I(nIon)), Source_CV(:,iU_I(nIon)),&
+              Source_CV(:,iP_I(nIon)),  &
+              HeatCon_GI(0:nCell+1,nIon), &
+              NewState_GV(-1:nDim+2,iT_I(nIon)))
+         ! Set electron density and velocity
+         NewState_GV(1:nDim,RhoE_)=0.0
+         NewState_GV(1:nDim,uE_)  =0.0
+         do k=1,nDim
+            do iIon=1,nIon-1
+               NewState_GV(K,RhoE_) = &
+                    NewState_GV(k,RhoE_)+MassElecIon_I(iIon)*NewState_GV(K,iRho_I(iIon))
+               NewState_GV(K,uE_)= &
+                    NewState_GV(k,uE_)+ &
+                    (MassElecIon_I(iIon)*NewState_GV(K,iRho_I(iIon))&
+                    *NewState_GV(K,iU_I(iIon)))
+            enddo
+            NewState_GV(K,uE_)=(NewState_GV(K,uE_) -1.8965E-18*CURR(K))/NewState_GV(K,RhoE_)
          enddo
-         
-         State_GV(K,uE_)=(State_GV(K,uE_) -1.8965E-18*CURR(K))/State_GV(K,RhoE_)
-      enddo
+         !get T from p and rho
+         NewState_GV(1:nDim,iP_I(nIon))=&
+              NewState_GV(1:nDim,iT_I(nIon))&
+              *Rgas_I(nIon)&
+              *NewState_GV(1:nDim,iRho_I(nIon))
+      else         
+         ! Set electron density and velocity
+         NewState_GV(1:nDim,RhoE_)=0.0
+         NewState_GV(1:nDim,uE_)  =0.0
+         do k=1,nDim
+            do iIon=1,nIon-1
+               NewState_GV(K,RhoE_) = &
+                    NewState_GV(k,RhoE_)+MassElecIon_I(iIon)*NewState_GV(K,iRho_I(iIon))
+               NewState_GV(K,uE_)= &
+                    NewState_GV(k,uE_)+ &
+                    (MassElecIon_I(iIon)*NewState_GV(K,iRho_I(iIon))&
+                    *NewState_GV(K,iU_I(iIon)))
+            enddo
+            
+            NewState_GV(K,uE_)=(NewState_GV(K,uE_) -1.8965E-18*CURR(K))/NewState_GV(K,RhoE_)
+         enddo
+      endif
+      !Update State
+      State_GV(:,:) = NewState_GV(:,:)
     end subroutine advect
     
   end Subroutine POLAR_WIND
