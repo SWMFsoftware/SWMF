@@ -20,6 +20,7 @@ F		IsUseJr
 
 #VERTICALGRID
 800		nPoints
+0.75e7		DeltaR
 
 #FIELDLINE
 4		nTotalLine

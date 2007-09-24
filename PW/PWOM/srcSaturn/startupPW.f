@@ -85,7 +85,7 @@ CALEX like most of the code.
 c      DRBND=4.E6
 c      DrBnd=3.0e7
 c      DrBnd=1.5e7
-      DrBnd=0.75e7
+c      DrBnd=0.75e7
 
       
 CALEX RN=lower boundary of the simulation? 
