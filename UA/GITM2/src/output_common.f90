@@ -146,7 +146,7 @@ subroutine output(dir, iBlock, iOutputType)
   call i2s(iTimeArray(5), cMinute, 2)
   call i2s(iTimeArray(6), cSecond, 2)
 
-  cTime = "t"//cYear//cMonth//cDay//"_"//cHour//cMinute//cSecond
+  cTime = "t"//cYear//cMonth//cDay//"_"//cHour//cMinute//"00"
 
   !! ---------------------------------------------
   !! Write the binary data files
@@ -751,8 +751,6 @@ subroutine output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
   real :: Tmp(0:nLons+1,0:nLats+1)
   integer :: iAlt, iiAlt, iOff, iIon, iSpecies, iDir
 
-  write(*,*) iiLon, iiLat, rLon, rLat
-
   do iAlt=-1,nAlts+2
 
      iiAlt = max(min(iAlt,nAlts),1)
@@ -794,7 +792,7 @@ subroutine output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
         Vars(iOff+iIon) = inter(Tmp,iiLon,iiLat,rlon,rlat)
      enddo
 
-     iOff = 8+nSpeciesTotal+nSpecies+nIons
+     iOff = 8+nSpeciesTotal+nSpecies+nIons+1
      Tmp = eTemperature(0:nLons+1,0:nLats+1,iAlt,iBlock)
      Vars(iOff)   = inter(Tmp,iiLon,iiLat,rlon,rlat)
 
