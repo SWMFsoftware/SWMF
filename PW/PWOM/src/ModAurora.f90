@@ -104,6 +104,7 @@ contains
   !============================================================================
   
   subroutine set_theta0(nPhi,nTheta,uExBphi_C,uExBtheta_C,Theta_G)
+    use ModPWOM, ONLY: DoMoveLine
     integer,intent(in) :: nPhi,nTheta
     real   ,intent(in) :: uExBphi_C(nPhi,nTheta),uExBtheta_C(nPhi,nTheta)
     real   ,intent(in) :: Theta_G(0:nPhi+1,0:nTheta+1)
@@ -116,6 +117,7 @@ contains
     iPhi = nPhi/2
     do iTheta=nTheta,1,-1
        Theta0=Theta_G(iPhi,iTheta)
+       if (.not. DoMoveLine) return
        Alpha = atan(uExBtheta_C(iPhi,iTheta)/uExBphi_C(iPhi,iTheta))
        
        if (Alpha >= AlphaMax .or. Theta0 <= ThetaMin ) then
