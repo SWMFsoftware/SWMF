@@ -76,8 +76,8 @@ subroutine polar_wind
         
 !        CALL PW_iheat_flux
         
-        CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
-        CALL PW_eheat_flux
+!        CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
+!        CALL PW_eheat_flux
         CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
         CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
         
@@ -123,7 +123,7 @@ subroutine polar_wind
  !       CALL PW_iheat_flux
         CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
         call PW_set_upper_bc
-        CALL PW_eheat_flux
+!        CALL PW_eheat_flux
         
         call PW_implicit_update
         
