@@ -2460,12 +2460,13 @@ Default values are UseAccurateIntegral = .true., UseAccurateTrace = .false.,
 DtExchangeRay = 0.1 and DnRaytrace=1.
 ','type' => 't'}],'name' => 'command','attrib' => {'name' => 'RAYTRACE'},'type' => 'e'},{'content' => [{'content' => '
 
-#RAYTRACE4IE
+#IE
+T                       DoTraceIE
 
-This command will activate accurate ray tracing on closed fieldlines for
+DoTraceIE will activate accurate ray tracing on closed fieldlines for
 coupling with the IE module.  If not set, then only Jr is sent.  If set, then
 Jr as well as 1/B, average rho, and average p on closed fieldlines are passed.
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'RAYTRACE4IE'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'min' => '1','name' => 'TauCoupleIm','type' => 'real'},'type' => 'e'},{'content' => '
+','type' => 't'}],'name' => 'command','attrib' => {'name' => 'IE'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'min' => '1','name' => 'TauCoupleIm','type' => 'real'},'type' => 'e'},{'content' => '
 
 #IM
 20.0			TauCoupleIm

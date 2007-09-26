@@ -1310,8 +1310,8 @@ subroutine MH_set_parameters(TypeAction)
         end if
         call read_var('DtExchangeRay',DtExchangeRay)
         call read_var('DnRaytrace',   DnRaytrace)
-     case("#RAYTRACE4IE")
-        DoTrace4IE = .true.
+     case("#IE")
+        call read_var('DoTraceIE',DoTraceIE)
         !                                              ^CFG END RAYTRACE
      case("#IMCOUPLING","#IM")                        !^CFG IF RCM BEGIN
         call read_var('TauCoupleIm',TauCoupleIm)

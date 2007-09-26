@@ -179,7 +179,7 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar,NameVar)
   use ModIeGrid
   use ModFieldAlignedCurrent,ONLY: FieldAlignedCurrent_II, &
        init_mod_field_aligned_current, calc_field_aligned_current
-  use ModRaytrace, ONLY: DoTrace4IE, RayResult_VII, RayIntegral_VII, &
+  use ModRaytrace, ONLY: DoTraceIE, RayResult_VII, RayIntegral_VII, &
        InvB_, RhoInvB_, pInvB_, xEnd_, CLOSEDRAY
   use ModNumConst, ONLY: cRadToDeg
   use ModPhysics, ONLY: No2Si_V, UnitP_, UnitRho_, UnitB_
@@ -213,7 +213,7 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar,NameVar)
   case('JrNorth')
      call calc_field_aligned_current
      Buffer_IIV(:,:,1) = FieldAlignedCurrent_II(1:iSize,:)
-     if(DoTrace4IE) then
+     if(DoTraceIE) then
         ! Load grid and convert to lat-lon in degrees
         IE_half_lat = 90.0 - cRadToDeg * ThetaIono_I(1:iSize)
         IE_half_lon =        cRadToDeg * PhiIono_I
@@ -237,7 +237,7 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar,NameVar)
   case('JrSouth')
      Buffer_IIV(:,:,1) = FieldAlignedCurrent_II(iSize:2*iSize-1,:)
 
-     if(DoTrace4IE) then
+     if(DoTraceIE) then
         ! Load grid and convert to lat-lon in degrees
         IE_half_lat = 90.0 - cRadToDeg * ThetaIono_I(iSize:2*iSize-1)
         IE_half_lon =         cRadToDeg * PhiIono_I

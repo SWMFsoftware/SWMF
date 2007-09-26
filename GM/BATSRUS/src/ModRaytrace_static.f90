@@ -98,7 +98,7 @@ module ModRaytrace
   integer      :: nOpen
 
   ! Logical for raytracing in IE coupling
-  logical :: DoTrace4IE = .false.
+  logical :: DoTraceIE = .false.
 
   ! ----------- Variables for extracting variables along the ray --------
   logical :: DoExtractState = .false., DoExtractUnitSi = .false.
