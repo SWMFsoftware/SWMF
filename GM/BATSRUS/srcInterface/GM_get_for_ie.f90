@@ -239,10 +239,7 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar,NameVar)
 
      if(DoTrace4IE) then
         ! Load grid and convert to lat-lon in degrees
-! This should be correct for southern hemisphere when ray tracing there works.
-!!        IE_half_lat = 90.0 - cRadToDeg * ThetaIono_I(iSize:2*iSize-1)
-! This is needed to mirror the northern hemisphere for now
-        IE_half_lat = cRadToDeg * ThetaIono_I(iSize:2*iSize-1) - 90.
+        IE_half_lat = 90.0 - cRadToDeg * ThetaIono_I(iSize:2*iSize-1)
         IE_half_lon =         cRadToDeg * PhiIono_I
         Radius = (6378.+100.)/6378.
         call integrate_ray_accurate(iSize, jSize, IE_half_lat, IE_half_lon, Radius, &
