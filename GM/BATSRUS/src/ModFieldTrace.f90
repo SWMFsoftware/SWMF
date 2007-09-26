@@ -533,6 +533,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
   use ModMain, ONLY: TypeCoordSystem, nI, nJ, nK
   use ModGeometry, ONLY: XyzStart_BLK, XyzMax_D, XyzMin_D, &
        Dx_BLK, Dy_BLK, Dz_BLK, rMin_BLK
+  use CON_planet, ONLY: DipoleStrength
 
   implicit none
 
@@ -754,10 +755,17 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
         ! Check if we have crossed the magnetic equator in the SM frame
         if(xx(3)*xx_ini(3)<=0)then
 
-           if(xx_ini(3) <= 0 .and. xx(3) >= 0)then
-              ! Crossing from South to North is not accepted !!!
-              iFace = ray_loop_
-              EXIT FOLLOW
+           ! Crossing the magnetic equator in opposite direction is not accepted !!!
+           if(DipoleStrength*(iRay-1.5)<0)then
+              if(xx_ini(3) <= 0 .and. xx(3) >= 0)then
+                 iFace = ray_loop_
+                 EXIT FOLLOW
+              end if
+           else
+              if(xx_ini(3) >= 0 .and. xx(3) <= 0)then
+                 iFace = ray_loop_
+                 EXIT FOLLOW
+              end if
            end if
 
            ! Interpolate x and y
@@ -1218,12 +1226,14 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   use ModUtilities,      ONLY: check_allocate
   use ModGeometry,       ONLY: XyzMax_D, XyzMin_D
   use CON_line_extract,  ONLY: line_init, line_collect
+  use CON_planet,        ONLY: DipoleStrength
   implicit none
 
   !INPUT ARGUMENTS:
   integer, intent(in):: nLat, nLon
   real,    intent(in):: Lat_I(nLat), Lon_I(nLon), Radius
   character(len=*), intent(in):: NameVar
+
 
   !DESCRIPTION:
   ! Lat_I(nLat) and Lon_I(nLon) are the coordinates of a 2D spherical 
@@ -1235,7 +1245,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   ! spherical grid.
 
   real    :: Theta, Phi, Lat, Lon, XyzIono_D(3), Xyz_D(3)
-  integer :: iLat, iLon, iHemisphere
+  integer :: iLat, iLon, iHemisphere, iRay
   integer :: iProcFound, iBlockFound, i, j, k
 
   integer :: nStateVar
@@ -1250,7 +1260,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   if(DoTest)write(*,*)NameSub,' starting on iProc=',iProc,&
        ' with nLat, nLon, Radius=',nLat,nLon,Radius
 
-  iLatTest = 34; iLonTest = 20
+  iLatTest = 87; iLonTest = 20
 
   call timing_start('integrate_ray')
 
@@ -1334,14 +1344,17 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
         call map_planet_field(time_simulation, XyzIono_D, 'SMG NORM', &
              rBody+cTiny, Xyz_D, iHemisphere)
 
+        ! Figure out direction of tracing outward
+        if(iHemisphere*DipoleStrength>0)then
+           iRay = 1
+        else
+           iRay = 2
+        end if
+
         ! Check if the mapping is on the north hemisphere
         if(iHemisphere == 0)then
            !  write(*,*)NameSub,' point did not map to rBody, ',&
            !   'implement analytic integrals here! Lat, Lon=', Lat, Lon
-           CYCLE
-        elseif(iHemisphere == -1)then
-           write(*,*)NameSub,' point mapped to the southern hemisphere! ',&
-                'Lat, Lon=',Lat,Lon
            CYCLE
         end if
 
@@ -1365,7 +1378,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
               write(*,'(a,3es12.4)')'Xyz_D    =',Xyz_D
            end if
 
-           call follow_ray(2, (/iLat, iLon, 0, iBlockFound/), Xyz_D)
+           call follow_ray(iRay, (/iLat, iLon, 0, iBlockFound/), Xyz_D)
 
         end if
      end do
