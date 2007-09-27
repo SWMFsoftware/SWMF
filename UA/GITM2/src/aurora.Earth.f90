@@ -14,7 +14,7 @@ subroutine aurora(iBlock)
   real :: alat, hpi, ped, hal, av_kev, eflx_ergs, a,b, maxi
   real :: Factor,temp_ED, avee, eflux, p
   integer :: i, j, k, n, iError, iED
-  logical :: IsDone
+  logical :: IsDone, IsTop
 
   real, dimension(nLons,nLats,nAlts) :: temp, AuroralBulkIonRate, &
        IonPrecipitationBulkIonRate, IonPrecipitationHeatingRate
@@ -77,6 +77,7 @@ subroutine aurora(iBlock)
               p = alog(Pressure(j,i,k,iBlock))
 
               IsDone = .false.
+              IsTop = .false.
               do while (.not.IsDone)
                  if (ED_grid(iED) >= p .and. ED_grid(iED+1) <= p) then
                     IsDone = .true.
@@ -86,19 +87,30 @@ subroutine aurora(iBlock)
                  else
                     if (iED == ED_N_Alts-1) then
                        IsDone = .true.
-                       ED_Interpolation_Weight(k) = 1.0
-                       ED_Interpolation_Index(k) = ED_N_Alts - 1
+                       IsTop = .true.
                     else
                        iED = iED + 1
                     endif
                  endif
               enddo
 
-              n = ED_Interpolation_Index(k)
-              AuroralBulkIonRate(j,i,k) = ED_Ion(n) - &
-                   (ED_Ion(n) - ED_Ion(n+1))*ED_Interpolation_Weight(k)
-              AuroralHeatingRate(j,i,k,iBlock) = ED_Heating(n) - &
-                   (ED_Heating(n) - ED_Heating(n+1))*ED_Interpolation_Weight(k)
+              if (.not.IsTop) then
+                 n = ED_Interpolation_Index(k)
+                 AuroralBulkIonRate(j,i,k) = ED_Ion(n) - &
+                      (ED_Ion(n) - ED_Ion(n+1))*ED_Interpolation_Weight(k)
+                 AuroralHeatingRate(j,i,k,iBlock) = ED_Heating(n) - &
+                      (ED_Heating(n) - ED_Heating(n+1))*ED_Interpolation_Weight(k)
+              else
+
+                 ! Decrease after top of model
+                 AuroralBulkIonRate(j,i,k) = ED_Ion(ED_N_Alts) * &
+                      Pressure(j,i,k,iBlock) / exp(ED_grid(ED_N_Alts)) 
+                 AuroralHeatingRate(j,i,k,iBlock) = ED_Heating(ED_N_Alts) * &
+                      Pressure(j,i,k,iBlock) / exp(ED_grid(ED_N_Alts))
+
+              endif
+
+              write(*,*) "aurora : ",k,IsTop, AuroralBulkIonRate(j,i,k)
 
            enddo
 
