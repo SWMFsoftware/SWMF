@@ -67,8 +67,11 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
 
   endif
 
-  Vel_GD(-1:0,iEast_)  = 0.0
-  Vel_GD(-1:0,iNorth_) = 0.0
+  ! Let the winds blow !!!!
+  Vel_GD(-1:0,iEast_)  = Vel_GD(1,iEast_)
+  Vel_GD(-1:0,iNorth_) = Vel_GD(1,iNorth_)
+
+
   Vel_GD(-1:0,iUp_)    = 0.0
   VertVel(-1:0,:)      = 0.0
   IVel(-1:0,iUp_)      = 0.0
@@ -126,8 +129,8 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
 !     if (dn < 0.75*LogINS(nAlts,iSpecies) .and. dn > 0) &
 !          dn = 0.75*LogINS(nAlts,iSpecies)
      if (dn > 0) dn = -0.1*LogINS(nAlts,iSpecies)
-     LogINS(nAlts+1,iSpecies) = LogINS(nAlts,iSpecies) - dn
-     LogINS(nAlts+2,iSpecies) = LogINS(nAlts+1,iSpecies) - dn
+     LogINS(nAlts+1,iSpecies) = LogINS(nAlts,iSpecies) + dn
+     LogINS(nAlts+2,iSpecies) = LogINS(nAlts+1,iSpecies) + dn
   enddo
 
   ! Hydrostatic pressure for the neutrals
