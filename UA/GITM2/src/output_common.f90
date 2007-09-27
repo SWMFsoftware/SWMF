@@ -800,7 +800,7 @@ subroutine output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
      Tmp = iTemperature(0:nLons+1,0:nLats+1,iAlt,iBlock)
      Vars(iOff) = inter(Tmp,iiLon,iiLat,rlon,rlat)
 
-     iOff = iOff+1
+     iOff = iOff
      do iDir = 1, 3
         Tmp = IVelocity(0:nLons+1,0:nLats+1,iAlt,iDir,iBlock)
         Vars(iOff+iDir) = inter(Tmp,iiLon,iiLat,rlon,rlat)
