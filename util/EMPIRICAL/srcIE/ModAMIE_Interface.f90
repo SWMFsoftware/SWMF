@@ -18,4 +18,8 @@ Module ModAMIE_Interface
   integer :: AMIE_South_ = 1
   integer :: AMIE_North_ = 2
 
+  integer, parameter :: potential_ = 1
+  integer, parameter :: eflux_     = 2
+  integer, parameter :: avee_      = 3
+
 end Module ModAMIE_Interface
