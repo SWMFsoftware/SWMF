@@ -60,5 +60,12 @@ Module ModCommonPlanet
                        iU_I(4)   = (/2,6,10,14/),&
                        iP_I(4)   = (/3,7,11,15/),&
                        iT_I(4)   = (/4,8,12,16/)
+
+  ! for reduced state used in ModPwImplicit
+  integer,parameter :: iRho(3) = (/1,4,7/),&
+                       iU(3)   = (/2,5,8/),&
+                       iP(3)   = (/3,6,9/),iTe_=10
+                       
+
     end Module ModCommonPlanet
     
