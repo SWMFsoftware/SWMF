@@ -190,8 +190,6 @@ subroutine AMIE_GetValue(TimeIn, Method, iValue, &
   real*8  :: dT, VerySmall = 1.0e-6
 
 
-  call start_timing("inside")
-
   iError = 0
 
   do iBLK = AMIE_South_, AMIE_North_
@@ -369,8 +367,6 @@ subroutine AMIE_GetValue(TimeIn, Method, iValue, &
      endif
 
   enddo
-
-  call end_timing("inside")
 
 end subroutine AMIE_GetValue
 
