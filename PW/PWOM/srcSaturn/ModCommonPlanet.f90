@@ -39,6 +39,9 @@ Module ModCommonPlanet
        iP_I(nIon)   = (/3,7,11/),&
        iT_I(nIon)   = (/4,8,12/)
   
+  integer,parameter :: iRho(3) = (/1,4/),&
+                       iU(3)   = (/2,5/),&
+                       iP(3)   = (/3,6/),iTe_=7
 
 end Module ModCommonPlanet
 
