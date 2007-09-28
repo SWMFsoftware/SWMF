@@ -8,11 +8,14 @@ my $Help        = $h; undef $h;
 
 use strict;
 
-# Set stand alone to false wh
-my $StandAlone = not -d "CON/Control";
+# Set framework mode to true if CON/Control directory is present
+my $Framework = -d "CON/Control";
 
 # Default list of possible components (for SWMF)
 my $ValidComp = 'SC|IH|SP|GM|IM|PS|PW|RB|IE|UA';
+
+# Name of file containing component versions (SWMF)
+my $MakefileDef = "Makefile.def";
 
 # Error string
 my $ERROR   = 'ParamTextToXml_ERROR:';
@@ -20,7 +23,6 @@ my $WARNING = 'ParamTextToXml_WARNING:';
 
 # Set default values (needed in the help message too)
 my $ParamFile  = ($ARGV[0] or 'run/PARAM.in');
-my $LayoutFile = ($ARGV[1] or $ParamFile); $LayoutFile =~ s/PARAM/LAYOUT/;
 
 my $ExpandParamScript= 'share/Scripts/ExpandParam.pl';
 
@@ -44,28 +46,18 @@ if(not -x $ExpandParamScript){
 	if $error;
 }
 
-# Set list of valid components
-if(not $StandAlone){
-    if(not -f $LayoutFile){
-	warn "$WARNING $LayoutFile is not found: allow all components\n";
-    }else{
-	open(LAYOUT,$LayoutFile) or
-	    die "$ERROR could not open layout file $LayoutFile\n";
-	$ValidComp='';
-	my $start;
-	while(<LAYOUT>){
-	    if(/^\#COMPONENTMAP/){$start=1; next}
-	    next unless $start; # Skip lines before #COMPONENTMAP
-	    last if /^\#END/;   # Ignore lines after #END
+# Set list of component versions
+my $Components;
+if($Framework){
+    open(INFILE,$MakefileDef) or
+	print "$ERROR could not open file $MakefileDef\n";
 
-	    # extract layout information from one line in the component map
-	    /^([A-Z][A-Z])\s+(\d+)\s+(\d+)\s+(\d+)/ or
-		die "$ERROR incorrect syntax at line $. in $LayoutFile:\n$_";
-	    $ValidComp .= "$1|";
-	}
-	close(LAYOUT);
-	$ValidComp =~ s/\|$//;
-    }    
+    while(<INFILE>){
+	next unless /^(\w\w)_VERSION\s*=\s*(\w+)/;
+	$Components .= "$1/$2," unless $2 eq "Empty";
+    }
+    $Components =~ s/,$//;
+    close(INFILE);
 }
 
 open(INFILE,$ParamExpand) or
@@ -109,7 +101,7 @@ while($_=<INFILE>){
 
     # Check for BEGIN_COMP and END_COMP commands
     if(/^\#BEGIN_COMP\b/){
-	if($StandAlone){
+	if(not $Framework){
 	    &print_error(" for command $_".
 			 "\tshould not be used in stand-alone mode");
 	    next;
@@ -128,7 +120,7 @@ while($_=<INFILE>){
 	$iItem = $#{ $Output[$nSession]{$Section} } + 1;
 
     }elsif(/^\#END_COMP/){
-	if($StandAlone){
+	if(not $Framework){
 	    &print_error(" for command $_".
 			 "\tshould not be used in stand-alone mode");
 	    next;
@@ -162,7 +154,7 @@ while($_=<INFILE>){
 	# Check if the required commands are defined and
 	# if the parameters are correct for the session
 
-	if($Section and not $StandAlone){
+	if($Section and $Framework){
 	    print "Error in session $nSession ending at line $nLine ".
                 "in file $ParamExpand:\n".
                 "\tBEGIN_COMP $Section does not have matching END_COMP\n";
@@ -199,10 +191,10 @@ while($_=<INFILE>){
 }
 
 # Write the XMLFILE
-if($StandAlone){
-    print XMLFILE "\t\t\t<MODE STANDALONE=\"1\"/>\n";
+if($Framework){ 
+    print XMLFILE "\t\t\t<MODE FRAMEWORK=\"1\" COMPONENTS=\"$Components\"/>\n";
 }else{
-    print XMLFILE "\t\t\t<MODE STANDALONE=\"0\" COMPONENT=\"$ValidComp\"/>\n";
+    print XMLFILE "\t\t\t<MODE FRAMEWORK=\"0\"/>\n";
 }
 
 my $iSession;
@@ -241,14 +233,12 @@ for $iSession (1..$nSession){
 my $Clipboard;
 $Clipboard = join("",@Clipboard);
 $Clipboard =~ s/^\n*//m;
-chop $Clipboard;
 
 print XMLFILE "
 \t\t\t<EDITOR SELECT=\"ALL SESSIONS\" INSERT=\"NEW SESSION\" ".
     "FILE=\"\" ABC=\"0\"/>
 \t\t\t<CLIPBOARD SESSION=\"NONE\" SECTION=\"NONE\" TYPE=\"NONE\">
-$Clipboard
-\t\t\t</CLIPBOARD>\n";
+$Clipboard\t\t\t</CLIPBOARD>\n";
 
 close XMLFILE;
 
@@ -282,24 +272,20 @@ sub print_help{
      The output is written into a file named as the parameter file with 
      an extra .xml extension. If the CON/Control directory is present,
      the code assumes that it is run for the SWMF, otherwise it is running
-     in stand-alone mode. In stand alone mode the #BEGIN_COMP and #END_COMP 
-     commands are ignored and no layout file is read. 
+     in stand-alone mode. In framework mode the code reads the component
+     versions from Makefile.def. In stand alone mode the #BEGIN_COMP 
+     and #END_COMP commands are ignored.
      This script uses the ExpandParam.pl script.
 
 Usage:
 
-  ParamTextToXml.pl [-h] [PARAMFILE] [LAYOUTFILE]
+  ParamTextToXml.pl [-h] [PARAMFILE]
 
   -h            print help message and stop
 
   PARAMFILE     The plain text file containing the input parameters 
                 and include commands for other files (if any).
                 The default file name is run/PARAM.in.
-
-  LAYOUTFILE    This argument is ignored in stand alone mode.
-                The file contains the list of registered components for SWMF.
-                The default file name is the same as the name of the PARAMFILE 
-                with the 'PARAM' string replaced by 'LAYOUT'.
 
 Examples:
 
