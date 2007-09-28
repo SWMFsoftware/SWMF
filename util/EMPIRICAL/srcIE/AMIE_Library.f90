@@ -99,9 +99,7 @@ subroutine AMIE_GetPotential(TimeIn, Method, &
   real, dimension(IEi_nMLTs,IEi_nLats,IEi_nBLKs)              :: ValueOut
   integer, intent(out) :: iError
 
-  AMIE_Value = AMIE_Potential
-
-  call AMIE_GetValue(TimeIn, Method, &
+  call AMIE_GetValue(TimeIn, Method, potential_, &
        IEi_nMLTs, IEi_nLats, IEi_nBLKs, ValueOut, iError)
 
   if (iError /= 0) then
@@ -130,9 +128,7 @@ subroutine AMIE_GetEFlux(TimeIn, Method, &
   real, dimension(IEi_nMLTs,IEi_nLats,IEi_nBLKs)              :: ValueOut
   integer, intent(out) :: iError
 
-  AMIE_Value = AMIE_EFlux
-
-  call AMIE_GetValue(TimeIn, Method, &
+  call AMIE_GetValue(TimeIn, Method, eflux_, &
        IEi_nMLTs, IEi_nLats, IEi_nBLKs, ValueOut, iError)
 
   if (iError /= 0) then
@@ -161,8 +157,7 @@ subroutine AMIE_GetAveE(TimeIn, Method, &
   real, dimension(IEi_nMLTs,IEi_nLats, IEi_nBLKs)              :: ValueOut
   integer, intent(out) :: iError
 
-  AMIE_Value = AMIE_AveE
-  call AMIE_GetValue(TimeIn, Method, &
+  call AMIE_GetValue(TimeIn, Method, avee_, &
        IEi_nMLTs, IEi_nLats, IEi_nBLKs, ValueOut, iError)
 
   if (iError /= 0) then
@@ -177,7 +172,7 @@ end subroutine AMIE_GetAveE
 
 !----------------------------------------------------------------------
 
-subroutine AMIE_GetValue(TimeIn, Method, &
+subroutine AMIE_GetValue(TimeIn, Method, iValue, &
      IEi_nMLTs, IEi_nLats, IEi_nBLKs, ValueOut, iError)
 
   use ModErrors
@@ -186,13 +181,16 @@ subroutine AMIE_GetValue(TimeIn, Method, &
   implicit none
 
   real*8, intent(in) :: TimeIn
-  integer, intent(in) :: Method, IEi_nMLTs, IEi_nLats, IEi_nBLKs
+  integer, intent(in) :: Method, IEi_nMLTs, IEi_nLats, IEi_nBLKs, iValue
   real, dimension(IEi_nMLTs,IEi_nLats,IEi_nBLKs), intent(out) :: ValueOut
   integer, intent(out) :: iError
 
   integer :: iTime, i, j, iLat, iBLK
   logical :: IsDone
   real*8  :: dT, VerySmall = 1.0e-6
+
+
+  call start_timing("inside")
 
   iError = 0
 
@@ -243,13 +241,41 @@ subroutine AMIE_GetValue(TimeIn, Method, &
 
      if (Method == AMIE_After_) then
         if (iBLK == AMIE_South_) then
-           ValueOut(1:AMIE_nMLTs, 1:AMIE_nLats,iBLK) =  &
-                AMIE_Value(1:AMIE_nMLTs, 1:AMIE_nLats,iTime,iBLK)
+
+           if (iValue == potential_) then
+              ValueOut(1:AMIE_nMLTs, 1:AMIE_nLats,iBLK) =  &
+                   AMIE_Potential(1:AMIE_nMLTs, 1:AMIE_nLats,iTime,iBLK)
+           endif
+
+           if (iValue == eflux_) then
+              ValueOut(1:AMIE_nMLTs, 1:AMIE_nLats,iBLK) =  &
+                   AMIE_EFlux(1:AMIE_nMLTs, 1:AMIE_nLats,iTime,iBLK)
+           endif
+
+           if (iValue == avee_) then
+              ValueOut(1:AMIE_nMLTs, 1:AMIE_nLats,iBLK) =  &
+                   AMIE_AveE(1:AMIE_nMLTs, 1:AMIE_nLats,iTime,iBLK)
+           endif
+
            ! Reverse the North block of AMIE data for now...
         else
            do iLat = AMIE_nLats,1,-1
-              ValueOut(1:AMIE_nMLTs, iLat,iBLK) =  &
-                   AMIE_Value(1:AMIE_nMLTs, AMIE_nLats - iLat + 1,iTime,iBLK)
+
+              if (iValue == potential_) then
+                 ValueOut(1:AMIE_nMLTs, iLat,iBLK) =  &
+                      AMIE_Potential(1:AMIE_nMLTs, AMIE_nLats - iLat + 1,iTime,iBLK)
+              endif
+
+              if (iValue == eflux_) then
+                 ValueOut(1:AMIE_nMLTs, iLat,iBLK) =  &
+                      AMIE_EFlux(1:AMIE_nMLTs, AMIE_nLats - iLat + 1,iTime,iBLK)
+              endif
+
+              if (iValue == avee_) then
+                 ValueOut(1:AMIE_nMLTs, iLat,iBLK) =  &
+                      AMIE_AveE(1:AMIE_nMLTs, AMIE_nLats - iLat + 1,iTime,iBLK)
+              endif
+
            enddo
         endif
      endif
@@ -261,13 +287,33 @@ subroutine AMIE_GetValue(TimeIn, Method, &
                iTime = iTime - 1
         endif
         if (iBLK == AMIE_South_) then
-           ValueOut(1:AMIE_nMLTs, 1:AMIE_nLats,iBLK) =  &
-                AMIE_Value(1:AMIE_nMLTs, 1:AMIE_nLats,iTime,iBLK)
+           if (iValue == potential_) then
+              ValueOut(1:AMIE_nMLTs, 1:AMIE_nLats,iBLK) =  &
+                   AMIE_Potential(1:AMIE_nMLTs, 1:AMIE_nLats,iTime,iBLK)
+           endif
+           if (iValue == eflux_) then
+              ValueOut(1:AMIE_nMLTs, 1:AMIE_nLats,iBLK) =  &
+                   AMIE_EFlux(1:AMIE_nMLTs, 1:AMIE_nLats,iTime,iBLK)
+           endif
+           if (iValue == avee_) then
+              ValueOut(1:AMIE_nMLTs, 1:AMIE_nLats,iBLK) =  &
+                   AMIE_AveE(1:AMIE_nMLTs, 1:AMIE_nLats,iTime,iBLK)
+           endif
         else
            ! Reverse the North block of AMIE data for now...
            do iLat = AMIE_nLats,1,-1
-              ValueOut(1:AMIE_nMLTs, iLat,iBLK) =  &
-                   AMIE_Value(1:AMIE_nMLTs, AMIE_nLats - iLat + 1,iTime,iBLK)
+              if (iValue == potential_) then
+                 ValueOut(1:AMIE_nMLTs, iLat,iBLK) =  &
+                      AMIE_Potential(1:AMIE_nMLTs, AMIE_nLats - iLat + 1,iTime,iBLK)
+              endif
+              if (iValue == eflux_) then
+                 ValueOut(1:AMIE_nMLTs, iLat,iBLK) =  &
+                      AMIE_EFlux(1:AMIE_nMLTs, AMIE_nLats - iLat + 1,iTime,iBLK)
+              endif
+              if (iValue == avee_) then
+                 ValueOut(1:AMIE_nMLTs, iLat,iBLK) =  &
+                      AMIE_AveE(1:AMIE_nMLTs, AMIE_nLats - iLat + 1,iTime,iBLK)
+              endif
            enddo
         endif
      endif
@@ -278,24 +324,53 @@ subroutine AMIE_GetValue(TimeIn, Method, &
         ! dT is the percentage of the way away from the current point
         dT = (AMIE_Time(iTime,iBLK) - TimeIn) / &
              (AMIE_Time(iTime,iBLK) - AMIE_Time(iTime-1,iBLK))
+
         ! Use 1-dT for the selected point, since dt = 0 if you are exactly
         ! on the selected point
         if (iBLK == AMIE_South_) then
-           ValueOut(1:AMIE_nMLTs, 1:AMIE_nLats,iBLK) =  &
-                (1.0 - dt)*AMIE_Value(1:AMIE_nMLTs, 1:AMIE_nLats,iTime,iBLK)+&
-                       dt*AMIE_Value(1:AMIE_nMLTs, 1:AMIE_nLats,iTime-1,iBLK)
+           if (iValue == potential_) then
+              ValueOut(1:AMIE_nMLTs, 1:AMIE_nLats,iBLK) =  &
+                   (1.0 - dt)*AMIE_Potential(1:AMIE_nMLTs, 1:AMIE_nLats,iTime,iBLK)+&
+                           dt*AMIE_Potential(1:AMIE_nMLTs, 1:AMIE_nLats,iTime-1,iBLK)
+           endif
+           if (iValue == eflux_) then
+              ValueOut(1:AMIE_nMLTs, 1:AMIE_nLats,iBLK) =  &
+                   (1.0 - dt)*AMIE_EFlux(1:AMIE_nMLTs, 1:AMIE_nLats,iTime,iBLK)+&
+                           dt*AMIE_EFlux(1:AMIE_nMLTs, 1:AMIE_nLats,iTime-1,iBLK)
+           endif
+           if (iValue == avee_) then
+              ValueOut(1:AMIE_nMLTs, 1:AMIE_nLats,iBLK) =  &
+                   (1.0 - dt)*AMIE_AveE(1:AMIE_nMLTs, 1:AMIE_nLats,iTime,iBLK)+&
+                           dt*AMIE_AveE(1:AMIE_nMLTs, 1:AMIE_nLats,iTime-1,iBLK)
+           endif
         else
            ! Reverse the 2nd block of AMIE data for now...
            do iLat = AMIE_nLats,1,-1
-              ValueOut(1:AMIE_nMLTs, iLat,iBLK) =  &
-                   (1.0 - dt)*AMIE_Value(1:AMIE_nMLTs,AMIE_nLats-iLat+1,&
+              if (iValue == potential_) then
+                 ValueOut(1:AMIE_nMLTs, iLat,iBLK) =  &
+                      (1.0 - dt)*AMIE_Potential(1:AMIE_nMLTs,AMIE_nLats-iLat+1,&
                                          iTime,iBLK) + &
-                   dt*AMIE_Value(1:AMIE_nMLTs, AMIE_nLats-iLat+1,iTime-1,iBLK)
+                     dt*AMIE_Potential(1:AMIE_nMLTs, AMIE_nLats-iLat+1,iTime-1,iBLK)
+              endif
+              if (iValue == eflux_) then
+                 ValueOut(1:AMIE_nMLTs, iLat,iBLK) =  &
+                      (1.0 - dt)*AMIE_EFlux(1:AMIE_nMLTs,AMIE_nLats-iLat+1,&
+                                         iTime,iBLK) + &
+                     dt*AMIE_EFlux(1:AMIE_nMLTs, AMIE_nLats-iLat+1,iTime-1,iBLK)
+              endif
+              if (iValue == avee_) then
+                 ValueOut(1:AMIE_nMLTs, iLat,iBLK) =  &
+                      (1.0 - dt)*AMIE_AveE(1:AMIE_nMLTs,AMIE_nLats-iLat+1,&
+                                         iTime,iBLK) + &
+                     dt*AMIE_AveE(1:AMIE_nMLTs, AMIE_nLats-iLat+1,iTime-1,iBLK)
+              endif
            enddo
         endif
      endif
 
   enddo
+
+  call end_timing("inside")
 
 end subroutine AMIE_GetValue
 
@@ -306,13 +381,14 @@ subroutine get_AMIE_values(rtime)
   real*8, intent(in) :: rtime
   integer :: iError
 
-  call AMIE_GetPotential(rtime, IE_Interpolate_, &
-       IEi_HavenMlts, IEi_HavenLats, IEi_HavenBLKs, IEr3_HavePotential, iError)
+  call AMIE_GetPotential(rtime, EIE_Interpolate_, &
+       EIEi_HavenMlts, EIEi_HavenLats, EIEi_HavenBLKs, &
+       EIEr3_HavePotential, iError)
 
-  call AMIE_GetAveE(rtime, IE_Closest_, &
-       IEi_HavenMlts, IEi_HavenLats, IEi_HavenBLKs, IEr3_HaveAveE, iError)
+  call AMIE_GetAveE(rtime, EIE_Closest_, &
+       EIEi_HavenMlts, EIEi_HavenLats, EIEi_HavenBLKs, EIEr3_HaveAveE, iError)
 
-  call AMIE_GetEFlux(rtime, IE_Closest_, &
-       IEi_HavenMlts, IEi_HavenLats, IEi_HavenBLKs, IEr3_HaveEFlux, iError)
+  call AMIE_GetEFlux(rtime, EIE_Closest_, &
+       EIEi_HavenMlts, EIEi_HavenLats, EIEi_HavenBLKs, EIEr3_HaveEFlux, iError)
 
 end subroutine get_AMIE_values
