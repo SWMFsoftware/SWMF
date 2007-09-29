@@ -1,6 +1,6 @@
 subroutine divergence(InArray, OutArray, iBlock)
 
-  ! This routine calculates the gradient of a scalar quantity.
+  ! This routine calculates the divergence of a scalar quantity.
   ! It assumes that it is working with a single block, but needs the
   ! variable "iBlock" because it has to figure out where it is in the
   ! grid.  This can be generalized by feeding in the specific grid
