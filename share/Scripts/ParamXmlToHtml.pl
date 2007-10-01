@@ -25,6 +25,7 @@ my $ERROR = 'ParamXmlToHtml_ERROR';
 # Output files have fixed names
 my $ParamHtmlFile  = "param.html";
 my $EditorHtmlFile = "editor.html";
+my $ManualHtmlFile = "manual.html";
 
 # Name of the original parameter file
 my $ParamFile = $XmlFile;
@@ -39,6 +40,8 @@ open(PARAM, ">$ParamHtmlFile")
     or die "$ERROR: could not open output file $ParamHtmlFile\n";
 open(EDITOR, ">$EditorHtmlFile") 
     or die "$ERROR: could not open output file $EditorHtmlFile\n";
+open(MANUAL, ">$ManualHtmlFile") 
+    or die "$ERROR: could not open output file $ManualHtmlFile\n";
 
 # Global variables
 my $Framework;                                   # True in framework mode
@@ -48,10 +51,15 @@ my $nSession = 0;                                # Number of sessions
 my @SessionRef;    # Data structure read from the XML param file
 my %Editor;        # Hash for the editor parameters
 my %Clipboard;     # Hash for the clipboard
+my $CommandXml;    # XML description of the command
+my $CommandExample;# XML description of the command
+my $CommandText;   # Normal text description of the command
 
 &read_xml_file;
 
 &write_editor_html;
+
+&write_manual_html;
 
 &write_param_html;
 
@@ -152,19 +160,26 @@ sub command_list{
     open(FILE, $ParamXml) or die "$ERROR: could not open $ParamXml\n";
 
     my $CommandList;
+    my $Command = $Editor{INSERT};
+
     if($Editor{ABC}){
 	# Read commands and sort them alphabetically
 	my @Command;
 	while($_=<FILE>){
-	    push(@Command,$1) if /^<command\s+name=\"([^\"]+)\"/;
+	    if(/^<command\s+name=\"([^\"]+)\"/){
+		push(@Command,$1);
+		&read_command_info if "\#$1" eq $Command;
+	    }
 	}
 	$CommandList = 
 	    "    <OPTION>\#".join("\n    <OPTION>\#",sort @Command)."\n";
     }else{
 	# Read commands and command groups and form OPTIONs and OPTGROUPs
 	while($_=<FILE>){
-	    $CommandList .= "    <OPTION>\#$1\n" 
-		if /^<command\s+name=\"([^\"]+)\"/;
+	    if(/^<command\s+name=\"([^\"]+)\"/){
+		$CommandList .= "    <OPTION>\#$1\n";
+		&read_command_info if "\#$1" eq $Command;
+	    }
 	    $CommandList .= 
 		"    </OPTGROUP>\n".
 		"    <OPTGROUP LABEL=\"$1\">>\n" 
@@ -187,6 +202,35 @@ sub command_list{
     #}
     
 }
+
+##############################################################################
+
+sub read_command_info{
+
+    my $CommandInfo;
+    while($_=<FILE>){
+	last if /<\/command>/;
+	$CommandInfo .= $_;
+    }
+
+    ($CommandXml, $CommandInfo)    = split(/\n\#/, $CommandInfo, 2);
+
+    ($CommandExample, $CommandText) = split(/\n\n/, $CommandInfo, 2);
+
+    $CommandExample = "\#$CommandExample\n";
+
+    print "
+CommandXml=
+$CommandXml
+
+CommandExample=
+$CommandExample
+
+CommandText=
+$CommandText" if $Debug;
+
+}
+
 ##############################################################################
 
 sub write_editor_html{
@@ -274,12 +318,6 @@ $Files
 	# Add SELECTED
 	my $File = $Editor{FILE};
 	$InsertItem =~ s/<OPTION>(.*$File\n)/<OPTION SELECTED>$1/ if $File;
-    }elsif($Insert =~ /^PASTE/){
-	$InsertItem = "
-  <TEXTAREA ROWS=2 COLS=40 READONLY>
-$Clipboard{BODY}
-  </TEXTAREA>
-";
     }
     # Add checkbox if COMMAND list
     if($InsertList =~ /COMMAND/){
@@ -347,6 +385,32 @@ $InsertItem
 
 ##############################################################################
 
+sub write_manual_html{
+
+    print "write_manual_html\n";
+    print "CommandExample=$CommandExample\n";
+
+    my $Manual;
+    if($CommandExample){
+	$Manual =  $CommandText;
+	$Manual =~ s/\n\n/\n<p>\n/g;
+	$Manual =  "<PRE>\n$CommandExample\n</PRE>\n$Manual";
+	$Manual =~ s/\n$//;
+    }elsif($Editor{INSERT} =~ /^PASTE/){
+	$Manual = "<PRE>\n$Clipboard{BODY}\n</PRE>";
+    }
+    $Manual = $CommandText if 
+
+    print MANUAL
+"<BODY BGCOLOR=WHITE>
+$Manual
+</BODY>
+";
+    close MANUAL;
+}
+
+##############################################################################
+
 sub write_param_html{
     close PARAM;
 }
@@ -367,9 +431,9 @@ sub print_help{
 "Purpose:
 
      Read an XML enhanced parameter file and write HTML files 
-     param.html and editor.html used by the parameter editor. 
-     The PARAM.pl files are also read for the list and 
-     description of commands. 
+     param.html, editor.html and manual.html used by the GUI
+     parameter editor. The PARAM.XML files are also read for 
+     the list and description of commands. 
 
 Usage:
 
@@ -382,11 +446,11 @@ Usage:
 
 Examples:
 
-    Convert run/PARAM.in.xml into editor.html and param.html
+    Convert run/PARAM.in.xml
 
 ParamXmlToHtml.pl
 
-    Convert run_new/PARAM.in.xml into editor.html and param.html
+    Convert run_new/PARAM.in.xml
 
 ParamXmlToHtml.pl run_new/PARAM.in.xml"
 #EOC
