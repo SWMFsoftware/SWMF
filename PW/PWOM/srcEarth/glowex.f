@@ -66,7 +66,7 @@ C
       SUBROUTINE GLOWEX
 C
       use ModCommonVariables
-
+      use ModNumConst, ONLY: cRadToDeg,cPi
 
 C      PARAMETER (JMAX=92)
 C      PARAMETER (NBINS=84)
@@ -111,7 +111,7 @@ c      COMMON /CMDN/ NDIM,NDIM1,DT,DTMX,TIME,TMAX,NSTEP,NPRINT,NSTPMX
 c     ;,NDIM2,NDIMM,DTX1,DTX2
 c      COMMON /PHOT/PHOTOTF(601),phototp(601)
 c      COMMON /INTG/IFACTOR
-      DATA IFIRST/1/, PI/3.1415926536/
+      DATA IFIRST/1/
       SAVE IFIRST
       ifirst = 1
 
@@ -126,106 +126,97 @@ C  IN TERMS OF THE CELL THICKNESS ADOPTED IN MAIN PROGRAM
 C  DMX MUST BE A POSITIVE EVEN INTEGER !
        IFACTOR = 2E5
        IDMX =INT(DRBND/IFACTOR)
-       DO 101 K = 90,1000,IDMX
-       I = I + 1
-       ZKK = K*1.E05
-       ZZ(I) = ZKK
-101    CONTINUE 
-      DO 100 I =1,JMAX
-            J = J+1     
-      CALL MODATM(ZZ(I),ZO2(J),ZN2(J),ZO(J),XXX,XXX,ZTN(J))
-100   CONTINUE
+       DO K = 90,1000,IDMX
+          I = I + 1
+          ZKK = K*1.E05
+          ZZ(I) = ZKK
+       enddo 
+       DO I =1,JMAX
+          J = J+1     
+          CALL MODATM(ZZ(I),ZO2(J),ZN2(J),ZO(J),XXX,XXX,ZTN(J))
+       enddo
 C
-       DO 102 I = 1,JMAX
+       do I = 1,JMAX
           ZMAJ(1,I) = ZO(I)
           ZMAJ(2,I) = ZO2(I)
           ZMAJ(3,I) = ZN2(I)
-102    CONTINUE
-      ISCALE = 0
-      JLOCAL = 1
-      J = 0
-C
-C First call only, set up energy grid and scale solar flux:
-C
-      IF (IFIRST .EQ. 1) THEN
-C
-        IFIRST = 0
-        DO 20 N=1,NBINS
-          IF (N .LE. 21) THEN
-            ENER(N) = 0.5 * FLOAT(N)
-          ELSE
-            ENER(N) = EXP (0.05 * FLOAT(N+26))
-          ENDIF
-   20   CONTINUE
-        DEL(1) = 0.5
-        DO 40 N=2,NBINS
-          DEL(N) = ENER(N)-ENER(N-1)
-   40   CONTINUE
-        DO 60 N=1,NBINS
-          ENER(N) = ENER(N) - DEL(N)/2.0
-   60   CONTINUE
-C
-        CALL SSFLUX (ISCALE, F107, F107A, WAVE1, WAVE2, SFLUX, LMAX)
-C
-      ENDIF
-C
-C
-C Find magnetic dip angle and solar zenith angle (radians):
-C
-      CALL FIELDM (GLAT, GLONG, 300., XF, YF, ZF, FF, DIP, DEC, SDIP)
-      DIP = ABS(DIP) * PI/180.
-C
-      CALL SOLZEN (IYD, UTG, GLAT, GLONG, SZA)
-      SZA = SZA * PI/180.
-      SZAD = SZA*360./6.283185
-      if (DoLog) WRITE(iUnitOutput,9996)SZAD
- 9996 FORMAT(26X,'SOLAR ZENITH ANGLE:',1F8.2,' DEGREES')
-C Calculate slant path column densities in the direction of sun of major
-C species:
-C
- 
-        CALL RCOLUM (SZA, ZZ, ZMAJ, ZTN, ZCOL, ZVCD, JMAX, NMAJ)
-C
-C Call Subroutine EPHOTO to calculate the photoelectron production
-C spectrum and photoionization rates as a function of altitude:
-C
-        CALL EPHOTO
-C
-      if (DoLog) WRITE(iUnitOutput,9997)
-CALEX note IDATE HERE is IYD in the rest of the subroutine
- 9997 FORMAT('   IDATE ','  UTG   ','   SEC   ','    GLAT    ',
-     $' GLONG    ',' STL   ',' F107A   ','  F107   ',
-     $'   AP(3)',' IART   ',' GMLAT   ','   GMLONG   ',
-     $'   SZAD    ')
-C
-      if (DoLog) WRITE(iUnitOutput,9995)IYD,UTG,SEC,GLAT,GLONG,STL,F107A,F107,AP(3)
-     $,IART,GMLAT,GMLONG,SZAD
- 9995 FORMAT(1X,I7,8(1X,F8.2),2X,I2,4X,F7.2,4X,F7.2,5X,F7.2)
-C
-C
+       enddo
+       ISCALE = 0
+       JLOCAL = 1
+       J = 0
+C     
+C     First call only, set up energy grid and scale solar flux:
+C     
+       IF (IFIRST .EQ. 1) THEN
+C     
+          IFIRST = 0
+          DO N=1,NBINS
+             IF (N .LE. 21) THEN
+                ENER(N) = 0.5 * FLOAT(N)
+             ELSE
+                ENER(N) = EXP (0.05 * FLOAT(N+26))
+             ENDIF
+          enddo
+          DEL(1) = 0.5
+          DO N=2,NBINS
+             DEL(N) = ENER(N)-ENER(N-1)
+          enddo
+          DO N=1,NBINS
+             ENER(N) = ENER(N) - DEL(N)/2.0
+          enddo
+C     
+          CALL SSFLUX (ISCALE, F107, F107A, WAVE1, WAVE2, SFLUX, LMAX)
+C     
+       ENDIF
+C     
+C     
+C     Find magnetic dip angle and solar zenith angle (radians):
+C     
+       CALL FIELDM (GLAT, GLONG, 300., XF, YF, ZF, FF, DIP, DEC, SDIP)
+       DIP = ABS(DIP) * cPi/180.
+C     
+       CALL SOLZEN (IYD, UTG, GLAT, GLONG, SZA)
+       SZA = SZA * cPi/180.
+       SZAD = SZA*cRadToDeg
+       if (DoLog) WRITE(iUnitOutput,9996)SZAD
+ 9996  FORMAT(26X,'SOLAR ZENITH ANGLE:',1F8.2,' DEGREES')
+C     Calculate slant path column densities in the direction of sun of major
+C     species:
+C     
+       
+       CALL RCOLUM (SZA, ZZ, ZMAJ, ZTN, ZCOL, ZVCD, JMAX, NMAJ)
+C     
+C     Call Subroutine EPHOTO to calculate the photoelectron production
+C     spectrum and photoionization rates as a function of altitude:
+C     
+       CALL EPHOTO
+C     
+       if (DoLog) WRITE(iUnitOutput,9997)
+C     ALEX note IDATE HERE is IYD in the rest of the subroutine
+ 9997  FORMAT('   IDATE ','  UTG   ','   SEC   ','    GLAT    ',
+     $      ' GLONG    ',' STL   ',' F107A   ','  F107   ',
+     $      '   AP(3)',' IART   ',' GMLAT   ','   GMLONG   ',
+     $      '   SZAD    ')
+C     
+       if (DoLog) WRITE(iUnitOutput,9995)IYD,UTG,SEC,GLAT,GLONG,STL,F107A,F107,AP(3)
+     $      ,IART,GMLAT,GMLONG,SZAD
+ 9995  FORMAT(1X,I7,8(1X,F8.2),2X,I2,4X,F7.2,4X,F7.2,5X,F7.2)
+C     
+C     
        IF (GMLAT .GE. 75.0)CALL PRECIP(IDMX,ALTMIN,PHOTOTP)
-C
-C       DO 109 J=291,391
-C       PHOTOTP(J)=PHOTOTP(290)
-       DO 109 J=14,391
-       PHOTOTP(J)=PHOTOTP(14)
-C      IF (J .LE. 16)THEN 
-C      WRITE(iUnitOutput,9999)PHOTOTP(J-1),PHOTOTP(14)
-C 9999 FORMAT(10X,'PHOTOTP(J-1) VALUE/PHOTOTP(J) VALUE',2(1PE15.4))
-C      ENDIF
-  109  CONTINUE
-C   NOW ADD EUV AND PARTICLE IONIZATIONS!!!!!!1
-      DO 105 I = 1,391
-      PHOTOTT(I) = PHOTOTF(I) + PHOTOTP(I)
-     
-      IF (I .LE. 20) THEN
-C      WRITE(iUnitOutput,9993)PHOTOTF(I),PHOTOTP(I),PHOTOTT(I),
-C     $(ZZ(I))
-C 9993 FORMAT('EUVF PRECF TOTF ALT ',4(1X,1PE12.4))
-      ENDIF
-C NOW RENAME TO MATCH MAIN PROGRAM
-      PHOTOTF(I) = PHOTOTT(I)      
-C
-  105 CONTINUE    
-      RETURN
-      END
+C     
+C     DO 109 J=291,391
+C     PHOTOTP(J)=PHOTOTP(290)
+       DO J=1,nDim
+          if (AltD(J) >= 480.0e5) PHOTOTP(J)=PHOTOTP(14)
+       enddo
+C     NOW ADD EUV AND PARTICLE IONIZATIONS!!!!!!1
+       DO I = 1,nDim
+          PHOTOTT(I) = PHOTOTF(I) + PHOTOTP(I)
+C     NOW RENAME TO MATCH MAIN PROGRAM
+          PHOTOTF(I) = PHOTOTT(I)      
+C     
+       enddo
+       RETURN
+       END
+      
