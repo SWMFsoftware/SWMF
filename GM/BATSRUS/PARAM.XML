@@ -19,9 +19,9 @@ List of MH (GM, IH and SC) commands used in the PARAM.in file
 <set name="NamePlotDir"       type="string" value="$_NameComp/IO2"/>
 
 <commandgroup name="STAND ALONE MODE">
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!! STAND ALONE PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!! STAND ALONE PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 <command name="COMPONENT">
 	<parameter name="NameComp" type="string" input="select">
@@ -153,9 +153,9 @@ of the included file or PARAM.in file is equivalent with an
 
 
 <commandgroup name="PLANET PARAMETERS">
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!! PLANET PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!! PLANET PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 The planet commands can only be used in stand alone mode.
 The commands allow to work with an arbitrary planet.
@@ -367,9 +367,9 @@ but much shorter.
 </commandgroup>
 
 <commandgroup name="USER DEFINED INPUT">
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!  USER DEFINED INPUT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!  USER DEFINED INPUT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 <command name="USERFLAGS" alias="USER_FLAGS">
 	<parameter name="UseUserInnerBcs"          type="logical" default="F"/>
@@ -429,27 +429,27 @@ There is no XML based parameter checking in the user section.
 </commandgroup>
 
 <commandgroup name="TESTING AND TIMING">
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!  TESTING AND TIMING PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!  TESTING AND TIMING PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="TEST">
 	<parameter name="TestString" type="string" length="100"/>
 #TEST
 read_inputs
 
-! A space separated list of subroutine names. Default is empty string.
-!
-! Examples:\\
-!   read_inputs  - echo the input parameters following the #TEST line\\
-!   project_B    - info on projection scheme\\   <!-- ^CFG IF PROJECTION -->
-!   implicit     - info on implicit scheme\\     <!-- ^CFG IF IMPLICIT   -->
-!   krylov       - info on the Krylov solver\\   <!-- ^CFG IF IMPLICIT   -->
-!   message_count- count messages\\
-!   initial_refinement\\
-!   ...
-!
-! Check the subroutines for call setoktest("...",oktest,oktest_me) to
-! see the appropriate strings.
+A space separated list of subroutine names. Default is empty string.
+
+Examples:\\
+  read_inputs  - echo the input parameters following the #TEST line\\
+  project_B    - info on projection scheme\\   <!-- ^CFG IF PROJECTION -->
+  implicit     - info on implicit scheme\\     <!-- ^CFG IF IMPLICIT   -->
+  krylov       - info on the Krylov solver\\   <!-- ^CFG IF IMPLICIT   -->
+  message_count- count messages\\
+  initial_refinement\\
+  ...
+
+Check the subroutines for call setoktest("...",oktest,oktest_me) to
+see the appropriate strings.
 </command>
 
 <command name="TESTIJK">
@@ -469,9 +469,9 @@ read_inputs
 1                       iBlockTest      (block index for testing)
 0                       iProcTest       (processor index for testing)
 
-! The location of test info in terms of indices, block and processor number.
-! Note that the user should set #TESTIJK or #TESTXYZ, not both.  If both
-! are set, the final one in the session will set the test point.
+The location of test info in terms of indices, block and processor number.
+Note that the user should set #TESTIJK or #TESTXYZ, not both.  If both
+are set, the final one in the session will set the test point.
 </command>
 
 <command name="TESTXYZ">
@@ -486,9 +486,9 @@ read_inputs
 -10.5                   yTest           (Y coordinate of cell for testing)
 -10.                    zTest           (Z coordinate of cell for testing)
 
-! The location of test info in terms of coordinates.
-! Note that the user should set #TESTIJK or #TESTXYZ, not both.  If both
-! are set, the final one in the session will set the test point.
+The location of test info in terms of coordinates.
+Note that the user should set #TESTIJK or #TESTXYZ, not both.  If both
+are set, the final one in the session will set the test point.
 </command>
 
 <command name="TESTTIME">
@@ -499,7 +499,7 @@ read_inputs
 -1                      nIterTest       (iteration number to start testing)
 10.5                    TimeTest        (time to start testing in seconds)
 
-! The time step and physical time to start testing.
+The time step and physical time to start testing.
 </command>
 
 <command name="TESTVAR">
@@ -517,7 +517,7 @@ read_inputs
 #TESTVAR
 1                       iVarTest
 
-! Index of variable to be tested. Default is rho_="1", i.e. density.
+Index of variable to be tested. Default is rho_="1", i.e. density.
 </command>
 
 <command name="TESTDIM">
@@ -530,7 +530,7 @@ read_inputs
 #TESTDIM
 1                       iDimTest
 
-! Index of dimension/direction to be tested. Default is X dimension.
+Index of dimension/direction to be tested. Default is X dimension.
 </command>
 
 <command name="STRICT" multiple="T">
@@ -538,8 +538,8 @@ read_inputs
 #STRICT
 T                       UseStrict
 
-! If true then stop when parameters are incompatible. If false, try to
-! correct parameters and continue. Default is true, i.e. strict mode
+If true then stop when parameters are incompatible. If false, try to
+correct parameters and continue. Default is true, i.e. strict mode
 </command>
 
 <command name="VERBOSE">
@@ -553,13 +553,13 @@ T                       UseStrict
 #VERBOSE
 -1                      lVerbose
 
-! Verbosity level controls the amount of output to STDOUT. Default level is 1.
-!\\
-!   lVerbose $\leq -1$ only warnings and error messages are shown.\\
-!   lVerbose $\geq  0$ start and end of sessions is shown.\\
-!   lVerbose $\leq  1$ a lot of extra information is given.\\
-!   lVerbose $\leq 10$ all calls of set_oktest are shown for the test processor.\\
-!   lVerbose $\leq 100$ all calls of set_oktest are shown for all processors.\\
+Verbosity level controls the amount of output to STDOUT. Default level is 1.
+\\
+  lVerbose $\leq -1$ only warnings and error messages are shown.\\
+  lVerbose $\geq  0$ start and end of sessions is shown.\\
+  lVerbose $\leq  1$ a lot of extra information is given.\\
+  lVerbose $\leq 10$ all calls of set_oktest are shown for the test processor.\\
+  lVerbose $\leq 100$ all calls of set_oktest are shown for all processors.\\
 </command>
 
 <command name="DEBUG">
@@ -569,7 +569,7 @@ T                       UseStrict
 F                       DoDebug         (use it as if(okdebug.and.oktest)...)
 F                       DoDebugGhost    (parameter for show_BLK in library.f90)
 
-! Excessive debug output can be controlled by the global okdebug parameter
+Excessive debug output can be controlled by the global okdebug parameter
 </command>
 
 <command name="CODEVERSION" if="$_IsFirstSession">
@@ -577,10 +577,10 @@ F                       DoDebugGhost    (parameter for show_BLK in library.f90)
 #CODEVERSION
 7.50                    CodeVersion
 
-! Checks CodeVersion. Prints a WARNING if it differs from the CodeVersion
-! defined in ModMain.f90. Used in newer restart header files. 
-! Should be given in PARAM.in when reading old restart files, 
-! which do not have version info in the header file.
+Checks CodeVersion. Prints a WARNING if it differs from the CodeVersion
+defined in ModMain.f90. Used in newer restart header files. 
+Should be given in PARAM.in when reading old restart files, 
+which do not have version info in the header file.
 </command>
 
 <command name="USERMODULE" if="$_IsFirstSession">
@@ -610,11 +610,11 @@ module is not checked.
 MHD			NameEquation
 8			nVar
 
-! Define the equation name and the number of variables.
-! If any of these do not agree with the values determined 
-! by the code, BATSRUS stops with an error. Used in restart
-! header files and can be given in PARAM.in as a check
-! and as a description.
+Define the equation name and the number of variables.
+If any of these do not agree with the values determined 
+by the code, BATSRUS stops with an error. Used in restart
+header files and can be given in PARAM.in as a check
+and as a description.
 </command>
 
 <command name="PRECISION" if="$_IsFirstSession">
@@ -657,13 +657,13 @@ The #PRECISION command may also be used to enforce a certain precision.
        4                        nK
      576                        MinBlockALL
 
-! Checks block size and number of blocks. Stops with an error message,
-! if nI, nJ, or nK differ from those set in ModSize. 
-! Also stops if number_of_blocks exceeds nBLK*numprocs, where nBLK 
-! is defined in ModSize and numprocs is the number of processors.
-! This command is used in the restart headerfile to check consistency,
-! and it is also useful to check if the executable is consistent with the 
-! requirements of the problem described in the PARAM.in file.
+Checks block size and number of blocks. Stops with an error message,
+if nI, nJ, or nK differ from those set in ModSize. 
+Also stops if number_of_blocks exceeds nBLK*numprocs, where nBLK 
+is defined in ModSize and numprocs is the number of processors.
+This command is used in the restart headerfile to check consistency,
+and it is also useful to check if the executable is consistent with the 
+requirements of the problem described in the PARAM.in file.
 </command>
 
 <command name="BLOCKLEVELSRELOADED">
@@ -700,36 +700,36 @@ T                       UseTiming      (rest of parameters read if true)
 -1                      nDepthTiming   (-1 for arbitrary depth)
 tree                    TypeTimingReport   ('cumu', 'list', or 'tree')
 
-! The default values are shown.
-!
-! This command can only be used in stand alone mode. In the SWMF the
-! #TIMING command should be issued for CON.
-!
-! If UseTiming=.true., the TIMING module must be on.
-! If UseTiming=.false., the execution is not timed.
-!
-! Dntiming determines the frequency of timing reports.
-! If DnTiming .ge.  1, a timing report is produced every dn_timing step.
-! If DnTiming .eq. -1, a timing report is shown at the end of each session,
-!                    before each AMR, and at the end of the whole run.
-! If DnTiming .eq. -2, a timing report is shown at the end of the whole run.
-! If DnTiming .eq. -3, no timing report is shown.
-!
-! nDepthTiming determines the depth of the timing tree. A negative number
-! means unlimited depth. If TimingDepth is 1, only the full BATSRUS execution
-! is timed.
-!
-! TypeTimingReport determines the format of the timing reports:
-! 'cumu' - cumulative list sorted by timings
-! 'list' - list based on caller and sorted by timings
-! 'tree' - tree based on calling sequence
+The default values are shown.
+
+This command can only be used in stand alone mode. In the SWMF the
+#TIMING command should be issued for CON.
+
+If UseTiming=.true., the TIMING module must be on.
+If UseTiming=.false., the execution is not timed.
+
+Dntiming determines the frequency of timing reports.
+If DnTiming .ge.  1, a timing report is produced every dn_timing step.
+If DnTiming .eq. -1, a timing report is shown at the end of each session,
+                   before each AMR, and at the end of the whole run.
+If DnTiming .eq. -2, a timing report is shown at the end of the whole run.
+If DnTiming .eq. -3, no timing report is shown.
+
+nDepthTiming determines the depth of the timing tree. A negative number
+means unlimited depth. If TimingDepth is 1, only the full BATSRUS execution
+is timed.
+
+TypeTimingReport determines the format of the timing reports:
+'cumu' - cumulative list sorted by timings
+'list' - list based on caller and sorted by timings
+'tree' - tree based on calling sequence
 </command>
 
 </commandgroup>
 <commandgroup name="INITIAL AND BOUNDARY CONDITIONS">
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!! MAIN INITIAL AND BOUNDARY CONDITION PARAMETERS  !!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!! MAIN INITIAL AND BOUNDARY CONDITION PARAMETERS  !!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="NORMALIZATION" if="$_IsFirstSession">
 	<parameter name="TypeNormalization" type="string" case="upper"
 		input="select">
@@ -873,12 +873,12 @@ and "HELIOSPHERIC" otherwise (SC or IH).
 #RESTARTINDIR
 GM/restart_n5000	NameRestartInDir
 
-! The NameRestartInDir variable contains the name of the directory
-! where restart files are saved relative to the run directory.
-! The directory should be inside the subdirectory with the name 
-! of the component.
-!
-! Default value is "GM/restartIN".
+The NameRestartInDir variable contains the name of the directory
+where restart files are saved relative to the run directory.
+The directory should be inside the subdirectory with the name 
+of the component.
+
+Default value is "GM/restartIN".
 </command>
 
 <command name="RESTARTINFILE" if="$_IsFirstSession">
@@ -903,18 +903,18 @@ The default value is 'block'.
 #NEWRESTART
 T		DoRestartBFace <!-- ^CFG IF CONSTRAINB -->
 
-! The RESTARTINDIR/restart.H file always contains the #NEWRESTART command.
-! This command is really used only in the restart headerfile.  Generally
-! it is not inserted in a PARAM.in file by the user.
-!
-! The #NEWRESTART command sets the following global variables:
-! DoRestart=.true. (read restart files),
-! DoRestartGhost=.false.  (no ghost cells are saved into restart file)
-! DoRestartReals=.true.   (only real numbers are saved in blk*.rst files).
+The RESTARTINDIR/restart.H file always contains the #NEWRESTART command.
+This command is really used only in the restart headerfile.  Generally
+it is not inserted in a PARAM.in file by the user.
+
+The #NEWRESTART command sets the following global variables:
+DoRestart=.true. (read restart files),
+DoRestartGhost=.false.  (no ghost cells are saved into restart file)
+DoRestartReals=.true.   (only real numbers are saved in blk*.rst files).
 <!-- ^CFG IF CONSTRAINB BEGIN -->
-! The DoRestartBFace parameter tells if the face centered magnetic field
-! is saved into the restart files. These values are used by the 
-! Constrained Transport scheme.
+The DoRestartBFace parameter tells if the face centered magnetic field
+is saved into the restart files. These values are used by the 
+Constrained Transport scheme.
 <!-- ^CFG END CONSTRAINB -->
 </command>
 
@@ -960,25 +960,25 @@ float                   TypeBcNorth
 float                   TypeBcBottom
 float                   TypeBcTop
 
-! Default depends on problem type.\\
-! Possible values:
-!\begin{verbatim}
-! coupled       - GM coupled to the IH component (at the 'west' boundary)
-! fixed         - fixed solarwind values
-! fixedB1       - fixed solarwind values without correction for the dipole B0
-! float/outflow - zero gradient
-! heliofloat    - floating for the SC component (requires #FACEOUTERBC)
-! linetied      - float P, rho, and B, reflect all components of U
-! raeder        - Jimmy Raeder's BC
-! reflect       - reflective
-! periodic      - periodic
-! vary/inflow   - time dependent BC (same as fixed for non time_accurate)
-! shear         - sheared (intended for shock tube problem only)
-! arcadetop     - intended for arcade problem only
-! arcadebot     - intended for arcade problem only
-! arcadebotcont - intended for arcade problem only
-! user          - user defined
-!\end{verbatim}
+Default depends on problem type.\\
+Possible values:
+\begin{verbatim}
+coupled       - GM coupled to the IH component (at the 'west' boundary)
+fixed         - fixed solarwind values
+fixedB1       - fixed solarwind values without correction for the dipole B0
+float/outflow - zero gradient
+heliofloat    - floating for the SC component (requires #FACEOUTERBC)
+linetied      - float P, rho, and B, reflect all components of U
+raeder        - Jimmy Raeder's BC
+reflect       - reflective
+periodic      - periodic
+vary/inflow   - time dependent BC (same as fixed for non time_accurate)
+shear         - sheared (intended for shock tube problem only)
+arcadetop     - intended for arcade problem only
+arcadebot     - intended for arcade problem only
+arcadebotcont - intended for arcade problem only
+user          - user defined
+\end{verbatim}
 </command>
 
 <command name="INNERBOUNDARY">
@@ -1085,9 +1085,9 @@ change along the outer boundaries indexed from East_ to MaxBoundary.
 </commandgroup>
 
 <commandgroup name="GRID GEOMETRY">
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!! GRID GEOMETRY !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!! GRID GEOMETRY !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 <command name="GRID" required="T" if="$_IsFirstSession">
 	<parameter name="nRootBlockX" type="integer" min="1"  default="2" />
@@ -1110,14 +1110,14 @@ change along the outer boundaries indexed from East_ to MaxBoundary.
 -64.                    zMin
  64.                    zMax
 
-! The nRootBlockX, nRootBlockY and nRootBlockZ parameters define the 
-! number of blocks of the base grid, i.e. the roots of the octree. 
-! By varying these parameters, one can setup a grid which is elongated
-! in some direction. The xMin, ..., zMax parameters define the physical
-! size of the grid.
-!
-! There is no default value, the grid size must always be given.
-! The #GRID command should be used before the #SAVEPLOT command.
+The nRootBlockX, nRootBlockY and nRootBlockZ parameters define the 
+number of blocks of the base grid, i.e. the roots of the octree. 
+By varying these parameters, one can setup a grid which is elongated
+in some direction. The xMin, ..., zMax parameters define the physical
+size of the grid.
+
+There is no default value, the grid size must always be given.
+The #GRID command should be used before the #SAVEPLOT command.
 </command>
 
 <command name="COORDSYSTEM" alias="COORDINATESYSTEM" multiple="T">
@@ -1132,13 +1132,13 @@ change along the outer boundaries indexed from East_ to MaxBoundary.
 #COORDSYSTEM
 GSM			TypeCoordSystem
 
-! TypeCoordSystem defines the coordinate system for the component.
-! Currently only one coordinate system is available for GM ("GSM")
-! and two for IH ("HGI" or "HGC") and two for SC ("HGR" or "HGI"). 
-! In the future "GSE" should be also an option for GM.
-! The coordinate systems are defined in share/Library/src/CON_axes.
-!
-! Default is component dependent: "GSM" for GM, "HGI" for IH, and "HGR" for SC.
+TypeCoordSystem defines the coordinate system for the component.
+Currently only one coordinate system is available for GM ("GSM")
+and two for IH ("HGI" or "HGC") and two for SC ("HGR" or "HGI"). 
+In the future "GSE" should be also an option for GM.
+The coordinate systems are defined in share/Library/src/CON_axes.
+
+Default is component dependent: "GSM" for GM, "HGI" for IH, and "HGR" for SC.
 </command>
 
 <!-- ^CFG IF COVARIANT BEGIN -->
@@ -1219,9 +1219,9 @@ the Voronoy cells only.
 </commandgroup>
 
 <commandgroup name="INITIAL TIME">
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!! INITIAL TIME AND STEP !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!! INITIAL TIME AND STEP !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="STARTTIME" alias="SETREALTIME" if="$_IsFirstSession">
 	<parameter name="iYear"  type="integer" default="2000" />
 	<parameter name="iMonth" type="integer" min="1" max="12" default="3"/>
@@ -1273,10 +1273,10 @@ The default value is tSimulation=0.
 #NSTEP
 100			nStep
 
-! Set nStep for the component. Typically used in the restart.H header file.
-! Generally it is not inserted in a PARAM.in file by the user.
-!
-! The default is nStep=0 as the starting time step with no restart.
+Set nStep for the component. Typically used in the restart.H header file.
+Generally it is not inserted in a PARAM.in file by the user.
+
+The default is nStep=0 as the starting time step with no restart.
 </command>
 
 <command name="NPREVIOUS" if="$_IsFirstSession">
@@ -1286,22 +1286,22 @@ The default value is tSimulation=0.
 100			nPrev
 1.5			DtPrev
 
-! This command should only occur in the restart.H header file.
-! If it is present, it indicates that the restart file contains
-! the state variables for the previous time step.
-! nPrev is the time step number and DtPrev is the length of the previous 
-! time step in seconds.
-! The previous time step is needed for a second order in time restart 
-! with the implicit scheme. 
-!
-! The default is that the command is not present and no previous time step 
-! is saved into the restart files.
+This command should only occur in the restart.H header file.
+If it is present, it indicates that the restart file contains
+the state variables for the previous time step.
+nPrev is the time step number and DtPrev is the length of the previous 
+time step in seconds.
+The previous time step is needed for a second order in time restart 
+with the implicit scheme. 
+
+The default is that the command is not present and no previous time step 
+is saved into the restart files.
 </command>
 </commandgroup>
 <commandgroup name="TIME INTEGRATION">
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!  TIME INTEGRATION PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!  TIME INTEGRATION PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="TIMESTEPPING">
 	<parameter name="nStage" type="integer" input="select">
 		<option value="1" />
@@ -1347,28 +1347,28 @@ Default is 2-stage scheme with CflExpl=0.8
 T                       UseDtFixed
 10.                     DtFixedDim [sec] (read if UseDtFixed is true)
 
-! Default is UseDtFixed=.false. Effective only if DoTimeAccurate is true.
-! If UseDtFixed is true, the time step is fixed to DtFixedDim.
-!
-! This is useful for debugging explicit schemes.
+Default is UseDtFixed=.false. Effective only if DoTimeAccurate is true.
+If UseDtFixed is true, the time step is fixed to DtFixedDim.
+
+This is useful for debugging explicit schemes.
 <!-- ^CFG IF IMPLICIT BEGIN -->
-! The real application is, however, for implicit and partially
-! implicit/local schemes. The time step is set to DtFixedDim unless the
-! update checking decides to reduce the time step for the sake of robustness.
+The real application is, however, for implicit and partially
+implicit/local schemes. The time step is set to DtFixedDim unless the
+update checking decides to reduce the time step for the sake of robustness.
 <!-- ^CFG END IMPLICIT -->
 </command>
 
 <command name="PARTSTEADY">
 	<parameter name="UsePartSteady" type="logical" default="F" />
 
-! If UsePartSteady is true, the partially steady state algorithm is used.
-! Only blocks which are changing or next to changing blocks are evolved.
-! This scheme can speed up the calculation if part 
-! of the domain is in a numerical steady state. 
-! In steady state runs the code stops when a full steady state is
-! achieved. The conditions for checking the numerical steady state are set 
-! by the #PARTSTEADYCRITERIA command.
-! Default value is UsePartSteady = .false.
+If UsePartSteady is true, the partially steady state algorithm is used.
+Only blocks which are changing or next to changing blocks are evolved.
+This scheme can speed up the calculation if part 
+of the domain is in a numerical steady state. 
+In steady state runs the code stops when a full steady state is
+achieved. The conditions for checking the numerical steady state are set 
+by the #PARTSTEADYCRITERIA command.
+Default value is UsePartSteady = .false.
 </command>
 
 <command name="PARTSTEADYCRITERIA" alias="STEADYCRITERIA">
@@ -1441,11 +1441,11 @@ The default values are UsePointImplicit=false and BetaPointImplicit=0.5.
 #PARTLOCAL
 T               UsePartLocal
 
-! Default is UsePartLocal=.false. If UsePartLocal is true and the
-! run is time accurate, then the blocks selected as "implicit"
-! by the criteria defined in #STEPPINGCRITERIA are not used to
-! calculate the time step, and all cells are advanced with the
-! smaller of the stable and the global time steps.
+Default is UsePartLocal=.false. If UsePartLocal is true and the
+run is time accurate, then the blocks selected as "implicit"
+by the criteria defined in #STEPPINGCRITERIA are not used to
+calculate the time step, and all cells are advanced with the
+smaller of the stable and the global time steps.
 </command>
 
 <command name="IMPLICIT">
@@ -1465,18 +1465,18 @@ F               UsePartImplicit
 F               UseFullImplicit
 100.0           CflImpl (read if UsePartImplicit or UseFullImplicit is true)
 
-! Default is false for all logicals. Only one of them can be set to true!
-! The CFL number is used in the implicit blocks of the fully or partially
-! implicit schemes. Ignored if UseDtFixed is true.
+Default is false for all logicals. Only one of them can be set to true!
+The CFL number is used in the implicit blocks of the fully or partially
+implicit schemes. Ignored if UseDtFixed is true.
 </command>
 <!-- ^CFG END IMPLICIT -->
 </commandgroup>
 
 <!-- ^CFG IF IMPLICIT BEGIN -->
 <commandgroup name="IMPLICIT PARAMETERS">
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!! PARAMETERS FOR FULL AND PART IMPLICIT TIME INTEGRATION !!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!! PARAMETERS FOR FULL AND PART IMPLICIT TIME INTEGRATION !!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="IMPLICITCRITERIA" alias="STEPPINGCRITERIA">
 	<parameter name="TypeImplCrit" type="string" input="select">
 		<option name="Time step"	value="dt" default="T"	/>
@@ -1490,24 +1490,24 @@ F               UseFullImplicit
 r		TypeImplCrit (dt or r or test)
 10.0		rImplicit    (only read for TypeImplCrit = r)
 
-! Both #IMPLICITCRITERIA and #STEPPINGCRITERIA are acceptable.
-! Only effective if PartImplicit or PartLocal is true in a time accurate run.
-! Default value is ImplCritType='dt'.
-!
-! The options are
-!\begin{verbatim}
-! if     (TypeImplCrit =='dt'  ) then blocks with DtBLK .gt. DtFixed
-! elseif (TypeImplCrit =='r'   ) then blocks with rMinBLK .lt. rImplicit
-! elseif (TypeImplCrit =='test') then block iBlockTest on processor iProcTest
-!\end{verbatim}
-! and are handled with local/implicit scheme. 
-! Here DtBlock is the time step
-! allowed by the CFL condition for a given block, while rMinBLK is the
-! smallest radial distance for all the cells in the block.\\
-!
-! \noindent
-! The iBlockTest and iProcTest can be defined in the #TESTIJK command.\\
-! DtFixed must be defined in the #FIXEDTIMESTEP command.
+Both #IMPLICITCRITERIA and #STEPPINGCRITERIA are acceptable.
+Only effective if PartImplicit or PartLocal is true in a time accurate run.
+Default value is ImplCritType='dt'.
+
+The options are
+\begin{verbatim}
+if     (TypeImplCrit =='dt'  ) then blocks with DtBLK .gt. DtFixed
+elseif (TypeImplCrit =='r'   ) then blocks with rMinBLK .lt. rImplicit
+elseif (TypeImplCrit =='test') then block iBlockTest on processor iProcTest
+\end{verbatim}
+and are handled with local/implicit scheme. 
+Here DtBlock is the time step
+allowed by the CFL condition for a given block, while rMinBLK is the
+smallest radial distance for all the cells in the block.\\
+
+\noindent
+The iBlockTest and iProcTest can be defined in the #TESTIJK command.\\
+DtFixed must be defined in the #FIXEDTIMESTEP command.
 </command>
 
 <command name="PARTIMPL" alias="PARTIMPLICIT">
@@ -1644,11 +1644,11 @@ T               UseNewton
 F               UseNewMatrix  (only read if UseNewton is true)
 10              MaxIterNewton (only read if UseNewton is true)
 
-! Default is UseConservativeImplicit=F and UseNewton=F, i.e. 
-! no conservative fix is used and only one "Newton" iteration is done.
-! UseNewMatrix decides whether the Jacobian should be recalculated
-! for every Newton iteration. MaxIterNewton is the maximum number
-! of Newton iterations before giving up.
+Default is UseConservativeImplicit=F and UseNewton=F, i.e. 
+no conservative fix is used and only one "Newton" iteration is done.
+UseNewMatrix decides whether the Jacobian should be recalculated
+for every Newton iteration. MaxIterNewton is the maximum number
+of Newton iterations before giving up.
 </command>
 
 <command name="JACOBIAN">
@@ -1662,11 +1662,11 @@ F               UseNewMatrix  (only read if UseNewton is true)
 prec            TypeJacobian (prec, free)
 1.E-12          JacobianEps
 
-! The Jacobian matrix is always calculated with a matrix free approach,
-! however it can be preconditioned  ('prec'), or not ('free').  The
-! Default value is TypeJacobian='prec'.
-! JacobianEps contains the machine round off error for numerical derivatives.
-! The default value is 1.E-12 for 8 byte reals and 1.E-6 for 4 byte reals.
+The Jacobian matrix is always calculated with a matrix free approach,
+however it can be preconditioned  ('prec'), or not ('free').  The
+Default value is TypeJacobian='prec'.
+JacobianEps contains the machine round off error for numerical derivatives.
+The default value is 1.E-12 for 8 byte reals and 1.E-6 for 4 byte reals.
 </command>
 
 <command name="PRECONDITIONER">
@@ -1685,10 +1685,10 @@ symmetric       TypePrecondSide (left, symmetric, right)
 MBILU           TypePrecond (MBILU)
 0.5             GustafssonPar (0. no modification, 1. full modification)
 
-! Default parameters are shown. Right preconditioning does not affect
-! the normalization of the residual. The Gustafsson parameter determines
-! how much the MBILU preconditioner is modified. The default 0.5 value
-! means a relaxed modification.
+Default parameters are shown. Right preconditioning does not affect
+the normalization of the residual. The Gustafsson parameter determines
+how much the MBILU preconditioner is modified. The default 0.5 value
+means a relaxed modification.
 </command>
 
 <command name="KRYLOV">
@@ -1712,11 +1712,11 @@ nul             TypeInitKrylov (nul, old, explicit, scaled)
 0.001           ErrorMaxKrylov
 100             MaxMatvecKrylov
 
-! Default values are shown. Initial guess for the Krylov type iterative scheme
-! can be 0 ('nul'), the previous solution ('old'), the explicit solution
-! ('explicit'), or the scaled explicit solution ('scaled'). The iterative
-! scheme stops if the required accuracy is achieved or the maximum number
-! of matrix-vector multiplications is exceeded.
+Default values are shown. Initial guess for the Krylov type iterative scheme
+can be 0 ('nul'), the previous solution ('old'), the explicit solution
+('explicit'), or the scaled explicit solution ('scaled'). The iterative
+scheme stops if the required accuracy is achieved or the maximum number
+of matrix-vector multiplications is exceeded.
 </command>
 <command name="KRYLOVSIZE">
 	<parameter name="nKrylovVector" type="integer" min="1" 
@@ -1724,21 +1724,21 @@ nul             TypeInitKrylov (nul, old, explicit, scaled)
 #KRYLOVSIZE
 10		nKrylovVector
 
-! The number of Krylov vectors only matters for GMRES (TypeKrylov='gmres').
-! If GMRES does not converge within nKrylovVector iterations, it needs
-! a restart, which usually degrades its convergence rate and robustness.
-! So nKrylovVector should exceed the number of iterations, but
-! it should not exceed the maximum number of iterations MaxMatvecKrylov.
-! On the other hand the dynamically allocated memory is also proportional 
-! to nKrylovVector. The default is nKrylovVector=MaxMatvecKrylov (in #KRYLOV)
-! which can be overwritten by #KRYLOVSIZE after the #KRYLOV command (if any).
+The number of Krylov vectors only matters for GMRES (TypeKrylov='gmres').
+If GMRES does not converge within nKrylovVector iterations, it needs
+a restart, which usually degrades its convergence rate and robustness.
+So nKrylovVector should exceed the number of iterations, but
+it should not exceed the maximum number of iterations MaxMatvecKrylov.
+On the other hand the dynamically allocated memory is also proportional 
+to nKrylovVector. The default is nKrylovVector=MaxMatvecKrylov (in #KRYLOV)
+which can be overwritten by #KRYLOVSIZE after the #KRYLOV command (if any).
 </command>
 </commandgroup>
 <!-- ^CFG END IMPLICIT -->
 <commandgroup name="STOPPING CRITERIA">
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!! STOPPING CRITERIA !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!! STOPPING CRITERIA !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 The commands in this group only work in stand alone mode.
 
@@ -1807,9 +1807,9 @@ To do the check the CpuTimeMax variable has to be set to a positive value.
 </command>
 </commandgroup>
 <commandgroup name="OUTPUT PARAMETERS">
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!  OUTPUT PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!  OUTPUT PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="RESTARTOUTDIR">
 	<parameter name="NameRestartOutDir" type="string" length="100"
 				default="GM/restartOUT" />
@@ -1820,12 +1820,12 @@ To do the check the CpuTimeMax variable has to be set to a positive value.
 #RESTARTOUTDIR
 GM/restart_n5000	NameRestartOutDir
 
-! The NameRestartOutDir variable contains the name of the directory
-! where restart files are saved relative to the run directory.
-! The directory should be inside the subdirectory with the name 
-! of the component.
-!
-! Default value is "GM/restartOUT".
+The NameRestartOutDir variable contains the name of the directory
+where restart files are saved relative to the run directory.
+The directory should be inside the subdirectory with the name 
+of the component.
+
+Default value is "GM/restartOUT".
 </command>
 
 <command name="RESTARTOUTFILE">
@@ -1855,17 +1855,17 @@ T			DoSaveRestart Rest of parameters read if true
 100			DnSaveRestart
 -1.			DtSaveRestart [seconds]
 
-! Default is DoSaveRestart=.true. with DnSaveRestart=-1 and 
-! DtSaveRestart=-1. This results in the restart file being 
-! saved only at the end.  A binary restart file is produced for every 
-! block and named as RESTARTOUTDIR/blkGLOBALBLKNUMBER.rst.
-! In addition the grid is described by RESTARTOUTDIR/octree.rst
-! and an ASCII header file is produced with timestep and time info:
-! RESTARTOUTDIR/restart.H
-!
-! The restart files are overwritten every time a new restart is done,
-! but one can change the name of the RESTARTOUTDIR with the #RESTARTOUTDIR
-! command from session to session. The default directory name is 'restartOUT'.
+Default is DoSaveRestart=.true. with DnSaveRestart=-1 and 
+DtSaveRestart=-1. This results in the restart file being 
+saved only at the end.  A binary restart file is produced for every 
+block and named as RESTARTOUTDIR/blkGLOBALBLKNUMBER.rst.
+In addition the grid is described by RESTARTOUTDIR/octree.rst
+and an ASCII header file is produced with timestep and time info:
+RESTARTOUTDIR/restart.H
+
+The restart files are overwritten every time a new restart is done,
+but one can change the name of the RESTARTOUTDIR with the #RESTARTOUTDIR
+command from session to session. The default directory name is 'restartOUT'.
 </command>
 
 <command name="PLOTDIR">
@@ -1934,74 +1934,74 @@ VAR step date           StringLog
 rho p rhoflx            NameLogVars (read if StrigLog is 'var' or 'VAR')
 4.0  10.0               rLog  (radii for the flux. Read if vars include 'flx')
 
-! Default is DoSaveLogfile=.false.
-! The logfile can contain averages or point values and other scalar
-! quantities.  It is written into an ASCII file named as\\
-!
-! NAMEPLOTDIR/log_TIMESTEP.log\\
-!
-! \noindent
-! where NAMEPLOTDIR can be defined with the #PLOTDIR command (default is IO2).\\
-! The StringLog can contain two groups of information in arbitrary order.
-! The first is LogVar which is a single 3 character string that indicates
-! the type of variables that are to be written.  The second group indicates
-! the type of time/iteration output format to use.  This second group is
-! not required and defaults to something standard for each logvar case.\\
-! Any of the identifiers for the timetype can be included in arbitrary order.
-!
-!\begin{verbatim}
-! logvar   = 'mhd', 'raw', 'flx' or 'var' - unitless output
-! logvar   = 'MHD', 'RAW', 'FLX' or 'VAR' - dimensional output
-! timetype = 'none', 'step', 'time', 'date'
-!\end{verbatim}
-!
-! The logvar string is not optional and must be found on the line.
-! The timetype is optional - when not specified a logical choice is made
-!  by the code.
-!
-! The log_var string defines the variables to print in the log file
-! It also controls whether or not the variables will come out in
-! dimensional or non-dimensional form by the capitalization of the log_var
-! string.
-!\begin{verbatim}
-! ALL CAPS  - dimensional
-! all lower - dimensionless
-!
-! 'raw' - vars: dt rho rhoUx rhoUy rhoUz Bx By Bz E Pmin Pmax
-!       - time: step time
-! 'mhd' - vars: rho rhoUx rhoUy rhoUz Bx By Bz E Pmin Pmax
-!       - time: step date time
-! 'flx' - vars: rho Pmin Pmax rhoflx pvecflx e2dflx
-!       - time: step date time
-! 'var' - vars: READ FROM PARAMETER FILE
-!       - time: step time
-!\end{verbatim}
-! log_vars is read only when the log_string contains var or VAR.  The choices
-! for variables are currently:
-!\begin{verbatim}
-! Average value on grid:   rho rhoUx rhoUy rhoUz Ux Uy Uz Bx By Bz P E
-! Value at the test point: rhopnt rhoUxpnt rhoUypnt rhoUxpnt Uxpnt Uypnt Uzpnt
-!                          Bxpnt Bypnt Bzpnt B1xpnt B1ypnt B1zpnt
-!                          Epnt Ppnt Jxpnt Jypnt Jzpnt
-!                          theta1pnt theta2pnt phi1pnt phi2pnt statuspnt
-! Ionosphere values:       cpcpn cpcps                  <!-- ^CFG IF IONOSPHERE -->
-!
-! Max or Min on grid:  Pmin Pmax
-! Flux values:         Aflx rhoflx Bflx B2flx pvecflx e2dflx
-! Other variables:     dt
-!\end{verbatim}
-! timetype values mean the following:
-!\begin{verbatim}
-!  none  = there will be no indication of time in the logfile (not even an
-!                # of steps)
-!  step  = # of time steps (n_steps)
-!  date  = time is given as an array of 7 integers:  year mo dy hr mn sc msc
-!  time  = time is given as a real number - elapsed time since the start of
-!          the run.  Units are determined by log_var and unitUSER_t
-!\end{verbatim}
-! these can be listed in any combination in the log_string line.\\
-! R_log is read only when one of the variables used is a 'flx' variable.  R_log
-! is a list of radii at which to calculate the flux through a sphere.
+Default is DoSaveLogfile=.false.
+The logfile can contain averages or point values and other scalar
+quantities.  It is written into an ASCII file named as\\
+
+NAMEPLOTDIR/log_TIMESTEP.log\\
+
+\noindent
+where NAMEPLOTDIR can be defined with the #PLOTDIR command (default is IO2).\\
+The StringLog can contain two groups of information in arbitrary order.
+The first is LogVar which is a single 3 character string that indicates
+the type of variables that are to be written.  The second group indicates
+the type of time/iteration output format to use.  This second group is
+not required and defaults to something standard for each logvar case.\\
+Any of the identifiers for the timetype can be included in arbitrary order.
+
+\begin{verbatim}
+logvar   = 'mhd', 'raw', 'flx' or 'var' - unitless output
+logvar   = 'MHD', 'RAW', 'FLX' or 'VAR' - dimensional output
+timetype = 'none', 'step', 'time', 'date'
+\end{verbatim}
+
+The logvar string is not optional and must be found on the line.
+The timetype is optional - when not specified a logical choice is made
+ by the code.
+
+The log_var string defines the variables to print in the log file
+It also controls whether or not the variables will come out in
+dimensional or non-dimensional form by the capitalization of the log_var
+string.
+\begin{verbatim}
+ALL CAPS  - dimensional
+all lower - dimensionless
+
+'raw' - vars: dt rho rhoUx rhoUy rhoUz Bx By Bz E Pmin Pmax
+      - time: step time
+'mhd' - vars: rho rhoUx rhoUy rhoUz Bx By Bz E Pmin Pmax
+      - time: step date time
+'flx' - vars: rho Pmin Pmax rhoflx pvecflx e2dflx
+      - time: step date time
+'var' - vars: READ FROM PARAMETER FILE
+      - time: step time
+\end{verbatim}
+log_vars is read only when the log_string contains var or VAR.  The choices
+for variables are currently:
+\begin{verbatim}
+Average value on grid:   rho rhoUx rhoUy rhoUz Ux Uy Uz Bx By Bz P E
+Value at the test point: rhopnt rhoUxpnt rhoUypnt rhoUxpnt Uxpnt Uypnt Uzpnt
+                         Bxpnt Bypnt Bzpnt B1xpnt B1ypnt B1zpnt
+                         Epnt Ppnt Jxpnt Jypnt Jzpnt
+                         theta1pnt theta2pnt phi1pnt phi2pnt statuspnt
+Ionosphere values:       cpcpn cpcps                  <!-- ^CFG IF IONOSPHERE -->
+
+Max or Min on grid:  Pmin Pmax
+Flux values:         Aflx rhoflx Bflx B2flx pvecflx e2dflx
+Other variables:     dt
+\end{verbatim}
+timetype values mean the following:
+\begin{verbatim}
+ none  = there will be no indication of time in the logfile (not even an
+               # of steps)
+ step  = # of time steps (n_steps)
+ date  = time is given as an array of 7 integers:  year mo dy hr mn sc msc
+ time  = time is given as a real number - elapsed time since the start of
+         the run.  Units are determined by log_var and unitUSER_t
+\end{verbatim}
+these can be listed in any combination in the log_string line.\\
+R_log is read only when one of the variables used is a 'flx' variable.  R_log
+is a list of radii at which to calculate the flux through a sphere.
 </command>
 
 <command name="SATELLITE" if="$_IsFirstSession">
@@ -2062,99 +2062,99 @@ satellite2.dat          NameTrajectoryFile
 rho p                   NameSatelliteVars ! Read if StringSatellite 
                                           ! contains 'var' or 'VAR'
 
-! The numerical solution can be extracted along one or more satellite
-! trajectories. The number of satellites is defined by the 
-! nSatellite parameter (default is 0).
-!
-! For each satellite the StringSatellite parameter determines what
-! is saved into the satellite file(s).
-! The StringSatellite can contain the following 3 parts in arbitrary order
-!\begin{verbatim}
-! satellitevar   = 'mhd', 'ful' or 'var' (unitless output)
-!                  'MHD', 'FUL' or 'VAR' (dimensional output)
-! trajectorytype = 'file' or 'eqn'
-! timetype       = 'none', 'step', 'time', 'date'
-!\end{verbatim}
-! The 'satellitevar' part is required, 
-! the 'trajectorytype' part is optional (defaults to 'file'), and
-! the 'timetype' part is also optional (default depends on satellitevar)
-!
-! The 'satellitevar' string defines the variables to print in the satellite
-! output file.  It also controls whether or not the variables will come out in
-! dimensional or non-dimensional form by the capitalization of the
-! satellitevars string: ALL CAPS means dimensional, all lower means 
-! dimensionless. 
-!
-! If 'satellitevar' is set to 'mhd', the variables 
-! 'rho ux uy uz bx by bz p jx jy jz' will be saved, while 'ful' implies
-! 'rho ux uy uz bx by bz b1x b1y b1z p jx jy jz'.
-!
-! If satellitevar is set to 'var' then the list of variables is read 
-! from the NameSatelliteVar parameter as a space separated list. 
-! The choices for variables are currently:
-!\begin{verbatim}
-! rho, rho, rhouy, rhouz, ux, uy, uz,Bx, By, Bz, B1x, B1y, B1z,
-! E, P, Jx, Jy, Jz, theta1, theta2, phi1, phi2, status.
-!\end{verbatim}
-!
-! If 'trajectorytype' is 'file' (default) than the trajectory of the 
-! satellite is read from the file given by the NameTrajectoryFile parameter.
-! If 'trajectorytype' is 'eqn' then the trajectory is defined by an
-! equation, which is hard coded in subroutine satellite_trajectory_formula
-! in satellites.f90.
-!
-! The 'timetype' values mean the following:
-!\begin{verbatim}
-!  none  = there will be no indication of time in the logfile 
-!          (not even the number of steps),
-!  step  = number of time steps (n_steps),
-!  date  = time is given as an array of 7 integers:  year mo dy hr mn sc msc,
-!  time  = time is given as a real number - elapsed time since the start of
-!          the run.  Units are determined by satellitevar and unitUSER_t.
-!\end{verbatim}
-!  More than one 'timetype' can be listed. They can be put together in any
-!  combination.\\
-!
-! \noindent
-! The DnOutput and DtOutput parameters determine the frequency of extracting
-! values along the satellite trajectories. \\
-!
-! \noindent
-! The extracted satellite information is saved into the files named
-!\begin{verbatim}
-! PLOTDIR/sat_TRAJECTORYNAME_nTIMESTEP.sat
-!\end{verbatim}
-! where TIMESTEP is the number of time steps (e.g. 000925), 
-! and TRAJECTORYNAME is the name of the trajectory file.\\
-!
-! \noindent
-! The default is nSatellite=0, i.e. no satellite data is saved.
-!
-! Satellite input files contain the trajectory of the satellite.  They should
-! have to following format:
-!\begin{verbatim}
-! #COOR
-! GSM
-!
-! #START
-!  2004  6  24   0   0  58   0  2.9  -3.1 - 3.7  
-!  2004  6  24   0   1  58   0  2.8  -3.2 - 3.6  
-!\end{verbatim}
-!
-! The #COOR command is optional.  It indicates which coordinate system the data
-! represents.  The default is GSM, but others are possible.
+The numerical solution can be extracted along one or more satellite
+trajectories. The number of satellites is defined by the 
+nSatellite parameter (default is 0).
 
-! The file containing the satellite trajectory should include data in the 
-! following order:
-!\begin{verbatim}
-! yr mn dy hr min sec msec x y z
-!\end{verbatim}
-! with the position variables in units of the body radii or the length scale
-! normalization.
-!
-! The maximum number of lines of data allowed in the input file is 50,000.  
-! However, this can be modified by changing the variable Max_Satellite_Npts 
-! in the file GM/BATSRUS/ModIO.f90.
+For each satellite the StringSatellite parameter determines what
+is saved into the satellite file(s).
+The StringSatellite can contain the following 3 parts in arbitrary order
+\begin{verbatim}
+satellitevar   = 'mhd', 'ful' or 'var' (unitless output)
+                 'MHD', 'FUL' or 'VAR' (dimensional output)
+trajectorytype = 'file' or 'eqn'
+timetype       = 'none', 'step', 'time', 'date'
+\end{verbatim}
+The 'satellitevar' part is required, 
+the 'trajectorytype' part is optional (defaults to 'file'), and
+the 'timetype' part is also optional (default depends on satellitevar)
+
+The 'satellitevar' string defines the variables to print in the satellite
+output file.  It also controls whether or not the variables will come out in
+dimensional or non-dimensional form by the capitalization of the
+satellitevars string: ALL CAPS means dimensional, all lower means 
+dimensionless. 
+
+If 'satellitevar' is set to 'mhd', the variables 
+'rho ux uy uz bx by bz p jx jy jz' will be saved, while 'ful' implies
+'rho ux uy uz bx by bz b1x b1y b1z p jx jy jz'.
+
+If satellitevar is set to 'var' then the list of variables is read 
+from the NameSatelliteVar parameter as a space separated list. 
+The choices for variables are currently:
+\begin{verbatim}
+rho, rho, rhouy, rhouz, ux, uy, uz,Bx, By, Bz, B1x, B1y, B1z,
+E, P, Jx, Jy, Jz, theta1, theta2, phi1, phi2, status.
+\end{verbatim}
+
+If 'trajectorytype' is 'file' (default) than the trajectory of the 
+satellite is read from the file given by the NameTrajectoryFile parameter.
+If 'trajectorytype' is 'eqn' then the trajectory is defined by an
+equation, which is hard coded in subroutine satellite_trajectory_formula
+in satellites.f90.
+
+The 'timetype' values mean the following:
+\begin{verbatim}
+ none  = there will be no indication of time in the logfile 
+         (not even the number of steps),
+ step  = number of time steps (n_steps),
+ date  = time is given as an array of 7 integers:  year mo dy hr mn sc msc,
+ time  = time is given as a real number - elapsed time since the start of
+         the run.  Units are determined by satellitevar and unitUSER_t.
+\end{verbatim}
+ More than one 'timetype' can be listed. They can be put together in any
+ combination.\\
+
+\noindent
+The DnOutput and DtOutput parameters determine the frequency of extracting
+values along the satellite trajectories. \\
+
+\noindent
+The extracted satellite information is saved into the files named
+\begin{verbatim}
+PLOTDIR/sat_TRAJECTORYNAME_nTIMESTEP.sat
+\end{verbatim}
+where TIMESTEP is the number of time steps (e.g. 000925), 
+and TRAJECTORYNAME is the name of the trajectory file.\\
+
+\noindent
+The default is nSatellite=0, i.e. no satellite data is saved.
+
+Satellite input files contain the trajectory of the satellite.  They should
+have to following format:
+\begin{verbatim}
+#COOR
+GSM
+
+#START
+ 2004  6  24   0   0  58   0  2.9  -3.1 - 3.7  
+ 2004  6  24   0   1  58   0  2.8  -3.2 - 3.6  
+\end{verbatim}
+
+The #COOR command is optional.  It indicates which coordinate system the data
+represents.  The default is GSM, but others are possible.
+
+The file containing the satellite trajectory should include data in the 
+following order:
+\begin{verbatim}
+yr mn dy hr min sec msec x y z
+\end{verbatim}
+with the position variables in units of the body radii or the length scale
+normalization.
+
+The maximum number of lines of data allowed in the input file is 50,000.  
+However, this can be modified by changing the variable Max_Satellite_Npts 
+in the file GM/BATSRUS/ModIO.f90.
 </command>
 
 <command name="STEADYSTATESATELLITE" if="$_IsFirstSession">
@@ -2166,29 +2166,29 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 -3600.0                      SatelliteTimeStart [sec]
 3600.0                       SatelliteTimeEnd   [sec]
 
-! In the non-time-accurate mode the numerical simulation result converges
-! to a steady-state solution. In the course of this simulation mode, the 
-! progress in the iteration number is not associated with an increase in the physical 
-! time, and the ultimate solution is a  "snapshot" of the parameter distribution at the 
-! time instant set by the  #STARTTIME command. Since time does not run, a satellite 
-! position cannot be determined in terms of the simulation time. Instead, the parameters 
-! along a cut of the satellite trajectory can be saved on file for a given iteration number. 
-! The trajectory points can be naturally parameterized by time, so that the cut can be 
-! specified with the choice of the start time, end time, and time interval.
-! 
-! The command #STEADYSTATESATELLITE is required for a steady-state simulation.
-! For each of the satellites, the SatelliteTimeStart is a real value that sets the start of 
-! trajectory cut,  while SatelliteTimeEnd sets the end of the trajectory cut. Both are in
-! seconds with respect to to the time given in #STARTTIME. A negative value means the time 
-! prior to  the #STARTTIME. 
+In the non-time-accurate mode the numerical simulation result converges
+to a steady-state solution. In the course of this simulation mode, the 
+progress in the iteration number is not associated with an increase in the physical 
+time, and the ultimate solution is a  "snapshot" of the parameter distribution at the 
+time instant set by the  #STARTTIME command. Since time does not run, a satellite 
+position cannot be determined in terms of the simulation time. Instead, the parameters 
+along a cut of the satellite trajectory can be saved on file for a given iteration number. 
+The trajectory points can be naturally parameterized by time, so that the cut can be 
+specified with the choice of the start time, end time, and time interval.
 
-! The DtOutput from the #SATELLITE command specifies the frequency of the points along the 
-! satellite trajectory for the non-time-accurate mode, while DnOutput keeps to control the
-! iteration number at which the data at the trajectory cut are written to the satellite 
-! output file.
-!
-! For more than one satellite (two satellites in the above given example), the start and 
-! end times should be set for all of them. 
+The command #STEADYSTATESATELLITE is required for a steady-state simulation.
+For each of the satellites, the SatelliteTimeStart is a real value that sets the start of 
+trajectory cut,  while SatelliteTimeEnd sets the end of the trajectory cut. Both are in
+seconds with respect to to the time given in #STARTTIME. A negative value means the time 
+prior to  the #STARTTIME. 
+
+The DtOutput from the #SATELLITE command specifies the frequency of the points along the 
+satellite trajectory for the non-time-accurate mode, while DnOutput keeps to control the
+iteration number at which the data at the trajectory cut are written to the satellite 
+output file.
+
+For more than one satellite (two satellites in the above given example), the start and 
+end times should be set for all of them. 
 </command>
 
 <command name="SAVEPLOT">
@@ -2659,13 +2659,13 @@ The IDL output from line of sight integration is always in ASCII format.
 #SAVEBINARY
 T			DoSaveBinary   used only for 'idl' plot file
 
-! Default is .true. Saves unformatted IO2/*.idl files if true. 
-! This is the recommended method, because it is fast and accurate.
-! The only advantage of saving IO2/*.idl in formatted text files is
-! that it can be processed on another machine or with a different 
-! (lower) precision. For example PostIDL.exe may be compiled with 
-! single precision to make IO2/*.out files smaller, while BATSRUS.exe is 
-! compiled in double precision to make results more accurate.
+Default is .true. Saves unformatted IO2/*.idl files if true. 
+This is the recommended method, because it is fast and accurate.
+The only advantage of saving IO2/*.idl in formatted text files is
+that it can be processed on another machine or with a different 
+(lower) precision. For example PostIDL.exe may be compiled with 
+single precision to make IO2/*.out files smaller, while BATSRUS.exe is 
+compiled in double precision to make results more accurate.
 </command>
 
 <command name="SAVEPLOTSAMR">
@@ -2673,7 +2673,7 @@ T			DoSaveBinary   used only for 'idl' plot file
 #SAVEPLOTSAMR
 F			DoSavePlotsAmr
 
-! Save plots before each AMR. Default is DoSavePlotsAMR=.false.
+Save plots before each AMR. Default is DoSavePlotsAMR=.false.
 </command>
 
 <command name="FLUSH">
@@ -2692,9 +2692,9 @@ The default is to flush the output, i.e. DoFlush=T.
 </command>
 </commandgroup>
 <commandgroup name="AMR PARAMETERS">
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!  AMR PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!  AMR PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="AMRINIT" if="$_IsFirstSession">
 	<parameter name="InitialRefineType" type="string" length="100"
 							default="none"/>
@@ -2724,9 +2724,9 @@ of the base grid.
 #AMRINITPHYSICS
 3			nRefineLevelIC
 
-! Defines number of physics (initial condition) based AMR-s AFTER the 
-! geometry based initial AMR-s defined by #AMRINIT were done.
-! Only useful if the initial condition has a non-trivial analytic form.
+Defines number of physics (initial condition) based AMR-s AFTER the 
+geometry based initial AMR-s defined by #AMRINIT were done.
+Only useful if the initial condition has a non-trivial analytic form.
 </command>
 
 <command name="GRIDRESOLUTION" alias="GRIDLEVEL" multiple="T">
@@ -2935,27 +2935,27 @@ around the X, Y and Z axes in this order.
 99			MaxBlockLevel
 F			DoFixBodyLevel
 
-! Set the minimum/maximum levels that can be affected by AMR.  The usage is as
-! follows:
-!\begin{verbatim}
-! MinBlockLevel .ge.0 Cells can be coarsened up to the listed level but not
-!                       further.
-! MinBlockLevel .lt.0 The current grid is ``frozen'' for coarsening such that
-!                       blocks are not allowed to be coarsened to a size
-!                       larger than their current one.
-! MaxBlockLevel .ge.0 Any cell at a level greater than or equal to
-!                       MaxBlockLevel is unaffected by AMR (cannot be coarsened
-!                       or refined).
-! MaxBlockLevel .lt.0 The current grid is ``frozen'' for refinement such that
-!                       blocks are not allowed to be refined to a size
-!                       smaller than their current one.
-! DoFixBodyLevel = T  Blocks touching the body cannot be coarsened or refined.
-!\end{verbatim}
-! This command has no effect when DoAutoRefine is .false. in the #AMR command.
-!
-! Note that the user can set either #AMRLEVELS or #AMRRESOLUTION but not
-! both.  If both are set, the final one in the session will set the values
-! for AMR.
+Set the minimum/maximum levels that can be affected by AMR.  The usage is as
+follows:
+\begin{verbatim}
+MinBlockLevel .ge.0 Cells can be coarsened up to the listed level but not
+                      further.
+MinBlockLevel .lt.0 The current grid is ``frozen'' for coarsening such that
+                      blocks are not allowed to be coarsened to a size
+                      larger than their current one.
+MaxBlockLevel .ge.0 Any cell at a level greater than or equal to
+                      MaxBlockLevel is unaffected by AMR (cannot be coarsened
+                      or refined).
+MaxBlockLevel .lt.0 The current grid is ``frozen'' for refinement such that
+                      blocks are not allowed to be refined to a size
+                      smaller than their current one.
+DoFixBodyLevel = T  Blocks touching the body cannot be coarsened or refined.
+\end{verbatim}
+This command has no effect when DoAutoRefine is .false. in the #AMR command.
+
+Note that the user can set either #AMRLEVELS or #AMRRESOLUTION but not
+both.  If both are set, the final one in the session will set the values
+for AMR.
 </command>
 
 <command name="AMRRESOLUTION">
@@ -2967,17 +2967,17 @@ F			DoFixBodyLevel
 99999.			DxCellMax
 F			DoFixBodyLevel
 
-! Serves the same function as AMRLEVELS. The DxCellMin and DxCellMmax
-! parameters are converted into MinBlockLevel and MaxBlockLevel 
-! when they are read.
-! Note that MinBlockLevel corresponds to DxCellMax and MaxBlockLevel
-! corresponds to DxCellMin.  See details above.
-!
-! This command has no effect when DoAutoRefine is .false. in the #AMR command.
-!
-! Note that the user can set either #AMRLEVELS or #AMRRESOLUTION but not
-! both.  If both are set, the final one in the session will set the values
-! for AMR.
+Serves the same function as AMRLEVELS. The DxCellMin and DxCellMmax
+parameters are converted into MinBlockLevel and MaxBlockLevel 
+when they are read.
+Note that MinBlockLevel corresponds to DxCellMax and MaxBlockLevel
+corresponds to DxCellMin.  See details above.
+
+This command has no effect when DoAutoRefine is .false. in the #AMR command.
+
+Note that the user can set either #AMRLEVELS or #AMRRESOLUTION but not
+both.  If both are set, the final one in the session will set the values
+for AMR.
 </command>
 
 <command name="AMR">
@@ -3000,28 +3000,28 @@ T			DoAutoRefine   ! read if DnRefine is positive
 0.			PercentRefine  ! read if DoAutoRefine is true
 99999			MaxTotalBlocks ! read if DoAutoRefine is true
 
-! The DnRefine parameter determines the frequency of adaptive mesh refinements
-! in terms of total steps nStep.
-!
-! When DoAutoRefine is false, the grid is refined by one more level
-! based on the TypeRefineInit parameter given in the #AMRINIT command
-! and/or the areas and resolutions defined by the 
-! #GRIDLEVEL and #GRIDRESOLUTION commands.
-! If the number of blocks is not sufficient for this pre-specified refinement, 
-! the code stops with an error.
-!
-! When DoAutoRefine is true, the grid is refined or coarsened 
-! based on the criteria given in the #AMRCRITERIA command.
-! The number of blocks to be refined or coarsened are determined by
-! the PercentRefine and PercentCoarsen parameters. These percentages
-! are approximate only, because the constraints of the block adaptive
-! grid may result in more or fewer blocks than prescribed.
-! The total number of blocks will not exceed the smaller of the 
-! MaxTotalBlocks parameter and the total number of blocks available on all 
-! the PE-s (which is determined by the number of PE-s and 
-! the MaxBlocks parameter in ModSize.f90).
-! 
-! Default for DnRefine is -1, i.e. no run time refinement.
+The DnRefine parameter determines the frequency of adaptive mesh refinements
+in terms of total steps nStep.
+
+When DoAutoRefine is false, the grid is refined by one more level
+based on the TypeRefineInit parameter given in the #AMRINIT command
+and/or the areas and resolutions defined by the 
+#GRIDLEVEL and #GRIDRESOLUTION commands.
+If the number of blocks is not sufficient for this pre-specified refinement, 
+the code stops with an error.
+
+When DoAutoRefine is true, the grid is refined or coarsened 
+based on the criteria given in the #AMRCRITERIA command.
+The number of blocks to be refined or coarsened are determined by
+the PercentRefine and PercentCoarsen parameters. These percentages
+are approximate only, because the constraints of the block adaptive
+grid may result in more or fewer blocks than prescribed.
+The total number of blocks will not exceed the smaller of the 
+MaxTotalBlocks parameter and the total number of blocks available on all 
+the PE-s (which is determined by the number of PE-s and 
+the MaxBlocks parameter in ModSize.f90).
+
+Default for DnRefine is -1, i.e. no run time refinement.
 </command>
 
 <command name="AMRCRITERIA">
@@ -3136,9 +3136,9 @@ Example for InvD2Ray =
 </command>
 </commandgroup>
 <commandgroup name="SCHEME PARAMETERS">
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!  SCHEME PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!  SCHEME PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="SCHEME">
 	<parameter name="nOrder" type="integer" input="select">
 		<option name="1" />
@@ -3336,28 +3336,28 @@ Default values are shown.
 2			nOrderProlong (1 or 2 for ghost cells)
 lr			TypeProlong  ! Only for nOrderProlong=2
 
-! Default is prolong_order=1. \\
-! Possible values for prolong_type:\\
-!
-!\noindent
-! 1. in message_pass_dir (used if limiter_type is not 'LSG')
-!\begin{verbatim}
-!    'lr'          - interpolate only with left and right slopes 
-!    'central'	   - interpolate only with central difference slope
-!    'minmod' 	   - interpolate only with minmod limited slope
-!    'lr2'	   -  like 'lr' but extrapolate when necessary
-!    'central2'	   - like 'central' but extrapolate when necessary
-!    'minmod2'	   - like 'minmod' but extrapolate when necessary
-!    'lr3'         - only experimental
-!\end{verbatim}
-!
-!\noindent
-! 2. in messagepass_all (used if limiter_type is 'LSG')
+Default is prolong_order=1. \\
+Possible values for prolong_type:\\
+
+\noindent
+1. in message_pass_dir (used if limiter_type is not 'LSG')
 \begin{verbatim}
-!    'lr','lr2'		    - left and right slopes (all interpolation)
-!    'central','central2'   - central differences (all interpolation)
-!    'minmod','minmod2'	    - to be implemented
-!\end{verbatim}
+   'lr'          - interpolate only with left and right slopes 
+   'central'	   - interpolate only with central difference slope
+   'minmod' 	   - interpolate only with minmod limited slope
+   'lr2'	   -  like 'lr' but extrapolate when necessary
+   'central2'	   - like 'central' but extrapolate when necessary
+   'minmod2'	   - like 'minmod' but extrapolate when necessary
+   'lr3'         - only experimental
+\end{verbatim}
+
+\noindent
+2. in messagepass_all (used if limiter_type is 'LSG')
+\begin{verbatim}
+   'lr','lr2'		    - left and right slopes (all interpolation)
+   'central','central2'   - central differences (all interpolation)
+   'minmod','minmod2'	    - to be implemented
+\end{verbatim}
 </command>
 
 <command name="MESSAGEPASS" alias="OPTIMIZE">
@@ -3372,24 +3372,24 @@ lr			TypeProlong  ! Only for nOrderProlong=2
 #MESSAGEPASS
 allopt			TypeMessagePass
 
-! Default value is shown above.\\
-! Possible values for optimize_message_pass:
-!\begin{verbatim}
-! 'dir'		- message_pass_dir: group messages direction by direction
-! 'face'	- message_pass_dir: group messages face by face
-! 'min'		- message_pass_dir: send equal, restricted and prolonged 
-!				    messages face by face
-!
-! 'opt'		- message_pass_dir: do not send corners, send one layer for
-!				    first order, send direction by direction
-!
-! 'all'		- message_pass_cell: corners, edges and faces in single message
-!
-! 'allopt'      - message_pass_cell:  faces only in a single message
-!\end{verbatim}
-! Constrained transport requires corners, default is 'all'!\\ <!--^CFG IF CONSTRAINB-->
-! Diffusive control requires corners, default is 'all'!\\<!--^CFG IF DIVBDIFFUSE-->
-! Projection uses message_pass_dir for efficiency!\\<!--^CFG IF PROJECTION-->
+Default value is shown above.\\
+Possible values for optimize_message_pass:
+\begin{verbatim}
+'dir'		- message_pass_dir: group messages direction by direction
+'face'	- message_pass_dir: group messages face by face
+'min'		- message_pass_dir: send equal, restricted and prolonged 
+				    messages face by face
+
+'opt'		- message_pass_dir: do not send corners, send one layer for
+				    first order, send direction by direction
+
+'all'		- message_pass_cell: corners, edges and faces in single message
+
+'allopt'      - message_pass_cell:  faces only in a single message
+\end{verbatim}
+Constrained transport requires corners, default is 'all'!\\ <!--^CFG IF CONSTRAINB-->
+Diffusive control requires corners, default is 'all'!\\<!--^CFG IF DIVBDIFFUSE-->
+Projection uses message_pass_dir for efficiency!\\<!--^CFG IF PROJECTION-->
 </command>
 
 <command name="RESCHANGE" alias="RESOLUTIONCHANGE">
@@ -3397,11 +3397,11 @@ allopt			TypeMessagePass
 #RESCHANGE
 T		UseAccurateResChange
 
-! For UseAccurateResChange=T a second order accurate, upwind and oscillation 
-! free scheme is used at the resolution changes. 
-!
-! Default value is false, which results in first order 
-! prolongation and restriction operators at the resolution changes.
+For UseAccurateResChange=T a second order accurate, upwind and oscillation 
+free scheme is used at the resolution changes. 
+
+Default value is false, which results in first order 
+prolongation and restriction operators at the resolution changes.
 </command>
 
 <command name="TVDRESCHANGE">
@@ -3409,11 +3409,11 @@ T		UseAccurateResChange
 #TVDRESCHANGE
 T		UseTvdResChange
 
-! For UseTvdResChange=T an almost second order and partially downwinded 
-! TVD limited scheme is used at the resolution changes. 
-!
-! Default value is false, which results in first order 
-! prolongation and restriction operators at the resolution changes.
+For UseTvdResChange=T an almost second order and partially downwinded 
+TVD limited scheme is used at the resolution changes. 
+
+Default value is false, which results in first order 
+prolongation and restriction operators at the resolution changes.
 </command>
 
 <!-- ^CFG IF BORISCORR BEGIN -->
@@ -3425,12 +3425,12 @@ T		UseTvdResChange
 T			UseBorisCorrection
 1.0			BorisClightFactor !Only if UseBorisCorrection is true
 
-! Default is boris_correction=.false.
-! Use semi-relativistic MHD equations with speed of light reduced by
-! the BorisClightFactor. Set BorisClightFactor=1.0 for true semi-relativistic
-! MHD. Gives the same steady state as normal MHD analytically, but there
-! can be differences due to discretization errors. 
-! You can use either Boris or BorisSimple but not both. <!-- ^CFG IF SIMPLEBORIS -->
+Default is boris_correction=.false.
+Use semi-relativistic MHD equations with speed of light reduced by
+the BorisClightFactor. Set BorisClightFactor=1.0 for true semi-relativistic
+MHD. Gives the same steady state as normal MHD analytically, but there
+can be differences due to discretization errors. 
+You can use either Boris or BorisSimple but not both. <!-- ^CFG IF SIMPLEBORIS -->
 </command>
 <!-- ^CFG END BORISCORR -->
 
@@ -3443,12 +3443,12 @@ T			UseBorisCorrection
 T			UseBorisSimple
 0.05			BorisClightFactor !Only if UseBorisSimple is true
 
-! Default is UseBorisSimple=.false. 
-! Use simplified semi-relativistic MHD with speed of light reduced by the
-! BorisClightFactor. This is only useful with BorisClightFactor less than 1.
-! Should give the same steady state as normal MHD, but there can be a
-! difference due to discretization errors.
-! You can use either Boris or BorisSimple but not both. <!-- ^CFG IF BORISCORR -->
+Default is UseBorisSimple=.false. 
+Use simplified semi-relativistic MHD with speed of light reduced by the
+BorisClightFactor. This is only useful with BorisClightFactor less than 1.
+Should give the same steady state as normal MHD, but there can be a
+difference due to discretization errors.
+You can use either Boris or BorisSimple but not both. <!-- ^CFG IF BORISCORR -->
 </command>
 <!-- ^CFG END SIMPLEBORIS -->
 
@@ -3479,10 +3479,10 @@ F			UseDivbDiffusion	<!-- ^CFG IF DIVBDIFFUSE-->
 F			UseProjection           <!-- ^CFG IF PROJECTION -->
 F			UseConstrainB           <!-- ^CFG IF CONSTRAINB -->
 
-! Default values are shown above.
-! If UseProjection is true, all others should be false.<!--^CFG IF PROJECTION-->
-! If UseConstrainB is true, all others should be false.<!--^CFG IF CONSTRAINB-->
-! At least one of the options should be true.
+Default values are shown above.
+If UseProjection is true, all others should be false.<!--^CFG IF PROJECTION-->
+If UseConstrainB is true, all others should be false.<!--^CFG IF CONSTRAINB-->
+At least one of the options should be true.
 </command>
 
 <command name="DIVBSOURCE">
@@ -3490,8 +3490,8 @@ F			UseConstrainB           <!-- ^CFG IF CONSTRAINB -->
 #DIVBSOURCE
 T			UseB0Source
 
-! Add extra source terms related to the non-zero divergence and curl of B0.
-! Default is true.
+Add extra source terms related to the non-zero divergence and curl of B0.
+Default is true.
 </command>
 
 <!-- ^CFG IF PROJECTION BEGIN -->
@@ -3516,44 +3516,44 @@ rel			TypeProjectStop:'rel' or 'max' error for stop condition
 0.0			AbsoluteLimit 
 50			MaxMatvec (upper limit on matrix.vector multipl.)
 
-! Default values are shown above.\\
-!
-!\noindent
-! For symmetric Laplacian matrix TypeProjectIter='cg' (Conjugate Gradients)
-! should be used, as it is faster than BiCGSTAB. In current applications
-! the Laplacian matrix is always symmetric.\\
-!
-!\noindent 
-! The iterative scheme stops when the stopping condition is fulfilled:
-!\begin{verbatim}
-!   TypeProjectStop = 'rel': 
-!        stop if ||div B||    &lt; RelativeLimit*||div B0||
-!   TypeProjectStop = 'max' and RelativeLimit is positive:
-!        stop if max(|div B|) &lt; RelativeLimit*max(|div B0|)
-!   TypeProjectStop = 'max' and RelativeLimit is negative: 
-!        stop if max(|div B|) &lt; AbsoluteLimit
-!\end{verbatim}
-!   where {\tt ||.||} is the second norm, and B0 is the magnetic
-!   field before projection. In words 'rel' means that the norm of the error
-!   should be decreased by a factor of RelativeLimit, while 
-!   'max' means that the maximum error should be less than either
-!   a fraction of the maximum error in div B0, or less than the constant 
-!   AbsoluteLimit.
-! 
-!   Finally the iterations stop if the number of matrix vector
-!   multiplications exceed MaxMatvec. For the CG iterative scheme
-!   there is 1 matvec per iteration, while for BiCGSTAB there are 2/iteration.
-!
-!  In practice reducing the norm of the error by a factor of 10 to 100 in 
-!  every iteration works well.
-!
+Default values are shown above.\\
+
+\noindent
+For symmetric Laplacian matrix TypeProjectIter='cg' (Conjugate Gradients)
+should be used, as it is faster than BiCGSTAB. In current applications
+the Laplacian matrix is always symmetric.\\
+
+\noindent 
+The iterative scheme stops when the stopping condition is fulfilled:
+\begin{verbatim}
+  TypeProjectStop = 'rel': 
+       stop if ||div B||    &lt; RelativeLimit*||div B0||
+  TypeProjectStop = 'max' and RelativeLimit is positive:
+       stop if max(|div B|) &lt; RelativeLimit*max(|div B0|)
+  TypeProjectStop = 'max' and RelativeLimit is negative: 
+       stop if max(|div B|) &lt; AbsoluteLimit
+\end{verbatim}
+  where {\tt ||.||} is the second norm, and B0 is the magnetic
+  field before projection. In words 'rel' means that the norm of the error
+  should be decreased by a factor of RelativeLimit, while 
+  'max' means that the maximum error should be less than either
+  a fraction of the maximum error in div B0, or less than the constant 
+  AbsoluteLimit.
+
+  Finally the iterations stop if the number of matrix vector
+  multiplications exceed MaxMatvec. For the CG iterative scheme
+  there is 1 matvec per iteration, while for BiCGSTAB there are 2/iteration.
+
+ In practice reducing the norm of the error by a factor of 10 to 100 in 
+ every iteration works well.
+
 <!-- ^CFG IF CONSTRAINB BEGIN -->
-!
-!  Projection is also used when the scheme switches to constrained transport.
-!  It is probably a good idea to allow many iterations and require an
-!  accurate projection, because it is only done once, and the constrained
-!  transport will carry along the remaining errors in div B. An example is
-!
+
+ Projection is also used when the scheme switches to constrained transport.
+ It is probably a good idea to allow many iterations and require an
+ accurate projection, because it is only done once, and the constrained
+ transport will carry along the remaining errors in div B. An example is
+
 #PROJECTION
 cg			TypeProjIter
 rel			TypeProjStop
@@ -3715,9 +3715,9 @@ tested.
 
 </commandgroup>
 <commandgroup name="PHYSICS PARAMETERS">
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!  PHYSICS PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!  PHYSICS PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="GAMMA" if="$_IsFirstSession">
 	<parameter name="Gamma" type="real" min="1" default="1.6666666667"/>
 #GAMMA
@@ -4221,9 +4221,9 @@ T			UseBody2   ! Rest of the parameters read if .true.
 5.0			RhoDimBody2 (/ccm) density for fixed BC for rho_BLK
 25000.0			TDimBody2 (K) temperature for fixed BC for P_BLK
 
-! Default for UseBody2=.false.   -   All others have no defaults!
-! This command should appear before the #INNERBOUNDARY command when using
-! a second body.
+Default for UseBody2=.false.   -   All others have no defaults!
+This command should appear before the #INNERBOUNDARY command when using
+a second body.
 </command>
 
 <command name="DIPOLEBODY2" if="$_IsFirstSession">
@@ -4236,22 +4236,22 @@ T			UseBody2   ! Rest of the parameters read if .true.
 0.0			BdpDimBody2y [nT]
 -1000.0			BdpDimBody2z [nT]
 
-! The BdpDimBody2x, BdpDimBody2y and BdpDimBody2z variables contain
-! the 3 components of the dipole vector in the GSE frame.
-! The absolute value of the dipole vector is the equatorial field strength
-! in nano Tesla.
-!
-! Default is no dipole field.
+The BdpDimBody2x, BdpDimBody2y and BdpDimBody2z variables contain
+the 3 components of the dipole vector in the GSE frame.
+The absolute value of the dipole vector is the equatorial field strength
+in nano Tesla.
 
-! For now the dipole of the second body can only be aligned with the z-axis
+Default is no dipole field.
+
+For now the dipole of the second body can only be aligned with the z-axis
 </command>
 <!-- ^CFG END SECONDBODY -->
 </commandgroup>
 
 <commandgroup name="HELIOSPHERE SPECIFIC COMMANDS">
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!! HELIOSPHERE SPECIFIC COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!! HELIOSPHERE SPECIFIC COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="HELIOUPDATEB0" if="$_NameComp ne 'GM'">
 	<parameter name="DtUpdateB0" type="real" min="-1" default="0.0001"/>
 
@@ -4271,11 +4271,11 @@ A negative value means that the B0 field is not updated.
 -3.0                    HelioDipoleStrength [G]
  0.0                    HelioDipoleTilt     [deg]
 
-! Variable HelioDipoleStrength defines the equatorial field strength in Gauss,
-! while HelioDipoleTilt is the tilt relative to the ecliptic North 
-! (negative sign means towards the planet) in degrees.
-!
-! Default value is HelioDipoleStrength = 0.0.
+Variable HelioDipoleStrength defines the equatorial field strength in Gauss,
+while HelioDipoleTilt is the tilt relative to the ecliptic North 
+(negative sign means towards the planet) in degrees.
+
+Default value is HelioDipoleStrength = 0.0.
 </command>
 
 <command name="HELIOTEST" if="$_NameComp ne 'GM'">
@@ -4284,11 +4284,11 @@ A negative value means that the B0 field is not updated.
 #HELIOTEST
 F			DoSendMHD
 
-! If DoSendMHD is true, IH sends the real MHD solution to GM in the coupling.
-! If DoSendMHD is false then the values read from the IMF file are sent,
-! so there is no real coupling. Mostly used for testing the framework.
-!
-! Default value is true, i.e. real coupling.
+If DoSendMHD is true, IH sends the real MHD solution to GM in the coupling.
+If DoSendMHD is false then the values read from the IMF file are sent,
+so there is no real coupling. Mostly used for testing the framework.
+
+Default value is true, i.e. real coupling.
 </command>
 
 <command name="HELIOBUFFERGRID" if="$_IsFirstSession and $_NameComp eq 'IH'">
@@ -4312,9 +4312,9 @@ Default values are shown above.
 </commandgroup>
 
 <commandgroup name="COMET PROBLEM TYPE">
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!! COMET PROBLEM TYPE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!! COMET PROBLEM TYPE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="COMET" if="$_IsFirstSession">
 	<parameter name="ProdRate"		type="real" min="0"/>
 	<parameter name="UrNeutral"		type="real" min="0"/>
@@ -4328,14 +4328,14 @@ Default values are shown above.
 1.0E-6		IonizationRate (1/s)
 1.7E-9		kFriction - ion-neutral friction rate coefficient (cm^3/s)
 
-! Only used by problem_comet.  Defaults are as shown.
+Only used by problem_comet.  Defaults are as shown.
 </command>
 </commandgroup>
 
 <commandgroup name="SCRIPT COMMANDS">
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!! SCRIPT COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!! SCRIPT COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="INCLUDE">
 	<parameter name="NameIncludeFile" type="string" length="100" 
 		default="Param/" />
@@ -4343,14 +4343,14 @@ Default values are shown above.
 #INCLUDE
 Param/SSS_3000		NameIncludeFile
 
-! Include a library file from Param/ or any file from anywhere else.
+Include a library file from Param/ or any file from anywhere else.
 </command>
 
 </commandgroup>
 <!--
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!! GLOBAL RULES !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!! GLOBAL RULES !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 -->
 <rule expr="($SwNDim > 0) or $UseSolarWindFile or $_NameComp ne 'GM'">
 	Either command #SOLARWIND or #SOLARWINDFILE must be used!
