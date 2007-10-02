@@ -123,9 +123,7 @@ test_restart_read:
 	cat plots_read/plots_iline0003.out >> plots/plots_iline0003.out;\
 	cat plots_read/plots_iline0004.out >> plots/plots_iline0004.out
 
-rundir: run
-
-run:
+rundir:
 	mkdir -p ${RUNDIR}/PW
 	cd ${RUNDIR}/PW; \
 		mkdir restartIN restartOUT plots; \
