@@ -1,5 +1,5 @@
 
-SUBROUTINE PW_set_upper_bc
+subroutine PW_set_upper_bc
   use ModCommonVariables
   use ModGmPressure
   use ModPWOM, ONLY: iLine
@@ -55,6 +55,7 @@ SUBROUTINE PW_set_upper_bc
   ! Te(nDim) + Tgradient*Dx where Tgradient = Etop/kappa
   ! and Etop is the electron heat flux or proportional to that
   State_GV(nDim+1,Te_)=State_GV(nDim,Te_)+XHTM*ETOP/State_GV(nDim,Te_)**2.5
+  State_GV(nDim+2,Te_)=State_GV(nDim+1,Te_)+XHTM*ETOP/State_GV(nDim,Te_)**2.5
   
   ! If using GM --> PW coupling, overwrite ghostcell pressure
   ! with fraction of MHD pressure using 
@@ -73,19 +74,23 @@ SUBROUTINE PW_set_upper_bc
   ! rho_e = rho_H*(m_e/m_H) + rho_O*(m_e/m_O) + rho_He*(m_e/m_He)
   ! Set electron density and velocity and pressure
 
-  State_GV(nDim+1,RhoE_)=0.0
-  State_GV(nDim+1,uE_)  =0.0
+  State_GV(nDim+1:nDim+2,RhoE_)=1.e-30
+  State_GV(nDim+1:nDim+2,uE_)  =0.0
   
   do iIon=1,nIon-1
-     State_GV(nDim+1,RhoE_) = &
-          State_GV(nDim+1,RhoE_)+MassElecIon_I(iIon)*State_GV(nDim+1,iRho_I(iIon))
-     State_GV(nDim+1,uE_)= &
-          State_GV(nDim+1,uE_)+ &
-          (MassElecIon_I(iIon)*State_GV(nDim+1,iRho_I(iIon))*State_GV(nDim+1,iU_I(iIon)))
+     State_GV(nDim+1:nDim+2,RhoE_) = &
+          State_GV(nDim+1:nDim+2,RhoE_)+MassElecIon_I(iIon)*State_GV(nDim+1:nDim+2,iRho_I(iIon))
+     State_GV(nDim+1:nDim+2,uE_)= &
+          State_GV(nDim+1:nDim+2,uE_)+ &
+          ( MassElecIon_I(iIon)*State_GV(nDim+1:nDim+2,iRho_I(iIon))&
+          *State_GV(nDim+1:nDim+2,iU_I(iIon)) )
   enddo
-  State_GV(nDim+1,uE_)=(State_GV(nDim+1,uE_) -1.8965E-18*CURRMX)/State_GV(nDim+1,RhoE_)
+  State_GV(nDim+1:nDim+2,uE_)=&
+       (State_GV(nDim+1:nDim+2,uE_) -1.8965E-18*CURRMX)/State_GV(nDim+1:nDim+2,RhoE_)
 
-  State_GV(nDim+1,pE_)=RGAS_I(nIon)*State_GV(nDim+1,Te_)*State_GV(nDim+1,RhoE_)  
+
+  State_GV(nDim+1:nDim+2,pE_)=&
+       RGAS_I(nIon)*State_GV(nDim+1:nDim+2,Te_)*State_GV(nDim+1:nDim+2,RhoE_)  
   
 
   !these are sound speeds
