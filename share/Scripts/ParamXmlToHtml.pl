@@ -23,9 +23,11 @@ my $XmlFile   = ($ARGV[0] or 'run/PARAM.in.xml');
 my $ERROR = 'ParamXmlToHtml_ERROR';
 
 # Output files have fixed names
+my $IndexHtmlFile  = "index.html";
 my $ParamHtmlFile  = "param.html";
 my $EditorHtmlFile = "editor.html";
 my $ManualHtmlFile = "manual.html";
+my $ImageDir       = "share/Scripts";
 
 # Name of the original parameter file
 my $ParamFile = $XmlFile;
@@ -55,7 +57,13 @@ my $CommandXml;    # XML description of the command
 my $CommandExample;# XML description of the command
 my $CommandText;   # Normal text description of the command
 
+my %TableColor = ("command" => "\#CCCCCC",
+		  "comment" => "\#DDDDDD",
+		  "userinput"=>"\#CCCCCC");
+
 &read_xml_file;
+
+&write_index_html unless -f $IndexHtmlFile;
 
 &write_editor_html;
 
@@ -105,16 +113,21 @@ sub read_xml_file{
 	    my $Type=$1;
 	    my $View=$2;
 
-	    print "iItem=$iItem Type=$Type View=$View\n" if $Debug;
+	    # Create new array element for this item
+	    $SessionRef[$nSession]{SECTION}{$Section}{ITEM}[$iItem]{TYPE} = 
+		$Type;
 
 	    my $ItemRef=
 		$SessionRef[$nSession]{SECTION}{$Section}{ITEM}[$iItem];
-	    $ItemRef->{TYPE} = $Type;
 	    $ItemRef->{VIEW} = $View;
+	    $ItemRef->{HEAD} = <XMLFILE>; # First line of body is always read
+
 	    while($_=<XMLFILE>){
 		last if /<\/ITEM>/;
-		$ItemRef->{BODY} .= $_ unless $View eq "MIN";
+		next if $ItemRef->{TAIL} and $View eq "MIN";
+		$ItemRef->{TAIL} .= $_;
 	    }
+
 	}elsif(/<EDITOR 
 	       \ SELECT=\"([^\"]*)\"
 	       \ INSERT=\"([^\"]*)\"
@@ -233,6 +246,24 @@ $CommandText" if $Debug;
 
 ##############################################################################
 
+sub write_index_html{
+
+    open(FILE, ">$IndexHtmlFile") 
+	or die "$ERROR: could not open $IndexHtmlFile\n";
+    print FILE
+"<FRAMESET ROWS=120,1*>
+  <FRAME SRC=\"./$EditorHtmlFile\" NAME=EDITOR FRAMEBORDER=1>
+  <FRAMESET COLS=75%,25%>
+    <FRAME SRC=\"./$ParamHtmlFile#SELECTED\"  NAME=PARAMFILE FRAMEBORDER=1>
+    <FRAME SRC=\"./$ManualHtmlFile\"  NAME=MANUAL FRAMEBORDER=1>
+  </FRAMESET>
+</FRAMESET>
+";
+    close(FILE);
+}
+
+##############################################################################
+
 sub write_editor_html{
 
     # Read the parameter definitions
@@ -335,48 +366,33 @@ $Files
 <FORM ALIGN=RIGHT>
   <TABLE WIDTH=100%>
     <TR>
-      <TD ALIGN=LEFT>
+      <TD ALIGN=LEFT WIDTH=20%>
+<INPUT TYPE=SUBMIT NAME=SUBMIT VALUE=CHECK>
+<INPUT TYPE=SUBMIT NAME=SUBMIT VALUE=SAVE>
+<INPUT TYPE=SUBMIT NAME=SUBMIT VALUE=\"SAVE AS\">
+      </TD>
+      <TD ALIGN=CENTER WIDTH=60%>
          <FONT COLOR=red>
 $ParamFile
          </FONT>
       </TD>
-      <TD ALIGN=CENTER>
-<INPUT TYPE=SUBMIT NAME=SUBMIT VALUE=CHECK>
-<INPUT TYPE=SUBMIT NAME=SUBMIT VALUE=SAVE>
-<INPUT TYPE=SUBMIT NAME=SUBMIT VALUE=SAVE AS>
-      </TD>
-      <TD ALIGN=RIGHT>
+      <TD ALIGN=RIGHT WIDTH=20%>
 <INPUT TYPE=SUBMIT NAME=SUBMIT VALUE=EXIT>
       </TD>
     </TR>
   </TABLE>
-  </FORM>
 <hr>
-  <FORM>
-  <TABLE BORDER=0>
-    <TR>
-      <TD ALIGN=CENTER>Session/section</TD>
-      <TD ALIGN=CENTER COLSPAN=2>Insert item
-      </TD>
-    </TR>
-    <TR>
-      <TD>
-  <SELECT NAME=SESSION>
+  <CENTER>
+  View: <SELECT NAME=SESSION>
 $SessionSection
   </SELECT>
-      </TD>
-      <TD>
+&nbsp;Insert: 
   <SELECT NAME=INSERT>
 $InsertList
   </SELECT>
-      </TD>
-      <TD>
 $InsertItem
-      </TD>
-    </TR>
-  </TABLE>
+  </CENTER>
   </FORM>
-  <hr>
 </body>
 ";
     print EDITOR $Editor;
@@ -387,17 +403,14 @@ $InsertItem
 
 sub write_manual_html{
 
-    print "write_manual_html\n";
-    print "CommandExample=$CommandExample\n";
-
     my $Manual;
     if($CommandExample){
-	$Manual =  $CommandText;
+	$Manual =  "<H1>Manual</H1>\n$CommandText";
 	$Manual =~ s/\n\n/\n<p>\n/g;
 	$Manual =  "<PRE>\n$CommandExample\n</PRE>\n$Manual";
 	$Manual =~ s/\n$//;
     }elsif($Editor{INSERT} =~ /^PASTE/){
-	$Manual = "<PRE>\n$Clipboard{BODY}\n</PRE>";
+	$Manual = "<H1>Clipboard</H1>\n<PRE>\n$Clipboard{BODY}\n</PRE>";
     }
     $Manual = $CommandText if 
 
@@ -412,6 +425,368 @@ $Manual
 ##############################################################################
 
 sub write_param_html{
+
+    my $Param = '  <head>
+  <style type="text/css">
+  a {text-decoration: none;}
+  </style>
+  </head>
+
+  <BODY BGCOLOR=#DDDDD TEXT=BLACK LINK=BLUE VLINK=BLUE>
+';
+
+    my $InsertSessionButton;
+
+    $InsertSessionButton = 
+"  <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert session\"></A>
+"                 if $Editor{SELECT} eq "ALL SESSIONS";
+
+    ########################## SESSION #################################
+    my $iSession;
+    for $iSession (1..$nSession){
+	my $SessionView =  $SessionRef[$iSession]{VIEW};
+	my $SessionName =  $SessionRef[$iSession]{NAME};
+	$SessionName    =~ s/^Session //i;
+
+	my $InsertSectionButton;
+
+	$InsertSectionButton =
+"    <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert section\"></A>
+" 	    if $Editor{SELECT} !~ /(ALL SESSIONS|\/)/;
+
+
+	# Place anchor to selected session
+	$Param .= "<A NAME=SELECTED></A>\n" 
+	    if $Editor{SELECT} eq $SessionName;
+
+	$Param .=
+"<hr COLOR=BLACK>
+  <TABLE BORDER=0 WIDTH=100% BGCOLOR=#CCCCCC>
+    <TR>
+      <TD WIDTH=20 ALIGN=LEFT>
+";
+	if($SessionView eq "MIN"){
+	    $Param .=
+"      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+><IMG SRC=$ImageDir/button_maximize.gif TITLE=\"Maximize session\"></A>
+";
+	}else{
+	    $Param .=
+"      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+><IMG SRC=$ImageDir/button_minimize.gif TITLE=\"Minimize session\"></A>
+";
+	}
+	$Param .=
+"      </TD>
+      <TD WIDTH=380><A HREF=\"$IndexHtmlFile\" TARGET=_parent>
+Session: $SessionName
+      </A></TD>
+      <TD ALIGN=RIGHT>
+$InsertSessionButton
+      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy session\"></A>
+      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Remove session\"></A>
+      </TD>
+    </TR>
+  </TABLE>
+";
+	next if $SessionView eq "MIN";
+
+	######################## SECTION ###############################
+
+	my $Section;
+	for $Section (sort keys %{ $SessionRef[$iSession]{SECTION} }){
+	    my $SectionRef  = $SessionRef[$iSession]{SECTION}{$Section};
+	    my $SectionView = $SectionRef->{VIEW};
+
+	    my $InsertItemButton;
+	    $InsertItemButton = 
+"     <A HREF=\"$IndexHtmlFile\"
+><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert\"></A>
+"                   if $Editor{SELECT} =~ /\/$Section$/;
+
+
+	    # Place anchor to selected session
+	    $Param .= "<A NAME=SELECTED></A>\n" 
+		if $Editor{SELECT} eq "$SessionName/$Section";
+
+	    $Param .=
+"  <TABLE BORDER=0 WIDTH=100% BGCOLOR=#CCCCCC>
+    <TR>
+      <TD WIDTH=20>
+      </TD>
+      <TD COLSPAN=2>
+<hr COLOR=GREY>
+      </TD>
+    </TR>
+    <TR>
+      <TD ALIGN=CENTER>
+";
+	    if($SectionView eq "MIN"){
+		$Param .=
+"      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+><IMG SRC=$ImageDir/button_maximize.gif TITLE=\"Maximize section\"></A>
+";
+	    }else{
+		$Param .=
+"      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+><IMG SRC=$ImageDir/button_minimize.gif TITLE=\"Minimize section\"></A>
+";
+	    }
+	    $Param .=
+"      </TD>
+      <TD WIDTH=380><A HREF=\"$IndexHtmlFile\" TARGET=_parent>
+Section: $Section
+      </A></TD>
+      <TD ALIGN=RIGHT>
+$InsertSectionButton
+      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy section\"></A>
+      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Remove section\"></A>
+      </TD>
+    </TR>
+  </TABLE>
+";
+	    next if $SectionView eq "MIN";
+	    
+###################### ITEM LOOP ############################################
+
+	    my $iItem;
+	    for $iItem (1..$#{ $SectionRef->{ITEM} }){
+
+		my $ItemRef  = $SectionRef->{ITEM}[$iItem];
+		my $ItemView = $ItemRef->{VIEW};
+		my $ItemType = lc($ItemRef->{TYPE});
+		my $ItemHead = $ItemRef->{HEAD};
+		my $ItemTail = $ItemRef->{TAIL};
+
+		my $TableColor = $TableColor{$ItemType};
+
+		if($ItemType eq "userinput"){
+		    # Fix the content of the user input
+		    $ItemHead = "#USERINPUT";
+		    $ItemTail =~ s/\n*\#USERINPUTEND.*//m;
+		}
+		my $nLine = ($ItemTail =~ s/\n/\n/g);
+
+		if($ItemView eq "EDIT"){
+		    $nLine += 2;
+		    if($ItemType eq "comment"){
+			$ItemTail = $ItemHead.$ItemTail;
+			$ItemHead = "";
+			$nLine++;
+		    }
+		    $Param .= "
+  <FORM TARGET=_parent>
+  <TABLE BORDER=0 WIDTH=100% BGCOLOR=#BBEEFF>
+    <TR>
+      <TD WIDTH=20>
+      </TD>
+      <TD WIDTH=380><FONT COLOR=BLUE>
+$ItemHead
+      </FONT></TD>
+      <TD ALIGN=RIGHT>
+<IMG SRC=$ImageDir/button_save.gif TITLE=Save>
+         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<IMG SRC=$ImageDir/button_remove.gif TITLE=\"Cancel\">
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      </TD>
+       <TD COLSPAN=2>
+          <TEXTAREA COLS=60 ROWS=$nLine>
+$ItemTail
+          </TEXTAREA>
+       </TD>
+    </TR>
+  </TABLE>
+  </FORM>
+";
+		    next;
+		}
+
+		my $CopyButton =
+"      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy $ItemType\"></A>
+";
+		my $RemoveButton =
+"      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Remove $ItemType\"></A>
+";
+
+		# Show first line with usual buttons
+		$ItemHead = "<PRE>$ItemHead</PRE>" if $ItemType eq "comment";
+
+		$Param .=
+"  <TABLE BORDER=0 WIDTH=100% BGCOLOR=$TableColor>
+    <TR>
+      <TD WIDTH=20 ALIGN=RIGHT>
+";
+		if($ItemTail){
+		    if($ItemView eq "MIN"){
+			$Param .= 
+"      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+      ><IMG SRC=$ImageDir/button_maximize.gif TITLE=\"Maximize $ItemType\"></A>
+";
+		    }else{
+			$Param .= 
+"      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+      ><IMG SRC=$ImageDir/button_minimize.gif TITLE=\"Minimize $ItemType\"></A>
+";
+		    }
+		}
+		$Param .= 
+"      </TD>
+      <TD WIDTH=380><A HREF=\"$IndexHtmlFile\" TARGET=_parent>
+$ItemHead
+      </A></TD>
+      <TD ALIGN=RIGHT ALIGN=TOP>
+$InsertItemButton$CopyButton$RemoveButton
+      </TD>
+    </TR>
+  </TABLE>
+";
+
+		if($ItemView eq "MIN"){
+                    $Param .= "<p>\n" if $ItemType ne "comment";
+		    next;
+                }
+
+		if($ItemType eq "comment" or $ItemType eq "userinput"){
+
+		    $Param .= 
+"  <TABLE BORDER=0 WIDTH=100% BGCOLOR=$TableColor>
+    <TR>
+      <TD WIDTH=20>
+      </TD>
+      <TD WIDTH=380 COLSPAN=2><A HREF=\"$IndexHtmlFile\" TARGET=_parent>
+<PRE>$ItemTail</PRE>
+      </A></TD>
+    </TR>
+";
+		    if($ItemType eq "userinput"){
+			$Param .= 
+"    <TR>
+      <TD WIDTH=20 ALIGN=RIGHT>
+      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+      ><IMG SRC=$ImageDir/button_minimize_up.gif TITLE=\"Minimize $ItemType\"></A>
+      </TD>
+      <TD WIDTH=380><A HREF=\"$IndexHtmlFile\" TARGET=_parent>
+#USERINPUT
+      </A></TD>
+      <TD ALIGN=RIGHT>
+$CopyButton$RemoveButton
+      </TD>
+    </TR>
+";
+			$Param .= 
+"  </TABLE>
+";
+		    }
+		}else{  #command type item
+                    $Param .= 
+"  <TABLE BORDER=0 WIDTH=100% BGCOLOR=#CCCCCC>
+";
+		    my $iLine;
+		    for $iLine (0..$nLine-1){
+			$ItemTail =~ s/(.*)\n//;
+			my $Value;
+			my $Comment;
+			($Value,$Comment) = split(/\t|\s\s\s+/, $1, 2);
+
+			$Param .= 
+"    <TR>
+      <TD WIDTH=20>
+      </TD>
+      <TD WIDTH=380>
+$Value
+      </TD>
+      <TD>
+$Comment
+      </TD>
+    </TR>
+";
+
+		    } # end body line loop
+
+		    $Param .= 
+"  </TABLE>
+";
+		} #endif item type
+
+		$Param .= "<p>\n" if $ItemType ne "comment";
+
+	    } # end item loop
+
+	    ###### End section #########
+
+	    $Param .=
+"  <TABLE BORDER=0 WIDTH=100% BGCOLOR=#CCCCCC>
+    <TR>
+      <TD WIDTH=20 ALIGN=CENTER>
+      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+><IMG SRC=$ImageDir/button_minimize_up.gif TITLE=\"Minimize section\"></A>
+      </TD>
+      <TD WIDTH=380><A HREF=\"$IndexHtmlFile\" TARGET=_parent>
+Section: $Section
+      </A></TD>
+      <TD ALIGN=RIGHT>
+$InsertItemButton
+      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy section\"></A>
+      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Remove section\"></A>
+      </TD>
+    </TR>
+  </TABLE>
+";
+	} # Section loop
+
+	###### End session #########
+
+	$Param .= 
+"  <TABLE BORDER=0 WIDTH=100% BGCOLOR=#CCCCCC>
+    <TR>
+      <TD>
+      </TD>
+      <TD COLSPAN=2>
+<hr COLOR=GREY>
+      </TD>
+    </TR>
+    <TR>
+      <TD WIDTH=20 ALIGN=CENTER>
+      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+><IMG SRC=$ImageDir/button_minimize_up.gif TITLE=\"Minimize session\"></A>
+      </TD>
+      <TD WIDTH=380><A HREF=\"$IndexHtmlFile\" TARGET=_parent>
+Session: $SessionName
+      </A></TD>
+      <TD ALIGN=RIGHT>
+$InsertSectionButton
+      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy session\"></A>
+      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Remove session\"></A>
+      </TD>
+    </TR>
+  </TABLE>
+";
+
+    } # session loop
+
+    $Param .= 
+"<hr COLOR=BLACK>\n
+  <TABLE WIDTH=100% BGCOLOR=#CCCCCC><TR><TD ALIGN=RIGHT>
+$InsertSessionButton
+  </TD></TR></TABLE>
+</BODY>\n";
+
+    print PARAM $Param;
     close PARAM;
 }
 
