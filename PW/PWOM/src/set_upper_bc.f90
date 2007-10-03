@@ -11,12 +11,12 @@ subroutine PW_set_upper_bc
   if (TypeSolver == 'Godunov') then
      
      do iIon = 1,nIon-1
-        State_GV(nDim+1,iU_I(iIon)) = State_GV(nDim,iU_I(iIon))
-        State_GV(nDim+1,iT_I(iIon)) = State_GV(nDim,iT_I(iIon))
-        State_GV(nDim+1,iP_I(iIon)) = &
+        State_GV(nDim+1:nDim+2,iU_I(iIon)) = State_GV(nDim,iU_I(iIon))
+        State_GV(nDim+1:nDim+2,iT_I(iIon)) = State_GV(nDim,iT_I(iIon))
+        State_GV(nDim+1:nDim+2,iP_I(iIon)) = &
           (State_GV(nDim-1,iP_I(iIon))+State_GV(nDim,iP_I(iIon))&
            -State_GV(nDim-2,iP_I(iIon)))*0.8
-        State_GV(nDim+1,iRho_I(iIon)) = &
+        State_GV(nDim+1:nDim+2,iRho_I(iIon)) = &
           State_GV(nDim+1,iP_I(iIon)) / RGAS_I(iIon) / State_GV(nDim+1,iT_I(iIon))
      enddo
      
@@ -74,7 +74,7 @@ subroutine PW_set_upper_bc
   ! rho_e = rho_H*(m_e/m_H) + rho_O*(m_e/m_O) + rho_He*(m_e/m_He)
   ! Set electron density and velocity and pressure
 
-  State_GV(nDim+1:nDim+2,RhoE_)=1.e-30
+  State_GV(nDim+1:nDim+2,RhoE_)=0.0
   State_GV(nDim+1:nDim+2,uE_)  =0.0
   
   do iIon=1,nIon-1
