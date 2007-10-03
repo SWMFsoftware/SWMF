@@ -23,7 +23,7 @@ my $XmlFile   = ($ARGV[0] or 'run/PARAM.in.xml');
 my $ERROR = 'ParamXmlToHtml_ERROR';
 
 # Output files have fixed names
-my $IndexHtmlFile  = "index.html";
+my $IndexHtmlFile  = "index.php";
 my $ParamHtmlFile  = "param.html";
 my $EditorHtmlFile = "editor.html";
 my $ManualHtmlFile = "manual.html";
@@ -431,21 +431,27 @@ $Manual
 
 sub write_param_html{
 
-    my $Param = '  <head>
-  <style type="text/css">
+    my $Param = "  <head>
+  <style type=\"text/css\">
   a {text-decoration: none;}
   </style>
   </head>
 
-  <BODY BGCOLOR=#DDDDD TEXT=BLACK LINK=BLUE VLINK=BLUE>
-';
+  <BODY BGCOLOR=\#DDDDDD TEXT=BLACK LINK=BLUE VLINK=BLUE>
+";
 
+    my $MinMaxSessionButton;
+    my $MinMaxSectionButton;
+    my $MinMaxItemButton;
     my $InsertSessionButton;
-
-    $InsertSessionButton = 
-"  <A HREF=\"$IndexHtmlFile\" TARGET=_parent
-><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert session\"></A>
-"                 if $Editor{SELECT} eq "ALL SESSIONS";
+    my $InsertSectionButton;
+    my $InsertItemButton;
+    my $CopySessionButton;
+    my $CopySectionButton;
+    my $CopyItemButton;
+    my $RemoveSessionButton;
+    my $RemoveSectionButton;
+    my $RemoveItemButton;
 
     ########################## SESSION #################################
     my $iSession;
@@ -456,12 +462,29 @@ sub write_param_html{
 	$SessionGivenName=": $SessionName" unless 
 	    $SessionName =~ /^Session \d/;
 
-	my $InsertSectionButton;
+	my $Action = "A TARGET=_parent ".
+	    "HREF=$IndexHtmlFile?id=$iSession\&action";
 
-	$InsertSectionButton =
-"    <A HREF=\"$IndexHtmlFile\" TARGET=_parent
-><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert section\"></A>
-" 	    if $Editor{SELECT} !~ /(ALL SESSIONS|\/)/;
+	if($SessionView eq "MIN"){
+	    $MinMaxSessionButton = "      <$Action=maximize_session
+><IMG SRC=$ImageDir/button_maximize.gif TITLE=\"Maximize session\"></A>
+";
+	}else{
+	    $MinMaxSessionButton = "      <$Action=minimize_session
+><IMG SRC=$ImageDir/button_minimize.gif TITLE=\"Minimize session\"></A>
+";
+	}
+
+	$InsertSessionButton = "    <$Action=insert_session
+><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert session\"></A>
+"                 if $Editor{SELECT} eq "ALL SESSIONS";
+
+	$CopySessionButton = "      <$Action=copy_session
+><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy session\"></A>
+";
+	$RemoveSessionButton = "      <$Action=remove_session
+><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Remove session\"></A>
+";
 
 	# Place anchor to selected session
 	$Param .= "<A NAME=SELECTED></A>\n" 
@@ -469,32 +492,16 @@ sub write_param_html{
 
 	$Param .=
 "<hr COLOR=BLACK>
-  <TABLE BORDER=0 WIDTH=100% BGCOLOR=#CCCCCC>
+  <TABLE BORDER=0 WIDTH=100% BGCOLOR=\#CCCCCC>
     <TR>
       <TD WIDTH=20 ALIGN=LEFT>
-";
-	if($SessionView eq "MIN"){
-	    $Param .=
-"      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
-><IMG SRC=$ImageDir/button_maximize.gif TITLE=\"Maximize session\"></A>
-";
-	}else{
-	    $Param .=
-"      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
-><IMG SRC=$ImageDir/button_minimize.gif TITLE=\"Minimize session\"></A>
-";
-	}
-	$Param .=
-"      </TD>
-      <TD WIDTH=380><A HREF=\"$IndexHtmlFile\" TARGET=_parent>
+$MinMaxSessionButton
+      </TD>
+      <TD WIDTH=380><$Action=select_session>
 Session $iSession$SessionGivenName
       </A></TD>
       <TD ALIGN=RIGHT>
-$InsertSessionButton
-      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
-><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy session\"></A>
-      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
-><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Remove session\"></A>
+$InsertSessionButton$CopySessionButton$RemoveSessionButton
       </TD>
     </TR>
   </TABLE>
@@ -508,19 +515,38 @@ $InsertSessionButton
 	    my $SectionRef  = $SessionRef[$iSession]{SECTION}{$Section};
 	    my $SectionView = $SectionRef->{VIEW};
 
-	    my $InsertItemButton;
-	    $InsertItemButton = 
-"     <A HREF=\"$IndexHtmlFile\"
-><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert\"></A>
-"                   if $Editor{SELECT} =~ /\/$Section$/;
+	    my $Action = "A TARGET=_parent ".
+		"HREF=$IndexHtmlFile?id=$iSession$Section\&action";
 
+	    if($SectionView eq "MIN"){
+		$MinMaxSectionButton = "      <$Action=maximize_section
+><IMG SRC=$ImageDir/button_maximize.gif TITLE=\"Maximize section\"></A>
+";
+	    }else{
+		$MinMaxSectionButton = "      <$Action=minimize_section
+><IMG SRC=$ImageDir/button_minimize.gif TITLE=\"Minimize section\"></A>
+";
+	    }
+
+	    $InsertSectionButton = "    <$Action=insert_section
+><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert section\"></A>
+" 	    if $Editor{SELECT} !~ /(ALL SESSIONS|\/)/;
+
+	    $CopySectionButton = "      <$Action=copy_section
+><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy section\"></A>
+";
+	    $RemoveSectionButton = "      <$Action=remove_section
+><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Remove section\"></A>
+";
+
+	    my $InsertItemButton;
 
 	    # Place anchor to selected session
 	    $Param .= "<A NAME=SELECTED></A>\n" 
 		if $Editor{SELECT} eq "$SessionName/$Section";
 
 	    $Param .=
-"  <TABLE BORDER=0 WIDTH=100% BGCOLOR=#CCCCCC>
+"  <TABLE BORDER=0 WIDTH=100% BGCOLOR=\#CCCCCC>
     <TR>
       <TD WIDTH=20>
       </TD>
@@ -530,30 +556,13 @@ $InsertSessionButton
     </TR>
     <TR>
       <TD ALIGN=CENTER>
-";
-	    if($SectionView eq "MIN"){
-		$Param .=
-"      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
-><IMG SRC=$ImageDir/button_maximize.gif TITLE=\"Maximize section\"></A>
-";
-	    }else{
-		$Param .=
-"      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
-><IMG SRC=$ImageDir/button_minimize.gif TITLE=\"Minimize section\"></A>
-";
-	    }
-	    $Param .=
-"      </TD>
-      <TD WIDTH=380><A HREF=\"$IndexHtmlFile\" TARGET=_parent>
+$MinMaxSectionButton
+      </TD>
+      <TD WIDTH=380><$Action=select_section>
 Section: $Section
       </A></TD>
       <TD ALIGN=RIGHT>
-$InsertSectionButton
-      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
-><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy section\"></A>
-      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
-><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Remove section\"></A>
-      </TD>
+$InsertSectionButton$CopySectionButton$RemoveSectionButton
     </TR>
   </TABLE>
 ";
@@ -562,7 +571,8 @@ $InsertSectionButton
 ###################### ITEM LOOP ############################################
 
 	    my $iItem;
-	    for $iItem (1..$#{ $SectionRef->{ITEM} }){
+	    my $nItem = $#{ $SectionRef->{ITEM} };
+	    for $iItem (1..$nItem){
 
 		my $ItemRef  = $SectionRef->{ITEM}[$iItem];
 		my $ItemView = $ItemRef->{VIEW};
@@ -572,9 +582,12 @@ $InsertSectionButton
 
 		my $TableColor = $TableColor{$ItemType};
 
+		my $Action = "A TARGET=_parent ".
+		    "HREF=$IndexHtmlFile?id=$iSession$Section$iItem\&action";
+
 		if($ItemType eq "userinput"){
 		    # Fix the content of the user input
-		    $ItemHead = "#USERINPUT";
+		    $ItemHead = "\#USERINPUT";
 		    $ItemTail =~ s/\n*\#USERINPUTEND.*//m;
 		}
 		my $nLine = ($ItemTail =~ s/\n/\n/g);
@@ -588,7 +601,7 @@ $InsertSectionButton
 		    }
 		    $Param .= "
   <FORM TARGET=_parent>
-  <TABLE BORDER=0 WIDTH=100% BGCOLOR=#BBEEFF>
+  <TABLE BORDER=0 WIDTH=100% BGCOLOR=\#BBEEFF>
     <TR>
       <TD WIDTH=20>
       </TD>
@@ -596,9 +609,11 @@ $InsertSectionButton
 $ItemHead
       </FONT></TD>
       <TD ALIGN=RIGHT>
-<IMG SRC=$ImageDir/button_save.gif TITLE=Save>
-         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-<IMG SRC=$ImageDir/button_remove.gif TITLE=\"Cancel\">
+        <$Action=save_item_edit
+><IMG SRC=$ImageDir/button_save.gif TITLE=\"Save item\"></A>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <$Action=cancel_item_edit
+><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Cancel\"></A>
       </TD>
     </TR>
     <TR>
@@ -613,15 +628,36 @@ $ItemTail
   </TABLE>
   </FORM>
 ";
-		    next;
+		    next; # done with editor
 		}
 
-		my $CopyButton =
-"      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+		# Create buttons
+		if($ItemTail){
+		    if($ItemView eq "MIN"){
+			$MinMaxItemButton = "      <$Action=maximize_item
+><IMG SRC=$ImageDir/button_maximize.gif TITLE=\"Maximize $ItemType\"></A>
+";
+		    }else{
+			$MinMaxItemButton = "      <$Action=minimize_item
+><IMG SRC=$ImageDir/button_minimize.gif TITLE=\"Minimize $ItemType\"></A>
+";
+		    }
+		}else{
+		    $MinMaxItemButton = "";
+		}
+
+		if($Editor{SELECT} =~ /\/$Section$/){
+		    $InsertItemButton = "    <$Action=insert_item
+><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert item\"></A>
+";
+		}else{
+		    $InsertItemButton="";
+		}
+
+		$CopyItemButton = "      <$Action=copy_item
 ><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy $ItemType\"></A>
 ";
-		my $RemoveButton =
-"      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
+		$RemoveItemButton = "      <$Action=remove_item
 ><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Remove $ItemType\"></A>
 ";
 
@@ -632,27 +668,13 @@ $ItemTail
 "  <TABLE BORDER=0 WIDTH=100% BGCOLOR=$TableColor>
     <TR>
       <TD WIDTH=20 ALIGN=RIGHT>
-";
-		if($ItemTail){
-		    if($ItemView eq "MIN"){
-			$Param .= 
-"      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
-      ><IMG SRC=$ImageDir/button_maximize.gif TITLE=\"Maximize $ItemType\"></A>
-";
-		    }else{
-			$Param .= 
-"      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
-      ><IMG SRC=$ImageDir/button_minimize.gif TITLE=\"Minimize $ItemType\"></A>
-";
-		    }
-		}
-		$Param .= 
-"      </TD>
-      <TD WIDTH=380><A HREF=\"$IndexHtmlFile\" TARGET=_parent>
+$MinMaxItemButton
+      </TD>
+      <TD WIDTH=380><$Action=edit_item>
 $ItemHead
       </A></TD>
       <TD ALIGN=RIGHT ALIGN=TOP>
-$InsertItemButton$CopyButton$RemoveButton
+$InsertItemButton$CopyItemButton$RemoveItemButton
       </TD>
     </TR>
   </TABLE>
@@ -670,33 +692,33 @@ $InsertItemButton$CopyButton$RemoveButton
     <TR>
       <TD WIDTH=20>
       </TD>
-      <TD WIDTH=380 COLSPAN=2><A HREF=\"$IndexHtmlFile\" TARGET=_parent>
+      <TD WIDTH=380 COLSPAN=2><$Action=edit_item>
 <PRE>$ItemTail</PRE>
       </A></TD>
     </TR>
 ";
 		    if($ItemType eq "userinput"){
+			$MinMaxItemButton =~ s/minimize\.gif/minimize_up.gif/;
 			$Param .= 
 "    <TR>
       <TD WIDTH=20 ALIGN=RIGHT>
-      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
-      ><IMG SRC=$ImageDir/button_minimize_up.gif TITLE=\"Minimize $ItemType\"></A>
+$MinMaxItemButton
       </TD>
-      <TD WIDTH=380><A HREF=\"$IndexHtmlFile\" TARGET=_parent>
-#USERINPUT
+      <TD WIDTH=380><$Action=edit_item>
+\#USERINPUT
       </A></TD>
       <TD ALIGN=RIGHT>
-$CopyButton$RemoveButton
+$CopyItemButton$RemoveItemButton
       </TD>
     </TR>
 ";
-			$Param .= 
+		    }
+		    $Param .= 
 "  </TABLE>
 ";
-		    }
 		}else{  #command type item
                     $Param .= 
-"  <TABLE BORDER=0 WIDTH=100% BGCOLOR=#CCCCCC>
+"  <TABLE BORDER=0 WIDTH=100% BGCOLOR=\#CCCCCC>
 ";
 		    my $iLine;
 		    for $iLine (0..$nLine-1){
@@ -718,7 +740,7 @@ $Comment
     </TR>
 ";
 
-		    } # end body line loop
+		    } # end item body line loop
 
 		    $Param .= 
 "  </TABLE>
@@ -731,22 +753,21 @@ $Comment
 
 	    ###### End section #########
 
+	    $iItem=$nItem+1;
+	    $InsertItemButton =~ s/id=\w+/id=$iSession$Section$iItem/;
+	    $MinMaxSectionButton =~ s/minimize\.gif/minimize_up.gif/;
+
 	    $Param .=
-"  <TABLE BORDER=0 WIDTH=100% BGCOLOR=#CCCCCC>
+"  <TABLE BORDER=0 WIDTH=100% BGCOLOR=\#CCCCCC>
     <TR>
       <TD WIDTH=20 ALIGN=CENTER>
-      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
-><IMG SRC=$ImageDir/button_minimize_up.gif TITLE=\"Minimize section\"></A>
+$MinMaxSectionButton
       </TD>
-      <TD WIDTH=380><A HREF=\"$IndexHtmlFile\" TARGET=_parent>
+      <TD WIDTH=380><$Action=select_section>
 Section: $Section
       </A></TD>
       <TD ALIGN=RIGHT>
-$InsertItemButton
-      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
-><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy section\"></A>
-      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
-><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Remove section\"></A>
+$InsertItemButton$CopySectionButton$RemoveSectionButton
       </TD>
     </TR>
   </TABLE>
@@ -755,8 +776,10 @@ $InsertItemButton
 
 	###### End session #########
 
-	$Param .= 
-"  <TABLE BORDER=0 WIDTH=100% BGCOLOR=#CCCCCC>
+	$InsertSectionButton =~ s/id=\w*/id=${iSession}END/;
+	$MinMaxSessionButton =~ s/minimize\.gif/minimize_up.gif/;
+	$Param .=
+"  <TABLE BORDER=0 WIDTH=100% BGCOLOR=\#CCCCCC>
     <TR>
       <TD>
       </TD>
@@ -766,28 +789,25 @@ $InsertItemButton
     </TR>
     <TR>
       <TD WIDTH=20 ALIGN=CENTER>
-      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
-><IMG SRC=$ImageDir/button_minimize_up.gif TITLE=\"Minimize session\"></A>
+$MinMaxSessionButton
       </TD>
-      <TD WIDTH=380><A HREF=\"$IndexHtmlFile\" TARGET=_parent>
+      <TD WIDTH=380><$Action=select_session>
 Session $iSession$SessionGivenName
       </A></TD>
       <TD ALIGN=RIGHT>
-$InsertSectionButton
-      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
-><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy session\"></A>
-      <A HREF=\"$IndexHtmlFile\" TARGET=_parent
-><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Remove session\"></A>
+$InsertSectionButton$CopySessionButton$RemoveSessionButton
       </TD>
     </TR>
   </TABLE>
 ";
-
     } # session loop
+
+    $iSession=$nSession+1;
+    $InsertSessionButton =~ s/id=\w+/id=$iSession/;
 
     $Param .= 
 "<hr COLOR=BLACK>\n
-  <TABLE WIDTH=100% BGCOLOR=#CCCCCC><TR><TD ALIGN=RIGHT>
+  <TABLE WIDTH=100% BGCOLOR=\#CCCCCC><TR><TD ALIGN=RIGHT>
 $InsertSessionButton
   </TD></TR></TABLE>
 </BODY>\n";
