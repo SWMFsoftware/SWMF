@@ -48,6 +48,7 @@ open(MANUAL, ">$ManualHtmlFile")
 # Global variables
 my $Framework;                                   # True in framework mode
 my $ValidComp = "SC,IH,SP,GM,IM,PW,RB,IE,UA,PS"; # List of components
+my %CompVersion;                                 # Hash for component versions
 my $nSession = 0;                                # Number of sessions
 
 my @SessionRef;    # Data structure read from the XML param file
@@ -85,8 +86,12 @@ sub read_xml_file{
     while($_ = <XMLFILE>){
 	if(/<MODE FRAMEWORK=\"(\d)\" (COMPONENTS=\"([^\"]*)\")?/){
 	    $Framework = $1;
-	    $ValidComp = $3 if $Framework and $3;
-	    print "Framework=$Framework ValidComp=$ValidComp\n" if $Debug;
+	    if($Framework and $3){
+		$ValidComp = $3;
+		%CompVersion = split( /[,\/]/ , $3 );
+		print "ValidComp=$ValidComp\n" if $Debug;
+		print "CompVersion=",join(', ',%CompVersion),"\n" if $Debug;
+	    }
 	}elsif(/<SESSION NAME=\"([^\"]*)\" VIEW=\"([\w]+)\"/){
 	    $nSession++;
 	    my $Name=($1 or "Session $nSession");
@@ -165,7 +170,7 @@ sub command_list{
 	if($Section eq "CON"){
 	    $ParamXml = "Param/PARAM.XML";
 	}else{
-	    $ParamXml = "$Section/PARAM.XML";
+	    $ParamXml = "$Section/$CompVersion{$Section}/PARAM.XML";
 	}
     }
     my $IsFirstSession = $Session eq $SessionRef[1]{NAME};
@@ -405,9 +410,9 @@ sub write_manual_html{
 
     my $Manual;
     if($CommandExample){
-	$Manual =  "<H1>Manual</H1>\n$CommandText";
+	$Manual =  $CommandText;
 	$Manual =~ s/\n\n/\n<p>\n/g;
-	$Manual =  "<PRE>\n$CommandExample\n</PRE>\n$Manual";
+	$Manual =  "<H1>Manual</H1>\n<PRE>\n$CommandExample\n</PRE>\n$Manual";
 	$Manual =~ s/\n$//;
     }elsif($Editor{INSERT} =~ /^PASTE/){
 	$Manual = "<H1>Clipboard</H1>\n<PRE>\n$Clipboard{BODY}\n</PRE>";
@@ -447,7 +452,9 @@ sub write_param_html{
     for $iSession (1..$nSession){
 	my $SessionView =  $SessionRef[$iSession]{VIEW};
 	my $SessionName =  $SessionRef[$iSession]{NAME};
-	$SessionName    =~ s/^Session //i;
+	my $SessionGivenName;
+	$SessionGivenName=": $SessionName" unless 
+	    $SessionName =~ /^Session \d/;
 
 	my $InsertSectionButton;
 
@@ -455,7 +462,6 @@ sub write_param_html{
 "    <A HREF=\"$IndexHtmlFile\" TARGET=_parent
 ><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert section\"></A>
 " 	    if $Editor{SELECT} !~ /(ALL SESSIONS|\/)/;
-
 
 	# Place anchor to selected session
 	$Param .= "<A NAME=SELECTED></A>\n" 
@@ -481,7 +487,7 @@ sub write_param_html{
 	$Param .=
 "      </TD>
       <TD WIDTH=380><A HREF=\"$IndexHtmlFile\" TARGET=_parent>
-Session: $SessionName
+Session $iSession$SessionGivenName
       </A></TD>
       <TD ALIGN=RIGHT>
 $InsertSessionButton
@@ -764,7 +770,7 @@ $InsertItemButton
 ><IMG SRC=$ImageDir/button_minimize_up.gif TITLE=\"Minimize session\"></A>
       </TD>
       <TD WIDTH=380><A HREF=\"$IndexHtmlFile\" TARGET=_parent>
-Session: $SessionName
+Session $iSession$SessionGivenName
       </A></TD>
       <TD ALIGN=RIGHT>
 $InsertSectionButton
