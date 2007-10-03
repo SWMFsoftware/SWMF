@@ -10,6 +10,9 @@ sub eval_comp{eval("package COMP; $_[0]")}
 # Read command line options
 my $Debug     = $D; undef $D;
 my $Help      = $h; undef $h;
+my $Submit    = $submit; undef $submit;
+
+warn "Submit=$Submit\n";
 
 use strict;
 
@@ -256,7 +259,10 @@ sub write_index_html{
     open(FILE, ">$IndexHtmlFile") 
 	or die "$ERROR: could not open $IndexHtmlFile\n";
     print FILE
-"<FRAMESET ROWS=120,1*>
+"
+<?php Exec('share/Scripts/ParamXmlToHtml.pl') ?>
+<#@ `share/Scripts/ParamXmlToHtml.pl -submit='\$FORM{submit}'`; #>
+<FRAMESET ROWS=120,1*>
   <FRAME SRC=\"./$EditorHtmlFile\" NAME=EDITOR FRAMEBORDER=1>
   <FRAMESET COLS=75%,25%>
     <FRAME SRC=\"./$ParamHtmlFile#SELECTED\"  NAME=PARAMFILE FRAMEBORDER=1>
@@ -276,7 +282,7 @@ sub write_editor_html{
 
     print "Starting write_editor_html\n" if $Debug;
 
-    my $SessionSection="    <OPTION>ALL SESSIONS\n";
+    my $SessionSection="    <OPTION VALUE=all>ALL SESSIONS\n";
 
     my $iSession;
     for $iSession (1..$nSession){
@@ -284,12 +290,13 @@ sub write_editor_html{
 
 	my $SessionRef = $SessionRef[$iSession];
 	my $SessionName = $SessionRef->{NAME};
-        $SessionSection .= "    <OPTION>$SessionName\n";
+        $SessionSection .= "    <OPTION VALUE=$iSession>$SessionName\n";
 	next unless $Framework;
 	my $Section;
 	for $Section (sort keys %{$SessionRef->{SECTION}}){
 	    $SessionSection .= 
-		"      <OPTION>".('&nbsp;' x 3)."$SessionName/$Section\n";
+		"      <OPTION VALUE=$iSession,$Section>"
+		.('&nbsp;' x 3)."$SessionName/$Section\n";
 	}
     }
 
@@ -303,26 +310,26 @@ sub write_editor_html{
 
     if($Selected eq "ALL SESSIONS"){
 
-	$InsertList  = "    <OPTION>FILE\n";
-	$InsertList .= "    <OPTION>PASTE SESSION\n" if $Clipboard{TYPE} eq 
-	    "SESSION";
-        $InsertList .= "    <OPTION>NEW SESSION\n";
+	$InsertList  = "    <OPTION VALUE=file>FILE\n";
+	$InsertList .= "    <OPTION VALUE=paste>PASTE SESSION\n"
+	    if $Clipboard{TYPE} eq "SESSION";
+        $InsertList .= "    <OPTION VALUE=new>NEW SESSION\n";
 
     }elsif($Selected !~ /\// and $Framework){
 
-	$InsertList  = "    <OPTION>FILE\n";
-	$InsertList .= "    <OPTION>PASTE SECTION\n" if $Clipboard{TYPE} eq 
-	    "SECTION";
-        $InsertList .= "    <OPTION>Section CON\n";
+	$InsertList  = "    <OPTION VALUE=file>FILE\n";
+	$InsertList .= "    <OPTION VALUE=paste>PASTE SECTION\n"
+	    if $Clipboard{TYPE} eq "SECTION";
+        $InsertList .= "    <OPTION VALUE=CON>Section CON\n";
 	my $Comp;
 	for $Comp (split ',', $ValidComp){
-	    $InsertList .= "     <OPTION>Section $Comp\n";
+	    $InsertList .= "     <OPTION VALUE=$Comp>Section $Comp\n";
 	}
     }else{
-        $InsertList  =     "    <OPTION>FILE\n";
-	$InsertList .=     "    <OPTION>PASTE COMMAND/COMMENT\n" if 
-	    $Clipboard{TYPE} eq "ITEM";
-	$InsertList .=     "    <OPTION>NEW COMMENT\n";
+        $InsertList  =     "    <OPTION VALUE=file>FILE\n";
+	$InsertList .=     "    <OPTION VALUE=paste>PASTE COMMAND/COMMENT\n"
+	    if $Clipboard{TYPE} eq "ITEM";
+	$InsertList .=     "    <OPTION VALUE=comment>NEW COMMENT\n";
     	if($Editor{ABC}){
 	    $InsertList .= "    <OPTION>COMMANDS ALPHABETICALLY\n";
 	}else{
@@ -334,7 +341,7 @@ sub write_editor_html{
     # Add SELECTED
     my $Insert = $Editor{INSERT};
     if($Insert){
-	$InsertList =~ s/<OPTION>(.*$Insert)/<OPTION SELECTED>$1/;
+	$InsertList =~ s/<OPTION(.*$Insert)/<OPTION SELECTED$1/;
     }
 
     my $InsertItem;
@@ -346,35 +353,52 @@ sub write_editor_html{
 	my $Files;
 	$Files = "    <OPTION>".join("\n    <OPTION>",@Files) if @Files;
 	$InsertItem=
-"  <SELECT NAME=FILE>
+"  <SELECT NAME=file onChange=\"dynamic_select('editor','file')>
     <OPTION>SELECT FILE
 $Files
   </SELECT>
 ";
 	# Add SELECTED
 	my $File = $Editor{FILE};
-	$InsertItem =~ s/<OPTION>(.*$File\n)/<OPTION SELECTED>$1/ if $File;
+	$InsertItem =~ s/<OPTION(.*$File\n)/<OPTION SELECTED$1/ if $File;
     }
     # Add checkbox if COMMAND list
     if($InsertList =~ /COMMAND/){
 	$InsertItem .= 
-	    " <INPUT TYPE=CHECKBOX NAME=ALPHABETIC VALUE=1>Abc\n";
-	$InsertItem =~ s/>Abc$/ CHECKED>Abc/ if $Editor{ABC};
+"  <INPUT TYPE=CHECKBOX NAME=abc VALUE=1
+      onChange=\"parent.location.href='$IndexHtmlFile?submit=action:abc_on'\"
+   >abc
+";
+	if($Editor{ABC}){
+	    $InsertItem =~ s/>abc$/ CHECKED>abc/;
+	    $InsertItem =~ s/abc_on'/abc_off'/;
+	}
     }
 
     chop $SessionSection;
     chop $InsertList;
     chop $InsertItem;
     my $Editor = "
+<html>
+<head>
+  <script language=javascript type=text/javascript>
+  <!--
+  function dynamic_select(NameForm, NameElement){
+    elem = document.forms[NameForm][NameElement];
+    parent.location.href = '$IndexHtmlFile?submit=action:select_'
+        + NameElement + ';value:' + elem.options[elem.selectedIndex].value;
+  }
+  // -->
+  </script>
+</head>
 <body bgcolor=WHITE>
-
-<FORM ALIGN=RIGHT>
+  <FORM NAME=editor ACTION=$IndexHtmlFile TARGET=_parent>
   <TABLE WIDTH=100%>
     <TR>
       <TD ALIGN=LEFT WIDTH=20%>
-<INPUT TYPE=SUBMIT NAME=SUBMIT VALUE=CHECK>
-<INPUT TYPE=SUBMIT NAME=SUBMIT VALUE=SAVE>
-<INPUT TYPE=SUBMIT NAME=SUBMIT VALUE=\"SAVE AS\">
+<INPUT TYPE=SUBMIT NAME=submit VALUE=CHECK>
+<INPUT TYPE=SUBMIT NAME=submit VALUE=SAVE>
+<INPUT TYPE=SUBMIT NAME=submit VALUE=\"SAVE AS\">
       </TD>
       <TD ALIGN=CENTER WIDTH=60%>
          <FONT COLOR=red>
@@ -382,23 +406,25 @@ $ParamFile
          </FONT>
       </TD>
       <TD ALIGN=RIGHT WIDTH=20%>
-<INPUT TYPE=SUBMIT NAME=SUBMIT VALUE=EXIT>
+<INPUT TYPE=SUBMIT NAME=submit VALUE=EXIT>
       </TD>
     </TR>
   </TABLE>
 <hr>
   <CENTER>
-  View: <SELECT NAME=SESSION>
+  View: 
+  <SELECT NAME=session onChange=\"dynamic_select('editor','session')\">
 $SessionSection
   </SELECT>
 &nbsp;Insert: 
-  <SELECT NAME=INSERT>
+  <SELECT NAME=insert onChange=\"dynamic_select('editor','insert')\">
 $InsertList
   </SELECT>
 $InsertItem
   </CENTER>
   </FORM>
 </body>
+</html>
 ";
     print EDITOR $Editor;
     close EDITOR;
@@ -463,26 +489,26 @@ sub write_param_html{
 	    $SessionName =~ /^Session \d/;
 
 	my $Action = "A TARGET=_parent ".
-	    "HREF=$IndexHtmlFile?id=$iSession\&action";
+	    "HREF=$IndexHtmlFile?submit=id:$iSession;action";
 
 	if($SessionView eq "MIN"){
-	    $MinMaxSessionButton = "      <$Action=maximize_session
+	    $MinMaxSessionButton = "      <$Action:maximize_session
 ><IMG SRC=$ImageDir/button_maximize.gif TITLE=\"Maximize session\"></A>
 ";
 	}else{
-	    $MinMaxSessionButton = "      <$Action=minimize_session
+	    $MinMaxSessionButton = "      <$Action:minimize_session
 ><IMG SRC=$ImageDir/button_minimize.gif TITLE=\"Minimize session\"></A>
 ";
 	}
 
-	$InsertSessionButton = "    <$Action=insert_session
+	$InsertSessionButton = "    <$Action:insert_session
 ><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert session\"></A>
 "                 if $Editor{SELECT} eq "ALL SESSIONS";
 
-	$CopySessionButton = "      <$Action=copy_session
+	$CopySessionButton = "      <$Action:copy_session
 ><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy session\"></A>
 ";
-	$RemoveSessionButton = "      <$Action=remove_session
+	$RemoveSessionButton = "      <$Action:remove_session
 ><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Remove session\"></A>
 ";
 
@@ -497,7 +523,7 @@ sub write_param_html{
       <TD WIDTH=20 ALIGN=LEFT>
 $MinMaxSessionButton
       </TD>
-      <TD WIDTH=380><$Action=select_session>
+      <TD WIDTH=380><$Action:select_session>
 Session $iSession$SessionGivenName
       </A></TD>
       <TD ALIGN=RIGHT>
@@ -516,26 +542,26 @@ $InsertSessionButton$CopySessionButton$RemoveSessionButton
 	    my $SectionView = $SectionRef->{VIEW};
 
 	    my $Action = "A TARGET=_parent ".
-		"HREF=$IndexHtmlFile?id=$iSession$Section\&action";
+		"HREF=$IndexHtmlFile?submit=id:$iSession$Section;action";
 
 	    if($SectionView eq "MIN"){
-		$MinMaxSectionButton = "      <$Action=maximize_section
+		$MinMaxSectionButton = "      <$Action:maximize_section
 ><IMG SRC=$ImageDir/button_maximize.gif TITLE=\"Maximize section\"></A>
 ";
 	    }else{
-		$MinMaxSectionButton = "      <$Action=minimize_section
+		$MinMaxSectionButton = "      <$Action:minimize_section
 ><IMG SRC=$ImageDir/button_minimize.gif TITLE=\"Minimize section\"></A>
 ";
 	    }
 
-	    $InsertSectionButton = "    <$Action=insert_section
+	    $InsertSectionButton = "    <$Action:insert_section
 ><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert section\"></A>
 " 	    if $Editor{SELECT} !~ /(ALL SESSIONS|\/)/;
 
-	    $CopySectionButton = "      <$Action=copy_section
+	    $CopySectionButton = "      <$Action:copy_section
 ><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy section\"></A>
 ";
-	    $RemoveSectionButton = "      <$Action=remove_section
+	    $RemoveSectionButton = "      <$Action:remove_section
 ><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Remove section\"></A>
 ";
 
@@ -558,7 +584,7 @@ $InsertSessionButton$CopySessionButton$RemoveSessionButton
       <TD ALIGN=CENTER>
 $MinMaxSectionButton
       </TD>
-      <TD WIDTH=380><$Action=select_section>
+      <TD WIDTH=380><$Action:select_section>
 Section: $Section
       </A></TD>
       <TD ALIGN=RIGHT>
@@ -583,7 +609,7 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 		my $TableColor = $TableColor{$ItemType};
 
 		my $Action = "A TARGET=_parent ".
-		    "HREF=$IndexHtmlFile?id=$iSession$Section$iItem\&action";
+		    "HREF=$IndexHtmlFile?submit=id:$iSession$Section$iItem;action";
 
 		if($ItemType eq "userinput"){
 		    # Fix the content of the user input
@@ -609,10 +635,10 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 $ItemHead
       </FONT></TD>
       <TD ALIGN=RIGHT>
-        <$Action=save_item_edit
+        <$Action:save_item_edit
 ><IMG SRC=$ImageDir/button_save.gif TITLE=\"Save item\"></A>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-        <$Action=cancel_item_edit
+        <$Action:cancel_item_edit
 ><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Cancel\"></A>
       </TD>
     </TR>
@@ -634,11 +660,11 @@ $ItemTail
 		# Create buttons
 		if($ItemTail){
 		    if($ItemView eq "MIN"){
-			$MinMaxItemButton = "      <$Action=maximize_item
+			$MinMaxItemButton = "      <$Action:maximize_item
 ><IMG SRC=$ImageDir/button_maximize.gif TITLE=\"Maximize $ItemType\"></A>
 ";
 		    }else{
-			$MinMaxItemButton = "      <$Action=minimize_item
+			$MinMaxItemButton = "      <$Action:minimize_item
 ><IMG SRC=$ImageDir/button_minimize.gif TITLE=\"Minimize $ItemType\"></A>
 ";
 		    }
@@ -647,17 +673,17 @@ $ItemTail
 		}
 
 		if($Editor{SELECT} =~ /\/$Section$/){
-		    $InsertItemButton = "    <$Action=insert_item
+		    $InsertItemButton = "    <$Action:insert_item
 ><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert item\"></A>
 ";
 		}else{
 		    $InsertItemButton="";
 		}
 
-		$CopyItemButton = "      <$Action=copy_item
+		$CopyItemButton = "      <$Action:copy_item
 ><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy $ItemType\"></A>
 ";
-		$RemoveItemButton = "      <$Action=remove_item
+		$RemoveItemButton = "      <$Action:remove_item
 ><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Remove $ItemType\"></A>
 ";
 
@@ -670,7 +696,7 @@ $ItemTail
       <TD WIDTH=20 ALIGN=RIGHT>
 $MinMaxItemButton
       </TD>
-      <TD WIDTH=380><$Action=edit_item>
+      <TD WIDTH=380><$Action:edit_item>
 $ItemHead
       </A></TD>
       <TD ALIGN=RIGHT ALIGN=TOP>
@@ -692,7 +718,7 @@ $InsertItemButton$CopyItemButton$RemoveItemButton
     <TR>
       <TD WIDTH=20>
       </TD>
-      <TD WIDTH=380 COLSPAN=2><$Action=edit_item>
+      <TD WIDTH=380 COLSPAN=2><$Action:edit_item>
 <PRE>$ItemTail</PRE>
       </A></TD>
     </TR>
@@ -704,7 +730,7 @@ $InsertItemButton$CopyItemButton$RemoveItemButton
       <TD WIDTH=20 ALIGN=RIGHT>
 $MinMaxItemButton
       </TD>
-      <TD WIDTH=380><$Action=edit_item>
+      <TD WIDTH=380><$Action:edit_item>
 \#USERINPUT
       </A></TD>
       <TD ALIGN=RIGHT>
@@ -763,7 +789,7 @@ $Comment
       <TD WIDTH=20 ALIGN=CENTER>
 $MinMaxSectionButton
       </TD>
-      <TD WIDTH=380><$Action=select_section>
+      <TD WIDTH=380><$Action:select_section>
 Section: $Section
       </A></TD>
       <TD ALIGN=RIGHT>
@@ -791,7 +817,7 @@ $InsertItemButton$CopySectionButton$RemoveSectionButton
       <TD WIDTH=20 ALIGN=CENTER>
 $MinMaxSessionButton
       </TD>
-      <TD WIDTH=380><$Action=select_session>
+      <TD WIDTH=380><$Action:select_session>
 Session $iSession$SessionGivenName
       </A></TD>
       <TD ALIGN=RIGHT>
