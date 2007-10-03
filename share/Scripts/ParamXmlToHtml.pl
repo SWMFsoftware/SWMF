@@ -302,7 +302,7 @@ sub write_editor_html{
 
     # Add SELECTED
     my $Selected = $Editor{SELECT};
-    $SessionSection =~ s/<OPTION>(.*$Selected)/<OPTION SELECTED>$1/;
+    $SessionSection =~ s/<OPTION(.*$Selected)/<OPTION SELECTED$1/;
 
     print "SessionSection=$SessionSection\n" if $Debug;
 
@@ -386,7 +386,8 @@ $Files
   function dynamic_select(NameForm, NameElement){
     elem = document.forms[NameForm][NameElement];
     parent.location.href = '$IndexHtmlFile?submit=action:select_'
-        + NameElement + ';value:' + elem.options[elem.selectedIndex].value;
+        + NameElement + ';value:' 
+        + escape(elem.options[elem.selectedIndex].value);
   }
   // -->
   </script>
