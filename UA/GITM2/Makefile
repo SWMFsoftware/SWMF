@@ -10,13 +10,10 @@ MAINDIR = src
 
 PLANET=earth
 
-src/Makefile:
-	cp src/Makefile.orig src/Makefile
-
 src/ModSize.f90:
 	cp src/ModSize.f90.orig src/ModSize.f90
 
-install: src/Makefile src/ModSize.f90
+install: src/ModSize.f90
 	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
 	cd src; make DYNAMIC
 #
@@ -61,7 +58,7 @@ distclean:
 	@cd $(EDDIR);    make clean
 	@cd $(MAINDIR);  make distclean
 	@cd srcInterface;make distclean
-	rm -f src/Makefile src/ModSize.f90 *~
+	rm -f src/ModSize.f90 *~
 #
 #       Create run directories
 #
