@@ -73,6 +73,7 @@ help:
 	@echo '    rundir      (create run directory "run/")'
 	@echo '    rundir RUNDIR=run_test  (create run directory "run_test/")'
 	@echo '    rundir MACHINE=columbia (select job scripts for columbia)'
+	@echo '    rundir_code (saves code archive in run directory)'
 	@echo ' '
 	@echo '    mpirun      (make SWMF and mpirun SWMF.exe on 2 PEs)'
 	@echo '    mpirun NP=7 (make SWMF and mpirun SWMF.exe on 7 PEs)'
@@ -341,6 +342,16 @@ rundir: ENV_CHECK
 	@echo
 	@echo Creation of ${RUNDIR} directory succeeded
 	@echo
+
+CDATE = `date +%Y%b%d`
+
+rundir_code:
+	make rundir
+	./Config.pl -show > _config_show
+	mkdir code_${CDATE}
+	rsync -a --exclude '*.o' --exclude '*.a' --exclude '*.exe' --exclude 'run*' --exclude '*~' --exclude '*.mod' --exclude code_${CDATE} . code_${CDATE}/
+	tar -czf ${RUNDIR}/code_${CDATE}.tgz code_${CDATE}
+	rm -rf _config_show code_${CDATE}
 
 #
 #	Run the default code on NP processors
