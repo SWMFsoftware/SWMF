@@ -52,7 +52,7 @@ DEPEND:
 
 MY_LIB = libPWOM.a
 
-LIB:    DEPEND
+LIB:	DEPEND
 	make ${MY_LIB}
 	@echo
 	@echo ${MY_LIB} has been brought up to date.
@@ -66,14 +66,26 @@ main.o: ${LIBSHARE}
 
 EXE = ${BINDIR}/PWOM.exe
 
-PWOM: DEPEND
+PWOM:	DEPEND
 	@make ${EXE}
 	@echo "PWOM.exe has been created"
 
-${EXE}: ${EXEOBJECTS}
-	${LINK.f90} ${Lflag1} -o ${EXE} ${EXEOBJECTS} \
-	-L${LIBDIR} -lEMPIRICALIE -lINDICES -lSHARE -lTIMING  \
-        ${EMPIRICALIEDIR}/ModEIEConductance.o 
+${EXE}:	${EXEOBJECTS}
+	@(if [ ${OS} = "Darwin" ];         then make PWOM_for_Darwin; \
+	else                                    make PWOM_general; fi)
+
+PWOM_general:
+	${LINK.f90} -o ${EXE} ${EXEOBJECTS} \
+		-L${LIBDIR} -lEMPIRICALIE -lINDICES -lSHARE -lTIMING \
+		${Lflag1}
+
+PWOM_for_Darwin:
+	rm -rf Tmp_; mkdir Tmp_
+	cd Tmp_; \
+		ar -x ${LIBDIR}/libEMPIRICALIE.a; \
+		ar -x ${LIBDIR}/libINDICES.a; \
+		ar -x ${LIBDIR}/libSHARE.a
+	${LINK.f90} -o ${EXE} ${EXEOBJECTS} Tmp_/*.o ${LBLAS} ${Lflag1}
 
 distclean: clean
 	rm -f PLANET *_planet.f get_rate.f90 \
