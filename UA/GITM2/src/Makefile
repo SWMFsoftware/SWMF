@@ -84,8 +84,10 @@ OBJECTS = \
 	gradient.o\
 	user.o
 
+OBJECTS_EXE = main.o ${OBJECTS} ${MODULES}
+
 DEPEND:
-	@${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS} ${MODULES}
+	@${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS_EXE}
 
 EXE = ${BINDIR}/GITM.exe
 
@@ -93,8 +95,6 @@ GITM:	DEPEND
 	@make ${EXE}
 	@make POST
 	@echo "${EXE} has been created"
-
-OBJECTS_EXE = main.o ${OBJECTS} ${MODULES}
 
 ${EXE}:	${OBJECTS_EXE}
 	@(if [ ${OS} = "Darwin" ];         then make GITM_for_Darwin; \
@@ -116,8 +116,6 @@ GITM_for_Darwin:
 		ar -x ${LIBDIR}/libSHARE.a
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} Tmp_/*.o ${LBLAS} ${Lflag1}
 	rm -rf Tmp_
-
-### ${EMPIRICALIEDIR}/ModEIEConductance.o ${EDDIR}/ModIons.o
 
 POST:	PostProcess.o
 	${LINK.f90} ${Lflag2} -o PostProcess.exe PostProcess.o
