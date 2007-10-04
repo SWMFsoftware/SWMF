@@ -203,25 +203,84 @@ sub modify_xml_data{
 
 	if( /minimize_session/ ){
 	    $SessionRef->{VIEW}="MIN";
+	}elsif( /minimize_section/ ){
+	    $SectionRef->{VIEW}="MIN";
+	}elsif( /minimize_item/ ){
+	    $ItemRef->{VIEW}="MIN";
 	}elsif( /maximize_session/ ){
 	    $SessionRef->{VIEW}="MAX";
 	    $Editor{SELECT} = $NameSession;
-	}elsif( /select_session/ ){
-	    $Editor{SELECT} = $NameSession;
-	}elsif( /minimize_section/ ){
-	    $SectionRef->{VIEW}="MIN";
 	}elsif( /maximize_section/ ){
 	    $SectionRef->{VIEW}="MAX";
 	    $Editor{SELECT} = "$NameSession/$Section";
-	}elsif( /select_section/ ){
-	    $Editor{SELECT} = "$NameSession/$Section";
-	}elsif( /minimize_item/ ){
-	    $ItemRef->{VIEW}="MIN";
 	}elsif( /maximize_item/ ){
 	    $ItemRef->{VIEW}="MAX";
 	    $Editor{SELECT} = "$NameSession/$Section";
+	}elsif( /select_session/ ){
+	    $Editor{SELECT} = $NameSession;
+	}elsif( /select_section/ ){
+	    $Editor{SELECT} = "$NameSession/$Section";
 	}elsif( /edit_item/ ){
 	    $ItemRef->{VIEW}="EDIT";
+	}elsif( /remove_session/ or /copy_session/ ){
+	    $Clipboard{SESSION} = $iSession;
+	    $Clipboard{SECTION} = $Section;
+	    $Clipboard{TYPE}    = "SESSION";
+	    $Clipboard{BODY}    = "$NameSession: should be here\n";
+	    $Editor{SELECT}     = "ALL SESSIONS";
+	    $Editor{INSERT}     = "PASTE SESSION";
+	    if(/remove_session/){
+		splice(@SessionRef,$iSession,1);
+		$nSession--;
+	    }
+	}elsif( /remove_section/ or /copy_section/ ){
+	    $Clipboard{SESSION} = $iSession;
+	    $Clipboard{SECTION} = $Section;
+	    $Clipboard{TYPE}    = "SECTION";
+	    $Clipboard{BODY}    = "Section $Section: should be here\n";
+	    $Editor{SELECT}     = $NameSession;
+	    $Editor{INSERT}     = "PASTE SECTION";
+	    if( /remove_section/ ){
+		delete $SessionRef[$iSession]{SECTION}{$Section};
+	    }
+	}elsif( /remove_item/ or /copy_item/ ){
+	    $Clipboard{SESSION} = $iSession;
+	    $Clipboard{SECTION} = $Section;
+	    $Clipboard{TYPE}    = $ItemRef->{TYPE};
+	    $Clipboard{BODY}    = $ItemRef->{HEAD}.$ItemRef->{TAIL};
+	    $Editor{SELECT}     = "$NameSession/$Section";
+	    $Editor{INSERT}     = "PASTE COMMAND/COMMENT";
+	    if( /remove_item/ ){
+		splice (@{$SectionRef->{ITEM}}, $iItem, 1);
+	    }
+	}elsif( /insert_session/ ){
+	    my $NewSessionRef;
+	    $NewSessionRef->{VIEW} = "MAX";
+	    $NewSessionRef->{NAME} = "Session $iSession";
+	    $NewSessionRef->{SECTION}{CON}{ITEM}[1]{HEAD} = $Clipboard{BODY};
+	    $NewSessionRef->{SECTION}{CON}{ITEM}[1]{TYPE} = "COMMENT";
+	    splice (@SessionRef, $iSession, 0, $NewSessionRef);
+	    $nSession++;
+	}elsif( /insert_item/ ){
+	    my $NewItemRef;
+	    $NewItemRef->{VIEW} = "MAX";
+	    $NewItemRef->{TYPE} = $Clipboard{TYPE};
+            ($NewItemRef->{HEAD}, $NewItemRef->{TAIL}) 
+		= split(/\n/, $Clipboard{BODY}, 2);
+	    $NewItemRef->{HEAD}.="\n";
+
+	    splice (@{$SectionRef->{ITEM}}, $iItem, 0, $NewItemRef);
+	    $Editor{SELECT}     = "$NameSession/$Section";
+	}elsif( /insert_item/ ){
+	    my $NewItemRef;
+	    $NewItemRef->{VIEW} = "MAX";
+	    $NewItemRef->{TYPE} = $Clipboard{TYPE};
+            ($NewItemRef->{HEAD}, $NewItemRef->{TAIL}) 
+		= split(/\n/, $Clipboard{BODY}, 2);
+	    $NewItemRef->{HEAD}.="\n";
+
+	    splice (@{$SectionRef->{ITEM}}, $iItem, 0, $NewItemRef);
+	    $Editor{SELECT}     = "$NameSession/$Section";
 	}elsif( /cancel_item_edit/ ){
 	    $ItemRef->{VIEW}="MAX";
 	}
@@ -910,7 +969,7 @@ $Comment
 	    ###### End section #########
 
 	    $iItem=$nItem+1;
-	    $InsertItemButton =~ s/id=\w+/id=$iSession$Section$iItem/;
+	    $InsertItemButton =~ s/id:\w+/id:$iSession$Section$iItem/;
 	    $MinMaxSectionButton =~ s/minimize\.gif/minimize_up.gif/;
 
 	    $Param .=
