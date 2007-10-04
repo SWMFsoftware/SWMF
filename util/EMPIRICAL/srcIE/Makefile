@@ -22,7 +22,7 @@ OBJECTS = \
 	EIE_End.o\
 	EIE_Initialize.o\
 	EIE_Library.o\
-	IO_Library.o\
+	EIE_IoLibrary.o\
 	EIE_set_inputs.o\
 	readAMIEoutput.o\
 	readMHDoutput.o\
