@@ -12,8 +12,6 @@ my $Debug     = $D; undef $D;
 my $Help      = $h; undef $h;
 my $Submit    = $submit; undef $submit;
 
-warn "Submit=$Submit\n";
-
 use strict;
 
 # Read optional argument
@@ -67,6 +65,10 @@ my %TableColor = ("command" => "\#CCCCCC",
 
 &read_xml_file;
 
+&modify_xml_data if $Submit;
+
+&write_xml_file if $Submit;
+
 &write_index_html unless -f $IndexHtmlFile;
 
 &write_editor_html;
@@ -113,7 +115,8 @@ sub read_xml_file{
 	    print "Section=$Section View=$SectionView\n" if $Debug;
 
 	    # Do not read details if the section is minimized
-	    if($SectionView eq "MIN" or $SessionView eq "MIN"){
+	    if(not $Submit 
+	       and ($SectionView eq "MIN" or $SessionView eq "MIN")){
 		$_=<XMLFILE> while not /<\/SECTION>/;
 	    }		
 	}elsif(/<ITEM TYPE=\"([^\"]*)\" VIEW=\"([\w]+)\"/){
@@ -132,7 +135,6 @@ sub read_xml_file{
 
 	    while($_=<XMLFILE>){
 		last if /<\/ITEM>/;
-		next if $ItemRef->{TAIL} and $View eq "MIN";
 		$ItemRef->{TAIL} .= $_;
 	    }
 
@@ -159,6 +161,133 @@ sub read_xml_file{
 	}
     }
     close XMLFILE;
+}
+
+##############################################################################
+
+sub modify_xml_data{
+
+
+    warn "Submit = $Submit\n";
+
+    if( $Submit =~ /^CHECK\b/ ){
+	my $Error = `./TestParam.pl`;
+	warn $Error if $Error; # to be written
+    }elsif( $Submit =~ /^SAVE\b/){
+	warn "share/Scripts/ParamXmlToText.pl $XmlFile\n";
+	`share/Scripts/ParamXmlToText.pl $XmlFile`;
+    }elsif($Submit =~ /^SAVE AS\b/){
+	# to be written
+    }elsif($Submit =~ /^EXIT\b/){
+	# kill the job
+	kill(-9, getpgrp);
+    }else{
+	my %Form;
+	%Form = split (/[:;]/, $Submit);
+	warn join(', ',%Form),"\n";
+
+	$_ = $Form{action};
+	my $id= $Form{id};
+
+	$id=~ /(\d+)([A-Z]+)?(\d+)?/;
+	my $iSession = $1;
+	my $Section  = $2;
+	my $iItem    = $3;
+
+	warn "iSession=$iSession Section=$Section iItem=$iItem\n";
+	
+	my $SessionRef = $SessionRef[$iSession];
+	my $NameSession= $SessionRef->{NAME};
+	my $SectionRef = $SessionRef->{SECTION}{$Section};
+	my $ItemRef    = $SectionRef->{ITEM}[$iItem];
+
+	if( /minimize_session/ ){
+	    $SessionRef->{VIEW}="MIN";
+	}elsif( /maximize_session/ ){
+	    $SessionRef->{VIEW}="MAX";
+	    $Editor{SELECT} = $NameSession;
+	}elsif( /select_session/ ){
+	    $Editor{SELECT} = $NameSession;
+	}elsif( /minimize_section/ ){
+	    $SectionRef->{VIEW}="MIN";
+	}elsif( /maximize_section/ ){
+	    $SectionRef->{VIEW}="MAX";
+	    $Editor{SELECT} = "$NameSession/$Section";
+	}elsif( /select_section/ ){
+	    $Editor{SELECT} = "$NameSession/$Section";
+	}elsif( /minimize_item/ ){
+	    $ItemRef->{VIEW}="MIN";
+	}elsif( /maximize_item/ ){
+	    $ItemRef->{VIEW}="MAX";
+	    $Editor{SELECT} = "$NameSession/$Section";
+	}elsif( /edit_item/ ){
+	    $ItemRef->{VIEW}="EDIT";
+	}elsif( /cancel_item_edit/ ){
+	    $ItemRef->{VIEW}="MAX";
+	}
+    }
+}
+
+##############################################################################
+
+sub write_xml_file{
+
+    open(XMLFILE, ">$XmlFile") 
+	or die "$ERROR: could not open $XmlFile for output!\n";
+
+    # Write the XMLFILE
+    if($Framework){ 
+	print XMLFILE
+	    "\t\t\t<MODE FRAMEWORK=\"1\" COMPONENTS=\"$ValidComp\"/>\n";
+    }else{
+	print XMLFILE 
+	    "\t\t\t<MODE FRAMEWORK=\"0\"/>\n";
+    }
+
+    my $iSession;
+    for $iSession (1..$nSession){
+	my $Name = $SessionRef[$iSession]{NAME};
+	my $View = $SessionRef[$iSession]{VIEW};
+	$Name = "" if $Name =~ /^Session \d+$/;
+	print XMLFILE
+	    "\t\t\t<SESSION NAME=\"$Name\" VIEW=\"$View\">\n";
+
+	my $SessionRef = $SessionRef[$iSession]{SECTION};
+	my $Section;
+	foreach $Section (sort keys %$SessionRef){
+	    my $SectionRef = $SessionRef->{$Section};
+	    my $View = $SectionRef->{VIEW};
+	    my $SectionName = $Section;
+	    $SectionName = "" if $Section eq "CON";
+
+	    print XMLFILE 
+		"\t\t\t\t<SECTION NAME=\"$SectionName\" VIEW=\"$View\">\n";
+
+	    my $iItem;
+	    my $nItem = $#{ $SectionRef->{ITEM}};
+	    for $iItem (1..$nItem){
+
+		my $ItemRef = $SectionRef->{ITEM}[$iItem];
+		my $Type    = $ItemRef->{TYPE};
+		my $View    = $ItemRef->{VIEW};
+
+		print XMLFILE 
+		    "\t\t\t\t\t<ITEM TYPE=\"$Type\" VIEW=\"$View\">\n";
+		print XMLFILE $ItemRef->{HEAD};
+		print XMLFILE $ItemRef->{TAIL};
+		print XMLFILE "\t\t\t\t\t</ITEM>\n";
+	    }
+	    print XMLFILE "\t\t\t\t</SECTION>\n";
+	}
+	print XMLFILE "\t\t\t</SESSION>\n";
+    }
+
+    print XMLFILE "
+<EDITOR SELECT=\"$Editor{SELECT}\" INSERT=\"$Editor{INSERT}\" FILE=\"$Editor{FILE}\" ABC=\"$Editor{ABC}\"/>
+<CLIPBOARD SESSION=\"$Clipboard{SESSION}\" SECTION=\"$Clipboard{SECTION}\" TYPE=\"$Clipboard{TYPE}\">
+$Clipboard{BODY}</CLIPBOARD>
+";
+    close(XMLFILE)
 }
 
 ##############################################################################
