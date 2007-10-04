@@ -99,7 +99,6 @@ test_earth:
 	make test_earth_check
 
 test_earth_compile:
-	make clean
 	./Config.pl -Earth -g=9,9,50,4
 	make GITM
 
@@ -128,7 +127,6 @@ test_mars:
 	make test_mars_check
 
 test_mars_compile:
-	make clean
 	./Config.pl -Mars -g=9,9,40,4
 	make GITM
 
