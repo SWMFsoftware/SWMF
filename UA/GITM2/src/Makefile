@@ -94,11 +94,30 @@ GITM:	DEPEND
 	@make POST
 	@echo "${EXE} has been created"
 
-${EXE}:	${OBJECTS} ${MODULES} main.o
-	${LINK.f90} ${Lflag1} -o ${EXE} main.o ${OBJECTS} ${MODULES} \
-	-L${ABDIR} -lSphere -L${EDDIR} -lED \
-	-L${LIBDIR} -lEMPIRICALIE -lINDICES \
-	-lSHARE ${EMPIRICALIEDIR}/ModEIEConductance.o ${EDDIR}/ModIons.o
+OBJECTS_EXE = main.o ${OBJECTS} ${MODULES}
+
+${EXE}:	${OBJECTS_EXE}
+	@(if [ ${OS} = "Darwin" ];         then make GITM_for_Darwin; \
+	else                                    make GITM_general; fi)
+
+GITM_general:
+	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} \
+		-L${ABDIR} -lSphere -L${EDDIR} -lED \
+		-L${LIBDIR} -lEMPIRICALIE -lINDICES -lSHARE \
+		${LBLAS} ${Lflag1}
+
+GITM_for_Darwin:
+	rm -rf Tmp_; mkdir Tmp_
+	cd Tmp_; \
+		ar -x ../${ABDIR}/libSphere.a; \
+		ar -x ../${EDDIR}/libED.a; \
+		ar -x ${LIBDIR}/libEMPIRICALIE.a; \
+		ar -x ${LIBDIR}/libINDICES.a; \
+		ar -x ${LIBDIR}/libSHARE.a
+	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} Tmp_/*.o ${LBLAS} ${Lflag1}
+	rm -rf Tmp_
+
+### ${EMPIRICALIEDIR}/ModEIEConductance.o ${EDDIR}/ModIons.o
 
 POST:	PostProcess.o
 	${LINK.f90} ${Lflag2} -o PostProcess.exe PostProcess.o
