@@ -991,7 +991,7 @@ $InsertItemButton$CopySectionButton$RemoveSectionButton
 
 	###### End session #########
 
-	$InsertSectionButton =~ s/id=\w*/id=${iSession}END/;
+	$InsertSectionButton =~ s/id:\w*/id:${iSession}END/;
 	$MinMaxSessionButton =~ s/minimize\.gif/minimize_up.gif/;
 	$Param .=
 "  <TABLE BORDER=0 WIDTH=100% BGCOLOR=\#CCCCCC>
@@ -1018,7 +1018,7 @@ $InsertSectionButton$CopySessionButton$RemoveSessionButton
     } # session loop
 
     $iSession=$nSession+1;
-    $InsertSessionButton =~ s/id=\w+/id=$iSession/;
+    $InsertSessionButton =~ s/id:\w+/id:$iSession/;
 
     $Param .= 
 "<hr COLOR=BLACK>\n
