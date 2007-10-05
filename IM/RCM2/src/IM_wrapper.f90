@@ -295,7 +295,12 @@ subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
   character (len=*),intent(in)       :: NameVar
 
   integer, parameter :: vol_=1, z0x_=2, z0y_=3, bmin_=4, rho_=5, p_=6
-  !--------------------------------------------------------------------------
+  logical :: DoTest, DoTestMe
+  !---------------------------------------------------------------------------
+  call CON_set_do_test(NameSub, DoTest, DoTestMe)
+  if(DoTest)write(*,*)NameSub,' starting with NameVar=',NameVar
+  if(DoTest) call write_data
+
   if(NameVar /= 'vol:z0x:z0y:bmin:rho:p') &
        call CON_stop(NameSub//' invalid NameVar='//NameVar)
 
@@ -329,6 +334,32 @@ subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
   call wrap_around_ghostcells(bmin,isize,jsize,n_gc)
   call wrap_around_ghostcells(density, isize, jsize, n_gc)
   call wrap_around_ghostcells(temperature, isize, jsize, n_gc)
+
+contains
+
+  !============================================================================
+  !write values sent to IM from GM
+  subroutine write_data
+    use ModIoUnit, ONLY: UNITTMP_
+    CHARACTER (LEN=80) :: filename
+    integer :: i,j
+    integer, save :: nCall=0
+    !-------------------------------------------------------------------------
+
+    nCall=nCall+1
+    write(filename,'(a,i5.5,a)')"gm2im_debug_",nCall,".dat"
+    OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown')
+    write(UNITTMP_,'(a)') 'TITLE="gm2im debug values"'
+    write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "vol", "z0x", "z0y", "bmin", "rho", "p"'
+    write(UNITTMP_,'(a,i4,a,i4,a)') &
+         'ZONE T="SAVE", I=',jsize,', J=',isize,', K=1, F=POINT'
+    do i=1,iSizeIn; do j=1,jSizeIn
+       write(UNITTMP_,'(2i4,6G14.6)') j,i, &
+            Buffer_IIV(i,j,vol_),Buffer_IIV(i,j,z0x_),Buffer_IIV(i,j,z0y_), &
+            Buffer_IIV(i,j,bmin_),Buffer_IIV(i,j,rho_),Buffer_IIV(i,j,p_)
+    end do; end do
+    CLOSE(UNITTMP_)
+  end subroutine write_data
 
 end subroutine IM_put_from_gm
 !==============================================================================
