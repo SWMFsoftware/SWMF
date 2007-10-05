@@ -1,9 +1,4 @@
-C                                                                      C
-C**********************************************************************C
-C                                                                      C
-C     END OF MSIS                                                      C
-C                                                                      C
-C**********************************************************************C
+
 C Subroutine GLOWEX
 C
 C S.C. Solomon, 6/89; Adapted for polar wind model by R. Cannata, 9/89
@@ -65,7 +60,9 @@ C
 C
       SUBROUTINE GLOWEX
 C
-      use ModCommonVariables
+      use ModGlow
+      use ModCommonVariables, ONLY: MaxGrid,DoLog,AltMin,GLAT,GLONG,F107,
+     &     F107A,IYD,SEC,iUnitOutput, GMLAT
       use ModNumConst, ONLY: cRadToDeg,cPi
 
 C      PARAMETER (JMAX=92)
@@ -125,7 +122,7 @@ C  IFACTOR SCALES THE ALTITUDE INTERVAL FOR ATTENUATION CALCULATIONS
 C  IN TERMS OF THE CELL THICKNESS ADOPTED IN MAIN PROGRAM
 C  DMX MUST BE A POSITIVE EVEN INTEGER !
        IFACTOR = 2E5
-       IDMX =INT(DRBND/IFACTOR)
+       IDMX =INT(DrGlow/IFACTOR)
        DO K = 90,1000,IDMX
           I = I + 1
           ZKK = K*1.E05
@@ -198,8 +195,8 @@ C     ALEX note IDATE HERE is IYD in the rest of the subroutine
      $      '   AP(3)',' IART   ',' GMLAT   ','   GMLONG   ',
      $      '   SZAD    ')
 C     
-       if (DoLog) WRITE(iUnitOutput,9995)IYD,UTG,SEC,GLAT,GLONG,STL,F107A,F107,AP(3)
-     $      ,IART,GMLAT,GMLONG,SZAD
+!       if (DoLog) WRITE(iUnitOutput,9995)IYD,UTG,SEC,GLAT,GLONG,STL,F107A,F107,AP(3)
+!     $      ,IART,GMLAT,GMLONG,SZAD
  9995  FORMAT(1X,I7,8(1X,F8.2),2X,I2,4X,F7.2,4X,F7.2,5X,F7.2)
 C     
 C     
@@ -207,12 +204,13 @@ C
 C     
 C     DO 109 J=291,391
 C     PHOTOTP(J)=PHOTOTP(290)
-       DO J=1,nDim
-          if (AltD(J) >= 480.0e5) PHOTOTP(J)=PHOTOTP(14)
+       DO J=1,nCellGlow
+          if (J > 14) PHOTOTP(J)=PHOTOTP(14)
        enddo
 C     NOW ADD EUV AND PARTICLE IONIZATIONS!!!!!!1
-       DO I = 1,nDim
+       DO I = 1,nCellGlow
           PHOTOTT(I) = PHOTOTF(I) + PHOTOTP(I)
+
 C     NOW RENAME TO MATCH MAIN PROGRAM
           PHOTOTF(I) = PHOTOTT(I)      
 C     

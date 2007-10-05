@@ -10,7 +10,7 @@ C
 C
 
       use ModCommonVariables
-
+      use ModGlow, ONLY: get_ionization
 C
       NPT1=14
       NPT2=16
@@ -243,7 +243,7 @@ C                                                                      C
 
 
       
-      CALL GLOWEX
+      CALL get_ionization(nDim, AltD(1:nDim), IonRateO_C(1:nDim))
       DO 1099 J = 1,40
 
  9999    FORMAT(2X,1PE15.3,2X,1PE15.3)
@@ -1267,7 +1267,7 @@ C     C
       TMP2=1.-9.149E-4*TEMP+4.228E-7*TEMP**2-6.790E-11*TEMP**3+
      $     4.225E-15*TEMP**4
 C     State_GV(0,RhoO_)=PHIOX*Mass_I(Ion1_)*XNO/(1.53E-12*XNN2*TMP1+2.82E-11*XNO2*TMP2)
-      State_GV(-1:0,RhoO_) =PHOTOTF(1)*Mass_I(Ion1_)*XNO/(1.53E-12*XNN2*TMP1+2.82E-11*XNO2*TMP2)
+      State_GV(-1:0,RhoO_) =IonRateO_C(1)*Mass_I(Ion1_)*XNO/(1.53E-12*XNN2*TMP1+2.82E-11*XNO2*TMP2)
       State_GV(-1:0,RhoHe_)=PHIHE*Mass_I(Ion3_)*XNHE/(1.10E-9*XNO2+1.60E-9*XNN2)
       State_GV(-1:0,RhoH_) =1.136*(XNH/XNO)*(Mass_I(Ion2_)/Mass_I(Ion1_))*State_GV(-1:0,RhoO_)
 
@@ -1293,7 +1293,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C     
       DO 20 I=1,NDIM
 C     FFOX1(1) BASED ON PHOTOIONIZATION FREQ FROM SUB GLOWEX;MASS OXYGEN IN GRAMS
-         FFOX1(I)=PHOTOTF(I+1)*16.*1.6726E-24*XO(I)
+         FFOX1(I)=IonRateO_C(I+1)*16.*1.6726E-24*XO(I)
 C     FFOX1(I)=PHIOX*Mass_I(Ion1_)*XO(I)
 CALEX SOURCE COEF?         
          FFOX2(I)=2.2E-11*Mass_I(Ion1_)*XO(I)/Mass_I(Ion2_)

@@ -1,3 +1,6 @@
+MODULES_PLANET = \
+	ModGlow.o
+
 OBJECTS_PLANET = \
 	PhotoElectronPW_planet.o\
 	glowex_planet.o\

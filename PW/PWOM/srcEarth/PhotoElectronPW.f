@@ -55,8 +55,8 @@ C
 C
       SUBROUTINE EPHOTO
 C
-
-      use ModCommonVariables
+      use ModCommonVariables,ONLY: DoLog,AltMin
+      use ModGlow
 
       DIMENSION SPECT(NBINS), FLUX(LMAX),
      >          SIGION(NMAJ,LMAX), SIGABS(NMAJ,LMAX),
@@ -483,7 +483,7 @@ C
             J= J + 1
  499  CONTINUE
 C NOW FILL PHOTOIONIZATION ARRAY TO MATCH PW CODE SIZE
-       DO 404 J=ISUM,NDIM1
+       DO 404 J=ISUM,nCellGlow-1
        PHOTOTF(J)=PHOTOTF(ISUM+1)
   404  CONTINUE
 C
