@@ -55,7 +55,7 @@ contains
        iMax = ceiling(x)
        if (iMax >= nCellGlow) then
           IonRateO_C(iCell) = &
-               Phototf(nCell-2)
+               Phototf(nCellGlow-2)
           cycle
        endif
        ! Set Interpolation weights
