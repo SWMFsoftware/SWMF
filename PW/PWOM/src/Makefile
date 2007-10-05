@@ -17,7 +17,8 @@ MODULES = \
 	ModPwImplicit.o\
 	ModGmPressure.o\
 	ModAurora.o\
-	ModPwTime.o
+	ModPwTime.o\
+	${MODULES_PLANET}
 
 METHODS = \
 	pw.o\
