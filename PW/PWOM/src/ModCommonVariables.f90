@@ -9,18 +9,7 @@ module ModCommonVariables
        iUnitCollision, iUnitSourceGraphics
   
   
-  !    MSIS86 parameters
-  INTEGER JMAX, NBINS, LMAX, NMAJ, NEX, NW, NC, NST, NEI, NF
-  PARAMETER (JMAX=92)
-  PARAMETER (NBINS=84)
-  PARAMETER (LMAX=59)
-  PARAMETER (NMAJ=3)
-  PARAMETER (NEX=20)
-  PARAMETER (NW=20)
-  PARAMETER (NC=10)
-  PARAMETER (NST=6)
-  PARAMETER (NEI=10)
-  PARAMETER (NF=4)
+
   
   real :: wHorizontal
   character(len=7) :: TypeSolver
@@ -41,42 +30,24 @@ module ModCommonVariables
 
   real :: State_GV(-1:MaxGrid,nVar),SoundSpeed_GI(0:MaxGrid,nIon),Source_CV(MaxGrid,nVar)
   real :: HeatCon_GI(0:maxGrid,nIon)
-!  REAL UOXYG(MaxGrid),DOXYG(MaxGrid),POXYG(MaxGrid),&
-!       TOXYG(MaxGrid),UHYD(MaxGrid),&
-!       DHYD(MaxGrid),PHYD(MaxGrid),THYD(MaxGrid),UHEL(MaxGrid),&
-!       DHEL(MaxGrid),PHEL(MaxGrid),&
-!       THEL(MaxGrid),UELECT(MaxGrid),DELECT(MaxGrid),PELECT(MaxGrid),&
-!       TELECT(MaxGrid)
-     !Changed for Saturn      
-     
      
   REAL EFIELD(MaxGrid),GRAVTY(MaxGrid),CURR(MaxGrid),EfieldConstant
   REAL Centrifugal(MaxGrid)
-  REAL YYH(MaxGrid)
       
   REAL QOXYG(MaxGrid),QHEL(MaxGrid),QHYD(MaxGrid),&
        QELECT(MaxGrid)
   REAL ELFXIN
-  !      REAL PHOTOTF(MaxGrid)
-
-!GABOR These variables are never used !!!
-  CHARACTER*4 NAME(2),ISDATE(3),ISTIME(2)
 
 !    IsRestart = .true. indicates restart from a file, 
 !    otherwise no file is read
   logical :: IsRestart
   logical IsVariableDt
-  
-
-
-     
+       
   REAL  CZHN2,CZHO2,CZHO,CZHOX,CZHEN2,CZHEO2,CZHEHE,&
        CZHEO,CZHEH,CZHEOX,CZHEHD,XTNMAX
 
   REAL  ETOP,CURTIM0,CURTIM,CURRMN,CURRMX
-  REAL  USURFO,PSURFO,DSURFO,TSURFO,WSURFO,USURFH,PSURFH,&
-       DSURFH,TSURFH,WSURFH,USURHE,PSURHE,DSURHE,TSURHE,WSURHE,USURFE,&
-       PSURFE,DSURFE,TSURFE,WSURFE
+
   REAL  UBGNDO,PBGNDO,DBGNDO,TBGNDO,WBGNDO,UBGNDH,PBGNDH,&
        DBGNDH,TBGNDH,WBGNDH,UBGNHE,PBGNHE,DBGNHE,TBGNHE,WBGNHE,UBGNDE,&
        PBGNDE,DBGNDE,TBGNDE,WBGNDE,&
@@ -100,36 +71,14 @@ module ModCommonVariables
   INTEGER :: IYD=76183,IART=1
   REAL    ::UT,SEC,GLAT,GLONG,STL,F107A=60.,F107=60.,GMLAT,GMLONG
   real    :: AP(7)=(/4.,4.,4.,4.,4.,4.,4./)
-  REAL  PHOTOTF(MaxGrid),phototp(MaxGrid)
-  REAL  TLB,S,DB04,DB16,DB28,DB32,DB40,DB48,DB01,ZA,T0,Z0, &
-       G0,RL,DD,DB14
-  REAL PTM(8),PDM(8,7)
-  INTEGER ISW
-  REAL SW(25),SWC(25)
-  REAL TINFG,GB,ROUT,TT(15)
+  REAL  IonRateO_C(MaxGrid)
+!  REAL  TLB,S,DB04,DB16,DB28,DB32,DB40,DB48,DB01,ZA,T0,Z0, &
+!       G0,RL,DD,DB14
+!  REAL PTM(8),PDM(8,7)
+!  INTEGER ISW
+!  REAL SW(25),SWC(25)
+!  REAL TINFG,GB,ROUT,TT(15)
   REAL GSURF,RE,Omega
-  REAL PLG(9,4),CTLOC,STLOC,C2TLOC,S2TLOC,C3TLOC,S3TLOC, &
-       DAY,DF,DFA,APD,APDF,APT(4)
-  INTEGER IYR
-  INTEGER IFACTOR
-  REAL EFLUX(NF), EZERO(NF), &
-       SZA, DIP,  EFRAC, &
-       ZO(JMAX), ZN2(JMAX), ZO2(JMAX), ZNO(JMAX), &
-       ZNS(JMAX), ZND(JMAX), ZRHO(JMAX), ZE(JMAX), &
-       ZCOL(NMAJ,JMAX),ZTN(JMAX),ZMAJ(NMAJ,JMAX),ZZ(JMAX), &
-       ZTI(JMAX), ZTE(JMAX), &
-       WAVE1(LMAX), WAVE2(LMAX), SFLUX(LMAX), &
-       ENER(NBINS), DEL(NBINS), PHITOP(NBINS), &
-       PESPEC(NBINS,JMAX), SESPEC(NBINS,JMAX), &
-       PHOTOI(NST,NMAJ,JMAX),PHOTOD(NST,NMAJ,JMAX),PHONO(NST,JMAX), &
-       QTI(JMAX),AURI(NMAJ,JMAX),PIA(NMAJ,JMAX),SION(NMAJ,JMAX), &
-       UFLX(NBINS,JMAX), DFLX(NBINS,JMAX), AGLW(NEI,NMAJ,JMAX), &
-       EHEAT(JMAX), TEZ(JMAX), ECALC(JMAX), &
-       ZXDEN(NEX,JMAX), ZETA(NW,JMAX), ZCETA(NC,NW,JMAX),VCB(NW), &
-       NNN(NMAJ)
-  INTEGER ISCALE,JLOCAL,IERR
-
-
   
   real :: CollisionFreq_IIC(nIon, nSpecies,MaxGrid)
   real :: HeatFlowCoef_II(nIon, nSpecies)
