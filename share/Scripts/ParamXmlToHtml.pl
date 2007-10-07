@@ -291,7 +291,7 @@ sub modify_xml_data{
 	    $NewSessionRef->{NAME} = "Session $iSession";
 	    $NewSessionRef->{SECTION}[1]{ITEM}[1]{HEAD} = $Clipboard{BODY};
 	    $NewSessionRef->{SECTION}[1]{ITEM}[1]{TYPE} = "COMMENT";
-	    $Editos{SELECT} = "all";
+	    $Editor{SELECT} = "all";
 	    splice (@SessionRef, $iSession, 0, $NewSessionRef);
 	    $nSession++;
 	}elsif( /insert_section/ ){
