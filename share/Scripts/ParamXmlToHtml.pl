@@ -47,7 +47,7 @@ open(MANUAL, ">$ManualHtmlFile")
     or die "$ERROR: could not open output file $ManualHtmlFile\n";
 
 # Global variables
-my $Framework;                                   # True in framework mode
+my $Framework = 0;                               # True in framework mode
 my $ValidComp = "SC,IH,SP,GM,IM,PW,RB,IE,UA,PS"; # List of components
 my %CompVersion;                                 # Hash for component versions
 my $nSession = 0;                                # Number of sessions
@@ -84,9 +84,10 @@ exit 0;
 sub read_xml_file{
 
     my $iItem;
+    my $iSection;
+    my $iSession;
+    
     my $SessionView;
-    my $Section;
-    my $SectionView;
 
     while($_ = <XMLFILE>){
 	if(/<MODE FRAMEWORK=\"(\d)\" (COMPONENTS=\"([^\"]*)\")?/){
@@ -99,6 +100,7 @@ sub read_xml_file{
 	    }
 	}elsif(/<SESSION NAME=\"([^\"]*)\" VIEW=\"([\w]+)\"/){
 	    $nSession++;
+	    $iSection=0;
 	    my $Name=($1 or "Session $nSession");
 	    $SessionView=$2;
 	    $SessionRef[$nSession]{NAME} = $Name;
@@ -106,13 +108,14 @@ sub read_xml_file{
 	    print "nSession=$nSession Name=$Name View=$SessionView\n" 
 		if $Debug;
 	}elsif(/<SECTION NAME=\"([^\"]*)\" VIEW=\"([\w]+)\"/){
-	    my $Name=$1;
-	    $SectionView = $2;
-	    $Section = ($Name or "CON");
-	    $SessionRef[$nSession]{SECTION}{$Section}{VIEW} = $SectionView;
+	    $iSection++;
 	    $iItem=0;
+	    my $Name=$1;
+	    my $SectionView = $2;
+	    $SessionRef[$nSession]{SECTION}[$iSection]{VIEW} = $SectionView;
+	    $SessionRef[$nSession]{SECTION}[$iSection]{NAME} = $Name;
 
-	    print "Section=$Section View=$SectionView\n" if $Debug;
+	    print "Section=$iSection name=$Name View=$SectionView\n" if $Debug;
 
 	    # Do not read details if the section is minimized
 	    if(not $Submit 
@@ -125,11 +128,11 @@ sub read_xml_file{
 	    my $View=$2;
 
 	    # Create new array element for this item
-	    $SessionRef[$nSession]{SECTION}{$Section}{ITEM}[$iItem]{TYPE} = 
+	    $SessionRef[$nSession]{SECTION}[$iSection]{ITEM}[$iItem]{TYPE} = 
 		$Type;
 
 	    my $ItemRef=
-		$SessionRef[$nSession]{SECTION}{$Section}{ITEM}[$iItem];
+		$SessionRef[$nSession]{SECTION}[$iSection]{ITEM}[$iItem];
 	    $ItemRef->{VIEW} = $View;
 	    $ItemRef->{HEAD} = <XMLFILE>; # First line of body is always read
 
@@ -170,17 +173,23 @@ sub modify_xml_data{
 
     warn "Submit = $Submit\n";
 
-    if( $Submit =~ /^CHECK\b/ ){
+    $_ = $Submit;
+
+    if( /^CHECK\b/ ){
 	my $Error = `./TestParam.pl`;
 	warn $Error if $Error; # to be written
-    }elsif( $Submit =~ /^SAVE\b/){
+    }elsif( /^SAVE\b/ ){
 	warn "share/Scripts/ParamXmlToText.pl $XmlFile\n";
 	`share/Scripts/ParamXmlToText.pl $XmlFile`;
-    }elsif($Submit =~ /^SAVE AS\b/){
+    }elsif( /^SAVE AS\b/ ){
 	# to be written
-    }elsif($Submit =~ /^EXIT\b/){
+    }elsif( /^EXIT\b/ ){
 	# kill the job
 	kill(-9, getpgrp);
+    }elsif( /^ABC_ON/ ){
+	$Editor{ABC}=1;
+    }elsif( /^ABC_OFF/ ){
+	$Editor{ABC}=0;
     }else{
 	my %Form;
 	%Form = split (/[:;]/, $Submit);
@@ -189,17 +198,45 @@ sub modify_xml_data{
 	$_ = $Form{action};
 	my $id= $Form{id};
 
-	$id=~ /(\d+)([A-Z]+)?(\d+)?/;
+	if( /select_session/ ){
+	    $Editor{INSERT} = "new" unless 
+		($Editor{SELECT} =~ s/(\d+)/$1/g) == ($id =~ s/(\d+)/$1/g);
+	    $Editor{SELECT} = $id;
+	    return;
+	}elsif( /select_insert/ ){
+	    $Editor{INSERT} = $id;
+	    return;
+	}elsif( /select_file/ ){
+	    $Editor{FILE} = $id;
+	    if(open(MYFILE, $id)){
+		$Clipboard{BODY} = join('',<MYFILE>);
+		if($Editor{SELECT} eq "all"){
+		    $Clipboard{TYPE}="SESSION";
+		}elsif($Editor{SELECT} =~ /^\d+$/){
+		    $Clipboard{TYPE}="SECTION";
+		}else{
+		    $Clipboard{TYPE}="COMMAND";
+		}
+	    }
+	    return;
+	}
+
 	my $iSession = $1;
-	my $Section  = $2;
+	my $iSection = $2;
 	my $iItem    = $3;
 
-	warn "iSession=$iSession Section=$Section iItem=$iItem\n";
+	($iSession,$iSection,$iItem) = split(/,/,$id);
+
+	warn "iSession=$iSession iSection=$iSection iItem=$iItem\n";
 	
 	my $SessionRef = $SessionRef[$iSession];
 	my $NameSession= $SessionRef->{NAME};
-	my $SectionRef = $SessionRef->{SECTION}{$Section};
+	my $SectionRef = $SessionRef->{SECTION}[$iSection];
+	my $NameSection= ($SectionRef->{NAME} or "CON");
 	my $ItemRef    = $SectionRef->{ITEM}[$iItem];
+
+	# View the stuff represented by id if id consist of numbers
+	$Editor{SELECT}=$id if $id =~ /^[\d,]+$/;
 
 	if( /minimize_session/ ){
 	    $SessionRef->{VIEW}="MIN";
@@ -209,25 +246,20 @@ sub modify_xml_data{
 	    $ItemRef->{VIEW}="MIN";
 	}elsif( /maximize_session/ ){
 	    $SessionRef->{VIEW}="MAX";
-	    $Editor{SELECT} = $NameSession;
 	}elsif( /maximize_section/ ){
 	    $SectionRef->{VIEW}="MAX";
-	    $Editor{SELECT} = "$NameSession/$Section";
 	}elsif( /maximize_item/ ){
 	    $ItemRef->{VIEW}="MAX";
-	    $Editor{SELECT} = "$NameSession/$Section";
-	}elsif( /select_session/ ){
-	    $Editor{SELECT} = $NameSession;
-	}elsif( /select_section/ ){
-	    $Editor{SELECT} = "$NameSession/$Section";
+	}elsif( /edit_session/ ){
+	    $SessionRef->{VIEW}="EDIT";
 	}elsif( /edit_item/ ){
 	    $ItemRef->{VIEW}="EDIT";
 	}elsif( /remove_session/ or /copy_session/ ){
 	    $Clipboard{SESSION} = $iSession;
-	    $Clipboard{SECTION} = $Section;
+	    $Clipboard{SECTION} = "NONE";
 	    $Clipboard{TYPE}    = "SESSION";
-	    $Clipboard{BODY}    = "$NameSession: should be here\n";
-	    $Editor{SELECT}     = "ALL SESSIONS";
+	    $Clipboard{BODY}    = "Session $id $NameSession: should be here\n";
+	    $Editor{SELECT}     = "all";
 	    $Editor{INSERT}     = "PASTE SESSION";
 	    if(/remove_session/){
 		splice(@SessionRef,$iSession,1);
@@ -235,20 +267,20 @@ sub modify_xml_data{
 	    }
 	}elsif( /remove_section/ or /copy_section/ ){
 	    $Clipboard{SESSION} = $iSession;
-	    $Clipboard{SECTION} = $Section;
+	    $Clipboard{SECTION} = $NameSection;
 	    $Clipboard{TYPE}    = "SECTION";
-	    $Clipboard{BODY}    = "Section $Section: should be here\n";
-	    $Editor{SELECT}     = $NameSession;
+	    $Clipboard{BODY}    = "Section $id $NameSection: should be here\n";
+	    $Editor{SELECT}     = $iSession;
 	    $Editor{INSERT}     = "PASTE SECTION";
 	    if( /remove_section/ ){
-		delete $SessionRef[$iSession]{SECTION}{$Section};
+		splice (@{$SessionRef->{SECTION}}, $iSection, 1);
 	    }
 	}elsif( /remove_item/ or /copy_item/ ){
 	    $Clipboard{SESSION} = $iSession;
-	    $Clipboard{SECTION} = $Section;
+	    $Clipboard{SECTION} = $NameSection;
 	    $Clipboard{TYPE}    = $ItemRef->{TYPE};
 	    $Clipboard{BODY}    = $ItemRef->{HEAD}.$ItemRef->{TAIL};
-	    $Editor{SELECT}     = "$NameSession/$Section";
+	    $Editor{SELECT}     = "$iSession,$iSection";
 	    $Editor{INSERT}     = "PASTE COMMAND/COMMENT";
 	    if( /remove_item/ ){
 		splice (@{$SectionRef->{ITEM}}, $iItem, 1);
@@ -257,10 +289,19 @@ sub modify_xml_data{
 	    my $NewSessionRef;
 	    $NewSessionRef->{VIEW} = "MAX";
 	    $NewSessionRef->{NAME} = "Session $iSession";
-	    $NewSessionRef->{SECTION}{CON}{ITEM}[1]{HEAD} = $Clipboard{BODY};
-	    $NewSessionRef->{SECTION}{CON}{ITEM}[1]{TYPE} = "COMMENT";
+	    $NewSessionRef->{SECTION}[1]{ITEM}[1]{HEAD} = $Clipboard{BODY};
+	    $NewSessionRef->{SECTION}[1]{ITEM}[1]{TYPE} = "COMMENT";
+	    $Editos{SELECT} = "all";
 	    splice (@SessionRef, $iSession, 0, $NewSessionRef);
 	    $nSession++;
+	}elsif( /insert_section/ ){
+	    my $NewSectionRef;
+	    $NewSectionRef->{VIEW} = "MAX";
+	    $NewSectionRef->{NAME} = $Clipboard{SECTION};
+	    $NewSectionRef->{ITEM}[1]{HEAD} = $Clipboard{BODY};
+	    $NewSectionRef->{ITEM}[1]{TYPE} = "COMMENT";
+
+	    splice (@{$SessionRef->{SECTION}}, $iSection, 0, $NewSectionRef);
 	}elsif( /insert_item/ ){
 	    my $NewItemRef;
 	    $NewItemRef->{VIEW} = "MAX";
@@ -270,17 +311,6 @@ sub modify_xml_data{
 	    $NewItemRef->{HEAD}.="\n";
 
 	    splice (@{$SectionRef->{ITEM}}, $iItem, 0, $NewItemRef);
-	    $Editor{SELECT}     = "$NameSession/$Section";
-	}elsif( /insert_item/ ){
-	    my $NewItemRef;
-	    $NewItemRef->{VIEW} = "MAX";
-	    $NewItemRef->{TYPE} = $Clipboard{TYPE};
-            ($NewItemRef->{HEAD}, $NewItemRef->{TAIL}) 
-		= split(/\n/, $Clipboard{BODY}, 2);
-	    $NewItemRef->{HEAD}.="\n";
-
-	    splice (@{$SectionRef->{ITEM}}, $iItem, 0, $NewItemRef);
-	    $Editor{SELECT}     = "$NameSession/$Section";
 	}elsif( /cancel_item_edit/ ){
 	    $ItemRef->{VIEW}="MAX";
 	}
@@ -295,45 +325,34 @@ sub write_xml_file{
 	or die "$ERROR: could not open $XmlFile for output!\n";
 
     # Write the XMLFILE
-    if($Framework){ 
-	print XMLFILE
-	    "\t\t\t<MODE FRAMEWORK=\"1\" COMPONENTS=\"$ValidComp\"/>\n";
-    }else{
-	print XMLFILE 
-	    "\t\t\t<MODE FRAMEWORK=\"0\"/>\n";
-    }
+    print XMLFILE "\t\t\t<MODE FRAMEWORK=\"$Framework\"";
+    print XMLFILE " COMPONENTS=\"$ValidComp\"" if $Framework;
+    print XMLFILE "/>\n";
 
     my $iSession;
-    for $iSession (1..$nSession){
-	my $Name = $SessionRef[$iSession]{NAME};
-	my $View = $SessionRef[$iSession]{VIEW};
-	$Name = "" if $Name =~ /^Session \d+$/;
+    for $iSession (1..$#SessionRef){
 	print XMLFILE
-	    "\t\t\t<SESSION NAME=\"$Name\" VIEW=\"$View\">\n";
+	    "\t\t\t<SESSION NAME=\"$SessionRef[$iSession]{NAME}\" ".
+	    "VIEW=\"$SessionRef[$iSession]{VIEW}\">\n";
 
-	my $SessionRef = $SessionRef[$iSession]{SECTION};
-	my $Section;
-	foreach $Section (sort keys %$SessionRef){
-	    my $SectionRef = $SessionRef->{$Section};
-	    my $View = $SectionRef->{VIEW};
-	    my $SectionName = $Section;
-	    $SectionName = "" if $Section eq "CON";
+	my $iSection;
+	for $iSection (1..$#{ $SessionRef[$iSession]{SECTION} }){
+	    my $SectionRef = $SessionRef[$iSession]{SECTION}[$iSection];
 
-	    print XMLFILE 
-		"\t\t\t\t<SECTION NAME=\"$SectionName\" VIEW=\"$View\">\n";
+	    # Skip empty session ($iItem starts with 1)
+	    next unless $#{ $SectionRef->{ITEM} } > 0;
 
+	    print XMLFILE "\t\t\t\t<SECTION NAME=\"$SectionRef->{NAME}\"".
+		" VIEW=\"$SectionRef->{VIEW}\">\n";
+	    
 	    my $iItem;
-	    my $nItem = $#{ $SectionRef->{ITEM}};
-	    for $iItem (1..$nItem){
+	    for $iItem (1..$#{ $SectionRef->{ITEM} }){
 
-		my $ItemRef = $SectionRef->{ITEM}[$iItem];
-		my $Type    = $ItemRef->{TYPE};
-		my $View    = $ItemRef->{VIEW};
+		my $Item = $SectionRef->{ITEM}[$iItem];
 
-		print XMLFILE 
-		    "\t\t\t\t\t<ITEM TYPE=\"$Type\" VIEW=\"$View\">\n";
-		print XMLFILE $ItemRef->{HEAD};
-		print XMLFILE $ItemRef->{TAIL};
+		print XMLFILE "\t\t\t\t\t<ITEM TYPE=\"$Item->{TYPE}\"".
+		    " VIEW=\"$Item->{VIEW}\">\n";
+		print XMLFILE $Item->{HEAD}, $Item->{TAIL};
 		print XMLFILE "\t\t\t\t\t</ITEM>\n";
 	    }
 	    print XMLFILE "\t\t\t\t</SECTION>\n";
@@ -353,18 +372,19 @@ $Clipboard{BODY}</CLIPBOARD>
 sub command_list{
 
     my $ParamXml = "PARAM.XML";
-    my $Session = $Editor{SELECT};
+    my $iSession;
+    my $iSection;
+    ($iSession, $iSection) = split( /,/, $Editor{SELECT});
 
     if($Framework){
-	my $Section;
-	($Session, $Section) = split(/\//, $Session, 2);
-	if($Section eq "CON"){
-	    $ParamXml = "Param/PARAM.XML";
-	}else{
+	my $Section = $SessionRef[$iSession]{SECTION}[$iSection]{NAME};
+	if($Section){
 	    $ParamXml = "$Section/$CompVersion{$Section}/PARAM.XML";
+	}else{
+	    $ParamXml = "Param/PARAM.XML";
 	}
     }
-    my $IsFirstSession = $Session eq $SessionRef[1]{NAME};
+    my $IsFirstSession = ($iSession == 1);
 
     open(FILE, $ParamXml) or die "$ERROR: could not open $ParamXml\n";
 
@@ -436,7 +456,7 @@ CommandExample=
 $CommandExample
 
 CommandText=
-$CommandText" if $Debug;
+$CommandText" if $Debug =~ /read_command_info/;
 
 }
 
@@ -468,56 +488,62 @@ sub write_editor_html{
     # Read the parameter definitions
     # $CommandList = &read_tree($TreeFile) 
 
-    print "Starting write_editor_html\n" if $Debug;
+    my $DoDebug = ($Debug =~ /write_editor_html/);
+
+    print "Starting write_editor_html\n" if $DoDebug;
 
     my $SessionSection="    <OPTION VALUE=all>ALL SESSIONS\n";
 
     my $iSession;
     for $iSession (1..$nSession){
-	print "iSession=$iSession\n" if $Debug;
+	print "iSession=$iSession\n" if $DoDebug;
 
 	my $SessionRef = $SessionRef[$iSession];
 	my $SessionName = $SessionRef->{NAME};
         $SessionSection .= "    <OPTION VALUE=$iSession>$SessionName\n";
 	next unless $Framework;
-	my $Section;
-	for $Section (sort keys %{$SessionRef->{SECTION}}){
+	my $iSection;
+	for $iSection (1..$#{$SessionRef->{SECTION}}){
+	    print "iSession,iSection=$iSession,$iSection\n" if $DoDebug;
+	    my $SectionName = 
+		($SessionRef->{SECTION}[$iSection]{NAME} or "CON");
 	    $SessionSection .= 
-		"      <OPTION VALUE=$iSession,$Section>"
-		.('&nbsp;' x 3)."$SessionName/$Section\n";
+		"      <OPTION VALUE=$iSession,$iSection>"
+		.('&nbsp;' x 3)."$SessionName/$SectionName\n";
 	}
     }
 
     # Add SELECTED
     my $Selected = $Editor{SELECT};
-    $SessionSection =~ s/<OPTION(.*$Selected)/<OPTION SELECTED$1/;
+    $Selected =~ s/^(\d+,\d+),\d+$/$1/; # Chop off item index if present
+    $SessionSection =~ s/(VALUE=$Selected)/$1 SELECTED/;
 
-    print "SessionSection=$SessionSection\n" if $Debug;
+    print "SessionSection=$SessionSection\n" if $DoDebug;
 
     my $InsertList;
 
-    if($Selected eq "ALL SESSIONS"){
+    if($Selected eq "all"){
 
-	$InsertList  = "    <OPTION VALUE=file>FILE\n";
-	$InsertList .= "    <OPTION VALUE=paste>PASTE SESSION\n"
+	$InsertList  = "    <OPTION>FILE\n";
+	$InsertList .= "    <OPTION>PASTE SESSION\n"
 	    if $Clipboard{TYPE} eq "SESSION";
-        $InsertList .= "    <OPTION VALUE=new>NEW SESSION\n";
+        $InsertList .= "    <OPTION>NEW SESSION\n";
 
-    }elsif($Selected !~ /\// and $Framework){
+    }elsif($Selected =~ /^\d+$/ and $Framework){
 
-	$InsertList  = "    <OPTION VALUE=file>FILE\n";
-	$InsertList .= "    <OPTION VALUE=paste>PASTE SECTION\n"
+	$InsertList  = "    <OPTION>FILE\n";
+	$InsertList .= "    <OPTION>PASTE SECTION\n"
 	    if $Clipboard{TYPE} eq "SECTION";
-        $InsertList .= "    <OPTION VALUE=CON>Section CON\n";
+        $InsertList .= "    <OPTION>Section CON\n";
 	my $Comp;
 	for $Comp (split ',', $ValidComp){
-	    $InsertList .= "     <OPTION VALUE=$Comp>Section $Comp\n";
+	    $InsertList .= "     <OPTION>Section $Comp\n";
 	}
     }else{
-        $InsertList  =     "    <OPTION VALUE=file>FILE\n";
-	$InsertList .=     "    <OPTION VALUE=paste>PASTE COMMAND/COMMENT\n"
-	    if $Clipboard{TYPE} eq "ITEM";
-	$InsertList .=     "    <OPTION VALUE=comment>NEW COMMENT\n";
+        $InsertList  =     "    <OPTION>FILE\n";
+	$InsertList .=     "    <OPTION>PASTE COMMAND/COMMENT\n"
+	    if $Clipboard{TYPE} =~ /COMMAND|COMMENT|USERINPUT/;
+	$InsertList .=     "    <OPTION>COMMENT\n";
     	if($Editor{ABC}){
 	    $InsertList .= "    <OPTION>COMMANDS ALPHABETICALLY\n";
 	}else{
@@ -528,8 +554,11 @@ sub write_editor_html{
 
     # Add SELECTED
     my $Insert = $Editor{INSERT};
-    if($Insert){
-	$InsertList =~ s/<OPTION(.*$Insert)/<OPTION SELECTED$1/;
+
+    if( not ($InsertList =~s/OPTION>$Insert/OPTION SELECTED>$Insert/)){
+	$InsertList =~ s/OPTION>(COMMANDS|NEW|Section CON)/OPTION SELECTED>$1/;
+	$Insert = "new";
+	$Editor{INSERT} = "new";
     }
 
     my $InsertItem;
@@ -541,7 +570,7 @@ sub write_editor_html{
 	my $Files;
 	$Files = "    <OPTION>".join("\n    <OPTION>",@Files) if @Files;
 	$InsertItem=
-"  <SELECT NAME=file onChange=\"dynamic_select('editor','file')>
+"  <SELECT NAME=file onChange=\"dynamic_select('editor','file')\">
     <OPTION>SELECT FILE
 $Files
   </SELECT>
@@ -554,18 +583,19 @@ $Files
     if($InsertList =~ /COMMAND/){
 	$InsertItem .= 
 "  <INPUT TYPE=CHECKBOX NAME=abc VALUE=1
-      onChange=\"parent.location.href='$IndexHtmlFile?submit=action:abc_on'\"
+      onChange=\"parent.location.href='$IndexHtmlFile?submit=ABC_ON'\"
    >abc
 ";
 	if($Editor{ABC}){
 	    $InsertItem =~ s/>abc$/ CHECKED>abc/;
-	    $InsertItem =~ s/abc_on'/abc_off'/;
+	    $InsertItem =~ s/ABC_ON'/ABC_OFF'/;
 	}
     }
 
     chop $SessionSection;
     chop $InsertList;
     chop $InsertItem;
+
     my $Editor = "
 <html>
 <head>
@@ -574,7 +604,7 @@ $Files
   function dynamic_select(NameForm, NameElement){
     elem = document.forms[NameForm][NameElement];
     parent.location.href = '$IndexHtmlFile?submit=action:select_'
-        + NameElement + ';value:' 
+        + NameElement + ';id:' 
         + escape(elem.options[elem.selectedIndex].value);
   }
   // -->
@@ -631,6 +661,8 @@ sub write_manual_html{
 	$Manual =~ s/\n$//;
     }elsif($Editor{INSERT} =~ /^PASTE/){
 	$Manual = "<H1>Clipboard</H1>\n<PRE>\n$Clipboard{BODY}\n</PRE>";
+    }elsif($Editor{INSERT} eq "FILE" and -f $Editor{FILE}){
+	$Manual = "<H1>$Editor{FILE}</H1>\n<PRE>$Clipboard{BODY}\n</PRE>";
     }
     $Manual = $CommandText if 
 
@@ -668,6 +700,7 @@ sub write_param_html{
     my $RemoveSectionButton;
     my $RemoveItemButton;
 
+
     ########################## SESSION #################################
     my $iSession;
     for $iSession (1..$nSession){
@@ -692,7 +725,7 @@ sub write_param_html{
 
 	$InsertSessionButton = "    <$Action:insert_session
 ><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert session\"></A>
-"                 if $Editor{SELECT} eq "ALL SESSIONS";
+"                 if $Editor{SELECT} eq "all";
 
 	$CopySessionButton = "      <$Action:copy_session
 ><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy session\"></A>
@@ -702,8 +735,7 @@ sub write_param_html{
 ";
 
 	# Place anchor to selected session
-	$Param .= "<A NAME=SELECTED></A>\n" 
-	    if $Editor{SELECT} eq $SessionName;
+	$Param .= "<A NAME=SELECTED>anchor</A>\n" if $Editor{SELECT} eq $iSession;
 
 	$Param .=
 "<hr COLOR=BLACK>
@@ -725,13 +757,15 @@ $InsertSessionButton$CopySessionButton$RemoveSessionButton
 
 	######################## SECTION ###############################
 
-	my $Section;
-	for $Section (sort keys %{ $SessionRef[$iSession]{SECTION} }){
-	    my $SectionRef  = $SessionRef[$iSession]{SECTION}{$Section};
+	my $iSection;
+	my $nSection = $#{ $SessionRef[$iSession]{SECTION} };
+	for $iSection (1..$nSection){
+	    my $SectionRef  = $SessionRef[$iSession]{SECTION}[$iSection];
 	    my $SectionView = $SectionRef->{VIEW};
+	    my $SectionName = ($SectionRef->{NAME} or "CON");
 
 	    my $Action = "A TARGET=_parent ".
-		"HREF=$IndexHtmlFile?submit=id:$iSession$Section;action";
+		"HREF=$IndexHtmlFile?submit=id:$iSession,$iSection;action";
 
 	    if($SectionView eq "MIN"){
 		$MinMaxSectionButton = "      <$Action:maximize_section
@@ -745,7 +779,7 @@ $InsertSessionButton$CopySessionButton$RemoveSessionButton
 
 	    $InsertSectionButton = "    <$Action:insert_section
 ><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert section\"></A>
-" 	    if $Editor{SELECT} !~ /(ALL SESSIONS|\/)/;
+" 	    if $Editor{SELECT} =~ /^\d+$/;
 
 	    $CopySectionButton = "      <$Action:copy_section
 ><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy section\"></A>
@@ -756,9 +790,9 @@ $InsertSessionButton$CopySessionButton$RemoveSessionButton
 
 	    my $InsertItemButton;
 
-	    # Place anchor to selected session
-	    $Param .= "<A NAME=SELECTED></A>\n" 
-		if $Editor{SELECT} eq "$SessionName/$Section";
+	    # Place anchor to selected section
+	    $Param .= "<A NAME=SELECTED>anchor</A>\n" 
+		if $Editor{SELECT} eq "$iSession,$iSection";
 
 	    $Param .=
 "  <TABLE BORDER=0 WIDTH=100% BGCOLOR=\#CCCCCC>
@@ -774,7 +808,7 @@ $InsertSessionButton$CopySessionButton$RemoveSessionButton
 $MinMaxSectionButton
       </TD>
       <TD WIDTH=380><$Action:select_section>
-Section: $Section
+Section: $SectionName
       </A></TD>
       <TD ALIGN=RIGHT>
 $InsertSectionButton$CopySectionButton$RemoveSectionButton
@@ -784,6 +818,18 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 	    next if $SectionView eq "MIN";
 	    
 ###################### ITEM LOOP ############################################
+
+	    my $Action = "A TARGET=_parent HREF=$IndexHtmlFile?submit=".
+		"id:$iSession,$iSection,0;action";
+
+	    if($SectionName eq $Clipboard{SECTION} and 
+	       $Clipboard{TYPE} =~ /COMMAND|COMMENT|USERINPUT/ ){
+		$InsertItemButton = "    <$Action:insert_item
+><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert item\"></A>
+";
+	    }else{
+		$InsertItemButton="";
+	    }
 
 	    my $iItem;
 	    my $nItem = $#{ $SectionRef->{ITEM} };
@@ -797,8 +843,8 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 
 		my $TableColor = $TableColor{$ItemType};
 
-		my $Action = "A TARGET=_parent ".
-		    "HREF=$IndexHtmlFile?submit=id:$iSession$Section$iItem;action";
+		$Action =~ s/\d+;action$/$iItem;action/;
+		$InsertItemButton =~ s/\d+;action:/$iItem;action:/;
 
 		if($ItemType eq "userinput"){
 		    # Fix the content of the user input
@@ -806,6 +852,10 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 		    $ItemTail =~ s/\n*\#USERINPUTEND.*//m;
 		}
 		my $nLine = ($ItemTail =~ s/\n/\n/g);
+
+		# Place anchor to selected item
+		$Param .= "<A NAME=SELECTED>anchor</A>\n" 
+		    if $Editor{SELECT} eq "$iSession,$iSection,$iItem";
 
 		if($ItemView eq "EDIT"){
 		    $nLine += 2;
@@ -859,14 +909,6 @@ $ItemTail
 		    }
 		}else{
 		    $MinMaxItemButton = "";
-		}
-
-		if($Editor{SELECT} =~ /\/$Section$/){
-		    $InsertItemButton = "    <$Action:insert_item
-><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert item\"></A>
-";
-		}else{
-		    $InsertItemButton="";
 		}
 
 		$CopyItemButton = "      <$Action:copy_item
@@ -968,8 +1010,8 @@ $Comment
 
 	    ###### End section #########
 
-	    $iItem=$nItem+1;
-	    $InsertItemButton =~ s/id:\w+/id:$iSession$Section$iItem/;
+	    $iItem=$nItem+1; $iItem=1 if $iItem==0;
+	    $InsertItemButton =~ s/id:[\d,]+/id:$iSession,$iSection,$iItem/;
 	    $MinMaxSectionButton =~ s/minimize\.gif/minimize_up.gif/;
 
 	    $Param .=
@@ -979,7 +1021,7 @@ $Comment
 $MinMaxSectionButton
       </TD>
       <TD WIDTH=380><$Action:select_section>
-Section: $Section
+Section: $SectionName
       </A></TD>
       <TD ALIGN=RIGHT>
 $InsertItemButton$CopySectionButton$RemoveSectionButton
@@ -991,7 +1033,7 @@ $InsertItemButton$CopySectionButton$RemoveSectionButton
 
 	###### End session #########
 
-	$InsertSectionButton =~ s/id:\w*/id:${iSession}END/;
+	$InsertSectionButton =~ s/id:[\d,]+/id:$iSession,$iSection/;
 	$MinMaxSessionButton =~ s/minimize\.gif/minimize_up.gif/;
 	$Param .=
 "  <TABLE BORDER=0 WIDTH=100% BGCOLOR=\#CCCCCC>
@@ -1003,7 +1045,7 @@ $InsertItemButton$CopySectionButton$RemoveSectionButton
       </TD>
     </TR>
     <TR>
-      <TD WIDTH=20 ALIGN=CENTER>
+      <TD WIDTH=20 ALIGN=LEFT>
 $MinMaxSessionButton
       </TD>
       <TD WIDTH=380><$Action:select_session>
@@ -1018,7 +1060,7 @@ $InsertSectionButton$CopySessionButton$RemoveSessionButton
     } # session loop
 
     $iSession=$nSession+1;
-    $InsertSessionButton =~ s/id:\w+/id:$iSession/;
+    $InsertSessionButton =~ s/id:[\d,]+/id:$iSession/;
 
     $Param .= 
 "<hr COLOR=BLACK>\n

@@ -70,17 +70,27 @@ open(XMLFILE,">$XmlFile") or
 
 # Initialize for checking input parameter file
 my $nLine        = 0;   # Line number in the expanded file
-my $nSession=1;         # current session number
+my $iSession=1;         # current session number
 my @NameSession;        # names of the sessions
+my $iSection=1;         # index of current section
 my $Section="";         # name of component section
-my $IsCommand=0;        # distingish commands from comments and user input
-my $UserInput="";       # true inside #BEGINUSERINPUT and #ENDUSERINPUT
+my $IsCommand=0;        # true while reading a command
+my $IsComment=0;        # true while reading a comment
+my $UserInput="";       # true between #USERINPUTBEGIN and #USERINPUTEND
 my $iItem=0;            # command index in the current section
 
-my @Output;             # Array of hashes of arrays (session/section/item)
+my @SessionRef;             # Array of hashes of arrays (session/section/item)
+my $SectionRef;         # Pointer to current section in $SessionRef
 my @Clipboard;          # The lines after the #END command
 
 my @Line;               # Collect lines for outputfile
+
+# We assume that there is at least one session with one section inside it
+$SessionRef[1]{VIEW} = "MAX";               # default view of session 1
+$SessionRef[1]{NAME} = "";                  # default name of session 1
+$SessionRef[1]{SECTION}[1]{VIEW} = "MAX";   # default view of section 1
+$SessionRef[1]{SECTION}[1]{NAME} = "";      # default name of section 1
+$SectionRef = $SessionRef[1]{SECTION}[1];
 
 while($_=<INFILE>){
 
@@ -115,9 +125,12 @@ while($_=<INFILE>){
 	($Section) = /BEGIN_COMP ([A-Z][A-Z])/ or
 	    &print_error(" for command $_".
 			 "\tincorrectly formatted BEGIN_COMP command");
-	    
-	# Set the item index to the last one of this session
-	$iItem = $#{ $Output[$nSession]{$Section} } + 1;
+
+	$iSection++ if $#{ $SectionRef->{ITEM} } >= 0;
+	$SessionRef[$iSession]{SECTION}[$iSection]{NAME} = $Section;
+	$SessionRef[$iSession]{SECTION}[$iSection]{VIEW} = "MAX";
+	$SectionRef = $SessionRef[$iSession]{SECTION}[$iSection];
+	$iItem = 0;
 
     }elsif(/^\#END_COMP/){
 	if(not $Framework){
@@ -144,49 +157,67 @@ while($_=<INFILE>){
 			 " BEGIN_COMP $Section");
 	}
 
-	# In any case return to CON
+	# In any case return to next CON section
+	$iSection++ if $#{ $SectionRef->{ITEM} } >= 0;
+	$SessionRef[$iSession]{SECTION}[$iSection]{NAME} = "";
+	$SessionRef[$iSession]{SECTION}[$iSection]{VIEW} = "MAX";
+	$SectionRef = $SessionRef[$iSession]{SECTION}[$iSection];
 	$Section = '';
-
-	# Set item index for CON
-	$iItem = $#{ $Output[$nSession]{$Section} } + 1;
+	$iItem   = 0;
  
     }elsif(/^\#RUN/){		# Check if a new session has started
 	# Check if the required commands are defined and
 	# if the parameters are correct for the session
 
 	if($Section and $Framework){
-	    print "Error in session $nSession ending at line $nLine ".
+	    print "Error in session $iSession ending at line $nLine ".
                 "in file $ParamExpand:\n".
                 "\tBEGIN_COMP $Section does not have matching END_COMP\n";
 	    $Section = '';
 	}
-	$nSession++;
+	$iSession++;
+	$SessionRef[$iSession]{VIEW} = "MAX";
+	$SessionRef[$iSession]{SECTION}[1]{VIEW} = "MAX";
+	$SectionRef = $SessionRef[$iSession]{SECTION}[1];
+	$iSection=1;
 	$iItem=0;
 
     }elsif( /^(Begin|End)\s+session:\s*(.*)/i ){
-	$NameSession[$nSession] = $2;
+	$SessionRef[$iSession]{NAME}= $2;
     }else{
 	# Analyze line for various items
 	if(/^\#USERINPUTBEGIN/){
 	    $iItem++;
+	    $SectionRef->{ITEM}[$iItem]{VIEW}="MAX";
+	    $SectionRef->{ITEM}[$iItem]{TYPE}="USERINPUT";
 	    $UserInput = $nLine+1;
-	    $IsCommand=1;
+	    $IsCommand=0;
+	    $IsComment=0;
 	}elsif(/\#USERINPUTEND/){
 	    if(not $UserInput){
 		&print_error(" for command $_\tthere is no matching".
 			     " USERINPUTBEGIN command");
-	    }else{
-		$UserInput = 0;
 	    }
+	    $UserInput = 0;
 	}elsif(/^\#/ and not $UserInput){
 	    $iItem++;
+	    $SectionRef->{ITEM}[$iItem]{VIEW}="MAX";
+	    $SectionRef->{ITEM}[$iItem]{TYPE}="COMMAND";
 	    $IsCommand=1;
-	}elsif( /^\s*\n$/ and $IsCommand and not $UserInput){
+	    $IsComment=0;
+	}elsif( /^\s*\n$/ ){
+	    # Empty line closes command
+	    $IsCommand = 0;
+	    next unless $IsComment or $UserInput;
+	}elsif(not $IsCommand and not $UserInput and not $IsComment){
+	    # non-empty line starts new comment
 	    $iItem++;
-	    $IsCommand=0;
+	    $IsComment = 1;
+	    $SectionRef->{ITEM}[$iItem]{VIEW}="MAX";
+	    $SectionRef->{ITEM}[$iItem]{TYPE}="COMMENT";
 	}
 	# Store line
-	$Output[$nSession]{$Section}[$iItem].=$_;
+	$SectionRef->{ITEM}[$iItem]{HEAD}.=$_;
     }
 }
 
@@ -197,32 +228,27 @@ if($Framework){
     print XMLFILE "\t\t\t<MODE FRAMEWORK=\"0\"/>\n";
 }
 
-my $iSession;
-for $iSession (1..$nSession){
+for $iSession (1..$#SessionRef){
     print XMLFILE
-	"\t\t\t<SESSION NAME=\"$NameSession[$iSession]\" VIEW=\"MAX\">\n";
-    my $SessionRef = $Output[$iSession];
+	"\t\t\t<SESSION NAME=\"$SessionRef[$iSession]{NAME}\" ".
+	"VIEW=\"$SessionRef[$iSession]{VIEW}\">\n";
 
-    foreach $Section (sort keys %$SessionRef){
-	print XMLFILE "\t\t\t\t<SECTION NAME=\"$Section\" VIEW=\"MAX\">\n";
-	my $SectionRef = $Output[$iSession]{$Section};
+    for $iSection (1..$#{ $SessionRef[$iSession]{SECTION} }){
+	my $SectionRef = $SessionRef[$iSession]{SECTION}[$iSection];
 
-	for $iItem (0..$#{ $SectionRef }){
-	    my $Item = $Output[$iSession]{$Section}[$iItem];
+	# Skip empty session ($iItem starts with 1)
+	next unless $#{ $SectionRef->{ITEM} } > 0;
 
-	    $Item =~ s/^\s*//m;   # Remove starting empty lines
-	    next unless $Item;    # Ignore empty items
+	print XMLFILE "\t\t\t\t<SECTION NAME=\"$SectionRef->{NAME}\"".
+	    " VIEW=\"$SectionRef->{VIEW}\">\n";
 
-	    my $Type;
-	    if($Item =~ /^\#USERINPUTBEGIN/){
-		$Type="USERINPUT";
-	    }elsif($Item =~ /^\#/){
-		$Type="COMMAND";
-	    }else{
-		$Type="COMMENT";
-	    }
-	    print XMLFILE "\t\t\t\t\t<ITEM TYPE=\"$Type\" VIEW=\"MAX\">\n";
-	    print XMLFILE $Item;
+	for $iItem (1..$#{ $SectionRef->{ITEM} }){
+
+	    my $Item = $SectionRef->{ITEM}[$iItem];
+
+	    print XMLFILE "\t\t\t\t\t<ITEM TYPE=\"$Item->{TYPE}\"".
+		" VIEW=\"$Item->{VIEW}\">\n";
+	    print XMLFILE $Item->{HEAD}, $Item->{BODY};
 	    print XMLFILE "\t\t\t\t\t</ITEM>\n";
 	}
 	print XMLFILE "\t\t\t\t</SECTION>\n";
@@ -235,10 +261,10 @@ $Clipboard = join("",@Clipboard);
 $Clipboard =~ s/^\n*//m;
 
 print XMLFILE "
-\t\t\t<EDITOR SELECT=\"ALL SESSIONS\" INSERT=\"NEW SESSION\" ".
+<EDITOR SELECT=\"ALL SESSIONS\" INSERT=\"NEW SESSION\" ".
     "FILE=\"\" ABC=\"0\"/>
-\t\t\t<CLIPBOARD SESSION=\"NONE\" SECTION=\"NONE\" TYPE=\"NONE\">
-$Clipboard\t\t\t</CLIPBOARD>\n";
+<CLIPBOARD SESSION=\"NONE\" SECTION=\"NONE\" TYPE=\"NONE\">
+$Clipboard</CLIPBOARD>\n";
 
 close XMLFILE;
 
