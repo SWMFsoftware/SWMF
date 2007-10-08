@@ -67,8 +67,6 @@ my %TableColor = ("command" => "\#CCCCCC",
 
 &modify_xml_data if $Submit;
 
-&write_xml_file if $Submit;
-
 &write_index_html unless -f $IndexHtmlFile;
 
 &write_editor_html;
@@ -77,17 +75,16 @@ my %TableColor = ("command" => "\#CCCCCC",
 
 &write_param_html;
 
+&write_xml_file if $Submit;
+
 exit 0;
 
 ##############################################################################
 
 sub read_xml_file{
 
-    my $iItem;
     my $iSection;
-    my $iSession;
-    
-    my $SessionView;
+    my $iItem;
 
     while($_ = <XMLFILE>){
 	if(/<MODE FRAMEWORK=\"(\d)\" (COMPONENTS=\"([^\"]*)\")?/){
@@ -101,27 +98,26 @@ sub read_xml_file{
 	}elsif(/<SESSION NAME=\"([^\"]*)\" VIEW=\"([\w]+)\"/){
 	    $nSession++;
 	    $iSection=0;
-	    my $Name=($1 or "Session $nSession");
-	    $SessionView=$2;
+	    my $Name=$1;
+	    my $View=$2;
 	    $SessionRef[$nSession]{NAME} = $Name;
-	    $SessionRef[$nSession]{VIEW} = $SessionView;
-	    print "nSession=$nSession Name=$Name View=$SessionView\n" 
-		if $Debug;
+	    $SessionRef[$nSession]{VIEW} = $View;
+	    print "nSession=$nSession Name=$Name View=$View\n" if $Debug;
 	}elsif(/<SECTION NAME=\"([^\"]*)\" VIEW=\"([\w]+)\"/){
 	    $iSection++;
 	    $iItem=0;
 	    my $Name=$1;
-	    my $SectionView = $2;
-	    $SessionRef[$nSession]{SECTION}[$iSection]{VIEW} = $SectionView;
+	    my $View = $2;
+	    $SessionRef[$nSession]{SECTION}[$iSection]{VIEW} = $View;
 	    $SessionRef[$nSession]{SECTION}[$iSection]{NAME} = $Name;
 
-	    print "Section=$iSection name=$Name View=$SectionView\n" if $Debug;
+	    print "Section=$iSection name=$Name View=$View\n" if $Debug;
 
 	    # Do not read details if the section is minimized
-	    if(not $Submit 
-	       and ($SectionView eq "MIN" or $SessionView eq "MIN")){
-		$_=<XMLFILE> while not /<\/SECTION>/;
-	    }		
+	    #if(not $Submit 
+	    #   and ($SectionView eq "MIN" or $SessionView eq "MIN")){
+	    #   $_=<XMLFILE> while not /<\/SECTION>/;
+	    #}		
 	}elsif(/<ITEM TYPE=\"([^\"]*)\" VIEW=\"([\w]+)\"/){
 	    $iItem++;
 	    my $Type=$1;
@@ -170,32 +166,36 @@ sub read_xml_file{
 
 sub modify_xml_data{
 
+    my %Form;
+    %Form = split (/[:;]/, $Submit);
+    warn "Submit=$Submit\n";
+    warn join(', ',%Form),"\n";
 
-    warn "Submit = $Submit\n";
-
-    $_ = $Submit;
-
-    if( /^CHECK\b/ ){
-	my $Error = `./TestParam.pl`;
-	warn $Error if $Error; # to be written
-    }elsif( /^SAVE\b/ ){
-	warn "share/Scripts/ParamXmlToText.pl $XmlFile\n";
-	`share/Scripts/ParamXmlToText.pl $XmlFile`;
-    }elsif( /^SAVE AS\b/ ){
-	# to be written
-    }elsif( /^EXIT\b/ ){
-	# kill the job
-	kill(-9, getpgrp);
-    }elsif( /^ABC_ON/ ){
-	$Editor{ABC}=1;
-    }elsif( /^ABC_OFF/ ){
-	$Editor{ABC}=0;
-    }else{
-	my %Form;
-	%Form = split (/[:;]/, $Submit);
-	warn join(', ',%Form),"\n";
-
-	$_ = $Form{action};
+    if($_ = $Form{submit}){
+	warn "submit=$_\n";
+	if( /^CHECK\b/ ){
+	    my $Error = `./TestParam.pl`;
+	    warn $Error if $Error; # to be written
+	}elsif( /^SAVE$/ ){
+	    warn "share/Scripts/ParamXmlToText.pl $XmlFile\n";
+	    `share/Scripts/ParamXmlToText.pl $XmlFile`;
+	}elsif( /^SAVE AS$/ ){
+	    # to be written
+	}elsif( /^EXIT$/ ){
+	    # kill the job
+	    kill(-9, getpgrp);
+	}elsif( /^ABC_ON$/ ){
+	    $Editor{ABC}=1;
+	}elsif( /^ABC_OFF$/ ){
+	    $Editor{ABC}=0;
+	}elsif( /^SAVE SESSION NAME$/ ){
+	    warn "Hello!!!\n";
+	    my $iSession = $Form{id};
+	    $SessionRef[$iSession]{VIEW}="MAX";
+	    $SessionRef[$iSession]{NAME}=$Form{name};
+	    $Editor{SELECT}=$iSession;
+	}
+    }elsif($_ = $Form{action}){
 	my $id= $Form{id};
 
 	if( /select_session/ ){
@@ -220,14 +220,12 @@ sub modify_xml_data{
 	    }
 	    return;
 	}
-
-	my $iSession = $1;
-	my $iSection = $2;
-	my $iItem    = $3;
-
+	
+	# The following actions
+	my $iSession;
+	my $iSection;
+	my $iItem;
 	($iSession,$iSection,$iItem) = split(/,/,$id);
-
-	warn "iSession=$iSession iSection=$iSection iItem=$iItem\n";
 	
 	my $SessionRef = $SessionRef[$iSession];
 	my $NameSession= $SessionRef->{NAME};
@@ -304,15 +302,43 @@ sub modify_xml_data{
 	    splice (@{$SessionRef->{SECTION}}, $iSection, 0, $NewSectionRef);
 	}elsif( /insert_item/ ){
 	    my $NewItemRef;
-	    $NewItemRef->{VIEW} = "MAX";
 	    $NewItemRef->{TYPE} = $Clipboard{TYPE};
-            ($NewItemRef->{HEAD}, $NewItemRef->{TAIL}) 
-		= split(/\n/, $Clipboard{BODY}, 2);
-	    $NewItemRef->{HEAD}.="\n";
-
+	    if($Editor{INSERT} =~ /^PASTE/){
+		$NewItemRef->{TYPE} = $Clipboard{TYPE};
+		$NewItemRef->{VIEW} = "MAX";
+		($NewItemRef->{HEAD}, $NewItemRef->{TAIL}) 
+		    = split(/\n/, $Clipboard{BODY}, 2);
+		$NewItemRef->{HEAD}.="\n";
+	    }elsif($Editor{INSERT} =~ /^COMMENT/){
+		$NewItemRef->{TYPE} = "COMMENT";
+		$NewItemRef->{VIEW} = "EDIT";
+	    }elsif($Editor{INSERT} =~ /^\#USERINPUTBEGIN/){
+		$NewItemRef->{TYPE} = "USERINPUT";
+		$NewItemRef->{VIEW} = "EDIT";
+		$NewItemRef->{HEAD} = "\#USERINPUT";
+	    }elsif($Editor{INSERT} =~ /^\#/){
+		$NewItemRef->{TYPE} = "COMMAND";
+		$NewItemRef->{VIEW} = "EDIT";
+		$NewItemRef->{HEAD} = "$Editor{INSERT}\n";
+		$NewItemRef->{TAIL} = "CommandExample\n";
+	    }else{
+		# invalid choice like "COMMANDS BY GROUP";
+		return;
+	    }
 	    splice (@{$SectionRef->{ITEM}}, $iItem, 0, $NewItemRef);
-	}elsif( /cancel_item_edit/ ){
+	}elsif( /Save command|Save userinput|Save comment/ ){
 	    $ItemRef->{VIEW}="MAX";
+	    if(/Save comment/){
+		($ItemRef->{HEAD}, $ItemRef->{TAIL})=split(/\n/,$Form{text},2);
+		$ItemRef->{HEAD} .= "\n";
+	    }else{
+		$ItemRef->{TAIL}=$Form{text};
+	    }
+	    $ItemRef->{TAIL} =~ s/\s*\n/\n/g;    # clean up line endings
+	    $ItemRef->{TAIL} =~ s/\n\n+/\n\n/g;  # remove multiple empty lines
+	    $ItemRef->{TAIL} =~ s/\n*$/\n/;      # close with a single \n
+	}elsif( /CANCEL/ ){
+	    $ItemRef->{VIEW}="MAX";	    
 	}
     }
 }
@@ -469,10 +495,11 @@ sub write_index_html{
     print FILE
 "
 <?php Exec('share/Scripts/ParamXmlToHtml.pl') ?>
-<#@ `share/Scripts/ParamXmlToHtml.pl -submit='\$FORM{submit}'`; #>
-<FRAMESET ROWS=120,1*>
+<#@ \$form=join(';',%FORM);                             #>
+<#@ `share/Scripts/ParamXmlToHtml.pl -submit='\$form'`; #>
+<FRAMESET ROWS=15%,85%>
   <FRAME SRC=\"./$EditorHtmlFile\" NAME=EDITOR FRAMEBORDER=1>
-  <FRAMESET COLS=75%,25%>
+  <FRAMESET COLS=60%,40%>
     <FRAME SRC=\"./$ParamHtmlFile#SELECTED\"  NAME=PARAMFILE FRAMEBORDER=1>
     <FRAME SRC=\"./$ManualHtmlFile\"  NAME=MANUAL FRAMEBORDER=1>
   </FRAMESET>
@@ -499,7 +526,7 @@ sub write_editor_html{
 	print "iSession=$iSession\n" if $DoDebug;
 
 	my $SessionRef = $SessionRef[$iSession];
-	my $SessionName = $SessionRef->{NAME};
+	my $SessionName = ($SessionRef->{NAME} or "Session $iSession");
         $SessionSection .= "    <OPTION VALUE=$iSession>$SessionName\n";
 	next unless $Framework;
 	my $iSection;
@@ -603,8 +630,8 @@ $Files
   <!--
   function dynamic_select(NameForm, NameElement){
     elem = document.forms[NameForm][NameElement];
-    parent.location.href = '$IndexHtmlFile?submit=action:select_'
-        + NameElement + ';id:' 
+    parent.location.href = '$IndexHtmlFile?action=select_'
+        + NameElement + '&id=' 
         + escape(elem.options[elem.selectedIndex].value);
   }
   // -->
@@ -707,30 +734,50 @@ sub write_param_html{
 	my $SessionView =  $SessionRef[$iSession]{VIEW};
 	my $SessionName =  $SessionRef[$iSession]{NAME};
 	my $SessionGivenName;
-	$SessionGivenName=": $SessionName" unless 
-	    $SessionName =~ /^Session \d/;
 
 	my $Action = "A TARGET=_parent ".
-	    "HREF=$IndexHtmlFile?submit=id:$iSession;action";
+	    "HREF=$IndexHtmlFile?id=$iSession\&action";
+
+	my $SessionTagTop;
+	my $SessionTagBot;
+	my $SectionTag = ($SessionName ? $SessionName : "Session $iSession");
+
+	if($SessionView eq "EDIT"){
+	    $SessionTagTop = "
+<FORM NAME=action ACTION=$IndexHtmlFile TARGET=_parent>
+Session $iSession: 
+<INPUT NAME=name TYPE=TEXT SIZE=30 VALUE=\"$SessionName\">
+<INPUT NAME=id TYPE=HIDDEN VALUE=$iSession>
+<INPUT TYPE=SUBMIT NAME=submit VALUE=\"SAVE SESSION NAME\"></FORM>";
+	}else{
+	    if($SessionName){
+		$SessionTagTop = 
+		    "<$Action=select_session>Session $iSession</A>:".
+		    "<$Action=edit_session>$SessionName</A>";
+	    }else{
+		$SessionTagTop = "<$Action=edit_session>Session $iSession</A>";
+	    }
+	    $SessionTagBot = $SessionTagTop;
+	}
 
 	if($SessionView eq "MIN"){
-	    $MinMaxSessionButton = "      <$Action:maximize_session
+	    $MinMaxSessionButton = "      <$Action=maximize_session
 ><IMG SRC=$ImageDir/button_maximize.gif TITLE=\"Maximize session\"></A>
 ";
 	}else{
-	    $MinMaxSessionButton = "      <$Action:minimize_session
+	    $MinMaxSessionButton = "      <$Action=minimize_session
 ><IMG SRC=$ImageDir/button_minimize.gif TITLE=\"Minimize session\"></A>
 ";
 	}
 
-	$InsertSessionButton = "    <$Action:insert_session
+	$InsertSessionButton = "    <$Action=insert_session
 ><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert session\"></A>
 "                 if $Editor{SELECT} eq "all";
 
-	$CopySessionButton = "      <$Action:copy_session
+	$CopySessionButton = "      <$Action=copy_session
 ><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy session\"></A>
 ";
-	$RemoveSessionButton = "      <$Action:remove_session
+	$RemoveSessionButton = "      <$Action=remove_session
 ><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Remove session\"></A>
 ";
 
@@ -744,9 +791,9 @@ sub write_param_html{
       <TD WIDTH=20 ALIGN=LEFT>
 $MinMaxSessionButton
       </TD>
-      <TD WIDTH=380><$Action:select_session>
-Session $iSession$SessionGivenName
-      </A></TD>
+      <TD WIDTH=380>
+$SessionTagTop
+      </TD>
       <TD ALIGN=RIGHT>
 $InsertSessionButton$CopySessionButton$RemoveSessionButton
       </TD>
@@ -765,26 +812,26 @@ $InsertSessionButton$CopySessionButton$RemoveSessionButton
 	    my $SectionName = ($SectionRef->{NAME} or "CON");
 
 	    my $Action = "A TARGET=_parent ".
-		"HREF=$IndexHtmlFile?submit=id:$iSession,$iSection;action";
+		"HREF=$IndexHtmlFile?id=$iSession,$iSection\&action";
 
 	    if($SectionView eq "MIN"){
-		$MinMaxSectionButton = "      <$Action:maximize_section
+		$MinMaxSectionButton = "      <$Action=maximize_section
 ><IMG SRC=$ImageDir/button_maximize.gif TITLE=\"Maximize section\"></A>
 ";
 	    }else{
-		$MinMaxSectionButton = "      <$Action:minimize_section
+		$MinMaxSectionButton = "      <$Action=minimize_section
 ><IMG SRC=$ImageDir/button_minimize.gif TITLE=\"Minimize section\"></A>
 ";
 	    }
 
-	    $InsertSectionButton = "    <$Action:insert_section
+	    $InsertSectionButton = "    <$Action=insert_section
 ><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert section\"></A>
 " 	    if $Editor{SELECT} =~ /^\d+$/;
 
-	    $CopySectionButton = "      <$Action:copy_section
+	    $CopySectionButton = "      <$Action=copy_section
 ><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy section\"></A>
 ";
-	    $RemoveSectionButton = "      <$Action:remove_section
+	    $RemoveSectionButton = "      <$Action=remove_section
 ><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Remove section\"></A>
 ";
 
@@ -807,8 +854,8 @@ $InsertSessionButton$CopySessionButton$RemoveSessionButton
       <TD ALIGN=CENTER>
 $MinMaxSectionButton
       </TD>
-      <TD WIDTH=380><$Action:select_section>
-Section: $SectionName
+      <TD WIDTH=380><$Action=select_section>
+$SectionTag/$SectionName
       </A></TD>
       <TD ALIGN=RIGHT>
 $InsertSectionButton$CopySectionButton$RemoveSectionButton
@@ -819,12 +866,12 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 	    
 ###################### ITEM LOOP ############################################
 
-	    my $Action = "A TARGET=_parent HREF=$IndexHtmlFile?submit=".
-		"id:$iSession,$iSection,0;action";
+	    my $Action = "A TARGET=_parent HREF=$IndexHtmlFile?".
+		"id=$iSession,$iSection,0\&action";
 
 	    if($SectionName eq $Clipboard{SECTION} and 
 	       $Clipboard{TYPE} =~ /COMMAND|COMMENT|USERINPUT/ ){
-		$InsertItemButton = "    <$Action:insert_item
+		$InsertItemButton = "    <$Action=insert_item
 ><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert item\"></A>
 ";
 	    }else{
@@ -843,8 +890,8 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 
 		my $TableColor = $TableColor{$ItemType};
 
-		$Action =~ s/\d+;action$/$iItem;action/;
-		$InsertItemButton =~ s/\d+;action:/$iItem;action:/;
+		$Action =~ s/\d+\&action$/$iItem\&action/;
+		$InsertItemButton =~ s/\d+\&action=/$iItem\&action=/;
 
 		if($ItemType eq "userinput"){
 		    # Fix the content of the user input
@@ -860,12 +907,13 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 		if($ItemView eq "EDIT"){
 		    $nLine += 2;
 		    if($ItemType eq "comment"){
+			warn "ItemHead=$ItemHead ItemTail=$ItemTail\n";
 			$ItemTail = $ItemHead.$ItemTail;
 			$ItemHead = "";
 			$nLine++;
 		    }
 		    $Param .= "
-  <FORM TARGET=_parent>
+  <FORM NAME=item_editor ACTION=$IndexHtmlFile TARGET=_parent>
   <TABLE BORDER=0 WIDTH=100% BGCOLOR=\#BBEEFF>
     <TR>
       <TD WIDTH=20>
@@ -874,20 +922,18 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 $ItemHead
       </FONT></TD>
       <TD ALIGN=RIGHT>
-        <$Action:save_item_edit
-><IMG SRC=$ImageDir/button_save.gif TITLE=\"Save item\"></A>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-        <$Action:cancel_item_edit
-><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Cancel\"></A>
+<INPUT TYPE=SUBMIT name=action value=\"Save $ItemType\">
+<INPUT TYPE=SUBMIT name=action value=CANCEL>
+<INPUT TYPE=HIDDEN name=id value=$iSession,$iSection,$iItem>
       </TD>
     </TR>
     <TR>
       <TD>
       </TD>
        <TD COLSPAN=2>
-          <TEXTAREA COLS=60 ROWS=$nLine>
+<TEXTAREA NAME=text COLS=60 ROWS=$nLine>
 $ItemTail
-          </TEXTAREA>
+</TEXTAREA>
        </TD>
     </TR>
   </TABLE>
@@ -899,11 +945,11 @@ $ItemTail
 		# Create buttons
 		if($ItemTail){
 		    if($ItemView eq "MIN"){
-			$MinMaxItemButton = "      <$Action:maximize_item
+			$MinMaxItemButton = "      <$Action=maximize_item
 ><IMG SRC=$ImageDir/button_maximize.gif TITLE=\"Maximize $ItemType\"></A>
 ";
 		    }else{
-			$MinMaxItemButton = "      <$Action:minimize_item
+			$MinMaxItemButton = "      <$Action=minimize_item
 ><IMG SRC=$ImageDir/button_minimize.gif TITLE=\"Minimize $ItemType\"></A>
 ";
 		    }
@@ -911,10 +957,10 @@ $ItemTail
 		    $MinMaxItemButton = "";
 		}
 
-		$CopyItemButton = "      <$Action:copy_item
+		$CopyItemButton = "      <$Action=copy_item
 ><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy $ItemType\"></A>
 ";
-		$RemoveItemButton = "      <$Action:remove_item
+		$RemoveItemButton = "      <$Action=remove_item
 ><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Remove $ItemType\"></A>
 ";
 
@@ -927,7 +973,7 @@ $ItemTail
       <TD WIDTH=20 ALIGN=RIGHT>
 $MinMaxItemButton
       </TD>
-      <TD WIDTH=380><$Action:edit_item>
+      <TD WIDTH=380><$Action=edit_item>
 $ItemHead
       </A></TD>
       <TD ALIGN=RIGHT ALIGN=TOP>
@@ -949,7 +995,7 @@ $InsertItemButton$CopyItemButton$RemoveItemButton
     <TR>
       <TD WIDTH=20>
       </TD>
-      <TD WIDTH=380 COLSPAN=2><$Action:edit_item>
+      <TD WIDTH=380 COLSPAN=2><$Action=edit_item>
 <PRE>$ItemTail</PRE>
       </A></TD>
     </TR>
@@ -961,7 +1007,7 @@ $InsertItemButton$CopyItemButton$RemoveItemButton
       <TD WIDTH=20 ALIGN=RIGHT>
 $MinMaxItemButton
       </TD>
-      <TD WIDTH=380><$Action:edit_item>
+      <TD WIDTH=380><$Action=edit_item>
 \#USERINPUT
       </A></TD>
       <TD ALIGN=RIGHT>
@@ -1011,7 +1057,7 @@ $Comment
 	    ###### End section #########
 
 	    $iItem=$nItem+1; $iItem=1 if $iItem==0;
-	    $InsertItemButton =~ s/id:[\d,]+/id:$iSession,$iSection,$iItem/;
+	    $InsertItemButton =~ s/id=[\d,]+/id=$iSession,$iSection,$iItem/;
 	    $MinMaxSectionButton =~ s/minimize\.gif/minimize_up.gif/;
 
 	    $Param .=
@@ -1020,8 +1066,8 @@ $Comment
       <TD WIDTH=20 ALIGN=CENTER>
 $MinMaxSectionButton
       </TD>
-      <TD WIDTH=380><$Action:select_section>
-Section: $SectionName
+      <TD WIDTH=380><$Action=select_section>
+$SectionTag/$SectionName
       </A></TD>
       <TD ALIGN=RIGHT>
 $InsertItemButton$CopySectionButton$RemoveSectionButton
@@ -1033,7 +1079,7 @@ $InsertItemButton$CopySectionButton$RemoveSectionButton
 
 	###### End session #########
 
-	$InsertSectionButton =~ s/id:[\d,]+/id:$iSession,$iSection/;
+	$InsertSectionButton =~ s/id=[\d,]+/id=$iSession,$iSection/;
 	$MinMaxSessionButton =~ s/minimize\.gif/minimize_up.gif/;
 	$Param .=
 "  <TABLE BORDER=0 WIDTH=100% BGCOLOR=\#CCCCCC>
@@ -1048,8 +1094,8 @@ $InsertItemButton$CopySectionButton$RemoveSectionButton
       <TD WIDTH=20 ALIGN=LEFT>
 $MinMaxSessionButton
       </TD>
-      <TD WIDTH=380><$Action:select_session>
-Session $iSession$SessionGivenName
+      <TD WIDTH=380><$Action=select_session>
+$SessionTagBot
       </A></TD>
       <TD ALIGN=RIGHT>
 $InsertSectionButton$CopySessionButton$RemoveSessionButton
@@ -1060,7 +1106,7 @@ $InsertSectionButton$CopySessionButton$RemoveSessionButton
     } # session loop
 
     $iSession=$nSession+1;
-    $InsertSessionButton =~ s/id:[\d,]+/id:$iSession/;
+    $InsertSessionButton =~ s/id=[\d,]+/id=$iSession/;
 
     $Param .= 
 "<hr COLOR=BLACK>\n
