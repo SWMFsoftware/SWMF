@@ -14,11 +14,12 @@ my $Submit    = $submit; undef $submit;
 
 use strict;
 
-# Read optional argument
-my $XmlFile   = ($ARGV[0] or 'run/PARAM.in.xml');
-
 # Print help message and exit if -h switch was used
 &print_help if $Help;
+
+# Read optional argument
+my $XmlFile   = ($ARGV[0] or 'run/PARAM.in.xml');
+my $TextFile  = "$XmlFile.txt"; $TextFile =~ s/\.xml//;
 
 # Error string
 my $ERROR = 'ParamXmlToHtml_ERROR';
@@ -168,13 +169,14 @@ sub modify_xml_data{
 
     my %Form;
     %Form = split (/[:;]/, $Submit);
-    warn "Submit=$Submit\n";
-    warn join(', ',%Form),"\n";
+    #warn "Submit=$Submit\n";
+    #warn join(', ',%Form),"\n";
 
     if($_ = $Form{submit}){
-	warn "submit=$_\n";
 	if( /^CHECK\b/ ){
-	    my $Error = `./TestParam.pl`;
+	    `share/Scripts/ParamXmlToText.pl $XmlFile`;
+	    my $TestScript = ($Framework ? "Scripts" : ".")."/TestParam.pl";
+	    my $Error = `$TestScript $TextFile`;
 	    warn $Error if $Error; # to be written
 	}elsif( /^SAVE$/ ){
 	    warn "share/Scripts/ParamXmlToText.pl $XmlFile\n";
@@ -189,7 +191,6 @@ sub modify_xml_data{
 	}elsif( /^ABC_OFF$/ ){
 	    $Editor{ABC}=0;
 	}elsif( /^SAVE SESSION NAME$/ ){
-	    warn "Hello!!!\n";
 	    my $iSession = $Form{id};
 	    $SessionRef[$iSession]{VIEW}="MAX";
 	    $SessionRef[$iSession]{NAME}=$Form{name};
@@ -285,20 +286,30 @@ sub modify_xml_data{
 	    }
 	}elsif( /insert_session/ ){
 	    my $NewSessionRef;
-	    $NewSessionRef->{VIEW} = "MAX";
-	    $NewSessionRef->{NAME} = "Session $iSession";
-	    $NewSessionRef->{SECTION}[1]{ITEM}[1]{HEAD} = $Clipboard{BODY};
+	    $NewSessionRef->{VIEW} = "EDIT";
+	    $NewSessionRef->{NAME} = "";
+	    $NewSessionRef->{SECTION}[1]{VIEW}="MAX";
+	    if($Editor{INSERT} eq "PASTE SESSION"){
+		$NewSessionRef->{SECTION}[1]{ITEM}[1]{HEAD} = $Clipboard{BODY};
+	    }elsif($Editor{INSERT} eq "NEW SESSION"){
+		$NewSessionRef->{SECTION}[1]{ITEM}[1]{HEAD} = "New session\n";
+	    }
 	    $NewSessionRef->{SECTION}[1]{ITEM}[1]{TYPE} = "COMMENT";
-	    $Editor{SELECT} = "all";
+	    $NewSessionRef->{SECTION}[1]{ITEM}[1]{VIEW} = "MAX";
 	    splice (@SessionRef, $iSession, 0, $NewSessionRef);
 	    $nSession++;
 	}elsif( /insert_section/ ){
 	    my $NewSectionRef;
 	    $NewSectionRef->{VIEW} = "MAX";
-	    $NewSectionRef->{NAME} = $Clipboard{SECTION};
-	    $NewSectionRef->{ITEM}[1]{HEAD} = $Clipboard{BODY};
-	    $NewSectionRef->{ITEM}[1]{TYPE} = "COMMENT";
-
+	    if($Editor{INSERT} eq "PASTE SECTION"){
+		$NewSectionRef->{NAME} = $Clipboard{SECTION};
+		$NewSectionRef->{ITEM}[1]{HEAD} = $Clipboard{BODY};
+	    }elsif($Editor{INSERT} =~ /Section (\w+)/){
+		$NewSectionRef->{NAME} = $1;
+		$NewSectionRef->{ITEM}[1]{VIEW} = "MAX";
+		$NewSectionRef->{ITEM}[1]{TYPE} = "COMMENT";
+		$NewSectionRef->{ITEM}[1]{HEAD} = "New $1 section\n";
+	    }
 	    splice (@{$SessionRef->{SECTION}}, $iSection, 0, $NewSectionRef);
 	}elsif( /insert_item/ ){
 	    my $NewItemRef;
@@ -705,6 +716,11 @@ $Manual
 
 sub write_param_html{
 
+    my $SelectedSectionName;
+    if($Editor{SELECT} =~ /^(\d+),(\d+)/){
+	$SelectedSectionName = ($SessionRef[$1]{SECTION}[$2]{NAME} or "CON");
+    }
+
     my $Param = "  <head>
   <style type=\"text/css\">
   a {text-decoration: none;}
@@ -740,7 +756,6 @@ sub write_param_html{
 
 	my $SessionTagTop;
 	my $SessionTagBot;
-	my $SectionTag = ($SessionName ? $SessionName : "Session $iSession");
 
 	if($SessionView eq "EDIT"){
 	    $SessionTagTop = "
@@ -749,10 +764,11 @@ Session $iSession:
 <INPUT NAME=name TYPE=TEXT SIZE=30 VALUE=\"$SessionName\">
 <INPUT NAME=id TYPE=HIDDEN VALUE=$iSession>
 <INPUT TYPE=SUBMIT NAME=submit VALUE=\"SAVE SESSION NAME\"></FORM>";
+	    $SessionTagBot = "Session $iSession";
 	}else{
 	    if($SessionName){
 		$SessionTagTop = 
-		    "<$Action=select_session>Session $iSession</A>:".
+		    "<$Action=select_session>Session $iSession</A>:\&nbsp;".
 		    "<$Action=edit_session>$SessionName</A>";
 	    }else{
 		$SessionTagTop = "<$Action=edit_session>Session $iSession</A>";
@@ -835,8 +851,6 @@ $InsertSessionButton$CopySessionButton$RemoveSessionButton
 ><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Remove section\"></A>
 ";
 
-	    my $InsertItemButton;
-
 	    # Place anchor to selected section
 	    $Param .= "<A NAME=SELECTED>anchor</A>\n" 
 		if $Editor{SELECT} eq "$iSession,$iSection";
@@ -855,7 +869,7 @@ $InsertSessionButton$CopySessionButton$RemoveSessionButton
 $MinMaxSectionButton
       </TD>
       <TD WIDTH=380><$Action=select_section>
-$SectionTag/$SectionName
+Section $SectionName
       </A></TD>
       <TD ALIGN=RIGHT>
 $InsertSectionButton$CopySectionButton$RemoveSectionButton
@@ -869,8 +883,9 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 	    my $Action = "A TARGET=_parent HREF=$IndexHtmlFile?".
 		"id=$iSession,$iSection,0\&action";
 
-	    if($SectionName eq $Clipboard{SECTION} and 
-	       $Clipboard{TYPE} =~ /COMMAND|COMMENT|USERINPUT/ ){
+	    if($SelectedSectionName eq $SectionName){
+#	    if($SectionName eq $Clipboard{SECTION} and 
+#	       $Clipboard{TYPE} =~ /COMMAND|COMMENT|USERINPUT/ ){
 		$InsertItemButton = "    <$Action=insert_item
 ><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert item\"></A>
 ";
@@ -907,11 +922,13 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 		if($ItemView eq "EDIT"){
 		    $nLine += 2;
 		    if($ItemType eq "comment"){
-			warn "ItemHead=$ItemHead ItemTail=$ItemTail\n";
 			$ItemTail = $ItemHead.$ItemTail;
 			$ItemHead = "";
-			$nLine++;
+		    }elsif($ItemTail =~ /CommandExample/){
+			($ItemHead,$ItemTail) = split(/\n/,$CommandExample,2);
 		    }
+		    $nLine = ($ItemTail =~ s/\n/\n/g) + 2;
+
 		    $Param .= "
   <FORM NAME=item_editor ACTION=$IndexHtmlFile TARGET=_parent>
   <TABLE BORDER=0 WIDTH=100% BGCOLOR=\#BBEEFF>
@@ -1067,7 +1084,7 @@ $Comment
 $MinMaxSectionButton
       </TD>
       <TD WIDTH=380><$Action=select_section>
-$SectionTag/$SectionName
+Section $SectionName
       </A></TD>
       <TD ALIGN=RIGHT>
 $InsertItemButton$CopySectionButton$RemoveSectionButton
@@ -1079,6 +1096,7 @@ $InsertItemButton$CopySectionButton$RemoveSectionButton
 
 	###### End session #########
 
+	$iSection = $nSection+1;
 	$InsertSectionButton =~ s/id=[\d,]+/id=$iSession,$iSection/;
 	$MinMaxSessionButton =~ s/minimize\.gif/minimize_up.gif/;
 	$Param .=
