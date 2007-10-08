@@ -1256,20 +1256,32 @@ C     C
       State_GV(-1:0,uO_)=0.
       State_GV(-1:0,uh_)=0
       State_GV(-1:0,uhe_)=0.
+      
+      CALL MODATM(ALTMIN-DrBnd,XNO2,XNN2,XNO,XNH,XNHE,TEMP)
+      State_GV(-1,To_) =TEMP
+      State_GV(-1,Th_) =TEMP
+      State_GV(-1,The_)=TEMP
+      State_GV(-1,Te_) =TEMP
+      TMP1=1.-1.290E-3*TEMP+6.233E-7*TEMP**2
+      TMP2=1.-9.149E-4*TEMP+4.228E-7*TEMP**2-6.790E-11*TEMP**3+
+     $     4.225E-15*TEMP**4
+      State_GV(-1,RhoO_) =IonRateO_C(1)*Mass_I(Ion1_)*XNO/(1.53E-12*XNN2*TMP1+2.82E-11*XNO2*TMP2)
+      State_GV(-1,RhoHe_)=PHIHE*Mass_I(Ion3_)*XNHE/(1.10E-9*XNO2+1.60E-9*XNN2)
+      State_GV(-1,RhoH_) =1.136*(XNH/XNO)*(Mass_I(Ion2_)/Mass_I(Ion1_))*State_GV(-1,RhoO_)
 
       CALL MODATM(ALTMIN,XNO2,XNN2,XNO,XNH,XNHE,TEMP)
-      State_GV(-1:0,To_) =TEMP
-      State_GV(-1:0,Th_) =TEMP
-      State_GV(-1:0,The_)=TEMP
-      State_GV(-1:0,Te_) =TEMP
+      State_GV(0,To_) =TEMP
+      State_GV(0,Th_) =TEMP
+      State_GV(0,The_)=TEMP
+      State_GV(0,Te_) =TEMP
 
       TMP1=1.-1.290E-3*TEMP+6.233E-7*TEMP**2
       TMP2=1.-9.149E-4*TEMP+4.228E-7*TEMP**2-6.790E-11*TEMP**3+
      $     4.225E-15*TEMP**4
 C     State_GV(0,RhoO_)=PHIOX*Mass_I(Ion1_)*XNO/(1.53E-12*XNN2*TMP1+2.82E-11*XNO2*TMP2)
-      State_GV(-1:0,RhoO_) =IonRateO_C(1)*Mass_I(Ion1_)*XNO/(1.53E-12*XNN2*TMP1+2.82E-11*XNO2*TMP2)
-      State_GV(-1:0,RhoHe_)=PHIHE*Mass_I(Ion3_)*XNHE/(1.10E-9*XNO2+1.60E-9*XNN2)
-      State_GV(-1:0,RhoH_) =1.136*(XNH/XNO)*(Mass_I(Ion2_)/Mass_I(Ion1_))*State_GV(-1:0,RhoO_)
+      State_GV(0,RhoO_) =IonRateO_C(1)*Mass_I(Ion1_)*XNO/(1.53E-12*XNN2*TMP1+2.82E-11*XNO2*TMP2)
+      State_GV(0,RhoHe_)=PHIHE*Mass_I(Ion3_)*XNHE/(1.10E-9*XNO2+1.60E-9*XNN2)
+      State_GV(0,RhoH_) =1.136*(XNH/XNO)*(Mass_I(Ion2_)/Mass_I(Ion1_))*State_GV(-0,RhoO_)
 
       State_GV(-1:0,RhoE_) =0.0 
       do iIon=1,nIon-1
