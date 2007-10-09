@@ -11,7 +11,7 @@ module ModPwImplicit
 
     use ModCommonVariables, ONLY: iRho_I,iU_I,iP_I,iT_I,Source_CV,RGAS_I, &
          MassElecIon_I,nIon,RhoE_,uE_,Te_,pE_,Curr,CURRMX,HeatCon_GI
-    use ModPWOM, ONLY: beta
+    use ModPWOM, ONLY: Beta, BetaIn
 
     implicit none
     integer, intent(in) :: nOrder, nCell, nVar
@@ -71,9 +71,9 @@ module ModPwImplicit
     call PW_calc_efield(nCell,StateFull_GV)         
 
     if(nOrder == 1)then
-       beta = 0.0
+       Beta = 0.0
     else
-       beta = 1.5
+       Beta = BetaIn
     end if
     
     do iIon=1,nIon-1
@@ -141,8 +141,7 @@ module ModPwImplicit
        !     State_GV(nCell,iP(iIon))*0.99999!*exp(-DrBnd/ScaleHeight_I(iIon))
 
        State_GV(nCell+1,iP(iIon)) = &
-            State_GV(nCell  ,iP(iIon))*exp(-DrBnd/ScaleHeight_I(iIon))
-       
+            State_GV(nCell  ,iP(iIon))*exp(-DrBnd/ScaleHeight_I(iIon))*.99
        State_GV(nCell+2,iP(iIon)) = &
             2.0*State_GV(nCell+1  ,iP(iIon))-State_GV(nCell,iP(iIon))
 
@@ -204,12 +203,13 @@ module ModPwImplicit
     integer :: k,iIon, nVarReduced
     !--------------------------------------------------------------------------
     DtImpl = Dt
-    !DtExpl = 0.01*(DrBnd/2.0e6)
-    ! DtExpl = dx^2/2/max(kappa) 
+    DtExpl = 1.0e-1*(DrBnd/2.0e6)
+    !DtExpl = dx^2/2/max(kappa) 
     
-    DtExpl = &
-         0.5*DrBnd**2.0 &
-         *minval(State_GV(1:nCell,iRho_I(nIon))/HeatCon_GI(1:nCell,nIon)) * 0.01
+   
+!    DtExpl = &
+!         0.5*DrBnd**2.0 &
+!         *minval(State_GV(1:nCell,iRho_I(nIon))/HeatCon_GI(1:nCell,nIon))
 
     !write(*,*)'DtImpl, DtExpl=',DtImpl, DtExpl
 
@@ -271,38 +271,7 @@ module ModPwImplicit
 
     deallocate(ReducedState_GV,StateOrig_GV,StateFull_GV)
   end subroutine PW_implicit_update
-!  !============================================================================
-!
-!  integer function iRho(iIon)
-!    integer, intent(in) :: iIon
-!    
-!    !--------------------------------------------------------------------------
-!    
-!    iRho = 3*(iIon-1) + 1
-!    return
-!  end function iRho
-!  
-!  !============================================================================
-!
-!  integer function iU(iIon)
-!    integer, intent(in) :: iIon
-!    
-!    !--------------------------------------------------------------------------
-!    
-!    iU = 3*(iIon-1) + 2
-!    return
-!  end function iU
-!  
-!  !============================================================================
-!
-!  integer function iP(iIon)
-!    integer, intent(in) :: iIon
-!    
-!    !--------------------------------------------------------------------------
-!    
-!    iP = 3*(iIon-1) + 3
-!    return
-!  end function iP
+
 
 
 end module ModPwImplicit
