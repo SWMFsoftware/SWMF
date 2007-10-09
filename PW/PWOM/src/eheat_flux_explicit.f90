@@ -5,7 +5,7 @@ subroutine PW_eheat_flux_explicit(nCell,&
      HeatCon_G,NewT_G)
 
   use ModCommonVariables,ONLY: Ar12,Ar23,CellVolume_C,Gmin1,DrBnd,Gamma
-  use ModPWOM, ONLY: IsFullyImplicit 
+  
   implicit none
 
   integer, intent(in)      :: nCell
@@ -25,7 +25,7 @@ subroutine PW_eheat_flux_explicit(nCell,&
   real :: Coeff
   !---------------------------------------------------------------------------
   if (.not.allocated(T_G)) then
-     allocate(T_G(-1:nCell+2),Conduction_G(-1:nCell+1),Conduction_F(0:nCell),     &
+     allocate(T_G(-1:nCell+2),Conduction_G(-1:nCell+1),Conduction_F(0:nCell), &
               GradT_F(0:nCell+1),Diffusion_C(nCell),      &
               DivU_C(1:nCell),DivUT_C(1:nCell), &
               LeftU_F(1:nCell+1),RightU_F(1:nCell+1),&
@@ -102,7 +102,7 @@ subroutine PW_eheat_flux_explicit(nCell,&
 !       -DivUT_C(nCell)                        &
 !       -T_G(nCell)*RhoSource_C(nCell)/OldState_GV(nCell,Rho_)           &
 !       -T_G(nCell)*(Gamma-2.0)*DivU_C(nCell) )
-!
+!!
 !  write(*,*) 'Gmin1/Rgas/OldState_GV(nCell,Rho_)*Diffusion_C(nCell) :',&
 !       Gmin1/Rgas/OldState_GV(nCell,Rho_)*Diffusion_C(nCell)
 !  write(*,*) 'Gmin1/Rgas/OldState_GV(nCell,Rho_)*eSource_C(nCell)    :',&
