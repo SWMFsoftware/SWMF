@@ -74,6 +74,9 @@ subroutine PW_set_parameters(NameAction)
            call read_var('IsPointImplicit'   ,IsPointImplicit)
            call read_var('IsPointImplicitAll',IsPointImplicitAll)
         end if
+     case('#LIMITER')
+        call read_var('LimiterBeta',BetaIn)
+        Beta = BetaIn
      case('#RESTART')
         call read_var('IsRestart',IsRestart)
      case('#MOTION')
