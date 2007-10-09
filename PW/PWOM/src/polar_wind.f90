@@ -72,14 +72,14 @@ subroutine polar_wind
      If (IsFullyImplicit) then
         call PW_implicit_update
 
-        CALL PW_set_upper_bc
+!!!        CALL PW_set_upper_bc
         
 !        CALL PW_iheat_flux
         
 !        CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
 !        CALL PW_eheat_flux
-        CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
-        CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
+!!!        CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
+!!!        CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
         
      else
         !       advect and add collisional and chemistry sources
@@ -121,15 +121,15 @@ subroutine polar_wind
  
      If (IsFullyImplicit) then
  !       CALL PW_iheat_flux
-        CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
-        call PW_set_upper_bc
+!!!        CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
+!!!        call PW_set_upper_bc
 !        CALL PW_eheat_flux
         
         call PW_implicit_update
         
-        call PW_set_upper_bc
-        CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
-        CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
+!!!        call PW_set_upper_bc
+!!!        CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
+!!!        CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
      else
         CALL PW_iheat_flux
         !BEGIN KLUGE
@@ -191,9 +191,9 @@ contains
          do iIon=1,nIon-1
             call rusanov_solver(iIon,nDim,RGAS_I(iIon),dt,   &
                  State_GV(-1:nDim+2,iRho_I(iIon):iP_I(iIon)),&
-                 Source_CV(:,iRho_I(iIon)), Source_CV(:,iU_I(iIon)),&
-                 Source_CV(:,iP_I(iIon)),  &
-                 HeatCon_GI(0:nCell+1,iIon), &
+                 Source_CV(1:nDim,iRho_I(iIon)), Source_CV(1:nDim,iU_I(iIon)),&
+                 Source_CV(1:nDim,iP_I(iIon)),  &
+                 HeatCon_GI(0:nDim+1,iIon), &
                  NewState_GV(-1:nDim+2,iRho_I(iIon):iP_I(iIon)))
             !get T from p and rho
             NewState_GV(1:nDim,iT_I(iIon))=&
@@ -208,7 +208,7 @@ contains
               State_GV(-1:nDim+2,iRho_I(nIon):iP_I(nIon)),&
               Source_CV(:,iRho_I(nIon)), Source_CV(:,iU_I(nIon)),&
               Source_CV(:,iP_I(nIon)),  &
-              HeatCon_GI(0:nCell+1,nIon), &
+              HeatCon_GI(0:nDim+1,nIon), &
               NewState_GV(-1:nDim+2,iT_I(nIon)))
          ! Set electron density and velocity
          NewState_GV(1:nDim,RhoE_)=0.0
