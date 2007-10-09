@@ -92,8 +92,9 @@ module ModPWOM
        IsVariableDt       = .true.
 
   character(7) :: TypeSolver='Godunov'
-  
-  real ::  Beta = 1.0              ! 1 <= Beta <= 2
+
+  real ::  BetaIn = 1.0  ! limiter beta: 1 <= Beta <= 2, 0 for first order
+  real ::  Beta = 1.0    ! actual beta used (changes in implicit scheme) 
 
 contains
   !==========================================================================
