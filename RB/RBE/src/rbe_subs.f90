@@ -2339,11 +2339,14 @@ subroutine driftlp(t,dt1,f2,k,m,vl,vp,cl,cp,ro,rb,fb,dlati,dphi,ib0,iba,n)
            else
               write(*,'(a,4i4)') 'f2 < 0 in driftlp, i,j,k,m ',i,j,k,m
               write(*,'(a,f12.0,1p,2e15.4)') 't,f2,f ',t,f2(i,j,k,m),f(i,j)
+              write(*,'(a,5es15.4)') 'f(i-2:i+2) ',f(i-2:i+2,j)
+              write(*,'(a,5es15.4)') 'f(j-2:j+2) ',f(i,j-2:j+2)
               write(*,'(a,2i6,1p,e15.4)')'iba(j),iba(j_1),fb(j,k,m) ',&
                    iba(j),iba(j_1),fb(j,k,m)
               write(*,*) 'dt1,dlati(i) ',dt1,dlati(i)
               write(*,'(a,1p,4e12.3)') 'vl(i-1),fal(i-1),vl(i),fal(i) ',&
                    vl(i-1,j,k,m),fal(i-1,j),vl(i,j,k,m),fal(i,j)
+              write(*,'(a,1p,4e12.3)') 'cl(i-1),cl(i) ',cl(i-1,j),cl(i,j)
               write(*,'(a,1p,4e12.3)') 'cp(j_1),fap(j_1),cp(j),fap(j) ',&
                    cp(i,j_1),fap(i,j_1),cp(i,j),fap(i,j)
               call CON_stop('RBE ERROR')
