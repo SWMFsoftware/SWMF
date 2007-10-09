@@ -27,7 +27,8 @@ subroutine rusanov_solver(iIon, nCell,&
   real, allocatable    :: RightRho_F(:), RightU_F(:), RightP_F(:)
   real, allocatable    :: RhoFlux_F(:), RhoUFlux_F(:), eFlux_F(:)
   real, allocatable    :: T_G(:),Heat1_G(:),HeatSource_C(:),eTotalSource_C(:),&
-                          Heat1_F(:)
+                          Heat1_F(:),GradT_F(:),Diffusion_C(:),&
+                          Conduction_F(:)
   integer :: i,iCell
   !---------------------------------------------------------------------------
 
@@ -37,7 +38,8 @@ subroutine rusanov_solver(iIon, nCell,&
           RightRho_F(nCell+1), RightU_F(nCell+1), RightP_F(nCell+1),&
           RhoFlux_F(nCell+1), RhoUFlux_F(nCell+1), eFlux_F(nCell+1),&
           T_G(-1:nCell+2),Heat1_G(-1:nCell+1),Heat1_F(0:nCell),     &
-          HeatSource_C(nCell),eTotalSource_C(nCell))
+          HeatSource_C(nCell),eTotalSource_C(nCell),GradT_F(0:nCell),&
+          Diffusion_C(nCell),Conduction_F(0:nCell))
   endif
   eTotalSource_C = eSource_C
 
@@ -46,21 +48,24 @@ subroutine rusanov_solver(iIon, nCell,&
   T_G(-1:nCell+2)=OldState_GV(-1:nCell+2,3)/Rgas/OldState_GV(-1:nCell+2,1)
   
   if (IsFullyImplicit)then
-     do iCell = 0,nCell+1
-        Heat1_G(iCell) = &
-             HeatCon_G(iCell) * (T_G(iCell+1)-T_G(iCell-1)) / (2.0*DrBnd)
-     enddo
-     !get facevalues
+     ! Get Temperature Gradient
      do iCell = 0,nCell
-        Heat1_F(iCell) = (Heat1_G(iCell+1)+Heat1_G(iCell))/2.0
+        GradT_F(iCell)=(T_G(iCell+1)-T_G(iCell)) / DrBnd
      enddo
+     ! Get facevalues of Kappa*Grad(T)
+     do iCell = 0,nCell
+        Conduction_F(iCell) = (HeatCon_G(iCell+1)+HeatCon_G(iCell)) / 2.0 &
+             * GradT_F(iCell)
+     enddo
+     ! Get heat diffusion term
      do iCell = 1,nCell
-        HeatSource_C(iCell) = &
-             (Ar23(iCell)*Heat1_F(iCell) - Ar12(iCell)*Heat1_F(iCell-1)) &
+        Diffusion_C(iCell) = &
+           (Ar23(iCell)*Conduction_F(iCell)-Ar12(iCell)*Conduction_F(iCell-1))&
              / (CellVolume_C(iCell))
      enddo
      ! Add heat flux to energy source
-     eTotalSource_C = eSource_C+HeatSource_C
+
+     eTotalSource_C = eSource_C+Diffusion_C
   endif
   
   ! Save the old state
@@ -93,7 +98,7 @@ subroutine rusanov_solver(iIon, nCell,&
       deallocate(LeftRho_F, LeftU_F, LeftP_F,&
           RightRho_F, RightU_F, RightP_F,&
           RhoFlux_F, RhoUFlux_F, eFlux_F,T_G,Heat1_G,Heat1_F,HeatSource_C,&
-          eTotalSource_C)
+          eTotalSource_C,GradT_F,Diffusion_C,Conduction_F)
 
 end subroutine rusanov_solver
 
@@ -120,9 +125,13 @@ subroutine rusanov_flux( DtIn, nCell,&
   GammaOverGammaMinus1 = Gamma/(Gamma - 1.0)
 
   Coeff = 0.47*DRBND/DtIn
+
 !  Coeff = 0.5/dtr1
   
   do i=1,nCell+1
+     Coeff = .47* max( LeftU_F(i)+sqrt(Gamma*LeftP_F(i)/LeftRho_F(i)), &
+                       RightU_F(i)+sqrt(Gamma*RightP_F(i)/RightRho_F(i)) )
+
      RhoFlux_F(i)  = 0.5*(LeftRho_F(i) *LeftU_F(i) &
           +               RightRho_F(i)*RightU_F(i))  &
           - Coeff * (RightRho_F(i) - LeftRho_F(i))
