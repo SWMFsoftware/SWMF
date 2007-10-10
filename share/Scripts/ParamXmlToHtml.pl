@@ -723,7 +723,8 @@ sub write_param_html{
 
     my $Param = "  <head>
   <style type=\"text/css\">
-  a {text-decoration: none;}
+      a {text-decoration: none}
+      a img {border: none}
   </style>
   </head>
 
