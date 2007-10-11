@@ -87,6 +87,7 @@ PWOM_for_Darwin:
 		ar -x ${LIBDIR}/libINDICES.a; \
 		ar -x ${LIBDIR}/libSHARE.a
 	${LINK.f90} -o ${EXE} ${EXEOBJECTS} Tmp_/*.o ${LBLAS} ${Lflag1}
+	rm -rf Tmp_
 
 distclean: clean
 	rm -f PLANET *_planet.f get_rate.f90 \
