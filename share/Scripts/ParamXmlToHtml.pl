@@ -17,15 +17,6 @@ use strict;
 # Print help message and exit if -h switch was used
 &print_help if $Help;
 
-# Name of the XML enhanced parameter file
-my $XmlFile   = ($ARGV[0] or 'run/PARAM.in.xml');
-
-# Name of the temporary text parameter file
-my $TextFile  = "$XmlFile.txt"; $TextFile =~ s/\.xml//;
-
-# Name of the original text parameter file
-my $ParamFile = $XmlFile; $ParamFile =~ s/\.xml//;
-
 # Error string
 my $ERROR = 'ParamXmlToHtml_ERROR';
 
@@ -39,12 +30,13 @@ my $ConfigFile     = "$ENV{HOME}/ParamEditor.conf";
 my $ImageDir       = "share/Scripts";
 
 # Variables that can be modified in the included config file
-our $RedoFrames       =0;          # rewrite index.php (jump.html)
-our $DoSafariJumpFix  =0;          # work around the Safari bug
-our $FrameHeights     ='15%,85%';  # heights of top frame and lower frames
-our $FrameWidths      ='60%,40%';  # widths of the left and right frames
-our $TopBgColor       ='#DDDDDD';  # background color for the top frame
-our $TopFileNameFont  ='COLOR=RED';# font used for file name in top frame
+our $RedoFrames       =0;           # rewrite index.php (jump.html)
+our $DoSafariJumpFix  =0;           # work around the Safari bug
+our $FrameHeights     ='15%,85%';   # heights of top frame and lower frames
+our $FrameWidths      ='60%,40%';   # widths of the left and right frames
+our $TopBgColor       ='#DDDDDD';   # background color for the top frame
+our $TopFileNameFont  ='COLOR=RED'; # font used for file name in top frame
+our $FileNameEditorWidth = 40;      # width (chars) of filename input box
 our $TopTableWidth    ='100%'   ;  # width of stuff above the line in top frame
 our $TopLine          ='<HR>'   ;  # separator line in top frame
 
@@ -70,16 +62,6 @@ our $UserInputBgColor ='#CCCCCC';  # background color for user input commands
 # Allow user to modify defaults
 do $ConfigFile;
 
-# Open files
-open(XMLFILE, $XmlFile) 
-    or die "$ERROR: could not open input file $XmlFile\n";
-open(PARAM, ">$ParamHtmlFile") 
-    or die "$ERROR: could not open output file $ParamHtmlFile\n";
-open(EDITOR, ">$EditorHtmlFile") 
-    or die "$ERROR: could not open output file $EditorHtmlFile\n";
-open(MANUAL, ">$ManualHtmlFile") 
-    or die "$ERROR: could not open output file $ManualHtmlFile\n";
-
 # Global variables
 my $Framework = 0;                               # True in framework mode
 my $ValidComp = "SC,IH,SP,GM,IM,PW,RB,IE,UA,PS"; # List of components
@@ -93,11 +75,39 @@ my $CommandXml;    # XML description of the command
 my $CommandExample;# XML description of the command
 my $CommandText;   # Normal text description of the command
 
+my $CheckResult;   # Result from TestParam.pl script
+
 my %TableColor = ("command"   => $CommandBgColor,
 		  "comment"   => $CommentBgColor,
 		  "userinput" => $UserInputBgColor);
 
-&read_xml_file;
+
+# Set name of parameter file
+my $ParamFile = "run/PARAM.in"; 
+if($ARGV[0]){
+    $ParamFile = $ARGV[0];
+}elsif(open(FILE, $ParamHtmlFile)){
+    while($_ = <FILE>){
+	next unless /<TITLE>([^\<]+)/;
+	$ParamFile = $1;
+	last;
+    }
+    close(FILE);
+}
+my $XmlFile   = "$ParamFile.xml"; # Name of the XML enhanced parameter file
+my $TextFile  = "$ParamFile.txt"; # Name of the temporary text parameter file
+
+if($ParamFile){
+    `share/Scripts/ParamTextToXml.pl $ParamFile` unless $XmlFile;
+    &read_xml_file;
+}
+
+open(PARAM, ">$ParamHtmlFile") 
+    or die "$ERROR: could not open output file $ParamHtmlFile\n";
+open(EDITOR, ">$EditorHtmlFile") 
+    or die "$ERROR: could not open output file $EditorHtmlFile\n";
+open(MANUAL, ">$ManualHtmlFile") 
+    or die "$ERROR: could not open output file $ManualHtmlFile\n";
 
 &modify_xml_data if $Submit;
 
@@ -119,6 +129,13 @@ exit 0;
 
 sub read_xml_file{
 
+    open(XMLFILE, $XmlFile) 
+	or die "$ERROR: could not open input file $XmlFile\n";
+
+    $nSession   = 0;
+    @SessionRef = ();
+    %Editor     = ();
+    %Clipboard  = ();
     my $iSection;
     my $iItem;
 
@@ -211,15 +228,53 @@ sub modify_xml_data{
 	if( /^CHECK\b/ ){
 	    `share/Scripts/ParamXmlToText.pl $XmlFile`;
 	    my $TestScript = ($Framework ? "Scripts" : ".")."/TestParam.pl";
-	    my $Error = `$TestScript $TextFile`;
-	    warn $Error if $Error; # to be written
+	    $CheckResult = `$TestScript $TextFile 2>&1`;
+	    $CheckResult = "No errors found" unless $CheckResult;
 	}elsif( /^SAVE$/ ){
-	    warn "share/Scripts/ParamXmlToText.pl $XmlFile\n";
 	    `share/Scripts/ParamXmlToText.pl $XmlFile`;
+	    `cp $TextFile $ParamFile`;
 	}elsif( /^SAVE AS$/ ){
-	    # to be written
+	    $Form{FILENAME} =~ s/\.(xml|txt)$//;
+	    if(open(FILE,">$Form{FILENAME}")){
+		close(FILE);
+		$ParamFile = $Form{FILENAME};
+		rename($XmlFile, "$ParamFile.xml");
+		$XmlFile   = "$ParamFile.xml";
+		$TextFile  = "$ParamFile.txt";
+		`share/Scripts/ParamXmlToText.pl $XmlFile`;
+		`cp $TextFile $ParamFile`;
+	    }else{
+		$Editor{READFILENAME}="SAVE AS";
+		$Editor{NEWFILENAME}="Could not open $Form{FILENAME}"
+		    if $Form{FILENAME};
+	    }
+	}elsif( /^OPEN$/ ){
+	    $Form{FILENAME} =~ s/\.(xml|txt)$//;
+	    if(open(FILE,"$Form{FILENAME}")){
+		close(FILE);
+		# Make a safety save
+		`share/Scripts/ParamXmlToText.pl $XmlFile` if -f $XmlFile;
+		$ParamFile = $Form{FILENAME};
+		$XmlFile   = "$ParamFile.xml";
+                $TextFile  = "$ParamFile.txt";
+		`share/Scripts/ParamTextToXml.pl $ParamFile`;
+		&read_xml_file;
+		warn "command1=$SessionRef[1]{SECTION}[1]{ITEM}[1]{HEAD}\n";
+	    }else{
+		$Editor{READFILENAME}="OPEN";
+		$Editor{NEWFILENAME}="Could not open $Form{FILENAME}"
+		    if $Form{FILENAME};
+	    }
+	}elsif( /^CANCEL$/ ){
+	    # Do nothing
+	}elsif( /^SAVE AND EXIT$/ ){
+	    # save the file then kill the job
+	    `share/Scripts/ParamXmlToText.pl $XmlFile` if -f $XmlFile;
+	    `cp $TextFile $ParamFile`;
+	    kill(-9, getpgrp);
 	}elsif( /^EXIT$/ ){
-	    # kill the job
+	    # make a safety save then kill the job
+	    `share/Scripts/ParamXmlToText.pl $XmlFile`;
 	    kill(-9, getpgrp);
 	}elsif( /^ABC_ON$/ ){
 	    $Editor{ABC}=1;
@@ -581,13 +636,60 @@ sub write_jump_html{
 
 sub write_editor_html{
 
-    # Read the parameter definitions
-    # $CommandList = &read_tree($TreeFile) 
-
     my $DoDebug = ($Debug =~ /write_editor_html/);
 
     print "Starting write_editor_html\n" if $DoDebug;
 
+    my $EditButtons;
+
+    if(not -f $ParamFile){
+	print EDITOR "
+<BODY BGCOLOR=$TopBgColor>
+  <FORM NAME=editor ACTION=$IndexPhpFile TARGET=_parent>
+    <CENTER>
+        <FONT COLOR=RED>Please provide name of input parameter file:</RED><BR>
+        <INPUT TYPE=TEXT SIZE=$FileNameEditorWidth NAME=FILENAME>
+        <INPUT TYPE=SUBMIT NAME=submit VALUE=OPEN>&nbsp;&nbsp;&nbsp;&nbsp;
+        <INPUT TYPE=SUBMIT NAME=submit VALUE=EXIT>
+    </CENTER>
+  </FORM>
+</BODY>
+";
+	close(EDITOR);
+	exit 0;
+    }
+
+    if($Editor{READFILENAME}){
+	$EditButtons = 
+"      <TD COLSPAN=2 ALIGN=CENTER>
+        <FONT $TopFileNameFont>New parameter file name:</FONT>
+        <INPUT TYPE=TEXT SIZE=$FileNameEditorWidth
+	      NAME=FILENAME VALUE=\"$Editor{NEWFILENAME}\">
+        <INPUT TYPE=SUBMIT NAME=submit VALUE=\"$Editor{READFILENAME}\">
+        &nbsp
+        <INPUT TYPE=SUBMIT NAME=submit VALUE=CANCEL>
+      </TD>
+      <TD>
+        <INPUT TYPE=SUBMIT NAME=submit VALUE=EXIT>
+      </TD>
+";
+    }else{
+	$EditButtons = 
+"      <TD ALIGN=LEFT>
+<INPUT TYPE=SUBMIT NAME=submit VALUE=CHECK>
+<INPUT TYPE=SUBMIT NAME=submit VALUE=SAVE>
+<INPUT TYPE=SUBMIT NAME=submit VALUE=\"SAVE AS\">
+<INPUT TYPE=SUBMIT NAME=submit VALUE=OPEN>
+      </TD>
+      <TD ALIGN=CENTER>
+<FONT $TopFileNameFont>$ParamFile</FONT>
+      </TD>
+      <TD ALIGN=RIGHT>
+<INPUT TYPE=SUBMIT NAME=submit VALUE=\"SAVE AND EXIT\">&nbsp;&nbsp;&nbsp;
+<INPUT TYPE=SUBMIT NAME=submit VALUE=EXIT>
+      </TD>
+";
+    }
     my $SessionSection="    <OPTION VALUE=all>ALL SESSIONS\n";
 
     my $iSession;
@@ -711,21 +813,7 @@ $Files
   <FORM NAME=editor ACTION=$IndexPhpFile>
   <TABLE WIDTH=$TopTableWidth>
     <TR>
-      <TD ALIGN=LEFT>
-<INPUT TYPE=SUBMIT NAME=submit VALUE=CHECK>
-<INPUT TYPE=SUBMIT NAME=submit VALUE=SAVE>
-<INPUT TYPE=SUBMIT NAME=submit VALUE=\"SAVE AS\">
-<INPUT TYPE=SUBMIT NAME=submit VALUE=OPEN>
-      </TD>
-      <TD ALIGN=CENTER>
-         <FONT $TopFileNameFont>
-$ParamFile
-         </FONT>
-      </TD>
-      <TD ALIGN=RIGHT>
-<INPUT TYPE=SUBMIT NAME=submit VALUE=\"SAVE AND EXIT\">&nbsp;&nbsp;&nbsp;
-<INPUT TYPE=SUBMIT NAME=submit VALUE=EXIT>
-      </TD>
+$EditButtons
     </TR>
     <TR>
       <TD COLSPAN=3>
@@ -759,7 +847,28 @@ $InsertItem
 sub write_manual_html{
 
     my $Manual;
-    if($CommandExample){
+    if($CheckResult){
+	$Manual = "<H1>Checking for Errors</H1>\n".
+	    "<FONT COLOR=RED><PRE>$CheckResult</PRE></FONT>\n";
+	if($CheckResult !~ /no errors/i and open(FILE, $TextFile)){
+	    my @TextFile;
+	    @TextFile = <FILE>;
+	    close(FILE);
+	    my $iError = 1;
+	    while($CheckResult =~ 
+		  s[Error at line (\d+)(.*)\n((\t.*\n)+)]
+		  [<A HREF=\#ERROR$iError>ERROR at line $1$2</A>\n$3]){
+		my $iLine = $1;
+		my $Error = $3; $Error =~ s/\t//g; chop $Error;
+		$iLine-- while $iLine > 0 and $TextFile[$iLine] !~ /^\#/;
+		$TextFile[$iLine] = 
+		    "<A NAME=ERROR$iError><FONT COLOR=RED>$Error</FONT></A>".
+		    "\n$TextFile[$iLine]";
+		$iError++;
+	    }
+	    $Manual .= "<PRE>\n". join('', @TextFile) . "</PRE>\n";
+	}
+    }elsif($CommandExample){
 	$Manual =  $CommandText;
 	$Manual =~ s/\n\n/\n<p>\n/g;
 	$Manual =  "<H1>Manual</H1>\n<PRE>\n$CommandExample\n</PRE>\n$Manual";
@@ -769,7 +878,6 @@ sub write_manual_html{
     }elsif($Editor{INSERT} eq "FILE" and -f $Editor{FILE}){
 	$Manual = "<H1>$Editor{FILE}</H1>\n<PRE>$Clipboard{BODY}\n</PRE>";
     }
-    $Manual = $CommandText if 
 
     print MANUAL
 "<BODY BGCOLOR=$RightBgColor>
@@ -790,6 +898,7 @@ sub write_param_html{
 
     my $Param = 
 "  <HEAD>
+    <TITLE>$ParamFile</TITLE>
     <STYLE TYPE=\"text/css\">
       A {text-decoration: none;}
       A IMG {border: none;}
@@ -1228,6 +1337,14 @@ sub print_help{
      param.html, editor.html and manual.html used by the GUI
      parameter editor. The PARAM.XML files are also read for 
      the list and description of commands. 
+
+     Many parameters of the HTML page can be customized by creating a 
+     ParamEditor.conf file in the home directory. Type 
+
+grep '^our' share/Scripts/ParamXmlToHtml.pl
+
+     to see the variables that can be modified using the same syntax, 
+     but different values. Note the use of semicolons at the end of lines.
 
 Usage:
 
