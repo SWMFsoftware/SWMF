@@ -17,27 +17,60 @@ use strict;
 # Print help message and exit if -h switch was used
 &print_help if $Help;
 
-# Read optional argument
+# Name of the XML enhanced parameter file
 my $XmlFile   = ($ARGV[0] or 'run/PARAM.in.xml');
+
+# Name of the temporary text parameter file
 my $TextFile  = "$XmlFile.txt"; $TextFile =~ s/\.xml//;
+
+# Name of the original text parameter file
+my $ParamFile = $XmlFile; $ParamFile =~ s/\.xml//;
 
 # Error string
 my $ERROR = 'ParamXmlToHtml_ERROR';
 
-# Output files have fixed names
-my $IndexHtmlFile  = "index.php";
+# Fixed file names
+my $IndexPhpFile   = "index.php";
 my $ParamHtmlFile  = "param.html";
 my $EditorHtmlFile = "editor.html";
 my $ManualHtmlFile = "manual.html";
+my $JumpHtmlFile   = "jump.html";
+my $ConfigFile     = "$ENV{HOME}/ParamEditor.conf";
 my $ImageDir       = "share/Scripts";
 
-# Name of the original parameter file
-my $ParamFile = $XmlFile;
-$ParamFile =~ s/\.xml//;
+# Variables that can be modified in the included config file
+our $RedoFrames       =0;          # rewrite index.php (jump.html)
+our $DoSafariJumpFix  =0;          # work around the Safari bug
+our $FrameHeights     ='15%,85%';  # heights of top frame and lower frames
+our $FrameWidths      ='60%,40%';  # widths of the left and right frames
+our $TopBgColor       ='#DDDDDD';  # background color for the top frame
+our $TopFileNameFont  ='COLOR=RED';# font used for file name in top frame
+our $TopTableWidth    ='100%'   ;  # width of stuff above the line in top frame
+our $TopLine          ='<HR>'   ;  # separator line in top frame
 
-# Read Perl dump of XML description: no need for the XML reader and faster
-my $TreeFile  = 'PARAM.pl';
+our $RightBgColor     ='WHITE';    # background color for the right side frame
 
+our $LeftTableWidth   ='100%'   ;  # width of table in left frame
+our $LeftColumn1Width =  '30'   ;  # width of minimize/maximize button column
+our $LeftColumn2Width = '380'   ;  # width of column with commands/comments
+our $LeftBgColor      ='#DDDDDD';  # background color for the left side frame
+our $SessionBgColor   ='#CCCCCC';  # background color for session markers
+our $SessionLine ='<HR COLOR=BLACK NOSHADE SIZE=4>'; # session separator line
+our $SessionEditorSize=30;         # size (characters) for session name input
+our $SectionBgColor   ='#CCCCCC';  # background color for section markers
+our $SectionLine ='<HR COLOR=GREY NOSHADE SIZE=2>'; # section separator line
+our $SectionColumn1Width=8      ;  # The space before the section marker
+our $ItemEditorBgColor='#BBEEFF';  # background color command/comment editor
+our $ItemEditorWidth  =60;         # width (chars) for command/comment editor
+our $CommandBgColor   ='#CCCCCC';  # background color for commands
+our $ParameterBgColor ='#CCCCCC';  # background color for command parameters
+our $CommentBgColor   ='#DDDDDD';  # background color for comments
+our $UserInputBgColor ='#CCCCCC';  # background color for user input commands
+
+# Allow user to modify defaults
+do $ConfigFile;
+
+# Open files
 open(XMLFILE, $XmlFile) 
     or die "$ERROR: could not open input file $XmlFile\n";
 open(PARAM, ">$ParamHtmlFile") 
@@ -60,15 +93,17 @@ my $CommandXml;    # XML description of the command
 my $CommandExample;# XML description of the command
 my $CommandText;   # Normal text description of the command
 
-my %TableColor = ("command" => "\#CCCCCC",
-		  "comment" => "\#DDDDDD",
-		  "userinput"=>"\#CCCCCC");
+my %TableColor = ("command"   => $CommandBgColor,
+		  "comment"   => $CommentBgColor,
+		  "userinput" => $UserInputBgColor);
 
 &read_xml_file;
 
 &modify_xml_data if $Submit;
 
-&write_index_html unless -f $IndexHtmlFile;
+&write_index_php if $RedoFrames or not -f $IndexPhpFile;
+
+&write_jump_html if $DoSafariJumpFix and ($RedoFrames or not -f $JumpHtmlFile);
 
 &write_editor_html;
 
@@ -499,22 +534,45 @@ $CommandText" if $Debug =~ /read_command_info/;
 
 ##############################################################################
 
-sub write_index_html{
+sub write_index_php{
 
-    open(FILE, ">$IndexHtmlFile") 
-	or die "$ERROR: could not open $IndexHtmlFile\n";
+    open(FILE, ">$IndexPhpFile") 
+	or die "$ERROR: could not open $IndexPhpFile\n";
+
+    my $ParamLink = ($DoSafariJumpFix ? $JumpHtmlFile : "$ParamHtmlFile#HERE");
+
     print FILE
 "
 <?php Exec('share/Scripts/ParamXmlToHtml.pl') ?>
 <#@ \$form=join(';',%FORM);                             #>
 <#@ `share/Scripts/ParamXmlToHtml.pl -submit='\$form'`; #>
-<FRAMESET ROWS=15%,85%>
-  <FRAME SRC=\"./$EditorHtmlFile\" NAME=EDITOR FRAMEBORDER=1>
-  <FRAMESET COLS=60%,40%>
-    <FRAME SRC=\"./$ParamHtmlFile#SELECTED\"  NAME=PARAMFILE FRAMEBORDER=1>
-    <FRAME SRC=\"./$ManualHtmlFile\"  NAME=MANUAL FRAMEBORDER=1>
+<FRAMESET ROWS=$FrameHeights>
+  <FRAME SRC=\"./$EditorHtmlFile\" NAME=EDITOR FRAMEBORDER=1 SCROLLING=no 
+                                                                   NORESIZE>
+  <FRAMESET COLS=$FrameWidths>
+    <FRAME SRC=\"./$ParamLink\"  NAME=PARAMFILE FRAMEBORDER=1 NORESIZE>
+    <FRAME SRC=\"./$ManualHtmlFile\"  NAME=MANUAL FRAMEBORDER=1 NORESIZE>
   </FRAMESET>
 </FRAMESET>
+";
+    close(FILE);
+}
+
+##############################################################################
+
+sub write_jump_html{
+
+    open(FILE, ">$JumpHtmlFile")
+	or die "$ERROR: could not open $JumpHtmlFile\n";
+
+    print FILE
+"<HEAD> 
+<SCRIPT language=JavaScript> 
+   window.location='$ParamHtmlFile#HERE';
+</SCRIPT>
+</HEAD>
+<BODY BGCOLOR=$LeftBgColor>
+</BODY>
 ";
     close(FILE);
 }
@@ -621,7 +679,7 @@ $Files
     if($InsertList =~ /COMMAND/){
 	$InsertItem .= 
 "  <INPUT TYPE=CHECKBOX NAME=abc VALUE=1
-      onChange=\"parent.location.href='$IndexHtmlFile?submit=ABC_ON'\"
+      onChange=\"parent.location.href='$IndexPhpFile?submit=ABC_ON'\"
    >abc
 ";
 	if($Editor{ABC}){
@@ -635,40 +693,47 @@ $Files
     chop $InsertItem;
 
     my $Editor = "
-<html>
-<head>
-  <script language=javascript type=text/javascript>
+<HTML>
+<HEAD>
+  <SCRIPT LANGUAGE=javascript TYPE=text/javascript>
   <!--
   function dynamic_select(NameForm, NameElement){
     elem = document.forms[NameForm][NameElement];
-    parent.location.href = '$IndexHtmlFile?action=select_'
+    parent.location.href = '$IndexPhpFile?action=select_'
         + NameElement + '&id=' 
         + escape(elem.options[elem.selectedIndex].value);
   }
   // -->
-  </script>
-</head>
-<body bgcolor=WHITE>
-  <FORM NAME=editor ACTION=$IndexHtmlFile TARGET=_parent>
-  <TABLE WIDTH=100%>
+  </SCRIPT>
+  <BASE TARGET=_parent>
+</HEAD>
+<BODY BGCOLOR=$TopBgColor>
+  <FORM NAME=editor ACTION=$IndexPhpFile>
+  <TABLE WIDTH=$TopTableWidth>
     <TR>
-      <TD ALIGN=LEFT WIDTH=20%>
+      <TD ALIGN=LEFT>
 <INPUT TYPE=SUBMIT NAME=submit VALUE=CHECK>
 <INPUT TYPE=SUBMIT NAME=submit VALUE=SAVE>
 <INPUT TYPE=SUBMIT NAME=submit VALUE=\"SAVE AS\">
+<INPUT TYPE=SUBMIT NAME=submit VALUE=OPEN>
       </TD>
-      <TD ALIGN=CENTER WIDTH=60%>
-         <FONT COLOR=red>
+      <TD ALIGN=CENTER>
+         <FONT $TopFileNameFont>
 $ParamFile
          </FONT>
       </TD>
-      <TD ALIGN=RIGHT WIDTH=20%>
+      <TD ALIGN=RIGHT>
+<INPUT TYPE=SUBMIT NAME=submit VALUE=\"SAVE AND EXIT\">&nbsp;&nbsp;&nbsp;
 <INPUT TYPE=SUBMIT NAME=submit VALUE=EXIT>
       </TD>
     </TR>
-  </TABLE>
-<hr>
-  <CENTER>
+    <TR>
+      <TD COLSPAN=3>
+$TopLine
+      </TD>
+    </TR>
+    <TR>
+      <TD COLSPAN=3 ALIGN=CENTER>
   View: 
   <SELECT NAME=session onChange=\"dynamic_select('editor','session')\">
 $SessionSection
@@ -678,10 +743,12 @@ $SessionSection
 $InsertList
   </SELECT>
 $InsertItem
-  </CENTER>
+      </TD>
+    </TR>
+  </TABLE>
   </FORM>
-</body>
-</html>
+</BODY>
+</HTML>
 ";
     print EDITOR $Editor;
     close EDITOR;
@@ -705,7 +772,7 @@ sub write_manual_html{
     $Manual = $CommandText if 
 
     print MANUAL
-"<BODY BGCOLOR=WHITE>
+"<BODY BGCOLOR=$RightBgColor>
 $Manual
 </BODY>
 ";
@@ -721,14 +788,15 @@ sub write_param_html{
 	$SelectedSectionName = ($SessionRef[$1]{SECTION}[$2]{NAME} or "CON");
     }
 
-    my $Param = "  <head>
-  <style type=\"text/css\">
-      a {text-decoration: none}
-      a img {border: none}
-  </style>
-  </head>
-
-  <BODY BGCOLOR=\#DDDDDD TEXT=BLACK LINK=BLUE VLINK=BLUE>
+    my $Param = 
+"  <HEAD>
+    <STYLE TYPE=\"text/css\">
+      A {text-decoration: none;}
+      A IMG {border: none;}
+    </STYLE>
+    <BASE TARGET=_parent>
+  </HEAD>
+  <BODY BGCOLOR=$LeftBgColor TEXT=BLACK LINK=BLUE VLINK=BLUE>
 ";
 
     my $MinMaxSessionButton;
@@ -752,27 +820,27 @@ sub write_param_html{
 	my $SessionName =  $SessionRef[$iSession]{NAME};
 	my $SessionGivenName;
 
-	my $Action = "A TARGET=_parent ".
-	    "HREF=$IndexHtmlFile?id=$iSession\&action";
+	my $Action = "A HREF=$IndexPhpFile?id=$iSession\&action";
 
 	my $SessionTagTop;
 	my $SessionTagBot;
 
 	if($SessionView eq "EDIT"){
 	    $SessionTagTop = "
-<FORM NAME=action ACTION=$IndexHtmlFile TARGET=_parent>
+<FORM NAME=action ACTION=$IndexPhpFile>
 Session $iSession: 
-<INPUT NAME=name TYPE=TEXT SIZE=30 VALUE=\"$SessionName\">
+<INPUT NAME=name TYPE=TEXT SIZE=$SessionEditorSize VALUE=\"$SessionName\">
 <INPUT NAME=id TYPE=HIDDEN VALUE=$iSession>
 <INPUT TYPE=SUBMIT NAME=submit VALUE=\"SAVE SESSION NAME\"></FORM>";
 	    $SessionTagBot = "Session $iSession";
 	}else{
 	    if($SessionName){
-		$SessionTagTop = 
-		    "<$Action=select_session>Session $iSession</A>:\&nbsp;".
-		    "<$Action=edit_session>$SessionName</A>";
+		$SessionTagTop = "<$Action=select_session 
+                    TITLE=\"Select session\">Session $iSession</A>:\&nbsp;".
+		    "<$Action=edit_session 
+                    TITLE=\"Edit session name\">$SessionName</A>";
 	    }else{
-		$SessionTagTop = "<$Action=edit_session>Session $iSession</A>";
+		$SessionTagTop = "<$Action=edit_session TITLE=\"edit session\">Session $iSession</A>";
 	    }
 	    $SessionTagBot = $SessionTagTop;
 	}
@@ -799,16 +867,15 @@ Session $iSession:
 ";
 
 	# Place anchor to selected session
-	$Param .= "<A NAME=SELECTED>anchor</A>\n" if $Editor{SELECT} eq $iSession;
+	$Param .= "<DIV><A NAME=HERE></A></DIV>\n" 
+	    if $Editor{SELECT} eq $iSession;
 
 	$Param .=
-"<hr COLOR=BLACK>
-  <TABLE BORDER=0 WIDTH=100% BGCOLOR=\#CCCCCC>
+"$SessionLine
+  <TABLE BORDER=0 WIDTH=$LeftTableWidth BGCOLOR=$SessionBgColor>
     <TR>
-      <TD WIDTH=20 ALIGN=LEFT>
+      <TD ALIGN=LEFT>
 $MinMaxSessionButton
-      </TD>
-      <TD WIDTH=380>
 $SessionTagTop
       </TD>
       <TD ALIGN=RIGHT>
@@ -828,8 +895,7 @@ $InsertSessionButton$CopySessionButton$RemoveSessionButton
 	    my $SectionView = $SectionRef->{VIEW};
 	    my $SectionName = ($SectionRef->{NAME} or "CON");
 
-	    my $Action = "A TARGET=_parent ".
-		"HREF=$IndexHtmlFile?id=$iSession,$iSection\&action";
+	    my $Action = "A HREF=$IndexPhpFile?id=$iSession,$iSection\&action";
 
 	    if($SectionView eq "MIN"){
 		$MinMaxSectionButton = "      <$Action=maximize_section
@@ -853,23 +919,24 @@ $InsertSessionButton$CopySessionButton$RemoveSessionButton
 ";
 
 	    # Place anchor to selected section
-	    $Param .= "<A NAME=SELECTED>anchor</A>\n" 
+	    $Param .= "<DIV><A NAME=HERE></A></DIV>\n" 
 		if $Editor{SELECT} eq "$iSession,$iSection";
 
 	    $Param .=
-"  <TABLE BORDER=0 WIDTH=100% BGCOLOR=\#CCCCCC>
+"  <TABLE BORDER=0 WIDTH=$LeftTableWidth BGCOLOR=$SectionBgColor>
     <TR>
-      <TD WIDTH=20>
+      <TD WIDTH=$SectionColumn1Width>
       </TD>
       <TD COLSPAN=2>
-<hr COLOR=GREY>
+$SectionLine
       </TD>
     </TR>
     <TR>
-      <TD ALIGN=CENTER>
-$MinMaxSectionButton
+      <TD WIDTH=$SectionColumn1Width>
       </TD>
-      <TD WIDTH=380><$Action=select_section>
+      <TD ALIGN=LEFT>
+$MinMaxSectionButton
+      <$Action=select_section>
 Section $SectionName
       </A></TD>
       <TD ALIGN=RIGHT>
@@ -881,8 +948,8 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 	    
 ###################### ITEM LOOP ############################################
 
-	    my $Action = "A TARGET=_parent HREF=$IndexHtmlFile?".
-		"id=$iSession,$iSection,0\&action";
+	    my $Action = 
+		"A HREF=$IndexPhpFile?id=$iSession,$iSection,0\&action";
 
 	    if($SelectedSectionName eq $SectionName){
 #	    if($SectionName eq $Clipboard{SECTION} and 
@@ -917,7 +984,7 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 		my $nLine = ($ItemTail =~ s/\n/\n/g);
 
 		# Place anchor to selected item
-		$Param .= "<A NAME=SELECTED>anchor</A>\n" 
+		$Param .= "<DIV><A NAME=HERE></A></DIV>\n"  
 		    if $Editor{SELECT} eq "$iSession,$iSection,$iItem";
 
 		if($ItemView eq "EDIT"){
@@ -931,12 +998,12 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 		    $nLine = ($ItemTail =~ s/\n/\n/g) + 2;
 
 		    $Param .= "
-  <FORM NAME=item_editor ACTION=$IndexHtmlFile TARGET=_parent>
-  <TABLE BORDER=0 WIDTH=100% BGCOLOR=\#BBEEFF>
+  <FORM NAME=item_editor ACTION=$IndexPhpFile>
+  <TABLE BORDER=0 WIDTH=$LeftTableWidth BGCOLOR=$ItemEditorBgColor>
     <TR>
-      <TD WIDTH=20>
+      <TD WIDTH=$LeftColumn1Width>
       </TD>
-      <TD WIDTH=380><FONT COLOR=BLUE>
+      <TD WIDTH=$LeftColumn2Width><FONT COLOR=BLUE>
 $ItemHead
       </FONT></TD>
       <TD ALIGN=RIGHT>
@@ -949,7 +1016,7 @@ $ItemHead
       <TD>
       </TD>
        <TD COLSPAN=2>
-<TEXTAREA NAME=text COLS=60 ROWS=$nLine>
+<TEXTAREA NAME=text COLS=$ItemEditorWidth ROWS=$nLine>
 $ItemTail
 </TEXTAREA>
        </TD>
@@ -986,12 +1053,12 @@ $ItemTail
 		$ItemHead = "<PRE>$ItemHead</PRE>" if $ItemType eq "comment";
 
 		$Param .=
-"  <TABLE BORDER=0 WIDTH=100% BGCOLOR=$TableColor>
+"  <TABLE BORDER=0 WIDTH=$LeftTableWidth BGCOLOR=$TableColor>
     <TR>
-      <TD WIDTH=20 ALIGN=RIGHT>
+      <TD WIDTH=$LeftColumn1Width ALIGN=RIGHT>
 $MinMaxItemButton
       </TD>
-      <TD WIDTH=380><$Action=edit_item>
+      <TD WIDTH=$LeftColumn2Width><$Action=edit_item>
 $ItemHead
       </A></TD>
       <TD ALIGN=RIGHT ALIGN=TOP>
@@ -1009,11 +1076,11 @@ $InsertItemButton$CopyItemButton$RemoveItemButton
 		if($ItemType eq "comment" or $ItemType eq "userinput"){
 
 		    $Param .= 
-"  <TABLE BORDER=0 WIDTH=100% BGCOLOR=$TableColor>
+"  <TABLE BORDER=0 WIDTH=$LeftTableWidth BGCOLOR=$TableColor>
     <TR>
-      <TD WIDTH=20>
+      <TD WIDTH=$LeftColumn1Width>
       </TD>
-      <TD WIDTH=380 COLSPAN=2><$Action=edit_item>
+      <TD WIDTH=$LeftColumn2Width COLSPAN=2><$Action=edit_item>
 <PRE>$ItemTail</PRE>
       </A></TD>
     </TR>
@@ -1022,10 +1089,10 @@ $InsertItemButton$CopyItemButton$RemoveItemButton
 			$MinMaxItemButton =~ s/minimize\.gif/minimize_up.gif/;
 			$Param .= 
 "    <TR>
-      <TD WIDTH=20 ALIGN=RIGHT>
+      <TD WIDTH=$LeftColumn1Width ALIGN=RIGHT>
 $MinMaxItemButton
       </TD>
-      <TD WIDTH=380><$Action=edit_item>
+      <TD WIDTH=$LeftColumn2Width><$Action=edit_item>
 \#USERINPUT
       </A></TD>
       <TD ALIGN=RIGHT>
@@ -1039,7 +1106,7 @@ $CopyItemButton$RemoveItemButton
 ";
 		}else{  #command type item
                     $Param .= 
-"  <TABLE BORDER=0 WIDTH=100% BGCOLOR=\#CCCCCC>
+"  <TABLE BORDER=0 WIDTH=$LeftTableWidth BGCOLOR=$ParameterBgColor>
 ";
 		    my $iLine;
 		    for $iLine (0..$nLine-1){
@@ -1050,9 +1117,9 @@ $CopyItemButton$RemoveItemButton
 
 			$Param .= 
 "    <TR>
-      <TD WIDTH=20>
+      <TD WIDTH=$LeftColumn1Width>
       </TD>
-      <TD WIDTH=380>
+      <TD WIDTH=$LeftColumn2Width>
 $Value
       </TD>
       <TD>
@@ -1079,12 +1146,13 @@ $Comment
 	    $MinMaxSectionButton =~ s/minimize\.gif/minimize_up.gif/;
 
 	    $Param .=
-"  <TABLE BORDER=0 WIDTH=100% BGCOLOR=\#CCCCCC>
+"  <TABLE BORDER=0 WIDTH=$LeftTableWidth BGCOLOR=$SectionBgColor>
     <TR>
-      <TD WIDTH=20 ALIGN=CENTER>
-$MinMaxSectionButton
+      <TD WIDTH=$SectionColumn1Width>
       </TD>
-      <TD WIDTH=380><$Action=select_section>
+      <TD ALIGN=LEFT>
+$MinMaxSectionButton
+      <$Action=select_section>
 Section $SectionName
       </A></TD>
       <TD ALIGN=RIGHT>
@@ -1101,19 +1169,20 @@ $InsertItemButton$CopySectionButton$RemoveSectionButton
 	$InsertSectionButton =~ s/id=[\d,]+/id=$iSession,$iSection/;
 	$MinMaxSessionButton =~ s/minimize\.gif/minimize_up.gif/;
 	$Param .=
-"  <TABLE BORDER=0 WIDTH=100% BGCOLOR=\#CCCCCC>
+"  <TABLE BORDER=0 WIDTH=$LeftTableWidth BGCOLOR=$SectionBgColor>
     <TR>
-      <TD>
+      <TD WIDTH=$SectionColumn1Width>
       </TD>
-      <TD COLSPAN=2>
-<hr COLOR=GREY>
+      <TD>
+$SectionLine
       </TD>
     </TR>
+  </TABLE>
+  <TABLE WIDTH=$LeftTableWidth BGCOLOR=$SessionBgColor>
     <TR>
-      <TD WIDTH=20 ALIGN=LEFT>
+      <TD ALIGN=LEFT>
 $MinMaxSessionButton
-      </TD>
-      <TD WIDTH=380><$Action=select_session>
+      <$Action=select_session>
 $SessionTagBot
       </A></TD>
       <TD ALIGN=RIGHT>
@@ -1127,12 +1196,14 @@ $InsertSectionButton$CopySessionButton$RemoveSessionButton
     $iSession=$nSession+1;
     $InsertSessionButton =~ s/id=[\d,]+/id=$iSession/;
 
-    $Param .= 
-"<hr COLOR=BLACK>\n
-  <TABLE WIDTH=100% BGCOLOR=\#CCCCCC><TR><TD ALIGN=RIGHT>
+    $Param .= "$SessionLine\n";
+    $Param .=
+"  <TABLE WIDTH=$LeftTableWidth BGCOLOR=$LeftBgColor><TR><TD ALIGN=RIGHT>
 $InsertSessionButton
   </TD></TR></TABLE>
-</BODY>\n";
+"       if $InsertSessionButton;
+
+    $Param .= "</BODY>\n";
 
     print PARAM $Param;
     close PARAM;
