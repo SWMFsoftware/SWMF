@@ -190,14 +190,19 @@ sub read_xml_file{
 		$SessionRef[$nSession]{SECTION}[$iSection]{ITEM}[$iItem];
 
 	    $ItemRef->{VIEW} = $View;
-	    $ItemRef->{HEAD} = <XMLFILE>; # First line of body is always read
+	    if($Type eq "USERINPUT"){
+		$ItemRef->{HEAD} = '#USERINPUT';
+	    }else{
+		$ItemRef->{HEAD} = <XMLFILE>; # First line of item
+		chop $ItemRef->{HEAD};
+	    }
 
 	    while($_=<XMLFILE>){
 		last if /<\/ITEM>/;
 		$ItemRef->{TAIL} .= $_;
 	    }
 
-	    warn "iItem=$iItem Type=$Type View=$View Head=$ItemRef->{HEAD}" 
+	    warn "iItem=$iItem Type=$Type View=$View Head=$ItemRef->{HEAD}\n" 
 		if $DoDebug;
 
 	}elsif(/<EDITOR 
@@ -269,7 +274,6 @@ sub modify_xml_data{
                 $TextFile  = "$ParamFile.txt";
 		`share/Scripts/ParamTextToXml.pl $ParamFile`;
 		&read_xml_file;
-		warn "command1=$SessionRef[1]{SECTION}[1]{ITEM}[1]{HEAD}\n";
 	    }else{
 		$Editor{READFILENAME}="OPEN";
 		$Editor{NEWFILENAME}="Could not open $Form{FILENAME}"
@@ -353,6 +357,7 @@ sub modify_xml_data{
 	    $SessionRef->{VIEW}="EDIT";
 	}elsif( /edit_item/ ){
 	    $ItemRef->{VIEW}="EDIT";
+	    $Editor{INSERT}=$ItemRef->{HEAD} if $ItemRef->{TYPE} eq "COMMAND";
 	}elsif( /remove_session/ or /copy_session/ ){
 	    $Clipboard{SESSION} = $iSession;
 	    $Clipboard{SECTION} = "NONE";
@@ -378,7 +383,7 @@ sub modify_xml_data{
 	    $Clipboard{SESSION} = $iSession;
 	    $Clipboard{SECTION} = $NameSection;
 	    $Clipboard{TYPE}    = $ItemRef->{TYPE};
-	    $Clipboard{BODY}    = $ItemRef->{HEAD}.$ItemRef->{TAIL};
+	    $Clipboard{BODY}    = $ItemRef->{HEAD}."\n".$ItemRef->{TAIL};
 	    $Editor{SELECT}     = "$iSession,$iSection";
 	    $Editor{INSERT}     = "PASTE COMMAND/COMMENT";
 	    if( /remove_item/ ){
@@ -391,8 +396,9 @@ sub modify_xml_data{
 	    $NewSessionRef->{SECTION}[1]{VIEW}="MAX";
 	    if($Editor{INSERT} eq "PASTE SESSION"){
 		$NewSessionRef->{SECTION}[1]{ITEM}[1]{HEAD} = $Clipboard{BODY};
+		chop $NewSessionRef->{SECTION}[1]{ITEM}[1]{HEAD};
 	    }elsif($Editor{INSERT} eq "NEW SESSION"){
-		$NewSessionRef->{SECTION}[1]{ITEM}[1]{HEAD} = "New session\n";
+		$NewSessionRef->{SECTION}[1]{ITEM}[1]{HEAD} = "New session";
 	    }
 	    $NewSessionRef->{SECTION}[1]{ITEM}[1]{TYPE} = "COMMENT";
 	    $NewSessionRef->{SECTION}[1]{ITEM}[1]{VIEW} = "MAX";
@@ -404,11 +410,12 @@ sub modify_xml_data{
 	    if($Editor{INSERT} eq "PASTE SECTION"){
 		$NewSectionRef->{NAME} = $Clipboard{SECTION};
 		$NewSectionRef->{ITEM}[1]{HEAD} = $Clipboard{BODY};
+		chop $NewSectionRef->{ITEM}[1]{HEAD};
 	    }elsif($Editor{INSERT} =~ /Section (\w+)/){
 		$NewSectionRef->{NAME} = $1;
 		$NewSectionRef->{ITEM}[1]{VIEW} = "MAX";
 		$NewSectionRef->{ITEM}[1]{TYPE} = "COMMENT";
-		$NewSectionRef->{ITEM}[1]{HEAD} = "New $1 section\n";
+		$NewSectionRef->{ITEM}[1]{HEAD} = "New $1 section";
 	    }
 	    splice (@{$SessionRef->{SECTION}}, $iSection, 0, $NewSectionRef);
 	}elsif( /insert_item/ ){
@@ -419,18 +426,17 @@ sub modify_xml_data{
 		$NewItemRef->{VIEW} = "MAX";
 		($NewItemRef->{HEAD}, $NewItemRef->{TAIL}) 
 		    = split(/\n/, $Clipboard{BODY}, 2);
-		$NewItemRef->{HEAD}.="\n";
 	    }elsif($Editor{INSERT} =~ /^COMMENT/){
 		$NewItemRef->{TYPE} = "COMMENT";
 		$NewItemRef->{VIEW} = "EDIT";
-	    }elsif($Editor{INSERT} =~ /^\#USERINPUTBEGIN/){
+	    }elsif($Editor{INSERT} =~ /^\#USERINPUT/){
 		$NewItemRef->{TYPE} = "USERINPUT";
 		$NewItemRef->{VIEW} = "EDIT";
 		$NewItemRef->{HEAD} = "\#USERINPUT";
 	    }elsif($Editor{INSERT} =~ /^\#/){
 		$NewItemRef->{TYPE} = "COMMAND";
 		$NewItemRef->{VIEW} = "EDIT";
-		$NewItemRef->{HEAD} = "$Editor{INSERT}\n";
+		$NewItemRef->{HEAD} = $Editor{INSERT};
 		$NewItemRef->{TAIL} = "CommandExample\n";
 	    }else{
 		# invalid choice like "COMMANDS BY GROUP";
@@ -439,15 +445,23 @@ sub modify_xml_data{
 	    splice (@{$SectionRef->{ITEM}}, $iItem, 0, $NewItemRef);
 	}elsif( /Save command|Save userinput|Save comment/ ){
 	    $ItemRef->{VIEW}="MAX";
+	    $Form{text} =~ s/^\s*//;        # remove leading space
+	    $Form{text} =~ s/[ \t]+\n/\n/g; # clean up line endings
 	    if(/Save comment/){
 		($ItemRef->{HEAD}, $ItemRef->{TAIL})=split(/\n/,$Form{text},2);
-		$ItemRef->{HEAD} .= "\n";
+		$ItemRef->{TAIL} =~ s/\n\n+$/\n\n/;  # at most 2 \n at end
+		$ItemRef->{HEAD} = 'no comment' if $ItemRef->{HEAD} =~ /^\s*$/;
 	    }else{
-		$ItemRef->{TAIL}=$Form{text};
+		$ItemRef->{TAIL} =  $Form{text};
+		$ItemRef->{TAIL} =~ s/\n+$/\n/;      # at most 1 \n at end
 	    }
-	    $ItemRef->{TAIL} =~ s/\s*\n/\n/g;    # clean up line endings
-	    $ItemRef->{TAIL} =~ s/\n\n+/\n\n/g;  # remove multiple empty lines
-	    $ItemRef->{TAIL} =~ s/\n*$/\n/;      # close with a single \n
+	    # remove empty tail
+	    $ItemRef->{TAIL}='' if $ItemRef->{TAIL} =~ /^\s*$/;
+
+	    # close tail with a \n if there is a tail
+	    $ItemRef->{TAIL} .= "\n" 
+		if $ItemRef->{TAIL} and $ItemRef->{TAIL} !~ /\n$/;
+
 	}elsif( /CANCEL/ ){
 	    $ItemRef->{VIEW}="MAX";	    
 	}
@@ -489,7 +503,9 @@ sub write_xml_file{
 
 		print XMLFILE "\t\t\t\t\t<ITEM TYPE=\"$Item->{TYPE}\"".
 		    " VIEW=\"$Item->{VIEW}\">\n";
-		print XMLFILE $Item->{HEAD}, $Item->{TAIL};
+		print XMLFILE $Item->{HEAD},"\n"
+		    unless $Item->{TYPE} eq "USERINPUT";
+		print XMLFILE $Item->{TAIL};
 		print XMLFILE "\t\t\t\t\t</ITEM>\n";
 	    }
 	    print XMLFILE "\t\t\t\t</SECTION>\n";
@@ -558,15 +574,6 @@ sub command_list{
     close FILE;
 
     return $CommandList;
-
-    #my $tree=do($TreeFile);
-    #die "Could not read command definitions from $TreeFile\n" unless $tree;
-    #print "Description tree was read from file $TreeFile\n" if $Debug;
-    #my $CommandList = $tree->[0];
-    #if($CommandList->{type} ne 'e' or $CommandList->{name} ne 'commandList'){
-    #    die "$ERROR first node should be an element named commandList\n";
-    #}
-    
 }
 
 ##############################################################################
@@ -690,7 +697,8 @@ sub write_editor_html{
 	print "iSession=$iSession\n" if $DoDebug;
 
 	my $SessionRef = $SessionRef[$iSession];
-	my $SessionName = ($SessionRef->{NAME} or "Session $iSession");
+	my $SessionName = "Session $iSession";
+	$SessionName .= ": $SessionRef->{NAME}" if $SessionRef->{NAME};
         $SessionSection .= "    <OPTION VALUE=$iSession>$SessionName\n";
 	next unless $Framework;
 	my $iSection;
@@ -1054,8 +1062,6 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 		"A HREF=$IndexPhpFile?id=$iSession,$iSection,0\&action";
 
 	    if($SelectedSectionName eq $SectionName){
-#	    if($SectionName eq $Clipboard{SECTION} and 
-#	       $Clipboard{TYPE} =~ /COMMAND|COMMENT|USERINPUT/ ){
 		$InsertItemButton = "    <$Action=insert_item
 ><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert item\"></A>
 ";
@@ -1078,11 +1084,6 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 		$Action =~ s/\d+\&action$/$iItem\&action/;
 		$InsertItemButton =~ s/\d+\&action=/$iItem\&action=/;
 
-		if($ItemType eq "userinput"){
-		    # Fix the content of the user input
-		    $ItemHead = "\#USERINPUT";
-		    $ItemTail =~ s/\n*\#USERINPUTEND.*//m;
-		}
 		my $nLine = ($ItemTail =~ s/\n/\n/g);
 
 		# Place anchor to selected item
@@ -1090,14 +1091,20 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 		    if $Editor{SELECT} eq "$iSession,$iSection,$iItem";
 
 		if($ItemView eq "EDIT"){
-		    $nLine += 2;
+
+		    warn "Orig HEAD=$ItemHead TAIL=$ItemTail\n";
+
 		    if($ItemType eq "comment"){
-			$ItemTail = $ItemHead.$ItemTail;
+			$ItemTail = "$ItemHead\n$ItemTail";
 			$ItemHead = "";
 		    }elsif($ItemTail =~ /CommandExample/){
 			($ItemHead,$ItemTail) = split(/\n/,$CommandExample,2);
+		    }elsif($ItemType eq "userinput"){
+			$ItemTail .= ("\n" x 10);
 		    }
 		    $nLine = ($ItemTail =~ s/\n/\n/g) + 2;
+
+		warn "Final HEAD=$ItemHead TAIL=$ItemTail\n";
 
 		    $Param .= "
   <FORM NAME=item_editor ACTION=$IndexPhpFile>
@@ -1170,7 +1177,7 @@ $InsertItemButton$CopyItemButton$RemoveItemButton
   </TABLE>
 ";
 
-		if($ItemView eq "MIN"){
+		if($ItemView eq "MIN" or not $ItemTail){
                     $Param .= "<p>\n" if $ItemType ne "comment";
 		    next;
                 }
