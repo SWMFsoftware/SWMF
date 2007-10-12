@@ -32,6 +32,7 @@ my $iSession;
 my $NameSession;
 my $NameSection;
 my $IsCommand;
+my $UserInput;
 my $Output;
 
 while($_=<INFILE>){
@@ -49,11 +50,16 @@ while($_=<INFILE>){
     }elsif(/<\/SECTION>/){
 	$Output .= "\#END_COMP $NameSection   ".("-" x 40)."\n\n"
 	    if $NameSection;
-    }elsif(/<ITEM TYPE=\"(COMMAND|USERINPUT)/){
+    }elsif(/<ITEM TYPE=\"COMMAND\"/){
 	$IsCommand=1;
+    }elsif(/<ITEM TYPE=\"USERINPUT\"/){
+	$Output .= "#USERINPUTBEGIN ----------------\n\n";
+	$UserInput=1;
     }elsif(/<\/ITEM>/){
+	$Output .= "\n#USERINPUTEND   ----------------\n\n" if $UserInput;
 	$Output .= "\n" if $IsCommand;
 	$IsCommand=0;
+	$UserInput=0;
     }elsif(not /^\s*</){
 	$Output .= $_;
     }
