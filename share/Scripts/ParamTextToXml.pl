@@ -29,23 +29,6 @@ my $ExpandParamScript= 'share/Scripts/ExpandParam.pl';
 # Print help message and exit if -h switch was used
 &print_help if $Help;
 
-die "$ERROR could not find $ParamFile\n" unless -f $ParamFile;
-
-my $ParamExpand = "${ParamFile}.expand";
-
-# Flatten the parameter file
-if(not -x $ExpandParamScript){
-    warn "$WARNING $ExpandParamScript is not found: ".
-	"cp $ParamFile $ParamExpand\n";
-    my $error=`cp $ParamFile $ParamExpand`;
-    die "$ERROR in cp $ParamFile $ParamExpand: $error\n"
-	if $error;
-}else{
-    my $error=`$ExpandParamScript $ParamFile > $ParamExpand`;
-    die "$ERROR in $ExpandParamScript $ParamFile > $ParamExpand: $error\n"
-	if $error;
-}
-
 # Set list of component versions
 my $Components;
 if($Framework){
@@ -60,8 +43,26 @@ if($Framework){
     close(INFILE);
 }
 
-open(INFILE,$ParamExpand) or
-    die "$ERROR Could not open expanded parameter file $ParamExpand!\n";
+my $ParamExpand = "${ParamFile}.expand";
+
+if(-f $ParamFile){
+
+    # Flatten the parameter file
+    if(not -x $ExpandParamScript){
+	warn "$WARNING $ExpandParamScript is not found: ".
+	    "cp $ParamFile $ParamExpand\n";
+	my $error=`cp $ParamFile $ParamExpand`;
+	die "$ERROR in cp $ParamFile $ParamExpand: $error\n"
+	    if $error;
+    }else{
+	my $error=`$ExpandParamScript $ParamFile > $ParamExpand`;
+	die "$ERROR in $ExpandParamScript $ParamFile > $ParamExpand: $error\n"
+	    if $error;
+    }
+
+    open(INFILE,$ParamExpand) or
+	die "$ERROR Could not open expanded parameter file $ParamExpand!\n";
+}
 
 my $XmlFile = "${ParamFile}.xml";
 
@@ -91,6 +92,13 @@ $SessionRef[1]{NAME} = "";                  # default name of session 1
 $SessionRef[1]{SECTION}[1]{VIEW} = "MAX";   # default view of section 1
 $SessionRef[1]{SECTION}[1]{NAME} = "";      # default name of section 1
 $SectionRef = $SessionRef[1]{SECTION}[1];
+
+if(not -f $ParamFile){
+    # Add a comment if input file does not exist (yet)
+    $SectionRef->{ITEM}[1]{VIEW} = "MAX";
+    $SectionRef->{ITEM}[1]{TYPE} = "COMMENT";
+    $SectionRef->{ITEM}[1]{HEAD} = "New parameter file\n";
+}
 
 while($_=<INFILE>){
 
