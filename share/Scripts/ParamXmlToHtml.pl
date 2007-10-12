@@ -315,7 +315,7 @@ sub modify_xml_data{
 	    $Editor{FILE} = $id;
 	    if(open(MYFILE, $id)){
 		$Clipboard{BODY} = join('',<MYFILE>);
-		if($Editor{SELECT} eq "all"){
+		if($Editor{SELECT} =~ /^all/){
 		    $Clipboard{TYPE}="SESSION";
 		}elsif($Editor{SELECT} =~ /^\d+$/){
 		    $Clipboard{TYPE}="SECTION";
@@ -363,7 +363,7 @@ sub modify_xml_data{
 	    $Clipboard{SECTION} = "NONE";
 	    $Clipboard{TYPE}    = "SESSION";
 	    $Clipboard{BODY}    = "Session $id $NameSession: should be here\n";
-	    $Editor{SELECT}     = "all";
+	    $Editor{SELECT}     = "allsessions";
 	    $Editor{INSERT}     = "PASTE SESSION";
 	    if(/remove_session/){
 		splice(@SessionRef,$iSession,1);
@@ -690,7 +690,12 @@ sub write_editor_html{
       </TD>
 ";
     }
-    my $SessionSection="    <OPTION VALUE=all>ALL SESSIONS\n";
+    my $SessionSection="
+    <OPTION VALUE=all        >ALL
+    <OPTION VALUE=allitems   >ALL ITEMS
+    <OPTION VALUE=allsections>ALL SECTIONS
+    <OPTION VALUE=allsessions>ALL SESSIONS
+";
 
     my $iSession;
     for $iSession (1..$nSession){
@@ -721,7 +726,10 @@ sub write_editor_html{
 
     my $InsertList;
 
-    if($Selected eq "all"){
+    if($Selected =~ /^all(\w*)$/ ){
+
+	my $ViewLevel = $1;
+	&set_view($ViewLevel);
 
 	$InsertList  = "    <OPTION>FILE\n";
 	$InsertList .= "    <OPTION>PASTE SESSION\n"
@@ -967,7 +975,7 @@ Session $iSession:
 
 	$InsertSessionButton = "    <$Action=insert_session
 ><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert session\"></A>
-"                 if $Editor{SELECT} eq "all";
+"                 if $Editor{SELECT} =~ /^all/;
 
 	$CopySessionButton = "      <$Action=copy_session
 ><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy session\"></A>
@@ -1046,7 +1054,7 @@ $SectionLine
       </TD>
       <TD ALIGN=LEFT>
 $MinMaxSectionButton
-      <$Action=select_section>
+      <$Action=select_section TITLE=\"Select section\">
 Section $SectionName
       </A></TD>
       <TD ALIGN=RIGHT>
@@ -1136,6 +1144,9 @@ $ItemTail
 		    next; # done with editor
 		}
 
+		my $ActionEditItem = "$Action=edit_item ".
+		    "TITLE=\"Edit $ItemType in session $iSession/$SectionName\"";
+
 		# Create buttons
 		if($ItemTail){
 		    if($ItemView eq "MIN"){
@@ -1167,7 +1178,7 @@ $ItemTail
       <TD WIDTH=$LeftColumn1Width ALIGN=RIGHT>
 $MinMaxItemButton
       </TD>
-      <TD WIDTH=$LeftColumn2Width><$Action=edit_item>
+      <TD WIDTH=$LeftColumn2Width><$ActionEditItem>
 $ItemHead
       </A></TD>
       <TD ALIGN=RIGHT ALIGN=TOP>
@@ -1189,7 +1200,7 @@ $InsertItemButton$CopyItemButton$RemoveItemButton
     <TR>
       <TD WIDTH=$LeftColumn1Width>
       </TD>
-      <TD WIDTH=$LeftColumn2Width COLSPAN=2><$Action=edit_item>
+      <TD WIDTH=$LeftColumn2Width COLSPAN=2><$ActionEditItem>
 <PRE>$ItemTail</PRE>
       </A></TD>
     </TR>
@@ -1201,7 +1212,7 @@ $InsertItemButton$CopyItemButton$RemoveItemButton
       <TD WIDTH=$LeftColumn1Width ALIGN=RIGHT>
 $MinMaxItemButton
       </TD>
-      <TD WIDTH=$LeftColumn2Width><$Action=edit_item>
+      <TD WIDTH=$LeftColumn2Width><$Action=EditItem>
 \#USERINPUT
       </A></TD>
       <TD ALIGN=RIGHT>
@@ -1261,7 +1272,7 @@ $Comment
       </TD>
       <TD ALIGN=LEFT>
 $MinMaxSectionButton
-      <$Action=select_section>
+      <$Action=select_section TITLE=\"Select section\">
 Section $SectionName
       </A></TD>
       <TD ALIGN=RIGHT>
@@ -1318,6 +1329,37 @@ $InsertSessionButton
     close PARAM;
 }
 
+##############################################################################
+sub set_view{
+    $_ = @_[0];
+
+    my $SessionView = (/sessions/ ? "MIN" : "MAX");
+    my $SectionView = (/sections/ ? "MIN" : "MAX");
+    my $ItemView    = (/items/    ? "MIN" : "MAX");
+
+    my $iSession;
+    my $iSection;
+    my $iItem;
+
+    for $iSession (1..$nSession){
+	$SessionRef[$iSession]{VIEW} = $SessionView;
+	next if /sessions/;
+
+	for $iSection (1..$#{ $SessionRef[$iSession]{SECTION} }){
+	    my $SectionRef = $SessionRef[$iSession]{SECTION}[$iSection];
+
+	    $SectionRef->{VIEW} = $SectionView;
+	    next if /sectioons/;
+	    
+	    for $iItem (1...$#{ $SectionRef->{ITEM} }){
+		my $ItemRef = $SectionRef->{ITEM}[$iItem];
+
+		$ItemRef->{VIEW} = $ItemView;
+	    }
+	}
+    }
+
+}
 ##############################################################################
 #BOP
 #!ROUTINE: ParamXmlToHtml.pl - convert XML enhanved parameter to HTML
