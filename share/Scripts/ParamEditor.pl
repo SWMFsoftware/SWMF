@@ -20,13 +20,20 @@
 # *  as long as this copyright notice is unchanged.                 *
 # *                                                                 *
 # *******************************************************************
+# *                                                                 *
+# *  The original script was renamed to ParamEditor.pl and slightly *
+# *  modified to be used in the general Input Parameter Toolkit.    *
+# *  Type ParamEditor.pl -h to see the help message.                *
+# *                                                                 *
+# *  October 1 2007 Gabor Toth with permission from Jozsef Hollosi. *
+# *                                                                 *
+# *******************************************************************
 #
-# FOR WEBLINK USERS:
-#
-# To run weblink as an interface type:
-#
-#   weblink.pl [-browser=browser] [-stdout=xterminalname]
-#              [-srcfile=sourcefile] [-default=defaultfile] [-basedir=dirname]
+
+$Help = ($h or $H or $help);
+&_print_help if $Help;
+
+#  
 #
 # FOR WEBLINK PROGRAMMERS:
 #
@@ -64,33 +71,37 @@
 
 # Put switches which come from command line into _VARIABLES
 
-$_BROWSER = $browser;
-$_STDOUT_XTERM = $stdout;
-$_BASEDIR = ($basedir or ".");
-$_SRCFILE = ($srcfile or "index.php");
+$_BROWSER   = $browser;
+$_SRCFILE   = $srcfile;
+$_PARAMFILE = $ARGV[0];
 
-# Execute the $default file which sets some variables, among others 
-# the $stdout variable which contains the name of the xterminal that 
-# should show the STDOUT. Empty string implies stdout into the original window.
+# Execute the $config file which sets some variables.
 
-$default = "Weblink/default" unless $default;
-if(-e $default){
-    require $default;
-}
-else {
-    # print STDERR "Warning: Customization file $default was not found!\n";
-}
-unless(-e $_SRCFILE){
-    die "Source file $srcfile was not found!\n";
-}
-# Put switches which come from $default into _VARIABLES unless already set
+$_CONFIGFILE = ($config or "$Env{HOME}/ParamEditor.conf");
+do $_CONFIGFILE;
 
-$_BROWSER = $browser unless $_BROWSER;
-$_STDOUT_XTERM = $stdout unless $_STDOUT_XTERM;
+# Put switches which come from config file into _VARIABLES unless already set
+$_BROWSER   = $browser unless $_BROWSER;
+$_SRCFILE   = ($srcfile or "index.php") unless $_SRCFILE;
+$_PARAMFILE = ($paramfile or "run/PARAM.in") unless $_PARAMFILE;
 
-$_STDOUT_XTERM = "original" unless $_STDOUT_XTERM; # To be safe.
+die "ERROR in ParamEditor.pl: source file $srcfile was not found!\n"
+    unless -e $_SRCFILE;
+
+# For sake of simplicity these are fixed now
+$_STDOUT_XTERM = "original";
+$_BASEDIR      = ".";
 
 # Start work
+
+# run the script to process the input parameter file
+
+$_PARAM_FILE = ($ARGV[0] or $paramfile or "run/PARAM.in");
+
+$Error = `share/Scripts/ParamTextToXml.pl $_PARAM_FILE 2>&1`;
+die "share/Scripts/ParamTextToXml.pl failed with $Error\n" if $Error;
+$Error = `share/Scripts/ParamXmlToHtml.pl $_PARAM_FILE.xml 2>&1`;
+die "share/Scripts/ParamXmlToHtml.pl failed with $Error\n" if $Error;
 
 &_system_setup;
 
@@ -592,6 +603,71 @@ sub _background
     setpgrp(0,$$) if $nohup;
     exec($command);
     exit;
+}
+
+###########################################################################
+
+sub _print_help{
+    print "
+
+Purpose: 
+
+  ParamEditor.pl is a stand-alone micro webserver that can be used 
+  as part of the general Input Parameter Toolkit to edit input parameter
+  files via a user-friendly GUI. The script was originally developed for
+  the Versatile Advection GUI by Jozsef Hollosi. This is a slightly
+  modified script. 
+
+  The ParamEditor.pl starts a web browser, connects it with itself and 
+  opens a source file that contains normal HTML and some extra 
+  <#...#> markups that can execute Perl statements, such as running the
+  ParamConvert.pl Perl script that generates the HTML pages for the GUI.
+
+  NOTE: The parameter editor can also be used with PHP if the machine
+  is running a PHP enabled web server and using PHP is permitted in the
+  given directory. In this case run the ParamConvert.pl script directly
+  and open the resulting index.php file with an arbitrary web browser.
+
+Usage: 
+
+  share/Scripts/ParamEditor.pl [-config=CONFIGFILE] [-browser=BROWSER] 
+      [-srcfile=SOURCEFILE] [PARAMFILE]
+
+  Note that the ParamEditor.pl script should be started from the main
+  directory of the simulation code (e.g. the SWMF or BATSRUS).
+
+  The configuration file is 'ParamEditor.conf' in the user's home directory
+  unless specified differently with the -config=... switch. The configuration 
+  file can be used to set the default values for the other parameters below.
+  The same file is also used to customize the look of the parameter editor GUI.
+
+  The name of the browser is either given with the -browser=... switch, 
+  or defined in the configuration file as '$browser=\"...\";'
+  or it is searched for. The first browser found will be used.
+
+  The source file opened by the browser can be set with the -srcfile=... switch
+  or it can be defined in the configuration file as '$srcfile=\"...\"' 
+  or it is set to the default value 'index.php'.
+
+  The file to be edited can be set with the optional argument PARAMFILE, 
+  or it can be defined in the configuration file as '$paramfile=\"...\
+  or it is set to the default value 'run/PARAM.in'.
+
+Examples:
+
+  Start the parameter editor with its default settings:
+
+share/Scripts/ParamEditor.pl 
+
+  Edit a parameter file with a non-default name:
+
+share/Scripts/ParamEditor.pl run_new/UAM.in
+
+  Use a browser that is not the default:
+
+share/Scripts/ParamEditor.pl -browser=/usr/bin/MozillaFirebird
+";
+    exit 0;
 }
 
 ############## END ############
