@@ -129,6 +129,9 @@ exit 0;
 
 sub read_xml_file{
 
+    my $DoDebug = ($Debug =~ /read_xml_file/);
+    warn "start read_xml_file from XmlFile=$XmlFile\n" if $DoDebug;
+
     open(XMLFILE, $XmlFile) 
 	or die "$ERROR: could not open input file $XmlFile\n";
 
@@ -140,13 +143,16 @@ sub read_xml_file{
     my $iItem;
 
     while($_ = <XMLFILE>){
+
+	warn "Line $. = $_" if $DoDebug;
+
 	if(/<MODE FRAMEWORK=\"(\d)\" (COMPONENTS=\"([^\"]*)\")?/){
 	    $Framework = $1;
 	    if($Framework and $3){
 		$ValidComp = $3;
 		%CompVersion = split( /[,\/]/ , $3 );
-		print "ValidComp=$ValidComp\n" if $Debug;
-		print "CompVersion=",join(', ',%CompVersion),"\n" if $Debug;
+		print "ValidComp=$ValidComp\n" if $DoDebug;
+		print "CompVersion=",join(', ',%CompVersion),"\n" if $DoDebug;
 	    }
 	}elsif(/<SESSION NAME=\"([^\"]*)\" VIEW=\"([\w]+)\"/){
 	    $nSession++;
@@ -155,7 +161,7 @@ sub read_xml_file{
 	    my $View=$2;
 	    $SessionRef[$nSession]{NAME} = $Name;
 	    $SessionRef[$nSession]{VIEW} = $View;
-	    print "nSession=$nSession Name=$Name View=$View\n" if $Debug;
+	    print "nSession=$nSession Name=$Name View=$View\n" if $DoDebug;
 	}elsif(/<SECTION NAME=\"([^\"]*)\" VIEW=\"([\w]+)\"/){
 	    $iSection++;
 	    $iItem=0;
@@ -164,7 +170,7 @@ sub read_xml_file{
 	    $SessionRef[$nSession]{SECTION}[$iSection]{VIEW} = $View;
 	    $SessionRef[$nSession]{SECTION}[$iSection]{NAME} = $Name;
 
-	    print "Section=$iSection name=$Name View=$View\n" if $Debug;
+	    print "Section=$iSection name=$Name View=$View\n" if $DoDebug;
 
 	    # Do not read details if the section is minimized
 	    #if(not $Submit 
@@ -182,6 +188,7 @@ sub read_xml_file{
 
 	    my $ItemRef=
 		$SessionRef[$nSession]{SECTION}[$iSection]{ITEM}[$iItem];
+
 	    $ItemRef->{VIEW} = $View;
 	    $ItemRef->{HEAD} = <XMLFILE>; # First line of body is always read
 
@@ -189,6 +196,9 @@ sub read_xml_file{
 		last if /<\/ITEM>/;
 		$ItemRef->{TAIL} .= $_;
 	    }
+
+	    warn "iItem=$iItem Type=$Type View=$View Head=$ItemRef->{HEAD}" 
+		if $DoDebug;
 
 	}elsif(/<EDITOR 
 	       \ SELECT=\"([^\"]*)\"
@@ -641,23 +651,6 @@ sub write_editor_html{
     print "Starting write_editor_html\n" if $DoDebug;
 
     my $EditButtons;
-
-    if(not -f $ParamFile){
-	print EDITOR "
-<BODY BGCOLOR=$TopBgColor>
-  <FORM NAME=editor ACTION=$IndexPhpFile TARGET=_parent>
-    <CENTER>
-        <FONT COLOR=RED>Please provide name of input parameter file:</RED><BR>
-        <INPUT TYPE=TEXT SIZE=$FileNameEditorWidth NAME=FILENAME>
-        <INPUT TYPE=SUBMIT NAME=submit VALUE=OPEN>&nbsp;&nbsp;&nbsp;&nbsp;
-        <INPUT TYPE=SUBMIT NAME=submit VALUE=EXIT>
-    </CENTER>
-  </FORM>
-</BODY>
-";
-	close(EDITOR);
-	exit 0;
-    }
 
     if($Editor{READFILENAME}){
 	$EditButtons = 
@@ -1348,22 +1341,22 @@ grep '^our' share/Scripts/ParamXmlToHtml.pl
 
 Usage:
 
-  ParamXmlToHtml.pl [-h] [PARAMXMLFILE]
+  ParamXmlToHtml.pl [-h] [PARAMFILE]
 
   -h            print help message and stop
 
-  PARAMXMLFILE  Name of the input XML enhanced parameter file. 
-                The default name is run/PARAM.in.xml
+  PARAMFILE     Name of the input parameter file. 
+                The default name is run/PARAM.in
 
 Examples:
 
-    Convert run/PARAM.in.xml
+    Convert run/PARAM.in
 
 ParamXmlToHtml.pl
 
-    Convert run_new/PARAM.in.xml
+    Convert run_new/PARAM.in
 
-ParamXmlToHtml.pl run_new/PARAM.in.xml"
+ParamXmlToHtml.pl run_new/PARAM.in"
 #EOC
     ,"\n\n";
     exit 0;
