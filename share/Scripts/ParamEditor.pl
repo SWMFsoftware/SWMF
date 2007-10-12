@@ -237,7 +237,7 @@ sub _redirect_stdout
     open(STDERR, ">&STDOUT");
     select(STDERR); $|=1; select(STDOUT); $|=1;
     $_STDOUT = 1;
-    &_stdout("You will see STDOUT and STDERR from WEBLINK here.\n");
+    &_stdout("You will see STDOUT and STDERR from ParamEditor.pl here.\n");
 }
 
 sub _getline
