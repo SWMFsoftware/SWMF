@@ -98,7 +98,7 @@ my $XmlFile   = "$ParamFile.xml"; # Name of the XML enhanced parameter file
 my $TextFile  = "$ParamFile.txt"; # Name of the temporary text parameter file
 
 if($ParamFile){
-    `share/Scripts/ParamTextToXml.pl $ParamFile` unless $XmlFile;
+    `share/Scripts/ParamTextToXml.pl $ParamFile` unless -f $XmlFile;
     &read_xml_file;
 }
 
