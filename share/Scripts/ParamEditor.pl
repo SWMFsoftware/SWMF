@@ -100,7 +100,7 @@ $_PARAM_FILE = ($ARGV[0] or $paramfile or "run/PARAM.in");
 
 $Error = `share/Scripts/ParamTextToXml.pl $_PARAM_FILE 2>&1`;
 die "share/Scripts/ParamTextToXml.pl failed with $Error\n" if $Error;
-$Error = `share/Scripts/ParamXmlToHtml.pl $_PARAM_FILE.xml 2>&1`;
+$Error = `share/Scripts/ParamXmlToHtml.pl $_PARAM_FILE 2>&1`;
 die "share/Scripts/ParamXmlToHtml.pl failed with $Error\n" if $Error;
 
 &_system_setup;
