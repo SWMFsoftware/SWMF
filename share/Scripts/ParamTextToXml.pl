@@ -191,23 +191,24 @@ while($_=<INFILE>){
 	$iItem=0;
 
     }elsif( /^(Begin|End)\s+session:\s*(.*)/i ){
+	# Session names are stored as comments Begin session: or End session:
 	$SessionRef[$iSession]{NAME}= $2;
+    }elsif(/^\#USERINPUTBEGIN/){
+	$iItem++;
+	$SectionRef->{ITEM}[$iItem]{VIEW}="MAX";
+	$SectionRef->{ITEM}[$iItem]{TYPE}="USERINPUT";
+	$UserInput = $nLine+1;
+	$IsCommand=0;
+	$IsComment=0;
+    }elsif(/\#USERINPUTEND/){
+	if(not $UserInput){
+	    &print_error(" for command $_\tthere is no matching".
+			     " USERINPUTBEGIN command");
+	}
+	$UserInput = 0;
     }else{
 	# Analyze line for various items
-	if(/^\#USERINPUTBEGIN/){
-	    $iItem++;
-	    $SectionRef->{ITEM}[$iItem]{VIEW}="MAX";
-	    $SectionRef->{ITEM}[$iItem]{TYPE}="USERINPUT";
-	    $UserInput = $nLine+1;
-	    $IsCommand=0;
-	    $IsComment=0;
-	}elsif(/\#USERINPUTEND/){
-	    if(not $UserInput){
-		&print_error(" for command $_\tthere is no matching".
-			     " USERINPUTBEGIN command");
-	    }
-	    $UserInput = 0;
-	}elsif(/^\#/ and not $UserInput){
+	if(/^\#/ and not $UserInput){
 	    $iItem++;
 	    $SectionRef->{ITEM}[$iItem]{VIEW}="MAX";
 	    $SectionRef->{ITEM}[$iItem]{TYPE}="COMMAND";
