@@ -738,6 +738,8 @@ sub write_editor_html{
 
     }elsif($Selected =~ /^\d+$/ and $Framework){
 
+	&set_view("session$Selected");
+
 	$InsertList  = "    <OPTION>FILE\n";
 	$InsertList .= "    <OPTION>PASTE SECTION\n"
 	    if $Clipboard{TYPE} eq "SECTION";
@@ -747,6 +749,9 @@ sub write_editor_html{
 	    $InsertList .= "     <OPTION>Section $Comp\n";
 	}
     }else{
+
+	&set_view("section$Selected");
+
         $InsertList  =     "    <OPTION>FILE\n";
 	$InsertList .=     "    <OPTION>PASTE COMMAND/COMMENT\n"
 	    if $Clipboard{TYPE} =~ /COMMAND|COMMENT|USERINPUT/;
@@ -1100,8 +1105,6 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 
 		if($ItemView eq "EDIT"){
 
-		    warn "Orig HEAD=$ItemHead TAIL=$ItemTail\n";
-
 		    if($ItemType eq "comment"){
 			$ItemTail = "$ItemHead\n$ItemTail";
 			$ItemHead = "";
@@ -1111,8 +1114,6 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 			$ItemTail .= ("\n" x 10);
 		    }
 		    $nLine = ($ItemTail =~ s/\n/\n/g) + 2;
-
-		warn "Final HEAD=$ItemHead TAIL=$ItemTail\n";
 
 		    $Param .= "
   <FORM NAME=item_editor ACTION=$IndexPhpFile>
@@ -1333,9 +1334,9 @@ $InsertSessionButton
 sub set_view{
     $_ = @_[0];
 
-    my $SessionView = (/sessions/ ? "MIN" : "MAX");
-    my $SectionView = (/sections/ ? "MIN" : "MAX");
-    my $ItemView    = (/items/    ? "MIN" : "MAX");
+    my $SessionView = ( /session|\d/ ? "MIN" : "MAX");
+    my $SectionView = ( /section|\d/ ? "MIN" : "MAX");
+    my $ItemView    = ( /items/      ? "MIN" : "MAX");
 
     my $iSession;
     my $iSection;
@@ -1343,13 +1344,20 @@ sub set_view{
 
     for $iSession (1..$nSession){
 	$SessionRef[$iSession]{VIEW} = $SessionView;
-	next if /sessions/;
+
+	$SessionRef[$iSession]{VIEW} = "MAX"
+	    if /ion$iSession/;
+
+	next if /session/;
 
 	for $iSection (1..$#{ $SessionRef[$iSession]{SECTION} }){
 	    my $SectionRef = $SessionRef[$iSession]{SECTION}[$iSection];
 
 	    $SectionRef->{VIEW} = $SectionView;
-	    next if /sectioons/;
+
+	    $SectionRef->{VIEW} = "MAX" if /ion$iSession,$iSection/;
+
+	    next if /section/;
 	    
 	    for $iItem (1...$#{ $SectionRef->{ITEM} }){
 		my $ItemRef = $SectionRef->{ITEM}[$iItem];
