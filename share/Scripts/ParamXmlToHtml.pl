@@ -1213,7 +1213,7 @@ $InsertItemButton$CopyItemButton$RemoveItemButton
       <TD WIDTH=$LeftColumn1Width ALIGN=RIGHT>
 $MinMaxItemButton
       </TD>
-      <TD WIDTH=$LeftColumn2Width><$Action=EditItem>
+      <TD WIDTH=$LeftColumn2Width><$ActionEditItem>
 \#USERINPUT
       </A></TD>
       <TD ALIGN=RIGHT>
