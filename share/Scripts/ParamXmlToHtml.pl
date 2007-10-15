@@ -1110,6 +1110,7 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 			$ItemHead = "";
 		    }elsif($ItemTail =~ /CommandExample/){
 			($ItemHead,$ItemTail) = split(/\n/,$CommandExample,2);
+			$ItemRef->{TAIL}=$ItemTail;
 		    }elsif($ItemType eq "userinput"){
 			$ItemTail .= ("\n" x 10);
 		    }
