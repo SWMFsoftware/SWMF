@@ -110,6 +110,7 @@ subroutine rusanov_flux( DtIn, nCell,&
      RhoFlux_F, RhoUFlux_F, eFlux_F)
 
   use ModCommonVariables
+  use ModPWOM,ONLY: TypeDiffusion
   implicit none
 
   real, intent(in)   :: DtIn
@@ -124,13 +125,18 @@ subroutine rusanov_flux( DtIn, nCell,&
   InvGammaMinus1       = 1.0/(Gamma - 1.0)
   GammaOverGammaMinus1 = Gamma/(Gamma - 1.0)
 
-!  Coeff = 0.47*DRBND/DtIn
+!
 !  Coeff = 0.5/dtr1
   
   do i=1,nCell+1
      ! Take half of the maximum of left and right hydro propagation speeds
-     Coeff = 0.5*max( abs(LeftU_F(i)) + sqrt(Gamma*LeftP_F(i)/LeftRho_F(i)), &
-                     abs(RightU_F(i)) + sqrt(Gamma*RightP_F(i)/RightRho_F(i)) )
+     if (TypeDiffusion == 'LaxFriedrichs') then
+        Coeff = 0.47*DRBND/DtIn
+     else 
+        Coeff = &
+             0.5*max( abs(LeftU_F(i)) + sqrt(Gamma*LeftP_F(i)/LeftRho_F(i)), &
+             abs(RightU_F(i)) + sqrt(Gamma*RightP_F(i)/RightRho_F(i)) )
+     endif
 
      RhoFlux_F(i)  = 0.5*(LeftRho_F(i) *LeftU_F(i) &
           +               RightRho_F(i)*RightU_F(i))  &

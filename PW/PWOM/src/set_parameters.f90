@@ -74,6 +74,8 @@ subroutine PW_set_parameters(NameAction)
            call read_var('IsPointImplicit'   ,IsPointImplicit)
            call read_var('IsPointImplicitAll',IsPointImplicitAll)
         end if
+     case('#DIFFUSION')
+        call read_var('TypeDiffusion',TypeDiffusion)
      case('#LIMITER')
         call read_var('LimiterBeta',BetaIn)
         Beta = BetaIn
