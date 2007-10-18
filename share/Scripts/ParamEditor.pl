@@ -85,9 +85,6 @@ $_BROWSER   = $browser unless $_BROWSER;
 $_SRCFILE   = ($srcfile or "index.php") unless $_SRCFILE;
 $_PARAMFILE = ($paramfile or "run/PARAM.in") unless $_PARAMFILE;
 
-die "ERROR in ParamEditor.pl: source file $srcfile was not found!\n"
-    unless -e $_SRCFILE;
-
 # For sake of simplicity these are fixed now
 $_STDOUT_XTERM = "original";
 $_BASEDIR      = ".";
@@ -98,10 +95,19 @@ $_BASEDIR      = ".";
 
 $_PARAM_FILE = ($ARGV[0] or $paramfile or "run/PARAM.in");
 
-$Error = `share/Scripts/ParamTextToXml.pl $_PARAM_FILE 2>&1`;
-die "share/Scripts/ParamTextToXml.pl failed with $Error\n" if $Error;
-$Error = `share/Scripts/ParamXmlToHtml.pl $_PARAM_FILE 2>&1`;
-die "share/Scripts/ParamXmlToHtml.pl failed with $Error\n" if $Error;
+#$Error = `share/Scripts/ParamTextToXml.pl $_PARAM_FILE 2>&1`;
+#die "share/Scripts/ParamTextToXml.pl failed with $Error\n" if $Error;
+#$Error = `share/Scripts/ParamXmlToHtml.pl $_PARAM_FILE 2>&1`;
+#die "share/Scripts/ParamXmlToHtml.pl failed with $Error\n" if $Error;
+
+$Error = `share/Scripts/ParamConvert.pl $_PARAM_FILE 2>&1`;
+die "ERROR in ParamEditor.pl: share/Scripts/ParamConvert.pl $_PARAM_FILE ".
+    "failed with $Error\n" 
+    if $Error;
+
+die "ERROR in ParamEditor.pl: source file $srcfile was not found!\n"
+    unless -e $_SRCFILE;
+
 
 &_system_setup;
 
