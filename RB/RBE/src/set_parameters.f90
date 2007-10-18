@@ -46,6 +46,14 @@ subroutine RB_set_parameters(NameAction)
      case('#TIMESTEP')
         call read_var('Dt',Dt)             ! time step in s. 
                                            ! Summer 2006: read dt from *.dat
+
+     case('#SCHEME')
+        call read_var('UseSplitting', UseSplitting)
+        if(UseSplitting)then
+           call read_var('UseMcLimiter', UseMcLimiter)
+           if(UseMcLimiter) call read_var('BetaLimiter', BetaLimiter)
+        end if
+
      case('#STARTTIME')
         call read_var('tStart',tStart)
      case('#SPECIES')
@@ -92,7 +100,7 @@ subroutine RB_set_parameters(NameAction)
            iplsp=0
         endif
 
-     endselect
+     end select
 
 
   enddo

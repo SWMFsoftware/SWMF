@@ -116,7 +116,11 @@ module rbe_cread2
        iprint,ntime,iconvect,init,il,ie,iplsp
   character (len=8)::  storm
 
-  logical :: IsStandAlone=.false.,UseGm=.false.
+  logical :: IsStandAlone=.false.,UseGm=.false., UseSplitting = .false.
+
+  logical :: UseMcLimiter = .false.
+  real    :: BetaLimiter  = 2.0
+
 end module rbe_cread2
 !=============================================================================
 module rbe_cgrid
@@ -2123,10 +2127,14 @@ end subroutine losscone
 subroutine drift(t,dt,f2,vl,vp,ro,rb,fb,dlati,dphi,ekev,ib0,iba,&
      iw1,iw2,irm)
   use rbe_grid
+  use rbe_cread2, ONLY: UseSplitting
+
   real vl(0:ir,ip,iw,ik),vp(ir,ip,iw,ik),ekev(0:ir,ip,iw,ik),&
        f2(ir,ip,iw,ik),ro(ir,ip),fb(ip,iw,ik),dlati(ir),cl(ir,ip),cp(ir,ip)
   integer ib0(ip),iba(ip),iw1(ik),iw2(ik),irm(ip)
 
+  logical :: IsOdd
+  !-----------------------------------------------------------------------
   do m=1,ik
      do k=iw1(m),iw2(m)      
 
@@ -2158,11 +2166,21 @@ subroutine drift(t,dt,f2,vl,vp,ro,rb,fb,dlati,dphi,ekev,ib0,iba,&
         enddo
 
         ! run driftl and driftp
+        IsOdd = .true.
         do n=1,nrun
-           !              call driftl(t,dt1,f2,k,m,vl,ro,rb,fb,dlati,ib0,iba,irm)
-           !              call driftp(t,dt1,f2,k,m,vp,fb,dphi,iba,irm)
-           call driftlp(t,dt1,f2,k,m,vl,vp,cl,cp,ro,rb,fb,dlati,dphi,&
-                ib0,iba,n)
+           if(UseSplitting)then
+              if(IsOdd)then
+                 call driftl(t,dt1,f2,k,m,vl,ro,rb,fb,dlati,ib0,iba,irm)
+                 call driftp(t,dt1,f2,k,m,vp,fb,dphi,iba,irm)
+              else
+                 call driftp(t,dt1,f2,k,m,vp,fb,dphi,iba,irm)
+                 call driftl(t,dt1,f2,k,m,vl,ro,rb,fb,dlati,ib0,iba,irm)
+              end if
+              IsOdd = .not. IsOdd
+           else
+              call driftlp(t,dt1,f2,k,m,vl,vp,cl,cp,ro,rb,fb,dlati,dphi,&
+                   ib0,iba,n)
+           end if
         enddo
 
      enddo
@@ -2419,8 +2437,22 @@ end subroutine E_change
 !  Routine calculates the inter-flux, f_i+0.5, using 2nd order flux
 !  limited scheme with super-bee flux limiter method
 !***********************************************************************
-subroutine FLS_2or(ibc,fb0,fb1,ipt,c,f,fa)         
-  real c(ipt),f(ipt),fa(ipt),f_new(0:ipt+2)
+subroutine FLS_2or(ibc,fb0,fb1,ipt,c,f,fa)
+
+  use rbe_cread2, ONLY: UseMcLimiter, BetaLimiter
+
+  implicit none
+
+  integer, intent(in) :: ibc, ipt
+  real :: fb0, fb1, c(ipt),f(ipt),fa(ipt)
+
+  real, allocatable :: f_new(:)
+
+  integer :: i
+
+  real :: x, xsign, xlimiter, fup, r, corr
+  !----------------------------------------------------------------------
+  allocate(f_new(0:ipt+2))
 
   f_new(1:ipt)=f(1:ipt)
 
@@ -2446,12 +2478,20 @@ subroutine FLS_2or(ibc,fb0,fb1,ipt,c,f,fa)
         if (xsign.eq.-1.) r=(f_new(i+2)-f_new(i+1))/x
         if (r.le.0.) fa(i)=fup
         if (r.gt.0.) then
-           xlimiter=max(min(2.*r,1.),min(r,2.))
+           if(UseMcLimiter)then
+              ! MC limiter with beta parameter
+              xlimiter = min(BetaLimiter*r, BetaLimiter, 0.5*(1+r))
+           else
+              ! Superbee limiter
+              xlimiter=max(min(2.*r,1.),min(r,2.))
+           end if
            corr=-0.5*(c(i)-xsign)*x      
            fa(i)=fup+xlimiter*corr
         endif
      endif
   enddo
+
+  deallocate(f_new)
 
 end subroutine FLS_2or
 
