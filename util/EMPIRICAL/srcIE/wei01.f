@@ -377,7 +377,9 @@ CNCAR
 	REAL Coef(0:1,0:5,0:5),BoundFit(0:1,0:5),pi
 	DOUBLE PRECISION dpi
 	INTEGER MaxL,MaxM,MaxN
-	COMMON /SetW2kCoef/MaxL,MaxM,MaxN,Coef,BoundFit,pi,dpi
+!v10: new,01 vers:  COMMON /SetW2kCoef/MaxL,MaxM,MaxN,Coef,BoundFit,pi,dpi
+	COMMON /SetW2kCoef/Coef, BoundFit, pi, dpi, MaxL, MaxM, MaxN
+!v10:   for using with SetModel(...) <== old version
 	BoundaryLat=FSVal(gmlt*pi/12.,MaxN,BoundFit)
 	RETURN
 	END
