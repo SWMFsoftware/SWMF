@@ -2181,8 +2181,18 @@ subroutine drift(t,dt,f2,vl,vp,ro,rb,fb,dlati,dphi,ekev,ib0,iba,&
               call driftlp(t,dt1,f2,k,m,vl,vp,cl,cp,ro,rb,fb,dlati,dphi,&
                    ib0,iba,n)
            end if
-        enddo
 
+           ! Check for NaN-s: NaN < 1.0 and NaN > 2.0 is true
+           do j=1,ip
+              do i=1,iba(j)
+                 if(f2(i,j,k,m) < 1.0 .and. f2(i,j,k,m) > 2.0)then
+                    write(*,*)'i,j,k,m,n=',i,j,k,m,n
+                    call CON_stop('RBE ERROR: NaN found in f2')
+                 end if
+              end do
+           end do
+
+        enddo
      enddo
   enddo
 
