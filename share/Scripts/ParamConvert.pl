@@ -100,9 +100,21 @@ if($ARGV[0]){
 my $XmlFile   = "$ParamFile.xml"; # Name of the XML enhanced parameter file
 my $TextFile  = "$ParamFile.txt"; # Name of the temporary text parameter file
 
-if($ParamFile){
-    `share/Scripts/ParamTextToXml.pl $ParamFile` unless -f $XmlFile;
-    &read_xml_file;
+if($ARGV[0] or not -f $XmlFile){
+    # Read parameter file if argument is present or the XML file is missing
+    &set_framework_components;
+    &read_text(&expand_param($ParamFile));
+    $Editor{SELECT} = "all";
+    $Editor{INSERT} = "NEW SESSION";
+    $Editor{ABC}    = "0";
+    $Clipboard{SESSION} = "NONE";
+    $Clipboard{SECTION} = "NONE";
+    $Clipboard{TYPE}    = "NONE";
+
+    &write_xml_file($XmlFile);
+}else{
+    # Read XML file
+    &read_xml_file($XmlFile);
 }
 
 open(PARAM, ">$ParamHtmlFile") 
@@ -124,7 +136,7 @@ open(MANUAL, ">$ManualHtmlFile")
 
 &write_param_html;
 
-&write_xml_file if $Submit;
+&write_xml_file($XmlFile) if $Submit;
 
 exit 0;
 
@@ -132,11 +144,13 @@ exit 0;
 
 sub read_xml_file{
 
-    my $DoDebug = ($Debug =~ /read_xml_file/);
-    warn "start read_xml_file from XmlFile=$XmlFile\n" if $DoDebug;
+    my $File = shift;
 
-    open(XMLFILE, $XmlFile) 
-	or die "$ERROR: could not open input file $XmlFile\n";
+    my $DoDebug = ($Debug =~ /read_xml_file/);
+    warn "start read_xml_file from XmlFile=$File\n" if $DoDebug;
+
+    open(XMLFILE, $File) 
+	or die "$ERROR: could not open input file $File\n";
 
     $nSession   = 0;
     @SessionRef = ();
@@ -237,10 +251,12 @@ sub read_xml_file{
 
 sub modify_xml_data{
 
+    my $DoDebug = ($Debug =~ /modify_xml_data/);
+
     my %Form;
     %Form = split (/[:;]/, $Submit);
-    #warn "Submit=$Submit\n";
-    #warn join(', ',%Form),"\n";
+    warn "Submit=$Submit\n" if $DoDebug;
+    warn join(', ',%Form),"\n" if $DoDebug;
 
     if($_ = $Form{submit}){
 	if( /^CHECK\b/ ){
@@ -276,7 +292,7 @@ sub modify_xml_data{
 		$XmlFile   = "$ParamFile.xml";
                 $TextFile  = "$ParamFile.txt";
 		`share/Scripts/ParamTextToXml.pl $ParamFile`;
-		&read_xml_file;
+		&read_xml_file($XmlFile);
 	    }else{
 		$Editor{READFILENAME}="OPEN";
 		$Editor{NEWFILENAME}="Could not open $Form{FILENAME}"
@@ -304,12 +320,21 @@ sub modify_xml_data{
 	    $Editor{SELECT}=$iSession;
 	}
     }elsif($_ = $Form{action}){
+
 	my $id= $Form{id};
 
 	if( /select_session/ ){
 	    $Editor{INSERT} = "new" unless 
 		($Editor{SELECT} =~ s/(\d+)/$1/g) == ($id =~ s/(\d+)/$1/g);
 	    $Editor{SELECT} = $id;
+
+	    if($id =~ /^all(.*)/){
+		&set_view($1);
+	    }elsif($id =~ /^(\d+)$/){
+		&set_view("session$1");
+	    }elsif($id =~ /^(\d+,\d+)/){
+		&set_view("section$1");
+	    }
 	    return;
 	}elsif( /select_insert/ ){
 	    $Editor{INSERT} = $id;
@@ -342,7 +367,7 @@ sub modify_xml_data{
 	my $ItemRef    = $SectionRef->{ITEM}[$iItem];
 
 	# View the stuff represented by id if id consist of numbers
-	$Editor{SELECT}=$id if $id =~ /^[\d,]+$/;
+	$Editor{SELECT}=$id if ($id =~ /^[\d,]+$/ and /edit_|insert_/);
 
 	if( /minimize_session/ ){
 	    $SessionRef->{VIEW}="MIN";
@@ -475,8 +500,10 @@ sub modify_xml_data{
 
 sub write_xml_file{
 
-    open(XMLFILE, ">$XmlFile") 
-	or die "$ERROR: could not open $XmlFile for output!\n";
+    my $File = shift;
+
+    open(XMLFILE, ">$File") 
+	or die "$ERROR: could not open XML file $File for output!\n";
 
     # Write the XMLFILE
     print XMLFILE "\t\t\t<MODE FRAMEWORK=\"$Framework\"";
@@ -731,17 +758,12 @@ sub write_editor_html{
 
     if($Selected =~ /^all(\w*)$/ ){
 
-	my $ViewLevel = $1;
-	&set_view($ViewLevel);
-
 	$InsertList  = "    <OPTION>FILE\n";
 	$InsertList .= "    <OPTION>PASTE SESSION\n"
 	    if $Clipboard{TYPE} eq "SESSION";
         $InsertList .= "    <OPTION>NEW SESSION\n";
 
     }elsif($Selected =~ /^\d+$/ and $Framework){
-
-	&set_view("session$Selected");
 
 	$InsertList  = "    <OPTION>FILE\n";
 	$InsertList .= "    <OPTION>PASTE SECTION\n"
@@ -752,8 +774,6 @@ sub write_editor_html{
 	    $InsertList .= "     <OPTION>Section $Comp\n";
 	}
     }else{
-
-	&set_view("section$Selected");
 
         $InsertList  =     "    <OPTION>FILE\n";
 	$InsertList .=     "    <OPTION>PASTE COMMAND/COMMENT\n"
@@ -1062,7 +1082,7 @@ $SectionLine
       </TD>
       <TD ALIGN=LEFT>
 $MinMaxSectionButton
-      <$Action=select_section TITLE=\"Select section\">
+      <$Action=select_session TITLE=\"Select section\">
 Section $SectionName
       </A></TD>
       <TD ALIGN=RIGHT>
@@ -1277,7 +1297,7 @@ $Comment
       </TD>
       <TD ALIGN=LEFT>
 $MinMaxSectionButton
-      <$Action=select_section TITLE=\"Select section\">
+      <$Action=select_session TITLE=\"Select section\">
 Section $SectionName
       </A></TD>
       <TD ALIGN=RIGHT>
@@ -1347,11 +1367,11 @@ sub set_view{
     my $iItem;
 
     for $iSession (1..$nSession){
-	$SessionRef[$iSession]{VIEW} = $SessionView;
+	if($SessionRef[$iSession]{VIEW} ne "EDIT"){
+	    $SessionRef[$iSession]{VIEW} = $SessionView;
 
-	$SessionRef[$iSession]{VIEW} = "MAX"
-	    if /ion$iSession/;
-
+	    $SessionRef[$iSession]{VIEW} = "MAX" if /ion$iSession/;
+	}
 	next if /session/;
 
 	for $iSection (1..$#{ $SessionRef[$iSession]{SECTION} }){
@@ -1390,39 +1410,294 @@ sub convert_type{
     die "$ERROR: input file $InputFile does not exist\n"
 	unless -f $InputFile;
 
-    open(OUTFILE, ">$OutputFile") or
-	die "$ERROR: could not open output file $OutputFile\n";
-
-    my @In;
+    my $In;
     if($InputType eq "txt"){
-	@In = expand_param($InputFile);
+	# Expand input text file
+	$In = expand_param($InputFile);
 	if($OutputType eq "expand"){
-	    print OUTFILE @In;
+	    # Convert to expanded text
+	    open(OUTFILE, ">$OutputFile") or
+		die "$ERROR: could not open output file $OutputFile\n";
+	    print OUTFILE $In;
 	    close OUTFILE;
 	    exit 0;
 	}
-    }else{
+    }elsif($InputType eq "expand"){
+	# Read expanded text file
 	open(INFILE, $InputFile) or 
 	    die "$ERROR: could not open input file $InputFile\n";
-	@In = <INFILE>;
+	$In = join('', <INFILE>);
 	close INFILE;
-    }
-
-    my @Out;
-    if($OutputType eq "xml"){
-	@Out = convert_to_xml(@In);
     }else{
-	@Out = convert_to_text(@In);
+	# Read XML enhanced file
+	&read_xml_file($InputFile);
     }
-    print OUTFILE @Out; 
-    close OUTFILE;
 
+    # Convert between expanded text and XML enhanced formats
+    if($OutputType eq "xml"){
+	&read_text($In);
+	&write_xml_file($OutputFile);
+    }else{
+	open(OUTFILE, ">$OutputFile") or
+	    die "$ERROR: could not open output file $OutputFile\n";
+	print OUTFILE &write_text; 
+	close OUTFILE;
+    }
 }
 
+##############################################################################
+sub set_framework_components{
+
+    # Set framework mode to true if CON/Control directory is present
+    $Framework = -d "CON/Control";
+
+    return unless $Framework;
+
+    # Set list of components
+    my $MakefileDef = "Makefile.def";
+    open(INFILE,$MakefileDef) or
+	print "$ERROR could not open file $MakefileDef\n";
+
+    $ValidComp = '';
+    while(<INFILE>){
+	next unless /^(\w\w)_VERSION\s*=\s*(\w+)/;
+	$ValidComp .= "$1/$2," unless $2 eq "Empty";
+	last if /TIMING_VERSION/;
+    }
+    $ValidComp =~ s/,$//;
+
+    close(INFILE);
+}
+##############################################################################
+sub read_text{
+
+    my @Text;
+    @Text = split(/\n/, @_[0]);
+
+    # Initialize for checking input parameter file
+    $nSession=1;            # number of sessions
+    my $nLine        = 0;   # Line number in the text
+    my $iSection=1;         # index of section in session
+    my $iItem=0;            # index of item in section
+    my $Section="";         # name of component section
+    my $IsCommand=0;        # true while reading a command
+    my $IsComment=0;        # true while reading a comment
+    my $UserInput="";       # true between #USERINPUTBEGIN and #USERINPUTEND
+
+    my $SectionRef;         # Pointer to current section in $SessionRef
+
+    # We assume that there is at least one session with one section inside it
+    $SessionRef[1]{VIEW} = "MAX";               # default view of session 1
+    $SessionRef[1]{NAME} = "";                  # default name of session 1
+    $SessionRef[1]{SECTION}[1]{VIEW} = "MAX";   # default view of section 1
+    $SessionRef[1]{SECTION}[1]{NAME} = "";      # default name of section 1
+    $SectionRef = $SessionRef[1]{SECTION}[1];
+
+    if(not @Text){
+	# Add a comment if there is no text passed
+	$SectionRef->{ITEM}[1]{VIEW} = "MAX";
+	$SectionRef->{ITEM}[1]{TYPE} = "COMMENT";
+	$SectionRef->{ITEM}[1]{HEAD} = "New parameter file\n";
+
+	return;
+    }
+
+    while(@Text){
+
+	$_ = shift(@Text);
+
+	if(/^\#END\b/){
+	    # Read the rest of the text into the 'clip board'
+	    $Clipboard{BODY} = join('', @_);
+	    return;
+	}
+
+	$nLine++;
+
+	if($UserInput and /^\#(BEGIN_COMP|END_COMP|RUN|USERINPUTBEGIN)\b/){
+	    &print_error( $nLine, " for command $_".
+			  "\tthis command cannot occur after ".
+			  "#USERINPUTBEGIN at line $UserInput");
+	    $UserInput = 0;
+	}
+
+	# Check for BEGIN_COMP and END_COMP commands
+	if(/^\#BEGIN_COMP\b/){
+	    if(not $Framework){
+		&print_error( $nLine, " for command $_".
+			     "\tshould not be used in stand-alone mode");
+		next;
+	    }
+	    if($Section){
+		&print_error( $nLine, " for command $_".
+			     "\talready had BEGIN_COMP $Section");
+		next;
+	    }
+	    # Figure out which component is beginning here
+	    ($Section) = /BEGIN_COMP ([A-Z][A-Z])/ or
+		&print_error( $nLine, " for command $_".
+			     "\tincorrectly formatted BEGIN_COMP command");
+
+	    $iSection++ if $#{ $SectionRef->{ITEM} } >= 0;
+	    $SessionRef[$nSession]{SECTION}[$iSection]{NAME} = $Section;
+	    $SessionRef[$nSession]{SECTION}[$iSection]{VIEW} = "MAX";
+	    $SectionRef = $SessionRef[$nSession]{SECTION}[$iSection];
+	    $iItem = 0;
+
+	}elsif(/^\#END_COMP/){
+	    if(not $Framework){
+		&print_error( $nLine, " for command $_".
+			     "\tshould not be used in stand-alone mode");
+		next;
+	    }
+
+	    if(not $Section){
+		&print_error( $nLine, 
+			      " for command $_".
+			      "\tmissing \#BEGIN_COMP command");
+		next;
+	    }
+
+	    # Extract name of the component from #END_COMP ID
+	    my $Comp;
+	    ($Comp) = /END_COMP ([A-Z][A-Z])/ or
+		&print_error( $nLine, 
+			      " for command $_".
+			      "\tincorrectly formatted END_COMP command");
+
+	    # Check if the component name matches
+	    if($Comp ne $Section){
+		&print_error( $nLine, 
+			      " for command $_\tcomponent does not match".
+			      " BEGIN_COMP $Section");
+	    }
+
+	    # In any case return to next CON section
+	    $iSection++ if $#{ $SectionRef->{ITEM} } >= 0;
+	    $SessionRef[$nSession]{SECTION}[$iSection]{NAME} = "";
+	    $SessionRef[$nSession]{SECTION}[$iSection]{VIEW} = "MAX";
+	    $SectionRef = $SessionRef[$nSession]{SECTION}[$iSection];
+	    $Section = '';
+	    $iItem   = 0;
+
+	}elsif(/^\#RUN/){	# Check if a new session has started
+	    # Check if the required commands are defined and
+	    # if the parameters are correct for the session
+
+	    if($Section and $Framework){
+		print "Error in session $nSession ending at line $nLine ".
+		    "in expanded file $ParamFile:\n".
+		    "\tBEGIN_COMP $Section does not have matching END_COMP\n";
+		$Section = '';
+	    }
+	    $nSession++;
+
+	    $SessionRef[$nSession]{VIEW} = "MAX";
+	    $SessionRef[$nSession]{SECTION}[1]{VIEW} = "MAX";
+	    $SectionRef = $SessionRef[$nSession]{SECTION}[1];
+	    $iSection=1;
+	    $iItem=0;
+
+	}elsif( /^(Begin|End)\s+session:\s*(.*)/i ){
+	    # Session names are stored as comments
+	    # Begin session: or End session:
+	    $SessionRef[$nSession]{NAME}= $2;
+	}elsif(/^\#USERINPUTBEGIN/){
+	    $iItem++;
+	    $SectionRef->{ITEM}[$iItem]{VIEW}="MAX";
+	    $SectionRef->{ITEM}[$iItem]{TYPE}="USERINPUT";
+	    $UserInput = $nLine+1;
+	    $IsCommand=0;
+	    $IsComment=0;
+	}elsif(/\#USERINPUTEND/){
+	    if(not $UserInput){
+		&print_error( $nLine, 
+			      " for command $_\tthere is no matching".
+			      " USERINPUTBEGIN command");
+	    }
+	    $UserInput = 0;
+	}else{
+	    # Analyze line for various items
+	    if(/^\#/ and not $UserInput){
+		$iItem++;
+		$SectionRef->{ITEM}[$iItem]{VIEW}="MAX";
+		$SectionRef->{ITEM}[$iItem]{TYPE}="COMMAND";
+		$IsCommand=1;
+		$IsComment=0;
+	    }elsif( /^\s*\n$/ ){
+		# Empty line closes command
+		$IsCommand = 0;
+		next unless $IsComment or $UserInput;
+	    }elsif(not $IsCommand and not $UserInput and not $IsComment){
+		# non-empty line starts new comment
+		$iItem++;
+		$IsComment = 1;
+		$SectionRef->{ITEM}[$iItem]{VIEW}="MAX";
+		$SectionRef->{ITEM}[$iItem]{TYPE}="COMMENT";
+	    }
+	    # Store line
+	    $SectionRef->{ITEM}[$iItem]{HEAD}.=$_;
+	}
+    }
+}
+##############################################################################
+sub print_error{
+    my $nLine = shift;
+    print "$ERROR at line $nLine in expanded file",@_,"\n";
+}
+##############################################################################
+sub write_text{
+
+    my $Output;
+    my $iSession;
+    for $iSession (1..$#SessionRef){
+	my $NameSession = $SessionRef[$iSession]{NAME};
+	$Output .= "Begin session: $NameSession\n\n";
+
+	my $iSection;
+	for $iSection (1..$#{ $SessionRef[$iSession]{SECTION} }){
+	    my $SectionRef = $SessionRef[$iSession]{SECTION}[$iSection];
+
+	    # Skip empty section ($iItem starts with 1)
+	    next unless $#{ $SectionRef->{ITEM} } > 0;
+
+	    my $NameSection = $SectionRef->{NAME};
+
+	    $Output .= "\#BEGIN_COMP $NameSection ".("-" x 40)."\n\n"
+		if $NameSection;
+
+	    my $iItem;
+	    for $iItem (1..$#{ $SectionRef->{ITEM} }){
+
+		my $ItemRef = $SectionRef->{ITEM}[$iItem];
+		my $ItemType= $ItemRef->{TYPE};
+
+		if($ItemType eq "USERINPUT"){
+		    $Output .= "#USERINPUTBEGIN ----------------\n\n".
+			$ItemRef->{TAIL}.
+			"\n#USERINPUTEND   ----------------\n\n";
+		}else{
+		    $Output .= $ItemRef->{HEAD}."\n".$ItemRef->{TAIL};
+		    $Output .= "\n" if $ItemType eq "COMMAND";
+		}
+	    }
+	    $Output .= "\#END_COMP $NameSection    ".("-" x 40)."\n\n"
+		if $NameSection;
+	}
+	$Output .= "\nEnd session: $NameSession\n#END ".("\#" x 60)."\n";
+    }
+
+    # Replace #END with #RUN when a session follows
+    $Output =~ s/\#END (\#+\nBegin session:)/\#RUN $1/;
+
+    return $Output;
+}
 ##############################################################################
 sub expand_param{
 
     my $basefile = @_[0];
+
+    return unless -f $basefile;
 
     # Check if basefile is in local directory or not
     if($basefile =~ /\/([^\/]+)$/){
@@ -1430,12 +1705,13 @@ sub expand_param{
 	# Change to directory so that the include files can be read
 	my $dir = $`;
 	$basefile = $1;
-	my $pwd = `pwd`;
+	my $pwd = `pwd`; chop $pwd;
 	chdir $dir or die "$ERROR: could not cd $dir\n";
 
 	# Expand the file recursively
 	my $result = &process_file($basefile, 'fh00');
 
+	# Go back to original directory
 	chdir $pwd;
 
 	return $result;
@@ -1511,6 +1787,8 @@ grep '^our' share/Scripts/ParamConvert.pl
      for the SWMF, the PARAM.XML files of the SWMF and the components to
      get the list and description of commands. The script also executes
      the TestParam.pl script to check the correctness of the parameter file.
+     For this reason it is normally executed from the main directory of the
+     SWMF or the stand-alone physics model.
 
 Usage:
 
@@ -1518,22 +1796,23 @@ Usage:
 
     -h            print help message and stop.
 
-  ParamConvert.pl [-submit=FORM] [INPUTFILE]
+  ParamConvert.pl [-submit=FORM] [PARAMFILE]
 
     -submit=FORM  FORM is a semi-colon separated list of form variables and 
                   their values. This parameter is normally passed by the 
                   parameter editor GUI.
 
-    INPUTFILE     Name of the plain text input parameter file. By default the 
-                  input file name is obtained from the HTML <TITLE> of the 
-                  param.html file.
+    PARAMFILE     Name of the plain text input parameter file to be edited. 
+                  By default the input file name is obtained from the HTML 
+                  <TITLE> of the param.html file. If there is no param.html
+                  file present, the default PARAMFILE is 'run/PARAM.in'.
 
   ParamConvert.pl INPUTFILE OUTPUTFILE
 
     INPUTFILE     Name of the input parameter file. The extensions  
                   .expand (expanded file with no \#INCLUDE files) and 
                   .xml    (XML enhanced input parameter file)
-                  are recognized, everything else is taken as a 
+                  are recognized. Everything else is taken as a 
                   plain parameter file with possible \#INCLUDE files.
 
     OUTPUTFILE    Name of the output parameter file. The extension
@@ -1543,21 +1822,25 @@ Usage:
 
 Examples:
 
-    Convert the plain text file with included files into a single file:
+    Create GUI files (index.php, editor.html, param.html...) from run/UAM.in:
 
-ParamConvert.pl run/PARAM.in run/PARAM.expand
-
-    Convert the expanded text file into an XML enhanced file:
-
-ParamConvert.pl run/PARAM.expand run/PARAM.xml
-
-    Create GUI files (index.php, editor.html, param.html...) from run/PARAM.in:
-
-ParamConvert.pl run/PARAM.in
+share/Scripts/ParamConvert.pl run/UAM.in
 
     Execute some action of the GUI for the file in the TITLE of param.html:
 
-ParamConvert.pl -submit='submit;SAVE AND EXIT'"
+share/Scripts/ParamConvert.pl -submit='submit;SAVE AND EXIT'
+
+    Convert the plain text file with included files into a single file:
+
+share/Scripts/ParamConvert.pl run/PARAM.in run/PARAM.expand
+
+    Convert the expanded text file into an XML enhanced file:
+
+share/Scripts/ParamConvert.pl run/PARAM.expand run/PARAM.xml
+
+    Convert the XML enhanced text file into a plain (expanded) text file:
+
+share/Scripts/ParamConvert.pl run/PARAM.in.xml run/PARAM.in"
 #EOC
     ,"\n\n";
     exit 0;
