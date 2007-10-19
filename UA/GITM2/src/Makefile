@@ -1,5 +1,4 @@
 ABDIR   = ../srcSphereAB
-EDDIR   = ../srcRudy
 IODIR   = ${DATAREADINDICESDIR}
 
 SEARCH_EXTRA = -I${ABDIR} -I${IODIR}
@@ -102,7 +101,7 @@ ${EXE}:	${OBJECTS_EXE}
 
 GITM_general:
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} \
-		-L${ABDIR} -lSphere -L${EDDIR} -lED \
+		-L${ABDIR} -lSphere \
 		-L${LIBDIR} -lEMPIRICALIE -lINDICES -lSHARE \
 		${LBLAS} ${Lflag1}
 
@@ -110,7 +109,6 @@ GITM_for_Darwin:
 	rm -rf Tmp_; mkdir Tmp_
 	cd Tmp_; \
 		ar -x ../${ABDIR}/libSphere.a; \
-		ar -x ../${EDDIR}/libED.a; \
 		ar -x ${LIBDIR}/libEMPIRICALIE.a; \
 		ar -x ${LIBDIR}/libINDICES.a; \
 		ar -x ${LIBDIR}/libSHARE.a
