@@ -46,14 +46,20 @@ die "$ERROR could not find $ParamFile\n" unless -f $ParamFile;
 
 # Try to guess the name of the LAYOUT file if not given
 if(not $LayoutFile){
-    $LayoutFile = $ParamFile;
-    # Replace PARAM with LAYOUT
-    $LayoutFile =~ s/PARAM/LAYOUT/;
-    # Replace .expand with .in
-    $LayoutFile =~ s/\.expand/.in/;
-    # If the LAYOUT file based on the PARAM file is not found try the default
-    $LayoutFile = $LayoutFileDefault 
-	if (not -f $LayoutFile and -f $LayoutFileDefault);
+    if($ParamFile =~ /PARAM/){
+	$LayoutFile = $ParamFile;
+	# Replace PARAM with LAYOUT
+	$LayoutFile =~ s/PARAM/LAYOUT/;
+	# Replace .expand with .in
+	$LayoutFile =~ s/\.expand/.in/;
+
+	# If the LAYOUT file based on the PARAM file name is not found 
+	# try the default
+	$LayoutFile = $LayoutFileDefault 
+	    if (not -f $LayoutFile and -f $LayoutFileDefault);
+    }else{
+	$LayoutFile = $LayoutFileDefault;
+    }
 }
 warn "$WARNING No layout file $LayoutFile was found\n" unless -f $LayoutFile;
 
