@@ -1,9 +1,9 @@
+
 default : GITM
 
 include Makefile.def
 
 ABDIR   = srcSphereAB
-EDDIR   = srcRudy
 IEDIR   = ${EMPIRICALIEDIR}
 IODIR   = ${DATAREADINDICESDIR}
 MAINDIR = src
@@ -24,7 +24,6 @@ GITM:
 	@cd ${SHAREDIR}; make LIB
 	@cd $(ABDIR);    make LIB
 	@cd $(IEDIR);    make LIB
-	@cd $(EDDIR);    make LIB
 	@cd $(IODIR);    make LIB
 	@cd $(MAINDIR);  make GITM
 
@@ -35,8 +34,7 @@ GITM2 = ${DIR}/UA/GITM2
 
 LIB:
 	cd $(ABDIR)     ; make                                         LIB
-	cd $(EDDIR)     ; make LIBPREV=${GITM2}/${ABDIR}/libSphere.a   LIBADD
-	cd $(MAINDIR)   ; make LIBPREV=${GITM2}/${EDDIR}/libABIEED.a   LIB
+	cd $(MAINDIR)   ; make LIBPREV=${GITM2}/${ABDIR}/libSphere.a   LIBADD
 	cd srcInterface ; make LIBPREV=${GITM2}/${MAINDIR}/libUA.a     LIB
 
 nompirun:
@@ -46,7 +44,6 @@ nompirun:
 clean:
 	@touch src/Makefile.DEPEND src/Makefile.RULES
 	@cd $(ABDIR);    make clean
-	@cd $(EDDIR);    make clean
 	@cd $(MAINDIR);  make clean
 	@cd srcInterface;make clean
 	@(if [ -d share ]; then cd share; make clean; fi);
@@ -55,7 +52,6 @@ clean:
 distclean:
 	@touch src/Makefile.DEPEND src/Makefile.RULES
 	@cd $(ABDIR);    make clean
-	@cd $(EDDIR);    make clean
 	@cd $(MAINDIR);  make distclean
 	@cd srcInterface;make distclean
 	rm -f src/ModSize.f90 *~
@@ -64,7 +60,10 @@ distclean:
 #
 rundir:
 	mkdir -p ${RUNDIR}/UA
+	mkdir -p ${RUNDIR}/EIE
 	cd ${RUNDIR} ; ln -s ${BINDIR}/PostProcess.exe ./PostGITM.exe
+	cp ${IEDIR}/ED_isoelec_edep.dat ${RUNDIR}/EIE/isoelec_edep.dat
+	cp ${IEDIR}/ED_hpke.noaa ${RUNDIR}/EIE/hpke.noaa
 	cd ${RUNDIR}/UA; \
 		mkdir restartOUT data; \
 		ln -s restartOUT restartIN; \
@@ -148,5 +147,5 @@ dist:
 	make distclean
 	tar cvzf gitm_`date "+%y%m%d"`.tgz Makefile* config.pl get_info.pl \
 	    share src srcData srcIDL srcIE srcIO srcInterface \
-	    srcMake srcRudy srcSphereAB
+	    srcMake srcSphereAB
 	make install
