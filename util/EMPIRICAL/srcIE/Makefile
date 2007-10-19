@@ -15,8 +15,9 @@ MODULES = \
 	ModEIE_Interface.o\
 	ModMHD_Interface.o\
 	ModExtras.o\
-	ModEIEFiles.o
-
+	ModEIEFiles.o\
+	ED_ModInterface.o\
+	ED_ModIons.o
 OBJECTS = \
 	AMIE_Library.o\
 	EIE_End.o\
@@ -34,7 +35,10 @@ OBJECTS = \
 	iz94.o\
 	ihp.o\
 	merge_str.o\
-	MHD_Library.o
+	MHD_Library.o\
+	ED_Interface.o \
+	ED_ReadIonHeat.o \
+	ED_r_elec_ed_lup_subs.o
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl -I${SHAREDIR} ${MODULES}
