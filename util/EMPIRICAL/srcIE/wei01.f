@@ -1,6 +1,6 @@
 ************************ Copyright 1996,2001 Dan Weimer/MRC ***********************
 *
-* Subroutines to calculate the electric potentials from the "Weimer 2K" model of
+* Subroutines to calculate the electric potentials from the "Weimer 01" model of
 * the polar cap ionospheric electric potentials described in the publication: 
 * Weimer, D. R., An improved model of ionospheric electric potentials including
 * substorm perturbations and application to the Geospace Environment Modeling
@@ -19,15 +19,10 @@
 * Input coordinates assume use of 'altitude adjusted' corrected geomagnetic
 * coordinates for R=1, also refered to as AACGM0.
 *
-* The function BOUNDARYLAT(gMLT) can be used to get the latitude of the boundary
+* The function BOUNDARYLAT01(gMLT) can be used to get the latitude of the boundary
 *   where the potential goes to zero.  This boundary is a function of MLT, and
 *   varies with the SETMODEL01 parameters.  The potential is zero everywhere below
 *   this boundary.
-*
-* Two data files are provided:
-*	'w2klittle.dat' for LITTLE_ENDIAN machines.
-*	'w2kbig.dat'    for    BIG_ENDIAN machines.
-* You must copy or rename the correct one to the file 'w2k.dat'
 *
 * This code is protected by copyright and is distributed
 * for research or educational use only.
@@ -58,7 +53,7 @@ C                adhere to ANSI Fortran 77.
 CNCAR      NCAR changes are delimited by "CNCAR"
 *
 ************************ Copyright 1996,2001 Dan Weimer/MRC ***********************
-	SUBROUTINE DLEGENDRE(x,lmax,mmax,Plm,dPlm,derivative)
+	SUBROUTINE DLEGENDRE01(x,lmax,mmax,Plm,dPlm,derivative)
 * compute Double Precision Associate Legendre Function P_l^m(x)
 * for all l up to lmax and all m up to mmax.
 * Returns results in array Plm.
@@ -193,14 +188,14 @@ CNCAR
 	REAL Coef(0:1,0:5,0:5),BoundFit(0:1,0:5),pi
 	DOUBLE PRECISION dpi
 	INTEGER*4 maxj,MaxL,MaxM,MaxN,MaxO
-	COMMON /AllW2kCoefs/MaxJ,MaxO,CS,BCS,SS,BSS
-	COMMON /SetW2kCoef/MaxL,MaxM,MaxN,Coef,BoundFit,pi,dpi
+	COMMON /AllW01Coefs/MaxJ,MaxO,CS,BCS,SS,BSS
+	COMMON /SetW01Coef/MaxL,MaxM,MaxN,Coef,BoundFit,pi,dpi
 
 CNCAR      Feb 01:  Initialize constants used in GECMP01
 C          Sep 01:  Omit unneeded min lat variables because of switch to
 C                   constant potential at and below min lat (hardcoded
 C                   in EPOTVAL01).
-      COMMON /CECMP/ ALAMX,STPD,STP2,CSTP,SSTP
+      COMMON /W01CECMP/ ALAMX,STPD,STP2,CSTP,SSTP
 C            ALAMX = Absolute max latitude (deg) for normal gradient calc.
 C            STPD  = Angular dist (deg) of step @ 300km above earth (r=6371km)
 C            STP2  = Denominator in gradient calc
@@ -215,10 +210,8 @@ C            STP2  = Denominator in gradient calc
       ALAMX = 90. - STPD
 CNCAR
 
-CNCAR      Sep 01:  udat,cfile are now a formal arguments
+CNCAR      Sep 01:  udat is now an argument
 C  Assume file has been opened at unit elsewhere
-c     cfile = 'w2k.dat' !make sure correct ENDIAN type file is used.
-c     udat  = 99
 CNCAR
 c     OPEN (UNIT=udat,FILE=cfile,STATUS='OLD',form='UNFORMATTED')
       READ (udat) Copyright
@@ -252,7 +245,7 @@ CNCAR
 * solar wind velocity (km/sec), SWDen (#/cc),
 * ALindex (nT), and Logical flag to use optional AL index.
 *
-* Sets the value of Coef and Boundfit in the common block SetW2kCoef.
+* Sets the value of Coef and Boundfit in the common block SetW01Coef.
 *
 	REAL angle,Bt,Tilt,SWVel,SWDen,ALindex
 C       LOGICAL First,UseAL
@@ -274,13 +267,13 @@ C       CHARACTER*30 Copyright
 	DOUBLE PRECISION dpi
 	INTEGER*4 i,j,k,l,m,n,o
 	INTEGER*4 maxj,MaxL,MaxM,MaxN,MaxO
-	COMMON /AllW2kCoefs/MaxJ,MaxO,CS,BCS,SS,BSS
-	COMMON /SetW2kCoef/MaxL,MaxM,MaxN,Coef,BoundFit,pi,dpi
+	COMMON /AllW01Coefs/MaxJ,MaxO,CS,BCS,SS,BSS
+	COMMON /SetW01Coef/MaxL,MaxM,MaxN,Coef,BoundFit,pi,dpi
 
 CNCAR      Feb 01: Move logic block to subroutine RdCoef01
 C  All First=TRUE in new subroutine ReadCoef
 C       If(First)Then
-C       cfile='w2k.dat' !make sure correct ENDIAN type file is used.
+C       cfile='w01.dat' !make sure correct ENDIAN type file is used.
 C       unit=99
 C       OPEN(UNIT=unit,FILE=cfile,STATUS='OLD',form='UNFORMATTED')
 C       READ(unit) Copyright
@@ -372,15 +365,13 @@ CNCAR
 	RETURN
 	END
 ****************** Copyright 1996, 2001, Dan Weimer/MRC ***********************
-	FUNCTION BoundaryLat(gmlt)
+	FUNCTION BoundaryLat01(gmlt)
 	REAL gmlt
 	REAL Coef(0:1,0:5,0:5),BoundFit(0:1,0:5),pi
 	DOUBLE PRECISION dpi
 	INTEGER MaxL,MaxM,MaxN
-!v10: new,01 vers:  COMMON /SetW2kCoef/MaxL,MaxM,MaxN,Coef,BoundFit,pi,dpi
-	COMMON /SetW2kCoef/Coef, BoundFit, pi, dpi, MaxL, MaxM, MaxN
-!v10:   for using with SetModel(...) <== old version
-	BoundaryLat=FSVal(gmlt*pi/12.,MaxN,BoundFit)
+	COMMON /SetW01Coef/MaxL,MaxM,MaxN,Coef,BoundFit,pi,dpi
+	BoundaryLat01=FSVal(gmlt*pi/12.,MaxN,BoundFit)
 	RETURN
 	END
 ****************** Copyright 1996, 2001, Dan Weimer/MRC ***********************
@@ -402,13 +393,13 @@ CNCAR
 
       REAL Coef(0:1,0:5,0:5), BoundFit(0:1,0:5),pi
       DOUBLE PRECISION dpi
-      COMMON /SetW2kCoef/ MaxL,MaxM,MaxN,Coef,BoundFit,pi,dpi
+      COMMON /SetW01Coef/ MaxL,MaxM,MaxN,Coef,BoundFit,pi,dpi
 
-      blat = BoundaryLat (gMLT)
+      blat = BoundaryLat01(gMLT)
 CNCAR      Feb 01:  For latitudes at and equatorward of the model minimum
 C          (a function of MLT), limit the latitude used to never be less
 C          than the model minimum, thus returning a constant potential for
-C          points at and equatorward of BoundaryLat (gmlt).
+C          points at and equatorward of BoundaryLat01(gmlt).
 C     IF (glat .GT. blat) THEN
       glatlim = amax1 (glat,blat)
 CNCAR
@@ -426,9 +417,9 @@ CNCAR
       Z  = DC
       O  = DC
       ct = DCOS(x)
-      CALL DLegendre (ct,   MaxL,MaxM,Plm ,0.D0,.FALSE.)
+      CALL DLegendre01(ct,   MaxL,MaxM,Plm ,0.D0,.FALSE.)
 C          Also find value at outer boundary at angle Pi, or cos(pi)=-1.
-      CALL DLegendre (-1.D0,MaxL,MaxM,OPlm,0.D0,.FALSE.)
+      CALL DLegendre01(-1.D0,MaxL,MaxM,OPlm,0.D0,.FALSE.)
       DO l=1,MaxL
 	Z = Z +  Plm(l,0)*DBLE(Coef(0,l,0))
 	O = O + OPlm(l,0)*DBLE(Coef(0,l,0))
@@ -498,7 +489,7 @@ C          gradients at lower limit has been removed.
      +            R2D = 57.2957795130823208767981548147)
 
 C          CECMP contains constants initialized in READCOEF01
-      COMMON /CECMP/ ALAMX,STPD,STP2,CSTP,SSTP
+      COMMON /W01CECMP/ ALAMX,STPD,STP2,CSTP,SSTP
 
       ET = -99999.
       EP = -99999.
@@ -542,7 +533,7 @@ C          in both directions to obtain the electric potential
 
       SUBROUTINE WEIEPOT01 (IYR,IMO,IDA,IHR,IMN,SWS,SWD,BY,BZ,AL,USEAL,
      +                     IHEM,ISETM,RMLA,RMLT, ET,EP,EPOT)
-C          Interface to Weimer-01 (a.k.a w2k) for AMIE's combined electrostatic
+C          Interface to Weimer-01 (a.k.a w01) for AMIE's combined electrostatic
 C          potential models.  This replaces two calls (SETMODEL01 and
 C          EPOTVAL01) and automates sign changes for southern hemisphere.
 C          INPUTS:
@@ -583,7 +574,7 @@ C          Jan 97:  Initial implementation. B. Emery.
 C          Feb 01:  Remove bug (HR was not defined)
 C          Sep 01:  Add common block s.t. computed values are available to
 C          the calling routine without changing the argument list
-      COMMON /WEIAT/ ANGL, TILT
+      COMMON /W01AT/ ANGL, TILT
       PARAMETER (R2D=57.2957795130823208767981548147)
       LOGICAL USEAL
 

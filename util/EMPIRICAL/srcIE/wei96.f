@@ -5,7 +5,7 @@
 *
 * To use, first call subroutine ReadCoef once.
 * Next, call SetModel with the specified input parameters.
-* The function EpotVal(gLAT,gMLT) can then be used repeatively to get the
+* The function EpotVal96(gLAT,gMLT) can then be used repeatively to get the
 * electric potential at the desired location in geomagnetic coordinates.
 *
 * This code is protected by copyright and is
@@ -39,8 +39,7 @@ CNCAR      NCAR changes are delimited by "CNCAR"
 
 CNCAR      Oct 01:  Distinguish from the 2001 version
 
-	FUNCTION EPOTVAL96 (gLAT,gMLT)
-C       FUNCTION EPOTVAL   (gLAT,gMLT)
+	FUNCTION EPOTVAL96(gLAT,gMLT)
 CNCAR
 * Return the value of the electric potential in kV at
 * corrected geomagnetic coordinates gLAT (degrees) and gMLT (hours).
@@ -54,7 +53,7 @@ CNCAR
 
 	REAL Coef(0:1,0:8,0:3),pi
 	INTEGER ML,MM
-	COMMON/SetCoef/ML,MM,Coef,pi
+	COMMON/SetW96Coef/ML,MM,Coef,pi
 
 	r = 90.-gLAT
 
@@ -68,7 +67,7 @@ CNCAR
           Phi=gMLT*pi/12.
 	  Z=Coef(0,0,0)
 	  ct=COS(Theta)
-	  CALL Legendre(ct,ML,MM,Plm)
+	  CALL Legendre96(ct,ML,MM,Plm)
 	  DO l=1,ML
 	    Z=Z + Coef(0,l,0)*Plm(l,0)
 	    IF(l.LT.MM)THEN
@@ -87,7 +86,6 @@ C       ELSE
 C         Z=0.
 C       ENDIF
 	EPOTVAL96 = Z
-C       EpotVal   = Z
 CNCAR
 	RETURN
 	END
@@ -98,7 +96,6 @@ CNCAR      Sep 01:  Pass in the unit no. and file name rather than hard coding
 C          inside.  Also change name to distinguish 2001 version.
 
 	SUBROUTINE READCOEF96 (udat)
-C       SUBROUTINE ReadCoef
 CNCAR
 
 *
@@ -112,14 +109,14 @@ CNCAR
 	REAL C(0:3)
 	REAL Cn( 0:3 , 0:1 , 0:4 , 0:1 , 0:8 , 0:3 )
 	INTEGER MaxL,MaxM,MaxN
-	COMMON /AllCoefs/MaxL,MaxM,MaxN,Cn
+	COMMON /AllW96Coefs/MaxL,MaxM,MaxN,Cn
 
 
 CNCAR      Jan 97:  Initialize constants used in GECMP96
 C          Sep 01:  Omit unneeded min lat variables because of switch to
 C                   constant potential at and below min lat (hardcoded
 C                   in EPOTVAL96).
-      COMMON /CECMP/ ALAMX,STPD,STP2,CSTP,SSTP
+      COMMON /W96CECMP/ ALAMX,STPD,STP2,CSTP,SSTP
 C            ALAMX = Absolute max latitude (deg) for normal gradient calc.
 C            STPD  = Angular dist (deg) of step @ 300km above earth (r=6371km)
 C            STP2  = Denominator in gradient calc
@@ -193,7 +190,6 @@ C	OPEN(udat,FILE=cfile,STATUS='OLD')
 CNCAR      Oct 01:  Change name from SetModel to be distinct
 
 	SUBROUTINE SETMODEL96 (angle,Bt,Tilt,SWVel)
-C       SUBROUTINE SetModel   (angle,Bt,Tilt,SWVel)
 CNCAR
 *
 * Calculate the complete set of spherical harmonic coefficients,
@@ -206,11 +202,11 @@ CNCAR
 	REAL FSC(0:1,0:4)
 	REAL Cn( 0:3 , 0:1 , 0:4 , 0:1 , 0:8 , 0:3 )
 	INTEGER MaxL,MaxM,MaxN
-	COMMON /AllCoefs/MaxL,MaxM,MaxN,Cn
+	COMMON /AllW96Coefs/MaxL,MaxM,MaxN,Cn
 
 	REAL Coef(0:1,0:8,0:3),pi
 	INTEGER ML,MM
-	COMMON/SetCoef/ML,MM,Coef,pi
+	COMMON/SetW96Coef/ML,MM,Coef,pi
 
 	pi=2.*ASIN(1.)
 	ML=MaxL
@@ -252,7 +248,7 @@ CNCAR
 	RETURN
 	END
 ************************ Copyright 1996, Dan Weimer/MRC ***********************
-	SUBROUTINE LEGENDRE(x,lmax,mmax,Plm)
+	SUBROUTINE LEGENDRE96(x,lmax,mmax,Plm)
 * compute Associate Legendre Function P_l^m(x)
 * for all l up to lmax and all m up to mmax.
 * returns results in array Plm
@@ -266,7 +262,7 @@ CNCAR
 	xx=MIN(x,1.)
 	xx=MAX(xx,-1.)
 	IF(lmax .LT. 0 .OR. mmax .LT. 0 .OR. mmax .GT. lmax )THEN
-	  Print *,'Bad arguments to Legendre'
+	  Print *,'Bad arguments to Legendre96'
 	  RETURN
 	ENDIF
 * First calculate all Pl0 for l=0 to l
@@ -332,7 +328,7 @@ C          gradients at lower limit has been removed.
      +            R2D = 57.2957795130823208767981548147)
 
 C          CECMP contains constants initialized in READCOEF
-      COMMON /CECMP/ ALAMX,STPD,STP2,CSTP,SSTP
+      COMMON /W96CECMP/ ALAMX,STPD,STP2,CSTP,SSTP
 
       ET = -99999.
       EP = -99999.
@@ -349,8 +345,8 @@ C          going over pole to keep lat <= 90).
 	AMLA1 = 180. - AMLA1
 	XMLT1 = XMLT1 + 12.
       ENDIF
-      P1 = EPOTVAL96 (AMLA1    ,XMLT1)
-      P2 = EPOTVAL96 (AMLA-STPD,XMLT )
+      P1 = EPOTVAL96(AMLA1    ,XMLT1)
+      P2 = EPOTVAL96(AMLA-STPD,XMLT )
       IF (KPOL .EQ. 1) GO TO 20
       ET = (P1 - P2) / STP2
 
@@ -363,8 +359,8 @@ C       DPHI  = ASIN (SSTP/SIN(AMLA1))*R2D          ! old and wrong! (changed Fe
 	DPHI  = ASIN (SSTP/COS(AMLA1))*R2D/15.      ! 15 converts from degrees to hours
 
 	AMLA1 = AMLA1*R2D
-	P1 = EPOTVAL96 (AMLA1,XMLT+DPHI)
-	P2 = EPOTVAL96 (AMLA1,XMLT-DPHI)
+	P1 = EPOTVAL96(AMLA1,XMLT+DPHI)
+	P2 = EPOTVAL96(AMLA1,XMLT-DPHI)
       ELSE
 C          At the pole.  Avoid a divide by zero by using Art's trick
 C          where Ephi(90,lon) = Etheta(90,lon+90).
@@ -420,7 +416,7 @@ C          Feb 01:  Remove bug (HR was not defined)
 C          Sep 01:  Add common block s.t. computed values are available to
 C          the calling routine without changing the argument list
 C          Oct 01:  Revise routine names s.t. this can run with the 2001 version
-      COMMON /WEIAT/ ANGL, TILT
+      COMMON /W96AT/ ANGL, TILT
       PARAMETER (R2D=57.2957795130823208767981548147)
 
       H = REAL (IHEM)
@@ -439,9 +435,9 @@ C    +                            SWS,BY,BZ,BT,ANGL,TILT
       ENDIF
 
 C          NH assumed latitudes only
-      AMLA = ABS (RMLA)
-      EPOT = EPOTVAL96 (AMLA, RMLT)
-      CALL GECMP96 (AMLA,RMLT,ET,EP)
+      AMLA = ABS(RMLA)
+      EPOT = EPOTVAL96(AMLA, RMLT)
+      CALL GECMP96(AMLA,RMLT,ET,EP)
 
       RETURN
       END
