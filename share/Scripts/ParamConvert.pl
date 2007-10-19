@@ -1410,6 +1410,8 @@ sub convert_type{
     die "$ERROR: input file $InputFile does not exist\n"
 	unless -f $InputFile;
 
+    &set_framework_components;
+
     my $In;
     if($InputType eq "txt"){
 	# Expand input text file
@@ -1436,13 +1438,25 @@ sub convert_type{
     # Convert between expanded text and XML enhanced formats
     if($OutputType eq "xml"){
 	&read_text($In);
+	
+	# set defaults for Editor and Clipboard
+	$Editor{SELECT} = "all";
+	$Editor{INSERT} = "NEW SESSION";
+	$Editor{ABC}    = "0";
+	$Clipboard{SESSION} = "NONE";
+	$Clipboard{SECTION} = "NONE";
+	$Clipboard{TYPE}    = "NONE";
+
 	&write_xml_file($OutputFile);
     }else{
 	open(OUTFILE, ">$OutputFile") or
 	    die "$ERROR: could not open output file $OutputFile\n";
 	print OUTFILE &write_text; 
+	print OUTFILE "\n$Clipboard{BODY}" if $Clipboard{BODY};
 	close OUTFILE;
     }
+
+    exit 0;
 }
 
 ##############################################################################
@@ -1508,7 +1522,8 @@ sub read_text{
 
 	if(/^\#END\b/){
 	    # Read the rest of the text into the 'clip board'
-	    $Clipboard{BODY} = join('', @_);
+	    $Clipboard{BODY} = join("\n", @Text) . "\n";
+	    $Clipboard{BODY} =~ s/^\n*//m;
 	    return;
 	}
 
@@ -1624,7 +1639,7 @@ sub read_text{
 		$SectionRef->{ITEM}[$iItem]{TYPE}="COMMAND";
 		$IsCommand=1;
 		$IsComment=0;
-	    }elsif( /^\s*\n$/ ){
+	    }elsif( /^\s*$/ ){
 		# Empty line closes command
 		$IsCommand = 0;
 		next unless $IsComment or $UserInput;
@@ -1636,7 +1651,11 @@ sub read_text{
 		$SectionRef->{ITEM}[$iItem]{TYPE}="COMMENT";
 	    }
 	    # Store line
-	    $SectionRef->{ITEM}[$iItem]{HEAD}.=$_;
+	    if($SectionRef->{ITEM}[$iItem]{HEAD}){
+		$SectionRef->{ITEM}[$iItem]{TAIL} .= "$_\n";
+	    }else{
+		$SectionRef->{ITEM}[$iItem]{HEAD} = $_;
+	    }
 	}
     }
 }
@@ -1651,7 +1670,7 @@ sub write_text{
     my $Output;
     my $iSession;
     for $iSession (1..$#SessionRef){
-	my $NameSession = $SessionRef[$iSession]{NAME};
+	my $NameSession = ($SessionRef[$iSession]{NAME} or $iSession);
 	$Output .= "Begin session: $NameSession\n\n";
 
 	my $iSection;
@@ -1681,10 +1700,10 @@ sub write_text{
 		    $Output .= "\n" if $ItemType eq "COMMAND";
 		}
 	    }
-	    $Output .= "\#END_COMP $NameSection    ".("-" x 40)."\n\n"
+	    $Output .= "\#END_COMP $NameSection   ".("-" x 40)."\n\n"
 		if $NameSection;
 	}
-	$Output .= "\nEnd session: $NameSession\n#END ".("\#" x 60)."\n";
+	$Output .= "End session: $NameSession\n#END ".("\#" x 60)."\n";
     }
 
     # Replace #END with #RUN when a session follows
