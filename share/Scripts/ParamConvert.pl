@@ -324,7 +324,7 @@ sub modify_xml_data{
 	my $id= $Form{id};
 
 	if( /select_session/ ){
-	    $Editor{INSERT} = "new" unless 
+	    $Editor{INSERT} = "NEW" unless 
 		($Editor{SELECT} =~ s/(\d+)/$1/g) == ($id =~ s/(\d+)/$1/g);
 	    $Editor{SELECT} = $id;
 
@@ -421,15 +421,16 @@ sub modify_xml_data{
 	    my $NewSessionRef;
 	    $NewSessionRef->{VIEW} = "EDIT";
 	    $NewSessionRef->{NAME} = "";
-	    $NewSessionRef->{SECTION}[1]{VIEW}="MAX";
+	    $NewSessionRef->{SECTION}[1]{VIEW} = "MAX";
+	    $NewSessionRef->{SECTION}[1]{ITEM}[1]{TYPE} = "COMMENT";
+	    $NewSessionRef->{SECTION}[1]{ITEM}[1]{VIEW} = "MAX";
+
 	    if($Editor{INSERT} eq "PASTE SESSION"){
 		$NewSessionRef->{SECTION}[1]{ITEM}[1]{HEAD} = $Clipboard{BODY};
 		chop $NewSessionRef->{SECTION}[1]{ITEM}[1]{HEAD};
-	    }elsif($Editor{INSERT} eq "NEW SESSION"){
+	    }elsif($Editor{INSERT} =~ /NEW/){
 		$NewSessionRef->{SECTION}[1]{ITEM}[1]{HEAD} = "New session";
 	    }
-	    $NewSessionRef->{SECTION}[1]{ITEM}[1]{TYPE} = "COMMENT";
-	    $NewSessionRef->{SECTION}[1]{ITEM}[1]{VIEW} = "MAX";
 	    splice (@SessionRef, $iSession, 0, $NewSessionRef);
 	    $nSession++;
 	}elsif( /insert_section/ ){
@@ -792,8 +793,8 @@ sub write_editor_html{
 
     if( not ($InsertList =~s/OPTION>$Insert/OPTION SELECTED>$Insert/)){
 	$InsertList =~ s/OPTION>(COMMANDS|NEW|Section CON)/OPTION SELECTED>$1/;
-	$Insert = "new";
-	$Editor{INSERT} = "new";
+	$Insert = "NEW";
+	$Editor{INSERT} = "NEW";
     }
 
     my $InsertItem;
@@ -1616,7 +1617,8 @@ sub read_text{
 	}elsif( /^(Begin|End)\s+session:\s*(.*)/i ){
 	    # Session names are stored as comments
 	    # Begin session: or End session:
-	    $SessionRef[$nSession]{NAME}= $2;
+	    my $Name = $2;
+	    $SessionRef[$nSession]{NAME}= $Name unless $Name =~ /^\d+$/;
 	}elsif(/^\#USERINPUTBEGIN/){
 	    $iItem++;
 	    $SectionRef->{ITEM}[$iItem]{VIEW}="MAX";
