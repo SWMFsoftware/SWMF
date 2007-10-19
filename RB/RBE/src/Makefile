@@ -12,7 +12,6 @@ OBJECTS = \
 	pbo_2.o\
 	t04_s.o\
 	t96_01.o\
-	w2k.o\
 	geopack.o
 
 DEPEND:

@@ -1544,7 +1544,7 @@ subroutine convection(t,tstart,ps,xlati,phi,dphi,re,&
      endif
      angle=atan2(by,bz)*180./pi       ! degrees from northward toward +Y
      Bt=sqrt(by*by+bz*bz)             ! Magnitude of IMF in Y-Z plane in nT
-     call SetModel(angle,Bt,Tilt,vsw,xnsw,ALindex,UseAL)
+     call SetModel00(angle,Bt,Tilt,vsw,xnsw,ALindex,UseAL)
   endif
 
   !  Find potential (in Volt) at the ionosphere
@@ -1552,10 +1552,10 @@ subroutine convection(t,tstart,ps,xlati,phi,dphi,re,&
      gLAT=acos(cos(xlati(i))/sqrt(rc))*180./pi !invariant lat. in degree
      do j=1,ip
         gMLT=phi(j)*12./pi    ! convert mlt from radians to hour 0-24.
-        BnLat=BoundaryLat(gMLT)    ! boundary latitude 
+        BnLat=BoundaryLat00(gMLT)    ! boundary latitude 
         if (iconvect.eq.1) then
            potent(i,j)=0.0
-           if (gLAT.gt.BnLat) potent(i,j)=EpotVal(gLAT,gMLT)*1000.  ! Volt
+           if (gLAT.gt.BnLat) potent(i,j)=EpotVal00(gLAT,gMLT)*1000.  ! Volt
         else
            !              potent(i,j)=MHD_pot(gLAT,gMLT)
         endif
