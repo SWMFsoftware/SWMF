@@ -261,6 +261,7 @@ subroutine PW_advance_line
   use ModNumConst, ONLY: cRadToDeg
   use ModPWOM
   use ModFieldLine
+  use ModAurora,   ONLY: set_aurora, set_auroral_rates
   implicit none
 
   real XXX,MaxLineTime
@@ -287,6 +288,12 @@ subroutine PW_advance_line
   else
      DoLog=.False.
   endif
+
+  if (UseAurora) then
+     call set_aurora
+     call set_auroral_rates
+  endif
+
 
   call put_field_line(&
        State_CVI(:,:,iLine),&
