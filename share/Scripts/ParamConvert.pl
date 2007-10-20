@@ -60,6 +60,7 @@ our $ItemEditorWidth  =60;         # width (chars) for command/comment editor
 our $CommandBgColor   ='#CCCCCC';  # background color for commands
 our $ParameterBgColor ='#CCCCCC';  # background color for command parameters
 our $CommentBgColor   ='#DDDDDD';  # background color for comments
+our $ErrorBgColor     ='RED';      # background color for errors
 our $UserInputBgColor ='#CCCCCC';  # background color for user input commands
 
 # Allow user to modify defaults
@@ -82,6 +83,7 @@ my $CheckResult;   # Result from TestParam.pl script
 
 my %TableColor = ("command"   => $CommandBgColor,
 		  "comment"   => $CommentBgColor,
+		  "error"     => $ErrorBgColor,
 		  "userinput" => $UserInputBgColor);
 
 
@@ -104,14 +106,8 @@ if($ARGV[0] or not -f $XmlFile){
     # Read parameter file if argument is present or the XML file is missing
     &set_framework_components;
     &read_text(&expand_param($ParamFile));
-    $Editor{SELECT} = "all";
-    $Editor{INSERT} = "NEW SESSION";
-    $Editor{ABC}    = "0";
-    $Clipboard{SESSION} = "NONE";
-    $Clipboard{SECTION} = "NONE";
-    $Clipboard{TYPE}    = "NONE";
 
-    &write_xml_file($XmlFile);
+    &write_xml_file($XmlFile, "DefaultEditorAndClipboard");
 }else{
     # Read XML file
     &read_xml_file($XmlFile);
@@ -260,13 +256,42 @@ sub modify_xml_data{
 
     if($_ = $Form{submit}){
 	if( /^CHECK\b/ ){
-	    `share/Scripts/ParamXmlToText.pl $XmlFile`;
+	    open(FILE, ">$TextFile") 
+		or die "$ERROR: could not open $TextFile\n";
+	    my $Text = &write_text;
+	    $Text =~ s/^ERROR.*\n+//mg;
+	    print FILE $Text;
+	    close FILE;
+
 	    my $TestScript = ($Framework ? "Scripts" : ".")."/TestParam.pl";
 	    $CheckResult = `$TestScript $TextFile 2>&1`;
-	    $CheckResult = "No errors found" unless $CheckResult;
+	    if(not $CheckResult){
+		$CheckResult = "No errors found";
+		return;
+	    }
+	    my @Text; @Text = split("\n", $Text);
+	    my $iLine;
+	    my $Section;
+	    for (split(/\n/, $CheckResult)){
+		if(/TestParam_ERROR: parameter errors for (\w+)/){
+		    $Section = " for $1" if $Framework;
+		}elsif(/Error at line (\d+)/){
+		    $iLine = $1;
+		    $iLine-- while $iLine > 0 and $Text[$iLine] !~ /^\#/;
+		    $iLine--;
+		}elsif(/Error in session (\d+) ending at line (\d+)/){
+		    $iLine = $2;
+		    $iLine-- while $Text[$iLine] !~ /^Begin session/;
+		}elsif(/^\t+(.*)/){
+		    $Text[$iLine] .= "\nERROR$Section: $1";
+		}
+	    }
+	    $Text = join("\n",@Text)."\n";
+	    &read_text($Text);
+	    open(FILE, ">$TextFile"); print FILE $Text; close FILE;
+	    &write_xml_file($XmlFile);
 	}elsif( /^SAVE$/ ){
-	    `share/Scripts/ParamXmlToText.pl $XmlFile`;
-	    `cp $TextFile $ParamFile`;
+	    &write_text_file($ParamFile);
 	}elsif( /^SAVE AS$/ ){
 	    $Form{FILENAME} =~ s/\.(xml|txt)$//;
 	    if(open(FILE,">$Form{FILENAME}")){
@@ -275,8 +300,7 @@ sub modify_xml_data{
 		rename($XmlFile, "$ParamFile.xml");
 		$XmlFile   = "$ParamFile.xml";
 		$TextFile  = "$ParamFile.txt";
-		`share/Scripts/ParamXmlToText.pl $XmlFile`;
-		`cp $TextFile $ParamFile`;
+		&write_text_file($ParamFile);
 	    }else{
 		$Editor{READFILENAME}="SAVE AS";
 		$Editor{NEWFILENAME}="Could not open $Form{FILENAME}"
@@ -284,30 +308,32 @@ sub modify_xml_data{
 	    }
 	}elsif( /^OPEN$/ ){
 	    $Form{FILENAME} =~ s/\.(xml|txt)$//;
-	    if(open(FILE,"$Form{FILENAME}")){
-		close(FILE);
+
+	    if($Form{FILENAME}){
+
 		# Make a safety save
-		`share/Scripts/ParamXmlToText.pl $XmlFile` if -f $XmlFile;
+		&write_text_file($TextFile);
+
+		# Use new filenames
 		$ParamFile = $Form{FILENAME};
 		$XmlFile   = "$ParamFile.xml";
-                $TextFile  = "$ParamFile.txt";
-		`share/Scripts/ParamTextToXml.pl $ParamFile`;
-		&read_xml_file($XmlFile);
+		$TextFile  = "$ParamFile.txt";
+
+		# Read new file
+		&read_text(&expand_param($ParamFile));
 	    }else{
 		$Editor{READFILENAME}="OPEN";
-		$Editor{NEWFILENAME}="Could not open $Form{FILENAME}"
-		    if $Form{FILENAME};
+		$Editor{NEWFILENAME}="";
 	    }
 	}elsif( /^CANCEL$/ ){
 	    # Do nothing
 	}elsif( /^SAVE AND EXIT$/ ){
 	    # save the file then kill the job
-	    `share/Scripts/ParamXmlToText.pl $XmlFile` if -f $XmlFile;
-	    `cp $TextFile $ParamFile`;
+	    &write_text_file($ParamFile);
 	    kill(-9, getpgrp);
 	}elsif( /^EXIT$/ ){
 	    # make a safety save then kill the job
-	    `share/Scripts/ParamXmlToText.pl $XmlFile`;
+	    &write_text_file($TextFile);
 	    kill(-9, getpgrp);
 	}elsif( /^ABC_ON$/ ){
 	    $Editor{ABC}=1;
@@ -501,7 +527,8 @@ sub modify_xml_data{
 
 sub write_xml_file{
 
-    my $File = shift;
+    my $File       = shift;
+    my $UseDefault = shift;
 
     open(XMLFILE, ">$File") 
 	or die "$ERROR: could not open XML file $File for output!\n";
@@ -542,6 +569,16 @@ sub write_xml_file{
 	    print XMLFILE "\t\t\t\t</SECTION>\n";
 	}
 	print XMLFILE "\t\t\t</SESSION>\n";
+    }
+
+    if($UseDefault){
+	$Editor{SELECT} = "all";
+	$Editor{INSERT} = "NEW SESSION";
+	$Editor{FILE}    = "";
+	$Editor{ABC}    = "0";
+	$Clipboard{SESSION} = "NONE";
+	$Clipboard{SECTION} = "NONE";
+	$Clipboard{TYPE}    = "NONE";
     }
 
     print XMLFILE "
@@ -888,24 +925,6 @@ sub write_manual_html{
     if($CheckResult){
 	$Manual = "<H1>Checking for Errors</H1>\n".
 	    "<FONT COLOR=RED><PRE>$CheckResult</PRE></FONT>\n";
-	if($CheckResult !~ /no errors/i and open(FILE, $TextFile)){
-	    my @TextFile;
-	    @TextFile = <FILE>;
-	    close(FILE);
-	    my $iError = 1;
-	    while($CheckResult =~ 
-		  s[Error at line (\d+)(.*)\n((\t.*\n)+)]
-		  [<A HREF=\#ERROR$iError>ERROR at line $1$2</A>\n$3]){
-		my $iLine = $1;
-		my $Error = $3; $Error =~ s/\t//g; chop $Error;
-		$iLine-- while $iLine > 0 and $TextFile[$iLine] !~ /^\#/;
-		$TextFile[$iLine] = 
-		    "<A NAME=ERROR$iError><FONT COLOR=RED>$Error</FONT></A>".
-		    "\n$TextFile[$iLine]";
-		$iError++;
-	    }
-	    $Manual .= "<PRE>\n". join('', @TextFile) . "</PRE>\n";
-	}
     }elsif($CommandExample){
 	$Manual =  $CommandText;
 	$Manual =~ s/\n\n/\n<p>\n/g;
@@ -1116,6 +1135,8 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 		my $ItemHead = $ItemRef->{HEAD};
 		my $ItemTail = $ItemRef->{TAIL};
 
+		$ItemType = "error" if $ItemHead =~ /^ERROR/;
+
 		my $TableColor = $TableColor{$ItemType};
 
 		$Action =~ s/\d+\&action$/$iItem\&action/;
@@ -1146,7 +1167,7 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
     <TR>
       <TD WIDTH=$LeftColumn1Width>
       </TD>
-      <TD WIDTH=$LeftColumn2Width><FONT COLOR=BLUE>
+      <TD ALIGN=LEFT><FONT COLOR=BLUE>
 $ItemHead
       </FONT></TD>
       <TD ALIGN=RIGHT>
@@ -1173,8 +1194,10 @@ $ItemTail
 		my $ActionEditItem = "$Action=edit_item ".
 		    "TITLE=\"Edit $ItemType in session $iSession/$SectionName\"";
 
+		$ActionEditItem = "A NAME=ERROR" if $ItemType eq "error";
+
 		# Create buttons
-		if($ItemTail){
+		if($ItemTail and $ItemType ne "error"){
 		    if($ItemView eq "MIN"){
 			$MinMaxItemButton = "      <$Action=maximize_item
 ><IMG SRC=$ImageDir/button_maximize.gif TITLE=\"Maximize $ItemType\"></A>
@@ -1191,12 +1214,16 @@ $ItemTail
 		$CopyItemButton = "      <$Action=copy_item
 ><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy $ItemType\"></A>
 ";
+
+		$CopyItemButton = "" if $ItemType eq "error";
+
 		$RemoveItemButton = "      <$Action=remove_item
 ><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Remove $ItemType\"></A>
 ";
 
 		# Show first line with usual buttons
-		$ItemHead = "<PRE>$ItemHead</PRE>" if $ItemType eq "comment";
+		$ItemHead = "<PRE>$ItemHead</PRE>" 
+		    if $ItemType =~ /comment|error/;
 
 		$Param .=
 "  <TABLE BORDER=0 WIDTH=$LeftTableWidth BGCOLOR=$TableColor>
@@ -1204,7 +1231,7 @@ $ItemTail
       <TD WIDTH=$LeftColumn1Width ALIGN=RIGHT>
 $MinMaxItemButton
       </TD>
-      <TD WIDTH=$LeftColumn2Width><$ActionEditItem>
+      <TD ALIGN=LEFT><$ActionEditItem>
 $ItemHead
       </A></TD>
       <TD ALIGN=RIGHT ALIGN=TOP>
@@ -1214,19 +1241,20 @@ $InsertItemButton$CopyItemButton$RemoveItemButton
   </TABLE>
 ";
 
-		if($ItemView eq "MIN" or not $ItemTail){
-                    $Param .= "<p>\n" if $ItemType ne "comment";
+		if( ($ItemView eq "MIN" and $ItemType ne "error") 
+		    or not $ItemTail){
+                    $Param .= "<p>\n" if $ItemType !~ /comment|error/;
 		    next;
                 }
 
-		if($ItemType eq "comment" or $ItemType eq "userinput"){
+		if($ItemType ne "command"){
 
 		    $Param .= 
 "  <TABLE BORDER=0 WIDTH=$LeftTableWidth BGCOLOR=$TableColor>
     <TR>
       <TD WIDTH=$LeftColumn1Width>
       </TD>
-      <TD WIDTH=$LeftColumn2Width COLSPAN=2><$ActionEditItem>
+      <TD COLSPAN=2><$ActionEditItem>
 <PRE>$ItemTail</PRE>
       </A></TD>
     </TR>
@@ -1238,7 +1266,7 @@ $InsertItemButton$CopyItemButton$RemoveItemButton
       <TD WIDTH=$LeftColumn1Width ALIGN=RIGHT>
 $MinMaxItemButton
       </TD>
-      <TD WIDTH=$LeftColumn2Width><$ActionEditItem>
+      <TD ALIGN=LEFT><$ActionEditItem>
 \#USERINPUT
       </A></TD>
       <TD ALIGN=RIGHT>
@@ -1281,7 +1309,7 @@ $Comment
 ";
 		} #endif item type
 
-		$Param .= "<p>\n" if $ItemType ne "comment";
+		$Param .= "<p>\n" if $ItemType !~ /comment|error/;
 
 	    } # end item loop
 
@@ -1413,50 +1441,20 @@ sub convert_type{
 
     &set_framework_components;
 
-    my $In;
-    if($InputType eq "txt"){
-	# Expand input text file
-	$In = expand_param($InputFile);
-	if($OutputType eq "expand"){
-	    # Convert to expanded text
-	    open(OUTFILE, ">$OutputFile") or
-		die "$ERROR: could not open output file $OutputFile\n";
-	    print OUTFILE $In;
-	    close OUTFILE;
-	    exit 0;
-	}
-    }elsif($InputType eq "expand"){
-	# Read expanded text file
-	open(INFILE, $InputFile) or 
-	    die "$ERROR: could not open input file $InputFile\n";
-	$In = join('', <INFILE>);
-	close INFILE;
-    }else{
-	# Read XML enhanced file
+    # Read input file
+    if($InputType eq "xml"){
 	&read_xml_file($InputFile);
-    }
-
-    # Convert between expanded text and XML enhanced formats
-    if($OutputType eq "xml"){
-	&read_text($In);
-	
-	# set defaults for Editor and Clipboard
-	$Editor{SELECT} = "all";
-	$Editor{INSERT} = "NEW SESSION";
-	$Editor{ABC}    = "0";
-	$Clipboard{SESSION} = "NONE";
-	$Clipboard{SECTION} = "NONE";
-	$Clipboard{TYPE}    = "NONE";
-
-	&write_xml_file($OutputFile);
     }else{
-	open(OUTFILE, ">$OutputFile") or
-	    die "$ERROR: could not open output file $OutputFile\n";
-	print OUTFILE &write_text; 
-	print OUTFILE "\n$Clipboard{BODY}" if $Clipboard{BODY};
-	close OUTFILE;
+	# Expand file (this is needed for files with #INCLUDE)
+	&read_text(&expand_param($InputFile));
     }
 
+    # Write output file
+    if($OutputType eq "xml"){
+	&write_xml_file($OutputFile, "UseDefaultEditorAndClipboard");
+    }else{
+	&write_text_file($OutputFile);
+    }
     exit 0;
 }
 
@@ -1488,6 +1486,9 @@ sub read_text{
 
     my @Text;
     @Text = split(/\n/, @_[0]);
+
+    # Delete previous values if any
+    @SessionRef = ();
 
     # Initialize for checking input parameter file
     $nSession=1;            # number of sessions
@@ -1712,6 +1713,18 @@ sub write_text{
     $Output =~ s/\#END (\#+\nBegin session:)/\#RUN $1/;
 
     return $Output;
+}
+##############################################################################
+sub write_text_file{
+    my $FileName = shift;
+    my $NoClipboard = shift;
+
+    open(FILE, ">$FileName") 
+	or die "$ERROR: write_text_file could not open $FileName\n";
+    print FILE &write_text; 
+    print FILE "\n$Clipboard{BODY}" 
+	unless $NoClipboard or not $Clipboard{BODY};
+    close FILE;
 }
 ##############################################################################
 sub expand_param{
