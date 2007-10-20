@@ -282,6 +282,15 @@ sub modify_xml_data{
 		}elsif(/Error in session (\d+) ending at line (\d+)/){
 		    $iLine = $2;
 		    $iLine-- while $Text[$iLine] !~ /^Begin session/;
+
+		    # Move error to #BEGIN_COMP XX if possible
+		    if($Section =~ /for ([A-Z][A-Z])$/){
+			my $Comp = $1;
+			my $jLine = $iLine;
+			$jLine++ while $Text[$jLine] !~ 
+			    /^(End session|\#BEGIN_COMP $Comp)/;
+			$iLine = $jLine if $1 ne "End session";
+		    }
 		}elsif(/^\t+(.*)/){
 		    $Text[$iLine] .= "\nERROR$Section: $1";
 		}
