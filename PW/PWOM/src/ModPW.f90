@@ -119,9 +119,7 @@ contains
          Er_C(iSize, jSize), & 
          uExBtheta_C(iSize, jSize), &
          uExBphi_C(iSize, jSize), &
-         uExBr_C(iSize, jSize),&
-         ElectronEnergyFlux_C(iSize,jSize),&
-         ElectronAverageEnergy_C(iSize,jSize))
+         uExBr_C(iSize, jSize))
 
   end subroutine allocate_ie_variables
 
