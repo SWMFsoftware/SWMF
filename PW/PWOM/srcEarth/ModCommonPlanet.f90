@@ -35,7 +35,10 @@ Module ModCommonPlanet
        CMOXEL,CMHN2,CMHO2,CMHHE,CMHO,CMHH,CMHOX,CMHHL,CMHEL,CMHEN2,&
        CMHEO2,CMHEHE,CMHEO,CMHEH,CMHEOX,CMHEHD,CMHEEL,CMELN2,CMELO2,&
        CMELHE,CMELO,CMELH,CMELOX,CMELHL,CMELHD
-
+  
+  ! Neutral parameters,densities,pressures
+  integer, parameter :: nNeutral = 5, O_=1, O2_=2, N2_=3, H_=4, He_=5
+  real :: NDensity_CI(MaxGrid,nNeutral),NeutralPressure_C(MaxGrid)
 
   !collision terms
   
