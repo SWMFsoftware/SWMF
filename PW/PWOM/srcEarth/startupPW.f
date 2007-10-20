@@ -12,6 +12,10 @@ C
       use ModCommonVariables
       use ModGlow, ONLY: get_ionization
 C
+      use ModConst ,ONLY: cBoltzmann
+      use ModPWOM  ,ONLY: UseAurora
+      use ModAurora,ONLY: get_aurora,AuroralIonRateO_C
+C     
       NPT1=14
       NPT2=16
       NPT3=30
@@ -237,13 +241,31 @@ c      AP(I)=50.
 49    CONTINUE 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC 
 C                                                                      C
+      cBoltzmannCGS = 1.0e7*cBoltzmann
       DO 50 K=1,NDIM
          CALL MODATM(ALTD(K),XO2(K),XN2(K),XO(K),XH(K),XHE(K),XTN(K))
+         NDensity_CI(k,O_ ) = XO (K)
+         NDensity_CI(k,O2_) = XO2(K)
+         NDensity_CI(k,N2_) = XN2(K)
+         NDensity_CI(k,H_ ) = XH (K)
+         NDensity_CI(k,He_) = XHE(K)
+         
+         NeutralPressure_C(k) = cBoltzmannCGS*sum(NDensity_CI(k,:))*XTN(k)
+         
 50    CONTINUE
 
 
       
-      CALL get_ionization(nDim, AltD(1:nDim), IonRateO_C(1:nDim))
+      if(UseAurora) then
+         call get_aurora(nDim,NDensity_CI(1:nDim,O_:N2_),
+     &        NeutralPressure_C(1:nDim)*0.1)
+      endif
+      	
+      call  get_ionization(nDim, AltD(1:nDim), IonRateO_C(1:nDim))		
+
+!      do K =1,nDim
+!         write(*,*) AltD(K),IonRateO_C(K),AuroralIonRateO_C(K)
+!      enddo
       DO 1099 J = 1,40
 
  9999    FORMAT(2X,1PE15.3,2X,1PE15.3)
