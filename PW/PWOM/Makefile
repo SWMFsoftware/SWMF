@@ -125,6 +125,9 @@ test_restart_read:
 
 rundir:
 	mkdir -p ${RUNDIR}/PW
+	mkdir -p ${RUNDIR}/EIE
+	cp ${EMPIRICALIEDIR}/ED_isoelec_edep.dat ${RUNDIR}/EIE/isoelec_edep.dat
+	cp ${EMPIRICALIEDIR}/ED_hpke.noaa ${RUNDIR}/EIE/hpke.noaa
 	cd ${RUNDIR}/PW; \
 		mkdir restartIN restartOUT plots; \
 		cp ${PWDIR}/input/${PLANET}/restart_iline* restartIN/ ;\
