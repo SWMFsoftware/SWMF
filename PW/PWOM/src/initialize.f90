@@ -8,6 +8,7 @@ subroutine PW_initialize
   use ModCommonVariables, ONLY:IYD
   use ModTimeConvert, ONLY: time_int_to_real
   use ModPwTime
+  use ModAurora, ONLY: init_aurora
   implicit none
 
   ! Temporary variables
@@ -147,6 +148,9 @@ subroutine PW_initialize
      !initialize field line locations
      call initial_line_location
   end if
+
+
+  if (UseAurora) call init_aurora
 
 end subroutine PW_initialize
 
