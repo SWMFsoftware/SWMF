@@ -4,16 +4,14 @@ subroutine get_weimer_potential
   use ModNumConst,ONLY:cPi,cTwoPi,cHalfPi,cRadToDeg
   use ModPWOM,    ONLY:Theta_G,Phi_G,nTheta,nPhi,&
                        SigmaH_G,SigmaP_G,Jr_G,Potential_G,&
-                       Time,allocate_ie_variables,&
-                       ElectronAverageEnergy_C,ElectronEnergyFlux_C,&
-                       UseAurora
+                       Time,allocate_ie_variables
   implicit none
   character (len=100), dimension(100):: Lines_I
   integer :: iError,iPhi,iTheta
   real    :: temp, dTheta, dPhi
   logical,save :: UseIMF, IsFirst=.true.
   !real :: MLT_C(257,65), MLatitude_C(257,65),TempPotential_C(257,65)
-  real :: MLT_C(360,90), MLatitude_C(360,90),TempPotential_C(360,90)
+  real,save :: MLT_C(360,90), MLatitude_C(360,90)
   !----------------------------------------------------------------------------
 
   call allocate_ie_variables(360, 90)
@@ -39,7 +37,7 @@ subroutine get_weimer_potential
      MLatitude_C(1:nPhi,1:nTheta)=(cHalfPi-Theta_G(1:nPhi,1:nTheta))*cRadToDeg
      
      Lines_I(1) = "#BACKGROUND"
-     Lines_I(2) = "PW/"
+     Lines_I(2) = "EIE/"
      
      
      call get_IMF_Bz(CurrentTime, temp, iError)
@@ -70,10 +68,11 @@ subroutine get_weimer_potential
         call con_stop()
      endif
      
-     call IO_SetnMLTs(nPhi)
-     call IO_SetnLats(nTheta)
      IsFirst = .false.
   endif
+
+  call IO_SetnMLTs(nPhi)
+  call IO_SetnLats(nTheta)
   call IO_SetTime(CurrentTime)
   
   call IO_SetNorth
@@ -100,15 +99,6 @@ subroutine get_weimer_potential
 !     call con_stop()
 !  endif
 
-  if (UseAurora) then
-     call get_HPI(CurrentTime, temp, iError)
-     call IO_SetHPI(temp)
-     
-     if (iError /= 0) then
-        write(*,*) "PW_Error in get_hpi called from get_weimer_potential.f90"
-        call con_stop()
-     endif
-  endif
 
   call IO_SetGrid(                    &
        MLT_C(1:nPhi,1:nTheta), &
@@ -134,34 +124,5 @@ subroutine get_weimer_potential
 
   ! Set Values for Aurora
   
-  if (UseAurora) then
-     call IO_GetAveE(ElectronAverageEnergy_C, iError)
-     if (iError /= 0) then
-        write(*,*) "Error in get_potential (IO_GetAveE):"
-        write(*,*) iError
-        call con_stop("Stopping in get_weimer_potential")
-     endif
-     
-     do iTheta=1,nTheta
-        do iPhi=1,nPhi
-           if (ElectronAverageEnergy_C(iPhi,iTheta) < 0.0) then
-              ElectronAverageEnergy_C(iPhi,iTheta) = 0.1
-              write(*,*) "i,j Negative : ",iPhi,iTheta,&
-                   ElectronAverageEnergy_C(iPhi,iTheta)
-           endif
-           if (ElectronAverageEnergy_C(iPhi,iTheta) > 100.0) then
-              write(*,*) "i,j Positive : ",iPhi,iTheta,&
-                   ElectronAverageEnergy_C(iPhi,iTheta)
-              ElectronAverageEnergy_C(iPhi,iTheta) = 0.1
-           endif
-        enddo
-     enddo
-     
-     call IO_GetEFlux(ElectronEnergyFlux_C, iError)
-     if (iError /= 0) then
-        write(*,*) "Error in get_potential (IO_GetEFlux):"
-        write(*,*) iError
-        call con_stop("Stopping in get_weimer_potential")
-     endif
-  endif
+
 end subroutine get_weimer_potential
