@@ -24,13 +24,13 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C      PICK A ENERGY AND FLUX VALUE!!!!!!!!!!!!!!!!!!!!!!!!
 C      DEFINE AN AVERAGE PARTICLE ENERGY (KEV)
 C      DEFINE A CHARACTERISTIC PRECIPITATING ELECTRON FLUX (ERGS/CM2/SEC)
-          if (UseAurora) then
-             ALF  = get_eAverageE(GMLAT,GMLON)
-             FLUX = (get_eflux(GMLAT,GMLON)*1.602E9)/(2.*ALF)
-          else
+!          if (UseAurora) then
+!             ALF  = get_eAverageE(GMLAT,GMLON)
+!             FLUX = (get_eflux(GMLAT,GMLON)*1.602E9)/(2.*ALF)
+!          else
              ALF  = ALF1(1)  
              FLUX = (FLUX1(1)*1.602E9)/(2.*ALF)
-          endif
+!          endif
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C USE KM FOR ALT ARRAY GENERATION!!! ALTMIN COMES IN AS CM!!!!!
        ALTMIN1 = ALTMIN/1E05
