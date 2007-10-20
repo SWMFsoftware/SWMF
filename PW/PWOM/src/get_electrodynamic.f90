@@ -7,16 +7,18 @@ subroutine PW_get_electrodynamics
   use ModIoUnit, ONLY: UnitTmp_
   use ModPWOM
   use ModNumConst, ONLY:cDegToRad
-  use ModAurora , ONLY: set_Emax,set_theta0
+!  use ModAurora , ONLY: set_Emax,set_theta0
   use ModCommonVariables,ONLY:Ap
   implicit none
 
+  character (len=100), dimension(100):: Lines_I
+  integer :: iError
   logical,save :: IsFirst = .true., UseWeimer=.false.
   real :: dTheta1, dPhi1
   !---------------------------------------------------------------------------
   
 
-  if (IsStandAlone .or. .not. UseIE .and. .not.UseWeimer) then
+  if ((IsStandAlone .or. .not. UseIE) .and. .not.UseWeimer) then
      open(UnitTmp_, FILE=NamePhiNorth)  
      if(IsFirst)then
         call allocate_ie_variables(257, 65)
@@ -41,7 +43,29 @@ subroutine PW_get_electrodynamics
      call get_weimer_potential
   endif
   
-  
+  ! Set EIE for Aurora when weimer not used
+  if (.not.UseWeimer .and. UseAurora .and. IsFirst) then
+          Lines_I(1) = "#BACKGROUND"
+          Lines_I(2) = "EIE/"
+          Lines_I(3) = "zero"
+          Lines_I(4) = "ihp"
+          Lines_I(5) = "idontknow"
+          Lines_I(6) = ""
+          Lines_I(7) = "#DEBUG"
+          Lines_I(8) = "0"
+          Lines_I(9) = "0"
+          Lines_I(10) = ""
+          Lines_I(11) = "#END"
+          
+     call EIE_set_inputs(Lines_I)
+     
+     call EIE_Initialize(iError)
+     if (iError /= 0) then
+        write(*,*) 'PW_ERROR: EIE_Initialize failed at get_electrodynamic'
+        call con_stop()
+     endif
+
+  end if
 !******************************************************************************
 !  Calc Bfield components
 !******************************************************************************
@@ -154,6 +178,6 @@ subroutine PW_get_electrodynamics
   endif
 
   !set auroral heating 
-  call set_theta0(nPhi,nTheta,uExBphi_C,uExBtheta_C,Theta_G)
-  call set_Emax(Ap(1))
+!  call set_theta0(nPhi,nTheta,uExBphi_C,uExBtheta_C,Theta_G)
+!  call set_Emax(Ap(1))
 end subroutine PW_get_electrodynamics
