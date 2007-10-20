@@ -27,8 +27,9 @@ OBJECTS = \
 	EIE_set_inputs.o\
 	readAMIEoutput.o\
 	readMHDoutput.o\
-	wei01.o\
 	wei96.o\
+	wei00.o\
+	wei01.o\
 	weicom.o\
 	mh86.o\
 	hmr89.o\
