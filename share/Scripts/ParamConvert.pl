@@ -80,6 +80,7 @@ my $CommandExample;# XML description of the command
 my $CommandText;   # Normal text description of the command
 
 my $CheckResult;   # Result from TestParam.pl script
+my $ShowHelp;      # set to true if help should be shown
 
 my %TableColor = ("command"   => $CommandBgColor,
 		  "comment"   => $CommentBgColor,
@@ -259,7 +260,7 @@ sub modify_xml_data{
 	    open(FILE, ">$TextFile") 
 		or die "$ERROR: could not open $TextFile\n";
 	    my $Text = &write_text;
-	    $Text =~ s/^ERROR.*\n+//mg;
+	    my $nErrorOld = ($Text =~ s/^ERROR.*\n+//mg);
 	    print FILE $Text;
 	    close FILE;
 
@@ -267,6 +268,7 @@ sub modify_xml_data{
 	    $CheckResult = `$TestScript $TextFile 2>&1`;
 	    if(not $CheckResult){
 		$CheckResult = "No errors found";
+		&read_text($Text) if $nErrorOld;
 		return;
 	    }
 	    my @Text; @Text = split("\n", $Text);
@@ -277,19 +279,24 @@ sub modify_xml_data{
 		    $Section = " for $1" if $Framework;
 		}elsif(/Error at line (\d+)/){
 		    $iLine = $1;
-		    $iLine-- while $iLine > 0 and $Text[$iLine] !~ /^\#/;
-		    $iLine--;
-		}elsif(/Error in session (\d+) ending at line (\d+)/){
-		    $iLine = $2;
-		    $iLine-- while $Text[$iLine] !~ /^Begin session/;
 
-		    # Move error to #BEGIN_COMP XX if possible
-		    if($Section =~ /for ([A-Z][A-Z])$/){
-			my $Comp = $1;
-			my $jLine = $iLine;
-			$jLine++ while $Text[$jLine] !~ 
-			    /^(End session|\#BEGIN_COMP $Comp)/;
-			$iLine = $jLine if $1 ne "End session";
+		    if(/for session (\d+):/){
+			$iLine-- while $Text[$iLine] !~ /^Begin session/;
+
+			# Move error to #BEGIN_COMP XX if possible
+			if($Section =~ /for ([A-Z][A-Z])$/){
+			    my $Comp = $1;
+			    my $jLine = $iLine;
+
+			    $jLine++ while $Text[$jLine] !~ 
+				/^(End session|\#BEGIN_COMP $Comp)/;
+
+			    $iLine = $jLine if $1 ne "End session";
+			}
+		    }else{
+			# Move error above the last command
+			$iLine-- while $iLine > 0 and $Text[$iLine] !~ /^\#/;
+			$iLine--;
 		    }
 		}elsif(/^\t+(.*)/){
 		    $Text[$iLine] .= "\nERROR$Section: $1";
@@ -297,8 +304,6 @@ sub modify_xml_data{
 	    }
 	    $Text = join("\n",@Text)."\n";
 	    &read_text($Text);
-	    open(FILE, ">$TextFile"); print FILE $Text; close FILE;
-	    &write_xml_file($XmlFile);
 	}elsif( /^SAVE$/ ){
 	    &write_text_file($ParamFile);
 	}elsif( /^SAVE AS$/ ){
@@ -334,6 +339,10 @@ sub modify_xml_data{
 		$Editor{READFILENAME}="OPEN";
 		$Editor{NEWFILENAME}="";
 	    }
+	}elsif( /^REOPEN$/ ){
+	    # Make a safety save and reread file
+	    &write_text_file($TextFile);
+	    &read_text(&expand_param($ParamFile));
 	}elsif( /^CANCEL$/ ){
 	    # Do nothing
 	}elsif( /^SAVE AND EXIT$/ ){
@@ -344,6 +353,8 @@ sub modify_xml_data{
 	    # make a safety save then kill the job
 	    &write_text_file($TextFile);
 	    kill(-9, getpgrp);
+	}elsif( /^HELP$/ ){
+	    $ShowHelp = 1;
 	}elsif( /^ABC_ON$/ ){
 	    $Editor{ABC}=1;
 	}elsif( /^ABC_OFF$/ ){
@@ -756,6 +767,7 @@ sub write_editor_html{
 <INPUT TYPE=SUBMIT NAME=submit VALUE=CHECK>
 <INPUT TYPE=SUBMIT NAME=submit VALUE=SAVE>
 <INPUT TYPE=SUBMIT NAME=submit VALUE=\"SAVE AS\">
+<INPUT TYPE=SUBMIT NAME=submit VALUE=REOPEN>
 <INPUT TYPE=SUBMIT NAME=submit VALUE=OPEN>
       </TD>
       <TD ALIGN=CENTER>
@@ -763,7 +775,8 @@ sub write_editor_html{
       </TD>
       <TD ALIGN=RIGHT>
 <INPUT TYPE=SUBMIT NAME=submit VALUE=\"SAVE AND EXIT\">&nbsp;&nbsp;&nbsp;
-<INPUT TYPE=SUBMIT NAME=submit VALUE=EXIT>
+<INPUT TYPE=SUBMIT NAME=submit VALUE=EXIT>&nbsp;&nbsp;&nbsp;
+<INPUT TYPE=SUBMIT NAME=submit VALUE=HELP>
       </TD>
 ";
     }
@@ -931,7 +944,163 @@ $InsertItem
 sub write_manual_html{
 
     my $Manual;
-    if($CheckResult){
+
+    if($ShowHelp){
+	$Manual = "<H1>Parameter Editor Help</H1>
+
+The parameter editor is a graphical user interface (GUI) that helps editing
+parameter files of scientific codes. The GUI consists of three frames: 
+the <A HREF=#TOPFRAME>top frame</A> with various 
+<A HREF=#BUTTONS>buttons</A>
+and <A HREF=#SELECTMENUS>select menus</A>, 
+the <A HREF=#LEFTFRAME>left frame</A> showing the parameter file, and 
+the <A HREF=#RIGHTFRAME>right frame</A> 
+showing extra information, such as manuals,
+contents of items to be pasted, list of errors, and this help message.
+
+<H2><A NAME=TOPFRAME>Top Frame</A></H2>
+
+By default the top frame shows the name of the edited parameter file 
+in the middle and the <A NAME=BUTTONS>following buttons:</A>
+<ul>
+<li><INPUT TYPE=SUBMIT VALUE=CHECK>: check the parameter file for errors. 
+        First all previous errors (if any) are removed from the left frame.
+        Next a list of errors will be displayed in the right frame.
+        as well as where they occur in the left frame.
+
+<li><INPUT TYPE=SUBMIT VALUE=SAVE>: save the edited parameter file. 
+
+<li><INPUT TYPE=SUBMIT VALUE=\"SAVE AS\">: 
+       save the edited parameter file under a different name.
+       The new name will be entered into a text box in the top frame.
+
+<li><INPUT TYPE=SUBMIT VALUE=REOPEN>: re-read the input file. 
+   Changes after the last save will be lost except for a 
+   safety save of the current content into $TextFile.
+
+<li><INPUT TYPE=SUBMIT VALUE=OPEN>: 
+   open another input file. Changes after the last save will 
+   be lost except for a safety save of the current content into $TextFile.
+
+<li><INPUT TYPE=SUBMIT VALUE=\"SAVE AND EXIT\">:
+   save file and exit from the editor.
+
+<li><INPUT TYPE=SUBMIT VALUE=EXIT>: 
+   exit from the editor. Changes after the last save will 
+   be lost except for a safety save of the current content into $TextFile.
+
+<li><INPUT TYPE=SUBMIT VALUE=HELP>: show this help message.
+</ul>
+    <A NAME=SELECTMENUS>The following menus and options are shown</A>:
+<ul>
+<li><b>View</b>: The view menu determines which how the parameter file is
+                 displayed in the left frame, and it also determines what
+                 and where can be inserted from the insert menu.
+<ul>
+<li>ALL: show everything. 
+<li>ALL ITEMS: show everything but all command/comments are minimized.
+<li>ALL SECTIONS: show all sessions with minimized sections.
+<li>ALL SESSIONS: show all sessions in minimized format.
+<li>Session X: show session X maximized, others minimized
+<li>Session X/Y: show section Y from session X maximized, all others minimized
+</ul>
+
+If any of the ALL* options is selected then full sessions can be inserted only.
+If a session is selected then sections can be inserted into any session. 
+If a section is selected then comments and commands can be inserted into any
+of thes sections of the selected type.
+
+<li><b>Insert</b>: Inserting an object into the parameter file consist of 
+up to four steps: select the appropriate view from the view menu, 
+select an object from the insert menu, select a file in case a file is
+to be inserted, and finally insert the object
+by clicking on any of the insert buttons
+<IMG SRC=$ImageDir/button_insert.gif> in the left frame.
+<p>
+The content of the insert list depends on the view list. 
+When the view list is set to one of the ALL* options, the insert list contains 
+NEW&nbsp;SESSION, FILE and PASTE&nbsp;SESSION 
+if the clipboard contains a session.
+It the view list is set to a session, the insert list contains FILE, 
+Section CON, sections for all components with a non-empty version,
+and PASTE SECTION if the clipboard contains a section. Finally, when the
+view list is set to a section, the insert list contains FILE, COMMENT, 
+all the commands appropriate for the selected section, and 
+PASTE&nbsp;COMMAND/COMMENT 
+in case the clipboard contains a comment or a command.
+The commands are either listed by groups (as determined by the command groups
+in the PARAM.XML file) or alphabetically. The choice can be made by clicking
+on the check box <INPUT TYPE=CHECKBOX CHECKED>abc.
+
+</ul>
+<H2><A NAME=LEFTFRAME>Left Frame</A></H2>
+
+The left frame shows the parameter file. Most of the functionality is
+shown if the mouse if hovering over any link or button. 
+
+The parameter file consists of one or more sessions. 
+The sessions are numbered from 1 to the number of sessions, 
+but they can also be named descriptively. Click on the blue
+session marker to input the session name, or click on the session name
+to modify it.
+
+The code first runs with the parameters of the first
+session, then upon completion it continues with the parameter modifications
+of the second session, etc. A session consists of one or more sections. 
+A section contains input parameter of the control module (CON) or one 
+of the components (e.g. IE or GM) allowed by the current configuration 
+of the framework. Each session contains one or more items. 
+An item can be one of the following:
+<ul>
+<li><b>ERROR</b>: text starting with the string 'ERROR' with
+  <TABLE BGCOLOR=$ErrorBgColor><TR><TD>this background color.</TD></TR></TABLE>
+<li><b>COMMENT</b>: text that does not start with ERROR' or '#'. 
+<li><b>#USERINPUT segment</b>: text that starts with '#USERINPUT(BEGIN)'
+                             and ends with '#USERINPUT(END)'.
+<li><b>#COMMAND</b>: text that starts with '#' but not '#USERINPUT' followed
+                  by zero or more non-empty lines containing the parameters
+                  of the command. 
+</ul>
+All items (except for errors) can be edited by clicking on 
+the first line of the item. 
+The edited item opens a text area that can be modified and 
+saved with the SAVE button. 
+<p>
+The sessions, sections and items can be manipulated with the following
+buttons:
+<ul>
+<li><IMG SRC=$ImageDir/button_remove.gif>: remove object. The removed
+    object is moved to the clipboard in the right frame
+    and the insert list is set to the PASTE option.
+<li><IMG SRC=$ImageDir/button_copy.gif>: copy object (except for errors). 
+    The object is copied to the clipboard in the right frame
+    and the insert list is set to the PASTE option.
+<li><IMG SRC=$ImageDir/button_insert.gif>: insert object defined in the
+    insert menu. If the selected option in the insert menu is FILE, or PASTE
+    or a command, then the object to be inserted is shown in the right frame.
+<li><IMG SRC=$ImageDir/button_minimize.gif> or 
+    <IMG SRC=$ImageDir/button_minimize_up.gif>&nbsp;: minimize object
+    (except for errors or objects consisting of a single line) 
+    to a single line. The <IMG SRC=$ImageDir/button_minimize_up.gif>
+    button is placed to the last line of sessions, sections and user-input
+    segments.
+<li><IMG SRC=$ImageDir/button_maximize.gif>&nbsp;: maximize object, ie. show
+    all lines of the object.
+</ul>
+
+<H3><A NAME=RIGHTFRAME>Right Frame</A></H3>
+
+   The right frame contains one of the following:
+<ul>
+<li><b>Manual</b>: description of a command to be inserted or edited.
+<li><b>Clipboard</b>: a removed or copied object than can be pasted.
+<li><b>Errors</b>: list of errors produced by the 
+       <INPUT TYPE=SUBMIT VALUE=CHECK> button.
+<li><b>Help</b>: this help message produced by the 
+       <INPUT TYPE=SUBMIT VALUE=HELP> button.
+</ul>
+";
+    }elsif($CheckResult){
 	$Manual = "<H1>Checking for Errors</H1>\n".
 	    "<FONT COLOR=RED><PRE>$CheckResult</PRE></FONT>\n";
     }elsif($CommandExample){
@@ -1501,13 +1670,13 @@ sub read_text{
 
     # Initialize for checking input parameter file
     $nSession=1;            # number of sessions
-    my $nLine        = 0;   # Line number in the text
+    my $nLine=0;            # Line number in the text
     my $iSection=1;         # index of section in session
     my $iItem=0;            # index of item in section
     my $Section="";         # name of component section
     my $IsCommand=0;        # true while reading a command
     my $IsComment=0;        # true while reading a comment
-    my $UserInput="";       # true between #USERINPUTBEGIN and #USERINPUTEND
+    my $UserInput=0;        # true between #USERINPUTBEGIN and #USERINPUTEND
 
     my $SectionRef;         # Pointer to current section in $SessionRef
 
@@ -1522,7 +1691,7 @@ sub read_text{
 	# Add a comment if there is no text passed
 	$SectionRef->{ITEM}[1]{VIEW} = "MAX";
 	$SectionRef->{ITEM}[1]{TYPE} = "COMMENT";
-	$SectionRef->{ITEM}[1]{HEAD} = "New parameter file\n";
+	$SectionRef->{ITEM}[1]{HEAD} = "New parameter file";
 
 	return;
     }
@@ -1532,6 +1701,17 @@ sub read_text{
 	$_ = shift(@Text);
 
 	if(/^\#END\b/){
+
+	    # Remove the last section if it has no items
+	    pop( @{ $SessionRef[$nSession]{SECTION} } )
+		if $#{ $SectionRef->{ITEM} } < 0;
+	    
+	    # Remove the last session if it has no sections
+	    if( $#{ $SessionRef[$nSession]{SECTION} } < 1){
+		pop( @SessionRef );
+		$nSession--;
+	    }
+	    
 	    # Read the rest of the text into the 'clip board'
 	    $Clipboard{BODY} = join("\n", @Text) . "\n";
 	    $Clipboard{BODY} =~ s/^\n*//m;
@@ -1569,6 +1749,7 @@ sub read_text{
 	    $SessionRef[$nSession]{SECTION}[$iSection]{VIEW} = "MAX";
 	    $SectionRef = $SessionRef[$nSession]{SECTION}[$iSection];
 	    $iItem = 0;
+	    $IsComment = 0; $IsCommand = 0; $UserInput = 0;
 
 	}elsif(/^\#END_COMP/){
 	    if(not $Framework){
@@ -1605,6 +1786,7 @@ sub read_text{
 	    $SectionRef = $SessionRef[$nSession]{SECTION}[$iSection];
 	    $Section = '';
 	    $iItem   = 0;
+	    $IsComment = 0; $IsCommand = 0; $UserInput = 0;
 
 	}elsif(/^\#RUN/){	# Check if a new session has started
 	    # Check if the required commands are defined and
@@ -1616,26 +1798,35 @@ sub read_text{
 		    "\tBEGIN_COMP $Section does not have matching END_COMP\n";
 		$Section = '';
 	    }
-	    $nSession++;
+
+	    # Remove the last section if it has no items
+	    pop( @{ $SessionRef[$nSession]{SECTION} } )
+		if $#{ $SectionRef->{ITEM} } < 0;
+
+	    # Note: sections are indexed from 1
+	    $nSession++ if $#{ $SessionRef[$nSession]{SECTION} } > 0;
 
 	    $SessionRef[$nSession]{VIEW} = "MAX";
 	    $SessionRef[$nSession]{SECTION}[1]{VIEW} = "MAX";
 	    $SectionRef = $SessionRef[$nSession]{SECTION}[1];
 	    $iSection=1;
 	    $iItem=0;
+	    $IsComment = 0; $IsCommand = 0; $UserInput = 0;
 
 	}elsif( /^(Begin|End)\s+session:\s*(.*)/i ){
 	    # Session names are stored as comments
 	    # Begin session: or End session:
 	    my $Name = $2;
 	    $SessionRef[$nSession]{NAME}= $Name unless $Name =~ /^\d+$/;
+	    $IsComment = 0; $IsCommand = 0; $UserInput = 0;
+
 	}elsif(/^\#USERINPUTBEGIN/){
 	    $iItem++;
 	    $SectionRef->{ITEM}[$iItem]{VIEW}="MAX";
 	    $SectionRef->{ITEM}[$iItem]{TYPE}="USERINPUT";
 	    $UserInput = $nLine+1;
-	    $IsCommand=0;
-	    $IsComment=0;
+	    $IsCommand = 0;
+	    $IsComment = 0;
 	}elsif(/\#USERINPUTEND/){
 	    if(not $UserInput){
 		&print_error( $nLine, 
@@ -1644,6 +1835,7 @@ sub read_text{
 	    }
 	    $UserInput = 0;
 	}else{
+
 	    # Analyze line for various items
 	    if(/^\#/ and not $UserInput){
 		$iItem++;
@@ -1662,6 +1854,11 @@ sub read_text{
 		$SectionRef->{ITEM}[$iItem]{VIEW}="MAX";
 		$SectionRef->{ITEM}[$iItem]{TYPE}="COMMENT";
 	    }
+
+	    if($iItem == 0){
+		print "Error iItem=0 for line: $_";
+	    }
+
 	    # Store line
 	    if($SectionRef->{ITEM}[$iItem]{HEAD}){
 		$SectionRef->{ITEM}[$iItem]{TAIL} .= "$_\n";
@@ -1808,7 +2005,7 @@ sub process_file {
 #EOP
 sub print_help{
 
-    print 
+    print
 #BOC
 "Purpose:
 
@@ -1885,6 +2082,7 @@ share/Scripts/ParamConvert.pl run/PARAM.expand run/PARAM.xml
 
 share/Scripts/ParamConvert.pl run/PARAM.in.xml run/PARAM.in"
 #EOC
-    ,"\n\n";
+    ."\n\n";
     exit 0;
 }
+
