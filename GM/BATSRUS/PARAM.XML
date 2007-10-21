@@ -1089,7 +1089,7 @@ change along the outer boundaries indexed from East_ to MaxBoundary.
 !!!!!!!!!!!!!!!!!!!!!!!! GRID GEOMETRY !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-<command name="GRID" required="T" if="$_IsFirstSession">
+<command name="GRID" required="$_IsFirstSession" if="$_IsFirstSession">
 	<parameter name="nRootBlockX" type="integer" min="1"  default="2" />
 	<parameter name="nRootBlockY" type="integer" min="1"  default="1" />
 	<parameter name="nRootBlockZ" type="integer" min="1"  default="1" />
@@ -4352,10 +4352,6 @@ Include a library file from Param/ or any file from anywhere else.
 !!!!!!!!!!!!!!!!!!!!!!!! GLOBAL RULES !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 -->
-<rule expr="($SwNDim > 0) or $UseSolarWindFile or $_NameComp ne 'GM'">
-	Either command #SOLARWIND or #SOLARWINDFILE must be used!
-</rule>
-
 <rule expr="$MaxImplBlock>1 or not $UsePartImplicit or not $MaxImplBlock">
 	Part implicit scheme requires more than 1 implicit block!
 </rule>
