@@ -80,7 +80,6 @@ my $CommandExample;# XML description of the command
 my $CommandText;   # Normal text description of the command
 
 my $CheckResult;   # Result from TestParam.pl script
-my $ShowHelp;      # set to true if help should be shown
 
 my %TableColor = ("command"   => $CommandBgColor,
 		  "comment"   => $CommentBgColor,
@@ -298,6 +297,8 @@ sub modify_xml_data{
 			$iLine-- while $iLine > 0 and $Text[$iLine] !~ /^\#/;
 			$iLine--;
 		    }
+		}elsif(/IsFirstSession is false/){
+		    $Text[$iLine] .= " it is not in the first session";
 		}elsif(/^\t+(.*)/){
 		    $Text[$iLine] .= "\nERROR$Section: $1";
 		}
@@ -353,8 +354,6 @@ sub modify_xml_data{
 	    # make a safety save then kill the job
 	    &write_text_file($TextFile);
 	    kill(-9, getpgrp);
-	}elsif( /^HELP$/ ){
-	    $ShowHelp = 1;
 	}elsif( /^ABC_ON$/ ){
 	    $Editor{ABC}=1;
 	}elsif( /^ABC_OFF$/ ){
@@ -776,7 +775,7 @@ sub write_editor_html{
       <TD ALIGN=RIGHT>
 <INPUT TYPE=SUBMIT NAME=submit VALUE=\"SAVE AND EXIT\">&nbsp;&nbsp;&nbsp;
 <INPUT TYPE=SUBMIT NAME=submit VALUE=EXIT>&nbsp;&nbsp;&nbsp;
-<INPUT TYPE=SUBMIT NAME=submit VALUE=HELP>
+<A HREF=share/Scripts/ParamEditorHelp.html TARGET=HELP>Help</A>
       </TD>
 ";
     }
@@ -945,162 +944,7 @@ sub write_manual_html{
 
     my $Manual;
 
-    if($ShowHelp){
-	$Manual = "<H1>Parameter Editor Help</H1>
-
-The parameter editor is a graphical user interface (GUI) that helps editing
-parameter files of scientific codes. The GUI consists of three frames: 
-the <A HREF=#TOPFRAME>top frame</A> with various 
-<A HREF=#BUTTONS>buttons</A>
-and <A HREF=#SELECTMENUS>select menus</A>, 
-the <A HREF=#LEFTFRAME>left frame</A> showing the parameter file, and 
-the <A HREF=#RIGHTFRAME>right frame</A> 
-showing extra information, such as manuals,
-contents of items to be pasted, list of errors, and this help message.
-
-<H2><A NAME=TOPFRAME>Top Frame</A></H2>
-
-By default the top frame shows the name of the edited parameter file 
-in the middle and the <A NAME=BUTTONS>following buttons:</A>
-<ul>
-<li><INPUT TYPE=SUBMIT VALUE=CHECK>: check the parameter file for errors. 
-        First all previous errors (if any) are removed from the left frame.
-        Next a list of errors will be displayed in the right frame.
-        as well as where they occur in the left frame.
-
-<li><INPUT TYPE=SUBMIT VALUE=SAVE>: save the edited parameter file. 
-
-<li><INPUT TYPE=SUBMIT VALUE=\"SAVE AS\">: 
-       save the edited parameter file under a different name.
-       The new name will be entered into a text box in the top frame.
-
-<li><INPUT TYPE=SUBMIT VALUE=REOPEN>: re-read the input file. 
-   Changes after the last save will be lost except for a 
-   safety save of the current content into $TextFile.
-
-<li><INPUT TYPE=SUBMIT VALUE=OPEN>: 
-   open another input file. Changes after the last save will 
-   be lost except for a safety save of the current content into $TextFile.
-
-<li><INPUT TYPE=SUBMIT VALUE=\"SAVE AND EXIT\">:
-   save file and exit from the editor.
-
-<li><INPUT TYPE=SUBMIT VALUE=EXIT>: 
-   exit from the editor. Changes after the last save will 
-   be lost except for a safety save of the current content into $TextFile.
-
-<li><INPUT TYPE=SUBMIT VALUE=HELP>: show this help message.
-</ul>
-    <A NAME=SELECTMENUS>The following menus and options are shown</A>:
-<ul>
-<li><b>View</b>: The view menu determines which how the parameter file is
-                 displayed in the left frame, and it also determines what
-                 and where can be inserted from the insert menu.
-<ul>
-<li>ALL: show everything. 
-<li>ALL ITEMS: show everything but all command/comments are minimized.
-<li>ALL SECTIONS: show all sessions with minimized sections.
-<li>ALL SESSIONS: show all sessions in minimized format.
-<li>Session X: show session X maximized, others minimized
-<li>Session X/Y: show section Y from session X maximized, all others minimized
-</ul>
-
-If any of the ALL* options is selected then full sessions can be inserted only.
-If a session is selected then sections can be inserted into any session. 
-If a section is selected then comments and commands can be inserted into any
-of thes sections of the selected type.
-
-<li><b>Insert</b>: Inserting an object into the parameter file consist of 
-up to four steps: select the appropriate view from the view menu, 
-select an object from the insert menu, select a file in case a file is
-to be inserted, and finally insert the object
-by clicking on any of the insert buttons
-<IMG SRC=$ImageDir/button_insert.gif> in the left frame.
-<p>
-The content of the insert list depends on the view list. 
-When the view list is set to one of the ALL* options, the insert list contains 
-NEW&nbsp;SESSION, FILE and PASTE&nbsp;SESSION 
-if the clipboard contains a session.
-It the view list is set to a session, the insert list contains FILE, 
-Section CON, sections for all components with a non-empty version,
-and PASTE SECTION if the clipboard contains a section. Finally, when the
-view list is set to a section, the insert list contains FILE, COMMENT, 
-all the commands appropriate for the selected section, and 
-PASTE&nbsp;COMMAND/COMMENT 
-in case the clipboard contains a comment or a command.
-The commands are either listed by groups (as determined by the command groups
-in the PARAM.XML file) or alphabetically. The choice can be made by clicking
-on the check box <INPUT TYPE=CHECKBOX CHECKED>abc.
-
-</ul>
-<H2><A NAME=LEFTFRAME>Left Frame</A></H2>
-
-The left frame shows the parameter file. Most of the functionality is
-shown if the mouse if hovering over any link or button. 
-
-The parameter file consists of one or more sessions. 
-The sessions are numbered from 1 to the number of sessions, 
-but they can also be named descriptively. Click on the blue
-session marker to input the session name, or click on the session name
-to modify it.
-
-The code first runs with the parameters of the first
-session, then upon completion it continues with the parameter modifications
-of the second session, etc. A session consists of one or more sections. 
-A section contains input parameter of the control module (CON) or one 
-of the components (e.g. IE or GM) allowed by the current configuration 
-of the framework. Each session contains one or more items. 
-An item can be one of the following:
-<ul>
-<li><b>ERROR</b>: text starting with the string 'ERROR' with
-  <TABLE BGCOLOR=$ErrorBgColor><TR><TD>this background color.</TD></TR></TABLE>
-<li><b>COMMENT</b>: text that does not start with ERROR' or '#'. 
-<li><b>#USERINPUT segment</b>: text that starts with '#USERINPUT(BEGIN)'
-                             and ends with '#USERINPUT(END)'.
-<li><b>#COMMAND</b>: text that starts with '#' but not '#USERINPUT' followed
-                  by zero or more non-empty lines containing the parameters
-                  of the command. 
-</ul>
-All items (except for errors) can be edited by clicking on 
-the first line of the item. 
-The edited item opens a text area that can be modified and 
-saved with the SAVE button. 
-<p>
-The sessions, sections and items can be manipulated with the following
-buttons:
-<ul>
-<li><IMG SRC=$ImageDir/button_remove.gif>: remove object. The removed
-    object is moved to the clipboard in the right frame
-    and the insert list is set to the PASTE option.
-<li><IMG SRC=$ImageDir/button_copy.gif>: copy object (except for errors). 
-    The object is copied to the clipboard in the right frame
-    and the insert list is set to the PASTE option.
-<li><IMG SRC=$ImageDir/button_insert.gif>: insert object defined in the
-    insert menu. If the selected option in the insert menu is FILE, or PASTE
-    or a command, then the object to be inserted is shown in the right frame.
-<li><IMG SRC=$ImageDir/button_minimize.gif> or 
-    <IMG SRC=$ImageDir/button_minimize_up.gif>&nbsp;: minimize object
-    (except for errors or objects consisting of a single line) 
-    to a single line. The <IMG SRC=$ImageDir/button_minimize_up.gif>
-    button is placed to the last line of sessions, sections and user-input
-    segments.
-<li><IMG SRC=$ImageDir/button_maximize.gif>&nbsp;: maximize object, ie. show
-    all lines of the object.
-</ul>
-
-<H3><A NAME=RIGHTFRAME>Right Frame</A></H3>
-
-   The right frame contains one of the following:
-<ul>
-<li><b>Manual</b>: description of a command to be inserted or edited.
-<li><b>Clipboard</b>: a removed or copied object than can be pasted.
-<li><b>Errors</b>: list of errors produced by the 
-       <INPUT TYPE=SUBMIT VALUE=CHECK> button.
-<li><b>Help</b>: this help message produced by the 
-       <INPUT TYPE=SUBMIT VALUE=HELP> button.
-</ul>
-";
-    }elsif($CheckResult){
+    if($CheckResult){
 	$Manual = "<H1>Checking for Errors</H1>\n".
 	    "<FONT COLOR=RED><PRE>$CheckResult</PRE></FONT>\n";
     }elsif($CommandExample){
