@@ -19,7 +19,6 @@ Module ModCommonPlanet
   REAL jp1,jp2,jp3,jp4,kc1,kc2,kc3,kc6,kc7,kc8,kr1,kr2
   REAL kc9(MaxGrid)
   
-  
   integer, parameter :: nIon = 3, nSpecies=6
   integer, parameter :: Ion1_ = 1, &    !Saturn:H3+   
        Ion2_ = 2, &    !Saturn:H+
@@ -42,6 +41,13 @@ Module ModCommonPlanet
   integer,parameter :: iRho(2) = (/1,4/),&
                        iU(2)   = (/2,5/),&
                        iP(2)   = (/3,6/),iTe_=7
+
+  ! Neutral parameters,densities,pressures (needed for ModAurora) 
+  integer, parameter :: nNeutral = 5, O_=1, O2_=2, N2_=3, H_=4, He_=5
+  real :: NDensity_CI(MaxGrid,nNeutral),NeutralPressure_C(MaxGrid)
+
+  
+
 
 end Module ModCommonPlanet
 
