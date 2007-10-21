@@ -987,9 +987,8 @@ sub check_session{
     print "InsideComp: $InsideComp\n" if $Debug;
 
     if($InsideComp and not $StandAlone){
-	print "Error in session $nSession ending at line $nLine ".
-                "in file $InputFile:\n".
-                "\tBEGIN_COMP $InsideComp does not have matching END_COMP\n";
+	&print_error(" for session $nSession:\n".
+                "\tBEGIN_COMP $InsideComp does not have matching END_COMP\n");
 	$IsError = 1;
     }
 
@@ -998,9 +997,8 @@ sub check_session{
 
     foreach $realName (@required){
 	if(not $defined{$realName}){
-	    print "Error in session $nSession ending at line $nLine ".
-		"in file $InputFile:\n".
-		"\trequired command \#$realName was not defined\n";
+	    &print_error(" for session $nSession:\n".
+		"\trequired command \#$realName was not defined\n");
 	    $IsError = 1;
 	}
     }
@@ -1021,7 +1019,7 @@ sub check_session{
 	    $content =~ s/\$(\w+)/'$COMP::'.$1/gee;
 
 	    print "Rule:\t$node->{attrib}->{expr}\n" if $Verbose;
-	    &print_error(" in session $nSession:\n\t$content");
+	    &print_error(" for session $nSession:\n\t$content");
 	}
     }
 }
