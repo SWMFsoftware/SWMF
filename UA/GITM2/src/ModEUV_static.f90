@@ -33,6 +33,18 @@ module ModEUV
   integer, parameter :: Num_WaveLengths_High = 59
 
   integer, parameter :: nS2WaveLengths = 80
+integer, parameter :: nFlaresMax = 20
+  integer, parameter :: nSeeLinesMax = 5000
+  integer, parameter :: FlareLength = 5
+  integer :: iFlare = 1
+  logical :: DuringFlare = .False.
+  integer :: nFlares = 0
+  integer :: nSeeTimes, FlareStartIndex,FlareEndIndex
+  real    :: FlareEndTime
+  
+  real, dimension(Num_WaveLengths_High,nSeeLinesMax) :: SeeFlux
+  real, dimension(nSeeLinesMax) :: TimeSee
+  real, dimension(nFlaresMax) :: FlareTimes
 
   real, dimension(nS2WaveLengths) :: &
        S2WaveLengths, S2PhotonEnergy, S2SolarFlux, &
