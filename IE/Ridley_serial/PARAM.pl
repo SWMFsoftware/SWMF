@@ -50,17 +50,17 @@ of saves in terms of time step or physical time.
 The default is that no plotfiles are saved.
 
 The \'min\' variable set includes:
-  Theta [deg], Psi [deg], SigmaH [mhos], SigmaP [mhos], Jr [mA/m^2], Phi [kV]
+  Theta [deg], Psi [deg], SigmaH [mhos], SigmaP [mhos], Jr [mA/$m^2$], Phi [kV]
 The \'max\' variable set includes:
   X [Re], Y [Re], Z [Re], Theta [deg], Psi [deg], SigmaH [mhos], SigmaP [mhos],
-  E-Flux [W/m2], Ave-E [eV], Jr [mA/m^2], Phi [kV], Ex [mV/m], Ey [mV/m], Ez [mV/m],
+  E-Flux [W/m2], Ave-E [eV], Jr [mA/$m^2$], Phi [kV], Ex [mV/m], Ey [mV/m], Ez [mV/m],
   Jx [microA/m2], Jy [microA/m2], Jz [microA/m2], Ux [km/s], Uy [km/s], Uz [km/s],
 The \'uam\' variable set includes:
-  Theta [deg], Psi [deg], SigmaH [mhos], SigmaP [mhos], Jr [mA/m^2], Jr(NW) [mA/m^2],
+  Theta [deg], Psi [deg], SigmaH [mhos], SigmaP [mhos], Jr [mA/$m^2$], Jr(NW) [mA/$m^2$],
   E-Flux [W/m2], Ave-E [eV], Phi [kV]
 The \'aur\' variable set includes:
-  Theta [deg], Psi [deg], SigmaH [mhos], SigmaP [mhos], Jr [mA/m^2], Phi [kV],
-  E-Flux [W/m2], Ave-E [eV], RT 1/B [1/T], RT Rho [amu/cm^3], RT P [Pa]
+  Theta [deg], Psi [deg], SigmaH [mhos], SigmaP [mhos], Jr [mA/$m^2$], Phi [kV],
+  E-Flux [W/m2], Ave-E [eV], RT 1/B [1/T], RT Rho [amu/$cm^3$], RT P [Pa]
 ','type' => 't'}],'name' => 'command','attrib' => {'name' => 'SAVEPLOT','alias' => 'IE_SAVEPLOT'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DoSaveIELogfile','default' => 'F','type' => 'logical'},'type' => 'e'},{'content' => '
 
 #SAVELOGFILE
