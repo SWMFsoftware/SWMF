@@ -182,7 +182,7 @@ subroutine calc_scaled_euv
   use ModEUV
   use ModInputs
   use ModTime
-
+  use ModGITM, only : dt
   implicit none
 
   integer, parameter :: Hinteregger_Contrast_Ratio  = 0
@@ -191,14 +191,16 @@ subroutine calc_scaled_euv
   integer, parameter :: WoodsAndRottman_10Nov88     = 3
   integer, parameter :: WoodsAndRottman_20Jun89     = 4
 
-  integer :: N, NN
+  integer :: N, NN, iMin(1)=0
   real    :: f107_Ratio, r1, r2, hlybr, fexvir, hlya, heiew
   real    :: xuvfac, hlymod, heimod, xuvf, wavelength_ave
   real (Real8_) :: rtime
   integer, dimension(7) :: Time_Array
-
+  
  !DAVES:
-  real :: wvavg(Num_WaveLengths_High)
+  real :: wvavg(Num_WaveLengths_High),SeeTime(nSeeTimes),tDiff(nSeeTimes)
+  real :: y1(Num_WaveLengths_High), y2(Num_WaveLengths_High), x1, x2, x
+  real :: m(Num_WaveLengths_High), k(Num_WaveLengths_High)
   character (len=2) :: dday, dhour, dminute 
   character (len=7) :: dtime
 
@@ -363,19 +365,61 @@ subroutine calc_scaled_euv
      wvavg(N)=(WAVEL(N)+WAVES(N))/2.
   enddo
 
-  if (UseEUVData) then
+ if (UseEUVData) then
 
-     call start_timing("new_euv")
-     open(unit = iInputUnit_, file=cEUVFile)
-     rtime=0
-     do while(rtime < CurrentTime)
-        read(iInputUnit_,*) Time_Array(1:6),Timed_Flux
-        Time_Array(7)=0
-        call time_int_to_real(Time_Array,rtime)
-     enddo
-     close(iInputUnit_)
-     !!need to convert from W/m^2 to photons/m^2/s
-     do N=1,Num_WaveLengths_High 
+    call start_timing("new_euv")
+    SeeTime(:) = 0
+
+    do N = 1, nSeeTimes
+       SeeTime(N) = TimeSee(N)
+    enddo
+
+    tDiff = CurrentTime - SeeTime
+    
+    where (tDiff .lt. 0) tDiff = 1.e20
+    iMin = minloc(tDiff)
+    
+    Timed_Flux = SeeFlux(:,iMin(1))
+
+    if (CurrentTime .ge. FlareTimes(iFlare) .and. CurrentTime-dt .le. FlareTimes(iFlare)) then
+
+       FlareStartIndex = iMin(1)+1
+       FlareEndIndex = iMin(1) + FlareLength
+       Timed_Flux = SeeFlux(:,FlareStartIndex)
+       FlareEndTime = SeeTime(FlareEndIndex)
+       DuringFlare = .true.
+       iFlare = iFlare + 1
+       
+    else 
+       if (DuringFlare) then
+          if (Seetime(iMin(1)+1) .lt. FlareTimes(iFlare) .or. FlareTimes(iFlare) .eq. 0) then
+             if (CurrentTime .lt. SeeTime(FlareStartIndex)) then
+                !We may not be to the point where the flare has begun in the SEE data yet...
+                Timed_Flux = SeeFlux(:,FlareStartIndex)
+             else
+                if (CurrentTime .le. FlareEndTime) then
+                   !Exponentially interpolate between last seetime and next seetim 
+                   !using y = kexp(-mx)
+                   
+                   y1 = SeeFlux(:,iMin(1))
+                   y2 = SeeFlux(:,iMin(1)+1)
+                   x1 = 0
+                   x2 = SeeTime(iMin(1)+1) - SeeTime(iMin(1))
+                   x = CurrentTime - SeeTime(iMin(1))
+                   
+                   m = ALOG(y2/y1)/(x1-x2)
+                   k = y1*exp(m*x1)
+                   Timed_Flux = k*exp(-1*m*x)
+                else
+                   DuringFlare = .False.
+                end if
+             end if
+          end if
+       end if
+    end if
+    
+    !!need to convert from W/m^2 to photons/m^2/s
+    gdo N=1,Num_WaveLengths_High 
         Flux_of_EUV(N) = Timed_Flux(N)*wvavg(N)*1.0e-10/(6.626e-34*2.998e8)
      enddo
      call end_timing("new_euv")
@@ -390,7 +434,7 @@ subroutine calc_scaled_euv
 
 end subroutine calc_scaled_euv
 
-!-------------------------------------------------------------------
+ !-------------------------------------------------------------------
 ! Subroutine for initializing photoabsorption, photoionization,
 ! and branching ratio quantities.
 !-------------------------------------------------------------------
@@ -493,3 +537,60 @@ subroutine init_euv
 
 end subroutine init_euv
 
+subroutine Set_Euv(iError)
+  use ModEUV
+  use ModInputs
+
+  implicit none
+
+  integer, intent(out)  :: iError
+  
+  character (len=iCharLen_)               :: line
+  integer, dimension(7)                   :: TimeOfFlare,TimeArray
+  real, dimension(6+Num_Wavelengths_High) :: temp
+  
+  logical :: NotDone = .true.
+  integer ::  i, iline, ioerror
+
+  open(unit = iInputUnit_, file=cEUVFile, IOSTAT = iError)
+  do while (NotDone) 
+     read(iInputUnit_,*) line
+
+     if (line .eq. '#NFLARES') then 
+        read(iInputUnit_,*) nFlares
+        do i = 1, nFlares 
+           read(iInputUnit_,*) TimeOfFlare(1:6)
+           TimeOfFlare(7) = 0
+           call time_int_to_real(TimeOfFlare,FlareTimes(i))
+        enddo
+     endif
+     
+     if (line .eq. '#START')  NotDone = .false.
+     
+  enddo
+
+  iline = 1
+  ioerror = 0
+  TimeSee(:) = 0
+  read(iInputUnit_,*,IOSTAT = ioerror) temp
+  do while (ioerror == 0) 
+     
+     TimeArray(1:6) = temp(1:6)
+     TimeArray(7) = 0
+     call time_int_to_real(TimeArray,TimeSee(iLine))
+     SeeFlux(:,iline) = temp(7:6+Num_WaveLengths_High)
+     iline = iline + 1
+     read(iInputUnit_,*,IOSTAT = ioerror) temp
+ 
+  enddo
+  close(iInputUnit_)
+
+  nSeeTimes = iline - 1
+    
+end subroutine Set_Euv
+
+
+
+  
+  
+  
