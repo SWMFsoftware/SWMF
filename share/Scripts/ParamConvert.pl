@@ -81,6 +81,9 @@ my $CommandText;   # Normal text description of the command
 
 my $CheckResult;   # Result from TestParam.pl script
 
+my $JumpHere;      # location ID for the param.html#HERE anchor
+my $Here = "<A NAME=HERE><DIV> </DIV></A>\n"; # The HERE anchor
+
 my %TableColor = ("command"   => $CommandBgColor,
 		  "comment"   => $CommentBgColor,
 		  "error"     => $ErrorBgColor,
@@ -203,19 +206,12 @@ sub read_xml_file{
 		$SessionRef[$nSession]{SECTION}[$iSection]{ITEM}[$iItem];
 
 	    $ItemRef->{VIEW} = $View;
-	    if($Type eq "USERINPUT"){
-		$ItemRef->{HEAD} = '#USERINPUT';
-	    }else{
-		$ItemRef->{HEAD} = <XMLFILE>; # First line of item
-		chop $ItemRef->{HEAD};
-	    }
-
-	    while($_=<XMLFILE>){
+	    while($_ = <XMLFILE>){
 		last if /<\/ITEM>/;
-		$ItemRef->{TAIL} .= $_;
+		$ItemRef->{BODY} .= $_;
 	    }
 
-	    warn "iItem=$iItem Type=$Type View=$View Head=$ItemRef->{HEAD}\n" 
+	    warn "iItem=$iItem Type=$Type View=$View Body=$ItemRef->{BODY}" 
 		if $DoDebug;
 
 	}elsif(/<EDITOR 
@@ -227,13 +223,9 @@ sub read_xml_file{
 	    $Editor{INSERT} = $2;
 	    $Editor{FILE}   = $3;
 	    $Editor{ABC}    = $4;
-	}elsif(/<CLIPBOARD
-	       \ SESSION=\"([^\"]+)\"
-	       \ SECTION=\"([^\"]+)\"
-	       \ TYPE   =\"([^\"]+)\"/x){
-	    $Clipboard{SESSION} = $1;
-	    $Clipboard{SECTION} = $2;
-	    $Clipboard{TYPE}    = $3;
+	}elsif(/<CLIPBOARD SECTION=\"([^\"]*)\" TYPE=\"([^\"]*)\"/){
+	    $Clipboard{SECTION} = $1;
+	    $Clipboard{TYPE}    = $2;
 	    while($_=<XMLFILE>){
 		last if /<\/CLIPBOARD>/;
 		$Clipboard{BODY} .= $_;
@@ -259,7 +251,7 @@ sub modify_xml_data{
 	    open(FILE, ">$TextFile") 
 		or die "$ERROR: could not open $TextFile\n";
 	    my $Text = &write_text;
-	    my $nErrorOld = ($Text =~ s/^ERROR.*\n+//mg);
+	    my $nErrorOld = ($Text =~ s/^(ERROR|WARNING).*\n+//mg);
 	    print FILE $Text;
 	    close FILE;
 
@@ -272,12 +264,14 @@ sub modify_xml_data{
 	    }
 	    my @Text; @Text = split("\n", $Text);
 	    my $iLine;
+	    my $ErrorWarning;
 	    my $Section;
 	    for (split(/\n/, $CheckResult)){
 		if(/TestParam_ERROR: parameter errors for (\w+)/){
 		    $Section = " for $1" if $Framework;
-		}elsif(/Error at line (\d+)/){
-		    $iLine = $1;
+		}elsif(/(Error|Warning) at line (\d+)/){
+		    $ErrorWarning = uc($1);
+		    $iLine = $2;
 
 		    if(/for session (\d+):/){
 			$iLine-- while $Text[$iLine] !~ /^Begin session/;
@@ -300,7 +294,10 @@ sub modify_xml_data{
 		}elsif(/IsFirstSession is false/){
 		    $Text[$iLine] .= " it is not in the first session";
 		}elsif(/^\t+(.*)/){
-		    $Text[$iLine] .= "\nERROR$Section: $1";
+		    $Text[$iLine] .= ($ErrorWarning ? 
+				      "\n$ErrorWarning$Section: $1" : 
+				      "<BR>         $1");
+		    $ErrorWarning = "";
 		}
 	    }
 	    $Text = join("\n",@Text)."\n";
@@ -344,8 +341,18 @@ sub modify_xml_data{
 	    # Make a safety save and reread file
 	    &write_text_file($TextFile);
 	    &read_text(&expand_param($ParamFile));
+	}elsif( /^READ FILE$/ ){
+	    my $File = $Form{FILENAME};
+	    if(-f $File and open(MYFILE, $File)){
+		$Clipboard{BODY}    = join('',<MYFILE>);
+		$Clipboard{TYPE}    = "FILE";
+		$Clipboard{SECTION} = "";
+		close MYFILE;
+		$Editor{FILE} = $File;
+	    }
 	}elsif( /^CANCEL$/ ){
 	    # Do nothing
+	    $Editor{FILE} = "" if $Editor{FILE} eq "TYPE FILENAME";
 	}elsif( /^SAVE AND EXIT$/ ){
 	    # save the file then kill the job
 	    &write_text_file($ParamFile);
@@ -363,15 +370,18 @@ sub modify_xml_data{
 	    $SessionRef[$iSession]{VIEW}="MAX";
 	    $SessionRef[$iSession]{NAME}=$Form{name};
 	    $Editor{SELECT}=$iSession;
+	    $JumpHere = $iSession;
 	}
     }elsif($_ = $Form{action}){
 
 	my $id= $Form{id};
 
 	if( /select_session/ ){
+	    # Change insert item unless it is the same level as before
 	    $Editor{INSERT} = "NEW" unless 
 		($Editor{SELECT} =~ s/(\d+)/$1/g) == ($id =~ s/(\d+)/$1/g);
 	    $Editor{SELECT} = $id;
+	    $JumpHere       = $id;
 
 	    if($id =~ /^all(.*)/){
 		&set_view($1);
@@ -387,14 +397,10 @@ sub modify_xml_data{
 	}elsif( /select_file/ ){
 	    $Editor{FILE} = $id;
 	    if(open(MYFILE, $id)){
-		$Clipboard{BODY} = join('',<MYFILE>);
-		if($Editor{SELECT} =~ /^all/){
-		    $Clipboard{TYPE}="SESSION";
-		}elsif($Editor{SELECT} =~ /^\d+$/){
-		    $Clipboard{TYPE}="SECTION";
-		}else{
-		    $Clipboard{TYPE}="COMMAND";
-		}
+		$Clipboard{BODY}    = join('',<MYFILE>);
+		$Clipboard{TYPE}    = "FILE";
+		$Clipboard{SECTION} = "";
+		close MYFILE;
 	    }
 	    return;
 	}
@@ -412,7 +418,10 @@ sub modify_xml_data{
 	my $ItemRef    = $SectionRef->{ITEM}[$iItem];
 
 	# View the stuff represented by id if id consist of numbers
-	$Editor{SELECT}=$id if ($id =~ /^[\d,]+$/ and /edit_|insert_/);
+	$Editor{SELECT} = $id if ($id =~ /^[\d,]+$/ and /edit_|insert_/);
+	$JumpHere       = $id if $id =~ /^[\d,]+$/;
+
+	my $Reread = 0; 
 
 	if( /minimize_session/ ){
 	    $SessionRef->{VIEW}="MIN";
@@ -430,12 +439,13 @@ sub modify_xml_data{
 	    $SessionRef->{VIEW}="EDIT";
 	}elsif( /edit_item/ ){
 	    $ItemRef->{VIEW}="EDIT";
-	    $Editor{INSERT}=$ItemRef->{HEAD} if $ItemRef->{TYPE} eq "COMMAND";
+	    # Set the insert item to the edited command so the manual shows up
+	    ($Editor{INSERT}) = split("\n", $ItemRef->{BODY}) if 
+		$ItemRef->{TYPE} eq "COMMAND";
 	}elsif( /remove_session/ or /copy_session/ ){
-	    $Clipboard{SESSION} = $iSession;
-	    $Clipboard{SECTION} = "NONE";
+	    $Clipboard{SECTION} = "";
 	    $Clipboard{TYPE}    = "SESSION";
-	    $Clipboard{BODY}    = "Session $id $NameSession: should be here\n";
+	    $Clipboard{BODY}    = &write_text($iSession);
 	    $Editor{SELECT}     = "allsessions";
 	    $Editor{INSERT}     = "PASTE SESSION";
 	    if(/remove_session/){
@@ -443,20 +453,19 @@ sub modify_xml_data{
 		$nSession--;
 	    }
 	}elsif( /remove_section/ or /copy_section/ ){
-	    $Clipboard{SESSION} = $iSession;
 	    $Clipboard{SECTION} = $NameSection;
 	    $Clipboard{TYPE}    = "SECTION";
-	    $Clipboard{BODY}    = "Section $id $NameSection: should be here\n";
+	    $Clipboard{BODY}    = &write_text($iSession, $iSection);
 	    $Editor{SELECT}     = $iSession;
 	    $Editor{INSERT}     = "PASTE SECTION";
 	    if( /remove_section/ ){
 		splice (@{$SessionRef->{SECTION}}, $iSection, 1);
 	    }
 	}elsif( /remove_item/ or /copy_item/ ){
-	    $Clipboard{SESSION} = $iSession;
-	    $Clipboard{SECTION} = $NameSection;
 	    $Clipboard{TYPE}    = $ItemRef->{TYPE};
-	    $Clipboard{BODY}    = $ItemRef->{HEAD}."\n".$ItemRef->{TAIL};
+	    $Clipboard{SECTION} = $NameSection;
+	    $Clipboard{SECTION} = "" if $Clipboard{TYPE} eq "COMMENT";
+	    $Clipboard{BODY}    = $ItemRef->{BODY};
 	    $Editor{SELECT}     = "$iSession,$iSection";
 	    $Editor{INSERT}     = "PASTE COMMAND/COMMENT";
 	    if( /remove_item/ ){
@@ -470,48 +479,49 @@ sub modify_xml_data{
 	    $NewSessionRef->{SECTION}[1]{ITEM}[1]{TYPE} = "COMMENT";
 	    $NewSessionRef->{SECTION}[1]{ITEM}[1]{VIEW} = "MAX";
 
-	    if($Editor{INSERT} eq "PASTE SESSION"){
-		$NewSessionRef->{SECTION}[1]{ITEM}[1]{HEAD} = $Clipboard{BODY};
-		chop $NewSessionRef->{SECTION}[1]{ITEM}[1]{HEAD};
+	    if($Editor{INSERT} =~ /PASTE|FILE/ ){
+		$NewSessionRef->{SECTION}[1]{ITEM}[1]{BODY} = $Clipboard{BODY};
+		$Reread = 1;
 	    }elsif($Editor{INSERT} =~ /NEW/){
-		$NewSessionRef->{SECTION}[1]{ITEM}[1]{HEAD} = "New session";
+		$NewSessionRef->{SECTION}[1]{ITEM}[1]{BODY} = "New session\n";
 	    }
 	    splice (@SessionRef, $iSession, 0, $NewSessionRef);
 	    $nSession++;
 	}elsif( /insert_section/ ){
 	    my $NewSectionRef;
 	    $NewSectionRef->{VIEW} = "MAX";
-	    if($Editor{INSERT} eq "PASTE SECTION"){
-		$NewSectionRef->{NAME} = $Clipboard{SECTION};
-		$NewSectionRef->{ITEM}[1]{HEAD} = $Clipboard{BODY};
-		chop $NewSectionRef->{ITEM}[1]{HEAD};
+	    $NewSectionRef->{ITEM}[1]{VIEW} = "MAX";
+	    $NewSectionRef->{ITEM}[1]{TYPE} = "COMMENT";
+	    if($Editor{INSERT} =~ /PASTE|FILE/ ){
+		$NewSectionRef->{NAME} = $Clipboard{SECTION} if 
+		    $Clipboard{SECTION} ne "CON";
+		$NewSectionRef->{ITEM}[1]{BODY} = $Clipboard{BODY};
+		$Reread = 1;
 	    }elsif($Editor{INSERT} =~ /Section (\w+)/){
-		$NewSectionRef->{NAME} = $1;
-		$NewSectionRef->{ITEM}[1]{VIEW} = "MAX";
-		$NewSectionRef->{ITEM}[1]{TYPE} = "COMMENT";
-		$NewSectionRef->{ITEM}[1]{HEAD} = "New $1 section";
+		$NewSectionRef->{NAME} = $1 if $1 ne "CON";
+		$NewSectionRef->{ITEM}[1]{BODY} = "New $1 section\n";
 	    }
 	    splice (@{$SessionRef->{SECTION}}, $iSection, 0, $NewSectionRef);
 	}elsif( /insert_item/ ){
 	    my $NewItemRef;
 	    $NewItemRef->{TYPE} = $Clipboard{TYPE};
-	    if($Editor{INSERT} =~ /^PASTE/){
+	    if($Editor{INSERT} =~ /^PASTE|FILE/){
 		$NewItemRef->{TYPE} = $Clipboard{TYPE};
+		$NewItemRef->{TYPE} = "COMMENT" if $Clipboard{TYPE} eq "FILE";
 		$NewItemRef->{VIEW} = "MAX";
-		($NewItemRef->{HEAD}, $NewItemRef->{TAIL}) 
-		    = split(/\n/, $Clipboard{BODY}, 2);
+		$NewItemRef->{BODY} = $Clipboard{BODY};
+		$Reread = 1 if $NewItemRef->{TYPE} eq "COMMENT" and 
+		    $NewItemRef->{BODY} =~ /^\#/m;
 	    }elsif($Editor{INSERT} =~ /^COMMENT/){
 		$NewItemRef->{TYPE} = "COMMENT";
 		$NewItemRef->{VIEW} = "EDIT";
 	    }elsif($Editor{INSERT} =~ /^\#USERINPUT/){
 		$NewItemRef->{TYPE} = "USERINPUT";
 		$NewItemRef->{VIEW} = "EDIT";
-		$NewItemRef->{HEAD} = "\#USERINPUT";
 	    }elsif($Editor{INSERT} =~ /^\#/){
 		$NewItemRef->{TYPE} = "COMMAND";
 		$NewItemRef->{VIEW} = "EDIT";
-		$NewItemRef->{HEAD} = $Editor{INSERT};
-		$NewItemRef->{TAIL} = "CommandExample\n";
+		$NewItemRef->{BODY} = "$Editor{INSERT}\nCommandExample\n";
 	    }else{
 		# invalid choice like "COMMANDS BY GROUP";
 		return;
@@ -521,23 +531,30 @@ sub modify_xml_data{
 	    $ItemRef->{VIEW}="MAX";
 	    $Form{text} =~ s/^\s*//;        # remove leading space
 	    $Form{text} =~ s/[ \t]+\n/\n/g; # clean up line endings
-	    if(/Save comment/){
-		($ItemRef->{HEAD}, $ItemRef->{TAIL})=split(/\n/,$Form{text},2);
-		$ItemRef->{TAIL} =~ s/\n\n+$/\n\n/;  # at most 2 \n at end
-		$ItemRef->{HEAD} = 'no comment' if $ItemRef->{HEAD} =~ /^\s*$/;
+	    if(/Save command/){
+		# Keep first line (name of command), and set the rest
+		$ItemRef->{BODY} =~ s/\n.*/\n$Form{text}/;
+	    }elsif(/Save comment/){
+		$ItemRef->{BODY} = $Form{text};
+		$ItemRef->{BODY} = "no comment\n" 
+		    if $ItemRef->{BODY} =~ /^\s*$/;
+		$Reread = 1 if $ItemRef->{BODY} =~ /^\#/m;
 	    }else{
-		$ItemRef->{TAIL} =  $Form{text};
-		$ItemRef->{TAIL} =~ s/\n+$/\n/;      # at most 1 \n at end
+		$ItemRef->{BODY} = $Form{text};
 	    }
-	    # remove empty tail
-	    $ItemRef->{TAIL}='' if $ItemRef->{TAIL} =~ /^\s*$/;
-
-	    # close tail with a \n if there is a tail
-	    $ItemRef->{TAIL} .= "\n" 
-		if $ItemRef->{TAIL} and $ItemRef->{TAIL} !~ /\n$/;
-
+	    $ItemRef->{BODY} =~ s/\n*$/\n/;      # exactly one \n at end
 	}elsif( /CANCEL/ ){
-	    $ItemRef->{VIEW}="MAX";	    
+	    $ItemRef->{VIEW}="MAX";
+	    $ItemRef->{BODY} = "no comment\n" if 
+		$ItemRef->{TYPE} eq "COMMENT" and $ItemRef->{BODY} =~ /^\s*$/;
+	}
+
+	# Reread text if we inserted something unusual like a file or a comment
+	# containing \# at the beginning of the line
+	if($Reread){
+	    &read_text(&write_text);
+	    $Editor{SELECT} = "all";
+	    $JumpHere = "";
 	}
     }
 }
@@ -580,9 +597,7 @@ sub write_xml_file{
 
 		print XMLFILE "\t\t\t\t\t<ITEM TYPE=\"$Item->{TYPE}\"".
 		    " VIEW=\"$Item->{VIEW}\">\n";
-		print XMLFILE $Item->{HEAD},"\n"
-		    unless $Item->{TYPE} eq "USERINPUT";
-		print XMLFILE $Item->{TAIL};
+		print XMLFILE $Item->{BODY};
 		print XMLFILE "\t\t\t\t\t</ITEM>\n";
 	    }
 	    print XMLFILE "\t\t\t\t</SECTION>\n";
@@ -595,14 +610,13 @@ sub write_xml_file{
 	$Editor{INSERT} = "NEW SESSION";
 	$Editor{FILE}    = "";
 	$Editor{ABC}    = "0";
-	$Clipboard{SESSION} = "NONE";
-	$Clipboard{SECTION} = "NONE";
-	$Clipboard{TYPE}    = "NONE";
+	$Clipboard{SECTION} = "";
+	$Clipboard{TYPE}    = "FILE";
     }
 
     print XMLFILE "
 <EDITOR SELECT=\"$Editor{SELECT}\" INSERT=\"$Editor{INSERT}\" FILE=\"$Editor{FILE}\" ABC=\"$Editor{ABC}\"/>
-<CLIPBOARD SESSION=\"$Clipboard{SESSION}\" SECTION=\"$Clipboard{SECTION}\" TYPE=\"$Clipboard{TYPE}\">
+<CLIPBOARD SECTION=\"$Clipboard{SECTION}\" TYPE=\"$Clipboard{TYPE}\">
 $Clipboard{BODY}</CLIPBOARD>
 ";
     close(XMLFILE)
@@ -819,14 +833,14 @@ sub write_editor_html{
 
 	$InsertList  = "    <OPTION>FILE\n";
 	$InsertList .= "    <OPTION>PASTE SESSION\n"
-	    if $Clipboard{TYPE} eq "SESSION";
+	    if $Clipboard{TYPE} =~ /SESSION|FILE/;
         $InsertList .= "    <OPTION>NEW SESSION\n";
 
     }elsif($Selected =~ /^\d+$/ and $Framework){
 
 	$InsertList  = "    <OPTION>FILE\n";
 	$InsertList .= "    <OPTION>PASTE SECTION\n"
-	    if $Clipboard{TYPE} eq "SECTION";
+	    if $Clipboard{TYPE} =~ /SECTION|FILE/;
         $InsertList .= "    <OPTION>Section CON\n";
 	my $Comp;
 	for $Comp (split ',', $ValidComp){
@@ -849,29 +863,43 @@ sub write_editor_html{
     # Add SELECTED
     my $Insert = $Editor{INSERT};
 
-    if( not ($InsertList =~s/OPTION>$Insert/OPTION SELECTED>$Insert/)){
-	$InsertList =~ s/OPTION>(COMMANDS|NEW|Section CON)/OPTION SELECTED>$1/;
-	$Insert = "NEW";
-	$Editor{INSERT} = "NEW";
+    if( not ($InsertList =~ s/OPTION>$Insert$/OPTION SELECTED>$Insert/m)){
+	$InsertList =~ 
+	    s/OPTION>(COMMANDS|NEW SESSION|Section CON)/OPTION SELECTED>$1/;
+	$Insert = $1;
+	$Editor{INSERT} = $1;
     }
 
     my $InsertItem;
 
     if($Insert eq "FILE"){
-	my @Files;
-	@Files = glob("run/PARAM*.in* Param/PARAM*.in.*");
 
-	my $Files;
-	$Files = "    <OPTION>".join("\n    <OPTION>",@Files) if @Files;
-	$InsertItem=
+	if($Editor{FILE} eq "TYPE FILENAME"){
+
+	    $InsertItem = 
+"        <INPUT TYPE=TEXT SIZE=$FileNameEditorWidth NAME=FILENAME>
+        <INPUT TYPE=SUBMIT NAME=submit VALUE=\"READ FILE\">
+        &nbsp
+        <INPUT TYPE=SUBMIT NAME=submit VALUE=CANCEL>
+";
+	}else{
+
+	    my @Files;
+	    @Files = glob("run/PARAM*.in* Param/PARAM*.in.*");
+
+	    my $Files;
+	    $Files = "    <OPTION>".join("\n    <OPTION>",@Files) if @Files;
+	    $InsertItem=
 "  <SELECT NAME=file onChange=\"dynamic_select('editor','file')\">
     <OPTION>SELECT FILE
+    <OPTION>TYPE FILENAME
 $Files
   </SELECT>
 ";
-	# Add SELECTED
-	my $File = $Editor{FILE};
-	$InsertItem =~ s/<OPTION(.*$File\n)/<OPTION SELECTED$1/ if $File;
+	    # Add SELECTED
+	    my $File = $Editor{FILE};
+	    $InsertItem =~ s/<OPTION(.*$File\n)/<OPTION SELECTED$1/ if $File;
+	}
     }
     # Add checkbox if COMMAND list
     if($InsertList =~ /COMMAND/){
@@ -952,10 +980,12 @@ sub write_manual_html{
 	$Manual =~ s/\n\n/\n<p>\n/g;
 	$Manual =  "<H1>Manual</H1>\n<PRE>\n$CommandExample\n</PRE>\n$Manual";
 	$Manual =~ s/\n$//;
-    }elsif($Editor{INSERT} =~ /^PASTE/){
-	$Manual = "<H1>Clipboard</H1>\n<PRE>\n$Clipboard{BODY}\n</PRE>";
-    }elsif($Editor{INSERT} eq "FILE" and -f $Editor{FILE}){
-	$Manual = "<H1>$Editor{FILE}</H1>\n<PRE>$Clipboard{BODY}\n</PRE>";
+    }elsif( $Editor{INSERT} =~ /^PASTE/ ){
+	$Manual = "<H1>Clipboard: $Clipboard{SECTION} $Clipboard{TYPE}</H1>\n".
+	    "<PRE>\n$Clipboard{BODY}\n</PRE>";
+    }elsif( $Editor{INSERT} eq "FILE" and $Clipboard{TYPE} eq "FILE" ){
+	$Manual = "<H1>FILE: $Editor{FILE}</H1>\n".
+	    "<PRE>\n$Clipboard{BODY}\n</PRE>";
     }
 
     print MANUAL
@@ -974,6 +1004,10 @@ sub write_param_html{
     if($Editor{SELECT} =~ /^(\d+),(\d+)/){
 	$SelectedSectionName = ($SessionRef[$1]{SECTION}[$2]{NAME} or "CON");
     }
+    $JumpHere = $Editor{SELECT} unless $JumpHere;
+
+    # Jump to previous item if item index is larger than 2
+    $JumpHere =~ s/(\d+,\d+,)([2-9]|\d\d+)$/"$1".($2-1)/e;
 
     my $Param = 
 "  <HEAD>
@@ -1055,8 +1089,7 @@ Session $iSession:
 ";
 
 	# Place anchor to selected session
-	$Param .= "<DIV><A NAME=HERE></A></DIV>\n" 
-	    if $Editor{SELECT} eq $iSession;
+	$Param .= $Here if $JumpHere eq $iSession;
 
 	$Param .=
 "$SessionLine
@@ -1107,8 +1140,7 @@ $InsertSessionButton$CopySessionButton$RemoveSessionButton
 ";
 
 	    # Place anchor to selected section
-	    $Param .= "<DIV><A NAME=HERE></A></DIV>\n" 
-		if $Editor{SELECT} eq "$iSession,$iSection";
+	    $Param .= $Here if $JumpHere eq "$iSession,$iSection";
 
 	    $Param .=
 "  <TABLE BORDER=0 WIDTH=$LeftTableWidth BGCOLOR=$SectionBgColor>
@@ -1154,10 +1186,17 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 		my $ItemRef  = $SectionRef->{ITEM}[$iItem];
 		my $ItemView = $ItemRef->{VIEW};
 		my $ItemType = lc($ItemRef->{TYPE});
-		my $ItemHead = $ItemRef->{HEAD};
-		my $ItemTail = $ItemRef->{TAIL};
 
-		$ItemType = "error" if $ItemHead =~ /^ERROR/;
+		$ItemRef->{BODY} =~ s/CommandExample/$CommandExample/;
+		my $ItemHead;
+		my $ItemTail;
+		if($ItemType eq "userinput"){
+		    $ItemHead = '#USERINPUT';
+		    $ItemTail = $ItemRef->{BODY};
+		}else{
+		    ($ItemHead, $ItemTail) = split("\n",$ItemRef->{BODY},2);
+		}
+		$ItemType = "error" if $ItemHead =~ /^(ERROR|WARNING)/;
 
 		my $TableColor = $TableColor{$ItemType};
 
@@ -1167,17 +1206,13 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 		my $nLine = ($ItemTail =~ s/\n/\n/g);
 
 		# Place anchor to selected item
-		$Param .= "<DIV><A NAME=HERE></A></DIV>\n"  
-		    if $Editor{SELECT} eq "$iSession,$iSection,$iItem";
+		$Param .= $Here if $JumpHere eq "$iSession,$iSection,$iItem";
 
 		if($ItemView eq "EDIT"){
 
 		    if($ItemType eq "comment"){
-			$ItemTail = "$ItemHead\n$ItemTail";
-			$ItemHead = "";
-		    }elsif($ItemTail =~ /CommandExample/){
-			($ItemHead,$ItemTail) = split(/\n/,$CommandExample,2);
-			$ItemRef->{TAIL}=$ItemTail;
+			$ItemHead = "Comment:";
+			$ItemTail = $ItemRef->{BODY};
 		    }elsif($ItemType eq "userinput"){
 			$ItemTail .= ("\n" x 10);
 		    }
@@ -1535,7 +1570,7 @@ sub read_text{
 	# Add a comment if there is no text passed
 	$SectionRef->{ITEM}[1]{VIEW} = "MAX";
 	$SectionRef->{ITEM}[1]{TYPE} = "COMMENT";
-	$SectionRef->{ITEM}[1]{HEAD} = "New parameter file";
+	$SectionRef->{ITEM}[1]{HEAD} = "New parameter file\n";
 
 	return;
     }
@@ -1556,9 +1591,9 @@ sub read_text{
 		$nSession--;
 	    }
 	    
-	    # Read the rest of the text into the 'clip board'
-	    $Clipboard{BODY} = join("\n", @Text) . "\n";
-	    $Clipboard{BODY} =~ s/^\n*//m;
+	    # Read the rest of the text into the 'clipboard'
+	    $Clipboard{BODY} = join("\n", @Text) . "\n" if @Text;
+	    $Clipboard{BODY} =~ s/^\n+$/\n/;
 	    return;
 	}
 
@@ -1688,10 +1723,12 @@ sub read_text{
 		$IsCommand=1;
 		$IsComment=0;
 	    }elsif( /^\s*$/ ){
-		# Empty line closes command
+		# Empty line closes commands and comments
 		$IsCommand = 0;
-		next unless $IsComment or $UserInput;
-	    }elsif(not $IsCommand and not $UserInput and not $IsComment){
+		$IsComment = 0;
+		next unless $UserInput;
+	    }elsif( /^(ERROR|WARNING)/ or 
+		    (not $IsCommand and not $UserInput and not $IsComment)){
 		# non-empty line starts new comment
 		$iItem++;
 		$IsComment = 1;
@@ -1704,11 +1741,7 @@ sub read_text{
 	    }
 
 	    # Store line
-	    if($SectionRef->{ITEM}[$iItem]{HEAD}){
-		$SectionRef->{ITEM}[$iItem]{TAIL} .= "$_\n";
-	    }else{
-		$SectionRef->{ITEM}[$iItem]{HEAD} = $_;
-	    }
+	    $SectionRef->{ITEM}[$iItem]{BODY} .= "$_\n";
 	}
     }
 }
@@ -1720,14 +1753,30 @@ sub print_error{
 ##############################################################################
 sub write_text{
 
-    my $Output;
-    my $iSession;
-    for $iSession (1..$#SessionRef){
-	my $NameSession = ($SessionRef[$iSession]{NAME} or $iSession);
-	$Output .= "Begin session: $NameSession\n\n";
+    my $iSession0 = shift;
+    my $iSection0 = shift;
 
+    my $Output;
+
+    my @Sessions;
+    if($iSession0){
+	@Sessions = ($iSession0);
+    }else{ 
+	@Sessions = (1..$#SessionRef);
+    }
+    my $iSession;
+    for $iSession (@Sessions){
+	my $NameSession = ($SessionRef[$iSession]{NAME} or $iSession);
+	$Output .= "Begin session: $NameSession\n\n" unless $iSession0;
+
+	my @Sections;
+	if($iSection0){
+	    @Sections = ($iSection0);
+	}else{
+	    @Sections = (1..$#{ $SessionRef[$iSession]{SECTION} });
+	}
 	my $iSection;
-	for $iSection (1..$#{ $SessionRef[$iSession]{SECTION} }){
+	for $iSection (@Sections){
 	    my $SectionRef = $SessionRef[$iSession]{SECTION}[$iSection];
 
 	    # Skip empty section ($iItem starts with 1)
@@ -1736,7 +1785,7 @@ sub write_text{
 	    my $NameSection = $SectionRef->{NAME};
 
 	    $Output .= "\#BEGIN_COMP $NameSection ".("-" x 40)."\n\n"
-		if $NameSection;
+		if $NameSection and not $iSection0;
 
 	    my $iItem;
 	    for $iItem (1..$#{ $SectionRef->{ITEM} }){
@@ -1746,17 +1795,18 @@ sub write_text{
 
 		if($ItemType eq "USERINPUT"){
 		    $Output .= "#USERINPUTBEGIN ----------------\n\n".
-			$ItemRef->{TAIL}.
+			$ItemRef->{BODY}.
 			"\n#USERINPUTEND   ----------------\n\n";
 		}else{
-		    $Output .= $ItemRef->{HEAD}."\n".$ItemRef->{TAIL};
+		    $Output .= $ItemRef->{BODY};
 		    $Output .= "\n" if $ItemType eq "COMMAND";
 		}
 	    }
 	    $Output .= "\#END_COMP $NameSection   ".("-" x 40)."\n\n"
-		if $NameSection;
+		if $NameSection and not $iSection0;
 	}
-	$Output .= "End session: $NameSession\n#END ".("\#" x 60)."\n";
+	$Output .= "End session: $NameSession\n\#END ".("\#" x 60)."\n" 
+	    unless $iSession0;
     }
 
     # Replace #END with #RUN when a session follows
