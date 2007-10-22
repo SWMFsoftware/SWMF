@@ -306,28 +306,27 @@ sub modify_xml_data{
 	    &write_text_file($ParamFile);
 	}elsif( /^SAVE AS$/ ){
 	    $Form{FILENAME} =~ s/\.(xml|txt)$//;
-	    if(open(FILE,">$Form{FILENAME}")){
+	    my $File = $Form{FILENAME}; $File =~ s/^\s+//; $File =~ s/\s+$//;
+	    if(open(FILE,">$File")){
 		close(FILE);
-		$ParamFile = $Form{FILENAME};
+		$ParamFile = $File;
 		rename($XmlFile, "$ParamFile.xml");
 		$XmlFile   = "$ParamFile.xml";
 		$TextFile  = "$ParamFile.txt";
 		&write_text_file($ParamFile);
 	    }else{
 		$Editor{READFILENAME}="SAVE AS";
-		$Editor{NEWFILENAME}="Could not open $Form{FILENAME}"
-		    if $Form{FILENAME};
+		$Editor{NEWFILENAME}="Could not open $File" if $File;
 	    }
 	}elsif( /^OPEN$/ ){
 	    $Form{FILENAME} =~ s/\.(xml|txt)$//;
-
-	    if($Form{FILENAME}){
-
+	    my $File = $Form{FILENAME}; $File =~ s/^\s+//; $File =~ s/\s+$//;
+	    if($File){
 		# Make a safety save
 		&write_text_file($TextFile);
 
 		# Use new filenames
-		$ParamFile = $Form{FILENAME};
+		$ParamFile = $File;
 		$XmlFile   = "$ParamFile.xml";
 		$TextFile  = "$ParamFile.txt";
 
@@ -341,14 +340,17 @@ sub modify_xml_data{
 	    # Make a safety save and reread file
 	    &write_text_file($TextFile);
 	    &read_text(&expand_param($ParamFile));
-	}elsif( /^READ FILE$/ ){
-	    my $File = $Form{FILENAME};
+	}elsif( /^READ FILE FOR INSERT$/ ){
+	    my $File = $Form{FILENAME}; $File =~ s/^\s+//; $File =~ s/\s+$//;
 	    if(-f $File and open(MYFILE, $File)){
 		$Clipboard{BODY}    = join('',<MYFILE>);
 		$Clipboard{TYPE}    = "FILE";
 		$Clipboard{SECTION} = "";
 		close MYFILE;
 		$Editor{FILE} = $File;
+	    }else{
+		$Editor{READFILENAME}= "READ FILE FOR INSERT";
+		$Editor{NEWFILENAME} = "could not open $File" if $File;
 	    }
 	}elsif( /^CANCEL$/ ){
 	    # Do nothing
@@ -405,6 +407,8 @@ sub modify_xml_data{
 		$Clipboard{TYPE} = '';
 		$Clipboard{BODY} = '';
 		$Clipboard{SECTION} = '';
+		$Editor{READFILENAME} = "READ FILE FOR INSERT" if
+		    $id = "ENTER FILENAME";
 	    }
 	    return;
 	}
@@ -767,7 +771,7 @@ sub write_editor_html{
     if($Editor{READFILENAME}){
 	$EditButtons = 
 "      <TD COLSPAN=2 ALIGN=CENTER>
-        <FONT $TopFileNameFont>New parameter file name:</FONT>
+        <FONT $TopFileNameFont>Enter file name:</FONT>
         <INPUT TYPE=TEXT SIZE=$FileNameEditorWidth
 	      NAME=FILENAME VALUE=\"$Editor{NEWFILENAME}\">
         <INPUT TYPE=SUBMIT NAME=submit VALUE=\"$Editor{READFILENAME}\">
@@ -878,33 +882,21 @@ sub write_editor_html{
 
     if($Insert eq "FILE"){
 
-	if($Editor{FILE} eq "ENTER FILENAME"){
-
-	    $InsertItem = 
-"       </FORM><FORM NAME=insertfilename ACTION=$IndexPhpFile> 
-        <INPUT TYPE=TEXT SIZE=$FileNameEditorWidth NAME=FILENAME>
-        <INPUT TYPE=SUBMIT NAME=submit VALUE=\"READ FILE\">
-        &nbsp
-        <INPUT TYPE=SUBMIT NAME=submit VALUE=CANCEL>
-";
-	}else{
-
-	    my @Files;
-	    @Files = glob("run/PARAM*.in* Param/PARAM*.in.*");
-
-	    my $Files;
-	    $Files = "    <OPTION>".join("\n    <OPTION>",@Files) if @Files;
-	    $InsertItem=
+	my @Files;
+	@Files = glob("run/PARAM*.in* Param/PARAM*.in.*");
+	
+	my $Files;
+	$Files = "    <OPTION>".join("\n    <OPTION>",@Files) if @Files;
+	$InsertItem=
 "  <SELECT NAME=file onChange=\"dynamic_select('editor','file')\">
     <OPTION>SELECT FILE
     <OPTION>ENTER FILENAME
 $Files
   </SELECT>
 ";
-	    # Add SELECTED
-	    my $File = $Editor{FILE};
-	    $InsertItem =~ s/<OPTION(.*$File\n)/<OPTION SELECTED$1/ if $File;
-	}
+	# Add SELECTED
+	my $File = $Editor{FILE};
+	$InsertItem =~ s/<OPTION(.*$File\n)/<OPTION SELECTED$1/ if $File;
     }
     # Add checkbox if COMMAND list
     if($InsertList =~ /COMMAND/){
