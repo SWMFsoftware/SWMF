@@ -419,7 +419,7 @@ subroutine calc_scaled_euv
     end if
     
     !!need to convert from W/m^2 to photons/m^2/s
-    gdo N=1,Num_WaveLengths_High 
+    do N=1,Num_WaveLengths_High 
         Flux_of_EUV(N) = Timed_Flux(N)*wvavg(N)*1.0e-10/(6.626e-34*2.998e8)
      enddo
      call end_timing("new_euv")
@@ -556,7 +556,7 @@ subroutine Set_Euv(iError)
   do while (NotDone) 
      read(iInputUnit_,*) line
 
-     if (line .eq. '#NFLARES') then 
+     if (line .eq. '#FLARES') then 
         read(iInputUnit_,*) nFlares
         do i = 1, nFlares 
            read(iInputUnit_,*) TimeOfFlare(1:6)
