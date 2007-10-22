@@ -108,7 +108,7 @@ my $TextFile  = "$ParamFile.txt"; # Name of the temporary text parameter file
 if($ARGV[0] or not -f $XmlFile){
     # Read parameter file if argument is present or the XML file is missing
     &set_framework_components;
-    &read_text(&expand_param($ParamFile));
+    &read_text(&expand_param($ParamFile), "ReadClipboard");
 
     &write_xml_file($XmlFile, "DefaultEditorAndClipboard");
 }else{
@@ -331,7 +331,7 @@ sub modify_xml_data{
 		$TextFile  = "$ParamFile.txt";
 
 		# Read new file
-		&read_text(&expand_param($ParamFile));
+		&read_text(&expand_param($ParamFile), "ReadClipboard");
 	    }else{
 		$Editor{READFILENAME}="OPEN";
 		$Editor{NEWFILENAME}="";
@@ -339,7 +339,7 @@ sub modify_xml_data{
 	}elsif( /^REOPEN$/ ){
 	    # Make a safety save and reread file
 	    &write_text_file($TextFile);
-	    &read_text(&expand_param($ParamFile));
+	    &read_text(&expand_param($ParamFile), "ReadClipboard");
 	}elsif( /^READ FILE FOR INSERT$/ ){
 	    my $File = $Form{FILENAME}; $File =~ s/^\s+//; $File =~ s/\s+$//;
 	    if(-f $File and open(MYFILE, $File)){
@@ -1517,7 +1517,7 @@ sub convert_type{
 	&read_xml_file($InputFile);
     }else{
 	# Expand file (this is needed for files with #INCLUDE)
-	&read_text(&expand_param($InputFile));
+	&read_text(&expand_param($InputFile), "ReadClipboard");
     }
 
     # Write output file
@@ -1556,7 +1556,9 @@ sub set_framework_components{
 sub read_text{
 
     my @Text;
-    @Text = split(/\n/, @_[0]);
+    @Text = split(/\n/, shift);
+
+    my $ReadClipboard = shift;
 
     # Delete previous values if any
     @SessionRef = ();
@@ -1605,6 +1607,8 @@ sub read_text{
 		$nSession--;
 	    }
 	    
+	    return unless $ReadClipboard;
+
 	    # Read the rest of the text into the 'clipboard'
 	    $Clipboard{BODY} = join("\n", @Text) . "\n" if @Text;
 	    $Clipboard{BODY} =~ s/^\n+$/\n/;
