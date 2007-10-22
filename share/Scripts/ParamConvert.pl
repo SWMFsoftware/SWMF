@@ -467,7 +467,7 @@ sub modify_xml_data{
 	    $Editor{SELECT}     = $iSession;
 	    $Editor{INSERT}     = "PASTE SECTION";
 	    if( /remove_section/ ){
-		splice (@{$SessionRef->{SECTION}}, $iSection, 1);
+		splice(@{$SessionRef->{SECTION}}, $iSection, 1);
 	    }
 	}elsif( /remove_item/ or /copy_item/ ){
 	    $Clipboard{TYPE}    = $ItemRef->{TYPE};
@@ -477,7 +477,7 @@ sub modify_xml_data{
 	    $Editor{SELECT}     = "$iSession,$iSection";
 	    $Editor{INSERT}     = "PASTE COMMAND/COMMENT";
 	    if( /remove_item/ ){
-		splice (@{$SectionRef->{ITEM}}, $iItem, 1);
+		splice(@{$SectionRef->{ITEM}}, $iItem, 1);
 	    }
 	}elsif( /insert_session/ ){
 	    my $NewSessionRef;
@@ -493,7 +493,11 @@ sub modify_xml_data{
 	    }elsif($Editor{INSERT} =~ /NEW/){
 		$NewSessionRef->{SECTION}[1]{ITEM}[1]{BODY} = "New session\n";
 	    }
-	    splice (@SessionRef, $iSession, 0, $NewSessionRef);
+	    if($nSession > 0){
+		splice(@SessionRef, $iSession, 0, $NewSessionRef);
+	    }else{
+		$SessionRef[1] = $NewSessionRef;
+	    }
 	    $nSession++;
 	}elsif( /insert_section/ ){
 	    my $NewSectionRef;
@@ -509,7 +513,11 @@ sub modify_xml_data{
 		$NewSectionRef->{NAME} = $1 if $1 ne "CON";
 		$NewSectionRef->{ITEM}[1]{BODY} = "New $1 section\n";
 	    }
-	    splice (@{$SessionRef->{SECTION}}, $iSection, 0, $NewSectionRef);
+	    if( @{$SessionRef->{SECTION}} ){
+		splice(@{$SessionRef->{SECTION}}, $iSection,0, $NewSectionRef);
+	    }else{
+		$SessionRef->{SECTION}[1] = $NewSectionRef;
+	    }
 	}elsif( /insert_item/ ){
 	    my $NewItemRef;
 	    $NewItemRef->{TYPE} = $Clipboard{TYPE};
@@ -529,12 +537,16 @@ sub modify_xml_data{
 	    }elsif($Editor{INSERT} =~ /^\#/){
 		$NewItemRef->{TYPE} = "COMMAND";
 		$NewItemRef->{VIEW} = "EDIT";
-		$NewItemRef->{BODY} = "$Editor{INSERT}\nCommandExample\n";
+		$NewItemRef->{BODY} = "CommandExample\n";
 	    }else{
 		# invalid choice like "COMMANDS BY GROUP";
 		return;
 	    }
-	    splice (@{$SectionRef->{ITEM}}, $iItem, 0, $NewItemRef);
+	    if(@{$SectionRef->{ITEM}}){
+		splice(@{$SectionRef->{ITEM}}, $iItem, 0, $NewItemRef);
+	    }else{
+		$SectionRef->{ITEM}[1] = $NewItemRef;
+	    }
 	}elsif( /Save command|Save userinput|Save comment/ ){
 	    $ItemRef->{VIEW}="MAX";
 	    $Form{text} =~ s/^\s*//;        # remove leading space
@@ -648,7 +660,7 @@ sub command_list{
     }
     my $IsFirstSession = ($iSession == 1);
 
-    open(FILE, $ParamXml) or die "$ERROR: could not open $ParamXml\n";
+    open(FILE, $ParamXml) or return ": no $ParamXml\n";
 
     my $CommandList;
     my $Command = $Editor{INSERT};
@@ -894,9 +906,11 @@ sub write_editor_html{
 $Files
   </SELECT>
 ";
-	# Add SELECTED
+	# Add SELECTED if file has been loaded already
 	my $File = $Editor{FILE};
-	$InsertItem =~ s/<OPTION(.*$File\n)/<OPTION SELECTED$1/ if $File;
+	$InsertItem =~ s/<OPTION(.*$File\n)/<OPTION SELECTED$1/ 
+	    if $File and ($File eq "ENTER FILENAME" or 
+			  $Clipboard{TYPE} eq "FILE" and $Clipboard{BODY});
     }
     # Add checkbox if COMMAND list
     if($InsertList =~ /COMMAND/){
@@ -980,7 +994,8 @@ sub write_manual_html{
     }elsif( $Editor{INSERT} =~ /^PASTE/ ){
 	$Manual = "<H1>Clipboard: $Clipboard{SECTION} $Clipboard{TYPE}</H1>\n".
 	    "<PRE>\n$Clipboard{BODY}\n</PRE>";
-    }elsif( $Editor{INSERT} eq "FILE" and $Clipboard{TYPE} eq "FILE" ){
+    }elsif( $Editor{INSERT} eq "FILE" and $Clipboard{TYPE} eq "FILE" and
+	    $Editor{FILE} ){
 	$Manual = "<H1>FILE: $Editor{FILE}</H1>\n".
 	    "<PRE>\n$Clipboard{BODY}\n</PRE>";
     }
@@ -1030,7 +1045,6 @@ sub write_param_html{
     my $RemoveSessionButton;
     my $RemoveSectionButton;
     my $RemoveItemButton;
-
 
     ########################## SESSION #################################
     my $iSession;
@@ -1276,8 +1290,6 @@ $ItemTail
 ";
 
 		# Show first line with usual buttons
-		$ItemHead = "<PRE>$ItemHead</PRE>" 
-		    if $ItemType =~ /comment|error/;
 
 		$Param .=
 "  <TABLE BORDER=0 WIDTH=$LeftTableWidth BGCOLOR=$TableColor>
@@ -1303,13 +1315,15 @@ $InsertItemButton$CopyItemButton$RemoveItemButton
 
 		if($ItemType ne "command"){
 
+		    $ItemTail =~ s/\n/<BR>\n/g;
+
 		    $Param .= 
 "  <TABLE BORDER=0 WIDTH=$LeftTableWidth BGCOLOR=$TableColor>
     <TR>
       <TD WIDTH=$LeftColumn1Width>
       </TD>
       <TD COLSPAN=2><$ActionEditItem>
-<PRE>$ItemTail</PRE>
+$ItemTail
       </A></TD>
     </TR>
 ";
@@ -1392,9 +1406,13 @@ $InsertItemButton$CopySectionButton$RemoveSectionButton
 	} # Section loop
 
 	###### End session #########
+	
+	$iSection = ($nSection+1 or 1);
+	$InsertSectionButton = 
+"    <A HREF=$IndexPhpFile?id=$iSession,$iSection\&action=insert_section
+><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert section\"></A>
+" 	    if $Editor{SELECT} =~ /^\d+$/;
 
-	$iSection = $nSection+1;
-	$InsertSectionButton =~ s/id=[\d,]+/id=$iSession,$iSection/;
 	$MinMaxSessionButton =~ s/minimize\.gif/minimize_up.gif/;
 	$Param .=
 "  <TABLE BORDER=0 WIDTH=$LeftTableWidth BGCOLOR=$SectionBgColor>
@@ -1421,15 +1439,14 @@ $InsertSectionButton$CopySessionButton$RemoveSessionButton
 ";
     } # session loop
 
-    $iSession=$nSession+1;
-    $InsertSessionButton =~ s/id=[\d,]+/id=$iSession/;
-
     $Param .= "$SessionLine\n";
+
     $Param .=
 "  <TABLE WIDTH=$LeftTableWidth BGCOLOR=$LeftBgColor><TR><TD ALIGN=RIGHT>
-$InsertSessionButton
+    <A HREF=$IndexPhpFile?id=".($nSession+1)."\&action=insert_session
+><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert session\"></A>
   </TD></TR></TABLE>
-"       if $InsertSessionButton;
+"                 if $Editor{SELECT} =~ /^all/;
 
     $Param .= "</BODY>\n";
 
