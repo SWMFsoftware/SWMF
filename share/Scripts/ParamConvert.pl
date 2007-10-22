@@ -352,7 +352,7 @@ sub modify_xml_data{
 	    }
 	}elsif( /^CANCEL$/ ){
 	    # Do nothing
-	    $Editor{FILE} = "" if $Editor{FILE} eq "TYPE FILENAME";
+	    $Editor{FILE} = "" if $Editor{FILE} eq "ENTER FILENAME";
 	}elsif( /^SAVE AND EXIT$/ ){
 	    # save the file then kill the job
 	    &write_text_file($ParamFile);
@@ -401,6 +401,10 @@ sub modify_xml_data{
 		$Clipboard{TYPE}    = "FILE";
 		$Clipboard{SECTION} = "";
 		close MYFILE;
+	    }else{
+		$Clipboard{TYPE} = '';
+		$Clipboard{BODY} = '';
+		$Clipboard{SECTION} = '';
 	    }
 	    return;
 	}
@@ -874,10 +878,11 @@ sub write_editor_html{
 
     if($Insert eq "FILE"){
 
-	if($Editor{FILE} eq "TYPE FILENAME"){
+	if($Editor{FILE} eq "ENTER FILENAME"){
 
 	    $InsertItem = 
-"        <INPUT TYPE=TEXT SIZE=$FileNameEditorWidth NAME=FILENAME>
+"       </FORM><FORM NAME=insertfilename ACTION=$IndexPhpFile> 
+        <INPUT TYPE=TEXT SIZE=$FileNameEditorWidth NAME=FILENAME>
         <INPUT TYPE=SUBMIT NAME=submit VALUE=\"READ FILE\">
         &nbsp
         <INPUT TYPE=SUBMIT NAME=submit VALUE=CANCEL>
@@ -892,7 +897,7 @@ sub write_editor_html{
 	    $InsertItem=
 "  <SELECT NAME=file onChange=\"dynamic_select('editor','file')\">
     <OPTION>SELECT FILE
-    <OPTION>TYPE FILENAME
+    <OPTION>ENTER FILENAME
 $Files
   </SELECT>
 ";
@@ -1810,7 +1815,7 @@ sub write_text{
     }
 
     # Replace #END with #RUN when a session follows
-    $Output =~ s/\#END (\#+\nBegin session:)/\#RUN $1/;
+    $Output =~ s/\#END (\#+\nBegin session:)/\#RUN $1/g;
 
     return $Output;
 }
