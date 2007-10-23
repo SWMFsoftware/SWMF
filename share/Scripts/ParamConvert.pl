@@ -553,7 +553,8 @@ sub modify_xml_data{
 	    $Form{text} =~ s/[ \t]+\n/\n/g; # clean up line endings
 	    if(/Save command/){
 		# Keep first line (name of command), and set the rest
-		$ItemRef->{BODY} =~ s/\n.*/\n$Form{text}/;
+		$ItemRef->{BODY} =~ /\n/;
+		$ItemRef->{BODY} =~ $`.$Form{text};
 	    }elsif(/Save comment/){
 		$ItemRef->{BODY} = $Form{text};
 		$ItemRef->{BODY} = "no comment\n" 
