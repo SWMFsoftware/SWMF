@@ -12,8 +12,8 @@ parameter files of scientific codes. The GUI consists of three frames:
    and <A HREF=#SELECTMENUS>select menus</A>,
 <li><A HREF=#LEFTFRAME>left frame</A> showing the parameter file,
 <li><A HREF=#RIGHTFRAME>right frame</A> 
-   showing extra information, such as manuals,
-   contents of objects to be pasted or list of errors.
+   showing extra information, such as manuals, clipboard,
+   files to be inserted, or list of errors.
 </ul>
 The parameter editor GUI can be 
 <A HREF=#CUSTOMIZE>customized with the configuration file ParamEditor.conf</A>.
@@ -25,7 +25,7 @@ in the middle and the <A NAME=BUTTONS>following buttons:</A>
 <ul>
 <li><INPUT TYPE=SUBMIT VALUE=CHECK>: check the parameter file for errors. 
         First all previous errors (if any) are removed from the left frame.
-        Next a list of errors will be displayed in the right frame.
+        Next a list of errors will be displayed in the right frame,
         as well as where they occur in the left frame.
 
 <li><INPUT TYPE=SUBMIT VALUE=SAVE>: save the edited parameter file. 
@@ -53,7 +53,7 @@ in the middle and the <A NAME=BUTTONS>following buttons:</A>
 </ul>
     <A NAME=SELECTMENUS>The following menus and options are shown</A>:
 <ul>
-<li><b>View</b>: The view menu determines which how the parameter file is
+<li><b>View</b>: The view menu determines how the parameter file is
                  displayed in the left frame, and it also determines what
                  and where can be inserted from the insert menu.
 <ul>
@@ -61,15 +61,15 @@ in the middle and the <A NAME=BUTTONS>following buttons:</A>
 <li>ALL ITEMS: show everything but all command/comments are minimized.
 <li>ALL SECTIONS: show all sessions with minimized sections.
 <li>ALL SESSIONS: show all sessions in minimized format.
-<li>Session X: show session X maximized, others minimized
-<li>Session X/Y: show section Y from session X maximized, all others minimized
+<li>Session X: show session X maximized, others minimized.
+<li>Session X/Y: show section Y from session X maximized, all others minimized.
 </ul>
 
 If any of the ALL* options is selected then full sessions can be inserted only.
 If a session is selected then sections can be inserted into any session. 
 If a section is selected then comments and commands can be inserted into any
-of thes sections of the selected type.
-
+of the sections of the selected type.
+<p>
 <li><b>Insert</b>: Inserting an object into the parameter file consist of 
 up to four steps: select the appropriate view from the view menu, 
 select an object from the insert menu, select a file in case a file is
@@ -107,18 +107,18 @@ to modify it.
 The code first runs with the parameters of the first
 session, then upon completion it continues with the parameter modifications
 of the second session, etc. A session consists of one or more sections. 
-A section contains input parameter of the control module (CON) or one 
+A section contains input parameters for the control module (CON), or one 
 of the components (e.g. IE or GM) allowed by the current configuration 
 of the framework. Each session contains one or more items. 
 An item can be one of the following:
 <ul>
-<li><b>ERROR</b>: text starting with the string 'ERROR'.
-<li><b>COMMENT</b>: text that does not start with ERROR' or '#'. 
-<li><b>#USERINPUT segment</b>: text that starts with '#USERINPUT(BEGIN)'
-                             and ends with '#USERINPUT(END)'.
 <li><b>#COMMAND</b>: text that starts with '#' but not '#USERINPUT' followed
                   by zero or more non-empty lines containing the parameters
                   of the command. 
+<li><b>#USERINPUT segment</b>: text that starts with '#USERINPUT(BEGIN)'
+                             and ends with '#USERINPUT(END)'.
+<li><b>ERROR</b>: text starting with the string 'ERROR' or 'WARNING'.
+<li><b>COMMENT</b>: any other text
 </ul>
 All items (except for errors) can be edited by clicking on 
 the first line of the item. 
@@ -207,7 +207,7 @@ the configuration file can be used to work around a bug in the Safari
 browser. The bug causes the browser to jump to the wrong place in the
 left frame. Set
 <pre>
-our $DoSafariJumpFix = 1; # work around the Safari bug
+$DoSafariJumpFix = 1; # work around the Safari bug
 </pre>
 in the configuration file to activate the work-around: first the
 browser jumps to a jump.html file that has a JavaScript that 
@@ -230,6 +230,6 @@ $RedoFrames = 1;             # rewrite index.php (jump.html)
 </pre>
 so that the changes take effect without restarting the editor. 
 Note, however, that this setting should be removed from the 
-configuration file once the settings are set permanently.
+configuration file once the settings are permanent.
 </BODY>
 </HTML>
