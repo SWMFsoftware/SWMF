@@ -13,9 +13,8 @@ subroutine RB_plot_fieldline(nAlt,iLat,iLon,Length_I,RadialDist_I,Bfield_I)
 
 
   write(NameFieldLine,"(a,i2.2,i2.2,a)") &
-       'RB/FieldLine',iLat,iLon,'.dat'
+       'RB/FieldLine',iLat,iLon,'.idl'
   open(UnitTmp_,FILE=NameFieldLine)
-
 
   write (UnitTmp_,"(a79)") 'RB_line'
   write (UnitTmp_,"(i8,1pe13.5,3i3)") 1,0.0,1,1,2
@@ -24,12 +23,9 @@ subroutine RB_plot_fieldline(nAlt,iLat,iLon,Length_I,RadialDist_I,Bfield_I)
   write (UnitTmp_,"(a79)")&
        'Length Radius Bfield g'
   do i=1,nAlt  
-     !WRITE (UnitTmp_,"(100(1pe18.10))") &
-     WRITE (UnitTmp_,*) &
+     WRITE (UnitTmp_,"(100es18.10)") &
           Length_I(i),RadialDist_I(i),Bfield_I(i)
   enddo
-
-  
   close(UnitTmp_)
 
 end subroutine RB_plot_fieldline
