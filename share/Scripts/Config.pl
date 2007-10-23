@@ -2,26 +2,30 @@
 use strict;
 
 # Default compiler per machine or OS
-my %Compiler = ("Linux"   => "f95",
-	     "Darwin"  => "f95",
-	     "OSF1"    => "f90",
-	     "IRIX64"  => "f90",
-	     "palm"    => "ifort",
-	     "cfe1"    => "ifort",
-	     "cfe2"    => "ifort",
-	     "cfe3"    => "ifort"
-	     );
+my %Compiler = (
+		"Linux"   => "f95",
+		"Darwin"  => "f95",
+		"OSF1"    => "f90",
+		"IRIX64"  => "f90",
+		"palm"    => "ifort",
+		"cfe1"    => "ifort",
+		"cfe2"    => "ifort",
+		"cfe3"    => "ifort",
+		"cfe4"    => "ifort"
+		);
 
 # Default MPI library per machine or OS
-my %MpiVersion = ("Linux"   => "mpich",
-	"Darwin"  => "mpich",
-	"OSF1"    => "mpich",
-	"IRIX64"  => "SGI",
-	"palm"    => "Altix",
-	"cfe1"    => "Altix",
-	"cfe2"    => "Altix",
-	"cfe3"    => "Altix"
-	);
+my %MpiVersion = (
+		  "Linux"   => "mpich",
+		  "Darwin"  => "mpich",
+		  "OSF1"    => "mpich",
+		  "IRIX64"  => "SGI",
+		  "palm"    => "Altix",
+		  "cfe1"    => "Altix",
+		  "cfe2"    => "Altix",
+		  "cfe3"    => "Altix",
+		  "cfe4"    => "Altix"
+		  );
 
 my $WARNING_='share/Scripts/Config.pl WARNING:';
 my $ERROR_  ='share/Scripts/Config.pl ERROR:';
