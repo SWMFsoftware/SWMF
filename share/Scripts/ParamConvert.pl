@@ -1556,10 +1556,14 @@ sub set_framework_components{
 ##############################################################################
 sub read_text{
 
+    my $ReadClipboard;
     my @Text;
-    @Text = split(/\n/, shift);
-
-    my $ReadClipboard = shift;
+    if($_[0] eq "ReadClipboard"){
+	$ReadClipboard = 1;
+    }else{
+	@Text = split(/\n/, shift);
+	$ReadClipboard = shift;
+    }
 
     # Delete previous values if any
     @SessionRef = ();
@@ -1587,7 +1591,7 @@ sub read_text{
 	# Add a comment if there is no text passed
 	$SectionRef->{ITEM}[1]{VIEW} = "MAX";
 	$SectionRef->{ITEM}[1]{TYPE} = "COMMENT";
-	$SectionRef->{ITEM}[1]{HEAD} = "New parameter file\n";
+	$SectionRef->{ITEM}[1]{BODY} = "New parameter file\n";
 
 	return;
     }
