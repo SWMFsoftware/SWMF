@@ -143,7 +143,7 @@ subroutine calc_GITM_sources(iBlock)
           Conduction)
 
      Conduction = Conduction/TempUnit(1:nLons, 1:nLats,1:nAlts)
-     
+
  else
      Conduction = 0.0
   end if
@@ -289,57 +289,19 @@ subroutine calc_GITM_sources(iBlock)
 
   if (iDebugLevel > 4) write(*,*) "=====> conduction", iproc
 
-  !if(UseViscosity)then
-  !   call calc_conduction(iBlock, &
-  !        Velocity(1:nLons, 1:nLats,-1:nAlts+2, iNorth_, iBlock), &
-  !        ViscCoef(1:nLons, 1:nLats,0:nAlts+1), &
-  !        Rho(1:nLons, 1:nLats,1:nAlts, iBlock), &
-  !        Viscosity(1:nLons, 1:nLats,1:nAlts, iNorth_))
-  !   call calc_conduction(iBlock, &
-  !        Velocity(1:nLons, 1:nLats,-1:nAlts+2, iEast_, iBlock), &
-  !        ViscCoef(1:nLons, 1:nLats,0:nAlts+1), &
-  !        Rho(1:nLons, 1:nLats,1:nAlts, iBlock), &
-  !        Viscosity(1:nLons, 1:nLats,1:nAlts, iEast_))
-  !
-  !   ! This is totally ad hoc.....
-  !
-  !   dtr = dt/1800.0
-  !
-  !   if (.not.Is1D) then
-  !      do iLon = 1, nLons
-  !         do iLat = 1, nLats
-  !            !!! THIS IS WRONG, VisCoef/Rho should multiply ALL !!!
-  !            Viscosity(iLon,iLat,1:nAlts,iUp_) = &
-  !                 ((Velocity(iLon-1,iLat,1:nAlts,iUp_,iBlock) &
-  !                 - Velocity(iLon,iLat,1:nAlts,iUp_,iBlock) &
-  !                 )*InvDLonDist_GB(iLon, iLat, 1:nAlts, iBlock) &
-  !                 +(Velocity(iLon+1,iLat,1:nAlts,iUp_,iBlock)  &
-  !                 - Velocity(iLon,iLat,1:nAlts,iUp_,iBlock) &
-  !                 )*InvDLonDist_GB(iLon,iLat, 1:nAlts, iBlock) &
-  !                 ) * 0.5 &
-  !                 +( &
-  !                 (Velocity(iLon,iLat-1,1:nAlts,iUp_,iBlock) &
-  !                 - Velocity(iLon,iLat,1:nAlts,iUp_,iBlock) &
-  !                 )*InvDLatDist_GB(iLon, iLat, 1:nAlts, iBlock) &
-  !                 +(Velocity(iLon,iLat-1,1:nAlts,iUp_,iBlock) &
-  !                 - Velocity(iLon,iLat,1:nAlts,iUp_,iBlock) &
-  !                 )*InvdLatDist_GB(iLon, iLat, 1:nAlts, iBlock) &
-  !                 ) * 0.5 &
-  !                 * ViscCoef(iLon, iLat,1:nAlts)    &
-  !                 / Rho(iLon, iLat, 1:nAlts, iBlock)
-  !            do iAlt = 1, nAlts
-  !               if (abs(Viscosity(iLon,iLat,iAlt,iUp_)) > &
-  !                    dtr*abs(velocity(iLon,iLat,iAlt,iUp_,iBlock))) then
-  !                  Viscosity(iLon,iLat,iAlt,iUp_) = &
-  !                       sign(dtr*velocity(iLon,iLat,iAlt,iUp_,iBlock), &
-  !                       Viscosity(iLon,iLat,iAlt,iUp_))
-  !               endif
-  !            enddo
-  !         enddo
-  !      enddo
-  !
-  !   endif
-  !else
+ if(UseViscosity)then
+    call calc_conduction(iBlock, &
+         Velocity(1:nLons, 1:nLats,-1:nAlts+2, iNorth_, iBlock), &
+         ViscCoef(1:nLons, 1:nLats,0:nAlts+1), &
+         Rho(1:nLons, 1:nLats,1:nAlts, iBlock), &
+         Viscosity(1:nLons, 1:nLats,1:nAlts, iNorth_))
+    call calc_conduction(iBlock, &
+         Velocity(1:nLons, 1:nLats,-1:nAlts+2, iEast_, iBlock), &
+         ViscCoef(1:nLons, 1:nLats,0:nAlts+1), &
+         Rho(1:nLons, 1:nLats,1:nAlts, iBlock), &
+         Viscosity(1:nLons, 1:nLats,1:nAlts, iEast_))
+  
+  else
      Viscosity = 0.0
   !end if
 
