@@ -6,7 +6,14 @@
 <H1 ALIGN=CENTER>Parameter Editor Help</H1>
 
 The parameter editor is a graphical user interface (GUI) that helps editing
-parameter files of scientific codes. The GUI consists of three frames: 
+parameter files of scientific codes. It behaves like a normal editor: one can
+open a new file or an existing file (the name is arbitrary, but we will use
+the name PARAMFILE in this manual). When an existing file is opened, the
+original file is copied into PARAMFILE~ (similarly to the emacs editor). 
+If the editor is exited or a new file is opened without saving the edited file,
+then the last state of the file is saved into PARAMFILE.bak.
+
+The GUI consists of three frames: 
 <ul>
 <li><A HREF=#TOPFRAME>top frame</A> with various <A HREF=#BUTTONS>buttons</A>
    and <A HREF=#SELECTMENUS>select menus</A>,
@@ -36,18 +43,18 @@ in the middle and the <A NAME=BUTTONS>following buttons:</A>
 
 <li><INPUT TYPE=SUBMIT VALUE=REOPEN>: re-read the input file. 
    Changes after the last save will be lost except for a 
-   safety save of the current content into PARAMFILE.txt
+   safety save of the current content into PARAMFILE.bak
 
 <li><INPUT TYPE=SUBMIT VALUE=OPEN>: 
    open another input file. Changes after the last save will 
-   be lost except for a safety save of the current content into PARAMFILE.txt
+   be lost except for a safety save of the current content into PARAMFILE.bak
 
 <li><INPUT TYPE=SUBMIT VALUE="SAVE AND EXIT">:
    save file and exit from the editor.
 
 <li><INPUT TYPE=SUBMIT VALUE=EXIT>: 
    exit from the editor. Changes after the last save will 
-   be lost except for a safety save of the current content into PARAMFILE.txt
+   be lost except for a safety save of the current content into PARAMFILE.bak
 
 <li><INPUT TYPE=SUBMIT VALUE=HELP>: show this help message.
 </ul>
