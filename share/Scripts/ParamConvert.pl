@@ -102,15 +102,15 @@ if($ARGV[0]){
     }
     close(FILE);
 }
-my $XmlFile   = "$ParamFile.xml"; # Name of the XML enhanced parameter file
-my $TextFile  = "$ParamFile.txt"; # Name of the temporary text parameter file
+my $XmlFile  = "$ParamFile.xml"; # Name of the XML enhanced parameter file
+my $BakFile  = "$ParamFile.bak"; # Name of the backup text parameter file
 
 if($ARGV[0] or not -f $XmlFile){
     # Read parameter file if argument is present or the XML file is missing
     &set_framework_components;
     &read_text(&expand_param($ParamFile), "ReadClipboard");
-
     &write_xml_file($XmlFile, "DefaultEditorAndClipboard");
+    `cp $ParamFile $ParamFile~` if -f $ParamFile;
 }else{
     # Read XML file
     &read_xml_file($XmlFile);
@@ -248,15 +248,15 @@ sub modify_xml_data{
 
     if($_ = $Form{submit}){
 	if( /^CHECK\b/ ){
-	    open(FILE, ">$TextFile") 
-		or die "$ERROR: could not open $TextFile\n";
+	    open(FILE, ">$BakFile") 
+		or die "$ERROR: could not open $BakFile\n";
 	    my $Text = &write_text;
 	    my $nErrorOld = ($Text =~ s/^(ERROR|WARNING).*\n+//mg);
 	    print FILE $Text;
 	    close FILE;
 
 	    my $TestScript = ($Framework ? "Scripts" : ".")."/TestParam.pl";
-	    $CheckResult = `$TestScript $TextFile 2>&1`;
+	    $CheckResult = `$TestScript $BakFile 2>&1`;
 	    if(not $CheckResult){
 		$CheckResult = "No errors found";
 		&read_text($Text) if $nErrorOld;
@@ -312,7 +312,7 @@ sub modify_xml_data{
 		$ParamFile = $File;
 		rename($XmlFile, "$ParamFile.xml");
 		$XmlFile   = "$ParamFile.xml";
-		$TextFile  = "$ParamFile.txt";
+		$BakFile  = "$ParamFile.bak";
 		&write_text_file($ParamFile);
 	    }else{
 		$Editor{READFILENAME}="SAVE AS";
@@ -323,12 +323,15 @@ sub modify_xml_data{
 	    my $File = $Form{FILENAME}; $File =~ s/^\s+//; $File =~ s/\s+$//;
 	    if($File){
 		# Make a safety save
-		&write_text_file($TextFile);
+		&write_text_file($BakFile);
+		unlink($XmlFile);
+		unlink($BakFile) unless `diff $BakFile $ParamFile 2>&1`;
 
 		# Use new filenames
 		$ParamFile = $File;
 		$XmlFile   = "$ParamFile.xml";
-		$TextFile  = "$ParamFile.txt";
+		$BakFile  = "$ParamFile.bak";
+		`cp $ParamFile $ParamFile~` if -f $ParamFile;
 
 		# Read new file
 		&read_text(&expand_param($ParamFile), "ReadClipboard");
@@ -338,7 +341,8 @@ sub modify_xml_data{
 	    }
 	}elsif( /^REOPEN$/ ){
 	    # Make a safety save and reread file
-	    &write_text_file($TextFile);
+	    &write_text_file($BakFile);
+	    unlink($BakFile) unless `diff $BakFile $ParamFile 2>&1`;
 	    &read_text(&expand_param($ParamFile), "ReadClipboard");
 	}elsif( /^READ FILE FOR INSERT$/ ){
 	    my $File = $Form{FILENAME}; $File =~ s/^\s+//; $File =~ s/\s+$//;
@@ -358,10 +362,15 @@ sub modify_xml_data{
 	}elsif( /^SAVE AND EXIT$/ ){
 	    # save the file then kill the job
 	    &write_text_file($ParamFile);
+	    unlink($XmlFile, $BakFile, $IndexPhpFile, $EditorHtmlFile, 
+		   $ParamHtmlFile, $ManualHtmlFile, $JumpHtmlFile);
 	    kill(-9, getpgrp);
 	}elsif( /^EXIT$/ ){
 	    # make a safety save then kill the job
-	    &write_text_file($TextFile);
+	    &write_text_file($BakFile);
+	    unlink($XmlFile, $IndexPhpFile, $EditorHtmlFile, 
+		   $ParamHtmlFile, $ManualHtmlFile, $JumpHtmlFile);
+	    unlink($BakFile) unless `diff $BakFile $ParamFile 2>&1`;
 	    kill(-9, getpgrp);
 	}elsif( /^ABC_ON$/ ){
 	    $Editor{ABC}=1;
@@ -551,10 +560,12 @@ sub modify_xml_data{
 	    $ItemRef->{VIEW}="MAX";
 	    $Form{text} =~ s/^\s*//;        # remove leading space
 	    $Form{text} =~ s/[ \t]+\n/\n/g; # clean up line endings
+
 	    if(/Save command/){
 		# Keep first line (name of command), and set the rest
 		$ItemRef->{BODY} =~ /\n/;
-		$ItemRef->{BODY} =~ $`.$Form{text};
+		$ItemRef->{BODY} = $`."\n".$Form{text};
+
 	    }elsif(/Save comment/){
 		$ItemRef->{BODY} = $Form{text};
 		$ItemRef->{BODY} = "no comment\n" 
@@ -1817,9 +1828,9 @@ sub write_text{
 		my $ItemType= $ItemRef->{TYPE};
 
 		if($ItemType eq "USERINPUT"){
-		    $Output .= "#USERINPUTBEGIN ----------------\n\n".
+		    $Output .= "#USERINPUTBEGIN ----------------\n".
 			$ItemRef->{BODY}.
-			"\n#USERINPUTEND   ----------------\n\n";
+			"#USERINPUTEND   ----------------\n\n";
 		}else{
 		    $Output .= $ItemRef->{BODY};
 		    $Output .= "\n" if $ItemType eq "COMMAND";
@@ -1845,8 +1856,7 @@ sub write_text_file{
     open(FILE, ">$FileName") 
 	or die "$ERROR: write_text_file could not open $FileName\n";
     print FILE &write_text; 
-    print FILE "\n$Clipboard{BODY}" 
-	unless $NoClipboard or not $Clipboard{BODY};
+    print FILE $Clipboard{BODY} unless $NoClipboard or not $Clipboard{BODY};
     close FILE;
 }
 ##############################################################################
