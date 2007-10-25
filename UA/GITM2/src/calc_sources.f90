@@ -303,7 +303,7 @@ subroutine calc_GITM_sources(iBlock)
   
   else
      Viscosity = 0.0
-  !end if
+  end if
 
   !\
   ! ---------------------------------------------------------------
