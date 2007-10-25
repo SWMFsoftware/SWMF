@@ -612,11 +612,23 @@ sub _background
 }
 
 ###########################################################################
-
+#BOP
+#!ROUTINE: ParamEditor.pl - micro web server for parameter editor GUI
+#!DESCRIPTION:
+# This script provides a web server for the parameter editor GUI and it
+# starts a web browser and runs ParamConvert.pl to produce the interactive
+# HTML and PHP files for the GUI.
+# 
+#!REVISION HISTORY:
+# 10/03/2007 G.Toth - initial version modified (with permission) 
+#                     from the weblink.pl script written by J. Hollosi
+#                     for the Versatile Advectin Code (VAC)
+#                      
+#EOP
 sub _print_help{
-    print "
-
-Purpose: 
+    print 
+#BOC
+"Purpose: 
 
   ParamEditor.pl is a stand-alone micro webserver that can be used 
   as part of the general Input Parameter Toolkit to edit input parameter
@@ -671,8 +683,9 @@ share/Scripts/ParamEditor.pl run_new/UAM.in
 
   Use a browser that is not the default:
 
-share/Scripts/ParamEditor.pl -browser=/usr/bin/MozillaFirebird
-";
+share/Scripts/ParamEditor.pl -browser=/usr/bin/MozillaFirebird"
+#EOC
+    ."\n\n";
     exit 0;
 }
 

@@ -66,7 +66,8 @@ SWMFREF = \
 	${DIR}/Scripts/Performance.protex \
 	BATSRUS_SCRIPTS.tex \
 	${SCRIPTDIR}/CheckParam.protex \
-	${SCRIPTDIR}/ExpandParam.protex \
+	${SCRIPTDIR}/ParamConvert.protex \
+	${SCRIPTDIR}/ParamEditor.protex \
 	${SCRIPTDIR}/PostProc.protex \
 	${SCRIPTDIR}/Restart.protex \
 	${SCRIPTDIR}/depend.protex \

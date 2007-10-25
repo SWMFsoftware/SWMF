@@ -1113,7 +1113,7 @@ sub param_error{
 #!QUOTE: \clearpage
 #BOP
 #!QUOTE: \section{share/Scripts: for SWMF and Physics Modules}
-#!QUOTE: \subsection{Checking Parameter Files}
+#!QUOTE: \subsection{Checking, Converting and Editing Parameter Files}
 #!ROUTINE: CheckParam.pl - check a parameter file based on an XML description
 #!DESCRIPTION:
 # Before running an executable, it is a good idea to check the parameter file.

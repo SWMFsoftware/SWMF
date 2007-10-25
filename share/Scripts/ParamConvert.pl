@@ -1832,8 +1832,7 @@ sub write_text{
 			$ItemRef->{BODY}.
 			"#USERINPUTEND   ----------------\n\n";
 		}else{
-		    $Output .= $ItemRef->{BODY};
-		    $Output .= "\n" if $ItemType eq "COMMAND";
+		    $Output .= $ItemRef->{BODY}."\n";
 		}
 	    }
 	    $Output .= "\#END_COMP $NameSection   ".("-" x 40)."\n\n"
