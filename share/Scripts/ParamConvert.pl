@@ -347,7 +347,7 @@ sub modify_xml_data{
 	    my $File = $Form{FILENAME}; $File =~ s/^\s+//; $File =~ s/\s+$//;
 	    if(-f $File and open(MYFILE, $File)){
 		$Clipboard{BODY}    = join('',<MYFILE>);
-		$Clipboard{BODY}    =~ s/\n+\#END.*\n*/\n/;
+		$Clipboard{BODY}    =~ s/^\#END\b.*\n//mg;
 		$Clipboard{TYPE}    = "FILE";
 		$Clipboard{SECTION} = "";
 		close MYFILE;
@@ -409,7 +409,7 @@ sub modify_xml_data{
 	    $Editor{FILE} = $id;
 	    if(open(MYFILE, $id)){
 		$Clipboard{BODY}    = join('',<MYFILE>);
-		$Clipboard{BODY}    =~ s/\n+\#END.*\n*/\n/;
+		$Clipboard{BODY}    =~ s/^\#END\b.*\n//mg;
 		$Clipboard{TYPE}    = "FILE";
 		$Clipboard{SECTION} = "";
 		close MYFILE;
