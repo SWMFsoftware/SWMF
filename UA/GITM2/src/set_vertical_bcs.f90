@@ -29,7 +29,7 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
        VertVel(-1:nAlts+2,nSpecies)
 
   integer :: iSpecies, iAlt
-  real    :: InvScaleHeightS, InvScaleHgt, Alt, Lst, Ap = 4.0, dn
+  real    :: InvScaleHeightS, InvScaleHgt, Alt, Lst, Ap = 4.0, dn, dt
   logical :: IsFirstTime = .true., UseMsisBCs = .false.
   real    :: HP
   integer :: ierror
