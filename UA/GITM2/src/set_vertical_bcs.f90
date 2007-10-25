@@ -111,10 +111,11 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
      VertVel(nAlts+2,:) = -VertVel(nAlts-1,:)
   endif
 
-  ! Float temp
+  ! Constant gradient in temperature
 
-  Temp(nAlts+1) = Temp(nAlts)
-  Temp(nAlts+2) = Temp(nAlts-1)
+  dt = Temp(nAlts) - Temp(nAlts-1)
+  Temp(nAlts+1) = Temp(nAlts) + dt
+  Temp(nAlts+2) = Temp(nAlts+1) + dt
 
   do iAlt = nAlts+1, nAlts+2
      InvScaleHgt  =  &
