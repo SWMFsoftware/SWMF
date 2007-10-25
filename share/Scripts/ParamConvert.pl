@@ -1004,6 +1004,8 @@ sub write_manual_html{
     }elsif($CommandExample){
 	$Manual =  $CommandText;
 	$Manual =~ s/\n\n/\n<p>\n/g;
+	$Manual =~ s/\\begin\{verbatim\}/<PRE>/g;
+	$Manual =~ s/\\end\{verbatim\}/<\/PRE>/g;
 	$Manual =  "<H1>Manual</H1>\n<PRE>\n$CommandExample\n</PRE>\n$Manual";
 	$Manual =~ s/\n$//;
     }elsif( $Editor{INSERT} =~ /^PASTE/ ){
