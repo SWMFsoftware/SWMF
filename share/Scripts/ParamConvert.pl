@@ -248,8 +248,7 @@ sub modify_xml_data{
 
     if($_ = $Form{submit}){
 	if( /^CHECK\b/ ){
-	    open(FILE, ">$BakFile") 
-		or die "$ERROR: could not open $BakFile\n";
+	    open(FILE, ">$BakFile") or die "$ERROR: could not open $BakFile\n";
 	    my $Text = &write_text;
 	    my $nErrorOld = ($Text =~ s/^(ERROR|WARNING).*\n+//mg);
 	    print FILE $Text;
@@ -348,6 +347,7 @@ sub modify_xml_data{
 	    my $File = $Form{FILENAME}; $File =~ s/^\s+//; $File =~ s/\s+$//;
 	    if(-f $File and open(MYFILE, $File)){
 		$Clipboard{BODY}    = join('',<MYFILE>);
+		$Clipboard{BODY}    =~ s/\n+\#END.*\n*/\n/;
 		$Clipboard{TYPE}    = "FILE";
 		$Clipboard{SECTION} = "";
 		close MYFILE;
@@ -409,6 +409,7 @@ sub modify_xml_data{
 	    $Editor{FILE} = $id;
 	    if(open(MYFILE, $id)){
 		$Clipboard{BODY}    = join('',<MYFILE>);
+		$Clipboard{BODY}    =~ s/\n+\#END.*\n*/\n/;
 		$Clipboard{TYPE}    = "FILE";
 		$Clipboard{SECTION} = "";
 		close MYFILE;
@@ -832,6 +833,8 @@ sub write_editor_html{
     <OPTION VALUE=allsessions>ALL SESSIONS
 ";
 
+    $SessionSection =~ s/.*ALL SECTIONS\n// unless $Framework;
+
     my $iSession;
     for $iSession (1..$nSession){
 	print "iSession=$iSession\n" if $DoDebug;
@@ -907,7 +910,7 @@ sub write_editor_html{
     if($Insert eq "FILE"){
 
 	my @Files;
-	@Files = glob("run/PARAM*.in* Param/PARAM*.in.*");
+	@Files = glob("run/PARAM*.in* Param/PARAM*.in.* Param/*/PARAM.in*");
 	
 	my $Files;
 	$Files = "    <OPTION>".join("\n    <OPTION>",@Files) if @Files;
@@ -1025,9 +1028,13 @@ $Manual
 sub write_param_html{
 
     my $SelectedSectionName;
-    if($Editor{SELECT} =~ /^(\d+),(\d+)/){
-	$SelectedSectionName = ($SessionRef[$1]{SECTION}[$2]{NAME} or "CON");
+    if($Framework){
+	$SelectedSectionName = ($SessionRef[$1]{SECTION}[$2]{NAME} or "CON")
+	    if $Editor{SELECT} =~ /^(\d+),(\d+)/;
+    }else{
+	$SelectedSectionName = "CON" if $Editor{SELECT} =~ /^\d+/;
     }
+
     $JumpHere = $Editor{SELECT} unless $JumpHere;
 
     # Jump to previous item if item index is larger than 2
@@ -1139,33 +1146,35 @@ $InsertSessionButton$CopySessionButton$RemoveSessionButton
 	    my $SectionView = $SectionRef->{VIEW};
 	    my $SectionName = ($SectionRef->{NAME} or "CON");
 
-	    my $Action = "A HREF=$IndexPhpFile?id=$iSession,$iSection\&action";
+	    if($Framework){
+		my $Action = 
+		    "A HREF=$IndexPhpFile?id=$iSession,$iSection\&action";
 
-	    if($SectionView eq "MIN"){
-		$MinMaxSectionButton = "      <$Action=maximize_section
+		if($SectionView eq "MIN"){
+		    $MinMaxSectionButton = "      <$Action=maximize_section
 ><IMG SRC=$ImageDir/button_maximize.gif TITLE=\"Maximize section\"></A>
 ";
-	    }else{
-		$MinMaxSectionButton = "      <$Action=minimize_section
+		}else{
+		    $MinMaxSectionButton = "      <$Action=minimize_section
 ><IMG SRC=$ImageDir/button_minimize.gif TITLE=\"Minimize section\"></A>
 ";
-	    }
+		}
 
-	    $InsertSectionButton = "    <$Action=insert_section
+		$InsertSectionButton = "    <$Action=insert_section
 ><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert section\"></A>
 " 	    if $Editor{SELECT} =~ /^\d+$/;
 
-	    $CopySectionButton = "      <$Action=copy_section
+		$CopySectionButton = "      <$Action=copy_section
 ><IMG SRC=$ImageDir/button_copy.gif TITLE=\"Copy section\"></A>
 ";
-	    $RemoveSectionButton = "      <$Action=remove_section
+		$RemoveSectionButton = "      <$Action=remove_section
 ><IMG SRC=$ImageDir/button_remove.gif TITLE=\"Remove section\"></A>
 ";
 
-	    # Place anchor to selected section
-	    $Param .= $Here if $JumpHere eq "$iSession,$iSection";
+		# Place anchor to selected section
+		$Param .= $Here if $JumpHere eq "$iSession,$iSection";
 
-	    $Param .=
+		$Param .=
 "  <TABLE BORDER=0 WIDTH=$LeftTableWidth BGCOLOR=$SectionBgColor>
     <TR>
       <TD WIDTH=$SectionColumn1Width>
@@ -1187,8 +1196,9 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
     </TR>
   </TABLE>
 ";
-	    next if $SectionView eq "MIN";
-	    
+
+		next if $SectionView eq "MIN";
+	    }
 ###################### ITEM LOOP ############################################
 
 	    my $Action = 
@@ -1271,10 +1281,15 @@ $ItemTail
 		    next; # done with editor
 		}
 
-		my $ActionEditItem = "$Action=edit_item ".
-		    "TITLE=\"Edit $ItemType in session $iSession/$SectionName\"";
-
-		$ActionEditItem = "A NAME=ERROR" if $ItemType eq "error";
+		my $ActionEditItem;
+		if($ItemType eq "error"){
+		    $ActionEditItem = "A NAME=ERROR";
+		}else{
+		    $ActionEditItem = "$Action=edit_item ".
+			"TITLE=\"Edit $ItemType in session $iSession";
+		    $ActionEditItem .= "/$SectionName" if $Framework;
+		    $ActionEditItem .= '"';
+		}
 
 		# Create buttons
 		if($ItemTail and $ItemType ne "error"){
@@ -1397,9 +1412,11 @@ $Comment
 
 	    $iItem=$nItem+1; $iItem=1 if $iItem==0;
 	    $InsertItemButton =~ s/id=[\d,]+/id=$iSession,$iSection,$iItem/;
-	    $MinMaxSectionButton =~ s/minimize\.gif/minimize_up.gif/;
 
-	    $Param .=
+	    if($Framework){
+		$MinMaxSectionButton =~ s/minimize\.gif/minimize_up.gif/;
+
+		$Param .=
 "  <TABLE BORDER=0 WIDTH=$LeftTableWidth BGCOLOR=$SectionBgColor>
     <TR>
       <TD WIDTH=$SectionColumn1Width>
@@ -1415,17 +1432,18 @@ $InsertItemButton$CopySectionButton$RemoveSectionButton
     </TR>
   </TABLE>
 ";
+	    }
 	} # Section loop
 
 	###### End session #########
-	
-	$iSection = ($nSection+1 or 1);
-	$InsertSectionButton = 
+
+	if($Framework){
+	    $iSection = ($nSection+1 or 1);
+	    $InsertSectionButton = 
 "    <A HREF=$IndexPhpFile?id=$iSession,$iSection\&action=insert_section
 ><IMG SRC=$ImageDir/button_insert.gif TITLE=\"Insert section\"></A>
 " 	    if $Editor{SELECT} =~ /^\d+$/;
 
-	$MinMaxSessionButton =~ s/minimize\.gif/minimize_up.gif/;
 	$Param .=
 "  <TABLE BORDER=0 WIDTH=$LeftTableWidth BGCOLOR=$SectionBgColor>
     <TR>
@@ -1436,7 +1454,14 @@ $SectionLine
       </TD>
     </TR>
   </TABLE>
-  <TABLE WIDTH=$LeftTableWidth BGCOLOR=$SessionBgColor>
+";
+	}else{
+	    $InsertSectionButton = $InsertItemButton;
+	}
+	$MinMaxSessionButton =~ s/minimize\.gif/minimize_up.gif/;
+
+	$Param .=
+"  <TABLE WIDTH=$LeftTableWidth BGCOLOR=$SessionBgColor>
     <TR>
       <TD ALIGN=LEFT>
 $MinMaxSessionButton
@@ -1643,8 +1668,8 @@ sub read_text{
 	# Check for BEGIN_COMP and END_COMP commands
 	if(/^\#BEGIN_COMP\b/){
 	    if(not $Framework){
-		&print_error( $nLine, " for command $_".
-			     "\tshould not be used in stand-alone mode");
+		#&print_error( $nLine, " for command $_".
+		#	     "\tshould not be used in stand-alone mode");
 		next;
 	    }
 	    if($Section){
@@ -1666,8 +1691,8 @@ sub read_text{
 
 	}elsif(/^\#END_COMP/){
 	    if(not $Framework){
-		&print_error( $nLine, " for command $_".
-			     "\tshould not be used in stand-alone mode");
+		#&print_error( $nLine, " for command $_".
+		#	     "\tshould not be used in stand-alone mode");
 		next;
 	    }
 
@@ -1894,7 +1919,7 @@ sub process_file {
     local($output);
 
     $input++;
-    open($input, $filename) or die"$ERROR: cannot open $filename: $!\n";
+    open($input, $filename) or die "$ERROR: cannot open $filename: $!\n";
     while (<$input>) {
 	# Stop reading if #END command is read
         last if /^#END\b/;
