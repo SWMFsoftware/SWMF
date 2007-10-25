@@ -95,14 +95,9 @@ $_BASEDIR      = ".";
 
 $_PARAM_FILE = ($ARGV[0] or $paramfile or "run/PARAM.in");
 
-#$Error = `share/Scripts/ParamTextToXml.pl $_PARAM_FILE 2>&1`;
-#die "share/Scripts/ParamTextToXml.pl failed with $Error\n" if $Error;
-#$Error = `share/Scripts/ParamXmlToHtml.pl $_PARAM_FILE 2>&1`;
-#die "share/Scripts/ParamXmlToHtml.pl failed with $Error\n" if $Error;
-
 $Error = `share/Scripts/ParamConvert.pl $_PARAM_FILE 2>&1`;
-die "ERROR in ParamEditor.pl: share/Scripts/ParamConvert.pl $_PARAM_FILE ".
-    "failed with $Error\n" 
+warn "ERROR in ParamEditor.pl: share/Scripts/ParamConvert.pl $_PARAM_FILE ".
+    "produced errors: $Error\n" 
     if $Error;
 
 die "ERROR in ParamEditor.pl: source file $srcfile was not found!\n"
