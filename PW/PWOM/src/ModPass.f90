@@ -9,7 +9,7 @@ module ModFieldLine
 
   real    ::  PassState_CV(maxGrid,nVar)
 
-  logical :: IsRestartPW, IsVariableDtPW, DoLogPW
+  logical :: IsVariableDtPW, DoLogPW
   real    :: TimePW,MaxLineTimePW,DToutputPW, DTpolarwindPW,GeoMagLatPW,&
        GeoMagLonPW,JrPW,nDimPW,uJoule2PW
   real    :: wHorizontalPW
@@ -29,7 +29,7 @@ contains
   subroutine put_field_line(State_CV, &
        GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,uJoule2,                  &
        iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
-       MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput,nAlt,DoLog,&
+       MaxLineTime,TypeSolver,IsVariableDt,DToutput,nAlt,DoLog,&
        nStep,r_C)
 
     use ModParameters
@@ -42,7 +42,7 @@ contains
     integer, optional,intent(in)  :: iUnitOutput,iUnitGraphics,iLine,nAlt,nStep
     character*100,optional,intent(in):: NameRestart
     character(7),optional,intent(in)::TypeSolver
-    logical,optional,intent(in) :: IsVariableDt,IsRestart,DoLog
+    logical,optional,intent(in) :: IsVariableDt,DoLog
     !-------------------------------------------------------------------------
     
     PassState_CV(:,:) = State_CV(:,:)
@@ -62,7 +62,6 @@ contains
     if (present(iUnitOutput))   iUnitOutputPW  = iUnitOutput
     if (present(TypeSolver))    TypeSolverPW   = TypeSolver
     if (present(IsVariableDt))  IsVariableDtPW = IsVariableDt
-    if (present(IsRestart))     IsRestartPW    = IsRestart
     if (present(DToutput))      DToutputPW     = DToutput
     if (present(DoLog))         DoLogPW        = DoLog
     if (present(nStep))         nStepPW        = nStep
@@ -78,7 +77,7 @@ contains
   subroutine get_field_line(State_CV,& 
        GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,uJoule2,                  &
        iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
-       MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput, nAlt,DoLog,&
+       MaxLineTime,TypeSolver,IsVariableDt,DToutput, nAlt,DoLog,&
        nStep,r_C)
 
     use ModParameters
@@ -91,7 +90,7 @@ contains
     
     character*100,optional,intent(out):: NameRestart
     character(7),optional,intent(out):: TypeSolver
-    logical,optional,intent(out)      :: IsVariableDt,IsRestart,DoLog
+    logical,optional,intent(out)      :: IsVariableDt,DoLog
     real, optional, intent(out)       :: Time,MaxLineTime,DToutput,uJoule2
     real, optional, intent(out)        :: r_C(maxGrid)
     integer, optional,intent(out)     :: iUnitOutput,iUnitGraphics,iLine,nAlt,nStep
@@ -115,7 +114,6 @@ contains
     if (present(iUnitOutput))   iUnitOutput=iUnitOutputPW
     if (present(TypeSolver))    TypeSolver =TypeSolverPW
     if (present(IsVariableDt))  IsVariableDt=IsVariableDtPW
-    if (present(IsRestart))     IsRestart=IsRestartPW
     if (present(DToutput))      DToutput=DToutputPW
     if (present(DoLog))         DoLog=DoLogPW
     if (present(nStep))         nStep        = nStepPW
