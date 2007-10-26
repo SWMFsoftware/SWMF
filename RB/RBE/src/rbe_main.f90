@@ -51,7 +51,7 @@ program rbe
   IsStandAlone=.true.
 
   ! Initial setup for the rbe model
-  call read_file('rbe_swmf.dat',MPI_COMM_WORLD)
+  call read_file('PARAM.in',MPI_COMM_WORLD)
   call read_init('  ',iSessionIn=1,iLineIn=0)
   call RB_set_parameters('READ')
   call readInputData
