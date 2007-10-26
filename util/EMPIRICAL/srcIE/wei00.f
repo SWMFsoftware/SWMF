@@ -414,7 +414,7 @@ c     Jan. 30, 2002
 
 	If(First)Then
 
-	cfile='w2k.dat' !make sure correct ENDIAN type file is used.
+	cfile='EIE/w2k.dat' !make sure correct ENDIAN type file is used.
 
 	unit=9
 
