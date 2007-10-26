@@ -118,7 +118,7 @@ module rbe_cread2
 
   logical :: IsStandAlone=.false.,UseGm=.false., UseSplitting = .false.
 
-  logical :: UseMcLimiter = .false.
+  logical :: UseMcLimiter = .false.,UseCentralDiff = .false.
   real    :: BetaLimiter  = 2.0
 
 end module rbe_cread2
@@ -379,7 +379,7 @@ subroutine rbe_run
   !  Print results
   if (t.gt.tstart.and.mod(t,tint).eq.0.) call rbe_save_restart
 
-  open(unit=UnitTmp_,file='rbe_swmf.log')
+  open(unit=UnitTmp_,file='RB/rbe_swmf.log')
   write(UnitTmp_,'(a8)') outname
   write(UnitTmp_,*) 'istep, t(hour)   ',istep,t/3600. 
   close(UnitTmp_)
@@ -463,18 +463,18 @@ subroutine readInputData
 
   !.....Open files in case of original run and continuous run 
   iUnit1 = io_unit_new()
-  open(unit=iUnit1,file='rbe'//st2//'.fin',status='old')
+  open(unit=iUnit1,file='RB/rbe'//st2//'.fin',status='old')
   read(iUnit1,*) init        ! 1=NASA RB model
   read(iUnit1,*) il,ie
   if (itype.eq.2) then
      iUnit2 = io_unit_new()
-     open(unit=iUnit2,file=outname//st2//'_c.f2',status='old',form='unformatted')
+     open(unit=iUnit2,file='RB/restartIN/'//outname//st2//'_c.f2',status='old',form='unformatted')
      init=0              ! continuous run
   endif
 
   !.....open file to read the SW-IMF data   
   if (.not. UseGm)then
-     open(unit=UnitTmp_,file=storm//'.SWIMF',status='old')
+     open(unit=UnitTmp_,file='RB/'//storm//'.SWIMF',status='old')
      read(UnitTmp_,*) iyear,iday,ihour        ! time corresponding to t=0
      read(UnitTmp_,*) swlag    ! time in sec for sw travel from s/c to subsolar point
      
@@ -534,7 +534,7 @@ subroutine readInputData
      close(UnitTmp_)
      
      ! Read Dst (symH) data
-     open(unit=UnitTmp_,file=storm//'.symH',status='old')
+     open(unit=UnitTmp_,file='RB/'//storm//'.symH',status='old')
      read(UnitTmp_,*) nhour
      ndst=nhour*60                      ! 1-minute resolution         
      if (ndst.gt.ndstmax) then
@@ -941,7 +941,6 @@ subroutine fieldpara(t,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
               ss2=ss2+b_I(iTaylor)*hBnI(iTaylor,m)/bm_n
               bm_n=bm_n*bm1(m)
            enddo
-           !if (i==25 .and. j==21 ) write(*,*) 'ss',ss
            si3(m)=re*sqrt(bm1(m))*ss
            tya3(m)=ss1/ro1/2.
            h3(m)=ss2/ss1
@@ -1582,6 +1581,9 @@ subroutine Vdrift(re,rc,xme,dphi,xlati,ekev,potent,js,irm,iw1,iw2)
   real xlati(0:ir+1),ekev(0:ir,ip,iw,ik),potent(0:ir+1,ip+1),ham(0:ir,ip)
   integer iw1(ik),iw2(ik),irm(ip)
 
+  logical :: DoTest = .false.
+  !--------------------------------------------------------------------------
+
   pi=acos(-1.)
   dphi2=dphi*2.
   kfactor=xme/rc/re
@@ -1759,7 +1761,7 @@ subroutine initial(itype,ekev,xjac,ro,gride,c,xmass,d4,js,irm,&
      enddo
   enddo
   if (itype.eq.1) then
-     open(unit=UnitTmp_,file=outname//st2//'.ec')
+     open(unit=UnitTmp_,file='RB/'//outname//st2//'.ec')
      write(UnitTmp_,*) elb,eub,'      ! elb,eub'
      close(UnitTmp_)
   else
@@ -1875,10 +1877,10 @@ subroutine boundary(t,tstart,f2,v,xjac,xmass,ekev,p,xktd,xnd,e_max,&
   !  Write boundary condition in file outname_st2.bc
   if (t.ge.tstart) then
      if (itype.eq.1.and.t.eq.tstart) then
-        open(unit=UnitTmp_,file=outname//st2//'.bc')
+        open(unit=UnitTmp_,file='RB/'//outname//st2//'.bc')
         write(UnitTmp_,*) '      t(sec)    n(cm^-3)     kT(keV)       nightside BC'
      else
-        open(unit=UnitTmp_,file=outname//st2//'.bc',status='old',position='append')
+        open(unit=UnitTmp_,file='RB/'//outname//st2//'.bc',status='old',position='append')
      endif
      xnn_cm3=xnn/1.e6
      write(UnitTmp_,'(f12.0,f12.4,f12.3)') t,xnn_cm3,xktn
@@ -1898,6 +1900,7 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
      ntime,irm,iplsp,iw1,iw2,itype)
 
   use rbe_grid
+  use rbe_cread2,ONLY: js
   use ModIoUnit, ONLY: UnitTmp_
   use ModNumConst, ONLY: pi => cPi
 
@@ -1925,7 +1928,7 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
   iwh=ifix(0.5*(iw+1))
   ikh=ifix(0.5*(ik+1))
   if (t.eq.tstart) then
-     open(unit=UnitTmp_,file=outname//st2//'.fls',status='unknown')
+     open(unit=UnitTmp_,file='RB/'//outname//st2//'.fls',status='unknown')
      !        open(unit=13,file=outname//st2//'.psd',status='unknown')
      write(UnitTmp_,'(f10.5,5i6,"         ! rc(Re),ir,ip,je,ig,ntime")')&
           rc,ir,ip,je,ig,ntime
@@ -1944,7 +1947,7 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
         return
      endif
   else                                                  ! in pbo_2.f
-     open(unit=UnitTmp_,file=outname//st2//'.fls',status='old',position='append')
+     open(unit=UnitTmp_,file='RB/'//outname//st2//'.fls',status='old',position='append')
      !        open(unit=13,file=outname//st2//'.psd',status='old',position='append')
   endif
 
@@ -1996,7 +1999,7 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
   !     close(13)
 
   ! Write energy changes from various processes
-  open(unit=UnitTmp_,file=outname//st2//'.ec',status='old',position='append')
+  open(unit=UnitTmp_,file='RB/'//outname//st2//'.ec',status='old',position='append')
   write(UnitTmp_,*) hour,'     ! hour'
   write(UnitTmp_,*) '   i  ro(i,1)       ecbf          ecdt          ecce',&
        '          eclc'
@@ -2007,7 +2010,7 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
   close(UnitTmp_)
 
   ! Open files to write all the informatin for continous run        
-  open(unit=UnitTmp_,file=outname//st2//'_c.f2',form='unformatted')
+  open(unit=UnitTmp_,file='RB/restartOUT/'//outname//st2//'_c.f2',form='unformatted')
   write(UnitTmp_) f2   
   write(UnitTmp_) iw1
   write(UnitTmp_) iw2
@@ -2020,6 +2023,21 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
   close(UnitTmp_)
   if (iplsp.eq.1) call saveplasmasphere(outname,t,tstart,itype)
 
+  ! Write the restart.H file to be included at restart
+  open(unit=UnitTmp_,file='RB/restartOUT/restart.H')
+  
+  write(UnitTmp_,'(a)') '#TIMESIMULATION'
+  write(UnitTmp_,'(es15.8,a25)') t,'tSimulation'
+  write(UnitTmp_,'(a)') '#RESTART'
+  write(UnitTmp_,'(a,a25)') 'T', 'IsRestart'
+  write(UnitTmp_,'(a)') '#INPUTDATA'
+  write(UnitTmp_,'(a,a25)') storm, 'NameStorm'
+  write(UnitTmp_,'(a)') '#SPECIES'
+  if (js == 1 ) write(UnitTmp_,'(a,a32)') 'e','NameSpecies'
+  if (js == 2 ) write(UnitTmp_,'(a,a32)') 'H','NameSpecies'
+  
+  close(UnitTmp_)
+  
 end subroutine p_result
 
 
@@ -2182,10 +2200,10 @@ subroutine drift(t,dt,f2,vl,vp,ro,rb,fb,dlati,dphi,ekev,ib0,iba,&
                    ib0,iba,n)
            end if
 
-           ! Check for NaN-s: NaN < 1.0 and NaN > 2.0 is true
+           ! Check for NaN-s: not (NaN < 2) and not (NaN > 1) is true
            do j=1,ip
               do i=1,iba(j)
-                 if(f2(i,j,k,m) < 1.0 .and. f2(i,j,k,m) > 2.0)then
+                 if(.not. f2(i,j,k,m) < 2.0 .and. .not. f2(i,j,k,m) > 1.0)then
                     write(*,*)'i,j,k,m,n=',i,j,k,m,n
                     call CON_stop('RBE ERROR: NaN found in f2')
                  end if
@@ -2513,6 +2531,7 @@ end subroutine FLS_2or
 !*******************************************************************************
 subroutine FLS_2or_2D(fb0,fb1,iba,cl,cp,f,fal,fap)
   use rbe_grid
+  use rbe_cread2, ONLY: UseMcLimiter, BetaLimiter, UseCentralDiff
   real cl(ir,ip),cp(ir,ip),f(ir,ip),fal(0:ir,ip),fap(ir,ip),&
        fwbc(0:ir+2,ip),fb0(ip),fb1(ip)
   integer iba(ip)
@@ -2538,7 +2557,12 @@ subroutine FLS_2or_2D(fb0,fb1,iba,cl,cp,f,fal,fap)
         ! find fal
         xsign=sign(1.,cl(i,j))
         fup=0.5*(1.+xsign)*fwbc(i,j)+0.5*(1.-xsign)*fwbc(i+1,j)   ! upwind
-        flw=0.5*(1.+cl(i,j))*fwbc(i,j)+0.5*(1.-cl(i,j))*fwbc(i+1,j)   ! LW
+        if (UseCentralDiff) then
+           flw=0.5*fwbc(i,j)+0.5*fwbc(i+1,j)   ! Central diff
+        else
+           flw=0.5*(1.+cl(i,j))*fwbc(i,j)+0.5*(1.-cl(i,j))*fwbc(i+1,j)   ! LW
+        end if
+!        flw=0.5*(1.+cl(i,j))*fwbc(i,j)+0.5*(1.-cl(i,j))*fwbc(i+1,j)   ! LW
         x=fwbc(i+1,j)-fwbc(i,j)
         if (abs(x).le.1.e-27) fal(i,j)=fup
         if (abs(x).gt.1.e-27) then
@@ -2554,7 +2578,12 @@ subroutine FLS_2or_2D(fb0,fb1,iba,cl,cp,f,fal,fap)
         ! find fap
         xsign=sign(1.,cp(i,j))
         fup=0.5*(1.+xsign)*fwbc(i,j)+0.5*(1.-xsign)*fwbc(i,j1)   ! upwind
-        flw=0.5*(1.+cp(i,j))*fwbc(i,j)+0.5*(1.-cp(i,j))*fwbc(i,j1)   ! LW
+        if (UseCentralDiff) then
+           flw=0.5*fwbc(i,j)+0.5*fwbc(i,j1)   ! Central diff
+        else
+           flw=0.5*(1.+cp(i,j))*fwbc(i,j)+0.5*(1.-cp(i,j))*fwbc(i,j1)   ! LW
+        end if
+!        flw=0.5*(1.+cp(i,j))*fwbc(i,j)+0.5*(1.-cp(i,j))*fwbc(i,j1)   ! LW
         x=fwbc(i,j1)-fwbc(i,j)
         if (abs(x).le.1.e-27) fap(i,j)=fup
         if (abs(x).gt.1.e-27) then
@@ -2562,7 +2591,12 @@ subroutine FLS_2or_2D(fb0,fb1,iba,cl,cp,f,fal,fap)
            if (xsign.eq.-1.) r=(fwbc(i,j2)-fwbc(i,j1))/x
            if (r.le.0.) fap(i,j)=fup
            if (r.gt.0.) then
-              xlimiter=max(min(2.*r,1.),min(r,2.))
+              if(UseMcLimiter)then
+                 xlimiter = min(BetaLimiter*r, BetaLimiter, 0.5*(1+r))
+              else
+                 xlimiter = max(min(2.*r,1.),min(r,2.))
+              end if
+              !xlimiter=max(min(2.*r,1.),min(r,2.))
               corr=flw-fup
               fap(i,j)=fup+xlimiter*corr
            endif
