@@ -10,7 +10,8 @@ module ModPwImplicit
   subroutine PW_calc_residual(nOrder, DtIn, nCell, nVar, StateIn_GV, Resid_CV)
 
     use ModCommonVariables, ONLY: iRho_I,iU_I,iP_I,iT_I,Source_CV,RGAS_I, &
-         MassElecIon_I,nIon,RhoE_,uE_,Te_,pE_,Curr,CURRMX,HeatCon_GI
+         MassElecIon_I,nIon,RhoE_,uE_,Te_,pE_,Curr,CURRMX,HeatCon_GI,&
+         nVarFull=>nVar,TypeSolver
     use ModPWOM, ONLY: Beta, BetaIn
 
     implicit none
@@ -19,11 +20,14 @@ module ModPwImplicit
     real,    intent(in) :: StateIn_GV(-1:nCell+2, nVar)
     real,    intent(out):: Resid_CV(nCell, nVar)
 
-    real, allocatable    :: NewState_GV(:,:)
+    real, allocatable    :: NewState_GV(:,:),NewStateFull_GV(:,:)
     integer              :: iIon,k
     !--------------------------------------------------------------------------
 
-    if (.not. allocated(NewState_GV)) allocate(NewState_GV(-1:nCell+2, nVar))
+    if (.not. allocated(NewState_GV)) &
+         allocate(NewState_GV(-1:nCell+2, nVar))
+    if (.not. allocated(NewStateFull_GV)) &
+         allocate(NewStateFull_GV(-1:nCell+2, nVarFull))
 
     NewState_GV = StateIn_GV
     
@@ -76,15 +80,29 @@ module ModPwImplicit
        Beta = BetaIn
     end if
     
-    do iIon=1,nIon-1
-       call rusanov_solver(iIon,nCell,RGAS_I(iIon),DtIn,   &
-            StateIn_GV(-1:nCell+2,iRho(iIon):iP(iIon)),&
-            Source_CV(1:nCell,iRho_I(iIon)), Source_CV(1:nCell,iU_I(iIon)),&
-            Source_CV(1:nCell,iP_I(iIon)),&
-            HeatCon_GI(0:nCell+1,iIon), &
-            NewState_GV(-1:nCell+2,iRho(iIon):iP(iIon)))
-    enddo
-
+    if (TypeSolver == 'Rusanov') then
+       do iIon=1,nIon-1
+          call rusanov_solver(iIon,nCell,RGAS_I(iIon),DtIn,   &
+               StateIn_GV(-1:nCell+2,iRho(iIon):iP(iIon)),&
+               Source_CV(1:nCell,iRho_I(iIon)), Source_CV(1:nCell,iU_I(iIon)),&
+               Source_CV(1:nCell,iP_I(iIon)),&
+               HeatCon_GI(0:nCell+1,iIon), &
+               NewState_GV(-1:nCell+2,iRho(iIon):iP(iIon)))
+       enddo
+    elseif (TypeSolver == 'Godunov') then
+       do iIon=1,nIon-1
+          CALL Solver(iIon,nCell,DtIn,&
+               StateFull_GV(-1:nCell+2,iRho_I(iIon):iT_I(iIon)),&
+               Source_CV(1:nCell,iRho_I(iIon)),Source_CV(1:nCell,iP_I(iIon)),&
+               Source_CV(1:nCell,iU_I(iIon)),&
+               RGAS_I(iIon),HeatCon_GI(0:nCell+1,iIon),&
+               NewStateFull_GV(-1:nCell+2,iRho_I(iIon):iT_I(iIon)))
+          NewState_GV(-1:nCell+2,iRho(iIon):iP(iIon))=&
+               NewStateFull_GV(-1:nCell+2,iRho_I(iIon):iP_I(iIon))
+       enddo
+    else
+       write(*,*) 'ERROR_PW: TypeSolver not recognized'
+    endif
     call PW_eheat_flux_explicit(nCell,RGAS_I(nIon),DtIn,      &
          StateFull_GV(-1:nCell+2,iRho_I(nIon):iP_I(nIon)),       &
          Source_CV(1:nCell,iRho_I(nIon)), Source_CV(1:nCell,iU_I(nIon)),&
@@ -106,8 +124,8 @@ module ModPwImplicit
 
     use ModCommonVariables, ONLY: iRho_I,iU_I,iP_I,iT_I,Source_CV,RGAS_I, &
          MassElecIon_I,RhoE_,uE_,Te_,Pe_,nIon,DrBnd,&
-         Gravty,ELFXIN,Mass_I,TIME,CURRMX,GAMMA,ETOP,&
-         Ion1_
+         Gravty,ELFXIN,Mass_I,CURRMX,GAMMA,ETOP,&
+         Ion1_,AR12top,AR23top
     use ModGmPressure
     use ModPWOM, ONLY: iLine
     use ModConst,ONLY: cBoltzmann
@@ -140,10 +158,23 @@ module ModPwImplicit
        !State_GV(nCell+1:nCell+2,iP(iIon)) = &
        !     State_GV(nCell,iP(iIon))*0.99999!*exp(-DrBnd/ScaleHeight_I(iIon))
 
+!       State_GV(nCell+1,iP(iIon)) = &
+!            State_GV(nCell  ,iP(iIon))*exp(-DrBnd/ScaleHeight_I(iIon))*.9
+!       State_GV(nCell+2,iP(iIon)) = State_GV(nCell+1,iP(iIon))
+!       State_GV(nCell+2,iP(iIon)) = &
+!            (2.0*State_GV(nCell+1  ,iP(iIon))-State_GV(nCell,iP(iIon)))*0.9
+
+!       State_GV(nCell+1,iP(iIon)) = &
+!            (2.0*State_GV(nCell  ,iP(iIon))-State_GV(nCell-1,iP(iIon)))*0.9
+!       State_GV(nCell+2,iP(iIon)) = &
+!            (2.0*State_GV(nCell+1  ,iP(iIon))-State_GV(nCell,iP(iIon)))*0.9
+!       State_GV(nCell+1,iP(iIon)) = &
+!            (2.0*State_GV(nCell  ,iP(iIon))-State_GV(nCell-1,iP(iIon)))*0.99
+!       State_GV(nCell+2,iP(iIon)) = State_GV(nCell+1,iP(iIon))
        State_GV(nCell+1,iP(iIon)) = &
-            State_GV(nCell  ,iP(iIon))*exp(-DrBnd/ScaleHeight_I(iIon))*.99
-       State_GV(nCell+2,iP(iIon)) = &
-            2.0*State_GV(nCell+1  ,iP(iIon))-State_GV(nCell,iP(iIon))
+            (2.0*State_GV(nCell  ,iP(iIon))-State_GV(nCell-1,iP(iIon)))*0.8
+       State_GV(nCell+2,iP(iIon)) = State_GV(nCell+1,iP(iIon))
+       
 
 !       State_GV(nCell+2,iP(iIon)) = &
 !            State_GV(nCell+1,iP(iIon))*.99999999999!*exp(-DrBnd/ScaleHeight_I(iIon))*0.1
@@ -156,12 +187,15 @@ module ModPwImplicit
             State_GV(nCell+2,iP(iIon)) / Rgas_I(iIon) / T_C(iIon)
 
        !set velocity bc to conserve flux Rho(n+1) * U(n+1) = Rho(n) * U(n)
-       State_GV(nCell+1,iU(iIon)) = &
-            State_GV(nCell,iRho(iIon))* State_GV(nCell,iU(iIon))&
-            /State_GV(nCell+1,iRho(iIon))
-       State_GV(nCell+2,iU(iIon)) = &
-            State_GV(nCell+1,iRho(iIon))* State_GV(nCell+1,iU(iIon))&
-            /State_GV(nCell+2,iRho(iIon))
+       !State_GV(nCell+1,iU(iIon)) = 2.0*State_GV(nCell,iU(iIon))-State_GV(nCell-1,iU(iIon))
+       !State_GV(nCell+2,iU(iIon)) = 2.0*State_GV(nCell+1,iU(iIon))-State_GV(nCell,iU(iIon))
+       State_GV(nCell+1:nCell+2,iU(iIon)) = State_GV(nCell,iU(iIon))
+!       State_GV(nCell+1,iU(iIon)) = &
+!            AR12top(1)*State_GV(nCell,iRho(iIon))* State_GV(nCell,iU(iIon))&
+!            /(AR23top(1)*State_GV(nCell+1,iRho(iIon)))
+!       State_GV(nCell+2,iU(iIon)) = &
+!            AR12top(2)*State_GV(nCell+1,iRho(iIon))* State_GV(nCell+1,iU(iIon))&
+!            /(AR23top(2)*State_GV(nCell+2,iRho(iIon)))
        
     enddo
     
@@ -203,7 +237,8 @@ module ModPwImplicit
     integer :: k,iIon, nVarReduced
     !--------------------------------------------------------------------------
     DtImpl = Dt
-    DtExpl = 1.0e-1*(DrBnd/2.0e6)
+    DtExpl = 1.0e-3*(DrBnd/2.0e6)
+!godunov    DtExpl = 1.0e-2
     !DtExpl = dx^2/2/max(kappa) 
     
    
