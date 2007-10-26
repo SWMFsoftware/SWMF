@@ -35,7 +35,7 @@ subroutine polar_wind
        NameRestart=NameRestart,                                    &
        iLine=iLine, Time=Time,MaxLineTime=Tmax,                    &
        TypeSolver=TypeSolver,IsVariableDT=IsVariableDT,            &
-       IsRestart=IsRestart,DToutput=DToutput,nAlt=nDim,DoLog=DoLog,&
+       DToutput=DToutput,nAlt=nDim,DoLog=DoLog,&
        nStep=nStep)
   
   DT=DtVertical
@@ -180,11 +180,13 @@ contains
     
     NewState_GV = State_GV
     if (TypeSolver == 'Godunov') then
-       do iIon=1,nIon-1
-          CALL Solver(iIon,Dt,State_GV(:,iRho_I(iIon):iT_I(iIon)),&
-               Source_CV(:,iRho_I(iIon)),Source_CV(:,iP_I(iIon)),&
-               Source_CV(:,iU_I(iIon)),&
-               RGAS_I(iIon),NewState_GV(:,iRho_I(iIon):iT_I(iIon)))
+       Do iIon=1,nIon-1
+          CALL Solver(iIon,nDim,Dt,&
+               State_GV(-1:nDim+2,iRho_I(iIon):iT_I(iIon)),&
+               Source_CV(1:nDim,iRho_I(iIon)),Source_CV(1:nDim,iP_I(iIon)),&
+               Source_CV(1:nDim,iU_I(iIon)),&
+               RGAS_I(iIon),HeatCon_GI(0:nDim+1,iIon),&
+               NewState_GV(-1:nDim+2,iRho_I(iIon):iT_I(iIon)))
        enddo
 
       else if (TypeSolver == 'Rusanov') then
