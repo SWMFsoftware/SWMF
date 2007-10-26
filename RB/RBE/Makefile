@@ -44,9 +44,9 @@ test_run:
 	cd ${TESTDIR}; ./rbe.exe > runlog
 
 test_check:
-	gunzip -c output/2000f223_e.fls.standalone.gz > ${TESTDIR}/2000f223_e.fls.ref
+	gunzip -c output/2000f223_e.fls.standalone.gz > ${TESTDIR}/RB/2000f223_e.fls.ref
 	${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
-		${TESTDIR}/2000f223_e.fls ${TESTDIR}/2000f223_e.fls.ref \
+		${TESTDIR}/RB/2000f223_e.fls ${TESTDIR}/RB/2000f223_e.fls.ref \
 		> test.diff
 	ls -l test.diff
 
@@ -67,18 +67,16 @@ run:
 	make rundir
 
 rundir:
+	mkdir -p ${RUNDIR}/EIE
 	mkdir -p ${RUNDIR}/RB
 	cd ${RUNDIR}/RB; \
-		mkdir restartOUT output; \
-		ln -s restartOUT restartIN;
+		mkdir restartOUT restartIN;
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR} ; \
 		ln -s ${BINDIR}/rbe.exe .   ; \
-		ln -s ../input/2000_223.* . ; \
-		ln -s ../input/w2k.dat .    ;\
-		ln -s ../input/rbe_e.fin .  ; \
-		cp ../input/rbe_swmf.dat .  ; \
-		touch core ; chmod 444 core ; \
-		ln -s RB/* .; \
+		cp ../input/2000_223.* RB/ ; \
+		cp ../input/rbe_e.fin RB/  ; \
+		cp ../input/PARAM.in . ; \
+		cp ${EMPIRICALIEDIR}/w2k.dat EIE/  ;\
+		touch core ; chmod 444 core;\
 	fi);
-
