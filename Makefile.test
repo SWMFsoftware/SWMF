@@ -102,7 +102,8 @@ test_rb_rundir:
 	make rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.RB ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.RB ${TESTDIR}/LAYOUT.in
-	cd ${TESTDIR}; ln -s ${RBDIR}/input/* .
+	cd ${TESTDIR}/RB/; ln -s ${RBDIR}/input/* .
+	cd ${TESTDIR}/EIE/; ln -s ${EMPIRICALIEDIR}/w2k.dat .
 
 test_rb_run:
 	cd ${TESTDIR}/RB; rm -f 2000f223_e.fls
@@ -112,7 +113,7 @@ test_rb_check:
 	gunzip -c ${RBDIR}/output/2000f223_e.fls.gz \
 		> ${TESTDIR}/2000f223_e.fls.ref
 	${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
-		${TESTDIR}/2000f223_e.fls ${TESTDIR}/2000f223_e.fls.ref \
+		${TESTDIR}/RB/2000f223_e.fls ${TESTDIR}/2000f223_e.fls.ref \
 		> test_rb.diff
 	ls -l test_rb.diff
 
