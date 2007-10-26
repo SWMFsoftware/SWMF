@@ -1,42 +1,46 @@
 
 
-      SUBROUTINE Solver (iIon, DtIn,InitialState_GV,
+      SUBROUTINE Solver (iIon, nCell, DtIn,InitialState_GV,
      &     RhoSource, eCollision, fCollision,
      &     RgasSpecies,
-     &     OutputState_GV)
+     &     HeatCon_G,OutputState_GV)
 
       use ModCommonVariables
-
+      use ModPWOM, ONLY: IsFullyImplicit, UseIonHeat
 C     Input: state variables in the grid, at bottom and top boundaries, 
 C            mass, energy, external heating and force source terms,
 C            gas constant normalized for the mass of this species
       integer, intent(in) :: iIon
 
-      real, intent(in):: DtIn, InitialState_GV(-1:maxGrid,4) 
-      real, intent(in):: RhoSource(MAXGRID), eCollision(MAXGRID),
-     &     fCollision(MAXGRID),
+      real, intent(in):: DtIn, InitialState_GV(-1:nCell+2,4) 
+      real, intent(in):: RhoSource(nCell), eCollision(nCell),
+     &     fCollision(nCell),
      &     RgasSpecies
-      
+      real, intent(in)  :: HeatCon_G(0:nCell+1)
 C     Output
-      real, intent(out):: OutputState_GV(-1:maxGrid,4)
+      real, intent(out):: OutputState_GV(-1:nCell+2,4)
 
 C     Local:
-      
+      integer :: iCell
       REAL uSpecies(MAXGRID),dSpecies(MAXGRID),pSpecies(MAXGRID)
+      REAL GradT_F(0:MAXGRID),Conduction_F(0:MAXGRID),Diffusion_C(MAXGRID)
+      REAL T_G(0:MAXGRID),eSource_C(MaxGrid)
       
       real ::uSur, dSur, pSur, dBgnd, pBgnd, uBgnd
 
       REAL DBN1(MaxGrid),UBN1(MaxGrid),PBN1(MaxGrid),
      &     U12(MaxGrid),P12(MaxGrid),D12(MaxGrid),
      &     WL(MaxGrid),WR(MaxGrid),PDIFF(MaxGrid),PSUM(MaxGrid)
-
+      
       logical :: DoTest
       !------------------------------------------------------------------------
+      eSource_C(1:nDim) = eCollision(1:nDim)
       
       dSpecies(1:nDim) = InitialState_GV(1:nDim,1)
       uSpecies(1:nDim) = InitialState_GV(1:nDim,2)
       pSpecies(1:nDim) = InitialState_GV(1:nDim,3)
-      
+      T_G(0:nDim+1)      = InitialState_GV(0:nDim+1,4)
+
       dSur = InitialState_GV(0,1)
       uSur = InitialState_GV(0,2)
       pSur = InitialState_GV(0,3)
@@ -44,7 +48,29 @@ C     Local:
       dBgnd = InitialState_GV(nDim+1,1)
       uBgnd = InitialState_GV(nDim+1,2)
       pBgnd = InitialState_GV(nDim+1,3)
-
+      
+      ! Get heat flow in fully implicit case
+      if (IsFullyImplicit .and. UseIonHeat)then
+      ! Get Temperature Gradient
+         do iCell = 0,nDim
+            GradT_F(iCell)=(T_G(iCell+1)-T_G(iCell)) / DrBnd
+         enddo
+      ! Get facevalues of Kappa*Grad(T)
+         do iCell = 0,nCell
+            Conduction_F(iCell) = 
+     &           (HeatCon_G(iCell+1)+HeatCon_G(iCell)) / 2.0 
+     &           * GradT_F(iCell)
+         enddo
+      ! Get heat diffusion term
+         do iCell = 1,nCell
+            Diffusion_C(iCell) = RgasSpecies/Gmin1 *
+     &      (Ar23(iCell)*Conduction_F(iCell)-Ar12(iCell)*Conduction_F(iCell-1))
+     &           / (CellVolume_C(iCell))
+         enddo
+      ! Add heat flux to energy source
+         eSource_C(1:nDim) = eCollision(1:nDim)+Diffusion_C(1:nDim)
+      
+      endif
 
 !     work on bottom of grid
 
@@ -125,29 +151,8 @@ c
       XHTM=EXP(-(TIME-300.)**2/2./150./150.)
 c     
 
-!      if(DoTest)then
-!         write(*,*)'OldRho    =',Dspecies(nDim-1:nDim)
-!         write(*,*)'DHYD      =',DHYD(nDim-1:nDim)
-!         write(*,*)'OldP      =',Pspecies(nDim-1:nDim)
-!         write(*,*)'PHYD      =',PHYD(nDim-1:nDim)
-!         write(*,*)'THYD      =',THYD(nDim-1:nDim)
-!         write(*,*)'Rhoflux   =',DBN1(nDim-1:nDim+1)
-!         write(*,*)'RhoUflux  =',UBN1(nDim-1:nDim+1)
-!         write(*,*)'eflux     =',PBN1(nDim-1:nDim+1)/gmin1
-
-!         write(*,*)'OldRho    =',Dspecies(1:3)
-!         write(*,*)'DHYD      =',DHYD(1:3)
-!         write(*,*)'OldP      =',Pspecies(1:3)
-!         write(*,*)'PHYD      =',PHYD(1:3)
-!         write(*,*)'THYD      =',THYD(1:3)
-!         write(*,*)'Rhoflux   =',DBN1(1:3)
-!         write(*,*)'RhoUflux  =',UBN1(1:3)
-!         write(*,*)'eflux     =',PBN1(1:3)/gmin1
-
-!      end if
-
-CALEX Update
-
+!     Update
+      
       OutputState_GV(-1:0,1)=InitialState_GV(-1:0,1)
       OutputState_GV(-1:0,2)=InitialState_GV(-1:0,2)
       OutputState_GV(-1:0,3)=InitialState_GV(-1:0,3)
@@ -162,14 +167,14 @@ CALEX Update
 
          OutputState_GV(K,3)=PSPECIES(K)-GMIN2*(OutputState_GV(K,2)**2*OutputState_GV(K,1)-
      $     USPECIES(K)**2*DSPECIES(K))-DtIn/DRBND*(AR23(K)*PBN1(KK)-AR12(K)*PBN1(K))
-     $     +DtIn*GMIN1*(ECOLLISION(K))
+     $     +DtIn*GMIN1*(eSource_C(K))
          OutputState_GV(K,4)=OutputState_GV(K,3)/RGASSPECIES/OutputState_GV(K,1)
       end do
 
-      OutputState_GV(nDim+1,1)=InitialState_GV(nDim+1,1)
-      OutputState_GV(nDim+1,2)=InitialState_GV(nDim+1,2)
-      OutputState_GV(nDim+1,3)=InitialState_GV(nDim+1,3)
-      OutputState_GV(nDim+1,4)=InitialState_GV(nDim+1,4)
+      OutputState_GV(nDim+1:nDim+2,1)=InitialState_GV(nDim+1:nDim+2,1)
+      OutputState_GV(nDim+1:nDim+2,2)=InitialState_GV(nDim+1:nDim+2,2)
+      OutputState_GV(nDim+1:nDim+2,3)=InitialState_GV(nDim+1:nDim+2,3)
+      OutputState_GV(nDim+1:nDim+2,4)=InitialState_GV(nDim+1:nDim+2,4)
 
       RETURN
       END
