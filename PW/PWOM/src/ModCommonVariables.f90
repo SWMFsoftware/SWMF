@@ -38,9 +38,6 @@ module ModCommonVariables
        QELECT(MaxGrid)
   REAL ELFXIN
 
-!    IsRestart = .true. indicates restart from a file, 
-!    otherwise no file is read
-  logical :: IsRestart
   logical IsVariableDt
        
   REAL  CZHN2,CZHO2,CZHO,CZHOX,CZHEN2,CZHEO2,CZHEHE,&
