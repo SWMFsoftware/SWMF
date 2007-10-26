@@ -11,7 +11,7 @@ subroutine rusanov_solver(iIon, nCell,&
      HeatCon_G,UpdateState_GV)
   
   use ModCommonVariables
-  use ModPWOM, ONLY: IsFullyImplicit 
+  use ModPWOM, ONLY: IsFullyImplicit,UseIonHeat 
   implicit none
 
   integer, intent(in)      :: iIon,nCell
@@ -47,7 +47,7 @@ subroutine rusanov_solver(iIon, nCell,&
   ! source term for the fully implicit case.
   T_G(-1:nCell+2)=OldState_GV(-1:nCell+2,3)/Rgas/OldState_GV(-1:nCell+2,1)
   
-  if (IsFullyImplicit)then
+  if (IsFullyImplicit .and. UseIonHeat)then
      ! Get Temperature Gradient
      do iCell = 0,nCell
         GradT_F(iCell)=(T_G(iCell+1)-T_G(iCell)) / DrBnd
@@ -59,7 +59,7 @@ subroutine rusanov_solver(iIon, nCell,&
      enddo
      ! Get heat diffusion term
      do iCell = 1,nCell
-        Diffusion_C(iCell) = &
+        Diffusion_C(iCell) = Rgas/Gmin1 *&
            (Ar23(iCell)*Conduction_F(iCell)-Ar12(iCell)*Conduction_F(iCell-1))&
              / (CellVolume_C(iCell))
      enddo
