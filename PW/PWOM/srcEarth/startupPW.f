@@ -1256,7 +1256,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
       SUBROUTINE STRT1
       use ModCommonVariables
-
+      use ModPWOM,ONLY: IsRestart
 C     
 C     
 C     
@@ -1547,6 +1547,7 @@ c         State_GV(K,uE_)=0
 c         State_GV(K,pE_)=State_GV(0,pE_)H
 c         State_GV(K,Te_)=State_GV(0,Te_)
 
+         IsRestart = .true.
 
          State_GV(K,RhoH_)=1.*State_GV(k-1,RhoH_)*exp(-DrBnd/10000.0e5)
          State_GV(K,uO_)=1.
