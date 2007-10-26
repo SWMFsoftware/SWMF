@@ -1017,10 +1017,30 @@ with the other planet commands listed in this subsection.
 These modifier commands cannot proceed the #PLANET command!
 
 <command name="PLANET" if="$_IsFirstSession">
-	<parameter name="NamePlanet" type="string" input="select">
-		<option name="Earth" value="EARTH/Earth/earth" default="T" />
-		<option name="Saturn" value="SATURN/Saturn/saturn" />
-		<option name="New" />
+	<parameter name="NamePlanet" type="string" case="upper" input="select">
+		<option name="NONE"			/>
+		<option name="NEW" 			/>
+		<option name="MERCURY"			/>
+		<option name="VENUS"			/>
+		<option name="EARTH" default="T"	/>
+		<option name="MARS"			/>
+		<option name="JUPITER"			/>
+		<option name="SATURN"			/>
+		<option name="URANUS"			/>
+		<option name="NEPTUNE" 			/>
+		<option name="PLUTO" 			/>
+		<option name="MOON"			/>
+		<option name="IO"			/>
+		<option name="EUROPA"			/>
+		<option name="TITAN"			/>
+		<option name="ENCELADUS"		/>
+		<option name="HALLEY"			/>
+		<option name="COMET1P"			/>
+		<option name="BORRELLY"			/>
+		<option name="COMET19P"			/>
+		<option name="CHURYUMOVGERASIMENKO"	/>
+		<option name="COMET67P"			/>
+		<option name="HALEBOPP"			/>
 	</parameter>
 	<if expr="$NamePlanet eq 'New'">
 		<parameter name="RadiusPlanet" type="real" min="0" />

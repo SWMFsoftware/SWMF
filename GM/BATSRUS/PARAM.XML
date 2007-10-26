@@ -171,6 +171,8 @@ These modified commands cannot precede the #PLANET command!
 <command name="PLANET" alias="MOON,COMET"
 	if="$_IsFirstSession and $_IsStandAlone">
 	<parameter name="NamePlanet" type="string" case="upper" input="select">
+		<option name="NONE"			/>
+		<option name="NEW" 			/>
 		<option name="MERCURY"			/>
 		<option name="VENUS"			/>
 		<option name="EARTH" default="T"	/>
@@ -184,7 +186,7 @@ These modified commands cannot precede the #PLANET command!
 		<option name="IO"			/>
 		<option name="EUROPA"			/>
 		<option name="TITAN"			/>
-		<option name="NEW" 			/>
+		<option name="ENCELADUS"		/>
 		<option name="HALLEY"			/>
 		<option name="COMET1P"			/>
 		<option name="BORRELLY"			/>
