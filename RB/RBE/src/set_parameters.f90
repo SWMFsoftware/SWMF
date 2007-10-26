@@ -26,15 +26,18 @@ subroutine RB_set_parameters(NameAction)
      if(.not.read_line() ) EXIT
      if(.not.read_command(NameCommand)) CYCLE
      select case(NameCommand)
+     
      case('#STOP')
         if(IsStandAlone)then
            call read_var('Tmax',Tmax)
         else
            write(*,*)'RB WARNING: #STOP command is ignored in the framework'
         end if
+     
      case('#SAVEPLOT')
         call read_var('DtSavePlot',tint)   ! output results every tint seconds
         call read_var('OutName',OutName)
+     
      case('#RESTART')
         call read_var('IsRestart',IsRestart) !T:Continuous run
                                              !F:Initial run
@@ -43,19 +46,22 @@ subroutine RB_set_parameters(NameAction)
         else
            iType = 1
         endif
+     
      case('#TIMESTEP')
         call read_var('Dt',Dt)             ! time step in s. 
                                            ! Summer 2006: read dt from *.dat
 
-     case('#SCHEME')
+     case('#SPLITING')
         call read_var('UseSplitting', UseSplitting)
-        if(UseSplitting)then
-           call read_var('UseMcLimiter', UseMcLimiter)
-           if(UseMcLimiter) call read_var('BetaLimiter', BetaLimiter)
-        end if
+        if (.not. UseSplitting) call read_var('UseCentralDiff', UseCentralDiff)
+        
+     case('#LIMITER')
+        call read_var('UseMcLimiter', UseMcLimiter)
+        if(UseMcLimiter) call read_var('BetaLimiter', BetaLimiter)
 
-     case('#STARTTIME')
-        call read_var('tStart',tStart)
+     case('#TIMESIMULATION')
+        call read_var('TimeSimulation',tStart)
+     
      case('#SPECIES')
         call read_var('NameSpecies',NameSpecies)
         if (NameSpecies == 'e') then       ! species: 1=RB e-, 2=RB H+
@@ -65,10 +71,11 @@ subroutine RB_set_parameters(NameAction)
         else
            call con_stop('Error: Species not found')
         endif
+     
      case('#STARTUPTIME')
         call read_var('tStartup',trans)    ! startup time in sec when itype=1
+     
      case('#BMODEL')
-        
         call read_var('NameModel',NameModel)!t96,t04,MHD
         call read_var('UseFixedB',UseFixedB)!T=fixed B config or 
                                             !F=changing B config
@@ -81,7 +88,6 @@ subroutine RB_set_parameters(NameAction)
         else
            call con_stop('Error: Model not found') 
         endif
-        
         if (UseFixedB) then
            ires = 0
         else
@@ -90,8 +96,10 @@ subroutine RB_set_parameters(NameAction)
        
      case('#IEMODEL')
         call read_var('iConvect',iConvect) ! 1=Weimer, 2=MHD
+     
      case('#INPUTDATA')
         call read_var('NameStorm',storm)
+     
      case('#PLASMASPHERE')
         call read_var('UsePlasmaSphere',UsePlasmaSphere)
         if(UsePlasmaSphere)then
