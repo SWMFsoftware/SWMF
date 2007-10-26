@@ -44,7 +44,7 @@ F		IsRestart
 #TIMESTEP
 3.0		Dt
 
-#STARTTIME
+#TIMESIMULATION
 0.0		tStart
 
 #SPECIES
