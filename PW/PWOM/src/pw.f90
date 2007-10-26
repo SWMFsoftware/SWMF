@@ -172,7 +172,7 @@ subroutine move_line
        (/ PhiLine_I(iLine)/Dphi,ThetaLine_I(iLine)/Dtheta /) )
  
   ! save ExB velocity to get joule heating
-  if (UseJouleHeating) then
+  if (UseJouleHeating .and. DoMoveLine) then
      uJoule2 = (&
        UthetaLine_I(iLine)**2.0&
        +(UphiLine_I(iLine) - OmegaPlanet*rPlanet*sin(ThetaLine_I(iLine)))**2.0)
@@ -301,7 +301,7 @@ subroutine PW_advance_line
        OmegaLine_I(iLine), uJoule2=uJoule2,iUnitOutput=iUnitOutput(iLine), &
        iUnitGraphics=iUnitGraphics(iLine),NameRestart=NameRestart(iLine),  &
        iLine=iLine,Time=Time,MaxLineTime=MaxLineTime,TypeSolver=TypeSolver,&
-       IsVariableDt=IsVariableDt,IsRestart=IsRestart,DToutput=DToutput,    &
+       IsVariableDt=IsVariableDt,DToutput=DToutput,    &
        nAlt=nAlt,DoLog=DoLog,nStep=nStep)
     
   call polar_wind
