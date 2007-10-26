@@ -356,8 +356,9 @@ sub modify_xml_data{
 		$Editor{READFILENAME}= "READ FILE FOR INSERT";
 		$Editor{NEWFILENAME} = "could not open $File" if $File;
 	    }
+	}elsif( /^DELETE CLIPBOARD/ ){
+	    %Clipboard = ();
 	}elsif( /^CANCEL$/ ){
-	    # Do nothing
 	    $Editor{FILE} = "" if $Editor{FILE} eq "ENTER FILENAME";
 	}elsif( /^SAVE AND EXIT$/ ){
 	    # save the file then kill the job
@@ -414,9 +415,7 @@ sub modify_xml_data{
 		$Clipboard{SECTION} = "";
 		close MYFILE;
 	    }else{
-		$Clipboard{TYPE} = '';
-		$Clipboard{BODY} = '';
-		$Clipboard{SECTION} = '';
+		%Clipboard = ();
 		$Editor{READFILENAME} = "READ FILE FOR INSERT" if
 		    $id = "ENTER FILENAME";
 	    }
@@ -820,7 +819,8 @@ sub write_editor_html{
 <FONT $TopFileNameFont>$ParamFile</FONT>
       </TD>
       <TD ALIGN=RIGHT>
-<INPUT TYPE=SUBMIT NAME=submit VALUE=\"SAVE AND EXIT\">&nbsp;&nbsp;&nbsp;
+<INPUT TYPE=SUBMIT NAME=submit VALUE=\"DELETE CLIPBOARD\">
+<INPUT TYPE=SUBMIT NAME=submit VALUE=\"SAVE AND EXIT\">
 <INPUT TYPE=SUBMIT NAME=submit VALUE=EXIT>&nbsp;&nbsp;&nbsp;
 <A HREF=share/Scripts/ParamEditorHelp.html TARGET=HELP>Help</A>
       </TD>
