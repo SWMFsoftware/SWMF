@@ -1125,6 +1125,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       
       SUBROUTINE STRT1
       use ModCommonVariables
+      use ModPWOM, ONLY:IsRestart
 !     REAL jp1,jp2,jp3,jp4,kc1,kc2,kc3,kc6,kc7,kc8,kr1,kr2
       real DensityHp,DensityH3p
 C     ALEX define the reaction rates, label by reaction number
@@ -1409,7 +1410,7 @@ C     ALEX(10/11/04):
 C     TRY SETTING THE PLASMA PARAMETERS HERE TO THE SURFACE VALUES
 
       if(IsRestart) RETURN
-
+      IsRestart = .true.
       do K=1,NDIM
          State_GV(K,RhoH_)=State_GV(0,RhoH_)*exp(-(ALTD(k)-1400.E5)/5000.E5)
          State_GV(K,uO_)=0
