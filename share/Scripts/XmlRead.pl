@@ -1,19 +1,11 @@
-#!/usr/bin/perl -s
+#!/usr/bin/perl
+no strict; # because of local
 
-my $Debug = $D;
+$Debug = 0;
 
-use strict;
-
-my @Result;
-@Result = &XmlRead( join('',<>) );
-
-exit 0;
-##############################################################################
 sub XmlRead{
 
     local($_) = shift;  # XML text
-
-    no strict;
     local(@Xml); # Array of XML elements
 
     # Remove all comments
@@ -23,16 +15,14 @@ sub XmlRead{
 	$_ = $before . $';
     }
 
+    # Find XML elements <...>
     while( s/^([^<]*)<//){
 
 	# check for text before next <
 	my $text = $1;
 	if($text){
-	    my $ElementRef;
-	    $ElementRef->{type} = "t";
-	    $ElementRef->{body} = $text;
+	    push(@Xml, { 'type' => 't', 'content' => $text } );
 	    warn "text = $text\n" if $Debug;
-	    push(@Xml, $ElementRef);
 	}
 
 	# Now read the XML comment or tag
@@ -42,14 +32,27 @@ sub XmlRead{
 	    $ElementRef->{type} = "e";
 	    $ElementRef->{name} = $tag;
 
-	    s/^([^>]*)>// or die "<$tag without closing >\n";
+	    # Find closing > but ignore quoted text like if="$x>1"
+	    my $attributes;
+	    while( /([\'\">])/ ){
+		my $q = $1; $attributes .= $`; $_ = $';
 
-	    my $attributes = $1; $_ = $';
+		last if $q eq ">"; # found matching >
+
+		$attributes .= $q; # start of some quoted text
+
+		# Check for matching quotation mark
+		if( /$q/ ){
+		    $attributes .= $`.$q; $_ = $';
+		}else{
+		    die "$ERROR: no matching $q for <$tag $attributes in $_\n";
+		}
+	    }
 
 	    # Check if the last character is a /
 	    my $endtag = ($attributes =~ s/\/$//);
 
-	    print "tag=$tag, attributes=$attributes, endtag=$endtag\n"
+	    warn "tag=$tag, attributes=$attributes, endtag=$endtag\n"
 		if $Debug;
 
 	    # Read attributes
@@ -58,7 +61,7 @@ sub XmlRead{
 		my $value = $2; $value =~ s/^[\'\"]//; $value =~ s/[\'\"]$//;
 		$ElementRef->{attrib}{$attribute} = $value;
 
-		print "attribute=$attribute, value=$value\n" if $Debug;
+		warn "attribute=$attribute, value=$value\n" if $Debug;
 	    }
 
 	    die "could not read tag $tag\'s attributes=$attributes\n" 
@@ -68,21 +71,22 @@ sub XmlRead{
 		# Check for nested <tag...> of the same type and </tag>
 		my $content;
 		my $level = 1; # there was an opening tag so far
-		while(/(<$tag\b|<\/$tag>)/){
+		while(/(<$tag\b[^>]*>|<\/$tag>)/){
 		    $content .= $`; $_ = $';
 		    my $tag2 = $1;
-		    if($tag2 =~ /<\//){
+		    if($tag2 eq "</$tag>"){
 			$level--;
 			last unless $level; # exit if we got back to level 0
-		    }else{
+		    }elsif($tag2 !~ /\/>$/){
 			$level++;
 		    }
-		    $content .= $tag2;
+		    $content .= $tag2; # still inside, keep searching for end
 		}
 		die "missing </$tag> near".substr($content,0,100)."\n"
 		    if $level;
 
-		$ElementRef->{content} = &XmlRead($content) if $content;
+		$ElementRef->{content} = &XmlRead($content) 
+		    if length($content);
 	    }
 	}else{
 	    die "incorrect <\n";
@@ -90,17 +94,14 @@ sub XmlRead{
 	push(@Xml, $ElementRef);
     }
 
-    # Remove trailing space
-    s/\s*$//;
-    
     # Check for closing text
-    if($_){
-	my $ElementRef;
-	$ElementRef->{type} = "t";
-	$ElementRef->{body} = $_;
+    if( $_ ne "\n" ){
+	push(@Xml, { 'type' => 't', 'content' => $_ } );
 	warn "final text = $_\n" if $Debug;
-	push(@Xml, $ElementRef);
     }
 
-    return @Xml;
+    # Return a reference to the @Xml array
+    return [ @Xml ]; 
 }
+
+1;
