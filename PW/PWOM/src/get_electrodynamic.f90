@@ -37,6 +37,8 @@ subroutine PW_get_electrodynamics
      endif
      !  Convert potential from kilovolts to Volts
      Potential_G(:,:) = Potential_G(:,:)*1.0e3
+     !  Convert microA/m^2 --> A/m^2
+     Jr_G(:,:) = Jr_G(:,:) * 1.0e-6 
   elseif (UseIE) then
      Potential_G(:,:) = Potential_G(:,:)*1.0e3
   elseif (UseWeimer) then
