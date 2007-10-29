@@ -8,7 +8,6 @@ my $HelpXml     = $X; undef $X;
 my $LayoutFile  = $l; undef $l;
 my $nProc       = $n; undef $n;
 my $Verbose     = $v; undef $v;
-my $Save        = $s; undef $s;
 
 use strict;
 
@@ -23,7 +22,6 @@ my $ConfigPl           = 'Config.pl';
 # The -H, -X and -s flags are transferred to CheckParam.pl
 exec("$CheckParamScript -X") if $HelpXml;
 exec("$CheckParamScript -H") if $HelpXmlParam;
-exec("$CheckParamScript -s") if $Save;
 
 # Name of BATSRUS and BATSRUS_share
 my $BATSRUS = "BATSRUS";
@@ -258,7 +256,7 @@ sub print_help{
 
 Usage:
 
-  Scripts/TestParam.pl [-h] [-H] [-X] [-v] [-s] 
+  Scripts/TestParam.pl [-h] [-H] [-X] [-v]
                        [-l=LAYOUTFILE] [-n=NPROC] [PARAMFILE]
 
   -h            print help message and stop
@@ -268,9 +266,6 @@ Usage:
   -X            print a short introduction to the XML language and stop
 
   -v            print verbose information
-
-  -s            convert Param/PARAM.XML into Param/PARAM.pl and exit
-                (requires XML-PARSER::EasyTree Perl package)
 
   -l=LAYOUTFILE obtain layout from LAYOUTFILE. 
                 Default name of the LAYTOUFILE is obtained from the name
@@ -292,11 +287,7 @@ Scripts/TestParam.pl
 
   Check another parameter and layout file for a 16 processor execution:
 
-Scripts/TestParam.pl -n=16 run/test.000/PARAM.expand
-
-  Convert the XML file Param/PARAM.XML into the Perl tree file Param/PARAM.pl:
-
-Scripts/TestParam.pl -s"
+Scripts/TestParam.pl -n=16 run/test.000/PARAM.expand"
 #EOC
     ,"\n\n";
     exit 0;

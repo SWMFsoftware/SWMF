@@ -4,7 +4,6 @@ my $Verbose     = $v; undef $v;
 my $Help        = $h; undef $h;
 my $HelpXmlParam= $H; undef $H;
 my $HelpXml     = $X; undef $X;
-my $Save        = $s; undef $s;
 
 use strict;
 
@@ -28,7 +27,7 @@ Purpose:
 
 Usage:
 
-    TestParam.pl [-h] [-H] [-X] [-v] [-s] [PARAMFILE]
+    TestParam.pl [-h] [-H] [-X] [-v] [PARAMFILE]
 
   -h            print help message and stop
 
@@ -37,9 +36,6 @@ Usage:
   -X            print a short introduction to the XML language and stop
 
   -v            print verbose information
-
-  -s            save PARAM.pl based on PARAM.XML 
-                (requires XML-PARSER::EasyTree Perl package)
 
   PARAMFILE     check parameters in PARAMFILE. Default value is 'run/PARAM.in'
 
@@ -52,10 +48,6 @@ Examples:
   Check another parameter file:
 
       TestParam.pl run/test.000/PARAM.expand
-
-  Convert the XML file PARAM.XML into the Perl tree file PARAM.pl:
-
-      TestParam.pl -s
 
 ";
     exit 0;

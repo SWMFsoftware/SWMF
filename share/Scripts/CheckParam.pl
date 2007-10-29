@@ -14,8 +14,6 @@ my $HelpXmlParam= $H; undef $H;
 my $HelpXml     = $X; undef $X;
 my $Interactive = $i; undef $i;
 my $Verbose     = $v; undef $v; 
-my $ReadTree    = $r; undef $r;
-my $SaveTree    = $s; undef $s;
 my $XmlFile     = $x; undef $x;
 my $NameComp    = $c; undef $c;
 my $Components  = $C; undef $C;
@@ -51,31 +49,9 @@ my $InputFileDefault = 'run/PARAM.in';
 # Reset filenames to defaults if needed
 $XmlFile  = $XmlFileDefault unless $XmlFile;
 
-# Default tree file has the same name as the XML file with .pl extension
-if($SaveTree eq '1'){
-    $SaveTree = $XmlFile;
-    $SaveTree =~ s/xml$/pl/i or 
-	die "$ERROR could not replace .XML extension with .pl for XML file\n".
-	    "$XmlFile\n";
-}
-
-
 # Check the correctness of the command line arguments
 &check_arguments;
 
-if($SaveTree){
-    # Convert XML description into Perl tree data structure and exit
-    &parse_xml($XmlFile) or 
-	die "$ERROR XML::Parser package is not installed\n";
-    exit 1;
-}
-
-if(not $ReadTree){
-    # Default tree file has the same name as the XML file with .pl extension
-    $ReadTree = $XmlFile;
-    $ReadTree =~ s/xml$/pl/i or $ReadTree = '';
-}
-    
 # Initialize for checking input parameter file
 my $InputFile;
 $InputFile       = $ARGV[0] or 
@@ -93,10 +69,8 @@ my $optionvalues;
 
 # Read the parameter definitions
 my $commandList;
-$commandList = &parse_xml($XmlFile) or
-    $commandList = &read_tree($ReadTree) or
-    die "$ERROR neither the XML::Parser::EasyTree package is installed\n".
-    "\tnor the tree file $ReadTree was found!\n";
+$commandList = &parse_xml($XmlFile)
+    or die "$ERROR could not parse the XML file\n";
 
 # Store values in the COMP package to be used and changed by the XML rules
 &init_comp;
@@ -186,18 +160,6 @@ sub check_arguments{
 	    if $XmlFile and not -f $XmlFile;
     }
 
-    if($ReadTree and $SaveTree){
-	die "$ERROR do not read (-r) and save (-s) tree files "
-	    ."at the same time!\n"
-	    ."For help type CheckParam.pl -h\n";
-    }
-
-    if($XmlFile eq $SaveTree){
-	die "$ERROR do not overwrite XML file $XmlFile "
-	    ."by saving tree into the same file!\n"
-	    ."Choose a different TREEFILE in -s=TREEFILE";
-    }
-
     if($NameComp and $NameComp !~ /^$ValidComp$/){
 	die "$ERROR -c=$NameComp is not among valid component ID-s"
 	    ." $ValidComp\n";
@@ -276,62 +238,21 @@ sub parse_xml{
     # Parse the XML file and return a pointer to the parsed tree
     my $XmlFile=$_[0];
 
-    # Try loading the modules
-    eval('
-    use XML::Parser;
-    use XML::Parser::EasyTree;
-    $XML::Parser::EasyTree::Noempty=1;
-    open(FILE,$XmlFile) or die "$ERROR could not open XML file $XmlFile!\n";
-    close(FILE);
-    ');
-    if($@){
-	# If it did not succeed return false value and try something else
-	print "XML description could not be parsed.\n" if $Debug;
-	return 0 if $@;
-    }
+    require 'share/Scripts/XmlRead.pl';
 
-    my $parser = new XML::Parser(Style => 'EasyTree');
-    my $tree   = $parser->parsefile($XmlFile);
-    my $commandList = $tree->[0];
+    open(XMLFILE, $XmlFile) or die "$ERROR could not open $XmlFile\n";
+    my $tree = &XmlRead( join('',<XMLFILE>) );
+    close XMLFILE;
+
+    my $commandList=$tree->[0];
+    $commandList=$tree->[1] if $commandList->{type} ne 'e';
 
     if($commandList->{type} ne 'e' or $commandList->{name} ne 'commandList'){
-	die "$ERROR first node should be an element named commandList\n";
+	die "$ERROR first node should be an element named commandList\n".
+	    "but it has type='$commandList->{type}' ".
+	    "and content='$commandList->{content}'\n";
     }
 
-    if($SaveTree){
-	# Save $tree into file $SaveTree
-
-	# Try Saving the tree with Data::Dumper module
-	require Data::Dumper or
-	    die "$ERROR Data::Dumper package is not installed\n";
-	$Data::Dumper::Indent=0;
-	$Data::Dumper::Variable="tree";
-
-	open TREE, ">$SaveTree" or 
-	    die "$ERROR could not open tree file $SaveTree for writing\n";
-	print TREE "#^"."CFG FILE _FALSE_\n";
-	print TREE Data::Dumper->Dump([$tree],["tree"]);
-	close TREE or
-	    die "$ERROR could not close saved tree file $SaveTree\n";
-	print "XML tree read from $XmlFile has been saved into $SaveTree\n";
-	exit 0;
-    }
-
-    return $commandList;
-}
-
-##############################################################################
-sub read_tree{
-    # read a tree file named $_[0] containing the parsed XML tree
-    my $ReadTree=$_[0];
-
-    my $tree=do($ReadTree);
-    return 0 unless length($tree)>0;
-    print "Description tree was read from file $ReadTree\n" if $Debug;
-    my $commandList = $tree->[0];
-    if($commandList->{type} ne 'e' or $commandList->{name} ne 'commandList'){
-	die "$ERROR first node should be an element named commandList\n";
-    }
     return $commandList;
 }
 
@@ -1138,8 +1059,7 @@ sub print_help{
 
 Usage:
 
-  CheckParam.pl [-h] [-H] [-X] [-v] [-D] 
-                [-x=XMLFILE] [-r=TREEFILE] [-s[=TREEFILE]] 
+  CheckParam.pl [-h] [-H] [-X] [-v] [-D] [-x=XMLFILE]
                 [-S] [-c=ID] [-C=IDLIST] [-p=PRECISION] [-i] [PARAMFILE]
 
   -h            print help message and stop
@@ -1154,18 +1074,6 @@ Usage:
 
   -x=XMLFILE    Use XMLFILE for the XML description. 
                 If the -x switch is omitted the $XmlFileDefault file is used.
-
-  -r=TREEFILE   Read TREEFILE containing the parameter description in a Perl 
-                tree data structure if no XML description is found or the
-                XML::Parser::Easytree module is not installed.
-                The default tree file has the same name as the XML file 
-                but with a .pl extension.
-              
-  -s[=TREEFILE] Save the parsed XML description into TREEFILE in form of a Perl
-                tree data structure and exit. 
-                If the -s switch is given without a TREEFILE value, 
-                the tree is saved into the default tree file, which has
-                the same name as the XML file but with a .pl extension.
 
   -S            Check parameters assuming a stand alone mode. In stand alone 
                 mode the #BEGIN_COMP and #END_COMP commands are ignored.
@@ -1200,14 +1108,6 @@ CheckParam.pl -C='GM,IH,IE' -v
     Check GM parameters in run/PARAM_new.in for correctness:
 
 CheckParam.pl -x=GM/BATSRUS/PARAM.XML -c=GM run/PARAM_new.in
-
-    Convert GM/BATSRUS/PARAM.XML into the tree file GM/BATSRUS/PARAM.pl:
-
-CheckParam.pl -x=GM/BATSRUS/PARAM.XML -s
-
-    Set the XML file name to an empty string and read a Perl tree file:
-
-CheckParam.pl -x= -r=mytree.pl
 
     Check lines typed through standard input with debug info:
 

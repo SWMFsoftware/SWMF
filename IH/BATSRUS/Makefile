@@ -44,7 +44,6 @@ distclean: clean
 		touch srcInterface/Makefile.DEPEND; \
 		cd srcInterface; make distclean; \
 	fi)
-	rm -rf  src srcUser Makefile.* PARAM.XML PARAM.pl \
-		RenameList.pl Config.pl *~
+	rm -rf  src srcUser Makefile.* PARAM.XML RenameList.pl Config.pl *~
 
 veryclean: distclean

@@ -198,7 +198,7 @@ dist:
 	tar -rf tmp.tar  Configure.pl		#^CFG IF CONFIGURE
 	tar -rf tmp.tar  Test*.pl TestCovariant	#^CFG IF TESTING
 	tar -rf tmp.tar  Doc			#^CFG IF DOC
-	tar -rf tmp.tar  PARAM.XML PARAM.pl
+	tar -rf tmp.tar  PARAM.XML
 	tar -rf tmp.tar  Config.pl
 	tar -rf tmp.tar  Idl
 	tar -rf tmp.tar  Param

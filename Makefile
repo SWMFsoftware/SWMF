@@ -391,7 +391,7 @@ IH/BATSRUS/src/Makefile:
 	cp IH/BATSRUS_share/src/IH_*.f90 IH/BATSRUS/srcInterface
 	cp GM/BATSRUS/srcUser/*.f90 IH/BATSRUS/srcUser/
 	cd GM/BATSRUS; \
-		cp Makefile.def Makefile.conf PARAM.XML PARAM.pl Config.pl \
+		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
 			../../IH/BATSRUS/
 	echo '*' > IH/BATSRUS/src/.cvsignore
 
