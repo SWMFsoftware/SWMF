@@ -1,25 +1,52 @@
 #!/usr/bin/perl
-no strict; # because of local
-
-$Debug = 0;
-
-# XML special characters
-my %unxml = ( 'gt' => '>',
-	      'lt' => '<',
-	      'amp'=> '&',
-	      'quot' => '"',
-	      'apos' => "'",
-	      );
 
 sub XmlRead{
 
+    # The XmlRead function implements an extremely light weight XML reader.
+    # It is a single Perl subroutine that does not use any package or C code.
+    #
+    # Input is a string with XML text and the function returns a Perl data
+    # structure with the parsed XML text. The sturcture of the returned value
+    # follows the XML::Parser::EasyTree package.
+    #
+    # The returned value is a reference to an array of hashes. 
+    # Each hash has a key 'type' with value either 't' (text) or 'e' 
+    # (XML element). For type 't' the hash has another key 'content'
+    # with a value containing the plain text.
+    # For type 'e' the key 'name' contains the name of the tag.
+    # If the tag has attributes the key 'attrib' has a value that is a 
+    # reference to a hash of attributes. The attribute hash has keys that
+    # are the attribute names and values that are the attribute values.
+    # If the opening tag is paired with a closing tag, the hash has a 
+    # key 'content' with a value that is a reference to an array of hashes that
+    # describes the XML text between the opening and closing tags
+    # as defined above.
+    #
+    # Although this is a recursive definition, the returned tree 
+    # always has a finite depth since the input text is of finite length.
+
+    no strict; # because of local
+
     local($_) = shift;  # XML text
-    local(@Xml); # Array of XML elements
+    local(@Xml);        # Array of XML elements
+
+    # Debugging flag
+    my $Debug = 0;
+
+    # XML special characters
+    my %unxml = ( 'gt' => '>',
+		  'lt' => '<',
+		  'amp'=> '&',
+		  'quot' => '"',
+		  'apos' => "'",
+		  );
+
+    my $ERROR = "ERROR in XmlRead.pl";
 
     # Remove all comments
     while( /<!--/ ){
 	my $before = $`;
-	/-->/ or die "missing -->\n";
+	/-->/ or die "$ERROR: missing --> after <!--".substr($',0,100)."\n";
 	$_ = $before . $';
     }
 
@@ -56,7 +83,8 @@ sub XmlRead{
 	    my $endtag = (s|^/||);
 
 	    # Check if the closing > is there
-	    s/^>// or die "$ERROR: missing > for <$tag ...\n";
+	    s/^>// or die "$ERROR: incorrect attribute for <$tag ... ".
+		substr($_,0,100)."\n";
 
 	    warn "tag=$tag, endtag=$endtag\n" if $Debug;
 
@@ -75,14 +103,14 @@ sub XmlRead{
 		    }
 		    $content .= $tag2; # still inside, keep searching for end
 		}
-		die "missing </$tag> near".substr($content,0,100)."\n"
+		die "$ERROR: missing </$tag> near".substr($content,0,100)."\n"
 		    if $level;
 
 		$ElementRef->{content} = &XmlRead($content) 
 		    if length($content);
 	    }
 	}else{
-	    die "incorrect <\n";
+	    die "$ERROR: incorrect tag at <".substr($_,0,100)."\n";
 	}
 	push(@Xml, $ElementRef);
     }
