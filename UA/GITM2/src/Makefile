@@ -76,8 +76,6 @@ OBJECTS = \
 	read_inputs.o\
 	add_sources.o\
 	calc_sources.o\
-	msis_library.o\
-	iri90.o\
 	apex.o\
 	write_output.o\
 	gradient.o\
@@ -102,7 +100,7 @@ ${EXE}:	${OBJECTS_EXE}
 GITM_general:
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} \
 		-L${ABDIR} -lSphere \
-		-L${LIBDIR} -lEMPIRICALIE -lINDICES -lSHARE \
+		-L${LIBDIR} -lEMPIRICALIE -lEMPIRICALUA -lINDICES -lSHARE \
 		${LBLAS} ${Lflag1}
 
 GITM_for_Darwin:
@@ -110,6 +108,7 @@ GITM_for_Darwin:
 	cd Tmp_; \
 		ar -x ../${ABDIR}/libSphere.a; \
 		ar -x ${LIBDIR}/libEMPIRICALIE.a; \
+		ar -x ${LIBDIR}/libEMPIRICALUA.a; \
 		ar -x ${LIBDIR}/libINDICES.a; \
 		ar -x ${LIBDIR}/libSHARE.a
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} Tmp_/*.o ${LBLAS} ${Lflag1}

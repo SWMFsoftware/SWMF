@@ -4,7 +4,8 @@ default : GITM
 include Makefile.def
 
 ABDIR   = srcSphereAB
-IEDIR   = ${EMPIRICALIEDIR}
+EIEDIR  = ${EMPIRICALIEDIR}
+EUADIR  = ${EMPIRICALUADIR}
 IODIR   = ${DATAREADINDICESDIR}
 MAINDIR = src
 
@@ -23,7 +24,8 @@ install: src/ModSize.f90
 GITM:
 	@cd ${SHAREDIR}; make LIB
 	@cd $(ABDIR);    make LIB
-	@cd $(IEDIR);    make LIB
+	@cd $(EIEDIR);   make LIB
+	@cd ${EUADIR};   make LIB
 	@cd $(IODIR);    make LIB
 	@cd $(MAINDIR);  make GITM
 
@@ -33,9 +35,9 @@ POST:
 GITM2 = ${DIR}/UA/GITM2
 
 LIB:
-	cd $(ABDIR)     ; make                                         LIB
-	cd $(MAINDIR)   ; make LIBPREV=${GITM2}/${ABDIR}/libSphere.a   LIBADD
-	cd srcInterface ; make LIBPREV=${GITM2}/${MAINDIR}/libUA.a     LIB
+	cd $(ABDIR)     ; make                                       LIB
+	cd $(MAINDIR)   ; make LIBPREV=${GITM2}/${ABDIR}/libSphere.a LIB
+	cd srcInterface ; make LIBPREV=${GITM2}/${MAINDIR}/libUA.a   LIB
 
 nompirun:
 	make GITM
@@ -62,8 +64,8 @@ rundir:
 	mkdir -p ${RUNDIR}/UA
 	mkdir -p ${RUNDIR}/EIE
 	cd ${RUNDIR} ; ln -s ${BINDIR}/PostProcess.exe ./PostGITM.exe
-	cp ${IEDIR}/ED_isoelec_edep.dat ${RUNDIR}/EIE/isoelec_edep.dat
-	cp ${IEDIR}/ED_hpke.noaa ${RUNDIR}/EIE/hpke.noaa
+	cp ${EIEDIR}/ED_isoelec_edep.dat ${RUNDIR}/EIE/isoelec_edep.dat
+	cp ${EIEDIR}/ED_hpke.noaa ${RUNDIR}/EIE/hpke.noaa
 	cd ${RUNDIR}/UA; \
 		mkdir restartOUT data; \
 		ln -s restartOUT restartIN; \

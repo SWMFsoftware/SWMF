@@ -22,7 +22,7 @@ LIB:    libSphere.a
 	@echo libSphere.a has been brought up to date.
 
 libSphere.a:      ${MF} ${MODULES} ${OBJECTS}
-	@echo 'Creating IE library' ; \
+	@echo 'Creating libSphere library'
 	${AR} libSphere.a ${MODULES} ${OBJECTS}
 
 
@@ -48,4 +48,3 @@ AB_ARRAY_module.o:  AB_ARRAY_module.f90
 
 AB_ERROR_module.o:  AB_ERROR_module.f90
 
-### DO NOT remove this line - make depends on it ###
