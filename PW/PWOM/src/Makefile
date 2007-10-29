@@ -77,13 +77,14 @@ ${EXE}:	${EXEOBJECTS}
 
 PWOM_general:
 	${LINK.f90} -o ${EXE} ${EXEOBJECTS} \
-		-L${LIBDIR} -lEMPIRICALIE -lINDICES -lSHARE -lTIMING \
+		-L${LIBDIR} -lEMPIRICALIE -lEMPIRICALUA -lINDICES -lSHARE -lTIMING \
 		${Lflag1}
 
 PWOM_for_Darwin:
 	rm -rf Tmp_; mkdir Tmp_
 	cd Tmp_; \
 		ar -x ${LIBDIR}/libEMPIRICALIE.a; \
+		ar -x ${LIBDIR}/libEMPIRICALUA.a; \
 		ar -x ${LIBDIR}/libINDICES.a; \
 		ar -x ${LIBDIR}/libSHARE.a
 	${LINK.f90} -o ${EXE} ${EXEOBJECTS} Tmp_/*.o ${LBLAS} ${Lflag1}

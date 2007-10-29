@@ -120,3 +120,13 @@ subroutine CON_set_do_test(String,DoTest,DoTestMe)
 
 end subroutine CON_set_do_test
 
+subroutine CON_io_unit_new(iUnit)
+
+  use ModIoUnit, ONLY: io_unit_new
+  implicit none
+  integer, intent(out) :: iUnit
+
+  iUnit = io_unit_new()
+
+end subroutine CON_io_unit_new
+
