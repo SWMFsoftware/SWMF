@@ -3,6 +3,14 @@ no strict; # because of local
 
 $Debug = 0;
 
+# XML special characters
+my %unxml = ( 'gt' => '>',
+	      'lt' => '<',
+	      'amp'=> '&',
+	      'quot' => '"',
+	      'apos' => "'",
+	      );
+
 sub XmlRead{
 
     local($_) = shift;  # XML text
@@ -21,6 +29,7 @@ sub XmlRead{
 	# check for text before next <
 	my $text = $1;
 	if($text){
+	    $text =~ s/\&(\w+);/$unxml{$1}/g;
 	    push(@Xml, { 'type' => 't', 'content' => $text } );
 	    warn "text = $text\n" if $Debug;
 	}
@@ -32,40 +41,24 @@ sub XmlRead{
 	    $ElementRef->{type} = "e";
 	    $ElementRef->{name} = $tag;
 
-	    # Find closing > but ignore quoted text like if="$x>1"
-	    my $attributes;
-	    while( /([\'\">])/ ){
-		my $q = $1; $attributes .= $`; $_ = $';
-
-		last if $q eq ">"; # found matching >
-
-		$attributes .= $q; # start of some quoted text
-
-		# Check for matching quotation mark
-		if( /$q/ ){
-		    $attributes .= $`.$q; $_ = $';
-		}else{
-		    die "$ERROR: no matching $q for <$tag $attributes in $_\n";
-		}
-	    }
-
-	    # Check if the last character is a /
-	    my $endtag = ($attributes =~ s/\/$//);
-
-	    warn "tag=$tag, attributes=$attributes, endtag=$endtag\n"
-		if $Debug;
-
 	    # Read attributes
-	    while($attributes=~s/^\s*(\w+)\s*=\s*(\'[^\']*\'|\"[^\"]*\")\s*//){
+	    while( s/^\s*(\w+)\s*=\s*(\'[^\']*\'|\"[^\"]*\")\s*// ){
 		my $attribute = $1;
 		my $value = $2; $value =~ s/^[\'\"]//; $value =~ s/[\'\"]$//;
+		$value =~ s/\&(\w+);/$unxml{$1}/g;
+
 		$ElementRef->{attrib}{$attribute} = $value;
 
 		warn "attribute=$attribute, value=$value\n" if $Debug;
 	    }
 
-	    die "could not read tag $tag\'s attributes=$attributes\n" 
-		if $attributes;
+	    # Check if the last character is a /
+	    my $endtag = (s|^/||);
+
+	    # Check if the closing > is there
+	    s/^>// or die "$ERROR: missing > for <$tag ...\n";
+
+	    warn "tag=$tag, endtag=$endtag\n" if $Debug;
 
 	    if(not $endtag){
 		# Check for nested <tag...> of the same type and </tag>
@@ -96,6 +89,7 @@ sub XmlRead{
 
     # Check for closing text
     if( $_ ne "\n" ){
+	s/\&(\w+);/$unxml{$1}/g;
 	push(@Xml, { 'type' => 't', 'content' => $_ } );
 	warn "final text = $_\n" if $Debug;
     }
