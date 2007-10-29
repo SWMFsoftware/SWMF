@@ -216,7 +216,7 @@ CALEX IYD=year_day of year
 !      GMLONG=0.
 !      GMLAT=80.
 C END
-      CALL GGM(IART,GLONG,GLAT,GMLONG,GMLAT)
+      CALL GGM_PLANET(IART,GLONG,GLAT,GMLONG,GMLAT)
       
       if (.not.UseStaticAtmosphere) then
          iDay  = mod(IYD,1000)+floor(Time/24.0/3600.0)
