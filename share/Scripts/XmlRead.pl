@@ -44,33 +44,29 @@ sub XmlRead{
     my $ERROR = "ERROR in XmlRead.pl";
 
     # Remove all comments
-    while( /<!--/ ){
-	my $before = $`;
-	/-->/ or die "$ERROR: missing --> after <!--".substr($',0,100)."\n";
-	$_ = $before . $';
-    }
+    s/<!--.*?-->//gs;
 
     # Find XML elements <...>
-    while( s/^([^<]*)<//){
+    while( /^([^<]*)</ ){
+	my $text = $1; $_ = $';
 
-	# check for text before next <
-	my $text = $1;
+	# Save text before next <
 	if($text){
 	    $text =~ s/\&(\w+);/$unxml{$1}/g;
 	    push(@Xml, { 'type' => 't', 'content' => $text } );
 	    warn "text = $text\n" if $Debug;
 	}
 
-	# Now read the XML comment or tag
+	# Now read the XML tag
 	my $ElementRef;
-	if(s/^(\w+)\s*//){
+	if( /^(\w+)\s*/ ){
 	    my $tag = $1; $_ = $';
 	    $ElementRef->{type} = "e";
 	    $ElementRef->{name} = $tag;
 
 	    # Read attributes
-	    while( s/^\s*(\w+)\s*=\s*(\'[^\']*\'|\"[^\"]*\")\s*// ){
-		my $attribute = $1;
+	    while( /^(\w+)\s*=\s*(\'[^\']*\'|\"[^\"]*\")\s*/ ){
+		my $attribute = $1; $_ = $';
 		my $value = $2; $value =~ s/^[\'\"]//; $value =~ s/[\'\"]$//;
 		$value =~ s/\&(\w+);/$unxml{$1}/g;
 
@@ -83,8 +79,11 @@ sub XmlRead{
 	    my $endtag = (s|^/||);
 
 	    # Check if the closing > is there
-	    s/^>// or die "$ERROR: incorrect attribute for <$tag ... ".
-		substr($_,0,100)."\n";
+	    if(not s/^>//){
+		warn "$ERROR: incorrect attribute for <$tag ... ".
+		    substr($_,0,100)."\n";
+		return;
+	    }
 
 	    warn "tag=$tag, endtag=$endtag\n" if $Debug;
 
@@ -92,7 +91,7 @@ sub XmlRead{
 		# Check for nested <tag...> of the same type and </tag>
 		my $content;
 		my $level = 1; # there was an opening tag so far
-		while(/(<$tag\b[^>]*>|<\/$tag>)/){
+		while( /(<$tag\b[^>]*>|<\/$tag>)/ ){
 		    $content .= $`; $_ = $';
 		    my $tag2 = $1;
 		    if($tag2 eq "</$tag>"){
@@ -103,14 +102,17 @@ sub XmlRead{
 		    }
 		    $content .= $tag2; # still inside, keep searching for end
 		}
-		die "$ERROR: missing </$tag> near".substr($content,0,100)."\n"
-		    if $level;
+		if($level){
+		    warn "$ERROR: missing </$tag> after <$tag ...>".
+			substr($content.$_,0,100)."\n";
+		    return;
+		}
 
-		$ElementRef->{content} = &XmlRead($content) 
-		    if length($content);
+		$ElementRef->{content} = &XmlRead($content) if length $content;
 	    }
 	}else{
-	    die "$ERROR: incorrect tag at <".substr($_,0,100)."\n";
+	    warn "$ERROR: incorrect tag at <".substr($_,0,100)."\n";
+	    return;
 	}
 	push(@Xml, $ElementRef);
     }
