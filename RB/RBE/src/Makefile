@@ -1,7 +1,6 @@
+
 include ../Makefile.def
 include ../Makefile.conf
-# include Makefile.DEPEND
-# include Makefile.RULES
 
 OBJECTS = \
 	rbe_subs.o\
@@ -10,8 +9,6 @@ OBJECTS = \
 	plot_fieldline.o\
 	set_parameters.o\
 	pbo_2.o\
-	t04_s.o\
-	t96_01.o\
 	geopack.o
 
 DEPEND:
@@ -42,10 +39,11 @@ OBJECTS_EXE = rbe_main.o
 LIBSHARE  = ${LIBDIR}/libSHARE.a
 LIBTIMING = ${LIBDIR}/libTIMING.a
 LIBNOMPI  = ${LIBDIR}/libNOMPI.a
-LIBEMPIRICALIE = ${LIBDIR}/libEMPIRICALIE.a
+LIBEMPIRICALIE   = ${LIBDIR}/libEMPIRICALIE.a
+LIBEMPIRICALGM = ${LIBDIR}/libEMPIRICALGM.a
 
 # Libraries should be compiled first, because modules are used in main
-${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
+${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING} ${MY_LIB}   
 
 EXE = ${BINDIR}/rbe.exe
 
@@ -62,6 +60,7 @@ ${EXE}: ${OBJECTS_EXE}
 		ar -x ${LIBTIMING}; \
 		ar -x ${LIBSHARE}; \
 		ar -x ${LIBNOMPI}; \
+		ar -x ${LIBEMPIRICALGM};\
 		ar -x ${LIBEMPIRICALIE};
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} Tmp_/*.o ${LBLAS} ${Lflag2}
 	rm -rf Tmp_

@@ -10,12 +10,13 @@ install:
 #
 
 RBE:
-	@cd ${NOMPIDIR};  make LIB
-	@cd ${SHAREDIR};  make LIB
-	@cd ${TIMINGDIR}; make LIB
-	@cd ${EMPIRICALIEDIR}; make LIB
-	@cd src;          make LIB
-	@cd src;          make RBE
+	@cd ${NOMPIDIR};	make LIB
+	@cd ${SHAREDIR};  	make LIB
+	@cd ${TIMINGDIR}; 	make LIB 
+	@cd ${EMPIRICALIEDIR};	make LIB
+	@cd ${EMPIRICALGMDIR};	make LIB
+	@cd src;	make LIB
+	@cd src;	make RBE
 
 LIB:
 	cd src; make LIB
@@ -25,13 +26,14 @@ TESTDIR = run_test
 
 test:
 	@echo "test_compile..." > test.diff
-	make test_compile
+	make   test_compile
 	@echo "test_rundir..." >> test.diff
-	make test_rundir
-	@echo "test_run..." >> test.diff
-	make test_run
-	@echo "test_check..." >> test.diff
-	make test_check
+	make   test_rundir
+	@echo "test_run..."    >> test.diff
+	make   test_run
+	@echo "test_check..."  >> test.diff
+	make   test_check
+
 
 test_compile:
 	make RBE
@@ -41,7 +43,9 @@ test_rundir:
 	make rundir RUNDIR=${TESTDIR} STANDALONE=YES RBDIR=`pwd`
 
 test_run:
-	cd ${TESTDIR}; ./rbe.exe > runlog
+	cd ${TESTDIR}; ./rbe.exe > runlog 
+#v10 > runlog
+
 
 test_check:
 	gunzip -c output/2000f223_e.fls.standalone.gz > ${TESTDIR}/RB/2000f223_e.fls.ref
