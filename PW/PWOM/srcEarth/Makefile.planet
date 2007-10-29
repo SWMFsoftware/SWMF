@@ -10,7 +10,6 @@ OBJECTS_PLANET = \
 	precipitationPW_planet.o\
 	solzen_planet.o\
 	suncor_planet.o\
-	ggm_planet.o\
 	sperfc_planet.o\
 	chap_planet.o\
 	neutral_atmosphere_planet.o\
@@ -19,5 +18,6 @@ OBJECTS_PLANET = \
 	collisionPW_planet.o\
 	print_plot.o\
 	upper_heat_conduction.o\
-	msis90_planet.o
+	ggm_planet.o
+
 	
