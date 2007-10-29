@@ -23,7 +23,9 @@ LIBSHARE   = ${LIBDIR}/libSHARE.a
 
 LIBTIMING      = ${LIBDIR}/libTIMING.a
 LIBINDICES     = ${LIBDIR}/libINDICES.a
+LIBEMPIRICALGM = ${LIBDIR}/libEMPIRICALGM.a
 LIBEMPIRICALIE = ${LIBDIR}/libEMPIRICALIE.a
+LIBEMPIRICALUA = ${LIBDIR}/libEMPIRICALUA.a
 
 #######################
 # CON infrastructure: #
@@ -121,23 +123,25 @@ EXEOBJECT = swmf.o
 # - make SWMFEXE or SWMFLIB
 
 LIB:
-	@cd ${SHAREDIR};     make LIB
-	@cd ${TIMINGDIR};    make LIB
+	@cd ${SHAREDIR};             make LIB
+	@cd ${TIMINGDIR};            make LIB
 	@cd ${DATAREADINDICESDIR};   make LIB
-	@cd ${EMPIRICALIEDIR}; make LIB
-	@cd ${LIBRARYDIR};   make LIB
-	@cd ${COUPLERDIR};   make LIB
-	@cd ${GMDIR};        make LIB	#^CMP IF GM
-	@cd ${IEDIR};        make LIB	#^CMP IF IE
-	@cd ${IHDIR};        make LIB	#^CMP IF IH
-	@cd ${IMDIR};        make LIB	#^CMP IF IM
-	@cd ${PWDIR};        make LIB	#^CMP IF PW
-	@cd ${RBDIR};        make LIB	#^CMP IF RB
-	@cd ${SCDIR};        make LIB   #^CMP IF SC
-	@cd ${SPDIR};        make LIB   #^CMP IF SP
-	@cd ${UADIR};        make LIB	#^CMP IF UA
-	@cd ${PSDIR};        make LIB	#^CMP IF PS
-	@cd ${INTERFACEDIR}; make LIB
+	@cd ${EMPIRICALGMDIR};       make LIB
+	@cd ${EMPIRICALIEDIR};       make LIB
+	@cd ${EMPIRICALUADIR};       make LIB
+	@cd ${LIBRARYDIR};           make LIB
+	@cd ${COUPLERDIR};           make LIB
+	@cd ${GMDIR};                make LIB	#^CMP IF GM
+	@cd ${IEDIR};                make LIB	#^CMP IF IE
+	@cd ${IHDIR};                make LIB	#^CMP IF IH
+	@cd ${IMDIR};                make LIB	#^CMP IF IM
+	@cd ${PWDIR};                make LIB	#^CMP IF PW
+	@cd ${RBDIR};                make LIB	#^CMP IF RB
+	@cd ${SCDIR};                make LIB   #^CMP IF SC
+	@cd ${SPDIR};                make LIB   #^CMP IF SP
+	@cd ${UADIR};                make LIB	#^CMP IF UA
+	@cd ${PSDIR};                make LIB	#^CMP IF PS
+	@cd ${INTERFACEDIR};         make LIB
 	@make DEPEND
 	make ${MY_LIB}
 	@echo
@@ -165,7 +169,9 @@ AR_X = ar -x
 ${SWMFLIB}:	${LIBSHARE} \
 		${LIBTIMING} \
 		${LIBINDICES} \
+		${LIBEMPIRICALGM} \
 		${LIBEMPIRICALIE} \
+		${LIBEMPIRICALUA} \
 		${LIBLIBRARY} \
 		${LIBCOUPLER} \
 		${LIBINTERFACE} \
@@ -184,7 +190,9 @@ ${SWMFLIB}:	${LIBSHARE} \
 	mkdir Tmp_SHARE;       cd Tmp_SHARE;       ${AR_X} ${LIBSHARE}
 	mkdir Tmp_TIMING;      cd Tmp_TIMING;      ${AR_X} ${LIBTIMING} 
 	mkdir Tmp_INDICES;     cd Tmp_INDICES;     ${AR_X} ${LIBINDICES} 
+	mkdir Tmp_EMPIRICALGM; cd Tmp_EMPIRICALGM; ${AR_X} ${LIBEMPIRICALGM} 
 	mkdir Tmp_EMPIRICALIE; cd Tmp_EMPIRICALIE; ${AR_X} ${LIBEMPIRICALIE} 
+	mkdir Tmp_EMPIRICALUA; cd Tmp_EMPIRICALUA; ${AR_X} ${LIBEMPIRICALUA} 
 	mkdir Tmp_LIBRARY;     cd Tmp_LIBRARY;   ${AR_X} ${LIBLIBRARY}
 	mkdir Tmp_COUPLER;     cd Tmp_COUPLER;   ${AR_X} ${LIBCOUPLER}
 	mkdir Tmp_INTERFACE;   cd Tmp_INTERFACE; ${AR_X} ${LIBINTERFACE}
