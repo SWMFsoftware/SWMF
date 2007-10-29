@@ -1,8 +1,0 @@
-To install perl modules, something close to the following commands are required.
-This may need to be run as root to be accessible on your system.
-
-perl Makefile.PL
-make all
-make test
-make install
-
