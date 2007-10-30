@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 
+# (c) Gabor Toth 2007
+
 sub XmlRead{
 
     # The XmlRead function implements an extremely light weight XML reader.
@@ -25,7 +27,8 @@ sub XmlRead{
     # Although this is a recursive definition, the returned tree 
     # always has a finite depth since the input text is of finite length.
 
-    no strict; # because of local
+    use strict;
+    use vars '@Xml'; # because of 'local' that is needed for recursiveness
 
     local($_) = shift;  # XML text
     local(@Xml);        # Array of XML elements
