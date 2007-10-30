@@ -70,16 +70,16 @@ output files. Default value is "IM".
 			</part>
 		</parameter>
 		<parameter name="DnSavePlot" type="integer" min="-1" />
-		<parameter name="DtSavePlot" type="integer" min="-1" />
+		<parameter name="iDtSavePlot" type="integer" min="-1" />
 	</for>
 #SAVEPLOT
 2			nFilesPlot
 2d min idl		StringPlot
 100			DnSavePlot
--1			DtSavePlot [sec]
+-1			iDtSavePlot [sec]
 3d max tec		StringPlot
 -1			DnSavePlot
-60			DtSavePlot [sec]
+60			iDtSavePlot [sec]
 
 Default is nFilesPlot=0. \\
 

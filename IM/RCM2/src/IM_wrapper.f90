@@ -68,7 +68,7 @@ subroutine IM_set_param(CompInfo, TypeAction)
 
               ! Plotting frequency
               call read_var('DnSavePlot',iDnPlot(iFile))
-              call read_var('DtSavePlot',iDtPlot(iFile))
+              call read_var('iDtSavePlot',iDtPlot(iFile))
 
               ! Extract geometry string value:
               if(index(StringPlot,'2d')>0)then
