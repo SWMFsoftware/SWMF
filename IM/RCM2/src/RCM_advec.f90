@@ -489,11 +489,13 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
         iCurrentTime = i_time+idt
         !
         do iFile=1,nFilesPlot
-           IF ( mod(iDtPlot(ifile), iDt) /=0 *idt ) then
-              write(*,*)'iFile, iDtPlot(ifile), iDt=',&
+           IF ( iDtPlot(ifile) > 0 .and. &
+                mod(iDtPlot(ifile), iDt) /= 0 ) then
+              write(*,*)'WARNING in IM/RCM2: iFile, iDtPlot(ifile), iDt=',&
                    iFile, iDtPlot(ifile), iDt
-              call CON_stop('ERROR in IM/RCM2/RCM_advec.f90: '// &
-                   'iDtPlot should be a multiple of iDt')
+              write(*,*)'WARNING: iDtPlot should be a multiple of iDt'
+              iDtPlot(iFile) = iDt * (iDtPlot(iFile) / iDt + 1)
+              write(*,*)'WARNING: iDtPlot is set to ',iDtPlot(iFile)
            end IF
            IF ( iDtPlot(ifile) > 0 .and. &
                 mod(iCurrentTime,     iDtPlot(ifile)) == 0 .or. &
