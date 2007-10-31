@@ -1900,7 +1900,7 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
      ntime,irm,iplsp,iw1,iw2,itype)
 
   use rbe_grid
-  use rbe_cread2,ONLY: js
+  use rbe_cread2,ONLY: js,storm
   use ModIoUnit, ONLY: UnitTmp_
   use ModNumConst, ONLY: pi => cPi
 
