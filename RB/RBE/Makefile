@@ -67,16 +67,13 @@ distclean: clean
 #
 #       Create run directories
 #
-run:
-	make rundir
-
 rundir:
 	mkdir -p ${RUNDIR}/EIE
 	mkdir -p ${RUNDIR}/RB
 	cd ${RUNDIR}/RB; \
-		mkdir restartOUT restartIN;
-	cp ${EMPIRICALIEDIR}/w2k.dat EIE/  ;\
-	cp ../input/rbe_e.fin RB/  ; \
+		mkdir restartOUT restartIN
+	cp ${EMPIRICALIEDIR}/w2k.dat ${RUNDIR}/EIE/
+	cp ${RBDIR}/input/rbe_e.fin ${RUNDIR}/RB/
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR} ; \
 		ln -s ${BINDIR}/rbe.exe .   ; \
