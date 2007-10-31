@@ -82,7 +82,7 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVar, &
   logical :: DoTestTec, DoTestIdl
   logical :: DoTest, DoTestMe
 
-  integer :: iLat,iLon
+  integer :: iLat,iLon,iLine
   !--------------------------------------------------------------------------
 
   if(NameVar /= 'Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:IMF') &
@@ -126,7 +126,18 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVar, &
   call line_get(nVarExtract, nPoint, Buffer_VI, DoSort=.true.)
   
   do iPoint = 1, nPoint
-     BufferLine_VI(1,iPoint) = Buffer_VI(0,iPoint)                 ! line index
+
+     iLine =  Buffer_VI(0,iPoint)     ! line index
+     iLat = mod(iLine, iSizeIn)
+     iLon = iLine/iSizeIn + 1
+
+     ! exclude open field lines by setting impossible line index
+     if(MHD_Xeq(iLat, iLon) == NoValue)then
+        !write(*,*)'!!!iPoint,iSizeIn,iLine,iLat,iLon=',iPoint,iSizeIn,iLine,iLat,iLon
+        iLine = -1
+     endif
+
+     BufferLine_VI(1,iPoint) = iLine
      BufferLine_VI(2,iPoint) = Buffer_VI(1,iPoint)                 ! Length
      BufferLine_VI(3,iPoint) = sqrt(sum(Buffer_VI(2:4,iPoint)**2)) ! |r|
      BufferLine_VI(4,iPoint) = &
