@@ -75,12 +75,12 @@ rundir:
 	mkdir -p ${RUNDIR}/RB
 	cd ${RUNDIR}/RB; \
 		mkdir restartOUT restartIN;
+	cp ${EMPIRICALIEDIR}/w2k.dat EIE/  ;\
+	cp ../input/rbe_e.fin RB/  ; \
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR} ; \
 		ln -s ${BINDIR}/rbe.exe .   ; \
 		cp ../input/2000_223.* RB/ ; \
-		cp ../input/rbe_e.fin RB/  ; \
 		cp ../input/PARAM.in . ; \
-		cp ${EMPIRICALIEDIR}/w2k.dat EIE/  ;\
 		touch core ; chmod 444 core;\
 	fi);
