@@ -826,7 +826,7 @@ the necessary information at the same simulation time.
 
 <command name="SAVERESTART">
 	<parameter name="DoSaveRestart" type="logical" default="T" />
-	<if expr="$SaveRestart">
+	<if expr="$DoSaveRestart">
 		<parameter name="DnSaveRestart" type="integer" min="-1" 
 							default="-1" />
 		<parameter name="DtSaveRestart" type="real"    min="-1" 
