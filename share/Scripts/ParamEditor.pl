@@ -315,28 +315,24 @@ sub _read_input
 
 sub _formvalues
 {
-    if ( $_[0] eq "&" ) { return; }
-    local($_str) = $_[0];
-    local($_var, $_val);
+    return if $_[0] eq '&';
+    my $_str = $_[0];
     $_str =~ s/&/&&/g;
     $_str = "&".$_str."&";
     while ( $_str =~ /&([\w\d]+)=([^&]*)&/g ) {
-        $_var = $1;
-        $_val = $2;
-        push(@FORM, $_var);
+        my $_var = $1;
+	my $_val = &_unhtml($2);
+        push(@FORM, $_var, $_val);
         $FORM{$_var} = $_val;
-    }
-    foreach $_var ( @FORM ) {
-        $FORM{$_var} = &_unhtml($FORM{$_var});
     }
 }
 
 sub _unhtml
 {
-    local($_str);
-    $_str = '';
-    $_[0] =~ s/\+/ /g;
-    foreach $_piece ( split(/(%..)/, $_[0]) ) {
+    my $_str = '';
+    my $_html = $_[0];
+    $_html =~ s/\+/ /g;
+    foreach $_piece ( split(/(%..)/, $_html) ) {
         if ( $_piece =~ /%(..)/ ) {
             $_num = hex($1);
             $_str .= sprintf("%c", $_num);
