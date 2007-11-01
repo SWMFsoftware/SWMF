@@ -32,6 +32,7 @@ sub XmlRead{
 
     local($_) = shift;  # XML text
     local(@Xml);        # Array of XML elements
+    my $KeepSpace = shift;
 
     # Debugging flag
     my $Debug = 0;
@@ -52,6 +53,8 @@ sub XmlRead{
     # Find XML elements <...>
     while( /^([^<]*)</ ){
 	my $text = $1; $_ = $';
+
+	$text =~ s/^\s*$// unless $KeepSpace;
 
 	# Save text before next <
 	if($text){
@@ -111,7 +114,10 @@ sub XmlRead{
 		    return;
 		}
 
-		$ElementRef->{content} = &XmlRead($content) if length $content;
+		$content =~ s/^\s*$// unless $KeepSpace;
+
+		$ElementRef->{content} = &XmlRead($content, $KeepSpace) 
+		    if length $content;
 	    }
 	}else{
 	    warn "$ERROR: incorrect tag at <".substr($_,0,100)."\n";
@@ -120,8 +126,10 @@ sub XmlRead{
 	push(@Xml, $ElementRef);
     }
 
+    s/^\s*$// unless $KeepSpace;
+
     # Check for closing text
-    if( $_ ne "\n" ){
+    if( not /^\n?$/ ){
 	s/\&(\w+);/$unxml{$1}/g;
 	push(@Xml, { 'type' => 't', 'content' => $_ } );
 	warn "final text = $_\n" if $Debug;
