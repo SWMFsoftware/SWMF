@@ -265,16 +265,16 @@ contains
   end subroutine set_auroral_rates
   
   !============================================================================
-  subroutine get_aurora(nAlt,NDensity_CI,Pressure_C)
+  subroutine get_aurora(nAlt,Alt_C,NDensity_CI,Pressure_C)
     use ModCommonPlanet, ONLY:O_,O2_,N2_
     use ModPWOM, ONLY: iLine,ElectronAverageEnergy_C,ElectronEnergyFlux_C
     integer, intent(in)  :: nAlt
-    real,    intent(in)  :: NDensity_CI(nAlt,nSpecies),Pressure_C(nAlt)
+    real,    intent(in)  :: NDensity_CI(nAlt,nSpecies),Alt_C(nAlt),Pressure_C(nAlt)
     real,    allocatable :: temp(:), AuroralBulkIonRate(:), &
                 IonPrecipitationBulkIonRate(:), IonPrecipitationHeatingRate(:)
-    integer :: iLat, iLon, k, n, iED
-    real    :: p, eflx_ergs, av_kev
-    logical :: IsDone
+    integer :: iLat, iLon, k, n, iED, iTop
+    real    :: p, eflx_ergs, av_kev, ScaleHeight = 50.0e5 !50km
+    logical :: IsDone, IsTopFirst, IsTop
     !--------------------------------------------------------------------------
     
     if (.not.allocated(temp))then
@@ -298,12 +298,13 @@ contains
     
     if (eflx_ergs > 0.02) then
        iED = 1
-       
+       IsTopFirst=.true.
        do k = 1, nAlt
           p = alog(Pressure_C(k))
 
           
           IsDone = .false.
+          IsTop  = .false.
           do while (.not.IsDone)
              !write(*,*) k, p, ED_grid(iED)
              if (ED_grid(iED) >= p .and. ED_grid(iED+1) <= p) then
@@ -314,8 +315,13 @@ contains
              else
                 if (iED == ED_N_Alts-1) then
                    IsDone = .true.
+                   if (IsTopFirst) then !save altitude index at top
+                      iTop = k
+                      IsTopFirst=.false.
+                   endif
                    ED_Interpolation_Weight(k) = 1.0
                    ED_Interpolation_Index(k) = ED_N_Alts - 1
+                   IsTop = .true.
                 else
                    iED = iED + 1
                 endif
@@ -327,7 +333,11 @@ contains
                (ED_Ion(n) - ED_Ion(n+1))*ED_Interpolation_Weight(k)
           HeatingRate_C(k) = ED_Heating(n) - &
                (ED_Heating(n)-ED_Heating(n+1))*ED_Interpolation_Weight(k)
-          
+          ! if you are past top of Energy deposition model, drop contributions with scaleheight approx
+          if (IsTop) then
+             AuroralBulkIonRate(k) = AuroralBulkIonRate(k) * exp((Alt_C(iTop) - Alt_C(k))/ScaleHeight)
+             HeatingRate_C(k)      = HeatingRate_C(k)      * exp((Alt_C(iTop) - Alt_C(k))/ScaleHeight)
+          endif
        enddo
     endif
     
