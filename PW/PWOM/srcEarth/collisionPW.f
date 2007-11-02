@@ -3,11 +3,14 @@ CALEX This subroutine calculates the collision frequencies and
 CALEX then calculates the momentum and energy collision terms
       SUBROUTINE COLLIS(N,StateIn_GV)
       use ModCommonVariables
+      use ModAurora,ONLY: get_aurora,HeatingRate_C
+      use ModPWOM  ,ONLY: UseAurora
       
       integer, intent(in) :: N 
       real,    intent(in) :: StateIn_GV(-1:N+2,nVar)
       
       real :: dT_II(nIon,nSpecies),dU2_II(nIon,nSpecies)
+      real :: AuroralHeatCoef
 C     
 C
 C
@@ -232,7 +235,18 @@ CALEX These are the energy collision terms as seen in eq 4.86 in Nagy
      & + dU2_II(Ion1_,jSpecies)
      &  *FricHeatCoef_II(Ion1_,jSpecies)*CollisionFreq_IIC(Ion1_,jSpecies,I)
       enddo
-      Source_CV(I,pO_) =StateIn_GV(I,RhoO_)*Source_CV(I,pO_)
+      AuroralHeatCoefLower = StateIn_GV(I,RhoO_)/Mass_I(Ion1_)**2.0
+     &     +StateIn_GV(I,RhoH_)/Mass_I(Ion2_)**2.0+StateIn_GV(I,RhoHe_)/Mass_I(Ion3_)**2.0
+      if (UseAurora)then
+         AuroralHeatCoef = (StateIn_GV(I,RhoO_)/Mass_I(Ion1_)**2.0)
+     &                     / AuroralHeatCoefLower
+         Source_CV(I,pO_) =
+     &        StateIn_GV(I,RhoO_)*Source_CV(I,pO_)+AuroralHeatCoef*HeatingRate_C(I)
+      else
+         Source_CV(I,pO_) =
+     &        StateIn_GV(I,RhoO_)*Source_CV(I,pO_)
+      endif
+
 
       do jSpecies=1,nSpecies
          if(Ion2_ /= jSpecies) Source_CV(I,pH_) = Source_CV(I,pH_) - dT_II(Ion2_,jSpecies)
@@ -240,7 +254,13 @@ CALEX These are the energy collision terms as seen in eq 4.86 in Nagy
      & + dU2_II(Ion2_,jSpecies)
      &  *FricHeatCoef_II(Ion2_,jSpecies)*CollisionFreq_IIC(Ion2_,jSpecies,I)
       enddo
-      Source_CV(I,pH_) =StateIn_GV(I,RhoH_)*Source_CV(I,pH_)
+      if (UseAurora)then
+         AuroralHeatCoef = (StateIn_GV(I,RhoH_)/Mass_I(Ion2_)**2.0)
+     &        / AuroralHeatCoefLower
+         Source_CV(I,pH_) =StateIn_GV(I,RhoH_)*Source_CV(I,pH_)+AuroralHeatCoef*HeatingRate_C(I) 
+      else
+         Source_CV(I,pH_) =StateIn_GV(I,RhoH_)*Source_CV(I,pH_)
+      endif
 
       do jSpecies=1,nSpecies
          if(Ion3_ /= jSpecies) Source_CV(I,pHe_) = Source_CV(I,pHe_) - dT_II(Ion3_,jSpecies)
@@ -248,7 +268,13 @@ CALEX These are the energy collision terms as seen in eq 4.86 in Nagy
      & + dU2_II(Ion3_,jSpecies)
      &  *FricHeatCoef_II(Ion3_,jSpecies)*CollisionFreq_IIC(Ion3_,jSpecies,I)
       enddo
-      Source_CV(I,pHe_) =StateIn_GV(I,RhoHe_)*Source_CV(I,pHe_)
+      if (UseAurora)then
+         AuroralHeatCoef = (StateIn_GV(I,RhoHe_)/Mass_I(Ion3_)**2.0)
+     &        / AuroralHeatCoefLower 
+         Source_CV(I,pHe_) =StateIn_GV(I,RhoHe_)*Source_CV(I,pHe_)+AuroralHeatCoef*HeatingRate_C(I) 
+      else
+         Source_CV(I,pHe_) =StateIn_GV(I,RhoHe_)*Source_CV(I,pHe_)
+      endif
 
       do jSpecies=1,nSpecies
          if(Ion4_ /= jSpecies) Source_CV(I,pE_) = Source_CV(I,pE_) - dT_II(Ion4_,jSpecies)
@@ -258,6 +284,8 @@ CALEX These are the energy collision terms as seen in eq 4.86 in Nagy
       enddo
       Source_CV(I,pE_) =StateIn_GV(I,RhoE_)*Source_CV(I,pE_)
 
+!      write(*,*) I, (StateIn_GV(I,RhoO_)/Mass_I(Ion1_)**2.0)/ AuroralHeatCoefLower*HeatingRate_C(I), 
+!     &     Source_CV(I,pO_),Source_CV(I,pH_),Source_CV(I,pHe_)
 C
 CALEX calculate heat conductivities
       HeatCon_GI(I,Ion1_)=HLPO*(StateIn_GV(I,RhoO_)/StateIn_GV(I,RhoE_))*StateIn_GV(I,To_)**2.5
