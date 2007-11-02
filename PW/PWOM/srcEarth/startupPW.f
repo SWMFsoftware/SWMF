@@ -257,7 +257,7 @@ C                                                                      C
 
       
       if(UseAurora) then
-         call get_aurora(nDim,NDensity_CI(1:nDim,O_:N2_),
+         call get_aurora(nDim,AltD(1:nDim),NDensity_CI(1:nDim,O_:N2_),
      &        NeutralPressure_C(1:nDim)*0.1)
       endif
       	
