@@ -102,8 +102,7 @@ test_rb_rundir:
 	make rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.RB ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.RB ${TESTDIR}/LAYOUT.in
-	cd ${TESTDIR}/RB/; ln -s ${RBDIR}/input/* .
-	cd ${TESTDIR}/EIE/; ln -s ${EMPIRICALIEDIR}/w2k.dat .
+	cd ${TESTDIR}/RB/; ln -s ${RBDIR}/input/2000_223* .
 
 test_rb_run:
 	cd ${TESTDIR}/RB; rm -f 2000f223_e.fls
