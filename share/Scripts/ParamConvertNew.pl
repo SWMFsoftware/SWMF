@@ -81,9 +81,7 @@ my $CommandExample;# XML description of the command
 my $CommandText;   # Normal text description of the command
 
 my $ItemId;        # Session,section,item index of the edite item/command
-my $iParamValue;   # Index of edited/modified parameter value
 my @ParamValue;    # Parameter values before editing command
-my $ParamValues;   # Parameter values after parsing the XML file
 my $ParamForm;     # FORM used to read the parameters of the edited command
 
 my $CheckResult;   # Result from TestParam.pl script
@@ -757,6 +755,10 @@ $CommandText" if $Debug =~ /read_command_info/;
 
 }
 
+# These variables must be global, because process_element is recursive
+my $iParamValue;   # Index of edited/modified parameter value
+my $ParamName;     # Parameter name
+
 ##############################################################################
 sub process_elements{
 
@@ -772,19 +774,27 @@ sub process_elements{
 	my $if = $element->{attr}{if};
 	next if $if and not &extract($if,"logical");
 	
-	my $name = $element->{"name"};
+	my $name = lc( $element->{"name"} );
 
 	if($name eq 'parameter'){
 
+	    $iParamValue++; # index
+
 	    my $Attrib = $element->{attrib};
 
-	    my $ParamName = &extract($Attrib->{name},"string");
+	    $ParamName    = &extract($Attrib->{name},"string");
 	    my $ParamType = lc($Attrib->{type});
 
 	    # Current value of the parameter from file or use default
-	    my $ParamValue = shift(@ParamValue);
+	    my $ParamValue = $ParamValue[$iParamValue];
 	    $ParamValue = $Attrib->{default} if not length($ParamValue);
-	    $ParamValues .= "$ParamValue\t\t\t$ParamName\n";
+
+	    # Change case if prescribed
+	    my $case = lc($Attrib->{case});
+	    $ParamValue = uc($ParamValue) if $case eq "upper";
+	    $ParamValue = lc($ParamValue) if $case eq "lower";
+
+	    $ParamValue[$iParamValue] = "$ParamValue\t\t\t$ParamName";
 
 	    warn "$ParamName = $ParamValue\n";
 
@@ -792,40 +802,109 @@ sub process_elements{
 	    &eval_comp("\$$ParamName='$ParamValue'");
 
 	    # Add a new row to the table with appropriate input field
-	    $iParamValue++;
 	    my $id = "$ItemId,$iParamValue";
 	    $ParamForm .= "  <TR><TD></TD><TD WIDTH=$LeftColumn2Width>\n";
-	    if($ParamType eq "logical"){
+
+	    if($Attrib->{input} eq "select"){
 		$ParamForm .= 
-"<input id=$id name=$ParamName type=text size=1 value=$ParamValue readonly
+"<SELECT id=$id
+    onChange='select_value(\"$id\", \"$ParamName\", \"$ParamType\")'>
+";	    
+		# Read in options
+		&process_elements($element->{content});
+
+		$ParamForm .= "</SELECT>\n";
+
+	    }elsif($ParamType eq "logical"){
+
+		$ParamValue = "F" unless $ParamValue =~ /^T|F$/;
+
+		$ParamForm .= 
+"<input id=$id type=text size=1 value=$ParamValue readonly
   onClick='set_value(\"$id\", \"$ParamName\", \"$ParamType\")'>
 ";
+
 	    }elsif($ParamType eq "string"){
+
 		my $Length = $Attrib->{length}; 
 		$Length = $CommandEditorWidth 
 		    if not $Length or $Length > $CommandEditorWidth;
 
-		my $case = lc($Attrib->{case});
-		$ParamValue = uc($ParamValue) if $case eq "upper";
-		$ParamValue = lc($ParamValue) if $case eq "lower";
-
 		$ParamForm .= 
-"<input id=$id name=$ParamName type=text size=$CommandEditorWidth value=$ParamValue
+"<input id=$id type=text size=$CommandEditorWidth value=\"$ParamValue\"
   onChange='set_value(\"$id\", \"$ParamName\", \"$ParamType\")'>
 ";
 	    }else{
 		my $Min = &extract($Attrib->{min});
 		my $Max = &extract($Attrib->{max});
-		$ParamForm .= 
-"<input id=$id name=$ParamName type=text size=$CommandEditorWidth value=$ParamValue
+		if($ParamType eq "integer" and length($Min) and length($Max)
+		   and ($Max - $Min) < 61){
+		    $ParamForm .= 
+"<SELECT id=$id
+    onChange='select_value(\"$id\", \"$ParamName\", \"$ParamType\")'>
+";
+		    my $i;
+		    warn "Min=$Min, Max=$Max ParamValue=$ParamValue\n";
+		    for $i ($Min..$Max){
+			warn "i=$i\n";
+			if($i == $ParamValue){
+			    $ParamForm .= "  <OPTION SELECTED>$i\n";
+			}else{
+			    $ParamForm .= "  <OPTION>$i\n";
+			}
+		    }
+		    $ParamForm .= "</SELECT>\n";
+		}else{
+
+		    # Check format here ?
+		    my $NumValue = $ParamValue; $NumValue =~ s/d/e/i;
+		    $NumValue = eval($NumValue) + 0;
+
+		    $ParamValue = $Min if length($Min) and $Min > $ParamValue;
+		    $ParamValue = $Max if length($Max) and $Max < $ParamValue;
+
+		    $ParamValue = int($ParamValue) if $ParamType eq "integer";
+
+		    $ParamValue .= '.0' if $ParamType  eq "real" 
+			and                $ParamValue !~ /\.|\/|e|d/i;
+
+
+		    $ParamForm .= 
+"<input id=$id type=text size=$CommandEditorWidth value=\"$ParamValue\"
   onChange='set_value(\"$id\", \"$ParamName\", \"$ParamType\")'>
 ";
-		$ParamName .= " ($ParamType";
-		$ParamName .= ", min=$Min" if length($Min);
-		$ParamName .= ", max=$Max" if length($Max);
-		$ParamName .= ")";
+		    $ParamName .= " ($ParamType";
+		    $ParamName .= ", min=$Min" if length($Min);
+		    $ParamName .= ", max=$Max" if length($Max);
+		    $ParamName .= ")";
+		}
 	    }
 	    $ParamForm .= "</TD><TD>$ParamName</TD></TR>\n";
+
+	}elsif($name eq 'option'){
+
+            my $Attrib = $element->{attrib};
+	    my $OptionName  = $Attrib->{name};
+	    my $OptionValue = $Attrib->{value};
+	    $OptionValue = $OptionName unless length($OptionValue);
+
+	    my $ParamValue = $ParamValue[$iParamValue]; 
+	    $ParamValue =~ s/\t.*//;
+	    my $Selected;
+
+	    if(length($ParamValue)){
+		$Selected = " SELECTED" if $OptionValue =~ /\b$ParamValue\b/;
+	    }else{
+		$Selected = " SELECTED" 
+		    if &extract($Attrib->{default},"logical");
+	    }
+	    $OptionValue =~ s/\/.*//; # keep first value only
+
+	    $ParamValue[$iParamValue] = "$OptionValue\t\t\t$ParamName"
+		if $Selected;
+
+	    $ParamForm .= 
+		"  <OPTION$Selected VALUE=\"$OptionValue\">$OptionName\n";
 
 	}elsif($name eq 'if'){
 	    
@@ -848,9 +927,9 @@ sub process_elements{
 		&eval_comp("\$$index='$value'");
 		&process_elements($element->{content});
 	    }
-	}
-	elsif($name eq 'foreach')
-	{
+
+	}elsif($name eq 'foreach'){
+
 	    my $index =&extract($element->{attrib}->{name},"string");
 	    my $values=&extract($element->{attrib}->{values},"string");
 	
@@ -870,7 +949,7 @@ sub xml_to_form{
 
     do "Share/Scripts/XmlRead.pl" or return; # XML reader
 
-    my $Param = shift; 
+    my $Param = shift;                       # Body of the command
     $Param =~ s/^\s*//mg;                    # remove leading spaces
     $Param =~ s/\s*(\t|\s\s\s)\s*.*$//mg;    # remove comments
     @ParamValue = split("\n", $Param);       # array of values
@@ -882,7 +961,7 @@ sub xml_to_form{
 
     &process_elements($Xml);
 
-    warn "ParamValues=$ParamValues\n";
+    warn "ParamValues=@ParamValue\n";
     warn "ParamForm=$ParamForm\n";
 }
 
@@ -1205,6 +1284,16 @@ sub write_param_html{
          if(type == 'logical'){
              value = (value == 'T' ? 'F' : 'T');
          }
+         if(type == 'string' && value == ''){
+             value = 'Empty string is not permitted!';             
+         }
+         parent.location.href = 
+           '$IndexPhpFile?action=set_value\&id=' + id
+           + '\&value=' + escape(value) + '\&name=' + name;
+      }
+      function select_value(id, name, type){
+         var select = document.getElementById(id);
+         var value  = select.options[select.selectedIndex].value;
          parent.location.href = 
            '$IndexPhpFile?action=set_value\&id=' + id
            + '\&value=' + escape(value) + '\&name=' + name;
@@ -1414,13 +1503,13 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 		    }elsif($ItemType eq "userinput"){
 			$ItemTail .= ("\n" x 10);
 		    }else{
-			# Create input fields from Xml description 
+			# Command: create input fields from Xml description 
 			# and current parameter values
-			&xml_to_form($ItemTail);
+			&xml_to_form($ItemRef->{BODY});
 
 			# Replace possibly modified parameter values 
 			# after XML description (with defaults) is read
-			$ItemRef->{BODY} = "$ItemHead\n$ParamValues";
+			$ItemRef->{BODY} = join("\n",@ParamValue)."\n";
 		    }
 
 		    $nLine = ($ItemTail =~ s/\n/\n/g) + 2;
@@ -2152,7 +2241,7 @@ sub extract{
     #
     # into $result.
 
-    my $value  = shift; return if length($value) == 0;
+    my $value  = shift; return "" if length($value) == 0;
     my $type   = shift;
 
     my $value_ = $value;
