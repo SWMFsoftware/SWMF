@@ -505,17 +505,7 @@ The time step and physical time to start testing.
 </command>
 
 <command name="TESTVAR">
-	<parameter name="iVarTest" type="integer" input="select">
-		<option name="Rho"   value="1" default="T" />
-		<option name="RhoUx" value="2" />
-		<option name="RhoUy" value="3" />
-		<option name="RhoUz" value="4" />
-		<option name="Bx"    value="5" />
-		<option name="By"    value="6" />
-		<option name="Bz"    value="7" />
-		<option name="e"     value="8" />
-		<option name="p"     value="9" />
-        </parameter>
+	<parameter name="iVarTest" type="integer" min="1" default="1"/>
 #TESTVAR
 1                       iVarTest
 
@@ -924,8 +914,7 @@ Constrained Transport scheme.
 	<foreach name="Side" values=
 	"TypeBcEast,TypeBcWest,TypeBcSouth,TypeBcNorth,TypeBcBot,TypeBcTop">
 		<parameter name="$Side" type="string" input="select">
-			<option name="coupled" />
-			<option name="vary/inflow"
+			<option name="inflow/vary"
 					default="$Side eq 'TypeBcWest'" />
 			<option name="float/outflow"
 					default="$Side ne 'TypeBcWest'" />
@@ -933,13 +922,13 @@ Constrained Transport scheme.
 			<option name="reflect"/>
 			<option name="periodic"/>
 			<option name="fixed"/>
+			<option value="fixedb1" name="fixed B1"/>
 			<option name="shear"/>
 			<option name="linetied"/>
 			<option name="raeder"/>
-			<option name="arcadetop"/>
-			<option name="arcadebot"/>
-			<option name="arcadebotcont"/>
 			<option name="user"/>
+			<option name="coupled" />
+			<option name="ihbuffer" />
 		</parameter>
 	</foreach>
 	<rule
@@ -2206,18 +2195,18 @@ end times should be set for all of them.
 			<part name="plotarea" type="string" input="select"
 								required="T">
 				<option name="3D" value="3d/3d_"/>
-				<option value="x=0" />
-				<option value="y=0" default="T" />
-				<option value="z=0" />
-				<option value="sph" />
-				<option value="los" />
-				<option value="lin" />
-				<option value="cut" />
-				<option value="slc" 
+				<option name="x=0" />
+				<option name="y=0" default="T" />
+				<option name="z=0" />
+				<option name="sph" />
+				<option name="los" />
+				<option name="lin" />
+				<option name="cut" />
+				<option name="slc" 
 					if="$plotform =~ /\btec\b/"/>
-				<option value="dpl" 
+				<option name="dpl" 
 					if="$plotform =~ /\btec\b/"/>
-				<option value="blk" 
+				<option name="blk" 
 					if="$plotform =~ /\btec\b/"/>
 				<option name="1D" value="1d/1d_" 
 					if="$plotform =~ /\btec\b/"/>
@@ -3142,10 +3131,7 @@ Example for InvD2Ray =
 !!!!!!!!!!!!!!!  SCHEME PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="SCHEME">
-	<parameter name="nOrder" type="integer" input="select">
-		<option name="1" />
-		<option name="2" default="T" />
-	</parameter>
+	<parameter name="nOrder" type="integer" min="1" max="2" default="1"/>
 	<parameter name="TypeFlux" type="string" input="select" case="upper">
 	    <option name="Roe"     value="ROE/1"/>       <!--^CFG IF ROEFLUX-->
 	    <option name="RoeOld"  value="ROEOLD/5"/>    <!--^CFG IF ROEFLUX-->
