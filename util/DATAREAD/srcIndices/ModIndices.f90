@@ -33,8 +33,9 @@ Module ModIndices
   integer, parameter :: jh_calc_  = 20
   integer, parameter :: hpi_norm_ = 21
   integer, parameter :: f107a_    = 22
+  integer, parameter :: ap_       = 23
 
-  integer, parameter :: nIndices  = f107a_
+  integer, parameter :: nIndices  = ap_
   integer, parameter :: MaxIndicesEntries = 20000
 
   real, dimension(MaxIndicesEntries, nIndices)           :: Indices_TV

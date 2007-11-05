@@ -930,6 +930,48 @@ subroutine get_kp_wotime(value, iOutputError)
 end subroutine get_kp_wotime
 
 !------------------------------------------------------------------------------
+! ap
+!------------------------------------------------------------------------------
+
+subroutine get_ap_wtime(TimeIn, value, iOutputError)
+
+  use ModKind
+  use ModIndices
+
+  implicit none
+
+  real (Real8_), intent(in) :: TimeIn
+  real, intent(out)               :: value
+  integer, intent(out)            :: iOutputError
+
+  call get_index(ap_, TimeIn, value, iOutputError)
+
+end subroutine get_ap_wtime
+
+subroutine get_ap_wotime(value, iOutputError)
+
+  use ModKind
+  use ModIndices
+
+  implicit none
+
+  real, intent(out)    :: value
+  integer, intent(out) :: iOutputError
+
+  iOutputError = 0
+
+  if (SavedTime < 0.0) then
+     value = -1.0e32
+     iOutputError = 3
+     return
+  else
+     value = SavedIndices_V(ap_)
+     iOutputError = SavedErrors_V(ap_)
+  endif
+  
+end subroutine get_ap_wotime
+
+!------------------------------------------------------------------------------
 ! Auroral Indices
 !------------------------------------------------------------------------------
 

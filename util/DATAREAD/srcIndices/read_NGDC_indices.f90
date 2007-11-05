@@ -56,6 +56,11 @@ subroutine read_NGDC_Indices(iOutputError)
         call Insert_into_Indices_Array(tmp, kp_)
      endif
 
+     if(index(line,'#Element: ap')>0)then
+        call read_values
+        call Insert_into_Indices_Array(tmp, ap_)
+     endif
+
      if(index(line,'#Element: bx')>0)then
         read(LunIndices_,'(a)', iostat = ierror ) line
         if(index(line,'#Table: IMFMin')>0)then

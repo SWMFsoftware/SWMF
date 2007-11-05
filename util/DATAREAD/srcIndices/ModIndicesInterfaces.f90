@@ -225,6 +225,23 @@ Module ModIndicesInterfaces
   end interface
 
   !\
+  ! ap
+  !/
+
+  interface get_ap
+     subroutine get_ap_wtime(TimeIn, value, iOutputError)
+       use ModKind
+       real (Real8_)  :: TimeIn
+       real, intent(out)    :: value
+       integer, intent(out) :: iOutputError
+     end subroutine get_ap_wtime
+     subroutine get_ap_wotime(value, iOutputError)
+       real, intent(out)    :: value
+       integer, intent(out) :: iOutputError
+     end subroutine get_ap_wotime
+  end interface
+
+  !\
   ! Auroral Indices
   !/
 

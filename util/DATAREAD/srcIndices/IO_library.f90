@@ -104,3 +104,17 @@ subroutine IO_set_kp_single(kpIn)
 end subroutine IO_set_kp_single
 
 
+! ---------------------------------------------------
+
+subroutine IO_set_ap_single(apIn)
+
+  use ModIndices
+  implicit none
+  real, intent(in) :: apIn
+
+  nIndices_V(ap_) = 1
+  Indices_TV(1,ap_) = apIn
+
+end subroutine IO_set_ap_single
+
+
