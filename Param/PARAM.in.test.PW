@@ -14,11 +14,11 @@ T                       DoSaveRestart
 50.0		        DtSaveRestart
 
 #STARTTIME
-2000			iYear
-3			iMonth
-21			iDay
-10			iHour
-45			iMinute
+1976			iYear
+6			iMonth
+28			iDay
+0			iHour
+0			iMinute
 0			iSecond
 0.0			FracSecond
 
@@ -32,6 +32,7 @@ F			UseRotation
 
 #ROTATION
 F               IsCentrifugal
+
 #FIELDLINE
 4		nTotalLine
 
