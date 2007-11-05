@@ -140,6 +140,7 @@ subroutine PW_set_parameters(NameAction)
         call IO_set_hpi_single(HPI)
         
      case ("#NOAAHPI_INDICES")
+        cLine = NameAction
         cTempLines(1) = cLine
         call read_var('NameHpiFile',cTempLine)
         cTempLines(2) = cTempLine
@@ -147,11 +148,25 @@ subroutine PW_set_parameters(NameAction)
         cTempLines(4) = "#END"
         call IO_set_inputs(cTempLines)
         call read_NOAAHPI_Indices(iError)
+
+     case ("#NGDC_INDICES")
+        cTempLines(1) = "#NGDC_INDICES"
+        call read_var('NameNgdcFile',cTempLine)
+        cTempLines(2) = cTempLine
+        cTempLines(3) = " "
+        cTempLines(4) = "#END"
         
+        call IO_set_inputs(cTempLines)
+        call read_NGDC_Indices(iError)
+        UseIndicies = .true.
+    
+        if (iError /= 0) then
+           write(*,*) "PW_ERROR: read indices was NOT successful"
+        endif
         
      endselect
   enddo
   
-
+  
 end subroutine PW_set_parameters
 
