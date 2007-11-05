@@ -6,6 +6,7 @@ module ModPWOM
 
   logical :: IsStandAlone = .false.
   logical :: UseIonHeat=.true.,UseEleHeat=.true.,UseExplicitHeat=.false.
+  logical :: UseIndicies
   integer :: iUnitOut
   character (len=7) :: StringPrefix=''
 
