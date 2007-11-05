@@ -13,9 +13,12 @@ C
       use ModGlow, ONLY: get_ionization
 C
       use ModConst ,ONLY: cBoltzmann
-      use ModPWOM  ,ONLY: UseAurora
+      use ModPWOM  ,ONLY: UseAurora,UseIndicies
       use ModAurora,ONLY: get_aurora,AuroralIonRateO_C
+      use ModPwTime,ONLY: CurrentTime,StartTime
+      use ModIndicesInterfaces
 C     
+      CurrentTime=StartTime+Time
       NPT1=14
       NPT2=16
       NPT3=30
@@ -239,6 +242,67 @@ C END
 c      AP(I)=50.
          AP(I)=4.  
 49    CONTINUE 
+
+!     if UseIndicies = T then fill AP array appropriatly 
+      if (UseIndicies) then
+         AP(:) = 0.0
+!     (1) DAILY AP
+         do iHour =-12,12
+            TempTime = real(iHour)*3600.0 + CurrentTime
+            call get_ap(TempTime, TempAp, iError)
+            AP(1) = AP(1) + TempAp
+         enddo
+         AP(1) = AP(1)/25.0
+!     (2) 3 HR AP INDEX FOR CURRENT TIME
+         do iHour =-1,1
+            TempTime = real(iHour)*3600.0 + CurrentTime
+            call get_ap(TempTime, TempAp, iError)
+            AP(2) = AP(2) + TempAp
+         enddo
+         AP(2) = AP(2)/3.0
+!     (3) 3 HR AP INDEX FOR 3 HRS BEFORE CURRENT TIME
+          do iHour =-4,-2
+            TempTime = real(iHour)*3600.0 + CurrentTime
+            call get_ap(TempTime, TempAp, iError)
+            AP(3) = AP(3) + TempAp
+         enddo
+         AP(3) = AP(3)/3.0
+!     (4) 3 HR AP INDEX FOR 6 HRS BEFORE CURRENT TIME
+         do iHour =-7,-5
+            TempTime = real(iHour)*3600.0 + CurrentTime
+            call get_ap(TempTime, TempAp, iError)
+            AP(4) = AP(4) + TempAp
+         enddo
+         AP(4) = AP(4)/3.0
+!     (5) 3 HR AP INDEX FOR 9 HRS BEFORE CURRENT TIME
+         do iHour =-10,-8
+            TempTime = real(iHour)*3600.0 + CurrentTime
+            call get_ap(TempTime, TempAp, iError)
+            AP(5) = AP(5) + TempAp
+         enddo
+         AP(5) = AP(5)/3.0
+!             (6) AVERAGE OF EIGHT 3 HR AP INDICIES FROM 12 TO 33 HRS PRIOR
+!                    TO CURRENT TIME
+         do iHour =-35,-12
+            TempTime = real(iHour)*3600.0 + CurrentTime
+            call get_ap(TempTime, TempAp, iError)
+            AP(6) = AP(6) + TempAp
+         enddo
+         AP(6) = AP(6)/24.0
+!             (7) AVERAGE OF EIGHT 3 HR AP INDICIES FROM 36 TO 59 HRS PRIOR
+!                    TO CURRENT TIME
+         do iHour =-59,-36
+            TempTime = real(iHour)*3600.0 + CurrentTime
+            call get_ap(TempTime, TempAp, iError)
+            AP(7) = AP(7) + TempAp
+         enddo
+         AP(7) = AP(7)/24.0
+!     check for errors when reading ap
+         if (iError /= 0) then
+            write(*,*) 'PW_ERROR: get_ap failed in get_weimer_potential'
+            call con_stop()
+         endif              
+      endif
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC 
 C                                                                      C
       cBoltzmannCGS = 1.0e7*cBoltzmann
