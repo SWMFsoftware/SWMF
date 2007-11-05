@@ -73,8 +73,10 @@ end subroutine PW_set_param
 
 subroutine PW_init_session(iSession, TimeSimulation)
   use ModPWOM, ONLY: UseIE
+  use ModPwTime
+  use ModTimeConvert, ONLY: time_real_to_int
   use CON_coupler, ONLY: Couple_CC, IE_, PW_
-  
+  use CON_physics, ONLY: get_time
   implicit none
 
   !INPUT PARAMETERS:
@@ -87,7 +89,14 @@ subroutine PW_init_session(iSession, TimeSimulation)
   !----------------------------------------------------------------------------
   UseIE = Couple_CC(IE_, PW_) % DoThis
   
-  if(DoInitialize) call PW_initialize
+  if(DoInitialize) then
+     ! Set time related variables for UA 
+     call get_time(tStartOut = StartTime)
+     CurrentTime = StartTime + TimeSimulation
+     call time_real_to_int(StartTime, iStartTime)
+     ! Initialize PW
+     call PW_initialize
+  endif
   DoInitialize = .false.
 
 end subroutine PW_init_session
