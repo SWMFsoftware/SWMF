@@ -112,7 +112,7 @@ test_rb_check:
 	gunzip -c ${RBDIR}/output/2000f223_e.fls.gz \
 		> ${TESTDIR}/2000f223_e.fls.ref
 	${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
-		${TESTDIR}/RB/2000f223_e.fls ${TESTDIR}/2000f223_e.fls.ref \
+		${TESTDIR}/RB/plots/2000f223_e.fls ${TESTDIR}/2000f223_e.fls.ref \
 		> test_rb.diff
 	ls -l test_rb.diff
 

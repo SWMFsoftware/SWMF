@@ -50,7 +50,7 @@ test_run:
 test_check:
 	gunzip -c output/2000f223_e.fls.standalone.gz > ${TESTDIR}/RB/2000f223_e.fls.ref
 	${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
-		${TESTDIR}/RB/2000f223_e.fls ${TESTDIR}/RB/2000f223_e.fls.ref \
+		${TESTDIR}/RB/plots/2000f223_e.fls ${TESTDIR}/RB/2000f223_e.fls.ref \
 		> test.diff
 	ls -l test.diff
 
@@ -71,7 +71,7 @@ rundir:
 	mkdir -p ${RUNDIR}/EIE
 	mkdir -p ${RUNDIR}/RB
 	cd ${RUNDIR}/RB; \
-		mkdir restartOUT restartIN
+		mkdir restartOUT restartIN plots
 	cp ${EMPIRICALIEDIR}/w2k.dat ${RUNDIR}/EIE/
 	cp ${RBDIR}/input/rbe_e.fin ${RUNDIR}/RB/
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
