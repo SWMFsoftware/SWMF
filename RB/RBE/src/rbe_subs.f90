@@ -1947,9 +1947,8 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
         return
      endif
   else                                                  ! in pbo_2.f
-!     open(unit=UnitTmp_,file='RB/plots/'//outname//st2//'.fls',status='old',position='append')
-     open(unit=UnitTmp_,file='RB/plots/'//outname//st2//'.fls',status='unknown')
-     !        open(unit=13,file=outname//st2//'.psd',status='old',position='append')
+     open(unit=UnitTmp_,file='RB/plots/'//outname//st2//'.fls',status='old',position='append')
+      !        open(unit=13,file=outname//st2//'.psd',status='old',position='append')
   endif
 
   ! Convert f2 to f (differential flux)
