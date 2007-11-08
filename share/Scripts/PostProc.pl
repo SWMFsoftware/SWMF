@@ -56,6 +56,7 @@ my %PlotDir = (
     "IH"     => "IH/IO2",
     "IM"     => "IM/plots",
     "PW"     => "PW/plots",
+    "RB"     => "RB/plots",
     "SC"     => "SC/IO2",
     "UA"     => "UA/Output,UA/data",
     "STDOUT" => "STDOUT",
@@ -113,6 +114,11 @@ REPEAT:{
 	}elsif( $Dir =~ /^PW/ ){
 	    if($Gzip){
 		my @files=glob("plots/*.out");
+		&shell("gzip",@files) if @files;
+	    }
+	}elsif( $Dir =~ /^RB/ ){
+	    if($Gzip){
+		my @files=glob("plots/*.fls");
 		&shell("gzip",@files) if @files;
 	    }
 	}
