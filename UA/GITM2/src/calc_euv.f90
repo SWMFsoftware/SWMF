@@ -544,48 +544,66 @@ subroutine Set_Euv(iError)
   implicit none
 
   integer, intent(out)  :: iError
-  
-  character (len=iCharLen_)               :: line
+
+  character    (len=20)                           :: line, cline
+  character    (len=20)                           :: cEUVText(10000)
+
   integer, dimension(7)                   :: TimeOfFlare,TimeArray
   real, dimension(6+Num_Wavelengths_High) :: temp
   
   logical :: NotDone = .true.
-  integer ::  i, iline, ioerror
+  integer ::  i, iline, ioerror, nline, nILine = 1
 
   open(unit = iInputUnit_, file=cEUVFile, IOSTAT = iError)
-  do while (NotDone) 
-     read(iInputUnit_,*) line
 
-     if (line .eq. '#FLARES') then 
-        read(iInputUnit_,*) nFlares
-        do i = 1, nFlares 
-           read(iInputUnit_,*) TimeOfFlare(1:6)
-           TimeOfFlare(7) = 0
-           call time_int_to_real(TimeOfFlare,FlareTimes(i))
-        enddo
-     endif
+  iline = 1
+
+  do while (NotDone)
+     read(iInputUnit_,'(a)',iostat=iError) cLine
+
+     if (cline(1:1) .eq. '#') then 
+
+        ! Remove anything after a space or TAB                                            
+        i=index(cLine,' '); if(i>0)cLine(i:len(cLine))=' '
+        i=index(cLine,char(9)); if(i>0)cLine(i:len(cLine))=' '
+        
+        select case (cLine)
+           
+        case("#FLARES")
+           read(iInputUnit_,*) nFlares
+           do i = 1, nFlares 
+              read(iInputUnit_,*) TimeOfFlare(1:6)
+              TimeOfFlare(7) = 0
+              call time_int_to_real(TimeOfFlare,FlareTimes(i))
+           enddo
+           
+        case('#START')  
+           NotDone = .false.
+           
+        end select
+     end if
      
-     if (line .eq. '#START')  NotDone = .false.
+     iline = iline + 1
      
   enddo
 
-  iline = 1
-  ioerror = 0
   TimeSee(:) = 0
-  read(iInputUnit_,*,IOSTAT = ioerror) temp
-  do while (ioerror == 0) 
+  iline = 1
+  read(iInputUnit_,*,iostat=iError) temp
+
+  do while (iError .eq. 0)
      
      TimeArray(1:6) = temp(1:6)
      TimeArray(7) = 0
-     call time_int_to_real(TimeArray,TimeSee(iLine))
+     call time_int_to_real(TimeArray,TimeSee(nLine))
      SeeFlux(:,iline) = temp(7:6+Num_WaveLengths_High)
      iline = iline + 1
-     read(iInputUnit_,*,IOSTAT = ioerror) temp
- 
-  enddo
-  close(iInputUnit_)
 
-  nSeeTimes = iline - 1
+     read(iInputUnit_,*,iostat=iError) temp
+  enddo
+
+  close(iInputUnit_)
+  nSeeTimes = iline 
     
 end subroutine Set_Euv
 
