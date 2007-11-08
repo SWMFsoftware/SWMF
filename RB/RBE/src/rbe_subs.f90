@@ -1928,7 +1928,7 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
   iwh=ifix(0.5*(iw+1))
   ikh=ifix(0.5*(ik+1))
   if (t.eq.tstart) then
-     open(unit=UnitTmp_,file='RB/'//outname//st2//'.fls',status='unknown')
+     open(unit=UnitTmp_,file='RB/plots/'//outname//st2//'.fls',status='unknown')
      !        open(unit=13,file=outname//st2//'.psd',status='unknown')
      write(UnitTmp_,'(f10.5,5i6,"         ! rc(Re),ir,ip,je,ig,ntime")')&
           rc,ir,ip,je,ig,ntime
@@ -1947,7 +1947,8 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
         return
      endif
   else                                                  ! in pbo_2.f
-     open(unit=UnitTmp_,file='RB/'//outname//st2//'.fls',status='old',position='append')
+!     open(unit=UnitTmp_,file='RB/plots/'//outname//st2//'.fls',status='old',position='append')
+     open(unit=UnitTmp_,file='RB/plots/'//outname//st2//'.fls',status='unknown')
      !        open(unit=13,file=outname//st2//'.psd',status='old',position='append')
   endif
 
