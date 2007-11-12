@@ -1114,11 +1114,10 @@ The #GRID command should be used before the #SAVEPLOT command.
 
 <command name="COORDSYSTEM" alias="COORDINATESYSTEM" multiple="T">
 	<parameter name="TypeCoordSystem" type="string" input="select">
-		<option name="GSM" default="T"	if="$_NameComp eq 'GM'"/>
-		<option name="HGI" default="T"	if="$_NameComp eq 'IH'"/>
-		<option name="HGC" 		if="$_NameComp eq 'IH'"/>
-		<option name="HGR" default="T"	if="$_NameComp eq 'SC'"/>
-		<option name="HGI" 		if="$_NameComp eq 'SC'"/>
+		<option name="GSM" default="$_NameComp eq 'GM'"/>
+		<option name="HGR" default="$_NameComp eq 'SC'"/>
+		<option name="HGI" default="$_NameComp eq 'IH'"/>
+		<option name="HGC" 		               />
 	</parameter>
 
 #COORDSYSTEM
