@@ -758,17 +758,21 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
            ! Crossing the magnetic equator in opposite direction is not accepted !!!
 if(DipoleStrength*(iRay-1.5)<0)then
    if(xx_ini(3) <= 0 .and. xx(3) >= 0)then
-      ! This write is necessary to avoid incorrect optimization by the ifort 8.070 compiler
-      if(oktest_ray)write(*,*)'!!! TOP: DipoleStrength, iRay, xx_ini, xx, iStart_D=', &
-           DipoleStrength, iRay, xx_ini, xx, iStart_D
+      
+      ! This write is necessary to avoid incorrect 
+      ! optimization by the ifort 8.070 compiler
+      write(*,'(a)',ADVANCE='NO') ''
+      
       iFace = ray_loop_
       EXIT FOLLOW
    end if
 else
    if(xx_ini(3) >= 0 .and. xx(3) <= 0)then
-      ! This write is necessary to avoid incorrect optimization by the ifort 8.070 compiler
-      if(oktest_ray)write(*,*)'!!! BOT: DipoleStrength, iRay, xx_ini(3), xx(3), iStart_D=', &
-           DipoleStrength, iRay, xx_ini(3), xx(3), iStart_D
+      
+      ! This write is necessary to avoid incorrect
+      ! optimization by the ifort 8.070 compiler
+      write(*,'(a)',ADVANCE='NO') ''
+
       iFace = ray_loop_
       EXIT FOLLOW
    end if
