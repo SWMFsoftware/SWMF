@@ -182,6 +182,8 @@
       npict1=1
    endelse
 
+
+   if savemovie ne 'n' then spawn,'mkdir -p Movie'
    if savemovie eq 'ps' then set_plot,'PS',/INTERPOLATE
 
    doanimate= npict gt npict1 and !d.name eq 'X'
