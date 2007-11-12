@@ -755,28 +755,30 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
         ! Check if we have crossed the magnetic equator in the SM frame
         if(xx(3)*xx_ini(3)<=0)then
 
-           ! Crossing the magnetic equator in opposite direction is not accepted !!!
-if(DipoleStrength*(iRay-1.5)<0)then
-   if(xx_ini(3) <= 0 .and. xx(3) >= 0)then
-      
-      ! This write is necessary to avoid incorrect 
-      ! optimization by the ifort 8.070 compiler
-      write(*,'(a)',ADVANCE='NO') ''
-      
-      iFace = ray_loop_
-      EXIT FOLLOW
-   end if
-else
-   if(xx_ini(3) >= 0 .and. xx(3) <= 0)then
-      
-      ! This write is necessary to avoid incorrect
-      ! optimization by the ifort 8.070 compiler
-      write(*,'(a)',ADVANCE='NO') ''
+           ! Crossing the magnetic equator in opposite direction 
+           ! is not accepted !!!
 
-      iFace = ray_loop_
-      EXIT FOLLOW
-   end if
-end if
+           if(DipoleStrength*(iRay-1.5)<0)then
+              if(xx_ini(3) <= 0 .and. xx(3) >= 0)then
+                 
+                 ! This write is necessary to avoid incorrect 
+                 ! optimization by the ifort 8.070 compiler
+                 write(*,'(a)',ADVANCE='NO') ''
+      
+                 iFace = ray_loop_
+                 EXIT FOLLOW
+              end if
+           else
+              if(xx_ini(3) >= 0 .and. xx(3) <= 0)then
+      
+                 ! This write is necessary to avoid incorrect
+                 ! optimization by the ifort 8.070 compiler
+                 write(*,'(a)',ADVANCE='NO') ''
+
+                 iFace = ray_loop_
+                 EXIT FOLLOW
+              end if
+           end if
 
            ! Interpolate x and y
            dz1 = abs(xx_ini(3))/(abs(xx(3))+abs(xx_ini(3))); dz2 = 1.0 - dz1
