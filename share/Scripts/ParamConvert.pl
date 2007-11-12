@@ -56,7 +56,8 @@ our $SectionBgColor   ='#CCCCCC';  # background color for section markers
 our $SectionLine ='<HR COLOR=GREY NOSHADE SIZE=2>'; # section separator line
 our $SectionColumn1Width=8      ;  # The space before the section marker
 our $ItemEditorBgColor='#BBEEFF';  # background color command/comment editor
-our $ItemEditorWidth  =60;         # width (chars) for command/comment editor
+our $ItemEditorWidth  =60;         # width (chars) for comment/userinput editor
+our $CommandEditorWidth=40;        # width (chars) for command editor
 our $CommandBgColor   ='#CCCCCC';  # background color for commands
 our $ParameterBgColor ='#CCCCCC';  # background color for command parameters
 our $CommentBgColor   ='#DDDDDD';  # background color for comments
@@ -78,6 +79,11 @@ my %Clipboard;     # Hash for the clipboard
 my $CommandXml;    # XML description of the command
 my $CommandExample;# XML description of the command
 my $CommandText;   # Normal text description of the command
+
+my $ItemId;        # Session,section,item index of the edite item/command
+my %ParamValue;    # Hash of parameter values for the edited command
+my $ParamValues;   # The string of ordered parameter values
+my $ParamForm;     # FORM used to read the parameters of the edited command
 
 my $CheckResult;   # Result from TestParam.pl script
 
@@ -243,7 +249,7 @@ sub modify_xml_data{
 
     my %Form;
     %Form = split (/[:;]/, $Submit);
-    warn "Submit=$Submit\n" if $DoDebug;
+    warn "Submit=$Submit\n"    if $DoDebug;
     warn join(', ',%Form),"\n" if $DoDebug;
 
     if($_ = $Form{submit}){
@@ -423,10 +429,15 @@ sub modify_xml_data{
 	}
 	
 	# The following actions
-	my $iSession;
-	my $iSection;
-	my $iItem;
-	($iSession,$iSection,$iItem) = split(/,/,$id);
+	my $iSession;  # index of session
+	my $iSection;  # index of section in this session
+	my $iItem;     # index of command/comment in this section
+	my $iParam;    # index of parameter for this command
+	my $iPart;     # index of parameter part for this parameter
+	($iSession,$iSection,$iItem,$iParam,$iPart) = split(/,/,$id);
+
+	$id =~ s/,\d+$// if $iParam; # remove parameter index
+	$id =~ s/,\d+$// if $iPart;  # remove part index
 	
 	my $SessionRef = $SessionRef[$iSession];
 	my $NameSession= $SessionRef->{NAME};
@@ -456,6 +467,9 @@ sub modify_xml_data{
 	    $SessionRef->{VIEW}="EDIT";
 	}elsif( /edit_item/ ){
 	    $ItemRef->{VIEW}="EDIT";
+	    $Clipboard{BODY}    = $ItemRef->{BODY};
+	    $Clipboard{TYPE}    = "COMMAND";
+	    $Clipboard{SECTION} = $NameSection;
 	    # Set the insert item to the edited command so the manual shows up
 	    ($Editor{INSERT}) = split("\n", $ItemRef->{BODY}) if 
 		$ItemRef->{TYPE} eq "COMMAND";
@@ -546,7 +560,7 @@ sub modify_xml_data{
 	    }elsif($Editor{INSERT} =~ /^\#/){
 		$NewItemRef->{TYPE} = "COMMAND";
 		$NewItemRef->{VIEW} = "EDIT";
-		$NewItemRef->{BODY} = "CommandExample\n";
+		$NewItemRef->{BODY} = "$Editor{INSERT}\n";
 	    }else{
 		# invalid choice like "COMMANDS BY GROUP";
 		return;
@@ -556,7 +570,28 @@ sub modify_xml_data{
 	    }else{
 		$SectionRef->{ITEM}[1] = $NewItemRef;
 	    }
-	}elsif( /Save command|Save userinput|Save comment/ ){
+	}elsif( /set_value/ ){
+	    # warn "set_value, iParam=$iParam, iPart=$iPart\n";
+	    my @Body; @Body = split(/\n/,$ItemRef->{BODY});
+
+	    # warn "set_value old line = $Body[$iParam]\n";
+
+	    if($iPart){
+		my $Line = $Body[$iParam];
+		$Line =~ s/(\t|   ).*//;    # delete comments
+		my @Part; @Part = split(' ', $Line);
+		$Part[$iPart-1] = $Form{value};
+		$Body[$iParam]  = join(' ',@Part)."\t\t\t$Form{name}";
+	    }else{
+		$Body[$iParam] = "$Form{value}\t\t\t$Form{name}";
+	    }
+	    # warn "set_value new line = $Body[$iParam]";
+	    $ItemRef->{BODY} = join("\n",@Body)."\n";
+	}elsif( /RESET/ ){
+	    $ItemRef->{BODY}=$Clipboard{BODY};
+	}elsif( /DONE/ ){
+	    $ItemRef->{VIEW}="MAX";
+	}elsif( /Save userinput|Save comment|Save command/ ){
 	    $ItemRef->{VIEW}="MAX";
 	    $Form{text} =~ s/^\s*//;        # remove leading space
 	    $Form{text} =~ s/[ \t]+\n/\n/g; # clean up line endings
@@ -565,7 +600,6 @@ sub modify_xml_data{
 		# Keep first line (name of command), and set the rest
 		$ItemRef->{BODY} =~ /\n/;
 		$ItemRef->{BODY} = $`."\n".$Form{text};
-
 	    }elsif(/Save comment/){
 		$ItemRef->{BODY} = $Form{text};
 		$ItemRef->{BODY} = "no comment\n" 
@@ -675,15 +709,17 @@ sub command_list{
     open(FILE, $ParamXml) or return ": no $ParamXml\n";
 
     my $CommandList;
-    my $Command = $Editor{INSERT};
+    my $Command = $Editor{INSERT}; $Command =~ s/^\#//;
 
     if($Editor{ABC}){
 	# Read commands and sort them alphabetically
 	my @Command;
-	while($_=<FILE>){
-	    if(/^<command\s+name=\"([^\"]+)\"/){
-		push(@Command,$1);
-		&read_command_info if "\#$1" eq $Command;
+	while($_ = <FILE>){
+	    if(/^<command\s+name=\"(.*?)\"/){
+		my $Name = $1;
+		my @Alias; @Alias = split(/,/,$1) if /alias=\"(.*?)\"/;
+		push(@Command,$Name,@Alias);
+		&read_command_info if grep /^$Command$/, ($Name,@Alias);
 	    }
 	}
 	$CommandList = 
@@ -692,8 +728,10 @@ sub command_list{
 	# Read commands and command groups and form OPTIONs and OPTGROUPs
 	while($_=<FILE>){
 	    if(/^<command\s+name=\"([^\"]+)\"/){
-		$CommandList .= "    <OPTION>\#$1\n";
-		&read_command_info if "\#$1" eq $Command;
+		my $Name = $1;
+		my @Alias; @Alias = split(/,/,$1) if /alias=\"(.*?)\"/;
+		$CommandList .= "    <OPTION>\#$_\n" foreach ($Name, @Alias);
+		&read_command_info if grep /^$Command$/, ($Name,@Alias);
 	    }
 	    $CommandList .= 
 		"    </OPTGROUP>\n".
@@ -737,6 +775,309 @@ $CommandText" if $Debug =~ /read_command_info/;
 
 }
 
+# These variables must be global, because process_element is recursive
+my $iLoop;        # Index within an (outermost) for loop
+my $iParameter;   # Index of edited/modified parameter value
+my $iPart;        # Index of edited parameter part
+my $ParamName;    # Parameter name
+my @Part;         # Values of concatenated parameter parts
+
+##############################################################################
+sub process_elements{
+
+    # recursive subroutine that processes the XML description of the command
+    # together with the current parameter values
+
+    my $content = shift;
+    foreach my $element (@$content){
+
+	next if $element->{type} eq 't'; # Ignore text (if any)
+
+	# Check if the element should be skipped due to false 'if' attribute
+	my $if = $element->{attrib}{if};
+
+	#warn "tail if = $if\n" if $if;
+
+	next if $if and not &extract($if,"logical");
+	
+	my $name = lc( $element->{"name"} );
+
+	if($name eq 'parameter' or $name eq 'part'){
+
+	    my $Attrib = $element->{attrib};
+	    my $Name   = &extract($Attrib->{name},"string");
+
+	    if($name eq 'part'){
+		$iPart++;
+	    }else{
+		$iParameter++; 
+		$ParamName = $Name;
+		$iPart = 0; @Part = ();
+		$ParamForm .= "  <TR><TD></TD><TD WIDTH=$LeftColumn2Width>\n";
+	    }
+
+	    my $ParamType = lc($Attrib->{type});
+	    my $ParamDescription = $ParamType; # description shown after name
+
+	    # Current value of the parameter
+	    my $Value = $ParamValue{$Name}[$iLoop];
+
+	    if($ParamType eq "strings"){
+		# Process parts of type "strings" to values
+		@Part     = split(' ',$Value);
+
+		# warn "Value = $Value Part=@Part\n";
+
+		# Repeat last part if necessary
+		my $Max   = &extract($Attrib->{max}, 'integer');
+		my $iLast = $#{ $element->{content} };
+		my $i;
+		for $i ($iLast+1 .. $Max-1){
+		    $element->{content}[$i] = $element->{content}[$iLast];
+		}
+		&process_elements($element->{content});
+		$iPart = 0;
+		$Value = join(' ',@Part);
+	    }elsif($iPart){
+                # Within the particular part the value is stored in @Part
+		$Value = $Part[$iPart-1];
+	    }
+	    # Change case if prescribed
+	    my $case;
+	    if($case = $Attrib->{case}){
+		$Value = uc($Value) if $case eq "upper";
+		$Value = lc($Value) if $case eq "lower";
+	    }
+
+	    # Set default value no value has been set
+	    $Value = $Attrib->{default} if not length($Value);
+
+	    # Set the parameter/part identifyer
+	    my $id = "$ItemId,$iParameter"; $id .= ",$iPart" if $iPart;
+
+	    # Add a new row to the table with appropriate input field
+	    if($Attrib->{input} eq "select"){
+		$ParamForm .= 
+"<SELECT id=$id TITLE=\"$Name\"
+    onChange='select_value(\"$id\", \"$ParamName\", \"$ParamType\")'>
+";	    
+
+		$ParamForm .= "  <OPTION VALUE=\" \">\n"
+		    if $iPart and not &extract($Attrib->{required},'logical');
+
+		# Read in options
+		&process_elements($element->{content});
+
+		$ParamForm .= "</SELECT>\n";
+
+	    }elsif($ParamType eq "logical"){
+
+		$Value = "F" unless $Value =~ /^T|F$/;
+
+		$ParamForm .= 
+"<input id=$id type=text size=1 value=$Value readonly
+  onClick='set_value(\"$id\", \"$ParamName\", \"$ParamType\")'>
+";
+
+	    }elsif($ParamType eq "string"){
+
+		my $Length = $Attrib->{length}; 
+		$Length = $CommandEditorWidth 
+		    if not $Length or $Length > $CommandEditorWidth;
+
+		$ParamForm .= 
+"<input id=$id type=text size=$CommandEditorWidth value=\"$Value\"
+  onChange='set_value(\"$id\", \"$ParamName\", \"$ParamType\")'>
+";
+	    }elsif($ParamType eq 'integer' or $ParamType eq 'real'){
+		my $Min = &extract($Attrib->{min}, $ParamType);
+		my $Max = &extract($Attrib->{max}, $ParamType);
+		if($ParamType eq "integer" and length($Min) and length($Max)
+		   and ($Max - $Min) < 61){
+		    $ParamForm .= 
+"<SELECT id=$id
+    onChange='select_value(\"$id\", \"$ParamName\", \"$ParamType\")'>
+";
+		    my $i;
+		    for $i ($Min..$Max){
+			if($i == $Value){
+			    $ParamForm .= "  <OPTION SELECTED>$i\n";
+			}else{
+			    $ParamForm .= "  <OPTION>$i\n";
+			}
+		    }
+		    $ParamForm .= "</SELECT>\n";
+		}else{
+
+		    # Check format here ?
+		    my $NumValue = $Value; $NumValue =~ s/d/e/i;
+		    $NumValue = eval($NumValue) + 0;
+
+		    $Value = 0 unless 
+			(length($Value) or $Attrib->{required} eq 'F');
+
+		    $Value = $Min if length($Min) and $Min > $Value;
+		    $Value = $Max if length($Max) and $Max < $Value;
+
+		    $Value = int($Value) if $ParamType eq "integer";
+
+		    $Value .= '.0' if $ParamType  eq "real" 
+			and length($Value) and $Value !~ /\.|\/|e|d/i;
+
+		    $ParamForm .= 
+"<input id=$id type=text size=$CommandEditorWidth value=\"$Value\"
+  onChange='set_value(\"$id\", \"$ParamName\", \"$ParamType\")'>
+";
+		    $ParamDescription .= ", min=$Min" if length($Min);
+		    $ParamDescription .= ", max=$Max" if length($Max);
+		}
+	    }
+	    $ParamForm .= "</TD><TD>$ParamName ($ParamDescription)</TD></TR>\n"
+		unless $iPart;
+
+	    if($name eq 'part' and $Attrib->{input} eq "select"){
+		$Value = $Part[$iPart-1];
+	    }elsif($iPart){
+		$Part[$iPart-1] = $Value;
+	    }elsif($Attrib->{input} ne "select"){
+		# Put back (default) value into %ParamValue
+		$ParamValue{$ParamName}[$iLoop] = $Value;
+		$ParamValues .= "$Value\t\t\t$ParamName\n";
+
+		# warn "ParamValues = $ParamValues\n";
+
+	    }
+
+	    # store value so we can evaluate conditionals
+	    # warn "parameter/part iPart=$iPart $Name = $Value\n";
+	    &eval_comp("\$$Name = '$Value'");
+
+	}elsif($name eq 'option'){
+
+            my $Attrib      = $element->{attrib};
+	    my $OptionName  = $Attrib->{name};
+	    my $OptionValue = $Attrib->{value};
+
+            # Set both name and value if only one is defined in the PARAM.XML
+	    $OptionValue = $OptionName  unless length($OptionValue);
+	    $OptionName  = $OptionValue unless length($OptionName);
+
+	    my $Value;
+            if($iPart){
+                $Value = $Part[$iPart-1];
+                # warn "option initial value from Part[$iPart]=$Value\n";
+            }else{
+                $Value = $ParamValue{$ParamName}[$iLoop];
+            }
+	    my $Selected;
+	    if(length($Value)){
+		$Selected = " SELECTED" if $OptionValue =~ /\b$Value\b/;
+	    }else{
+		my $IsDefault = &extract($Attrib->{default},"logical");
+		$Selected = " SELECTED" if $IsDefault;
+	    }
+	    $OptionValue =~ s/\/.*//; # keep first value only
+
+            if($Selected){
+                if($iPart){
+                    $Part[$iPart-1] = $OptionValue;
+                    # warn "option setting Part[$iPart] = $OptionValue\n";
+                }else{
+ 	            $ParamValue{$ParamName}[$iLoop] = $OptionValue;
+		    $ParamValues .= "$OptionValue\t\t\t$ParamName\n";
+		    # warn "option setting $ParamName $iLoop = $OptionValue\n";
+                }
+	    }
+
+	    $ParamForm .= 
+		"  <OPTION$Selected VALUE=\"$OptionValue\">$OptionName\n";
+
+	}elsif($name eq 'if'){
+	    
+	    # <if expr=...> ... </if>
+	    next unless &extract($element->{attrib}{expr}, "logical");
+	    &process_elements($element->{content});
+
+	}elsif($name eq 'for'){
+
+	    # <for [name=...] from=... to=...> ... </for>
+	    my $index = &extract($element->{attrib}->{name}, "string");
+	    my $from  = &extract($element->{attrib}->{from}, "integer");
+	    my $to    = &extract($element->{attrib}->{to},   "integer");
+
+	    # warn "iLoop=$iLoop for index=$index from=$from to=$to\n";
+
+            if(length($iLoop)){
+		# inner loop does not change iLoop
+		# so all variable name have to depend on the loop index
+		foreach my $value ($from..$to){
+		    # Set the index value if it is a named index
+		    &eval_comp("\$$index = '$value'") if $index;
+		    &process_elements($element->{content});
+		}
+	    }else{
+		# Outer loop advances iLoop,
+		# so variable names do not need to depend on the loop index
+		$iLoop = 0;
+		foreach my $value ($from..$to){
+		    # Set the index value if it is a named index
+		    &eval_comp("\$$index = '$value'") if $index;
+		    &process_elements($element->{content});
+		    $iLoop++;
+		}
+		$iLoop='';
+	    }
+
+	}elsif($name eq 'foreach'){
+
+	    my $index =&extract($element->{attrib}->{name},"string");
+	    my $values=&extract($element->{attrib}->{values},"string");
+	
+	    print "FOREACH index=$index values=$values\n" if $Debug;
+	    foreach my $value (split(',',$values)){
+		# Set the index name in package
+		&eval_comp("\$$index='$value'");
+		&process_elements($element->{content});
+	    }
+	}
+    }
+}
+
+##############################################################################
+
+sub xml_to_form{
+
+    do "Share/Scripts/XmlRead.pl" or return; # XML reader
+
+    my $Component = shift;                   # Name of the component
+    my $Command = shift;                     # Name of the command
+    &eval_comp("\$_NameComp     = '$Component';".
+	       "\$_command      = '$Command'; ".
+	       "\$_IsStandAlone = not $Framework" );
+
+    my $Param = shift;                       # parameters of the command
+    $Param =~ s/^\s*//mg;                    # remove leading spaces
+
+    my $index = 0;
+    while($Param =~ s/^(.*?)(\t|    )\s*(.*?)\n//){
+	my $Value = $1;
+	my $Name  = $3;
+
+	# Allow for the outermost <for ...> loop with parameter names repeated
+	$index++ if defined $ParamValue{$Name}[$index];
+	
+	$ParamValue{$Name}[$index] = $Value;
+
+	# warn "setting ParamValue{$Name}[$index] = $Value\n";
+    }
+
+    my $Xml = &XmlRead($CommandXml);         # XML description of command
+
+    &process_elements($Xml);
+
+}
+
+
 ##############################################################################
 
 sub write_index_php{
@@ -749,7 +1090,7 @@ sub write_index_php{
     print FILE
 "
 <?php Exec('share/Scripts/ParamConvert.pl') ?>
-<#@ \$form=join(';',%FORM);                             #>
+<#@ \$form=join(';',\@FORM);                          #>
 <#@ `share/Scripts/ParamConvert.pl -submit='\$form'`; #>
 <FRAMESET ROWS=$FrameHeights>
   <FRAME SRC=\"./$EditorHtmlFile\" NAME=EDITOR FRAMEBORDER=1 SCROLLING=no 
@@ -947,15 +1288,13 @@ $Files
     my $Editor = "
 <HTML>
 <HEAD>
-  <SCRIPT LANGUAGE=javascript TYPE=text/javascript>
-  <!--
+  <SCRIPT LANGUAGE=javascript>
   function dynamic_select(NameForm, NameElement){
     elem = document.forms[NameForm][NameElement];
     parent.location.href = '$IndexPhpFile?action=select_'
         + NameElement + '&id=' 
         + escape(elem.options[elem.selectedIndex].value);
   }
-  // -->
   </SCRIPT>
   <BASE TARGET=_parent>
 </HEAD>
@@ -1006,6 +1345,8 @@ sub write_manual_html{
 	$Manual =~ s/\n\n/\n<p>\n/g;
 	$Manual =~ s/\\begin\{verbatim\}/<PRE>/g;
 	$Manual =~ s/\\end\{verbatim\}/<\/PRE>/g;
+	$Manual =~ s/\\noindent\s*//g;
+	$Manual =~ s/\\\\/<BR>/g;
 	$Manual =  "<H1>Manual</H1>\n<PRE>\n$CommandExample\n</PRE>\n$Manual";
 	$Manual =~ s/\n$//;
     }elsif( $Editor{INSERT} =~ /^PASTE/ ){
@@ -1050,6 +1391,28 @@ sub write_param_html{
       A IMG {border: none;}
     </STYLE>
     <BASE TARGET=_parent>
+    <SCRIPT LANGUAGE=javascript>
+      function set_value(id, name, type){
+         var value = document.getElementById(id).value;
+
+         if(type == 'logical'){
+             value = (value == 'T' ? 'F' : 'T');
+         }
+         if(type == 'string' && value == ''){
+             value = 'Empty string is not permitted!';             
+         }
+         parent.location.href = 
+           '$IndexPhpFile?action=set_value\&id=' + id
+           + '\&value=' + escape(value) + '\&name=' + name;
+      }
+      function select_value(id, name, type){
+         var select = document.getElementById(id);
+         var value  = select.options[select.selectedIndex].value;
+         parent.location.href = 
+           '$IndexPhpFile?action=set_value\&id=' + id
+           + '\&value=' + escape(value) + '\&name=' + name;
+      }
+    </SCRIPT>
   </HEAD>
   <BODY BGCOLOR=$LeftBgColor TEXT=BLACK LINK=BLUE VLINK=BLUE>
 ";
@@ -1218,21 +1581,26 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 	    my $nItem = $#{ $SectionRef->{ITEM} };
 	    for $iItem (1..$nItem){
 
+		$ItemId = "$iSession,$iSection,$iItem";
+
 		my $ItemRef  = $SectionRef->{ITEM}[$iItem];
 		my $ItemView = $ItemRef->{VIEW};
 		my $ItemType = lc($ItemRef->{TYPE});
 
-		$ItemRef->{BODY} =~ s/CommandExample/$CommandExample/;
+		#$ItemRef->{BODY} =~ s/CommandExample/$CommandExample/;
+
 		my $ItemHead;
 		my $ItemTail;
 		if($ItemType eq "userinput"){
 		    $ItemHead = '#USERINPUT';
 		    $ItemTail = $ItemRef->{BODY};
 		}else{
-		    ($ItemHead, $ItemTail) = split("\n",$ItemRef->{BODY},2);
+		    $ItemRef->{BODY} =~ /\n/; 
+		    $ItemHead = $`; 
+		    $ItemTail = $';
 		}
 		$ItemType = "error" if $ItemHead =~ /^(ERROR|WARNING)/;
-
+		
 		my $TableColor = $TableColor{$ItemType};
 
 		$Action =~ s/\d+\&action$/$iItem\&action/;
@@ -1241,7 +1609,7 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 		my $nLine = ($ItemTail =~ s/\n/\n/g);
 
 		# Place anchor to selected item
-		$Param .= $Here if $JumpHere eq "$iSession,$iSection,$iItem";
+		$Param .= $Here if $JumpHere eq $ItemId;
 
 		if($ItemView eq "EDIT"){
 
@@ -1250,20 +1618,43 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 			$ItemTail = $ItemRef->{BODY};
 		    }elsif($ItemType eq "userinput"){
 			$ItemTail .= ("\n" x 10);
+		    }else{
+			# Command: create input fields from Xml description 
+			# and current parameter values
+			&xml_to_form($SectionName, $ItemHead, $ItemTail);
+
+			# Replace possibly modified parameter values 
+			# after XML description (with defaults) is read
+			$ItemRef->{BODY} = "$ItemHead\n$ParamValues";
 		    }
+
 		    $nLine = ($ItemTail =~ s/\n/\n/g) + 2;
 
 		    $Param .= "
-  <FORM NAME=item_editor ACTION=$IndexPhpFile>
   <TABLE BORDER=0 WIDTH=$LeftTableWidth BGCOLOR=$ItemEditorBgColor>
+  <FORM NAME=item_editor ACTION=$IndexPhpFile>
     <TR>
       <TD WIDTH=$LeftColumn1Width>
       </TD>
-      <TD ALIGN=LEFT><FONT COLOR=BLUE>
+      <TD COLSPAN=2><FONT COLOR=BLUE>
 $ItemHead
-      </FONT></TD>
-      <TD ALIGN=RIGHT>
-<INPUT TYPE=SUBMIT name=action value=\"Save $ItemType\">
+      </FONT>&nbsp;&nbsp;&nbsp;&nbsp;
+";
+		    if($ItemType eq "command" and $ParamForm){
+			$Param .= 
+"<INPUT TYPE=SUBMIT name=action value=\"DONE\">
+<INPUT TYPE=SUBMIT name=action value=\"RESET\">
+<INPUT TYPE=HIDDEN name=id value=$iSession,$iSection,$iItem>
+      </TD>
+    </TR>
+  </FORM>
+$ParamForm
+  </TABLE>
+  <p>
+";
+		    }else{
+			$Param .=
+"<INPUT TYPE=SUBMIT name=action value=\"Save $ItemType\">
 <INPUT TYPE=SUBMIT name=action value=CANCEL>
 <INPUT TYPE=HIDDEN name=id value=$iSession,$iSection,$iItem>
       </TD>
@@ -1277,9 +1668,11 @@ $ItemTail
 </TEXTAREA>
        </TD>
     </TR>
-  </TABLE>
   </FORM>
+  </TABLE>
+  <p>
 ";
+		    }
 		    next; # done with editor
 		}
 
@@ -1943,6 +2336,55 @@ sub process_file {
     close $input;
 
     return $output;
+}
+
+##############################################################################
+
+sub extract{
+    # Usage:
+    #        $result = &extract($expression, $type);
+    #
+    # $result will get the value extracted from $expression.
+    # The variables containing a $ sign are substituted from package
+    # COMP and the expressions are evaluated
+    # The type given by the second argument can be 
+    # "logical", "integer", "real" or "string"
+    #
+    # Example:
+    #       $result = &extract('$nI+2','integer')
+    #
+    # the function will return the value of $COMP::nI + 2
+
+    my $value  = shift; 
+
+    # Do not attempt to evaluate empty string or string containing 
+    # unknown values
+    return "" if length($value) == 0 
+	or $value =~ /\$_(IsFirstSession|GridSize|nProc|nByteReal)/;
+
+    my $type   = shift;
+    my $value_ = $value;
+
+    if($value_ =~ /\$/){
+	if($type eq "string"){
+	    $value='"'.$value.'"';
+	}else{
+	    $value='('.$value.')';
+	}
+	&eval_comp("\$_value_=$value;");
+	$value_ = $COMP::_value_;
+    }
+
+    if($type eq "logical"){
+	# replace T or .true. with 1, F or .false. with 0
+	$value_ =~ s/^(f|.false.)$/0/i;
+	$value_ =~ s/^(t|.true.)$/1/i;
+	# Convert possible empty string (=false) into a more readable 0
+	$value_ = $value_+0;
+    }
+
+    return $value_;
+
 }
 
 ##############################################################################
