@@ -50,7 +50,8 @@ if(not $LayoutFile){
 	$LayoutFile =~ s/PARAM/LAYOUT/;
 	# Replace .expand with .in
 	$LayoutFile =~ s/\.expand/.in/;
-
+	# Delete .bak
+	$LayoutFile =~ s/\.bak//;
 	# If the LAYOUT file based on the PARAM file name is not found 
 	# try the default
 	$LayoutFile = $LayoutFileDefault 
