@@ -59,11 +59,6 @@ my $NameComp='GM';
 my $Precision;
 my $GridSize;
 
-if($Save){
-    system($CheckParamScript,"-s","-x=$XmlFile");
-    exit 0;
-}
-
 if(-x $ConfigScript){
     $GridSize = `$ConfigScript -g`; chop($GridSize);
     $GridSize =~ s/$ConfigScript(\s*-g=)?//;
