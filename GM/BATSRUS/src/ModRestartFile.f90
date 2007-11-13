@@ -66,22 +66,21 @@ contains
   subroutine init_mod_restart_file
     use ModMPI, ONLY: MPI_HEADER_FILE
 
-    !Commented out. Fixed 'one' format seems to work on all platforms.
-    !if(MPI_HEADER_FILE == 'mpif90_Linux_Altix.h')then
-    !   ! Columbia (and other Altix machines) have restrictions on the
-    !   ! number of files
-    !   TypeRestartOutFile = 'one'
-    !else
-    !   ! On some machines (e.g. multicore Linux platforms) 
-    !   ! the format 'one' does not work. The safe format is 'block'.
-    !   TypeRestartOutFile = 'block'
-    !end if
-    !if(iProc==0)then
-    !   call write_prefix;
-    !   write(iUnitOut,*) &
-    !        'init_mod_restart_file: setting TypeRestartOutFile = ',&
-    !        trim(TypeRestartOutFile)
-    !end if
+    if(MPI_HEADER_FILE == 'mpif90_Linux_openmpi.h')then
+       ! There are some issues when the 'one' restart file is used 
+       ! on grendel and nyx with openmpi (although it may have nothing
+       ! to do with openmpi itself.
+       TypeRestartOutFile = 'block'
+    else
+       ! On other machines the format 'one' works correctly.
+       TypeRestartOutFile = 'one'
+    end if
+    if(iProc==0)then
+       call write_prefix;
+       write(iUnitOut,*) &
+            'init_mod_restart_file: setting TypeRestartOutFile = ',&
+            trim(TypeRestartOutFile)
+    end if
 
     NameRestartInDir(1:2)  = NameThisComp
     NameRestartOutDir(1:2) = NameThisComp
