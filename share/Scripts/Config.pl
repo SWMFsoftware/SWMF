@@ -24,7 +24,8 @@ my %MpiVersion = (
 		  "cfe1"    => "Altix",
 		  "cfe2"    => "Altix",
 		  "cfe3"    => "Altix",
-		  "cfe4"    => "Altix"
+		  "cfe4"    => "Altix",
+		  "grendel" => "openmpi",
 		  );
 
 my $WARNING_='share/Scripts/Config.pl WARNING:';
