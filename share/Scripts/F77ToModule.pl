@@ -64,6 +64,7 @@ for(my $i=0; $i<=$#text; $i++){
 
 # Fix the last END statement
 $text[$iEnd] =~ s/\n/ $unit\n/ if $iEnd;
+$nBlockData  = $iEnd - $iBlockData + 1     if $unit =~ /block/i;
 
 # Move block data to the beginning
 print FILE splice(@text,$iBlockData,$nBlockData), "\n" if $nBlockData;
