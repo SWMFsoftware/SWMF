@@ -450,7 +450,7 @@ sub modify_xml_data{
 	my $NameSection= ($SectionRef->{NAME} or "CON");
 	my $ItemRef    = $SectionRef->{ITEM}[$iItem];
 
-	# View the stuff represented by id if id consist of numbers
+	# View the stuff represented by id if id consists of numbers
 	$Editor{SELECT} = $id if ($id =~ /^[\d,]+$/ and /edit_|insert_/);
 	$JumpHere       = $id if $id =~ /^[\d,]+$/;
 
@@ -578,7 +578,12 @@ sub modify_xml_data{
 	    }else{
 		$SectionRef->{ITEM}[1] = $NewItemRef;
 	    }
-	    $IsEditing = 1 if $NewItemRef->{VIEW} eq "EDIT";
+	    if($NewItemRef->{VIEW} eq "EDIT"){
+		$IsEditing = 1;
+		$Clipboard{TYPE} = $NewItemRef->{TYPE};
+		$Clipboard{BODY} = $NewItemRef->{BODY};
+		$Clipboard{SECTION} = $NameSection;
+	    }
 
 	}elsif( /set_value/ ){
 	    # warn "set_value, iParam=$iParam, iPart=$iPart\n";
@@ -1224,6 +1229,7 @@ sub write_editor_html{
     # Add SELECTED
     my $Selected = $Editor{SELECT};
     $Selected =~ s/^(\d+,\d+),\d+$/$1/; # Chop off item index if present
+    $Selected =~ s/^(\d+),\d+$/$1/ if not $Framework; # Chop off section index
     $SessionSection =~ s/(VALUE=$Selected)/$1 SELECTED/;
 
     print "SessionSection=$SessionSection\n" if $DoDebug;
@@ -1485,9 +1491,11 @@ sub write_param_html{
 		    "<$Action=edit_session 
                     TITLE=\"Edit session name\">$SessionName</A>";
 	    }else{
-		$SessionTagTop = "<$Action=edit_session TITLE=\"edit session\">Session $iSession</A>";
+		$SessionTagTop = "<$Action=edit_session 
+                    TITLE=\"Edit session name\">Session $iSession</A>";
 	    }
 	    $SessionTagBot = $SessionTagTop;
+
 	}
 
 	if($SessionView eq "MIN"){
@@ -1886,9 +1894,8 @@ $SectionLine
     <TR>
       <TD ALIGN=LEFT>
 $MinMaxSessionButton
-      <$Action=select_session>
 $SessionTagBot
-      </A></TD>
+      </TD>
       <TD ALIGN=RIGHT>
 $InsertSectionButton$CopySessionButton$RemoveSessionButton
       </TD>
