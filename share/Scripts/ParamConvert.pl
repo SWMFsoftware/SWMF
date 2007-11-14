@@ -552,7 +552,7 @@ sub modify_xml_data{
 	}elsif( /insert_item/ ){
 	    my $NewItemRef;
 	    $NewItemRef->{TYPE} = $Clipboard{TYPE};
-	    if($Editor{INSERT} =~ /^PASTE|FILE/){
+	    if($Editor{INSERT} =~ /^(PASTE|FILE)\b/){
 		$NewItemRef->{TYPE} = $Clipboard{TYPE};
 		$NewItemRef->{TYPE} = "COMMENT" if $Clipboard{TYPE} eq "FILE";
 		$NewItemRef->{VIEW} = "MAX";
@@ -579,6 +579,7 @@ sub modify_xml_data{
 		$SectionRef->{ITEM}[1] = $NewItemRef;
 	    }
 	    $IsEditing = 1 if $NewItemRef->{VIEW} eq "EDIT";
+
 	}elsif( /set_value/ ){
 	    # warn "set_value, iParam=$iParam, iPart=$iPart\n";
 	    my @Body; @Body = split(/\n/,$ItemRef->{BODY});
