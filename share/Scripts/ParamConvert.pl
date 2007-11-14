@@ -603,6 +603,7 @@ sub modify_xml_data{
 	    # warn "set_value new line = $Body[$iParam]";
 	    $ItemRef->{BODY} = join("\n",@Body)."\n";
 	}elsif( /RESET/ ){
+	    $IsFirstEdit = 1;
 	    $ItemRef->{BODY}=$Clipboard{BODY};
 	}elsif( /DONE/ ){
 	    $IsEditing = 0;
