@@ -192,7 +192,7 @@ dist:
 	@echo ' NOTE: All "run" or other created directories not included!'
 	@echo ' '
 	tar -cf tmp.tar  Makefile Makefile_CONFIGURE Makefile.test
-	tar -rf tmp.tar  Copyrights
+	tar -rf tmp.tar  README Copyrights
 	tar -rf tmp.tar  CVS* .cvsignore	#^CFG IF CONFIGURE
 	tar -rf tmp.tar  Configure.options	#^CFG IF CONFIGURE
 	tar -rf tmp.tar  Configure.pl		#^CFG IF CONFIGURE
@@ -203,7 +203,7 @@ dist:
 	tar -rf tmp.tar  Idl
 	tar -rf tmp.tar  Param
 	tar -rf tmp.tar  Scripts
-	tar -rf tmp.tar  src srcInterface srcPostProc srcUser
+	tar -rf tmp.tar  src srcInterface srcPostProc srcTest srcUser
 	@(if [ -d util  ]; then tar -rf tmp.tar util; fi);
 	@(if [ -d share ]; then tar -rf tmp.tar share; fi);
 	@echo ' '
