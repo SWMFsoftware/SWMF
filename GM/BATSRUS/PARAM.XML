@@ -514,7 +514,7 @@ Index of variable to be tested. Default is rho_="1", i.e. density.
 </command>
 
 <command name="TESTDIM">
-	<parameter name="iVarTest" type="integer" input="select">
+	<parameter name="iDimTest" type="integer" input="select">
 		<option name="all" value="0" />
 		<option name="x"   value="1" default="T" />
 		<option name="y"   value="2" />
@@ -539,7 +539,7 @@ correct parameters and continue. Default is true, i.e. strict mode
 	<parameter name="lVerbose" type="integer" input="select">
 		<option name="errors and warnings only"  value="-1" />
 		<option name="start and end of sessions" value="0"  />
-		<option name="normal"                   value="1" default="T"/>
+		<option name="default"                 value="1" default="T"/>
 		<option name="calls on test processor"   value="10" />
 		<option name="calls on all processors"   value="100" />
         </parameter>
@@ -612,9 +612,9 @@ and as a description.
 
 <command name="PRECISION" if="$_IsFirstSession">
 	<parameter name="nByteReal" type="integer" input="select">
-		<option name="single precision (4)" value="4" 
+		<option name="single precision" value="4" 
 			default="$_nByteReal==4"/>
-		<option name="double precision (8)" value="8"
+		<option name="double precision" value="8"
 			default="$_nByteReal==8" />
 	</parameter>
 	<rule expr="$nByteReal==$_nByteReal or not $UseStrict">
@@ -670,14 +670,8 @@ This command is only used in the restart header file.
 <command name="TIMING" if="$_IsStandAlone">
 	<parameter name="UseTiming" type="logical" default="T" />
 	<if expr="$UseTiming">
-		<parameter name="Frequency" type="integer" input="select">
-			<option name="none"              value="-3" />
-			<option name="final only"        value="-2" 
-								default="T" />
-	                <option name="end of sessions"   value="-1" />
-			<optioninput name="every X steps" min="1" 
-							default="100" />
-		</parameter>
+		<parameter name="DnTiming" type="integer" min="-3" 
+							default="-2" />
 		<parameter name="nDepthTiming" type="integer" min="-1" 
 							default="-1" />
 		<parameter name="TypeTimingReport" type="string" 
@@ -876,8 +870,8 @@ Default value is "GM/restartIN".
 
 <command name="RESTARTINFILE" if="$_IsFirstSession">
 	<parameter name="TypeRestartInFile" type="string" input="select">
-		<option name="block" default="T"/>
-		<option name="one" />
+		<option name="separate files/block" value="block" default="T"/>
+		<option name="single data.rst file" value="one"/>
 	</parameter>
 
 #RESTARTINFILE
@@ -887,7 +881,7 @@ This command is normally saved in the restart header file, and it describes
 how the restart data was saved: 
 into separate files for each grid block ('block') 
 or into a single direct access file ('one').
-The default value is 'block'.
+The default value is 'block' for sake of backwards compatibility.
 </command>
 
 <command name="NEWRESTART" if="$_IsFirstSession">
@@ -974,25 +968,26 @@ user          - user defined
 </command>
 
 <command name="INNERBOUNDARY">
-	<parameter name="TypeBcInner" type="string" input="select">
+	<parameter name="TypeBcInner" type="string" case="lower"
+	input="select">
 		<option name="reflect"				/>
 		<option name="float"				/>
 		<option name="fixed"				/>
 		<option name="ionosphere"	default="T"	/>
-		<option name="ionosphereB0" value="ionosphereB0/ionosphereb0"/>
+		<option name="ionosphereb0"			/>
 		<option name="ionospherefloat"			/>
 		<option name="coronatoih"			/>
 		<option name="user"				/>
 	</parameter>
 <!-- ^CFG IF SECONDBODY BEGIN -->
 	<if expr="$UseBody2">
-		<parameter name="TypeBcBody2" type="string" 
-							input="select">
+		<parameter name="TypeBcBody2" type="string" case="lower"
+		input="select">
 			<option name="reflect"		default="T"	/>
 			<option name="float"				/>
 			<option name="fixed"				/>
 			<option name="ionosphere"			/>
-			<option name="ionosphereB0"			/>
+			<option name="ionosphereb0"			/>
 			<option name="ionospherefloat"			/>
 		</parameter>
 	</if>
@@ -1294,10 +1289,7 @@ is saved into the restart files.
 !!!!!!!!!!!!!!!  TIME INTEGRATION PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="TIMESTEPPING">
-	<parameter name="nStage" type="integer" input="select">
-		<option value="1" />
-		<option value="2" default="T" />
-	</parameter>
+	<parameter name="nStage" type="integer" min="1" max="2" default="2" />
 	<parameter name="CflExpl" type="real" min="0" max="1" default="0.8" />
 
 #TIMESTEPPING
@@ -1469,9 +1461,10 @@ implicit schemes. Ignored if UseDtFixed is true.
 !!!!!!! PARAMETERS FOR FULL AND PART IMPLICIT TIME INTEGRATION !!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="IMPLICITCRITERIA" alias="STEPPINGCRITERIA">
-	<parameter name="TypeImplCrit" type="string" input="select">
+	<parameter name="TypeImplCrit" type="string" case="lower"
+	input="select">
 		<option name="Time step"	value="dt" default="T"	/>
-		<option name="Radial distance"	value="r/R"		/>
+		<option name="Radial distance"	value="r"		/>
 		<option name="Test block"	value="test"		/>
 	</parameter>
 	<parameter name="rImplicit" type="real" min="0"
@@ -1555,12 +1548,10 @@ the code switches back to the two-level scheme for one time step.
 </command>
 
 <command name="IMPLSCHEME" alias="IMPLICITSCHEME">
-	<parameter name="nOrderImpl" type="integer" input="select">
-		<option name="1" default="T"	/>
-		<option name="2"		/>
-	</parameter>
-	<parameter name="TypeFluxImpl" type="string" input="select" 
-		case="upper">
+	<parameter name="nOrderImpl" type="integer" min="1" max="2" 
+								default="1"/>
+	<parameter name="TypeFluxImpl" type="string" case="upper"
+	input="select">
 	    <option name="Roe"     value="ROE/1"/>       <!--^CFG IF ROEFLUX-->
 	    <option name="RoeOld"  value="ROEOLD/5"/>    <!--^CFG IF ROEFLUX-->
 	    <option name="Rusanov" value="RUSANOV/2" default="T"/>								    <!--^CFG IF RUSANOVFLUX-->
@@ -1648,7 +1639,7 @@ of Newton iterations before giving up.
 		<option name="No preconditioning" value="free"		/>
 	</parameter>
 	<parameter name="JacobianEps" type="real" min="0" max="1.e-5" 
-		default="$doublePrecision ? 1.e-12 : 1.e-6" />
+							default="1.E-12" />
 #JACOBIAN
 prec            TypeJacobian (prec, free)
 1.E-12          JacobianEps
@@ -1803,7 +1794,7 @@ To do the check the CpuTimeMax variable has to be set to a positive value.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="RESTARTOUTDIR">
 	<parameter name="NameRestartOutDir" type="string" length="100"
-				default="GM/restartOUT" />
+						default="GM/restartOUT" />
 	<rule expr="-d $NameRestartOutDir">
 		Restart output directory $NameRestartOutDir must exist
 	</rule>
@@ -1821,8 +1812,8 @@ Default value is "GM/restartOUT".
 
 <command name="RESTARTOUTFILE">
 	<parameter name="TypeRestartOutFile" type="string" input="select">
-		<option name="block"/>
-		<option name="one" default="T"/>
+		<option name="separate files/block" value="block"/>
+		<option name="single data.rst file" value="one" default="T"/>
 	</parameter>
 
 #RESTARTOUTFILE
@@ -2194,57 +2185,57 @@ end times should be set for all of them.
 				<option name="x=0" />
 				<option name="y=0" default="T" />
 				<option name="z=0" />
-				<option name="sph" />
+				<option name="sphere" value="sph" />
 				<option name="los" />
-				<option name="lin" />
+				<option name="line" value="lin" />
 				<option name="cut" />
-				<option name="slc" 
+				<option name="slice" value="slc" 
 					if="$plotform =~ /\btec\b/"/>
-				<option name="dpl" 
+				<option name="dipole" value="dpl" 
 					if="$plotform =~ /\btec\b/"/>
-				<option name="blk" 
+				<option name="block" value="blk" 
 					if="$plotform =~ /\btec\b/"/>
 				<option name="1D" value="1d/1d_" 
 					if="$plotform =~ /\btec\b/"/>
 			</part>
 			<part name="plotvar" type="string" input="select" 
 							required="T">
-				<option name="MHD vars. dimensional"
+				<option name="MHD variables"
 					value="MHD" default="T" />
-				<option name="All vars. dimensional"
-					value="FUL" />
-				<option name="Raw vars. dimensional"
-					value="RAW" />
-				<option name="Ray tracing vars. dim."
-					value="RAY" />
-				<option name="Flux vars. dimensional"
-					value="FLX" />
-				<option name="Solar vars. dimensional"
-					value="SOL" />
-				<option name="Position vars. dimensional"
-					value="POS" if="$plotarea eq 'lin'" />
-				<option name="Select dimensional vars."
-					value="VAR" />
-				<option name="Basic Block vars. dimensional"
-					value="BBK" />
 				<option name="MHD vars. scaled"
 					value="mhd" />
+				<option name="All variables"
+					value="FUL" />
 				<option name="All vars. scaled"
 					value="ful" />
+				<option name="Raw variables"
+					value="RAW" />
 				<option name="Raw vars. scaled"
 					value="raw" />
+				<option name="Ray tracing variables"
+					value="RAY" />
 				<option name="Ray tracing vars. scaled"
 					value="ray" />
-				<option name="Flux vars. scaled"
+				<option name="Flux variables" 
+					value="FLX" />
+				<option name="Flux vars. scaled" 
 					value="flx" />
+				<option name="Solar variables"
+					value="SOL" />
 				<option name="Solar vars. scaled"
 					value="sol" />
+				<option name="Position variables"
+					value="POS" if="$plotarea eq 'lin'" />
 				<option name="Position vars. scaled"
 					value="pos"  if="$plotarea eq 'lin'"/>
+				<option name="Basic block variables"
+					value="BBK" />
+				<option name="Basic block vars. scaled"
+					value="bbk" />
+				<option name="Select dimensional vars."
+					value="VAR" />
 				<option name="Select scaled vars."
 					value="var" />
-				<option name="Basic Block vars. scaled"
-					value="bbk" />
 			</part>
 		</parameter>
 		<parameter name="DnSavePlot" type="integer" min="-1" 
@@ -2294,10 +2285,12 @@ end times should be set for all of them.
 		<if expr="$plotarea =~ /\blin\b/">
 			<parameter name="NameLine" type="string" 
 			input="select">
-				<option name="Advected B" value="A" />
-				<option name="B" default="T"/>
-				<option name="U"/>
-				<option name="J"/>
+				<option name="Advected magnetic field line" 
+								value="A" />
+				<option name="Magnetic field line" value="B"
+								default="T"/>
+				<option name="Stream line"  value="U"/>
+				<option name="Current line" value="J"/>
 			</parameter>
 			<parameter name="IsSingleLine" type="logical"
 							default="F" />
@@ -2727,7 +2720,7 @@ Only useful if the initial condition has a non-trivial analytic form.
 	<parameter name="StringArea" type="strings" min="1" max="2">
 		<part name="NameArea" type="string" input="select" 
 							required="T">
-			<option name="initial" value="init/initial" 
+			<option name="initial" value="initial/init"
 								default="T" />
 			<option name="all"				/>
 			<option name="box"				/>
@@ -3014,48 +3007,44 @@ Default for DnRefine is -1, i.e. no run time refinement.
 </command>
 
 <command name="AMRCRITERIA">
-	<parameter name="nRefineCrit" type="integer" input="select">
-		<option name="0" default="T" />
-		<option name="1" />
-		<option name="2" />
-		<option name="3" />
-	</parameter>
+	<parameter name="nRefineCrit" type="integer" min="0" max="3"
+								default="0" />
 	<for from="1" to="$nRefineCrit">
-		<parameter name="TypeRefine" type="string" 	input="select">
-			<option name="grad T"		value="gradt/gradT"  />
-			<option name="grad P"		value="gradp/gradP"  />
+		<parameter name="TypeRefine" type="string" case="lower"
+		input="select">
+			<option name="grad T"		value="gradt"        />
+			<option name="grad P"		value="gradp"        />
 			<option name="grad log(Rho)"	value="gradlogrho"   />
-			<option name="grad log(p)" value="gradlogP/gradlogp" />
-			<option name="grad E"		value="gradE"	     />
-			<option name="curl U" value="curlV/curlv/curlU/curlu"/>
+			<option name="grad log(p)" 	value="gradlogp"     />
+			<option name="grad E"		value="grade"	     />
+			<option name="curl U" 		value="curlu"        />
 			<option name="curl B"		value="curlB/curlb"  />
-			<option name="div U"  value="divU/divu/divV/divv"    />
-			<option name="divB"		value="divb/divB"    />
-			<option name="vAlfven"
-					     value="Valfven/vAlfven/valfven" />
+			<option name="div U"		value="divu"	     />
+			<option name="divB"		value="divb"	     />
+			<option name="Alfven speed"	value="valfven" />
 			<option name="heliospheric beta" value="heliobeta"   />
 			<option name="flux"				     />
 			<option name="heliospheric current sheet"
 						 value="heliocurrentsheet"   />
-			<option name="rCurrents" value="rcurrents/Rcurrents" />
-			<option name="Transient" value="transient/Transient" />
+			<option name="rCurrents" value="rcurrents"	     />
+			<option name="Transient" value="transient" />
 		</parameter>
-		<if expr="$TypeRefine =~ /transient/i">
+		<if expr="$TypeRefine =~ /transient/">
 			<parameter name="TypeTransient" type="string"
-							input="select">
-				<option name='P_dot' value='p_dot/P_dot'/>
-				<option name='T_dot' value='t_dot/T_dot'/>
+			case="lower" input="select">
+				<option name='P_dot' value='p_dot'/>
+				<option name='T_dot' value='t_dot'/>
 				<option name='Rho_dot' 		default="T"
-						value='rho_dot/Rho_dot'/>
+						value='rho_dot'/>
 				<option name='RhoU_dot' 
-						value='RhoU_dot/rhou_dot'/>
+						value='rhou_dot'/>
 				<option name='Rho_2nd_1'
-						value='Rho_2nd_1/rho_2nd_1'/>
+						value='rho_2nd_1'/>
 				<option name='Rho_2nd_2'
-						value='Rho_2nd_2/rho_2nd_2'/>
+						value='rho_2nd_2'/>
 			</parameter>
-			<parameter name="UseSunEarth"   type="logical" 
-						default="F"/>
+			<parameter name="UseSunEarth" type="logical" 
+								default="F"/>
 			<if expr="$UseSunEarth">
 				<parameter name="xEarth"   type="real"/>
 				<parameter name="yEarth"   type="real"/>
@@ -3104,15 +3093,14 @@ All the names can also be spelled with all small case letters.\\
 \noindent
 The possible choices for TypeTransient:
 \begin{verbatim}
-  'P_dot' (same as 'p_dot')
-  'T_dot' (same as 't_dot')
-  'Rho_dot' (same as 'rho_dot')
-  'RhoU_dot' (same as 'rhou_dot')
-  'B_dot' (same as 'b_dot')
-  'Rho_2nd_1' (same as 'rho_2nd_1')
-  'Rho_2nd_2' (same as 'rho_2nd_2')
+  'P_dot'
+  'T_dot'
+  'Rho_dot'
+  'RhoU_dot'
+  'B_dot'
+  'Rho_2nd_1'
+  'Rho_2nd_2'
 \end{verbatim}
-
 Also, (xEarth,yEarth,zEarth) are the coordinates of the Earth. InvD2Ray is
 a factor that defines how close to the ray Sun-Earth to refine the grid.
 Note that the AMR occurs in a cylinder around the ray.
@@ -3202,13 +3190,12 @@ For Earth the default is using non-conservative equations
 	<parameter name="nConservCrit" type="integer" min="0" max="3"
                                                              default="1"/>
 	<for from="1" to="$nConservCrit">
-		<parameter name="TypeConservCrit" type="string" 
-							input="select">
-			<option name="radius"	value="r/R/radius/Radius"
-							default="T"/>
-			<option name="parabola"	value="parabola/paraboloid"/>
-			<option name="p"    	value="p/P"		/>
-			<option name="grad P"	value="gradp/GradP"	/>
+		<parameter name="TypeConservCrit" type="string" case="lower" 
+		input="select">
+			<option name="radius"	value="r/radius" default="T"/>
+			<option name="parabola"	value="parabola/paraboloid" />
+			<option name="p"				    />
+			<option name="grad P"	value="gradp"		    />
 		</parameter>
 		<parameter name="rConserv" type="real" min="$rBody"
 			default="6"  if="$TypeConservCrit =~ /^r|radius$/i"/>
@@ -3305,10 +3292,8 @@ Default values are shown.
 </command>
 
 <command name="PROLONGATION">
-	<parameter name="nOrderProlong" type="integer" input="select">
-		<option name="1" default="T"	/>
-		<option name="2"		/>
-	</parameter>
+	<parameter name="nOrderProlong" type="integer" min="1" max="2" 
+								default="1" />
 	<parameter name="TypeProlong" type="string" input="select"
 						if="$nOrderProlong==2">
 		<option name="left-right" value="lr" default="T"	/>
@@ -3348,12 +3333,13 @@ Possible values for prolong_type:\\
 
 <command name="MESSAGEPASS" alias="OPTIMIZE">
 	<parameter name="TypeMessagePass" type="string" input="select">
-		<option value="allopt" name="m_p_cell FACES ONLY" default="T"/>
-		<option value="all"    name="m_p_cell"	                     />
-		<option value="opt"    name="m_p_dir FACES ONLY"	     />
-		<option value="dir"    name="m_p_dir group by directions"    />
-		<option value="face"   name="m_p_dir group by faces     "    />
-		<option value="min"    name="m_p_dir group by kind and face" />
+		<option value="allopt" name="allopt: m_p_cell FACES ONLY"
+								default="T"/>
+		<option value="all"  name="all:  m_p_cell"	             />
+		<option value="opt"  name="opt:  m_p_dir FACES ONLY"	     />
+		<option value="dir"  name="dir:  m_p_dir group by directions"/>
+		<option value="face" name="face: m_p_dir group by faces"     />
+		<option value="min"  name="min:  m_p_dir group by kind/face" />
 	</parameter>
 #MESSAGEPASS
 allopt			TypeMessagePass
