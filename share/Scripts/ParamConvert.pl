@@ -80,7 +80,10 @@ my $CommandXml;    # XML description of the command
 my $CommandExample;# XML description of the command
 my $CommandText;   # Normal text description of the command
 
-my $ItemId;        # Session,section,item index of the edite item/command
+my $ItemId;        # Session,section,item index of the edited item/command
+my $IsFirstEdit;   # True when the item is opened for editing
+my $IsEditing;     # True when an item/session is already in EDIT mode
+my @ParamValue;    # Array of parameter values (used only if $IsFirstEdit)
 my %ParamValue;    # Hash of parameter values for the edited command
 my $ParamValues;   # The string of ordered parameter values
 my $ParamForm;     # FORM used to read the parameters of the edited command
@@ -180,7 +183,7 @@ sub read_xml_file{
 	    $nSession++;
 	    $iSection=0;
 	    my $Name=$1;
-	    my $View=$2;
+	    my $View=$2; $IsEditing = 1 if $View eq 'EDIT';
 	    $SessionRef[$nSession]{NAME} = $Name;
 	    $SessionRef[$nSession]{VIEW} = $View;
 	    print "nSession=$nSession Name=$Name View=$View\n" if $DoDebug;
@@ -188,7 +191,7 @@ sub read_xml_file{
 	    $iSection++;
 	    $iItem=0;
 	    my $Name=$1;
-	    my $View = $2;
+	    my $View = $2; $IsEditing = 1 if $View eq 'EDIT';
 	    $SessionRef[$nSession]{SECTION}[$iSection]{VIEW} = $View;
 	    $SessionRef[$nSession]{SECTION}[$iSection]{NAME} = $Name;
 
@@ -202,7 +205,7 @@ sub read_xml_file{
 	}elsif(/<ITEM TYPE=\"([^\"]*)\" VIEW=\"([\w]+)\"/){
 	    $iItem++;
 	    my $Type=$1;
-	    my $View=$2;
+	    my $View=$2; $IsEditing = 1 if $View eq 'EDIT';
 
 	    # Create new array element for this item
 	    $SessionRef[$nSession]{SECTION}[$iSection]{ITEM}[$iItem]{TYPE} = 
@@ -366,6 +369,7 @@ sub modify_xml_data{
 	    %Clipboard = ();
 	}elsif( /^CANCEL$/ ){
 	    $Editor{FILE} = "" if $Editor{FILE} eq "ENTER FILENAME";
+	    $IsEditing = 0;
 	}elsif( /^SAVE AND EXIT$/ ){
 	    # save the file then kill the job
 	    &write_text_file($ParamFile);
@@ -384,6 +388,7 @@ sub modify_xml_data{
 	}elsif( /^ABC_OFF$/ ){
 	    $Editor{ABC}=0;
 	}elsif( /^SAVE SESSION NAME$/ ){
+	    $IsEditing = 0;
 	    my $iSession = $Form{id};
 	    $SessionRef[$iSession]{VIEW}="MAX";
 	    $SessionRef[$iSession]{NAME}=$Form{name};
@@ -465,14 +470,17 @@ sub modify_xml_data{
 	    $ItemRef->{VIEW}="MAX";
 	}elsif( /edit_session/ ){
 	    $SessionRef->{VIEW}="EDIT";
+	    $IsEditing = 1;
 	}elsif( /edit_item/ ){
 	    $ItemRef->{VIEW}="EDIT";
 	    $Clipboard{BODY}    = $ItemRef->{BODY};
-	    $Clipboard{TYPE}    = "COMMAND";
+	    $Clipboard{TYPE}    = $ItemRef->{TYPE};
 	    $Clipboard{SECTION} = $NameSection;
 	    # Set the insert item to the edited command so the manual shows up
 	    ($Editor{INSERT}) = split("\n", $ItemRef->{BODY}) if 
 		$ItemRef->{TYPE} eq "COMMAND";
+	    $IsEditing = 1;
+	    $IsFirstEdit = 1;
 	}elsif( /remove_session/ or /copy_session/ ){
 	    $Clipboard{SECTION} = "";
 	    $Clipboard{TYPE}    = "SESSION";
@@ -570,6 +578,7 @@ sub modify_xml_data{
 	    }else{
 		$SectionRef->{ITEM}[1] = $NewItemRef;
 	    }
+	    $IsEditing = 1 if $NewItemRef->{VIEW} eq "EDIT";
 	}elsif( /set_value/ ){
 	    # warn "set_value, iParam=$iParam, iPart=$iPart\n";
 	    my @Body; @Body = split(/\n/,$ItemRef->{BODY});
@@ -590,8 +599,10 @@ sub modify_xml_data{
 	}elsif( /RESET/ ){
 	    $ItemRef->{BODY}=$Clipboard{BODY};
 	}elsif( /DONE/ ){
+	    $IsEditing = 0;
 	    $ItemRef->{VIEW}="MAX";
 	}elsif( /Save userinput|Save comment|Save command/ ){
+	    $IsEditing = 0;
 	    $ItemRef->{VIEW}="MAX";
 	    $Form{text} =~ s/^\s*//;        # remove leading space
 	    $Form{text} =~ s/[ \t]+\n/\n/g; # clean up line endings
@@ -757,11 +768,12 @@ sub read_command_info{
 	$CommandInfo .= $_;
     }
 
-    ($CommandXml, $CommandInfo)    = split(/\n\#/, $CommandInfo, 2);
+    ($CommandXml, $CommandInfo) = split(/\n\#/, $CommandInfo, 2);
 
-    ($CommandExample, $CommandText) = split(/\n\n/, $CommandInfo, 2);
-
-    $CommandExample = "\#$CommandExample\n";
+    # Text starts with a new paragraph that does not have # as first character
+    $CommandInfo =~ /\n\n([^\#])/;
+    $CommandExample = "\#$`\n";
+    $CommandText    = "$1$'";
 
     print "
 CommandXml=
@@ -820,7 +832,12 @@ sub process_elements{
 	    my $ParamDescription = $ParamType; # description shown after name
 
 	    # Current value of the parameter
-	    my $Value = $ParamValue{$Name}[$iLoop];
+	    my $Value;
+	    if($IsFirstEdit){
+		$Value = $ParamValue[$iParameter-1];
+	    }else{
+		$Value = $ParamValue{$Name}[$iLoop];
+	    }
 
 	    if($ParamType eq "strings"){
 		# Process parts of type "strings" to values
@@ -966,9 +983,12 @@ sub process_elements{
             if($iPart){
                 $Value = $Part[$iPart-1];
                 # warn "option initial value from Part[$iPart]=$Value\n";
-            }else{
+            }elsif($IsFirstEdit){
+		$Value = $ParamValue[$iParameter-1];
+	    }else{
                 $Value = $ParamValue{$ParamName}[$iLoop];
             }
+
 	    my $Selected;
 	    if(length($Value)){
 		$Selected = " SELECTED" if $OptionValue =~ /\b$Value\b/;
@@ -1058,17 +1078,21 @@ sub xml_to_form{
     my $Param = shift;                       # parameters of the command
     $Param =~ s/^\s*//mg;                    # remove leading spaces
 
-    my $index = 0;
-    while($Param =~ s/^(.*?)(\t|    )\s*(.*?)\n//){
-	my $Value = $1;
-	my $Name  = $3;
+    if($IsFirstEdit){
+	# Put values into @ParamValue (names will be taken from XML file)
+	$Param      =~ s/(\t|    ).*$//mg;   # remove names/comments
+	@ParamValue = split(/\n/, $Param);   # array of values
+    }else{
+	my $index = 0;
+	while($Param =~ s/^(.*?)(\t|    )\s*(.*?)\n//){
+	    my $Value = $1;
+	    my $Name  = $3;
 
-	# Allow for the outermost <for ...> loop with parameter names repeated
-	$index++ if defined $ParamValue{$Name}[$index];
+	    # The outermost <for ...> loop can have parameter names repeated
+	    $index++ if defined $ParamValue{$Name}[$index];
 	
-	$ParamValue{$Name}[$index] = $Value;
-
-	# warn "setting ParamValue{$Name}[$index] = $Value\n";
+	    $ParamValue{$Name}[$index] = $Value;
+	}
     }
 
     my $Xml = &XmlRead($CommandXml);         # XML description of command
@@ -1445,13 +1469,16 @@ sub write_param_html{
 	if($SessionView eq "EDIT"){
 	    $SessionTagTop = "
 <FORM NAME=action ACTION=$IndexPhpFile>
-Session $iSession: 
+<FONT COLOR=BLUE>Session $iSession:</FONT>
 <INPUT NAME=name TYPE=TEXT SIZE=$SessionEditorSize VALUE=\"$SessionName\">
 <INPUT NAME=id TYPE=HIDDEN VALUE=$iSession>
 <INPUT TYPE=SUBMIT NAME=submit VALUE=\"SAVE SESSION NAME\"></FORM>";
 	    $SessionTagBot = "Session $iSession";
 	}else{
-	    if($SessionName){
+	    if($IsEditing){
+		$SessionTagTop = "Session $iSession";
+		$SessionTagTop .= ":\&nbsp;$SessionName" if $SessionName;
+	    }elsif($SessionName){
 		$SessionTagTop = "<$Action=select_session 
                     TITLE=\"Select session\">Session $iSession</A>:\&nbsp;".
 		    "<$Action=edit_session 
@@ -1587,8 +1614,6 @@ $InsertSectionButton$CopySectionButton$RemoveSectionButton
 		my $ItemView = $ItemRef->{VIEW};
 		my $ItemType = lc($ItemRef->{TYPE});
 
-		#$ItemRef->{BODY} =~ s/CommandExample/$CommandExample/;
-
 		my $ItemHead;
 		my $ItemTail;
 		if($ItemType eq "userinput"){
@@ -1677,8 +1702,8 @@ $ItemTail
 		}
 
 		my $ActionEditItem;
-		if($ItemType eq "error"){
-		    $ActionEditItem = "A NAME=ERROR";
+		if($IsEditing or $ItemType eq "error"){
+		    $ActionEditItem = "A NAME=NOEDIT";
 		}else{
 		    $ActionEditItem = "$Action=edit_item ".
 			"TITLE=\"Edit $ItemType in session $iSession";
@@ -1915,7 +1940,7 @@ sub set_view{
 
 	    next if /section/;
 	    
-	    for $iItem (1...$#{ $SectionRef->{ITEM} }){
+	    for $iItem (1..$#{ $SectionRef->{ITEM} }){
 		my $ItemRef = $SectionRef->{ITEM}[$iItem];
 
 		$ItemRef->{VIEW} = $ItemView;
