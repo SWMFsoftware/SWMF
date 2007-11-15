@@ -161,7 +161,7 @@ sub _start_browser
       TRY: 
 	foreach $_bro (@_bro){
 	    foreach $_dir (split(/:/, $ENV{"PATH"}.
-				 ":/usr/bin/X11".
+				 "::/usr/bin/X11".
 				 ":/usr/local/bin".
 				 ":/usr/local/gnu/bin".
 				 ":/opt/bin".
