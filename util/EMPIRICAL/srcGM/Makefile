@@ -9,8 +9,10 @@ MY_LIB = ${LIBDIR}/libEMPIRICALGM.a
 #include Makefile.RULES
 
 OBJECTS = \
-	t96_01.o\
-	t04_s.o
+        ModTsyganenko.o
+
+#	t96_01.o\
+#	t04_s.o
 
 
 #DEPEND:
