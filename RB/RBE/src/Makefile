@@ -1,5 +1,8 @@
 
 include ../Makefile.def
+
+SEARCH_EXTRA = -I${EMPIRICALGMDIR} -I${EMPIRICALIEDIR}
+
 include ../Makefile.conf
 
 OBJECTS = \
