@@ -3000,12 +3000,11 @@ subroutine tsyndipoleSM(imod,iopt,parmod,ps,t,xsm,ysm,zsm,bxsm,bysm,bzsm)
   !  Routine calculate the total (T96 or T04 external and dipole fields) field
   !  in SM.
 
+
+  use EGM_ModTsyganenko, ONLY: t96_01,t04_s,dipole
+
   parameter (i_1=1,m_1=-1)
   real parmod(10)
-
-  external t96_01,t04_s
-
-
 
   call smgsm(xsm,ysm,zsm,xgsm,ygsm,zgsm,i_1)
   if (imod.eq.1)call t96_01(iopt,parmod,ps,xgsm,ygsm,zgsm,bxext,byext,bzext)
