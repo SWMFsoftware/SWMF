@@ -56,7 +56,10 @@ for i=0,ncolor-1 do begin
 endfor
 bar_len=200
 color_bar=congrid(temp,bar_len,20)
-tv,color_bar,x0b,y0b
+;tv,color_bar,x0b,y0b
+;tv,color_bar
+TV, color_bar, .095, .08, XSIZE=.13, YSIZE=.05, /Normal
+TV, color_bar, .58, .08, XSIZE=.13, YSIZE=.05, /Normal
 v_min=string(vmin,'(f4.1)')
 if (vmax lt 100.) then v_max=string(vmax,'(f4.1)')
 if (vmax ge 100.) then v_max=string(vmax,'(e7.1)')
@@ -275,7 +278,7 @@ amax=1.
 amin=-1.
 
 ; Setup window
-!p.charsize=3
+!p.charsize=1.5
 x_wsize=1140
 y_wsize=800
 window,1,xpos=200,ypos=100,xsize=x_wsize,ysize=y_wsize
@@ -283,6 +286,7 @@ window,1,xpos=200,ypos=100,xsize=x_wsize,ysize=y_wsize
 
 ; Plot plasma flux (or pressure) and pitch angle anisotropy
 for n=0,ntime-1 do begin
+    setdevice,'plot'+strtrim(n,2)+'.eps',eps=eps
     polyfill,[0.,1.,1.,0.,0.],[0.,0.,1.,1.,0.],color=255,/normal  ; white BG
     hour=houra(n)
     ro(*,*)=roa(n,*,*)
@@ -315,14 +319,16 @@ for n=0,ntime-1 do begin
     xyouts,0.5,0.93,hours+':'+minutes+' UT',size=2.,alignment=0.5,/normal 
     xyouts,0.5,0.85,elabel+' keV '+species,size=2.,alignment=0.5,/normal
 
-    ; Make gif file
-    gimg = tvrd(0,0,order=0,true=1)
-    
-    ;write_tiff,fhead+'_'+fmiddle+strtrim(n,2)+'.tif',gimg,red=red(0:255),$
-    ;  green=green(0:255),blue=blue(0:255) ;,/multiple
+;    ; Make gif file
+;    gimg = tvrd(0,0,order=0,true=1)
+;    
+;    ;write_tiff,fhead+'_'+fmiddle+strtrim(n,2)+'.tif',gimg,red=red(0:255),$
+;    ;  green=green(0:255),blue=blue(0:255) ;,/multiple
+;
+;    write_image,fhead+'_'+fmiddle+strtrim(n,2)+'.tif','TIFF',gimg,red=red(0:255),$
+;      green=green(0:255),blue=blue(0:255) ;,/multiple
 
-    write_image,fhead+'_'+fmiddle+strtrim(n,2)+'.tif','TIFF',gimg,red=red(0:255),$
-      green=green(0:255),blue=blue(0:255) ;,/multiple
+    closedevice
 endfor
 
 ;write_tiff,fhead+'_'+fmiddle+'.tiff',red=red(0:255),$
