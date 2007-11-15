@@ -1,4 +1,4 @@
-      BLOCK DATA EGM_ModT_endData
+      BLOCK DATA EGM_ModTsyanenkoData
 
       IMPLICIT REAL*8 (A-H,O-Z)
       COMMON /EGM_COORD11/ XX1(12),YY1(12)
@@ -23,7 +23,8 @@ C     CURVATURE  OF THE WARPING (SEE P.89, NB #2)
       DATA DX,SCALEIN,SCALEOUT /-0.16D0,0.08D0,0.4D0/
       DATA TILT,XCENTRE,RADIUS,DIPX,DIPY /1.00891,2.28397,-5.60831,
      *     1.86106,7.83281,1.12541,0.945719/
-      End Block Data EGM_ModT_endData
+
+      End Block Data EGM_ModTsyganenkoData
 
 
       module EGM_ModTsyganenko
