@@ -9,17 +9,18 @@ MY_LIB = ${LIBDIR}/libEMPIRICALUA.a
 #include Makefile.RULES
 	 
 OBJECTS =\
-	msis90.o\
-	iri90.o
+	ModIri90.o\
+	msis90.o
 
-#       msis_library.o         [* this is the same file as msis90
-#       init_iri.o & init_msis.o   [* this files in model's root dir] 
-
+#	iri90.o\
+#	ModMsis90.o\
 
 #DEPEND:
 #	@perl ${SCRIPTDIR}/depend.pl -I${SHAREDIR} ${MODULES}
- 
 
+#.f.o:
+#	${COMPILE.f77} ${CFLAGS} ${PRECISION} $<
+ 
 LIB:
 	make ${MY_LIB}
 	@echo
