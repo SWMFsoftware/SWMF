@@ -1,6 +1,8 @@
 
 subroutine init_iri
 
+  use EUA_ModIri90, ONLY: iri90
+
   use ModGITM
   use ModInputs
   use ModConstants
@@ -18,7 +20,7 @@ subroutine init_iri
   !  character, dimension(1:80) :: ccirnm, ursinm
 
   integer :: iBlock, iAlt, iLat, iLon, iIon
-  real :: geo_lat, geo_lon, geo_alt, geo_lst
+  real :: geo_lat, geo_lon, geo_alt(1), geo_lst
 
   call report("init_iri",1)
 
@@ -120,8 +122,8 @@ subroutine init_iri
               geo_lat = Latitude(iLat,iBlock)*180.0/pi
               geo_lon = Longitude(iLon,iBlock)*180.0/pi
 
-              geo_alt = Altitude_GB(iLon, iLat, iAlt, iBlock)/1000.0
-              geo_lst = mod(utime/3600.0+geo_lon/15.0,24.0)
+              geo_alt(1) = Altitude_GB(iLon, iLat, iAlt, iBlock)/1000.0
+              geo_lst    = mod(utime/3600.0+geo_lon/15.0,24.0)
 
               if (geo_lat < -90.0) then
                  geo_lat = -180.0 - geo_lat
