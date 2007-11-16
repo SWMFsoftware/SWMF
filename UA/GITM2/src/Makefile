@@ -1,9 +1,10 @@
 ABDIR   = ../srcSphereAB
 IODIR   = ${DATAREADINDICESDIR}
 
-SEARCH_EXTRA = -I${ABDIR} -I${IODIR}
+SEARCH_EXTRA = -I${ABDIR} -I${IODIR} -I${EMPIRICALUADIR} -I${EMPIRICALIEDIR}
 
 include ../srcMake/Makefile.conf
+
 include Makefile.DEPEND
 include Makefile.RULES
 
@@ -84,7 +85,7 @@ OBJECTS = \
 OBJECTS_EXE = main.o ${OBJECTS} ${MODULES}
 
 DEPEND:
-	@${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS_EXE}
+	@${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS_EXE} 
 
 EXE = ${BINDIR}/GITM.exe
 
@@ -94,8 +95,8 @@ GITM:	DEPEND
 	@echo "${EXE} has been created"
 
 ${EXE}:	${OBJECTS_EXE}
-	@(if [ ${OS} = "Darwin" ];         then make GITM_for_Darwin; \
-	else                                    make GITM_general; fi)
+	@(if [ ${OS} = "Darwin" ]; then make GITM_for_Darwin; \
+	else                            make GITM_general;     fi)
 
 GITM_general:
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} \
