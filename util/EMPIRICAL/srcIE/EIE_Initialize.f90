@@ -5,6 +5,8 @@ subroutine EIE_Initialize(iOutputError)
   use ModEIEFiles
   use ModIoUnit, only : UnitTmp_
 
+  use EIE_ModWeimer, only: readcoef96, readcoef01
+
   implicit none
 
   integer, intent(out) :: iOutputError
