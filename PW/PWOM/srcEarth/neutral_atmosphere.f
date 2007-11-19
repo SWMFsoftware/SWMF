@@ -7,6 +7,10 @@ C**********************************************************************C
 C                                                                      C
       SUBROUTINE MODATM (ALT,XNO2,XNN2,XNO,XNH,XNHE,TEMP)
       use ModCommonVariables
+      
+      use EUA_ModMsis90, ONLY: GTD6
+
+
       REAL D(8),T(2),MT(10),ALTL(8)
 
  
