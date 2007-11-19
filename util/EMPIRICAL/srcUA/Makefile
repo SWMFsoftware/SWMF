@@ -5,22 +5,10 @@ include ../../../Makefile.conf
 
 MY_LIB = ${LIBDIR}/libEMPIRICALUA.a
 
-#include Makefile.DEPEND
-#include Makefile.RULES
-	 
 OBJECTS =\
 	ModIri90.o\
-	msis90.o
+        ModMsis90.o
 
-#	iri90.o\
-#	ModMsis90.o\
-
-#DEPEND:
-#	@perl ${SCRIPTDIR}/depend.pl -I${SHAREDIR} ${MODULES}
-
-#.f.o:
-#	${COMPILE.f77} ${CFLAGS} ${PRECISION} $<
- 
 LIB:
 	make ${MY_LIB}
 	@echo
