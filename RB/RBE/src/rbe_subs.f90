@@ -1499,6 +1499,8 @@ end subroutine diffusea_a
 subroutine convection(t,tstart,ps,xlati,phi,dphi,re,&
      rc,xme,xnsw0,vsw0,Bx0,By0,Bz0)
 
+  use EIE_ModWeimer, ONLY: setmodel00, boundarylat00, epotval00
+
   use rbe_convect
   use rbe_cread2,ONLY:nimf,timf,&
        bxw,byw,bzw,nsw,tsw,xnswa,vswa,iconvect,itype,UseGm
@@ -2994,14 +2996,14 @@ subroutine modd_dayno(iyy,imo,idy,iday,j)
 
 end subroutine modd_dayno
 
+
 !*****************************************************************************
 subroutine tsyndipoleSM(imod,iopt,parmod,ps,t,xsm,ysm,zsm,bxsm,bysm,bzsm)
   !****************************************************************************
   !  Routine calculate the total (T96 or T04 external and dipole fields) field
   !  in SM.
 
-
-  use EGM_ModTsyganenko, ONLY: t96_01,t04_s,dipole
+  use EGM_ModTsyganenko, ONLY: t96_01, t04_s, dipole
 
   parameter (i_1=1,m_1=-1)
   real parmod(10)
