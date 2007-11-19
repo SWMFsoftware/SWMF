@@ -26,7 +26,7 @@ PWOM:
 	cd ${EMPIRICALIEDIR};     make LIB
 	cd ${EMPIRICALUADIR};    make  LIB
 	cd ${DATAREADINDICESDIR}; make LIB
-	cd src;                   make PWOM
+	cd src;                  make PWOM
 
 LIB:
 	cd src; make LIB
@@ -100,11 +100,11 @@ test_check:
 
 test_restart:
 	@echo "test_restart_save..." > test_${PLANET}_restart.diff
-	make test_restart_save
+	make   test_restart_save
 	@echo "test_restart_read..." >> test_${PLANET}_restart.diff
-	make test_restart_read
+	make   test_restart_read
 	@echo "test_restart_check..." >> test_${PLANET}_restart.diff
-	make test_check MYTEST=_restart
+	make   test_check MYTEST=_restart
 
 test_restart_save:
 	cp input/${PLANET}/restart_iline* ${TESTDIR}/PW/restartIN/
