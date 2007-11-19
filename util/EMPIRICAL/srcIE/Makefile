@@ -8,7 +8,7 @@ MY_LIB = ${LIBDIR}/libEMPIRICALIE.a
 include Makefile.DEPEND
 #include Makefile.RULES
 
-MODULES = \
+OBJECTS = \
 	ModEIEConductance.o\
 	ModAMIE_Interface.o\
 	ModErrors.o\
@@ -17,8 +17,8 @@ MODULES = \
 	ModExtras.o\
 	ModEIEFiles.o\
 	ED_ModInterface.o\
-	ED_ModIons.o
-OBJECTS = \
+	ED_ModIons.o\
+	ModWeimer.o\
 	AMIE_Library.o\
 	EIE_End.o\
 	EIE_Initialize.o\
@@ -27,10 +27,6 @@ OBJECTS = \
 	EIE_set_inputs.o\
 	readAMIEoutput.o\
 	readMHDoutput.o\
-	wei96.o\
-	wei00.o\
-	wei01.o\
-	weicom.o\
 	mh86.o\
 	hmr89.o\
 	iz94.o\
@@ -42,7 +38,7 @@ OBJECTS = \
 	ED_r_elec_ed_lup_subs.o
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl -I${SHAREDIR} ${MODULES}
+	@perl ${SCRIPTDIR}/depend.pl -I${SHAREDIR} ${OBJECTS}
 
 LIB:    DEPEND
 	make ${MY_LIB}
@@ -50,9 +46,9 @@ LIB:    DEPEND
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}: ${MODULES} ${OBJECTS}
+${MY_LIB}: ${OBJECTS}
 	rm -f ${MY_LIB}
-	${AR} ${MY_LIB} ${MODULES} ${OBJECTS}
+	${AR} ${MY_LIB} ${OBJECTS}
 
 distclean: clean
 	rm -f Makefile.DEPEND
