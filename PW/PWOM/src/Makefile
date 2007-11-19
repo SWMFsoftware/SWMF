@@ -1,17 +1,19 @@
 include ../Makefile.def
 
-SEARCH_EXTRA = -I${DATAREADINDICESDIR} -I${EMPIRICALIEDIR}
+SEARCH_EXTRA = -I${DATAREADINDICESDIR} -I${EMPIRICALIEDIR} -I${EMPIRICALUADIR}
 
 include ../Makefile.conf
+
 include Makefile.planet
 include Makefile.DEPEND
+
 include Makefile.RULES
 
 MODULES = \
+	ModPW.o\
 	ModParameters.o\
 	ModCommonPlanet.o\
 	ModCommonVariables.o\
-	ModPW.o\
 	ModNeutralPW.o\
 	ModPass.o\
 	ModPwImplicit.o\
@@ -49,7 +51,8 @@ LIBOBJECTS = ${MODULES} ${METHODS}
 EXEOBJECTS = main.o ${LIBOBJECTS}
 
 DEPEND:
-	@${SCRIPTDIR}/depend.pl ${SEARCH} ${EXEOBJECTS}
+	@${SCRIPTDIR}/depend.pl ${SEARCH} ${EXEOBJECTS} 
+
 
 MY_LIB = libPWOM.a
 
