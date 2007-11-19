@@ -5,6 +5,8 @@ subroutine get_msis_temperature(lon, lat, alt, t, h)
   use ModPlanet
   use ModGITM
 
+  use EUA_ModMsis90, only: meter6, gtd6
+
   implicit none
 
   real, intent(in) :: lon, lat, alt
@@ -13,8 +15,13 @@ subroutine get_msis_temperature(lon, lat, alt, t, h)
   real, dimension(1:2) :: msis_temp
   real, dimension(1:8) :: msis_dens
 
-  real :: LonDeg, LatDeg, AltKm, LST, ap = 10.0
+  real :: LonDeg, LatDeg, AltKm, LST
+  real,dimension(7)    :: AP  
   real :: nO, nO2, nN2, m, r, g
+
+  !-------------------------------------------------------
+  
+  ap=10.0
 
   call meter6(.true.)
 
@@ -53,6 +60,8 @@ subroutine init_msis
   use ModPlanet
   use ModTime
 
+  use EUA_ModMsis90, ONLY: meter6, gtd6
+
   implicit none
 
   ! msis variables
@@ -64,7 +73,7 @@ subroutine init_msis
 
   integer :: iBlock, iAlt, iLat, iLon, iSpecies
   real :: geo_lat, geo_lon, geo_alt, geo_lst
-  real :: ap = 10.0
+  real, dimension(7)  :: ap = 10.0
 
   call report("init_msis",1)
 
@@ -207,13 +216,18 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
 
   use ModPlanet
 
+   use EUA_ModMsis90, ONLY: gtd6
+
   implicit none
 
   real, dimension(1:2) :: msis_temp
   real, dimension(1:8) :: msis_dens
+  
+  
 
   integer, intent(in) :: iJulianDay
-  real, intent(in) :: uTime, Alt, Lat, Lon, LST, f107a, f107, ap
+  real, intent(in) :: uTime, Alt, Lat, Lon, LST, f107a, f107
+  real, dimension(7), intent(in):: ap
   real, intent(out) :: LogNS(nSpecies), Temp, LogRho
   !----------------------------------------------------------------------------
   CALL GTD6(iJulianDay,uTime,Alt,Lat,Lon,LST, &
