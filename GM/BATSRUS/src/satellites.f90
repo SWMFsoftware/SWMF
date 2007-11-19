@@ -371,3 +371,127 @@ subroutine close_satellite_output_files(iSat)
 end subroutine close_satellite_output_files
 !=============================================================================
 
+subroutine sat_get_ray(iSatIn, sat_rayvars)
+
+  use ModRaytrace
+  use ModMpi
+  use ModMain,       ONLY: nI, nJ, nK, nCells, nBlock
+  use ModGeometry,   ONLY: XyzStart_BLK, dx_BLK, dy_BLK, dz_BLK, UseCovariant
+  use ModIO,         ONLY: iBLKsatellite, iPEsatellite, Xsatellite
+
+  integer, intent(in) :: iSatIn
+  real,    intent(out):: sat_rayvars(6)
+  
+  integer :: iDir, iBLK, iDim
+  real    :: Xyz_D(3),  Dxyz_D(3), rayvars(3,2,nI,nJ,nK)
+  real    :: Dx1, Dx2, Dy1, Dy2, Dz1, Dz2
+  integer :: i1, i2, j1, j2, k1, k2, iNear, jNear, kNear
+  integer :: i, j, k  ! Used in the FORALL statement
+
+  !---------------------------------------------------------------------------
+
+  ! Only use this if we're on the correct node.
+  if (iProc /= iPEsatellite(iSatIn)) then
+     do iDim=1,6
+        sat_rayvars(iDim) = 0.0
+     enddo
+     RETURN
+  endif
+
+  iBLK = iBLKSatellite(iSatIn)
+  Dxyz_D(1) = dx_BLK(iBLK)
+  Dxyz_D(2) = dy_BLK(iBLK)
+  Dxyz_D(3) = dz_BLK(iBLK)
+
+  if (UseCovariant) then 
+     call xyz_to_gen(Xsatellite(iSatIn,:),Xyz_D)
+  else
+     Xyz_D = Xsatellite(iSatIn,:)
+  endif
+
+  ! Normalize coordinates
+  do iDim=1,3
+     Xyz_D(iDim) = (Xyz_D(iDim) - XyzStart_BLK(iDim,iBLK)) / Dxyz_D(iDim)
+  end do
+
+  ! Set location assuming point is inside block.
+  i1 = floor(Xyz_D(1))
+  j1 = floor(Xyz_D(2))  
+  k1 = floor(Xyz_D(3))
+  i2 = ceiling(Xyz_D(1))
+  j2 = ceiling(Xyz_D(2))
+  k2 = ceiling(Xyz_D(3))
+
+  ! If Xy_D is outside of block, change i,j,k in order to extrapolate.
+  if(any( Xyz_D < 1) .or. any(Xyz_D > (/nI, nJ, nK/))) then
+     i1 = min(nI-1, max(1, i1));   i2 = i1 + 1
+     j1 = min(nJ-1, max(1, j1));   j2 = j1 + 1
+     k1 = min(nK-1, max(1, k1));   k2 = k1 + 1
+  endif
+
+  ! Set interpolation weights
+  Dx1 = Xyz_D(1) - i1; Dx2 = 1.0 - Dx1
+  Dy1 = Xyz_D(2) - j1; Dy2 = 1.0 - Dy1
+  Dz1 = Xyz_D(3) - k1; Dz2 = 1.0 - Dz1
+
+  ! Calculate the nearest point.
+  iNear = min( nI, max(nint(Xyz_D(1)),1) )
+  jNear = min( nJ, max(nint(Xyz_D(2)),1) )
+  kNear = min( nK, max(nint(Xyz_D(3)),1) )
+
+  ! Copy ray tracing values to new array so allow changing of values.
+  rayvars = ray(1:3,1:2,1:nI,1:nJ,1:nK,iBLK)
+
+  ! Use the ray status of the nearest point to the satellite.
+  sat_rayvars(3) = rayvars(3, 1, iNear,jNear,kNear)
+  sat_rayvars(6) = rayvars(3, 2, iNear,jNear,kNear)
+
+  ! For each direction along the ray, determine if all lines surrounding point
+  ! are open or closed, then set sat_rayvars accordingly.
+  do iDir=1,2
+
+     if ( any(rayvars(3,iDir,i1:i2,j1:j2,k1:k2) < 1) .or. &
+          any(rayvars(3,iDir,i1:i2,j1:j2,k1:k2) == iDir) ) then
+        ! write(*,'(a35,i1)')'Using nearest point for iDir: ', iDir
+        ! One or more lines is open in direction iDir, must use nearest point.
+        do iDim=1,2
+           sat_rayvars(iDim + 3*(iDir-1))=rayvars(iDim,iDir,iNear,jNear,kNear)
+        end do
+
+     else   ! All lines closed in direction iDir, interpolate.
+
+        ! If the satellite is near the 0/360 degree boundary in longitude,
+        ! the result of the interpolation will be incorrect.  Adjust
+        ! longitudes accordingly.
+        if (any(rayvars(2,iDir,i1:i2,j1:j2,k1:k2)>330.0) .AND. &
+            any(rayvars(2,iDir,i1:i2,j1:j2,k1:k2)<30.0)) then
+
+           forall(i=i1:i2,j=j1:j2,k=k1:k2,rayvars(2,iDir,i,j,k)<30.0)
+              rayvars(2,iDir,i,j,k) = rayvars(2,iDir,i,j,k) + 360.0
+           end forall
+
+        endif
+
+        do iDim=1,2
+           sat_rayvars(iDim + 3*(iDir-1)) =                         &
+                 Dz2*(   Dy2*(   Dx2*rayvars(iDim,iDir,i1,j1,k1)   &
+                +                Dx1*rayvars(iDim,iDir,i2,j1,k1))  &
+                +        Dy1*(   Dx2*rayvars(iDim,iDir,i1,j2,k1)   &
+                +                Dx1*rayvars(iDim,iDir,i2,j2,k1))) &
+                +Dz1*(   Dy2*(   Dx2*rayvars(iDim,iDir,i1,j1,k2)   &
+                +                Dx1*rayvars(iDim,iDir,i2,j1,k2))  &
+                +        Dy1*(   Dx2*rayvars(iDim,iDir,i1,j2,k2)   &
+                +                Dx1*rayvars(iDim,iDir,i2,j2,k2)))
+        end do
+     endif
+
+  end do
+
+  ! Ensure that longitude wraps around 0/360 degree boundary correctly.
+  if(sat_rayvars(2)<000.0) sat_rayvars(2) = sat_rayvars(2) + 360.0
+  if(sat_rayvars(5)<000.0) sat_rayvars(5) = sat_rayvars(5) + 360.0
+  if(sat_rayvars(2)>360.0) sat_rayvars(2) = sat_rayvars(2) - 360.0
+  if(sat_rayvars(5)>360.0) sat_rayvars(5) = sat_rayvars(5) - 360.0
+
+end subroutine sat_get_ray
+!=============================================================================
