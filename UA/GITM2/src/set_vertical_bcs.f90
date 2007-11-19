@@ -17,6 +17,8 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   use ModVertical, only: Lat, Lon, Gravity_G, Altitude_G, dAlt_F
   use ModIndicesInterfaces, only: get_HPI
 
+  use EUA_ModMsis90, ONLY: meter6
+
   implicit none
 
   real, intent(inout) :: &
