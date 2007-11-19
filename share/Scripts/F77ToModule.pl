@@ -28,6 +28,7 @@ my $unit;           # name of last program unit: subroutine/function/block data
 my $iEnd;           # index of last END 
 my $iBlockData;     # start index of block data
 my $nBlockData;     # number of lines in the block data
+my $common;         # true when inside a common block declaration
 
 for(my $i=0; $i<=$#text; $i++){
     $_ = $text[$i];
@@ -49,22 +50,27 @@ for(my $i=0; $i<=$#text; $i++){
 	    # put name back into current line
 	    $text[$i] = "      BLOCK DATA $name\n";
 	}
-	$nBlockData = $iEnd - $iBlockData + 1     if $unit =~ /block/i;
+	$nBlockData = $iEnd - $iBlockData + 1 if $unit =~ /block/i;
 
 	$text[$iEnd] =~ s/\n/ $unit\n/ if $iEnd;
 	$unit = "$type $name";
 
     }elsif(/^\s+end\s*$/i){
 	$iEnd = $i;
+    }elsif(/^\s+common\b/i){
+	$text[$i] =~ s/\/(\w+)\//\/$Prefix$1\//gi;
+	$common = 1;
+    }elsif(/^\s\s\s\s\s\S/ and $common){
+	$text[$i] =~ s/\/(\w+)\//\/$Prefix$1\//gi;
     }else{
-	# Rename common blocks
-	$text[$i] =~ s/^(\s+common\s+\/)/$1$Prefix/i;
+	$common = 0;
     }
 }
 
 # Fix the last END statement
 $text[$iEnd] =~ s/\n/ $unit\n/ if $iEnd;
-$nBlockData  = $iEnd - $iBlockData + 1     if $unit =~ /block/i;
+$nBlockData = $iEnd - $iBlockData + 1 if $unit =~ /block/i;
+
 
 # Move block data to the beginning
 print FILE splice(@text,$iBlockData,$nBlockData), "\n" if $nBlockData;
