@@ -1323,6 +1323,7 @@ subroutine MH_set_parameters(TypeAction)
               write(*,*)NameSub//' using the inverse:',TauCoupleIm
            end if
         end if
+        call read_var('DoImSatTrace',DoImSatTrace)
         if(NameCommand == "#IMCOUPLING")then
            call read_var('DoCoupleImPressure',DoCoupleImPressure)
            call read_var('DoCoupleImDensity',DoCoupleImDensity)
@@ -1445,6 +1446,15 @@ subroutine MH_set_parameters(TypeAction)
                    'Variable definition (mhd,ful,var) missing' &
                    //' from satellite_string='//satellite_string)
            end if
+
+           !Change by DTW, July 2007
+           !Add ray-tracing variables if 'ray' is present.
+           if (index(satellite_string,'ray')>0 .or. &
+                index(satellite_string,'RAY')>0) then
+              satellite_vars(ifile) = trim(satellite_vars(ifile)) // &
+                   ' theta1 phi1 status1 theta2 phi2 status2'
+           endif
+
            plot_type(ifile) = "satellite"
 
            ! Determine the time output format to use in the 
