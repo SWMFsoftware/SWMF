@@ -247,6 +247,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
 
   use ModProcMH
   use ModNumConst
+  use ModMPI   !!!!DTW moved up from set_log_var
   use ModMain, ONLY: n_step,dt,unusedBLK,nI,nJ,nK,nBlock,gcn,UseUserLogFiles,&
        iTest,jTest,kTest,ProcTest,BlkTest,optimize_message_pass,x_,y_,&
        UseRotatingFrame
@@ -271,9 +272,11 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
 
   real :: Volume
   real :: StateIntegral_V(nVar)
+  real :: sat_RayVars(6), sat_RayVarsSum(6)  !DTW, July 2007
 
   integer :: iVar,iR,iVarTot,itmp,jtmp, iBLK
   integer :: i,j,k
+  integer :: iError  !!!DTW moved up from set_log_var
   real :: R_log
 
   logical :: DoTest,DoTestMe
@@ -311,6 +314,19 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
         StateSat_V(rhoUy_)=StateSat_V(rhoUy_) &
                 + StateSat_V(rho_)*OMEGAbody*xSatellite(iSat,x_)
      end if
+
+     !If any ray tracing satellite variables are present, collect ray data
+     !DTW, July 2007
+     do iVar=1, nLogVar
+        select case(NameLogVar_I(iVar))
+        case('theta1','theta2','phi1','phi2','status1','status2')
+           call sat_get_ray(iSat, sat_RayVars)
+           call MPI_reduce(sat_RayVars, sat_RayVarsSum, 6, MPI_REAL, MPI_SUM, &
+                0, iComm, iError)
+           EXIT
+        end select
+     enddo
+
   else
      ! The logfile may need the integral of conservative variables
      ! Also extract the pressure into a variable for pmin and pmax
@@ -345,12 +361,12 @@ contains
   subroutine set_log_var
 
     use ModMain, ONLY: x_, y_, z_
-    use ModMPI
+    !use ModMPI  !!!DTW: Moved to set_logvar
     use ModUser, ONLY: user_get_log_var
     use ModUtilities, ONLY: lower_case
 
     ! Local variables
-    integer :: iError
+    !integer :: iError  !!!DTW: Moved to set_logvar
     real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, qval, qval_all
     real :: Current_D(3)
 
@@ -862,6 +878,21 @@ contains
        else
           LogVar_I(iVarTot) = 1
        end if
+       
+       !Raytracing footpoint values  DTW, July 2007
+    case('theta1')
+       LogVar_I(iVarTot) = sat_RayVarsSum(1)
+    case('phi1')
+       LogVar_I(iVarTot) = sat_RayVarsSum(2)
+    case('status1')
+       LogVar_I(iVarTot) = sat_RayVarsSum(3)
+    case('theta2')
+       LogVar_I(iVarTot) = sat_RayVarsSum(4)
+    case('phi2')
+       LogVar_I(iVarTot) = sat_RayVarsSum(5)
+    case('status2')
+       LogVar_I(iVarTot) = sat_RayVarsSum(6)
+
     case default
        LogVar_I(iVarTot) = -777.0
        if(iProc==0)write(*,*)'WARNING in var_sat: unknown variable ',&
