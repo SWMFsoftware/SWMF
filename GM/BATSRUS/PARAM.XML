@@ -1871,22 +1871,15 @@ Default value is "GM/IO2".
 		<parameter name="StringLog" type="strings" min="1" max="4">
 			<part name="TypeLogVar" type="string" input="select"
 							required="T">
-				<option name="MHD vars. dimensional" 
-					value="MHD" default="T" />
-				<option name="Flux vars. dimensional"
-					value="FLX" />
-				<option name="Raw vars. dimensional"
-					value="RAW" />
-				<option name="Set vars. dimensional"
-					value="VAR" />
-				<option name="MHD vars. scaled" 
-					value="mhd" default="T" />
-				<option name="Flux vars. scaled"
-					value="flx" />
-				<option name="Raw vars. scaled"
-					value="raw" />
-				<option name="Set vars. scaled"
-					value="var" />
+				<option name="MHD variables"     value="MHD"
+								 default="T" />
+				<option name="MHD vars. scaled"  value="mhd" />
+				<option name="Flux variables"    value="FLX" />
+				<option name="Flux vars. scaled" value="flx" />
+				<option name="Raw variables"     value="RAW" />
+				<option name="Raw vars. scaled"  value="raw" />
+				<option name="Set variables"     value="VAR" />
+				<option name="Set vars. scaled"  value="var" />
 			</part>
 			<part name="TypeTime" type="string" input="select"
 				required="F" multiple="T">
@@ -1991,28 +1984,24 @@ is a list of radii at which to calculate the flux through a sphere.
 	<parameter name="nSatellite" type="integer" min="0" default="0" />
 	<for from="1" to="$nSatellite">
 		<parameter name="StringSatellite" type="strings"
-							min="1" max="4">
+							min="1" max="5">
 			<part name="TypeSatelliteVar" type="string" 
 						 input="select" required="T">
-				<option name="MHD vars. dimensional" 
-					value="MHD" default="T" />
-				<option name="All vars. dimensional"
-					value="FUL" />
-				<option name="Set vars. dimensional"
-					value="VAR" />
-				<option name="MHD vars. scaled" 
-					value="mhd" />
-				<option name="All vars. scaled"
-					value="ful" />
-				<option name="Set vars. scaled"
-					value="var" />
+				<option name="MHD variables"    value="MHD"
+								default="T" />
+				<option name="MHD vars. scaled" value="mhd" />
+				<option name="All variables"    value="FUL" />
+				<option name="All vars. scaled" value="ful" />
+				<option name="Set variables"    value="VAR" />
+				<option name="Set vars. scaled" value="var" />
 			</part>
-			<part name="TypeTime" type="string" input="select"
+			<part name="OptionalVar" type="string" input="select"
 						required="F" multiple="T">
 				<option name="none" exclusive="T"/>
 				<option name="step" />
 				<option name="date" />
 				<option name="time" />
+				<option value="ray"/>
 			</part>
 		</parameter>
 		<parameter name="DnOutput" type="integer" min="-1" 
@@ -2029,17 +2018,16 @@ is a list of radii at which to calculate the flux through a sphere.
 	</for>
 #SATELLITE
 2                       nSatellite
-MHD file                StringSatellite (variables and traj type)
+MHD ray                 StringSatellite (variables and optional ray tracing)
 100                     DnOutput
 -1.                     DtOutput [sec]
 satellite1.dat          NameTrajectoryFile
-VAR eqn step date       StringSatellite
+VAR step date           StringSatellite
 100                     DnOutput
 -1.                     DtOutput [sec]
 satellite2.dat          NameTrajectoryFile
 rho p                   NameSatelliteVars ! Read if StringSatellite 
                                           ! contains 'var' or 'VAR'
-
 The numerical solution can be extracted along one or more satellite
 trajectories. The number of satellites is defined by the 
 nSatellite parameter (default is 0).
@@ -2050,12 +2038,12 @@ The StringSatellite can contain the following 3 parts in arbitrary order
 \begin{verbatim}
 satellitevar   = 'mhd', 'ful' or 'var' (unitless output)
                  'MHD', 'FUL' or 'VAR' (dimensional output)
-trajectorytype = 'file' or 'eqn'
-timetype       = 'none', 'step', 'time', 'date'
+optionalvar    = 'ray', 'none', 'step', 'time', and/or 'date'
 \end{verbatim}
-The 'satellitevar' part is required, 
-the 'trajectorytype' part is optional (defaults to 'file'), and
-the 'timetype' part is also optional (default depends on satellitevar)
+The 'satellitevar' part is required. If the optional 'optionalvar' part 
+contains 'ray' then the ray variables 'theta1 phi1 theta2 phi2 status' 
+are saved. The strings 'step', 'time' and 'date' define the corresponding
+time information. The value 'none' means that no time information is saved.
 
 The 'satellitevar' string defines the variables to print in the satellite
 output file.  It also controls whether or not the variables will come out in
@@ -2144,29 +2132,33 @@ in the file GM/BATSRUS/ModIO.f90.
 -3600.0                      SatelliteTimeStart [sec]
 3600.0                       SatelliteTimeEnd   [sec]
 
-In the non-time-accurate mode the numerical simulation result converges
-to a steady-state solution. In the course of this simulation mode, the 
-progress in the iteration number is not associated with an increase in the physical 
-time, and the ultimate solution is a  "snapshot" of the parameter distribution at the 
-time instant set by the  #STARTTIME command. Since time does not run, a satellite 
-position cannot be determined in terms of the simulation time. Instead, the parameters 
-along a cut of the satellite trajectory can be saved on file for a given iteration number. 
-The trajectory points can be naturally parameterized by time, so that the cut can be 
-specified with the choice of the start time, end time, and time interval.
+In the non-time-accurate mode the numerical simulation result
+converges to a steady-state solution. In the course of this simulation
+mode, the progress in the iteration number is not associated with an
+increase in the physical time, and the ultimate solution is a
+"snapshot" of the parameter distribution at the time instant set by
+the #STARTTIME command. Since time does not run, a satellite position
+cannot be determined in terms of the simulation time. Instead, the
+parameters along a cut of the satellite trajectory can be saved on
+file for a given iteration number.  The trajectory points can be
+naturally parameterized by time, so that the cut can be specified with
+the choice of the start time, end time, and time interval.
 
-The command #STEADYSTATESATELLITE is required for a steady-state simulation.
-For each of the satellites, the SatelliteTimeStart is a real value that sets the start of 
-trajectory cut,  while SatelliteTimeEnd sets the end of the trajectory cut. Both are in
-seconds with respect to to the time given in #STARTTIME. A negative value means the time 
-prior to  the #STARTTIME. 
+The command #STEADYSTATESATELLITE is required for a steady-state
+simulation.  For each of the satellites, the SatelliteTimeStart is a
+real value that sets the start of trajectory cut, while
+SatelliteTimeEnd sets the end of the trajectory cut. Both are in
+seconds with respect to the time given in #STARTTIME. A negative
+value means the is time prior to the #STARTTIME.
 
-The DtOutput from the #SATELLITE command specifies the frequency of the points along the 
-satellite trajectory for the non-time-accurate mode, while DnOutput keeps to control the
-iteration number at which the data at the trajectory cut are written to the satellite 
-output file.
+The DtOutput from the #SATELLITE command specifies the frequency of
+the points along the satellite trajectory for the non-time-accurate
+mode, while DnOutput keeps to control the iteration number at which
+the data at the trajectory cut are written to the satellite output
+file.
 
-For more than one satellite (two satellites in the above given example), the start and 
-end times should be set for all of them. 
+For more than one satellite (two satellites in the above given
+example), the start and end times should be set for all of them.
 </command>
 
 <command name="SAVEPLOT">
@@ -2198,44 +2190,31 @@ end times should be set for all of them.
 				<option name="1D" value="1d/1d_" 
 					if="$plotform =~ /\btec\b/"/>
 			</part>
-			<part name="plotvar" type="string" input="select" 
-							required="T">
-				<option name="MHD variables"
-					value="MHD" default="T" />
-				<option name="MHD vars. scaled"
-					value="mhd" />
-				<option name="All variables"
-					value="FUL" />
-				<option name="All vars. scaled"
-					value="ful" />
-				<option name="Raw variables"
-					value="RAW" />
-				<option name="Raw vars. scaled"
-					value="raw" />
-				<option name="Ray tracing variables"
-					value="RAY" />
-				<option name="Ray tracing vars. scaled"
-					value="ray" />
-				<option name="Flux variables" 
-					value="FLX" />
-				<option name="Flux vars. scaled" 
-					value="flx" />
-				<option name="Solar variables"
-					value="SOL" />
-				<option name="Solar vars. scaled"
-					value="sol" />
-				<option name="Position variables"
-					value="POS" if="$plotarea eq 'lin'" />
+			<part name="plotvar" type="string" required="T"
+				input="select">
+				<option name="MHD variables"	  value="MHD" 
+								  default="T"/>
+				<option name="MHD vars. scaled"   value="mhd"/>
+				<option name="All variables"      value="FUL"/>
+				<option name="All vars. scaled"   value="ful"/>
+				<option name="Raw variables"      value="RAW"/>
+				<option name="Raw vars. scaled"   value="raw"/>
+				<option name="Ray tracing vars."  value="RAY"/>
+				<option name="Ray tracing scaled" value="ray"/>
+				<option name="Flux variables"     value="FLX"/>
+				<option name="Flux vars. scaled"  value="flx"/>
+				<option name="Solar variables"    value="SOL"/>
+				<option name="Solar vars. scaled" value="sol"/>
+				<option name="Position variables" value="POS"
+						     if="$plotarea eq 'lin'" />
 				<option name="Position vars. scaled"
 					value="pos"  if="$plotarea eq 'lin'"/>
 				<option name="Basic block variables"
 					value="BBK" />
 				<option name="Basic block vars. scaled"
 					value="bbk" />
-				<option name="Select dimensional vars."
-					value="VAR" />
-				<option name="Select scaled vars."
-					value="var" />
+				<option name="Set variables"    value="VAR" />
+				<option name="Set scaled vars." value="var"/>
 			</part>
 		</parameter>
 		<parameter name="DnSavePlot" type="integer" min="-1" 
