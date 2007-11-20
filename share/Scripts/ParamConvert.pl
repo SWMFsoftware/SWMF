@@ -47,7 +47,7 @@ our $RightBgColor     ='WHITE';    # background color for the right side frame
 
 our $LeftTableWidth   ='100%'   ;  # width of table in left frame
 our $LeftColumn1Width =  '30'   ;  # width of minimize/maximize button column
-our $LeftColumn2Width = '380'   ;  # width of column with commands/comments
+our $LeftColumn2Width = '400'   ;  # width of column with commands/comments
 our $LeftBgColor      ='#DDDDDD';  # background color for the left side frame
 our $SessionBgColor   ='#CCCCCC';  # background color for session markers
 our $SessionLine ='<HR COLOR=BLACK NOSHADE SIZE=4>'; # session separator line
