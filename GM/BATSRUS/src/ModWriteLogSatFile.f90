@@ -315,6 +315,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
                 + StateSat_V(rho_)*OMEGAbody*xSatellite(iSat,x_)
      end if
 
+     !^CFG IF RAYTRACE BEGIN
      !If any ray tracing satellite variables are present, collect ray data
      !DTW, July 2007
      do iVar=1, nLogVar
@@ -326,6 +327,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
            EXIT
         end select
      enddo
+     !^CFG END RAYTRACE
 
   else
      ! The logfile may need the integral of conservative variables
@@ -879,7 +881,7 @@ contains
           LogVar_I(iVarTot) = 1
        end if
        
-       !Raytracing footpoint values  DTW, July 2007
+       !Raytracing footpoint values  DTW, July 2007 !^CFG IF RAYTRACE BEGIN
     case('theta1')
        LogVar_I(iVarTot) = sat_RayVarsSum(1)
     case('phi1')
@@ -891,7 +893,7 @@ contains
     case('phi2')
        LogVar_I(iVarTot) = sat_RayVarsSum(5)
     case('status2')
-       LogVar_I(iVarTot) = sat_RayVarsSum(6)
+       LogVar_I(iVarTot) = sat_RayVarsSum(6)       !^CFG END RAYTRACE
 
     case default
        LogVar_I(iVarTot) = -777.0

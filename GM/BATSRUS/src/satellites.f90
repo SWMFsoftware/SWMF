@@ -369,8 +369,9 @@ subroutine close_satellite_output_files(iSat)
   close(iUnitSat_I(iSat))
 
 end subroutine close_satellite_output_files
-!=============================================================================
 
+!=============================================================================
+!^CFG IF RAYTRACE BEGIN
 subroutine sat_get_ray(iSatIn, sat_rayvars)
 
   use ModRaytrace
@@ -495,3 +496,4 @@ subroutine sat_get_ray(iSatIn, sat_rayvars)
 
 end subroutine sat_get_ray
 !=============================================================================
+!^CFG END RAYTRACE
