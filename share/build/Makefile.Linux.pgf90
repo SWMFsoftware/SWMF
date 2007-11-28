@@ -82,7 +82,7 @@ SEARCH = -I${SHAREDIR} ${SEARCH_EXTRA}
 #
 # Flags used for debugging. 
 #
-DEBUGFLAG = -C -gline
+DEBUGFLAG = -C -g -Ktrap=fp
 DEBUG     = 
 
 #
