@@ -112,7 +112,7 @@ Cflag4  = ${CFLAG} ${PRECISION} ${OPT4}
 # should be static (typically the -save option)
 #
 # To allow RCM to compile as double precision, add PRECISION flag
-CFLAGS = ${CFLAG} -save
+CFLAGS = ${CFLAG} -Msave
 
 #
 # The linker flags. Lflag1 is for parallel code with the (NO)MPI library.
