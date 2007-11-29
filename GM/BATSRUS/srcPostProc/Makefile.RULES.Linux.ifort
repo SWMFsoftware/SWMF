@@ -1,0 +1,2 @@
+PostIDL.o: PostIDL.f90
+	${COMPILE.f90} ${Cflag1} PostIDL.f90
