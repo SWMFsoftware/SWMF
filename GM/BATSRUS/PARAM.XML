@@ -8,6 +8,10 @@ List of MH (GM, IH and SC) commands used in the PARAM.in file
 <set name="MaxBlock"     type="integer" value="$_GridSize[3]" />
 <set name="MaxImplBlock" type="integer" value="$_GridSize[4]" />
 
+<!-- Set max for total number of blocks if both _nProc and MaxBlock are set -->
+<set name="MaxBlockALL" type="integer"
+        value="$_nProc and $MaxBlock and $_nProc*$MaxBlock" />
+
 <set name="NameRestartOutDir" type="string" value="$_NameComp/restartOUT"/>
 <set name="NamePlotDir"       type="string" value="$_NameComp/IO2"/>
 
@@ -635,14 +639,14 @@ The #PRECISION command may also be used to enforce a certain precision.
 </command>
 
 <command name="CHECKGRIDSIZE" if="$_IsFirstSession">
-	<parameter name="nI" type="integer"
+	<parameter name="nI" type="integer" default="8"
 		min="$_GridSize[0]" max="$_GridSize[0]" />
-	<parameter name="nJ" type="integer" 
+	<parameter name="nJ" type="integer" default="8"
 		min="$_GridSize[1]" max="$_GridSize[1]" />
-	<parameter name="nK" type="integer" 
+	<parameter name="nK" type="integer" default="8"
 		min="$_GridSize[2]" max="$_GridSize[2]" />
-	<parameter name="MinBlockALL" type="integer" min="1" 
-		max="$_GridSize[3]" />
+	<parameter name="MinBlockALL" type="integer" default="4000"
+		min="1" max="$MaxBlockALL" />
 
 #CHECKGRIDSIZE
        4                        nI
