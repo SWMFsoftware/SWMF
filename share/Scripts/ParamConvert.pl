@@ -1074,7 +1074,7 @@ sub process_elements{
 
 sub xml_to_form{
 
-    do "Share/Scripts/XmlRead.pl" or return; # XML reader
+    do "share/Scripts/XmlRead.pl" or return; # XML reader
 
     my $Component = shift;                   # Name of the component
     my $Command = shift;                     # Name of the command
