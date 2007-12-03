@@ -190,7 +190,7 @@ pf=4.*!pi*1.e4/3.*sqrt(2.*1.673e-27*mass)*sqrt(1.6e-16)*1.e9  ; pressure in nPa
 
 ; Read fluxes and calculate PA anisotropy
 for n=0,ntime-1 do begin
-    readf,2,hour,format='(8x,f6.2)'
+    readf,2,hour ;,format='(8x,f6.2)'
     houra(n)=hour
     print,n,hour
     for i=0,nr-1 do begin
@@ -316,7 +316,7 @@ for n=0,ntime-1 do begin
     minutes=string(minute,'(i2.2)')
     elabel=string(e0,flab)+' - '+string(e1,flab)
     xyouts,0.07,0.93,fhead,size=2.,/normal
-    xyouts,0.5,0.93,hours+':'+minutes+' UT',size=2.,alignment=0.5,/normal 
+    xyouts,0.5,0.93,hours+':'+minutes+' ',size=2.,alignment=0.5,/normal 
     xyouts,0.5,0.85,elabel+' keV '+species,size=2.,alignment=0.5,/normal
 
 ;    ; Make gif file
