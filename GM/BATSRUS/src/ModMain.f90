@@ -67,10 +67,11 @@ Module ModMain
 
   logical :: UseRaytrace=.false.                           !^CFG IF RAYTRACE
 
-  logical :: UseIM = .false.                               !^CFG IF RCM
-  logical :: DoCoupleImPressure = .true.                   !^CFG IF RCM
-  logical :: DoCoupleImDensity  = .false.                  !^CFG IF RCM
-  real    :: TauCoupleIM = 20.0                            !^CFG IF RCM
+  logical :: UseIM = .false.                               !^CFG IF RCM BEGIN
+  logical :: DoCoupleImPressure = .true.
+  logical :: DoCoupleImDensity  = .false.
+  logical :: DoFixPolarRegion   = .false.
+  real    :: TauCoupleIM = 20.0                            !^CFG END RCM
 
   !\
   ! Parameters for the B0 field
