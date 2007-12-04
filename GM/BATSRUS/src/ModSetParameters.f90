@@ -1327,6 +1327,7 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('DoCoupleImPressure', DoCoupleImPressure)
            call read_var('DoCoupleImDensity',  DoCoupleImDensity)
            call read_var('DoFixPolarRegion',   DoFixPolarRegion)
+           call read_var('rFixPolarRegion',    rFixPolarRegion)
         end if                                        !^CFG END RCM
      case("#USERFLAGS", "#USER_FLAGS")
         call read_var('UseUserInnerBcs'         ,UseUserInnerBcs)

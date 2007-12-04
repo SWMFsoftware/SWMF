@@ -41,9 +41,10 @@ end module ModImPressure
 subroutine get_im_pressure(iBlock, pIm_C, dIm_C)
 
   use ModImPressure
-  use ModMain,     ONLY : nI,nJ,nK,gcn
+  use ModMain,     ONLY : nI, nJ, nK, DoFixPolarRegion, rFixPolarRegion
   use ModRaytrace, ONLY : ray
-  use ModPhysics,  ONLY : Si2No_V, UnitP_, UnitRho_
+  use ModPhysics,  ONLY : Si2No_V, UnitP_, UnitRho_, PolarRho_I, PolarP_I
+  use ModGeometry, ONLY : R_BLK
   implicit none
 
   integer, intent(in)  :: iBlock
@@ -77,6 +78,9 @@ subroutine get_im_pressure(iBlock, pIm_C, dIm_C)
 
         pIm_C(i,j,k) = RCM_p(i1,i2)*Si2No_V(UnitP_)
         dIm_C(i,j,k) = RCM_dens(i1,i2)*Si2No_V(UnitRho_)
+     else if(DoFixPolarRegion .and. R_BLK(i,j,k,iBlock) < rFixPolarRegion)then
+        pIm_C(i,j,k) = PolarP_I(1)
+        dIm_C(i,j,k) = PolarRho_I(1)
      else
         pIm_C(i,j,k) = -1.0
         dIm_C(i,j,k) = -1.0
