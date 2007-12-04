@@ -84,6 +84,8 @@ module ModPWOM
        dHyd_CI, uHyd_CI, pHyd_CI, THyd,         &
        dElect_CI, uElect_CI, pElect_CI, TElect
   real :: DToutput=50.0, DtVertical=0.05, Tmax=100.0,DtPlotElectrodynamics=10.0
+  integer :: MaxStep = -1, DnOutput=-1
+  logical :: DoTimeAccurate = .true.
 
   logical:: &
        IsFullyImplicit    = .false.,  &
