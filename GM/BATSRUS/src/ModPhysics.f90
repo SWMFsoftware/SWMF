@@ -89,7 +89,8 @@ module ModPhysics
 
   real, dimension(nFluid) :: &
        BodyNDim_I, BodyTDim_I, BodyRho_I, BodyP_I, &
-       PolarNDim_I,PolarTDim_I,PolarRho_I,PolarP_I
+       PolarNDim_I,PolarTDim_I,PolarRho_I,PolarP_I, &
+       PolarUDim_I,PolarRhoU_I
 
   real :: PolarLatitude = 75.0, PolarTheta = 15.0*cDegToRad
 

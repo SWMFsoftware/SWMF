@@ -1652,6 +1652,7 @@ subroutine MH_set_parameters(TypeAction)
         do iFluid = 1,nFluid
            call read_var('PolarNDim',  PolarNDim_I(iFluid))
            call read_var('PolarTDim',  PolarTDim_I(iFluid))
+           call read_var('PolarUDim',  PolarUDim_I(iFluid))
         end do
         call read_var('PolarLatitude', PolarLatitude)
         PolarTheta = (90-PolarLatitude)*cDegToRad
