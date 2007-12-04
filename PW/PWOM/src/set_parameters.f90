@@ -32,6 +32,7 @@ subroutine PW_set_parameters(NameAction)
      case('#STOP')
         if(IsStandAlone)then
            call read_var('Tmax',Tmax)
+           call read_var('MaxStep',MaxStep)
         else
            write(*,*)'PWOM WARNING: #STOP command is ignored in the framework'
         end if
@@ -57,8 +58,11 @@ subroutine PW_set_parameters(NameAction)
         call read_var('AP(5)',AP(5))
         call read_var('AP(6)',AP(6))
         call read_var('AP(7)',AP(7))
+     case('#TIMEACCURATE')
+        call read_var('DoTimeAccurate',DoTimeAccurate)
      case('#SAVEPLOT')
         call read_var('DtSavePlot',DtOutput)
+        call read_var('DnSavePlot',DnOutput)
         call read_var('SaveFirst',DoSavePlot)
      case('#SAVEPLOTELECTRODYNAMICS')
         call read_var('DoPlotElectrodynamics',DoPlotElectrodynamics)
