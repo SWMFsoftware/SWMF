@@ -14,7 +14,7 @@ subroutine polar_wind
   !
   
   use ModPWOM, only: DtVertical,nLine,IsStandAlone,DoSavePlot,iLine,&
-       IsFullyImplicit,UseExplicitHeat
+       IsFullyImplicit,UseExplicitHeat,DoTimeAccurate,MaxStep,DnOutput
   use ModIoUnit, ONLY: UnitTmp_
   use ModCommonVariables
   use ModFieldLine
@@ -105,17 +105,14 @@ subroutine polar_wind
         
      endif
 
-     
-     TIME=TIME+DT
-
-
-     
-
      NSTEP=NSTEP+1
-     
-     IF (floor((Time+1.0e-5)/DToutput)/=floor((Time+1.0e-5-DT)/DToutput) )& 
-          CALL PW_print_plot
-     
+     if (DoTimeAccurate)then
+        TIME=TIME+DT
+        if (floor((Time+1.0e-5)/DToutput)/=floor((Time+1.0e-5-DT)/DToutput) )& 
+             CALL PW_print_plot
+     else if (mod(nStep,DnOutput) == 0) then
+        CALL PW_print_plot
+     end if
      !       Reverse order of advection and implicit temperature update
      
  
@@ -149,27 +146,41 @@ subroutine polar_wind
      !    and electric field
      !    these will be used in the next time step
 
-     
-     TIME=TIME+DT
      NSTEP=NSTEP+1
-
-
-     IF (floor((Time+1.0e-5)/DToutput)/=floor((Time+1.0e-5-DT)/DToutput) ) &
-          CALL PW_print_plot
      
-     IF (IsStandAlone .and. &
-          floor((Time+1.0e-5)/DToutput)/=floor((Time+1.0e-5-2.0*DT)/DToutput) )&
-          call PW_write_restart(&
-          nDim,RAD,GmLat,GmLong,Time,DT,nStep,NameRestart, &    
-          State_GV)                  
-       
-     IF (TIME+1.0e-5 >= TMAX) Then 
-        Call put_field_line(State_GV(1:maxGrid,:),    &
-             GMLAT,GMLONG,Jr,wHorizontal,&
-             Time=Time,nStep=nStep,r_C=RAD   ) 
-        
-        RETURN
+     if (DoTimeAccurate)then
+        TIME=TIME+DT
+        if (floor((Time+1.0e-5)/DToutput)/=floor((Time+1.0e-5-DT)/DToutput) )& 
+             CALL PW_print_plot
+        IF (IsStandAlone .and. &
+             floor((Time+1.0e-5)/DToutput)/=floor((Time+1.0e-5-2.0*DT)/DToutput) )&
+             call PW_write_restart(&
+             nDim,RAD,GmLat,GmLong,Time,DT,nStep,NameRestart, &    
+             State_GV)                  
+        IF (TIME+1.0e-5 >= TMAX) Then 
+           Call put_field_line(State_GV(1:maxGrid,:),    &
+                GMLAT,GMLONG,Jr,wHorizontal,&
+                Time=Time,nStep=nStep,r_C=RAD   ) 
+           RETURN
+        endif
+     else 
+        if (mod(nStep,DnOutput) == 0 .or. mod(nStep-1,DnOutput) == 0) then
+           CALL PW_print_plot
+           IF (IsStandAlone)&
+                call PW_write_restart(&
+                nDim,RAD,GmLat,GmLong,Time,DT,nStep,NameRestart, &    
+                State_GV)             
+        endif
+        IF (nStep >= MaxStep) Then 
+           Call put_field_line(State_GV(1:maxGrid,:),    &
+                GMLAT,GMLONG,Jr,wHorizontal,&
+                Time=Time,nStep=nStep,r_C=RAD   ) 
+           RETURN
+        end if
      endif
+     
+     
+     
      
   enddo TIMELOOP
   
