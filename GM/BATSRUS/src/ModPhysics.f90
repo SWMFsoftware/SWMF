@@ -87,7 +87,11 @@ module ModPhysics
   real :: gBody
   real :: RotPeriodSi, OmegaBody 
 
-  real, dimension(nFluid) :: BodyNDim_I, BodyTDim_I, BodyRho_I, BodyP_I  
+  real, dimension(nFluid) :: &
+       BodyNDim_I, BodyTDim_I, BodyRho_I, BodyP_I, &
+       PolarNDim_I,PolarTDim_I,PolarRho_I,PolarP_I
+
+  real :: PolarLatitude = 75.0, PolarTheta = 15.0*cDegToRad
 
   !^CFG IF SECONDBODY BEGIN
   !\
