@@ -3,6 +3,7 @@ F		IsCentrifugal
 
 #SAVEPLOT
 1.0		DtSavePlot
+-1		DnSavePlot
 T		SaveFirst
 
 #SCHEME
@@ -27,3 +28,4 @@ F		IsUseJr
 
 #STOP
 10.0		Tmax
+-1		MaxStep

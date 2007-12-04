@@ -6,7 +6,9 @@ F		IsCentrifugal
 
 #SAVEPLOT
 50.0		DtSavePlot
+-1		DnSavePlot
 T		SaveFirst
 
 #STOP
 50.0		TimeMax
+-1		MaxStep
