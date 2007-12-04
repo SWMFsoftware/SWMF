@@ -35,32 +35,47 @@ program pw
   ! Move the flux tube, solve each fieldline, and advance the time
   !****************************************************************************
 
-  TIMELOOP:do
-     if (Time >= Tmax) exit TIMELOOP
-     DtHorizontal = min(DtHorizontalOrig, Tmax - Time)
-     if (DtHorizontal < 1.0e-6) then
-        Time = Tmax
-        exit TIMELOOP
-     endif
-     do iLine=1,nLine
-
-        ! move_line moves the flux tube, then we can use the angular
-        !position to get the lat and lon
-
-        call move_line
-
-        !  Call the flux tube to be solved
-
-        call PW_advance_line
-     enddo
-     !Output the electrodynamics info
-     if (DoPlotElectrodynamics) then
-        if (floor(Time/DtPlotElectrodynamics) &
-             /= floor((Time-DtHorizontal)/DtPlotElectrodynamics) ) &
-             call PW_print_electrodynamics
-     endif
-  enddo TIMELOOP
-
+  if (DoTimeAccurate) then
+     TIMELOOP:do
+        if (Time >= Tmax) exit TIMELOOP
+        DtHorizontal = min(DtHorizontalOrig, Tmax - Time)
+        if (DtHorizontal < 1.0e-6) then
+           Time = Tmax
+           exit TIMELOOP
+        endif
+        do iLine=1,nLine
+           
+           ! move_line moves the flux tube, then we can use the angular
+           !position to get the lat and lon
+           
+           call move_line
+           
+           !  Call the flux tube to be solved
+           
+           call PW_advance_line
+        enddo
+        !Output the electrodynamics info
+        if (DoPlotElectrodynamics) then
+           if (floor(Time/DtPlotElectrodynamics) &
+                /= floor((Time-DtHorizontal)/DtPlotElectrodynamics) ) &
+                call PW_print_electrodynamics
+        endif
+     enddo TIMELOOP
+  else
+     NLOOP:do
+        if (nStep >= MaxStep) exit NLOOP
+        DtHorizontal = DtHorizontalOrig
+        do iLine=1,nLine
+           ! move_line moves the flux tube, then we can use the angular
+           !position to get the lat and lon
+           call move_line
+           
+           !  Call the flux tube to be solved
+           call PW_advance_line
+        enddo
+        
+     enddo NLOOP
+  end if
 
   !****************************************************************************
   !  Write output, use cartesian coords for output
