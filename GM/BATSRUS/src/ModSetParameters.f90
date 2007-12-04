@@ -1324,8 +1324,9 @@ subroutine MH_set_parameters(TypeAction)
            end if
         end if
         if(NameCommand == "#IMCOUPLING")then
-           call read_var('DoCoupleImPressure',DoCoupleImPressure)
-           call read_var('DoCoupleImDensity',DoCoupleImDensity)
+           call read_var('DoCoupleImPressure', DoCoupleImPressure)
+           call read_var('DoCoupleImDensity',  DoCoupleImDensity)
+           call read_var('DoFixPolarRegion',   DoFixPolarRegion)
         end if                                        !^CFG END RCM
      case("#USERFLAGS", "#USER_FLAGS")
         call read_var('UseUserInnerBcs'         ,UseUserInnerBcs)
@@ -1647,6 +1648,13 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('BodyTDim', BodyTDim_I(iFluid))
            end do
         end if
+     case("#POLARBOUNDARY")
+        do iFluid = 1,nFluid
+           call read_var('PolarNDim',  PolarNDim_I(iFluid))
+           call read_var('PolarTDim',  PolarTDim_I(iFluid))
+        end do
+        call read_var('PolarLatitude', PolarLatitude)
+        PolarTheta = (90-PolarLatitude)*cDegToRad
      case("#GRAVITY")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseGravity',UseGravity)
