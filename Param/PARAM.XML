@@ -1162,6 +1162,22 @@ The default is to use the true magnetic axis determined by the
 date and time given by #STARTTIME.
 </command>
 
+<command name="MAGNETICCENTER" if="$_IsStandAlone">
+	<parameter name="MagCenterX" type="real" default="0.0" />
+	<parameter name="MagCenterY" type="real" default="0.0" />
+	<parameter name="MagCenterZ" type="real" default="0.0" />
+	<set name="PlanetCommand" type="string" value="MAGNETICCENTER" />
+
+#MAGNETICCENTER
+0.1			MagCenterX
+-0.02			MagCenterY
+0.0			MagCenterZ
+
+Shifts the magnetic center (e.g. the center of the dipole) to the location
+given by the three parameters. The default is no shift 
+(at least for most planets).
+</command>
+
 <command name="DIPOLE" if="$_IsFirstSession">
 	<parameter name="DipoleStrength" type="real" />
 	<set name="PlanetCommand" type="string" value="DIPOLE" />
