@@ -126,8 +126,8 @@ contains
                          
      TypeBFieldPlanet_I(:)               = "NONE"                
      DipoleStrengthPlanet_I(:)           = 0.0                     ! [ T]
-     bAxisThetaPlanet_I(:)               = 0.0 * cDegToRad         ! [rad]
-     bAxisPhiPlanet_I(:)                 = 0.0 * cDegToRad         ! [rad]
+     bAxisThetaPlanet_I(:)               = 0.0                     ! [rad]
+     bAxisPhiPlanet_I(:)                 = 0.0                     ! [rad]
                                           
      IonoHeightPlanet_I(:)               = 0.0                     ! [ m]
    
@@ -146,8 +146,6 @@ contains
      OrbitalPeriodPlanet_I(Venus_)       = 224.7   * 24.0 * 3600.0 ! [ s]
      RotationPeriodPlanet_I(Venus_)      = 243.0185* 24.0 * 3600.0 ! [ s]
                                        
-     IonoHeightPlanet_I(Venus_)          =  0.0                    ! [ m]
-   
      !\                                
      ! Earth (30)                         
      !/                                
@@ -168,7 +166,7 @@ contains
      FracSecondEquinoxPlanet_I(Earth_)   =  0.0                    ! [ s]
      TiltPlanet_I(Earth_)                = 23.5 * cDegToRad        ! [rad]
    
-     TypeBFieldPlanet_I(:)               = "DIPOLE"                
+     TypeBFieldPlanet_I(Earth_)          = "DIPOLE"                
      DipoleStrengthPlanet_I(Earth_)      = -31100.0 * 1.0e-9       ! [ T]
      bAxisThetaPlanet_I(Earth_)          =  11.0 * cDegToRad       ! [rad]
      bAxisPhiPlanet_I(Earth_)            = 289.1 * cDegToRad       ! [rad]
@@ -185,8 +183,6 @@ contains
      OrbitalPeriodPlanet_I(Mars_)        = 686.98* 24.0 * 3600.0   ! [ s]
      RotationPeriodPlanet_I(Mars_)       = 1.026 * 24.0 * 3600.0   ! [ s]
                                         
-     IonoHeightPlanet_I(Mars_)           =  0.0                    ! [ m]
-   
      !\
      ! Jupiter (50)
      !/
@@ -197,10 +193,8 @@ contains
      OrbitalPeriodPlanet_I(Jupiter_)     = 4330.60 * 24 * 3600     ! [ s]
      RotationPeriodPlanet_I(Jupiter_)    = 9.925 * 3600            ! [ s]
 
-     TypeBFieldPlanet_I(:)               = "DIPOLE"                
+     TypeBFieldPlanet_I(Jupiter_)        = "DIPOLE"                
      DipoleStrengthPlanet_I(Jupiter_)    =   428000.0e-9           ! [ T]
-     bAxisThetaPlanet_I(Jupiter_)        =   0.0                   ! [rad]
-     bAxisPhiPlanet_I(Jupiter_)          =   0.0                   ! [rad]
                                        
      IonoHeightPlanet_I(Jupiter_)        = 1000.0e3                ! [ m]
    
@@ -214,10 +208,8 @@ contains
      OrbitalPeriodPlanet_I(Saturn_)      = 10746.94 * 24 * 3600    ! [ s]
      RotationPeriodPlanet_I(Saturn_)     = 10.5 * 3600.0           ! [ s]
                                        
-     TypeBFieldPlanet_I(:)               = "DIPOLE"                
+     TypeBFieldPlanet_I(Saturn_)         = "DIPOLE"                
      DipoleStrengthPlanet_I(Saturn_)     = 20800.0e-9              ! [ T]
-     bAxisThetaPlanet_I(Saturn_)         =   0.0                   ! [rad]
-     bAxisPhiPlanet_I(Saturn_)           =   0.0                   ! [rad]
                                        
      IonoHeightPlanet_I(Saturn_)         = 1000.0e3                ! [ m]
    
@@ -254,7 +246,6 @@ contains
      OrbitalPeriodPlanet_I(Titan_)       = 15.945 * 24 * 3600      ! [ s]
      RotationPeriodPlanet_I(Titan_)      = 15.945 * 24 * 3600      ! [ s]
                                        
-     IonoHeightPlanet_I(Titan_)          =   0.0                   ! [ m]
      !\
      ! Enceladus (62)
      !/
@@ -265,8 +256,12 @@ contains
      rOrbitPlanet_I(Enceladus_)              = 2.3802e8            ! [ m]
      OrbitalPeriodPlanet_I(Enceladus_)       = 1.370218 * 24*3600  ! [ s]
      RotationPeriodPlanet_I(Enceladus_)      = 1.370218 * 24*3600  ! [ s]
-                                       
-     IonoHeightPlanet_I(Enceladus_)          =   0.0               ! [ m]
+
+     ! This is the field of Saturn but using a different distance unit !!!
+     TypeBFieldPlanet_I(Enceladus_)         = "DIPOLE"
+     DipoleStrengthPlanet_I(Enceladus_) = &
+          DipoleStrengthPlanet_I(Saturn_)* &
+          (rPlanet_I(Saturn_)/rPlanet_I(Enceladus_))**3
 
      !\
      ! No Planet (0)

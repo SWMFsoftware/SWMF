@@ -135,7 +135,6 @@ contains
   !INTERFACE:
   function is_planet_init(NamePlanetIn) result(IsKnown)
 
-
     !INPUT ARGUMENTS:
     character(len=*), intent(in) :: NamePlanetIn
     
@@ -214,7 +213,10 @@ contains
     DipoleStrength    = DipoleStrengthPlanet_I(Planet_)
     MagAxisThetaGeo   = bAxisThetaPlanet_I(Planet_)  ! Permanent theta  in GEO
     MagAxisPhiGeo     = bAxisPhiPlanet_I(Planet_)    ! Permanent phi    in GEO
-    
+
+    ! For Enceladus the dipole is at Saturn's center
+    MagCenter_D(2)    = 944.23
+
   end function is_planet_init
 
   !===========================================================================
