@@ -107,6 +107,8 @@ contains
        Xyz_D = XyzIn_D / RadiusPlanet
     end if
 
+    Xyz_D = Xyz_D - MagCenter_D
+
     ! radial distance squared
     r2 = sum(Xyz_D**2)
     if(r2 < 1E-12) then

@@ -62,6 +62,9 @@ module CON_planet
   real    :: MagAxisTheta      ! Current   theta angla in GSE
   real    :: MagAxisPhi        ! Current   phi   angla in GSE
 
+  ! Offset of the magnetic field center
+  real    :: MagCenter_D(3) = (/ 0.0, 0.0, 0.0/)
+
   ! Optional changes relative to the "real" planet
   logical :: UseRotation     = .true.
   logical :: UseAlignedAxes  = .false.
@@ -359,6 +362,14 @@ contains
                ' ERROR: either rotation or magnetic axis must be primary')
        end if
 
+    case('#MAGNETICCENTER')
+
+       NamePlanetCommands = '#MAGNETICCENTER ' // NamePlanetCommands
+       IsPlanetModified = .true.
+       call read_var('MagneticCenterX',MagCenter_D(1))
+       call read_var('MagneticCenterY',MagCenter_D(2))
+       call read_var('MagneticCenterZ',MagCenter_D(3))
+
     case('#ROTATION')
 
        NamePlanetCommands = '#ROTATION ' // NamePlanetCommands
@@ -393,6 +404,7 @@ contains
        IsPlanetModified = .true.
 
        call read_var('DipoleStrength',DipoleStrength)
+
 
     case('#UPDATEB0')
 
