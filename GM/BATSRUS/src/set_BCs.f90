@@ -295,10 +295,12 @@ contains
 
     real:: FaceState_V(nFaceValueVars)
     real:: PressureJumpLimit=0.0,DensityJumpLimit=0.1    !
-    real ::BdotR,BRefl_D(nDim)
+    real ::BdotR,BRefl_D(nDim), BOrig_D(nDim)
     real:: BdotU,RInv
     real:: cosTheta,sinTheta,cosPhi,sinPhi
     real:: UrTrue,UtTrue,BpTrue,BrGhost,BtGhost,BpGhost
+
+    !------------------------------------------------------------------------
 
 !    For new ionosphere, multispecies, multifluids 
     if(  index(TypeBcHere,'user')>0 .or. &
@@ -381,26 +383,28 @@ contains
     case('fixed','inflow','vary')
        VarsGhostFace_V    = FaceState_V
        VarsGhostFace_V(Bx_:Bz_)  =  VarsGhostFace_V(Bx_:Bz_) - B0Face_D
-    case('reflect')   
+    case('reflect','reflectb')
+       BOrig_D = VarsTrueFace_V(Bx_:Bz_)
+       if(TypeBcHere == 'reflectb') BOrig_D = BOrig_D + B0Face_D
+
        select case(iBoundary)                                                 
        case(body1_,body2_)
-          BdotR  = dot_product(VarsTrueFace_V(Bx_:Bz_),FaceCoords_D)*&
-               cTwo/dot_product(FaceCoords_D,FaceCoords_D)
+          BdotR   = 2*dot_product(BOrig_D, FaceCoords_D)/sum(FaceCoords_D**2)
           BRefl_D = FaceCoords_D*BdotR
        case(east_,west_)  
-          BRefl_D(X_) = cTwo*VarsTrueFace_V(Bx_)
-          BRefl_D(Y_) = cZero
-          BRefl_D(Z_) = cZero         
+          BRefl_D(X_) = 2*BOrig_D(x_)
+          BRefl_D(Y_) = 0.0
+          BRefl_D(Z_) = 0.0         
        case(south_,north_)                                                 
-          BRefl_D(X_) = cZero
-          BRefl_D(Y_) = cTwo*VarsTrueFace_V(By_)
-          BRefl_D(Z_) = cZero         
+          BRefl_D(X_) = 0.0
+          BRefl_D(Y_) = 2*BOrig_D(y_)
+          BRefl_D(Z_) = 0.0 
        case(bot_,top_)                                                     
-          BRefl_D(X_) = cZero;
-          Brefl_D(Y_) = cZero; 
-          BRefl_D(Z_) = cTwo*VarsTrueFace_V(Bz_)         
+          BRefl_D(X_) = 0.0
+          Brefl_D(Y_) = 0.0 
+          BRefl_D(Z_) = 2*BOrig_D(z_)
        end select
-       VarsGhostFace_V=VarsTrueFace_V
+       VarsGhostFace_V           = VarsTrueFace_V
        VarsGhostFace_V(iRhoUx_I) = -VarsGhostFace_V(iRhoUx_I)
        VarsGhostFace_V(iRhoUy_I) = -VarsGhostFace_V(iRhoUy_I)
        VarsGhostFace_V(iRhoUz_I) = -VarsGhostFace_V(iRhoUz_I)
