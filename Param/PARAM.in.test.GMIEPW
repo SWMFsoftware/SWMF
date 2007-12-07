@@ -230,7 +230,8 @@ F
 4	nTotalLine
 
 #SAVEPLOT
-1	DtSavePlot
+1.0	DtSavePlot
+-1	DnSavePlot
 T	SaveFirst
 
 #END_COMP PW ##############################################################
