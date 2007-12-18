@@ -8,8 +8,9 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
   use ModPwGrid
   use ModNumConst, ONLY: cTwoPi
   use ModTriangulate,ONLY:calc_triangulation
-  use ModCoordTransform, ONLY: sph_to_xyz
   use CON_axes, ONLY: transform_matrix
+  use ModCoordTransform, ONLY: dir_to_xyz
+  use CON_planet_field,  ONLY: map_planet_field
 
   implicit none
   character (len=*),parameter :: NameSub='GM_put_from_pw'
@@ -23,8 +24,8 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
 
   logical, save :: DoInitialize = .true.
 
-  integer :: iVar, i, iLine
-  real    :: SinThetaOuter, GmPw_DD(3,3)
+  integer :: iVar, i, iLine, iHemisphere
+  real    :: SinThetaOuter, GmPw_DD(3,3), Theta, Phi, XyzPw_D(3)
   character (len=40):: NameVar
   logical :: DoTest, DoTestMe
   !----------------------------------------------------------------------------
@@ -39,14 +40,20 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
      ! Convert from spherical to Cartesian coordinates at radius rCurrents
      ! where the pressure is going to be taken from
      do iLine = 1, nFieldLine
-        call sph_to_xyz(rCurrents, Buffer_VI(Theta_,iLine), &
-             Buffer_VI(Phi_, iLine), CoordXyzPw_DI(:,iLine))
+        ! Map field line from ionosphere (taken at r=1) to rCurrents
+        Theta = Buffer_VI(Theta_, iLine)
+        Phi   = Buffer_VI(Phi_,   iLine)
+        call dir_to_xyz(Theta, Phi, XyzPw_D)
+        call map_planet_field(Time_Simulation, XyzPw_D, 'SM NORM', &
+             rCurrents,  CoordXyzPw_DI(:,iLine), iHemisphere)
+        if(iHemisphere == 0) CoordXyzPw_DI(:,iLine) = 0.0
      end do
 
      ! Convert from PW to GM coordinates if necessary
      NamePwCoord = Grid_C(PW_) % TypeCoord
      if(TypeCoordSystem /= NamePwCoord) then
-        GmPw_DD = transform_matrix(Time_Simulation, NamePwCoord, TypeCoordSystem)
+        GmPw_DD = &
+             transform_matrix(Time_Simulation, NamePwCoord, TypeCoordSystem)
         do iLine = 1, nFieldLine
            CoordXyzPw_DI(:,iLine) = matmul( GmPw_DD, CoordXyzPw_DI(:,iLine))
         end do
@@ -104,7 +111,7 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
      call CON_stop(NameSub,' nFieldLine or nVar has changed')
   end if
 
-  ! Convert to X, Y on a unit sphere
+  ! Convert to X, Y on a unit sphere (this will be used for triangulation)
   CoordXyPw_DI(x_,1:nLinePw) =  &
          sin(Buffer_VI(Theta_,:)) * cos(Buffer_VI(Phi_,:))
   CoordXyPw_DI(y_,1:nLinePw) =  &
@@ -160,6 +167,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   use ModPwGrid
   use ModTriangulate, ONLY: find_triangle, triangle_area
   use ModPhysics, ONLY: No2Io_V, UnitU_, UnitRho_
+  use CON_planet_field,  ONLY: map_planet_field
 
   implicit none
 
@@ -175,8 +183,8 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
   ! A short time relative to the rotation period of Earth
   real, parameter :: dTimeMax = 600.0 ! [s]
-  real    :: B0_D(3), XyzPw_D(3), Xy_D(2)
-  integer :: iPoint
+  real    :: B0_D(3), XyzPw_D(3), Xyz_D(3), Xy_D(2)
+  integer :: iPoint, iHemisphere
   logical :: DoInitialize = .true.
 
   real    :: TimeSimLast = -1.0 - dTimeMax
@@ -205,16 +213,21 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   else
      if(abs(Time_Simulation - TimeSimLast) > dTimeMax)then
         ! Update GM to PW transformation if necessary
-        PwGm_DD = transform_matrix(Time_Simulation, TypeCoordSystem, NamePwCoord)
+        PwGm_DD = &
+             transform_matrix(Time_Simulation, TypeCoordSystem, NamePwCoord)
         TimeSimLast = Time_Simulation
      end if
      ! Convert from GM coordinates to buffer coordinates
      XyzPw_D = matmul( PwGm_DD, CoordIn_D)
   end if
 
+  ! Map down to radius 1.0 where the PW fieldline positions are defined
+  call map_planet_field(Time_Simulation, XyzPw_D, 'SM NORM', &
+       1.0, Xyz_D, iHemisphere)
+
   ! Project to unit sphere and calculate X, Y coordinates
   ! Disregard the 3rd coordinate (Z) that determines the hemisphere !!!
-  Xy_D(1:2) = XyzPw_D(1:2)/sqrt(sum(XyzPw_D**2))
+  Xy_D(1:2) = Xyz_D(1:2)
 
   !Find triangle containing point Xy_D
 
@@ -223,7 +236,6 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
   ! Point is not covered: leave the input state variables alone
   if (.not.IsTriangleFound) RETURN
-
 
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
