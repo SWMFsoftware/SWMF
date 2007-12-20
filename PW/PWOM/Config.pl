@@ -102,11 +102,11 @@ sub show_settings{
 ############################################################################
 
 sub print_help{
-    print "Additional options for GITM2/Config.pl:
+    print "Additional options for PWOM/Config.pl:
 
 -Earth      Configure PWOM for Earth. This flag is case insensitive.
 
--Saturn     Configure PWOM for Satrun. This flag is case insensitive.
+-Saturn     Configure PWOM for Saturn. This flag is case insensitive.
 
 -s          Show current planet.
 
