@@ -119,7 +119,7 @@ foreach $dir (@search){
     opendir(DIR,$dir) or die "$ERROR: could not open directory $dir\n";
 
     my @source; # List of fortran 90 files
-    @source = grep /\.f(90)?$/i, readdir DIR;
+    @source = grep /\.(f|f90|h)$/i, readdir DIR;
     closedir DIR;
 
     my $file; # Actual F90 file
