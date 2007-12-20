@@ -18,6 +18,9 @@ subroutine PW_set_upper_bc
            -State_GV(nDim-2,iP_I(iIon)))*0.8
         State_GV(nDim+1:nDim+2,iRho_I(iIon)) = &
           State_GV(nDim+1,iP_I(iIon)) / RGAS_I(iIon) / State_GV(nDim+1,iT_I(iIon))
+
+        State_GV(-1:0,iU_I(iIon))=&
+             State_GV(1,iU_I(iIon))*State_GV(1,iRho_I(iIon))/State_GV(-1:0,iRho_I(iIon))
      enddo
      
   ENDIF
