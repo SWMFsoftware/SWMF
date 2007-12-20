@@ -1331,6 +1331,7 @@ C     DEFINE THE HE PHOTOIONIZATION RATE
 C     
 C      PHIHE=1.30E-7
       PHIHE=3.87E-8
+
 C     
 C     C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
@@ -1375,6 +1376,11 @@ C     State_GV(0,RhoO_)=PHIOX*Mass_I(Ion1_)*XNO/(1.53E-12*XNN2*TMP1+2.82E-11*XNO
      &        State_GV(-1:0,RhoE_)+MassElecIon_I(iIon)*State_GV(-1:0,iRho_I(iIon))
       enddo
       
+      State_GV(-1:0,uO_)=State_GV(1,RhoO_)*State_GV(1,uO_)/State_GV(-1:0,RhoO_)
+      State_GV(-1:0,uH_)=State_GV(1,RhoH_)*State_GV(1,uH_)/State_GV(-1:0,RhoH_)
+      State_GV(-1:0,uHe_)=State_GV(1,RhoHe_)*State_GV(1,uHe_)/State_GV(-1:0,RhoHe_)
+            
+
       State_GV(-1:0,pO_) =RGAS_I(Ion1_)*State_GV(-1:0,To_) *State_GV(-1:0,RhoO_)
       State_GV(-1:0,pH_) =RGAS_I(Ion2_)*State_GV(-1:0,Th_) *State_GV(-1:0,RhoH_)
       State_GV(-1:0,pHe_)=RGAS_I(Ion3_)*State_GV(-1:0,The_)*State_GV(-1:0,RhoHe_)
