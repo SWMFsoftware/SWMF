@@ -141,6 +141,8 @@ module ModPwImplicit
        ! Lower boundary is fixed, copy it from StateOrig_GV
        State_GV(-1:0,iRho(iIon):iP(iIon)) = &
             StateOrig_GV(-1:0,iRho_I(iIon):iP_I(iIon))
+       State_GV(-1:0,iU(iIon)) = &
+            State_GV(1,iU(iIon))*State_GV(1,iRho(iIon))/State_GV(-1:0,iRho(iIon))
        State_GV(-1:0,iTe_) = &
             StateOrig_GV(-1:0,iT_I(nIon))
 
