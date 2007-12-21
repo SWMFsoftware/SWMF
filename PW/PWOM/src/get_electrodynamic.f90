@@ -40,7 +40,7 @@ subroutine PW_get_electrodynamics
      !  Convert microA/m^2 --> A/m^2
      Jr_G(:,:) = Jr_G(:,:) * 1.0e-6 
   elseif (UseIE) then
-     Potential_G(:,:) = Potential_G(:,:)*1.0e3
+     Potential_G(:,:) = Potential_G(:,:)
   elseif (UseWeimer) then
      call get_weimer_potential
   endif
