@@ -334,7 +334,7 @@ endif else begin
           if max(abs(xx-xxold))+max(abs(yy-yyold)) eq 0 then newx=0
    if newx then begin
       print,'Triangulating in VECTOR ...'
-      triangulate,xx,yy,triangles
+      triangulate,float(xx),float(yy),triangles
       xxold=xx
       yyold=yy
    endif

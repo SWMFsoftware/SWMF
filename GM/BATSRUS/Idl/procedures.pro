@@ -990,7 +990,7 @@ pro regulargrid,x_old,nxreg_old,xreglimits_old,x,xreg,nxreg,xreglimits,$
       nxreg_old=nxreg
       xreglimits_old=xreglimits
 
-      triangulate,xx,yy,triangles
+      triangulate,float(xx),float(yy),triangles
 
       ; calculate conjugate triangulation and rectangles if required
       if symmtri eq 1 or symmtri eq 2 then $
@@ -1781,7 +1781,8 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
          endcase
       'coord': case plotmod of
          'cont'     :if irr then begin
-                       if not keyword_set(tri) then triangulate,xx,yy,tri
+                       if not keyword_set(tri) then $
+                         triangulate,float(xx),float(yy),tri
                        contour,f>f_min,xx,yy,$
                           FOLLOW=label, FILL=fill, TRIANGULATION=tri, $
                           LEVELS=levels,XSTYLE=1,YSTYLE=1,/NOERASE
