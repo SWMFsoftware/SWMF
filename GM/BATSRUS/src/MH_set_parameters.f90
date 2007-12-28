@@ -755,7 +755,7 @@ subroutine MH_set_parameters(TypeAction)
               case('cartesian')                        !^CFG IF COVARIANT
                  plot_dx(1,ifile) = 1.0    ! set to match value in write_plot_sph
                  plot_dx(2:3,ifile) = 1.0  ! set to degrees desired in angular resolution
-                 plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4   ! so that R/=0
+                 plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4  ! so that R/=0
                  plot_range(3,ifile)= 0.   - 0.5*plot_dx(2,ifile)
                  plot_range(4,ifile)= 90.0 + 0.5*plot_dx(2,ifile)
                  plot_range(5,ifile)= 0.   - 0.5*plot_dx(3,ifile)
@@ -1498,9 +1498,9 @@ subroutine MH_set_parameters(TypeAction)
         if(.not.is_first_session())CYCLE READPARAM
         UseCovariant=.true.
         
-        call read_var('TypeGeometry',TypeGeometry)      
+        call read_var('TypeGeometry', TypeGeometry)      
         if(is_axial_geometry().and.mod(proc_dims(2),2)==1)&
-             proc_dims(2)=2*proc_dims(2)
+             proc_dims(2) = proc_dims(2)+1
         if(index(TypeGeometry,'spherical')>0)then      
            automatic_refinement=.false.                  
            MaxBoundary = Top_
@@ -1515,8 +1515,8 @@ subroutine MH_set_parameters(TypeAction)
         end if
      case("#LIMITRADIUS", "#LIMITGENCOORD1")
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('XyzMin_D(1)',XyzMin_D(1))
-        call read_var('XyzMax_D(1)',XyzMax_D(1))
+        call read_var('Coord1Min',XyzMin_D(1))
+        call read_var('Coord1Max',XyzMax_D(1))
      case('#TORUSSIZE')
         call read_var('rTorusLarge',rTorusLarge)
         call read_var('rTorusSmall',rTorusSmall)
@@ -1527,19 +1527,15 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('nRootBlockY',proc_dims(2))
         call read_var('nRootBlockZ',proc_dims(3))
         !^CFG IF COVARIANT BEGIN
-        if( is_axial_geometry()&
-             .and.mod(proc_dims(Phi_),2)==1) then
-           proc_dims(Phi_)=2*proc_dims(3)
+        if( is_axial_geometry() .and. mod(proc_dims(Phi_),2)==1 ) then
+           proc_dims(Phi_) = proc_dims(Phi_) + 1
            if(iProc==0)then
-              write(*,*)&
-                   'Original number of blocks for the polar angle Phi must be even'
-              write(*,*)&
-                   'Proc_dim(2) is set to be equal to 2*Proc_dim(3) = ',&
-                   proc_dims(2)
+              write(*,*)'For axial symmetru nRootBlock2 must be even'
+              write(*,*)'nRootBlock2 is increased by 1 to ',proc_dims(Phi_)
            end if
         end if
         !^CFG END COVARIANT
-        if(product(proc_dims)>nBLK.and.iProc==0)then
+        if(product(proc_dims) > nBLK .and. iProc==0)then
            write(*,*)'Root blocks will not fit on 1 processor, check nBLK'
            call stop_mpi('product(proc_dims) > nBLK!')
         end if
@@ -1551,7 +1547,6 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('zMax',z2)
         
         call set_xyzminmax  
-        
 
      case("#USERMODULE")
         if(.not.is_first_session())CYCLE READPARAM
