@@ -22,12 +22,12 @@ module ModUser
 
   character (len=20) :: UserProblem='wave'
 
-  real :: Width, Amplitude, Phase, Lamdax, Lamday, Lamdaz
+  real :: Width, Amplitude, Phase, LambdaX, LambdaY, LambdaZ
   real,dimension(nVar):: Width_I=0.0, Ampl_I=0.0, Phase_I=0.0, &
        KxWave_I=0.0, KyWave_I=0.0,KzWave_I=0.0
   integer :: iVar             
   logical:: DoInitialize=.true.
-  real :: Lx=25.6, Lz=12.8, lamda0=0.5, Ay=0.1, Tp=0.5 , B0=1.0  
+  real :: Lx=25.6, Lz=12.8, Lambda0=0.5, Ay=0.1, Tp=0.5 , B0=1.0  
   
 contains
 
@@ -51,18 +51,18 @@ contains
           call read_var('iVar',iVar)
           call read_var('Width',Width)
           call read_var('Amplitude',Amplitude)
-          call read_var('Lamdax',Lamdax)          
-          call read_var('Lamday',Lamday)
-          call read_var('Lamdaz',Lamdaz)
+          call read_var('LambdaX',LambdaX)          
+          call read_var('LambdaY',LambdaY)
+          call read_var('LambdaZ',LambdaZ)
           call read_var('Phase',Phase)
           Width_I(iVar)=Width
           Ampl_I(iVar)=Amplitude
           Phase_I(iVar)=Phase*cDegToRad
           !if the wavelength is smaller than 0.0, 
           !then the wave number is set to0
-          KxWave_I(iVar) = max(0.0, cTwoPi/Lamdax)          
-          KyWave_I(iVar) = max(0.0, cTwoPi/Lamday)          
-          KzWave_I(iVar) = max(0.0, cTwoPi/Lamdaz)
+          KxWave_I(iVar) = max(0.0, cTwoPi/LambdaX)          
+          KyWave_I(iVar) = max(0.0, cTwoPi/LambdaY)          
+          KzWave_I(iVar) = max(0.0, cTwoPi/LambdaZ)
 
        case('#USERINPUTEND')
           if(iProc==0) write(*,*)'USERINPUTEND'
@@ -133,7 +133,7 @@ contains
 
     case('GEM')
        ! write(*,*)'GEM problem set up'
-       State_VGB(Bx_,:,:,:,iBlock) = B0*tanh(z_BLK(:,:,:,iBlock)/lamda0)
+       State_VGB(Bx_,:,:,:,iBlock) = B0*tanh(z_BLK(:,:,:,iBlock)/Lambda0)
        State_VGB(p_,:,:,:,iBlock)= State_VGB(p_,:,:,:,iBlock) &
             +0.5*(B0**2-State_VGB(Bx_,:,:,:,iBlock)**2)
        State_VGB(rho_,:,:,:,iBlock)= State_VGB(p_,:,:,:,iBlock)/Tp
