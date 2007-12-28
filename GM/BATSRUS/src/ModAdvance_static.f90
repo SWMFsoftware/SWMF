@@ -116,13 +116,14 @@ Module ModAdvance
   !\
   ! X Face local MHD solution array definitions.
   !/
-  integer, parameter :: nFaceValueVars = nVar
-  real :: LeftState_VX(nFaceValueVars,2-gcn:nI+gcn,0:nJ+1,0:nK+1)
-  real :: RightState_VX(nFaceValueVars,2-gcn:nI+gcn,0:nJ+1,0:nK+1)
+  ! These are primitive variables (velocity)
+  real :: LeftState_VX(nVar,2-gcn:nI+gcn,0:nJ+1,0:nK+1)
+  real :: RightState_VX(nVar,2-gcn:nI+gcn,0:nJ+1,0:nK+1)
 
   real :: EDotFA_X(2-gcn:nI+gcn,0:nJ+1,0:nK+1)    !^CFG IF BORISCORR
   real :: VdtFace_X(2-gcn:nI+gcn,0:nJ+1,0:nK+1)   ! V/dt Face X
 
+  ! Fluxes are for conservative variables (momentum)
   real :: Flux_VX(nVar+nFluid,0:nI+1,2-gcn:nJ+gcn,0:nK+1)
 
   real :: uDotArea_XI(2-gcn:nI+gcn,0:nJ+1,0:nK+1,nFluid)
@@ -132,8 +133,8 @@ Module ModAdvance
   !\
   ! Y Face local MHD solution array definitions.
   !/
-  real :: LeftState_VY(nFaceValueVars,0:nI+1,2-gcn:nJ+gcn,0:nK+1)
-  real :: RightState_VY(nFaceValueVars,0:nI+1,2-gcn:nJ+gcn,0:nK+1)
+  real :: LeftState_VY(nVar,0:nI+1,2-gcn:nJ+gcn,0:nK+1)
+  real :: RightState_VY(nVar,0:nI+1,2-gcn:nJ+gcn,0:nK+1)
 
   real :: EDotFA_Y(0:nI+1,2-gcn:nJ+gcn,0:nK+1)    !^CFG IF BORISCORR
   real :: VdtFace_Y(0:nI+1,2-gcn:nJ+gcn,0:nK+1)   ! V/dt Face Y
@@ -147,8 +148,8 @@ Module ModAdvance
   !\
   ! Z Face local MHD solution array definitions.
   !/
-  real :: LeftState_VZ(nFaceValueVars,0:nI+1,0:nJ+1,2-gcn:nK+gcn)
-  real :: RightState_VZ(nFaceValueVars,0:nI+1,0:nJ+1,2-gcn:nK+gcn)
+  real :: LeftState_VZ(nVar,0:nI+1,0:nJ+1,2-gcn:nK+gcn)
+  real :: RightState_VZ(nVar,0:nI+1,0:nJ+1,2-gcn:nK+gcn)
 
   real :: EDotFA_Z(0:nI+1,0:nJ+1,2-gcn:nK+gcn)    !^CFG IF BORISCORR
   real :: VdtFace_z(0:nI+1,0:nJ+1,2-gcn:nK+gcn)   ! V/dt Face Z
