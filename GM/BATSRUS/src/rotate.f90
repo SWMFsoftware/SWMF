@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-subroutine calc_corotation_velocities(iter,time_now,Xyz_D,uRot_D)
+subroutine calc_corotation_velocities(Xyz_D, uRot_D)
   !-------------------------------------------------------------------------
   !\
   ! This routine calculates cartesian corotation velocity uRot_D as a
@@ -13,9 +13,6 @@ subroutine calc_corotation_velocities(iter,time_now,Xyz_D,uRot_D)
   use ModPhysics,        ONLY: OmegaBody
   use ModNumConst
   implicit none
-
-  integer, intent(in) :: iter
-  integer, intent(in) :: time_now
 
   real, intent(in) :: Xyz_D(3)
   real, intent(out):: uRot_D(3)

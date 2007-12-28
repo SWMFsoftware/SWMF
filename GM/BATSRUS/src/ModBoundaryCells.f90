@@ -1,3 +1,34 @@
+module ModFaceBc
+
+  use ModVarIndexes, ONLY: nVar
+
+  implicit none
+
+  SAVE
+
+  logical:: DoResChangeOnly
+
+  integer:: iBlockBc
+
+  ! Negative iBoundary indicates which body we are computing for.
+  ! Positive iBoundary numerates the sides for the outer BCs.
+  integer:: iBoundary
+
+  ! The side of the cell defined with respect to the cell inside the domain
+  integer :: iFaceBc
+
+  character(len=20) :: TypeBc
+
+  real,dimension(nVar):: VarsTrueFace_V, VarsGhostFace_V
+
+  real :: FaceCoords_D(3), B0Face_D(3)
+
+  real :: TimeBc
+
+end module ModFaceBc
+
+!============================================================================
+
 module ModBoundaryCells
   implicit none
   SAVE

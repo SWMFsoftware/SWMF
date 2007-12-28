@@ -47,7 +47,7 @@ subroutine advance_expl(DoCalcTimestep)
         call calc_face_value(.true.,GlobalBlk)
         call timing_stop('calc_face_bfo')
 
-        if(body_BLK(globalBLK))call set_BCs(n_step,Time_Simulation,.true.)
+        if(body_BLK(globalBLK))call set_BCs(Time_Simulation, .true.)
 
         ! Compute interface fluxes for each fine grid cell face at
         ! block edges with resolution changes.
@@ -92,7 +92,7 @@ subroutine advance_expl(DoCalcTimestep)
         call calc_face_value(.false., GlobalBlk)
         call timing_stop('calc_facevalues')
 
-        if(body_BLK(globalBLK))call set_BCs(n_step,Time_Simulation,.false.)
+        if(body_BLK(globalBLK))call set_BCs(Time_Simulation, .false.)
 
         ! Compute interface fluxes for each cell.
         call timing_start('calc_fluxes')

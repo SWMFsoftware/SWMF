@@ -23,19 +23,12 @@ contains
   end subroutine user_set_boundary_cells
 
   !=====================================================================
-  subroutine user_face_bcs(iFace, jFace, kFace, iBlock, iSide, iBoundary,&
-       iter, time_now, FaceCoords_D, &
-       VarsTrueFace_V, VarsGhostFace_V, &
-       B0Face_D,  UseIonosphereHere, UseCorotationHere)
-    use ModSize, ONLY: nDim
-    use ModAdvance, ONLY: nFaceValueVars
+  subroutine user_face_bcs(iFace, jFace, kFace, VarsGhostFace_V)
 
-    integer,intent(in)::iFace,jFace,kFace,iBlock,iSide,iBoundary,iter
-    real, intent(in):: time_now
-    real, dimension(nDim), intent(in) :: FaceCoords_D, B0Face_D
-    real, dimension(nFaceValueVars), intent(in) :: VarsTrueFace_V
-    real, dimension(nFaceValueVars), intent(out):: VarsGhostFace_V
-    logical, intent(in):: UseIonosphereHere, UseCorotationHere
+    use ModAdvance, ONLY: nVar
+
+    integer,intent(in)::iFace,jFace,kFace
+    real, intent(out):: VarsGhostFace_V(nVar)
 
     character (len=*), parameter :: Name='user_face_bcs' 
     !-------------------------------------------------------------------

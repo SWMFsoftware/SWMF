@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-subroutine set_BCs(iter,time_now,DoResChangeOnly)
+subroutine set_BCs(TimeBcIn,DoResChangeOnlyIn)
   use ModProcMH
   use ModMain
   use ModAdvance
@@ -7,12 +7,12 @@ subroutine set_BCs(iter,time_now,DoResChangeOnly)
   use ModGeometry, ONLY:&
        IsBoundaryCell_GI , IsBoundaryBlock_IB,true_cell,MinBoundary,MaxBoundary
   use ModBoundaryCells
+  use ModFaceBc, ONLY: TimeBc, DoResChangeOnly, iBlockBc, iBoundary
+
   implicit none
 
-  integer, intent(in) :: iter
-  real, intent(in) :: time_now
-  logical, intent (in) :: DoResChangeOnly
-  integer:: iBoundary
+  real,     intent(in) :: TimeBcIn
+  logical, intent (in) :: DoResChangeOnlyIn
   logical :: oktest, oktest_me
   !----------------------------------------------------------------------------
 
@@ -24,45 +24,50 @@ subroutine set_BCs(iter,time_now,DoResChangeOnly)
      oktest=.false.; oktest_me=.false.
   endif
 
+  ! set variables in module
+  TimeBc          = TimeBcIn
+  DoResChangeOnly = DoResChangeOnlyIn
+  iBlockBc        = GlobalBlk
+
   if(oktest_me.and. .not.DoResChangeOnly)write(*,*)'set_BCs initial Ux,Uy=',&
        LeftState_VX(Ux_,Itest,Jtest,Ktest),LeftState_VX(Uy_,Itest,Jtest,Ktest)
 
-  call set_boundary_cells(globalBLK)
+  call set_boundary_cells(iBlockBc)
   if(SaveBoundaryCells)then
      do iBoundary=MinBoundarySaved,MaxBoundarySaved
         IsBoundaryCell_GI(:,:,:,iBoundary)=&
-             IsBoundaryCell_IGB(iBoundary,:,:,:,globalBLK)
+             IsBoundaryCell_IGB(iBoundary,:,:,:,iBlockBc)
      end do
   end if
   
   !\
   ! Apply boundary conditions
   !/
-  do iBoundary=MinBoundary,MaxBoundary
-     if(IsBoundaryBlock_IB(iBoundary,globalBLK))&
-          call set_face_BCs(iter,time_now,DoResChangeOnly,&
+  do iBoundary = MinBoundary, MaxBoundary
+     if(IsBoundaryBlock_IB(iBoundary,globalBLK)) call set_face_BCs( &
           IsBoundaryCell_GI(:,:,:,iBoundary),&
-          true_cell(:,:,:,globalBLK),iBoundary)
+          true_cell(:,:,:,globalBLK) )
   end do
   
-
-  if(oktest_me.and. .not.DoResChangeOnly)write(*,*)'set_BCs final Ux,Uy=',&
-       LeftState_VX(Ux_,Itest,Jtest,Ktest),&
-       LeftState_VX(Uy_,Itest,Jtest,Ktest)
-
   if(oktest_me)then
-     write(*,*)'east  PfaceL_x,PfaceR_x=',&
-          LeftState_VX(P_,Itest,Jtest,Ktest),  RightState_VX(P_,Itest,Jtest,Ktest)
-     write(*,*)'west  PfaceL_x,PfaceR_x=',&
-          LeftState_VX(P_,Itest+1,Jtest,Ktest),RightState_VX(P_,Itest+1,Jtest,Ktest)
-     write(*,*)'south PfaceL_y,PfaceR_y=',&
-          LeftState_VY(P_,Itest,Jtest,Ktest),  RightState_VY(P_,Itest,Jtest,Ktest)
-     write(*,*)'north PfaceL_y,PfaceR_y=',&
-          LeftState_VY(P_,Itest,Jtest+1,Ktest),RightState_VY(P_,Itest,Jtest+1,Ktest)
-     write(*,*)'bot   PfaceL_z,PfaceR_z=',&
-          LeftState_VZ(P_,Itest,Jtest,Ktest),  RightState_VZ(P_,Itest,Jtest,Ktest)
-     write(*,*)'top   PfaceL_z,PfaceR_z=',&
-          LeftState_VZ(P_,Itest,Jtest,Ktest+1),RightState_VZ(P_,Itest,Jtest,Ktest+1)
+     write(*,*)'east  VarL_x,VarR_x=',&
+          LeftState_VX(VarTest,  Itest, Jtest, Ktest),  &
+          RightState_VX(VarTest, Itest, Jtest, Ktest)
+     write(*,*)'west  VarL_x,VarR_x=',&
+          LeftState_VX(VarTest,  Itest+1, Jtest, Ktest), &
+          RightState_VX(VarTest, Itest+1, Jtest, Ktest)
+     write(*,*)'south VarL_y,VarR_y=',&
+          LeftState_VY(VarTest,  Itest, Jtest, Ktest),  &
+          RightState_VY(VarTest, Itest, Jtest, Ktest)
+     write(*,*)'north VarL_y,VarR_y=',&
+          LeftState_VY(VarTest,  Itest, Jtest+1, Ktest), &
+          RightState_VY(VarTest, Itest, Jtest+1, Ktest)
+     write(*,*)'bot   VarL_z,VarR_z=',&
+          LeftState_VZ(VarTest,  Itest, Jtest, Ktest), &
+          RightState_VZ(VarTest, Itest, Jtest, Ktest)
+     write(*,*)'top   VarL_z,VarR_z=',&
+          LeftState_VZ(VarTest,  Itest, Jtest, Ktest+1), &
+          RightState_VZ(VarTest, Itest, Jtest, Ktest+1)
   end if
 
   call timing_stop('set_BCs')
@@ -71,58 +76,32 @@ end subroutine set_BCs
 
 !=============================================================================
 
-subroutine set_face_BCs(iter,time_now,DoResChangeOnly,&
-     IsBodyCell,IsTrueCell,iBoundary)
+subroutine set_face_BCs(IsBodyCell_G,IsTrueCell_G)
 
   use ModMain
   use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK
   use ModAdvance
   use ModParallel, ONLY : neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
   use ModNumConst
+  use ModFaceBc
 
   implicit none
 
-  integer, intent(in) :: iter, iBoundary
-  real, intent(in) :: time_now
-  logical, intent (in) :: DoResChangeOnly
   logical, dimension(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn), intent(in) :: &
-       IsBodyCell, IsTrueCell 
-  logical :: UseIonosphereHere, UseRotatingBcHere
-  character (len=20) :: TypeBcHere
-  
-  real,dimension(nFaceValueVars)::VarsTrueFace_V,VarsGhostFace_V
-
-
-  ! Negative iBoundary indicates which body we are computing for.
-  ! Positive iBoundary numerates the sides for the outer BCs.
-  ! Here iter and time now are the iteration number and physical time,
-  ! which may be used for time-dependent BCs (not used now).
-  ! 
-  ! UseIonesphereHere = .true. allows to call calc_inner_bc_velocity
-  ! UseRotatingBcHere = .true. allows to call calc_corotation_velocities
+       IsBodyCell_G, IsTrueCell_G 
 
   integer :: i,j,k
-
-  real              :: FaceCoords_D(nDim), B0Face_D(nDim)
 
   character (len=*), parameter :: NameSub = 'set_face_BCs'
   logical :: DoTest, DoTestMe
   !---------------------------------------------------------------------------
-  if(globalBLK==BLKtest.and.iProc==PROCtest)then
+  if(iBlockBc==BLKtest.and.iProc==PROCtest)then
      call set_oktest(NameSub, DoTest, DoTestMe)
   else
      DoTest = .false.; DoTestMe = .false.
   end if
 
-  if(iBoundary==Body1_)then
-     UseIonosphereHere=UseIonosphere
-     UseRotatingBcHere=UseRotatingBc
-  else
-     UseIonosphereHere=.false.
-     UseRotatingBcHere=.false.
-  end if
-
-  TypeBcHere=TypeBc_I(iBoundary)
+  TypeBc = TypeBc_I(iBoundary)
 
   !\
   ! Apply body BCs as required.
@@ -143,43 +122,47 @@ subroutine set_face_BCs(iter,time_now,DoResChangeOnly,&
            !     i-1   i     i     i+1   i+1
            !
            !====================================
-           if (IsTrueCell(i-1,j,k) .and. &
-                IsBodyCell(i,j,k) .and. &
+           if (IsTrueCell_G(i-1,j,k) .and. &
+                IsBodyCell_G(i,j,k) .and. &
                 (.not.DoResChangeOnly .or. &
-                ((i == nIFace .and. neiLwest(globalBLK)==+1) .or. &
-                (i == 1       .and. neiLeast(globalBLK)==+1)) )) then
+                ((i == nIFace .and. neiLwest(iBlockBc)==+1) .or. &
+                (i == 1       .and. neiLeast(iBlockBc)==+1)) )) then
 
-              FaceCoords_D(x_) = 0.50*(x_BLK(i-1,j,k,globalBLK)+x_BLK(i,j,k,globalBLK))
-              FaceCoords_D(y_) = 0.50*(y_BLK(i-1,j,k,globalBLK)+y_BLK(i,j,k,globalBLK))
-              FaceCoords_D(z_) = 0.50*(z_BLK(i-1,j,k,globalBLK)+z_BLK(i,j,k,globalBLK))
-              B0Face_D(x_) = B0xFace_x_BLK(i,j,k,globalBLK)
-              B0Face_D(y_) = B0yFace_x_BLK(i,j,k,globalBLK)
-              B0Face_D(z_) = B0zFace_x_BLK(i,j,k,globalBLK)
+              iFaceBc = West_
+
+              FaceCoords_D(x_) = 0.5*sum(x_BLK(i-1:i,j,k,iBlockBc))
+              FaceCoords_D(y_) = 0.5*sum(y_BLK(i-1:i,j,k,iBlockBc))
+              FaceCoords_D(z_) = 0.5*sum(z_BLK(i-1:i,j,k,iBlockBc))
+              B0Face_D(x_) = B0xFace_x_BLK(i,j,k,iBlockBc)
+              B0Face_D(y_) = B0yFace_x_BLK(i,j,k,iBlockBc)
+              B0Face_D(z_) = B0zFace_x_BLK(i,j,k,iBlockBc)
 
               VarsTrueFace_V= LeftState_VX(:,i,j,k)
 
-              call set_body_BCs(West_)             
+              call set_face_bc
 
               RightState_VX(:,i,j,k) = VarsGhostFace_V
 
            end if
 
-           if (IsTrueCell(i,j,k) .and. &
-                IsBodyCell(i-1,j,k)  .and. &
+           if (IsTrueCell_G(i,j,k) .and. &
+                IsBodyCell_G(i-1,j,k)  .and. &
                 (.not.DoResChangeOnly .or. &
-                (i == 1         .and. neiLeast(globalBLK)==+1) .or. &
-                (i == nIFace    .and. neiLwest(globalBLK)==+1)  )) then
+                (i == 1         .and. neiLeast(iBlockBc)==+1) .or. &
+                (i == nIFace    .and. neiLwest(iBlockBc)==+1)  )) then
 
-              FaceCoords_D(x_) = 0.50*(x_BLK(i,j,k,globalBLK)+x_BLK(i-1,j,k,globalBLK))
-              FaceCoords_D(y_) = 0.50*(y_BLK(i,j,k,globalBLK)+y_BLK(i-1,j,k,globalBLK))
-              FaceCoords_D(z_) = 0.50*(z_BLK(i,j,k,globalBLK)+z_BLK(i-1,j,k,globalBLK))
-              B0Face_D(x_)     = B0xFace_x_BLK(i,j,k,globalBLK)
-              B0Face_D(y_)     = B0yFace_x_BLK(i,j,k,globalBLK)
-              B0Face_D(z_)     = B0zFace_x_BLK(i,j,k,globalBLK)
+              iFaceBc = East_
+
+              FaceCoords_D(x_) = 0.5*sum(x_BLK(i-1:i,j,k,iBlockBc))
+              FaceCoords_D(y_) = 0.5*sum(y_BLK(i-1:i,j,k,iBlockBc))
+              FaceCoords_D(z_) = 0.5*sum(z_BLK(i-1:i,j,k,iBlockBc))
+              B0Face_D(x_)     = B0xFace_x_BLK(i,j,k,iBlockBc)
+              B0Face_D(y_)     = B0yFace_x_BLK(i,j,k,iBlockBc)
+              B0Face_D(z_)     = B0zFace_x_BLK(i,j,k,iBlockBc)
             
               VarsTrueFace_V = RightState_VX(:,i,j,k)
 
-              call set_body_BCs(East_)
+              call set_face_bc
 
               LeftState_VX(:,i,j,k) = VarsGhostFace_V
            end if
@@ -193,40 +176,46 @@ subroutine set_face_BCs(iter,time_now,DoResChangeOnly,&
            !\
            ! Apply BCs at Y-direction faces as necessary.
            !/
-           if (IsTrueCell(i,j-1,k) .and. &
-                IsBodyCell(i,j,k)  .and. &
+           if (IsTrueCell_G(i,j-1,k) .and. &
+                IsBodyCell_G(i,j,k)  .and. &
                 ( .not.DoResChangeOnly .or. &
-                (j == nJFace .and. neiLnorth(globalBLK)==+1) .or. &
-                (j == 1      .and. neiLsouth(globalBLK)==+1) )) then
-              FaceCoords_D(x_) = 0.50*(x_BLK(i,j-1,k,globalBLK)+x_BLK(i,j,k,globalBLK))
-              FaceCoords_D(y_) = 0.50*(y_BLK(i,j-1,k,globalBLK)+y_BLK(i,j,k,globalBLK))
-              FaceCoords_D(z_) = 0.50*(z_BLK(i,j-1,k,globalBLK)+z_BLK(i,j,k,globalBLK))
-              B0Face_D(x_)     = B0xFace_y_BLK(i,j,k,globalBLK)
-              B0Face_D(y_)     = B0yFace_y_BLK(i,j,k,globalBLK)
-              B0Face_D(z_)     = B0zFace_y_BLK(i,j,k,globalBLK)
+                (j == nJFace .and. neiLnorth(iBlockBc)==+1) .or. &
+                (j == 1      .and. neiLsouth(iBlockBc)==+1) )) then
+
+              iFaceBc = North_
+
+              FaceCoords_D(x_) = 0.5*sum(x_BLK(i,j-1:j,k,iBlockBc))
+              FaceCoords_D(y_) = 0.5*sum(y_BLK(i,j-1:j,k,iBlockBc))
+              FaceCoords_D(z_) = 0.5*sum(z_BLK(i,j-1:j,k,iBlockBc))
+              B0Face_D(x_)     = B0xFace_y_BLK(i,j,k,iBlockBc)
+              B0Face_D(y_)     = B0yFace_y_BLK(i,j,k,iBlockBc)
+              B0Face_D(z_)     = B0zFace_y_BLK(i,j,k,iBlockBc)
 
               VarsTrueFace_V = LeftState_VY(:,i,j,k)
           
-              call set_body_BCs(North_)
+              call set_face_bc
 
               RightState_VY(:,i,j,k) = VarsGhostFace_V           
            end if
 
-           if (IsTrueCell(i,j,k) .and. &
-                IsBodyCell(i,j-1,k)  .and. &
+           if (IsTrueCell_G(i,j,k) .and. &
+                IsBodyCell_G(i,j-1,k)  .and. &
                 (.not.DoResChangeOnly .or. &
-                (j ==1         .and. neiLsouth(globalBLK)==+1) .or. &
-                (j == nJFace .and. neiLnorth(globalBLK)==+1) )) then
-              FaceCoords_D(x_) = 0.50*(x_BLK(i,j-1,k,globalBLK)+x_BLK(i,j,k,globalBLK))
-              FaceCoords_D(y_) = 0.50*(y_BLK(i,j-1,k,globalBLK)+y_BLK(i,j,k,globalBLK))
-              FaceCoords_D(z_) = 0.50*(z_BLK(i,j-1,k,globalBLK)+z_BLK(i,j,k,globalBLK))
-              B0Face_D(x_)     = B0xFace_y_BLK(i,j,k,globalBLK)
-              B0Face_D(y_)     = B0yFace_y_BLK(i,j,k,globalBLK)
-              B0Face_D(z_)     = B0zFace_y_BLK(i,j,k,globalBLK)
+                (j ==1       .and. neiLsouth(iBlockBc)==+1) .or. &
+                (j == nJFace .and. neiLnorth(iBlockBc)==+1) )) then
+
+              iFaceBc = South_
+
+              FaceCoords_D(x_) = 0.5*sum(x_BLK(i,j-1:j,k,iBlockBc))
+              FaceCoords_D(y_) = 0.5*sum(y_BLK(i,j-1:j,k,iBlockBc))
+              FaceCoords_D(z_) = 0.5*sum(z_BLK(i,j-1:j,k,iBlockBc))
+              B0Face_D(x_)     = B0xFace_y_BLK(i,j,k,iBlockBc)
+              B0Face_D(y_)     = B0yFace_y_BLK(i,j,k,iBlockBc)
+              B0Face_D(z_)     = B0zFace_y_BLK(i,j,k,iBlockBc)
 
               VarsTrueFace_V = RightState_VY(:,i,j,k)
 
-              call set_body_BCs(South_)
+              call set_face_bc
 
               LeftState_VY(:,i,j,k) = VarsGhostFace_V
            end if
@@ -240,40 +229,46 @@ subroutine set_face_BCs(iter,time_now,DoResChangeOnly,&
            !\
            ! Apply BCs at Z-direction faces as necessary.
            !/
-           if (IsTrueCell(i,j,k-1) .and. &
-                IsBodyCell(i,j,k) .and. &
+           if (IsTrueCell_G(i,j,k-1) .and. &
+                IsBodyCell_G(i,j,k) .and. &
                 (.not.DoResChangeOnly .or. &
-                (k == nKFace .and. neiLtop(globalBLK)==+1) .or. &
-                (k == 1       .and. neiLbot(globalBLK)==+1)) ) then
-              FaceCoords_D(x_)= 0.50*(x_BLK(i,j,k,globalBLK)+x_BLK(i,j,k-1,globalBLK))
-              FaceCoords_D(y_)= 0.50*(y_BLK(i,j,k,globalBLK)+y_BLK(i,j,k-1,globalBLK))
-              FaceCoords_D(z_)= 0.50*(z_BLK(i,j,k,globalBLK)+z_BLK(i,j,k-1,globalBLK))
-              B0Face_D(x_)    = B0xFace_z_BLK(i,j,k,globalBLK)
-              B0Face_D(y_)    = B0yFace_z_BLK(i,j,k,globalBLK)
-              B0Face_D(z_)    = B0zFace_z_BLK(i,j,k,globalBLK)
+                (k == nKFace .and. neiLtop(iBlockBc)==+1) .or. &
+                (k == 1       .and. neiLbot(iBlockBc)==+1)) ) then
+
+              iFaceBc = Top_
+
+              FaceCoords_D(x_)= 0.5*sum(x_BLK(i,j,k-1:k,iBlockBc))
+              FaceCoords_D(y_)= 0.5*sum(y_BLK(i,j,k-1:k,iBlockBc))
+              FaceCoords_D(z_)= 0.5*sum(z_BLK(i,j,k-1:k,iBlockBc))
+              B0Face_D(x_)    = B0xFace_z_BLK(i,j,k,iBlockBc)
+              B0Face_D(y_)    = B0yFace_z_BLK(i,j,k,iBlockBc)
+              B0Face_D(z_)    = B0zFace_z_BLK(i,j,k,iBlockBc)
 
               VarsTrueFace_V =  LeftState_VZ(:,i,j,k)
         
-              call set_body_BCs(Top_)
+              call set_face_bc
 
               RightState_VZ(:,i,j,k) = VarsGhostFace_V
            end if
 
-           if (IsTrueCell(i,j,k).and. &
-                IsBodyCell(i,j,k-1).and. &
+           if (IsTrueCell_G(i,j,k).and. &
+                IsBodyCell_G(i,j,k-1).and. &
                 (.not.DoResChangeOnly .or. &
-                (k == 1         .and. neiLbot(globalBLK)==+1) .or. &
-                (k == nKFace .and. neiLtop(globalBLK)==+1))  ) then
-              FaceCoords_D(x_) = 0.50*(x_BLK(i,j,k-1,globalBLK)+x_BLK(i,j,k,globalBLK))
-              FaceCoords_D(y_) = 0.50*(y_BLK(i,j,k-1,globalBLK)+y_BLK(i,j,k,globalBLK))
-              FaceCoords_D(z_) = 0.50*(z_BLK(i,j,k-1,globalBLK)+z_BLK(i,j,k,globalBLK))
-              B0Face_D(x_)     = B0xFace_z_BLK(i,j,k,globalBLK)
-              B0Face_D(y_)     = B0yFace_z_BLK(i,j,k,globalBLK)
-              B0Face_D(z_)     = B0zFace_z_BLK(i,j,k,globalBLK)
+                (k == 1         .and. neiLbot(iBlockBc)==+1) .or. &
+                (k == nKFace .and. neiLtop(iBlockBc)==+1))  ) then
+
+              iFaceBc = Bot_
+
+              FaceCoords_D(x_) = 0.5*sum(x_BLK(i,j,k-1:k,iBlockBc))
+              FaceCoords_D(y_) = 0.5*sum(y_BLK(i,j,k-1:k,iBlockBc))
+              FaceCoords_D(z_) = 0.5*sum(z_BLK(i,j,k-1:k,iBlockBc))
+              B0Face_D(x_)     = B0xFace_z_BLK(i,j,k,iBlockBc)
+              B0Face_D(y_)     = B0yFace_z_BLK(i,j,k,iBlockBc)
+              B0Face_D(z_)     = B0zFace_z_BLK(i,j,k,iBlockBc)
 
               VarsTrueFace_V =  RightState_VZ(:,i,j,k)
          
-              call set_body_BCs(Bot_)
+              call set_face_bc
 
               LeftState_VZ(:,i,j,k) = VarsGhostFace_V
           
@@ -284,16 +279,17 @@ subroutine set_face_BCs(iter,time_now,DoResChangeOnly,&
  
 contains
 
-  subroutine set_body_BCs(iSide)
+  subroutine set_face_bc
+
     use ModPhysics, ONLY : xBody2,yBody2,zBody2 !^CFG IF SECONDBODY
     use ModPhysics, ONLY : FaceState_VI
     use ModUser, ONLY: user_face_bcs
     
     implicit none
-    integer,intent(in)::iSide !is defined with respect to the TRUE CELL!!!
+
     real, dimension(1:3) :: uRot_D, uIono_D
 
-    real:: FaceState_V(nFaceValueVars)
+    real:: FaceState_V(nVar)
     real:: PressureJumpLimit=0.0,DensityJumpLimit=0.1    !
     real ::BdotR,BRefl_D(nDim), BOrig_D(nDim)
     real:: BdotU,RInv
@@ -302,31 +298,27 @@ contains
 
     !------------------------------------------------------------------------
 
-!    For new ionosphere, multispecies, multifluids 
-    if(  index(TypeBcHere,'user')>0 .or. &
+    ! User defined boundary conditions
+    if( index(TypeBc, 'user') > 0 .or. &
          (UseUserInnerBCs .and. iBoundary <= body1_) .or. &
          (UseUserOuterBCs .and. iBoundary >= east_ ) )then
-       call user_face_bcs(i,j,k,globalBLK,iSide,iBoundary,&
-            iter,time_now, FaceCoords_D,&
-            VarsTrueFace_V,VarsGhostFace_V,&
-            B0Face_D,  UseIonosphereHere,UseRotatingBcHere)
+       call user_face_bcs(i, j, k, VarsGhostFace_V)
        return
     end if
 
-
     !^CFG IF SECONDBODY BEGIN
     if(iBoundary==body2_)then
-       FaceCoords_D(x_)= FaceCoords_D(x_)-xBody2
-       FaceCoords_D(y_)= FaceCoords_D(y_)-yBody2
-       FaceCoords_D(z_)= FaceCoords_D(z_)-zBody2
+       FaceCoords_D(x_)= FaceCoords_D(x_) - xBody2
+       FaceCoords_D(y_)= FaceCoords_D(y_) - yBody2
+       FaceCoords_D(z_)= FaceCoords_D(z_) - zBody2
     end if
     !^CFG END SECONDBODY
 
-    FaceState_V=FaceState_VI(:,iBoundary)  
+    FaceState_V = FaceState_VI(:,iBoundary)  
     if(iBoundary==west_.and. &
-         (TypeBcHere=='vary'.or.TypeBcHere=='inflow') ) then                          
+         (TypeBc == 'vary'.or.TypeBc == 'inflow') ) then                          
        call get_solar_wind_point(&
-            time_now,         &
+            TimeBc,           &
             FaceCoords_D(y_), &
             FaceCoords_D(z_), &
             FaceState_V(rho_),&
@@ -339,7 +331,7 @@ contains
             FaceState_V(P_))            
     end if                                                        
 
-    select case(TypeBcHere) 
+    select case(TypeBc) 
     case('linetied','ionospherefloat')
        VarsGhostFace_V=VarsTrueFace_V
        VarsGhostFace_V(iRhoUx_I) = -VarsGhostFace_V(iRhoUx_I)
@@ -385,7 +377,7 @@ contains
        VarsGhostFace_V(Bx_:Bz_)  =  VarsGhostFace_V(Bx_:Bz_) - B0Face_D
     case('reflect','reflectb')
        BOrig_D = VarsTrueFace_V(Bx_:Bz_)
-       if(TypeBcHere == 'reflectb') BOrig_D = BOrig_D + B0Face_D
+       if(TypeBc == 'reflectb') BOrig_D = BOrig_D + B0Face_D
 
        select case(iBoundary)                                                 
        case(body1_,body2_)
@@ -444,33 +436,33 @@ contains
        VarsGhostFace_V(iP_I)    = VarsTrueFace_V(iP_I)
        VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_)
     case default
-       call stop_mpi('Incorrect TypeBc_I='//TypeBcHere)
+       call stop_mpi('Incorrect TypeBc_I='//TypeBc)
     end select
 !^CFG IF IONOSPHERE BEGIN
-    if (UseIonosphereHere) then
-       call calc_inner_bc_velocity(time_now, FaceCoords_D, &
+    if (UseIonosphere .and. iBoundary == Body1_) then
+       call calc_inner_bc_velocity(TimeBc, FaceCoords_D, &
             VarsTrueFace_V(Bx_:Bz_), B0Face_D, uIono_D)
        
-       select case(TypeBcHere)
+       select case(TypeBc)
        case('reflect','linetied','polarwind','ionosphere','ionospherefloat')
           VarsGhostFace_V(iRhoUx_I) = 2*uIono_D(x_) + VarsGhostFace_V(iRhoUx_I)
           VarsGhostFace_V(iRhoUy_I) = 2*uIono_D(y_) + VarsGhostFace_V(iRhoUy_I)
           VarsGhostFace_V(iRhoUz_I) = 2*uIono_D(z_) + VarsGhostFace_V(iRhoUz_I)
        case default
           call stop_mpi('UseIonosphere is not compatible with TypeBc_I=' &
-               //TypeBcHere)
+               //TypeBc)
        end select
     end if
 !^CFG END IONOSPHERE
-    if (UseRotatingBcHere) then
+    if (UseRotatingBc .and. iBoundary==Body1_) then
 
        !\
        ! The program is called which calculates the cartesian corotation 
        ! velocity vector uRot_D as a function of the radius-vector "FaceCoords"
        !/
-       call calc_corotation_velocities(iter,time_now,FaceCoords_D,uRot_D)
+       call calc_corotation_velocities(FaceCoords_D, uRot_D)
 
-       select case(TypeBcHere)
+       select case(TypeBc)
        case('reflect','linetied', &
             'ionosphere','ionospherefloat')
           VarsGhostFace_V(iRhoUx_I) = 2*uRot_D(x_) + VarsGhostFace_V(iRhoUx_I)
@@ -478,9 +470,9 @@ contains
           VarsGhostFace_V(iRhoUz_I) = 2*uRot_D(z_) + VarsGhostFace_V(iRhoUz_I)
        case default
           call stop_mpi('UseRotatingBc is not compatible with TypeBc_I=' &
-               //TypeBcHere) 
+               //TypeBc) 
        end select
     end if 
-  end subroutine set_body_BCs
+  end subroutine set_face_bc
 
 end subroutine set_face_BCs
