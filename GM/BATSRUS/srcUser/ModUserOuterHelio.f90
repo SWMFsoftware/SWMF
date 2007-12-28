@@ -197,7 +197,7 @@ contains
   end subroutine user_read_inputs
 
   !=================  !  SUBROUTINE USER_SET_INNER_BCS  !=====================
-  subroutine user_face_bcs(iFace,jFace,kFace,VarsGhostFace_V)
+  subroutine user_face_bcs(VarsGhostFace_V)
 
     use ModSize,     ONLY: nDim,West_,North_,Top_
     use ModMain
@@ -208,8 +208,7 @@ contains
     use ModSetOuterBC
     use ModProcMH
     use ModFaceBc
-    !\
-    integer,intent(in)::iFace,jFace,kFace
+
     real, intent(out):: VarsGhostFace_V(nVar)
 
     ! Variables required by this user subroutine

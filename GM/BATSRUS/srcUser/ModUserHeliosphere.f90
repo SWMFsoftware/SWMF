@@ -1304,9 +1304,8 @@ contains
   end subroutine user_set_boundary_cells
 
   !========================================================================
-  subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary, &
-       iter,time_now,FaceCoords_D,VarsTrueFace_V,VarsGhostFace_V,    &
-       B0Face_D,UseIonosphereHere,UseRotatingBcHere)
+  subroutine user_face_bcs(VarsGhostFace_V)
+
     use ModSize,       ONLY: nDim,East_,West_,South_,North_,Bot_,    &
          Top_
     use ModMain,       ONLY: time_accurate,UseUserHeating,x_,y_,z_,  &
@@ -1315,27 +1314,17 @@ contains
          Ew_ => ScalarFirst_
 
     use ModGeometry,   ONLY: R_BLK
-    use ModAdvance,    ONLY: nFaceValueVars,State_VGB
+    use ModAdvance,    ONLY: nVar, State_VGB
     use ModPhysics,    ONLY: CosThetaTilt,SinThetaTilt,g,inv_g,      &
          inv_gm1,OmegaBody,No2Io_V(UnitB_)
     use ModNumConst,   ONLY: cZero,cHalf,cOne,cTwo,cTolerance,cTiny
 
     use ModBlockData, ONLY: use_block_data, put_block_data, get_block_data
+    use ModFaceBc
+
     implicit none
-    !\
-    ! Variables required by this user subroutine
-    !/
-    integer, intent(in):: iFace,jFace,kFace,iBlock,iSide,&
-         iBoundary,iter
-    real, intent(in):: time_now
-    real, dimension(nDim), intent(in):: FaceCoords_D,    &
-         B0Face_D
-    real, dimension(nFaceValueVars), intent(in)::        &
-         VarsTrueFace_V
-    logical, intent(in):: UseIonosphereHere,             &
-         UseRotatingBcHere
-    real, dimension(nFaceValueVars), intent(out)::       &
-         VarsGhostFace_V
+
+    real, intent(out):: VarsGhostFace_V(nVar)
     !\
     ! User declared local variables go here::
     !/

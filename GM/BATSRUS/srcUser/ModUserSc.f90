@@ -974,29 +974,25 @@ contains
   end subroutine user_read_inputs
   
   !========================================================================
-  subroutine user_face_bcs(iFace,jFace,kFace,VarsGhostFace_V)
+  subroutine user_face_bcs(VarsGhostFace_V)
 
-    use ModSize,       ONLY: nDim,East_,West_,South_,North_,Bot_,    &
-         Top_
-    use ModMain,       ONLY: time_accurate,x_,y_,z_,  &
-         UseRotatingFrame
+    use ModSize,       ONLY: East_,West_,South_,North_,Bot_,Top_
+    use ModMain,       ONLY: time_accurate,x_,y_,z_, UseRotatingFrame
     use ModVarIndexes, ONLY: nVar,Ew_,rho_,Ux_,Uy_,Uz_,Bx_,By_,Bz_,P_
 
     use ModGeometry,   ONLY: R_BLK
-    use ModAdvance,    ONLY: nFaceValueVars,State_VGB
-    use ModPhysics,    ONLY: CosThetaTilt,SinThetaTilt,g,inv_g,      &
-         inv_gm1,OmegaBody
-    use ModNumConst,   ONLY: cZero,cHalf,cOne,cTwo,cTolerance,cTiny
+    use ModAdvance,    ONLY: State_VGB
+    use ModPhysics,    ONLY: inv_gm1, OmegaBody
+    use ModNumConst,   ONLY: cTolerance,cTiny
 
     use ModBlockData, ONLY: use_block_data, put_block_data, get_block_data
 
     use ModFaceBc, ONLY: FaceCoords_D, VarsTrueFace_V, TimeBc, &
-         iFaceBc, iBlockBc
+         iFace, jFace, kFace, iSide, iBlockBc
 
     implicit none
 
-    integer, intent(in):: iFace, jFace, kFace
-    real,   intent(out):: VarsGhostFace_V(nVar)
+    real, intent(out):: VarsGhostFace_V(nVar)
 
     integer:: iCell,jCell,kCell
 
@@ -1050,7 +1046,7 @@ contains
     ! and pressure::
     !/
     iCell = iFace; jCell = jFace; kCell = kFace
-    select case(iFaceBc)
+    select case(iSide)
     case(East_)
        iCell  = iFace
     case(West_)
@@ -1064,22 +1060,23 @@ contains
     case(Top_)
        kCell  = kFace-1
     case default
-       call stop_mpi('incorrect iFaceBc in user_face_bcs')
+       write(*,*)'ERROR: iSide = ',iSide
+       call stop_mpi('incorrect iSide value in user_face_bcs')
     end select
 
     call get_plasma_parameters_cell(iCell,jCell,kCell,iBlockBc,&
          DensCell,PresCell,GammaCell)
     VarsGhostFace_V(rho_     ) = max(-VarsTrueFace_V(rho_     )+ &
-         cTwo*(DensCell+RhoFRope),&!+RhoFRope)
+         2*(DensCell+RhoFRope),&!+RhoFRope)
          VarsTrueFace_V(rho_))
     VarsGhostFace_V(P_       ) =max(VarsGhostFace_V(rho_     )*&
          PresCell/(DensCell+RhoFRope),&
                                 !max(-VarsTrueFace_V(P_       )+ &
-                                !cTwo*PresCell,&
+                                !2*PresCell,&
          VarsTrueFace_V(P_  ))
     VarsGhostFace_V(Ew_) = &!max(-VarsTrueFace_V(Ew_)+ &  
-         VarsGhostFace_V(rho_     )/(DensCell+RhoFRope)*&  !cTwo* ???
-         PresCell*(cOne/(GammaCell-cOne)-inv_gm1)
+         VarsGhostFace_V(rho_     )/(DensCell+RhoFRope)*&  !2* ???
+         PresCell*(1.0/(GammaCell-cOne)-inv_gm1)
 
     !\
     ! Apply corotation
@@ -1127,12 +1124,12 @@ contains
     URatio=UFinal/UMin
     DensCell  = ((cOne/URatio)**2)*&               !This is the density variation
          exp(-GBody*g*&
-         (min(URatio,cTwo)*BodyTdim_I(1)/T0)*&!This is the temperature variation
+         (min(URatio,2.0)*BodyTdim_I(1)/T0)*&!This is the temperature variation
          (cOne/max(R_BLK(iCell,jCell,kCell,iBlock),0.90)&
          -cOne))
 
     PresCell  = inv_g*DensCell*&
-         T0/(min(URatio,cTwo)*BodyTdim_I(1))  !This is the temperature variation
+         T0/(min(URatio,2.0)*BodyTdim_I(1))  !This is the temperature variation
   end subroutine get_plasma_parameters_cell
 
   !========================================================================
@@ -1278,8 +1275,8 @@ contains
        call get_plasma_parameters_cell(i,j,k,iBlock,&
             DensCell,PresCell,GammaCell)
        if(R_BLK(i,j,k,iBlock)>2.5)&
-            GammaCell=GammaCell-(GammaCell-1.1)*max(cZero,&
-            -cOne+cTwo* State_VGB(P_   ,i,j,k,iBlock)/&
+            GammaCell=GammaCell-(GammaCell-1.1)*max(0.0, &
+            -1.0 + 2*State_VGB(P_,i,j,k,iBlock)/&
             (State_VGB(P_   ,i,j,k,iBlock)+(&
             (State_VGB(Bx_   ,i,j,k,iBlock)+B0xCell_BLK(i,j,k,iBlock))**2+&
             (State_VGB(By_   ,i,j,k,iBlock)+B0yCell_BLK(i,j,k,iBlock))**2+&

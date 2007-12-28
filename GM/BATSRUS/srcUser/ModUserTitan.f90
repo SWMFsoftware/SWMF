@@ -1099,17 +1099,13 @@ contains
 
   !========================================================================
 
-  subroutine user_face_bcs(iFace, jFace, kFace, VarsGhostFace_V)
+  subroutine user_face_bcs(VarsGhostFace_V)
 
     use ModAdvance,  ONLY: nVar
     use ModPhysics,  ONLY: SW_rho, SW_p, SW_T_dim
     use ModFaceBc,   ONLY: VarsTrueFace_V, FaceCoords_D
 
-    !\
-    ! Variables required by this user subroutine
-    !/
-    integer, intent(in):: iFace,jFace,kFace
-    real,   intent(out):: VarsGhostFace_V(nVar)
+    real, intent(out):: VarsGhostFace_V(nVar)
 
     real:: XFace,YFace,ZFace, rFace, rFace2
     real:: v_phi(3)

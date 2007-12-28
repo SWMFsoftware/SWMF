@@ -808,15 +808,14 @@ contains
 
   !========================================================================
 
-  subroutine user_face_bcs(iFace,jFace,kFace,VarsGhostFace_V)
+  subroutine user_face_bcs(VarsGhostFace_V)
 
     use ModSize,       ONLY: West_, North_, Top_
     use ModVarIndexes, ONLY: nVar, RhoOp_, RhoO2p_, RhoCO2p_, RhoHp_
     use ModPhysics,    ONLY: SW_rho, SW_p, SW_T_dim
     use ModFaceBc,     ONLY: FaceCoords_D, VarsTrueFace_V
 
-    integer, intent(in):: iFace,jFace,kFace
-    real,   intent(out):: VarsGhostFace_V(nVar)
+    real, intent(out):: VarsGhostFace_V(nVar)
 
     real:: XFace,YFace,ZFace, rFace, rFace2
     ! real:: v_phi(3) 
