@@ -1,16 +1,5 @@
 !^CFG COPYRIGHT UM
 
-module ModSetOuterBC
-  ! Notation: 1g - first ghost cell,    2g - second ghost cell
-  !           1p - first physical cell, 2p - second physical cell
-  integer :: imin1g,imax1g,imin2g,imax2g,imin1p,imax1p,imin2p,imax2p
-  integer :: jmin1g,jmax1g,jmin2g,jmax2g,jmin1p,jmax1p,jmin2p,jmax2p
-  integer :: kmin1g,kmax1g,kmin2g,kmax2g,kmin1p,kmax1p,kmin2p,kmax2p
-  integer :: iBLK
-end module ModSetOuterBC
-
-!=============================================================================
-
 subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
 
   ! Set ghost cells values rho, U, B, and P for iBLK. 
