@@ -23,11 +23,10 @@ contains
   end subroutine user_set_boundary_cells
 
   !=====================================================================
-  subroutine user_face_bcs(iFace, jFace, kFace, VarsGhostFace_V)
+  subroutine user_face_bcs(VarsGhostFace_V)
 
     use ModAdvance, ONLY: nVar
 
-    integer,intent(in)::iFace,jFace,kFace
     real, intent(out):: VarsGhostFace_V(nVar)
 
     character (len=*), parameter :: Name='user_face_bcs' 

@@ -128,7 +128,7 @@ subroutine set_face_BCs(IsBodyCell_G,IsTrueCell_G)
                 ((i == nIFace .and. neiLwest(iBlockBc)==+1) .or. &
                 (i == 1       .and. neiLeast(iBlockBc)==+1)) )) then
 
-              iFaceBc = West_
+              iSide = West_
 
               FaceCoords_D(x_) = 0.5*sum(x_BLK(i-1:i,j,k,iBlockBc))
               FaceCoords_D(y_) = 0.5*sum(y_BLK(i-1:i,j,k,iBlockBc))
@@ -151,7 +151,7 @@ subroutine set_face_BCs(IsBodyCell_G,IsTrueCell_G)
                 (i == 1         .and. neiLeast(iBlockBc)==+1) .or. &
                 (i == nIFace    .and. neiLwest(iBlockBc)==+1)  )) then
 
-              iFaceBc = East_
+              iSide = East_
 
               FaceCoords_D(x_) = 0.5*sum(x_BLK(i-1:i,j,k,iBlockBc))
               FaceCoords_D(y_) = 0.5*sum(y_BLK(i-1:i,j,k,iBlockBc))
@@ -182,7 +182,7 @@ subroutine set_face_BCs(IsBodyCell_G,IsTrueCell_G)
                 (j == nJFace .and. neiLnorth(iBlockBc)==+1) .or. &
                 (j == 1      .and. neiLsouth(iBlockBc)==+1) )) then
 
-              iFaceBc = North_
+              iSide = North_
 
               FaceCoords_D(x_) = 0.5*sum(x_BLK(i,j-1:j,k,iBlockBc))
               FaceCoords_D(y_) = 0.5*sum(y_BLK(i,j-1:j,k,iBlockBc))
@@ -204,7 +204,7 @@ subroutine set_face_BCs(IsBodyCell_G,IsTrueCell_G)
                 (j ==1       .and. neiLsouth(iBlockBc)==+1) .or. &
                 (j == nJFace .and. neiLnorth(iBlockBc)==+1) )) then
 
-              iFaceBc = South_
+              iSide = South_
 
               FaceCoords_D(x_) = 0.5*sum(x_BLK(i,j-1:j,k,iBlockBc))
               FaceCoords_D(y_) = 0.5*sum(y_BLK(i,j-1:j,k,iBlockBc))
@@ -235,7 +235,7 @@ subroutine set_face_BCs(IsBodyCell_G,IsTrueCell_G)
                 (k == nKFace .and. neiLtop(iBlockBc)==+1) .or. &
                 (k == 1       .and. neiLbot(iBlockBc)==+1)) ) then
 
-              iFaceBc = Top_
+              iSide = Top_
 
               FaceCoords_D(x_)= 0.5*sum(x_BLK(i,j,k-1:k,iBlockBc))
               FaceCoords_D(y_)= 0.5*sum(y_BLK(i,j,k-1:k,iBlockBc))
@@ -257,7 +257,7 @@ subroutine set_face_BCs(IsBodyCell_G,IsTrueCell_G)
                 (k == 1         .and. neiLbot(iBlockBc)==+1) .or. &
                 (k == nKFace .and. neiLtop(iBlockBc)==+1))  ) then
 
-              iFaceBc = Bot_
+              iSide = Bot_
 
               FaceCoords_D(x_) = 0.5*sum(x_BLK(i,j,k-1:k,iBlockBc))
               FaceCoords_D(y_) = 0.5*sum(y_BLK(i,j,k-1:k,iBlockBc))
@@ -302,7 +302,8 @@ contains
     if( index(TypeBc, 'user') > 0 .or. &
          (UseUserInnerBCs .and. iBoundary <= body1_) .or. &
          (UseUserOuterBCs .and. iBoundary >= east_ ) )then
-       call user_face_bcs(i, j, k, VarsGhostFace_V)
+       iFace = i; jFace = j; kFace = k
+       call user_face_bcs(VarsGhostFace_V)
        return
     end if
 

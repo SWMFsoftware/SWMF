@@ -1,28 +1,36 @@
 module ModFaceBc
 
+  ! Variables shared by subroutines set_BCs.f90 and user_face_bcs in ModUser
+  
   use ModVarIndexes, ONLY: nVar
 
   implicit none
 
   SAVE
 
+  ! True if only boundaries at resolution changes are updated
   logical:: DoResChangeOnly
 
-  integer:: iBlockBc
+  ! The type and index of the boundary
+  character(len=20) :: TypeBc
 
   ! Negative iBoundary indicates which body we are computing for.
   ! Positive iBoundary numerates the sides for the outer BCs.
   integer:: iBoundary
 
+  ! Index of the face
+  integer:: iFace, jFace, kFace, iBlockBc
+
   ! The side of the cell defined with respect to the cell inside the domain
-  integer :: iFaceBc
+  integer :: iSide
 
-  character(len=20) :: TypeBc
+  ! The values on the physical side and the ghost cell side of the boudary
+  real:: VarsTrueFace_V(nVar), VarsGhostFace_V(nVar)
 
-  real,dimension(nVar):: VarsTrueFace_V, VarsGhostFace_V
-
+  ! The coordinates of the face center and the B0 field at that point
   real :: FaceCoords_D(3), B0Face_D(3)
 
+  ! The time at which the (time dependent) boundary condition is calculated
   real :: TimeBc
 
 end module ModFaceBc
