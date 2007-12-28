@@ -129,7 +129,7 @@ module ModUser
        SrhoSpecies
 
 contains
-  !=============================================================================
+  !============================================================================
 
   subroutine user_read_inputs
     use ModMain
@@ -137,7 +137,7 @@ contains
     use ModReadParam
 
     character (len=100) :: NameCommand
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     do
        if(.not.read_line() ) EXIT
@@ -155,24 +155,23 @@ contains
   end subroutine user_read_inputs
 
 
-  !=============================================================================
+  !============================================================================
   subroutine user_calc_sources
     use ModMain
-    use ModVarIndexes, ONLY: rho_, rhoUx_, rhoUy_, rhoUz_,p_,Bx_, By_, Bz_, nVar
-    use ModAdvance,  ONLY: Source_VC,Energy_
-    use ModNumConst, ONLY: cZero
-    !---------------------------------------------------------------------------
+    use ModVarIndexes, ONLY: rho_,rhoUx_,rhoUy_,rhoUz_,p_,Bx_, By_, Bz_,nVar
+    use ModAdvance,  ONLY: Source_VC, Energy_
+    !--------------------------------------------------------------------------
 
-    Srho   = cZero
-    SrhoSpecies=cZero
-    SrhoUx = cZero
-    SrhoUy = cZero
-    SrhoUz = cZero
-    SBx    = cZero
-    SBy    = cZero
-    SBz    = cZero
-    SP     = cZero
-    SE     = cZero
+    Srho   = 0.0
+    SrhoSpecies=0.0
+    SrhoUx = 0.0
+    SrhoUy = 0.0
+    SrhoUz = 0.0
+    SBx    = 0.0
+    SBy    = 0.0
+    SBz    = 0.0
+    SP     = 0.0
+    SE     = 0.0
 !!!    if(globalBLK==199)then
 !!!       write(*,*)'before Source(rhoU)=', Source_VC(6:8,2,1,2)
 !!!       write(*,*)'Source(p,E)', Source_VC(P_:P_+1,2,1,2)
@@ -198,34 +197,14 @@ contains
 !!!!       write(*,*)'rhosp=',State_VGB(rho_:5,2,1,2,globalBLK)
 !!!    end if
   end subroutine user_calc_sources
-  !========================================================================
-  !  SUBROUTINE USER_SOURCES
-  !========================================================================
-  !\
-  ! This subroutine is used to calculate sources for the MHD equations.  The
-  ! routine is called for each block separately so that the user would typically
-  ! need only to code the source term calculation for a single block (in other
-  ! words inside the the k,j,i loop below).  As with all user subroutines, the
-  ! variables declared in ModUser are available here.  Again, as with other
-  ! user subroutines DO NOT MODIFY ANY GLOBAL VARIABLE DEFINED IN THE MODULES
-  ! INCLUDED IN THIS SUBROUTINE UNLESS SPECIFIED!!
-  !
-  ! The user should load the global variables:
-  !      Srho,SrhoUx,SrhoUy,SrhoUz,SBx,SBy,SBz,SE,SP,SEw
-  !
-  ! Note that SE (energy) and SP (pressure) must both be loaded if the code is 
-  ! going to use both the primitive and the conservative MHD equation advance  
-  ! (see the USER MANUAL and the DESIGN document).  If using only primitive SP 
-  ! must be loaded.  If using only conservative SE must be loaded.  The safe
-  ! approach is to load both.
-  !/
+
+  !===========================================================================
   subroutine user_sources
     use ModMain
     use ModAdvance,  ONLY: State_VGB,VdtFace_x,VdtFace_y,VdtFace_z
     use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_
     use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
          vInv_CB
-    use ModConst,    ONLY: cZero,cHalf,cOne,cTwo,cTolerance
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: Rbody, inv_gm1
 
@@ -236,7 +215,6 @@ contains
     real :: totalPSNumRho=0.0,totalRLNumRhox=0.0
     logical:: oktest,oktest_me
     !
-    !---------------------------------------------------------------------------
     !\
     ! Variable meanings:
     !   Srho: Source terms for the continuity equation
@@ -245,8 +223,9 @@ contains
     !   SrhoUx,SrhoUy,SrhoUz:  Source terms for the momentum equation
     !   SBx,SBy,SBz:  Souce terms for the magnetic field equations 
     !/
-    !---------------------------------------------------------------------------
     !
+    !--------------------------------------------------------------------------
+
     if (iProc==PROCtest.and.globalBLK==BLKtest) then
        call set_oktest('user_sources',oktest,oktest_me)
     else
@@ -297,7 +276,7 @@ contains
                   /MassSpecies_I(1:nSpecies))
              MaxSLSpecies_CB(i,j,k,globalBLK)=1.0e-3
 
-             cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,globalBLK)))*&
+             cosSZA=(0.5+sign(0.5,x_BLK(i,j,k,globalBLK)))*&
                   x_BLK(i,j,k,globalBLK)/max(R_BLK(i,j,k,globalBLK),1.0e-3)&
                   +1.0e-3
 
@@ -501,7 +480,7 @@ contains
 
   end subroutine user_sources
 
-  !==============================================================================
+  !============================================================================
   subroutine user_init_session
     use ModMain
     use ModPhysics
@@ -535,22 +514,7 @@ contains
 
   end subroutine user_init_session
 
-
   !========================================================================
-  !  SUBROUTINE USER_SET_ICs
-  ! (It will include set_ICs_global.f90
-  !!\
-  ! Calculates the initial conditions of the grid for the Global Heliosphere
-  !
-  ! Written by Merav Opher Feb 14  2002
-  !/
-  ! OMEGAbody is the rotation frequency of the Sun
-  !========================================================================
-
-  ! This subroutine allows the user to apply initial conditions to the domain
-  ! which are problem specific and cannot be created using the predefined
-  ! options in BATSRUS.
-  ! The variables specific to the problem are loaded from ModUser
 
   subroutine user_set_ICs
     use ModProcMH, ONLY : iProc
@@ -559,7 +523,6 @@ contains
     use ModGeometry, ONLY : x2,y2,z2,x_BLK,y_BLK,z_BLK,R_BLK,true_cell
     use ModIO, ONLY : restart
     use ModPhysics
-    use ModNumConst
 
     real :: Rmax, SinSlope, CosSlope,CosSZA
     real :: B4, dB4dx, zeta4, q4, epsi4, plobe, &
@@ -606,7 +569,7 @@ contains
 
        do k=1-gcn,nK+gcn;do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
           if (R_BLK(i,j,k,globalBLK)< Rbody) then
-             cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,globalBLK)))*&
+             cosSZA=(0.5+sign(0.5,x_BLK(i,j,k,globalBLK)))*&
                   x_BLK(i,j,k,globalBLK)/max(R_BLK(i,j,k,globalBLK),1.0e-3)+&
                   1.0e-3
              State_VGB(:,i,j,k,globalBLK)   =  CellState_VI(:,body1_)
@@ -622,8 +585,8 @@ contains
                   CellState_VI(rhoOp_,body1_)*cosSZA
              State_VGB(rho_,i,j,k,globalBLK)  = &
                   sum( State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,globalBLK))
-             State_VGB(P_,i,j,k,globalBLK) = &
-                  max(SW_p, sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,globalBLK)&
+             State_VGB(P_,i,j,k,globalBLK) = max(SW_p, &
+                  sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,globalBLK) &
                   /MassSpecies_I(1:MaxSpecies))*XiT0 )
 
           else
@@ -640,7 +603,7 @@ contains
           if (true_cell(i,j,k,globalBLK).and. &
                R_BLK(i,j,k,globalBLK)<1.2*Rbody) then
 
-             cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,globalBLK)))*&
+             cosSZA=(0.5+sign(0.5,x_BLK(i,j,k,globalBLK)))*&
                   x_BLK(i,j,k,globalBLK)/max(R_BLK(i,j,k,globalBLK),1.0e-3)+&
                   1.0e-3
 
@@ -702,11 +665,12 @@ contains
   end subroutine user_set_ICs
 
   !========================================================================
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !THIS SUBROUTINE calculate the scale height of ion and neutal species and 
-  !intial boundary value of ion species
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
   subroutine set_multiSp_ICs
+
+    ! Calculate the scale height of ion and neutal species and 
+    ! intial boundary value of ion species
+
     use ModMain
     use ModConst
     use ModIO
@@ -721,10 +685,11 @@ contains
 !!!  No2Io_V(UnitT_)=1.0
 !!!  No2Si_V(UnitTemperature_)=1.0
     write(*,*)'BodynDenNuSpecies_I=',BodynDenNuSpecies_I
-    write(*,*)'BodynDenNuSpecies_dim_I(1:nNuSpecies)',BodynDenNuSpecies_dim_I(1:nNuSpecies)
+    write(*,*)'BodynDenNuSpecies_dim_I(1:nNuSpecies)', &
+         BodynDenNuSpecies_dim_I(1:nNuSpecies)
 
     nu0=nu0_dim*No2Io_V(UnitN_)*No2Io_V(UnitT_)
-    XiT0 = SW_p*Ti_body_dim*cTwo/SW_T_dim
+    XiT0 = SW_p*Ti_body_dim*2/SW_T_dim
     Tnu_body = Tnu_body_dim *Si2No_V(UnitTemperature_)
     T300 = T300_dim*Si2No_V(UnitTemperature_)
     BodynDenNuSpecies_I(1:nNuSpecies)=&
@@ -815,7 +780,6 @@ contains
   subroutine user_set_boundary_cells(iBLK)
     use ModGeometry
     use ModMain	
-    use ModNumConst	
 
     integer,intent(in)::iBLK
     !-----------------------------------------------------------------------
@@ -841,164 +805,59 @@ contains
        end if
     end if
   end subroutine user_set_boundary_cells
-  !========================================================================
 
   !========================================================================
-  !  SUBROUTINE USER_SET_INNER_BCS
-  !========================================================================
-  !\
-  ! This subroutine allows the user to apply boundary conditions to the inner
-  ! body which are problem specific and cannot be created using the predefined
-  ! options in BATSRUS.  The available options in BATSRUS have been designed
-  ! to be self consistent and reasonably robust.  We generally recommend that
-  ! you use on of those or a variant that is very close to one of them.  They
-  ! can be considered reasonably safe.
-  !
-  ! An example of a reasonable variant would be to use a modification of the
-  ! "ionosphere" boundary where the density is fixed at the boundary to a 
-  ! value that is a function of latitude.
-  !
-  ! This routine is called for a single inner boundary face.  Since BATSRUS is
-  ! is block cartesian, the values inside the boundary face must be passed back
-  ! in cartesian coordinates.  Values that must be set are:
-  !
-  !  RhoFaceInside, pFaceInside, VxFaceInside, VyFaceInside, VzFaceInside
-  !  BxFaceInside, ByFaceInside, BzFaceInside, EwFaceInside
-  !
-  ! Typically the boundary conditions are applied for the spherical coordinates
-  ! and then transformed to the cartesian ones.
-  !
-  ! As with all user subroutines, the variables declared in ModUser are 
-  ! available here.  Again, as with other user subroutines DO NOT MODIFY 
-  ! ANY GLOBAL VARIABLE DEFINED IN THE MODULES INCLUDED IN THIS SUBROUTINE 
-  ! UNLESS SPECIFIED!!
-  !/
-  subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary, &
-       iter,time_now,FaceCoords_D,VarsTrueFace_V,VarsGhostFace_V,    &
-       B0Face_D,UseIonosphereHere,UseRotatingBcHere)
-    use ModSize,     ONLY: nDim,West_,North_,Top_	
-    use ModMain
-    use ModVarIndexes
-    use ModAdvance,  ONLY: nFaceValueVars
-    use ModPhysics,  ONLY: g,inv_g,cosTHETAtilt,sinTHETAtilt, SW_rho, SW_p, SW_T_dim
-    use ModNumConst, ONLY: cZero,cOne,cTwo,cTolerance
-    !--------------------------------------------------------------------------
 
-    !\
-    ! Variables required by this user subroutine
-    !/
-    integer, intent(in):: iFace,jFace,kFace,iBlock,iSide,&
-         iBoundary,iter
-    real, intent(in):: time_now
-    real, dimension(nDim), intent(in):: FaceCoords_D,    &
-         B0Face_D
-    real, dimension(nFaceValueVars), intent(in)::        &
-         VarsTrueFace_V
-    logical, intent(in):: UseIonosphereHere,             &
-         UseRotatingBcHere
-    real, dimension(nFaceValueVars), intent(out)::       &
-         VarsGhostFace_V
-    !\
-    ! User declared local variables go here::
-    !/
-    real:: XFace,YFace,ZFace
-    real:: VxFaceOutside,VyFaceOutside,VzFaceOutside
-    real:: BxFaceOutside,ByFaceOutside,BzFaceOutside
-    real:: VrFaceOutside,VthetaFaceOutside,VphiFaceOutside,&
-         VrFaceInside,VthetaFaceInside,VphiFaceInside,     &
-         BrFaceOutside,BthetaFaceOutside,BphiFaceOutside,  &
-         BrFaceInside,BthetaFaceInside,BphiFaceInside
-    real:: cosTheta,sinTheta,cosPhi,sinPhi,RFace
-    real, dimension(1:3):: location,v_phi
-    real:: XFaceT,YFaceT,ZFaceT,sin2Theta_coronal_hole
-    real:: cosThetaT,sinThetaT,cosPhiT,sinPhiT
+  subroutine user_face_bcs(iFace,jFace,kFace,VarsGhostFace_V)
+
+    use ModSize,       ONLY: West_, North_, Top_
+    use ModVarIndexes, ONLY: nVar, RhoOp_, RhoO2p_, RhoCO2p_, RhoHp_
+    use ModPhysics,    ONLY: SW_rho, SW_p, SW_T_dim
+    use ModFaceBc,     ONLY: FaceCoords_D, VarsTrueFace_V
+
+    integer, intent(in):: iFace,jFace,kFace
+    real,   intent(out):: VarsGhostFace_V(nVar)
+
+    real:: XFace,YFace,ZFace, rFace, rFace2
+    ! real:: v_phi(3) 
     real:: cosSZA 
     real:: uDotR, bDotR
     !--------------------------------------------------------------------------
-    !
-    !---------------------------------------------------------------------------
-    !\
-    ! Calculation of boundary conditions should start here::
-    !/
-    !---------------------------------------------------------------------------
-    !
+
     XFace = FaceCoords_D(1)
     YFace = FaceCoords_D(2)
     ZFace = FaceCoords_D(3)
-    VxFaceOutside = VarsTrueFace_V(Ux_)
-    VyFaceOutside = VarsTrueFace_V(Uy_)
-    VzFaceOutside = VarsTrueFace_V(Uz_)
-    BxFaceOutside = VarsTrueFace_V(Bx_)
-    ByFaceOutside = VarsTrueFace_V(By_)
-    BzFaceOutside = VarsTrueFace_V(Bz_)
 
-    RFace    = sqrt(XFace**2+YFace**2+ZFace**2)
+    rFace2 = XFace**2 + YFace**2 + ZFace**2
+    rFace  = sqrt(rFace2)
 
     !Apply boundary conditions
-    select case(iBoundary)                                                 
-    case(body1_)
-       cosSZA=(0.5+sign(0.5,XFace))*&
-            XFace/max(RFace,1.0e-3)&
-            +1.0e-3
+    cosSZA = (0.5+sign(0.5,XFace)) * XFace/max(rFace,1.0e-3) + 1.0e-3
 
-       VarsGhostFace_V(rhoOp_) =  BodyRhoSpecies_I(Op_)*&
-            cosSZA
+    VarsGhostFace_V(rhoOp_) =  BodyRhoSpecies_I(Op_) *cosSZA
 
-       VarsGhostFace_V(rhoO2p_) = BodyRhoSpecies_I(O2p_)*&      
-            sqrt(cosSZA)
+    VarsGhostFace_V(rhoO2p_) = BodyRhoSpecies_I(O2p_)*sqrt(cosSZA)
 
-       VarsGhostFace_V(rhoCO2p_)=BodyRhoSpecies_I(CO2p_)*&
-            cosSZA
+    VarsGhostFace_V(rhoCO2p_)=BodyRhoSpecies_I(CO2p_)*cosSZA
 
-       VarsGhostFace_V(rhoHp_)=SW_rho*0.3
+    VarsGhostFace_V(rhoHp_)=SW_rho*0.3
 
+    VarsGhostFace_V(rho_) = sum(VarsGhostFace_V(rho_+1:rho_+MaxSpecies))
+    VarsGhostFace_V(P_)=sum(VarsGhostFace_V(rho_+1:rho_+MaxSpecies)&
+         /MassSpecies_I)*SW_p*Ti_body_dim/SW_T_dim 
 
-       VarsGhostFace_V(rho_) = sum(VarsGhostFace_V(rho_+1:rho_+MaxSpecies))
-       VarsGhostFace_V(P_)=sum(VarsGhostFace_V(rho_+1:rho_+MaxSpecies)&
-            /MassSpecies_I(:))*SW_p*Ti_body_dim/SW_T_dim 
+    ! Reflective in radial direction
+    uDotR = sum(VarsTrueFace_V(Ux_:Uz_)*FaceCoords_D)/rFace2
+    bDotR = sum(VarsTrueFace_V(Bx_:Bz_)*FaceCoords_D)/rFace2
 
-!       VrFaceInside     = -VrFaceOutside
-!       VthetaFaceInside = VthetaFaceOutside
-!       VphiFaceInside   = VphiFaceOutside
-!       BrFaceInside     = cZero
-!       BthetaFaceInside = cZero
-!       BphiFaceInside   = cZero
-       uDotR=( VxFaceOutside*XFace &
-            +  VyFaceOutside*YFace &
-            +  VzFaceOutside*ZFace )/Rface
-       bDotR=( BxFaceOutside*XFace &
-            +  ByFaceOutside*YFace &
-            +  BzFaceOutside*ZFace )/Rface
-       
-       VarsGhostFace_V(Ux_)=VxFaceOutside - 2.0*uDotR* XFace/Rface
-       VarsGhostFace_V(Uy_)=VyFaceOutside - 2.0*uDotR* YFace/Rface
-       VarsGhostFace_V(Uz_)=VzFaceOutside - 2.0*uDotR* ZFace/Rface
-       VarsGhostFace_V(Bx_)=BxFaceOutside - 2.0*bDotR* XFace/Rface
-       VarsGhostFace_V(By_)=ByFaceOutside - 2.0*bDotR* YFace/Rface
-       VarsGhostFace_V(Bz_)=BzFaceOutside - 2.0*bDotR* ZFace/Rface
-    end select
+    VarsGhostFace_V(Ux_:Uz_) = VarsTrueFace_V(Ux_:Uz_) - 2*uDotR*FaceCoords_D
+    VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_) - 2*bDotR*FaceCoords_D
 
-    !\
-    ! Apply corotation:: Currently works only for the first body.
-    !/
-    if (UseRotatingBcHere) then
-       location(1) = XFace 
-       location(2) = YFace 
-       location(3) = ZFace
-       !\
-       ! The program is called which calculates the cartesian 
-       ! corotation velocity vector v_phi as a function of the 
-       ! radius-vector "location".
-       !/
-       call calc_corotation_velocities(iter,time_now,&
-            location,v_phi)
-       VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_)  +&
-            cTwo*v_phi(1)
-       VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_)  +&
-            cTwo*v_phi(2)
-       VarsGhostFace_V(Uz_) = VarsGhostFace_V(Uz_)  +&
-            cTwo*v_phi(3)
-    end if
+    ! Apply corotation?
+    !if (UseRotatingBcHere) then
+    !   call calc_corotation_velocities(FaceCoords_D, v_phi)
+    !   VarsGhostFace_V(Ux_:Uz_) = VarsGhostFace_V(Ux_:Uz_) + 2*v_phi
+    !end if
 
   end subroutine user_face_bcs
 
@@ -1058,8 +917,6 @@ contains
   end subroutine user_set_plot_var1
 
   !====================================================================
-  !                     neutral_density_averages
-  !====================================================================
   subroutine neutral_density_averages
     use ModMain
     use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, true_cell,vInv_CB, R_BLK
@@ -1070,8 +927,8 @@ contains
     real:: FaceArea_DS(3,east_:top_),VInv
 
     real ::  density_IS(6,nNuSpecies),x,y,z,R0, factor
-    !  real :: neutral_density
-    !true_cell note: using true_cell to replace an Rbody test does not apply here
+    ! real :: neutral_density
+    ! Note: using true_cell to replace an Rbody test does not apply here
     !----------------------------------------------------------------
 
     do k=1,nK; do j=1,nJ;  do i=1,nI  
@@ -1079,9 +936,9 @@ contains
 
        if(.not.true_cell(i,j,k,globalBLK))cycle
        !-------------------East----------------------------------
-       x = cHalf*(x_BLK(i-1,j,k,globalBLK) + x_BLK(i,j,k,globalBLK))
-       y = cHalf*(y_BLK(i-1,j,k,globalBLK) + y_BLK(i,j,k,globalBLK))
-       z = cHalf*(z_BLK(i-1,j,k,globalBLK) + z_BLK(i,j,k,globalBLK))
+       x = 0.5*(x_BLK(i-1,j,k,globalBLK) + x_BLK(i,j,k,globalBLK))
+       y = 0.5*(y_BLK(i-1,j,k,globalBLK) + y_BLK(i,j,k,globalBLK))
+       z = 0.5*(z_BLK(i-1,j,k,globalBLK) + z_BLK(i,j,k,globalBLK))
        R0 = sqrt(x*x + y*y + z*z+cTolerance**2)
        FaceArea_DS(:,East_)= FaceAreaI_DFB(:,i,j,k,globalBLK)
        factor = (FaceArea_DS(1,East_)*x+ &
@@ -1092,9 +949,9 @@ contains
        end do
 
        !-------------------West----------------------------------
-       x = cHalf*(x_BLK(i+1,j,k,globalBLK)+x_BLK(i,j,k,globalBLK))
-       y = cHalf*(y_BLK(i+1,j,k,globalBLK)+y_BLK(i,j,k,globalBLK))
-       z = cHalf*(z_BLK(i+1,j,k,globalBLK)+z_BLK(i,j,k,globalBLK))
+       x = 0.5*(x_BLK(i+1,j,k,globalBLK)+x_BLK(i,j,k,globalBLK))
+       y = 0.5*(y_BLK(i+1,j,k,globalBLK)+y_BLK(i,j,k,globalBLK))
+       z = 0.5*(z_BLK(i+1,j,k,globalBLK)+z_BLK(i,j,k,globalBLK))
        R0 = sqrt(x*x + y*y + z*z+cTolerance**2)
        FaceArea_DS(:,West_)= FaceAreaI_DFB(:,i+1,j,k,globalBLK)
        factor = (FaceArea_DS(1,West_)*x+ &
@@ -1105,9 +962,9 @@ contains
        end do
 
        !-------------------South----------------------------------
-       x = cHalf*(x_BLK(i,j-1,k,globalBLK)+x_BLK(i,j,k,globalBLK))
-       y = cHalf*(y_BLK(i,j-1,k,globalBLK)+y_BLK(i,j,k,globalBLK))
-       z = cHalf*(z_BLK(i,j-1,k,globalBLK)+z_BLK(i,j,k,globalBLK))
+       x = 0.5*(x_BLK(i,j-1,k,globalBLK)+x_BLK(i,j,k,globalBLK))
+       y = 0.5*(y_BLK(i,j-1,k,globalBLK)+y_BLK(i,j,k,globalBLK))
+       z = 0.5*(z_BLK(i,j-1,k,globalBLK)+z_BLK(i,j,k,globalBLK))
        R0 = sqrt(x*x + y*y + z*z+cTolerance**2)
        FaceArea_DS(:,South_)=FaceAreaJ_DFB(:,i,j,k,globalBLK)
        factor = (FaceArea_DS(1,South_)*x+ &
@@ -1118,9 +975,9 @@ contains
        end do
 
        !-------------------North----------------------------------
-       x = cHalf*(x_BLK(i,j+1,k,globalBLK)+x_BLK(i,j,k,globalBLK))
-       y = cHalf*(y_BLK(i,j+1,k,globalBLK)+y_BLK(i,j,k,globalBLK))
-       z = cHalf*(z_BLK(i,j+1,k,globalBLK)+z_BLK(i,j,k,globalBLK))
+       x = 0.5*(x_BLK(i,j+1,k,globalBLK)+x_BLK(i,j,k,globalBLK))
+       y = 0.5*(y_BLK(i,j+1,k,globalBLK)+y_BLK(i,j,k,globalBLK))
+       z = 0.5*(z_BLK(i,j+1,k,globalBLK)+z_BLK(i,j,k,globalBLK))
        R0 = sqrt(x*x + y*y + z*z+cTolerance**2)
        FaceArea_DS(:,North_)=FaceAreaJ_DFB(:,i,j+1,k,globalBLK)
        factor = (FaceArea_DS(1,North_)*x+ &
@@ -1131,9 +988,9 @@ contains
        end do
 
        !-------------------Bot----------------------------------
-       x = cHalf*(x_BLK(i,j,k-1,globalBLK)+x_BLK(i,j,k,globalBLK))
-       y = cHalf*(y_BLK(i,j,k-1,globalBLK)+y_BLK(i,j,k,globalBLK))
-       z = cHalf*(z_BLK(i,j,k-1,globalBLK)+z_BLK(i,j,k,globalBLK))
+       x = 0.5*(x_BLK(i,j,k-1,globalBLK)+x_BLK(i,j,k,globalBLK))
+       y = 0.5*(y_BLK(i,j,k-1,globalBLK)+y_BLK(i,j,k,globalBLK))
+       z = 0.5*(z_BLK(i,j,k-1,globalBLK)+z_BLK(i,j,k,globalBLK))
        R0 = sqrt(x*x + y*y + z*z+cTolerance**2)
        FaceArea_DS(:,Bot_)= FaceAreaK_DFB(:,i,j,k,globalBLK)
        factor = (FaceArea_DS(1,Bot_)*x+ &
@@ -1144,9 +1001,9 @@ contains
        end do
 
        !-------------------Top----------------------------------
-       x = cHalf*(x_BLK(i,j,k+1,globalBLK)+x_BLK(i,j,k,globalBLK))
-       y = cHalf*(y_BLK(i,j,k+1,globalBLK)+y_BLK(i,j,k,globalBLK))
-       z = cHalf*(z_BLK(i,j,k+1,globalBLK)+z_BLK(i,j,k,globalBLK))
+       x = 0.5*(x_BLK(i,j,k+1,globalBLK)+x_BLK(i,j,k,globalBLK))
+       y = 0.5*(y_BLK(i,j,k+1,globalBLK)+y_BLK(i,j,k,globalBLK))
+       z = 0.5*(z_BLK(i,j,k+1,globalBLK)+z_BLK(i,j,k,globalBLK))
        R0 = sqrt(x*x + y*y + z*z+cTolerance**2)
        FaceArea_DS(:,Top_)= FaceAreaK_DFB(:,i,j,k+1,globalBLK)
        factor = (FaceArea_DS(1,Top_)*x+ &
@@ -1174,13 +1031,13 @@ contains
   !==============================================================================
   real function neutral_density(R0,iNu)
     !  use ModUser, ONLY : BodynDenNuSpecies_I, HNuSpecies_I
-    use ModPhysics, ONLY :Rbody,cZero
+    use ModPhysics, ONLY : Rbody
 
     real, intent(in) :: R0
     integer, intent(in) :: iNu
 
     !-----------------------------------------------------------------------
-    neutral_density = cZero
+    neutral_density = 0.0
     if( R0 >= 0.9*Rbody .and. R0< 3.0*Rbody ) &
          neutral_density= exp(-(R0-Rbody)/HNuSpecies_I(iNu))
 

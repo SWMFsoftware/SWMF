@@ -436,22 +436,17 @@ contains
   end subroutine user_set_ics
 
   !=====================================================================
-  subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary, &
-       iter,time_now,FaceCoords_D,VarsTrueFace_V,VarsGhostFace_V,    &
-       B0Face_D,UseIonosphereHere,UseRotatingBcHere)
+  subroutine user_face_bcs(iFace,jFace,kFace,VarsGhostFace_V)
 
     use ModMain, ONLY: x_, y_, z_
     use ModVarIndexes
     use ModPhysics, ONLY: BodyRho_I, BodyP_I, Io2No_V, UnitU_
+    use ModFaceBc,  ONLY: FaceCoords_D, B0Face_D, VarsTrueFace_V
 
     !\
     ! Variables required by this user subroutine
     !/
-    integer, intent(in):: iFace,jFace,kFace,iBlock,iSide,iBoundary,iter
-    real,    intent(in):: time_now
-    real,    intent(in):: FaceCoords_D(3), B0Face_D(3)
-    real,    intent(in):: VarsTrueFace_V(nVar)
-    logical, intent(in):: UseIonosphereHere, UseRotatingBcHere
+    integer, intent(in):: iFace,jFace,kFace
     real,   intent(out):: VarsGhostFace_V(nVar)
 
     real :: zMin, uPerB0

@@ -974,14 +974,13 @@ contains
   end subroutine user_read_inputs
   
   !========================================================================
-  subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary, &
-       iter,time_now,FaceCoords_D,VarsTrueFace_V,VarsGhostFace_V,    &
-       B0Face_D,UseIonosphereHere,UseRotatingBcHere)
+  subroutine user_face_bcs(iFace,jFace,kFace,VarsGhostFace_V)
+
     use ModSize,       ONLY: nDim,East_,West_,South_,North_,Bot_,    &
          Top_
     use ModMain,       ONLY: time_accurate,x_,y_,z_,  &
          UseRotatingFrame
-    use ModVarIndexes, ONLY: Ew_,rho_,Ux_,Uy_,Uz_,Bx_,By_,Bz_,P_  
+    use ModVarIndexes, ONLY: nVar,Ew_,rho_,Ux_,Uy_,Uz_,Bx_,By_,Bz_,P_
 
     use ModGeometry,   ONLY: R_BLK
     use ModAdvance,    ONLY: nFaceValueVars,State_VGB
@@ -990,44 +989,26 @@ contains
     use ModNumConst,   ONLY: cZero,cHalf,cOne,cTwo,cTolerance,cTiny
 
     use ModBlockData, ONLY: use_block_data, put_block_data, get_block_data
+
+    use ModFaceBc, ONLY: FaceCoords_D, VarsTrueFace_V, TimeBc, &
+         iFaceBc, iBlockBc
+
     implicit none
-    !\
-    ! Variables required by this user subroutine
-    !/
-    integer, intent(in):: iFace,jFace,kFace,iBlock,iSide,&
-         iBoundary,iter
-    real, intent(in):: time_now
-    real, dimension(nDim), intent(in):: FaceCoords_D,    &
-         B0Face_D
-    real, dimension(nFaceValueVars), intent(in)::        &
-         VarsTrueFace_V
-    logical, intent(in):: UseIonosphereHere,             &
-         UseRotatingBcHere
-    real, dimension(nFaceValueVars), intent(out)::       &
-         VarsGhostFace_V
-    !\
-    ! User declared local variables go here::
-    !/
+
+    integer, intent(in):: iFace, jFace, kFace
+    real,   intent(out):: VarsGhostFace_V(nVar)
+
     integer:: iCell,jCell,kCell
 
     real:: DensCell,PresCell,GammaCell, B1dotR  
-    real, dimension(3):: RFace_D,B1_D,U_D,&
-         B1t_D,B1n_D
-    !---------------------------------------------------------------------
+    real, dimension(3):: RFace_D,B1_D,U_D,B1t_D,B1n_D
+
     ! Variables related to the TD99 flux rope::
-    !---------------------------------------------------------------------
     real:: BFRdotR,RhoFRope=cZero
     real, dimension(3):: BFRope_D,BFRn_D,BFRt_D,UVorT_D
 
-    !\
-    ! Calculation of boundary conditions should start here::
-    !/
     !--------------------------------------------------------------------------
 
-
-    !\
-    ! 
-    !/
     RFace_D  = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
 
     U_D (x_:z_)  = VarsTrueFace_V(Ux_:Uz_)
@@ -1046,7 +1027,7 @@ contains
     !/
     if (DoTD99FluxRope.or.DoBqField) then
        call get_transformed_TD99fluxrope(RFace_D,BFRope_D,&
-            UVorT_D,RhoFRope,time_now)
+            UVorT_D,RhoFRope,TimeBc)
        if(.not.DoBqField)UVorT_D=0.0
        !\
        ! Compute the normal, BFRn_D, and tangential, BFRt_D,
@@ -1069,7 +1050,7 @@ contains
     ! and pressure::
     !/
     iCell = iFace; jCell = jFace; kCell = kFace
-    select case(iSide)
+    select case(iFaceBc)
     case(East_)
        iCell  = iFace
     case(West_)
@@ -1083,9 +1064,10 @@ contains
     case(Top_)
        kCell  = kFace-1
     case default
-       call stop_mpi('user_face_bcs')
+       call stop_mpi('incorrect iFaceBc in user_face_bcs')
     end select
-    call get_plasma_parameters_cell(iCell,jCell,kCell,iBlock,&
+
+    call get_plasma_parameters_cell(iCell,jCell,kCell,iBlockBc,&
          DensCell,PresCell,GammaCell)
     VarsGhostFace_V(rho_     ) = max(-VarsTrueFace_V(rho_     )+ &
          cTwo*(DensCell+RhoFRope),&!+RhoFRope)
@@ -1103,14 +1085,11 @@ contains
     ! Apply corotation
     !/
     if (.not.UseRotatingFrame) then
-       !\
-       ! The program is called which calculates the cartesian 
-       ! corotation velocity::
-       !/
+
        VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_) -&
-            cTwo*OmegaBody*FaceCoords_D(y_)
+            2*OmegaBody*FaceCoords_D(y_)
        VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) +&
-            cTwo*OmegaBody*FaceCoords_D(x_)
+            2*OmegaBody*FaceCoords_D(x_)
     end if
   end subroutine user_face_bcs
 

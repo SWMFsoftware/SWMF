@@ -1153,166 +1153,61 @@ contains
        end if
     end if
   end subroutine user_set_boundary_cells
-  !========================================================================
 
   !========================================================================
-  !  SUBROUTINE USER_SET_INNER_BCS
-  !========================================================================
-  !\
-  ! This subroutine allows the user to apply boundary conditions to the inner
-  ! body which are problem specific and cannot be created using the predefined
-  ! options in BATSRUS.  The available options in BATSRUS have been designed
-  ! to be self consistent and reasonably robust.  We generally recommend that
-  ! you use on of those or a variant that is very close to one of them.  They
-  ! can be considered reasonably safe.
-  !
-  ! An example of a reasonable variant would be to use a modification of the
-  ! "ionosphere" boundary where the density is fixed at the boundary to a 
-  ! value that is a function of latitude.
-  !
-  ! This routine is called for a single inner boundary face.  Since BATSRUS is
-  ! is block cartesian, the values inside the boundary face must be passed back
-  ! in cartesian coordinates.  Values that must be set are:
-  !
-  !  RhoFaceInside, pFaceInside, VxFaceInside, VyFaceInside, VzFaceInside
-  !  BxFaceInside, ByFaceInside, BzFaceInside, EwFaceInside
-  !
-  ! Typically the boundary conditions are applied for the spherical coordinates
-  ! and then transformed to the cartesian ones.
-  !
-  ! As with all user subroutines, the variables declared in ModUser are 
-  ! available here.  Again, as with other user subroutines DO NOT MODIFY 
-  ! ANY GLOBAL VARIABLE DEFINED IN THE MODULES INCLUDED IN THIS SUBROUTINE 
-  ! UNLESS SPECIFIED!!
-  !/
-  subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary, &
-       iter,time_now,FaceCoords_D,VarsTrueFace_V,VarsGhostFace_V,    &
-       B0Face_D,UseIonosphereHere,UseRotatingBcHere)
-    use ModSize,     ONLY: nDim,West_,North_,Top_	
-    use ModMain
-    use ModVarIndexes
-    use ModAdvance,  ONLY: nFaceValueVars
-    use ModPhysics,  ONLY: g,inv_g,cosTHETAtilt,sinTHETAtilt, SW_rho, SW_p, SW_T_dim
-    use ModNumConst, ONLY: cZero,cOne,cTwo,cTolerance
-    !--------------------------------------------------------------------------
 
-    !\
-    ! Variables required by this user subroutine
-    !/
-    integer, intent(in):: iFace,jFace,kFace,iBlock,iSide,&
-         iBoundary,iter
-    real, intent(in):: time_now
-    real, dimension(nDim), intent(in):: FaceCoords_D,    &
-         B0Face_D
-    real, dimension(nFaceValueVars), intent(in)::        &
-         VarsTrueFace_V
-    logical, intent(in):: UseIonosphereHere,             &
-         UseRotatingBcHere
-    real, dimension(nFaceValueVars), intent(out)::       &
-         VarsGhostFace_V
-    !\
-    ! User declared local variables go here::
-    !/
-    real:: XFace,YFace,ZFace
-    real:: VxFaceOutside,VyFaceOutside,VzFaceOutside
-    real:: BxFaceOutside,ByFaceOutside,BzFaceOutside
-    real:: VrFaceOutside,VthetaFaceOutside,VphiFaceOutside,&
-         VrFaceInside,VthetaFaceInside,VphiFaceInside,     &
-         BrFaceOutside,BthetaFaceOutside,BphiFaceOutside,  &
-         BrFaceInside,BthetaFaceInside,BphiFaceInside
-    real:: cosTheta,sinTheta,cosPhi,sinPhi,RFace
-    real, dimension(1:3):: location,v_phi
-    real:: XFaceT,YFaceT,ZFaceT,sin2Theta_coronal_hole
-    real:: cosThetaT,sinThetaT,cosPhiT,sinPhiT
+  subroutine user_face_bcs(iFace,jFace,kFace,VarsGhostFace_V)
+
+    use ModSize,       ONLY: nDim,West_,North_,Top_	
+    use ModMain,       ONLY: UseRotatingBc
+    use ModVarIndexes, ONLY: nVar, RhoOp_, RhoO2p_, RhoCO2p_, RhoHp_
+    use ModPhysics,    ONLY: SW_rho, SW_p, SW_T_dim
+    use ModFaceBc,     ONLY: FaceCoords_D, VarsTrueFace_V
+
+    integer, intent(in):: iFace,jFace,kFace
+    real,   intent(out):: VarsGhostFace_V(nVar)
+
+    real:: XFace,YFace,ZFace,rFace,rFace2
+    real:: v_phi(3)
     real:: cosSZA 
     real:: uDotR, bDotR
     !--------------------------------------------------------------------------
-    !
-    !---------------------------------------------------------------------------
-    !\
-    ! Calculation of boundary conditions should start here::
-    !/
-    !---------------------------------------------------------------------------
-    !
+
     XFace = FaceCoords_D(1)
     YFace = FaceCoords_D(2)
     ZFace = FaceCoords_D(3)
-    VxFaceOutside = VarsTrueFace_V(Ux_)
-    VyFaceOutside = VarsTrueFace_V(Uy_)
-    VzFaceOutside = VarsTrueFace_V(Uz_)
-    BxFaceOutside = VarsTrueFace_V(Bx_)
-    ByFaceOutside = VarsTrueFace_V(By_)
-    BzFaceOutside = VarsTrueFace_V(Bz_)
 
-    RFace    = sqrt(XFace**2+YFace**2+ZFace**2)
+    rFace2 = XFace**2 + YFace**2 + ZFace**2
+    rFace  = sqrt(rFace2)
 
     !Apply boundary conditions
-    select case(iBoundary)                                                 
-    case(body1_)
-       cosSZA=(0.5+sign(0.5,XFace))*&
-            XFace/max(RFace,1.0e-3)&
-            +1.0e-3
+    cosSZA=(0.5+sign(0.5,XFace)) * XFace/max(RFace,1.0e-3) + 1.0e-3
 
-       VarsGhostFace_V(rhoOp_) =  BodyRhoSpecies_I(Op_)*&
-            cosSZA
+    VarsGhostFace_V(rhoOp_)  = BodyRhoSpecies_I(Op_) *cosSZA
 
-       VarsGhostFace_V(rhoO2p_) = BodyRhoSpecies_I(O2p_)*&      
-            sqrt(cosSZA)
+    VarsGhostFace_V(rhoO2p_) = BodyRhoSpecies_I(O2p_)*sqrt(cosSZA)
 
-       VarsGhostFace_V(rhoCO2p_)=BodyRhoSpecies_I(CO2p_)*&
-            cosSZA
+    VarsGhostFace_V(rhoCO2p_)= BodyRhoSpecies_I(CO2p_)*cosSZA
 
-       VarsGhostFace_V(rhoHp_)=SW_rho*0.3
+    VarsGhostFace_V(rhoHp_)  = SW_rho*0.3
 
 
-       VarsGhostFace_V(rho_) = sum(VarsGhostFace_V(rho_+1:rho_+MaxSpecies))
-       VarsGhostFace_V(P_)=sum(VarsGhostFace_V(rho_+1:rho_+MaxSpecies)&
-            /MassSpecies_I(:))*Tp_body
+    VarsGhostFace_V(rho_) = sum(VarsGhostFace_V(rho_+1:rho_+MaxSpecies))
+    VarsGhostFace_V(P_)=sum(VarsGhostFace_V(rho_+1:rho_+MaxSpecies)&
+         /MassSpecies_I)*Tp_body
 
-       !       VrFaceInside     = -VrFaceOutside
-       !       VthetaFaceInside = VthetaFaceOutside
-       !       VphiFaceInside   = VphiFaceOutside
-       !       BrFaceInside     = cZero
-       !       BthetaFaceInside = cZero
-       !       BphiFaceInside   = cZero
-       uDotR=( VxFaceOutside*XFace &
-            +  VyFaceOutside*YFace &
-            +  VzFaceOutside*ZFace )/Rface
-       bDotR=( BxFaceOutside*XFace &
-            +  ByFaceOutside*YFace &
-            +  BzFaceOutside*ZFace )/Rface
+    ! Reflective in radial direction
+    uDotR = sum(VarsTrueFace_V(Ux_:Uz_)*FaceCoords_D)/rFace2
+    ! bDotR = sum(VarsTrueFace_V(Bx_:Bz_)*FaceCoords_D)/rFace2
 
-       VarsGhostFace_V(Ux_)=VxFaceOutside - 2.0*uDotR* XFace/Rface
-       VarsGhostFace_V(Uy_)=VyFaceOutside - 2.0*uDotR* YFace/Rface
-       VarsGhostFace_V(Uz_)=VzFaceOutside - 2.0*uDotR* ZFace/Rface
-!       VarsGhostFace_V(Bx_)=BxFaceOutside - 2.0*bDotR* XFace/Rface
-!       VarsGhostFace_V(By_)=ByFaceOutside - 2.0*bDotR* YFace/Rface
-!       VarsGhostFace_V(Bz_)=BzFaceOutside - 2.0*bDotR* ZFace/Rface
-       VarsGhostFace_V(Bx_)=0.0
-       VarsGhostFace_V(By_)=0.0
-       VarsGhostFace_V(Bz_)=0.0
-    end select
+    VarsGhostFace_V(Ux_:Uz_) = VarsTrueFace_V(Ux_:Uz_) - 2*uDotR*FaceCoords_D
+    ! VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_) - 2*bDotR*FaceCoords_D
+    VarsGhostFace_V(Bx_:Bz_) = 0.0
 
-    !\
-    ! Apply corotation:: Currently works only for the first body.
-    !/
-    if (UseRotatingBcHere) then
-       location(1) = XFace 
-       location(2) = YFace 
-       location(3) = ZFace
-       !\
-       ! The program is called which calculates the cartesian 
-       ! corotation velocity vector v_phi as a function of the 
-       ! radius-vector "location".
-       !/
-       call calc_corotation_velocities(iter,time_now,&
-            location,v_phi)
-       VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_)  +&
-            cTwo*v_phi(1)
-       VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_)  +&
-            cTwo*v_phi(2)
-       VarsGhostFace_V(Uz_) = VarsGhostFace_V(Uz_)  +&
-            cTwo*v_phi(3)
+    ! Apply corotation?
+    if (UseRotatingBc) then
+       call calc_corotation_velocities(FaceCoords_D, v_phi)
+       VarsGhostFace_V(Ux_:Uz_) = VarsGhostFace_V(Ux_:Uz_) + 2*v_phi
     end if
 
   end subroutine user_face_bcs

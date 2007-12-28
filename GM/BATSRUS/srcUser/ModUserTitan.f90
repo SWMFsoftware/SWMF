@@ -1096,75 +1096,23 @@ contains
        end if
     end if
   end subroutine user_set_boundary_cells
-  !========================================================================
 
   !========================================================================
-  !  SUBROUTINE USER_SET_INNER_BCS
-  !========================================================================
-  !\
-  ! This subroutine allows the user to apply boundary conditions to the inner
-  ! body which are problem specific and cannot be created using the predefined
-  ! options in BATSRUS.  The available options in BATSRUS have been designed
-  ! to be self consistent and reasonably robust.  We generally recommend that
-  ! you use on of those or a variant that is very close to one of them.  They
-  ! can be considered reasonably safe.
-  !
-  ! An example of a reasonable variant would be to use a modification of the
-  ! "ionosphere" boundary where the density is fixed at the boundary to a 
-  ! value that is a function of latitude.
-  !
-  ! This routine is called for a single inner boundary face.  Since BATSRUS is
-  ! is block cartesian, the values inside the boundary face must be passed back
-  ! in cartesian coordinates.  Values that must be set are:
-  !
-  !  RhoFaceInside, pFaceInside, VxFaceInside, VyFaceInside, VzFaceInside
-  !  BxFaceInside, ByFaceInside, BzFaceInside, EwFaceInside
-  !
-  ! Typically the boundary conditions are applied for the spherical coordinates
-  ! and then transformed to the cartesian ones.
-  !
-  ! As with all user subroutines, the variables declared in ModUser are 
-  ! available here.  Again, as with other user subroutines DO NOT MODIFY 
-  ! ANY GLOBAL VARIABLE DEFINED IN THE MODULES INCLUDED IN THIS SUBROUTINE 
-  ! UNLESS SPECIFIED!!
-  !/
-  subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary, &
-       iter,time_now,FaceCoords_D,VarsTrueFace_V,VarsGhostFace_V,    &
-       B0Face_D,UseIonosphereHere,UseRotatingBcHere)
-    use ModMain
-    use ModAdvance,  ONLY: nFaceValueVars
-    use ModPhysics,  ONLY: g,inv_g,cosTHETAtilt,sinTHETAtilt, SW_rho, SW_p, SW_T_dim
-    use ModNumConst, ONLY: cZero,cOne,cTwo,cTolerance
-    !--------------------------------------------------------------------------
+
+  subroutine user_face_bcs(iFace, jFace, kFace, VarsGhostFace_V)
+
+    use ModAdvance,  ONLY: nVar
+    use ModPhysics,  ONLY: SW_rho, SW_p, SW_T_dim
+    use ModFaceBc,   ONLY: VarsTrueFace_V, FaceCoords_D
 
     !\
     ! Variables required by this user subroutine
     !/
-    integer, intent(in):: iFace,jFace,kFace,iBlock,iSide,&
-         iBoundary,iter
-    real, intent(in):: time_now
-    real, dimension(nDim), intent(in):: FaceCoords_D,    &
-         B0Face_D
-    real, dimension(nFaceValueVars), intent(in)::        &
-         VarsTrueFace_V
-    logical, intent(in):: UseIonosphereHere,             &
-         UseRotatingBcHere
-    real, dimension(nFaceValueVars), intent(out)::       &
-         VarsGhostFace_V
-    !\
-    ! User declared local variables go here::
-    !/
-    real:: XFace,YFace,ZFace
-    real:: VxFaceOutside,VyFaceOutside,VzFaceOutside
-    real:: BxFaceOutside,ByFaceOutside,BzFaceOutside
-    real:: VrFaceOutside,VthetaFaceOutside,VphiFaceOutside,&
-         VrFaceInside,VthetaFaceInside,VphiFaceInside,     &
-         BrFaceOutside,BthetaFaceOutside,BphiFaceOutside,  &
-         BrFaceInside,BthetaFaceInside,BphiFaceInside
-    real:: cosTheta,sinTheta,cosPhi,sinPhi,RFace
-    real, dimension(1:3):: location,v_phi
-    !    real:: XFaceT,YFaceT,ZFaceT,sin2Theta_coronal_hole
-    real:: cosThetaT,sinThetaT,cosPhiT,sinPhiT
+    integer, intent(in):: iFace,jFace,kFace
+    real,   intent(out):: VarsGhostFace_V(nVar)
+
+    real:: XFace,YFace,ZFace, rFace, rFace2
+    real:: v_phi(3)
     real:: cosSZA
     real,dimension(1:MaxSpecies) :: coefx
     real :: dtm, dtmp1
@@ -1172,156 +1120,61 @@ contains
     real:: uDotR, bDotR
 
     !--------------------------------------------------------------------------
-    !
-    !---------------------------------------------------------------------------
-    !\
-    ! Calculation of boundary conditions should start here::
-    !/
-    !---------------------------------------------------------------------------
-    !
     XFace = FaceCoords_D(1)
     YFace = FaceCoords_D(2)
     ZFace = FaceCoords_D(3)
-    VxFaceOutside = VarsTrueFace_V(Ux_)
-    VyFaceOutside = VarsTrueFace_V(Uy_)
-    VzFaceOutside = VarsTrueFace_V(Uz_)
-    BxFaceOutside = VarsTrueFace_V(Bx_)
-    ByFaceOutside = VarsTrueFace_V(By_)
-    BzFaceOutside = VarsTrueFace_V(Bz_)
-    !\
-    ! Rotate to spherical coordinates
-    !/
-    RFace    = sqrt(XFace**2+YFace**2+ZFace**2)
-!!!    cosTheta = ZFace/RFace
-!!!    sinTheta = sqrt(XFace**2+YFace**2)/RFace
-!!!    cosPhi   = XFace/sqrt(XFace**2+YFace**2+cTolerance**2)
-!!!    sinPhi   = YFace/sqrt(XFace**2+YFace**2+cTolerance**2)
-!!!    VrFaceOutside = (VxFaceOutside*XFace      +&
-!!!         VyFaceOutside*YFace                  +&
-!!!         VzFaceOutside*ZFace)/RFace
-!!!    VthetaFaceOutside = ((VxFaceOutside*XFace +&
-!!!         VyFaceOutside*YFace)*ZFace           -&
-!!!         VzFaceOutside*(XFace**2+YFace**2))   /&
-!!!         (sqrt(XFace**2+YFace**2+cTolerance**2)*RFace)
-!!!    VphiFaceOutside = (VyFaceOutside*XFace    -&
-!!!         VxFaceOutside*YFace)*sinTheta        /&
-!!!         ((XFace**2+YFace**2+cTolerance**2)/RFace)
-!!!    BrFaceOutside = (BxFaceOutside*XFace      +&
-!!!         ByFaceOutside*YFace                  +&
-!!!         BzFaceOutside*ZFace)/RFace
-!!!    BthetaFaceOutside = ((BxFaceOutside*XFace +&
-!!!         ByFaceOutside*YFace)*ZFace           -&
-!!!         BzFaceOutside*(XFace**2+YFace**2))   /&
-!!!         (sqrt(XFace**2+YFace**2+cTolerance**2)*RFace)
-!!!    BphiFaceOutside = (ByFaceOutside*XFace    -&
-!!!         BxFaceOutside*YFace)*sinTheta        /&
-!!!         ((XFace**2+YFace**2+cTolerance**2)/RFace)
-!!!
+
+    rFace2 = XFace**2 + YFace**2 + ZFace**2
+    rFace  = sqrt(rFace2)
 
     !Apply boundary conditions
-    select case(iBoundary)                                                 
-    case(body1_)
-       cosSZA=(XFace*SX0+YFace*SY0+ZFace*SZ0)&
-            /max(RFace,1.0e-3)
-       if(.not.UseCosSZA)then
-          coefx=1.0
-          if(cosSZA.lt.0.95)then
-             do m=1,MaxNumSZA
-                if((cosSZA < CosSZAB_I(m)).and.&
-                     (cosSZA >= CosSZAB_I(m+1))) then
-                   dtm = CosSZAB_I(m)- cosSZA
-                   dtmp1 = cosSZA - CosSZAB_I(m+1)                
-                   coefx = (coefSZAB_II(:,m)*dtmp1+&
-                        coefSZAB_II(:,m+1)*dtm)&
-                        /(CosSZAB_I(m)-CosSZAB_I(m+1))
+    cosSZA = (XFace*SX0 + YFace*SY0 + ZFace*SZ0)/max(RFace,1.0e-3)
 
-                end if
-             end do
-          end if
-       else
-          coefx=2.0*cosSZA
-          if(cosSZA.lt.0.5)then
-             coefx =1.001+2.0/3.0*(cosSZA-0.5)
-          end if
+    if(.not.UseCosSZA)then
+       coefx=1.0
+       if(cosSZA.lt.0.95)then
+          do m=1,MaxNumSZA
+             if((cosSZA < CosSZAB_I(m)).and.&
+                  (cosSZA >= CosSZAB_I(m+1))) then
+                dtm = CosSZAB_I(m)- cosSZA
+                dtmp1 = cosSZA - CosSZAB_I(m+1)                
+                coefx = (coefSZAB_II(:,m)*dtmp1+&
+                     coefSZAB_II(:,m+1)*dtm)&
+                     /(CosSZAB_I(m)-CosSZAB_I(m+1))
+
+             end if
+          end do
        end if
-       VarsGhostFace_V(rho_+1:rho_+nSpecies) = &
-            BodyRhoSpecies_I(1:nSpecies)*coefx
-
-       VarsGhostFace_V(rho_) = sum(VarsGhostFace_V(rho_+1:rho_+nSpecies))
-       VarsGhostFace_V(P_)=sum(VarsGhostFace_V(rho_+1:rho_+nSpecies)&
-            /MassSpecies_V(SpeciesFirst_:SpeciesLast_))*SW_p*Body_Ti_dim/SW_T_dim
-
-!!!       VrFaceInside     = -VrFaceOutside
-!!!       VthetaFaceInside = VthetaFaceOutside
-!!!       VphiFaceInside   = VphiFaceOutside
-!!!       BrFaceInside     = -BrFaceOutside
-!!!       BthetaFaceInside = BthetaFaceOutside
-!!!       BphiFaceInside   = BphiFaceOutside
-       !       BrFaceInside     = cZero
-       !       BthetaFaceInside = cZero
-       !       BphiFaceInside   = cZero
-    end select
-
-    !\
-    ! Rotate back to cartesian coordinates::
-    !/
-!!!    VarsGhostFace_V(Ux_) = VrFaceInside*XFace/RFace+&
-!!!         VthetaFaceInside*cosTheta*cosPhi          -&
-!!!         VphiFaceInside*sinPhi 
-!!!    VarsGhostFace_V(Uy_) = VrFaceInside*YFace/RFace+&
-!!!         VthetaFaceInside*cosTheta*sinPhi          +&
-!!!         VphiFaceInside*cosPhi
-!!!    VarsGhostFace_V(Uz_) = VrFaceInside*ZFace/RFace-&
-!!!         VthetaFaceInside*sinTheta
-!!!    VarsGhostFace_V(Bx_) = BrFaceInside*XFace/RFace+&
-!!!         BthetaFaceInside*cosTheta*cosPhi          -&
-!!!         BphiFaceInside*sinPhi
-!!!    VarsGhostFace_V(By_) = BrFaceInside*YFace/RFace+&
-!!!         BthetaFaceInside*cosTheta*sinPhi          +&
-!!!         BphiFaceInside*cosPhi
-!!!    VarsGhostFace_V(Bz_) = BrFaceInside*ZFace/RFace-&
-!!!         BthetaFaceInside*sinTheta
-
-    uDotR=( VxFaceOutside*XFace &
-         +  VyFaceOutside*YFace &
-         +  VzFaceOutside*ZFace )/Rface
-    bDotR=( BxFaceOutside*XFace &
-         +  ByFaceOutside*YFace &
-         +  BzFaceOutside*ZFace )/Rface
-
-    VarsGhostFace_V(Ux_)=VxFaceOutside - 2.0*uDotR* XFace/Rface
-    VarsGhostFace_V(Uy_)=VyFaceOutside - 2.0*uDotR* YFace/Rface
-    VarsGhostFace_V(Uz_)=VzFaceOutside - 2.0*uDotR* ZFace/Rface
-    VarsGhostFace_V(Bx_)=BxFaceOutside - 2.0*bDotR* XFace/Rface
-    VarsGhostFace_V(By_)=ByFaceOutside - 2.0*bDotR* YFace/Rface
-    VarsGhostFace_V(Bz_)=BzFaceOutside - 2.0*bDotR* ZFace/Rface
-
-    !\
-    ! Apply corotation:: Currently works only for the first body.
-    !/
-    if (UseRotatingBcHere) then
-       location(1) = XFace 
-       location(2) = YFace 
-       location(3) = ZFace
-       !\
-       ! The program is called which calculates the cartesian 
-       ! corotation velocity vector v_phi as a function of the 
-       ! radius-vector "location".
-       !/
-       call calc_corotation_velocities(iter,time_now,&
-            location,v_phi)
-       VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_)  +&
-            cTwo*v_phi(1)
-       VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_)  +&
-            cTwo*v_phi(2)
-       VarsGhostFace_V(Uz_) = VarsGhostFace_V(Uz_)  +&
-            cTwo*v_phi(3)
+    else
+       coefx=2.0*cosSZA
+       if(cosSZA.lt.0.5)then
+          coefx =1.001+2.0/3.0*(cosSZA-0.5)
+       end if
     end if
+    VarsGhostFace_V(rho_+1:rho_+nSpecies) = &
+         BodyRhoSpecies_I(1:nSpecies)*coefx
+
+    VarsGhostFace_V(rho_) = sum(VarsGhostFace_V(rho_+1:rho_+nSpecies))
+    VarsGhostFace_V(P_)=sum(VarsGhostFace_V(rho_+1:rho_+nSpecies)&
+         /MassSpecies_V(SpeciesFirst_:SpeciesLast_))*SW_p*Body_Ti_dim/SW_T_dim
+
+    ! Reflective in radial direction
+    uDotR = sum(VarsTrueFace_V(Ux_:Uz_)*FaceCoords_D)/rFace2
+    ! bDotR = sum(VarsTrueFace_V(Bx_:Bz_)*FaceCoords_D)/rFace2
+
+    VarsGhostFace_V(Ux_:Uz_) = VarsTrueFace_V(Ux_:Uz_) - 2*uDotR*FaceCoords_D
+    VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_) - 2*bDotR*FaceCoords_D
+
+    !\
+    ! Apply corotation?
+    !/
+    !if (UseRotatingBcHere) then
+    !   call calc_corotation_velocities(FaceCoords_D, v_phi)
+    !   VarsGhostFace_V(Ux_:Uz_) = VarsGhostFace_V(Ux_:Uz_)  + 2*v_phi
+    !end if
 
   end subroutine user_face_bcs
 
-  !====================================================================
-  !                     neutral_density_averages
   !====================================================================
   subroutine neutral_density_averages
     use ModMain, ONLY: globalBLK 
@@ -1433,7 +1286,7 @@ contains
 
   end subroutine neutral_density_averages
 
-  !==============================================================================
+  !============================================================================
   real function neutral_density(R0,iNu)
     use ModPhysics, ONLY :Rbody,cZero
 
@@ -1446,7 +1299,7 @@ contains
          neutral_density= exp(-(R0-Rbody)/HNuSpecies_I(iNu))
 
   end function neutral_density
-  !=============================================================================
+  !============================================================================
   subroutine titan_input(iBlock)
     use ModPhysics
     use ModGeometry
