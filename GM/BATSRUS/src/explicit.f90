@@ -4,20 +4,20 @@
 subroutine advance_expl(DoCalcTimestep)
 
   use ModMain
-  use ModFaceFlux, ONLY: calc_face_flux
-  use ModFaceValue,ONLY: calc_face_value
-  use ModAdvance,  ONLY: UseUpdateCheck
-  use ModParallel, ONLY: neiLev
-  use ModGeometry, ONLY: Body_BLK
-  use ModGeometry, ONLY: UseCovariant              !^CFG IF COVARIANT
-  use ModBlockData,ONLY: set_block_data
-  use ModImplicit, ONLY: UsePartImplicit           !^CFG IF IMPLICIT
+  use ModFaceFlux,  ONLY: calc_face_flux
+  use ModFaceValue, ONLY: calc_face_value
+  use ModAdvance,   ONLY: UseUpdateCheck
+  use ModParallel,  ONLY: neiLev
+  use ModGeometry,  ONLY: Body_BLK
+  use ModGeometry,  ONLY: UseCovariant              !^CFG IF COVARIANT
+  use ModBlockData, ONLY: set_block_data
+  use ModImplicit,  ONLY: UsePartImplicit           !^CFG IF IMPLICIT
+  use ModPhysics,   ONLY: No2Si_V, UnitT_
+
   implicit none
 
   logical, intent(in) :: DoCalcTimestep
   integer :: iStage, iBlock
-
-  real :: dtf, mdtf
 
   character (len=*), parameter :: NameSub = 'advance_expl'
 
@@ -30,7 +30,7 @@ subroutine advance_expl(DoCalcTimestep)
   !/
   if(UsePartImplicit)call timing_start('advance_expl') !^CFG IF IMPLICIT
 
-  STAGELOOP: do istage = 1, nSTAGE
+  STAGELOOP: do iStage = 1, nStage
 
      if(DoTestMe)write(*,*)NameSub,' starting stage=',iStage
 
@@ -171,6 +171,9 @@ subroutine advance_expl(DoCalcTimestep)
         call timing_stop('constrain_B')
         if(DoTestMe)write(*,*)NameSub,' done constrain B'
      end if                                        !^CFG END CONSTRAINB
+
+     if(DoCalcTimeStep) &
+          Time_Simulation = Time_Simulation + Dt*No2Si_V(UnitT_)/nStage
 
      if(iStage<nStage)call exchange_messages
 

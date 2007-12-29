@@ -81,7 +81,7 @@ subroutine advance_impl
        time_BlK, &
        tmp1_BLK, UseUpdateCheck, iTypeAdvance_B, iTypeAdvance_BP, &
        SkippedBlock_, ExplBlock_, ImplBlock_
-  use ModPhysics, ONLY : gm1, No2Io_V, UnitT_
+  use ModPhysics, ONLY : gm1, No2Si_V, UnitT_
   use ModImplicit
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
   use ModAMR, ONLY : UnusedBlock_BP
@@ -101,7 +101,8 @@ subroutine advance_impl
   logical:: converged
   character (LEN=3) :: typestop
 
-  real*8  :: time_before,time_before_all
+  real :: TimeSimulationOrig
+
   logical :: oktest, oktest_me, DoTestKrylov, DoTestKrylovMe
 
   logical :: UseUpdateCheckOrig, UsePointImplicitOrig
@@ -140,6 +141,7 @@ subroutine advance_impl
 
   if(oktest_me)write(*,*)NameSub,': nimpltot, wnrm=',nimpl_total,wnrm
 
+  TimeSimulationOrig = Time_Simulation
   UseUpdateCheckOrig = UseUpdateCheck
   UseUpdateCheck = .false.
 
@@ -195,6 +197,7 @@ subroutine advance_impl
      UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
   end if
 
+
   !\
   ! Advance implicitly treated blocks
   !/
@@ -204,7 +207,7 @@ subroutine advance_impl
   UsePointImplicit = .false.
 
   ! Use implicit time step
-  if(.not.UseDtFixed)cfl=implCFL
+  if(.not.UseDtFixed)Cfl = ImplCfl
 
   if(UseDtFixed)then
      if(oktest_me)write(*,*)NameSub,': call getdt_courant'
@@ -222,6 +225,11 @@ subroutine advance_impl
   else
      ImplCoeff = ImplCoeff0
   end if
+
+  ! Advance time to level n+1 in case there is explicit time dependence:
+  !   R(U^n+1,t^n+1) = R(U^n,t^n+1) + dR/dU(U^n,t^n+1).(U^n+1 - U^n)
+  ! so the Jacobian should be evaliated at t^n+1
+  Time_Simulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
 
   if(oktest_me.and.time_accurate)&
        write(*,*)NameSub,': dtcoeff,dtexpl,dt=',dtcoeff,dtexpl,dt
@@ -468,6 +476,8 @@ subroutine advance_impl
      call calc_old_pressure(iBlk) ! restore StateOld_VCB(P_...)
   end do
 
+  Time_Simulation = Time_Simulation - Dt*No2Si_V(UnitT_)*2.0/3.0
+
   if(UseUpdateCheckOrig .and. time_accurate .and. UseDtFixed)then
      
      ! Calculate the largest relative drop in density or pressure
@@ -508,8 +518,11 @@ subroutine advance_impl
      end if
 
      if(oktest_me) write(*,*) NameSub,': pRelMin,Dt,DtFixed=',&
-          pRhoRelativeMin,Dt*No2Io_V(UnitT_), DtFixed*No2Io_V(UnitT_)
+          pRhoRelativeMin,Dt*No2Si_V(UnitT_), DtFixed*No2Si_V(UnitT_)
   endif
+
+  ! Advance time by Dt
+  Time_Simulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
 
   UseUpdateCheck = UseUpdateCheckOrig
   UsePointImplicit = UsePointImplicitOrig

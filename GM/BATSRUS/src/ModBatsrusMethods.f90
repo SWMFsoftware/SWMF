@@ -346,7 +346,6 @@ subroutine BATS_advance(TimeSimulationLimit)
   
   if(UseIM)call apply_im_pressure         !^CFG IF RCM
 
-  Time_Simulation = Time_Simulation + Dt*No2Si_V(UnitT_)
   if(UseDivBDiffusion)call clean_divb     !^CFG IF DIVBDIFFUSE
   call exchange_messages
   
