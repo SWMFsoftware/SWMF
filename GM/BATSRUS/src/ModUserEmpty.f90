@@ -35,14 +35,15 @@ contains
   end subroutine user_face_bcs
 
   !=====================================================================
-  subroutine user_set_outerbcs(iBlock,iSide, TypeBc,found)
+  subroutine user_set_outerbcs(iBlock,iSide, TypeBc, IsFound)
 
-    integer,intent(in)::iBlock, iSide
-    logical,intent(out) :: found
-    character (len=20),intent(in) :: TypeBc
+    integer,          intent(in)  :: iBlock, iSide
+    character(len=20),intent(in)  :: TypeBc
+    logical,          intent(out) :: IsFound
 
     character (len=*), parameter :: Name='user_set_outerbcs'
     !-------------------------------------------------------------------
+    IsFound = .false.
     call stop_user(Name)
   end subroutine user_set_outerbcs
 
