@@ -7,6 +7,7 @@ module ModSetOuterBC
   integer :: jmin1g,jmax1g,jmin2g,jmax2g,jmin1p,jmax1p,jmin2p,jmax2p
   integer :: kmin1g,kmax1g,kmin2g,kmax2g,kmin1p,kmax1p,kmin2p,kmax2p
   integer :: iBLK
+
 end module ModSetOuterBC
 
 !=============================================================================
@@ -51,17 +52,24 @@ end module ModFaceBc
 !============================================================================
 
 module ModBoundaryCells
+
   implicit none
   SAVE
+
   logical::SaveBoundaryCells=.false.
   integer::MinBoundarySaved=-777,MaxBoundarySaved=-777,nBoundarySaved=0
   logical,allocatable,dimension(:,:,:,:,:)::IsBoundaryCell_IGB
+
 contains
+
+  !===========================================================================
   subroutine allocate_boundary_cells
+
     use ModSize
     use ModGeometry,ONLY:MinBoundary,MaxBoundary,ExtraBC_
     use ModMain,ONLY:UseExtraBoundary
     use ModProcMH
+    !-------------------------------------------------------------------------
     if(.not.SaveBoundaryCells)then
        if(iProc==0)write(*,*)&
             'Do not allocate boundary cell array, if SaveBoundaryCells=',&
@@ -76,43 +84,56 @@ contains
        MinBoundarySaved=ExtraBC_+1
     end if
     MaxBoundarySaved=MaxBoundary
-    if(MaxBoundarySaved<MinBoundarySaved)then
+    if(MaxBoundarySaved < MinBoundarySaved)then
        if(iProc==0)write(*,*)'Only Extra and Outer boundary cells can be saved'
        SaveBoundaryCells=.false.
     end if
-    nBoundarySaved=MaxBoundarySaved-MinBoundarySaved+1
+    nBoundarySaved = MaxBoundarySaved - MinBoundarySaved + 1
     allocate(IsBoundaryCell_IGB(MinBoundarySaved:MaxBoundarySaved,&
          1-gcn:nI+gcn, 1-gcn:nJ+gcn,  1-gcn:nK+gcn, nBLK))
+
   end subroutine allocate_boundary_cells
+
 end module ModBoundaryCells
+
 !=============================================================================
+
 subroutine fix_boundary_ghost_cells(UseMonotoneRestrict)
-  use ModBoundaryCells
-  use ModMain, ONLY : unusedBLK 
-  use ModMain, ONLY : iNewGrid, iNewDecomposition
-  use ModGeometry
-  use ModProcMH
+
+  use ModBoundaryCells, ONLY: MinBoundarySaved, MaxBoundarySaved, &
+       IsBoundaryCell_IGB
+  use ModMain, ONLY : nBlock, UnusedBlk, iNewGrid, iNewDecomposition
+  use ModGeometry, ONLY: true_cell, body_BLK, IsBoundaryBlock_IB
+  !use ModProcMH, ONLY: iProc
+
   implicit none
-  !Subroutine arguements
-  logical :: UseMonotoneRestrict
-  integer::iBlock,iBoundary
-  integer,save::iGridHere=-1,iDecompositionHere=-1
+
+  logical, intent(in):: UseMonotoneRestrict
+
+  integer:: iBlock, iBoundary
+  integer:: iGridHere=-1, iDecompositionHere=-1
 !-----------------------------------------------------------------------------
-  if(iGridHere==iNewGrid.and.iDecompositionHere==iNewDecomposition)return
+  if(iGridHere==iNewGrid .and. iDecompositionHere==iNewDecomposition) RETURN
+
 !  if(iProc==0)write(*,*)'Start fix boundary cells'
+
   iGridHere=iNewGrid; iDecompositionHere=iNewDecomposition
   call message_pass_boundary_cells(UseMonotoneRestrict)
-  do iBlock=1,nBLK
-     if(unusedBLK(iBlock))CYCLE
-     do iBoundary=MinBoundarySaved,MaxBoundarySaved
+
+  do iBlock = 1, nBlock
+
+     if(unusedBLK(iBlock)) CYCLE
+
+     do iBoundary = MinBoundarySaved, MaxBoundarySaved
         IsBoundaryBlock_IB(iBoundary,iBlock)=&
              any(IsBoundaryCell_IGB(iBoundary,:,:,:,iBlock))
         true_cell(:,:,:,iBlock) = true_cell(:,:,:,iBlock) &
              .and. .not.IsBoundaryCell_IGB(iBoundary,:,:,:,iBlock)
      end do
-     !\
-     ! body_BLK: if any cell INCLUDING ghost cells is inside body(ies)
-     !/
+
+     ! body_BLK: if any cell INCLUDING ghost cells is outside the comp. domain
      body_BLK(iBlock) = .not. all(true_cell(:,:,:,iBlock))
+
   end do
+
 end subroutine fix_boundary_ghost_cells
