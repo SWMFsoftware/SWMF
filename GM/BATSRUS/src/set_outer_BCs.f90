@@ -21,28 +21,30 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
   real,    intent(in) :: time_now
   logical, intent(in) :: DoSetEnergy
 
-  integer :: iSide, iStart, iVar
+  integer :: iStart, iVar, iSide
 
   integer :: iGhost, jGhost, kGhost, iGhost2, jGhost2, kGhost2
 
-  logical :: oktest, oktest_me, IsFound
+  logical :: DoTest, DoTestMe, IsFound
+
+  character(len=*), parameter :: NameSub = 'set_outer_bcs'
   !--------------------------------------------------------------------------
   iBLK=iBlock
   if(iBLK==BLKtest.and.iProc==PROCtest)then
-     call set_oktest('set_outer_BCs',oktest,oktest_me)
+     call set_oktest(NameSub, DoTest, DoTestMe)
   else
-     oktest=.false.; oktest_me=.false.
+     DoTest=.false.; DoTestMe=.false.
   endif
 
   if(.not.far_field_BCs_BLK(iBLK))then
-     write(*,*)'Warning in set_outer_BCs: iBLK=',iBLK,' is not far_field block'
+     write(*,*) NameSub,' warning: iBLK=',iBLK,' is not far_field block'
      RETURN
   end if
 
-  if(oktest_me)write(*,*)'set_outer_BCs iBLK, set_E, neiLEV=',&
+  if(DoTestMe)write(*,*)NameSub,': iBLK, set_E, neiLEV=',&
        iBLK,DoSetEnergy,neiLEV(:,iBLK)
 
-  if(oktest_me)then
+  if(DoTestMe)then
      Ighost =Itest; Jghost=Jtest;  Kghost=Ktest
      Ighost2=Itest; Jghost2=Jtest; Kghost2=Ktest
      select case(DimTest)
@@ -69,10 +71,10 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
   end if
 
   iStart=max(MaxBoundary+1,1)
-  do iside=iStart,Top_
+  do iSide = iStart, Top_
 
      ! Check if this side of the block is indeed an outer boundary
-     if(neiLEV(iside,iBLK)/=NOBLK) CYCLE
+     if(neiLEV(iSide,iBLK)/=NOBLK) CYCLE
 
      ! Set index limits
      imin1g=-1; imax1g=nI+2; imin2g=-1; imax2g=nI+2
@@ -114,28 +116,28 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
         call BC_cont(1,nVar)
      case('raeder')
         call BC_cont(1,nVar)
-        if(iside==north_.or.iside==south_)then
+        if(iSide==north_.or.iSide==south_)then
            call BC_fixed(By_,By_,DefaultState_V)
-        elseif(iside==bot_.or.iside==top_)then
+        elseif(iSide==bot_.or.iSide==top_)then
            call BC_fixed(Bz_,Bz_,DefaultState_V)
         end if
      case('reflect')
         ! Scalars are symmetric
         call BC_symm(1,nVar)
         ! Normal vector components are mirror symmetric
-        if(iside==east_.or.iside==west_)then
+        if(iSide==east_.or.iSide==west_)then
            do iFluid = 1, nFluid
               call BC_asymm(iRhoUx_I(iFluid), iRhoUx_I(iFluid))
            end do
            call BC_asymm(Bx_,Bx_)
         endif
-        if(iside==south_.or.iside==north_)then
+        if(iSide==south_.or.iSide==north_)then
            do iFluid = 1, nFluid
               call BC_asymm(iRhoUy_I(iFluid), iRhoUy_I(iFluid))
            end do
            call BC_asymm(By_,By_)
         endif
-        if(iside==bot_.or.iside==top_)then
+        if(iSide==bot_.or.iSide==top_)then
            do iFluid = 1, nFluid
               call BC_asymm(iRhoUz_I(iFluid), iRhoUz_I(iFluid))
            end do
@@ -147,9 +149,9 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
         call BC_cont(rhoUz_+1,nVar)
      case('fixed','inflow','vary','ihbuffer')
         if(time_accurate &
-             .and. (TypeBc_I(iside)=='vary'.or.TypeBc_I(iside)=='inflow'))then
+             .and. (TypeBc_I(iSide)=='vary'.or.TypeBc_I(iSide)=='inflow'))then
            call BC_solar_wind(time_now)
-        else if(TypeBc_I(iside)=='ihbuffer'.and.time_loop)then
+        else if(TypeBc_I(iSide)=='ihbuffer'.and.time_loop)then
            call BC_solar_wind_buffer
         else
            call BC_fixed(1,nVar,CellState_VI(:,iSide))
@@ -161,20 +163,22 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
         call BC_shear(1,nVar,iSide)
      case default
         IsFound=.false.
-        if(UseUserOuterBcs)&
+        if(UseUserOuterBcs .or. TypeBc_I(iSide) == 'user')&
            call user_set_outerBCs(iBLK,iside,TypeBc_I(iside),IsFound)
 
-        if(.not. IsFound) call stop_mpi('Error in set_outer_BCs: unknown TypeBc_I=' &
-                //TypeBc_I(iside))
+        if(.not. IsFound) call stop_mpi( &
+             NameSub // ': unknown TypeBc_I=' //TypeBc_I(iside))
      end select
 
      if(DoSetEnergy)then
-        call calc_energy(imin1g,imax1g,jmin1g,jmax1g,kmin1g,kmax1g,iBLK,1,nFluid)
-        call calc_energy(imin2g,imax2g,jmin2g,jmax2g,kmin2g,kmax2g,iBLK,1,nFluid)
+        call calc_energy(imin1g,imax1g,jmin1g,jmax1g,kmin1g,kmax1g,iBLK,&
+             1,nFluid)
+        call calc_energy(imin2g,imax2g,jmin2g,jmax2g,kmin2g,kmax2g,iBLK,&
+             1,nFluid)
      end if
   end do
 
-  if(oktest_me)then
+  if(DoTestMe)then
      do iVar=1,nVar
         write(*,*)'final',NameVar_V(iVar),'   cell,ghost,ghost2=',&
              State_VGB(iVar,Itest,Jtest,Ktest,iBLK),&
