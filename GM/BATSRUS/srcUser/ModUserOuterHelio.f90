@@ -3,6 +3,8 @@
 !June 08, 2007 correcting source terms
 !August 18, 2007 Implementing 3-fluids
 !October 23, 2007 more little corrections
+!January 01, 2008 Source terms in point-implicit form - with help
+! of Gabor Toth
 !==============================================================================
 module ModUser
 
@@ -27,7 +29,9 @@ module ModUser
        IMPLEMENTED8 => user_write_progress,            & 
        IMPLEMENTED9 => user_io_units,                  &
        IMPLEMENTED10 => user_set_plot_var,              &
-       IMPLEMENTED11 => user_calc_sources
+       IMPLEMENTED11 => user_calc_sources,              &
+       IMPLEMENTED12 => user_init_point_implicit
+
 
   include 'user_module.h' !list of public methods
 
@@ -35,7 +39,9 @@ module ModUser
   ! I am calling Version Module = 2.0 the version with 3-fluids
   character (len=*), parameter :: NameUserModule = 'Global Heliosphere'
 
-  ! \
+  real :: rFriction = 1.0
+
+  ! 
   ! SWH variables.
   !/
   real ::      SWH_T_dim=0.0  , &
@@ -60,7 +66,7 @@ module ModUser
        SWH_By_t ,  &
        SWH_Bz_t ,  &
        SWH_time_t
-  ! \
+  ! 
   ! VLISM variables.
   !/
   real ::      SW_B_factor=0.0  
@@ -86,7 +92,7 @@ module ModUser
        VLISW_By_t ,  &
        VLISW_Bz_t ,  &
        VLISW_time_t
-  !\
+  !
   ! FASTSW variables.
   !/
   real :: SWfast_T_dim=0.0, &
@@ -111,7 +117,7 @@ module ModUser
        SWfast_By_t ,  &
        SWfast_Bz_t ,  &
        SWfast_time_t
-  !\
+  !
   ! neutrals variables
   !/
 
@@ -187,6 +193,9 @@ contains
           call read_var('UyNeutralsISW_dim' ,UyNeutralsISW_dim)
           call read_var('UzNeutralsISW_dim' ,UzNeutralsISW_dim)
           call read_var('mNeutralsmp',mNeutralsmp)
+          ! Probably in this case i will define rFriction as larger than the domain
+       case("#FRICTION")
+          call read_var('rFriction',rFriction)
 
        case default
           if(iProc==0) call stop_mpi( &
@@ -196,7 +205,7 @@ contains
 
   end subroutine user_read_inputs
 
-  !=================  !  SUBROUTINE USER_SET_INNER_BCS  !=====================
+  !=================  !  SUBROUTINE USER_SET_INNER_BCS  !======================
   subroutine user_face_bcs(VarsGhostFace_V)
 
     use ModSize,     ONLY: nDim,West_,North_,Top_
@@ -207,8 +216,8 @@ contains
     use ModNumConst, ONLY: cZero,cOne,cTwo,cTolerance
     use ModSetOuterBC
     use ModProcMH
-    use ModFaceBc
-
+    use ModFaceBc, ONLY: iBoundary, FaceCoords_D, VarsTrueFace_V
+    !
     real, intent(out):: VarsGhostFace_V(nVar)
 
     ! Variables required by this user subroutine
@@ -225,7 +234,7 @@ contains
     real, dimension(1:3):: location,v_phi
     real:: cosThetaT,sinThetaT,cosPhiT,sinPhiT
     ! Arguments
-    !\
+    !
     ! Global Heliospheric Variables
     !/
     real :: VrSolarWind,VthetaSolarWind,VphiSolarWind,BrSolarWind
@@ -254,100 +263,102 @@ contains
     BzFaceOutside = VarsTrueFace_V(Bz_)
 
     RFace = sqrt(XFace**2 + YFace**2 + ZFace**2)
-    !\
+    !
     ! Rotate to spherical coordinates
     !/
 
     !Apply boundary conditions
 
-    cosTheta = ZFace/RFace
-    sinTheta = sqrt(XFace**2+YFace**2)/RFace
-    cosPhi = XFace/sqrt(XFace**2+YFace**2+cTolerance**2)
-    sinPhi = YFace/sqrt(XFace**2+YFace**2+cTolerance**2)
-    VrFaceOutside = (VxFaceOutside*XFace + &
-         VyFaceOutside*YFace + &
-         VzFaceOutside*ZFace) / RFace
-    VthetaFaceOutside = ((VxFaceOutside*XFace + &
-         VyFaceOutside*YFace) * ZFace - &
-         VzFaceOutside*(XFace**2+YFace**2)) / &
-         (sqrt(XFace**2+YFace**2+cTolerance**2)*RFace)
-    VphiFaceOutside = (VyFaceOutside*XFace - &
-         VxFaceOutside*YFace)*sinTheta / &
-         ((XFace**2+YFace**2+cTolerance**2)/RFace)
-    BrFaceOutside = (BxFaceOutside*XFace + &
-         ByFaceOutside*YFace + &
-         BzFaceOutside*ZFace) / RFace
-    BthetaFaceOutside = ((BxFaceOutside*XFace + &
-         ByFaceOutside*YFace) * ZFace - &
-         BzFaceOutside*(XFace**2+YFace**2)) / &
-         (sqrt(XFace**2+YFace**2+cTolerance**2)*RFace)
-    BphiFaceOutside = (ByFaceOutside*XFace - &
-         BxFaceOutside*YFace)*sinTheta / &
-         ((XFace**2+YFace**2+cTolerance**2)/RFace)
+    select case(iBoundary)
+    case(body1_)
+       cosTheta = ZFace/RFace
+       sinTheta = sqrt(XFace**2+YFace**2)/RFace
+       cosPhi = XFace/sqrt(XFace**2+YFace**2+cTolerance**2)
+       sinPhi = YFace/sqrt(XFace**2+YFace**2+cTolerance**2)
+       VrFaceOutside = (VxFaceOutside*XFace + &
+            VyFaceOutside*YFace + &
+            VzFaceOutside*ZFace) / RFace
+       VthetaFaceOutside = ((VxFaceOutside*XFace + &
+            VyFaceOutside*YFace) * ZFace - &
+            VzFaceOutside*(XFace**2+YFace**2)) / &
+            (sqrt(XFace**2+YFace**2+cTolerance**2)*RFace)
+       VphiFaceOutside = (VyFaceOutside*XFace - &
+            VxFaceOutside*YFace)*sinTheta / &
+            ((XFace**2+YFace**2+cTolerance**2)/RFace)
+       BrFaceOutside = (BxFaceOutside*XFace + &
+            ByFaceOutside*YFace + &
+            BzFaceOutside*ZFace) / RFace
+       BthetaFaceOutside = ((BxFaceOutside*XFace + &
+            ByFaceOutside*YFace) * ZFace - &
+            BzFaceOutside*(XFace**2+YFace**2)) / &
+            (sqrt(XFace**2+YFace**2+cTolerance**2)*RFace)
+       BphiFaceOutside = (ByFaceOutside*XFace - &
+            BxFaceOutside*YFace)*sinTheta / &
+            ((XFace**2+YFace**2+cTolerance**2)/RFace)
 
-    ! defining the rotation components of the Sun
+       ! defining the rotation components of the Sun
 
-    rot_period_dim = 26.0*24.0     ! rotation period in hours
-    OMEGAbodyH = (2.00*cPi/(rot_period_dim*3600.00)) !in sec^-1
-    Rbody = 30. !define it
+       rot_period_dim = 26.0*24.0     ! rotation period in hours
+       OMEGAbodyH = (2.00*cPi/(rot_period_dim*3600.00)) !in sec^-1
+       Rbody = 30. !define it
 
-    !\
-    ! calculating the parker field components, Br, Btheta and Bphi
-    ! SW_Bx is the value of the field in the pole B0
-    !/
+       !
+       ! calculating the parker field components, Br, Btheta and Bphi
+       ! SW_Bx is the value of the field in the pole B0
+       !/
 
-    sg = sign(1.0,cosTheta)
-    !     sg = -sign(1.0,cosTheta)
-    ! should I invert the polarity for this cycle?
+       sg = sign(1.0,cosTheta)
+       !     sg = -sign(1.0,cosTheta)
+       ! should I invert the polarity for this cycle?
 
-    B0mag       =  SWH_Bx
-    BrSolar     =  sg*B0mag
+       B0mag       =  SWH_Bx
+       BrSolar     =  sg*B0mag
 
-    ! the factor 1.496E8 is to convert Rbody in AU to km; 
+       ! the factor 1.496E8 is to convert Rbody in AU to km; 
 
-    BphiSolar   = -(sg*B0mag*OMEGAbodyH*Rbody*(1.496E8)*sinTheta)/(SWH_Ux_dim)
-    BthetaSolar =  0.0
+       BphiSolar   = -(sg*B0mag*OMEGAbodyH*Rbody*(1.496E8)*sinTheta)/(SWH_Ux_dim)
+       BthetaSolar =  0.0
 
-    !      VphiSolar = OMEGAbody*(6.96E5)*sinTheta/unitUSER_U
-    ! Vphi=omega*r*sinTheta - 6.96E5 is the solar radii in km
-    ! No2Si_V(UnitU_) is in m/s so its ok
-    ! No2Io_V(UnitU_) is in km/s
-    ! factor 1000 for test
+       !      VphiSolar = OMEGAbody*(6.96E5)*sinTheta/unitUSER_U
+       ! Vphi=omega*r*sinTheta - 6.96E5 is the solar radii in km
+       ! No2Si_V(UnitU_) is in m/s so its ok
+       ! No2Io_V(UnitU_) is in km/s
+       ! factor 1000 for test
 
-    VphiSolar = OMEGAbodyH*(6.96E5)*sinTheta/No2Io_V(UnitU_)
+       VphiSolar = OMEGAbodyH*(6.96E5)*sinTheta/No2Io_V(UnitU_)
 
-    Btot = sqrt((BrSolar**2)+(BphiSolar**2))
+       Btot = sqrt((BrSolar**2)+(BphiSolar**2))
 
-    ! magnetic pressure Btot*unitUSER_B will be in nT  and the pressure in Pa
-    ! No2Si_V(UnitB_) is in T
+       ! magnetic pressure Btot*unitUSER_B will be in nT  and the pressure in Pa
+       ! No2Si_V(UnitB_) is in T
 
-    Pmag = (((Btot*No2Io_V(UnitB_)*1.0E-9)**2)/(2.0*cMu))/(inv_g*0.1*No2Io_V(UnitP_))
+       Pmag = (((Btot*No2Io_V(UnitB_)*1.0E-9)**2)/(2.0*cMu))/(inv_g*0.1*No2Io_V(UnitP_))
 
-    !magnetic pressure in the equator
-    !\
-    !     PmagEquator = (((SWH_Bx*27.9*unitUSER_B*1.0E-
-    !9)**2)/(2.0*cMu))/(inv_g*unitSI_p)
+       !magnetic pressure in the equator
+       !
+       !     PmagEquator = (((SWH_Bx*27.9*unitUSER_B*1.0E-
+       !9)**2)/(2.0*cMu))/(inv_g*unitSI_p)
 
-    ! The factor 27.9 comes from Rbody*OMEGAbody/SW_Ux
-    !/
-    !
-    PmagEquator = (((SWH_Bx*27.9*No2Io_V(UnitB_)*1.0E-9)**2)/(2.0*cMu))/(inv_g*0.1*No2Io_V(UnitP_))
+       ! The factor 27.9 comes from Rbody*OMEGAbody/SW_Ux
+       !/
+       !
+       PmagEquator = (((SWH_Bx*27.9*No2Io_V(UnitB_)*1.0E-9)**2)/(2.0*cMu))/(inv_g*0.1*No2Io_V(UnitP_))
 
-    ! Introducing the Fast Solar Wind
+       ! Introducing the Fast Solar Wind
 !!!    sin2Theta_fast_wind = 0.250000    ! 30 degrees
-    !  sin2Theta_fast_wind = 0.1786062   ! 25 degrees
-    !  sin2Theta_fast_wind = 0.116980    ! 20 degrees
-    !  sin2Theta_fast_wind = 1.000000    ! 90 degrees
+       !  sin2Theta_fast_wind = 0.1786062   ! 25 degrees
+       !  sin2Theta_fast_wind = 0.116980    ! 20 degrees
+       !  sin2Theta_fast_wind = 1.000000    ! 90 degrees
 
 !!!      if (sinTheta*sinTheta > sin2Theta_fast_wind) then
-    !SLOW WIND
-    VrSolarWind     = SWH_Ux
-    VthetaSolarWind = 0.0
-    VphiSolarWind   = VphiSolar
-    BrSolarWind     = BrSolar
-    BthetaSolarWind = BthetaSolar
-    BphiSolarWind   = BphiSolar
-    RhoSolarWind    = SWH_rho
+       !SLOW WIND
+       VrSolarWind     = SWH_Ux
+       VthetaSolarWind = 0.0
+       VphiSolarWind   = VphiSolar
+       BrSolarWind     = BrSolar
+       BthetaSolarWind = BthetaSolar
+       BphiSolarWind   = BphiSolar
+       RhoSolarWind    = SWH_rho
 !!!       else
 !!!          ! FAST WIND
 !!!          VrSolarWind     =  SWfast_Ux
@@ -366,100 +377,103 @@ contains
 
 !!!      end if
 
-    ! Latitude variating wind
+       ! Latitude variating wind
 
 
 !!!         VrSolarWind = SWH_Ux+((SWfast_Ux - SWH_Ux)*cosTheta*cosTheta)
 
 !!!         RhoSolarWind = SWH_rho + ((SWfast_rho - SWH_rho)*cosTheta*cosTheta)
 
-    ! pressure will vary for fast and slow wind         PSolarWind = SWH_p
+       ! pressure will vary for fast and slow wind         PSolarWind = SWH_p
 
-    !
-    !\
-    !/
+       !
+       !
+       !/
 !!!test      VrSolarWind = SWH_Ux
 
-    VthetaSolarWind = 0.0
-    VphiSolarWind = VphiSolar
-    BrSolarWind = BrSolar
-    BthetaSolarWind = BthetaSolar
-    BphiSolarWind = BphiSolar
+       VthetaSolarWind = 0.0
+       VphiSolarWind = VphiSolar
+       BrSolarWind = BrSolar
+       BthetaSolarWind = BthetaSolar
+       BphiSolarWind = BphiSolar
 
-    ! making sure that the total pressure Pt+Pb will be constant (PmagEquator is Pb 
+       ! making sure that the total pressure Pt+Pb will be constant (PmagEquator is Pb 
 
-    !at the equator)
-    !/
+       !at the equator)
+       !/
 !!!               PSolarWindT = SWH_p + (SWH_p - SWfast_p)*cosTheta*cosTheta
 
 !!!               PsolarWind  = PSolarWindT + PmagEquator - Pmag
 
-    PSolarWind = SWH_p + PmagEquator -  Pmag
+       PSolarWind = SWH_p + PmagEquator -  Pmag
 
-    ! ISW
-    !
-    VrFaceInside      =   VrSolarWind
-    VthetaFaceInside =    VthetaSolarWind
-    VphiFaceInside   =    VphiSolarWind
-    BrFaceInside      =   BrSolarWind
-    BthetaFaceInside  =   BthetaSolarWind
-    BphiFaceInside    =   BphiSolarWind
-    RhoFaceInside     =   RhoSolarWind
-    PFaceInside       =   PSolarWind
+       ! ISW
+       !
+       VrFaceInside      =   VrSolarWind
+       VthetaFaceInside =    VthetaSolarWind
+       VphiFaceInside   =    VphiSolarWind
+       BrFaceInside      =   BrSolarWind
+       BthetaFaceInside  =   BthetaSolarWind
+       BphiFaceInside    =   BphiSolarWind
+       RhoFaceInside     =   RhoSolarWind
+       PFaceInside       =   PSolarWind
 
-    VarsGhostFace_V(rho_) = RhoFaceInside
-    VarsGhostFace_V(p_) = PFaceInside
+       VarsGhostFace_V(rho_) = RhoFaceInside
+       VarsGhostFace_V(p_) = PFaceInside
 
-    ! Rotate back to cartesian coordinates
-    VarsGhostFace_V(Ux_) = VrFaceInside*XFace/RFace+&
-         VthetaFaceInside*cosTheta*cosPhi          -&
-         VphiFaceInside*sinPhi
-    VarsGhostFace_V(Uy_) = VrFaceInside*YFace/RFace+&
-         VthetaFaceInside*cosTheta*sinPhi          +&
-         VphiFaceInside*cosPhi
-    VarsGhostFace_V(Uz_) = VrFaceInside*ZFace/RFace-&
-         VthetaFaceInside*sinTheta
-    VarsGhostFace_V(Bx_) = BrFaceInside*XFace/RFace+&
-         BthetaFaceInside*cosTheta*cosPhi          -&
-         BphiFaceInside*sinPhi
-    VarsGhostFace_V(By_) = BrFaceInside*YFace/RFace+&
-         BthetaFaceInside*cosTheta*sinPhi          +&
-         BphiFaceInside*cosPhi
-    VarsGhostFace_V(Bz_) = BrFaceInside*ZFace/RFace-&
-         BthetaFaceInside*sinTheta
-    !attempt to deal with neutrals
+       ! Rotate back to cartesian coordinates
+       VarsGhostFace_V(Ux_) = VrFaceInside*XFace/RFace+&
+            VthetaFaceInside*cosTheta*cosPhi          -&
+            VphiFaceInside*sinPhi
+       VarsGhostFace_V(Uy_) = VrFaceInside*YFace/RFace+&
+            VthetaFaceInside*cosTheta*sinPhi          +&
+            VphiFaceInside*cosPhi
+       VarsGhostFace_V(Uz_) = VrFaceInside*ZFace/RFace-&
+            VthetaFaceInside*sinTheta
+       VarsGhostFace_V(Bx_) = BrFaceInside*XFace/RFace+&
+            BthetaFaceInside*cosTheta*cosPhi          -&
+            BphiFaceInside*sinPhi
+       VarsGhostFace_V(By_) = BrFaceInside*YFace/RFace+&
+            BthetaFaceInside*cosTheta*sinPhi          +&
+            BphiFaceInside*cosPhi
+       VarsGhostFace_V(Bz_) = BrFaceInside*ZFace/RFace-&
+            BthetaFaceInside*sinTheta
+       !attempt to deal with neutrals
 
-    !!    VarsGhostFace_V(NeuRho_) = RhoNeutralsISW
-    !!    VarsGhostFace_V(NeuRhoUx_)= 0.0
-    !!    VarsGhostFace_V(NeuRhoUy_)= 0.0
-    !!    VarsGhostFace_V(NeuRhoUz_)= 0.0
-    !!    VarsGhostFace_V(NeuP_)= PNeutralsISW
+       !!    VarsGhostFace_V(NeuRho_) = RhoNeutralsISW
+       !!    VarsGhostFace_V(NeuRhoUx_)= 0.0
+       !!    VarsGhostFace_V(NeuRhoUy_)= 0.0
+       !!    VarsGhostFace_V(NeuRhoUz_)= 0.0
+       !!    VarsGhostFace_V(NeuP_)= PNeutralsISW
 
-    ! NeuRho is PopI; NeuIIRho is PopII and NeuIIIRho is PopIII
-    !\
-    ! Pop I
-    !/  
-    VarsGhostFace_V(NeuRho_) = VarsTrueFace_V(NeuRho_)
-    VarsGhostFace_V(NeuRhoUx_) = VarsTrueFace_V(NeuRhoUx_)
-    VarsGhostFace_V(NeuRhoUy_) = VarsTrueFace_V(NeuRhoUy_)
-    VarsGhostFace_V(NeuRhoUz_) = VarsTrueFace_V(NeuRhoUz_)
-    VarsGhostFace_V(NeuP_) = VarsTrueFace_V(NeuP_)
-    !\
-    ! Pop II
-    !/  
-    VarsGhostFace_V(Ne2Rho_) = VarsTrueFace_V(Ne2Rho_) 
-    VarsGhostFace_V(Ne2RhoUx_) = VarsTrueFace_V(Ne2RhoUx_)
-    VarsGhostFace_V(Ne2RhoUy_) = VarsTrueFace_V(Ne2RhoUy_)
-    VarsGhostFace_V(Ne2RhoUz_) = VarsTrueFace_V(Ne2RhoUz_)
-    VarsGhostFace_V(Ne2P_) = VarsTrueFace_V(Ne2P_)
-    !\
-    ! Pop III
-    !/  
-    VarsGhostFace_V(Ne3Rho_) = VarsTrueFace_V(Ne3Rho_) 
-    VarsGhostFace_V(Ne3RhoUx_) = VarsTrueFace_V(Ne3RhoUx_)
-    VarsGhostFace_V(Ne3RhoUy_) = VarsTrueFace_V(Ne3RhoUy_)
-    VarsGhostFace_V(Ne3RhoUz_) = VarsTrueFace_V(Ne3RhoUz_)
-    VarsGhostFace_V(Ne3P_) = VarsTrueFace_V(Ne3P_)
+       ! NeuRho is PopI; NeuIIRho is PopII and NeuIIIRho is PopIII
+       !
+       ! Pop I
+       !/  
+       VarsGhostFace_V(NeuRho_) = VarsTrueFace_V(NeuRho_)
+       VarsGhostFace_V(NeuRhoUx_) = VarsTrueFace_V(NeuRhoUx_)
+       VarsGhostFace_V(NeuRhoUy_) = VarsTrueFace_V(NeuRhoUy_)
+       VarsGhostFace_V(NeuRhoUz_) = VarsTrueFace_V(NeuRhoUz_)
+       VarsGhostFace_V(NeuP_) = VarsTrueFace_V(NeuP_)
+       !
+       ! Pop II
+       !/  
+       VarsGhostFace_V(Ne2Rho_) = VarsTrueFace_V(Ne2Rho_) 
+       VarsGhostFace_V(Ne2RhoUx_) = VarsTrueFace_V(Ne2RhoUx_)
+       VarsGhostFace_V(Ne2RhoUy_) = VarsTrueFace_V(Ne2RhoUy_)
+       VarsGhostFace_V(Ne2RhoUz_) = VarsTrueFace_V(Ne2RhoUz_)
+       VarsGhostFace_V(Ne2P_) = VarsTrueFace_V(Ne2P_)
+       !
+       ! Pop III
+       !/  
+       VarsGhostFace_V(Ne3Rho_) = VarsTrueFace_V(Ne3Rho_) 
+       VarsGhostFace_V(Ne3RhoUx_) = VarsTrueFace_V(Ne3RhoUx_)
+       VarsGhostFace_V(Ne3RhoUy_) = VarsTrueFace_V(Ne3RhoUy_)
+       VarsGhostFace_V(Ne3RhoUz_) = VarsTrueFace_V(Ne3RhoUz_)
+       VarsGhostFace_V(Ne3P_) = VarsTrueFace_V(Ne3P_)
+
+    end select
+    !-------------------------------------------------------------------
 
   end subroutine user_face_bcs
 
@@ -508,7 +522,7 @@ contains
     State_VGB(By_,:,:,:,iBlock)=VLISW_By
     State_VGB(Bz_,:,:,:,iBlock)=VLISW_Bz
     State_VGB(p_,:,:,:,iBlock)=VLISW_p
-    !\
+    !
     ! PopI
     !/    
     State_VGB(NeuRho_,:,:,:,iBlock)=RhoNeutralsISW    
@@ -516,14 +530,21 @@ contains
     State_VGB(NeuRhoUy_,:,:,:,iBlock)=RhoNeutralsISW*UyNeutralsISW   
     State_VGB(NeuRhoUz_,:,:,:,iBlock)=RhoNeutralsISW*UzNeutralsISW    
     State_VGB(NeuP_,:,:,:,iBlock)=PNeutralsISW
-    !\
+    !
     ! PopII
     !/ 
     !we want for NeuIIRho outflow
 
-    call BC_cont(Ne2Rho_,Ne2p_)
+    State_VGB(Ne2Rho_,:,:,:,iBlock)=RhoNeutralsISW*cTiny
+    State_VGB(Ne2RhoUx_,:,:,:,iBlock)=RhoNeutralsISW*UxNeutralsISW*cTiny
+    State_VGB(Ne2RhoUy_,:,:,:,iBlock)=0.0
+    State_VGB(Ne2RhoUz_,:,:,:,iBlock)=0.0
+    State_VGB(Ne2P_,:,:,:,iBlock)=PNeutralsISW*cTiny
+
+    !
+    !    call BC_cont(Ne2Rho_,Ne2p_)
     ! erro discover Nov 11, 2007
-    !\
+    !
     ! PopIII
     !/ 
 
@@ -551,12 +572,11 @@ contains
     real :: rp,Br,Btheta,Bphi
     real :: B0mag,VrS,VthetaS,VphiS
     real :: cos_theta,sin_theta,cos_phi,sin_phi,sg
-    real :: rot_period_dim, OMEGAbodyH, Rbody
+    real :: rot_period_dim, OMEGAbodyH
     real :: thetaN, sinthetaN, lambda, RhoSolarW
     real :: sin2Theta_fast_wind
 
     !--------------------------------------------------------------------------
-
 
     iBlock = globalBLK
     rot_period_dim = 26.0*24.0     ! rotation period in hours
@@ -673,32 +693,26 @@ contains
                 State_VGB(rhoUx_,i,j,k,iBlock) = State_VGB(rho_,i,j,k,iBlock)*vel(1)
                 State_VGB(rhoUy_,i,j,k,iBlock) = State_VGB(rho_,i,j,k,iBlock)*vel(2)
                 State_VGB(rhoUz_,i,j,k,iBlock) = State_VGB(rho_,i,j,k,iBlock)*vel(3) 
-                !\
+                !
                 ! PopI
                 !/
                 State_VGB(NeuRho_,i,j,k,iBlock) = RhoNeutralsISW*Exp(-lambda*thetaN/(rp*SinThetaN))
                 State_VGB(NeuP_,i,j,k,iBlock) = PNeutralsISW*Exp(-lambda*thetaN/(rp*SinThetaN))
                 State_VGB(NeuRhoUx_,i,j,k,iBlock) = UxNeutralsISW*RhoNeutralsISW*Exp(-lambda*thetaN/(rp*SinThetaN)) 
 
-                !\
+                !
                 ! PopII - o que fazer com set_ICs popII?
                 !/
-                State_VGB(Ne2Rho_,i,j,k,iBlock) = RhoNeutralsISW*1.E-6
-                State_VGB(Ne2P_,i,j,k,iBlock) = PNeutralsISW*1.E-6
-                State_VGB(Ne2RhoUx_,i,j,k,iBlock) = UxNeutralsISW*RhoNeutralsISW*1.E-6  
-                !!       State_VGB(Ne2Rho_,i,j,k,iBlock) = RhoNeutralsISW*Exp(-lambda*thetaN/(rp*SinThetaN))
-                !!       State_VGB(Ne2P_,i,j,k,iBlock) = PNeutralsISW*Exp(-lambda*thetaN/(rp*SinThetaN))
-                !!       State_VGB(Ne2RhoUx_,i,j,k,iBlock) = UxNeutralsISW*RhoNeutralsISW*Exp(-lambda*thetaN/(rp*SinThetaN))
+                State_VGB(Ne2Rho_,i,j,k,iBlock) = RhoNeutralsISW*cTiny
+                State_VGB(Ne2P_,i,j,k,iBlock) = PNeutralsISW*cTiny
+                State_VGB(Ne2RhoUx_,i,j,k,iBlock) = UxNeutralsISW*RhoNeutralsISW*cTiny  
 
-                !\
+                !
                 ! PopIII - o que fazer com set_ICs popIII?
                 !/
-                State_VGB(Ne3Rho_,i,j,k,iBlock) = RhoNeutralsISW*1.E-6
-                State_VGB(Ne3P_,i,j,k,iBlock) = PNeutralsISW*1.E-6
+                State_VGB(Ne3Rho_,i,j,k,iBlock) = RhoNeutralsISW*cTiny
+                State_VGB(Ne3P_,i,j,k,iBlock) = PNeutralsISW*cTiny
                 State_VGB(Ne3RhoUx_,i,j,k,iBlock) = 0.0
-                !!       State_VGB(Ne3Rho_,i,j,k,iBlock) = RhoNeutralsISW*Exp(-lambda*thetaN/(rp*SinThetaN))
-                !!       State_VGB(Ne3P_,i,j,k,iBlock) = PNeutralsISW*Exp(-lambda*thetaN/(rp*SinThetaN))
-                !!       State_VGB(Ne3RhoUx_,i,j,k,iBlock) = UxNeutralsISW*RhoNeutralsISW*Exp(-lambda*thetaN/(rp*SinThetaN))
 
              end if
           end do
@@ -762,7 +776,7 @@ contains
 
     select case (InitialRefineType)
     case('global_test')
-       !\
+       !
        ! Initial refinement criteria for globalheliosphere
 
        !/
@@ -802,7 +816,7 @@ contains
          dx_BLK,dy_BLK,dz_BLK,true_cell
     use ModPhysics
     use ModConst
-    !\ 
+    ! 
     ! Variables required by this user subroutine::
     !/
     integer, intent(in):: iBLK
@@ -811,7 +825,7 @@ contains
     integer:: i,j,k
 
     real, intent(out):: userCriteria
-    !\
+    !
     ! Local variables::
     !/
     real:: dsMin,dsMax,dsTwo
@@ -824,115 +838,14 @@ contains
     character (len=20),intent(in):: TypeCriteria
     !-------------------------------------------------------------------
 
-    !\
+    !
     ! Find the radial location of the center of the block and
 
     ! the min/max cell size::
     !/
     !    RCenter = cEighth*&
-    !         (R_BLK( 1, 1, 1,iBLK)+R_BLK( 1, 1,nK,iBLK)+&
-
-    !         R_BLK( 1,nJ, 1,iBLK)+R_BLK( 1,nJ,nK,iBLK)+&
-
-    !         R_BLK(nI, 1, 1,iBLK)+R_BLK(nI, 1,nK,iBLK)+&
-
-    !         R_BLK(nI,nJ, 1,iBLK)+R_BLK(nI,nJ,nK,iBLK))
-
-    !    dsMin = min(dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK))
-
-    !    dsMax = max(dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK))
-
-    !    dsTwo = dsMin*dsMax
-
-    select case (TypeCriteria)
-       !    case('UserCS','USERCS','usercs')
-
-       !\
-       ! Get the radial magnetic field in iBLK::
-
-       !/
-       !       do k=1-gcn,nK+gcn
-       !          IsGhostCell_D(3)=k<1.or.k>nK
-
-       !          do j=1-gcn,nJ+gcn
-       !             IsGhostCell_D(2)=j<1.or.j>nJ           
-
-       !             do i=1-gcn,nI+gcn
-
-       !                IsGhostCell_D(1)=i<1.or.i>nI
-
-       !                if (count(IsGhostCell_D)>1) then
-
-       !                   Br_D(i,j,k) = huge(cOne)
-
-       !                   CYCLE
-
-       !                end if
-
-       !                XCell   = x_BLK(i,j,k,iBLK)
-
-       !                YCell   = y_BLK(i,j,k,iBLK)
-
-       !                ZCell   = z_BLK(i,j,k,iBLK)
-
-       !               RCell   = R_BLK(i,j,k,iBLK)
-
-       !               B0xCell = B0xCell_BLK(i,j,k,iBLK)
-
-       !                B0yCell = B0yCell_BLK(i,j,k,iBLK)
-
-       !                B0zCell = B0zCell_BLK(i,j,k,iBLK)
-
-       !                BIxCell = State_VGB(Bx_,i,j,k,iBLK)
-
-       !                BIyCell = State_VGB(By_,i,j,k,iBLK)
-
-       !                BIzCell = State_VGB(Bz_,i,j,k,iBLK)
-
-       !                Br_D(i,j,k) = abs(&
-
-       !                     (XCell*(B0xCell+BIxCell)+ &
-
-       !                     YCell*(B0yCell+BIyCell)+ &
-
-       !                     ZCell*(B0zCell+BIzCell))/&
-
-       !                     RCell)
-
-       !             end do
-
-       !          end do
-
-       !       end do
-
-       !\
-       ! Find the minimum of abs(Br) in iBLK::
-
-       !/
-       !       MinBr = minval(Br_D)
-
-       !\
-       ! Construct refine criteria based on ds2, RCenter, and MinBr::
-
-       !/
-       !     IsInRange = (RCenter<1.50*Rs_PFSSM).and.&
-
-       !          (MinBr<3.0E-05) 
-
-       !       if (IsInRange) then
-
-       !          userCriteria = dsTwo*RCenter*exp(-MinBr)
-
-       !       else
-       !          userCriteria = dsTwo*RCenter*exp(-MinBr)/cE6
-
-       !       end if
-       !       IsFound = .true.
-
-    endselect
 
   end subroutine user_amr_criteria
-
 
   !=====================================================================
 
@@ -942,7 +855,7 @@ contains
     use ModMultiFluid
     implicit none
 
-    !\
+    !
     !-------------------------------------------------------------------
 
 
@@ -996,7 +909,7 @@ contains
     use ModProcMH, ONLY:iProc
     use ModMain
     use ModVarIndexes
-    !\
+    !
     character (len=*), parameter :: Name='user_io_units'
 
     Io2Si_V(UnitX_)           = 215*Rsun                  ! R  
@@ -1055,7 +968,7 @@ contains
     SWfast_p_dim = No2Io_V(UnitP_)*inv_g*(SWfast_rho_dim/SWH_rho_dim)
     SWfast_p = SWfast_p_dim*Io2No_V(UnitP_)
     !
-    !\
+    !
     ! The units of rho_dim are n/cc and unitUSER_rho g/cc
     !/
     !merav june01    PNeutralsISW   = RhoNeutralsISW * 
@@ -1103,16 +1016,17 @@ contains
     character (len=*), parameter :: Name='user_set_plot_var'
     !-------------------------------------------------------------------
 
+    UsePlotVarBody = .true.
+    PlotVarBody    = 0.0
+    
     select case(NameVar)
     case('srho')
        NameTecVar = 'Srho'
-       PlotVar_G      = Source_VC(NeuRho_,i,j,k)
+       PlotVar_G(1:nI,1:nJ,1:nK) = Source_VC(NeuRho_,:,:,:)
+       IsFound = .true.
+    case default
+       IsFound = .false.
     end select
-    NameTecUnit_V(UnitX_)            = 'AU'
-    NameTecUnit_V(UnitRho_)          = '#/cm3'
-    NameTecUnit_V(UnitU_)            = 'km/s'
-    NameTecUnit_V(UnitP_)            = 'dyne/cm^2'
-    NameTecUnit_V(UnitB_)            = 'nT'
 
   end subroutine user_set_plot_var
 
@@ -1130,28 +1044,24 @@ contains
     ! modified June 08, 2007 to take into account multi-fluids
     ! modified August 18;September10, 2007 to take into account 3-fluids
     ! october 27 checking units 
+    ! January 01, implementing implicit source terms 
+    ! Help of Gabor Toth
     !-------------------------------------------------------------------
     use ModProcMH
+    use ModPointImplicit, ONLY:  UsePointImplicit, UsePointImplicit_B, &
+         IsPointImplSource, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
+
     use ModMain
     use ModVarIndexes, ONLY: rho_, rhoUx_, rhoUy_, rhoUz_,p_,Bx_, By_, Bz_, nVar
     use ModGeometry, ONLY : dx_BLK, dy_BLK, dz_BLK, R_BLK,&
          body_BLK, Rmin_BLK, vInv_CB
-    use ModAdvance,  ONLY: Source_VC,Energy_
+    use ModAdvance,  ONLY: State_VGB, Source_VC, &
+         Rho_, RhoUx_, RhoUy_, RhoUz_, Energy_
     use ModPhysics
     use ModNumConst
     use ModCovariant, ONLY: UseCovariant !^CFG IF COVARIANT
 
     character (len=*), parameter :: Name='user_calc_sources'
-
-    integer :: i, j, k, iDim
-
-    ! Variables for multi-ion MHD
-    real    :: InvCharge, InvNumDens,  State_V(nVar)
-    real, dimension(3) :: FullB_D, uIon_D, u_D, uPlus_D, uPlusHallU_D, Force_D
-    real, dimension(nIonFluid) :: NumDens_I, InvRho_I, Ux_I, Uy_I, Uz_I
-
-    ! variaveis pra ModUser
-
     real ::  Ux, Uy, Uz
     real :: usq, usqdim, Tproton
     real :: cstar,cstarl,cstarln,cTpro,cth, term3, term4
@@ -1160,6 +1070,7 @@ contains
     real :: Entropy, Mask 
     real::UTh2
     real::x0,y0,z0,rp
+
     real, dimension(3)::I0xp,I0px,Tneutral,urel2,urel2dim,vNeutrals,UThN2
     real, dimension(3)::JpxUx,JpxUy,JpxUz,ureldim,termpx,termxp,termepx
     real, dimension(3)::JxpUx,JxpUy,JxpUz,QmxpUx,QmxpUy,QmxpUz,Kxp,Kpx,Qexp
@@ -1170,6 +1081,15 @@ contains
 
     logical :: OutsideHeliopause = .false.
     logical:: oktest=.false.,oktest_me
+
+    integer :: i, j, k, iDim, iBlock
+    real    :: Coef
+
+    !-----------------------------------------------------------------------
+    iBlock = GlobalBlk
+
+    ! Only blocks within radius rFriction need to be point implicit
+    UsePointImplicit_B(iBlock) = rMin_BLK(iBlock) < rFriction
 
     ! Tproton has units of kelvin
     ! It's the proton temperature that enters here. Tproton = 0.5*Tplasma
@@ -1191,353 +1111,453 @@ contains
     !cstar*T eh (m/s)^2 
     !No2Si_V m/s
     !/
-    do k = 1, nK    
-       do j = 1, nJ
-          do i = 1, nI
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
-             x0 = x_BLK(i,j,k,globalBLK)
-             y0 = y_BLK(i,j,k,globalBLK)
-             z0 = z_BLK(i,j,k,globalBLK)
+       x0 = x_BLK(i,j,k,iBlock)
+       y0 = y_BLK(i,j,k,iBlock)
+       z0 = z_BLK(i,j,k,iBlock)
 
-             rp=sqrt(x0**2+y0**2+z0**2)
+       rp=sqrt(x0**2+y0**2+z0**2)
 
-             Ux = State_VGB(rhoUx_,i,j,k,globalBLK)/State_VGB(Rho_,i,j,k,globalBLK)
-             Uy = State_VGB(rhoUy_,i,j,k,globalBLK)/State_VGB(Rho_,i,j,k,globalBLK)
-             Uz = State_VGB(rhoUz_,i,j,k,globalBLK)/State_VGB(Rho_,i,j,k,globalBLK) 
+       Ux = State_VGB(rhoUx_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+       Uy = State_VGB(rhoUy_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+       Uz = State_VGB(rhoUz_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock) 
 
-             UxN(1) = State_VGB(NeuRhoUx_,i,j,k,globalBLK)/State_VGB(NeuRho_,i,j,k,globalBLK)
-             UyN(1) = State_VGB(NeuRhoUy_,i,j,k,globalBLK)/State_VGB(NeuRho_,i,j,k,globalBLK)
-             UzN(1) = State_VGB(NeuRhoUz_,i,j,k,globalBLK)/State_VGB(NeuRho_,i,j,k,globalBLK)
+       UxN(1)=State_VGB(NeuRhoUx_,i,j,k,iBlock)/State_VGB(NeuRho_,i,j,k,iBlock)
+       UyN(1)=State_VGB(NeuRhoUy_,i,j,k,iBlock)/State_VGB(NeuRho_,i,j,k,iBlock)
+       UzN(1)=State_VGB(NeuRhoUz_,i,j,k,iBlock)/State_VGB(NeuRho_,i,j,k,iBlock)
 
-             UxN(2) = State_VGB(Ne2RhoUx_,i,j,k,globalBLK)/State_VGB(Ne2Rho_,i,j,k,globalBLK)
-             UyN(2) = State_VGB(Ne2RhoUy_,i,j,k,globalBLK)/State_VGB(Ne2Rho_,i,j,k,globalBLK)
-             UzN(2) = State_VGB(Ne2RhoUz_,i,j,k,globalBLK)/State_VGB(Ne2Rho_,i,j,k,globalBLK)
+       UxN(2)=State_VGB(Ne2RhoUx_,i,j,k,iBlock)/State_VGB(Ne2Rho_,i,j,k,iBlock)
+       UyN(2)=State_VGB(Ne2RhoUy_,i,j,k,iBlock)/State_VGB(Ne2Rho_,i,j,k,iBlock)
+       UzN(2)=State_VGB(Ne2RhoUz_,i,j,k,iBlock)/State_VGB(Ne2Rho_,i,j,k,iBlock)
 
-             UxN(3) = State_VGB(Ne3RhoUx_,i,j,k,globalBLK)/State_VGB(Ne3Rho_,i,j,k,globalBLK)
-             UyN(3) = State_VGB(Ne3RhoUy_,i,j,k,globalBLK)/State_VGB(Ne3Rho_,i,j,k,globalBLK)
-             UzN(3) = State_VGB(Ne3RhoUz_,i,j,k,globalBLK)/State_VGB(Ne3Rho_,i,j,k,globalBLK)
+       UxN(3)=State_VGB(Ne3RhoUx_,i,j,k,iBlock)/State_VGB(Ne3Rho_,i,j,k,iBlock)
+       UyN(3)=State_VGB(Ne3RhoUy_,i,j,k,iBlock)/State_VGB(Ne3Rho_,i,j,k,iBlock)
+       UzN(3)=State_VGB(Ne3RhoUz_,i,j,k,iBlock)/State_VGB(Ne3Rho_,i,j,k,iBlock)
 
-             usq = sqrt(Ux**2.0 + Uy**2.0 + Uz**2.0) 
+       usq = sqrt(Ux**2.0 + Uy**2.0 + Uz**2.0) 
 
-             usqdim = usq*(No2Si_V(UnitU_))*1.E-3
+       usqdim = usq*(No2Si_V(UnitU_))*1.E-3
 
-             !units of usqdim is km/s
+       !units of usqdim is km/s
 
-             Tproton = 0.5*cTpro*State_VGB(P_,i,j,k,globalBLK)*No2Io_V(UnitP_)/ & 
-                  (State_VGB(Rho_,i,j,k,globalBLK)*No2Io_V(UnitRho_))
+       Tproton = 0.5*cTpro*State_VGB(P_,i,j,k,iBlock)*No2Io_V(UnitP_)/ & 
+            (State_VGB(Rho_,i,j,k,iBlock)*No2Io_V(UnitRho_))
 
-             Tneutral(1) = 0.5*cTpro*State_VGB(NeuP_,i,j,k,globalBLK)*No2Io_V(UnitP_)/  &
-                  (State_VGB(NeuRho_,i,j,k,globalBLK)*No2Io_V(UnitRho_))
+       Tneutral(1) = 0.5*cTpro*State_VGB(NeuP_,i,j,k,iBlock)*No2Io_V(UnitP_)/ &
+            (State_VGB(NeuRho_,i,j,k,iBlock)*No2Io_V(UnitRho_))
 
-             Tneutral(2) = 0.5*cTpro*State_VGB(Ne2P_,i,j,k,globalBLK)*No2Io_V(UnitP_)/  &
-                  (State_VGB(Ne2Rho_,i,j,k,globalBLK)*No2Io_V(UnitRho_))
+       Tneutral(2) = 0.5*cTpro*State_VGB(Ne2P_,i,j,k,iBlock)*No2Io_V(UnitP_)/ &
+            (State_VGB(Ne2Rho_,i,j,k,iBlock)*No2Io_V(UnitRho_))
 
-             Tneutral(3) = 0.5*cTpro*State_VGB(Ne3P_,i,j,k,globalBLK)*No2Io_V(UnitP_)/  &
-                  (State_VGB(Ne3Rho_,i,j,k,globalBLK)*No2Io_V(UnitRho_))
+       Tneutral(3) = 0.5*cTpro*State_VGB(Ne3P_,i,j,k,iBlock)*No2Io_V(UnitP_)/ &
+            (State_VGB(Ne3Rho_,i,j,k,iBlock)*No2Io_V(UnitRho_))
 
-             ! Calculating the thermal speed for the three populations of neutrals
-             ! units of UthN2 and Uth2 are (m/s)^2
+       ! Calculating the thermal speed for the three populations of neutrals
+       ! units of UthN2 and Uth2 are (m/s)^2
 
-             UThN2(1)=cth*Tneutral(1)
-             UThN2(2)=cth*Tneutral(2)
-             UThN2(3)=cth*Tneutral(3)
-             UTh2=cth*Tproton
+       UThN2(1)=cth*Tneutral(1)
+       UThN2(2)=cth*Tneutral(2)
+       UThN2(3)=cth*Tneutral(3)
+       UTh2=cth*Tproton
 
-             ! Relative velocity between neutrals and plasma 
-             ! the sqrt is to ensure that urel >0.
+       ! Relative velocity between neutrals and plasma 
+       ! the sqrt is to ensure that urel >0.
 
-             vNeutrals(1) = sqrt(UxN(1)**2.0 + UyN(1)**2.0 + UzN(1)**2.0)
-             !!               urel2(1) = (vNeutrals(1)-usq)**2.0
-             !! i am not doing this way above because of regions where urel2 drops to zero or negative
+       vNeutrals(1) = sqrt(UxN(1)**2.0 + UyN(1)**2.0 + UzN(1)**2.0)
+       !!               urel2(1) = (vNeutrals(1)-usq)**2.0
+       !! i am not doing this way above because of regions where urel2 drops to zero or negative
 
-             urel2(1) = (UxN(1) - Ux)**2 + (UyN(1) - Uy)**2 + (UzN(1) - Uz)**2 
+       urel2(1) = (UxN(1) - Ux)**2 + (UyN(1) - Uy)**2 + (UzN(1) - Uz)**2 
 
-             vNeutrals(2) = sqrt(UxN(2)**2.0 + UyN(2)**2.0 + UzN(2)**2.0)
+       vNeutrals(2) = sqrt(UxN(2)**2.0 + UyN(2)**2.0 + UzN(2)**2.0)
 
-             urel2(2) = (UxN(2) - Ux)**2 + (UyN(2) - Uy)**2 + (UzN(2) - Uz)**2
-             !!              urel2(2) = (vNeutrals(2)-usq)**2.0
+       urel2(2) = (UxN(2) - Ux)**2 + (UyN(2) - Uy)**2 + (UzN(2) - Uz)**2
+       !!              urel2(2) = (vNeutrals(2)-usq)**2.0
 
-             vNeutrals(3) = sqrt(UxN(3)**2.0 + UyN(3)**2.0 + UzN(3)**2.0)
-             urel2(3) = (UxN(3) - Ux)**2 + (UyN(3) - Uy)**2 + (UzN(3) - Uz)**2
-             !!              urel2(3) = (vNeutrals(3)-usq)**2.0
+       vNeutrals(3) = sqrt(UxN(3)**2.0 + UyN(3)**2.0 + UzN(3)**2.0)
+       urel2(3) = (UxN(3) - Ux)**2 + (UyN(3) - Uy)**2 + (UzN(3) - Uz)**2
+       !!              urel2(3) = (vNeutrals(3)-usq)**2.0
 
-             ! Incorporating units in variables so we can calculate the charge exchange cross 
-             ! sections
-             ! No2Si_V has units of m/s like cstartT so ureldim and ustar has units of m/s
+       ! Incorporating units in variables so we can calculate the charge exchange cross 
+       ! sections
+       ! No2Si_V has units of m/s like cstartT so ureldim and ustar has units of m/s
 
-             urel2dim(1) = urel2(1)*((No2Si_V(UnitU_))**2.0)
-             ustar(1) = sqrt(urel2dim(1) + cstar*(Tproton + TNeutral(1)))   
-             ureldim(1)=sqrt(urel2dim(1)) 
+       urel2dim(1) = urel2(1)*((No2Si_V(UnitU_))**2.0)
+       ustar(1) = sqrt(urel2dim(1) + cstar*(Tproton + TNeutral(1)))   
+       ureldim(1)=sqrt(urel2dim(1)) 
 
-             ! here i put cstar  to be consistent with i did before but
-             ! seem to me Zank et al. 1996 is using cstartl 
-             ! also before i was using ureldim (uxN-ux)**2 etc instead of vneutrals-usq like i am 
-             ! doing here
-             !
-             urel2dim(2) = urel2(2)*((No2Si_V(UnitU_))**2.0)
-             ustar(2) = sqrt(urel2dim(2) + cstarl*(Tproton + TNeutral(2)))   
-             ureldim(2)=sqrt(urel2dim(2))
+       ! here i put cstar  to be consistent with i did before but
+       ! seem to me Zank et al. 1996 is using cstartl 
+       ! also before i was using ureldim (uxN-ux)**2 etc instead of vneutrals-usq like i am 
+       ! doing here
+       !
+       urel2dim(2) = urel2(2)*((No2Si_V(UnitU_))**2.0)
+       ustar(2) = sqrt(urel2dim(2) + cstarl*(Tproton + TNeutral(2)))   
+       ureldim(2)=sqrt(urel2dim(2))
 
-             urel2dim(3) = urel2(3)*((No2Si_V(UnitU_))**2.0)
-             ustar(3) = sqrt(urel2dim(3) + cstarl*(Tproton + TNeutral(3)))   
-             ureldim(3)=sqrt(urel2dim(3))
+       urel2dim(3) = urel2(3)*((No2Si_V(UnitU_))**2.0)
+       ustar(3) = sqrt(urel2dim(3) + cstarl*(Tproton + TNeutral(3)))   
+       ureldim(3)=sqrt(urel2dim(3))
 
-             !Calculating some common terms
-             ! units of tempx and termxp are (m/s)^-1
+       !Calculating some common terms
+       ! units of tempx and termxp are (m/s)^-1
 
-             termpx(1)=1.0/sqrt(4*(cstarl*Tproton+urel2dim(1))+cstarln*Tneutral(1))
-             termpx(2)=1.0/sqrt(4*(cstarl*Tproton+urel2dim(2))+cstarln*Tneutral(2))
-             termpx(3)=1.0/sqrt(4*(cstarl*Tproton+urel2dim(3))+cstarln*Tneutral(3))     
+       termpx(1)=1.0/sqrt(4*(cstarl*Tproton+urel2dim(1))+cstarln*Tneutral(1))
+       termpx(2)=1.0/sqrt(4*(cstarl*Tproton+urel2dim(2))+cstarln*Tneutral(2))
+       termpx(3)=1.0/sqrt(4*(cstarl*Tproton+urel2dim(3))+cstarln*Tneutral(3))     
 
-             termxp(1)=1.0/sqrt(4*(cstarl*Tneutral(1)+urel2dim(1))+cstarln*Tproton)     
-             termxp(2)=1.0/sqrt(4*(cstarl*Tneutral(2)+urel2dim(2))+cstarln*Tproton)
-             termxp(3)=1.0/sqrt(4*(cstarl*Tneutral(3)+urel2dim(3))+cstarln*Tproton) 
-
-             ! units of termepx is m/s
-
-             termepx(1)=sqrt(cstarl*Tproton+cstar*Tneutral(1)+urel2dim(1))
-             termepx(2)=sqrt(cstarl*Tproton+cstar*Tneutral(2)+urel2dim(2))
-             termepx(3)=sqrt(cstarl*Tproton+cstar*Tneutral(3)+urel2dim(3))
+       termxp(1)=1.0/sqrt(4*(cstarl*Tneutral(1)+urel2dim(1))+cstarln*Tproton)     
+       termxp(2)=1.0/sqrt(4*(cstarl*Tneutral(2)+urel2dim(2))+cstarln*Tproton)
+       termxp(3)=1.0/sqrt(4*(cstarl*Tneutral(3)+urel2dim(3))+cstarln*Tproton) 
 
-             ! Maher and Tinsley cross section - units of cm^2 (Timur's paper has a misprint 
-             ! where he
-             ! had + instead of a -
-             ! sigma has ureldim look at Baranov et al. 1991              
-             ! ureldim has to have units of cm/s so the factor 100 is to pass m to cm
-             ! probken when ureldim=0             sigma = (1.64E-7 - (6.95E-9)*log(ureldim*100))**2.0 
-             ! Linde uses ustar, page 53
+       ! units of termepx is m/s
+
+       termepx(1)=sqrt(cstarl*Tproton+cstar*Tneutral(1)+urel2dim(1))
+       termepx(2)=sqrt(cstarl*Tproton+cstar*Tneutral(2)+urel2dim(2))
+       termepx(3)=sqrt(cstarl*Tproton+cstar*Tneutral(3)+urel2dim(3))
+
+       ! Maher and Tinsley cross section - units of cm^2 (Timur's paper has a misprint 
+       ! where he
+       ! had + instead of a -
+       ! sigma has ureldim look at Baranov et al. 1991              
+       ! ureldim has to have units of cm/s so the factor 100 is to pass m to cm
+       ! probken when ureldim=0             sigma = (1.64E-7 - (6.95E-9)*log(ureldim*100))**2.0 
+       ! Linde uses ustar, page 53
+
+       sigma(1) = (1.64E-7 - (6.95E-9)*log(ustar(1)*100.))**2.0
+       sigma(2) = (1.64E-7 - (6.95E-9)*log(ustar(2)*100.))**2.0
+       sigma(3) = (1.64E-7 - (6.95E-9)*log(ustar(3)*100.))**2.0
 
-             sigma(1) = (1.64E-7 - (6.95E-9)*log(ustar(1)*100.))**2.0
-             sigma(2) = (1.64E-7 - (6.95E-9)*log(ustar(2)*100.))**2.0
-             sigma(3) = (1.64E-7 - (6.95E-9)*log(ustar(3)*100.))**2.0
+       ! Get the neutral density in units
+       ! The charge exhange cross section 
+       ! 100 to change ustar to cm/s
 
-             ! Get the neutral density in units
-             ! The charge exhange cross section 
-             ! 100 to change ustar to cm/s
-
-             nuc(1) = sigma(1)*State_VGB(NeuRho_,i,j,k,globalBLK)*No2Io_V(UnitRho_)*ustar(1)*100.
-             nuc(2) = sigma(2)*State_VGB(Ne2Rho_,i,j,k,globalBLK)*No2Io_V(UnitRho_)*ustar(2)*100.
-             nuc(3) = sigma(3)*State_VGB(Ne3Rho_,i,j,k,globalBLK)*No2Io_V(UnitRho_)*ustar(3)*100.
-             ! Now everything normalized
-
-             nucNORM(1)=nuc(1)*No2Io_V(UnitT_)
-             nucNORM(2)=nuc(2)*No2Io_V(UnitT_)
-             nucNORM(3)=nuc(3)*No2Io_V(UnitT_)
-
-             !\
-             ! source terms for neutrals
-             !/
-             ! we are ignoring the creation of very energetic neutrals, which are created by charge exchange
-             ! see Liewer et al. 1996
-             ! we probably want to put a flag based on entropy do identify the heliopause   
-
-             Mask = 0.0
-
-             if (rp > 40.0) then 
-                Mask = 0.5*(1.0-sign(1.0,usqdim-24.8))+(1.0-sign(1.0,usqdim-400.0))+ &
-                     0.5*(1.0-sign(1.0,Tproton - 1.15E4))
-             end if
-
-             Friction(1) = nucNORM(1)*State_VGB(Rho_,i,j,k,globalBLK)
-             Friction(2) = nucNORM(2)*State_VGB(Rho_,i,j,k,globalBLK)
-             Friction(3) = nucNORM(3)*State_VGB(Rho_,i,j,k,globalBLK)
-
-             !\
-             ! Declaration of all the I',J,K !following my notes of Sep 10, 2007
-             !/
-
-             I0xp(1)=Friction(1)
-             I0xp(2)=Friction(2)
-             I0xp(3)=Friction(3)
-             I0px(1)=Friction(1)
-             I0px(2)=Friction(2)
-             I0px(3)=Friction(3)
-
-             ! units are fine: (Uth2/ustar)*termxp is unitless as it should be
-
-             JxpUx(1)=Friction(1)*(Ux+((UxN(1)-Ux)*(UTh2/ustar(1))*termxp(1)))
-             JxpUy(1)=Friction(1)*(Uy+((UyN(1)-Uy)*(UTh2/ustar(1))*termxp(1)))
-             JxpUz(1)=Friction(1)*(Uz+((UzN(1)-Uz)*(UTh2/ustar(1))*termxp(1)))
-
-             JxpUx(2)=Friction(2)*(Ux+((UxN(2)-Ux)*(UTh2/ustar(2))*termxp(2)))
-             JxpUy(2)=Friction(2)*(Uy+((UyN(2)-Uy)*(UTh2/ustar(2))*termxp(2)))
-             JxpUz(2)=Friction(2)*(Uz+((UzN(2)-Uz)*(UTh2/ustar(2))*termxp(2)))
-
-             JxpUx(3)=Friction(3)*(Ux+((UxN(3)-Ux)*(UTh2/ustar(3))*termxp(3)))
-             JxpUy(3)=Friction(3)*(Uy+((UyN(3)-Uy)*(UTh2/ustar(3))*termxp(3)))
-             JxpUz(3)=Friction(3)*(Uz+((UzN(3)-Uz)*(UTh2/ustar(3))*termxp(3)))
-
-             JpxUx(1)=Friction(1)*(UxN(1)+((Ux-UxN(1))*(UThN2(1)/ustar(1))*termpx(1)))
-             JpxUy(1)=Friction(1)*(UyN(1)+((Uy-UyN(1))*(UThN2(1)/ustar(1))*termpx(1)))
-             JpxUz(1)=Friction(1)*(UzN(1)+((Uz-UzN(1))*(UThN2(1)/ustar(1))*termpx(1)))
-
-             JpxUx(2)=Friction(2)*(UxN(2)+((Ux-UxN(2))*(UThN2(2)/ustar(2))*termpx(2)))
-             JpxUy(2)=Friction(2)*(UyN(2)+((Uy-UyN(2))*(UThN2(2)/ustar(2))*termpx(2)))
-             JpxUz(2)=Friction(2)*(UzN(2)+((Uz-UzN(2))*(UThN2(2)/ustar(2))*termpx(2)))
-
-
-             JpxUx(3)=Friction(3)*(UxN(3)+((Ux-UxN(3))*(UThN2(3)/ustar(3))*termpx(3)))
-             JpxUy(3)=Friction(3)*(UyN(3)+((Uy-UyN(3))*(UThN2(3)/ustar(3))*termpx(3)))
-             JpxUz(3)=Friction(3)*(UzN(3)+((Uz-UzN(3))*(UThN2(3)/ustar(3))*termpx(3)))
-
-             QmxpUx(1)=JxpUx(1)-JpxUx(1)
-             QmxpUy(1)=JxpUy(1)-JpxUy(1)
-             QmxpUz(1)=JxpUz(1)-JpxUz(1)
-
-             QmxpUx(2)=JxpUx(2)-JpxUx(2)
-             QmxpUy(2)=JxpUy(2)-JpxUy(2)
-             QmxpUz(2)=JxpUz(2)-JpxUz(2)
-
-             QmxpUx(3)=JxpUx(3)-JpxUx(3)
-             QmxpUy(3)=JxpUy(3)-JpxUy(3)
-             QmxpUz(3)=JxpUz(3)-JpxUz(3)
-
-             Kxp(1)=0.5*Friction(1)*(usq**2+(1.5*(UTh2/ustar(1))*termepx(1)*(1/((No2Si_V(UnitU_))**2.0)))+ &
-                  2*usq*(vNeutrals(1)-usq)*(UThN2(1)/ustar(1))*termpx(1))
-
-             Kxp(2)=0.5*Friction(2)*(usq**2+(1.5*(UTh2/ustar(2))*termepx(2)*(1/((No2Si_V(UnitU_))**2.0)))+ &
-                  2*usq*(vNeutrals(2)-usq)*(UThN2(2)/ustar(2))*termpx(2))
-
-             Kxp(3)=0.5*Friction(3)*(usq**2+(1.5*(UTh2/ustar(3))*termepx(3)*(1/((No2Si_V(UnitU_))**2.0)))+ &
-                  2*usq*(vNeutrals(3)-usq)*(UThN2(3)/ustar(3))*termpx(3))
-
-             Kpx(1)=0.5*Friction(1)*(vNeutrals(1)**2+(1.5*(UThN2(1)/ustar(1))*termepx(1)*(1/((No2Si_V(UnitU_))**2.0)))+ &
-                  2*vNeutrals(1)*(usq-vNeutrals(1))*(UThN2(1)/ustar(1))*termpx(1))
-
-             Kpx(2)=0.5*Friction(2)*(vNeutrals(2)**2+(1.5*(UThN2(2)/ustar(2))*termepx(2)*(1/((No2Si_V(UnitU_))**2.0)))+ &
-                  2*vNeutrals(2)*(usq-vNeutrals(2))*(UThN2(2)/ustar(2))*termpx(2))
-
-             Kpx(3)=0.5*Friction(3)*(vNeutrals(3)**2+(1.5*(UThN2(3)/ustar(3))*termepx(3)*(1/((No2Si_V(UnitU_))**2.0)))+ &
-                  2*vNeutrals(3)*(usq-vNeutrals(3))*(UThN2(3)/ustar(3))*termpx(3))
-
-             Qexp(1)=Kxp(1)-Kpx(1)
-             Qexp(2)=Kxp(2)-Kpx(2)
-             Qexp(3)=Kxp(3)-Kpx(3)
-             !\
-             ! Pop I
-             !/
-             if (Mask >= 3.0) then
-                Source_VC(NeuRho_,i,j,k) = Source_VC(NeuRho_,i,j,k) +I0xp(2) + I0xp(3)
-                Source_VC(NeuRhoUx_,i,j,k) = Source_VC(NeuRhoUx_,i,j,k) +  &
-                     QmxpUx(1) + JxpUx(2) + JxpUx(3)
-                Source_VC(NeuRhoUy_,i,j,k) = Source_VC(NeuRhoUy_,i,j,k) +  &
-                     QmxpUy(1) + JxpUy(2) + JxpUy(3)
-                Source_VC(NeuRhoUz_,i,j,k) = Source_VC(NeuRhoUz_,i,j,k) +  & 
-                     QmxpUz(1) + JxpUz(2) + JxpUz(3)
-                Source_VC(NeuEnergy_,i,j,k) = Source_VC(NeuEnergy_,i,j,k) +        &
-                     Qexp(1) + Kxp(2) + Kxp(3)
-                ! writing the source P as SP = [SE -uxS(rhoux)-uyS(rhoUy) - uzS(rhoUz)]*gamma-1
-
-                Source_VC(NeuP_,i,j,k) = Source_VC(NeuP_,i,j,k) +    &
-                     (g-1)*(Source_VC(NeuEnergy_,i,j,k) - UxN(1)*Source_VC(NeuRhoUx_,i,j,k)- &
-                     UyN(1)*Source_VC(NeuRhoUy_,i,j,k) - UzN(1)*Source_VC(NeuRhoUz_,i,j,k)) 
-
-             else
-                Source_VC(NeuRho_,i,j,k) = Source_VC(NeuRho_,i,j,k) - I0px(1)
-                Source_VC(NeuRhoUx_,i,j,k) = Source_VC(NeuRhoUx_,i,j,k) +  &
-                     -JpxUx(1)
-                Source_VC(NeuRhoUy_,i,j,k) = Source_VC(NeuRhoUy_,i,j,k) +  &
-                     -JpxUy(1)
-                Source_VC(NeuRhoUz_,i,j,k) = Source_VC(NeuRhoUz_,i,j,k) +  &
-                     -JpxUz(1)
-                Source_VC(NeuEnergy_,i,j,k) = Source_VC(NeuEnergy_,i,j,k) +        &
-                     -Kpx(1)
-                Source_VC(NeuP_,i,j,k) = Source_VC(NeuP_,i,j,k) +    &
-                     (g-1)*(Source_VC(NeuEnergy_,i,j,k) - UxN(1)*Source_VC(NeuRhoUx_,i,j,k)- &
-                     UyN(1)*Source_VC(NeuRhoUy_,i,j,k) - UzN(1)*Source_VC(NeuRhoUz_,i,j,k))
-             end if
-             !\
-             ! Pop II
-             !/
-             if (Mask < 3.0) then
-                if (Mask > 1.0) then
-                   Source_VC(Ne2Rho_,i,j,k) = Source_VC(Ne2Rho_,i,j,k) + &
-                        I0xp(1) + I0xp(3)
-                   Source_VC(Ne2RhoUx_,i,j,k) = Source_VC(Ne2RhoUx_,i,j,k) +  &
-                        QmxpUx(2) + JxpUx(1) + JxpUx(3)
-                   Source_VC(Ne2RhoUy_,i,j,k) = Source_VC(Ne2RhoUy_,i,j,k) +  &
-                        QmxpUy(2) + JxpUy(1) + JxpUy(3)
-                   Source_VC(Ne2RhoUz_,i,j,k) = Source_VC(Ne2RhoUz_,i,j,k) +  & 
-                        QmxpUz(2) + JxpUz(1) + JxpUz(3)
-                   !           Source_VC(Ne2Energy_,i,j,k) = Source_VC(Ne2Energy_,i,j,k) +        &
-                   !                              Qexp(2) + Kxp(1) + Kxp(3)
-                   !           Source_VC(Ne2P_,i,j,k) = Source_VC(Ne2P_,i,j,k) +    &
-                   !           (g-1)*(Source_VC(Ne2Energy_,i,j,k) - UxN(2)*Source_VC(Ne2RhoUx_,i,j,k)- &
-                   !              UyN(2)*Source_VC(Ne2RhoUy_,i,j,k) - UzN(2)*Source_VC(Ne2RhoUz_,i,j,k))
-
-                else
-                   Source_VC(Ne2Rho_,i,j,k) = Source_VC(Ne2Rho_,i,j,k) -I0px(2) 
-                   Source_VC(Ne2RhoUx_,i,j,k) = Source_VC(Ne2RhoUx_,i,j,k) +  &
-                        -JpxUx(2)
-                   Source_VC(Ne2RhoUy_,i,j,k) = Source_VC(Ne2RhoUy_,i,j,k) +  &
-                        -JpxUy(2)
-                   Source_VC(Ne2RhoUz_,i,j,k) = Source_VC(Ne2RhoUz_,i,j,k) +  &
-                        -JpxUz(2)
-                   !            Source_VC(Ne2Energy_,i,j,k) = Source_VC(Ne2Energy_,i,j,k) +        &
-                   !                                -Kpx(2)
-                   !            Source_VC(Ne2P_,i,j,k) = Source_VC(Ne2P_,i,j,k) +    &
-                   !                (g-1)*(Source_VC(Ne2Energy_,i,j,k) - UxN(2)*Source_VC(Ne2RhoUx_,i,j,k)- &
-                   !                          UyN(2)*Source_VC(Ne2RhoUy_,i,j,k) - UzN(2)*Source_VC(Ne2RhoUz_,i,j,k))
-                end if
-             end if
-             !\
-             ! Pop III
-             !/
-             if (Mask <= 1.0) then
-                Source_VC(Ne3Rho_,i,j,k) = Source_VC(Ne3Rho_,i,j,k) + & 
-                     I0xp(1) + I0xp(2)
-                Source_VC(Ne3RhoUx_,i,j,k) = Source_VC(Ne3RhoUx_,i,j,k) +  &
-                     QmxpUx(3) + JxpUx(2) + JxpUx(1)
-                Source_VC(Ne3RhoUy_,i,j,k) = Source_VC(Ne3RhoUy_,i,j,k) +  &
-                     QmxpUy(3) + JxpUy(2) + JxpUy(1)
-                Source_VC(Ne3RhoUz_,i,j,k) = Source_VC(Ne3RhoUz_,i,j,k) +  & 
-                     QmxpUz(3) + JxpUz(2) + JxpUz(1)
-                !               Source_VC(Ne3Energy_,i,j,k) = Source_VC(Ne3Energy_,i,j,k) +        &
-                !                              Qexp(3) + Kxp(1) + Kxp(2)
-                !               Source_VC(Ne3P_,i,j,k) = Source_VC(Ne3P_,i,j,k) +    &
-                !                 (g-1)*(Source_VC(Ne3Energy_,i,j,k) - UxN(3)*Source_VC(Ne3RhoUx_,i,j,k)- &
-                !                 UyN(3)*Source_VC(Ne3RhoUy_,i,j,k) - UzN(3)*Source_VC(Ne3RhoUz_,i,j,k))
-             else
-                Source_VC(Ne3Rho_,i,j,k) = Source_VC(Ne3Rho_,i,j,k) -I0px(3) 
-                Source_VC(Ne3RhoUx_,i,j,k) = Source_VC(Ne3RhoUx_,i,j,k) +  &
-                     -JpxUx(3)
-                Source_VC(Ne3RhoUy_,i,j,k) = Source_VC(Ne3RhoUy_,i,j,k) +  &
-                     -JpxUy(3)
-                Source_VC(Ne3RhoUz_,i,j,k) = Source_VC(Ne3RhoUz_,i,j,k) +  &
-                     -JpxUz(3)
-                !                 Source_VC(Ne3Energy_,i,j,k) = Source_VC(Ne3Energy_,i,j,k) +        &
-                !                        -Kpx(3)
-                !                 Source_VC(Ne3P_,i,j,k) = Source_VC(Ne3P_,i,j,k) +    &
-                !                 (g-1)*(Source_VC(Ne3Energy_,i,j,k) - UxN(3)*Source_VC(Ne3RhoUx_,i,j,k)- &
-                !                 UyN(3)*Source_VC(Ne3RhoUy_,i,j,k) - UzN(3)*Source_VC(Ne3RhoUz_,i,j,k))
-
-             end if
-             !\
-             ! Source terms for Plasma
-             !/
-             Source_VC(Rho_,i,j,k)   = Source_VC(Rho_,i,j,k)  + 0.0
-             Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k) +        &
-                  QmpxUx(1) + QmpxUx(2) + QmpxUx(3)
-             Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k) +        &
-                  QmpxUy(1) + QmpxUy(2) + QmpxUy(3)
-             Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k) +        & 
-                  QmpxUz(1) + QmpxUz(2) + QmpxUz(3)
-
-             !correcting the source terms (see Gombosi 2000)
-
-             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) +        &
-                  Qepx(1)+ Qepx(2) + Qepx(3)
-
-             Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) +    &
-                  (g-1)*(Source_VC(Energy_,i,j,k) - Ux*Source_VC(RhoUx_,i,j,k)- &
-                  Uy*Source_VC(RhoUy_,i,j,k) - Uz*Source_VC(RhoUz_,i,j,k))
-
-          end do !end i loop
-       end do !end j loop
-    end do !end k loop  
+       nuc(1) = sigma(1)*State_VGB(NeuRho_,i,j,k,iBlock)*No2Io_V(UnitRho_)*ustar(1)*100.
+       nuc(2) = sigma(2)*State_VGB(Ne2Rho_,i,j,k,iBlock)*No2Io_V(UnitRho_)*ustar(2)*100.
+       nuc(3) = sigma(3)*State_VGB(Ne3Rho_,i,j,k,iBlock)*No2Io_V(UnitRho_)*ustar(3)*100.
+       ! Now everything normalized
+
+       nucNORM(1)=nuc(1)*No2Io_V(UnitT_)
+       nucNORM(2)=nuc(2)*No2Io_V(UnitT_)
+       nucNORM(3)=nuc(3)*No2Io_V(UnitT_)
+
+       !
+       ! source terms for neutrals
+       !/
+       ! we are ignoring the creation of very energetic neutrals, which are created by charge exchange
+       ! see Liewer et al. 1996
+       ! we probably want to put a flag based on entropy do identify the heliopause   
+
+       Mask = 0.0
+
+       if (rp > 40.0) then 
+          Mask = 0.5*(1.0-sign(1.0,usqdim-24.8))+(1.0-sign(1.0,usqdim-400.0))+ &
+               0.5*(1.0-sign(1.0,Tproton - 1.15E4))
+       end if
+
+       Friction(1) = nucNORM(1)*State_VGB(Rho_,i,j,k,iBlock)
+       Friction(2) = nucNORM(2)*State_VGB(Rho_,i,j,k,iBlock)
+       Friction(3) = nucNORM(3)*State_VGB(Rho_,i,j,k,iBlock)
+
+       !
+       ! Declaration of all the I',J,K !following my notes of Sep 10, 2007
+       !/
+
+       I0xp(1)=Friction(1)
+       I0xp(2)=Friction(2)
+       I0xp(3)=Friction(3)
+       I0px(1)=Friction(1)
+       I0px(2)=Friction(2)
+       I0px(3)=Friction(3)
+
+       ! units are fine: (Uth2/ustar)*termxp is unitless as it should be
+
+       JxpUx(1)=Friction(1)*(Ux+((UxN(1)-Ux)*(UTh2/ustar(1))*termxp(1)))
+       JxpUy(1)=Friction(1)*(Uy+((UyN(1)-Uy)*(UTh2/ustar(1))*termxp(1)))
+       JxpUz(1)=Friction(1)*(Uz+((UzN(1)-Uz)*(UTh2/ustar(1))*termxp(1)))
+
+       JxpUx(2)=Friction(2)*(Ux+((UxN(2)-Ux)*(UTh2/ustar(2))*termxp(2)))
+       JxpUy(2)=Friction(2)*(Uy+((UyN(2)-Uy)*(UTh2/ustar(2))*termxp(2)))
+       JxpUz(2)=Friction(2)*(Uz+((UzN(2)-Uz)*(UTh2/ustar(2))*termxp(2)))
+
+       JxpUx(3)=Friction(3)*(Ux+((UxN(3)-Ux)*(UTh2/ustar(3))*termxp(3)))
+       JxpUy(3)=Friction(3)*(Uy+((UyN(3)-Uy)*(UTh2/ustar(3))*termxp(3)))
+       JxpUz(3)=Friction(3)*(Uz+((UzN(3)-Uz)*(UTh2/ustar(3))*termxp(3)))
+
+       JpxUx(1)=Friction(1)*(UxN(1)+((Ux-UxN(1))*(UThN2(1)/ustar(1))*termpx(1)))
+       JpxUy(1)=Friction(1)*(UyN(1)+((Uy-UyN(1))*(UThN2(1)/ustar(1))*termpx(1)))
+       JpxUz(1)=Friction(1)*(UzN(1)+((Uz-UzN(1))*(UThN2(1)/ustar(1))*termpx(1)))
+
+       JpxUx(2)=Friction(2)*(UxN(2)+((Ux-UxN(2))*(UThN2(2)/ustar(2))*termpx(2)))
+       JpxUy(2)=Friction(2)*(UyN(2)+((Uy-UyN(2))*(UThN2(2)/ustar(2))*termpx(2)))
+       JpxUz(2)=Friction(2)*(UzN(2)+((Uz-UzN(2))*(UThN2(2)/ustar(2))*termpx(2)))
+
+
+       JpxUx(3)=Friction(3)*(UxN(3)+((Ux-UxN(3))*(UThN2(3)/ustar(3))*termpx(3)))
+       JpxUy(3)=Friction(3)*(UyN(3)+((Uy-UyN(3))*(UThN2(3)/ustar(3))*termpx(3)))
+       JpxUz(3)=Friction(3)*(UzN(3)+((Uz-UzN(3))*(UThN2(3)/ustar(3))*termpx(3)))
+
+       QmxpUx(1)=JxpUx(1)-JpxUx(1)
+       QmxpUy(1)=JxpUy(1)-JpxUy(1)
+       QmxpUz(1)=JxpUz(1)-JpxUz(1)
+
+       QmxpUx(2)=JxpUx(2)-JpxUx(2)
+       QmxpUy(2)=JxpUy(2)-JpxUy(2)
+       QmxpUz(2)=JxpUz(2)-JpxUz(2)
+
+       QmxpUx(3)=JxpUx(3)-JpxUx(3)
+       QmxpUy(3)=JxpUy(3)-JpxUy(3)
+       QmxpUz(3)=JxpUz(3)-JpxUz(3)
+
+       Kxp(1)=0.5*Friction(1)*(usq**2+(1.5*(UTh2/ustar(1))*termepx(1)*(1/((No2Si_V(UnitU_))**2.0)))+ &
+            2*usq*(vNeutrals(1)-usq)*(UThN2(1)/ustar(1))*termpx(1))
+
+       Kxp(2)=0.5*Friction(2)*(usq**2+(1.5*(UTh2/ustar(2))*termepx(2)*(1/((No2Si_V(UnitU_))**2.0)))+ &
+            2*usq*(vNeutrals(2)-usq)*(UThN2(2)/ustar(2))*termpx(2))
+
+       Kxp(3)=0.5*Friction(3)*(usq**2+(1.5*(UTh2/ustar(3))*termepx(3)*(1/((No2Si_V(UnitU_))**2.0)))+ &
+            2*usq*(vNeutrals(3)-usq)*(UThN2(3)/ustar(3))*termpx(3))
+
+       Kpx(1)=0.5*Friction(1)*(vNeutrals(1)**2+(1.5*(UThN2(1)/ustar(1))*termepx(1)*(1/((No2Si_V(UnitU_))**2.0)))+ &
+            2*vNeutrals(1)*(usq-vNeutrals(1))*(UThN2(1)/ustar(1))*termpx(1))
+
+       Kpx(2)=0.5*Friction(2)*(vNeutrals(2)**2+(1.5*(UThN2(2)/ustar(2))*termepx(2)*(1/((No2Si_V(UnitU_))**2.0)))+ &
+            2*vNeutrals(2)*(usq-vNeutrals(2))*(UThN2(2)/ustar(2))*termpx(2))
+
+       Kpx(3)=0.5*Friction(3)*(vNeutrals(3)**2+(1.5*(UThN2(3)/ustar(3))*termepx(3)*(1/((No2Si_V(UnitU_))**2.0)))+ &
+            2*vNeutrals(3)*(usq-vNeutrals(3))*(UThN2(3)/ustar(3))*termpx(3))
+
+       Qexp(1)=Kxp(1)-Kpx(1)
+       Qexp(2)=Kxp(2)-Kpx(2)
+       Qexp(3)=Kxp(3)-Kpx(3)
+
+       ! Check if point implicit scheme is on (part implicit may switch it off)
+       ! Also check if this particular block is point implicit or not
+       if(.not.(UsePointImplicit .and. UsePointImplicit_B(iBlock)))then
+          ! Add all source terms if we do not use the point implicit scheme
+          call user_expl_source
+          call user_impl_source
+       elseif(IsPointImplSource)then
+          ! Add implicit sources only
+          call user_impl_source
+       else
+          ! Add explicit sources only
+          call user_expl_source
+       end if
+    end do; end do; end do
+
+  contains
+
+    !==========================================================================
+    subroutine user_expl_source
+      ! Add explicit source here
+
+      ! Here come the explicit source terms
+      !
+      ! Pop I
+      !/
+      if (Mask >= 3.0) then
+         Source_VC(NeuRho_,i,j,k) = Source_VC(NeuRho_,i,j,k) +I0xp(2) + I0xp(3)
+         Source_VC(NeuEnergy_,i,j,k) = Source_VC(NeuEnergy_,i,j,k) +        &
+              Qexp(1) + Kxp(2) + Kxp(3)
+         ! writing the source P as SP = [SE -uxS(rhoux)-uyS(rhoUy) - uzS(rhoUz)]*gamma-1
+
+      else
+         Source_VC(NeuRho_,i,j,k) = Source_VC(NeuRho_,i,j,k) - I0px(1)
+         Source_VC(NeuEnergy_,i,j,k) = Source_VC(NeuEnergy_,i,j,k) &
+              - Kpx(1)
+      end if
+      !
+      ! Pop II
+      !/
+      if (Mask < 3.0) then
+         if (Mask > 1.0) then
+            Source_VC(Ne2Rho_,i,j,k) = Source_VC(Ne2Rho_,i,j,k) + &
+                 I0xp(1) + I0xp(3)
+            Source_VC(Ne2Energy_,i,j,k) = Source_VC(Ne2Energy_,i,j,k) &
+                 + Qexp(2) + Kxp(1) + Kxp(3)
+         else
+            Source_VC(Ne2Rho_,i,j,k) = Source_VC(Ne2Rho_,i,j,k) -I0px(2) 
+            Source_VC(Ne2Energy_,i,j,k) = Source_VC(Ne2Energy_,i,j,k) &
+                 - Kpx(2)
+         end if
+      end if
+      !
+      ! Pop III
+      !/
+      if (Mask <= 1.0) then
+         Source_VC(Ne3Rho_,i,j,k) = Source_VC(Ne3Rho_,i,j,k) & 
+              + I0xp(1) + I0xp(2)
+         Source_VC(Ne3Energy_,i,j,k) = Source_VC(Ne3Energy_,i,j,k) &
+              + Qexp(3) + Kxp(1) + Kxp(2)
+      else
+         Source_VC(Ne3Rho_,i,j,k) = Source_VC(Ne3Rho_,i,j,k) -I0px(3) 
+         Source_VC(Ne3Energy_,i,j,k) = Source_VC(Ne3Energy_,i,j,k) &
+              -Kpx(3)
+      end if
+      !
+      ! Source terms for Plasma
+      !/
+      Source_VC(Rho_,i,j,k)   = Source_VC(Rho_,i,j,k)  + 0.0
+
+      !correcting the source terms (see Gombosi 2000)
+
+      Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) +        &
+           Qepx(1)+ Qepx(2) + Qepx(3)
+
+    end subroutine user_expl_source
+    !==========================================================================
+    subroutine user_impl_source
+
+      !  This is where the point implicit source terms go
+      if(r_BLK(i,j,k,iBlock) > rFriction ) RETURN
+
+
+      !   All the neutrals momenta are implicit
+
+      ! Source terms for Plasma
+
+      Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) +    &
+           (g-1)*(Qepx(1)+ Qepx(2) + Qepx(3) &
+           - Ux*Source_VC(RhoUx_,i,j,k) &
+           - Uy*Source_VC(RhoUy_,i,j,k) &
+           - Uz*Source_VC(RhoUz_,i,j,k))
+
+
+      !
+      ! Pop I
+      !/
+      if (Mask >= 3.0) then
+
+         Source_VC(NeuRhoUx_,i,j,k) = Source_VC(NeuRhoUx_,i,j,k) +  &
+              QmxpUx(1) + JxpUx(2) + JxpUx(3)
+         Source_VC(NeuRhoUy_,i,j,k) = Source_VC(NeuRhoUy_,i,j,k) +  &
+              QmxpUy(1) + JxpUy(2) + JxpUy(3)
+         Source_VC(NeuRhoUz_,i,j,k) = Source_VC(NeuRhoUz_,i,j,k) +  & 
+              QmxpUz(1) + JxpUz(2) + JxpUz(3)
+
+         Source_VC(NeuP_,i,j,k) = Source_VC(NeuP_,i,j,k) +    &
+              (g-1)*(Qexp(1) + Kxp(2) + Kxp(3) &
+              - UxN(1)*Source_VC(NeuRhoUx_,i,j,k) &
+              - UyN(1)*Source_VC(NeuRhoUy_,i,j,k) &
+              - UzN(1)*Source_VC(NeuRhoUz_,i,j,k)) 
+      else
+         Source_VC(NeuRhoUx_,i,j,k) = Source_VC(NeuRhoUx_,i,j,k) &
+              -JpxUx(1)
+         Source_VC(NeuRhoUy_,i,j,k) = Source_VC(NeuRhoUy_,i,j,k) &
+              -JpxUy(1)
+         Source_VC(NeuRhoUz_,i,j,k) = Source_VC(NeuRhoUz_,i,j,k) &
+              -JpxUz(1)
+         Source_VC(NeuP_,i,j,k) = Source_VC(NeuP_,i,j,k) +    &
+              (g-1)*( -kpx(1) &
+              - UxN(1)*Source_VC(NeuRhoUx_,i,j,k) &
+              - UyN(1)*Source_VC(NeuRhoUy_,i,j,k) &
+              - UzN(1)*Source_VC(NeuRhoUz_,i,j,k))
+      end if
+      !
+      ! Pop II
+      !/
+      if (Mask < 3.0) then
+         if (Mask > 1.0) then
+            Source_VC(Ne2RhoUx_,i,j,k) = Source_VC(Ne2RhoUx_,i,j,k) +  &
+                 QmxpUx(2) + JxpUx(1) + JxpUx(3)
+            Source_VC(Ne2RhoUy_,i,j,k) = Source_VC(Ne2RhoUy_,i,j,k) +  &
+                 QmxpUy(2) + JxpUy(1) + JxpUy(3)
+            Source_VC(Ne2RhoUz_,i,j,k) = Source_VC(Ne2RhoUz_,i,j,k) +  & 
+                 QmxpUz(2) + JxpUz(1) + JxpUz(3)
+            Source_VC(Ne2P_,i,j,k) = Source_VC(Ne2P_,i,j,k) +    &
+                 (g-1)*(Qexp(2) + Kxp(1) + Kxp(3) &
+                 - UxN(2)*Source_VC(Ne2RhoUx_,i,j,k) &
+                 - UyN(2)*Source_VC(Ne2RhoUy_,i,j,k) &
+                 - UzN(2)*Source_VC(Ne2RhoUz_,i,j,k))
+         else
+            Source_VC(Ne2RhoUx_,i,j,k) = Source_VC(Ne2RhoUx_,i,j,k) &
+                 -JpxUx(2)
+            Source_VC(Ne2RhoUy_,i,j,k) = Source_VC(Ne2RhoUy_,i,j,k) &
+                 -JpxUy(2)
+            Source_VC(Ne2RhoUz_,i,j,k) = Source_VC(Ne2RhoUz_,i,j,k) &
+                 -JpxUz(2)
+            Source_VC(Ne2P_,i,j,k) = Source_VC(Ne2P_,i,j,k) +    &
+                 (g-1)*(- Kpx(2) &
+                 - UxN(2)*Source_VC(Ne2RhoUx_,i,j,k) &
+                 - UyN(2)*Source_VC(Ne2RhoUy_,i,j,k) &
+                 - UzN(2)*Source_VC(Ne2RhoUz_,i,j,k))
+
+         end if
+      end if
+      !
+      ! Pop III
+      !/
+      if (Mask <= 1.0) then
+         Source_VC(Ne3RhoUx_,i,j,k) = Source_VC(Ne3RhoUx_,i,j,k) +  &
+              QmxpUx(3) + JxpUx(2) + JxpUx(1)
+         Source_VC(Ne3RhoUy_,i,j,k) = Source_VC(Ne3RhoUy_,i,j,k) +  &
+              QmxpUy(3) + JxpUy(2) + JxpUy(1)
+         Source_VC(Ne3RhoUz_,i,j,k) = Source_VC(Ne3RhoUz_,i,j,k) +  & 
+              QmxpUz(3) + JxpUz(2) + JxpUz(1)
+         Source_VC(Ne3P_,i,j,k) = Source_VC(Ne3P_,i,j,k) +    &
+              (g-1)*(Qexp(3) + Kxp(1) + Kxp(2) &
+              - UxN(3)*Source_VC(Ne3RhoUx_,i,j,k) &
+              - UyN(3)*Source_VC(Ne3RhoUy_,i,j,k) &
+              - UzN(3)*Source_VC(Ne3RhoUz_,i,j,k))
+      else
+         Source_VC(Ne3RhoUx_,i,j,k) = Source_VC(Ne3RhoUx_,i,j,k)  &
+              -JpxUx(3)
+         Source_VC(Ne3RhoUy_,i,j,k) = Source_VC(Ne3RhoUy_,i,j,k)  &
+              -JpxUy(3)
+         Source_VC(Ne3RhoUz_,i,j,k) = Source_VC(Ne3RhoUz_,i,j,k)  &
+              -JpxUz(3)
+         Source_VC(Ne3P_,i,j,k) = Source_VC(Ne3P_,i,j,k) +    &
+              (g-1)*(-Kpx(3) &
+              - UxN(3)*Source_VC(Ne3RhoUx_,i,j,k) &
+              - UyN(3)*Source_VC(Ne3RhoUy_,i,j,k) &
+              - UzN(3)*Source_VC(Ne3RhoUz_,i,j,k))
+      end if
+      !
+      ! Source terms for Plasma
+      !/
+      Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k) +        &
+           QmpxUx(1) + QmpxUx(2) + QmpxUx(3)
+      Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k) +        &
+           QmpxUy(1) + QmpxUy(2) + QmpxUy(3)
+      Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k) +        & 
+           QmpxUz(1) + QmpxUz(2) + QmpxUz(3)
+
+    end subroutine user_impl_source
 
   end subroutine user_calc_sources
 
+  !============================================================================
+
+  subroutine user_init_point_implicit
+
+    use ModVarIndexes, ONLY: RhoUx_,RhoUy_,RhoUz_,P_,NeuRhoUx_,NeuRhoUy_,&
+         NeuRhoUz_,NeuP_,Ne2RhoUx_,Ne2RhoUy_,Ne2RhoUz_,Ne2P_,&
+         Ne3RhoUx_,Ne3RhoUy_,Ne3RhoUz_,Ne3P_
+
+    use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
+    !------------------------------------------------------------------------
+
+    ! Allocate and set iVarPointImpl_I
+    ! In this example there are 3 implicit variables
+
+
+    ! All the neutrals momenta and plasma are implicit 
+    ! (3 neutral fluid and 1 ion)
+
+    allocate(iVarPointImpl_I(16))
+
+    iVarPointImpl_I = (/RhoUx_, RhoUy_, RhoUz_, P_, NeuRhoUx_ ,&
+         NeuRhoUy_, NeuRhoUz_ , NeuP_, Ne2RhoUx_, Ne2RhoUy_, Ne2RhoUz_ ,&
+         Ne2P_, Ne3RhoUx_, Ne3RhoUy_, Ne3RhoUz_, Ne3P_/)
+
+
+    ! Tell the point implicit scheme if dS/dU will be set analytically
+    ! If this is set to true the DsDu_VVC matrix has to be set below.
+
+    IsPointImplMatrixSet = .false.
+
+  end subroutine user_init_point_implicit
+
 end module ModUser
-
-
