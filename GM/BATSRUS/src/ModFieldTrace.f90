@@ -1038,7 +1038,7 @@ contains
          Rho_, RhoUx_, RhoUz_, Ux_, Uz_, p_, Bx_, Bz_
     real, intent(in) :: x_D(3)
 
-    real    :: Xyz_D(3), State_V(nVar), B0_D(3), PlotVar_V(20)
+    real    :: Xyz_D(3), State_V(nVar), B0_D(3), PlotVar_V(50)
     integer :: n, iLine
     character(len=*), parameter :: NameSub='ray_extract'
     !----------------------------------------------------------------------
@@ -1807,11 +1807,11 @@ subroutine write_plot_line(iFile)
         do iPoint = iPointNext, iPointNext + nPoint1 - 1
            if(IsIdl)then
               ! Write Length as the first variable: the 1D coordinate
-              write(UnitTmp_,'(20es18.10)') PlotVar_VI(1:nStateVar,iPoint)
+              write(UnitTmp_,'(50es18.10)') PlotVar_VI(1:nStateVar,iPoint)
            else
               ! Write Length as the last variable, so that 
               ! x,y,z can be used as 3D coordinates
-              write(UnitTmp_,'(20es18.10)') PlotVar_VI(2:nStateVar,iPoint),&
+              write(UnitTmp_,'(50es18.10)') PlotVar_VI(2:nStateVar,iPoint),&
                    PlotVar_VI(1,iPoint)
            end if
         end do
@@ -1820,11 +1820,11 @@ subroutine write_plot_line(iFile)
         do iPoint = 1, nPoint
            if(IsIdl)then
               ! Write Index as the last variable
-              write(UnitTmp_, '(20es18.10)') &
+              write(UnitTmp_, '(50es18.10)') &
                    PlotVar_VI(1:nStateVar, iPoint), PlotVar_VI(0,iPoint)
            else
               ! Write Index and Length as the last 2 variables
-              write(UnitTmp_, '(20es18.10)') &
+              write(UnitTmp_, '(50es18.10)') &
                    PlotVar_VI(2:nStateVar, iPoint), PlotVar_VI(0:1,iPoint)
            end if
         end do
