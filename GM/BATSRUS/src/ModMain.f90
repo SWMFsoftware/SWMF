@@ -159,7 +159,8 @@ Module ModMain
   logical :: UseProjection    = .false. !^CFG IF PROJECTION
   logical :: UseConstrainB    = .false. !^CFG IF CONSTRAINB
   logical :: UseB0Source
-
+  logical :: UseHyperbolicDivb= .false.
+  real    :: cHypDim = 1.0, cHyp2
   
   !\
   ! More numerical scheme parameters
