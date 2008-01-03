@@ -1241,6 +1241,11 @@ subroutine MH_set_parameters(TypeAction)
         DivbMax = -1.0                                   !^CFG IF PROJECTION
         ! reinitialize constrained transport if needed   !^CFG IF CONSTRAINB
         DoInitConstrainB = .true.                        !^CFG IF CONSTRAINB
+
+     case("#HYPERBOLICDIVB")
+        call read_var('UseHyperbolicDivB',UseHyperbolicDivB)
+        if(UseHyperbolicDivB) call read_var('cHypDim',cHypDim)
+
      case("#DIVBSOURCE")
 	call read_var('UseB0Source'   ,UseB0Source)
      case("#USECURLB0")
