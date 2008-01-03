@@ -1450,7 +1450,7 @@ contains
     subroutine get_mhd_flux
 
       use ModPhysics, ONLY: g, inv_gm1, inv_c2LIGHT
-      use ModMain,    ONLY: x_, y_, z_
+      use ModMain,    ONLY: x_, y_, z_, UseHyperbolicDivb, cHyp2
       use ModVarIndexes
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, Bx, By, Bz, p, e, FullBx, FullBy, FullBz, FullBn
@@ -1463,6 +1463,9 @@ contains
 
       real :: InvNumDens, StateTmp_V(nVar), UxPlus, UyPlus, UzPlus, UnPlus
       real, dimension(nIonFluid) :: NumDens_I, InvRho_I, Ux_I, Uy_I, Uz_I
+
+      integer :: iHyp
+      real    :: Hyp
 
       !-----------------------------------------------------------------------
 
@@ -1567,6 +1570,17 @@ contains
          Flux_V(Bx_) = UnPlus*FullBx - UxPlus*FullBn
          Flux_V(By_) = UnPlus*FullBy - UyPlus*FullBn
          Flux_V(Bz_) = UnPlus*FullBz - UzPlus*FullBn
+      end if
+
+      if(UseHyperbolicDivb)then
+         iHyp = Bz_+1
+         Hyp  = State_V(iHyp)
+
+         Flux_V(Bx_) = Flux_V(Bx_) + AreaX*Hyp
+         Flux_V(By_) = Flux_V(By_) + AreaY*Hyp
+         Flux_V(Bz_) = Flux_V(Bz_) + AreaZ*Hyp
+
+         Flux_V(iHyp)= cHyp2 * Bn
       end if
 
       ! f_i[p]=u_i*p
