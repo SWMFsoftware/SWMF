@@ -73,9 +73,8 @@ float		zMaxBc
 
 #SCHEME
 2		nOrder
-Roe		TypeFlux
-mc3		TypeLimiter
-1.5		LimiterBeta
+Rusanov		TypeFlux
+minmod		TypeLimiter
 
 #SAVELOGFILE
 T		DoSaveLogfile
