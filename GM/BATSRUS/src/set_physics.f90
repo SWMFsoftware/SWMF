@@ -276,6 +276,9 @@ subroutine set_physics_constants
   Qqp(1:3,1:3) = 0.00
   Oop(1:3,1:3,1:3) = 0.00
 
+  ! Hyperbolic cleaning uses cHyp velocity
+  cHyp2 = (cHypDim*Io2No_V(UnitU_))**2
+
 end subroutine set_physics_constants
 
 !===========================================================================
@@ -557,5 +560,16 @@ subroutine init_mhd_variables
      NameUnitUserTec_V(iVar) = NameTecUnit_V(UnitRho_)
      NameUnitUserIdl_V(iVar) = NameIdlUnit_V(UnitRho_)
   end do
+
+  if(NameVar_V(Bz_+1) == 'Hyp')then
+     iVar = Bz_+1
+     ! Set the scalar field Phi used in hyperbolic cleaning
+     UnitUser_V(iVar) = No2Io_V(UnitB_)*No2Io_V(UnitU_)
+     NameUnitUserTec_V(iVar) = &
+          trim(NameTecUnit_V(UnitB_)) // trim(NameTecUnit_V(UnitU_))
+    
+     NameUnitUserIdl_V(Hyp_) = &
+          trim(NameIdlUnit_V(UnitB_)) // trim(NameIdlUnit_V(UnitU_))
+  end if
 
 end subroutine init_mhd_variables
