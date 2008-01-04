@@ -1245,8 +1245,8 @@ subroutine MH_set_parameters(TypeAction)
      case("#HYPERBOLICDIVB")
         call read_var('UseHyperbolicDivB',UseHyperbolicDivB)
         if(UseHyperbolicDivB) then
-           call read_var('ChypDim',ChypDim)
-           call read_var('TauHyp',TauHyp)
+           call read_var('SpeedHypDim',SpeedHypDim)
+           call read_var('TauHypDim'  ,TauHypDim)
         end if
      case("#DIVBSOURCE")
 	call read_var('UseB0Source'   ,UseB0Source)

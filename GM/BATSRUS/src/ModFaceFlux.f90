@@ -687,6 +687,7 @@ contains
     use ModAdvance, ONLY: DoReplaceDensity,State_VGB
     use ModCharacteristicMhd,ONLY:dissipation_matrix
     use ModCoordTransform, ONLY: cross_product
+    use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp
 
     real,    intent(out):: Flux_V(nFlux)
 
@@ -841,6 +842,8 @@ contains
 
     ! Increase maximum speed with resistive diffusion speed if necessary
     if(Eta > 0.0) CmaxDt = CmaxDt + 2*Eta*InvDxyz*Area !^CFG IF DISSFLUX
+
+    if(UseHyperbolicDivb) CmaxDt = max(Area*SpeedHyp, CmaxDt)
 
     if(DoTestCell)call write_test_info
 
@@ -1450,7 +1453,7 @@ contains
     subroutine get_mhd_flux
 
       use ModPhysics, ONLY: g, inv_gm1, inv_c2LIGHT
-      use ModMain,    ONLY: x_, y_, z_, UseHyperbolicDivb, cHyp2
+      use ModMain,    ONLY: x_, y_, z_, UseHyperbolicDivb, SpeedHyp2
       use ModVarIndexes
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, Bx, By, Bz, p, e, FullBx, FullBy, FullBz, FullBn
@@ -1580,7 +1583,7 @@ contains
          Flux_V(By_) = Flux_V(By_) + AreaY*Hyp
          Flux_V(Bz_) = Flux_V(Bz_) + AreaZ*Hyp
 
-         Flux_V(iHyp)= cHyp2 * Bn
+         Flux_V(iHyp)= SpeedHyp2 * Bn
       end if
 
       ! f_i[p]=u_i*p

@@ -276,9 +276,11 @@ subroutine set_physics_constants
   Qqp(1:3,1:3) = 0.00
   Oop(1:3,1:3,1:3) = 0.00
 
-  ! Hyperbolic cleaning uses cHyp velocity
-  cHyp2 = (cHypDim*Io2No_V(UnitU_))**2
-
+  ! Hyperbolic cleaning uses SpeedHyp velocity and TauHyp relaxation
+  SpeedHyp  = SpeedHypDim*Io2No_V(UnitU_)
+  SpeedHyp2 = SpeedHyp**2
+  TauHyp    = TauHypDim*Io2No_V(UnitT_)
+  
 end subroutine set_physics_constants
 
 !===========================================================================
