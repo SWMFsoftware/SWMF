@@ -71,6 +71,10 @@ subroutine update_states_MHD(iStage,iBLK)
        call update_point_implicit(iStage, iBLK, user_calc_sources, &
        user_init_point_implicit)
 
+  if(UseHyperbolicDivb .and. TauHyp > 0.0) &
+       State_VGB(Bz_+1,1:nI,1:nJ,1:nK,iBlk) = &
+       State_VGB(Bz_+1,1:nI,1:nJ,1:nK,iBlk) / (1 + Dt/TauHyp)
+
 contains
 
   subroutine update_explicit
