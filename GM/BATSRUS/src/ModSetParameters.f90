@@ -1604,7 +1604,9 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('ElectronTemperatureRatio', ElectronTemperatureRatio)
      case("#MULTISPECIES")
         call read_var('DoReplaceDensity', DoReplaceDensity)
-        call read_var('SpeciesPercentCheck',SpeciesPercentCheck) 
+        call read_var('SpeciesPercentCheck',SpeciesPercentCheck)
+     case("#MULTIFLUID")
+        call read_var('UseTotalSpeed',UseTotalSpeed)
      case('#USERBOUNDARY', '#EXTRABOUNDARY')
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseExtraBoundary',UseExtraBoundary)
@@ -2064,8 +2066,6 @@ contains
        RefineCrit(3)  = 'Rcurrents'
 
     end select
-
-
 
   end subroutine set_defaults
 
