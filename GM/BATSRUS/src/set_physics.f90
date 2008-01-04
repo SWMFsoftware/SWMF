@@ -570,7 +570,7 @@ subroutine init_mhd_variables
      NameUnitUserTec_V(iVar) = &
           trim(NameTecUnit_V(UnitB_)) // trim(NameTecUnit_V(UnitU_))
     
-     NameUnitUserIdl_V(Hyp_) = &
+     NameUnitUserIdl_V(iVar) = &
           trim(NameIdlUnit_V(UnitB_)) // trim(NameIdlUnit_V(UnitU_))
   end if
 
