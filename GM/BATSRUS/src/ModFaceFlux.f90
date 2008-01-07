@@ -6,8 +6,7 @@ module ModFaceFlux
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
   use ModVarIndexes, ONLY: nVar, NameVar_V, UseMultiSpecies, UseMultiIon, &
        nFluid, nIonFluid, TypeFluid_I
-  use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK      !^CFG IF NOT COVARIANT
-  use ModGeometry,   ONLY: dx_BLK, dy_BLK, dz_BLK
+  use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK, dx_BLK, dy_BLK, dz_BLK
   use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, true_cell
 
   use ModGeometry,   ONLY: UseCovariant, &                !^CFG IF COVARIANT 
@@ -26,7 +25,8 @@ module ModFaceFlux
        EDotFA_X, EDotFA_Y, EDotFA_Z,     & ! output: E.Area for Boris !^CFG IF BORISCORR
        uDotArea_XI, uDotArea_YI, uDotArea_ZI,& ! output: U.Area for P source
        bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,& ! output: B x Area for J
-       UseRS7
+       UseRS7, UseTotalSpeed
+
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        IsNewBlockHall, hall_factor, get_face_current, set_ion_mass_per_charge
 
@@ -300,7 +300,7 @@ contains
     DoRoeOld = TypeFlux == 'RoeOld'      !^CFG IF ROEFLUX
     DoRoe    = TypeFlux == 'Roe'         !^CFG IF ROEFLUX
 
-    UseRS7 = DoRoe ! This is always true in the current implementation
+    UseRS7 = DoRoe  ! This is always true for the current implementation
 
     UseLindeFix = .false. &
          .or. DoHll      &               !^CFG IF LINDEFLUX
@@ -562,7 +562,7 @@ contains
     iDimFace   = iDim
 
     if(UseCovariant) RETURN    !^CFG IF COVARIANT
-                               !^CFG IF NOT COVARIANT BEGIN
+
     select case(iDim)
     case(x_)
        Area    = fAx_BLK(iBlockFace)
@@ -578,7 +578,7 @@ contains
        InvDxyz = 1./dz_BLK(iBlockFace)
     end select
     Area2 = Area**2
-                               !^CFG END COVARIANT
+
   end subroutine set_block_values
   !===========================================================================
   subroutine set_cell_values
@@ -850,31 +850,53 @@ contains
   contains
     !==========================================================================
     subroutine modify_flux(Flux_V,Un)
-      use ModVarIndexes,ONLY:RhoUx_,RhoUz_,Energy_
-      real,intent(in)::Un
-      real,dimension(nVar+1),intent(inout)::Flux_V
-      !----------------------------------------------------
-      Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_)+&
+
+      use ModVarIndexes, ONLY:RhoUx_,RhoUz_,Energy_
+
+      real, intent(in)   :: Un
+      real, intent(inout):: Flux_V(nFlux)
+      !----------------------------------------------------------------------
+      Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + &
            cHalf*DiffBb*(/AreaX,AreaY,AreaZ/)
-      Flux_V(Energy_)       = Flux_V(Energy_)+Un   * DiffBb
+      Flux_V(Energy_)       = Flux_V(Energy_) + Un*DiffBb
+
     end subroutine modify_flux
     !==========================================================================
     subroutine roe_solver_new
-      Flux_V = 0.5*(FluxLeft_V  + FluxRight_V) &
-           +DissipationFlux_V*Area
+
+      Flux_V = 0.5*(FluxLeft_V  + FluxRight_V) + DissipationFlux_V*Area
 
       Unormal_I = Unormal_I*Area
-      cMax    = cMax*Area
-      cMaxDt = cMax
+      cMax      = cMax*Area
+      cMaxDt    = cMax
+
     end subroutine roe_solver_new
     !^CFG IF RUSANOVFLUX BEGIN
     !==========================================================================
     subroutine lax_friedrichs_flux
 
-      call get_speed_max(State_V, B0x, B0y, B0z, Cmax = Cmax)
+      real    :: Cmax_I(nFluid)
+      integer :: iVar
+      !----------------------------------------------------------------------
+      call get_speed_max(State_V, B0x, B0y, B0z, Cmax_I = Cmax_I)
 
-      Flux_V = 0.5*(FluxLeft_V + FluxRight_V &
-           - Cmax*(StateRightCons_V - StateLeftCons_V))
+      if(UseTotalSpeed)then
+         Cmax = maxval(Cmax_I)
+         Flux_V = 0.5*(FluxLeft_V + FluxRight_V &
+              - Cmax*(StateRightCons_V - StateLeftCons_V))
+      else
+         do iFluid = 1, nFluid
+            Cmax = Cmax_I(iFluid); iRho=iRho_I(iFluid); iP=iP_I(iFluid) 
+            do iVar = iRho_I(iFluid), iP_I(iFluid)
+               Flux_V(iVar) = 0.5*(FluxLeft_V(iVar) + FluxRight_V(iVar) &
+                    - Cmax*(StateRightCons_V(iVar) - StateLeftCons_V(iVar)))
+            end do
+            iVar = nVar + iFluid ! energy index
+            Flux_V(iVar) = 0.5*(FluxLeft_V(iVar) + FluxRight_V(iVar) &
+                 - Cmax*(StateRightCons_V(iVar) - StateLeftCons_V(iVar)))
+         end do
+         Cmax = Cmax_I(1)
+      end if
 
       Unormal_I = 0.5*(UnLeft_I + UnRight_I)
       Enormal   = 0.5*(EnLeft + EnRight)                !^CFG IF BORISCORR
@@ -887,31 +909,64 @@ contains
 
       use ModVarIndexes, ONLY: B_, Energy_
 
-      real :: Cleft,  CleftStateLeft, CleftStateAverage
-      real :: Cright, CrightStateRight, CrightStateAverage
-      real :: WeightLeft, WeightRight, Diffusion
+      real, dimension(nFluid) :: CleftStateLeft_I,   CleftStateHat_I, &
+           Cmax_I, CrightStateRight_I, CrightStateHat_I
+      real :: Cleft, Cright, WeightLeft, WeightRight, Diffusion
+      integer :: iVar
       !-----------------------------------------------------------------------
 
       call get_speed_max(StateLeft_V,  B0x, B0y, B0z, &
-           Cleft =CleftStateLeft)
+           Cleft_I =CleftStateLeft_I)
       call get_speed_max(StateRight_V, B0x, B0y, B0z, &
-           Cright=CrightStateRight)
+           Cright_I=CrightStateRight_I)
       call get_speed_max(State_V, B0x, B0y, B0z, &
-           Cmax = Cmax, Cleft = CleftStateAverage, Cright = CrightStateAverage)
+           Cmax_I = Cmax_I, &
+           Cleft_I = CleftStateHat_I, Cright_I = CrightStateHat_I)
 
-      Cleft  = min(0.0, CleftStateLeft,   CleftStateAverage)
-      Cright = max(0.0, CrightStateRight, CrightStateAverage)
+      if(UseTotalSpeed)then
+         Cmax   = maxval(Cmax_I)
+         Cleft  =min(0.0, minval(CleftStateLeft_I), minval(CleftStateHat_I))
+         Cright =max(0.0, maxval(CrightStateRight_I), maxval(CrightStateHat_I))
 
-      WeightLeft  = Cright/(Cright - Cleft)
-      WeightRight = 1.0 - WeightLeft
-      Diffusion   = Cright*WeightRight
+         WeightLeft  = Cright/(Cright - Cleft)
+         WeightRight = 1.0 - WeightLeft
+         Diffusion   = Cright*WeightRight
 
-      Flux_V = &
-           (WeightRight*FluxRight_V + WeightLeft*FluxLeft_V &
-           - Diffusion*(StateRightCons_V - StateLeftCons_V))
+         Flux_V = &
+              (WeightRight*FluxRight_V + WeightLeft*FluxLeft_V &
+              - Diffusion*(StateRightCons_V - StateLeftCons_V))
 
-      ! Weighted average of the normal speed
-      Unormal_I = WeightRight*UnRight_I + WeightLeft*UnLeft_I
+         ! Weighted average of the normal speed
+         Unormal_I = WeightRight*UnRight_I + WeightLeft*UnLeft_I
+
+      else
+         Cmax   = Cmax_I(1)
+         do iFluid = 1, nFluid
+            Cleft =min(0.0, CleftStateLeft_I(iFluid), CleftStateHat_I(iFluid))
+            Cright=max(0.0,CrightStateRight_I(iFluid),CrightStateHat_I(iFluid))
+
+            WeightLeft  = Cright/(Cright - Cleft)
+            WeightRight = 1.0 - WeightLeft
+            Diffusion   = Cright*WeightRight
+
+            do iVar = iRho_I(iFluid), iP_I(iFluid)
+               Flux_V(iVar) = &
+                    (WeightRight*FluxRight_V(iVar)+WeightLeft*FluxLeft_V(iVar)&
+                    - Diffusion*(StateRightCons_V(iVar)-StateLeftCons_V(iVar)))
+            end do
+            iVar = nVar + iFluid ! energy index
+            Flux_V(iVar) = &
+                 (WeightRight*FluxRight_V(iVar)+WeightLeft*FluxLeft_V(iVar) &
+                 - Diffusion*(StateRightCons_V(iVar)-StateLeftCons_V(iVar)))
+
+
+            ! Weighted average of the normal speed
+            Unormal_I(iFluid) = &
+                 WeightRight*UnRight_I(iFluid) + WeightLeft*UnLeft_I(iFluid)
+
+         end do
+      end if
+
       Enormal   = WeightRight*EnRight   + WeightLeft*EnLeft !^CFG IF BORISCORR
 
     end subroutine harten_lax_vanleer_flux
@@ -922,15 +977,17 @@ contains
 
       use ModVarIndexes, ONLY: B_, Energy_
 
+      real, dimension(nFluid) :: Cleft_I, Cright_I, Cmax_I
       real :: Cleft, Cright, WeightLeft, WeightRight, Diffusion
       !-----------------------------------------------------------------------
 
       ! The propagation speeds are modified by the DoAw = .true. !
       call get_speed_max(State_V, B0x, B0y, B0z,  &
-           Cleft = Cleft, Cright = Cright, Cmax = Cmax)
+           Cleft_I = Cleft_I, Cright_I = Cright_I, Cmax_I = Cmax_I)
 
-      Cleft  = min(0.0, Cleft)
-      Cright = max(0.0, Cright)
+      Cmax   = maxval(Cmax_I)
+      Cleft  = min(0.0, minval(Cleft_I))
+      Cright = max(0.0, maxval(Cright_I))
 
       WeightLeft  = Cright/(Cright - Cleft)
       WeightRight = 1.0 - WeightLeft
@@ -983,9 +1040,9 @@ contains
 
       real :: Tmp, B1n2, Bn2, SignBn
 
-      real :: sL, CleftStateLeft, CleftStateRight
-      real :: sR, CrightStateLeft, CrightStateRight
-
+      real :: sL, CleftStateLeft_I(nFluid), CleftStateRight_I(nFluid)
+      real :: sR, CrightStateLeft_I(nFluid), CrightStateRight_I(nFluid)
+      
       integer, parameter :: ScalarMax_ = max(ScalarFirst_, ScalarLast_)
       real :: Scalar_V(ScalarFirst_:ScalarMax_)
       integer :: iVar
@@ -993,13 +1050,13 @@ contains
 
       ! This is the choice made in the hlld_tmp code. May not be the best.
       call get_speed_max(StateLeft_V,  B0x, B0y, B0z, &
-           Cleft =CleftStateLeft, Cright = CrightStateLeft)
+           Cleft_I = CleftStateLeft_I, Cright_I = CrightStateLeft_I)
 
       call get_speed_max(StateRight_V, B0x, B0y, B0z, &
-           Cleft =CleftStateRight, Cright=CrightStateRight)
+           Cleft_I = CleftStateRight_I, Cright_I = CrightStateRight_I)
 
-      sL = min(CleftStateLeft,  CleftStateRight) 
-      sR = max(CrightStateLeft, CrightStateRight)
+      sL = min(minval(CleftStateLeft_I),  minval(CleftStateRight_I)) 
+      sR = max(maxval(CrightStateLeft_I), maxval(CrightStateRight_I))
 
       Cmax   = max(sR, -sL)
       CmaxDt = Cmax
@@ -1748,17 +1805,17 @@ contains
 
   !===========================================================================
 
-  subroutine get_speed_max(State_V, B0x, B0y, B0z, cMax, cLeft, cRight)
+  subroutine get_speed_max(State_V, B0x, B0y, B0z, cMax_I, cLeft_I, cRight_I)
 
     use ModMultiFluid, ONLY: select_fluid, iFluid, iRho, iUx, iUy, iUz, iP
 
     real,    intent(in) :: State_V(nVar)
     real,    intent(in) :: B0x, B0y, B0z
-    real, optional, intent(out) :: Cmax        ! maximum speed relative to lab
-    real, optional, intent(out) :: Cleft       ! maximum left speed
-    real, optional, intent(out) :: Cright      ! maximum right speed
+    real, optional, intent(out) :: Cmax_I(nFluid)   ! max speed relative to lab
+    real, optional, intent(out) :: Cleft_I(nFluid)  ! maximum left speed
+    real, optional, intent(out) :: Cright_I(nFluid) ! maximum right speed
 
-    real :: CmaxFluid, CmaxDtFluid, CleftFluid, CrightFluid
+    real :: CmaxDt_I(nFluid)
     !--------------------------------------------------------------------------
 
     UnLeft = minval(UnLeft_I(1:nIonFluid))
@@ -1770,36 +1827,26 @@ contains
     endif                                        !^CFG IF BORISCORR    
 
     if(nFluid > 1)then
-       if(present(Cmax))then
-          CmaxFluid  =Cmax
-          CmaxDtFluid=CmaxDt
-       end if
-       if(present(Cleft))  CleftFluid =Cleft
-       if(present(Cright)) CrightFluid=Cright
 
        do iFluid = 2, nFluid
-          if(TypeFluid_I(iFluid)/='neutral') CYCLE
+          if(TypeFluid_I(iFluid)/='neutral')then
+             if(present(Cmax_I))   CmaxDt_I(iFluid) = CmaxDt_I(1)
+             if(present(Cmax_I))   Cmax_I(iFluid)   = Cmax_I(1)
+             if(present(Cleft_I))  Cleft_I(iFluid)  = Cleft_I(1)
+             if(present(Cright_I)) Cright_I(iFluid) = Cright_I(1)
+             CYCLE
+          end if
+
           call select_fluid
           UnLeft = UnLeft_I(iFluid)
           UnRight= UnRight_I(iFluid)
 
           call get_hd_speed
-
-          if(present(Cmax))then
-             CmaxFluid  =max(CmaxFluid,  Cmax)
-             CmaxDtFluid=max(CmaxDtFluid,CmaxDt)
-          end if
-          if(present(Cleft))  CleftFluid =min(CleftFluid, Cleft)
-          if(present(Cright)) CrightFluid=max(CrightFluid,Cright)
        end do
-
-       if(present(Cmax))then
-          Cmax  =CmaxFluid
-          CmaxDt=CmaxDtFluid
-       end if
-       if(present(Cleft))  Cleft =CleftFluid
-       if(present(Cright)) Cright=CrightFluid
     end if
+
+    ! Take maximum time step limit for all the fluids
+    if (present(Cmax_I)) CmaxDt=maxval(CmaxDt_I)
 
   contains
 
@@ -1850,20 +1897,20 @@ contains
       ! so take the maximum of the two
 
       if(DoAw)then                                       !^CFG IF AWFLUX BEGIN
-         Un      = min(UnRight, UnLeft)
-         Cleft   = min(Un*GammaA2 - Fast, Un - Slow)
-         Un      = max(UnLeft, UnRight)
-         Cright  = max(Un*GammaA2 + Fast, Un + Slow)
-         CmaxDt  = max(Cright, -Cleft)
-         Cmax    = CmaxDt
+         Un           = min(UnRight, UnLeft)
+         Cleft_I(1)   = min(Un*GammaA2 - Fast, Un - Slow)
+         Un           = max(UnLeft, UnRight)
+         Cright_I(1)  = max(Un*GammaA2 + Fast, Un + Slow)
+         Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
+         CmaxDt_I(1)  = Cmax_I(1)
       else                                                !^CFG END AWFLUX
          UnBoris            = Un*GammaA2
-         if(present(Cmax))then
-            Cmax   = max(abs(UnBoris) + Fast, abs(Un) + Slow)
-            CmaxDt = Cmax
+         if(present(Cmax_I))then
+            Cmax_I(1)   = max(abs(UnBoris) + Fast, abs(Un) + Slow)
+            CmaxDt_I(1) = Cmax_I(1)
          end if
-         if(present(Cleft))  Cleft  = min(UnBoris - Fast, Un - Slow)
-         if(present(Cright)) Cright = max(UnBoris + Fast, Un + Slow)
+         if(present(Cleft_I))  Cleft_I(1)  = min(UnBoris - Fast, Un - Slow)
+         if(present(Cright_I)) Cright_I(1) = max(UnBoris + Fast, Un + Slow)
       end if                                              !^CFG IF AWFLUX
 
     end subroutine get_boris_speed
@@ -1965,31 +2012,31 @@ contains
 
       if(DoAw)then                                   !^CFG IF AWFLUX BEGIN
          if(HallCoeff > 0.0)then
-            Cleft   = min(UnLeft, UnRight, HallUnLeft, HallUnRight)
-            Cright  = max(UnLeft, UnRight, HallUnLeft, HallUnRight)
-            CmaxDt  = max(Cright + FastDt, - Cleft - FastDt)
-            Cleft   = Cleft  - Fast
-            Cright  = Cright + Fast
-            Cmax    = max(Cright, -Cleft)
+            Cleft_I(1)   = min(UnLeft, UnRight, HallUnLeft, HallUnRight)
+            Cright_I(1)  = max(UnLeft, UnRight, HallUnLeft, HallUnRight)
+            CmaxDt_I(1)  = max(Cright_I(1) + FastDt, - Cleft_I(1) - FastDt)
+            Cleft_I(1)   = Cleft_I(1)  - Fast
+            Cright_I(1)  = Cright_I(1) + Fast
+            Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
          else
-            Cleft   = min(UnLeft, UnRight) - Fast
-            Cright  = max(UnLeft, UnRight) + Fast
-            Cmax    = max(Cright, -Cleft)
-            CmaxDt = Cmax
+            Cleft_I(1)   = min(UnLeft, UnRight) - Fast
+            Cright_I(1)  = max(UnLeft, UnRight) + Fast
+            Cmax_I(1)    = max(Cright_I(1), -Cleft_I(1))
+            CmaxDt_I(1) = Cmax_I(1)
          end if
       else                                           !^CFG END AWFLUX
-         if(present(Cmax))then
+         if(present(Cmax_I))then
             if(HallCoeff > 0.0)then
-               Cmax   = max(abs(Un), abs(HallUnLeft), abs(HallUnRight))
-               CmaxDt = Cmax + FastDt
-               Cmax   = Cmax + Fast
+               Cmax_I(1)   = max(abs(Un), abs(HallUnLeft), abs(HallUnRight))
+               CmaxDt_I(1) = Cmax_I(1) + FastDt
+               Cmax_I(1)   = Cmax_I(1) + Fast
             else
-               Cmax   = abs(Un) + Fast
-               CmaxDt = Cmax
+               Cmax_I(1)   = abs(Un) + Fast
+               CmaxDt_I(1) = Cmax_I(1)
             end if
          end if
-         if(present(Cleft))  Cleft  = Un - Fast
-         if(present(Cright)) Cright = Un + Fast
+         if(present(Cleft_I))  Cleft_I(1)  = Un - Fast
+         if(present(Cright_I)) Cright_I(1) = Un + Fast
       end if                                         !^CFG IF AWFLUX
 
       if(DoTestCell)then
@@ -2000,7 +2047,7 @@ contains
          write(*,*)NameSub,' Calfven=',sqrt(Alfven2)
          write(*,*)NameSub,' Calfven_normal=',sqrt(Alfven2Normal)
          write(*,*)NameSub,' Cfast=',Fast
-         if(present(Cmax)) write(*,*)NameSub,' Cmax=',Cmax/Area
+         if(present(Cmax_I)) write(*,*)NameSub,' Cmax_I=',Cmax_I/Area
       end if
 
     end subroutine get_mhd_speed
@@ -2025,23 +2072,23 @@ contains
       Sound = sqrt(Sound2)
 
       if(DoAw)then                                   !^CFG IF AWFLUX BEGIN
-         Cleft   = min(UnLeft, UnRight) - Sound
-         Cright  = max(UnLeft, UnRight) + Sound
-         Cmax    = max(Cright, -Cleft)
-         CmaxDt = Cmax
+         Cleft_I(iFluid)  = min(UnLeft, UnRight) - Sound
+         Cright_I(iFluid) = max(UnLeft, UnRight) + Sound
+         Cmax_I(iFluid)   = max(Cright_I(iFluid), -Cleft_I(iFluid))
+         CmaxDt_I(iFluid) = Cmax_I(iFluid)
       else                                           !^CFG END AWFLUX
-         if(present(Cmax))then
-            Cmax   = abs(Un) + Sound
-            CmaxDt = Cmax
+         if(present(Cmax_I))then
+            Cmax_I(iFluid)   = abs(Un) + Sound
+            CmaxDt_I(iFluid) = Cmax_I(iFluid)
          end if
-         if(present(Cleft))  Cleft  = Un - Sound
-         if(present(Cright)) Cright = Un + Sound
+         if(present(Cleft_I))  Cleft_I(iFluid)  = Un - Sound
+         if(present(Cright_I)) Cright_I(iFluid) = Un + Sound
       end if                                         !^CFG IF AWFLUX
 
       if(DoTestCell)then
          write(*,*)NameSub,' Un     =',Un
          write(*,*)NameSub,' Csound =',Sound
-         write(*,*)NameSub,' Cmax   =',Cmax/Area
+         if(present(Cmax_I)) write(*,*)NameSub,' Cmax_I  =',Cmax_I/Area
       end if
 
     end subroutine get_hd_speed
