@@ -1460,7 +1460,7 @@ subroutine MH_set_parameters(TypeAction)
            if (index(satellite_string,'ray')>0 .or. &
                 index(satellite_string,'RAY')>0) then
               satellite_vars(ifile) = trim(satellite_vars(ifile)) // &
-                   ' theta1 phi1 status1 theta2 phi2 status2'
+                   ' theta1 phi1 status theta2 phi2'
            endif
 
            plot_type(ifile) = "satellite"
