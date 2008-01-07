@@ -104,7 +104,7 @@ subroutine impl2expl(w,iBLK)
   use ModSize,     ONLY : nI, nJ, nK
   use ModAdvance,  ONLY : nVar, State_VGB, Energy_GBI
   use ModEnergy,   ONLY : calc_pressure_cell
-  use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
+  use ModMultiFluid, ONLY: iFluid, nFluid, iP_I, iP
   implicit none
 
   real, intent(in)    :: w(nI,nJ,nK,nVar)
@@ -118,7 +118,7 @@ subroutine impl2expl(w,iBLK)
      State_VGB(iVar,1:nI,1:nJ,1:nK,iBLK) = w(:,:,:,iVar)
   end do
   do iFluid = 1, nFluid
-     call select_fluid
+     iP = iP_I(iFluid)
      Energy_GBI(1:nI,1:nJ,1:nK,iBLK,iFluid) = w(:,:,:,iP)
   end do
   call calc_pressure_cell(iBLK)
@@ -277,6 +277,10 @@ end subroutine getsource
 !==============================================================================
 subroutine get_face_flux(StateCons_CV,B0_CD,nI,nJ,nK,iDim,iBlock,Flux_CV)
 
+  ! We need the cell centered physical flux function, but to keep
+  ! the implicit scheme general for all equations, we reuse
+  ! subroutine get_physical_flux from ModFaceFlux.
+
   use ModVarIndexes,ONLY: nFluid, nVar
   use ModProcMH,   ONLY: iProc
   use ModMain,     ONLY: nDim, x_, y_, z_, &
@@ -285,7 +289,7 @@ subroutine get_face_flux(StateCons_CV,B0_CD,nI,nJ,nK,iDim,iBlock,Flux_CV)
        set_block_values, set_cell_values, get_physical_flux, &
        HallJx, HallJy, HallJz, DoTestCell, Area
   use ModHallResist, ONLY: UseHallResist, HallJ_CD
-  use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
+  use ModMultiFluid, ONLY: iFluid, nFluid, iP_I, iP
 
   implicit none
 
@@ -297,6 +301,7 @@ subroutine get_face_flux(StateCons_CV,B0_CD,nI,nJ,nK,iDim,iBlock,Flux_CV)
   real :: Primitive_V(nVar), Conservative_V(nFlux), Flux_V(nFlux)
 
   real :: Un_I(nFluid), En, HallUn
+  integer :: i, j, k
 
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
@@ -308,38 +313,43 @@ subroutine get_face_flux(StateCons_CV,B0_CD,nI,nJ,nK,iDim,iBlock,Flux_CV)
   end if
 
   call set_block_values(iBlock, iDim)
-  do kFace = 1, nK; do jFace = 1, nJ; do iFace = 1, nI
+  ! Set iFace=i, jFace=j, kFace=k so that 
+  ! call set_cell_values and call get_physical_flux work
+  ! This is not quite right but good enough for the preconditioner
+  do k = 1, nK; kFace=k; do j = 1, nJ; jFace=j; do i = 1, nI; iFace=i
 
      DoTestCell = DoTestMe .and. &
-          iFace==iTest .and. jFace==jTest .and. kFace==kTest
+          i==iTest .and. j==jTest .and. k==kTest
 
-     Primitive_V = StateCons_CV(iFace, jFace, kFace, :)
+     Primitive_V = StateCons_CV(i, j, k, :)
      call conservative_to_primitive(Primitive_V)
 
-     Conservative_V(1:nVar) = StateCons_CV(iFace, jFace, kFace, :)
+     Conservative_V(1:nVar) = StateCons_CV(i, j, k, :)
      do iFluid=1, nFluid
-        call select_fluid
+        iP = iP_I(iFluid)
         Conservative_V(iP) = Primitive_V(iP)
-        Conservative_V(nVar+iFluid) = StateCons_CV(iFace, jFace, kFace, iP)
+        Conservative_V(nVar+iFluid) = StateCons_CV(i, j, k, iP)
      end do
 
      if(UseHallResist)then
-        HallJx = HallJ_CD(iFace, jFace, kFace, x_)
-        HallJy = HallJ_CD(iFace, jFace, kFace, y_)
-        HallJz = HallJ_CD(iFace, jFace, kFace, z_)
+        HallJx = HallJ_CD(i, j, k, x_)
+        HallJy = HallJ_CD(i, j, k, y_)
+        HallJz = HallJ_CD(i, j, k, z_)
      end if
 
      call set_cell_values
      call get_physical_flux(Primitive_V, &
-          B0_CD(iFace, jFace, kFace, x_), &
-          B0_CD(iFace, jFace, kFace, y_), &
-          B0_CD(iFace, jFace, kFace, z_), &
+          B0_CD(i, j, k, x_), &
+          B0_CD(i, j, k, y_), &
+          B0_CD(i, j, k, z_), &
           Conservative_V, Flux_V, Un_I, En, HallUn)
 
-     Flux_CV(iFace, jFace, kFace, 1:nVar)= Flux_V(1:nVar)
+     Flux_CV(i, j, k, 1:nVar)= Flux_V(1:nVar)
+
+     ! Replace pressure flux with energy flux
      do iFluid = 1, nFluid
-        call select_fluid
-        Flux_CV(iFace, jFace, kFace, iP)    = Flux_V(nVar+iFluid)
+        iP = iP_I(iFluid)
+        Flux_CV(i, j, k, iP) = Flux_V(nVar+iFluid)
      end do
 
   end do; end do; end do
@@ -347,13 +357,13 @@ subroutine get_face_flux(StateCons_CV,B0_CD,nI,nJ,nK,iDim,iBlock,Flux_CV)
 end subroutine get_face_flux
 
 !==============================================================================
-subroutine get_cmax_face(w,B0,qnI,qnJ,qnK,iDim,iBlock,cmax)
+subroutine get_cmax_face(w,B0,qnI,qnJ,qnK,iDim,iBlock,Cmax)
 
   use ModProcMH,   ONLY: iProc
   use ModMain,     ONLY: nDim, x_, y_, z_, ProcTest, BlkTest,iTest,jTest,kTest
   use ModImplicit, ONLY: nw
   use ModFaceFlux, ONLY: iFace, jFace, kFace, &
-       set_block_values, set_cell_values, get_speed_max,&
+       set_block_values, set_cell_values, get_speed_max, nFluid, &
        Area, DoLf, DoAw, DoRoe, DoHll, HallUnLeft, HallUnRight, DoTestCell
 
   implicit none
@@ -363,7 +373,7 @@ subroutine get_cmax_face(w,B0,qnI,qnJ,qnK,iDim,iBlock,cmax)
   real, intent(in)   :: B0(qnI,qnJ,qnK,ndim)
   real, intent(out)  :: Cmax(qnI,qnJ,qnK)
 
-  real :: Primitive_V(nw)
+  real :: Primitive_V(nw), Cmax_I(nFluid)
 
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
@@ -397,8 +407,8 @@ subroutine get_cmax_face(w,B0,qnI,qnJ,qnK,iDim,iBlock,cmax)
           B0(iFace, jFace, kFace, x_), &
           B0(iFace, jFace, kFace, y_), &
           B0(iFace, jFace, kFace, z_), &
-          cmax = cmax(iFace, jFace, kFace))
-     cmax(iFace, jFace, kFace) = cmax(iFace, jFace, kFace)
+          cmax_I = Cmax_I)
+     cmax(iFace, jFace, kFace) = maxval(Cmax_I)
   end do; end do; end do
 
 end subroutine get_cmax_face
