@@ -272,7 +272,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
 
   real :: Volume
   real :: StateIntegral_V(nVar)
-  real :: sat_RayVars(6), sat_RayVarsSum(6)  !DTW, July 2007
+  real :: SatRayVar_I(5), SatRayVarSum_I(5)  !DTW, July 2007
 
   integer :: iVar,iR,iVarTot,itmp,jtmp, iBLK
   integer :: i,j,k
@@ -320,9 +320,9 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
      !DTW, July 2007
      do iVar=1, nLogVar
         select case(NameLogVar_I(iVar))
-        case('theta1','theta2','phi1','phi2','status1','status2')
-           call sat_get_ray(iSat, sat_RayVars)
-           call MPI_reduce(sat_RayVars, sat_RayVarsSum, 6, MPI_REAL, MPI_SUM, &
+        case('theta1','theta2','phi1','phi2','status')
+           call sat_get_ray(iSat, SatRayVar_I)
+           call MPI_reduce(SatRayVar_I, SatRayVarSum_I, 6, MPI_REAL, MPI_SUM, &
                 0, iComm, iError)
            EXIT
         end select
@@ -883,17 +883,15 @@ contains
        
        !Raytracing footpoint values  DTW, July 2007 !^CFG IF RAYTRACE BEGIN
     case('theta1')
-       LogVar_I(iVarTot) = sat_RayVarsSum(1)
+       LogVar_I(iVarTot) = SatRayVarSum_I(1)
     case('phi1')
-       LogVar_I(iVarTot) = sat_RayVarsSum(2)
-    case('status1')
-       LogVar_I(iVarTot) = sat_RayVarsSum(3)
+       LogVar_I(iVarTot) = SatRayVarSum_I(2)
+    case('status')
+       LogVar_I(iVarTot) = SatRayVarSum_I(3)
     case('theta2')
-       LogVar_I(iVarTot) = sat_RayVarsSum(4)
+       LogVar_I(iVarTot) = SatRayVarSum_I(4)
     case('phi2')
-       LogVar_I(iVarTot) = sat_RayVarsSum(5)
-    case('status2')
-       LogVar_I(iVarTot) = sat_RayVarsSum(6)       !^CFG END RAYTRACE
+       LogVar_I(iVarTot) = SatRayVarSum_I(5)       !^CFG END RAYTRACE
 
     case default
        LogVar_I(iVarTot) = -777.0
