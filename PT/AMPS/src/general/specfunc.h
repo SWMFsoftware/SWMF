@@ -171,8 +171,11 @@ public:
     MPI_Gather(buffer,1,MPI_UNSIGNED_LONG,buffer,1,MPI_UNSIGNED_LONG,0,MPI_COMM_WORLD);
 
     if (ThisThread==0) {
-      if (message!=NULL) printf("CRC32 checksum, message=%s\n",message);
-      else printf("CRC32 checksum:\n");
+      CRC32 cumulativeSignature;
+      cumulativeSignature.add(buffer,TotalThreadsNumber);
+
+      if (message!=NULL) printf("CRC32 checksum, cumulativeSignature=0x%lx, message=%s:\n",cumulativeSignature.checksum(),message);
+      else printf("CRC32 checksum, cumulativeSignature=0x%lx:\n",cumulativeSignature.checksum());
 
       for (thread=0;thread<TotalThreadsNumber;thread++) printf("thread=%ld, sum=0x%lx\n",thread,buffer[thread]);
     }
