@@ -194,15 +194,7 @@ public:
     return res;
   }; 
 
-  void RandomPosition(float* x) {
-    double xtmp[3];
-    int i;
-
-    RandomPosition(xtmp);
-    for (i=0;i<DIM;i++) x[i]=xtmp[i];
-  };
-
-  void RandomPosition(double* x) {
+  template <class T> void RandomPosition(T* x) {
     double f1,f2,f3; 
 
     switch (DIM) {
@@ -213,23 +205,58 @@ public:
       x[0]=f1*(1.0-f2);
       x[1]=f1*f2*(1.0-f3);
       x[2]=f1*f2*f3;
+
+exit(__LINE__,__FILE__,"Random position does'nt works correctly");
       return;
     case 2 :
-      f1=rnd(); if (f1<0.00001) f1=0.00001; if (f1>0.99999) f1=0.99999; f1=sqrt(f1);
-      f2=rnd(); if (f2<0.00001) f2=0.00001; if (f2>0.99999) f2=0.99999;
-      x[0]=f1*(1.0-f2);
-      x[1]=f1*f2;
+      if (SymmetryMode==no_symmetry) {
+        x[0]=1.0-sqrt(rnd());
+        x[1]=(1.0-x[0])*rnd();
+      }
+      else if (SymmetryMode==cylindrical_symmetry) {
+        register double r0,J,ltot,p,pmax,f1,f2,nd0[2],nd1[2],nd2[2],e0[2],e1[2];
+
+        node[0]->GetX(nd0);node[1]->GetX(nd1);node[2]->GetX(nd2); 
+        e0[0]=nd1[0]-nd0[0],e0[1]=nd1[1]-nd0[1];
+        e1[0]=nd2[0]-nd0[0],e1[1]=nd2[1]-nd0[1];
+
+        r0=nd0[1];
+        J=fabs(e0[0]*e1[1]-e1[0]*e0[1]);
+
+        //distribute the first coordinate
+        ltot=sqrt(pow(e1[0],2)+pow(e1[1],2))+sqrt(pow(e0[0],2)+pow(e0[1],2));
+
+        f2=(fabs(e0[1]-2.0*e1[1])>1.0E-8*ltot) ? f2=(r0+e0[1]-e1[1])/(e0[1]-2.0*e1[1]) : 10.0;
+        pmax=((f2>0.0)&&(f2<1.0)) ? max(r0+e0[1]/2.0,(1.0-f2)*(r0+f2*e1[1]+e0[1]*(1.0-f2)/2.0)) : r0+e0[1]/2.0; 
+
+        do {
+          f2=rnd();
+          p=(1.0-f2)*(r0+f2*e1[1]+e0[1]*(1.0-f2)/2.0);
+        }
+        while (p/pmax<rnd()); 
+
+        //distribute the second coordinate
+        pmax=max(r0+e0[1]*(1.0-f2)+e1[1]*f2,r0+e1[1]*f2);
+
+        do {
+          f1=(1.0-f2)*rnd();
+          p=r0+e0[1]*f1+e1[1]*f2;
+        }
+        while (p/pmax<rnd());
+
+        if (f1<0.00001) f1=0.00001; if (f1>0.99999) f1=0.99999;
+        if (f2<0.00001) f2=0.00001; if (f2>0.99999) f2=0.99999;
+
+        x[0]=f1,x[1]=f2;
+      }
+
       return;
     case 1 : 
       f1=rnd(); if (f1<0.00001) f1=0.00001; if (f1>0.99999) f1=0.99999;
       x[0]=f1;
       return;
-    case 0 :
-      return;
     default :
-      printf("proc. Cface::RandomPosition()\n");
-      printf("wrong DIM value: DIM=%i\n",DIM);
-      exit(__LINE__,__FILE__);
+      exit(__LINE__,__FILE__,"wrong DIM value");
     }
   }; 
 
