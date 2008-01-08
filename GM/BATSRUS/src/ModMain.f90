@@ -160,8 +160,8 @@ Module ModMain
   logical :: UseConstrainB    = .false. !^CFG IF CONSTRAINB
   logical :: UseB0Source
   logical :: UseHyperbolicDivb= .false.
-  real    :: SpeedHypDim = 1.0, SpeedHyp = 1.0, SpeedHyp2 = 1.0
-  real    :: TauHypDim = 1.0, TauHyp = 1.0
+  real    :: SpeedHypDim = -1.0, SpeedHyp = 1.0, SpeedHyp2 = 1.0
+  real    :: HypDecay = 0.2
   
   !\
   ! More numerical scheme parameters

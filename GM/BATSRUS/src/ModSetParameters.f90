@@ -1228,6 +1228,7 @@ subroutine MH_set_parameters(TypeAction)
         !^CFG END CONSTRAINB
 
         if (iProc==0 &
+             .and..not.UseHyperbolicDivb &
              .and..not.UseDivbSource &
              .and..not.UseProjection &      !^CFG IF PROJECTION
              .and..not.UseConstrainB &      !^CFG IF CONSTRAINB
@@ -1243,11 +1244,19 @@ subroutine MH_set_parameters(TypeAction)
         DoInitConstrainB = .true.                        !^CFG IF CONSTRAINB
 
      case("#HYPERBOLICDIVB")
-        call read_var('UseHyperbolicDivB',UseHyperbolicDivB)
-        if(UseHyperbolicDivB) then
-           call read_var('SpeedHypDim',SpeedHypDim)
-           call read_var('TauHypDim'  ,TauHypDim)
-        end if
+        if(NameVar_V(Bz_+1) /= 'Hyp')then
+           if(iProc==0)then
+              write(*,*) NameSub // 'WARNING: ',&
+                   'there is no hyperbolic scalar variable in the equation module!'
+              if (UseStrict) call stop_mpi('Correct PARAM.in or change equation!')
+           end if
+        else
+           call read_var('UseHyperbolicDivB',UseHyperbolicDivB)
+           if(UseHyperbolicDivB) then
+              call read_var('SpeedHypDim',SpeedHypDim)
+              call read_var('HypDecay'   ,HypDecay)
+           end if
+        endif
      case("#DIVBSOURCE")
 	call read_var('UseB0Source'   ,UseB0Source)
      case("#USECURLB0")
@@ -1937,6 +1946,7 @@ contains
     UseConstrainB   = .false.         !^CFG IF CONSTRAINB
 
     UseB0Source     = .true.
+    UseHyperbolicDivB = NameVar_V(Bz_+1) == 'Hyp'
 
     UseUpdateCheck  = .true.
     ! The use of (/../) is correct F90, but it is replaced
