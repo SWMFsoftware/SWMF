@@ -6,7 +6,9 @@ module ModUser
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_set_ics,                    &
        IMPLEMENTED3 => user_get_log_var,                &
-       IMPLEMENTED4 => user_get_b0
+       IMPLEMENTED4 => user_get_b0,                     &
+       IMPLEMENTED5 => user_face_bcs,                   &
+       IMPLEMENTED6 => user_set_outerbcs
 
   use ModVarIndexes, ONLY: nVar
 
@@ -16,18 +18,24 @@ module ModUser
   ! Here you must define a user routine Version number and a 
   ! descriptive string.
   !/
-  real,              parameter :: VersionUserModule = 1.1
+  real,              parameter :: VersionUserModule = 1.2
   character (len=*), parameter :: NameUserModule = &
        'Waves and GEM, Yingjuan Ma'
 
   character (len=20) :: UserProblem='wave'
 
   real :: Width, Amplitude, Phase, LambdaX, LambdaY, LambdaZ
-  real,dimension(nVar):: Width_I=0.0, Ampl_I=0.0, Phase_I=0.0, &
-       KxWave_I=0.0, KyWave_I=0.0,KzWave_I=0.0
+  real,dimension(nVar):: Width_V=0.0, Ampl_V=0.0, Phase_V=0.0, &
+       KxWave_V=0.0, KyWave_V=0.0,KzWave_V=0.0
   integer :: iVar             
   logical:: DoInitialize=.true.
   real :: Lx=25.6, Lz=12.8, Lambda0=0.5, Ay=0.1, Tp=0.5 , B0=1.0  
+
+  ! The (rotated) unperturbed initial state with primitive variables
+  real :: PrimInit_V(nVar)
+
+  ! Velocity of wave (default is set for right going whistler wave test)
+  real :: Velocity = 169.344
   
 contains
 
@@ -47,6 +55,8 @@ contains
        select case(NameCommand)
        case('#USERPROBLEM')
           call read_var('UserProblem',UserProblem)
+       case('#WAVESPEED')
+          call read_var('Velocity',Velocity)
        case('#WAVE')
           call read_var('iVar',iVar)
           call read_var('Width',Width)
@@ -55,14 +65,14 @@ contains
           call read_var('LambdaY',LambdaY)
           call read_var('LambdaZ',LambdaZ)
           call read_var('Phase',Phase)
-          Width_I(iVar)=Width
-          Ampl_I(iVar)=Amplitude
-          Phase_I(iVar)=Phase*cDegToRad
+          Width_V(iVar)=Width
+          Ampl_V(iVar)=Amplitude
+          Phase_V(iVar)=Phase*cDegToRad
           !if the wavelength is smaller than 0.0, 
           !then the wave number is set to0
-          KxWave_I(iVar) = max(0.0, cTwoPi/LambdaX)          
-          KyWave_I(iVar) = max(0.0, cTwoPi/LambdaY)          
-          KzWave_I(iVar) = max(0.0, cTwoPi/LambdaZ)
+          KxWave_V(iVar) = max(0.0, cTwoPi/LambdaX)          
+          KyWave_V(iVar) = max(0.0, cTwoPi/LambdaY)          
+          KzWave_V(iVar) = max(0.0, cTwoPi/LambdaZ)
 
        case('#USERINPUTEND')
           if(iProc==0) write(*,*)'USERINPUTEND'
@@ -79,14 +89,14 @@ contains
   subroutine user_set_ics
     use ModMain,     ONLY: globalBLK
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
-    use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, &
+    use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, &
          Bx_, By_, Bz_, rho_, p_
     use ModProcMH,   ONLY: iProc
-    use ModPhysics,  ONLY: ShockSlope
+    use ModPhysics,  ONLY: ShockSlope, ShockLeftState_V
     use ModNumconst, ONLY: cOne,cPi, cTwoPi
     implicit none
 
-    real,dimension(nVar):: state_I,KxTemp_I,KyTemp_I
+    real,dimension(nVar):: state_V,KxTemp_V,KyTemp_V
     real :: SinSlope, CosSlope
     integer :: i, j, k, iBlock
     !--------------------------------------------------------------------------
@@ -94,41 +104,51 @@ contains
 
     select case(UserProblem)
     case('wave')
-       if(ShockSlope.ne.0.0.and.DoInitialize)then
-          SinSlope=ShockSlope/sqrt(cOne+ShockSlope**2)
-          CosSlope=      cOne/sqrt(cOne+ShockSlope**2)
-          state_I(:)=Ampl_I(:)
-          Ampl_I(rhoUx_) = &
-               (CosSlope*state_I(rhoUx_)-SinSlope*state_I(rhoUy_))
-          Ampl_I(rhoUy_) =  &
-               (SinSlope*state_I(rhoUx_)+CosSlope*state_I(rhoUy_))
-          Ampl_I(Bx_) = &
-               CosSlope*state_I(Bx_)-SinSlope*state_I(By_)
-          Ampl_I(By_) = &
-               SinSlope*state_I(Bx_)+CosSlope*state_I(By_)
 
-          KxTemp_I= KxWave_I
-          KyTemp_I= KyWave_I
-          KxWave_I= CosSlope*KxTemp_I-SinSlope*KyTemp_I
-          KyWave_I= SinSlope*KxTemp_I+CosSlope*KyTemp_I
+       if(DoInitialize)then
 
           DoInitialize=.false.
 
-          !write(*,*)'KxWave_I(Bx_:Bz_),KyWave_I(Bx_:Bz_),KzWave_I(Bx_:Bz_)=',&
-          !     KxWave_I(Bx_:Bz_),KyWave_I(Bx_:Bz_),KzWave_I(Bx_:Bz_)
-          !write(*,*)'       Ampl_I(Bx_:Bz_) =',       Ampl_I(Bx_:Bz_) 
-          !write(*,*)'      Phase_I(Bx_:Bz_) =',       Phase_I(Bx_:Bz_)
+          PrimInit_V = ShockLeftState_V
 
+          if(ShockSlope /= 0.0)then
+             CosSlope = 1.0/sqrt(1+ShockSlope**2)
+             SinSlope = ShockSlope*CosSlope
+
+             State_V = Ampl_V
+             Ampl_V(RhoUx_) = CosSlope*State_V(RhoUx_)-SinSlope*State_V(RhoUy_)
+             Ampl_V(RhoUy_) = SinSlope*State_V(RhoUx_)+CosSlope*State_V(RhoUy_)
+             Ampl_V(Bx_)    = CosSlope*State_V(Bx_)   - SinSlope*State_V(By_)
+             Ampl_V(By_)    = SinSlope*State_V(Bx_)   + CosSlope*State_V(By_)
+
+             KxTemp_V= KxWave_V
+             KyTemp_V= KyWave_V
+             KxWave_V= CosSlope*KxTemp_V - SinSlope*KyTemp_V
+             KyWave_V= SinSlope*KxTemp_V + CosSlope*KyTemp_V
+
+             State_V = ShockLeftState_V
+             PrimInit_V(Ux_) = CosSlope*State_V(Ux_) - SinSlope*State_V(Uy_)
+             PrimInit_V(Uy_) = SinSlope*State_V(Ux_) + CosSlope*State_V(Uy_)
+             PrimInit_V(Bx_) = CosSlope*State_V(Bx_) - SinSlope*State_V(By_)
+             PrimInit_V(By_) = SinSlope*State_V(Bx_) + CosSlope*State_V(By_)
+
+             !write(*,*) &
+             !    'KxWave_V(Bx_:Bz_),KyWave_V(Bx_:Bz_),KzWave_V(Bx_:Bz_)=',&
+             !     KxWave_V(Bx_:Bz_),KyWave_V(Bx_:Bz_),KzWave_V(Bx_:Bz_)
+             !write(*,*)'       Ampl_V(Bx_:Bz_) =',       Ampl_V(Bx_:Bz_) 
+             !write(*,*)'      Phase_V(Bx_:Bz_) =',       Phase_V(Bx_:Bz_)
+
+          end if
        end if
 
        do iVar=1,nVar
-          where(abs(x_BLK(:,:,:,iBlock))<Width_I(iVar))   &          
+          where(abs(x_BLK(:,:,:,iBlock)) < Width_V(iVar))   &
                State_VGB(iVar,:,:,:,iBlock)=              &
                State_VGB(iVar,:,:,:,iBlock)               &
-               + Ampl_I(iVar)*cos(Phase_I(iVar)           &
-               + KxWave_I(iVar)*x_BLK(:,:,:,iBlock)       &
-               + KyWave_I(iVar)*y_BLK(:,:,:,iBlock)       &
-               + KzWave_I(iVar)*z_BLK(:,:,:,iBlock))
+               + Ampl_V(iVar)*cos(Phase_V(iVar)           &
+               + KxWave_V(iVar)*x_BLK(:,:,:,iBlock)       &
+               + KyWave_V(iVar)*y_BLK(:,:,:,iBlock)       &
+               + KzWave_V(iVar)*z_BLK(:,:,:,iBlock))
        end do
 
     case('GEM')
@@ -202,5 +222,109 @@ contains
     B0_D = (/0.2, 0.3, 0.4/)
 
   end subroutine user_get_b0
+
+  !=====================================================================
+
+  subroutine user_face_bcs(VarsGhostFace_V)
+
+    use ModMain,    ONLY: x_, y_, z_, iTest, jTest, kTest, BlkTest
+    use ModAdvance, ONLY: Ux_, Uy_, Uz_, By_, Bz_, State_VGB
+    use ModFaceBc,  ONLY: FaceCoords_D, TimeBc, &
+         VarsTrueFace_V, iFace, jFace, kFace, iBlockBc, iSide
+
+    real, intent(out):: VarsGhostFace_V(nVar)
+
+    integer :: iVar
+    real :: Dx
+    logical :: DoTest = .false.
+    !-------------------------------------------------------------------------
+
+    DoTest = iBlockBc == BlkTest
+!DoTest = iFace == iTest .and. jFace == jTest .and. kFace == kTest .and. DoTest
+
+     if(DoTest)write(*,*)'face: iFace,jFace,kFace,iSide=',&
+          iFace,jFace,kFace,iSide
+!     DoTest = .false.
+
+    Dx = Velocity*TimeBc
+
+!    if(DoTest) write(*,*)'Velocity, TimeBc, tSim, Dx=',&
+!         Velocity, TimeBc, Dx
+
+    do iVar = 1, nVar
+       ! Both of these are primitive variables
+       VarsGhostFace_V(iVar) = PrimInit_V(iVar)         &
+            + Ampl_V(iVar)*cos(Phase_V(iVar)            &
+            + KxWave_V(iVar)*(FaceCoords_D(x_) - Dx)    &
+            + KyWave_V(iVar)*FaceCoords_D(y_)           &
+            + KzWave_V(iVar)*FaceCoords_D(z_))
+
+!       if(DoTest)write(*,*)'iVar, True, Ghost=',&
+!            iVar, VarsTrueFace_V(iVar), VarsGhostFace_V(iVar)
+
+    end do
+
+  end subroutine user_face_bcs
+
+  !=====================================================================
+
+  subroutine user_set_outerbcs(iBlock,iSide, TypeBc, IsFound)
+
+    use ModSize,     ONLY: nI, nJ, nK
+    use ModPhysics,  ONLY: ShockSlope
+    use ModMain,     ONLY: Time_Simulation, iTest, jTest, kTest, BlkTest
+    use ModAdvance,  ONLY: nVar, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, State_VGB
+    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, x1, x2, y1, y2, z1, z2
+    use ModSetOuterBC
+
+    integer, intent(in) :: iBlock, iSide
+    logical, intent(out) :: IsFound
+    character (len=20),intent(in) :: TypeBc
+
+    character (len=*), parameter :: Name='user_set_outerbcs'
+
+    integer :: i,j,k,iVar
+    real    :: x,y,z,Dx
+    logical :: DoTest = .false.
+    !-------------------------------------------------------------------------
+
+!    DoTest = iFace == iTest .and. jFace == jTest .and. kFace == kTest .and. &
+    DoTest = iBlock == BlkTest
+
+    if(DoTest)write(*,*)'outer: iSide=',iSide
+!     DoTest = .false.
+
+    IsFound = .true.
+
+    Dx = Velocity*Time_Simulation 
+
+!    do i = imin1g,imax2g,sign(1,imax2g-imin1g)
+!       do j = jmin1g,jmax2g,sign(1,jmax2g-jmin1g)
+!          do k = kmin1g,kmax2g,sign(1,kmax2g-kmin1g)
+    do i=-1,nI+2
+       do j=-1,nJ+2
+          do k=-1,nK+2
+             x = x_BLK(i,j,k,iBlk)
+             y = y_BLK(i,j,k,iBlk)
+             z = z_BLK(i,j,k,iBlk)
+
+             if(x1<x.and.x<x2.and.y1<y.and.y<y2.and.z1<z.and.z<z2) CYCLE
+
+             do iVar = 1, nVar
+
+                ! Both of these are primitive variables
+                State_VGB(iVar,i,j,k,iBlk) = PrimInit_V(iVar) &
+                     + Ampl_V(iVar)*cos(Phase_V(iVar)               &
+                     + KxWave_V(iVar)*(x - Dx)                      &
+                     + KyWave_V(iVar)*y                             &
+                     + KzWave_V(iVar)*z)
+             end do
+             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlk) = &
+                  State_VGB(Ux_:Uz_,i,j,k,iBlk)*State_VGB(Rho_,i,j,k,iBlk)
+          end do
+       end do
+    end do
+
+  end subroutine user_set_outerbcs
 
 end module ModUser
