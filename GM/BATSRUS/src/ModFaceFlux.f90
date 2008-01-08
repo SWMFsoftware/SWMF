@@ -1632,17 +1632,6 @@ contains
          Flux_V(Bz_) = UnPlus*FullBz - UzPlus*FullBn
       end if
 
-      if(UseHyperbolicDivb)then
-         iHyp = Bz_+1
-         Hyp  = State_V(iHyp)
-
-         Flux_V(Bx_) = Flux_V(Bx_) + AreaX*Hyp
-         Flux_V(By_) = Flux_V(By_) + AreaY*Hyp
-         Flux_V(Bz_) = Flux_V(Bz_) + AreaZ*Hyp
-
-         Flux_V(iHyp)= SpeedHyp2 * Bn
-      end if
-
       ! f_i[p]=u_i*p
       Flux_V(p_)  = Un*p
 
@@ -1660,6 +1649,18 @@ contains
       else
          Flux_V(Energy_) = &
               Un*(pTotal + e) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)     
+      end if
+
+      if(UseHyperbolicDivb)then
+         iHyp = Bz_+1
+         Hyp  = State_V(iHyp)
+
+         Flux_V(Bx_) = Flux_V(Bx_) + AreaX*Hyp
+         Flux_V(By_) = Flux_V(By_) + AreaY*Hyp
+         Flux_V(Bz_) = Flux_V(Bz_) + AreaZ*Hyp
+         Flux_V(Energy_) = Flux_V(Energy_) + Bn*Hyp
+
+         Flux_V(iHyp) = SpeedHyp2*FullBn
       end if
 
       if(Eta > 0.0)then                          !^CFG IF DISSFLUX BEGIN
