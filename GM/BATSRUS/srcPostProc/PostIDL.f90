@@ -650,8 +650,10 @@ contains
 
   subroutine save_vacfile_bin
 
-    integer :: iw, i, j, k, idim
+    integer :: iw, i, j, k, idim, n
 
+    real, allocatable :: Buffer_I(:)
+    !----------------------------------------------------------------------
     write(unit_tmp)fileheadout
 
     if(structured)then
@@ -663,10 +665,25 @@ contains
     endif
     write(unit_tmp)eqpar,specialpar(1:nspecialpar)
     write(unit_tmp)varnames
-    write(unit_tmp)((((xx(i,j,k,idim),i=1,nx),j=1,ny),k=1,nz),idim=1,ndim)
+
+    ! Use a 1D buffer, because some versions of the NAG compiler are
+    ! not able to write out a 4D array into an unformatted file correctly :-(
+    allocate(Buffer_I(nx*ny*nz*ndim))
+    n = 0
+    do idim=1,ndim; do k=1,nz; do j=1,ny; do i=1,nx; n = n + 1;
+       Buffer_I(n) = xx(i,j,k,idim)
+    end do; end do; end do; end do
+    write(unit_tmp) Buffer_I
+    deallocate(Buffer_I)
+    allocate(Buffer_I(nx*ny*nz))
     do iw=1,nw
-       write(unit_tmp)(((w(i,j,k,iw),i=1,nx),j=1,ny),k=1,nz)
+       n = 0
+       do k=1,nz; do j=1,ny; do i=1,nx; n = n + 1;
+          Buffer_I(n) = w(i,j,k,iw)
+       end do; end do; end do
+       write(unit_tmp) Buffer_I
     end do
+    deallocate(Buffer_I)
 
   end subroutine save_vacfile_bin
 
