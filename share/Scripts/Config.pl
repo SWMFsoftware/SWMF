@@ -11,7 +11,11 @@ my %Compiler = (
 		"cfe1"    => "ifort",
 		"cfe2"    => "ifort",
 		"cfe3"    => "ifort",
-		"cfe4"    => "ifort"
+		"cfe4"    => "ifort",
+		"sysx1"   => "xlf90",
+		"sysx2"   => "xlf90",
+		"sysx3"   => "xlf90",
+		"sysx4"   => "xlf90"
 		);
 
 # Default MPI library per machine or OS
