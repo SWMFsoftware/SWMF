@@ -1295,7 +1295,7 @@ subroutine split_str(str,nmax,strarr,n)
   character (len=10), intent(out):: strarr(nmax)
   integer, intent(out):: n
 
-  character (len=100) :: s
+  character (len=500) :: s
   integer :: i,l
 
   !--------------------------------------------------------------------------

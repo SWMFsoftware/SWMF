@@ -113,7 +113,7 @@ Module ModIO
   real, dimension(3,maxfile) :: plot_dx
 
   ! variables to plot
-  character (len=100) :: plot_vars(maxfile), plot_vars1
+  character (len=500) :: plot_vars(maxfile), plot_vars1
   character (len=50)  :: plot_pars(maxfile), plot_pars1
 
   ! variables to put in log file
