@@ -86,7 +86,7 @@ for $OutFile (@OutFiles){
     my $BaseName = $OutFile;
 
     # Remove extension
-    $BaseName =~ s/(_t\d+)?_n\d+\.out$// or
+    $BaseName =~ s/(_t[\.\d]+)?_n\d+\.out$// or
 	die "$ERROR: file name $OutFile does not match _nSTEPNUM.out format\n";
 
     # Store outfile

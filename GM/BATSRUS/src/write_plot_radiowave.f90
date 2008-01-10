@@ -12,7 +12,7 @@ subroutine write_plot_radiowave(iFile)
   !
 
   use ModProcMH, ONLY: iProc
-  use ModMain, ONLY: Time_Accurate, StringTimeH4M2S2, n_Step, Time_Simulation
+  use ModMain, ONLY: Time_Accurate, n_Step, Time_Simulation
   use ModPhysics, ONLY: UnitX_, NO2IO_V
   use ModNumConst
   use ModConst
@@ -226,7 +226,7 @@ subroutine write_plot_radiowave(iFile)
         call get_time_string
         write(filename,file_format) &
              trim(plot_type1)//"_",&
-             ifile-plot_,"_t"//StringTimeH4M2S2//"_n",n_step,&
+             ifile-plot_,"_t"//StringDateOrTime//"_n",n_step,&
              file_extension
      else
         write(filename,file_format) &

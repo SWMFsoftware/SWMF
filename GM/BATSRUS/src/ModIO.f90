@@ -15,6 +15,12 @@ Module ModIO
 
   character (len=80) :: filename
 
+  ! The largest time unit used in the plot file names in time-accurate runs
+  character (len=10) :: NameMaxTimeUnit = 'hour'
+  ! Simulation time or physical date and time used in file names
+  character (len=8) :: StringDateOrTime
+
+
   logical :: restart=.false.        ! read restart file
   logical :: restart_Bface =.false. ! Bface restarted ^CFG IF CONSTRAINB
 

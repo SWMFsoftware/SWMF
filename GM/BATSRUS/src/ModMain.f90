@@ -252,9 +252,6 @@ Module ModMain
   logical:: UseTiming = .true.
   integer:: dn_timing = -2
 
-  ! Simulation time in hour,minute,second format
-  character (LEN=8) :: StringTimeH4M2S2
-
   !\
   ! Stopping conditions. These variables are only used in stand alone mode.
   !/

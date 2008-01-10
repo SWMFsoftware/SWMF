@@ -36,8 +36,7 @@ subroutine write_plot_los(iFile)
 
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,n_step,time_simulation,unusedBLK, &
-       time_accurate,StringTimeH4M2S2,nBlock, NameThisComp,   &
-       rBuffMax,TypeCoordSystem
+       time_accurate,nBlock, NameThisComp,rBuffMax,TypeCoordSystem
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK
   use ModPhysics, ONLY : No2Io_V, UnitX_
   use ModIO
@@ -337,7 +336,7 @@ subroutine write_plot_los(iFile)
         call get_time_string
         write(filename,file_format) &
              trim(plot_type1)//"_",&
-             ifile-plot_,"_t"//StringTimeH4M2S2//"_n",n_step,&
+             ifile-plot_,"_t"//StringDateOrTime//"_n",n_step,&
              file_extension
      else
         write(filename,file_format) &

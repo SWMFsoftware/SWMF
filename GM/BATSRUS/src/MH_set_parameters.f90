@@ -846,6 +846,8 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoSavePlotsAmr',save_plots_amr)
      case("#SAVEBINARY")
         call read_var('DoSaveBinary',save_binary)
+     case("#PLOTFILENAME")
+        call read_var('NameMaxTimeUnit', NameMaxTimeUnit)
 
      case("#GRIDRESOLUTION","#GRIDLEVEL","#AREARESOLUTION","#AREALEVEL")
         if(index(NameCommand,"RESOLUTION")>0)then

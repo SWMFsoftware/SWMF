@@ -1618,11 +1618,10 @@ subroutine write_plot_line(iFile)
   use ModProcMH,   ONLY: iComm, iProc
   use ModRayTrace, ONLY: NameVectorField, DoExtractState, DoExtractUnitSi
   use ModVarIndexes,ONLY: nVar, NamePrimitiveVar, NamePrimitiveVarTec
-  use ModIO,       ONLY: &
+  use ModIO,       ONLY: StringDateOrTime, &
        NamePlotDir, plot_type, plot_form, plot_dimensional, Plot_, &
        NameLine_I, nLine_I, XyzStartLine_DII, IsParallelLine_II, IsSingleLine_I
-  use ModMain,     ONLY: n_step, time_accurate, time_simulation, &
-       StringTimeH4M2S2
+  use ModMain,     ONLY: n_step, time_accurate, time_simulation
   use ModIoUnit,   ONLY: UnitTmp_
   use CON_line_extract, ONLY: line_init, line_collect, line_get, line_clean
 
@@ -1764,7 +1763,7 @@ subroutine write_plot_line(iFile)
            write(NameFile,'(a,i2)') trim(NameFile),iLine
         end if
      end if
-     if(time_accurate) NameFile = trim(NameFile)// "_t"//StringTimeH4M2S2
+     if(time_accurate) NameFile = trim(NameFile)// "_t"//StringDateOrTime
      write(NameFile,'(a,i7.7,a)') trim(NameFile) // '_n',n_step
 
      if(IsIdl)then

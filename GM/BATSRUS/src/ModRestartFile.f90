@@ -212,6 +212,7 @@ contains
     use ModPhysics
     use CON_planet,  ONLY: NamePlanet
     use ModReadParam,ONLY: i_line_command
+    use ModIO,       ONLY: NameMaxTimeUnit
 
     implicit none
 
@@ -331,6 +332,10 @@ contains
     write(unit_tmp,'(1pe23.15,a17)')No2Si_V(UnitU_),   'No2SiUnitU'
     write(unit_tmp,'(1pe23.15,a17)')No2Si_V(UnitRho_), 'No2SiUnitRho'
     write(unit_tmp,*)
+    write(unit_tmp,'(a)')'#PLOTFILENAME'
+    write(unit_tmp,'(a10,a30)') NameMaxTimeUnit, 'NameMaxTimeUnit'
+    write(unit_tmp,*)
+
     if(body1)then
        write(unit_tmp,'(a)')'#BODY'
        write(unit_tmp,'(l1,a39)')      body1, 'UseBody'

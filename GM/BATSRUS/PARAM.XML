@@ -2649,6 +2649,53 @@ single precision to make IO2/*.out files smaller, while BATSRUS.exe is
 compiled in double precision to make results more accurate.
 </command>
 
+<command name="PLOTFILENAME" multiple="T">
+	<parameter name="NameMaxTimeUnit" type="string" input="select">
+		<option name="year"/>
+		<option name="yr"/>
+		<option name="month"/>
+		<option name="day"/>
+		<option name="hour" default="T"/>
+		<option name="hr"/>
+		<option name="minute"/>
+		<option name="second"/>
+	</parameter>
+#PLOTFILENAME
+hour			NameMaxTimeUnit
+
+For time accurate runs the plot filenames contain an 8-charcter timestamp 
+string. The NameMaxTimeUnit string determines the content of this string.
+
+If the longest time unit is hours or shorter, the string contains the
+simulation time. If the time unit is days or longer the string contains
+the physical date (set by the #STARTTIME command) and time information.
+
+For NameMaxTimeUnit='hour' the string contains the simulation time 
+described by a 4-character string for hours, and two 2-character strings 
+for minutes and seconds, respectively. 
+For NameMaxTimeUnit='hr' the string contains the simulation time 
+described by a 2-character strings for hours, minutes, and seconds
+with a decimal point and one decimal digit. For NameMaxTimeUnit='minute'
+the first 2 characters describe the minutes, and the rest is seconds
+including 3 decimal digits. Finally NameMaxTimeUnit='second' gives
+the simulation time up to 100 seconds with 5 decimal digits.
+
+For time units 'day', 'month', 'yr' and 'year' an 8-character-long substring 
+of the 14-character date-time string (YYYYMMDDHHMMSS) is used. 
+For NameMaxTimeUnit='year' the time stamp will contain the four digit year,
+and the two-digit month and day.
+For NameMaxTimeUnit='yr' the last two digits of the year, 
+and the month, day and hour are used. 
+For NameMaxTimeUnit='month' the month, day, hour, and minute are used.
+For NameMaxTimeUnit='day' the day, hour, minute and seconds are used.
+
+The #PLOTFILENAME command and the NameMaxTimeUnit parameter are 
+saved into the restart header file so that the #PLOTFILENAME command does
+not have to be repeated in restarted runs (unless the unit is changed).
+
+The default value is NameMaxTimeUnit='hour'.
+</command>
+
 <command name="SAVEPLOTSAMR">
 	<parameter name="DoSavePlotsAmr" type="logical" default="F" />
 #SAVEPLOTSAMR

@@ -8,7 +8,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC
   !
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,globalBLK,global_block_number, nBlock, &
-       nBlockALL,nBlockMax, StringTimeH4M2S2,time_accurate,n_step,&
+       nBlockALL,nBlockMax, time_accurate,n_step,&
        nOrder, UseRotatingBc, BlkTest, ProcTest, &
        TypeCoordSystem, CodeVersion
   use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
@@ -57,9 +57,9 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC
   if(time_accurate)then
      call get_time_string
      write(textNandT,'(a,i7.7,a)') "N=",n_step," T="// &
-          StringTimeH4M2S2(1:4)//":"// &
-          StringTimeH4M2S2(5:6)//":"// &
-          StringTimeH4M2S2(7:8)
+          StringDateOrTime(1:4)//":"// &
+          StringDateOrTime(5:6)//":"// &
+          StringDateOrTime(7:8)
   else
      write(textNandT,'(a,i7.7)') &
           "N=",n_step
@@ -820,9 +820,9 @@ contains
     !TIMESIM
     if(time_accurate)then
        write(stmp,'(a)')'T='// &
-            StringTimeH4M2S2(1:4)//":"// &
-            StringTimeH4M2S2(5:6)//":"// &
-            StringTimeH4M2S2(7:8)
+            StringDateOrTime(1:4)//":"// &
+            StringDateOrTime(5:6)//":"// &
+            StringDateOrTime(7:8)
     else
        write(stmp,'(a)')'T= N/A'
     end if

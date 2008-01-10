@@ -1707,13 +1707,77 @@ end subroutine get_date_time
 
 !=========================================================================
 subroutine get_time_string
-  use ModMain, ONLY: StringTimeH4M2S2,Time_Simulation
+
+  use ModIO,   ONLY: StringDateOrTime, NameMaxTimeUnit
+  use ModMain, ONLY: StartTime, Time_Simulation
+  use ModTimeConvert, ONLY: TimeType, time_real_to_int
   implicit none
 
-  write(StringTimeH4M2S2,'(i4.4,i2.2,i2.2)') &
-       int(                            Time_Simulation/3600.), &
-       int((Time_Simulation-(3600.*int(Time_Simulation/3600.)))/60.), &
-       int( Time_Simulation-(  60.*int(Time_Simulation/  60.)))
+  integer:: i
+  type(TimeType):: Time
+  !---------------------------------------------------------------------------
+
+  StringDateOrTime = '';
+  select case(NameMaxTimeUnit)
+  case('hour')
+     if(Time_Simulation < 10000.0*3600)then
+        write(StringDateOrTime,'(i4.4,i2.2,i2.2)') &
+             int(                            Time_Simulation/3600.), &
+             int((Time_Simulation-(3600.*int(Time_Simulation/3600.)))/60.), &
+             int( Time_Simulation-(  60.*int(Time_Simulation/  60.)))
+     else
+        StringDateOrTime = '99999999'
+     end if
+  case('hr')
+     if(Time_Simulation < 100.0*3600)then
+        write(StringDateOrTime,'(i2.2,i2.2,f4.1)') &
+             int(                            Time_Simulation/3600.), &
+             int((Time_Simulation-(3600.*int(Time_Simulation/3600.)))/60.), &
+             Time_Simulation-(  60.*int(Time_Simulation/  60.))
+     else
+        StringDateOrTime = '99999999'
+     end if
+  case('minute')
+     if(Time_Simulation < 100.0*60)then
+        write(StringDateOrTime,'(i2.2,f6.3)') &
+             int(Time_Simulation/60.), &
+             Time_Simulation-(60.*int(Time_Simulation/60.))
+     else
+        StringDateOrTime = '99999999'
+     end if
+  case('second')
+     if(Time_Simulation < 100.0)then
+        write(StringDateOrTime,'(f8.5)') Time_Simulation
+     else
+        StringDateOrTime = '99999999'
+     end if
+  end select
+
+  if(StringDateOrTime /= '')then
+     do i=1,len(StringDateOrTime)
+        if(StringDateOrTime(i:i)==' ') StringDateOrTime(i:i)='0'
+     end do
+     RETURN
+  end if
+
+  ! Convert current date and time into string Time % String
+  Time % Time = StartTime + Time_Simulation
+  call time_real_to_int(Time)
+
+  ! Select part of the string
+  select case(NameMaxTimeUnit)
+  case('year')
+     StringDateOrTime = Time % String(1:8)
+  case('yr')
+     StringDateOrTime = Time % String(3:10)
+  case('month')
+     StringDateOrTime = Time % String(5:12)
+  case('day')
+     StringDateOrTime = Time % String(7:14)
+  case default
+     ! the unit is wrong, but what can we do? Let's write something.
+     StringDateOrTime = '00000000'
+  end select
 
 end subroutine get_time_string
 
