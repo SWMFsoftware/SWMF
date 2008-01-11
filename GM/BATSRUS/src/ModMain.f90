@@ -71,6 +71,7 @@ Module ModMain
   logical :: DoCoupleImPressure = .true.
   logical :: DoCoupleImDensity  = .false.
   logical :: DoFixPolarRegion   = .false.
+  logical :: DoImSatTrace       = .false.    
   real    :: rFixPolarRegion    = 5.0
   real    :: TauCoupleIM = 20.0                            !^CFG END RCM
 
