@@ -24,7 +24,7 @@ Brio-Wu MHD shock tube problem rotated around Z axis
 #HYPERBOLICDIVB
 T		UseHyperbolicDivb
 4.0		SpeedHypDim
-0.05		HypDecay
+0.1		HypDecay
 
 #DIVB
 F
@@ -84,6 +84,9 @@ F		DoSaverestart
 This is set only for sake of the test_shocktube test
 #SAVEBINARY
 F		UseBinary
+
+#PLOTFILENAME
+second
 
 #SAVEPLOT
 2		nPlotfile

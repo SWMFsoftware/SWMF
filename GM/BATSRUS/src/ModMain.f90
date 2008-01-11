@@ -162,7 +162,7 @@ Module ModMain
   logical :: UseB0Source
   logical :: UseHyperbolicDivb= .false.
   real    :: SpeedHypDim = -1.0, SpeedHyp = 1.0, SpeedHyp2 = 1.0
-  real    :: HypDecay = 0.05
+  real    :: HypDecay = 0.1
   
   !\
   ! More numerical scheme parameters

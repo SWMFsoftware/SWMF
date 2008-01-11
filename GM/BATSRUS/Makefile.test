@@ -68,7 +68,7 @@ test_shocktube_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 
 test_shocktube_check:
-	cat ${TESTDIR}/GM/IO2/cut_raw_2_t00000025_n0000386_pe*.idl \
+	cat ${TESTDIR}/GM/IO2/cut_raw_2_t25.60000_n0000386_pe*.idl \
 		> ${TESTDIR}/GM/IO2/cut_25.idl
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-13 \
 	  Param/SHOCKTUBE/TestOutput/cut_25.idl \
