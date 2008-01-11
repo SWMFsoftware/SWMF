@@ -13,6 +13,7 @@ module ModUser
        IMPLEMENTED4 => user_set_boundary_cells,         &
        IMPLEMENTED5 => user_face_bcs,                   &
        IMPLEMENTED6 => user_calc_sources,               &
+       IMPLEMENTED7 => user_init_point_implicit,        &
        IMPLEMENTED9 => user_get_b0,                     &
        IMPLEMENTED10 => user_get_log_var,               &
        IMPLEMENTED11 => user_specify_initial_refinement
@@ -26,6 +27,9 @@ module ModUser
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = &
        'Mars 4 species MHD code, Yingjuan Ma'
+
+  ! Radius within which the point implicit scheme should be used
+  real :: rPointImplicit = 2.0
 
   ! Mars stuff
   logical ::  UseMultiSpecies=.true.
@@ -250,23 +254,115 @@ contains
                   IOp(Nlong,Nlat,Nalt)
              
           end if
+       case('#POINTIMPLICITREGION')
+          call read_var('rPointImplicit',rPointImplicit)
           
-     case default
+       case default
           if(iProc==0) call stop_mpi( &
                'read_inputs: unrecognized command: '//NameCommand)
        end select
     end do
   end subroutine user_read_inputs
 
+  !============================================================================
+  
+  subroutine user_init_point_implicit
+    
+    use ModVarIndexes
+    use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
 
-  !=============================================================================
+    ! Allocate and set iVarPointImpl_I
+    allocate(iVarPointImpl_I(8))
+
+    iVarPointImpl_I = (/RhoHp_, RhoO2p_, RhoOp_, RhoCO2p_, &
+         RhoUx_, RhoUy_, RhoUz_, P_/)
+
+    ! Note that energy is not an independent variable for the 
+    ! point implicit scheme. The pressure is an independent variable,
+    ! and in this example there is no implicit pressure source term.
+
+    ! Tell the point implicit scheme if dS/dU will be set analytically
+    ! If this is set to true the DsDu_VVC matrix has to be set below.
+    IsPointImplMatrixSet = .false.
+
+  end subroutine user_init_point_implicit
+  !========================================================================
   subroutine user_calc_sources
-    use ModMain
-    use ModVarIndexes, ONLY: rho_, rhoUx_, rhoUy_, rhoUz_,p_,Bx_, By_, Bz_, nVar
     use ModAdvance,  ONLY: Source_VC,Energy_
     use ModNumConst, ONLY: cZero
-    !---------------------------------------------------------------------------
+    use ModVarIndexes, ONLY: rhoUx_, rhoUy_, rhoUz_
+    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, &
+         GLOBALBLK
+    use ModProcMH,   ONLY: iProc
+    use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit, &
+         IsPointImplSource
+    use ModPhysics, ONLY: Rbody
+    use ModGeometry,ONLY: R_BLK
+    
+    logical :: oktest,oktest_me
+    !------------------------------------------------------------------------  
+    if(iProc==PROCtest .and. globalBLK==BLKtest)then
+       call set_oktest('user_calc_sources',oktest,oktest_me)
+    else
+       oktest=.false.; oktest_me=.false.
+    end if
+    if(UsePointImplicit)&
+         UsePointImplicit_B(globalBLK) = &
+         R_BLK(1,1,1,globalBLK) <= rPointImplicit &
+         .and. R_BLK(nI,1,1,globalBLK) > rBody
 
+    if(.not.(UsePointImplicit .and. UsePointImplicit_B(globalBLK)) )then
+       ! Add all source terms if we do not use the point implicit 
+       ! scheme for the Block
+       call user_expl_source
+       call user_impl_source
+
+    elseif(IsPointImplSource)then
+       ! Add implicit sources only
+       call user_impl_source
+    else
+       ! Add explicit sources only
+       call user_expl_source
+    end if
+
+    if(oktest_me)then
+       write(*,*)'After Source(rho, rhoSp)=', &
+            Source_VC(rho_:8,iTest,jTest,kTest)
+       write(*,*)'Source(rhoU)=', Source_VC(9:11,iTest,jTest,kTest)
+       write(*,*)'Source(B)=', Source_VC(12:14,iTest,jTest,kTest)
+       write(*,*)'Source(p,E)', Source_VC(P_:P_+1,iTest,jTest,kTest)
+    end if
+
+  end subroutine user_calc_sources
+
+  !=========================================================================
+  subroutine user_impl_source
+    use ModPointImplicit, ONLY: UsePointImplicit_B, &
+         iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
+    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK
+    use ModPhysics, ONLY: inv_gm1
+    use ModAdvance, ONLY: State_VGB, Source_VC
+    use ModGeometry,ONLY: r_BLK
+    use ModNumConst,ONLY: cZero
+    use ModVarIndexes,ONLY: Rho_, RhoHp_, RhoO2p_, RhoOp_, RhoCO2p_, &
+         RhoUx_, RhoUy_, RhoUz_, P_, Energy_, Bx_, By_, Bz_
+    use ModMain,     ONLY: iTest, jTest, kTest, ProcTest, BlkTest
+    use ModProcMH,   ONLY: iProc
+    !    use ModAdvance,  ONLY: Source_VC,Energy_
+    !    use ModNumConst, ONLY: cZero
+    logical :: oktest,oktest_me
+    integer :: iBlock, i, j, k
+    real    :: Coef
+    !--------------------------------------------------------------------
+    
+    if(iProc==PROCtest .and. globalBLK==BLKtest)then
+       call set_oktest('user_imp_sources',oktest,oktest_me)
+    else
+       oktest=.false.; oktest_me=.false.
+    end if
+    
+    iBlock = GlobalBlk
+     
     Srho   = cZero
     SrhoSpecies=cZero
     SrhoUx = cZero
@@ -277,10 +373,11 @@ contains
     SBz    = cZero
     SP     = cZero
     SE     = cZero
-!!!    if(globalBLK==199)then
-!!!       write(*,*)'before Source(rhoU)=', Source_VC(6:8,2,1,2)
-!!!       write(*,*)'Source(p,E)', Source_VC(P_:P_+1,2,1,2)
-!!!    end if
+
+    if(oktest_me)then
+       !   write(*,*)'before Source(rhoU)=', Source_VC(6:8,itest,jtest,ktest)
+       write(*,*)'Source(p,E)', Source_VC(P_:P_+1,iTest,jTest,kTest)
+    end if
 
     call user_sources
     Source_VC(rho_       ,:,:,:) = Srho+Source_VC(rho_,:,:,:)
@@ -295,13 +392,19 @@ contains
     Source_VC(P_     ,:,:,:) = SP+Source_VC(P_,:,:,:)
     Source_VC(Energy_,:,:,:) = SE+Source_VC(Energy_,:,:,:)
 
-!!!    if(globalBLK==199)then
-!!!       write(*,*)'After Source(rho, rhoSp)=', Source_VC(rho_:5,2,1,2)
-!!!       write(*,*)'Source(rhoU)=', Source_VC(6:8,2,1,2)
-!!!       write(*,*)'Source(p,E)', Source_VC(P_:P_+1,2,1,2)
-!!!!       write(*,*)'rhosp=',State_VGB(rho_:5,2,1,2,globalBLK)
-!!!    end if
-  end subroutine user_calc_sources
+  end subroutine user_impl_source
+
+  !===========================================================================
+
+  subroutine user_expl_source
+    !    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK
+    !    use ModPointImplicit,ONLY: UsePointImplicit, UsePointImplicit_B
+
+    !---------------------------------------------------------------------
+    ! Here come the explicit source terms
+
+  end subroutine user_expl_source
+
   !========================================================================
   !  SUBROUTINE USER_SOURCES
   !========================================================================
@@ -324,7 +427,7 @@ contains
   ! approach is to load both.
   !/
   subroutine user_sources
-    use ModMain
+    use ModMain, ONLY: PROCTEST,GLOBALBLK,BLKTEST, iTest,jTest,kTest 
     use ModAdvance,  ONLY: State_VGB,VdtFace_x,VdtFace_y,VdtFace_z
     use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_
     use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
@@ -332,9 +435,11 @@ contains
     use ModConst,    ONLY: cZero,cHalf,cOne,cTwo,cTolerance
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: Rbody, inv_gm1
+!    use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data
+    use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit
 
     ! Variables required by this user subroutine
-    integer:: i,j,k,iSpecies
+    integer:: i,j,k,iSpecies, iBlock
     real :: inv_rho, inv_rho2, uu2,Productrate
     real :: alt, Te_dim = 300.0
     real :: totalPSNumRho=0.0,totalRLNumRhox=0.0
@@ -351,7 +456,9 @@ contains
     !/
     !---------------------------------------------------------------------------
     !
-    if (iProc==PROCtest.and.globalBLK==BLKtest) then
+    iBlock = globalBlk
+
+    if (iProc==PROCtest.and.iBlock==BLKtest) then
        call set_oktest('user_sources',oktest,oktest_me)
     else
        oktest=.false.; oktest_me=.false.
@@ -364,7 +471,7 @@ contains
             +State_VGB(Uy_,i,j,k,globalBLK)*State_VGB(Uy_,i,j,k,globalBLK)  &
             +State_VGB(Uz_,i,j,k,globalBLK)*State_VGB(Uz_,i,j,k,globalBLK)) &
             *inv_rho2
-
+       
        SrhoUx(i,j,k) = SrhoUx(i,j,k) &
             -nu_BLK(i,j,k,globalBLK)*State_VGB(Ux_,i,j,k,globalBLK)
        SrhoUy(i,j,k) = SrhoUy(i,j,k)  &
@@ -383,7 +490,6 @@ contains
              PhoIon_I(:)=0.0
              Recb_I(:)=0.0
              LossSpecies_I=0.0
-             !totalNumRho=0.0
              SiSpecies_I(:)=0.0
              LiSpecies_I(:)=0.0
 
