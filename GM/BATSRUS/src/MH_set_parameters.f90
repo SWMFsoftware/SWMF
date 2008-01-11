@@ -1341,6 +1341,7 @@ subroutine MH_set_parameters(TypeAction)
               write(*,*)NameSub//' using the inverse:',TauCoupleIm
            end if
         end if
+        call read_var('DoImSatTrace',DoImSatTrace)
         if(NameCommand == "#IMCOUPLING")then
            call read_var('DoCoupleImPressure', DoCoupleImPressure)
            call read_var('DoCoupleImDensity',  DoCoupleImDensity)
