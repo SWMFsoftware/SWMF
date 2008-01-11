@@ -31,6 +31,13 @@ MODULE Rcm_variables
     ! SWMF: added logical to check for initialized grid
     logical :: IsUninitialized = .true., DoneGmCoupling = .false.
 
+    ! SWMF: added values to control satellite tracing.
+    logical :: DoWriteSats  = .false.  !!!DTW 2007
+    logical :: IsFirstWrite = .true.
+    integer :: nImSats = 0, iStartIter = 0
+    real,               allocatable :: SatLoc_3I(:,:,:)
+    character(len=100), allocatable :: NameSat_I(:)
+
     ! SWMF: set initial values for composition and charge exchange information
     real(rprec) :: x_h=0.70, x_o=1.00-0.70
     logical     :: L_dktime = .TRUE.

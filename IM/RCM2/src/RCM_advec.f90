@@ -507,6 +507,17 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
            END IF
         end do
         !
+        ! If tracing satellites, write current sat records to file.
+        ! !!! DTW 2007
+        if (DoWriteSats .and. (nImSats>0) ) then
+           do iFile=1, nImSats
+              if (iProc == 0) call write_sat_file(iFile)
+           end do
+           IsFirstWrite = .false.
+           DoWriteSats  = .false.
+        end if
+
+        !
         time1=MPI_Wtime()
         if(iProc == 0) then
            call IM_write_prefix
@@ -998,6 +1009,76 @@ CONTAINS
   end SUBROUTINE Disk_write_arrays
   !
   !
+  !===========================================================================
+  subroutine write_sat_file(iSatIn)
+    ! Write solution interpolated to satellite position to satellite files.
+    ! !!!DTW  2007.
+    implicit none
+    
+    ! Arguments
+    integer, intent(in) :: iSatIn
+    
+    ! Name of subroutine
+    character(len=*), parameter :: NameSubSub = 'rcm_advec.write_sat_file'
+
+    !internal variables
+    integer            :: iError
+    integer, parameter :: nHeadVar=11, nDistVar=4
+    real               :: HeadVar_I(nHeadVar), DistVar_II(kcsize,nDistVar)
+    logical            :: IsExist
+    character(len=100) :: NameSatFile, StringTime
+    !-------------------------------------------------------------------------
+    ! Build file name; 
+    if (IsFirstWrite) iStartIter = int(iCurrentTime/idt)
+    write(NameSatFile, '(a, i6.6, a)')                    &
+         trim(NameRcmDir)//'plots/'//'sat_'//trim(NameSat_I(iSatIn))// &
+         '_n',iStartIter, '.sat'
+
+    ! Open file in appropriate mode.  Write header if necessary.
+    inquire(file=NameSatFile, exist=IsExist)
+
+    if ( (.not.IsExist) .or. IsFirstWrite ) then
+       open(unit=LUN, file=trim(NameSatFile), status='replace', iostat=iError)
+       if(iError /= 0) call CON_stop &
+            (NameSubSub//' Error opening file '//NameSatFile)
+
+       ! Write header
+       write(LUN, '(2a)')'RCM results for SWMF trajectory file ', &
+            trim(NameSat_I(iSatIn))
+       write(LUN,'(a40,i3.3)')'Number of header variables:', nHeadVar + 2
+       write(LUN,*)'iter simTime X Y Z lat lon status interLat interLon Xmin Ymin Vm'
+       write(LUN,*) 'Number of distribution variables:', nDistVar+2
+       write(LUN,*) 'Number of energy channels:', kcsize
+       write(LUN,*) 'k species alamc eeta energy[eV] density[cm^-3]'
+       
+
+    else
+       open(unit=LUN, file=trim(NameSatFile), status='OLD',&
+            position='append', iostat=iError)
+       if(iError /= 0) &
+            call CON_stop(NameSubSub//' Error opening file '//NameSatFile)
+    end if
+
+    ! Collect variables.
+    call set_satvar(HeadVar_I, DistVar_II, iSatIn, nHeadVar, nDistVar)
+
+    ! Calculate current simulation time.
+    call Write_Label(iCurrentTime)
+    write(StringTime,'(I2.2,A1,I2.2,A1,I2.2)') &
+         label%intg(3), ':', label%intg(4), ':', label%intg(5)
+    
+    write(LUN,'(i6.6,1x,a8,20es13.5)')                             &
+         int(iCurrentTime/idt),StringTime,HeadVar_I
+
+    do k=1, kcsize
+       write(LUN, '(i4.4,1x,a3,20es13.5)') &
+            k, species_char(ikflavc(k)), DistVar_II(k,:)
+    end do
+
+  end subroutine write_sat_file
+  !===========================================================================
+  !
+  !
   subroutine Save_Restart
 
     !Fill labels
@@ -1049,3 +1130,140 @@ CONTAINS
   !
   !
 end subroutine RCM_advec
+!=============================================================================
+subroutine set_satvar(headvar_I, distvar_II, iSatIn, nHeadVar, nDistVar)
+  ! Collects and prepares all variables to be printed to sat files.
+  ! !!!DTW 2007
+  !use ModInterpolate
+  use ModNumConst,   ONLY: cRadToDeg
+  use RCM_variables, ONLY: SatLoc_3I, kcsize, isize, jsize, eeta, &
+                           colat, aloct, vm, xmin, ymin, alamc
+
+  implicit none
+
+  ! Name of subroutine:
+  character(len=*), parameter :: NameSub = 'Set_SatVar'
+
+  ! Arguments:
+  integer, intent(in) :: nHeadVar, nDistVar, iSatIn
+  real, intent(out)   :: HeadVar_I(nHeadVar), DistVar_II(kcsize,nDistVar)
+
+  ! Internal Vars:
+  integer            :: iLoc, jLoc, IntTemp(1), k
+  real               :: xnorm, ynorm, diff_colat(isize), diff_aloct(jsize)
+  real               :: IM_bilinear
+  character(len=100) :: StringTime
+  !-------------------------------------------------------------------------
+  HeadVar_I = -1.0
+  DistVar_II= -1.0
+
+  !\
+  ! Get satellite location in generalized coordinates.
+  !/
+
+  if (SatLoc_3I(3,2,iSatIn) == 3) then
+     diff_colat = colat(1:isize,1) - SatLoc_3I(1,2,iSatIn)
+     diff_aloct = aloct(1,1:jsize) - SatLoc_3I(2,2,iSatIn)
+     IntTemp = minloc(abs(diff_colat)); iLoc = IntTemp(1)
+     IntTemp = minloc(abs(diff_aloct)); jLoc = IntTemp(1)
+     if(diff_colat(iLoc) > 0) iLoc = iLoc - 1
+     if(diff_aloct(jLoc) > 0) jLoc = jLoc - 1
+     ! If satellite is out of bounds, mark it as such.
+     if( (diff_colat(1)>0) .or. (diff_colat(isize)<0) ) then
+        SatLoc_3I(3,2,iSatIn) = -1
+        iLoc = 1
+     end if
+  else 
+     iLoc = 1
+     jLoc = 1
+  end if
+
+  xnorm = (SatLoc_3I(1,2,iSatIn) - colat(iLoc,jLoc)) &
+           / (colat(iLoc+1,jLoc+1) - colat(iLoc,jLoc)) + 1.0
+  ynorm = (SatLoc_3I(2,2,iSatIn) - aloct(iLoc,jLoc)) &
+       / (aloct(2,2) - aloct(1,1)) + 1.0     ! grid is uniform in j direction
+  
+  !\
+  ! Set variables.
+  !/
+
+  ! Position
+  HeadVar_I(1:3) = SatLoc_3I(1:3,1,iSatIn)
+  HeadVar_I(4)   = 90.0 - cRadToDeg * SatLoc_3I(1,2,iSatIn)
+  HeadVar_I(5)   =        cRadToDeg * SatLoc_3I(2,2,iSatIn)
+  HeadVar_I(6)   = SatLoc_3I(3,2,iSatIn)
+    
+  ! If sat resides on CLOSED field line, get those variables!
+  if (SatLoc_3I(3,2,iSatIn) == 3) then 
+     ! Interpolated position (for debugging/validation)
+     HeadVar_I(7) = 90.0 - IM_bilinear(colat(iLoc:iLoc+1,jLoc:jLoc+1), &
+          1,2,1,2,(/xnorm,ynorm/)) * cRadToDeg
+     HeadVar_I(8) = IM_bilinear(aloct(iLoc:iLoc+1,jLoc:jLoc+1), &
+          1,2,1,2,(/xnorm,ynorm/)) * cRadToDeg
+     
+     ! Flux tube equitorial crossing:
+     HeadVar_I(9) = IM_bilinear(xmin(iLoc:iLoc+1,jLoc:jLoc+1), &
+          1, 2, 1, 2, (/xnorm,ynorm/))
+     HeadVar_I(10)= IM_bilinear(ymin(iLoc:iLoc+1,jLoc:jLoc+1), &
+          1, 2, 1, 2, (/xnorm,ynorm/))
+     ! Flux tube volume:
+     HeadVar_I(11) = IM_bilinear(vm(iLoc:iLoc+1,jLoc:jLoc+1), &
+          1, 2, 1, 2, (/xnorm,ynorm/))**(-1.5)
+     HeadVar_I(11) = HeadVar_I(11) * 1.0E+9
+
+     ! Fill DistVar_II
+     do k=1, kcsize 
+        DistVar_II(k,1) = alamc(k) ! Energy invariant.
+        DistVar_II(k,2) = IM_bilinear(eeta(iLoc:iLoc+1,jLoc:jLoc+1, k), &
+             1, 2, 1, 2, (/xnorm,ynorm/)) ! Density invariant
+        DistVar_II(k,3) = abs(alamc(k)) * IM_bilinear(vm(iLoc:iLoc+1,   &
+             jLoc:jLoc+1),1, 2, 1, 2, (/xnorm,ynorm/)) ! Kinetic Energy
+        DistVar_II(k,4) = DistVar_II(k,2) * IM_bilinear( &
+             vm(iLoc:iLoc+1,jLoc:jLoc+1),1,2,1,2,(/xnorm,ynorm/))**1.5/6.37E21!density
+     end do
+
+  endif
+  
+  
+
+     !anothertest = IM_bilinear(eff_test, 1, 2, 1, 2, (/1.5,1.5/))!**(-3/2) * 1.0E9
+     end subroutine set_satvar
+
+!=============================================================================
+real function IM_bilinear(A_II, iMin, iMax, jMin, jMax, Xy_D)
+
+  ! Calculate bilinear interpolation of A_II at position Xy_D
+  
+  implicit none
+  integer, intent(in) :: iMin, iMax, jMin, jMax
+  real, intent(in)    :: A_II(iMin:iMax,jMin:jMax)
+  real, intent(in)    :: Xy_D(2)
+  
+  integer :: i1, i2, j1, j2
+  real :: Dx1, Dx2, Dy1, Dy2
+  character (len=*), parameter :: NameSub='IM_bilinear'
+  !--------------------------------------------------------------------------
+  !Set location assuming point is inside block.
+  i1 = floor(Xy_D(1))
+  j1 = floor(Xy_D(2))  
+  i2 = ceiling(Xy_D(1))
+  j2 = ceiling(Xy_D(2))
+  
+  !If Xy_D is outside of block, change i,j,k according to DoExtrapolate.
+  if(any( Xy_D < (/iMin, jMin/)) .or. any(Xy_D > (/ iMax, jMax /))) then
+     write(*,*)NameSub//': Xy_D = ', Xy_D(:)
+     write(*,*)NameSub//': iMin, iMax, jMin, jMax = ',iMin,iMax,jMin,jMax
+     call CON_stop(NameSub//': normalized coordinates are out of range')
+  endif
+  
+  !Set interpolation weights
+  Dx1= Xy_D(1) - i1;   Dx2 = 1.0 - Dx1
+  Dy1= Xy_D(2) - j1;   Dy2 = 1.0 - Dy1
+  
+  !Perform interpolation
+  IM_bilinear = Dy2*(   Dx2*A_II(i1,j1)   &
+          +             Dx1*A_II(i2,j1))  &
+          +     Dy1*(   Dx2*A_II(i1,j2)   &
+          +             Dx1*A_II(i2,j2))
+  
+end function IM_bilinear
