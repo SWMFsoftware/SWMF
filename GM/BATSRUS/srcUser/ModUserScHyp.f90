@@ -12,15 +12,15 @@ module ModUser
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_set_ics,                    &
        IMPLEMENTED3 => user_face_bcs,                   &
-       IMPLEMENTED5 => user_get_b0,                     &
-       IMPLEMENTED6 => user_update_states,              &
-       IMPLEMENTED7 => user_specify_initial_refinement
+       IMPLEMENTED4 => user_get_b0,                     &
+       IMPLEMENTED5 => user_update_states,              &
+       IMPLEMENTED6 => user_specify_initial_refinement
 
   include 'user_module.h' !list of public methods
 
   real, parameter :: VersionUserModule = 1.1
   character (len=*), parameter :: &
-       NameUserModule = 'EMPIRICAL SC - Cohen, Sokolov. van der Holst'
+       NameUserModule = 'EMPIRICAL SC - Cohen, Sokolov, van der Holst'
 
 contains
 
@@ -94,9 +94,9 @@ contains
 
   !==========================================================================
   subroutine user_set_ics
-    use ModMain,      ONLY: nI, nJ, nK, nBLK, unusedBLK
+    use ModMain,      ONLY: nI, nJ, nK, nBLK, unusedBLK, UseHyperbolicDivb
     use ModVarIndexes
-    use ModAdvance,   ONLY: State_VGB 
+    use ModAdvance,   ONLY: State_VGB, Hyp_
     use ModNumConst
     use ModPhysics,   ONLY: inv_gm1
     use ModGeometry
@@ -119,10 +119,10 @@ contains
           RR = sqrt(xx**2+yy**2+zz**2+cTolerance**2)
           ROne  = max(cOne,RR)
           Rmax  = max(2.1E+01,sqrt(xx**2+yy**2+zz**2))
-          State_VGB(Bx_      ,i,j,k,iBLK) = cZero
-          State_VGB(By_      ,i,j,k,iBLK) = cZero
-          State_VGB(Bz_      ,i,j,k,iBLK) = cZero
-          State_VGB(Hyp_     ,i,j,k,iBLK) = cZero
+          State_VGB(Bx_:Bz_  ,i,j,k,iBLK) = 0.0
+          if(UseHyperbolicDivb)then
+             State_VGB(Hyp_  ,i,j,k,iBLK) = 0.0
+          end if
           call get_plasma_parameters_cell(xx,yy,zz,RR,&
                Denscell,Prescell,Gammacell)
           State_VGB(rho_     ,i,j,k,iBLK) = Denscell
@@ -153,7 +153,7 @@ contains
     use ModVarIndexes, ONLY: nVar,Ew_,rho_,Ux_,Uy_,Uz_,Bx_,By_,Bz_,P_
 
     use ModGeometry,   ONLY: R_BLK
-    use ModAdvance,    ONLY: State_VGB
+    use ModAdvance,    ONLY: State_VGB, Hyp_
     use ModPhysics,    ONLY: inv_gm1, OmegaBody
     use ModNumConst,   ONLY: cTolerance,cTiny
 
@@ -166,7 +166,6 @@ contains
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
-    integer :: iHyp
     real    :: Denscell, Prescell, Gammacell
     real    :: RR, FullBnorm
     real, dimension(3) :: RFace_D, B1_D, U_D, B1t_D, B1n_D, &
@@ -226,8 +225,7 @@ contains
     end if
 
     if(UseHyperbolicDivb)then
-       iHyp = Bz_ + 1
-       VarsGhostFace_V(iHyp) = cZero
+       VarsGhostFace_V(Hyp_) = 0.0
     end if
 
   end subroutine user_face_bcs
@@ -295,7 +293,6 @@ contains
     integer :: i, j, k
     real    :: Denscell,Prescell,Gammacell,Beta
     !------------------------------------------------------------------------
-
     call update_states_MHD(iStage,iBlock)
     !\
     ! Begin update of pressure and relaxation energy::
@@ -336,6 +333,7 @@ contains
          State_VGB,Bx_,By_,Bz_,B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
     use ModGeometry
     use ModPhysics,ONLY:rBody
+    use ModOctree
     implicit none
 
     logical,intent(out) :: refineBlock, found
@@ -366,7 +364,7 @@ contains
                 refineBlock = .false.
              end if
           endif
-       elseif(lev<=6)then
+       elseif(global_block_ptrs(iBLK,iProc+1)%ptr%LEV<=5)then
           !refine heliosheath up to 6 levels
           BDotRMin=cZero
           do k=0,nK+1;do j=1,nJ
