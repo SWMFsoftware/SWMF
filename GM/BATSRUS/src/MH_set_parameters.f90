@@ -1628,6 +1628,13 @@ subroutine MH_set_parameters(TypeAction)
              call read_var('DoFixExtraBoundary',&  
              DoFixExtraBoundary)  
 
+     case("#FACEBOUNDARY")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('MinBoundary',MinBoundary)
+        call read_var('MaxBoundary',MaxBoundary)
+        if(MaxBoundary>=East_)&
+             call read_var('DoFixOuterBoundary',DoFixOuterBoundary) 
+
      case('#FACEOUTERBC')                      
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('MaxBoundary',MaxBoundary)
