@@ -33,8 +33,7 @@ module ModVarIndexes
        RhoUz_ = 4,    &
        Bx_    = 5,    &
        By_    = 6,    &
-       Bz_    = 7,    &
-       Hyp_   = 8,    &
+       Bz_    = 7,    & ! Hyp_ = Bz_+1 is defined in ModAdvance
        Ew_    = 9,    &
        p_     = nVar, &
        Energy_= nVar+1

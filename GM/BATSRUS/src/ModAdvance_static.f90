@@ -14,6 +14,10 @@ Module ModAdvance
   ! Numerical flux type
   character (len=10) :: FluxType
 
+  ! Named index for hyperbolic scalar field for div B cleaning
+  integer, parameter:: Hyp_ = Bz_+1
+
+
   !\ One of the two possible ways to treat the MHD-like systems
   !  (oartially symmetrizable, following the Godunov definition).
   !  If the UseRS7=.true. then the 7 waves Riemann Solver (RS) with 

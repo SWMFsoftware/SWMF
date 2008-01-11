@@ -1246,7 +1246,7 @@ subroutine MH_set_parameters(TypeAction)
         DoInitConstrainB = .true.                        !^CFG IF CONSTRAINB
 
      case("#HYPERBOLICDIVB")
-        if(NameVar_V(Bz_+1) /= 'Hyp')then
+        if(NameVar_V(Hyp_) /= 'Hyp')then
            if(iProc==0)then
               write(*,*) NameSub // 'WARNING: ',&
                    'there is no hyperbolic scalar variable in the equation module!'
@@ -1956,7 +1956,7 @@ contains
     UseConstrainB   = .false.         !^CFG IF CONSTRAINB
 
     UseB0Source     = .true.
-    UseHyperbolicDivB = NameVar_V(Bz_+1) == 'Hyp'
+    UseHyperbolicDivB = NameVar_V(Hyp_) == 'Hyp'
 
     UseUpdateCheck  = .true.
     ! The use of (/../) is correct F90, but it is replaced

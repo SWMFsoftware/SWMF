@@ -275,7 +275,8 @@ contains
          jMinFaceX, jMaxFaceX, kMinFaceX, kMaxFaceX, &
          iMinFaceY, iMaxFaceY, kMinFaceY,kMaxFaceY, &
          iMinFaceZ,iMaxFaceZ, jMinFaceZ, jMaxFaceZ, &
-         iTest, jTest, kTest, ProcTest, BlkTest, DimTest
+         iTest, jTest, kTest, ProcTest, BlkTest, DimTest, &
+         UseHyperbolicDivb
     use ModPhysics,  ONLY: Clight
 
     implicit none
@@ -302,7 +303,7 @@ contains
 
     UseRS7 = DoRoe  ! This is always true for the current implementation
 
-    UseLindeFix = .false. &
+    UseLindeFix = UseHyperbolicDivb &
          .or. DoHll      &               !^CFG IF LINDEFLUX
          .or. DoHllD     &               !^CFG IF HLLDFLUX
          .or. DoAw                       !^CFG IF AWFLUX
@@ -684,7 +685,7 @@ contains
     use ModVarIndexes, ONLY: U_, Bx_, By_, Bz_, &
          UseMultiSpecies, SpeciesFirst_, SpeciesLast_, Rho_,Ux_,Uy_,Uz_,&
          RhoUx_,RhoUy_,RhoUz_
-    use ModAdvance, ONLY: DoReplaceDensity,State_VGB
+    use ModAdvance, ONLY: DoReplaceDensity,State_VGB,Hyp_
     use ModCharacteristicMhd,ONLY:dissipation_matrix
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp
@@ -830,20 +831,33 @@ contains
        ! Fix the energy diffusion
        !Flux_V(Energy_) = Flux_V(Energy_) - cDivBWave*DiffE
     end if
-    if(.not.UseRS7 .and. UseLindeFix)then
-       ! Linde's idea: use Lax-Friedrichs flux for Bn
-       Flux_V(Bx_) = Flux_V(Bx_) - cMax*DiffBx
-       Flux_V(By_) = Flux_V(By_) - cMax*DiffBy
-       Flux_V(Bz_) = Flux_V(Bz_) - cMax*DiffBz
+    if(UseLindeFix)then
 
-       ! Fix the energy diffusion
-       Flux_V(Energy_) = Flux_V(Energy_) - cMax*DiffE
+       if(UseHyperbolicDivb) then
+          ! Overwrite the Flux of the Hyp field with the Lax-Friedrichs Flux
+          Cmax = max(Cmax,Area*SpeedHyp)
+          Flux_V(Hyp_) = 0.5*(FluxLeft_V(Hyp_) + FluxRight_V(Hyp_) &
+               - Cmax*(StateRight_V(Hyp_) - StateLeft_V(Hyp_)))
+       end if
+
+       if(.not.UseRS7)then
+          ! Linde's idea: use Lax-Friedrichs flux for Bn
+          Flux_V(Bx_) = Flux_V(Bx_) - Cmax*DiffBx
+          Flux_V(By_) = Flux_V(By_) - Cmax*DiffBy
+          Flux_V(Bz_) = Flux_V(Bz_) - Cmax*DiffBz
+
+          ! Fix the energy diffusion
+          Flux_V(Energy_) = Flux_V(Energy_) - Cmax*DiffE
+       end if
     end if
 
     ! Increase maximum speed with resistive diffusion speed if necessary
     if(Eta > 0.0) CmaxDt = CmaxDt + 2*Eta*InvDxyz*Area !^CFG IF DISSFLUX
 
-    if(UseHyperbolicDivb) CmaxDt = max(Area*SpeedHyp, CmaxDt)
+    if(UseHyperbolicDivb)then
+       ! Further limit timestep due to the hyperbolic cleaning equation
+       CmaxDt = max(Area*SpeedHyp, CmaxDt)
+    end if
 
     if(DoTestCell)call write_test_info
 
@@ -1512,6 +1526,8 @@ contains
       use ModPhysics, ONLY: g, inv_gm1, inv_c2LIGHT
       use ModMain,    ONLY: x_, y_, z_, UseHyperbolicDivb, SpeedHyp2
       use ModVarIndexes
+      use ModAdvance, ONLY: Hyp_
+
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, Bx, By, Bz, p, e, FullBx, FullBy, FullBz, FullBn
       real :: HallUx, HallUy, HallUz, InvRho
@@ -1524,7 +1540,6 @@ contains
       real :: InvNumDens, StateTmp_V(nVar), UxPlus, UyPlus, UzPlus, UnPlus
       real, dimension(nIonFluid) :: NumDens_I, InvRho_I, Ux_I, Uy_I, Uz_I
 
-      integer :: iHyp
       real    :: Hyp
 
       !-----------------------------------------------------------------------
@@ -1652,15 +1667,14 @@ contains
       end if
 
       if(UseHyperbolicDivb)then
-         iHyp = Bz_+1
-         Hyp  = State_V(iHyp)
+         Hyp  = State_V(Hyp_)
 
          Flux_V(Bx_) = Flux_V(Bx_) + AreaX*Hyp
          Flux_V(By_) = Flux_V(By_) + AreaY*Hyp
          Flux_V(Bz_) = Flux_V(Bz_) + AreaZ*Hyp
          Flux_V(Energy_) = Flux_V(Energy_) + Bn*Hyp
 
-         Flux_V(iHyp) = SpeedHyp2*FullBn
+         Flux_V(Hyp_) = SpeedHyp2*FullBn
       end if
 
       if(Eta > 0.0)then                          !^CFG IF DISSFLUX BEGIN

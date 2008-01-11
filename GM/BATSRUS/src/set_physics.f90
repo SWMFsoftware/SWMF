@@ -529,6 +529,7 @@ subroutine init_mhd_variables
   use ModVarIndexes
   use ModPhysics
   use ModMultiFluid
+  use ModAdvance, ONLY: Hyp_
 
   implicit none
 
@@ -564,14 +565,13 @@ subroutine init_mhd_variables
      NameUnitUserIdl_V(iVar) = NameIdlUnit_V(UnitRho_)
   end do
 
-  if(NameVar_V(Bz_+1) == 'Hyp')then
-     iVar = Bz_+1
+  if(NameVar_V(Hyp_) == 'Hyp')then
      ! Set the scalar field Phi used in hyperbolic cleaning
-     UnitUser_V(iVar) = No2Io_V(UnitB_)*No2Io_V(UnitU_)
-     NameUnitUserTec_V(iVar) = &
+     UnitUser_V(Hyp_) = No2Io_V(UnitB_)*No2Io_V(UnitU_)
+     NameUnitUserTec_V(Hyp_) = &
           trim(NameTecUnit_V(UnitB_)) // trim(NameTecUnit_V(UnitU_))
     
-     NameUnitUserIdl_V(iVar) = &
+     NameUnitUserIdl_V(Hyp_) = &
           trim(NameIdlUnit_V(UnitB_)) // trim(NameIdlUnit_V(UnitU_))
   end if
 

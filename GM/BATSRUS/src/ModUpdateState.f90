@@ -72,8 +72,8 @@ subroutine update_states_MHD(iStage,iBLK)
        user_init_point_implicit)
 
   if(UseHyperbolicDivb .and. HypDecay > 0) &
-       State_VGB(Bz_+1,1:nI,1:nJ,1:nK,iBlk) = &
-       State_VGB(Bz_+1,1:nI,1:nJ,1:nK,iBlk)*(1 - HypDecay)
+       State_VGB(Hyp_,1:nI,1:nJ,1:nK,iBlk) = &
+       State_VGB(Hyp_,1:nI,1:nJ,1:nK,iBlk)*(1 - HypDecay)
 
 contains
 
