@@ -3475,10 +3475,6 @@ You can use either Boris or BorisSimple but not both. <!-- ^CFG IF BORISCORR -->
 	<parameter name="UseDivbDiffusion" type="logical" default="F"/><!--^CFG IF DIVBDIFFUSE -->
 	<parameter name="UseProjection"    type="logical" default="F"/><!--^CFG IF PROJECTION -->
 	<parameter name="UseConstrainB"    type="logical" default="F"/><!--^CFG IF CONSTRAINB -->
-	<rule
-	expr="$UseDivbSource or $UseDivbDiffusion or $UseProjection or $UseConstrainB">
-		At least one of the options should be true.
-	</rule>
 	<!-- ^CFG IF PROJECTION BEGIN -->
 	<rule 
 	expr="not($UseProjection and ($UseDivbSource or $UseDivbDiffusion or $UseConstrainB))">
@@ -3500,7 +3496,8 @@ F			UseConstrainB           <!-- ^CFG IF CONSTRAINB -->
 Default values are shown above.
 If UseProjection is true, all others should be false.<!--^CFG IF PROJECTION-->
 If UseConstrainB is true, all others should be false.<!--^CFG IF CONSTRAINB-->
-At least one of the options should be true.
+At least one of the options should be true unless the hyperbolic cleaning
+is used. The hyperbolic cleaning can be combined with UseDivbSource only.
 </command>
 
 <command name="DIVBSOURCE">
@@ -3510,6 +3507,32 @@ T			UseB0Source
 
 Add extra source terms related to the non-zero divergence and curl of B0.
 Default is true.
+</command>
+
+<command name="HYPERBOLICDIVB">
+	<parameter name="UseHyperbolicDivb" type="logical" default="T"/>
+	<if expr="$UseHyperbolicDivb">
+		<parameter name="SpeedHypDim" type="real" min="0" default="1"/>
+		<parameter name="HypDecay" type="real" min="-1" max="0.5"
+						default="0.1"/>
+	</if>	
+#HYPERBOLICDIVB
+T			UseHyperbolicDivb
+400.0			SpeedHypDim
+0.1			HypDecay
+
+This command sets the parameters for hyperbolic/parabolic cleaning. The command
+(and the hyperbolic cleaning method) can only be used of there is a hyperbolic
+scalar named Hyp in the equation module. The SpeedHypDim parameter sets the 
+propagation speed for div B errors in dimensional units. Do not use a speed
+that limits the time step (ie. exceeds the fastest wave speed). The HypDecay
+parameter is for the parabolic cleaning. If HypDecay is less than zero, no
+parabolic cleaning is applied. If it is positive, the scalar field is
+modified as Hyp=Hyp*(1-HypDecay) after every update. This corresponds to
+a point implicit evaluation of a parabolic diffusion of the Hyp scalar.
+
+Default values are UseHyperbolicDivb true, the speed SpeedHyp is 1.0 in
+the normalized units, and HypDecay=0.1.
 </command>
 
 <!-- ^CFG IF PROJECTION BEGIN -->
