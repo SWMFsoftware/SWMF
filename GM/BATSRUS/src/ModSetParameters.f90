@@ -2291,6 +2291,22 @@ contains
   !===========================================================================
   subroutine check_parameters
 
+    if(UseHyperbolicDivb)then
+       if(UseDivbDiffusion &
+            .or. UseConstrainB &  !^CFG IF CONSTRAINB
+            .or. UseProjection &  !^CFG IF PROJECTION
+            )then
+          if(iProc==0)then
+             write(*,'(a)')NameSub// &
+                  ' WARNING: Hyperbolic cleaning can only be combined', &
+                  ' with 8-wave scheme, not any other div B scheme'
+             if (UseStrict) call stop_mpi('Correct PARAM.in!')
+             write(*,*)NameSub//' Setting UseHyperbolicDivb = .false.'
+          end if
+          UseHyperbolicDivb = .false.
+       end if
+    end if
+
     ! Check CFL number
     if(.not.time_accurate .and. iProc==0)then
        if(boris_correction)then                     !^CFG IF BORISCORR BEGIN
