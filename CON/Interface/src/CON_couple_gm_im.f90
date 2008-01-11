@@ -38,6 +38,9 @@ module CON_couple_gm_im
   ! Size of the 2D spherical structured (possibly non-uniform) IM grid
   integer, save :: iSize, jSize, nCells_D(2)
 
+  ! Number of satellites in GM that will also be traced in IM
+  integer, save :: nShareSats       !!!DTW 2007
+
 contains
 
   !BOP =======================================================================
@@ -57,6 +60,9 @@ contains
     ! This works for a regular IM grid only
     nCells_D=ncells_decomposition_d(IM_)
     iSize=nCells_D(1); jSize=nCells_D(2)
+
+    ! Set number of satellites shared between GM and IM for tracing.
+    call GM_satinit_for_im(nShareSats)       !!!!DTW 2007
 
   end subroutine couple_gm_im_init
 
@@ -111,6 +117,12 @@ contains
       ! Buffer for the variables on the 2D IM grid
       real, dimension(:,:,:), allocatable :: Buffer_IIV
 
+      ! Buffer for satellite locations   !!! DTW 2007
+      real, dimension(:,:,:), allocatable :: Buffer_III
+
+      ! Buffer for satellite names   !!! DTW 2007
+      character (len=100), dimension(:), allocatable:: Buffer_I
+
       ! MPI related variables
 
       ! MPI status variable
@@ -136,6 +148,13 @@ contains
       !/
       allocate(Buffer_IIV(iSize,jSize,nVarGmIm), stat=iError)
       call check_allocate(iError,NameSubSub//": Buffer_IIV")
+      !!! DTW 2007
+      if (nShareSats > 0) then
+         allocate(Buffer_III(3,2,nShareSats), stat=iError)
+         call check_allocate(iError,NameSubSub//": Buffer_III")
+         allocate(Buffer_I(nShareSats),       stat=iError)
+         call check_allocate(iError,NameSubSub//": Buffer_I")
+      end if
 
       if(DoTest)write(*,*)NameSubSub,', variables allocated',&
            ', iProc:',iProcWorld
@@ -147,7 +166,14 @@ contains
            call GM_get_for_im(Buffer_IIV,iSize,jSize,nVarGmIm,NameVar)
 
       !\
-      ! Transfer variables from GM to IM
+      ! If IM sat tracing is enabled, get sat locations from GM
+      !/
+      if(is_proc(GM_).AND.(nShareSats > 0)) &
+           call GM_get_sat_for_im(Buffer_III, Buffer_I, nShareSats)
+           
+
+      !\
+      ! Transfer physical variables from GM to IM
       !/
       if(i_proc0(IM_) /= i_proc0(GM_))then
          nSize = iSize*jSize*nVarGmIm
@@ -159,6 +185,32 @@ contains
               1,i_comm(),iStatus_I,iError)
       end if
 
+      !\
+      ! Transfer satellite names from GM to IM   !!!DTW 2007
+      !/   
+      if(i_proc0(IM_) /= i_proc0(GM_))then
+         nSize = nShareSats
+         if(is_proc0(GM_)) &
+              call MPI_send(Buffer_I,nSize,MPI_REAL,i_proc0(IM_),&
+              1,i_comm(),iError)
+         if(is_proc0(IM_)) &
+              call MPI_recv(Buffer_I,nSize,MPI_REAL,i_proc0(GM_),&
+              1,i_comm(),iStatus_I,iError)
+      end if
+
+      !\
+      ! Transfer satellite locations from GM to IM   !!!DTW 2007
+      !/   
+      if(i_proc0(IM_) /= i_proc0(GM_))then
+         nSize = 3*2*nShareSats
+         if(is_proc0(GM_)) &
+              call MPI_send(Buffer_III,nSize,MPI_REAL,i_proc0(IM_),&
+              1,i_comm(),iError)
+         if(is_proc0(IM_)) &
+              call MPI_recv(Buffer_III,nSize,MPI_REAL,i_proc0(GM_),&
+              1,i_comm(),iStatus_I,iError)
+      end if
+
       if(DoTest)write(*,*)NameSubSub,', variables transferred',&
            ', iProc:',iProcWorld
 
@@ -167,6 +219,7 @@ contains
       !/
       if(is_proc0(IM_))then
          call IM_put_from_gm(Buffer_IIV,iSize,jSize,nVarGmIm,NameVar)
+         call IM_put_sat_from_gm(nShareSats, Buffer_I, Buffer_III)
          if(DoTest) &
               write(*,*)'get_fieldline_volume: IM iProc, Buffer(1,1)=',&
               iProcWorld,Buffer_IIV(1,1,:)
@@ -176,6 +229,12 @@ contains
       ! Deallocate buffer to save memory
       !/
       deallocate(Buffer_IIV)
+
+      !!! DTW 2007
+      if (nShareSats > 0) then
+         deallocate(Buffer_I)
+         deallocate(Buffer_III)
+      end if
 
       if(DoTest)write(*,*)NameSubSub,', variables deallocated',&
            ', iProc:',iProcWorld
