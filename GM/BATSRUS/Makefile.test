@@ -57,18 +57,18 @@ test_shocktube:
 	make test_shocktube_check
 
 test_shocktube_compile:
-	./Config.pl -u=Default -e=Mhd -g=256,4,4,10,1
+	./Config.pl -u=Default -e=MhdHyp -g=256,4,4,10,1
 	make
 	make PIDL
 
 test_shocktube_rundir: test_rundir
-	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in .
+	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.hyp PARAM.in
 
 test_shocktube_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 
 test_shocktube_check:
-	cat ${TESTDIR}/GM/IO2/cut_raw_2_t00000025_n0000358_pe*.idl \
+	cat ${TESTDIR}/GM/IO2/cut_raw_2_t00000025_n0000386_pe*.idl \
 		> ${TESTDIR}/GM/IO2/cut_25.idl
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-13 \
 	  Param/SHOCKTUBE/TestOutput/cut_25.idl \

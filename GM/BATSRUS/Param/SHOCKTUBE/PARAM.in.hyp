@@ -21,21 +21,16 @@ Brio-Wu MHD shock tube problem rotated around Z axis
 #GAMMA
 2.0
 
-#STRICT
-F
+#HYPERBOLICDIVB
+T		UseHyperbolicDivb
+4.0		SpeedHypDim
+0.05		HypDecay
 
 #DIVB
 F
 F
 F
 F
-
-#STRICT
-T
-
-#HYPERBOLICDIVB
-T		UseHyperbolicDivb
-1.0		cHyp
 
 #SHOCKTUBE
 1.		rho (left state)
@@ -45,7 +40,7 @@ T		UseHyperbolicDivb
 0.75		Bx
 1.		By
 0.		Bz
-0.		Phi
+0.		Hyp
 1.		P
 0.125		rho (right state)
 0.		Ux
@@ -73,8 +68,9 @@ float		zMaxBc
 
 #SCHEME
 2		nOrder
-Rusanov		TypeFlux
-minmod		TypeLimiter
+Roe		TypeFlux
+mc3		TypeLimiter
+1.5		LimiterBeta
 
 #SAVELOGFILE
 T		DoSaveLogfile
