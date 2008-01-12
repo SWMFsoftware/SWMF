@@ -160,3 +160,17 @@ end subroutine IM_get_for_gm
 
 !==============================================================================
 
+subroutine IM_put_sat_from_gm(nSats, Buffer_I, Buffer_III)
+
+  implicit none
+  character (len=*), parameter :: NameSub='IM_put_sat_from_gm'
+
+  integer, intent(in)            :: nSats
+  real, intent(in)               :: Buffer_III(3,2,nSats)
+  character(len=100), intent(in) :: Buffer_I(nSats)
+
+  call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
+
+end subroutine IM_put_sat_from_gm
+
+!==============================================================================
