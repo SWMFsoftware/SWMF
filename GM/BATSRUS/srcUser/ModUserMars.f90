@@ -24,7 +24,7 @@ module ModUser
   ! Here you must define a user routine Version number and a 
   ! descriptive string.
   !/
-  real,              parameter :: VersionUserModule = 1.0
+  real,              parameter :: VersionUserModule = 1.1
   character (len=*), parameter :: NameUserModule = &
        'Mars 4 species MHD code, Yingjuan Ma'
 
@@ -52,7 +52,7 @@ module ModUser
   real, dimension(MaxSpecies)::LossSpecies_I, &
        SiSpecies_I,  LiSpecies_I,  PhoIon_I, Recb_I
   !        dStndRho_I,  dLtdRho_I,  dLtndNumRho_I, &
-  real:: totalNumRho, totalLossRho, totalLossNumRho, &
+  real:: totalNumRho, totalLossRho,totalSourceRho, totalLossNumRho, &
        totalSourceNumRho, totalLossx, totalLossNumx
 
   real,  dimension(1:nI, 1:nJ, 1:nK, nBLK) :: &
@@ -135,7 +135,7 @@ module ModUser
   real :: Tp_body_dim=300.0, Tp_body  !dimensionless temperature 
   !of new created ions / plasma (Tp_body=2.0*Ti_body)
 
-  real :: T300_dim = 300.0, T300 , Ti_dim =300.
+  real :: T300_dim = 300.0, T300 , Ti_dim =300., Tp
   real,  dimension(1:nI,1:nJ,1:nK,nBLK) :: nu_BLK,nu1_BLK
   real :: nu0_dim=4.0e-10,nu0
 
@@ -328,8 +328,8 @@ contains
     if(oktest_me)then
        write(*,*)'After Source(rho, rhoSp)=', &
             Source_VC(rho_:8,iTest,jTest,kTest)
-       write(*,*)'Source(rhoU)=', Source_VC(9:11,iTest,jTest,kTest)
-       write(*,*)'Source(B)=', Source_VC(12:14,iTest,jTest,kTest)
+       write(*,*)'Source(rhoU)=', Source_VC(5:8,iTest,jTest,kTest)
+       write(*,*)'Source(B)=', Source_VC(9:11,iTest,jTest,kTest)
        write(*,*)'Source(p,E)', Source_VC(P_:P_+1,iTest,jTest,kTest)
     end if
 
@@ -434,14 +434,14 @@ contains
          vInv_CB
     use ModConst,    ONLY: cZero,cHalf,cOne,cTwo,cTolerance
     use ModProcMH,   ONLY: iProc
-    use ModPhysics,  ONLY: Rbody, inv_gm1
+    use ModPhysics,  ONLY: Rbody, inv_gm1, gm1
 !    use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data
     use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit
 
     ! Variables required by this user subroutine
     integer:: i,j,k,iSpecies, iBlock
     real :: inv_rho, inv_rho2, uu2,Productrate
-    real :: alt, Te_dim = 300.0
+    real :: alt, Te_dim = 300.0, temp
     real :: totalPSNumRho=0.0,totalRLNumRhox=0.0
     logical:: oktest,oktest_me
     !
@@ -478,55 +478,54 @@ contains
             -nu_BLK(i,j,k,globalBLK)*State_VGB(Uy_,i,j,k,globalBLK)
        SrhoUz(i,j,k) = SrhoUz(i,j,k)  &
             -nu_BLK(i,j,k,globalBLK)*State_VGB(Uz_,i,j,k,globalBLK)
-       SE(i,j,k) = SE(i,j,k)  &
-            -State_VGB(rho_,i,j,k,globalBLK)*uu2*nu_BLK(i,j,k,globalBLK) 
-
-       if (UseMultiSpecies) then
-          if (R_BLK(i,j,k,globalBLK) > Rbody &
-               .and.R_BLK(i,j,k,globalBLK) < 2.0 ) then
-
-             ReactionRate_I=0.0
-             CoeffSpecies_II(:,:)=0.0
-             PhoIon_I(:)=0.0
-             Recb_I(:)=0.0
-             LossSpecies_I=0.0
-             SiSpecies_I(:)=0.0
-             LiSpecies_I(:)=0.0
-
-             totalLossRho=0.0
-             totalLossNumRho=0.0
-             totalSourceNumRho=0.0
-             totalLossx=0.0
-             totalLossNumx=0.0
-             totalPSNumRho=0.0
-             totalRLNumRhox=0.0
 
 
-             totalNumRho=sum(State_VGB(rho_+1:rho_+nSpecies,i,j,k,globalBLK) &
-                  /MassSpecies_I(1:nSpecies))
-             MaxSLSpecies_CB(i,j,k,globalBLK)=1.0e-3
+       if (R_BLK(i,j,k,globalBLK) > Rbody &
+            .and.R_BLK(i,j,k,globalBLK) < 3.0 ) then
+          
+          ReactionRate_I=0.0
+          CoeffSpecies_II(:,:)=0.0
+          PhoIon_I(:)=0.0
+          Recb_I(:)=0.0
+          LossSpecies_I=0.0
+          SiSpecies_I(:)=0.0
+          LiSpecies_I(:)=0.0
+          
+          totalSourceRho=0.0
+          totalLossRho=0.0
+          totalLossNumRho=0.0
+          totalSourceNumRho=0.0
+          totalLossx=0.0
+          totalLossNumx=0.0
+          totalPSNumRho=0.0
+          totalRLNumRhox=0.0
+          
+          
+          totalNumRho=sum(State_VGB(rho_+1:rho_+nSpecies,i,j,k,globalBLK) &
+               /MassSpecies_I(1:nSpecies))
+          MaxSLSpecies_CB(i,j,k,globalBLK)=1.0e-3
+          
+          Productrate= Productrate_CB(i,j,k,globalBLK)
+          
+          !             ReactionRate_I(CO2_hv__CO2p_em_)= &
+          !                  Rate_I(CO2_hv__CO2p_em_)&
+          !                  *nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)
+          !             PhoIon_I(CO2p_)=ReactionRate_I(CO2_hv__CO2p_em_) &
+          !                  *Productrate
+          !             ReactionRate_I(O_hv__Op_em_)= &
+          !                  Rate_I(O_hv__Op_em_)&
+          !                  *nDenNuSpecies_CBI(i,j,k,globalBLK,O_)
+          !             PhoIon_I(Op_)=ReactionRate_I(O_hv__Op_em_) &
+          !                  *Productrate
 
-             Productrate= Productrate_CB(i,j,k,globalBLK)
-
-!             ReactionRate_I(CO2_hv__CO2p_em_)= &
-!                  Rate_I(CO2_hv__CO2p_em_)&
-!                  *nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)
-!             PhoIon_I(CO2p_)=ReactionRate_I(CO2_hv__CO2p_em_) &
-!                  *Productrate
-!             ReactionRate_I(O_hv__Op_em_)= &
-!                  Rate_I(O_hv__Op_em_)&
-!                  *nDenNuSpecies_CBI(i,j,k,globalBLK,O_)
-!             PhoIon_I(Op_)=ReactionRate_I(O_hv__Op_em_) &
-!                  *Productrate
-
-             ReactionRate_I(H_hv__Hp_em_)= &
-                  Rate_I(H_hv__Hp_em_)&
-                  *nDenNuSpecies_CBI(i,j,k,globalBLK,H_)
-             PhoIon_I(Hp_)=ReactionRate_I(H_hv__Hp_em_) &
-                  *Productrate
+          ReactionRate_I(H_hv__Hp_em_)= &
+               Rate_I(H_hv__Hp_em_)&
+               *nDenNuSpecies_CBI(i,j,k,globalBLK,H_)
+          PhoIon_I(Hp_)=ReactionRate_I(H_hv__Hp_em_) &
+               *Productrate
              
-             PhoIon_I(CO2p_)=Ionizationrate_CBI(i,j,k,globalBLK,CO2_)
-             PhoIon_I(Op_)=Ionizationrate_CBI(i,j,k,globalBLK,O_)
+          PhoIon_I(CO2p_)=Ionizationrate_CBI(i,j,k,globalBLK,CO2_)
+          PhoIon_I(Op_)=Ionizationrate_CBI(i,j,k,globalBLK,O_)
 
 
 !!!              Alt = (R_BLK(i,j,k,globalBLK)-1.0)*6052.0
@@ -537,26 +536,26 @@ contains
 !!!              else
 !!!                 Te_dim =7.0e3
 !!!              end if
-             Te_dim = 300.0
-             Ti_dim= Te_dim
+!!!          Te_dim = 300.0
+!!!          Ti_dim= Te_dim
 
-             !charge exchange
-             ReactionRate_I(CO2p_O__O2p_CO_)= &
-                  Rate_I(CO2p_O__O2p_CO_)&
-                  * nDenNuSpecies_CBI(i,j,k,globalBLK,O_)
-             CoeffSpecies_II(O2p_,CO2p_)=ReactionRate_I(CO2p_O__O2p_CO_)
-
-             ReactionRate_I(Op_CO2__O2p_CO_)= &
-                  Rate_I(Op_CO2__O2p_CO_)&
-                  * nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)&
-                  *exp(log(Tnu_body_dim/Ti_dim)*0.39)
-             CoeffSpecies_II(O2p_, Op_)=ReactionRate_I(Op_CO2__O2p_CO_)
-
-             ReactionRate_I(CO2p_O__Op_CO2_)= &
-                  Rate_I(CO2p_O__Op_CO2_)&
-                  * nDenNuSpecies_CBI(i,j,k,globalBLK,O_)
-             CoeffSpecies_II(Op_,CO2p_)=ReactionRate_I(CO2p_O__Op_CO2_)
-
+          !charge exchange
+          ReactionRate_I(CO2p_O__O2p_CO_)= &
+               Rate_I(CO2p_O__O2p_CO_)&
+               * nDenNuSpecies_CBI(i,j,k,globalBLK,O_)
+          CoeffSpecies_II(O2p_,CO2p_)=ReactionRate_I(CO2p_O__O2p_CO_)
+          
+          ReactionRate_I(Op_CO2__O2p_CO_)= &
+               Rate_I(Op_CO2__O2p_CO_)&
+               * nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)&
+               *exp(log(Tnu_body_dim/Ti_dim)*0.39)
+          CoeffSpecies_II(O2p_, Op_)=ReactionRate_I(Op_CO2__O2p_CO_)
+          
+          ReactionRate_I(CO2p_O__Op_CO2_)= &
+               Rate_I(CO2p_O__Op_CO2_)&
+               * nDenNuSpecies_CBI(i,j,k,globalBLK,O_)
+          CoeffSpecies_II(Op_,CO2p_)=ReactionRate_I(CO2p_O__Op_CO2_)
+          
 !!!              ReactionRate_I(Hp_O__Op_H_)= &
 !!!                   Rate_I(Hp_O__Op_H_)* nDenNuSpecies_CBI(i,j,k,globalBLK,O_)
 !!!              CoeffSpecies_II(Op_,Hp_)=ReactionRate_I(Hp_O__Op_H_)
@@ -564,37 +563,42 @@ contains
 !!!              ReactionRate_I(Op_H__Hp_O_)= &
 !!!                   Rate_I(Op_H__Hp_O_)* nDenNuSpecies_CBI(i,j,k,globalBLK,H_)
 !!!              CoeffSpecies_II(Hp_,Op_)=ReactionRate_I(Op_H__Hp_O_)
+          
+          
+          ! Recombination
+          
+          !              ReactionRate_I(O2p_em__O_O_)=Rate_I(O2p_em__O_O_)
+          !              Recb_I(O2p_)=ReactionRate_I(O2p_em__O_O_)
+          
+          !              ReactionRate_I(CO2p_em__CO_O_)=Rate_I(CO2p_em__CO_O_)
+          !              Recb_I(CO2p_)=ReactionRate_I(CO2p_em__CO_O_)
+          ! Recombination
 
+          Tp=State_VGB(P_,i,j,k,globalBLK)/totalNumRho
 
-             ! Recombination
-
-             !              ReactionRate_I(O2p_em__O_O_)=Rate_I(O2p_em__O_O_)
-             !              Recb_I(O2p_)=ReactionRate_I(O2p_em__O_O_)
-
-             !              ReactionRate_I(CO2p_em__CO_O_)=Rate_I(CO2p_em__CO_O_)
-             !              Recb_I(CO2p_)=ReactionRate_I(CO2p_em__CO_O_)
-             ! Recombination
-             !Tp=p_BLK(i,j,k,globalBLk)/totalNumRho
-             ReactionRate_I(O2p_em__O_O_)=Rate_I(O2p_em__O_O_)
-             Recb_I(O2p_)=ReactionRate_I(O2p_em__O_O_)*exp(log(TNu_body_dim/Te_dim)*0.56)
-
-             ReactionRate_I(CO2p_em__CO_O_)=Rate_I(CO2p_em__CO_O_)
-             Recb_I(CO2p_)=ReactionRate_I(CO2p_em__CO_O_)*&
-                  sqrt(TNu_body_dim/Te_dim)
-
-             !end if  !(x>0.0)
-
-             do iSpecies=1, nSpecies
-                LossSpecies_I=LossSpecies_I &
-                     +CoeffSpecies_II(iSpecies, :)
-                !                dStndRho_I=dStndRho_I  &
-                     !                     +CoeffSpecies_II(iSpecies, :)/MassSpecies_I(:)
-                dSdRho_II(1:nSpecies, iSpecies)= &
-                     CoeffSpecies_II(1:nSpecies, iSpecies)&
-                     *MassSpecies_I(1:nSpecies)/MassSpecies_I(iSpecies)
-
-             enddo
-
+          ReactionRate_I(O2p_em__O_O_)=Rate_I(O2p_em__O_O_)
+!          Recb_I(O2p_)=ReactionRate_I(O2p_em__O_O_)*exp(log(TNu_body_dim/Te_dim)*0.56)
+          Recb_I(O2p_)=ReactionRate_I(O2p_em__O_O_)*exp(log(TNu_body*2.0/Tp)*0.56)
+          
+          ReactionRate_I(CO2p_em__CO_O_)=Rate_I(CO2p_em__CO_O_)
+!          Recb_I(CO2p_)=ReactionRate_I(CO2p_em__CO_O_)*&
+!               sqrt(TNu_body_dim/Te_dim)
+          Recb_I(CO2p_)=ReactionRate_I(CO2p_em__CO_O_)*&
+               sqrt(TNu_body*2.0/Tp)
+          
+          !end if  !(x>0.0)
+          
+          do iSpecies=1, nSpecies
+             LossSpecies_I=LossSpecies_I &
+                  +CoeffSpecies_II(iSpecies, :)
+             !                dStndRho_I=dStndRho_I  &
+             !                     +CoeffSpecies_II(iSpecies, :)/MassSpecies_I(:)
+             dSdRho_II(1:nSpecies, iSpecies)= &
+                  CoeffSpecies_II(1:nSpecies, iSpecies)&
+                  *MassSpecies_I(1:nSpecies)/MassSpecies_I(iSpecies)
+             
+          enddo
+             
 !!!              do iSpecies=1, nSpecies
 !!!                 dLdRho_II(1:nSpecies, iSpecies)=Recb_I(1:nSpecies)&
 !!!                      *rhoSpecies_GBI(i,j,k,globalBLK,1:nSpecies) &
@@ -611,104 +615,99 @@ contains
 !!!                 dLtndNumRho_I(:)=dLtndNumRho_I(:) &
 !!!                      +dLdRho_II(iSpecies,:)*MassSpecies_I(:)/MassSpecies_I(iSpecies)
 !!!              enddo              
+          
+          SiSpecies_I(:)=PhoIon_I(:)*MassSpecies_I(:)
+          
+          do iSpecies=1, nSpecies
+             SiSpecies_I(1:nSpecies)=&
+                  SiSpecies_I(1:nSpecies)  &
+                  +dSdRho_II(1:nSpecies, iSpecies) &
+                  *State_VGB(rho_+iSpecies, i,j,k, globalBLK)
+             LiSpecies_I(iSpecies)= &
+                  LiSpecies_I(iSpecies)  &
+                  +(LossSpecies_I(iSpecies) +Recb_I(iSpecies)*totalNumRho)&
+                  *State_VGB(rho_+iSpecies, i,j,k, globalBLK)
+          enddo
+             
 
-             SiSpecies_I(:)=PhoIon_I(:)*MassSpecies_I(:)
-
-             do iSpecies=1, nSpecies
-                SiSpecies_I(1:nSpecies)=&
-                     SiSpecies_I(1:nSpecies)  &
-                     +dSdRho_II(1:nSpecies, iSpecies) &
-                     *State_VGB(rho_+iSpecies, i,j,k, globalBLK)
-                LiSpecies_I(iSpecies)= &
-                     LiSpecies_I(iSpecies)  &
-                     +(LossSpecies_I(iSpecies) +Recb_I(iSpecies)*totalNumRho)&
-                     *State_VGB(rho_+iSpecies, i,j,k, globalBLK)
-             enddo
-
-
-             totalLossRho=sum(LiSpecies_I(1:nSpecies))    
-             !sum of the (Loss term) of all ion species
-             totalLossNumRho=sum(LiSpecies_I(1:nSpecies)&
-                  /MassSpecies_I(1:nSpecies))   
-             !sum of the (loss term/atom mass) of all ..
-             totalSourceNumRho=sum(SiSpecies_I(1:nSpecies)&
-                  /MassSpecies_I(1:nSpecies))
-             ! sum of the (Source term/atom mass) of all..
-             totalLossx=totalLossRho*inv_rho
-             totalLossNumx=totalLossNumRho/totalNumRho
-             totalPSNumRho=sum(PhoIon_I(:)) 
-             ! sum of the photonionziation source/atom mass) of all..
-             totalRLNumRhox=sum(Recb_I(:) &
-                  *State_VGB(rho_+1:rho_+nSpecies, i,j,k, globalBLK)/MassSpecies_I(:))
-             !sum of the (loss term/atom mass) due to recombination
+          totalSourceRho=sum(SiSpecies_I(1:nSpecies))    
+          totalLossRho=sum(LiSpecies_I(1:nSpecies))    
+          !sum of the (Loss term) of all ion species
+          totalLossNumRho=sum(LiSpecies_I(1:nSpecies)&
+               /MassSpecies_I(1:nSpecies))   
+          !sum of the (loss term/atom mass) of all ..
+          totalSourceNumRho=sum(SiSpecies_I(1:nSpecies)&
+               /MassSpecies_I(1:nSpecies))
+          ! sum of the (Source term/atom mass) of all..
+          totalLossx=totalLossRho*inv_rho
+          totalLossNumx=totalLossNumRho/totalNumRho
+          totalPSNumRho=sum(PhoIon_I(:)) 
+          ! sum of the photonionziation source/atom mass) of all..
+          totalRLNumRhox=sum(Recb_I(:) &
+               *State_VGB(rho_+1:rho_+nSpecies, i,j,k, globalBLK)/MassSpecies_I(:))
+          !sum of the (loss term/atom mass) due to recombination
 
 
 
-             MaxSLSpecies_CB(i,j,k,globalBLK)=maxval(abs(SiSpecies_I(1:nSpecies)+&
-                  LiSpecies_I(1:nSpecies) ) /&
-                  (State_VGB(rho_+1:rho_+MaxSpecies, i,j,k, globalBLK)+1e-20))&
-                  /vInv_CB(i,j,k,globalBLK)
+          MaxSLSpecies_CB(i,j,k,globalBLK)=maxval(abs(SiSpecies_I(1:nSpecies)+&
+               LiSpecies_I(1:nSpecies) ) /&
+               (State_VGB(rho_+1:rho_+MaxSpecies, i,j,k, globalBLK)+1e-20))&
+               /vInv_CB(i,j,k,globalBLK)
+          
+          VdtFace_x(i,j,k) = max (MaxSLSpecies_CB(i,j,k,globalBLK),&
+               VdtFace_x(i,j,k) )
+          VdtFace_y(i,j,k) = max (MaxSLSpecies_CB(i,j,k,globalBLK),&
+               VdtFace_y(i,j,k) )
+          VdtFace_z(i,j,k) = max (MaxSLSpecies_CB(i,j,k,globalBLK),&
+               VdtFace_z(i,j,k) )
 
-             VdtFace_x(i,j,k) = max (MaxSLSpecies_CB(i,j,k,globalBLK),&
-                  VdtFace_x(i,j,k) )
-             VdtFace_y(i,j,k) = max (MaxSLSpecies_CB(i,j,k,globalBLK),&
-                  VdtFace_y(i,j,k) )
-             VdtFace_z(i,j,k) = max (MaxSLSpecies_CB(i,j,k,globalBLK),&
-                  VdtFace_z(i,j,k) )
+          SrhoSpecies(1:nSpecies,i,j,k)=SrhoSpecies(1:nSpecies,i,j,k)&
+               +SiSpecies_I(1:nSpecies) &
+               -LiSpecies_I(1:nSpecies)
 
-             SrhoSpecies(1:nSpecies,i,j,k)=SrhoSpecies(1:nSpecies,i,j,k)&
-                  +SiSpecies_I(1:nSpecies) &
-                  -LiSpecies_I(1:nSpecies)
+          Srho(i,j,k)=Srho(i,j,k)&
+               +sum(SiSpecies_I(1:MaxSpecies))&
+               -sum(LiSpecies_I(1:MaxSpecies))
 
-             Srho(i,j,k)=Srho(i,j,k)&
-                  +sum(SiSpecies_I(1:MaxSpecies))&
-                  -sum(LiSpecies_I(1:MaxSpecies))
+          SrhoUx(i,j,k) = SrhoUx(i,j,k) &
+               -State_VGB(Ux_,i,j,k,globalBLK)*totalLossx  
 
-             SrhoUx(i,j,k) = SrhoUx(i,j,k) &
-                  -State_VGB(Ux_,i,j,k,globalBLK)*totalLossx  
+          SrhoUy(i,j,k) = SrhoUy(i,j,k)  &
+               -State_VGB(Uy_,i,j,k,globalBLK)*totalLossx 
 
-             SrhoUy(i,j,k) = SrhoUy(i,j,k)  &
-                  -State_VGB(Uy_,i,j,k,globalBLK)*totalLossx 
+          SrhoUz(i,j,k) = SrhoUz(i,j,k)  &
+               -State_VGB(Uz_,i,j,k,globalBLK)*totalLossx 
+          
+!----- pressure and energy source terms
+          temp = (totalSourceNumRho*Tp_body + totalPSNumRho*T300*20.) &
+               -(totalLossNumx+totalRLNumRhox)*State_VGB(P_,i,j,k,globalBLK)
+               
 
-             SrhoUz(i,j,k) = SrhoUz(i,j,k)  &
-                  -State_VGB(Uz_,i,j,k,globalBLK)*totalLossx 
+          SE(i,j,k) = SE(i,j,k) + (inv_gm1*temp-0.50*uu2*(totalLossRho)     ) 
+          SP(i,j,k) = SP(i,j,k) + (temp        +0.50*uu2*(totalSourceRho)*gm1)
 
-             !           SE(i,j,k) = SE(i,j,k)  &
-                  !                +inv_gm1*totalSourceNumRho*XiT0 &
-             !                -0.50*uu2*(totalLossRho) &
-                  !                -inv_gm1*totalLossNumx*State_VGB(P_,i,j,k,globalBLK) 
+          SE(i,j,k) = SE(i,j,k)  &
+               -0.5*State_VGB(rho_,i,j,k,globalBLK)*uu2*&
+               nu_BLK(i,j,k,globalBLK) 
 
+          SP(i,j,k) = SP(i,j,k)  &
+               +gm1*0.5*State_VGB(rho_,i,j,k,globalBLK)*uu2*&
+               nu_BLK(i,j,k,globalBLK) 
+
+          if((State_VGB(P_,i,j,k,globalBLK)/totalNumRho).gt.(2.0*Tnu_body))then
              SE(i,j,k) = SE(i,j,k)  &
-                  +inv_gm1*(totalSourceNumRho+totalPSNumRho)*Tp_body &
-                  -0.50*uu2*(totalLossRho) &
-                  -inv_gm1*(totalLossNumx+totalRLNumRhox)*State_VGB(P_,i,j,k,globalBLK)
-
-             if((State_VGB(P_,i,j,k,globalBLK)/totalNumRho).gt.(2.0*Tnu_body).and.&
-                  R_BLK(i,j,k,globalBLK)<1.2)&
-                  SE(i,j,k) = SE(i,j,k)  &
-                  -nu_BLK(i,j,k,globalBLK)*totalNumRho&
+                  -nu_BLK(i,j,k,globalBLK)*totalNumRho*inv_gm1&
                   *(State_VGB(P_,i,j,k,globalBLK)/totalNumRho/2.0-Tnu_body)
-
-             ! SE(i,j,k) = SE(i,j,k)  &
-                  ! -0.009*exp((-R_BLK(i,j,k,globalBLK)+1.0)/0.03)*&
-             ! (State_VGB(P_,i,j,k,globalBLK) - 20.0*T300*totalNumRho)/0.00023
-          else
-             !              SrhoSpecies(2:nSpecies,i,j,k)=0.0
-
-          endif !R_BLK(i,j,k,globalBLK) >= Rbody?
-
-       end if !if(UseMultiSpecies)
-
+             SP(i,j,k) = SP(i,j,k)  &
+                  -nu_BLK(i,j,k,globalBLK)*totalNumRho &
+                  *(State_VGB(P_,i,j,k,globalBLK)/totalNumRho/2.0-Tnu_body)
+          end if
+       else
+             
+       endif !R_BLK(i,j,k,globalBLK) >= Rbody?
+       
+   
     end do; end do; end do     ! end of the i,j,k loop
-!!!       if(globalBLK==199)then
-!!!        !  write(*,*)'Source(rho, rhoSp)=', Source_VC(rho_:5,2,1,2)
-!!!        !  write(*,*)'Source(rhoU)=', Source_VC(6:8,2,1,2)
-!!!        !  write(*,*)'Source(p,E)', Source_VC(P_:P_+1,2,1,2)
-!!!          write(*,*)'rhosp=',State_VGB(rho_:5,2,1,2,globalBLK)
-!!!          write(*,*)'srhoUx=', SrhoUx(2,1,2), 'srhoUy=', SrhoUy(2,1,2),&
-!!!               'srhoUz=', SrhoUz(2,1,2)
-!!!          write(*,*)'state_VGB(uz)=',State_VGB(Uz_,2,1,2,globalBLK) 
-!!!       end if
 
   end subroutine user_sources
 
@@ -1077,21 +1076,23 @@ contains
 
     if(UseSolarMax)then
        Tnu_body_dim = 134.0      ! neutral temperature 
+       BodynDenNuSpDim_I(CO2_)= 4.435e12
+       BodynDenNuSpDim_I(O_)= 8.0283e9
+       BodynDenNuSpDim_I(H_)= 1.8374e6
        BodynDenNuSpDim_I(Oh_)= 6.3119e4
        BodynDenNuSpDim_I(Ohx_)= 3.9646e3
-       BodynDenNuSpDim_I(CO2_)= 4.435e12
-       BodynDenNuSpDim_I(CO2x_)= 8.0807e10
-       BodynDenNuSpDim_I(O_)= 8.0283e9
-       BodynDenNuSpDim_I(Ox_)= 5.1736e8
-       BodynDenNuSpDim_I(H_)= 1.8374e6
        BodynDenNuSpDim_I(Hx_)= 7.3638e4
-       
-       HNuSpeciesDim_I(Ox_)=50.025 !scale height in KM
+       BodynDenNuSpDim_I(Ox_)= 5.1736e8
+       BodynDenNuSpDim_I(CO2x_)= 8.0807e10
+      
+       HNuSpeciesDim_I(O_)=13.34 !scale height in KM
+       HNuSpeciesDim_I(Ox_)=50.025 
        HNuSpeciesDim_I(Oh_)=290.5
        HNuSpeciesDim_I(Ohx_)=2436.6
-       HNuSpeciesDim_I(O_)=13.34
-       HNuSpeciesDim_I(CO2x_)=17.064
+
        HNuSpeciesDim_I(CO2_)=6.5631
+       HNuSpeciesDim_I(CO2x_)=17.064
+
        HNuSpeciesDim_I(H_)=13.133
        HNuSpeciesDim_I(Hx_)=610.0
        
@@ -1099,15 +1100,34 @@ contains
        RateDim_I(O_hv__Op_em_) = 2.734e-7
        RateDim_I(H_hv__Hp_em_) = 8.59e-8
 
-    else
-       HNuSpeciesDim_I(Ox_)=30.45  !scale height in km
-       HNuSpeciesDim_I(O_)=9.486
+    else  ! for solar min condition
+
+       Tnu_body_dim = 117.0      ! neutral temperature 
+
+       BodynDenNuSpDim_I(CO2_)= 1.1593e12
+       BodynDenNuSpDim_I(O_)= 3.2278e9
+       BodynDenNuSpDim_I(H_)= 1.1307e7
+       BodynDenNuSpDim_I(Oh_)= 1.951e4
+       BodynDenNuSpDim_I(Ohx_)= 1.5248e3
+       BodynDenNuSpDim_I(Hx_)= 9.4936e5
+       BodynDenNuSpDim_I(Ox_)= 5.2695e8
+       BodynDenNuSpDim_I(CO2x_)= 2.2258e11
+
+       HNuSpeciesDim_I(O_)=9.486  !scale height in km
+       HNuSpeciesDim_I(Ox_)=30.45  
        HNuSpeciesDim_I(Oh_)=290.5
        HNuSpeciesDim_I(Ohx_)=2436.6
-       HNuSpeciesDim_I(CO2x_)=10.533
+
        HNuSpeciesDim_I(CO2_)=5.2667
+       HNuSpeciesDim_I(CO2x_)=10.533
+
        HNuSpeciesDim_I(H_)=13.133
        HNuSpeciesDim_I(Hx_)=586.6
+
+       RateDim_I(CO2_hv__CO2p_em_)=2.47e-7
+       RateDim_I(O_hv__Op_em_) = 8.89e-8
+       RateDim_I(H_hv__Hp_em_) = 5.58e-8
+
     end if
 
     Ti_body_dim = Tnu_body_dim  !ion temperature at the body
@@ -1115,6 +1135,7 @@ contains
 
 
     TNu_body= TNu_body_dim*Si2No_V(UnitTemperature_)
+    Ti_body = Ti_body_dim*Si2No_V(UnitTemperature_)
     Tp_body = Tp_body_dim*Si2No_V(UnitTemperature_)
     T300 = T300_dim*Si2No_V(UnitTemperature_)
 
