@@ -305,3 +305,30 @@ subroutine read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
   call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
 
 end subroutine read_pw_buffer
+
+!==============================================================================
+
+subroutine GM_satinit_for_im(nSats)
+
+  implicit none
+  character (len=*), parameter :: NameSub='read_pw_buffer'
+
+  integer, intent(out) :: nSats
+
+  call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
+
+end subroutine GM_satinit_for_im
+
+!==============================================================================
+
+subroutine GM_get_sat_for_im(Buffer_III, Buffer_I, nSats)
+
+  implicit none
+  
+  integer, intent(in)               :: nSats
+  real, intent(out)                 :: Buffer_III(3,2,nSats)
+  character (len=100), intent(out)  :: Buffer_I(nSats)
+  
+end subroutine GM_get_sat_for_im
+
+!==============================================================================
