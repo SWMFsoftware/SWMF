@@ -18,6 +18,8 @@ subroutine IE_set_param(CompInfo, TypeAction)
   type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp.
   character (len=*), intent(in)     :: TypeAction ! What to do
 
+  real :: IMFBx, IMFBy, IMFBz, SWVx, HemisphericPower
+
   integer :: iError
 
   !-------------------------------------------------------------------------
@@ -66,6 +68,8 @@ contains
     ! Plot file parameters
     integer :: iFile, i, iError, iDebugProc
     character (len=50) :: plot_string
+
+    character (len=100), dimension(100) :: cTempLines
 
     !--------------------------------------------------------------------------
     select case(TypeAction)
@@ -120,9 +124,9 @@ contains
                      //plot_string)
              end if
              if(index(plot_string,'min')>0)then
-                plot_vars(iFile)='minimum'
+                plot_vars(iFile)='min'
              elseif(index(plot_string,'max')>0)then
-                plot_vars(iFile)='maximum'
+                plot_vars(iFile)='max'
              elseif(index(plot_string,'aur')>0)then
                 plot_vars(iFile)='aur'
              elseif(index(plot_string,'uam')>0)then
@@ -133,6 +137,47 @@ contains
                      ' from plot_string='//plot_string)
              end if
           end do
+
+       case ("#SOLARWIND")
+          call read_var('IMFBx',IMFBx)
+          call read_var('IMFBy',IMFBy)
+          call read_var('IMFBz',IMFBz)
+          call read_var('SWVx',SWVx)
+          call IO_set_imf_by_single(IMFby)
+          call IO_set_imf_bz_single(IMFbz)
+          call IO_set_sw_v_single(abs(SWvx))
+          UseStaticIMF = .true.
+
+        case ("#HPI")
+           call read_var('HemisphericPower',HemisphericPower)
+           call IO_set_hpi_single(HemisphericPower)
+
+        case ("#MHD_INDICES")
+           cTempLines(1) = NameCommand
+           if(read_line()) then
+              cTempLines(2) = NameCommand
+              cTempLines(3) = " "
+              cTempLines(4) = "#END"
+              call IO_set_inputs(cTempLines)
+              call read_MHDIMF_Indices(iError)
+           else 
+              iError = 1
+           endif
+
+           if (iError /= 0) then 
+              write(*,*) "read indices was NOT successful"
+              EXIT
+           else
+              UseStaticIMF = .false.
+           endif
+
+       case("#SOLVE")
+          call read_var('DoSolve', DoSolve)
+          call read_var('HighLatBoundary', HighLatBoundary)
+          call read_var('LowLatBoundary', LowLatBoundary)
+          call read_var('DoFold', DoFold)
+          HighLatBoundary = HighLatBoundary * cPi / 180.0
+          LowLatBoundary  = LowLatBoundary  * cPi / 180.0
 
        case("#IONOSPHERE")
           call read_var('iConductanceModel',iConductanceModel)
@@ -216,6 +261,11 @@ contains
           end if
        end select
     end do
+
+    if (.not.DoSolve) then
+       HighLatBoundary = 0.0
+       LowLatBoundary  = 0.0
+    endif
 
   end subroutine read_param
 
@@ -398,7 +448,7 @@ subroutine IE_init_session(iSession, tSimulation)
   ! Initialize the Ionosphere Electrostatic (IE) module for session iSession
 
   use CON_physics, ONLY: get_time, get_planet, get_axes
-  use ModRIM,      ONLY: IsTimeAccurate, ThetaTilt, DipoleStrength
+  use ModRIM,      ONLY: IsTimeAccurate, ThetaTilt, DipoleStrength, StartTime
   use ModIoRIM,    ONLY: dt_output, t_output_last
   implicit none
 
@@ -426,9 +476,12 @@ subroutine IE_init_session(iSession, tSimulation)
   call get_planet(DipoleStrengthOut = DipoleStrength)
   call get_axes(tSimulation, MagAxisTiltGsmOut = ThetaTilt)
 
+  call get_time(tCurrentOut = StartTime)
+
   DipoleStrength = DipoleStrength*1.0e9 ! Tesla -> nT
 
-  write(*,*)NameSub,': DipoleStrength, ThetaTilt =',DipoleStrength,ThetaTilt
+  write(*,*)NameSub,': DipoleStrength, ThetaTilt =',DipoleStrength,ThetaTilt,&
+       StartTime
 
   ! Reset t_output_last in case the plotting frequency has changed
   if(IsTimeAccurate)then
@@ -489,6 +542,7 @@ subroutine IE_run(tSimulation,tSimulationLimit)
 
   use ModProcIE
   use ModRIM
+  use ModParamRIM, only: iDebugLevel
   use CON_physics, ONLY: get_time, get_axes, time_real_to_int
   use ModKind
   implicit none
@@ -499,7 +553,6 @@ subroutine IE_run(tSimulation,tSimulationLimit)
   !INPUT ARGUMENTS:
   real, intent(in) :: tSimulationLimit ! simulation time not to be exceeded
 
-  real(Real8_) :: tStart
   integer      :: nStep
 
   character(len=*), parameter :: NameSub='IE_run'
@@ -508,42 +561,27 @@ subroutine IE_run(tSimulation,tSimulationLimit)
   !----------------------------------------------------------------------------
 
   call CON_set_do_test(NameSub,DoTest,DoTestMe)
+  if (iDebugLevel > 2) DoTest = .true.
 
   if(DoTest)write(*,*)NameSub,': iProc,tSimulation,tSimulationLimit=',&
        iProc,tSimulation,tSimulationLimit
 
-  nSolve=nSolve+1
+  CurrentTime = StartTime + tSimulation
+  call time_real_to_int(CurrentTime, TimeArray)
 
-!   ! Since IE is not a time dependent component, it may advance to the 
-!   ! next coupling time in a time accurate run
-!   if(time_accurate)tSimulation = tSimulationLimit
+  write(*,*) "Current Time : ",TimeArray
 
-!   if(DoTest)write(*,*)NameSub,': iProc,IsNewInput=',iProc,IsNewInput
+  ! Since IE is not a time dependent component, it may advance to the 
+  ! next coupling time in a time accurate run
+  if (IsTimeAccurate) tSimulation = tSimulationLimit
 
-!   ! Do not solve if there is no new input from GM or UA
-!   if(.not.IsNewInput) RETURN
+  ! Obtain the position of the magnetix axis
+  call get_axes(tSimulation,MagAxisTiltGsmOut = ThetaTilt)
 
-!   ! Check if we can have a reasonable magnetic field already
-!   call get_time(nStepOut=nStep)
-
-!   if(DoTest)write(*,*)NameSub,': iProc,nStep = ',iProc,nStep
-
-!   ! After the solve this input can be considered old
-!   IsNewInput = .false.
-
-!   ! Obtain the position of the magnetix axis
-!   call get_axes(time_simulation,MagAxisTiltGsmOut = ThetaTilt)
-
-!   call get_time(tStartOut=tStart)
-!   call time_real_to_int(tStart + time_simulation, Time_Array)
-
-!   nSolve = nSolve + 1
+  call advance_RIM
 
 !   ! Solve for the ionosphere potential
 !   call IE_solve
-
-!   ! Save solution (plot files) into file if required
-!   call IE_output
 
 !   ! Save logfile if required
 !   call IE_save_logfile

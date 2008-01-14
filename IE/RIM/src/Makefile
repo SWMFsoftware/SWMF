@@ -35,13 +35,19 @@ MODULES = \
 OBJECTS = \
 	IE_wrapper.o\
 	init_RIM.o\
+	stop_RIM.o\
+	advance_RIM.o\
+	get_conductance.o\
+	conductance_gradients.o\
+	solve.o\
+	set_imf.o\
 	write_output_RIM.o
 
 #
 #	Libraries
 #
 
-SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR} -I${EMPIRICALIEDIR}
+SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR} -I${DATAREADINDICESDIR} -I${EMPIRICALIEDIR} 
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${MODULES} ${OBJECTS}

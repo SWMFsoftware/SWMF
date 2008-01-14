@@ -21,19 +21,22 @@ subroutine write_output_RIM(iFile)
   integer :: iLon, iLat
   character(len=*), parameter :: NameSub='IE_write_output'
   character(len=4) :: IO_ext
-  character (len=23) :: textNandT
+
+  character (len=5)  :: cBlock
+  character (len=14) :: cTime
+
   !------------------------------------------------------------------------
 
   variables = min_vars
   output_type = idl_type
 
   select case(plot_vars(ifile))
-  case('minimum')
+  case('min')
      variables = min_vars
-  case('maximum')
+  case('max')
      variables = all_vars
-  case('uam')                                   !^CFG  IF TIEGCM
-     variables = uam_vars                       !^CFG  IF TIEGCM
+  case('uam')
+     variables = uam_vars
   case('aur')
      variables = aur_vars
   end select
@@ -53,34 +56,93 @@ subroutine write_output_RIM(iFile)
      IO_ext = ".tec"
   endif
 
-  if (.not.IsTimeAccurate) then
+  write(cBlock,'(a1,i4.4)') "b",iProc+1
 
-     write(Filename,'(a,i6.6,a,i2.2,a)')trim(NameOutputDir)//"in",nSolve,&
-          "_b",iProc,IO_ext
-
-     write(textNandT,'(a,i7.7)') "N=",nSolve
-
+  if (IsTimeAccurate) then
+     write(cTime,'("t",3i2.2,"_",3i2.2)') mod(TimeArray(1),100), TimeArray(2:6)
   else
-     write(Filename,'(a,3i2.2,"_",3i2.2,"_",i3.3,"_b",i1,a)') &
-          trim(NameOutputDir)//"it",&
-          mod(TimeArray(1),100),TimeArray(2:7),&
-          iProc,IO_ext
+     write(cTime,'("i",i7.7)') nSolve
+  endif
 
-     write(textNandT,'(a,i7.7,a,i4.4,a,i2.2,a,i2.2)') &
-          "N=",nSolve," T=", &
-          TimeArray(4),":",TimeArray(5),":",TimeArray(6)
+  ! Write out header
 
-  end if
+  if (iProc == 0) then
 
-  open(unit=iUnit,file=Filename,status="unknown")
+     open(unit=iUnit,status="unknown", &
+          file = trim(NameOutputDir)//trim(cTime)//"_"//trim(plot_vars(ifile))//".header")
 
-  do iLon=0,nLons+1
-     do iLat=1,nLats
+     write(iUnit,*) "BLOCKS"
+     write(iUnit,"(I7,A)") 1, " nBlocksAlt"
+     write(iUnit,"(I7,A)") 1, " nBlocksLat"
+     write(iUnit,"(I7,A)") nProc, " nBlocksLon"
+     write(iUnit,*) ""
 
-        write(iUnit,*) Longitude(iLon,iLat),Latitude(iLon,iLat),Potential(iLon,iLat)
+     write(iUnit,*) "ITERATION"
+     write(iUnit,"(I7,A)") nSolve, " iteration"
+     write(iUnit,*) ""
 
+     write(iUnit,*) "TIME"
+     write(iUnit,"(I7,A)") TimeArray(1), " Year"
+     write(iUnit,"(I7,A)") TimeArray(2), " Month"
+     write(iUnit,"(I7,A)") TimeArray(3), " Day"
+     write(iUnit,"(I7,A)") TimeArray(4), " Hour"
+     write(iUnit,"(I7,A)") TimeArray(5), " Minute"
+     write(iUnit,"(I7,A)") TimeArray(6), " Second"
+     write(iUnit,"(I7,A)") TimeArray(7), " Millisecond"
+     write(iUnit,*) ""
+  
+     write(iUnit,*) "VERSION"
+     write(iUnit,*) Version
+     write(iUnit,*) ""
+
+     write(iUnit,*) "NUMERICAL VALUES"
+     select case(plot_vars(ifile))
+     case('min')
+        write(iUnit,"(I7,A)") 7, " nVars"
+     case('max')
+        write(iUnit,"(I7,A)") 7, " nVars"
+     case('uam')
+        write(iUnit,"(I7,A)") 7, " nVars"
+     case('aur')
+        write(iUnit,"(I7,A)") 7, " nVars"
+     end select
+     write(iUnit,"(I7,A)")       1, " nAltitudes"
+     write(iUnit,"(I7,A)") nLats  , " nLatitude"
+     write(iUnit,"(I7,A)") nLons+2, " nLongitudes"
+     write(iUnit,*) ""
+
+     write(iUnit,*) "NGHOSTCELLS"
+     write(iUnit,"(I7,A)") 0, " nAltitudes"
+     write(iUnit,"(I7,A)") 0, " nLatitude"
+     write(iUnit,"(I7,A)") 1, " nLongitudes"
+     write(iUnit,*) ""
+
+     write(iUnit,*) "VARIABLE LIST"
+     write(iUnit,"(I7,A1,a)")  1, " ", "MagneticLocalTime"
+     write(iUnit,"(I7,A1,a)")  2, " ", "Latitude"
+     write(iUnit,"(I7,A1,a)")  3, " ", "Potential (kV)"
+     write(iUnit,"(I7,A1,a)")  4, " ", "AveE (keV)"
+     write(iUnit,"(I7,A1,a)")  5, " ", "EFlux (ergs/cm2/s)"
+     write(iUnit,"(I7,A1,a)")  6, " ", "SigmaH (mhos)"
+     write(iUnit,"(I7,A1,a)")  7, " ", "SigmaP (mhos)"
+
+     write(iUnit,*) ""
+
+     close(iUnit)
+
+  endif
+
+  open(unit=iUnit,status="unknown", form="unformatted", &
+       file = trim(NameOutputDir)//trim(cTime)//"_"//trim(plot_vars(ifile))//"."//cBlock)
+
+  do iLat=1,nLats
+     do iLon=0,nLons+1
+        write(iUnit) Longitude(iLon,iLat),Latitude(iLon,iLat),&
+             Potential(iLon,iLat), AveE(iLon,iLat), EFlux(iLon,iLat), &
+             SigmaH(iLon,iLat), SigmaP(iLon,iLat)
      end do
   end do
 
   close(iUnit)
+
 end subroutine write_output_RIM
