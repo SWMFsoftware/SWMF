@@ -16,9 +16,6 @@ subroutine conductance_gradients
   real, dimension(0:nLons+1,nLats) :: &
        dLatitude2, dLongitude2
 
-  SigmaP = 1.0
-  SigmaH = 0.0
-
   Theta = cPi - Latitude
 
   sn = sin(Theta)
@@ -120,17 +117,16 @@ subroutine conductance_gradients
   TermPsi1 = (dSigmaThPs_dLatitude*sn + dSigmaPsPs_dLongitude) / dLongitude
 
   ! Form the complete matrix
-  SolverA = -2.0 * (TermTheta2 + TermPsi2)
-  SolverB =         TermTheta2 - TermTheta1
-  SolverC =         TermTheta2 + TermTheta1
-  SolverD =         TermPsi2   - TermPsi1
-  SolverE =         TermPsi2   + TermPsi1
+  SolverA =  -2.0 * (TermTheta2 + TermPsi2)
+  SolverB =          TermTheta2 - TermTheta1
+  SolverC =          TermTheta2 + TermTheta1
+  SolverD =          TermPsi2   - TermPsi1
+  SolverE =          TermPsi2   + TermPsi1
 
-  SolverA = -2.0
-  SolverB = 1.0
-  SolverC = 1.0
-  SolverD = 0.0
-  SolverE = 0.0
-
+!  SolverA = 4.0
+!  SolverB = 1.0
+!  SolverC = 1.0
+!  SolverD = 1.0
+!  SolverE = 1.0
 
 end subroutine conductance_gradients

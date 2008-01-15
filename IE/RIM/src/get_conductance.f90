@@ -83,6 +83,11 @@ subroutine get_conductance
   SigmaH = sqrt( SigmaEUVH**2 + SigmaScatH**2 + SigmaStarH**2 + SigmaAurH**2)
   SigmaP = sqrt( SigmaEUVP**2 + SigmaScatP**2 + SigmaStarP**2 + SigmaAurP**2)
 
+  write(*,*) "Min/Max(SigmaaH) : ",minval(SigmaAurH), maxval(SigmaAurH)
+  write(*,*) "Min/Max(SigmaeH) : ",minval(SigmaEUVH), maxval(SigmaEUVH)
+  write(*,*) "Min/Max(SigmasH) : ",minval(SigmaStarH), maxval(SigmaStarH)
+  write(*,*) "Min/Max(SigmasH) : ",minval(SigmaScatH), maxval(SigmaScatH)
+
   Sigma0 = 1000.0
 
 end subroutine get_conductance

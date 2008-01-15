@@ -56,8 +56,8 @@ subroutine solve
            if ( Latitude(1,iLat) >= -HighLatBoundary .and. &
                 Latitude(1,iLat) <= HighLatBoundary) then
               nLatsSolve=nLatsSolve+1
-           else
-              Potential(:,iLat) = 10.0
+!           else
+!              Potential(:,iLat) = 10.0
            endif
         enddo
 
@@ -166,103 +166,105 @@ subroutine solve
 !!!
 !!!  end select
 
-  write(*,*) "iI : ", iI, nTotalSolve
+        call ridley_solve
 
-  Rhs = b
-  if (DoPrecond) then
-     ! A -> LU
-
-     write(*,*) "precon"
-     call prehepta(nTotalSolve,1,nLatsSolve,nTotalSolve,-0.5,d_I,e_I,f_I,e1_I,f1_I)
-
-     ! Left side preconditioning: U^{-1}.L^{-1}.A.x = U^{-1}.L^{-1}.rhs
-
-     ! rhs'=U^{-1}.L^{-1}.rhs
-     call Lhepta(       nTotalSolve,1,nLatsSolve,nTotalSolve,b,d_I,e_I,e1_I)
-     call Uhepta(.true.,nTotalSolve,1,nLatsSolve,nTotalSolve,b,    f_I,f1_I)
-     
-  end if
-
-  if (iDebugLevel > 2) &
-       write(*,*)'after precond: sum(b,abs(b),x,d,e,f,e1,f1)=',&
-       sum(b),sum(abs(b)),sum(x),sum(d_I),sum(e_I),sum(f_I),&
-       sum(e1_I),sum(f1_I)
-
-  ! Solve A'.x = rhs'
-  Residual    = Tolerance
-  nIteration  = MaxIteration
-  if (.not.UseInitialGuess) x = 0.0
-  if (iDebugLevel > 1) DoTest = .true.
-
-  call gmres(matvec_RIM,b,x,UseInitialGuess,nTotalSolve,&
-       MaxIteration,Residual,'rel',nIteration,iError,DoTest)
-  if (iError /= 0 .and. iError /=3) &
-       write(*,*)'iono_solve: iter, resid, iError=',&
-       nIteration, Residual, iError
-  if (iError /= 0 .and. iError /=3)then
-     write(*,*)'IE_ERROR in iono_solve: gmres failed !!!'
-     if(iError < 0) &
-          call CON_stop('IE_ERROR in iono_solve: residual did not decrease')
-  end if
-
-  iI = 0
-  select case(SolveType)
-
-     case(SolveAcrossEquator_)
-
-        do iLat = 1, nLats
-           if ( Latitude(1,iLat) >= -HighLatBoundary .and. &
-                Latitude(1,iLat) <= HighLatBoundary) then
-              do iLon = 1, nLons
-                 iI = iI + 1
-                 Potential(iLon, iLat) = x(iI)
-                 if (iLon == 25) write(*,*) "x(iI) : ",iI, iLon, iLat, x(iI)
-              enddo
-           endif
-        enddo
-
-     case(SolveWithOutEquator_)
-
-        ! South
-        do iLat = 1, nLats
-           if ( Latitude(1,iLat) >= -HighLatBoundary .and. &
-                Latitude(1,iLat) <= -LowLatBoundary) then
-              do iLon = 1, nLons
-                 iI = iI + 1
-                 Potential(iLon, iLat) = x(iI)
-              enddo
-           endif
-        enddo
-
-        ! North
-        do iLat = 1, nLats
-           if ( Latitude(1,iLat) >= LowLatBoundary .and. &
-                Latitude(1,iLat) <= HighLatBoundary) then
-              do iLon = 1, nLons
-                 iI = iI + 1
-                 Potential(iLon, iLat) = x(iI)
-              enddo
-           endif
-        enddo
-
-     case(SolveWithFold_)
-        write(*,*) "Doesn't Work!"
-  end select
-
-  ! If we include poles, then the pole solution is the average of all
-  ! the cells around the pole:
-
-  if (DoTouchNorthPole) &
-       Potential(1:nLons,nLats) = sum(Potential(1:nLons,nLats-1))/nLons
-  if (DoTouchSouthPole) &
-       Potential(1:nLons,    1) = sum(Potential(1:nLons,      2))/nLons
-
-  ! Need to do message passing here......
-
-  ! Periodic Boundary Conditions:
-
-  Potential(      0,:) = Potential(nLons,:)
-  Potential(nLons+1,:) = Potential(    1,:)
+!!!  write(*,*) "iI : ", iI, nTotalSolve
+!!!
+!!!  Rhs = b
+!!!  if (DoPrecond) then
+!!!     ! A -> LU
+!!!
+!!!     write(*,*) "precon"
+!!!     call prehepta(nTotalSolve,1,nLatsSolve,nTotalSolve,-0.5,d_I,e_I,f_I,e1_I,f1_I)
+!!!
+!!!     ! Left side preconditioning: U^{-1}.L^{-1}.A.x = U^{-1}.L^{-1}.rhs
+!!!
+!!!     ! rhs'=U^{-1}.L^{-1}.rhs
+!!!     call Lhepta(       nTotalSolve,1,nLatsSolve,nTotalSolve,b,d_I,e_I,e1_I)
+!!!     call Uhepta(.true.,nTotalSolve,1,nLatsSolve,nTotalSolve,b,    f_I,f1_I)
+!!!     
+!!!  end if
+!!!
+!!!  if (iDebugLevel > 2) &
+!!!       write(*,*)'after precond: sum(b,abs(b),x,d,e,f,e1,f1)=',&
+!!!       sum(b),sum(abs(b)),sum(x),sum(d_I),sum(e_I),sum(f_I),&
+!!!       sum(e1_I),sum(f1_I)
+!!!
+!!!  ! Solve A'.x = rhs'
+!!!  Residual    = Tolerance
+!!!  nIteration  = MaxIteration
+!!!  if (.not.UseInitialGuess) x = 0.0
+!!!  if (iDebugLevel > 1) DoTest = .true.
+!!!
+!!!  call gmres(matvec_RIM,b,x,UseInitialGuess,nTotalSolve,&
+!!!       MaxIteration,Residual,'rel',nIteration,iError,DoTest)
+!!!  if (iError /= 0 .and. iError /=3) &
+!!!       write(*,*)'iono_solve: iter, resid, iError=',&
+!!!       nIteration, Residual, iError
+!!!  if (iError /= 0 .and. iError /=3)then
+!!!     write(*,*)'IE_ERROR in iono_solve: gmres failed !!!'
+!!!     if(iError < 0) &
+!!!          call CON_stop('IE_ERROR in iono_solve: residual did not decrease')
+!!!  end if
+!!!
+!!!  iI = 0
+!!!  select case(SolveType)
+!!!
+!!!     case(SolveAcrossEquator_)
+!!!
+!!!        do iLat = 1, nLats
+!!!           if ( Latitude(1,iLat) >= -HighLatBoundary .and. &
+!!!                Latitude(1,iLat) <= HighLatBoundary) then
+!!!              do iLon = 1, nLons
+!!!                 iI = iI + 1
+!!!                 Potential(iLon, iLat) = x(iI)
+!!!                 if (iLon == 25) write(*,*) "x(iI) : ",iI, iLon, iLat, x(iI)
+!!!              enddo
+!!!           endif
+!!!        enddo
+!!!
+!!!     case(SolveWithOutEquator_)
+!!!
+!!!        ! South
+!!!        do iLat = 1, nLats
+!!!           if ( Latitude(1,iLat) >= -HighLatBoundary .and. &
+!!!                Latitude(1,iLat) <= -LowLatBoundary) then
+!!!              do iLon = 1, nLons
+!!!                 iI = iI + 1
+!!!                 Potential(iLon, iLat) = x(iI)
+!!!              enddo
+!!!           endif
+!!!        enddo
+!!!
+!!!        ! North
+!!!        do iLat = 1, nLats
+!!!           if ( Latitude(1,iLat) >= LowLatBoundary .and. &
+!!!                Latitude(1,iLat) <= HighLatBoundary) then
+!!!              do iLon = 1, nLons
+!!!                 iI = iI + 1
+!!!                 Potential(iLon, iLat) = x(iI)
+!!!              enddo
+!!!           endif
+!!!        enddo
+!!!
+!!!     case(SolveWithFold_)
+!!!        write(*,*) "Doesn't Work!"
+!!!  end select
+!!!
+!!!  ! If we include poles, then the pole solution is the average of all
+!!!  ! the cells around the pole:
+!!!
+!!!  if (DoTouchNorthPole) &
+!!!       Potential(1:nLons,nLats) = sum(Potential(1:nLons,nLats-1))/nLons
+!!!  if (DoTouchSouthPole) &
+!!!       Potential(1:nLons,    1) = sum(Potential(1:nLons,      2))/nLons
+!!!
+!!!  ! Need to do message passing here......
+!!!
+!!!  ! Periodic Boundary Conditions:
+!!!
+!!!  Potential(      0,:) = Potential(nLons,:)
+!!!  Potential(nLons+1,:) = Potential(    1,:)
 
   if(allocated(b)) deallocate(x, y, b, rhs, d_I, e_I, f_I, e1_I, f1_I)
 
@@ -438,3 +440,57 @@ contains
 
 end subroutine matvec_RIM
 
+subroutine ridley_solve
+
+  use ModRIM
+  use ModParamRIM
+
+  implicit none
+
+  integer :: iLon, iLat, nIters
+  real :: OldSolution(0:nLons+1,nLats), Solution(0:nLons+1,nLats)
+  real :: Residual
+
+  ! Don't worry about high latitude (i.e. Pole) BCs yet
+
+  Solution = Potential
+  Solution(0,iLat) = Solution(nLons,iLat)
+  Solution(nLons+1,iLat) = Solution(1,iLat)
+  OldSolution = Solution
+  Residual = 1.0e32
+  nIters = 0
+
+  do while (Residual > 500.0)
+
+     do iLat = 2, nLats-1
+        if ( Latitude(1,iLat) >= -HighLatBoundary .and. &
+             Latitude(1,iLat) <= HighLatBoundary) then
+           do iLon = 1, nLons
+              Solution(iLon,iLat) = &
+                   (SolverB(iLon, iLat)*Solution(iLon,  iLat-1) + &
+                    SolverC(iLon, iLat)*Solution(iLon,  iLat+1) + &
+                    SolverD(iLon, iLat)*Solution(iLon-1,iLat  ) + &
+                    SolverE(iLon, iLat)*Solution(iLon+1,iLat  )) / &
+                    (-SolverA(iLon, iLat))
+
+!              if (iLon == 25) write(*,*) "sol : ",iLat,&
+!                   Solution(iLon,iLat)
+
+           enddo
+           Solution(0,iLat) = Solution(nLons,iLat)
+           Solution(nLons+1,iLat) = Solution(1,iLat)
+        endif
+     enddo
+
+     Residual = sum(abs(Solution-OldSolution))
+
+     OldSolution = Solution
+     nIters = nIters + 1
+
+     write(*,*) "Residual : ", Residual, nIters
+
+  enddo
+
+  Potential = Solution
+
+end subroutine ridley_solve

@@ -8,6 +8,10 @@ LIB:
 
 rundir:
 	mkdir -p ${RUNDIR}/IE/Output
+	cd ${RUNDIR}/IE; ln -s ${DIR}/UA/GITM2/srcData Input; cd ${DIR}
+	cd ${RUNDIR}; ln -s ${DIR}/UA/GITM2/src/PostProcess.exe PostGITM.exe; cd ${DIR}
+	cd ${DIR}/UA/GITM2 ; make POST ; cd ${DIR}
+	cd ${RUNDIR}/IE; ln -s ${IEDIR}/src/pIE .; cd ${DIR}
 
 clean:
 	@touch src/Makefile.DEPEND src/Makefile.RULES
@@ -19,4 +23,6 @@ distclean:
 	rm -f *~
 
 test:
-	echo "IE/RIM test is incomplete" > notest.diff
+	cd ${RUNDIR}; cp ${DIR}/Param/LAYOUT.in.test.RIM.Weimer LAYOUT.in; cd ${DIR}
+	cd ${RUNDIR}; cp ${DIR}/Param/PARAM.in.test.RIM.Weimer PARAM.in; cd ${DIR}
+	cd ${RUNDIR}; ./SWMF.exe
