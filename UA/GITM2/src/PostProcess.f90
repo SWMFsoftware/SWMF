@@ -16,6 +16,7 @@ program PostProcess
   integer :: iYear,iMonth,iDay,iHour,iMinute,iSecond,iMilli
   integer :: nBlocksLon, nBlocksLat, nBlocksAlt
   integer :: nVars, nLons, nLats, nAlts, nLonsTotal, nLatsTotal, nAltsTotal
+  integer :: nGhostLats, nGhostLons, nGhostAlts
   integer :: iLon, iLat, iAlt, iBlockLon, iBlockLat, iBlockAlt
   integer :: iiLon, iiLat, iiAlt
   real    :: Version
@@ -26,6 +27,10 @@ program PostProcess
   character (len=40) :: Variables(nMaxVars)
 
   integer :: i, iVar, iBlock
+
+  nGhostLats = 2
+  nGhostLons = 2
+  nGhostAlts = 2
 
   write(*,*) "Enter file group to process (can include .header) : "
   read(5,*) FileName
@@ -63,12 +68,10 @@ program PostProcess
      endif
 
      if (index(cLine,"NUMERICAL") > 0) then
-
         read(iInputUnit_,*) nVars
         read(iInputUnit_,*) nAlts
         read(iInputUnit_,*) nLats
         read(iInputUnit_,*) nLons
-
      endif
 
      if (index(cLine,"TIME") > 0) then
@@ -86,14 +89,23 @@ program PostProcess
      endif
 
      if (index(cLine,"VARIABLE") > 0) then
-
         do iVar = 1, nVars
            read(iInputUnit_,"(i7,a40)") i, Variables(iVar)
         enddo
-
      endif
 
-     if (index(cLine,"NO GHOSTCELLS") > 0) UseGhostCells = .false.
+     if (index(cLine,"NGHOSTCELLS") > 0) then
+        read(iInputUnit_,*) nGhostAlts
+        read(iInputUnit_,*) nGhostLats
+        read(iInputUnit_,*) nGhostLons
+     endif
+
+     if (index(cLine,"NO GHOSTCELLS") > 0) then
+        UseGhostCells = .false.
+        nGhostLats = 0
+        nGhostLons = 0
+        nGhostAlts = 0
+     endif
 
   enddo
 
@@ -110,16 +122,18 @@ program PostProcess
        nBlocksLon, nBlocksLat, nBlocksAlt
   write(*,*) "  nLons,      nLats,      nAlts      : ", nLons, nLats, nAlts
   if (UseGhostCells) then
-     nLonsTotal = nBlocksLon*(nLons-4)+4
-     nLatsTotal = nBlocksLat*(nLats-4)+4
-     nAltsTotal = nBlocksAlt*(nAlts-4)+4
+     nLonsTotal = nBlocksLon*(nLons-nGhostLons)+nGhostLons
+     write(*,*) nBlocksLon, nLons, nGhostLons
+     nLatsTotal = nBlocksLat*(nLats-nGhostLats)+nGhostLats
+     write(*,*) nBlocksLat, nLats, nGhostLats, nLatsTotal
+     nAltsTotal = nBlocksAlt*(nAlts-nGhostAlts)+nGhostAlts
   else
      nLonsTotal = nBlocksLon*nLons
      nLatsTotal = nBlocksLat*nLats
      nAltsTotal = nBlocksAlt*nAlts
   endif
   write(*,*) "  nLonsTotal, nLatsTotal, nAltsTotal : ", &
-       nLonsTotal, nLonsTotal, nAltsTotal, " (Predicted Values)"
+       nLonsTotal, nLatsTotal, nAltsTotal, " (Predicted Values)"
 
   allocate(AllData(nLonsTotal,nLatsTotal,nAltsTotal,nVars))
 
@@ -168,17 +182,20 @@ program PostProcess
 
                     if (UseGhostCells) then
 
-                       if (iBlockLon /= 1 .and. iLon < 3) DoWrite = .false.
-                       if (iBlockLon /= nBlocksLon .and. iLon > nLons-2) &
+                       if (iBlockLon /= 1 .and. iLon <= nGhostLons) &
                             DoWrite = .false.
+                       if (iBlockLon /= nBlocksLon .and. &
+                            iLon > nLons-nGhostLons) DoWrite = .false.
 
-                       if (iBlockLat /= 1 .and. iLat < 3) DoWrite = .false.
-                       if (iBlockLat /= nBlocksLat .and. iLat > nLats-2) &
+                       if (iBlockLat /= 1 .and. iLat <= nGhostLats) &
                             DoWrite = .false.
+                       if (iBlockLat /= nBlocksLat .and. &
+                            iLat > nLats-nGhostLats) DoWrite = .false.
 
-                       if (iBlockAlt /= 1 .and. iAlt < 3) DoWrite = .false.
-                       if (iBlockAlt /= nBlocksAlt .and. iAlt > nAlts-2) &
+                       if (iBlockAlt /= 1 .and. iAlt <= nGhostAlts) &
                             DoWrite = .false.
+                       if (iBlockAlt /= nBlocksAlt .and. &
+                            iAlt > nAlts-nGhostAlts) DoWrite = .false.
 
                     endif
 
@@ -186,14 +203,9 @@ program PostProcess
 
                        if (UseGhostCells) then
 
-                          iiLon = (iBlockLon-1)*(nLons-4) + iLon
-!                          if (iBlockLon > 1) iiLon = iiLon + 2
-
-                          iiLat = (iBlockLat-1)*(nLats-4) + iLat
-!                          if (iBlockLat > 1) iiLat = iiLat + 2
-
-                          iiAlt = (iBlockAlt-1)*(nAlts-4) + iAlt
-!                          if (iBlockAlt > 1) iiAlt = iiAlt + 2
+                          iiLon = (iBlockLon-1)*(nLons-nGhostLons*2) + iLon
+                          iiLat = (iBlockLat-1)*(nLats-nGhostLats*2) + iLat
+                          iiAlt = (iBlockAlt-1)*(nAlts-nGhostAlts*2) + iAlt
 
                        else
 
@@ -203,23 +215,12 @@ program PostProcess
 
                        endif
 
-
-!                       write(*,*) iBlockLon, iLon, nLons, iiLon, UseGhostCells
                        AllData(iiLon,iiLat,iiAlt,1:nVars) = Data(1:nVars)
 
                        if (iiLon > nLonsTotal) nLonsTotal = iiLon
                        if (iiLat > nLatsTotal) nLatsTotal = iiLat
                        if (iiAlt > nAltsTotal) nAltsTotal = iiAlt
 
-!!                        if (iLon == 1 .and. iLat == 1 .and. &
-!!                             iBlockLon == 1 .and. iBlockLat == 1) &
-!!                             nAltsTotal = nAltsTotal+1
-!!                        if (iAlt == 1 .and. iLon == 1 .and. &
-!!                             iBlockAlt == 1 .and. iBlockLon == 1) &
-!!                             nLatsTotal = nLatsTotal+1
-!!                        if (iAlt == 1 .and. iLat == 1 .and. &
-!!                             iBlockAlt == 1 .and. iBlockLat == 1) &
-!!                           nLonsTotal = nLonsTotal+1
 
                     endif
 
@@ -238,14 +239,6 @@ program PostProcess
   do iVar = 1, nVars
      write(iOutputUnit_) AllData(:,:,:,iVar)
   enddo
-
-!  do iAlt = 1, nAltsTotal
-!     do iLat = 1, nLatsTotal
-!        do iLon = 1, nLonsTotal
-!           write(iOutputUnit_) AllData(iLon,iLat,iAlt,:)
-!        enddo
-!     enddo
-!  enddo
 
   write(*,*) "Output :"
   write(*,*) "  nLons, nLats, nAlts : ", nLonsTotal, nLatsTotal, nAltsTotal
