@@ -444,6 +444,8 @@ contains
     real :: alt, Te_dim = 300.0, temp
     real :: totalPSNumRho=0.0,totalRLNumRhox=0.0
     logical:: oktest,oktest_me
+    real :: SourceLossMax, vdtmin
+
     !
     !---------------------------------------------------------------------------
     !\
@@ -653,13 +655,29 @@ contains
                LiSpecies_I(1:nSpecies) ) /&
                (State_VGB(rho_+1:rho_+MaxSpecies, i,j,k, globalBLK)+1e-20))&
                /vInv_CB(i,j,k,globalBLK)
-          
-          VdtFace_x(i,j,k) = max (MaxSLSpecies_CB(i,j,k,globalBLK),&
-               VdtFace_x(i,j,k) )
-          VdtFace_y(i,j,k) = max (MaxSLSpecies_CB(i,j,k,globalBLK),&
-               VdtFace_y(i,j,k) )
-          VdtFace_z(i,j,k) = max (MaxSLSpecies_CB(i,j,k,globalBLK),&
-               VdtFace_z(i,j,k) )
+
+          if(.not.UsePointImplicit_B(iBlock) )then
+             !sum of the (loss term/atom mass) due to recombination             
+             SourceLossMax = 10.0*maxval(abs(SiSpecies_I(1:nSpecies)-&
+                  LiSpecies_I(1:nSpecies) ) /&
+                  (State_VGB(rho_+1:rho_+nSpecies, i,j,k, iBlock)+1e-20))&
+                  /vInv_CB(i,j,k,iBlock)
+             vdtmin=min(VdtFace_x(i,j,k),VdtFace_y(i,j,k),VdtFace_z(i,j,k))
+             if(SourceLossMax > Vdtmin) then
+                !UsePointImplicit_B(iBlock)=.true.                              
+                !write(*,*)'should use Point-implicit or increase its region'   
+                VdtFace_x(i,j,k) = max (SourceLossMax, VdtFace_x(i,j,k) )
+                VdtFace_y(i,j,k) = max (SourceLossMax, VdtFace_y(i,j,k) )
+                VdtFace_z(i,j,k) = max (SourceLossMax, VdtFace_z(i,j,k) )
+             end if
+          end if
+
+!          VdtFace_x(i,j,k) = max (MaxSLSpecies_CB(i,j,k,globalBLK),&
+!               VdtFace_x(i,j,k) )
+!          VdtFace_y(i,j,k) = max (MaxSLSpecies_CB(i,j,k,globalBLK),&
+!               VdtFace_y(i,j,k) )
+!          VdtFace_z(i,j,k) = max (MaxSLSpecies_CB(i,j,k,globalBLK),&
+!               VdtFace_z(i,j,k) )
 
           SrhoSpecies(1:nSpecies,i,j,k)=SrhoSpecies(1:nSpecies,i,j,k)&
                +SiSpecies_I(1:nSpecies) &
@@ -799,7 +817,7 @@ contains
        if(R_BLK(i,j,k,globalBLK)<= Rbody)then
           nDenNuSpecies_CBI(i,j,k,globalBLK,:)=&
                BodynDenNuSpecies_I(:)
-       else if(R_BLK(i,j,k,globalBLK)< 2.0) then
+       else if(R_BLK(i,j,k,globalBLK)< 3.0) then
           nDenNuSpecies_CBI(i,j,k,globalBLK,:)=&
                BodynDenNuSpecies_I(:)* & 
                exp(-(R_BLK(i,j,k,globalBLK)-Rbody)&
@@ -887,7 +905,7 @@ contains
 
 
     if(UseMarsAtm)then
-       if(maxval(R_BLK(:,:,:,globalBLK))<4.0*Rbody) call Mars_input
+       if(maxval(R_BLK(:,:,:,globalBLK))<3.0*Rbody) call Mars_input
  
        do k=1,nK; do j=1,nJ; do i=1,nI
           if(UseHotO) then
@@ -1950,7 +1968,7 @@ contains
     ! Refine, focusing on body
     found=.true.
     refineBlock=.false.
-    if (maxR > Rbody.and.(lev <= 1 .or. minR < 2.0*Rbody))&
+    if (maxR > Rbody.and.(lev <= 1 .or. minR < 1.5*Rbody))&
          refineBlock = .true.
 
     !    case default
