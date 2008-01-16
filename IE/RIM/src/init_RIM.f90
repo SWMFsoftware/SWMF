@@ -5,9 +5,10 @@ subroutine init_RIM()
   use ModNumConst
   use ModParamRIM
   use ModPlanetConst
+  use ModMpi
 
   implicit none
-  integer :: i, iLat, iLon
+  integer :: i, iLat, iLon, iSize
   character (len=100), dimension(100) :: Lines
   integer :: iError = 0
   real :: rTmp
@@ -126,5 +127,44 @@ subroutine init_RIM()
      endif
 
   endif
+
+  ! Need to allocate memory for arrays that span all of the IE module
+
+  allocate( &
+       LatitudeAll(0:nLons*nProc+1,nLats), &
+       LongitudeAll(0:nLons*nProc+1,nLats), &
+       PotentialAll(0:nLons*nProc+1,nLats), &
+       SigmaHAll(0:nLons*nProc+1,nLats), &
+       SigmaPAll(0:nLons*nProc+1,nLats), &
+       LocalVar(0:nLons*nProc+1,nLats))
+
+  ! Let's try message passing some of this stuff to Processor 0
+
+  LatitudeAll = -1.0e32
+  LongitudeAll = -1.0e32
+
+  ! Fill Arrays
+  LatitudeAll(iProc*nLons+1:iProc*nLons+nLons, :) = Latitude
+  LongitudeAll(iProc*nLons+1:iProc*nLons+nLons, :) = Longitude(1:nLons,:)
+
+  if (iProc == 0) then
+     LatitudeAll(0, :) = Latitude(0,:)
+     LongitudeAll(0, :) = Longitude(0,:)
+  endif
+
+  if (iProc == nProc-1) then
+     LatitudeAll((iProc+1)*nLons+1, :) = Latitude(nLons+1,:)
+     LongitudeAll((iProc+1)*nLons+1, :) = Longitude(nLons+1,:)
+  endif
+
+  iSize = nLats * (nProc*nLons+2)
+
+  localVar = LatitudeAll
+  call MPI_REDUCE(localVar, LatitudeAll, iSize, MPI_REAL, MPI_MAX, &
+       0, iComm, iError)
+
+  localVar = LongitudeAll
+  call MPI_REDUCE(localVar, LongitudeAll, iSize, MPI_REAL, MPI_MAX, &
+       0, iComm, iError)
 
 end subroutine init_RIM

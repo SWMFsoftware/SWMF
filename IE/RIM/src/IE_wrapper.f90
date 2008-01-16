@@ -569,7 +569,7 @@ subroutine IE_run(tSimulation,tSimulationLimit)
   CurrentTime = StartTime + tSimulation
   call time_real_to_int(CurrentTime, TimeArray)
 
-  write(*,*) "Current Time : ",TimeArray
+  if (iDebugLevel >= 0) write(*,*) "Current Time : ",TimeArray
 
   ! Since IE is not a time dependent component, it may advance to the 
   ! next coupling time in a time accurate run
@@ -589,3 +589,5 @@ subroutine IE_run(tSimulation,tSimulationLimit)
 end subroutine IE_run
 
 !=================================================================
+
+

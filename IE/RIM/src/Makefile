@@ -26,7 +26,8 @@ MODULES = \
 	ModRIM.o\
 	ModIoRIM.o\
 	ModParamRIM.o\
-	ModFiles.o
+	ModFiles.o\
+	ModIEInterface.o
 
 #
 #	Object Lists
@@ -41,7 +42,9 @@ OBJECTS = \
 	conductance_gradients.o\
 	solve.o\
 	set_imf.o\
-	write_output_RIM.o
+	gather.o\
+	write_output_RIM.o\
+	IE_couplers.o
 
 #
 #	Libraries

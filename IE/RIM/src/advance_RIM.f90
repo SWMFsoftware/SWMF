@@ -37,6 +37,7 @@ subroutine advance_RIM
 
   call conductance_gradients
   call solve
+  call gather
 
   if(nSolve>0)then
      do iFile=1,nFile

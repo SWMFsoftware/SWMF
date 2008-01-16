@@ -43,4 +43,11 @@ module ModRIM
 
   real (Real8_) :: StartTime, CurrentTime
 
+  real, dimension(:,:), allocatable :: &
+       LatitudeAll, LongitudeAll, PotentialAll, SigmaHAll, SigmaPAll, &
+       LocalVar
+
+  real :: cpcps = 0.0
+  real :: cpcpn = 0.0
+
 end module ModRIM
