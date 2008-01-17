@@ -23,14 +23,16 @@ Module ModUser
   include 'user_module.h' !list of public methods
 
   !summed MHD quantities
-  integer, public :: MaxSumMhdVar=nVar !(8+2)
+  integer, parameter, public :: MaxSumMhdVar=nVar+2 !(8+2+2)
+  integer, parameter, public :: Umag_=nVar+1
+  integer, parameter, public :: Tsw_ =nVar+2 
   real :: tSumStart, tSumEnd
-  real :: StateSum_VC(nVar,nI, nJ, nK)
+  real :: StateSum_VC(MaxSumMhdVar,nI, nJ, nK)
   logical :: IsRestartSum(MaxBlock)
  
-  real, parameter :: VersionUserModule = 1.0
+  real, parameter :: VersionUserModule = 1.1
   character (len=*), parameter :: &
-       NameUserModule = 'Earth Mag X-ray (EarthXray), Hansen, July, 2007'
+       NameUserModule = 'Earth Mag X-ray (EarthXray), Hansen, Jan, 2008'
 
 contains
 
@@ -190,12 +192,49 @@ contains
              tSumStart = Time_Simulation
              tSumEnd = tSumStart
           else
-             StateSum_VC = StateSum_VC + State_VGB(:,1:nI,1:nJ,1:nK,iBlock)*dt
+             StateSum_VC(rho_,:,:,:) = StateSum_VC(rho_,:,:,:) + &
+                  State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)*dt
+             StateSum_VC(rhosw_,:,:,:) = StateSum_VC(rhosw_,:,:,:) + &
+                  State_VGB(rhosw_,1:nI,1:nJ,1:nK,iBlock)*dt
+             StateSum_VC(rhoion_,:,:,:) = StateSum_VC(rhoion_,:,:,:) + &
+                  State_VGB(rhoion_,1:nI,1:nJ,1:nK,iBlock)*dt
+             StateSum_VC(Bx_,:,:,:) = StateSum_VC(Bx_,:,:,:) + &
+                  State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)*dt
+             StateSum_VC(By_,:,:,:) = StateSum_VC(By_,:,:,:) + &
+                  State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)*dt
+             StateSum_VC(Bz_,:,:,:) = StateSum_VC(Bz_,:,:,:) + &
+                  State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)*dt
+             StateSum_VC(p_,:,:,:) = StateSum_VC(p_,:,:,:) + &
+                  State_VGB(p_,1:nI,1:nJ,1:nK,iBlock)*dt
+             StateSum_VC(Ux_,:,:,:) = StateSum_VC(Ux_,:,:,:) + &
+                  State_VGB(rhoux_,1:nI,1:nJ,1:nK,iBlock) /   &
+                  State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)*dt
+             StateSum_VC(Uy_,:,:,:) = StateSum_VC(Uy_,:,:,:) + &
+                  State_VGB(rhouy_,1:nI,1:nJ,1:nK,iBlock) /   &
+                  State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)*dt
+             StateSum_VC(Uz_,:,:,:) = StateSum_VC(Uz_,:,:,:) + &
+                  State_VGB(rhouz_,1:nI,1:nJ,1:nK,iBlock) /   &
+                  State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)*dt
+             StateSum_VC(Umag_,:,:,:) = StateSum_VC(Umag_,:,:,:) + &
+                  sqrt(State_VGB(RhoUx_,1:nI,1:nJ,1:nK,iBlock)**2 + &
+                       State_VGB(RhoUy_,1:nI,1:nJ,1:nK,iBlock)**2 + &
+                       State_VGB(RhoUz_,1:nI,1:nJ,1:nK,iBlock)**2 )/ &
+                  State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)*dt
+             ! Note that the temperature of the solar wind plasma is only
+             ! going to work here for cells were the ionospheric plasma is 
+             ! small since we are using the full pressure and the partial 
+             ! density.
+             StateSum_VC(Tsw_,:,:,:) = StateSum_VC(Tsw_,:,:,:) + &
+                  State_VGB(p_,1:nI,1:nJ,1:nK,iBlock)/           &
+                  State_VGB(rhosw_,1:nI,1:nJ,1:nK,iBlock)*dt
+
           end if
+
           call put_block_data(iBlock, MaxSumMhdVar, nI, nJ, nK, &
                StateSum_VC, DoAllowReplace=.true.)
 
        else
+
           IsRestartSum(iBlock) = .false.
           tSumStart = Time_Simulation
           StateSum_VC = 0.0
@@ -247,6 +286,7 @@ contains
     end if
 
     !If we are in this routine then reset the logical that tell the sum to start over
+
     IsRestartSum = .true.
 
     ! Get the averaged data from the Block storage arrays if this block has not been read yet
@@ -267,6 +307,7 @@ contains
           NameTecVar = '<`r>'
           iUnitVar   = UnitRho_
           PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(rho_,:,:,:)
+
        case('rhoswave')
           NameTecVar = '<`rsw>'
           iUnitVar   = UnitRho_
@@ -280,38 +321,46 @@ contains
           iUnitVar   = UnitB_
           ! Note: here we add B0x to the summed B1.  We have to multiply by the time because the
           ! summed variables have been multiplied by dt in the summation.
-          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(Bx_,:,:,:)+B0xCell_BLK(1:nI,1:nJ,1:nK,iBlock)*(tSumEnd-tSumStart)
+          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(Bx_,:,:,:)+ &
+               B0xCell_BLK(1:nI,1:nJ,1:nK,iBlock)*(tSumEnd-tSumStart)
        case('byave') 
           NameTecVar = '<B_y>'
           iUnitVar   = UnitB_
           ! Note: here we add B0y to the summed B1.  We have to multiply by the time because the
           ! summed variables have been multiplied by dt in the summation.
-          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(By_,:,:,:)+B0yCell_BLK(1:nI,1:nJ,1:nK,iBlock)*(tSumEnd-tSumStart)
+          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(By_,:,:,:)+ &
+               B0yCell_BLK(1:nI,1:nJ,1:nK,iBlock)*(tSumEnd-tSumStart)
        case('bzave') 
           NameTecVar = '<B_z>'
           iUnitVar   = UnitB_
           ! Note: here we add B0z to the summed B1.  We have to multiply by the time because the
           ! summed variables have been multiplied by dt in the summation.
-          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(Bz_,:,:,:)+B0zCell_BLK(1:nI,1:nJ,1:nK,iBlock)*(tSumEnd-tSumStart)
+          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(Bz_,:,:,:)+ &
+               B0zCell_BLK(1:nI,1:nJ,1:nK,iBlock)*(tSumEnd-tSumStart)
        case('uxave') 
           NameTecVar = '<U_x>'
           iUnitVar   = UnitU_
-          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(RhoUx_,:,:,:)/ &
-               StateSum_VC(Rho_,:,:,:)
+          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(RhoUx_,:,:,:)
        case('uyave') 
           NameTecVar = '<U_y>'
           iUnitVar   = UnitU_
-          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(RhoUy_,:,:,:)/ &
-               StateSum_VC(Rho_,:,:,:)
+          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(RhoUy_,:,:,:)
        case('uzave') 
           NameTecVar = '<U_z>'
           iUnitVar   = UnitU_
-          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(RhoUz_,:,:,:)/ &
-               StateSum_VC(Rho_,:,:,:)
+          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(RhoUz_,:,:,:)
+       case('uave') 
+          NameTecVar = '<|U|>'
+          iUnitVar   = UnitU_
+          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(Umag_,:,:,:)
        case('pave','pthave')
           NameTecVar = '<p>'
           iUnitVar   = UnitP_
           PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(p_,:,:,:)
+       case('tswave')
+          NameTecVar = '<Tsw>'
+          iUnitVar   = UnitTemperature_
+          PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(Tsw_,:,:,:)
        case default
           IsFound = .false.
           call stop_mpi(Name//': unimplemented variable='//NameVar)
