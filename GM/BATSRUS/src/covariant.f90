@@ -861,7 +861,8 @@ end subroutine fix_geometry_at_reschange
 subroutine fix_covariant_geometry(iBLK)
   use ModCovariant
   use ModNodes,ONLY:NodeX_NB,NodeY_NB,NodeZ_NB
-  use ModGeometry,ONLY: vInv_CB,XyzStart_BLK,dx_BLK,dy_BLK,dz_BLK
+  use ModGeometry,ONLY: vInv_CB,XyzStart_BLK,dx_BLK,dy_BLK,dz_BLK, &
+       x_BLK,y_BLK,z_BLK
   use ModMain,ONLY:x_,y_,z_
   implicit none
   integer,intent(in)::iBLK
@@ -1016,6 +1017,8 @@ contains
        if(sum(FaceArea_D**2)>cTolerance)then
           write(*,*)'Wrongly defined face areas'
           write(*,*)'i,j,k,iBlock=',i,j,k,iBlock
+          write(*,*)'x,y,z=',x_BLK(i,j,k,iBlock),&
+               y_BLK(i,j,k,iBlock),z_BLK(i,j,k,iBlock)
           write(*,*)'CRASH IN THE MAIN FIX GEOMETRY!!!'
           write(*,*)'Face Area Vectors:',&
                   FaceAreaI_DFB(:,i+1,j,k,iBlock),&
