@@ -1,5 +1,6 @@
 !^CFG COPYRIGHT UM
-!========================================================================
+!============================================================================
+
 module ModUser
   use ModNumConst, ONLY: cHalf,cTwo,cThree,&
        cFour,cE1,cHundred,cHundredth,cZero,&
@@ -10,7 +11,7 @@ module ModUser
   use ModExpansionFactors
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
-       IMPLEMENTED2 => user_set_ics,                    &
+       IMPLEMENTED2 => user_initial_perturbation,       &
        IMPLEMENTED3 => user_face_bcs,                   &
        IMPLEMENTED4 => user_get_b0,                     &
        IMPLEMENTED5 => user_update_states,              &
@@ -43,20 +44,6 @@ contains
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
        select case(NameCommand)
-       case("#USER_FLAGS")
-          call read_var('UseUserInnerBCs'         ,UseUserInnerBCs)
-          call read_var('UseUserSource'           ,UseUserSource)
-          call read_var('UseUserPerturbation'     ,UseUserPerturbation)
-          call read_var('UseUserOuterBcs'         ,UseUserOuterBcs)
-          call read_var('UseUserICs'              ,UseUserICs)
-          call read_var('UseUserSpecifyRefinement',UseUserSpecifyRefinement)
-          call read_var('UseUserLogFiles'         ,UseUserLogFiles)
-          call read_var('UseUserWritePlot'        ,UseUserWritePlot)
-          call read_var('UseUserAMR'              ,UseUserAMR)
-          call read_var('UseUserEchoInput'        ,UseUserEchoInput)
-          call read_var('UseUserB0'               ,UseUserB0)
-          call read_var('UseUserInitSession'     ,UseUserInitSession)
-          call read_var('UseUserUpdateStates'     ,UseUserUpdateStates)
        case("#PFSSM")
           call read_var('UseUserB0'  ,UseUserB0)
           if (UseUserB0)then
@@ -64,12 +51,6 @@ contains
              call read_var('dt_UpdateB0',dt_UpdateB0)
              DoUpdateB0 = dt_updateb0 > 0.0
           endif
-          !       case("#AWHEAT")
-          !          call read_var('Bnot        ',Bnot)
-          !          call read_var('Tnot        ',Tnot)
-          !          call read_var('DegFrm1     ',DegFrm1)
-          !          call read_var('DegF_Ratio  ',DegF_Ratio)
-          !          call read_var('Dens_Ratio  ',Dens_Ratio)
        case("#EMPIRICALSW")
           call read_var('NameModel',NameModel)
           call set_empirical_model(trim(NameModel))
@@ -91,58 +72,6 @@ contains
        end select
     end do
   end subroutine user_read_inputs
-
-  !==========================================================================
-  subroutine user_set_ics
-    use ModMain,      ONLY: nI, nJ, nK, nBLK, unusedBLK, UseHyperbolicDivb
-    use ModVarIndexes
-    use ModAdvance,   ONLY: State_VGB, Hyp_
-    use ModNumConst
-    use ModPhysics,   ONLY: inv_gm1
-    use ModGeometry
-    use ModEnergy,    ONLY: calc_energy_cell
-    implicit none
-
-    integer :: i,j,k,iBLK
-    logical :: oktest,oktest_me
-    real    :: Denscell,Prescell,Gammacell
-    real    :: xx,yy,zz,RR,ROne,Rmax
-    !------------------------------------------------------------------------
-
-    call set_oktest('user_set_ics',oktest,oktest_me)
-    do iBLK=1,nBLK
-       if(unusedBLK(iBLK))CYCLE
-       do k=1,nK;do j=1,nJ; do i=1,nI
-          xx = x_BLK(i,j,k,iBLK)
-          yy = y_BLK(i,j,k,iBLK)
-          zz = z_BLK(i,j,k,iBLK)
-          RR = sqrt(xx**2+yy**2+zz**2+cTolerance**2)
-          ROne  = max(cOne,RR)
-          Rmax  = max(2.1E+01,sqrt(xx**2+yy**2+zz**2))
-          State_VGB(Bx_:Bz_  ,i,j,k,iBLK) = 0.0
-          if(UseHyperbolicDivb)then
-             State_VGB(Hyp_  ,i,j,k,iBLK) = 0.0
-          end if
-          call get_plasma_parameters_cell(xx,yy,zz,RR,&
-               Denscell,Prescell,Gammacell)
-          State_VGB(rho_     ,i,j,k,iBLK) = Denscell
-          State_VGB(P_       ,i,j,k,iBLK) = Prescell
-          State_VGB(rhoUx_   ,i,j,k,iBLK) = Denscell*&
-               4.0E+00*((ROne-cOne)/(Rmax-cOne))*xx/RR
-          State_VGB(rhoUy_   ,i,j,k,iBLK) = Denscell*&
-               4.0E+00*((ROne-cOne)/(Rmax-cOne))*yy/RR
-          State_VGB(rhoUz_   ,i,j,k,iBLK) = Denscell*&
-               4.0E+00*((ROne-cOne)/(Rmax-cOne))*zz/RR
-          State_VGB(Ew_      ,i,j,k,iBLK) = Prescell*&
-               (cOne/(Gammacell-cOne)-inv_gm1) 
-       end do;end do; end do
-
-       !\
-       ! Update the total energy::
-       !/
-       call calc_energy_cell(iBLK)
-    end do
-  end subroutine user_set_ics
   
   !==========================================================================
   subroutine user_face_bcs(VarsGhostFace_V)
@@ -160,16 +89,19 @@ contains
     use ModBlockData, ONLY: use_block_data, put_block_data, get_block_data
 
     use ModFaceBc, ONLY: FaceCoords_D, VarsTrueFace_V, TimeBc, &
-         iBlockBc, B0Face_D
+         iBlockBc !!!,B0Face_D
 
     implicit none
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
-    real    :: Denscell, Prescell, Gammacell
-    real    :: RR, FullBnorm
-    real, dimension(3) :: RFace_D, B1_D, U_D, B1t_D, B1n_D, &
-                          FullB_D, FullBunit_D
+    real :: DensCell, PresCell, GammaCell
+    real :: RR, B1dotR  
+    real, dimension(3):: RFace_D,B1_D,U_D,B1t_D,B1n_D
+
+!!!    real    :: RR, FullBnorm
+!!!    real, dimension(3) :: RFace_D, B1_D, U_D, B1t_D, B1n_D, &
+!!!                          FullB_D, FullBunit_D
     !------------------------------------------------------------------------
 
     RR = sqrt(sum(FaceCoords_D**2))
@@ -177,28 +109,37 @@ contains
 
     U_D (x_:z_)  = VarsTrueFace_V(Ux_:Uz_)
     B1_D(x_:z_)  = VarsTrueFace_V(Bx_:Bz_)
-    B1n_D(x_:z_) = dot_product(RFace_D,B1_D)*RFace_D(x_:z_)
+    B1dotR       = dot_product(RFace_D,B1_D)
+    B1n_D(x_:z_) = B1dotR*RFace_D(x_:z_)
     B1t_D        = B1_D-B1n_D
 
+! A field aligned flow extrapolation is more conform the MHD equations.
+! However, in the current heating scenario the nonzero inflow will create
+! a nonzero Ew*vr flux and therefor change the coronal heating properties.
+! We leave this boundary condition here for future heating explorations.
+!!!    !\
+!!!    ! Update BCs for induction field::
+!!!    !/
+!!!    VarsGhostFace_V(Bx_:Bz_) = B1t_D(x_:z_)
+!!!
+!!!    !\
+!!!    ! Update BCs for velocity
+!!!    !/
+!!!    FullB_D = VarsGhostFace_V(Bx_:Bz_) + B0Face_D
+!!!    FullBnorm = sqrt(sum(FullB_D**2))
+!!!    if (FullBnorm<cTolerance) then
+!!!       ! HD: extrapolate in radial direction
+!!!       VarsGhostFace_V(Ux_:Uz_) = dot_product(U_D,RFace_D)*RFace_D
+!!!    else
+!!!       ! MHD: extrapolate in field line direction
+!!!       FullBunit_D = FullB_D/FullBnorm
+!!!       VarsGhostFace_V(Ux_:Uz_) = dot_product(U_D,FullBunit_D)*FullBunit_D
+!!!    end if
     !\
-    ! Update BCs for induction field::
+    ! Update BCs for velocity and induction field::
     !/
-    VarsGhostFace_V(Bx_:Bz_) = B1t_D(x_:z_)
-
-    !\
-    ! Update BCs for velocity
-    !/
-    FullB_D = VarsGhostFace_V(Bx_:Bz_) + B0Face_D
-    FullBnorm = sqrt(sum(FullB_D**2))
-    if (FullBnorm<cTolerance) then
-       ! HD: extrapolate in radial direction
-       VarsGhostFace_V(Ux_:Uz_) = dot_product(U_D,RFace_D)*RFace_D
-    else
-       ! MHD: extrapolate in field line direction
-       FullBunit_D = FullB_D/FullBnorm
-       VarsGhostFace_V(Ux_:Uz_) = dot_product(U_D,FullBunit_D)*FullBunit_D
-    end if
-
+    VarsGhostFace_V(Ux_:Uz_) = -U_D(x_:z_)
+    VarsGhostFace_V(Bx_:Bz_) = B1t_D(x_:z_)!-B1n_D(x_:z_)
     !\
     ! Update BCs for the mass density, EnergyRL, and pressure::
     !/
@@ -212,7 +153,6 @@ contains
     VarsGhostFace_V(Ew_)  = &!max(-VarsTrueFace_V(Ew_)+ &  
          VarsGhostFace_V(rho_)*Prescell/Denscell &
          *(1.0/(Gammacell-cOne)-inv_gm1)
-
     !\
     ! Apply corotation
     !/
@@ -265,6 +205,64 @@ contains
   end subroutine get_plasma_parameters_cell
 
   !==========================================================================
+  subroutine user_initial_perturbation
+    use ModMain,      ONLY: nI, nJ, nK, nBLK, unusedBLK, UseHyperbolicDivb
+    use ModIO,        ONLY: restart
+    use ModVarIndexes
+    use ModAdvance,   ONLY: State_VGB, Hyp_
+    use ModNumConst
+    use ModPhysics,   ONLY:inv_gm1
+    use ModGeometry
+    use ModEnergy,    ONLY: calc_energy_cell
+    implicit none
+
+    !\
+    ! Variables required by this user subroutine::
+    !/
+    integer:: i,j,k,iBLK,iError
+    logical:: oktest,oktest_me
+    real:: Dens_BLK,Pres_BLK,Gamma_BLK
+    real:: xx,yy,zz,RR,ROne,Rmax,Speed
+    !------------------------------------------------------------------------
+    call set_oktest('user_initial_perturbation',oktest,oktest_me)
+    do iBLK=1,nBLK
+       if(unusedBLK(iBLK))CYCLE
+       if ((.not.restart)) then   
+          do k=1,nK;do j=1,nJ; do i=1,nI
+             xx = x_BLK(i,j,k,iBLK)
+             yy = y_BLK(i,j,k,iBLK)
+             zz = z_BLK(i,j,k,iBLK)
+             RR = sqrt(xx**2+yy**2+zz**2+cTolerance**2)
+             ROne  = max(cOne,RR)
+             Rmax  = max(2.1E+01,sqrt(x2**2+y2**2+z2**2))
+             State_VGB(Bx_      ,i,j,k,iBLK) = cZero
+             State_VGB(By_      ,i,j,k,iBLK) = cZero
+             State_VGB(Bz_      ,i,j,k,iBLK) = cZero
+             if(UseHyperbolicDivb)then
+                State_VGB(Hyp_  ,i,j,k,iBLK) = 0.0
+             end if
+             call get_plasma_parameters_cell(xx,yy,zz,RR,&
+                  Dens_BLK,Pres_BLK,Gamma_BLK)
+             State_VGB(rho_     ,i,j,k,iBLK) = Dens_BLK
+             State_VGB(P_       ,i,j,k,iBLK) = Pres_BLK
+             State_VGB(rhoUx_   ,i,j,k,iBLK) = Dens_BLK*&
+                  4.0E+00*((ROne-cOne)/(Rmax-cOne))*xx/RR
+             State_VGB(rhoUy_   ,i,j,k,iBLK) = Dens_BLK*&
+                  4.0E+00*((ROne-cOne)/(Rmax-cOne))*yy/RR
+             State_VGB(rhoUz_   ,i,j,k,iBLK) = Dens_BLK*&
+                  4.0E+00*((ROne-cOne)/(Rmax-cOne))*zz/RR
+             State_VGB(Ew_,i,j,k,iBLK) = Pres_BLK   *&
+                  (cOne/(Gamma_BLK-cOne)-inv_gm1) 
+          end do;end do; end do
+       endif
+       !\
+       ! Update the total energy::
+       !/
+       call calc_energy_cell(iBLK)
+    end do
+  end subroutine user_initial_perturbation
+
+  !==========================================================================
   subroutine user_get_b0(xInput,yInput,zInput,B0_D)
     use ModPhysics,  ONLY: Io2No_V,UnitB_
     implicit none
@@ -291,7 +289,7 @@ contains
     integer, intent(in) :: iStage, iBlock
 
     integer :: i, j, k
-    real    :: Denscell,Prescell,Gammacell,Beta
+    real    :: Gammacell
     !------------------------------------------------------------------------
     call update_states_MHD(iStage,iBlock)
     !\
@@ -299,10 +297,8 @@ contains
     !/
     !  if (iStage/=nStage) return
     do k=1,nK; do j=1,nJ; do i=1,nI
-       call get_plasma_parameters_cell( &
-               x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock), &
-               z_BLK(i,j,k,iBlock),R_BLK(i,j,k,iBlock), &
-               Denscell,Prescell,Gammacell)
+       call get_gamma_emp(x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock), &
+            z_BLK(i,j,k,iBlock),Gammacell)
        if(R_BLK(i,j,k,iBlock)>2.5)&
             Gammacell=Gammacell-(Gammacell-1.1)*max(0.0, &
             -1.0 + 2*State_VGB(P_,i,j,k,iBlock)/&
@@ -327,7 +323,7 @@ contains
        xCenter,yCenter,zCenter,rCenter,                        &
        minx,miny,minz,minR,maxx,maxy,maxz,maxR,found)
     use ModMain,ONLY:time_loop,nI,nJ,nK
-    use ModAMR,ONLY:InitialRefineType
+    use ModAMR,ONLY:InitialRefineType, initial_refine_levels
     use ModNumConst
     use ModAdvance,ONLY:&
          State_VGB,Bx_,By_,Bz_,B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
@@ -345,27 +341,50 @@ contains
     integer, intent(in) :: iBLK
 
     character (len=*), parameter :: Name='user_specify_initial_refinement'
-    real::BDotRMin,BDotRMax,critx
-    integer::i,j,k
-    !-------------------------------------------------------------------
+    real :: BDotRMin,BDotRMax,critr
+    integer :: i,j,k, levmin, levelHS, levBLK
+    !------------------------------------------------------------------------
+
+    levBLK=global_block_ptrs(iBLK,iProc+1)%ptr%LEV
+
+    select case(TypeGeometry)
+    case('cartesian')
+       levmin=4
+       levelHS=6
+    case('spherical_lnr')
+       levmin=1
+       levelHS=3
+    case default
+       call stop_mpi('user_specify_initial_refinement is not implemented ' &
+                     //'for geometry= '//TypeGeometry)
+    end select
+
     select case (InitialRefineType)
     case ('helio_init')
        if(.not.time_loop)then
-          !refine to have resolution not worse 4.0 and
-          !refine the body intersecting blocks
-          ! Refine all blocks time through (starting with 1 block)
-          if (lev <= 4) then
+          !refine to have resolution not worse than levmin
+          if(lev<=levmin)then
              refineBlock = .true.
           else
-             critx=(XyzMax_D(1)-XyzMin_D(1))/(2.0**real(lev-2))
-             if ( rCenter < 1.10*rBody + critx ) then
-                refineBlock = .true.
-             else
-                refineBlock = .false.
-             end if
+             select case(TypeGeometry)
+             case('cartesian')
+                critr=1.1*rBody + (x2-x1)/(2.0**real(lev+2-levmin))
+                if ( rCenter < critr ) then
+                   refineBlock = .true.
+                else
+                   refineBlock = .false.
+                end if
+             case('spherical_lnr')
+                critr=rBody + (x2-x1)/(2.0**real(lev+2-levmin))
+                if ( minR < critr ) then
+                   refineBlock = .true.
+                else
+                   refineBlock = .false.
+                end if
+             end select
           endif
-       elseif(global_block_ptrs(iBLK,iProc+1)%ptr%LEV<=5)then
-          !refine heliosheath up to 6 levels
+       elseif( levBLK<=levelHS-1 )then
+          !refine heliosheath up to levelHS
           BDotRMin=cZero
           do k=0,nK+1;do j=1,nJ
              BDotRMin=min( BDotRMin,minval(&
