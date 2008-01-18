@@ -508,6 +508,8 @@ contains
     use ModHallResist, ONLY: HallJ_CD, IonMassPerCharge_G, &
          BxPerN_G, ByPerN_G, BzPerN_G, set_ion_mass_per_charge
 
+    use ModAdvance, ONLY: B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
+    
     use ModHallResist, ONLY: &                 !^CFG IF COVARIANT
          DgenDxyz_DDC, set_block_jacobian_cell !^CFG IF COVARIANT
     real :: DbDgen_DD(3,3)                     !^CFG IF COVARIANT
@@ -587,11 +589,15 @@ contains
 
     !write(*,*)'iBlock, max(HallJ)=',implBlk,maxval(abs(HallJ_CD(:,:,:,:)))
 
-    InvN_G = IonMassPerCharge_G / w_k(:,:,:,Rho_,implBLK)
+    InvN_G = HallFactor_G * IonMassPerCharge_G / &
+         w_k(0:nI+1,0:nJ+1,0:nK+1,Rho_,implBLK)
 
-    BxPerN_G = w_k(:,:,:,Bx_,implBLK)*InvN_G 
-    ByPerN_G = w_k(:,:,:,By_,implBLK)*InvN_G 
-    BzPerN_G = w_k(:,:,:,Bz_,implBLK)*InvN_G
+    BxPerN_G = (B0xCell_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
+         w_k(0:nI+1,0:nJ+1,0:nK+1,Bx_,implBLK))*InvN_G
+    ByPerN_G = (B0yCell_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
+         w_k(0:nI+1,0:nJ+1,0:nK+1,By_,implBLK))*InvN_G
+    BzPerN_G = (B0zCell_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
+         w_k(0:nI+1,0:nJ+1,0:nK+1,Bz_,implBLK))*InvN_G
 
   end subroutine impl_init_hall
   !===========================================================================
