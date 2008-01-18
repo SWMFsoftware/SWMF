@@ -464,7 +464,7 @@ contains
              tmp1_BLK(i,j,k,iBLK) = ( &
                   Current_D(x_)*x_BLK(i,j,k,iBLK)+ &
                   Current_D(y_)*y_BLK(i,j,k,iBLK)+ &
-                  Current_D(z_)*x_BLK(i,j,k,iBLK) ) / r_BLK(i,j,k,iBLK)
+                  Current_D(z_)*z_BLK(i,j,k,iBLK) ) / r_BLK(i,j,k,iBLK)
           end do; end do; end do
 
           !now modify tmp1 according to the case we want
