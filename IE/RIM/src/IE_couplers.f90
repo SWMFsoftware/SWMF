@@ -80,4 +80,6 @@ subroutine IE_setgrid(iComponent, MLTsIn, LatsIn, iError)
      IsIEGridRefined = .false.
   else
 
+  end if
+
 end subroutine IE_setgrid
