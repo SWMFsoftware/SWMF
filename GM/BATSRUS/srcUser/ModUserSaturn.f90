@@ -404,9 +404,9 @@ contains
                       CXsource = accelerationFactor*CXsource
                    end if
   
-                   ! testing only
-                   Alpha_rec = 0.0
-                   CXsource = 0.0
+!                   ! testing only
+!                   Alpha_rec = 0.0
+!                   CXsource = 0.0
                    
                    ! now load the source terms into the right hand side
   
