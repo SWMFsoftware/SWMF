@@ -1532,7 +1532,15 @@ subroutine MH_set_parameters(TypeAction)
            DoFixExtraBoundary=.true.
            SaveBoundaryCells=.true.
         end if
-     case("#LIMITRADIUS", "#LIMITGENCOORD1")
+     case("#LIMITRADIUS")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('Coord1Min',XyzMin_D(1))
+        call read_var('Coord1Max',XyzMax_D(1))
+        if(index(TypeGeometry,'lnr')>0)then
+           XyzMin_D(1)=log(XyzMin_D(1))
+           XyzMax_D(1)=log(XyzMax_D(1))
+        end if
+     case("#LIMITGENCOORD1")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('Coord1Min',XyzMin_D(1))
         call read_var('Coord1Max',XyzMax_D(1))
@@ -2482,7 +2490,6 @@ contains
     end if
     MaxBoundary=min(MaxBoundary,Top_)
     MinBoundary=max(MinBoundary,body2_)
-
     DoOneCoarserLayer = .not. (nOrder==2 .and. &
          (UseTvdResChange .or. UseAccurateResChange))
     DoLimitMomentum = &                                !^CFG IF BORISCORR
