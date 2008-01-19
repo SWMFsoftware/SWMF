@@ -1,12 +1,22 @@
 #^CFG COPYRIGHT UM
 #
-#       Linux Operating System, ifort 9.?? compiler
+#       Linux Operating System, ifort 9.?? 10.?? compiler
 #       Specific Rules
 #
 
 MOD1 = ModCT.o       #^CFG IF CONSTRAINB
 MOD2 = ModImplicit.o #^CFG IF IMPLICIT
 MOD3 = ModRaytrace.o #^CFG IF RAYTRACE
+
+impl_jacobian.o: impl_jacobian.f90 \
+	ModProcMH.o \
+	ModMain.o \
+	ModEquation.o \
+	ModAdvance.o \
+	ModGeometry.o \
+	ModImplicit.o \
+	ModHallResist.o
+	${COMPILE.f90} ${Cflag1} impl_jacobian.f90
 
 create_soln_blocks.o: create_soln_blocks.f90 \
         ModAMR.o \
