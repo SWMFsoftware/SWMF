@@ -264,6 +264,12 @@ contains
           (rPlanet_I(Saturn_)/rPlanet_I(Enceladus_))**3
 
      !\
+     ! Comets
+     !/
+     NamePlanet_I(Halley_) = 'HALLEY'
+     rPlanet_I(Halley_)    = 1e9             ! for distance units
+
+     !\
      ! No Planet (0)
      !     - No Planet and no body - defaults for everything, just set name.
      !/
