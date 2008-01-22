@@ -92,3 +92,17 @@ end subroutine PS_run
 
 !==============================================================================
 
+subroutine PS_put_from_ie(Buffer_IIV, iSize, jSize, nVar)
+
+  implicit none
+  character (len=*),parameter :: NameSub='PS_put_from_ie'
+
+  integer, intent(in)           :: iSize, jSize, nVar
+  real, intent(out)             :: Buffer_IIV(iSize,jSize,nVar)
+
+  call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
+
+end subroutine PS_put_from_ie
+
+!==============================================================================
+

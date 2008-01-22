@@ -281,4 +281,20 @@ subroutine PS_run(tSimulation,tSimulationLimit)
 
 end subroutine PS_run
 
+!==============================================================================
+
+subroutine PS_put_from_ie(Buffer_IIV, iSize, jSize, nVar)
+
+  implicit none
+  character (len=*),parameter :: NameSub='PS_put_from_ie'
+
+  integer, intent(in)           :: iSize, jSize, nVar
+  real, intent(out)             :: Buffer_IIV(iSize,jSize,nVar)
+
+  !NOTE: The Buffer variables have been pushed to all PS processors already.
+
+  write(*,*) NameSub,' -- called but not yet implemented.'
+
+end subroutine PS_put_from_ie
+
 !=================================================================

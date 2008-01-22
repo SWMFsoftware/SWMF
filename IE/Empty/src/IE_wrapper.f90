@@ -137,6 +137,21 @@ subroutine IE_get_for_pw(Buffer_IIV, iSize, jSize, nVar, Name_V, NameHem,&
   call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
 end subroutine IE_get_for_pw
+
+!==============================================================================
+
+subroutine IE_get_for_ps(Buffer_IIV, iSize, jSize, nVar)
+
+  implicit none
+  character (len=*),parameter :: NameSub='IE_get_for_ps'
+
+  integer, intent(in)           :: iSize, jSize, nVar
+  real, intent(out)             :: Buffer_IIV(iSize,jSize,nVar)
+
+  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+
+end subroutine IE_get_for_ps
+
 !==============================================================================
 
 subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)

@@ -373,8 +373,10 @@ contains
           ! Couple iCompSource --> iCompTarget
           if( (IsProc_C(iCompSource).or.IsProc_C(iCompTarget)) .and. &
                is_time_to(Couple_CC(iCompSource, iCompTarget),&
-               nStep, tSimulation, DoTimeAccurate)) &
-               call couple_two_comp(iCompSource, iCompTarget, tSimulation)
+               nStep, tSimulation, DoTimeAccurate))then
+             if(DoTestMe)write(*,*)NameSub,' coupling ',iCompSource,iCompTarget,tSimulation
+             call couple_two_comp(iCompSource, iCompTarget, tSimulation)
+          end if
 
        end do
 
