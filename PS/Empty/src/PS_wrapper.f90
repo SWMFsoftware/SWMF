@@ -106,3 +106,24 @@ end subroutine PS_put_from_ie
 
 !==============================================================================
 
+subroutine PS_get_grid_size(iSize,jSize)
+
+  implicit none
+  integer, intent(out) :: iSize, jSize
+
+  call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
+
+end subroutine PS_get_grid_size
+
+!==============================================================================
+
+subroutine PS_get_grid(MLTs,Lats)
+
+  implicit none
+  real, allocatable, intent(out) :: MLTs(:,:), Lats(:,:)
+
+  call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
+
+end subroutine PS_get_grid
+
+!==============================================================================

@@ -298,3 +298,28 @@ subroutine PS_put_from_ie(Buffer_IIV, iSize, jSize, nVar)
 end subroutine PS_put_from_ie
 
 !=================================================================
+
+subroutine PS_get_grid_size(iSize,jSize)
+
+  implicit none
+  integer, intent(out) :: iSize, jSize
+
+!FIX
+  iSize=1
+  jSize=1
+
+end subroutine PS_get_grid_size
+
+!==============================================================================
+
+subroutine PS_get_grid(MLTs,Lats)
+
+  implicit none
+  real, allocatable, intent(out) :: MLTs(:,:), Lats(:,:)
+
+!FIX
+
+
+end subroutine PS_get_grid
+
+!==============================================================================
