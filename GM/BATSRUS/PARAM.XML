@@ -997,6 +997,7 @@ user          - user defined
 		<option name="ionosphereb0"			/>
 		<option name="ionospherefloat"			/>
 		<option name="coronatoih"			/>
+		<option name="polarwind"			/>
 		<option name="user"				/>
 	</parameter>
 <!-- ^CFG IF SECONDBODY BEGIN -->
@@ -1041,15 +1042,15 @@ Possible values for TypeBcInner are:
 'ionospherefloat' - set V as if ionosphere gave V_iono=0
                     float B, float rho, float P
 'coronatoih'      - IH component obtains inner boundary from the SC component
+'polarwind'       - GM component obtains the inner boundary from PW component
 'user'            - user defined
 \end{verbatim}
 For 'ionosphere' and 'ionospherefloat' types and a coupled GM-IE run,
 the velocity at the inner boundary is determined by the ionosphere model.
 
-Default value for TypeBcInner is 'ionosphere' for problem types
-Earth, Saturn, Jupiter, and rotation.
-For all other problems with an inner boundary the default is 'unknown',
-so the inner boundary must be set.
+Default value for TypeBcInner is 'ionosphere' for the GM component,
+and 'unknown' for the SC and IH components, so the inner boundary must be set
+for the SC and IH components.
 </command>
 
 <command name="EXTRABOUNDARY">
@@ -1071,7 +1072,7 @@ to select a certain type. The DoFixExtraboundary controls
 if resolution change is allowed.
 </command>
 
-<command name="FACEOUTERBC">
+<command name="FACEOUTERBC" if="$_IsFirstSession">
 	<parameter name="MaxBoundary" type="integer" min="0" max="6"
 							default="0" />
 	<if expr="$MaxBoundary >= 1">
@@ -1089,6 +1090,50 @@ are defined).
 If DoFixOuterBoundary is .true., there is no resolution
 change along the outer boundaries indexed from East_ to MaxBoundary.
 </command>
+
+<command name="FACEBOUNDARY" if="$_IsFirstSession">
+	<parameter name="MinBoundary" type="integer" min="-2" max="6"
+							default="-1" />
+	<parameter name="MaxBoundary" type="integer" min="0" max="6"
+							default="0" />
+	<if expr="$MaxBoundary >= 1">
+		<parameter name="DoFixOuterBoundary" type="logical" 
+							default="F"/>
+	</if>
+#FACEBOUNDARY
+6		MinBoundary
+-2		MaxBoundary
+F		DoFixOuterBoundary
+
+This command is similar to #FACEOUTERBC, but it allows setting both the
+first and the last boundaries and it allows switching OFF the face boundary
+conditions for generalized coordinate grids (as shown by the example). 
+</command>
+
+<command name="POLARBOUNDARY">
+	<parameter name="PolarNDim" type="real" min="0" default="20"/>
+	<parameter name="PolarTDim" type="real" min="0" default="1e5"/>
+	<parameter name="PolarUDim" type="real" min="0" default="1"/>
+	<parameter name="PolarLatitude" type="real" min="0" default="5"/>
+#POLARBOUNDARY
+20.0		PolarNDim [amu/cc]
+100000.0	PolarTDim [K]
+1.0		PolarUDim [km/s]
+75.0		PolarLatitude [deg]
+
+This command defines the boundary conditions in the polar region. The number 
+density, temperature and velocity can be given (for all fluids in multifluid
+calculations). The density and temperature parameters (converted to pressure)
+are used to fix the open fieldline region in GM-IM coupled runs 
+(see #IMCOUPLING command). 
+
+The following feature is not implemented yet:
+The #POLARWIND command is used to set polar wind like inner boundary
+conditions when GM is not coupled with the PW component. 
+The PolarLatitude determines the extent of the polar boundary where the outflow
+is defined.
+</command>
+
 </commandgroup>
 
 <commandgroup name="GRID GEOMETRY">
@@ -3696,61 +3741,87 @@ Jr as well as 1/B, average rho, and average p on closed fieldlines are passed.
 <!-- ^CFG IF RCM BEGIN -->
 <command name="IM">
 	<parameter name="TauCoupleIm" type="real" min="1"/>
+	<parameter name="DoImSatTrace" type="logical" default="F" />
 
 #IM
 20.0			TauCoupleIm
+F			DoImSatTracing
 
-Same as command IMCOUPLING, except it does not read the two logicals.
-See description for command IMCOUPLING.
+Same as command IMCOUPLING, except it only reads the first and second
+parameters of #IMCOUPLING.
 
-The default value is TauCoupleIm=20.0, which corresponds to typical nudging.
+The default value is TauCoupleIm=20.0, which corresponds to typical nudging
+and DoImSatTrace false.
 </command>
 
 <command name="IMCOUPLING">
 	<parameter name="TauCoupleIm" type="real" min="1"/>
+	<parameter name="DoImSatTrace" type="logical" default="F" />
 	<parameter name="DoCoupleImPressure" type="logical" default="T"/>
 	<parameter name="DoCoupleImDensity"  type="logical" default="F"/>
+	<parameter name="DoFixPolarRegion'   type="logical" default="F"/>
+	<parameter name="rFixPolarRegion'    type="real" min="1" default="5"/>
 
 #IMCOUPLING
 20.0			TauCoupleIm
 T			DoCoupleImPressure
 F			DoCoupleImDensity
+T			DoFixPolarRegion
+5.0			rFixPolarRegion
 
-TauCoupleIm:
+This command sets parameters for the GM-IM coupling. The parameters
+are described below:
 
-Determine how fast the GM pressure p (and possibly density rho) 
+The TauCoupleIm parameter determine how fast the GM pressure p 
+(and possibly density rho) 
 should be nudged towards the IM pressure pIm (and density dIM). 
-The RCM prssure and denstiy are updated every time IM->GM coupling occurs,
+The RCM pressure and denstiy are updated every time IM->GM coupling occurs,
 but the nudging towards these values is done in every GM time step.
-
-If not time accurate, a weighted average is taken: 
+When GM is not run in time accurate mode, the pressure is set as
 
 p' = (p*TauCoupleIm + pIm)/(TauCoupleIm+1)
 
 Therefore the larger TauCoupleIm is the slower the adjustment will be.
 It takes approximately 2*TauCoupleIm time steps to get p close to pIm.
+In time accurate mode, the nudging is based on physical time:
 
-If time accurate, the nudging is based on physical time:
-
-p' = p + max(1.0, dt/TauCoupleIm)*(pIm - p)
+p' = p + min(1.0, dt/TauCoupleIm)*(pIm - p)
 
 where dt is the time step. It takes about 2*TauCoupleIm seconds
 to get p close to pIm. If the time step dt exceeds TauCoupleIm, 
 p' = pIm is set in a single step.
-
 The default value is TauCoupleIm=20.0, which corresponds to typical nudging.
 
-DoCoupleImPressure:
+The DoImSatTrace logical sets whether the IM component receives the locations 
+of the satellites in GM mapped down along the magnetic field lines. The IM
+component then can produce satellite output files with IM data.
 
-Logical which sets whether GM pressure is driven by IM pressure, default 
-is true, and it should always be true, because pressure is the dominant
-variable in the IM to GM coupling.
+The DoCoupleImPressure logical sets whether GM pressure is driven by IM 
+pressure. Default is true, and it should always be true (except for testing), 
+because pressure is the dominant variable in the IM to GM coupling.
 
-DoCoupleImDensity:
+The DoCoupleImDensity logical sets whether the GM density is driven 
+by IM density. The default value is false. This is a new feature in the 
+IM-GM coupling, which is not fully tested.
 
-Logical which sets whether GM density is driven by IM density, default is
-false. This is a new feature in the IM-GM coupling, which is not fully
-tested.
+The DoFixPolarRegion logical decides if we try to fix the pressure 
+(and density) values in the open field line region. The pressure/density 
+tends to diffuse 
+numerically from the closed field line region (nudged by IM) into the
+polar region that should not be affected by IM. This can cause unphysically
+fast outflow from the polar region. If DoFixPolarRegion is set to true, 
+the pressure (and density) are nudged toward the values given 
+in the #POLARBOUNDARY command in the open field line region within
+radius defined by rFixPolarRegion and where the flow points outward.
+This is a very new feature that hasn't been tested in real runs yet.
+
+The rFixPolarRegion radius (given in planetary radii) sets the outer
+limit for nudging the pressure (density) in the open field line region
+towards the values set by the #POLARBOUNDARY command. 
+
+The default is to couple the IM pressure only and no fix is applied 
+in the polar region.
+
 </command>
 <!-- ^CFG END RCM -->
 
