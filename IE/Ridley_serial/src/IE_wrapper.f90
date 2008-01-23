@@ -1105,3 +1105,48 @@ subroutine IE_run(tSimulation,tSimulationLimit)
 end subroutine IE_run
 
 !=================================================================
+!==============================================================================
+
+subroutine IE_setnMlts(iComponent, nMLTsIn, iError)
+
+  implicit none
+
+  integer, intent(in)  :: iComponent, nMLTsIn
+  integer, intent(out) :: iError
+
+  character (len=*), parameter :: NameSub='IE_setnMlts'
+
+  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+
+end subroutine IE_setnMlts
+
+!==============================================================================
+
+subroutine IE_setnLats(iComponent, nLatsIn, iError)
+
+  implicit none
+
+  integer, intent(in)  :: iComponent, nLatsIn
+  integer, intent(out) :: iError
+
+  character (len=*), parameter :: NameSub='IE_setnLats'
+
+  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+
+end subroutine IE_setnLats
+
+!==============================================================================
+
+subroutine IE_setgrid(iComponent, MLTsIn, LatsIn, iError)
+
+  integer, intent(in) :: iComponent
+  real, intent(in) :: MLTsIn,LatsIn
+  integer, intent(out) :: iError
+
+  character (len=*), parameter :: NameSub='IE_setgrid'
+
+  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+
+end subroutine IE_setgrid
+
+!==============================================================================
