@@ -143,8 +143,16 @@ module ModPwImplicit
             StateOrig_GV(-1:0,iRho_I(iIon):iP_I(iIon))
        State_GV(-1:0,iU(iIon)) = &
             State_GV(1,iU(iIon))*State_GV(1,iRho(iIon))/State_GV(-1:0,iRho(iIon))
-       State_GV(-1:0,iTe_) = &
-            StateOrig_GV(-1:0,iT_I(nIon))
+
+      if (State_GV(0,iU(iIon)) > 0.0) then
+         State_GV(-1:0,iP(iIon)) = StateOrig_GV(-1:0,iP_I(iIon))
+      else
+         State_GV(-1:0,iP(iIon)) = &
+              State_GV(1,iP(iIon))/State_GV(1,iRho(iIon)) * State_GV(-1:0,iRho(iIon))
+      endif
+      
+      State_GV(-1:0,iTe_) = &
+           StateOrig_GV(-1:0,iT_I(nIon))
 
        ! Upper boundary requires temperature and scaleheight
        T_C(iIon) = &
@@ -239,7 +247,7 @@ module ModPwImplicit
     integer :: k,iIon, nVarReduced
     !--------------------------------------------------------------------------
     DtImpl = Dt
-    DtExpl = 1.0e-3*(DrBnd/2.0e6)
+    DtExpl = 1.0e-4*(DrBnd/2.0e6)
 !godunov    DtExpl = 1.0e-2
     !DtExpl = dx^2/2/max(kappa) 
     
