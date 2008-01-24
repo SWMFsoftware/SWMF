@@ -215,7 +215,7 @@ contains
     MagAxisPhiGeo     = bAxisPhiPlanet_I(Planet_)    ! Permanent phi    in GEO
 
     ! For Enceladus the dipole is at Saturn's center
-    MagCenter_D(2)    = 944.23
+    if(Planet_==Enceladus_) MagCenter_D(2)    = 944.23
 
   end function is_planet_init
 
