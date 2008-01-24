@@ -11,6 +11,7 @@ test:
 	-@(make test_titan)
 	-@(make test_mars)
 	-@(make test_venus)
+	-@(make test_saturn)
 	-@(make test_func)
 	@ls -l *.diff
 
@@ -34,6 +35,7 @@ test_help:
 	@echo "    test_corona                (run Solar Corona test only)"
 	@echo "    test_mars                  (run Mars test only)"
 	@echo "    test_venus                 (run Venus test only)"
+	@echo "    test_saturn                (run Saturn test only)"
 	@echo "    test_titan                 (run titan tests only)"
 	@echo "    test_titan_start           (run first titan test only)"
 	@echo "    test_titan_restart         (run titan restart test only)"
@@ -338,4 +340,40 @@ test_venus_check:
 		Param/VENUS/TestOutput/log_n000001.log \
 		${TESTDIR}/VenusTest/GM/log_n000001.log > test_venus.diff
 	ls -l test_venus.diff
+
+### TESTS FOR MODELING SATURN ###
+
+test_saturn:
+	-@(make test_saturn_start)
+
+test_saturn_start:
+	@echo "test_saturn_compile..." > test_saturn.diff
+	make test_saturn_compile
+	@echo "test_saturn_rundir..." >> test_saturn.diff
+	make test_saturn_rundir
+	@echo "test_saturn_run..." >> test_saturn.diff
+	make test_saturn_run
+	@echo "test_saturn_check..." >> test_saturn.diff
+	make test_saturn_check
+
+test_saturn_compile:
+	./Config.pl -u=Saturn -e=MhdHyp -g=8,8,8,720,1
+	make
+	make PIDL
+
+test_saturn_rundir: test_rundir
+	cd ${TESTDIR}; \
+		cp Param/SATURN/PARAM.in .; \
+	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+
+test_saturn_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+
+test_saturn_check:
+	${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-17 \
+		Param/SATURN/TestOutput/log_n000001.log \
+		${TESTDIR}/RESULTS/GM/log_n000001.log > test_saturn.diff
+	ls -l test_saturn.diff
 
