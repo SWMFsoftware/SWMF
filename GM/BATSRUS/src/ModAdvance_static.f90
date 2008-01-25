@@ -15,8 +15,11 @@ Module ModAdvance
   character (len=10) :: FluxType
 
   ! Named index for hyperbolic scalar field for div B cleaning
-  integer, parameter:: Hyp_ = Bz_+1
+  integer, parameter:: Hyp_ = Bz_ + 1
 
+  ! Named index for electron pressure and velocity
+  integer, parameter:: Pe_ = p_ - 1, eFluid_ = nFluid + 1
+  logical, parameter:: UseElectronPressure = NameVar_V(Pe_) == 'Pe'
 
   !\ One of the two possible ways to treat the MHD-like systems
   !  (oartially symmetrizable, following the Godunov definition).
@@ -133,7 +136,7 @@ Module ModAdvance
   ! Fluxes are for conservative variables (momentum)
   real :: Flux_VX(nVar+nFluid,0:nI+1,2-gcn:nJ+gcn,0:nK+1)
 
-  real :: uDotArea_XI(2-gcn:nI+gcn,0:nJ+1,0:nK+1,nFluid)
+  real :: uDotArea_XI(2-gcn:nI+gcn,0:nJ+1,0:nK+1,nFluid+1)
 
   real :: bCrossArea_DX(3,2-gcn:nI+gcn,0:nJ+1,0:nK+1)
 
@@ -148,7 +151,7 @@ Module ModAdvance
 
   real :: Flux_VY(nVar+nFluid,0:nI+1,2-gcn:nJ+gcn,0:nK+1)
 
-  real :: uDotArea_YI(0:nI+1,2-gcn:nJ+gcn,0:nK+1,nFluid)
+  real :: uDotArea_YI(0:nI+1,2-gcn:nJ+gcn,0:nK+1,nFluid+1)
 
   real :: bCrossArea_DY(3,0:nI+1,2-gcn:nJ+gcn,0:nK+1)
 
@@ -163,7 +166,7 @@ Module ModAdvance
 
   real :: Flux_VZ(nVar+nFluid,0:nI+1,0:nJ+1,2-gcn:nK+gcn)
 
-  real :: uDotArea_ZI(0:nI+1,0:nJ+1,2-gcn:nK+gcn,nFluid)
+  real :: uDotArea_ZI(0:nI+1,0:nJ+1,2-gcn:nK+gcn,nFluid+1)
 
   real :: bCrossArea_DZ(3,0:nI+1,0:nJ+1,2-gcn:nK+gcn)
 
