@@ -55,6 +55,8 @@ contains
        select case(NameCommand)
        case('#USERPROBLEM')
           call read_var('UserProblem',UserProblem)
+       case('#GEM')
+          call read_var('Amplitude',Ay)
        case('#WAVESPEED')
           call read_var('Velocity',Velocity)
        case('#WAVE')
