@@ -15,7 +15,7 @@ module ModVarIndexes
   real               :: MassFluid_I(nFluid) = (/ 1.0, 32.0, 16.0, 44.0 /)
 
   character (len=6), parameter :: NameFluid_I(nFluid) = &
-       (/ 'All  ', 'O2p ', 'Op  ', 'CO2p' /)
+       (/ 'All ', 'O2p ', 'Op  ', 'CO2p' /)
   character (len=7), parameter :: TypeFluid_I(nFluid) = &
        (/ 'ion ', 'ions', 'ions', 'ions' /)
 
