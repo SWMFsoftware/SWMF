@@ -300,7 +300,7 @@ subroutine get_face_flux(StateCons_CV,B0_CD,nI,nJ,nK,iDim,iBlock,Flux_CV)
 
   real :: Primitive_V(nVar), Conservative_V(nFlux), Flux_V(nFlux)
 
-  real :: Un_I(nFluid), En, HallUn
+  real :: Un_I(nFluid+1), En
   integer :: i, j, k
 
   logical :: DoTest, DoTestMe
@@ -342,7 +342,7 @@ subroutine get_face_flux(StateCons_CV,B0_CD,nI,nJ,nK,iDim,iBlock,Flux_CV)
           B0_CD(i, j, k, x_), &
           B0_CD(i, j, k, y_), &
           B0_CD(i, j, k, z_), &
-          Conservative_V, Flux_V, Un_I, En, HallUn)
+          Conservative_V, Flux_V, Un_I, En)
 
      Flux_CV(i, j, k, 1:nVar)= Flux_V(1:nVar)
 
@@ -362,9 +362,10 @@ subroutine get_cmax_face(w,B0,qnI,qnJ,qnK,iDim,iBlock,Cmax)
   use ModProcMH,   ONLY: iProc
   use ModMain,     ONLY: nDim, x_, y_, z_, ProcTest, BlkTest,iTest,jTest,kTest
   use ModImplicit, ONLY: nw
-  use ModFaceFlux, ONLY: iFace, jFace, kFace, &
+  use ModFaceFlux, ONLY: DoTestCell, iFace, jFace, kFace, &
        set_block_values, set_cell_values, get_speed_max, nFluid, &
-       Area, DoLf, DoAw, DoRoe, DoHll, HallUnLeft, HallUnRight, DoTestCell
+       Area, DoLf, DoAw, DoRoe, DoHll, UnLeft_I, UnRight_I
+  use ModAdvance,  ONLY: eFluid_
 
   implicit none
 
@@ -388,8 +389,10 @@ subroutine get_cmax_face(w,B0,qnI,qnJ,qnK,iDim,iBlock,Cmax)
   DoAw  = .false.
   DoRoe = .false.
   DoHll = .false.
-  HallUnLeft = 0.0
-  HallUnRight = 0.0
+
+  ! The electron speed is set to zero (I can't remember why)
+  UnLeft_I(eFluid_)  = 0.0
+  UnRight_I(eFluid_) = 0.0
 
   call set_block_values(iBlock, iDim)
   do kFace = 1, qnK; do jFace = 1, qnJ; do iFace = 1, qnI
