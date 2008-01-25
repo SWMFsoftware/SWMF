@@ -1105,6 +1105,19 @@ subroutine IE_run(tSimulation,tSimulationLimit)
 end subroutine IE_run
 
 !=================================================================
+subroutine IE_get_for_ps(Buffer_IIV, iSize, jSize, nVar)
+
+  implicit none
+  character (len=*),parameter :: NameSub='IE_get_for_ps'
+
+  integer, intent(in)           :: iSize, jSize, nVar
+  real, intent(out)             :: Buffer_IIV(iSize,jSize,nVar)
+
+  !NOTE: The Buffer variables must be collected to i_proc0(IE_) before return.
+
+  write(*,*) NameSub,' -- called but not yet implemented.'
+
+end subroutine IE_get_for_ps
 !==============================================================================
 
 subroutine IE_setnMlts(iComponent, nMLTsIn, iError)
@@ -1150,3 +1163,4 @@ subroutine IE_setgrid(iComponent, MLTsIn, LatsIn, iError)
 end subroutine IE_setgrid
 
 !==============================================================================
+
