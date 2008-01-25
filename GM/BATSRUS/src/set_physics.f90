@@ -16,6 +16,7 @@ subroutine set_physics_constants
   use CON_planet,  ONLY: get_planet, NamePlanet
   use ModVarIndexes
   use ModMultiFluid
+  use ModAdvance, ONLY: UseElectronPressure, Pe_
 
   implicit none
 
@@ -217,7 +218,6 @@ subroutine set_physics_constants
   FaceState_VI(rho_,body2_)=RhoBody2                !^CFG IF SECONDBODY
   FaceState_VI(P_,body2_)=pBody2                    !^CFG IF SECONDBODY
 
-  
   !For Outer Boundaries
   FaceState_VI(Rho_, East_:Top_) = SW_rho
   FaceState_VI(Ux_,  East_:Top_) = SW_Ux
@@ -227,6 +227,7 @@ subroutine set_physics_constants
   FaceState_VI(By_,  East_:Top_) = SW_By
   FaceState_VI(Bz_,  East_:Top_) = SW_Bz
   FaceState_VI(P_,   East_:Top_) = SW_p
+  if(UseElectronPressure) FaceState_VI(Pe_, East_:Top_) = SW_p
 
   do iFluid = 2, nFluid
      call select_fluid
@@ -529,7 +530,7 @@ subroutine init_mhd_variables
   use ModVarIndexes
   use ModPhysics
   use ModMultiFluid
-  use ModAdvance, ONLY: Hyp_
+  use ModAdvance, ONLY: Hyp_, Pe_, UseElectronPressure
 
   implicit none
 
@@ -564,6 +565,12 @@ subroutine init_mhd_variables
      NameUnitUserTec_V(iVar) = NameTecUnit_V(UnitRho_)
      NameUnitUserIdl_V(iVar) = NameIdlUnit_V(UnitRho_)
   end do
+
+  if(UseElectronPressure)then
+     UnitUser_V(Pe_)        = No2Io_V(UnitP_)
+     NameUnitUserTec_V(Pe_) = NameTecUnit_V(UnitP_)
+     NameUnitUserIdl_V(Pe_) = NameIdlUnit_V(UnitP_)
+  end if
 
   if(NameVar_V(Hyp_) == 'Hyp')then
      ! Set the scalar field Phi used in hyperbolic cleaning
