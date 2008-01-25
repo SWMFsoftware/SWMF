@@ -1219,7 +1219,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         PlotVar(:,:,:,iVar)=iTypeAdvance_B(iBLK)
         if(UsePointImplicit_B(iBLK))&
              PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)+0.5        
-     case('pe','proc')
+     case('proc')
         PlotVar(:,:,:,iVar)=iProc
      case('blk','block')
         PlotVar(:,:,:,iVar)=iBLK
@@ -1588,7 +1588,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
         NameUnit   = NameTecUnit_V(UnitT_)
      case('impl')                                !^CFG IF IMPLICIT
         NameTecVar = 'impl'                      !^CFG IF IMPLICIT
-     case('pe','proc')
+     case('proc')
         NameTecVar = 'PE #'
      case('blk')
         NameTecVar = 'Block #'
@@ -1701,7 +1701,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
      case('status','f1x','f1y','f1z','f2x','f2y','f2z')
         NameUnit = '--'                          !^CFG END RAYTRACE
         ! GRID INFORMATION
-     case('pe', 'proc','blk','blkall','child','impl','evolve')
+     case('proc','blk','blkall','child','impl','evolve')
         NameUnit = '1'
      case('dt', 'dtblk')
         NameUnit = NameIdlUnit_V(UnitT_)
