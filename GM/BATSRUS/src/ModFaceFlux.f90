@@ -70,8 +70,12 @@ module ModFaceFlux
   real :: DiffBb  !     (1/4)(BnL-BnR)^2
   real :: DeltaBnL, DeltaBnR
   real :: Area, Area2, AreaX, AreaY, AreaZ
-  real :: CmaxDt, UnLeft, UnRight
-  real :: Unormal_I(nFluid), UnLeft_I(nFluid), UnRight_I(nFluid)
+
+  ! Maximum speed for the Courant condition
+  real :: CmaxDt
+
+  ! Normal velocities for all fluids plus electrons
+  real :: Unormal_I(nFluid+1), UnLeft_I(nFluid+1), UnRight_I(nFluid+1)
   real :: bCrossArea_D(3)
   real :: Enormal
 
@@ -79,8 +83,7 @@ module ModFaceFlux
   real :: EtaJx, EtaJy, EtaJz, Eta = -1.0
 
   ! Variables needed for Hall resistivity
-  real :: InvDxyz, HallCoeff, HallUnLeft, HallUnRight, &
-       HallJx, HallJy, HallJz
+  real :: InvDxyz, HallCoeff, HallJx, HallJy, HallJz
 
   ! These are variables for pure MHD solvers (Roe and HLLD)
   ! Number of MHD fluxes including the pressure and energy fluxes
@@ -447,7 +450,7 @@ contains
          call get_numerical_flux(Flux_VX(:,iFace, jFace, kFace))
 
          VdtFace_x(iFace, jFace, kFace)        = CmaxDt
-         uDotArea_XI(iFace, jFace, kFace, :)   = Unormal_I
+         uDotArea_XI(iFace, jFace, kFace,:)    = Unormal_I
          bCrossArea_DX(:, iFace, jFace, kFace) = bCrossArea_D
          EDotFA_X(iFace, jFace, kFace)         = Enormal !^CFG IF BORISCORR
 
@@ -784,10 +787,10 @@ contains
     if(.not.DoHlld)then                                !^CFG IF HLLDFLUX
        ! All solvers, except HLLD, use left and right fluxes and avarage state
        call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
-            StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, HallUnLeft)
+            StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft)
        
        call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
-            StateRightCons_V, FluxRight_V, UnRight_I, EnRight, HallUnRight)
+            StateRightCons_V, FluxRight_V, UnRight_I, EnRight)
 
        State_V = 0.5*(StateLeft_V + StateRight_V)
 
@@ -1031,7 +1034,7 @@ contains
       real :: FluxRot_V(nFluxMhd)
 
       ! Needed as an argument for get_physical_flux
-      real :: StateCons_V(nFlux), HallUn
+      real :: StateCons_V(nFlux)
 
       ! Left and right state (scalars and extra variables only)
       real :: DsL, DsRhoL, RhoL, pL, eL, PbL, PtotL, uDotB1L, Bt1L, Bt2L
@@ -1083,14 +1086,14 @@ contains
 
       if(sL >= 0.) then
          call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
-              StateCons_V, Flux_V, Unormal_I, Enormal, HallUn)
+              StateCons_V, Flux_V, Unormal_I, Enormal)
          if(UseRs7)call modify_flux(Flux_V, Unormal_I(1))
          RETURN
       end if
 
       if(sR <= 0.) then 
          call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
-              StateCons_V, Flux_V, Unormal_I, Enormal, HallUn)
+              StateCons_V, Flux_V, Unormal_I, Enormal)
          if(UseRs7)call modify_flux(Flux_V, Unormal_I(1))
          RETURN
       end if
@@ -1382,19 +1385,19 @@ contains
   !===========================================================================
 
   subroutine get_physical_flux(State_V, B0x, B0y, B0z, &
-       StateCons_V, Flux_V, Un_I, En, HallUn)
+       StateCons_V, Flux_V, Un_I, En)
 
     use ModMultiFluid
+    use ModAdvance, ONLY: UseElectronPressure, eFluid_
 
     real,    intent(in) :: State_V(nVar)       ! input primitive state
     real,    intent(in) :: B0x, B0y, B0z       ! B0
     real,    intent(out):: StateCons_V(nFlux)  !conservative states with energy
     real,    intent(out):: Flux_V(nFlux)       ! fluxes for all states
-    real,    intent(out):: Un_I(nFluid)        ! normal velocity
+    real,    intent(out):: Un_I(nFluid+1)      ! normal velocities
     real,    intent(out):: En                  ! normal electric field
-    real,    intent(out):: HallUn              ! normal Hall/electron velocity
 
-    real :: Un
+    real :: Un, HallUn
     !--------------------------------------------------------------------------
 
     ! Calculate conservative state
@@ -1422,6 +1425,9 @@ contains
           Un_I(iFLuid) = Un
        end do
     end if
+
+    ! Set the normal electron velocity used for the electron pressure source
+    if(UseElectronPressure)Un_I(eFluid_) = HallUn
 
   contains
 
@@ -1516,6 +1522,8 @@ contains
          Flux_V(iVar) = Un*State_V(iVar)
       end do
 
+      if(UseElectronPressure)HallUn = Un
+
     end subroutine get_boris_flux
 
     !==========================================================================
@@ -1526,7 +1534,7 @@ contains
       use ModPhysics, ONLY: g, inv_gm1, inv_c2LIGHT
       use ModMain,    ONLY: x_, y_, z_, UseHyperbolicDivb, SpeedHyp2
       use ModVarIndexes
-      use ModAdvance, ONLY: Hyp_
+      use ModAdvance, ONLY: Hyp_, Pe_, UseElectronPressure
 
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, Bx, By, Bz, p, e, FullBx, FullBy, FullBz, FullBn
@@ -1642,10 +1650,15 @@ contains
          Flux_V(By_) = HallUn*FullBy - HallUy*FullBn
          Flux_V(Bz_) = HallUn*FullBz - HallUz*FullBn
       else
+         HallUn = UnPlus
+
          Flux_V(Bx_) = UnPlus*FullBx - UxPlus*FullBn
          Flux_V(By_) = UnPlus*FullBy - UyPlus*FullBn
          Flux_V(Bz_) = UnPlus*FullBz - UzPlus*FullBn
       end if
+
+      ! f_i[Pe] = u_e,i*p_e
+      if(UseElectronPressure)Flux_V(Pe_) = HallUn*State_V(Pe_)
 
       ! f_i[p]=u_i*p
       Flux_V(p_)  = Un*p
@@ -1710,13 +1723,12 @@ contains
 
     subroutine get_magnetic_flux
 
-      integer, parameter :: Rho_=1, Ux_=2, Uy_=3, Uz_=4
-
-      ! Calculate magnetic flux for multi-ion equations
+      ! Calculate magnetic flux for multi-ion equations 
+      ! without a global ion fluid
 
       real :: NumDens_I(nIonFluid), InvNumDens
       real :: UxPlus, UyPlus, UzPlus
-      real :: HallUx, HallUy, HallUz, HallUn
+      real :: HallUx, HallUy, HallUz
       real :: FullBx, FullBy, FullBz, FullBn
       !-----------------------------------------------------------------------
 
@@ -1830,7 +1842,7 @@ contains
     real, optional, intent(out) :: Cleft_I(nFluid)  ! maximum left speed
     real, optional, intent(out) :: Cright_I(nFluid) ! maximum right speed
 
-    real :: CmaxDt_I(nFluid)
+    real :: CmaxDt_I(nFluid), UnLeft, UnRight
     !--------------------------------------------------------------------------
 
     UnLeft = minval(UnLeft_I(1:nIonFluid))
@@ -1938,14 +1950,16 @@ contains
       use ModVarIndexes
       use ModPhysics, ONLY: g, Inv_C2Light
       use ModNumConst, ONLY: cPi
-      use ModAdvance, ONLY: State_VGB
+      use ModAdvance, ONLY: State_VGB, eFluid_
 
       real :: RhoU_D(3)
       real :: Rho, p, InvRho, Sound2, FullBx, FullBy, FullBz, FullBn,FullB
       real :: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, FastDt, cWhistler
       real :: dB1dB1                                     !^CFG IF AWFLUX
 
-      real :: FullBt, Rho1, cDrift, cHall,B1B0L,B1B0R
+      real :: FullBt, Rho1, cDrift, cHall, HallUnLeft, HallUnRight, &
+           B1B0L, B1B0R
+
       character(len=*), parameter:: NameSub=NameMod//'::get_mhd_speed'
       !------------------------------------------------------------------------
 
@@ -1989,8 +2003,12 @@ contains
          Alfven2= (FullBx**2 + FullBy**2 + FullBz**2)*InvRho
       end if                                             !^CFG IF AWFLUX
       if(UseCurlB0)then
-         B1B0L = StateLeft_V(Bx_)*B0x + StateLeft_V(By_)*B0y + StateLeft_V(Bz_)*B0z
-         B1B0R = StateRight_V(Bx_)*B0x + StateRight_V(By_)*B0y + StateRight_V(Bz_)*B0z
+         B1B0L = StateLeft_V(Bx_)*B0x &
+              +  StateLeft_V(By_)*B0y &
+              +  StateLeft_V(Bz_)*B0z
+         B1B0R = StateRight_V(Bx_)*B0x &
+              +  StateRight_V(By_)*B0y &
+              +  StateRight_V(Bz_)*B0z
          Alfven2 = Alfven2 +(abs(B1B0L)-B1B0L+abs(B1B0R)-B1B0R)*InvRho
       end if
 
@@ -2024,6 +2042,9 @@ contains
          FastDt = Fast + cHall
          Fast   = Fast + HallCmaxFactor*cHall
       end if
+
+      HallUnLeft  = UnLeft_I(eFluid_)
+      HallUnRight = UnRight_I(eFluid_)
 
       if(DoAw)then                                   !^CFG IF AWFLUX BEGIN
          if(HallCoeff > 0.0)then

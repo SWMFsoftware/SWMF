@@ -55,7 +55,7 @@ subroutine calc_sources
 
   Source_VC   = cZero
 
-  ! Calculate source terms for pressure
+  ! Calculate source terms for ion pressure
   if(UseNonconservative)then
      do iFluid = 1, nFluid
         call select_fluid
@@ -78,6 +78,18 @@ subroutine calc_sources
         end do; end do; end do
      end if                 !^CFG END DISSFLUX
   end if
+
+  if(UseElectronPressure)then
+     ! Adiabatic heating for electron pressure: -(g-1)*Pe*Div(U)
+     do k=1,nK; do j=1,nJ; do i=1,nI
+        Source_VC(Pe_,i,j,k) = -(g-1)*State_VGB(Pe_,i,j,k,globalBLK)*&
+             vInv_CB(i,j,k,globalBLK)*&
+             (uDotArea_XI(i+1,j,k,eFluid_) - uDotArea_XI(i,j,k,eFluid_) &
+             +uDotArea_YI(i,j+1,k,eFluid_) - uDotArea_YI(i,j,k,eFluid_) &
+             +uDotArea_ZI(i,j,k+1,eFluid_) - uDotArea_ZI(i,j,k,eFluid_))
+     end do; end do; end do
+  end if
+
 
   if(UseDivbSource)then
      if(UseCovariant)then   !^CFG IF COVARIANT BEGIN
