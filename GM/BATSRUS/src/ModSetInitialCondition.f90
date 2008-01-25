@@ -17,8 +17,17 @@ subroutine set_ics
   real   :: SinSlope, CosSlope, Rot_II(2,2)
   real   :: ShockLeft_V(nVar), ShockRight_V(nVar)
   integer:: i, j, k, iBlock, iVar
+
+  character(len=*), parameter:: NameSub = 'set_ics'
+  logical :: DoTest, DoTestMe
   !----------------------------------------------------------------------------
   iBlock = GlobalBlk
+
+  if(iProc == ProcTest .and. iBlock == BlkTest)then
+     call set_oktest(NameSub, DoTest, DoTestMe)
+  else
+     DoTest = .false.; DoTestMe = .false.
+  end if
 
   B0xCell_BLK(:,:,:,iBlock) = 0.00
   B0yCell_BLK(:,:,:,iBlock) = 0.00
@@ -126,6 +135,7 @@ subroutine set_ics
            end if
 
         end do; end do; end do
+
         !\
         ! Initialize solution quantities
         !/
@@ -140,5 +150,8 @@ subroutine set_ics
   ! Compute energy from set values above.
   !/
   call calc_energy_ghost(iBlock)
+
+  if(DoTestMe)write(*,*) &
+       NameSub, 'State(test)=',State_VGB(:,iTest,jTest,kTest,BlkTest)
 
 end subroutine set_ics
