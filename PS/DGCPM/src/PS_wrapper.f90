@@ -315,7 +315,7 @@ end subroutine PS_get_grid_size
 subroutine PS_get_grid(MLTs,Lats)
 
   implicit none
-  real, allocatable, intent(out) :: MLTs(:,:), Lats(:,:)
+  real :: MLTs(:,:), Lats(:,:)
 
 !FIX
 

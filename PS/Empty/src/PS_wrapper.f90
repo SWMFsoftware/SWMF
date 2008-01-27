@@ -121,7 +121,7 @@ end subroutine PS_get_grid_size
 subroutine PS_get_grid(MLTs,Lats)
 
   implicit none
-  real, allocatable, intent(out) :: MLTs(:,:), Lats(:,:)
+  real:: MLTs(:,:), Lats(:,:)
 
   character (len=*),parameter ::  NameSub='PS_get_grid'
   call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
