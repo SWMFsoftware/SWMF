@@ -1426,8 +1426,9 @@ contains
        end do
     end if
 
-    ! Set the normal electron velocity used for the electron pressure source
-    if(UseElectronPressure)Un_I(eFluid_) = HallUn
+    ! Set the normal electron velocity used for Hall MHD and/or 
+    ! the electron pressure source term
+    Un_I(eFluid_) = HallUn
 
   contains
 
@@ -2077,13 +2078,22 @@ contains
 
       if(DoTestCell)then
          write(*,*)NameSub,' Un=',Un
+         if(DoAw)then
+            write(*,*)NameSub,' UnLeft=',  UnLeft
+            write(*,*)NameSub,' UnRight=', UnRight
+         end if
+         if(HallCoeff > 0.0) then
+            write(*,*)NameSub,' HallCoeff=',   HallCoeff
+            write(*,*)NameSub,' HallUnLeft=',  HallUnLeft
+            write(*,*)NameSub,' HallUnRight=', HallUnRight
+         end if
          write(*,*)NameSub,' Csound2=',Sound2
          write(*,*)NameSub,' Cfast2=', Fast2
          write(*,*)NameSub,' Discr2=', Discr**2
          write(*,*)NameSub,' Calfven=',sqrt(Alfven2)
          write(*,*)NameSub,' Calfven_normal=',sqrt(Alfven2Normal)
          write(*,*)NameSub,' Cfast=',Fast
-         if(present(Cmax_I)) write(*,*)NameSub,' Cmax_I=',Cmax_I/Area
+         if(present(Cmax_I)) write(*,*)NameSub,' Cmax_I=',Cmax_I
       end if
 
     end subroutine get_mhd_speed
