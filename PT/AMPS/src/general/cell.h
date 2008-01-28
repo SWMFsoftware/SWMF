@@ -135,9 +135,7 @@ public:
 
     switch (DIM) {
     case 0 :
-      printf("Error: Ccell::Measure()\n");
-      printf("measure_value dor DIM=0 is not defined\n");
-      exit(__LINE__,__FILE__); 
+      measure_value=1.0;
 
       break;
     case 1 :
