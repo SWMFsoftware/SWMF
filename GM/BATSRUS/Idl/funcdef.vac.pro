@@ -323,11 +323,8 @@ case 1 of
   f eq 'divb':   result=div(b1,b2,xx,yy)
   f eq 'absdivb':result=abs(div(b1,b2,xx,yy))
   f eq 'divbnorm':result=div(b1,b2,xx,yy)*(xx(1,0)-xx(0,0))/2*(abs(b1)+abs(b2))
-  f eq 'DIVB':   if ndim eq 2 then $
-    result=diff2(1,b1,xx)+diff2(2,b2,yy) $
-  else if ndim eq 3 then $
-    result=diff2(1,b1,xx)+diff2(2,b2,yy)+diff2(3,b2,yy)
-  f eq 'divb4':  result=diff4(1,b1,xx)   +diff4(2,b2,yy)
+  f eq 'DIVB':   result=diff2(1,b1,xx) + diff2(2,b2,yy)
+  f eq 'divb4':  result=diff4(1,b1,xx) + diff4(2,b2,yy)
   f eq 'divb_rz':result=div_rz(b1,b2,r,z)
   f eq 'DIVB_rz':result=diff2(1,b1*r,r)/r+diff2(2,b2,z)
   f eq 'divb_rp':result=diff2(1,b1*r,r)/r+diff2(2,b2,phi)/r
