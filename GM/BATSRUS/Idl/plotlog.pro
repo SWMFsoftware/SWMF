@@ -9,6 +9,6 @@ plot_log, logfilename, logfunc,                          $
   xrange=xrange, yranges=yranges, timeshifts=timeshifts, $
   smooths=smooths,                                       $
   colors=colors, symbols=symbols, linestyles=linestyles, $
-  title=title, xtitle=xtitle, ytitles=ytitles
+  title=title, xtitle=xtitle, ytitles=ytitles, timeunit=timeunit
 
 end

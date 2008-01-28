@@ -57,7 +57,7 @@ return,reform(x,siz(where(siz gt 1)))
 end
 
 ;=============================================================================
-function log_time,wlog,wlognames
+function log_time,wlog,wlognames,timeunit
 
 ; Obtain time in hours from wlog and wlognames
 ; If the log file contains 't' or 'time', simply convert seconds to hours
@@ -102,6 +102,7 @@ endif else begin
           wlog(*,imsc)/3.6e6
     endelse
 endelse
+
 if max(hours) eq min(hours) then begin
     if istep gt -1 then begin
         print, 'Could not find time information, using steps'
@@ -112,8 +113,18 @@ if max(hours) eq min(hours) then begin
     endelse
 endif
 
-return, hours
+logtime = hours
 
+if n_elements(timeunit) gt 0 then begin
+    case timeunit of
+        '1': logtime = hours*3600
+        's': logtime = hours*3600
+        'm': logtime = hours*60
+        else: 
+    endcase
+endif
+
+return, logtime
 end
 
 ;=============================================================================
@@ -253,7 +264,7 @@ end
 pro gethead,unit,filetype,headline,physics,it,time,gencoord, $
             ndim,neqpar,nw,nx,eqpar,variables,pictsize=pictsize
 
-on_error,2
+;; on_error,2
 
 ftype = strlowcase(filetype)
 
@@ -440,7 +451,7 @@ end
 ;=============================================================================
 pro get_pict_log,unit,npict,ndim,nw,nx,x,w
 
-get_log, unit, w, wlognames, x
+get_log, unit, w, wlognames, x, 's'
 ndim = 1
 nx(0)= n_elements(x)
 nw   = n_elements(wlognames)
@@ -2717,7 +2728,7 @@ endfor
 end
 
 ;=============================================================================
-pro get_log, source, wlog, wlognames, logtime, verbose=verbose
+pro get_log, source, wlog, wlognames, logtime, timeunit, verbose=verbose
 
 ; Read the log data from source. If source is an integer, it is 
 ; interpreted as a unit number. If it is a string, it is taken as the
@@ -2731,7 +2742,7 @@ on_error,2
 
 if not keyword_set(source) then begin
    print, $
-     'Usage: get_log, source, wlog, wlognames [,logtime] [,verbose=verbose]'
+     'Usage: get_log, source, wlog, wlognames [,logtime, timeunit] [,verbose=verbose]'
    help,source,wlog,wlognames
    retall
 endif
@@ -2804,7 +2815,7 @@ if verbose then print,'Number of recorded timesteps: nt=',nt
 
 wlog = transpose(wlog(*,0:nt-1))
 
-logtime = log_time(wlog,wlognames)
+logtime = log_time(wlog,wlognames,timeunit)
 if verbose then print,'Setting logtime',index
 
 end
@@ -2816,7 +2827,7 @@ pro plot_log, logfilename, func, $
               xrange=xrange, yranges=yranges, timeshifts=timeshifts, $
               smooths=smooths, $
               colors=colors, linestyles=linestyles, symbols=symbols, $
-              title=title, xtitle=xtitle, ytitles=ytitles
+              title=title, xtitle=xtitle, ytitles=ytitles, timeunit=timeunit
 
 ; Plot variables listed in the space separated func string from the
 ; files listed in the space separated list of filenames in logfilename.
@@ -2887,8 +2898,9 @@ if n_elements(title) eq 1 and size(title,/type) eq 7 then $
   title0=title else title0=logfilename
 
 ; Define default xtitle
-if n_elements(xtitle) eq 1 and size(xtitle,/type) eq 7 then $
-  xtitle0=xtitle else xtitle0='Time [hour]'
+if n_elements(xtitle) eq 1 and size(xtitle,/type) eq 7 then xtitle0=xtitle $
+else if timeunit eq '1' then xtitle0='Time' $
+else xtitle0='Time ['+timeunit+']'
 
 ; Define default ytitles
 if n_elements(ytitles) eq nfunc and size(ytitles,/type) eq 7 then $
@@ -2927,7 +2939,7 @@ for iter = iter0, 2 do begin
             end
         endcase
         
-        hour = log_time(wlog,wlognames) + timeshifts(ilog)
+        hour = log_time(wlog,wlognames,timeunit) + timeshifts(ilog)
 
         for ifunc = 0, nfunc-1 do begin
 
@@ -3036,7 +3048,7 @@ interpol_log,wlog0,wlog1,var0,var1,varname,varnames0,varnames1,$
 end
 ;============================================================================
 pro interpol_log,wlog0,wlog1,var0,var1,varname,varnames0,varnames1,time,$
-             tmin=tmin,tmax=tmax
+             tmin=tmin,tmax=tmax,timeunit=timeunit
 
 ; Interpolate the variables listed in varname to the time of wlog0
 ; between tmin and tmax. 
@@ -3075,8 +3087,8 @@ if sizewlog1(2) ne nvar1 then begin
    retall
 endif
 
-time0 = log_time(wlog0,varnames0)
-time1 = log_time(wlog1,varnames1)
+time0 = log_time(wlog0,varnames0,timeunit)
+time1 = log_time(wlog1,varnames1,timeunit)
 
 if not keyword_set(tmin) then tmin = max([ min(time0), min(time1) ])
 if not keyword_set(tmax) then tmax = min([ max(time0), max(time1) ])
