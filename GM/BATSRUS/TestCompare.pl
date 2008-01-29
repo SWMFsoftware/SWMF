@@ -269,10 +269,8 @@ TEST: foreach $test (sort @test){
 		    next LOGFILE;
 		}
 		# Figure out the number of digits
-		$item1 =~ s/^[\-\d]+\.//; $item1 =~ s/E.*$//; 
-		if($diff > $diffmax and $diff > 0.1**length($item1)){
-		    print "$item1\n";
-		    print "$item2\n";
+		$item1 =~ s/^[\-\d]+\.//; $item1 =~ s/E(.*)$//; my $exp=$1; 
+		if($diff > $diffmax and $diff > 1.5/10**(length($item1)-$exp)){
 		    $diffmax=$diff;
 		    $linenum=$.;
 		    $itemnum=$i;
