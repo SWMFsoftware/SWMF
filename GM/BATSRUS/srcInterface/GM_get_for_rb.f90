@@ -128,8 +128,8 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVar, &
   do iPoint = 1, nPoint
 
      iLine =  Buffer_VI(0,iPoint)     ! line index
-     iLat = mod(iLine, iSizeIn)
-     iLon = iLine/iSizeIn + 1
+     iLat = mod(iLine-1, iSizeIn) + 1
+     iLon = (iLine-1)/iSizeIn + 1
 
      ! exclude open field lines by setting impossible line index
      if(MHD_Xeq(iLat, iLon) == NoValue)then
