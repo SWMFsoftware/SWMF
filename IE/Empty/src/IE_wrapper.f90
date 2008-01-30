@@ -140,6 +140,24 @@ end subroutine IE_get_for_pw
 
 !==============================================================================
 
+subroutine IE_get_for_rb(Buffer_IIV, iSize, jSize, nVar, Name_V, NameHem,&
+     tSimulation)
+
+  implicit none
+  character (len=*),parameter :: NameSub='IE_get_for_rb'
+
+  integer, intent(in)           :: iSize, jSize, nVar
+  real, intent(out)             :: Buffer_IIV(iSize,jSize,nVar)
+  character (len=*),intent(in)  :: NameHem
+  character (len=*),intent(in)  :: Name_V(nVar)
+  real,             intent(in)  :: tSimulation
+
+  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+
+end subroutine IE_get_for_rb
+
+!==============================================================================
+
 subroutine IE_get_for_ps(Buffer_IIV, iSize, jSize, nVar)
 
   implicit none
