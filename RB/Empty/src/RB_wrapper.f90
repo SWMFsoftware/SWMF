@@ -294,3 +294,18 @@ subroutine RB_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
 
   call CON_stop(NameSub//': RB_ERROR: empty version cannot be used!')
 end subroutine RB_put_from_gm
+!============================================================================
+subroutine RB_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
+                 Name_V, iBlock)
+ 
+  implicit none
+
+  character(len=*), parameter :: NameSub='RB_put_from_ie'
+
+  !INPUT ARGUMENTS:
+  integer, intent(in):: iSize, jSize, nVarIn, iBlock
+  real, intent(in) :: Buffer_IIV(iSize, jSize, nVarIn)
+  character(len=*), intent(in) :: Name_V(nVarIn)
+  
+  call CON_stop(NameSub//': RB_ERROR: empty version cannot be used!')
+end subroutine RB_put_from_ie
