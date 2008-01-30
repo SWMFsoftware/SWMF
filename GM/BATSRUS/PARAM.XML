@@ -3759,8 +3759,8 @@ and DoImSatTrace false.
 	<parameter name="DoImSatTrace" type="logical" default="F" />
 	<parameter name="DoCoupleImPressure" type="logical" default="T"/>
 	<parameter name="DoCoupleImDensity"  type="logical" default="F"/>
-	<parameter name="DoFixPolarRegion'   type="logical" default="F"/>
-	<parameter name="rFixPolarRegion'    type="real" min="1" default="5"/>
+	<parameter name="DoFixPolarRegion"   type="logical" default="F"/>
+	<parameter name="rFixPolarRegion"    type="real" min="1" default="5"/>
 
 #IMCOUPLING
 20.0			TauCoupleIm
