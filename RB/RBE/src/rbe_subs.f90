@@ -116,7 +116,8 @@ module rbe_cread2
        iprint,ntime,iconvect,init,il,ie,iplsp
   character (len=8)::  storm
 
-  logical :: IsStandAlone=.false.,UseGm=.false., UseSplitting = .false.
+  logical :: IsStandAlone=.false.,UseGm=.false.,UseIE=.false., &
+       UseSplitting = .false.
 
   logical :: UseMcLimiter = .false.,UseCentralDiff = .false.
   real    :: BetaLimiter  = 2.0
@@ -1503,7 +1504,7 @@ subroutine convection(t,tstart,ps,xlati,phi,dphi,re,&
 
   use rbe_convect
   use rbe_cread2,ONLY:nimf,timf,&
-       bxw,byw,bzw,nsw,tsw,xnswa,vswa,iconvect,itype,UseGm
+       bxw,byw,bzw,nsw,tsw,xnswa,vswa,iconvect,itype,UseGm,UseIe
   
   real xlati(0:ir+1),phi(ip)
   logical UseAL
@@ -1549,20 +1550,21 @@ subroutine convection(t,tstart,ps,xlati,phi,dphi,re,&
   endif
 
   !  Find potential (in Volt) at the ionosphere
-  do i=0,ir+1
-     gLAT=acos(cos(xlati(i))/sqrt(rc))*180./pi !invariant lat. in degree
-     do j=1,ip
-        gMLT=phi(j)*12./pi    ! convert mlt from radians to hour 0-24.
-        BnLat=BoundaryLat00(gMLT)    ! boundary latitude 
-        if (iconvect.eq.1) then
-           potent(i,j)=0.0
-           if (gLAT.gt.BnLat) potent(i,j)=EpotVal00(gLAT,gMLT)*1000.  ! Volt
-        else
-           !              potent(i,j)=MHD_pot(gLAT,gMLT)
-        endif
+  if (.not. UseIE) then
+     do i=0,ir+1
+        gLAT=acos(cos(xlati(i))/sqrt(rc))*180./pi !invariant lat. in degree
+        do j=1,ip
+           gMLT=phi(j)*12./pi    ! convert mlt from radians to hour 0-24.
+           BnLat=BoundaryLat00(gMLT)    ! boundary latitude 
+           if (iconvect.eq.1) then
+              potent(i,j)=0.0
+              if (gLAT.gt.BnLat) potent(i,j)=EpotVal00(gLAT,gMLT)*1000.  ! Volt
+           else
+              !              potent(i,j)=MHD_pot(gLAT,gMLT)
+           endif
+        enddo
      enddo
-  enddo
-
+  end if
   potent(0:ir+1,ip+1)=potent(0:ir+1,1)      ! periodic boundary condition
 
 end subroutine convection
