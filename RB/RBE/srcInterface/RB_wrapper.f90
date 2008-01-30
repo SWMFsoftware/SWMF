@@ -11,8 +11,8 @@ subroutine RB_set_param(CompInfo, TypeAction)
   use CON_comp_info
   use ModUtilities
   use ModReadParam
-  use CON_coupler, ONLY: Couple_CC, GM_, RB_
-  use rbe_cread2,  ONLY: UseGm
+  use CON_coupler, ONLY: Couple_CC, GM_, RB_, IE_
+  use rbe_cread2,  ONLY: UseGm,UseIE
   implicit none
 
   character (len=*), intent(in)     :: TypeAction ! which action to perform
@@ -28,6 +28,7 @@ subroutine RB_set_param(CompInfo, TypeAction)
   !------------------------------------------------------------------------
 
   UseGm = Couple_CC(GM_, RB_) % DoThis
+  UseIE = Couple_CC(IE_, RB_) % DoThis
   
   !if(iProc>=0)then
   !   call RB_write_prefix;  
@@ -277,3 +278,69 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
 
 end subroutine RB_put_from_gm
 !============================================================================
+
+subroutine RB_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
+                 Name_V, iBlock)
+  
+  use rbe_grid,    ONLY: nLat => ir, nLon => ip
+  use rbe_cgrid,   ONLY: Lat_I => xlati, Lon_I => phi
+  use rbe_convect, ONLY: Potential_II => potent
+  use CON_coupler, ONLY: Grid_C, IE_
+  use ModNumConst, ONLY: cTwoPi,cPi,cHalfPi
+  use ModInterpolate, ONLY: bilinear
+  implicit none
+
+  character(len=*), parameter :: NameSub='RB_put_from_ie'
+
+  !INPUT ARGUMENTS:
+  integer, intent(in):: iSize, jSize, nVarIn, iBlock
+  real, intent(in) :: Buffer_IIV(iSize, jSize, nVarIn)
+  character(len=*), intent(in) :: Name_V(nVarIn)
+
+  integer, parameter :: nVar = 2
+  integer, parameter :: South_ = 1, North_ = 2
+
+  logical :: IsPotFound, IsJrFound
+  real    :: dPhiIono,dThetaIono
+  integer :: iLat, iLon, iVar, nThetaIono, nPhiIono
+  !----------------------------------------------------------------------------
+  if(iBlock /= north_) RETURN
+  
+  nThetaIono = Grid_C(IE_) % nCoord_D(1)
+  nPhiIono   = Grid_C(IE_) % nCoord_D(2)
+  if(nThetaIono /= 2*iSize - 1 .or. nPhiIono /= jSize)then
+     write(*,*)NameSub,': Grid_C(IE_)%nCoord_D(1:2)=',&
+          Grid_C(IE_) % nCoord_D(1:2)
+     write(*,*)NameSub,': iSize,2*iSize-1,jSize=',iSize,2*iSize-1,jSize
+     call CON_stop(NameSub//' ERROR: Inconsistent IE grid sizes')
+  endif
+  ! Get ionospheric grid spacing for use in interpolation
+  dPhiIono   = cTwoPi / (nPhiIono-1)
+  dThetaIono = maxval( Grid_C(IE_) % Coord1_I(:) ) / (nThetaIono -1)
+
+  IsPotFound = .false.
+  do iVar = 1, nVarIn
+     select case(Name_V(iVar))
+     case('Pot')
+        IsPotFound = .true.
+        do iLon=1,nLon
+           do iLat=0,nLat+1
+              !Interpolate IE potential onto RB grid
+              ! Note that the RB grid is 180 degrees rotated relative to 
+              ! the usual SM coordinates used by IE
+              Potential_II(iLat,iLon) = &
+                   bilinear (Buffer_IIV(:, :, iVar),1,iSize,1,jSize,&
+                   (/ (cHalfPi-Lat_I(iLat))/dThetaIono+1,&
+                      modulo(Lon_I(iLon)+cPi,cTwoPi)/dPhiIono+1 /) )
+           end do
+        end do
+     end select
+  end do
+  
+  if(.not.IsPotFound)then
+     write(*,*)NameSub,': Name_V=',Name_V
+     call CON_stop(NameSub//' could not find Pot')
+  end if
+
+end subroutine RB_put_from_ie
+!==============================================================================
