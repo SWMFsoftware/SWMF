@@ -25,6 +25,7 @@ module CON_couple_all
   !^CMP IF IE BEGIN
   use CON_couple_ie_im        !^CMP IF IM
   use CON_couple_ie_pw        !^CMP IF PW
+  use CON_couple_ie_rb        !^CMP IF RB
   use CON_couple_ie_ua        !^CMP IF UA
   use CON_couple_ie_ps
   !^CMP END IE
@@ -66,6 +67,7 @@ contains
     !                                                     ^CMP IF IE BEGIN
     if(use_comp(IE_).and.use_comp(IM_))call couple_ie_im_init  !^CMP IF IM
     if(use_comp(IE_).and.use_comp(PW_))call couple_ie_pw_init  !^CMP IF PW
+    if(use_comp(IE_).and.use_comp(RB_))call couple_ie_rb_init  !^CMP IF RB
     if(use_comp(IE_).and.use_comp(UA_))call couple_ie_ua_init  !^CMP IF UA
     if(use_comp(IE_).and.use_comp(PS_))call couple_ie_ps_init
     !                                                     ^CMP END IE
@@ -167,12 +169,14 @@ contains
           call couple_ie_gm(TimeSimulation)        !^CMP IF GM
        case(IM_)                                   !^CMP IF IM
           call couple_ie_im(TimeSimulation)        !^CMP IF IM
-       case(PW_)                                   !^CMP IF PW
-          call couple_ie_pw(TimeSimulation)        !^CMP IF PW
-       case(UA_)                                   !^CMP IF UA
-          call couple_ie_ua(TimeSimulation)        !^CMP IF UA
        case(PS_)
           call couple_ie_ps(TimeSimulation)
+       case(PW_)                                   !^CMP IF PW
+          call couple_ie_pw(TimeSimulation)        !^CMP IF PW
+       case(RB_)                                   !^CMP IF RB
+          call couple_ie_rb(TimeSimulation)        !^CMP IF RB
+       case(UA_)                                   !^CMP IF UA
+          call couple_ie_ua(TimeSimulation)        !^CMP IF UA
        case default
           call error
        end select                             !^CMP END IE
