@@ -14,12 +14,13 @@ subroutine set_BCs(TimeBcIn,DoResChangeOnlyIn)
   real,     intent(in) :: TimeBcIn
   logical, intent (in) :: DoResChangeOnlyIn
   logical :: oktest, oktest_me
+  character(len=*), parameter:: NameSub='set_bcs'
   !----------------------------------------------------------------------------
 
-  call timing_start('set_BCs')
+  call timing_start(NameSub)
 
   if(globalBLK==BLKtest.and.iProc==PROCtest)then
-     call set_oktest('set_BCs',oktest,oktest_me)
+     call set_oktest(NameSub, oktest,oktest_me)
   else
      oktest=.false.; oktest_me=.false.
   endif
@@ -29,8 +30,8 @@ subroutine set_BCs(TimeBcIn,DoResChangeOnlyIn)
   DoResChangeOnly = DoResChangeOnlyIn
   iBlockBc        = GlobalBlk
 
-  if(oktest_me.and. .not.DoResChangeOnly)write(*,*)'set_BCs initial Ux,Uy=',&
-       LeftState_VX(Ux_,Itest,Jtest,Ktest),LeftState_VX(Uy_,Itest,Jtest,Ktest)
+
+  if(oktest_me)call write_face_state('Initial')
 
   call set_boundary_cells(iBlockBc)
   if(SaveBoundaryCells)then
@@ -49,28 +50,37 @@ subroutine set_BCs(TimeBcIn,DoResChangeOnlyIn)
           true_cell(:,:,:,globalBLK) )
   end do
   
-  if(oktest_me)then
-     write(*,*)'east  VarL_x,VarR_x=',&
-          LeftState_VX(VarTest,  Itest, Jtest, Ktest),  &
-          RightState_VX(VarTest, Itest, Jtest, Ktest)
-     write(*,*)'west  VarL_x,VarR_x=',&
-          LeftState_VX(VarTest,  Itest+1, Jtest, Ktest), &
-          RightState_VX(VarTest, Itest+1, Jtest, Ktest)
-     write(*,*)'south VarL_y,VarR_y=',&
-          LeftState_VY(VarTest,  Itest, Jtest, Ktest),  &
-          RightState_VY(VarTest, Itest, Jtest, Ktest)
-     write(*,*)'north VarL_y,VarR_y=',&
-          LeftState_VY(VarTest,  Itest, Jtest+1, Ktest), &
-          RightState_VY(VarTest, Itest, Jtest+1, Ktest)
-     write(*,*)'bot   VarL_z,VarR_z=',&
-          LeftState_VZ(VarTest,  Itest, Jtest, Ktest), &
-          RightState_VZ(VarTest, Itest, Jtest, Ktest)
-     write(*,*)'top   VarL_z,VarR_z=',&
-          LeftState_VZ(VarTest,  Itest, Jtest, Ktest+1), &
-          RightState_VZ(VarTest, Itest, Jtest, Ktest+1)
-  end if
+  if(oktest_me)call write_face_state('Final')
 
-  call timing_stop('set_BCs')
+  call timing_stop(NameSub)
+
+contains
+
+  subroutine write_face_state(String)
+
+    character(len=*), intent(in):: String
+    
+    write(*,*)NameSub,' ',String,' face states:'
+    write(*,*)'east  VarL_x,VarR_x=',&
+         LeftState_VX(VarTest,  Itest, Jtest, Ktest),  &
+         RightState_VX(VarTest, Itest, Jtest, Ktest)
+    write(*,*)'west  VarL_x,VarR_x=',&
+         LeftState_VX(VarTest,  Itest+1, Jtest, Ktest), &
+         RightState_VX(VarTest, Itest+1, Jtest, Ktest)
+    write(*,*)'south VarL_y,VarR_y=',&
+         LeftState_VY(VarTest,  Itest, Jtest, Ktest),  &
+         RightState_VY(VarTest, Itest, Jtest, Ktest)
+    write(*,*)'north VarL_y,VarR_y=',&
+         LeftState_VY(VarTest,  Itest, Jtest+1, Ktest), &
+         RightState_VY(VarTest, Itest, Jtest+1, Ktest)
+    write(*,*)'bot   VarL_z,VarR_z=',&
+         LeftState_VZ(VarTest,  Itest, Jtest, Ktest), &
+         RightState_VZ(VarTest, Itest, Jtest, Ktest)
+    write(*,*)'top   VarL_z,VarR_z=',&
+         LeftState_VZ(VarTest,  Itest, Jtest, Ktest+1), &
+         RightState_VZ(VarTest, Itest, Jtest, Ktest+1)
+
+  end subroutine write_face_state
 
 end subroutine set_BCs
 
