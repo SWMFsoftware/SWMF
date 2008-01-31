@@ -7,6 +7,7 @@ include ../Makefile.conf
 
 OBJECTS = \
 	rbe_subs.o\
+	plot_potential.o\
 	trace_line.o\
 	trace_dipole.o\
 	plot_fieldline.o\
