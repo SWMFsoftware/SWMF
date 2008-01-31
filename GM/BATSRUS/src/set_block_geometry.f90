@@ -76,7 +76,7 @@ end subroutine set_root_block_geometry
 subroutine fix_block_geometry(iBLK)
 
   use ModMain, ONLY : body1,body1_,body2_,ExtraBc_,&
-       UseExtraBoundary,DoFixExtraBoundary,unusedBLK                       
+       UseExtraBoundary,DoFixExtraBoundary,unusedBLK,ProcTest,BlkTest   
   use ModMain, ONLY : UseBody2                       !^CFG IF SECONDBODY
   use ModNodes
   use ModGeometry
@@ -92,7 +92,16 @@ subroutine fix_block_geometry(iBLK)
   integer :: i,j,k, iBoundary
   real :: dx,dy,dz,fAx,fAy,fAz,cV,VInv
   real,dimension(nDim)::XyzOfNode111_D               !^CFG IF COVARIANT
+
+  logical:: DoTest, DoTestMe
+  character(len=*), parameter :: NameSub='fix_block_geometry'
   !---------------------------------------------------------------------------
+
+  if(iBlk==BlkTest .and. iProc==ProcTest)then
+     call set_oktest(NameSub, DoTest, DoTestMe)
+  else
+     DoTest = .false.; DoTestMe = .false.
+  end if
 
   !\--------------------------------
   ! Assign cell centered coordinates.
@@ -222,6 +231,15 @@ subroutine fix_block_geometry(iBLK)
        (((xyzStart_BLK(3,iBLK)-dz_BLK(iBLK))<XyzMin_D(3).or.&
        (xyzStart_BLK(3,iBLK)+nK*dz_BLK(iBLK))>XyzMax_D(3)) &
        .and. .not.periodic3D(3))  
+
+
+  if(DoTestMe)then
+     write(*,*)NameSub,': far_field_bcs_blk=',far_field_bcs_BLK(iBlk)
+     write(*,*)NameSub,': xyzStart_BLK=',xyzStart_BLK(:,BlkTest)
+     write(*,*)NameSub,': dx,dy,dz= ',dx_BLK(BlkTest),dy_BLK(iBLK),dz_BLK(iBLK)
+     write(*,*)NameSub,': xyzmin=',XyzMin_D(:)
+     write(*,*)NameSub,': xyzmax=',XyzMax_D(:)
+  end if
 
   !\
   ! TRUE_CELL: if not inside a body or outside the outer face boundary
