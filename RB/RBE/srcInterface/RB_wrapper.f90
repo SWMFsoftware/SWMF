@@ -303,6 +303,8 @@ subroutine RB_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
   logical :: IsPotFound, IsJrFound
   real    :: dPhiIono,dThetaIono
   integer :: iLat, iLon, iVar, nThetaIono, nPhiIono
+  real,dimension(:,:),allocatable  :: x,y,z
+  Character(len=100) :: NameElectrodynamics
   !----------------------------------------------------------------------------
   if(iBlock /= north_) RETURN
   
@@ -337,10 +339,11 @@ subroutine RB_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
      end select
   end do
   
+
   if(.not.IsPotFound)then
      write(*,*)NameSub,': Name_V=',Name_V
      call CON_stop(NameSub//' could not find Pot')
   end if
-
+  
 end subroutine RB_put_from_ie
 !==============================================================================
