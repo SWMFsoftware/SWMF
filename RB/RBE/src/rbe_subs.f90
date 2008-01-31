@@ -117,7 +117,7 @@ module rbe_cread2
   character (len=8)::  storm
 
   logical :: IsStandAlone=.false.,UseGm=.false.,UseIE=.false., &
-       UseSplitting = .false.
+       UseSplitting = .false.,DoSaveIe = .false.
 
   logical :: UseMcLimiter = .false.,UseCentralDiff = .false.
   real    :: BetaLimiter  = 2.0
@@ -1904,7 +1904,7 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
      ntime,irm,iplsp,iw1,iw2,itype)
 
   use rbe_grid
-  use rbe_cread2,ONLY: js,storm
+  use rbe_cread2,ONLY: js,storm,DoSaveIe
   use ModIoUnit, ONLY: UnitTmp_
   use ModNumConst, ONLY: pi => cPi
 
@@ -2042,6 +2042,8 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
   
   close(UnitTmp_)
   
+  ! Write the potential values
+  if (DoSaveIe) call RB_plot_potential
 end subroutine p_result
 
 
