@@ -37,7 +37,10 @@ subroutine RB_set_parameters(NameAction)
      case('#SAVEPLOT')
         call read_var('DtSavePlot',tint)   ! output results every tint seconds
         call read_var('OutName',OutName)
-     
+        
+     case('#PLOTELECTRODYNAMICS')
+        call read_var('DoSaveIe',DoSaveIe)
+
      case('#RESTART')
         call read_var('IsRestart',IsRestart) !T:Continuous run
                                              !F:Initial run
