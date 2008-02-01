@@ -1650,9 +1650,46 @@ subroutine MH_set_parameters(TypeAction)
         !^CFG IF COVARIANT BEGIN
         select case(TypeGeometry)
         case('spherical','spherical_lnr')
-           MaxBoundary = Top_
+           If(UseStrict)then
+              if(iProc==0.and.MaxBoundary/=Top_)&
+                   write(*,*)&
+                   NameSub&
+                   //': Set UseStrict=.false. if you want to apply BC ar R=RMin and R=RMax.'&
+                   //'Set Maxboundary=Top_'
+              MaxBoundary = Top_
+           else
+              if(MaxBoundary/=Top_)then
+                 if(iProc==0)then
+                    write(*,*)&
+                         NameSub//': The boundary condition at R=RMin and R=RMax should be set.'
+                    write(*,*)NameSub//': Now they are:'//TypeBC_I(East_)&
+                         //' at R=RMin and '//TypeBC_I(West_)//' at R=RMax, other are none'
+                    write(*,*)NameSub//': If you reset TypeBC_I, set TypeBC_I(South_:Top_)=none'
+                 end if
+                 TypeBC_I(South_:Top_)='none'
+              end if
+           end If
         case('cylindrical')
-           MaxBoundary = max(MaxBoundary,North_)
+           If(UseStrict)then
+              if(iProc==0.and.MaxBoundary<North_)&
+                   write(*,*)&
+                   NameSub&
+                   //': Set UseStrict=.false. if you want to apply BC ar R=RMin and R=RMax.'&
+                   //'Set Maxboundary=North_'
+              MaxBoundary = max(MaxBoundary,North_)
+           else
+              if(MaxBoundary<North_)then
+                 if(iProc==0)then
+                    write(*,*)&
+                         NameSub//': The boundary condition at R=RMin and R=RMax should be set.'
+                    write(*,*)NameSub//': Now they are:'//TypeBC_I(East_)&
+                         //' at R=RMin and '//TypeBC_I(West_)//' at R=RMax, TypeBC_I(3:4)=none'
+                    write(*,*)NameSub//': if you reset TypeBC_I, set TypeBC_I(South_:North_)=none'
+                 end if
+                 TypeBC_I(South_:North_)='none'
+              end if
+           end If
+           
         end select
         !^CFG END COVARIANT
         if(MaxBoundary>=East_)&
