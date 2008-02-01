@@ -161,6 +161,7 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
         call BC_fixed(1,nVar,CellState_VI(:,iSide))
      case('shear')
         call BC_shear(1,nVar,iSide)
+     case('none')
      case default
         IsFound=.false.
         if(UseUserOuterBcs .or. TypeBc_I(iSide) == 'user')&
