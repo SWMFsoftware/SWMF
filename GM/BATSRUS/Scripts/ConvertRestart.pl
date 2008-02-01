@@ -121,7 +121,7 @@ foreach $rstfile (@rstfiles){
     $_=<INFILE>;
     close INFILE;
 
-    if($nByteReal == 4){
+    if($nByteReal == 4 or $rstfile eq $octreefile){
 	# single precision files are easy to convert
 	&convert4;
     }elsif($rstfile eq $datafile){
