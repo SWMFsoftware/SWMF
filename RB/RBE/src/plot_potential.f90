@@ -27,8 +27,8 @@ subroutine RB_plot_potential
        'VARIABLES = "X", "Y", "Z", "V"'
   
   write(UnitTmp_,*) 'Zone I=', nLon, ', J=', nLat,', DATAPACKING=POINT'
-  do iLon=1,nLon
-     do iLat=1,nLat
+  do iLat=1,nLat
+     do iLon=1,nLon
         x_II(iLat,iLon)  =  &
              1.0*sin(cHalfPi-Lat_I(iLat))*cos(Lon_I(iLon))
         y_II(iLat,iLon)  =  &
@@ -36,7 +36,7 @@ subroutine RB_plot_potential
         z_II(iLat,iLon)  =  &
              1.0*cos(cHalfPi-Lat_I(iLat))
         write(UnitTmp_,*) &
-             x_II(iLat,iLon),y_II(iLat,iLon),z_II(iLat,iLon),Potential_II(iLat,iLon)
+             x_II(iLat,iLon),y_II(iLat,iLon),z_II(iLat,iLon),Potential_II(iLat,iLon)/1000.0
      enddo
   enddo
   deallocate(x_II,y_II,z_II)
