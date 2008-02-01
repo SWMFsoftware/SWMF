@@ -332,7 +332,7 @@ subroutine RB_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
               ! the usual SM coordinates used by IE
               Potential_II(iLat,iLon) = &
                    bilinear (Buffer_IIV(:, :, iVar),1,iSize,1,jSize,&
-                   (/ (cHalfPi-Lat_I(iLat))/dThetaIono+1,&
+                   (/ (Lat_I(iLat))/dThetaIono+1,&
                       modulo(Lon_I(iLon)+cPi,cTwoPi)/dPhiIono+1 /) )
            end do
         end do
