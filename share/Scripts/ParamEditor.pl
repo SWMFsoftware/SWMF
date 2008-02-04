@@ -77,7 +77,7 @@ $_PARAMFILE = $ARGV[0];
 
 # Execute the $config file which sets some variables.
 
-$_CONFIGFILE = ($config or "$Env{HOME}/ParamEditor.conf");
+$_CONFIGFILE = ($config or "$ENV{HOME}/ParamEditor.conf");
 do $_CONFIGFILE;
 
 # Put switches which come from config file into _VARIABLES unless already set
@@ -653,13 +653,15 @@ Usage:
   The name of the browser is either given with the -browser=... switch, 
   or defined in the configuration file as '$browser=\"...\";'
   or it is searched for. The first browser found will be used.
+  Under Mac OSX the -browser switch does not work: the GUI always uses the 
+  default browser that is associated with the generic 'open' command.
 
   The source file opened by the browser can be set with the -srcfile=... switch
-  or it can be defined in the configuration file as '$srcfile=\"...\"' 
+  or it can be defined in the configuration file as '$srcfile=\"...\";' 
   or it is set to the default value 'index.php'.
 
   The file to be edited can be set with the optional argument PARAMFILE, 
-  or it can be defined in the configuration file as '$paramfile=\"...\
+  or it can be defined in the configuration file as '$paramfile=\"...\";'
   or it is set to the default value 'run/PARAM.in'.
 
 Examples:
