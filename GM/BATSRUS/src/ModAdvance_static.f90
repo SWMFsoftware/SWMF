@@ -183,6 +183,11 @@ Module ModAdvance
   real :: CorrectedFlux_VZB(nCorrectedFaceValues, nI, nJ, 2, MaxBlock)
 
   !\
+  ! Merge cells around the polar axis in spherical geometry
+  !/
+  logical :: DoFixAxis = .false.
+
+  !\
   ! Block type information
   !/
   integer              :: iTypeAdvance_B(MaxBlock)

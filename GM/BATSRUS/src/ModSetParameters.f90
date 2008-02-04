@@ -1532,18 +1532,16 @@ subroutine MH_set_parameters(TypeAction)
            DoFixExtraBoundary=.true.
            SaveBoundaryCells=.true.
         end if
-     case("#LIMITRADIUS")
+     case("#LIMITRADIUS", "#LIMITGENCOORD1")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('Coord1Min',XyzMin_D(1))
         call read_var('Coord1Max',XyzMax_D(1))
-        if(index(TypeGeometry,'lnr')>0)then
+        if(index(TypeGeometry,'lnr')>0 .and. NameCommand=="#LIMITRADIUS")then
            XyzMin_D(1)=log(XyzMin_D(1))
            XyzMax_D(1)=log(XyzMax_D(1))
         end if
-     case("#LIMITGENCOORD1")
-        if(.not.is_first_session())CYCLE READPARAM
-        call read_var('Coord1Min',XyzMin_D(1))
-        call read_var('Coord1Max',XyzMax_D(1))
+     case("#FIXAXIS")
+        call read_var('DoFixAxis',DoFixAxis)
      case('#TORUSSIZE')
         call read_var('rTorusLarge',rTorusLarge)
         call read_var('rTorusSmall',rTorusSmall)

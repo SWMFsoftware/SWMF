@@ -6,14 +6,15 @@ subroutine advance_expl(DoCalcTimestep)
   use ModMain
   use ModFaceFlux,  ONLY: calc_face_flux
   use ModFaceValue, ONLY: calc_face_value
-  use ModAdvance,   ONLY: UseUpdateCheck
+  use ModAdvance,   ONLY: UseUpdateCheck, DoFixAxis
   use ModParallel,  ONLY: neiLev
   use ModGeometry,  ONLY: Body_BLK
   use ModGeometry,  ONLY: UseCovariant              !^CFG IF COVARIANT
   use ModBlockData, ONLY: set_block_data
   use ModImplicit,  ONLY: UsePartImplicit           !^CFG IF IMPLICIT
   use ModPhysics,   ONLY: No2Si_V, UnitT_
-
+  use ModCovariant, ONLY: is_axial_geometry
+  
   implicit none
 
   logical, intent(in) :: DoCalcTimestep
@@ -146,6 +147,8 @@ subroutine advance_expl(DoCalcTimestep)
      if(DoTestMe)write(*,*)NameSub,' done update blocks'
 
      call barrier_mpi2('expl2')
+
+     if(is_axial_geometry().and.DoFixAxis)call fix_axis_cells
 
      ! Check for allowable update percentage change.
      if(UseUpdateCheck)then

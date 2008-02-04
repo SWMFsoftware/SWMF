@@ -79,6 +79,7 @@ OBJECTS = \
 	amr.o\
 	amr_criteria.o\
 	amr_physics.o\
+        fix_axis_cells.o\
 	calc_gradients.o\
 	calc_sources.o\
 	calc_timestep.o\
