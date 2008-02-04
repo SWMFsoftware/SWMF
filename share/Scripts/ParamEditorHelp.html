@@ -171,8 +171,24 @@ The right frame contains one of the following:
 
 <H2 ALIGN=CENTER><A NAME=CUSTOMIZE>Customization with ParamEditor.conf</A></H2>
 
-The GUI can be customized by creating a ParamEditor.conf file in 
-the user's home directory. Type 
+The GUI as well as the micro web-server running the GUI can be customized 
+by creating a ParamEditor.conf file in the user's home directory.
+
+When the GUI is started with the share/Scripts/ParamEditor.pl script, the
+script starts a micro web-server and reads the ParamEditor.conf file for
+configuration settings. One can set the default browser and/or
+the default name of the edited parameter file. For example
+<pre>
+$browser   = "/opt/kde3/bin/konqueror";
+$paramfile = "run_test/PARAM.in";
+</pre>
+Note that the default browser cannot be set under Mac OSX. 
+For more detail type
+<pre>
+share/Scripts/ParamEditor.pl -h
+</pre>
+The GUI itself can be customized by setting variables in the 
+ParamEditor.conf file. Type
 <pre>
 grep '^our' share/Scripts/ParamConvert.pl
 </pre>
