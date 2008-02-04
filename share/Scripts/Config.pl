@@ -393,6 +393,80 @@ sub set_optimization_{
 
 ##############################################################################
 
+sub create_makefile_rules{
+
+    my @InFile = glob("src*/$MakefileRules.all");
+
+    return unless @InFile;
+
+    # Hash for general configuration settings
+    my %Settings = (OS => $OS, Compiler => $Compiler, 
+		    MpiVersion => $MpiVersion, Precision => $Precision);
+
+    # Add settings from the caller Config.pl script
+    my $Settings = shift;
+    $Settings{$1}=$2 while $Settings =~ s/(\w+)\s*=\s*([^,\n]+)//;
+
+    # Create Makefile.RULES from Makefile.RULES.all in all src* directories
+    my $InFile;
+    foreach $InFile (@InFile){
+
+	$InFile =~ /(\w*)\//;
+	my $SrcDir = $1;
+
+	# Create Makefile.DEPEND and read it in
+	`cd $SrcDir; make DEPEND`;
+	open(INFILE, "$SrcDir/$MakefileDepend") 
+	    or die "$ERROR_: could not open $SrcDir/$MakefileDepend\n";
+	my $Dependency = join('',<INFILE>);
+	close(INFILE);
+
+	# Open Makefile.RULES.all for reading
+	open(INFILE, $InFile) or die "$ERROR_: could not open $InFile\n";
+
+	# Open Makefile.RULES for writing
+	my $OutFile = "$SrcDir/$MakefileRules";
+	open(OUTFILE, ">$OutFile") or die "$ERROR_: could not open $OutFile\n";
+
+	# Evaluate conditional rules in Makefile.RULES.all
+	my $Condition;
+	while(<INFILE>){
+	    next if /^\#/ or /^\s/; 
+	    $Condition = $_;
+
+	    # Replace $xxx variables with their actually set values
+	    my $key;
+	    foreach $key (keys %Settings){
+		$Condition =~ s/\$$key/"$Settings{$key}"/g;
+	    }
+
+	    # Skip rules unless condition is true
+	    next unless eval($Condition);
+
+	    # Create compilation rules using Makefile.DEPEND
+	    my $Rule;
+	    while($Rule = <INFILE>){
+		last unless $Rule =~ s/^\t//;
+
+		$Rule =~ /([\w\.]+)\s*$/;
+
+		my $SrcFile = $1;
+		my $ObjectFile = $SrcFile; $ObjectFile =~ s/\.\w+$/.o/;
+		
+
+		$Dependency =~ /^$ObjectFile:.*\n((\t.*\n)+)/m;
+		my $Depend = $1;
+
+		print OUTFILE "$ObjectFile: $SrcFile \\\n$Depend\t$Rule\n";
+	    }
+	}
+	close INFILE;
+	close OUTFILE;
+    }
+}
+
+##############################################################################
+
 sub shell_command{
 
     my $command = join(' ',@_);
