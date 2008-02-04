@@ -22,6 +22,7 @@ our $Verbose;
 our $Show;
 our $ShowGridSize;
 our $NewGridSize;
+our $Install;
 
 &print_help if $Help;
 
@@ -67,7 +68,10 @@ print "Config.pl -g=$nI,$nJ,$nK,$MaxBlock",
 # Set or list the user modules
 &set_user_module if $UserModule;
 
-&show_settings if $Show;
+my $Settings = &current_settings; print $Settings if $Show;
+
+# (Re)Create Makefile.RULES file(s) based on current settings
+# &create_makefile_rules($Settings);
 
 exit 0;
 
@@ -160,8 +164,6 @@ sub set_grid_size{
 
 ##############################################################################
 
-#############################################################################
-
 sub set_equation{
 
     if($Equation eq '1'){
@@ -211,12 +213,15 @@ sub set_user_module{
 
 #############################################################################
 
-sub show_settings{
+sub current_settings{
 
-    print "Number of cells in a block        : nI=$nI, nJ=$nJ, nK=$nK\n";
-    print "Max. number of blocks/PE          : MaxBlock    =$MaxBlock\n";
+    $Settings = 
+	"Number of cells in a block        : nI=$nI, nJ=$nJ, nK=$nK\n";
+    $Settings .= 
+	"Max. number of blocks/PE          : MaxBlock    =$MaxBlock\n";
     #^CFG IF IMPLICIT BEGIN
-    print "Max. number of implicit blocks/PE : MaxImplBlock=$MaxImplBlock\n";
+    $Settings .= 
+	"Max. number of implicit blocks/PE : MaxImplBlock=$MaxImplBlock\n";
     #^CFG END IMPLICIT
 
     open(FILE, $UserMod) or die "$ERROR Could not open $UserMod\n";
@@ -233,7 +238,7 @@ sub show_settings{
 	$Version = $1 if /VersionUserModule\s*=\s*([\d\.]+)/;
     }
     close(FILE);
-    print "User Module = $Module, ver $Version\n";
+    $Settings .= "User Module = $Module, ver $Version\n";
 
     open(FILE, $EquationMod) or die "$ERROR Could not open $EquationMod\n";
     my $Equation='???';
@@ -242,7 +247,7 @@ sub show_settings{
 	$Equation = $1; last;
     }
 
-    print "Equation    = $Equation\n";
+    $Settings .= "Equation    = $Equation\n";
 
 }
 
