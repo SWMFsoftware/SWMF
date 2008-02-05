@@ -405,7 +405,7 @@ sub create_makefile_rules{
 
 	# Create Makefile.DEPEND and read it in
 	my $Dependency;
-	`cd $SrcDir; make DEPEND 2>1`;
+	`cd $SrcDir; make DEPEND 2>&1`;
 	if(open(INFILE, "$SrcDir/$MakefileDepend")){
 	    $Dependency = join('',<INFILE>);
 	    close(INFILE);
