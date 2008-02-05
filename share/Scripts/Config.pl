@@ -299,18 +299,7 @@ sub install_code_{
     &get_settings_;
 
     # Copy Makefile.RULES.${OS}.${COMPILER} into Makefile.RULES as needed
-    my $Src;
-    foreach $Src (glob "src*") {
-	my @Rules = glob("$Src/$MakefileRules\*");
-	next unless @Rules;
-	my $Rules = "$Src/$MakefileRules.$OS.$Compiler";
-	if(-f $Rules){
-	    &shell_command("cp $Rules $Src/$MakefileRules");
-	}else{
-	    &shell_command(
-                "rm -f $Src/$MakefileRules; touch $Src/$MakefileRules");
-	}
-    }
+    &create_makefile_rules;
 
     # Set initial precision for reals
     $NewPrecision = $DefaultPrecision unless $NewPrecision;
@@ -415,11 +404,12 @@ sub create_makefile_rules{
 	my $SrcDir = $1;
 
 	# Create Makefile.DEPEND and read it in
+	my $Dependency;
 	`cd $SrcDir; make DEPEND`;
-	open(INFILE, "$SrcDir/$MakefileDepend") 
-	    or die "$ERROR_: could not open $SrcDir/$MakefileDepend\n";
-	my $Dependency = join('',<INFILE>);
-	close(INFILE);
+	if(open(INFILE, "$SrcDir/$MakefileDepend")){
+	    $Dependency = join('',<INFILE>);
+	    close(INFILE);
+	}
 
 	# Open Makefile.RULES.all for reading
 	open(INFILE, $InFile) or die "$ERROR_: could not open $InFile\n";
@@ -452,12 +442,12 @@ sub create_makefile_rules{
 
 		my $SrcFile = $1;
 		my $ObjectFile = $SrcFile; $ObjectFile =~ s/\.\w+$/.o/;
-		
 
-		$Dependency =~ /^$ObjectFile:.*\n((\t.*\n)+)/m;
-		my $Depend = $1;
+		my $Depend = "\n";
+		$Depend = " \\\n$1"
+		    if $Dependency =~ /^$ObjectFile:.*\n((\t.*\n)+)/m;
 
-		print OUTFILE "$ObjectFile: $SrcFile \\\n$Depend\t$Rule\n";
+		print OUTFILE "$ObjectFile: $SrcFile$Depend\t$Rule\n";
 	    }
 	}
 	close INFILE;
