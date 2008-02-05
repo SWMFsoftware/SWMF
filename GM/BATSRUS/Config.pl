@@ -23,6 +23,7 @@ our $Show;
 our $ShowGridSize;
 our $NewGridSize;
 our $Install;
+our $Compiler;
 
 &print_help if $Help;
 
@@ -71,7 +72,8 @@ print "Config.pl -g=$nI,$nJ,$nK,$MaxBlock",
 my $Settings = &current_settings; print $Settings if $Show;
 
 # (Re)Create Makefile.RULES file(s) based on current settings
-# &create_makefile_rules($Settings);
+&create_makefile_rules($Settings) 
+    if $Compiler eq "ifort" and ($Install or $Equation);
 
 exit 0;
 
