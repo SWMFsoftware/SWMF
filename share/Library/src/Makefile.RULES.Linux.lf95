@@ -1,7 +1,0 @@
-#^CFG COPYRIGHT UM
-#
-#	Specific Rules for Darwin fortran compiler
-#
-
-ModBlasLapack.o: ModBlasLapack.f90
-	${COMPILE.f90} ${Cflag4NoP} ModBlasLapack.f90
