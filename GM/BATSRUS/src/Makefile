@@ -67,7 +67,7 @@ OBJ4=project_B.o proj_cg.o proj_bicgstab.o #	^CFG IF PROJECTION
 
 OBJ10=  calc_heat_flux.o set_resistivity.o ModResistivity.o #^CFG IF DISSFLUX
 
-OBJ14=covariant.o                           #^CFG IF COVARIANT
+OBJ14=covariant.o fix_axis_cells.o          #^CFG IF COVARIANT
 
 OBJ15=clean_divb.o                          #^CFG IF DIVBDIFFUSE
 
@@ -79,7 +79,6 @@ OBJECTS = \
 	amr.o\
 	amr_criteria.o\
 	amr_physics.o\
-        fix_axis_cells.o\
 	calc_gradients.o\
 	calc_sources.o\
 	calc_timestep.o\

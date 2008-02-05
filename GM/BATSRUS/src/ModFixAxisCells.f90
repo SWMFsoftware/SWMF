@@ -1,3 +1,5 @@
+!^CFG FILE COVARIANT
+
 subroutine fix_axis_cells
 
   use ModProcMH, ONLY: iComm

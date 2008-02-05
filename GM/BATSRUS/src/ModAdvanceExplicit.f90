@@ -9,11 +9,10 @@ subroutine advance_expl(DoCalcTimestep)
   use ModAdvance,   ONLY: UseUpdateCheck, DoFixAxis
   use ModParallel,  ONLY: neiLev
   use ModGeometry,  ONLY: Body_BLK
-  use ModGeometry,  ONLY: UseCovariant              !^CFG IF COVARIANT
+  use ModCovariant, ONLY: UseCovariant, is_axial_geometry !^CFG IF COVARIANT
   use ModBlockData, ONLY: set_block_data
   use ModImplicit,  ONLY: UsePartImplicit           !^CFG IF IMPLICIT
   use ModPhysics,   ONLY: No2Si_V, UnitT_
-  use ModCovariant, ONLY: is_axial_geometry
   
   implicit none
 
@@ -148,7 +147,8 @@ subroutine advance_expl(DoCalcTimestep)
 
      call barrier_mpi2('expl2')
 
-     if(is_axial_geometry().and.DoFixAxis)call fix_axis_cells
+     if(is_axial_geometry() .and. DoFixAxis) &       !^CFG IF COVARIANT
+          call fix_axis_cells                        !^CFG IF COVARIANT
 
      ! Check for allowable update percentage change.
      if(UseUpdateCheck)then
