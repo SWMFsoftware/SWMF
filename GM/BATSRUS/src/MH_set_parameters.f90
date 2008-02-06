@@ -1542,6 +1542,7 @@ subroutine MH_set_parameters(TypeAction)
         end if
      case("#FIXAXIS")
         call read_var('DoFixAxis',DoFixAxis)
+        call read_var('nAxisCell',nAxisCell)
      case('#TORUSSIZE')
         call read_var('rTorusLarge',rTorusLarge)
         call read_var('rTorusSmall',rTorusSmall)
