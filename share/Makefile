@@ -18,19 +18,12 @@ include ../Makefile.def
 #EOP
 #BOC
 
-LIBRULES = Library/src/Makefile.RULES
-
 Library/src/mpif.h:
 	cd Library/src; cat precision.h mpif90.h > mpif.h
 
 install: Library/src/mpif.h
 	touch Library/src/Makefile.DEPEND
-	@(if [ -f ${LIBRULES}.${OS}.${COMPILER} ]; then   \
-		cp -f ${LIBRULES}.${OS}.${COMPILER} ${LIBRULES};\
-	else \
-		rm -f ${LIBRULES}; touch ${LIBRULES}; \
-	fi);
-
+	touch Library/src/Makefile.RULES
 
 clean:
 	cd Library/src; make clean
@@ -40,6 +33,7 @@ clean:
 distclean: clean
 	cd Library/test;make distclean
 	cd Prologs;     make distclean
-	rm -f Library/src/mpif*.h ${LIBRULES} Library/src/Makefile.DEPEND \
-		*~ */*~
+	rm -f Library/src/mpif*.h Library/src/Makefile.DEPEND \
+		Library/src/Makefile.RULES *~ */*~
+
 #EOC

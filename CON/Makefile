@@ -1,25 +1,16 @@
 # defines OS
 include ../Makefile.def
 
-CONTROLRULES = Control/src/Makefile.RULES
-
 INSTALL_FILES = \
 	Control/src/Makefile.DEPEND \
+	Control/src/Makefile.RULES \
 	Library/src/Makefile.DEPEND \
 	Coupler/src/Makefile.DEPEND \
 	Interface/src/Makefile.DEPEND \
-	Stubs/src/Makefile.DEPEND \
-	${CONTROLRULES}
-
+	Stubs/src/Makefile.DEPEND
 
 install:
 	touch ${INSTALL_FILES}
-	@(if [ -f ${CONTROLRULES}.${OS}.${COMPILER} ]; then   \
-		cp -f ${CONTROLRULES}.${OS}.${COMPILER} ${CONTROLRULES};\
-	else \
-                rm -f ${CONTROLRULES}; touch ${CONTROLRULES}; \
-	fi);
-
 clean:
 	cd Control/src;   make clean
 	cd Library/src;   make clean
