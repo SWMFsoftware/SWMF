@@ -14,8 +14,12 @@ PLANET=earth
 src/ModSize.f90:
 	cp src/ModSize.f90.orig src/ModSize.f90
 
+INSTALLFILES =  src/Makefile.DEPEND \
+		src/Makefile.RULES \
+		srcInterface/Makefile.DEPEND
+
 install: src/ModSize.f90
-	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
+	touch ${INSTALLFILES}
 	cd src; make DYNAMIC
 #
 #       General Housekeeping
@@ -44,7 +48,7 @@ nompirun:
 	cd run; ./GITM.exe
 
 clean:
-	@touch src/Makefile.DEPEND src/Makefile.RULES
+	@touch ${INSTALLFILES}
 	@cd $(ABDIR);    make clean
 	@cd $(MAINDIR);  make clean
 	@cd srcInterface;make clean
@@ -52,7 +56,7 @@ clean:
 	@(if [ -d util ];  then cd util;  make clean; fi);
 
 distclean:
-	@touch src/Makefile.DEPEND src/Makefile.RULES
+	@touch ${INSTALLFILES}
 	@cd $(ABDIR);    make clean
 	@cd $(MAINDIR);  make distclean
 	@cd srcInterface;make distclean

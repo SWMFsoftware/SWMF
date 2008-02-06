@@ -17,8 +17,12 @@ help:
 bin:
 	mkdir bin
 
+INSTALLFILES =  src/Makefile.DEPEND \
+		src/Makefile.RULES \
+		srcInterface/Makefile.DEPEND
+
 install: bin
-	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
+	touch ${INSTALLFILES}
 
 PWOM:
 	cd ${SHAREDIR};           make LIB
@@ -142,16 +146,14 @@ rundir:
 	fi)
 
 clean:
-	@touch src/Makefile.DEPEND src/Makefile.RULES
+	@touch ${INSTALLFILES}
 	cd src; make clean
-	@touch srcInterface/Makefile.DEPEND
 	cd srcInterface; make clean
 	@(if [ -d share ]; then cd share; make clean; fi);
 	@(if [ -d util ];  then cd util;  make clean; fi);
 
 distclean:
-	@touch src/Makefile.DEPEND src/Makefile.RULES
+	@touch ${INSTALLFILES}
 	cd src; make distclean
-	@touch srcInterface/Makefile.DEPEND
 	cd srcInterface; make distclean
 	rm -rf Makefile.planet *~ bin
