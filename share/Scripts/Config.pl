@@ -298,9 +298,6 @@ sub install_code_{
     # Read info from main Makefile.def
     &get_settings_;
 
-    # Copy Makefile.RULES.${OS}.${COMPILER} into Makefile.RULES as needed
-    &create_makefile_rules;
-
     # Set initial precision for reals
     $NewPrecision = $DefaultPrecision unless $NewPrecision;
     &set_precision_ if $NewPrecision ne $Precision;
@@ -311,6 +308,9 @@ sub install_code_{
     &shell_command("cd util; make install") 
 	if -d "util" and not $IsComponent;
     &shell_command("make install");
+
+    # Create Makefile.RULES as needed
+    &create_makefile_rules;
 
     # Now code is installed
     $Installed = 1 unless $DryRun;
@@ -403,20 +403,12 @@ sub create_makefile_rules{
 	$InFile =~ /([\w,\/]*)\//;
 	my $SrcDir = $1;
 
+	# Open Makefile.RULES.all for reading
+	open(INFILE, $InFile) or die "$ERROR_: could not open $InFile\n";
+
 	# Open Makefile.RULES for writing
 	my $OutFile = "$SrcDir/$MakefileRules";
 	open(OUTFILE, ">$OutFile") or die "$ERROR_: could not open $OutFile\n";
-
-	# Create Makefile.DEPEND and read it in
-	my $Dependency;
-	`cd $SrcDir; make DEPEND 2>&1`;
-	if(open(INFILE, "$SrcDir/$MakefileDepend")){
-	    $Dependency = join('',<INFILE>);
-	    close(INFILE);
-	}
-
-	# Open Makefile.RULES.all for reading
-	open(INFILE, $InFile) or die "$ERROR_: could not open $InFile\n";
 
 	# Evaluate conditional rules in Makefile.RULES.all
 	my $Condition;
@@ -433,7 +425,7 @@ sub create_makefile_rules{
 	    # Skip rules unless condition is true
 	    next unless eval($Condition);
 
-	    # Create compilation rules using Makefile.DEPEND
+	    # Create compilation rules
 	    my $Rule;
 	    while($Rule = <INFILE>){
 		last unless $Rule =~ s/^\t//;
@@ -443,11 +435,7 @@ sub create_makefile_rules{
 		my $SrcFile = $1;
 		my $ObjectFile = $SrcFile; $ObjectFile =~ s/\.\w+$/.o/;
 
-		my $Depend = "\n";
-		$Depend = " \\\n$1"
-		    if $Dependency =~ /^$ObjectFile:.*\n((\t.*\n)+)/m;
-
-		print OUTFILE "$ObjectFile: $SrcFile$Depend\t$Rule\n";
+		print OUTFILE "$ObjectFile: $SrcFile\n\t$Rule\n";
 	    }
 	}
 	close INFILE;
