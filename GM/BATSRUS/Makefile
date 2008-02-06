@@ -55,8 +55,13 @@ help:
 	@echo '    distclean (make clean; rm -f *exe Makefile Makefile.DEPEND)'
 	@echo '    dist      (create source distribution tar file)'
 
+INSTALLFILES =	src/Makefile.DEPEND \
+		src/Makefile.RULES \
+		srcInterface/Makefile.DEPEND \
+		srcPostProc/Makefile.RULES
+
 install: src/ModSize.f90
-	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
+	touch ${INSTALLFILES}
 	./Config.pl -u=Default -e=Mhd
 	cd src; make STATIC
 
@@ -165,18 +170,16 @@ CLEAN2 = cleanhtml #				    ^CFG IF NOT MAKEHTML
 #
 
 clean:
-	@touch src/Makefile.DEPEND src/Makefile.RULES
+	@touch ${INSTALLFILES}
 	cd src; make clean
-	@touch srcInterface/Makefile.DEPEND
 	cd srcInterface; make clean
 	cd srcPostProc;  make clean
 	@(if [ -d util  ]; then cd util;  make clean; fi);
 	@(if [ -d share ]; then cd share; make clean; fi);
 
 distclean:
-	@touch src/Makefile.DEPEND src/Makefile.RULES
+	@touch ${INSTALLFILES}
 	cd src; make distclean
-	@touch srcInterface/Makefile.DEPEND
 	cd srcInterface; make distclean
 	cd srcPostProc;  make distclean
 	@				#^CFG IF DOC BEGIN
@@ -184,7 +187,6 @@ distclean:
 	cd Doc/Tex; make clean ${CLEAN1} ${CLEAN2}
 	@					#^CFG END REMOVEDOCTEX
 	@				#^CFG END DOC
-	rm -f *~
 
 dist:
 	./Config.pl -uninstall
