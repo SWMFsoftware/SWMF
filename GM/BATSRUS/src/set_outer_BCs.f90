@@ -8,7 +8,8 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
   use ModProcMH
   use ModMain
   use ModVarIndexes
-  use ModAdvance, ONLY : State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
+  use ModAdvance, ONLY : State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK, &
+       DoFixAxis
   use ModParallel, ONLY : NOBLK, NeiLev
   use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, far_field_BCs_BLK, MaxBoundary
   use ModPhysics
@@ -75,6 +76,9 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
 
      ! Check if this side of the block is indeed an outer boundary
      if(neiLEV(iSide,iBLK)/=NOBLK) CYCLE
+
+     ! Cells around axis are handled in fix_axis_cells
+     if(DoFixAxis .and. iSide >= Bot_) CYCLE
 
      ! Set index limits
      imin1g=-1; imax1g=nI+2; imin2g=-1; imax2g=nI+2
