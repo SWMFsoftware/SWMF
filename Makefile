@@ -249,7 +249,7 @@ clean: ENV_CHECK
 	rm -rf *~ doc/*~ Param/*~ TAGS
 	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/`; \
 		do (cd $$i; make clean); done
-	cd ESMF/ESMF_SWMF;	make clean
+	-(cd ESMF/ESMF_SWMF;	make clean)
 	cd CON;			make clean
 	cd share;		make clean
 	cd util;		make clean
@@ -271,7 +271,7 @@ distclean: ENV_CHECK rmdir
 		do (cd $$i; make distclean); done
 	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v Empty`; \
 		do (cd $$i; ./Config.pl -uninstall); done
-	cd ESMF/ESMF_SWMF;	make distclean
+	-(cd ESMF/ESMF_SWMF;	make distclean)
 	cd CON;			make distclean
 	@#^CMP IF DOC BEGIN
 	@#^CMP IF NOT REMOVEDOCTEX BEGIN
