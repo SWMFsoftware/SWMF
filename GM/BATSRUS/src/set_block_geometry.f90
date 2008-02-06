@@ -3,11 +3,11 @@ subroutine set_root_block_geometry
   use ModProcMH
   use ModSize
   use ModMain, ONLY : TypeBc_I,unusedBLK,nBlock,nBlockMax
-  use ModMain,ONLY  : Phi_,Theta_,z_             !^CFG IF COVARIANT
+  use ModMain,ONLY  : Phi_,Theta_,z_             
   use ModAMR, ONLY : availableBLKs
   use ModGeometry,ONLY: xyzStart_BLK,dx_BLK,dy_BLK,dz_BLK,&
        R2_BLK,&                !^CFG IF SECONDBODY
-       TypeGeometry,is_axial_geometry,&          !^CFG IF COVARIANT
+       TypeGeometry,is_axial_geometry,&          
        R_BLK,x_BLK,y_BLK,z_BLK,Dxyz,XyzMin_D,XyzMax_D
   use ModNumConst
   use ModParallel, ONLY: proc_dims,periodic3D
@@ -19,18 +19,18 @@ subroutine set_root_block_geometry
 
   ! set the array periodic3D for the periodic boundary
 
-  if(is_axial_geometry())then                     !^CFG IF COVARIANT BEGIN
+  if(is_axial_geometry())then                     
      Periodic3D(Phi_)=.true.
      if(index(TypeGeometry,'spherical')>0)then
         Periodic3D(Theta_)=.false.
      else
         periodic3D(z_)=any(TypeBc_I(bot_:top_)=='periodic')
      end if
-  else                                           !^CFG END COVARIANT
+  else                                          
      periodic3D(1)=any(TypeBc_I(east_:west_)=='periodic')
      periodic3D(2)=any(TypeBc_I(south_:north_)=='periodic')
      periodic3D(3)=any(TypeBc_I(bot_:top_)=='periodic')
-  end if                                                !^CFG IF COVARIANT
+  end if                                                
  
   xyzStart_BLK = -777777.
   dx_BLK = -777777.
@@ -91,7 +91,7 @@ subroutine fix_block_geometry(iBLK)
 
   integer :: i,j,k, iBoundary
   real :: dx,dy,dz,fAx,fAy,fAz,cV,VInv
-  real,dimension(nDim)::XyzOfNode111_D               !^CFG IF COVARIANT
+  real,dimension(nDim)::XyzOfNode111_D               
 
   logical:: DoTest, DoTestMe
   character(len=*), parameter :: NameSub='fix_block_geometry'
@@ -108,7 +108,7 @@ subroutine fix_block_geometry(iBLK)
   !/--------------------------------
 
 
-  if(.not.UseCovariant)then                  !^CFG IF COVARIANT
+  if(.not.UseCovariant)then                  
      dx = dx_BLK(iBLK)
      dy = dy_BLK(iBLK)
      dz = dz_BLK(iBLK)
@@ -133,10 +133,10 @@ subroutine fix_block_geometry(iBLK)
      fAy = dz*dx 
      fAz = dx*dy 
 
-     fAx_BLK(iBLK) = fAx                         !^CFG IF NOT COVARIANT BEGIN  
+     fAx_BLK(iBLK) = fAx                           
      fAy_BLK(iBLK) = fAy
      fAz_BLK(iBLK) = fAz
-     cV_BLK(iBLK) = cV                           !^CFG END COVARIANT        
+     cV_BLK(iBLK) = cV                               
      vInv_CB(:,:,:,iBLK) = cOne/cV                
 
      !Calculate the node coordinates
@@ -145,7 +145,7 @@ subroutine fix_block_geometry(iBLK)
         NodeY_NB(i,j,k,iBLK) = cEighth*sum(y_BLK(i-1:i,j-1:j,k-1:k,iBLK))
         NodeZ_NB(i,j,k,iBLK) = cEighth*sum(z_BLK(i-1:i,j-1:j,k-1:k,iBLK))
      end do; end do; end do                  
-  else                                       !^CFG IF COVARIANT BEGIN
+  else                                      
      !Cell center coordinates are calculated directly as the
      !transformed generalized coordinates
      call gen_to_xyz_arr(XyzStart_BLK(:,iBLK),&
@@ -202,7 +202,7 @@ subroutine fix_block_geometry(iBLK)
      
      call fix_covariant_geometry(iBLK)
    
-  end if                                          !^CFG END COVARIANT
+  end if                                          
 
   Rmin_BLK(iBLK)  = minval(R_BLK(:,:,:,iBLK))
 
@@ -251,7 +251,7 @@ subroutine fix_block_geometry(iBLK)
   end do
   IsBoundaryBlock_IB(ExtraBc_,iBLK) = &
        DoFixExtraBoundary &                         
-       .and..not.is_axial_geometry() &             !^CFG IF COVARIANT
+       .and..not.is_axial_geometry() &             
        .or. &                                       
        UseExtraBoundary
 
@@ -266,7 +266,7 @@ subroutine fix_block_geometry(iBLK)
 
   BodyFlg_B(iBLK) = .not. all(true_cell(:,:,:,iBLK))
                                                     
-  if(.not.is_axial_geometry())     &               !^CFG IF COVARIANT
+  if(.not.is_axial_geometry())     &              
        DoFixExtraBoundary_B(iBLK) = DoFixExtraBoundary &
        .and.any(IsBoundaryCell_GI(:,:,:,ExtraBc_))
                                                     
@@ -363,13 +363,13 @@ end subroutine fix_block_geometry
 !=============================================================================
 subroutine set_xyzminmax
   use ModGeometry, ONLY:x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D
-  use ModGeometry,ONLY:UseCovariant                   !^CFG IF COVARIANT
+  use ModGeometry,ONLY:UseCovariant                  
   use ModMain,ONLY:x_,y_,z_
   implicit none
-  if(UseCovariant)then                          !^CFG IF COVARIANT BEGIN
+  if(UseCovariant)then                         
      call set_xyz_minmax_covar
      return
-  end if                                        !^CFG END COVARIANT
+  end if                                        
   XyzMin_D(x_) = x1
   XyzMin_D(y_) = y1
   XyzMin_D(z_) = z1

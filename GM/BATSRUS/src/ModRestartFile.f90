@@ -205,8 +205,8 @@ contains
     use ModMain,       ONLY: UseBody2                     !^CFG IF SECONDBODY
     use ModVarIndexes, ONLY: NameEquation, nVar, nFluid
     use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2
-    use ModGeometry, ONLY: XyzMin_D, XyzMax_D, &             !^CFG IF COVARIANT
-         TypeGeometry, UseCovariant, UseVertexBasedGrid      !^CFG IF COVARIANT
+    use ModGeometry, ONLY: XyzMin_D, XyzMax_D, &             
+         TypeGeometry, UseCovariant, UseVertexBasedGrid      
     use ModParallel, ONLY: proc_dims
     use ModUser,     ONLY: NameUserModule, VersionUserModule
     use ModPhysics
@@ -286,7 +286,7 @@ contains
     write(unit_tmp,'(a)')'#TIMESIMULATION'
     write(unit_tmp,'(es15.8,a25)')time_simulation,'tSimulation'
     write(unit_tmp,*)
-    if(UseCovariant)then                        !^CFG IF COVARIANT BEGIN
+    if(UseCovariant)then                        
        write(unit_tmp,'(a)')'#GRIDGEOMETRY'
        write(unit_tmp,'(a)')trim(TypeGeometry)
        write(unit_tmp,*)
@@ -297,7 +297,7 @@ contains
        write(unit_tmp,'(1pe13.5,a27)')XyzMin_D(1),'XyzMin_D(1)' 
        write(unit_tmp,'(1pe13.5,a27)')XyzMax_D(1),'XyzMax_D(1)' 
        write(unit_tmp,*)
-    end if                                      !^CFG END COVARIANT
+    end if                                      
     write(unit_tmp,*)
     write(unit_tmp,'(a)')'#GRID'
     write(unit_tmp,'(i8,a32)')proc_dims(1),'nRootBlockX'

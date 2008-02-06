@@ -169,7 +169,7 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   use ModMain, ONLY : nI, nJ, nK, nCells, nBlock, unusedBLK
   use ModAdvance, ONLY : State_VGB, StateOld_VCB
   use ModGeometry, ONLY : XyzStart_BLK, dx_BLK, dy_BLK, dz_BLK
-  use ModGeometry, ONLY : UseCovariant     !^CFG IF COVARIANT
+  use ModGeometry, ONLY : UseCovariant     
   use ModParallel, ONLY : NeiLev
 
   implicit none
@@ -228,11 +228,11 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
 
   ! Convert to generalized coordinates if necessary
 
-  if(UseCovariant)then                !^CFG IF COVARIANT BEGIN
+  if(UseCovariant)then                
      call xyz_to_gen(XyzIn_D,Xyz_D)
-  else                                !^CFG END COVARIANT
+  else                                
      Xyz_D = XyzIn_D
-  end if                              !^CFG IF COVARIANT
+  end if                              
  
 
   ! Set state and weight to zero, so MPI_reduce will add it up right
@@ -382,10 +382,9 @@ contains
     DyInv = 1/((jHi-jLo)*Dxyz_D(2))
     DzInv = 1/((kHi-kLo)*Dxyz_D(3))
 
-    if(UseCovariant)then                          !^CFG IF COVARIANT BEGIN
+    if(UseCovariant)then                          
        call covariant_curlb(i,j,k,iBlock,Current_D,.not.body_BLK(iBlock))
-    else                                          !^CFG END COVARIANT
-       !^CFG IF NOT COVARIANT BEGIN
+    else                                          
        Current_D(1) = &
             (State_VGB(Bz_,i,jHi,k,iBlock)-State_VGB(Bz_,i,jLo,k,iBlock))*DyInv- &
             (State_VGB(By_,i,j,kHi,iBlock)-State_VGB(By_,i,j,kLo,iBlock))*DzInv
@@ -398,9 +397,7 @@ contains
             (State_VGB(By_,iHi,j,k,iBlock)-State_VGB(By_,iLo,j,k,iBlock))*DxInv- &
             (State_VGB(Bx_,i,jHi,k,iBlock)-State_VGB(Bx_,i,jLo,k,iBlock))*DyInv
 
-       !^CFG END COVARIANT
-       continue
-    end if                                        !^CFG IF COVARIANT
+    end if                                       
     
 
     StateCurrent_V(nState+1:nState+3) = StateCurrent_V(nState+1:nState+3) &

@@ -42,16 +42,14 @@ module ModHallResist
   real, public :: xSizeBoxHall=-1.0, ySizeBoxHall=-1.0, zSizeBoxHall=-1.0
   real, public :: DxSizeBoxHall=-1.0, DySizeBoxHall=-1.0, DzSizeBoxHall=-1.0
 
-  !^CFG IF COVARIANT BEGIN
   ! Jacobian matrix for covariant grid: Dcovariant/Dcartesian
   real, public :: DgenDxyz_DDFD(nDim, nDim,1:nI+1, 1:nJ+1, 1:nK+1, nDim)
   real, public :: DgenDxyz_DDC(nDim, nDim, nI, nJ, nK)
-  !^CFG END COVARIANT
 
   ! Public methods
   public :: init_hall_resist, get_face_current, hall_factor, test_face_current
   public :: calc_hyper_resistivity, set_ion_mass_per_charge
-  public :: set_block_jacobian_cell           !^CFG IF COVARIANT
+  public :: set_block_jacobian_cell           
 
   ! Local variables
   real :: b_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2)
@@ -424,7 +422,7 @@ contains
 
   end subroutine set_block_field
 
-  !^CFG IF COVARIANT BEGIN
+ 
   !============================================================================
   subroutine set_block_jacobian_face(iBlock)
     use ModMain, ONLY: x_, y_, z_
@@ -688,7 +686,7 @@ contains
     end do; end do; end do
 
   end subroutine set_block_jacobian_cell
-  !^CFG END COVARIANT
+ 
   !============================================================================
 
   subroutine get_face_current(iDir, i, j, k, iBlock, Jx, Jy, Jz)
@@ -697,8 +695,8 @@ contains
     use ModMain,      ONLY: nBlock, nI, nJ, nK, x_, y_, z_, &
          iTest, jTest, kTest, VarTest, BlkTest, ProcTest, n_step, nStage
     use ModGeometry,  ONLY: Dx_BLK, Dy_BLK, Dz_BLK, x_BLK, y_BLK, z_BLK
-    use ModGeometry,  ONLY: TypeGeometry                !^CFG IF COVARIANT
-    use ModCovariant, ONLY: UseCovariant                !^CFG IF COVARIANT
+    use ModGeometry,  ONLY: TypeGeometry                
+    use ModCovariant, ONLY: UseCovariant                
     use ModParallel,  ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot, BlkNeighborLev
     implicit none
@@ -735,7 +733,7 @@ contains
 
     if( IsNewBlockHall ) then
        call set_block_field(iBlock)
-       if(UseCovariant)then                            !^CFG IF COVARIANT BEGIN
+       if(UseCovariant)then                            
           !call timing_start('set_block_jac')
           !call set_block_jacobian_cell(iBlock) ! Fast but not accurate
           !if(TypeGeometry=='spherical'.or.TypeGeometry=='spherical_lnr') then
@@ -744,7 +742,7 @@ contains
              call set_block_jacobian_face(iBlock)      !general
           !end if
           !call timing_stop('set_block_jac')
-       end if                                          !^CFG END COVARIANT
+       end if                                          
     end if
 
     ! Central difference with averaging in orthogonal direction
@@ -828,11 +826,11 @@ contains
        end if
     end if
 
-    if(UseCovariant)then               !^CFG IF COVARIANT BEGIN
+    if(UseCovariant)then               
        call calc_covariant_j
-    else                               !^CFG END COVARIANT
+    else                              
        call calc_cartesian_j
-    end if                             !^CFG IF COVARIANT
+    end if                             
 
     if(DoTestMe)then
        write(*,*)NameSub,': iDir,i,j,k,iBlock=',iDir,i,j,k,iBlock
@@ -915,7 +913,7 @@ contains
 
     end subroutine calc_cartesian_j
 
-    !^CFG IF COVARIANT BEGIN
+    
     !==========================================================================
     subroutine calc_covariant_j
 
@@ -966,7 +964,6 @@ contains
            - sum(DbDgen_DD(x_,:)*DgenDxyz_DDFD(:,y_,i,j,k,iDir))
 
     end subroutine calc_covariant_j
-    !^CFG END COVARIANT
 
   end subroutine get_face_current
 
@@ -977,8 +974,8 @@ contains
     use ModMain,     ONLY: nI, nJ, nK, nBlock, UnusedBlk, x_, y_, z_, &
          east_, west_, south_, north_, bot_, top_
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
-    use ModCovariant,ONLY: UseCovariant                !^CFG IF COVARIANT
-    use ModGeometry, ONLY: TypeGeometry                !^CFG IF COVARIANT
+    use ModCovariant,ONLY: UseCovariant                
+    use ModGeometry, ONLY: TypeGeometry                
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK, dz_BLK
     use ModParallel, ONLY: NeiLev
     use ModFaceValue,ONLY: correct_monotone_restrict
@@ -1018,13 +1015,13 @@ contains
                   + 400*x_BLK(:,:,:,iBlock)*y_BLK(:,:,:,iBlock) &
                   + 500*x_BLK(:,:,:,iBlock)*z_BLK(:,:,:,iBlock) &
                   + 600*y_BLK(:,:,:,iBlock)*z_BLK(:,:,:,iBlock)
-             if(TypeGeometry == 'spherical' .or.&      !^CFG IF COVARIANT BEGIN
+             if(TypeGeometry == 'spherical' .or.&     
                   TypeGeometry == 'spherical_lnr')then
                 State_VGB(Bx_,:,:,:,iBlock) = &
                      y_BLK(:,:,:,iBlock)
                 State_VGB(By_,:,:,:,iBlock) = z_BLK(:,:,:,iBlock)
                 State_VGB(Bz_,:,:,:,iBlock) = 0.0
-             end if                                    !^CFG END COVARIANT
+             end if                                    
           case(2)
              State_VGB(Bx_,:,:,:,iBlock) = 1.0 + &
                   0.01*x_BLK(:,:,:,iBlock)**2 + &
@@ -1120,7 +1117,7 @@ contains
          JyGood =   3 +   5*x +   6*y - 100 - 400*y - 500*z
          JzGood =  10 +  40*y +  50*z -   2 -   4*x -   6*z
 
-         if(UseCovariant)then                !^CFG IF COVARIANT BEGIN
+         if(UseCovariant)then                
             if(  TypeGeometry == 'spherical' .or. &
                  TypeGeometry == 'spherical_lnr')then
                ! This is an easier test
@@ -1129,20 +1126,20 @@ contains
                JzGood = -1.0
             end if
             Tolerance = 5.e-3
-         else                                !^CFG END COVARIANT
+         else                               
             Tolerance = 1.e-6
-         end if                              !^CFG IF COVARIANT
+         end if                              
 
       case(2)
          JxGood = 4.0 *y - 0.6 *z
          JyGood = 0.06*z - 2.0 *x
          JzGood = 0.2 *x - 0.04*y
 
-         if(UseCovariant)then                !^CFG IF COVARIANT BEGIN
+         if(UseCovariant)then                
             Tolerance = 1.e-1
-         else                                !^CFG END COVARIANT
+         else                               
             Tolerance = 5e-2
-         end if                              !^CFG IF COVARIANT
+         end if                              
       end select
 
       if(       abs(Jx-JxGood) > Tolerance*max(abs(JxGood),1.0)  &

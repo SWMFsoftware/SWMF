@@ -73,10 +73,7 @@ HLLDFLUX		OFF			#^CFG IF HLLDFLUX
 ROEFLUX			OFF			#^CFG IF ROEFLUX
 DISSFLUX		OFF			#^CFG IF DISSFLUX
 
-#						#^CFG IF NOT COVARIANT BEGIN
-# Geometry
-#
-COVARIANT               OFF                     #^CFG END COVARIANT
+
 
 #						#^CFG IF DYNAMIC BEGIN
 # Dynamic allocation of big arrays

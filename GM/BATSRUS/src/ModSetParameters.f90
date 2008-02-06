@@ -7,8 +7,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModMain
   use ModAdvance
   use ModGeometry, ONLY : init_mod_geometry, &
-       TypeGeometry,UseCovariant,UseVertexBasedGrid,is_axial_geometry,  & !^CFG IF COVARIANT
-       allocate_face_area_vectors,allocate_old_levels,rTorusLarge,rTorusSmall,& !^CFG IF COVARIANT
+       TypeGeometry,UseCovariant,UseVertexBasedGrid,is_axial_geometry,  & 
+       allocate_face_area_vectors,allocate_old_levels,rTorusLarge,rTorusSmall,& 
        x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,MinBoundary,MaxBoundary
   use ModNodes, ONLY : init_mod_nodes
   use ModImplicit                                       !^CFG IF IMPLICIT
@@ -692,19 +692,19 @@ subroutine MH_set_parameters(TypeAction)
               if(index(plot_string,'x=0')>0)then
                  plot_area='x=0'
                  if(index(plot_string,'tec')>0 &
-                      .or. .not.is_axial_geometry() & !^CFG IF COVARIANT
+                      .or. .not.is_axial_geometry() & 
                       )then     
                     plot_range(1,ifile)=-cTiny*(XyzMax_D(x_)-XyzMin_D(x_)) &
                          /(nCells(1)*proc_dims(1))
                     plot_range(2,ifile)=+cTiny*(XyzMax_D(x_)-XyzMin_D(x_)) &
                          /(nCells(1)*proc_dims(1))
-                 else                              !^CFG IF COVARIANT BEGIN
+                 else                              
                     plot_range(3,ifile)=cHalfPi                 &
                          -cTiny*(XyzMax_D(Phi_)-XyzMin_D(Phi_)) &
                          /(nCells(Phi_)*proc_dims(Phi_))            
                     plot_range(4,ifile)=cHalfPi                 &
                          +cTiny*(XyzMax_D(Phi_)-XyzMin_D(Phi_)) &
-                         /(nCells(Phi_)*proc_dims(Phi_))  !^CFG END COVARIANT 
+                         /(nCells(Phi_)*proc_dims(Phi_))   
                  end if                            
 
               elseif(index(plot_string,'y=0')>0)then
@@ -713,10 +713,10 @@ subroutine MH_set_parameters(TypeAction)
                       /(nCells(2)*proc_dims(2)) 
                  plot_range(4,ifile)=+cTiny*(XyzMax_D(2)-XyzMin_D(2))&
                       /(nCells(2)*proc_dims(2)) 
-                 !^CFG IF COVARIANT BEGIN
+                 
                  if(index(plot_string,'idl')>0 .and. is_axial_geometry()) &
                     plot_range(3:4,ifile)=plot_range(3:4,ifile)+cPi
-                 !^CFG END COVARIANT
+                 
               elseif(index(plot_string,'z=0')>0)then
                  plot_area='z=0'
                  plot_range(5,ifile)=-cTiny*(XyzMax_D(3)-XyzMin_D(3))&
@@ -741,7 +741,7 @@ subroutine MH_set_parameters(TypeAction)
                    .and. plot_area /= 'los' &
                    .and. plot_area /= 'lin' &        !^CFG IF RAYTRACE
                    ) call read_var('DxSavePlot',plot_dx(1,ifile))
-              if(is_axial_geometry())plot_dx(1,ifile)=-1.0 !^CFG IF COVARIANT 
+              if(is_axial_geometry())plot_dx(1,ifile)=-1.0  
    
            elseif(index(plot_string,'tec')>0)then 
               plot_form(ifile)='tec'
@@ -751,8 +751,8 @@ subroutine MH_set_parameters(TypeAction)
                    //plot_string)
            end if
            if (plot_area == 'sph') then
-              select case(TypeGeometry)                !^CFG IF COVARIANT
-              case('cartesian')                        !^CFG IF COVARIANT
+              select case(TypeGeometry)                
+              case('cartesian')                        
                  plot_dx(1,ifile) = 1.0    ! set to match value in write_plot_sph
                  plot_dx(2:3,ifile) = 1.0  ! set to degrees desired in angular resolution
                  plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4  ! so that R/=0
@@ -760,7 +760,7 @@ subroutine MH_set_parameters(TypeAction)
                  plot_range(4,ifile)= 90.0 + 0.5*plot_dx(2,ifile)
                  plot_range(5,ifile)= 0.   - 0.5*plot_dx(3,ifile)
                  plot_range(6,ifile)= 360.0- 0.5*plot_dx(3,ifile)
-              case('spherical')                    !^CFG IF COVARIANT BEGIN
+              case('spherical')                    
                  plot_dx(1,ifile) = -1.0   
                  plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4   ! so that R/=0 
                  do i=Phi_,Theta_
@@ -780,7 +780,7 @@ subroutine MH_set_parameters(TypeAction)
               case default
                  call stop_mpi(NameSub//' Sph-plot is not implemented for geometry= '&
                       //TypeGeometry)
-              end select                           !^CFG END COVARIANT 
+              end select                            
            end if
 
            ! Plot variables
@@ -1167,7 +1167,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('nOrderProlong',prolong_order)
         call read_var('TypeProlong' ,prolong_type)
      case("#MESSAGEPASS","#OPTIMIZE")
-        if(.not.is_axial_geometry()) then               !^CFG IF COVARIANT
+        if(.not.is_axial_geometry()) then               
            call read_var('TypeMessagePass',optimize_message_pass)
            if(optimize_message_pass=='allold' .or.&
                 optimize_message_pass=='oldopt')then
@@ -1177,7 +1177,7 @@ subroutine MH_set_parameters(TypeAction)
                    ' is not available any longer, allopt is set !!!'
               optimize_message_pass='allopt'
            end if
-        end if                                           !^CFG IF COVARIANT
+        end if                                           
      case('#RESCHANGE','#RESOLUTIONCHANGE')
         call read_var('UseAccurateResChange',UseAccurateResChange)
         if(UseAccurateResChange) UseTvdResChange=.false.
@@ -1510,7 +1510,7 @@ subroutine MH_set_parameters(TypeAction)
      case('#RESCHANGEBOUNDARY')
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('SaveBoundaryCells',SaveBoundaryCells)
-     case('#VERTEXBASEDGRID')          !^CFG IF COVARIANT BEGIN
+     case('#VERTEXBASEDGRID')          
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseVertexBasedGrid',UseVertexBasedGrid)
      case("#GRIDGEOMETRY", "#COVARIANTGEOMETRY")
@@ -1545,13 +1545,13 @@ subroutine MH_set_parameters(TypeAction)
      case('#TORUSSIZE')
         call read_var('rTorusLarge',rTorusLarge)
         call read_var('rTorusSmall',rTorusSmall)
-        !^CFG END COVARIANT 
+         
      case("#GRID")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('nRootBlockX',proc_dims(1)) 
         call read_var('nRootBlockY',proc_dims(2))
         call read_var('nRootBlockZ',proc_dims(3))
-        !^CFG IF COVARIANT BEGIN
+        
         if( is_axial_geometry() .and. mod(proc_dims(Phi_),2)==1 ) then
            proc_dims(Phi_) = proc_dims(Phi_) + 1
            if(iProc==0)then
@@ -1559,7 +1559,7 @@ subroutine MH_set_parameters(TypeAction)
               write(*,*)'nRootBlock2 is increased by 1 to ',proc_dims(Phi_)
            end if
         end if
-        !^CFG END COVARIANT
+        
         if(product(proc_dims) > nBLK .and. iProc==0)then
            write(*,*)'Root blocks will not fit on 1 processor, check nBLK'
            call stop_mpi('product(proc_dims) > nBLK!')
@@ -1631,7 +1631,7 @@ subroutine MH_set_parameters(TypeAction)
         if(UseExtraBoundary) call read_var('TypeBc_I(ExtraBc_)',&
              TypeBc_I(ExtraBc_))      
         
-        if(.not.is_axial_geometry())&             !^CFG IF COVARIANT
+        if(.not.is_axial_geometry())&             
              call read_var('DoFixExtraBoundary',&  
              DoFixExtraBoundary)  
 
@@ -1645,7 +1645,7 @@ subroutine MH_set_parameters(TypeAction)
      case('#FACEOUTERBC')                      
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('MaxBoundary',MaxBoundary)
-        !^CFG IF COVARIANT BEGIN
+        
         select case(TypeGeometry)
         case('spherical','spherical_lnr')
            If(UseStrict)then
@@ -1689,7 +1689,7 @@ subroutine MH_set_parameters(TypeAction)
            end If
            
         end select
-        !^CFG END COVARIANT
+        
         if(MaxBoundary>=East_)&
              call read_var('DoFixOuterBoundary',DoFixOuterBoundary) 
     
@@ -1954,7 +1954,6 @@ contains
     nOrder = 2
     FluxType = 'RUSANOV'               !^CFG IF RUSANOVFLUX
     !FluxType = 'SOKOLOV'              !^CFG UNCOMMENT IF NOT RUSANOVFLUX
-    !UseCovariant = .true.             !^CFG UNCOMMENT IF COVARIANT
   
     ! Default implicit parameters      !^CFG IF IMPLICIT BEGIN
     UsePointImplicit = .false.
@@ -2140,7 +2139,7 @@ contains
     real               :: Version
     logical            :: IsOn
 
-    if(UseCovariant)then                               !^CFG IF COVARIANT BEGIN
+    if(UseCovariant)then                               
        call allocate_face_area_vectors
        if(UseVertexBasedGrid) call allocate_old_levels
 
@@ -2154,7 +2153,7 @@ contains
             'Do not use covariant with divB diffusion')   !^CFG IF DIVBDIFFUSE
     else
        UseVertexBasedGrid = .false.
-    end if                                             !^CFG END COVARIANT
+    end if                                             
 
     if(SaveBoundaryCells)then
        if(index(optimize_message_pass,'all')>0)then
@@ -2335,9 +2334,10 @@ contains
   subroutine check_parameters
 
     if(UseHyperbolicDivb)then
-       if(UseDivbDiffusion &
-            .or. UseConstrainB &  !^CFG IF CONSTRAINB
-            .or. UseProjection &  !^CFG IF PROJECTION
+       if(.false.&
+            .or.UseDivbDiffusion & !^CFG IF DIVBDIFFUSE
+            .or. UseConstrainB &   !^CFG IF CONSTRAINB
+            .or. UseProjection &   !^CFG IF PROJECTION
             )then
           if(iProc==0)then
              write(*,'(a)')NameSub// &

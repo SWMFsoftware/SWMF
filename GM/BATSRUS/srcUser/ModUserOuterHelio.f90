@@ -1059,7 +1059,7 @@ contains
          Rho_, RhoUx_, RhoUy_, RhoUz_, Energy_
     use ModPhysics
     use ModNumConst
-    use ModCovariant, ONLY: UseCovariant !^CFG IF COVARIANT
+    use ModCovariant, ONLY: UseCovariant 
 
     character (len=*), parameter :: Name='user_calc_sources'
     real ::  Ux, Uy, Uz

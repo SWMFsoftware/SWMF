@@ -8,7 +8,7 @@ subroutine grad1D(iObsolete, iBlock, Var_G, &
   ! For using in amr_criteria only
 
   use ModMain, ONLY : nI,nJ,nK,gcn
-  use ModGeometry,ONLY: UseCovariant               !^CFG IF COVARIANT
+  use ModGeometry,ONLY: UseCovariant              
   implicit none
 
   integer,           intent(in) :: iBlock
@@ -19,18 +19,18 @@ subroutine grad1D(iObsolete, iBlock, Var_G, &
   character (LEN=*), intent(in) :: TypeObsolete            !Obsolete
 
   !--------------------------------------------------------------------------
-  if(UseCovariant)then                                !^CFG IF COVARIANT BEGIN
+  if(UseCovariant)then                               
      call covariant_gradient(iBlock, Var_G,&  
           DifferenceX_G, DifferenceY_G, DifferenceZ_G)  
-  else                                                !^CFG END COVARIANT
-     call central_differences(iBlock, Var_G,&         !^CFG IF NOT COVARIANT
-          DifferenceX_G, DifferenceY_G, DifferenceZ_G)!^CFG IF NOT COVARIANT
+  else                                                
+     call central_differences(iBlock, Var_G,&         
+          DifferenceX_G, DifferenceY_G, DifferenceZ_G)
      continue
-  end if                                              !^CFG IF COVARIANT
+  end if                                             
 end subroutine grad1D
 
 !==============================================================================
-subroutine central_differences(iBlock, Var_G,&     !^CFG IF NOT COVARIANT BEGIN
+subroutine central_differences(iBlock, Var_G,&     
      DifferenceX_G, DifferenceY_G, DifferenceZ_G)
   use ModSize
   use ModGeometry,ONLY:body_blk, true_cell, &
@@ -109,6 +109,4 @@ subroutine central_differences(iBlock, Var_G,&     !^CFG IF NOT COVARIANT BEGIN
      end do; end do; end do
   end if
 end subroutine central_differences
-
-!^CFG END COVARIANT
 

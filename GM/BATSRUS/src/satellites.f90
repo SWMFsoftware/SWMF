@@ -146,7 +146,7 @@ subroutine set_satellite_flags(iSat)
   use ModProcMH
   use ModMain, ONLY : nDim,nI,nJ,nK,nBlockMax,PROCtest,unusedBLK
   use ModGeometry, ONLY : XyzStart_BLK,dx_BLK,dy_BLK,dz_BLK
-  use ModGeometry, ONLY : UseCovariant               !^CFG IF COVARIANT
+  use ModGeometry, ONLY : UseCovariant               
   use ModIO, ONLY : iBLKsatellite,iPEsatellite,Xsatellite,&
        SatelliteInBLK,DoTrackSatellite_I,nSatellite
   use ModNumConst
@@ -170,16 +170,16 @@ subroutine set_satellite_flags(iSat)
   call set_satellite_positions(iSat)
      if(.not.DoTrackSatellite_I(iSat)) return !Position is not defined
 
-     if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
+     if(UseCovariant)then                  
         call xyz_to_gen(XSatellite(iSat,:),GenOut_D)
         xSat=GenOut_D(1)
         ySat=GenOut_D(2)
         zSat=GenOut_D(3)
-     else                                   !^CFG END COVARIANT
+     else                                   
         xSat=XSatellite(iSat,1)
         ySat=XSatellite(iSat,2)
         zSat=XSatellite(iSat,3)
-     end if                                 !^CFG IF COVARIANT             
+     end if                                              
 
      iPE = -1
      iBLKtemp = -1
@@ -223,7 +223,7 @@ subroutine set_satellite_positions(iSat)
   use ModMain, ONLY : nI,nJ,nK,n_step,nBlockMax,StartTime,time_simulation, &
        time_accurate
   use ModGeometry, ONLY : x1,x2,y1,y2,z1,z2,XyzStart_BLK,dx_BLK,dy_BLK,dz_BLK
-  use ModGeometry, ONLY : TypeGeometry               !^CFG IF COVARIANT
+  use ModGeometry, ONLY : TypeGeometry               
   use ModNumConst
   use ModIO
   implicit none

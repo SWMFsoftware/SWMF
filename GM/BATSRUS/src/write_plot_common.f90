@@ -8,7 +8,7 @@ subroutine write_plot_common(ifile)
   use ModProcMH
   use ModMain
   use ModGeometry, ONLY : XyzMin_D,XyzMax_D,true_cell
-  use ModGeometry, ONLY : TypeGeometry,UseCovariant     !^CFG IF COVARIANT
+  use ModGeometry, ONLY : TypeGeometry,UseCovariant     
   use ModPhysics, ONLY : No2Io_V, UnitX_, thetaTilt,Rbody
   use ModIO
   use ModIoUnit, ONLY : io_unit_new
@@ -428,7 +428,7 @@ subroutine write_plot_common(ifile)
            write(unit_tmp,'(a)')trim(unitstr_IDL)
            write(unit_tmp,'(l8,a)')save_binary,' save_binary'
            if(save_binary)write(unit_tmp,'(i8,a)')nByteReal,' nByteReal'
-           if(UseCovariant)write(unit_tmp,'(a)')TypeGeometry !^CFG IF COVARIANT
+           if(UseCovariant)write(unit_tmp,'(a)')TypeGeometry 
         end select
         if (index(plot_type1,'sph')>0) then
            write(unit_tmp,'(1pe13.5,a)')rplot,' rplot'
@@ -751,10 +751,10 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
      case('b1z')
         PlotVar(:,:,:,iVar) = State_VGB(Bz_,:,:,:,iBLK)
      case('jx')
-        if(UseCovariant)then                       !^CFG IF COVARIANT BEGIN
+        if(UseCovariant)then                       
            call covar_curlb_plotvar(x_,iBLK,PlotVar(:,:,:,iVar))  
-        else                                       !^CFG END COVARIANT
-           if(true_BLK(iBLK))then                  !^CFG IF NOT COVARIANT BEGIN
+        else                                       
+           if(true_BLK(iBLK))then                  
               PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
                    (State_VGB(Bz_, 0:nI+1, 1:nJ+2, 0:nK+1,iBLK) &
                    -State_VGB(Bz_, 0:nI+1,-1:nJ  , 0:nK+1,iBLK))/dy_BLK(iBLK)-&
@@ -784,14 +784,14 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
                       (State_VGB(By_,i  ,j  ,kp1,iBLK) &
                       -State_VGB(By_,i  ,j  ,km1,iBLK))*zfactor / dz_BLK(iBLK))
               end do; end do; end do
-           end if                            !^CFG END COVARIANT
+           end if                            
            continue
-        end if                               !^CFG IF COVARIANT
+        end if                               
      case('jy')
-        if(UseCovariant)then                 !^CFG IF COVARIANT BEGIN 
+        if(UseCovariant)then                  
            call covar_curlb_plotvar(y_,iBLK,PlotVar(:,:,:,iVar))   
-        else                                 !^CFG END COVARIANT
-           if(true_BLK(iBLK))then            !^CFG IF NOT COVARIANT BEGIN
+        else                                 
+           if(true_BLK(iBLK))then            
               PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
                    (State_VGB(Bx_, 0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
                    -State_VGB(Bx_, 0:nI+1, 0:nJ+1,-1:nK  ,iBLK))/dz_BLK(iBLK)-&
@@ -821,15 +821,15 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
                       (State_VGB(Bz_,ip1,j  ,k  ,iBLK) &
                       -State_VGB(Bz_,im1,j  ,k  ,iBLK))*xfactor/dx_BLK(iBLK))
               end do; end do; end do
-           endif                                   !^CFG END COVARIANT
+           endif                                   
            continue
-        end if                                     !^CFG IF COVARIANT
+        end if                                     
 
      case('jz')
-        if(UseCovariant)then                       !^CFG IF COVARIANT BEGIN
+        if(UseCovariant)then                       
            call covar_curlb_plotvar(z_,iBLK,PlotVar(:,:,:,iVar))  
-        else                                       !^CFG END COVARIANT
-           if(true_BLK(iBLK))then                  !^CFG IF NOT COVARIANT BEGIN
+        else                                       
+           if(true_BLK(iBLK))then                  
               PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
                    (State_VGB(By_, 1:nI+2,0:nJ+1,0:nK+1,iBLK) &
                    -State_VGB(By_,-1:nI  ,0:nJ+1,0:nK+1,iBLK))/dx_BLK(iBLK) - &
@@ -859,9 +859,9 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
                       (State_VGB(Bx_,i  ,jp1,k  ,iBLK) &
                       -State_VGB(Bx_,i  ,jm1,k  ,iBLK))*yfactor/dy_BLK(iBLK))
               end do; end do; end do
-           end if                                  !^CFG END COVARIANT
+           end if                                  
            continue
-        end if                                     !^CFG IF COVARIANT
+        end if                                     
      case('jxe','jye','jze','jxw','jyw','jzw', &
           'jxs','jys','jzs','jxn','jyn','jzn', &
           'jxb','jyb','jzb','jxt','jyt','jzt')
@@ -989,10 +989,10 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              + State_VGB(Bz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) &
              ) / R_BLK(:,:,:,iBLK)                                 
      case('jr')
-        if(UseCovariant)then                       !^CFG IF COVARIANT BEGIN
+        if(UseCovariant)then                       
            call covar_curlbr_plotvar(iBLK,PlotVar(:,:,:,iVar))  
-        else                                       !^CFG END COVARIANT
-           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &  !^CFG IF NOT COVARIANT BEGIN
+        else                                       
+           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &  
                 0.5 / R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) * &
                 ( ( &
                 ( State_VGB(Bz_,0:nI+1, 1:nJ+2, 0:nK+1,iBLK) & 
@@ -1011,9 +1011,9 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
                 - State_VGB(By_,-1:nI  , 0:nJ+1,0:nK+1,iBLK))/dx_BLK(iBLK) - &
                 ( State_VGB(Bx_, 0:nI+1, 1:nJ+2,0:nK+1,iBLK) &
                 - State_VGB(Bx_, 0:nI+1,-1:nJ  ,0:nK+1,iBLK))/dy_BLK(iBLK)   &
-                ) * z_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) )     !^CFG END COVARIANT
+                ) * z_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) )     
            continue
-        end if                                             !^CFG IF COVARIANT
+        end if                                             
      case('er')
         PlotVar(:,:,:,iVar)=( ( State_VGB(iRhoUz,:,:,:,iBLK)* &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK)) &
@@ -1063,10 +1063,10 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              + tmp1Var*State_VGB(iRhoUz,:,:,:,iBLK)*Z_BLK(:,:,:,iBLK) &   
              )/(State_VGB(iRho,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
      case('divb','divb_cd','divb_ct')
-        if(UseCovariant)&                            !^CFG IF COVARIANT BEGIN
+        if(UseCovariant)&                            
              call stop_mpi('When UseCovariant=T use absdivb indstead of divb')
-                                                     !^CFG END COVARIANT
-        !^CFG IF NOT COVARIANT BEGIN
+                                                     
+        
         if(String == 'divb_cd' .or. (String == 'divb' &
              .and..not.UseConstrainB &               !^CFG IF CONSTRAINB
              ))then
@@ -1119,7 +1119,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         if(.not.true_BLK(iBLK))then
            where(.not.true_cell(:,:,:,iBLK))PlotVar(:,:,:,iVar)=0.0
         endif
-!^CFG END COVARIANT
+
      case('absdivb')
          PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &
               abs(DivB1_GB(0:nI+1,0:nJ+1,0:nK+1,iBLK))

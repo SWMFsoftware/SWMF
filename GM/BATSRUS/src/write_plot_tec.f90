@@ -13,7 +13,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC
        TypeCoordSystem, CodeVersion
   use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
   use ModMain, ONLY: boris_correction                     !^CFG IF BORISCORR
-  use ModCovariant, ONLY: UseCovariant, TypeGeometry      !^CFG IF COVARIANT
+  use ModCovariant, ONLY: UseCovariant, TypeGeometry      
   use ModParallel, ONLY : iBlock_A, iProc_A
   use ModPhysics, ONLY : No2Io_V, UnitX_, &
        ThetaTilt, Rbody, boris_cLIGHT_factor, BodyNDim_I, g
@@ -182,7 +182,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC
      if((xmax-xmin)<(ymax-ymin) .and. (xmax-xmin)<(zmax-zmin))then
         !X Slice
         CutValue = 0.5*(xmin+xmax)
-        if(.not.UseCovariant)then        !^CFG IF COVARIANT           
+        if(.not.UseCovariant)then             
            ! First loop to count nodes and cells        
            do iBlockALL  = 1, nBlockALL
               iBLK = iBlock_A(iBlockALL)
@@ -246,7 +246,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC
                  end if
               end if
            end do
-        else if(TypeGeometry == 'spherical_lnr' .or. & !^CFG IF COVARIANT BEGIN
+        else if(TypeGeometry == 'spherical_lnr' .or. & 
              TypeGeometry == 'spherical') then 
            ! First loop to count nodes and cells        
            do iBlockALL  = 1, nBlockALL
@@ -311,12 +311,12 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC
                  end if
               end if
            end do
-        end if                         !^CFG IF COVARIANT END
+        end if                         
 
      elseif((ymax-ymin)<(zmax-zmin))then
         !Y Slice
         CutValue = 0.5*(ymin+ymax)
-        if(.not.UseCovariant)then        !^CFG IF COVARIANT           
+        if(.not.UseCovariant)then                   
            ! First loop to count nodes and cells
            do iBlockALL  = 1, nBlockALL
               iBLK = iBlock_A(iBlockALL)
@@ -380,7 +380,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC
                  end if
               end if
            end do
-        else if(TypeGeometry == 'spherical_lnr' .or. & !^CFG IF COVARIANT BEGIN
+        else if(TypeGeometry == 'spherical_lnr' .or. & 
              TypeGeometry == 'spherical') then 
            ! First loop to count nodes and cells
            do iBlockALL  = 1, nBlockALL
@@ -445,7 +445,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC
                  end if
               end if
            end do
-        end if               !^CFG IF COVARIANT END
+        end if               
 
      else
         !Z Slice

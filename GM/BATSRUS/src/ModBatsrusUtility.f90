@@ -362,8 +362,8 @@ real function integrate_BLK(qnum,qa)
 
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,nBLK,nBlockMax,unusedBLK
-  use ModGeometry, ONLY : cV_BLK,true_BLK,true_cell !^CFG IF NOT COVARIANT
-  use ModGeometry, ONLY : UseCovariant      !^CFG IF COVARIANT  
+  use ModGeometry, ONLY : cV_BLK,true_BLK,true_cell 
+  use ModGeometry, ONLY : UseCovariant      
   use ModMpi
   implicit none 
 
@@ -377,13 +377,12 @@ real function integrate_BLK(qnum,qa)
   integer :: iBLK, iError
 
   logical :: oktest, oktest_me
-  real,external:: integrate_BLK_covar  !^CFG IF COVARIANT BEGIN
+  real,external:: integrate_BLK_covar  
   !---------------------------------------------------------------------------
   if(UseCovariant)then
      integrate_BLK=integrate_BLK_covar(qnum,qa)
      return
-  end if                               !^CFG END COVARIANT 
-                                       !^CFG IF NOT COVARIANT BEGIN
+  end if                               
   call set_oktest('integrate_BLK',oktest, oktest_me)
 
   qsum=0.0
@@ -410,7 +409,6 @@ real function integrate_BLK(qnum,qa)
      integrate_BLK=qsum
      if(oktest)write(*,*)'me,qsum:',iProc,qsum
   end if
-!^CFG END COVARIANT
 end function integrate_BLK    
 
 
@@ -1542,7 +1540,7 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
   use ModParallel,ONLY : proc_dims
   use ModOctree, ONLY: adaptive_block_ptr, octree_roots
   use ModSize, ONLY: nCells
-  use ModGeometry, ONLY : UseCovariant         !^CFG IF COVARIANT
+  use ModGeometry, ONLY : UseCovariant         
   use ModGeometry, ONLY : XyzMin_D, XyzMax_D
   use ModNumConst
   implicit none
@@ -1562,13 +1560,13 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
 
   ! Perform the coordinate transformation, if needed
                      
-  if(UseCovariant)then                       !^CFG IF COVARIANT BEGIN
+  if(UseCovariant)then                       
      call xyz_to_gen((/x,y,z/),Xyz_D)
-  else                                       !^CFG END COVARIANT
+  else                                       
      Xyz_D(1)=x
      Xyz_D(2)=y
      Xyz_D(3)=z
-  end if                                     !^CFG IF COVARIANT
+  end if                                     
 
   !Check, if we are within the Octree:
   if(any(Xyz_D(1:3)<XyzMin_D(1:3)).or.any(Xyz_D(1:3)>XyzMax_D(1:3)-cTiny))&

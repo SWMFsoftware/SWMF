@@ -13,7 +13,7 @@ MOD1 = ModCT.o       #^CFG IF CONSTRAINB
 MOD2 = ModImplicit.o #^CFG IF IMPLICIT
 MOD3 = ModRaytrace.o #^CFG IF RAYTRACE
 MOD4 = ModProject.o  #^CFG IF PROJECTION
-MOD7 = ModCovariant.o#^CFG IF COVARIANT
+
 
 MODULES = \
 	ModAdvance.o\
@@ -25,6 +25,7 @@ MODULES = \
 	ModEnergy.o\
 	ModEquation.o\
 	ModCharacteristic.o\
+	ModCovariant.o\
 	ModFaceFlux.o\
 	ModFaceValue.o\
 	ModGeometry.o\
@@ -45,7 +46,7 @@ MODULES = \
 	ModUser.o \
 	ModMagnetogram.o \
 	ModExpansionFactors.o \
-	${MOD1}	${MOD2}	${MOD3} ${MOD4} ${MOD7}
+	${MOD1}	${MOD2}	${MOD3} ${MOD4} 
 
 # OBJECT FILES FOR MAIN EXECUTABLE
 
@@ -67,8 +68,6 @@ OBJ4=project_B.o proj_cg.o proj_bicgstab.o #	^CFG IF PROJECTION
 
 OBJ10=  calc_heat_flux.o set_resistivity.o ModResistivity.o #^CFG IF DISSFLUX
 
-OBJ14=covariant.o fix_axis_cells.o          #^CFG IF COVARIANT
-
 OBJ15=clean_divb.o                          #^CFG IF DIVBDIFFUSE
 
 OBJECTS = \
@@ -84,10 +83,12 @@ OBJECTS = \
 	calc_timestep.o\
 	coarsen_grid.o\
 	conserve_flux.o\
+	covariant.o\
 	create_soln_blocks.o\
 	exchange_messages.o\
 	explicit.o\
 	find_neighbors.o\
+	fix_axis_cells.o\
 	get_solar_wind_point.o\
 	library.o\
 	load_balance.o\
@@ -118,7 +119,7 @@ OBJECTS = \
 	write_plot_radiowave.o \
 	write_progress.o\
 	${OBJ1} ${OBJ2} ${OBJ3} ${OBJ3B} ${OBJ4} \
-	${OBJ10} ${OBJ11} ${OBJ14} ${OBJ15}
+	${OBJ10} ${OBJ15}
 
 
 # Default user module

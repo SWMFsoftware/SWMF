@@ -1,4 +1,4 @@
-!^CFG FILE COVARIANT
+
 
 subroutine fix_axis_cells
 

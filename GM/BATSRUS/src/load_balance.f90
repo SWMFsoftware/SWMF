@@ -6,7 +6,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
        SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, ImplBlock_
   use ModGeometry, ONLY: True_Blk
-  use ModGeometry, ONLY: UseCovariant     !^CFG IF COVARIANT
+  use ModGeometry, ONLY: UseCovariant     
   use ModPartSteady, ONLY: UsePartSteady
   use ModAMR, ONLY : availableBLKs, UnusedBlock_BP
   use ModParallel
@@ -250,12 +250,11 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
         call calc_energy_ghost(iBlock)
 
         if(DoMoveExtraData)then
-           if(UseCovariant)then                       !^CFG IF COVARIANT BEGIN
+           if(UseCovariant)then                      
               call calc_b0source_covar(iBlock)  
-           else                                       !^CFG END COVARIANT
-              call set_b0_matrix(iBlock)              !^CFG IF NOT COVARIANT
-              continue
-           end if                                     !^CFG IF COVARIANT
+           else                                       
+              call set_b0_matrix(iBlock)              
+           end if                                     
            call init_conservative_facefluxes(iBlock)
         else
            call calc_other_soln_vars(iBlock)
@@ -295,8 +294,8 @@ contains
   !===========================================================================
   subroutine finish_load_balance
 
-    use ModCovariant,ONLY: UseVertexBasedGrid, &       !^CFG IF COVARIANT
-         do_fix_geometry_at_reschange                  !^CFG IF COVARIANT
+    use ModCovariant,ONLY: UseVertexBasedGrid, &       
+         do_fix_geometry_at_reschange                  
 
     integer :: iBlock
 
@@ -305,14 +304,12 @@ contains
 
        call find_neighbors
 
-       !^CFG IF COVARIANT BEGIN
        if(DoMoveCoord .and. UseVertexBasedGrid)then
           do iBlock=1, nBlock
              if(do_fix_geometry_at_reschange(iBlock)) &       
                   call fix_geometry_at_reschange(iBlock) 
           end do
        end if
-       !^CFG END COVARIANT
 
        ! Analyze only when new blocks are created   !^CFG IF DEBUGGING
        if(IsNewBlock)call analyze_neighbors         !^CFG IF DEBUGGING 

@@ -19,7 +19,7 @@ subroutine calc_sources
        UseHallResist, HallHyperFactor, calc_hyper_resistivity 
   use ModMultiFluid
 
-  use ModCovariant, ONLY: UseCovariant !^CFG IF COVARIANT
+  use ModCovariant, ONLY: UseCovariant 
 
   implicit none
 
@@ -92,11 +92,11 @@ subroutine calc_sources
 
 
   if(UseDivbSource)then
-     if(UseCovariant)then   !^CFG IF COVARIANT BEGIN
+     if(UseCovariant)then   
         call calc_divb_source_covar
-     else                   !^CFG END COVARIANT
+     else                   
         call calc_divb_source
-     end if                 !^CFG IF COVARIANT
+     end if                 
 
      if(DoTestMe)write(*,*)'divb=',DivB1_GB(iTest,jTest,kTest,BlkTest)
      if(DoTestMe.and.VarTest>=RhoUx_.and.VarTest<=RhoUz_)&
@@ -411,7 +411,6 @@ contains
 
   end subroutine calc_divb_source
   !===========================================================================
-  !^CFG IF COVARIANT BEGIN
   subroutine calc_divb_source_covar
 
     use ModCovariant, ONLY: FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
@@ -562,7 +561,7 @@ contains
 
   end subroutine calc_divb_source_covar
   !===========================================================================
-  !^CFG END COVARIANT
+ 
   subroutine write_source(String)
     character(len=*) :: String
     write(*,'(a,a,es13.5)',advance='no') &
@@ -627,7 +626,7 @@ subroutine get_current(i,j,k,iBlock,Current_D)
 
   use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
   use ModGeometry, ONLY: True_Cell, Dx_BLK, Dy_BLK, Dz_BLK
-  use ModCovariant,ONLY: UseCovariant                !^CFG IF COVARIANT
+  use ModCovariant,ONLY: UseCovariant                
 
   implicit none
   integer, intent(in) :: i,j,k,iBlock
@@ -642,10 +641,10 @@ subroutine get_current(i,j,k,iBlock,Current_D)
      RETURN
   endif
 
-  if(UseCovariant)then                               !^CFG IF COVARIANT BEGIN
+  if(UseCovariant)then                               
      call covariant_curlb(i,j,k,iBlock,Current_D,.true.)
      RETURN
-  end if                                             !^CFG END COVARIANT
+  end if                                             
 
   DxInvHalf = 0.5/Dx_BLK(iBlock)
   DyInvHalf = 0.5/Dy_BLK(iBlock)

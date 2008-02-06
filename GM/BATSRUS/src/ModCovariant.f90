@@ -1,5 +1,4 @@
 !^CFG COPYRIGHT UM
-!^CFG FILE COVARIANT
 module ModCovariant
   use ModSize
   use ModNumConst

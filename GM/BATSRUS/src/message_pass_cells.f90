@@ -1049,8 +1049,8 @@ subroutine mp_build_cell_indices(JustCount)
   use ModOctree
   use ModMPCells
   use ModAMR, ONLY : unusedBlock_BP
-  use ModGeometry,ONLY:TypeGeometry                !^CFG IF COVARIANT
-  use ModParallel,ONLY:NOBLK                       !^CFG IF COVARIANT
+  use ModGeometry,ONLY:TypeGeometry                
+  use ModParallel,ONLY:NOBLK                       
   implicit none
 
   !Subroutine arguements
@@ -1140,12 +1140,11 @@ subroutine mp_build_cell_indices(JustCount)
                  do sSubF=1,nsubF(idir)
                     call build_i
                  end do
-              case(NOBLK)                                  !^CFG IF COVARIANT BEGIN
+              case(NOBLK)                                 
                  if(DoFixExtraBoundary.and.&
                       ((index(TypeGeometry,'spherical')>0&
                       .and.(idir==Top_.or.idir==Bot_)).or.& 
                       (index(TypeGeometry,'cylindrical')>0.and.idir==West_))) call build_i_axis
-                 !^CFG END COVARIANT  
               end select
            end do
         else
@@ -1167,12 +1166,11 @@ subroutine mp_build_cell_indices(JustCount)
                  do sSubF=1,nsubF(idir)
                     call build_i
                  end do
-              case(NOBLK)                                  !^CFG IF COVARIANT BEGIN
+              case(NOBLK)                  
                  if(DoFixExtraBoundary.and.&
                       ((index(TypeGeometry,'spherical')>0&
                       .and.(idir==Top_.or.idir==Bot_)).or.& 
                       (index(TypeGeometry,'cylindrical')>0.and.idir==West_)))  call build_i_axis
-                 !^CFG END COVARIANT  
               end select
            end do
         end if
@@ -1772,7 +1770,7 @@ contains
     end if
 
   end subroutine set_indices
-  subroutine build_i_axis                              !^CFG IF COVARIANT BEGIN
+  subroutine build_i_axis                              
     !Local variables
     integer :: i,j,k,n
     integer :: iStepR,kStepR
@@ -1831,7 +1829,7 @@ contains
        end do; end do; end do
     end if
 
-  end subroutine build_i_axis                                   !^CFG END COVARIANT
+  end subroutine build_i_axis                                   
 
 end subroutine mp_build_cell_indices
 

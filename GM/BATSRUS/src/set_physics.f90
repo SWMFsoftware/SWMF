@@ -8,7 +8,7 @@ subroutine set_physics_constants
   use ModProcMH
   use ModAMR
   use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, XyzMin_D, XyzMax_D
-  use ModGeometry, ONLY: is_axial_geometry              !^CFG IF COVARIANT
+  use ModGeometry, ONLY: is_axial_geometry              
   use ModIO,       ONLY: plot_range, plot_dx, plot_, nPlotFile
   use ModMain
   use ModPhysics
@@ -96,11 +96,11 @@ subroutine set_physics_constants
   !call set_xyzminmax
   !
   !do iFile = plot_+1, plot_+nplotfile
-  !   if(is_axial_geometry())then     !^CFG IF COVARIANT BEGIN
+  !   if(is_axial_geometry())then     
   !      plot_range(1:2,iFile) = plot_range(1:2,iFile)*Io2No_V(UnitX_)
-  !   else                            !^CFG END COVARIANT
+  !   else                            
   !      plot_range(1:6,iFile) = plot_range(1:6,iFile)*Io2No_V(UnitX_)
-  !   end if                          !^CFG IF COVARIANT
+  !   end if                          
   !   where(plot_dx(:,iFile) > 0.) &
   !        plot_dx(:,iFile) = plot_dx(:,iFile)*Io2No_V(UnitX_)
   !end do

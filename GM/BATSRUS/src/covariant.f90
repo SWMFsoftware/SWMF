@@ -1,5 +1,4 @@
 !^CFG COPYRIGHT UM
-!^CFG FILE COVARIANT
 !subroutine gen_to_xyz_arr maps the piece of an equally spaced grid
 !in the space of GENERALIZED COORDINATES to the cartesian space xyz
 subroutine gen_to_xyz_arr(&
@@ -145,7 +144,7 @@ subroutine xyz_to_gen(XyzIn_D,GenOut_D)
      !From colatitude to latitude:
      GenOut_D(Theta_)=cHalfPi-GenOut_D(Theta_)
      if(TypeGeometry=='spherical_lnr')&
-          GenOut_D(R_)=alog(max(GenOut_D(R_),cTiny))
+          GenOut_D(R_)=log(max(GenOut_D(R_),cTiny))
   case('axial_torus')
      if(all(XyzIn_D(x_:y_)==cZero))&
           call stop_mpi(&
@@ -216,7 +215,7 @@ subroutine set_xyz_minmax_covar
      XyzMin_D(R_)     = cZero
      XyzMin_D(Phi_)   = cZero
      XyzMin_D(Theta_) = -cHalfPi
-     XyzMax_D(R_)     = cHalf*alog(&
+     XyzMax_D(R_)     = cHalf*log(&
           max(x1*x1,x2*x2)+max(y1*y1,y2*y2)+max(z1*z1,z2*z2))
      XyzMax_D(Phi_)   = cTwoPi
      XyzMax_D(Theta_) = cHalfPi
@@ -429,32 +428,8 @@ subroutine fix_geometry_at_reschange(iBlock)
 
   !Save level of refinement
   OldLevel_IIIB(:,:,:,iBlock)=BLKneighborLEV(:,:,:,iBlock)
-  call test_fix_geometry_reschange
+  call test_block_geometry(iBlock)
 contains
-  subroutine test_fix_geometry_reschange
-    real,dimension(nDim)::FaceArea_D
-    do k=1,nK;do j=1,nJ;do i=1,nI
-       FaceArea_D=FaceAreaI_DFB(:,i+1,j,k,iBlock)-&
-                  FaceAreaI_DFB(:,i  ,j,k,iBlock)+&
-                  FaceAreaJ_DFB(:,i,j+1,k,iBlock)-&
-                  FaceAreaJ_DFB(:,i  ,j,k,iBlock)+&
-                  FaceAreaK_DFB(:,i,j,k+1,iBlock)-&
-                  FaceAreaK_DFB(:,i  ,j,k,iBlock)
-       if(sum(FaceArea_D**2)>cTolerance)then
-          write(*,*)'Wrongly defined face areas'
-          write(*,*)'i,j,k,iBlock=',i,j,k,iBlock
-          write(*,*)'Refinement levels:',BLKneighborLEV(:,:,:,iBlock)
-          write(*,*)'Face Area Vectors:',&
-                  FaceAreaI_DFB(:,i+1,j,k,iBlock),&
-                  FaceAreaI_DFB(:,i  ,j,k,iBlock),&
-                  FaceAreaJ_DFB(:,i,j+1,k,iBlock),&
-                  FaceAreaJ_DFB(:,i  ,j,k,iBlock),&
-                  FaceAreaK_DFB(:,i,j,k+1,iBlock),&
-                  FaceAreaK_DFB(:,i  ,j,k,iBlock)
-          call stop_mpi('Stopped')
-       end if
-    end do;end do;end do
-  end subroutine test_fix_geometry_reschange
 !--------------------------------FACE I----------------------------------!
 !Fix face area vectors along I direction
   subroutine refine_face_i(iFace)
@@ -1032,6 +1007,34 @@ contains
     end do;end do;end do
   end subroutine test_fix_geometry
 end subroutine fix_covariant_geometry
+subroutine test_block_geometry(iBlock)
+  use ModCovariant
+  implicit none
+  integer,intent(in)::iBlock
+  real,dimension(nDim)::FaceArea_D
+  integer::i,j,k
+  do k=1,nK;do j=1,nJ;do i=1,nI
+     FaceArea_D=FaceAreaI_DFB(:,i+1,j,k,iBlock)-&
+          FaceAreaI_DFB(:,i  ,j,k,iBlock)+&
+          FaceAreaJ_DFB(:,i,j+1,k,iBlock)-&
+          FaceAreaJ_DFB(:,i  ,j,k,iBlock)+&
+          FaceAreaK_DFB(:,i,j,k+1,iBlock)-&
+          FaceAreaK_DFB(:,i  ,j,k,iBlock)
+     if(sum(FaceArea_D**2)>cTolerance)then
+        write(*,*)'Wrongly defined face areas'
+        write(*,*)'i,j,k,iBlock=',i,j,k,iBlock
+        write(*,*)'CRASH IN THE MAIN FIX GEOMETRY!!!'
+        write(*,*)'Face Area Vectors:',&
+             FaceAreaI_DFB(:,i+1,j,k,iBlock),&
+             FaceAreaI_DFB(:,i  ,j,k,iBlock),&
+             FaceAreaJ_DFB(:,i,j+1,k,iBlock),&
+             FaceAreaJ_DFB(:,i  ,j,k,iBlock),&
+             FaceAreaK_DFB(:,i,j,k+1,iBlock),&
+             FaceAreaK_DFB(:,i  ,j,k,iBlock)
+        call stop_mpi('Stopped')
+     end if
+  end do;end do;end do
+end subroutine test_block_geometry
 !---------------------------------------------------------------------
 subroutine fix_spherical_geometry(iBLK)
   use ModMain

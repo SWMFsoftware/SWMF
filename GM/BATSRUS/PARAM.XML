@@ -1193,7 +1193,7 @@ The coordinate systems are defined in share/Library/src/CON_axes.
 Default is component dependent: "GSM" for GM, "HGI" for IH, and "HGR" for SC.
 </command>
 
-<!-- ^CFG IF COVARIANT BEGIN -->
+<!-- -->
 <command name="GRIDGEOMETRY" alias="COVARIANTGEOMETRY" if="$_IsFirstSession">
 	<parameter name="TypeGeometry" type="string" input="select">
 		<option name="cartesian" default="T"	/>
@@ -1266,7 +1266,7 @@ cell-centered grid either is not logically cartesian, or does not consist of
 the Voronoy cells only.
 
 </command>
-<!-- ^CFG END COVARIANT -->
+<!-- -->
 
 </commandgroup>
 

@@ -50,9 +50,9 @@ subroutine add_resistive_flux(DoResChangeOnly)
   use ModPhysics,  ONLY: gm1
   use ModResistivity,   ONLY: EtaResist_G ,Eta_GB
   use ModMpi
-  use ModCovariant, ONLY: UseCovariant, FaceArea2MinI_B,& !^CFG IF COVARIANT    
-       FaceArea2MinJ_B,FaceArea2MinK_B, &                 !^CFG IF COVARIANT    
-       FaceAreaI_DFB,FaceAreaJ_DFB,FaceAreaK_DFB          !^CFG IF COVARIANT  
+  use ModCovariant, ONLY: UseCovariant, FaceArea2MinI_B,& 
+       FaceArea2MinJ_B,FaceArea2MinK_B, &                 
+       FaceAreaI_DFB,FaceAreaJ_DFB,FaceAreaK_DFB           
   implicit none
   
   logical, intent(in):: DoResChangeOnly
@@ -83,7 +83,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
   ! Compute and add the x_resistive_flux to the x-face fluxes 
   !/
   CristophCoefficient = fAx_BLK(globalBLK)/dx_BLK(globalBLK)
-  if(UseCovariant.and. DoSetCoef_B(globalBLK))then                !^CFG IF COVARIANT BEGIN
+  if(UseCovariant.and. DoSetCoef_B(globalBLK))then               
      DoSetCoef_B(globalBLK)=.false.
 
      do k=1,nK; do j=1,nJ; do i=1,nIFace 
@@ -130,13 +130,13 @@ subroutine add_resistive_flux(DoResChangeOnly)
              - z_BLK(i, j, k-1, globalBLK))**2 )                           
         CCfaceZ_FB(i,j,k,globalBLK)= Area*InvDxyz 
      end do; end do; end do
-  end if                              !^CFG IF COVARIANT END
+  end if                              
    
   if (.not.DoResChangeOnly) then
      do k=kMinFaceX,kMaxFaceX
         do j=jMinFaceX,jMaxFaceX
            do i=1,nIFace
-              if(UseCovariant) CristophCoefficient = CCfaceX_FB(i,j,k,globalBLK) !^CFG IF COVARIANT
+              if(UseCovariant) CristophCoefficient = CCfaceX_FB(i,j,k,globalBLK)
               call add_resistive_flux_x
            end do
         end do
@@ -145,7 +145,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
      i=1
      do k=1,nK
         do j=1,nJ
-           if(UseCovariant) CristophCoefficient = CCfaceX_FB(i,j,k,globalBLK) !^CFG IF COVARIANT
+           if(UseCovariant) CristophCoefficient = CCfaceX_FB(i,j,k,globalBLK) 
            call add_resistive_flux_x
         end do
      end do
@@ -153,7 +153,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
      i=nIFace
      do k=1,nK
         do j=1,nJ
-           if(UseCovariant) CristophCoefficient = CCfaceX_FB(i,j,k,globalBLK) !^CFG IF COVARIANT
+           if(UseCovariant) CristophCoefficient = CCfaceX_FB(i,j,k,globalBLK) 
            call add_resistive_flux_x
         end do
      end do
@@ -166,7 +166,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
      do k=kMinFaceY,kMaxFaceY
         do j=1,nJFace
            do i=iMinFaceY,iMaxFaceY
-              if(UseCovariant) CristophCoefficient = CCfaceY_FB(i,j,k,globalBLK) !^CFG IF COVARIANT
+              if(UseCovariant) CristophCoefficient = CCfaceY_FB(i,j,k,globalBLK)
               call add_resistive_flux_y
            end do
         end do
@@ -175,7 +175,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
      j=1
      do k=1,nK
         do i=1,nI
-           if(UseCovariant) CristophCoefficient = CCfaceY_FB(i,j,k,globalBLK) !^CFG IF COVARIANT
+           if(UseCovariant) CristophCoefficient = CCfaceY_FB(i,j,k,globalBLK) 
            call add_resistive_flux_y
         end do
      end do
@@ -183,7 +183,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
      j=nJFace 
      do k=1,nK
         do i=1,nI
-           if(UseCovariant) CristophCoefficient = CCfaceY_FB(i,j,k,globalBLK) !^CFG IF COVARIANT
+           if(UseCovariant) CristophCoefficient = CCfaceY_FB(i,j,k,globalBLK) 
            call add_resistive_flux_y
         end do
      end do
@@ -196,7 +196,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
      do k=1,nKFace
         do j=jMinFaceZ,jMaxFaceZ
            do i=iMinFaceZ,iMaxFaceZ
-              if(UseCovariant) CristophCoefficient = CCfaceZ_FB(i,j,k,globalBLK) !^CFG IF COVARIANT
+              if(UseCovariant) CristophCoefficient = CCfaceZ_FB(i,j,k,globalBLK)
               call add_resistive_flux_z
            end do
         end do
@@ -205,7 +205,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
      k=1
      do j=1,nJ
         do i=1,nI
-           if(UseCovariant) CristophCoefficient = CCfaceZ_FB(i,j,k,globalBLK) !^CFG IF COVARIANT
+           if(UseCovariant) CristophCoefficient = CCfaceZ_FB(i,j,k,globalBLK) 
            call add_resistive_flux_z
         end do
      end do
@@ -213,7 +213,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
      k=nKFace            
      do j=1,nJ
         do i=1,nI
-           if(UseCovariant) CristophCoefficient = CCfaceZ_FB(i,j,k,globalBLK) !^CFG IF COVARIANT
+           if(UseCovariant) CristophCoefficient = CCfaceZ_FB(i,j,k,globalBLK) 
            call add_resistive_flux_z
         end do
      end do

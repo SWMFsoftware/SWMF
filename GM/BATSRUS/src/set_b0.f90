@@ -138,7 +138,7 @@ subroutine set_b0_face(iBlock)
        B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK
   use ModGeometry, ONLY : &       
        dx_BLK,dy_BLK,dz_BLK,XyzStart_BLK
-  use ModGeometry, ONLY : UseCovariant                !^CFG IF COVARIANT
+  use ModGeometry, ONLY : UseCovariant                
   use ModParallel, ONLY : neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
   use ModNumConst
   implicit none
@@ -219,11 +219,10 @@ subroutine set_b0_face(iBlock)
           B0zCell_BLK(0:nI+1,0:nJ+1,1-gcn:nK+gcn-1,iBlock))
 
   end if
-  if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN    
+  if(UseCovariant)then                   
      call calc_b0source_covar(iBlock)         
      return
-  end if                                 !^CFG END COVARIANT
-  !^CFG IF NOT COVARIANT BEGIN
+  end if                                 
 
   if(.not. UseB0FaceRestriction)return
 
@@ -302,9 +301,6 @@ subroutine set_b0_face(iBlock)
   end if
 
   call set_b0_matrix(iBlock)
-
-  !^CFG END COVARIANT   
-
  
 
 contains
@@ -404,7 +400,6 @@ subroutine calc_db0_dt(dTime)
 
 end subroutine calc_db0_dt
 !============================================================================
-
 subroutine set_b0_matrix(iBlock)
 
   ! Calculate the elements of the B0 Source term
@@ -518,6 +513,7 @@ subroutine set_b0_matrix(iBlock)
   end do; end do; end do
 
 end subroutine set_b0_matrix
+
 !============================================================================
 real function eigenvalue_max(A_DD)
   use ModNumConst

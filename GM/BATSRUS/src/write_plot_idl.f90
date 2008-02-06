@@ -10,7 +10,7 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
        x_, y_, z_, Phi_
   use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, Dx_BLK, Dy_BLK, Dz_BLK,&
        x1, x2, y1, y2, z1, z2, XyzStart_BLK, XyzMin_D, XyzMax_D
-  use ModCovariant, ONLY: is_axial_geometry           !^CFG IF COVARIANT
+  use ModCovariant, ONLY: is_axial_geometry          
   use ModPhysics, ONLY : No2Io_V, UnitX_
   use ModIO
   use ModNumConst
@@ -103,14 +103,14 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
   zMax1 = zMax + cHalfMinusTiny*Dz_BLK(iBlock)
 
   nCell = 0
-  if(is_axial_geometry())then                  !^CFG IF COVARIANT BEGIN
+  if(is_axial_geometry())then                 
      ! Make sure that angles around 3Pi/2 are moved to Pi/2 for x=0 cut
      ySqueezed = mod(xyzStart_BLK(Phi_,iBlock),cPi)
      ! Make sure that small angles are moved to Pi degrees for y=0 cut
      if(ySqueezed < 0.25*cPi) ySqueezed = ySqueezed + cPi
-  else                                          !^CFG END COVARIANT
+  else                                          
      ySqueezed = xyzStart_BLK(y_,iBlock)
-  end if                                        !^CFG IF COVARIANT 
+  end if                                         
 
   ! If block is fully outside of cut then cycle
   if(  xyzStart_BLK(x_,iBlock) > xMax1.or.&

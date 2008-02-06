@@ -2,66 +2,18 @@
 #^CFG FILE CONFIGURE
 
 config_help:
-	@#^CFG IF COVARIANT BEGIN
-	@echo "    covariant_src  (Make COVARIANT directory with BATSRUS on covariant grid)"
-	@echo "    corelax_src    (Make CORELAX directory for the covariant version "
-	@echo "                of the magnetogram-driven solar wind)"
-	@#^CFG END COVARIANT
-	@#^CFG IF NOT COVARIANT BEGIN
-	@echo "    cartesian_src  (removes source code for covariant grid)"
 	@echo "    relax_src      (Make RELAX directory for the Cartesian "
 	@echo "                    version of the magnetogram-driven solar wind)"
-	@#^CFG END COVARIANT
 	@echo ' '
 
 
-#^CFG IF NOT COVARIANT BEGIN
-############################################################################
 
-DCART =CARTESIAN
-cartesian_src:
-	./Configure.pl -keepall -exe=covariant -d=${DCART} -u
-
-cartesian_conf: cartesian_src
-	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS/${DCART} BATSRUS_conf
-
-cartesian: cartesian_src
-
-#^CFG END COVARIANT
-#^CFG IF COVARIANT BEGIN
-############################################################################
-
-DCOV =COVARIANT
-
-covariant_src:
-	./Configure.pl -d=${DCOV} -u -off=boriscorr \
-		-on=awflux,lindeflux,testing,userfiles,covariant
-
-covariant_conf: covariant_src
-	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS/${DCOV} BATSRUS_conf
-
-covariant: covariant_src
-	cd ${DCOV}; make
-
-covarcheck_src:
-	./Configure.pl -d=COVARCHECK -u -off=boriscorr \
-		-on=awflux,lindeflux,testing,userfiles
-
-covarcheck_conf: covarcheck_src
-	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS/COVARCHECK BATSRUS_conf
-
-covarcheck: covarcheck_src
-	cd COVARCHECK; make
-
-
-#^CFG END COVARIANT
-############################################################################
 DREL=RELAX
 COMP=IH
 relax_src:
 	./Configure.pl -d=${DREL} -u \
-		-on=roeflux,awflux,lindeflux,userfiles,testing,divbdiffuse \
-		-off=ionosphere,boriscorr,covariant
+		-on=roeflux,awflux,lindeflux,userfiles,testing \
+		-off=ionosphere,boriscorr
 	cd ${DREL}; rm -f CVS_Entries .cvsignore
 	cd ${DREL}/srcInterface; \
 		rm -f .cvsignore GM_* ModIeGrid.f90 *bc.f90 *BC.f90 ModPwGrid.f90
@@ -75,16 +27,4 @@ relax_conf: relax_src
 relax: relax_src
 	cd ${DREL}; make
 
-############################################################################
-corelax_src:
-	./Configure.pl -d=CORELAX \
-		-off=rusanovflux,ionosphere,boriscorr,implicit \
-		-on=awflux,testing,userfiles,covariant
-
-corelax_conf: corelax_src
-	cd ..; rm -rf BATSRUS_conf; \
-	ln -s BATSRUS/CORELAX BATSRUS_conf
-
-corelax: corelax_src
-	cd CORELAX; make
 

@@ -1014,7 +1014,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
   use ModGeometry,       ONLY: x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK, &
        r_BLK, XyzStart_Blk
   use ModNumConst
-  use ModCovariant, ONLY: TypeGeometry             !^CFG IF COVARIANT
+  use ModCovariant, ONLY: TypeGeometry             
   use ModInterpolate, ONLY: trilinear
   implicit none
 
@@ -1060,7 +1060,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
      call stop_mpi('ERROR in calc_sphere: Invalid action='//TypeAction)
   end select
 
-  if(index(TypeGeometry,'spherical') > 0)then         !^CFG IF COVARIANT BEGIN
+  if(index(TypeGeometry,'spherical') > 0)then         
      ! For spherical geometry it is sufficient to 
      ! interpolate in the radial direction
 
@@ -1112,7 +1112,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
   elseif(TypeGeometry /= 'cartesian')then
      call stop_mpi('ERROR in calc_sphere: Not implemented for geometry=' &
           //TypeGeometry)
-  else                                                     !^CFG END COVARIANT
+  else                                                     
      ! Get the angular resolution from the input parameter nTheta
      MaxPhi = 2*nTheta
      dTheta = cPi/nTheta
@@ -1230,7 +1230,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
            end do
         end do
      end do
-  end if                                           !^CFG IF COVARIANT
+  end if                                           
   ! deallocate(x_II, y_II, z_I, SinTheta_I)
 
   calc_sphere = Result
@@ -1501,8 +1501,8 @@ subroutine integrate_domain(Sum_V, Pressure_GB)
   use ModAdvance,   ONLY: State_VGB, P_
   use ModMain,      ONLY: nI, nJ, nK, nBlock, MaxBlock, UnusedBLK
   use ModVarIndexes,ONLY: nVar
-  use ModGeometry,  ONLY: cV_BLK, true_BLK, true_cell !^CFG IF NOT COVARIANT
-  use ModGeometry,  ONLY: UseCovariant                !^CFG IF COVARIANT
+  use ModGeometry,  ONLY: cV_BLK, true_BLK, true_cell 
+  use ModGeometry,  ONLY: UseCovariant                
   use ModGeometry,  ONLY: 
   use ModNumConst
   implicit none 
@@ -1517,11 +1517,10 @@ subroutine integrate_domain(Sum_V, Pressure_GB)
   logical :: DoTest, DoTestMe
 
   !---------------------------------------------------------------------------
-  if(UseCovariant)then                            !^CFG IF COVARIANT BEGIN
+  if(UseCovariant)then                            
      call integrate_domain_covar(Sum_V, Pressure_GB)
      return
-  end if                                          !^CFG END COVARIANT
-  !^CFG IF NOT COVARIANT BEGIN
+  end if                                          
   call set_oktest('integrate_domain',DoTest, DoTestMe)
   call timing_start('int_domain')
   Sum_V = cZero
@@ -1543,6 +1542,5 @@ subroutine integrate_domain(Sum_V, Pressure_GB)
      Pressure_GB(1:nI,1:nJ,1:nK,iBlock) = State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)
   end do
   call timing_stop('int_domain')
-!^CFG END COVARIANT
 end subroutine integrate_domain
 

@@ -20,7 +20,7 @@ subroutine save_conservative_facefluxes
   use ModMain
   use ModNumConst
   use ModAdvance
-  use ModGeometry,ONLY: UseCovariant                   !^CFG IF COVARIANT
+  use ModGeometry,ONLY: UseCovariant                   
   use ModParallel, ONLY : &
        neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &
        neiPtop, neiPbot, neiPeast, neiPwest, neiPnorth, neiPsouth, &
@@ -86,15 +86,14 @@ Contains
 
        CorrectedFlux_VXB(Vdt_,   j,k,lFaceTo,globalBLK)= &
             VdtFace_x(             lFaceFrom,j,k)
-       !^CFG IF NOT COVARIANT BEGIN
+      
        CorrectedFlux_VXB(BnL_,   j,k,lFaceTo,globalBLK)= &
             LeftState_VX(Bx_,     lFaceFrom,j,k)*cQuarter
        CorrectedFlux_VXB(BnR_,   j,k,lFaceTo,globalBLK)= &
             RightState_VX(Bx_,     lFaceFrom,j,k)*cQuarter
-       !^CFG END COVARIANT
     end do;end do
-    if(UseCovariant)call save_bn_faceI(&   !^CFG IF COVARIANT
-         lFaceTo,lFaceFrom,globalBLK)      !^CFG IF COVARIANT
+    if(UseCovariant)call save_bn_faceI(&   
+         lFaceTo,lFaceFrom,globalBLK)      
   end subroutine save_corrected_flux_x
 
   !===========================================================================
@@ -107,15 +106,13 @@ Contains
             Flux_VY(Energy_,i,lFaceFrom,k)
        CorrectedFlux_VYB(Vdt_,     i,k,lFaceTo,globalBLK)= &
             VdtFace_y(i,lFaceFrom,k)
-       !^CFG IF NOT COVARIANT BEGIN
        CorrectedFlux_VYB(BnL_,  i,k,lFaceTo,globalBLK)= &
             LeftState_VY(By_,i,lFaceFrom,k)*cQuarter
        CorrectedFlux_VYB(BnR_,  i,k,lFaceTo,globalBLK)= &
             RightState_VY(By_,i,lFaceFrom,k)*cQuarter
-       !^CFG END COVARIANT
     end do; end do
-    if(UseCovariant)call save_bn_faceJ(&  !^CFG IF COVARIANT
-         lFaceTo,lFaceFrom,globalBLK)     !^CFG IF COVARIANT
+    if(UseCovariant)call save_bn_faceJ(&  
+         lFaceTo,lFaceFrom,globalBLK)     
   end subroutine save_corrected_flux_y
 
   !===========================================================================
@@ -129,15 +126,13 @@ Contains
 
        CorrectedFlux_VZB(Vdt_,  i,j,lFaceTo,globalBLK)= &
             VdtFace_z(i,j,lFaceFrom)
-       !^CFG IF NOT COVARIANT BEGIN
        CorrectedFlux_VZB(BnL_,i,j,lFaceTo,globalBLK)= &
             LeftState_VZ(Bz_,i,j,lFaceFrom)*cQuarter
        CorrectedFlux_VZB(BnR_,i,j,lFaceTo,globalBLK)= &
             RightState_VZ(Bz_,i,j,lFaceFrom)*cQuarter
-       !^CFG END COVARIANT
     end do; end do
-    if(UseCovariant)call save_bn_faceK(& !^CFG IF COVARIANT
-         lFaceTo,lFaceFrom,globalBLK)    !^CFG IF COVARIANT
+    if(UseCovariant)call save_bn_faceK(& 
+         lFaceTo,lFaceFrom,globalBLK)    
   end subroutine save_corrected_flux_z
 end subroutine save_conservative_facefluxes
 
@@ -149,7 +144,7 @@ subroutine apply_cons_face_flux
   use ModAdvance
   use ModVarIndexes
   use ModGeometry, ONLY: body_BLK, true_cell
-  use ModGeometry, ONLY: UseCovariant    !^CFG IF COVARIANT
+  use ModGeometry, ONLY: UseCovariant    
   use ModAMR
   use ModParallel, ONLY : &
        neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &
@@ -251,13 +246,11 @@ contains
                CorrectedFlux_VXB(nVar,j,k,lFaceFrom,globalBLK)
           VdtFace_x(lFaceTo,j,k) = &
                CorrectedFlux_VXB(Vdt_,j,k,lFaceFrom,globalBLK)
-          if(UseCovariant)CYCLE    !^CFG IF COVARIANT 
-          !^CFG IF NOT COVARIANT BEGIN
+          if(UseCovariant)CYCLE    
           LeftState_VX(Bx_,lFaceTo,j,k) = &
                CorrectedFlux_VXB(BnL_,j,k,lFaceFrom,globalBLK)
           RightState_VX(Bx_,lFaceTo,j,k) = &
                CorrectedFlux_VXB(BnR_,j,k,lFaceFrom,globalBLK)
-          !^CFG END COVARIANT
        end do;end do
     else
        do k = 1, nK; do j = 1, nJ
@@ -268,18 +261,16 @@ contains
                   CorrectedFlux_VXB(nVar,j,k,lFaceFrom,globalBLK)
              VdtFace_x(lFaceTo,j,k) = &
                   CorrectedFlux_VXB(Vdt_,j,k,lFaceFrom,globalBLK)
-             if(UseCovariant)CYCLE       !^CFG IF COVARIANT 
-             !^CFG IF NOT COVARIANT BEGIN
+             if(UseCovariant)CYCLE       
              LeftState_VX(Bx_,lFaceTo,j,k) = &
                   CorrectedFlux_VXB(BnL_,j,k,lFaceFrom,globalBLK)
              RightState_VX(Bx_,lFaceTo,j,k) = &
                   CorrectedFlux_VXB(BnR_,j,k,lFaceFrom,globalBLK)
-             !^CFG END COVARIANT
           end if
        end do; end do 
     end if
-    if(UseCovariant)call apply_bn_faceI(&      !^CFG IF COVARIANT
-         lFaceFrom,lFaceTo,globalBLK)          !^CFG IF COVARIANT
+    if(UseCovariant)call apply_bn_faceI(&     
+         lFaceFrom,lFaceTo,globalBLK)          
   end subroutine apply_corrected_flux_x
 
   !============================================================================
@@ -293,13 +284,11 @@ contains
                CorrectedFlux_VYB(nVar,i,k,lFaceFrom,globalBLK)
           VdtFace_y(i,lFaceTo,k)= &
                CorrectedFlux_VYB(Vdt_,i,k,lFaceFrom,globalBLK)
-          if(UseCovariant)CYCLE          !^CFG IF COVARIANT 
-          !^CFG IF NOT COVARIANT BEGIN
+          if(UseCovariant)CYCLE          
           LeftState_VY(By_,i,lFaceTo,k) = &
                CorrectedFlux_VYB(BnL_,i,k,lFaceFrom,globalBLK)
           RightState_VY(By_,i,lFaceTo,k) = &
                CorrectedFlux_VYB(BnR_,i,k,lFaceFrom,globalBLK)
-          !^CFG END COVARIANT
        end do; end do 
     else
        do k = 1, nK; do i = 1, nI
@@ -310,18 +299,16 @@ contains
                   CorrectedFlux_VYB(nVar,i,k,lFaceFrom,globalBLK)
              VdtFace_y(i,lFaceTo,k)= &
                   CorrectedFlux_VYB(Vdt_,i,k,lFaceFrom,globalBLK)
-             if(UseCovariant)CYCLE     !^CFG IF COVARIANT 
-             !^CFG IF NOT COVARIANT BEGIN
+             if(UseCovariant)CYCLE    
              LeftState_VY(By_,i,lFaceTo,k) = &
                   CorrectedFlux_VYB(BnL_,i,k,lFaceFrom,globalBLK)
              RightState_VY(By_,i,lFaceTo,k) = &
                   CorrectedFlux_VYB(BnR_,i,k,lFaceFrom,globalBLK)
-             !^CFG END COVARIANT
           end if
        end do; end do 
     end if
-    if(UseCovariant)call apply_bn_faceJ(&      !^CFG IF COVARIANT
-         lFaceFrom,lFaceTo,globalBLK)          !^CFG IF COVARIANT
+    if(UseCovariant)call apply_bn_faceJ(&      
+         lFaceFrom,lFaceTo,globalBLK)          
   end subroutine apply_corrected_flux_y
 
   !============================================================================
@@ -335,13 +322,11 @@ contains
                CorrectedFlux_VZB(nVar,i,j,lFaceFrom,globalBLK)
           VdtFace_z(i,j,lFaceTo) = &
                CorrectedFlux_VZB(Vdt_,i,j,lFaceFrom,globalBLK)
-          if(UseCovariant)CYCLE      !^CFG IF COVARIANT 
-          !^CFG IF NOT COVARIANT BEGIN
+          if(UseCovariant)CYCLE       
           LeftState_VZ(Bz_,i,j,lFaceTo) = &
                CorrectedFlux_VZB(BnL_,i,j,lFaceFrom,globalBLK)
           RightState_VZ(Bz_,i,j,lFaceTo) = &
                CorrectedFlux_VZB(BnR_,i,j,lFaceFrom,globalBLK)
-          !^CFG END COVARIANT
        end do; end do 
     else
        do j = 1, nJ; do i = 1, nI
@@ -352,18 +337,16 @@ contains
                   CorrectedFlux_VZB(nVar,i,j,lFaceFrom,globalBLK)
              VdtFace_z(i,j,lFaceTo) = &
                   CorrectedFlux_VZB(Vdt_,i,j,lFaceFrom,globalBLK)
-             if(UseCovariant)CYCLE    !^CFG IF COVARIANT 
-             !^CFG IF NOT COVARIANT BEGIN
+             if(UseCovariant)CYCLE   
              LeftState_VZ(Bz_,i,j,lFaceTo) = &
                   CorrectedFlux_VZB(BnL_,i,j,lFaceFrom,globalBLK)
              RightState_VZ(Bz_,i,j,lFaceTo) = &
                   CorrectedFlux_VZB(BnR_,i,j,lFaceFrom,globalBLK)
-             !^CFG END COVARIANT
           end if
        end do; end do 
     end if
-    if(UseCovariant)call apply_bn_faceK(&       !^CFG IF COVARIANT
-         lFaceFrom,lFaceTo,globalBLK)           !^CFG IF COVARIANT
+    if(UseCovariant)call apply_bn_faceK(&      
+         lFaceFrom,lFaceTo,globalBLK)           
   end subroutine apply_corrected_flux_z
 
 end subroutine apply_cons_face_flux

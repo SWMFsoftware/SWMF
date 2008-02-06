@@ -4,7 +4,7 @@ Module ModGeometry
   use ModMain,ONLY:body2_,ExtraBc_
   use ModIO,         ONLY: iUnitOut, write_prefix
   use ModProcMH,     ONLY: iProc
-  use ModCovariant                !^CFG IF COVARIANT
+  use ModCovariant                
 
   implicit none
   SAVE
@@ -25,7 +25,7 @@ Module ModGeometry
 
   real, dimension(nBLK) :: dx_BLK, dy_BLK, dz_BLK, Rmin_BLK
   real, dimension(nBLK) :: Rmin2_BLK                                       !^CFG IF SECONDBODY
-  real, dimension(nBLK) :: fAx_BLK, fAy_BLK, fAz_BLK, cV_BLK               !^CFG IF NOT COVARIANT
+  real, dimension(nBLK) :: fAx_BLK, fAy_BLK, fAz_BLK, cV_BLK
 
   real,dimension(nI,nJ,nK,nBLK):: vInv_CB         
  

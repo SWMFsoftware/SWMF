@@ -5,7 +5,7 @@ subroutine specify_initial_refinement(refb, lev)
        UseUserSpecifyRefinement,&
        body1,UseRotatingBc,unusedBLK
   use ModGeometry, ONLY : XyzMin_D,XyzMax_D,XyzStart_BLK,&
-       dy_BLK,dz_BLK,TypeGeometry,x1,x2,&                !^CFG IF COVARIANT
+       dy_BLK,dz_BLK,TypeGeometry,x1,x2,&                
        x_BLK,y_BLK,z_BLK,dx_BLK,far_field_BCs_BLK
   use ModPhysics, ONLY : Rbody,Rcurrents
   use ModAMR, ONLY : InitialRefineType
@@ -45,8 +45,8 @@ subroutine specify_initial_refinement(refb, lev)
         zz1 = cHalf*(z_BLK( 0, 0, 0,iBLK)+z_BLK(   1,   1,   1,iBLK))
         zz2 = cHalf*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(nI+1,nJ+1,nK+1,iBLK))
         
-        select case(TypeGeometry)                              !^CFG IF COVARIANT
-        case('cartesian')                                      !^CFG IF COVARIANT
+        select case(TypeGeometry)                              
+        case('cartesian')                                      
            SizeMax=dx_BLK(iBLK)
            ! Block center coordinates
            xxx = cHalf*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(1,1,1,iBLK)) 
@@ -59,7 +59,7 @@ subroutine specify_initial_refinement(refb, lev)
                 (max(abs(yy1),abs(yy2)))**2 + &
                 (max(abs(zz1),abs(zz2)))**2)
            if(body1.and.maxRblk<rBody)CYCLE
-        case('spherical')                                          !^CFG IF COVARIANT BEGIN
+        case('spherical')                                          
            SizeMax=max(dx_BLK(iBLK),dy_BLK(iBLK)*maxRblk)
            minRblk = XyzStart_BLK(1,iBLK)-cHalf*dx_BLK(iBLK)            
            maxRblk = minRblk+nI*dx_BLK(iBLK)                            
@@ -89,8 +89,7 @@ subroutine specify_initial_refinement(refb, lev)
            zzz=-cOne
            !In case of an arbitrary geometry the variables above
            !are initialized but they are meaningless
-        end select                                                 !^CFG END COVARIANT
-
+        end select                                                
         select case (InitialRefineType)
         case ('none')
            ! Refine no blocks

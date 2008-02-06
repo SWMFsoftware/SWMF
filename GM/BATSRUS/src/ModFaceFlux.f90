@@ -9,9 +9,9 @@ module ModFaceFlux
   use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK, dx_BLK, dy_BLK, dz_BLK
   use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, true_cell
 
-  use ModGeometry,   ONLY: UseCovariant, &                !^CFG IF COVARIANT 
-       FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB, &     !^CFG IF COVARIANT 
-       FaceArea2MinI_B, FaceArea2MinJ_B, FaceArea2MinK_B  !^CFG IF COVARIANT 
+  use ModGeometry,   ONLY: UseCovariant, &                
+       FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB, &     
+       FaceArea2MinI_B, FaceArea2MinJ_B, FaceArea2MinK_B  
 
   use ModAdvance, ONLY:&
        B0xFace_x_BLK, B0yFace_x_BLK, B0zFace_x_BLK, & ! input: face X B0
@@ -94,7 +94,7 @@ module ModFaceFlux
        B1n_=5, B1t1_=6, B1t2_=7, eMhd_=8, pMhd_=9
 
   ! Variables for rotated coordinate system (n is normal to face)
-  real :: Normal_D(3), Tangent1_D(3), Tangent2_D(3)   !^CFG IF COVARIANT 
+  real :: Normal_D(3), Tangent1_D(3), Tangent2_D(3)   
   real :: B0n, B0t1, B0t2
   real :: UnL, Ut1L, Ut2L, B1nL, B1t1L, B1t2L
   real :: UnR, Ut1R, Ut2R, B1nR, B1t1R, B1t2R
@@ -111,7 +111,7 @@ contains
     ! Also store the transformation for rotating back.
     ! Current implementation is for a single ion fluid.
 
-    if(UseCovariant)then                           !^CFG IF COVARIANT BEGIN
+    if(UseCovariant)then                           
        ! Obtain the base vectors of the face aligned coordinate system
        Normal_D(x_) = AreaX / Area
        Normal_D(y_) = AreaY / Area
@@ -153,7 +153,7 @@ contains
        B1nR  = sum(Normal_D  *StateRight_V(Bx_:Bz_))
        B1t1R = sum(Tangent1_D*StateRight_V(Bx_:Bz_))
        B1t2R = sum(Tangent2_D*StateRight_V(Bx_:Bz_))
-    else                                                !^CFG END COVARIANT
+    else                                                
        select case (iDimFace)
        case (x_) ! x face
           ! B0 on the face
@@ -213,7 +213,7 @@ contains
           B1t1R =  StateRight_V(Bx_)
           B1t2R =  StateRight_V(By_)
        end select
-    end if                                           !^CFG IF COVARIANT
+    end if                                          
   end subroutine rotate_state_vectors
   !==========================================================================
   subroutine rotate_flux_vector(FluxRot_V, Flux_V)
@@ -221,7 +221,7 @@ contains
     real, intent(inout):: Flux_V(:)
 
     ! Rotate n,t1,t2 components back to x,y,z components
-    if(UseCovariant)then                             !^CFG IF COVARIANT BEGIN
+    if(UseCovariant)then                             
        Flux_V(RhoUx_) = Normal_D(x_)  *FluxRot_V(RhoUn_)  &
             +           Tangent1_D(x_)*FluxRot_V(RhoUt1_) &
             +           Tangent2_D(x_)*FluxRot_V(RhoUt2_)
@@ -241,7 +241,7 @@ contains
        Flux_V(Bz_   ) = Normal_D(z_)  *FluxRot_V(B1n_)  &
             +           Tangent1_D(z_)*FluxRot_V(B1t1_) &
             +           Tangent2_D(z_)*FluxRot_V(B1t2_)
-    else                                             !^CFG END COVARIANT
+    else                                             
        select case (iDimFace)
        case (x_)
           Flux_V(RhoUx_ ) = FluxRot_V(RhoUn_)
@@ -265,7 +265,7 @@ contains
           Flux_V(By_    ) = FluxRot_V(B1t2_)
           Flux_V(Bz_    ) = FluxRot_V(B1n_)
        end select
-    end if                                           !^CFG IF COVARIANT
+    end if                                           
 
   end subroutine rotate_flux_vector
   !===========================================================================
@@ -565,7 +565,7 @@ contains
     iBlockFace = iBlock
     iDimFace   = iDim
 
-    if(UseCovariant) RETURN    !^CFG IF COVARIANT
+    if(UseCovariant) RETURN    
 
     select case(iDim)
     case(x_)
@@ -602,13 +602,13 @@ contains
 
     iLeft = iFace - 1; jLeft = jFace; kLeft = kFace
 
-    if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
+    if(UseCovariant)then                  
        AreaX = FaceAreaI_DFB(x_, iFace, jFace, kFace, iBlockFace)
        AreaY = FaceAreaI_DFB(y_, iFace, jFace, kFace, iBlockFace)
        AreaZ = FaceAreaI_DFB(z_, iFace, jFace, kFace, iBlockFace)
        Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, FaceArea2MinI_B(iBlockFace))
        Area = sqrt(Area2)
-    end if                                 !^CFG END COVARIANT
+    end if                                
 
     call set_cell_values_common
 
@@ -619,13 +619,13 @@ contains
 
     iLeft = iFace; jLeft = jFace - 1; kLeft = kFace
 
-    if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
+    if(UseCovariant)then                   
        AreaX = FaceAreaJ_DFB(x_, iFace, jFace, kFace, iBlockFace)
        AreaY = FaceAreaJ_DFB(y_, iFace, jFace, kFace, iBlockFace)
        AreaZ = FaceAreaJ_DFB(z_, iFace, jFace, kFace, iBlockFace)
        Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, FaceArea2MinJ_B(iBlockFace))
        Area = sqrt(Area2)
-    end if                                 !^CFG END COVARIANT
+    end if                                
 
     call set_cell_values_common
 
@@ -636,13 +636,13 @@ contains
 
     iLeft = iFace; jLeft = jFace; kLeft = kFace - 1
 
-    if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
+    if(UseCovariant)then                  
        AreaX = FaceAreaK_DFB(x_, iFace, jFace, kFace, iBlockFace)
        AreaY = FaceAreaK_DFB(y_, iFace, jFace, kFace, iBlockFace)
        AreaZ = FaceAreaK_DFB(z_, iFace, jFace, kFace, iBlockFace)
        Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, FaceArea2MinK_B(iBlockFace))
        Area = sqrt(Area2)
-    end if                                 !^CFG END COVARIANT
+    end if                                 
 
     call set_cell_values_common
 
@@ -668,7 +668,6 @@ contains
          ( Eta_GB(iLeft, jLeft  ,kLeft,iBlockFace) &
          + Eta_GB(iRight,jRight,kRight,iBlockFace))  !^CFG END DISSFLUX
 
-    !^CFG IF COVARIANT BEGIN
     if(UseCovariant .and. (HallCoeff > 0.0 .or. Eta > 0.0)) &
          InvDxyz  = 1.0/sqrt(                               &
          ( x_BLK(iRight,jRight,kRight, iBlockFace)          &
@@ -677,7 +676,7 @@ contains
          - y_BLK(iLeft, jLeft  ,kLeft, iBlockFace))**2 +    &
          ( z_BLK(iRight,jRight,kRight, iBlockFace)          &
          - z_BLK(iLeft, jLeft  ,kLeft, iBlockFace))**2 )
-    !^CFG END COVARIANT
+    
 
   end subroutine set_cell_values_common
 
@@ -2166,7 +2165,7 @@ subroutine roe_solver(Flux_V)
   use ModPhysics,  ONLY: g,gm1,inv_gm1
   use ModNumConst
 
-  use ModGeometry,   ONLY: UseCovariant                      !^CFG IF COVARIANT
+  use ModGeometry,   ONLY: UseCovariant                     
   implicit none
 
   real,    intent(out):: Flux_V(nFlux)
@@ -2214,7 +2213,7 @@ subroutine roe_solver(Flux_V)
   ! Misc. scalar variables
   real :: SignBnH, Tmp1, Tmp2, Tmp3, Gamma1A2Inv, DtInvVolume, AreaFace
 
-  real :: dRhoU_D(3), dB1_D(3)                        !^CFG IF COVARIANT
+  real :: dRhoU_D(3), dB1_D(3)                        
   !---------------------------------------------------------------------------
   ! Scalar variables
   RhoL  =  StateLeft_V(Rho_)
@@ -2717,12 +2716,11 @@ subroutine calc_electric_field(iBlock)
   use ModSize,       ONLY: nI, nJ, nK
   use ModVarIndexes, ONLY: Bx_,By_,Bz_
   use ModAdvance,    ONLY: Flux_VX, Flux_VY, Flux_VZ, Ex_CB, Ey_CB, Ez_CB
-  use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK !^CFG IF NOT COVARIANT
+  use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK 
  
   implicit none
   integer, intent(in) :: iBlock
   !------------------------------------------------------------------------
-  !^CFG IF NOT COVARIANT BEGIN
   ! E_x=(fy+fy-fz-fz)/4
   Ex_CB(:,:,:,iBlock) = - 0.25*(                              &
        ( Flux_VY(Bz_,1:nI,1:nJ  ,1:nK  )                      &
@@ -2743,6 +2741,5 @@ subroutine calc_electric_field(iBlock)
        + Flux_VX(By_,2:nI+1,1:nJ  ,1:nK)) / fAx_BLK(iBlock) - &
        ( Flux_VY(Bx_,1:nI  ,1:nJ  ,1:nK)                      &
        + Flux_VY(Bx_,1:nI  ,2:nJ+1,1:nK)) / fAy_BLK(iBlock))
-  !^CFG END COVARIANT
 end subroutine calc_electric_field
 

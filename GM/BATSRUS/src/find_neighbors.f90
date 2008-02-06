@@ -574,7 +574,7 @@ subroutine fixRefinementLevels
   use ModProcMH
   use ModMain, ONLY : nBLK,lVerbose
   use ModAMR, ONLY : refine_list
-  use ModGeometry,ONLY: is_axial_geometry                !^CFG IF COVARIANT
+  use ModGeometry,ONLY: is_axial_geometry                
   use ModOctree
   implicit none
 
@@ -620,7 +620,7 @@ subroutine fixRefinementLevels
                                   outBlockPtr%ptr%IsOuterBoundary)&
                                   .or.(inBlockPtr%ptr%IsExtraBoundary .and.& 
                                   outBlockPtr%ptr%IsExtraBoundary&
-                                  .and.( i==0.and.k==0.or..not.is_axial_geometry())& !^CFG IF COVARIANT
+                                  .and.( i==0.and.k==0.or..not.is_axial_geometry())& 
                                   )&          
                                   ))) then
                                 refine_list(outBlockPtr%ptr%BLK,outBlockPtr%ptr%PE+1) = .true.
@@ -642,7 +642,7 @@ subroutine fixRefinementLevels
   end do
 
 end subroutine fixRefinementLevels
-!^CFG IF COVARIANT BEGIN
+
 subroutine find_axial_neighbor(iPEIn,iBLKIn,iPEOut,iBLKout)
   use ModParallel, ONLY : proc_dims
   use ModOctree
@@ -686,4 +686,4 @@ subroutine find_axial_neighbor(iPEIn,iBLKIn,iPEOut,iBLKout)
      iPEOut  = outBlkPtr%ptr%PE
      iBlkOut = outBlkPtr%ptr%BLK
 end subroutine find_axial_neighbor
-!^CFG END COVARIANT
+

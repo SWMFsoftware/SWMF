@@ -510,9 +510,9 @@ contains
 
     use ModAdvance, ONLY: B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
     
-    use ModHallResist, ONLY: &                 !^CFG IF COVARIANT
-         DgenDxyz_DDC, set_block_jacobian_cell !^CFG IF COVARIANT
-    real :: DbDgen_DD(3,3)                     !^CFG IF COVARIANT
+    use ModHallResist, ONLY: &                 
+         DgenDxyz_DDC, set_block_jacobian_cell 
+    real :: DbDgen_DD(3,3)                     
 
     real :: InvDx2, InvDy2, InvDz2, InvN_G(0:nI+1,0:nJ+1,0:nK+1)
 
@@ -523,7 +523,7 @@ contains
 
     InvDx2 = 0.5/Dxyz(x_); InvDy2 = 0.5/Dxyz(y_); InvDz2 = 0.5/Dxyz(z_)
 
-    if(UseCovariant)then                      !^CFG IF COVARIANT BEGIN
+    if(UseCovariant)then                      
 
        call set_block_jacobian_cell(iBlk)
 
@@ -552,7 +552,7 @@ contains
 
        end do; end do; end do
 
-    else                                        !^CFG END COVARIANT
+    else                                        
 
        do k=1,nK; do j=1,nJ; do i=1,nI
           HallJ_CD(i,j,k,x_) = &
@@ -571,7 +571,7 @@ contains
                +InvDx2*(w_k(i+1,j,k,By_,implBLK)-w_k(i-1,j,k,By_,implBLK)) &
                -InvDy2*(w_k(i,j+1,k,Bx_,implBLK)-w_k(i,j-1,k,Bx_,implBLK))
        end do; end do; end do
-    end if                                     !^CFG IF COVARIANT
+    end if                                    
 
     do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
        HallFactor_G(i,j,k) = hall_factor(0,i,j,k,iBlk)
