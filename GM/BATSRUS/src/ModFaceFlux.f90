@@ -112,10 +112,6 @@ contains
     ! Current implementation is for a single ion fluid.
 
     if(UseCovariant)then                           
-       ! Obtain the base vectors of the face aligned coordinate system
-       Normal_D(x_) = AreaX / Area
-       Normal_D(y_) = AreaY / Area
-       Normal_D(z_) = AreaZ / Area
        if(Normal_D(z_) < 0.5)then
           ! Tangent1 = Normal x (0,0,1)
           Tangent1_D(x_) =  Normal_D(y_)
@@ -431,16 +427,16 @@ contains
          if(UseRS7.and..not.IsBoundary)then
             DeltaBnR=sum((RightState_VX(Bx_:Bz_, iFace, jFace, kFace)-&
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
-                 (/AreaX,AreaY,AreaZ/))/Area
+                 Normal_D)
             RightState_VX(Bx_:Bz_, iFace, jFace, kFace)=&
                  RightState_VX(Bx_:Bz_, iFace, jFace, kFace)-&
-                 DeltaBnR* (/AreaX,AreaY,AreaZ/)/Area   
+                 DeltaBnR* Normal_D   
             DeltaBnL=sum((LeftState_VX(Bx_:Bz_, iFace, jFace, kFace)-&
                  State_VGB(Bx_:Bz_,iFace-1,jFace,kFace,iBlockFace))*&
-                 (/AreaX,AreaY,AreaZ/))/Area
+                 Normal_D)
             LeftState_VX(Bx_:Bz_, iFace, jFace, kFace)=&
                  LeftState_VX(Bx_:Bz_, iFace, jFace, kFace)-&
-                 DeltaBnL* (/AreaX,AreaY,AreaZ/)/Area         
+                 DeltaBnL* Normal_D         
          else
             DeltaBnL=cZero;DeltaBnR=cZero
          end if
@@ -479,16 +475,16 @@ contains
          if(UseRS7.and..not.IsBoundary)then
             DeltaBnR=sum((RightState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
-                 (/AreaX,AreaY,AreaZ/))/Area
+                 Normal_D)
             RightState_VY(Bx_:Bz_, iFace, jFace, kFace)=&
                  RightState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
-                 DeltaBnR* (/AreaX,AreaY,AreaZ/)/Area   
+                 DeltaBnR* Normal_D
             DeltaBnL=sum((LeftState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
                  State_VGB(Bx_:Bz_,iFace,jFace-1,kFace,iBlockFace))*&
-                 (/AreaX,AreaY,AreaZ/))/Area
+                 Normal_D)
             LeftState_VY(Bx_:Bz_, iFace, jFace, kFace)=&
                  LeftState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
-                 DeltaBnL* (/AreaX,AreaY,AreaZ/)/Area         
+                 DeltaBnL* Normal_D         
          else
             DeltaBnL=cZero;DeltaBnR=cZero
          end if
@@ -529,16 +525,16 @@ contains
          if(UseRS7.and..not.IsBoundary)then
             DeltaBnR=sum((RightState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
-                 (/AreaX,AreaY,AreaZ/))/Area
+                 Normal_D)
             RightState_VZ(Bx_:Bz_, iFace, jFace, kFace)=&
                  RightState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
-                 DeltaBnR* (/AreaX,AreaY,AreaZ/)/Area   
+                 DeltaBnR* Normal_D   
             DeltaBnL=sum((LeftState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace-1,iBlockFace))*&
-                 (/AreaX,AreaY,AreaZ/))/Area
+                 Normal_D)
             LeftState_VZ(Bx_:Bz_, iFace, jFace, kFace)=&
                  LeftState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
-                 DeltaBnL* (/AreaX,AreaY,AreaZ/)/Area         
+                 DeltaBnL* Normal_D         
          else
             DeltaBnL=cZero;DeltaBnR=cZero
          end if
@@ -566,7 +562,7 @@ contains
     iDimFace   = iDim
 
     if(UseCovariant) RETURN    
-
+    Normal_D=cZero; Normal_D(iDim)=cOne
     select case(iDim)
     case(x_)
        Area    = fAx_BLK(iBlockFace)
@@ -606,8 +602,23 @@ contains
        AreaX = FaceAreaI_DFB(x_, iFace, jFace, kFace, iBlockFace)
        AreaY = FaceAreaI_DFB(y_, iFace, jFace, kFace, iBlockFace)
        AreaZ = FaceAreaI_DFB(z_, iFace, jFace, kFace, iBlockFace)
-       Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, FaceArea2MinI_B(iBlockFace))
-       Area = sqrt(Area2)
+       Area2 = AreaX**2 + AreaY**2 + AreaZ**2
+       if(Area2 < cHalf*FaceArea2MinI_B(iBlockFace))then
+          !The face is at the pole
+          Normal_D(x_)=x_BLK(iFace, jFace, kFace, iBlockFace)-&
+                       x_BLK(iLeft, jLeft, kLeft, iBlockFace)
+          Normal_D(y_)=y_BLK(iFace, jFace, kFace, iBlockFace)-&
+                       y_BLK(iLeft, jLeft, kLeft, iBlockFace)
+          Normal_D(z_)=z_BLK(iFace, jFace, kFace, iBlockFace)-&
+                       z_BLK(iLeft, jLeft, kLeft, iBlockFace)
+          Normal_D=Normal_D/&
+               sqrt(Normal_D(x_)**2+Normal_D(y_)**2+Normal_D(z_)**2)
+          Area2 = FaceArea2MinI_B(iBlockFace)
+          Area = sqrt(Area2)
+       else
+          Area = sqrt(Area2)
+          Normal_D=(/AreaX,AreaY,AreaZ/)/Area
+       end if
     end if                                
 
     call set_cell_values_common
@@ -623,8 +634,22 @@ contains
        AreaX = FaceAreaJ_DFB(x_, iFace, jFace, kFace, iBlockFace)
        AreaY = FaceAreaJ_DFB(y_, iFace, jFace, kFace, iBlockFace)
        AreaZ = FaceAreaJ_DFB(z_, iFace, jFace, kFace, iBlockFace)
-       Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, FaceArea2MinJ_B(iBlockFace))
-       Area = sqrt(Area2)
+       if(Area2 < cHalf*FaceArea2MinJ_B(iBlockFace))then
+          !The face is at the pole
+          Normal_D(x_)=x_BLK(iFace, jFace, kFace, iBlockFace)-&
+                       x_BLK(iLeft, jLeft, kLeft, iBlockFace)
+          Normal_D(y_)=y_BLK(iFace, jFace, kFace, iBlockFace)-&
+                       y_BLK(iLeft, jLeft, kLeft, iBlockFace)
+          Normal_D(z_)=z_BLK(iFace, jFace, kFace, iBlockFace)-&
+                       z_BLK(iLeft, jLeft, kLeft, iBlockFace)
+          Normal_D=Normal_D/&
+               sqrt(Normal_D(x_)**2+Normal_D(y_)**2+Normal_D(z_)**2)
+          Area2 = FaceArea2MinJ_B(iBlockFace)
+          Area = sqrt(Area2)
+       else
+          Area = sqrt(Area2)
+          Normal_D=(/AreaX,AreaY,AreaZ/)/Area
+       end if
     end if                                
 
     call set_cell_values_common
@@ -640,8 +665,22 @@ contains
        AreaX = FaceAreaK_DFB(x_, iFace, jFace, kFace, iBlockFace)
        AreaY = FaceAreaK_DFB(y_, iFace, jFace, kFace, iBlockFace)
        AreaZ = FaceAreaK_DFB(z_, iFace, jFace, kFace, iBlockFace)
-       Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, FaceArea2MinK_B(iBlockFace))
-       Area = sqrt(Area2)
+       if(Area2 < cHalf*FaceArea2MinK_B(iBlockFace))then
+          !The face is at the pole
+          Normal_D(x_)=x_BLK(iFace, jFace, kFace, iBlockFace)-&
+                       x_BLK(iLeft, jLeft, kLeft, iBlockFace)
+          Normal_D(y_)=y_BLK(iFace, jFace, kFace, iBlockFace)-&
+                       y_BLK(iLeft, jLeft, kLeft, iBlockFace)
+          Normal_D(z_)=z_BLK(iFace, jFace, kFace, iBlockFace)-&
+                       z_BLK(iLeft, jLeft, kLeft, iBlockFace)
+          Normal_D=Normal_D/&
+               sqrt(Normal_D(x_)**2+Normal_D(y_)**2+Normal_D(z_)**2)
+          Area2 = FaceArea2MinK_B(iBlockFace)
+          Area = sqrt(Area2)
+       else
+          Area = sqrt(Area2)
+          Normal_D=(/AreaX,AreaY,AreaZ/)/Area
+       end if
     end if                                 
 
     call set_cell_values_common
@@ -743,7 +782,7 @@ contains
        B0xR = B0xCell_BLK(iRight, jRight, kRight, iBlockFace)
        B0yR = B0yCell_BLK(iRight, jRight, kRight, iBlockFace)
        B0zR = B0zCell_BLK(iRight, jRight, kRight, iBlockFace)
-       call dissipation_matrix(iDimFace,               &
+       call dissipation_matrix(Normal_D,               &
             StateLeft_V, StateRight_V,                 &
             B0x,B0y,B0z,B0xL,B0yL,B0zL,B0xR,B0yR,B0zR, &
             uLeft_D, uRight_D, DeltaBnL, DeltaBnR,     &
