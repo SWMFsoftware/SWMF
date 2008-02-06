@@ -302,15 +302,15 @@ sub install_code_{
     $NewPrecision = $DefaultPrecision unless $NewPrecision;
     &set_precision_ if $NewPrecision ne $Precision;
 
+    # Create Makefile.RULES as needed
+    &create_makefile_rules;
+
     # Install the code
     &shell_command("cd share; make install") 
 	if -d "share" and not $IsComponent;
     &shell_command("cd util; make install") 
 	if -d "util" and not $IsComponent;
     &shell_command("make install");
-
-    # Create Makefile.RULES as needed
-    &create_makefile_rules;
 
     # Now code is installed
     $Installed = 1 unless $DryRun;
