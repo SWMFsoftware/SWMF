@@ -2,10 +2,11 @@
 subroutine calc_timestep
   use ModProcMH
   use ModMain
-  use ModAdvance, ONLY : VdtFace_x,VdtFace_y,VdtFace_z,time_BLK,&
-                         CurlB0_DCB,State_VGB,Rho_,FluxType,NormB0_CB
+  use ModAdvance, ONLY : VdtFace_x, VdtFace_y, VdtFace_z, time_BLK, &
+       DoFixAxis, nAxisCell, CurlB0_DCB, State_VGB, Rho_, FluxType, NormB0_CB
   use ModNumConst
-  use ModGeometry, ONLY : true_cell,true_BLK, vInv_CB
+  use ModGeometry, ONLY: true_cell,true_BLK, vInv_CB
+  use ModParallel, ONLY: NeiLBot, NeiLTop, NOBLK
   implicit none
 
   logical :: DoTest, DoTestMe
@@ -28,13 +29,23 @@ subroutine calc_timestep
   else
      SourceSpectralRadius_C=cZero
   end if
-  do k=1,nK; do j=1,nJ; do i=1,nI
+  do k=1,nK; 
+     do j=1,nJ; do i=1,nI
      time_BLK(i,j,k,iBlock) = cOne /(vInv_CB(i,j,k,iBlock)&
           *(max(VdtFace_x(i,j,k),VdtFace_x(i+1,j,k))+ &
           max(VdtFace_y(i,j,k),VdtFace_y(i,j+1,k))+ &
           max(VdtFace_z(i,j,k),VdtFace_z(i,j,k+1)))+&
           SourceSpectralRadius_C(i,j,k))
   end do; end do; end do
+
+  if(DoFixAxis)then
+     if(NeiLTop(iBlock) == NOBLK) &
+          time_BLK(1:nI, 1:nJ, nK+1-nAxisCell:nK, iBlock) = &
+          time_BLK(1:nI, 1:nJ, nK+1-nAxisCell:nK, iBlock) * 2 * nAxisCell
+     if(NeiLBot(iBlock) == NOBLK) &
+          time_BLK(1:nI, 1:nJ, 1:nAxisCell, iBlock) = &
+          time_BLK(1:nI, 1:nJ, 1:nAxisCell, iBlock) * 2 * nAxisCell
+  end if
 
   if(DoTestMe)then
      write(*,*)'left  VdtFace_x,y,z=',&
