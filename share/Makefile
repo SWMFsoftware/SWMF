@@ -21,9 +21,12 @@ include ../Makefile.def
 Library/src/mpif.h:
 	cd Library/src; cat precision.h mpif90.h > mpif.h
 
+INSTALL_FILES = \
+	Library/src/Makefile.DEPEND \
+	Library/src/Makefile.RULES
+
 install: Library/src/mpif.h
-	touch Library/src/Makefile.DEPEND
-	touch Library/src/Makefile.RULES
+	touch ${INSTALL_FILES}
 
 clean:
 	cd Library/src; make clean
@@ -33,7 +36,6 @@ clean:
 distclean: clean
 	cd Library/test;make distclean
 	cd Prologs;     make distclean
-	rm -f Library/src/mpif*.h Library/src/Makefile.DEPEND \
-		Library/src/Makefile.RULES *~ */*~
+	rm -f Library/src/mpif*.h *~ */*~ ${INSTALL_FILES}
 
 #EOC
