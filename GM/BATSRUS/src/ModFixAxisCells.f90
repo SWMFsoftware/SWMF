@@ -4,7 +4,7 @@ subroutine fix_axis_cells
 
   use ModProcMH, ONLY: iComm
   use ModMain, ONLY: nI, nJ, nK, nBlock, UnusedBlk
-  use ModAdvance, ONLY: nVar, State_VGB
+  use ModAdvance, ONLY: nVar, State_VGB, nAxisCell
   use ModGeometry, ONLY: TypeGeometry, XyzMin_D, XyzMax_D, MinDxValue, &
        x_Blk, y_Blk, z_Blk, r_BLK, Dy_Blk, far_field_bcs_blk
   use ModConst, ONLY: cTwoPi
@@ -17,13 +17,13 @@ subroutine fix_axis_cells
 
   integer, parameter :: Sum_=1, SumX_=2, SumY_=3, SumXX_=4
   integer, parameter :: North_=1, South_=2
-  integer :: i, j, k, k1, iBlock, iHemisphere, iR, nR, nPhi, iError
-  real :: r, StateAvg_V(nVar), dState_V(nVar)
+  integer :: i, j, k, kMin, kMax, iBlock, iHemisphere, iR, nR, iError
+  real :: r, InvNCell, StateAvg_V(nVar), dStateDx_V(nVar), dStateDy_V(nVar)
 
   !--------------------------------------------------------------------------
 
   ! Maximum number of cells in radial direction
-  nR = ceiling((XyzMax_D(1)-XyzMin_D(1))/MinDxValue)
+  nR = nint((XyzMax_D(1)-XyzMin_D(1))/MinDxValue)
   if(.not.allocated(Buffer_VIII)) &
        allocate(Buffer_VIII(nVar, nR, Sum_:SumXX_, North_:South_), &
                 SumBuffer_VIII(nVar, nR, Sum_:SumXX_, North_:South_))
@@ -36,20 +36,19 @@ subroutine fix_axis_cells
 
      ! Determine hemisphere
      if( NeiLTop(iBlock) == NOBLK )then
-        iHemisphere = North_
-        k = nK
+        iHemisphere = North_; kMin = nK + 1 - nAxisCell; kMax = nK
      elseif( NeiLBot(iBlock) == NOBLK) then
-        iHemisphere = South_
-        k = 1
+        iHemisphere = South_; kMin = 1; kMax = nAxisCell
      else
         CYCLE
      endif
-     
+
      do i=1,nI
-        r = r_Blk(i,1,k,iBlock)
+        r = r_Blk(i,1,1,iBlock)
         if(TypeGeometry == 'spherical_lnr') r = alog(r)
-        iR = ceiling(r/MinDxValue+0.1)
-        do j=1,nJ
+        iR = ceiling( (r - XyzMin_D(1))/MinDxValue +0.1)
+
+        do k=kMin, kMax; do j=1,nJ
            Buffer_VIII(:,iR,Sum_,iHemisphere) = &
                 Buffer_VIII(:,iR,Sum_,iHemisphere) &
                 + State_VGB(:,i,j,k,iBlock)
@@ -62,7 +61,7 @@ subroutine fix_axis_cells
            Buffer_VIII(:,iR,SumXX_,iHemisphere) = &
                 Buffer_VIII(:,iR,SumXX_,iHemisphere) &
                 + x_BLK(i,j,k,iBlock)**2
-        end do
+        end do; end do
      end do
   end do
      
@@ -72,37 +71,34 @@ subroutine fix_axis_cells
   do iBlock = 1, nBlock
      if(unusedBlk(iBlock) .or. .not. far_field_BCs_BLK(iBlock)) CYCLE
 
-     nPhi = nint(cTwoPi/Dy_BLK(iBlock))
+     InvNCell = 1.0/(nAxisCell*nint(cTwoPi/Dy_BLK(iBlock)))
 
      if( NeiLTop(iBlock) == NOBLK )then
-        iHemisphere = North_
-        k = nK
-        k1= nK+1
+        iHemisphere = North_; kMax = nK + 1; kMin = nK + 1 - nAxisCell
      elseif( NeiLBot(iBlock) == NOBLK) then
-        iHemisphere = South_
-        k = 1
-        k1= 0
+        iHemisphere = South_; kMin = 0; kMax = nAxisCell
      else
         CYCLE
      endif
 
      do i=1,nI
-        r = r_Blk(i,1,k,iBlock)
+        r = r_Blk(i,1,1,iBlock)
         if(TypeGeometry == 'spherical_lnr') r = alog(r)
-        iR = ceiling(r/MinDxValue+0.1)
-        do j=1,nJ
-           StateAvg_V = SumBuffer_VIII(:,iR,Sum_,iHemisphere)/nPhi
-           dState_V = &
-                ( SumBuffer_VIII(:,iR,SumX_,iHemisphere)*x_BLK(i,j,k,iBlock) &
-                + SumBuffer_VIII(:,iR,SumY_,iHemisphere)*y_BLK(i,j,k,iBlock) &
-                )/SumBuffer_VIII(:,iR,SumXX_,iHemisphere)
+        iR = ceiling( (r - XyzMin_D(1))/MinDxValue + 0.1)
+        StateAvg_V = SumBuffer_VIII(:,iR,Sum_,iHemisphere)*InvNCell
+        dStateDx_V = SumBuffer_VIII(:,iR,SumX_,iHemisphere) &
+             /SumBuffer_VIII(:,iR,SumXX_,iHemisphere)
+        dStateDy_V = SumBuffer_VIII(:,iR,SumY_,iHemisphere) &
+             /SumBuffer_VIII(:,iR,SumXX_,iHemisphere)
 
-           State_VGB(:,i,j,k ,iBlock) = StateAvg_V + dState_V
-           State_VGB(:,i,j,k1,iBlock) = StateAvg_V - dState_V
+        do k=kMin, kMax; do j=1,nJ
+
+           State_VGB(:,i,j,k ,iBlock) = StateAvg_V &
+                + dStateDx_V*x_BLK(i,j,k,iBlock) &
+                + dStateDy_V*y_BLK(i,j,k,iBlock)
 
            call calc_energy_point(i,j,k ,iBlock)
-           call calc_energy_point(i,j,k1,iBlock)
-        end do
+        end do; end do
      end do
 
   end do
