@@ -384,7 +384,7 @@ sub set_optimization_{
 
 sub create_makefile_rules{
 
-    my @InFile = glob("src*/$MakefileRules.all");
+    my @InFile = glob("src*/$MakefileRules.all */*/src*/$MakefileRules.all");
 
     return unless @InFile;
 
@@ -400,8 +400,12 @@ sub create_makefile_rules{
     my $InFile;
     foreach $InFile (@InFile){
 
-	$InFile =~ /(\w*)\//;
+	$InFile =~ /([\w,\/]*)\//;
 	my $SrcDir = $1;
+
+	# Open Makefile.RULES for writing
+	my $OutFile = "$SrcDir/$MakefileRules";
+	open(OUTFILE, ">$OutFile") or die "$ERROR_: could not open $OutFile\n";
 
 	# Create Makefile.DEPEND and read it in
 	my $Dependency;
@@ -413,10 +417,6 @@ sub create_makefile_rules{
 
 	# Open Makefile.RULES.all for reading
 	open(INFILE, $InFile) or die "$ERROR_: could not open $InFile\n";
-
-	# Open Makefile.RULES for writing
-	my $OutFile = "$SrcDir/$MakefileRules";
-	open(OUTFILE, ">$OutFile") or die "$ERROR_: could not open $OutFile\n";
 
 	# Evaluate conditional rules in Makefile.RULES.all
 	my $Condition;
