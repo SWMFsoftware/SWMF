@@ -12,6 +12,7 @@ test:
 	-@(make test_mars)
 	-@(make test_venus)
 	-@(make test_saturn)
+	-@(make test_comet)
 	-@(make test_func)
 	@ls -l *.diff
 
@@ -36,6 +37,7 @@ test_help:
 	@echo "    test_mars                  (run Mars test only)"
 	@echo "    test_venus                 (run Venus test only)"
 	@echo "    test_saturn                (run Saturn test only)"
+	@echo "    test_comet                 (run Comet test only)"
 	@echo "    test_titan                 (run titan tests only)"
 	@echo "    test_titan_start           (run first titan test only)"
 	@echo "    test_titan_restart         (run titan restart test only)"
@@ -376,4 +378,40 @@ test_saturn_check:
 		Param/SATURN/TestOutput/log_n000001.log \
 		${TESTDIR}/RESULTS/GM/log_n000001.log > test_saturn.diff
 	ls -l test_saturn.diff
+
+### TESTS FOR MODELING COMET6SP ###
+
+test_comet:
+	-@(make test_comet_start)
+
+test_comet_start:
+	@echo "test_comet_compile..." > test_comet.diff
+	make test_comet_compile
+	@echo "test_comet_rundir..." >> test_comet.diff
+	make test_comet_rundir
+	@echo "test_comet_run..." >> test_comet.diff
+	make test_comet_run
+	@echo "test_comet_check..." >> test_comet.diff
+	make test_comet_check
+
+test_comet_compile:
+	./Config.pl -u=Comet6Sp -e=MhdComet -g=8,8,8,600,100
+	make
+	make PIDL
+
+test_comet_rundir: test_rundir
+	cd ${TESTDIR}; \
+		cp Param/COMET/PARAM.in .; \
+		#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+
+test_comet_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf CometTest
+	cd ${TESTDIR}; ./PostProc.pl -M -o CometTest
+
+test_comet_check:
+	${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-15 \
+		Param/COMET/TestOutput/log_n000001.log \
+		${TESTDIR}/CometTest/GM/log_n000001.log > test_comet.diff
+	ls -l test_comet.diff
 
