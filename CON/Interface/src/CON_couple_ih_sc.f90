@@ -56,8 +56,8 @@ module CON_couple_ih_sc
   logical :: DoInitialize=.true., DoTest, DoTestMe
   real :: tNow
   character(len=*), parameter :: NameMod='couple_ih_sc'
-  logical::IsSphericalSc
-
+  logical::IsSphericalSc=.false.
+  integer::iError
 contains
 
   !===============================================================!
@@ -76,7 +76,9 @@ contains
     
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
 
-    call SC_inquire_if_spherical(IsSphericalSc)
+    if(is_proc(SC_))&
+          call SC_inquire_if_spherical(IsSphericalSc)
+    call MPI_Bcast(IsSphericalSc,1,MPI_Logical,i_proc0(SC_),i_comm(),iError)
 
     call init_coupler(              &    
        iCompSource=IH_,             & ! component index for source
@@ -85,7 +87,8 @@ contains
        GridDescriptorSource=IH_Grid,& ! OUT!\
        GridDescriptorTarget=SC_TargetGrid,& !-General coupler variables 
        Router=RouterIhSc)             ! OUT!/
-
+    
+   
     IH_iGridRealization=-1
     SC_iGridInIhSc     =-1
     SC_iGridInScIh     =-1
