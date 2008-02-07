@@ -56,7 +56,7 @@ module CON_couple_ih_sc
   logical :: DoInitialize=.true., DoTest, DoTestMe
   real :: tNow
   character(len=*), parameter :: NameMod='couple_ih_sc'
-  
+  logical::IsSphericalSc
 
 contains
 
@@ -73,8 +73,10 @@ contains
 
     if(.not.DoInitialize)return
     DoInitialize=.false.
-
+    
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
+
+    call SC_inquire_if_spherical(IsSphericalSc)
 
     call init_coupler(              &    
        iCompSource=IH_,             & ! component index for source
@@ -183,16 +185,24 @@ contains
   end subroutine couple_ih_sc
   !======================================================!
   logical function is_boundary_block(lGlobalTreeNode)
-
+    integer,parameter::R_=1
     integer,intent(in)::lGlobalTreeNode
     logical,dimension(3)::IsBoundary_D
 
     IsBoundary_D=is_right_boundary_d(&
-         SC_TargetGrid%DD%Ptr,lGlobalTreeNode).or.&
+         SC_TargetGrid%DD%Ptr,lGlobalTreeNode)
+    !For spherical domain
+    is_boundary_block=IsBoundary_D(R_).and.IsSphericalSc
+
+    !For cartesian box   
+     IsBoundary_D= IsBoundary_D.or.&
          is_left_boundary_d(&
          SC_TargetGrid%DD%Ptr,lGlobalTreeNode)
-    is_boundary_block=any(IsBoundary_D)
 
+    is_boundary_block=is_boundary_block.or. &
+         (any(IsBoundary_D).and.(.not.IsSphericalSc))
+   
+    
   end function is_boundary_block
   !===============================================================!
   subroutine outer_cells(&
@@ -213,13 +223,21 @@ contains
 
     logical,dimension(3)::IsLeftFace_D,IsRightFace_D
     integer,parameter::x_=1,y_=2,z_=3
-
+    integer,parameter::R_=1
+   
     IsLeftFace_D=i_D(x_:z_)<1.and.is_left_boundary_d(&
          SC_TargetGrid%DD%Ptr,lGlobalTreeNode)
     IsRightFace_D=i_D(x_:z_)>&
          ncells_decomposition_d(SC_TargetGrid%DD%Ptr).and.&
          is_right_boundary_d(SC_TargetGrid%DD%Ptr,lGlobalTreeNode)
-    IsInterfacePoint=any(IsRightFace_D.or.IsLeftFace_D)
+
+    !For spherical grid
+    IsInterfacePoint=IsRightFace_D(R_).and.IsSphericalSc
+
+    !For Cartesian grid:
+
+    IsInterfacePoint=IsInterfacePoint.or.&
+         (any(IsRightFace_D.or.IsLeftFace_D).and.(.not.IsSphericalSc))
   end subroutine outer_cells 
   !========================================================!
   subroutine map_sc_ih(&
