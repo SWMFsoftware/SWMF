@@ -634,6 +634,7 @@ contains
        AreaX = FaceAreaJ_DFB(x_, iFace, jFace, kFace, iBlockFace)
        AreaY = FaceAreaJ_DFB(y_, iFace, jFace, kFace, iBlockFace)
        AreaZ = FaceAreaJ_DFB(z_, iFace, jFace, kFace, iBlockFace)
+       Area2 = AreaX**2 + AreaY**2 + AreaZ**2
        if(Area2 < cHalf*FaceArea2MinJ_B(iBlockFace))then
           !The face is at the pole
           Normal_D(x_)=x_BLK(iFace, jFace, kFace, iBlockFace)-&
@@ -665,6 +666,7 @@ contains
        AreaX = FaceAreaK_DFB(x_, iFace, jFace, kFace, iBlockFace)
        AreaY = FaceAreaK_DFB(y_, iFace, jFace, kFace, iBlockFace)
        AreaZ = FaceAreaK_DFB(z_, iFace, jFace, kFace, iBlockFace)
+       Area2 = AreaX**2 + AreaY**2 + AreaZ**2
        if(Area2 < cHalf*FaceArea2MinK_B(iBlockFace))then
           !The face is at the pole
           Normal_D(x_)=x_BLK(iFace, jFace, kFace, iBlockFace)-&
