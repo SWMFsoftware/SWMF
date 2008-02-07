@@ -276,7 +276,6 @@ contains
          iMinFaceZ,iMaxFaceZ, jMinFaceZ, jMaxFaceZ, &
          iTest, jTest, kTest, ProcTest, BlkTest, DimTest, &
          UseHyperbolicDivb
-    use ModPhysics,  ONLY: Clight
 
     implicit none
 
@@ -725,9 +724,8 @@ contains
 
   subroutine get_numerical_flux(Flux_V)
 
-    use ModVarIndexes, ONLY: U_, Bx_, By_, Bz_, &
-         UseMultiSpecies, SpeciesFirst_, SpeciesLast_, Rho_,Ux_,Uy_,Uz_,&
-         RhoUx_,RhoUy_,RhoUz_
+    use ModVarIndexes, ONLY: Bx_, By_, Bz_, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, &
+         UseMultiSpecies, SpeciesFirst_, SpeciesLast_
     use ModAdvance, ONLY: DoReplaceDensity,State_VGB,Hyp_
     use ModCharacteristicMhd,ONLY:dissipation_matrix
     use ModCoordTransform, ONLY: cross_product
@@ -740,7 +738,7 @@ contains
     real :: Cmax
     real :: DiffBn, DiffBx, DiffBy, DiffBz, DiffE
     real :: EnLeft, EnRight, Jx, Jy, Jz
-    real :: uLeft_D(3),uRight_D(3),cDivBWave
+    real :: uLeft_D(3),uRight_D(3) !,cDivBWave
     real :: B0xL, B0yL, B0zL, B0xR, B0yR, B0zR
     !-----------------------------------------------------------------------
 
@@ -955,6 +953,12 @@ contains
          Cmax = Cmax_I(1)
       end if
 
+!         write(*,*)'iFace,jFace,kFace,iBlock=',iFace,jFace,kFace,iBlockFace
+!         write(*,*)'UnLeft_I=',UnLeft_I
+!         write(*,*)'UnRight_I=',UnLeft_I
+!      end if
+
+
       Unormal_I = 0.5*(UnLeft_I + UnRight_I)
       Enormal   = 0.5*(EnLeft + EnRight)                !^CFG IF BORISCORR
 
@@ -963,8 +967,6 @@ contains
     !^CFG IF LINDEFLUX BEGIN
     !==========================================================================
     subroutine harten_lax_vanleer_flux
-
-      use ModVarIndexes, ONLY: B_, Energy_
 
       real, dimension(nFluid) :: CleftStateLeft_I,   CleftStateHat_I, &
            Cmax_I, CrightStateRight_I, CrightStateHat_I
@@ -1031,8 +1033,6 @@ contains
     !^CFG IF AWFLUX BEGIN
     !==========================================================================
     subroutine artificial_wind
-
-      use ModVarIndexes, ONLY: B_, Energy_
 
       real, dimension(nFluid) :: Cleft_I, Cright_I, Cmax_I
       real :: Cleft, Cright, WeightLeft, WeightRight, Diffusion
@@ -1475,8 +1475,7 @@ contains
     !^CFG IF BORISCORR BEGIN
     subroutine get_boris_flux
 
-      use ModPhysics, ONLY: g, inv_gm1, Inv_C2light, InvClight
-      use ModMain,    ONLY: x_, y_, z_
+      use ModPhysics, ONLY: inv_gm1, Inv_C2light, InvClight
       use ModVarIndexes
 
       ! Variables for conservative state and flux calculation
@@ -1572,8 +1571,8 @@ contains
 
     subroutine get_mhd_flux
 
-      use ModPhysics, ONLY: g, inv_gm1, inv_c2LIGHT
-      use ModMain,    ONLY: x_, y_, z_, UseHyperbolicDivb, SpeedHyp2
+      use ModPhysics, ONLY: inv_gm1, inv_c2LIGHT
+      use ModMain,    ONLY: UseHyperbolicDivb, SpeedHyp2
       use ModVarIndexes
       use ModAdvance, ONLY: Hyp_, Pe_, UseElectronPressure
 
@@ -1821,8 +1820,7 @@ contains
     !==========================================================================
     subroutine get_hd_flux
 
-      use ModPhysics, ONLY: g, inv_gm1
-      use ModMain,    ONLY: x_, y_, z_
+      use ModPhysics, ONLY: inv_gm1
       use ModVarIndexes
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, p, e, RhoUn
@@ -1922,7 +1920,6 @@ contains
     !========================================================================
     subroutine get_boris_speed
 
-      use ModMain,    ONLY: x_, y_, z_
       use ModVarIndexes
       use ModPhysics, ONLY: g, inv_c2LIGHT
 
@@ -1987,14 +1984,14 @@ contains
 
     subroutine get_mhd_speed
 
-      use ModMain,    ONLY: x_, y_, z_,UseCurlB0
+      use ModMain,    ONLY: UseCurlB0
       use ModVarIndexes
       use ModPhysics, ONLY: g, Inv_C2Light
       use ModNumConst, ONLY: cPi
       use ModAdvance, ONLY: State_VGB, eFluid_
 
       real :: RhoU_D(3)
-      real :: Rho, p, InvRho, Sound2, FullBx, FullBy, FullBz, FullBn,FullB
+      real :: Rho, p, InvRho, Sound2, FullBx, FullBy, FullBz, FullBn
       real :: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, FastDt, cWhistler
       real :: dB1dB1                                     !^CFG IF AWFLUX
 
@@ -2142,7 +2139,6 @@ contains
 
       use ModVarIndexes
       use ModPhysics, ONLY: g
-      use ModAdvance, ONLY: State_VGB
 
       real :: InvRho, Sound2, Sound, Un
 
@@ -2188,8 +2184,7 @@ end module ModFaceFlux
 subroutine roe_solver(Flux_V)
 
   use ModFaceFlux, ONLY: &
-       nFlux, IsBoundary, iDimFace, &
-       iFace, jFace, kFace, Area, Area2, AreaX, AreaY, AreaZ, DoTestCell, &
+       nFlux, IsBoundary, Area, &
        StateLeft_V,  StateRight_V, FluxLeft_V, FluxRight_V, &
        StateLeftCons_V, StateRightCons_V, CmaxDt, Unormal_I, &
        nFluxMhd, RhoMhd_, RhoUn_, RhoUt1_, RhoUt2_, &
@@ -2198,15 +2193,11 @@ subroutine roe_solver(Flux_V)
        UnR, Ut1R, Ut2R, B1nR, B1t1R, B1t2R, &
        rotate_state_vectors, rotate_flux_vector
 
-  use ModVarIndexes, ONLY: nVar, Rho_, RhoUx_, RhoUy_, RhoUz_, &
-       Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_, Energy_, ScalarFirst_, ScalarLast_
+  use ModVarIndexes, ONLY: Rho_, p_, Energy_, ScalarFirst_, ScalarLast_
 
-  use ModMain,     ONLY: x_, y_, z_
-  use ModGeometry, ONLY: true_cell
   use ModPhysics,  ONLY: g,gm1,inv_gm1
   use ModNumConst
 
-  use ModGeometry,   ONLY: UseCovariant                     
   implicit none
 
   real,    intent(out):: Flux_V(nFlux)
@@ -2222,8 +2213,8 @@ subroutine roe_solver(Flux_V)
   integer :: iFlux, iVar, iWave
 
   ! Left and right face
-  real :: RhoL, BnL, Bt1L, Bt2L, BbL, Bb1L, pL, eL, aL, CsL, CfL
-  real :: RhoR, BnR, Bt1R, Bt2R, BbR, Bb1R, pR, eR, aR, CsR, CfR
+  real :: RhoL, BnL, Bt1L, Bt2L, BbL, pL, eL, aL, CsL, CfL
+  real :: RhoR, BnR, Bt1R, Bt2R, BbR, pR, eR, aR, CsR, CfR
 
   ! Roe average (hat)
   real :: RhoH,UnH,Ut1H,Ut2H
@@ -2252,9 +2243,7 @@ subroutine roe_solver(Flux_V)
   real, dimension(nFluxMhd)       :: Diffusion_V      ! Diffusive fluxes
 
   ! Misc. scalar variables
-  real :: SignBnH, Tmp1, Tmp2, Tmp3, Gamma1A2Inv, DtInvVolume, AreaFace
-
-  real :: dRhoU_D(3), dB1_D(3)                        
+  real :: SignBnH, Tmp1, Tmp2, Tmp3, Gamma1A2Inv
   !---------------------------------------------------------------------------
   ! Scalar variables
   RhoL  =  StateLeft_V(Rho_)
