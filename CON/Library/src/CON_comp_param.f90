@@ -17,19 +17,17 @@
 ! (listed in alphabetical order): 
 !
 !\begin{itemize}
-!\item[CE] Cometary Environment
-!\item[DP] Data Processing
 !\item[EE] Eruptive Event
 !\item[GM] Global Magnetosphere
 !\item[IE] Ionospheric Electrodynamics
 !\item[IH] Inner Heliosphere
 !\item[IM] Inner Magnetosphere
-!\item[IN] Interstellar Neutrals
+!\item[LA] Lower Atmosphere
 !\item[OH] Outer Heliosphere
-!\item[PL] Plasmasphere
-!\item[PS] Planetary Satellites
+!\item[PS] Plasmasphere
 !\item[PW] Polar Wind
 !\item[RB] Radiation Belts
+!\item[RT] Radiative Transfer
 !\item[SC] Solar Corona
 !\item[SP] Solar Energetic Particles
 !\item[UA] Upper Atmosphere
@@ -43,18 +41,18 @@ module CON_comp_param
 
   !PUBLIC DATA MEMBERS:
 
-  integer, parameter :: MaxComp   = 17 ! maximum number of components
+  integer, parameter :: MaxComp   = 14 ! maximum number of components
   integer, parameter :: lNameComp =  2 ! length of component names
 
   ! Convert component index to component name
   character(len=lNameComp), parameter :: NameComp_I(MaxComp) = (/ & 
-       "DP", "GM","IH","UA","IE","IM","TH", &
-       "SP","SC","EE","CE","OH","IN","PS","PW","PL","RB"/)
+       "EE", "GM", "IE", "IH", "IM", "LA", "OH", "PS", "PW", &
+       "RB", "RT", "SP", "SC", "UA"/)
 
   ! Named indexes for the components
-  integer, parameter :: DP_=1, GM_=2 ,IH_=3 ,UA_=4 ,IE_=5 ,IM_=6 
-  integer, parameter :: TH_=7 , SP_=8 ,SC_=9 ,EE_=10 ,CE_=11 ,OH_=12 ,IN_=13 
-  integer, parameter :: PS_=14 ,PW_=15 ,PL_=16 ,RB_=17
+  integer, parameter :: &
+       EE_=1, GM_=2, IE_=3, IH_=4 , IM_=5 ,LA_=6, OH_=7, PS_=8, PW_=9, &
+       RB_=10 ,RT_=11, SP_=12 ,SC_=13 ,UA_=14
 
   ! Length of the version name of the component
   integer, parameter :: lNameVersion=40 
