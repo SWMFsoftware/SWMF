@@ -506,11 +506,25 @@ contains
 
     subroutine get_flux_z(iMin, iMax, jMin, jMax, kMin, kMax)
       use ModAdvance,ONLY:Bx_,Bz_,State_VGB
+      use ModParallel, ONLY: NOBLK
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax
       !------------------------------------------------------------------------
       call set_block_values(iBlock, z_)
 
-      do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
+      do kFace = kMin, kMax; 
+
+         !if(DoFixAxis .and. &
+         !     (    NeiLTop(iBlock) == NOBLK .and. kFace == nK+1 &
+         !     .or. NeiLBot(iBlock) == NOBLK .and. kFace ==    1 )) then
+         !   VdtFace_Z(iMin:iMax, jMin:jMax, kFace)        = 0.0
+         !   uDotArea_ZI(iMin:iMax, jMin:jMax,  kFace,:)   = 0.0
+         !   bCrossArea_DZ(:, iMin:iMax, jMin:jMax, kFace) = 0.0
+         !   EDotFA_Z(iMin:iMax, jMin:jMax, kFace)  = 0.0 !^CFG IF BORISCORR
+         !   CYCLE
+         !end if
+
+
+         do jFace = jMin, jMax; do iFace = iMin, iMax
 
          call set_cell_values_z
 
@@ -659,6 +673,8 @@ contains
 
   subroutine set_cell_values_z
 
+    use ModAdvance, ONLY: DoFixAxis
+
     iLeft = iFace; jLeft = jFace; kLeft = kFace - 1
 
     if(UseCovariant)then                  
@@ -677,6 +693,7 @@ contains
           Normal_D=Normal_D/&
                sqrt(Normal_D(x_)**2+Normal_D(y_)**2+Normal_D(z_)**2)
           Area2 = FaceArea2MinK_B(iBlockFace)
+          if(DoFixAxis) Area2 = Area2*1e-6
           Area = sqrt(Area2)
        else
           Area = sqrt(Area2)
@@ -2114,7 +2131,11 @@ contains
       end if                                         !^CFG IF AWFLUX
 
       if(DoTestCell)then
-         write(*,*)NameSub,' Un=',Un
+         if(UseCovariant)then
+            write(*,*)NameSub,' AreaX,Y,Z =',AreaX, AreaY, AreaZ
+            write(*,*)NameSub,' Area,Area2=',Area, Area2
+            write(*,*)NameSub,' InvRho, RhoU_D=',InvRho, RhoU_D
+         end if
          if(DoAw)then
             write(*,*)NameSub,' UnLeft=',  UnLeft
             write(*,*)NameSub,' UnRight=', UnRight
@@ -2124,6 +2145,7 @@ contains
             write(*,*)NameSub,' HallUnLeft=',  HallUnLeft
             write(*,*)NameSub,' HallUnRight=', HallUnRight
          end if
+         write(*,*)NameSub,' Un=',Un
          write(*,*)NameSub,' Csound2=',Sound2
          write(*,*)NameSub,' Cfast2=', Fast2
          write(*,*)NameSub,' Discr2=', Discr**2
