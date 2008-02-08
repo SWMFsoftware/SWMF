@@ -68,8 +68,8 @@ our $UserInputBgColor ='#CCCCCC';  # background color for user input commands
 do $ConfigFile;
 
 # Global variables
-my $Framework = 0;                               # True in framework mode
-my $ValidComp = "SC,IH,SP,GM,IM,PW,RB,IE,UA,PS"; # List of components
+my $Framework = 0;                                # True in framework mode
+my $ValidComp = "GM,IE,IH,IM,LA,PS,PW,RB,SC,SP,UA"; # List of components
 my %CompVersion;                                 # Hash for component versions
 my $nSession = 0;                                # Number of sessions
 
