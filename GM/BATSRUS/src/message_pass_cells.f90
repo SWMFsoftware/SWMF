@@ -40,7 +40,7 @@ module ModMPCells
   integer:: iTwoOrOneForTwoCoarserLayers=2,iZeroOrOneForTwoCoarserLayers=0
 
 
-  logical :: DoFacesOnlyLast, DoOneLayerLast, DoOneLayer_D(27)=.false.
+  logical :: DoFacesOnlyLast, DoOneLayerLast, DoOneLayer_D(26)=.false.
   logical, parameter :: DoLimitCornerMemory=.false.
   logical, parameter :: DoRSend=.true.
   logical, parameter :: DoBreakUpMessages=.false.
@@ -870,7 +870,7 @@ subroutine mp_cells_set_indices(DoOneLayer,DoFacesOnly)
   !If corners are to be send and DoOneLayerCorner is set to .true.,
   !then only one layer of ghostcells is send to fill in corners,
  
-  DoOneLayer_D(7:27) = DoOneLayer_D(7:27).or.DoOneLayerCorner
+  DoOneLayer_D(7:26) = DoOneLayer_D(7:26).or.DoOneLayerCorner
 
   DoOneLayerLast     = DoOneLayer
   DoFacesOnlyLast    = DoFacesOnly
