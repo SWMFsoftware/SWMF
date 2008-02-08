@@ -7,10 +7,11 @@ check_src:
 		exit 1; \
 	fi)
 
+INSTALLFILES = src/Makefile.DEPEND src/Makefile.RULES srcInterface/Makefile.DEPEND
+
 install:
 	@(if([ -f src/Makefile ]); then \
-		touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND; \
-		cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES; \
+		touch ${INSTALLFILES}; \
 		cp -f src/ModSize_orig.f90 src/ModSize.f90; \
 	fi)
 
@@ -19,7 +20,7 @@ LIB: check_src
 	cd srcInterface; make LIB
 
 test:
-	touch see_gm_batsrus.diff
+	@echo IH/BATSRUS is tested in GM/BATSRUS
 
 rundir: check_src
 	mkdir ${RUNDIR}/IH
@@ -34,16 +35,14 @@ rundir: check_src
 
 clean:  
 	@(if([ -f src/Makefile ]); then \
-	   touch src/Makefile.DEPEND src/Makefile.RULES; \
+	   touch ${INSTALLFILES}; \
 	   cd src; make clean; cd ..; \
-	   touch srcInterface/Makefile.DEPEND; cd srcInterface; make clean; \
+	   cd srcInterface; make clean; \
 	fi)
 
-distclean: clean
+distclean: 
 	@(if([ -f Makefile.def ]); then \
-		touch srcInterface/Makefile.DEPEND; \
+		touch ${INSTALLFILES}; \
 		cd srcInterface; make distclean; \
 	fi)
-	rm -rf  src srcUser Makefile.* PARAM.XML RenameList.pl Config.pl *~
-
-veryclean: distclean
+	rm -rf src srcUser PARAM.XML RenameList.pl Config.pl *~
