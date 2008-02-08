@@ -977,12 +977,11 @@ contains
   subroutine user_face_bcs(VarsGhostFace_V)
 
     use ModSize,       ONLY: East_,West_,South_,North_,Bot_,Top_
-    use ModMain,       ONLY: time_accurate,x_,y_,z_, UseRotatingFrame, &
-                             UseHyperbolicDivb
+    use ModMain,       ONLY: time_accurate,x_,y_,z_, UseRotatingFrame
     use ModVarIndexes, ONLY: nVar,Ew_,rho_,Ux_,Uy_,Uz_,Bx_,By_,Bz_,P_
 
     use ModGeometry,   ONLY: R_BLK
-    use ModAdvance,    ONLY: State_VGB, Hyp_
+    use ModAdvance,    ONLY: State_VGB
     use ModPhysics,    ONLY: inv_gm1, OmegaBody
     use ModNumConst,   ONLY: cTolerance,cTiny
 
@@ -1089,11 +1088,6 @@ contains
        VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) +&
             2*OmegaBody*FaceCoords_D(x_)
     end if
-
-    if(UseHyperbolicDivb)then
-       VarsGhostFace_V(Hyp_) = 0.0
-    end if
-
   end subroutine user_face_bcs
 
   !============================================================================
@@ -1141,11 +1135,10 @@ contains
   !========================================================================
 
   subroutine user_initial_perturbation
-    use ModMain,      ONLY: nI, nJ, nK, nBLK, unusedBLK, gcn, x_, y_, z_, &
-         UseHyperbolicDivb
+    use ModMain,      ONLY: nI, nJ, nK, nBLK, unusedBLK, gcn, x_, y_, z_
     use ModIO,        ONLY: restart
     use ModVarIndexes
-    use ModAdvance,   ONLY: State_VGB, Hyp_
+    use ModAdvance,   ONLY: State_VGB 
     use ModNumConst
     use ModPhysics,   ONLY:inv_gm1
     use ModGeometry
@@ -1171,20 +1164,6 @@ contains
     !---------------------------------------------------------------------------
     !
     call set_oktest('user_initial_perturbation',oktest,oktest_me)
-
-    select case(TypeGeometry)
-    case('cartesian')
-       Rmax=sqrt(x2**2+y2**2+z2**2)
-    case('spherical_lnr')
-       Rmax=exp(XyzMax_D(1))
-    case('spherical')
-       Rmax=XyzMax_D(1)
-    case default
-       call stop_mpi('user_initial_perturbation is not implemented ' &
-                     //'for geometry= '//TypeGeometry)
-    end select
-    Rmax=max(2.1E+01,Rmax)
-
     do iBLK=1,nBLK
        if(unusedBLK(iBLK))CYCLE
        if ((.not.restart)) then   
@@ -1194,12 +1173,10 @@ contains
              zz = z_BLK(i,j,k,iBLK)
              RR = sqrt(xx**2+yy**2+zz**2+cTolerance**2)
              ROne  = max(cOne,RR)
+             Rmax  = max(2.1E+01,sqrt(x2**2+y2**2+z2**2))
              State_VGB(Bx_      ,i,j,k,iBLK) = cZero
              State_VGB(By_      ,i,j,k,iBLK) = cZero
              State_VGB(Bz_      ,i,j,k,iBLK) = cZero
-             if(UseHyperbolicDivb)then
-                State_VGB(Hyp_  ,i,j,k,iBLK) = 0.0
-             end if
              call get_plasma_parameters_cell(i,j,k,iBLK,&
                   Dens_BLK,Pres_BLK,Gamma_BLK)
              State_VGB(rho_     ,i,j,k,iBLK) = Dens_BLK
@@ -1397,15 +1374,13 @@ contains
        xCenter,yCenter,zCenter,rCenter,                        &
        minx,miny,minz,minR,maxx,maxy,maxz,maxR,found)
     use ModMain,ONLY:time_loop,nI,nJ,nK
-    use ModAMR,ONLY:InitialRefineType, initial_refine_levels
+    use ModAMR,ONLY:InitialRefineType
     use ModNumConst
     use ModAdvance,ONLY:&
          State_VGB,Bx_,By_,Bz_,B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
     use ModGeometry
     use ModPhysics,ONLY:rBody
-    use ModOctree
     implicit none
-
     logical,intent(out) :: refineBlock, found
     integer, intent(in) :: lev
     real, intent(in)    :: DxBlock
@@ -1415,53 +1390,29 @@ contains
     integer, intent(in) :: iBLK
 
     character (len=*), parameter :: Name='user_specify_initial_refinement'
-    real :: BDotRMin,BDotRMax,critr
-    integer :: i,j,k, levmin, levelHS, levBLK
-    !------------------------------------------------------------------------
-
-    levBLK=global_block_ptrs(iBLK,iProc+1)%ptr%LEV
-
-    select case(TypeGeometry)
-    case('cartesian')
-       levmin=4
-       levelHS=6
-    case('spherical_lnr')
-       levmin=2
-       levelHS=3
-    case default
-       call stop_mpi('user_specify_initial_refinement is not implemented ' &
-                     //'for geometry= '//TypeGeometry)
-    end select
-
+    real::BDotRMin,BDotRMax,critx
+    integer::i,j,k
+    !-------------------------------------------------------------------
     select case (InitialRefineType)
     case ('helio_init')
        if(.not.time_loop)then
-          !refine to have resolution not worse than levmin
-          if(lev<=levmin)then
+          !refine to have resolution not worse 4.0 and
+          !refine the body intersecting blocks
+          ! Refine all blocks time through (starting with 1 block)
+          if (lev <= 4) then
              refineBlock = .true.
           else
-             select case(TypeGeometry)
-             case('cartesian')
-                critr=1.1*rBody + (x2-x1)/(2.0**real(lev+2-levmin))
-                if ( rCenter < critr ) then
-                   refineBlock = .true.
-                else
-                   refineBlock = .false.
-                end if
-             case('spherical_lnr')
-                critr=rBody + (exp(XyzMax_D(1))-exp(XyzMin_D(1))) &
-                     /(2.0**real(lev+2-levmin))
-                if ( minR < critr ) then
-                   refineBlock = .true.
-                else
-                   refineBlock = .false.
-                end if
-             end select
+             critx=(XyzMax_D(1)-XyzMin_D(1))/(2.0**real(lev-2))
+             if ( rCenter < 1.10*rBody + critx ) then
+                refineBlock = .true.
+             else
+                refineBlock = .false.
+             end if
           endif
-       elseif( levBLK==1 .and. TypeGeometry=='spherical_lnr' ) then
-          refineBlock = .true.
-       elseif( levBLK<=levelHS-1 )then
-          !refine heliosheath up to levelHS
+       elseif(dx_BLK(iBLK)<0.20.or.far_field_BCs_BLK(iBLK))then
+          refineBlock=.false. !Do not refine body or outer boundary
+       else
+          !refine heliosheath
           BDotRMin=cZero
           do k=0,nK+1;do j=1,nJ
              BDotRMin=min( BDotRMin,minval(&
@@ -1490,8 +1441,6 @@ contains
           end do;end do
           refineBlock =BDotRMin<-cTiny.and.&
                BDotRMax>cTiny
-       else
-          refineBlock=.false.
        end if
        found=.true.
     end select
