@@ -31,6 +31,7 @@ module ModMPCells
   !With DoOneCoarserLayer=.false., the finer cells of the "second" layer are filled in 
   !with the values from the "second" layer of the coarser block
   logical::DoOneCoarserLayer=.true.
+  Logical::DoOneLayerCorner=.false.
   
   !With DoOneCoarserLayer=.true., the following nDuplicateIJK=2 and
   !the values from only one layer of the physical cells are sent to the finer neighbor
@@ -39,7 +40,7 @@ module ModMPCells
   integer:: iTwoOrOneForTwoCoarserLayers=2,iZeroOrOneForTwoCoarserLayers=0
 
 
-  logical :: DoFacesOnlyLast, DoOneLayerLast
+  logical :: DoFacesOnlyLast, DoOneLayerLast, DoOneLayer_D(27)=.false.
   logical, parameter :: DoLimitCornerMemory=.false.
   logical, parameter :: DoRSend=.true.
   logical, parameter :: DoBreakUpMessages=.false.
@@ -864,6 +865,13 @@ subroutine mp_cells_set_indices(DoOneLayer,DoFacesOnly)
   integer :: iPE, iError
   !------------------------------------------
 
+  DoOneLayer_D = DoOneLayer 
+  
+  !If corners are to be send and DoOneLayerCorner is set to .true.,
+  !then only one layer of ghostcells is send to fill in corners,
+ 
+  DoOneLayer_D(7:27) = DoOneLayer_D(7:27).or.DoOneLayerCorner
+
   DoOneLayerLast     = DoOneLayer
   DoFacesOnlyLast    = DoFacesOnly
   iLastGrid          = iNewGrid
@@ -1466,13 +1474,13 @@ contains
        case(1)
           i1S=nI-1 ; i1R=-1
           i2S=nI   ; i2R= 0
-          if(DoOneLayerLast)then
+          if(DoOneLayer_D(iDir))then
              i1S=nI   ; i1R= 0
           end if
        case(-1)
           i1S= 1   ; i1R=nI+1
           i2S= 2   ; i2R=nI+2
-          if(DoOneLayerLast)then
+          if(DoOneLayer_D(iDir))then
              i2S= 1   ; i2R=nI+1
           end if
        case(0)
@@ -1485,13 +1493,13 @@ contains
        case(1)
           j1S=nJ-1 ; j1R=-1
           j2S=nJ   ; j2R= 0
-          if(DoOneLayerLast)then
+          if(DoOneLayer_D(iDir))then
              j1S=nJ   ; j1R= 0
           end if
        case(-1)
           j1S= 1   ; j1R=nJ+1
           j2S= 2   ; j2R=nJ+2
-          if(DoOneLayerLast)then
+          if(DoOneLayer_D(iDir))then
              j2S= 1   ; j2R=nJ+1
           end if
        case(0)
@@ -1504,13 +1512,13 @@ contains
        case(1)
           k1S=nK-1 ; k1R=-1
           k2S=nK   ; k2R= 0
-          if(DoOneLayerLast)then
+          if(DoOneLayer_D(iDir))then
              k1S=nK   ; k1R= 0
           end if
        case(-1)
           k1S= 1   ; k1R=nK+1
           k2S= 2   ; k2R=nK+2
-          if(DoOneLayerLast)then
+          if(DoOneLayer_D(iDir))then
              k2S= 1   ; k2R=nK+1
           end if
        case(0)
@@ -1531,14 +1539,14 @@ contains
           nDuplicateI=iTwoOrOneForTwoCoarserLayers
           i1S=nI-iZeroOrOneForTwoCoarserLayers; i1R=-1
           i2S=nI ; i2R= 0
-          if(DoOneLayerLast)then
+          if(DoOneLayer_D(iDir))then
              i1R= i2R; i1S=i2S
           end if
        case(-1)
           nDuplicateI=iTwoOrOneForTwoCoarserLayers
           i1S= 1 ; i1R=nI+1
           i2S= 1+iZeroOrOneForTwoCoarserLayers; i2R=nI+2
-          if(DoOneLayerLast)then
+          if(DoOneLayer_D(iDir))then
              i2R=i1R;i2S=i1S
           end if
        case(0)
@@ -1577,14 +1585,14 @@ contains
           nDuplicateJ=iTwoOrOneForTwoCoarserLayers
           j1S=nJ-iZeroOrOneForTwoCoarserLayers; j1R=-1
           j2S=nJ ; j2R= 0
-          if(DoOneLayerLast)then
+          if(DoOneLayer_D(iDir))then
              j1R= j2R; j1S=j2S
           end if
        case(-1)
           nDuplicateJ=iTwoOrOneForTwoCoarserLayers
           j1S= 1 ; j1R=nJ+1
           j2S= 1+iZeroOrOneForTwoCoarserLayers ; j2R=nJ+2
-          if(DoOneLayerLast)then
+          if(DoOneLayer_D(iDir))then
              j2R=j1R; j2S=j1S
           end if
        case(0)
@@ -1617,14 +1625,14 @@ contains
           nDuplicateK=iTwoOrOneForTwoCoarserLayers
           k1S=nK-iZeroOrOneForTwoCoarserLayers ; k1R=-1
           k2S=nK ; k2R= 0
-          if(DoOneLayerLast)then
+          if(DoOneLayer_D(iDir))then
              k1R=  k2R;  k1S=k2S
           end if
        case(-1)
           nDuplicateK=iTwoOrOneForTwoCoarserLayers
           k1S= 1 ; k1R=nK+1
           k2S= 1+iZeroOrOneForTwoCoarserLayers; k2R=nK+2
-          if(DoOneLayerLast)then
+          if(DoOneLayer_D(iDir))then
              k2R=k1R; k2S=k1S
           end if
        case(0)
@@ -1660,13 +1668,13 @@ contains
        case(1)
           i1S=nI-3 ; i1R=-1
           i2S=nI   ; i2R= 0
-          if(DoOneLayerLast)then
+          if(DoOneLayer_D(iDir))then
              i1S=nI-1 ; i1R= 0
           end if
        case(-1)
           i1S= 1   ; i1R=nI+1
           i2S= 4   ; i2R=nI+2
-          if(DoOneLayerLast)then
+          if(DoOneLayer_D(iDir))then
              i2S= 2   ; i2R=nI+1
           end if
        case(0)
@@ -1703,13 +1711,13 @@ contains
        case(1)
           j1S=nJ-3 ; j1R=-1
           j2S=nJ   ; j2R= 0
-          if(DoOneLayerLast)then
+          if(DoOneLayer_D(iDir))then
              j1S=nJ-1 ; j1R= 0
           end if
        case(-1)
           j1S= 1   ; j1R=nJ+1
           j2S= 4   ; j2R=nJ+2
-          if(DoOneLayerLast)then
+          if(DoOneLayer_D(iDir))then
              j2S= 2   ; j2R=nJ+1
           end if
        case(0)
@@ -1740,13 +1748,13 @@ contains
        case(1)
           k1S=nK-3 ; k1R=-1
           k2S=nK   ; k2R= 0
-          if(DoOneLayerLast)then
+          if(DoOneLayer_D(iDir))then
              k1S=nK-1 ; k1R= 0
           end if
        case(-1)
           k1S= 1   ; k1R=nK+1
           k2S= 4   ; k2R=nK+2
-          if(DoOneLayerLast)then
+          if(DoOneLayer_D(iDir))then
              k2S= 2   ; k2R=nK+1
           end if
        case(0)
