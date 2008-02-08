@@ -10,7 +10,8 @@ module ModInitGridStorage
   !EOP
   integer,parameter:: MaxGrid = MaxComp+3
   type(DomainDecompositionType),private,save,target::&
-       GmGrid,IhGrid,UaGrid,IeGrid,ImGrid,PwGrid,RbGrid,SpGrid,ScGrid,PsGrid
+       GmGrid, IeGrid, IhGrid, ImGrid, LaGrid, PsGrid, PwGrid, RbGrid, &
+       ScGrid, SpGrid, UaGrid
 contains
   !BOP
   !REVISION HISTORY:
@@ -31,7 +32,7 @@ contains
     ! describes how the memory is allocated for the domain decomposition 
     ! structure. This solution satisfies the most picky SGI compiler, 
     ! but requires to add manually an identifier for the domain 
-    ! decomposition while addung a new component to the framework. 
+    ! decomposition while adding a new component to the framework. 
     !EOP
     select case(GridID_)
     case(GM_)
@@ -42,6 +43,10 @@ contains
        DD_I(GridID_)%Ptr=>ImGrid
     case(IH_)
        DD_I(GridID_)%Ptr=>IhGrid
+    case(LA_)
+       DD_I(GridID_)%Ptr=>LaGrid
+    case(PS_)
+       DD_I(GridID_)%Ptr=>PsGrid
     case(PW_)
        DD_I(GridID_)%Ptr=>PwGrid
     case(RB_)
@@ -52,8 +57,6 @@ contains
        DD_I(GridID_)%Ptr=>ScGrid
     case(UA_)
        DD_I(GridID_)%Ptr=>UaGrid
-    case(PS_)
-       DD_I(GridID_)%Ptr=>PsGrid
     case default
        write(*,*)'ERROR in ModInitGridStorage: GridID = ',GridID_
        call CON_stop('ERRORin ModInitGridStorage: not implemented grid ID')

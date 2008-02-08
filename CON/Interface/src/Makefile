@@ -23,7 +23,7 @@ MOD11 = CON_couple_gm_pw.o      #^CMP IF PW
 MOD05 = CON_couple_ie_im.o	#^CMP IF IM
 MOD06 = CON_couple_ie_ua.o	#^CMP IF UA
 MOD10 = CON_couple_ie_pw.o	#^CMP IF PW
-MOD12 = CON_couple_ie_ps.o
+MOD12 = CON_couple_ie_ps.o	#^CMP IF PS
 MOD13 = CON_couple_ie_rb.o	#^CMP IF RB
 #^CMP END IE
 #^CMP IF IH BEGIN

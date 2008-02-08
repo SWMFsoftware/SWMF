@@ -44,7 +44,7 @@ module CON_coupler
 
   public :: MaxCouple           ! Maximum number of couplings
 
-  integer, parameter :: MaxCouple = 18
+  integer, parameter :: MaxCouple = 20
 
   public :: nCouple             ! Actual number of couplings
 
@@ -57,14 +57,16 @@ module CON_coupler
        ! from component to component
        SC_, IH_, & 
        IH_, SC_, & 
-       SC_, SP_, & !\The mutual order of these two couplings is mandatory
-       IH_, SP_, & !/Do not modify them, please.
+       SC_, SP_, & ! The order of these two couplings is mandatory
+       IH_, SP_, & ! Do not modify them, please.
        IH_, GM_, &
        GM_, IE_, &
        GM_, IM_, &
        GM_, PW_, &
        GM_, RB_, &
        UA_, IE_, &
+       UA_, LA_, &
+       LA_, UA_, &
        IE_, IM_, &
        IM_, GM_, &
        PW_, GM_, &

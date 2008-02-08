@@ -51,6 +51,10 @@ LIBIH = ${LIBDIR}/libIH.a	#^CMP IF IH
 
 LIBIM = ${LIBDIR}/libIM.a	#^CMP IF IM
 
+LIBLA = ${LIBDIR}/libLA.a	#^CMP IF LA
+
+LIBPS = ${LIBDIR}/libPS.a	#^CMP IF PS
+
 LIBPW = ${LIBDIR}/libPW.a       #^CMP IF PW
 
 LIBRB = ${LIBDIR}/libRB.a	#^CMP IF RB
@@ -60,8 +64,6 @@ LIBSC = ${LIBDIR}/libSC.a       #^CMP IF SC
 LIBSP = ${LIBDIR}/libSP.a       #^CMP IF SP
 
 LIBUA = ${LIBDIR}/libUA.a	#^CMP IF UA
-
-LIBPS = ${LIBDIR}/libPS.a	#^CMP IF PS
 
 #######################
 # Interface part of   #
@@ -135,12 +137,13 @@ LIB:
 	@cd ${IEDIR};                make LIB	#^CMP IF IE
 	@cd ${IHDIR};                make LIB	#^CMP IF IH
 	@cd ${IMDIR};                make LIB	#^CMP IF IM
+	@cd ${LADIR};                make LIB	#^CMP IF LA
+	@cd ${PSDIR};                make LIB	#^CMP IF PS
 	@cd ${PWDIR};                make LIB	#^CMP IF PW
 	@cd ${RBDIR};                make LIB	#^CMP IF RB
 	@cd ${SCDIR};                make LIB   #^CMP IF SC
 	@cd ${SPDIR};                make LIB   #^CMP IF SP
 	@cd ${UADIR};                make LIB	#^CMP IF UA
-	@cd ${PSDIR};                make LIB	#^CMP IF PS
 	@cd ${INTERFACEDIR};         make LIB
 	@make DEPEND
 	make ${MY_LIB}
@@ -180,12 +183,13 @@ ${SWMFLIB}:	${LIBSHARE} \
 		${LIBIE} \
 		${LIBIH} \
 		${LIBIM} \
+		${LIBLA} \
+		${LIBPS} \
 		${LIBPW} \
 		${LIBRB} \
 		${LIBSC} \
 		${LIBSP} \
-		${LIBUA} \
-		${LIBPS}
+		${LIBUA}
 	rm -rf Tmp_*
 	mkdir Tmp_SHARE;       cd Tmp_SHARE;       ${AR_X} ${LIBSHARE}
 	mkdir Tmp_TIMING;      cd Tmp_TIMING;      ${AR_X} ${LIBTIMING} 
@@ -201,12 +205,13 @@ ${SWMFLIB}:	${LIBSHARE} \
 	mkdir Tmp_LIBIE;       cd Tmp_LIBIE;     ${AR_X} ${LIBIE} #^CMP IF IE
 	mkdir Tmp_LIBIH;       cd Tmp_LIBIH;     ${AR_X} ${LIBIH} #^CMP IF IH
 	mkdir Tmp_LIBIM;       cd Tmp_LIBIM;     ${AR_X} ${LIBIM} #^CMP IF IM
+	mkdir Tmp_LIBLA;       cd Tmp_LIBLA;     ${AR_X} ${LIBLA} #^CMP IF LA
+	mkdir Tmp_LIBPS;       cd Tmp_LIBPS;     ${AR_X} ${LIBPS} #^CMP IF PS
 	mkdir Tmp_LIBPW;       cd Tmp_LIBPW;     ${AR_X} ${LIBPW} #^CMP IF PW
 	mkdir Tmp_LIBRB;       cd Tmp_LIBRB;     ${AR_X} ${LIBRB} #^CMP IF RB
 	mkdir Tmp_LIBSC;       cd Tmp_LIBSC;     ${AR_X} ${LIBSC} #^CMP IF SC
 	mkdir Tmp_LIBSP;       cd Tmp_LIBSP;     ${AR_X} ${LIBSP} #^CMP IF SP
 	mkdir Tmp_LIBUA;       cd Tmp_LIBUA;     ${AR_X} ${LIBUA} #^CMP IF UA
-	mkdir Tmp_LIBPS;       cd Tmp_LIBPS;     ${AR_X} ${LIBPS} #^CMP IF PS
 	rm -f ${SWMFLIB}
 	@echo '${AR} ${SWMFLIB} Tmp_*/*.o'
 	@${AR} ${SWMFLIB} Tmp_*/*.o

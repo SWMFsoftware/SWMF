@@ -146,16 +146,18 @@ contains
     call get_comp_info(iComp,CompInfo=CompInfo)
 
     select case(iComp)
-    case(IE_)                                     !^CMP IF IE
-       call IE_set_param(CompInfo,TypeAction)     !^CMP IF IE
     case(GM_)                                     !^CMP IF GM
        call GM_set_param(CompInfo,TypeAction)     !^CMP IF GM
-    case(IM_)                                     !^CMP IF IM
-       call IM_set_param(CompInfo,TypeAction)     !^CMP IF IM
+    case(IE_)                                     !^CMP IF IE
+       call IE_set_param(CompInfo,TypeAction)     !^CMP IF IE
     case(IH_)                                     !^CMP IF IH
        call IH_set_param(CompInfo,TypeAction)     !^CMP IF IH
-    case(UA_)                                     !^CMP IF UA
-       call UA_set_param(CompInfo,TypeAction)     !^CMP IF UA
+    case(IM_)                                     !^CMP IF IM
+       call IM_set_param(CompInfo,TypeAction)     !^CMP IF IM
+    case(LA_)                                     !^CMP IF LA
+       call LA_set_param(CompInfo,TypeAction)     !^CMP IF LA
+    case(PS_)                                     !^CMP IF PS
+       call PS_set_param(CompInfo,TypeAction)     !^CMP IF PS
     case(PW_)                                     !^CMP IF PW
        call PW_set_param(CompInfo,TypeAction)     !^CMP IF PW
     case(RB_)                                     !^CMP IF RB
@@ -164,8 +166,8 @@ contains
        call SC_set_param(CompInfo,TypeAction)     !^CMP IF SC
     case(SP_)                                     !^CMP IF SP
        call SP_set_param(CompInfo,TypeAction)     !^CMP IF SP
-    case(PS_)                                     !^CMP IF PS
-       call PS_set_param(CompInfo,TypeAction)     !^CMP IF PS
+    case(UA_)                                     !^CMP IF UA
+       call UA_set_param(CompInfo,TypeAction)     !^CMP IF UA
     case default
        call CON_stop(NameSub//' '//TypeAction//&
             ' SWMF_ERROR: not implemented for component'//NameComp_I(iComp))
@@ -247,16 +249,18 @@ contains
     call check_i_comp(iComp,NameSub)
 
     select case(iComp)
-    case(IE_)                                    !^CMP IF IE
-       call IE_set_param(CompInfo,'VERSION')     !^CMP IF IE
-    case(IM_)                                    !^CMP IF IM
-       call IM_set_param(CompInfo,'VERSION')     !^CMP IF IM
     case(GM_)                                    !^CMP IF GM
        call GM_set_param(CompInfo,'VERSION')     !^CMP IF GM
+    case(IE_)                                    !^CMP IF IE
+       call IE_set_param(CompInfo,'VERSION')     !^CMP IF IE
     case(IH_)                                    !^CMP IF IH
        call IH_set_param(CompInfo,'VERSION')     !^CMP IF IH
-    case(UA_)                                    !^CMP IF UA
-       call UA_set_param(CompInfo,'VERSION')     !^CMP IF UA 
+    case(IM_)                                    !^CMP IF IM
+       call IM_set_param(CompInfo,'VERSION')     !^CMP IF IM
+    case(LA_)                                    !^CMP IF LA
+       call LA_set_param(CompInfo,'VERSION')     !^CMP IF LA
+    case(PS_)                                    !^CMP IF PS
+       call PS_set_param(CompInfo,'VERSION')     !^CMP IF PS
     case(PW_)                                    !^CMP IF PW
        call PW_set_param(CompInfo,'VERSION')     !^CMP IF PW
     case(RB_)                                    !^CMP IF RB
@@ -265,8 +269,8 @@ contains
        call SC_set_param(CompInfo,'VERSION')     !^CMP IF SC
     case(SP_)                                    !^CMP IF SP
        call SP_set_param(CompInfo,'VERSION')     !^CMP IF SP
-    case(PS_)                                    !^CMP IF PS
-       call PS_set_param(CompInfo,'VERSION')     !^CMP IF PS
+    case(UA_)                                    !^CMP IF UA
+       call UA_set_param(CompInfo,'VERSION')     !^CMP IF UA 
     case default
        call put(CompInfo,Use=.false.,NameVersion='not implemented',Version=0.0)
     end select
@@ -313,8 +317,10 @@ contains
        call IH_init_session(iSession,TimeSimulation)     !^CMP IF IH
     case(IM_)                                            !^CMP IF IM
        call IM_init_session(iSession,TimeSimulation)     !^CMP IF IM
-    case(UA_)                                            !^CMP IF UA
-       call UA_init_session(iSession,TimeSimulation)     !^CMP IF UA
+    case(LA_)                                            !^CMP IF LA
+       call LA_init_session(iSession,TimeSimulation)     !^CMP IF LA
+    case(PS_)                                            !^CMP IF PS
+       call PS_init_session(iSession,TimeSimulation)     !^CMP IF PS
     case(PW_)                                            !^CMP IF PW
        call PW_init_session(iSession,TimeSimulation)     !^CMP IF PW
     case(RB_)                                            !^CMP IF RB
@@ -323,8 +329,8 @@ contains
        call SC_init_session(iSession,TimeSimulation)     !^CMP IF SC
     case(SP_)                                            !^CMP IF SP
        call SP_init_session(iSession,TimeSimulation)     !^CMP IF SP
-    case(PS_)                                            !^CMP IF PS
-       call PS_init_session(iSession,TimeSimulation)     !^CMP IF PS
+    case(UA_)                                            !^CMP IF UA
+       call UA_init_session(iSession,TimeSimulation)     !^CMP IF UA
     case default
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select
@@ -370,8 +376,10 @@ contains
        call IH_finalize(TimeSimulation)     !^CMP IF IH
     case(IM_)                               !^CMP IF IM
        call IM_finalize(TimeSimulation)     !^CMP IF IM
-    case(UA_)                               !^CMP IF UA
-       call UA_finalize(TimeSimulation)     !^CMP IF UA
+    case(LA_)                               !^CMP IF LA
+       call LA_finalize(TimeSimulation)     !^CMP IF LA
+    case(PS_)                               !^CMP IF PS
+       call PS_finalize(TimeSimulation)     !^CMP IF PS
     case(PW_)                               !^CMP IF PW
        call PW_finalize(TimeSimulation)     !^CMP IF PW
     case(RB_)                               !^CMP IF RB
@@ -380,8 +388,8 @@ contains
        call SC_finalize(TimeSimulation)     !^CMP IF SC
     case(SP_)                               !^CMP IF SP
        call SP_finalize(TimeSimulation)     !^CMP IF SP
-    case(PS_)                               !^CMP IF PS
-       call PS_finalize(TimeSimulation)     !^CMP IF PS
+    case(UA_)                               !^CMP IF UA
+       call UA_finalize(TimeSimulation)     !^CMP IF UA
     case default
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select
@@ -425,8 +433,10 @@ contains
        call IH_save_restart(TimeSimulation)     !^CMP IF IH
     case(IM_)                                   !^CMP IF IM
        call IM_save_restart(TimeSimulation)     !^CMP IF IM
-    case(UA_)                                   !^CMP IF UA
-       call UA_save_restart(TimeSimulation)     !^CMP IF UA
+    case(LA_)                                   !^CMP IF LA
+       call LA_save_restart(TimeSimulation)     !^CMP IF LA
+    case(PS_)                                   !^CMP IF PS
+       call PS_save_restart(TimeSimulation)     !^CMP IF PS
     case(PW_)                                   !^CMP IF PW
        call PW_save_restart(TimeSimulation)     !^CMP IF PW
     case(RB_)                                   !^CMP IF RB
@@ -435,8 +445,8 @@ contains
        call SC_save_restart(TimeSimulation)     !^CMP IF SC
     case(SP_)                                   !^CMP IF SP
        call SP_save_restart(TimeSimulation)     !^CMP IF SP
-    case(PS_)                                   !^CMP IF PS
-       call PS_save_restart(TimeSimulation)     !^CMP IF PS
+    case(UA_)                                   !^CMP IF UA
+       call UA_save_restart(TimeSimulation)     !^CMP IF UA
     case default
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select
@@ -486,8 +496,10 @@ contains
        call IH_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF IH
     case(IM_)                                               !^CMP IF IM
        call IM_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF IM
-    case(UA_)                                               !^CMP IF UA
-       call UA_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF UA
+    case(LA_)                                               !^CMP IF LA
+       call LA_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF LA
+    case(PS_)                                               !^CMP IF PS
+       call PS_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF PS
     case(PW_)                                               !^CMP IF PW
        call PW_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF PW
     case(RB_)                                               !^CMP IF RB
@@ -496,8 +508,8 @@ contains
        call SC_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF SC
     case(SP_)                                               !^CMP IF SP
        call SP_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF SP
-    case(PS_)                                               !^CMP IF PS
-       call PS_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF PS
+    case(UA_)                                               !^CMP IF UA
+       call UA_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF UA
     case default
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select
