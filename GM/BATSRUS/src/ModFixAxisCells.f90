@@ -17,7 +17,7 @@ subroutine fix_axis_cells
 
   integer, parameter :: Sum_=1, SumX_=2, SumY_=3, SumXX_=4
   integer, parameter :: North_=1, South_=2
-  integer :: i, j, k, kMin, kMax, iBlock, iHemisphere, iR, nR, iError
+  integer :: i, j, k, kMin, kMax, kOut, iBlock, iHemisphere, iR, nR, iError
   real :: r, InvNCell, StateAvg_V(nVar), dStateDx_V(nVar), dStateDy_V(nVar)
 
   !--------------------------------------------------------------------------
@@ -36,9 +36,9 @@ subroutine fix_axis_cells
 
      ! Determine hemisphere
      if( NeiLTop(iBlock) == NOBLK )then
-        iHemisphere = North_; kMin = nK + 1 - nAxisCell; kMax = nK
+        iHemisphere = North_; kMin = nK+1-nAxisCell; kMax = nK; kOut = kMin-1
      elseif( NeiLBot(iBlock) == NOBLK) then
-        iHemisphere = South_; kMin = 1; kMax = nAxisCell
+        iHemisphere = South_; kMin = 1; kMax = nAxisCell; kOut = kMax+1
      else
         CYCLE
      endif
@@ -52,16 +52,18 @@ subroutine fix_axis_cells
            Buffer_VIII(:,iR,Sum_,iHemisphere) = &
                 Buffer_VIII(:,iR,Sum_,iHemisphere) &
                 + State_VGB(:,i,j,k,iBlock)
+        end do; end do
+        do j=1,nJ
            Buffer_VIII(:,iR,SumX_,iHemisphere) = &
                 Buffer_VIII(:,iR,SumX_,iHemisphere) &
-                + State_VGB(:,i,j,k,iBlock)*x_BLK(i,j,k,iBlock)
+                + State_VGB(:,i,j,kOut,iBlock)*x_BLK(i,j,kOut,iBlock)
            Buffer_VIII(:,iR,SumY_,iHemisphere) = &
                 Buffer_VIII(:,iR,SumY_,iHemisphere) &
-                + State_VGB(:,i,j,k,iBlock)*y_BLK(i,j,k,iBlock)
+                + State_VGB(:,i,j,kOut,iBlock)*y_BLK(i,j,kOut,iBlock)
            Buffer_VIII(:,iR,SumXX_,iHemisphere) = &
                 Buffer_VIII(:,iR,SumXX_,iHemisphere) &
-                + x_BLK(i,j,k,iBlock)**2
-        end do; end do
+                + x_BLK(i,j,kOut,iBlock)**2
+        end do
      end do
   end do
      
