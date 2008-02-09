@@ -46,7 +46,6 @@ Param/SHOCKTUBE/grid256
 0.		Uy
 0.		Uz
 0.1e-4		P
-0.0		ShockSlope
 
 Sheared boundary condition is used for non-zero shock slope
 #OUTERBOUNDARY

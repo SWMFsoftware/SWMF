@@ -693,7 +693,8 @@ contains
           Normal_D=Normal_D/&
                sqrt(Normal_D(x_)**2+Normal_D(y_)**2+Normal_D(z_)**2)
           Area2 = FaceArea2MinK_B(iBlockFace)
-          if(DoFixAxis) Area2 = Area2*1e-6
+!!!          if(DoFixAxis) 
+          Area2 = Area2*1e-6
           Area = sqrt(Area2)
        else
           Area = sqrt(Area2)

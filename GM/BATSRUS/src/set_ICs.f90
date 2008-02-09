@@ -94,7 +94,8 @@ subroutine set_ics
            elseif(.not.UseShockTube)then
               State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,1)
            else
-              if(x_BLK(i,j,k,iBlock) < -ShockSlope*y_BLK(i,j,k,iBlock))then
+              if( (x_BLK(i,j,k,iBlock)-ShockPosition) &
+                   < -ShockSlope*y_BLK(i,j,k,iBlock))then
                  ! Set all variables first
                  State_VGB(:,i,j,k,iBlock)   = ShockLeft_V
 

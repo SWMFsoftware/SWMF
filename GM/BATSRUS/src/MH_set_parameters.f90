@@ -1307,6 +1307,9 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('RightState',ShockRightState_V(i))
         end do
         call read_var('ShockSlope',ShockSlope)
+     case("#SHOCKPOSITION")
+        call read_var('ShockPosition',ShockPosition)
+        call read_var('ShockSlope',ShockSlope)
      case("#SOLARWINDFILE", "#UPSTREAM_INPUT_FILE")
         call read_var('UseSolarWindFile',UseUpstreamInputFile)
         if (UseUpstreamInputFile) then
