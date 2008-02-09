@@ -1306,7 +1306,6 @@ subroutine MH_set_parameters(TypeAction)
         do i=1,nVar
            call read_var('RightState',ShockRightState_V(i))
         end do
-        call read_var('ShockSlope',ShockSlope)
      case("#SHOCKPOSITION")
         call read_var('ShockPosition',ShockPosition)
         call read_var('ShockSlope',ShockSlope)
