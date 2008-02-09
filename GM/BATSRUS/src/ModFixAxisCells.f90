@@ -1,12 +1,10 @@
-
-
 subroutine fix_axis_cells
 
   use ModProcMH, ONLY: iComm
   use ModMain, ONLY: nI, nJ, nK, nBlock, UnusedBlk
-  use ModAdvance, ONLY: nVar, State_VGB, nAxisCell
+  use ModAdvance, ONLY: nVar, State_VGB, rFixAxis, r2FixAxis
   use ModGeometry, ONLY: TypeGeometry, XyzMin_D, XyzMax_D, MinDxValue, &
-       x_Blk, y_Blk, z_Blk, r_BLK, Dy_Blk, far_field_bcs_blk
+       x_Blk, y_Blk, z_Blk, r_BLK, rMin_BLK, Dy_Blk, far_field_bcs_blk
   use ModConst, ONLY: cTwoPi
   use ModEnergy, ONLY: calc_energy_point
   use ModParallel, ONLY: NeiLBot, NeiLTop, NOBLK
@@ -19,7 +17,7 @@ subroutine fix_axis_cells
        SumYLeft_=4, SumYRight_=5, SumX_=6
   integer, parameter :: North_=1, South_=2
   integer :: i, j, k, kMin, kMax, kOut, iBlock, iHemisphere, iR, nR, iError
-  integer :: iVar
+  integer :: iVar, nAxisCell
   real :: r, x, y, InvNCell, SumX, SumXAvg, InvSumX2, dLeft, dRight
   real :: State_V(nVar), dStateDx_V(nVar), dStateDy_V(nVar)
 
@@ -36,6 +34,14 @@ subroutine fix_axis_cells
 
   do iBlock = 1, nBlock
      if(unusedBlk(iBlock) .or. .not. far_field_BCs_BLK(iBlock)) CYCLE
+
+     if(rMin_BLK(iBlock) < r2FixAxis) then 
+        nAxisCell = 2
+     elseif(rMin_BLK(iBlock) < rFixAxis) then 
+        nAxisCell = 1
+     else
+        CYCLE
+     end if
 
      ! Determine hemisphere
      if( NeiLTop(iBlock) == NOBLK )then
@@ -87,6 +93,14 @@ subroutine fix_axis_cells
   do iBlock = 1, nBlock
      if(unusedBlk(iBlock) .or. .not. far_field_BCs_BLK(iBlock)) CYCLE
 
+     if(rMin_BLK(iBlock) < r2FixAxis) then 
+        nAxisCell = 2
+     elseif(rMin_BLK(iBlock) < rFixAxis) then 
+        nAxisCell = 1
+     else
+        CYCLE
+     end if
+
      InvNCell = 1.0/(nAxisCell*nint(cTwoPi/Dy_BLK(iBlock)))
 
      if( NeiLTop(iBlock) == NOBLK )then
@@ -104,7 +118,7 @@ subroutine fix_axis_cells
         State_V = SumBuffer_VIII(:,iR,Sum_,iHemisphere)*InvNCell
 
         SumX     = 0.5*SumBuffer_VIII(1,iR,SumX_,iHemisphere)
-        InvSumX2 = 0.5/SumBuffer_VIII(2,iR,SumX_,iHemisphere)
+        InvSumX2 = 0.5/max(SumBuffer_VIII(2,iR,SumX_,iHemisphere),1e-10)
 
         ! Limit the slope for each variable
         do iVar = 1, nVar
