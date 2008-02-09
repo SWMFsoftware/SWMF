@@ -186,7 +186,7 @@ Module ModAdvance
   ! Merge cells around the polar axis in spherical geometry
   !/
   logical :: DoFixAxis = .false.
-  integer :: nAxisCell = 0
+  real ::    rFixAxis = 0.0, r2FixAxis = 0.0 
 
   !\
   ! Block type information

@@ -673,8 +673,6 @@ contains
 
   subroutine set_cell_values_z
 
-    use ModAdvance, ONLY: DoFixAxis
-
     iLeft = iFace; jLeft = jFace; kLeft = kFace - 1
 
     if(UseCovariant)then                  
@@ -693,7 +691,6 @@ contains
           Normal_D=Normal_D/&
                sqrt(Normal_D(x_)**2+Normal_D(y_)**2+Normal_D(z_)**2)
           Area2 = FaceArea2MinK_B(iBlockFace)
-          if(DoFixAxis) Area2 = Area2*1e-6
           Area = sqrt(Area2)
        else
           Area = sqrt(Area2)

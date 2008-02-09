@@ -1268,20 +1268,24 @@ the Voronoy cells only.
 
 <command name="FIXAXIS">
 	<parameter name="DoFixAxis" type="logical" default="F"/>
-	<parameter name="nAxisCell" type="integer" min="1" max="2"
-						   default="1"/>
+	<parameter name="rFixAxis"  type="real" min="0" default="0"/>
+	<parameter name="r2FixAxis" type="real" min="0" 
+				max="$rFixAxis" default="0"/>
 #FIXAXIS
 T			DoFixAxis
-1			nAxisCell
+5.0			rFixAxis
+1.5			r2FixAxis
 
 The computational cells become where small near the symmetry axis 
 of a spherical (or cylindrical) grid. When DoFixAxis is true, the
-cells around the pole are merged into one 'supercell'. The nAxisCell
-parameter determines how many 'rings' of cells are merged. Possible
-values are 1 or 2. Merging the small cells allows larger time steps 
-(about a factor of 2 for nAxisCell=1, and around factor of 3 for 
-nAxisCell=2). This algorithm is still experimental.
+cells around the pole are merged into one 'supercell' upto the blocks
+that are (partially) inside radius rFixAxis. 
+For blocks within r2FixAxis the radius of the supercell is 2 normal
+cells. Merging the small cells allows larger time steps 
+(about a factor of 2 if only rFixAxis is used, and around factor of 3 
+if r2FixAxis is also used.
 </command>
+
 </commandgroup>
 
 <commandgroup name="INITIAL TIME">

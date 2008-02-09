@@ -3,14 +3,15 @@ subroutine calc_timestep
   use ModProcMH
   use ModMain
   use ModAdvance, ONLY : VdtFace_x, VdtFace_y, VdtFace_z, time_BLK, &
-       DoFixAxis, nAxisCell, CurlB0_DCB, State_VGB, Rho_, FluxType, NormB0_CB
+       DoFixAxis, rFixAxis, r2FixAxis, &
+       CurlB0_DCB, State_VGB, Rho_, FluxType, NormB0_CB
   use ModNumConst
-  use ModGeometry, ONLY: true_cell,true_BLK, vInv_CB
+  use ModGeometry, ONLY: true_cell,true_BLK, vInv_CB, rMin_BLK
   use ModParallel, ONLY: NeiLBot, NeiLTop, NOBLK
   implicit none
 
   logical :: DoTest, DoTestMe
-  integer :: i, j, k, iBlock
+  integer :: i, j, k, dK, iBlock
   real:: SourceSpectralRadius_C(1:nI,1:nJ,1:nK)=cZero
   !--------------------------------------------------------------------------
   iBlock = GlobalBlk
@@ -38,13 +39,15 @@ subroutine calc_timestep
           SourceSpectralRadius_C(i,j,k))
   end do; end do; end do
 
-  if(DoFixAxis)then
+  if(DoFixAxis .and. rMin_Blk(iBlock) < rFixAxis)then
+     dK = 1; if(rMin_Blk(iBlock) < r2FixAxis) dK = 2
+     ! Ignore time step constraints from supercell
      if(NeiLTop(iBlock) == NOBLK) &
-          time_BLK(1:nI, 1:nJ, nK+1-nAxisCell:nK, iBlock) = &
-          time_BLK(1:nI, 1:nJ, nK+1-nAxisCell:nK, iBlock) * 2 * nAxisCell
+          time_BLK(1:nI, 1:nJ, nK+1-dK:nK, iBlock) = &
+          time_BLK(1:nI, 1:nJ, nK+1-dK:nK, iBlock) * 10.0
      if(NeiLBot(iBlock) == NOBLK) &
-          time_BLK(1:nI, 1:nJ, 1:nAxisCell, iBlock) = &
-          time_BLK(1:nI, 1:nJ, 1:nAxisCell, iBlock) * 2 * nAxisCell
+          time_BLK(1:nI, 1:nJ, 1:dK, iBlock) = &
+          time_BLK(1:nI, 1:nJ, 1:dK, iBlock) * 10.0
   end if
 
   if(DoTestMe)then
