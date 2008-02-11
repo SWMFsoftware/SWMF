@@ -319,7 +319,7 @@ contains
        if(index(TypeGeometry,'spherical')>0)then
           !calculate a minimal non-zero face area squared along theta direction
           dTheta=dz_BLK(iBlock); iDir=3
-          if(XyzStart_BLK(Theta_,iBlock)-dTheta < cZero)then
+          if(XyzStart_BLK(Theta_,iBlock)-dTheta < -cHalfPi)then
              iLoop=-1
           else
              iLoop=+1
