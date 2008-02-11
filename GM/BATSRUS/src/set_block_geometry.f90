@@ -76,7 +76,7 @@ end subroutine set_root_block_geometry
 subroutine fix_block_geometry(iBLK)
 
   use ModMain, ONLY : body1,body1_,body2_,ExtraBc_,&
-       UseExtraBoundary,DoFixExtraBoundary,unusedBLK,ProcTest,BlkTest   
+       UseExtraBoundary,DoFixExtraBoundaryOrPole,unusedBLK,ProcTest,BlkTest   
   use ModMain, ONLY : UseBody2                       !^CFG IF SECONDBODY
   use ModNodes
   use ModGeometry
@@ -250,10 +250,8 @@ subroutine fix_block_geometry(iBLK)
      IsBoundaryBlock_IB(iBoundary,iBLK) = .true.
   end do
   IsBoundaryBlock_IB(ExtraBc_,iBLK) = &
-       DoFixExtraBoundary &                         
-       .and..not.is_axial_geometry() &             
-       .or. &                                       
-       UseExtraBoundary
+       (DoFixExtraBoundaryOrPole.and..not.is_axial_geometry()) &             
+       .or.UseExtraBoundary
 
   ! set true_cell array
   call set_boundary_cells(iBLK)
@@ -267,7 +265,7 @@ subroutine fix_block_geometry(iBLK)
   BodyFlg_B(iBLK) = .not. all(true_cell(:,:,:,iBLK))
                                                     
   if(.not.is_axial_geometry())     &              
-       DoFixExtraBoundary_B(iBLK) = DoFixExtraBoundary &
+       DoFixExtraBoundary_B(iBLK) = DoFixExtraBoundaryOrPole &
        .and.any(IsBoundaryCell_GI(:,:,:,ExtraBc_))
                                                     
   IsBoundaryCell_GI(:,:,:,ExtraBc_) = &

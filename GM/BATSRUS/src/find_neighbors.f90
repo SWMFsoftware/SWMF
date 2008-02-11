@@ -116,6 +116,16 @@ subroutine treeNeighbor(inPE, inBLK, ix, iy, iz, &
   idir = 1+ (iz+1) + 3*(iy+1) + 9*(ix+1)
   inBlockPtr%ptr => global_block_ptrs(inBLK,inPE+1)%ptr
   if (associated(inBlockPtr%ptr)) then ! ensure block is allocated
+     !While applied near the pole the present subroutine is often called
+     !with ix=0,  iy=0,  iz=0. To improve an efficiency, consider
+     !this case now.
+     if(iDir==14)then !ix=0  iy=0  iz=0
+        OutChild(1)=InBlockPtr%ptr%child_number
+        OutPe(1)=inPE
+        OutBlk(1)=inBLK
+        OutLev=0
+        return
+     end if
      call findTreeNeighbor(inBlockPtr,outBlockPtr,idir,noNeighbor)
      if (noNeighbor) then
         outLEV   = NOBLK
@@ -390,7 +400,6 @@ subroutine treeNeighbor(inPE, inBLK, ix, iy, iz, &
      write (*,*) 'ERROR: treeNeighbor: 1: not associated ',inPE,inBLK
      !     stop
   end if
-
 end subroutine treeNeighbor
 
 recursive subroutine findTreeNeighbor(inblkptr,outblkptr,idir,noNeighbor)
@@ -618,9 +627,9 @@ subroutine fixRefinementLevels
                                   ((inBlockPtr%ptr%body .and. outBlockPtr%ptr%body)&
                                   .or.(inBlockPtr%ptr%IsOuterBoundary .and. &    
                                   outBlockPtr%ptr%IsOuterBoundary)&
-                                  .or.(inBlockPtr%ptr%IsExtraBoundary .and.& 
-                                  outBlockPtr%ptr%IsExtraBoundary&
-                                  .and.( i==0.and.k==0.or..not.is_axial_geometry())& 
+                                  .or.(inBlockPtr%ptr%IsExtraBoundaryOrPole .and.& 
+                                  outBlockPtr%ptr%IsExtraBoundaryOrPole &
+                                  .and.( (i==0.and.k==0).or.(.not.is_axial_geometry()))& 
                                   )&          
                                   ))) then
                                 refine_list(outBlockPtr%ptr%BLK,outBlockPtr%ptr%PE+1) = .true.
@@ -642,48 +651,3 @@ subroutine fixRefinementLevels
   end do
 
 end subroutine fixRefinementLevels
-
-subroutine find_axial_neighbor(iPEIn,iBLKIn,iPEOut,iBLKout)
-  use ModParallel, ONLY : proc_dims
-  use ModOctree
-  implicit none
-  integer,intent(in)::iPEIn,iBLKIn
-  integer,intent(out)::iPEOut,iBLKOut
-  integer,dimension(99)::iChild_I
-  integer::i,j,k,iRoot,jRoot,kRoot,iLevel,iLevelIn
-  type (adaptive_block_ptr) :: InBlkPtr,OutBlkPtr
- 
-  nullify (InBlkPtr % ptr)
-  InBlkPtr%ptr=> global_block_ptrs(iBlkIn,iPEIn+1)%ptr
-  iLevelIn=InBlkPtr%ptr%LEV
-
-  do iLevel=iLevelIn,1,-1
-     iChild_I(iLevel)=InBlkPtr%ptr%child_number
-     InBlkPtr%ptr=>InBlkPtr%ptr%parent
-  end do
-     !Found root cell, find neighbor root cell
-  do i=1,proc_dims(1)
-     do j=1,proc_dims(2)
-        do k=1,proc_dims(3)
-           if (associated(InBlkPtr%ptr,octree_roots(i,j,k)%ptr)) then
-              iRoot=i
-              jRoot=j
-              kRoot=k
-           end if
-        end do
-     end do
-  end do
-  jRoot=1+mod(jRoot-1+proc_dims(2)/2,proc_dims(2))
-  
-  nullify (OutBlkPtr%ptr)
-  
-  OutBlkPtr%ptr=>octree_roots(iRoot,jRoot,kRoot)%ptr
-  do iLevel=1,iLevelIn
-     call  neighborAssignment(OutBlkPtr,OutBlkPtr,iChild_I(iLevel))
-     if (.not.associated(OutBlkPtr%ptr))&
-          call stop_mpi('Wrong Axial Neighbor is found') ! ensure block is allocated
-  end do
-     iPEOut  = outBlkPtr%ptr%PE
-     iBlkOut = outBlkPtr%ptr%BLK
-end subroutine find_axial_neighbor
-

@@ -860,7 +860,7 @@ contains
        octree % ptr % refine  = .false.
        octree % ptr % coarsen = .false.
        octree % ptr % body    = .false.
-       octree % ptr % IsExtraBoundary = .false.  
+       octree % ptr % IsExtraBoundaryOrPole = .false.  
        octree % ptr % IsOuterBoundary = .false.  
        iPE = octree % ptr % PE
        iBLK = octree % ptr % BLK

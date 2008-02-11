@@ -39,6 +39,7 @@ MODULES = \
 	ModPartSteady.o\
 	ModPhysics.o\
 	ModPointImplicit.o\
+	ModPolarNeighbor.o\
 	ModProcMH.o\
 	ModRestartFile.o\
 	ModSize.o\

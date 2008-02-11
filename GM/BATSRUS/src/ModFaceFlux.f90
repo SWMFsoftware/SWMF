@@ -11,7 +11,7 @@ module ModFaceFlux
 
   use ModGeometry,   ONLY: UseCovariant, &                
        FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB, &     
-       FaceArea2MinI_B, FaceArea2MinJ_B, FaceArea2MinK_B  
+       FaceArea2MinI_B, FaceArea2MinK_B  
 
   use ModAdvance, ONLY:&
        B0xFace_x_BLK, B0yFace_x_BLK, B0zFace_x_BLK, & ! input: face X B0
@@ -512,18 +512,6 @@ contains
       call set_block_values(iBlock, z_)
 
       do kFace = kMin, kMax; 
-
-         !if(DoFixAxis .and. &
-         !     (    NeiLTop(iBlock) == NOBLK .and. kFace == nK+1 &
-         !     .or. NeiLBot(iBlock) == NOBLK .and. kFace ==    1 )) then
-         !   VdtFace_Z(iMin:iMax, jMin:jMax, kFace)        = 0.0
-         !   uDotArea_ZI(iMin:iMax, jMin:jMax,  kFace,:)   = 0.0
-         !   bCrossArea_DZ(:, iMin:iMax, jMin:jMax, kFace) = 0.0
-         !   EDotFA_Z(iMin:iMax, jMin:jMax, kFace)  = 0.0 !^CFG IF BORISCORR
-         !   CYCLE
-         !end if
-
-
          do jFace = jMin, jMax; do iFace = iMin, iMax
 
          call set_cell_values_z
@@ -648,22 +636,9 @@ contains
        AreaY = FaceAreaJ_DFB(y_, iFace, jFace, kFace, iBlockFace)
        AreaZ = FaceAreaJ_DFB(z_, iFace, jFace, kFace, iBlockFace)
        Area2 = AreaX**2 + AreaY**2 + AreaZ**2
-       if(Area2 < cHalf*FaceArea2MinJ_B(iBlockFace))then
-          !The face is at the pole
-          Normal_D(x_)=x_BLK(iFace, jFace, kFace, iBlockFace)-&
-                       x_BLK(iLeft, jLeft, kLeft, iBlockFace)
-          Normal_D(y_)=y_BLK(iFace, jFace, kFace, iBlockFace)-&
-                       y_BLK(iLeft, jLeft, kLeft, iBlockFace)
-          Normal_D(z_)=z_BLK(iFace, jFace, kFace, iBlockFace)-&
-                       z_BLK(iLeft, jLeft, kLeft, iBlockFace)
-          Normal_D=Normal_D/&
-               sqrt(Normal_D(x_)**2+Normal_D(y_)**2+Normal_D(z_)**2)
-          Area2 = FaceArea2MinJ_B(iBlockFace)
-          Area = sqrt(Area2)
-       else
-          Area = sqrt(Area2)
-          Normal_D=(/AreaX,AreaY,AreaZ/)/Area
-       end if
+       
+       Area = sqrt(Area2)
+       Normal_D=(/AreaX,AreaY,AreaZ/)/Area
     end if                                
 
     call set_cell_values_common

@@ -266,9 +266,6 @@ Module ModMain
   !/
   logical:: UseUserInnerBcs          = .false.
   logical:: UseUserSource            = .false.
-  logical:: UseExtraBoundary         = .false.
-  logical:: DoFixExtraBoundary       = .false.
-  logical:: DoFixOuterBoundary       = .false.  
   logical:: UseUserPerturbation      = .false.
   logical:: UseUserOuterBcs          = .false.
   logical:: UseUserICs               = .false.
@@ -280,5 +277,23 @@ Module ModMain
   logical:: UseUserB0                = .false.
   logical:: UseUserInitSession       = .false.
   logical:: UseUserUpdateStates      = .false.
+
+  !\
+  ! For face formulation for outer boundary conditions, by setting
+  ! DoFixOuterBoundary to .true. one can achive the same level of
+  ! refinement across the outer boundary. 
+  !/
+  logical:: DoFixOuterBoundary       = .false.  
+
+  !\
+  ! For non-spherical geometry an extra boundary can be set, with
+  ! or without fixing the refinement level across this boundary.
+  ! With spherical geometry this structure is used to keep the 
+  ! constant refinement level around the pole and to flag the blocks
+  ! intersecting the pole.
+  !/
+  logical:: UseExtraBoundary         = .false.
+  logical:: DoFixExtraBoundaryOrPole = .false.
+ 
 
 end module ModMain

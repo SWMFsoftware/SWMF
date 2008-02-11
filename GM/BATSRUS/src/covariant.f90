@@ -237,7 +237,50 @@ subroutine set_xyz_minmax_covar
      call stop_mpi('Unknown geometry: '//TypeGeometry)
   end select
 end subroutine set_xyz_minmax_covar
-
+!-------------------------------------------------------------!
+subroutine fix_pole(iBlock)
+  use ModSize
+  use ModMain,ONLY:R_,Theta_
+  use ModGeometry,ONLY:dx_BLK,dz_BLK,XyzStart_BLK
+  use ModGeometry,ONLY:IsPole_B=>DoFixExtraBoundary_B
+  use ModCovariant
+  implicit none
+  integer, intent(in)::iBlock
+  real::dR,dTheta,Area2
+  integer::k
+  
+  !-------------------------------------------------------------!
+  FaceArea2MinI_B(iBlock)=cZero
+  FaceArea2MinK_B(iBlock)=cZero
+  
+  if(.not.is_axial_geometry())return
+  if(index(TypeGeometry,'spherical')>0)then
+     !calculate a minimal non-zero face area squared along theta direction
+     dTheta=dz_BLK(iBlock)
+     IsPole_B(iBlock)= XyzStart_BLK(Theta_,iBlock)-dTheta < cZero &
+          .or.XyzStart_BLK(Theta_,iBlock)+nK*dTheta > cPi
+     if(IsPole_B(iBlock))then
+        Area2=sum(FaceAreaK_DFB(:,1,1,2,iBlock)**2)
+        !minimal Area2 is calculated over cell faces non-intersecting the pole
+        !no dependence on Phi_
+        
+        Area2=min(Area2,sum(FaceAreaK_DFB(:,1,1,nK,iBlock)**2))
+  
+        FaceArea2MinK_B(iBlock)=Area2
+     end if
+  elseif(index(TypeGeometry,'cylindrical')>0.or.&
+       index(TypeGeometry,'axial')>0)then
+     dR=dx_BLK(iBlock)
+     IsPole_B(iBlock)= XyzStart_BLK(R_,iBlock)-dR < cZero 
+     if(IsPole_B(iBlock))then
+        Area2=sum(FaceAreaI_DFB(:,2,1,1,iBlock)**2)
+        do k=1,nK 
+           Area2=min(Area2,sum(FaceAreaI_DFB(:,2,1,k,iBlock)**2))
+        end do
+        FaceArea2MinI_B(iBlock)=Area2
+     end if
+  end if
+end subroutine fix_pole
 !=======================================================================
 subroutine fix_geometry_at_reschange(iBlock)
   use ModCovariant
@@ -260,6 +303,8 @@ subroutine fix_geometry_at_reschange(iBlock)
   real,dimension(nDim,1:nI,nJ+1,nK)::FaceCenterJ_DF
   real,dimension(nDim,1:nI,nJ,nK+1)::FaceCenterK_DF
   real,dimension(nDim)::FaceCenterStart_D,StartNode_D
+
+  character(LEN=*),parameter::NameSub='fix_geometry_at_reschange'
 
   integer::i,j,k,iDim
 
@@ -428,7 +473,8 @@ subroutine fix_geometry_at_reschange(iBlock)
 
   !Save level of refinement
   OldLevel_IIIB(:,:,:,iBlock)=BLKneighborLEV(:,:,:,iBlock)
-  call test_block_geometry(iBlock)
+  call fix_pole(iBlock)
+  call test_block_geometry(iBlock,NameSub)
 contains
 !--------------------------------FACE I----------------------------------!
 !Fix face area vectors along I direction
@@ -854,7 +900,7 @@ subroutine fix_covariant_geometry(iBLK)
   real,dimension(nDim,1:nI,nJ+1,nK)::FaceCenterJ_DF
   real,dimension(nDim,1:nI,nJ,nK+1)::FaceCenterK_DF
   real,dimension(nDim)::FaceCenterStart_D
-
+  character(LEN=*),parameter::NameSub='fix_covariant_geometry'
 
   integer::i,j,k
 
@@ -963,54 +1009,14 @@ subroutine fix_covariant_geometry(iBLK)
        RDotFaceAreaI_F(2:nI+1,:,:)-RDotFaceAreaI_F(1:nI,:,:)+&
        RDotFaceAreaJ_F(:,2:nJ+1,:)-RDotFaceAreaJ_F(:,1:nJ,:)+&
        RDotFaceAreaK_F(:,:,2:nK+1)-RDotFaceAreaK_F(:,:,1:nK) )
-  
-  FaceArea2MinI_B(iBLK)=cZero
-  FaceArea2MinJ_B(iBLK)=cZero
-  FaceArea2MinK_B(iBLK)=cZero
-
-  select case(TypeGeometry)      
-  case('spherical')                               
-     call fix_spherical_geometry(iBLK)      
-  case('spherical_lnr')                           
-     call fix_spherical2_geometry(iBLK)     
-  case('cylindrical')                             
-     call fix_cylindrical_geometry(iBLK)                        
-  end select
-  call test_fix_geometry
-contains
-  subroutine test_fix_geometry
-    real,dimension(nDim)::FaceArea_D
-    integer::iBlock
-    iBlock=iBLK
-    do k=1,nK;do j=1,nJ;do i=1,nI
-       FaceArea_D=FaceAreaI_DFB(:,i+1,j,k,iBlock)-&
-                  FaceAreaI_DFB(:,i  ,j,k,iBlock)+&
-                  FaceAreaJ_DFB(:,i,j+1,k,iBlock)-&
-                  FaceAreaJ_DFB(:,i  ,j,k,iBlock)+&
-                  FaceAreaK_DFB(:,i,j,k+1,iBlock)-&
-                  FaceAreaK_DFB(:,i  ,j,k,iBlock)
-       if(sum(FaceArea_D**2)>cTolerance)then
-          write(*,*)'Wrongly defined face areas'
-          write(*,*)'i,j,k,iBlock=',i,j,k,iBlock
-          write(*,*)'x,y,z=',x_BLK(i,j,k,iBlock),&
-               y_BLK(i,j,k,iBlock),z_BLK(i,j,k,iBlock)
-          write(*,*)'CRASH IN THE MAIN FIX GEOMETRY!!!'
-          write(*,*)'Face Area Vectors:',&
-                  FaceAreaI_DFB(:,i+1,j,k,iBlock),&
-                  FaceAreaI_DFB(:,i  ,j,k,iBlock),&
-                  FaceAreaJ_DFB(:,i,j+1,k,iBlock),&
-                  FaceAreaJ_DFB(:,i  ,j,k,iBlock),&
-                  FaceAreaK_DFB(:,i,j,k+1,iBlock),&
-                  FaceAreaK_DFB(:,i  ,j,k,iBlock)
-          call stop_mpi('Stopped')
-       end if
-    end do;end do;end do
-  end subroutine test_fix_geometry
+  call fix_pole(iBLK)
+  call test_block_geometry(iBLK,NameSub)
 end subroutine fix_covariant_geometry
-subroutine test_block_geometry(iBlock)
+subroutine test_block_geometry(iBlock,NameSub)
   use ModCovariant
   implicit none
   integer,intent(in)::iBlock
+  character(LEN=*),intent(in)::NameSub
   real,dimension(nDim)::FaceArea_D
   integer::i,j,k
   do k=1,nK;do j=1,nJ;do i=1,nI
@@ -1023,7 +1029,7 @@ subroutine test_block_geometry(iBlock)
      if(sum(FaceArea_D**2)>cTolerance)then
         write(*,*)'Wrongly defined face areas'
         write(*,*)'i,j,k,iBlock=',i,j,k,iBlock
-        write(*,*)'CRASH IN THE MAIN FIX GEOMETRY!!!'
+        write(*,*)'Wrong geometry is created in '//NameSub
         write(*,*)'Face Area Vectors:',&
              FaceAreaI_DFB(:,i+1,j,k,iBlock),&
              FaceAreaI_DFB(:,i  ,j,k,iBlock),&
@@ -1035,79 +1041,7 @@ subroutine test_block_geometry(iBlock)
      end if
   end do;end do;end do
 end subroutine test_block_geometry
-!---------------------------------------------------------------------
-subroutine fix_spherical_geometry(iBLK)
-  use ModMain
-  use ModGeometry,ONLY:dx_BLK,dy_BLK,dz_BLK,&
-       DoFixExtraBoundary_B,XyzStart_BLK,XyzMin_D,XyzMax_D
-  use ModCovariant
-  use ModNumConst
-  implicit none
-
-  integer, intent(in) :: iBLK
-  
-  real::dR,dPhi,dTheta
- 
-  dR=dx_BLK(iBLK)
-  dPhi=dy_BLK(iBLK)
-  dTheta=dz_BLK(iBLK)
-
-
-
-  DoFixExtraBoundary_B(iBLK) = XyzStart_BLK(Theta_,iBLK)-dz_BLK(iBLK)&
-       <XyzMin_D(Theta_).or.&
-       XyzStart_BLK(Theta_,iBLK)+nK*dz_BLK(iBLK)>XyzMax_D(Theta_)
-
-  if(DoFixExtraBoundary_B(iBLK)) then
-     FaceArea2MinK_B(iBLK)=dR*XyzStart_BLK(1,iBLK)*&
-          (cTwo*tan(cHalf*dPhi))*&       
-          (cTwo*tan(cHalf*dTheta))
-     FaceArea2MinK_B(iBLK)=FaceArea2MinK_B(iBLK)**2
-  end if
-end subroutine fix_spherical_geometry
-!-----------------------------------------------------------
-subroutine fix_spherical2_geometry(iBLK)
-  use ModMain
-  use ModGeometry,ONLY:dx_BLK,dy_BLK,dz_BLK,&
-       DoFixExtraBoundary_B,XyzStart_BLK,XyzMin_D,XyzMax_D
-  use ModCovariant
-  use ModNumConst
-  implicit none
-
-  integer, intent(in) :: iBLK
-  real::dR2,dPhi,dTheta
-
-  dR2=dx_BLK(iBLK)
-  dPhi=dy_BLK(iBLK)
-  dTheta=dz_BLK(iBLK)
-
- 
-
-  DoFixExtraBoundary_B(iBLK) = XyzStart_BLK(Theta_,iBLK)-dz_BLK(iBLK)&
-       <XyzMin_D(Theta_).or.&
-       XyzStart_BLK(Theta_,iBLK)+nK*dz_BLK(iBLK)>XyzMax_D(Theta_)
-  
-  if(DoFixExtraBoundary_B(iBLK)) then
-     FaceArea2MinK_B(iBLK)=exp(cTwo*XyzStart_BLK(1,iBLK))*&
-          sinh(dR2)*(cOne+cosh(dR2))*cHalf*&
-          (cTwo*tan(cHalf*dPhi))*&       
-          (cTwo*tan(cHalf*dTheta))
-     FaceArea2MinK_B(iBLK)=FaceArea2MinK_B(iBLK)**2
-  end if
-
-end subroutine fix_spherical2_geometry
-
-
-!-----------------------------------------------------------------
-subroutine fix_cylindrical_geometry(iBLK)
-  use ModMain
-  use ModGeometry
-  implicit none
-  integer,intent(in)::iBLK
-  DoFixExtraBoundary_B(iBLK)= XyzStart_BLK(R_,iBLK)-dx_BLK(iBLK)<XyzMin_D(R_)
-end subroutine fix_cylindrical_geometry
-!-------------------------------------------------------------------
-
+!========================================================================
 subroutine calc_b0source_covar(iBlock)  
   use ModProcMH  
   use ModMain,ONLY:UseB0Source,UseCurlB0,x_,y_,z_!,R_,Theta_,Phi_

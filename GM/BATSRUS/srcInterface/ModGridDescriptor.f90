@@ -208,7 +208,7 @@ contains
              child % ptr % refine  = .false.
              child % ptr % coarsen = .false.
              child % ptr % body    = .false.
-             child % ptr % IsExtraBoundary = .false.
+             child % ptr % IsExtraBoundaryOrPole = .false.
              child % ptr % IsOuterBoundary = .false.
 
              child % ptr % parent =>octree % ptr

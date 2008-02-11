@@ -5,7 +5,7 @@ module ModOctree
 
   type adaptive_block
      logical :: &
-          IsExtraBoundary,IsOuterBoundary,&         
+          IsExtraBoundaryOrPole,IsOuterBoundary,&         
           used, refine, coarsen, body
      integer :: number, child_number, PE, BLK, LEV, LEVmin,LEVmax
      type (adaptive_block), pointer :: parent

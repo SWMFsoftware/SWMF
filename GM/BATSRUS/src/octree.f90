@@ -88,7 +88,7 @@ subroutine initialize_octree_block(octree, iPE, iBLK, iLEV, iLEVmin, iLEVmax)
   octree % ptr % refine  = .false.
   octree % ptr % coarsen = .false.
   octree % ptr % body    = .false.
-  octree % ptr % IsExtraBoundary    = .false.   
+  octree % ptr % IsExtraBoundaryOrPole    = .false.   
   octree % ptr % IsOuterBoundary    = .false.  
 
 end subroutine initialize_octree_block
@@ -162,7 +162,7 @@ subroutine refine_octree_block(octree, iPEs, iBLKs, fromPE, fromBLK)
      octree % ptr % refine  = .false.
      octree % ptr % coarsen = .false.
      octree % ptr % body    = .false.
-     octree % ptr % IsExtraBoundary = .false. 
+     octree % ptr % IsExtraBoundaryOrPole = .false. 
      octree % ptr % IsOuterBoundary = .false. 
      octree % ptr % number  = -1
      octree % ptr % PE      = -1
@@ -248,7 +248,7 @@ subroutine coarsen_octree_block(octree, iPEs, iBLKs)
      octree % ptr % refine  = .false.
      octree % ptr % coarsen = .false.
      octree % ptr % body    = .false.
-     octree % ptr % IsExtraBoundary = .false.   
+     octree % ptr % IsExtraBoundaryOrPole = .false.   
      octree % ptr % IsOuterBoundary = .false.  
 
      global_block_ptrs(iBLKs(1), iPEs(1)+1) % ptr => octree % ptr
@@ -459,7 +459,7 @@ subroutine set_body_flag
   use ModProcMH
   use ModSize,ONLY:nBLK
   use ModMain, ONLY : DoFixOuterBoundary,East_,Top_,&       
-       ExtraBc_,DoFixExtraBoundary,TypeBC_I     
+       ExtraBc_,DoFixExtraBoundaryOrPole,TypeBC_I     
   use ModGeometry, ONLY :IsBoundaryBlock_IB,DoFixExtraBoundary_B
   use ModGeometry, ONLY : BodyFlg_B
   use ModOctree
@@ -489,7 +489,7 @@ subroutine set_body_flag
      end do
   end do
 
-  if(DoFixExtraBoundary)then
+  if(DoFixExtraBoundaryOrPole)then
 
      tmp_logical_list = .false.
 
@@ -501,13 +501,15 @@ subroutine set_body_flag
         do inBLK = 1,nBLK
            inBlockPtr%ptr => global_block_ptrs(inBLK,inPE)%ptr
            if (associated(inBlockPtr%ptr)) &
-                inBlockPtr%ptr%IsExtraBoundary = tmp_logical_list(inBLK,inPE)
+                inBlockPtr%ptr%IsExtraBoundaryOrPole = &
+                tmp_logical_list(inBLK,inPE)
         end do
      end do
   end if
   if(DoFixOuterBoundary)then
      do inBLK=1,nBLK
-        DoFixBoundary_B(inBLK)=any(IsBoundaryBlock_IB(East_:Top_,inBLK).and.TypeBC_I(East_:Top_)/='float')
+        DoFixBoundary_B(inBLK)=any(IsBoundaryBlock_IB(East_:Top_,inBLK).and.&
+        TypeBC_I(East_:Top_)/='float')
      end do
      tmp_logical_list = .false.
 

@@ -1058,7 +1058,8 @@ subroutine mp_build_cell_indices(JustCount)
   use ModMPCells
   use ModAMR, ONLY : unusedBlock_BP
   use ModGeometry,ONLY:TypeGeometry                
-  use ModParallel,ONLY:NOBLK                       
+  use ModParallel,ONLY:NOBLK
+  use ModPolarNeighbor
   implicit none
 
   !Subroutine arguements
@@ -1149,7 +1150,7 @@ subroutine mp_build_cell_indices(JustCount)
                     call build_i
                  end do
               case(NOBLK)                                 
-                 if(DoFixExtraBoundary.and.&
+                 if(&
                       ((index(TypeGeometry,'spherical')>0&
                       .and.(idir==Top_.or.idir==Bot_)).or.& 
                       (index(TypeGeometry,'cylindrical')>0.and.idir==West_))) call build_i_axis
@@ -1175,7 +1176,7 @@ subroutine mp_build_cell_indices(JustCount)
                     call build_i
                  end do
               case(NOBLK)                  
-                 if(DoFixExtraBoundary.and.&
+                 if(&
                       ((index(TypeGeometry,'spherical')>0&
                       .and.(idir==Top_.or.idir==Bot_)).or.& 
                       (index(TypeGeometry,'cylindrical')>0.and.idir==West_)))  call build_i_axis

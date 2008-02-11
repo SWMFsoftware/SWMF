@@ -1520,18 +1520,18 @@ subroutine MH_set_parameters(TypeAction)
         UseCovariant=.true.
         
         call read_var('TypeGeometry', TypeGeometry)      
-        if(is_axial_geometry().and.mod(proc_dims(2),2)==1)&
-             proc_dims(2) = proc_dims(2)+1
+        if(is_axial_geometry())then
+           DoFixExtraBoundaryOrPole=.true.
+           if(mod(proc_dims(Phi_),2)==1)proc_dims(Phi_) = proc_dims(Phi_)+1
+        end if
         if(index(TypeGeometry,'spherical')>0)then      
            automatic_refinement=.false.                  
            MaxBoundary = Top_
-           DoFixExtraBoundary=.true.
            SaveBoundaryCells=.true.
         end if
         if(index(TypeGeometry,'cylindrical')>0)then
            automatic_refinement=.false.
            MaxBoundary = max(MaxBoundary,North_)
-           DoFixExtraBoundary=.true.
            SaveBoundaryCells=.true.
         end if
      case("#LIMITRADIUS", "#LIMITGENCOORD1")
@@ -1637,7 +1637,7 @@ subroutine MH_set_parameters(TypeAction)
         
         if(.not.is_axial_geometry())&             
              call read_var('DoFixExtraBoundary',&  
-             DoFixExtraBoundary)  
+             DoFixExtraBoundaryOrPole)  
 
      case("#FACEBOUNDARY")
         if(.not.is_first_session())CYCLE READPARAM
