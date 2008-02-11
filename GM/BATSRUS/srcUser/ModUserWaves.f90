@@ -244,8 +244,8 @@ contains
     DoTest = iBlockBc == BlkTest
 !DoTest = iFace == iTest .and. jFace == jTest .and. kFace == kTest .and. DoTest
 
-     if(DoTest)write(*,*)'face: iFace,jFace,kFace,iSide=',&
-          iFace,jFace,kFace,iSide
+!     if(DoTest)write(*,*)'face: iFace,jFace,kFace,iSide=',&
+!          iFace,jFace,kFace,iSide
 !     DoTest = .false.
 
     Dx = Velocity*TimeBc
@@ -276,7 +276,8 @@ contains
     use ModPhysics,  ONLY: ShockSlope
     use ModMain,     ONLY: Time_Simulation, iTest, jTest, kTest, BlkTest
     use ModAdvance,  ONLY: nVar, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, State_VGB
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, x1, x2, y1, y2, z1, z2
+    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, x1, x2, y1, y2, z1, z2, &
+         r_BLK, XyzMin_D, XyzMax_D, TypeGeometry
     use ModSetOuterBC
 
     integer, intent(in) :: iBlock, iSide
@@ -286,31 +287,46 @@ contains
     character (len=*), parameter :: Name='user_set_outerbcs'
 
     integer :: i,j,k,iVar
-    real    :: x,y,z,Dx
-    logical :: DoTest = .false.
+    real    :: Dx, x, y, z,r, rMin, rMax
+!    logical :: DoTest = .false.
     !-------------------------------------------------------------------------
 
-!    DoTest = iFace == iTest .and. jFace == jTest .and. kFace == kTest .and. &
-    DoTest = iBlock == BlkTest
+!    DoTest = iBlock == BlkTest
 
-    if(DoTest)write(*,*)'outer: iSide=',iSide
-!     DoTest = .false.
-
+!    if(DoTest)then
+!       write(*,*)'outer: iSide=',iSide
+!       write(*,*)'x1,x2,y1,y2,z1,z2=',x1,x2,y1,y2,z1,z2
+!       write(*,*)'XyzMin=',XyzMin_D
+!       write(*,*)'XyzMax=',XyzMax_D
+!    end if
     IsFound = .true.
 
     Dx = Velocity*Time_Simulation 
 
+!Cartesian only code
 !    do i = imin1g,imax2g,sign(1,imax2g-imin1g)
 !       do j = jmin1g,jmax2g,sign(1,jmax2g-jmin1g)
 !          do k = kmin1g,kmax2g,sign(1,kmax2g-kmin1g)
+
+    if(TypeGeometry=='spherical_lnr')then
+       rMin = exp(XyzMin_D(1)); rMax = exp(XyzMax_D(1));
+    else
+       rMin = XyzMin_D(1); rMax = XyzMax_D(1);
+    end if
+
     do i=-1,nI+2
        do j=-1,nJ+2
           do k=-1,nK+2
              x = x_BLK(i,j,k,iBlk)
              y = y_BLK(i,j,k,iBlk)
              z = z_BLK(i,j,k,iBlk)
+             r = r_BLK(i,j,k,iBLK)
+             r = alog(r)
 
-             if(x1<x.and.x<x2.and.y1<y.and.y<y2.and.z1<z.and.z<z2) CYCLE
+             if( x1<x .and. x<x2 .and. y1<y .and. y<y2 .and. z1<z .and. z<z2 &
+                  .and. r > rMin .and. r < rMax) CYCLE
+
+!             if(DoTest)write(*,*)'i,j,k,x,y,z,r=',i,j,k,x,y,z,r
 
              do iVar = 1, nVar
 
