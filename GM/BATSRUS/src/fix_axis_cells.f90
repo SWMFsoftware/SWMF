@@ -4,8 +4,7 @@ subroutine fix_axis_cells
   use ModMain, ONLY: nI, nJ, nK, nBlock, UnusedBlk
   use ModAdvance, ONLY: nVar, State_VGB, rFixAxis, r2FixAxis
   use ModGeometry, ONLY: TypeGeometry, XyzMin_D, XyzMax_D, MinDxValue, &
-       x_Blk, y_Blk, z_Blk, r_BLK, rMin_BLK, Dy_Blk, far_field_bcs_blk
-  use ModConst, ONLY: cTwoPi
+       x_Blk, y_Blk, z_Blk, r_BLK, rMin_BLK, far_field_bcs_blk, vInv_CB
   use ModEnergy, ONLY: calc_energy_point
   use ModParallel, ONLY: NeiLBot, NeiLTop, NOBLK
   use ModMpi
@@ -14,11 +13,12 @@ subroutine fix_axis_cells
   real, allocatable:: Buffer_VIII(:,:,:,:), SumBuffer_VIII(:,:,:,:)
 
   integer, parameter :: Sum_=1, SumXLeft_=2, SumXRight_=3, &
-       SumYLeft_=4, SumYRight_=5, SumX_=6
+       SumYLeft_=4, SumYRight_=5, Geom_=6
+  integer, parameter :: Volume_=1, SumX_=2, SumX2_=3
   integer, parameter :: North_=1, South_=2
   integer :: i, j, k, kMin, kMax, kOut, iBlock, iHemisphere, iR, nR, iError
   integer :: iVar, nAxisCell
-  real :: r, x, y, InvNCell, SumX, SumXAvg, InvSumX2, dLeft, dRight
+  real :: r, x, y, Volume, InvVolume, SumX, SumXAvg, InvSumX2, dLeft, dRight
   real :: State_V(nVar), dStateDx_V(nVar), dStateDy_V(nVar)
 
   !--------------------------------------------------------------------------
@@ -26,8 +26,8 @@ subroutine fix_axis_cells
   ! Maximum number of cells in radial direction
   nR = nint((XyzMax_D(1)-XyzMin_D(1))/MinDxValue)
   if(.not.allocated(Buffer_VIII)) &
-       allocate(Buffer_VIII(nVar, nR, 1:SumX_, North_:South_), &
-                SumBuffer_VIII(nVar, nR, 1:SumX_, North_:South_))
+       allocate(Buffer_VIII(nVar, nR, 1:Geom_, North_:South_), &
+                SumBuffer_VIII(nVar, nR, 1:Geom_, North_:South_))
 
   Buffer_VIII    = 0.0
   SumBuffer_VIII = 0.0
@@ -57,11 +57,16 @@ subroutine fix_axis_cells
         if(TypeGeometry == 'spherical_lnr') r = alog(r)
         iR = ceiling( (r - XyzMin_D(1))/MinDxValue + 0.1)
 
-        do k=kMin, kMax; do j=1,nJ
-           Buffer_VIII(:,iR,Sum_,iHemisphere) = &
-                Buffer_VIII(:,iR,Sum_,iHemisphere) &
-                + State_VGB(:,i,j,k,iBlock)
-        end do; end do
+        do k=kMin, kMax; 
+           Volume = 1.0/vInv_CB(i,1,k,iBlock)
+           Buffer_VIII(Volume_,iR,Geom_,iHemisphere) = &
+                Buffer_VIII(Volume_,iR,Geom_,iHemisphere) + nJ*Volume
+           do j=1,nJ
+              Buffer_VIII(:,iR,Sum_,iHemisphere) = &
+                   Buffer_VIII(:,iR,Sum_,iHemisphere) &
+                   + Volume*State_VGB(:,i,j,k,iBlock)
+           end do
+        end do
         do j=1,nJ
            x = x_BLK(i,j,kOut,iBlock)
            y = y_BLK(i,j,kOut,iBlock)
@@ -69,7 +74,6 @@ subroutine fix_axis_cells
 
            Buffer_VIII(:,iR,SumXLeft_,iHemisphere) = &
                 Buffer_VIII(:,iR,SumXLeft_,iHemisphere)  + State_V*max(0.,-x)
-           
            Buffer_VIII(:,iR,SumXRight_,iHemisphere) = &
                 Buffer_VIII(:,iR,SumXRight_,iHemisphere) + State_V*max(0.,x)
 
@@ -78,16 +82,16 @@ subroutine fix_axis_cells
            Buffer_VIII(:,iR,SumYRight_,iHemisphere) = &
                 Buffer_VIII(:,iR,SumYRight_,iHemisphere) + State_V*max(0.,y)
 
-           ! Use first two variables of buffer to add up x and x**2
-           Buffer_VIII(1,iR,SumX_,iHemisphere) = &
-                Buffer_VIII(1,iR,SumX_,iHemisphere) + abs(x)
-           Buffer_VIII(2,iR,SumX_,iHemisphere) = &
-                Buffer_VIII(2,iR,SumX_,iHemisphere) + x**2
+           ! Add up abs(x) and x**2
+           Buffer_VIII(SumX_,iR,Geom_,iHemisphere) = &
+                Buffer_VIII(SumX_,iR,Geom_,iHemisphere) + abs(x)
+           Buffer_VIII(SumX2_,iR,Geom_,iHemisphere) = &
+                Buffer_VIII(SumX2_,iR,Geom_,iHemisphere) + x**2
         end do
      end do
   end do
      
-  call MPI_allreduce(Buffer_VIII, SumBuffer_VIII, nVar*nR*SumX_*2, MPI_REAL, &
+  call MPI_allreduce(Buffer_VIII, SumBuffer_VIII, nVar*nR*Geom_*2, MPI_REAL, &
        MPI_SUM, iComm, iError)
 
   do iBlock = 1, nBlock
@@ -101,8 +105,6 @@ subroutine fix_axis_cells
         CYCLE
      end if
 
-     InvNCell = 1.0/(nAxisCell*nint(cTwoPi/Dy_BLK(iBlock)))
-
      if( NeiLTop(iBlock) == NOBLK )then
         iHemisphere = North_; kMax = nK + 1; kMin = nK + 1 - nAxisCell
      elseif( NeiLBot(iBlock) == NOBLK) then
@@ -115,10 +117,12 @@ subroutine fix_axis_cells
         r = r_Blk(i,1,1,iBlock)
         if(TypeGeometry == 'spherical_lnr') r = alog(r)
         iR = ceiling( (r - XyzMin_D(1))/MinDxValue + 0.1)
-        State_V = SumBuffer_VIII(:,iR,Sum_,iHemisphere)*InvNCell
 
-        SumX     = 0.5*SumBuffer_VIII(1,iR,SumX_,iHemisphere)
-        InvSumX2 = 0.5/max(SumBuffer_VIII(2,iR,SumX_,iHemisphere),1e-10)
+        InvVolume= 1.0/SumBuffer_VIII(Volume_,iR,Geom_,iHemisphere)
+        SumX     = 0.5*SumBuffer_VIII(SumX_  ,iR,Geom_,iHemisphere)
+        InvSumX2 = 0.5/SumBuffer_VIII(SumX2_ ,iR,Geom_,iHemisphere)
+
+        State_V = InvVolume*SumBuffer_VIII(:,iR,Sum_,iHemisphere)
 
         ! Limit the slope for each variable
         do iVar = 1, nVar
@@ -136,7 +140,7 @@ subroutine fix_axis_cells
         end do
 
         ! Apply fit to each cell within the supercell
-        do k=kMin, kMax; do j=1,nJ
+        do k=kMin, kMax; do j=1, nJ
 
            State_VGB(:,i,j,k ,iBlock) = State_V &
                 + dStateDx_V*x_BLK(i,j,k,iBlock) &
