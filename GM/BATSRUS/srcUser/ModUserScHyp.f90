@@ -15,7 +15,8 @@ module ModUser
        IMPLEMENTED3 => user_face_bcs,                   &
        IMPLEMENTED4 => user_get_b0,                     &
        IMPLEMENTED5 => user_update_states,              &
-       IMPLEMENTED6 => user_specify_initial_refinement
+       IMPLEMENTED6 => user_specify_initial_refinement, &
+       IMPLEMENTED7 => user_set_outerbcs
 
   include 'user_module.h' !list of public methods
 
@@ -72,7 +73,114 @@ contains
        end select
     end do
   end subroutine user_read_inputs
-  
+
+  !==========================================================================
+  subroutine user_set_outerbcs(iBlock, iSide, TypeBc, IsFound)
+    use ModAdvance,  ONLY: State_VGB,B0xCell_Blk,B0yCell_Blk,B0zCell_Blk,Hyp_
+    use ModMain,     ONLY: UseHyperbolicDivb
+    use ModNumConst, ONLY: cTolerance
+    use ModGeometry, ONLY: x_Blk, y_Blk, z_Blk, r_Blk
+    use ModPhysics,  ONLY: inv_gm1
+    use ModSize
+    use ModVarIndexes
+    implicit none
+
+    integer,          intent(in)  :: iBlock, iSide
+    character(len=20),intent(in)  :: TypeBc
+    logical,          intent(out) :: IsFound
+
+    character (len=*), parameter :: Name='user_set_outerbcs'
+
+    integer :: i, j, k, iMin, jMin, kMin, iMax, jMax, kMax
+    real, dimension(nDim) :: B1_D,B1n_D,B1t_D, FullB_D
+    real, dimension(nDim) :: RhoU_D,RhoUn_D,RhoUt_D,r2RhoUn_D,GRhoU_D
+    real, dimension(nDim) :: FaceCoords_D, Normal_D, Unit_D
+    real :: RFace, Dens, Pres, Gamma, B1dotR, FullBNorm, RhoUdotR
+    !------------------------------------------------------------------------
+    IsFound = .true.
+
+    if(iSide/=East_) call stop_mpi('Wrong iSide in user_set_outerBCs')
+
+    iMin=1-gcn;iMax=0
+    jMin=1-gcn;jMax=nJ+gcn
+    kMin=1-gcn;kMax=nK+gcn
+
+    do k=kMin,kMax; do j=jMin,jMax
+       FaceCoords_D(x_)=0.5*sum(x_Blk(0:1,j,k,iBlock))
+       FaceCoords_D(y_)=0.5*sum(y_Blk(0:1,j,k,iBlock))
+       FaceCoords_D(z_)=0.5*sum(z_Blk(0:1,j,k,iBlock))
+       RFace = sqrt(sum(FaceCoords_D**2))
+
+       call get_plasma_parameters_cell(FaceCoords_D(x_),FaceCoords_D(y_), &
+            FaceCoords_D(z_),RFace,Dens,Pres,Gamma)
+
+       State_VGB(Rho_,iMax,j,k,iBlock) = max( 2.0*Dens &
+            - State_VGB(Rho_,iMax+1,j,k,iBlock), &
+            State_VGB(Rho_,iMax+1,j,k,iBlock) )
+       do i=iMax-1,iMin,-1
+          State_VGB(Rho_,i,j,k,iBlock) = 2.0*State_VGB(Rho_,i+1,j,k,iBlock) &
+            - State_VGB(Rho_,i+2,j,k,iBlock)
+       end do
+
+       do i=iMin,iMax
+          call get_plasma_parameters_cell(x_Blk(i,j,k,iBlock), &
+               y_Blk(i,j,k,iBlock),z_Blk(i,j,k,iBlock),r_Blk(i,j,k,iBlock), &
+               Dens,Pres,Gamma)
+          State_VGB(P_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) &
+               *Pres/Dens
+          State_VGB(Ew_,i,j,k,iBlock) = State_VGB(P_,i,j,k,iBlock) &
+               *(1.0/(Gamma-1.0)-inv_gm1)
+       end do
+
+       Normal_D(x_)=x_Blk(1,j,k,iBlock)/r_Blk(1,j,k,iBlock)
+       Normal_D(y_)=y_Blk(1,j,k,iBlock)/r_Blk(1,j,k,iBlock)
+       Normal_D(z_)=z_Blk(1,j,k,iBlock)/r_Blk(1,j,k,iBlock)
+
+       B1_D   = State_VGB(Bx_:Bz_,1,j,k,iBlock)
+       B1dotR = dot_product(Normal_D,B1_D)
+       B1n_D  = B1dotR*Normal_D
+       B1t_D  = B1_D-B1n_D
+
+       do i=iMin,iMax
+          State_VGB(Bx_:Bz_,i,j,k,iBlock) = B1t_D
+       end do
+
+       RhoU_D   = State_VGB(RhoUx_:RhoUz_,1,j,k,iBlock)
+       RhoUdotR = dot_product(Normal_D,RhoU_D)
+       RhoUn_D  = RhoUdotR*Normal_D
+       RhoUt_D  = RhoU_D - RhoUn_D
+       r2RhoUn_D = r_Blk(1,j,k,iBlock)**2*RhoUn_D
+
+       do i=iMin,iMax
+          GRhoU_D = RhoUt_D + r2RhoUn_D/r_Blk(i,j,k,iBlock)**2
+          FullB_D(x_) = State_VGB(Bx_,i,j,k,iBlock) &
+               + B0xCell_BLK(i,j,k,iBlock)
+          FullB_D(y_) = State_VGB(By_,i,j,k,iBlock) &
+               + B0yCell_BLK(i,j,k,iBlock)
+          FullB_D(z_) = State_VGB(Bz_,i,j,k,iBlock) &
+               + B0zCell_BLK(i,j,k,iBlock)
+          FullBNorm = sqrt(sum(FullB_D**2))
+          if(FullBNorm<cTolerance)then
+             ! HD: extrapolate in radial direction
+             Unit_D(x_)=x_Blk(i,j,k,iBlock)/r_Blk(i,j,k,iBlock)
+             Unit_D(y_)=y_Blk(i,j,k,iBlock)/r_Blk(i,j,k,iBlock)
+             Unit_D(z_)=z_Blk(i,j,k,iBlock)/r_Blk(i,j,k,iBlock)
+          else
+             ! MHD: extrapolate in field line direction
+             Unit_D = FullB_D/FullBNorm
+          end if
+          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+               dot_product(GRhoU_D,Unit_D)*Unit_D
+       end do
+
+    end do; end do
+
+    if(UseHyperbolicDivb)then
+       State_VGB(Hyp_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) = 0.0
+    end if
+
+  end subroutine user_set_outerbcs
+
   !==========================================================================
   subroutine user_face_bcs(VarsGhostFace_V)
 
@@ -89,7 +197,7 @@ contains
     use ModBlockData, ONLY: use_block_data, put_block_data, get_block_data
 
     use ModFaceBc, ONLY: FaceCoords_D, VarsTrueFace_V, TimeBc, &
-         iBlockBc !!!,B0Face_D
+         iBlockBc, iSide !!!, B0Face_D
 
     implicit none
 
@@ -99,9 +207,9 @@ contains
     real :: RR, B1dotR  
     real, dimension(3):: RFace_D,B1_D,U_D,B1t_D,B1n_D
 
-!!!    real    :: RR, FullBnorm
+!!!    real    :: RR, B1dotR, FullBnorm, UdotRFace
 !!!    real, dimension(3) :: RFace_D, B1_D, U_D, B1t_D, B1n_D, &
-!!!                          FullB_D, FullBunit_D
+!!!                         FullB_D, FullBunit_D, UFace_D
     !------------------------------------------------------------------------
 
     RR = sqrt(sum(FaceCoords_D**2))
@@ -117,24 +225,31 @@ contains
 ! However, in the current heating scenario the nonzero inflow will create
 ! a nonzero Ew*vr flux and therefor change the coronal heating properties.
 ! We leave this boundary condition here for future heating explorations.
-!!!    !\
-!!!    ! Update BCs for induction field::
-!!!    !/
-!!!    VarsGhostFace_V(Bx_:Bz_) = B1t_D(x_:z_)
-!!!
-!!!    !\
-!!!    ! Update BCs for velocity
-!!!    !/
-!!!    FullB_D = VarsGhostFace_V(Bx_:Bz_) + B0Face_D
-!!!    FullBnorm = sqrt(sum(FullB_D**2))
-!!!    if (FullBnorm<cTolerance) then
-!!!       ! HD: extrapolate in radial direction
-!!!       VarsGhostFace_V(Ux_:Uz_) = dot_product(U_D,RFace_D)*RFace_D
-!!!    else
-!!!       ! MHD: extrapolate in field line direction
-!!!       FullBunit_D = FullB_D/FullBnorm
-!!!       VarsGhostFace_V(Ux_:Uz_) = dot_product(U_D,FullBunit_D)*FullBunit_D
-!!!    end if
+!    !\
+!    ! Update BCs for induction field::
+!    !/
+!    VarsGhostFace_V(Bx_:Bz_) = B1t_D(x_:z_)
+!
+!    !\
+!    ! Update BCs for velocity
+!    !/
+!    FullB_D(x_:z_) = VarsGhostFace_V(Bx_:Bz_) + B0Face_D(x_:z_)
+!    FullBnorm = sqrt(sum(FullB_D**2))
+!    if(FullBnorm<cTolerance)then
+!       ! HD: extrapolate in radial direction
+!       UFace_D = dot_product(U_D,RFace_D)*RFace_D
+!    else
+!       ! MHD: extrapolate in field line direction
+!       FullBunit_D = FullB_D/FullBnorm
+!       UFace_D = dot_product(U_D,FullBunit_D)*FullBunit_D
+!    endif
+!    UdotRFace = dot_product(UFace_D,RFace_D)
+!    if(UdotRFace < 0.0)then
+!       VarsGhostFace_V(Ux_:Uz_) = 0.0
+!    else
+!       VarsGhostFace_V(Ux_:Uz_) = UFace_D(x_:z_)
+!    endif
+
     !\
     ! Update BCs for velocity and induction field::
     !/
@@ -146,22 +261,21 @@ contains
     call get_plasma_parameters_cell(FaceCoords_D(x_),FaceCoords_D(y_), &
                                     FaceCoords_D(z_),RR, &
                                     Denscell,Prescell,Gammacell)
+
     VarsGhostFace_V(rho_) = max(-VarsTrueFace_V(rho_) + 2*Denscell, &
-                                VarsTrueFace_V(rho_))
+         VarsTrueFace_V(rho_))
     VarsGhostFace_V(P_)   = max(VarsGhostFace_V(rho_)*Prescell/Denscell, &
-                                VarsTrueFace_V(P_))
-    VarsGhostFace_V(Ew_)  = &!max(-VarsTrueFace_V(Ew_)+ &  
-         VarsGhostFace_V(rho_)*Prescell/Denscell &
+         VarsTrueFace_V(P_))
+    VarsGhostFace_V(Ew_)  = VarsGhostFace_V(rho_)*Prescell/Denscell &
          *(1.0/(Gammacell-cOne)-inv_gm1)
     !\
     ! Apply corotation
     !/
     if (.not.UseRotatingFrame) then
-
-       VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_) -&
-            2*OmegaBody*FaceCoords_D(y_)
-       VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) +&
-            2*OmegaBody*FaceCoords_D(x_)
+       VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_) &
+            - 2*OmegaBody*FaceCoords_D(y_)
+       VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) &
+            + 2*OmegaBody*FaceCoords_D(x_)
     end if
 
     if(UseHyperbolicDivb)then
@@ -225,6 +339,20 @@ contains
     real:: xx,yy,zz,RR,ROne,Rmax,Speed
     !------------------------------------------------------------------------
     call set_oktest('user_initial_perturbation',oktest,oktest_me)
+
+    select case(TypeGeometry)
+    case('cartesian')
+       Rmax=sqrt(x2**2+y2**2+z2**2)
+    case('spherical_lnr')
+       Rmax=exp(XyzMax_D(1))
+    case('spherical')
+       Rmax=XyzMax_D(1)
+    case default
+       call stop_mpi('user_initial_perturbation is not implemented ' &
+                     //'for geometry= '//TypeGeometry)
+    end select
+    Rmax=max(2.1E+01,Rmax)
+
     do iBLK=1,nBLK
        if(unusedBLK(iBLK))CYCLE
        if ((.not.restart)) then   
@@ -234,7 +362,6 @@ contains
              zz = z_BLK(i,j,k,iBLK)
              RR = sqrt(xx**2+yy**2+zz**2+cTolerance**2)
              ROne  = max(cOne,RR)
-             Rmax  = max(2.1E+01,sqrt(x2**2+y2**2+z2**2))
              State_VGB(Bx_      ,i,j,k,iBLK) = cZero
              State_VGB(By_      ,i,j,k,iBLK) = cZero
              State_VGB(Bz_      ,i,j,k,iBLK) = cZero
@@ -341,84 +468,98 @@ contains
     integer, intent(in) :: iBLK
 
     character (len=*), parameter :: Name='user_specify_initial_refinement'
-    real :: BDotRMin,BDotRMax,critr
+    real :: BDotRMin,BDotRMax,CritR, MinRBlk
     integer :: i,j,k, levmin, levelHS, levBLK
     !------------------------------------------------------------------------
 
-    levBLK=global_block_ptrs(iBLK,iProc+1)%ptr%LEV
-
-    select case(TypeGeometry)
-    case('cartesian')
-       levmin=4
-       levelHS=6
-    case('spherical_lnr')
-       levmin=1
-       levelHS=3
-    case default
-       call stop_mpi('user_specify_initial_refinement is not implemented ' &
-                     //'for geometry= '//TypeGeometry)
-    end select
-
     select case (InitialRefineType)
     case ('helio_init')
-       if(.not.time_loop)then
-          !refine to have resolution not worse than levmin
-          if(lev<=levmin)then
-             refineBlock = .true.
+
+       select case(TypeGeometry)
+       case('cartesian')
+          if(.not.time_loop)then
+             !refine to have resolution not worse 4.0 and
+             !refine the body intersecting blocks
+             ! Refine all blocks time through (starting with 1 block)
+             if (lev <= 4) then
+                refineBlock = .true.
+             else
+                critr=(XyzMax_D(1)-XyzMin_D(1))/(2.0**real(lev-2))
+                if ( rCenter < 1.10*rBody + critr ) then
+                   refineBlock = .true.
+                else
+                   refineBlock = .false.
+                end if
+             endif
+          elseif(dx_BLK(iBLK)<0.20.or.far_field_BCs_BLK(iBLK))then
+             refineBlock = .false. !Do not refine body or outer boundary
           else
-             select case(TypeGeometry)
-             case('cartesian')
-                critr=1.1*rBody + (x2-x1)/(2.0**real(lev+2-levmin))
-                if ( rCenter < critr ) then
-                   refineBlock = .true.
-                else
-                   refineBlock = .false.
-                end if
-             case('spherical_lnr')
-                critr=rBody + (x2-x1)/(2.0**real(lev+2-levmin))
-                if ( minR < critr ) then
-                   refineBlock = .true.
-                else
-                   refineBlock = .false.
-                end if
-             end select
-          endif
-       elseif( levBLK<=levelHS-1 )then
-          !refine heliosheath up to levelHS
-          BDotRMin=cZero
-          do k=0,nK+1;do j=1,nJ
-             BDotRMin=min( BDotRMin,minval(&
-                  (B0xCell_BLK(1:nI,j,k,iBLK)+&
-                  State_VGB(Bx_,1:nI,j,k,iBLK))*&
-                  x_BLK(1:nI,j,k,iBLK)+&
-                  (B0yCell_BLK(1:nI,j,k,iBLK)+&
-                  State_VGB(By_,1:nI,j,k,iBLK))*&
-                  y_BLK(1:nI,j,k,iBLK)+&
-                  (B0zCell_BLK(1:nI,j,k,iBLK)+&
-                  State_VGB(Bz_,1:nI,j,k,iBLK))*&
-                  z_BLK(1:nI,j,k,iBLK)))
-          end do;end do
-          BDotRMax=cZero
-          do k=0,nK+1;do j=1,nJ
-             BDotRMax=max( BDotRMax,maxval(&
-                  (B0xCell_BLK(1:nI,j,k,iBLK)+&
-                  State_VGB(Bx_,1:nI,j,k,iBLK))*&
-                  x_BLK(1:nI,j,k,iBLK)+&
-                  (B0yCell_BLK(1:nI,j,k,iBLK)+&
-                  State_VGB(By_,1:nI,j,k,iBLK))*&
-                  y_BLK(1:nI,j,k,iBLK)+&
-                  (B0zCell_BLK(1:nI,j,k,iBLK)+&
-                  State_VGB(Bz_,1:nI,j,k,iBLK))*&
-                  z_BLK(1:nI,j,k,iBLK)))
-          end do;end do
-          refineBlock =BDotRMin<-cTiny.and.&
-               BDotRMax>cTiny
-       else
-          refineBlock=.false.
-       end if
+             call refine_heliosheath
+          end if
+       case('spherical_lnr')
+          levBLK=global_block_ptrs(iBLK,iProc+1)%ptr%LEV
+          levmin=1
+          levelHS=2
+          if(.not.time_loop)then
+             !refine to have resolution not worse than levmin
+             if(lev<=levmin)then
+                refineBlock = .true.
+             else
+                refineBlock = .false.
+             end if
+          elseif( levBLK<=levmin ) then
+             refineBlock = .true.
+          elseif( levBLK<=levelHS-1 )then
+             MinRBlk = exp(XyzStart_Blk(1,iBlk)-0.5*Dx_Blk(iBlk))
+             CritR=rBody + (exp(XyzMax_D(1))-exp(XyzMin_D(1))) &
+                  /(2.0**real(levBLK+2-levmin))
+             if( MinRBlk < CritR )then
+                refineBlock = .true.
+             else
+                call refine_heliosheath
+             endif
+          else
+             refineBlock=.false.
+          end if
+       case default
+          call stop_mpi('user_specify_initial_refinement is ' &
+               //'not implemented for geometry= '//TypeGeometry)
+       end select
        found=.true.
     end select
+
+    contains
+      subroutine refine_heliosheath
+
+        BDotRMin=cZero
+        do k=0,nK+1;do j=1,nJ
+           BDotRMin=min( BDotRMin,minval(&
+                (B0xCell_BLK(1:nI,j,k,iBLK)+&
+                State_VGB(Bx_,1:nI,j,k,iBLK))*&
+                x_BLK(1:nI,j,k,iBLK)+&
+                (B0yCell_BLK(1:nI,j,k,iBLK)+&
+                State_VGB(By_,1:nI,j,k,iBLK))*&
+                y_BLK(1:nI,j,k,iBLK)+&
+                (B0zCell_BLK(1:nI,j,k,iBLK)+&
+                State_VGB(Bz_,1:nI,j,k,iBLK))*&
+                z_BLK(1:nI,j,k,iBLK)))
+        end do;end do
+        BDotRMax=cZero
+        do k=0,nK+1;do j=1,nJ
+           BDotRMax=max( BDotRMax,maxval(&
+                (B0xCell_BLK(1:nI,j,k,iBLK)+&
+                State_VGB(Bx_,1:nI,j,k,iBLK))*&
+                x_BLK(1:nI,j,k,iBLK)+&
+                (B0yCell_BLK(1:nI,j,k,iBLK)+&
+                State_VGB(By_,1:nI,j,k,iBLK))*&
+                y_BLK(1:nI,j,k,iBLK)+&
+                (B0zCell_BLK(1:nI,j,k,iBLK)+&
+                State_VGB(Bz_,1:nI,j,k,iBLK))*&
+                z_BLK(1:nI,j,k,iBLK)))
+        end do;end do
+        refineBlock =BDotRMin<-cTiny.and.&
+             BDotRMax>cTiny
+      end subroutine refine_heliosheath
   end subroutine user_specify_initial_refinement
 
 end module ModUser
-
