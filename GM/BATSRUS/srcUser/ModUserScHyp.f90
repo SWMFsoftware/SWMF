@@ -16,7 +16,8 @@ module ModUser
        IMPLEMENTED4 => user_get_b0,                     &
        IMPLEMENTED5 => user_update_states,              &
        IMPLEMENTED6 => user_specify_initial_refinement, &
-       IMPLEMENTED7 => user_set_outerbcs
+       IMPLEMENTED7 => user_set_outerbcs,               &
+       IMPLEMENTED8 => user_set_plot_var
 
   include 'user_module.h' !list of public methods
 
@@ -77,10 +78,10 @@ contains
   !==========================================================================
   subroutine user_set_outerbcs(iBlock, iSide, TypeBc, IsFound)
     use ModAdvance,  ONLY: State_VGB,B0xCell_Blk,B0yCell_Blk,B0zCell_Blk,Hyp_
-    use ModMain,     ONLY: UseHyperbolicDivb
+    use ModMain,     ONLY: UseHyperbolicDivb, UseRotatingFrame
     use ModNumConst, ONLY: cTolerance
     use ModGeometry, ONLY: x_Blk, y_Blk, z_Blk, r_Blk
-    use ModPhysics,  ONLY: inv_gm1
+    use ModPhysics,  ONLY: inv_gm1, OmegaBody
     use ModSize
     use ModVarIndexes
     implicit none
@@ -93,9 +94,10 @@ contains
 
     integer :: i, j, k, iMin, jMin, kMin, iMax, jMax, kMax
     real, dimension(nDim) :: B1_D,B1n_D,B1t_D, FullB_D
-    real, dimension(nDim) :: RhoU_D,RhoUn_D,RhoUt_D,r2RhoUn_D,GRhoU_D
+    real, dimension(nDim) :: RhoU_D,RhoUn_D,RhoUt_D,r2RhoUn_D,GhostRhoU_D
     real, dimension(nDim) :: FaceCoords_D, Normal_D, Unit_D
     real :: RFace, Dens, Pres, Gamma, B1dotR, FullBNorm, RhoUdotR
+    logical :: fieldaligned=.false.
     !------------------------------------------------------------------------
     IsFound = .true.
 
@@ -126,10 +128,10 @@ contains
           call get_plasma_parameters_cell(x_Blk(i,j,k,iBlock), &
                y_Blk(i,j,k,iBlock),z_Blk(i,j,k,iBlock),r_Blk(i,j,k,iBlock), &
                Dens,Pres,Gamma)
-          State_VGB(P_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) &
-               *Pres/Dens
-          State_VGB(Ew_,i,j,k,iBlock) = State_VGB(P_,i,j,k,iBlock) &
-               *(1.0/(Gamma-1.0)-inv_gm1)
+          State_VGB(P_,i,j,k,iBlock) = max( State_VGB(Rho_,i,j,k,iBlock) &
+               *Pres/Dens, State_VGB(P_,1,j,k,iBlock) )
+          State_VGB(Ew_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) &
+               *Pres/Dens*(1.0/(Gamma-1.0)-inv_gm1)
        end do
 
        Normal_D(x_)=x_Blk(1,j,k,iBlock)/r_Blk(1,j,k,iBlock)
@@ -145,35 +147,61 @@ contains
           State_VGB(Bx_:Bz_,i,j,k,iBlock) = B1t_D
        end do
 
-       RhoU_D   = State_VGB(RhoUx_:RhoUz_,1,j,k,iBlock)
-       RhoUdotR = dot_product(Normal_D,RhoU_D)
-       RhoUn_D  = RhoUdotR*Normal_D
-       RhoUt_D  = RhoU_D - RhoUn_D
-       r2RhoUn_D = r_Blk(1,j,k,iBlock)**2*RhoUn_D
+       if(fieldaligned)then
+          RhoU_D   = State_VGB(RhoUx_:RhoUz_,1,j,k,iBlock)
+          RhoUdotR = max( dot_product(Normal_D,RhoU_D), 0.0 )
+          RhoUn_D  = RhoUdotR*Normal_D
+          RhoUt_D  = RhoU_D - RhoUn_D
+          r2RhoUn_D = r_Blk(1,j,k,iBlock)**2*RhoUn_D
 
-       do i=iMin,iMax
-          GRhoU_D = RhoUt_D + r2RhoUn_D/r_Blk(i,j,k,iBlock)**2
-          FullB_D(x_) = State_VGB(Bx_,i,j,k,iBlock) &
-               + B0xCell_BLK(i,j,k,iBlock)
-          FullB_D(y_) = State_VGB(By_,i,j,k,iBlock) &
-               + B0yCell_BLK(i,j,k,iBlock)
-          FullB_D(z_) = State_VGB(Bz_,i,j,k,iBlock) &
-               + B0zCell_BLK(i,j,k,iBlock)
-          FullBNorm = sqrt(sum(FullB_D**2))
-          if(FullBNorm<cTolerance)then
-             ! HD: extrapolate in radial direction
-             Unit_D(x_)=x_Blk(i,j,k,iBlock)/r_Blk(i,j,k,iBlock)
-             Unit_D(y_)=y_Blk(i,j,k,iBlock)/r_Blk(i,j,k,iBlock)
-             Unit_D(z_)=z_Blk(i,j,k,iBlock)/r_Blk(i,j,k,iBlock)
-          else
-             ! MHD: extrapolate in field line direction
-             Unit_D = FullB_D/FullBNorm
-          end if
-          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
-               dot_product(GRhoU_D,Unit_D)*Unit_D
-       end do
-
+          do i=iMin,iMax
+             GhostRhoU_D = RhoUt_D + r2RhoUn_D/r_Blk(i,j,k,iBlock)**2
+             FullB_D(x_) = State_VGB(Bx_,i,j,k,iBlock) &
+                  + B0xCell_BLK(i,j,k,iBlock)
+             FullB_D(y_) = State_VGB(By_,i,j,k,iBlock) &
+                  + B0yCell_BLK(i,j,k,iBlock)
+             FullB_D(z_) = State_VGB(Bz_,i,j,k,iBlock) &
+                  + B0zCell_BLK(i,j,k,iBlock)
+             FullBNorm = sqrt(sum(FullB_D**2))
+             if(FullBNorm<cTolerance)then
+                ! HD: extrapolate in radial direction
+                Unit_D(x_)=x_Blk(i,j,k,iBlock)/r_Blk(i,j,k,iBlock)
+                Unit_D(y_)=y_Blk(i,j,k,iBlock)/r_Blk(i,j,k,iBlock)
+                Unit_D(z_)=z_Blk(i,j,k,iBlock)/r_Blk(i,j,k,iBlock)
+             else
+                ! MHD: extrapolate in field line direction
+                Unit_D = FullB_D/FullBNorm
+             end if
+             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+                  dot_product(GhostRhoU_D,Unit_D)*Unit_D
+          end do
+       else
+          ! zero physical mass flux at coronal base (reflection)
+          do i=iMin,iMax
+             State_VGB(RhoUx_,i,j,k,iBlock) = &
+                  -State_VGB(RhoUx_,1-i,j,k,iBlock)
+             State_VGB(RhoUy_,i,j,k,iBlock) = &
+                  -State_VGB(RhoUy_,1-i,j,k,iBlock)
+             State_VGB(RhoUz_,i,j,k,iBlock) = &
+                  -State_VGB(RhoUz_,1-i,j,k,iBlock)
+          end do
+       end if
     end do; end do
+
+    !\
+    ! Apply corotation
+    !/
+    if(.not.UseRotatingFrame)then
+       State_VGB(RhoUx_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) = &
+            State_VGB(RhoUx_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) &
+            -2.0*OmegaBody*y_Blk(iMin:iMax,jMin:jMax,kMin:kMax,iBlock) &
+            *State_VGB(Rho_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)
+       State_VGB(RhoUy_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) = &
+            State_VGB(RhoUy_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) &
+            -2.0*OmegaBody*x_Blk(iMin:iMax,jMin:jMax,kMin:kMax,iBlock) &
+            *State_VGB(Rho_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)
+    end if
+
 
     if(UseHyperbolicDivb)then
        State_VGB(Hyp_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) = 0.0
@@ -561,5 +589,49 @@ contains
              BDotRMax>cTiny
       end subroutine refine_heliosheath
   end subroutine user_specify_initial_refinement
+
+  !=================================================================
+
+  subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
+       PlotVar_G, PlotVarBody, UsePlotVarBody, &
+       NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
+
+    use ModSize, ONLY: nI, nJ, nK
+    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
+    implicit none
+
+    integer,          intent(in)   :: iBlock
+    character(len=*), intent(in)   :: NameVar
+    logical,          intent(in)   :: IsDimensional
+    real,             intent(out)  :: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out)  :: PlotVarBody
+    logical,          intent(out)  :: UsePlotVarBody
+    character(len=*), intent(inout):: NameTecVar
+    character(len=*), intent(inout):: NameTecUnit
+    character(len=*), intent(inout):: NameIdlUnit
+    logical,          intent(out)  :: IsFound
+
+    character (len=*), parameter :: Name='user_set_plot_var'
+
+    integer :: i,j,k
+    real :: Gamma
+    !-------------------------------------------------------------------
+
+    IsFound=.true.
+
+    select case(NameVar)
+    case('gamma')
+       do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
+          call get_gamma_emp(x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock), &
+               z_BLK(i,j,k,iBlock),Gamma)
+          PlotVar_G(i,j,k) = Gamma
+       end do; end do; end do
+    end select
+
+    UsePlotVarBody=.true.
+    PlotVarBody=1.0
+
+  end subroutine user_set_plot_var
+
 
 end module ModUser
