@@ -36,7 +36,7 @@ Module ModIndices
   integer, parameter :: ap_       = 23
 
   integer, parameter :: nIndices  = ap_
-  integer, parameter :: MaxIndicesEntries = 20000
+  integer, parameter :: MaxIndicesEntries = 25000
 
   real, dimension(MaxIndicesEntries, nIndices)           :: Indices_TV
   integer, dimension(nIndices)                           :: nIndices_V=0
