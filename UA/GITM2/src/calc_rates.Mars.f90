@@ -10,6 +10,7 @@ subroutine calc_rates(iBlock)
 !                              all indices inside loops
 ! Modified (02/20/07) : SWB :  Conversion from cgs to mks for Kt and Km corrected.
 !                              Comment out write statements (no longer needed)
+! Modified (10/05/07) : SWB :  Scaling-off of Km for spin-up stability fo winds.
 ! ----------------------------------------------------------------------------
   use ModGITM
   use ModRates
@@ -367,7 +368,9 @@ trouble = .false.
 !         (Temperature(1:nLons,1:nLats,iAlt,iBlock)*&
 !         TempUnit(1:nLons,1:nLats,iAlt)/ 1000.)**(-0.71)
 !   MTGCM formulation for Molecular Viscosity requires cgs to mks conversion
-
+!   * Scaling of Molecular Viscosity for spun-up stability
+!    ViscCoef(:,:,iAlt) =  kmmix(1:nLons,1:nLats,iAlt)*10.0
+!   * No scaling of molecular vciscosity
      ViscCoef(:,:,iAlt) =  kmmix(1:nLons,1:nLats,iAlt)
 
 !     Visc_3D(:,:,iAlt,iBlock) =  kmmix(1:nLons,1:nLats,iAlt)

@@ -1,5 +1,7 @@
 !--------------------------------------------------------------
-!
+!  Corrections by S. W. Bougher (9/28/07)
+!  -- atomic oxygen replaces O2 in mean mass and scale height
+!  -- artificially set ion densities to 1.0 m-3 (not 1.0E+06 m-3)
 !--------------------------------------------------------------
 
 subroutine get_msis_temperature(lon, lat, alt, t, h)
@@ -14,25 +16,33 @@ subroutine get_msis_temperature(lon, lat, alt, t, h)
   real, intent(in) :: lon, lat, alt
   real, intent(out) :: t, h
 
-  real :: nCO2, nO2, nN2, nCO, m, r, g
+! real :: nCO2, nO2, nN2, nCO, m, r, g
+  real :: nCO2, nO,  nN2, nCO, m, r, g
   integer :: i
 
   i = 1
-  do while (alt >= newalt(i)) 
+! do while (alt >= newalt(i)) 
+  do while ( (alt >= newalt(i)) .and.  (i <= nAlts+2) ) 
      i = i + 1
   enddo
   i = i - 1
 
   t = InTemp(i)
   nCO2 = InNDensityS(i,iCO2_)
-  nO2 = InNDensityS(i,iO2_)
+! nO2 = InNDensityS(i,iO2_)
+  nO  = InNDensityS(i,iO_)
   nCO = InNDensityS(i,iCO_)
   nN2 = InNDensityS(i,iN2_)
   
+! m = (nCO2 * mass(iCO2_) + &
+!      nO2 * mass(iO2_) + &
+!      nN2 * mass(iN2_) + &
+!      nCO * mass(iCO_)) / (nCO2 + nO2 + nN2 + nCO)
+
   m = (nCO2 * mass(iCO2_) + &
-       nO2 * mass(iO2_) + &
+       nO  * mass(iO_) + &
        nN2 * mass(iN2_) + &
-       nCO * mass(iCO_)) / (nCO2 + nO2 + nN2 + nCO)
+       nCO * mass(iCO_)) / (nCO2 + nO + nN2 + nCO)
 
   r = RBody + alt
 !  g = Gravitational_Constant * (RBody/r) ** 2
@@ -81,9 +91,11 @@ subroutine init_msis
 
            do iSpecies = 1, nSpeciesTotal
 
-              ! Converts from cm^-3 to m^-3
+          ! If Mars_input.f90 then *1.0e+06 Converts from cm^-3 to m^-3  
+          ! Do not multiply by 1.0e+06 for MarsAtmosphere.txt - the
+          ! densities in the file have already been done so
               NDensityS(iLon,iLat,-1:nAlts+2,iSpecies,iBlock) =  &
-                   InNDensityS(-1:nAlts+2,iSpecies)*(1.0e+06)
+                   InNDensityS(-1:nAlts+2,iSpecies)!*(1.0e+06)
 
            enddo ! end inner ispecies loop
 
@@ -98,7 +110,8 @@ subroutine init_msis
 
            do iIon = 1, nIons-1
 
-              IDensityS(iLon,iLat,-1:nAlts + 2,iIon,iBlock) =  1.0e6
+           ! IDensityS(iLon,iLat,-1:nAlts + 2,iIon,iBlock) =  1.0e6
+             IDensityS(iLon,iLat,-1:nAlts + 2,iIon,iBlock) =  1.0
 
               IDensityS(iLon,iLat,-1:nAlts + 2,ie_,iBlock) = &
                    IDensityS(iLon,iLat,-1:nAlts + 2,ie_,iBlock) + &
