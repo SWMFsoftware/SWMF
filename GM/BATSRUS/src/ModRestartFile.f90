@@ -293,7 +293,7 @@ contains
        write(unit_tmp,'(a)')'#VERTEXBASEDGRID'
        write(unit_tmp,'(l1,a39)') UseVertexBasedGrid,'UseVertexBasedGrid'
        write(unit_tmp,*)
-       write(unit_tmp,'(a)')'#LIMITRADIUS'                   
+       write(unit_tmp,'(a)')'#LIMITGENCOORD1'                   
        write(unit_tmp,'(1pe13.5,a27)')XyzMin_D(1),'XyzMin_D(1)' 
        write(unit_tmp,'(1pe13.5,a27)')XyzMax_D(1),'XyzMax_D(1)' 
        write(unit_tmp,*)
