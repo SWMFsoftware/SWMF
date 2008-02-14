@@ -8,11 +8,9 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
   use ModProcMH
   use ModMain
   use ModVarIndexes
-  use ModAdvance, ONLY : State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK, &
-       DoFixAxis
-  use ModParallel, ONLY : NOBLK, NeiLev
-  use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, far_field_BCs_BLK, MaxBoundary,&
-       TypeGeometry
+  use ModAdvance, ONLY: State_VGB
+  use ModParallel, ONLY: NOBLK, NeiLev
+  use ModGeometry, ONLY: far_field_BCs_BLK, MaxBoundary, TypeGeometry, XyzMin_D
   use ModPhysics
   use ModUser, ONLY: user_set_outerBCs
   use ModMultiFluid, ONLY: iFluid, nFluid, iRhoUx_I, iRhoUy_I, iRhoUz_I
@@ -80,7 +78,9 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
 
      ! Do not apply cell boundary conditions at the pole 
      ! This is either handled by message passing or supercell
-     if(TypeGeometry(1:9) .eq. 'spherical' .and. iSide >= Bot_) CYCLE
+     if(TypeGeometry(1:9) == 'spherical' .and. iSide >= Bot_) CYCLE
+     if(TypeGeometry      == 'cylindrical' .and. &
+          XyzMin_D(1) == 0.0 .and. iSide == 1) CYCLE
 
      ! Set index limits
      imin1g=-1; imax1g=nI+2; imin2g=-1; imax2g=nI+2
