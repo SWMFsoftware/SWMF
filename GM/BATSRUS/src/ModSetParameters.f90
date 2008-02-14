@@ -1166,18 +1166,30 @@ subroutine MH_set_parameters(TypeAction)
      case("#PROLONGATION")
         call read_var('nOrderProlong',prolong_order)
         call read_var('TypeProlong' ,prolong_type)
-     case("#MESSAGEPASS","#OPTIMIZE")
-        if(.not.is_axial_geometry()) then               
-           call read_var('TypeMessagePass',optimize_message_pass)
-           if(optimize_message_pass=='allold' .or.&
-                optimize_message_pass=='oldopt')then
-              if(iProc==0)write(*,'(a)')NameSub// &
-                   ' WARNING: message_pass mode='// &
-                   trim(optimize_message_pass)// &
-                   ' is not available any longer, allopt is set !!!'
+     case("#MESSAGEPASS","#OPTIMIZE")               
+        call read_var('TypeMessagePass',optimize_message_pass)
+        if(is_axial_geometry().and.index(optimize_message_pass,'all')==0)then
+           if(iProc==0)write(*,'(a)')NameSub// &
+                ' WARNING: message_pass mode='//&
+                trim(optimize_message_pass)// &
+                ' is not implemented for TypeGeometry=',trim(TypeGeometry)
+           if(index(optimize_message_pass,'opt')>0)then
               optimize_message_pass='allopt'
+           else
+              optimize_message_pass='all'
            end if
-        end if                                           
+           if(iProc==0)write(*,'(a)')NameSub// &
+                ' WARNING: message_pass mode='//&
+                trim(optimize_message_pass),' is set.'
+        end if
+        if(optimize_message_pass=='allold' .or.&
+             optimize_message_pass=='oldopt')then
+           if(iProc==0)write(*,'(a)')NameSub// &
+                ' WARNING: message_pass mode='// &
+                trim(optimize_message_pass)// &
+                ' is not available any longer, allopt is set !!!'
+           optimize_message_pass='allopt'
+        end if
      case('#RESCHANGE','#RESOLUTIONCHANGE')
         call read_var('UseAccurateResChange',UseAccurateResChange)
         if(UseAccurateResChange) UseTvdResChange=.false.
