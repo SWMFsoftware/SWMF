@@ -8,7 +8,7 @@ module ModPolarNeighbor
   save
   integer, dimension(26,8) :: iSubfSpher_IC
   integer, dimension(26,8) :: iSubfCyl_IC
-
+  integer, dimension(26,8) :: iSubF_IC
 
   !//////////////////////////////////////////////////////////////////////////////
   !
@@ -37,14 +37,15 @@ module ModPolarNeighbor
   !Dir:1   2   3   4   5   6    7   8   9  10  11  12  13  14  15  16  17  18   19  20  21  22  23  24  25  26   !       |
   !    W   E   N   S   T   B   WN  ES  WS  EN  NT  SB  NB  ST  TW  BE  TE  BW  WNT ESB WNB EST WST ENB WSB ENT   !       |
   !--------------------------------------------------------------------------------------------------------------!       |
-  !    0,  2,  0,  2,  1,  0,   0,  2,  0,  0,  0,  0,  0,  1,  0,  0,  1,  0,   0,  0,  0,  1,  0,  0,  0,  0, &! C     |
-  !    2,  0,  0,  4,  2,  0,   0,  0,  2,  0,  0,  0,  0,  2,  1,  0,  0,  0,   0,  0,  0,  0,  1,  0,  0,  0, &! H     |
-  !    1,  0,  0,  3,  0,  2,   0,  0,  1,  0,  0,  2,  0,  0,  0,  0,  0,  1,   0,  0,  0,  0,  0,  0,  1,  0, &! I     |
-  !    0,  1,  0,  1,  0,  1,   0,  1,  0,  0,  0,  1,  0,  0,  0,  1,  0,  0,   0,  1,  0,  0,  0,  0,  0,  0, &! L     |
-  !    0,  3,  1,  0,  0,  3,   0,  0,  0,  1,  0,  0,  1,  0,  0,  2,  0,  0,   0,  0,  0,  0,  0,  1,  0,  0, &! D     |
-  !    3,  0,  3,  0,  0,  4,   1,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  2,   0,  0,  1,  0,  0,  0,  0,  0, &! R     |
-  !    4,  0,  4,  0,  4,  0,   2,  0,  0,  0,  2,  0,  0,  0,  2,  0,  0,  0,   1,  0,  0,  0,  0,  0,  0,  0, &! E     |
-  !    0,  4,  2,  0,  3,  0,   0,  0,  0,  2,  1,  0,  0,  0,  0,  0,  2,  0,   0,  0,  0,  0,  0,  0,  0,  1 / ! N     |
+  data iSubF_IC /&
+      0,  2,  0,  2,  1,  0,   0,  2,  0,  0,  0,  0,  0,  1,  0,  0,  1,  0,   0,  0,  0,  1,  0,  0,  0,  0, &! C     |
+      2,  0,  0,  4,  2,  0,   0,  0,  2,  0,  0,  0,  0,  2,  1,  0,  0,  0,   0,  0,  0,  0,  1,  0,  0,  0, &! H     |
+      1,  0,  0,  3,  0,  2,   0,  0,  1,  0,  0,  2,  0,  0,  0,  0,  0,  1,   0,  0,  0,  0,  0,  0,  1,  0, &! I     |
+      0,  1,  0,  1,  0,  1,   0,  1,  0,  0,  0,  1,  0,  0,  0,  1,  0,  0,   0,  1,  0,  0,  0,  0,  0,  0, &! L     |
+      0,  3,  1,  0,  0,  3,   0,  0,  0,  1,  0,  0,  1,  0,  0,  2,  0,  0,   0,  0,  0,  0,  0,  1,  0,  0, &! D     |
+      3,  0,  3,  0,  0,  4,   1,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  2,   0,  0,  1,  0,  0,  0,  0,  0, &! R     |
+      4,  0,  4,  0,  4,  0,   2,  0,  0,  0,  2,  0,  0,  0,  2,  0,  0,  0,   1,  0,  0,  0,  0,  0,  0,  0, &! E     |
+      0,  4,  2,  0,  3,  0,   0,  0,  0,  2,  1,  0,  0,  0,  0,  0,  2,  0,   0,  0,  0,  0,  0,  0,  0,  1 / ! N     |
   !For cylindrical geometry, the coulumn for iX(iR)=-1  is constructed from the target coulumn with iX=0 by      !       |
   !leaving children 1,4-5,8. For each non-zero column (iX=-1)provide a reference number for target coloumn (iX=0)!       |
   data iSubFCyl_IC / & !Z e r o s                    target coulum:/6   5           12      14      13      11   !=======|
@@ -113,16 +114,28 @@ contains
     !--------------------------------------------------------!
     integer::iDir_D(3),iDirPole,iLoopPole
     logical::IsPole
+    logical::DoTest,DoTestMe
+    character(LEN=*),parameter::NameSub='tree_neighbor_fixed'
     !--------------------------------------------------------!
+    call set_oktest(NameSub,DoTest,DoTestMe)
+
     call check_pole_inside_b(iBlock,iProc,IsPole,iDirPole,iLoopPole)
+ 
     iDir_D=(/iX,iY,iZ/)
+    
     if(IsPole.and.iDir_D(iDirPole)==iLoopPole)then
+    
        call tree_neighbor_across_pole(iProc,iBlock,iX,iY,iZ,iDirPole,&
-       iPE_I, iBLK_I, iChild_I, iLevel)
+            iPE_I, iBLK_I, iChild_I, iLevel)
+       if(ilevel==-1.and.DoTest)call test_refined_polar_neighbor(iX,iY,iZ,iDirPole,iChild_I)
     else
-       call treeNeighbor(iBlock,iProc,IsPole,iDirPole,iLoopPole)
+       
+       call treeNeighbor(iProc,iBlock,iX,iY,iZ, &
+       iPE_I, iBLK_I, iChild_I, iLevel)
+       if(ilevel==-1.and.DoTest)call test_refined_neighbor(iX,iY,iZ,iChild_I)
     end if
   end subroutine tree_neighbor_fixed
+  !=============================================================================================!
   !=====tree_neighbor_across_pole, requires that the direction of iX,iY,iZ is towards the pole=!
   subroutine tree_neighbor_across_pole(iProc,iBlock,iX,iY,iZ,iDirPole,&
        iPE_I, iBLK_I, iChild_I, iLevel)
@@ -141,8 +154,10 @@ contains
          .and.iDir_D(iDirPole)==iLoopPole))call stop_mpi(&
          'tree_neighbor_across_pole:no pole from a given BLK to a given dir')
     iDir_D(iDirPole)=0
+  
     call treeNeighbor(iProc,iBlock, iDir_D(1), iDir_D(2), iDir_D(3), &
          iPE_I, iBLK_I, iChild_I,iLevel)
+  
     select case(iLevel)
     case(NOBLK)
        return !The neighbor is out of tree
@@ -156,7 +171,7 @@ contains
        if(.not.iDir_D(4-iDirPole)**2==1)call stop_mpi(&
             'Failed:  tree_neighbor_across_pole')
        !Sort out subfaces of the blocks which do not touch the pole
-       
+ 
        do i=1,4
           if(iBLK_I(i)==NOBLK)exit
           call check_pole_inside_blkpe(&
@@ -169,7 +184,8 @@ contains
              !Move the earlier created NOBLK lines to top position,if needed
              iPut=i
              do while(iPut>1)
-                if(iBLK_I(iPut-1)==NOBLK)iPut=iPut-1
+                if(iBLK_I(iPut-1)/=NOBLK)exit
+                iPut=iPut-1
              end do
              if(iPut/=i)then
                 iPE_I(iPut)=iPE_I(i)
@@ -179,69 +195,8 @@ contains
              end if
           end if
        end do
-       call test_refined_polar_neighbor(iX,iY,iZ,iDirPole,iChild_I)
     end select
   end subroutine tree_neighbor_across_pole
-  !=test verifies that subfaces arrays constructed above is in accordance with tree_neighbors_across_pole=!
-  subroutine test_refined_polar_neighbor(iX,iY,iZ,iDirPole,iChild_I)
-    use ModParallel,ONLY:NOBLK
-    integer,intent(in)::iX,iY,iZ,iDirPole,iChild_I(4)
-    integer::iDir,i
-    integer, dimension(26) :: nSubF_I
-    data nSubF_I / &
-         0,  0,  0,  0,  0,  0,   0,  0,  0,  0,  0,  0,  0,  0,  2,  2,  2,  2,   1,  1,  1,  1,  1,  1,  1,  1 /
-    !------------------------------------------------------------------------------------------------------------!
-    iDir=i_dir(iX,iY,iZ)
-    if(count(iChild_I/=NOBLK)/=nSubF_I(iDir))then
-       write(*,*)'Wrong refined children list in tree_neighbor_across_pole'
-       write(*,*)'iX,iY,iZ=',iX,iY,iZ
-       write(*,*)'Children list',iChild_I
-       call stop_mpi('Failed')
-    end if
-    select case(iDirPole)
-    case(3)
-       do i=1,nSubF_I(iDir)
-          if(iSubfSpher_IC( iDir, iChild_I(i))/=i)then
-             write(*,*)'Wrong refined children list in tree_neighbor_across_pole'
-             write(*,*)'The positions of children in the list should be:',iSubfSpher_IC( iDir,:)
-             write(*,*)'Actual children list',iChild_I
-             call stop_mpi('Failed')
-          end if
-       end do
-    case(1)
-       do i=1,nSubF_I(iDir)
-          if(iSubfSpher_IC( iDir, iChild_I(i))/=i)then
-             write(*,*)'Wrong refined children list in tree_neighbor_across_pole'
-             write(*,*)'The positions of children in the list should be:',iSubfSpher_IC( iDir,:)
-             write(*,*)'Actual children list',iChild_I
-             call stop_mpi('Failed')
-          end if
-       end do
-    end select
-  contains
-    integer function i_dir(iX,iY,iZ)
-      integer, dimension(26,3) :: iLoop_ID
-      integer,intent(in)::iX,iY,iZ
-      integer::iLoop,iDir_D(3),i2
-      data iLoop_ID / &                                                                                              
-           1, -1,  0,  0,  0,  0,   1, -1,  1, -1,  0,  0,  0,  0,  1, -1, -1,  1,   1, -1,  1, -1,  1, -1,  1, -1, &
-           0,  0,  1, -1,  0,  0,   1, -1, -1,  1,  1, -1,  1, -1,  0,  0,  0,  0,   1, -1,  1, -1, -1,  1, -1,  1, &
-           0,  0,  0,  0,  1, -1,   0,  0,  0,  0,  1, -1, -1,  1,  1, -1,  1, -1,   1, -1, -1,  1,  1, -1, -1,  1 / 
-      !-----------------------------------------------------------------!
-      i2=iX**2+iY**2+iZ**2
-      if(i2>3.or.i2==0)then
-         write(*,*)'i_dir: wrong input parameters:',iX,iY,iZ
-         call stop_mpi('Failed')
-      end if
-      iDir_D=(/iX,iY,iZ/)
-      do iLoop=1,26
-         if(all(iDir_D==iLoop_ID(i,:)))then
-            i_dir=iLoop
-            return
-         end if
-      end do
-    end function i_dir
-  end subroutine test_refined_polar_neighbor
   !=============================================================================================!
   !Simplified version, gives only iPEOut and iBLKOut for the block which has the common section !
   !of the pole with iPEIn,iBLKIn (face neighbor, the face being degenerated and having zero area!
@@ -339,13 +294,15 @@ contains
     logical,intent(out)::IsPole   !True if the pole is inside
     integer,intent(out)::iDir     !iDir=1 pole is in the direction 'i'
     integer,intent(out)::iLoop    !iLoop=+1(-1) in positive (negative) 
+    type(adaptive_block_ptr)::BlkAux
     !direction, from a given block
     if(.not.associated(global_block_ptrs(iBlock, iProc+1) % ptr))then
        write(*,*)'Not associated global block pointer for iBlock=',iBlock,&
             ' at PE=',iProc
        call stop_mpi('Stop in check_pole_inside_blk')
     end if
-    call check_pole_inside_octreeblk(global_block_ptrs(iBlock,iProc+1),&
+    BlkAux%ptr=>global_block_ptrs(iBlock,iProc+1)%ptr
+    call check_pole_inside_octreeblk(BlkAux,&
          IsPole,iDir,iLoop)
   end subroutine check_pole_inside_blkpe
   !=========================================================================!
@@ -374,14 +331,17 @@ contains
        !for        iz=-1      iy=0       ix=0   iDir=13
 
        call findTreeNeighbor(OctreeBlk,BlkAux,13,IsPole)
-       if(IsPole)iDir=3; iLoop=-1; return
-
+       if(IsPole)then
+          iDir=3; iLoop=-1; return
+       end if
 
        !idir = 1+ (iz+1) + 3*(iy+1) + 9*(ix+1)
        !for        iz=+1      iy=0       ix=0   iDir=15
 
        call findTreeNeighbor(OctreeBlk,BlkAux,15,IsPole)   
-       if(IsPole)iDir=3; iLoop=+1; return
+       if(IsPole)then
+          iDir=3; iLoop=+1; return
+       end if
     elseif(index(TypeGeometry,'cylindrical')>0.or.&
          index(TypeGeometry,'axial')>0)then
        !idir = 1+ (iz+1) + 3*(iy+1) + 9*(ix+1)
@@ -392,6 +352,99 @@ contains
     else
        call stop_mpi('Failed check_pole_inside_octreeblk')
     end if
+    call stop_mpi('Failed check_pole_inside_octreeblk')
   end subroutine check_pole_inside_octreeblk
-  !=============================================================
+  !==============================================================
+  !===============================TESTING PROCEDURES============!
+ !=test verifies that subfaces arrays constructed above is in accordance with tree_neighbors_across_pole=!
+  subroutine test_refined_polar_neighbor(iX,iY,iZ,iDirPole,iChild_I)
+    use ModParallel,ONLY:NOBLK
+    integer,intent(in)::iX,iY,iZ,iDirPole,iChild_I(4)
+    integer::iDir,i,iDir_D(3)
+    integer, dimension(26) :: nSubF_I
+    data nSubF_I / &
+         0,  0,  0,  0,  0,  0,   0,  0,  0,  0,  0,  0,  0,  0,  2,  2,  2,  2,   1,  1,  1,  1,  1,  1,  1,  1 /
+    !------------------------------------------------------------------------------------------------------------!
+    iDir_D=(/iX,iY,iZ/); iDir_D=-iDir_D; iDir_D(iDirPole)=-iDir_D(iDirPole)
+    iDir=i_dir(iDir_D(1),iDir_D(2),iDir_D(3))
+    if(count(iChild_I/=NOBLK)/=nSubF_I(iDir))then
+       write(*,*)'Wrong refined children list in tree_neighbor_across_pole'
+       write(*,*)'iX,iY,iZ=',iX,iY,iZ
+       write(*,*)'Children list',iChild_I
+       call stop_mpi('Failed')
+    end if
+    select case(iDirPole)
+    case(3)
+       do i=1,nSubF_I(iDir)
+          if(iSubfSpher_IC( iDir, iChild_I(i))/=i)then
+             write(*,*)'Wrong refined children list in tree_neighbor_across_pole'
+             write(*,*)'The positions of children in the list should be:',iSubfSpher_IC( iDir,:)
+             write(*,*)'Actual children list',iChild_I
+             call stop_mpi('Failed')
+          end if
+       end do
+    case(1)
+       do i=1,nSubF_I(iDir)
+          if(iSubfSpher_IC( iDir, iChild_I(i))/=i)then
+             write(*,*)'Wrong refined children list in tree_neighbor_across_pole'
+             write(*,*)'The positions of children in the list should be:',iSubfSpher_IC( iDir,:)
+             write(*,*)'Actual children list',iChild_I
+             call stop_mpi('Failed')
+          end if
+       end do
+    end select
+  end subroutine test_refined_polar_neighbor
+  !================================================================================================================!
+  subroutine test_refined_neighbor(iX,iY,iZ,iChild_I)
+    use ModParallel,ONLY:NOBLK
+    integer,intent(in)::iX,iY,iZ,iChild_I(4)
+    integer::iDir,i,iDir_D(3)
+    integer, dimension(26) :: nSubF_I
+    data nSubF_I / &
+         4,  4,  4,  4,  4,  4,   2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,   1,  1,  1,  1,  1,  1,  1,  1 /
+    !------------------------------------------------------------------------------------------------------------!
+    iDir_D=(/iX,iY,iZ/); iDir_D=-iDir_D
+    iDir=i_dir(iDir_D(1),iDir_D(2),iDir_D(3))
+    !write(*,*)'iDir=',iDir
+    !write(*,*)'The positions of children in the list should be:'&
+    !     ,iSubfSpher_IC( iDir,:)
+    !write(*,*)'Children list',iChild_I
+    if(count(iChild_I/=NOBLK)/=nSubF_I(iDir))then
+       write(*,*)'Wrong refined children list in tree_neighbor_across_pole'
+       write(*,*)'iX,iY,iZ=',iX,iY,iZ
+       write(*,*)'Children list',iChild_I
+       call stop_mpi('Failed')
+    end if
+    do i=1,nSubF_I(iDir)
+       if(iSubF_IC( iDir, iChild_I(i))/=i)then
+          write(*,*)'Wrong refined children list in tree_neighbor_across_pole'
+          write(*,*)'The positions of children in the list should be:',iSubF_IC( iDir,:)
+          write(*,*)'Actual children list',iChild_I
+          call stop_mpi('Failed')
+       end if
+    end do
+  end subroutine test_refined_neighbor
+  !===============================================================================================================!
+  integer function i_dir(iX,iY,iZ)
+    integer, dimension(26,3) :: iLoop_ID
+    integer,intent(in)::iX,iY,iZ
+    integer::iLoop,iDir_D(3),i2
+    data iLoop_ID / &                                                                                              
+         1, -1,  0,  0,  0,  0,   1, -1,  1, -1,  0,  0,  0,  0,  1, -1, -1,  1,   1, -1,  1, -1,  1, -1,  1, -1, &
+         0,  0,  1, -1,  0,  0,   1, -1, -1,  1,  1, -1,  1, -1,  0,  0,  0,  0,   1, -1,  1, -1, -1,  1, -1,  1, &
+         0,  0,  0,  0,  1, -1,   0,  0,  0,  0,  1, -1, -1,  1,  1, -1,  1, -1,   1, -1, -1,  1,  1, -1, -1,  1 / 
+    !-----------------------------------------------------------------!
+    i2=iX**2+iY**2+iZ**2
+    if(i2>3.or.i2==0)then
+       write(*,*)'i_dir: wrong input parameters:',iX,iY,iZ
+       call stop_mpi('Failed')
+    end if
+    iDir_D=(/iX,iY,iZ/)
+    do iLoop=1,26
+       if(all(iDir_D==iLoop_ID(iLoop,:)))then
+          i_dir=iLoop
+          return
+       end if
+    end do
+  end function i_dir
 end module ModPolarNeighbor
