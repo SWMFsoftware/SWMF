@@ -188,7 +188,7 @@ contains
       !\
       ! Transfer satellite names from GM to IM   !!!DTW 2007
       !/   
-      if(i_proc0(IM_) /= i_proc0(GM_))then
+      if(nShareSats > 0 .and. i_proc0(IM_) /= i_proc0(GM_))then
          nSize = nShareSats
          if(is_proc0(GM_)) &
               call MPI_send(Buffer_I,nSize,MPI_REAL,i_proc0(IM_),&
@@ -196,12 +196,9 @@ contains
          if(is_proc0(IM_)) &
               call MPI_recv(Buffer_I,nSize,MPI_REAL,i_proc0(GM_),&
               1,i_comm(),iStatus_I,iError)
-      end if
 
-      !\
-      ! Transfer satellite locations from GM to IM   !!!DTW 2007
-      !/   
-      if(i_proc0(IM_) /= i_proc0(GM_))then
+         ! Transfer satellite locations from GM to IM   !!!DTW 2007
+
          nSize = 3*2*nShareSats
          if(is_proc0(GM_)) &
               call MPI_send(Buffer_III,nSize,MPI_REAL,i_proc0(IM_),&
@@ -219,7 +216,7 @@ contains
       !/
       if(is_proc0(IM_))then
          call IM_put_from_gm(Buffer_IIV,iSize,jSize,nVarGmIm,NameVar)
-         call IM_put_sat_from_gm(nShareSats, Buffer_I, Buffer_III)
+         if(nShareSats > 0) call IM_put_sat_from_gm(nShareSats, Buffer_I, Buffer_III)
          if(DoTest) &
               write(*,*)'get_fieldline_volume: IM iProc, Buffer(1,1)=',&
               iProcWorld,Buffer_IIV(1,1,:)
