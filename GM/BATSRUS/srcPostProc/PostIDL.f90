@@ -21,7 +21,7 @@ program PostIDL
   ! Coordinates, sizes, indices
   real, dimension(3) :: Xyz_D, xyzmin, xyzmax, dxyz, dxyzmin, dxyzcell
   real, dimension(3) :: XyzGen_D
-  real ::    x, y, z, xmin, xmax, ymin, ymax, zmin, zmax
+  real ::    x, y, z, xmin, ymin, zmin
   real ::    dx, dy, dz, dyperdx, dzperdx, dxcell, dycell, dzcell
   real ::    frac
   real(selected_real_kind(12))  :: total, volume
@@ -33,15 +33,17 @@ program PostIDL
   character (LEN=5), dimension(3), parameter :: &
        coord_xyz=(/'x    ','y    ','z    '/), &
        NameCoordSph_D=(/'r    ','phi  ','theta'/),& !Theta is latitude
-       coord_sph=(/'r    ','theta','phi  '/)        !Theta is colatitude
+       coord_sph=(/'r    ','theta','phi  '/),     & !Theta is colatitude
+       coord_cyl=(/'r    ','phi  ','z    '/)
 
-  logical :: fileopen, structured, read_binary=.false., UseLookup=.false.
+  logical :: structured, read_binary=.false., UseLookup=.false.
   character (len=100) :: filename, filenamehead, coordnames
   character (len=500) :: varnames, unitnames, fileheadout
   integer :: l, ll, me
 
   ! Variables for the 2D lookup table
   integer :: ix1,ix2,ixmin1,ixmax1,ixmin2,ixmax2,nx1,nx2,idim1,idim2,jcell=0
+  integer :: idim0 ! the ignored dimension
   integer :: iError
   real    :: xmin1, xmax1, xmin2, xmax2, dx1, dx2, dx1cell, dx2cell
   integer, dimension(:,:), allocatable :: lookup
@@ -50,18 +52,14 @@ program PostIDL
   integer, parameter :: nByteReal = 4 + (1.00000000041 - 1.0)*10000000000.0
   integer            :: nByteRealRead
 
-  character (len=79) :: TypeGeometry
-  logical :: UseSpherical=.false., UseLnr=.false.
-  integer :: idim0
-  real    :: rCyl
-  !Pi:
-  real,parameter::cPi= 3.1415926535897932384626433832795
+  ! Variables for generalized coordinates
+  character (len=79) :: TypeGeometry='cartesian', TypeGeometryRead
+  logical            :: UseDoubleCut = .false.
 
   !Toroidal geometry
-  logical::UseToroidal=.false.
-  integer::iPoint,nPoint
-  real,allocatable,dimension(:)::TorusSurface_I
-  real::rTorusSmall,rTorusLarge
+  integer:: iPoint, nPoint
+  real :: rTorusSmall, rTorusLarge
+  real, allocatable:: TorusSurface_I(:)
   !---------------------------------------------------------------------------
 
   write(*,'(a)')'PostIDL (G.Toth 2000-2002) starting'
@@ -114,24 +112,21 @@ program PostIDL
         write(*,*)'nByteReal=',nByteReal
      else if(nByteRealRead==-1)then
         write(*,*)'!!! Warning: PostIDL was compiled with ',&
-            nByteReal,' byte reals but nByteReal is not given in file !!!'
+             nByteReal,' byte reals but nByteReal is not given in file !!!'
      else
         write(*,*)'!!! Error: PostIDL was compiled with ',&
-            nByteReal,' byte reals but file contains nByteReal=',nByteRealRead
+             nByteReal,' byte reals but file contains nByteReal=',nByteRealRead
         stop '!!! Change PRECISION in Makefile.${OS} and make PIDL !!!'
      end if
   end if
   !Read TypeGeometry, if possible
-
-  read(*,'(a)',err=3,end=3)TypeGeometry
-  write(*,*)'Geometry is '//TypeGeometry
-  UseSpherical=index(TypeGeometry,'spherical')>0
-  UseLnr=UseSpherical.and.index(TypeGeometry,'lnr')>0
-  UseToroidal=index(TypeGeometry,'torus')>0
+  read(*,'(a)',err=3,end=3) TypeGeometryRead
+  TypeGeometry = TypeGeometryRead
 3 continue
-  if(UseToroidal)then
+  write(*,*)'Geometry is '//TypeGeometry
+  if(index(TypeGeometry,'torus')>0)then
      open(unit_tmp,file='torus.dat',status='old')
-     read(unit_tmp,*)nPoint,rTorusSmall,rTorusLarge
+     read(unit_tmp,*)nPoint, rTorusSmall, rTorusLarge
      allocate(TorusSurface_I(0:nPoint))
      do i=0,nPoint
         read(unit_tmp,*)iPoint,TorusSurface_I(iPoint)
@@ -177,7 +172,18 @@ program PostIDL
      dx2=dxyzmin(idim2)
      nx1=nint((xmax1-xmin1)/dx1)
      nx2=nint((xmax2-xmin2)/dx2)
-     if(UseSpherical.and.idim0==2)nx2=2*nx2                  
+
+     ! Sph/cyl. X=0 and Y=0 cuts require doubled lookup table (+/- r)
+     if(idim0==2)then
+        if(TypeGeometry(1:9)=='spherical') then
+           ! Use -pi/2 < theta' < 3/2* pi as generalized coordinate
+           UseDoubleCut = .true.; nx2 = 2*nx2
+        elseif(TypeGeometry=='cylindrical')then
+           ! Use 0 < r' < 2*rmax as generalized coordinate
+           UseDoubleCut = .true.; nx1 = 2*nx1
+        end if
+     end if
+
      if(.not.structured)then
         if(real(nx1)*real(nx2) > 1e8)then
            write(*,*)'PostIDL WARNING: very fine grid, no averaging is done!'
@@ -266,52 +272,16 @@ program PostIDL
         else
            read(unit_tmp,*,ERR=999,END=999) dxcell, Xyz_D, w1
         end if
-        
+
         countcell=countcell+1
         dycell=dxcell*dyperdx; dzcell=dxcell*dzperdx
 
-        if(.not.(UseSpherical.or.UseToroidal))then
-           XyzGen_D=Xyz_D
-        elseif(UseSpherical)then
-           call cart_to_spher(Xyz_D, XyzGen_D)
-
-           if(ndim==2)then
-              select case(idim0)
-              case(1)
-                 ! This is R=const slice
-                 ! Latitude in hours
-                 Xyz_D(2)=mod(XyzGen_D(2)*12./cPi+12.0,24.0)
-                 ! Longitude in degrees
-                 Xyz_D(3)=XyzGen_D(3)*180./cPi
-              case(2)
-                 ! This is x=0 or y=0 plane
-                 Xyz_D(1) = sign(1.00,Xyz_D(1)+Xyz_D(2))*rCyl
-              case(3)
-                 ! This is z=0 plane
-                 if(UseLnr) then
-                    Xyz_D(1)=Xyz_D(1)*exp(XyzGen_D(1))/rCyl   
-                    Xyz_D(2)=Xyz_D(2)*exp(XyzGen_D(1))/rCyl   
-                 else                                                 
-                    Xyz_D(1)=Xyz_D(1)*XyzGen_D(1)/rCyl        
-                    Xyz_D(2)=Xyz_D(2)*XyzGen_D(1)/rCyl        
-                 end if
-              end select
-           end if
+        if(TypeGeometry == 'cartesian')then
+           XyzGen_D = Xyz_D
         else
-            call cart_to_toroid(Xyz_D,XyzGen_D)               
-
-           if(ndim==2)then
-              select case(idim0)                                       
-              
-              case(2)         !This is x=0 or y=0 plane                                  
-                 Xyz_D(1)=&                                       
-                      RCyl            
-              case(3)         !This is z=0 plane 
-                 Xyz_D(1)=Xyz_D(1)!*XyzGen_D(1)/Rcyl        
-                 Xyz_D(2)=Xyz_D(2)!*XyzGen_D(1)/Rcyl        
-              end select
-           end if
+           call set_gen_coord
         end if
+
         if(.not.structured)then
 
            if(.not.UseLookup)then
@@ -325,13 +295,13 @@ program PostIDL
            ! Calculate indices for lookup table
            ix1=nint((XyzGen_D(idim1)-xmin1)/dx1+halfeps)
            ix2=nint((XyzGen_D(idim2)-xmin2)/dx2+halfeps)
- 
+
            call unstructured_2D
 
            ! We are finished with unstructured
            CYCLE
         endif
-        
+
         x = XyzGen_D(1); y = XyzGen_D(2); z = XyzGen_D(3)
 
         if(dxcell<dx+1.e-6)then
@@ -370,7 +340,7 @@ program PostIDL
         end if
      end do ! read file
 
-     999 continue
+999  continue
 
      close(unit_tmp)
   end do ! me
@@ -392,7 +362,7 @@ program PostIDL
         volume=(xmax1-xmin1)*(xmax2-xmin2)
         ! For axysimmetric cut planes with phi being the negligible coordinate
         ! we plot both phi=cut and phi=cut+pi, so the volume is doubled
-        if((UseSpherical .or. UseToroidal).and. idim0 == 2) volume = 2*volume
+        if(UseDoubleCut) volume = 2*volume
 
         if(abs(total/volume-1.0)<0.0001)then
            write(*,*)'Averaged 2D unstructured file'
@@ -402,7 +372,7 @@ program PostIDL
         end if
      else
         if(ndim/=2.and.icell /= ncell) &
-           write(*,*)'!!! Error: ncell=',ncell,' /= icell=',icell,' !!!'
+             write(*,*)'!!! Error: ncell=',ncell,' /= icell=',icell,' !!!'
      end if
      nx=icell
      nxyz(1)=icell
@@ -465,7 +435,7 @@ contains
 
           ! Increase dxdoubled by another factor of 2 to count fine neighbors
           dxdoubled(jcell)=dxdoubled(jcell)*2
- 
+
           ! Negate lookup for safety check
           lookup(ix1,ix2)=-lookup(ix1,ix2)
        case(32)
@@ -566,6 +536,7 @@ contains
 
     real,    intent(in) :: new_weight, from_weight
     integer, intent(in) :: from_cell,to_cell
+    !---------------------------------------------------------------
     if(from_cell<0)then
        w(to_cell,1,1,:)=w1
        do idim=1,ndim
@@ -602,19 +573,11 @@ contains
 
     ! Produce coordinate names 
     !         ('x y z', 'x y', 'x z', 'y z' or 'r theta', 'r phi' ...)
-    if(.not.(UseSpherical.or.UseToroidal))then
-       coordnames=coord(icutdim(1))
-    else       
-       if(index(filenamehead,'x=0')>0) then
-          coordnames=coord(2)      !y -z plane, but icutdim(1)/=2
-       elseif(index(filenamehead,'x=y')>0)then
-          coordnames=NameCoordSph_D(1) !r-z plane
-       else
-          if(index(filenamehead,'R=0')>0)coord=NameCoordSph_D !Phi-Theta plane
-          coordnames=coord(icutdim(1)) !x-z, x-y planes
-       end if
-    end if
-    do idim=2,ndim
+
+    coordnames=coord(icutdim(1))
+    ! Fix coordinate name for non-cartesian cut along phi=90 deg:
+    if(index(filenamehead,'x=0')>0) coordnames='y'
+    do idim = 2, ndim
        coordnames=trim(coordnames)//' '//trim(coord(icutdim(idim)))
     end do
     varnames=trim(coordnames)//' '//trim(varnames)
@@ -688,70 +651,106 @@ contains
   end subroutine save_vacfile_bin
 
   !===========================================================================
+  subroutine set_gen_coord
 
-  subroutine cart_to_spher(Cart_D, Spher_D)
+    ! Calculate the generalized coordinates mostly for lookup
 
-    ! Convert cartesian coordinates to spherical coordinates
-    ! Also set the rCyl = sqrt(x^2+y^2) variable
+    real, parameter:: cPi= 3.1415926535897932384626433832795
+    real, parameter:: cTwoPi = 2*cPi, cHalfPi = cPi/2, cRadToDeg=180/cPi
 
-    real, intent(in)  :: Cart_D(3)
-    real, intent(out) :: Spher_D(3)
+    real:: rCyl ! distance from axis Z
 
-    rCyl       = sqrt(Cart_D(1)**2 + Cart_D(2)**2)
-    Spher_D(1) = sqrt(rCyl**2 + Cart_D(3)**2)
+    ! Toroidal variables
+    real:: PoloidalAngle, r, z, StretchCoef, dAngle, Residual, WallRadius
 
-    if (Cart_D(1) == 0.0 .and. Cart_D(2) == 0.0) then
-       Spher_D(2) = 0.0
+    !---------------------------------------------------------------------
+    rCyl = sqrt(Xyz_D(1)**2 + Xyz_D(2)**2)
+
+    ! Calculate phi
+    if (rCyl == 0.0) then
+       XyzGen_D(2) = 0.0
     else
-       Spher_D(2) = atan2(Cart_D(2), Cart_D(1))
+       XyzGen_D(2) = modulo(atan2(Xyz_D(2), Xyz_D(1)), cTwoPi)
     end if
-    if (Spher_D(2) < 0.00) Spher_D(2) = Spher_D(2) + cPi*2
 
-    if(ndim==2 .and. idim0==2) then
-       Spher_D(3) = cPi/2-atan2(Cart_D(3),sign(1.00,Cart_D(1)+Cart_D(2))*rCyl)
-       if (Spher_D(3) < -cPi/2) Spher_D(3) = Spher_D(3) + cPi*2
-    else
-       Spher_D(3) = cPi/2 - acos(Cart_D(3)/Spher_D(1))
-    end if
-    if(UseLnr) Spher_D(1) = log(Spher_D(1))
+    select case(TypeGeometry)
+    case('cylindrical')
+       XyzGen_D(1) = rCyl
+       XyzGen_D(3) = Xyz_D(3)
 
-  end subroutine cart_to_spher
-!=======================================================================
-  subroutine cart_to_toroid(Cart_D,Toroid_D)
-    implicit none
-    real,dimension(3),intent(in)::Cart_D
-    real,dimension(3),intent(out)::Toroid_D
-    real::PoloidalAngle,R,Z,StretchCoef
-    RCyl=sqrt(Cart_D(1)**2+Cart_D(2)**2)
-    Toroid_D(2)=atan2(Cart_D(2),Cart_D(1))
-    if (Toroid_D(2) < 0.00) Toroid_D(2) = Toroid_D(2) + cPi*2
-    R=rCyl-rTorusLarge
-    Z=Cart_D(3)
-    if(.not.(Z==0.00.and.R==0.00))then
-       PoloidalAngle=atan2(Z,R)
-       if(PoloidalAngle<0.00)&
-            PoloidalAngle= PoloidalAngle+cPi*2
-       StretchCoef=rTorusSmall/&
-            (max(abs(cos(PoloidalAngle)),abs(sin(PoloidalAngle)))*&
-            wall_radius(PoloidalAngle))
-       R=R*StretchCoef
-       Z=Z*StretchCoef
-    end if
-    Toroid_D(3)=Z
-    Toroid_D(1)=R+rTorusLarge
-   end subroutine cart_to_toroid
-   real function wall_radius(PoloidalAngle)
-     !This functions calculates the poloidal radius of the vacuum chamber wall
-     !as a function of the poloidal angle
-     implicit none
-     real::Residual,PoloidalAngle
-     real::dAngle
-     dAngle=(2*cPi)/nPoint
-     iPoint=int(PoloidalAngle/dAngle)
-     if(iPoint==nPoint)iPoint=0
-     !Use linear interpolation:
-     Residual=PoloidalAngle-iPoint*dAngle
-     wall_radius=TorusSurface_I(iPoint)*(1-Residual)+&
-                 TorusSurface_I(iPoint+1)*Residual
-   end function wall_radius
+       if(ndim==2)then
+          ! Set the 'X-Y' coordinates for plotting a 2D cut
+          select case(idim0)
+          case(1)
+             ! This is R=const slice, use longitude [deg] vs height
+             Xyz_D(2)=XyzGen_D(2)*cRadToDeg
+          case(2)
+             ! This is x=0 or y=0 plane, use signed radius vs Z
+             Xyz_D(1) = sign(1.0, Xyz_D(1)+Xyz_D(2))*rCyl
+             ! The generalized coordinate will run from 0 to 2r?
+             XyzGen_D(1) = Xyz_D(1) + XyzMax(1)
+          end select
+       end if
+
+    case('spherical','spherical_lnr')
+       XyzGen_D(1) = sqrt(rCyl**2 + Xyz_D(3)**2)
+
+       if(ndim==2)then
+          ! Set the 'X-Y' coordinates for plotting a 2D cut
+          select case(idim0)
+          case(1)
+             ! This is R=const slice, use longitude vs latitude in degs.
+             Xyz_D(2:3)=XyzGen_D(2:3)*cRadToDeg
+          case(2)
+             ! This is x=0 or y=0 plane, use axial radius vs Z
+             Xyz_D(1) = sign(1.00,Xyz_D(1)+Xyz_D(2))*rCyl
+          case(3)
+             ! Stretch X and Y with rSph/rCyl since instead of simply
+             ! projecting the points down to the X-Y plane
+             Xyz_D(1:2)=Xyz_D(1:2)*XyzGen_D(1)/rCyl
+          end select
+       end if
+       if(ndim==2 .and. idim0==2) then
+          ! Use 360 degrees for theta to distinguish left and right halves
+          XyzGen_D(3) = cHalfPi - atan2(Xyz_D(3),Xyz_D(1))
+          if (XyzGen_D(3) < -cHalfPi) XyzGen_D(3) = XyzGen_D(3) + cTwoPi
+       else
+          ! Colatitude
+          XyzGen_D(3) = cHalfPi - acos(Xyz_D(3)/XyzGen_D(1))
+       end if
+       if(TypeGeometry=='spherical_lnr') XyzGen_D(1) = log(XyzGen_D(1))
+
+    case('axial_torus')
+
+       !This is x=0 or y=0 plane
+       if(ndim==2 .and. idim0==2) Xyz_D(1) = rCyl
+
+       r = rCyl - rTorusLarge
+       z = Xyz_D(3)
+       if(.not.(z==0.0 .and. r==0.0))then
+          PoloidalAngle = modulo(atan2(Z,R), cTwoPi)
+
+          ! Use linear interpolation to obtain the distance to the wall
+          dAngle = cTwoPi/nPoint
+          iPoint = modulo(int(PoloidalAngle/dAngle), nPoint)
+          Residual = PoloidalAngle - iPoint*dAngle
+          WallRadius = &
+               (1-Residual)*TorusSurface_I(iPoint  ) &
+               +  Residual*TorusSurface_I(iPoint+1)
+
+          StretchCoef = rTorusSmall/ &
+               (WallRadius * max(abs(r), abs(z))/sqrt(r**2 + z**2))
+
+          r = r*StretchCoef
+          z = z*StretchCoef
+       end if
+       XyzGen_D(3) = z
+       XyzGen_D(1) = r + rTorusLarge
+
+    case default
+       write(*,*)'Unknown TypeGeometry='//TypeGeometry
+       stop
+    end select
+  end subroutine set_gen_coord
+
 end program PostIDL
