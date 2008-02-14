@@ -9,7 +9,7 @@ subroutine advance_expl(DoCalcTimestep)
   use ModAdvance,   ONLY: UseUpdateCheck, DoFixAxis
   use ModParallel,  ONLY: neiLev
   use ModGeometry,  ONLY: Body_BLK
-  use ModCovariant, ONLY: UseCovariant, is_axial_geometry 
+  use ModCovariant, ONLY: is_axial_geometry 
   use ModBlockData, ONLY: set_block_data
   use ModImplicit,  ONLY: UsePartImplicit           !^CFG IF IMPLICIT
   use ModPhysics,   ONLY: No2Si_V, UnitT_
@@ -71,10 +71,6 @@ subroutine advance_expl(DoCalcTimestep)
 
      ! Message pass conservative flux corrections.
      call timing_start('send_cons_flux')
-!!$     call send_conservative_facefluxes
-
-     if(DoTestMe)write(*,*)NameSub,' done send cons flux'
-
      call message_pass_faces_9conserve
      call timing_stop('send_cons_flux')
 
@@ -147,8 +143,7 @@ subroutine advance_expl(DoCalcTimestep)
 
      call barrier_mpi2('expl2')
 
-     if(is_axial_geometry() .and. DoFixAxis) &       
-          call fix_axis_cells                        
+     if(is_axial_geometry() .and. DoFixAxis) call fix_axis_cells
 
      ! Check for allowable update percentage change.
      if(UseUpdateCheck)then
@@ -169,7 +164,6 @@ subroutine advance_expl(DoCalcTimestep)
            if(unusedBLK(iBlock))CYCLE
            call constrain_B(iBlock)
            call Bface2Bcenter(iBlock)
-!!$           call correctP(iBlock)
         end do
         call timing_stop('constrain_B')
         if(DoTestMe)write(*,*)NameSub,' done constrain B'
