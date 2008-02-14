@@ -4,7 +4,7 @@ subroutine fix_axis_cells
   use ModMain, ONLY: nI, nJ, nK, nBlock, UnusedBlk
   use ModAdvance, ONLY: nVar, State_VGB, rFixAxis, r2FixAxis
   use ModGeometry, ONLY: TypeGeometry, XyzMin_D, XyzMax_D, MinDxValue, &
-       x_Blk, y_Blk, z_Blk, r_BLK, rMin_BLK, far_field_bcs_blk, vInv_CB
+       x_Blk, y_Blk, r_BLK, rMin_BLK, far_field_bcs_blk, vInv_CB
   use ModEnergy, ONLY: calc_energy_point
   use ModParallel, ONLY: NeiLBot, NeiLTop, NOBLK
   use ModMpi
@@ -22,12 +22,15 @@ subroutine fix_axis_cells
   real :: State_V(nVar), dStateDx_V(nVar), dStateDy_V(nVar)
 
   !--------------------------------------------------------------------------
+  if(TypeGeometry == 'cylindrical')then
+     call fix_axis_cells_cyl
+     RETURN
+  end if
 
-  ! Maximum number of cells in radial direction
+  ! Maximum number of cells along the axis
   nR = nint((XyzMax_D(1)-XyzMin_D(1))/MinDxValue)
-  if(.not.allocated(Buffer_VIII)) &
-       allocate(Buffer_VIII(nVar, nR, 1:Geom_, North_:South_), &
-                SumBuffer_VIII(nVar, nR, 1:Geom_, North_:South_))
+  allocate(Buffer_VIII(nVar, nR, 1:Geom_, North_:South_), &
+       SumBuffer_VIII(nVar, nR, 1:Geom_, North_:South_))
 
   Buffer_VIII    = 0.0
   SumBuffer_VIII = 0.0
@@ -155,3 +158,128 @@ subroutine fix_axis_cells
   deallocate(Buffer_VIII, SumBuffer_VIII)
 
 end subroutine fix_axis_cells
+!=============================================================================
+subroutine fix_axis_cells_cyl
+
+  use ModProcMH, ONLY: iComm
+  use ModMain, ONLY: nJ, nK, nBlock, UnusedBlk
+  use ModAdvance, ONLY: nVar, State_VGB, r2FixAxis
+  use ModGeometry, ONLY: XyzMin_D, XyzMax_D, MinDxValue, &
+       x_Blk, y_Blk, z_Blk, Dx_Blk, Dz_Blk, vInv_CB
+  use ModEnergy, ONLY: calc_energy_point
+  use ModParallel, ONLY: NeiLEast, NOBLK
+  use ModMpi
+  implicit none
+
+  real, allocatable:: Buffer_VII(:,:,:), SumBuffer_VII(:,:,:)
+
+  integer, parameter :: Sum_=1, SumXLeft_=2, SumXRight_=3, &
+       SumYLeft_=4, SumYRight_=5, Geom_=6
+  integer, parameter :: Volume_=1, SumX_=2, SumX2_=3
+  integer :: i, j, k, iBlock, iZ, nZ, iError
+  integer :: iVar, nAxisCell
+  real :: MinDzValue
+  real :: x, y, z, Volume, InvVolume, SumX, SumXAvg, InvSumX2, dLeft, dRight
+  real :: State_V(nVar), dStateDx_V(nVar), dStateDy_V(nVar)
+
+  !--------------------------------------------------------------------------
+
+  ! Maximum number of cells along the axis
+  MinDzValue = MinDxValue*dz_Blk(1)/dx_Blk(1)
+  nZ = nint((XyzMax_D(3)-XyzMin_D(3))/MinDzValue)
+  allocate(Buffer_VII(nVar, nZ, 1:Geom_), SumBuffer_VII(nVar, nZ, 1:Geom_))
+
+  Buffer_VII    = 0.0
+  SumBuffer_VII = 0.0
+
+  if (r2FixAxis > 0.1) then 
+     nAxisCell = 2
+  else
+     nAxisCell = 1
+  end if
+
+  do iBlock = 1, nBlock
+     if(unusedBlk(iBlock) .or. NeiLeast(iBlock) /= NOBLK) CYCLE
+
+     do k=1,nK
+        z = z_Blk(1,1,k,iBlock)
+        iZ = ceiling( (z - XyzMin_D(3))/MinDzValue + 0.1)
+
+        do i=1, nAxisCell
+           Volume = 1.0/vInv_CB(i,1,k,iBlock)
+           Buffer_VII(Volume_,iZ,Geom_) = Buffer_VII(Volume_,iZ,Geom_) &
+                + nJ*Volume
+           do j=1,nJ
+              Buffer_VII(:,iZ,Sum_) = Buffer_VII(:,iZ,Sum_) &
+                   + Volume*State_VGB(:,i,j,k,iBlock)
+           end do
+        end do
+        do j=1,nJ
+           x       = x_BLK(nAxisCell+1,j,k,iBlock)
+           y       = y_BLK(nAxisCell+1,j,k,iBlock)
+           State_V = State_VGB(:,nAxisCell+1,j,k,iBlock)
+
+           Buffer_VII(:,iZ,SumXLeft_) = Buffer_VII(:,iZ,SumXLeft_) &
+                + State_V*max(0.,-x)
+           Buffer_VII(:,iZ,SumXRight_) = Buffer_VII(:,iZ,SumXRight_) &
+                + State_V*max(0.,x)
+
+           Buffer_VII(:,iZ,SumYLeft_) = Buffer_VII(:,iZ,SumYLeft_) &
+                + State_V*max(0.,-y)
+           Buffer_VII(:,iZ,SumYRight_) = Buffer_VII(:,iZ,SumYRight_) &
+                + State_V*max(0.,y)
+
+           ! Add up abs(x) and x**2
+           Buffer_VII(SumX_,iZ,Geom_)  = Buffer_VII(SumX_,iZ,Geom_) + abs(x)
+           Buffer_VII(SumX2_,iZ,Geom_) = Buffer_VII(SumX2_,iZ,Geom_) + x**2
+        end do
+     end do
+  end do
+     
+  call MPI_allreduce(Buffer_VII, SumBuffer_VII, nVar*nZ*Geom_, MPI_REAL, &
+       MPI_SUM, iComm, iError)
+
+  do iBlock = 1, nBlock
+     if(unusedBlk(iBlock) .or. NeiLeast(iBlock) /= NOBLK) CYCLE
+
+     do k=1,nK
+        z = z_Blk(1,1,k,iBlock)
+        iZ = ceiling( (z - XyzMin_D(3))/MinDzValue + 0.1)
+
+        InvVolume = 1.0/SumBuffer_VII(Volume_,iZ,Geom_)
+        SumX      = 0.5*SumBuffer_VII(SumX_  ,iZ,Geom_)
+        InvSumX2  = 0.5/SumBuffer_VII(SumX2_ ,iZ,Geom_)
+
+        State_V = InvVolume*SumBuffer_VII(:,iZ,Sum_)
+
+        ! Limit the slope for each variable
+        do iVar = 1, nVar
+           SumXAvg = SumX*State_V(iVar)
+
+           dLeft  = SumXAvg - SumBuffer_VII(iVar,iZ,SumXLeft_)
+           dRight = SumBuffer_VII(iVar,iZ,SumXRight_) - SumXAvg
+           dStateDx_V(iVar) = (sign(0.5,dLeft)+sign(0.5,dRight))*InvSumX2 &
+               *min(1.5*abs(dLeft),1.5*abs(dRight),0.5*abs(dLeft+dRight))
+
+           dLeft  = SumXAvg - SumBuffer_VII(iVar,iZ,SumYLeft_)
+           dRight = SumBuffer_VII(iVar,iZ,SumYRight_) - SumXAvg
+           dStateDy_V(iVar) = InvSumX2 * (sign(0.5,dLeft)+sign(0.5,dRight)) &
+                *min(1.5*abs(dLeft),1.5*abs(dRight),0.5*abs(dLeft+dRight))
+        end do
+
+        ! Apply fit to each cell within the supercell
+        do j=1, nJ; do i=1, nAxisCell
+
+           State_VGB(:,i,j,k,iBlock) = State_V &
+                + dStateDx_V*x_BLK(i,j,k,iBlock) &
+                + dStateDy_V*y_BLK(i,j,k,iBlock)
+
+           call calc_energy_point(i,j,k,iBlock)
+        end do; end do
+     end do
+
+  end do
+
+  deallocate(Buffer_VII, SumBuffer_VII)
+
+end subroutine fix_axis_cells_cyl
