@@ -3,16 +3,15 @@ subroutine calc_timestep
   use ModProcMH
   use ModMain
   use ModAdvance, ONLY : VdtFace_x, VdtFace_y, VdtFace_z, time_BLK, &
-       DoFixAxis, rFixAxis, r2FixAxis, &
-       CurlB0_DCB, State_VGB, Rho_, FluxType, NormB0_CB
+       DoFixAxis, rFixAxis, r2FixAxis, State_VGB, Rho_, FluxType, NormB0_CB
   use ModNumConst
-  use ModGeometry, ONLY: true_cell,true_BLK, vInv_CB, rMin_BLK
-  use ModParallel, ONLY: NeiLBot, NeiLTop, NOBLK
+  use ModGeometry, ONLY: true_cell, true_BLK, vInv_CB, rMin_BLK, TypeGeometry
+  use ModParallel, ONLY: NeiLEast, NeiLBot, NeiLTop, NOBLK
   implicit none
 
   logical :: DoTest, DoTestMe
-  integer :: i, j, k, dK, iBlock
-  real:: SourceSpectralRadius_C(1:nI,1:nJ,1:nK)=cZero
+  integer :: i, j, k, Di, Dk, iBlock
+  real:: SourceSpectralRadius_C(nI,nJ,nK)
   !--------------------------------------------------------------------------
   iBlock = GlobalBlk
 
@@ -28,26 +27,32 @@ subroutine calc_timestep
              sqrt(State_VGB(Rho_,i,j,k,iBlock))
      end do;end do;end do
   else
-     SourceSpectralRadius_C=cZero
+     SourceSpectralRadius_C = 0.0
   end if
   do k=1,nK; 
      do j=1,nJ; do i=1,nI
-     time_BLK(i,j,k,iBlock) = cOne /(vInv_CB(i,j,k,iBlock)&
+     time_BLK(i,j,k,iBlock) = 1.0 /(vInv_CB(i,j,k,iBlock)&
           *(max(VdtFace_x(i,j,k),VdtFace_x(i+1,j,k))+ &
           max(VdtFace_y(i,j,k),VdtFace_y(i,j+1,k))+ &
           max(VdtFace_z(i,j,k),VdtFace_z(i,j,k+1)))+&
           SourceSpectralRadius_C(i,j,k))
   end do; end do; end do
 
-  if(DoFixAxis .and. rMin_Blk(iBlock) < rFixAxis)then
-     dK = 1; if(rMin_Blk(iBlock) < r2FixAxis) dK = 2
-     ! Ignore time step constraints from supercell
-     if(NeiLTop(iBlock) == NOBLK) &
-          time_BLK(1:nI, 1:nJ, nK+1-dK:nK, iBlock) = &
-          time_BLK(1:nI, 1:nJ, nK+1-dK:nK, iBlock) * 10.0
-     if(NeiLBot(iBlock) == NOBLK) &
-          time_BLK(1:nI, 1:nJ, 1:dK, iBlock) = &
-          time_BLK(1:nI, 1:nJ, 1:dK, iBlock) * 10.0
+  if(DoFixAxis)then
+     if(TypeGeometry == 'cylindrical' .and. NeiLEast(iBlock) == NOBLK)then
+        Di = 1; if(r2FixAxis > 0.1) Di = 2
+        time_BLK(1:Di, 1:nJ, 1:nK, iBlock) = &
+             time_BLK(1:Di, 1:nJ, 1:nK, iBlock) * 10.0
+     elseif(rMin_Blk(iBlock) < rFixAxis)then
+        Dk = 1; if(rMin_Blk(iBlock) < r2FixAxis) Dk = 2
+        ! Ignore time step constraints from supercell
+        if(NeiLTop(iBlock) == NOBLK) &
+             time_BLK(1:nI, 1:nJ, nK+1-Dk:nK, iBlock) = &
+             time_BLK(1:nI, 1:nJ, nK+1-Dk:nK, iBlock) * 10.0
+        if(NeiLBot(iBlock) == NOBLK) &
+             time_BLK(1:nI, 1:nJ, 1:Dk, iBlock) = &
+             time_BLK(1:nI, 1:nJ, 1:Dk, iBlock) * 10.0
+     end if
   end if
 
   if(DoTestMe)then
@@ -111,7 +116,7 @@ subroutine set_global_timestep(TimeSimulationLimit)
 
   integer :: iBlock
   integer :: iError, Ijk_D(3), i, j, k
-  real    :: dTimeMax, DtMinPe, Cmax, Cmax_C(nI,nJ,nK)
+  real    :: DtMinPe, Cmax, Cmax_C(nI,nJ,nK)
 
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
