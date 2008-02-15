@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+ !^CFG COPYRIGHT UM
 !//////////////////////////////////////////////////////////////////////////////
 !
 !    North                      8--------------7
@@ -27,7 +27,7 @@ subroutine find_neighbors
 
   integer :: i, j, k, iBlock, iLevelOut
   integer, dimension(4) :: iProcOut_I, iBlockOut_I, iChildOut_I
-  logical::DoTest,DoTestMe,DoCallOKTest=.true.
+  logical::DoTest=.false.,DoTestMe=.false.,DoCallOKTest=.true.
   character(LEN=*),parameter::NameSub='find_neighbors'
     !--------------------------------------------------------!
   if(DoCallOKTest)then
