@@ -1058,7 +1058,7 @@ subroutine mp_build_cell_indices(JustCount)
   use ModMPCells
   use ModAMR, ONLY : unusedBlock_BP
   use ModGeometry,ONLY:TypeGeometry                
-  use ModParallel,ONLY:NOBLK
+  use ModParallel,ONLY:NOBLK         
   use ModPolarNeighbor
   implicit none
 
@@ -1068,6 +1068,28 @@ subroutine mp_build_cell_indices(JustCount)
   !Local variables
   integer :: iBLK,iPE, iCHILD, idir, sSubF,rSubF
   integer :: i1S,i2S, j1S,j2S, k1S,k2S, i1R,i2R, j1R,j2R, k1R,k2R, sS,sR
+
+  !For passing message across the pole some indexes should be flipped
+  !Typical example:
+  !Usual situation: if in the loop for sending the limits for k are 1,2
+  !SEND:do k=1,2;........
+  !then in the loop for receiving, the limits are nK+1,nK+2
+  !RECEIVE:do k=nK+1,nK+2;...
+  !However,
+  !for message pass across the pole of the spherical grid the RECEIVE loop becomes:
+  !RECEIVE:do k=0,-1,-1;...
+  !So we need a logical to figure out if the message pass occurs across the pole:
+
+  logical::DoMPassAcrossPole=.false.
+  integer::iDirPole,iLoopPole
+
+  !as well as the integers for strides which are negative is the indexes are flipped
+
+
+  !j index always relates to a cycling coordinate around the pole, so that this index
+  !never flips and never requires negative stride
+
+  integer::iDirMax=26
 
   integer, dimension(26) :: nsubF
   integer, dimension(26,3) :: dLOOP
@@ -1103,9 +1125,9 @@ subroutine mp_build_cell_indices(JustCount)
   nRecv=0
 
   if(DoFacesOnlyLast)then
-     sS=0 ; sR=0
+     sS=0 ; sR=0; iDirMax=6
   else
-     sS=1 ; sR=2
+     sS=1 ; sR=2; iDirMax=26
   end if
 
   if(.not.DoOneCoarserLayer) then
@@ -1130,66 +1152,45 @@ subroutine mp_build_cell_indices(JustCount)
         !valid used block found, setup indices
         iCHILD = global_block_ptrs(iBLK, iPE+1) % ptr % child_number
 
-        if(DoFacesOnlyLast)then
-           do idir=1,6
-              call treeNeighbor(iPE,iBLK,dLOOP(idir,1),dLOOP(idir,2),dLOOP(idir,3), &
-                   neighborPE,neighborBLK,neighborCHILD,neighborLEV)
+        DoMPassAcrossPole=.false.
+        call check_pole_inside_blkpe(iBlk,iPE,&
+             DoMPassAcrossPole,iDirPole,iLoopPole)
 
-              select case(neighborLEV)
-              case(0)
-                 !Build indices for send to same block level
-                 sSubF=0
-                 call build_i
-              case(1)
-                 !Build indices for send to coarser block level
-                 sSubF=-1
-                 call build_i
-              case(-1)
-                 !Build indices for send to finer block level
-                 do sSubF=1,nsubF(idir)
-                    call build_i
-                 end do
-              case(NOBLK)                                 
-                 if(&
-                      ((index(TypeGeometry,'spherical')>0&
-                      .and.(idir==Top_.or.idir==Bot_)).or.& 
-                      (index(TypeGeometry,'cylindrical')>0.and.idir==West_))) call build_i_axis
-              end select
-           end do
-        else
-           do idir=1,26
-              call treeNeighbor(iPE,iBLK,dLOOP(idir,1),dLOOP(idir,2),dLOOP(idir,3), &
+        do idir=1,iDirMax
+           if(DoMPassAcrossPole.and.dLoop(iDir,iDirPole)==iLoopPole)then
+              call tree_neighbor_across_pole(iPE,iBLK,&
+                   dLOOP(idir,1),dLOOP(idir,2),dLOOP(idir,3),iDirPole, &
                    neighborPE,neighborBLK,neighborCHILD,neighborLEV)
-
-              select case(neighborLEV)
-              case(0)
-                 !Build indices for send to same block level
-                 sSubF=0
+           else
+              call treeNeighbor(iPE,iBLK,&
+                   dLOOP(idir,1),dLOOP(idir,2),dLOOP(idir,3), &
+                   neighborPE,neighborBLK,neighborCHILD,neighborLEV)
+           end if
+           select case(neighborLEV)
+           case(0)
+              !Build indices for send to same block level
+              sSubF=0
+              rSubF=0
+              call build_i
+           case(1)
+              !Build indices for send to coarser block level
+              sSubF=-1
+              rSubF = subfaceNumber(idir,iCHILD)
+              call build_i
+           case(-1)
+              !Build indices for send to finer block level
+              rSubF = 0
+              do sSubF=1,nsubF(idir)
                  call build_i
-              case(1)
-                 !Build indices for send to coarser block level
-                 sSubF=-1
-                 call build_i
-              case(-1)
-                 !Build indices for send to finer block level
-                 do sSubF=1,nsubF(idir)
-                    call build_i
-                 end do
-              case(NOBLK)                  
-                 if(&
-                      ((index(TypeGeometry,'spherical')>0&
-                      .and.(idir==Top_.or.idir==Bot_)).or.& 
-                      (index(TypeGeometry,'cylindrical')>0.and.idir==West_)))  call build_i_axis
-              end select
-           end do
-        end if
+              end do
+           case(NOBLK)                   
+           end select
+        end do
      end do
   end do
 
 
 contains
-
-  !==========================================================================
   subroutine build_i
     !
     !
@@ -1197,9 +1198,10 @@ contains
     !Local variables
     integer :: i,j,k, n, iAdd,jAdd,kAdd
     integer :: nborPE, nborBLK
-
+    integer::iStrideR=1,kStrideR=1
     !------------------------------------------
-
+    iStrideR=1; kStrideR=1
+   
     nborPE  = neighborPE (max(1,sSubF))
     nborBLK = neighborBLK(max(1,sSubF))
 
@@ -1207,32 +1209,49 @@ contains
        if (unusedBlock_BP(nborBLK,nborPE)) return
     end if
 
-    rSubF=0
-    if(sSubF == -1) rSubF = subfaceNumber(idir,iCHILD)
-
     call set_indices
+    if(DoMPassAcrossPole)then
+       if(dLoop(iDir,iDirPole)==iLoopPole)then
+          select case(iDirPole)
+          case(1)
+             !flip i idexes for recv:
+             i1R=nI+1-i1R; i2R=nI+1-i2R; iStrideR=-1
+          case(3)
+             !flip k indexes for recv
+             k1R=nK+1-k1R; k2R=nK+1-k2R; kStrideR=-1
+          case default
+             call stop_mpi(&
+                  'Message_pass_cells: in flipping indexes, unknown idir')
+          end select
+       end if
+    end if
+    
     if(sSubF == 0)then !Send to same level
 
        if(iProc == iPE)then  ! Setup sends
           SENDLOOP: do i=i1S,i2S; do j=j1S,j2S; do k=k1S,k2S
              nSend(nborPE)=nSend(nborPE)+1
-             if(JustCount .and. iPE==nborPE) EXIT SENDLOOP  ! Use for array syntax copy
+             if(JustCount .and. iPE==nborPE.and.&
+             iStrideR==1.and.kStrideR==1) EXIT SENDLOOP  ! Use for array syntax copy
              if(JustCount) CYCLE
 
              if(iPE==nborPE)then
-!!$                ! Old point by point copy
-!!$                n=nSend(nborPE)
-!!$                VSendIlocal(0,n)=1
-!!$                VSendIlocal(1,n)=i; VSendIlocal(3,n)=j; VSendIlocal(5,n)=k
-!!$                VSendIlocal(2,n)=i; VSendIlocal(4,n)=j; VSendIlocal(6,n)=k
-!!$                VSendIlocal(7,n)=iBLK
-                ! For local copies of blocks at same level, we can do array syntax copy
-                n=nSend(nborPE)
-                VSendIlocal(0,n)=0
-                VSendIlocal(1,n)=i1S; VSendIlocal(3,n)=j1S; VSendIlocal(5,n)=k1S
-                VSendIlocal(2,n)=i2S; VSendIlocal(4,n)=j2S; VSendIlocal(6,n)=k2S
-                VSendIlocal(7,n)=iBLK
-                EXIT SENDLOOP
+                if(iStrideR==-1.or.kStrideR==-1)then
+                   ! Old point by point copy
+                   n=nSend(nborPE)
+                   VSendIlocal(0,n)=1
+                   VSendIlocal(1,n)=i; VSendIlocal(3,n)=j; VSendIlocal(5,n)=k
+                   VSendIlocal(2,n)=i; VSendIlocal(4,n)=j; VSendIlocal(6,n)=k
+                   VSendIlocal(7,n)=iBLK
+                else
+                   ! For local copies of blocks at same level, we can do array syntax copy
+                   n=nSend(nborPE)
+                   VSendIlocal(0,n)=0
+                   VSendIlocal(1,n)=i1S; VSendIlocal(3,n)=j1S; VSendIlocal(5,n)=k1S
+                   VSendIlocal(2,n)=i2S; VSendIlocal(4,n)=j2S; VSendIlocal(6,n)=k2S
+                   VSendIlocal(7,n)=iBLK
+                   EXIT SENDLOOP
+                end if
              else
                 n=nSendStart(nborPE)+nSend(nborPE)
                 VSendI(0,n)=1
@@ -1243,23 +1262,26 @@ contains
           end do; end do; end do SENDLOOP
        end if
        if(iProc == nborPE)then  ! Setup recvs
-          RECVLOOP: do i=i1R,i2R; do j=j1R,j2R; do k=k1R,k2R
+          RECVLOOP: do i=i1R,i2R,iStrideR; do j=j1R,j2R; do k=k1R,k2R,kStrideR
              nRecv(iPE)=nRecv(iPE)+1
-             if(JustCount .and. iPE==nborPE) EXIT RECVLOOP  ! Use for array syntax copy
+             if(JustCount .and. iPE==nborPE.and.iStrideR==1.and.kStrideR==1) EXIT RECVLOOP  ! Use for array syntax copy
              if(JustCount) CYCLE
 
              if(iPE==nborPE)then
-!!$                ! Old point by point copy
-!!$                n=nRecv(iPE)
-!!$                VRecvIlocal(1,n)=i; VRecvIlocal(3,n)=j; VRecvIlocal(5,n)=k
-!!$                VRecvIlocal(2,n)=i; VRecvIlocal(4,n)=j; VRecvIlocal(6,n)=k
-!!$                VRecvIlocal(7,n)=nborBLK
-                ! For local copies of blocks at same level, we can do array syntax copy
-                n=nRecv(iPE)
-                VRecvIlocal(1,n)=i1R; VRecvIlocal(3,n)=j1R; VRecvIlocal(5,n)=k1R
-                VRecvIlocal(2,n)=i2R; VRecvIlocal(4,n)=j2R; VRecvIlocal(6,n)=k2R
-                VRecvIlocal(7,n)=nborBLK
-                EXIT RECVLOOP
+                if(iStrideR==-1.or.kStrideR==-1)then
+                   ! Old point by point copy
+                   n=nRecv(iPE)
+                   VRecvIlocal(1,n)=i; VRecvIlocal(3,n)=j; VRecvIlocal(5,n)=k
+                   VRecvIlocal(2,n)=i; VRecvIlocal(4,n)=j; VRecvIlocal(6,n)=k
+                   VRecvIlocal(7,n)=nborBLK
+                else
+                   ! For local copies of blocks at same level, we can do array syntax copy
+                   n=nRecv(iPE)
+                   VRecvIlocal(1,n)=i1R; VRecvIlocal(3,n)=j1R; VRecvIlocal(5,n)=k1R
+                   VRecvIlocal(2,n)=i2R; VRecvIlocal(4,n)=j2R; VRecvIlocal(6,n)=k2R
+                   VRecvIlocal(7,n)=nborBLK
+                   EXIT RECVLOOP
+                end if
              else
                 n=nRecvStart(iPE)+nRecv(iPE)
                 VRecvI(1,n)=i; VRecvI(3,n)=j; VRecvI(5,n)=k
@@ -1367,7 +1389,7 @@ contains
        if(iProc == nborPE)then  ! Setup recvs
           if(iCFExchangeType==1 .or. iCFExchangeType==3)then
              ! Old Style: receive 8 separate values for 8 fine cells to use
-             do i=i1R,i2R; do j=j1R,j2R; do k=k1R,k2R
+             do i=i1R,i2R,iStrideR; do j=j1R,j2R; do k=k1R,k2R,kStrideR
                 nRecv(iPE)=nRecv(iPE)+1
                 if(JustCount) CYCLE
 
@@ -1386,19 +1408,19 @@ contains
 
           elseif(iCFExchangeType==2)then
              ! New Style: receive 1 value for 8 fine cells to use
-             iAdd=1; jAdd=1; kAdd=1
+             iAdd=iStrideR; jAdd=1; kAdd=kStrideR
              if(i1R==i2R.or.nDuplicateI==1) iAdd=0
              if(j1R==j2R.or.nDuplicateJ==1) jAdd=0
              if(k1R==k2R.or.nDuplicateK==1) kAdd=0
-             do i=i1R,i2R,nDuplicateI; do j=j1R,j2R,nDuplicateJ; do k=k1R,k2R,nDuplicateK
+             do i=i1R,i2R,nDuplicateI*iStrideR;do j=j1R,j2R,nDuplicateJ;do k=k1R,k2R,nDuplicateK*kStrideR
                 if(iPE==nborPE)then
                    nRecv(iPE)=nRecv(iPE)+1
                    if(JustCount) CYCLE
 
                    n=nRecv(iPE)
                    VRecvIlocal(0,n)=2
-                   VRecvIlocal(1,n)=i     ; VRecvIlocal(3,n)=j     ; VRecvIlocal(5,n)=k
-                   VRecvIlocal(2,n)=i+iAdd; VRecvIlocal(4,n)=j+jAdd; VRecvIlocal(6,n)=k+kAdd
+                   VRecvIlocal(1,n)=min(i,i+iAdd) ; VRecvIlocal(3,n)=j     ; VRecvIlocal(5,n)=min(k,k+kAdd)
+                   VRecvIlocal(2,n)=max(i,i+iAdd) ; VRecvIlocal(4,n)=j+jAdd; VRecvIlocal(6,n)=max(k,k+kAdd)
                    VRecvIlocal(7,n)=nborBLK
                 else
                    nRecv(iPE)=nRecv(iPE)+1
@@ -1406,11 +1428,11 @@ contains
 
                    n=nRecvStart(iPE)+nRecv(iPE)
                    VRecvI(0,n)=2
-                   VRecvI(1,n)=i     ; VRecvI(3,n)=j     ; VRecvI(5,n)=k
-                   VRecvI(2,n)=i+iAdd; VRecvI(4,n)=j+jAdd; VRecvI(6,n)=k+kAdd
+                   VRecvI(1,n)=min(i,i+iAdd)     ; VRecvI(3,n)=j     ; VRecvI(5,n)=min(k,k+kAdd)
+                   VRecvI(2,n)=max(i,i+iAdd)     ; VRecvI(4,n)=j+jAdd; VRecvI(6,n)=max(k,k+kAdd)
                    VRecvI(7,n)=nborBLK
                 end if
-             end do; end do; end do
+             end do;end do;end do
           end if
        end if
 
@@ -1437,7 +1459,7 @@ contains
           end do; end do; end do
        end if
        if(iProc == nborPE)then  ! Setup recvs
-          do i=i1R,i2R; do j=j1R,j2R; do k=k1R,k2R
+          do i=i1R,i2R,iStrideR; do j=j1R,j2R; do k=k1R,k2R,kStrideR
              nRecv(iPE)=nRecv(iPE)+1
              if(JustCount) CYCLE
 
@@ -1526,7 +1548,7 @@ contains
           k1S= 1   ; k1R= 1
           k2S=nK   ; k2R=nK
        end select
-
+       
        RETURN
     end if
 
@@ -1779,67 +1801,6 @@ contains
     end if
 
   end subroutine set_indices
-  subroutine build_i_axis                              
-    !Local variables
-    integer :: i,j,k,n
-    integer :: iStepR,kStepR
-    integer :: nborPE, nborBLK
-    call find_axial_neighbor(iPE,iBLK,nborPE,nborBLK) 
-    i1S=1; i2S=nI; j1S=1; j2S=nJ; k1S=1; k2S=nK
-    i1R=1; i2R=nI; j1R=1; j2R=nJ; k1R=1; k2R=nK
-    iStepR=1; kStepR=1
-
-    select case(idir)
-    case(West_)
-       i2S=2; i1R=0; i2R=-1; iStepR=-1
-    case(Top_)
-       k2S=2; k1R=0; k2R=-1; kStepR=-1
-    case(Bot_)
-       k1S=nK-1; k1R=nK+2; k2R=nK+1; kStepR=-1
-    case default
-       call stop_mpi('Message_pass_cells: unknown idir = ')
-    end select
-    if(iProc == iPE)then
-       do i=i1S,i2S; do j=j1S,j2S; do k=k1S,k2S
-          nSend(nborPE)=nSend(nborPE)+1
-          if(JustCount) CYCLE
-
-          if(iPE==nborPE)then
-             n=nSend(nborPE)
-             VSendIlocal(0,n)=1
-             VSendIlocal(1,n)=i; VSendIlocal(3,n)=j; VSendIlocal(5,n)=k
-             VSendIlocal(2,n)=i; VSendIlocal(4,n)=j; VSendIlocal(6,n)=k
-             VSendIlocal(7,n)=iBLK
-          else
-             n=nSendStart(nborPE)+nSend(nborPE)
-             VSendI(0,n)=1
-             VSendI(1,n)=i; VSendI(3,n)=j; VSendI(5,n)=k
-             VSendI(2,n)=i; VSendI(4,n)=j; VSendI(6,n)=k
-             VSendI(7,n)=iBLK
-          end if
-       end do; end do; end do
-    end if
-    if(iProc == nborPE)then
-       do i=i1R,i2R,iStepR; do j=j1R,j2R; do k=k1R,k2R,kStepR
-          nRecv(iPE)=nRecv(iPE)+1
-          if(JustCount) CYCLE
-
-          if(iPE==nborPE)then
-             n=nRecv(iPE)
-             VRecvIlocal(1,n)=i; VRecvIlocal(3,n)=j; VRecvIlocal(5,n)=k
-             VRecvIlocal(2,n)=i; VRecvIlocal(4,n)=j; VRecvIlocal(6,n)=k
-             VRecvIlocal(7,n)=nborBLK
-          else
-             n=nRecvStart(iPE)+nRecv(iPE)
-             VRecvI(1,n)=i; VRecvI(3,n)=j; VRecvI(5,n)=k
-             VRecvI(2,n)=i; VRecvI(4,n)=j; VRecvI(6,n)=k
-             VRecvI(7,n)=nborBLK
-          end if
-       end do; end do; end do
-    end if
-
-  end subroutine build_i_axis                                   
-
 end subroutine mp_build_cell_indices
 
 !==========================================================================
