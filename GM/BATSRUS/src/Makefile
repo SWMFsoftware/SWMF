@@ -20,6 +20,7 @@ MODULES = \
 	ModAMR.o\
 	ModBlockData.o\
 	ModBoundaryCells.o\
+	ModCube.o\
 	ModSingleFluid.o\
 	ModMultiFluid.o\
 	ModEnergy.o\

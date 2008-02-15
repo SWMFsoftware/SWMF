@@ -22,10 +22,18 @@ subroutine find_neighbors
   use ModProcMH, ONLY: iProc
   use ModMain,   ONLY: nBlock, UnusedBLK
   use ModParallel
+  use ModPolarNeighbor
   implicit none
 
   integer :: i, j, k, iBlock, iLevelOut
   integer, dimension(4) :: iProcOut_I, iBlockOut_I, iChildOut_I
+  logical::DoTest,DoTestMe,DoCallOKTest=.true.
+  character(LEN=*),parameter::NameSub='find_neighbors'
+    !--------------------------------------------------------!
+  if(DoCallOKTest)then
+     call set_oktest(NameSub,DoTest,DoTestMe)
+     DoCallOKTest=.false.
+  end if
   !---------------------------------------------------------------------------
   !\
   ! Loop and fill variables with neighbor information for all blocks on this PE
@@ -40,6 +48,7 @@ subroutine find_neighbors
         BLKneighborBLK  (i,j,k,:,iBlock) = iBlockOut_I
         BLKneighborCHILD(i,j,k,:,iBlock) = iChildOut_I
         BLKneighborLEV  (i,j,k,  iBlock) = iLevelOut
+        if(DoTest.and.iLevelOut==-1)call test_refined_neighbor(i,j,k,iChildOut_I)
      end do; end do; end do
   end do
 

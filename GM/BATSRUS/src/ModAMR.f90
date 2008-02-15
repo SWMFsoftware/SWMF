@@ -1,6 +1,6 @@
 !^CFG COPYRIGHT UM
 module ModAMR
-  use ModSize
+  use ModCube
   implicit none
   save
 
@@ -23,13 +23,6 @@ module ModAMR
        0,0,2,1,1,2,0,0, &     !Bot face   X edges
        1,2,0,0,0,0,2,1/       !Top face   X edges
   
-  !The shift of the child corner with respect to the parent corner
-  integer, parameter, dimension(8,3):: iShiftChild_ID = reshape(&
-       !1    2     3     4    5     6     7     8        child index
-       (/0,  nI/2, nI/2, 0,   0,    nI/2, nI/2, 0,     & !i shift
-       0,    0,    0,    0,   nJ/2, nJ/2, nJ/2, nJ/2,  & !j shift
-       nK/2, nK/2, 0,    0,   0,    0,    nK/2, nK/2/),& !k shift
-       (/8,3/))
   !\
   ! Local and global refinement/coarsening and neighbor parameters.
   !/
