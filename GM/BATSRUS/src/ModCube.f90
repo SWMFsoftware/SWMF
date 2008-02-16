@@ -46,13 +46,13 @@ contains
   subroutine refined_children_list(iX,iY,iZ,iChildren_I)
     integer,intent(in)::iX,iY,iZ 
     !Allowed values: -1,0,1. 
-    !(iX,iY,iZ) is the direction from the center of the coarser block
-    !towards face (edge, corners).
+    !(iX,iY,iZ) is the direction from the center of the COARSER block
+    !towards face (edge, corners), i.e. towards FINER neighbors.
     
     integer,dimension(4),intent(out)::iChildren_I
     !The child number list for neighboring blocks
     !-----------------------------------------------------
-    integer::i,j,k,lSubF
+    integer::i,j,k,lSubF,iChild2
     lSubf=0;iChildren_I=NOBLK
     do i=-min(0,iX),& !for iX=-1 all the nighbors are in the western part
                      1-max(0,iX)! For iX=+1, in the eastern part
@@ -66,6 +66,11 @@ contains
           end do
        end do
     end do
+    if(.not.(iZ**2==1.and.iX**2+iY**2==0))return
+    !consider separatelely  Top_ or Bot_ face
+    iChild2=iChildren_I(2)
+    iChildren_I(2)=iChildren_I(3)
+    iChildren_I(3)=iChild2
   end subroutine refined_children_list
   !============================================================================!
   !==============================================================
@@ -79,7 +84,7 @@ contains
     !--------------------------------------------------------------------------!
     call refined_children_list(iX,iY,iZ,iChildrenTest_I)
     if(any(iChildrenTest_I/=iChild_I))then
-       write(*,*)'Wrong refined children list in tree_neighbor_across_pole'
+       write(*,*)'Wrong refined children list in tree_neighbor_list'
        write(*,*)'The positions of children in the list should be:',&
             iChildrenTest_I
        write(*,*)'Actual children list',iChild_I

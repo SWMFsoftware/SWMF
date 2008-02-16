@@ -25,7 +25,7 @@ contains
     !--------------------------------------------------------!
     integer::iDir_D(3),iDirPole,iLoopPole
     logical::IsPole
-    logical::DoTest,DoTestMe,DoCallOKTest=.true.
+    logical::DoTest=.false.,DoTestMe=.false.,DoCallOKTest=.true.
     character(LEN=*),parameter::NameSub='tree_neighbor_fixed'
     !--------------------------------------------------------!
     if(DoCallOKTest)then
