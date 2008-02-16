@@ -239,6 +239,12 @@ subroutine set_physics_constants
           *MassFluid_I(1)/MassFluid_I(iFluid)
   end do
 
+  ! Fix the total pressure if necessary (density and temperature are kept)
+  if(UseMultiIon.and.TypeFluid_I(1)=='ion') &
+       FaceState_VI(P_,East_:Top_) = sum(FaceState_VI(iP_I(2:nFluid),1)) &
+       + SW_p/Sw_rho &
+       * (Sw_rho - sum(FaceState_VI(iRho_I(2:nFluid),1))/MassFluid_I(1))
+     
   ! Cell State is used for filling the ghostcells
   CellState_VI = FaceState_VI
 
