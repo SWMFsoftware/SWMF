@@ -942,12 +942,6 @@ contains
          Cmax = Cmax_I(1)
       end if
 
-!         write(*,*)'iFace,jFace,kFace,iBlock=',iFace,jFace,kFace,iBlockFace
-!         write(*,*)'UnLeft_I=',UnLeft_I
-!         write(*,*)'UnRight_I=',UnLeft_I
-!      end if
-
-
       Unormal_I = 0.5*(UnLeft_I + UnRight_I)
       Enormal   = 0.5*(EnLeft + EnRight)                !^CFG IF BORISCORR
 
@@ -1551,7 +1545,7 @@ contains
          Flux_V(iVar) = Un*State_V(iVar)
       end do
 
-      if(UseElectronPressure)HallUn = Un
+      HallUn = Un
 
     end subroutine get_boris_flux
 
