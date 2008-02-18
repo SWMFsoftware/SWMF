@@ -1066,9 +1066,15 @@ subroutine mp_build_cell_indices(JustCount)
   logical, intent(in) :: JustCount
 
   !Local variables
-  integer :: iBLK,iPE, iCHILD, idir, sSubF,rSubF
-  integer :: i1S,i2S, j1S,j2S, k1S,k2S, i1R,i2R, j1R,j2R, k1R,k2R, sS,sR
-
+  integer :: iBLK,iPE, iChild, idir, sSubF
+  integer :: i1S,i2S, j1S,j2S, k1S,k2S, i1R,i2R, j1R,j2R, k1R,k2R
+  integer :: sS
+  integer :: sR,rSubf
+  logical :: IsAtFace
+  integer,dimension(3)::iMinS_D,iMaxS_D,iMinR_D,iMaxR_D,nDuplicate_D
+  integer::nLayerS,nLayerR
+ 
+  
   !For passing message across the pole some indexes should be flipped
   !Typical example:
   !Usual situation: if in the loop for sending the limits for k are 1,2
@@ -1080,7 +1086,7 @@ subroutine mp_build_cell_indices(JustCount)
   !RECEIVE:do k=0,-1,-1;...
   !So we need a logical to figure out if the message pass occurs across the pole:
 
-  logical::DoMPassAcrossPole=.false.
+  logical::IsPolarBlockS=.false.,DoMPassAcrossPole=.false.
   integer::iDirPole,iLoopPole
 
   !as well as the integers for strides which are negative is the indexes are flipped
@@ -1093,10 +1099,13 @@ subroutine mp_build_cell_indices(JustCount)
 
   integer, dimension(26) :: nsubF
   integer, dimension(26,3) :: dLOOP
-  integer, dimension(26,8) :: subfaceNumber
+ 
 
-  integer :: neighborLEV
+
+  integer :: iLevelR    !level of the receiving block
   integer, dimension(4) :: neighborPE,neighborBLK,neighborCHILD
+
+  logical::DoTest=.false.,DoTestMe=.false.,DoCallOKTest=.true.
   !------------------------------------------
 
   ! face=1-6, edge=7-18, corner=19-26
@@ -1110,24 +1119,20 @@ subroutine mp_build_cell_indices(JustCount)
        0,  0,  1, -1,  0,  0,   1, -1, -1,  1,  1, -1,  1, -1,  0,  0,  0,  0,   1, -1,  1, -1, -1,  1, -1,  1, &
        0,  0,  0,  0,  1, -1,   0,  0,  0,  0,  1, -1, -1,  1,  1, -1,  1, -1,   1, -1, -1,  1,  1, -1, -1,  1 /
 
-  data subfaceNumber / &
-       0,  2,  0,  2,  1,  0,   0,  2,  0,  0,  0,  0,  0,  1,  0,  0,  1,  0,   0,  0,  0,  1,  0,  0,  0,  0, &
-       2,  0,  0,  4,  2,  0,   0,  0,  2,  0,  0,  0,  0,  2,  1,  0,  0,  0,   0,  0,  0,  0,  1,  0,  0,  0, &
-       1,  0,  0,  3,  0,  2,   0,  0,  1,  0,  0,  2,  0,  0,  0,  0,  0,  1,   0,  0,  0,  0,  0,  0,  1,  0, &
-       0,  1,  0,  1,  0,  1,   0,  1,  0,  0,  0,  1,  0,  0,  0,  1,  0,  0,   0,  1,  0,  0,  0,  0,  0,  0, &
-       0,  3,  1,  0,  0,  3,   0,  0,  0,  1,  0,  0,  1,  0,  0,  2,  0,  0,   0,  0,  0,  0,  0,  1,  0,  0, &
-       3,  0,  3,  0,  0,  4,   1,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  2,   0,  0,  1,  0,  0,  0,  0,  0, &
-       4,  0,  4,  0,  4,  0,   2,  0,  0,  0,  2,  0,  0,  0,  2,  0,  0,  0,   1,  0,  0,  0,  0,  0,  0,  0, &
-       0,  4,  2,  0,  3,  0,   0,  0,  0,  2,  1,  0,  0,  0,  0,  0,  2,  0,   0,  0,  0,  0,  0,  0,  0,  1 /
-  !------------------------------------------
-
   nSend=0
   nRecv=0
 
+  if(DoCallOKTest)then
+     call set_oktest('set_indices',DoTest,DoTestMe)
+     DoCallOKTest=.false.
+  end if
+
   if(DoFacesOnlyLast)then
-     sS=0 ; sR=0; iDirMax=6
+     sS=0 ;  iDirMax=6    
+     sR=0
   else
-     sS=1 ; sR=2; iDirMax=26
+     sS=1 ;  iDirMax=26
+     sR=2
   end if
 
   if(.not.DoOneCoarserLayer) then
@@ -1152,35 +1157,85 @@ subroutine mp_build_cell_indices(JustCount)
         !valid used block found, setup indices
         iCHILD = global_block_ptrs(iBLK, iPE+1) % ptr % child_number
 
-        DoMPassAcrossPole=.false.
         call check_pole_inside_blkpe(iBlk,iPE,&
-             DoMPassAcrossPole,iDirPole,iLoopPole)
+             IsPolarBlockS,iDirPole,iLoopPole)
 
         do idir=1,iDirMax
-           if(DoMPassAcrossPole.and.dLoop(iDir,iDirPole)==iLoopPole)then
+           DoMPassAcrossPole=&
+                IsPolarBlockS.and.dLoop(iDir,iDirPole)==iLoopPole
+           if(DoMPassAcrossPole)then
               call tree_neighbor_across_pole(iPE,iBLK,&
                    dLOOP(idir,1),dLOOP(idir,2),dLOOP(idir,3),iDirPole, &
-                   neighborPE,neighborBLK,neighborCHILD,neighborLEV)
+                   neighborPE,neighborBLK,neighborCHILD,iLevelR)
            else
               call treeNeighbor(iPE,iBLK,&
                    dLOOP(idir,1),dLOOP(idir,2),dLOOP(idir,3), &
-                   neighborPE,neighborBLK,neighborCHILD,neighborLEV)
+                   neighborPE,neighborBLK,neighborCHILD,iLevelR)
            end if
-           select case(neighborLEV)
+           nDuplicate_D=2
+           select case(iLevelR)
            case(0)
               !Build indices for send to same block level
               sSubF=0
-              rSubF=0
+              rSubf=0
+              if(DoOneLayer_D(iDir))then
+                 nLayerS = 1 ; nLayerR = 1
+              else
+                 nLayerS = 2 ; nLayerR = 2
+              end if
+              call set_indices(&
+                   iDirS2R_D=dLoop(iDir,:), &
+                   nLayerS=nLayerS,nLayerR=nLayerR,&
+                   iMinS_D=iMinS_D,iMaxS_D=iMaxS_D,&
+                   iMinR_D=iMinR_D,iMaxR_D=iMaxR_D,&
+                   iLevelR=iLevelR)
               call build_i
            case(1)
               !Build indices for send to coarser block level
               sSubF=-1
-              rSubF = subfaceNumber(idir,iCHILD)
+              if(DoTest)then
+                 call get_position_at_face(-dLoop(iDir,1),&
+                      -dLoop(iDir,2),-dLoop(iDir,3),iChild,&
+                      IsAtFace,rSubf)
+                 if(IsAtFace.eqv.is_not_at_face(&
+                      iDirC2F_D=-dLoop(iDir,:),iChild=iChild))call stop_mpi(&
+                      'Error in is_not_at_face')
+              end if
+              if(is_not_at_face(&
+                   iDirC2F_D=-dLoop(iDir,:),iChild=iChild))CYCLE
+              if(DoOneLayer_D(iDir))then
+                 nLayerS = 2 ; nLayerR = 1
+              else
+                 nLayerS = 4 ; nLayerR = 2
+              end if
+              call set_indices(&
+                   iDirS2R_D=dLoop(iDir,:), &
+                   nLayerS=nLayerS,nLayerR=nLayerR,&
+                   iMinS_D=iMinS_D,iMaxS_D=iMaxS_D,&
+                   iMinR_D=iMinR_D,iMaxR_D=iMaxR_D,&
+                   iLevelR=iLevelR,iChild=iChild)
               call build_i
            case(-1)
               !Build indices for send to finer block level
-              rSubF = 0
+              rSubF=0
+              nLayerS = 1 ; nLayerR = 1 
+              if((.not.DoOneLayer_D(iDir)))then
+                 nLayerS = 1 + iZeroOrOneForTwoCoarserLayers
+                 nLayerR = 2
+                 where(dLoop(iDir,:)/=0)
+                    nDuplicate_D=iTwoOrOneForTwoCoarserLayers
+                 end where
+              end if
               do sSubF=1,nsubF(idir)
+                 call set_indices(&
+                      iDirS2R_D=dLoop(iDir,:), &
+                      nLayerS=nLayerS,nLayerR=nLayerR,&
+                      iMinS_D=iMinS_D,iMaxS_D=iMaxS_D,&
+                      iMinR_D=iMinR_D,iMaxR_D=iMaxR_D,&
+                      iLevelR=iLevelR,&
+                      iChild =neighborCHILD(sSubf),&
+                      iChild1=neighborCHILD(  1  ),&
+                      nExtraCell=sS)
                  call build_i
               end do
            case(NOBLK)                   
@@ -1194,7 +1249,6 @@ contains
   subroutine build_i
     !
     !
-
     !Local variables
     integer :: i,j,k, n, iAdd,jAdd,kAdd
     integer :: nborPE, nborBLK
@@ -1208,22 +1262,57 @@ contains
     if (DoImplicitUnusedBlock)then
        if (unusedBlock_BP(nborBLK,nborPE)) return
     end if
-
-    call set_indices
-    if(DoMPassAcrossPole)then
-       if(dLoop(iDir,iDirPole)==iLoopPole)then
-          select case(iDirPole)
-          case(1)
-             !flip i idexes for recv:
-             i1R=nI+1-i1R; i2R=nI+1-i2R; iStrideR=-1
-          case(3)
-             !flip k indexes for recv
-             k1R=nK+1-k1R; k2R=nK+1-k2R; kStrideR=-1
-          case default
-             call stop_mpi(&
-                  'Message_pass_cells: in flipping indexes, unknown idir')
-          end select
+    if(DoTest)then
+       call set_indices_obsolete
+       if(any((/i1r,j1r,k1r/)/=iMinR_D))then
+          write(*,*)'For iDir=',iDir,'i1r,j1r,k1r=',i1r,j1r,k1r,'iMinR_D=',&
+               iMinR_D, 'iLevelR=',iLevelR
+          call stop_mpi('set_indices failed')
        end if
+       if(any((/i1s,j1s,k1s/)/=iMinS_D))then
+          write(*,*)'For iDir=',iDir,'i1s,j1s,k1s=',i1s,j1s,k1s,'iMinS_D=',&
+               iMinS_D, 'iLevelR=',iLevelR
+          call stop_mpi('set_indices failed')
+       end if
+       if(any((/i2r,j2r,k2r/)/=iMaxR_D))then
+          write(*,*)'For iDir=',iDir,'i2r,j2r,k2r=',i2r,j2r,k2r,'iMaxR_D=',&
+               iMaxR_D, 'iLevelR=',iLevelR
+          call stop_mpi('set_indices failed')
+       end if
+       if(any((/i2s,j2s,k2s/)/=iMaxS_D))then
+          write(*,*)'For iDir=',iDir,'i2s,j2s,k2s=',i2s,j2s,k2s,'iMaxS_D=',&
+               iMaxS_D, 'iLevelR=',iLevelR
+          call stop_mpi('set_indices failed')
+       end if
+       if(any((/nDuplicateI,nDuplicateJ,nDuplicateK/)/=nDuplicate_D)&
+            .and.sSubF>0)then
+          write(*,*)'For iDir=',iDir,&
+               'nDuplicateI,nDuplicateJ,nDuplicateK=',&
+               nDuplicateI,nDuplicateJ,nDuplicateK,&
+               ' nDuplicate_D=',nDuplicate_D
+          call stop_mpi('set_indices failed')
+       end if
+    end if
+    i1S=iMinS_D(1) ;j1S=iMinS_D(2) ; k1S=iMinS_D(3) 
+    i2S=iMaxS_D(1) ;j2S=iMaxS_D(2) ; k2S=iMaxS_D(3) 
+    i1R=iMinR_D(1) ;j1R=iMinR_D(2) ; k1R=iMinR_D(3) 
+    i2R=iMaxR_D(1) ;j2R=iMaxR_D(2) ; k2R=iMaxR_D(3) 
+    nDuplicateI=nDuplicate_D(1)
+    nDuplicateJ=nDuplicate_D(2)
+    nDuplicateK=nDuplicate_D(3)
+
+    if(DoMPassAcrossPole)then
+       select case(iDirPole)
+       case(1)
+          !flip i idexes for recv:
+          i1R=nI+1-i1R; i2R=nI+1-i2R; iStrideR=-1
+       case(3)
+          !flip k indexes for recv
+          k1R=nK+1-k1R; k2R=nK+1-k2R; kStrideR=-1
+       case default
+          call stop_mpi(&
+               'Message_pass_cells: in flipping indexes, unknown idir')
+       end select
     end if
     
     if(sSubF == 0)then !Send to same level
@@ -1416,7 +1505,11 @@ contains
                 if(iPE==nborPE)then
                    nRecv(iPE)=nRecv(iPE)+1
                    if(JustCount) CYCLE
-
+                   !Consider case kStride=-1. In this case k2R=k1R-1
+                   !For nDuplicate=1 automatically kAdd=0, so that we should first take
+                   !VRecvLocal(5,n)=k, VRecvLocal(5,n)=k for k=k1R and then for k=k2R
+                   !For nDuplicate=2 k=k1R. So we should take
+                   !VRecvLocal(5,n)=k2R=k1R-1,VRecvLocal(6,n)=k1R,
                    n=nRecv(iPE)
                    VRecvIlocal(0,n)=2
                    VRecvIlocal(1,n)=min(i,i+iAdd) ; VRecvIlocal(3,n)=j     ; VRecvIlocal(5,n)=min(k,k+kAdd)
@@ -1480,327 +1573,15 @@ contains
     end if
 
   end subroutine build_i
-
   !==========================================================================
-  subroutine set_indices
+  subroutine set_indices_obsolete
+    !Add this initialization line to the old version of set_incides
+    nDuplicateI = 2 ; nDuplicateJ = 2 ; nDuplicateK = 2
+    call stop_mpi(&
+         'If you want to test the present version of set_indexes, '//&
+         'copy set_indices from mp_cell v1.13 as set_indices_obsolete here')
+  end subroutine set_indices_obsolete
 
-    !-----------------------------------------
-    !Set initial values
-    i1S= 1 ; j1S= 1 ; k1S= 1;   i1R= 1 ; j1R= 1 ; k1R= 1
-    i2S=-1 ; j2S=-1 ; k2S=-1;   i2R=-1 ; j2R=-1 ; k2R=-1
-
-    if(sSubF==0)then
-       !Set indices for neighbor block at same level
-
-       !i
-       select case(dLOOP(idir,1))
-       case(1)
-          i1S=nI-1 ; i1R=-1
-          i2S=nI   ; i2R= 0
-          if(DoOneLayer_D(iDir))then
-             i1S=nI   ; i1R= 0
-          end if
-       case(-1)
-          i1S= 1   ; i1R=nI+1
-          i2S= 2   ; i2R=nI+2
-          if(DoOneLayer_D(iDir))then
-             i2S= 1   ; i2R=nI+1
-          end if
-       case(0)
-          i1S= 1   ; i1R= 1
-          i2S=nI   ; i2R=nI
-       end select
-
-       !j
-       select case(dLOOP(idir,2))
-       case(1)
-          j1S=nJ-1 ; j1R=-1
-          j2S=nJ   ; j2R= 0
-          if(DoOneLayer_D(iDir))then
-             j1S=nJ   ; j1R= 0
-          end if
-       case(-1)
-          j1S= 1   ; j1R=nJ+1
-          j2S= 2   ; j2R=nJ+2
-          if(DoOneLayer_D(iDir))then
-             j2S= 1   ; j2R=nJ+1
-          end if
-       case(0)
-          j1S= 1   ; j1R= 1
-          j2S=nJ   ; j2R=nJ
-       end select
-
-       !k
-       select case(dLOOP(idir,3))
-       case(1)
-          k1S=nK-1 ; k1R=-1
-          k2S=nK   ; k2R= 0
-          if(DoOneLayer_D(iDir))then
-             k1S=nK   ; k1R= 0
-          end if
-       case(-1)
-          k1S= 1   ; k1R=nK+1
-          k2S= 2   ; k2R=nK+2
-          if(DoOneLayer_D(iDir))then
-             k2S= 1   ; k2R=nK+1
-          end if
-       case(0)
-          k1S= 1   ; k1R= 1
-          k2S=nK   ; k2R=nK
-       end select
-       
-       RETURN
-    end if
-
-    if(sSubF>0)then
-       !Set indices for finer neighbor block
-       !NOTE: some indices shifted to send extra values (sS, sR)
-
-       !i
-       select case(dLOOP(idir,1))
-       case(1)
-          nDuplicateI=iTwoOrOneForTwoCoarserLayers
-          i1S=nI-iZeroOrOneForTwoCoarserLayers; i1R=-1
-          i2S=nI ; i2R= 0
-          if(DoOneLayer_D(iDir))then
-             i1R= i2R; i1S=i2S
-          end if
-       case(-1)
-          nDuplicateI=iTwoOrOneForTwoCoarserLayers
-          i1S= 1 ; i1R=nI+1
-          i2S= 1+iZeroOrOneForTwoCoarserLayers; i2R=nI+2
-          if(DoOneLayer_D(iDir))then
-             i2R=i1R;i2S=i1S
-          end if
-       case(0)
-          nDuplicateI=2
-          select case(sSubF)
-          case(1)
-             i1S= 1        ; i1R= 1
-             i2S=nI/2+sS   ; i2R=nI+sR
-          case(2)
-             select case(idir)
-             case(3,4)
-                i1S= 1        ; i1R= 1
-                i2S=nI/2+sS   ; i2R=nI+sR
-             case default
-                i1S=nI/2+1-sS ; i1R= 1-sR
-                i2S=nI        ; i2R=nI
-             end select
-          case(3)
-             select case(idir)
-             case(3,4)
-                i1S=nI/2+1-sS ; i1R= 1-sR
-                i2S=nI        ; i2R=nI
-             case default
-                i1S= 1        ; i1R= 1
-                i2S=nI/2+sS   ; i2R=nI+sR
-             end select
-          case(4)
-             i1S=nI/2+1-sS ; i1R= 1-sR
-             i2S=nI        ; i2R=nI
-          end select
-       end select
-
-       !j
-       select case(dLOOP(idir,2))
-       case(1)
-          nDuplicateJ=iTwoOrOneForTwoCoarserLayers
-          j1S=nJ-iZeroOrOneForTwoCoarserLayers; j1R=-1
-          j2S=nJ ; j2R= 0
-          if(DoOneLayer_D(iDir))then
-             j1R= j2R; j1S=j2S
-          end if
-       case(-1)
-          nDuplicateJ=iTwoOrOneForTwoCoarserLayers
-          j1S= 1 ; j1R=nJ+1
-          j2S= 1+iZeroOrOneForTwoCoarserLayers ; j2R=nJ+2
-          if(DoOneLayer_D(iDir))then
-             j2R=j1R; j2S=j1S
-          end if
-       case(0)
-          nDuplicateJ=2
-          select case(sSubF)
-          case(1)
-             j1S= 1        ; j1R= 1
-             j2S=nJ/2+sS   ; j2R=nJ+sR
-          case(2)
-             select case(idir)
-             case(1,2,3,4,5,6)
-                j1S= 1        ; j1R= 1
-                j2S=nJ/2+sS   ; j2R=nJ+sR
-             case default
-                j1S=nJ/2+1-sS ; j1R= 1-sR
-                j2S=nJ        ; j2R=nJ
-             end select
-          case(3)
-             j1S=nJ/2+1-sS ; j1R= 1-sR
-             j2S=nJ        ; j2R=nJ
-          case(4)
-             j1S=nJ/2+1-sS ; j1R= 1-sR
-             j2S=nJ        ; j2R=nJ
-          end select
-       end select
-
-       !k
-       select case(dLOOP(idir,3))
-       case(1)
-          nDuplicateK=iTwoOrOneForTwoCoarserLayers
-          k1S=nK-iZeroOrOneForTwoCoarserLayers ; k1R=-1
-          k2S=nK ; k2R= 0
-          if(DoOneLayer_D(iDir))then
-             k1R=  k2R;  k1S=k2S
-          end if
-       case(-1)
-          nDuplicateK=iTwoOrOneForTwoCoarserLayers
-          k1S= 1 ; k1R=nK+1
-          k2S= 1+iZeroOrOneForTwoCoarserLayers; k2R=nK+2
-          if(DoOneLayer_D(iDir))then
-             k2R=k1R; k2S=k1S
-          end if
-       case(0)
-          nDuplicateK=2
-          select case(sSubF)
-          case(1)
-             k1S= 1        ; k1R= 1
-             k2S=nK/2+sS   ; k2R=nK+sR
-          case(2)
-             k1S=nK/2+1-sS ; k1R= 1-sR
-             k2S=nK        ; k2R=nK
-          case(3)
-             k1S= 1        ; k1R= 1
-             k2S=nK/2+sS   ; k2R=nK+sR
-          case(4)
-             k1S=nK/2+1-sS ; k1R= 1-sR
-             k2S=nK        ; k2R=nK
-          end select
-       end select
-
-       RETURN
-    end if
-
-    if(sSubF==-1)then
-       !Set indices for coarser neighbor block
-
-       !If rSubF=0, then the neighbor block is coarser, but shifted.
-       !These cells will be added to face send via index shift NOTEd above.
-       if(rSubF==0) RETURN
-
-       !i
-       select case(dLOOP(idir,1))
-       case(1)
-          i1S=nI-3 ; i1R=-1
-          i2S=nI   ; i2R= 0
-          if(DoOneLayer_D(iDir))then
-             i1S=nI-1 ; i1R= 0
-          end if
-       case(-1)
-          i1S= 1   ; i1R=nI+1
-          i2S= 4   ; i2R=nI+2
-          if(DoOneLayer_D(iDir))then
-             i2S= 2   ; i2R=nI+1
-          end if
-       case(0)
-          select case(rSubF)
-          case(1)
-             i1S= 1 ; i1R= 1
-             i2S=nI ; i2R=nI/2
-          case(2)
-             select case(idir)
-             case(3,4)
-                i1S= 1 ; i1R= 1
-                i2S=nI ; i2R=nI/2
-             case default
-                i1S= 1 ; i1R=nI/2+1
-                i2S=nI ; i2R=nI
-             end select
-          case(3)
-             select case(idir)
-             case(3,4)
-                i1S= 1 ; i1R=nI/2+1
-                i2S=nI ; i2R=nI
-             case default
-                i1S= 1 ; i1R= 1
-                i2S=nI ; i2R=nI/2
-             end select
-          case(4)
-             i1S= 1 ; i1R=nI/2+1
-             i2S=nI ; i2R=nI
-          end select
-       end select
-
-       !j
-       select case(dLOOP(idir,2))
-       case(1)
-          j1S=nJ-3 ; j1R=-1
-          j2S=nJ   ; j2R= 0
-          if(DoOneLayer_D(iDir))then
-             j1S=nJ-1 ; j1R= 0
-          end if
-       case(-1)
-          j1S= 1   ; j1R=nJ+1
-          j2S= 4   ; j2R=nJ+2
-          if(DoOneLayer_D(iDir))then
-             j2S= 2   ; j2R=nJ+1
-          end if
-       case(0)
-          select case(rSubF)
-          case(1)
-             j1S= 1 ; j1R= 1
-             j2S=nJ ; j2R=nJ/2
-          case(2)
-             select case(idir)
-             case(1,2,3,4,5,6)
-                j1S= 1 ; j1R= 1
-                j2S=nJ ; j2R=nJ/2
-             case default
-                j1S= 1 ; j1R=nJ/2+1
-                j2S=nJ ; j2R=nJ
-             end select
-          case(3)
-             j1S= 1 ; j1R=nJ/2+1
-             j2S=nJ ; j2R=nJ
-          case(4)
-             j1S= 1 ; j1R=nJ/2+1
-             j2S=nJ ; j2R=nJ
-          end select
-       end select
-
-       !k
-       select case(dLOOP(idir,3))
-       case(1)
-          k1S=nK-3 ; k1R=-1
-          k2S=nK   ; k2R= 0
-          if(DoOneLayer_D(iDir))then
-             k1S=nK-1 ; k1R= 0
-          end if
-       case(-1)
-          k1S= 1   ; k1R=nK+1
-          k2S= 4   ; k2R=nK+2
-          if(DoOneLayer_D(iDir))then
-             k2S= 2   ; k2R=nK+1
-          end if
-       case(0)
-          select case(rSubF)
-          case(1)
-             k1S= 1 ; k1R= 1
-             k2S=nK ; k2R=nK/2
-          case(2)
-             k1S= 1 ; k1R=nK/2+1
-             k2S=nK ; k2R=nK
-          case(3)
-             k1S= 1 ; k1R= 1
-             k2S=nK ; k2R=nK/2
-          case(4)
-             k1S= 1 ; k1R=nK/2+1
-             k2S=nK ; k2R=nK
-          end select
-       end select
-
-       RETURN
-    end if
-
-  end subroutine set_indices
 end subroutine mp_build_cell_indices
 
 !==========================================================================
