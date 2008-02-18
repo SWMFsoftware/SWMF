@@ -22,8 +22,6 @@ our $Verbose;
 our $Show;
 our $ShowGridSize;
 our $NewGridSize;
-our $Install;
-our $Compiler;
 
 &print_help if $Help;
 
@@ -219,11 +217,17 @@ sub current_settings{
     $Settings = 
 	"Number of cells in a block        : nI=$nI, nJ=$nJ, nK=$nK\n";
     $Settings .= 
-	"Max. number of blocks/PE          : MaxBlock    =$MaxBlock\n";
+	"Max. number of blocks/PE          : MaxBlock=$MaxBlock\n";
     #^CFG IF IMPLICIT BEGIN
     $Settings .= 
 	"Max. number of implicit blocks/PE : MaxImplBlock=$MaxImplBlock\n";
     #^CFG END IMPLICIT
+
+    # Check if the large arrays are static or dynamic
+    my $IsDynamic = `grep IsDynamic src/ModAdvance.f90 | grep true` ?
+	"yes" : "no";
+    $Settings .= 
+	"Allocation of large arrays        : IsDynamic=$IsDynamic\n";
 
     open(FILE, $UserMod) or die "$ERROR Could not open $UserMod\n";
     my $Module='???';
@@ -250,12 +254,6 @@ sub current_settings{
 
     $Settings     .= "Equation    = $Equation\n";
 
-    # Check if the large arrays are static or dynamic
-    if(`grep IsDynamic src/ModAdvance.f90 | grep true`){
-	$Settings .= "IsDynamic   = yes\n";
-    }else{
-	$Settings .= "IsDynamic   = no\n";
-    }
 }
 
 #############################################################################
