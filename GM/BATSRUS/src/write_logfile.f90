@@ -912,7 +912,7 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
 
   integer, intent(in) :: nLogVar, nLogR, nLogTot
   character (LEN=10), intent(in) :: NameLogVar_I(nLogVar)
-  real, intent(out) :: LogVar_I(nLogTot)
+  real, intent(inout) :: LogVar_I(nLogTot)
   real, intent(in) :: LogR_I(nLogR)
   character (len=10) :: NameLogVar
 
