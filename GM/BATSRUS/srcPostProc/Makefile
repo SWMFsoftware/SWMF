@@ -10,14 +10,23 @@ include Makefile.RULES
 # Post processing executables
 #
 
-PIDL:	PostIDL.o
+${BINDIR}/PostIDL.exe:	PostIDL.o
 	${LINK.f90} -o ${BINDIR}/PostIDL.exe PostIDL.o ${Lflag2}
 
-PSPH:	PostSPH.o
+PIDL:
+	make ${BINDIR}/PostIDL.exe
+
+${BINDIR}/PostSPH.exe:	PostSPH.o
 	${LINK.f90} -o ${BINDIR}/PostSPH.exe PostSPH.o ${Lflag1}
 
-CRST:	ConvertRestart.o
+PSPH:
+	make ${BINDIR}/PostSPH.exe
+
+${BINDIR}/ConvertRestart.exe:	ConvertRestart.o
 	${LINK.f90} -o ${BINDIR}/ConvertRestart.exe ConvertRestart.o ${Lflag2}
+
+CRST:
+	make ${BINDIR}/ConvertRestart.exe
 
 OBJECTS1 = \
 	CON_geopack_internal.o\
