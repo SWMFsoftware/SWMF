@@ -72,8 +72,7 @@ print "Config.pl -g=$nI,$nJ,$nK,$MaxBlock",
 my $Settings = &current_settings; print $Settings if $Show;
 
 # (Re)Create Makefile.RULES file(s) based on current settings
-&create_makefile_rules($Settings) 
-    if $Compiler eq "ifort" and ($Install or $Equation);
+&create_makefile_rules($Settings);
 
 exit 0;
 
@@ -249,8 +248,14 @@ sub current_settings{
 	$Equation = $1; last;
     }
 
-    $Settings .= "Equation    = $Equation\n";
+    $Settings     .= "Equation    = $Equation\n";
 
+    # Check if the large arrays are static or dynamic
+    if(`grep IsDynamic src/ModAdvance.f90 | grep true`){
+	$Settings .= "IsDynamic   = yes\n";
+    }else{
+	$Settings .= "IsDynamic   = no\n";
+    }
 }
 
 #############################################################################
