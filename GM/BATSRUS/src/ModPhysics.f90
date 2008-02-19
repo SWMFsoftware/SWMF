@@ -25,8 +25,8 @@ module ModPhysics
   ! speed of light, inverse, square, inverse of square, boris correction
   real :: Clight, InvClight, C2light, Inv_C2light, Boris_Clight_Factor   
 
-  ! the dipole moment for body2           !^CFG IF SECONDBODY
-  real :: BdpBody2_D(3),BdpDimBody2_D(3)  !^CFG IF SECONDBODY
+  ! the dipole moment for body2                    !^CFG IF SECONDBODY
+  real :: BdpBody2_D(3)=0.0, BdpDimBody2_D(3)=0.0  !^CFG IF SECONDBODY
 
   !\
   ! Dipole and multipole expansion terms NOW ONLY IH SHOULD USE THESE
@@ -36,7 +36,7 @@ module ModPhysics
   real, dimension(1:3,1:3,1:3) :: Oop=0   ! the octupole moment of B0
 
   real :: THETAtilt=0.0, &                ! tilt angle of magnetic axis
-       sinTHETAtilt,cosTHETAtilt          ! NOW ONLY IH SHOULD USE THIS !!!
+       SinThetaTilt=0.0, CosThetaTilt=1.0 ! NOW ONLY IH SHOULD USE THIS !!!
 
   !\
   ! The following are some notes on how to pick the Q's.  I have used the
@@ -83,14 +83,14 @@ module ModPhysics
   ! General Body parameters
   !/
   character (len=2) :: NamePlanetRadius = 'R ' !can be 'km' if there is no body
-  real :: rPlanetSi, rBody, rCurrents
-  real :: gBody
-  real :: RotPeriodSi, OmegaBody 
+  real :: rPlanetSi=0.0, rBody=0.0, rCurrents=0.0
+  real :: gBody=0.0
+  real :: RotPeriodSi=0.0, OmegaBody=0.0
 
   real, dimension(nFluid) :: &
-       BodyNDim_I, BodyTDim_I, BodyRho_I, BodyP_I, &
-       PolarNDim_I,PolarTDim_I,PolarRho_I,PolarP_I, &
-       PolarUDim_I,PolarRhoU_I
+       BodyNDim_I=0.0, BodyTDim_I=0.0, BodyRho_I=0.0, BodyP_I=0.0, &
+       PolarNDim_I=0.0, PolarTDim_I=0.0, PolarRho_I=0.0 ,PolarP_I=0.0, &
+       PolarUDim_I=0.0, PolarRhoU_I=0.0
 
   real :: PolarLatitude = 75.0, PolarTheta = 15.0*cDegToRad
 
@@ -98,9 +98,10 @@ module ModPhysics
   !\
   ! General variables for the second body
   !/
-  real :: rPlanetDimBody2, rBody2, rCurrentsBody2, xBody2, yBody2, zBody2
-  real :: RhoDimBody2, tDimBody2, RhoBody2, pBody2  
-  real :: gBody2
+  real :: rPlanetDimBody2=0.0, rBody2=0.0, rCurrentsBody2=0.0
+  real :: xBody2=0.0, yBody2=0.0, zBody2=0.0
+  real :: RhoDimBody2=0.0, tDimBody2=0.0, RhoBody2=0.0, pBody2=0.0
+  real :: gBody2=0.0
   !^CFG END SECONDBODY
 
   ! Variables for two-state shock tube problems
@@ -116,12 +117,12 @@ module ModPhysics
   ! a parameter that specifies the opening angle of the ray
   !/
   logical :: UseSunEarth=.false.
-  real :: xEarth,yEarth,zEarth, InvD2Ray
+  real    :: xEarth=0.0, yEarth=0.0, zEarth=0.0, InvD2Ray
 
   !\
   ! Heat conduction parameters
   !/
-  real :: Kappa0Heat,ExponentHeat
+  real :: Kappa0Heat=0.0, ExponentHeat=0.0
 
   !\
   ! Units for normalization of variables
@@ -154,16 +155,13 @@ module ModPhysics
 
   ! Conversion between units: e.g. VarSi = VarNo*No2Si_V(UnitVar_)
   ! The following should always be true: No2Si_V*Si2Io_V = No2Io_V
-  real, dimension(nIoUnit) :: Io2Si_V, Si2Io_V, Io2No_V, No2Io_V, Si2No_V, No2Si_V
+  real, dimension(nIoUnit) :: &
+       Io2Si_V, Si2Io_V, Io2No_V, No2Io_V, Si2No_V, No2Si_V
 
   character (len=20), dimension(nIoUnit) :: &
        NameIdlUnit_V, NameTecUnit_V, NameSiUnit_V
 
-  !!!\
-  !!! These 'dissipative problem type' units should be eliminated
-  !!!/
-  logical :: UseDefaultUnits = .false.         !!!
-  real :: Grav0Diss,Beta0Diss,Length0Diss      !!!
-  real :: Time0Diss,Rho0Diss,Tem0Diss          !!!
+  ! Some strange logical used in calc_heat_flux
+  logical :: UseDefaultUnits = .false.
 
 end module ModPhysics
