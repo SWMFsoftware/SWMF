@@ -389,8 +389,11 @@ sub create_makefile_rules{
     return unless @InFile;
 
     # Hash for general configuration settings
-    my %Settings = (OS => $OS, Compiler => $Compiler, 
-		    MpiVersion => $MpiVersion, Precision => $Precision);
+    my %Settings = (OS         => $OS, 
+		    Compiler   => $Compiler, 
+		    MpiVersion => $MpiVersion, 
+		    Debug      => $Debug,
+		    Precision  => $Precision);
 
     # Add settings from the caller Config.pl script
     my $Settings = shift;
