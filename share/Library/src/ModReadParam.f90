@@ -536,6 +536,9 @@ contains
   !===========================================================================
 
   subroutine read_string(StringVar,iError,IsUpperCase,IsLowerCase)
+
+    use ModUtilities, ONLY: lower_case, upper_case
+
     ! Read a string variable
     ! Convert to upper or lower case if required.
     ! Arguments
