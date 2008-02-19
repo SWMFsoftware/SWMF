@@ -9,10 +9,29 @@ Module ModIO
 
   ! All constants and variables related to Input/Output for GM
 
+  ! Maximum number of output files and output variables
+  ! note that:
+  !     maxfile > MaxPlotFile + MaxSatelliteFile + extras
+  ! is required
+  integer, parameter :: MaxPlotFile=15
+  integer, parameter :: MaxSatelliteFile=10
+  integer, parameter :: MaxFile = 30
+  integer, parameter :: Max_Satellite_Npts = 50000
+  integer, parameter :: nPlotvarLosMax=10
+  integer, parameter :: nPlotRfrFreqMax=20
+  integer, parameter :: nPlotvarMax = 30    ! Maximum number of plot variables
+  integer, parameter :: MaxLine=20          ! Max number of lines/plot file
+
+  ! Named indexes for output files
+  integer, parameter :: &
+       restart_=1, logfile_=2, plot_=2, satellite_ = plot_+MaxPlotFile
+
+  ! I/O
   integer             :: iUnitOut = STDOUT_
   character (len=7)   :: StringPrefix=''
   character (len=100) :: NamePlotDir="GM/IO2/"
 
+  ! Generic file name variable
   character (len=80) :: filename
 
   ! The largest time unit used in the plot file names in time-accurate runs
@@ -27,27 +46,14 @@ Module ModIO
   logical :: save_restart_file=.true., save_satellite_data=.false., &
        save_plots_amr=.false.,save_logfile=.false.,save_binary=.true.
 
-  ! Maximum number of output files and output variables
-  ! note that:
-  !     maxfile > MaxPlotFile + maxsatellitefile + extras
-  ! is required
-  integer, parameter :: MaxPlotFile=15
-  integer, parameter :: MaxSatelliteFile=10
-  integer, parameter :: MaxFile = 30
-
   ! Unit numbers for satellite files
   integer :: iUnitSat_I(MaxSatelliteFile) = -1
 
   ! Unit numbers for the log file and the second SPH plot file
   integer :: unit_log = -1, unit_tmp2 = -1
 
-  ! Named indexes for output parameters
-  integer, parameter :: restart_=1, &
-       logfile_=2, plot_=2, satellite_ = plot_+MaxPlotFile
-
   ! variables for the line of sight integration plots
   character (LEN=2) :: TypeLosImage
-  integer, parameter :: nplotvarlosmax=10
   integer :: n_pix_r(maxfile)
   real :: r_size_image(maxfile), xoffset(maxfile), yoffset(maxfile)
   real :: radius_occult(maxfile), mu_los
@@ -56,7 +62,6 @@ Module ModIO
 
   ! Variables for radiowave image
   ! ObsPos_DI is borrowed from the LOS plot
-  integer, parameter :: nPlotRfrFreqMax=20
   integer, dimension(MaxFile) :: n_Pix_X, n_Pix_Y
   real,    dimension(MaxFile) :: X_Size_Image, Y_Size_Image
   ! String read from PARAM.in, like '1500kHz, 11MHz, 42.7MHz, 1.08GHz':
@@ -64,13 +69,9 @@ Module ModIO
   real, dimension(MaxFile,nPlotRfrFreqMax) :: RadioFrequency_II
 
 
-  ! Maximum number of plot variables
-  integer, parameter :: nPlotvarMax = 30
-
   ! Variables for field/stream/current line files
   logical :: IsSingleLine_I(MaxPlotFile)      ! One subfile for the plot file?
   integer :: nLine_I(MaxPlotFile)             ! Number of lines for a plot file
-  integer, parameter :: MaxLine=20            ! Max numbe of lines/plot file
   character :: NameLine_I(MaxPlotFile)                 ! Name of vector field
   real      :: XyzStartLine_DII(3,MaxLine,MaxPlotFile) ! Starting positions
   logical   :: IsParallelLine_II(MaxLine,MaxPlotFile)  ! Parallel/anti-parallel
@@ -90,16 +91,16 @@ Module ModIO
   ! Time limits (in seconds) for satellite trajectory cut 
   ! for .not. time_accurate session.
   ! If a steady-state simulation is run for a specific moment of time
-  ! (set in  StartTime), the TimeSatStart_I determines the starting point of the 
-  ! satellite trajectory, while TimeSatEnd_I determines the trajectory ending point.
+  ! (set in  StartTime), the TimeSatStart_I determines the starting point of 
+  ! the satellite trajectory, while TimeSatEnd_I determines the trajectory 
+  ! ending point.
   ! Both determine the considered trajectory cut.
   ! Unlike in time_accurate sessions, after each dn_output simulation 
   ! steps the satellite variables for ALL the trajectory cut are 
   ! saved in file.
-  !
-  real,    dimension(maxsatellitefile) :: TimeSatStart_I = 0., TimeSatEnd_I = 0.
-  
+  real, dimension(MaxSatelliteFile) :: TimeSatStart_I = 0., TimeSatEnd_I = 0.
 
+  ! Frequency of writing progress reports in terms of time steps
   integer :: dn_progress1=10, dn_progress2=100
 
   character (LEN=10) :: plot_type(maxfile), plot_type1
@@ -107,53 +108,54 @@ Module ModIO
   character (LEN=3) :: log_form
 
   ! x1, x2, y1, y2, z1, z2 limits for plotting
-  real, dimension(6,maxfile) :: plot_range 
+  real, dimension(6,MaxFile) :: plot_range 
 
   ! x, y, z point for arbitrary slice plotting
-  real, dimension(3,maxfile) :: plot_point
+  real, dimension(3,MaxFile) :: plot_point
 
   ! x, y, z normal vector for arbitrary slice plotting
-  real, dimension(3,maxfile) :: plot_normal
+  real, dimension(3,MaxFile) :: plot_normal
 
   ! dx resolution for equidistant plotting
-  real, dimension(3,maxfile) :: plot_dx
+  real, dimension(3,MaxFile) :: plot_dx
 
   ! variables to plot
-  character (len=500) :: plot_vars(maxfile), plot_vars1
-  character (len=50)  :: plot_pars(maxfile), plot_pars1
+  character (len=500) :: plot_vars(MaxFile), plot_vars1
+  character (len=50)  :: plot_pars(MaxFile), plot_pars1
 
   ! variables to put in log file
   character (len=100) :: log_vars, log_R_str
 
   ! variables to control time output format 
-  character (len=100) :: log_time, sat_time(maxfile)
+  character (len=100) :: log_time, sat_time(MaxFile)
 
   ! variables to write to the satellite files
-  character (len=100) :: satellite_vars(maxfile)
+  character (len=100) :: satellite_vars(MaxFile)
   
   ! dimensionalize the output
-  logical :: plot_dimensional(maxfile)    
+  logical :: plot_dimensional(MaxFile)    
 
   !\
-  ! Variables for the satellite locations
+  ! Variables for the satellites
   !/
-  logical, dimension(maxsatellitefile,nBLK)                   :: SatelliteInBLK=.false.
-  logical, dimension(maxsatellitefile)                        :: DoTrackSatellite_I = .false.
-  logical, dimension(maxsatellitefile)                        :: UseSatelliteFile = .true.
-  logical, dimension(maxsatellitefile)                        :: Satellite_first_write = .true.
-  integer, parameter                                          :: Max_Satellite_Npts = 50000
-  integer, dimension(maxsatellitefile)                        :: Satellite_Npts, icurrent_satellite_position=1
-  integer, dimension(maxsatellitefile)                        :: iPEsatellite, iBLKsatellite
-  real,    dimension(maxsatellitefile, Max_Satellite_Npts, 3) :: XSatellite_traj
-  real,    dimension(maxsatellitefile, 3)                     :: XSatellite
-  real,    dimension(maxsatellitefile, Max_Satellite_Npts)    :: Satellite_Time
-  character (len=50)                                          :: Satellite_name(maxsatellitefile)
-  character(len=3), dimension(maxsatellitefile) :: TypeSatCoord_I
+  logical:: SatelliteInBLK(MaxSatelliteFile,nBLK)= .false.
+  logical:: DoTrackSatellite_I(MaxSatelliteFile) = .false.
+  logical:: UseSatelliteFile(MaxSatelliteFile)   = .true.
+  logical:: Satellite_first_write(MaxSatelliteFile) = .true.
+  integer:: Satellite_Npts(MaxSatelliteFile)
+  integer:: iCurrent_satellite_position(MaxSatelliteFile)=1
+  integer:: iPEsatellite(MaxSatelliteFile)
+  integer:: iBLKsatellite(MaxSatelliteFile)
+  real   :: XSatellite_traj(MaxSatelliteFile, Max_Satellite_Npts, 3)
+  real   :: XSatellite(MaxSatelliteFile, 3)
+  real   :: Satellite_Time(MaxSatelliteFile, Max_Satellite_Npts)
+
+  character (len=50):: Satellite_name(MaxSatelliteFile)
+  character(len=3)  :: TypeSatCoord_I(MaxSatelliteFile)
 
   ! Plot variable names and units defined in the user module
   character(len=10), dimension(nPlotVarMax) :: &
        NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I
-
 
 contains
 
