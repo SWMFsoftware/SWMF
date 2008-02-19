@@ -74,13 +74,13 @@ subroutine MH_set_parameters(TypeAction)
   character (len=lStringLine) :: UpstreamFileName='???'
 
   ! Temporary variables
-  logical :: DoEcho
-  integer :: nVarRead
-  character (len=lStringLine) :: NameEquationRead
+  logical :: DoEcho=.false.
+  integer :: nVarRead=0
+  character (len=lStringLine) :: NameEquationRead="?"
 
   character (len=50) :: plot_string,log_string,satellite_string
   character (len=3)  :: plot_area, plot_var, satellite_var, satellite_form
-  character (len=2)  :: NameCompRead
+  character (len=2)  :: NameCompRead="??"
   integer :: qtotal, nIJKRead_D(3)
 
   integer            :: TimingDepth=-1
@@ -90,16 +90,16 @@ subroutine MH_set_parameters(TypeAction)
   real (Real8_)         :: StartTimeCheck = -1.0_Real8_
 
   ! Variables for the #GRIDRESOLUTION and #GRIDLEVEL commands
-  character (len=lStringLine) :: NameArea
-  integer                     :: nLevelArea
-  real                        :: AreaResolution, RadiusArea
-  logical                     :: DoReadAreaCenter
-  real, dimension(3)          :: XyzStartArea_D, XyzEndArea_D
-  real                        :: xRotateArea, yRotateArea, zRotateArea
+  character(len=lStringLine):: NameArea='all'
+  integer                   :: nLevelArea=0
+  real                      :: AreaResolution=0.0, RadiusArea=0.0
+  logical                   :: DoReadAreaCenter=.false.
+  real, dimension(3)        :: XyzStartArea_D=0.0, XyzEndArea_D=0.0
+  real                      :: xRotateArea=0., yRotateArea=0., zRotateArea=0.
 
   ! Variables for checking the user module
-  character (len=lStringLine) :: NameUserModuleRead
-  real                        :: VersionUserModuleRead
+  character (len=lStringLine) :: NameUserModuleRead='?'
+  real                        :: VersionUserModuleRead=0.0
   integer :: iSession, iPlotFile, iVar, iFluid
   !-------------------------------------------------------------------------
   NameSub(1:2) = NameThisComp

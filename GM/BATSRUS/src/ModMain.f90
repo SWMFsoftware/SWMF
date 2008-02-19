@@ -232,8 +232,8 @@ Module ModMain
   ! Location for test
   integer :: Itest=1, Jtest=1, Ktest=1, BLKtest=1, PROCtest=0, ITERtest=-1
   integer :: VARtest=1, DIMtest=1
-  real    :: Xtest, Ytest, Ztest, Ttest
-  real    :: Xtest_mod, Ytest_mod, Ztest_mod
+  real    :: xTest=0.0, yTest=0.0, zTest=0.0, tTest=0.0
+  real    :: xTest_mod=0.0, yTest_mod=0.0, zTest_mod=0.0
   logical :: UseTestCell=.false., coord_test=.false.
 
   ! Debug logicals

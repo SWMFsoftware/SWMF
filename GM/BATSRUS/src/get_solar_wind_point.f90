@@ -107,6 +107,9 @@ subroutine read_upstream_input_file(upstreamfilename)
         if(index(line,'#START')>0) EXIT
      end do
 
+     ! Initialize array so all elements are set
+     Upstream_Data = 0.0
+
      ! Read the data
      do
         read(UNITTMP_,*,iostat=iError) &
