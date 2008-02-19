@@ -61,6 +61,8 @@ subroutine message_pass_nodes
 
   !------------------------------------------
 
+  if(.not. allocated(V))allocate(V(nI+1,nJ+1,nK+1,nBLK,8))
+
   ! Check that indices are up to date
   if(iNewGrid/=iLastGrid .or. iNewDecomposition/=iLastDecomposition) &
        call mp_nodes_set_indices
@@ -183,8 +185,6 @@ subroutine mp_nodes_set_indices
 
   ! Initialize count back to 1, then increase as needed
   nodeCount = 1
-
-  if(.not. allocated(V))allocate(V(nI+1,nJ+1,nK+1,nBLK,8))
 
   call mp_allocate_node_arrays1
   call mp_build_node_indices(.true.)
@@ -944,6 +944,8 @@ subroutine pass_and_average_nodes(DoFixHangingNodes,Vin)
 
   !------------------------------------------
 
+  if(.not. allocated(V))allocate(V(nI+1,nJ+1,nK+1,nBLK,8))
+
   ! Assign value to internal passing variable and do message pass
   V(:,:,:,:,1) = Vin(:,:,:,:)
   call message_pass_nodes
@@ -984,6 +986,8 @@ subroutine pass_and_max_nodes(DoFixHangingNodes,Vin)
   integer :: i,j,k, iBLK
 
   !------------------------------------------
+
+  if(.not. allocated(V))allocate(V(nI+1,nJ+1,nK+1,nBLK,8))
 
   ! Assign value to internal passing variable and do message pass
   V(:,:,:,:,1) = Vin(:,:,:,:)
@@ -1148,6 +1152,8 @@ subroutine assign_node_numbers
   integer, allocatable, dimension(:) :: NodeOffset, NodeOffsetMax, nOffset_P
 
   !------------------------------------------
+
+  if(.not. allocated(V))allocate(V(nI+1,nJ+1,nK+1,nBLK,8))
 
   ! Write information to the screen
   if(iProc==0.and.lVerbose>0)then
