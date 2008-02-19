@@ -19,9 +19,10 @@ module ModMPNodes
        VSendI, VRecvI, VSendIlocal, VRecvIlocal
 
   integer, dimension(1:nI+1,1:nJ+1,1:nK+1,nBLK) :: NodeCount
-  real,    dimension(1:nI+1,1:nJ+1,1:nK+1,nBLK,8) :: V
+!  real,    dimension(1:nI+1,1:nJ+1,1:nK+1,nBLK,8) :: V
+!  real,    dimension(:),   allocatable :: VSend, VRecv
 
-  real,    dimension(:),   allocatable :: VSend, VRecv
+  real, allocatable:: VSend(:), VRecv(:), V(:,:,:,:,:)
 
   integer :: iLastGrid = -1, iLastDecomposition = -1
   integer :: itag, lS(0:7), lR(5), nSends
@@ -182,6 +183,8 @@ subroutine mp_nodes_set_indices
 
   ! Initialize count back to 1, then increase as needed
   nodeCount = 1
+
+  if(.not. allocated(V))allocate(V(nI+1,nJ+1,nK+1,nBLK,8))
 
   call mp_allocate_node_arrays1
   call mp_build_node_indices(.true.)
