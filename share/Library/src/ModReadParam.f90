@@ -544,6 +544,12 @@ contains
     logical, optional, intent(in)   :: IsUpperCase, IsLowerCase
     !-------------------------------------------------------------------------
     call read_var_c(' ',StringVar,iError)
+    if(present(IsLowerCase))then
+       if(IsLowerCase)call lower_case(StringVar)
+    endif
+    if(present(IsUpperCase))then
+       if(IsUpperCase)call upper_case(StringVar)
+    endif
   end subroutine read_string
 
   !===========================================================================

@@ -102,7 +102,7 @@ contains
 
     ! Local variables
     integer :: iComm                           ! MPI communicator
-    integer :: i,i1,its,j,k,k1, iError
+    integer :: i,i1,its,j,k,k1
     real :: coeff,Tol1,epsmac,gam,ro,ro0,t,tmp
 
     ! This array used to be automatic (Krylov subspace vectors)
@@ -380,9 +380,6 @@ contains
     real :: varrho, hatgamma
     real :: assumedzero, rnrm0, rnrm, rnrmMax0, rnrmMax
     real :: mxnrmx, mxnrmr, kappa0, kappal
-
-    ! error codes for MPI
-    integer :: iError, nError 
 
     !--------------------------------------------------------------------------
 
@@ -819,7 +816,7 @@ contains
     integer, dimension(:), allocatable :: pivot
 
     REAL    :: alf
-    INTEGER :: i,j,INFO, iError
+    INTEGER :: i,j,INFO
     REAL, PARAMETER :: zero=0.0, one=1.0
 
     ! ALF      : internal value for Gustafsson parameter
@@ -1110,7 +1107,7 @@ contains
     ! this used to be an automatic array
     real, dimension(:), allocatable :: work
 
-    INTEGER :: j, iError
+    INTEGER :: j
     REAL, PARAMETER :: zero=0.0, one=1.0
 
     ! External subroutine
