@@ -50,6 +50,8 @@ foreach (@Arguments){
     if(/^-e=(.*)$/)           {$Equation=$1;                   next};
     if(/^-u=(.*)$/)           {$UserModule=$1;                 next};
     if(/^-s$/)                {$Show=1;                        next};
+    if(/^-dynamic$/)          {`cd src; make DYNAMIC`;         next};
+    if(/^-static$/)           {`cd src; make STATIC`;          next};
 
     warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
@@ -263,6 +265,14 @@ sub print_help{
     print "
 Additional options for BATSRUS/Config.pl:
 
+-g=NI,NJ,NK,MAXBLK,MAXIMPLBLK     
+                Set grid size. NI, NJ and NK are the number of cells 
+                in the I, J and K directions, respectively. These parameters
+                have to be even integers and at least 4.
+                MAXBLK is the maximum number of blocks per processor.
+                MAXIMPLBLK is the maximum number of implicitly 
+                integrated blocks per processor.
+
 -e              List all available equations.
 
 -e=EQUATION     Select equation EQUATION. 
@@ -270,6 +280,10 @@ Additional options for BATSRUS/Config.pl:
 -u              List all the available user modules.
 
 -u=USERMODULE   Select the user module USERMODULE. 
+
+-dynamic        Use dynamic allocation for large arrays.
+
+-static         Use static allocation for large arrays.
 
 Examples for BATSRUS/Config.pl:
 
