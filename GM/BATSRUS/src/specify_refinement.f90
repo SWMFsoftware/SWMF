@@ -23,7 +23,6 @@ subroutine specify_initial_refinement(refb, lev)
   real :: x_off,x_off1,x_off2,curve_rad,curve_rad1,curve_rad2
   real :: mach,frac,bound1,bound2
   real :: lscale,rcyl, minx, miny, minz, maxx, maxy, maxz
-  real :: SizeMax
 
   real,parameter::cRefinedTailCutoff=(cOne-cQuarter)*(cOne-cEighth)
   logical::IsFound
@@ -47,7 +46,6 @@ subroutine specify_initial_refinement(refb, lev)
         
         select case(TypeGeometry)                              
         case('cartesian')                                      
-           SizeMax=dx_BLK(iBLK)
            ! Block center coordinates
            xxx = cHalf*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(1,1,1,iBLK)) 
            yyy = cHalf*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(1,1,1,iBLK))
@@ -60,7 +58,6 @@ subroutine specify_initial_refinement(refb, lev)
                 (max(abs(zz1),abs(zz2)))**2)
            if(body1.and.maxRblk<rBody)CYCLE
         case('spherical')                                          
-           SizeMax=max(dx_BLK(iBLK),dy_BLK(iBLK)*maxRblk)
            minRblk = XyzStart_BLK(1,iBLK)-cHalf*dx_BLK(iBLK)            
            maxRblk = minRblk+nI*dx_BLK(iBLK)                            
            RR=cHalf*(minRblk+maxRblk)                                   
@@ -70,7 +67,6 @@ subroutine specify_initial_refinement(refb, lev)
                 sin(XyzStart_BLK(2,iBLK)+cHalf*(nJ-1)*dy_BLK(iBLK))       
            zzz=RR*sin(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))
         case('spherical_lnr')                                          
-           SizeMax=max(dx_BLK(iBLK)*maxRblk,dy_BLK(iBLK)*maxRblk)
            minRblk =exp( XyzStart_BLK(1,iBLK)-cHalf*dx_BLK(iBLK))            
            maxRblk =exp(nI*dx_BLK(iBLK))*minRblk                            
            RR=cHalf*(minRblk+maxRblk)                                   
@@ -80,7 +76,6 @@ subroutine specify_initial_refinement(refb, lev)
                 sin(XyzStart_BLK(2,iBLK)+cHalf*(nJ-1)*dy_BLK(iBLK))       
            zzz=RR*sin(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))
         case default
-           SizeMax=-cOne
            minRblk=-cOne
            maxRblk=-cOne
            RR=-cOne
@@ -90,6 +85,7 @@ subroutine specify_initial_refinement(refb, lev)
            !In case of an arbitrary geometry the variables above
            !are initialized but they are meaningless
         end select                                                
+
         select case (InitialRefineType)
         case ('none')
            ! Refine no blocks
@@ -98,9 +94,6 @@ subroutine specify_initial_refinement(refb, lev)
            refb(iBLK) = .true.
         case('outerboundary')
            refb(iBLK) =  far_field_BCs_BLK(iBLK)
-
-        case ('2Dbodyfocus')
-           ! 
 
         case ('3Dbodyfocus')
            ! Refine, focusing on body
