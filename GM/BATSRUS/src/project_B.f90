@@ -11,7 +11,7 @@ subroutine project_B
 
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,nBLK,Itest,Jtest,Ktest,BLKtest
-  use ModVarIndexes,ONLY: Bx_,By_,Bz_,P_
+  use ModVarIndexes,ONLY: Bx_,Bz_,P_
   use ModAdvance, ONLY : State_VGB
   use ModGeometry, ONLY : true_cell, x_BLK, y_BLK, z_BLK
   use ModProject
@@ -218,7 +218,7 @@ subroutine proj_get_divB(proj_divB)
   ! Do corrections for mesh refinement
   use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
-  use ModAdvance, ONLY : State_VGB, tmp1_BLK
+  use ModAdvance, ONLY : State_VGB
   use ModGeometry, ONLY : dx_BLK, dy_BLK, dz_BLK
   use ModProject
   use ModMain, ONLY : UseConstrainB                       !^CFG IF CONSTRAINB
@@ -510,7 +510,7 @@ subroutine proj_boundphi(phi,idimmin,idimmax)
   integer, intent(in):: idimmin,idimmax
 
   ! Local variables
-  integer :: iBLK, iface, idim
+  integer :: iBLK
 
   !---------------------------------------------------------------------------
 
@@ -558,7 +558,7 @@ subroutine proj_correction(phi)
   use ModMain, ONLY : nI,nJ,nK,nBLK,Itest,Jtest,Ktest,BLKtest, &
        nBlock,unusedBLK
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
-  use ModAdvance,    ONLY : State_VGB, tmp1_BLK
+  use ModAdvance,    ONLY : State_VGB
   use ModGeometry,   ONLY : dx_BLK,dy_BLK,dz_BLK,true_cell
   use ModProject
   use ModMain, ONLY : UseConstrainB             !^CFG IF CONSTRAINB

@@ -60,7 +60,7 @@ subroutine prolong_ray_after_pass(iface,iBLK)
   !(1,1)           (5,1)
 
   integer, intent(in) :: iface,iBLK
-  integer :: iray, idim
+  integer :: iray
   integer :: j, k, nFaceJ, nFaceK
   integer, parameter :: nFaceMax=max(nI+1,nJ+1,nK+1)
   real    :: qrayface(3,2,nFaceMax,nFaceMax)
@@ -779,7 +779,7 @@ contains
     !   O-- b --O-- b --O
     !(1,1)           (5,1)
 
-    integer :: iray, idim
+    integer :: iray
     integer :: j, k, nFaceJ, nFaceK
     integer, parameter :: nFaceMax=max(nI+1,nJ+1,nK+1)
     real    :: qrayface(3,2,nFaceMax,nFaceMax)

@@ -72,11 +72,9 @@ subroutine impl_jacobian(implBLK,JAC)
 
   integer :: iBLK
   real, dimension(nI,nJ,nK,nw)                :: qwk      , weps
-  real, dimension(nI+1,nJ+1,nK+1,nw,ndim)     :: fLface   , fRface
-  real, dimension(nI+1,nJ+1,nK+1)             :: fepsLface, fepsRface, &
-       dfdwLface, dfdwRface
+  real, dimension(nI+1,nJ+1,nK+1)             :: dfdwLface, dfdwRface
   real, dimension(nI,nJ,nK,nw)                :: qS, qSeps, Qpowell
-  real :: DivB(nI,nJ,nK), Current_D(nDim)
+  real :: DivB(nI,nJ,nK)
   real :: B0face(nI+1,nJ+1,nK+1,nDim,nDim), cmaxFace(nI+1,nJ+1,nK+1,nDim)
 
   real   :: qeps, coeff
@@ -92,8 +90,6 @@ subroutine impl_jacobian(implBLK,JAC)
   real :: FaceArea_F(nI, nJ, nK)               ! Only the inner faces
 
   real :: HallFactor_G(0:nI+1,0:nJ+1,0:nK+1)
-
-  integer :: i_D(3), ii, jj, kk
   !----------------------------------------------------------------------------
 
   if(iProc==PROCtest.and.implBLK==implBLKtest)then
@@ -612,7 +608,7 @@ contains
     !real :: ResistDiag should be Eta0Resist_ND from calc_resistive_flux
 
     real :: Coeff
-    integer:: iVar
+    !integer:: iVar
     !-----------------------------------------------------------------------
 
     ! For diffusion term

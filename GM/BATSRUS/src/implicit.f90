@@ -81,9 +81,9 @@ subroutine advance_impl
        time_BlK, &
        tmp1_BLK, UseUpdateCheck, iTypeAdvance_B, iTypeAdvance_BP, &
        SkippedBlock_, ExplBlock_, ImplBlock_
-  use ModPhysics, ONLY : gm1, No2Si_V, UnitT_
+  use ModPhysics, ONLY : No2Si_V, UnitT_
   use ModImplicit
-  use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
+  use ModPointImplicit, ONLY: UsePointImplicit
   use ModAMR, ONLY : UnusedBlock_BP
   use ModNumConst
   use ModLinearSolver, ONLY: gmres, bicgstab, prehepta, Uhepta, Lhepta
@@ -94,7 +94,7 @@ subroutine advance_impl
 
   real, external :: minval_BLK
 
-  integer :: n,iVar, i, j, k, iw, implBLK, iBLK, KrylovMatVec, info, NewtonIter
+  integer :: iVar, iw, implBLK, iBLK, KrylovMatVec, info, NewtonIter
   integer :: iError
   real    :: KrylovError, dwnrm, local_wnrm(nw), coef1, coef2
 

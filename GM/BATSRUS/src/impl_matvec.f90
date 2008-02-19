@@ -72,7 +72,7 @@ subroutine impl_matvec_free(qx,qy,nn)
   !      = (1 + beta*dtcoeff)*qx - beta*dtcoeff*(weps' - w')/eps
   !
   ! where w=w_k, w'=w+R_low, beta=ImplCoeff, eps=sqrt(JacobianEps)/||qx||
-  ! !! instead of eps=(JacobianEps)^(1/2)*(w_k.qx)/(qx.qx) suggested by Keyes !!!
+  ! instead of eps=(JacobianEps)^(1/2)*(w_k.qx)/(qx.qx) suggested by Keyes
 
   use ModProcMH
   use ModMain, ONLY : Itest,Jtest,Ktest,VARtest
@@ -85,11 +85,11 @@ subroutine impl_matvec_free(qx,qy,nn)
   real, intent(out)  :: qy(nn)
   real               :: weps(nI,nJ,nK,nw,MaxImplBLK)
 
-  integer:: n,i,j,k,idim,iw,implBLK,ntest(ndim+1), iError
-  real:: qeps, qxnrm, qxnrm_total, q1, q2, q3
+  integer:: n,i,j,k,iw,implBLK, iError
+  real:: qeps, qxnrm, qxnrm_total, q1, q2
 
   logical :: oktest, oktest_me
-  !-----------------------------------------------------------------------------
+  !----------------------------------------------------------------------------
   call set_oktest('impl_matvec_free', oktest, oktest_me)
 
   call timing_start('matvec_free')

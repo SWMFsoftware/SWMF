@@ -11,7 +11,7 @@ subroutine get_VxB(iBlock)
 
   ! Calculate VxB from fluxes following Balsara and Spicer
 
-  use ModMain, ONLY : nI,nJ,nK,test_string,iTest,jTest,kTest,BLKtest
+  use ModMain, ONLY : nI,nJ,nK,iTest,jTest,kTest,BLKtest
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   use ModAdvance, ONLY : Flux_VX,Flux_VY,Flux_VZ
   use ModGeometry, ONLY : fAx_BLK,fAy_BLK,fAz_BLK
@@ -449,7 +449,7 @@ subroutine prolong_b_face(Bxf_c,Byf_c,Bzf_c,&
   ! _c is coarse, _f is fine
 
   use ModSize
-  use ModMain, ONLY : test_string, BLKtest, iTest, jTest, kTest
+  use ModMain, ONLY : BLKtest, iTest, jTest, kTest
   use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK
   use ModAMR, ONLY: child2subface
   implicit none
@@ -862,7 +862,7 @@ subroutine assign_coarse_face_soln(sol_BLK,iVar)
   integer,parameter :: isize=(nI/2+1)*(nJ/2+1)*(nK/2+1)
   integer :: iTag,iError, number_send_requests, send_requests(7)
   integer::receive_requests(7), number_receive_requests, &
-       status(MPI_STATUS_SIZE, 7), SENDstatus(MPI_STATUS_SIZE)
+       status(MPI_STATUS_SIZE, 7)
 
   number_send_requests = 0
   remaining_PE=local_cube(1)
@@ -1219,9 +1219,8 @@ subroutine correct_VxB
   real, dimension(:,:), allocatable :: sbuf1, sbuf2
   real, dimension(:),   allocatable :: sbuf3
 
-  logical :: oktest, oktest_me, testnow=.false., testtop
-  integer :: loc(3), inow, jnow, know, iError
-  character (len=2) :: testname
+  logical :: oktest, oktest_me
+  integer :: inow, jnow, iError
 
   !---------------------------------------------------------------------------
 
@@ -1784,51 +1783,6 @@ contains
 
   end function recv_edge
 
-  !==========================================================================
-
-  subroutine set_testnow
-
-    logical :: fineshown=.false., coarseshown=.false.
-
-    !!!NO DEBUG
-    return
-
-    !    if(n_step>1 .and. &
-    !         minval(abs(x_BLK(1:4,1:5,1:5,iBLK)-10.)+&
-    !         abs(y_BLK(1:4,1:5,1:5,iBLK)-dy_BLK(iBLK)/2-4.)+&
-    !         abs(abs(z_BLK(1:4,1:5,1:5,iBLK)-dz_BLK(iBLK)/2)-32.))<1.5)then
-    ! !         abs(z_BLK(1:4,1:5,1:5,iBLK)-dz_BLK(iBLK)/2-32.))<1.5)then
-    !       testnow=.true.
-    !       testtop=z_BLK(1,1,1,iBLK)>0.
-    !       loc=minloc(abs(x_BLK(1:4,1:5,1:5,iBLK)-10.)+&
-    !            abs(y_BLK(1:4,1:5,1:5,iBLK)-dy_BLK(iBLK)/2-4.)+&
-    !            abs(abs(z_BLK(1:4,1:5,1:5,iBLK)-dz_BLK(iBLK)/2)-32.))
-    !       inow=loc(1); jnow=loc(2); know=loc(3)
-    !
-    !       write(testname,'(l1,i1)')testtop,nint(dx_BLK(iBLK))
-    !
-    !       if(.not.fineshown .and. dx_BLK(iBLK)==2.)then
-    !          fineshown=.true.
-    !          write(*,*)'Testing FINE me,iBLK,i:i+1,j,k,top,x(i:i+1),y,z=',&
-    !               iProc,iBLK,inow,':',inow+1,jnow,know,testtop,&
-    !               x_BLK(inow:inow+1,jnow,know,iBLK),&
-    !               y_BLK(inow,jnow,know,iBLK)-dy_BLK(iBLK)/2,&
-    !               z_BLK(inow,jnow,know,iBLK)-dz_BLK(iBLK)/2
-    !       end if
-    !       if(.not.coarseshown .and. dx_BLK(iBLK)==4.)then
-    !          coarseshown=.true.
-    !          write(*,*)'Testing COARSE me,iBLK,i,j,k,top,x,y,z=',&
-    !               iProc,iBLK,inow,jnow,know,testtop,&
-    !               x_BLK(inow,jnow,know,iBLK),&
-    !               y_BLK(inow,jnow,know,iBLK)-dy_BLK(iBLK)/2,&
-    !               z_BLK(inow,jnow,know,iBLK)-dz_BLK(iBLK)/2
-    !       end if
-    !    else
-    !       testnow=.false.
-    !    end if
-
-  end subroutine set_testnow
-
 end subroutine correct_VxB
 
 !==============================================================================
@@ -1836,9 +1790,9 @@ subroutine b_face_fine_pass
 
   ! Set B*FaceFine_*SB from finer face
   use ModProcMH
-  use ModMain, ONLY : nBLock,unusedBLK,BLKtest,iTest,jTest,kTest
+  use ModMain, ONLY : nBLock,unusedBLK,BLKtest
   use ModCT
-  use ModAMR, ONLY : refine_list,child2subface
+  use ModAMR, ONLY : child2subface
   use ModParallel, ONLY : neiLEV,neiBLK,neiPE,BLKneighborCHILD
   use ModMpi
   implicit none

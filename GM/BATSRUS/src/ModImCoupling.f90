@@ -95,10 +95,9 @@ end subroutine get_im_pressure
 
 subroutine apply_im_pressure
 
-  use ModProcMH,  ONLY: iProc
   use ModMain,    ONLY: nI, nJ, nK, nBlock, iNewGrid, TauCoupleIm, &
        time_accurate, Dt, DoCoupleImPressure,DoCoupleImDensity, unusedBLK
-  use ModAdvance, ONLY: time_BLK, State_VGB, Energy_GBI, &
+  use ModAdvance, ONLY: State_VGB, Energy_GBI, &
        Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_
   use ModPhysics, ONLY: Si2No_V, UnitT_, inv_gm1
   use ModImPressure

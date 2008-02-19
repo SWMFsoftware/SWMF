@@ -2,7 +2,6 @@
 !^CFG COPYRIGHT UM
 subroutine add_heat_flux(DoResChangeOnly)
   use ModSize,     ONLY:nI,nJ,nK,gcn
-  use ModProcMH,   ONLY:iProc
   use ModMain,     ONLY:nIFace,nJFace,nKFace,&
        iMinFaceY,iMaxFaceY,iMinFaceZ,iMaxFaceZ, &
        jMinFaceX,jMaxFaceX,jMinFaceZ,jMaxFaceZ, &
@@ -10,7 +9,7 @@ subroutine add_heat_flux(DoResChangeOnly)
        globalBLK,UseSpitzerForm
   use ModVarIndexes,ONLY:rho_,P_,Energy_,&
        Bx_,By_,Bz_
-  use ModGeometry, ONLY:x_BLK,y_BLK,z_BLK,dx_BLK, &
+  use ModGeometry, ONLY: dx_BLK, &
        dy_BLK,dz_BLK,fAx_BLK,fAy_BLK,fAz_BLK
   use ModParallel, ONLY:neiLeast,neiLwest,neiLsouth, &
        neiLnorth,neiLtop,neiLbot
@@ -19,9 +18,9 @@ subroutine add_heat_flux(DoResChangeOnly)
        VdtFace_x,VdtFace_y,VdtFace_z, &
        Flux_VX,Flux_VY,Flux_VZ
   use ModConst,    ONLY:cBoltzmann,cProtonMass, &
-       cElectronMass,cElectronCharge,cEps,cMu
+       cElectronMass,cElectronCharge,cEps
   use ModNumConst, ONLY:cOne,cTwo,cFour,cHalf, &
-       cZero,cTiny,cHundred,cHundredth,cPi
+       cZero,cTiny,cPi
   use ModPhysics,  ONLY:Kappa0Heat,ExponentHeat,g,gm1, &
        No2Si_V, UnitX_, UnitT_, UnitEnergyDens_, &
        UnitTemperature_, UnitB_, UnitRho_, &

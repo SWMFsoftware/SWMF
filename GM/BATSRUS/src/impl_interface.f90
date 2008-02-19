@@ -173,7 +173,6 @@ subroutine get_residual(IsLowOrder, DoCalcTimestep, DoSubtract, w_GVB, Res_GVB)
   integer :: nOrderTmp, nStageTmp, implBLK, iBLK
   character (len=10) :: FluxTypeTmp
 
-  real*8  :: time_before
   logical :: oktest, oktest_me
   !--------------------------------------------------------------------------
 
@@ -287,7 +286,7 @@ subroutine get_face_flux(StateCons_CV,B0_CD,nI,nJ,nK,iDim,iBlock,Flux_CV)
        ProcTest, BlkTest,iTest,jTest,kTest
   use ModFaceFlux, ONLY: nFlux, iFace, jFace, kFace, &
        set_block_values, set_cell_values, get_physical_flux, &
-       HallJx, HallJy, HallJz, DoTestCell, Area
+       HallJx, HallJy, HallJz, DoTestCell
   use ModHallResist, ONLY: UseHallResist, HallJ_CD
   use ModMultiFluid, ONLY: iFluid, nFluid, iP_I, iP
 
@@ -364,7 +363,7 @@ subroutine get_cmax_face(w,B0,qnI,qnJ,qnK,iDim,iBlock,Cmax)
   use ModImplicit, ONLY: nw
   use ModFaceFlux, ONLY: DoTestCell, iFace, jFace, kFace, &
        set_block_values, set_cell_values, get_speed_max, nFluid, &
-       Area, DoLf, DoAw, DoRoe, DoHll, UnLeft_I, UnRight_I
+       DoLf, DoAw, DoRoe, DoHll, UnLeft_I, UnRight_I
   use ModAdvance,  ONLY: eFluid_
 
   implicit none
@@ -419,8 +418,8 @@ end subroutine get_cmax_face
 !==============================================================================
 subroutine conservative_to_primitive(State_V)
 
-  use ModImplicit, ONLY: nw, p_, e_
-  use ModVarIndexes, ONLY: Rho_, Ux_, Uz_, RhoUx_, RhoUz_, Bx_, Bz_
+  use ModImplicit, ONLY: nw
+  use ModVarIndexes, ONLY: Bx_, Bz_
   use ModMultiFluid, ONLY: select_fluid, nFluid, TypeFluid_I, &
        iFluid, iRho, iRhoUx, iUx, iRhoUz, iUz, iP
   use ModPhysics, ONLY: gm1

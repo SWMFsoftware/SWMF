@@ -13,19 +13,18 @@ subroutine clean_divb
   use ModSize
   use ModNumConst
   use ModDivbCleanup
-  use ModMain,ONLY: iNewGrid, iNewDecomposition, nBlock, unusedblk,&
-       PROCtest,BLKtest,iTest,jTest,kTest
+  use ModMain,ONLY: iNewGrid, iNewDecomposition, nBlock, unusedblk
   use ModAdvance,ONLY:State_VGB, Bx_, By_, Bz_, P_,tmp1_BLK,tmp2_BLK,&
        Residual_GB=>tmp1_blk,Dir_GB=>tmp2_blk
   use ModAdvance,ONLY:tmp3_blk=>divB1_GB
   use ModGeometry,ONLY:vInv_CB,true_blk,&
-       FaX_BLK,FaY_BLK,FaZ_BLK,body_blk,true_cell,R_BLK,RMin_BLK
+       FaX_BLK,FaY_BLK,FaZ_BLK,body_blk,true_cell
   use ModParallel, ONLY : NOBLK, neiLEV
   use ModPhysics,ONLY:gm1
   use ModMpi
   implicit none
 
-  integer::i,j,k,iBlock,iter
+  integer::i,j,k,iBlock
   logical::DoConservative=.false.
   real,dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn)::DivBV_G
   real:: DivBInt(2),DivBTemp(2)

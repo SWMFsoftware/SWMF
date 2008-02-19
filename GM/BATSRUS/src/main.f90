@@ -11,8 +11,7 @@ program BATSRUS
        IsLastRead, &
        lVerbose, &
        dn_timing, UseTiming
-  use ModIO,          ONLY: NamePlotDir
-  use ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
+  use ModRestartFile, ONLY: NameRestartInDir
   use CON_planet, ONLY: init_planet_const, set_planet_defaults
 
   use ModReadParam
