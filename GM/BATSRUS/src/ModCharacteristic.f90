@@ -554,17 +554,9 @@ contains
     real,dimension(nVar+1),intent(out)::DissipationFlux_V
     real,intent(out)::cMax,Un
     logical,intent(in)::IsBoundary,DoTest
-    
-    real,dimension(nVar,nVar)::Eigenvector_VV
-    real,dimension(nVar)     ::DeltaWave_V
-    real,dimension(nVar)   :: Eigenvalue_V
-    real,dimension(nVar)     ::   EigenvalueL_V,  &
-                                  EigenvalueR_V
-    real::RhoH,UH_D(3),B1H_D(3),XH,UnL,UnR,DeltaB0_D(3),LambdaB0
-    real,dimension(nVar)  ::EigenvalueFixed_V,FluxPseudoChar_V
-    integer::iWave
-     !-------------------------------------------
+
     real,dimension(3)::Normal_D
+    !--------------------------------------------------------------------
     Normal_D=cZero; Normal_D(iDir)=cOne
 
     call dissipation_matrix_dir(Normal_D,&

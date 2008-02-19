@@ -1,7 +1,6 @@
 !^CFG COPYRIGHT UM
 module ModFaceValue
 
-  use ModMain, ONLY: VarTest
   use ModSize
   use ModVarIndexes, ONLY:nVar
   use ModNumConst
@@ -36,8 +35,6 @@ module ModFaceValue
   real   :: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
   real   :: Primitive_VI(1:nVar,-1:MaxIJK+2)
   logical:: IsTrueCell_I(-1:MaxIJK+2)
-
-  logical :: DoTestLimiter = .false.
 
 contains
   !===========================================================================
@@ -375,7 +372,7 @@ contains
 
 
     logical::DoTest,DoTestMe
-    integer:: i,j,k,m,l,iSide
+    integer:: i,j,k,iSide
     real:: RhoInv
 
     real:: RhoC2Inv, BxFull, ByFull, BzFull, B2Full,& !^CFG IF BORISCORR

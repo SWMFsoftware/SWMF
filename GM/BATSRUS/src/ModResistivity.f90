@@ -22,15 +22,14 @@ module ModResistivity
   character(len=*), private, parameter :: NameMod = 'ModResistivity'
 
 contains
-
+  !===========================================================================
   subroutine init_mod_resistivity
 
     use ModConst, ONLY: cLightSpeed, cElectronCharge, cElectronMass, cEps, &
          cBoltzmann, cTwoPi
 
     use ModPhysics, ONLY: Si2No_V, UnitX_, UnitT_, UnitJ_
-    real :: UnitEta
-
+    !------------------------------------------------------------------------
     Si2NoEta = Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
 
     Eta0       = Eta0Si       * Si2NoEta

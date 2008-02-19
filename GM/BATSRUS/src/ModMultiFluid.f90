@@ -27,7 +27,6 @@ module ModMultiFluid
 contains
 
   subroutine select_fluid
-    integer :: i
 
     iRho   = iRho_I(iFluid)
     iRhoUx = iRhoUx_I(iFluid)

@@ -8,8 +8,7 @@ contains
 
   subroutine message_pass_dir(&
        idirmin,idirmax,width,sendcorners,prolongorder,nVar,sol_BLK,&
-       sol2_BLK,sol3_BLK,sol4_BLK,sol5_BLK,sol6_BLK,sol7_BLK,sol8_BLK,&
-       sol9_BLK,Sol_VGB,restrictface,DoTwoCoarseLayers)
+       Sol_VGB,restrictface,DoTwoCoarseLayers)
 
     ! Exchange messages for array sol_BLK, ..., sol9_BLK or for Sol_VGB
     ! for directions idir=idirmin..idirmax using a ghost cell layer of 
@@ -65,8 +64,7 @@ contains
     ! Optional parameters
 
     real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), optional, intent(inout) :: &
-         sol_BLK,&
-         sol2_BLK,sol3_BLK,sol4_BLK,sol5_BLK,sol6_BLK,sol7_BLK,sol8_BLK,sol9_BLK
+         sol_BLK
 
     real, dimension(nVar,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), &
          optional, intent(inout) :: Sol_VGB
@@ -80,7 +78,7 @@ contains
     logical :: qrestrictface
 
     integer :: isweep, idir, iface, otherface, iside, isubface
-    integer :: ibuf, i, j, k, width1, width2, iBLK
+    integer :: ibuf, width1, width2, iBLK
     integer :: imin_g,imax_g,jmin_g,jmax_g,kmin_g,kmax_g
     integer :: imin_o,imax_o,jmin_o,jmax_o,kmin_o,kmax_o
     integer :: imin_r,imax_r,jmin_r,jmax_r,kmin_r,kmax_r
@@ -879,35 +877,8 @@ contains
          qsol(iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1)=&
               Sol_VGB(iVar,iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1,iBLK)
       else
-         select case(iVar)
-         case(1)
-            qsol(iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1)=&
-                 Sol_BLK(iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1,iBLK)
-         case(2)
-            qsol(iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1)=&
-                 Sol2_BLK(iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1,iBLK)
-         case(3)
-            qsol(iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1)=&
-                 Sol3_BLK(iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1,iBLK)
-         case(4)
-            qsol(iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1)=&
-                 Sol4_BLK(iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1,iBLK)
-         case(5)
-            qsol(iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1)=&
-                 Sol5_BLK(iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1,iBLK)
-         case(6)
-            qsol(iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1)=&
-                 Sol6_BLK(iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1,iBLK)
-         case(7)
-            qsol(iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1)=&
-                 Sol7_BLK(iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1,iBLK)
-         case(8)
-            qsol(iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1)=&
-                 Sol8_BLK(iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1,iBLK)
-         case(9)
-            qsol(iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1)=&
-                 Sol9_BLK(iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1,iBLK)
-         end select
+         qsol(iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1)=&
+              Sol_BLK(iminP-1:imaxP+1,jminP-1:jmaxP+1,kminP-1:kmaxP+1,iBLK)
       end if
 
       ! The part without the extra ghost cells
@@ -1139,38 +1110,6 @@ contains
          else
             sol_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,neiB)= &
                  sol_BLK(imin_o:imax_o,jmin_o:jmax_o,kmin_o:kmax_o,iBLK)
-            if(nvar>1)then
-               sol2_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,neiB)= &
-                    sol2_BLK(imin_o:imax_o,jmin_o:jmax_o,kmin_o:kmax_o,iBLK)
-               if(nvar>2)then
-                  sol3_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,neiB)= &
-                       sol3_BLK(imin_o:imax_o,jmin_o:jmax_o,kmin_o:kmax_o,iBLK)
-                  if(nvar>3)then
-                     sol4_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,neiB)= &
-                          sol4_BLK(imin_o:imax_o,jmin_o:jmax_o,kmin_o:kmax_o,iBLK)
-                     if(nvar>4)then
-                        sol5_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,neiB)= &
-                             sol5_BLK(imin_o:imax_o,jmin_o:jmax_o,kmin_o:kmax_o,iBLK)
-                        if(nvar>5)then
-                           sol6_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,neiB)= &
-                                sol6_BLK(imin_o:imax_o,jmin_o:jmax_o,kmin_o:kmax_o,iBLK)
-                           if(nvar>6)then
-                              sol7_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,neiB)= &
-                                   sol7_BLK(imin_o:imax_o,jmin_o:jmax_o,kmin_o:kmax_o,iBLK)
-                              if(nvar>7)then
-                                 sol8_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,neiB)= &
-                                      sol8_BLK(imin_o:imax_o,jmin_o:jmax_o,kmin_o:kmax_o,iBLK)
-                                 if(nvar>8)then
-                                    sol9_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,neiB)= &
-                                         sol9_BLK(imin_o:imax_o,jmin_o:jmax_o,kmin_o:kmax_o,iBLK)
-                                 endif
-                              endif
-                           endif
-                        endif
-                     endif
-                  endif
-               endif
-            endif
          endif
       else
          ! Remote send
@@ -1183,39 +1122,7 @@ contains
          else
             eq_buf(:,:,:,1)=&
                  sol_BLK(imin_o:imax_o,jmin_o:jmax_o,kmin_o:kmax_o,iBLK)
-            if(nvar>1)then
-               eq_buf(:,:,:,2)=&
-                    sol2_BLK(imin_o:imax_o,jmin_o:jmax_o,kmin_o:kmax_o,iBLK)
-               if(nvar>2)then
-                  eq_buf(:,:,:,3)=&
-                       sol3_BLK(imin_o:imax_o,jmin_o:jmax_o,kmin_o:kmax_o,iBLK)
-                  if(nvar>3)then
-                     eq_buf(:,:,:,4)=&
-                          sol4_BLK(imin_o:imax_o,jmin_o:jmax_o,kmin_o:kmax_o,iBLK)
-                     if(nvar>4)then
-                        eq_buf(:,:,:,5)=&
-                             sol5_BLK(imin_o:imax_o,jmin_o:jmax_o,kmin_o:kmax_o,iBLK)
-                        if(nvar>5)then
-                           eq_buf(:,:,:,6)=&
-                                sol6_BLK(imin_o:imax_o,jmin_o:jmax_o,kmin_o:kmax_o,iBLK)
-                           if(nvar>6)then
-                              eq_buf(:,:,:,7)=&
-                                   sol7_BLK(imin_o:imax_o,jmin_o:jmax_o,kmin_o:kmax_o,iBLK)
-                              if(nvar>7)then
-                                 eq_buf(:,:,:,8)=&
-                                      sol8_BLK(imin_o:imax_o,jmin_o:jmax_o,kmin_o:kmax_o,iBLK)
-                                 if(nvar>8)then
-                                    eq_buf(:,:,:,9)=&
-                                         sol9_BLK(imin_o:imax_o,jmin_o:jmax_o,kmin_o:kmax_o,iBLK)
-                                 endif
-                              endif
-                           endif
-                        endif
-                     endif
-                  endif
-               endif
-            endif
-         endif
+         end if
          call MPI_Rsend(eq_buf,isize, MPI_REAL, neiP, itag, iComm, iError)
       end if
     end subroutine send_equal
@@ -1235,30 +1142,6 @@ contains
          call restrict_state
       else
          call restrict(1,sol_BLK)
-         if(nvar>1)then
-            call restrict(2,sol2_BLK)
-            if(nvar>2)then
-               call restrict(3,sol3_BLK)
-               if(nvar>3)then
-                  call restrict(4,sol4_BLK)
-                  if(nvar>4)then
-                     call restrict(5,sol5_BLK)
-                     if(nvar>5)then
-                        call restrict(6,sol6_BLK)
-                        if(nvar>6)then
-                           call restrict(7,sol7_BLK)
-                           if(nvar>7)then
-                              call restrict(8,sol8_BLK)
-                              if(nvar>8)then
-                                 call restrict(9,sol9_BLK)
-                              end if
-                           end if
-                        end if
-                     end if
-                  end if
-               end if
-            end if
-         end if
       end if
 
       ! Subface index =1,2,3, or 4 with respect to the coarse neighbor
@@ -1282,38 +1165,6 @@ contains
          else
             sol_BLK(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,neiB)=&
                  re_buf(:,:,:,1)
-            if(nvar>1)then
-               sol2_BLK(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,neiB)=&
-                    re_buf(:,:,:,2)
-               if(nvar>2)then
-                  sol3_BLK(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,neiB)=&
-                       re_buf(:,:,:,3)
-                  if(nvar>3)then
-                     sol4_BLK(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,neiB)=&
-                          re_buf(:,:,:,4)
-                     if(nvar>4)then
-                        sol5_BLK(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,neiB)=&
-                             re_buf(:,:,:,5)
-                        if(nvar>5)then
-                           sol6_BLK(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,neiB)=&
-                                re_buf(:,:,:,6)
-                           if(nvar>6)then
-                              sol7_BLK(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,neiB)=&
-                                   re_buf(:,:,:,7)
-                              if(nvar>7)then
-                                 sol8_BLK(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,neiB)=&
-                                      re_buf(:,:,:,8)
-                                 if(nvar>8)then
-                                    sol9_BLK(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,neiB)=&
-                                         re_buf(:,:,:,9)
-                                 end if
-                              end if
-                           end if
-                        end if
-                     end if
-                  end if
-               end if
-            end if
          end if
       else
          ! Remote send
@@ -1347,30 +1198,6 @@ contains
       else
          ! Variable by variable 1st order prolongation
          call prolong1(1,sol_BLK)
-         if(nvar>1)then
-            call prolong1(2,sol2_BLK)
-            if(nvar>2)then
-               call prolong1(3,sol3_BLK)
-               if(nvar>3)then
-                  call prolong1(4,sol4_BLK)
-                  if(nvar>4)then
-                     call prolong1(5,sol5_BLK)
-                     if(nvar>5)then
-                        call prolong1(6,sol6_BLK)
-                        if(nvar>6)then
-                           call prolong1(7,sol7_BLK)
-                           if(nvar>7)then
-                              call prolong1(8,sol8_BLK)
-                              if(nvar>8)then
-                                 call prolong1(9,sol9_BLK)
-                              end if
-                           end if
-                        end if
-                     end if
-                  end if
-               end if
-            end if
-         end if
       end if
 
       do isubface=1,4
@@ -1388,38 +1215,6 @@ contains
             else
                sol_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,neiB)=&
                     pr_buf(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,1)
-               if(nvar>1)then
-                  sol2_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,neiB)=&
-                       pr_buf(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,2)
-                  if(nvar>2)then
-                     sol3_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,neiB)=&
-                          pr_buf(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,3)
-                     if(nvar>3)then
-                        sol4_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,neiB)=&
-                             pr_buf(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,4)
-                        if(nvar>4)then
-                           sol5_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,neiB)=&
-                                pr_buf(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,5)
-                           if(nvar>5)then
-                              sol6_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,neiB)=&
-                                   pr_buf(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,6)
-                              if(nvar>6)then
-                                 sol7_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,neiB)=&
-                                      pr_buf(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,7)
-                                 if(nvar>7)then
-                                    sol8_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,neiB)=&
-                                         pr_buf(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,8)
-                                    if(nvar>8)then
-                                       sol9_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,neiB)=&
-                                            pr_buf(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,9)
-                                    end if
-                                 end if
-                              end if
-                           end if
-                        end if
-                     end if
-                  end if
-               end if
             end if
          else
             ! Remote send
@@ -1482,31 +1277,6 @@ contains
       ! Read buffer into 4 index variables
       sol_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,iBLK)=buf(:,:,:,1)
 
-      if(nvar>1)then
-         sol2_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,iBLK)=buf(:,:,:,2)
-         if(nvar>2)then
-            sol3_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,iBLK)=buf(:,:,:,3)
-            if(nvar>3)then
-               sol4_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,iBLK)=buf(:,:,:,4)
-               if(nvar>4)then
-                  sol5_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,iBLK)=buf(:,:,:,5)
-                  if(nvar>5)then
-                     sol6_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,iBLK)=buf(:,:,:,6)
-                     if(nvar>6)then
-                        sol7_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,iBLK)=buf(:,:,:,7)
-                        if(nvar>7)then
-                           sol8_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,iBLK)=buf(:,:,:,8)
-                           if(nvar>8)then
-                              sol9_BLK(imin_g:imax_g,jmin_g:jmax_g,kmin_g:kmax_g,iBLK)=buf(:,:,:,9)
-                           end if
-                        end if
-                     end if
-                  end if
-               end if
-            end if
-         end if
-      end if
-
     end subroutine buffer2face
 
     !==========================================================================
@@ -1542,38 +1312,6 @@ contains
 
          sol_BLK(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,iBLK)=&
               buf(:,:,:,1,isubface)
-         if(nvar>1)then
-            sol2_BLK(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,iBLK)=&
-                 buf(:,:,:,2,isubface)
-            if(nvar>2)then
-               sol3_BLK(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,iBLK)=&
-                    buf(:,:,:,3,isubface)
-               if(nvar>3)then
-                  sol4_BLK(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,iBLK)=&
-                       buf(:,:,:,4,isubface)
-                  if(nvar>4)then
-                     sol5_BLK(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,iBLK)=&
-                          buf(:,:,:,5,isubface)
-                     if(nvar>5)then
-                        sol6_BLK(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,iBLK)=&
-                             buf(:,:,:,6,isubface)
-                        if(nvar>6)then
-                           sol7_BLK(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,iBLK)=&
-                                buf(:,:,:,7,isubface)
-                           if(nvar>7)then
-                              sol8_BLK(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,iBLK)=&
-                                   buf(:,:,:,8,isubface)
-                              if(nvar>8)then
-                                 sol9_BLK(imin_s:imax_s,jmin_s:jmax_s,kmin_s:kmax_s,iBLK)=&
-                                      buf(:,:,:,9,isubface)
-                              end if
-                           end if
-                        end if
-                     end if
-                  end if
-               end if
-            end if
-         end if
       end do ! isubface
 
     end subroutine buffer2subfaces

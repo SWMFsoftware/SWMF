@@ -506,7 +506,6 @@ contains
 
     subroutine get_flux_z(iMin, iMax, jMin, jMax, kMin, kMax)
       use ModAdvance,ONLY:Bx_,Bz_,State_VGB
-      use ModParallel, ONLY: NOBLK
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax
       !------------------------------------------------------------------------
       call set_block_values(iBlock, z_)
@@ -1411,7 +1410,7 @@ contains
        StateCons_V, Flux_V, Un_I, En)
 
     use ModMultiFluid
-    use ModAdvance, ONLY: UseElectronPressure, eFluid_
+    use ModAdvance, ONLY: eFluid_
 
     real,    intent(in) :: State_V(nVar)       ! input primitive state
     real,    intent(in) :: B0x, B0y, B0z       ! B0

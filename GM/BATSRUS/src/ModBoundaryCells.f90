@@ -66,8 +66,8 @@ contains
   subroutine allocate_boundary_cells
 
     use ModSize
-    use ModGeometry,ONLY:MinBoundary,MaxBoundary,ExtraBC_
-    use ModMain,ONLY:UseExtraBoundary
+    use ModGeometry, ONLY: MaxBoundary, ExtraBC_
+    use ModMain,     ONLY: UseExtraBoundary
     use ModProcMH
     !-------------------------------------------------------------------------
     if(.not.SaveBoundaryCells)then

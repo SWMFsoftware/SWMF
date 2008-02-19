@@ -199,7 +199,7 @@ contains
 
   subroutine set_block_field(iBlock)
 
-    use ModAdvance, ONLY: State_VGB, B_, Bx_, By_, Bz_
+    use ModAdvance, ONLY: State_VGB, Bx_, Bz_
     use ModParallel, ONLY:neiLeast,neiLwest,neiLsouth, &
          neiLnorth,neiLtop,neiLbot,BlkNeighborLev,NOBLK
 
@@ -536,7 +536,6 @@ contains
   subroutine set_block_sph_jacobian_face(iBlock)
     use ModMain,     ONLY: x_, y_, z_, r_, Theta_, Phi_
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, TypeGeometry
-    use ModCoordTransform, ONLY: show_rot_matrix
 
     integer, intent(in):: iBlock
 
@@ -692,10 +691,9 @@ contains
   subroutine get_face_current(iDir, i, j, k, iBlock, Jx, Jy, Jz)
 
     use ModProcMH,    ONLY: iProc
-    use ModMain,      ONLY: nBlock, nI, nJ, nK, x_, y_, z_, &
-         iTest, jTest, kTest, VarTest, BlkTest, ProcTest, n_step, nStage
-    use ModGeometry,  ONLY: Dx_BLK, Dy_BLK, Dz_BLK, x_BLK, y_BLK, z_BLK
-    use ModGeometry,  ONLY: TypeGeometry                
+    use ModMain,      ONLY: nI, nJ, nK, x_, y_, z_, &
+         iTest, jTest, kTest, BlkTest, ProcTest
+    use ModGeometry,  ONLY: Dx_BLK, Dy_BLK, Dz_BLK
     use ModCovariant, ONLY: UseCovariant                
     use ModParallel,  ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot, BlkNeighborLev
@@ -710,10 +708,6 @@ contains
 
     integer :: iL, iR, jL, jR, kL, kR
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
-
-    real :: jLeft_D(3), jRight_D(3)
-
-    real :: AverageMassFace
 
     logical :: DoTest, DoTestMe
     integer :: i1,j1,k1
@@ -1170,7 +1164,7 @@ contains
   subroutine calc_hyper_resistivity(iBlock)
     use ModMain, ONLY: x_, y_, z_
     use ModAdvance, ONLY: State_VGB, B0xCell_Blk, B0yCell_Blk, B0zCell_Blk, &
-         Rho_, Bx_, By_, Bz_, Energy_, Source_VC
+         Rho_, Bx_, Bz_, Energy_, Source_VC
     use ModGeometry,  ONLY: Dx_BLK, Dy_BLK, Dz_BLK
 
     integer, intent(in) :: iBlock
@@ -1220,10 +1214,11 @@ contains
   end subroutine calc_hyper_resistivity
   !=========================================================================
   real function hall_factor(iDir, iFace, jFace, kFace , iBlock)
-    use ModMain,     ONLY: nI, nJ, nK, nBlock
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK, dz_BLK
-    use ModPhysics, ONLY : Rbody
+
+    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
+
     integer, intent(in)::iDir, iFace, jFace, kFace, iBlock 
+
     real :: x,y,z,rSqr,TanSqr,Distance1,Distance2
     real :: HallFactor
 
