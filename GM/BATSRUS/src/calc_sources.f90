@@ -67,6 +67,8 @@ subroutine calc_sources
                 +uDotArea_YI(i,j+1,k,iFluid) - uDotArea_YI(i,j,k,iFluid) &
                 +uDotArea_ZI(i,j,k+1,iFluid) - uDotArea_ZI(i,j,k,iFluid))
         end do; end do; end do
+
+        if(DoTestMe.and.VarTest==iP)call write_source('After p div U')
      end do
 
      ! Joule heating: dP/dt += (gamma-1)*eta*j**2
@@ -76,6 +78,9 @@ subroutine calc_sources
            Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) + &
                 (g-1) * Eta_GB(i,j,k,GlobalBlk) * sum(Current_D**2)
         end do; end do; end do
+
+        if(DoTestMe.and.VarTest==P_)call write_source('After eta j')
+
      end if                 !^CFG END DISSFLUX
   end if
 
@@ -88,6 +93,9 @@ subroutine calc_sources
              +uDotArea_YI(i,j+1,k,eFluid_) - uDotArea_YI(i,j,k,eFluid_) &
              +uDotArea_ZI(i,j,k+1,eFluid_) - uDotArea_ZI(i,j,k,eFluid_))
      end do; end do; end do
+
+     if(DoTestMe.and.VarTest==Pe_)call write_source('After Pe div Ue')
+
   end if
 
 
@@ -148,6 +156,9 @@ subroutine calc_sources
              sum(CurlB0CrossB_D*State_VGB(rhoUx_:rhoUz_,i,j,k,globalBLK))&
              /State_VGB(rho_,i,j,k,globalBLK)
      end do;end do;end do
+
+     if(DoTestMe.and.(VarTest==Energy_.or.VarTest>=RhoUx_.and.VarTest<=RhoUz_))&
+          call write_source('After curl B0')
   end if
 
   if(boris_correction &                             !^CFG IF BORISCORR BEGIN
@@ -174,6 +185,10 @@ subroutine calc_sources
 
         Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) &
              + Coef*DivE*E_D 
+
+        if(DoTestMe.and.VarTest>=RhoUx_.and.VarTest<=RhoUz_) &
+             call write_source('After E div E')
+
      end do; end do; end do
   end if                                                 !^CFG END BORISCORR
 
@@ -198,6 +213,10 @@ subroutine calc_sources
              fbody_y_BLK(:,:,:,globalBLK) + &
              State_VGB(iRhoUz,1:nI,1:nJ,1:nK,globalBLK)* &
              fbody_z_BLK(:,:,:,globalBLK)) 
+
+        if(DoTestMe.and. &
+             (VarTest==Energy_.or.VarTest>=RhoUx_.and.VarTest<=RhoUz_)) &
+             call write_source('After gravity')
      end if
 
      ! Add Coriolis forces
@@ -216,6 +235,8 @@ subroutine calc_sources
                 'Coriolis force is not implemented for '// &
                 'TypeCoordSystem=',TypeCoordSystem)
         end select
+        if(DoTestMe.and.VarTest>=RhoUx_.and.VarTest<=RhoUy_) &
+             call write_source('After Coriolis')
      end if
   end do
 
@@ -312,11 +333,15 @@ subroutine calc_sources
      end do; end do; end do
   end if
 
-  if(UseHallResist .and. HallHyperFactor > 0.0) &
-       call calc_hyper_resistivity(globalBLK)
+  if(UseHallResist .and. HallHyperFactor > 0.0) then
+     call calc_hyper_resistivity(globalBLK)
+     if(DoTestMe) call write_source('After HyperResist')
+  end if
 
-  if(UseUserSource) call user_calc_sources
-
+  if(UseUserSource)then
+     call user_calc_sources
+     if(DoTestMe) call write_source('After user sources')
+  end if
 contains
   !===========================================================================
   subroutine calc_divb_source
@@ -563,9 +588,9 @@ contains
   !===========================================================================
  
   subroutine write_source(String)
-    character(len=*) :: String
-    write(*,'(a,a,es13.5)',advance='no') &
-         String," S=",Source_VC(VarTest,iTest,jTest,kTest) 
+    character(len=*), intent(in) :: String
+    write(*,'(a,es13.5)') "calc_sources: "//String//" S(VarTest)=",&
+         Source_VC(VarTest,iTest,jTest,kTest) 
   end subroutine write_source
 
 end subroutine calc_sources
