@@ -111,11 +111,13 @@ contains
           call select_fluid
           do k=1,nK; do j=1,nJ; do i=1,nI
              if (State_VGB(iRho,i,j,k,iBLK) > &
-                  0.0002*State_VGB(Rho_,i,j,k,iBLK)) CYCLE
-             State_VGB(iRho,i,j,k,iBLK) = 0.0001*State_VGB(Rho_,i,j,k,iBLK)
+                  2*LowDensityRatio*State_VGB(Rho_,i,j,k,iBLK)) CYCLE
+             State_VGB(iRho,i,j,k,iBLK) = &
+                  LowDensityRatio*State_VGB(Rho_,i,j,k,iBLK)
              State_VGB(iRhoUx:iRhoUz,i,j,k,iBLK) = &
-                  0.0001*State_VGB(RhoUx_:RhoUz_,i,j,k,iBLK)
-             State_VGB(iP,i,j,k,iBLK) = 0.0001*State_VGB(P_,i,j,k,iBLK) &
+                  LowDensityRatio*State_VGB(RhoUx_:RhoUz_,i,j,k,iBLK)
+             State_VGB(iP,i,j,k,iBLK) = &
+                  LowDensityRatio*State_VGB(P_,i,j,k,iBLK) &
                   *MassFluid_I(1)/MassFluid_I(iFluid)
 
              Energy_GBI(i,j,k,iBLK,iFluid) = inv_gm1*State_VGB(iP,i,j,k,iBLK) &
@@ -124,6 +126,7 @@ contains
 
           end do; end do; end do
        end do
+
     end if
 
     if( TypeFluid_I(1)=='ion' .and. &

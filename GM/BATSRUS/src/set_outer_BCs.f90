@@ -392,6 +392,7 @@ subroutine BC_solar_wind(time_now)
   use ModSetOuterBC
   use ModMultiFluid, ONLY: select_fluid, iFluid, &
        iRho, iRhoUx, iRhoUy, iRhoUz, iP
+  use ModPhysics, ONLY: LowDensityRatio
 
   implicit none
 
@@ -421,11 +422,11 @@ subroutine BC_solar_wind(time_now)
            State_VGB(P_,i,j,k,iBLK)     = p
            do iFluid = 2, nFluid
               call select_fluid
-              State_VGB(iRho,   i,j,k,iBLK) = Rho   *0.0001
-              State_VGB(iRhoUx, i,j,k,iBLK) = Rho*Ux*0.0001
-              State_VGB(iRhoUy, i,j,k,iBLK) = Rho*Uy*0.0001
-              State_VGB(iRhoUz, i,j,k,iBLK) = Rho*Uz*0.0001
-              State_VGB(iP,     i,j,k,iBLK) = p     *0.0001 &
+              State_VGB(iRho,   i,j,k,iBLK) = Rho   *LowDensityRatio
+              State_VGB(iRhoUx, i,j,k,iBLK) = Rho*Ux*LowDensityRatio
+              State_VGB(iRhoUy, i,j,k,iBLK) = Rho*Uy*LowDensityRatio
+              State_VGB(iRhoUz, i,j,k,iBLK) = Rho*Uz*LowDensityRatio
+              State_VGB(iP,     i,j,k,iBLK) = p     *LowDensityRatio &
                    *MassFluid_I(1)/MassFluid_I(iFluid)
            end do
 
