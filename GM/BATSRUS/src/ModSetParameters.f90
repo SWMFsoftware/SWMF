@@ -184,6 +184,7 @@ subroutine MH_set_parameters(TypeAction)
 
      ! initialize module variables
      call init_mod_advance
+     DivB1_GB = 0.0
      call init_mod_geometry
      call init_mod_nodes
      call init_mod_raytrace                    !^CFG IF RAYTRACE
