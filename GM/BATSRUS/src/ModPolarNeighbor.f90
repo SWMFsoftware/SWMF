@@ -25,13 +25,6 @@ contains
     !--------------------------------------------------------!
     integer::iDir_D(3),iDirPole,iLoopPole
     logical::IsPole
-    logical::DoTest=.false.,DoTestMe=.false.,DoCallOKTest=.true.
-    character(LEN=*),parameter::NameSub='tree_neighbor_fixed'
-    !--------------------------------------------------------!
-    if(DoCallOKTest)then
-       call set_oktest(NameSub,DoTest,DoTestMe)
-       DoCallOKTest=.false.
-    end if
 
     call check_pole_inside_b(iBlock,iProc,IsPole,iDirPole,iLoopPole)
  
@@ -41,12 +34,10 @@ contains
     
        call tree_neighbor_across_pole(iProc,iBlock,iX,iY,iZ,iDirPole,&
             iPE_I, iBLK_I, iChild_I, iLevel)
-       if(ilevel==-1.and.DoTest)call test_refined_polar_neighbor(iX,iY,iZ,iDirPole,iChild_I)
     else
        
        call treeNeighbor(iProc,iBlock,iX,iY,iZ, &
        iPE_I, iBLK_I, iChild_I, iLevel)
-       if(ilevel==-1.and.DoTest)call test_refined_neighbor(iX,iY,iZ,iChild_I)
     end if
   end subroutine tree_neighbor_fixed
   !=============================================================================================!
@@ -268,31 +259,4 @@ contains
     end if
     call stop_mpi('Failed check_pole_inside_octreeblk')
   end subroutine check_pole_inside_octreeblk
-  !============================================================================!
-  !===============================TESTING PROCEDURES============!
-  !=test verifies that subfaces arrays constructed above is in 
-  !=accordance with tree_neighbors_across_pole=!
-  subroutine refined_children_list_across_pole(iX,iY,iZ,iDirPole,iChildren_I)
-    integer,intent(in)::iX,iY,iZ, iDirPole
-    integer,dimension(4),intent(out)::iChildren_I
-    integer::iDir_D(3)
-    iDir_D=(/iX,iY,iZ/); iDir_D(iDirPole)=-iDir_D(iDirPole)
-    call refined_children_list(iDir_D(1),iDir_D(2),iDir_D(3),iChildren_I)
-  end subroutine refined_children_list_across_pole
-  !=========================================================================~==!
-  subroutine test_refined_polar_neighbor(iX,iY,iZ,iDirPole,iChild_I)
-    use ModParallel,ONLY:NOBLK
-    integer,intent(in)::iX,iY,iZ,iDirPole,iChild_I(4)
-    integer::iChildrenTest_I(4)
-    !--------------------------------------------------------------------------!
-    call refined_children_list_across_pole(iX,iY,iZ,iDirPole,iChildrenTest_I)
-    if(any(iChildrenTest_I/=iChild_I))then
-       write(*,*)'Wrong refined children list in tree_neighbor_across_pole'
-       write(*,*)'The positions of children in the list should be:',&
-            iChildrenTest_I
-       write(*,*)'Actual children list',iChild_I
-       call stop_mpi('Failed')
-    end if
-  end subroutine test_refined_polar_neighbor
-  !============================================================================!
 end module ModPolarNeighbor

@@ -1193,14 +1193,6 @@ subroutine mp_build_cell_indices(JustCount)
            case(1)
               !Build indices for send to coarser block level
               sSubF=-1
-              if(DoTest)then
-                 call get_position_at_face(-dLoop(iDir,1),&
-                      -dLoop(iDir,2),-dLoop(iDir,3),iChild,&
-                      IsAtFace,rSubf)
-                 if(IsAtFace.eqv.is_not_at_face(&
-                      iDirC2F_D=-dLoop(iDir,:),iChild=iChild))call stop_mpi(&
-                      'Error in is_not_at_face')
-              end if
               if(is_not_at_face(&
                    iDirC2F_D=-dLoop(iDir,:),iChild=iChild))CYCLE
               if(DoOneLayer_D(iDir))then
@@ -1262,37 +1254,7 @@ contains
     if (DoImplicitUnusedBlock)then
        if (unusedBlock_BP(nborBLK,nborPE)) return
     end if
-    if(DoTest)then
-       call set_indices_obsolete
-       if(any((/i1r,j1r,k1r/)/=iMinR_D))then
-          write(*,*)'For iDir=',iDir,'i1r,j1r,k1r=',i1r,j1r,k1r,'iMinR_D=',&
-               iMinR_D, 'iLevelR=',iLevelR
-          call stop_mpi('set_indices failed')
-       end if
-       if(any((/i1s,j1s,k1s/)/=iMinS_D))then
-          write(*,*)'For iDir=',iDir,'i1s,j1s,k1s=',i1s,j1s,k1s,'iMinS_D=',&
-               iMinS_D, 'iLevelR=',iLevelR
-          call stop_mpi('set_indices failed')
-       end if
-       if(any((/i2r,j2r,k2r/)/=iMaxR_D))then
-          write(*,*)'For iDir=',iDir,'i2r,j2r,k2r=',i2r,j2r,k2r,'iMaxR_D=',&
-               iMaxR_D, 'iLevelR=',iLevelR
-          call stop_mpi('set_indices failed')
-       end if
-       if(any((/i2s,j2s,k2s/)/=iMaxS_D))then
-          write(*,*)'For iDir=',iDir,'i2s,j2s,k2s=',i2s,j2s,k2s,'iMaxS_D=',&
-               iMaxS_D, 'iLevelR=',iLevelR
-          call stop_mpi('set_indices failed')
-       end if
-       if(any((/nDuplicateI,nDuplicateJ,nDuplicateK/)/=nDuplicate_D)&
-            .and.sSubF>0)then
-          write(*,*)'For iDir=',iDir,&
-               'nDuplicateI,nDuplicateJ,nDuplicateK=',&
-               nDuplicateI,nDuplicateJ,nDuplicateK,&
-               ' nDuplicate_D=',nDuplicate_D
-          call stop_mpi('set_indices failed')
-       end if
-    end if
+
     i1S=iMinS_D(1) ;j1S=iMinS_D(2) ; k1S=iMinS_D(3) 
     i2S=iMaxS_D(1) ;j2S=iMaxS_D(2) ; k2S=iMaxS_D(3) 
     i1R=iMinR_D(1) ;j1R=iMinR_D(2) ; k1R=iMinR_D(3) 
@@ -1573,15 +1535,6 @@ contains
     end if
 
   end subroutine build_i
-  !==========================================================================
-  subroutine set_indices_obsolete
-    !Add this initialization line to the old version of set_incides
-    nDuplicateI = 2 ; nDuplicateJ = 2 ; nDuplicateK = 2
-    call stop_mpi(&
-         'If you want to test the present version of set_indexes, '//&
-         'copy set_indices from mp_cell v1.13 as set_indices_obsolete here')
-  end subroutine set_indices_obsolete
-
 end subroutine mp_build_cell_indices
 
 !==========================================================================

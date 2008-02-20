@@ -3,7 +3,6 @@
 !=================================
 module ModCube
   use ModSize
-  use ModParallel,ONLY:NOBLK
   implicit none
   Private
   integer,parameter,dimension(3)::nCell2_D=(/nI/2,nJ/2,nK/2/)
@@ -33,40 +32,20 @@ module ModCube
        0,    0,    0,    0,   nJ/2, nJ/2, nJ/2, nJ/2,  & !j shift
        nK/2, nK/2, 0,    0,   0,    0,    nK/2, nK/2/),& !k shift
        (/8,3/))
-  
-  interface child1_at_face
-     module procedure child1_at_face_vec
-     module procedure child1_at_face_3s
-  end interface
-
-   interface is_not_at_face
-     module procedure is_not_at_face_vec
-     module procedure is_not_at_face_3s
-  end interface
-                                 !  vec(iDirC2F_D,iChild,IsAtFace,
-  interface get_position_at_face !...3s(iX,iY,iZ,iChild,IsAtFace,...
-     module procedure get_position_shift_3s  ! ....,iShift_D)
-     module procedure get_position_shift_vec ! ....,iShift_D)
-     module procedure get_position_subf_3s   ! ....,iSubF)
-     module procedure get_position_subf_vec  ! ....,iSubF)
-  end interface
-  public::child1_at_face         !iDirC2F_D=>Child1
   public::is_not_at_face         !iDirC2F_D,Child=>is_not_at_face
   public::set_indices            !iDirC2F_D=>cell indices for send/receive
   !-----------------------------------------------------------------------!
-  public::get_position_at_face   !iDirC2F,Child=>iSubface or index shift
-  public::refined_children_list  !iDirC2F_D=>list of children at face
   public::iShiftChild_ID         
-  public::test_refined_neighbor
 contains
   !==============================================================!
-  integer function i_child(iX,iY,iZ)
-    integer,intent(in)::iX,iY,iZ       !should be 0 or 1
+  integer function child1_at_face(iDirC2F_D) !iDirC2F_D=>Child1
+    integer,dimension(3),intent(in)::iDirC2F_D
     integer,dimension(8),parameter::Bin2Child_I=(/4,1,5,8,3,2,6,7/)
     !Transforms the binary number ix|iy|iz to the child number,
     !such that iShiftChild_ID(iChild,:)/nCell2_D=(iX,iY,iZ)
-    i_child=Bin2Child_I(4*iX+2*iY+iZ+1)
-  end function i_child
+    child1_at_face=Bin2Child_I( -min(0,iDirC2F_D(1))*4&
+         -min(0,iDirC2F_D(2))*2-min(0,iDirC2F_D(3))+1)
+  end function child1_at_face
   !==============================================================!
   !=============is_not_at_face, child1_at_face===================!
   !In the following routines "face" means face, edge or corner    
@@ -83,58 +62,13 @@ contains
   !along the face. Child1 is the number of child for the block which
   !includes the starting poit for such variable indices. 
   !==============================================================!
-  integer function child1_at_face_vec(iDirC2F_D)
-    integer,dimension(3),intent(in)::iDirC2F_D
-    child1_at_face_vec=i_child( -min(0,iDirC2F_D(1)),&
-        -min(0,iDirC2F_D(2)),-min(0,iDirC2F_D(3)))
-  end function child1_at_face_vec
-  !==============================================================!
-  integer function child1_at_face_3s(iX,iY,iZ)
-    integer,intent(in)::iX,iY,iZ
-    child1_at_face_3s=i_child( -min(0,iX),-min(0,iY),-min(0,iZ))
-  end function child1_at_face_3s
-  !==============================================================!
-  logical function is_not_at_face_vec(iDirC2F_D,iChild)
+  logical function is_not_at_face(iDirC2F_D,iChild)
     integer,dimension(3),intent(in)::iDirC2F_D
     integer,intent(in)::iChild
-    is_not_at_face_vec=any(iDirC2F_D/=0.and.&
+    is_not_at_face=any(iDirC2F_D/=0.and.&
          iShiftChild_ID(iChild,:)- &
-         iShiftChild_ID(child1_at_face_vec(iDirC2F_D),:)/=0)
-  end function is_not_at_face_vec
-  !==============================================================!
-  logical function is_not_at_face_3s(iX,iY,iZ,iChild)
-    integer,intent(in)::iX,iY,iZ,iChild
-    is_not_at_face_3s=any((/iX,iY,iZ/)/=0.and.&
-         iShiftChild_ID(iChild,:)- &
-         iShiftChild_ID(child1_at_face_3s(iX,iY,iZ),:)/=0)
-  end function is_not_at_face_3s
-  !==============================================================!
-  !==============Combined routines:  ============================!
-  subroutine get_position_shift_3s(&
-       iX,iY,iZ,iChild,IsAtFace,iShift_D)
-    integer,intent(in)::iX,iY,iZ,iChild
-    logical,intent(out)::IsAtFace
-    integer,intent(out),dimension(3)::iShift_D
-    !-----------------------------------------!
- 
-    iShift_D=0
-    IsAtFace=.not.is_not_at_face_3s(iX,iY,iZ,iChild)
-    if(IsAtFace)iShift_D=iShiftChild_ID(iChild,:) &
-         -iShiftChild_ID(Child1_at_face_3s(iX,iY,iZ),:)
-  end subroutine get_position_shift_3s
-  !==============================================================!
-  subroutine get_position_shift_vec(&
-       iDirC2F_D,iChild,IsAtFace,iShift_D)
-    integer,intent(in)::iDirC2F_D(3),iChild
-    logical,intent(out)::IsAtFace
-    integer,intent(out),dimension(3)::iShift_D
-    !-----------------------------------------!
- 
-    iShift_D=0
-    IsAtFace=.not.is_not_at_face_vec(iDirC2F_D,iChild)
-    if(IsAtFace)iShift_D=iShiftChild_ID(iChild,:) &
-         -iShiftChild_ID(Child1_at_face_vec(iDirC2F_D),:)
-  end subroutine get_position_shift_vec
+         iShiftChild_ID(child1_at_face(iDirC2F_D),:)/=0)
+  end function is_not_at_face
   !==============================================================
   !==============================================================!
   !=====================SET_INDICES==============================!
@@ -160,12 +94,12 @@ contains
     integer::iShift_D(3),iDirC2F_D(3)
     logical::IsFaseIndex_D(3)
     where(iDirS2R_D==+1)   !send UP
-       iMaxS_D=nCells   ; iMinS_D=iMaxS_D+1-nLayerS
+       iMaxS_D=nCells    ; iMinS_D=iMaxS_D+1-nLayerS
        iMaxR_D=0         ; iMinR_D=iMaxR_D+1-nLayerR
     end where
     where(iDirS2R_D==-1)   !send DOWN
        iMinS_D=1         ; iMaxS_D=iMinS_D-1+nLayerS
-       iMinR_D=nCells+1 ; iMaxR_D=iMinR_D-1+nLayerR
+       iMinR_D=nCells+1  ; iMaxR_D=iMinR_D-1+nLayerR
     end where
     select case(iLevelR) ! Indices along the face
     case(0)              ! Recv block is at the same level
@@ -176,7 +110,7 @@ contains
     case(-1)             ! Recv block is finer
        if(.not.present(iChild1))then
           iShift_D=iShiftChild_ID(iChild,:)-&
-               iShiftChild_ID(child1_at_face_vec(iDirS2R_D),:)
+               iShiftChild_ID(child1_at_face(iDirS2R_D),:)
        else
           iShift_D=iShiftChild_ID(iChild,:)-&
                iShiftChild_ID(iChild1,:)
@@ -200,7 +134,7 @@ contains
        if(.not.present(iChild1))then
           iDirC2F_D=-iDirS2R_D
           iShift_D=iShiftChild_ID(iChild,:)-&
-               iShiftChild_ID(child1_at_face_vec(iDirC2F_D),:)
+               iShiftChild_ID(child1_at_face(iDirC2F_D),:)
        else
           iShift_D=iShiftChild_ID(iChild,:)-&
                iShiftChild_ID(iChild1,:)
@@ -211,79 +145,5 @@ contains
        end where
     end select
   end subroutine set_indices
-  !===================================================================!
-  !The further routines are based on the order of children in the list!
-  !created by routines for finding neighbors                          !
-  subroutine refined_children_list(iX,iY,iZ,iChildren_I)
-    integer,intent(in)::iX,iY,iZ 
-    !Allowed values: -1,0,1. 
-    !(iX,iY,iZ) is the direction from the center of the COARSER block
-    !towards face (edge, corners), i.e. towards FINER neighbors.
-    
-    integer,dimension(4),intent(out)::iChildren_I
-    !The child number list for neighboring blocks
-    !-----------------------------------------------------
-    integer::i,j,k,lSubF,iChild2
-    lSubf=0;iChildren_I=NOBLK
-    do i=-min(0,iX),& !for iX=-1 all the nighbors are in the western part
-                     1-max(0,iX)! For iX=+1, in the eastern part
-       do j=-min(0,iY),&       ! For iY=-1, in the nothern part
-                     1-max(0,iY)! For iY=+1, in the southern part
-          do k=-min(0,iZ),&    ! For iZ=-1, in the top part
-                     1-max(0,iZ)! For iZ=-1, in the bottom part
-             !Part here means the part of the common parent octree block for 
-             !all the finer neighbors in the direction (iX,iY,iZ)
-             lSubF=lSubF+1; iChildren_I(lSubF)=i_child(i,j,k)
-          end do
-       end do
-    end do
-    if(.not.(iZ**2==1.and.iX**2+iY**2==0))return
-    !consider separatelely  Top_ or Bot_ face
-    iChild2=iChildren_I(2)
-    iChildren_I(2)=iChildren_I(3)
-    iChildren_I(3)=iChild2
-  end subroutine refined_children_list
-  !==============================================================!
-  subroutine get_position_subf_3s(iX,iY,iZ,iChild,IsAtFace,iSubF)
-    integer,intent(in)::iX,iY,iZ,iChild
-    logical,intent(out)::IsAtFace
-    integer,intent(out)::iSubF
-    !-----------------------------------------!
-    integer,dimension(4)::iChild_I
-    integer,dimension(1)::iLoc
-    iSubf=0
-    call refined_children_list(iX,iY,iZ,iChild_I)
-    IsAtFace=any(iChild_I==iChild)
-    if(.not.IsAtFace)return
-    iLoc=minloc(iChild_I,MASK=iChild_I==iChild)
-    iSubF=iLoc(1)
-  end subroutine get_position_subf_3s
-  !=============================================================!
-  subroutine get_position_subf_vec(iDirC2F_D,iChild,IsAtFace,iSubF)
-    integer,intent(in)::iDirC2F_D(3),iChild
-    logical,intent(out)::IsAtFace
-    integer,intent(out)::iSubF
-    !-----------------------------------------!
-    call get_position_subf_3s(iDirC2F_D(1),iDirC2F_D(2),&
-     iDirC2F_D(3),iChild,IsAtFace,iSubF)
-  end subroutine get_position_subf_vec
-  !==============================================================
-  !===============================TESTING PROCEDURES============!
-  !=test verifies that subfaces arrays constructed above is in 
-  !=accordance with tree_neighbors_across_pole=!
-  subroutine test_refined_neighbor(iX,iY,iZ,iChild_I)
-    use ModParallel,ONLY:NOBLK
-    integer,intent(in)::iX,iY,iZ,iChild_I(4)
-    integer::iChildrenTest_I(4)
-    !------------------------------------------------------------------------!
-    call refined_children_list(iX,iY,iZ,iChildrenTest_I)
-    if(any(iChildrenTest_I/=iChild_I))then
-       write(*,*)'Wrong refined children list in tree_neighbor_list'
-       write(*,*)'The positions of children in the list should be:',&
-            iChildrenTest_I
-       write(*,*)'Actual children list',iChild_I
-       call stop_mpi('Failed')
-    end if
-  end subroutine test_refined_neighbor
 end module ModCube
   

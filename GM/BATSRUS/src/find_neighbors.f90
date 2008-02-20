@@ -48,7 +48,6 @@ subroutine find_neighbors
         BLKneighborBLK  (i,j,k,:,iBlock) = iBlockOut_I
         BLKneighborCHILD(i,j,k,:,iBlock) = iChildOut_I
         BLKneighborLEV  (i,j,k,  iBlock) = iLevelOut
-        if(DoTest.and.iLevelOut==-1)call test_refined_neighbor(i,j,k,iChildOut_I)
      end do; end do; end do
   end do
 
