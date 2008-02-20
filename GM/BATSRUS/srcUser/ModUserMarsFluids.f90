@@ -357,6 +357,9 @@ contains
 
        end if !(true_cell?)
 
+       if (R_BLK(i,j,k,globalBLK)< 2.0*Rbody)&
+            State_VGB(Bx_:Bz_,i,j,k,globalBLK)=0.0
+
     end do; end do; end do
 
   end subroutine user_set_ICs
