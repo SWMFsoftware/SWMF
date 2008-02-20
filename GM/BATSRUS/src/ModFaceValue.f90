@@ -571,7 +571,9 @@ contains
                call get_faceZ_second(1,nI,1,nJ,nKFace,nKFace)
        endif
 
-       if(UseLogLimiter.and..not.DoLimitMomentum)then
+       if(UseLogLimiter &
+            .and..not.DoLimitMomentum &                     !^CFG IF BORISCORR
+            )then
           if(DoResChangeOnly)then
              if(neiLeast(iBlock)==+1) &
                   call logfaceX_to_faceX(1,1,1,nJ,1,nK)
