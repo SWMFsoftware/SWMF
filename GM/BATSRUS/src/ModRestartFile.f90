@@ -191,7 +191,7 @@ contains
     do iBlock = 1, nBlock
        if (.not.unusedBLK(iBlock)) call fix_block_geometry(iBlock)
     end do
-
+    call set_body_flag
     call timing_stop(NameSub)
 
   end subroutine read_restart_files
