@@ -94,6 +94,8 @@ module ModPhysics
 
   real :: PolarLatitude = 75.0, PolarTheta = 15.0*cDegToRad
 
+  real :: LowDensityRatio = 0.0001
+
   !^CFG IF SECONDBODY BEGIN
   !\
   ! General variables for the second body
