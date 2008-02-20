@@ -20,8 +20,7 @@ module ModUser
   character (len=*), parameter :: NameUserModule = &
        'Mars 4 Fluids MHD code, Dalal Najib'
 
-  real    :: CollisionCoefDim = 0.0, CollisionCoef
-  logical :: IsAnalytic = .false.
+  real    :: CollisionCoefDim = 1.0, CollisionCoef
 
 contains
 
@@ -34,13 +33,14 @@ contains
     use ModProcMH,  ONLY: iProc
     use ModPointImplicit, ONLY:  UsePointImplicit, IsPointImplSource, &
          IsPointImplMatrixSet, DsDu_VVC
-    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, Test_String, BlkTest, ProcTest
+    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, &
+         Test_String, iTest, jTest, kTest, BlkTest, ProcTest, n_step
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModAdvance, ONLY: B0XCell_BLK, B0YCell_BLK, B0ZCell_BLK
     use ModAdvance, ONLY: bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
     use ModGeometry,ONLY: vInv_CB
     use ModPhysics, ONLY: ElectronCharge, gm1, inv_gm1, &
-         Si2No_V, No2Si_V, UnitTemperature_, UnitT_
+         Si2No_V, No2Si_V, UnitTemperature_, UnitT_, BodyRho_I, BodyP_I
     use ModMain,    ONLY: x_, y_, z_
     use ModCoordTransform, ONLY: cross_product
 
@@ -54,8 +54,10 @@ contains
     real :: CoefBx, CoefBy, CoefBz, Coef, AverageTemp, TemperatureCoef, Heating
     real :: CollisionRate_II(nIonFluid, nIonFluid), CollisionRate
 
+    real :: RhoMin = 0.0, pMin = 0.0
+
     character (len=*), parameter :: NameSub = 'user_calc_sources'
-    logical :: DoTest, DoTestMe
+    logical :: DoTest, DoTestMe, DoTestCell
     !-----------------------------------------------------------------------
     if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
 
@@ -88,11 +90,20 @@ contains
 
     ! Do not add
     iFirstIons = 1
-    if(TypeFluid_I(1) == 'ion')iFirstIons = 2
+    if(TypeFluid_I(1) == 'ion')then
+       iFirstIons = 2
+       RhoMin = BodyRho_I(1) - sum(BodyRho_I(2:nFluid))
+       pMin   = BodyP_I(1) - sum(BodyP_I(2:nFluid))
+    end if
 
     do k=1,nK; do j=1,nJ; do i=1,nI
+
+       DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest
+      
        ! Extract conservative variables
        State_V = State_VGB(:,i,j,k,globalBLK)
+
+       if(DoTestCell)write(*,*) NameSub,' orig State_V=',State_V
 
        if(TypeFluid_I(1) == 'ion')then
           ! Get first fluid quantities
@@ -106,6 +117,11 @@ contains
                - sum(State_V(iRhoUzIon_I(2:nIonFluid)))
           State_V(P_) = State_V(P_) &
                - sum(State_V(iPIon_I(2:nIonFluid)))
+
+          if(State_V(Rho_) < RhoMin .or. State_V(P_)< pMin)then
+             State_V(Rho_)=RhoMin
+             State_V(P_)  =pMin
+          end if
        end if
 
        ! Total magnetic field
@@ -143,6 +159,24 @@ contains
        end if
        uPlusHallU_D = uPlus_D - InvNumDens*InvCharge*Current_D
 
+       if(DoTestCell .or. AverageTemp<=0.0)then
+          write(*,*) NameSub,' i,j,k,iBlock,iProc=',i,j,k,iBlock,iProc
+          write(*,*) NameSub,' State_V  =',State_V
+          write(*,*) NameSub,' iRhoIon_I=',iRhoIon_I
+          write(*,*) NameSub,' Rho(ions)=',State_V(iRhoIon_I)
+          write(*,*) NameSub,' MassFluid=',MassFluid_I
+          write(*,*) NameSub,' NumDens_I=',NumDens_I
+          write(*,*) NameSub,' Ux_I     =',Ux_I
+          write(*,*) NameSub,' Uy_I     =',Uy_I
+          write(*,*) NameSub,' Uz_I     =',Uz_I
+          write(*,*) NameSub,' Temp_I   =',Temp_I
+          write(*,*) NameSub,' uPlus_D    =',uPlus_D
+          write(*,*) NameSub,' Current_D  =',Current_D
+          write(*,*) NameSub,' AverageTemp=',AverageTemp
+          if(AverageTemp<=0.0) &
+               call stop_mpi(NameSub//': average temperature is non-positive')
+       end if
+
        TemperatureCoef = 1.0/(AverageTemp*sqrt(AverageTemp))
 
        CollisionRate = CollisionCoef
@@ -156,6 +190,11 @@ contains
           Force_D = &
                ElectronCharge*NumDens_I(iFluid)*cross_product(u_D, FullB_D) 
 
+          if(DoTestCell)then
+             write(*,*) NameSub,' iFluid=',iFluid
+             write(*,*) NameSub,' Hall Force=',Force_D
+          end if
+
           Heating = 0.0
 
           do jFluid = 1, nIonFluid
@@ -164,6 +203,7 @@ contains
              ! Add collisional term
              uIon2_D = (/ Ux_I(jFLuid),  Uy_I(jFluid), Uz_I(jFluid) /)
 
+             ! In low density regions make the fluids stick together
              if(  InvNumDens*NumDens_I(iFluid) < 0.01 .or. &
                   InvNumDens*NumDens_I(jFluid) < 0.01) then
                 CollisionRate = 100.0 * NumDens_I(iFluid) * NumDens_I(jFluid)
@@ -178,6 +218,20 @@ contains
              Heating = Heating + CollisionRate* &
                   ( 2*(Temp_I(jFluid) - Temp_I(iFluid)) &
                   + gm1*sum((uIon2_D - uIon_D)**2) )
+
+
+             if(DoTestCell)then
+                write(*,*) NameSub,'    jFluid=',jFluid
+                write(*,*) NameSub,'    CollisionRate=',CollisionRate
+                write(*,*) NameSub,'    Friction     =', &
+                     CollisionRate*(uIon2_D - uIon_D)
+                write(*,*) NameSub,'    Heat exchange=', &
+                     ( 2*(Temp_I(jFluid) - Temp_I(iFluid)) &
+                     + gm1*sum((uIon2_D - uIon_D)**2) )
+                write(*,*) NameSub,'    New Force_D  =',Force_D
+                write(*,*) NameSub,'    New Heating  =',Heating
+             end if
+
           end do
 
           Source_VC(iRhoUx_I(iFluid):iRhoUz_I(iFluid),i,j,k) = &
@@ -229,7 +283,7 @@ contains
        end do
     end if
 
-    IsPointImplMatrixSet = IsAnalytic
+    IsPointImplMatrixSet = .false.
 
   end subroutine user_init_point_implicit
 
