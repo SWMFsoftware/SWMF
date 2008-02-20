@@ -828,22 +828,8 @@ contains
     UnitUser_V(ScalarFirst_:ScalarLast_) = No2Io_V(UnitRho_)/MassSpecies_V
 
   end subroutine user_init_session
-
-  !========================================================================
-  !  SUBROUTINE USER_SET_ICs
-  ! (It will include set_ICs_global.f90
-  !!\
-  ! Calculates the initial conditions of the grid for the Global Heliosphere
-  !
-  ! Written by Merav Opher Feb 14  2002
-  !/
-  ! OMEGAbody is the rotation frequency of the Sun
-  !========================================================================
-
-  ! This subroutine allows the user to apply initial conditions to the domain
-  ! which are problem specific and cannot be created using the predefined
-  ! options in BATSRUS.
-  ! The variables specific to the problem are loaded from ModUser
+  
+  !======================================================================
 
   subroutine user_set_ICs
     use ModProcMH, ONLY : iProc
@@ -983,11 +969,11 @@ contains
   end subroutine user_set_ICs
 
   !========================================================================
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !THIS SUBROUTINE calculate the scale height of ion and neutal species and 
-  !intial boundary value of ion species
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine set_multiSp_ICs
+
+    ! Calculate the scale height of ion and neutal species and 
+    ! intial boundary value of ion species
+
     use ModMain
     use ModConst
     use ModIO
