@@ -32,20 +32,13 @@ module ModCube
        0,    0,    0,    0,   nJ/2, nJ/2, nJ/2, nJ/2,  & !j shift
        nK/2, nK/2, 0,    0,   0,    0,    nK/2, nK/2/),& !k shift
        (/8,3/))
+  integer,dimension(8),parameter::iBin2Child_I=(/4,1,5,8,3,2,6,7/)
   public::is_not_at_face         !iDirC2F_D,Child=>is_not_at_face
   public::set_indices            !iDirC2F_D=>cell indices for send/receive
   !-----------------------------------------------------------------------!
   public::iShiftChild_ID         
 contains
   !==============================================================!
-  integer function child1_at_face(iDirC2F_D) !iDirC2F_D=>Child1
-    integer,dimension(3),intent(in)::iDirC2F_D
-    integer,dimension(8),parameter::Bin2Child_I=(/4,1,5,8,3,2,6,7/)
-    !Transforms the binary number ix|iy|iz to the child number,
-    !such that iShiftChild_ID(iChild,:)/nCell2_D=(iX,iY,iZ)
-    child1_at_face=Bin2Child_I( -min(0,iDirC2F_D(1))*4&
-         -min(0,iDirC2F_D(2))*2-min(0,iDirC2F_D(3))+1)
-  end function child1_at_face
   !==============================================================!
   !=============is_not_at_face, child1_at_face===================!
   !In the following routines "face" means face, edge or corner    
@@ -65,9 +58,15 @@ contains
   logical function is_not_at_face(iDirC2F_D,iChild)
     integer,dimension(3),intent(in)::iDirC2F_D
     integer,intent(in)::iChild
+    integer::iBin,iChild1
+    iBin=1-&
+         (4*min(0,iDirC2F_D(1))+&
+          2*min(0,iDirC2F_D(2))+&
+            min(0,iDirC2F_D(3)))
+    iChild1=iBin2Child_I(iBin)
     is_not_at_face=any(iDirC2F_D/=0.and.&
          iShiftChild_ID(iChild,:)- &
-         iShiftChild_ID(child1_at_face(iDirC2F_D),:)/=0)
+         iShiftChild_ID(iChild1,:)/=0)
   end function is_not_at_face
   !==============================================================
   !==============================================================!
@@ -91,57 +90,80 @@ contains
     integer,intent(in)::iLevelR
     integer,intent(in),optional::iChild,iChild1,nExtraCell
     !------------------------------------------------------------!
-    integer::iShift_D(3),iDirC2F_D(3)
+    integer::iShift_D(3),iChild1Here,iBin
     logical::IsFaseIndex_D(3)
     where(iDirS2R_D==+1)   !send UP
-       iMaxS_D=nCells    ; iMinS_D=iMaxS_D+1-nLayerS
-       iMaxR_D=0         ; iMinR_D=iMaxR_D+1-nLayerR
+       iMaxS_D=nCells    
+       iMinS_D=iMaxS_D+1-nLayerS
+       iMaxR_D=0         
+       iMinR_D=iMaxR_D+1-nLayerR
     end where
     where(iDirS2R_D==-1)   !send DOWN
-       iMinS_D=1         ; iMaxS_D=iMinS_D-1+nLayerS
-       iMinR_D=nCells+1  ; iMaxR_D=iMinR_D-1+nLayerR
+       iMinS_D=1         
+       iMaxS_D=iMinS_D-1+nLayerS
+       iMinR_D=nCells+1  
+       iMaxR_D=iMinR_D-1+nLayerR
     end where
     select case(iLevelR) ! Indices along the face
     case(0)              ! Recv block is at the same level
        where(iDirS2R_D==0)
-          iMinS_D=1      ; iMaxS_D=nCells
-          iMinR_D=1      ; iMaxR_D=nCells
+          iMinS_D=1      
+          iMaxS_D=nCells
+          iMinR_D=1      
+          iMaxR_D=nCells
        end where
     case(-1)             ! Recv block is finer
        if(.not.present(iChild1))then
+          iBin=1-(&
+               4*min(0,iDirS2R_D(1))+&
+               2*min(0,iDirS2R_D(2))+&
+               min(0,iDirS2R_D(3)))
+          iChild1Here=iBin2Child_I(iBin)
           iShift_D=iShiftChild_ID(iChild,:)-&
-               iShiftChild_ID(child1_at_face(iDirS2R_D),:)
+               iShiftChild_ID(iChild1Here,:)
        else
           iShift_D=iShiftChild_ID(iChild,:)-&
                iShiftChild_ID(iChild1,:)
        end if
        if(.not.present(nExtraCell))then
           where(iDirS2R_D==0)
-             iMinS_D=1 + iShift_D ; iMaxS_D=nCell2_D + iShift_D
-             iMinR_D=1            ; iMaxR_D=nCells
+             iMinS_D=1 + iShift_D 
+             iMaxS_D=nCell2_D + iShift_D
+             iMinR_D=1            
+             iMaxR_D=nCells
           end where
        else
           where(iDirS2R_D==0.and.iShift_D==0)
-             iMinS_D=1            ; iMaxS_D=nCell2_D + nExtraCell
-             iMinR_D=1            ; iMaxR_D=nCells +2*nExtraCell
+             iMinS_D=1            
+             iMaxS_D=nCell2_D + nExtraCell
+             iMinR_D=1            
+             iMaxR_D=nCells +2*nExtraCell
           end where
           where(iDirS2R_D==0.and.iShift_D/=0)
-             iMinS_D=1 - nExtraCell + nCell2_D   ; iMaxS_D=nCells 
-             iMinR_D=1 - 2 * nExtraCell          ; iMaxR_D=nCells 
+             iMinS_D=1 - nExtraCell + nCell2_D   
+             iMaxS_D=nCells 
+             iMinR_D=1 - 2 * nExtraCell          
+             iMaxR_D=nCells 
           end where
        end if
     case(+1)    !Receiveng block is coarser
        if(.not.present(iChild1))then
-          iDirC2F_D=-iDirS2R_D
+          iBin=1-(&
+               4*min(0,-iDirS2R_D(1))+&
+               2*min(0,-iDirS2R_D(2))+&
+                 min(0,-iDirS2R_D(3)))
+          iChild1Here=iBin2Child_I(iBin)
           iShift_D=iShiftChild_ID(iChild,:)-&
-               iShiftChild_ID(child1_at_face(iDirC2F_D),:)
+               iShiftChild_ID(iChild1Here,:)
        else
           iShift_D=iShiftChild_ID(iChild,:)-&
                iShiftChild_ID(iChild1,:)
        end if
        where(iDirS2R_D==0)
-          iMinS_D=1             ; iMaxS_D=nCells 
-          iMinR_D=1 + iShift_D  ; iMaxR_D=nCell2_D + iShift_D
+          iMinS_D=1             
+          iMaxS_D=nCells 
+          iMinR_D=1 + iShift_D  
+          iMaxR_D=nCell2_D + iShift_D
        end where
     end select
   end subroutine set_indices
