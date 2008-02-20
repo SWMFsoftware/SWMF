@@ -15,10 +15,14 @@ module ModFaceValue
 
   real,             public :: BetaLimiter
   character(len=6), public :: TypeLimiter = 'minmod'
+  logical,          public :: UseLogRhoLimiter=.false.
+  logical,          public :: UseLogPLimiter=.false.
 
   public :: calc_face_value, correct_monotone_restrict
 
   ! Local variables:
+  logical :: UseLogLimiter=.false., UseLogLimiter_V(nVar)=.false.
+
   real, parameter :: cSixth=cHalf*cThird
 
   ! Maximum length of the stencil in 1D
@@ -35,6 +39,8 @@ module ModFaceValue
   real   :: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
   real   :: Primitive_VI(1:nVar,-1:MaxIJK+2)
   logical:: IsTrueCell_I(-1:MaxIJK+2)
+
+  integer :: iVar
 
 contains
   !===========================================================================
@@ -372,7 +378,7 @@ contains
 
 
     logical::DoTest,DoTestMe
-    integer:: i,j,k,iSide
+    integer:: i,j,k,iSide,iFluid
     real:: RhoInv
 
     real:: RhoC2Inv, BxFull, ByFull, BzFull, B2Full,& !^CFG IF BORISCORR
@@ -386,6 +392,21 @@ contains
        call set_oktest('calc_face_value', DoTest, DoTestMe)
     else
        DoTest=.false.; DoTestMe=.false.
+    end if
+
+    UseLogLimiter   = nOrder == 2 .and. (UseLogRhoLimiter .or. UseLogPLimiter)
+    UseLogLimiter_V = .false.
+    if(UseLogLimiter)then
+       if(UseLogRhoLimiter)then
+          do iFluid = 1, nFluid
+             UseLogLimiter_V(iRho_I(iFluid)) = .true.
+          end do
+       end if
+       if(UseLogPLimiter)then
+          do iFluid = 1, nFluid
+             UseLogLimiter_V(iP_I(iFluid))   = .true.
+          end do
+       end if
     end if
 
     if(.not.DoResChangeOnly & !In order not to call it twice
@@ -549,9 +570,80 @@ contains
           if(neiLtop(iBlock)==+1) &
                call get_faceZ_second(1,nI,1,nJ,nKFace,nKFace)
        endif
+
+       if(UseLogLimiter.and..not.DoLimitMomentum)then
+          if(DoResChangeOnly)then
+             if(neiLeast(iBlock)==+1) &
+                  call logfaceX_to_faceX(1,1,1,nJ,1,nK)
+             if(neiLwest(iBlock)==+1) &
+                  call logfaceX_to_faceX(nIFace,nIFace,1,nJ,1,nK)
+             if(neiLsouth(iBlock)==+1) &
+                  call logfaceY_to_faceY(1,nI,1,1,1,nK)
+             if(neiLnorth(iBlock)==+1) &
+                  call logfaceY_to_faceY(1,nI,nJFace,nJFace,1,nK)
+             if(neiLbot(iBlock)==+1) &
+                  call logfaceZ_to_faceZ(1,nI,1,nJ,1,1)
+             if(neiLtop(iBlock)==+1) &
+                  call logfaceZ_to_faceZ(1,nI,1,nJ,nKFace,nKFace)
+          else
+             call logfaceX_to_faceX(1,nIFace,jMinFaceX,jMaxFaceX, &
+                  kMinFaceX,kMaxFaceX)
+             call logfaceY_to_faceY(iMinFaceY,iMaxFaceY,1,nJFace, &
+                  kMinFaceY,kMaxFaceY)
+             call logfaceZ_to_faceZ(iMinFaceZ,iMaxFaceZ, &
+                  jMinFaceZ,jMaxFaceZ,1,nKFace)
+          end if
+       end if
+
     end select  !end second order
 
   contains
+
+    !==========================================================================
+    subroutine logfaceX_to_faceX(iMin,iMax,jMin,jMax,kMin,kMax)
+
+      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      !------------------------------------------------------------------------
+      do iVar=1,nVar
+         if(.not.UseLogLimiter_V(iVar))CYCLE
+
+         LeftState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              exp(LeftState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
+         RightState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              exp(RightState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
+      end do
+
+    end subroutine logfaceX_to_faceX
+    !==========================================================================
+    subroutine logfaceY_to_faceY(iMin,iMax,jMin,jMax,kMin,kMax)
+
+      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      !------------------------------------------------------------------------
+      do iVar=1,nVar
+         if(.not.UseLogLimiter_V(iVar))CYCLE
+
+         LeftState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              exp(LeftState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
+         RightState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              exp(RightState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
+      end do
+
+    end subroutine logfaceY_to_faceY
+    !==========================================================================
+    subroutine logfaceZ_to_faceZ(iMin,iMax,jMin,jMax,kMin,kMax)
+
+      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      !------------------------------------------------------------------------
+      do iVar=1,nVar
+         if(.not.UseLogLimiter_V(iVar))CYCLE
+
+         LeftState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              exp(LeftState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
+         RightState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              exp(RightState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax))
+      end do
+
+    end subroutine logfaceZ_to_faceZ
     !==========================================================================
     subroutine calc_primitives_MHD
       use ModMultiFluid
@@ -563,6 +655,12 @@ contains
          RhoInv=cOne/Primitive_VG(iRho,i,j,k)
          Primitive_VG(iUx:iUz,i,j,k)=RhoInv*Primitive_VG(iRhoUx:iRhoUz,i,j,k)
       end do
+      if(UseLogLimiter)then
+         do iVar=1,nVar
+            if(UseLogLimiter_V(iVar)) &
+                 Primitive_VG(iVar,i,j,k) = log(Primitive_VG(iVar,i,j,k))
+         end do
+      end if
     end subroutine calc_primitives_MHD
     !==========================================================================
     !^CFG IF BORISCORR BEGIN
@@ -602,6 +700,7 @@ contains
       !^CFG IF BORISCORR BEGIN
       if(DoLimitMomentum)call BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
       !^CFG END BORISCORR
+
     end subroutine get_faceX_first
     !========================================================================
     subroutine get_faceY_first(iMin,iMax,jMin,jMax,kMin,kMax)

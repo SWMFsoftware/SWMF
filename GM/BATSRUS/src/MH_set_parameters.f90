@@ -32,7 +32,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModMPCells,       ONLY: iCFExchangeType,DoOneCoarserLayer
   use ModFaceValue,     ONLY: UseTvdResChange, UseAccurateResChange, &
        DoLimitMomentum, &                              !^CFG IF BORISCORR
-       BetaLimiter, TypeLimiter
+       BetaLimiter, TypeLimiter, UseLogRhoLimiter, UseLogPLimiter
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
   use ModUser,          ONLY: user_read_inputs, user_init_session, &
@@ -1101,6 +1101,9 @@ subroutine MH_set_parameters(TypeAction)
         else
            call read_var('LimiterBeta', BetaLimiter)
         end if
+     case('#LIMITER')
+        call read_var('UseLogRhoLimiter', UseLogRhoLimiter)
+        call read_var('UseLogPLimiter',   UseLogPLimiter)
      case('#USERS7')
         call read_var('UseRS7',UseRS7)
      case("#NONCONSERVATIVE")
