@@ -406,6 +406,11 @@ subroutine write_plot_common(ifile)
            write(unit_tmp,*) iTime_I(1:7),' year mo dy hr mn sc msc'        
            write(unit_tmp,'(2(1pe13.5),a)') thetaTilt*180.0/cPi, 0.0,  &
                                             ' thetatilt[deg] phitilt[deg]'
+           if (index(plot_type1,'sph')>0) then
+              write(unit_tmp,'(es13.5,a)')rplot,' rplot'
+              if (i==1) write(unit_tmp,'(a)')'Northern Hemisphere'
+              if (i==2) write(unit_tmp,'(a)')'Southern Hemisphere'
+           end if
         case('idl')
            if(plot_dimensional(ifile)) then
               write(unit_tmp,'(6(1pe18.10),a)') &
@@ -428,16 +433,8 @@ subroutine write_plot_common(ifile)
            write(unit_tmp,'(a)')trim(unitstr_IDL)
            write(unit_tmp,'(l8,a)')save_binary,' save_binary'
            if(save_binary)write(unit_tmp,'(i8,a)')nByteReal,' nByteReal'
-           if(UseCovariant)write(unit_tmp,'(a)')TypeGeometry 
+           write(unit_tmp,'(a)')TypeGeometry
         end select
-        if (index(plot_type1,'sph')>0) then
-           write(unit_tmp,'(1pe13.5,a)')rplot,' rplot'
-           if (i==1) then
-              write(unit_tmp,'(a)')'Northern Hemisphere'
-           else 
-              write(unit_tmp,'(a)')'Southern Hemisphere'
-           end if
-        end if
         close(unit_tmp)
      end do
   end if
