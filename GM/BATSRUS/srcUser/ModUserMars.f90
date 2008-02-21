@@ -763,22 +763,7 @@ contains
 
   end subroutine user_init_session
 
-
-  !========================================================================
-  !  SUBROUTINE USER_SET_ICs
-  ! (It will include set_ICs_global.f90
-  !!\
-  ! Calculates the initial conditions of the grid for the Global Heliosphere
-  !
-  ! Written by Merav Opher Feb 14  2002
-  !/
-  ! OMEGAbody is the rotation frequency of the Sun
-  !========================================================================
-
-  ! This subroutine allows the user to apply initial conditions to the domain
-  ! which are problem specific and cannot be created using the predefined
-  ! options in BATSRUS.
-  ! The variables specific to the problem are loaded from ModUser
+  !===========================================================================
 
   subroutine user_set_ICs
     use ModProcMH, ONLY : iProc
@@ -793,7 +778,6 @@ contains
     real :: B4, dB4dx, zeta4, q4, epsi4, plobe, &
          XFace, YFace, ZFace
     integer :: i,j,k
-    integer:: iBoundary
     logical::okTestMe=.false., okTest=.false.
     !-------------------------------------------------------------------------
     if(globalBLK==BLKtest .and. iProc==PROCtest)then
@@ -823,7 +807,7 @@ contains
                exp(-(R_BLK(i,j,k,globalBLK)-Rbody)&
                /HNuSpecies_I(:))
        else
-          nDenNuSpecies_CBI(i,j,k,globalBLK,1:nNuSPecies)=0.0
+          nDenNuSpecies_CBI(i,j,k,globalBLK,:)=0.0
        end if
     end do; end do; end do
 
@@ -867,7 +851,8 @@ contains
     do k=1,nK; do j=1,nJ; do i=1,nI
        if(UseHotO) then
           nu_BLK(i,j,k,globalBLK)=&
-               sum(nDenNuSpecies_CBI(i,j,k,globalBLK,:))*nu0          
+               sum(nDenNuSpecies_CBI(i,j,k,globalBLK,:))*nu0
+
           nDenNuSpecies_CBI(i,j,k,globalBLK,O_)= &
                nDenNuSpecies_CBI(i,j,k,globalBLK,O_)+ &
                nDenNuSpecies_CBI(i,j,k,globalBLK,Ox_)
