@@ -678,15 +678,15 @@ contains
     !calculate neutral density
     do k=1,nK; do j=1,nJ; do i=1,nI
        if(R_BLK(i,j,k,globalBLK)<= Rbody)then
-          nDenNuSpecies_CBI(i,j,k,globalBLK,1:nNuSPecies)=&
-               BodynDenNuSpecies_I(1:nNuSPecies)
+          nDenNuSpecies_CBI(i,j,k,globalBLK,:)=&
+               BodynDenNuSpecies_I(:)
        else if(R_BLK(i,j,k,globalBLK)< 2.0) then
-          nDenNuSpecies_CBI(i,j,k,globalBLK,1:nNuSPecies)=&
-               BodynDenNuSpecies_I(1:nNuSPecies)* & 
+          nDenNuSpecies_CBI(i,j,k,globalBLK,:)=&
+               BodynDenNuSpecies_I(:)* & 
                exp(-(R_BLK(i,j,k,globalBLK)-Rbody)&
-               /HNuSpecies_I(1:nNuSpecies))
+               /HNuSpecies_I(:))
        else
-          nDenNuSpecies_CBI(i,j,k,globalBLK,1:nNuSPecies)=0.0
+          nDenNuSpecies_CBI(i,j,k,globalBLK,:)=0.0
        end if
     end do; end do; end do
     call neutral_density_averages
@@ -700,6 +700,7 @@ contains
        cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,globalBLK)))*&
             x_BLK(i,j,k,globalBLK)/max(R_BLK(i,j,k,globalBLK),1.0e-3)&
             +5.0e-4
+
        Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,globalBLK,1:MaxNuSpecies)*&
             CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
             6.0e-3)/cosSZA
@@ -904,6 +905,7 @@ contains
     CoeffSpecies_II(Op_,CO2p_)=ReactionRate_I(CO2p_O__Op_CO2_)
 
     !ion density at the body
+    CrossSection_I=CrossSectionDim_I*No2Io_V(unitN_)*No2Si_V(unitX_)*1.0e2
     Productrate =1.0
     BodyRhoSpecies_I(Hp_)=SW_rho*0.1
 
