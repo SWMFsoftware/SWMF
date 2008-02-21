@@ -776,6 +776,7 @@ contains
             uLeft_D, uRight_D, DeltaBnL, DeltaBnR,     &
             DissipationFlux_V, cMax, Unormal_I(1),     &
             IsBoundary, .false.)
+       Unormal_I=Unormal_I(1)
     end if
     if(UseRS7 .or. UseLindeFix)then
        ! Sokolov's algorithm
@@ -1410,7 +1411,8 @@ contains
        StateCons_V, Flux_V, Un_I, En)
 
     use ModMultiFluid
-    use ModAdvance, ONLY: eFluid_
+    use ModMain,    ONLY: UseHyperbolicDivb, SpeedHyp2
+    use ModAdvance, ONLY: Hyp_, eFluid_
 
     real,    intent(in) :: State_V(nVar)       ! input primitive state
     real,    intent(in) :: B0x, B0y, B0z       ! B0
@@ -1419,11 +1421,26 @@ contains
     real,    intent(out):: Un_I(nFluid+1)      ! normal velocities
     real,    intent(out):: En                  ! normal electric field
 
-    real :: Un, HallUn
+    real:: Hyp, Bx, By, Bz, FullBx, FullBy, FullBz, Bn, B0n, FullBn, Un, HallUn
+    real:: FluxBx, FluxBy, FluxBz
     !--------------------------------------------------------------------------
 
     ! Calculate conservative state
     StateCons_V(1:nVar)  = State_V
+
+    ! Make sure normal electric field is initialized
+    En = 0.0
+
+    ! Set magnetic variables
+    Bx = State_V(Bx_)
+    By = State_V(By_)
+    Bz = State_V(Bz_)
+    FullBx  = Bx + B0x
+    FullBy  = By + B0y
+    FullBz  = Bz + B0z
+    Bn      = Bx*AreaX  + By*AreaY  + Bz*AreaZ
+    B0n     = B0x*AreaX + B0y*AreaY + B0z*AreaZ
+    FullBn  = B0n + Bn
 
     if(TypeFluid_I(1)=='ion')then
        ! single ion fluid MHD (possibly with extra neutrals)
@@ -1432,7 +1449,6 @@ contains
           call get_boris_flux
        else                       !^CFG END BORISCORR
           call get_mhd_flux
-          En = 0.0
        end if                     !^CFG IF BORISCORR
        Un_I(1) = Un
     end if
@@ -1448,6 +1464,36 @@ contains
        end do
     end if
 
+    ! These terms are common for the induction equation
+    ! If the first fluid is the total fluid, 
+    ! the total energy density is also updated
+    if(Eta > 0.0)then                          !^CFG IF DISSFLUX BEGIN
+       ! Add curl Eta.J to induction equation
+       FluxBx = AreaY*EtaJz - AreaZ*EtaJy
+       FluxBy = AreaZ*EtaJx - AreaX*EtaJz
+       FluxBz = AreaX*EtaJy - AreaY*EtaJx
+
+       Flux_V(Bx_) = Flux_V(Bx_) + FluxBx
+       Flux_V(By_) = Flux_V(By_) + FluxBy
+       Flux_V(Bz_) = Flux_V(Bz_) + FluxBz
+
+       ! add B.dB/dt term to energy equation
+       if(TypeFluid_I(1)=='ion') Flux_V(Energy_) = &
+            Flux_V(Energy_) + Bx*FluxBx + By*FluxBy + Bz*FluxBz
+    end if                                     !^CFG END DISSFLUX
+
+    if(UseHyperbolicDivb)then
+       Hyp  = State_V(Hyp_)
+
+       Flux_V(Bx_) = Flux_V(Bx_) + AreaX*Hyp
+       Flux_V(By_) = Flux_V(By_) + AreaY*Hyp
+       Flux_V(Bz_) = Flux_V(Bz_) + AreaZ*Hyp
+       Flux_V(Hyp_) = SpeedHyp2*FullBn
+
+       if(TypeFluid_I(1)=='ion') Flux_V(Energy_) = &
+            Flux_V(Energy_) + Bn*Hyp
+    end if
+
     ! Set the normal electron velocity used for Hall MHD and/or 
     ! the electron pressure source term
     Un_I(eFluid_) = HallUn
@@ -1461,10 +1507,9 @@ contains
       use ModVarIndexes
 
       ! Variables for conservative state and flux calculation
-      real :: Rho, Ux, Uy, Uz, Bx, By, Bz, p, e, FullBx, FullBy, FullBz, FullBn
+      real :: Rho, Ux, Uy, Uz, p, e
       real :: B2, FullB2, pTotal, pTotal2, UDotB
       real :: Ex, Ey, Ez, E2Half
-      real :: Bn, B0n
       integer :: iVar
       !-----------------------------------------------------------------------
 
@@ -1473,16 +1518,9 @@ contains
       Ux      = State_V(Ux_)
       Uy      = State_V(Uy_)
       Uz      = State_V(Uz_)
-      Bx      = State_V(Bx_)
-      By      = State_V(By_)
-      Bz      = State_V(Bz_)
       p       = State_V(p_)
 
       B2      = Bx**2 + By**2 + Bz**2
-
-      FullBx  = Bx + B0x
-      FullBy  = By + B0y
-      FullBz  = Bz + B0z
 
       ! Electric field divided by speed of light: 
       ! E= - U x B / c = (B x U)/c
@@ -1512,10 +1550,7 @@ contains
       pTotal2 = pTotal + E2Half
 
       ! Normal direction
-      Un     = Ux*AreaX  + Uy*AreaY  + Uz*AreaZ
-      B0n    = B0x*AreaX + B0y*AreaY + B0z*AreaZ
-      Bn     = Bx*AreaX  + By*AreaY  + Bz*AreaZ
-      FullBn = B0n + Bn
+      Un     = Ux*AreaX + Uy*AreaY + Uz*AreaZ
       En     = Ex*AreaX + Ey*AreaY + Ez*AreaZ
 
       ! f_i[rho]=m_i
@@ -1554,24 +1589,18 @@ contains
     subroutine get_mhd_flux
 
       use ModPhysics, ONLY: inv_gm1, inv_c2LIGHT
-      use ModMain,    ONLY: UseHyperbolicDivb, SpeedHyp2
       use ModVarIndexes
-      use ModAdvance, ONLY: Hyp_, Pe_, UseElectronPressure
+      use ModAdvance, ONLY: Pe_, UseElectronPressure
 
       ! Variables for conservative state and flux calculation
-      real :: Rho, Ux, Uy, Uz, Bx, By, Bz, p, e, FullBx, FullBy, FullBz, FullBn
+      real :: Rho, Ux, Uy, Uz, p, e
       real :: HallUx, HallUy, HallUz, InvRho
-      real :: FluxBx, FluxBy, FluxBz
-      real :: Bn, B0n
       real :: B2, B0B1, pTotal
       real :: Gamma2                           !^CFG IF SIMPLEBORIS
       integer :: iVar
 
       real :: InvNumDens, StateTmp_V(nVar), UxPlus, UyPlus, UzPlus, UnPlus
       real, dimension(nIonFluid) :: NumDens_I, InvRho_I, Ux_I, Uy_I, Uz_I
-
-      real    :: Hyp
-
       !-----------------------------------------------------------------------
 
       ! Extract primitive variables
@@ -1579,9 +1608,6 @@ contains
       Ux      = State_V(Ux_)
       Uy      = State_V(Uy_)
       Uz      = State_V(Uz_)
-      Bx      = State_V(Bx_)
-      By      = State_V(By_)
-      Bz      = State_V(Bz_)
       p       = State_V(p_)
 
       B2      = Bx**2 + By**2 + Bz**2
@@ -1596,19 +1622,11 @@ contains
       StateCons_V(Energy_) = e
 
       ! Calculate some intermediate values for flux calculations
-
-      FullBx  = Bx + B0x
-      FullBy  = By + B0y
-      FullBz  = Bz + B0z
-
       B0B1    = B0x*Bx + B0y*By + B0z*Bz
       pTotal  = p + 0.5*B2 + B0B1
 
       ! Normal direction
       Un     = Ux*AreaX  + Uy*AreaY  + Uz*AreaZ
-      B0n    = B0x*AreaX + B0y*AreaY + B0z*AreaZ
-      Bn     = Bx*AreaX  + By*AreaY  + Bz*AreaZ
-      FullBn = B0n + Bn
 
       if(UseMultiIon)then
          ! Calculate charge density averaged velocity U*Plus
@@ -1701,31 +1719,6 @@ contains
               Un*(pTotal + e) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)     
       end if
 
-      if(UseHyperbolicDivb)then
-         Hyp  = State_V(Hyp_)
-
-         Flux_V(Bx_) = Flux_V(Bx_) + AreaX*Hyp
-         Flux_V(By_) = Flux_V(By_) + AreaY*Hyp
-         Flux_V(Bz_) = Flux_V(Bz_) + AreaZ*Hyp
-         Flux_V(Energy_) = Flux_V(Energy_) + Bn*Hyp
-
-         Flux_V(Hyp_) = SpeedHyp2*FullBn
-      end if
-
-      if(Eta > 0.0)then                          !^CFG IF DISSFLUX BEGIN
-         ! Add curl Eta.J to induction equation
-         FluxBx = AreaY*EtaJz - AreaZ*EtaJy
-         FluxBy = AreaZ*EtaJx - AreaX*EtaJz
-         FluxBz = AreaX*EtaJy - AreaY*EtaJx
-
-         Flux_V(Bx_) = Flux_V(Bx_) + FluxBx
-         Flux_V(By_) = Flux_V(By_) + FluxBy
-         Flux_V(Bz_) = Flux_V(Bz_) + FluxBz
-
-         ! add B.dB/dt term to energy equation
-         Flux_V(Energy_) = Flux_V(Energy_) + Bx*FluxBx + By*FluxBy + Bz*FluxBz
-      end if                                     !^CFG END DISSFLUX
-
       ! f_i[scalar] = Un*scalar
       do iVar = ScalarFirst_, ScalarLast_
          Flux_V(iVar) = Un*State_V(iVar)
@@ -1751,7 +1744,6 @@ contains
       real :: NumDens_I(nIonFluid), InvNumDens
       real :: UxPlus, UyPlus, UzPlus
       real :: HallUx, HallUy, HallUz
-      real :: FullBx, FullBy, FullBz, FullBn
       !-----------------------------------------------------------------------
 
       ! calculate number densities
@@ -1763,17 +1755,17 @@ contains
       UyPlus = InvNumDens*sum(NumDens_I*State_V(iUyIon_I))
       UzPlus = InvNumDens*sum(NumDens_I*State_V(iUzIon_I))
 
-      HallUx = UxPlus - HallJx*InvNumDens
-      HallUy = UyPlus - HallJy*InvNumDens
-      HallUz = UzPlus - HallJz*InvNumDens
+      if(HallCoeff > 0.0)then
+         HallUx = UxPlus - HallJx*InvNumDens
+         HallUy = UyPlus - HallJy*InvNumDens
+         HallUz = UzPlus - HallJz*InvNumDens
+      else
+         HallUx = UxPlus
+         HallUy = UyPlus
+         HallUz = UzPlus
+      end if
 
       HallUn = AreaX*HallUx + AreaY*HallUy + AreaZ*HallUz
-
-      FullBx  = State_V(Bx_) + B0x
-      FullBy  = State_V(By_) + B0y
-      FullBz  = State_V(Bz_) + B0z
-
-      FullBn  = FullBx*AreaX + FullBy*AreaY + FullBz*AreaZ
 
       Flux_V(Bx_) = HallUn*FullBx - HallUx*FullBn
       Flux_V(By_) = HallUn*FullBy - HallUy*FullBn
@@ -1787,13 +1779,6 @@ contains
          write(*,*)'B0x,y,z   =',B0x,B0y,B0z
          write(*,*)'Flux(Bxyz)=',Flux_V(Bx_:Bz_)
       end if
-
-      if(Eta > 0.0)then                          !^CFG IF DISSFLUX BEGIN
-         ! Add curl Eta.J to induction equation
-         Flux_V(Bx_) = Flux_V(Bx_) + AreaY*EtaJz - AreaZ*EtaJy
-         Flux_V(By_) = Flux_V(By_) + AreaZ*EtaJx - AreaX*EtaJz
-         Flux_V(Bz_) = Flux_V(Bz_) + AreaX*EtaJy - AreaY*EtaJx
-      end if                                     !^CFG END DISSFLUX
 
 !!! add gradient of electron pressure here !!!
 
