@@ -165,7 +165,7 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
         else
            do iVar=1,nPlotVar
               Plot_V(iVar) = PlotVar(i,j,k,iVar)
-              if(abs(Plot_V(iVar)) < 1.0e-99) Plot_V(iVar) = 0.0
+              if(abs(Plot_V(iVar)) < 1.0D-99) Plot_V(iVar) = 0.0
            end do
            write(unit_tmp,'(50(1pe13.5))') &
                 DxBlockOut, x, y, z, Plot_V(1:nPlotVar)
@@ -221,7 +221,7 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
                  write(unit_tmp)DxBlockOut,x,y,z,Plot_V(1:nPlotVar)
               else
                  do iVar=1,nPlotVar
-                    if(abs(Plot_V(iVar)) < 1.0E-99)Plot_V(iVar)=0.0
+                    if(abs(Plot_V(iVar)) < 1.0D-99)Plot_V(iVar)=0.0
                  end do
                  write(unit_tmp,'(50es13.5)')DxBlockOut,x,y,z,&
                       Plot_V(1:nPlotVar)
