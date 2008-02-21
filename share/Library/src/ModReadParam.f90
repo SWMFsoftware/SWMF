@@ -486,16 +486,13 @@ contains
 
   !===========================================================================
 
-  subroutine read_echo(IsSame,Name)
+  subroutine read_echo(Name)
 
-    logical, intent(in) :: IsSame
     character (len=*), intent(in)    :: Name
     !-------------------------------------------------------------------------
 
     if(index(StringLine,Name)<1) &
          StringLine=trim(StringLine)//char(9)//char(9)//Name
-    if(IsSame) &
-         StringLine=trim(StringLine)//' (default/unchanged)'
     write(iIoUnit,'(a)') trim(StringPrefix)//trim(StringLine)
 
   end subroutine read_echo
@@ -542,7 +539,7 @@ contains
     ! Read a string variable
     ! Convert to upper or lower case if required.
     ! Arguments
-    character (len=*), intent(inout):: StringVar
+    character (len=*), intent(out)  :: StringVar
     integer, optional, intent(out)  :: iError
     logical, optional, intent(in)   :: IsUpperCase, IsLowerCase
     !-------------------------------------------------------------------------
@@ -565,14 +562,14 @@ contains
     ! Convert to upper or lower case if required.
     ! Arguments
     character (len=*), intent(in)   :: Name
-    character (len=*), intent(inout):: StringVar
+    character (len=*), intent(out)  :: StringVar
     integer, optional, intent(out)  :: iError
     logical, optional, intent(in)   :: IsUpperCase, IsLowerCase
     !-------------------------------------------------------------------------
 
     call read_line_param('character',Name,iError)
 
-    if(DoEcho)call read_echo(StringParam==StringVar,Name)
+    if(DoEcho)call read_echo(Name)
 
     StringVar=StringParam
 
@@ -589,7 +586,7 @@ contains
  
   subroutine read_integer(IntVar,iError)
     !OUTPUT ARGUMENTS:
-    integer,           intent(inout):: IntVar
+    integer,           intent(out)  :: IntVar
     integer, optional, intent(out)  :: iError
     !-------------------------------------------------------------------------
     call read_var_i(' ',IntVar,iError)
@@ -603,7 +600,7 @@ contains
     !INPUT ARGUMENTS:
     character (len=*), intent(in)   :: Name
     !OUTPUT ARGUMENTS:
-    integer,           intent(inout):: IntVar
+    integer,           intent(out)  :: IntVar
     integer, optional, intent(out)  :: iError
 
     !DESCRIPTION:
@@ -626,7 +623,7 @@ contains
 
     read(StringParam,*,iostat=iReadError) IntTmp
     if(iReadError/=0) call read_error('integer',Name,iError)
-    if(DoEcho)        call read_echo(IntTmp==IntVar,Name)
+    if(DoEcho)        call read_echo(Name)
     IntVar=IntTmp
 
   end subroutine read_var_i
@@ -636,7 +633,7 @@ contains
   subroutine read_real(RealVar,iError)
     ! Read a real variable
     ! Arguments
-    real, intent(inout)             :: RealVar
+    real, intent(out)               :: RealVar
     integer, optional, intent(out)  :: iError
     !-------------------------------------------------------------------------
     call read_var_r(' ',RealVar,iError)
@@ -650,7 +647,7 @@ contains
     
     ! Arguments
     character (len=*), intent(in)   :: Name
-    real, intent(inout)             :: RealVar
+    real, intent(out)               :: RealVar
     integer, optional, intent(out)  :: iError
 
     ! Local variable
@@ -674,7 +671,7 @@ contains
        if(Denominator == 0.0) call read_error('zero denominator',Name,iError)
        RealTmp = Numerator / Denominator
     end if
-    if(DoEcho)call read_echo(RealTmp==RealVar,Name)
+    if(DoEcho)call read_echo(Name)
     RealVar=RealTmp
 
   end subroutine read_var_r
@@ -684,7 +681,7 @@ contains
   subroutine read_logical(IsLogicVar,iError)
     ! Read a logical variable
     ! Arguments
-    logical, intent(inout)          :: IsLogicVar
+    logical, intent(out)            :: IsLogicVar
     integer, optional, intent(out)  :: iError
     !-------------------------------------------------------------------------
     call read_var_l(' ',IsLogicVar,iError)
@@ -698,7 +695,7 @@ contains
 
     ! Arguments
     character (len=*), intent(in)   :: Name
-    logical, intent(inout)          :: IsLogicVar
+    logical, intent(out)            :: IsLogicVar
     integer, optional, intent(out)  :: iError
 
     ! Local variable
@@ -710,7 +707,7 @@ contains
 
     read(StringParam,*,iostat=iReadError) IsLogicTmp
     if(iReadError/=0)call read_error('logical',Name,iError)
-    if(DoEcho)call        read_echo(IsLogicTmp.eqv.IsLogicVar,Name)
+    if(DoEcho)call        read_echo(Name)
     IsLogicVar=IsLogicTmp
 
   end subroutine read_var_l
