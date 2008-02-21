@@ -13,7 +13,7 @@ module ModFaceValue
   logical, public :: UseTvdResChange      = .true.
   logical, public :: DoLimitMomentum      = .false.  !^CFG IF BORISCORR
 
-  real,             public :: BetaLimiter
+  real,             public :: BetaLimiter = 1.0
   character(len=6), public :: TypeLimiter = 'minmod'
   logical,          public :: UseLogRhoLimiter=.false.
   logical,          public :: UseLogPLimiter=.false.
@@ -23,7 +23,7 @@ module ModFaceValue
   ! Local variables:
   logical :: UseLogLimiter=.false., UseLogLimiter_V(nVar)=.false.
 
-  real, parameter :: cSixth=cHalf*cThird
+  real, parameter :: cSixth=1./6.
 
   ! Maximum length of the stencil in 1D
   integer,parameter:: MaxIJK= max(nI,nJ,nK)
@@ -32,7 +32,7 @@ module ModFaceValue
   integer, parameter:: Lo2_=nVar+1, Hi2_=nVar+nVar, Lo3_=Hi2_+1, Hi3_=nVar+Hi2_
 
   ! local constant
-  real, parameter   :: cTwoThird = cTwo*cThird
+  real, parameter   :: cTwoThird = 2./3.
 
   ! Locally set variables
   real   :: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
