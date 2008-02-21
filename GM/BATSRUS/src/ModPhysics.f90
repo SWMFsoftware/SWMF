@@ -108,7 +108,7 @@ module ModPhysics
 
   ! Variables for two-state shock tube problems
   logical :: UseShockTube = .false.
-  real :: ShockLeftState_V(nVar), ShockRightState_V(nVar)
+  real :: ShockLeftState_V(nVar)=0.0, ShockRightState_V(nVar)=0.0
   real :: ShockPosition = 0.0, ShockSlope = 0.0
 
   ! State for the boundary conditions
