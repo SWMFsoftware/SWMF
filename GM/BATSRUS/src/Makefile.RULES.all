@@ -19,10 +19,11 @@ $OS eq "Linux" and $Compiler eq "ifort" and $Equation =~ /Mars|Venus|Titan/i
 $OS eq "IRIX64" and $Compiler eq "f90"
 	${COMPILE.f90} ${Cflag2} set_outer_BCs.f90
 
-$OS eq "Linux" and $Compiler eq "f95" and $Debug eq "yes"
+# The NAG compiler cannot compile big static arrays with the -nan flag
+$Compiler eq "f95" and $Debug eq "yes"
 	${COMPILE.f90} ${SEARCH} -c -O0 -gline ${PRECISION} ModIO.f90
 
-$OS eq "Linux" and $Compiler eq "f95" and $Debug eq "yes" and $IsDynamic eq "no"
+$Compiler eq "f95" and $Debug eq "yes" and $IsDynamic eq "no"
 	${COMPILE.f90} ${SEARCH} -c -O0 -gline ${PRECISION} ModAdvance.f90
 	${COMPILE.f90} ${SEARCH} -c -O0 -gline ${PRECISION} ModGeometry.f90
 	${COMPILE.f90} ${SEARCH} -c -O0 -gline ${PRECISION} ModImplicit.f90
