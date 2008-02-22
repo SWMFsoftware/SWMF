@@ -1503,18 +1503,6 @@ The default values are UsePointImplicit=false and BetaPointImplicit=0.5.
 </command>
 
 <!-- ^CFG IF IMPLICIT BEGIN -->
-<command name="PARTLOCAL">
-	<parameter name="UsePartLocal" type="logical" default="F" />
-#PARTLOCAL
-T               UsePartLocal
-
-Default is UsePartLocal=.false. If UsePartLocal is true and the
-run is time accurate, then the blocks selected as "implicit"
-by the criteria defined in #STEPPINGCRITERIA are not used to
-calculate the time step, and all cells are advanced with the
-smaller of the stable and the global time steps.
-</command>
-
 <command name="IMPLICIT">
 	<parameter name="UsePointImplicit" type="logical" default="F"/>
 	<parameter name="UsePartImplicit" type="logical" default="F"/>
@@ -1559,7 +1547,7 @@ r		TypeImplCrit (dt or r or test)
 10.0		rImplicit    (only read for TypeImplCrit = r)
 
 Both #IMPLICITCRITERIA and #STEPPINGCRITERIA are acceptable.
-Only effective if PartImplicit or PartLocal is true in a time accurate run.
+Only effective if PartImplicit is true in a time accurate run.
 Default value is ImplCritType='dt'.
 
 The options are
