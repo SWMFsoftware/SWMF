@@ -360,10 +360,8 @@ subroutine MH_set_parameters(TypeAction)
 
            call read_var('BetaPointImplicit',BetaPointImpl)
         end if
-     case("#PARTLOCAL")                                !^CFG IF IMPLICIT BEGIN 
-        call read_var('UsePartLocal',UsePartLocal)
 
-     case("#IMPLICIT")                                 
+     case("#IMPLICIT")                                 !^CFG IF IMPLICIT BEGIN
         call read_var('UsePointImplicit', UsePointImplicit)
         call read_var('UsePartImplicit', UsePartImplicit)
         call read_var('UseFullImplicit', UseFullImplicit)
@@ -1948,7 +1946,6 @@ contains
     VARtest         =1
     DIMtest         =1
 
-    UsePartLocal  = .false.       !^CFG IF IMPLICIT
     nSTAGE        = 2
     cfl           = 0.80
     UseDtFixed    = .false.
@@ -1978,39 +1975,14 @@ contains
     ! Default implicit parameters      !^CFG IF IMPLICIT BEGIN
     UsePointImplicit = .false.
     UsePointImplicit_B = .false.
-    UsePartImplicit  = .false.
-    UseFullImplicit  = .false.
     UseImplicit      = .false.
     ImplCritType     = 'dt'
 
-    nOrder_impl   = 1
-    FluxTypeImpl  = 'default'
-
-    ImplCoeff0    = 1.0
-    UseBDF2       = .false.
-    ImplSource    = .false.
-
-    UseConservativeImplicit = .false.
-    UseNewton     = .false.
-    NewMatrix     = .true.
-    NewtonIterMax = 1
-
-    JacobianType  = 'prec'
     if(nByteReal>7)then
        JacobianEps   = 1.E-12
     else
        JacobianEps   = 1.E-6
-    end if
-
-    PrecondSide   = 'symmetric'
-    PrecondType   = 'MBILU'
-    GustafssonPar = 0.5
-
-    KrylovType      = 'gmres' !do not rename the gmres string
-    KrylovInitType  = 'nul'
-    KrylovErrorMax  = 0.001
-    KrylovMatvecMax = 100
-    nKrylovVector   = KrylovMatvecMax !^CFG END IMPLICIT
+    end if                            !^CFG END IMPLICIT
 
     UseDivbSource   = .true.
     UseDivbDiffusion= .false.         !^CFG IF DIVBDIFFUSE
