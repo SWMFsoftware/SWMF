@@ -764,8 +764,8 @@ subroutine select_stepping(DoPartSelect)
   use ModAdvance,  ONLY : iTypeAdvance_B, iTypeAdvance_BP, &
        SkippedBlock_, ExplBlock_, ImplBlock_
   use ModGeometry, ONLY : Rmin_BLK
-  use ModImplicit, ONLY : UseFullImplicit,UsePartImplicit, &
-       ImplCritType, ExplCFL,rImplicit
+  use ModImplicit, ONLY : UseImplicit, UseFullImplicit, UsePartImplicit, &
+       ImplCritType, ExplCFL, rImplicit
   use ModIO,       ONLY : write_prefix, iUnitOut
   use ModMpi
   implicit none
@@ -780,8 +780,8 @@ subroutine select_stepping(DoPartSelect)
 
   if(oktest)then
      write(*,*) 'select_stepping starting with iProc ',&
-          'UseFullImplicit, UsePartImplicit, UsePartLocal, DoPartSelect=',&
-          iProc, UseFullImplicit, UsePartImplicit, UsePartLocal, DoPartSelect
+          'UseFullImplicit, UsePartImplicit, DoPartSelect=',&
+          iProc, UseFullImplicit, UsePartImplicit, DoPartSelect
      write(*,*)'select_stepping starting with ',&
           'iProc,nBlockExpl, nBlockImpl, nBlockSkipped=', iProc, &
           count(iTypeAdvance_B == ExplBlock_),&
@@ -800,8 +800,7 @@ subroutine select_stepping(DoPartSelect)
           minval(iTypeAdvance_BP),maxval(iTypeAdvance_BP)
   end if
 
-  if(((UsePartLocal .or. UsePartImplicit) .and. .not. DoPartSelect) &
-       .or. .not. (UseImplicit .or. UsePartLocal))then
+  if((UsePartImplicit .and. .not. DoPartSelect) .or. .not. UseImplicit)then
      nBlockExplALL    = nBlockALL
      nBlockImplALL    = 0
      where(iTypeAdvance_BP(1:nBlockMax,:) == ImplBlock_) &

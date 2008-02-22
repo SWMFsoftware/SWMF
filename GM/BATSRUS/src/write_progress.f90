@@ -63,6 +63,7 @@ subroutine write_runtime_values()
   use ModPhysics
   use ModMpi
   use CON_planet
+  use ModImplicit, ONLY: UseImplicit             !^CFG IF IMPLICIT
   use ModUser, ONLY: user_write_progress
   implicit none
 

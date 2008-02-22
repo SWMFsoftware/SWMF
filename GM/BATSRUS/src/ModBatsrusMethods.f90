@@ -285,6 +285,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModAdvance, ONLY: UseNonConservative, nConservCrit
   use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
        part_steady_select, part_steady_switch
+  use ModImplicit, ONLY: UseImplicit                   !^CFG IF IMPLICIT
 
   implicit none
 
@@ -571,7 +572,6 @@ end subroutine BATS_init_constrain_b
 subroutine BATS_select_blocks
 
   use ModProcMH
-  use ModMain, ONLY: UsePartLocal         !^CFG IF IMPLICIT
   use ModMain, ONLY: lVerbose
   use ModImplicit, ONLY : UsePartImplicit !^CFG IF IMPLICIT
   use ModPartSteady, ONLY: UsePartSteady, IsNewSteadySelect
@@ -581,10 +581,6 @@ subroutine BATS_select_blocks
   character(len=*), parameter :: NameSub = 'BATS_select_blocks'
   integer :: iError
   !----------------------------------------------------------------------------
-
-  ! Select blocks for partially local time stepping
-
-  if(UsePartLocal)call select_stepping(.true.) !^CFG IF IMPLICIT
 
   ! Select and load balance blocks for partially implicit/steady scheme
   if( UsePartSteady .and. IsNewSteadySelect &

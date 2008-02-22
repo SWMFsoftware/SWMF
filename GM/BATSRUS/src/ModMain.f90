@@ -50,7 +50,6 @@ Module ModMain
        time_loop=.false.
 
   logical :: UseDtFixed
-  logical :: UseImplicit,  UsePartLocal      !^CFG IF IMPLICIT
 
   !\
   ! Model Coupling variables
