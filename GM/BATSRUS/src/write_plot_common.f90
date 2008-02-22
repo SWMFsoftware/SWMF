@@ -604,7 +604,15 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
   real :: Jx, Jy, Jz
 
   logical :: IsFound
-  !-------------------------------------------------------------------------
+  
+  logical :: DoTest,DoTestMe
+  character(len=*), parameter:: NameSub='set_plotvar'
+  !---------------------------------------------------------------------------
+  if(iBLK==BlkTest.and.iProc==ProcTest)then
+     call set_oktest(NameSub,DoTest,DoTestMe)
+  else
+     DoTest=.false.; DoTestMe=.false.
+  end if
 
   ! Recalculate magnetic field in block for face currents (if needed)
   IsNewBlockHall = .true.
@@ -1118,11 +1126,11 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         endif
 
      case('absdivb')
-         PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &
-              abs(DivB1_GB(0:nI+1,0:nJ+1,0:nK+1,iBLK))
-         if(.not.true_BLK(iBLK))then
-            where(.not.true_cell(:,:,:,iBLK)) PlotVar(:,:,:,iVar)=0.0
-         endif
+        PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &
+             abs(DivB1_GB(0:nI+1,0:nJ+1,0:nK+1,iBLK))
+        if(.not.true_BLK(iBLK))then
+           where(.not.true_cell(:,:,:,iBLK)) PlotVar(:,:,:,iVar)=0.0
+        endif
 !!$!^CFG  IF RAYTRACE BEGIN
         ! BASIC RAYTRACE variables
 
@@ -1281,12 +1289,12 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
   character (len=10)  :: String, NamePlotVar, NameVar
 
   integer :: iVar, i,j,k, jVar
-  logical :: oktest,oktest_me
+  logical :: DoTest,DoTestMe
   !---------------------------------------------------------------------------
   if(iBLK==BlkTest.and.iProc==ProcTest)then
-     call set_oktest('dimensionalize_plotvar',oktest,oktest_me)
+     call set_oktest('dimensionalize_plotvar',DoTest,DoTestMe)
   else
-     oktest=.false.; oktest_me=.false.
+     DoTest=.false.; DoTestMe=.false.
   end if
 
   do iVar=1,nPlotVar
