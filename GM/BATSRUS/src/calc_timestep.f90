@@ -84,9 +84,7 @@ subroutine calc_timestep
        MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
 
   ! Reset time_BLK for fixed time step (but Dt_BLK is kept!)
-  if(UseDtFixed &
-       .and..not.UsePartLocal &               !^CFG IF IMPLICIT
-       ) time_BLK(:,:,:,iBlock) = Dt
+  if(UseDtFixed) time_BLK(:,:,:,iBlock) = Dt
 
   ! Set time step to zero inside body.
   if(.not.true_BLK(iBlock)) then
@@ -130,7 +128,7 @@ subroutine set_global_timestep(TimeSimulationLimit)
      !\
      ! Impose global time step for time-accurate calculations as required
      !/
-     if(UsePartImplicit .or. UsePartLocal)then        !^CFG IF IMPLICIT BEGIN
+     if(UsePartImplicit)then                          !^CFG IF IMPLICIT BEGIN
         ! Implicit blocks are not taken into account for partially implicit run
         DtMinPE = minval(Dt_BLK(1:nBlock),&
              MASK=iTypeAdvance_B(1:nBlock) == ExplBlock_)
@@ -193,19 +191,14 @@ subroutine set_global_timestep(TimeSimulationLimit)
   do iBlock = 1, nBlock
      if (UnusedBlk(iBlock)) CYCLE
 
-     if(UsePartLocal)then                             !^CFG IF IMPLICIT BEGIN
-        ! Set smaller of the stable and the global time steps
-        time_BLK(:,:,:,iBlock)= min(Dt, time_BLK(:,:,:,iBlock))
-     else                                             !^CFG END IMPLICIT
-        time_BLK(:,:,:,iBlock) = Dt
-     end if                                           !^CFG IF IMPLICIT
+     time_BLK(:,:,:,iBlock) = Dt
 
      !\
      ! Reset time step to zero inside body.
      !/
      if(.not.true_BLK(iBlock))then
         where(.not.true_cell(1:nI,1:nJ,1:nK,iBlock)) &
-             time_BLK(:,:,:,iBlock) = 0.00
+             time_BLK(:,:,:,iBlock) = 0.0
      end if
 
   end do
