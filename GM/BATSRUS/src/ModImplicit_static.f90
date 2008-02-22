@@ -20,17 +20,23 @@ module ModImplicit
   integer, parameter :: E_ = P_
 
   !\
-  ! Logical determining if the scheme is part or full implicit (spatially)
-  ! and whether we make it fully conservative
+  ! Logicals determining if and what implcit scheme is used
   !/
-  logical :: UseFullImplicit          ! Use fully implicit scheme (all blocks)
-  logical :: UsePartImplicit          ! Use part implicit scheme (some blocks)
-  logical :: UsePartImplicit2=.false. ! Use temporally 2nd order part implicit
-  !                                     by doing explicit predictor step
-  !                                     in all the blocks to get expl/impl flux
-  logical :: UseConservativeImplicit  ! Do a conservative update at the end
-  !                                     of the iterative solver 
-  !                                     (not recommended)
+  logical :: UseImplicit = .false.
+
+  ! Use fully implicit scheme (all blocks)
+  logical :: UseFullImplicit=.false.  
+
+  ! Use part implicit scheme (some blocks)
+  logical :: UsePartImplicit=.false. 
+
+  ! Use temporally 2nd order part implicit by doing explicit predictor step
+  ! in all the blocks to get second order flux at expl/impl interfaces
+  logical :: UsePartImplicit2=.false. 
+
+  ! Do a conservative update at the end of the iterative solver 
+  ! This does not work well without full Newton iteration
+  logical :: UseConservativeImplicit=.false.  
 
   !\
   ! Parameters for selecting implicit blocks
@@ -41,10 +47,6 @@ module ModImplicit
   !\
   ! Parameters for the Implicit Time Stepping
   !/
-
-  ! Conversion between BATSRUS and VAC index order for variables
-  integer, parameter, dimension(8):: bat2vac=(/1,2,3,4,8,5,6,7/)
-
   ! Number of cells and unknowns per block
   integer, parameter:: nwIJK = nw*nIJK
 
@@ -59,13 +61,13 @@ module ModImplicit
   integer, parameter :: kr(3,3) = reshape( (/1,0,0,0,1,0,0,0,1/), (/3,3/) )
 
   ! Actual number of implicitly treated blocks for a processor
-  integer :: nImplBLK
+  integer :: nImplBLK=0
 
   ! Actual number of implicit variables (unknowns) per processor, total
-  integer :: nimpl, nimpl_total
+  integer :: nimpl=0, nimpl_total=0
 
   ! Test variables
-  integer :: implBLKtest, implVARtest
+  integer :: implBLKtest=1, implVARtest=1
 
   ! Indirect index array from implicit block index to general block index
   integer :: impl2iBLK(MaxImplBLK)
@@ -73,45 +75,43 @@ module ModImplicit
   ! Parameters for the implicit techniques
 
   ! Implicit scheme parameters
-  real   :: explCFL, implCFL, ImplCoeff0, ImplCoeff
-  logical:: UseBDF2
-  logical:: ImplSource
-
-  real :: impldwlimit !!!
+  real   :: explCFL=0.8, implCFL=100.0, ImplCoeff0=1.0, ImplCoeff=1.0
+  logical:: UseBDF2    = .false.
+  logical:: ImplSource = .false.
 
   ! Newton iteration parameters
-  logical :: UseNewton=.false.
-  logical :: NewMatrix=.true.
-  integer :: NewtonIterMax=1
+  logical :: UseNewton     = .false.
+  logical :: NewMatrix     = .true.
+  integer :: NewtonIterMax = 1
 
   ! Jacobian parameters
-  character (len=10) :: JacobianType='prec'
-  real               :: JacobianEps =1.E-12
+  character (len=10) :: JacobianType = 'prec'
+  real               :: JacobianEps  = 1.E-12
 
   ! Preconditioner parameters
-  real               :: GustafssonPar=0.5
-  character (len=10) :: PrecondSide
-  character (len=10) :: PrecondType
+  real               :: GustafssonPar = 0.5
+  character (len=10) :: PrecondSide   = 'symmetric'
+  character (len=10) :: PrecondType   = 'MBILU'
 
   ! Krylov scheme parameters
-  character (len=10) :: KrylovType     ='bicgstab'
+  character (len=10) :: KrylovType     ='gmres'
   character (len=10) :: KrylovInitType ='nul'
   integer            :: KrylovMatvecMax=100
   real               :: KrylovErrorMax =0.001
   integer            :: nKrylovVector  =100
 
   ! Implicit scheme
-  integer            :: nORDER_impl
-  character (len=10) :: FluxTypeImpl
+  integer            :: nOrder_Impl  = 1
+  character (len=10) :: FluxTypeImpl = 'default' ! same as explicit
 
-  logical:: sourceunsplit=.false.
-  logical:: compactres=.true.
+  logical:: sourceunsplit = .false.
+  logical:: compactres    = .true.
 
   ! Second norm of the variables and the residual
-  real:: wnrm(nw), residual
+  real:: wnrm(nw)=0.0, residual=-1.0
 
   ! Previous time step, explicit time step, ratio of explicit and implicit dt
-  real:: dtexpl, dt_prev, dtcoeff
+  real:: dtexpl=-1.0, dt_prev=-1.0, dtcoeff=-1.0
 
   ! The k-th Newton iterate, one layer of ghost cells for the Jacobian
   real, dimension(0:nI+1,0:nJ+1,0:nK+1,nw,MaxImplBLK) :: w_k
@@ -133,10 +133,10 @@ module ModImplicit
   real, dimension(MaxImplVar) :: rhs0, rhs, dw
 
   ! Is dw=0 initiallly
-  logical :: non0dw
+  logical :: non0dw = .false.
 
   ! Counters for reports
-  integer:: nexpl=0,nnewton=0,niterimpl=0,nmatvec=0
+  integer:: nExpl=0, nNewton=0, nIterImpl=0, nMatvec=0
 
   ! Update check
   real :: &
