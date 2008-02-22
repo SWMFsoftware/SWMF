@@ -1848,11 +1848,16 @@ contains
     real, optional, intent(out) :: Cleft_I(nFluid)  ! maximum left speed
     real, optional, intent(out) :: Cright_I(nFluid) ! maximum right speed
 
-    real :: CmaxDt_I(nFluid), UnLeft, UnRight
+    real :: CmaxDt_I(nFluid)
+    real :: UnLeft, UnRight                         !^CFG IF AWFLUX
+    integer :: iVar
     !--------------------------------------------------------------------------
 
-    UnLeft = minval(UnLeft_I(1:nIonFluid))
-    UnRight= maxval(UnRight_I(1:nIonFluid))
+    if(DoAW)then                                 !^CFG IF AWFLUX BEGIN
+       ! For AW flux UnLeft_I,UnRight_I are already set by get_physical_flux
+       UnLeft = minval(UnLeft_I(1:nIonFluid))
+       UnRight= maxval(UnRight_I(1:nIonFluid))
+    end if                                       !^CFG END AWFLUX
     if(UseBoris)then                             !^CFG IF BORISCORR BEGIN
        call get_boris_speed
     else                                         !^CFG END BORISCORR
@@ -1871,9 +1876,10 @@ contains
           end if
 
           call select_fluid
-          UnLeft = UnLeft_I(iFluid)
-          UnRight= UnRight_I(iFluid)
-
+          if(DoAw)then                           !^CFG IF AWFLUX BEGIN
+             UnLeft = UnLeft_I(iFluid)
+             UnRight= UnRight_I(iFluid)
+          end if                                 !^CFG END AWFLUX
           call get_hd_speed
        end do
     end if
@@ -2086,10 +2092,10 @@ contains
             write(*,*)NameSub,' Area,Area2=',Area, Area2
             write(*,*)NameSub,' InvRho, RhoU_D=',InvRho, RhoU_D
          end if
-         if(DoAw)then
+         if(DoAw)then                               !^CFG IF AWFLUX BEGIN
             write(*,*)NameSub,' UnLeft=',  UnLeft
             write(*,*)NameSub,' UnRight=', UnRight
-         end if
+         end if                                     !^CFG END AWFLUX
          if(HallCoeff > 0.0) then
             write(*,*)NameSub,' HallCoeff=',   HallCoeff
             write(*,*)NameSub,' HallUnLeft=',  HallUnLeft
