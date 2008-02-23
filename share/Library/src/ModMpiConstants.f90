@@ -2,7 +2,7 @@ module ModMpiConstantsOrig
 
   implicit none
   ! iRealPrec = 0, no modification of MPI_REAL
-  integer, parameter :: iRealPrec = 0;
+  integer, parameter :: iRealPrec = 0
   include 'mpif90.h'
 
 end module ModMpiConstantsOrig
