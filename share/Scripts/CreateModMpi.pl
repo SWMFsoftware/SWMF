@@ -35,6 +35,8 @@ if($Sub){
 }else{
     open(IN,$DataFile) or die "Could not open data file $DataFile\n";
     while(<IN>){
+	next if /^#/;
+	next if /^$/;
 	chop;
 	my $Sub;
 	my $Types;

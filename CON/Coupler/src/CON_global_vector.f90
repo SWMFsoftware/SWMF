@@ -163,9 +163,7 @@ contains
        i_vector=iLoop
        if(trim(Name)==trim(NameVector_I(iLoop)))return
     end do
-    call CON_stop(&
-         'Global vector '//Name//' is not allocated at PE=',&
-         i_proc())
+    call CON_stop('Global vector '//Name//' is not allocated')
   end function i_vector
   !==========================================================!
   integer function i_mask(Name)
@@ -615,8 +613,8 @@ contains
     end do
     if(nPoint/=nU_I(2))then
        write(*,*)'Vector '//NameVector//' with dimensions ',nU_I
-       call CON_stop('For vector '//NameVector//' are read only nPoint=',&
-            nPoint)
+       write(*,*)'nPoint=',nPoint
+       call CON_stop('For vector '//NameVector//' fewer points are read')
     end if
   end subroutine read_global_vector
 end Module CON_global_vector

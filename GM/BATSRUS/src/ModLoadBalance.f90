@@ -393,7 +393,7 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
 
   integer :: iData, itag, i, j, k, i1,i2, iVar, iw, iSize
   integer :: iError
-  integer :: status(MPI_STATUS_SIZE,1)
+  integer :: Status_I(MPI_STATUS_SIZE)
 
   ! Number of data values stored in ModBlockData
   integer :: nDynamicData
@@ -605,7 +605,7 @@ contains
     end if
     itag=1
     call MPI_RECV(BlockData_I, iSize, MPI_REAL, iProcFrom, &
-         itag, iComm, status, iError)
+         itag, iComm, Status_I, iError)
 
     dx_BLK(iBlockTo)           = BlockData_I(1)
     dy_BLK(iBlockTo)           = BlockData_I(2)

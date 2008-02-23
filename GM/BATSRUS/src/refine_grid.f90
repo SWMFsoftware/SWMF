@@ -14,8 +14,8 @@ subroutine refine_grid(refBLK)
 
   integer :: iError
 
-  call MPI_ALLGATHER(refBLK(1), nBLK, MPI_LOGICAL, &
-       refine_list(1,1), nBLK, MPI_LOGICAL, iComm, iError)
+  call MPI_ALLGATHER(refBLK, nBLK, MPI_LOGICAL, &
+       refine_list, nBLK, MPI_LOGICAL, iComm, iError)
 
   call parallel_refine
 

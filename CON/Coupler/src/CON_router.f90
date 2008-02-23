@@ -226,7 +226,7 @@ contains
                   n_proc(),&
                   iAux_P(0),&
                   iGroupUnion,&
-                  Router%iTranslated_P(0),&
+                  Router%iTranslated_P,&
                   iError)
              Router%iProc0Target=&
                   Router%iTranslated_P(iProc0Target)
@@ -242,7 +242,7 @@ contains
                   n_proc(),&
                   iAux_P(0),&
                   iGroupUnion,&
-                  Router%iTranslated_P(0),&
+                  Router%iTranslated_P,&
                   iError)
              Router%iProc0Source=&
                   Router%iTranslated_P(iProc0Source)
@@ -256,12 +256,10 @@ contains
           Router%IsProc=iProcUnion/=MPI_UNDEFINED
           if(iProcUnion/=Router%iProc0Target.and.&
                i_proc()==iProc0Target)call CON_stop(&
-               'Wrongly defined Router%iProc0Target=',&
-               Router%iProc0Target)
+               'Wrongly defined Router%iProc0Target')
           if(iProcUnion/=Router%iProc0Source.and.&
                i_proc()==iProc0Source)call CON_stop(&
-               'Wrongly defined Router%iProc0Source=',&
-               Router%iProc0Source)
+               'Wrongly defined Router%iProc0Source')
           call MPI_GROUP_FREE(iGroupUnion,iError)
        else
           Router%iCommUnion=Router%iComm
@@ -279,9 +277,8 @@ contains
             .or.nIndexesSource==1)then
           Router%nIndexesSource=nIndexesSource
        else
-          call CON_stop(&
-               'nIndexesSource should be at least ',&
-               Router%nIndexesSource-1)
+          write(*,*)'IndexMin=',Router%nIndexesSource-1
+          call CON_stop('nIndexesSource should be at least IndexMin')
        end if
     end if
     Router%nIndexesTarget=ndim_grid(&
@@ -292,9 +289,8 @@ contains
             .or.nIndexesTarget==1)then
           Router%nIndexesTarget=nIndexesTarget
        else
-          call CON_stop(&
-               'nIndexesTarget should be at least ',&
-               Router%nIndexesTarget-1)
+          write(*,*)'IndexMin=',Router%nIndexesTarget-1
+          call CON_stop('nIndexesTarget should be at least IndexMin')
        end if
     end if
     nProc=Router%nProc

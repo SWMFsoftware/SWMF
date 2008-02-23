@@ -477,8 +477,8 @@ subroutine set_body_flag
   tmp_logical_list = .false.
 
   !collect BodyFlags to tmp_logical_list
-  call MPI_ALLGATHER(BodyFlg_B(1), nBLK, MPI_LOGICAL, &
-       tmp_logical_list(1,1), nBLK, MPI_LOGICAL, iComm, iError)
+  call MPI_ALLGATHER(BodyFlg_B, nBLK, MPI_LOGICAL, &
+       tmp_logical_list, nBLK, MPI_LOGICAL, iComm, iError)
 
   !set body flag
   do inPE = 1,nProc
@@ -493,8 +493,8 @@ subroutine set_body_flag
 
      tmp_logical_list = .false.
 
-     call MPI_ALLGATHER(DoFixExtraBoundary_B(1), nBLK, MPI_LOGICAL, &
-          tmp_logical_list(1,1), nBLK, MPI_LOGICAL, iComm, iError)
+     call MPI_ALLGATHER(DoFixExtraBoundary_B, nBLK, MPI_LOGICAL, &
+          tmp_logical_list, nBLK, MPI_LOGICAL, iComm, iError)
      
      !set body flag
      do inPE = 1,nProc
@@ -514,8 +514,8 @@ subroutine set_body_flag
      tmp_logical_list = .false.
 
      !collect BodyFlags to tmp_logical_list
-     call MPI_ALLGATHER(DoFixBoundary_B(1), nBLK, MPI_LOGICAL, &
-          tmp_logical_list(1,1), nBLK, MPI_LOGICAL, iComm, iError)
+     call MPI_ALLGATHER(DoFixBoundary_B, nBLK, MPI_LOGICAL, &
+          tmp_logical_list, nBLK, MPI_LOGICAL, iComm, iError)
      
      !set body flag
      do inPE = 1,nProc
@@ -623,10 +623,14 @@ subroutine analyze_neighbors
 !!$       ' (',100.*real(NMsame(2))/real(NMtotal(2)),'%)'
 
   !processor 0 write summary
-  call MPI_allgather(NMblk,     1,MPI_INTEGER,PEblk(1),  1,MPI_INTEGER,iComm,iError)
-  call MPI_allgather(NMholes,   1,MPI_INTEGER,PEholes(1),1,MPI_INTEGER,iComm,iError)
-  call MPI_allgather(NMsame(2), 1,MPI_INTEGER,PEsame(1), 1,MPI_INTEGER,iComm,iError)
-  call MPI_allgather(NMtotal(2),1,MPI_INTEGER,PEtotal(1),1,MPI_INTEGER,iComm,iError)
+  call MPI_allgather(NMblk,     1,MPI_INTEGER,PEblk,  1,MPI_INTEGER,&
+       iComm,iError)
+  call MPI_allgather(NMholes,   1,MPI_INTEGER,PEholes,1,MPI_INTEGER,&
+       iComm,iError)
+  call MPI_allgather(NMsame(2), 1,MPI_INTEGER,PEsame, 1,MPI_INTEGER,&
+       iComm,iError)
+  call MPI_allgather(NMtotal(2),1,MPI_INTEGER,PEtotal,1,MPI_INTEGER,&
+       iComm,iError)
   if(iProc==0) then
      do i=1,nProc
         write(*,'(2x,a,i3,a,i3,a,i3,a,i6,a,i6,a,f6.2,a)') ' PE=',i-1,' Blocks:',PEblk(i),&

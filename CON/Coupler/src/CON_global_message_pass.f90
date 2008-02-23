@@ -276,7 +276,7 @@ contains
        end if
     end do
     if(nVar<1)call CON_stop(&
-    'In GlobalMessagePass you can not use nVar=',nVar)
+         'In GlobalMessagePass you can not use nVar<1')
     !Check send/recv buffers
     nSendAll=(iSendStart_P(nProc-1)+&
               Router%nSend_P(nProc-1))*nVar
@@ -374,8 +374,7 @@ contains
           itag = iPE
           nRECVrequests = nRECVrequests + 1
           if(nRECVrequests>maxMessages)&
-               call CON_stop(&
-               "Too many RECVs in mp_SendValues")
+               call CON_stop("Too many RECVs in mp_SendValues")
           call MPI_irecv(VRecv_I(iRecvStart_P(iPE)*nVar+1),&
                nVar*Router%nRecv_P(iPE), &
                MPI_REAL,iPE,itag,iComm,&

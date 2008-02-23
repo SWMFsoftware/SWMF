@@ -131,7 +131,7 @@ subroutine AB_COMM_XCHNG_REAL_start(xchng,snd_size,snd, &
   tag=xchng%tag
 
   ! make sure there are no outstanding receive requests
-  call MPI_waitall(np,xchng%rcv_req(0),xchng%status(1,0),ierror)
+  call MPI_waitall(np,xchng%rcv_req,xchng%status,ierror)
   if (ierror .ne. MPI_SUCCESS) then
      ok=.false.
      call AB_ERROR_set("AB_COMM_XCHNG_REAL_start","MPI error ",ierror)
@@ -159,7 +159,7 @@ subroutine AB_COMM_XCHNG_REAL_start(xchng,snd_size,snd, &
   enddo
 
   ! make sure there are no outstanding send requests
-  call MPI_waitall(np,xchng%snd_req(0),xchng%status(1,0),ierror)
+  call MPI_waitall(np,xchng%snd_req,xchng%status,ierror)
   if (ierror .ne. MPI_SUCCESS) then
      ok=.false.
      call AB_ERROR_set("AB_COMM_XCHNG_REAL_start","MPI error ",ierror)
@@ -212,7 +212,7 @@ subroutine AB_COMM_XCHNG_INT_2D_start(xchng,snd_size,snd_size_mult,snd, &
   tag=xchng%tag
 
   ! make sure there are no outstanding receive requests
-  call MPI_waitall(np,xchng%rcv_req(0),xchng%status(1,0),ierror)
+  call MPI_waitall(np,xchng%rcv_req,xchng%status,ierror)
   if (ierror .ne. MPI_SUCCESS) then
      ok=.false.
      call AB_ERROR_set("AB_COMM_XCHNG_INT_2D_start","MPI error ",ierror)
@@ -240,7 +240,7 @@ subroutine AB_COMM_XCHNG_INT_2D_start(xchng,snd_size,snd_size_mult,snd, &
   enddo
 
   ! make sure there are no outstanding send requests
-  call MPI_waitall(np,xchng%snd_req(0),xchng%status(1,0),ierror)
+  call MPI_waitall(np,xchng%snd_req,xchng%status,ierror)
   if (ierror .ne. MPI_SUCCESS) then
      ok=.false.
      call AB_ERROR_set("AB_COMM_XCHNG_INT_2D_start","MPI error ",ierror)
@@ -280,7 +280,7 @@ subroutine AB_COMM_XCHNG_finish_rcv(xchng,ok)
   ok=.true.
 
   ! wait for all the receives to finish
-  call MPI_waitall(xchng%comm%np,xchng%rcv_req(0),xchng%status(1,0),ierror)
+  call MPI_waitall(xchng%comm%np,xchng%rcv_req,xchng%status,ierror)
   if (ierror .ne. MPI_SUCCESS) then
      ok=.false.
      call AB_ERROR_set("AB_COMM_XCHNG_finish_rcv","MPI error ",ierror)
@@ -299,7 +299,7 @@ subroutine AB_COMM_XCHNG_finish_snd(xchng,ok)
   ok=.true.
 
   ! wait for all the receives to finish
-  call MPI_waitall(xchng%comm%np,xchng%snd_req(0),xchng%status(1,0),ierror)
+  call MPI_waitall(xchng%comm%np,xchng%snd_req,xchng%status,ierror)
   if (ierror .ne. MPI_SUCCESS) then
      ok=.false.
      call AB_ERROR_set("AB_COMM_XCHNG_finish_snd","MPI error ",ierror)
@@ -321,7 +321,7 @@ subroutine AB_COMM_XCHNG_destroy(xchng,ok)
   np=xchng%comm%np
 
   ! wait for all the sends to complete
-  call MPI_waitall(np,xchng%snd_req(0),xchng%status(1,0),ierror)
+  call MPI_waitall(np,xchng%snd_req,xchng%status,ierror)
   if (ierror .ne. MPI_SUCCESS) then
      ok=.false.
      call AB_ERROR_set("AB_COMM_XCHNG_destroy","MPI error ",ierror)
@@ -332,7 +332,7 @@ subroutine AB_COMM_XCHNG_destroy(xchng,ok)
   deallocate(xchng%snd_req)
 
   ! wait for all the rcvs to complete
-  call MPI_waitall(np,xchng%rcv_req(0),xchng%status(1,0),ierror)
+  call MPI_waitall(np,xchng%rcv_req,xchng%status,ierror)
   if (ierror .ne. MPI_SUCCESS) then
      ok=.false.
      call AB_ERROR_set("AB_COMM_XCHNG_destroy","MPI error ",ierror)

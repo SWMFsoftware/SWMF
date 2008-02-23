@@ -293,7 +293,7 @@ subroutine specify_area_refinement(DoRefine_B)
 
         case default
            call stop_mpi(NameSub // &
-                ' ERROR: Unknown NameArea = ',Area_I(iArea) % Name)
+                ' ERROR: Unknown NameArea = '//Area_I(iArea) % Name)
 
         end select
 

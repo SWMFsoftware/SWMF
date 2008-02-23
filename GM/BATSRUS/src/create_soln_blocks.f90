@@ -452,8 +452,9 @@ subroutine create_coarse_soln_block(nPEsCrseBlk, PEsCrseBlk)
 
   integer :: remaining_PE, remaining_BLK, icube, i, iBLK
   integer :: iError,iTag
-  integer :: send_request, receive_requests(7), number_receive_requests, &
-       Status(MPI_STATUS_SIZE, 7)
+  integer :: send_request, send_requests(7), receive_requests(7), &
+       number_receive_requests, &
+       Status_II(MPI_STATUS_SIZE, 7), Status_I(MPI_STATUS_SIZE)
 
   real    :: DtToReduce, DtBuff(8)
   integer :: MaxTypeAdvance, iTypeAdvance_I(8)
@@ -541,12 +542,12 @@ subroutine create_coarse_soln_block(nPEsCrseBlk, PEsCrseBlk)
      if(iProc/=remaining_PE) then 
         call MPI_isend(DtToReduce,1,MPI_REAL,remaining_PE,&
              iTag,iComm,send_request,iError)
-        call MPI_waitall(1,send_request,Status,iError)
+        call MPI_waitall(1,send_requests,Status_II,iError)
      else
         DtBuff(1) = DtToReduce
         do i=2,nPEsCrseBlk
            call MPI_recv(DtBuff(i),1,MPI_REAL,PEsCrseBlk(i),&
-                iTag,iComm,Status,iError)
+                iTag,iComm,Status_I,iError)
         end do
         dt_BLK(remaining_BLK) = minval(DtBuff(1:nPEsCrseBlk))*2
      end if
@@ -560,12 +561,12 @@ subroutine create_coarse_soln_block(nPEsCrseBlk, PEsCrseBlk)
      if(iProc/=remaining_PE) then 
         call MPI_isend(MaxTypeAdvance,1,MPI_INTEGER,remaining_PE,&
              iTag,iComm,send_request,iError)
-        call MPI_waitall(1,send_request,Status,iError)
+        call MPI_waitall(1,send_requests,Status_II,iError)
      else
         iTypeAdvance_I(1) = MaxTypeAdvance
         do i=2,nPEsCrseBlk
            call MPI_recv(iTypeAdvance_I(i),1,MPI_INTEGER,PEsCrseBlk(i),&
-                iTag,iComm,Status,iError)
+                iTag,iComm,Status_I,iError)
         end do
         iTypeAdvance_B(remaining_BLK) = maxval(iTypeAdvance_I(1:nPEsCrseBlk))
      end if
@@ -656,8 +657,8 @@ contains
 
     if (number_send_requests > 0) then
        call MPI_waitall(number_send_requests, &
-            send_requests(1), &
-            status(1,1), iError)
+            send_requests, &
+            Status_II, iError)
     end if
 
     number_receive_requests = 0
@@ -675,8 +676,8 @@ contains
 
        if (number_receive_requests > 0) then
           call MPI_waitall(number_receive_requests, &
-               receive_requests(1), &
-               status(1,1), iError)
+               receive_requests, &
+               Status_II, iError)
        end if
        !\
        ! Assign default value (to get corners).

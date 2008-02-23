@@ -246,8 +246,7 @@ contains
             ncells_decomposition_D(&
             GridID_)+nGhostGridPointsMy
     case default
-       call CON_stop(&
-            'Unknown standard for Grid Descriptor',Standard_)
+       call CON_stop('Unknown standard for Grid Descriptor')
     end select
   end subroutine set_standard_grid_descriptor_id
   !---------------------------------------------------------------!
@@ -307,8 +306,7 @@ contains
             ncells_decomposition_d(&
             DomainDecomposition)+nGhostGridPointsMy
     case default
-       call CON_stop(&
-            'Unknown standard for Grid Descriptor',Standard_)
+       call CON_stop('Unknown standard for Grid Descriptor')
     end select
   end subroutine set_standard_grid_descriptor_dd
   !===============================================================!

@@ -13,8 +13,8 @@ subroutine coarsen_grid(coarsenBLK)
   logical, intent(inout) :: coarsenBLK(nBLK)
   integer :: iError
 
-  call MPI_ALLGATHER(coarsenBLK(1), nBLK, MPI_LOGICAL, &
-       coarsen_list(1,1), nBLK, MPI_LOGICAL, iComm, iError)
+  call MPI_ALLGATHER(coarsenBLK, nBLK, MPI_LOGICAL, &
+       coarsen_list, nBLK, MPI_LOGICAL, iComm, iError)
 
   call parallel_coarsen
 

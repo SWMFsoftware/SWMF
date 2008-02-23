@@ -118,12 +118,14 @@ contains
       real, dimension(:,:,:), allocatable :: Buffer_IIV
 
       ! Buffer for satellite locations   !!! DTW 2007
-      real, dimension(:,:,:), allocatable :: Buffer_III
+      real, dimension(:,:,:), allocatable :: SatPos_DII
 
       ! Buffer for satellite names   !!! DTW 2007
-      character (len=100), dimension(:), allocatable:: Buffer_I
+      character (len=100), dimension(:), allocatable:: NameSat_I
 
       ! MPI related variables
+      integer :: iProc0Im, iComm
+
 
       ! MPI status variable
       integer :: iStatus_I(MPI_STATUS_SIZE)
@@ -150,14 +152,18 @@ contains
       call check_allocate(iError,NameSubSub//": Buffer_IIV")
       !!! DTW 2007
       if (nShareSats > 0) then
-         allocate(Buffer_III(3,2,nShareSats), stat=iError)
-         call check_allocate(iError,NameSubSub//": Buffer_III")
-         allocate(Buffer_I(nShareSats),       stat=iError)
-         call check_allocate(iError,NameSubSub//": Buffer_I")
+         allocate(SatPos_DII(3,2,nShareSats), stat=iError)
+         call check_allocate(iError,NameSubSub//": SatPos_DII")
+         allocate(NameSat_I(nShareSats),       stat=iError)
+         call check_allocate(iError,NameSubSub//": NameSat_I")
       end if
 
       if(DoTest)write(*,*)NameSubSub,', variables allocated',&
            ', iProc:',iProcWorld
+
+
+      iProc0Im = i_proc0(IM_)
+      iComm = i_comm()
 
       !\
       ! Get field line integrals from GM
@@ -169,7 +175,7 @@ contains
       ! If IM sat tracing is enabled, get sat locations from GM
       !/
       if(is_proc(GM_).AND.(nShareSats > 0)) &
-           call GM_get_sat_for_im(Buffer_III, Buffer_I, nShareSats)
+           call GM_get_sat_for_im(SatPos_DII, NameSat_I, nShareSats)
            
 
       !\
@@ -191,20 +197,20 @@ contains
       if(nShareSats > 0 .and. i_proc0(IM_) /= i_proc0(GM_))then
          nSize = nShareSats
          if(is_proc0(GM_)) &
-              call MPI_send(Buffer_I,nSize,MPI_REAL,i_proc0(IM_),&
-              1,i_comm(),iError)
+              call MPI_send(NameSat_I,nSize,MPI_REAL,iProc0Im,&
+              1,iComm,iError)
          if(is_proc0(IM_)) &
-              call MPI_recv(Buffer_I,nSize,MPI_REAL,i_proc0(GM_),&
+              call MPI_recv(NameSat_I,nSize,MPI_REAL,i_proc0(GM_),&
               1,i_comm(),iStatus_I,iError)
 
          ! Transfer satellite locations from GM to IM   !!!DTW 2007
 
          nSize = 3*2*nShareSats
          if(is_proc0(GM_)) &
-              call MPI_send(Buffer_III,nSize,MPI_REAL,i_proc0(IM_),&
+              call MPI_send(SatPos_DII,nSize,MPI_REAL,i_proc0(IM_),&
               1,i_comm(),iError)
          if(is_proc0(IM_)) &
-              call MPI_recv(Buffer_III,nSize,MPI_REAL,i_proc0(GM_),&
+              call MPI_recv(SatPos_DII,nSize,MPI_REAL,i_proc0(GM_),&
               1,i_comm(),iStatus_I,iError)
       end if
 
@@ -216,7 +222,7 @@ contains
       !/
       if(is_proc0(IM_))then
          call IM_put_from_gm(Buffer_IIV,iSize,jSize,nVarGmIm,NameVar)
-         if(nShareSats > 0) call IM_put_sat_from_gm(nShareSats, Buffer_I, Buffer_III)
+         if(nShareSats > 0) call IM_put_sat_from_gm(nShareSats, NameSat_I, SatPos_DII)
          if(DoTest) &
               write(*,*)'get_fieldline_volume: IM iProc, Buffer(1,1)=',&
               iProcWorld,Buffer_IIV(1,1,:)
@@ -229,8 +235,8 @@ contains
 
       !!! DTW 2007
       if (nShareSats > 0) then
-         deallocate(Buffer_I)
-         deallocate(Buffer_III)
+         deallocate(NameSat_I)
+         deallocate(SatPos_DII)
       end if
 
       if(DoTest)write(*,*)NameSubSub,', variables deallocated',&

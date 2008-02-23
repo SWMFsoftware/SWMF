@@ -664,17 +664,14 @@ contains
     !---------------------------------------------------------------!
     !Check the dimension of PE_I and iBlock_I                       !
     if(present(PE_I))then
-       if(ubound(PE_I,1)/=product(iRootMapDim_D))&
-            call CON_stop(&
-            'The dimension of PE_I should be equal to ',&
-            product(iRootMapDim_D))
+       if(ubound(PE_I,1)/=product(iRootMapDim_D))then
+          call CON_stop('The dimension of PE_I is wrong')
+       end if
     end if
 
     if(present(iBlock_I))then
        if(ubound(iBlock_I,1)/=product(iRootMapDim_D))&
-            call CON_stop(&
-            'The dimension of iBlock_I should be equal to ',&
-            product(iRootMapDim_D))
+            call CON_stop('The dimension of iBlock_I is wrong')
     end if
 
     !---------------------------------------------------------------!
@@ -772,8 +769,7 @@ contains
     integer,intent(in)::lGlobalTreeNode,iPE,iBlock
     if(DomainDecomposition%iDecomposition_II&
          (FirstChild_,lGlobalTreeNode)/=None_)call CON_stop(&
-         'You can not assign pe and blk for tree node=',&
-         lGlobalTreeNode)
+         'You can not assign pe and blk for tree node')
 
     DomainDecomposition%iDecomposition_II&
          (BLK_,lGlobalTreeNode)=iBlock

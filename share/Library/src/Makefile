@@ -9,6 +9,9 @@ include Makefile.RULES
 # A component does not have to use the whole library.
 # The minimum reqguirement is ModIoUnit.o
 
+ModMpiInterfaces.f90: SWMF_MPI_routines.dat
+	${SCRIPTDIR}/CreateModMpi.pl
+
 MODULES = \
 	${BLAS}\
 	ModBlasLapack.o\
@@ -19,6 +22,8 @@ MODULES = \
 	ModIoUnit.o\
 	ModKind.o\
 	ModLinearSolver.o\
+	ModMpiConstants.o\
+	ModMpiInterfaces.o\
 	ModMpi.o\
         ModNumConst.o\
 	ModPlanetConst.o\

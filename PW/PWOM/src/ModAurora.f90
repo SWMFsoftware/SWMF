@@ -180,8 +180,7 @@ contains
     call get_HPI(CurrentTime, temp, iError)
     call IO_SetHPI(temp)
     if (iError /= 0) then
-       write(*,*) "PW_Error in get_hpi called from set_aurora.f90"
-       call con_stop()
+       call con_stop("PW_Error in get_hpi called from set_aurora.f90")
     endif
     
     
