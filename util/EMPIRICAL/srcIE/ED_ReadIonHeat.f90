@@ -28,7 +28,7 @@ subroutine ReadIonHeat(filename, IsIonizationFile)
   end do
     
   ! number of altitude
-  read(UnitTmp_, '(i)') NAlt
+  read(UnitTmp_, *) NAlt
 
   if (IsFirstTime) then
      ALLOCATE(glng(NLng))
