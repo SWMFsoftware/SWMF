@@ -10,3 +10,6 @@ $OS eq "Darwin" and $Compiler eq "xlf90"
 
 $OS eq "Linux" and $Compiler eq "lf95"
 	${COMPILE.f90} ${Cflag4NoP} ModBlasLapack.f90
+
+$Compiler eq "f95"
+	${COMPILE.f90} ${Cflag0} -dusty ModMpiInterfaces.f90
