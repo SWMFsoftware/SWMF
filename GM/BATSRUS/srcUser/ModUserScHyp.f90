@@ -149,7 +149,7 @@ contains
 
        if(fieldaligned)then
           RhoU_D   = State_VGB(RhoUx_:RhoUz_,1,j,k,iBlock)
-          RhoUdotR = max( dot_product(Normal_D,RhoU_D), 0.0 )
+          RhoUdotR = dot_product(Normal_D,RhoU_D)
           RhoUn_D  = RhoUdotR*Normal_D
           RhoUt_D  = RhoU_D - RhoUn_D
           r2RhoUn_D = r_Blk(1,j,k,iBlock)**2*RhoUn_D
@@ -172,10 +172,31 @@ contains
                 ! MHD: extrapolate in field line direction
                 Unit_D = FullB_D/FullBNorm
              end if
-             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
-                  dot_product(GhostRhoU_D,Unit_D)*Unit_D
+             if(RhoUdotR<0.0)then
+                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
+             else
+                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+                     dot_product(GhostRhoU_D,Unit_D)*Unit_D
+             end if
           end do
        else
+!          RhoU_D   = State_VGB(RhoUx_:RhoUz_,1,j,k,iBlock)
+!          RhoUdotR = dot_product(Normal_D,RhoU_D)
+!          RhoUn_D  = RhoUdotR*Normal_D
+!          RhoUt_D  = RhoU_D - RhoUn_D
+!          r2RhoUn_D = r_Blk(1,j,k,iBlock)**2*RhoUn_D
+!
+!          do i=iMin,iMax
+!             if(RhoUdotR<0.0)then
+!                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
+!             else
+!                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+!                     r2RhoUn_D/r_Blk(i,j,k,iBlock)**2
+!             end if
+!          end do
+!          do i=iMin,iMax
+!             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
+!          end do
           ! zero physical mass flux at coronal base (reflection)
           do i=iMin,iMax
              State_VGB(RhoUx_,i,j,k,iBlock) = &
@@ -201,7 +222,6 @@ contains
             -2.0*OmegaBody*x_Blk(iMin:iMax,jMin:jMax,kMin:kMax,iBlock) &
             *State_VGB(Rho_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)
     end if
-
 
     if(UseHyperbolicDivb)then
        State_VGB(Hyp_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) = 0.0
@@ -462,6 +482,7 @@ contains
             (State_VGB(By_   ,i,j,k,iBlock)+B0yCell_BLK(i,j,k,iBlock))**2+&
             (State_VGB(Bz_   ,i,j,k,iBlock)+B0zCell_BLK(i,j,k,iBlock))**2)&
             *cQuarter*(R_BLK(i,j,k,iBlock)/2.5)**1.50))
+
        State_VGB(P_   ,i,j,k,iBlock)=(Gammacell-cOne)*      &
             (inv_gm1*State_VGB(P_,i,j,k,iBlock) + State_VGB(Ew_,i,j,k,iBlock))
        State_VGB(Ew_,i,j,k,iBlock)= State_VGB(P_,i,j,k,iBlock) &
@@ -523,6 +544,32 @@ contains
              refineBlock = .false. !Do not refine body or outer boundary
           else
              call refine_heliosheath
+          end if
+       case('spherical')
+          ! assumes 1x2x9 root blocks
+          levBLK=global_block_ptrs(iBLK,iProc+1)%ptr%LEV
+          levmin=3
+          levelHS=4
+          if(.not.time_loop)then
+             !refine to have resolution not worse than levmin
+             if(lev<=levmin)then
+                refineBlock = .true.
+             else
+                refineBlock = .false.
+             end if
+          elseif( levBLK<=levmin ) then
+             refineBlock = .true.
+          elseif( levBLK<=levelHS-1 )then
+             MinRBlk = XyzStart_Blk(1,iBlk)-0.5*Dx_Blk(iBlk)
+             CritR=rBody + (XyzMax_D(1)-XyzMin_D(1)) &
+                  /(2.0**real(levBLK+2-levmin))
+             if( MinRBlk < CritR )then
+                refineBlock = .true.
+             else
+                call refine_heliosheath
+             endif
+          else
+             refineBlock=.false.
           end if
        case('spherical_lnr')
           levBLK=global_block_ptrs(iBLK,iProc+1)%ptr%LEV
@@ -596,8 +643,10 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
+    use ModAdvance, ONLY: State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
     use ModSize, ONLY: nI, nJ, nK
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
+    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, r_BLK
+    use ModVarIndexes
     implicit none
 
     integer,          intent(in)   :: iBlock
@@ -624,6 +673,16 @@ contains
        do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
           call get_gamma_emp(x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock), &
                z_BLK(i,j,k,iBlock),Gamma)
+
+          if(R_BLK(i,j,k,iBlock)>2.5)&
+               Gamma=Gamma-(Gamma-1.1)*max(0.0, &
+               -1.0 + 2.0*State_VGB(P_,i,j,k,iBlock)/&
+               (State_VGB(P_,i,j,k,iBlock)+(&
+               (State_VGB(Bx_,i,j,k,iBlock)+B0xCell_BLK(i,j,k,iBlock))**2+&
+               (State_VGB(By_,i,j,k,iBlock)+B0yCell_BLK(i,j,k,iBlock))**2+&
+               (State_VGB(Bz_,i,j,k,iBlock)+B0zCell_BLK(i,j,k,iBlock))**2)&
+               *0.25*(R_BLK(i,j,k,iBlock)/2.5)**1.5))
+
           PlotVar_G(i,j,k) = Gamma
        end do; end do; end do
     end select
@@ -632,6 +691,5 @@ contains
     PlotVarBody=1.0
 
   end subroutine user_set_plot_var
-
 
 end module ModUser
