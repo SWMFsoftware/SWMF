@@ -357,6 +357,21 @@ subroutine MPI_GATHER(sendbuf,sendcount,sendtype,&
   ierror=0
 end subroutine MPI_GATHER
 
+subroutine MPI_GATHERV(sendbuf,sendcount,sendtype,&
+     recvbuf,recvcount,displs,recvtype,root,comm,ierror)
+
+  integer, intent(in) :: sendcount,sendtype,recvcount,displs,recvtype,root,comm
+  integer, intent(out):: ierror
+  character (LEN=*)   :: sendbuf
+  character (LEN=*)   :: recvbuf
+
+  call MPI_SIMPLE_COPY('MPI_GATHERV', &
+       sendbuf,sendcount,sendtype,    &
+       recvbuf,recvcount,recvtype)
+
+  ierror=0
+end subroutine MPI_GATHERV
+
 subroutine MPI_REDUCE(sendbuf,recvbuf,count,datatype,op,root,comm,ierror)
 
   integer, intent(in) :: count,datatype,op,root,comm
