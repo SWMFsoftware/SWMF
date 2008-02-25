@@ -123,12 +123,13 @@ subroutine update_check(iStage)
   real :: time_fraction_rho, min_time_fraction_rho
   real :: time_fraction_p,   min_time_fraction_p
   real :: time_fraction, cell_time_fraction, report_tf, report_tf_all
-  real :: minRho,minP
   real, dimension(2) :: percent_chg_rho
   real, dimension(2) :: percent_chg_p
   real, dimension(4) :: PercentChangePE, PercentChangeMax
 
-  logical :: update_check_done, negative_found, stop_now
+  real :: Value
+  integer :: i_D(3)
+  logical :: update_check_done, IsNegative, DoStop
   logical :: oktest,  oktest_me
   logical :: oktest1, oktest1_me
   logical :: oktest2, oktest2_me
@@ -159,6 +160,7 @@ subroutine update_check(iStage)
                  do iVar = 1, nVar
                     if (DefaultState_V(iVar) <= cTiny) CYCLE
 
+                    ! For sake of backward compatibility
                     if(iVar == P_) CYCLE
 
                     if(UseMultiSpecies .and. &
@@ -167,22 +169,26 @@ subroutine update_check(iStage)
                          < SpeciesPercentCheck*0.01*&
                          StateOld_VCB(Rho_,i,j,k,iBlock)) CYCLE
 
-                    percent_chg_rho(1) = max(percent_chg_rho(1), 100.*abs( min(0.,&
+                    percent_chg_rho(1) = &
+                         max(percent_chg_rho(1), 100*abs( min(0.,&
                          (State_VGB(iVar,i,j,k,iBlock)- &
                          StateOld_VCB(iVar,i,j,k,iBlock)) &
                          /StateOld_VCB(iVar,i,j,k,iBlock) ) ) )
-                    percent_chg_rho(2) = max(percent_chg_rho(2), 100.*abs( max(0.,&
+                    percent_chg_rho(2) = &
+                         max(percent_chg_rho(2), 100*abs( max(0.,&
                          (State_VGB(iVar,i,j,k,iBlock)- &
                          StateOld_VCB(iVar,i,j,k,iBlock)) &
                          /StateOld_VCB(iVar,i,j,k,iBlock) ) ) )
                  end do
               end do; end do; end do
            end if
-           percent_chg_p(1) = max(percent_chg_p(1), 100. * abs( min( 0., minval( &
+           percent_chg_p(1) = &
+                max(percent_chg_p(1), 100. * abs( min( 0., minval( &
                 (State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)- &
                 StateOld_VCB(P_,1:nI,1:nJ,1:nK,iBlock)) &
                 /StateOld_VCB(P_,1:nI,1:nJ,1:nK,iBlock) ) ) ) )
-           percent_chg_p(2) = max(percent_chg_p(2), 100. * abs( max( 0., maxval( &
+           percent_chg_p(2) = &
+                max(percent_chg_p(2), 100. * abs( max( 0., maxval( &
                 (State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)- &
                 StateOld_VCB(P_,1:nI,1:nJ,1:nK,iBlock)) &
                 /StateOld_VCB(P_,1:nI,1:nJ,1:nK,iBlock) ) ) ) )
@@ -196,8 +202,10 @@ subroutine update_check(iStage)
         if (min_time_fraction_rho >= 1. .and. min_time_fraction_p >= 1.) EXIT
         if (num_checks == 1) then
            time_fraction = 1.
-           if (min_time_fraction_rho < 1.) time_fraction = 0.9*min_time_fraction_rho
-           if (min_time_fraction_p   < 1.) time_fraction = min(time_fraction, 0.75)
+           if (min_time_fraction_rho < 1.) &
+                time_fraction = 0.9*min_time_fraction_rho
+           if (min_time_fraction_p   < 1.) &
+                time_fraction = min(time_fraction, 0.75)
         else
            time_fraction = 0.5
         end if
@@ -229,7 +237,7 @@ subroutine update_check(iStage)
      end if
   else
      !\\\
-     !    LOCAL TIMESTEPPING  ==============================================
+     !    LOCAL TIMESTEPPING
      !///
      report_tf = 1.
      PercentChangePE = cZero
@@ -238,7 +246,7 @@ subroutine update_check(iStage)
 
         do k=1,nK; do j=1,nJ; do i=1,nI
            cell_time_fraction = 1.
-           do num_checks = 1,max_checks
+           do num_checks = 1, max_checks
               update_check_done = .true.
               percent_chg_rho = 0.1
               percent_chg_p   = 0.1
@@ -246,6 +254,7 @@ subroutine update_check(iStage)
                  do iVar = 1, nVar
                     if (DefaultState_V(iVar) <= cTiny) CYCLE
 
+                    ! This is for backwards compatibility
                     if(iVar == P_) CYCLE
 
                     if(UseMultiSpecies .and. &
@@ -280,35 +289,43 @@ subroutine update_check(iStage)
               if (time_fraction_rho < 1. .or. time_fraction_p < 1.) then
                  if (num_checks == 1) then
                     time_fraction = 1.
-                    if (time_fraction_rho < 1.) time_fraction = 0.9*time_fraction_rho
-                    if (time_fraction_p   < 1.) time_fraction = min(time_fraction, 0.75)
+                    if (time_fraction_rho < 1.) &
+                         time_fraction = 0.9*time_fraction_rho
+                    if (time_fraction_p   < 1.) &
+                         time_fraction = min(time_fraction, 0.75)
                  else
                     time_fraction = 0.5
                  end if
                  update_check_done = .false.
                  cell_time_fraction = cell_time_fraction * time_fraction
                  if(oktest2) then
-                    write(*,*) 'update_check LT: changing cell value, PE=',iProc, &
+                    write(*,*) &
+                         'update_check LT: changing cell value, PE=',iProc, &
                          ' BLK=',iBlock,' i,j,k=',i,' ',j,' ',k, &
                          '  time_fraction=',time_fraction
-                    write(*,*) iProc,' ',iBlock,' ',i,' ',j,' ',k,' OLD:  ', &
-                         NameVar_V(1),'=',StateOld_VCB(1,i,j,k,iBlock), &
-                         '    ', NameVar_V(nVar),' ', StateOld_VCB(nVar,i,j,k,iBlock)
-                    write(*,*) iProc,' ',iBlock,' ',i,' ',j,' ',k,' BAD:', &
+                    write(*,*) &
+                         iProc,' ',iBlock,' ',i,' ',j,' ',k,' OLD:  ', &
+                         NameVar_V(1),'=',StateOld_VCB(1,i,j,k,iBlock),'    ',&
+                         NameVar_V(nVar),' ', StateOld_VCB(nVar,i,j,k,iBlock)
+                    write(*,*) &
+                         iProc,' ',iBlock,' ',i,' ',j,' ',k,' BAD:', &
                          ' ', NameVar_V(1),'=',State_VGB(1,i,j,k,iBlock), &
                          '   ', NameVar_V(nVar),State_VGB(nVar,i,j,k,iBlock)
                  end if
                  call fix_update
                  if(oktest2) then
-                    write(*,*) iProc,' ',iBlock,' ',i,' ',j,' ',k,' NEW:', &
-                         ' ',NameVar_V(1),'=',State_VGB(1,i,j,k,iBlock), &
-                         '   ',NameVar_V(nVar),'=', State_VGB(nVar,i,j,k,iBlock)
+                    write(*,*) &
+                         iProc,' ',iBlock,' ',i,' ',j,' ',k,' NEW:', &
+                         ' ',NameVar_V(Rho_),'=',State_VGB(Rho_,i,j,k,iBlock),&
+                         '   ',NameVar_V(p_),'=', State_VGB(p_,i,j,k,iBlock)
                  end if
               end if
               if (update_check_done) EXIT
            end do
-           PercentChangePE(1:2) = max(percent_chg_rho(1:2)-0.1, PercentChangePE(1:2))
-           PercentChangePE(3:4) = max(percent_chg_p(1:2)-0.1, PercentChangePE(3:4))
+           PercentChangePE(1:2) = &
+                max(percent_chg_rho(1:2)-0.1, PercentChangePE(1:2))
+           PercentChangePE(3:4) = &
+                max(percent_chg_p(1:2)-0.1, PercentChangePE(3:4))
            report_tf = min(report_tf, cell_time_fraction)
         end do; end do; end do
      end do
@@ -326,60 +343,66 @@ subroutine update_check(iStage)
      call MPI_allreduce(PercentChangePE,  PercentChangeMax, 4, &
           MPI_REAL, MPI_MAX, iComm, iError)
      if(iProc==0) then
-        write(*,*) ' At stage',iStage,' maximum change in ',NameVar_V(1),'("-" -down, "+" -up',&
-             - PercentChangeMax(1),' %,   ',  PercentChangeMax(2),' %'
-        write(*,*)'            maximum change in ',NameVar_V(nVar), '("-" -down, "+" -up',&
+        write(*,*)'Maximum change in pressure on proc 0:',&
              - PercentChangeMax(3),' %,   ',  PercentChangeMax(4),' %'
+        write(*,*) 'Maximum change in other positive variables:', &
+             - PercentChangeMax(1),' %,   ',  PercentChangeMax(2),' %'
      end if
      if(oktest3) then
         do iBlock = 1,nBlockMax
            if(unusedBLK(iBlock))cycle
            do k=1,nK;do j=1,nJ; do i=1,nI
               if(.not.true_cell(i,j,k,iBlock))cycle
-              if(DefaultState_V(1)>cTiny)then
-                 if (abs(100. * abs( min( 0., &
-                      (State_VGB(1,i,j,k,iBlock)-&
-                      StateOld_VCB(1,i,j,k,iBlock)) &
-                      /StateOld_VCB(1,i,j,k,iBlock) ) )-&
-                      PercentChangeMax(1))<cTiny*PercentChangeMax(1))&
-                      write(*,*)'Maximum decrese in density at the point',&
-                      x_BLK(i,j,k,iBlock), y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock),&
-                      'is: rho_old = ',StateOld_VCB(1,i,j,k,iBlock),&
-                      'rho_new=',State_VGB(1,i,j,k,iBlock)
+              if (abs(100. * abs( min( 0., &
+                   (State_VGB(Rho_,i,j,k,iBlock)-&
+                   StateOld_VCB(Rho_,i,j,k,iBlock)) &
+                   /StateOld_VCB(Rho_,i,j,k,iBlock) ) )-&
+                   PercentChangeMax(1))<cTiny*PercentChangeMax(1))&
+                   write(*,*)'Maximum decrease in density at X Y Z=',&
+                   x_BLK(i,j,k,iBlock), &
+                   y_BLK(i,j,k,iBlock), &
+                   z_BLK(i,j,k,iBlock),&
+                   ': rho_old = ',StateOld_VCB(Rho_,i,j,k,iBlock),&
+                   ' rho_new = ',State_VGB(Rho_,i,j,k,iBlock)
                  
-                 if (abs(100. * abs( max( 0., &
-                      (State_VGB(1,i,j,k,iBlock)-&
-                      StateOld_VCB(1,i,j,k,iBlock)) &
-                      /StateOld_VCB(1,i,j,k,iBlock) ) )-&
-                      PercentChangeMax(2))<cTiny*PercentChangeMax(2))&
-                      write(*,*)'Maximum increase in density at the point',&
-                      x_BLK(i,j,k,iBlock), y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock),&
-                      'is: rho_old = ',&
-                      StateOld_VCB(1,i,j,k,iBlock),&
-                      'rho_new=',State_VGB(1,i,j,k,iBlock)
-              end if
-              if(DefaultState_V(nVar)>cTiny)then
-                 if (abs(100. * abs( min( 0., &
-                      (State_VGB(nVar,i,j,k,iBlock)-&
-                      StateOld_VCB(nVar,i,j,k,iBlock)) &
-                      /StateOld_VCB(nVar,i,j,k,iBlock) ) )-&
-                      PercentChangeMax(3))<cTiny*PercentChangeMax(3))&
-                      write(*,*)'Maximum decrese in',NameVar_V(nVar), 'at the point',&
-                      x_BLK(i,j,k,iBlock), y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock),&
-                      'is: valeu_old = ',StateOld_VCB(P_,i,j,k,iBlock),&
-                      'value_new=',State_VGB(nVar,i,j,k,iBlock)
-                 if (abs(100. * abs( max( 0., &
-                      (State_VGB(nVar,i,j,k,iBlock)-&
-                      StateOld_VCB(nVar,i,j,k,iBlock)) &
-                      /StateOld_VCB(nVar,i,j,k,iBlock) ) )-&
-                      PercentChangeMax(4))<cTiny*PercentChangeMax(4))&
-                      write(*,*)'Maximum increase in',NameVar_V(nVar), 'at the point',&
-                      x_BLK(i,j,k,iBlock), y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock),&
-                      'is: value_old = ',&
-                      StateOld_VCB(nVar,i,j,k,iBlock),&
-                      'value_new=',State_VGB(nVar,i,j,k,iBlock)
-              end if
-           end do;end do;end do
+              if (abs(100. * abs( max( 0., &
+                   (State_VGB(Rho_,i,j,k,iBlock)-&
+                   StateOld_VCB(Rho_,i,j,k,iBlock)) &
+                   /StateOld_VCB(Rho_,i,j,k,iBlock) ) )-&
+                   PercentChangeMax(2))<cTiny*PercentChangeMax(2))&
+                   write(*,*)'Maximum increase in density at the point',&
+                   x_BLK(i,j,k,iBlock), &
+                   y_BLK(i,j,k,iBlock), &
+                   z_BLK(i,j,k,iBlock),&
+                   'is: rho_old = ',&
+                   StateOld_VCB(Rho_,i,j,k,iBlock),&
+                   'rho_new=',State_VGB(Rho_,i,j,k,iBlock)
+
+              if (abs(100. * abs( min( 0., &
+                   (State_VGB(p_,i,j,k,iBlock)-&
+                   StateOld_VCB(p_,i,j,k,iBlock)) &
+                   /StateOld_VCB(p_,i,j,k,iBlock) ) )-&
+                   PercentChangeMax(3))<cTiny*PercentChangeMax(3))&
+                   write(*,*)'Maximum decrease in',NameVar_V(p_), &
+                   'at the point',&
+                   x_BLK(i,j,k,iBlock), &
+                   y_BLK(i,j,k,iBlock), &
+                   z_BLK(i,j,k,iBlock),&
+                   'is: valeu_old = ',StateOld_VCB(P_,i,j,k,iBlock),&
+                   'value_new=',State_VGB(p_,i,j,k,iBlock)
+              if (abs(100. * abs( max( 0., &
+                   (State_VGB(p_,i,j,k,iBlock)-&
+                   StateOld_VCB(p_,i,j,k,iBlock)) &
+                   /StateOld_VCB(p_,i,j,k,iBlock) ) )-&
+                   PercentChangeMax(4))<cTiny*PercentChangeMax(4))&
+                   write(*,*)'Maximum increase in',NameVar_V(p_), &
+                   'at the point',&
+                   x_BLK(i,j,k,iBlock), &
+                   y_BLK(i,j,k,iBlock), &
+                   z_BLK(i,j,k,iBlock),&
+                   'is: value_old = ',StateOld_VCB(p_,i,j,k,iBlock),&
+                   'value_new=',State_VGB(p_,i,j,k,iBlock)
+           end do; end do; end do
         end do
      end if
   end if
@@ -388,59 +411,52 @@ subroutine update_check(iStage)
        call error_report('Time step reduction, min(factor)',&
        report_tf,iError1,.true.)
 
-
-  !\\\
-  !    Check for positive pressures and densities
-  !///
-  negative_found = .false.
+  ! Check for positivity of variables
+  IsNegative = .false.
   do iBlock = 1, nBlockMax
      if (unusedBLK(iBlock)) CYCLE
-     minRho=1.00
-     do iVar = 1,nVar
+     do iVar = 1, nVar
+        ! Ignore variables that do not have to be positive
+        if(DefaultState_V(iVar) < cTiny) CYCLE
 
         ! Do not check species densities if check threshold is positive
         ! (i.e. minor species densities are allowed to go negative,
         !       and they are fixed to be zero in update_states)
-        if(UseMultiSpecies .and. SpeciesPercentCheck > 0.0 .and. &
-             iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_ )CYCLE
+        if(UseMultiSpecies .and. SpeciesPercentCheck > 0.0 &
+           .and. iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_) CYCLE
 
-        if (DefaultState_V(iVar)>cTiny)&
-             minRho =min(minRho, minval(State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock)))
-     end do
-     minP   = minval(  State_VGB(nVar,1:nI,1:nJ,1:nK,iBlock))
-     if (minRho <= 0.00 .or. minP <= 0.00) then
-        negative_found = .true.
-        if(time_accurate) then
-           write(*,'(a,i4,a,a,i6,a,f12.8,a,f12.8)') &
-                'Negative updated value: PE=',iProc, &
-                'update_check TA:',' ITER=',n_step, &
-                '     dt reduction=',report_tf,' dt=',dt
-        else
-           write(*,'(a,i4,a,a,i6,a,f12.8)') &
-                'Negative updated value: PE=',iProc, &
-                'update_check LT:',' ITER=',n_step, &
-                ' max dt reduction=',report_tf
+        Value = minval(State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock))
+
+        if(Value < 0.0)then
+           i_D = minloc(State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock))
+           write (*,'(a,3i3,2i5,i3,a,3f12.4,/,5x,a,a,es12.4)') &
+                ' I J K iBlock iProc iVar=',i_D,iBlock,iProc,iVar, &
+                ' X Y Z=', &
+                x_BLK(i,j,k,iBlock), &
+                y_BLK(i,j,k,iBlock), &
+                z_BLK(i,j,k,iBlock), &
+                ' Var='//trim(NameVar_V(iVar)), &
+                ' Value=', State_VGB(iVar,i,j,k,iBlock)
+           IsNegative = .true.
         end if
-        write(*,'(a,i4,a,i5,2(a8,es12.4))') 'Negative updated value: PE=',iProc, &
-             ' BLK=',iBlock,' minRho=',minRho,' minP=',minP
-        do iVar = 1, nVar
-
-           if (DefaultState_V(iVar)<=cTiny)cycle
-           do k=1,nK;do j=1,nJ;do i=1,nI
-              if (State_VGB(iVar,i,j,k,iBlock) <= 0.00 )&
-                   write (*,'(a,i4,a,i5,a,3i3,a,3f12.4,/,5x,a5,1pe12.4)') &
-                   'PE=',iProc,' BLK=',iBlock,' I J K=',i,j,k,' X Y Z=', &
-                   x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock),z_BLK(i,j,k,iBlock), &
-                   ' iVar=',&
-                   State_VGB(iVar,i,j,k,iBlock)
-           end do;end do; end do; 
-        end do
-     end if
+     end do
   end do
-  stop_now = .false.
-  call MPI_allreduce(negative_found,stop_now, &
-       1,MPI_LOGICAL,MPI_LOR,iComm,iError)
-  if (stop_now) call stop_mpi('Stopping, negative density or pressure')
+  if (IsNegative) then
+     if(time_accurate) then
+        write(*,'(a,i4,a,a,i6,a,f12.8,a,f12.8)') &
+             'Negative updated value: PE=',iProc, &
+             'update_check TA:',' ITER=',n_step, &
+             '     dt reduction=',report_tf,' dt=',dt
+     else
+        write(*,'(a,i4,a,a,i6,a,f12.8)') &
+             'Negative updated value: PE=',iProc, &
+             'update_check LT:',' ITER=',n_step, &
+             ' max dt reduction=',report_tf
+     end if
+  end if
+
+  call MPI_allreduce(IsNegative, DoStop,1,MPI_LOGICAL,MPI_LOR,iComm,iError)
+  if (DoStop) call stop_mpi('Stopping, negative density or pressure')
 
 contains
 
