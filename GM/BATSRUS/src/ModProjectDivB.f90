@@ -112,9 +112,6 @@ subroutine project_B
           call stop_mpi('Error in project_B: Too small value for divbmax')
   endif
 
-  ! Initial guess for phi is zero for the iterative solver
-  call set_BLK(phi,0.0)
-
   ! Solve the Poisson equation Laplace phi = div B
   call proj_poisson(proj_divb,divbmax,proj_typestop,proj_matvecmax, &
        info,nmatvec,resid,phi)
@@ -309,7 +306,7 @@ subroutine proj_poisson(rhs,tolerance,typestop,matvecmax,&
   real, intent(out)    :: resid
   ! The residual after the iterations
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(inout):: phi
+  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(out):: phi
   !    The solution
 
   ! Local variables
