@@ -103,7 +103,7 @@ subroutine advance_impl
 
   real :: TimeSimulationOrig
 
-  logical :: oktest, oktest_me, DoTestKrylov, DoTestKrylovMe
+  logical :: DoTest, DoTestMe, DoTestKrylov, DoTestKrylovMe
 
   logical :: UseUpdateCheckOrig, UsePointImplicitOrig
 
@@ -116,17 +116,18 @@ subroutine advance_impl
   !----------------------------------------------------------------------------
 
   NameSub(1:2) = NameThisComp
-  call set_oktest('implicit',oktest,oktest_me) 
-  if(oktest_me) write(*,*)NameSub,' starting at step=',n_step
+  call set_oktest('implicit',DoTest,DoTestMe) 
+  if(DoTestMe) write(*,*)NameSub,' starting at step=',n_step
 
   ! Initialize some variables in ModImplicit
   call implicit_init
 
   ! Get initial iterate from current state
   call explicit2implicit(0,nI+1,0,nJ+1,0,nK+1,w_k)
-  if(oktest_me)write(*,*)NameSub,': nImplBLK=',nImplBLK
-  if(oktest_me.and.nImplBLK>0)write(*,*)NameSub,': w_k=',&
-       w_k(Itest,Jtest,Ktest,VARtest,implBLKtest)
+
+  if(DoTestMe)write(*,*)NameSub,': nImplBLK=',nImplBLK
+  if(DoTestMe.and.nImplBLK>0)write(*,*)NameSub,': w_k=',&
+       w_k(Itest,Jtest,Ktest,:,implBLKtest)
 
   wnrm(1:nw)=-1.0
   ! Global norm of current w_(k=0) = w_n
@@ -139,7 +140,7 @@ subroutine advance_impl
   wnrm=sqrt(wnrm/(nimpl_total/nw))
   where(wnrm < smalldouble) wnrm =1.0
 
-  if(oktest_me)write(*,*)NameSub,': nimpltot, wnrm=',nimpl_total,wnrm
+  if(DoTestMe)write(*,*)NameSub,': nimpltot, wnrm=',nimpl_total,wnrm
 
   TimeSimulationOrig = Time_Simulation
   UseUpdateCheckOrig = UseUpdateCheck
@@ -148,7 +149,7 @@ subroutine advance_impl
   ! Advance explicitly treated blocks if any
   if(UsePartImplicit .and. nBlockExplALL > 0)then
 
-     if(oktest_me)write(*,*)NameSub,': advance explicit blocks'
+     if(DoTestMe)write(*,*)NameSub,': advance explicit blocks'
 
      if(UseBDF2)then
 
@@ -197,7 +198,6 @@ subroutine advance_impl
      UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
   end if
 
-
   !\
   ! Advance implicitly treated blocks
   !/
@@ -210,12 +210,12 @@ subroutine advance_impl
   if(.not.UseDtFixed)Cfl = ImplCfl
 
   if(UseDtFixed)then
-     if(oktest_me)write(*,*)NameSub,': call getdt_courant'
+     if(DoTestMe)write(*,*)NameSub,': call getdt_courant'
      call getdt_courant(dtexpl)
      dtexpl=cHalf*dtexpl
      dtcoeff=dt/dtexpl
   else
-     if(oktest_me)write(*,*)NameSub,': no call of getdt_courant'
+     if(DoTestMe)write(*,*)NameSub,': no call of getdt_courant'
      dtcoeff=implCFL/cHalf
   endif
 
@@ -231,9 +231,9 @@ subroutine advance_impl
   ! so the Jacobian should be evaliated at t^n+1
   Time_Simulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
 
-  if(oktest_me.and.time_accurate)&
+  if(DoTestMe.and.time_accurate)&
        write(*,*)NameSub,': dtcoeff,dtexpl,dt=',dtcoeff,dtexpl,dt
-  if(oktest_me.and.UseBDF2)write(*,*)NameSub,': n_prev,dt_prev,ImplCoeff=',&
+  if(DoTestMe.and.UseBDF2)write(*,*)NameSub,': n_prev,dt_prev,ImplCoeff=',&
        n_prev,dt_prev,ImplCoeff
 
   ! Initialize right hand side and dw
@@ -257,7 +257,7 @@ subroutine advance_impl
   NewtonIter=0
   do
      NewtonIter=NewtonIter+1;
-     if(oktest_me)write(*,*)NameSub,': NewtonIter=',NewtonIter
+     if(DoTestMe)write(*,*)NameSub,': NewtonIter=',NewtonIter
      if(NewtonIter>NewtonIterMax)then
         write(*,*)'Newton-Raphson failed to converge NewtonIter=',NewtonIter
         if(time_accurate)call stop_mpi('Newton-Raphson failed to converge')
@@ -281,10 +281,10 @@ subroutine advance_impl
         end do
         call timing_stop('impl_jacobian')
 
-        if(oktest)then
+        if(DoTest)then
            call MPI_reduce(sum(MAT(:,:,:,:,:,:,1:nImplBLK)**2),coef1,1,&
                 MPI_REAL,MPI_SUM,PROCtest,iComm,iError)
-           if(oktest_me)write(*,*)NameSub,': sum(MAT**2)=',coef1
+           if(DoTestMe)write(*,*)NameSub,': sum(MAT**2)=',coef1
         end if
 
      endif
@@ -292,7 +292,7 @@ subroutine advance_impl
      ! Update rhs and initial dw if required
      if (NewtonIter>1) call impl_newton_loop
 
-     if(oktest_me.and.nImplBLK>0)write(*,*)NameSub,&
+     if(DoTestMe.and.nImplBLK>0)write(*,*)NameSub,&
           ': initial dw(test), rhs(test)=',dw(implVARtest),rhs(implVARtest)
 
      ! Precondition matrix if required
@@ -336,12 +336,12 @@ subroutine advance_impl
                 MAT(1,1,1,1,1,7,implBLK))      ! +k
         end do
 
-        if(oktest)then
+        if(DoTest)then
            call MPI_reduce(sum(MAT(:,:,:,:,:,:,1:nImplBLK)**2),coef1,1,&
                 MPI_REAL,MPI_SUM,procTEST,iComm,iError)
            call MPI_reduce(sum(rhs(1:nimpl)**2),coef2,1,MPI_REAL,&
                 MPI_SUM,procTEST,iComm,iError)
-           if(oktest_me)then
+           if(DoTestMe)then
               write(*,*)NameSub,': preconditioned sum(MAT**2), sum(rhs**2)=',&
                    coef1,coef2
               if(nImplBLK>0)&
@@ -376,7 +376,7 @@ subroutine advance_impl
 
      KrylovMatVec=KrylovMatvecMax
 
-     if(oktest_me)write(*,*)NameSub,': Before ',KrylovType,&
+     if(DoTestMe)write(*,*)NameSub,': Before ',KrylovType,&
           ' KrylovMatVec,KrylovError:',KrylovMatVec,KrylovError
 
      ! Solve linear problem
@@ -395,7 +395,7 @@ subroutine advance_impl
      end select
      call timing_stop('krylov solver')
 
-     if(oktest_me.and.nImplBLK>0)write(*,*)NameSub,&
+     if(DoTestMe.and.nImplBLK>0)write(*,*)NameSub,&
           ': solution dw(test)=',dw(implVARtest)
 
      ! Postprocessing: dw = P_R.dw' where P_R = I, U^{-1}, U^{-1}L^{-1} for 
@@ -415,14 +415,14 @@ subroutine advance_impl
                 MAT(1,1,1,1,1,5,implBLK),  &   ! +j
                 MAT(1,1,1,1,1,7,implBLK))      ! +k
         end do
-        if(oktest_me.and.nImplBLK>0)&
+        if(DoTestMe.and.nImplBLK>0)&
              write(*,*)NameSub,': final     dw(test)=',dw(implVARtest)
      end if
-     if(oktest_me.or.DoTestKrylovMe)write(*,*)NameSub,&
+     if(DoTestMe.or.DoTestKrylovMe)write(*,*)NameSub,&
           ': After KrylovMatVec,info,KrylovError=',&
           KrylovMatVec,info,KrylovError
 
-     if(oktest_me.and.info/=0)write(*,*) NameSub, &
+     if(DoTestMe.and.info/=0)write(*,*) NameSub, &
           ' warning: no convergence, info:',info
 
      ! Update w: w_k+1 = w_k + coeff*dw  with coeff=1 or coeff<1 from
@@ -431,7 +431,8 @@ subroutine advance_impl
      ! Also calculates RES_impl=dtexpl*R_low_k+1 and logical converged.
      call impl_newton_update(dwnrm, converged)
 
-     if(oktest_me)write(*,*)NameSub,': dwnrm, converged=',dwnrm, converged
+     if(DoTestMe.and.UseNewton) &
+          write(*,*)NameSub,': dwnrm, converged=',dwnrm, converged
      if(converged)exit
   enddo
 
@@ -457,10 +458,10 @@ subroutine advance_impl
   ! Exchange messages, so ghost cells of all blocks are updated
   call exchange_messages
 
-  if(oktest_me)write(*,*) NameSub,': nmatvec=',nmatvec
-  if(oktest_me.and.nImplBLK>0)write(*,*)NameSub,': new w=',&
+  if(DoTestMe)write(*,*) NameSub,': nmatvec=',nmatvec
+  if(DoTestMe.and.nImplBLK>0)write(*,*)NameSub,': new w=',&
        w_k(Itest,Jtest,Ktest,VARtest,implBLKtest)
-  if(UseNewton.and.oktest_me)write(*,*)NameSub,': final NewtonIter, dwnrm=',&
+  if(UseNewton.and.DoTestMe)write(*,*)NameSub,': final NewtonIter, dwnrm=',&
        NewtonIter, dwnrm
 
   ! Restore StateOld and E_o_BLK in the implicit blocks
@@ -517,7 +518,7 @@ subroutine advance_impl
         DtFixed = min(DtFixedOrig, DtFixed*IncreaseStepFactor)
      end if
 
-     if(oktest_me) write(*,*) NameSub,': pRelMin,Dt,DtFixed=',&
+     if(DoTestMe) write(*,*) NameSub,': pRelMin,Dt,DtFixed=',&
           pRhoRelativeMin,Dt*No2Si_V(UnitT_), DtFixed*No2Si_V(UnitT_)
   endif
 
