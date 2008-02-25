@@ -75,6 +75,7 @@ subroutine proj_cg(rhs,qx,iter,tol,typestop,info)
   !call show_BLK('rhs',rhs)
 
   assumedzero=1.E-16; itr=0; matv=0
+  call set_BLK(qx,0.0)
 
   if (typestop/='rel'.and.typestop/='abs'.and.typestop/='max') &
        call stop_mpi('Error in CG: typestop='//typestop// &
