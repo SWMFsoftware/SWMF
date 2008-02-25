@@ -2,7 +2,7 @@
 !------------------------------------------------------------------------
 !
 !------------------------------------------------------------------------
-subroutine number_soln_blocks(renumber)
+subroutine number_soln_blocks
   use ModProcMH
   use ModMain, ONLY : nBLK,nBlockALL,lVerbose
   use ModParallel, ONLY : proc_dims
@@ -10,7 +10,6 @@ subroutine number_soln_blocks(renumber)
   use ModIO, ONLY : iUnitOut, write_prefix
   implicit none
 
-  logical, intent(in) :: renumber
   integer :: i,j,k
   type (adaptive_block_ptr) :: octree
 
