@@ -478,6 +478,7 @@ subroutine prolong_b_face(Bxf_c,Byf_c,Bzf_c,&
        Bxf_f, Byf_f, Bzf_f
 
   integer :: i,j,k,i1,j1,k1,ishift,jshift,kshift
+  integer :: iP,iM,jP,jM,kP,kM
   real :: gradXl, gradXr, gradYl, gradYr, gradZl, gradZr
   real :: dBxdy, dBxdz, dBydx, dBydz, dBzdx, dBzdy
   real :: dBxdxx, dBydyy, dBzdzz, dBxdxyz, dBydxyz, dBzdxyz
@@ -520,19 +521,18 @@ subroutine prolong_b_face(Bxf_c,Byf_c,Bzf_c,&
 
   ! X faces
   do i = 1+ishift, nI/2+ishift+1
-     do j = 1+jshift, nJ/2+jshift
-        do k = 1+kshift, nK/2+kshift
+     do j = 1+jshift, nJ/2+jshift; jP=min(j+1,nJ); jM=max(j-1,1)
+        do k = 1+kshift, nK/2+kshift; kP=min(k+1,nK); kM=max(k-1,1)
            i1 = 2*(i-ishift)-1; j1 = 2*(j-jshift)-1; k1 = 2*(k-kshift)-1
-
            ! Second order minmod limited interpolation on coarse cell faces
 
-           gradYr = Bxf_c(i,j+1,k)-Bxf_c(i,j  ,k)
-           gradYl = Bxf_c(i,j  ,k)-Bxf_c(i,j-1,k)
+           gradYr = Bxf_c(i,jP ,k)-Bxf_c(i,j  ,k)
+           gradYl = Bxf_c(i,j  ,k)-Bxf_c(i,jM ,k)
            dBxdy  = sign(0.25,gradyl)*&
                 max(0.,min(abs(gradyl),sign(1.,gradyl)*gradyr))
 
-           gradZr = Bxf_c(i,j,k+1)-Bxf_c(i,j,k)
-           gradZl = Bxf_c(i,j,k)  -Bxf_c(i,j,k-1)
+           gradZr = Bxf_c(i,j,kP) - Bxf_c(i,j,k)
+           gradZl = Bxf_c(i,j,k)  - Bxf_c(i,j,kM)
            dBxdz  = sign(0.25,gradzl)*&
                 max(0.,min(abs(gradzl),sign(1.,gradzl)*gradzr))
 
@@ -546,18 +546,18 @@ subroutine prolong_b_face(Bxf_c,Byf_c,Bzf_c,&
   end do
 
   ! Y faces
-  do i = 1+ishift, nI/2+ishift
+  do i = 1+ishift, nI/2+ishift; iP=min(i+1,nI); iM=max(i-1,1)
      do j = 1+jshift, nJ/2+jshift+1
-        do k = 1+kshift, nK/2+kshift
+        do k = 1+kshift, nK/2+kshift; kP=min(k+1,nK); kM=max(k-1,1)
            i1 = 2*(i-ishift)-1; j1 = 2*(j-jshift)-1; k1 = 2*(k-kshift)-1
 
-           gradXr = Byf_c(i+1,j,k)-Byf_c(i  ,j,k)
-           gradXl = Byf_c(i  ,j,k)-Byf_c(i-1,j,k)
+           gradXr = Byf_c(iP,j,k) - Byf_c(i ,j,k)
+           gradXl = Byf_c(i ,j,k) - Byf_c(iM,j,k)
            dBydx  = sign(0.25,gradxl)*&
                 max(0.,min(abs(gradxl),sign(1.,gradxl)*gradxr))
 
-           gradZr = Byf_c(i,j,k+1)-Byf_c(i,j,k)
-           gradZl = Byf_c(i,j,k)  -Byf_c(i,j,k-1)
+           gradZr = Byf_c(i,j,kP) - Byf_c(i,j,k)
+           gradZl = Byf_c(i,j,k)  - Byf_c(i,j,kM)
            dBydz  = sign(0.25,gradzl)*&
                 max(0.,min(abs(gradzl),sign(1.,gradzl)*gradzr))
 
@@ -571,18 +571,18 @@ subroutine prolong_b_face(Bxf_c,Byf_c,Bzf_c,&
   end do
 
   ! Z faces
-  do i = 1+ishift, nI/2+ishift
-     do j = 1+jshift, nJ/2+jshift
+  do i = 1+ishift, nI/2+ishift; iP=min(i+1,nI); iM=max(i-1,1)
+     do j = 1+jshift, nJ/2+jshift; jP=min(j+1,nJ); jM=max(j-1,1)
         do k = 1+kshift, nK/2+kshift+1
            i1 = 2*(i-ishift)-1; j1 = 2*(j-jshift)-1; k1 = 2*(k-kshift)-1
 
-           gradXr = Bzf_c(i+1,j,k)-Bzf_c(i  ,j,k)
-           gradXl = Bzf_c(i  ,j,k)-Bzf_c(i-1,j,k)
+           gradXr = Bzf_c(iP,j,k) - Bzf_c(i ,j,k)
+           gradXl = Bzf_c(i ,j,k) - Bzf_c(iM,j,k)
            dBzdx  = sign(0.25,gradxl)*&
                 max(0.,min(abs(gradxl),sign(1.,gradxl)*gradxr))
 
-           gradYr = Bzf_c(i,j+1,k)-Bzf_c(i,j  ,k)
-           gradYl = Bzf_c(i,j  ,k)-Bzf_c(i,j-1,k)
+           gradYr = Bzf_c(i,jP,k) - Bzf_c(i,j ,k)
+           gradYl = Bzf_c(i,j ,k) - Bzf_c(i,jM,k)
            dBzdy  = sign(0.25,gradyl)*&
                 max(0.,min(abs(gradyl),sign(1.,gradyl)*gradyr))
 
