@@ -65,13 +65,13 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,w)
   integer,intent(in) :: imin,imax,jmin,jmax,kmin,kmax
   real, intent(out)  :: w(imin:imax,jmin:jmax,kmin:kmax,nw,MaxImplBLK)
   integer :: implBLK, iBLK, iVar
-  logical :: oktest, oktest_me
+  logical :: DoTest, DoTestMe
   !---------------------------------------------------------------------------
-  call set_oktest('explicit2implicit',oktest,oktest_me)
-  if(oktest_me)write(*,*)'Starting explicit2implicit: ',&
+  call set_oktest('explicit2implicit',DoTest,DoTestMe)
+  if(DoTestMe)write(*,*)'Starting explicit2implicit: ',&
        'imin,imax,jmin,jmax,kmin,kmax=',imin,imax,jmin,jmax,kmin,kmax
 
-  if(oktest_me)write(*,*)'E=',Energy_GBI(Itest,Jtest,Ktest,BLKtest,:)
+  if(DoTestMe)write(*,*)'E=',Energy_GBI(Itest,Jtest,Ktest,BLKtest,:)
 
   call timing_start('expl2impl')
 
@@ -90,8 +90,8 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,w)
 
   call timing_stop('expl2impl')
 
-  if(oktest_me.and.nImplBLK>0)write(*,*)'Finished explicit2implicit: w=',&
-       w(Itest,Jtest,Ktest,VARtest,implBLKtest)
+  if(DoTestMe.and.nImplBLK>0)write(*,*)'Finished explicit2implicit: w=',&
+       w(Itest,Jtest,Ktest,:,implBLKtest)
 
 end subroutine explicit2implicit
 
@@ -147,15 +147,15 @@ subroutine implicit2explicit(w)
 end subroutine implicit2explicit
 
 !=============================================================================
-subroutine get_residual(IsLowOrder, DoCalcTimestep, DoSubtract, w_GVB, Res_GVB)
+subroutine get_residual(IsLowOrder, DoCalcTimestep, DoSubtract, w_CVB, Res_CVB)
 
   ! If IsLowOrder is true apply low  order scheme
   ! otherwise            apply high order scheme
   !
   ! If DoCalcTimestep is true calculate time step based on CFL condition
   !
-  ! If DoSubtract is true return  Res_GVB = w_GVB(t+dtexpl)-w_GVB(t) 
-  ! otherwise return              Res_GVB = w_GVB(t+dtexpl)
+  ! If DoSubtract is true return  Res_CVB = w_CVB(t+dtexpl)-w_CVB(t) 
+  ! otherwise return              Res_CVB = w_CVB(t+dtexpl)
 
   use ModMain
   use ModAdvance, ONLY : FluxType,time_BLK
@@ -166,65 +166,64 @@ subroutine get_residual(IsLowOrder, DoCalcTimestep, DoSubtract, w_GVB, Res_GVB)
   implicit none
 
   logical, intent(in) :: IsLowOrder, DoCalcTimestep, DoSubtract
-  real, intent(in)    :: w_GVB(nI,nJ,nK,nVar,MaxImplBLK)
-  real, intent(out)   :: Res_GVB(nI,nJ,nK,nVar,MaxImplBLK)
+  real, intent(in)    :: w_CVB(nI,nJ,nK,nVar,MaxImplBLK)
+  ! The actual w_CVB and Res_CVB arguments may be the same array: intent(inout)
+  real, intent(inout) :: Res_CVB(nI,nJ,nK,nVar,MaxImplBLK)
 
   real    :: CflTmp
   integer :: nOrderTmp, nStageTmp, implBLK, iBLK
   character (len=10) :: FluxTypeTmp
 
-  logical :: oktest, oktest_me
+  logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
 
-  call set_oktest('get_residual',oktest,oktest_me)
+  call set_oktest('get_residual',DoTest,DoTestMe)
 
   call timing_start('get_residual')
 
-  if(oktest_me.and.nImplBLK>0)&
-       write(*,*)'get_residual DoSubtract,IsLowOrder,w_GVB=',&
-       DoSubtract,IsLowOrder,w_GVB(Itest,Jtest,Ktest,VARtest,implBLKtest)
+  if(DoTestMe.and.nImplBLK>0)&
+       write(*,*)'get_residual DoSubtract,IsLowOrder,w_CVB=',&
+       DoSubtract,IsLowOrder,w_CVB(Itest,Jtest,Ktest,VARtest,implBLKtest)
 
-  nStageTmp    =nStage
-  nStage       =1
+  nStageTmp       = nStage
+  nStage          = 1
   if(IsLowOrder)then
-     nOrderTmp      =norder
-     norder       =norder_impl
-     FluxTypeTmp  =FluxType
-     FluxType     =FluxTypeImpl
+     nOrderTmp    = nOrder
+     nOrder       = nOrder_impl
+     FluxTypeTmp  = FluxType
+     FluxType     = FluxTypeImpl
   endif
   if(UseDtFixed)then
      do implBLK=1,nimplBLK
         iBLK=impl2iBLK(implBLK)
         time_BLK(:,:,:,iBLK)=0.0
         where(true_cell(1:nI,1:nJ,1:nK,iBLK)) &
-             time_BLK(1:nI,1:nJ,1:nK,iBLK)=dtexpl
+             time_BLK(1:nI,1:nJ,1:nK,iBLK) = DtExpl
      end do
   else
-     CflTmp=cfl
-     cfl=0.5
+     CflTmp = Cfl
+     Cfl    = 0.5
   end if
 
-  ! Res_GVB = w_GVB(t+dt)
-  call implicit2explicit(w_GVB)
+  ! Res_CVB = w_CVB(t+dt)
+  call implicit2explicit(w_CVB)
   call exchange_messages
   call advance_expl(DoCalcTimestep)
-  call explicit2implicit(1,nI,1,nJ,1,nK,Res_GVB)
+  call explicit2implicit(1,nI,1,nJ,1,nK,Res_CVB)
 
-  if(DoSubtract) &
-       Res_GVB(1:nI,1:nJ,1:nK,1:nVar,1:nImplBLK) = &
-       Res_GVB(1:nI,1:nJ,1:nK,1:nVar,1:nImplBLK) &
-       - w_GVB(1:nI,1:nJ,1:nK,1:nVar,1:nImplBLK)
+  if(DoSubtract) Res_CVB(:,:,:,:,1:nImplBLK) = Res_CVB(:,:,:,:,1:nImplBLK) &
+       - w_CVB(:,:,:,:,1:nImplBLK)
 
-  if(oktest_me.and.nImplBLK>0)write(*,*)'get_residual Res_GVB:',&
-       Res_GVB(Itest,Jtest,Ktest,VARtest,implBLKtest)
+  if(DoTestMe.and.nImplBLK>0)write(*,*)'get_residual Res_CVB:',&
+       Res_CVB(Itest,Jtest,Ktest,VARtest,implBLKtest)
 
   ! Restore global variables
-  nStage=nStageTmp
+  nStage      = nStageTmp
   if(IsLowOrder)then
      nOrder   = nOrderTmp
      FluxType = FluxTypeTmp 
   end if
-  if (.not.UseDtFixed) cfl=CflTmp
+  if (.not.UseDtFixed) Cfl = CflTmp
 
   call timing_stop('get_residual')
 
@@ -233,7 +232,7 @@ end subroutine get_residual
 !==============================================================================
 subroutine getsource(iBLK,w,s)
 
-  ! Get source s for block iBLK using implicit data w
+  ! Get sources for block iBLK using implicit data w
 
   use ModMain
   use ModVarIndexes
@@ -455,9 +454,9 @@ subroutine getdt_courant(qdt)
   real :: cmax(nI,nJ,nK), B0cell(nI,nJ,nK,ndim), qdt_local
   integer :: idim, implBLK, iBLK, iError
 
-  logical :: oktest, oktest_me
+  logical :: DoTest, DoTestMe
   !-------------------------------------------------------------------------
-  call set_oktest('getdt_courant',oktest,oktest_me)
+  call set_oktest('getdt_courant',DoTest,DoTestMe)
 
   ! First calculate max(cmax/dx) for each cell and dimension
   qdt_local=0.0
@@ -480,7 +479,7 @@ subroutine getdt_courant(qdt)
 
         qdt_local=max(qdt_local,maxval(cmax*vInv_CB(:,:,:,iBlk)))
 
-        if(oktest_me)write(*,*)'getdt_courant idim,dx,cmax,1/qdt=',&
+        if(DoTestMe)write(*,*)'getdt_courant idim,dx,cmax,1/qdt=',&
              idim,cmax(Itest,Jtest,Ktest),qdt_local
      end do
   end do
@@ -488,12 +487,12 @@ subroutine getdt_courant(qdt)
   ! Take global maximum
   call MPI_allreduce(qdt_local,qdt,1,MPI_REAL,MPI_MAX,iComm,iError)
 
-  if(oktest_me)write(*,*)'1/dt_local,1/dt=',qdt_local,qdt
+  if(DoTestMe)write(*,*)'1/dt_local,1/dt=',qdt_local,qdt
 
   ! Take inverse, and reduce so it is OK for 3D calculation
   qdt=0.3/qdt
 
-  if(oktest_me)write(*,*)'getdt_courant final dt=',qdt
+  if(DoTestMe)write(*,*)'getdt_courant final dt=',qdt
 
 end subroutine getdt_courant
 
