@@ -82,9 +82,11 @@ subroutine impl_matvec_free(qx,qy,nn)
 
   integer, intent(in):: nn
   real, intent(in)   :: qx(nn)
-  real, intent(out)  :: qy(nn)
-  real               :: weps(nI,nJ,nK,nw,MaxImplBLK)
+  ! Sometimes this subroutine called with the same array in both arguments
+  ! that's why the intent of qy cannot be set to out.
+  real, intent(inout):: qy(nn)
 
+  real               :: weps(nI,nJ,nK,nw,MaxImplBLK)
   integer:: n,i,j,k,iw,implBLK, iError
   real:: qeps, qxnrm, qxnrm_total, q1, q2
 
