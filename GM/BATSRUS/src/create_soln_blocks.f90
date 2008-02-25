@@ -217,7 +217,7 @@ subroutine  cube_bcast_r(nPar,Par,var,isize)
 
      if (number_send_requests > 0) then
         call MPI_waitall(number_send_requests, &
-             send_requests(1), Status, iError)
+             send_requests, Status, iError)
      end if
   else
      var = -888888.
@@ -253,7 +253,7 @@ subroutine  cube_bcast_l(nPar,Par,var,isize)
 
      if (number_send_requests > 0) then
         call MPI_waitall(number_send_requests, &
-             send_requests(1), status, iError)
+             send_requests, status, iError)
      end if
   else
      var = .false.
@@ -452,7 +452,7 @@ subroutine create_coarse_soln_block(nPEsCrseBlk, PEsCrseBlk)
 
   integer :: remaining_PE, remaining_BLK, icube, i, iBLK
   integer :: iError,iTag
-  integer :: send_request, send_requests(7), receive_requests(7), &
+  integer :: send_requests(7), receive_requests(7), &
        number_receive_requests, &
        Status_II(MPI_STATUS_SIZE, 7), Status_I(MPI_STATUS_SIZE)
 
@@ -541,7 +541,7 @@ subroutine create_coarse_soln_block(nPEsCrseBlk, PEsCrseBlk)
      iTag=10
      if(iProc/=remaining_PE) then 
         call MPI_isend(DtToReduce,1,MPI_REAL,remaining_PE,&
-             iTag,iComm,send_request,iError)
+             iTag,iComm,send_requests(1),iError)
         call MPI_waitall(1,send_requests,Status_II,iError)
      else
         DtBuff(1) = DtToReduce
@@ -560,7 +560,7 @@ subroutine create_coarse_soln_block(nPEsCrseBlk, PEsCrseBlk)
 
      if(iProc/=remaining_PE) then 
         call MPI_isend(MaxTypeAdvance,1,MPI_INTEGER,remaining_PE,&
-             iTag,iComm,send_request,iError)
+             iTag,iComm,send_requests(1),iError)
         call MPI_waitall(1,send_requests,Status_II,iError)
      else
         iTypeAdvance_I(1) = MaxTypeAdvance
@@ -657,8 +657,7 @@ contains
 
     if (number_send_requests > 0) then
        call MPI_waitall(number_send_requests, &
-            send_requests, &
-            Status_II, iError)
+            send_requests, Status_II, iError)
     end if
 
     number_receive_requests = 0
@@ -676,8 +675,7 @@ contains
 
        if (number_receive_requests > 0) then
           call MPI_waitall(number_receive_requests, &
-               receive_requests, &
-               Status_II, iError)
+               receive_requests, Status_II, iError)
        end if
        !\
        ! Assign default value (to get corners).
