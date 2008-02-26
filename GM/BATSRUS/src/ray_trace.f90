@@ -1121,7 +1121,8 @@ contains
     ! and false if it was started from a cell center
 
     logical, intent(in) :: surface_point
-    real,    intent(out):: qray(3)
+    ! Called with a segment of rayface array and it is used here to get qray
+    real, intent(inout) :: qray(3)
 
     ! Temporary variable
     real :: qqray(3)
@@ -1407,6 +1408,7 @@ end subroutine convFaces2LatLon
 !=============================================================================
 
 subroutine integrate_ray(dbg,iBLK,x_0,y_0,z_0,fvol,rvol,pvol)
+
   ! Follow ray starting at initial position x_0,y_0,z_0 in direction 1
   ! until we hit the wall of the control volume or the ionosphere.
   ! Return dS/B
