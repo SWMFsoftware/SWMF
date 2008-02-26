@@ -187,8 +187,6 @@ subroutine write_logfile(iSatIn,iFile)
      end if
   endif
 
-  LogVar_I(1:nLogTot) = 0.0
-
   call set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSatIn)
 
   if(nProc > 0)then
@@ -298,6 +296,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
      write(*,*)'LogR_I:',LogR_I(1:nLogR)
   end if
 
+  LogVar_I(1:nLogTot) = 0.0
   tmp1_BLK=1.00
   volume  =integrate_BLK(nProc,tmp1_BLK)
 
@@ -378,6 +377,7 @@ contains
     ! External function for ionosphere    !^CFG IF IONOSPHERE
     real, external :: logvar_ionosphere   !^CFG IF IONOSPHERE
     !------------------------------------------------------------------------
+
     select case(NameLogVar)
 
 !!$! MHD variables averaged over the computational domain
@@ -785,6 +785,7 @@ contains
        ! Check if the variable name is one of the state variables
        String = NameLogVar_I(iVar)
        call lower_case(String)
+
        do jVar = 1, nVar
           NameVar = NameVar_V(jVar)
           call lower_case(NameVar)
