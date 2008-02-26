@@ -242,50 +242,40 @@ contains
     if(DoTest)write(*,*)NameSub,', iProc, GMi_iProc0, i_proc0(IE_)=', &
          iProcWorld,i_proc0(GM_),i_proc0(IE_)
 
-    ! Do Northern and then Southern hemispheres in this order!
-    do iBlock = 1, 2
+    !\
+    ! Allocate buffers for the variables both in GM and IE
+    !/
+    allocate(Buffer_IIV(iSize, jSize, nVar), stat=iError)
+    call check_allocate(iError,NameSub//": "//NameVar_B(iBlock))
 
-       if(DoTest)write(*,*)NameSub,': iBlock=',iBlock
+    !\
+    ! Calculate field aligned currents on GM
+    ! The result will be on the root processor of GM
+    !/
+    if(is_proc(GM_)) &
+         call GM_get_for_ie(Buffer_IIV, iSize, jSize, nVar, NameVar_B(iBlock))
+    !\
+    ! Transfer variables from GM to IE
+    !/
+    if(i_proc0(IE_) /= i_proc0(GM_))then
+       nSize = iSize*jSize*nVar
+       if(is_proc0(GM_)) &
+            call MPI_send(Buffer_IIV, nSize, MPI_REAL, i_proc0(IE_),&
+            1, i_comm(), iError)
+       if(i_proc() == i_proc0(IE_)) &
+            call MPI_recv(Buffer_IIV, nSize, MPI_REAL, i_proc0(GM_),&
+            1,i_comm(), iStatus_I, iError)
+    end if
+    !\
+    ! Put variables into IE
+    !/
+    if(is_proc(IE_)) &
+         call IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar, NameVar_B(iBlock))
 
-       ! The IE processor for this block
-       iProcTo = pe_decomposition(IE_, iBlock)
-
-       if(DoTest)write(*,*)NameSub,': iProcTo=',iProcTo
-
-       !\
-       ! Allocate buffers for the variables both in GM and IE
-       !/
-       allocate(Buffer_IIV(iSize, jSize, nVar), stat=iError)
-       call check_allocate(iError,NameSub//": "//NameVar_B(iBlock))
-
-       !\
-       ! Calculate field aligned currents on GM
-       ! The result will be on the root processor of GM
-       !/
-       if(is_proc(GM_)) &
-            call GM_get_for_ie(Buffer_IIV, iSize, jSize, nVar, NameVar_B(iBlock))
-       !\
-       ! Transfer variables from GM to IE
-       !/
-       if(iProcTo /= i_proc0(GM_))then
-          nSize = iSize*jSize*nVar
-          if(is_proc0(GM_)) &
-               call MPI_send(Buffer_IIV, nSize, MPI_REAL, iProcTo,&
-               1, i_comm(), iError)
-          if(i_proc() == iProcTo) &
-               call MPI_recv(Buffer_IIV, nSize, MPI_REAL, i_proc0(GM_),&
-               1,i_comm(), iStatus_I, iError)
-       end if
-       !\
-       ! Put variables into IE
-       !/
-       if(i_proc() == iProcTo )&
-            call IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar, NameVar_B(iBlock))
-       !\
-       ! Deallocate buffer to save memory
-       !/
-       deallocate(Buffer_IIV)
-    end do
+    !\
+    ! Deallocate buffer to save memory
+    !/
+    deallocate(Buffer_IIV)
 
     if(DoTest)write(*,*)NameSub,' finished, iProc=',iProcWorld
 

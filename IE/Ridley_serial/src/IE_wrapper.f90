@@ -350,15 +350,6 @@ subroutine IE_get_for_gm(Buffer_II,iSize,jSize,tSimulation)
 
   Buffer_II = IONO_Phi
 
-!!!  select case(NameVar)
-!!!  case('PotNorth')
-!!!     if(iProc == 0)         Buffer_II = IONO_NORTH_Phi
-!!!  case('PotSouth')
-!!!     if(iProc == nProc - 1) Buffer_II = IONO_SOUTH_Phi
-!!!  case default
-!!!     call CON_stop(NameSub//' SWMF_ERROR invalid NameVar='//NameVar)
-!!!  end select
-
 end subroutine IE_get_for_gm
 !==============================================================================
 
@@ -569,20 +560,26 @@ subroutine IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar, NameVar)
   use IE_ModMain, ONLY: IsNewInput, LatBoundaryGm
   use ModProcIE
   use ModIonosphere
+  use ModMpi
 
   implicit none
   character (len=*), parameter :: NameSub = 'IE_put_from_gm'
   integer,          intent(in) :: iSize, jSize, nVar
-  real,             intent(in) :: Buffer_IIV(iSize, jSize, nVar)
+  real                         :: Buffer_IIV(iSize, jSize, nVar)
   character(len=*), intent(in) :: NameVar
 
-  integer :: iError
+  integer :: iError, iMessageSize
   logical :: DoTest, DoTestMe
   !---------------------------------------------------------------------------
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
   if(DoTest)write(*,*)NameSub,' starting with NameVar=',NameVar
 
   IsNewInput = .true.
+
+  if (nProc > 1) then
+     iMessageSize = iSize*jSize*nVar
+     call MPI_Bcast(Buffer_IIV,iMessageSize,MPI_Real,0,iComm,iError)
+  endif
 
   if (iProc == 0) then
      LatBoundaryGm = Buffer_IIV(IONO_nTheta,1,1)
