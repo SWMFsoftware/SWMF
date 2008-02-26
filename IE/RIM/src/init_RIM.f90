@@ -8,7 +8,7 @@ subroutine init_RIM()
   use ModMpi
 
   implicit none
-  integer :: i, iLat, iLon, iSize
+  integer :: i, iLat, iLon, iSize, iLatFrom
   character (len=100), dimension(100) :: Lines
   integer :: iError = 0
   real :: rTmp
@@ -19,10 +19,6 @@ subroutine init_RIM()
   end do
   do i=0,nLons+1
      Longitude(i,:)=((cTwoPi/nLons)/real(nProc))*(iProc*nLons+real(i)-cHalf) 
-  end do
-  allocate(AllLons(nLons*nProc))
-  do i=1,nLons*nProc
-     AllLons(i)=((cTwoPi/nLons)/real(nProc))*(real(i)-cHalf) 
   end do
 
   ! Center Differencing except for the edges
@@ -131,33 +127,51 @@ subroutine init_RIM()
   ! Need to allocate memory for arrays that span all of the IE module
 
   allocate( &
-       LatitudeAll(0:nLons*nProc+1,nLats), &
-       LongitudeAll(0:nLons*nProc+1,nLats), &
-       PotentialAll(0:nLons*nProc+1,nLats), &
-       SigmaHAll(0:nLons*nProc+1,nLats), &
-       SigmaPAll(0:nLons*nProc+1,nLats), &
-       LocalVar(0:nLons*nProc+1,nLats))
+       LatitudeAll(nLats+2,nLons*nProc+1), &
+       LongitudeAll(nLats+2,nLons*nProc+1), &
+       PotentialAll(nLats+2,nLons*nProc+1), &
+       SigmaHAll(nLats+2,nLons*nProc+1), &
+       SigmaPAll(nLats+2,nLons*nProc+1), &
+       LocalVar(nLats+2,nLons*nProc+1))
 
-  ! Let's try message passing some of this stuff to Processor 0
+  ! This is ONLY for communication to other modules
 
   LatitudeAll = -1.0e32
   LongitudeAll = -1.0e32
 
   ! Fill Arrays
-  LatitudeAll(iProc*nLons+1:iProc*nLons+nLons, :) = Latitude
-  LongitudeAll(iProc*nLons+1:iProc*nLons+nLons, :) = Longitude(1:nLons,:)
 
-  if (iProc == 0) then
-     LatitudeAll(0, :) = Latitude(0,:)
-     LongitudeAll(0, :) = Longitude(0,:)
-  endif
-
+  ! This is the north pole
+  LatitudeAll(1,iProc*nLons+1:iProc*nLons+nLons) = 0.0
+  LongitudeAll(1,iProc*nLons+1:iProc*nLons+nLons) = &
+       Longitude(1:nLons,nLats)
   if (iProc == nProc-1) then
-     LatitudeAll((iProc+1)*nLons+1, :) = Latitude(nLons+1,:)
-     LongitudeAll((iProc+1)*nLons+1, :) = Longitude(nLons+1,:)
+     LatitudeAll((iProc+1)*nLons+1, 1) = 0.0
+     LongitudeAll((iProc+1)*nLons+1,1) = Longitude(nLons+1,nLats)
   endif
 
-  iSize = nLats * (nProc*nLons+2)
+  do iLat = 1, nLats
+     iLatFrom = nLats-(iLat-1)
+     LatitudeAll(iLat+1, iProc*nLons+1:iProc*nLons+nLons) = &
+          cPi - Latitude(1:nLons,iLatFrom)
+     LongitudeAll(iLat+1,iProc*nLons+1:iProc*nLons+nLons) = &
+          Longitude(1:nLons,iLatFrom)
+     if (iProc == nProc-1) then
+        LatitudeAll(iLat+1,(iProc+1)*nLons+1) = cPi-Latitude(nLons+1,iLatFrom)
+        LongitudeAll(iLat+1,(iProc+1)*nLons+1) = Longitude(nLons+1,iLatFrom)
+     endif
+  enddo
+
+  ! This is the south pole
+  LatitudeAll(nLats+2,iProc*nLons+1:iProc*nLons+nLons) = cPi
+  LongitudeAll(nLats+2,iProc*nLons+1:iProc*nLons+nLons) = &
+       Longitude(1:nLons,1)
+  if (iProc == nProc-1) then
+     LatitudeAll(nLats+2,(iProc+1)*nLons+1) = cPi
+     LongitudeAll(nLats+2,(iProc+1)*nLons+1) = Longitude(nLons+1,1)
+  endif
+
+  iSize = (nLats+2) * (nProc*nLons+1)
 
   localVar = LatitudeAll
   call MPI_REDUCE(localVar, LatitudeAll, iSize, MPI_REAL, MPI_MAX, &

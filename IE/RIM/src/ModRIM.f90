@@ -25,8 +25,6 @@ module ModRIM
   real, dimension(0:nLons+1,nLats) :: &
        SolverA, SolverB, SolverC, SolverD, SolverE
 
-  real, allocatable :: AllLons(:)
-
   real, dimension(:), allocatable :: d_I, e_I, f_I, e1_I, f1_I
 
   real, dimension(:,:), allocatable :: &
@@ -45,9 +43,12 @@ module ModRIM
 
   real, dimension(:,:), allocatable :: &
        LatitudeAll, LongitudeAll, PotentialAll, SigmaHAll, SigmaPAll, &
-       LocalVar
+       LocalVar, MagJrAll, MagInvBAll, MagRhoAll, MagPAll
 
   real :: cpcps = 0.0
   real :: cpcpn = 0.0
+
+  logical :: IsNewInput = .true.
+  real :: LatBoundaryGm = 60.0
 
 end module ModRIM

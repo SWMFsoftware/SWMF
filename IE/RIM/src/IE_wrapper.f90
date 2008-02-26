@@ -301,33 +301,60 @@ subroutine IE_set_grid
      iProc_A(i)=i-1
   end do
 
-  call set_grid_descriptor(                        &
-       IE_,                          &! component index
-       nDim=2,                       &! dimensionality
-       nRootBlock_D=(/nProc,1/),     &! north+south hemispheres
-       nCell_D =(/nLons,nLats/),     &! size of node based grid
-       XyzMin_D=(/cZero, cOne/),      &! min colat and longitude indexes
-       XyzMax_D=(/real(nLons),real(nLats)/),   &! max colat and longitude indexes
-       TypeCoord='SMG',                            &! solar magnetic coord.
-       Coord1_I=AllLons,                           &! colatitudes
-       Coord2_I=Latitude(0,:),                     &! longitudes
-       Coord3_I=(/rPlanet_I(Planet_) + IonoHeightPlanet_I(Planet_)/),     &! radial size in meters
-       iProc_A = iProc_A)                           ! processor assigment
+  !\
+  ! When coupling, all models expect the ionosphere solution to go from
+  ! the north pole to the south pole, and the "longitudes" to start from
+  ! 12 MLT instead of 00 MLT (the other models interpret 0 as 12 MLT...)
+  ! Further, we need to pad the solution at the north and south poles
+  ! so we have a solution at exactly +/- 90.
+  !/
+
+  call set_grid_descriptor(                  &
+       IE_,                                  &! component index
+       nDim=2,                               &! dimensionality
+       nRootBlock_D=(/1,1/),                 &! north+south hemispheres
+       nCell_D =(/nLons*nProc+1,nLats+2/),   &! size of node based grid
+       XyzMin_D=(/cOne, cOne/),              &! min colat and longitude indexes
+       XyzMax_D=(/real(nLons*nProc+1),       &
+                  real(nLats+2)/),           &! max colat and longitude indexes
+       TypeCoord='SMG',                      &! solar magnetic coord.
+       Coord1_I=LongitudeAll(:,1),           &! colatitudes
+       Coord2_I=LatitudeAll(1,:),            &! longitudes
+       Coord3_I=(/rPlanet_I(Planet_) +       &
+                  IonoHeightPlanet_I(Planet_)/),  &! radial size in meters
+       iProc_A = iProc_A)                          ! processor assigment
 
 end subroutine IE_set_grid
 
 !==============================================================================
 
-subroutine IE_get_for_gm(Buffer_II,iSize,jSize,NameVar)
+subroutine IE_get_for_gm(Buffer_II,iSize,jSize,tSimulation)
+
+  use ModProcIE, only:nProc
+  use ModSizeRIM
+  use ModRIM
 
   implicit none
   character (len=*),parameter :: NameSub='IE_get_for_gm'
 
   integer, intent(in)           :: iSize,jSize
   real, intent(out)             :: Buffer_II(iSize,jSize)
-  character (len=*),intent(in)  :: NameVar
+  real (Real8_),    intent(in)  :: tSimulation
 
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+  integer :: i,j,k
+  real    :: tSimulationTmp
+  !--------------------------------------------------------------------------
+  if(iSize /= nLats+2 .or. jSize /= nLons*nProc+1)then
+     write(*,*)NameSub//' incorrect buffer size=',iSize,jSize,&
+          ' nLats+2,nLons*nProc+1=',nLats+2,nLons*nProc+1
+     call CON_stop(NameSub//' SWMF_ERROR')
+  end if
+
+  ! Make sure that the most recent result is provided
+  tSimulationTmp = tSimulation
+  call IE_run(tSimulationTmp,tSimulation)
+
+  Buffer_II = PotentialAll
 
 end subroutine IE_get_for_gm
 
@@ -335,16 +362,115 @@ end subroutine IE_get_for_gm
 
 subroutine IE_put_from_gm(Buffer_IIV,iSize,jSize,nVar,NameVar)
 
+  use ModRIM
+  use ModProcIE
+  use ModMpi
+
   implicit none
-  character (len=*),parameter :: NameSub='IE_put_from_gm'
+  character (len=*), parameter :: NameSub = 'IE_put_from_gm'
   integer,          intent(in) :: iSize, jSize, nVar
-  real,             intent(in) :: Buffer_IIV(iSize,jSize,nVar)
-  character(len=*) ,intent(in) :: NameVar
+  real                         :: Buffer_IIV(iSize, jSize, nVar)
+  character(len=*), intent(in) :: NameVar
 
+  integer :: iError, iMessageSize
+  logical :: DoTest, DoTestMe
+  !---------------------------------------------------------------------------
+  call CON_set_do_test(NameSub, DoTest, DoTestMe)
+  if(DoTest)write(*,*)NameSub,' starting with NameVar=',NameVar
 
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+  IsNewInput = .true.
+
+  if (nProc > 1) then
+     iMessageSize = iSize*jSize*nVar
+     call MPI_Bcast(Buffer_IIV,iMessageSize,MPI_Real,0,iComm,iError)
+  endif
+
+  MagJrAll = Buffer_IIV(:,:,1)
+  if(nVar>1)then
+     MagInvBAll = Buffer_IIV(:,:,2)
+     MagRhoAll  = Buffer_IIV(:,:,3)
+     MagPAll    = Buffer_IIV(:,:,4)
+  endif
+
+  !\
+  ! This seems like a total hack, but the latitude boundary
+  ! is stored in this region, so we have to zero it out....
+  !/
+  LatBoundaryGm = Buffer_IIV(nLats/2+1,1,1)
+  MagJrAll(nLats/2+1:nLats/2+2,1) = 0.0
+
+  if(DoTest)write(*,*)NameSub,' finished'
 
 end subroutine IE_put_from_gm
+
+!==============================================================================
+
+subroutine IE_get_for_rb(Buffer_IIV, iSize, jSize, nVar, Name_V, NameHem,&
+     tSimulation)
+
+  use ModSizeRIM
+  use ModRIM
+!  use ModProcIE
+!  use ModIonosphere
+
+  implicit none
+  character (len=*),parameter :: NameSub='IE_get_for_rb'
+
+  integer, intent(in)           :: iSize, jSize, nVar
+  real, intent(out)             :: Buffer_IIV(iSize,jSize,nVar)
+  character (len=*),intent(in)  :: NameHem
+  character (len=*),intent(in)  :: Name_V(nVar)
+  real,             intent(in)  :: tSimulation
+
+  integer :: iVar
+  real    :: tSimulationTmp
+
+  return
+
+!!!     !--------------------------------------------------------------------------
+!!!     if(iSize /= IONO_nTheta .or. jSize /= IONO_nPsi)then
+!!!        write(*,*)NameSub//' incorrect buffer size=',iSize,jSize,&
+!!!             ' IONO_nTheta,IONO_nPsi=',IONO_nTheta, IONO_nPsi
+!!!        call CON_stop(NameSub//' SWMF_ERROR')
+!!!     end if
+!!!   
+!!!     ! Make sure that the most recent result is provided
+!!!     tSimulationTmp = tSimulation
+!!!     call IE_run(tSimulationTmp,tSimulation)
+!!!   
+!!!     select case(NameHem)
+!!!   
+!!!     case('North')
+!!!   
+!!!        if(iProc /= 0) RETURN
+!!!        do iVar = 1, nVar
+!!!           select case(Name_V(iVar))
+!!!           case('Pot')
+!!!              Buffer_IIV(:,:,iVar) = IONO_NORTH_Phi
+!!!           case default
+!!!              call CON_stop(NameSub//' invalid NameVar='//Name_V(iVar))
+!!!           end select
+!!!        end do
+!!!   
+!!!     case('South')
+!!!   
+!!!        if(iProc /= nProc - 1) RETURN
+!!!        do iVar = 1, nVar
+!!!           select case(Name_V(iVar))
+!!!           case('Pot')
+!!!              Buffer_IIV(:,:,iVar) = IONO_SOUTH_Phi
+!!!           case default
+!!!              call CON_stop(NameSub//' invalid NameVar='//Name_V(iVar))
+!!!           end select
+!!!        end do
+!!!   
+!!!     case default
+!!!   
+!!!        call CON_stop(NameSub//' invalid NameHem='//NameHem)
+!!!   
+!!!     end select
+
+end subroutine IE_get_for_rb
 
 !==============================================================================
 

@@ -12,30 +12,16 @@ subroutine gather
 
   ! Let's try message passing some of this stuff to Processor 0
 
+  iSize = (nLats+2) * (nProc*nLons+1)
+
   PotentialAll = -1.0e32
-
-  ! Fill Arrays
-  PotentialAll(iProc*nLons+1:iProc*nLons+nLons, :) = Potential
+  call rearrange(Potential, PotentialAll)
 
   if (iProc == 0) then
-     PotentialAll(0, :) = Potential(0,:)
-  endif
-
-  if (iProc == nProc-1) then
-     PotentialAll((iProc+1)*nLons+1, :) = Latitude(nLons+1,:)
-  endif
-
-  iSize = nLats * (nProc*nLons+2)
-
-  localVar = PotentialAll
-  call MPI_REDUCE(localVar, PotentialAll, iSize, MPI_REAL, MPI_MAX, &
-       0, iComm, iError)
-
-  if (iProc == 0) then
-     cpcpn = maxval(PotentialAll(:,0:nLats/2)) - &
-             minval(PotentialAll(:,0:nLats/2))
-     cpcps = maxval(PotentialAll(:,0:nLats/2)) - &
-             minval(PotentialAll(:,0:nLats/2))
+     cpcpn = maxval(PotentialAll(1:nLats/2,:)) - &
+             minval(PotentialAll(1:nLats/2,:))
+     cpcps = maxval(PotentialAll(nLats/2+1:nLats+2,:)) - &
+             minval(PotentialAll(nLats/2+1:nLats+2,:))
   endif
 
   if (iDebugLevel > 1) then 
@@ -43,5 +29,49 @@ subroutine gather
           (maxval(PotentialAll) - minval(PotentialAll))/1000.0, " kV"
      write(*,*) "CPCP South/North : ", cpcps/1000.0, cpcpn/1000.0, " kV"
   endif
+
+contains
+
+  subroutine rearrange(ValueLocal, ValueAll)
+
+    real, intent(in)  :: ValueLocal(0:nLons+1, nLats)
+    real, intent(out) :: ValueAll(nLats+2, nLons*nProc+1)
+
+    integer :: iLat, iLon, iLatFrom, iLonFrom, iError
+
+    !\
+    ! We need to reverse the latitude, shift the longitudes, and swap the
+    ! index order....
+    !/
+
+    ! Skip the North and South pole, since this needs to be done on a case by
+    ! case basis
+
+    do iLat = 1, nLats
+       ! Need to reverst latitudes
+       iLatFrom = nLats-(iLat-1)
+       do iLon = 1, nLons
+          ! Need to shift longitudes
+          iLonFrom = mod(iLon + nLons*nProc/2, nLons*nProc)
+          if (iLonFrom == 0) iLonFrom = nLons*nProc+1
+          ValueAll(iLat+1, iLon) = ValueLocal(iLonFrom, iLatFrom)
+       enddo
+    enddo
+
+    localVar = ValueAll
+    call MPI_REDUCE(localVar, ValueAll, iSize, MPI_REAL, MPI_MAX, &
+         0, iComm, iError)
+
+    if (iProc == 0) then
+       ! Pole is the average of the surrounding points.
+       ValueAll(1,:)       = &
+            sum(ValueAll(      2,1:nLons*nProc))/(nLons*nProc)
+       ValueAll(nLats+2,:) = &
+            sum(ValueAll(nLats+1,1:nLons*nProc))/(nLons*nProc)
+       ! Fill in overlap point in longitude
+       ValueAll(:,nLons*nProc+1) = ValueAll(:,1)
+    endif
+
+  end subroutine rearrange
 
 end subroutine gather
