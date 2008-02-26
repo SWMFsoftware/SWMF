@@ -67,6 +67,7 @@ OBJECTS = \
 	logfile.o\
 	calc_conduction.o\
 	calc_physics.o\
+	calc_avesza.o\
 	calc_euv.o\
 	calc_neutral_density.o\
 	calc_ion_density.o\

@@ -645,6 +645,15 @@ subroutine set_inputs
               IsDone = .true.
            endif
 
+        case ("#LTERadiation")
+           call read_in_real(DtLTERadiation, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #LTERadiation:'
+              write(*,*) '#LTERadiation'
+              write(*,*) 'DtLTERadiation (real)'
+              IsDone = .true.
+           endif
+
         case ("#IONPRECIPITATION")
            call read_in_logical(UseIonPrecipitation, iError)
            call read_in_string(IonIonizationFilename, iError)

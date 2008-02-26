@@ -39,7 +39,9 @@ subroutine add_sources
      
      Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) = &
           Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) + Dt * ( &
-          EuvHeating(1:nLons, 1:nLats, 1:nAlts, iBlock) &
+          LowAtmosRadRate(1:nLons, 1:nLats, 1:nAlts, iBlock) &
+          /TempUnit(1:nLons,1:nLats,1:nAlts)&
+          + EuvHeating(1:nLons, 1:nLats, 1:nAlts, iBlock) &
           - RadCooling(1:nLons, 1:nLats, 1:nAlts, iBlock) &
           + AuroralHeating + JouleHeating) + &
           Conduction + ChemicalHeatingRate

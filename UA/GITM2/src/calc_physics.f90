@@ -101,6 +101,11 @@ subroutine calc_physics(iBlock)
              acos(SinDec*sin(Latitude(iLat,iBlock)) + &
              CosDec*CosLatitude(iLat,iBlock) * &
              cos(pi*(LocalTime(iLon)-HoursPerDay/2)/(HoursPerDay/2)))
+
+        if (DtLTERadiation < Rotation_Period) then
+           call calc_avesza(iLon,iLat,iBlock, SinDec, CosDec)
+        endif
+
      enddo
   enddo
 

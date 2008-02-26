@@ -46,9 +46,11 @@ module ModGITM
 
   real :: Gamma(-1:nLons+2, -1:nLats+2, -1:nAlts+2,nBlocksMax)
 
-
   real, dimension(nLons, nLats, 0:nAlts+1, nBlocksMax) :: &
        KappaTemp, Ke,dKe
+
+  real, dimension(nLons, nLats, nBlocksMax) :: &
+       SurfaceAlbedo=0.0, SurfaceTemp=0.0
 
   real :: cp(nLons, nLats, 0:nAlts+1,nBlocksMax)
   real :: ViscCoef(nLons, nLats, 0:nAlts+1)

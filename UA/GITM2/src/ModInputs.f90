@@ -2,7 +2,7 @@
 module ModInputs
 
   use ModConstants
-  use ModPlanet, only : nSpecies
+  use ModPlanet, only : nSpecies, Rotation_Period
   use ModIoUnit, only : UnitTmp_
 
   implicit none
@@ -167,7 +167,27 @@ module ModInputs
 
   logical                   :: UseEUVData =.false.
   character (len=iCharLen_) :: cEUVFile
-  
+
+  ! These are Mars Specific, but ignored by other codes:
+  ! Some are modified in Planet.f90 (set_planet_defaults)
+  real :: DtLTERadiation = 100.0*Rotation_Period
+! Setting the depth to which dust is mixed based on a reference dust opacity
+  real, parameter :: CONRNU = 0.03    ! Standard value  ~25km half-height
+!     real, parameter :: CONRNU = 0.003   ! ~50 km half-height
+!     real, parameter :: CONRNU = 0.5     ! ~10 km half-height
+
+!   RPTAU   :  Reference Pressure optical depth;  6.1 mbar for now
+  real, parameter :: RPTAU  = 6.1
+
+! Global mean dust opacity
+  real, parameter :: TAUTOT  = 0.3 !do not set to 0.0 or less
+
+! Top of the shortwave calculatin for lower atmosphere radiation code(mbars)
+  real, parameter :: PRAD  = 2.0E-4 !0.001
+
+! Top of the longwave calculatin for lower atmosphere radiation code(PASCALS)
+! and where radcool begins
+  real, parameter :: PLONG = 4.0E-1
 
 contains
 
@@ -229,6 +249,8 @@ contains
 
     UseApex   = .false.
     DoRestart = .false.
+
+    call set_planet_defaults
 
   end subroutine set_defaults
 

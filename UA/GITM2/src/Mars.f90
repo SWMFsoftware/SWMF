@@ -47,10 +47,15 @@ subroutine calc_planet_sources(iBlock)
   use ModInputs
   use ModSources
   use ModGITM
+  use ModPlanet
+  use ModEUV, only:SunOrbitEccentricity,AveCosSza
+  use ModTime
 
   implicit none
 
   integer, intent(in) :: iBlock
+  integer :: nw, iLat, iLon, iAlt
+  integer :: L_LAYERS, L_LEVELS, L_NLAYRAD,L_NLEVRAD
 
   ! New sources specificly for Mars include: 
   ! (1) calc_radcooling(iBlock):  added 1/31/07 (BOUGHER)
@@ -84,6 +89,82 @@ subroutine calc_planet_sources(iBlock)
   !    RadCooling = 0.0
   !    RadCoolingRate = 0.0
   !\ -------------------------------------------------------------------
+
+  
+  !\
+  ! ---------------------------------------------------------------
+  ! This calls the lower atmosphere radiation code
+  ! Steven Nelli May 7, 2007
+  ! ---------------------------------------------------------------
+  !/
+  ! --------------------------------------------------
+  ! xLowAtmosRadRate = K/s
+  ! xLowAtmosRadRate/TempUnit = <T>/s
+  ! TempUnit = MeanMajorMass/kb = K*kg/J = K/(m/s)^2
+  ! --------------------------------------------------
+  !
+  !     Mars GITM ground temperature (on its grid) -------------------
+  
+  !      grtemp(1:nLons,1:nLats,iBlock)=280.0 !240.0
+  
+  !     Mars GITM surface albedo (on its grid) -------------------
+
+  SurfaceAlbedo(1:nLons,1:nLats,iBlock)=0.24
+
+  ! Calculating the solar flux at Mars 
+
+  ! SunOrbitEccentricity = sqrt(2.64236)
+  do NW=1,L_NSPECTV
+     SOL(nw) = SOLARF(NW)/(SunOrbitEccentricity**2)
+  end do
+  
+  !##############################################################
+  ! MAIN LOOP, for MarsGITM horizontal grid (Latitude,Longitude)
+
+  if( floor((tSimulation - dT)/DtLTERadiation) == &
+       floor(tSimulation/DtLTERadiation)) then         
+     ! Do nothing
+  else
+ 
+     LowAtmosRadRate(1:nLons,1:nLats,1:nAlts,iBlock)=0.0
+
+     do iLat = 1, nLats
+        do iLon = 1, nLons
+
+           !     Mars GITM ground temperature (on its grid) -------------------
+           SurfaceTemp(iLon,iLat,iBlock)=180.0+100.0*AveCosSza(iLon,iLat,iBlock)
+           Temperature(iLon,iLat,0,iBlock)=SurfaceTemp(iLon,iLat,iBlock)/&
+                TempUnit(iLon,iLat,0)
+           Temperature(iLon,iLat,-1,iBlock)=SurfaceTemp(iLon,iLat,iBlock)/&
+                TempUnit(iLon,iLat,-1)
+
+           ! Determining the top of the lower atmosphere radiative zone
+           do iAlt=1,nAlts
+              if(pressure(iLon,iLat,iAlt,iBlock)*0.01.gt.prad) L_LAYERS = iAlt
+           end do
+
+           !        L_LAYERS = 20
+
+           ! setting up the vertical fields
+           L_LEVELS  = 2*L_LAYERS+3
+           L_NLAYRAD  = L_LAYERS+1   
+           L_NLEVRAD  = L_LAYERS+2
+
+           call calc_lowatmosrad(iblock,iLat,iLon,L_LAYERS,L_LEVELS,&
+                L_NLAYRAD,L_NLEVRAD)
+
+        end do !Latitude Loop
+     end do    !Longitude Loop
+
+!!$     xLowAtmosRadRate(1:nLons,1:nLats,1:nAlts,iBlock) = &
+!!$          xLowAtmosRadRate(1:nLons,1:nLats,1:nAlts,iBlock)/&
+!!$          (TempUnit(1:nLons,1:nLats,1:nAlts))
+
+  endif
+
+!################# END MAIN COMPUTATIONAL LOOP#################
+
+
 
 end subroutine calc_planet_sources
 
@@ -133,7 +214,7 @@ subroutine calc_radcooling(iBlock)
   ! Jan-2007     Adapt to the MarsGITM model (3D version & extended parametp_table)
   !  -----------------------------------------------------------------
 
-  use ModInputs, only:  iDebugLevel
+  use ModInputs
   use ModSources, only: RadCoolingRate
   use ModPlanet
   use ModGITM
@@ -604,12 +685,10 @@ subroutine  calc_lowatmosrad(iblock,iLat,iLon,L_LAYERS,L_LEVELS,&
 !  =======================================================================
 !
       use ModInputs, only:  iDebugLevel,altmin
-      use ModSources, only: xLowAtmosRadRate,fvis,fir,Tbot,TopL,Psurf,P125
+      use ModSources, only: LowAtmosRadRate
       use ModPlanet
       use ModGITM
-      use ModEUV, only: acosz
-      use ModConstants, only:  HeatCapacityCO2
-                               
+      use ModEUV, only: AveCosSza
 
       implicit none
 ! ----------------------------------------------------------------------
@@ -693,7 +772,7 @@ subroutine  calc_lowatmosrad(iblock,iLat,iLon,L_LAYERS,L_LEVELS,&
 !C  that the new radiation code uses.
 
          CALL FILLPT(P,T,L_LEVELS,L_LAYERS,&
-            grtemp(iLon,iLat,iBlock),altmin,&
+            SurfaceTemp(iLon,iLat,iBlock),altmin,&
              altitude_GB(iLon,iLat,1:nAlts,iBlock),&
              PLEV,TLEV,PMID,TMID,pressure(iLon,iLat,0,iBlock),&
              altitude_GB(iLon,iLat,0,iBlock))
@@ -730,15 +809,15 @@ subroutine  calc_lowatmosrad(iblock,iLat,iLon,L_LAYERS,L_LEVELS,&
 !C  Set up, and solve for, the solar (visual) fluxes, if the sun
 !C  is up
 
-          if(acosz(iLon,iLat,iBlock).ge.1.0e-5) then
+          if(AveCosSza(iLon,iLat,iBlock).ge.1.0e-5) then
 
 !C  Check for ground ice.  Change albedo if there is any ice.
 
-             ALS   = albedo(iLon,iLat,iBlock)
+             ALS   = SurfaceAlbedo(iLon,iLat,iBlock)
 
 ! FOR FUTURE CONSIDERATION OF CO2 GROUND ICE
 
-!!$             IF(grtemp(iLon,iLat,iBlock).LE.150.0) THEN
+!!$             IF(SurfaceTemp(iLon,iLat,iBlock).LE.150.0) THEN
 !!$                IF(latitude(iLat,iBlock)*180.0/pi.LT.0.0) THEN
 !!$                   ALS = ALICES
 !!$                ELSE
@@ -755,7 +834,7 @@ subroutine  calc_lowatmosrad(iblock,iLat,iLon,L_LAYERS,L_LEVELS,&
 !C  Calculate the fluxes in the visual
 
                  call sfluxv(DTAUV,TAUV,TAUCUMV,ALS,WBARV,COSBV,&
-                             ACOSZ(iLon,iLat,iBlock),NFLUXTOPV,FMNETV,&
+                             AVECOSSZA(iLon,iLat,iBlock),NFLUXTOPV,FMNETV,&
                              fluxupv,fluxdnv,diffvt,ngwv,&
                              L_LAYERS,L_LEVELS,L_NLAYRAD,L_NLEVRAD)
 
@@ -833,16 +912,10 @@ subroutine  calc_lowatmosrad(iblock,iLat,iLon,L_LAYERS,L_LEVELS,&
          TOTAL(1) = 0.0
          TOTAL(2) = 0.0
 
-!         print*,total(L1),HEATING(L1),HEATING(L1)/XLTECORRECTION(L1)
-!         print*,gravity_GB(iLon,iLat,L1,iBlock),altitude_GB(iLon,iLat,L1,iBlock)
-!         print*,grtemp(iLon,iLat,iBlock),TOTAL(L1)
-!         print*,fluxvd(L1),fluxid(L1),(PLEV(2*L+1)-PLEV(2*L-1))
-      xlowatmosradrate(iLon,iLat,L_NLAYRAD-L1,iBlock)=TOTAL(L1)
+      lowatmosradrate(iLon,iLat,L_NLAYRAD-L1,iBlock)=TOTAL(L1)
 
       end do
 
-!         print*,grtemp(iLon,iLat,iBlock),T(1),TOTAL(L_NLAYRAD-1)
-!         print*,fmnetv(L_NLAYRAD),fmnetv(L_NLAYRAD-1),(PLEV(2*L_NLAYRAD+1)-PLEV(2*L_NLAYRAD-1))
       fir(iLon,iLat,iBlock) = fluxdni(L_NLAYRAD)
       fvis(iLon,iLat,iBlock) = fluxdnv(L_NLAYRAD)
       Tbot(iLon,iLat,iBlock) = T(1)
@@ -975,6 +1048,7 @@ subroutine  calc_lowatmosrad(iblock,iLat,iLon,L_LAYERS,L_LEVELS,&
 !C Driver:  Jan 2003 - Modified from GCM 3-D to DRIVER 1-D
 
       use ModPlanet
+      use ModInputs
 
       implicit none
 
@@ -2772,3 +2846,13 @@ subroutine  calc_lowatmosrad(iblock,iLat,iLon,L_LAYERS,L_LEVELS,&
 
 
 ! ----------------------------------------------------------------------
+
+subroutine set_planet_defaults
+
+  use ModInputs
+
+  DtLTERadiation = 900.0
+
+  return
+
+end subroutine set_planet_defaults

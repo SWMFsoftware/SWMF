@@ -2,7 +2,7 @@
 module ModPlanet
 
   use ModConstants
-  use ModSizeGITM, only: nAlts
+  use ModSizeGITM
 
   implicit none
 
@@ -38,6 +38,9 @@ module ModPlanet
   real :: Mass(nSpeciesTotal), MassI(nIons)
 
   real :: Vibration(nSpeciesTotal)
+
+  !   CP      :  HEAT CAPACITY (OR SPECIFIC HEAT) OF CO2 GAS.
+  real, parameter :: HeatCapacityCO2           = 735.94              ! J/(Kg*K)
 
   ! When you want to program in emissions, you can use this...
   integer, parameter :: nEmissions = 10
@@ -131,31 +134,12 @@ module ModPlanet
 
   real, parameter:: AltMinIono=100.0 ! in km
 
+  real, dimension(nLons, nLats,nBlocksMax) :: &
+       fir,fvis,Tbot,TopL,Psurf,P125
+
 !################ Nelli, April 07 ##########################
 !Setting up parameters needed by the correlated k lower
 !atmosphere radiation code
-
-
-! Setting the depth to which dust is mixed based on a reference dust opacity
-      real, parameter :: CONRNU = 0.03    ! Standard value  ~25km half-height
-!     real, parameter :: CONRNU = 0.003   ! ~50 km half-height
-!     real, parameter :: CONRNU = 0.5     ! ~10 km half-height
-
-!   RPTAU   :  Reference Pressure optical depth;  6.1 mbar for now
-      real, parameter :: RPTAU  = 6.1
-
-! Global mean dust opacity
-      real, parameter :: TAUTOT  = 0.3 !do not set to 0.0 or less
-
-! Top of the shortwave calculatin for lower atmosphere radiation code(mbars)
-      real, parameter :: PRAD  = 2.0E-4 !0.001
-
-! Top of the longwave calculatin for lower atmosphere radiation code(PASCALS)
-! and where radcool begins
-      real, parameter :: PLONG = 4.0E-1
-
-! Frequency at which to call the lower atmosphere radiation code (seconds)
-      real, parameter :: RAD_DT = 900.0
 
 !     Number of atmospheric layers
       integer, PARAMETER :: LL_LAYERS  = 40

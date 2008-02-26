@@ -71,6 +71,8 @@ subroutine calc_planet_sources(iBlock)
   real :: tmp3(nLons, nLats, nAlts)
   real :: Omega(nLons, nLats, nAlts)
 
+  LowAtmosRadRate = 0.0
+
   !\
   ! Cooling ----------------------------------------------------------
   !/
@@ -212,3 +214,10 @@ subroutine calc_eddy_diffusion_coefficient(iBlock)
 
 end subroutine calc_eddy_diffusion_coefficient
 
+subroutine set_planet_defaults
+
+  use ModInputs
+
+  return
+
+end subroutine set_planet_defaults
