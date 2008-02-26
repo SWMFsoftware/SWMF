@@ -52,9 +52,12 @@ contains
     if(IsInitialized) RETURN
     IsInitialized = .true.
 
-    ! This works for a NODE BASED regular IE grid only
-    nCells_D = ncells_decomposition_d(IE_) + 1
-    iSize = nCells_D(1); jSize = nCells_D(2)
+    !!!   ! This works for a NODE BASED regular IE grid only
+    !!!   nCells_D = ncells_decomposition_d(IE_) + 1
+    !!!   iSize = nCells_D(1); jSize = nCells_D(2)
+
+    iSize = Grid_C(IE_) % nCoord_D(1)
+    jSize = Grid_C(IE_) % nCoord_D(2)
 
     ! Set UseMe to .true. for the participating PE-s
     UseMe = is_proc(IE_) .or. is_proc(GM_)
@@ -129,46 +132,38 @@ contains
     if(DoTest)write(*,*)NameSub,', variables allocated',&
          ', iProc:',iProcWorld
 
-    do iBlock = 1,2
+    if(is_proc(IE_)) &
+         call IE_get_for_gm(Buffer_II,iSize,jSize,tSimulation)
 
-       !\
-       ! Get potential from IE
-       !/
-       if(is_proc(IE_)) &
-            call IE_get_for_gm(Buffer_II,iSize,jSize,NameVar_B(iBlock),&
-            tSimulation)
-       !\
-       ! Transfer variables from IE to GM
-       !/ 
-       iProcFrom = pe_decomposition(IE_,iBlock)
+    write(*,*) 'done with ie_get_for_gm'
 
-       nSize = iSize*jSize
-       if(iProcFrom /= i_proc0(GM_))then
-          if(i_proc() == iProcFrom) &
-               call MPI_send(Buffer_II,nSize,MPI_REAL,i_Proc0(GM_),&
-               1,i_comm(),iError)
-          if(is_proc0(GM_)) &
-               call MPI_recv(Buffer_II,nSize,MPI_REAL,iProcFrom,&
-               1,i_comm(),iStatus_I,iError)
-       end if
+    nSize = iSize*jSize
+    if(i_proc() /= i_proc0(GM_))then
+       if(i_proc() == i_proc0(IE_)) &
+            call MPI_send(Buffer_II,nSize,MPI_REAL,i_Proc0(GM_),&
+            1,i_comm(),iError)
+       if(is_proc0(GM_)) &
+            call MPI_recv(Buffer_II,nSize,MPI_REAL,iProcFrom,&
+            1,i_comm(),iStatus_I,iError)
+    end if
 
-       ! Broadcast variables inside GM
-       if(n_proc(GM_)>1 .and. is_proc(GM_)) &
-            call MPI_bcast(Buffer_II,nSize,MPI_REAL,0,i_comm(GM_),iError)
+    ! Broadcast variables inside GM
+    if(n_proc(GM_)>1 .and. is_proc(GM_)) &
+         call MPI_bcast(Buffer_II,nSize,MPI_REAL,0,i_comm(GM_),iError)
 
-       if(DoTest)write(*,*)NameSub,', variables transferred',&
-            ', iProc:',iProcWorld
+    if(DoTest)write(*,*)NameSub,', variables transferred',&
+         ', iProc:',iProcWorld
 
-       !\
-       ! Put variables into GM
-       !/
-       if(is_proc(GM_))then
-          call GM_put_from_ie(Buffer_II,iSize,jSize,NameVar_B(iBlock))
-          if(DoTest) &
-               write(*,*)NameSub//' iProc, Buffer(1,1)=',&
-               iProcWorld,Buffer_II(1,1)
-       end if
-    end do
+    !\
+    ! Put variables into GM
+    !/
+    if(is_proc(GM_))then
+       call GM_put_from_ie(Buffer_II,iSize,jSize)
+       if(DoTest) &
+            write(*,*)NameSub//' iProc, Buffer(1,1)=',&
+            iProcWorld,Buffer_II(1,1)
+    end if
+
     !\
     ! Deallocate buffer to save memory
     !/

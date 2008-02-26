@@ -22,6 +22,8 @@ contains
 
     call init_mod_ie_grid(iSize, jSize)
 
+    write(*,*) "nThetaIono : ",nThetaIono, nPhiIono
+
     allocate( IonoPotential_II(nThetaIono, nPhiIono), &
          dIonoPotential_DII(2, nThetaIono, nPhiIono) )
 
@@ -80,7 +82,7 @@ contains
 end module ModIonoPotential
 
 !=============================================================================
-subroutine GM_put_from_ie(Buffer_II,iSize,jSize,NameVar)
+subroutine GM_put_from_ie(Buffer_II,iSize,jSize)
 
   use ModIonoPotential, ONLY: IonoPotential_II, &
        init_mod_iono_potential, calc_grad_iono_potential
@@ -90,30 +92,33 @@ subroutine GM_put_from_ie(Buffer_II,iSize,jSize,NameVar)
 
   integer, intent(in) :: iSize,jSize
   real, intent(in) :: Buffer_II(iSize,jSize)
-  character(len=*), intent(in) :: NameVar
+!  character(len=*), intent(in) :: NameVar
 
   logical :: DoTest, DoTestMe
   !---------------------------------------------------------------------------
   call CON_set_do_test(NameSub,DoTest,DoTestMe)
-  if(DoTest)write(*,*)NameSub,': NameVar,iSize,jSize=',NameVar,iSize,jSize
+!  if(DoTest)write(*,*)NameSub,': NameVar,iSize,jSize=',NameVar,iSize,jSize
 
   if(.not. allocated(IonoPotential_II)) &
        call init_mod_iono_potential(iSize,jSize)
 
-  if(DoTest)write(*,*)NameSub,': putting potential'
-  select case(NameVar)
-  case('PotNorth')
-     IonoPotential_II(1:iSize,:)         = &
-          Buffer_II* Si2No_V(UnitElectric_)*Si2No_V(UnitX_)
-  case('PotSouth')
-     IonoPotential_II(iSize:2*iSize-1,:) = &
-          Buffer_II* Si2No_V(UnitElectric_)*Si2No_V(UnitX_)
+  IonoPotential_II = Buffer_II * Si2No_V(UnitElectric_)*Si2No_V(UnitX_)
+  call calc_grad_iono_potential
 
-     ! After getting the southern potential as well, get the gradients
-     call calc_grad_iono_potential
-  case default
-     call CON_stop(NameSub//' invalid NameVar='//NameVar)
-  end select
+!!!  if(DoTest)write(*,*)NameSub,': putting potential'
+!!!  select case(NameVar)
+!!!  case('PotNorth')
+!!!     IonoPotential_II(1:iSize,:)         = &
+!!!          Buffer_II* Si2No_V(UnitElectric_)*Si2No_V(UnitX_)
+!!!  case('PotSouth')
+!!!     IonoPotential_II(iSize:2*iSize-1,:) = &
+!!!          Buffer_II* Si2No_V(UnitElectric_)*Si2No_V(UnitX_)
+!!!
+!!!     ! After getting the southern potential as well, get the gradients
+!!!     call calc_grad_iono_potential
+!!!  case default
+!!!     call CON_stop(NameSub//' invalid NameVar='//NameVar)
+!!!  end select
 
 
   if(DoTest)write(*,*)NameSub,': done'

@@ -25,6 +25,9 @@ subroutine IE_solve
        " "//NameSub//" at ",Time_Array
 
   do iBlock = 1, 2
+
+write(*,*) 'iblock',iblock
+
      select case(iBlock)
      case(1) ! Northern hemisphere
         if(iProc /= 0) CYCLE

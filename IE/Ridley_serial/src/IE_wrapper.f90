@@ -323,7 +323,7 @@ end subroutine IE_set_grid
 
 !==============================================================================
 
-subroutine IE_get_for_gm(Buffer_II,iSize,jSize,NameVar,tSimulation)
+subroutine IE_get_for_gm(Buffer_II,iSize,jSize,tSimulation)
 
   use ModProcIE
   use ModIonosphere
@@ -333,13 +333,12 @@ subroutine IE_get_for_gm(Buffer_II,iSize,jSize,NameVar,tSimulation)
 
   integer, intent(in)           :: iSize,jSize
   real, intent(out)             :: Buffer_II(iSize,jSize)
-  character (len=*),intent(in)  :: NameVar
   real,             intent(in)  :: tSimulation
 
   integer :: i,j,k
   real    :: tSimulationTmp
   !--------------------------------------------------------------------------
-  if(iSize /= IONO_nTheta .or. jSize /= IONO_nPsi)then
+  if(iSize /= IONO_nTheta*2-1 .or. jSize /= IONO_nPsi)then
      write(*,*)NameSub//' incorrect buffer size=',iSize,jSize,&
           ' IONO_nTheta,IONO_nPsi=',IONO_nTheta, IONO_nPsi
      call CON_stop(NameSub//' SWMF_ERROR')
@@ -349,14 +348,16 @@ subroutine IE_get_for_gm(Buffer_II,iSize,jSize,NameVar,tSimulation)
   tSimulationTmp = tSimulation
   call IE_run(tSimulationTmp,tSimulation)
 
-  select case(NameVar)
-  case('PotNorth')
-     if(iProc == 0)         Buffer_II = IONO_NORTH_Phi
-  case('PotSouth')
-     if(iProc == nProc - 1) Buffer_II = IONO_SOUTH_Phi
-  case default
-     call CON_stop(NameSub//' SWMF_ERROR invalid NameVar='//NameVar)
-  end select
+  Buffer_II = IONO_Phi
+
+!!!  select case(NameVar)
+!!!  case('PotNorth')
+!!!     if(iProc == 0)         Buffer_II = IONO_NORTH_Phi
+!!!  case('PotSouth')
+!!!     if(iProc == nProc - 1) Buffer_II = IONO_SOUTH_Phi
+!!!  case default
+!!!     call CON_stop(NameSub//' SWMF_ERROR invalid NameVar='//NameVar)
+!!!  end select
 
 end subroutine IE_get_for_gm
 !==============================================================================
@@ -583,33 +584,32 @@ subroutine IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar, NameVar)
 
   IsNewInput = .true.
 
-  select case(NameVar)
-
-  case('JrNorth')
-     if (iProc /= 0) RETURN
-     LatBoundaryGm                  = Buffer_IIV(iSize,1,1)
-     Iono_North_Jr                  = Buffer_IIV(:,:,1)
-     Iono_North_Jr(iSize-1:iSize,1) = 0.0
+  if (iProc == 0) then
+     LatBoundaryGm = Buffer_IIV(IONO_nTheta,1,1)
+     write(*,*) "LatBoundary : ",LatBoundaryGm*180.0/3.1415926
+     Iono_North_Jr = Buffer_IIV(1:IONO_nTheta,:,1)
+     Iono_North_Jr(IONO_nTheta-1:IONO_nTheta,1) = 0.0
      if(nVar>1)then
-        Iono_North_invB           = Buffer_IIV(:,:,2)
-        Iono_North_rho            = Buffer_IIV(:,:,3)
-        Iono_North_p              = Buffer_IIV(:,:,4)
+        Iono_North_invB           = Buffer_IIV(1:IONO_nTheta,:,2)
+        Iono_North_rho            = Buffer_IIV(1:IONO_nTheta,:,3)
+        Iono_North_p              = Buffer_IIV(1:IONO_nTheta,:,4)
         if(DoTest) call write_dataN
      end if
-  case('JrSouth')
-     if (iProc /= nProc-1) RETURN
-     LatBoundaryGm                  = Buffer_IIV(1,1,1)
-     Iono_South_Jr                  = Buffer_IIV(:,:,1)
-     Iono_South_Jr(1:2,1)           = 0.0
+  endif
+  if (iProc == nProc-1) then
+     LatBoundaryGm = Buffer_IIV(IONO_nTheta,1,1)
+     write(*,*) "LatBoundary2 : ",LatBoundaryGm*180.0/3.1415926
+     Iono_South_Jr = Buffer_IIV(IONO_nTheta:2*IONO_nTheta-1,:,1)
+     Iono_South_Jr(1:2,1) = 0.0
      if(nVar>1)then
-        Iono_South_invB           = Buffer_IIV(:,:,2)
-        Iono_South_rho            = Buffer_IIV(:,:,3)
-        Iono_South_p              = Buffer_IIV(:,:,4)
+        Iono_South_invB           = Buffer_IIV(IONO_nTheta:2*IONO_nTheta-1,:,2)
+        Iono_South_rho            = Buffer_IIV(IONO_nTheta:2*IONO_nTheta-1,:,3)
+        Iono_South_p              = Buffer_IIV(IONO_nTheta:2*IONO_nTheta-1,:,4)
         if(DoTest) call write_dataS
      end if
-  case default
-     call CON_stop(NameSub//' SWMF_ERROR invalid NameVar='//NameVar)
-  end select
+  endif
+     
+  write(*,*) "LatBoundary end of ie_put_from_gm : ", LatBoundaryGm
 
   if(DoTest)write(*,*)NameSub,' finished'
 
@@ -1156,14 +1156,26 @@ subroutine IE_run(tSimulation,tSimulationLimit)
 
   nSolve = nSolve + 1
 
+  write(*,*) 'solve'
+
   ! Solve for the ionosphere potential
   call IE_solve
+
+  write(*,*) 'done with solve'
 
   ! Save solution (plot files) into file if required
   call IE_output
 
+  write(*,*) 'done with output'
+
+  call IE_gather
+
+  write(*,*) 'gather done'
+
   ! Save logfile if required
   call IE_save_logfile
+
+  write(*,*) 'done with IE_run'
 
 end subroutine IE_run
 

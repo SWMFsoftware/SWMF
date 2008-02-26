@@ -42,6 +42,7 @@ OBJECTS = \
 	IE_wrapper.o\
 	IE_Initialize.o\
 	IE_Library.o\
+	IE_gather.o\
         iono_conductances.o\
 	iono_currents.o\
         iono_solver.o\

@@ -193,7 +193,7 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar,NameVar)
   character (len=*), intent(in) :: NameVar
 
   real :: Radius
-  real, allocatable, dimension(:), save :: IE_half_lat, IE_half_lon
+  real, allocatable, dimension(:), save :: IE_lat, IE_lon
 
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
@@ -203,64 +203,36 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar,NameVar)
   if(.not.allocated(FieldAlignedCurrent_II)) &
        call init_mod_field_aligned_current(iSize, jSize)
 
-  if(.not.allocated(IE_half_lat)) &
-       allocate(IE_half_lat(iSize), IE_half_lon(jSize))
+  if(.not.allocated(IE_lat)) &
+       allocate(IE_lat(iSize), IE_lon(jSize))
 
   ! Initialize to zero
   Buffer_IIV = 0.
 
-  select case(NameVar)
-  case('JrNorth')
-     call calc_field_aligned_current
-     Buffer_IIV(:,:,1) = FieldAlignedCurrent_II(1:iSize,:)
-     if(DoTraceIE) then
-        ! Load grid and convert to lat-lon in degrees
-        IE_half_lat = 90.0 - cRadToDeg * ThetaIono_I(1:iSize)
-        IE_half_lon =        cRadToDeg * PhiIono_I
-        Radius = (6378.+100.)/6378.
-        call integrate_ray_accurate(iSize, jSize, IE_half_lat, IE_half_lon, Radius, &
-             'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b')
-        where(RayResult_VII(InvB_,:,:)>0.)
-           RayResult_VII(RhoInvB_,:,:)=RayResult_VII(RhoInvB_,:,:)/RayResult_VII(InvB_,:,:)
-           RayResult_VII(pInvB_,:,:)=RayResult_VII(pInvB_,:,:)/RayResult_VII(InvB_,:,:)
-        end where
-        where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
-           RayResult_VII(   InvB_,:,:) = -1.*No2Si_V(UnitB_)
-           RayResult_VII(rhoInvB_,:,:) = 0.
-           RayResult_VII(  pInvB_,:,:) = 0.
-        end where
-        Buffer_IIV(:,:,2) = RayResult_VII(   InvB_,:,:) / No2Si_V(UnitB_)
-        Buffer_IIV(:,:,3) = RayResult_VII(rhoInvB_,:,:) * No2Si_V(UnitRho_)
-        Buffer_IIV(:,:,4) = RayResult_VII(  pInvB_,:,:) * No2Si_V(UnitP_)
-        deallocate(RayIntegral_VII, RayResult_VII)
-     end if
-  case('JrSouth')
-     Buffer_IIV(:,:,1) = FieldAlignedCurrent_II(iSize:2*iSize-1,:)
+  call calc_field_aligned_current
+  Buffer_IIV(:,:,1) = FieldAlignedCurrent_II(:,:)
 
-     if(DoTraceIE) then
-        ! Load grid and convert to lat-lon in degrees
-        IE_half_lat = 90.0 - cRadToDeg * ThetaIono_I(iSize:2*iSize-1)
-        IE_half_lon =         cRadToDeg * PhiIono_I
-        Radius = (6378.+100.)/6378.
-        call integrate_ray_accurate(iSize, jSize, IE_half_lat, IE_half_lon, Radius, &
-             'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b')
-        where(RayResult_VII(InvB_,:,:)>0.)
-           RayResult_VII(RhoInvB_,:,:)=RayResult_VII(RhoInvB_,:,:)/RayResult_VII(InvB_,:,:)
-           RayResult_VII(pInvB_,:,:)=RayResult_VII(pInvB_,:,:)/RayResult_VII(InvB_,:,:)
-        end where
-        where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
-           RayResult_VII(   InvB_,:,:) = -1.*No2Si_V(UnitB_)
-           RayResult_VII(rhoInvB_,:,:) = 0.
-           RayResult_VII(  pInvB_,:,:) = 0.
-        end where
-        Buffer_IIV(:,:,2) = RayResult_VII(   InvB_,:,:) / No2Si_V(UnitB_)
-        Buffer_IIV(:,:,3) = RayResult_VII(rhoInvB_,:,:) * No2Si_V(UnitRho_)
-        Buffer_IIV(:,:,4) = RayResult_VII(  pInvB_,:,:) * No2Si_V(UnitP_)
-        deallocate(RayIntegral_VII, RayResult_VII)
-     end if
-  case default
-     call CON_stop(NameSub//' invalid NameVar='//NameVar)
-  end select
+  if(DoTraceIE) then
+     ! Load grid and convert to lat-lon in degrees
+     IE_lat = 90.0 - cRadToDeg * ThetaIono_I(1:iSize)
+     IE_lon =        cRadToDeg * PhiIono_I
+     Radius = (6378.+100.)/6378.
+     call integrate_ray_accurate(iSize, jSize, IE_lat, IE_lon, Radius, &
+          'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b')
+     where(RayResult_VII(InvB_,:,:)>0.)
+        RayResult_VII(RhoInvB_,:,:)=RayResult_VII(RhoInvB_,:,:)/RayResult_VII(InvB_,:,:)
+        RayResult_VII(pInvB_,:,:)=RayResult_VII(pInvB_,:,:)/RayResult_VII(InvB_,:,:)
+     end where
+     where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
+        RayResult_VII(   InvB_,:,:) = -1.*No2Si_V(UnitB_)
+        RayResult_VII(rhoInvB_,:,:) = 0.
+        RayResult_VII(  pInvB_,:,:) = 0.
+     end where
+     Buffer_IIV(:,:,2) = RayResult_VII(   InvB_,:,:) / No2Si_V(UnitB_)
+     Buffer_IIV(:,:,3) = RayResult_VII(rhoInvB_,:,:) * No2Si_V(UnitRho_)
+     Buffer_IIV(:,:,4) = RayResult_VII(  pInvB_,:,:) * No2Si_V(UnitP_)
+     deallocate(RayIntegral_VII, RayResult_VII)
+  end if
 
   if(DoTest)write(*,*)NameSub,': finished with NameVar=',NameVar
 

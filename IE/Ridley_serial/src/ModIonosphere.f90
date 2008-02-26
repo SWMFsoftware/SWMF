@@ -48,6 +48,12 @@ module ModIonosphere
   integer :: i_cond_nmlts, i_cond_nlats
 
   !\
+  ! Ionosphere Solution on the whole grid
+  !/
+  real, dimension(2*IONO_nTheta-1, IONO_nPsi) :: &
+       IONO_Phi
+
+  !\
   ! Ionosphere solution array definitions
   !/
   real, dimension(1:IONO_nTheta,1:IONO_nPsi) ::     &
