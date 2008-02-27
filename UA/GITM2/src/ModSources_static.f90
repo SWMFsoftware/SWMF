@@ -15,7 +15,7 @@ module ModSources
   real, dimension(nLons, nLats, nAlts,nBlocksMax) :: &
        EuvHeating,eEuvHeating, &
        RadCooling, RadCoolingRate, RadCoolingErgs, EuvHeatingErgs, &
-       LowAtmosRadRate=0.0
+       LowAtmosRadRate
 
   !\
   ! Stuff for auroral energy deposition and ionization

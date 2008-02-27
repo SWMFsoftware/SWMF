@@ -330,6 +330,7 @@ subroutine calc_GITM_sources(iBlock)
 
   ! This includes Radiative Cooling....
   RadCooling = 0.0
+  LowAtmosRadRate(:,:,:,iBlock) = 0.0
   call calc_planet_sources(iBlock)
 
   call calc_chemistry(iBlock)
