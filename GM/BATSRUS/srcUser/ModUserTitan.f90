@@ -30,13 +30,11 @@ module ModUser
   character (len=*), parameter :: NameUserModule = &
        'Titan 7 species MHD code, Yingjuan Ma'
 
-  ! Venus stuff
-  logical,public ::  UseMultiSpecies=.true.
   integer, parameter :: MaxNuSpecies=10, MaxReactions=30
 
-  integer, parameter, public :: MaxSpecies=7
+  integer, parameter:: MaxSpecies=7
 
-  integer, public :: nSpecies=7, nNuSpecies=10, nReactions=25
+  integer :: nSpecies=7, nNuSpecies=10, nReactions=25
 
   ! Radius within which the point implicit scheme should be used
   real :: rPointImplicit = 2.5
@@ -114,9 +112,6 @@ module ModUser
 
   character (len=10), dimension(MaxSpecies):: &
        ion_name_I
-
-  !  real,public ::  &
-  !       MassSpecies_V(MaxSpecies)=1.0  !atm
 
   real, dimension(MaxNuSpecies)::  NuMassSpecies_I, &
        HNuSpecies_I, BodynDenNuSpdim_I,&
@@ -223,10 +218,10 @@ contains
              write(*,*)'MassFluid_I(1)=',MassFluid_I(1)           
              write(*,*)'plas_T=',plas_T
           end if
-          !          if(UseMultiSpecies)then
+
           SW_n_dim = Plas_rho/MassFluid_I(1)
           SW_T_dim = plas_T      
-          !          end if
+
           !write(*,*)'SW_n_dim=',SW_n_dim,SW_T_dim
 
        case('#USETITANINPUT')
@@ -871,9 +866,13 @@ contains
                + z_BLK(i,j,k,globalBLK)*SZ0)&
                /max(R_BLK(i,j,k,globalBLK),1.0e-3)
 
+          ! Make sure these are set (printed in testing)
+          dtm   = -1.0
+          dtmp1 = -1.0
+
           if(.not.UseCosSZA)then
              coefx=coefy
-             if(cosSZA.lt.0.9)then
+             if(cosSZA < 0.9)then
                 do m=1,MaxNumSZA
                    if((cosSZA < CosSZAB_I(m)).and.&
                         (cosSZA >= CosSZAB_I(m+1))) then
