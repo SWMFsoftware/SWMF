@@ -99,24 +99,7 @@ subroutine PW_initialize
 !******************************************************************************
 
   if(IsRestart)then
-
-     do iLine=1,nLine
-        OPEN(UNIT=UnitTmp_, FILE=NameRestartIn(iLine), STATUS='OLD')
-        READ (UnitTmp_,*) TIME,DDT1,nStep
-        READ (UnitTmp_,*) GeoMagLat_I(iLine),GeoMagLon_I(iLine)
-
-        ThetaLine_I (iLine) = (90.0-GeoMagLat_I(iLine)) * cDegToRad
-        PhiLine_I   (iLine) = GeoMagLon_I(iLine)        * cDegToRad
-        
-        do iIon=1,nIon
-           READ (UnitTmp_,*) &
-                (XXX,State_CVI(i,iU_I(iIon),iLine),State_CVI(i,iP_I(iIon),iLine),&
-                State_CVI(i,iRho_I(iIon),iLine),State_CVI(i,iT_I(iIon),iLine),&
-                i=1,nAlt)
-        enddo
-        
-        CLOSE(UNIT=UnitTmp_)
-     enddo
+     call PW_read_restart
   else
      do iLine = 1, nLine
         ThetaLine_I (iLine) = 10.0 * cDegToRad
