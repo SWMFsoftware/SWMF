@@ -125,11 +125,13 @@ contains
        end do
 
        do i=iMin,iMax
-          call get_plasma_parameters_cell(x_Blk(i,j,k,iBlock), &
-               y_Blk(i,j,k,iBlock),z_Blk(i,j,k,iBlock),r_Blk(i,j,k,iBlock), &
-               Dens,Pres,Gamma)
-          State_VGB(P_,i,j,k,iBlock) = max( State_VGB(Rho_,i,j,k,iBlock) &
-               *Pres/Dens, State_VGB(P_,1,j,k,iBlock) )
+!          call get_plasma_parameters_cell(x_Blk(i,j,k,iBlock), &
+!               y_Blk(i,j,k,iBlock),z_Blk(i,j,k,iBlock),r_Blk(i,j,k,iBlock), &
+!               Dens,Pres,Gamma)
+!          State_VGB(P_,i,j,k,iBlock) = max( State_VGB(Rho_,i,j,k,iBlock) &
+!               *Pres/Dens, State_VGB(P_,1,j,k,iBlock) )
+          State_VGB(P_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) &
+               *Pres/Dens
           State_VGB(Ew_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) &
                *Pres/Dens*(1.0/(Gamma-1.0)-inv_gm1)
        end do
@@ -194,18 +196,18 @@ contains
 !                     r2RhoUn_D/r_Blk(i,j,k,iBlock)**2
 !             end if
 !          end do
-!          do i=iMin,iMax
-!             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
-!          end do
-          ! zero physical mass flux at coronal base (reflection)
           do i=iMin,iMax
-             State_VGB(RhoUx_,i,j,k,iBlock) = &
-                  -State_VGB(RhoUx_,1-i,j,k,iBlock)
-             State_VGB(RhoUy_,i,j,k,iBlock) = &
-                  -State_VGB(RhoUy_,1-i,j,k,iBlock)
-             State_VGB(RhoUz_,i,j,k,iBlock) = &
-                  -State_VGB(RhoUz_,1-i,j,k,iBlock)
+             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
           end do
+!          ! zero physical mass flux at coronal base (reflection)
+!          do i=iMin,iMax
+!             State_VGB(RhoUx_,i,j,k,iBlock) = &
+!                  -State_VGB(RhoUx_,1-i,j,k,iBlock)
+!             State_VGB(RhoUy_,i,j,k,iBlock) = &
+!                  -State_VGB(RhoUy_,1-i,j,k,iBlock)
+!             State_VGB(RhoUz_,i,j,k,iBlock) = &
+!                  -State_VGB(RhoUz_,1-i,j,k,iBlock)
+!          end do
        end if
     end do; end do
 
@@ -459,6 +461,7 @@ contains
     use ModPhysics, ONLY: inv_gm1
     use ModGeometry,ONLY: x_BLK, y_BLK, z_BLK, R_BLK
     use ModEnergy,  ONLY: calc_energy_cell
+    use ModExpansionFactors, ONLY:  GammaSS
     implicit none
 
     integer, intent(in) :: iStage, iBlock
@@ -475,7 +478,7 @@ contains
        call get_gamma_emp(x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock), &
             z_BLK(i,j,k,iBlock),Gammacell)
        if(R_BLK(i,j,k,iBlock)>2.5)&
-            Gammacell=Gammacell-(Gammacell-1.1)*max(0.0, &
+            Gammacell=Gammacell-(Gammacell-GammaSS)*max(0.0, &
             -1.0 + 2*State_VGB(P_,i,j,k,iBlock)/&
             (State_VGB(P_    ,i,j,k,iBlock)+(&
             (State_VGB(Bx_   ,i,j,k,iBlock)+B0xCell_BLK(i,j,k,iBlock))**2+&
@@ -546,7 +549,7 @@ contains
              call refine_heliosheath
           end if
        case('spherical')
-          ! assumes 1x2x9 root blocks
+          ! assumes 9x4x2 root blocks
           levBLK=global_block_ptrs(iBLK,iProc+1)%ptr%LEV
           levmin=3
           levelHS=4
@@ -647,6 +650,7 @@ contains
     use ModSize, ONLY: nI, nJ, nK
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, r_BLK
     use ModVarIndexes
+    use ModExpansionFactors, ONLY:  GammaSS
     implicit none
 
     integer,          intent(in)   :: iBlock
@@ -675,7 +679,7 @@ contains
                z_BLK(i,j,k,iBlock),Gamma)
 
           if(R_BLK(i,j,k,iBlock)>2.5)&
-               Gamma=Gamma-(Gamma-1.1)*max(0.0, &
+               Gamma=Gamma-(Gamma-GammaSS)*max(0.0, &
                -1.0 + 2.0*State_VGB(P_,i,j,k,iBlock)/&
                (State_VGB(P_,i,j,k,iBlock)+(&
                (State_VGB(Bx_,i,j,k,iBlock)+B0xCell_BLK(i,j,k,iBlock))**2+&
