@@ -20,7 +20,7 @@ subroutine PW_write_restart(&
   
   open(UnitTmp_, FILE=NameRestart)
   
-  WRITE (UnitTmp_,*) TIME,DT,NSTEP
+  WRITE (UnitTmp_,*) TIME,DT,nAlt,NSTEP
   Write (UnitTmp_,*) GMLAT, GMLONG
   do iIon=1,nIon
      WRITE (UnitTmp_,2002)&
