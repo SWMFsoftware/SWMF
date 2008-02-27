@@ -44,6 +44,7 @@ METHODS = \
 	write_restart.o\
 	set_upper_bc.o\
 	get_weimer_potential.o\
+	read_restart.o\
 	${OBJECTS_PLANET}
 
 LIBOBJECTS = ${MODULES} ${METHODS}
