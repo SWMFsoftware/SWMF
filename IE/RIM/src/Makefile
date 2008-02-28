@@ -43,6 +43,7 @@ OBJECTS = \
 	solve.o\
 	set_imf.o\
 	gather.o\
+	distribute.o\
 	write_output_RIM.o\
 	IE_couplers.o
 

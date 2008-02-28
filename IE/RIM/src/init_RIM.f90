@@ -126,13 +126,28 @@ subroutine init_RIM()
 
   ! Need to allocate memory for arrays that span all of the IE module
 
+  nLonsAll = nLons*nProc
+
   allocate( &
-       LatitudeAll(nLats+2,nLons*nProc+1), &
-       LongitudeAll(nLats+2,nLons*nProc+1), &
-       PotentialAll(nLats+2,nLons*nProc+1), &
-       SigmaHAll(nLats+2,nLons*nProc+1), &
-       SigmaPAll(nLats+2,nLons*nProc+1), &
-       LocalVar(nLats+2,nLons*nProc+1))
+       LatitudeAll(nLats+2,nLonsAll+1), &
+       LongitudeAll(nLats+2,nLonsAll+1), &
+       PotentialAll(nLats+2,nLonsAll+1), &
+       SigmaHAll(nLats+2,nLonsAll+1), &
+       SigmaPAll(nLats+2,nLonsAll+1), &
+       LocalVar(nLats+2,nLonsAll+1), &
+       OuterMagJrAll(nLats+2,nLonsAll+1), &
+       InnerMagJrAll(nLats+2,nLonsAll+1), &
+       IonoJrAll(nLats+2,nLonsAll+1), &
+       OuterMagInvBAll(nLats+2,nLonsAll+1), &
+       OuterMagRhoAll(nLats+2,nLonsAll+1), &
+       OuterMagPAll(nLats+2,nLonsAll+1))
+
+  OuterMagJrAll = -1.0e32
+  InnerMagJrAll = -1.0e32
+  IonoJrAll = -1.0e32
+  OuterMagInvBAll = -1.0e32
+  OuterMagRhoAll = -1.0e32
+  OuterMagPAll = -1.0e32
 
   ! This is ONLY for communication to other modules
 
@@ -146,19 +161,19 @@ subroutine init_RIM()
   LongitudeAll(1,iProc*nLons+1:iProc*nLons+nLons) = &
        Longitude(1:nLons,nLats)
   if (iProc == nProc-1) then
-     LatitudeAll((iProc+1)*nLons+1, 1) = 0.0
-     LongitudeAll((iProc+1)*nLons+1,1) = Longitude(nLons+1,nLats)
+     LatitudeAll(1,(iProc+1)*nLons+1) = 0.0
+     LongitudeAll(1,(iProc+1)*nLons+1) = Longitude(nLons+1,nLats)
   endif
 
   do iLat = 1, nLats
-     iLatFrom = nLats-(iLat-1)
+!     iLatFrom = nLats-(iLat-1)
      LatitudeAll(iLat+1, iProc*nLons+1:iProc*nLons+nLons) = &
-          cPi - Latitude(1:nLons,iLatFrom)
+          cPi/2 + Latitude(1:nLons,iLat)
      LongitudeAll(iLat+1,iProc*nLons+1:iProc*nLons+nLons) = &
-          Longitude(1:nLons,iLatFrom)
+          Longitude(1:nLons,iLat)
      if (iProc == nProc-1) then
-        LatitudeAll(iLat+1,(iProc+1)*nLons+1) = cPi-Latitude(nLons+1,iLatFrom)
-        LongitudeAll(iLat+1,(iProc+1)*nLons+1) = Longitude(nLons+1,iLatFrom)
+        LatitudeAll(iLat+1,(iProc+1)*nLons+1) = cPi/2+Latitude(nLons+1,iLat)
+        LongitudeAll(iLat+1,(iProc+1)*nLons+1) = Longitude(nLons+1,iLat)
      endif
   enddo
 

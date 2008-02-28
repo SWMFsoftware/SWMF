@@ -555,7 +555,7 @@ subroutine IE_get_for_ua(Buffer_II,iSize,jSize,NameVar,NameHem,tSimulation)
 end subroutine IE_get_for_ua
 
 !==============================================================================
-subroutine IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar, NameVar)
+subroutine IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar)
 
   use IE_ModMain, ONLY: IsNewInput, LatBoundaryGm
   use ModProcIE
@@ -566,13 +566,12 @@ subroutine IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar, NameVar)
   character (len=*), parameter :: NameSub = 'IE_put_from_gm'
   integer,          intent(in) :: iSize, jSize, nVar
   real                         :: Buffer_IIV(iSize, jSize, nVar)
-  character(len=*), intent(in) :: NameVar
 
   integer :: iError, iMessageSize
   logical :: DoTest, DoTestMe
   !---------------------------------------------------------------------------
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
-  if(DoTest)write(*,*)NameSub,' starting with NameVar=',NameVar
+  if(DoTest)write(*,*)NameSub,' starting'
 
   IsNewInput = .true.
 

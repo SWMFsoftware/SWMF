@@ -312,14 +312,14 @@ subroutine IE_set_grid
   call set_grid_descriptor(                  &
        IE_,                                  &! component index
        nDim=2,                               &! dimensionality
-       nRootBlock_D=(/1,1/),                 &! north+south hemispheres
+       nRootBlock_D=(/1,nProc/),             &! north+south hemispheres
        nCell_D =(/nLons*nProc+1,nLats+2/),   &! size of node based grid
        XyzMin_D=(/cOne, cOne/),              &! min colat and longitude indexes
        XyzMax_D=(/real(nLons*nProc+1),       &
                   real(nLats+2)/),           &! max colat and longitude indexes
        TypeCoord='SMG',                      &! solar magnetic coord.
-       Coord1_I=LongitudeAll(:,1),           &! colatitudes
-       Coord2_I=LatitudeAll(1,:),            &! longitudes
+       Coord1_I=LatitudeAll(:,1),           &! colatitudes
+       Coord2_I=LongitudeAll(1,:),            &! longitudes
        Coord3_I=(/rPlanet_I(Planet_) +       &
                   IonoHeightPlanet_I(Planet_)/),  &! radial size in meters
        iProc_A = iProc_A)                          ! processor assigment
@@ -356,11 +356,13 @@ subroutine IE_get_for_gm(Buffer_II,iSize,jSize,tSimulation)
 
   Buffer_II = PotentialAll
 
+  write(*,*) "potentialall : ", minval(potentialall), maxval(potentialall)
+
 end subroutine IE_get_for_gm
 
 !==============================================================================
 
-subroutine IE_put_from_gm(Buffer_IIV,iSize,jSize,nVar,NameVar)
+subroutine IE_put_from_gm(Buffer_IIV,iSize,jSize,nVar)
 
   use ModRIM
   use ModProcIE
@@ -370,13 +372,12 @@ subroutine IE_put_from_gm(Buffer_IIV,iSize,jSize,nVar,NameVar)
   character (len=*), parameter :: NameSub = 'IE_put_from_gm'
   integer,          intent(in) :: iSize, jSize, nVar
   real                         :: Buffer_IIV(iSize, jSize, nVar)
-  character(len=*), intent(in) :: NameVar
 
   integer :: iError, iMessageSize
   logical :: DoTest, DoTestMe
   !---------------------------------------------------------------------------
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
-  if(DoTest)write(*,*)NameSub,' starting with NameVar=',NameVar
+  if(DoTest)write(*,*)NameSub,' starting'
 
   IsNewInput = .true.
 
@@ -385,11 +386,15 @@ subroutine IE_put_from_gm(Buffer_IIV,iSize,jSize,nVar,NameVar)
      call MPI_Bcast(Buffer_IIV,iMessageSize,MPI_Real,0,iComm,iError)
   endif
 
-  MagJrAll = Buffer_IIV(:,:,1)
+  OuterMagJrAll = Buffer_IIV(:,:,1)
   if(nVar>1)then
-     MagInvBAll = Buffer_IIV(:,:,2)
-     MagRhoAll  = Buffer_IIV(:,:,3)
-     MagPAll    = Buffer_IIV(:,:,4)
+     OuterMagInvBAll = Buffer_IIV(:,:,2)
+     OuterMagRhoAll  = Buffer_IIV(:,:,3)
+     OuterMagPAll    = Buffer_IIV(:,:,4)
+  else
+     OuterMagInvBAll = -1.0e32
+     OuterMagRhoAll  = -1.0e32
+     OuterMagPAll    = -1.0e32
   endif
 
   !\
@@ -397,7 +402,7 @@ subroutine IE_put_from_gm(Buffer_IIV,iSize,jSize,nVar,NameVar)
   ! is stored in this region, so we have to zero it out....
   !/
   LatBoundaryGm = Buffer_IIV(nLats/2+1,1,1)
-  MagJrAll(nLats/2+1:nLats/2+2,1) = 0.0
+  OuterMagJrAll(nLats/2+1:nLats/2+2,1) = 0.0
 
   if(DoTest)write(*,*)NameSub,' finished'
 

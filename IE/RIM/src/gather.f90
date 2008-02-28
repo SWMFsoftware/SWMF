@@ -17,6 +17,8 @@ subroutine gather
   PotentialAll = -1.0e32
   call rearrange(Potential, PotentialAll)
 
+  write(*,*) "potentialall : ", minval(potentialall), maxval(potentialall)
+
   if (iProc == 0) then
      cpcpn = maxval(PotentialAll(1:nLats/2,:)) - &
              minval(PotentialAll(1:nLats/2,:))
@@ -37,7 +39,7 @@ contains
     real, intent(in)  :: ValueLocal(0:nLons+1, nLats)
     real, intent(out) :: ValueAll(nLats+2, nLons*nProc+1)
 
-    integer :: iLat, iLon, iLatFrom, iLonFrom, iError
+    integer :: iLat, iLon, iLatFrom, iLonFrom, iError, iLatTo, iLonTo
 
     !\
     ! We need to reverse the latitude, shift the longitudes, and swap the
@@ -49,12 +51,14 @@ contains
 
     do iLat = 1, nLats
        ! Need to reverst latitudes
+       iLatTo   = iLat+1
        iLatFrom = nLats-(iLat-1)
        do iLon = 1, nLons
           ! Need to shift longitudes
-          iLonFrom = mod(iLon + nLons*nProc/2, nLons*nProc)
-          if (iLonFrom == 0) iLonFrom = nLons*nProc+1
-          ValueAll(iLat+1, iLon) = ValueLocal(iLonFrom, iLatFrom)
+          iLonFrom = iLon
+          iLonTo   = mod(iLon + nLons*iProc + nLonsAll/2, nLonsAll)
+          if (iLonTo == 0) iLonTo = nLonsAll
+          ValueAll(iLatTo, iLonTo) = ValueLocal(iLonFrom, iLatFrom)
        enddo
     enddo
 
@@ -71,6 +75,8 @@ contains
        ! Fill in overlap point in longitude
        ValueAll(:,nLons*nProc+1) = ValueAll(:,1)
     endif
+
+    write(*,*) ValueAll(2,:)
 
   end subroutine rearrange
 

@@ -174,7 +174,7 @@ end module ModFieldAlignedCurrent
 
 !==============================================================================
 
-subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar,NameVar)
+subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar)
 
   use ModIeGrid
   use ModFieldAlignedCurrent,ONLY: FieldAlignedCurrent_II, &
@@ -190,7 +190,6 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar,NameVar)
 
   integer, intent(in) :: iSize, jSize, nVar
   real, intent(out), dimension(iSize, jSize, nVar) :: Buffer_IIV
-  character (len=*), intent(in) :: NameVar
 
   real :: Radius
   real, allocatable, dimension(:), save :: IE_lat, IE_lon
@@ -198,7 +197,7 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar,NameVar)
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
   call CON_set_do_test(NameSub,DoTest, DoTestMe)
-  if(DoTest)write(*,*)NameSub,': starting with NameVar=',NameVar
+  if(DoTest)write(*,*)NameSub,': starting'
 
   if(.not.allocated(FieldAlignedCurrent_II)) &
        call init_mod_field_aligned_current(iSize, jSize)
@@ -234,6 +233,6 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar,NameVar)
      deallocate(RayIntegral_VII, RayResult_VII)
   end if
 
-  if(DoTest)write(*,*)NameSub,': finished with NameVar=',NameVar
+  if(DoTest)write(*,*)NameSub,': finished'
 
 end subroutine GM_get_for_ie

@@ -246,14 +246,14 @@ contains
     ! Allocate buffers for the variables both in GM and IE
     !/
     allocate(Buffer_IIV(iSize, jSize, nVar), stat=iError)
-    call check_allocate(iError,NameSub//": "//NameVar_B(iBlock))
+    call check_allocate(iError,NameSub)
 
     !\
     ! Calculate field aligned currents on GM
     ! The result will be on the root processor of GM
     !/
     if(is_proc(GM_)) &
-         call GM_get_for_ie(Buffer_IIV, iSize, jSize, nVar, NameVar_B(iBlock))
+         call GM_get_for_ie(Buffer_IIV, iSize, jSize, nVar)
     !\
     ! Transfer variables from GM to IE
     !/
@@ -270,7 +270,7 @@ contains
     ! Put variables into IE
     !/
     if(is_proc(IE_)) &
-         call IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar, NameVar_B(iBlock))
+         call IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar)
 
     !\
     ! Deallocate buffer to save memory

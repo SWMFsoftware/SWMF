@@ -14,7 +14,8 @@ module ModRIM
        dLatitude, dLongitude, SMX, SMY, SMZ, &
        SigmaEUVH, SigmaEUVP, SigmaScatH, SigmaScatP, SigmaStarH, SigmaStarP, &
        SigmaAurH, SigmaAurP, Sigma0, &
-       OldPotential, Jr
+       OldPotential, Jr, OuterMagJr, InnerMagJr, IonoJr, &
+       OuterMagInvB, OuterMagRho, OuterMagP
 
   real, dimension(0:nLons+1,nLats) :: &
        SigmaThTh, SigmaThPs, SigmaPsPs, &
@@ -43,7 +44,8 @@ module ModRIM
 
   real, dimension(:,:), allocatable :: &
        LatitudeAll, LongitudeAll, PotentialAll, SigmaHAll, SigmaPAll, &
-       LocalVar, MagJrAll, MagInvBAll, MagRhoAll, MagPAll
+       LocalVar, OuterMagJrAll, InnerMagJrAll, IonoJrAll, &
+       OuterMagInvBAll, OuterMagRhoAll, OuterMagPAll
 
   real :: cpcps = 0.0
   real :: cpcpn = 0.0
