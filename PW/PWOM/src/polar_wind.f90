@@ -14,7 +14,8 @@ subroutine polar_wind
   !
   
   use ModPWOM, only: DtVertical,nLine,IsStandAlone,DoSavePlot,iLine,&
-       IsFullyImplicit,UseExplicitHeat,DoTimeAccurate,MaxStep,DnOutput
+       IsFullyImplicit,UseExplicitHeat,DoTimeAccurate,MaxStep,DnOutput,&
+       nAlt
   use ModIoUnit, ONLY: UnitTmp_
   use ModCommonVariables
   use ModFieldLine
@@ -28,14 +29,14 @@ subroutine polar_wind
   real    :: NewState_GV(-1:maxGrid,nVar)
 
   !-----------------------------------------------------------------------
-  
-  call get_field_line(State_GV(1:maxGrid,:),                       &
+  nDim = nAlt
+  call get_field_line(nDim,State_GV(1:nDim,:),                       &
        GMLAT,GMLONG,Jr,wHorizontal,uJoule2=uJoule2,                &
        iUnitOutput=iUnitOutput, iUnitGraphics=iUnitGraphics,       &
        NameRestart=NameRestart,                                    &
        iLine=iLine, Time=Time,MaxLineTime=Tmax,                    &
        TypeSolver=TypeSolver,IsVariableDT=IsVariableDT,            &
-       DToutput=DToutput,nAlt=nDim,DoLog=DoLog,&
+       DToutput=DToutput,DoLog=DoLog,&
        nStep=nStep)
   
   DT=DtVertical
@@ -158,7 +159,7 @@ subroutine polar_wind
              nDim,RAD,GmLat,GmLong,Time,DT,nStep,NameRestart, &    
              State_GV)                  
         IF (TIME+1.0e-5 >= TMAX) Then 
-           Call put_field_line(State_GV(1:maxGrid,:),    &
+           Call put_field_line(nDim,State_GV(1:nDim,:),    &
                 GMLAT,GMLONG,Jr,wHorizontal,&
                 Time=Time,nStep=nStep,r_C=RAD   ) 
            RETURN
@@ -172,7 +173,7 @@ subroutine polar_wind
                 State_GV)             
         endif
         IF (nStep >= MaxStep) Then 
-           Call put_field_line(State_GV(1:maxGrid,:),    &
+           Call put_field_line(nDim,State_GV(1:nDim,:),    &
                 GMLAT,GMLONG,Jr,wHorizontal,&
                 Time=Time,nStep=nStep,r_C=RAD   ) 
            RETURN
