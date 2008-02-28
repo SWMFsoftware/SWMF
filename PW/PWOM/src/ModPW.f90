@@ -19,7 +19,7 @@ module ModPWOM
   
   integer :: nTotalLine=1
   integer :: iTheta, iPhi, iUnitSouth,iUnitNorth,i,iLine=0
-  integer, dimension(MaxLine)::iLineGlobal
+  integer, dimension(:), allocatable::iLineGlobal
 
   real    ::   Bcoef,MagMoment,rPlanet,OmegaPlanet,Dtheta,Dphi,rLowerBoundary
 
@@ -43,7 +43,7 @@ module ModPWOM
        ElectronAverageEnergy_C
 
 
-  real, dimension(MaxLine) ::            &
+  real, dimension(:), allocatable ::            &
        GeoMagLat_I,GeoMagLon_I,          &
        ThetaLine_I, PhiLine_I,           &
        xLine_I,yLine_I,zLine_I,          &
@@ -55,7 +55,7 @@ module ModPWOM
   
   integer :: nStep=0
   
-  integer, dimension(maxLine)        ::  iThetaLine_I,iPhiLine_I
+  integer, dimension(:), allocatable        ::  iThetaLine_I,iPhiLine_I
   real   ::  DtHorizontalOrig = 50.0, DtHorizontal=50.0, Time, TimeMax
 
   logical::  DoMoveLine=.true., UseJr=.true., UseCentrifugal=.true.
@@ -67,22 +67,18 @@ module ModPWOM
   character(len=100) :: NameInput,  &
                    NameCollision,NameSourceGraphics
 
-  character(len=100),dimension(MaxLine):: &
+  character(len=100),dimension(:), allocatable:: &
        NameRestartIn, NameRestart, NameGraphics,NameOutput
 
   integer       :: iUnitInput,iUnitSourceGraphics,&
                    iUnitCollision,nAlt=390
                  
-  integer, dimension(maxLine) :: &
+  integer, dimension(:), allocatable :: &
        iUnitRestart,iUnitRestartIn,iUnitGraphics,iUnitOutput
   
-  real :: r_C(1:maxGrid)
-  real :: State_CVI(maxGrid,nVar,maxLine)
-  real, dimension(1:maxGrid,0:maxLine):: &
-       dOxyg_CI, uOxyg_CI, pOxyg_CI, TOxyg,     &
-       dHel_CI, uHel_CI, pHel_CI, THel,         &
-       dHyd_CI, uHyd_CI, pHyd_CI, THyd,         &
-       dElect_CI, uElect_CI, pElect_CI, TElect
+  real,allocatable :: r_C(:)
+  real,allocatable :: State_CVI(:,:,:)
+
   real :: DToutput=50.0, DtVertical=0.05, Tmax=100.0,DtPlotElectrodynamics=10.0
   integer :: MaxStep = -1, DnOutput=-1
   logical :: DoTimeAccurate = .true.
