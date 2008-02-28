@@ -38,9 +38,9 @@ Module ModIndices
   integer, parameter :: nIndices  = ap_
   integer, parameter :: MaxIndicesEntries = 25000
 
-  real, dimension(MaxIndicesEntries, nIndices)           :: Indices_TV
+  real, allocatable           :: Indices_TV(:,:)
   integer, dimension(nIndices)                           :: nIndices_V=0
-  real (Real8_), dimension(MaxIndicesEntries, nIndices)  :: IndexTimes_TV
+  real (Real8_), allocatable :: IndexTimes_TV(:,:)
   real, dimension(nIndices)                              :: SavedIndices_V
   integer, dimension(nIndices)                           :: SavedErrors_V
   real (Real8_)                                          :: SavedTime
@@ -50,5 +50,16 @@ Module ModIndices
 
   character (len=100) :: NameOfIndexFile
   integer             :: LunIndices_ = UnitTmp_
+
+contains
+
+  subroutine init_mod_indices
+
+    if(allocated(Indices_TV)) return
+    allocate( &
+         Indices_TV(MaxIndicesEntries, nIndices), &
+         IndexTimes_TV(MaxIndicesEntries, nIndices))
+
+  end subroutine init_mod_indices
 
 end Module ModIndices

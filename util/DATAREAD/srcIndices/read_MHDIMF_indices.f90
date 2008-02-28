@@ -25,7 +25,7 @@ subroutine read_MHDIMF_Indices(iOutputError)
   real (Real8_) :: time_now, TimeDelay
 
   integer, dimension(7) :: itime
-
+  !------------------------------------------------------------------------
   iOutputError = 0
 
   open(LunIndices_, file=NameOfIndexFile, status="old", iostat = ierror)
@@ -39,6 +39,8 @@ subroutine read_MHDIMF_Indices(iOutputError)
 
   npts = 0
   TimeDelay = 0.0
+
+  call init_mod_indices
 
   do while (.not.done)
      

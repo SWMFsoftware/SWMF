@@ -30,6 +30,8 @@ subroutine read_NOAAHPI_Indices(iOutputError)
   integer, external :: jday
 
   iOutputError = 0
+  !-------------------------------------------------------------------------
+  call init_mod_indices
 
   open(LunIndices_, file=NameOfIndexFile, status="old", iostat = ierror)
 

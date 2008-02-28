@@ -25,6 +25,8 @@ subroutine read_NGDC_Indices(iOutputError)
   real (Real8_) :: time_now
 
   integer, dimension(7) :: itime
+  !------------------------------------------------------------------------
+  call init_mod_indices
 
   iOutputError = 0
 
