@@ -19,6 +19,8 @@ subroutine read_satellites(iError)
   real (kind = dblprec)     :: OldTime, NewTime
   integer                   :: itime(7)
   real                      :: pos(3)
+  !---------------------------------------------------------------------
+  call init_mod_satellites
 
   iError = 0
   nSatLines = 0
