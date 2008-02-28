@@ -4,17 +4,20 @@ subroutine PW_read_restart
   use ModIoUnit,      ONLY: io_unit_new,UnitTmp_
   use ModPwom,        ONLY: nLine, Time, GeoMagLat_I, GeoMagLon_I, nStep, &
                             ThetaLine_I, PhiLine_I , State_CVI, nAlt, &
-                            NameRestartIn,MaxLine
+                            NameRestartIn
   use ModCommonPlanet,ONLY: nIon,iRho_I,iU_I,iP_I,iT_I,nVar
-  use ModParameters,  ONLY: MaxGrid
   use ModCommonVariables,ONLY: DrBnd,AltMin
 
   implicit none
-  real   :: ddt1, xxx, Alt_C(MaxGrid), DrFile,Loc,Dx,&
-            StateFile_CVI(MaxGrid,nVar,MaxLine)
+  real   :: ddt1, xxx,Dx, DrFile, Loc
+  real,allocatable :: StateFile_CVI(:,:,:),Alt_C(:)
   integer:: iError, iIon, iLine,i, nAltFile,iAlt,iMin,iMax
 
 !------------------------------------------------------------------------------
+  if (.not.allocated(StateFile_CVI)) &
+       allocate(StateFile_CVI(nAlt,nVar,nLine))
+  if (.not.allocated(Alt_C)) &
+       allocate(Alt_C(nAlt))
   !read in restart data for each line
   do iLine=1,nLine
      OPEN(UNIT=UnitTmp_, FILE=NameRestartIn(iLine), STATUS='OLD')
@@ -64,5 +67,6 @@ subroutine PW_read_restart
      enddo
   endif
      
-
+  deallocate(StateFile_CVI)
+  deallocate(Alt_C)
 end subroutine PW_read_restart
