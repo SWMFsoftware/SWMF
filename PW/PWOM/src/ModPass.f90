@@ -7,7 +7,7 @@ module ModFieldLine
   private
   public put_field_line, get_field_line
 
-  real    ::  PassState_CV(maxGrid,nVar)
+  real,allocatable    ::  PassState_CV(:,:)
 
   logical :: IsVariableDtPW, DoLogPW
   real    :: TimePW,MaxLineTimePW,DToutputPW, DTpolarwindPW,GeoMagLatPW,&
@@ -19,32 +19,33 @@ module ModFieldLine
        iUnitCollisionPW,iUnitRestartInPW,iLinePW,nLinePW
   CHARACTER(7) :: TypeSolverPW
   character*100 :: NameRestartPW
-  real  :: rPW_C(maxGrid)
+  real,allocatable  :: rPW_C(:)
 contains
 
   !***************************************************************************
   !  Put polarwind variables into Mod_PW for passing 
   !***************************************************************************
 
-  subroutine put_field_line(State_CV, &
+  subroutine put_field_line(nAlt,State_CV, &
        GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,uJoule2,                  &
        iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
-       MaxLineTime,TypeSolver,IsVariableDt,DToutput,nAlt,DoLog,&
+       MaxLineTime,TypeSolver,IsVariableDt,DToutput,DoLog,&
        nStep,r_C)
 
     use ModParameters
     use ModCommonPlanet,ONLY: nVar
-    
-    real, intent(in) :: State_CV(maxGrid,nVar)
+    integer, intent(in) :: nAlt
+    real, intent(in) :: State_CV(nAlt,nVar)
     real, optional, intent(in) :: Time,MaxLineTime,DToutput,uJoule2
-    real, optional, intent(in) :: r_C(maxGrid)
+    real, optional, intent(in) :: r_C(nAlt)
     real,    intent(in)     :: GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal  
-    integer, optional,intent(in)  :: iUnitOutput,iUnitGraphics,iLine,nAlt,nStep
+    integer, optional,intent(in)  :: iUnitOutput,iUnitGraphics,iLine,nStep
     character*100,optional,intent(in):: NameRestart
     character(7),optional,intent(in)::TypeSolver
     logical,optional,intent(in) :: IsVariableDt,DoLog
     !-------------------------------------------------------------------------
-    
+    if (.not. allocated(PassState_CV)) allocate(PassState_CV(nAlt,nVar))
+    if (.not. allocated(rPW_C))        allocate(rPW_C(nAlt))
     PassState_CV(:,:) = State_CV(:,:)
     GeoMagLatPW = GeoMagLat_I
     GeoMagLonPW = GeoMagLon_I
@@ -52,8 +53,6 @@ contains
     wHorizontalPW   = wHorizontal
     
 
-    if (present(nAlt))          nDimPW = nAlt
-    
     if (present(Time))          TimePW = Time
     if (present(MaxLineTime))   MaxLineTimePW  = MaxLineTime
     if (present(iUnitGraphics)) iUnitGraphicsPW= iUnitGraphics
@@ -74,16 +73,16 @@ contains
   !  Get polarwind variables from Mod_PW 
   !***************************************************************************
 
-  subroutine get_field_line(State_CV,& 
+  subroutine get_field_line(nAlt,State_CV,& 
        GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,uJoule2,                  &
        iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
-       MaxLineTime,TypeSolver,IsVariableDt,DToutput, nAlt,DoLog,&
+       MaxLineTime,TypeSolver,IsVariableDt,DToutput,DoLog,&
        nStep,r_C)
 
     use ModParameters
     use ModCommonPlanet, ONLY: nVar
-
-    real, intent(out):: State_CV(MaxGrid,nVar)
+    integer,intent(in) :: nAlt
+    real, intent(out):: State_CV(nAlt,nVar)
 
 
     real,    intent(out)     :: GeoMagLat_I, GeoMagLon_I,Jr, wHorizontal           
@@ -92,10 +91,11 @@ contains
     character(7),optional,intent(out):: TypeSolver
     logical,optional,intent(out)      :: IsVariableDt,DoLog
     real, optional, intent(out)       :: Time,MaxLineTime,DToutput,uJoule2
-    real, optional, intent(out)        :: r_C(maxGrid)
-    integer, optional,intent(out)     :: iUnitOutput,iUnitGraphics,iLine,nAlt,nStep
+    real, optional, intent(out)        :: r_C(nAlt)
+    integer, optional,intent(out)     :: iUnitOutput,iUnitGraphics,iLine,nStep
     !--------------------------------------------------------------------------
-    
+    if (.not. allocated(PassState_CV)) allocate(PassState_CV(nAlt,nVar))
+    if (.not. allocated(rPW_C)) allocate(rPW_C(nAlt))
     State_CV(:,:)= PassState_CV(:,:)
     GeoMagLat_I = GeoMagLatPW
     GeoMagLon_I = GeoMagLonPW
@@ -105,7 +105,6 @@ contains
 
     
 
-    if (present(nAlt))          nAlt = nDimPW
     if (present(Time))          Time = TimePW
     if (present(MaxLineTime))   MaxLineTime = MaxLineTimePW
     if (present(iUnitGraphics)) iUnitGraphics =iUnitGraphicsPW
