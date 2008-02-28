@@ -97,6 +97,17 @@ program pw
   else
   end if
 
+  !\
+  ! Deallocate variables needed for simulation
+  !/
+  deallocate(r_C, State_CVI, GeoMagLat_I,GeoMagLon_I,     &
+       ThetaLine_I, PhiLine_I, xLine_I, yLine_I, zLine_I, &
+       xLineOld_I, yLineOld_I, zLineOld_I, UthetaLine_I,  &
+       UphiLine_I, UxLine_I, UyLine_I, UzLine_I,          &
+       OmegaLine_I, JrLine_I, iThetaLine_I,iPhiLine_I,    &
+       NameRestartIn, NameRestart, NameGraphics,          &
+       NameOutput,  iUnitRestart, iUnitRestartIn,         &
+       iUnitGraphics,iUnitOutput, iLineGlobal)
   
 
   call MPI_FINALIZE(errcode)
