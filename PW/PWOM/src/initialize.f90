@@ -45,6 +45,23 @@ subroutine PW_initialize
   StartTime=CurrentTime
   
 
+  !\
+  ! Allocate arrays for simulation
+  !/
+  if (.not.allocated(r_C)) allocate(r_C(nAlt),&
+       State_CVI(nAlt,nVar,nLine),&
+       GeoMagLat_I(nLine),GeoMagLon_I(nLine),          &
+       ThetaLine_I(nLine), PhiLine_I(nLine),           &
+       xLine_I(nLine),yLine_I(nLine),zLine_I(nLine),          &
+       xLineOld_I(nLine),yLineOld_I(nLine),zLineOld_I(nLine), &
+       UthetaLine_I(nLine),UphiLine_I(nLine),          &
+       UxLine_I(nLine),UyLine_I(nLine),UzLine_I(nLine),       &
+       OmegaLine_I(nLine),                      &
+       JrLine_I(nLine), iThetaLine_I(nLine),iPhiLine_I(nLine), &
+       NameRestartIn(nLine), NameRestart(nLine), NameGraphics(nLine),&
+       NameOutput(nLine),  iUnitRestart(nLine),iUnitRestartIn(nLine),&
+       iUnitGraphics(nLine),iUnitOutput(nLine), iLineGlobal(nLine))
+
   !**************************************************************************
   !  Define file names and unit numbers, and open for reading and writing.
   !***************************************************************************
