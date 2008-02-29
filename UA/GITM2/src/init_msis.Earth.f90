@@ -184,7 +184,7 @@ subroutine init_msis
               endif
 
               NDensity(iLon,iLat,iAlt,iBlock) = &
-                   sum(NDensityS(iLon,iLat,iAlt,:,iBlock))
+                   sum(NDensityS(iLon,iLat,iAlt,1:nSpecies,iBlock))
 
            enddo
         enddo
