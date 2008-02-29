@@ -156,8 +156,8 @@ subroutine polar_wind
         IF (IsStandAlone .and. &
              floor((Time+1.0e-5)/DToutput)/=floor((Time+1.0e-5-2.0*DT)/DToutput) )&
              call PW_write_restart(&
-             nDim,RAD,GmLat,GmLong,Time,DT,nStep,NameRestart, &    
-             State_GV)                  
+             nDim,RAD(1:nDim),GmLat,GmLong,Time,DT,nStep,NameRestart, &    
+             State_GV(1:nDim,:))                  
         IF (TIME+1.0e-5 >= TMAX) Then 
            Call put_field_line(nDim,State_GV(1:nDim,:),    &
                 GMLAT,GMLONG,Jr,wHorizontal,&
@@ -169,8 +169,8 @@ subroutine polar_wind
            CALL PW_print_plot
            IF (IsStandAlone)&
                 call PW_write_restart(&
-                nDim,RAD,GmLat,GmLong,Time,DT,nStep,NameRestart, &    
-                State_GV)             
+                nDim,RAD(1:nDim),GmLat,GmLong,Time,DT,nStep,NameRestart, &    
+                State_GV(1:nDim,:))             
         endif
         IF (nStep >= MaxStep) Then 
            Call put_field_line(nDim,State_GV(1:nDim,:),    &
