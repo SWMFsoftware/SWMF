@@ -227,7 +227,7 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
      write(*,*)NameSub,' iSizeIn,jSizeIn,nIntegralIn=',&
           iSizeIn,jSizeIn,nIntegralIn
      write(*,*)NameSub,' nVarLine,nPointLine=',nVarLine,nPointLine
-     write(*,*)NameSub,' Integral_IIV(21,1,:)=',Integral_IIV(21,1,:)
+     !write(*,*)NameSub,' Integral_IIV(21,1,:)=',Integral_IIV(21,1,:)
      write(*,*)NameSub,' BufferLine_VI(:,1) =',BufferLine_VI(:,1)
      write(*,*)NameSub,' BufferLine_VI(:,2) =',BufferLine_VI(:,2)
      write(*,*)NameSub,' IMF=',Integral_IIV(1:8,1,4)
