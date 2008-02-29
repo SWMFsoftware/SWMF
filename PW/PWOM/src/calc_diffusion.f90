@@ -68,8 +68,8 @@ subroutine calc_facevalues(nDim, Var_G, VarLeft_F, VarRight_F)
   implicit none
 
   integer, intent(in)    :: nDim
-  real,    intent(in) :: Var_G(-1:MaxGrid+2)
-  real,    intent(out):: VarLeft_F(1:MaxGrid+1), VarRight_F(1:MaxGrid+1)
+  real,    intent(in) :: Var_G(-1:nDim+2)
+  real,    intent(out):: VarLeft_F(1:nDim+1), VarRight_F(1:nDim+1)
 
   real :: dVarUp, dVarDown, dVarLimited_G(0:MaxGrid+1)
 
