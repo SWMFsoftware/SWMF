@@ -1,6 +1,6 @@
 subroutine PW_write_restart(&
      nAlt,RAD,GmLat,GmLong,Time,DT,nStep,NameRestart,     &
-     State_GV)
+     State_CV)
 
   !Description: Write out restart file for PW
   
@@ -10,8 +10,8 @@ subroutine PW_write_restart(&
   implicit none
   integer, intent(in) :: nAlt,nStep
   real   , intent(in) :: GmLat,GmLong,Time,DT
-  real   , intent(in) :: RAD(maxGrid)
-  real   , intent(in) :: State_GV(-1:maxGrid,nVar)
+  real   , intent(in) :: RAD(nAlt)
+  real   , intent(in) :: State_CV(1:nAlt,nVar)
   
   character*100,intent(in)   :: NameRestart
   
@@ -24,8 +24,8 @@ subroutine PW_write_restart(&
   Write (UnitTmp_,*) GMLAT, GMLONG
   do iIon=1,nIon
      WRITE (UnitTmp_,2002)&
-          (RAD(K),State_GV(K,iU_I(iIon)),State_GV(K,iP_I(iIon)),&
-          State_GV(K,iRho_I(iIon)) ,State_GV(K,iT_I(iIon)) ,K=1,nAlt)        
+          (RAD(K),State_CV(K,iU_I(iIon)),State_CV(K,iP_I(iIon)),&
+          State_CV(K,iRho_I(iIon)) ,State_CV(K,iT_I(iIon)) ,K=1,nAlt)        
   enddo
   
   close(UnitTmp_)
