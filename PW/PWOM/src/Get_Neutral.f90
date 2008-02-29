@@ -1,20 +1,17 @@
-
-
-
-!******************************************************************************
-! Get_GITM reads in an input file from GITM and stores the values in a module
-! file ( ModGITM).
-!******************************************************************************
 subroutine GetNeutralData
+
+  ! Read in an input file produced by GITM and store the values in a module
+
   use ModNeutralPW
+
   Logical       :: IsFirstCall = .true.
   Character*100 :: NameGITM
   integer       :: iUnitGITM
   NameGITM='gitm.dat'
   iUnitGITM=30
   
-
   If (IsFirstCall) Then
+     call init_mod_neutral
      open(iUnitGITM,file=NameGITM)
      do iLon=1,nlon 
         do iLat=1,nLat 
@@ -47,7 +44,6 @@ subroutine GetNeutralData
      close(iUnitGITM)
      IsFirstCall=.false.
   endif
-  
 
 end subroutine GetNeutralData
 
