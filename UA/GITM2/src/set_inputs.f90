@@ -211,6 +211,12 @@ subroutine set_inputs
                  call read_in_real(LogNS0(i), iError)
                  if (iError == 0) LogNS0(i) = alog(LogNS0(i))
               enddo
+              LogRho0 = 0.0
+              do iSpecies = 1, nSpecies
+                 LogRho0 = LogRho0 + &
+                      exp(LogNS0(iSpecies)) * Mass(iSpecies)
+              enddo
+              LogRho0 = alog(LogRho0)
            endif
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #INITIAL:'
@@ -225,15 +231,6 @@ subroutine set_inputs
               do i=1,nSpecies
                  write(*,*) 'Bottom N Density (real), species',i
               enddo
-           else
-
-              LogRho0 = 0.0
-              do iSpecies = 1, nSpecies
-                 LogRho0 = LogRho0 + &
-                      exp(LogNS0(iSpecies)) * Mass(iSpecies)
-              enddo
-              LogRho0 = alog(LogRho0)
-
            endif
 
         case ("#HPI")
