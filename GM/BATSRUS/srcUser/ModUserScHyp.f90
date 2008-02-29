@@ -84,6 +84,7 @@ contains
     use ModPhysics,  ONLY: inv_gm1, OmegaBody
     use ModSize
     use ModVarIndexes
+    use ModFaceValue, ONLY: UseLogRhoLimiter
     implicit none
 
     integer,          intent(in)  :: iBlock, iSide
@@ -97,7 +98,6 @@ contains
     real, dimension(nDim) :: RhoU_D,RhoUn_D,RhoUt_D,r2RhoUn_D,GhostRhoU_D
     real, dimension(nDim) :: FaceCoords_D, Normal_D, Unit_D
     real :: RFace, Dens, Pres, Gamma, B1dotR, FullBNorm, RhoUdotR
-    logical :: fieldaligned=.false.
     !------------------------------------------------------------------------
     IsFound = .true.
 
@@ -116,20 +116,22 @@ contains
        call get_plasma_parameters_cell(FaceCoords_D(x_),FaceCoords_D(y_), &
             FaceCoords_D(z_),RFace,Dens,Pres,Gamma)
 
-       State_VGB(Rho_,iMax,j,k,iBlock) = max( 2.0*Dens &
-            - State_VGB(Rho_,iMax+1,j,k,iBlock), &
-            State_VGB(Rho_,iMax+1,j,k,iBlock) )
+       if(UseLogRhoLimiter)then
+          State_VGB(Rho_,1,j,k,iBlock)=log(State_VGB(Rho_,1,j,k,iBlock))
+          Dens = log(Dens)
+       end if
+       State_VGB(Rho_,iMax,j,k,iBlock) = 2.0*Dens &
+            - State_VGB(Rho_,iMax+1,j,k,iBlock)
        do i=iMax-1,iMin,-1
           State_VGB(Rho_,i,j,k,iBlock) = 2.0*State_VGB(Rho_,i+1,j,k,iBlock) &
-            - State_VGB(Rho_,i+2,j,k,iBlock)
+               - State_VGB(Rho_,i+2,j,k,iBlock)
        end do
+       if(UseLogRhoLimiter)then
+          State_VGB(Rho_,-1:1,j,k,iBlock)=exp(State_VGB(Rho_,-1:1,j,k,iBlock))
+          Dens = exp(Dens)
+       end if
 
        do i=iMin,iMax
-!          call get_plasma_parameters_cell(x_Blk(i,j,k,iBlock), &
-!               y_Blk(i,j,k,iBlock),z_Blk(i,j,k,iBlock),r_Blk(i,j,k,iBlock), &
-!               Dens,Pres,Gamma)
-!          State_VGB(P_,i,j,k,iBlock) = max( State_VGB(Rho_,i,j,k,iBlock) &
-!               *Pres/Dens, State_VGB(P_,1,j,k,iBlock) )
           State_VGB(P_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) &
                *Pres/Dens
           State_VGB(Ew_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) &
@@ -149,66 +151,37 @@ contains
           State_VGB(Bx_:Bz_,i,j,k,iBlock) = B1t_D
        end do
 
-       if(fieldaligned)then
-          RhoU_D   = State_VGB(RhoUx_:RhoUz_,1,j,k,iBlock)
-          RhoUdotR = dot_product(Normal_D,RhoU_D)
-          RhoUn_D  = RhoUdotR*Normal_D
-          RhoUt_D  = RhoU_D - RhoUn_D
-          r2RhoUn_D = r_Blk(1,j,k,iBlock)**2*RhoUn_D
+       RhoU_D   = State_VGB(RhoUx_:RhoUz_,1,j,k,iBlock)
+       RhoUdotR = dot_product(Normal_D,RhoU_D)
+       RhoUn_D  = RhoUdotR*Normal_D
+       RhoUt_D  = RhoU_D - RhoUn_D
+       r2RhoUn_D = r_Blk(1,j,k,iBlock)**2*RhoUn_D
 
-          do i=iMin,iMax
-             GhostRhoU_D = RhoUt_D + r2RhoUn_D/r_Blk(i,j,k,iBlock)**2
-             FullB_D(x_) = State_VGB(Bx_,i,j,k,iBlock) &
-                  + B0xCell_BLK(i,j,k,iBlock)
-             FullB_D(y_) = State_VGB(By_,i,j,k,iBlock) &
-                  + B0yCell_BLK(i,j,k,iBlock)
-             FullB_D(z_) = State_VGB(Bz_,i,j,k,iBlock) &
-                  + B0zCell_BLK(i,j,k,iBlock)
-             FullBNorm = sqrt(sum(FullB_D**2))
-             if(FullBNorm<cTolerance)then
-                ! HD: extrapolate in radial direction
-                Unit_D(x_)=x_Blk(i,j,k,iBlock)/r_Blk(i,j,k,iBlock)
-                Unit_D(y_)=y_Blk(i,j,k,iBlock)/r_Blk(i,j,k,iBlock)
-                Unit_D(z_)=z_Blk(i,j,k,iBlock)/r_Blk(i,j,k,iBlock)
-             else
-                ! MHD: extrapolate in field line direction
-                Unit_D = FullB_D/FullBNorm
-             end if
-             if(RhoUdotR<0.0)then
-                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
-             else
-                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
-                     dot_product(GhostRhoU_D,Unit_D)*Unit_D
-             end if
-          end do
-       else
-!          RhoU_D   = State_VGB(RhoUx_:RhoUz_,1,j,k,iBlock)
-!          RhoUdotR = dot_product(Normal_D,RhoU_D)
-!          RhoUn_D  = RhoUdotR*Normal_D
-!          RhoUt_D  = RhoU_D - RhoUn_D
-!          r2RhoUn_D = r_Blk(1,j,k,iBlock)**2*RhoUn_D
-!
-!          do i=iMin,iMax
-!             if(RhoUdotR<0.0)then
-!                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
-!             else
-!                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
-!                     r2RhoUn_D/r_Blk(i,j,k,iBlock)**2
-!             end if
-!          end do
-          do i=iMin,iMax
+       do i=iMin,iMax
+          GhostRhoU_D = RhoUt_D + r2RhoUn_D/r_Blk(i,j,k,iBlock)**2
+          FullB_D(x_) = State_VGB(Bx_,i,j,k,iBlock) &
+               + B0xCell_BLK(i,j,k,iBlock)
+          FullB_D(y_) = State_VGB(By_,i,j,k,iBlock) &
+               + B0yCell_BLK(i,j,k,iBlock)
+          FullB_D(z_) = State_VGB(Bz_,i,j,k,iBlock) &
+               + B0zCell_BLK(i,j,k,iBlock)
+          FullBNorm = sqrt(sum(FullB_D**2))
+          if(FullBNorm<cTolerance)then
+             ! HD: extrapolate in radial direction
+             Unit_D(x_)=x_Blk(i,j,k,iBlock)/r_Blk(i,j,k,iBlock)
+             Unit_D(y_)=y_Blk(i,j,k,iBlock)/r_Blk(i,j,k,iBlock)
+             Unit_D(z_)=z_Blk(i,j,k,iBlock)/r_Blk(i,j,k,iBlock)
+          else
+             ! MHD: extrapolate in field line direction
+             Unit_D = FullB_D/FullBNorm
+          end if
+          if(RhoUdotR<0.0)then
              State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
-          end do
-!          ! zero physical mass flux at coronal base (reflection)
-!          do i=iMin,iMax
-!             State_VGB(RhoUx_,i,j,k,iBlock) = &
-!                  -State_VGB(RhoUx_,1-i,j,k,iBlock)
-!             State_VGB(RhoUy_,i,j,k,iBlock) = &
-!                  -State_VGB(RhoUy_,1-i,j,k,iBlock)
-!             State_VGB(RhoUz_,i,j,k,iBlock) = &
-!                  -State_VGB(RhoUz_,1-i,j,k,iBlock)
-!          end do
-       end if
+          else
+             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+                  dot_product(GhostRhoU_D,Unit_D)*Unit_D
+          end if
+       end do
     end do; end do
 
     !\
@@ -576,8 +549,8 @@ contains
           end if
        case('spherical_lnr')
           levBLK=global_block_ptrs(iBLK,iProc+1)%ptr%LEV
-          levmin=1
-          levelHS=2
+          levmin=2
+          levelHS=3
           if(.not.time_loop)then
              !refine to have resolution not worse than levmin
              if(lev<=levmin)then
@@ -585,7 +558,7 @@ contains
              else
                 refineBlock = .false.
              end if
-          elseif( levBLK<=levmin ) then
+          elseif( levBLK<=levmin-1 ) then
              refineBlock = .true.
           elseif( levBLK<=levelHS-1 )then
              MinRBlk = exp(XyzStart_Blk(1,iBlk)-0.5*Dx_Blk(iBlk))
