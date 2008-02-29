@@ -32,6 +32,9 @@ PWOM:
 	cd ${DATAREADINDICESDIR}; make LIB
 	cd src;                  make PWOM
 
+nompirun: PWOM
+	cd ${RUNDIR}; ./PWOM.exe
+
 LIB:
 	cd src; make LIB
 	cd srcInterface; make LIB
