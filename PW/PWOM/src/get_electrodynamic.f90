@@ -31,16 +31,16 @@ subroutine PW_get_electrodynamics
            enddo
         enddo
         !  Change angles to radians
-        Theta_G(:,:) = Theta_G(:,:)*cDegToRad
-        Phi_G  (:,:) = Phi_G  (:,:)*cDegToRad
+        Theta_G(1:nPhi,1:nTheta) = Theta_G(1:nPhi,1:nTheta)*cDegToRad
+        Phi_G  (1:nPhi,1:nTheta) = Phi_G  (1:nPhi,1:nTheta)*cDegToRad
         close(UnitTmp_)   
      endif
      !  Convert potential from kilovolts to Volts
-     Potential_G(:,:) = Potential_G(:,:)*1.0e3
+     Potential_G(1:nPhi,1:nTheta) = Potential_G(1:nPhi,1:nTheta)*1.0e3
      !  Convert microA/m^2 --> A/m^2
-     Jr_G(:,:) = Jr_G(:,:) * 1.0e-6 
+     Jr_G(1:nPhi,1:nTheta) = Jr_G(1:nPhi,1:nTheta) * 1.0e-6 
   elseif (UseIE) then
-     Potential_G(:,:) = Potential_G(:,:)
+     Potential_G(1:nPhi,1:nTheta) = Potential_G(1:nPhi,1:nTheta)
   elseif (UseWeimer) then
      call get_weimer_potential
   endif
@@ -83,30 +83,31 @@ subroutine PW_get_electrodynamics
      enddo
   enddo
   
-  BmagnitudeSquared_G(:,:) = Br_G(:,:)**2 + Btheta_G(:,:)**2
+  BmagnitudeSquared_G(1:nPhi,1:nTheta) = &
+       Br_G(1:nPhi,1:nTheta)**2 + Btheta_G(1:nPhi,1:nTheta)**2
 !******************************************************************************
 !  Fill Ghost cells
 !******************************************************************************
-  Theta_G    (nPhi+1,:) = Theta_G    (2,:) 
-  Phi_G      (nPhi+1,:) = Phi_G      (2,:)
-  SigmaH_G   (nPhi+1,:) = SigmaH_G   (2,:)
-  SigmaP_G   (nPhi+1,:) = SigmaP_G   (2,:) 
-  Jr_G       (nPhi+1,:) = Jr_G       (2,:)
-  Potential_G(nPhi+1,:) = Potential_G(2,:)
+  Theta_G    (nPhi+1,1:nTheta) = Theta_G    (2,1:nTheta) 
+  Phi_G      (nPhi+1,1:nTheta) = Phi_G      (2,1:nTheta)
+  SigmaH_G   (nPhi+1,1:nTheta) = SigmaH_G   (2,1:nTheta)
+  SigmaP_G   (nPhi+1,1:nTheta) = SigmaP_G   (2,1:nTheta) 
+  Jr_G       (nPhi+1,1:nTheta) = Jr_G       (2,1:nTheta)
+  Potential_G(nPhi+1,1:nTheta) = Potential_G(2,1:nTheta)
 
-  Theta_G    (0,:) = Theta_G    (nPhi-1,:) 
-  Phi_G      (0,:) = Phi_G      (nPhi-1,:)
-  SigmaH_G   (0,:) = SigmaH_G   (nPhi-1,:)
-  SigmaP_G   (0,:) = SigmaP_G   (nPhi-1,:) 
-  Jr_G       (0,:) = Jr_G       (nPhi-1,:)
-  Potential_G(0,:) = Potential_G(nPhi-1,:)
+  Theta_G    (0,1:nTheta) = Theta_G    (nPhi-1,1:nTheta) 
+  Phi_G      (0,1:nTheta) = Phi_G      (nPhi-1,1:nTheta)
+  SigmaH_G   (0,1:nTheta) = SigmaH_G   (nPhi-1,1:nTheta)
+  SigmaP_G   (0,1:nTheta) = SigmaP_G   (nPhi-1,1:nTheta) 
+  Jr_G       (0,1:nTheta) = Jr_G       (nPhi-1,1:nTheta)
+  Potential_G(0,1:nTheta) = Potential_G(nPhi-1,1:nTheta)
 
-  Theta_G    (:,nTheta+1) = Theta_G    (:,nTheta) 
-  Phi_G      (:,nTheta+1) = Phi_G      (:,nTheta)
-  SigmaH_G   (:,nTheta+1) = SigmaH_G   (:,nTheta)
-  SigmaP_G   (:,nTheta+1) = SigmaP_G   (:,nTheta) 
-  Jr_G       (:,nTheta+1) = Jr_G       (:,nTheta)
-  Potential_G(:,nTheta+1) = Potential_G(:,nTheta)
+  Theta_G    (0:nPhi+1,nTheta+1) = Theta_G    (0:nPhi+1,nTheta) 
+  Phi_G      (0:nPhi+1,nTheta+1) = Phi_G      (0:nPhi+1,nTheta)
+  SigmaH_G   (0:nPhi+1,nTheta+1) = SigmaH_G   (0:nPhi+1,nTheta)
+  SigmaP_G   (0:nPhi+1,nTheta+1) = SigmaP_G   (0:nPhi+1,nTheta) 
+  Jr_G       (0:nPhi+1,nTheta+1) = Jr_G       (0:nPhi+1,nTheta)
+  Potential_G(0:nPhi+1,nTheta+1) = Potential_G(0:nPhi+1,nTheta)
 
   do iPhi=1,nPhi
      Theta_G    (iPhi,0) = Theta_G    (mod(iPhi+floor(nPhi/2.0),nPhi-1),2) 

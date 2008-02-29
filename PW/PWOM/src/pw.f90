@@ -121,7 +121,7 @@ subroutine initial_line_location
   implicit none
 
   ! set global variables Dtheta and Dphi
-  dTheta = maxval( Theta_G(:,:)) / (nTheta - 1)
+  dTheta = maxval( Theta_G(1:nPhi,1:nTheta)) / (nTheta - 1)
   dPhi   = cTwoPi / (nPhi - 1)
 
   do iLine=1,nLine
