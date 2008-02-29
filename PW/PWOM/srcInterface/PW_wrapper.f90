@@ -105,7 +105,14 @@ end subroutine PW_init_session
 
 subroutine PW_finalize(TimeSimulation)
 
-  use ModPWOM, ONLY: iLine, nLine, iUnitGraphics, iUnitOutput,nLog,iLineGlobal
+  use ModPWOM, ONLY: iLine, nLine, iUnitGraphics, iUnitOutput,nLog,iLineGlobal,&
+       r_C, State_CVI, GeoMagLat_I,GeoMagLon_I,     &
+       ThetaLine_I, PhiLine_I, xLine_I, yLine_I, zLine_I, &
+       xLineOld_I, yLineOld_I, zLineOld_I, UthetaLine_I,  &
+       UphiLine_I, UxLine_I, UyLine_I, UzLine_I,          &
+       OmegaLine_I, JrLine_I, iThetaLine_I,iPhiLine_I,    &
+       NameRestartIn, NameRestart, NameGraphics,          &
+       NameOutput,  iUnitRestart, iUnitRestartIn
 
   implicit none
 
