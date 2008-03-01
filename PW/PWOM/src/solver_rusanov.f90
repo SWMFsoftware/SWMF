@@ -88,7 +88,7 @@ subroutine rusanov_solver(iIon, nCell,&
   call update_state( iIon,nCell,&
        Rgas, DtIn,&
        OldState_GV(1:nCell,Rho_), OldState_GV(1:nCell,U_), &
-       OldState_GV(1:nCell,P_), T_G(1:nCell), &
+       OldState_GV(1:nCell,P_), &
        LeftRho_F, RightRho_F,LeftU_F, RightU_F,LeftP_F, RightP_F, &
        RhoFlux_F, RhoUFlux_F, eFlux_F, &
        RhoSource_C, RhoUSource_C, eTotalSource_C,&
@@ -163,7 +163,7 @@ end subroutine rusanov_flux
 
 subroutine update_state( iIon,nCell,&
      Rgas,DtIn,&
-     OldRho_C, OldU_C, OldP_C, OldT_C, &
+     OldRho_C, OldU_C, OldP_C, &
      LeftRho_F, RightRho_F,LeftU_F, RightU_F,LeftP_F, RightP_F, &
      RhoFlux_F, RhoUFlux_F, eFlux_F, &
      RhoSource_C, RhoUSource_C, eSource_C,&
@@ -175,13 +175,13 @@ subroutine update_state( iIon,nCell,&
 
   integer, intent(in)                   :: iIon,nCell  
   real, intent(in)                      :: Rgas,DtIn 
-  real, dimension(nCell), intent(in)  :: OldRho_C, OldU_C, OldP_C, OldT_C
+  real, dimension(nCell), intent(in)  :: OldRho_C, OldU_C, OldP_C
   real, dimension(nCell+1), intent(in):: LeftRho_F, LeftU_F, LeftP_F
   real, dimension(nCell+1), intent(in):: RightRho_F, RightU_F, RightP_F
   real, dimension(nCell+1), intent(in):: RhoFlux_F, RhoUFlux_F, eFlux_F
   real, dimension(nCell), intent(in)  :: RhoSource_C, RhoUSource_C, eSource_C
   real, dimension(nCell), intent(out) :: NewRho_C, NewU_C, NewP_C,NewT_C
-  real, allocatable :: NewRhoU(:), NewE(:)
+  real, allocatable :: OldT_C(:), NewRhoU(:), NewE(:)
   real :: InvGammaMinus1,SumCollisionFreq,SumHTxCol,SumMFxCol
   real, allocatable :: NewRhoUSource_C(:), ExplicitRhoU_C(:)
   real :: CollisionNeutral1, CollisionNeutral2, &
@@ -191,12 +191,12 @@ subroutine update_state( iIon,nCell,&
   real :: ModifyESource
   integer :: i,iSpecies,MinSpecies
   !----------------------------------------------------------------------------
-  
   if (.not. allocated(NewRhoU)) then
-     allocate(NewRhoU(nCell), NewE(nCell),NewRhoUSource_C(nCell), ExplicitRhoU_C(nCell))
+     allocate(NewRhoU(nCell), NewE(nCell),NewRhoUSource_C(nCell), &
+          ExplicitRhoU_C(nCell),OldT_C(nCell))
   endif
+  OldT_C(1:nCell)=OldP_C(1:nCell)/Rgas/OldRho_C(1:nCell)
   
-
   InvGammaMinus1 = 1.0/(Gamma - 1.0)
 
   do i=1,nCell
@@ -268,5 +268,5 @@ subroutine update_state( iIon,nCell,&
      
      NewT_C(i)=NewP_C(i)/Rgas/NewRho_C(i)
   end do
-  deallocate(NewRhoU, NewE,NewRhoUSource_C, ExplicitRhoU_C)
+  deallocate(NewRhoU, NewE,NewRhoUSource_C, ExplicitRhoU_C,OldT_C)
 end subroutine update_state
