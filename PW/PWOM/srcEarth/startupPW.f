@@ -1379,7 +1379,7 @@ C     State_GV(0,RhoO_)=PHIOX*Mass_I(Ion1_)*XNO/(1.53E-12*XNN2*TMP1+2.82E-11*XNO
       State_GV(-1:0,uO_)=State_GV(1,RhoO_)*State_GV(1,uO_)/State_GV(-1:0,RhoO_)
       State_GV(-1:0,uH_)=State_GV(1,RhoH_)*State_GV(1,uH_)/State_GV(-1:0,RhoH_)
       State_GV(-1:0,uHe_)=State_GV(1,RhoHe_)*State_GV(1,uHe_)/State_GV(-1:0,RhoHe_)
-            
+      State_GV(-1:0,ue_) = 0.0     
 
       State_GV(-1:0,pO_) =RGAS_I(Ion1_)*State_GV(-1:0,To_) *State_GV(-1:0,RhoO_)
       State_GV(-1:0,pH_) =RGAS_I(Ion2_)*State_GV(-1:0,Th_) *State_GV(-1:0,RhoH_)
@@ -1397,7 +1397,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C     
       DO 20 I=1,NDIM
 C     FFOX1(1) BASED ON PHOTOIONIZATION FREQ FROM SUB GLOWEX;MASS OXYGEN IN GRAMS
-         FFOX1(I)=IonRateO_C(I+1)*16.*1.6726E-24*XO(I)
+         FFOX1(I)=IonRateO_C(I)*16.*1.6726E-24*XO(I)
 C     FFOX1(I)=PHIOX*Mass_I(Ion1_)*XO(I)
 CALEX SOURCE COEF?         
          FFOX2(I)=2.2E-11*Mass_I(Ion1_)*XO(I)/Mass_I(Ion2_)
@@ -1513,7 +1513,8 @@ CALEX CTOXN2 = 3*R_o*M_o/(M_o+M_{N2}) see nagy p.83
       HeatFlowCoef_II(Ion1_,Neutral1_)=3.*RGAS_I(Ion1_)*Mass_I(Ion1_)/(Mass_I(Ion1_)+Mass_I(Ion1_))
       HeatFlowCoef_II(Ion1_,Neutral5_)=3.*RGAS_I(Ion1_)*Mass_I(Ion1_)/(Mass_I(Ion1_)+Mass_I(Ion3_))
       HeatFlowCoef_II(Ion1_,Neutral2_)=3.*RGAS_I(Ion1_)*Mass_I(Ion1_)/(Mass_I(Ion1_)+Mass_I(Ion2_))
-      HeatFlowCoef_II(Ion1_,Ion2_) = 3.*RGAS_I(Ion1_)*Mass_I(Ion1_)/(Mass_I(Ion1_)+Mass_I(Ion2_))
+      HeatFlowCoef_II(Ion1_,Ion1_) = 0.0
+ 1    HeatFlowCoef_II(Ion1_,Ion2_) = 3.*RGAS_I(Ion1_)*Mass_I(Ion1_)/(Mass_I(Ion1_)+Mass_I(Ion2_))
       HeatFlowCoef_II(Ion1_,Ion3_) = 3.*RGAS_I(Ion1_)*Mass_I(Ion1_)/(Mass_I(Ion1_)+Mass_I(Ion3_))
       HeatFlowCoef_II(Ion1_,Ion4_) = 3.*RGAS_I(Ion1_)*Mass_I(Ion1_)/(Mass_I(Ion1_)+Mass_I(Ion4_))
       
@@ -1525,6 +1526,7 @@ CALEX CTOXN2 = 3*R_o*M_o/(M_o+M_{N2}) see nagy p.83
       HeatFlowCoef_II(Ion2_,Neutral5_)=3.*RGAS_I(Ion2_)*Mass_I(Ion2_)/(Mass_I(Ion2_)+Mass_I(Ion3_))
       HeatFlowCoef_II(Ion2_,Neutral1_)=3.*RGAS_I(Ion2_) *Mass_I(Ion2_)/(Mass_I(Ion2_)+Mass_I(Ion1_))
       HeatFlowCoef_II(Ion2_,Neutral2_)=3.*RGAS_I(Ion2_)*Mass_I(Ion2_)/(Mass_I(Ion2_)+Mass_I(Ion2_))
+      HeatFlowCoef_II(Ion2_,Ion2_) = 0.0
       HeatFlowCoef_II(Ion2_,Ion1_) = 3.*RGAS_I(Ion2_) *Mass_I(Ion2_)/(Mass_I(Ion2_)+Mass_I(Ion1_))
       HeatFlowCoef_II(Ion2_,Ion3_) = 3.*RGAS_I(Ion2_)*Mass_I(Ion2_)/(Mass_I(Ion2_)+Mass_I(Ion3_))
       HeatFlowCoef_II(Ion2_,Ion4_) =3.*RGAS_I(Ion2_)*Mass_I(Ion2_)/(Mass_I(Ion2_)+Mass_I(Ion4_))
@@ -1537,6 +1539,7 @@ CALEX CTOXN2 = 3*R_o*M_o/(M_o+M_{N2}) see nagy p.83
       HeatFlowCoef_II(Ion3_,Neutral5_)=3.*RGAS_I(Ion3_)*Mass_I(Ion3_)/(Mass_I(Ion3_)+Mass_I(Ion3_))
       HeatFlowCoef_II(Ion3_,Neutral1_)=3.*RGAS_I(Ion3_)*Mass_I(Ion3_)/(Mass_I(Ion3_)+Mass_I(Ion1_))
       HeatFlowCoef_II(Ion3_,Neutral2_)=3.*RGAS_I(Ion3_)*Mass_I(Ion3_)/(Mass_I(Ion3_)+Mass_I(Ion2_))
+      HeatFlowCoef_II(Ion3_,Ion3_) = 0.0
       HeatFlowCoef_II(Ion3_,Ion1_)=3.*RGAS_I(Ion3_)*Mass_I(Ion3_)/(Mass_I(Ion3_)+Mass_I(Ion1_))
       HeatFlowCoef_II(Ion3_,Ion2_)=3.*RGAS_I(Ion3_)*Mass_I(Ion3_)/(Mass_I(Ion3_)+Mass_I(Ion2_))
       HeatFlowCoef_II(Ion3_,Ion4_)=3.*RGAS_I(Ion3_)*Mass_I(Ion3_)/(Mass_I(Ion3_)+Mass_I(Ion4_))
@@ -1549,6 +1552,7 @@ CALEX CTOXN2 = 3*R_o*M_o/(M_o+M_{N2}) see nagy p.83
       HeatFlowCoef_II(Ion4_,Neutral5_)=3.*RGAS_I(Ion4_)*Mass_I(Ion4_)/(Mass_I(Ion4_)+Mass_I(Ion3_))
       HeatFlowCoef_II(Ion4_,Neutral1_)=3.*RGAS_I(Ion4_)*Mass_I(Ion4_)/(Mass_I(Ion4_)+Mass_I(Ion1_))
       HeatFlowCoef_II(Ion4_,Neutral2_)=3.*RGAS_I(Ion4_)*Mass_I(Ion4_)/(Mass_I(Ion4_)+Mass_I(Ion2_))
+      HeatFlowCoef_II(Ion4_,Ion4_) = 0.0
       HeatFlowCoef_II(Ion4_,Ion1_)=3.*RGAS_I(Ion4_)*Mass_I(Ion4_)/(Mass_I(Ion4_)+Mass_I(Ion1_))
       HeatFlowCoef_II(Ion4_,Ion3_)=3.*RGAS_I(Ion4_)*Mass_I(Ion4_)/(Mass_I(Ion4_)+Mass_I(Ion3_))
       HeatFlowCoef_II(Ion4_,Ion2_)=3.*RGAS_I(Ion4_)*Mass_I(Ion4_)/(Mass_I(Ion4_)+Mass_I(Ion2_))
