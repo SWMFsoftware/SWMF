@@ -362,6 +362,8 @@ C
      >   PHOTOD(1,2,J) = PHOTOD(1,2,J) + ZMAJ(2,J)*SIGABS(2,L)*FLUX(L)
       PHOTOD(1,3,J) = PHOTOD(1,3,J) +
      >                ZMAJ(3,J)*(SIGABS(3,L)-SIGION(3,L))*FLUX(L)
+
+      ZNO(J) =0.0
       IF (WAVE1(L) .LT. 1216. .AND. WAVE2(L) .GT. 1215.)
      >   PHONO(1,J) = PHONO(1,J) + ZNO(J)*SIGNO*FLUX(L)
 C
