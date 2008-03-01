@@ -208,13 +208,14 @@ C     PHOTOTP(J)=PHOTOTP(290)
           if (J > 14) PHOTOTP(J)=PHOTOTP(14)
        enddo
 C     NOW ADD EUV AND PARTICLE IONIZATIONS!!!!!!1
-       DO I = 1,nCellGlow
+       DO I = 1,nCellGlow-1
           PHOTOTT(I) = PHOTOTF(I) + PHOTOTP(I)
 
 C     NOW RENAME TO MATCH MAIN PROGRAM
           PHOTOTF(I) = PHOTOTT(I)      
 C     
        enddo
+       PHOTOTF(nCellGlow) = PHOTOTT(nCellGlow-1)      
        RETURN
        END
       
