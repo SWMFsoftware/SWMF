@@ -4,7 +4,9 @@ Module ModCommonPlanet
   parameter (NamePlanet = 'Saturn')
   
   integer,parameter :: nVar=12
-  
+  real,   parameter :: rLowerBoundary  = 6.1668e9
+  real,   parameter :: rPlanet = 60268.E5
+
   REAL XH2(MaxGrid),XH(MaxGrid),XH2O(MaxGrid),XCH4(MaxGrid), &
        XTN(MAXGRID)
   
