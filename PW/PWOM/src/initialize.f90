@@ -126,6 +126,10 @@ subroutine PW_initialize
   endif
   
   CurrentTime=StartTime+Time
+  !****************************************************************************
+  ! Set vertical field-line grid
+  !****************************************************************************
+  call set_vertical_grid
 
   !****************************************************************************
   ! Use Get_GITM to bring in neutral atmosphere from GITM
