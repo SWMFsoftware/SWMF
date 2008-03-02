@@ -45,6 +45,7 @@ METHODS = \
 	set_upper_bc.o\
 	get_weimer_potential.o\
 	read_restart.o\
+	set_vertical_grid.o\
 	${OBJECTS_PLANET}
 
 LIBOBJECTS = ${MODULES} ${METHODS}
