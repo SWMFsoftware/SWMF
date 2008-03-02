@@ -75,82 +75,6 @@ c      Omega=1./37800.
 C                                                                      C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
-C     DEFINE THE RADIAL GRID STRUCTURE                                 C
-C                                                                      C
-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-C                                                                      C
-C      READ (5,2) DRBND
-CALEX DRBND=altitude step? I think the units here are in cm not meters
-CALEX like most of the code.
-c      DRBND=4.E6
-c      DrBnd=3.0e7
-c      DrBnd=1.5e7
-c      DrBnd=0.75e7
-
-      
-CALEX RN=lower boundary of the simulation? 
-CALEX RAD=radial distance of cell centers?      
-CALEX RBOUND=radial distance of lower boundary of cell     
-CALEX ALTD = same as RAD but distance is from surface, not center of planet
-      RN=1.40E8+RE+0.5*DRBND
-
-c      RN=1.00E8+RE+0.5*DRBND
-
-
-      DO 20 KSTEP=1,NDIM1
-         RBOUND(KSTEP)=RN+(KSTEP-1)*DRBND
-20    CONTINUE
-      DO 30 KSTEP=1,NDIM
-         KSTEP1=KSTEP+1
-         RAD(KSTEP)=(RBOUND(KSTEP)+RBOUND(KSTEP1))/2.
-         ALTD(KSTEP)=RAD(KSTEP)-RE
- 30   CONTINUE
-      ALTMIN=ALTD(1)-DRBND
-      ALTMAX=ALTD(NDIM)+DRBND
-C                                                                      C
-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-C                                                                      C
-C     READ THE EXPONENT OF THE  A(R)=R**NEXP  AREA FUNCTION            C
-C                                                                      C
-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-C                                                                      C
-C      READ (5,1) NEXP
-      NEXP=3
-      
-CAlex      write(*,*) NEXP
-
-CALEX AR stands for area function. 12 is the lower boundary of the cell
-CALEX and 23 is the upper boundary
-
-      DO 40 K=1,NDIM
-      DAREA(K)=NEXP/RAD(K)
-      AR12(K)=(RBOUND(K)/RAD(K))**NEXP
-      AR23(K)=(RBOUND(K+1)/RAD(K))**NEXP
-!     For the cell volume in the Rusanov Solver we use a cell volume 
-!     calculated by assuming an area function in the form A=alpha r^3
-!     and then assuming each cell is a truncated cone.
-!     So CellVolume_C is the volume of cell j divided by the crossesction
-!     of cell j, A(j). 
-
-      CellVolume_C(K)=1.0/3.0 * DrBnd *
-     &     ( Ar12(K) + Ar23(K) + ( Ar12(K)*Ar23(K) )**0.5 ) 
-
-40    CONTINUE
-
-! area and volume for ghost cell
-      AR12top(1)=((RN+nDim*drbnd)/(RN+nDim*drbnd+drbnd*0.5))**NEXP
-      AR23top(1)=((RN+(nDim+1.0)*drbnd)/(RN+(nDim+1.0)*drbnd+drbnd*0.5))**NEXP
-      CellVolumeTop(1)=1.0/3.0 * DrBnd *
-     &     ( Ar12top(1) + Ar23top(1) + ( Ar12top(1)*Ar23top(1) )**0.5 ) 
-
-
-      AR12top(2)=((RN+(nDim+1.0)*drbnd)/(RN+(nDim+1.0)*drbnd+drbnd*0.5))**NEXP
-      AR23top(2)=((RN+(nDim+2.0)*drbnd)/(RN+(nDim+2.0)*drbnd+drbnd*0.5))**NEXP
-      CellVolumeTop(2)=1.0/3.0 * DrBnd *
-     &     ( Ar12top(2) + Ar23top(2) + ( Ar12top(2)*Ar23top(2) )**0.5 ) 
-C                                                                      C
-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-C                                                                      C
 C     READ FIELD ALIGNED CURRENT DENSITY AT LOWEST GRID POINT          C
 C        (UNIT=AMPERE/M**2)                                            C
 C                                                                      C
@@ -158,7 +82,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
 C      READ (5,2) CURR(1)
 
-      
+      call set_vertical_grid
       CURR(1)=2.998E2*CURR(1)
 !      CURTIM=150.
 !      CURTIM0=500.
