@@ -4,6 +4,8 @@ Module ModCommonPlanet
   parameter (NamePlanet = 'Earth ')
 
   integer,parameter :: nVar=16
+  real,   parameter :: rLowerBoundary  = 6.55677E8
+  real,   parameter :: rPlanet = 6356.77E5
   
   REAL XN2(MaxGrid),XO2(MaxGrid),XO(MaxGrid),XH(MaxGrid),&
        XHE(MaxGrid),XTN(MaxGrid)
