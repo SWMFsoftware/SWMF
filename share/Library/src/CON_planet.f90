@@ -17,8 +17,8 @@ module CON_planet
   ! via the {\bf CON\_physics} class.
 
   !USES:
+  use ModNumConst, ONLY: cTwoPi
   use ModPlanetConst
-  use ModConst
   use ModTimeConvert, ONLY: TimeType
 
   !REVISION HISTORY:
@@ -270,11 +270,11 @@ contains
 
           case('NONE')
 
-             MagAxisTheta   = cZero
-             MagAxisPhi     = cZero
+             MagAxisTheta   = 0.0
+             MagAxisPhi     = 0.0
              UseSetMagAxis  = .true.
              UseRealMagAxis = .false.
-             DipoleStrength = cZero
+             DipoleStrength = 0.0
 
           case('DIPOLE','QUADRUPOLE','OCTUPOLE')
 
@@ -312,8 +312,8 @@ contains
        UseRealRotAxis   = .false.
        IsRotAxisPrimary = .true.
        UseSetRotAxis    = .true.
-       RotAxisTheta     = cZero
-       RotAxisPhi       = cZero
+       RotAxisTheta     = 0.0
+       RotAxisPhi       = 0.0
        UseRealMagAxis   = .false.
        IsMagAxisPrimary = .false.
        UseSetMagAxis    = .false.
@@ -330,7 +330,7 @@ contains
           UseSetRotAxis = .true.
 
           call read_var('RotAxisTheta', RotAxisTheta)
-          if(RotAxisTheta < cZero)call CON_stop(NameSub// &
+          if(RotAxisTheta < 0.0)call CON_stop(NameSub// &
                ' ERROR: negative tilt should be entered as Phi=180.0')
           RotAxisTheta = cDegToRad * RotAxisTheta
 
@@ -379,8 +379,8 @@ contains
 
        call read_var('UseRotation', UseRotation)
        if (.not.UseRotation) then
-          OmegaPlanet  = cZero
-          RotPeriodPlanet = cZero
+          OmegaPlanet     = 0.0
+          RotPeriodPlanet = 0.0
        else
           call read_var('Rotation period [hours]',  RotPeriodPlanet)
           RotPeriodPlanet = RotPeriodPlanet * 3600

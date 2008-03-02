@@ -142,6 +142,7 @@ module CON_axes
   !USES:
 
   use ModKind
+  use ModNumConst, ONLY: cHalfPi, cRadToDeg, cTwoPi8, cUnit_DD, cTiny
   use ModConst
   use ModCoordTransform
   use ModTimeConvert, ONLY : time_int_to_real,time_real_to_int
@@ -909,7 +910,7 @@ contains
        
     RotMinus_DD = transform_matrix(TimeSim-dTimeSim,NameCoord1,NameCoord2)
     RotPlus_DD  = transform_matrix(TimeSim+dTimeSim,NameCoord1,NameCoord2)
-    dRot_DD = (RotPlus_DD-RotMinus_DD)/(cTwo*dTimeSim)
+    dRot_DD = (RotPlus_DD-RotMinus_DD)/(2*dTimeSim)
 
     RotMid_DD = transform_matrix(TimeSim,NameCoord1,NameCoord2)
     Rot_DD  = matmul(transpose(RotMid_DD), dRot_DD)

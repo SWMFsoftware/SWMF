@@ -1,7 +1,8 @@
 !^CFG COPYRIGHT UM
 Module ModConst
+
+  ! This is here so other modules can access all constants via ModConst
   use ModNumConst
-  use ModKind
 
   implicit none
 
@@ -17,44 +18,50 @@ Module ModConst
   ! Physical constants
   !/
 
-  real,parameter::  cBoltzmann  = 13.807/cE24
-  ! Boltzmann constant  1.3807E-23 [J/K]
+  ! Time units
+  real, parameter :: cSecondPerYear   = 31536000.0
+  real, parameter :: cSecondPerDay    =    86400.0
+  real, parameter :: cSecondPerHour   =     3600.0
+  real, parameter :: cSecondPerMinute =       60.0
 
-  real, parameter :: cProtonMass = 1.6726/cE27
-  ! Proton mass  1.6726E-27[kg]
+  ! Boltzmann constant [J/K]
+  real, parameter::  cBoltzmann  = 1.3807E-23
 
-  real, parameter :: cElectronMass = 9.1094/cE30/cE1
-  ! Electron mass  9.1094E-31[kg]
+  ! Proton mass [kg]
+  real, parameter :: cProtonMass = 1.6726E-27
 
-  real, parameter :: cLightSpeed =  0.29979*cE9
-  ! Speed of light (true) 2.9979E+08 [m/s]
+  ! Electron mass [kg]
+  real, parameter :: cElectronMass = 9.1094E-31
 
-  real, parameter :: cMu = cPi*0.4/cE6
-  ! Vacuum permeability Pi*4.0E-7[H/m]
+  ! Speed of light [m/s]
+  real, parameter :: cLightSpeed =  2.9979E+8
 
-  real, parameter :: cEps = cOne/cMu/(cLightSpeed**2)
+  ! Vacuum permeability [H/m]
+  real, parameter :: cMu = cPi*4E-7
+
   ! Vacuum permittivity 8.8542E-12[F/m]
+  real, parameter :: cEps = 1.0/cMu/cLightSpeed**2
   
-  real,parameter :: cVacuumResistivity=cLightSpeed*cMu
   ! Vacuum resistance 120*cPi [Ohm]
+  real,parameter :: cVacuumResistivity=cLightSpeed*cMu
 
-  real, parameter :: cElectronCharge  = 0.16022/cE18
-  ! Fundamental charge 1.6022E-19 [C (coulomb)]
+  ! Fundamental charge [Coulomb]
+  real, parameter :: cElectronCharge  = 1.6022E-19
 
-  real, parameter :: cAvogadro =0.6022045*cE24
-  ! Number of particles per mole 6.022045E+23[mole^-1]
+  ! Number of particles per mole
+  real, parameter :: cAvogadro = 6.022045E+23
 
-  real, parameter :: cGravitation = 66.726/cE12
-  ! Gravitation constant 6.6726E-11  (NRL 1994)
+  ! Gravitation constant (NRL 1994)
+  real, parameter :: cGravitation = 6.6726E-11
 
   !\
   ! Units for energy.
   !/
   real, parameter :: cEV  = cElectronCharge
-  real, parameter :: cKEV = cE3 * cEV
-  real, parameter :: cMEV = cE3 * cKEV
-  real, parameter :: cGEV = cE3 * cMEV
-  real, parameter :: cTEV = cE3 * cGEV
+  real, parameter :: cKEV = 1000 * cEV
+  real, parameter :: cMEV = 1000 * cKEV
+  real, parameter :: cGEV = 1000 * cMEV
+  real, parameter :: cTEV = 1000 * cGEV
 
   real, parameter :: cEVToK  =  cEV / cBoltzmann
   real, parameter :: cKEVToK = cKEV / cBoltzmann
@@ -81,24 +88,17 @@ Module ModConst
   ! Formula for gyroradius:
   ! Gyroradius = cGyroRadius * momentum / |B|
   !/
-  real, parameter :: cGyroRadius = cOne / cElectronCharge
-
-
-
-  real(Real8_), parameter :: cSecondPerYear   = 31536000.0
-  real(Real8_), parameter :: cSecondPerDay    =    86400.0
-  real(Real8_), parameter :: cSecondPerHour   =     3600.0
-  real(Real8_), parameter :: cSecondPerMinute =       60.0
+  real, parameter :: cGyroRadius = 1.0 / cElectronCharge
 
   !\
   ! Solar Astronomical constants
   !/
 
-  real,parameter :: cAU = 1.4959787E11
+  real,parameter :: cAU = 1.4959787E+11
 
-  real,parameter :: rSun              = 0.696E9                ! [ m]
-  real,parameter :: mSun              = 1.99E30                ! [kg]
-  real,parameter :: RotationPeriodSun = 25.38 * 24.0 * 3600.0  ! [ s]
+  real,parameter :: rSun              = 0.696E+9               ! [ m]
+  real,parameter :: mSun              = 1.99E+30               ! [kg]
+  real,parameter :: RotationPeriodSun = 25.38 * cSecondPerDay  ! [ s]
 
 
 
@@ -169,10 +169,10 @@ real function kinetic_energy_to_momentum(Energy,NameParticle)
   select case(NameParticle)
   case('e','Electron','electron','ELECTRON')
      kinetic_energy_to_momentum=sqrt(&
-          Energy*(Energy+cTwo*cRMEElectron))/cLightSpeed
+          Energy*(Energy + 2*cRMEElectron))/cLightSpeed
   case('p','Proton','proton','PROTON')
      kinetic_energy_to_momentum=sqrt(&
-          Energy*(Energy+cTwo*cRMEProton  ))/cLightSpeed
+          Energy*(Energy + 2*cRMEProton  ))/cLightSpeed
   case default
      call CON_stop(&
           'Do not know the rest mass energy for '//NameParticle)
@@ -185,7 +185,7 @@ real function energy_in(NameEnergyUnit)
   character(LEN=*),intent(in):: NameEnergyUnit
   select case (NameEnergyUnit)
   case('J','j','Joule','joule','JOULE')
-     energy_in=cOne   ! Do Nothing
+     energy_in=1.0   ! Do Nothing
   case('K','k','Kelvin','kelvin','KELVIN')
      energy_in=cBoltzmann
   case('ev','eV','EV','Ev')

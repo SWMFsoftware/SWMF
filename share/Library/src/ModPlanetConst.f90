@@ -1,7 +1,7 @@
 !^CFG COPYRIGHT UM
 Module ModPlanetConst
-  use ModNumConst
-  use ModConst, ONLY: cAU
+  use ModNumConst, ONLY: cDegToRad
+  use ModConst, ONLY: cAU, cHour => cSecondPerHour, cDay => cSecondPerDay
   use ModKind
 
   implicit none
@@ -122,7 +122,7 @@ contains
      iMinuteEquinoxPlanet_I(:)           =   0                     ! [mn]
      iSecondEquinoxPlanet_I(:)           =   0                     ! [ s]
      FracSecondEquinoxPlanet_I(:)        = 0.0                     ! [ s]
-     TiltPlanet_I(:)                     = 0.0 * cDegToRad         ! [rad]
+     TiltPlanet_I(:)                     = 0.0                     ! [rad]
                          
      TypeBFieldPlanet_I(:)               = "NONE"                
      DipoleStrengthPlanet_I(:)           = 0.0                     ! [ T]
@@ -141,21 +141,21 @@ contains
      !/                                
      NamePlanet_I(Venus_)                = 'VENUS'
 
-     rPlanet_I(Venus_)                   = 6052.0e3                ! [ m]
-     mPlanet_I(Venus_)                   = 4.865e24                ! [kg]
-     OrbitalPeriodPlanet_I(Venus_)       = 224.7   * 24.0 * 3600.0 ! [ s]
-     RotationPeriodPlanet_I(Venus_)      = 243.0185* 24.0 * 3600.0 ! [ s]
+     rPlanet_I(Venus_)                   = 6052.0e+3               ! [ m]
+     mPlanet_I(Venus_)                   = 4.865e+24               ! [kg]
+     OrbitalPeriodPlanet_I(Venus_)       = 224.7   * cDay          ! [ s]
+     RotationPeriodPlanet_I(Venus_)      = 243.0185* cDay          ! [ s]
                                        
      !\                                
      ! Earth (30)                         
      !/                                
      NamePlanet_I(Earth_)                = 'EARTH'
 
-     rPlanet_I(Earth_)                   = 6378.00*cThousand       ! [ m]
-     mPlanet_I(Earth_)                   = 5.976e24                ! [kg]
+     rPlanet_I(Earth_)                   = 6378.0e+3               ! [ m]
+     mPlanet_I(Earth_)                   = 5.976e+24               ! [kg]
      rOrbitPlanet_I(Earth_)              = cAU                     ! [ m]
-     OrbitalPeriodPlanet_I(Earth_)       = 365.24218967 * 24*3600  ! [ s]
-     RotationPeriodPlanet_I(Earth_)      = 24.0 * 3600.0           ! [ s]
+     OrbitalPeriodPlanet_I(Earth_)       = 365.24218967 * cDay     ! [ s]
+     RotationPeriodPlanet_I(Earth_)      = cDay                    ! [ s]
                                        
      iYearEquinoxPlanet_I(Earth_)        = 2000                    ! [yr]
      iMonthEquinoxPlanet_I(Earth_)       =    3                    ! [mo]
@@ -167,7 +167,7 @@ contains
      TiltPlanet_I(Earth_)                = 23.5 * cDegToRad        ! [rad]
    
      TypeBFieldPlanet_I(Earth_)          = "DIPOLE"                
-     DipoleStrengthPlanet_I(Earth_)      = -31100.0 * 1.0e-9       ! [ T]
+     DipoleStrengthPlanet_I(Earth_)      = -31100.0e-9             ! [ T]
      bAxisThetaPlanet_I(Earth_)          =  11.0 * cDegToRad       ! [rad]
      bAxisPhiPlanet_I(Earth_)            = 289.1 * cDegToRad       ! [rad]
                                        
@@ -178,40 +178,40 @@ contains
      !/                               
      NamePlanet_I(Mars_)                 = 'MARS'
 
-     rPlanet_I(Mars_)                    = 3396.00e3               ! [ m]
-     mPlanet_I(Mars_)                    = 0.6436e24               ! [kg]
-     OrbitalPeriodPlanet_I(Mars_)        = 686.98* 24.0 * 3600.0   ! [ s]
-     RotationPeriodPlanet_I(Mars_)       = 1.026 * 24.0 * 3600.0   ! [ s]
+     rPlanet_I(Mars_)                    = 3396.0e+3               ! [ m]
+     mPlanet_I(Mars_)                    = 0.6436e+24              ! [kg]
+     OrbitalPeriodPlanet_I(Mars_)        = 686.98* cDay            ! [ s]
+     RotationPeriodPlanet_I(Mars_)       = 1.026 * cDay            ! [ s]
                                         
      !\
      ! Jupiter (50)
      !/
      NamePlanet_I(Jupiter_)              = 'JUPITER'
 
-     rPlanet_I(Jupiter_)                 = 71492.00e3              ! [ m]
-     mPlanet_I(Jupiter_)                 = 1.8980e27               ! [kg]
-     OrbitalPeriodPlanet_I(Jupiter_)     = 4330.60 * 24 * 3600     ! [ s]
-     RotationPeriodPlanet_I(Jupiter_)    = 9.925 * 3600            ! [ s]
+     rPlanet_I(Jupiter_)                 = 71492.0e+3              ! [ m]
+     mPlanet_I(Jupiter_)                 = 1.8980e+27              ! [kg]
+     OrbitalPeriodPlanet_I(Jupiter_)     = 4330.6 * cDay           ! [ s]
+     RotationPeriodPlanet_I(Jupiter_)    = 9.925 * cHour           ! [ s]
 
      TypeBFieldPlanet_I(Jupiter_)        = "DIPOLE"                
-     DipoleStrengthPlanet_I(Jupiter_)    =   428000.0e-9           ! [ T]
+     DipoleStrengthPlanet_I(Jupiter_)    = 428000.0e-9             ! [ T]
                                        
-     IonoHeightPlanet_I(Jupiter_)        = 1000.0e3                ! [ m]
+     IonoHeightPlanet_I(Jupiter_)        = 1000.0e+3               ! [ m]
    
      !\                               
      ! Saturn (60)                        
      !/                               
      NamePlanet_I(Saturn_)               = 'SATURN'
 
-     rPlanet_I(Saturn_)                  = 60268.0e3               ! [ m]
-     mPlanet_I(Saturn_)                  = 0.5685e27               ! [kg]
-     OrbitalPeriodPlanet_I(Saturn_)      = 10746.94 * 24 * 3600    ! [ s]
-     RotationPeriodPlanet_I(Saturn_)     = 10.5 * 3600.0           ! [ s]
+     rPlanet_I(Saturn_)                  = 60268.0e+3              ! [ m]
+     mPlanet_I(Saturn_)                  = 0.5685e+27              ! [kg]
+     OrbitalPeriodPlanet_I(Saturn_)      = 10746.94 * cDay         ! [ s]
+     RotationPeriodPlanet_I(Saturn_)     = 10.5 * cHour            ! [ s]
                                        
      TypeBFieldPlanet_I(Saturn_)         = "DIPOLE"                
      DipoleStrengthPlanet_I(Saturn_)     = 20800.0e-9              ! [ T]
                                        
-     IonoHeightPlanet_I(Saturn_)         = 1000.0e3                ! [ m]
+     IonoHeightPlanet_I(Saturn_)         = 1000.0e+3               ! [ m]
    
      !\
      ! Uranus (70)
@@ -230,7 +230,7 @@ contains
      !/
      NamePlanet_I(Io_)                   = 'IO'
 
-     rPlanet_I(Io_)                      = 1821.00e3               ! [ m]
+     rPlanet_I(Io_)                      = 1821.0e+3               ! [ m]
      mPlanet_I(Io_)                      = 0.0                     ! [kg]
      OrbitalPeriodPlanet_I(Io_)          = 0.0                     ! [ s]
      RotationPeriodPlanet_I(Io_)         = 0.0                     ! [ s]
@@ -240,22 +240,22 @@ contains
      !/
      NamePlanet_I(Titan_)                = 'TITAN'
 
-     rPlanet_I(Titan_)                   = 2575.00e3               ! [ m]
-     mPlanet_I(Titan_)                   = 0.1346e24               ! [kg]
-     rOrbitPlanet_I(Titan_)              = 1.222e9                 ! [ m]
-     OrbitalPeriodPlanet_I(Titan_)       = 15.945 * 24 * 3600      ! [ s]
-     RotationPeriodPlanet_I(Titan_)      = 15.945 * 24 * 3600      ! [ s]
-                                       
+     rPlanet_I(Titan_)                   = 2575.0e+3               ! [ m]
+     mPlanet_I(Titan_)                   = 0.1346e+24              ! [kg]
+     rOrbitPlanet_I(Titan_)              = 1.222e+9                ! [ m]
+     OrbitalPeriodPlanet_I(Titan_)       = 15.945 * cDay           ! [ s]
+     RotationPeriodPlanet_I(Titan_)      = 15.945 * cDay           ! [ s]
+
      !\
      ! Enceladus (62)
      !/
      NamePlanet_I(Enceladus_)                = 'ENCELADUS'
 
-     rPlanet_I(Enceladus_)                   = 252.0e3             ! [ m]
-     mPlanet_I(Enceladus_)                   = 8.40e19             ! [kg]
-     rOrbitPlanet_I(Enceladus_)              = 2.3802e8            ! [ m]
-     OrbitalPeriodPlanet_I(Enceladus_)       = 1.370218 * 24*3600  ! [ s]
-     RotationPeriodPlanet_I(Enceladus_)      = 1.370218 * 24*3600  ! [ s]
+     rPlanet_I(Enceladus_)                   = 252.0e+3            ! [ m]
+     mPlanet_I(Enceladus_)                   = 8.4e+19             ! [kg]
+     rOrbitPlanet_I(Enceladus_)              = 2.3802e+8           ! [ m]
+     OrbitalPeriodPlanet_I(Enceladus_)       = 1.370218 * cDay     ! [ s]
+     RotationPeriodPlanet_I(Enceladus_)      = 1.370218 * cDay     ! [ s]
 
      ! This is the field of Saturn but using a different distance unit !!!
      TypeBFieldPlanet_I(Enceladus_)         = "DIPOLE"
@@ -267,7 +267,7 @@ contains
      ! Comets
      !/
      NamePlanet_I(Halley_) = 'HALLEY'
-     rPlanet_I(Halley_)    = 1e9             ! for distance units
+     rPlanet_I(Halley_)    = 1e9             ! for distance units ???
 
      !\
      ! No Planet (0)
@@ -307,7 +307,7 @@ end module ModPlanetConst
 ! The rotational angular velocity is relative to an inertial frame
 
 ! Reference equinox time taken from 
-! http://aa.usno.navy.mil/data/docs/Planet(Earth_)Seasons.html
+! http://aa.usno.navy.mil/data/docs/Earth_Seasons.html
 
 ! The angle between the zero meridian and the eqinox direction at 
 ! equinox time. For Earth this can be calculated from the time of day.
