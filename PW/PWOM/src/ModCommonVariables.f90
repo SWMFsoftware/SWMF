@@ -23,6 +23,7 @@ module ModCommonVariables
   
   REAL CELLNW(nVar,MaxGrid)
   REAL AR12(MaxGrid),AR23(MaxGrid),DAREA(MaxGrid), CellVolume_C(MaxGrid)
+  integer NEXP
   
   REAL ALTD(MaxGrid),RAD(MaxGrid),RBOUND(MaxGrid)
   ! plasma parameters, U=velocity, D=density, P=pressure, T=electrons
