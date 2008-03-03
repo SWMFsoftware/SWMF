@@ -122,7 +122,7 @@ contains
 
     do iLevel=iLevelIn,1,-1
        iChild_I(iLevel)=InBlkPtr%ptr%child_number
-       InBlkPtr%ptr=>InBlkPtr%ptr%parent
+       InBlkPtr%ptr=>InBlkPtr%ptr%parent%ptr
     end do
     !Found root cell, find neighbor root cell
     do i=1,proc_dims(1)

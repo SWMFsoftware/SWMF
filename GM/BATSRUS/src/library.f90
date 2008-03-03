@@ -1600,35 +1600,35 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
            if(.not.IsLowerThanCenter_D(3))then
               XyzCorner_D(3)=XyzCenter_D(3)
               if(IsLowerThanCenter_D(1))then
-                 Octree % ptr => Octree % ptr % child1
+                 Octree % ptr => Octree % ptr % child(1)%ptr
               else
                  XyzCorner_D(1)=XyzCenter_D(1)
-                 Octree % ptr => Octree % ptr % child2
+                 Octree % ptr => Octree % ptr % child(2)%ptr
               end if
            else
               if(.not.IsLowerThanCenter_D(1))then
                  XyzCorner_D(1)=XyzCenter_D(1)
-                 Octree % ptr => Octree % ptr % child3
+                 Octree % ptr => Octree % ptr % child(3)%ptr
               else
-                 Octree % ptr => Octree % ptr % child4
+                 Octree % ptr => Octree % ptr % child(4)%ptr
               end if
            end if
         else
            XyzCorner_D(2)=XyzCenter_D(2)
            if(IsLowerThanCenter_D(3))then
               if(IsLowerThanCenter_D(1))then
-                 Octree % ptr => Octree % ptr % child5
+                 Octree % ptr => Octree % ptr % child(5)%ptr
               else
                  XyzCorner_D(1)=XyzCenter_D(1)
-                 Octree % ptr => Octree % ptr % child6
+                 Octree % ptr => Octree % ptr % child(6)%ptr
               end if
            else
               XyzCorner_D(3)=XyzCenter_D(3)
               if(.not.IsLowerThanCenter_D(1))then
                  XyzCorner_D(1)=XyzCenter_D(1)
-                 Octree % ptr => Octree % ptr % child7
+                 Octree % ptr => Octree % ptr % child(7)%ptr
               else
-                 Octree % ptr => Octree % ptr % child8
+                 Octree % ptr => Octree % ptr % child(8)%ptr
               end if
            end if
         end if

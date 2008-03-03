@@ -142,7 +142,7 @@ subroutine treeNeighbor(inPE, inBLK, ix, iy, iz, &
         outCHILD = NOBLK
      else
         if (associated(outBlockPtr%ptr)) then ! ensure block is allocated
-           if (.not. associated(outBlockPtr%ptr%child1)) then
+           if (.not. associated(outBlockPtr%ptr%child(1)%ptr)) then
               if (inBlockPtr%ptr%LEV == outBlockPtr%ptr%LEV) then
                  outLEV = 0
               else
@@ -158,230 +158,230 @@ subroutine treeNeighbor(inPE, inBLK, ix, iy, iz, &
               outBLK = NOBLK
               select case (idir)
               case (1)  ! -X -Y -Z    ESB
-                 outPE (1)   = outBlockPtr%ptr%child7%PE
-                 outBLK(1)   = outBlockPtr%ptr%child7%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child7%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(7)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(7)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(7)%ptr%child_number
               case (2)  ! -X -Y       ES 
-                 outPE (1)   = outBlockPtr%ptr%child6%PE
-                 outBLK(1)   = outBlockPtr%ptr%child6%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child6%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(6)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(6)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(6)%ptr%child_number
 
-                 outPE (2)   = outBlockPtr%ptr%child7%PE
-                 outBLK(2)   = outBlockPtr%ptr%child7%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child7%child_number
+                 outPE (2)   = outBlockPtr%ptr%child(7)%ptr%PE
+                 outBLK(2)   = outBlockPtr%ptr%child(7)%ptr%BLK
+                 outCHILD(2) = outBlockPtr%ptr%child(7)%ptr%child_number
               case (3)  ! -X -Y +Z    EST
-                 outPE (1)   = outBlockPtr%ptr%child6%PE
-                 outBLK(1)   = outBlockPtr%ptr%child6%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child6%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(6)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(6)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(6)%ptr%child_number
               case (4)  ! -X    -Z    E B
-                 outPE (1)   = outBlockPtr%ptr%child2%PE
-                 outBLK(1)   = outBlockPtr%ptr%child2%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child2%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(2)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(2)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(2)%ptr%child_number
 
-                 outPE (2)   = outBlockPtr%ptr%child7%PE
-                 outBLK(2)   = outBlockPtr%ptr%child7%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child7%child_number
+                 outPE (2)   = outBlockPtr%ptr%child(7)%ptr%PE
+                 outBLK(2)   = outBlockPtr%ptr%child(7)%ptr%BLK
+                 outCHILD(2) = outBlockPtr%ptr%child(7)%ptr%child_number
               case (5)  ! -X          E  
-                 outPE (1)   = outBlockPtr%ptr%child3%PE
-                 outBLK(1)   = outBlockPtr%ptr%child3%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child3%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(3)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(3)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(3)%ptr%child_number
 
-                 outPE (2)   = outBlockPtr%ptr%child2%PE
-                 outBLK(2)   = outBlockPtr%ptr%child2%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child2%child_number
+                 outPE (2)   = outBlockPtr%ptr%child(2)%ptr%PE
+                 outBLK(2)   = outBlockPtr%ptr%child(2)%ptr%BLK
+                 outCHILD(2) = outBlockPtr%ptr%child(2)%ptr%child_number
 
-                 outPE (3)   = outBlockPtr%ptr%child6%PE
-                 outBLK(3)   = outBlockPtr%ptr%child6%BLK
-                 outCHILD(3) = outBlockPtr%ptr%child6%child_number
+                 outPE (3)   = outBlockPtr%ptr%child(6)%ptr%PE
+                 outBLK(3)   = outBlockPtr%ptr%child(6)%ptr%BLK
+                 outCHILD(3) = outBlockPtr%ptr%child(6)%ptr%child_number
 
-                 outPE (4)   = outBlockPtr%ptr%child7%PE
-                 outBLK(4)   = outBlockPtr%ptr%child7%BLK
-                 outCHILD(4) = outBlockPtr%ptr%child7%child_number
+                 outPE (4)   = outBlockPtr%ptr%child(7)%ptr%PE
+                 outBLK(4)   = outBlockPtr%ptr%child(7)%ptr%BLK
+                 outCHILD(4) = outBlockPtr%ptr%child(7)%ptr%child_number
               case (6)  ! -X    +Z    E T
-                 outPE (1)   = outBlockPtr%ptr%child3%PE
-                 outBLK(1)   = outBlockPtr%ptr%child3%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child3%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(3)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(3)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(3)%ptr%child_number
 
-                 outPE (2)   = outBlockPtr%ptr%child6%PE
-                 outBLK(2)   = outBlockPtr%ptr%child6%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child6%child_number
+                 outPE (2)   = outBlockPtr%ptr%child(6)%ptr%PE
+                 outBLK(2)   = outBlockPtr%ptr%child(6)%ptr%BLK
+                 outCHILD(2) = outBlockPtr%ptr%child(6)%ptr%child_number
               case (7)  ! -X +Y -Z    ENB
-                 outPE (1)   = outBlockPtr%ptr%child2%PE
-                 outBLK(1)   = outBlockPtr%ptr%child2%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child2%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(2)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(2)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(2)%ptr%child_number
               case (8)  ! -X +Y       EN
-                 outPE (1)   = outBlockPtr%ptr%child3%PE
-                 outBLK(1)   = outBlockPtr%ptr%child3%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child3%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(3)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(3)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(3)%ptr%child_number
 
-                 outPE (2)   = outBlockPtr%ptr%child2%PE
-                 outBLK(2)   = outBlockPtr%ptr%child2%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child2%child_number
+                 outPE (2)   = outBlockPtr%ptr%child(2)%ptr%PE
+                 outBLK(2)   = outBlockPtr%ptr%child(2)%ptr%BLK
+                 outCHILD(2) = outBlockPtr%ptr%child(2)%ptr%child_number
               case (9)  ! -X +Y +Z    ENT
-                 outPE (1)   = outBlockPtr%ptr%child3%PE
-                 outBLK(1)   = outBlockPtr%ptr%child3%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child3%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(3)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(3)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(3)%ptr%child_number
               case (10) !    -Y -Z     SB
-                 outPE (1)   = outBlockPtr%ptr%child8%PE
-                 outBLK(1)   = outBlockPtr%ptr%child8%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child8%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(8)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(8)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(8)%ptr%child_number
 
-                 outPE (2)   = outBlockPtr%ptr%child7%PE
-                 outBLK(2)   = outBlockPtr%ptr%child7%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child7%child_number
+                 outPE (2)   = outBlockPtr%ptr%child(7)%ptr%PE
+                 outBLK(2)   = outBlockPtr%ptr%child(7)%ptr%BLK
+                 outCHILD(2) = outBlockPtr%ptr%child(7)%ptr%child_number
               case (11) !    -Y        S 
-                 outPE (1)   = outBlockPtr%ptr%child5%PE
-                 outBLK(1)   = outBlockPtr%ptr%child5%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child5%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(5)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(5)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(5)%ptr%child_number
 
-                 outPE (2)   = outBlockPtr%ptr%child8%PE
-                 outBLK(2)   = outBlockPtr%ptr%child8%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child8%child_number
+                 outPE (2)   = outBlockPtr%ptr%child(8)%ptr%PE
+                 outBLK(2)   = outBlockPtr%ptr%child(8)%ptr%BLK
+                 outCHILD(2) = outBlockPtr%ptr%child(8)%ptr%child_number
 
-                 outPE (3)   = outBlockPtr%ptr%child6%PE
-                 outBLK(3)   = outBlockPtr%ptr%child6%BLK
-                 outCHILD(3) = outBlockPtr%ptr%child6%child_number
+                 outPE (3)   = outBlockPtr%ptr%child(6)%ptr%PE
+                 outBLK(3)   = outBlockPtr%ptr%child(6)%ptr%BLK
+                 outCHILD(3) = outBlockPtr%ptr%child(6)%ptr%child_number
 
-                 outPE (4)   = outBlockPtr%ptr%child7%PE
-                 outBLK(4)   = outBlockPtr%ptr%child7%BLK
-                 outCHILD(4) = outBlockPtr%ptr%child7%child_number
+                 outPE (4)   = outBlockPtr%ptr%child(7)%ptr%PE
+                 outBLK(4)   = outBlockPtr%ptr%child(7)%ptr%BLK
+                 outCHILD(4) = outBlockPtr%ptr%child(7)%ptr%child_number
               case (12) !    -Y +Z     ST
-                 outPE (1)   = outBlockPtr%ptr%child5%PE
-                 outBLK(1)   = outBlockPtr%ptr%child5%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child5%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(5)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(5)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(5)%ptr%child_number
 
-                 outPE (2)   = outBlockPtr%ptr%child6%PE
-                 outBLK(2)   = outBlockPtr%ptr%child6%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child6%child_number
+                 outPE (2)   = outBlockPtr%ptr%child(6)%ptr%PE
+                 outBLK(2)   = outBlockPtr%ptr%child(6)%ptr%BLK
+                 outCHILD(2) = outBlockPtr%ptr%child(6)%ptr%child_number
               case (13) !       -Z      B
-                 outPE (1)   = outBlockPtr%ptr%child1%PE
-                 outBLK(1)   = outBlockPtr%ptr%child1%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child1%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(1)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(1)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(1)%ptr%child_number
 
-                 outPE (2)   = outBlockPtr%ptr%child2%PE
-                 outBLK(2)   = outBlockPtr%ptr%child2%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child2%child_number
+                 outPE (2)   = outBlockPtr%ptr%child(2)%ptr%PE
+                 outBLK(2)   = outBlockPtr%ptr%child(2)%ptr%BLK
+                 outCHILD(2) = outBlockPtr%ptr%child(2)%ptr%child_number
 
-                 outPE (3)   = outBlockPtr%ptr%child8%PE
-                 outBLK(3)   = outBlockPtr%ptr%child8%BLK
-                 outCHILD(3) = outBlockPtr%ptr%child8%child_number
+                 outPE (3)   = outBlockPtr%ptr%child(8)%ptr%PE
+                 outBLK(3)   = outBlockPtr%ptr%child(8)%ptr%BLK
+                 outCHILD(3) = outBlockPtr%ptr%child(8)%ptr%child_number
 
-                 outPE (4)   = outBlockPtr%ptr%child7%PE
-                 outBLK(4)   = outBlockPtr%ptr%child7%BLK
-                 outCHILD(4) = outBlockPtr%ptr%child7%child_number
+                 outPE (4)   = outBlockPtr%ptr%child(7)%ptr%PE
+                 outBLK(4)   = outBlockPtr%ptr%child(7)%ptr%BLK
+                 outCHILD(4) = outBlockPtr%ptr%child(7)%ptr%child_number
               case (14) !         
               case (15) !       +Z      T
-                 outPE (1)   = outBlockPtr%ptr%child4%PE
-                 outBLK(1)   = outBlockPtr%ptr%child4%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child4%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(4)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(4)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(4)%ptr%child_number
 
-                 outPE (2)   = outBlockPtr%ptr%child3%PE
-                 outBLK(2)   = outBlockPtr%ptr%child3%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child3%child_number
+                 outPE (2)   = outBlockPtr%ptr%child(3)%ptr%PE
+                 outBLK(2)   = outBlockPtr%ptr%child(3)%ptr%BLK
+                 outCHILD(2) = outBlockPtr%ptr%child(3)%ptr%child_number
 
-                 outPE (3)   = outBlockPtr%ptr%child5%PE
-                 outBLK(3)   = outBlockPtr%ptr%child5%BLK
-                 outCHILD(3) = outBlockPtr%ptr%child5%child_number
+                 outPE (3)   = outBlockPtr%ptr%child(5)%ptr%PE
+                 outBLK(3)   = outBlockPtr%ptr%child(5)%ptr%BLK
+                 outCHILD(3) = outBlockPtr%ptr%child(5)%ptr%child_number
 
-                 outPE (4)   = outBlockPtr%ptr%child6%PE
-                 outBLK(4)   = outBlockPtr%ptr%child6%BLK
-                 outCHILD(4) = outBlockPtr%ptr%child6%child_number
+                 outPE (4)   = outBlockPtr%ptr%child(6)%ptr%PE
+                 outBLK(4)   = outBlockPtr%ptr%child(6)%ptr%BLK
+                 outCHILD(4) = outBlockPtr%ptr%child(6)%ptr%child_number
               case (16) !    +Y -Z     NB
-                 outPE (1)   = outBlockPtr%ptr%child1%PE
-                 outBLK(1)   = outBlockPtr%ptr%child1%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child1%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(1)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(1)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(1)%ptr%child_number
 
-                 outPE (2)   = outBlockPtr%ptr%child2%PE
-                 outBLK(2)   = outBlockPtr%ptr%child2%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child2%child_number
+                 outPE (2)   = outBlockPtr%ptr%child(2)%ptr%PE
+                 outBLK(2)   = outBlockPtr%ptr%child(2)%ptr%BLK
+                 outCHILD(2) = outBlockPtr%ptr%child(2)%ptr%child_number
               case (17) !    +Y        N 
-                 outPE (1)   = outBlockPtr%ptr%child4%PE
-                 outBLK(1)   = outBlockPtr%ptr%child4%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child4%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(4)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(4)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(4)%ptr%child_number
 
-                 outPE (2)   = outBlockPtr%ptr%child1%PE
-                 outBLK(2)   = outBlockPtr%ptr%child1%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child1%child_number
+                 outPE (2)   = outBlockPtr%ptr%child(1)%ptr%PE
+                 outBLK(2)   = outBlockPtr%ptr%child(1)%ptr%BLK
+                 outCHILD(2) = outBlockPtr%ptr%child(1)%ptr%child_number
 
-                 outPE (3)   = outBlockPtr%ptr%child3%PE
-                 outBLK(3)   = outBlockPtr%ptr%child3%BLK
-                 outCHILD(3) = outBlockPtr%ptr%child3%child_number
+                 outPE (3)   = outBlockPtr%ptr%child(3)%ptr%PE
+                 outBLK(3)   = outBlockPtr%ptr%child(3)%ptr%BLK
+                 outCHILD(3) = outBlockPtr%ptr%child(3)%ptr%child_number
 
-                 outPE (4)   = outBlockPtr%ptr%child2%PE
-                 outBLK(4)   = outBlockPtr%ptr%child2%BLK
-                 outCHILD(4) = outBlockPtr%ptr%child2%child_number
+                 outPE (4)   = outBlockPtr%ptr%child(2)%ptr%PE
+                 outBLK(4)   = outBlockPtr%ptr%child(2)%ptr%BLK
+                 outCHILD(4) = outBlockPtr%ptr%child(2)%ptr%child_number
               case (18) !    +Y +Z     NT
-                 outPE (1)   = outBlockPtr%ptr%child4%PE
-                 outBLK(1)   = outBlockPtr%ptr%child4%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child4%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(4)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(4)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(4)%ptr%child_number
 
-                 outPE (2)   = outBlockPtr%ptr%child3%PE
-                 outBLK(2)   = outBlockPtr%ptr%child3%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child3%child_number
+                 outPE (2)   = outBlockPtr%ptr%child(3)%ptr%PE
+                 outBLK(2)   = outBlockPtr%ptr%child(3)%ptr%BLK
+                 outCHILD(2) = outBlockPtr%ptr%child(3)%ptr%child_number
               case (19) ! +X -Y -Z    WSB
-                 outPE (1)   = outBlockPtr%ptr%child8%PE
-                 outBLK(1)   = outBlockPtr%ptr%child8%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child8%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(8)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(8)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(8)%ptr%child_number
               case (20) ! +X -Y       WS 
-                 outPE (1)   = outBlockPtr%ptr%child5%PE
-                 outBLK(1)   = outBlockPtr%ptr%child5%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child5%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(5)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(5)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(5)%ptr%child_number
 
-                 outPE (2)   = outBlockPtr%ptr%child8%PE
-                 outBLK(2)   = outBlockPtr%ptr%child8%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child8%child_number
+                 outPE (2)   = outBlockPtr%ptr%child(8)%ptr%PE
+                 outBLK(2)   = outBlockPtr%ptr%child(8)%ptr%BLK
+                 outCHILD(2) = outBlockPtr%ptr%child(8)%ptr%child_number
               case (21) ! +X -Y +Z    WST
-                 outPE (1)   = outBlockPtr%ptr%child5%PE
-                 outBLK(1)   = outBlockPtr%ptr%child5%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child5%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(5)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(5)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(5)%ptr%child_number
               case (22) ! +X    -Z    W B 
-                 outPE (1)   = outBlockPtr%ptr%child1%PE
-                 outBLK(1)   = outBlockPtr%ptr%child1%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child1%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(1)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(1)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(1)%ptr%child_number
 
-                 outPE (2)   = outBlockPtr%ptr%child8%PE
-                 outBLK(2)   = outBlockPtr%ptr%child8%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child8%child_number
+                 outPE (2)   = outBlockPtr%ptr%child(8)%ptr%PE
+                 outBLK(2)   = outBlockPtr%ptr%child(8)%ptr%BLK
+                 outCHILD(2) = outBlockPtr%ptr%child(8)%ptr%child_number
               case (23) ! +X          W  
-                 outPE (1)   = outBlockPtr%ptr%child4%PE
-                 outBLK(1)   = outBlockPtr%ptr%child4%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child4%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(4)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(4)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(4)%ptr%child_number
 
-                 outPE (2)   = outBlockPtr%ptr%child1%PE
-                 outBLK(2)   = outBlockPtr%ptr%child1%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child1%child_number
+                 outPE (2)   = outBlockPtr%ptr%child(1)%ptr%PE
+                 outBLK(2)   = outBlockPtr%ptr%child(1)%ptr%BLK
+                 outCHILD(2) = outBlockPtr%ptr%child(1)%ptr%child_number
 
-                 outPE (3)   = outBlockPtr%ptr%child5%PE
-                 outBLK(3)   = outBlockPtr%ptr%child5%BLK
-                 outCHILD(3) = outBlockPtr%ptr%child5%child_number
+                 outPE (3)   = outBlockPtr%ptr%child(5)%ptr%PE
+                 outBLK(3)   = outBlockPtr%ptr%child(5)%ptr%BLK
+                 outCHILD(3) = outBlockPtr%ptr%child(5)%ptr%child_number
 
-                 outPE (4)   = outBlockPtr%ptr%child8%PE
-                 outBLK(4)   = outBlockPtr%ptr%child8%BLK
-                 outCHILD(4) = outBlockPtr%ptr%child8%child_number
+                 outPE (4)   = outBlockPtr%ptr%child(8)%ptr%PE
+                 outBLK(4)   = outBlockPtr%ptr%child(8)%ptr%BLK
+                 outCHILD(4) = outBlockPtr%ptr%child(8)%ptr%child_number
               case (24) ! +X    +Z    W T
-                 outPE (1)   = outBlockPtr%ptr%child4%PE
-                 outBLK(1)   = outBlockPtr%ptr%child4%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child4%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(4)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(4)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(4)%ptr%child_number
 
-                 outPE (2)   = outBlockPtr%ptr%child5%PE
-                 outBLK(2)   = outBlockPtr%ptr%child5%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child5%child_number
+                 outPE (2)   = outBlockPtr%ptr%child(5)%ptr%PE
+                 outBLK(2)   = outBlockPtr%ptr%child(5)%ptr%BLK
+                 outCHILD(2) = outBlockPtr%ptr%child(5)%ptr%child_number
               case (25) ! +X +Y -Z     WNB
-                 outPE (1)   = outBlockPtr%ptr%child1%PE
-                 outBLK(1)   = outBlockPtr%ptr%child1%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child1%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(1)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(1)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(1)%ptr%child_number
               case (26) ! +X +Y        WN 
-                 outPE (1)   = outBlockPtr%ptr%child4%PE
-                 outBLK(1)   = outBlockPtr%ptr%child4%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child4%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(4)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(4)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(4)%ptr%child_number
 
-                 outPE (2)   = outBlockPtr%ptr%child1%PE
-                 outBLK(2)   = outBlockPtr%ptr%child1%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child1%child_number
+                 outPE (2)   = outBlockPtr%ptr%child(1)%ptr%PE
+                 outBLK(2)   = outBlockPtr%ptr%child(1)%ptr%BLK
+                 outCHILD(2) = outBlockPtr%ptr%child(1)%ptr%child_number
               case (27) ! +X +Y +Z     WNT
-                 outPE (1)   = outBlockPtr%ptr%child4%PE
-                 outBLK(1)   = outBlockPtr%ptr%child4%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child4%child_number
+                 outPE (1)   = outBlockPtr%ptr%child(4)%ptr%PE
+                 outBLK(1)   = outBlockPtr%ptr%child(4)%ptr%BLK
+                 outCHILD(1) = outBlockPtr%ptr%child(4)%ptr%child_number
               end select
            end if
            !Error check
@@ -520,12 +520,12 @@ recursive subroutine findTreeNeighbor(inblkptr,outblkptr,idir,noNeighbor)
      iFoundIt = isFound(idir,inblkptr%ptr%child_number)
      select case (iFoundIt)
      case (1,2,3,4,5,6,7,8)
-        tmp1blkptr%ptr => inblkptr%ptr%parent
+        tmp1blkptr%ptr => inblkptr%ptr%parent%ptr
         call neighborAssignment(tmp1blkptr,outblkptr,iFoundIt)
      case default
         idirNext = isNext(idir,inblkptr%ptr%child_number)
         idirDown = isDown(idir,inblkptr%ptr%child_number)
-        tmp1blkptr%ptr => inblkptr%ptr%parent
+        tmp1blkptr%ptr => inblkptr%ptr%parent%ptr
         if (associated(tmp1blkptr%ptr)) then ! ensure block is allocated
            call findTreeNeighbor(tmp1blkptr,tmp2blkptr,idirNext,noNeighbor)
            if (.not. noNeighbor) then
@@ -547,7 +547,7 @@ recursive subroutine findTreeNeighbor(inblkptr,outblkptr,idir,noNeighbor)
               end if
            end if
         else
-           write (*,*) 'ERROR: findTreeNeighbor: 2: not associated - parent'
+           write (*,*) 'ERROR: findTreeNeighbor: 2: not associated - parent%ptr'
            !           stop
         end if
      end select
@@ -569,21 +569,21 @@ subroutine neighborAssignment(inblkptr,outblkptr,idir)
 
   select case (idir)
   case (1)
-     outblkptr%ptr => inblkptr%ptr%child1
+     outblkptr%ptr => inblkptr%ptr%child(1)%ptr
   case (2)
-     outblkptr%ptr => inblkptr%ptr%child2
+     outblkptr%ptr => inblkptr%ptr%child(2)%ptr
   case (3)
-     outblkptr%ptr => inblkptr%ptr%child3
+     outblkptr%ptr => inblkptr%ptr%child(3)%ptr
   case (4)
-     outblkptr%ptr => inblkptr%ptr%child4
+     outblkptr%ptr => inblkptr%ptr%child(4)%ptr
   case (5)
-     outblkptr%ptr => inblkptr%ptr%child5
+     outblkptr%ptr => inblkptr%ptr%child(5)%ptr
   case (6)
-     outblkptr%ptr => inblkptr%ptr%child6
+     outblkptr%ptr => inblkptr%ptr%child(6)%ptr
   case (7)
-     outblkptr%ptr => inblkptr%ptr%child7
+     outblkptr%ptr => inblkptr%ptr%child(7)%ptr
   case (8)
-     outblkptr%ptr => inblkptr%ptr%child8
+     outblkptr%ptr => inblkptr%ptr%child(8)%ptr
   end select
 end subroutine neighborAssignment
 
@@ -626,7 +626,7 @@ subroutine fixRefinementLevels
                     call findTreeNeighbor(inBlockPtr,outBlockPtr,idir,noNeighbor)
                     if (.not. noNeighbor)then
                        if(associated(outBlockPtr%ptr)) then
-                          if (.not. associated(outBlockPtr%ptr%child1)) then
+                          if (.not. associated(outBlockPtr%ptr%child(1)%ptr)) then
                              iLEV2 = outBlockPtr%ptr%LEV
                              if (refine_list(outBlockPtr%ptr%BLK,outBlockPtr%ptr%PE+1)) &
                                   iLEV2 = iLEV2 + 1

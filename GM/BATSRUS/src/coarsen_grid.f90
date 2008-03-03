@@ -60,7 +60,7 @@ subroutine parallel_coarsen
      
      ! ensure flagged block is not top level block
      if (associated(coarse_block_ptr % ptr)) then
-        parent_block_ptr % ptr => coarse_block_ptr % ptr % parent
+        parent_block_ptr % ptr => coarse_block_ptr % ptr % parent%ptr
      else
         nullify(parent_block_ptr % ptr)
      end if
@@ -71,31 +71,31 @@ subroutine parallel_coarsen
      end if
      
      ! ensure all blocks to be coarsened are in use
-     if (parent_block_ptr % ptr % child1 % used .and. &
-         parent_block_ptr % ptr % child2 % used .and. &
-         parent_block_ptr % ptr % child3 % used .and. &
-         parent_block_ptr % ptr % child4 % used .and. &
-         parent_block_ptr % ptr % child5 % used .and. &
-         parent_block_ptr % ptr % child6 % used .and. &
-         parent_block_ptr % ptr % child7 % used .and. &
-         parent_block_ptr % ptr % child8 % used ) then 
+     if (parent_block_ptr % ptr % child(1)%ptr % used .and. &
+         parent_block_ptr % ptr % child(2)%ptr % used .and. &
+         parent_block_ptr % ptr % child(3)%ptr % used .and. &
+         parent_block_ptr % ptr % child(4)%ptr % used .and. &
+         parent_block_ptr % ptr % child(5)%ptr % used .and. &
+         parent_block_ptr % ptr % child(6)%ptr % used .and. &
+         parent_block_ptr % ptr % child(7)%ptr % used .and. &
+         parent_block_ptr % ptr % child(8)%ptr % used ) then 
         
-        local_cube(1) = parent_block_ptr % ptr % child1 % PE
-        local_cube(2) = parent_block_ptr % ptr % child2 % PE
-        local_cube(3) = parent_block_ptr % ptr % child3 % PE
-        local_cube(4) = parent_block_ptr % ptr % child4 % PE
-        local_cube(5) = parent_block_ptr % ptr % child5 % PE
-        local_cube(6) = parent_block_ptr % ptr % child6 % PE
-        local_cube(7) = parent_block_ptr % ptr % child7 % PE
-        local_cube(8) = parent_block_ptr % ptr % child8 % PE
-        local_cubeBLK(1) = parent_block_ptr % ptr % child1 % BLK
-        local_cubeBLK(2) = parent_block_ptr % ptr % child2 % BLK
-        local_cubeBLK(3) = parent_block_ptr % ptr % child3 % BLK
-        local_cubeBLK(4) = parent_block_ptr % ptr % child4 % BLK
-        local_cubeBLK(5) = parent_block_ptr % ptr % child5 % BLK
-        local_cubeBLK(6) = parent_block_ptr % ptr % child6 % BLK
-        local_cubeBLK(7) = parent_block_ptr % ptr % child7 % BLK
-        local_cubeBLK(8) = parent_block_ptr % ptr % child8 % BLK
+        local_cube(1) = parent_block_ptr % ptr % child(1)%ptr % PE
+        local_cube(2) = parent_block_ptr % ptr % child(2)%ptr % PE
+        local_cube(3) = parent_block_ptr % ptr % child(3)%ptr % PE
+        local_cube(4) = parent_block_ptr % ptr % child(4)%ptr % PE
+        local_cube(5) = parent_block_ptr % ptr % child(5)%ptr % PE
+        local_cube(6) = parent_block_ptr % ptr % child(6)%ptr % PE
+        local_cube(7) = parent_block_ptr % ptr % child(7)%ptr % PE
+        local_cube(8) = parent_block_ptr % ptr % child(8)%ptr % PE
+        local_cubeBLK(1) = parent_block_ptr % ptr % child(1)%ptr % BLK
+        local_cubeBLK(2) = parent_block_ptr % ptr % child(2)%ptr % BLK
+        local_cubeBLK(3) = parent_block_ptr % ptr % child(3)%ptr % BLK
+        local_cubeBLK(4) = parent_block_ptr % ptr % child(4)%ptr % BLK
+        local_cubeBLK(5) = parent_block_ptr % ptr % child(5)%ptr % BLK
+        local_cubeBLK(6) = parent_block_ptr % ptr % child(6)%ptr % BLK
+        local_cubeBLK(7) = parent_block_ptr % ptr % child(7)%ptr % BLK
+        local_cubeBLK(8) = parent_block_ptr % ptr % child(8)%ptr % BLK
         
         nPEsCrseBlk = 1
         PEsCrseBlk = -1
@@ -174,37 +174,37 @@ subroutine parallel_coarsen
         
      else
         ! some blocks to be coarsened are not in use, turn off coarsen flag
-        if               (parent_block_ptr%ptr%child1%used) &
-             coarsen_list(parent_block_ptr%ptr%child1%BLK, &
-                          parent_block_ptr%ptr%child1%PE+1) = .false.
+        if               (parent_block_ptr%ptr%child(1)%ptr%used) &
+             coarsen_list(parent_block_ptr%ptr%child(1)%ptr%BLK, &
+                          parent_block_ptr%ptr%child(1)%ptr%PE+1) = .false.
         
-        if               (parent_block_ptr%ptr%child2%used) &
-             coarsen_list(parent_block_ptr%ptr%child2%BLK, &
-                          parent_block_ptr%ptr%child2%PE+1) = .false.
+        if               (parent_block_ptr%ptr%child(2)%ptr%used) &
+             coarsen_list(parent_block_ptr%ptr%child(2)%ptr%BLK, &
+                          parent_block_ptr%ptr%child(2)%ptr%PE+1) = .false.
         
-        if               (parent_block_ptr%ptr%child3%used) &
-             coarsen_list(parent_block_ptr%ptr%child3%BLK, &
-                          parent_block_ptr%ptr%child3%PE+1) = .false.
+        if               (parent_block_ptr%ptr%child(3)%ptr%used) &
+             coarsen_list(parent_block_ptr%ptr%child(3)%ptr%BLK, &
+                          parent_block_ptr%ptr%child(3)%ptr%PE+1) = .false.
         
-        if               (parent_block_ptr%ptr%child4%used) &
-             coarsen_list(parent_block_ptr%ptr%child4%BLK, &
-                          parent_block_ptr%ptr%child4%PE+1) = .false.
+        if               (parent_block_ptr%ptr%child(4)%ptr%used) &
+             coarsen_list(parent_block_ptr%ptr%child(4)%ptr%BLK, &
+                          parent_block_ptr%ptr%child(4)%ptr%PE+1) = .false.
         
-        if               (parent_block_ptr%ptr%child5%used) &
-             coarsen_list(parent_block_ptr%ptr%child5%BLK, &
-                          parent_block_ptr%ptr%child5%PE+1) = .false.
+        if               (parent_block_ptr%ptr%child(5)%ptr%used) &
+             coarsen_list(parent_block_ptr%ptr%child(5)%ptr%BLK, &
+                          parent_block_ptr%ptr%child(5)%ptr%PE+1) = .false.
         
-        if               (parent_block_ptr%ptr%child6%used) &
-             coarsen_list(parent_block_ptr%ptr%child6%BLK, &
-                          parent_block_ptr%ptr%child6%PE+1) = .false.
+        if               (parent_block_ptr%ptr%child(6)%ptr%used) &
+             coarsen_list(parent_block_ptr%ptr%child(6)%ptr%BLK, &
+                          parent_block_ptr%ptr%child(6)%ptr%PE+1) = .false.
         
-        if               (parent_block_ptr%ptr%child7%used) &
-             coarsen_list(parent_block_ptr%ptr%child7%BLK, &
-                          parent_block_ptr%ptr%child7%PE+1) = .false.
+        if               (parent_block_ptr%ptr%child(7)%ptr%used) &
+             coarsen_list(parent_block_ptr%ptr%child(7)%ptr%BLK, &
+                          parent_block_ptr%ptr%child(7)%ptr%PE+1) = .false.
         
-        if               (parent_block_ptr%ptr%child8%used) &
-             coarsen_list(parent_block_ptr%ptr%child8%BLK, &
-                          parent_block_ptr%ptr%child8%PE+1) = .false.
+        if               (parent_block_ptr%ptr%child(8)%ptr%used) &
+             coarsen_list(parent_block_ptr%ptr%child(8)%ptr%BLK, &
+                          parent_block_ptr%ptr%child(8)%ptr%PE+1) = .false.
      end if
   end do; end do
 end subroutine parallel_coarsen

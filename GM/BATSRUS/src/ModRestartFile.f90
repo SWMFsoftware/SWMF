@@ -911,21 +911,21 @@ contains
           do iChild = 1, 8
              select case (iChild)
              case (1)
-                child % ptr => octree % ptr % child1
+                child % ptr => octree % ptr % child(1)%ptr
              case (2)
-                child % ptr => octree % ptr % child2
+                child % ptr => octree % ptr % child(2)%ptr
              case (3)
-                child % ptr => octree % ptr % child3
+                child % ptr => octree % ptr % child(3)%ptr
              case (4)
-                child % ptr => octree % ptr % child4
+                child % ptr => octree % ptr % child(4)%ptr
              case (5)
-                child % ptr => octree % ptr % child5
+                child % ptr => octree % ptr % child(5)%ptr
              case (6)
-                child % ptr => octree % ptr % child6
+                child % ptr => octree % ptr % child(6)%ptr
              case (7)
-                child % ptr => octree % ptr % child7
+                child % ptr => octree % ptr % child(7)%ptr
              case (8)
-                child % ptr => octree % ptr % child8
+                child % ptr => octree % ptr % child(8)%ptr
              end select
              child % ptr % PE  = local_cube(1)
              child % ptr % BLK = local_cubeBLK(1)
@@ -1004,21 +1004,21 @@ contains
           do icube = 1, 8
              select case (icube)
              case (1)
-                child % ptr => octree % ptr % child1
+                child % ptr => octree % ptr % child(1)%ptr
              case (2)
-                child % ptr => octree % ptr % child2
+                child % ptr => octree % ptr % child(2)%ptr
              case (3)
-                child % ptr => octree % ptr % child3
+                child % ptr => octree % ptr % child(3)%ptr
              case (4)
-                child % ptr => octree % ptr % child4
+                child % ptr => octree % ptr % child(4)%ptr
              case (5)
-                child % ptr => octree % ptr % child5
+                child % ptr => octree % ptr % child(5)%ptr
              case (6)
-                child % ptr => octree % ptr % child6
+                child % ptr => octree % ptr % child(6)%ptr
              case (7)
-                child % ptr => octree % ptr % child7
+                child % ptr => octree % ptr % child(7)%ptr
              case (8)
-                child % ptr => octree % ptr % child8
+                child % ptr => octree % ptr % child(8)%ptr
              end select
              call write_octree_soln_block(child)
           end do

@@ -302,7 +302,7 @@ subroutine prolong_block(nOrderIn, IsTrueCellC_G, VarC_VG, iCube, VarF_VG)
      jF = 2*(j-jShift)-1
      kF = 2*(k-kShift)-1
 
-     ! Averaging for cells whose parent cell was inside the body
+     ! Averaging for cells whose parent%ptr cell was inside the body
      if(.not.IsTrueCellC_G(i,j,k))then
         ! Count true cells in the vicinity of this false cell
         nTrueNeighbors=count(IsTrueCellC_G(i-1:i+1,j,k))+ &
