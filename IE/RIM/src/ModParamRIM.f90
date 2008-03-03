@@ -31,10 +31,10 @@ module ModParamRIM
   !\
   ! Krylov solver (GMRES) parameters
   !/
-  logical :: UsePreconditioner = .false.! Use preconditioner
+  logical :: UsePreconditioner = .true.! Use preconditioner
   logical :: UseInitialGuess = .true.  ! Use previous solution as initial guess
   real    :: Tolerance = 1.e-2        ! Solution accuracy: 2nd norm of residual
-  integer :: MaxIteration = 200       ! Maximum number of Krylov iterations
+  integer :: MaxIteration = 100       ! Maximum number of Krylov iterations
 
   integer :: iDebugLevel=0
 

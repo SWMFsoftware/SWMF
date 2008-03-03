@@ -17,8 +17,6 @@ subroutine gather
   PotentialAll = -1.0e32
   call rearrange(Potential, PotentialAll)
 
-  write(*,*) "potentialall : ", minval(potentialall), maxval(potentialall)
-
   if (iProc == 0) then
      cpcpn = maxval(PotentialAll(1:nLats/2,:)) - &
              minval(PotentialAll(1:nLats/2,:))
@@ -75,8 +73,6 @@ contains
        ! Fill in overlap point in longitude
        ValueAll(:,nLons*nProc+1) = ValueAll(:,1)
     endif
-
-    write(*,*) ValueAll(2,:)
 
   end subroutine rearrange
 

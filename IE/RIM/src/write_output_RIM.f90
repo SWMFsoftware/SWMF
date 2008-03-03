@@ -98,13 +98,13 @@ subroutine write_output_RIM(iFile)
      write(iUnit,*) "NUMERICAL VALUES"
      select case(plot_vars(ifile))
      case('min')
-        write(iUnit,"(I7,A)") 7, " nVars"
+        write(iUnit,"(I7,A)") 8, " nVars"
      case('max')
-        write(iUnit,"(I7,A)") 7, " nVars"
+        write(iUnit,"(I7,A)") 8, " nVars"
      case('uam')
-        write(iUnit,"(I7,A)") 7, " nVars"
+        write(iUnit,"(I7,A)") 8, " nVars"
      case('aur')
-        write(iUnit,"(I7,A)") 7, " nVars"
+        write(iUnit,"(I7,A)") 8, " nVars"
      end select
      write(iUnit,"(I7,A)")       1, " nAltitudes"
      write(iUnit,"(I7,A)") nLats  , " nLatitude"
@@ -121,10 +121,11 @@ subroutine write_output_RIM(iFile)
      write(iUnit,"(I7,A1,a)")  1, " ", "MagneticLocalTime"
      write(iUnit,"(I7,A1,a)")  2, " ", "Latitude"
      write(iUnit,"(I7,A1,a)")  3, " ", "Potential (kV)"
-     write(iUnit,"(I7,A1,a)")  4, " ", "AveE (keV)"
-     write(iUnit,"(I7,A1,a)")  5, " ", "EFlux (ergs/cm2/s)"
-     write(iUnit,"(I7,A1,a)")  6, " ", "SigmaH (mhos)"
-     write(iUnit,"(I7,A1,a)")  7, " ", "SigmaP (mhos)"
+     write(iUnit,"(I7,A1,a)")  4, " ", "Jr (microA/m2)"
+     write(iUnit,"(I7,A1,a)")  5, " ", "AveE (keV)"
+     write(iUnit,"(I7,A1,a)")  6, " ", "EFlux (ergs/cm2/s)"
+     write(iUnit,"(I7,A1,a)")  7, " ", "SigmaH (mhos)"
+     write(iUnit,"(I7,A1,a)")  8, " ", "SigmaP (mhos)"
 
      write(iUnit,*) ""
 
@@ -138,7 +139,8 @@ subroutine write_output_RIM(iFile)
   do iLat=1,nLats
      do iLon=0,nLons+1
         write(iUnit) Longitude(iLon,iLat),Latitude(iLon,iLat),&
-             Potential(iLon,iLat), AveE(iLon,iLat), EFlux(iLon,iLat), &
+             Potential(iLon,iLat), Jr(iLon,iLat), &
+             AveE(iLon,iLat), EFlux(iLon,iLat), &
              SigmaH(iLon,iLat), SigmaP(iLon,iLat)
      end do
   end do

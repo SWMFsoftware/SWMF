@@ -142,12 +142,13 @@ subroutine init_RIM()
        OuterMagRhoAll(nLats+2,nLonsAll+1), &
        OuterMagPAll(nLats+2,nLonsAll+1))
 
-  OuterMagJrAll = -1.0e32
-  InnerMagJrAll = -1.0e32
-  IonoJrAll = -1.0e32
+  SigmaHAll       = -1.0e32
+  SigmaPAll       = -1.0e32
+  InnerMagJrAll   = -1.0e32
+  IonoJrAll       = -1.0e32
   OuterMagInvBAll = -1.0e32
-  OuterMagRhoAll = -1.0e32
-  OuterMagPAll = -1.0e32
+  OuterMagRhoAll  = -1.0e32
+  OuterMagPAll    = -1.0e32
 
   ! This is ONLY for communication to other modules
 

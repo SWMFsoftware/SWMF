@@ -14,6 +14,8 @@ subroutine advance_RIM
 
   call set_imf
 
+  call distribute
+
   call get_conductance
 
   call IO_GetPotential(EmpiricalPotential, iError)

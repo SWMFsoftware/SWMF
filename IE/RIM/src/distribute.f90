@@ -10,6 +10,8 @@ subroutine distribute
 
   integer :: iError, iSize
 
+  write(*,*) "mm(OuterMagJrAll) : ", minval(OuterMagJrAll), maxval(OuterMagJrAll)
+
   if (maxval(OuterMagJrAll) > -1.0e31) then
      call rearrange(OuterMagJrAll, OuterMagJr)
   else
@@ -27,6 +29,8 @@ subroutine distribute
   else
      IonoJr = 0.0
   endif
+
+  Jr = IonoJr + InnerMagJr + OuterMagJr
 
   if (maxval(OuterMagInvBAll) > -1.0e31) then
      call rearrange(OuterMagInvBAll, OuterMagInvB)
@@ -52,13 +56,13 @@ contains
     ! information
 
     do iLat = 1, nLats
-       ! Need to reverst latitudes
+       ! Need to reverse latitudes
        iLatFrom = iLat+1
        iLatTo   = nLats-(iLat-1)
        do iLon = 0, nLons+1
           ! Need to shift longitudes
           iLonTo   = iLon
-          iLonFrom = mod(iLon + nLons*nProc/2, nLons*nProc)
+          iLonFrom = mod(iLon + iProc*nLons + nLons*nProc/2, nLons*nProc)
           if (iLonFrom == 0) iLonFrom = nLons*nProc
           ValueLocal(iLonTo, iLatTo) = ValueAll(iLatFrom, iLonFrom)
        enddo
