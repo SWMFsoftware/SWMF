@@ -467,7 +467,7 @@ subroutine prolong_b_face(Bxf_c,Byf_c,Bzf_c,&
   real, intent(in) :: ByFaceFine_YQS(1:nI,1:nK,4,2)
   real, intent(in) :: BzFaceFine_ZQS(1:nI,1:nJ,4,2)
 
-  ! The child index relative to the coarse parent%ptr
+  ! The child index relative to the coarse parent
   integer, intent(in) :: iChild
 
   ! The block number of the fine block into which the prolongation is done

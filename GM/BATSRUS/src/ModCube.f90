@@ -25,7 +25,7 @@ module ModCube
   !  Point 4 is:  -x, -y, -z, East, South, Bottom
   !=================================================================================!
 
-  !The shift of the child corner with respect to the parent%ptr corner
+  !The shift of the child corner with respect to the parent corner
   integer, parameter, dimension(8,3):: iShiftChild_ID = reshape(&
        !1    2     3     4    5     6     7     8        child index
        (/0,  nI/2, nI/2, 0,   0,    nI/2, nI/2, 0,     & !i shift
@@ -48,11 +48,11 @@ contains
   !does not work for the case when the face is the the pole. For
   !this case a  more general definition for iDirC2F_D should be 
   !applied,specifically iDirC2F_D is the direction from the face 
-  !to the center of the parent%ptr octree block In a 3-scalar version, 
+  !to the center of the parent octree block In a 3-scalar version, 
   !iDirC2F=(/iX,iY,iZ/)
-  !!=========================child(1)%ptr at face =====================!
+  !!=========================child1 at face =====================!
   !!At faces (except for corner, some cell indexes may change 
-  !along the face. child(1)%ptr is the number of child for the block which
+  !along the face. Child1 is the number of child for the block which
   !includes the starting poit for such variable indices. 
   !==============================================================!
   logical function is_not_at_face(iDirC2F_D,iChild)
@@ -82,7 +82,7 @@ contains
        iMinR_D,iMaxR_D,& !Indexes to be sent, for receiving block
        iLevelR,        & !Level of receiving block
        iChild,         & !Child number for finer block, if needed
-       iChild1,        & !child(1)%ptr defined as described above
+       iChild1,        & !Child1 defined as described above
        nExtraCell)       !
     integer,intent(in)::iDirS2R_D(3),nLayerS,nLayerR
     integer,dimension(3),intent(out)::iMinS_D,iMaxS_D
