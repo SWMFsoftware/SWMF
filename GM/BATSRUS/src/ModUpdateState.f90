@@ -10,6 +10,7 @@ subroutine update_states_MHD(iStage,iBLK)
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B, &
        update_point_implicit
   use ModUser, ONLY: user_calc_sources, user_init_point_implicit
+  use ModMultiIon, ONLY: multi_ion_sources, multi_ion_init_point_impl
   use ModEnergy
 
   implicit none
@@ -67,9 +68,15 @@ subroutine update_states_MHD(iStage,iBLK)
   call update_explicit
 
   ! Add point implicit user source terms
-  if (UsePointImplicit .and. UsePointImplicit_B(iBLK) .and. UseUserSource) &
-       call update_point_implicit(iStage, iBLK, user_calc_sources, &
-       user_init_point_implicit)
+  if (UsePointImplicit .and. UsePointImplicit_B(iBLK))then
+     if(UseMultiIon)then
+        call update_point_implicit(iStage, iBLK, multi_ion_sources, &
+             multi_ion_init_point_impl)
+     elseif(UseUserSource) then
+        call update_point_implicit(iStage, iBLK, user_calc_sources, &
+             user_init_point_implicit)
+     end if
+  end if
 
   if(UseHyperbolicDivb .and. HypDecay > 0 .and. iStage == nStage) &
        State_VGB(Hyp_,1:nI,1:nJ,1:nK,iBlk) = &

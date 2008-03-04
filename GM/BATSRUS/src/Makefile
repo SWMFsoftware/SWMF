@@ -23,6 +23,7 @@ MODULES = \
 	ModCube.o\
 	ModSingleFluid.o\
 	ModMultiFluid.o\
+	ModMultiIon.o\
 	ModEnergy.o\
 	ModEquation.o\
 	ModCharacteristic.o\

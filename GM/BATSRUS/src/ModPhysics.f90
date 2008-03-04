@@ -1,5 +1,7 @@
 !^CFG COPYRIGHT UM
 module ModPhysics
+
+  use ModNumConst, ONLY: cDegToRad
   use ModConst
   use ModMain, ONLY:body2_,Top_
   use ModVarIndexes, ONLY: nVar, nFluid
