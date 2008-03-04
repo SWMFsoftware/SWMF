@@ -100,21 +100,21 @@ contains
                   iChildOrder_II(iCube,iChildNumber), lOctree)=l+1
              select case (iChildOrder_II(iCube,iChildNumber))
              case (1)
-                child % ptr => octree % ptr % child1
+                child % ptr => octree % ptr % child(1) % ptr
              case (2)
-                child % ptr => octree % ptr % child2
+                child % ptr => octree % ptr % child(2) % ptr
              case (3)
-                child % ptr => octree % ptr % child3
+                child % ptr => octree % ptr % child(3) % ptr
              case (4)
-                child % ptr => octree % ptr % child4
+                child % ptr => octree % ptr % child(4) % ptr
              case (5)
-                child % ptr => octree % ptr % child5
+                child % ptr => octree % ptr % child(5) % ptr
              case (6)
-                child % ptr => octree % ptr % child6
+                child % ptr => octree % ptr % child(6) % ptr
              case (7)
-                child % ptr => octree % ptr % child7
+                child % ptr => octree % ptr % child(7) % ptr
              case (8)
-                child % ptr => octree % ptr % child8
+                child % ptr => octree % ptr % child(8) % ptr
              end select
              call pack_soln_block(child,l,lOctree,&
                   iChildOrder_II(iCube,iChildNumber),DoCountOnly,DomainDecomposition)
@@ -187,15 +187,15 @@ contains
              allocate ( child % ptr, stat=ierror )
              if (ierror > 0) write(*,*) "initialize_octree_block: ", &
                   & " allocation error for octree"
-             nullify (child % ptr % parent)
-             nullify (child % ptr % child1)
-             nullify (child % ptr % child2)
-             nullify (child % ptr % child3)
-             nullify (child % ptr % child4)
-             nullify (child % ptr % child5)
-             nullify (child % ptr % child6)
-             nullify (child % ptr % child7)
-             nullify (child % ptr % child8)
+             nullify (child % ptr % parent % ptr)
+             nullify (child % ptr % child(1) % ptr)
+             nullify (child % ptr % child(2) % ptr)
+             nullify (child % ptr % child(3) % ptr)
+             nullify (child % ptr % child(4) % ptr)
+             nullify (child % ptr % child(5) % ptr)
+             nullify (child % ptr % child(6) % ptr)
+             nullify (child % ptr % child(7) % ptr)
+             nullify (child % ptr % child(8) % ptr)
 
              child % ptr % number  = 0
              child % ptr % child_number = iChildOrder_II(iChild,iChildNumber)
@@ -211,24 +211,24 @@ contains
              child % ptr % IsExtraBoundaryOrPole = .false.
              child % ptr % IsOuterBoundary = .false.
 
-             child % ptr % parent =>octree % ptr
+             child % ptr % parent % ptr =>octree % ptr
              select case (iChildOrder_II(iChild,iChildNumber))
              case (1)
-                octree % ptr % child1 =>  child % ptr
+                octree % ptr % child(1) % ptr =>  child % ptr
              case (2)
-                octree % ptr % child2 =>  child % ptr
+                octree % ptr % child(2) % ptr =>  child % ptr
              case (3)
-                octree % ptr % child3 =>  child % ptr
+                octree % ptr % child(3) % ptr =>  child % ptr
              case (4)
-                octree % ptr % child4 =>  child % ptr
+                octree % ptr % child(4) % ptr =>  child % ptr
              case (5)
-                octree % ptr % child5 =>  child % ptr
+                octree % ptr % child(5) % ptr =>  child % ptr
              case (6)
-                octree % ptr % child6 =>  child % ptr
+                octree % ptr % child(6) % ptr =>  child % ptr
              case (7)
-                octree % ptr % child7 =>  child % ptr
+                octree % ptr % child(7) % ptr =>  child % ptr
              case (8)
-                octree % ptr % child8 =>  child % ptr
+                octree % ptr % child(8) % ptr =>  child % ptr
              end select
              call unpack_node(child, l, DomainDecomposition)
           end do
