@@ -17,7 +17,6 @@ module ModMultiIon
   public:: multi_ion_init_point_impl
 
   real    :: CollisionCoefDim = 1.0, CollisionCoef = 0.0
-  logical :: IsAnalytic = .false.
 
 contains
   !===========================================================================
@@ -29,7 +28,7 @@ contains
 
     use ModProcMH,  ONLY: iProc
     use ModPointImplicit, ONLY:  UsePointImplicit, IsPointImplSource, &
-         IsPointImplMatrixSet, DsDu_VVC
+         IsPointImplMatrixSet
     use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, Test_String, BlkTest, ProcTest
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModAdvance, ONLY: B0XCell_BLK, B0YCell_BLK, B0ZCell_BLK
@@ -191,66 +190,7 @@ contains
                Source_VC(Energy_-1+iFluid,i,j,k) + sum(Force_D*uIon_D) &
                + inv_gm1*Heating
 
-          if(.not.IsAnalytic) CYCLE
-
-          Coef   = ElectronCharge/MassFluid_I(iFluid) &
-               *(1.0 - InvNumDens*NumDens_I(iFluid))
-          CoefBx = Coef*FullB_D(x_)
-          CoefBy = Coef*FullB_D(y_)
-          CoefBz = Coef*FullB_D(z_)
-          DsDu_VVC(iRhoUx, iRhoUy, i,j,k) =   CoefBz
-          DsDu_VVC(iRhoUx, iRhoUz, i,j,k) = - CoefBy
-          DsDu_VVC(iRhoUy, iRhoUz, i,j,k) =   CoefBx
-          DsDu_VVC(iRhoUy, iRhoUx, i,j,k) = - CoefBz
-          DsDu_VVC(iRhoUz, iRhoUx, i,j,k) =   CoefBy
-          DsDu_VVC(iRhoUz, iRhoUy, i,j,k) = - CoefBx
-
-          Coef = 0.5*CollisionRate*(NumDens - NumDens_I(iFluid))
-          DsDu_VVC(iP,    iP,     i,j,k) = -2*Coef
-          DsDu_VVC(iRhoUx,iRhoUx, i,j,k) = -Coef
-          DsDu_VVC(iRhoUy,iRhoUy, i,j,k) = -Coef
-          DsDu_VVC(iRhoUz,iRhoUz, i,j,k) = -Coef
-
        end do
-       if( .not. IsAnalytic) CYCLE
-       if(iFirstIons == 1)then
-          Coef   = -ElectronCharge/MassFluid_I(1) &
-               *InvNumDens*NumDens_I(1)
-          CoefBx = Coef*FullB_D(x_)
-          CoefBy = Coef*FullB_D(y_)
-          CoefBz = Coef*FullB_D(z_)
-          DsDu_VVC(RhoUx_, OpRhoUy_, i,j,k) =   CoefBz
-          DsDu_VVC(RhoUx_, OpRhoUz_, i,j,k) = - CoefBy
-          DsDu_VVC(RhoUy_, OpRhoUz_, i,j,k) =   CoefBx
-          DsDu_VVC(RhoUy_, OpRhoUx_, i,j,k) = - CoefBz
-          DsDu_VVC(RhoUz_, OpRhoUx_, i,j,k) =   CoefBy
-          DsDu_VVC(RhoUz_, OpRhoUy_, i,j,k) = - CoefBx
-
-          Coef = -0.5*CollisionRate*NumDens_I(1)
-          DsDu_VVC(P_,     OpP_,     i, j, k) = -2*Coef
-          DsDu_VVC(RhoUx_, OpRhoUx_, i, j, k) = -Coef
-          DsDu_VVC(RhoUy_, OpRhoUy_, i, j, k) = -Coef
-          DsDu_VVC(RhoUz_, OpRhoUz_, i, j, k) = -Coef
-
-          Coef = -0.5*CollisionRate*NumDens_I(2)
-          DsDu_VVC(OpP_,     P_,     i, j, k) = -2*Coef
-          DsDu_VVC(OpRhoUx_, RhoUx_, i, j, k) = -Coef
-          DsDu_VVC(OpRhoUy_, RhoUy_, i, j, k) = -Coef
-          DsDu_VVC(OpRhoUz_, RhoUz_, i, j, k) = -Coef
-       end if
-
-       Coef   = -ElectronCharge/MassFluid_I(2) &
-            *InvNumDens*NumDens_I(2)
-       CoefBx = Coef*FullB_D(x_)
-       CoefBy = Coef*FullB_D(y_)
-       CoefBz = Coef*FullB_D(z_)
-       DsDu_VVC(OpRhoUx_, RhoUy_, i,j,k) =   CoefBz
-       DsDu_VVC(OpRhoUx_, RhoUz_, i,j,k) = - CoefBy
-       DsDu_VVC(OpRhoUy_, RhoUz_, i,j,k) =   CoefBx
-       DsDu_VVC(OpRhoUy_, RhoUx_, i,j,k) = - CoefBz
-       DsDu_VVC(OpRhoUz_, RhoUx_, i,j,k) =   CoefBy
-       DsDu_VVC(OpRhoUz_, RhoUy_, i,j,k) = - CoefBx
-
     end do; end do; end do
 
     if(DoTestMe)then
@@ -272,16 +212,14 @@ contains
     !------------------------------------------------------------------------
 
     IsPointImpl_V = .false.
-    IsPointImplMatrixSet = IsAnalytic
-
 
     if(UseUserSource)then
        call user_init_point_implicit
-       IsPointImplMatrixSet = .false.
-    
        if(allocated(iVarPointImpl_I)) &
             IsPointImpl_V(iVarPointImpl_I) = .true.
     end if
+
+    IsPointImplMatrixSet = .false.
 
     ! All ion momenta are implicit
     if(TypeFluid_I(1) == 'ions')then
