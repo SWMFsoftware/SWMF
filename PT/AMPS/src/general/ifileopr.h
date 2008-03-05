@@ -18,7 +18,12 @@ public:
   FILE* openfile(char* ifile) {
     sprintf(fname,"%s",ifile); 
     line=0;
-    return fd=fopen(ifile,"r");
+    if ((fd=fopen(ifile,"r"))==NULL) {
+      printf ("FILE %s is not found\n",ifile);
+      exit(0);
+    } 
+     
+    return fd;
   }; 
 
   void closefile() {
