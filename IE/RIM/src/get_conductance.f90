@@ -20,7 +20,7 @@ subroutine get_conductance
 
      f107p53 = f107flux**0.53
      f107p49 = f107flux**0.49
-     cosLimit = cos(70.0*cPi/180.0)
+     cosLimit = cos(70.0*cDegToRad)
      MeetingValueP = f107p49*(0.34*cosLimit+0.93*sqrt(cosLimit))
      MeetingValueH = f107p53*(0.81*cosLimit+0.54*sqrt(cosLimit))
 

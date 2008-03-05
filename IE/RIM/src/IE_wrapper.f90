@@ -176,8 +176,8 @@ contains
           call read_var('HighLatBoundary', HighLatBoundary)
           call read_var('LowLatBoundary', LowLatBoundary)
           call read_var('DoFold', DoFold)
-          HighLatBoundary = HighLatBoundary * cPi / 180.0
-          LowLatBoundary  = LowLatBoundary  * cPi / 180.0
+          HighLatBoundary = HighLatBoundary * cDegToRad
+          LowLatBoundary  = LowLatBoundary  * cDegToRad
 
        case("#IONOSPHERE")
           call read_var('iConductanceModel',iConductanceModel)

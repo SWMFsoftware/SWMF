@@ -1,14 +1,14 @@
 
 module ModParamRIM
 
-  use ModNumConst, only : cPi
+  use ModNumConst, only : cDegToRad
 
   implicit none
 
   logical :: DoSolve = .false.
   logical :: DoFold  = .false.
-  real    :: HighLatBoundary = 90.0 * cPi / 180.0
-  real    :: LowLatBoundary  = 55.0 * cPi / 180.0
+  real    :: HighLatBoundary = 90.0 * cDegToRad
+  real    :: LowLatBoundary  = 55.0 * cDegToRad
 
   logical :: UseGMCurrents = .true.
   logical :: UseIMCurrents = .false.
