@@ -11,7 +11,7 @@ subroutine amr_physics
   integer :: nDesiredMax
   integer :: idir, i1,i2, nDesired, nRefined, nCoarsened, currentBlocks
   integer :: i,j,k,n, iBLK, nSort, nRefineMax, nCoarsenMax, Itmp
-  integer :: iError, SortIndex(4)
+  integer :: iError, SortIndex(4),iChild
   real :: percentCoarsenMax=100.0
   real :: refine_criteria(4, nBLK), Rtmp
   logical :: unique, noNeighbor, stopRefinement, done
@@ -228,23 +228,12 @@ subroutine amr_physics
      end do
      if(unique) then
         !Remove if part of multilevel block
-        if(associated(BlockPtr%ptr%parent%ptr)) then ! ensure parent%ptr exists
-           if  (BlockPtr%ptr%parent%ptr%child(1)%ptr%used .and. &
-                BlockPtr%ptr%parent%ptr%child(2)%ptr%used .and. &
-                BlockPtr%ptr%parent%ptr%child(3)%ptr%used .and. &
-                BlockPtr%ptr%parent%ptr%child(4)%ptr%used .and. &
-                BlockPtr%ptr%parent%ptr%child(5)%ptr%used .and. &
-                BlockPtr%ptr%parent%ptr%child(6)%ptr%used .and. &
-                BlockPtr%ptr%parent%ptr%child(7)%ptr%used .and. &
-                BlockPtr%ptr%parent%ptr%child(8)%ptr%used) then
-              !All siblings have no children
-           else
-              !A sibling has children, can't coarsen
-              unique=.false.
-           end if
-        else
-           !Root cell, no parent%ptr, can't coarsen
-           unique=.false.
+        Unique=associated(BlockPtr%ptr%parent%ptr)! ensure parent exists
+        !else root cell, no parent can't coarsen
+        if(Unique)then
+           Unique=all_children_used(BlockPtr%ptr%parent)
+           !All siblings have no children if Unique is .true.
+           ! else a sibling has children, can't coarsen
         end if
      end if
      if(unique) then
@@ -283,23 +272,12 @@ subroutine amr_physics
            end do
            if(unique) then
               !Remove if part of multilevel block
-              if(associated(BlockPtr%ptr%parent%ptr)) then ! ensure parent%ptr exists
-                 if  (BlockPtr%ptr%parent%ptr%child(1)%ptr%used .and. &
-                      BlockPtr%ptr%parent%ptr%child(2)%ptr%used .and. &
-                      BlockPtr%ptr%parent%ptr%child(3)%ptr%used .and. &
-                      BlockPtr%ptr%parent%ptr%child(4)%ptr%used .and. &
-                      BlockPtr%ptr%parent%ptr%child(5)%ptr%used .and. &
-                      BlockPtr%ptr%parent%ptr%child(6)%ptr%used .and. &
-                      BlockPtr%ptr%parent%ptr%child(7)%ptr%used .and. &
-                      BlockPtr%ptr%parent%ptr%child(8)%ptr%used) then
-                    !All siblings have no children
-                 else
-                    !A sibling has children, can't coarsen
-                    unique=.false.
-                 end if
-              else
-                 !Root cell, no parent%ptr, can't coarsen
-                 unique=.false.
+              Unique=associated(BlockPtr%ptr%parent%ptr)! ensure parent exists
+              !else root cell, no parent can't coarsen
+              if(Unique)then
+                 Unique=all_children_used(BlockPtr%ptr%parent)
+                 !All siblings have no children if Unique is .true.
+                 ! else a sibling has children, can't coarsen
               end if
            end if
            if(unique) then
@@ -359,15 +337,8 @@ subroutine amr_physics
      !Clean up extra unused coarsening flags
      do i=1,nCoarsenMax
         BlockPtr%ptr => global_block_ptrs(ListToCoarsen(1,i),ListToCoarsen(2,i)+1)%ptr
-        if(associated(BlockPtr%ptr%parent%ptr)) then ! ensure parent%ptr exists
-           if  (BlockPtr%ptr%parent%ptr%child(1)%ptr%coarsen .and. &
-                BlockPtr%ptr%parent%ptr%child(2)%ptr%coarsen .and. &
-                BlockPtr%ptr%parent%ptr%child(3)%ptr%coarsen .and. &
-                BlockPtr%ptr%parent%ptr%child(4)%ptr%coarsen .and. &
-                BlockPtr%ptr%parent%ptr%child(5)%ptr%coarsen .and. &
-                BlockPtr%ptr%parent%ptr%child(6)%ptr%coarsen .and. &
-                BlockPtr%ptr%parent%ptr%child(7)%ptr%coarsen .and. &
-                BlockPtr%ptr%parent%ptr%child(8)%ptr%coarsen) then
+        if(associated(BlockPtr%ptr%parent%ptr)) then ! ensure parent exists
+           if  (all_children_coarsen(BlockPtr%ptr%parent)) then
               !All siblings coarsened, leave there
            else
               BlockPtr%ptr%coarsen = .false.
@@ -387,14 +358,9 @@ subroutine amr_physics
                     if(.not. noNeighbor)then
                        if(associated(tmpBlockPtr%ptr)) then
                           if(tmpBlockPtr%ptr%body .and. tmpBlockPtr%ptr%coarsen) then
-                             tmpBlockPtr%ptr%parent%ptr%child(1)%ptr%coarsen = .false.
-                             tmpBlockPtr%ptr%parent%ptr%child(2)%ptr%coarsen = .false.
-                             tmpBlockPtr%ptr%parent%ptr%child(3)%ptr%coarsen = .false.
-                             tmpBlockPtr%ptr%parent%ptr%child(4)%ptr%coarsen = .false.
-                             tmpBlockPtr%ptr%parent%ptr%child(5)%ptr%coarsen = .false.
-                             tmpBlockPtr%ptr%parent%ptr%child(6)%ptr%coarsen = .false.
-                             tmpBlockPtr%ptr%parent%ptr%child(7)%ptr%coarsen = .false.
-                             tmpBlockPtr%ptr%parent%ptr%child(8)%ptr%coarsen = .false.
+                             do iChild=1,8
+                                tmpBlockPtr%ptr%parent%ptr%child(iChild)%ptr%coarsen = .false.
+                             end do
                              nCoarsened=nCoarsened-7
                              currentBlocks = nBlockALL - nCoarsened + nRefined
                              done = .false.
@@ -500,14 +466,9 @@ Contains
     nRefined=nRefined+7
     currentBlocks = nBlockALL - nCoarsened + nRefined
     if(BlockPtr%ptr%coarsen) then
-       BlockPtr%ptr%parent%ptr%child(1)%ptr%coarsen = .false.
-       BlockPtr%ptr%parent%ptr%child(2)%ptr%coarsen = .false.
-       BlockPtr%ptr%parent%ptr%child(3)%ptr%coarsen = .false.
-       BlockPtr%ptr%parent%ptr%child(4)%ptr%coarsen = .false.
-       BlockPtr%ptr%parent%ptr%child(5)%ptr%coarsen = .false.
-       BlockPtr%ptr%parent%ptr%child(6)%ptr%coarsen = .false.
-       BlockPtr%ptr%parent%ptr%child(7)%ptr%coarsen = .false.
-       BlockPtr%ptr%parent%ptr%child(8)%ptr%coarsen = .false.
+       do iChild=1,8
+          BlockPtr%ptr%parent%ptr%child(iChild)%ptr%coarsen = .false.
+       end do
        nCoarsened=nCoarsened-7
        currentBlocks = nBlockALL - nCoarsened + nRefined
     end if
@@ -522,22 +483,15 @@ Contains
 
   subroutine FlagBlockCoarsen
     BlockPtr%ptr%coarsen = .true.
-    if(associated(BlockPtr%ptr%parent%ptr)) then ! ensure parent%ptr exists
-       if  (BlockPtr%ptr%parent%ptr%child(1)%ptr%coarsen .and. &
-            BlockPtr%ptr%parent%ptr%child(2)%ptr%coarsen .and. &
-            BlockPtr%ptr%parent%ptr%child(3)%ptr%coarsen .and. &
-            BlockPtr%ptr%parent%ptr%child(4)%ptr%coarsen .and. &
-            BlockPtr%ptr%parent%ptr%child(5)%ptr%coarsen .and. &
-            BlockPtr%ptr%parent%ptr%child(6)%ptr%coarsen .and. &
-            BlockPtr%ptr%parent%ptr%child(7)%ptr%coarsen .and. &
-            BlockPtr%ptr%parent%ptr%child(8)%ptr%coarsen) then
+    if(associated(BlockPtr%ptr%parent%ptr)) then ! ensure parent exists
+       if  (all_children_coarsen(BlockPtr%ptr%parent)) then
           !All siblings coarsened, add to list
           nCoarsened=nCoarsened+7
           currentBlocks = nBlockALL - nCoarsened + nRefined
        end if
     end if
   end subroutine FlagBlockCoarsen
-
+  
 end subroutine amr_physics
 
 !------------------------------------------------------------------------
@@ -570,24 +524,7 @@ recursive subroutine clear_octree_amr_flags(octree)
      octree % ptr % coarsen = .false.
      if(.not. (octree % ptr % used) ) then
         do icube = 1,8
-           select case (icube)
-           case (1)
-              child % ptr => octree % ptr % child(1)%ptr
-           case (2)
-              child % ptr => octree % ptr % child(2)%ptr
-           case (3)
-              child % ptr => octree % ptr % child(3)%ptr
-           case (4)
-              child % ptr => octree % ptr % child(4)%ptr
-           case (5)
-              child % ptr => octree % ptr % child(5)%ptr
-           case (6)
-              child % ptr => octree % ptr % child(6)%ptr
-           case (7)
-              child % ptr => octree % ptr % child(7)%ptr
-           case (8)
-              cHild % ptr => octree % ptr % child(8)%ptr
-           end select
+           child % ptr => octree % ptr % child(iCube)%ptr
            call clear_octree_amr_flags(child)
         end do
      end if
@@ -626,24 +563,7 @@ recursive subroutine count_octree_amr_flags(octree, count1, count2)
      if(octree % ptr % refine) count2=count2+1
      if(.not. (octree % ptr % used) ) then
         do icube = 1,8
-           select case (icube)
-           case (1)
-              child % ptr => octree % ptr % child(1)%ptr
-           case (2)
-              child % ptr => octree % ptr % child(2)%ptr
-           case (3)
-              child % ptr => octree % ptr % child(3)%ptr
-           case (4)
-              child % ptr => octree % ptr % child(4)%ptr
-           case (5)
-              child % ptr => octree % ptr % child(5)%ptr
-           case (6)
-              child % ptr => octree % ptr % child(6)%ptr
-           case (7)
-              child % ptr => octree % ptr % child(7)%ptr
-           case (8)
-              cHild % ptr => octree % ptr % child(8)%ptr
-           end select
+           child % ptr => octree % ptr % child(iCube)%ptr
            call count_octree_amr_flags(child, count1, count2)
         end do
      end if
@@ -664,7 +584,7 @@ recursive subroutine fix_octree_refine_flags(inBlockPtr, nCoarsened, nRefined, &
 
   integer, intent(inout) :: nCoarsened, nRefined, currentBlocks
   logical, intent(inout) :: stopRefinement
-  integer :: idir, iLEV1, iLEV2
+  integer :: idir, iLEV1, iLEV2,iChild
   logical :: noNeighbor
   type (adaptive_block_ptr) :: inBlockPtr, outBlockPtr
   !---------------------------------------------------------------------------
@@ -684,14 +604,9 @@ recursive subroutine fix_octree_refine_flags(inBlockPtr, nCoarsened, nRefined, &
                     !Turn off coarsening
                     nCoarsened=nCoarsened-7
                     currentBlocks = nBlockALL - nCoarsened + nRefined
-                    outBlockPtr%ptr%parent%ptr%child(1)%ptr%coarsen = .false.
-                    outBlockPtr%ptr%parent%ptr%child(2)%ptr%coarsen = .false.
-                    outBlockPtr%ptr%parent%ptr%child(3)%ptr%coarsen = .false.
-                    outBlockPtr%ptr%parent%ptr%child(4)%ptr%coarsen = .false.
-                    outBlockPtr%ptr%parent%ptr%child(5)%ptr%coarsen = .false.
-                    outBlockPtr%ptr%parent%ptr%child(6)%ptr%coarsen = .false.
-                    outBlockPtr%ptr%parent%ptr%child(7)%ptr%coarsen = .false.
-                    outBlockPtr%ptr%parent%ptr%child(8)%ptr%coarsen = .false.
+                    do iChild=1,8
+                       outBlockPtr%ptr%parent%ptr%child(iChild)%ptr%coarsen = .false.
+                    end do
                     iLEV2=iLEV2+1
                  end if
                  if(  (iLEV1-iLEV2 > 1) .or. &
