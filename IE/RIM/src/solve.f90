@@ -3,8 +3,9 @@ subroutine solve
 
   use ModRIM
   use ModParamRIM
-  use ModNumConst, only : cPi
-  use ModLinearSolver, ONLY: gmres, prehepta, Uhepta, Lhepta
+  use ModNumConst,     only: cPi
+  use ModProcIE,       only: iComm
+  use ModLinearSolver, only: gmres, prehepta, Uhepta, Lhepta
 
   implicit none
 
@@ -193,7 +194,7 @@ subroutine solve
   DoTest = .false.
 
   call gmres(matvec_RIM,b,x,UseInitialGuess,nTotalSolve,&
-       MaxIteration,Residual,'abs',nIteration,iError,DoTest)
+       MaxIteration,Residual,'abs',nIteration,iError,DoTest,iComm)
   if (iError /= 0 .and. iError /=3) &
        write(*,*)'iono_solve: iter, resid, iError=',&
        nIteration, Residual, iError
