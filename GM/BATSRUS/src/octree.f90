@@ -111,8 +111,6 @@ subroutine refine_octree_block(octree, iPEs, iBLKs, fromPE, fromBLK)
         child % ptr % child_number = iChild
         
         octree % ptr % child(iChild)%ptr % parent%ptr => octree % ptr
-        global_block_ptrs(iBLKs(iChild), iPEs(iChild)+1) % ptr => &
-             octree % ptr % child(iChild)%ptr
      end do
      
      octree % ptr % used    = .false.
@@ -127,6 +125,11 @@ subroutine refine_octree_block(octree, iPEs, iBLKs, fromPE, fromBLK)
 
      if(fromBLK>=0 .and. fromPE>=0) &
           nullify(global_block_ptrs(fromBLK, fromPE+1) % ptr)
+
+     do iChild=1,8
+        global_block_ptrs(iBLKs(iChild), iPEs(iChild)+1) % ptr => &
+             octree % ptr % child(iChild)%ptr
+     end do
   end if
 
 end subroutine refine_octree_block
