@@ -98,24 +98,8 @@ contains
           do iCube = 1, 8
              if(.not.DoCountOnly)DomainDecomposition%iDecomposition_II(&
                   iChildOrder_II(iCube,iChildNumber), lOctree)=l+1
-             select case (iChildOrder_II(iCube,iChildNumber))
-             case (1)
-                child % ptr => octree % ptr % child(1) % ptr
-             case (2)
-                child % ptr => octree % ptr % child(2) % ptr
-             case (3)
-                child % ptr => octree % ptr % child(3) % ptr
-             case (4)
-                child % ptr => octree % ptr % child(4) % ptr
-             case (5)
-                child % ptr => octree % ptr % child(5) % ptr
-             case (6)
-                child % ptr => octree % ptr % child(6) % ptr
-             case (7)
-                child % ptr => octree % ptr % child(7) % ptr
-             case (8)
-                child % ptr => octree % ptr % child(8) % ptr
-             end select
+             child % ptr => &
+                  octree % ptr % child(iChildOrder_II(iCube,iChildNumber))%ptr
              call pack_soln_block(child,l,lOctree,&
                   iChildOrder_II(iCube,iChildNumber),DoCountOnly,DomainDecomposition)
           end do
@@ -140,103 +124,7 @@ contains
        end if
     end if
   end subroutine pack_soln_block
-  !=========================================================================
-  recursive subroutine unpack_node(octree,l,DomainDecomposition)
-    use ModOctree,ONLY:global_block_ptrs
-    implicit none
-    type (adaptive_block_ptr),intent(inout) :: octree
-    integer,intent(inout) :: l
-    type(DomainDecompositionType),intent(in)::DomainDecomposition
-    logical :: IsUsedBlock
-
-    integer ::lOctree,iPE,iBLK
-
-    type (adaptive_block_ptr) :: child
-
-    integer :: iChild,iChildNumber,iLEV,iError
-
-    !---------------------------------------------------------------------------
-
-    if (associated(octree % ptr)) then
-       l=l+1
-       lOctree=l
-       IsUsedBlock=DomainDecomposition%&
-            iDecomposition_II(FirstChild_,lOctree)==None_
-       octree % ptr % used    = IsUsedBlock
-       iChildNumber=DomainDecomposition%iDecomposition_II(MyNumberAsAChild_,lOctree)
-       octree % ptr % child_number =iChildNumber
-       if(IsUsedBlock)then
-          octree % ptr % number  = DomainDecomposition%&
-               iDecomposition_II(GlobalBlock_,lOctree)
-          octree % ptr % PE      = DomainDecomposition%&
-               iDecomposition_II(PE_,lOctree)
-          octree % ptr % BLK     = DomainDecomposition%&
-               iDecomposition_II(BLK_,lOctree)
-          octree % ptr % LEVmin  = DomainDecomposition%&
-               iDecomposition_II(LEVmin_,lOctree)
-          octree % ptr % LEVmax  = DomainDecomposition%&
-               iDecomposition_II(LEVmax_,lOctree)
-          global_block_ptrs(octree % ptr % BLK, octree % ptr % PE +1) % ptr &
-               =>octree % ptr
-       else
-          !Choose the PE and BLK set to be used in refining the octree node.
-          iLEV=octree % ptr % LEV +1
-          octree % ptr % used = .false.
-          do iChild = 1, 8
-             nullify(child % ptr)
-             allocate ( child % ptr, stat=ierror )
-             if (ierror > 0) write(*,*) "initialize_octree_block: ", &
-                  & " allocation error for octree"
-             nullify (child % ptr % parent % ptr)
-             nullify (child % ptr % child(1) % ptr)
-             nullify (child % ptr % child(2) % ptr)
-             nullify (child % ptr % child(3) % ptr)
-             nullify (child % ptr % child(4) % ptr)
-             nullify (child % ptr % child(5) % ptr)
-             nullify (child % ptr % child(6) % ptr)
-             nullify (child % ptr % child(7) % ptr)
-             nullify (child % ptr % child(8) % ptr)
-
-             child % ptr % number  = 0
-             child % ptr % child_number = iChildOrder_II(iChild,iChildNumber)
-             child % ptr % PE      = -1
-             child % ptr % BLK     = -1
-             child % ptr % LEV     = iLEV
-             child % ptr % LEVmin  =  0
-             child % ptr % LEVmax  =  99
-             child % ptr % used    = .true.
-             child % ptr % refine  = .false.
-             child % ptr % coarsen = .false.
-             child % ptr % body    = .false.
-             child % ptr % IsExtraBoundaryOrPole = .false.
-             child % ptr % IsOuterBoundary = .false.
-
-             child % ptr % parent % ptr =>octree % ptr
-             select case (iChildOrder_II(iChild,iChildNumber))
-             case (1)
-                octree % ptr % child(1) % ptr =>  child % ptr
-             case (2)
-                octree % ptr % child(2) % ptr =>  child % ptr
-             case (3)
-                octree % ptr % child(3) % ptr =>  child % ptr
-             case (4)
-                octree % ptr % child(4) % ptr =>  child % ptr
-             case (5)
-                octree % ptr % child(5) % ptr =>  child % ptr
-             case (6)
-                octree % ptr % child(6) % ptr =>  child % ptr
-             case (7)
-                octree % ptr % child(7) % ptr =>  child % ptr
-             case (8)
-                octree % ptr % child(8) % ptr =>  child % ptr
-             end select
-             call unpack_node(child, l, DomainDecomposition)
-          end do
-       end if
-    end if
-  end subroutine unpack_node
-!============================================================================!
-
+  !=====================================================================!
   subroutine MH_get_roots_dd(DomainDecomposition)                         
     use ModSize,ONLY:nDim,nCells                                             
     use ModParallel,ONLY:periodic3d,proc_dims                                
