@@ -844,15 +844,8 @@ contains
     !-------------------------------------------------------------------------
 
     if (associated(octree % ptr)) then
-       !     if (iProc == 0) &
        read(UNITTMP_) numberBLK, childNumber, iPE, iBLK, iLEV, sol_blk_used
 
-       !     call MPI_BCAST(numberBLK,    1, MPI_INTEGER, 0, iComm, iError)
-       !     call MPI_BCAST(childNumber,  1, MPI_INTEGER, 0, iComm, iError)
-       !     call MPI_BCAST(iPE,          1, MPI_INTEGER, 0, iComm, iError)
-       !     call MPI_BCAST(iBLK,         1, MPI_INTEGER, 0, iComm, iError)
-       !     call MPI_BCAST(iLEV,         1, MPI_INTEGER, 0, iComm, iError)
-       !     call MPI_BCAST(sol_blk_used, 1, MPI_LOGICAL, 0, iComm, iError)
 
        octree % ptr % number  = numberBLK
        octree % ptr % child_number = childNumber
@@ -909,24 +902,7 @@ contains
                local_cube, local_cubeBLK, -1,-1)
 
           do iChild = 1, 8
-             select case (iChild)
-             case (1)
-                child % ptr => octree % ptr % child(1)%ptr
-             case (2)
-                child % ptr => octree % ptr % child(2)%ptr
-             case (3)
-                child % ptr => octree % ptr % child(3)%ptr
-             case (4)
-                child % ptr => octree % ptr % child(4)%ptr
-             case (5)
-                child % ptr => octree % ptr % child(5)%ptr
-             case (6)
-                child % ptr => octree % ptr % child(6)%ptr
-             case (7)
-                child % ptr => octree % ptr % child(7)%ptr
-             case (8)
-                child % ptr => octree % ptr % child(8)%ptr
-             end select
+             child % ptr => octree % ptr % child(iChild)%ptr
              child % ptr % PE  = local_cube(1)
              child % ptr % BLK = local_cubeBLK(1)
              call read_octree_soln_block(child, BlksPerPE, isRoot)
@@ -1002,24 +978,7 @@ contains
        write(UNITTMP_) iLEVmin,iLEVmax
        if (.not. octree % ptr % used) then
           do icube = 1, 8
-             select case (icube)
-             case (1)
-                child % ptr => octree % ptr % child(1)%ptr
-             case (2)
-                child % ptr => octree % ptr % child(2)%ptr
-             case (3)
-                child % ptr => octree % ptr % child(3)%ptr
-             case (4)
-                child % ptr => octree % ptr % child(4)%ptr
-             case (5)
-                child % ptr => octree % ptr % child(5)%ptr
-             case (6)
-                child % ptr => octree % ptr % child(6)%ptr
-             case (7)
-                child % ptr => octree % ptr % child(7)%ptr
-             case (8)
-                child % ptr => octree % ptr % child(8)%ptr
-             end select
+             child % ptr => octree % ptr % child(iCube)%ptr
              call write_octree_soln_block(child)
           end do
        end if
