@@ -35,6 +35,9 @@ test_check:
 	@echo ' '
 	@echo 'See test_swmf.res and test_swmf.log for more detail...'
 	@echo ' '
+	@echo '=============================================================='\
+		>> test_swmf.res
+	-@cat GM/BATSRUS/test_func.speed >> test_swmf.res
 
 ### Component tests ###
 
