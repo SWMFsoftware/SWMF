@@ -61,21 +61,16 @@ subroutine initialize_octree_block(octree, iPE, iBLK, iLEV, iLEVmin, iLEVmax)
   type (adaptive_block_ptr) :: octree
   integer, intent(in) :: iPE, iBLK, iLEV, iLEVmin, iLEVmax
 
-  integer :: ierror
+  integer :: ierror,iChild
 
   if (associated(octree % ptr)) deallocate (octree % ptr)
   allocate ( octree % ptr, stat=ierror )
   if (ierror > 0) write(*,*) "initialize_octree_block: ", &
        & " allocation error for octree"
   nullify (octree % ptr % parent%ptr)
-  nullify (octree % ptr % child(1)%ptr)
-  nullify (octree % ptr % child(2)%ptr)
-  nullify (octree % ptr % child(3)%ptr)
-  nullify (octree % ptr % child(4)%ptr)
-  nullify (octree % ptr % child(5)%ptr)
-  nullify (octree % ptr % child(6)%ptr)
-  nullify (octree % ptr % child(7)%ptr)
-  nullify (octree % ptr % child(8)%ptr)
+  do iChild=1,8
+     nullify (octree % ptr % child(iChild)%ptr)
+  end do
 
   octree % ptr % number  = 0
   octree % ptr % child_number = 0
@@ -101,63 +96,25 @@ subroutine refine_octree_block(octree, iPEs, iBLKs, fromPE, fromBLK)
   integer, intent(in) :: fromPE, fromBLK
   integer, intent(in), dimension(8) :: iPEs, iBLKs
 
-  integer :: iLEV, iLEVmin, iLEVmax
+  integer :: iLEV, iLEVmin, iLEVmax,iChild
   type (adaptive_block_ptr) :: child
 
   if (associated(octree % ptr)) then
      iLEV = octree % ptr % LEV + 1
      iLEVmin = octree % ptr % LEVmin
      iLEVmax = octree % ptr % LEVmax
-
-     nullify(child % ptr)
-     call initialize_octree_block(child, iPEs(1), iBLKs(1), iLEV, iLEVmin, iLEVmax)
-     octree % ptr % child(1)%ptr =>  child % ptr
-     child % ptr % child_number = 1
-
-     nullify(child % ptr)
-     call initialize_octree_block(child, iPEs(2), iBLKs(2), iLEV, iLEVmin, iLEVmax)
-     octree % ptr % child(2)%ptr =>  child % ptr
-     child % ptr % child_number = 2
-
-     nullify(child % ptr)
-     call initialize_octree_block(child, iPEs(3), iBLKs(3), iLEV, iLEVmin, iLEVmax)
-     octree % ptr % child(3)%ptr =>  child % ptr
-     child % ptr % child_number = 3
-
-     nullify(child % ptr)
-     call initialize_octree_block(child, iPEs(4), iBLKs(4), iLEV, iLEVmin, iLEVmax)
-     octree % ptr % child(4)%ptr =>  child % ptr
-     child % ptr % child_number = 4
-
-     nullify(child % ptr)
-     call initialize_octree_block(child, iPEs(5), iBLKs(5), iLEV, iLEVmin, iLEVmax)
-     octree % ptr % child(5)%ptr =>  child % ptr
-     child % ptr % child_number = 5
-
-     nullify(child % ptr)
-     call initialize_octree_block(child, iPEs(6), iBLKs(6), iLEV, iLEVmin, iLEVmax)
-     octree % ptr % child(6)%ptr =>  child % ptr
-     child % ptr % child_number = 6
-
-     nullify(child % ptr)
-     call initialize_octree_block(child, iPEs(7), iBLKs(7), iLEV, iLEVmin, iLEVmax)
-     octree % ptr % child(7)%ptr =>  child % ptr
-     child % ptr % child_number = 7
-
-     nullify(child % ptr)
-     call initialize_octree_block(child, iPEs(8), iBLKs(8), iLEV, iLEVmin, iLEVmax)
-     octree % ptr % child(8)%ptr =>  child % ptr
-     child % ptr % child_number = 8
-
-     octree % ptr % child(1)%ptr % parent%ptr => octree % ptr
-     octree % ptr % child(2)%ptr % parent%ptr => octree % ptr
-     octree % ptr % child(3)%ptr % parent%ptr => octree % ptr
-     octree % ptr % child(4)%ptr % parent%ptr => octree % ptr
-     octree % ptr % child(5)%ptr % parent%ptr => octree % ptr
-     octree % ptr % child(6)%ptr % parent%ptr => octree % ptr
-     octree % ptr % child(7)%ptr % parent%ptr => octree % ptr
-     octree % ptr % child(8)%ptr % parent%ptr => octree % ptr
-
+     do iChild=1,8
+        nullify(child % ptr)
+        call initialize_octree_block(child, &
+             iPEs(iChild), iBLKs(iChild), iLEV, iLEVmin, iLEVmax)
+        octree % ptr % child(iChild)%ptr =>  child % ptr
+        child % ptr % child_number = iChild
+        
+        octree % ptr % child(iChild)%ptr % parent%ptr => octree % ptr
+        global_block_ptrs(iBLKs(iChild), iPEs(iChild)+1) % ptr => &
+             octree % ptr % child(iChild)%ptr
+     end do
+     
      octree % ptr % used    = .false.
      octree % ptr % refine  = .false.
      octree % ptr % coarsen = .false.
@@ -170,23 +127,6 @@ subroutine refine_octree_block(octree, iPEs, iBLKs, fromPE, fromBLK)
 
      if(fromBLK>=0 .and. fromPE>=0) &
           nullify(global_block_ptrs(fromBLK, fromPE+1) % ptr)
-
-     global_block_ptrs(iBLKs(1), iPEs(1)+1) % ptr => &
-          octree % ptr % child(1)%ptr
-     global_block_ptrs(iBLKs(2), iPEs(2)+1) % ptr => &
-          octree % ptr % child(2)%ptr
-     global_block_ptrs(iBLKs(3), iPEs(3)+1) % ptr => &
-          octree % ptr % child(3)%ptr
-     global_block_ptrs(iBLKs(4), iPEs(4)+1) % ptr => &
-          octree % ptr % child(4)%ptr
-     global_block_ptrs(iBLKs(5), iPEs(5)+1) % ptr => &
-          octree % ptr % child(5)%ptr
-     global_block_ptrs(iBLKs(6), iPEs(6)+1) % ptr => &
-          octree % ptr % child(6)%ptr
-     global_block_ptrs(iBLKs(7), iPEs(7)+1) % ptr => &
-          octree % ptr % child(7)%ptr
-     global_block_ptrs(iBLKs(8), iPEs(8)+1) % ptr => &
-          octree % ptr % child(8)%ptr
   end if
 
 end subroutine refine_octree_block
@@ -219,18 +159,14 @@ subroutine coarsen_octree_block(octree, iPEs, iBLKs)
 
   type (adaptive_block_ptr) :: octree
   integer, intent(in), dimension(8) :: iPEs, iBLKs
+  integer::iChild
 
   type (adaptive_block_ptr) :: child
 
   if (associated(octree % ptr)) then
-     deallocate (octree % ptr % child(1)%ptr)
-     deallocate (octree % ptr % child(2)%ptr)
-     deallocate (octree % ptr % child(3)%ptr)
-     deallocate (octree % ptr % child(4)%ptr)
-     deallocate (octree % ptr % child(5)%ptr)
-     deallocate (octree % ptr % child(6)%ptr)
-     deallocate (octree % ptr % child(7)%ptr)
-     deallocate (octree % ptr % child(8)%ptr)
+     do iChild=1,8
+        deallocate (octree % ptr % child(iChild)%ptr)
+     end do
      !     nullify (octree % ptr % child(1)%ptr)
      !     nullify (octree % ptr % child(2)%ptr)
      !     nullify (octree % ptr % child(3)%ptr)
@@ -252,14 +188,9 @@ subroutine coarsen_octree_block(octree, iPEs, iBLKs)
      octree % ptr % IsOuterBoundary = .false.  
 
      global_block_ptrs(iBLKs(1), iPEs(1)+1) % ptr => octree % ptr
-
-     nullify (global_block_ptrs(iBLKs(2), iPEs(2)+1) % ptr)
-     nullify (global_block_ptrs(iBLKs(3), iPEs(3)+1) % ptr)
-     nullify (global_block_ptrs(iBLKs(4), iPEs(4)+1) % ptr)
-     nullify (global_block_ptrs(iBLKs(5), iPEs(5)+1) % ptr)
-     nullify (global_block_ptrs(iBLKs(6), iPEs(6)+1) % ptr)
-     nullify (global_block_ptrs(iBLKs(7), iPEs(7)+1) % ptr)
-     nullify (global_block_ptrs(iBLKs(8), iPEs(8)+1) % ptr)
+     do iChild=2,8
+        nullify (global_block_ptrs(iBLKs(iChild), iPEs(iChild)+1) % ptr)
+     end do
 
   end if
 
@@ -312,24 +243,7 @@ recursive subroutine set_octree_min_level(octree, iLEVmin)
      end if
      if (.not. (octree % ptr % used) ) then
         do icube = 1,8
-           select case (icube)
-           case (1)
-              child % ptr => octree % ptr % child(1)%ptr
-           case (2)
-              child % ptr => octree % ptr % child(2)%ptr
-           case (3)
-              child % ptr => octree % ptr % child(3)%ptr
-           case (4)
-              child % ptr => octree % ptr % child(4)%ptr
-           case (5)
-              child % ptr => octree % ptr % child(5)%ptr
-           case (6)
-              child % ptr => octree % ptr % child(6)%ptr
-           case (7)
-              child % ptr => octree % ptr % child(7)%ptr
-           case (8)
-              child % ptr => octree % ptr % child(8)%ptr
-           end select
+           child % ptr => octree % ptr % child(iCube)%ptr
            call set_octree_min_level(child, iLEVmin)
         end do
      end if
@@ -371,24 +285,7 @@ recursive subroutine set_octree_max_level(octree, iLEVmax)
      end if
      if (.not. (octree % ptr % used) ) then
         do icube = 1,8
-           select case (icube)
-           case (1)
-              child % ptr => octree % ptr % child(1)%ptr
-           case (2)
-              child % ptr => octree % ptr % child(2)%ptr
-           case (3)
-              child % ptr => octree % ptr % child(3)%ptr
-           case (4)
-              child % ptr => octree % ptr % child(4)%ptr
-           case (5)
-              child % ptr => octree % ptr % child(5)%ptr
-           case (6)
-              child % ptr => octree % ptr % child(6)%ptr
-           case (7)
-              child % ptr => octree % ptr % child(7)%ptr
-           case (8)
-              child % ptr => octree % ptr % child(8)%ptr
-           end select
+           child % ptr => octree % ptr % child(iCube)%ptr
            call set_octree_max_level(child, iLEVmax)
         end do
      end if
@@ -428,24 +325,7 @@ recursive subroutine set_octree_body_level(octree)
      end if
      if (.not. (octree % ptr % used) ) then
         do icube = 1,8
-           select case (icube)
-           case (1)
-              child % ptr => octree % ptr % child(1)%ptr
-           case (2)
-              child % ptr => octree % ptr % child(2)%ptr
-           case (3)
-              child % ptr => octree % ptr % child(3)%ptr
-           case (4)
-              child % ptr => octree % ptr % child(4)%ptr
-           case (5)
-              child % ptr => octree % ptr % child(5)%ptr
-           case (6)
-              child % ptr => octree % ptr % child(6)%ptr
-           case (7)
-              child % ptr => octree % ptr % child(7)%ptr
-           case (8)
-              child % ptr => octree % ptr % child(8)%ptr
-           end select
+           child % ptr => octree % ptr % child(iCube)%ptr
            call set_octree_body_level(child)
         end do
      end if
