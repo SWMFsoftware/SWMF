@@ -23,6 +23,24 @@ module ModOctree
   type (adaptive_block_ptr), dimension(:,:,:), allocatable :: octree_roots
   type (adaptive_block_ptr), dimension(:,:), allocatable :: global_block_ptrs
   type (adaptive_block_ptr), dimension(:), allocatable :: blocknumber_ptrs
+  
+  !\ 
+  ! Ordering blocks along the Koshi-Peano curve
+  !/
+  ! Decides order based on child number
+  integer, parameter, dimension(8,0:8):: iChildOrder_II = reshape(&
+       (/4,1,8,5,6,7,2,3,&    !0
+       4,1,2,3,6,7,8,5,&    !1
+       6,7,8,5,4,1,2,3,&    !2
+       2,1,8,7,6,5,4,3,&    !3
+       4,3,6,5,8,7,2,1,&    !4
+       2,1,4,3,6,5,8,7,&    !5
+       8,7,6,5,4,3,2,1,&    !6
+       4,1,8,5,6,7,2,3,&    !7
+       4,1,8,5,6,7,2,3/),&  !8
+       (/8,9/))
+
+
 contains
 !---------------------------------------------------------------------
   logical function all_children_used(OctreeBlock)

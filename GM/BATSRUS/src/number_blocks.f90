@@ -28,7 +28,7 @@ subroutine number_soln_blocks
   end if
 
 end subroutine number_soln_blocks
-
+!========================================================================!
 recursive subroutine renumber_octree_blocks(octree, iBlockALL)
   use ModProcMH
   use ModMain, ONLY : global_block_number
@@ -56,27 +56,7 @@ recursive subroutine renumber_octree_blocks(octree, iBlockALL)
              global_block_number(octree % ptr % BLK)=iBlockALL
      else
         ! Decide order based on child number
-        select case(octree % ptr % child_number)
-        case(4)
-           ChildOrder_a=(/4,3,6,5,8,7,2,1/)
-        case(1)
-           ChildOrder_a=(/4,1,2,3,6,7,8,5/)
-        case(0,7,8)
-           ChildOrder_a=(/4,1,8,5,6,7,2,3/)
-        case(5)
-           ChildOrder_a=(/2,1,4,3,6,5,8,7/)
-        case(6)
-           ChildOrder_a=(/8,7,6,5,4,3,2,1/)
-        case(2)
-           ChildOrder_a=(/6,7,8,5,4,1,2,3/)
-        case(3)
-           ChildOrder_a=(/2,1,8,7,6,5,4,3/)
-        case default
-           write(*,*)'iBlockALL, child_number=',&
-                iBlockALL,octree % ptr % child_number
-           call stop_mpi('impossible child_number')
-        end select
-
+        ChildOrder_a=iChildOrder_II(:,octree % ptr % child_number)
         ! Do children one by one in the selected order
         do iChild=1,8
            child % ptr => octree % ptr % child(ChildOrder_a(iChild))%ptr

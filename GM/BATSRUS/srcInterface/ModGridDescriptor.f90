@@ -1,7 +1,7 @@
 !MHD grid in BATSRUS 
 Module MH_domain_decomposition
   use CON_grid_storage
-  use ModOctree,ONLY:adaptive_block_ptr,adaptive_block
+  use ModOctree,ONLY:adaptive_block_ptr,adaptive_block,iChildOrder_II
   implicit none
   logical::UseMHGridDescriptor=.true. 
   integer,private::iLastGrid=-1,iLastDecomposition=-1
@@ -12,18 +12,7 @@ Module MH_domain_decomposition
        LEVmin_      =7,&
        LEVmax_      =8
 
-  ! Decide order based on child number
-  integer, parameter, dimension(8,0:8):: iChildOrder_II = reshape(&
-       (/4,1,8,5,6,7,2,3,&    !0
-       4,1,2,3,6,7,8,5,&    !1
-       6,7,8,5,4,1,2,3,&    !2
-       2,1,8,7,6,5,4,3,&    !3
-       4,3,6,5,8,7,2,1,&    !4
-       2,1,4,3,6,5,8,7,&    !5
-       8,7,6,5,4,3,2,1,&    !6
-       4,1,8,5,6,7,2,3,&    !7
-       4,1,8,5,6,7,2,3/),&  !8
-       (/8,9/))
+  
   integer,parameter,dimension(3,8)::iShift3_DI= reshape(&
                                       !Coords /  1,2,3   /Children 
                                                (/0,0,1,&!1
