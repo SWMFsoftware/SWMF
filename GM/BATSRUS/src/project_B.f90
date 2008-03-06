@@ -277,8 +277,9 @@ subroutine proj_poisson(rhs,tolerance,typestop,matvecmax,&
 
   ! Arguments
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(in):: rhs
-  !    The right hand side of the Poisson equation
+  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(inout):: rhs
+  !    on input: the right hand side of the Poisson equation
+  !    on output: the residual
 
   character (len=3), intent(in) :: typestop
   real, intent(in) :: tolerance
