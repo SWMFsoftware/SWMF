@@ -106,7 +106,10 @@ subroutine init_msis
         
            !\
            ! This just arbitrarily sets the ionospheric densities to 1.0
+           ! and adds them up to get the electron density
            !
+
+           IDensityS(iLon,iLat,-1:nAlts + 2,ie_,iBlock) = 0.0
 
            do iIon = 1, nIons-1
 
