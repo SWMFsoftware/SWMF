@@ -5,7 +5,7 @@ $OS eq "Darwin" and $Compiler eq "f95"
 	${COMPILE.f77} ${Cflag4} -132 blas.f
 	${COMPILE.f90} ${Cflag3} ModNumConst.f90
 
-$OS eq "Darwin" and $Compiler eq "xlf90"
+$Compiler eq "xlf90"
 	${COMPILE.f90} ${Cflag4NoP} ${SuffixMapf90} ModBlasLapack.f90
 
 $OS eq "Linux" and $Compiler eq "lf95"
