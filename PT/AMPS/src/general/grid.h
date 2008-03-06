@@ -518,27 +518,17 @@ public:
           if (CellFoundFlag==true) return ncell;
         }
       }
-
-      bool SearchCompleteFlag=true;
-
-      if ((imin>0)||(imax<SearchMaskLength-1)) SearchCompleteFlag=false;
-      if (DIM>=2) if ((jmin>0)||(jmax<SearchMaskLength-1)) SearchCompleteFlag=false; 
-      if (DIM>=3) if ((kmin>0)||(kmax<SearchMaskLength-1)) SearchCompleteFlag=false;
-
-      if (SearchCompleteFlag==true) {
-        char msg[200];
-
-        sprintf(msg," Cgrid::GetNCell Cannot find cell which contain point x=");
-        for (idim=0;idim<DIM;idim++) sprintf(msg," %s %e",msg,x[idim]);
-
-        PrintErrorLog(__LINE__,__FILE__,msg);
-
-        if (breakflag==true) exit(__LINE__,__FILE__); 
-        else return -1;
-      }  
     }
 
-    return ncell;     
+    char msg[200];
+
+    sprintf(msg," Cgrid::GetNCell Cannot find cell which contain point x=");
+    for (idim=0;idim<DIM;idim++) sprintf(msg," %s %e",msg,x[idim]);
+
+    PrintErrorLog(__LINE__,__FILE__,msg);
+    if (breakflag==true) exit(__LINE__,__FILE__); 
+
+    return -1;     
   };  
 
 //==================================================
