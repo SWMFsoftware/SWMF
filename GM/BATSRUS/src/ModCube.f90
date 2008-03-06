@@ -36,7 +36,8 @@ module ModCube
   public::is_not_at_face         !iDirC2F_D,Child=>is_not_at_face
   public::set_indices            !iDirC2F_D=>cell indices for send/receive
   !-----------------------------------------------------------------------!
-  public::iShiftChild_ID         
+  public::iShiftChild_ID
+  public::get_children_list
 contains
   !==============================================================!
   !==============================================================!
@@ -167,5 +168,40 @@ contains
        end where
     end select
   end subroutine set_indices
+!===================================================================!
+  !The further routines are based on the order of children in the list!
+  !created by routines for finding neighbors                          !
+  subroutine get_children_list(iX,iY,iZ,iChildren_I)
+    use ModParallel,ONLY:NOBLK
+    integer,intent(in)::iX,iY,iZ 
+    !Allowed values: -1,0,1. 
+    !(iX,iY,iZ) is the direction from the center of the COARSER block
+    !towards face (edge, corners), i.e. towards FINER neighbors.
+    
+    integer,dimension(4),intent(out)::iChildren_I
+    !The child number list for neighboring blocks
+    !-----------------------------------------------------
+    integer::i,j,k,lSubF,iChild2,iBin
+    lSubf=0;iChildren_I=NOBLK
+    do i=-min(0,iX),& !for iX=-1 all the nighbors are in the western part
+                     1-max(0,iX)! For iX=+1, in the eastern part
+       do j=-min(0,iY),&       ! For iY=-1, in the nothern part
+                     1-max(0,iY)! For iY=+1, in the southern part
+          do k=-min(0,iZ),&    ! For iZ=-1, in the top part
+                     1-max(0,iZ)! For iZ=+1, in the bottom part
+             !Part here means the part of the common parent octree block for 
+             !all the finer neighbors in the direction (iX,iY,iZ)
+             lSubF= lSubF + 1
+             iBin = 1 + 4*i + 2*j + k
+             iChildren_I(lSubF)=iBin2Child_I(iBin)
+          end do
+       end do
+    end do
+    if(.not.(iZ**2==1.and.iX**2+iY**2==0))return
+    !consider separatelely  Top_ or Bot_ face
+    iChild2=iChildren_I(2)
+    iChildren_I(2)=iChildren_I(3)
+    iChildren_I(3)=iChild2
+  end subroutine get_children_list
 end module ModCube
   

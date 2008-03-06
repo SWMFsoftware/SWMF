@@ -101,12 +101,13 @@ subroutine treeNeighbor(inPE, inBLK, ix, iy, iz, &
      outPE, outBLK, outCHILD, outLEV)
   use ModParallel, ONLY : NOBLK
   use ModOctree
+  use ModCube
   implicit none
 
   integer, intent(in) :: inPE,inBLK,ix,iy,iz
   integer, intent(out) :: outLEV
   integer, intent(out), dimension(4) :: outPE, outBLK, outCHILD
-  integer :: i,idir
+  integer :: i,idir,iSubFace
   logical :: noNeighbor
   type (adaptive_block_ptr) :: inBlockPtr,outBlockPtr,tmpBlockPtr
 
@@ -156,233 +157,14 @@ subroutine treeNeighbor(inPE, inBLK, ix, iy, iz, &
               !Set values for refined neighbor
               outPE  = NOBLK
               outBLK = NOBLK
-              select case (idir)
-              case (1)  ! -X -Y -Z    ESB
-                 outPE (1)   = outBlockPtr%ptr%child(7)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(7)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(7)%ptr%child_number
-              case (2)  ! -X -Y       ES 
-                 outPE (1)   = outBlockPtr%ptr%child(6)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(6)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(6)%ptr%child_number
-
-                 outPE (2)   = outBlockPtr%ptr%child(7)%ptr%PE
-                 outBLK(2)   = outBlockPtr%ptr%child(7)%ptr%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child(7)%ptr%child_number
-              case (3)  ! -X -Y +Z    EST
-                 outPE (1)   = outBlockPtr%ptr%child(6)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(6)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(6)%ptr%child_number
-              case (4)  ! -X    -Z    E B
-                 outPE (1)   = outBlockPtr%ptr%child(2)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(2)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(2)%ptr%child_number
-
-                 outPE (2)   = outBlockPtr%ptr%child(7)%ptr%PE
-                 outBLK(2)   = outBlockPtr%ptr%child(7)%ptr%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child(7)%ptr%child_number
-              case (5)  ! -X          E  
-                 outPE (1)   = outBlockPtr%ptr%child(3)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(3)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(3)%ptr%child_number
-
-                 outPE (2)   = outBlockPtr%ptr%child(2)%ptr%PE
-                 outBLK(2)   = outBlockPtr%ptr%child(2)%ptr%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child(2)%ptr%child_number
-
-                 outPE (3)   = outBlockPtr%ptr%child(6)%ptr%PE
-                 outBLK(3)   = outBlockPtr%ptr%child(6)%ptr%BLK
-                 outCHILD(3) = outBlockPtr%ptr%child(6)%ptr%child_number
-
-                 outPE (4)   = outBlockPtr%ptr%child(7)%ptr%PE
-                 outBLK(4)   = outBlockPtr%ptr%child(7)%ptr%BLK
-                 outCHILD(4) = outBlockPtr%ptr%child(7)%ptr%child_number
-              case (6)  ! -X    +Z    E T
-                 outPE (1)   = outBlockPtr%ptr%child(3)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(3)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(3)%ptr%child_number
-
-                 outPE (2)   = outBlockPtr%ptr%child(6)%ptr%PE
-                 outBLK(2)   = outBlockPtr%ptr%child(6)%ptr%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child(6)%ptr%child_number
-              case (7)  ! -X +Y -Z    ENB
-                 outPE (1)   = outBlockPtr%ptr%child(2)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(2)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(2)%ptr%child_number
-              case (8)  ! -X +Y       EN
-                 outPE (1)   = outBlockPtr%ptr%child(3)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(3)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(3)%ptr%child_number
-
-                 outPE (2)   = outBlockPtr%ptr%child(2)%ptr%PE
-                 outBLK(2)   = outBlockPtr%ptr%child(2)%ptr%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child(2)%ptr%child_number
-              case (9)  ! -X +Y +Z    ENT
-                 outPE (1)   = outBlockPtr%ptr%child(3)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(3)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(3)%ptr%child_number
-              case (10) !    -Y -Z     SB
-                 outPE (1)   = outBlockPtr%ptr%child(8)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(8)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(8)%ptr%child_number
-
-                 outPE (2)   = outBlockPtr%ptr%child(7)%ptr%PE
-                 outBLK(2)   = outBlockPtr%ptr%child(7)%ptr%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child(7)%ptr%child_number
-              case (11) !    -Y        S 
-                 outPE (1)   = outBlockPtr%ptr%child(5)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(5)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(5)%ptr%child_number
-
-                 outPE (2)   = outBlockPtr%ptr%child(8)%ptr%PE
-                 outBLK(2)   = outBlockPtr%ptr%child(8)%ptr%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child(8)%ptr%child_number
-
-                 outPE (3)   = outBlockPtr%ptr%child(6)%ptr%PE
-                 outBLK(3)   = outBlockPtr%ptr%child(6)%ptr%BLK
-                 outCHILD(3) = outBlockPtr%ptr%child(6)%ptr%child_number
-
-                 outPE (4)   = outBlockPtr%ptr%child(7)%ptr%PE
-                 outBLK(4)   = outBlockPtr%ptr%child(7)%ptr%BLK
-                 outCHILD(4) = outBlockPtr%ptr%child(7)%ptr%child_number
-              case (12) !    -Y +Z     ST
-                 outPE (1)   = outBlockPtr%ptr%child(5)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(5)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(5)%ptr%child_number
-
-                 outPE (2)   = outBlockPtr%ptr%child(6)%ptr%PE
-                 outBLK(2)   = outBlockPtr%ptr%child(6)%ptr%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child(6)%ptr%child_number
-              case (13) !       -Z      B
-                 outPE (1)   = outBlockPtr%ptr%child(1)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(1)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(1)%ptr%child_number
-
-                 outPE (2)   = outBlockPtr%ptr%child(2)%ptr%PE
-                 outBLK(2)   = outBlockPtr%ptr%child(2)%ptr%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child(2)%ptr%child_number
-
-                 outPE (3)   = outBlockPtr%ptr%child(8)%ptr%PE
-                 outBLK(3)   = outBlockPtr%ptr%child(8)%ptr%BLK
-                 outCHILD(3) = outBlockPtr%ptr%child(8)%ptr%child_number
-
-                 outPE (4)   = outBlockPtr%ptr%child(7)%ptr%PE
-                 outBLK(4)   = outBlockPtr%ptr%child(7)%ptr%BLK
-                 outCHILD(4) = outBlockPtr%ptr%child(7)%ptr%child_number
-              case (14) !         
-              case (15) !       +Z      T
-                 outPE (1)   = outBlockPtr%ptr%child(4)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(4)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(4)%ptr%child_number
-
-                 outPE (2)   = outBlockPtr%ptr%child(3)%ptr%PE
-                 outBLK(2)   = outBlockPtr%ptr%child(3)%ptr%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child(3)%ptr%child_number
-
-                 outPE (3)   = outBlockPtr%ptr%child(5)%ptr%PE
-                 outBLK(3)   = outBlockPtr%ptr%child(5)%ptr%BLK
-                 outCHILD(3) = outBlockPtr%ptr%child(5)%ptr%child_number
-
-                 outPE (4)   = outBlockPtr%ptr%child(6)%ptr%PE
-                 outBLK(4)   = outBlockPtr%ptr%child(6)%ptr%BLK
-                 outCHILD(4) = outBlockPtr%ptr%child(6)%ptr%child_number
-              case (16) !    +Y -Z     NB
-                 outPE (1)   = outBlockPtr%ptr%child(1)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(1)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(1)%ptr%child_number
-
-                 outPE (2)   = outBlockPtr%ptr%child(2)%ptr%PE
-                 outBLK(2)   = outBlockPtr%ptr%child(2)%ptr%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child(2)%ptr%child_number
-              case (17) !    +Y        N 
-                 outPE (1)   = outBlockPtr%ptr%child(4)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(4)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(4)%ptr%child_number
-
-                 outPE (2)   = outBlockPtr%ptr%child(1)%ptr%PE
-                 outBLK(2)   = outBlockPtr%ptr%child(1)%ptr%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child(1)%ptr%child_number
-
-                 outPE (3)   = outBlockPtr%ptr%child(3)%ptr%PE
-                 outBLK(3)   = outBlockPtr%ptr%child(3)%ptr%BLK
-                 outCHILD(3) = outBlockPtr%ptr%child(3)%ptr%child_number
-
-                 outPE (4)   = outBlockPtr%ptr%child(2)%ptr%PE
-                 outBLK(4)   = outBlockPtr%ptr%child(2)%ptr%BLK
-                 outCHILD(4) = outBlockPtr%ptr%child(2)%ptr%child_number
-              case (18) !    +Y +Z     NT
-                 outPE (1)   = outBlockPtr%ptr%child(4)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(4)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(4)%ptr%child_number
-
-                 outPE (2)   = outBlockPtr%ptr%child(3)%ptr%PE
-                 outBLK(2)   = outBlockPtr%ptr%child(3)%ptr%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child(3)%ptr%child_number
-              case (19) ! +X -Y -Z    WSB
-                 outPE (1)   = outBlockPtr%ptr%child(8)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(8)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(8)%ptr%child_number
-              case (20) ! +X -Y       WS 
-                 outPE (1)   = outBlockPtr%ptr%child(5)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(5)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(5)%ptr%child_number
-
-                 outPE (2)   = outBlockPtr%ptr%child(8)%ptr%PE
-                 outBLK(2)   = outBlockPtr%ptr%child(8)%ptr%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child(8)%ptr%child_number
-              case (21) ! +X -Y +Z    WST
-                 outPE (1)   = outBlockPtr%ptr%child(5)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(5)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(5)%ptr%child_number
-              case (22) ! +X    -Z    W B 
-                 outPE (1)   = outBlockPtr%ptr%child(1)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(1)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(1)%ptr%child_number
-
-                 outPE (2)   = outBlockPtr%ptr%child(8)%ptr%PE
-                 outBLK(2)   = outBlockPtr%ptr%child(8)%ptr%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child(8)%ptr%child_number
-              case (23) ! +X          W  
-                 outPE (1)   = outBlockPtr%ptr%child(4)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(4)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(4)%ptr%child_number
-
-                 outPE (2)   = outBlockPtr%ptr%child(1)%ptr%PE
-                 outBLK(2)   = outBlockPtr%ptr%child(1)%ptr%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child(1)%ptr%child_number
-
-                 outPE (3)   = outBlockPtr%ptr%child(5)%ptr%PE
-                 outBLK(3)   = outBlockPtr%ptr%child(5)%ptr%BLK
-                 outCHILD(3) = outBlockPtr%ptr%child(5)%ptr%child_number
-
-                 outPE (4)   = outBlockPtr%ptr%child(8)%ptr%PE
-                 outBLK(4)   = outBlockPtr%ptr%child(8)%ptr%BLK
-                 outCHILD(4) = outBlockPtr%ptr%child(8)%ptr%child_number
-              case (24) ! +X    +Z    W T
-                 outPE (1)   = outBlockPtr%ptr%child(4)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(4)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(4)%ptr%child_number
-
-                 outPE (2)   = outBlockPtr%ptr%child(5)%ptr%PE
-                 outBLK(2)   = outBlockPtr%ptr%child(5)%ptr%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child(5)%ptr%child_number
-              case (25) ! +X +Y -Z     WNB
-                 outPE (1)   = outBlockPtr%ptr%child(1)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(1)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(1)%ptr%child_number
-              case (26) ! +X +Y        WN 
-                 outPE (1)   = outBlockPtr%ptr%child(4)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(4)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(4)%ptr%child_number
-
-                 outPE (2)   = outBlockPtr%ptr%child(1)%ptr%PE
-                 outBLK(2)   = outBlockPtr%ptr%child(1)%ptr%BLK
-                 outCHILD(2) = outBlockPtr%ptr%child(1)%ptr%child_number
-              case (27) ! +X +Y +Z     WNT
-                 outPE (1)   = outBlockPtr%ptr%child(4)%ptr%PE
-                 outBLK(1)   = outBlockPtr%ptr%child(4)%ptr%BLK
-                 outCHILD(1) = outBlockPtr%ptr%child(4)%ptr%child_number
-              end select
+              call get_children_list(iX,iY,iZ,OutCHILD)
+              do iSubFace=1,4
+                 if(outCHILD(iSubface)==NOBLK)EXIT
+                 outPE (iSubFace)   = outBlockPtr%ptr%child(&
+                      outCHILD(iSubFace))%ptr%PE
+                 outBLK(iSubFace)   = outBlockPtr%ptr%child(&
+                      outCHILD(iSubFace))%ptr%BLK
+              end do
            end if
            !Error check
            do i=1,4
@@ -408,6 +190,69 @@ subroutine treeNeighbor(inPE, inBLK, ix, iy, iz, &
      write (*,*) 'ERROR: treeNeighbor: 1: not associated ',inPE,inBLK
      !     stop
   end if
+contains
+  subroutine get_children_list_obsolete(iX,iY,iZ,OutCHILD)
+    integer,intent(in)::iX,iY,iZ
+    integer,intent(out)::OutCHILD(4)
+    integer::iDirHere
+    outCHILD=NOBLK
+    idirHere = 1+ (iz+1) + 3*(iy+1) + 9*(ix+1)
+    select case (idirhere)
+    case (1)  ! -X -Y -Z    ESB
+       outCHILD(1) = 7 
+    case (2)  ! -X -Y       ES 
+       outCHILD(1:2) =(/ 6,7/)
+    case (3)  ! -X -Y +Z    EST
+       outCHILD(1) = 6
+    case (4)  ! -X    -Z    E B
+       outCHILD(1:2) =(/ 2,7/)
+    case (5)  ! -X          E  
+       outCHILD(1:4) =(/ 3,2,6,7/)
+    case (6)  ! -X    +Z    E T
+       outCHILD(1:2) =(/ 3,6/)
+    case (7)  ! -X +Y -Z    ENB
+       outCHILD(1) = 2
+    case (8)  ! -X +Y       EN
+       outCHILD(1:2) =(/ 3,2/)
+    case (9)  ! -X +Y +Z    ENT
+       outCHILD(1) = 3
+    case (10) !    -Y -Z     SB
+       outCHILD(1:2) =(/8,7/)
+    case (11) !    -Y        S 
+       outCHILD(1:4) =(/5,8,6,7/)
+    case (12) !    -Y +Z     ST
+       outCHILD(1:2) = (/5,6/)
+    case (13) !       -Z      B
+       outCHILD(1:4) =(/1,2,8,7/)
+    case (14) !         
+    case (15) !       +Z      T
+       outCHILD(1:4) =(/4,3,5,6/)
+    case (16) !    +Y -Z     NB
+       outCHILD(1:2) =(/1,2/)
+    case (17) !    +Y        N 
+       outCHILD(1:4) =(/4,1,3,2/)
+    case (18) !    +Y +Z     NT
+       outCHILD(1:2) =(/4,3/)
+    case (19) ! +X -Y -Z    WSB
+       outCHILD(1) = 8
+    case (20) ! +X -Y       WS 
+       outCHILD(1:2) = (/5,8/)
+    case (21) ! +X -Y +Z    WST
+       outCHILD(1) = 5
+    case (22) ! +X    -Z    W B 
+       outCHILD(1:2) = (/1,8/)
+    case (23) ! +X          W  
+       outCHILD(1:4) =(/4,1,5,8/)
+    case (24) ! +X    +Z    W T
+       outCHILD(1:2) =(/4,5/)
+    case (25) ! +X +Y -Z     WNB
+       outCHILD(1) = 1
+    case (26) ! +X +Y        WN 
+       outCHILD(1:2) = (/4,1/)
+    case (27) ! +X +Y +Z     WNT
+       outCHILD(1) = 4
+    end select
+  end subroutine get_children_list_obsolete
 end subroutine treeNeighbor
 
 recursive subroutine findTreeNeighbor(inblkptr,outblkptr,idir,noNeighbor)
@@ -521,7 +366,8 @@ recursive subroutine findTreeNeighbor(inblkptr,outblkptr,idir,noNeighbor)
      select case (iFoundIt)
      case (1,2,3,4,5,6,7,8)
         tmp1blkptr%ptr => inblkptr%ptr%parent%ptr
-        call neighborAssignment(tmp1blkptr,outblkptr,iFoundIt)
+        
+        outblkptr%ptr => tmp1blkptr%ptr%child(iFoundIt)%ptr
      case default
         idirNext = isNext(idir,inblkptr%ptr%child_number)
         idirDown = isDown(idir,inblkptr%ptr%child_number)
@@ -532,7 +378,8 @@ recursive subroutine findTreeNeighbor(inblkptr,outblkptr,idir,noNeighbor)
               if (associated(tmp2blkptr%ptr)) then ! ensure block is allocated
                  select case (idirDown)
                  case (1,2,3,4,5,6,7,8)
-                    call neighborAssignment(tmp2blkptr,outblkptr,idirDown)
+                    
+                    outblkptr%ptr => tmp2blkptr%ptr%child(iDirDown)%ptr
                     if (.not. associated(outblkptr%ptr)) then
                        !neighbor must be at coarser level keep previous block
                        outblkptr%ptr => tmp2blkptr%ptr
@@ -559,33 +406,6 @@ recursive subroutine findTreeNeighbor(inblkptr,outblkptr,idir,noNeighbor)
      end if
   end if
 end subroutine findTreeNeighbor
-
-subroutine neighborAssignment(inblkptr,outblkptr,idir)
-  use ModOctree
-  implicit none
-
-  integer, intent(in) :: idir
-  type (adaptive_block_ptr) :: inblkptr,outblkptr
-
-  select case (idir)
-  case (1)
-     outblkptr%ptr => inblkptr%ptr%child(1)%ptr
-  case (2)
-     outblkptr%ptr => inblkptr%ptr%child(2)%ptr
-  case (3)
-     outblkptr%ptr => inblkptr%ptr%child(3)%ptr
-  case (4)
-     outblkptr%ptr => inblkptr%ptr%child(4)%ptr
-  case (5)
-     outblkptr%ptr => inblkptr%ptr%child(5)%ptr
-  case (6)
-     outblkptr%ptr => inblkptr%ptr%child(6)%ptr
-  case (7)
-     outblkptr%ptr => inblkptr%ptr%child(7)%ptr
-  case (8)
-     outblkptr%ptr => inblkptr%ptr%child(8)%ptr
-  end select
-end subroutine neighborAssignment
 
 subroutine fixRefinementLevels
   use ModProcMH

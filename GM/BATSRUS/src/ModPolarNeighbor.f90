@@ -142,7 +142,8 @@ contains
 
     OutBlkPtr%ptr=>octree_roots(iRoot,jRoot,kRoot)%ptr
     do iLevel=1,iLevelIn
-       call  neighborAssignment(OutBlkPtr,OutBlkPtr,iChild_I(iLevel))
+    
+       OutBlkPtr%ptr => OutBlkPtr%ptr%child(iChild_I(iLevel))%ptr
        if (.not.associated(OutBlkPtr%ptr))&
             call stop_mpi('Wrong Axial Neighbor is found') ! ensure block is allocated
     end do
