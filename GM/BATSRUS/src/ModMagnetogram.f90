@@ -335,7 +335,7 @@ contains
     real, dimension(N_PFSSM+1):: FactRatio1
     real, dimension(N_PFSSM+1,N_PFSSM+1):: p_nm,dp_nm
 
-    integer, parameter:: MaxInt=10000
+    integer, parameter:: MaxInt=100000
     real:: Sqrt_I(MaxInt)
     !\
     !
