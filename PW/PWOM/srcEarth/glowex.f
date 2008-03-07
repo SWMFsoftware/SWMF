@@ -200,7 +200,11 @@ C
  9995  FORMAT(1X,I7,8(1X,F8.2),2X,I2,4X,F7.2,4X,F7.2,5X,F7.2)
 C     
 C     
-       IF (GMLAT .GE. 75.0)CALL PRECIP(IDMX,ALTMIN,PHOTOTP)
+       if (GMLAT .GE. 75.0) then 
+          call PRECIP(IDMX,ALTMIN,PHOTOTP)
+       else
+          PHOTOTP(:) =0.0
+       endif
 C     
 C     DO 109 J=291,391
 C     PHOTOTP(J)=PHOTOTP(290)
@@ -210,7 +214,7 @@ C     PHOTOTP(J)=PHOTOTP(290)
 C     NOW ADD EUV AND PARTICLE IONIZATIONS!!!!!!1
        DO I = 1,nCellGlow-1
           PHOTOTT(I) = PHOTOTF(I) + PHOTOTP(I)
-
+          
 C     NOW RENAME TO MATCH MAIN PROGRAM
           PHOTOTF(I) = PHOTOTT(I)      
 C     
