@@ -5,7 +5,7 @@
 !  
 ! Licensed Materials - Property of IBM 
 !  
-! (C) COPYRIGHT International Business Machines Corp. 1999,2006 
+! (C) COPYRIGHT International Business Machines Corp. 1994,2006 
 ! All Rights Reserved 
 !  
 ! US Government Users Restricted Rights - Use, duplication or 
@@ -13,7 +13,7 @@
 !  
 ! IBM_PROLOG_END_TAG 
 !  ***************************************************************************
-!  @(#) 1.16 src/ppe/poe/include/thread64/mpif.h, ppe.poe.mpi, ppe_rfal, rfal0715a 07/04/17 10:38:46
+!  @(#) 1.22 src/ppe/poe/include/thread/mpif.h, ppe.poe.mpi, ppe_rfal, rfal0715a 07/04/17 10:38:45
 !
 !  Name: thread/mpif.h
 !
@@ -89,7 +89,7 @@
       parameter (MPI_ANY_TAG=-1,MPI_UNDEFINED=-1,MPI_ROOT=-99)
  
       integer*4 MPI_STATUS_SIZE,MPI_SOURCE,MPI_TAG,MPI_ERROR
-      parameter (MPI_STATUS_SIZE=10,MPI_SOURCE=1,MPI_TAG=2,MPI_ERROR=3)
+      parameter (MPI_STATUS_SIZE=8,MPI_SOURCE=1,MPI_TAG=2,MPI_ERROR=3)
  
       integer*4 MPI_ERRORS_ARE_FATAL,MPI_ERRORS_RETURN,MPE_ERRORS_WARN
       parameter (MPI_ERRORS_ARE_FATAL=0,MPI_ERRORS_RETURN=1)
@@ -112,7 +112,7 @@
       parameter (MPI_MAX_OBJECT_NAME=256)
 
       integer*4 MPI_BSEND_OVERHEAD
-      parameter (MPI_BSEND_OVERHEAD=39)
+      parameter (MPI_BSEND_OVERHEAD=23)
  
       integer*4 MPI_LB,MPI_UB,MPI_BYTE,MPI_PACKED
       parameter (MPI_LB=0,MPI_UB=1,MPI_BYTE=2,MPI_PACKED=3)
@@ -129,7 +129,6 @@
       parameter (MPI_LONG_DOUBLE=15,MPI_LONG_LONG_INT=39)
       parameter (MPI_LONG_LONG=44,MPI_UNSIGNED_LONG_LONG=40)
       parameter (MPI_WCHAR=41)
-
  
       integer*4 MPI_INTEGER1,MPI_INTEGER2,MPI_INTEGER4,MPI_INTEGER
       integer*4 MPI_REAL4,MPI_REAL,MPI_REAL8,MPI_DOUBLE_PRECISION
@@ -188,7 +187,7 @@
       parameter (MPI_GROUP_EMPTY=0)
 
       integer*4 MPI_ADDRESS_KIND
-      parameter (MPI_ADDRESS_KIND=8)
+      parameter (MPI_ADDRESS_KIND=4)
  
       integer*4 MPI_OFFSET_KIND
       parameter (MPI_OFFSET_KIND=8)
@@ -226,10 +225,10 @@
       parameter (MPI_MODE_UNIQUE_OPEN=     128 )
 !     parameter (MPI_MODE_SEQUENTIAL=X'000100')
       parameter (MPI_MODE_SEQUENTIAL=     256 )
- 
+
       integer*4 MPI_LOCK_EXCLUSIVE,MPI_LOCK_SHARED
       parameter (MPI_LOCK_EXCLUSIVE=0,MPI_LOCK_SHARED=1)
- 
+
       integer*4 MPI_MODE_NOCHECK,MPI_MODE_NOSTORE,MPI_MODE_NOPUT
       integer*4 MPI_MODE_NOPRECEDE,MPI_MODE_NOSUCCEED
 !     parameter (MPI_MODE_NOCHECK=X'000200',MPI_MODE_NOSTORE=X'000400')
@@ -237,7 +236,7 @@
 !     parameter (MPI_MODE_NOPUT=X'000800',MPI_MODE_NOPRECEDE=X'001000')
       parameter (MPI_MODE_NOPUT=    2048 ,MPI_MODE_NOPRECEDE=    4096 )
 !     parameter (MPI_MODE_NOSUCCEED=X'002000')
-      parameter (MPI_MODE_NOSUCCEED=    8192 )                                       
+      parameter (MPI_MODE_NOSUCCEED=    8192 )
 
       integer*4  MPI_GRAPH,MPI_CART
       parameter (MPI_GRAPH=0,MPI_CART=1)
@@ -256,7 +255,7 @@
       external MPI_TYPE_NULL_DELETE_FN
       external MPI_WIN_NULL_COPY_FN,MPI_WIN_DUP_FN
       external MPI_WIN_NULL_DELETE_FN
-      external MPI_BOTTOM,MPI_IN_PLACE 
+      external MPI_BOTTOM,MPI_IN_PLACE
       external MPI_STATUS_IGNORE,MPI_STATUSES_IGNORE
 
       integer*4 MPI_COMBINER_NAMED,MPI_COMBINER_DUP
@@ -282,7 +281,7 @@
       integer*4 MPI_TYPECLASS_REAL,MPI_TYPECLASS_INTEGER
       integer*4 MPI_TYPECLASS_COMPLEX
       parameter(MPI_TYPECLASS_REAL=1,MPI_TYPECLASS_INTEGER=2)
-      parameter(MPI_TYPECLASS_COMPLEX=3)  
+      parameter(MPI_TYPECLASS_COMPLEX=3)
 
       integer*4 MP_BW_MPI, MP_BW_LAPI
       parameter(MP_BW_MPI=2,MP_BW_LAPI=1)
