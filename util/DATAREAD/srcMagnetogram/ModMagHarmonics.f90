@@ -1,7 +1,6 @@
 module ModMagHarmonics
   implicit none  
-  save
-  
+    
   include 'mpif.h'
 
   integer :: iProc, nProc, iComm
