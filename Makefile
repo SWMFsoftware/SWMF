@@ -315,7 +315,7 @@ dist:
 #			
 #	Create run directories
 #
-run:
+${RUNDIR}:
 	make rundir
 
 rundir: ENV_CHECK
@@ -360,13 +360,13 @@ rundir_code:
 #
 NP=2
 
-mpirun: ENV_CHECK SWMF run
+mpirun: ENV_CHECK SWMF ${RUNDIR}
 	cd ${RUNDIR}; mpirun -np ${NP} ./SWMF.exe
 
-mprun: ENV_CHECK SWMF run
+mprun: ENV_CHECK SWMF ${RUNDIR}
 	cd ${RUNDIR}; mprun -np ${NP} ./SWMF.exe
 
-nompirun: ENV_CHECK SWMF run
+nompirun: ENV_CHECK SWMF ${RUNDIR}
 	cd ${RUNDIR}; ./SWMF.exe
 
 ETAGS = etags
