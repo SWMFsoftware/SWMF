@@ -42,10 +42,11 @@ Module ModGlow
   
 contains
   subroutine get_ionization(nCell, AltD_C, IonRateO_C)
+    implicit none
     integer, intent(in) :: nCell
     real,    intent(in) :: AltD_C(nCell)
     real,    intent(out):: IonRateO_C(nCell) 
-    integer :: iCell
+    integer :: iCell, iMin,iMax
     real    :: x, Dx1, Dx2
     !------------------------------------------------------------------------
     call glowex
@@ -64,8 +65,9 @@ contains
        ! Interpolate
        IonRateO_C(iCell) = &
             Dx2 * Phototf(iMin) + Dx1 * Phototf(iMax)
+
     enddo
-    
+        
   end subroutine get_ionization
   
 end Module ModGlow
