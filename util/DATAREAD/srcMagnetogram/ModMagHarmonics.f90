@@ -12,9 +12,17 @@ module ModMagHarmonics
   ! Name of output file
   character (len=*), parameter:: NameFileOut='harmonics.dat'
 
-  ! This Module reads a raw magnetogram data file and
+  ! This Module reads a raw (RADIAL, not LOS!!!) magnetogram data file and
   ! generates a magnetogram file in the form of spherical
-  ! harmonics to be use by SWMF
+  ! harmonics to be use by SWMF. 
+  
+  ! ************************ Data Links ********************************
+  ! * MDI:   http://soi.stanford.edu/magnetic/index6.html              *
+  ! * WSO:   http://wso.stanford.edu/forms/prgs.html                   *  
+  ! * GONG:  http://gong.nso.edu/data/magmap/QR/mqs/                   *
+  ! * SOLIS: ftp://solis.nso.edu/synoptic/level3/vsm/merged/carr-rot   *
+  ! * MWO:   ftp://howard.astro.ucla.edu/pub/obs/synoptic_charts       *
+  ! ********************************************************************
   real, parameter:: &
        cPi        =  3.1415926535897932384626433832795,       &
        cTwoPi     =  2*cPi,                                   &
@@ -26,10 +34,10 @@ module ModMagHarmonics
   real::dR=1.0,dPhi=1.0,dTheta,dSinTheta=1.0
   integer:: nThetaPerProc
   integer:: nPhi=72, nTheta=29
-  integer:: nHarmonics=90
+  integer:: nHarmonics=180
   !----------------------------------------------------------------
 
-  integer:: i,n,m,iTheta,iPhi,iR,mm,nn
+  integer:: i,n,m,iTheta,iPhi,iR,mm,nn,CarringtonRotation
   real:: c_n
   real:: SinPhi,CosPhi
   real:: CosTheta,SinTheta
@@ -37,7 +45,7 @@ module ModMagHarmonics
   real:: Theta,Phi,R_PFSSM
   !----------------------------------------------------------------
   real :: SumArea,da
-  real :: NormalizationFactor,R_n
+  real :: NormalizationFactor!,R_n
   integer :: iUnit2,NmPerProc,iBcast, iStart, nSize,iNM,ll
   real,allocatable,dimension(:) :: gArray, hArray
   integer,allocatable,dimension(:) :: nArray, mArray
@@ -73,7 +81,7 @@ contains
 
     ! Read the raw magnetogram file into a 2d array
     
-    integer :: iRM,jRM,iUnit,iError
+    integer :: iRM,jRM,iUnit,iError,nHarmonicsIn
     character (len=100) :: line
     real, allocatable:: tempBr(:)
     !----------------------------------------------------------
@@ -82,7 +90,13 @@ contains
     open(iUnit,file=NameFileIn,status='old',iostat=iError)
     
     do 
-       read(iUnit,'(a)', iostat = iError ) line  
+       read(iUnit,'(a)', iostat = iError ) line
+       if(index(line,'#CR')>0)then
+          read(iUnit,*) CarringtonRotation
+       endif
+       if(index(line,'#nMax')>0)then
+          read(iUnit,*) nHarmonicsIn
+       endif
        if(index(line,'#ARRAYSIZE')>0)then
           read(iUnit,*) nPhi
           read(iUnit,*) nTheta
@@ -90,12 +104,16 @@ contains
        if(index(line,'#START')>0) EXIT
     end do
     
-    write(*,*)'Magnetogram size - Theta,Phi: ',nTheta,nPhi
+    if(iProc==0) write(*,*)'Magnetogram size - Theta,Phi: ',nTheta,nPhi
     
     ! Setting the order on harmonics to be equal to the 
     ! latitudinal resolution.
-    
-    nHarmonics=nTheta
+    if(nHarmonicsIn > 0 .and. nHarmonicsIn <180)then
+       nHarmonics=nHarmonicsIn
+    else
+       nHarmonics=min(nTheta,180)
+    endif
+    if(iProc==0) write(*,*)'Order of harmonics: ',nHarmonics
     
     dPhi=cTwoPi/nPhi
     dTheta=cPi/nTheta
@@ -129,6 +147,8 @@ contains
     
     do iRM=0,nTheta-1
        do jRM=0,nPhi-1
+          ! The MDI magnetogram is saturated for magnetic field larger than 
+          ! 1900 gauss.
           if (abs(tempBr(iRM*nPhi+jRM)) > 1900.0) &
                tempBr(iRM*nPhi+jRM)=1900.0*sign(1.,tempBr(iRM*nPhi+jRM))
           Br_DD(jRM,iRM) = tempBr(iRM*nPhi+jRM)
@@ -136,7 +156,6 @@ contains
     end do
     
     deallocate(tempBr)
-    
   end subroutine read_raw_magnetogram
 
   !=========================================================================
@@ -146,6 +165,7 @@ contains
     ! magnetogram data
 
     integer :: iUnit, iError, nError
+    real, parameter :: Rs_PFSSM=2.5
     !-------------------------------------------------------------------------
 
     if(iProc==0)write(*,*)'Calculating harmonic coefficients'
@@ -189,14 +209,15 @@ contains
        EndProc=(iProc+1)*ArrPerProc-1
     end if
 
-    ! Each processor gets part of the array
+    ! Each processor gets part of the array 
     do iNM=iProc*ArrPerProc,EndProc
 
-       ! The normalization factor of (2n+1)/R_n should be where R_n=n+1+n(1/Rs)**2
-       ! However, in this code P_nm are normalized only to 2n+1 to reproduce 
-       ! the coefficients provided by Stanford.
-       !R_n=real(nArray(iNM)+1)+real(nArray(iNM))*(1.0/Rs_PFSSM)**(2*nArray(iNM)+1)
-       NormalizationFactor=real(2*nArray(iNM)+1)
+       ! The proper normalization factor is (2n+1)/R_n, where R_n=n+1+n(1/Rs)**(2n+1).
+       ! However, in this code the coefficients are normalized only with 2n+1 to reproduce 
+       ! the coefficients provided by Stanford. The division by R_n is done after
+       ! the coefficients are been read in ModMagnetogram.f90.
+       ! R_n=(nArray(iNM)+1.0)+nArray(iNM)*(1.0/Rs_PFSSM)**(2*nArray(iNM)+1)
+       NormalizationFactor=(2*nArray(iNM)+1)
 
        SumArea=0.0
 
@@ -208,23 +229,24 @@ contains
           da=SinTheta*dTheta*dPhi
           ! Calculate the set of Legandre polynoms (with Schmidt normalization), 
           ! for a given CosTheta,SinTheta
+          ! For non-radial magnetogram (LOS), a division in SinTheta is needed.
           call calc_Legandre_polynoms
 
           do iPhi=0,nPhi-1
-             Phi=real(iPhi)*dPhi
+             Phi=(iPhi)*dPhi
              gArray(iNM) = gArray(iNM)+&
                   Br_DD(iPhi,iTheta)*da*p_nm(nArray(iNM)+1,mArray(iNM)+1)*&
-                  cos(real(mArray(iNM))*Phi)/SinTheta
+                  cos((mArray(iNM))*Phi)!/SinTheta
              hArray(iNM) = hArray(iNM)+&
                   Br_DD(iPhi,iTheta)*da*p_nm(nArray(iNM)+1,mArray(iNM)+1)*&
-                  sin(real(mArray(iNM))*Phi)/SinTheta
+                  sin((mArray(iNM))*Phi)!/SinTheta
              SumArea = SumArea+da
           end do
        end do
        gArray(iNM) = &
-            NormalizationFactor*gArray(iNM)/(SumArea*real(nArray(iNM)+1))
+            NormalizationFactor*gArray(iNM)/SumArea
        hArray(iNM) = &
-            NormalizationFactor*hArray(iNM)/(SumArea*real(nArray(iNM)+1))
+            NormalizationFactor*hArray(iNM)/SumArea
     end do
 
     ! Each processor broadcasts his part of the g_nm, h_nm arrays
@@ -277,15 +299,15 @@ contains
           call MPI_abort(iComm, nError, iError)
        end if
 
-       write ( iUnit, '(a)' ) 'Coefficients order=90 center=CT0000:180'
+       write ( iUnit, '(a19,I3,a10,I4,a4)' ) 'Coefficients order=',nHarmonics,' center=CT',CarringtonRotation,':180'
        write ( iUnit, '(a)' ) 'Observation time'
-       write ( iUnit, '(a)' ) 'B0 angle & Nmax:        0          90'
+       write ( iUnit, '(a45,I3)' ) 'B0 angle & Nmax:        0          ',nHarmonics
        write ( iUnit, * )
        write ( iUnit, * )
        write ( iUnit, * )
        write ( iUnit, * )
        write ( iUnit, * )
-       write ( iUnit, '(a)' ) 'Max Harmonic Order:90   Units: microTesla (0.01G)'
+       write ( iUnit, '(a19,I3,a26)' ) 'Max Harmonic Order:',nHarmonics,' Units: microTesla (0.01G)'
        write ( iUnit, '(a)' ) ' '
        write ( iUnit, '(a)' ) '  l   m      g(uT)      h(uT)'
        write ( iUnit, '(a)' ) ' '
@@ -293,7 +315,7 @@ contains
 
        do nn=0,nHarmonics
           do mm=0,nn
-             write(iUnit, '(2I4,2f15.3)') nn,mm,g_nm(nn+1,mm+1),h_nm(nn+1,mm+1)
+             write(iUnit, '(2I5,2f15.3)') nn,mm,g_nm(nn+1,mm+1),h_nm(nn+1,mm+1)
           enddo
        end do
 
@@ -306,6 +328,20 @@ contains
   ! This subroutine calculates the Legendre polynoms for a particular latitude
   !/
   subroutine calc_Legandre_polynoms
+
+    
+    ! Calculate sqrt(integer) from 1 to 10000::
+     
+    do m=1,MaxInt
+       Sqrt_I(m) = sqrt(real(m))
+    end do
+
+    ! Calculate the ratio sqrt(2m!)/(2^m*m!)::
+    
+    factRatio1(:) = 0.0; factRatio1(1) = 1.0
+    do m=1,nHarmonics
+       factRatio1(m+1) = factRatio1(m)*Sqrt_I(2*m-1)/Sqrt_I(2*m)
+    enddo
 
     ! Calculate polynomials with appropriate normalization
     ! for Theta_PFSSMa::

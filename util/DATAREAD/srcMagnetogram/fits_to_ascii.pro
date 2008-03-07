@@ -16,6 +16,14 @@ pro fits_to_ascii, FileIn, DataName, silent=silent
 ;    FileIn = 'fitsfile.fits'
 ;endif
 
+nMax=180
+CR=1900
+
+read,nMax,prompt='enter order of harmonics (nMax:)' 
+nMax=strtrim(nMax,2)
+read,CR,prompt='enter Carrington Rotation number:' 
+CR=strtrim(CR,2)
+
 FileFits  = 'fitsfile.fits'
 FileHeader='fitsfile.H'
 FileDat='fitsfile.dat'
@@ -46,9 +54,13 @@ if not keyword_set(silent) then begin
 endif
 
 openw,lun,FileDat,/get_lun
+printf,lun,'#CR'
+printf,lun,CR
+printf,lun,'#nMax'
+printf,lun,nMax
 printf,lun,'#ARRAYSIZE'
-printf,lun,Nx
-printf,lun,Ny
+printf,lun,strtrim(Nx,2)
+printf,lun,strtrim(Ny,2)
 printf,lun,'#START'
 
 for i=0L,Ny-1 do begin
