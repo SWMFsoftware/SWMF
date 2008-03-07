@@ -17,6 +17,9 @@ SuffixMapftn = -qsuffix=f=ftn
 COMPILE.f77     = ${CUSTOMPATH_F}xlf90 -qfixed=132
 COMPILE.f90     = ${CUSTOMPATH_F}xlf90 ${SuffixMapf90}
 LINK.f90        = ${CUSTOMPATH_MPI}mpxlf90_r
+
+### LINK.f90        = ${CUSTOMPATH_MPI}xlf90 for NOMPI only
+
 AR = ar -rs
 
 SINGLEPREC =
@@ -38,9 +41,9 @@ OPT0 = -O0
 OPT1 = -O1
 OPT2 = -O2
 OPT3 = -O3
-OPT4 = -O4
+OPT4 = -O3
 
-CFLAG = ${SEARCH} -c -qextname -qarch=auto -qtune=auto ${DEBUG}
+CFLAG = ${SEARCH} -c -qextname -qarch=auto -qtune=auto ${DEBUG} -qrealsize=8
 
 Cflag0  = ${CFLAG} ${PRECISION} ${OPT0}
 Cflag1  = ${CFLAG} ${PRECISION} ${OPT1}
