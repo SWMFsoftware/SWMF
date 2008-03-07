@@ -32,7 +32,7 @@ module ModIonosphere
        IONO_NORTH_Theta_Max, IONO_SOUTH_Theta_Min,     &
        IONO_Radius, IONO_Height, Radius
 
-  real :: cpcp_north, cpcp_south
+  real :: cpcp_north=0.0, cpcp_south=0.0
 
   real, dimension(1:25,1:16) ::  &
        hal_a0_up,ped_a0_up,      &
