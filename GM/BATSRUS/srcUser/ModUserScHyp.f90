@@ -88,10 +88,11 @@ contains
     character (len=*), parameter :: Name='user_set_outerbcs'
 
     integer :: i, j, k, iMin, jMin, kMin, iMax, jMax, kMax
-    real, dimension(nDim) :: B1_D,B1n_D,B1t_D, FullB_D
-    real, dimension(nDim) :: RhoU_D,RhoUn_D,RhoUt_D,r2RhoUn_D,GhostRhoU_D
-    real, dimension(nDim) :: Normal_D, Unit_D
-    real :: xx, yy, zz, RR, Dens, Pres, Gamma, B1dotR, FullBNorm, RhoUdotR
+    real, dimension(nDim) :: B1_D, B1t_D, FullB_D, FullBt_D
+    real, dimension(nDim) :: RhoU_D, RhoUt_D
+    real, dimension(nDim) :: Normal_D
+    real :: xx, yy, zz, RR, Dens, Pres, Gamma
+    real :: B1n, FullBn, RhoUn, r2RhoUn
     !------------------------------------------------------------------------
     IsFound = .true.
 
@@ -108,7 +109,7 @@ contains
        RR = 0.5*sum(r_Blk(0:1,j,k,iBlock))
 
        call plasma_at_base(xx,yy,zz,RR,Dens,Pres)
-       call get_gamma_emp(xx,yy,zz,Gamma)
+       call my_gamma_emp(xx,yy,zz,Gamma)
 
        if(UseLogRhoLimiter)then
           State_VGB(Rho_,1,j,k,iBlock)=log(State_VGB(Rho_,1,j,k,iBlock))
@@ -137,44 +138,36 @@ contains
        Normal_D(y_)=y_Blk(1,j,k,iBlock)/r_Blk(1,j,k,iBlock)
        Normal_D(z_)=z_Blk(1,j,k,iBlock)/r_Blk(1,j,k,iBlock)
 
-       B1_D   = State_VGB(Bx_:Bz_,1,j,k,iBlock)
-       B1dotR = dot_product(Normal_D,B1_D)
-       B1n_D  = B1dotR*Normal_D
-       B1t_D  = B1_D-B1n_D
+       B1_D  = State_VGB(Bx_:Bz_,1,j,k,iBlock)
+       B1n   = dot_product(Normal_D,B1_D)
+       B1t_D = B1_D - B1n*Normal_D
 
        do i=iMin,iMax
           State_VGB(Bx_:Bz_,i,j,k,iBlock) = B1t_D
        end do
 
-       RhoU_D   = State_VGB(RhoUx_:RhoUz_,1,j,k,iBlock)
-       RhoUdotR = dot_product(Normal_D,RhoU_D)
-       RhoUn_D  = RhoUdotR*Normal_D
-       RhoUt_D  = RhoU_D - RhoUn_D
-       r2RhoUn_D = r_Blk(1,j,k,iBlock)**2*RhoUn_D
+       RhoU_D = State_VGB(RhoUx_:RhoUz_,1,j,k,iBlock)
+       r2RhoUn = r_Blk(1,j,k,iBlock)**2*dot_product(Normal_D,RhoU_D)
 
        do i=iMin,iMax
-          GhostRhoU_D = RhoUt_D + r2RhoUn_D/r_Blk(i,j,k,iBlock)**2
           FullB_D(x_) = State_VGB(Bx_,i,j,k,iBlock) &
                + B0xCell_BLK(i,j,k,iBlock)
           FullB_D(y_) = State_VGB(By_,i,j,k,iBlock) &
                + B0yCell_BLK(i,j,k,iBlock)
           FullB_D(z_) = State_VGB(Bz_,i,j,k,iBlock) &
                + B0zCell_BLK(i,j,k,iBlock)
-          FullBNorm = sqrt(sum(FullB_D**2))
-          if(FullBNorm<cTolerance)then
-             ! HD: extrapolate in radial direction
-             Unit_D(x_)=x_Blk(i,j,k,iBlock)/r_Blk(i,j,k,iBlock)
-             Unit_D(y_)=y_Blk(i,j,k,iBlock)/r_Blk(i,j,k,iBlock)
-             Unit_D(z_)=z_Blk(i,j,k,iBlock)/r_Blk(i,j,k,iBlock)
-          else
-             ! MHD: extrapolate in field line direction
-             Unit_D = FullB_D/FullBNorm
-          end if
-          if(RhoUdotR<0.0)then
+          FullBn = dot_product(Normal_D,FullB_D)
+
+          if(abs(FullBn) < cTolerance)then
+             ! No flow at polarity inversion lines
              State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
           else
+             FullBt_D = FullB_D - FullBn*Normal_D
+             ! No backflow
+             RhoUn = max(0.0,r2RhoUn/r_Blk(i,j,k,iBlock)**2)
+             RhoUt_D = (RhoUn/FullBn)*FullBt_D
              State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
-                  dot_product(GhostRhoU_D,Unit_D)*Unit_D
+                  RhoUt_D + RhoUn*Normal_D
           end if
        end do
     end do; end do
@@ -230,7 +223,7 @@ contains
     if(.not.(rTransonic>exp(1.0))) call stop_mpi('sonic point inside Sun')
 
     if(r_BLK(1,1,1,iBLK) > rTransonic)then
-       !sonic point below subdomain
+       ! sonic point below subdomain
        iCrita = 0
        iCritb = 1
     elseif(r_BLK(nI,1,1,iBLK) <= rTransonic)then
@@ -328,7 +321,7 @@ contains
           State_VGB(Hyp_,i,j,k,iBLK) = 0.0
        end if
        State_VGB(P_,i,j,k,iBLK) = State_VGB(Rho_,i,j,k,iBLK)*Pres/Dens
-       call get_gamma_emp(xx,yy,zz,Gamma)
+       call my_gamma_emp(xx,yy,zz,Gamma)
        State_VGB(Ew_,i,j,k,iBLK) = State_VGB(P_,i,j,k,iBLK) &
             *(1.0/(Gamma-1.0)-inv_gm1) 
     end do;end do; end do
@@ -345,10 +338,12 @@ contains
 
     real :: UFinal, URatio
     !------------------------------------------------------------------------
-    call get_bernoulli_integral(xx/rr,yy/rr,zz/rr,UFinal)
-    URatio = UFinal/UMin
-    Dens  = (1.0/URatio)**2
-    Pres  = inv_g*Dens*T0/(min(URatio,2.0)*BodyTdim_I(1))
+!    call get_bernoulli_integral(xx/rr,yy/rr,zz/rr,UFinal)
+!    URatio = UFinal/UMin
+!    Dens  = (1.0/URatio)**2
+!    Pres  = inv_g*Dens*T0/(min(URatio,2.0)*BodyTdim_I(1))
+    Dens  = 1.0
+    Pres  = inv_g*Dens*T0/BodyTdim_I(1)
 
   end subroutine plasma_at_base
 
@@ -388,13 +383,13 @@ contains
     !/
     !  if (iStage/=nStage) return
     do k=1,nK; do j=1,nJ; do i=1,nI
-       call get_gamma_emp(x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock), &
+       call my_gamma_emp(x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock), &
             z_BLK(i,j,k,iBlock),Gammacell)
        call correct_gamma(i,j,k,iBlock,Gammacell)
 
-       State_VGB(P_   ,i,j,k,iBlock)=(Gammacell-1.0)*      &
-            (inv_gm1*State_VGB(P_,i,j,k,iBlock) + State_VGB(Ew_,i,j,k,iBlock))
-       State_VGB(Ew_,i,j,k,iBlock)= State_VGB(P_,i,j,k,iBlock) &
+       State_VGB(P_,i,j,k,iBlock) = (Gammacell-1.0) &
+            *(inv_gm1*State_VGB(P_,i,j,k,iBlock) + State_VGB(Ew_,i,j,k,iBlock))
+       State_VGB(Ew_,i,j,k,iBlock) = State_VGB(P_,i,j,k,iBlock) &
             *(1.0/(Gammacell-1.0)-inv_gm1)
     end do; end do; end do
     call calc_energy_cell(iBlock)
@@ -413,6 +408,10 @@ contains
     integer, intent(in) :: i, j, k, iBlock
     real, intent(inout) :: Gamma
     !------------------------------------------------------------------------
+    !\
+    ! Change the empirical gamma near the current sheet based on the
+    ! plasma beta
+    !/
     if(R_BLK(i,j,k,iBlock) > Rs_PFSSM) &
          Gamma = Gamma - (Gamma - GammaSS)*max(0.0, &
          -1.0 + 2.0*State_VGB(P_,i,j,k,iBlock)/(State_VGB(P_,i,j,k,iBlock) &
@@ -422,6 +421,7 @@ contains
          *0.25*(R_BLK(i,j,k,iBlock)/Rs_PFSSM)**1.5))
 
   end subroutine correct_gamma
+
   !==========================================================================
   subroutine user_specify_initial_refinement(iBLK,refineBlock,lev,DxBlock, &
        xCenter,yCenter,zCenter,rCenter,                        &
@@ -454,9 +454,10 @@ contains
 
        select case(TypeGeometry)
        case('spherical_lnr')
+          ! assumes 3x4x2 blocks on root level
           levBLK=global_block_ptrs(iBLK,iProc+1)%ptr%LEV
-          levmin=2
-          levelHS=3
+          levmin=3
+          levelHS=4
           if(.not.time_loop)then
              !refine to have resolution not worse than levmin
              if(lev<=levmin)then
@@ -464,17 +465,17 @@ contains
              else
                 MinRBlk = exp(XyzStart_Blk(1,iBlk)-0.5*Dx_Blk(iBlk))
                 CritR=rBody + (exp(XyzMax_D(1))-exp(XyzMin_D(1))) &
-                     /(2.0**real(lev+3-levmin))
+                     /(2.0**(lev+2-levmin))
                 if( MinRBlk < CritR )then
                    refineBlock = .true.
                 else
-                   refineBlock=.false.
+                   refineBlock = .false.
                 endif
              end if
           elseif( levBLK<=levelHS-1 )then
              call refine_heliosheath
           else
-             refineBlock=.false.
+             refineBlock = .false.
           end if
        case default
           call stop_mpi('user_specify_initial_refinement is ' &
@@ -517,8 +518,7 @@ contains
       end subroutine refine_heliosheath
   end subroutine user_specify_initial_refinement
 
-  !=================================================================
-
+  !=========================================================================
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
@@ -545,21 +545,21 @@ contains
 
     integer :: i,j,k
     real :: Gamma
-    !-------------------------------------------------------------------
+    !------------------------------------------------------------------------
 
     IsFound=.true.
 
     select case(NameVar)
     case('g0')
        do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
-          call get_gamma_emp(x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock), &
+          call my_gamma_emp(x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock), &
                z_BLK(i,j,k,iBlock),Gamma)
 
           PlotVar_G(i,j,k) = Gamma
        end do; end do; end do
     case('g1')
        do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
-          call get_gamma_emp(x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock), &
+          call my_gamma_emp(x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock), &
                z_BLK(i,j,k,iBlock),Gamma)
           call correct_gamma(i,j,k,iBlock,Gamma)
 
@@ -571,5 +571,52 @@ contains
     PlotVarBody=1.0
 
   end subroutine user_set_plot_var
+
+  !==========================================================================
+  subroutine my_gamma_emp(xx,yy,zz,gammaOut)
+
+    ! Subroutine my_gamma_emp
+    ! Provides the distribution of the polytropic index, complying with
+    ! the WSA or Fisk semi-empirical models
+
+    use ModExpansionFactors
+    use ModNumConst
+    implicit none
+
+    real, intent(in) :: xx,yy,zz
+    real, intent(out)   :: gammaOut 
+    real :: RR,Uf,BernoulliFactor
+    real, parameter :: gammaIH=1.5
+    real, parameter :: R1=2.50,R2=12.50
+    integer,parameter::nPowerIndex=2
+    !------------------------------------------------------------------------
+    !\
+    ! Calculate cell-centered spherical coordinates::
+    RR   = sqrt(xx**2+yy**2+zz**2)
+    !\
+    ! Avoid calculating inside a critical radius = 0.5*Rsun
+    !/
+    if (RR <max(Ro_PFSSM-dR*nRExt,0.90*Ro_PFSSM)) then 
+       gammaOut= gammaSS
+       RETURN
+    end if
+
+    ! Calculate gamma
+    if(RR >= R2)then
+       gammaOut=gammaIH
+    else if(RR >= R1)then
+       gammaOut=gammaSS+(RR-R1)*(gammaIH-gammaSS)/(R2-R1)
+    else
+       call get_bernoulli_integral(xx,yy,zz,Uf)
+       BernoulliFactor=(cHalf*Uf**2+cSunGravitySI)/&
+            (T0*cBoltzmann/cProtonMass)&
+            *(R1-RR)*&
+            & (Ro_PFSSM/RR)**nPowerIndex/ (R1-Ro_PFSSM)+ GammaSS&
+            &/(GammaSS-cOne)*(cOne- (R1-RR)*(Ro_PFSSM/RR)&
+            &**nPowerIndex/ (R1-Ro_PFSSM))
+       gammaOut = BernoulliFactor/(BernoulliFactor-cOne)
+    end if
+
+  end subroutine my_gamma_emp
 
 end module ModUser
