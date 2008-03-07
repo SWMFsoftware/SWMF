@@ -74,13 +74,6 @@ end subroutine ionosphere
 !
 !*************************************************************************
 
-!-------------------------------------------------------------------------
-! ionosphere_fine_grid
-!
-!
-!
-!-------------------------------------------------------------------------
-
 subroutine ionosphere_fine_grid
   !\
   ! This routine sets the fine grid meshes for the
@@ -227,12 +220,7 @@ subroutine ionosphere_fine_grid
 
 end subroutine ionosphere_fine_grid
 
-!-------------------------------------------------------------------------
-! ionosphere_init
-!
-!
-!
-!-------------------------------------------------------------------------
+!=============================================================================
 
 subroutine ionosphere_init
   !\
@@ -273,6 +261,15 @@ subroutine ionosphere_init
 
   IONO_NORTH_TGCM_JR = 0.00                                !^CFG IF TIEGCM
   IONO_SOUTH_TGCM_JR = 0.00                                !^CFG IF TIEGCM
+
+  SAVE_NORTH_SigmaH = 0.00
+  SAVE_SOUTH_SigmaH = 0.00
+
+  IONO_NORTH_EFlux = 0.00
+  IONO_SOUTH_EFlux = 0.00
+
+  IONO_NORTH_Ave_E = 0.00
+  IONO_SOUTH_Ave_E = 0.00
 
 end subroutine ionosphere_init
 
