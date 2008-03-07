@@ -107,10 +107,8 @@ subroutine ionosphere_solver(iBlock, Jr, &
   call timing_start('iono_solve')
   if(DoTest)write(*,*)'iono_solve starting'
 
-  if(DoTest)write(*,*)'North=',north
+  if(DoTest)write(*,*)'North, LatBoundaryGm=',north,LatBoundaryGm
 
-
-  write(*,*) "LatBoundary in solver : ", LatBoundaryGm
   if (.not. DoCoupleUaCurrent) LatBoundary = LatBoundaryGm - 5.1 * cDegToRad
 
   ! Count the points above the latitude boundary
@@ -134,6 +132,7 @@ subroutine ionosphere_solver(iBlock, Jr, &
   SinTheta_I = sin(Theta(:,1))
   CosTheta_I = cos(Theta(:,1))
 
+  if(DoTest) write(*,*) 'iono_solver: iMin, iMax=',iMin, iMax
   if(DoTest .and. north) &
        write(*,*)'north:nThetaUsed, LatBoundary, Lat(iMax)=',&
        nThetaUsed,LatBoundary*cRadToDeg,&
@@ -147,8 +146,6 @@ subroutine ionosphere_solver(iBlock, Jr, &
 
   allocate( x(nX), y(nX), rhs(nX), b(nX), &
        d_I(nX), e_I(nX), e1_I(nX), f_I(nX), f1_I(nX) )
-
-  write(*,*) 'solver : ',iMin, iMax, LatBoundary*cRadToDeg, LatBoundaryGm
 
   do j = 1, nPsiUsed
      do i= iMin, iMax

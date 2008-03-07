@@ -26,7 +26,7 @@ subroutine IE_solve
 
   do iBlock = 1, 2
 
-write(*,*) 'iblock',iblock
+     if(DoTest)write(*,*) 'iblock',iblock
 
      select case(iBlock)
      case(1) ! Northern hemisphere

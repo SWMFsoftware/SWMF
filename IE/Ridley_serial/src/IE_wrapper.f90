@@ -582,7 +582,7 @@ subroutine IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar)
 
   if (iProc == 0) then
      LatBoundaryGm = Buffer_IIV(IONO_nTheta,1,1)
-     write(*,*) "LatBoundary : ",LatBoundaryGm*180.0/3.1415926
+     if(DoTest)write(*,*) "LatBoundary : ",LatBoundaryGm*180.0/3.1415926
      Iono_North_Jr = Buffer_IIV(1:IONO_nTheta,:,1)
      Iono_North_Jr(IONO_nTheta-1:IONO_nTheta,1) = 0.0
      if(nVar>1)then
@@ -594,7 +594,7 @@ subroutine IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar)
   endif
   if (iProc == nProc-1) then
      LatBoundaryGm = Buffer_IIV(IONO_nTheta,1,1)
-     write(*,*) "LatBoundary2 : ",LatBoundaryGm*180.0/3.1415926
+     if(DoTest)write(*,*) "LatBoundary2 : ",LatBoundaryGm*180.0/3.1415926
      Iono_South_Jr = Buffer_IIV(IONO_nTheta:2*IONO_nTheta-1,:,1)
      Iono_South_Jr(1:2,1) = 0.0
      if(nVar>1)then
@@ -604,27 +604,26 @@ subroutine IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar)
         if(DoTest) call write_dataS
      end if
   endif
-     
-  write(*,*) "LatBoundary end of ie_put_from_gm : ", LatBoundaryGm
 
   if(DoTest)write(*,*)NameSub,' finished'
 
   contains
 
-    !============================================================================
+    !=========================================================================
     !write values to North plot file
     subroutine write_dataN
       use ModIoUnit, ONLY: UNITTMP_
       CHARACTER (LEN=80) :: filename
       integer :: i,j
       integer, save :: nCall=0
-      !-------------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       nCall=nCall+1
       write(filename,'(a,i5.5,a)')"gm2ie_debugN_",nCall,".dat"
       OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown')
       write(UNITTMP_,'(a)') 'TITLE="gm2ie debugN values"'
-      write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Theta", "Psi", "JR", "1/B", "rho", "p"'
+      write(UNITTMP_,'(a)') &
+           'VARIABLES="J", "I", "Theta", "Psi", "JR", "1/B", "rho", "p"'
       write(UNITTMP_,'(a,i3.3,a,i4,a,i4,a)') &
            'ZONE T="PE=',iProc,'", I=',jsize,', J=',isize,', K=1, F=POINT'
       do i=1,isize; do j=1,jsize
@@ -1031,7 +1030,7 @@ subroutine IE_init_session(iSession, tSimulation)
 
   IONO_Bdp = IONO_Bdp*1.0e9 ! Tesla -> nT
 
-  write(*,*)NameSub,': IONO_Bdp, ThetaTilt =',IONO_Bdp,ThetaTilt
+  if(DoTest)write(*,*)NameSub,': IONO_Bdp, ThetaTilt =',IONO_Bdp,ThetaTilt
 
   ! Reset t_output_last in case the plotting frequency has changed
   if(time_accurate)then
@@ -1152,26 +1151,26 @@ subroutine IE_run(tSimulation,tSimulationLimit)
 
   nSolve = nSolve + 1
 
-  write(*,*) 'solve'
+  if(DoTest)write(*,*) 'solve'
 
   ! Solve for the ionosphere potential
   call IE_solve
 
-  write(*,*) 'done with solve'
+  if(DoTest)write(*,*) 'done with solve'
 
   ! Save solution (plot files) into file if required
   call IE_output
 
-  write(*,*) 'done with output'
+  if(DoTest)write(*,*) 'done with output'
 
   call IE_gather
 
-  write(*,*) 'gather done'
+  if(DoTest)write(*,*) 'gather done'
 
   ! Save logfile if required
   call IE_save_logfile
 
-  write(*,*) 'done with IE_run'
+  if(DoTest)write(*,*) 'done with IE_run'
 
 end subroutine IE_run
 
