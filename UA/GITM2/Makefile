@@ -146,7 +146,7 @@ test_mars_run:
 test_mars_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/UA/data/log00000002.dat \
-		srcData/log00000002.dat.Mars > test_mars.diff)
+		srcData/log00000002.dat.Mars >& test_mars.diff)
 	ls -l test_mars.diff
 
 dist:
