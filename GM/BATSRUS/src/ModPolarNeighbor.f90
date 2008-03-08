@@ -233,28 +233,28 @@ contains
        if(proc_dims(3)==1.and.OctreeBlk%ptr%LEV==0)call stop_mpi(&
             'Can not check pole: the block covers both hemispheres')
 
-       !idir = 1+ (iz+1) + 3*(iy+1) + 9*(ix+1)
-       !for        iz=-1      iy=0       ix=0   iDir=13
+       !for        iz=-1      iy=0       ix=0
 
-       call findTreeNeighbor(OctreeBlk,BlkAux,13,IsPole)
+       call find_tree_neighbor(OctreeBlk,BlkAux,0,0,-1,IsPole)
        if(IsPole)then
           iDir=3; iLoop=-1; return
        end if
 
-       !idir = 1+ (iz+1) + 3*(iy+1) + 9*(ix+1)
-       !for        iz=+1      iy=0       ix=0   iDir=15
+       !for        iz=+1      iy=0       ix=0  
 
-       call findTreeNeighbor(OctreeBlk,BlkAux,15,IsPole)   
+       call find_tree_neighbor(OctreeBlk,BlkAux,0,0,+1,IsPole)   
        if(IsPole)then
           iDir=3; iLoop=+1; return
        end if
     elseif(index(TypeGeometry,'cylindrical')>0.or.&
          index(TypeGeometry,'axial')>0)then
-       !idir = 1+ (iz+1) + 3*(iy+1) + 9*(ix+1)
-       !for        iz=0       iy=0       ix=-1   iDir=5
 
-       call findTreeNeighbor(OctreeBlk,BlkAux,5,IsPole)   
-       if(IsPole)iDir=1; iLoop=-1; return
+       !for        iz=0       iy=0       ix=-1
+
+       call find_tree_neighbor(OctreeBlk,BlkAux,-1,0,0,IsPole)   
+       if(IsPole)then
+          iDir=1; iLoop=-1 ;return
+       end if
     else
        call stop_mpi('Failed check_pole_inside_octreeblk')
     end if
