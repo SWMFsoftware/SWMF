@@ -57,7 +57,8 @@ subroutine read_conductance_model(iOutputError)
         enddo
      enddo
      halar(longmx,:,:) = halar(0,:,:)
-     halar = scale * halar
+
+     halar(0:30,0:latmx,1:ndx) = scale * halar(0:30,0:latmx,1:ndx)
 
      if (iDebugLevel > 2) write(*,*) "===> Ped"
      read (iunit,*) char80
@@ -68,7 +69,7 @@ subroutine read_conductance_model(iOutputError)
         enddo
      enddo
      pedar(longmx,:,:) = pedar(0,:,:)
-     pedar = scale * pedar
+     pedar(0:30,0:latmx,1:ndx) = scale * pedar(0:30,0:latmx,1:ndx)
 
      if (iDebugLevel > 2) write(*,*) "===> AveE"
      read (iunit,*) char80
@@ -83,7 +84,7 @@ subroutine read_conductance_model(iOutputError)
         enddo
      enddo
      avkar(longmx,:,:) = avkar(0,:,:)
-     avkar = scale * avkar
+     avkar(0:30,0:latmx,1:ndx) = scale * avkar(0:30,0:latmx,1:ndx)
 
      if (iDebugLevel > 2) write(*,*) "===> TotE"
      read (iunit,*) char80
@@ -106,7 +107,7 @@ subroutine read_conductance_model(iOutputError)
 !        endif
      enddo
      efxar(longmx,:,:) = efxar(0,:,:)
-     efxar = scale * efxar
+     efxar(0:30,0:latmx,1:ndx) = scale * efxar(0:30,0:latmx,1:ndx)
 
      close(iunit)
 
