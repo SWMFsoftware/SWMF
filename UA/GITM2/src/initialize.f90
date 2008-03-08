@@ -242,6 +242,7 @@ subroutine initialize_gitm(TimeIn)
 
   if (.not. DoRestart) then
 
+     Potential = 0.0
      Velocity = 0.0
      IVelocity = 0.0
      VerticalVelocity = 0.0
