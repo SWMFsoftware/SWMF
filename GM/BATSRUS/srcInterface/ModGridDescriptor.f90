@@ -2,6 +2,7 @@
 Module MH_domain_decomposition
   use CON_grid_storage
   use ModOctree,ONLY:adaptive_block_ptr,adaptive_block,iChildOrder_II
+  use ModCube,ONLY:iShiftChild_DI
   implicit none
   logical::UseMHGridDescriptor=.true. 
   integer,private::iLastGrid=-1,iLastDecomposition=-1
@@ -11,19 +12,6 @@ Module MH_domain_decomposition
        LEV_         =6,&
        LEVmin_      =7,&
        LEVmax_      =8
-
-  
-  integer,parameter,dimension(3,8)::iShift3_DI= reshape(&
-                                      !Coords /  1,2,3   /Children 
-                                               (/0,0,1,&!1
-                                                 1,0,1,&!2
-                                                 1,0,0,&!3
-                                                 0,0,0,&!4
-                                                 0,1,0,&!5
-                                                 1,1,0,&!6
-                                                 1,1,1,&!7
-                                                 0,1,1/),&!8
-                                                 (/3,8/))
   type(DomainDecompositionType),save::MH_DomainDecomposition
   interface MH_get_root_decomposition
      module procedure MH_get_roots_id
@@ -126,7 +114,7 @@ contains
          XyzMax_D,&   !As in DomainDecompositionType
          nCells,&     !As in DomainDecompositionType
          IsPeriodic_D=periodic3d,& 
-         iShift_DI=iShift3_DI)       !As in DomainDecompositionType
+         iShift_DI=iShiftChild_DI)       !As in DomainDecompositionType
   end subroutine MH_get_roots_dd                                             
 !----------------------------------------------------------------------------!
   subroutine MH_get_roots_id(GridID_)                         
@@ -141,7 +129,7 @@ contains
          XyzMax_D,&   !As in DomainDecompositionType
          nCells,&     !As in DomainDecompositionType
          IsPeriodic_D=periodic3d,& 
-         iShift_DI=iShift3_DI)       !As in DomainDecompositionType
+         iShift_DI=iShiftChild_DI)       !As in DomainDecompositionType
   end subroutine MH_get_roots_id
 !----------------------------------------------------------------------------!
   !==========================================================================!

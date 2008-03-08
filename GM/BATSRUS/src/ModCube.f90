@@ -4,7 +4,6 @@
 module ModCube
   use ModSize
   implicit none
-  Private
   integer,parameter,dimension(3)::nCell2_D=(/nI/2,nJ/2,nK/2/)
  !/////////////////////////////////////////////////////////////////////////////
   !
@@ -24,20 +23,28 @@ module ModCube
   !
   !  Point 4 is:  -x, -y, -z, East, South, Bottom
   !=================================================================================!
-
-  !The shift of the child corner with respect to the parent corner
-  integer, parameter, dimension(8,3):: iShiftChild_ID = reshape(&
-       !1    2     3     4    5     6     7     8        child index
-       (/0,  nI/2, nI/2, 0,   0,    nI/2, nI/2, 0,     & !i shift
-       0,    0,    0,    0,   nJ/2, nJ/2, nJ/2, nJ/2,  & !j shift
-       nK/2, nK/2, 0,    0,   0,    0,    nK/2, nK/2/),& !k shift
-       (/8,3/))
+  !\
+  ! The above drawing is entirely described by two arrays as follows.
+  !/ 
+  !The vector of a shift of the child corner with respect to the parent corner
+  !expressed in terms of the size of the child, as a function of the child number:
+  integer,parameter,dimension(3,8)::iShiftChild_DI= reshape(&
+                                      !Coords /  1,2,3    /Children 
+                                               (/0,0,1,&  !1
+                                                 1,0,1,&  !2
+                                                 1,0,0,&  !3
+                                                 0,0,0,&  !4
+                                                 0,1,0,&  !5
+                                                 1,1,0,&  !6
+                                                 1,1,1,&  !7
+                                                 0,1,1/),&!8
+                                                 (/3,8/))
+  !The inverse mapping, which allows us to find a child number for a given shift vector, 
+  !(iX,iY,iZ), each of the component being equal to 0 or 1 is provided by the following 
+  !linear array
   integer,dimension(8),parameter::iBin2Child_I=(/4,1,5,8,3,2,6,7/)
-  public::is_not_at_face         !iDirC2F_D,Child=>is_not_at_face
-  public::set_indices            !iDirC2F_D=>cell indices for send/receive
-  !-----------------------------------------------------------------------!
-  public::iShiftChild_ID
-  public::get_children_list
+  !To apply it, the shift vector should be converted to a binary 3-digit number (iX|iY|iZ)
+  !which should be converted then to decimal: iChild=iBin2Child_I(4*iX+2*iY+iZ+1)
 contains
   !==============================================================!
   !==============================================================!
@@ -66,8 +73,8 @@ contains
             min(0,iDirC2F_D(3)))
     iChild1=iBin2Child_I(iBin)
     is_not_at_face=any(iDirC2F_D/=0.and.&
-         iShiftChild_ID(iChild,:)- &
-         iShiftChild_ID(iChild1,:)/=0)
+         iShiftChild_DI(:,iChild)- &
+         iShiftChild_DI(:,iChild1)/=0)
   end function is_not_at_face
   !==============================================================
   !==============================================================!
@@ -120,11 +127,11 @@ contains
                2*min(0,iDirS2R_D(2))+&
                min(0,iDirS2R_D(3)))
           iChild1Here=iBin2Child_I(iBin)
-          iShift_D=iShiftChild_ID(iChild,:)-&
-               iShiftChild_ID(iChild1Here,:)
+          iShift_D=(iShiftChild_DI(:,iChild)-&
+               iShiftChild_DI(:,iChild1Here))*nCell2_D
        else
-          iShift_D=iShiftChild_ID(iChild,:)-&
-               iShiftChild_ID(iChild1,:)
+          iShift_D=(iShiftChild_DI(:,iChild)-&
+               iShiftChild_DI(:,iChild1))*nCell2_D
        end if
        if(.not.present(nExtraCell))then
           where(iDirS2R_D==0)
@@ -154,11 +161,11 @@ contains
                2*min(0,-iDirS2R_D(2))+&
                  min(0,-iDirS2R_D(3)))
           iChild1Here=iBin2Child_I(iBin)
-          iShift_D=iShiftChild_ID(iChild,:)-&
-               iShiftChild_ID(iChild1Here,:)
+          iShift_D=(iShiftChild_DI(:,iChild)-&
+               iShiftChild_DI(:,iChild1Here))*nCell2_D
        else
-          iShift_D=iShiftChild_ID(iChild,:)-&
-               iShiftChild_ID(iChild1,:)
+          iShift_D=(iShiftChild_DI(:,iChild)-&
+               iShiftChild_DI(:,iChild1))*nCell2_D
        end if
        where(iDirS2R_D==0)
           iMinS_D=1             
@@ -199,6 +206,8 @@ contains
     end do
     if(.not.(iZ**2==1.and.iX**2+iY**2==0))return
     !consider separatelely  Top_ or Bot_ face
+    !This deviation from the "natural" order of indexes in this case
+    !presumably occured while passing to 3D code from 2D one many years ago
     iChild2=iChildren_I(2)
     iChildren_I(2)=iChildren_I(3)
     iChildren_I(3)=iChild2

@@ -1,13 +1,13 @@
 !^CFG COPYRIGHT UM
 subroutine get_shifts(iCube,iShift,jShift,kShift)
-  use ModAMR, ONLY: iShiftChild_ID
+  use ModCube, ONLY: iShiftChild_DI,nCell2_D
   implicit none
   integer,intent(in) :: iCube
   integer,intent(out):: iShift, jShift, kShift
 
-  iShift = iShiftChild_ID(iCube,1)
-  jShift = iShiftChild_ID(iCube,2)
-  kShift = iShiftChild_ID(iCube,3)
+  iShift = iShiftChild_DI(1,iCube)*nCell2_D(1)
+  jShift = iShiftChild_DI(2,iCube)*nCell2_D(2)
+  kShift = iShiftChild_DI(3,iCube)*nCell2_D(3)
 
 end subroutine get_shifts
 
@@ -388,7 +388,7 @@ subroutine set_refined_block_geometry
   use ModProcMH
   use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,dxyz,xyzStart,xyzStart_BLK
   use ModNumConst
-  use ModAMR, ONLY: local_cube,local_cubeBLK,iShiftChild_ID 
+  use ModAMR, ONLY: local_cube,local_cubeBLK,iShiftChild_DI,nCell2_D 
   implicit none
 
   integer :: iPE,iBLK
@@ -407,8 +407,8 @@ subroutine set_refined_block_geometry
      !\
      ! Set refined block corner offsets.
      !/
-     xyzStart_BLK(:,iBLK) = xyzStart(:) &
-          + (iShiftChild_ID(iPE,:) - cQuarter)*dxyz(:)
+     XyzStart_BLK(:,iBLK) = XyzStart(:) &
+          + (iShiftChild_DI(:,iPE)*nCell2_D - cQuarter)*DXyz(:)
      !\
      ! Assign refined block geometry parameters.
      !/
@@ -706,7 +706,7 @@ end subroutine create_coarse_soln_block
 subroutine set_coarse_block_geometry(iBLK)
   use ModNumConst
   use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,dxyz,xyzStart_BLK
-  use ModAMR, ONLY: iShiftChild_ID
+  use ModAMR, ONLY: iShiftChild_DI,nCell2_D
   implicit none
 
   integer, intent(in) :: iBLK
@@ -715,8 +715,8 @@ subroutine set_coarse_block_geometry(iBLK)
 
   ! Former the first child becomes the coarse block. Now his coordinates
   ! are in xyzStart_BLK(:,iBLK)
-  xyzStart_BLK(:,iBLK)=xyzStart_BLK(:,iBLK)-&
-       (iShiftChild_ID(1,:) - cQuarter)*dxyz(:)
+  XyzStart_BLK(:,iBLK)=XyzStart_BLK(:,iBLK)-&
+       (iShiftChild_DI(:,1)*nCell2_D - cQuarter)*DXyz(:)
 
   !\
   ! Set dx, dy, and dz for the new coarsened block.
