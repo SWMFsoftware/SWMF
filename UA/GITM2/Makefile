@@ -45,7 +45,7 @@ LIB:
 
 nompirun:
 	make GITM
-	cd run; ./GITM.exe
+	cd ${RUNDIR}; ./GITM.exe
 
 clean:
 	@touch ${INSTALLFILES}
