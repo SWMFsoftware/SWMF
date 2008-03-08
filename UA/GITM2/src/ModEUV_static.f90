@@ -18,7 +18,7 @@ module ModEUV
        Chapman
 
   real, dimension(nLons, nLats,nBlocksMax) :: &
-       Sza, cosSza, sinSza, sqrtsinSza, AveCosSza
+       Sza, cosSza, sinSza, AveCosSza
 
   real :: SunOrbitEccentricity
 
