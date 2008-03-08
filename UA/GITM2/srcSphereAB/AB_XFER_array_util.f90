@@ -36,7 +36,7 @@ contains
       logical, intent(in) :: pole
       integer, intent(inout) :: p
       real, dimension(1-gcn:,1-gcn:,1:), intent(in) :: v_in  
-      real, dimension(:),intent(out) :: out_array
+      real, dimension(:),intent(inout) :: out_array
       integer :: i,j,a
 
       select case(dir)
@@ -246,7 +246,6 @@ contains
                enddo
             enddo
 
-
          case(ab_northeast)
             do a=1,alt
                do i=lat+1,lat+gcn
@@ -314,7 +313,7 @@ contains
       logical, intent(in) :: pole
       integer, intent(inout) :: p
       real, dimension(1-gcn:,1-gcn:,1:,1:), intent(in) :: v_in  
-      real, dimension(:),intent(out) :: out_array
+      real, dimension(:),intent(inout) :: out_array
       integer :: i,j,a,e
 
       select case(dir)
