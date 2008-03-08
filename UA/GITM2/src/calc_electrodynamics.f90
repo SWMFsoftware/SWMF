@@ -222,19 +222,21 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   endif
 
-  do i=1,nMagLons+1
-     do j=1,nMagLats
+  if(UseApex .and. IsEarth) then
 
-        call magloctm(MagLonMC(i,j),SubsolarLatitude,   &
-             SubsolarLongitude,  &
-             MagneticPoleColat, &
-             MagneticPoleLon,mltMC)
+     do i=1,nMagLons+1
+        do j=1,nMagLats
 
-        MagLocTimeMC(i,j) = mod(mltMC+24.0,24.0)
+           call magloctm(MagLonMC(i,j),SubsolarLatitude,   &
+                SubsolarLongitude,  &
+                MagneticPoleColat, &
+                MagneticPoleLon,mltMC)
 
+           MagLocTimeMC(i,j) = mod(mltMC+24.0,24.0)
+
+        enddo
      enddo
-  enddo
-
+  end if
 
   if (.not. UseDynamo .or. Is1D) return
 
