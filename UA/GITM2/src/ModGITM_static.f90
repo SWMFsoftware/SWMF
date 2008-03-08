@@ -6,7 +6,7 @@ module ModGITM
 
   implicit none
 
-  real :: dt
+  real :: dt = 0.0
 
   integer :: iCommGITM, iProc, nProcs
 
