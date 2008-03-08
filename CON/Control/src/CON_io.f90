@@ -501,7 +501,7 @@ contains
           end if
 
        case('#PLANET','#MOON','#COMET', &
-            '#IDEALAXES','#ROTATIONAXIS','#MAGNETICAXIS',&
+            '#IDEALAXES','#ROTATIONAXIS','#MAGNETICAXIS','#MAGNETICCENTER',&
             '#ROTATION','#NONDIPOLE','#DIPOLE','#UPDATEB0')
           if(.not.is_first_read())then
              if(UseStrict)RETURN

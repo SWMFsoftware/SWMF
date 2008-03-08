@@ -1765,7 +1765,8 @@ subroutine MH_set_parameters(TypeAction)
         !                                           ^CFG END SECONDBODY
 
      case('#PLANET','#MOON','#COMET','#IDEALAXES','#ROTATIONAXIS',&
-          '#MAGNETICAXIS','#ROTATION','#DIPOLE','#NONDIPOLE','#UPDATEB0')
+          '#MAGNETICAXIS','#MAGNETICCENTER','#ROTATION','#DIPOLE', &
+          '#NONDIPOLE','#UPDATEB0')
 
         call check_stand_alone
         if(.not.is_first_session())CYCLE READPARAM
