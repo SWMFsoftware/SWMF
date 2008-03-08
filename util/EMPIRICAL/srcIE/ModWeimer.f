@@ -1550,6 +1550,8 @@ CNCAR
 	      DO n=0,MaxN
 	        IF(n.LT.1)THEN
 	          ilimit=0
+* in n=0 case the FSC(1,0) element was never set but used in FSVAL
+                  FSC(1,0)=0.0
 	        ELSE
 	          ilimit=1
 	        ENDIF
