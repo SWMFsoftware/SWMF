@@ -112,7 +112,7 @@ subroutine aurora(iBlock)
 
               endif
 
-              write(*,*) "aurora : ",k,IsTop, AuroralBulkIonRate(j,i,k)
+              ! write(*,*) "aurora : ",k,IsTop, AuroralBulkIonRate(j,i,k)
 
            enddo
 
