@@ -273,6 +273,8 @@ subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
         Phi_G( j,1:iSize) = Grid_C(IE_) % Coord2_I(j)
      end do
 
+     ! This has to be initialized (will be replaced below)
+     Potential_G = 0.0 
      call PW_get_electrodynamics
      call initial_line_location
   end if
@@ -298,6 +300,7 @@ subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
      end select
 
   end do
+
   if(.not.IsPotFound .or. .not.IsJrFound)then
      write(*,*)NameSub,': Name_V=',Name_V
      call CON_stop(NameSub//' could not find Pot or Jr')
