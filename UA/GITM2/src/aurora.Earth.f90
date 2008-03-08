@@ -62,6 +62,8 @@ subroutine aurora(iBlock)
 
            a= sqrt(27.0/(2.0*3.14159)) * eflux /(avee**2.5)
 
+           ED_flux(ED_N_energies) = 0.0 !!! But why ???
+           
            do n=1,ED_N_Energies-1
               ED_flux(n) = &
                    a*sqrt(ed_energies(n))*exp(-1.5*ed_energies(n)/avee)/pi
