@@ -109,17 +109,13 @@ subroutine calc_physics(iBlock)
      enddo
   enddo
 
-  cosSZA = cos(SZA)
-  sinSZA = sin(SZA)
-  sqrtsinSZA = sqrt(abs(sinSZA))
-
   call calc_scaled_euv
 
   do iAlt = 1, nAlts
      xSolar(:,:,iAlt) = RadialDistance_GB(1:nLons,1:nLats,iAlt,iBlock) &
-          * cosSZA(:,:,iBlock)
+          * cos(SZA(:,:,iBlock))
      ySolar(:,:,iAlt) = RadialDistance_GB(1:nLons,1:nLats,iAlt,iBlock) &
-          * sinSZA(:,:,iBlock)
+          * sin(SZA(:,:,iBlock))
   enddo
 
 end subroutine calc_physics

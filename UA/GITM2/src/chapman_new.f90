@@ -69,7 +69,7 @@ subroutine chapman_integrals(iBlock)
               xp(iLon,iLat,iAlt,iSpecies) = &
                    sqrt(0.5 * pi * &
                    RadialDistance_GB(iLon, iLat, iAlt, iBlock) / ScaleHeightS)
-              y = xp(iLon,iLat,iAlt,iSpecies) * abs(cosSZA(iLon,iLat,iBlock))
+              y = xp(iLon,iLat,iAlt,iSpecies) * abs(cos(SZA(iLon,iLat,iBlock)))
               if (y < 8) then
                  erfcy(iLon,iLat,iAlt,iSpecies) = (a+b*y) / (c+d*y+y**2)
               else
