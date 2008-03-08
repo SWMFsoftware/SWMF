@@ -144,7 +144,7 @@ subroutine calc_GITM_sources(iBlock)
 
      Conduction = Conduction/TempUnit(1:nLons, 1:nLats,1:nAlts)
 
- else
+  else
      Conduction = 0.0
   end if
 
@@ -154,16 +154,16 @@ subroutine calc_GITM_sources(iBlock)
 
   if (iDebugLevel > 4) write(*,*) "=====> diffusion ", iproc
 
-!!---------------------------------------------
-!! Yue's method
-!!---------------------------------------------
+  !!---------------------------------------------
+  !! Yue's method
+  !!---------------------------------------------
 
   if (UseDiffusion)then
 
      call calc_eddy_diffusion_coefficient(iBlock)
 
      if (.not.UseEddyInSolver) then
-             
+
         LogNum(:,:,:) = log(NDensity(:,:,:,iblock))
         do iSpecies = 1, nSpecies
            do iAlt = 0, nAlts+1
@@ -204,7 +204,7 @@ subroutine calc_GITM_sources(iBlock)
 
   else
      Diffusion = 0.0
-  endif 
+  endif
 
 
   !\
@@ -232,9 +232,9 @@ subroutine calc_GITM_sources(iBlock)
              RhoI / &
              (Mass(iSpecies) * &
              NDensityS(1:nLons,1:nLats,1:nAlts,iSpecies,iBlock)) * &
-            (NDensityS(1:nLons,1:nLats,1:nAlts,iSpecies,iBlock) / &
+             (NDensityS(1:nLons,1:nLats,1:nAlts,iSpecies,iBlock) / &
              NDensity(1:nLons,1:nLats,1:nAlts,iBlock))
-             
+
         VerticalIonDrag(:,:,:,iSpecies) = tmp2 * &
              (IVelocity(1:nLons,1:nLats,1:nAlts,iUp_,iBlock) - &
              VerticalVelocity(1:nLons,1:nLats,1:nAlts,iSpecies,iBlock))
@@ -289,18 +289,21 @@ subroutine calc_GITM_sources(iBlock)
 
   if (iDebugLevel > 4) write(*,*) "=====> conduction", iproc
 
- if(UseViscosity)then
-    call calc_conduction(iBlock, &
-         Velocity(1:nLons, 1:nLats,-1:nAlts+2, iNorth_, iBlock), &
-         ViscCoef(1:nLons, 1:nLats,0:nAlts+1), &
-         Rho(1:nLons, 1:nLats,1:nAlts, iBlock), &
-         Viscosity(1:nLons, 1:nLats,1:nAlts, iNorth_))
-    call calc_conduction(iBlock, &
-         Velocity(1:nLons, 1:nLats,-1:nAlts+2, iEast_, iBlock), &
-         ViscCoef(1:nLons, 1:nLats,0:nAlts+1), &
-         Rho(1:nLons, 1:nLats,1:nAlts, iBlock), &
-         Viscosity(1:nLons, 1:nLats,1:nAlts, iEast_))
-  
+  if(UseViscosity)then
+     call calc_conduction(iBlock, &
+          Velocity(1:nLons, 1:nLats,-1:nAlts+2, iNorth_, iBlock), &
+          ViscCoef(1:nLons, 1:nLats,0:nAlts+1), &
+          Rho(1:nLons, 1:nLats,1:nAlts, iBlock), &
+          Viscosity(1:nLons, 1:nLats,1:nAlts, iNorth_))
+
+     call calc_conduction(iBlock, &
+          Velocity(1:nLons, 1:nLats,-1:nAlts+2, iEast_, iBlock), &
+          ViscCoef(1:nLons, 1:nLats,0:nAlts+1), &
+          Rho(1:nLons, 1:nLats,1:nAlts, iBlock), &
+          Viscosity(1:nLons, 1:nLats,1:nAlts, iEast_))
+
+     Viscosity(:,:,:,iUp_) = 0.0
+
   else
      Viscosity = 0.0
   end if
@@ -333,6 +336,8 @@ subroutine calc_GITM_sources(iBlock)
   LowAtmosRadRate(:,:,:,iBlock) = 0.0
   call calc_planet_sources(iBlock)
 
+  ! The Emissions array was never set. Should this be here or earlier ????
+  Emissions(:,:,:,:,iBlock) = 0.0
   call calc_chemistry(iBlock)
 
   ChemicalHeatingRate(:,:,:) = &
