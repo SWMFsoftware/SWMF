@@ -107,7 +107,7 @@ subroutine treeNeighbor(inPE, inBLK, ix, iy, iz, &
   integer, intent(in) :: inPE,inBLK,ix,iy,iz
   integer, intent(out) :: outLEV
   integer, intent(out), dimension(4) :: outPE, outBLK, outCHILD
-  integer :: i,idir,iSubFace
+  integer :: i,iSubFace
   logical :: noNeighbor
   type (adaptive_block_ptr) :: inBlockPtr,outBlockPtr,tmpBlockPtr
 
@@ -122,20 +122,19 @@ subroutine treeNeighbor(inPE, inBLK, ix, iy, iz, &
   outBLK   = NOBLK
   outCHILD = NOBLK
 
-  idir = 1+ (iz+1) + 3*(iy+1) + 9*(ix+1)
   inBlockPtr%ptr => global_block_ptrs(inBLK,inPE+1)%ptr
   if (associated(inBlockPtr%ptr)) then ! ensure block is allocated
      !While applied near the pole the present subroutine is often called
      !with ix=0,  iy=0,  iz=0. To improve an efficiency, consider
      !this case now.
-     if(iDir==14)then !ix=0  iy=0  iz=0
+     if(iX*iX+iY*iY+iZ*iZ==0)then 
         OutChild(1)=InBlockPtr%ptr%child_number
         OutPe(1)=inPE
         OutBlk(1)=inBLK
         OutLev=0
         return
      end if
-     call findTreeNeighbor(inBlockPtr,outBlockPtr,idir,noNeighbor)
+     call find_tree_neighbor(inBlockPtr,outBlockPtr,iX,iY,iZ,noNeighbor)
      if (noNeighbor) then
         outLEV   = NOBLK
         outPE    = NOBLK
@@ -190,72 +189,247 @@ subroutine treeNeighbor(inPE, inBLK, ix, iy, iz, &
      write (*,*) 'ERROR: treeNeighbor: 1: not associated ',inPE,inBLK
      !     stop
   end if
-contains
-  subroutine get_children_list_obsolete(iX,iY,iZ,OutCHILD)
-    integer,intent(in)::iX,iY,iZ
-    integer,intent(out)::OutCHILD(4)
-    integer::iDirHere
-    outCHILD=NOBLK
-    idirHere = 1+ (iz+1) + 3*(iy+1) + 9*(ix+1)
-    select case (idirhere)
-    case (1)  ! -X -Y -Z    ESB
-       outCHILD(1) = 7 
-    case (2)  ! -X -Y       ES 
-       outCHILD(1:2) =(/ 6,7/)
-    case (3)  ! -X -Y +Z    EST
-       outCHILD(1) = 6
-    case (4)  ! -X    -Z    E B
-       outCHILD(1:2) =(/ 2,7/)
-    case (5)  ! -X          E  
-       outCHILD(1:4) =(/ 3,2,6,7/)
-    case (6)  ! -X    +Z    E T
-       outCHILD(1:2) =(/ 3,6/)
-    case (7)  ! -X +Y -Z    ENB
-       outCHILD(1) = 2
-    case (8)  ! -X +Y       EN
-       outCHILD(1:2) =(/ 3,2/)
-    case (9)  ! -X +Y +Z    ENT
-       outCHILD(1) = 3
-    case (10) !    -Y -Z     SB
-       outCHILD(1:2) =(/8,7/)
-    case (11) !    -Y        S 
-       outCHILD(1:4) =(/5,8,6,7/)
-    case (12) !    -Y +Z     ST
-       outCHILD(1:2) = (/5,6/)
-    case (13) !       -Z      B
-       outCHILD(1:4) =(/1,2,8,7/)
-    case (14) !         
-    case (15) !       +Z      T
-       outCHILD(1:4) =(/4,3,5,6/)
-    case (16) !    +Y -Z     NB
-       outCHILD(1:2) =(/1,2/)
-    case (17) !    +Y        N 
-       outCHILD(1:4) =(/4,1,3,2/)
-    case (18) !    +Y +Z     NT
-       outCHILD(1:2) =(/4,3/)
-    case (19) ! +X -Y -Z    WSB
-       outCHILD(1) = 8
-    case (20) ! +X -Y       WS 
-       outCHILD(1:2) = (/5,8/)
-    case (21) ! +X -Y +Z    WST
-       outCHILD(1) = 5
-    case (22) ! +X    -Z    W B 
-       outCHILD(1:2) = (/1,8/)
-    case (23) ! +X          W  
-       outCHILD(1:4) =(/4,1,5,8/)
-    case (24) ! +X    +Z    W T
-       outCHILD(1:2) =(/4,5/)
-    case (25) ! +X +Y -Z     WNB
-       outCHILD(1) = 1
-    case (26) ! +X +Y        WN 
-       outCHILD(1:2) = (/4,1/)
-    case (27) ! +X +Y +Z     WNT
-       outCHILD(1) = 4
-    end select
-  end subroutine get_children_list_obsolete
 end subroutine treeNeighbor
+!============================================================================!
+subroutine find_tree_neighbor(TreeNodeIn,TreeNodeOut,iX,iY,iZ,IsNoNeighbor)
+  use ModParallel, ONLY : proc_dims,periodic3D
+  use ModOctree
+  use ModCube
+  implicit none
 
-recursive subroutine findTreeNeighbor(inblkptr,outblkptr,idir,noNeighbor)
+  integer, intent(in) :: iX,iY,iZ
+  type (adaptive_block_ptr),intent(in)  ::TreeNodeIn 
+  type (adaptive_block_ptr),intent(out) ::TreeNodeOut
+  logical, intent(inout) :: IsNoNeighbor
+  !--------------------------------------------------------------------------!
+  integer::iDXyz,iBin,i,j,k
+  integer,dimension(3)::iXyzFromCorner_D,iRoot_D,iShift_D
+  
+  IsNoNeighbor=.false.
+
+  nullify(TreeNodeOut%ptr)
+
+  TreeNodeOut%ptr=>TreeNodeIn%ptr
+
+  if(iX*iX+iY*iY+iZ*iZ==0)return
+  
+  !Assume the In block size along each coordinate to be 2
+
+  iDXyz=2
+
+  !The center of the neighboring block CENTER with respect to
+  !the original block CORNER are
+  iXyzFromCorner_D = 1 + (/iX,iY,iZ/)*iDXyz
+  
+
+  !Descend and find a common predator
+  do while(TreeNodeOut%ptr%LEV>0)
+     iXyzFromCorner_D = iXyzFromCorner_D + &
+          iShiftChild_DI(:,TreeNodeOut%ptr%child_number)*iDXyz
+     iDXyz=iDXyz*2
+     TreeNodeOut%ptr=>TreeNodeOut%ptr%parent%ptr
+     if(maxval(iXyzFromCorner_D)<iDXyz.and.minval(iXyzFromCorner_D)>0)then
+        !Found common predator
+        call ascend_tree
+        return
+     end if
+  end do
+  
+  !Found root cell, find neighbor root cell
+  do i=1,proc_dims(1)
+     do j=1,proc_dims(2)
+        do k=1,proc_dims(3)
+           if (associated(TreeNodeOut%ptr,octree_roots(i,j,k)%ptr)) then
+              iRoot_D=(/i,j,k/)
+           end if
+        end do
+     end do
+  end do
+  !Pass to the neighboring tree, modify iXyzFromCorner_D accordingly
+  where(iXyzFromCorner_D<0)
+     iXyzFromCorner_D = iXyzFromCorner_D + iDXyz
+     iRoot_D          = iRoot_D          - 1
+  end where
+  where(iXyzFromCorner_D>iDXyz)
+     iXyzFromCorner_D = iXyzFromCorner_D - iDXyz
+     iRoot_D          = iRoot_D          + 1
+  end where
+  where (periodic3D.and.iRoot_D==0)iRoot_D=Proc_Dims
+  where (periodic3D.and.iRoot_D>Proc_Dims)iRoot_D=iRoot_D-Proc_Dims
+  if(any(iRoot_D==0.or.iRoot_D>Proc_Dims))then
+     IsNoNeighbor=.true.
+     return
+  end if
+  TreeNodeOut%ptr => octree_roots(iRoot_D(1),iRoot_D(2),iRoot_D(3))%ptr
+  call ascend_tree
+contains
+  subroutine ascend_tree
+    !Ascend and find block which contains the ppoint Xyz
+    do while(iDXyz>2)
+       if(.not.associated(TreeNodeOut%ptr%child(1)%ptr))EXIT
+       iDXyz=iDXyz/2
+       iShift_D=iXyzFromCorner_D/iDXyz
+       iXyzFromCorner_D=iXyzFromCorner_D-iShift_D*iDXyz
+       iBin = 4 * iShift_D(1) + 2 * iShift_D(2) + iShift_D(3) +1
+       TreeNodeOut%ptr=>TreeNodeOut%ptr%child(iBin2Child_I(iBin))%ptr
+    end do
+    if (.not. associated(TreeNodeOut%ptr)) then
+       write (*,*) 'ERROR: find_tree_neighbor: 1: not associated '
+       !           stop
+    end if
+  end subroutine ascend_tree
+end subroutine find_tree_neighbor
+!===========================================================================!
+subroutine fixRefinementLevels
+  use ModProcMH
+  use ModMain, ONLY : nBLK,lVerbose
+  use ModAMR, ONLY : refine_list
+  use ModGeometry,ONLY: is_axial_geometry                
+  use ModOctree
+  implicit none
+
+  integer :: i,j,k, idir, inPE,inBLK, iLEV1,iLEV2, iCount, maxLev, curLev
+  logical :: noNeighbor
+  type (adaptive_block_ptr) :: inBlockPtr,outBlockPtr,tmpBlockPtr
+
+  call set_body_flag
+  do
+     iCount = 0
+     refine_list = .false.
+     !find max level
+     maxLev=0
+     do inPE = 1,nProc
+        do inBLK = 1,nBLK
+           inBlockPtr%ptr => global_block_ptrs(inBLK,inPE)%ptr
+           if (associated(inBlockPtr%ptr)) &
+                maxLev = max(maxLev, inBlockPtr%ptr%LEV)
+        end do
+     end do
+     !loop from max level down to zero
+     do curLev = maxLev,1,-1
+        do inPE=1,nProc; do inBLK=1,nBLK
+           inBlockPtr%ptr => global_block_ptrs(inBLK,inPE)%ptr
+           if (associated(inBlockPtr%ptr)) then
+              if (inBlockPtr%ptr%LEV == curLev) then
+                 iLEV1 = inBlockPtr%ptr%LEV
+                 if (refine_list(inBlockPtr%ptr%BLK,inBlockPtr%ptr%PE+1)) &
+                      iLEV1 = iLEV1 + 1
+                 do i=-1,1; do j=-1,1; do k=-1,1
+                    call find_tree_neighbor(inBlockPtr,outBlockPtr,i,j,k,noNeighbor)
+                    if (.not. noNeighbor)then
+                       if(associated(outBlockPtr%ptr)) then
+                          if (.not. associated(outBlockPtr%ptr%child(1)%ptr)) then
+                             iLEV2 = outBlockPtr%ptr%LEV
+                             if (refine_list(outBlockPtr%ptr%BLK,outBlockPtr%ptr%PE+1)) &
+                                  iLEV2 = iLEV2 + 1
+                             if ( (iLEV1-iLEV2 > 1) .or. &
+                                  (iLEV1-iLEV2 > 0 .and. &
+                                  ((inBlockPtr%ptr%body .and. outBlockPtr%ptr%body)&
+                                  .or.(inBlockPtr%ptr%IsOuterBoundary .and. &    
+                                  outBlockPtr%ptr%IsOuterBoundary)&
+                                  .or.(inBlockPtr%ptr%IsExtraBoundaryOrPole .and.& 
+                                  outBlockPtr%ptr%IsExtraBoundaryOrPole &
+                                  .and.( (i==0.and.k==0).or.(.not.is_axial_geometry()))& 
+                                  )&          
+                                  ))) then
+                                refine_list(outBlockPtr%ptr%BLK,outBlockPtr%ptr%PE+1) = .true.
+                                iCount = iCount +1
+                             end if
+                          end if
+                       end if
+                    end if
+                 end do; end do; end do
+              end if
+           end if
+        end do; end do
+     end do
+     if (iCount == 0) EXIT
+     if (iProc == 0.and.lVerbose>0)&
+          write (*,*) '    FixRefinementLevels found ',iCount,' blocks to refine'
+     call parallel_refine
+     call set_body_flag
+  end do
+
+end subroutine fixRefinementLevels
+!=============================================================================!
+
+
+subroutine get_children_list_orig(iX,iY,iZ,OutCHILD)
+  use ModParallel,ONLY:NOBLK
+  implicit none
+  integer,intent(in)::iX,iY,iZ
+  integer,intent(out)::OutCHILD(4)
+  integer::iDirHere
+  outCHILD=NOBLK
+  idirHere = 1+ (iz+1) + 3*(iy+1) + 9*(ix+1)
+  select case (idirhere)
+  case (1)  ! -X -Y -Z    ESB
+     outCHILD(1) = 7 
+  case (2)  ! -X -Y       ES 
+     outCHILD(1:2) =(/ 6,7/)
+  case (3)  ! -X -Y +Z    EST
+     outCHILD(1) = 6
+  case (4)  ! -X    -Z    E B
+     outCHILD(1:2) =(/ 2,7/)
+  case (5)  ! -X          E  
+     outCHILD(1:4) =(/ 3,2,6,7/)
+  case (6)  ! -X    +Z    E T
+     outCHILD(1:2) =(/ 3,6/)
+  case (7)  ! -X +Y -Z    ENB
+     outCHILD(1) = 2
+  case (8)  ! -X +Y       EN
+     outCHILD(1:2) =(/ 3,2/)
+  case (9)  ! -X +Y +Z    ENT
+     outCHILD(1) = 3
+  case (10) !    -Y -Z     SB
+     outCHILD(1:2) =(/8,7/)
+  case (11) !    -Y        S 
+     outCHILD(1:4) =(/5,8,6,7/)
+  case (12) !    -Y +Z     ST
+     outCHILD(1:2) = (/5,6/)
+  case (13) !       -Z      B
+     outCHILD(1:4) =(/1,2,8,7/)
+  case (14) !         
+  case (15) !       +Z      T
+     outCHILD(1:4) =(/4,3,5,6/)
+  case (16) !    +Y -Z     NB
+     outCHILD(1:2) =(/1,2/)
+  case (17) !    +Y        N 
+     outCHILD(1:4) =(/4,1,3,2/)
+  case (18) !    +Y +Z     NT
+     outCHILD(1:2) =(/4,3/)
+  case (19) ! +X -Y -Z    WSB
+     outCHILD(1) = 8
+  case (20) ! +X -Y       WS 
+     outCHILD(1:2) = (/5,8/)
+  case (21) ! +X -Y +Z    WST
+     outCHILD(1) = 5
+  case (22) ! +X    -Z    W B 
+     outCHILD(1:2) = (/1,8/)
+  case (23) ! +X          W  
+     outCHILD(1:4) =(/4,1,5,8/)
+  case (24) ! +X    +Z    W T
+     outCHILD(1:2) =(/4,5/)
+  case (25) ! +X +Y -Z     WNB
+     outCHILD(1) = 1
+  case (26) ! +X +Y        WN 
+     outCHILD(1:2) = (/4,1/)
+  case (27) ! +X +Y +Z     WNT
+     outCHILD(1) = 4
+  end select
+end subroutine get_children_list_orig
+subroutine find_tree_neighbor_orig(inblkptr,outblkptr,iX,iY,iZ,noNeighbor)
+  use ModOctree
+  implicit none
+  integer,intent(in)::iX,iY,iZ
+  type (adaptive_block_ptr) :: inblkptr,outblkptr,tmp1blkptr
+  logical, intent(inout) :: noNeighbor
+  integer::iDir
+  iDir=9*(iX+1)+3*(iY+1)+(iZ+1)+1
+  call findTreeNeighbor_orig(inblkptr,outblkptr,idir,noNeighbor)
+end subroutine find_tree_neighbor_orig
+
+recursive subroutine findTreeNeighbor_orig(inblkptr,outblkptr,idir,noNeighbor)
   use ModParallel, ONLY : proc_dims,periodic3D
   use ModOctree
   implicit none
@@ -373,7 +547,7 @@ recursive subroutine findTreeNeighbor(inblkptr,outblkptr,idir,noNeighbor)
         idirDown = isDown(idir,inblkptr%ptr%child_number)
         tmp1blkptr%ptr => inblkptr%ptr%parent%ptr
         if (associated(tmp1blkptr%ptr)) then ! ensure block is allocated
-           call findTreeNeighbor(tmp1blkptr,tmp2blkptr,idirNext,noNeighbor)
+           call findTreeNeighbor_orig(tmp1blkptr,tmp2blkptr,idirNext,noNeighbor)
            if (.not. noNeighbor) then
               if (associated(tmp2blkptr%ptr)) then ! ensure block is allocated
                  select case (idirDown)
@@ -405,77 +579,5 @@ recursive subroutine findTreeNeighbor(inblkptr,outblkptr,idir,noNeighbor)
         end if
      end if
   end if
-end subroutine findTreeNeighbor
+end subroutine findTreeNeighbor_orig
 
-subroutine fixRefinementLevels
-  use ModProcMH
-  use ModMain, ONLY : nBLK,lVerbose
-  use ModAMR, ONLY : refine_list
-  use ModGeometry,ONLY: is_axial_geometry                
-  use ModOctree
-  implicit none
-
-  integer :: i,j,k, idir, inPE,inBLK, iLEV1,iLEV2, iCount, maxLev, curLev
-  logical :: noNeighbor
-  type (adaptive_block_ptr) :: inBlockPtr,outBlockPtr,tmpBlockPtr
-
-  call set_body_flag
-  do
-     iCount = 0
-     refine_list = .false.
-     !find max level
-     maxLev=0
-     do inPE = 1,nProc
-        do inBLK = 1,nBLK
-           inBlockPtr%ptr => global_block_ptrs(inBLK,inPE)%ptr
-           if (associated(inBlockPtr%ptr)) &
-                maxLev = max(maxLev, inBlockPtr%ptr%LEV)
-        end do
-     end do
-     !loop from max level down to zero
-     do curLev = maxLev,1,-1
-        do inPE=1,nProc; do inBLK=1,nBLK
-           inBlockPtr%ptr => global_block_ptrs(inBLK,inPE)%ptr
-           if (associated(inBlockPtr%ptr)) then
-              if (inBlockPtr%ptr%LEV == curLev) then
-                 iLEV1 = inBlockPtr%ptr%LEV
-                 if (refine_list(inBlockPtr%ptr%BLK,inBlockPtr%ptr%PE+1)) &
-                      iLEV1 = iLEV1 + 1
-                 do i=-1,1; do j=-1,1; do k=-1,1
-                    idir = 1+ (k+1) + 3*(j+1) + 9*(i+1)
-                    call findTreeNeighbor(inBlockPtr,outBlockPtr,idir,noNeighbor)
-                    if (.not. noNeighbor)then
-                       if(associated(outBlockPtr%ptr)) then
-                          if (.not. associated(outBlockPtr%ptr%child(1)%ptr)) then
-                             iLEV2 = outBlockPtr%ptr%LEV
-                             if (refine_list(outBlockPtr%ptr%BLK,outBlockPtr%ptr%PE+1)) &
-                                  iLEV2 = iLEV2 + 1
-                             if ( (iLEV1-iLEV2 > 1) .or. &
-                                  (iLEV1-iLEV2 > 0 .and. &
-                                  ((inBlockPtr%ptr%body .and. outBlockPtr%ptr%body)&
-                                  .or.(inBlockPtr%ptr%IsOuterBoundary .and. &    
-                                  outBlockPtr%ptr%IsOuterBoundary)&
-                                  .or.(inBlockPtr%ptr%IsExtraBoundaryOrPole .and.& 
-                                  outBlockPtr%ptr%IsExtraBoundaryOrPole &
-                                  .and.( (i==0.and.k==0).or.(.not.is_axial_geometry()))& 
-                                  )&          
-                                  ))) then
-                                refine_list(outBlockPtr%ptr%BLK,outBlockPtr%ptr%PE+1) = .true.
-                                iCount = iCount +1
-                             end if
-                          end if
-                       end if
-                    end if
-                 end do; end do; end do
-              end if
-           end if
-        end do; end do
-     end do
-     if (iCount == 0) EXIT
-     if (iProc == 0.and.lVerbose>0)&
-          write (*,*) '    FixRefinementLevels found ',iCount,' blocks to refine'
-     call parallel_refine
-     call set_body_flag
-  end do
-
-end subroutine fixRefinementLevels

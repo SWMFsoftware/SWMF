@@ -9,7 +9,7 @@ subroutine amr_physics
   implicit none
 
   integer :: nDesiredMax
-  integer :: idir, i1,i2, nDesired, nRefined, nCoarsened, currentBlocks
+  integer :: iX,iY,iZ, i1,i2, nDesired, nRefined, nCoarsened, currentBlocks
   integer :: i,j,k,n, iBLK, nSort, nRefineMax, nCoarsenMax, Itmp
   integer :: iError, SortIndex(4),iChild
   real :: percentCoarsenMax=100.0
@@ -238,14 +238,14 @@ subroutine amr_physics
      end if
      if(unique) then
         !Check for more refined neighbors
-        do idir=1,27
-           call findTreeNeighbor(BlockPtr,tmpBlockPtr,idir,noNeighbor)
+        do iX=-1,1;do iY=-1,1;do iZ=-1,1
+           call find_tree_neighbor(BlockPtr,tmpBlockPtr,iX,iY,iZ,noNeighbor)
            if(.not. noNeighbor) then
               if(associated(tmpBlockPtr%ptr)) then
                  if(associated(tmpBlockPtr%ptr%child(1)%ptr)) unique=.false.
               end if
            end if
-        end do
+        end do;end do;end do
      end if
      if(unique) then
         k=k+1
@@ -282,14 +282,14 @@ subroutine amr_physics
            end if
            if(unique) then
               !Check for more refined neighbors
-              do idir=1,27
-                 call findTreeNeighbor(BlockPtr,tmpBlockPtr,idir,noNeighbor)
+              do iX=-1,1;do iY=-1,1;do iZ=-1,1
+                 call find_tree_neighbor(BlockPtr,tmpBlockPtr,iX,iY,iZ,noNeighbor)
                  if(.not. noNeighbor) then
                     if(associated(tmpBlockPtr%ptr)) then
                        if(associated(tmpBlockPtr%ptr%child(1)%ptr)) unique=.false.
                     end if
                  end if
-              end do
+              end do; end do;end do
            end if
            if(unique) then
               k=k+1
@@ -353,8 +353,8 @@ subroutine amr_physics
            BlockPtr%ptr => global_block_ptrs(i,j)%ptr
            if(associated(BlockPtr%ptr)) then ! ensure block is allocated
               if(BlockPtr%ptr%body .and. .not.BlockPtr%ptr%coarsen) then
-                 do idir=1,27
-                    call findTreeNeighbor(BlockPtr,tmpBlockPtr,idir,noNeighbor)
+                 do iX=-1,1;do iY=-1,1;do iZ=-1,1
+                    call find_tree_neighbor(BlockPtr,tmpBlockPtr,iX,iY,iZ,noNeighbor)
                     if(.not. noNeighbor)then
                        if(associated(tmpBlockPtr%ptr)) then
                           if(tmpBlockPtr%ptr%body .and. tmpBlockPtr%ptr%coarsen) then
@@ -367,7 +367,7 @@ subroutine amr_physics
                           end if
                        end if
                     end if
-                 end do
+                 end do;end do;end do
               end if
            end if
         end do; end do
@@ -584,7 +584,7 @@ recursive subroutine fix_octree_refine_flags(inBlockPtr, nCoarsened, nRefined, &
 
   integer, intent(inout) :: nCoarsened, nRefined, currentBlocks
   logical, intent(inout) :: stopRefinement
-  integer :: idir, iLEV1, iLEV2,iChild
+  integer :: iX,iY,iZ, iLEV1, iLEV2,iChild
   logical :: noNeighbor
   type (adaptive_block_ptr) :: inBlockPtr, outBlockPtr
   !---------------------------------------------------------------------------
@@ -592,8 +592,8 @@ recursive subroutine fix_octree_refine_flags(inBlockPtr, nCoarsened, nRefined, &
   if(associated(inBlockPtr % ptr)) then
      !Check for valid neighbor level changes
      iLEV1 = inBlockPtr%ptr%LEV + 1
-     do idir=1,27
-        call findTreeNeighbor(inBlockPtr,outBlockPtr,idir,noNeighbor)
+     do iX=-1,1;do iY=-1,1;do iZ=-1,1
+        call find_tree_neighbor(inBlockPtr,outBlockPtr,iX,iY,iZ,noNeighbor)
         if(.not. noNeighbor) then
            if(associated(outBlockPtr%ptr)) then
               if(.not. associated(outBlockPtr%ptr%child(1)%ptr)) then
@@ -635,7 +635,7 @@ recursive subroutine fix_octree_refine_flags(inBlockPtr, nCoarsened, nRefined, &
               end if
            end if
         end if
-     end do
+     end do;end do; end do
   end if
 end subroutine fix_octree_refine_flags
 
@@ -646,7 +646,7 @@ subroutine fixCheck
   use ModIO, ONLY: write_myname
   implicit none
 
-  integer :: idir, inPE,inBLK, iLEV1,iLEV2, iCount, maxLev, curLev
+  integer :: iX,iY,iZ, inPE,inBLK, iLEV1,iLEV2, iCount, maxLev, curLev
   logical :: noNeighbor
   type (adaptive_block_ptr) :: inBlockPtr,outBlockPtr,tmpBlockPtr
 
@@ -676,8 +676,8 @@ subroutine fixCheck
               iLEV1 = inBlockPtr%ptr%LEV
               if(inBlockPtr%ptr%refine)  iLEV1 = iLEV1 + 1
               if(inBlockPtr%ptr%coarsen) iLEV1 = iLEV1 - 1
-              do idir=1,27
-                 call findTreeNeighbor(inBlockPtr,outBlockPtr,idir,noNeighbor)
+              do iX=-1,1;do iY=-1,1; do iZ=-1,1
+                 call find_tree_neighbor(inBlockPtr,outBlockPtr,iX,iY,iZ,noNeighbor)
                  if(.not. noNeighbor)then
                     if(associated(outBlockPtr%ptr)) then
                        if(.not. associated(outBlockPtr%ptr%child(1)%ptr)) then
@@ -696,7 +696,7 @@ subroutine fixCheck
                        end if
                     end if
                  end if
-              end do
+              end do;end do; end do
            end if
         end if
      end do; end do
