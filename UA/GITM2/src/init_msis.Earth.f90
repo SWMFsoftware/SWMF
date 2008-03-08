@@ -146,6 +146,9 @@ subroutine init_msis
               CALL GTD6(iJulianDay,utime,geo_alt,geo_lat,geo_lon,geo_lst, &
                    F107A,F107,AP,48,msis_dens,msis_temp)
 
+              ! Initialize densities to zero in case msis does not set it
+              NDensityS(iLon,iLat,iAlt,:,iBlock) = 0.0
+
               NDensityS(iLon,iLat,iAlt,iH_,iBlock)          = msis_dens(1)
               NDensityS(iLon,iLat,iAlt,iO_,iBlock)          = msis_dens(2)
               NDensityS(iLon,iLat,iAlt,iN2_,iBlock)         = msis_dens(3)
