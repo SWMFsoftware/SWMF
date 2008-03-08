@@ -183,6 +183,9 @@ subroutine init_msis
                       MAX(10**(13.-LOG10(3.)*(geo_alt-165.)/35.),1.0)
               endif
 
+              LogNS(iLon,iLat,iAlt,:,iBlock) = &
+                   log(NDensityS(iLon,iLat,iAlt,iNO_,iBlock))
+
               NDensity(iLon,iLat,iAlt,iBlock) = &
                    sum(NDensityS(iLon,iLat,iAlt,1:nSpecies,iBlock))
 
