@@ -218,7 +218,7 @@ end subroutine init_msis
 !--------------------------------------------------------------
 
 subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
-             F107A,F107,AP,LogNS, Temp, LogRho)
+     F107A,F107,AP,LogNS, Temp, LogRho)
 
   use ModPlanet
 
@@ -226,18 +226,18 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
 
   implicit none
 
-  real, dimension(1:2) :: msis_temp
-  real, dimension(1:8) :: msis_dens
-  
-  
-
   integer, intent(in) :: iJulianDay
   real, intent(in) :: uTime, Alt, Lat, Lon, LST, f107a, f107
-  real, dimension(7), intent(in):: ap
+  real, intent(in):: ap
   real, intent(out) :: LogNS(nSpecies), Temp, LogRho
+
+  real :: msis_temp(2)
+  real :: msis_dens(8)
+  real :: AP_I(7)
   !----------------------------------------------------------------------------
+  AP_I = AP
   CALL GTD6(iJulianDay,uTime,Alt,Lat,Lon,LST, &
-       F107A,F107,AP,48,msis_dens,msis_temp)
+       F107A,F107,AP_I,48,msis_dens,msis_temp)
 
   LogNS(iO_)  = alog(msis_dens(2))
   LogNS(iO2_) = alog(msis_dens(4))
