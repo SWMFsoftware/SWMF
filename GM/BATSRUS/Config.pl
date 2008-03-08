@@ -245,7 +245,7 @@ sub current_settings{
 	$Version = $1 if /VersionUserModule\s*=\s*([\d\.]+)/;
     }
     close(FILE);
-    $Settings .= "User Module = $Module, ver $Version\n";
+    $Settings .= "UserModule = $Module, ver $Version\n";
 
     open(FILE, $EquationMod) or die "$ERROR Could not open $EquationMod\n";
     my $Equation='???';
@@ -254,7 +254,7 @@ sub current_settings{
 	$Equation = $1; last;
     }
 
-    $Settings     .= "Equation    = $Equation\n";
+    $Settings     .= "Equation   = $Equation\n";
 
 }
 
