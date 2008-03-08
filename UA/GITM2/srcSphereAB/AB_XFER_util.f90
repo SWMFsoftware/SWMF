@@ -190,12 +190,12 @@
 
     end subroutine AB_array3_gc_pack
 
-   subroutine AB_array3_gc_unpack(long,lat,alt,gcn,v_out,dir,p,in_array)
+    subroutine AB_array3_gc_unpack(long,lat,alt,gcn,v_out,dir,p,in_array)
       use AB_module
       integer, intent(in) :: long,lat,alt,gcn
       integer, intent(in) :: dir
       integer, intent(inout) :: p
-      real, dimension(1-gcn:,1-gcn:,1:), intent(out) :: v_out  
+      real, dimension(1-gcn:,1-gcn:,1:), intent(inout) :: v_out  
       real, dimension(:), intent(in) :: in_array
       integer :: i,j,a
 
@@ -480,7 +480,7 @@
       integer, intent(in) :: long,lat,alt,gcn
       integer, intent(in) :: dir
       integer, intent(inout) :: p
-      real, dimension(1-gcn:,1-gcn:,1:), intent(out) :: v_out  
+      real, dimension(1-gcn:,1-gcn:,1:), intent(inout) :: v_out  
       real, dimension(:), intent(in) :: in_array
       integer :: i,j,a
 
@@ -784,7 +784,7 @@
       integer, intent(in) :: long,lat,alt,eta,gcn
       integer, intent(in) :: dir
       integer, intent(inout) :: p
-      real, dimension(1-gcn:,1-gcn:,1:,1:), intent(out) :: v_out  
+      real, dimension(1-gcn:,1-gcn:,1:,1:), intent(inout) :: v_out  
       real, dimension(:), intent(in) :: in_array
       integer :: i,j,a,e
 
@@ -1114,7 +1114,7 @@
       integer, intent(in) :: long,lat,alt,eta,gcn
       integer, intent(in) :: dir
       integer, intent(inout) :: p
-      real, dimension(1-gcn:,1-gcn:,1:,1:), intent(out) :: v_out  
+      real, dimension(1-gcn:,1-gcn:,1:,1:), intent(inout) :: v_out  
       real, dimension(:), intent(in) :: in_array
       integer :: i,j,a,e
 

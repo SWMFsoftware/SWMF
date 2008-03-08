@@ -199,7 +199,7 @@ contains
       integer, intent(in) :: long,lat,alt,gcn
       integer, intent(in) :: dir
       integer, intent(inout) :: p
-      real, dimension(1-gcn:,1-gcn:,1:), intent(out) :: v_out  
+      real, dimension(1-gcn:,1-gcn:,1:), intent(inout) :: v_out  
       real, dimension(:), intent(in) :: in_array
       integer :: i,j,a
 
@@ -503,7 +503,7 @@ contains
       integer, intent(in) :: long,lat,alt,eta,gcn
       integer, intent(in) :: dir
       integer, intent(inout) :: p
-      real, dimension(1-gcn:,1-gcn:,1:,1:), intent(out) :: v_out  
+      real, dimension(1-gcn:,1-gcn:,1:,1:), intent(inout) :: v_out
       real, dimension(:), intent(in) :: in_array
       integer :: i,j,a,e
 
