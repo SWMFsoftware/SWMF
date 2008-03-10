@@ -111,16 +111,18 @@ subroutine logfile(dir)
   LocalVar = AverageTemp
   call MPI_REDUCE(LocalVar, AverageTemp, 1, MPI_REAL, MPI_SUM, &
        0, iCommGITM, iError)
-  AverageTemp = AverageTemp / nProcs
 
   LocalVar = AverageVertVel
   call MPI_REDUCE(LocalVar, AverageVertVel, 1, MPI_REAL, MPI_SUM, &
        0, iCommGITM, iError)
-  AverageVertVel = AverageVertVel / nProcs
 
   if (iProc == 0) then
+
 !     write(iLogFileUnit_,"(i8,i5,5i3,i4,f8.4,4f13.5)") &
 !          iStep, iTimeArray, dt, minTemp, maxTemp, minVertVel, maxVertVel
+
+     AverageTemp = AverageTemp / nProcs
+     AverageVertVel = AverageVertVel / nProcs
 
      write(iLogFileUnit_,"(i8,8f13.5)") &
           iStep, tSimulation, Dt, MinTemp, MaxTemp, AverageTemp, &
