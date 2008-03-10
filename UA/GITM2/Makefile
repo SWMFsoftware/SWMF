@@ -118,7 +118,7 @@ test_earth_run:
 test_earth_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/UA/data/log00000002.dat \
-		srcData/log00000002.dat.noAPEX > test_earth.diff)
+		srcData/log00000002.dat.noAPEX >& test_earth.diff)
 	ls -l test_earth.diff
 
 test_mars:
