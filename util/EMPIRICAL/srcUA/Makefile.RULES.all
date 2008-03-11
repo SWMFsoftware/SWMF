@@ -1,0 +1,3 @@
+$Machine eq "grendel"
+	${COMPILE.f77} ${Cflag0} ModIri90.f
+

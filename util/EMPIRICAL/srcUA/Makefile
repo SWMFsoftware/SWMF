@@ -2,6 +2,7 @@
 
 include ../../../Makefile.def
 include ../../../Makefile.conf
+include Makefile.RULES
 
 MY_LIB = ${LIBDIR}/libEMPIRICALUA.a
 
