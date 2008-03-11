@@ -47,6 +47,15 @@ s=size(Data)
 Nx=s(1)
 Ny=s(2)
 
+; Removing missing data by multiply B by sin(lat)^8
+for i=0L,Ny-1 do begin
+    theta=!PI*float(i)/float(Ny)
+    for j=0L,Nx-1 do begin
+        if(abs(Data(i*Nx+j)) ge 5000.0) then $
+          Data(i*Nx+j)=Data(i*Nx+j)*sin(theta)^8
+    endfor
+endfor
+
 if not keyword_set(silent) then begin
     print,''
     print,'Writing TecPlot file ',FileDat
