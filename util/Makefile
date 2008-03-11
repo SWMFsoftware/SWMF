@@ -1,6 +1,7 @@
 INSTALLFILE = \
 	DATAREAD/srcIndices/Makefile.DEPEND \
-	EMPIRICAL/srcIE/Makefile.DEPEND
+	EMPIRICAL/srcIE/Makefile.DEPEND \
+	EMPIRICAL/srcUA/Makefile.RULES
 
 install:
 	touch ${INSTALLFILE}
