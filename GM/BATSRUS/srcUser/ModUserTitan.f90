@@ -122,13 +122,14 @@ module ModUser
        em_=-1 ,&
        hv_=-2   
 
-  real:: kT0 !dimensionless temperature of new created ions
-  real :: body_Ti_dim  !ion temperature at the body
+  real :: body_Tn_dim=160. !neutral temperature at the body                    
+  real :: kT0 !dimensionless temperature of new created ions
+  real :: body_Ti_dim=350., kTp0 !ion temperature at the body
   real :: Nu_C(1:nI,1:nJ,1:nK)
   real :: nu0_dim,nu0
 
   logical :: UseImpact =.false.
-  character*30 :: SolarCondition
+  character*30 :: SolarCondition, type_innerbcs='reflect'
   integer, parameter :: num_Te = 9500, num_Ri = 199, num_nu=229
   !, num_n = 9500
   !  real, dimension(1:num_n) :: tmp_rn, tmp_hn, tmp_nL, tmp_nM, tmp_nH
@@ -202,6 +203,8 @@ contains
           call read_var('SX0',SX0)
           call read_var('SY0',SY0)
           call read_var('SZ0',SZ0)
+       case('#INNERBCS')
+          call read_var('type_innerbcs',type_innerbcs)
 
        case('#UPSTREAM')
           call read_var('SW_LP_dim', SW_LP_dim)
@@ -807,8 +810,8 @@ contains
     call set_multiSp_ICs  
     !    Rbody = 1.0 + 725.0e3/RTitan
     BodyRho_I(1) = sum(BodyRhoSpecies_I(1:nSpecies))
-    BodyP_I(1) =max(sw_p,SW_p*sum(BodyRhoSpecies_I(1:nSpecies)&
-         /MassSpecies_V(SpeciesFirst_:SpeciesLast_))*Body_Ti_dim/SW_T_dim)
+    BodyP_I(1) =max(sw_p, sum(BodyRhoSpecies_I(1:nSpecies)&
+         /MassSpecies_V(SpeciesFirst_:SpeciesLast_))*kTp0) 
     FaceState_VI(rho_,body1_)=BodyRho_I(1)
     FaceState_VI(ScalarFirst_:ScalarLast_,body1_) = BodyRhoSpecies_I
     FaceState_VI(P_,body1_)=BodyP_I(1)
@@ -935,7 +938,7 @@ contains
           !               *State_VGB(rho_,i,j,k,globalBLK)
           State_VGB(P_,i,j,k,globalBLK)= &
                sum(State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,globalBLK)&
-               /MassSpecies_V(SpeciesFirst_:SpeciesLast_))*KT0          
+               /MassSpecies_V(SpeciesFirst_:SpeciesLast_))*KTp0          
           
           if(R_BLK(i,j,k,globalBLK).gt.2.0)&
                State_VGB(P_,i,j,k,globalBLK)= &
@@ -1001,9 +1004,9 @@ contains
             BodyRhoSpecies_dim_II(:,1)
     end if
 
-    !body_Ti_dim = Neutral_T_dim
-    body_Ti_dim = 350
-    KT0 = SW_p*body_Ti_dim/SW_T_dim
+    !body_Ti_dim = Neutral_T_dim    
+    KT0 = body_Ti_dim*Si2No_V(UnitTemperature_) 
+    kTp0=kT0  !2.0*kT0
     nu0_dim =  1.0e-10
     nu0=nu0_dim*No2Io_V(UnitN_)*No2Io_V(UnitT_)
 
@@ -1137,14 +1140,26 @@ contains
 
     VarsGhostFace_V(rho_) = sum(VarsGhostFace_V(rho_+1:rho_+nSpecies))
     VarsGhostFace_V(P_)=sum(VarsGhostFace_V(rho_+1:rho_+nSpecies)&
-         /MassSpecies_V(SpeciesFirst_:SpeciesLast_))*SW_p*Body_Ti_dim/SW_T_dim
+         /MassSpecies_V(SpeciesFirst_:SpeciesLast_))*kTp0  
 
     ! Reflective in radial direction
     uDotR = sum(VarsTrueFace_V(Ux_:Uz_)*FaceCoords_D)/rFace2
     bDotR = sum(VarsTrueFace_V(Bx_:Bz_)*FaceCoords_D)/rFace2
 
-    VarsGhostFace_V(Ux_:Uz_) = VarsTrueFace_V(Ux_:Uz_) - 2*uDotR*FaceCoords_D
-    VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_) - 2*bDotR*FaceCoords_D
+    select case (type_innerbcs)
+    case('float')
+    case('reflect')
+       VarsGhostFace_V(Ux_:Uz_) = &
+            VarsTrueFace_V(Ux_:Uz_) - 2*uDotR*FaceCoords_D
+       VarsGhostFace_V(Bx_:Bz_) = &
+            VarsTrueFace_V(Bx_:Bz_) - 2*bDotR*FaceCoords_D
+    case('zeroB')
+       VarsGhostFace_V(Ux_:Uz_) = &
+            VarsTrueFace_V(Ux_:Uz_) - 2*uDotR*FaceCoords_D
+       VarsGhostFace_V(Bx_:Bz_) = 0.0
+    case('default')
+       write(*,*)'unknown type of user inner bcs'
+    end select
 
     !\
     ! Apply corotation?
@@ -1617,8 +1632,7 @@ contains
     use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
          dx_BLK,dy_BLK,dz_BLK
     use ModMain,       ONLY: unusedBLK
-    use ModVarIndexes, ONLY: Rho_,rhoH1p_, rhoH2p_, &
-         rhoUx_,rhoUy_,rhoUz_
+    use ModVarIndexes
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK
     use ModPhysics,ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
 
@@ -1628,7 +1642,7 @@ contains
 
     real, external :: calc_sphere
     real ::mass
-    integer:: i,j,k,iBLK
+    integer:: i,j,k,iBLK,index
     character (len=*), parameter :: Name='user_get_log_var'
     logical:: oktest=.false.,oktest_me
     !-------------------------------------------------------------------
@@ -1636,66 +1650,48 @@ contains
     if(oktest)write(*,*)'in user_get_log_var: TypeVar=',TypeVar
     select case(TypeVar)
     case('lpflx')
-       mass=1.0
-       do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) CYCLE
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoLp_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
-                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-          end do; end do; end do          
-       end do
-       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
+       index = RhoLp_
 
     case('mpflx')
-       mass=14.
-       do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) CYCLE
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoMp_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
-                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-          end do; end do; end do          
-       end do
-       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)    
+       index = RhoMp_
+
     case('h1pflx')
-       mass=28.
-       do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) CYCLE
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoH1p_,i,j,k,iBLK)*&
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
-                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-          end do; end do; end do          
-       end do
-       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
+       index = RhoH1p_
 
     case('h2pflx')
-       mass=44.
-       do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) CYCLE
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoH2p_,i,j,k,iBLK)*&
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
-                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-          end do; end do; end do          
-       end do
-       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
+       index = RhoH2p_
+
+    case('mhcpflx')
+       index= RhoMHCp_
+
+    case('hhcpflx')
+       index= RhoHHCp_
+
+    case('hnipflx')
+       index= RhoHNIp_
+
+    !case('neflx')
 
     case default
        call stop_mpi('wrong logvarname')
     end select
+
+    do iBLK=1,nBLK
+       if (unusedBLK(iBLK)) CYCLE
+       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          tmp1_BLK(i,j,k,iBLK) = State_VGB(index,i,j,k,iBLK)* &
+               (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
+               +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
+               +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+               )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
+       end do; end do; end do
+    end do
+
+    VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
     !change to user value from normalized flux
     !    write(*,*)'varvalue, unitSI_n, unitSI_x, unitSI_U, mass, unitSI_t=',&
     !         varvalue, unitSI_n, unitSI_x, unitSI_U, mass, unitSI_t
+    mass = MassSpecies_V(index)
     VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
 
   end subroutine user_get_log_var
