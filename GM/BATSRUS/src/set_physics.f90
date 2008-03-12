@@ -165,8 +165,8 @@ subroutine set_physics_constants
   ! Normalize solar wind values. Note: the solarwind is in I/O units
   !/
   SW_n   = SW_n_dim*Io2No_V(UnitN_)
-  SW_rho = SW_n*No2Si_V(UnitN_)*MassFluid_I(1)*cProtonMass*Si2No_V(UnitRho_)
-  SW_p   = SW_rho * SW_T_dim*Io2No_V(UnitTemperature_)
+  SW_rho = SW_n * MassFluid_I(1)
+  SW_p   = SW_n * SW_T_dim*Io2No_V(UnitTemperature_)
   SW_Ux  = SW_Ux_dim*Io2No_V(UnitU_)
   SW_Uy  = SW_Uy_dim*Io2No_V(UnitU_)
   SW_Uz  = SW_Uz_dim*Io2No_V(UnitU_)
