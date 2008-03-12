@@ -6,10 +6,10 @@ subroutine PW_read_restart
                             ThetaLine_I, PhiLine_I , State_CVI, nAlt, &
                             NameRestartIn
   use ModCommonPlanet,ONLY: nIon,iRho_I,iU_I,iP_I,iT_I,nVar
-  use ModCommonVariables,ONLY: DrBnd,AltMin
+  use ModCommonVariables,ONLY: DrBnd
 
   implicit none
-  real   :: ddt1, xxx,Dx, DrFile, Loc
+  real   :: ddt1, xxx,Dx, DrFile, Loc,Altmin
   real,allocatable :: StateFile_CVI(:,:,:),Alt_C(:)
   integer:: iError, iIon, iLine,i, nAltFile,iAlt,iMin,iMax
 
@@ -40,7 +40,7 @@ subroutine PW_read_restart
 
   !check that restart data has same resolution as called for in the simulation
   DrFile = Alt_C(2)-Alt_C(1)
-  
+  Altmin = Alt_C(1)
   if (DrFile >= DrBnd - 1.0e-5 .and. DrFile <= DrBnd + 1.0e-5 .and.& 
        nAltFile == nAlt) then
      !Restart File and simulation use same grid.  
@@ -50,7 +50,7 @@ subroutine PW_read_restart
      !solution onto simulation grid
      do iLine=1,nLine
         do iAlt=1,nAlt
-           Loc  = (AltMin+DrBnd*iAlt)/DrFile
+           Loc  = (DrBnd*iAlt)/DrFile+1.0
            iMin = floor(Loc)
            iMax = ceiling(Loc)
            Dx   = Loc-iMin 
