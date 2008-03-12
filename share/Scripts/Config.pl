@@ -395,6 +395,7 @@ sub create_makefile_rules{
 		    Compiler   => $Compiler, 
 		    MpiVersion => $MpiVersion, 
 		    Debug      => $Debug,
+		    Machine    => $Machine,
 		    Precision  => $Precision);
 
     # Add settings from the caller Config.pl script
