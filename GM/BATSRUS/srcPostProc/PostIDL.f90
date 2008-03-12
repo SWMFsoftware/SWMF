@@ -32,9 +32,7 @@ program PostIDL
   character (LEN=5), dimension(3)            :: coord
   character (LEN=5), dimension(3), parameter :: &
        coord_xyz=(/'x    ','y    ','z    '/), &
-       NameCoordSph_D=(/'r    ','phi  ','theta'/),& !Theta is latitude
-       coord_sph=(/'r    ','theta','phi  '/),     & !Theta is colatitude
-       coord_cyl=(/'r    ','phi  ','z    '/)
+       coord_sph=(/'r    ','theta','phi  '/)     !Theta is colatitude
 
   logical :: structured, read_binary=.false., UseLookup=.false.
   character (len=100) :: filename, filenamehead, coordnames
@@ -73,13 +71,11 @@ program PostIDL
 
   read(*,*)numprocs
   write(*,*)trim(filenamehead),', numprocs=',numprocs
-
   if(filenamehead(1:2) == 'sp')then
      coord=coord_sph
   else
      coord=coord_xyz
   end if
-
   read(*,*)it
   read(*,*)t
   write(*,*)'n_step=',it,' time_simulation=',t
@@ -119,11 +115,12 @@ program PostIDL
         stop '!!! Change PRECISION in Makefile.${OS} and make PIDL !!!'
      end if
   end if
+
   !Read TypeGeometry, if possible
   read(*,'(a)',err=3,end=3) TypeGeometryRead
   TypeGeometry = TypeGeometryRead
 3 continue
-  write(*,*)'Geometry is '//TypeGeometry
+  write(*,*)'TypeGeometry = ',trim(TypeGeometry)
   if(index(TypeGeometry,'torus')>0)then
      open(unit_tmp,file='torus.dat',status='old')
      read(unit_tmp,*)nPoint, rTorusSmall, rTorusLarge
