@@ -148,6 +148,9 @@ rundir:
 			ln -s PW/* .; \
 	fi)
 
+PDF:
+	@cd doc/Tex; make cleanpdf; make PDF
+
 clean:
 	@touch ${INSTALLFILES}
 	cd src; make clean
