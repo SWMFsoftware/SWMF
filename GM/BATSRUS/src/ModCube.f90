@@ -86,8 +86,8 @@ contains
   subroutine set_indices(&
        iDirS2R_D,& !Direction from S(end) to R(ecv) blocks
        nLayerS,nLayerR,& !nLayers for physical- and ghost cells 
-       iMinS_D,iMaxS_D,& !Indexes to be sent, for sending block
-       iMinR_D,iMaxR_D,& !Indexes to be sent, for receiving block
+       iMinS_D,iMaxS_D,& !Indexes to be set, for sending block
+       iMinR_D,iMaxR_D,& !Indexes to be set, for receiving block
        iLevelR,        & !Level of receiving block
        iChild,         & !Child number for finer block, if needed
        iChild1,        & !Child1 defined as described above
@@ -175,7 +175,84 @@ contains
        end where
     end select
   end subroutine set_indices
-!===================================================================!
+!=============================The same for nodes====================!
+ subroutine set_indices_node(&
+       iDirS2R_D,& !Direction from S(end) to R(ecv) blocks 
+       iMinS_D,iMaxS_D,& !Indexes to be sent, for sending block
+       iMinR_D,iMaxR_D,& !Indexes to be sent, for receiving block
+       iLevelR,        & !Level of receiving block
+       iChild,         & !Child number for finer block, if needed
+       iChild1         ) !Child1 defined as described above
+       
+    integer,intent(in)::iDirS2R_D(3)
+    integer,dimension(3),intent(out)::iMinS_D,iMaxS_D
+    integer,dimension(3),intent(out)::iMinR_D,iMaxR_D
+    integer,intent(in)::iLevelR
+    integer,intent(in),optional::iChild,iChild1
+    !------------------------------------------------------------!
+    integer::iShift_D(3),iChild1Here,iBin
+    logical::IsFaseIndex_D(3)
+    where(iDirS2R_D==+1)   !send UP
+       iMaxS_D=nCells+1    
+       iMinS_D=iMaxS_D
+       iMaxR_D=1         
+       iMinR_D=iMaxR_D
+    end where
+    where(iDirS2R_D==-1)   !send DOWN
+       iMinS_D=1         
+       iMaxS_D=iMinS_D
+       iMinR_D=nCells+1  
+       iMaxR_D=iMinR_D
+    end where
+    select case(iLevelR) ! Indices along the face
+    case(0)              ! Recv block is at the same level
+       where(iDirS2R_D==0)
+          iMinS_D=1      
+          iMaxS_D=nCells+1
+          iMinR_D=1      
+          iMaxR_D=nCells+1
+       end where
+    case(-1)             ! Recv block is finer
+       if(.not.present(iChild1))then
+          iBin=1-(&
+               4*min(0,iDirS2R_D(1))+&
+               2*min(0,iDirS2R_D(2))+&
+               min(0,iDirS2R_D(3)))
+          iChild1Here=iBin2Child_I(iBin)
+          iShift_D=(iShiftChild_DI(:,iChild)-&
+               iShiftChild_DI(:,iChild1Here))*nCell2_D
+       else
+          iShift_D=(iShiftChild_DI(:,iChild)-&
+               iShiftChild_DI(:,iChild1))*nCell2_D
+       end if
+       where(iDirS2R_D==0)
+          iMinS_D=1 + iShift_D 
+          iMaxS_D=nCell2_D+1 + iShift_D
+          iMinR_D=1            
+          iMaxR_D=nCells+1
+       end where
+    case(+1)    !Receiveng block is coarser
+       if(.not.present(iChild1))then
+          iBin=1-(&
+               4*min(0,-iDirS2R_D(1))+&
+               2*min(0,-iDirS2R_D(2))+&
+                 min(0,-iDirS2R_D(3)))
+          iChild1Here=iBin2Child_I(iBin)
+          iShift_D=(iShiftChild_DI(:,iChild)-&
+               iShiftChild_DI(:,iChild1Here))*nCell2_D
+       else
+          iShift_D=(iShiftChild_DI(:,iChild)-&
+               iShiftChild_DI(:,iChild1))*nCell2_D
+       end if
+       where(iDirS2R_D==0)
+          iMinS_D=1             
+          iMaxS_D=nCells+1 
+          iMinR_D=1 + iShift_D  
+          iMaxR_D=nCell2_D+1 + iShift_D
+       end where
+    end select
+  end subroutine set_indices_node
+  !===================================================================!
   !The further routines are based on the order of children in the list!
   !created by routines for finding neighbors                          !
   subroutine get_children_list(iX,iY,iZ,iChildren_I)

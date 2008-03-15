@@ -316,20 +316,37 @@ subroutine mp_build_node_indices(JustCount)
   use ModOctree
   use ModMPNodes
   use ModAMR, ONLY : unusedBlock_BP
+  use ModPolarNeighbor
   implicit none
 
   !Subroutine arguements
   logical, intent(in) :: JustCount
 
   !Local variables
-  integer :: iBLK,iPE, iCHILD, idir, sSubF,rSubF
+  integer :: iBLK,iPE, iCHILD, idir, sSubF
   integer :: i1S,i2S, j1S,j2S, k1S,k2S, i1R,i2R, j1R,j2R, k1R,k2R
-
+  logical :: IsAtFace
+  integer,dimension(3)::iMinS_D,iMaxS_D,iMinR_D,iMaxR_D
   integer, dimension(26) :: nsubF
   integer, dimension(26,3) :: dLOOP
-  integer, dimension(26,8) :: subfaceNumber
 
-  integer :: neighborLEV
+  !For passing message across the pole some indexes should be flipped
+  !Typical example:
+  !Usual situation: if in the loop for sending the limits for k are 1,2
+  !SEND:do k=1,2;........
+  !then in the loop for receiving, the limits are nK+1,nK+2
+  !RECEIVE:do k=nK+1,nK+2;...
+  !However,
+  !for message pass across the pole of the spherical grid the RECEIVE loop becomes:
+  !RECEIVE:do k=0,-1,-1;...
+  !So we need a logical to figure out if the message pass occurs across the pole:
+
+  logical::IsPolarBlockS=.false.,DoMPassAcrossPole=.false.
+  integer::iDirPole,iLoopPole
+  
+
+
+  integer :: iLevelR
   integer, dimension(4) :: neighborPE,neighborBLK,neighborCHILD
   !------------------------------------------
 
@@ -344,16 +361,7 @@ subroutine mp_build_node_indices(JustCount)
        0,  0,  1, -1,  0,  0,   1, -1, -1,  1,  1, -1,  1, -1,  0,  0,  0,  0,   1, -1,  1, -1, -1,  1, -1,  1, &
        0,  0,  0,  0,  1, -1,   0,  0,  0,  0,  1, -1, -1,  1,  1, -1,  1, -1,   1, -1, -1,  1,  1, -1, -1,  1 /
 
-  data subfaceNumber / &
-       0,  2,  0,  2,  1,  0,   0,  2,  0,  0,  0,  0,  0,  1,  0,  0,  1,  0,   0,  0,  0,  1,  0,  0,  0,  0, &
-       2,  0,  0,  4,  2,  0,   0,  0,  2,  0,  0,  0,  0,  2,  1,  0,  0,  0,   0,  0,  0,  0,  1,  0,  0,  0, &
-       1,  0,  0,  3,  0,  2,   0,  0,  1,  0,  0,  2,  0,  0,  0,  0,  0,  1,   0,  0,  0,  0,  0,  0,  1,  0, &
-       0,  1,  0,  1,  0,  1,   0,  1,  0,  0,  0,  1,  0,  0,  0,  1,  0,  0,   0,  1,  0,  0,  0,  0,  0,  0, &
-       0,  3,  1,  0,  0,  3,   0,  0,  0,  1,  0,  0,  1,  0,  0,  2,  0,  0,   0,  0,  0,  0,  0,  1,  0,  0, &
-       3,  0,  3,  0,  0,  4,   1,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  2,   0,  0,  1,  0,  0,  0,  0,  0, &
-       4,  0,  4,  0,  4,  0,   2,  0,  0,  0,  2,  0,  0,  0,  2,  0,  0,  0,   1,  0,  0,  0,  0,  0,  0,  0, &
-       0,  4,  2,  0,  3,  0,   0,  0,  0,  2,  1,  0,  0,  0,  0,  0,  2,  0,   0,  0,  0,  0,  0,  0,  0,  1 /
-  !------------------------------------------
+ 
 
   nSend=0
   nRecv=0
@@ -370,23 +378,51 @@ subroutine mp_build_node_indices(JustCount)
 
         !valid used block found, setup indices
         iCHILD = global_block_ptrs(iBLK, iPE+1) % ptr % child_number
-
-           do idir=1,26
-              call treeNeighbor(iPE,iBLK,dLOOP(idir,1),dLOOP(idir,2),dLOOP(idir,3), &
-                   neighborPE,neighborBLK,neighborCHILD,neighborLEV)
-
-              select case(neighborLEV)
-              case(0)
-                 !Build indices for send to same block level
+        call check_pole_inside_blkpe(iBlk,iPE,&
+             IsPolarBlockS,iDirPole,iLoopPole)
+        do idir=1,26
+           DoMPassAcrossPole=&
+                IsPolarBlockS.and.dLoop(iDir,iDirPole)==iLoopPole
+           if(DoMPassAcrossPole)then
+              call tree_neighbor_across_pole(iPE,iBLK,&
+                   dLOOP(idir,1),dLOOP(idir,2),dLOOP(idir,3),iDirPole, &
+                   neighborPE,neighborBLK,neighborCHILD,iLevelR)
+           else
+              call treeNeighbor(iPE,iBLK,&
+                   dLOOP(idir,1),dLOOP(idir,2),dLOOP(idir,3), &
+                   neighborPE,neighborBLK,neighborCHILD,iLevelR)
+           end if
+           select case(iLevelR)
+           case(0)
+              !Build indices for send to same block level
                  sSubF=0
+                 call set_indices_node(&
+                   iDirS2R_D=dLoop(iDir,:), &
+                   iMinS_D=iMinS_D,iMaxS_D=iMaxS_D,&
+                   iMinR_D=iMinR_D,iMaxR_D=iMaxR_D,&
+                   iLevelR=iLevelR)
                  call build_i
               case(1)
                  !Build indices for send to coarser block level
                  sSubF=-1
+                 if(is_not_at_face(&
+                      iDirC2F_D=-dLoop(iDir,:),iChild=iChild))CYCLE
+                 call set_indices_node(&
+                   iDirS2R_D=dLoop(iDir,:), &
+                   iMinS_D=iMinS_D,iMaxS_D=iMaxS_D,&
+                   iMinR_D=iMinR_D,iMaxR_D=iMaxR_D,&
+                   iLevelR=iLevelR,iChild=iChild)
                  call build_i
               case(-1)
                  !Build indices for send to finer block level
                  do sSubF=1,nsubF(idir)
+                    call set_indices_node(&
+                      iDirS2R_D=dLoop(iDir,:), &
+                      iMinS_D=iMinS_D,iMaxS_D=iMaxS_D,&
+                      iMinR_D=iMinR_D,iMaxR_D=iMaxR_D,&
+                      iLevelR=iLevelR,&
+                      iChild =neighborCHILD(sSubf),&
+                      iChild1=neighborCHILD(  1  ))
                     call build_i
                  end do
               end select
@@ -415,10 +451,25 @@ contains
        if (unusedBlock_BP(nborBLK,nborPE)) return
     end if
 
-    rSubF=0
-    if(sSubF == -1) rSubF = subfaceNumber(idir,iCHILD)
+    i1S=iMinS_D(1) ;j1S=iMinS_D(2) ; k1S=iMinS_D(3) 
+    i2S=iMaxS_D(1) ;j2S=iMaxS_D(2) ; k2S=iMaxS_D(3) 
+    i1R=iMinR_D(1) ;j1R=iMinR_D(2) ; k1R=iMinR_D(3) 
+    i2R=iMaxR_D(1) ;j2R=iMaxR_D(2) ; k2R=iMaxR_D(3) 
 
-    call set_indices
+    if(DoMPassAcrossPole)then
+       select case(iDirPole)
+       case(1)
+          !flip i idexes for recv:
+          i1R=nI+2-i1R; i2R=nI+2-i2R
+       case(3)
+          !flip k indexes for recv
+          k1R=nK+2-k1R; k2R=nK+2-k2R
+       case default
+          call stop_mpi(&
+               'Message_pass_cells: in flipping indexes, unknown idir')
+       end select
+    end if
+
     if(sSubF == 0)then !Send to same level
 
        if(iProc == iPE)then
@@ -548,262 +599,6 @@ contains
     end if
 
   end subroutine build_i
-
-  !==========================================================================
-  subroutine set_indices
-
-    !-----------------------------------------
-    !Set initial values
-    i1S= 1 ; j1S= 1 ; k1S= 1;   i1R= 1 ; j1R= 1 ; k1R= 1
-    i2S=-1 ; j2S=-1 ; k2S=-1;   i2R=-1 ; j2R=-1 ; k2R=-1
-
-    if(sSubF==0)then
-       !Set indices for neighbor block at same level
-
-       !i
-       select case(dLOOP(idir,1))
-       case(1)
-          i1S=1+nI ; i1R=1
-          i2S=1+nI ; i2R=1
-       case(-1)
-          i1S=1    ; i1R=1+nI
-          i2S=1    ; i2R=1+nI
-       case(0)
-          i1S=1    ; i1R=1
-          i2S=1+nI ; i2R=1+nI
-       end select
-
-       !j
-       select case(dLOOP(idir,2))
-       case(1)
-          j1S=1+nJ ; j1R=1
-          j2S=1+nJ ; j2R=1
-       case(-1)
-          j1S=1    ; j1R=1+nJ
-          j2S=1    ; j2R=1+nJ
-       case(0)
-          j1S=1    ; j1R=1
-          j2S=1+nJ ; j2R=1+nJ
-       end select
-
-       !k
-       select case(dLOOP(idir,3))
-       case(1)
-          k1S=1+nK ; k1R=1
-          k2S=1+nK ; k2R=1
-       case(-1)
-          k1S=1    ; k1R=1+nK
-          k2S=1    ; k2R=1+nK
-       case(0)
-          k1S=1    ; k1R=1
-          k2S=1+nK ; k2R=1+nK
-       end select
-
-       RETURN
-    end if
-
-    if(sSubF>0)then
-       !Set indices for finer neighbor block
-
-       !i
-       select case(dLOOP(idir,1))
-       case(1)
-          i1S=1+nI ; i1R=1
-          i2S=1+nI ; i2R=1
-       case(-1)
-          i1S=1    ; i1R=1+nI
-          i2S=1    ; i2R=1+nI
-       case(0)
-          select case(sSubF)
-          case(1)
-             i1S=1      ; i1R=1
-             i2S=1+nI/2 ; i2R=1+nI
-          case(2)
-             select case(idir)
-             case(3,4)
-                i1S=1      ; i1R=1
-                i2S=1+nI/2 ; i2R=1+nI
-             case default
-                i1S=1+nI/2 ; i1R=1
-                i2S=1+nI   ; i2R=1+nI
-             end select
-          case(3)
-             select case(idir)
-             case(3,4)
-                i1S=1+nI/2 ; i1R=1
-                i2S=1+nI   ; i2R=1+nI
-             case default
-                i1S=1      ; i1R=1
-                i2S=1+nI/2 ; i2R=1+nI
-             end select
-          case(4)
-             i1S=1+nI/2    ; i1R=1
-             i2S=1+nI      ; i2R=1+nI
-          end select
-       end select
-
-       !j
-       select case(dLOOP(idir,2))
-       case(1)
-          j1S=1+nJ ; j1R=1
-          j2S=1+nJ ; j2R=1
-       case(-1)
-          j1S=1    ; j1R=1+nJ
-          j2S=1    ; j2R=1+nJ
-       case(0)
-          select case(sSubF)
-          case(1)
-             j1S=1      ; j1R=1
-             j2S=1+nJ/2 ; j2R=1+nJ
-          case(2)
-             select case(idir)
-             case(1,2,3,4,5,6)
-                j1S=1      ; j1R=1
-                j2S=1+nJ/2 ; j2R=1+nJ
-             case default
-                j1S=1+nJ/2 ; j1R=1
-                j2S=1+nJ   ; j2R=1+nJ
-             end select
-          case(3)
-             j1S=1+nJ/2    ; j1R=1
-             j2S=1+nJ      ; j2R=1+nJ
-          case(4)
-             j1S=1+nJ/2    ; j1R=1
-             j2S=1+nJ      ; j2R=1+nJ
-          end select
-       end select
-
-       !k
-       select case(dLOOP(idir,3))
-       case(1)
-          k1S=1+nK ; k1R=1
-          k2S=1+nK ; k2R=1
-       case(-1)
-          k1S=1    ; k1R=1+nK
-          k2S=1    ; k2R=1+nK
-       case(0)
-          select case(sSubF)
-          case(1)
-             k1S=1      ; k1R=1
-             k2S=1+nK/2 ; k2R=1+nK
-          case(2)
-             k1S=1+nK/2 ; k1R=1
-             k2S=1+nK   ; k2R=1+nK
-          case(3)
-             k1S=1      ; k1R=1
-             k2S=1+nK/2 ; k2R=1+nK
-          case(4)
-             k1S=1+nK/2 ; k1R=1
-             k2S=1+nK   ; k2R=1+nK
-          end select
-       end select
-
-       RETURN
-    end if
-
-    if(sSubF==-1)then
-       !Set indices for coarser neighbor block
-
-       !If rSubF=0, then the neighbor block is coarser, but shifted. No send needed.
-       if(rSubF==0) RETURN
-
-       !i
-       select case(dLOOP(idir,1))
-       case(1)
-          i1S=1+nI ; i1R=1
-          i2S=1+nI ; i2R=1
-       case(-1)
-          i1S=1    ; i1R=1+nI
-          i2S=1    ; i2R=1+nI
-       case(0)
-          select case(rSubF)
-          case(1)
-             i1S=1    ; i1R=1
-             i2S=1+nI ; i2R=1+nI/2
-          case(2)
-             select case(idir)
-             case(3,4)
-                i1S=1    ; i1R=1
-                i2S=1+nI ; i2R=1+nI/2
-             case default
-                i1S=1    ; i1R=1+nI/2
-                i2S=1+nI ; i2R=1+nI
-             end select
-          case(3)
-             select case(idir)
-             case(3,4)
-                i1S=1    ; i1R=1+nI/2
-                i2S=1+nI ; i2R=1+nI
-             case default
-                i1S=1    ; i1R=1
-                i2S=1+nI ; i2R=1+nI/2
-             end select
-          case(4)
-             i1S=1    ; i1R=1+nI/2
-             i2S=1+nI ; i2R=1+nI
-          end select
-       end select
-
-       !j
-       select case(dLOOP(idir,2))
-       case(1)
-          j1S=1+nJ ; j1R=1
-          j2S=1+nJ ; j2R=1
-       case(-1)
-          j1S=1    ; j1R=1+nJ
-          j2S=1    ; j2R=1+nJ
-       case(0)
-          select case(rSubF)
-          case(1)
-             j1S=1    ; j1R=1
-             j2S=1+nJ ; j2R=1+nJ/2
-          case(2)
-             select case(idir)
-             case(1,2,3,4,5,6)
-                j1S=1    ; j1R=1
-                j2S=1+nJ ; j2R=1+nJ/2
-             case default
-                j1S=1    ; j1R=1+nJ/2
-                j2S=1+nJ ; j2R=1+nJ
-             end select
-          case(3)
-             j1S=1    ; j1R=1+nJ/2
-             j2S=1+nJ ; j2R=1+nJ
-          case(4)
-             j1S=1    ; j1R=1+nJ/2
-             j2S=1+nJ ; j2R=1+nJ
-          end select
-       end select
-
-       !k
-       select case(dLOOP(idir,3))
-       case(1)
-          k1S=1+nK ; k1R=1
-          k2S=1+nK ; k2R=1
-       case(-1)
-          k1S=1    ; k1R=1+nK
-          k2S=1    ; k2R=1+nK
-       case(0)
-          select case(rSubF)
-          case(1)
-             k1S=1    ; k1R=1
-             k2S=1+nK ; k2R=1+nK/2
-          case(2)
-             k1S=1    ; k1R=1+nK/2
-             k2S=1+nK ; k2R=1+nK
-          case(3)
-             k1S=1    ; k1R=1
-             k2S=1+nK ; k2R=1+nK/2
-          case(4)
-             k1S=1    ; k1R=1+nK/2
-             k2S=1+nK ; k2R=1+nK
-          end select
-       end select
-
-       RETURN
-    end if
-
-  end subroutine set_indices
 
 end subroutine mp_build_node_indices
 

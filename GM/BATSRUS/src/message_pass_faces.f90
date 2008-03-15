@@ -527,38 +527,24 @@ subroutine mp_build_face_indices(JustCount)
   logical, intent(in) :: JustCount
 
   !Local variables
-  integer :: iBLK,iPE, iCHILD, idir, sSubF,rSubF
-  integer :: i1S,i2S, j1S,j2S, k1S,k2S, i1R,i2R, j1R,j2R, k1R,k2R
+  integer :: iBLK,iPE, iCHILD, idir
+  
 
-  integer, dimension(26) :: nsubF
-  integer, dimension(26,3) :: dLOOP
-  integer, dimension(26,8) :: subfaceNumber
+  integer, dimension(6,3) :: dLOOP
 
   integer :: neighborLEV
   integer, dimension(4) :: neighborPE,neighborBLK,neighborCHILD
   !------------------------------------------
 
-  ! face=1-6, edge=7-18, corner=19-26
-  !    1   2   3   4   5   6    7   8   9  10  11  12  13  14  15  16  17  18   19  20  21  22  23  24  25  26
-  !    W   E   N   S   T   B   WN  ES  WS  EN  NT  SB  NB  ST  TW  BE  TE  BW  WNT ESB WNB EST WST ENB WSB ENT
-  data nsubF / &
-       4,  4,  4,  4,  4,  4,   2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,   1,  1,  1,  1,  1,  1,  1,  1 /
+  ! face=1-6
+  !    1   2   3   4   5   6  
+  !    W   E   N   S   T   B   
 
   data dLOOP / &
-       1, -1,  0,  0,  0,  0,   1, -1,  1, -1,  0,  0,  0,  0,  1, -1, -1,  1,   1, -1,  1, -1,  1, -1,  1, -1, &
-       0,  0,  1, -1,  0,  0,   1, -1, -1,  1,  1, -1,  1, -1,  0,  0,  0,  0,   1, -1,  1, -1, -1,  1, -1,  1, &
-       0,  0,  0,  0,  1, -1,   0,  0,  0,  0,  1, -1, -1,  1,  1, -1,  1, -1,   1, -1, -1,  1,  1, -1, -1,  1 /
+       1, -1,  0,  0,  0,  0, &
+       0,  0,  1, -1,  0,  0, &
+       0,  0,  0,  0,  1, -1  /
 
-  data subfaceNumber / &
-       0,  2,  0,  2,  1,  0,   0,  2,  0,  0,  0,  0,  0,  1,  0,  0,  1,  0,   0,  0,  0,  1,  0,  0,  0,  0, &
-       2,  0,  0,  4,  2,  0,   0,  0,  2,  0,  0,  0,  0,  2,  1,  0,  0,  0,   0,  0,  0,  0,  1,  0,  0,  0, &
-       1,  0,  0,  3,  0,  2,   0,  0,  1,  0,  0,  2,  0,  0,  0,  0,  0,  1,   0,  0,  0,  0,  0,  0,  1,  0, &
-       0,  1,  0,  1,  0,  1,   0,  1,  0,  0,  0,  1,  0,  0,  0,  1,  0,  0,   0,  1,  0,  0,  0,  0,  0,  0, &
-       0,  3,  1,  0,  0,  3,   0,  0,  0,  1,  0,  0,  1,  0,  0,  2,  0,  0,   0,  0,  0,  0,  0,  1,  0,  0, &
-       3,  0,  3,  0,  0,  4,   1,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  2,   0,  0,  1,  0,  0,  0,  0,  0, &
-       4,  0,  4,  0,  4,  0,   2,  0,  0,  0,  2,  0,  0,  0,  2,  0,  0,  0,   1,  0,  0,  0,  0,  0,  0,  0, &
-       0,  4,  2,  0,  3,  0,   0,  0,  0,  2,  1,  0,  0,  0,  0,  0,  2,  0,   0,  0,  0,  0,  0,  0,  0,  1 /
-  !------------------------------------------
 
   nSend=0
   nRecv=0
@@ -580,12 +566,8 @@ subroutine mp_build_face_indices(JustCount)
            call treeNeighbor(iPE,iBLK,dLOOP(idir,1),dLOOP(idir,2),dLOOP(idir,3), &
                 neighborPE,neighborBLK,neighborCHILD,neighborLEV)
 
-           select case(neighborLEV)
-           case(1)
+           if(neighborLEV==1)call build_i
               !Build indices for send to coarser block level
-              sSubF=-1
-              call build_i
-           end select
         end do
      end do
   end do
@@ -597,9 +579,11 @@ contains
   subroutine build_i
     !
     !
-
+    Use ModCube
     !Local variables
     integer :: i,j,k, n
+    integer,dimension(3)::iMinS_D,iMaxS_D,iMinR_D,iMaxR_D
+    integer :: i1S,i2S, j1S,j2S, k1S,k2S, i1R,i2R, j1R,j2R, k1R,k2R
     integer :: nborPE, nborBLK
 
     !------------------------------------------
@@ -610,19 +594,60 @@ contains
        call stop_mpi('bad idir value in message_pass_faces')
     end if
 
-    nborPE  = neighborPE (max(1,sSubF))
-    nborBLK = neighborBLK(max(1,sSubF))
+    nborPE  = neighborPE (1)
+    nborBLK = neighborBLK(1)
 
     if (DoImplicitUnusedBlock)then
        if (unusedBlock_BP(nborBLK,nborPE)) return
     end if
 
-    rSubF=0
-    if(sSubF == -1) rSubF = subfaceNumber(idir,iCHILD)
+    call set_indices(&
+                   iDirS2R_D=dLoop(iDir,:), &
+                   nLayerS=1,nLayerR=1,&
+                   iMinS_D=iMinS_D,iMaxS_D=iMaxS_D,&
+                   iMinR_D=iMinR_D,iMaxR_D=iMaxR_D,&
+                   iLevelR=1,iChild=iChild)
 
-    call set_indices
-    if(sSubF == -1)then !Send to coarser level
-
+    
+    select case(iDir)
+    case(1)
+       i1S=iMinS_D(2); j1S=iMinS_D(3)
+       i2S=iMaxS_D(2); j2S=iMaxS_D(3)      
+       i1R=iMinR_D(2); j1R=iMinR_D(3)
+       i2R=iMaxR_D(2); j2R=iMaxR_D(3)       
+       k1S=2         ; k1R=1
+    case(2)
+       i1S=iMinS_D(2); j1S=iMinS_D(3)
+       i2S=iMaxS_D(2); j2S=iMaxS_D(3)      
+       i1R=iMinR_D(2); j1R=iMinR_D(3)
+       i2R=iMaxR_D(2); j2R=iMaxR_D(3)       
+       k1S=1         ; k1R=2
+    case(3)
+       i1S=iMinS_D(1); j1S=iMinS_D(3)
+       i2S=iMaxS_D(1); j2S=iMaxS_D(3)      
+       i1R=iMinR_D(1); j1R=iMinR_D(3)
+       i2R=iMaxR_D(1); j2R=iMaxR_D(3)       
+       k1S=2         ; k1R=1
+    case(4)
+       i1S=iMinS_D(1); j1S=iMinS_D(3)
+       i2S=iMaxS_D(1); j2S=iMaxS_D(3)      
+       i1R=iMinR_D(1); j1R=iMinR_D(3)
+       i2R=iMaxR_D(1); j2R=iMaxR_D(3)       
+       k1S=1         ; k1R=2
+    case(5)
+       i1S=iMinS_D(1); j1S=iMinS_D(2)
+       i2S=iMaxS_D(1); j2S=iMaxS_D(2)      
+       i1R=iMinR_D(1); j1R=iMinR_D(2)
+       i2R=iMaxR_D(1); j2R=iMaxR_D(2)       
+       k1S=2         ; k1R=1
+    case(6)
+       i1S=iMinS_D(1); j1S=iMinS_D(2)
+       i2S=iMaxS_D(1); j2S=iMaxS_D(2)      
+       i1R=iMinR_D(1); j1R=iMinR_D(2)
+       i2R=iMaxR_D(1); j2R=iMaxR_D(2)       
+       k1S=1         ; k1R=2
+    end select
+    k2S=k1S  ;  k2R=k1R
        if(iProc == iPE)then
           do i=i1S,i2S,2; do j=j1S,j2S,2; do k=k1S,k2S
              nSend(nborPE)=nSend(nborPE)+1
@@ -661,99 +686,9 @@ contains
              end if
           end do; end do; end do
        end if
-    end if
+
 
   end subroutine build_i
-
-  !==========================================================================
-  subroutine set_indices
-
-    !-----------------------------------------
-    !Set initial values
-    i1S=0 ; j1S=0 ; k1S=0;   i1R=0 ; j1R=0 ; k1R=0
-    i2S=0 ; j2S=0 ; k2S=0;   i2R=0 ; j2R=0 ; k2R=0
-
-    if(sSubF==-1)then
-       !Set indices for coarser neighbor block
-
-       !1st dimension (nI or nJ)
-       ! Send
-       select case(idir)
-       case(1,2)
-          i1S=1 ; i2S=nJ
-
-          select case(rSubF)
-          case(1,2)
-             i1R=1 ; i2R=nJ/2
-          case(3,4)
-             i1R=nJ/2+1 ; i2R=nJ
-          end select
-       case(3,4,5,6)
-          i1S=1 ; i2S=nI
-
-          select case(rSubF)
-          case(1)
-             i1R=1 ; i2R=nI/2
-          case(2)
-             select case(idir)
-             case(3,4)
-                i1R=1 ; i2R=nI/2
-             case(5,6)
-                i1R=nI/2+1 ; i2R=nI
-             end select
-          case(3)
-             select case(idir)
-             case(3,4)
-                i1R=nI/2+1 ; i2R=nI
-             case(5,6)
-                i1R=1 ; i2R=nI/2
-             end select
-          case(4)
-             i1R=nI/2+1 ; i2R=nI
-          end select
-       end select
-       ! Recv
-
-       !2nd dimension (nJ or nK)
-       ! Send
-       select case(idir)
-       case(1,2,3,4)
-          j1S=1 ; j2S=nK
-
-          select case(rSubF)
-          case(1,3)
-             j1R=1 ; j2R=nK/2
-          case(2,4)
-             j1R=nK/2+1 ; j2R=nK
-          end select
-       case(5,6)
-          j1S=1 ; j2S=nJ
-
-          select case(rSubF)
-          case(1,2)
-             j1R=1 ; j2R=nJ/2
-          case(3,4)
-             j1R=nJ/2+1 ; j2R=nJ
-          end select
-       end select
-       ! Recv
-
-       !3rd dimension (1 or 2)
-       ! Send & Recv
-       select case(idir)
-       case(2,4,6)
-          k1S=1 ; k2S=1 
-          k1R=2 ; k2R=2
-       case(1,3,5)
-          k1S=2 ; k2S=2 
-          k1R=1 ; k2R=1
-       end select
-
-       RETURN
-    end if
-
-  end subroutine set_indices
-
 end subroutine mp_build_face_indices
 
 !==========================================================================

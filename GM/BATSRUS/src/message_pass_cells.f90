@@ -1069,8 +1069,6 @@ subroutine mp_build_cell_indices(JustCount)
   integer :: iBLK,iPE, iChild, idir, sSubF
   integer :: i1S,i2S, j1S,j2S, k1S,k2S, i1R,i2R, j1R,j2R, k1R,k2R
   integer :: sS
-  integer :: sR,rSubf
-  logical :: IsAtFace
   integer,dimension(3)::iMinS_D,iMaxS_D,iMinR_D,iMaxR_D,nDuplicate_D
   integer::nLayerS,nLayerR
  
@@ -1105,7 +1103,6 @@ subroutine mp_build_cell_indices(JustCount)
   integer :: iLevelR    !level of the receiving block
   integer, dimension(4) :: neighborPE,neighborBLK,neighborCHILD
 
-  logical::DoTest=.false.,DoTestMe=.false.,DoCallOKTest=.true.
   !------------------------------------------
 
   ! face=1-6, edge=7-18, corner=19-26
@@ -1122,17 +1119,11 @@ subroutine mp_build_cell_indices(JustCount)
   nSend=0
   nRecv=0
 
-  if(DoCallOKTest)then
-     call set_oktest('set_indices',DoTest,DoTestMe)
-     DoCallOKTest=.false.
-  end if
 
   if(DoFacesOnlyLast)then
      sS=0 ;  iDirMax=6    
-     sR=0
   else
      sS=1 ;  iDirMax=26
-     sR=2
   end if
 
   if(.not.DoOneCoarserLayer) then
@@ -1177,7 +1168,6 @@ subroutine mp_build_cell_indices(JustCount)
            case(0)
               !Build indices for send to same block level
               sSubF=0
-              rSubf=0
               if(DoOneLayer_D(iDir))then
                  nLayerS = 1 ; nLayerR = 1
               else
@@ -1209,7 +1199,6 @@ subroutine mp_build_cell_indices(JustCount)
               call build_i
            case(-1)
               !Build indices for send to finer block level
-              rSubF=0
               nLayerS = 1 ; nLayerR = 1 
               if((.not.DoOneLayer_D(iDir)))then
                  nLayerS = 1 + iZeroOrOneForTwoCoarserLayers
