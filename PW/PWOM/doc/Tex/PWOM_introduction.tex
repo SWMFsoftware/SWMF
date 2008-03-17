@@ -14,14 +14,43 @@ The core software designers and code developers: Alex Glocer, G\'abor T\'oth
 
 \section{The PWOM in a Few Paragraphs}
 
-The PWOM is a ... 
+The Polar Wind Outflow Model (PWOM), solves the gyrotropic continuity, 
+momentum and energy equations that describe the supersonic ion outflow 
+along open magnetic field lines in the polar region. The PWOM can simulate 
+the polar winds of Earth and Saturn. At Earth the behavior of three ion 
+species, O$^{+}$, H$^{+}$, and He$^{+}$ are considered, while at Saturn 
+only two species, H$^{+}$ and H$_{3}^{+}$, are considered. The model assumes 
+a stationary neutral atmosphere. Ranging in altitude from 250 km to 8,000 km 
+for the Earth version, or 1,400 to 61,000 km for the Saturn version, the PWOM 
+has its lower boundary set in a reservoir at chemical and thermal equilibrium, 
+while the top boundary is at considerably lower pressure, thus creating a 
+transonic outflow to a low pressure external medium. The considerable 
+altitude range covers two different regimes; the collision and chemistry 
+dominated low altitude, and the expansion dominated high altitude. 
+Furthermore, the ambipolar electric field is calculated at every time step, 
+and is a major contributor to ion outflow. Other physical effects that are 
+included in the PWOM, are topside electron heating, photo-ionization, and the 
+expanding cross-sectional area of the magnetic flux tube.
 
-The PWOM utilizes the utilities and coupling tools of the SWMF. 
-Coupling includes: A wrapper (coupling interface)
+Obtaining a single field line solution yields the vertical solution at one 
+point. The field line convects as determined from the polar cap potential. 
+By solving several field lines distributed  throughout the polar cap, 
+the full solution can be obtained. Since each field line solution is 
+independent, this problem is embarassingly parallel. Accordingly, 
+we use the Message Passing Interface (MPI) to split the computational work 
+evenly among processors. 
 
-The PWOM can be compiled into standalone or coupled mode
+The PWOM can be compiled into standalone or coupled mode. In the standalone 
+mode, the polar cap potential is read from a file or calculated from the 
+Weimer empirical model, and the polar wind solution is obtained independantly 
+of other models.In the coupled mode, the PWOM interacts with the SWMF 
+via a coupling interface known as a wrapper. In this case the polar 
+cap potential is obtained from the IE component, and the fluxes at the top 
+of the PWOM are passed to the GM component. Most of this manual is devoted to 
+the standalone operation of the PWOM, but chapter \ref{SWMF} discusses some 
+details on how to utilize the coupled model.
 
-The coupling is realized either with MPI
+
 
 The PWOM has been tested on the SGI Altix, on Linux Beowulf clusters with the 
 NAG f95 compiler. We have also run the PWOM with reasonable success under
