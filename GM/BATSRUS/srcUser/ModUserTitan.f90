@@ -1,4 +1,3 @@
-
 !^CFG COPYRIGHT UM
 !========================================================================
 module ModUser
@@ -365,7 +364,7 @@ contains
           open(unit_tmp,file="TitanInput/e_n_collision.dat",&
                status="old")             
           read(unit_tmp,'(a)')linetitan
-          write(*,*)linetitan
+          !write(*,*)linetitan
           do i=1,num_en
              read(unit_tmp,*)nu_Te(i),(nu_en(i,j),j=1,3)
           end do
@@ -529,9 +528,12 @@ contains
        end if
     end if
 
-!    if (R_BLK(1,1,1,iBlock) > 10.0*Rbody) RETURN
+    !    if (R_BLK(1,1,1,iBlock) > 5.0*Rbody) RETURN
 
     do k = 1, nK ;   do j = 1, nJ ;  do i = 1, nI
+       
+       if (R_BLK(i,j,k,iBlock) < Rbody) CYCLE
+    
        inv_rho = 1.00/State_VGB(rho_,i,j,k,iBlock)
        inv_rho2 = inv_rho*inv_rho
        uu2 =(State_VGB(Ux_,i,j,k,iBlock)*State_VGB(Ux_,i,j,k,iBlock)  &
@@ -998,7 +1000,7 @@ contains
 
     real :: Productrate
     integer:: iSpecies
-    logical:: oktest_me=.true.,oktest
+    logical:: oktest_me=.false.,oktest
     !---------------------------------------------------------------
 
     CosSZA_I=cos(SZATitan_I*cPi/180.0)
@@ -1163,6 +1165,8 @@ contains
 
     select case (type_innerbcs)
     case('float')
+       VarsGhostFace_V(Ux_:Uz_)= VarsTrueFace_V(Ux_:Uz_)
+       VarsGhostFace_V(Bx_:Bz_)= VarsTrueFace_V(Bx_:Bz_)
     case('reflect')
        VarsGhostFace_V(Ux_:Uz_) = &
             VarsTrueFace_V(Ux_:Uz_) - 2*uDotR*FaceCoords_D
