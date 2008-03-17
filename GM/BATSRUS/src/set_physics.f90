@@ -326,7 +326,7 @@ subroutine set_units
   case("SOLARWIND")
      ! rPlanet, SW sound speed, SW density in amu/cm^3
      No2Si_V(UnitX_)   = rPlanetSi                             
-     No2Si_V(UnitU_)   = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass)
+     No2Si_V(UnitU_)   = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass/MassFluid_I(1))
      No2Si_V(UnitRho_) = 1000000*cProtonMass*MassFluid_I(1)*SW_n_dim
   case("NONE", "READ")
      ! Already set in MH_set_parameters

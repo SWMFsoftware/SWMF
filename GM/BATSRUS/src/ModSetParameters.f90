@@ -1469,14 +1469,14 @@ subroutine MH_set_parameters(TypeAction)
               satellite_var='mhd'
               plot_dimensional(ifile)= index(satellite_string,'MHD')>0
               sat_time(ifile) = 'step date'
-              satellite_vars(ifile)='rho ux uy uz bx by bz p jx jy jz'
+              satellite_vars(ifile)=NamePrimitiveVar//' jx jy jz'
            elseif(index(satellite_string,'FUL')>0 .or. &
                 index(satellite_string,'ful')>0)then
               satellite_var='ful'
               plot_dimensional(ifile)= index(satellite_string,'FUL')>0
               sat_time(ifile) = 'step date'
               satellite_vars(ifile)=&
-                   'rho ux uy uz bx by bz b1x b1y b1z p jx jy jz'
+                   NamePrimitiveVar//' b1x b1y b1z e jx jy jz'
            else
               call stop_mpi(&
                    'Variable definition (mhd,ful,var) missing' &

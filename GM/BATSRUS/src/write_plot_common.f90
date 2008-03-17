@@ -580,6 +580,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
   use ModNumConst, ONLY: cTiny
   use ModHallResist, ONLY: UseHallResist, hall_factor, &
        IsNewBlockHall, get_face_current
+  use ModResistivity, ONLY: Eta_GB                         !^CFG IF DISSFLUX
   use ModPointImplicit, ONLY: UsePointImplicit_B
   use ModMultiFluid, ONLY: extract_fluid_name, &
        TypeFluid, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I
@@ -702,6 +703,8 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         plotvar_inBody(iVar) = BodyP_I(iFluid)
 
         ! EXTRA MHD variables
+     case('eta')
+        PlotVar(:,:,:,iVar) = Eta_GB(:,:,:,iBlk)   !^CFG IF DISSFLUX
 
      case('n','t','temp')
         ! Calculate the number density
@@ -1335,6 +1338,9 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitN_)
      case('t','temp')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitTemperature_)
+     case('eta')                                          !^CFG IF DISSFLUX
+        PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*&       !^CFG IF DISSFLUX
+             (No2Io_V(UnitX_)**2/No2Io_V(UnitT_))         !^CFG IF DISSFLUX
      case('ux','uy','uz')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitU_)
      case('jx','jy','jz','jr',&
