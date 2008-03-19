@@ -155,6 +155,7 @@ clean:
 	@touch ${INSTALLFILES}
 	cd src; make clean
 	cd srcInterface; make clean
+	cd doc/Tex; make clean
 	@(if [ -d share ]; then cd share; make clean; fi);
 	@(if [ -d util ];  then cd util;  make clean; fi);
 
