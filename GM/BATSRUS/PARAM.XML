@@ -3771,6 +3771,7 @@ and DoImSatTrace false.
 
 #IMCOUPLING
 20.0			TauCoupleIm
+F			DoImSatTrace
 T			DoCoupleImPressure
 F			DoCoupleImDensity
 T			DoFixPolarRegion
