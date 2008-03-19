@@ -178,12 +178,10 @@ subroutine set_physics_constants
   SW_rho_dim = SW_rho*No2Io_V(UnitRho_)
   SW_p_dim   = SW_p*No2Io_V(UnitP_)
 
-  BodyRho_I = BodyNDim_I*Io2Si_V(UnitN_)*MassFluid_I*cProtonMass &
-       *Si2No_V(UnitRho_)
+  BodyRho_I = BodyNDim_I*Io2No_V(UnitN_)*MassFluid_I
   BodyP_I   = BodyRho_I/MassFluid_I * BodyTDim_I*Io2No_V(UnitTemperature_)
 
-  PolarRho_I = PolarNDim_I*Io2Si_V(UnitN_)*MassFluid_I*cProtonMass &
-       *Si2No_V(UnitRho_)
+  PolarRho_I = PolarNDim_I*Io2No_V(UnitN_)*MassFluid_I
   PolarP_I   = PolarRho_I/MassFluid_I * PolarTDim_I*Io2No_V(UnitTemperature_)
   PolarRhoU_I= PolarRho_I * PolarUDim_I * Io2No_V(UnitU_)
 
@@ -198,11 +196,11 @@ subroutine set_physics_constants
 
   !^CFG IF SECONDBODY BEGIN
   RhoBody2= RhoDimBody2 * Io2No_V(UnitRho_)
-  pBody2  = RhoBody2 * TDimBody2*Io2No_V(UnitTemperature_)
+  pBody2  = RhoBody2/MassFluid_I(1) * TDimBody2*Io2No_V(UnitTemperature_)
   !^CFG END SECONDBODY
 
-  !Here the arrays of the FACE VALUE are formed
-  !Initialization
+  ! Here the arrays of the FACE VALUE are formed
+  ! Initialization
   do iBoundary=body2_,Top_
      FaceState_VI(:,iBoundary)=DefaultState_V(1:nVar)
   end do
@@ -241,7 +239,7 @@ subroutine set_physics_constants
   end do
 
   ! Fix the total pressure if necessary (density and temperature are kept)
-  if(UseMultiIon.and.TypeFluid_I(1)=='ion') &
+  if(UseMultiIon .and. TypeFluid_I(1)=='ion' .and. SW_rho>0.0) &
        FaceState_VI(P_,East_:Top_) = sum(FaceState_VI(iP_I(2:nFluid),1)) &
        + SW_p/Sw_rho &
        * (Sw_rho - sum(FaceState_VI(iRho_I(2:nFluid),1))/MassFluid_I(1))
