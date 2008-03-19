@@ -229,7 +229,7 @@ HTML: cleanhtml
 #^CMP END DOCHTML
 
 clean:
-	rm -f *.aux *.log *.toc *.ind *.idx *.ilg *.dvi *.ps *~ *.protex
+	rm -f *.out *.aux *.log *.toc *.ind *.idx *.ilg *.dvi *.ps *~ *.protex
 	rm -f SWMFREF.tex SWMFXML.tex BATSRUS_SCRIPTS.tex
 	@echo 'rm -f SWMFREF SWMFXML'
 	@rm -f ${SWMFREF} ${SWMFXML}

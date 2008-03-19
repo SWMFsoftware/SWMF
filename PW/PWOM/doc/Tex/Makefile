@@ -44,7 +44,7 @@ PDF_FILES = PWOM.pdf
 PDF: ${PDF_FILES}
 
 clean:
-	rm -f *.aux *.log *.toc *.ind *.idx *.ilg *.dvi *.ps *~ *.protex
+	rm -f *.out *.aux *.log *.toc *.ind *.idx *.ilg *.dvi *.ps *~ *.protex
 	rm -f PWOMXML.tex 
 	@echo 'rm -f PWOMREF PWOMXML'
 	@rm -f ${PWOMXML}
