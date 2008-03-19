@@ -63,6 +63,8 @@ USERMANUAL.dvi: \
 	idl.tex \
 	tecplot.tex
 
+USERMANUAL.html: ../../PARAM.xmltex
+
 PDF:  USERMANUAL.pdf DESIGN.pdf STANDARDS.pdf
 
 HTML: cleanhtml USERMANUAL.html DESIGN.html STANDARDS.html #^CFG IF DOCHTML
