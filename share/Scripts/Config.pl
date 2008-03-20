@@ -177,6 +177,9 @@ if($Show){
     &show_settings_;
 }
 
+# Recreate Makefile.RULES with the current settings
+&create_makefile_rules;
+
 ##############################################################################
 sub get_settings_{
 
