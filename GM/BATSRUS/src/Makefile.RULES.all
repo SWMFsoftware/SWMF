@@ -21,15 +21,15 @@ $OS eq "IRIX64" and $Compiler eq "f90"
 
 # The NAG compiler cannot compile big static arrays with the -nan flag
 $Compiler eq "f95" and $Debug eq "yes"
-	${COMPILE.f90} ${SEARCH} -c -O0 -gline ${PRECISION} ModIO.f90
+	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModIO.f90
 
 $Compiler eq "f95" and $Debug eq "yes" and $IsDynamic eq "no"
-	${COMPILE.f90} ${SEARCH} -c -O0 -gline ${PRECISION} ModAdvance.f90
-	${COMPILE.f90} ${SEARCH} -c -O0 -gline ${PRECISION} ModGeometry.f90
-	${COMPILE.f90} ${SEARCH} -c -O0 -gline ${PRECISION} ModImplicit.f90
-	${COMPILE.f90} ${SEARCH} -c -O0 -gline ${PRECISION} ModCT.f90
-	${COMPILE.f90} ${SEARCH} -c -O0 -gline ${PRECISION} ModRaytrace.f90
-	${COMPILE.f90} ${SEARCH} -c -O0 -gline ${PRECISION} ModNodes.f90
+	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModAdvance.f90
+	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModGeometry.f90
+	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModImplicit.f90
+	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModCT.f90
+	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModRaytrace.f90
+	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModNodes.f90
 
 $Compiler eq "f95" and $Debug eq "yes" and $UserModule =~ /Mars 4 species/i
 	${COMPILE.f90} ${SEARCH} -c -O0 -gline ${PRECISION} ModUser.f90
