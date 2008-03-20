@@ -4,6 +4,7 @@ include ../Makefile.def
 SEARCH_EXTRA = -I${EMPIRICALGMDIR} -I${EMPIRICALIEDIR}
 
 include ../Makefile.conf
+include Makefile.RULES
 
 OBJECTS = \
 	rbe_subs.o\
