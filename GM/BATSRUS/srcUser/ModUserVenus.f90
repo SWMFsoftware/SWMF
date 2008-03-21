@@ -1011,6 +1011,10 @@ contains
 
     select case (type_innerbcs) 
     case('float')
+       VarsGhostFace_V(Ux_:Uz_) = &
+            VarsTrueFace_V(Ux_:Uz_)
+       VarsGhostFace_V(Bx_:Bz_) = &
+            VarsTrueFace_V(Bx_:Bz_)
     case('reflect')   
        VarsGhostFace_V(Ux_:Uz_) = &
             VarsTrueFace_V(Ux_:Uz_) - 2*uDotR*FaceCoords_D
