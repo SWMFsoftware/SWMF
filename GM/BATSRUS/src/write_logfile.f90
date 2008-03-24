@@ -239,25 +239,23 @@ subroutine write_logfile(iSatIn,iFile)
 
 end subroutine write_logfile
 
-
 !==============================================================================
 subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
 
   use ModProcMH
   use ModNumConst
-  use ModMPI   !!!!DTW moved up from set_log_var
-  use ModMain, ONLY: n_step,dt,unusedBLK,nI,nJ,nK,nBlock,gcn,UseUserLogFiles,&
+  use ModMPI
+  use ModMain, ONLY: n_step,dt,unusedBLK,nI,nJ,nK,nBlock,UseUserLogFiles,&
        iTest,jTest,kTest,ProcTest,BlkTest,optimize_message_pass,x_,y_,&
        UseRotatingFrame
-  use ModPhysics,    ONLY: rCurrents, rBody, inv_gm1, OMEGABody
+  use ModPhysics,    ONLY: rCurrents, inv_gm1, OMEGABody
   use ModVarIndexes
   use ModAdvance,    ONLY: tmp1_BLK, tmp2_BLK, &
        B0xCell_BLK, B0yCell_BLK, B0zCell_BLK, State_VGB, Energy_GBI, DivB1_GB
-  use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,dx_BLK,dy_BLK,dz_BLK,&
-       x1,x2,y1,y2,z1,z2
+  use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,x1,x2,y1,y2,z1,z2
   use ModRaytrace,   ONLY: ray  !^CFG  IF RAYTRACE
   use ModIO
-  use ModMultiFluid, ONLY: iRho, iRhoUx, iRhoUy, iRhoUz, iP, iFluid, TypeFluid
+  use ModMultiFluid, ONLY: iRho, iRhoUx, iRhoUy, iRhoUz, iP, iFluid
 
   implicit none
 
@@ -270,11 +268,11 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
 
   real :: Volume
   real :: StateIntegral_V(nVar)
-  real :: SatRayVar_I(5), SatRayVarSum_I(5)  !DTW, July 2007
+  real :: SatRayVar_I(5), SatRayVarSum_I(5)
 
-  integer :: iVar,iR,iVarTot,itmp,jtmp, iBLK
+  integer :: iVar,iR,iVarTot, iBLK
   integer :: i,j,k
-  integer :: iError  !!!DTW moved up from set_log_var
+  integer :: iError
   real :: R_log
 
   logical :: DoTest,DoTestMe
@@ -285,7 +283,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   real :: StateSat_V(0:nVar+3), B0Sat_D(3)
 
   real, external :: integrate_BLK, maxval_BLK, minval_BLK
-  real, external :: calc_sphere,integrate_circle,test_cell_value
+  real, external :: calc_sphere,integrate_circle
 
   !-------------------------------------------------------------------------
   call set_oktest('set_logvar',DoTest,DoTestMe)
@@ -316,7 +314,6 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
 
      !^CFG IF RAYTRACE BEGIN
      !If any ray tracing satellite variables are present, collect ray data
-     !DTW, July 2007
      do iVar=1, nLogVar
         select case(NameLogVar_I(iVar))
         case('theta1','theta2','phi1','phi2','status')
@@ -362,12 +359,10 @@ contains
   subroutine set_log_var
 
     use ModMain, ONLY: x_, y_, z_
-    !use ModMPI  !!!DTW: Moved to set_logvar
     use ModUser, ONLY: user_get_log_var
     use ModUtilities, ONLY: lower_case
 
     ! Local variables
-    !integer :: iError  !!!DTW: Moved to set_logvar
     real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, qval, qval_all
     real :: Current_D(3)
 
@@ -820,7 +815,14 @@ contains
     use ModNumConst
     use ModVarIndexes
     use ModIO
+    use ModUtilities, ONLY: lower_case
+    use ModPhysics, ONLY:  AverageIonCharge, ElectronTemperatureRatio
+    use ModMultiFluid, ONLY: TypeFluid, iFluid, iRho, iP, iRhoIon_I
     implicit none
+
+    integer :: jVar, jFluid
+    character(len=10) :: NameVar, String
+
     !-------------------------------------------------------------------------
     if (iProc/=0) RETURN
 
@@ -845,6 +847,32 @@ contains
        if(TypeFluid == 'ion') LogVar_I(iVarTot) = &
             LogVar_I(iVarTot) + &
             0.5*sum((StateSat_V(Bx_:Bz_)+B0Sat_D)**2)
+    case('n','t','temp')
+       ! Calculate the number density
+       if(UseMultiSpecies)then
+          LogVar_I(iVarTot)=0.0
+          do jVar = SpeciesFirst_, SpeciesLast_
+             LogVar_I(iVarTot) = LogVar_I(iVarTot) + &
+                  StateSat_V(jVar)/MassSpecies_V(jVar)
+          end do
+       else if(UseMultiIon .and. TypeFluid_I(iFluid) == 'ion')then
+          ! This can only occur for iFluid = 1 being the total ion fluid
+          ! sum(n_i) = sum(rho_i/M_i) = rho/M_1 + sum_2 rho_i*(1/M_i - 1/M_1)
+          LogVar_I(iVarTot)= StateSat_V(Rho_)/MassFluid_I(1)
+          do jFluid = 2, nIonFluid
+             LogVar_I(iVarTot) = LogVar_I(iVarTot) + &
+                  StateSat_V(iRhoIon_I(jFluid)) &
+                  *(1/MassFluid_I(jFluid) - 1/MassFluid_I(1))
+          end do
+       else
+          LogVar_I(iVarTot) = StateSat_V(iRho)/MassFluid_I(iFluid)
+       end if
+       
+       ! Calculate temperature from P = n*k*T + ne*k*Te = n*k*T*(1+ne/n*Te/T)
+       if(NameLogVar /= 'n') LogVar_I(iVarTot) = &
+            StateSat_V(iP) / LogVar_I(iVarTot) &
+            /(1+AverageIonCharge*ElectronTemperatureRatio)
+       
     case('p')
        LogVar_I(iVarTot) = StateSat_V(iP)
     case('ux')
@@ -882,7 +910,7 @@ contains
           LogVar_I(iVarTot) = 1
        end if
        
-       !Raytracing footpoint values  DTW, July 2007 !^CFG IF RAYTRACE BEGIN
+       !Raytracing footpoint values !^CFG IF RAYTRACE BEGIN
     case('theta1')
        LogVar_I(iVarTot) = SatRayVarSum_I(1)
     case('phi1')
@@ -895,6 +923,16 @@ contains
        LogVar_I(iVarTot) = SatRayVarSum_I(5)       !^CFG END RAYTRACE
 
     case default
+       ! Check if the variable name is one of the state variables
+       String = NameLogVar_I(iVar)
+       call lower_case(String)
+       do jVar = 1, nVar
+          NameVar = NameVar_V(jVar)
+          call lower_case(NameVar)
+          if(NameVar /= String) CYCLE
+          LogVar_I(iVarTot) = StateSat_V(jVar)
+          RETURN
+       end do
        LogVar_I(iVarTot) = -777.0
        if(iProc==0)write(*,*)'WARNING in var_sat: unknown variable ',&
             NameLogVar,' for iSat = ',iSat
@@ -909,15 +947,17 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
      LogR_I,nLogTot,LogVar_I)
 
   use ModPhysics
+  use ModVarIndexes, ONLY: NameVar_V, UnitUser_V
+  use ModUtilities, ONLY: lower_case
   implicit none
 
   integer, intent(in) :: nLogVar, nLogR, nLogTot
   character (LEN=10), intent(in) :: NameLogVar_I(nLogVar)
   real, intent(inout) :: LogVar_I(nLogTot)
   real, intent(in) :: LogR_I(nLogR)
-  character (len=10) :: NameLogVar
 
-  integer :: iVar, iR, iVarTot
+  character (len=10) :: NameLogVar, NameVar
+  integer :: iVar, iVarTot, jVar
   !-------------------------------------------------------------------------
 
   iVarTot = 0
@@ -949,6 +989,11 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
      case('jx','jy','jz','jxpnt','jypnt','jzpnt',&
           'jin','jout','jinmax','joutmax')
         LogVar_I(iVarTot)= LogVar_I(iVarTot)*No2Io_V(UnitJ_)
+
+     case('n')
+        LogVar_I(iVarTot)=LogVar_I(iVarTot)*No2Io_V(UnitN_)
+     case('t','temp')
+        LogVar_I(iVarTot)=LogVar_I(iVarTot)*No2Io_V(UnitTemperature_)
 
 !!$! Ionosphere values                                
         !^CFG IF IONOSPHERE BEGIN
@@ -996,8 +1041,14 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
         LogVar_I(iVarTot) = LogVar_I(iVarTot)*No2Io_V(UnitT_)
 
      case default
+        do jVar = 1, nVar
+           NameVar = NameVar_V(jVar)
+           call lower_case(NameVar)
+           if(NameLogVar /= NameVar) CYCLE
+           LogVar_I(iVarTot)=LogVar_I(iVarTot)*UnitUser_V(jVar)
+           EXIT
+        end do
         ! no normalization
-
      end select
   end do ! iVar
 end subroutine normalize_logvar
@@ -1276,7 +1327,7 @@ real function integrate_circle(Radius,z,Array_GB)
   real :: Integral, Average 
 
   ! Indices and coordinates
-  integer :: iBlock,i,j
+  integer :: iBlock,i
   integer :: nPhi
   real :: xMin,xMax,yMin,yMax,zMin,zMax
   real :: x, y, InvDxyz_D(3)
