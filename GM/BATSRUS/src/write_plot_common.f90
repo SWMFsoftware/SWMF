@@ -490,7 +490,7 @@ contains
              !   with values for plotting.  However, when allowed to go all the
              !   way to the origin, B traces will continuously loop through the
              !   body and out.  Setting the values to zero inside of 0.51 fixes it.
-             if(plotvar_useBody(iVar))then
+             if(plotvar_useBody(iVar) .and. body1)then
                 if(rr < 0.51*Rbody .and. rr < 0.51) then
                    PlotVarNodes_NBI(i,j,k,iBLK,iVar) = 0.00
                 end if
