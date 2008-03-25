@@ -123,9 +123,10 @@ module ModUser
        hv_=-2   
 
   real :: body_Tn_dim=160. !neutral temperature at the body                    
-  real :: kT0 !dimensionless temperature of new created ions
-  real :: body_Ti_dim=350., kTp0 !ion temperature at the body
-  real :: Te_new_dim=160., KTe0 !temperature of new created electrons
+  real :: kTn, kTi0, kTp0  !dimensionless temperature of neutral, &
+                           !new created ions, plasma at the body
+!  real :: body_Ti_dim=350., kT0 !ion temperature at the body
+  real :: Te_new_dim=1000., KTe0 !temperature of new created electrons
   real :: kT1000
 
   real :: Nu_C(1:nI,1:nJ,1:nK)
@@ -481,8 +482,8 @@ contains
 
     ! Variables required by this user subroutine
     integer:: i,j,k,iSpecies,iBlock,iBlockLast = -1
-    real :: inv_rho, inv_rho2, uu2, cosSZA, Productrate,kTi, kTn
-    real :: alt, Te_dim = 300.0
+    real :: inv_rho, inv_rho2, uu2, cosSZA, Productrate,kTi, kTe
+    real :: alt
     real :: totalPSNumRho=0.0,totalRLNumRhox=0.0, temps
     logical:: oktest,oktest_me
     real :: SourceLossMax, vdtmin
@@ -528,12 +529,12 @@ contains
        end if
     end if
 
-    !    if (R_BLK(1,1,1,iBlock) > 5.0*Rbody) RETURN
+    if (R_BLK(1,1,1,iBlock) > 5.0*Rbody) RETURN
 
     do k = 1, nK ;   do j = 1, nJ ;  do i = 1, nI
-       
+
        if (R_BLK(i,j,k,iBlock) < Rbody) CYCLE
-    
+
        inv_rho = 1.00/State_VGB(rho_,i,j,k,iBlock)
        inv_rho2 = inv_rho*inv_rho
        uu2 =(State_VGB(Ux_,i,j,k,iBlock)*State_VGB(Ux_,i,j,k,iBlock)  &
@@ -734,36 +735,49 @@ contains
             -Nu_C(i,j,k)*State_VGB(Uy_,i,j,k,iBlock)
        SrhoUz(i,j,k) = SrhoUz(i,j,k)  &
             -Nu_C(i,j,k)*State_VGB(Uz_,i,j,k,iBlock)
-       SE(i,j,k) = SE(i,j,k)  &
-            -0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*Nu_C(i,j,k) 
 
-
-       kTn = KT0
        kTi = State_VGB(p_,i,j,k,iBlock)/totalNumRho/2.0
-       SE(i,j,k) = SE(i,j,k)  &
-            +inv_gm1*(totalSourceNumRho*kTn-totalLossNumRho*kTi) &
-            -0.50*uu2*(totalLossRho) &
-            +1.5*totalNumRho*(kTn-KTi)*Nu_C(i,j,k)
+       kTe = kTi
 
-       SP(i,j,k) = SP(i,j,k)  &
-            +0.5*gm1*State_VGB(rho_,i,j,k,iBlock)*uu2*&
-            Nu_C(i,j,k)  &
-            +(totalSourceNumRho*kTn-totalLossNumRho*kTi) &
-            +0.50*(gm1)*uu2*(totalSourceRho) &
-            +totalNumRho*(kTn-KTi)*Nu_C(i,j,k) 
+       if(UseOldEnergy)then          
+          SE(i,j,k) = SE(i,j,k)  &
+               -0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*Nu_C(i,j,k) 
+          
+          SE(i,j,k) = SE(i,j,k)  &
+               +inv_gm1*(totalSourceNumRho*kTn-totalLossNumRho*kTi) &
+               -0.50*uu2*(totalLossRho) &
+               +1.5*totalNumRho*(kTn-KTi)*Nu_C(i,j,k)
+          
+          SP(i,j,k) = SP(i,j,k)  &
+               +0.5*gm1*State_VGB(rho_,i,j,k,iBlock)*uu2*&
+               Nu_C(i,j,k)  &
+               +(totalSourceNumRho*kTn-totalLossNumRho*kTi) &
+               +0.50*(gm1)*uu2*(totalSourceRho) &
+               +totalNumRho*(kTn-KTi)*Nu_C(i,j,k)
+       else
 
-!!!          kTi = State_VGB(p_,i,j,k,iBlock)/totalNumRho
-!!!          SE(i,j,k) = SE(i,j,k)  &
-!!!               +inv_gm1*(totalSourceNumRho*kTn-totalLossNumRho*kTi) &
-!!!               -0.50*uu2*(totalLossRho)
-!!!
-!!!          SP(i,j,k) = SP(i,j,k)  &
-!!!               +0.5*gm1*State_VGB(rho_,i,j,k,iBlock)*uu2*&
-!!!               Nu_C(i,j,k)  &
-!!!               +(totalSourceNumRho*kTn-totalLossNumRho*kTi) &
-!!!               +0.50*(gm1)*uu2*(totalSourceRho) 
-
-
+          temps = totalSourceNumRho*kTn            &
+               + totalNumRho*(kTn-KTi)*Nu_C(i,j,k) &
+               + totalPSNumRho*kTe0                &
+               - totalLossNumRho*kTi               &
+               - totalRLNumRhox*totalNumRho*KTe
+          
+          if(UseTempControl.and.kTi > kT1000)&
+               temps = temps+totalNumRho*(kT1000-KTi)*Nu_C(i,j,k)*5.0
+          
+          SE(i,j,k) = SE(i,j,k)  &
+               -0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*&
+               Nu_C(i,j,k)  &
+               -0.50*uu2*(totalLossRho) &
+               +inv_gm1*temps
+             
+          SP(i,j,k) = SP(i,j,k)  &
+               +0.5*gm1*State_VGB(rho_,i,j,k,iBlock)*uu2*&
+               Nu_C(i,j,k)  &
+               +0.50*(gm1)*uu2*(totalSourceRho) &
+               +temps
+       end if
+  
     end do; end do; end do     ! end of the i,j,k loop
     if(oktest_me)then
        RhoUTimesSrhoU = State_VGB(Ux_,itest,jtest,ktest,iBlock)*&
@@ -816,6 +830,9 @@ contains
     integer::iBoundary
     !--------------------------------------------------------------------------
     !For Outer Boundaries
+    AverageIonCharge         = 1.0
+    ElectronTemperatureRatio = 1.0   !default was 0.0
+
     do iBoundary=East_,Top_
        FaceState_VI(ScalarFirst_:ScalarLast_,iBoundary)  = cTiny8/1.0e5     
        !  FaceState_VI(ScalarFirst_:ScalarLast_,iBoundary)  = 0.0
@@ -1000,7 +1017,7 @@ contains
 
     real :: Productrate
     integer:: iSpecies
-    logical:: oktest_me=.false.,oktest
+    logical:: oktest_me=.false.,oktest=.false.
     !---------------------------------------------------------------
 
     CosSZA_I=cos(SZATitan_I*cPi/180.0)
@@ -1021,9 +1038,17 @@ contains
             BodyRhoSpecies_dim_II(:,1)
     end if
 
-    !body_Ti_dim = Neutral_T_dim    
-    KT0 = body_Ti_dim*Si2No_V(UnitTemperature_) 
-    kTp0=kT0  !2.0*kT0
+
+    KTn = body_Tn_dim*Si2No_V(UnitTemperature_) !normalized body neutral temperature
+    kTi0=kTn                                    !normalized body ion temperature
+    kTp0=2.0*kTn                                !normalized body plasma temperature
+    kTe0=max(Te_new_dim, body_Tn_dim)*Si2No_V(UnitTemperature_)   
+						!normalized newly created electron temperature
+    kT1000=1000.*Si2No_V(UnitTemperature_)
+
+!    KTn = body_Ti_dim*Si2No_V(UnitTemperature_) 
+    
+!    kTp0=kTn  !2.0*kT0
 
     nu0=nu0_dim*No2Io_V(UnitN_)*No2Io_V(UnitT_)
 
@@ -1351,6 +1376,8 @@ contains
     !     read(1,*) (tmp_hT(i),tmp_Te(i),i=1,num_Te)
     !     close(1)
 
+
+    if (R_BLK(1,1,1,iBlock) > 5.0*Rbody) RETURN
     Te_C          = 0.0
     RecombRate_VC = 0.0
 
@@ -1837,7 +1864,7 @@ contains
     !/
     Eta_G = 0.0
 
-    if (Rmin_BLK(iBlock) > 3.0) RETURN !in Rbody unit
+    if (Rmin_BLK(iBlock) > 5.0*Rbody) RETURN !in Rbody unit
 
     Eta0 = Eta0Si * Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
 
