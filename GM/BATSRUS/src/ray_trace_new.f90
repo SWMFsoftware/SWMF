@@ -70,6 +70,7 @@ subroutine ray_trace_accurate
   end if
 
   ! This loop order seems to give optimal speed
+  CpuTimeStartRay = MPI_WTIME();
   do k = 1, nK; do j = 1, nJ; do i = 1, nI
      do iBlock = 1, nBlock
         if(unusedBLK(iBlock))CYCLE
@@ -333,8 +334,13 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
      if(iRayIn>0)then
         ! If there are still local rays, exchange only occasionally
         CpuTimeNow = MPI_WTIME()
+        
         if(CpuTimeNow - CpuTimeStartRay > DtExchangeRay)then
            ! This PE is not done yet, so pass .false.
+
+           write(*,*)'iProc, CpuTimeStartRay, CpuTimeNow=',&
+                iProc, CpuTimeStartRay, CpuTimeNow
+
            call ray_exchange(.false., DoneAll)
            CpuTimeStartRay = CpuTimeNow
         end if
@@ -1126,6 +1132,8 @@ subroutine ray_trace_sorted
   use ModPhysics, ONLY: SW_Bx, SW_By, SW_Bz
   use ModGeometry, ONLY: XyzMin_D, XyzMax_D, XyzStart_BLK
   use ModSort, ONLY: sort_quick
+  use ModRayTrace, ONLY: CpuTimeStartRay
+  use ModMpi, ONLY: MPI_WTIME
 
   implicit none
 
@@ -1171,12 +1179,11 @@ subroutine ray_trace_sorted
 
   call sort_quick(nBlock,SortFunc_B,iBlockSorted_B)
 
-  call barrier_mpi
-  !CpuTimeStartRay = MPI_WTIME()
 
   ! Assign face ray values to cell centers
 
   !nOpen = 0
+  CpuTimeStartRay = MPI_WTIME()
   do iRay=1,2
 
      if(iRay==1)then
@@ -1339,6 +1346,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
 
   ! Integrate rays starting from the latitude-longitude pairs defined
   ! by the arrays Lat_I, Lon_I
+  CpuTimeStartRay = MPI_WTIME()
   do iLat = 1, nLat
 
      Lat = Lat_I(iLat)
@@ -1502,7 +1510,8 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
   ! The results are stored by CON_line_extract.
 
   use ModProcMH,   ONLY: iProc, iComm
-  use ModRayTrace, ONLY: oktest_ray, DoTraceRay, DoIntegrateRay, DoExtractRay,&
+  use ModRayTrace, ONLY: &
+       CpuTimeStartRay, oktest_ray, DoTraceRay, DoIntegrateRay, DoExtractRay, &
        nRay_D, NameVectorField, R_Raytrace, R2_Raytrace, RayLengthMax, Bxyz_DGB
   use CON_ray_trace, ONLY: ray_init
   use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, &
@@ -1510,6 +1519,7 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
   use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBLK
   use ModPhysics,  ONLY: rBody
   use ModGeometry, ONLY: XyzMax_D, XyzMin_D, Dx_BLK, Dy_BLK, Dz_BLK
+  use ModMpi,      ONLY: MPI_WTIME
 
   implicit none
 
@@ -1588,6 +1598,7 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
   end select
 
   ! Start extracting rays
+  CpuTimeStartRay = MPI_WTIME()
   do iLine = 1, nLine
      Xyz_D = Xyz_DI(:,iLine)
 
