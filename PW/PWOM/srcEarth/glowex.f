@@ -173,6 +173,7 @@ C
        DIP = ABS(DIP) * cPi/180.
 C     
        CALL SOLZEN (IYD, UTG, GLAT, GLONG, SZA)
+       SZA = min(SZA,85.0)
        SZA = SZA * cPi/180.
        SZAD = SZA*cRadToDeg
        if (DoLog) WRITE(iUnitOutput,9996)SZAD
