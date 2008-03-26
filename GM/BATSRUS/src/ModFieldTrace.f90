@@ -337,10 +337,6 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
         
         if(CpuTimeNow - CpuTimeStartRay > DtExchangeRay)then
            ! This PE is not done yet, so pass .false.
-
-           write(*,*)'iProc, CpuTimeStartRay, CpuTimeNow=',&
-                iProc, CpuTimeStartRay, CpuTimeNow
-
            call ray_exchange(.false., DoneAll)
            CpuTimeStartRay = CpuTimeNow
         end if
