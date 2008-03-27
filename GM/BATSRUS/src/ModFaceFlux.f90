@@ -4,8 +4,8 @@ module ModFaceFlux
   use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
-  use ModVarIndexes, ONLY: nVar, NameVar_V, UseMultiSpecies, UseMultiIon, &
-       nFluid, nIonFluid, TypeFluid_I
+  use ModVarIndexes, ONLY: nVar, NameVar_V, UseMultiSpecies, nFluid
+  use ModMultiFluid, ONLY: UseMultiIon, nIonFluid
   use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK, dx_BLK, dy_BLK, dz_BLK
   use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, true_cell
 
@@ -827,9 +827,9 @@ contains
        end if
     end if                                             !^CFG IF HLLDFLUX
 
-    if(UseMultiIon)then
+    if(UseMultiIon .or. .not. IsMhd)then
        ! Calculate bCrossArea_D to be used for J in the J x B source term
-       ! in calc_sources.f90.
+       ! for the individual ion fluids in calc_sources.f90.
        ! The upwinded discretization of the current is J = sum(A x B) / V
 
        bCrossArea_D = cross_product(AreaX, AreaY, AreaZ, State_V(Bx_:Bz_))
@@ -1442,27 +1442,29 @@ contains
     B0n     = B0x*AreaX + B0y*AreaY + B0z*AreaZ
     FullBn  = B0n + Bn
 
-    if(TypeFluid_I(1)=='ion')then
+    iFluid = 1
+    if(IsMhd)then
        ! single ion fluid MHD (possibly with extra neutrals)
-       iFluid = 1
        if(UseBoris)then           !^CFG IF BORISCORR BEGIN
           call get_boris_flux
        else                       !^CFG END BORISCORR
           call get_mhd_flux
        end if                     !^CFG IF BORISCORR
-       Un_I(1) = Un
+    else
+       ! If there is no MHD fluid, calculate fluxes for magnetic field
+       ! together with hydro fluxes for the first fluid
+       call get_magnetic_flux
+       call select_fluid
+       call get_hd_flux
     end if
+    Un_I(1) = Un
 
-    if(nFluid > 1 .or. UseMultiIon)then
-       if(TypeFluid_I(1)/='ion')call get_magnetic_flux
-       do iFluid = 1, nFluid
-          if(TypeFluid_I(iFluid) == 'ion') CYCLE
-          call select_fluid
-          ! multi-ion or neutral fluid
-          call get_hd_flux
-          Un_I(iFLuid) = Un
-       end do
-    end if
+    ! Calculate hydro fluxes for individual ion and neutral fluids
+    do iFluid = 2, nFluid
+       call select_fluid
+       call get_hd_flux
+       Un_I(iFLuid) = Un
+    end do
 
     ! These terms are common for the induction equation
     ! If the first fluid is the total fluid, 
@@ -1478,8 +1480,8 @@ contains
        Flux_V(Bz_) = Flux_V(Bz_) + FluxBz
 
        ! add B.dB/dt term to energy equation
-       if(TypeFluid_I(1)=='ion') Flux_V(Energy_) = &
-            Flux_V(Energy_) + Bx*FluxBx + By*FluxBy + Bz*FluxBz
+       if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) &
+            + Bx*FluxBx + By*FluxBy + Bz*FluxBz
     end if                                     !^CFG END DISSFLUX
 
     if(UseHyperbolicDivb)then
@@ -1490,8 +1492,7 @@ contains
        Flux_V(Bz_) = Flux_V(Bz_) + AreaZ*Hyp
        Flux_V(Hyp_) = SpeedHyp2*FullBn
 
-       if(TypeFluid_I(1)=='ion') Flux_V(Energy_) = &
-            Flux_V(Energy_) + Bn*Hyp
+       if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) + Bn*Hyp
     end if
 
     ! Set the normal electron velocity used for Hall MHD and/or 
@@ -1630,30 +1631,15 @@ contains
 
       if(UseMultiIon)then
          ! Calculate charge density averaged velocity U*Plus
-         StateTmp_V = State_V
-         StateTmp_V(Rho_) = StateTmp_V(Rho_) &
-              - sum(StateTmp_V(iRhoIon_I(2:nIonFluid)))
-
-         StateTmp_V(Ux_) = (StateCons_V(RhoUx_) &
-              - sum(State_V(iRhoIon_I(2:))*State_V(iUxIon_I(2:)))) &
-              / StateTmp_V(Rho_)
-
-         StateTmp_V(Uy_) = (StateCons_V(RhoUy_) &
-              - sum(State_V(iRhoIon_I(2:))*State_V(iUyIon_I(2:)))) &
-              / StateTmp_V(Rho_)
-
-         StateTmp_V(Uz_) = (StateCons_V(RhoUz_) &
-              - sum(State_V(iRhoIon_I(2:))*State_V(iUzIon_I(2:)))) &
-              / StateTmp_V(Rho_)
 
          ! calculate number densities
-         NumDens_I  = StateTmp_V(iRhoIon_I) / MassFluid_I(1:nIonFluid)
+         NumDens_I  = State_V(iRhoIon_I) / MassIon_I
          InvNumDens = 1.0/sum(NumDens_I)
 
-         InvRho_I = 1.0/StateTmp_V(iRhoIon_I)
-         Ux_I  = StateTmp_V(iUxIon_I)
-         Uy_I  = StateTmp_V(iUyIon_I)
-         Uz_I  = StateTmp_V(iUzIon_I)
+         InvRho_I = 1.0/State_V(iRhoIon_I)
+         Ux_I  = State_V(iUxIon_I)
+         Uy_I  = State_V(iUyIon_I)
+         Uz_I  = State_V(iUzIon_I)
 
          ! calculate the average positive charge velocity
          UxPlus = InvNumDens* sum(NumDens_I*Ux_I)
@@ -1747,7 +1733,7 @@ contains
       !-----------------------------------------------------------------------
 
       ! calculate number densities
-      NumDens_I  = State_V(iRhoIon_I) / MassFluid_I(1:nIonFluid)
+      NumDens_I  = State_V(iRhoIon_I) / MassIon_I
       InvNumDens = 1.0/sum(NumDens_I)
 
       ! calculate positive charge velocity
@@ -1867,14 +1853,6 @@ contains
     if(nFluid > 1)then
 
        do iFluid = 2, nFluid
-          if(TypeFluid_I(iFluid)/='neutral')then
-             if(present(Cmax_I))   CmaxDt_I(iFluid) = CmaxDt_I(1)
-             if(present(Cmax_I))   Cmax_I(iFluid)   = Cmax_I(1)
-             if(present(Cleft_I))  Cleft_I(iFluid)  = Cleft_I(1)
-             if(present(Cright_I)) Cright_I(iFluid) = Cright_I(1)
-             CYCLE
-          end if
-
           call select_fluid
           if(DoAw)then                           !^CFG IF AWFLUX BEGIN
              UnLeft = UnLeft_I(iFluid)
@@ -1882,6 +1860,20 @@ contains
           end if                                 !^CFG END AWFLUX
           call get_hd_speed
        end do
+
+       ! For ion fluids the maximum speed is takent to be 
+       ! the maximum of the individual HD speed and the total MHD speed
+       do iFluid = 2, IonLast_
+          if(present(Cmax_I))   CmaxDt_I(iFluid) = &
+               max(CmaxDt_I(1), CmaxDt_I(iFluid))
+          if(present(Cmax_I))   Cmax_I(iFluid)   = &
+               max(Cmax_I(1),   Cmax_I(iFluid))
+          if(present(Cleft_I))  Cleft_I(iFluid)  = &
+               min(Cleft_I(1),  Cleft_I(iFluid))
+          if(present(Cright_I)) Cright_I(iFluid) = &
+               max(Cright_I(1), Cright_I(iFluid))
+       end do
+
     end if
 
     ! Take maximum time step limit for all the fluids
@@ -1979,7 +1971,7 @@ contains
       Rho    = State_V(Rho_)
       p      = State_V(p_)
       RhoU_D = Rho*State_V(Ux_:Uz_)
-      if(TypeFluid_I(1) == 'ions')then
+      if(.not. IsMhd)then
          do iFluid = 2, nIonFluid
             Rho1= State_V(iRhoIon_I(iFluid))
             Rho = Rho + Rho1
@@ -2108,7 +2100,7 @@ contains
          write(*,*)NameSub,' Calfven=',sqrt(Alfven2)
          write(*,*)NameSub,' Calfven_normal=',sqrt(Alfven2Normal)
          write(*,*)NameSub,' Cfast=',Fast
-         if(present(Cmax_I)) write(*,*)NameSub,' Cmax_I=',Cmax_I
+         if(present(Cmax_I)) write(*,*)NameSub,' Cmax_I(1)=',Cmax_I(1)
       end if
 
     end subroutine get_mhd_speed
@@ -2148,7 +2140,7 @@ contains
       if(DoTestCell)then
          write(*,*)NameSub,' Un     =',Un
          write(*,*)NameSub,' Csound =',Sound
-         if(present(Cmax_I)) write(*,*)NameSub,' Cmax_I  =',Cmax_I/Area
+         if(present(Cmax_I)) write(*,*)NameSub,' Cmax/Area=',Cmax_I(iFluid)/Area
       end if
 
     end subroutine get_hd_speed
