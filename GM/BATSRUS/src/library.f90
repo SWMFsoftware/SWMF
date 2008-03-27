@@ -1478,7 +1478,7 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
   end if                                     
 
   !Check, if we are within the Octree:
-  if(any(Xyz_D(1:3)<XyzMin_D(1:3)).or.any(Xyz_D(1:3)>XyzMax_D(1:3)-cTiny))&
+  if(any(Xyz_D(1:3)<XyzMin_D(1:3)).or.any(Xyz_D(1:3)>XyzMax_D(1:3)))&
        call stop_mpi(&
        'Xyz_to_peblk subroutine: the point is out of the Octree') 
   !Find the octree root
