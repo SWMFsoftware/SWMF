@@ -129,14 +129,12 @@ contains
        uPlus_D(z_) = InvNumDens* sum(NumDens_I*Uz_I)
 
        ! Add the Hall velocity -J/(e n)
-       if(index(Test_String,'newj') > 0)then
-          Current_D = vInv_CB(i,j,k,iBlock)*&
-               ( bCrossArea_DX(:,i+1,j,k) - bCrossArea_DX(:,i,j,k) &
-               + bCrossArea_DY(:,i,j+1,k) - bCrossArea_DY(:,i,j,k) &
-               + bCrossArea_DZ(:,i,j,k+1) - bCrossArea_DZ(:,i,j,k))
-       else
-          call get_current(i,j,k,GlobalBlk,Current_D)
-       end if
+       ! old version: call get_current(i,j,k,iBlock,Current_D)
+       Current_D = vInv_CB(i,j,k,iBlock)*&
+            ( bCrossArea_DX(:,i+1,j,k) - bCrossArea_DX(:,i,j,k) &
+            + bCrossArea_DY(:,i,j+1,k) - bCrossArea_DY(:,i,j,k) &
+            + bCrossArea_DZ(:,i,j,k+1) - bCrossArea_DZ(:,i,j,k))
+
        uPlusHallU_D = uPlus_D - InvNumDens*InvCharge*Current_D
 
        TemperatureCoef = 1.0/(AverageTemp*sqrt(AverageTemp))
