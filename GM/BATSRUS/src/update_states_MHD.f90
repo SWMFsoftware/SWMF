@@ -112,31 +112,7 @@ contains
        end if
     end if
 
-    if(UseMultiIon .and. index(Test_String,'fixvacuum') > 0)then
-       ! Replace very small densities with a fraction of the first fluid
-       do iFluid = 2, nFluid
-          call select_fluid
-          do k=1,nK; do j=1,nJ; do i=1,nI
-             if (State_VGB(iRho,i,j,k,iBLK) > &
-                  2*LowDensityRatio*State_VGB(Rho_,i,j,k,iBLK)) CYCLE
-             State_VGB(iRho,i,j,k,iBLK) = &
-                  LowDensityRatio*State_VGB(Rho_,i,j,k,iBLK)
-             State_VGB(iRhoUx:iRhoUz,i,j,k,iBLK) = &
-                  LowDensityRatio*State_VGB(RhoUx_:RhoUz_,i,j,k,iBLK)
-             State_VGB(iP,i,j,k,iBLK) = &
-                  LowDensityRatio*State_VGB(P_,i,j,k,iBLK) &
-                  *MassFluid_I(1)/MassFluid_I(iFluid)
-
-             Energy_GBI(i,j,k,iBLK,iFluid) = inv_gm1*State_VGB(iP,i,j,k,iBLK) &
-                  + 0.5*sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBLK)**2) &
-                  / State_VGB(iRho,i,j,k,iBLK)
-
-          end do; end do; end do
-       end do
-
-    end if
-
-    if( TypeFluid_I(1)=='ion' .and. &
+    if( IsMhd .and. &
          ((nStage==1.and..not.time_accurate).or.(nStage>1.and.iStage==1)))then
        do k=1,nK; do j=1,nJ; do i=1,nI
           Energy_GBI(i,j,k,iBLK,1) = Energy_GBI(i,j,k,iBLK,1) + cHalf*( &
@@ -147,6 +123,31 @@ contains
 
        if(oktest_me)write(*,*)'EnergyFix=',Energy_GBI(iTest,jTest,kTest,iBlk,:)
 
+    end if
+
+    if(UseMultiIon .and. IsMhd)then
+       ! Distribute the total conservative variables and pressure among ion fluids
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          State_VGB(iRhoIon_I,i,j,k,iBLK) = State_VGB(iRhoIon_I,i,j,k,iBLK) * &
+               State_VGB(Rho_,i,j,k,iBLK)/sum(State_VGB(iRhoIon_I,i,j,k,iBLK))
+!          State_VGB(iRhoUxIon_I,i,j,k,iBLK) = State_VGB(iRhoUxIon_I,i,j,k,iBLK) * &
+!               State_VGB(RhoUx_,i,j,k,iBLK)/sum(State_VGB(iRhoUxIon_I,i,j,k,iBLK))
+!          State_VGB(iRhoUyIon_I,i,j,k,iBLK) = State_VGB(iRhoUyIon_I,i,j,k,iBLK) * &
+!               State_VGB(RhoUy_,i,j,k,iBLK)/sum(State_VGB(iRhoUyIon_I,i,j,k,iBLK))
+!          State_VGB(iRhoUzIon_I,i,j,k,iBLK) = State_VGB(iRhoUzIon_I,i,j,k,iBLK) * &
+!               State_VGB(RhoUz_,i,j,k,iBLK)/sum(State_VGB(iRhoUzIon_I,i,j,k,iBLK))
+          State_VGB(iPIon_I,i,j,k,iBLK) = State_VGB(iPIon_I,i,j,k,iBLK) * &
+               State_VGB(P_,i,j,k,iBLK)/sum(State_VGB(iPIon_I,i,j,k,iBLK))
+
+          ! Set hydro energy (don't worry about conserving energy per ion fluid)
+!          Energy_GBI(i,j,k,iBLK,IonFirst_:IonLast_) = &
+!               inv_gm1*State_VGB(iPIon_I,i,j,k,iBLK) + &
+!               0.5*( State_VGB(iRhoUxIon_I,i,j,k,iBLK)**2 &
+!               +     State_VGB(iRhoUyIon_I,i,j,k,iBLK)**2 &
+!               +     State_VGB(iRhoUzIon_I,i,j,k,iBLK)**2 &
+!               ) / State_VGB(iRhoIon_I,i,j,k,iBLK)
+
+       end do; end do; end do
     end if
 
     if(boris_correction) then                 !^CFG IF BORISCORR BEGIN
