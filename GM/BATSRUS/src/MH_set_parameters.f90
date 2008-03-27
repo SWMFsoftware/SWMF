@@ -49,6 +49,7 @@ subroutine MH_set_parameters(TypeAction)
        ySizeBoxHall, DySizeBoxHall, &
        zSizeBoxHall, DzSizeBoxHall
   use ModResistivity                              !^CFG IF DISSFLUX
+  use ModMultiFluid, ONLY: MassIon_I
 
   implicit none
 
@@ -101,6 +102,8 @@ subroutine MH_set_parameters(TypeAction)
   character (len=lStringLine) :: NameUserModuleRead='?'
   real                        :: VersionUserModuleRead=0.0
   integer :: iSession, iPlotFile, iVar, iFluid
+
+  character(len=10) :: NamePrimitive_V(nVar)
   !-------------------------------------------------------------------------
   NameSub(1:2) = NameThisComp
 
@@ -176,11 +179,7 @@ subroutine MH_set_parameters(TypeAction)
 
      call correct_parameters
 
-     call check_parameters
-
      call check_plot_range
-
-     call check_options
 
      ! initialize module variables
      call init_mod_advance
@@ -704,7 +703,7 @@ subroutine MH_set_parameters(TypeAction)
                     plot_range(4,ifile)=cHalfPi                 &
                          +cTiny*(XyzMax_D(Phi_)-XyzMin_D(Phi_)) &
                          /(nCells(Phi_)*proc_dims(Phi_))   
-                 end if                            
+                 end if
 
               elseif(index(plot_string,'y=0')>0)then
                  plot_area='y=0'
@@ -712,10 +711,10 @@ subroutine MH_set_parameters(TypeAction)
                       /(nCells(2)*proc_dims(2)) 
                  plot_range(4,ifile)=+cTiny*(XyzMax_D(2)-XyzMin_D(2))&
                       /(nCells(2)*proc_dims(2)) 
-                 
+
                  if(index(plot_string,'idl')>0 .and. is_axial_geometry()) &
-                    plot_range(3:4,ifile)=plot_range(3:4,ifile)+cPi
-                 
+                      plot_range(3:4,ifile)=plot_range(3:4,ifile)+cPi
+
               elseif(index(plot_string,'z=0')>0)then
                  plot_area='z=0'
                  plot_range(5,ifile)=-cTiny*(XyzMax_D(3)-XyzMin_D(3))&
@@ -741,7 +740,7 @@ subroutine MH_set_parameters(TypeAction)
                    .and. plot_area /= 'lin' &        !^CFG IF RAYTRACE
                    ) call read_var('DxSavePlot',plot_dx(1,ifile))
               if(is_axial_geometry())plot_dx(1,ifile)=-1.0  
-   
+
            elseif(index(plot_string,'tec')>0)then 
               plot_form(ifile)='tec'
               plot_dx(1,ifile)=0.
@@ -779,7 +778,7 @@ subroutine MH_set_parameters(TypeAction)
               case default
                  call stop_mpi(NameSub//' Sph-plot is not implemented for geometry= '&
                       //TypeGeometry)
-              end select                            
+              end select
            end if
 
            ! Plot variables
@@ -993,7 +992,7 @@ subroutine MH_set_parameters(TypeAction)
 
         case default
            if(UseStrict) call stop_mpi(NameSub//&
-                   ' ERROR: unknown NameArea='//trim(Area_I(nArea)%Name))
+                ' ERROR: unknown NameArea='//trim(Area_I(nArea)%Name))
 
            if(iProc == 0) &
                 write(*,*) NameSub//' WARNING: unknown NameArea=' // &
@@ -1314,11 +1313,12 @@ subroutine MH_set_parameters(TypeAction)
         end select
      case("#SHOCKTUBE")
         UseShockTube = .true.
+        call split_str(NamePrimitiveVar,nVar,NamePrimitive_V,nVarRead)
         do i=1,nVar
-           call read_var('LeftState',ShockLeftState_V(i))
+           call read_var(NamePrimitive_V(i)//' left',ShockLeftState_V(i))
         end do
         do i=1,nVar
-           call read_var('RightState',ShockRightState_V(i))
+           call read_var(NamePrimitive_V(i)//' right',ShockRightState_V(i))
         end do
      case("#SHOCKPOSITION")
         call read_var('ShockPosition',ShockPosition)
@@ -1380,6 +1380,8 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseUserUpdateStates'     ,UseUserUpdateStates)
      case("#USERINPUTBEGIN")
         call user_read_inputs
+        ! Make sure that MassIon_I is consistent with MassFluid_I
+        MassIon_I = MassFluid_I(IonFirst_:IonLast_)
      case("#CODEVERSION")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('CodeVersion',CodeVersionRead)
@@ -1406,11 +1408,11 @@ subroutine MH_set_parameters(TypeAction)
      case("#PROBLEMTYPE")
         if(iProc==0) then
            write(*,'(a)')NameSub // &
-                   'WARNING: problem_type is and obsolete command !!!'
+                'WARNING: problem_type is and obsolete command !!!'
            write(*,'(a)')NameSub // &
-                   '         Please use #PLANET and make sure '
+                '         Please use #PLANET and make sure '
            write(*,'(a)')NameSub // &
-                   '         all parameters are set correctly!'
+                '         all parameters are set correctly!'
            if(UseStrict)call stop_mpi('Problem_type is obsolete!!')
         end if
      case("#NEWRESTART","#RESTARTINDIR","#RESTARTINFILE",&
@@ -1444,7 +1446,7 @@ subroutine MH_set_parameters(TypeAction)
            ! in later distributions
            call read_var('DnOutput',dn_output(ifile))
            call read_var('DtOutput',dt_output(ifile))
-           
+
 
            ! Satellite inputfile name or the satellite name
            call read_var('NameTrajectoryFile',&
@@ -1522,7 +1524,7 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('SatelliteTimeEnd',   TimeSatEnd_I(ifile))
            end if
         end do
-           
+
      case('#RESCHANGEBOUNDARY')
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('SaveBoundaryCells',SaveBoundaryCells)
@@ -1532,7 +1534,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#GRIDGEOMETRY", "#COVARIANTGEOMETRY")
         if(.not.is_first_session())CYCLE READPARAM
         UseCovariant=.true.
-        
+
         call read_var('TypeGeometry', TypeGeometry)      
         if(is_axial_geometry())then
            DoFixExtraBoundaryOrPole=.true.
@@ -1563,13 +1565,13 @@ subroutine MH_set_parameters(TypeAction)
      case('#TORUSSIZE')
         call read_var('rTorusLarge',rTorusLarge)
         call read_var('rTorusSmall',rTorusSmall)
-         
+
      case("#GRID")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('nRootBlockX',proc_dims(1)) 
         call read_var('nRootBlockY',proc_dims(2))
         call read_var('nRootBlockZ',proc_dims(3))
-        
+
         if( is_axial_geometry() .and. mod(proc_dims(Phi_),2)==1 ) then
            proc_dims(Phi_) = proc_dims(Phi_) + 1
            if(iProc==0)then
@@ -1577,7 +1579,7 @@ subroutine MH_set_parameters(TypeAction)
               write(*,*)'nRootBlock2 is increased by 1 to ',proc_dims(Phi_)
            end if
         end if
-        
+
         if(product(proc_dims) > nBLK .and. iProc==0)then
            write(*,*)'Root blocks will not fit on 1 processor, check nBLK'
            call stop_mpi('product(proc_dims) > nBLK!')
@@ -1588,7 +1590,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('yMax',y2)
         call read_var('zMin',z1)
         call read_var('zMax',z2)
-        
+
         call set_xyzminmax  
 
      case("#USERMODULE")
@@ -1633,9 +1635,10 @@ subroutine MH_set_parameters(TypeAction)
         inv_gm1 = cOne/gm1
         g_half  = cHalf*g
      case("#PLASMA")
-        do iFluid = 1, nFluid
+        do iFluid = IonFirst_, nFluid
            call read_var('MassFluid', MassFluid_I(iFluid))
         end do
+        MassIon_I = MassFluid_I(IonFirst_:IonLast_)
         call read_var('AverageIonCharge        ', AverageIonCharge)
         call read_var('ElectronTemperatureRatio', ElectronTemperatureRatio)
      case("#MULTISPECIES")
@@ -1648,7 +1651,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseExtraBoundary',UseExtraBoundary)
         if(UseExtraBoundary) call read_var('TypeBc_I(ExtraBc_)',&
              TypeBc_I(ExtraBc_))      
-        
+
         if(.not.is_axial_geometry())&             
              call read_var('DoFixExtraBoundary',&  
              DoFixExtraBoundaryOrPole)  
@@ -1663,7 +1666,7 @@ subroutine MH_set_parameters(TypeAction)
      case('#FACEOUTERBC')                      
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('MaxBoundary',MaxBoundary)
-        
+
         select case(TypeGeometry)
         case('spherical','spherical_lnr')
            If(UseStrict)then
@@ -1676,11 +1679,10 @@ subroutine MH_set_parameters(TypeAction)
            else
               if(MaxBoundary/=Top_)then
                  if(iProc==0)then
-                    write(*,*)&
-                         NameSub//': The boundary condition at R=RMin and R=RMax should be set.'
-                    write(*,*)NameSub//': Now they are:'//TypeBC_I(East_)&
-                         //' at R=RMin and '//TypeBC_I(West_)//' at R=RMax, other are none'
-                    write(*,*)NameSub//': If you reset TypeBC_I, set TypeBC_I(South_:Top_)=none'
+                    write(*,*)NameSub,': the boundary conditions are ',&
+                         TypeBC_I(East_),' at rMin and ',&
+                         TypeBC_I(West_),' at rMax'
+                    write(*,*)NameSub,': TypeBC_I(South_:Top_) are set to none'
                  end if
                  TypeBC_I(South_:Top_)='none'
               end if
@@ -1705,12 +1707,12 @@ subroutine MH_set_parameters(TypeAction)
                  TypeBC_I(South_:North_)='none'
               end if
            end If
-           
+
         end select
-        
+
         if(MaxBoundary>=East_)&
              call read_var('DoFixOuterBoundary',DoFixOuterBoundary) 
-    
+
      case("#SOLARWIND")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('SwNDim',  SW_n_dim)
@@ -1728,13 +1730,13 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('rBody'     ,Rbody)
            if(NameThisComp=='GM') &
                 call read_var('rCurrents' ,Rcurrents)
-           do iFluid = 1, nFluid
+           do iFluid = IonFirst_, nFluid
               call read_var('BodyNDim', BodyNDim_I(iFluid))
               call read_var('BodyTDim', BodyTDim_I(iFluid))
            end do
         end if
      case("#POLARBOUNDARY")
-        do iFluid = 1,nFluid
+        do iFluid = IonFirst_, nFluid
            call read_var('PolarNDim',  PolarNDim_I(iFluid))
            call read_var('PolarTDim',  PolarTDim_I(iFluid))
            call read_var('PolarUDim',  PolarUDim_I(iFluid))
@@ -1805,7 +1807,7 @@ subroutine MH_set_parameters(TypeAction)
               end if
            case('HGI')
               if(iProc==0) write(*,*) NameSub,&
-                      ' WARNING: inertial SC is less accurate'
+                   ' WARNING: inertial SC is less accurate'
               UseRotatingFrame = .false.
            case default
               call stop_mpi(NameSub// &
@@ -1866,8 +1868,8 @@ subroutine MH_set_parameters(TypeAction)
            if(UseStrict)call stop_mpi('Correct PARAM.in!')
         end if
      end select
-  
-end do READPARAM
+
+  end do READPARAM
 
   ! end reading parameters
 
@@ -1914,17 +1916,15 @@ contains
     ! Default coordinate systems
     select case(NameThisComp)
     case('IH')
-       TypeCoordSystem   = 'HGI'
+       ! Do not start line with Type... to avoid an Emacs indentation bug
        UseRotatingFrame  = .false.
-       UseRotatingBc     = .false.
+       UseRotatingBc     = .false.; TypeCoordSystem   = 'HGI'
     case('SC')
-       TypeCoordSystem   = 'HGR'
        UseRotatingFrame  = .true.
-       UseRotatingBc     = .false.
+       UseRotatingBc     = .false.; TypeCoordSystem   = 'HGR'
     case('GM')
-       TypeCoordSystem   = 'GSM'
        UseRotatingFrame  = .false.
-       UseRotatingBc     = .true.
+       UseRotatingBc     = .true.;  TypeCoordSystem   = 'GSM'
     end select
 
     ! Do not update B0 for SC or IH by default
@@ -1932,7 +1932,7 @@ contains
        DoUpdateB0 = .false.
        Dt_UpdateB0 = -1.0
     end if
-    
+
     ! Initialize StartTime to the default values
     ! For SWMF it is set during 'CHECK'
     if(IsStandAlone)call time_int_to_real(iStartTime_I, StartTime)
@@ -1972,7 +1972,7 @@ contains
     nOrder = 2
     FluxType = 'RUSANOV'               !^CFG IF RUSANOVFLUX
     !FluxType = 'SOKOLOV'              !^CFG UNCOMMENT IF NOT RUSANOVFLUX
-  
+
     ! Default implicit parameters      !^CFG IF IMPLICIT BEGIN
     UsePointImplicit = .false.
     UsePointImplicit_B = .false.
@@ -2047,6 +2047,8 @@ contains
     RhoDimBody2 = 1.0    ! n/cc
     TDimBody2   = 10000.0! K                          !^CFG END SECONDBODY
 
+    MassIon_I = MassFluid_I(IonFirst_:IonLast_) ! Ion masses
+
     InitialRefineType = 'none'
 
     !\
@@ -2056,7 +2058,6 @@ contains
     GravityDir=0
     if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
 
-
     select case(NameThisComp)
     case('IH','SC')
        ! Body parameters
@@ -2065,21 +2066,17 @@ contains
        Rbody      = 1.00
        Rcurrents  =-1.00
 
-       TypeIoUnit = "HELIOSPHERIC"
-       TypeNormalization="SOLARWIND"
        ! Non Conservative Parameters
        UseNonConservative   = .false.
        nConservCrit         = 0
        rConserv             = -1.
 
-       ! Boundary Conditions
-       TypeBc_I(east_:top_)   ='float'
-       TypeBc_I(body1_)='unknown'
-       BodyTDim_I    = 2.85E06    ! K
-       BodyNDim_I(1) = 1.50E8     ! /cc
-       do iFluid = 2, nFluid
-          BodyNDim_I(iFluid) = BodyNDim_I(1)*cTiny
-       end do
+       ! Boundary Conditions and Normalization (avoid Emacs indentation bug)
+       TypeBc_I(east_:top_)  = 'float';   TypeIoUnit = "HELIOSPHERIC"      
+       TypeBc_I(body1_)      = 'unknown'; TypeNormalization = "SOLARWIND"
+       BodyTDim_I            = 2.85E06    ! K
+       BodyNDim_I(IonFirst_) = 1.50E8     ! /cc  protons
+       BodyNDim_I(IonFirst_+1:nFluid) = BodyNDim_I(IonFirst_)*cTiny
 
        ! Refinement criteria
        nRefineCrit    = 3
@@ -2094,25 +2091,20 @@ contains
        Rbody      = 3.00
        Rcurrents  = 4.00
 
-       TypeIoUnit = "PLANETARY"
-
        ! Non Conservative Parameters
        UseNonConservative   = .true.
        nConservCrit         = 1
        allocate( TypeConservCrit_I(nConservCrit) )
        TypeConservCrit_I(1) = 'r'
        rConserv             = 2*rBody
-       
-       ! Boundary Conditions
-       TypeBc_I(east_)        ='outflow'
+
+       ! Boundary Conditions and Normalization (avoid Emacs indentation bug)
+       TypeBc_I(east_)        ='outflow'; TypeIoUnit = "PLANETARY"
        TypeBc_I(west_)        ='inflow'
        TypeBc_I(south_:top_)  ='fixed'
        TypeBc_I(body1_)='ionosphere'
        BodyTDim_I    = 25000.0          ! K
-       BodyNDim_I(1) = 5.0              ! /cc
-       do iFluid = 2, nFluid
-          BodyNDim_I(iFluid) = BodyNDim_I(1)*cTiny
-       end do
+       BodyNDim_I    = 5.0              ! /cc
 
        ! Refinement Criteria
        nRefineCrit    = 3
@@ -2125,41 +2117,18 @@ contains
   end subroutine set_defaults
 
   !=========================================================================
-  subroutine check_options
+  subroutine correct_parameters
 
     ! option and module parameters
     character (len=40) :: Name
     real               :: Version
     logical            :: IsOn
+    !---------------------------------------------------------------------
 
-    if(UseCovariant)then                               
-       call allocate_face_area_vectors
-       if(UseVertexBasedGrid) call allocate_old_levels
-
-       if(UseProjection)call stop_mpi(&                   !^CFG IF PROJECTION
-            'Do not use covariant with projection')       !^CFG IF PROJECTION
-       if(UseConstrainB)call stop_mpi(&                   !^CFG IF CONSTRAINB
-            'Do not use covariant with constrain B')      !^CFG IF CONSTRAINB
-       if(UseRaytrace) call stop_mpi(&                    !^CFG IF RAYTRACE
-            'Do not use covariant with ray tracing')      !^CFG IF RAYTRACE
-       if(UseDivBDiffusion)call stop_mpi(&                !^CFG IF DIVBDIFFUSE
-            'Do not use covariant with divB diffusion')   !^CFG IF DIVBDIFFUSE
-    else
-       UseVertexBasedGrid = .false.
-    end if                                             
-
-    if(SaveBoundaryCells)then
-       if(index(optimize_message_pass,'all')>0)then
-          call allocate_boundary_cells
-       else
-          if(iProc==0)&
-               write(*,'(a)')NameSub//&
-               'SaveBoundaryCells does not work '&
-               //'with message_pass option='//optimize_message_pass//&
-               ', set SaveBoundaryCells to F'
-          SaveBoundaryCells=.false.
-       end if
-    end if
+    !\
+    ! Check for some combinations of things that cannot be accepted as input
+    !/
+    if (iProc==0) write (*,*) ' '
 
     if(UseTiming)then
        call timing_version(IsOn,Name,Version)
@@ -2173,16 +2142,6 @@ contains
           UseTiming=.false.
        end if
     end if
-
-  end subroutine check_options
-
-  !=========================================================================
-  subroutine correct_parameters
-
-    !\
-    ! Check for some combinations of things that cannot be accepted as input
-    !/
-    if (iProc==0) write (*,*) ' '
 
     ! Check flux type selection
     select case(FluxType)
@@ -2246,7 +2205,7 @@ contains
 
     ! Reset initial refine type if it is set to 'default'
     if(InitialRefineType=='default') InitialRefineType='none'
- 
+
     if(UseConstrainB .and. .not.time_accurate)then  !^CFG IF CONSTRAINB BEGIN
        if(iProc==0)then
           write(*,'(a)')NameSub//&
@@ -2289,7 +2248,7 @@ contains
           write(*,*)NameSub//' setting optimize_message_pass = all'
        end if
        optimize_message_pass = 'all'
-    endif                                     
+    endif
 
     if(prolong_order/=1 .and. optimize_message_pass(1:3)=='all')&
          call stop_mpi(NameSub// &
@@ -2304,7 +2263,7 @@ contains
           write(*,*)NameSub//' setting optimize_message_pass = all'
        end if
        optimize_message_pass = 'all'
-    endif                                     
+    endif
 
     if(UseTvdResChange .and. &
          optimize_message_pass(1:3)=='all' .and. iCFExchangeType/=2)then
@@ -2321,10 +2280,34 @@ contains
        procTEST=0
     end if
 
-  end subroutine correct_parameters
+    if(UseCovariant)then                               
+       call allocate_face_area_vectors
+       if(UseVertexBasedGrid) call allocate_old_levels
 
-  !===========================================================================
-  subroutine check_parameters
+       if(UseProjection)call stop_mpi(&                   !^CFG IF PROJECTION
+            'Do not use covariant with projection')       !^CFG IF PROJECTION
+       if(UseConstrainB)call stop_mpi(&                   !^CFG IF CONSTRAINB
+            'Do not use covariant with constrain B')      !^CFG IF CONSTRAINB
+       if(UseRaytrace) call stop_mpi(&                    !^CFG IF RAYTRACE
+            'Do not use covariant with ray tracing')      !^CFG IF RAYTRACE
+       if(UseDivBDiffusion)call stop_mpi(&                !^CFG IF DIVBDIFFUSE
+            'Do not use covariant with divB diffusion')   !^CFG IF DIVBDIFFUSE
+    else
+       UseVertexBasedGrid = .false.
+    end if
+
+    if(SaveBoundaryCells)then
+       if(index(optimize_message_pass,'all')>0)then
+          call allocate_boundary_cells
+       else
+          if(iProc==0)&
+               write(*,'(a)')NameSub//&
+               'SaveBoundaryCells does not work '&
+               //'with message_pass option='//optimize_message_pass//&
+               ', set SaveBoundaryCells to F'
+          SaveBoundaryCells=.false.
+       end if
+    end if
 
     if(UseHyperbolicDivb)then
        if(.false.&
@@ -2364,8 +2347,8 @@ contains
 
     !Boris correction checks                        !^CFG IF BORISCORR BEGIN
     if((FluxType=='Roe' &                              !^CFG IF ROEFLUX BEGIN
-         .or. FluxTypeImpl=='Roe' &                       !^CFG IF IMPLICIT
-         ) .and. boris_correction)then
+       .or. FluxTypeImpl=='Roe' &                       !^CFG IF IMPLICIT
+       ) .and. boris_correction)then
        if (iProc == 0) then
           write(*,'(a)')NameSub//&
                ' WARNING: Boris correction not available for Roe flux !!!'
@@ -2479,7 +2462,98 @@ contains
 
     !Finish checks for implicit                     !^CFG END IMPLICIT
 
-  end subroutine check_parameters
+  end subroutine correct_parameters
+
+  !============================================================================
+
+  subroutine check_plot_range
+    use ModGeometry, ONLY : XyzMin_D,XyzMax_D,nCells
+    use ModParallel, ONLY : proc_dims
+    use ModIO
+    implicit none
+
+    integer :: ifile, iBLK
+    real :: dx, dy, dz, dxmax, dymax, dzmax, dsmall, r
+
+    logical :: oktest,oktest_me
+    !---------------------------------------------------------------------------
+
+    call set_oktest('check_plot_range',oktest,oktest_me)
+
+    if(oktest_me)write(*,*)&
+         'Check_Plot_Range: x1,y1,z1,x2,y2,z2=',XyzMin_D,XyzMax_D
+
+    dxmax=(XyzMax_D(1)-XyzMin_D(1))/(nCells(1)*proc_dims(1))
+    dymax=(XyzMax_D(2)-XyzMin_D(2))/(nCells(2)*proc_dims(2))
+    dzmax=(XyzMax_D(3)-XyzMin_D(3))/(nCells(3)*proc_dims(3))
+    dsmall=dxmax*1.e-6
+
+    if(oktest_me)write(*,*)'Check_Plot_Range: proc_dims,dxmax,dymax,dzmax=',&
+         proc_dims,dxmax,dymax,dzmax
+
+    do ifile=plot_+1,plot_+nplotfile
+       if(index(plot_type(ifile),'sph')>0) CYCLE
+
+       if(oktest_me)write(*,*)'For file ',ifile-plot_,&
+            ' original range   =',plot_range(:,ifile)
+
+       plot_range(1,ifile)=max(XyzMin_D(1),plot_range(1,ifile))
+       plot_range(2,ifile)=min(XyzMax_D(1),plot_range(2,ifile))
+       plot_range(3,ifile)=max(XyzMin_D(2),plot_range(3,ifile))
+       plot_range(4,ifile)=min(XyzMax_D(2),plot_range(4,ifile))
+       plot_range(5,ifile)=max(XyzMin_D(3),plot_range(5,ifile))
+       plot_range(6,ifile)=min(XyzMax_D(3),plot_range(6,ifile))
+       if(plot_dx(1,ifile)<=1.e-6)then
+          ! No fixed resolution is required
+          plot_dx(:,ifile)=plot_dx(1,ifile)
+          if(oktest_me)write(*,*)'For file ',ifile-plot_,&
+               ' adjusted range   =',plot_range(:,ifile)
+
+          CYCLE
+       end if
+
+       ! Make sure that dx is a power of 2 fraction of dxmax
+
+       dx=plot_dx(1,ifile)
+       r=dxmax/dx
+       r=2.0**nint(alog(r)/alog(2.))
+       dx=dxmax/r
+       dy=dymax/r
+       dz=dzmax/r
+       if(oktest_me)write(*,*)'For file ',ifile-plot_,&
+            ' original dx      =',plot_dx(1,ifile)
+       plot_dx(1,ifile)=dx
+       plot_dx(2,ifile)=dy
+       plot_dx(3,ifile)=dz
+       if(oktest_me)write(*,*)'For file ',ifile-plot_,&
+            ' adjusted dx,dy,dz=',plot_dx(:,ifile)
+
+       ! Make sure that plotting range is placed at an integer multiple of dx
+
+       if(plot_range(2,ifile)-plot_range(1,ifile)>1.5*dx)then
+          plot_range(1,ifile)=XyzMin_D(1)+&
+               nint((plot_range(1,ifile)-dsmall-XyzMin_D(1))/dx)*dx
+          plot_range(2,ifile)=XyzMin_D(1)+&
+               nint((plot_range(2,ifile)+dsmall-XyzMin_D(1))/dx)*dx
+       endif
+       if(plot_range(4,ifile)-plot_range(3,ifile)>1.5*dy)then
+          plot_range(3,ifile)=XyzMin_D(2)+&
+               nint((plot_range(3,ifile)-dsmall-XyzMin_D(2))/dy)*dy
+          plot_range(4,ifile)=XyzMin_D(2)+&
+               nint((plot_range(4,ifile)+dsmall-XyzMin_D(2))/dy)*dy
+       endif
+       if(plot_range(6,ifile)-plot_range(5,ifile)>1.5*dz)then
+          plot_range(5,ifile)=XyzMin_D(3)+&
+               nint((plot_range(5,ifile)-dsmall-XyzMin_D(3))/dz)*dz
+          plot_range(6,ifile)=XyzMin_D(3)+&
+               nint((plot_range(6,ifile)+dsmall-XyzMin_D(3))/dz)*dz
+       endif
+       if(oktest_me)write(*,*)'For file ',ifile-plot_,&
+            ' adjusted range   =',plot_range(:,ifile)
+
+    end do ! ifile
+
+  end subroutine check_plot_range
 
   !===========================================================================
   subroutine set_extra_parameters
@@ -2505,7 +2579,7 @@ contains
 
     ! You have to have the normalizations first
     if (read_new_upstream)  call normalize_upstream_data
-    
+
     ! Set MinBoundary and MaxBoundary
     if(UseBody2) MinBoundary=min(Body2_,MinBoundary)   !^CFG IF SECONDBODY
     if(body1) then   
@@ -2531,7 +2605,7 @@ contains
        iMinFaceZ=0; iMaxFaceZ=nI+1
        jMinFaceZ=0; jMaxFaceZ=nJ+1
     end if                          !^CFG END CONSTRAINB
- 
+
   end subroutine set_extra_parameters
 
   !==========================================================================
