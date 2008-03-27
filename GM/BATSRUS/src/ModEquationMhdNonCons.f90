@@ -1,5 +1,7 @@
 module ModVarIndexes
 
+  use ModSingleFluid, IGNORE => IsMhd
+
   implicit none
 
   save
@@ -7,15 +9,8 @@ module ModVarIndexes
   ! This equation module solves the MHD equations in a non-conservative form
   character (len=*), parameter :: NameEquation='Non-conservative MHD'
 
-  ! The standard 1 fluid sattings
-  integer,           parameter :: nFluid = 1
-  integer,           parameter :: nIonFluid = 1
-  character (len=1), parameter :: NameFluid_I(nFluid) = (/' '/)
-
-  ! These are non-standard, so that we solve the non-conservative equations.
-  logical,           parameter :: UseMultiIon = .true.             ! not false
-  character (len=4), parameter :: TypeFluid_I(nFluid) = (/'ions'/) ! not 'ion'
-  real                         :: MassFluid_I(nFluid) = 1.0        ! proton
+  ! This is non-standard, so that we solve the non-conservative equations.
+  logical,           parameter :: IsMhd = .false.
 
   ! The variables numbered from 1 to nVar are:
   !

@@ -5,17 +5,17 @@ module ModVarIndexes
   save
 
   ! This equation module contains the standard MHD equations.
-  character (len=*), parameter :: NameEquation='MHD with ions'
+  character (len=*), parameter :: NameEquation='MHD with 2 ions'
 
-  integer, parameter :: nVar = 13
+  integer, parameter :: nVar = 18
 
-  integer, parameter :: nFluid = 2
-  integer, parameter :: nIonFluid = 2
-  logical, parameter :: UseMultiIon = .true.
-  real               :: MassFluid_I(nFluid) = (/ 1.0, 16.0 /)
+  integer, parameter :: nFluid    = 3
+  integer, parameter :: IonFirst_ = 2
+  integer, parameter :: IonLast_  = 3
+  logical, parameter :: IsMhd     = .true.
+  real               :: MassFluid_I(2:3) = (/ 1.0, 16.0 /)
 
-  character (len=3), parameter :: NameFluid_I(nFluid) = (/ 'All', 'Op ' /)
-  character (len=4), parameter :: TypeFluid_I(nFluid) = (/ 'ion ', 'ions' /)
+  character (len=3), parameter :: NameFluid_I(nFluid)= (/ 'All', 'Hp ', 'Op '/)
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+nFluid.
@@ -30,23 +30,29 @@ module ModVarIndexes
        By_        =  6, &
        Bz_        =  7, &
        p_         =  8, &
-       OpRho_     =  9, &
-       OpRhoUx_   = 10, &
-       OpRhoUy_   = 11, &
-       OpRhoUz_   = 12, &
-       OpP_       = 13, &
+       HpRho_     =  9, &
+       HpRhoUx_   = 10, &
+       HpRhoUy_   = 11, &
+       HpRhoUz_   = 12, &
+       HpP_       = 13, &
+       OpRho_     = 14, &
+       OpRhoUx_   = 15, &
+       OpRhoUy_   = 16, &
+       OpRhoUz_   = 17, &
+       OpP_       = 18, &
        Energy_    = nVar+1, &
-       OpEnergy_ = nVar+2
+       HpEnergy_  = nVar+2, &
+       OpEnergy_  = nVar+3
 
   ! This allows to calculate RhoUx_ as RhoU_+x_ and so on.
   integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1, B_ = Bx_-1
 
   ! These arrays are useful for multifluid
-  integer, parameter :: iRho_I(nFluid)   = (/Rho_,   OpRho_/)
-  integer, parameter :: iRhoUx_I(nFluid) = (/RhoUx_, OpRhoUx_/)
-  integer, parameter :: iRhoUy_I(nFluid) = (/RhoUy_, OpRhoUy_/)
-  integer, parameter :: iRhoUz_I(nFluid) = (/RhoUz_, OpRhoUz_/)
-  integer, parameter :: iP_I(nFluid)     = (/p_,     OpP_/)
+  integer, parameter :: iRho_I(nFluid)   = (/Rho_,   HpRho,   OpRho_/)
+  integer, parameter :: iRhoUx_I(nFluid) = (/RhoUx_, HpRhoUx, OpRhoUx_/)
+  integer, parameter :: iRhoUy_I(nFluid) = (/RhoUy_, HpRhoUy, OpRhoUy_/)
+  integer, parameter :: iRhoUz_I(nFluid) = (/RhoUz_, HpRhoUz, OpRhoUz_/)
+  integer, parameter :: iP_I(nFluid)     = (/p_,     HpP_,    OpP_/)
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
@@ -60,13 +66,19 @@ module ModVarIndexes
        0.0, & ! By_
        0.0, & ! Bz_
        1.0, & ! p_
+       1.0, & ! HpRho_
+       0.0, & ! HpRhoUx_
+       0.0, & ! HpRhoUy_
+       0.0, & ! HpRhoUz_
+       1.0, & ! HpP_
        1.0, & ! OpRho_
        0.0, & ! OpRhoUx_
        0.0, & ! OpRhoUy_
        0.0, & ! OpRhoUz_
        1.0, & ! OpP_
        1.0, & ! Energy_
-       1.0 /) ! OpEnergy_
+       1.0, & ! HpEnergy_
+       1.0, /)! OpEnergy_
 
   ! The names of the variables used in i/o
   character(len=*), parameter :: NameVar_V(nVar+nFluid) = (/ &
@@ -78,26 +90,37 @@ module ModVarIndexes
        'By   ', & ! By_
        'Bz   ', & ! Bz_
        'P    ', & ! p_
+       'HpRho', & ! HpRho_
+       'HpMx ', & ! HpRhoUx_
+       'HpMy ', & ! HpRhoUy_
+       'HpMz ', & ! HpRhoUz_
+       'HpP  ', & ! HpP_
        'OpRho', & ! OpRho_
        'OpMx ', & ! OpRhoUx_
        'OpMy ', & ! OpRhoUy_
        'OpMz ', & ! OpRhoUz_
        'OpP  ', & ! OpP_
-       'HpE  ', & ! Energy_
+       'E    ', & ! Energy_
+       'HpE  ', & ! HpEnergy_
        'OpE  ' /) ! OpEnergy_
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
-       'Rho Mx My Mz Bx By Bz E OpRho OpMx OpMy OpMz OpE'
+       'Rho Mx My Mz Bx By Bz E '// &
+       'HpRho HpMx HpMy HpMz HpE '// &
+       'OpRho OpMx OpMy OpMz OpE'
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
-       'Rho Ux Uy Uz Bx By Bz P OpRho OpUx OpUy OpUz OpP'
+       'Rho Ux Uy Uz Bx By Bz P '// &
+       'HpRho HpUx HpUy HpUz HpP '// &
+       'OpRho OpUx OpUy OpUz OpP'
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", ' // &
-       '"p", "`r^O^+", "U_x^O^+", "U_y^O^+", "U_z^O^+", "P^O^+"'
+       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "p", ' // &
+       '"`r^H^+", "U_x^H^+", "U_y^H^+", "U_z^H^+", "P^H^+", ' // &
+       '"`r^O^+", "U_x^O^+", "U_y^O^+", "U_z^O^+", "P^O^+"'
 
   ! Names of the user units for IDL and TECPlot output
   character(len=20) :: &

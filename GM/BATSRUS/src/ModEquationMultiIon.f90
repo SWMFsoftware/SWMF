@@ -9,13 +9,14 @@ module ModVarIndexes
 
   integer, parameter :: nVar = 13
 
-  integer, parameter :: nFluid = 2
-  integer, parameter :: nIonFluid = 2
-  logical, parameter :: UseMultiIon = .true.
+  ! There are two ion fluids but no total ion fluid
+  integer, parameter :: nFluid    = 2
+  integer, parameter :: IonFirst_ = 1
+  integer, parameter :: IonLast_  = 2
+  logical, parameter :: IsMhd     = .false.
   real               :: MassFluid_I(nFluid) = (/ 1.0, 16.0 /)
 
   character (len=3), parameter :: NameFluid_I(nFluid) = (/ 'Hp', 'Op' /)
-  character (len=7), parameter :: TypeFluid_I(nFluid) = (/ 'ions', 'ions' /)
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+nFluid.

@@ -4,8 +4,8 @@ module ModVarIndexes
 
    save
 
-   ! This equation module contains the standard MHD equations.
-   character (len=*), parameter :: NameEquation='MHD and HD'
+   ! This equation module contains the standard MHD equations + 3 neutrals
+   character (len=*), parameter :: NameEquation='MHD and three neutrals'
 
    ! The variables numbered from 1 to nVar are:
    !
@@ -19,15 +19,15 @@ module ModVarIndexes
 
    integer, parameter :: nVar = 23
 
+   ! 1 ion fluid and 3 neutral fluids
    integer, parameter :: nFluid    = 4
-   integer, parameter :: nIonFluid = 1
-   logical, parameter :: UseMultiIon = .false.
+   integer, parameter :: IonFirst_ = 1
+   integer, parameter :: IonLast_  = 1
+   logical, parameter :: IsMhd     = .true.
    real               :: MassFluid_I(nFluid) = (/ 1.0, 1.0, 1.0, 1.0 /)
 
    character (len=3), parameter :: &
         NameFluid_I(nFluid) = (/'Ion', 'Neu', 'Ne2', 'Ne3'/)
-   character (len=7), parameter :: &
-        TypeFluid_I(nFluid) = (/ 'ion    ', 'neutral', 'neutral',  'neutral' /)
 
    ! Named indexes for State_VGB and other variables
    ! These indexes should go subsequently, from 1 to nVar+nFluid.
