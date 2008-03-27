@@ -906,6 +906,7 @@ contains
           ! Make sure these are set (printed in testing)
           dtm   = -1.0
           dtmp1 = -1.0
+          m     = -1
 
           if(.not.UseCosSZA)then
              coefx=coefy
