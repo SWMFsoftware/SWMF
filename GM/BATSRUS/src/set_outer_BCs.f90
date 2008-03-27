@@ -391,7 +391,7 @@ subroutine BC_solar_wind(time_now)
   use ModAdvance, ONLY : State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
   use ModSetOuterBC
   use ModMultiFluid, ONLY: select_fluid, iFluid, &
-       iRho, iRhoUx, iRhoUy, iRhoUz, iP
+       iRho, iRhoUx, iRhoUy, iRhoUz, iP, MassIon_I
   use ModPhysics, ONLY: LowDensityRatio
 
   implicit none
@@ -420,14 +420,14 @@ subroutine BC_solar_wind(time_now)
            State_VGB(By_,i,j,k,iBLK)    = By - B0yCell_BLK(i,j,k,iBLK)
            State_VGB(Bz_,i,j,k,iBLK)    = Bz - B0zCell_BLK(i,j,k,iBLK)
            State_VGB(P_,i,j,k,iBLK)     = p
-           do iFluid = 2, nFluid
+           do iFluid = IonFirst_+1, nFluid
               call select_fluid
               State_VGB(iRho,   i,j,k,iBLK) = Rho   *LowDensityRatio
               State_VGB(iRhoUx, i,j,k,iBLK) = Rho*Ux*LowDensityRatio
               State_VGB(iRhoUy, i,j,k,iBLK) = Rho*Uy*LowDensityRatio
               State_VGB(iRhoUz, i,j,k,iBLK) = Rho*Uz*LowDensityRatio
               State_VGB(iP,     i,j,k,iBLK) = p     *LowDensityRatio &
-                   *MassFluid_I(1)/MassFluid_I(iFluid)
+                   *MassIon_I(1)/MassFluid_I(iFluid)
            end do
 
         end do

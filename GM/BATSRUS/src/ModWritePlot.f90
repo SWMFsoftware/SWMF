@@ -583,7 +583,8 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
   use ModResistivity, ONLY: Eta_GB                         !^CFG IF DISSFLUX
   use ModPointImplicit, ONLY: UsePointImplicit_B
   use ModMultiFluid, ONLY: extract_fluid_name, &
-       TypeFluid, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I
+       UseMultiIon, nIonFluid, MassIon_I, &
+       IsMhd, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I
 
   implicit none
 
@@ -597,7 +598,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
 
   real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2) :: tmp1Var, tmp2Var
 
-  integer :: iVar, itmp, jtmp, jVar, jFluid
+  integer :: iVar, itmp, jtmp, jVar, iIon
   integer :: i,j,k,l, ip1,im1,jp1,jm1,kp1,km1
   real :: xfactor,yfactor,zfactor
 
@@ -690,7 +691,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
      case('e')
         PlotVar(:,:,:,iVar) = Energy_GBI(:,:,:,iBLK,iFluid)
         ! Add (B0+B1)^2 - B1^2 so the energy contains B0
-        if(TypeFluid == 'ion') &
+        if(iFluid == 1 .and. IsMhd) &
              PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)+0.5*(&
              (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))**2+&
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))**2+&
@@ -714,14 +715,12 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
               PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) + &
                    State_VGB(jVar,:,:,:,iBLK)/MassSpecies_V(jVar)
            end do
-        else if(UseMultiIon .and. TypeFluid_I(iFluid) == 'ion')then
-           ! This can only occur for iFluid = 1 being the total ion fluid
-           ! sum(n_i) = sum(rho_i/M_i) = rho/M_1 + sum_2 rho_i*(1/M_i - 1/M_1)
-           PlotVar(:,:,:,iVar) = State_VGB(Rho_,:,:,:,iBLK)/MassFluid_I(1)
-           do jFluid = 2, nIonFluid
+        else if(iFluid == 1 .and. UseMultiIon)then
+           ! Add up ion number densities
+           PlotVar(:,:,:,iVar) = 0.0
+           do iIon = 1, nIonFluid
               PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) + &
-                   State_VGB(iRhoIon_I(jFluid),:,:,:,iBLK) &
-                   *(1/MassFluid_I(jFluid) - 1/MassFluid_I(1))
+                   State_VGB(iRhoIon_I(iIon),:,:,:,iBLK)/MassIon_I(iIon)
            end do
         else
            PlotVar(:,:,:,iVar) = State_VGB(iRho,:,:,:,iBLK)/MassFluid_I(iFluid)

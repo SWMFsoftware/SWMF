@@ -727,6 +727,7 @@ contains
   end subroutine find_cuts
 
   subroutine write_auxdata
+    use ModMultiFluid, ONLY: IonFirst_
     character(len=8)  :: real_date
     character(len=10) :: real_time
 
@@ -735,7 +736,7 @@ contains
     write(unit_tmp,'(a,a,a)') 'AUXDATA BLOCKS="',trim(adjustl(stmp)),'"'
 
     !BODYDENSITY
-    write(stmp,'(f12.2)')BodyNDim_I(1)
+    write(stmp,'(f12.2)')BodyNDim_I(IonFirst_)
     write(unit_tmp,'(a,a,a)') &
          'AUXDATA BODYNUMDENSITY="',trim(adjustl(stmp)),'"'
 

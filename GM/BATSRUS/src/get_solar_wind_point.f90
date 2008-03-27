@@ -379,7 +379,7 @@ subroutine get_solar_wind_point(TimeSimulation,y,z,&
   use ModMain
   use ModUpstreamData
   use ModPhysics
-  use ModVarIndexes, ONLY: MassFluid_I
+  use ModMultiFluid, ONLY: MassIon_I
 
   implicit none
   real, intent(in) :: TimeSimulation,y,z
@@ -507,6 +507,6 @@ subroutine get_solar_wind_point(TimeSimulation,y,z,&
   endif
 
   ! Convert number density to mass density in normalized units
-  Current_SW_rho = current_SW_n*MassFluid_I(1)
+  Current_SW_rho = current_SW_n*MassIon_I(1)
 
 end subroutine get_solar_wind_point

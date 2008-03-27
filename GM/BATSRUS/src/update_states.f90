@@ -112,7 +112,7 @@ subroutine update_check(iStage)
   use ModNumConst, ONLY: cTiny
   use ModMpi
   use ModEnergy
-  use ModMultiFluid, ONLY: iFluid, nFluid, TypeFluid_I
+  use ModMultiFluid, ONLY: IsMhd
 
   implicit none
 
@@ -631,16 +631,13 @@ contains
                (   time_fraction) *   Energy_GBI(i,j,k,iBlock,:) + &
                (cOne-time_fraction) * EnergyOld_CBI(i,j,k,iBlock,:)
 
-          if((nStage==1.and..not.time_accurate).or.&
+          if(IsMhd .and. (nStage==1.and..not.time_accurate).or.&
                (nStage>1.and.iStage==1)) then
-             do iFluid = 1, nFluid
-                if(TypeFluid_I(iFluid) /= 'ion') CYCLE
-                Energy_GBI(i,j,k,iBlock,iFluid) = &
-                     Energy_GBI(i,j,k,iBlock,iFluid) - &
-                     (cHalf/time_fraction - cHalf)*&
-                     sum((State_VGB(Bx_:Bz_,i,j,k,iBlock) - &
-                     StateOld_VCB(Bx_:Bz_,i,j,k,iBlock))**2)
-             end do
+             Energy_GBI(i,j,k,iBlock,1) = &
+                  Energy_GBI(i,j,k,iBlock,1) - &
+                  (cHalf/time_fraction - cHalf)*&
+                  sum((State_VGB(Bx_:Bz_,i,j,k,iBlock) - &
+                  StateOld_VCB(Bx_:Bz_,i,j,k,iBlock))**2)
           end if
 
           call calc_pressure_point(i,j,k,iBlock)

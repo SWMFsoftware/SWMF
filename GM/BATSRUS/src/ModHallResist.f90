@@ -73,7 +73,8 @@ contains
     use ModConst,   ONLY: cProtonMass, cElectronCharge, cMu
     use ModPhysics, ONLY: No2Si_V, UnitB_, UnitT_, UnitX_, UnitRho_, &
          AverageIonCharge
-    use ModVarIndexes, ONLY: UseMultiSpecies, nIonFluid, MassFluid_I
+    use ModVarIndexes, ONLY: UseMultiSpecies
+    use ModMultiFluid, ONLY: UseMultiIon, MassIon_I
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='init_hall_resist'
@@ -87,8 +88,8 @@ contains
          * No2Si_V(UnitRho_))
 
     ! If not multispecies, multiply with average ion mass
-    if(.not.UseMultiSpecies .and. nIonFluid == 1) &
-         IonMassPerCharge = IonMassPerCharge * MassFluid_I(1)
+    if(.not. (UseMultiSpecies .or. UseMultiIon)) &
+         IonMassPerCharge = IonMassPerCharge * MassIon_I(1)
 
     if (DoTestMe) then
        write(*,*) ''
@@ -154,7 +155,7 @@ contains
     use ModAdvance, ONLY: State_VGB, Rho_
     use ModVarIndexes, ONLY: &
          UseMultiSpecies, SpeciesFirst_, SpeciesLast_, MassSpecies_V, nVar
-    use ModMultiFluid, ONLY: iRhoIon_I, nIonFluid, MassFluid_I, TypeFluid_I
+    use ModMultiFluid, ONLY: UseMultiIon, iRhoIon_I, MassIon_I
 
     ! Set IonMassPerCharge_G based on average mass
     integer, intent(in) :: iBlock
@@ -172,26 +173,13 @@ contains
                sum(State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock) &
                /MassSpecies_V)
        end do; end do; end do
-    elseif(nIonFluid > 1)then
-       if(TypeFluid_I(1) == 'ions')then
-          ! Get mass density per total number denisity
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             IonMassPerCharge_G(i,j,k) = IonMassPerCharge * &
-                  sum(State_VGB(iRhoIon_I, i, j, k, iBlock)) / &
-                  sum(State_VGB(iRhoIon_I, i, j, k,iBlock) &
-                  /   MassFluid_I(1:nIonFluid) )
-          end do; end do; end do
-       else
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             State_V = State_VGB(:,i,j,k,iBlock)
-             ! Get the first fluid's mass density from the total
-             State_V(Rho_) = State_V(Rho_)-sum(State_V(iRhoIon_I(2:nIonFluid)))
-             ! Get mass density per total number denisity
-             IonMassPerCharge_G(i,j,k) = IonMassPerCharge * &
-                  State_VGB(Rho_,i,j,k,iBlock) / &
-                  sum( State_V(iRhoIon_I)/MassFluid_I(1:nIonFluid) )
-          end do; end do; end do
-       end if
+    elseif(UseMultiIon)then
+       ! Get mass density per total number denisity
+       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          IonMassPerCharge_G(i,j,k) = IonMassPerCharge * &
+               sum(State_VGB(iRhoIon_I, i, j, k, iBlock)) / &
+               sum(State_VGB(iRhoIon_I, i, j, k, iBlock) / MassIon_I)
+       end do; end do; end do
     end if
 
   end subroutine set_ion_mass_per_charge

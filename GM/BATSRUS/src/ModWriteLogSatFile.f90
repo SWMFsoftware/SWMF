@@ -817,7 +817,8 @@ contains
     use ModIO
     use ModUtilities, ONLY: lower_case
     use ModPhysics, ONLY:  AverageIonCharge, ElectronTemperatureRatio
-    use ModMultiFluid, ONLY: TypeFluid, iFluid, iRho, iP, iRhoIon_I
+    use ModMultiFluid, ONLY: UseMultiIon, IsMhd, iFluid, iRho, iP, iRhoIon_I, &
+         MassIon_I
     implicit none
 
     integer :: jVar, jFluid
@@ -844,9 +845,9 @@ contains
     case('e')
        LogVar_I(iVarTot) = inv_gm1*StateSat_V(iP) + 0.5*&
             sum(StateSat_V(iRhoUx:iRhoUz)**2)/StateSat_V(iRho)
-       if(TypeFluid == 'ion') LogVar_I(iVarTot) = &
-            LogVar_I(iVarTot) + &
-            0.5*sum((StateSat_V(Bx_:Bz_)+B0Sat_D)**2)
+       if(iFluid == 1 .and. IsMhd) &
+            LogVar_I(iVarTot) = LogVar_I(iVarTot) &
+            + 0.5*sum((StateSat_V(Bx_:Bz_)+B0Sat_D)**2)
     case('n','t','temp')
        ! Calculate the number density
        if(UseMultiSpecies)then
@@ -855,15 +856,8 @@ contains
              LogVar_I(iVarTot) = LogVar_I(iVarTot) + &
                   StateSat_V(jVar)/MassSpecies_V(jVar)
           end do
-       else if(UseMultiIon .and. TypeFluid_I(iFluid) == 'ion')then
-          ! This can only occur for iFluid = 1 being the total ion fluid
-          ! sum(n_i) = sum(rho_i/M_i) = rho/M_1 + sum_2 rho_i*(1/M_i - 1/M_1)
-          LogVar_I(iVarTot)= StateSat_V(Rho_)/MassFluid_I(1)
-          do jFluid = 2, nIonFluid
-             LogVar_I(iVarTot) = LogVar_I(iVarTot) + &
-                  StateSat_V(iRhoIon_I(jFluid)) &
-                  *(1/MassFluid_I(jFluid) - 1/MassFluid_I(1))
-          end do
+       else if(UseMultiIon .and. IsMhd .and. iFluid==1)then
+          LogVar_I(iVarTot) = sum(StateSat_V(iRhoIon_I)/MassIon_I)
        else
           LogVar_I(iVarTot) = StateSat_V(iRho)/MassFluid_I(iFluid)
        end if
@@ -871,8 +865,7 @@ contains
        ! Calculate temperature from P = n*k*T + ne*k*Te = n*k*T*(1+ne/n*Te/T)
        if(NameLogVar /= 'n') LogVar_I(iVarTot) = &
             StateSat_V(iP) / LogVar_I(iVarTot) &
-            /(1+AverageIonCharge*ElectronTemperatureRatio)
-       
+            /(1 + AverageIonCharge*ElectronTemperatureRatio)
     case('p')
        LogVar_I(iVarTot) = StateSat_V(iP)
     case('ux')

@@ -117,7 +117,7 @@ subroutine calc_sources
              -DivB1_GB(i,j,k,iBlock)* &
              State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)*RhoInv
 
-        if(TypeFluid_I(1) /= 'ion') CYCLE
+        if(.not. IsMhd) CYCLE
 
         Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) -&
              DivB1_GB(i,j,k,iBlock)* &
@@ -128,7 +128,7 @@ subroutine calc_sources
              State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock))*RhoInv
      end do;end do;end do
 
-     if (UseB0Source .and. TypeFluid_I(1) == 'ion') then
+     if (UseB0Source .and. IsMhd) then
         do k=1,nK; do j=1,nJ; do i=1,nI
            Source_VC(rhoUx_:rhoUz_,i,j,k)=Source_VC(rhoUx_:rhoUz_,i,j,k) - &
                 State_VGB(Bx_:Bz_,i,j,k,iBlock)*DivB0_CB(i,j,k,iBlock)+&
@@ -293,7 +293,7 @@ contains
        DivB1_GB(i,j,k,iBlock)  = DivBInternal + &
             dB1nEast + dB1nWest + dB1nSouth + dB1nNorth + dB1nTop + dB1nBot
 
-       if(TypeFluid_I(1) /= 'ion') CYCLE
+       if(.not.IsMhd) CYCLE
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k) &
             -B0xFace_x_BLK(i,j,k,iBlock)*dB1nEast
@@ -379,7 +379,7 @@ contains
 
        DivB1_GB(i,j,k,iBlock)  = B1nJumpL + B1nJumpR
 
-       if(TypeFluid_I(1) /= 'ion') CYCLE
+       if(.not.IsMhd) CYCLE
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k) &
             -B0xFace_x_BLK(i,j,k,iBlock)*B1nJumpL
@@ -421,7 +421,7 @@ contains
        DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock) &
             + B1nJumpL + B1nJumpR
 
-       if(TypeFluid_I(1) /= 'ion') CYCLE
+       if(.not.IsMhd) CYCLE
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
             -B0xFace_y_BLK(i,j,k,iBlock)*B1nJumpL
@@ -465,7 +465,7 @@ contains
        DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock) &
             + B1nJumpL + B1nJumpR
 
-       if(TypeFluid_I(1) /= 'ion') CYCLE
+       if(.not.IsMhd) CYCLE
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
             -B0xFace_z_BLK(i,j,k,iBlock)*B1nJumpL
@@ -486,7 +486,7 @@ contains
        DivB1_GB(i,j,k,iBlock)  = DivB1_GB(i,j,k,iBlock)+&
             DivBInternal_C(i,j,k)
 
-       if(TypeFluid_I(1) /= 'ion') CYCLE
+       if(.not.IsMhd) CYCLE
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k) &
             -DivBInternal_C(i,j,k)*B0xCell_BLK(i,j,k,iBlock)

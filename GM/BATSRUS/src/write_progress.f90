@@ -65,6 +65,7 @@ subroutine write_runtime_values()
   use CON_planet
   use ModImplicit, ONLY: UseImplicit             !^CFG IF IMPLICIT
   use ModUser, ONLY: user_write_progress
+  use ModMultiFluid, ONLY: IonFirst_
   implicit none
 
   character (len=35) :: TextPlanetMod = ''
@@ -126,7 +127,7 @@ subroutine write_runtime_values()
   if(body1)then
      call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
           'rBody:       ', rBody,      ', rPlanet:   ',rPlanetSi
-     do iFluid = 1, nFluid
+     do iFluid = IonFirst_, nFluid
         call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
              'BodyNDim:    ',BodyNDim_I(iFluid), &
              ', BodyTDim:  ',BodyTDim_I(iFluid)

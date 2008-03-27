@@ -49,8 +49,8 @@ subroutine set_physics_constants
      rPlanetSi   = rSun
      MassBodySi  = mSun
      RotPeriodSi = RotationPeriodSun
-     SW_n_dim    = BodyNDim_I(1)  ! Needed for SOLARWIND normalization only
-     SW_T_dim    = BodyTDim_I(1)  ! Needed for SOLARWIND normalization only
+     SW_n_dim    = BodyNDim_I(IonFirst_)  ! Needed for SOLARWIND normalization only
+     SW_T_dim    = BodyTDim_I(IonFirst_)  ! Needed for SOLARWIND normalization only
   end select
  
   ! Note for GM  !!! BATSRUS's OmegaBody is siderial (relative to the Sun)
@@ -63,6 +63,10 @@ subroutine set_physics_constants
   end if
   ! Second body mass is set to zero by default     !^CFG IF SECONDBODY
   MassBody2Si = 0.0                                !^CFG IF SECONDBODY
+
+
+  ! Make sure that MassIon_I is consistent with MassFluid_I
+  MassIon_I = MassFluid_I(IonFirst_:IonLast_)
 
   !\
   ! Call set_units, which set the quantities for converting from
@@ -165,7 +169,7 @@ subroutine set_physics_constants
   ! Normalize solar wind values. Note: the solarwind is in I/O units
   !/
   SW_n   = SW_n_dim*Io2No_V(UnitN_)
-  SW_rho = SW_n * MassFluid_I(1)
+  SW_rho = SW_n * MassIon_I(1)
   SW_p   = SW_n * SW_T_dim*Io2No_V(UnitTemperature_)
   SW_Ux  = SW_Ux_dim*Io2No_V(UnitU_)
   SW_Uy  = SW_Uy_dim*Io2No_V(UnitU_)
@@ -178,25 +182,26 @@ subroutine set_physics_constants
   SW_rho_dim = SW_rho*No2Io_V(UnitRho_)
   SW_p_dim   = SW_p*No2Io_V(UnitP_)
 
-  BodyRho_I = BodyNDim_I*Io2No_V(UnitN_)*MassFluid_I
-  BodyP_I   = BodyRho_I/MassFluid_I * BodyTDim_I*Io2No_V(UnitTemperature_)
+  ! The normalized quantities extend to the first MHD fluid too
+  BodyRho_I(IonFirst_:) = BodyNDim_I*Io2No_V(UnitN_)*MassFluid_I
+  BodyP_I(IonFirst_:)   = BodyNDim_I*Io2No_V(UnitN_)*BodyTDim_I*Io2No_V(UnitTemperature_)
 
-  PolarRho_I = PolarNDim_I*Io2No_V(UnitN_)*MassFluid_I
-  PolarP_I   = PolarRho_I/MassFluid_I * PolarTDim_I*Io2No_V(UnitTemperature_)
-  PolarRhoU_I= PolarRho_I * PolarUDim_I * Io2No_V(UnitU_)
+  PolarRho_I(IonFirst_:) = PolarNDim_I*Io2No_V(UnitN_)*MassFluid_I
+  PolarP_I(IonFirst_:)   = PolarNDim_I*Io2No_V(UnitN_)*PolarTDim_I*Io2No_V(UnitTemperature_)
+  PolarRhoU_I(IonFirst_:)= PolarRho_I(IonFirst_:) * PolarUDim_I * Io2No_V(UnitU_)
 
-  if(UseMultiIon.and.TypeFluid_I(1)=='ion')then
-     ! Add up density and pressure for first total ion fluid
-     BodyRho_I(1)  = sum(BodyRho_I(1:nIonFluid))
-     BodyP_I(1)    = sum(BodyP_I(1:nIonFluid))
-     PolarRho_I(1) = sum(PolarRho_I(1:nIonFluid))
-     PolarP_I(1)   = sum(PolarP_I(1:nIonFluid))
-     PolarRhoU_I(1)= sum(PolarRhoU_I(1:nIonFluid))
+  if(UseMultiIon .and. IsMhd)then
+     ! Add up quantities for first total ion fluid
+     BodyRho_I(1)  = sum(BodyRho_I(IonFirst_:IonLast_))
+     BodyP_I(1)    = sum(BodyP_I(IonFirst_:IonLast_))
+     PolarRho_I(1) = sum(PolarRho_I(IonFirst_:IonLast_))
+     PolarP_I(1)   = sum(PolarP_I(IonFirst_:IonLast_))
+     PolarRhoU_I(1)= sum(PolarRhoU_I(IonFirst_:IonLast_))
   end if
 
   !^CFG IF SECONDBODY BEGIN
   RhoBody2= RhoDimBody2 * Io2No_V(UnitRho_)
-  pBody2  = RhoBody2/MassFluid_I(1) * TDimBody2*Io2No_V(UnitTemperature_)
+  pBody2  = RhoBody2/MassIon_I(1) * TDimBody2*Io2No_V(UnitTemperature_)
   !^CFG END SECONDBODY
 
   ! Here the arrays of the FACE VALUE are formed
@@ -227,23 +232,21 @@ subroutine set_physics_constants
   FaceState_VI(P_,   East_:Top_) = SW_p
   if(UseElectronPressure) FaceState_VI(Pe_, East_:Top_) = SW_p
 
-  do iFluid = 2, nFluid
+  do iFluid = IonFirst_+1, nFluid
      call select_fluid
      FaceState_VI(iRho, East_:Top_) = SW_Rho*LowDensityRatio
      FaceState_VI(iUx,  East_:Top_) = SW_Ux
      FaceState_VI(iUy,  East_:Top_) = SW_Uy
      FaceState_VI(iUz,  East_:Top_) = SW_Uz
      ! Use solar wind temperature and reduced density to get pressure 
-     FaceState_VI(iP,   East_:Top_) = (SW_p*MassFluid_I(1)) &
-          *(LowDensityRatio/MassFluid_I(iFluid))
+     FaceState_VI(iP,   East_:Top_) = SW_p*LowDensityRatio &
+          *MassIon_I(1)/MassFluid_I(iFluid)
   end do
 
   ! Fix the total pressure if necessary (density and temperature are kept)
-  if(UseMultiIon .and. TypeFluid_I(1)=='ion' .and. SW_rho>0.0) &
-       FaceState_VI(P_,East_:Top_) = sum(FaceState_VI(iP_I(2:nFluid),1)) &
-       + SW_p/Sw_rho &
-       * (Sw_rho - sum(FaceState_VI(iRho_I(2:nFluid),1))/MassFluid_I(1))
-     
+  if(UseMultiIon .and. IsMhd .and. SW_rho>0.0) &
+       FaceState_VI(P_,East_:Top_) = sum(FaceState_VI(iP_I(2:nFluid),1))
+
   ! Cell State is used for filling the ghostcells
   CellState_VI = FaceState_VI
 
@@ -298,6 +301,7 @@ subroutine set_units
   use ModMain
   use ModPhysics
   use ModVarIndexes
+  use ModMultiFluid, ONLY: MassIon_I
   use ModUser, ONLY: user_io_units, user_normalization
   implicit none
 
@@ -324,8 +328,8 @@ subroutine set_units
   case("SOLARWIND")
      ! rPlanet, SW sound speed, SW density in amu/cm^3
      No2Si_V(UnitX_)   = rPlanetSi                             
-     No2Si_V(UnitU_)   = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass/MassFluid_I(1))
-     No2Si_V(UnitRho_) = 1000000*cProtonMass*MassFluid_I(1)*SW_n_dim
+     No2Si_V(UnitU_)   = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass/MassIon_I(1))
+     No2Si_V(UnitRho_) = 1000000*cProtonMass*MassIon_I(1)*SW_n_dim
   case("NONE", "READ")
      ! Already set in MH_set_parameters
   case("USER")

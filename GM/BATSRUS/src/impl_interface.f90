@@ -419,7 +419,7 @@ subroutine conservative_to_primitive(State_V)
 
   use ModImplicit, ONLY: nw
   use ModVarIndexes, ONLY: Bx_, Bz_
-  use ModMultiFluid, ONLY: select_fluid, nFluid, TypeFluid_I, &
+  use ModMultiFluid, ONLY: select_fluid, nFluid, IsMhd, &
        iFluid, iRho, iRhoUx, iUx, iRhoUz, iUz, iP
   use ModPhysics, ONLY: gm1
   implicit none
@@ -431,7 +431,7 @@ subroutine conservative_to_primitive(State_V)
      InvRho = 1.0/State_V(iRho)
      State_V(iP) = gm1*(State_V(iP) - &
           0.5*sum(State_V(iRhoUx:iRhoUz)**2)*InvRho)
-     if(TypeFluid_I(iFluid) == 'ion') &
+     if(iFluid == 1 .and. IsMhd) &
           State_V(iP) = State_V(iP) - 0.5*gm1*sum(State_V(Bx_:Bz_)**2)
      State_V(iUx:iUz) = InvRho*State_V(iRhoUx:iRhoUz)
   end do

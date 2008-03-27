@@ -47,7 +47,7 @@ contains
           end if
        end do; end do; end do
 
-       if(TypeFluid /= 'ion') CYCLE
+       if(iFluid > 1 .or. .not. IsMhd) CYCLE
        
        do k=1, nK; do j=1, nJ; do i=1, nI
           if(IsConserv_CB(i,j,k,iBlock)) then
@@ -83,7 +83,7 @@ contains
             /StateOld_VCB(iRho,i, j, k, iBlock) )
        end do; end do; end do
 
-       if(TypeFluid /= 'ion') CYCLE
+       if(iFluid > 1 .or. .not. IsMhd) CYCLE
        
        do k=1, nK; do j=1, nJ; do i=1, nI
           StateOld_VCB(iP, i, j, k,iBlock) = StateOld_VCB(iP, i, j, k,iBlock) &
@@ -114,7 +114,7 @@ contains
             /State_VGB(iRho,i, j, k, iBlock) )
        end do; end do; end do
 
-       if(TypeFluid /= 'ion') CYCLE
+       if(iFluid > 1 .or. .not. IsMhd) CYCLE
        
        do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
           State_VGB(iP, i, j, k,iBlock) = State_VGB(iP, i, j, k,iBlock) &
@@ -151,7 +151,7 @@ contains
           end if
        end do; end do; end do
        
-       if(TypeFluid /= 'ion') CYCLE
+       if(iFluid > 1 .or. .not. IsMhd) CYCLE
 
        ! Add magnetic energy for ion fluid
        do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
