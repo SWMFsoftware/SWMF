@@ -1274,10 +1274,10 @@ C     DEFINE THE GAS PARAMETERS AT THE LOWER BOUNDARY                  C
 C     C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C     C
-      State_GV(-1:0,uO_)=0.
-      State_GV(-1:0,uh_)=0
+      State_GV(-1:0,uO_) =0.
+      State_GV(-1:0,uh_) =0
       State_GV(-1:0,uhe_)=0.
-      
+      State_GV(-1:0,ue_) =0.
       CALL MODATM(ALTMIN-DrBnd,XNO2,XNN2,XNO,XNH,XNHE,TEMP)
       State_GV(-1,To_) =TEMP
       State_GV(-1,Th_) =TEMP
