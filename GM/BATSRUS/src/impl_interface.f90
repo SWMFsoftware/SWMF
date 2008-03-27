@@ -418,8 +418,8 @@ end subroutine get_cmax_face
 subroutine conservative_to_primitive(State_V)
 
   use ModImplicit, ONLY: nw
-  use ModVarIndexes, ONLY: Bx_, Bz_
-  use ModMultiFluid, ONLY: select_fluid, nFluid, IsMhd, &
+  use ModVarIndexes, ONLY: Bx_, Bz_, IsMhd, nFluid
+  use ModMultiFluid, ONLY: select_fluid,           &
        iFluid, iRho, iRhoUx, iUx, iRhoUz, iUz, iP
   use ModPhysics, ONLY: gm1
   implicit none
