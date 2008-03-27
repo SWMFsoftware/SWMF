@@ -33,7 +33,7 @@ contains
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModAdvance, ONLY: B0XCell_BLK, B0YCell_BLK, B0ZCell_BLK
     use ModAdvance, ONLY: bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
-    use ModGeometry,ONLY: vInv_CB
+    use ModGeometry,ONLY: vInv_CB, x_BLK, y_BLK, z_BLK
     use ModPhysics, ONLY: ElectronCharge, gm1, inv_gm1, &
          Si2No_V, No2Si_V, UnitTemperature_, UnitT_
     use ModMain,    ONLY: x_, y_, z_
@@ -45,11 +45,11 @@ contains
     real, dimension(3) :: Current_D, Force_D
     real, dimension(nIonFluid) :: NumDens_I, InvRho_I, Ux_I, Uy_I, Uz_I, Temp_I
 
-    integer :: iBlock, i, j, k, jFluid, iFirstIons
+    integer :: iBlock, i, j, k, iIon, jIon, iRhoUx, iRhoUz, iP, iEnergy
     real :: CoefBx, CoefBy, CoefBz, Coef, AverageTemp, TemperatureCoef, Heating
     real :: CollisionRate_II(nIonFluid, nIonFluid), CollisionRate
 
-    character (len=*), parameter :: NameSub = 'user_calc_sources'
+    character (len=*), parameter :: NameSub = 'multi_ion_sources'
     logical :: DoTest, DoTestMe
     !-----------------------------------------------------------------------
     if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
@@ -77,49 +77,46 @@ contains
     CollisionCoef = CollisionCoefDim &
          /No2Si_V(UnitTemperature_)**1.5/Si2No_V(UnitT_)
 
-    do jFluid = 1, nIonFluid
-       do iFluid = 1, nIonFluid
-          CollisionRate_II(iFluid, jFluid) = CollisionCoef* &
-               MassFluid_I(iFluid)*MassFluid_I(jFluid) &
-               /(MassFluid_I(iFluid)+MassFluid_I(jFluid))
+    do jIon = 1, nIonFluid
+       do iIon = 1, nIonFluid
+          CollisionRate_II(iIon, jIon) = CollisionCoef* &
+               MassIon_I(iIon)*MassIon_I(jIon) &
+               /(MassIon_I(iIon)+MassIon_I(jIon))
        end do
     end do
 
-    ! Do not add
-    iFirstIons = 1
-    if(TypeFluid_I(1) == 'ion')iFirstIons = 2
-
     do k=1,nK; do j=1,nJ; do i=1,nI
        ! Extract conservative variables
-       State_V = State_VGB(:,i,j,k,globalBLK)
-
-       if(TypeFluid_I(1) == 'ion')then
-          ! Get first fluid quantities
-          State_V(Rho_) = State_V(Rho_) &
-               - sum(State_V(iRhoIon_I(2:nIonFluid)))
-          State_V(RhoUx_) = State_V(RhoUx_) &
-               - sum(State_V(iRhoUxIon_I(2:nIonFluid)))
-          State_V(RhoUy_) = State_V(RhoUy_) &
-               - sum(State_V(iRhoUyIon_I(2:nIonFluid)))
-          State_V(RhoUz_) = State_V(RhoUz_) &
-               - sum(State_V(iRhoUzIon_I(2:nIonFluid)))
-          State_V(P_) = State_V(P_) &
-               - sum(State_V(iPIon_I(2:nIonFluid)))
-       end if
+       State_V = State_VGB(:,i,j,k,iBlock)
 
        ! Total magnetic field
        FullB_D = State_V(Bx_:Bz_) + (/ &
-            B0xCell_BLK(i,j,k,globalBLK),&
-            B0yCell_BLK(i,j,k,globalBLK),&
-            B0zCell_BLK(i,j,k,globalBLK) /)
+            B0xCell_BLK(i,j,k,iBlock),&
+            B0yCell_BLK(i,j,k,iBlock),&
+            B0zCell_BLK(i,j,k,iBlock) /)
 
        ! calculate number densities
-       NumDens_I  = State_V(iRhoIon_I) / MassFluid_I(1:nIonFluid)
+       NumDens_I  = State_V(iRhoIon_I) / MassIon_I
        NumDens    = sum(NumDens_I)
        InvNumDens = 1.0/NumDens
 
        Temp_I     = State_V(iPIon_I)/NumDens_I
        AverageTemp= sum(State_V(iPIon_I))*InvNumDens
+
+       if(AverageTemp <= 0.0)then
+          write(*,*)'ERROR: AverageTemp =',AverageTemp
+          write(*,*)'i,j,k,iBlock,iProc =',i,j,k,iBlock,iProc
+          write(*,*)'x,y,z              =', &
+               x_BLK(i,j,k,iBlock), y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock)
+          write(*,*)'iRhoIon_I          =',iRhoIon_I
+          write(*,*)'RhoIon_I           =',State_V(iRhoIon_I)
+          write(*,*)'MassIon_I          =',MassIon_I
+          write(*,*)'NumDens_I          =',NumDens_I
+          write(*,*)'iPIon_I            =',iPIon_I
+          write(*,*)'PIon_I             =',State_V(iPIon_I)
+          write(*,*)'Temp_I             =',Temp_I
+          call stop_mpi(NameSub//': non-positive average temperature')
+       end if
 
        InvRho_I = 1.0/State_V(iRhoIon_I)
        Ux_I  = InvRho_I*State_V(iUxIon_I)
@@ -133,7 +130,7 @@ contains
 
        ! Add the Hall velocity -J/(e n)
        if(index(Test_String,'newj') > 0)then
-          Current_D = vInv_CB(i,j,k,globalBLK)*&
+          Current_D = vInv_CB(i,j,k,iBlock)*&
                ( bCrossArea_DX(:,i+1,j,k) - bCrossArea_DX(:,i,j,k) &
                + bCrossArea_DY(:,i,j+1,k) - bCrossArea_DY(:,i,j,k) &
                + bCrossArea_DZ(:,i,j,k+1) - bCrossArea_DZ(:,i,j,k))
@@ -147,47 +144,51 @@ contains
        CollisionRate = CollisionCoef
 
        ! Calculate the source term for all the ion fluids
-       do iFluid = iFirstIons, nIonFluid
-          call select_fluid
-          uIon_D = (/ Ux_I(iFLuid),  Uy_I(iFluid), Uz_I(iFluid) /)
+       do iIon = 1, nIonFluid
+          ! call select_fluid
+          uIon_D = (/ Ux_I(iIon),  Uy_I(iIon), Uz_I(iIon) /)
           u_D    = uIon_D - uPlusHallU_D
 
           Force_D = &
-               ElectronCharge*NumDens_I(iFluid)*cross_product(u_D, FullB_D) 
+               ElectronCharge*NumDens_I(iIon)*cross_product(u_D, FullB_D) 
 
           Heating = 0.0
 
           if(.false.)then
-             do jFluid = 1, nIonFluid
-                if(jFluid == iFluid) CYCLE
+             do jIon = 1, nIonFluid
+                if(jIon == iIon) CYCLE
                 
                 ! Add collisional term
-                uIon2_D = (/ Ux_I(jFLuid),  Uy_I(jFluid), Uz_I(jFluid) /)
+                uIon2_D = (/ Ux_I(jIon),  Uy_I(jIon), Uz_I(jIon) /)
 
-                if(  InvNumDens*NumDens_I(iFluid) < 0.01 .or. &
-                     InvNumDens*NumDens_I(jFluid) < 0.01) then
-                   CollisionRate = 100.0 * NumDens_I(iFluid) * NumDens_I(jFluid)
+                if(  InvNumDens*NumDens_I(iIon) < 0.01 .or. &
+                     InvNumDens*NumDens_I(jIon) < 0.01) then
+                   CollisionRate = 100 * NumDens_I(iIon) * NumDens_I(jIon)
                 else
-                   CollisionRate = CollisionRate_II(iFluid, jFluid) * &
-                        NumDens_I(iFluid) * NumDens_I(jFluid) &
+                   CollisionRate = CollisionRate_II(iIon, jIon) * &
+                        NumDens_I(iIon) * NumDens_I(jIon) &
                         * TemperatureCoef
                 end if
 
                 Force_D = Force_D + CollisionRate*(uIon2_D - uIon_D)
 
                 Heating = Heating + CollisionRate* &
-                     ( 2*(Temp_I(jFluid) - Temp_I(iFluid)) &
+                     ( 2*(Temp_I(jIon) - Temp_I(iIon)) &
                      + gm1*sum((uIon2_D - uIon_D)**2) )
              end do
+
+             iP = iPIon_I(iIon)
+             Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) + Heating
+
           end if
 
-          Source_VC(iRhoUx_I(iFluid):iRhoUz_I(iFluid),i,j,k) = &
-               Source_VC(iRhoUx_I(iFluid):iRhoUz_I(iFluid),i,j,k) + Force_D
+          iRhoUx = iRhoUxIon_I(iIon); iRhoUz = iRhoUzIon_I(iIon)
+          Source_VC(iRhoUx:iRhoUz,i,j,k) = Source_VC(iRhoUx:iRhoUz,i,j,k) &
+               + Force_D
 
-          Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) + Heating
-
-          Source_VC(Energy_-1+iFluid,i,j,k) = &
-               Source_VC(Energy_-1+iFluid,i,j,k) + sum(Force_D*uIon_D) &
+          iEnergy = Energy_-2+iIon+IonFirst_
+          Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) &
+               + sum(Force_D*uIon_D) &
                + inv_gm1*Heating
 
        end do
@@ -208,7 +209,7 @@ contains
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
 
     logical :: IsPointImpl_V(nVar)
-    integer :: iFirst, iVar, iPointImplVar, nPointImplVar
+    integer :: iVar, iPointImplVar, nPointImplVar
     !------------------------------------------------------------------------
 
     IsPointImpl_V = .false.
@@ -221,18 +222,11 @@ contains
 
     IsPointImplMatrixSet = .false.
 
-    ! All ion momenta are implicit
-    if(TypeFluid_I(1) == 'ions')then
-       iFirst = 1
-    else
-       iFirst = 2
-    end if
-
-    IsPointImpl_V(iRhoUxIon_I(iFirst:)) = .true.
-    IsPointImpl_V(iRhoUyIon_I(iFirst:)) = .true.
-    IsPointImpl_V(iRhoUzIon_I(iFirst:)) = .true.
-    IsPointImpl_V(iRhoUxIon_I(iFirst:)) = .true.
-    IsPointImpl_V(iPIon_I(iFirst:))     = .true.
+    ! All ion momenta and pressures are implicit
+    IsPointImpl_V(iRhoUxIon_I) = .true.
+    IsPointImpl_V(iRhoUyIon_I) = .true.
+    IsPointImpl_V(iRhoUzIon_I) = .true.
+    IsPointImpl_V(iPIon_I)     = .true.
 
     nPointImplVar = count(IsPointImpl_V)
 
