@@ -98,6 +98,7 @@ my $nDiff=0;
      my $Avrg = 0.5*(abs($Num1)+abs($Num2));
 
      if( $Diff > $AbsTol and $Diff > $RelTol*$Avrg ){
+	 print "DiffNum.pl -a=$AbsTol -r=$RelTol $File1 $File2\n" unless $nDiff;
 	 $nDiff++;
 	 if($MaxLine > 5){
 	     print "${iLine1}n${iLine2}\n";
