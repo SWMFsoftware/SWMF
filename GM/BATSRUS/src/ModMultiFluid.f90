@@ -5,6 +5,24 @@ module ModMultiFluid
   implicit none
   save
 
+  ! Convenient parameters for the ion fluids
+  logical, parameter :: UseMultiIon = IonLast_ > IonFirst_
+
+  integer, parameter :: nIonFluid   = IonLast_ - IonFirst_ + 1
+
+  integer, parameter :: iRhoIon_I(nIonFluid)   = iRho_I(IonFirst_:IonLast_)
+  integer, parameter :: iRhoUxIon_I(nIonFluid) = iRhoUx_I(IonFirst_:IonLast_)
+  integer, parameter :: iRhoUyIon_I(nIonFluid) = iRhoUy_I(IonFirst_:IonLast_)
+  integer, parameter :: iRhoUzIon_I(nIonFluid) = iRhoUz_I(IonFirst_:IonLast_)
+  integer, parameter :: iUxIon_I(nIonFluid)    = iRhoUx_I(IonFirst_:IonLast_)
+  integer, parameter :: iUyIon_I(nIonFluid)    = iRhoUy_I(IonFirst_:IonLast_)
+  integer, parameter :: iUzIon_I(nIonFluid)    = iRhoUz_I(IonFirst_:IonLast_)
+  integer, parameter :: iPIon_I(nIonFluid)     = iP_I(IonFirst_:IonLast_)
+
+  ! The ion masses (adjustable)
+  real :: MassIon_I(nIonFluid)
+
+  ! Variables that are set for the selected fluid
   integer :: iFluid = 1
   integer ::                          &
        iRho   = Rho_,                 &
@@ -13,16 +31,7 @@ module ModMultiFluid
        iRhoUz = RhoUz_, iUz = RhoUz_, &
        iP     = P_,                   &
        iEnergy= nVar+1
-  character (len=20) :: NameFluid = '', TypeFluid='ion'
-
-  integer, parameter :: iRhoIon_I(nIonFluid)   = iRho_I(1:nIonFluid)
-  integer, parameter :: iRhoUxIon_I(nIonFluid) = iRhoUx_I(1:nIonFluid)
-  integer, parameter :: iRhoUyIon_I(nIonFluid) = iRhoUy_I(1:nIonFluid)
-  integer, parameter :: iRhoUzIon_I(nIonFluid) = iRhoUz_I(1:nIonFluid)
-  integer, parameter :: iUxIon_I(nIonFluid)    = iRhoUx_I(1:nIonFluid)
-  integer, parameter :: iUyIon_I(nIonFluid)    = iRhoUy_I(1:nIonFluid)
-  integer, parameter :: iUzIon_I(nIonFluid)    = iRhoUz_I(1:nIonFluid)
-  integer, parameter :: iPIon_I(nIonFluid)     = iP_I(1:nIonFluid)
+  character (len=20) :: NameFluid = ''
 
 contains
 
@@ -41,7 +50,6 @@ contains
     iUz    = iRhoUz
 
     NameFluid = NameFluid_I(iFluid)
-    TypeFluid = TypeFluid_I(iFluid)
 
   end subroutine select_fluid
   !============================================================
@@ -51,7 +59,6 @@ contains
     ! and set iFluid to the corresponding fluid index
 
     use ModUtilities, ONLY: lower_case
-
 
     character(len=*), intent(inout) :: String
 
