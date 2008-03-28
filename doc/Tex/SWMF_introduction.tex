@@ -14,25 +14,29 @@ Milestone 11K requirements. The SWMF was developed to provide flexible
 modeling community.  In its current form the SWMF links together eight
 models from the surface of the Sun to the upper atmosphere of the Earth: 
 \begin{enumerate}
-\item SC -- Solar Corona which includes the Eruptive Event Generator,
+\item GM -- Global Magnetosphere 
+\item IE -- Ionosphere Electrodynamics
 \item IH -- Inner Heliosphere
 \item SP -- Solar Energetic Particles 
-\item GM -- Global Magnetosphere 
 \item IM -- Inner Magnetosphere
+\item LA -- Lower Atmosphere (under development)
 \item PW -- Polar Wind
+\item PS -- Plasma Sphere (under development)
 \item RB -- Radiation Belts
-\item IE -- Ionosphere Electrodynamics
+\item SC -- Solar Corona which includes the Eruptive Event Generator,
 \item UA -- Upper Atmosphere
 \end{enumerate}
-In the future the SWMF may be extended to include even more 
+The SWMF may be extended in the future to include even more 
 physics domains: Cometary Environment, Interstellar
-Neutrals, Outer Heliosphere, Plasmasphere, Planetary Satellites and
-Polar Wind. 
+Neutrals, Outer Heliosphere, Planetary Satellites, and Radiation Transfer.
 
 The SWMF implementation is based on the component technology and
 Object-Oriented Programming emulated in Fortran 90.  The SWMF parallel
 communications are based on the MPI standard.  In its current
-implementation the SWMF creates a single executable.
+implementation the SWMF creates a single executable. Note, however, that the
+models in the SWMF can still be compiled into stand-alone executables.
+This means that the models preserve their individuality while being
+compatible with the SWMF.
 
 \section{Acknowledgments}
 
@@ -56,9 +60,11 @@ T\'oth, Igor Sokolov and Ovsei Volberg:
 \begin{itemize}
 \item Component registration and layout was designed and implemented by 
       Ovsei Volberg and G\'abor T\'oth.
-\item The session and time management support was designed and
-      developed by G\'abor T\'oth.
+\item The session and time management support as well as the various
+      configuration scripts and the parameter editor GUI were designed and
+      implemented by G\'abor T\'oth.
 \item The SWMF coupling toolkit was developed by Igor Sokolov.
+\item The SWMF GUI was designed and implemented by Darren De Zeeuw.
 \end{itemize}
 The physics models were developed by the following research groups:
 \begin{itemize}
@@ -76,19 +82,21 @@ energetic particles along a magnetic field line in a 3D phase space.
 
 \item
 The Inner Magnetosphere (IM) component is the Rice Convection Model
-(RCM) developed at Rice University.  This code is 2-dimensional and
-serial.
+(RCM) developed Dick Wolf, Stan Sazykin and others at Rice University. 
+There are two versions in the SWMF: RCM and RCM2 (with oxygen and loss). 
+The RCM code is 2-dimensional in space 
+(plus one dimension for energy) and serial.
 
 \item
 The Polar Wind (PW) component is the Polar Wind Outflow Model (PWOM)
-developed at the University of Michigan.  This code solves the
+developed by Alex Glocer, Gabor Toth and Tamas Gombosi
+at the University of Michigan.  This code solves the
 multifluid equations along multiple field lines and it is fully parallel.
 
 \item
-There are two versions for the Radiation Belt (RB) component: 
-the Rice Rardiation Belt Model (RRBM) is developed at Rice University,
-the Radiation Belt Environment (RBE) model is developed at Goddard.
-Both codes are 2-dimensional and serial.
+The Radiation Belt Environment (RBE) model is developed by Meiching Fok
+at NASA Goddard. It is a spatially 2-dimensional code with 
+extra two dimensions for pitch angle and energy. The RBE is serial.
 
 \item
 The Ionospheric Electrodynamics (IE) component is a 2-processor,
@@ -99,56 +107,13 @@ The Ionospheric Electrodynamics (IE) component is a 2-processor,
 There are two versions of the Upper Atmosphere (UA) component:
 the Global Ionosphere - Thermosphere Model (GITM) and its newer
 version GITM2. Both versions are 3-dimensional spherical
-models developed at CSEM by Ridley, Deng, and Toth.  They are fully parallel.
+models developed at CSEM by Aaron Ridley, Yue Deng, and Gabor Toth.  
+The GITM codes are fully parallel.
 
 \end{itemize}
 The transformation of physics models into physics components,
 the coupling of components to the SWMF and each other and
 all the testing were done at CSEM.
-
-\section{What is New in Version 2.1}
-
-The SWMF has been developed further since the second release of
-version 2.0. Here is a partial list of improvements:
-\begin{itemize}
-\item The documentation has been improved and split into smaller parts.
-\item The SWMF contains a new version for the UA component: GITM2.
-\item Restarting SWMF is made easier with the Restart.pl script.
-\item The Solar Corona can be solved in a corotating frame.
-\item The coupling between the GM and IE components has been rewritten
-      with simpler and more accurate algorithms.
-\item The coupling between the GM and IM components has been made more robust.
-\item The geometry based grid refinement can be modified easily with
-      the \#GRIDRESOLUTION command in the
-      parameter file for the GM,IH,SC/BATSRUS components.
-
-\end{itemize}
-
-\section{What is New in Version 2.0}
-
-The SWMF has been developed extensively since the first release of
-version 1.0. Here are some of the highlights:
-\begin{itemize}
-\item The SWMF now contains 3 new components:
-      the Solar Corona (SC), the Solar Energetic Particles (SP) 
-      and the Radiation Belt (RB)
-\item Some components now support dynamic memory allocation which 
-      reduces the total memory required by a processing element. 
-\item The directory structure of the SWMF has been greatly improved and 
-      reorganized. 
-\item This reorganization allows components to be used as stand alone 
-      physics models without any modification in the source code.  The
-      stand alone version only links to a small SWMF library.
-\item The installation and configuration of SWMF has been greatly simplified
-      with the aid of Perl scripts. 
-\item Layout and input parameter can be checked with Scripts/TestParam.pl
-\item User manual is produced from the XML description of the input parameters.
-\item Unused components can be configured out completely.
-\item The control module now fully supports steady state calculations 
-      including component subcycling. 
-\item The coupling toolkit provides means for extracting and following 
-      the motion of field lines.
-\end{itemize}
 
 \section{The SWMF in a Few Paragraphs}
 
@@ -286,27 +251,32 @@ been designed for only these two visualization softwares.
 The distribution in the form of the compressed tar image
 includes the SWMF source code.
 The top level directory contains the following subdirectories:
-\begin{itemize}
+\begin{itemize}\itemsep=0pt
 \item {\tt CON}     - the directory of the framework's main building blocks
 \item {\tt GM}      - Global Magnetosphere component       %^CMP IF GM
 \item {\tt IE}      - Ionosphere Electrodynamics Component %^CMP IF IE
 \item {\tt IH}      - Inner Heliosphere component          %^CMP IF IH
+\item {\tt LA}      - Lower Atmosphere component           %^CMP IF LA
 \item {\tt IM}      - Inner Magnetosphere component        %^CMP IF IM
+\item {\tt PS}      - Plasma Sphere component              %^CMP IF PS
 \item {\tt PW}      - Polar wind component                 %^CMP IF PW
 \item {\tt RB}      - Radiation Belt component             %^CMP IF RB
 \item {\tt SC}      - Solar Corona component               %^CMP IF SC
 \item {\tt SP}      - Solar Energetic Particles component  %^CMP IF SP
 \item {\tt UA}      - Upper Atmosphere component           %^CMP IF UA
+\item {\tt ESMF}    - the ESMF wrapper for the SWMF
 \item {\tt Copyrights} - copyright files
 \item {\tt Param}   - description of CON parameters, parameter and layout files
 \item {\tt Scripts} - shell and Perl scripts
 \item {\tt bin}     - scripts for installation, configuration and testing
 \item {\tt doc}     - the documentation directory %^CMP IF DOC
+\item {\tt gui}     - the SWMF graphical user interface
+\item {\tt output}  - reference test results for the SWMF tests
 \item {\tt share}   - shared scripts and source code
 \item {\tt util}    - general utilities such as TIMING and NOMPI
 \end{itemize}
 and the following files
-\begin{itemize}
+\begin{itemize}\itemsep=0pt
 \item {\tt README}        - a short instruction on installation and usage
 \item {\tt Makefile}      - the main makefile
 \item {\tt Makefile.test} - the makefile containing the tests %#^CMP IF TESTING
@@ -344,10 +314,23 @@ be found at
 GM/BATSRUS/PARAM.XML
 \end{verbatim}
 This file contains a complete list of all input commands for the
-component as well as the allowed ranges for each of the input parameters.
+component as well as the type, the allowed ranges and default values
+for each of the input parameters.
 Although the XML format makes the files a little hard to read, they are
 extremely useful.  A typical usage is to cut and paste commands out of the
-PARAM.XML file into the PARAM.in file for a run.
+PARAM.XML file into the PARAM.in file for a run. 
+
+An alternative approach is to use the web browser based parameter editor 
+to edit the PARAM.in file for the SWMF 
+(also for the stand-alone models that have PARAM.XML files).
+The editor GUI can be started as
+\begin{verbatim}
+share/Scripts/ParamEditor.pl
+\end{verbatim}
+This editor allows constructing PARAM.in files with pull down menus, 
+shows the manual for the edited commands, and checks the correctness of
+the parameter file and highlights the errors. All this functionality 
+is based on the PARAM.XML files.
 
 \subsubsection{Have the working directory in your path}
 
@@ -367,6 +350,8 @@ then you can simply type
 \begin{verbatim} 
 Config.pl -s
 \end{verbatim}
+Setting the path is best done in the .cshrc or equivalent Unix shell 
+customization file located in the user's home directory.
 
 \section{Installing the Code}
 
@@ -533,31 +518,24 @@ with
 
 {\bf IMPORTANT NOTES:
 On the Altix machine at NASA Ames (columbia)
-you should load the 8.0.070 version 
+you should load the 10.0.026 version 
 of the Intel Fortran compiler 
 with the command
 \begin{verbatim}
-  module load intel-comp.8.0.070
+  module load intel-comp.10.0.026
 \end{verbatim}
-You may wish to insert this line into the .cshrc file
-so it executes at login time. 
 Selecting the correct compiler version is 
-necessary both to compile and to run the code.
-Therefore the above line is needed in the job scripts
-as well.
-
-On Linux platforms with the NAG f95 compiler it may be necessary
-to add the {\tt -Bstatic} option to the link flag in {\tt Makfefile.conf}
+necessary both to compile and to run the code. This can be done
+by manually loading the module before compilation and inserting
+the module load command into the job script. A simpler and more
+reliable solution is to load the module during login. 
+Simply add the following into the .cshrc file in the home directory
 \begin{verbatim}
-Lflag1  = ${PRECISION} ${MPILIB} ${DEBUG} -Bstatic
-\end{verbatim} 
-in case running the executable {\tt SWMF.exe}
-results in a segmentation fault immediately. This error occurs when 
-the memory usage is high, e.g. there are many implicit blocks in 
-the {\tt GM/BATSRUS} component. Running with the {\tt UA/GITM2} component 
-may also requires this flag. Some users reported
-that while this fix avoids the segmentation fault, the code crashes 
-with run time errors. Other users found that the fix works fine.
+   if(`which ifort` != "/opt/intel/comp/10.0.026/bin/ifort") then
+      module load intel-comp.10.0.026
+   endif
+\end{verbatim}
+The if statement avoids loading the module repeatedly.
 }
 
 To build the executable {\bf bin/SWMF.exe}, type:
