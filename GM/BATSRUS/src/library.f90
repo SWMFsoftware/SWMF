@@ -1463,6 +1463,7 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
   real,dimension(3) :: Xyz_D,DXyz_D,XyzCorner_D,XyzCenter_D
   integer,dimension(3)::IjkRoot_D
   logical,dimension(3):: IsLowerThanCenter_D
+  character(len=*), parameter:: NameSub = 'xyz_to_peblk'
   !----------------------------------------------------------------------
 
   nullify(Octree % ptr)
@@ -1472,58 +1473,68 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
   if(UseCovariant)then                       
      call xyz_to_gen((/x,y,z/),Xyz_D)
   else                                       
-     Xyz_D(1)=x
-     Xyz_D(2)=y
-     Xyz_D(3)=z
+     Xyz_D = (/x,y,z/)
   end if                                     
 
-  !Check, if we are within the Octree:
-  if(any(Xyz_D(1:3)<XyzMin_D(1:3)).or.any(Xyz_D(1:3)>XyzMax_D(1:3)))&
-       call stop_mpi(&
-       'Xyz_to_peblk subroutine: the point is out of the Octree') 
-  !Find the octree root
+  !Check if we are within the domain:
+  if(  any(Xyz_D(1:3) < XyzMin_D(1:3)-cTiny) .or. &
+       any(Xyz_D(1:3) > XyzMax_D(1:3)+cTiny) )then
+     write(*,*)NameSub,' XyzMin_D=',XyzMin_D
+     write(*,*)NameSub,' XyzMax_D=',XyzMax_D
+     write(*,*)NameSub,' x,y,z   =',x,y,z
+     if(UseCovariant)write(*,*)NameSub,' Xyz_D   =',Xyz_D
+     call stop_mpi(NameSub//': the point is out of the domain')
+  end if
 
-  DXyz_D=(XyzMax_D-XyzMin_D)/proc_dims
-  IjkRoot_D=int((Xyz_D-XyzMin_D)/DXyz_D)
-  XyzCorner_D=XyzMin_D+DXyz_D*IjkRoot_D
+  !Find the octree root
+  Dxyz_D      = (XyzMax_D-XyzMin_D)/proc_dims
+  IjkRoot_D   = int((Xyz_D-XyzMin_D)/DXyz_D)
+
+  ! Make sure that we remain within the index range
+  ! The int function takes care of values below XyzMin_D
+  ! We fix indices that are too large if any Xyz_D >= XyzMax_D
+  IjkRoot_D   = min(IjkRoot_D, proc_dims-1)
+
+  XyzCorner_D = XyzMin_D + DXyz_D*IjkRoot_D
 
   Octree % ptr => &
        octree_roots(IjkRoot_D(1)+1,IjkRoot_D(2)+1,IjkRoot_D(3)+1) % ptr
-  ! Recursive procedure to find the adaptive block:
+
+  ! Descend the octree to find the block containing the point
   do
      if(Octree % ptr % used) then
         iPE    = octree % ptr % PE
         iBlock = octree % ptr % BLK
         if(DoFindCell)then
-           DXyz_D=DXyz_D/nCells
-           iCell=int((Xyz_D(1)-XyzCorner_D(1))/DXyz_D(1))+1
-           jCell=int((Xyz_D(2)-XyzCorner_D(2))/DXyz_D(2))+1
-           kCell=int((Xyz_D(3)-XyzCorner_D(3))/DXyz_D(3))+1
+           DXyz_D = DXyz_D/nCells
+           iCell  = int((Xyz_D(1)-XyzCorner_D(1))/DXyz_D(1))+1
+           jCell  = int((Xyz_D(2)-XyzCorner_D(2))/DXyz_D(2))+1
+           kCell  = int((Xyz_D(3)-XyzCorner_D(3))/DXyz_D(3))+1
         end if
         EXIT
      else
-        DXyz_D=cHalf*DXyz_D
-        XyzCenter_D=XyzCorner_D+DXyz_D
-        IsLowerThanCenter_D=Xyz_D<XyzCenter_D
+        DXyz_D = 0.5*DXyz_D
+        XyzCenter_D = XyzCorner_D + DXyz_D
+        IsLowerThanCenter_D = Xyz_D < XyzCenter_D
         if(IsLowerThanCenter_D(2))then
            if(.not.IsLowerThanCenter_D(3))then
-              XyzCorner_D(3)=XyzCenter_D(3)
+              XyzCorner_D(3) = XyzCenter_D(3)
               if(IsLowerThanCenter_D(1))then
                  Octree % ptr => Octree % ptr % child(1)%ptr
               else
-                 XyzCorner_D(1)=XyzCenter_D(1)
+                 XyzCorner_D(1) = XyzCenter_D(1)
                  Octree % ptr => Octree % ptr % child(2)%ptr
               end if
            else
               if(.not.IsLowerThanCenter_D(1))then
-                 XyzCorner_D(1)=XyzCenter_D(1)
+                 XyzCorner_D(1) = XyzCenter_D(1)
                  Octree % ptr => Octree % ptr % child(3)%ptr
               else
                  Octree % ptr => Octree % ptr % child(4)%ptr
               end if
            end if
         else
-           XyzCorner_D(2)=XyzCenter_D(2)
+           XyzCorner_D(2) = XyzCenter_D(2)
            if(IsLowerThanCenter_D(3))then
               if(IsLowerThanCenter_D(1))then
                  Octree % ptr => Octree % ptr % child(5)%ptr
@@ -1532,7 +1543,7 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
                  Octree % ptr => Octree % ptr % child(6)%ptr
               end if
            else
-              XyzCorner_D(3)=XyzCenter_D(3)
+              XyzCorner_D(3) = XyzCenter_D(3)
               if(.not.IsLowerThanCenter_D(1))then
                  XyzCorner_D(1)=XyzCenter_D(1)
                  Octree % ptr => Octree % ptr % child(7)%ptr
