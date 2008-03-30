@@ -29,4 +29,26 @@ test_block_data:
 	@echo test_block_data done
 	@echo -----------------------------------------------------------------
 
+########################################################################
+
+OBJ_OCTREE = \
+	test_octree.o \
+	../src/ModOctreeNew.o
+
+test_octree.exe: ${OBJ_OCTREE}
+	${LINK.f90} -o test_octree.exe ${OBJ_OCTREE} ${Lflag2}
+
+test_octree: 
+	@echo -----------------------------------------------------------------
+	@echo test_octree starting
+	@echo
+	@(cd ../src; make ModOctreeNew.o)
+	@make test_octree.exe
+	@echo
+	@echo './test_octree.exe'
+	@./test_octree.exe
+	@echo
+	@echo test_octree done
+	@echo -----------------------------------------------------------------
+
 distclean: clean
