@@ -58,7 +58,7 @@ test_check:
 
 clean:
 	@touch ${INSTALLFILES}
-	@cd src; make clean
+	# @cd src; make clean
 	# @cd srcInterface; make clean
 	@(if [ -d util ];  then cd util;  make clean; fi);
 	@(if [ -d share ]; then cd share; make clean; fi);
