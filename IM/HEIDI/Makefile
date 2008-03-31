@@ -28,6 +28,7 @@ LIB:
 TESTDIR = run_test
 
 test:
+	@echo "There is no test for HEIDI" > notest.diff
 	@echo "test_compile..." > test.diff
 	make   test_compile
 	@echo "test_rundir..." >> test.diff
@@ -64,9 +65,9 @@ clean:
 
 distclean: clean
 	@touch ${INSTALLFILES}
-	@cd src; make distclean
-	# cd srcInterface; make distclean
-	rm -f *~
+	#@cd src; make distclean
+	#@cd srcInterface; make distclean
+	rm -f *~ ${INSTALLFILES}
 
 #
 #       Create run directories
