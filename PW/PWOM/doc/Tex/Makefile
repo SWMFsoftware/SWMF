@@ -19,10 +19,6 @@ help:
 	@echo "clean        - remove temporary files"
 	@echo ""
 	@echo "cleanpdf     - clean + remove PDF manuals"
-	@#^CMP IF DOCHTML BEGIN
-	@echo ""
-	@echo "cleanall     - clean + remove PDF manuals"
-	@#^CMP END DOCHTML
 #EOC
 
 
@@ -49,9 +45,5 @@ clean:
 	@echo 'rm -f PWOMREF PWOMXML'
 	@rm -f ${PWOMXML}
 
-cleanpdf: clean
+distclean: clean
 	cd ..; rm -f ${PDF_FILES}
-
-
-cleanall: cleanpdf
-#^CMP END DOCHTML

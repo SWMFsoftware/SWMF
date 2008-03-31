@@ -149,7 +149,7 @@ rundir:
 	fi)
 
 PDF:
-	@cd doc/Tex; make cleanpdf; make PDF
+	@cd doc/Tex; make PDF
 
 clean:
 	@touch ${INSTALLFILES}
@@ -163,4 +163,5 @@ distclean:
 	@touch ${INSTALLFILES}
 	cd src; make distclean
 	cd srcInterface; make distclean
+	cd doc/Tex; make distclean
 	rm -rf Makefile.planet *~ bin
