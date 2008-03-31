@@ -231,8 +231,8 @@ HTML: cleanhtml
 clean:
 	rm -f *.out *.aux *.log *.toc *.ind *.idx *.ilg *.dvi *.ps *~ *.protex
 	rm -f SWMFREF.tex SWMFXML.tex BATSRUS_SCRIPTS.tex
-	@echo 'rm -f SWMFREF SWMFXML'
-	@rm -f ${SWMFREF} ${SWMFXML}
+	@echo 'rm -f SWMFREF SWMFXML BATSRUS_SCRIPTS'
+	@rm -f ${SWMFREF} ${SWMFXML} ${BATSRUS_SCRIPTS}
 
 cleanpdf: clean
 	cd ..; rm -f ${PDF_FILES}
