@@ -60,7 +60,7 @@ distclean:
 	@cd $(ABDIR);    make clean
 	@cd $(MAINDIR);  make distclean
 	@cd srcInterface;make distclean
-	rm -f src/ModSize.f90 *~
+	rm -f *~
 #
 #       Create run directories
 #

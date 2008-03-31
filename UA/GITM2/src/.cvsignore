@@ -6,6 +6,7 @@ ModGITM.f90
 ModEUV.f90
 ModSources.f90
 ModPlanet.f90
+ModRates.f90
 calc_chemistry.f90
 calc_electron_temperature.f90
 calc_ion_density.f90

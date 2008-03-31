@@ -146,9 +146,14 @@ ${MY_LIB}: ${LIBPREV} ${MF} ${MODULES} ${OBJECTS}
 	${AR} ${MY_LIB} ${OBJECTS} ${MODULES}
 
 distclean:
-	rm -f 	ModGITM.f90 \
-		ModEUV.f90 ModSources.f90 \
+	rm -f 	ModSize.f90 \
+		ModGITM.f90 \
+		ModEUV.f90 \
+		ModSources.f90 \
 		ModPlanet.f90 \
+		ModRates.f90 \
+		aurora.f90 \
+		calc_chemistry.f90 \
 		calc_electron_temperature.f90 \
 		calc_ion_density.f90 \
 		calc_neutral_density.f90 \
