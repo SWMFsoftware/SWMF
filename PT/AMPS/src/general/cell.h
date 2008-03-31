@@ -197,14 +197,10 @@ public:
 
     switch (DIM) {
     case 3 :
-      f1=rnd(); if (f1<0.00001) f1=0.00001; if (f1>0.99999) f1=0.99999; f1=pow(f1,(double)0.3333333333);
-      f2=rnd(); if (f2<0.00001) f2=0.00001; if (f2>0.99999) f2=0.99999; f2=sqrt(f2);
-      f3=rnd(); if (f3<0.00001) f3=0.00001; if (f3>0.99999) f3=0.99999;
-      x[0]=f1*(1.0-f2);
-      x[1]=f1*f2*(1.0-f3);
-      x[2]=f1*f2*f3;
+      x[0]=1.0-pow(rnd(),(double)0.33333333);
+      x[1]=(1-x[0])*(1.0-sqrt(rnd()));
+      x[2]=rnd()*(1.0-x[0]-x[1]);   
 
-exit(__LINE__,__FILE__,"Random position does'nt works correctly");
       return;
     case 2 :
       if (SymmetryMode==no_symmetry) {

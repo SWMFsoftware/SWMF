@@ -125,13 +125,6 @@ public:
       x[0]=1.0-sqrt(rnd());
       x[1]=rnd()*(1.0-x[0]); 
 
-      if (x[0]<0.00001E0) x[0]=0.00001E0;
-      if (x[0]>0.99999E0) x[0]=0.99999E0;
-
-      if (x[1]<0.00001E0) x[1]=0.00001E0;
-      if (x[1]>0.99999E0) x[1]=0.99999E0;
-
-exit(__LINE__,__FILE__,"RandomPosition does'nt works correctly");
       return;
     case 2 :
       if (SymmetryMode==no_symmetry) x[0]=rnd();     
