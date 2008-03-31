@@ -76,3 +76,4 @@ dgcpm.exe:	${MODULES} ${OBJECTS_010} dgcpm_main_010.o
 	$(COMPILE.f90) $(LFLAGS) -o dgcpm.exe ${MODULES} ${OBJECTS_010} dgcpm_main_010.o
 
 distclean: clean
+	rm -f Makefile.RULES Makefile.DEPEND
