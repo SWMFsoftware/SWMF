@@ -21,4 +21,4 @@ ${MY_LIB}:  ${MODULES}  ${OBJECTS}
 	${AR} ${MY_LIB} ${OBJECTS} ${MODULES}
 
 distclean: clean
-	rm -f Makefile.DEPEND
+	rm -f Makefile.RULES
