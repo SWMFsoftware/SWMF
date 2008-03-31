@@ -16,9 +16,6 @@ EARTH			NamePlanet
 0			iSecond
 0.0 			FracSecond
 
-#IDEALAXES
-! Align rotational and magnetic axes with Z_GSE
-
 #TIMEACCURATE
 F			DoTimeAccurate
 
@@ -31,9 +28,6 @@ T			DoSaveRestart
 ! and do 1 AMR-s at the 300th iteration
 
 #BEGIN_COMP GM ----------------------------------------------------------------
-
-#PROBLEMTYPE
-11
 
 ! Check if the block size is correct and the number of blocks are sufficient
 #CHECKGRIDSIZE
@@ -53,9 +47,12 @@ T			DoSaveRestart
  -64.                   zMin
  +64.                   zMax
 
-#AMRINIT
-magneto12		TypeRefineInit
-4			nRefineLevelInit
+#INCLUDE
+GM/Param/EARTH/Grid
+
+#GRIDRESOLUTION
+2.0			Resolution
+initial
 
 #AMR
 300			DnRefine
@@ -123,7 +120,7 @@ z=0 MHD idl             StringPlot
 
 #RUN   ########################################################################
 
-! Continue with 2nd order scheme and do 1 more AMR at the 600th iteration
+! Continue with 2nd order scheme and do 2 more AMRs at iterations 600 and 900
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
@@ -135,31 +132,23 @@ minmod			TypeLimiter
 #END_COMP GM -----------------------------------------------------------------
 
 #STOP
-700			MaxIteration
+1000			MaxIteration
 -1.0			tSimulationMax
 
 #RUN   ########################################################################
 
-! Do physics based AMRs and increase the number of GM blocks to 2500
-
 #BEGIN_COMP GM ---------------------------------------------------------------
 
-#AMRRESOLUTION
-0.25			DxCellMin
-8.0			DxCellMax
-T			DoFixBodyLevel
-
+! Switch off AMR
 #AMR
-250			DnRefine
-T			DoAutoRefine
-10.			PercentCoarsen
-20.			PercentRefine
-2500			MaxTotalBlocks
+-1			DnRefine
 
-#AMRCRITERIA
-2			nRefineCrit
-gradlogP		TypeRefine
-curlB			TypeRefine
+! Use a sharper limiter
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+mc			TypeLimiter
+1.2			BetaLimiter
 
 #END_COMP GM -----------------------------------------------------------------
 
