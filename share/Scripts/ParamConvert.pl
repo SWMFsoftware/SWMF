@@ -2357,10 +2357,17 @@ sub process_file {
         if (/^#INCLUDE\b/) {
 	    # Read file name following #INCLUDE
             $includefile=<$input>;
-	    # Remove anything after space or TAB
-	    $includefile =~ s/\s.*//;
-	    # process include file recursively
-	    $output .= &process_file($includefile,$input);
+
+	    # Check if the included file is a restart file
+	    if($includefile =~ /restart\.(in|h)/i){
+		# Do not expand included restart files. 
+		$output .= $_.$includefile;
+	    }else{
+		# Remove anything after space or TAB
+		$includefile =~ s/\s.*//;
+		# process include file recursively
+		$output .= &process_file($includefile,$input);
+	    }
         }else{
 	    # Print line as it is otherwise
 	    $output .= $_;
