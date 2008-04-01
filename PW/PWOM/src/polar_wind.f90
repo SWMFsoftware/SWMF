@@ -32,7 +32,7 @@ subroutine polar_wind
   nDim = nAlt
   call get_field_line(nDim,State_GV(1:nDim,:),                       &
        GMLAT,GMLONG,Jr,wHorizontal,uJoule2=uJoule2,                &
-       iUnitOutput=iUnitOutput, iUnitGraphics=iUnitGraphics,       &
+       iUnitOutput=iUnitOutput,       &
        NameRestart=NameRestart,                                    &
        iLine=iLine, Time=Time,MaxLineTime=Tmax,                    &
        TypeSolver=TypeSolver,IsVariableDT=IsVariableDT,            &

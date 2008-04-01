@@ -299,7 +299,7 @@ subroutine PW_advance_line
        State_CVI(:,:,iLine),&
        GeoMagLat_I(iLine),GeoMagLon_I(iLine),JrLine_I(iLine),              &
        OmegaLine_I(iLine), uJoule2=uJoule2,iUnitOutput=iUnitOutput(iLine), &
-       iUnitGraphics=iUnitGraphics(iLine),NameRestart=NameRestart(iLine),  &
+       NameRestart=NameRestart(iLine),  &
        iLine=iLine,Time=Time,MaxLineTime=MaxLineTime,TypeSolver=TypeSolver,&
        IsVariableDt=IsVariableDt,DToutput=DToutput,    &
        DoLog=DoLog,nStep=nStep)
@@ -310,14 +310,14 @@ subroutine PW_advance_line
      call get_field_line( nAlt,&
        State_CVI(:,:,iLine),&
        GeoMagLat_I(iLine),GeoMagLon_I(iLine),JrLine_I(iLine),               &
-       OmegaLine_I(iLine), iUnitGraphics=iUnitGraphics(iLine),       &
+       OmegaLine_I(iLine),       &
        iLine=iLine,Time=Time,MaxLineTime=MaxLineTime,nStep=nStep,r_C=r_C)
      DoSavePlot=.true.
   else
      call get_field_line( nAlt,&
        State_CVI(:,:,iLine),&
        GeoMagLat_I(iLine),GeoMagLon_I(iLine),JrLine_I(iLine),               &
-       OmegaLine_I(iLine), iUnitGraphics=iUnitGraphics(iLine),       &
+       OmegaLine_I(iLine),       &
        iLine=iLine,MaxLineTime=MaxLineTime)
   endif
   
