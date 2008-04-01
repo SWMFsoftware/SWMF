@@ -1115,7 +1115,7 @@ conditions for generalized coordinate grids (as shown by the example).
 	<parameter name="PolarNDim" type="real" min="0" default="20"/>
 	<parameter name="PolarTDim" type="real" min="0" default="1e5"/>
 	<parameter name="PolarUDim" type="real" min="0" default="1"/>
-	<parameter name="PolarLatitude" type="real" min="0" default="5"/>
+	<parameter name="PolarLatitude" type="real" min="0" default="75"/>
 #POLARBOUNDARY
 20.0		PolarNDim [amu/cc]
 100000.0	PolarTDim [K]
@@ -2462,14 +2462,14 @@ rfr rwi tec             StringPlot
 Default is nPlotFile=0. \\
 
 \noindent
-StringPlot must contain the following 3 parts in arbitrary order
+StringPlot must contain the following 3 parts in the following order
 \begin{verbatim}
-plotarea plotvar plotform
+plotform plotarea plotvar
 
+plotform = 'tec', 'idl'
 plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin', 'blk', '1d' 'rfr'
 plotvar  = 'mhd', 'ful', 'raw', 'ray', 'flx', 'sol', 'pos', 'var', 'bbk' 'rwi' - normalized
 plotvar  = 'MHD', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'pos', 'VAR', 'BBK' 'RWI' - dimensional
-plotform = 'tec', 'idl'
 \end{verbatim}
 NOTES: The plotvar option 'sol' is only valid for plotarea 'los';
        the plotvar option 'pos' is only valid for plotarea 'lin'.
@@ -2489,7 +2489,7 @@ dpl   - cut at dipole 'equator', uses PLOTRANGE to clip plot
 slc   - 2D slice defined with a point and normal, uses PLOTRANGE to clip plot
 sph   - spherical surface cut at the given radius
 los   - line of sight integrated plot
-lin   - one dimensional plot along a field or stream line
+lin   - one dimensional plot along a field or stream or current line
 blk   - 3D single block cell centered data, block specified point location
 rfr   - radiotelescope pixel image plot
 \end{verbatim}
@@ -2501,11 +2501,11 @@ values or as non-dimensional values:
  all lower - dimensionless
 
  'mhd' - vars: rho Ux Uy Uz E Bx By Bz P Jx Jy Jz
-         pars: g eta
+         pars: g rbody
  'ful' - vars: rho Ux Uy Uz E Bx By Bz B1x B1y B1z P Jx Jy Jz
-         pars: g eta
+         pars: g rbody
  'raw' - vars: rho rhoUx rhoUy rhoUz E Bx By Bz P b1x b1y b1z divb
-         pars: g eta
+         pars: g rbody
  'ray' - vars: bx by bz theta1 phi1 theta2 phi2 status blk
          pars: R_ray
  'flx' - vars: rho rhoUr Br jr pvecr
