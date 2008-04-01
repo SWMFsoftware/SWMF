@@ -121,11 +121,6 @@ subroutine PW_finalize(TimeSimulation)
 
   character(len=*), parameter :: NameSub='PW_finalize'
   !-------------------------------------------------------------------------
-  do iLine=1,nLine
-     close(UNIT=iUnitGraphics(iLine))
-  enddo
-
-  
   if (nLog == -1) then
      do iLine=1,nLine
         close(iUnitOutput(iLine))
