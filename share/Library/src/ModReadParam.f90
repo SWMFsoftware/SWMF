@@ -256,6 +256,11 @@ contains
           if(NameCommand=='#INCLUDE')then
              ! Include text from file following the #INCLUDE command
              read(iUnit_I(iFile),'(a)')StringLine
+             ! Remove anything after a space or TAB
+             i=index(StringLine,' ')
+             if(i>0)StringLine(i:len(StringLine))=' '
+             i=index(StringLine,char(9))
+             if(i>0)StringLine(i:len(StringLine))=' '
              DoInclude = .true.
           elseif(present(NameRestartFile) .and. NameCommand=='#RESTART')then
              ! If #RESTART command is followed by true then include

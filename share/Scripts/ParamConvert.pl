@@ -2357,6 +2357,8 @@ sub process_file {
         if (/^#INCLUDE\b/) {
 	    # Read file name following #INCLUDE
             $includefile=<$input>;
+	    # Remove anything after space or TAB
+	    $includefile =~ s/\s.*//;
 	    # process include file recursively
 	    $output .= &process_file($includefile,$input);
         }else{
