@@ -14,7 +14,7 @@ module ModFieldLine
        GeoMagLonPW,JrPW,nDimPW,uJoule2PW
   real    :: wHorizontalPW
   integer :: nStepPw,iUnitInputPW,      &
-       iUnitOutputPW,iUnitGraphicsPW,                 &
+       iUnitOutputPW,                 &
        iUnitSourceGraphicsPW,iUnitRestartPW,          &
        iUnitCollisionPW,iUnitRestartInPW,iLinePW,nLinePW
   CHARACTER(7) :: TypeSolverPW
@@ -28,7 +28,7 @@ contains
 
   subroutine put_field_line(nAlt,State_CV, &
        GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,uJoule2,                  &
-       iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
+       iUnitOutput, NameRestart,iLine,Time,   &
        MaxLineTime,TypeSolver,IsVariableDt,DToutput,DoLog,&
        nStep,r_C)
 
@@ -39,7 +39,7 @@ contains
     real, optional, intent(in) :: Time,MaxLineTime,DToutput,uJoule2
     real, optional, intent(in) :: r_C(nAlt)
     real,    intent(in)     :: GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal  
-    integer, optional,intent(in)  :: iUnitOutput,iUnitGraphics,iLine,nStep
+    integer, optional,intent(in)  :: iUnitOutput,iLine,nStep
     character*100,optional,intent(in):: NameRestart
     character(7),optional,intent(in)::TypeSolver
     logical,optional,intent(in) :: IsVariableDt,DoLog
@@ -55,7 +55,6 @@ contains
 
     if (present(Time))          TimePW = Time
     if (present(MaxLineTime))   MaxLineTimePW  = MaxLineTime
-    if (present(iUnitGraphics)) iUnitGraphicsPW= iUnitGraphics
     if (present(NameRestart))   NameRestartPW  = NameRestart
     if (present(iLine))         iLinePW        = iLine
     if (present(iUnitOutput))   iUnitOutputPW  = iUnitOutput
@@ -75,7 +74,7 @@ contains
 
   subroutine get_field_line(nAlt,State_CV,& 
        GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,uJoule2,                  &
-       iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
+       iUnitOutput, NameRestart,iLine,Time,   &
        MaxLineTime,TypeSolver,IsVariableDt,DToutput,DoLog,&
        nStep,r_C)
 
@@ -92,7 +91,7 @@ contains
     logical,optional,intent(out)      :: IsVariableDt,DoLog
     real, optional, intent(out)       :: Time,MaxLineTime,DToutput,uJoule2
     real, optional, intent(out)        :: r_C(nAlt)
-    integer, optional,intent(out)     :: iUnitOutput,iUnitGraphics,iLine,nStep
+    integer, optional,intent(out)     :: iUnitOutput,iLine,nStep
     !--------------------------------------------------------------------------
     if (.not. allocated(PassState_CV)) allocate(PassState_CV(nAlt,nVar))
     if (.not. allocated(rPW_C)) allocate(rPW_C(nAlt))
@@ -107,7 +106,6 @@ contains
 
     if (present(Time))          Time = TimePW
     if (present(MaxLineTime))   MaxLineTime = MaxLineTimePW
-    if (present(iUnitGraphics)) iUnitGraphics =iUnitGraphicsPW
     if (present(NameRestart))   NameRestart=NameRestartPW
     if (present(iLine))         iLine = iLinePW
     if (present(iUnitOutput))   iUnitOutput=iUnitOutputPW
