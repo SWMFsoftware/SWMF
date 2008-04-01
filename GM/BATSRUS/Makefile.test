@@ -286,7 +286,7 @@ test_mars_start:
 	make test_mars_check
 
 test_mars_compile:
-	./Config.pl -u=Mars -e=MhdMars -g=4,4,4,2000,200
+	./Config.pl -u=Mars -e=MhdMars -g=6,6,6,1000,200
 	make
 	make PIDL
 

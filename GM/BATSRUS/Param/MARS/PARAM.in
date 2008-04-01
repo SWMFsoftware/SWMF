@@ -50,6 +50,11 @@ T
 Mars3Dbodyfocus        InitialRefineType
 2                      InitialRefineLevel
 
+#TESTXYZ
+1.2
+0.1
+0.1
+
 #BODY
 T			body1
 1.0294464		Rbody
@@ -96,7 +101,7 @@ T                       DoSaveLogfile, rest of parameters read if true
 VAR step time	        StringLog
 1	                DnSaveLogfile
 -1.                     DtSaveLogfile [sec]
-rho p pmin pmax Hpflx Opflx O2pflx CO2pflx
+rho p rhopnt ppnt bxpnt pmin pmax Hpflx Opflx O2pflx CO2pflx
 3.0
 
 #INNERBOUNDARY
