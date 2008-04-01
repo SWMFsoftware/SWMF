@@ -81,11 +81,6 @@ program pw
   !  Write output, use cartesian coords for output
   !****************************************************************************
 
-
-  do iLine=1,nLine
-     CLOSE(UNIT=iUnitGraphics(iLine))
-  enddo
-
   if (nLog == -1) then
      do iLine=1,nLine
         close(iUnitOutput(iLine))
