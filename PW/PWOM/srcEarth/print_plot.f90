@@ -1,17 +1,20 @@
 
 SUBROUTINE PW_print_plot
   use ModCommonVariables
+  use ModIoUnit, ONLY: UnitTmp_
+  use ModPWOM,   ONLY: iLine,NameGraphics
+
   real MO,MH,MHe,Me
   
   !----------------------------------------------------------------------------
 
   !write the plot header
-  
-  write (iUnitGraphics,"(a79)") 'Polarwind output_var11'
-  write (iUnitGraphics,"(i8,1pe13.5,3i3)") nint(time/dt),time,1,1,20
-  write (iUnitGraphics,"(3i4)") nDim+2
-  write (iUnitGraphics,"(100(1pe13.5))") Gamma
-  write (iUnitGraphics,"(a79)")&
+  open (UnitTmp_,FILE=NameGraphics(iLine),STATUS='old',position='append')
+  write (UnitTmp_,"(a79)") 'Polarwind output_var11'
+  write (UnitTmp_,"(i8,1pe13.5,3i3)") nint(time/dt),time,1,1,20
+  write (UnitTmp_,"(3i4)") nDim+2
+  write (UnitTmp_,"(100(1pe13.5))") Gamma
+  write (UnitTmp_,"(a79)")&
        'r Lat Lon uO uHe uH ue lgnO lgnHe lgnH lgne TO THe TH Te MO MH MHe Me Ef Pe g'
   
   ! write out lower ghost cell values
@@ -40,7 +43,7 @@ SUBROUTINE PW_print_plot
   MH=State_GV(0,uH_)/sqrt(gamma*State_GV(0,pH_)/State_GV(0,RhoH_))
   Me=State_GV(0,uE_)/sqrt(gamma*State_GV(0,pE_)/State_GV(0,RhoE_))
                     
-  WRITE (iUnitGraphics,"(100(1pe18.10))") &
+  WRITE (UnitTmp_,"(100(1pe18.10))") &
        AltMin,GmLat, GmLong,QS1,QS2,QS3,QS4,QS5,QS6,QS7,QS8,&
        State_GV(0,To_),State_GV(0,The_),State_GV(0,Th_),State_GV(0,Te_),&
        MO,MH,MHe,Me,Efield(1),State_GV(0,pE_)
@@ -72,7 +75,7 @@ SUBROUTINE PW_print_plot
      Me =State_GV(K,uE_)/sqrt(gamma*State_GV(K,pE_)/State_GV(K,RhoE_))
      
      
-     WRITE (iUnitGraphics,"(100(1pe18.10))")& 
+     WRITE (UnitTmp_,"(100(1pe18.10))")& 
           ALTD(K),GmLat, GmLong,QS1,QS2,QS3,QS4,QS5,QS6,QS7,QS8,&
           State_GV(K,To_),State_GV(K,The_),State_GV(K,Th_),State_GV(K,Te_),&
           MO,MH,MHe,Me,Efield(k),State_GV(K,pE_)
@@ -105,11 +108,12 @@ SUBROUTINE PW_print_plot
   MH=State_GV(nDim+1,uH_)/sqrt(gamma*State_GV(nDim+1,pH_)/State_GV(nDim+1,RhoH_))
   Me=State_GV(nDim+1,uE_)/sqrt(gamma*State_GV(nDim+1,pE_)/State_GV(nDim+1,RhoE_))
     
-  WRITE (iUnitGraphics,"(100(1pe18.10))")& 
+  WRITE (UnitTmp_,"(100(1pe18.10))")& 
        AltMax,GmLat, GmLong, QS1,QS2,QS3,QS4,QS5,QS6,QS7,QS8,&
        State_GV(nDim+1,To_),State_GV(nDim+1,The_),State_GV(nDim+1,Th_),&
        State_GV(nDim+1,Te_), MO,MH,MHe,Me,Efield(nDim),State_GV(nDim+1,pE_)
     
+  close(UnitTmp_)
   RETURN
 END SUBROUTINE PW_print_plot
 
