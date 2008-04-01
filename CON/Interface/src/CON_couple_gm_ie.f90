@@ -135,8 +135,6 @@ contains
     if(is_proc(IE_)) &
          call IE_get_for_gm(Buffer_II,iSize,jSize,tSimulation)
 
-    write(*,*) 'done with ie_get_for_gm'
-
     nSize = iSize*jSize
     if(i_proc() /= i_proc0(GM_))then
        if(i_proc() == i_proc0(IE_)) &
