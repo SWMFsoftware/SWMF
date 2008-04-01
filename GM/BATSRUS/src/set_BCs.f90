@@ -475,7 +475,7 @@ contains
 
        select case(TypeBc)
        case('reflect','linetied', &
-            'ionosphere','ionospherefloat')
+            'ionosphere','ionospherefloat','polarwind')
           VarsGhostFace_V(iRhoUx_I) = 2*uRot_D(x_) + VarsGhostFace_V(iRhoUx_I)
           VarsGhostFace_V(iRhoUy_I) = 2*uRot_D(y_) + VarsGhostFace_V(iRhoUy_I)
           VarsGhostFace_V(iRhoUz_I) = 2*uRot_D(z_) + VarsGhostFace_V(iRhoUz_I)
