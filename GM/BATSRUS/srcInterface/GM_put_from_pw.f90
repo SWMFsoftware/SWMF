@@ -44,7 +44,7 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
         Theta = Buffer_VI(Theta_, iLine)
         Phi   = Buffer_VI(Phi_,   iLine)
         call dir_to_xyz(Theta, Phi, XyzPw_D)
-        call map_planet_field(Time_Simulation, XyzPw_D, 'SM NORM', &
+        call map_planet_field(Time_Simulation, XyzPw_D, 'SMG NORM', &
              rCurrents,  CoordXyzPw_DI(:,iLine), iHemisphere)
         if(iHemisphere == 0) CoordXyzPw_DI(:,iLine) = 0.0
      end do
@@ -222,7 +222,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   end if
 
   ! Map down to radius 1.0 where the PW fieldline positions are defined
-  call map_planet_field(Time_Simulation, XyzPw_D, 'SM NORM', &
+  call map_planet_field(Time_Simulation, XyzPw_D, 'SMG NORM', &
        1.0, Xyz_D, iHemisphere)
 
   ! Project to unit sphere and calculate X, Y coordinates
