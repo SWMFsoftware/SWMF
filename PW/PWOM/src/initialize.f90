@@ -88,8 +88,8 @@ subroutine PW_initialize
      write(NameGraphics(iLine),"(a,i4.4,a)") &
           'PW/plots/plots_iline',iLineGlobal(iLine),'.out'
 
-     iUnitGraphics(iLine)  = io_unit_new()
-     open(iUnitGraphics(iLine),FILE=NameGraphics(iLine),STATUS='replace')
+     open(UnitTmp_,FILE=NameGraphics(iLine),STATUS='replace')
+     close(UnitTmp_)
      
      !Setup log files
      if (nLog == -1) then
