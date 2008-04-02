@@ -421,6 +421,7 @@ contains
 
     if(.not.use_comp(iComp) .or. .not.is_proc(iComp)) RETURN
 
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(DoTestMe)write(*,*) NameSub,' starting for ',NameComp_I(iComp),&
          ': Time=', TimeSimulation
 
