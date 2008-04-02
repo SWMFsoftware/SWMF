@@ -32,7 +32,8 @@ test:
 test_harmonics:
 	@echo "test_harmonics_compile..." > test_harmonics.diff
 	make HARMONICS
-	ln -s ../../../bin/HARMONICS.exe HARMONICS.exe
+	rm -f HARMONICS.exe
+	ln -s ${BINDIR}/HARMONICS.exe HARMONICS.exe
 	cp test.in fitsfile.dat
 	@echo "test_harmonics_run..." >> test_harmonics.diff
 	mpirun -np 2 HARMONICS.exe > runlog
@@ -40,8 +41,8 @@ test_harmonics:
 	make test_harmonics_check
 
 test_harmonics_check:
-	../../../share/Scripts/DiffNum.pl -t -r=1e-5 -a=1e-12 \
-	  harmonics.dat \
-	  test.out > test_harmonics.diff
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
+		harmonics.dat \
+		test.out > test_harmonics.diff
 	ls -l test_harmonics.diff
 	rm -f fitsfile.dat harmonics.dat 
