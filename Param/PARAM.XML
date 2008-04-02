@@ -48,10 +48,11 @@ The only restriction is that the length of the lines cannot exceed
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 <command name="INCLUDE">
-        <parameter name="NameIncludeFile" type="string" length="100" />
+        <parameter name="NameIncludeFile" type="string" 
+		default="RESTART.in" length="100" />
 
 #INCLUDE
-run/GM/restartIN/restart.H		NameIncludeFile
+RESTART.in		NameIncludeFile
 
 The NameIncludeFile parameter contains the name of the file to be included.
 The file name may be followed with a trailing comment if it
@@ -1219,7 +1220,7 @@ is continuously followed.
 The #IDEALAXES command has no parameters. It sets both the rotational
 and magnetic axes parallel with the ecliptic North direction. In fact
 it is identical with
-
+\begin{verbatim}
 #ROTATIONAXIS
 T               IsRotAxisPrimary
 0.0             RotAxisTheta
@@ -1227,7 +1228,7 @@ T               IsRotAxisPrimary
 
 #MAGNETICAXIS
 F               IsMagAxisPrimary
-
+\end{verbatim}
 but much shorter.
 </command>
 
