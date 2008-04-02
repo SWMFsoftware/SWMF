@@ -110,8 +110,6 @@ contains
     integer :: nSize
 
     integer :: iBlock     ! 1 for northern and 2 for southern hemisphere
-    integer :: iProcFrom  ! PE number sending the potential for current block
-
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
     iProcWorld = i_proc()
@@ -136,12 +134,12 @@ contains
          call IE_get_for_gm(Buffer_II,iSize,jSize,tSimulation)
 
     nSize = iSize*jSize
-    if(i_proc() /= i_proc0(GM_))then
-       if(i_proc() == i_proc0(IE_)) &
+    if(i_proc0(IE_) /= i_proc0(GM_))then
+       if(is_proc0(IE_)) &
             call MPI_send(Buffer_II,nSize,MPI_REAL,i_Proc0(GM_),&
             1,i_comm(),iError)
        if(is_proc0(GM_)) &
-            call MPI_recv(Buffer_II,nSize,MPI_REAL,iProcFrom,&
+            call MPI_recv(Buffer_II,nSize,MPI_REAL,i_Proc0(IE_),&
             1,i_comm(),iStatus_I,iError)
     end if
 
@@ -260,7 +258,7 @@ contains
        if(is_proc0(GM_)) &
             call MPI_send(Buffer_IIV, nSize, MPI_REAL, i_proc0(IE_),&
             1, i_comm(), iError)
-       if(i_proc() == i_proc0(IE_)) &
+       if(is_proc0(IE_)) &
             call MPI_recv(Buffer_IIV, nSize, MPI_REAL, i_proc0(GM_),&
             1,i_comm(), iStatus_I, iError)
     end if
