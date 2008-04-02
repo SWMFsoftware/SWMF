@@ -29,6 +29,8 @@ TESTDIR = run_test
 
 test:
 	@echo "There is no test for HEIDI" > notest.diff
+
+test_heidi:
 	@echo "test_compile..." > test.diff
 	make   test_compile
 	@echo "test_rundir..." >> test.diff
