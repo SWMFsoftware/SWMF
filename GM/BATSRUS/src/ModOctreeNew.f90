@@ -3,6 +3,14 @@ module ModOctreeNew
   implicit none
   save
 
+  private ! except
+
+  public:: init_mod_octree
+  public:: set_root_block
+  public:: refine_block
+  public:: coarsen_block
+  public:: test_octree
+
   integer, parameter :: nDim = 3
   integer, parameter :: nChild = 2**nDim
 
@@ -171,7 +179,7 @@ contains
        end if
 
        if(kRoot < kRootMax)then
-          iOctree_IA(kRight_, iBlock) = iBlockRoot_III(iRoot, jRoot, kRoot-1)
+          iOctree_IA(kRight_, iBlock) = iBlockRoot_III(iRoot, jRoot, kRoot+1)
        elseif(IsPeriodic_D(3))then
           iOctree_IA(kRight_, iBlock) = iBlockRoot_III(iRoot, jRoot, 1)
        else
