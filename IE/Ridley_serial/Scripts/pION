@@ -27,8 +27,12 @@ foreach $file1 (sort @files){
     $err = `cat $file1 $file2 > $fileout`;
     die "Error occured: $err\n" if $err;
     unlink($file1, $file2) unless $Keep;
-    if($Gzip){
-	$err = `gzip $fileout`;
+}
+
+if($Gzip){
+    @files = glob('*.idl');
+    foreach $fileout (sort @files){
+	$err = `gzip -f $fileout`;
 	die "Error occured: $err\n" if $err;
     }
 }
