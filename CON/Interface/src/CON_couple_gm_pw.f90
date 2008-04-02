@@ -158,10 +158,10 @@ contains
 
       if(iProc0Gm /= iProc0Pw)then
          if(is_proc0(PW_)) &
-              call MPI_send(Buffer_VI,nSize,MPI_REAL,iProc0Pw,&
+              call MPI_send(Buffer_VI,nSize,MPI_REAL,iProc0Gm,&
               1,i_comm(),iError)
          if(is_proc0(GM_)) &
-              call MPI_recv(Buffer_VI,nSize,MPI_REAL,iProc0Gm,&
+              call MPI_recv(Buffer_VI,nSize,MPI_REAL,iProc0Pw,&
               1,i_comm(),iStatus_I,iError)
       end if
       if(DoTest)write(*,*)NameSubSub,', variables transferred',&
