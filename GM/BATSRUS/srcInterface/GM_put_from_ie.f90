@@ -22,8 +22,6 @@ contains
 
     call init_mod_ie_grid(iSize, jSize)
 
-    write(*,*) "nThetaIono : ",nThetaIono, nPhiIono
-
     allocate( IonoPotential_II(nThetaIono, nPhiIono), &
          dIonoPotential_DII(2, nThetaIono, nPhiIono) )
 

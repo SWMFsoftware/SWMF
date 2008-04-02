@@ -34,8 +34,6 @@ contains
     nThetaIono = Grid_C(IE_) % nCoord_D(1)
     nPhiIono   = Grid_C(IE_) % nCoord_D(2)
 
-    write(*,*) "nThetaIono : ",nThetaIono
-
     if(nThetaIono /= iSize .or. nPhiIono /= jSize)then
        write(*,*)NameSub,': Grid_C(IE_)%nCoord_D(1:2)=',&
             Grid_C(IE_) % nCoord_D(1:2)
