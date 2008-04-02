@@ -88,7 +88,7 @@ StringPlot must contain the following 3 parts (separated with space)
 in arbitrary order:
 \begin{verbatim}
 plotarea   = '2d', '3d'
-plotvar    = 'min', 'max', 'rcm'
+plotvar    = 'min', 'max'
 plotformat = 'tec', 'idl'
 \end{verbatim}
 
