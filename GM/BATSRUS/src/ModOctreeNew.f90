@@ -51,6 +51,9 @@ module ModOctreeNew
   ! Index for non-existing neighbors
   integer, parameter :: NoBlock_=0
 
+  ! Neighbor information
+  integer, allocatable :: iBlockNei_IIIB(:,:,:,:)
+
   ! Opposite directions
   integer, parameter :: jNeighbor_I(iLeft_:kRight_) = &
        (/ iRight_, iLeft_, jRight_, jLeft_, kRight_, kLeft_ /)
@@ -63,35 +66,49 @@ module ModOctreeNew
   integer :: L__
   integer, parameter :: MaxCoord_I(0:MaxLevel) = (/ (2**L__, L__=0,MaxLevel) /)
 
-  integer :: MaxBlockAll
-  
+  ! Maximum number of blocks including unused and skipped ones
+  integer :: MaxBlockAll = 0
+
+  ! Maximum number of blocks per processor
+  integer :: MaxBlock = 0
+
   ! Number of levels below root in level (that has occured at any time)
   integer :: nLevel = 0
 
   ! The number of root blocks in all dimensions
-  integer :: nRoot_D(nDim)
+  integer :: nRoot_D(nDim) = 0
 
   ! Periodicity of the domain per dimension
-  logical :: IsPeriodic_D(nDim)
+  logical :: IsPeriodic_D(nDim) = .false.
+
+  ! Cylindrical or spherical coordinates
+  logical :: IsSpherical = .false., IsCylindrical = .false.
 
   ! The block index for each root block (could be calculated too)
   integer, allocatable :: iBlockRoot_III(:,:,:)
 
 contains
 
-  subroutine init_mod_octree(nBlock)
+  subroutine init_mod_octree(nBlockProc, nBlockAll)
 
     ! Initialize the octree array with nBlock blocks
 
-    integer, intent(in) :: nBlock
+    integer, intent(in) :: nBlockProc ! Max number of blocks per processor
+    integer, intent(in) :: nBlockAll  ! Max number of blocks altogether
     !----------------------------------------------------------------------
     if(allocated(iOctree_IA)) RETURN
 
-    MaxBlockAll = nBlock
+    MaxBlockAll = nBlockAll
     allocate(iOctree_IA(nInfo, MaxBlockAll))
 
     ! Initialize all elements and make blocks skipped
     iOctree_IA = Skipped_
+
+    MaxBlock = nBlockProc
+    allocate(iBlockNei_IIIB(0:3,0:3,0:3,MaxBlock))
+
+    ! Initialize all elements and make neighbors unknown
+    iBlockNei_IIIB = NoBlock_
 
   end subroutine init_mod_octree
 
@@ -388,6 +405,95 @@ contains
     end do
 
   end subroutine find_point
+
+  !==========================================================================
+  logical function is_point_inside_block(Xyz_D, iBlock)
+
+    real,    intent(in):: Xyz_D(nDim)
+    integer, intent(in):: iBlock
+
+    integer :: iLevel
+    real    :: XyzStart_D(nDim), XyzEnd_D(nDim)
+    !-------------------------------------------------------------------------
+    iLevel = iOctree_IA(Level_, iBlock)
+    XyzStart_D = (iOctree_IA(iCoord_:kCoord_,iBlock)-1.0) &
+         /MaxCoord_I(iLevel)/nRoot_D
+    XyzEnd_D   = (iOctree_IA(iCoord_:kCoord_,iBlock)+0.0) &
+         /MaxCoord_I(iLevel)/nRoot_D
+
+    is_point_inside_block= all(Xyz_D >= XyzStart_D) .and. all(Xyz_D < XyzEnd_D)
+
+    if(  any(Xyz_D > XyzEnd_D) .or. any(Xyz_D < XyzStart_D) ) then
+       write(*,*)'Error in is_point_inside_block'
+       write(*,*)'iBlock, iLevel=',iBlock, iLevel
+       write(*,*)'Block start coord=',XyzStart_D
+       write(*,*)'Block end   coord=',XyzEnd_D
+       write(*,*)'Point coordinates=',Xyz_D
+    end if
+
+  end function is_point_inside_block
+
+  !===========================================================================
+
+  subroutine find_neighbors(iBlock)
+
+    integer, intent(in):: iBlock
+    integer :: iLevel, i, j, k, iCoord, jCoord, kCoord, jBlock
+    real :: Scale_D(3), x, y, z
+    !-----------------------------------------------------------------------
+
+    ! We should convert local block into global block index or vice versa
+
+    ! We should handle neighbors across the pole here too
+
+    iLevel = iOctree_IA(Level_, iBlock)
+    Scale_D = (1.0/MaxCoord_I(iLevel))/nRoot_D
+    do k=0,3
+       z = (iOctree_IA(kCoord_, iBlock) + 0.4*k - 1.1)*Scale_D(3)
+       if(z > 1.0 .or. z < 0.0)then
+          if(IsPeriodic_D(3))then
+             z = modulo(z, 1.0)
+          else
+             iBlockNei_IIIB(:,:,k,iBlock) = NoBlock_
+             CYCLE
+          end if
+       end if
+       do j=0,3
+          y = (iOctree_IA(jCoord_, iBlock) + 0.4*j - 1.1)*Scale_D(2)
+          if(y > 1.0 .or. y < 0.0)then
+             if(IsPeriodic_D(2))then
+                y = modulo(y, 1.0)
+             elseif(IsSpherical)then
+                ! Push back theta and go around half way in phi
+                y = max(0.0, min(1.0, y))
+                z = modulo( z+0.5, 1.0)
+             else
+                iBlockNei_IIIB(:,j,k,iBlock) = NoBlock_
+                CYCLE
+             end if
+          end if
+          do i=0,3
+             x = (iOctree_IA(iCoord_, iBlock) + 0.4*i - 1.1)*Scale_D(1)
+             if(x > 1.0 .or. x < 0.0)then
+                if(IsPeriodic_D(1))then
+                   x = modulo(x, 1.0)
+                elseif(IsCylindrical .and. x < 0.0)then
+                   ! Push back radius and go around half way in phi direction
+                   x = 0.0
+                   z = modulo( z+0.5, 1.0)
+                else
+                   iBlockNei_IIIB(i,j,k,iBlock) = NoBlock_
+                   CYCLE
+                end if
+             end if
+
+             call find_point( (/x, y, z/), jBlock)
+             iBlockNei_IIIB(i,j,k,iBlock) = jBlock
+          end do
+       end do
+    end do
+
+  end subroutine find_neighbors
   !==========================================================================
 
   subroutine test_octree
@@ -399,10 +505,14 @@ contains
     !-----------------------------------------------------------------------
 
     write(*,*)'Testing init_mod_octree'
-    call init_mod_octree(100)
+    call init_mod_octree(50, 100)
     if(MaxBlockAll /= 100) &
          write(*,*)'init_mod_octtree faild, MaxBlockAll=',&
          MaxBlockAll, ' should be 100'
+
+    if(MaxBlock /= 100) &
+         write(*,*)'init_mod_octtree faild, MaxBlock=',&
+         MaxBlock, ' should be 100'
 
     write(*,*)'Testing i_block_new()'
     iBlock = i_block_new()
@@ -468,33 +578,10 @@ contains
     if(.not.is_point_inside_block(XyzTest_D(1:nDim), iBlock)) &
          write(*,*)'ERROR: Test find point failed'
 
+    write(*,*)'Testing find_neighbors'
+    call find_neighbors(5)
+    write(*,*)'iBlockNei_IIIB(:,:,:,5)=',iBlockNei_IIIB(:,:,:,5)
+
   end subroutine test_octree
-
-  !============================================================================
-  logical function is_point_inside_block(Xyz_D, iBlock)
-
-    real,    intent(in):: Xyz_D(nDim)
-    integer, intent(in):: iBlock
-
-    integer :: iLevel
-    real    :: XyzStart_D(nDim), XyzEnd_D(nDim)
-    !-------------------------------------------------------------------------
-    iLevel = iOctree_IA(Level_, iBlock)
-    XyzStart_D = (iOctree_IA(iCoord_:kCoord_,iBlock)-1.0) &
-         /MaxCoord_I(iLevel)/nRoot_D
-    XyzEnd_D   = (iOctree_IA(iCoord_:kCoord_,iBlock)+0.0) &
-         /MaxCoord_I(iLevel)/nRoot_D
-
-    is_point_inside_block= all(Xyz_D >= XyzStart_D) .and. all(Xyz_D < XyzEnd_D)
-
-    if(  any(Xyz_D > XyzEnd_D) .or. any(Xyz_D < XyzStart_D) ) then
-       write(*,*)'Error in is_point_inside_block'
-       write(*,*)'iBlock, iLevel=',iBlock, iLevel
-       write(*,*)'Block start coord=',XyzStart_D
-       write(*,*)'Block end   coord=',XyzEnd_D
-       write(*,*)'Point coordinates=',Xyz_D
-    end if
-
-  end function is_point_inside_block
 
 end module ModOctreeNew
