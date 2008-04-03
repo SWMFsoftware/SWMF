@@ -9,6 +9,7 @@ module ModOctreeNew
   public:: set_root_block
   public:: refine_block
   public:: coarsen_block
+  public:: find_point
   public:: test_octree
 
   integer, parameter :: nDim = 3
@@ -54,9 +55,26 @@ module ModOctreeNew
   integer, parameter :: jNeighbor_I(iLeft_:kRight_) = &
        (/ iRight_, iLeft_, jRight_, jLeft_, kRight_, kLeft_ /)
 
+  ! Deepest AMR level relative to root blocks (limited by 32 bit integers)
+  integer, parameter :: MaxLevel = 30
+
+  ! The maximum integer coordinate for a given level below root blocks
+  ! The loop variable has to be declared to work-around NAG f95 bug
+  integer :: L__
+  integer, parameter :: MaxCoord_I(0:MaxLevel) = (/ (2**L__, L__=0,MaxLevel) /)
+
   integer :: MaxBlockAll
+  
+  ! Number of levels below root in level (that has occured at any time)
+  integer :: nLevel = 0
+
+  ! The number of root blocks in all dimensions
   integer :: nRoot_D(nDim)
+
+  ! Periodicity of the domain per dimension
   logical :: IsPeriodic_D(nDim)
+
+  ! The block index for each root block (could be calculated too)
   integer, allocatable :: iBlockRoot_III(:,:,:)
 
 contains
@@ -125,7 +143,7 @@ contains
              iOctree_IA(Status_, iBlock)         = Used_
              iOctree_IA(Parent_, iBlock)         = NoBlock_
              iOctree_IA(Child1_:Child8_, iBlock) = NoBlock_
-             iOctree_IA(Level_ , iBlock)         = 1
+             iOctree_IA(Level_ , iBlock)         = 0
              iOctree_IA(iCoord_, iBlock)         = iRoot
              iOctree_IA(jCoord_, iBlock)         = jRoot
              iOctree_IA(kCoord_, iBlock)         = kRoot
@@ -195,19 +213,24 @@ contains
 
     integer, intent(in) :: iBlock
 
-    integer :: iShift, jShift, kShift, iChild
+    integer :: iShift, jShift, kShift, iChild, iLevelChild
     integer :: iBlockChild, iBlockChild_III(2,2,2)
     integer :: iSide, jSide, jBlock, jChild, jBlockChild
     !----------------------------------------------------------------------
 
     iOctree_IA(Status_, iBlock) = Unused_
 
+    iLevelChild = iOctree_IA(Level_, iBlock) + 1
+
+    ! Keep track of number of levels
+    nLevel = max(nLevel, iLevelChild)
+
     iChild = Child0_
     do kShift = 1,2; do jShift=1,2; do iShift=1,2
        iChild = iChild+1
 
        iBlockChild = i_block_new()
-       iBlockChild_III(iShift, jShift, kShift) = iBlockChild
+       iBlockChild_III(iShift, jShift, kShift)  = iBlockChild
 
        iOctree_IA(iChild, iBlock)               = iBlockChild
 
@@ -217,8 +240,7 @@ contains
 
        iOctree_IA(Child1_:Child8_, iBlockChild) = NoBlock_
 
-       iOctree_IA(Level_, iBlockChild)          = &
-            iOctree_IA(Level_, iBlock) + 1
+       iOctree_IA(Level_, iBlockChild)          = iLevelChild
 
        iOctree_IA(LevelMin_:LevelMax_, iBlockChild) = &
             iOctree_IA(LevelMin_:LevelMax_, iBlock)
@@ -318,7 +340,7 @@ contains
                iOctree_IA(jNeighbor_I(iNeighbor), jBlockChild) = NoBlock_
        end do
        ! Wipe out the child block
-       iOctree_IA(:, Status_) = Skipped_
+       iOctree_IA(Status_, iBlockChild) = Skipped_
     end do
 
     ! Make block used with no children
@@ -328,12 +350,54 @@ contains
   end subroutine coarsen_block
 
   !==========================================================================
+  subroutine find_point(XyzIn_D, iBlock)
+
+    ! Find the block that contains a point. The point coordinates should
+    ! be given in generalized coordinates normalized to the domain size:
+    ! XyzIn_D = (XyzOrig_D - XyzMin_D)/(XyzMax_D-XyzMin_D)
+
+    real, intent(in):: XyzIn_D(3)
+    integer, intent(out):: iBlock
+
+    real :: Xyz_D(nDim)
+    integer :: iLevel, iChild
+    integer :: Ijk_D(nDim), iBit_D(nDim)
+    !----------------------------------------------------------------------
+    ! Scale coordinates so that 1 <= Xyz_D <= nRoot_D+1
+    Xyz_D = 1.0 + nRoot_D*max(0.0, min(1.0, XyzIn_D(1:nDim)))
+
+    ! Get root block index
+    Ijk_D = min(int(Xyz_D), nRoot_D)
+
+    iBlock = iBlockRoot_III(Ijk_D(1),Ijk_D(2),Ijk_D(3))
+
+    if(iOctree_IA(Status_, iBlock) == Used_) RETURN
+
+    ! Get normalized coordinates within root block
+    Xyz_D = Xyz_D - Ijk_D
+
+    ! Calculate integer coordinates for the largest resolution
+    Ijk_D = Xyz_D*MaxCoord_I(nLevel)
+
+    ! Go down the tree using bit information
+    do iLevel = nLevel-1,0,-1
+       iBit_D = ibits(Ijk_D,iLevel,1)
+       iChild = sum(iBit_D*(/1,2,4/)) + Child1_
+       iBlock = iOctree_IA(iChild, iBlock)
+       if(iOctree_IA(Status_, iBlock) == Used_) RETURN
+    end do
+
+  end subroutine find_point
+  !==========================================================================
 
   subroutine test_octree
 
     integer :: iBlock
+    real:: XyzTest_D(3)
+
     character(len=*), parameter :: NameSub = 'test_octree'
     !-----------------------------------------------------------------------
+
     write(*,*)'Testing init_mod_octree'
     call init_mod_octree(100)
     if(MaxBlockAll /= 100) &
@@ -379,17 +443,58 @@ contains
     write(*,*)'iOctree_IA(:,4)=',iOctree_IA(:,4)
     write(*,*)'iOctree_IA(:,7)=',iOctree_IA(:,7)
 
-    call refine_block(3)
+    call refine_block(6)
 
     write(*,*)'iOctree_IA(:,3)=',iOctree_IA(:,3)
     write(*,*)'iOctree_IA(:,7)=',iOctree_IA(:,7)
 
     write(*,*)'Testing coarsen_block'
-    call coarsen_block(3)
+    call coarsen_block(4)
 
     write(*,*)'iOctree_IA(:,3)=',iOctree_IA(:,3)
     write(*,*)'iOctree_IA(:,7)=',iOctree_IA(:,7)
 
+
+    write(*,*)'Testing find_point'
+    XyzTest_D = (/0.99,0.99,0.9/)
+    call find_point(XyzTest_D, iBlock)
+    if(.not.is_point_inside_block(XyzTest_D(1:nDim), iBlock)) &
+         write(*,*)'ERROR: Test find point failed'
+    
+
+    ! Refine the block where the point was found and find it again
+    call refine_block(iBlock)
+    call find_point(XyzTest_D,iBlock)
+    if(.not.is_point_inside_block(XyzTest_D(1:nDim), iBlock)) &
+         write(*,*)'ERROR: Test find point failed'
+
   end subroutine test_octree
+
+  !============================================================================
+  logical function is_point_inside_block(Xyz_D, iBlock)
+
+    real,    intent(in):: Xyz_D(nDim)
+    integer, intent(in):: iBlock
+
+    integer :: iLevel
+    real    :: XyzStart_D(nDim), XyzEnd_D(nDim)
+    !-------------------------------------------------------------------------
+    iLevel = iOctree_IA(Level_, iBlock)
+    XyzStart_D = (iOctree_IA(iCoord_:kCoord_,iBlock)-1.0) &
+         /MaxCoord_I(iLevel)/nRoot_D
+    XyzEnd_D   = (iOctree_IA(iCoord_:kCoord_,iBlock)+0.0) &
+         /MaxCoord_I(iLevel)/nRoot_D
+
+    is_point_inside_block= all(Xyz_D >= XyzStart_D) .and. all(Xyz_D < XyzEnd_D)
+
+    if(  any(Xyz_D > XyzEnd_D) .or. any(Xyz_D < XyzStart_D) ) then
+       write(*,*)'Error in is_point_inside_block'
+       write(*,*)'iBlock, iLevel=',iBlock, iLevel
+       write(*,*)'Block start coord=',XyzStart_D
+       write(*,*)'Block end   coord=',XyzEnd_D
+       write(*,*)'Point coordinates=',Xyz_D
+    end if
+
+  end function is_point_inside_block
 
 end module ModOctreeNew
