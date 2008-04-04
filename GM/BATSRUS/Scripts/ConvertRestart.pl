@@ -30,6 +30,7 @@ use strict;
 &print_help if $Help or $#ARGV == -1;
 
 my $indir =$ARGV[0];
+$indir =~ s/\/$//;
 my $outdir=($ARGV[1] or $indir."__tmp");
 
 my $headerfile="restart.H";
