@@ -53,7 +53,7 @@ Module ModIO
   integer :: unit_log = -1, unit_tmp2 = -1
 
   ! variables for the line of sight integration plots
-  character (LEN=2) :: TypeLosImage
+  character (LEN=10) :: TypeLosImage
   integer :: n_pix_r(maxfile)
   real :: r_size_image(maxfile), xoffset(maxfile), yoffset(maxfile)
   real :: radius_occult(maxfile), mu_los
