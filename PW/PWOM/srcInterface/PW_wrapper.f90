@@ -349,16 +349,16 @@ subroutine PW_get_for_gm(Buffer_VI, nVar, nLineTotal, Name_V, tSimulation)
         SendBuffer_VI(iVar,:)=PhiLine_I(1:nLine)
      case('Density1')
         ! g/cm^3 = 1000 * kg/m^3
-        SendBuffer_VI(iVar,:)=State_CVI(nAlt,RhoO_ ,1:nLine)*1000.0
-     case('Density2')
         SendBuffer_VI(iVar,:)=State_CVI(nAlt,RhoH_ ,1:nLine)*1000.0
+     case('Density2')
+        SendBuffer_VI(iVar,:)=State_CVI(nAlt,RhoO_ ,1:nLine)*1000.0
      case('Density3')
         SendBuffer_VI(iVar,:)=State_CVI(nAlt,RhoHe_,1:nLine)*1000.0
      case('Velocity1')
         ! cm/s = 0.01*m/s
-        SendBuffer_VI(iVar,:)=State_CVI(nAlt,uO_ ,1:nLine)*0.01
-     case('Velocity2')
         SendBuffer_VI(iVar,:)=State_CVI(nAlt,uH_ ,1:nLine)*0.01
+     case('Velocity2')
+        SendBuffer_VI(iVar,:)=State_CVI(nAlt,uO_ ,1:nLine)*0.01
      case('Velocity3')
         SendBuffer_VI(iVar,:)=State_CVI(nAlt,uHe_,1:nLine)*0.01
      case default
