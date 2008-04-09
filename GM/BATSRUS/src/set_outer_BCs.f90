@@ -393,7 +393,7 @@ subroutine BC_solar_wind(time_now)
   use ModMultiFluid, ONLY: select_fluid, iFluid, &
        iRho, iRhoUx, iRhoUy, iRhoUz, iP, MassIon_I
   use ModPhysics, ONLY: LowDensityRatio
-
+  use ModNumConst, ONLY: cTiny
   implicit none
 
   ! Current simulation time in seconds
@@ -429,7 +429,12 @@ subroutine BC_solar_wind(time_now)
               State_VGB(iP,     i,j,k,iBLK) = p     *LowDensityRatio &
                    *MassIon_I(1)/MassFluid_I(iFluid)
            end do
-
+           if(UseMultiSpecies)then
+              State_VGB(SpeciesFirst_,i,j,k,iBLK) = &
+                   Rho - cTiny*Rho*(SpeciesLast_-SpeciesFirst_)
+              State_VGB(SpeciesFirst_+1:SpeciesLast_,i,j,k,iBLK)= &
+                   cTiny*Rho
+           end if
         end do
      end do
   end do
