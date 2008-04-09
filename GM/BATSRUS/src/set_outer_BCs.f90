@@ -431,9 +431,9 @@ subroutine BC_solar_wind(time_now)
            end do
            if(UseMultiSpecies)then
               State_VGB(SpeciesFirst_,i,j,k,iBLK) = &
-                   Rho - cTiny*Rho*(SpeciesLast_-SpeciesFirst_)
+                   Rho - LowDensityRatio*Rho*(SpeciesLast_-SpeciesFirst_)
               State_VGB(SpeciesFirst_+1:SpeciesLast_,i,j,k,iBLK)= &
-                   cTiny*Rho
+                   LowDensityRatio*Rho
            end if
         end do
      end do
