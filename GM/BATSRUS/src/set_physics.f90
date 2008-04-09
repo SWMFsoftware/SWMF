@@ -214,6 +214,13 @@ subroutine set_physics_constants
   FaceState_VI(iRho_I, Body1_) = BodyRho_I
   FaceState_VI(iP_I,   Body1_) = BodyP_I
 
+  if (UseMultiSpecies) then
+     FaceState_VI(SpeciesFirst_, Body1_) = &
+          BodyRho_I(1) - LowDensityRatio * (SpeciesLast_-SpeciesFirst_)
+     FaceState_VI(SpeciesFirst_+1:SpeciesLast_, Body1_) = &
+          LowDensityRatio*BodyRho_I(1)
+  endif
+
   !The following part of the code is sensitive to a particular physical
   !model. It should be modified in adding/deleting the physical effects 
   !or features
@@ -231,7 +238,14 @@ subroutine set_physics_constants
   FaceState_VI(Bz_,  East_:Top_) = SW_Bz
   FaceState_VI(P_,   East_:Top_) = SW_p
   if(UseElectronPressure) FaceState_VI(Pe_, East_:Top_) = SW_p
-
+  
+  if (UseMultiSpecies) then
+     FaceState_VI(SpeciesFirst_, East_:Top_) = &
+          SW_rho - LowDensityRatio * (SpeciesLast_-SpeciesFirst_)
+     FaceState_VI(SpeciesFirst_+1:SpeciesLast_, East_:Top_) = &
+          LowDensityRatio*sw_rho
+  endif
+    
   do iFluid = IonFirst_+1, nFluid
      call select_fluid
      FaceState_VI(iRho, East_:Top_) = SW_Rho*LowDensityRatio
