@@ -12,51 +12,37 @@ module ModOctreeNew
   public:: find_point
   public:: test_octree
 
-  integer, parameter :: nDim = 3
+  integer, parameter :: MaxDim = 3
+  integer, parameter :: nDim   = 3
   integer, parameter :: nChild = 2**nDim
 
   integer, allocatable :: iOctree_IA(:,:)
 
   integer, parameter :: &
-       Status_   =  1, &
-       Parent_   =  2, &
-       Child0_   =  2, &
-       Child1_   =  3, &
-       Child2_   =  4, &
-       Child3_   =  5, &
-       Child4_   =  6, &
-       Child5_   =  7, &
-       Child6_   =  8, &
-       Child7_   =  9, &
-       Child8_   = 10, &
-       Proc_     = 11, &
-       Level_    = 12, &
-       LevelMin_ = 13, &
-       LevelMax_ = 14, &
-       iCoord_   = 15, &
-       jCoord_   = 16, &
-       kCoord_   = 17, &
-       iLeft_    = 18, &
-       iRight_   = 19, &
-       jLeft_    = 20, &
-       jRight_   = 21, &
-       kLeft_    = 22, &
-       kRight_   = 23
+       Status_   = 1, &
+       Level_    = 2, &
+       LevelMin_ = 3, &
+       LevelMax_ = 4, &
+       Parent_   = 5, &
+       Child0_   = 6, &
+       Child1_   = Child0_ + 1,      &
+       ChildLast_= Child0_ + nChild, &
+       Proc_     = Child0_ + 1,      & ! Overlaps with child 1
+       Block_    = Child0_ + 2,      & ! Overlaps with child 2
+       Coord0_   = ChildLast_,       &
+       Coord1_   = Coord0_ + 1,      &
+       CoordLast_= Coord0_ + nDim
 
-  integer, parameter :: nInfo = 23
+  integer, parameter :: nInfo = CoordLast_
 
   ! Possible values for the status variable
   integer, parameter :: Skipped_=0, Unused_=1, Used_=2, Refine_=3, Coarsen_=4
 
-  ! Index for non-existing neighbors
-  integer, parameter :: NoBlock_=0
+  ! Index for non-existing block and level differences
+  integer, parameter :: NoBlock_ = -100
 
   ! Neighbor information
-  integer, allocatable :: iBlockNei_IIIB(:,:,:,:)
-
-  ! Opposite directions
-  integer, parameter :: jNeighbor_I(iLeft_:kRight_) = &
-       (/ iRight_, iLeft_, jRight_, jLeft_, kRight_, kLeft_ /)
+  integer, allocatable :: DiLevelNei_IIIB(:,:,:,:), iBlockNei_IIIB(:,:,:,:)
 
   ! Deepest AMR level relative to root blocks (limited by 32 bit integers)
   integer, parameter :: MaxLevel = 30
@@ -75,17 +61,14 @@ module ModOctreeNew
   ! Number of levels below root in level (that has occured at any time)
   integer :: nLevel = 0
 
-  ! The number of root blocks in all dimensions
-  integer :: nRoot_D(nDim) = 0
+  ! The number of root blocks in all dimensions, and altogether
+  integer :: nRoot_D(MaxDim) = 0, nRoot = 0
 
   ! Periodicity of the domain per dimension
-  logical :: IsPeriodic_D(nDim) = .false.
+  logical :: IsPeriodic_D(MaxDim) = .false.
 
   ! Cylindrical or spherical coordinates
   logical :: IsSpherical = .false., IsCylindrical = .false.
-
-  ! The block index for each root block (could be calculated too)
-  integer, allocatable :: iBlockRoot_III(:,:,:)
 
 contains
 
@@ -106,9 +89,11 @@ contains
 
     MaxBlock = nBlockProc
     allocate(iBlockNei_IIIB(0:3,0:3,0:3,MaxBlock))
+    allocate(DiLevelNei_IIIB(-1:1,-1:1,-1:1,MaxBlock))
 
     ! Initialize all elements and make neighbors unknown
-    iBlockNei_IIIB = NoBlock_
+    iBlockNei_IIIB  = NoBlock_
+    DiLevelNei_IIIB = NoBlock_
 
   end subroutine init_mod_octree
 
@@ -135,93 +120,39 @@ contains
 
   subroutine set_root_block(nRootIn_D, IsPeriodicIn_D)
 
-    integer, intent(in) :: nRootIn_D(nDim)
-    logical, intent(in) :: IsPeriodicIn_D(nDim)
+    integer, intent(in) :: nRootIn_D(MaxDim)
+    logical, intent(in) :: IsPeriodicIn_D(MaxDim)
 
-    integer :: iRoot, jRoot, kRoot, iBlock
-    integer :: iRootMax, jRootMax, kRootMax
+    integer :: iRoot, jRoot, kRoot, iBlock, Ijk_D(MaxDim)
     !-----------------------------------------------------------------------
 
-    if(allocated(iBlockRoot_III)) RETURN
-
     nRoot_D      = nRootIn_D
+    nRoot        = product(nRoot_D)
     IsPeriodic_D = IsPeriodicIn_D
-    iRootMax = nRoot_D(1); jRootMax = nRoot_D(2); kRootMax = nRoot_D(3)
 
-    allocate(iBlockRoot_III(iRootMax, jRootMax, kRootMax))
+    ! Use the first product(nRoot_D) blocks as root blocks in the octree
+    iBlock = 0
+    do kRoot = 1, nRoot_D(3)
+       do jRoot = 1, nRoot_D(2)
+          do iRoot = 1, nRoot_D(1)
 
-    do kRoot = 1, kRootMax
-       do jRoot = 1, jRootMax
-          do iRoot = 1, iRootMax
-             iBlock = i_block_new()
+             Ijk_D = (/ iRoot, jRoot, kRoot /)
 
-             iBlockRoot_III(iRoot, jRoot, kRoot) = iBlock
-
-             iOctree_IA(Status_, iBlock)         = Used_
-             iOctree_IA(Parent_, iBlock)         = NoBlock_
-             iOctree_IA(Child1_:Child8_, iBlock) = NoBlock_
-             iOctree_IA(Level_ , iBlock)         = 0
-             iOctree_IA(iCoord_, iBlock)         = iRoot
-             iOctree_IA(jCoord_, iBlock)         = jRoot
-             iOctree_IA(kCoord_, iBlock)         = kRoot
+             iBlock = iBlock + 1
+             iOctree_IA(Status_, iBlock)            = Used_
+             iOctree_IA(Parent_, iBlock)            = NoBlock_
+             iOctree_IA(Child1_:ChildLast_, iBlock) = NoBlock_
+             iOctree_IA(Level_ , iBlock)            = 0
+             iOctree_IA(Coord1_:CoordLast_, iBlock) = Ijk_D(1:nDim)
 
           end do
        end do
     end do
 
     ! Set neighbor info
-    do kRoot = 1, kRootMax; do jRoot = 1, jRootMax; do iRoot = 1, iRootMax
-       iBlock = iBlockRoot_III(iRoot, jRoot, kRoot)
-
-       if(iRoot > 1)then
-          iOctree_IA(iLeft_, iBlock) = iBlockRoot_III(iRoot-1, jRoot, kRoot)
-       elseif(IsPeriodic_D(1))then
-          iOctree_IA(iLeft_, iBlock) = iBlockRoot_III(iRootMax, jRoot, kRoot)
-       else
-          iOctree_IA(iLeft_, iBlock) = NoBlock_
-       end if
-
-       if(iRoot < iRootMax)then
-          iOctree_IA(iRight_, iBlock) = iBlockRoot_III(iRoot+1, jRoot, kRoot)
-       elseif(IsPeriodic_D(1))then
-          iOctree_IA(iRight_, iBlock) = iBlockRoot_III(1, jRoot, kRoot)
-       else
-          iOctree_IA(iRight_, iBlock) = NoBlock_
-       end if
-
-       if(jRoot > 1)then
-          iOctree_IA(jLeft_, iBlock) = iBlockRoot_III(iRoot, jRoot-1, kRoot)
-       elseif(IsPeriodic_D(2))then
-          iOctree_IA(jLeft_, iBlock) = iBlockRoot_III(iRoot, jRootMax, kRoot)
-       else
-          iOctree_IA(jLeft_, iBlock) = NoBlock_
-       end if
-
-       if(jRoot < jRootMax)then
-          iOctree_IA(jRight_, iBlock) = iBlockRoot_III(iRoot, jRoot+1, kRoot)
-       elseif(IsPeriodic_D(2))then
-          iOctree_IA(jRight_, iBlock) = iBlockRoot_III(iRoot, 1, kRoot)
-       else
-          iOctree_IA(jRight_, iBlock) = NoBlock_
-       end if
-
-       if(kRoot > 1)then
-          iOctree_IA(kLeft_, iBlock) = iBlockRoot_III(iRoot, jRoot, kRoot-1)
-       elseif(IsPeriodic_D(3))then
-          iOctree_IA(kLeft_, iBlock) = iBlockRoot_III(iRoot, jRoot, kRootMax)
-       else
-          iOctree_IA(kLeft_, iBlock) = NoBlock_
-       end if
-
-       if(kRoot < kRootMax)then
-          iOctree_IA(kRight_, iBlock) = iBlockRoot_III(iRoot, jRoot, kRoot+1)
-       elseif(IsPeriodic_D(3))then
-          iOctree_IA(kRight_, iBlock) = iBlockRoot_III(iRoot, jRoot, 1)
-       else
-          iOctree_IA(kRight_, iBlock) = NoBlock_
-       end if
-
-    end do; end do; end do
+    !do iBlock = 1, nRoot
+    !   call find_neighbors(iBlock)
+    !end do
 
   end subroutine set_root_block
 
@@ -230,139 +161,85 @@ contains
 
     integer, intent(in) :: iBlock
 
-    integer :: iShift, jShift, kShift, iChild, iLevelChild
-    integer :: iBlockChild, iBlockChild_III(2,2,2)
-    integer :: iSide, jSide, jBlock, jChild, jBlockChild
+    integer :: iChild, DiChild, iLevelChild, iProc, iBlockProc, iCoord_D(nDim)
+    integer :: iDim, iBlockChild
     !----------------------------------------------------------------------
 
     iOctree_IA(Status_, iBlock) = Unused_
 
     iLevelChild = iOctree_IA(Level_, iBlock) + 1
+    iProc       = iOctree_IA(Proc_,  iBlock)
+    iBlockProc  = iOctree_IA(Block_, iBlock)
 
     ! Keep track of number of levels
     nLevel = max(nLevel, iLevelChild)
+    if(nLevel > MaxLevel) &
+         call CON_stop('Error in refine_block: too many levels')
 
-    iChild = Child0_
-    do kShift = 1,2; do jShift=1,2; do iShift=1,2
-       iChild = iChild+1
+    iCoord_D = 2*iOctree_IA(Coord1_:CoordLast_, iBlock) - 1
+
+    do iChild = Child1_, ChildLast_
 
        iBlockChild = i_block_new()
-       iBlockChild_III(iShift, jShift, kShift)  = iBlockChild
 
-       iOctree_IA(iChild, iBlock)               = iBlockChild
+       iOctree_IA(iChild, iBlock) = iBlockChild
 
-       iOctree_IA(Status_, iBlockChild)         = Used_
+       iOctree_IA(Status_,   iBlockChild) = Used_
+       iOctree_IA(Level_,    iBlockChild) = iLevelChild
+       iOctree_IA(LevelMin_, iBlockChild) = iOctree_IA(LevelMin_, iBlock)
+       iOctree_IA(LevelMax_, iBlockChild) = iOctree_IA(LevelMax_, iBlock)
+       iOctree_IA(Parent_,   iBlockChild) = iBlock
+       iOctree_IA(Child1_:ChildLast_, iBlockChild) = NoBlock_
 
-       iOctree_IA(Parent_, iBlockChild)         = iBlock
-
-       iOctree_IA(Child1_:Child8_, iBlockChild) = NoBlock_
-
-       iOctree_IA(Level_, iBlockChild)          = iLevelChild
-
-       iOctree_IA(LevelMin_:LevelMax_, iBlockChild) = &
-            iOctree_IA(LevelMin_:LevelMax_, iBlock)
+       ! This overwrites the two first children (saves memory)
+       iOctree_IA(Proc_,     iBlockChild) = iProc
+       iOctree_IA(Block_,    iBlockChild) = iBlockProc
 
        ! Calculate the coordinates of the child block
-       iOctree_IA(iCoord_:kCoord_, iBlockChild) = &
-            2*(iOctree_IA(iCoord_:kCoord_, iBlock) - 1) &
-            + (/ iShift, jShift, kShift /)
-          
-    end do; end do; end do
+       DiChild = iChild - Child1_
+       do iDim = 1, nDim
+          iOctree_IA(Coord0_+iDim, iBlockChild) = &
+               iCoord_D(iDim) + ibits(DiChild, iDim-1, 1)
+       end do
 
-    ! Figure out neighbors of children
-    do kShift = 1,2; do jShift=1,2; do iShift=1,2
+    end do
 
-       iBlockChild = iBlockChild_III(iShift, jShift, kShift)
+    ! Find neighbors of children
+    !do iChild = Child1_, ChildLast_
+    !
+    !   iBlockChild = iOctree_IA(iChild, iBlock)
+    !   call find_neighbors(iBlockChild)
+    !
+    !end do
 
-       ! Do i-directional neighbors first
-       iSide = iLeft_ + iShift - 1; jSide = iRight_ + 1 - iShift
-
-       ! One of the left/right neighbors is another child of the same parent
-       jBlockChild = iBlockChild_III(3-iShift, jShift, kShift)
-       iOctree_IA(jSide, iBlockChild) = jBlockChild
-       iOctree_IA(iSide, jBlockChild) = iBlockChild
-
-       ! The other neighbor is the appropriate child of parent's neighbor
-       jBlock = iOctree_IA(iSide, iBlock)
-       if(jBlock /= NoBlock_)then
-
-          jChild      = Child1_ + (2-iShift) + (jShift-1)*2 + (kShift-1)*4
-          jBlockChild = iOctree_IA(jChild, jBlock)
-
-          iOctree_IA(iSide, iBlockChild) = jBlockChild
-          if(jBlockChild /= NoBlock_) &
-               iOctree_IA(jSide, jBlockChild) = iBlockChild
-       else
-          iOctree_IA(iSide, iBlockChild) = NoBlock_
-       end if
-
-       ! Do j-directional neighbors
-       iSide = jLeft_ + jShift - 1; jSide = jRight_ + 1 - jShift
-
-       ! One of the left/right neighbors is another child of the same parent
-       jBlockChild = iBlockChild_III(iShift, 3-jShift, kShift)
-       iOctree_IA(jSide, iBlockChild) = jBlockChild
-       iOctree_IA(iSide, jBlockChild) = iBlockChild
-
-       ! The other neighbor is the appropriate child of parent's neighbor
-       jBlock = iOctree_IA(iSide, iBlock)
-       if(jBlock /= NoBlock_)then
-          jChild      = Child1_ + iShift-1 + (2-jShift)*2 + (kShift-1)*4
-          jBlockChild = iOctree_IA(jChild, jBlock)
-          iOctree_IA(iSide, iBlockChild) = jBlockChild
-          if(jBlockChild /= NoBlock_) &
-               iOctree_IA(jSide, jBlockChild) = iBlockChild
-       else
-          iOctree_IA(iSide, iBlockChild) = NoBlock_
-       end if
-
-       ! Do k-directional neighbors
-       iSide = kLeft_ + kShift - 1; jSide = kRight_ + 1 - kShift
-
-       ! One of the left/right neighbors is another child of the same parent
-       jBlockChild = iBlockChild_III(iShift, jShift, 3-kShift)
-       iOctree_IA(jSide, iBlockChild) = jBlockChild
-       iOctree_IA(iSide, jBlockChild) = iBlockChild
-
-       ! The other neighbor is the appropriate child of parent's neighbor
-       jBlock = iOctree_IA(iSide, iBlock)
-       if(jBlock /= NoBlock_)then
-          jChild      = Child1_ + iShift-1 + (jShift-1)*2 + (2-kShift)*4
-          jBlockChild = iOctree_IA(jChild, jBlock)
-          iOctree_IA(iSide, iBlockChild) = jBlockChild
-          if(jBlockChild /= NoBlock_) &
-               iOctree_IA(jSide, jBlockChild) = iBlockChild
-       else
-          iOctree_IA(iSide, iBlockChild) = NoBlock_
-       end if
-
-    end do; end do; end do
+    ! Should also redo neighbors of the parent block
 
   end subroutine refine_block
 
   !==========================================================================
   subroutine coarsen_block(iBlock)
+
     integer, intent(in) :: iBlock
 
-    integer :: iChild, iBlockChild, iNeighbor, jBlockChild
+    integer :: iChild, iBlockChild1, iBlockChild
     !-----------------------------------------------------------------------
 
-    do iChild = Child1_, Child8_
+    do iChild = Child1_, ChildLast_
        iBlockChild = iOctree_IA(iChild, iBlock)
 
-       ! Tell neighbors that this block does not exist any longer
-       do iNeighbor = iLeft_, kRight_
-          jBlockChild = iOctree_IA(iNeighbor, iBlockChild)
-          if(jBlockChild /= NoBlock_) &
-               iOctree_IA(jNeighbor_I(iNeighbor), jBlockChild) = NoBlock_
-       end do
        ! Wipe out the child block
        iOctree_IA(Status_, iBlockChild) = Skipped_
     end do
 
-    ! Make block used with no children
+    ! Make this block used with no children
     iOctree_IA(Status_, iBlock) = Used_
-    iOctree_IA(Child1_:Child8_, iBlock) = NoBlock_
+
+    iBlockChild1 = iOctree_IA(Child1_, iBlock)
+    iOctree_IA(Child1_:ChildLast_, iBlock) = NoBlock_
+
+    ! set proc and block info from child1
+    iOctree_IA(Proc_,  iBlock) = iOctree_IA(Proc_,  iBlockChild1)
+    iOctree_IA(Block_, iBlock) = iOctree_IA(Block_, iBlockChild1)
 
   end subroutine coarsen_block
 
@@ -373,36 +250,37 @@ contains
     ! be given in generalized coordinates normalized to the domain size:
     ! XyzIn_D = (XyzOrig_D - XyzMin_D)/(XyzMax_D-XyzMin_D)
 
-    real, intent(in):: XyzIn_D(3)
+    real, intent(in):: XyzIn_D(MaxDim)
     integer, intent(out):: iBlock
 
-    real :: Xyz_D(nDim)
+    real :: Xyz_D(MaxDim)
     integer :: iLevel, iChild
-    integer :: Ijk_D(nDim), iBit_D(nDim)
+    integer :: Ijk_D(MaxDim), iCoord_D(nDim), iBit_D(nDim)
     !----------------------------------------------------------------------
     ! Scale coordinates so that 1 <= Xyz_D <= nRoot_D+1
-    Xyz_D = 1.0 + nRoot_D*max(0.0, min(1.0, XyzIn_D(1:nDim)))
+    Xyz_D = 1.0 + nRoot_D*max(0.0, min(1.0, XyzIn_D))
 
     ! Get root block index
     Ijk_D = min(int(Xyz_D), nRoot_D)
 
-    iBlock = iBlockRoot_III(Ijk_D(1),Ijk_D(2),Ijk_D(3))
+    ! Root block indexes are ordered
+    iBlock = Ijk_D(1) + nRoot_D(1)*((Ijk_D(2)-1) + nRoot_D(2)*(Ijk_D(3)-1))
 
     if(iOctree_IA(Status_, iBlock) == Used_) RETURN
 
-    ! Get normalized coordinates within root block
-    Xyz_D = Xyz_D - Ijk_D
-
-    ! Calculate integer coordinates for the largest resolution
-    Ijk_D = Xyz_D*MaxCoord_I(nLevel)
+    ! Get normalized coordinates within root block and scale it up
+    ! to the largest resolution
+    iCoord_D = (Xyz_D(1:nDim) - Ijk_D(1:nDim))*MaxCoord_I(nLevel)
 
     ! Go down the tree using bit information
     do iLevel = nLevel-1,0,-1
-       iBit_D = ibits(Ijk_D,iLevel,1)
-       iChild = sum(iBit_D*(/1,2,4/)) + Child1_
+       iBit_D = ibits(iCoord_D, iLevel, 1)
+       iChild = sum(iBit_D*MaxCoord_I(0:nDim-1)) + Child1_
        iBlock = iOctree_IA(iChild, iBlock)
+
        if(iOctree_IA(Status_, iBlock) == Used_) RETURN
     end do
+
 
   end subroutine find_point
 
@@ -416,10 +294,10 @@ contains
     real    :: XyzStart_D(nDim), XyzEnd_D(nDim)
     !-------------------------------------------------------------------------
     iLevel = iOctree_IA(Level_, iBlock)
-    XyzStart_D = (iOctree_IA(iCoord_:kCoord_,iBlock)-1.0) &
-         /MaxCoord_I(iLevel)/nRoot_D
-    XyzEnd_D   = (iOctree_IA(iCoord_:kCoord_,iBlock)+0.0) &
-         /MaxCoord_I(iLevel)/nRoot_D
+    XyzStart_D = (iOctree_IA(Coord1_:CoordLast_,iBlock)-1.0) &
+         /MaxCoord_I(iLevel)/nRoot_D(1:nDim)
+    XyzEnd_D   = (iOctree_IA(Coord1_:CoordLast_,iBlock)+0.0) &
+         /MaxCoord_I(iLevel)/nRoot_D(1:nDim)
 
     is_point_inside_block= all(Xyz_D >= XyzStart_D) .and. all(Xyz_D < XyzEnd_D)
 
@@ -438,42 +316,76 @@ contains
   subroutine find_neighbors(iBlock)
 
     integer, intent(in):: iBlock
-    integer :: iLevel, i, j, k, iCoord, jCoord, kCoord, jBlock
-    real :: Scale_D(3), x, y, z
+
+    integer :: iLevel, i, j, k, Di, Dj, Dk, jBlock
+    real :: Scale_D(MaxDim), x, y, z
     !-----------------------------------------------------------------------
 
-    ! We should convert local block into global block index or vice versa
+    ! We should convert local block into global block index or vice-versa
 
-    ! We should handle neighbors across the pole here too
-
-    iLevel = iOctree_IA(Level_, iBlock)
+    iLevel  = iOctree_IA(Level_, iBlock)
     Scale_D = (1.0/MaxCoord_I(iLevel))/nRoot_D
     do k=0,3
-       z = (iOctree_IA(kCoord_, iBlock) + 0.4*k - 1.1)*Scale_D(3)
-       if(z > 1.0 .or. z < 0.0)then
-          if(IsPeriodic_D(3))then
-             z = modulo(z, 1.0)
-          else
-             iBlockNei_IIIB(:,:,k,iBlock) = NoBlock_
-             CYCLE
-          end if
-       end if
-       do j=0,3
-          y = (iOctree_IA(jCoord_, iBlock) + 0.4*j - 1.1)*Scale_D(2)
-          if(y > 1.0 .or. y < 0.0)then
-             if(IsPeriodic_D(2))then
-                y = modulo(y, 1.0)
-             elseif(IsSpherical)then
-                ! Push back theta and go around half way in phi
-                y = max(0.0, min(1.0, y))
-                z = modulo( z+0.5, 1.0)
+       Dk = nint((k - 1.5)/1.5)
+       if(nDim < 3)then
+          if(k/=1) CYCLE
+          z = 0.3
+       else
+          z = (iOctree_IA(CoordLast_, iBlock) + 0.4*k - 1.1)*Scale_D(3)
+          if(z > 1.0 .or. z < 0.0)then
+             if(IsPeriodic_D(3))then
+                z = modulo(z, 1.0)
              else
-                iBlockNei_IIIB(:,j,k,iBlock) = NoBlock_
+                iBlockNei_IIIB(:,:,k,iBlock) = NoBlock_
+                DiLevelNei_IIIB(:,:,Dk,iBlock) = NoBlock_
                 CYCLE
              end if
           end if
+       end if
+       do j=0,3
+          Dj = nint((j - 1.5)/1.5)
+          if(nDim < 2)then
+             if(j/=1) CYCLE
+             y = 0.3
+          else
+             y = (iOctree_IA(Coord0_+2, iBlock) + 0.4*j - 1.1)*Scale_D(2)
+             if(y > 1.0 .or. y < 0.0)then
+                if(IsPeriodic_D(2))then
+                   y = modulo(y, 1.0)
+                elseif(IsSpherical)then
+                   ! Push back theta and go around half way in phi
+                   y = max(0.0, min(1.0, y))
+                   z = modulo( z+0.5, 1.0)
+                else
+                   iBlockNei_IIIB(:,j,k,iBlock) = NoBlock_
+                   DiLevelNei_IIIB(:,Dj,Dk,iBlock) = NoBlock_
+                   CYCLE
+                end if
+             end if
+          end if
           do i=0,3
-             x = (iOctree_IA(iCoord_, iBlock) + 0.4*i - 1.1)*Scale_D(1)
+             ! Exclude inner points
+             if(0<i.and.i<3.and.0<j.and.j<3.and.0<k.and.k<3) CYCLE
+
+             Di = nint((i - 1.5)/1.5)
+
+             ! If neighbor is not finer, fill in the i=2 or j=2 or k=2 elements
+             if(DiLevelNei_IIIB(Di,Dj,Dk,iBlock) >= 0)then
+                if(i==2)then
+                   iBlockNei_IIIB(i,j,k,iBlock) = iBlockNei_IIIB(1,j,k,iBlock)
+                   CYCLE
+                end if
+                if(j==2)then
+                   iBlockNei_IIIB(i,j,k,iBlock) = iBlockNei_IIIB(i,1,k,iBlock)
+                   CYCLE
+                end if
+                if(k==2)then
+                   iBlockNei_IIIB(i,j,k,iBlock) = iBlockNei_IIIB(i,j,1,iBlock)
+                   CYCLE
+                end if
+             end if
+
+             x = (iOctree_IA(Coord1_, iBlock) + 0.4*i - 1.1)*Scale_D(1)
              if(x > 1.0 .or. x < 0.0)then
                 if(IsPeriodic_D(1))then
                    x = modulo(x, 1.0)
@@ -483,12 +395,15 @@ contains
                    z = modulo( z+0.5, 1.0)
                 else
                    iBlockNei_IIIB(i,j,k,iBlock) = NoBlock_
+                   DiLevelNei_IIIB(Di,Dj,Dk,iBlock) = NoBlock_
                    CYCLE
                 end if
              end if
 
              call find_point( (/x, y, z/), jBlock)
              iBlockNei_IIIB(i,j,k,iBlock) = jBlock
+             DiLevelNei_IIIB(Di,Dj,Dk,iBlock) = &
+                  iLevel - iOctree_IA(Level_, jBlock)
           end do
        end do
     end do
@@ -499,20 +414,21 @@ contains
   subroutine test_octree
 
     integer :: iBlock
-    real:: XyzTest_D(3)
+    real:: XyzTest_D(MaxDim)
+    integer:: Int_D(MaxDim)
 
     character(len=*), parameter :: NameSub = 'test_octree'
     !-----------------------------------------------------------------------
 
     write(*,*)'Testing init_mod_octree'
     call init_mod_octree(50, 100)
+    if(MaxBlock /= 50) &
+         write(*,*)'init_mod_octtree faild, MaxBlock=',&
+         MaxBlock, ' should be 50'
+
     if(MaxBlockAll /= 100) &
          write(*,*)'init_mod_octtree faild, MaxBlockAll=',&
          MaxBlockAll, ' should be 100'
-
-    if(MaxBlock /= 100) &
-         write(*,*)'init_mod_octtree faild, MaxBlock=',&
-         MaxBlock, ' should be 100'
 
     write(*,*)'Testing i_block_new()'
     iBlock = i_block_new()
@@ -526,61 +442,42 @@ contains
          write(*,*) 'set_root_block failed, nRoot_D=',nRoot_D,&
          ' should be 1,2,3'
 
-    if(any( iBlockRoot_III /= reshape( (/1,2,3,4,5,6/), (/1,2,3/) ) )) &
-         write(*,*) 'set_root_block failed, iBlockRoot_III=',iBlockRoot_III,&
-         ' should be 1,2,3,4,5,6'
+    Int_D = (/1,2,2/)
 
-    if(any( iOctree_IA(iCoord_:kCoord_,4) /= (/1,2,2/) )) &
+    if(any( iOctree_IA(Coord1_:CoordLast_,4) /= Int_D(1:nDim) )) &
          write(*,*) 'set_root_block failed, coordinates of block four=',&
-         iOctree_IA(iCoord_:kCoord_,4), 'should be 1,2,2'
-
-    if(any( iOctree_IA(iLeft_:kRight_,5) /= (/5,5,6,6,3,0/) )) &
-         write(*,*) 'set_root_block failed, neighbors of block four=',&
-         iOctree_IA(iLeft_:kRight_,4), 'should be 5,5,6,6,3,0'
-
-    ! Coordinates of root blocks
-    !do iBlock = 1,6
-    !   write(*,*)iBlock,iOctree_IA(iCoord_:kCoord_,iBlock)
-    !end do
-    ! Neighbors of root blocks
-    !do iBlock = 1,6
-    !   write(*,*)iBlock,iOctree_IA(iLeft_:kRight_,iBlock)
-    !end do
-
-    write(*,*)'Testing refine_block'
-    call refine_block(4)
-
-    write(*,*)'iOctree_IA(:,4)=',iOctree_IA(:,4)
-    write(*,*)'iOctree_IA(:,7)=',iOctree_IA(:,7)
-
-    call refine_block(6)
-
-    write(*,*)'iOctree_IA(:,3)=',iOctree_IA(:,3)
-    write(*,*)'iOctree_IA(:,7)=',iOctree_IA(:,7)
-
-    write(*,*)'Testing coarsen_block'
-    call coarsen_block(4)
-
-    write(*,*)'iOctree_IA(:,3)=',iOctree_IA(:,3)
-    write(*,*)'iOctree_IA(:,7)=',iOctree_IA(:,7)
-
+         iOctree_IA(Coord1_:CoordLast_,4), ' should be ',Int_D(1:nDim)
 
     write(*,*)'Testing find_point'
     XyzTest_D = (/0.99,0.99,0.9/)
     call find_point(XyzTest_D, iBlock)
+    if(iBlock /= nRoot)write(*,*)'ERROR: Test find point failed, iBlock=',&
+         iBlock,' instead of',nRoot
+
     if(.not.is_point_inside_block(XyzTest_D(1:nDim), iBlock)) &
          write(*,*)'ERROR: Test find point failed'
     
-
+    write(*,*)'Testing refine_block'
     ! Refine the block where the point was found and find it again
     call refine_block(iBlock)
+
     call find_point(XyzTest_D,iBlock)
     if(.not.is_point_inside_block(XyzTest_D(1:nDim), iBlock)) &
          write(*,*)'ERROR: Test find point failed'
 
     write(*,*)'Testing find_neighbors'
     call find_neighbors(5)
+    write(*,*)'DiLevelNei_IIIB(:,:,:,5)=',DiLevelNei_IIIB(:,:,:,5)
     write(*,*)'iBlockNei_IIIB(:,:,:,5)=',iBlockNei_IIIB(:,:,:,5)
+
+    write(*,*)'Testing coarsen_block'
+    ! Coarsen back the last root block and find point again
+    call coarsen_block(nRoot)
+    call find_point(XyzTest_D,iBlock)
+    if(iBlock /= nRoot)write(*,*)'ERROR: coarsen_block faild, iBlock=',&
+         iBlock,' instead of',nRoot
+    if(.not.is_point_inside_block(XyzTest_D(1:nDim), iBlock)) &
+         write(*,*)'ERROR: is_point_inside_block failed'
 
   end subroutine test_octree
 
