@@ -662,7 +662,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
 
      STEP: do
         ! Full step
-        b_mid = b_ini ! In case interpolation would gives zero vector
+        b_mid = b_ini ! In case interpolation would give zero vector
         call interpolate_b(x_mid, b_D, b_mid)
 
         ! Calculate the difference between 1st and 2nd order integration
@@ -947,7 +947,7 @@ contains
     real, intent(inout):: Dir_D(3)    ! direction vector
 
     !LOCAL VARIABLES:
-    real :: AbsB
+    real :: AbsB, Dir0_D(3)
 
     character (len=*), parameter :: NameSub='interpolate_b'
 
@@ -965,7 +965,6 @@ contains
     dz1 = x_D(3) - k1; dz2 = cOne - dz1
 
     ! Interpolate the magnetic field
-
     b_D = dx1*(   dy1*(   dz1*Bxyz_DGB(:,i2,j2,k2,iBlock)   &
          +                dz2*Bxyz_DGB(:,i2,j2,k1,iBlock))  &
          +        dy2*(   dz1*Bxyz_DGB(:,i2,j1,k2,iBlock)   &
@@ -976,19 +975,14 @@ contains
          +                dz2*Bxyz_DGB(:,i1,j1,k1,iBlock)))
 
     ! Stretch according to normalized coordinates
-    Dir_D = b_D/Dxyz_D
+    Dir0_D = b_D/Dxyz_D
 
     ! Normalize to unity
-    AbsB = sqrt(sum(Dir_D**2))
+    AbsB = sqrt(sum(Dir0_D**2))
 
-    if(AbsB > cTiny)then
-       Dir_D = Dir_D/AbsB
-    else
-       ! This is actually a big problem, and should not happen
-       write(*,*)NameSub,' ERROR at iProc,iBlock,Xyz_D = ',iProc,iBlock,&
-            XyzStart_BLK(:,iBlock)+Dxyz_D*(x_D-1.0)
-       write(*,*)NameSub,' ERROR b_D=',b_D,' abs(B)=',AbsB
-    end if
+    ! Set Dir_D only if the magnetic field is not very small. 
+    ! Otherwise continue in the previous direction.
+    if(AbsB > cTiny)Dir_D = Dir0_D/AbsB
 
   end subroutine interpolate_b
 
