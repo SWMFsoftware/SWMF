@@ -1,5 +1,7 @@
 module ModOctreeNew
 
+  use ModIoUnit, ONLY: UnitTmp_
+
   implicit none
   save
 
@@ -10,6 +12,8 @@ module ModOctreeNew
   public:: refine_block
   public:: coarsen_block
   public:: find_point
+  public:: write_octree_file
+  public:: read_octree_file
   public:: test_octree
 
   integer, parameter :: MaxDim = 3
@@ -23,7 +27,7 @@ module ModOctreeNew
        Level_    = 2, &
        LevelMin_ = 3, &
        LevelMax_ = 4, &
-       Parent_   = 5, &
+       Parent_   = 5, & ! Parent must be just before the first child!
        Child0_   = 6, &
        Child1_   = Child0_ + 1,      &
        ChildLast_= Child0_ + nChild, &
@@ -409,14 +413,106 @@ contains
     end do
 
   end subroutine find_neighbors
+
+  !==========================================================================
+
+  subroutine compact_octree(nBlockAll)
+
+    ! Eliminate holes from the octree
+
+    integer, intent(out), optional:: nBlockAll
+
+    ! Amount of shift for each block
+    integer, allocatable:: iBlockNew_A(:)
+    integer :: iBlock, iBlockSkipped, iBlockOld, i
+    !-------------------------------------------------------------------------
+    allocate(iBlockNew_A(MaxBlockAll))
+
+    ! Set impossible initial values
+    iBlockNew_A = NoBlock_
+    iBlockSkipped = MaxBlockAll + 1
+
+    do iBlock = 1, MaxBlockAll
+
+       if(iOctree_IA(Status_, iBlock) == Skipped_)then
+          ! Store the first skipped position
+          iBlockSkipped = min(iBlockSkipped, iBlock)
+       elseif(iBlockSkipped < iBlock)then
+          ! Move block to the first skipped position
+          iOctree_IA(:,iBlockSkipped) = iOctree_IA(:,iBlock)
+          iOctree_IA(Status_, iBlock) = Skipped_
+          ! Store new block index
+          iBlockNew_A(iBlock) = iBlockSkipped
+          ! Advance iBlockSkipped
+          iBlockSkipped = iBlockSkipped + 1
+       else
+          ! The block did not move
+          iBlockNew_A(iBlock) = iBlock
+       endif
+    end do
+
+    ! Apply shifts
+    do iBlock = 1, MaxBlockAll
+
+       if(iOctree_IA(Status_, iBlock) == Skipped_) EXIT
+
+       do i = Parent_, ChildLast_
+          iBlockOld = iOctree_IA(i, iBlock)
+          if(iBlockOld /= NoBlock_) &
+               iOctree_IA(i, iBlock) = iBlockNew_A(iBlockOld)
+       end do
+
+    end do
+
+    if(present(nBlockAll)) nBlockAll = iBlock - 1
+
+  end subroutine compact_octree
+
+  !==========================================================================
+
+  subroutine write_octree_file(NameFile)
+
+    character(len=*), intent(in):: NameFile
+    integer :: nBlockAll
+
+    !-------------------------------------------------------------------------
+    call compact_octree(nBlockAll)
+    open(UnitTmp_, file=NameFile, status='replace', form='unformatted')
+
+    write(UnitTmp_) nBlockAll, nInfo
+    write(UnitTmp_) nDim, nRoot_D
+    write(UnitTmp_) iOctree_IA(:,1:nBlockAll)
+
+    close(UnitTmp_)
+
+  end subroutine write_octree_file
+  
+  !==========================================================================
+
+  subroutine read_octree_file(NameFile)
+
+    character(len=*), intent(in):: NameFile
+    integer :: nInfoIn, nBlockIn, nDimIn, nRootIn_D(MaxDim)
+    !----------------------------------------------------------------------
+
+    open(UnitTmp_, file=NameFile, status='old', form='unformatted')
+
+    read(UnitTmp_) nBlockIn, nInfoIn
+    read(UnitTmp_) nDimIn, nRootIn_D
+    call set_root_block(nRootIn_D, IsPeriodic_D)
+    read(UnitTmp_) iOctree_IA(:,1:nBlockIn)
+
+    close(UnitTmp_)
+
+  end subroutine read_octree_file
+  
   !==========================================================================
 
   subroutine test_octree
 
-    integer :: iBlock
+    integer :: iBlock, nBlockAll, Int_D(MaxDim)
     real:: XyzTest_D(MaxDim)
-    integer:: Int_D(MaxDim)
-
+ 
     character(len=*), parameter :: NameSub = 'test_octree'
     !-----------------------------------------------------------------------
 
@@ -465,12 +561,16 @@ contains
     if(.not.is_point_inside_block(XyzTest_D(1:nDim), iBlock)) &
          write(*,*)'ERROR: Test find point failed'
 
+    ! Refine another block
+    call refine_block(nRoot-2)
+
     write(*,*)'Testing find_neighbors'
     call find_neighbors(5)
     write(*,*)'DiLevelNei_IIIB(:,:,:,5)=',DiLevelNei_IIIB(:,:,:,5)
     write(*,*)'iBlockNei_IIIB(:,:,:,5)=',iBlockNei_IIIB(:,:,:,5)
 
     write(*,*)'Testing coarsen_block'
+
     ! Coarsen back the last root block and find point again
     call coarsen_block(nRoot)
     call find_point(XyzTest_D,iBlock)
@@ -479,6 +579,35 @@ contains
     if(.not.is_point_inside_block(XyzTest_D(1:nDim), iBlock)) &
          write(*,*)'ERROR: is_point_inside_block failed'
 
+    write(*,*)'Testing compact_octree'
+    call compact_octree(nBlockAll)
+    if(iOctree_IA(Status_, nBlockAll+1) /= Skipped_) &
+         write(*,*)'ERROR: compact_octree faild, nBlockAll=', nBlockAll, &
+         ' but status of next block is', iOctree_IA(Status_, nBlockAll+1), &
+         ' instead of ',Skipped_
+    if(any(iOctree_IA(Status_, 1:nBlockAll) == Skipped_)) &
+         write(*,*)'ERROR: compact_octree faild, nBlockAll=', nBlockAll, &
+         ' but iOctree_IA(Status_, 1:nBlockAll)=', &
+         iOctree_IA(Status_, 1:nBlockAll),' contains skipped=',Skipped_
+    call find_point(XyzTest_D,iBlock)
+    if(iBlock /= nRoot)write(*,*)'ERROR: compact_octree faild, iBlock=',&
+         iBlock,' instead of',nRoot
+    if(.not.is_point_inside_block(XyzTest_D(1:nDim), iBlock)) &
+         write(*,*)'ERROR: is_point_inside_block failed'
+
+    write(*,*)'Testing write_octree_file'
+    call write_octree_file('octree.rst')
+
+
+    write(*,*)'Testing read_octree_file'
+    iOctree_IA = NoBlock_
+    nRoot_D = 0
+    call read_octree_file('octree.rst')
+
+    call find_point(XyzTest_D,iBlock)
+    if(iBlock /= nRoot)write(*,*)'ERROR: compact_octree faild, iBlock=',&
+         iBlock,' instead of',nRoot
+    
   end subroutine test_octree
 
 end module ModOctreeNew
