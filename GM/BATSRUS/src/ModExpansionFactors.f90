@@ -271,12 +271,20 @@ contains
 
     ! Calculate WSA speed distribution using eq. 1 in Arge et al.
     ! 2004:
-    WSAspeed_N(:,:,:)=(265.0+&
-         1.5*ExpansionFactorInv_N(:,:,:)**(1.0/3.0)/&
-         ( cOne+ExpansionFactorInv_N(:,:,:) )**(1.0/3.0)* &
-         (5.9-1.5*exp( 1.0-(ThetaB_N(:,:,:)/7.0)**(5.0/2.0) ) &
-         )**(7.0/2.0) ) &    !km/s so far
-         *cE3                 !To get the result in SI
+    !WSAspeed_N(:,:,:)=(265.0+&
+    !     1.5*ExpansionFactorInv_N(:,:,:)**(1.0/3.0)/&
+    !     ( cOne+ExpansionFactorInv_N(:,:,:) )**(1.0/3.0)* &
+    !     (5.9-1.5*exp( 1.0-(ThetaB_N(:,:,:)/7.0)**(5.0/2.0) ) &
+    !     )**(7.0/2.0) ) &    !km/s so far
+    !     *cE3                 !To get the result in SI
+    
+    ! Calculate WSA speed distribution using eq. obtained
+    ! by personal communication with N. Arge (2006)                                              
+    WSAspeed_N(:,:,:)=(240.0+&
+         (675.0*ExpansionFactorInv_N(:,:,:)**(1./4.5)/(&
+         ExpansionFactorInv_N(:,:,:)+1.0)**(1./4.5))*&
+         (1.0-0.8*exp(1.0-(ThetaB_N(:,:,:)/2.8)**1.25)/exp(1.0))**3.0)*cE3
+
     ! Calculate WSA speed distribution using eq. 2 in Arge et al.
     ! 2003:
     !WSAspeed_N(:,:,:)=(265.0+25.0* exp(log(ExpansionFactorInv_N(:,:&
