@@ -1261,7 +1261,7 @@ contains
     use ModPhysics, ONLY: inv_gm1
     use ModGeometry,ONLY: R_BLK
     use ModEnergy,  ONLY: calc_energy_cell
-
+    use ModExpansionFactors, ONLY: gammaSS
     implicit none
     integer,intent(in):: iStage,iBlock
     integer:: i,j,k
@@ -1275,7 +1275,7 @@ contains
        call get_plasma_parameters_cell(i,j,k,iBlock,&
             DensCell,PresCell,GammaCell)
        if(R_BLK(i,j,k,iBlock)>2.5)&
-            GammaCell=GammaCell-(GammaCell-1.1)*max(0.0, &
+            GammaCell=GammaCell-(GammaCell-gammaSS)*max(0.0, &
             -1.0 + 2*State_VGB(P_,i,j,k,iBlock)/&
             (State_VGB(P_   ,i,j,k,iBlock)+(&
             (State_VGB(Bx_   ,i,j,k,iBlock)+B0xCell_BLK(i,j,k,iBlock))**2+&
