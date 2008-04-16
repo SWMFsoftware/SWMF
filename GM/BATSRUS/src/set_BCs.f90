@@ -326,20 +326,15 @@ contains
     !^CFG END SECONDBODY
 
     FaceState_V = FaceState_VI(:,iBoundary)  
-    if(iBoundary==west_.and. &
+!    if(iBoundary==west_.and. &
+     if(  &
          (TypeBc == 'vary'.or.TypeBc == 'inflow') ) then                          
        call get_solar_wind_point(&
             TimeBc,           &
+            FaceCoords_D(x_), &
             FaceCoords_D(y_), &
             FaceCoords_D(z_), &
-            FaceState_V(rho_),&
-            FaceState_V(Ux_ ),&
-            FaceState_V(Uy_ ),&
-            FaceState_V(Uz_ ),&
-            FaceState_V(Bx_ ),&
-            FaceState_V(By_ ),&
-            FaceState_V(Bz_ ),&
-            FaceState_V(P_))            
+            FaceState_V)
     end if                                                        
 
     select case(TypeBc) 

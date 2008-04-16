@@ -1,18 +1,35 @@
+!Modified by Yingjuan for user defined IMF input variables
+
 module ModUpstreamData
   use ModKind
+  use ModVarIndexes
+  use ModMultiFluid, ONLY: select_fluid, iFluid, &
+       iRho, iRhoUx, iRhoUy, iRhoUz, iP, MassIon_I
+  use ModPhysics, ONLY: LowDensityRatio, inv_g
+  use ModNumConst, ONLY: cTiny  
   implicit none
 
   integer, parameter :: MaxVarTime=7
-  integer, parameter :: MaxVarImf =8
+  integer, parameter :: MaxVarImf =nVar
   integer, parameter :: Max_Upstream_Npts = 50000
   integer :: Upstream_Npts=0
 
+  integer :: nVarImf
+  integer :: iVarImf_V(MaxVarImf) !indexed by imf variable indexes 
+                                  !and returns a normal variable index
+  logical :: UseNumberDensity=.true., UseTemperature=.true.
+  logical :: UseInputImfVars=.false.  !default old list of imf vars
+  character (LEN=255):: NameImfVars
+  character (LEN=10) :: NameImfVar_I(MaxVarImf)
+  
   real         :: Upstream_Data(Max_Upstream_Npts, MaxVarImf)
   real(Real8_) :: Upstream_Time(Max_Upstream_Npts)
 
+  
   ! Solar Wind Input Variables
   character(len=3) :: TypeInputCoordSystem = 'GSM'
   real :: Propagation_Plane_XY=0.0, Propagation_Plane_XZ=0.0
+  real :: Normal_D(3)=(/1.0, 0.0, 0.0/), MagNormal
 
 end Module ModUpstreamData
 
@@ -28,17 +45,19 @@ subroutine read_upstream_input_file(upstreamfilename)
   use CON_geopack
   use ModIO, ONLY: iUnitOut, write_prefix
   use ModTimeConvert, ONLY: time_int_to_real
-  use ModUtilities, ONLY: upper_case
+  use ModUtilities, ONLY: upper_case, lower_case
   use ModMpi
   implicit none
 
   character (len=100), intent(in) :: upstreamfilename
 
-  integer :: iError, i 
+  integer :: iError, i , iVar, jVar
   logical :: UseZeroBx
 
   ! One line of input
   character (len=100) :: line
+  character (len=10) :: string, NameVar
+
 
   real :: TmpData_V(MaxVarImf)
   integer :: Tmp_Time(MaxVarTime)
@@ -51,8 +70,11 @@ subroutine read_upstream_input_file(upstreamfilename)
   logical   :: DoSetMatrix=.true.
 
   character (len=*), parameter:: NameSub='read_upstream_input_file'
+  logical :: oktest, oktest_me
+  !---------------------------------------------------------------------------
 
-  !--------------------------------------------------------------------------
+  call set_oktest(NameSub,oktest,oktest_me)
+
   UseZeroBx = .false.
   TimeDelay = cZero
 
@@ -68,6 +90,16 @@ subroutine read_upstream_input_file(upstreamfilename)
      Propagation_Plane_XY = 0.0
      Propagation_Plane_XZ = 0.0
 
+     nVarImf = 8
+     iVarImf_V(1)=Bx_
+     iVarImf_V(2)=By_
+     iVarImf_V(3)=Bz_
+     iVarImf_V(4)=Ux_
+     iVarImf_V(5)=Uy_
+     iVarImf_V(6)=Uz_
+     iVarImf_V(7)=Rho_
+     iVarImf_V(8)=p_
+        
      if(lVerbose>0)then
         call write_prefix; write(iUnitOut,*) NameSub, &
              ' reading ',trim(upstreamfilename)
@@ -89,7 +121,61 @@ subroutine read_upstream_input_file(upstreamfilename)
            read(UNITTMP_,*) Propagation_Plane_XZ
            Propagation_Plane_XY = Propagation_Plane_XY * cDegToRad
            Propagation_Plane_XZ = Propagation_Plane_XZ * cDegToRad
+           Normal_D(2) = tan(Propagation_Plane_XY)
+           Normal_D(3) = tan(Propagation_Plane_XZ)
+           MagNormal = sqrt(dot_product(Normal_D, Normal_D))
+           if(MagNormal > 1.0e5 )call stop_mpi('too large angle with X plane')
+           Normal_D =  Normal_D /MagNormal
         endif
+
+        if(index(line,'#VAR')>0)then
+           read(UNITTMP_,'(a)', iostat = iError )NameImfVars
+           call split_str(NameImfVars, MaxVarImf, NameImfVar_I,nVarImf)
+           UseNumberDensity=.false.
+           UseTemperature =.false.
+           iVarImf_V(:)=0
+           if(oktest)then
+              write(*,*)'NameImfVars=', NameImfVars
+              write(*,*)'NameImfVar_I=',NameImfVar_I
+              write(*,*)'Max Number of input variables =',MaxVarImf
+              write(*,*)'user input number of variables=',nVarImf
+           end if
+           Do iVar= 1, nVarImf
+              String=NameImfVar_I(iVar)
+              call lower_case(String)
+              select case ( String)
+              case ('n')
+                 iVarImf_V(iVar)=rho_
+                 UseNumberDensity=.true.
+              case ('ux')
+                 iVarImf_V(iVar)=Ux_
+              case ('uy')
+                 iVarImf_V(iVar)=Uy_
+              case ('uz')
+                 iVarImf_V(iVar)=Uz_
+              case ('bx')
+                 iVarImf_V(iVar)=Bx_
+              case ('by')
+                 iVarImf_V(iVar)=By_
+              case ('bz')
+                 iVarImf_V(iVar)=Bz_
+              case ('t')
+                 iVarImf_V(iVar)=p_
+                 UseTemperature =.true.
+              case  default
+                 do jVar=1, nVar
+                    NameVar=NameVar_V(jVar)
+                    call lower_case(NameVar)
+                    if(NameVar /=String) CYCLE
+                    iVarImf_V(iVar)=jVar
+                 end do
+                 if(iVarImf_V(iVar)==0.)then
+                    write(*,*)'unknown input variable', iVar, String
+                    !call stop_mpi('wrong input variables',iVar, String)
+                 end if
+              end select
+           end do
+        end if
 
         if(index(line,'#POSITION')>0)then
            read(UNITTMP_,*) Satellite_Y_Pos
@@ -107,14 +193,30 @@ subroutine read_upstream_input_file(upstreamfilename)
         if(index(line,'#START')>0) EXIT
      end do
 
-     ! Initialize array so all elements are set
+     ! Initialize array so all elements are set to approriate values
      Upstream_Data = 0.0
-
+     Upstream_Data(:, Rho_)   = 1.0
+     Upstream_Data(:, P_)     = inv_g
+     do iFluid = IonFirst_+1, nFluid
+        call select_fluid 
+        Upstream_Data(:, Rho_)   = LowDensityRatio
+        Upstream_Data(:, iP)     = inv_g*LowDensityRatio &
+             *MassIon_I(1)/MassFluid_I(iFluid)
+     end do
+     if(UseMultiSpecies)then
+        Upstream_Data(:, SpeciesFirst_) = &
+             1.0 - cTiny*(SpeciesLast_-SpeciesFirst_)
+        Upstream_Data(:, SpeciesFirst_+1:SpeciesLast_)= &
+             cTiny
+     end if
+     
      ! Read the data
      do
         read(UNITTMP_,*,iostat=iError) &
-             Tmp_Time, TmpData_V
-
+             Tmp_Time, TmpData_V(1:nVarImf)
+        write(*,*)'Upstream_Npts=',Upstream_Npts
+        write(*,*) "Tmp_Time=", Tmp_Time
+        write(*,*) "TmpData_V=",TmpData_V
         if (iError /= 0) EXIT
 
         if (Upstream_Npts >= Max_Upstream_Npts) then
@@ -129,8 +231,17 @@ subroutine read_upstream_input_file(upstreamfilename)
         end if
 
         Upstream_Npts = Upstream_Npts + 1
+        
+        do iVar =1, nVarImf
+           jVar=iVarImf_V(iVar)
+           Upstream_Data(Upstream_Npts,jVar) = TmpData_V(iVar)              
+        end do
 
-        Upstream_Data(Upstream_Npts,:)         = TmpData_V
+        if(oktest)then
+           write(*,*)'Upstream_Npts=', Upstream_Npts
+           write(*,*)'Upstream_Data=', Upstream_Data(Upstream_Npts,:)
+        end if
+
         Upstream_integer_time(Upstream_Npts,:) = Tmp_Time
 
         if (Upstream_integer_time(Upstream_Npts,1) >= 65 .and. &
@@ -157,12 +268,12 @@ subroutine read_upstream_input_file(upstreamfilename)
                    Upstream_integer_time(Upstream_Npts,5),&
                    Upstream_integer_time(Upstream_Npts,6))
               
-              Upstream_Data(Upstream_Npts,1:3)=&
+              Upstream_Data(Upstream_Npts,Bx_:Bz_)=&
                    matmul(GsmGse_DD,&
-                   Upstream_Data(Upstream_Npts,1:3))
-              Upstream_Data(Upstream_Npts,4:6)=&
+                   Upstream_Data(Upstream_Npts,Bx_:Bz_))
+              Upstream_Data(Upstream_Npts,Ux_:Uz_)=&
                    matmul(GsmGse_DD,&
-                   Upstream_Data(Upstream_Npts,4:6))
+                   Upstream_Data(Upstream_Npts,Ux_:Uz_))
            elseif(TypeCoordSystem == 'HGI' .and. &
                 TypeInputCoordSystem == 'GSM') then
               if(DoSetMatrix)then
@@ -177,12 +288,12 @@ subroutine read_upstream_input_file(upstreamfilename)
                  HgiGsm_DD=&
                       matmul(HgiGse_DD,transpose(GsmGse_DD))
               end if
-              Upstream_Data(Upstream_Npts,1:3)=&
+              Upstream_Data(Upstream_Npts,Bx_:Bz_)=&
                    matmul(HgiGsm_DD,&
-                   Upstream_Data(Upstream_Npts,1:3))
-              Upstream_Data(Upstream_Npts,4:6)=&
+                   Upstream_Data(Upstream_Npts,Bx_:Bz_))
+              Upstream_Data(Upstream_Npts,Ux_:Uz_)=&
                    matmul(HgiGsm_DD,&
-                   Upstream_Data(Upstream_Npts,4:6))
+                   Upstream_Data(Upstream_Npts,Ux_:Uz_))
            else
               write(*,*) 'Transformation between input ',&
                    ' coordinate system=',TypeInputCoordSystem,&
@@ -264,16 +375,16 @@ subroutine read_upstream_input_file(upstreamfilename)
 
      if (Upstream_Npts == 1) then
 
-        SW_Bx_dim  = Upstream_Data(1,1)
-        SW_By_dim  = Upstream_Data(1,2)
-        SW_Bz_dim  = Upstream_Data(1,3)
+        SW_Bx_dim  = Upstream_Data(1,Bx_)
+        SW_By_dim  = Upstream_Data(1,By_)
+        SW_Bz_dim  = Upstream_Data(1,Bz_)
+        
+        SW_Ux_dim  = Upstream_Data(1,Ux_)
+        SW_Uy_dim  = Upstream_Data(1,Uy_)
+        SW_Uz_dim  = Upstream_Data(1,Uz_)
 
-        SW_Ux_dim  = Upstream_Data(1,4)
-        SW_Uy_dim  = Upstream_Data(1,5)
-        SW_Uz_dim  = Upstream_Data(1,6)
-
-        SW_n_dim = Upstream_Data(1,7)
-        SW_T_dim   = Upstream_Data(1,8)
+        SW_n_dim = Upstream_Data(1,rho_)
+        SW_T_dim   = Upstream_Data(1,p_)
 
      else
 
@@ -288,16 +399,16 @@ subroutine read_upstream_input_file(upstreamfilename)
         if ((i == Upstream_Npts .and. &
              Upstream_Time(i) <= StartTime).or.(i==1)) then 
 
-           SW_Bx_dim  = Upstream_Data(i,1)
-           SW_By_dim  = Upstream_Data(i,2)
-           SW_Bz_dim  = Upstream_Data(i,3)
+           SW_Bx_dim  = Upstream_Data(i,Bx_)
+           SW_By_dim  = Upstream_Data(i,By_)
+           SW_Bz_dim  = Upstream_Data(i,Bz_)
 
-           SW_Ux_dim  = Upstream_Data(i,4)
-           SW_Uy_dim  = Upstream_Data(i,5)
-           SW_Uz_dim  = Upstream_Data(i,6)
+           SW_Ux_dim  = Upstream_Data(i,Ux_)
+           SW_Uy_dim  = Upstream_Data(i,Uy_)
+           SW_Uz_dim  = Upstream_Data(i,Uz_)
 
-           SW_n_dim = Upstream_Data(i,7)
-           SW_T_dim   = Upstream_Data(i,8)
+           SW_n_dim = Upstream_Data(i,rho_)
+           SW_T_dim   = Upstream_Data(i,p_)
 
         else
 
@@ -305,164 +416,202 @@ subroutine read_upstream_input_file(upstreamfilename)
                 (Upstream_Time(i) - Upstream_Time(i-1) + 1.0e-6)
            DtData1 = 1.0 - DtData2
 
-           SW_Bx_dim  =       DtData1  * Upstream_Data(i,1) + &
-                DtData2 * Upstream_Data(i-1,1)
-           SW_By_dim  =       DtData1  * Upstream_Data(i,2) + &
-                DtData2 * Upstream_Data(i-1,2)
-           SW_Bz_dim  =       DtData1  * Upstream_Data(i,3) + &
-                DtData2 * Upstream_Data(i-1,3)
+           SW_Bx_dim  =       DtData1  * Upstream_Data(i,Bx_) + &
+                DtData2 * Upstream_Data(i-1,Bx_)
+           SW_By_dim  =       DtData1  * Upstream_Data(i,By_) + &
+                DtData2 * Upstream_Data(i-1,By_)
+           SW_Bz_dim  =       DtData1  * Upstream_Data(i,Bz_) + &
+                DtData2 * Upstream_Data(i-1,Bz_)
 
-           SW_Ux_dim  =       DtData1  * Upstream_Data(i,4) + &
-                DtData2 * Upstream_Data(i-1,4)
-           SW_Uy_dim  =       DtData1  * Upstream_Data(i,5) + &
-                DtData2 * Upstream_Data(i-1,5)
-           SW_Uz_dim  =       DtData1  * Upstream_Data(i,6) + &
-                DtData2 * Upstream_Data(i-1,6)
+           SW_Ux_dim  =       DtData1  * Upstream_Data(i,Ux_) + &
+                DtData2 * Upstream_Data(i-1,Ux_)
+           SW_Uy_dim  =       DtData1  * Upstream_Data(i,Uy_) + &
+                DtData2 * Upstream_Data(i-1,Uy_)
+           SW_Uz_dim  =       DtData1  * Upstream_Data(i,Uz_) + &
+                DtData2 * Upstream_Data(i-1,Uz_)
 
-           SW_n_dim =       DtData1  * Upstream_Data(i,7) + &
-                DtData2 * Upstream_Data(i-1,7)
-           SW_T_dim   =       DtData1  * Upstream_Data(i,8) + &
-                DtData2 * Upstream_Data(i-1,8)
+           SW_n_dim =       DtData1  * Upstream_Data(i,rho_) + &
+                DtData2 * Upstream_Data(i-1,rho_)
+           SW_T_dim   =       DtData1  * Upstream_Data(i,p_) + &
+                DtData2 * Upstream_Data(i-1,p_)
         endif
      endif
   endif
 
 end subroutine read_upstream_input_file
 !============================================================================
-!BOP
 !IROUTINE: reusable procedure to normalize the physicsl data file
 !INTERFACE
 subroutine normalize_upstream_data
-  !USES:
-  use ModPhysics,ONLY: Si2No_V, UnitN_, UnitP_, UnitU_, UnitB_,&
+  use ModPhysics,ONLY: Io2No_V, UnitTemperature_, UnitN_, UnitP_, UnitU_, UnitB_,&
       AverageIonCharge, ElectronTemperatureRatio
-  use ModUpstreamData, ONLY: Upstream_Data, Upstream_Npts
+  use ModUpstreamData
+  use ModMultiFluid, ONLY: MassIon_I
   use ModConst
-!EOP
   implicit none
-!BOP
-!DESCRIPTION:
-  ! According to conventions, temperature in the IMF files is given in K,
-  ! magnetic field in nanoTesla's, velocity in km/sec:
-  real,parameter:: cNanoTesla=cOne/cE9 ![Tesla]
-  ! Velociy in km/sec
-  real,parameter:: cKmPerSec=cThousand ![m/s]
-  ! Number density is per cubic centimeter
-  real,parameter::cPerCm3=cE6 ![per cubic meter]
-!EOP
-  ! Normalize B
-  Upstream_Data(:,1:3) = &
-       Upstream_Data(:,1:3)*cNanotesla*Si2No_V(UnitB_)
-  ! Normalize U
-  Upstream_Data(:,4:6) = &
-       Upstream_Data(:,4:6)*cKmPerSec*Si2No_V(UnitU_)
-  ! Convert T into Normalized P:p=n K_B T
-  Upstream_Data(:,8) = &
-       (Upstream_Data(:,7)*cPerCm3)*cBoltzmann*&
-       Upstream_Data(:,8)*Si2No_V(UnitP_)
-  ! Normalize number density
-  Upstream_Data(:,7) = Upstream_Data(:,7)*cPerCm3*Si2No_V(UnitN_)
 
-  ! So far we assumed a fully ionized pure hydrogen plasma with
-  ! negligible electron pressure: Pion = Nion*k*Tion
-  ! Fix: P = Pion + Pe = Nion*k*Tion + Ne*k*Te = Pion*(1+Ne/Nion*Te/Tion)
-  Upstream_Data(:,8) = Upstream_Data(:,8) * &
-       (1.0 + AverageIonCharge*ElectronTemperatureRatio)
+  integer:: iVar, jVar
+  integer:: T_= p_
+  logical:: oktest =.true.
+  !-----------------------
 
+  !normalize B and U 
+  Upstream_Data(:,Bx_:Bz_) = &
+       Upstream_Data(:, Bx_:Bz_)*Io2No_V(UnitB_)
+  Upstream_Data(:,Ux_:Uz_) = &
+       Upstream_Data(:, Ux_:Uz_)*Io2No_V(UnitU_)
+  
+  do iFluid = IonFirst_+1, nFluid
+     call select_fluid
+     Upstream_Data(:, iRho  )=Upstream_Data(:, iRho)*Io2No_V(UnitN_)
+     Upstream_Data(:, iRhoUx)=Upstream_Data(:, iRhoUx)*Io2No_V(UnitU_)
+     Upstream_Data(:, iRhoUy)=Upstream_Data(:, iRhoUy)*Io2No_V(UnitU_)
+     Upstream_Data(:, iRhoUz)=Upstream_Data(:, iRhoUz)*Io2No_V(UnitU_)
+
+     !change number density to mass density
+     if (UseNumberDensity) &
+          Upstream_Data(:,irho)=Upstream_Data(:,irho)*MassFluid_I(iFluid)
+
+     !change temperature to pressure
+     if(UseTemperature)  Upstream_Data(:,p_)= &
+          Upstream_Data(:,iP)*Io2No_V(UnitTemperature_)&
+          *Upstream_Data(:,irho)/MassFluid_I(iFluid)
+  end do
+
+
+  if(UseMultiSpecies) then
+     Upstream_Data(:,rho_)=0.0
+     !calculate number density to get the right pressure p=n*T
+     do jVar=SpeciesFirst_, SpeciesLast_
+        Upstream_Data(:,jVar)=Upstream_Data(:,jVar)*Io2No_V(UnitN_) 
+        Upstream_Data(:,rho_)=Upstream_Data(:,rho_)+Upstream_Data(:,jVar)
+     end do
+
+     !normalize p = n*T 
+     if(UseTemperature)  Upstream_Data(:,p_)= &
+          Upstream_Data(:,T_)*Io2No_V(UnitTemperature_)&
+          *Upstream_Data(:,rho_)
+
+     !calculate mass density of each ion species and the total mass density
+     Upstream_Data(:,rho_)=0.0
+     do jVar=SpeciesFirst_, SpeciesLast_
+        Upstream_Data(:,jVar)=Upstream_Data(:,jVar)*MassSpecies_V(jVar) 
+        Upstream_Data(:,rho_)=Upstream_Data(:,rho_)+Upstream_Data(:,jVar)
+     end do
+
+  else
+     Upstream_Data(:,rho_) = &
+          Upstream_Data(:, rho_)*Io2No_V(UnitN_)
+     
+     if (UseNumberDensity) &
+          Upstream_Data(:,rho_)=Upstream_Data(:,rho_)*MassIon_I(1)
+
+     if(UseTemperature)  Upstream_Data(:,p_)= &
+          Upstream_Data(:,T_)*Io2No_V(UnitTemperature_)&
+          *Upstream_Data(:,rho_)/MassFluid_I(1)
+     
+  end if
+
+  !normalize Pressure in nPa if not input temperature
+  if(.not.UseTemperature)then
+     Upstream_Data(:,p_) = &
+          Upstream_Data(:, p_)*Io2No_V(UnitP_)
+  else
+     Upstream_Data(:,p_) = Upstream_Data(:,p_) * &
+          (1.0 + AverageIonCharge*ElectronTemperatureRatio)
+  end if
+
+  if(oktest)then
+     write(*,*)'Io2No_V(UnitP_)',Io2No_V(UnitP_)
+     write(*,*)'Io2No_V(UnitN_)*Io2No_V(UnitTemperature_)',&
+          Io2No_V(UnitN_)*Io2No_V(UnitTemperature_)     
+     write(*,*)'After normalization, Upstream_Data(1,1:MaxVarImf)=',&
+          Upstream_Data(1,1:MaxVarImf)
+     write(*,*)'After normalization, Upstream_Data(2,1:MaxVarImf)=',&
+          Upstream_Data(2,1:MaxVarImf)
+     write(*,*)'After normalization, Upstream_Data(3,1:MaxVarImf)=',&
+          Upstream_Data(3,1:MaxVarImf)
+  end if
 end subroutine normalize_upstream_data
 !======================================================================
-subroutine get_solar_wind_point(TimeSimulation,y,z,&
-     current_SW_rho, current_SW_Ux, current_SW_Uy, current_SW_Uz, &
-     current_SW_Bx, current_SW_By, current_SW_Bz, current_SW_p)
+subroutine get_solar_wind_point(TimeSimulation,x, y,z,&
+     SolarWind_V)
 
   use ModKind
   use ModMain
   use ModUpstreamData
   use ModPhysics
-  use ModMultiFluid, ONLY: MassIon_I
+  use ModVarIndexes
+  use ModGeometry, ONLY: x1, x2
 
   implicit none
-  real, intent(in) :: TimeSimulation,y,z
+  real, intent(in) :: TimeSimulation,x,y,z
   real, intent(out) :: & ! Varying solar wind parameters
-       current_SW_rho, current_SW_Ux, current_SW_Uy, current_SW_Uz, &
-       current_SW_Bx, current_SW_By, current_SW_Bz,current_SW_p
-
+       SolarWind_V(MaxVarImf)
 
   integer :: iData
   real(Real8_) :: dtData1, dtData2, time_now
-  real    :: Ux, current_sw_n
+  real    :: Satellite_X_Pos
+  real    :: SatDistance_D(3), U_D(3)
 
   !--------------------------------------------------------------------------
   time_now = StartTime+TimeSimulation
 
   if (UseUpstreamInputFile.and.(Upstream_Npts > 0)) then
-
+     
      if (Upstream_Npts == 1) then
 
-        current_SW_Bx  = Upstream_Data(1,1)
-        current_SW_By  = Upstream_Data(1,2)
-        current_SW_Bz  = Upstream_Data(1,3)
-
-        current_SW_Ux  = Upstream_Data(1,4)
-        current_SW_Uy  = Upstream_Data(1,5)
-        current_SW_Uz  = Upstream_Data(1,6)
-
-        current_SW_n   = Upstream_Data(1,7)
-        current_SW_p   = Upstream_Data(1,8)
-
+        SolarWind_V = Upstream_Data(1,:)
+        
      else
-
+        if(Upstream_Data(1,Ux_)>0.0)then
+           Satellite_X_Pos=x1  
+        else
+           Satellite_X_Pos=x2
+        endif
+        
         iData = 1
-
-        do while ((iData < Upstream_Npts).and.   &
+        do while ((iData < Upstream_Npts).and. &
              (Upstream_Time(iData) < time_now))
            iData = iData + 1
         enddo
-
-        if ((Propagation_Plane_XY /= 0.0).or.   &
+        
+        if ((abs(x-Satellite_X_Pos) > 1.0e-5) .or.   &
+             (Propagation_Plane_XY /= 0.0)    .or.   &
              (Propagation_Plane_XZ /= 0.0)) then
+
+           SatDistance_D = &
+                (/x- Satellite_X_Pos, y-Satellite_Y_Pos, z - Satellite_Z_Pos /)
 
            if ((iData == Upstream_Npts .and. &
                 Upstream_Time(iData) <= time_now).or.(iData==1)) then 
-              Ux = Upstream_Data(iData,4)
-           else
-
+              U_D = Upstream_Data(iData,Ux_:Uz_)
+           else           
               dtData2 = (Upstream_Time(iData) - time_now) / &
                    (Upstream_Time(iData) - Upstream_Time(iData-1) + 1.0e-6)
               dtData1 = 1.0 - dtData2
+              
+              U_D = dtData1 * Upstream_Data(iData,  Ux_:Uz_) + &
+                   dtData2 * Upstream_Data(iData-1,Ux_:Uz_)
 
-              Ux = dtData1  * Upstream_Data(iData,4) + &
-                   dtData2 * Upstream_Data(iData-1,4)
            endif
-
+           
            ! Time is in SI units
-           time_now = time_now + &
-                ((Y - Satellite_Y_Pos) * sin(Propagation_Plane_XY)       &
-                +(Z - Satellite_Z_Pos) * sin(Propagation_Plane_XZ)) / Ux &
-                * No2Si_V(UnitT_)
-
-           iData = 1
-
+           time_now = time_now - &
+                dot_product(SatDistance_D,Normal_D)/ &
+                dot_product(U_D,Normal_D)* No2Si_V(UnitT_)
+           
+           iData = 1           
            do while ((iData < Upstream_Npts).and. &
                 (Upstream_Time(iData) < time_now))
               iData = iData + 1
            enddo
-
-        endif
-
+        end if
+        
         if ((iData == Upstream_Npts .and. &
              Upstream_Time(iData) <= time_now).or.(iData==1)) then 
 
-           current_SW_Bx  = Upstream_Data(iData,1)
-           current_SW_By  = Upstream_Data(iData,2)
-           current_SW_Bz  = Upstream_Data(iData,3)
-
-           current_SW_Ux  = Upstream_Data(iData,4)
-           current_SW_Uy  = Upstream_Data(iData,5)
-           current_SW_Uz  = Upstream_Data(iData,6)
-
-           current_SW_n   = Upstream_Data(iData,7)
-           current_SW_p   = Upstream_Data(iData,8)
+           SolarWind_V(:)  = Upstream_Data(iData,:)
 
         else
 
@@ -470,43 +619,12 @@ subroutine get_solar_wind_point(TimeSimulation,y,z,&
                 (Upstream_Time(iData) - Upstream_Time(iData-1) + 1.0e-6)
            dtData1 = 1.0 - dtData2
 
-           current_SW_Bx  = dtData1 * Upstream_Data(iData,1) + &
-                dtData2 * Upstream_Data(iData-1,1)
-           current_SW_By  = dtData1 * Upstream_Data(iData,2) + &
-                dtData2 * Upstream_Data(iData-1,2)
-           current_SW_Bz  = dtData1 * Upstream_Data(iData,3) + &
-                dtData2 * Upstream_Data(iData-1,3)
-
-           current_SW_Ux  = dtData1 * Upstream_Data(iData,4) + &
-                dtData2 * Upstream_Data(iData-1,4)
-           current_SW_Uy  = dtData1 * Upstream_Data(iData,5) + &
-                dtData2 * Upstream_Data(iData-1,5)
-           current_SW_Uz  = dtData1 * Upstream_Data(iData,6) + &
-                dtData2 * Upstream_Data(iData-1,6)
-
-           current_SW_n   = dtData1 * Upstream_Data(iData,7) + &
-                dtData2 * Upstream_Data(iData-1,7)
-           current_SW_p   = dtData1 * Upstream_Data(iData,8) + &
-                dtData2 * Upstream_Data(iData-1,8)
+           SolarWind_V(:)  = dtData1 * Upstream_Data(iData,:) + &
+                dtData2 * Upstream_Data(iData-1,:)
 
         endif
 
      endif
-
-  else
-
-     current_SW_n   = SW_n
-     current_SW_p   = SW_p
-     current_SW_Ux  = SW_Ux
-     current_SW_Uy  = SW_Uy
-     current_SW_Uz  = SW_Uz
-     current_SW_Bx  = SW_Bx
-     current_SW_By  = SW_By
-     current_SW_Bz  = SW_Bz
-
   endif
-
-  ! Convert number density to mass density in normalized units
-  Current_SW_rho = current_SW_n*MassIon_I(1)
 
 end subroutine get_solar_wind_point

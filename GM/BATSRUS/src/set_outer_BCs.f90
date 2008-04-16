@@ -386,7 +386,7 @@ end subroutine BC_fixed_B
 !==========================================================================  
 
 subroutine BC_solar_wind(time_now)
-  use ModGeometry,ONLY:z_BLK,y_BLK
+  use ModGeometry,ONLY:x_BLK, z_BLK,y_BLK
   use ModVarIndexes
   use ModAdvance, ONLY : State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
   use ModSetOuterBC
@@ -401,44 +401,42 @@ subroutine BC_solar_wind(time_now)
 
   ! index and location of a single point
   integer :: i,j,k
-  real :: y,z
+  real :: x, y, z
   ! Varying solar wind parameters
-  real :: rho, Ux, Uy, Uz, p, Bx, By, Bz
+  real :: SolarWind_V(nVar)
   !-----------------------------------------------------------------------
+  x=x_BLK(1,1,1,iBLK)
   do k=kmin1g,kmax1g 
      z = z_BLK(1,1,k,iBLK)
      do j=jmin1g,jmax2g
         y = y_BLK(1,j,1,iBLK)
         do i=imin1g,imax2g,sign(1,imax2g-imin1g)
-           call get_solar_wind_point(time_now, y, z, &
-                Rho, Ux, Uy, Uz, Bx, By, Bz, p)
-           State_VGB(rho_,i,j,k,iBLK)   = Rho
-           State_VGB(rhoUx_,i,j,k,iBLK) = Rho*Ux
-           State_VGB(rhoUy_,i,j,k,iBLK) = Rho*Uy
-           State_VGB(rhoUz_,i,j,k,iBLK) = Rho*Uz
-           State_VGB(Bx_,i,j,k,iBLK)    = Bx - B0xCell_BLK(i,j,k,iBLK)
-           State_VGB(By_,i,j,k,iBLK)    = By - B0yCell_BLK(i,j,k,iBLK)
-           State_VGB(Bz_,i,j,k,iBLK)    = Bz - B0zCell_BLK(i,j,k,iBLK)
-           State_VGB(P_,i,j,k,iBLK)     = p
-           do iFluid = IonFirst_+1, nFluid
+           
+           call get_solar_wind_point(time_now, x, y, z, &
+                SolarWind_V)
+
+           State_VGB(:,i,j,k,iBLK)   = SolarWind_V
+
+           do iFluid = IonFirst_, nFluid
               call select_fluid
-              State_VGB(iRho,   i,j,k,iBLK) = Rho   *LowDensityRatio
-              State_VGB(iRhoUx, i,j,k,iBLK) = Rho*Ux*LowDensityRatio
-              State_VGB(iRhoUy, i,j,k,iBLK) = Rho*Uy*LowDensityRatio
-              State_VGB(iRhoUz, i,j,k,iBLK) = Rho*Uz*LowDensityRatio
-              State_VGB(iP,     i,j,k,iBLK) = p     *LowDensityRatio &
-                   *MassIon_I(1)/MassFluid_I(iFluid)
+              State_VGB(iRhoUx, i,j,k,iBLK) = &
+                   State_VGB(iRhoUx, i,j,k,iBLK)*State_VGB(iRho,   i,j,k,iBLK)
+              State_VGB(iRhoUy, i,j,k,iBLK) = &
+                   State_VGB(iRhoUy, i,j,k,iBLK)*State_VGB(iRho,   i,j,k,iBLK)
+              State_VGB(iRhoUz, i,j,k,iBLK) = &
+                   State_VGB(iRhoUz, i,j,k,iBLK)*State_VGB(iRho,   i,j,k,iBLK)
            end do
-           if(UseMultiSpecies)then
-              State_VGB(SpeciesFirst_,i,j,k,iBLK) = &
-                   Rho - LowDensityRatio*Rho*(SpeciesLast_-SpeciesFirst_)
-              State_VGB(SpeciesFirst_+1:SpeciesLast_,i,j,k,iBLK)= &
-                   LowDensityRatio*Rho
-           end if
+
+           State_VGB(Bx_,i,j,k,iBLK)    = &
+                State_VGB(Bx_,i,j,k,iBLK) - B0xCell_BLK(i,j,k,iBLK)
+           State_VGB(By_,i,j,k,iBLK)    = &
+                State_VGB(By_,i,j,k,iBLK) - B0yCell_BLK(i,j,k,iBLK)
+           State_VGB(Bz_,i,j,k,iBLK)    = &
+                State_VGB(Bz_,i,j,k,iBLK) - B0zCell_BLK(i,j,k,iBLK)
         end do
      end do
   end do
-
+  
 end subroutine BC_solar_wind
 
 !==========================================================================  
