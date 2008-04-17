@@ -48,11 +48,11 @@ module ModVarIndexes
   integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1, B_ = Bx_-1
 
   ! These arrays are useful for multifluid
-  integer, parameter :: iRho_I(nFluid)   = (/Rho_,   HpRho,   OpRho_/)
-  integer, parameter :: iRhoUx_I(nFluid) = (/RhoUx_, HpRhoUx, OpRhoUx_/)
-  integer, parameter :: iRhoUy_I(nFluid) = (/RhoUy_, HpRhoUy, OpRhoUy_/)
-  integer, parameter :: iRhoUz_I(nFluid) = (/RhoUz_, HpRhoUz, OpRhoUz_/)
-  integer, parameter :: iP_I(nFluid)     = (/p_,     HpP_,    OpP_/)
+  integer, parameter :: iRho_I(nFluid)   = (/Rho_,   HpRho_,   OpRho_/)
+  integer, parameter :: iRhoUx_I(nFluid) = (/RhoUx_, HpRhoUx_, OpRhoUx_/)
+  integer, parameter :: iRhoUy_I(nFluid) = (/RhoUy_, HpRhoUy_, OpRhoUy_/)
+  integer, parameter :: iRhoUz_I(nFluid) = (/RhoUz_, HpRhoUz_, OpRhoUz_/)
+  integer, parameter :: iP_I(nFluid)     = (/p_,     HpP_,     OpP_/)
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
@@ -78,7 +78,7 @@ module ModVarIndexes
        1.0, & ! OpP_
        1.0, & ! Energy_
        1.0, & ! HpEnergy_
-       1.0, /)! OpEnergy_
+       1.0  /)! OpEnergy_
 
   ! The names of the variables used in i/o
   character(len=*), parameter :: NameVar_V(nVar+nFluid) = (/ &
