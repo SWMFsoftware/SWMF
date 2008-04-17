@@ -58,7 +58,7 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVar, &
   use ModRaytrace, ONLY: RayResult_VII, RayIntegral_VII, &
        InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_, xEnd_, CLOSEDRAY
 
-  use ModVarIndexes, ONLY: Bx_, Bz_, MassFluid_I
+  use ModVarIndexes, ONLY: Bx_, Bz_, MassFluid_I, IonFirst_
 
   use ModPhysics, ONLY: No2Si_V, UnitN_, UnitU_, UnitB_, UnitP_
 
@@ -178,7 +178,7 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVar, &
   call get_solar_wind_point(Time_Simulation, 0.0, 0.0, &
        Rho, Ux, Uy, Uz, Bx, By, Bz, p)
 
-  Buffer_IIV(1,:,4) = Rho/MassFluid_I(1)  * No2Si_V(UnitN_)
+  Buffer_IIV(1,:,4) = Rho/MassFluid_I(IonFirst_)  * No2Si_V(UnitN_)
   Buffer_IIV(2,:,4) = Ux * No2Si_V(UnitU_)
   Buffer_IIV(3,:,4) = Uy * No2Si_V(UnitU_)
   Buffer_IIV(4,:,4) = Uz * No2Si_V(UnitU_)
