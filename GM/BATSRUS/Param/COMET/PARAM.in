@@ -21,10 +21,6 @@ PLANETARY
 #ROTATION 
 F
 
-#GRAVITY
-T
-0
-
 #GRID
 1                       nRootBlockX
 1                       nRootBlockY
