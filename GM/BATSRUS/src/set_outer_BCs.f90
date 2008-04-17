@@ -386,7 +386,7 @@ end subroutine BC_fixed_B
 !==========================================================================  
 
 subroutine BC_solar_wind(time_now)
-  use ModGeometry,ONLY:x_BLK, z_BLK,y_BLK
+  use ModGeometry,ONLY:x_BLK, z_BLK,y_BLK, x2
   use ModVarIndexes
   use ModAdvance, ONLY : State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
   use ModSetOuterBC
@@ -405,13 +405,15 @@ subroutine BC_solar_wind(time_now)
   ! Varying solar wind parameters
   real :: SolarWind_V(nVar)
   !-----------------------------------------------------------------------
-  x=x_BLK(1,1,1,iBLK)
+  
   do k=kmin1g,kmax1g 
      z = z_BLK(1,1,k,iBLK)
      do j=jmin1g,jmax2g
         y = y_BLK(1,j,1,iBLK)
         do i=imin1g,imax2g,sign(1,imax2g-imin1g)
-           
+           !x= x_BLK(i,j,k,iBLK)
+            x=x2
+           !warning: only work for west side to be inflow
            call get_solar_wind_point(time_now, x, y, z, &
                 SolarWind_V)
 
