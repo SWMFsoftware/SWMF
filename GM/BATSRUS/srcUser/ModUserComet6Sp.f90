@@ -1,8 +1,8 @@
 !^CFG COPYRIGHT UM
 !this file contains the ModUser for general Cometary MHD
 !MassSpecies is defined at [SpeciesFirst:SpeciesLast]
-! Last 01.12 Add Elastic collision
-! This 01.13 Add user_init_point_implicit
+! Last 01.15 committed in
+! This 01.16 change Te calculation, add ini rates for solar max.
 ! This ModUser.f90 requires copying ModEquationsMHDComet.f90 into ModEquation.f90.
 ! jpattern = 0, 10, 11, 12, sets the electron impact ionization term, and
 ! the way electron temperature is treated for dissociative recombination processes[Gombosi96].
@@ -65,9 +65,15 @@ module ModUser
     CO_Op_    = 10,&
     CO_COp_   = 11
 
+!The ionization rates that put down here are midified in user_init by
+! a factor (ionization_rate) that reflecting the solar distance.
   real, dimension(MaxIni) :: IoniRate_I=(/5.4e-7, .2e-7, &
 	1.2e-7, .6e-7, .9e-7, 3.94e-7, 9.5e-9, 5.3e-8, 3.45e-7, &
 	.4e-7, 6.25e-7/)  !s^(-1), solar minimum conditions at 1AU
+
+!  real, dimension(MaxIni) :: IoniRate_I=(/5.4e-7, .2e-7, &
+!	1.2e-7, .6e-7, .9e-7, 3.94e-7, 9.5e-9, 5.3e-8, 3.45e-7, &
+!	.4e-7, 6.25e-7/)  !s^(-1), solar maximum conditions at 1AU
 
   integer, parameter :: &	!CX reaction number
     H2Op_H2O__H3Op_OH_ = 1 ,&
@@ -173,7 +179,8 @@ contains
 
     kin=kin_cc*1E-6
     Unr=Unr_km*1E3
-    lambda = Unr/ionization_rate	!in ??? unit.
+    lambda = Unr/ionization_rate	!in meters 
+! should be lambda water(5.4e-7), but this is the same with 1sp model.
 
 !    if(UseMultiSpecies) mbar = NuMassSp_I(H2O_)
 
@@ -217,7 +224,7 @@ contains
 		    z_BLK(0:nI+1,0:nJ+1,0:nK+1,globalBLK)/ &
 		    R_BLK(0:nI+1,0:nJ+1,0:nK+1,globalBLK)
     UNeu_BLK(:,:,:,globalBLK,:) = &
-		UNeu_BLK(:,:,:,globalBLK,:)/No2Si_V(UnitU_)
+		    UNeu_BLK(:,:,:,globalBLK,:)/No2Si_V(UnitU_)
 
 !define neutral density array, necessary for special neutral distribution types only
     NNeu_BLK(:,:,:,globalBLK,H2O_) = Qprod * &	!!!Number Density!!!
@@ -384,8 +391,8 @@ contains
 	     Te = 1.e5
           endif
        else
-	  Te = State_VGB(p_,i,j,k,globalBLK)*No2Si_V(UnitP_)*cProtonMass / &
-		( cTwo*No2Si_V(UnitRho_)*cBoltzmann*totalNumRho )
+	  Te = State_VGB(p_,i,j,k,globalBLK)*No2Si_V(UnitP_) / &
+		( cTwo*No2Si_V(UnitN_)*cBoltzmann*totalNumRho )
        endif	!jpattern
 
        If(Te < 200.) then
@@ -552,7 +559,7 @@ contains
                   No2Si_V(UnitN_)*cBoltzmann*Tion/No2Si_V(UnitP_)
           else
              Pthmin_VC = State_VGB(rho_,i,j,k,iBlock)/ &
-                  mbar*No2Si_V(UnitP_)*cBoltzmann*Tion/No2Si_V(UnitP_)
+                  mbar*No2Si_V(UnitN_)*cBoltzmann*Tion/No2Si_V(UnitP_)
           endif
           if( State_VGB(p_,i,j,k,iBlock) < Pthmin_VC ) &
 	          State_VGB(p_,i,j,k,iBlock) = Pthmin_VC
