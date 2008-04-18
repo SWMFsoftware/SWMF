@@ -6,7 +6,7 @@ module ModUpstreamData
   use ModMultiFluid, ONLY: select_fluid, iFluid, &
        iRho, iRhoUx, iRhoUy, iRhoUz, iP, MassIon_I
   use ModPhysics, ONLY: LowDensityRatio, inv_g
-  use ModNumConst, ONLY: cTiny  
+  use ModNumConst, ONLY: cTiny8  
   implicit none
 
   integer, parameter :: MaxVarTime=7
@@ -205,9 +205,9 @@ subroutine read_upstream_input_file(upstreamfilename)
      end do
      if(UseMultiSpecies)then
         Upstream_Data(:, SpeciesFirst_) = &
-             1.0 - cTiny*(SpeciesLast_-SpeciesFirst_)
+             1.0 - cTiny8*(SpeciesLast_-SpeciesFirst_)
         Upstream_Data(:, SpeciesFirst_+1:SpeciesLast_)= &
-             cTiny
+             cTiny8
      end if
      
      ! Read the data
