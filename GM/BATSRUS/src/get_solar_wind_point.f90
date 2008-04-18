@@ -625,6 +625,8 @@ subroutine get_solar_wind_point(TimeSimulation,x, y,z,&
         endif
 
      endif
+  else
+     SolarWind_V=FaceState_VI(:,east_)
   endif
 
 end subroutine get_solar_wind_point
