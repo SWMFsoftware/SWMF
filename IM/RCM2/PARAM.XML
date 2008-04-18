@@ -36,10 +36,11 @@ Default value is true for ascii.
 						default="IM"/>
 
 #RCMDIR
-IM/Plots		NameRcmDir
+IM			NameRcmDir
 
 The NameRcmDir variable contains the name of the directory to store
-output files. Default value is "IM".
+output files. Default value is "IM". Don't change this unless you know
+what you are doing.
 
 </command>
 
