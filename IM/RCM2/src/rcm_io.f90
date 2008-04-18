@@ -1366,7 +1366,7 @@ CONTAINS
       OPEN (UNIT = LUN, STATUS = 'OLD', FORM = 'FORMATTED', &
             FILE = trim(NameRcmDir)//'input/rcmcrd11', IOSTAT = istat)
       IF (istat /= 0) THEN
-         write(*,*) 'ERROR OPENING RCMCRD11'
+         write(*,*) 'ERROR OPENING',trim(NameRcmDir)//'input/rcmcrd11'
          call CON_STOP('ERROR in IM/RCM2/src/rcm_io.f90::Read_grid')
       END IF
       READ (LUN, '(A80)') form_length
