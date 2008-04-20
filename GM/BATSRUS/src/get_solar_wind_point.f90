@@ -65,15 +65,15 @@ subroutine read_upstream_input_file(upstreamfilename)
 
 
   real :: TimeDelay
-  real(Real8_) :: dtData1, dtData2
+  real(Real8_) :: DtData1, DtData2
   real, save:: HgiGsm_DD(3,3)
   logical   :: DoSetMatrix=.true.
 
   character (len=*), parameter:: NameSub='read_upstream_input_file'
-  logical :: oktest, oktest_me
+  logical :: DoTest, DoTestMe
   !---------------------------------------------------------------------------
 
-  call set_oktest(NameSub,oktest,oktest_me)
+  call set_oktest(NameSub, DoTest, DoTestMe)
 
   UseZeroBx = .false.
   TimeDelay = cZero
@@ -134,7 +134,7 @@ subroutine read_upstream_input_file(upstreamfilename)
            UseNumberDensity=.false.
            UseTemperature =.false.
            iVarImf_V(:)=0
-           if(oktest)then
+           if(DoTest)then
               write(*,*)'NameImfVars=', NameImfVars
               write(*,*)'NameImfVar_I=',NameImfVar_I
               write(*,*)'Max Number of input variables =',MaxVarImf
@@ -237,7 +237,7 @@ subroutine read_upstream_input_file(upstreamfilename)
            Upstream_Data(Upstream_Npts,jVar) = TmpData_V(iVar)              
         end do
 
-        if(oktest)then
+        if(DoTest)then
            write(*,*)'Upstream_Npts=', Upstream_Npts
            write(*,*)'Upstream_Data=', Upstream_Data(Upstream_Npts,:)
         end if
@@ -383,7 +383,7 @@ subroutine read_upstream_input_file(upstreamfilename)
         SW_Uy_dim  = Upstream_Data(1,Uy_)
         SW_Uz_dim  = Upstream_Data(1,Uz_)
 
-        SW_n_dim = Upstream_Data(1,rho_)
+        SW_n_dim   = Upstream_Data(1,rho_)
         SW_T_dim   = Upstream_Data(1,p_)
 
      else
@@ -439,27 +439,31 @@ subroutine read_upstream_input_file(upstreamfilename)
   endif
 
 end subroutine read_upstream_input_file
+
 !============================================================================
-!IROUTINE: reusable procedure to normalize the physicsl data file
-!INTERFACE
+
 subroutine normalize_upstream_data
-  use ModPhysics,ONLY: Io2No_V, UnitTemperature_, UnitN_, UnitP_, UnitU_, UnitB_,&
-      AverageIonCharge, ElectronTemperatureRatio
+
+  use ModPhysics, ONLY: &
+       Io2No_V, UnitTemperature_, UnitN_, UnitP_, UnitU_, UnitB_,&
+       AverageIonCharge, ElectronTemperatureRatio
   use ModUpstreamData
   use ModMultiFluid, ONLY: MassIon_I
   use ModConst
+
   implicit none
 
   integer:: iVar, jVar
   integer:: T_= p_
-  logical:: oktest =.true.
-  !-----------------------
 
-  !normalize B and U 
-  Upstream_Data(:,Bx_:Bz_) = &
-       Upstream_Data(:, Bx_:Bz_)*Io2No_V(UnitB_)
-  Upstream_Data(:,Ux_:Uz_) = &
-       Upstream_Data(:, Ux_:Uz_)*Io2No_V(UnitU_)
+  character(len=*), parameter:: NameSub = 'normalize_upstream_data'
+  logical:: DoTest, DoTestMe
+  !--------------------------------------------------------------------------
+  call set_oktest(NameSub,DoTest,DoTestMe)
+
+  ! normalize B and U 
+  Upstream_Data(:,Bx_:Bz_) = Upstream_Data(:, Bx_:Bz_)*Io2No_V(UnitB_)
+  Upstream_Data(:,Ux_:Uz_) = Upstream_Data(:, Ux_:Uz_)*Io2No_V(UnitU_)
   
   do iFluid = IonFirst_+1, nFluid
      call select_fluid
@@ -478,9 +482,9 @@ subroutine normalize_upstream_data
           *Upstream_Data(:,irho)/MassFluid_I(iFluid)
   end do
 
-
   if(UseMultiSpecies) then
      Upstream_Data(:,rho_)=0.0
+
      !calculate number density to get the right pressure p=n*T
      do jVar=SpeciesFirst_, SpeciesLast_
         Upstream_Data(:,jVar)=Upstream_Data(:,jVar)*Io2No_V(UnitN_) 
@@ -489,8 +493,7 @@ subroutine normalize_upstream_data
 
      !normalize p = n*T 
      if(UseTemperature)  Upstream_Data(:,p_)= &
-          Upstream_Data(:,T_)*Io2No_V(UnitTemperature_)&
-          *Upstream_Data(:,rho_)
+          Upstream_Data(:,T_)*Io2No_V(UnitTemperature_)*Upstream_Data(:,rho_)
 
      !calculate mass density of each ion species and the total mass density
      Upstream_Data(:,rho_)=0.0
@@ -512,16 +515,15 @@ subroutine normalize_upstream_data
      
   end if
 
-  !normalize Pressure in nPa if not input temperature
-  if(.not.UseTemperature)then
-     Upstream_Data(:,p_) = &
-          Upstream_Data(:, p_)*Io2No_V(UnitP_)
-  else
+  ! normalize pressure or temperature
+  if(UseTemperature)then
      Upstream_Data(:,p_) = Upstream_Data(:,p_) * &
           (1.0 + AverageIonCharge*ElectronTemperatureRatio)
+  else
+     Upstream_Data(:, p_) = Upstream_Data(:, p_)*Io2No_V(UnitP_)
   end if
 
-  if(oktest)then
+  if(DoTestMe)then
      write(*,*)'Io2No_V(UnitP_)',Io2No_V(UnitP_)
      write(*,*)'Io2No_V(UnitN_)*Io2No_V(UnitTemperature_)',&
           Io2No_V(UnitN_)*Io2No_V(UnitTemperature_)     
@@ -532,10 +534,12 @@ subroutine normalize_upstream_data
      write(*,*)'After normalization, Upstream_Data(3,1:MaxVarImf)=',&
           Upstream_Data(3,1:MaxVarImf)
   end if
+
 end subroutine normalize_upstream_data
+
 !======================================================================
-subroutine get_solar_wind_point(TimeSimulation,x, y,z,&
-     SolarWind_V)
+
+subroutine get_solar_wind_point(TimeSimulation, x, y, z, SolarWind_V)
 
   use ModKind
   use ModMain
@@ -546,15 +550,14 @@ subroutine get_solar_wind_point(TimeSimulation,x, y,z,&
 
   implicit none
   real, intent(in) :: TimeSimulation,x,y,z
-  real, intent(out) :: & ! Varying solar wind parameters
-       SolarWind_V(MaxVarImf)
+  real, intent(out) :: SolarWind_V(MaxVarImf) ! Varying solar wind parameters
 
   integer :: iData
-  real(Real8_) :: dtData1, dtData2, time_now
+  real(Real8_) :: DtData1, DtData2, time_now
   real    :: Satellite_X_Pos
   real    :: SatDistance_D(3), U_D(3)
-
   !--------------------------------------------------------------------------
+
   time_now = StartTime+TimeSimulation
 
   if (UseUpstreamInputFile.and.(Upstream_Npts > 0)) then
@@ -581,27 +584,27 @@ subroutine get_solar_wind_point(TimeSimulation,x, y,z,&
              (Propagation_Plane_XZ /= 0.0)) then
 
            SatDistance_D = &
-                (/x- Satellite_X_Pos, y-Satellite_Y_Pos, z - Satellite_Z_Pos /)
+                (/x-Satellite_X_Pos, y-Satellite_Y_Pos, z-Satellite_Z_Pos /)
 
            if ((iData == Upstream_Npts .and. &
                 Upstream_Time(iData) <= time_now).or.(iData==1)) then 
               U_D = Upstream_Data(iData,Ux_:Uz_)
            else           
-              dtData2 = (Upstream_Time(iData) - time_now) / &
+              DtData2 = (Upstream_Time(iData) - time_now) / &
                    (Upstream_Time(iData) - Upstream_Time(iData-1) + 1.0e-6)
-              dtData1 = 1.0 - dtData2
+              DtData1 = 1.0 - DtData2
               
-              U_D = dtData1 * Upstream_Data(iData,  Ux_:Uz_) + &
-                   dtData2 * Upstream_Data(iData-1,Ux_:Uz_)
+              U_D = DtData1 * Upstream_Data(iData,  Ux_:Uz_) + &
+                   DtData2 * Upstream_Data(iData-1, Ux_:Uz_)
 
            endif
            
            ! Time is in SI units
            time_now = time_now - &
-                dot_product(SatDistance_D,Normal_D)/ &
-                dot_product(U_D,Normal_D)* No2Si_V(UnitT_)
+                dot_product(SatDistance_D, Normal_D)/ &
+                dot_product(U_D, Normal_D) * No2Si_V(UnitT_)
            
-           iData = 1           
+           iData = 1
            do while ((iData < Upstream_Npts).and. &
                 (Upstream_Time(iData) < time_now))
               iData = iData + 1
@@ -615,18 +618,18 @@ subroutine get_solar_wind_point(TimeSimulation,x, y,z,&
 
         else
 
-           dtData2 = (Upstream_Time(iData) - time_now) / &
+           DtData2 = (Upstream_Time(iData) - time_now) / &
                 (Upstream_Time(iData) - Upstream_Time(iData-1) + 1.0e-6)
-           dtData1 = 1.0 - dtData2
+           DtData1 = 1.0 - DtData2
 
-           SolarWind_V(:)  = dtData1 * Upstream_Data(iData,:) + &
-                dtData2 * Upstream_Data(iData-1,:)
+           SolarWind_V(:)  = DtData1 * Upstream_Data(iData,:) + &
+                DtData2 * Upstream_Data(iData-1,:)
 
         endif
 
      endif
   else
-     SolarWind_V=FaceState_VI(:,east_)
+     SolarWind_V = FaceState_VI(:,east_)
   endif
 
 end subroutine get_solar_wind_point
