@@ -352,13 +352,12 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#POINTIMPLICIT")
         call read_var('UsePointImplicit', UsePointImplicit)
-        if(UsePointImplicit)then
-           !the array allows the user to specify the blocks to 
-           !use the point implicit scheme individually
-           UsePointImplicit_B     = UsePointImplicit
 
-           call read_var('BetaPointImplicit',BetaPointImpl)
-        end if
+        !the array allows the user to specify the blocks to 
+        !use the point implicit scheme individually
+        UsePointImplicit_B = UsePointImplicit
+        if(UsePointImplicit) &
+             call read_var('BetaPointImplicit',BetaPointImpl)
 
      case("#IMPLICIT")                                 !^CFG IF IMPLICIT BEGIN
         call read_var('UsePointImplicit', UsePointImplicit)
@@ -1974,8 +1973,6 @@ contains
     !FluxType = 'SOKOLOV'              !^CFG UNCOMMENT IF NOT RUSANOVFLUX
 
     ! Default implicit parameters      !^CFG IF IMPLICIT BEGIN
-    UsePointImplicit = .false.
-    UsePointImplicit_B = .false.
     UseImplicit      = .false.
     ImplCritType     = 'dt'
 
