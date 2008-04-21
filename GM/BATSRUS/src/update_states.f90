@@ -429,6 +429,7 @@ subroutine update_check(iStage)
 
         if(Value < 0.0)then
            i_D = minloc(State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock))
+           i = i_D(1); j = i_D(2); k = i_D(3)
            write (*,'(a,3i3,2i5,i3,a,3f12.4,/,5x,a,a,es12.4)') &
                 ' I J K iBlock iProc iVar=',i_D,iBlock,iProc,iVar, &
                 ' X Y Z=', &
