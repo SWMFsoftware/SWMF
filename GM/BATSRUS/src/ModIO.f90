@@ -3,6 +3,7 @@ Module ModIO
 
   use ModSize
   use ModIoUnit, ONLY: unit_tmp => UNITTMP_, STDOUT_
+  use ModVarIndexes, ONLY: nVar
 
   implicit none
   SAVE
@@ -19,7 +20,7 @@ Module ModIO
   integer, parameter :: Max_Satellite_Npts = 50000
   integer, parameter :: nPlotvarLosMax=10
   integer, parameter :: nPlotRfrFreqMax=20
-  integer, parameter :: nPlotvarMax = 30    ! Maximum number of plot variables
+  integer, parameter :: nPlotvarMax = min(30,nVar+10) ! Max number of plot vars
   integer, parameter :: MaxLine=20          ! Max number of lines/plot file
 
   ! Named indexes for output files
