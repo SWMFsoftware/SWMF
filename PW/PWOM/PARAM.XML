@@ -14,18 +14,28 @@ List of PW commands used in the PARAM.in file
 		<option name="Godunov" default="T"/>
 		<option name="Rusanov"/>
 	</parameter>
-	<parameter name="IsImplicit" type="logical" default="F" />
 	<parameter name="DtVertical" type="real" min="0" default="0.05" />
-
+	<parameter name="IsFullyImplicit" type="logical" default="F" />
+	<if expr="not $IsFullyImplicit">
+		<parameter name="IsPointImplicit" type="logical" default="F"/>
+		<parameter name="IsPointImplicitAll" type="logical" 
+								default="F"/>
+	</if>
 #SCHEME
 Godunov			TypeSolver
-F			IsImplicit
 0.05			DtVertical
+F			IsFullyImplicit
+F			IsPointImplicit
+F			IsPointImplicitAll
 
 TypeSolver sets the type of solver which is to be used. Currently only two
-options are available: Godunov and Rusanov. IsImplicit determines whether
-collision terms are handled implicitly or not. DtVertical sets the time step
-for plasma propagating along the field line.
+options are available: Godunov and Rusanov. 
+DtVertical sets the time step for plasma propagating along the field line.
+IsFullyImplicit determines whether the fully implicit time stepping is used. 
+If not, the last two parameters are also read.
+IsPointImplicit determines if the point implicit scheme is used or not for
+the collision terms. 
+IsPointImplicitAll is true if all terms are point implicit.
 
 The default values are shown.
 </command>
@@ -111,12 +121,14 @@ Otherwise, the PWOM uses a cold start routine. The default is shown.
 </command>
 
 <command name="SAVEPLOT">
-	<parameter name="DtSavePlot" type="real" default="10.0" />
-	<parameter name="SaveFirst" type="Logical" default="T" />
+	<parameter name="DtSavePlot" type="real" min="-1" default="10.0" />
+	<parameter name="DnSavePlot" type="integer" min="-1" default="-1" />
+	<parameter name="DoSaveFirst" type="logical" default="T" />
 
 #SAVEPLOT
 10.0			DtSavePlot
-T			SaveFirst
+-1			DnSavePlot
+T			DoSaveFirst
 
 The frequency which plot files are written out are defined here. 
 As is whether or not to save a plot on the first call. The 
