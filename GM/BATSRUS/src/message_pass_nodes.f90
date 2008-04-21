@@ -641,7 +641,6 @@ subroutine testmessage_pass_nodes
   use ModMain, ONLY : unusedBLK
   use ModMPNodes
   use ModNodes
-  use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK
   use ModParallel, ONLY : BLKneighborLEV
   use ModMpi
   implicit none
@@ -935,6 +934,8 @@ subroutine assign_node_numbers
   use ModMain, ONLY : lVerbose, nBlock, nBlockMax, nBlockALL
   use ModOctree
   use ModAdvance,  ONLY: iTypeAdvance_B, iTypeAdvance_BP, SkippedBlock_
+  use ModGeometry, ONLY : dx_BLK, dy_BLK, dz_BLK, x1,x2, y1,y2, z1,z2
+  use ModParallel, ONLY: periodic3D
   use ModNodes
   use ModMPNodes
   use ModMpi
@@ -945,6 +946,7 @@ subroutine assign_node_numbers
   integer :: i, j, k, iNode, iBLK, iError
   integer :: nOffset, nOffsetPrevious
   integer, allocatable, dimension(:) :: NodeOffset, NodeOffsetMax, nOffset_P
+  logical :: boundary
 
   !------------------------------------------
 
@@ -992,9 +994,23 @@ subroutine assign_node_numbers
      if (.not.associated(global_block_ptrs(iBLK, iProc+1) % ptr)) CYCLE
      if (.not.global_block_ptrs(iBLK, iProc+1) % ptr % used) CYCLE
      do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
-        if(NodeCount(i,j,k,iBLK)>1) &
-             NodeNumberGlobal_NB(i,j,k,iBLK) = &
-             nint(minval(V(i,j,k,iBLK,1:NodeCount(i,j,k,iBLK))))
+        if(NodeCount(i,j,k,iBLK)>1)then
+           boundary=.false.
+           if(periodic3D(1))then
+              if(min(x1,x2) > (NodeX_NB(i,j,k,iBLK)-0.5*abs(dx_BLK(iBLK))))boundary=.true.
+              if(max(x1,x2) < (NodeX_NB(i,j,k,iBLK)+0.5*abs(dx_BLK(iBLK))))boundary=.true.
+           end if
+           if(periodic3D(2))then
+              if(min(y1,y2) > (NodeY_NB(i,j,k,iBLK)-0.5*abs(dy_BLK(iBLK))))boundary=.true.
+              if(max(y1,y2) < (NodeY_NB(i,j,k,iBLK)+0.5*abs(dy_BLK(iBLK))))boundary=.true.
+           end if
+           if(periodic3D(3))then
+              if(min(z1,z2) > (NodeZ_NB(i,j,k,iBLK)-0.5*abs(dz_BLK(iBLK))))boundary=.true.
+              if(max(z1,z2) < (NodeZ_NB(i,j,k,iBLK)+0.5*abs(dz_BLK(iBLK))))boundary=.true.
+           end if
+           if(.not.boundary) NodeNumberGlobal_NB(i,j,k,iBLK) = &
+                nint(minval(V(i,j,k,iBLK,1:NodeCount(i,j,k,iBLK))))
+        end if
      end do; end do; end do
   end do
 
@@ -1010,8 +1026,7 @@ subroutine assign_node_numbers
   TREE2: do iBLK  = 1, nBlock
      if(iTypeAdvance_B(iBLK) == SkippedBlock_) CYCLE
      do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
-        if(NodeNumberLocal_NB(i,j,k,iBLK) &
-             > NodeNumberGlobal_NB(i,j,k,iBLK))then
+        if(NodeNumberLocal_NB(i,j,k,iBLK) > NodeNumberGlobal_NB(i,j,k,iBLK))then
            nOffset = nOffset+1
            NodeUniqueGlobal_NB(i,j,k,iBLK) = .false.
         end if
