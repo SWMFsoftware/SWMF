@@ -37,13 +37,14 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
 
   real :: ySqueezed
 
-  real,parameter:: cHalfMinusTiny=cHalf*(cOne-cTiny)
+  real, parameter:: cHalfMinusTiny=cHalf*(cOne-cTiny)
 
+  character(len=*), parameter :: NameSub = 'write_plot_idl'
   logical :: DoTest, DoTestMe
   !---------------------------------------------------------------------------
 
   if(iProc==PROCtest .and. iBlock==BLKtest)then
-     call set_oktest('write_plot_idl',DoTest,DoTestMe)
+     call set_oktest(NameSub, DoTest, DoTestMe)
   else
      DoTest=.false.; DoTestMe=.false.
   end if
@@ -107,10 +108,22 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
      ! Make sure that angles around 3Pi/2 are moved to Pi/2 for x=0 cut
      ySqueezed = mod(xyzStart_BLK(Phi_,iBlock),cPi)
      ! Make sure that small angles are moved to Pi degrees for y=0 cut
-     if(ySqueezed < 0.25*cPi) ySqueezed = ySqueezed + cPi
+     if(ySqueezed < 0.25*cPi .and. &
+          abs(yMin+yMax-cTwoPi) < cTiny .and. yMax-yMin < 0.01) &
+          ySqueezed = ySqueezed + cPi
   else                                          
      ySqueezed = xyzStart_BLK(y_,iBlock)
   end if                                         
+
+  if(DoTestMe)then
+     write(*,*) NameSub, 'xMin1,xMax1,yMin1,yMax1,zMin1,zMax1=',&
+          xMin1,xMax1,yMin1,yMax1,zMin1,zMax1
+     write(*,*) NameSub, 'xyzStart_BLK=',iBlock,xyzStart_BLK(:,iBlock)
+     write(*,*) NameSub, 'ySqueezed =',ySqueezed
+     write(*,*) NameSub, 'xyzEnd=',xyzStart_BLK(x_,iBlock)+(nI-1)*Dx_BLK(iBlock),&
+          ySqueezed+(nJ-1)*Dy_BLK(iBlock),&
+          xyzStart_BLK(z_,iBlock)+(nK-1)*Dz_BLK(iBlock)
+  end if
 
   ! If block is fully outside of cut then cycle
   if(  xyzStart_BLK(x_,iBlock) > xMax1.or.&
@@ -135,13 +148,13 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
   kMax = min(nK,floor((zMax1-xyzStart_BLK(z_,iBlock))/DzBlock)+1)
 
   if(DoTestMe)then
-     write(*,*)'iMin,iMax,jMin,jMax,kMin,kMax=',&
+     write(*,*) NameSub, 'iMin,iMax,jMin,jMax,kMin,kMax=',&
           iMin,iMax,jMin,jMax,kMin,kMax
-     write(*,*)'DxBlock,x1,y1,z1',DxBlock,xyzStart_BLK(:,iBlock)
-     write(*,*)'ySqueezed  =',ySqueezed
-     write(*,*)'xMin1,xMax1=',xMin1,xMax1
-     write(*,*)'yMin1,yMax1=',yMin1,yMax1
-     write(*,*)'zMin1,zMax1=',zMin1,zMax1
+     write(*,*) NameSub, 'DxBlock,x1,y1,z1',DxBlock,xyzStart_BLK(:,iBlock)
+     write(*,*) NameSub, 'ySqueezed  =',ySqueezed
+     write(*,*) NameSub, 'xMin1,xMax1=',xMin1,xMax1
+     write(*,*) NameSub, 'yMin1,yMax1=',yMin1,yMax1
+     write(*,*) NameSub, 'zMin1,zMax1=',zMin1,zMax1
   end if
 
   if(DxBlock>=Dx)then
@@ -165,7 +178,7 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
         else
            do iVar=1,nPlotVar
               Plot_V(iVar) = PlotVar(i,j,k,iVar)
-              if(abs(Plot_V(iVar)) < 1.0D-99) Plot_V(iVar) = 0.0
+              if(abs(Plot_V(iVar)) < 1.0e-99) Plot_V(iVar) = 0.0
            end do
            write(unit_tmp,'(50(1pe13.5))') &
                 DxBlockOut, x, y, z, Plot_V(1:nPlotVar)
@@ -192,7 +205,7 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
      ! Factor for taking the average
      Restrict=1./(nRestrictX*nRestrictY*nRestrictZ)
 
-     if(DoTestMe) write(*,*)'nRestrict, X, Y, Z,Restrict=',&
+     if(DoTestMe) write(*,*) NameSub, 'nRestrict, X, Y, Z,Restrict=',&
           nRestrict, nRestrictX, nRestrictY, nRestrictZ, Restrict
 
      ! Loop for the nRestrictX*nRestrictY*nRestrictZ bricks inside the cut
@@ -221,7 +234,7 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
                  write(unit_tmp)DxBlockOut,x,y,z,Plot_V(1:nPlotVar)
               else
                  do iVar=1,nPlotVar
-                    if(abs(Plot_V(iVar)) < 1.0D-99)Plot_V(iVar)=0.0
+                    if(abs(Plot_V(iVar)) < 1.0E-99)Plot_V(iVar)=0.0
                  end do
                  write(unit_tmp,'(50es13.5)')DxBlockOut,x,y,z,&
                       Plot_V(1:nPlotVar)
