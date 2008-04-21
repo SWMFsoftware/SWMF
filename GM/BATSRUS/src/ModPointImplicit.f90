@@ -47,20 +47,21 @@ module ModPointImplicit
   ! where eps^w is a small perturbation in the w-th component of Uimp.
   !EOP
   use ModSize, ONLY: nBLK
+  use ModMultiFluid, ONLY: UseMultiIon
   implicit none
 
   save
 
   private ! except
 
-  logical, public :: UsePointImplicit = .false.  ! Use point implicit scheme?
-  logical, public :: UsePointImplicit_B(nBLK)=.false.
+  logical, public :: UsePointImplicit = UseMultiIon  ! Use point implicit scheme?
+  logical, public :: UsePointImplicit_B(nBLK) = UseMultiIon
   integer, public, allocatable :: &
        iVarPointImpl_I(:)                        ! Indexes of point impl. vars
   logical, public :: IsPointImplSource=.false.   ! Ask for implicit source
   logical, public :: IsPointImplMatrixSet=.false.! Is the dS/dU matrix set
                                                  ! analytically?
-  real, public    :: BetaPointImpl = 0.5         ! Coeff. of implicit part: 
+  real, public    :: BetaPointImpl = 1.0         ! Coeff. of implicit part: 
                                                  ! beta=0.5 second order
                                                  ! beta=1.0 first order
 
