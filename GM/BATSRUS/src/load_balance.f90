@@ -52,7 +52,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   integer :: iType_I(-ImplBlock_:ImplBlock_)
 
   ! load balance distribute each type
-  integer :: iLoadTable_II(0:nProc-1,MaxType), iProcTo_I(MaxType)
+  integer :: nBlock_PI(0:nProc-1,MaxType), iProcTo_I(MaxType)
   integer :: iProcStart, iProcStop, iProcExtraBlock
 
   ! Number of blocks moved around
@@ -142,20 +142,20 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   ! Construct load balance table for various types
   do iType=1,nType
      ! minimum load for each processor
-     iLoadTable_II(0:nProc-1,iType) = nBlockALL_I(iType)/nProc
+     nBlock_PI(0:nProc-1,iType) = nBlockALL_I(iType)/nProc
 
      ! The processors with extra blocks are filled in from nProc-1 backwards
      iProcStart = nProc - modulo(sum(nBlockALL_I(1:iType)),nProc)
      iProcStop = iProcStart + modulo(nBlockALL_I(iType),nProc) - 1
      do iProcExtraBlock=iProcStart,iProcStop
         iProcTo = modulo(iProcExtraBlock,nProc)
-        iLoadTable_II(iProcTo,iType) = iLoadTable_II(iProcTo,iType) + 1
+        nBlock_PI(iProcTo,iType) = nBlock_PI(iProcTo,iType) + 1
      end do
 
      ! convert to accumilative load table
      do iProcTo=1,nProc-1
-        iLoadTable_II(iProcTo,iType) = iLoadTable_II(iProcTo,iType) &
-             + iLoadTable_II(iProcTo-1,iType)
+        nBlock_PI(iProcTo,iType) = nBlock_PI(iProcTo,iType) &
+             + nBlock_PI(iProcTo-1,iType)
      end do
   end do
 
@@ -204,12 +204,13 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
         iBlockALL_I(iType) = iBlockALL_I(iType) + 1
 
         PROC: do iProcTo=iProcTo_I(iType),nProc-1
-           if(iBlockALL_I(iType) <= iLoadTable_II(iProcTo,iType))then
+           if(iBlockALL_I(iType) <= nBlock_PI(iProcTo,iType))then
               iProcTo_I(iType) = iProcTo
               EXIT PROC
            end if
         end do PROC
-        iProcTo = iProcTo_I(iType)
+        if(iProcTo>=nProc) call stop_mpi("load_balance error: iProcTo==nProc")
+        if(iProcTo/=iProcTo_I(iType)) call stop_mpi("load_balance error: F90 failed")
 
         !DEBUG
         !if(iProc==0)write(*,*)'iBlockALL,iBlockFrom,iProcFrom,iProcTo=',&
@@ -324,7 +325,7 @@ contains
        if(IsNewBlock)call analyze_neighbors         !^CFG IF DEBUGGING 
 
        ! If coordinates are known, find the test cell
-!!!       if(DoMoveCoord)call find_test_cell
+       if(DoMoveCoord)call find_test_cell
 
        ! When load balancing is done Skipped and Unused blocks coincide
        UnusedBlock_BP = iTypeAdvance_BP == SkippedBlock_
