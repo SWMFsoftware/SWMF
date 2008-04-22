@@ -51,9 +51,9 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   ! Conversion from iTypeAdvance (including body block info) to iType
   integer :: iType_I(-ImplBlock_:ImplBlock_)
 
-  ! First processor to start distributing each type
-  integer :: iProcStart_I(MaxType)
-  integer :: nBlockPerPe, iProcLimit
+  ! load balance distribute each type
+  integer :: iLoadTable_II(0:nProc-1,MaxType), iProcTo_I(MaxType)
+  integer :: iProcStart, iProcStop, iProcExtraBlock
 
   ! Number of blocks moved around
   integer :: nBlockMoved
@@ -139,13 +139,24 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
      if(iType > 0) nBlockALL_I(iType) = nBlockALL_I(iType) + 1
   end do; end do
 
-  ! Calculate the starting processor index for all types
-  iProcStart_I(1)=0
-  do iType = 2, nType
-     ! Start each type from the first processor that has extra block
-     ! Number of extra blocks is modulo(nBlockPrevType, nProc)
+  ! Construct load balance table for various types
+  do iType=1,nType
+     ! minimum load for each processor
+     iLoadTable_II(0:nProc-1,iType) = nBlockALL_I(iType)/nProc
+
      ! The processors with extra blocks are filled in from nProc-1 backwards
-     iProcStart_I(iType)= nProc - modulo(sum(nBlockALL_I(1:iType-1)),nProc)
+     iProcStart = nProc - modulo(sum(nBlockALL_I(1:iType)),nProc)
+     iProcStop = iProcStart + modulo(nBlockALL_I(iType),nProc) - 1
+     do iProcExtraBlock=iProcStart,iProcStop
+        iProcTo = modulo(iProcExtraBlock,nProc)
+        iLoadTable_II(iProcTo,iType) = iLoadTable_II(iProcTo,iType) + 1
+     end do
+
+     ! convert to accumilative load table
+     do iProcTo=1,nProc-1
+        iLoadTable_II(iProcTo,iType) = iLoadTable_II(iProcTo,iType) &
+             + iLoadTable_II(iProcTo-1,iType)
+     end do
   end do
 
   if(DoTestMe)then
@@ -163,11 +174,10 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
         write(*,'(a,i4,10i7)')'load_balance starting: iProc, nBlockALL_I=',&
              iProc, nBlockALL_I(1:nType)
         do iType = 1, nType
-           write(*,'(a,i4,i2,i6,i4)')'load_balance starting: '// &
-                'iProc, iType, count, iProcStart=',&
+           write(*,'(a,i4,i2,i6)')'load_balance starting: '// &
+                'iProc, iType, count=',&
                 iProc, iType,&
-                count(iType_I(iTypeAdvance_B(1:nBlockMax))==iType),&
-                iProcStart_I(iType)
+                count(iType_I(iTypeAdvance_B(1:nBlockMax))==iType)
         end do
      end if
   end if
@@ -180,6 +190,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
 
      skippedAnyBlock=.false.
      iBlockALL_I = 0
+     iProcTo_I = 0
 
      TREE: do iBlockALL  = 1, nBlockALL
 
@@ -192,15 +203,13 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
         ! Increase the index for this block type and select target processor
         iBlockALL_I(iType) = iBlockALL_I(iType) + 1
 
-        nBlockPerPe = nBlockALL_I(iType)/nProc
-        iProcTo = nProc - 1 - (nBlockALL_I(iType)-iBlockALL_I(iType))/(nBlockPerPe+1)
-        iProcLimit = nProc - modulo(nBlockALL_I(iType),nProc)
-        if(iProcTo<iProcLimit)iProcTo = (iBlockALL_I(iType)-1)/nBlockPerPe
-
-        iProcTo = modulo( iProcTo + iProcStart_I(iType), nProc)
-
-        !iProcTo = modulo( (nProc*iBlockALL_I(iType)-1) / nBlockALL_I(iType) &
-        !     + iProcStart_I(iType), nProc)
+        PROC: do iProcTo=iProcTo_I(iType),nProc-1
+           if(iBlockALL_I(iType) <= iLoadTable_II(iProcTo,iType))then
+              iProcTo_I(iType) = iProcTo
+              EXIT PROC
+           end if
+        end do PROC
+        iProcTo = iProcTo_I(iType)
 
         !DEBUG
         !if(iProc==0)write(*,*)'iBlockALL,iBlockFrom,iProcFrom,iProcTo=',&
@@ -315,7 +324,7 @@ contains
        if(IsNewBlock)call analyze_neighbors         !^CFG IF DEBUGGING 
 
        ! If coordinates are known, find the test cell
-       if(DoMoveCoord)call find_test_cell
+!!!       if(DoMoveCoord)call find_test_cell
 
        ! When load balancing is done Skipped and Unused blocks coincide
        UnusedBlock_BP = iTypeAdvance_BP == SkippedBlock_
