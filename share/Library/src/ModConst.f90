@@ -27,6 +27,9 @@ Module ModConst
   ! Boltzmann constant [J/K]
   real, parameter::  cBoltzmann  = 1.3807E-23
 
+  ! Atomic unit of mass [kg]
+  real,parameter :: cAtomicMass = 1.66053E-27
+
   ! Proton mass [kg]
   real, parameter :: cProtonMass = 1.6726E-27
 
