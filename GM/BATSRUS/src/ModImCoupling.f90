@@ -60,7 +60,7 @@ subroutine get_im_pressure(iBlock, pIm_C, dIm_C)
   ! Check to see if cell centers are on closed fieldline
   !/
   do k=1,nK; do j=1,nJ; do i=1,nI
-     if(ray(3,1,i,j,k,iBlock)==3.) then
+     if(nint(ray(3,1,i,j,k,iBlock)) == 3) then
         rLat=ray(1,1,i,j,k,iBlock)
         rLon=ray(2,1,i,j,k,iBlock)
 
