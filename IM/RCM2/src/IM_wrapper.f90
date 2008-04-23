@@ -427,17 +427,24 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   integer, parameter :: pres_=1, dens_=2
 
   integer :: i,j,k
+  logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
+  call CON_set_do_test(NameSub, DoTest, DoTestMe)
+  if(DoTestMe)write(*,*)NameSub,' starting with iSizeIn,jSizeIn,nVar,NameVar=',&
+       iSizeIn,jSizeIn,nVar,NameVar
+
   if(NameVar /= 'p:rho') &
        call CON_stop(NameSub//' invalid NameVar='//NameVar)
 
   if(IsUninitialized)then
+     if(DoTestMe)write(*,*) NameSub,' call RCM_advec(1...)'
      if(.not.DoneGmCoupling)call CON_stop(NameSub//&
           ' SWMF_ERROR: IM/RCM has not been coupled with GM')
      call get_time(tSimulationOut = tSimulation)
      iTimeStart=nint(tSimulation)
      call RCM_advec (1, iTimeStart, 99999, 0)
      IsUninitialized = .false.
+     if(DoTestMe)write(*,*) NameSub,' done RCM_advec(1...)'
   end if
 
   if(iSizeIn /= iSize .or. jSizeIn /= jSize)then
@@ -491,6 +498,8 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   ! Units of rcm_mass_density are kg/m3
   where(Buffer_IIV(:,:,dens_) > 0.0) &
        Buffer_IIV(:,:,dens_) = Buffer_IIV(:,:,dens_) / 6.37E+15
+
+  if(DoTestMe)write(*,*) NameSub,' finished'
 
 end subroutine IM_get_for_gm
 
