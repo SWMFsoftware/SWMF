@@ -166,7 +166,7 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   use ModNumConst
   use ModVarIndexes, ONLY : nVar, Bx_, By_, Bz_
   use ModProcMH
-  use ModMain, ONLY : nI, nJ, nK, nCells, nBlock, unusedBLK
+  use ModMain, ONLY : nI, nJ, nK, nCells, nBlock, unusedBLK, BlkTest
   use ModAdvance, ONLY : State_VGB, StateOld_VCB
   use ModGeometry, ONLY : XyzStart_BLK, dx_BLK, dy_BLK, dz_BLK
   use ModGeometry, ONLY : UseCovariant     
@@ -218,7 +218,11 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   ! Testing
   logical :: DoTest,DoTestMe
   !----------------------------------------------------------------------------
-  call set_oktest('get_point_data',DoTest,DoTestMe)
+  if(iBlockMin <= BlkTest .and. BlkTest <= iBlockMax)then
+     call set_oktest('get_point_data', DoTest, DoTestMe)
+  else
+     DoTest = .false.; DoTestMe = .false.
+  end if
 
   if(DoTestMe)write(*,*)'get_point_data called with XyzIn_D=',XyzIn_D
 
