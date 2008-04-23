@@ -511,7 +511,7 @@ subroutine normalize_upstream_data
 
      if(UseTemperature)  Upstream_Data(:,p_)= &
           Upstream_Data(:,T_)*Io2No_V(UnitTemperature_)&
-          *Upstream_Data(:,rho_)/MassFluid_I(1)
+          *Upstream_Data(:,rho_)/MassIon_I(1)
      
   end if
 
