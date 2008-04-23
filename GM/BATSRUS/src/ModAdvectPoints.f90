@@ -218,14 +218,6 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   ! Testing
   logical :: DoTest,DoTestMe
   !----------------------------------------------------------------------------
-  if(iBlockMin <= BlkTest .and. BlkTest <= iBlockMax)then
-     call set_oktest('get_point_data', DoTest, DoTestMe)
-  else
-     DoTest = .false.; DoTestMe = .false.
-  end if
-
-  if(DoTestMe)write(*,*)'get_point_data called with XyzIn_D=',XyzIn_D
-
   ! Calculate maximum index and the number of state variables
   iStateMax = min(iVarMax, nVar)
   nState    = iStateMax - iVarMin + 1
@@ -245,6 +237,14 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   ! Loop through all blocks
   BLOCK: do iBlock = iBlockMin, iBlockMax
      if(unusedBLK(iBlock)) CYCLE
+
+!     if(iBlock == BlkTest)then
+!        call set_oktest('get_point_data', DoTest, DoTestMe)
+!     else
+        DoTest = .false.; DoTestMe = .false.
+!     end if
+
+     if(DoTestMe)write(*,*)'get_point_data called with XyzIn_D=',XyzIn_D
 
      ! Put cell size of current block into an array
      Dxyz_D(1)=Dx_BLK(iBlock)
