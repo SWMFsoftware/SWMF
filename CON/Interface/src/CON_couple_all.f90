@@ -200,6 +200,8 @@ contains
             NameComp_I(iCompSource))
     end select
     call timing_stop(NameComp_I(iCompSource)//'_'//NameComp_I(iCompTarget)//'_couple')
+    if(DoTest)write(*,*)NameSub,': finished coupling iProc=',i_proc(),' ',&
+         NameComp_I(iCompSource),' --> ',NameComp_I(iCompTarget)
 
   contains
 

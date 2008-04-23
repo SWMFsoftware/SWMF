@@ -180,6 +180,9 @@ contains
             NameVersion=CompInfo%NameVersion)
     end select
 
+    if(DoTestMe)write(*,*) NameSub,' finished TypeAction=',TypeAction, &
+         ' for ',NameComp_I(iComp)
+
   end subroutine set_param_id
 
   !BOP -------------------------------------------------------------------
@@ -335,6 +338,8 @@ contains
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select
 
+    if(DoTestMe)write(*,*) NameSub,' finished for ',NameComp_I(iComp)
+
   end subroutine init_session_comp_id
 
   !BOP -------------------------------------------------------------------
@@ -394,6 +399,8 @@ contains
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select
 
+    if(DoTestMe)write(*,*) NameSub,' finished for ',NameComp_I(iComp)
+
   end subroutine finalize_comp_id
 
   !BOP -------------------------------------------------------------------
@@ -451,6 +458,8 @@ contains
     case default
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select
+
+    if(DoTestMe)write(*,*) NameSub,' finished for ',NameComp_I(iComp)
 
   end subroutine save_restart_comp_id
 
@@ -515,6 +524,8 @@ contains
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select
     call timing_stop(NameComp_I(iComp)//'_run')
+
+    if(DoTestMe)write(*,*) NameSub,' finished for ',NameComp_I(iComp)
 
   end subroutine run_comp_id
 
