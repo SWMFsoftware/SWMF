@@ -226,11 +226,11 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
 
   character(len=*), parameter :: NameSub='follow_ray'
 
-  logical :: DoTest, DoTestMe
+  logical :: DoTest = .false., DoTestMe = .false.
 
   !-----------------------------------------------------------------------
 
-  call set_oktest(NameSub, DoTest, DoTestMe)
+  ! call set_oktest(NameSub, DoTest, DoTestMe)
 
   if(iRayIn /= 0)then
 
