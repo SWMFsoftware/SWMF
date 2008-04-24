@@ -249,7 +249,7 @@ clean: ENV_CHECK
 	@echo
 	rm -rf *~ doc/*~ Param/*~ TAGS
 	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/`; \
-		do (cd $$i; make clean); done
+		do (echo Cleaning $$i; cd $$i; make clean); done
 	-(cd ESMF/ESMF_SWMF;	make clean)
 	cd CON;			make clean
 	cd share;		make clean
@@ -269,9 +269,9 @@ distclean: ENV_CHECK rmdir
 	@echo
 	rm -rf *~ doc/*~ Param/*~ TAGS
 	for i in `ls -d [A-Z][A-Z]/Empty/`; \
-		do (cd $$i; make distclean); done
+		do (echo Distcleaning $$i; cd $$i; make distclean); done
 	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v Empty`; \
-		do (cd $$i; ./Config.pl -uninstall); done
+		do (echo Uninstalling $$i; cd $$i; ./Config.pl -uninstall); done
 	-(cd ESMF/ESMF_SWMF;	make distclean)
 	cd CON;			make distclean
 	@#^CMP IF DOC BEGIN
@@ -280,7 +280,7 @@ distclean: ENV_CHECK rmdir
 	@#^CMP END REMOVEDOCTEX
 	@#^CMP END DOC
 	@echo
-	@echo Distclean succeeded
+	@echo Uninstallation/distclean succeeded
 	@echo
 
 dist:
@@ -306,7 +306,7 @@ dist:
 	tar -rf tmp.tar  CON
 	tar -rf tmp.tar  ESMF
 	for i in `ls -d [A-Z][A-Z]`; \
-		do (tar -rf tmp.tar $$i); done
+		do (echo Tarring $$i; tar -rf tmp.tar $$i); done
 	@echo ' '
 	gzip tmp.tar
 	mv tmp.tar.gz SWMF_v${VERSION}_`date +%Y%b%d_%H%M.tgz`
