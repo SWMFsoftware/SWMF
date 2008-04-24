@@ -133,10 +133,11 @@ install: ENV_CHECK mkdir
 	fi
 	if([ -d "IH/BATSRUS_share" ]); \
 		then cp GM/BATSRUS/Config.pl IH/BATSRUS_share; \
-		     perl -i -pe 's/GM/IH/' IH/BATSRUS_share/Config.pl; \
+		     perl -i -pe "s/GM/IH/; s#'src#'../../GM/BATSRUS/src#" \
+			IH/BATSRUS_share/Config.pl; \
 	fi
 	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v /Empty/`; \
-		do (cd $$i; ./Config.pl -install=c); done
+		do (echo Installing $$i; cd $$i; ./Config.pl -install=c); done
 	@echo
 	@echo Installation succeeded
 	@echo
