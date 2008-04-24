@@ -41,6 +41,9 @@ my $GridSize;
 my ($nI, $nJ, $nK, $MaxBlock);
 my $MaxImplBlock;
 
+# For SC/BATSRUS and IH/BATSRUS src/ is created during configuration of SWMF
+if(not -d $Src){exit 0};
+
 # Read previous grid size, equation and user module
 &get_settings;
 
@@ -50,8 +53,8 @@ foreach (@Arguments){
     if(/^-e=(.*)$/)           {$Equation=$1;                   next};
     if(/^-u=(.*)$/)           {$UserModule=$1;                 next};
     if(/^-s$/)                {$Show=1;                        next};
-    if(/^-dynamic$/)          {`cd src; make DYNAMIC`;         next};
-    if(/^-static$/)           {`cd src; make STATIC`;          next};
+    if(/^-dynamic$/)          {`cd $Src; make DYNAMIC`;         next};
+    if(/^-static$/)           {`cd $Src; make STATIC`;          next};
 
     warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
@@ -226,7 +229,7 @@ sub current_settings{
     #^CFG END IMPLICIT
 
     # Check if the large arrays are static or dynamic
-    my $IsDynamic = `grep IsDynamic src/ModAdvance.f90 | grep true` ?
+    my $IsDynamic = `grep IsDynamic $Src/ModAdvance.f90 | grep true` ?
 	"yes" : "no";
     $Settings .= 
 	"Allocation of large arrays        : IsDynamic=$IsDynamic\n";
