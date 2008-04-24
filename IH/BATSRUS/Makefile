@@ -42,7 +42,7 @@ clean:
 
 distclean: 
 	@(if([ -f Makefile.def ]); then \
-		touch ${INSTALLFILES}; \
+		touch srcInterface/Makefile.DEPEND; \
 		cd srcInterface; make distclean; \
 	fi)
 	rm -rf src srcUser PARAM.XML RenameList.pl Config.pl *~
