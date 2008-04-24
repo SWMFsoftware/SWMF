@@ -43,6 +43,6 @@ test_harmonics:
 test_harmonics_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
 		harmonics.dat \
-		test.out > test_harmonics.diff
+		test.dat > test_harmonics.diff
 	ls -l test_harmonics.diff
 	rm -f fitsfile.dat harmonics.dat 
