@@ -1,0 +1,210 @@
+!- PARAM.in:  Example input file for BATSRUS --
+
+#ECHO
+T                       DoEcho
+
+#NORMALIZATION
+SOLARWIND
+
+#VERBOSE
+1                       lVerbose
+
+#PLANET
+VENUS                      problem_type: 14=Venus Ionosphere
+
+#DIPOLE
+0.0			DipoleStrength
+
+#ROTATION 
+F
+
+#GRAVITY
+T
+0
+
+#COVARIANTGEOMETRY
+spherical_lnr
+
+#LIMITGENCOORD1
+1.02			Radius1
+53.0			Radius2
+
+#GRID
+8                      proc_dims(1)
+4                       proc_dims(2)
+2                       proc_dims(3),
+-40.                    x1
+  8.                    x2
+-24.                    y1
+ 24.                    y2
+-24.                    z1
+ 24.                    z2
+
+#AMRINIT
+Venus3Dbodyfocus       InitialRefineType
+2                      InitialRefineLevel
+
+#BODY
+T			body1
+1.0231328486450759	Rbody
+1.0        		Rcurrents
+1.0e6                 	Body_Rho_Dim
+300                 	Body_T_dim
+
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#TIMESTEPPING
+2		nStage
+0.2		CflExpl
+
+#USERFLAGS
+F			UseUserInnerBcs
+T			UseUserSource
+F			UseUserPerturbation
+F                       UseUserOuterBcs
+T                       UseUserICs
+T                       UseUserSpecifyRefinement
+T                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+T                       UseUserInitSession
+F                       UseUserUpdateStates
+
+HALLRESISTIVITY
+T	UseHallResistFlux
+1.0    HallFactor
+0.0     HallCmaxFactor
+
+#TEST
+read_inputs amr 
+update_states calc_sources calc_facefluxes calc_timestep
+
+#TESTXYZ
+0.6672			xTest		(X coordinate of cell for testing)
+-0.7864  		yTest		(Y coordinate of cell for testing)
+-0.0169			zTest		(Z coordinate of cell for testing)
+
+#TESTTIME
+10			nIterTest	(iteration number to start testing)
+10.5			TimeTest	(time to start testing in seconds) 
+						Only read if timeaccurate!
+#TESTVAR
+1			iVarTest
+
+! Index of variable to be tested. Default is rho_=1, ie. density.
+
+#SAVELOGFILE
+T                       DoSaveLogfile, rest of parameters read if true
+VAR step                StringLog
+1                       DnSaveLogfile
+-1.                     DtSaveLogfile [sec]
+dt pmin pmax rho p hpflx opflx o2pflx co2pflx
+3.0 5.0
+
+MULTISPECIES
+T
+4
+
+HEATFLUX
+F			UseHeatFlux
+F 			UseSpitzerForm	
+1.23354e-11		Kappa0Heat
+2.5			ExponentHeat
+
+
+#INNERBOUNDARY
+user
+
+#MULTISPECIES
+T			DoReplaceDensity
+5.0			SpeciesPercentCheck
+
+#SOLARWIND
+14.0                    SW_rho_dim [n/cc]    \
+2.703E5                 SW_T_dim [K]          |
+-400.0                  SW_Ux_dim [km/s]      |  
+0.0                     SW_Uy_dim [km/s]      |
+0.0                     SW_Uz_dim [km/s]      |
+0.0                     SW_Bx_dim [nT]        |
+15.0                    SW_By_dim [nT]        !15 nT parker spiral
+0.0                     SW_Bz_dim [nT]       /
+
+#SAVERESTART
+T
+3000
+-1.0
+
+#SAVEPLOT
+5			nplotfiles
+z=0 MHD tec             StringPlot
+1000			DnOutput
+-1.0			DxOutput
+y=0 MHD tec             StringPlot
+1000			DnOutput
+-1.0
+x=0 MHD idl             StringPlot
+1000			DnSaveplot
+-1.0			DtSaveplot
+-1.0
+y=0 MHD idl             StringPlot
+1000			DnSaveplot
+-1.0			DtSaveplot
+-1.0
+z=0 MHD idl             StringPlot
+1000			DnSaveplot
+-1.0			DtSaveplot
+-1.0			DxSaveplot
+
+#SCHEME
+2                       nOrder (1 or 2)
+Linde                 FluxType  1=Roe, 2=Rusanov, 3=Linde
+mc                  LimiterType ! Only for nordder=2
+1.2
+
+#STOP
+25
+-1.0
+
+#END
+
+
+#RUN ===============================================
+
+#SCHEME
+2                       nOrder (1 or 2)
+Linde                 FluxType  1=Roe, 2=Rusanov, 3=Linde
+minmod                  LimiterType ! Only for nordder=2
+
+#STOP
+10000
+-1.0
+
+#RUN ===============================================
+
+#SCHEME
+2                       nOrder (1 or 2)
+Linde                 FluxType  1=Roe, 2=Rusanov, 3=Linde
+mc                  LimiterType ! Only for nordder=2
+1.2
+
+#STOP
+25000
+-1.0
+
+#RUN ===================================================
+
+#SCHEME
+2                       nOrder (1 or 2)
+Linde                 FluxType  1=Roe, 2=Rusanov, 3=Linde
+mc                  LimiterType ! Only for nordder=2
+1.5
+
+#STOP
+30000
+-1.0
+
+#END

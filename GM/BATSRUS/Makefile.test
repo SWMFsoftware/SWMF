@@ -311,6 +311,7 @@ test_mars_check:
 
 test_venus:
 	-@(make test_venus_start)
+	-@(make test_venus_restart)
 
 test_venus_start:
 	@echo "test_venus_compile..." > test_venus.diff
@@ -342,6 +343,39 @@ test_venus_check:
 		Param/VENUS/TestOutput/log_n000001.log \
 		${TESTDIR}/VenusTest/GM/log_n000001.log > test_venus.diff
 	ls -l test_venus.diff
+
+test_venus_restart:
+	@echo "test_venus_restart_save..." > test_venus_restart.diff
+	make test_venus_restart_save
+	@echo "test_venus_restart_read..." >> test_venus_restart.diff
+	make test_venus_restart_read
+	@echo "test_venus_restart_check..." >> test_venus_restart.diff
+	make test_venus_restart_check
+
+test_venus_restart_save:
+	cd ${TESTDIR}; cp Param/VENUS/PARAM.in.restartsave PARAM.in
+	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf VenusTest/RestartSave RESTART_venus
+	cd ${TESTDIR}; ./PostProc.pl -M -o VenusTest/RestartSave
+	cd ${TESTDIR}; ./Restart.pl -o RESTART_venus; 
+
+test_venus_restart_read:
+	cd ${TESTDIR}; cp Param/VENUS/PARAM.in.restartread PARAM.in
+	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ./Restart.pl -i RESTART_venus
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf VenusTest/RestartRead
+	cd ${TESTDIR}; ./PostProc.pl -M -o VenusTest/RestartRead
+
+test_venus_restart_check:
+	cd ${TESTDIR}/VenusTest; \
+		cp RestartSave/GM/log_n000001.log log_all.log; \
+		tail -25 RestartRead/GM/log_n000026.log >> log_all.log
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
+		Param/VENUS/TestOutput/log_n000001.log \
+		${TESTDIR}/VenusTest/log_all.log > test_venus_restart.diff
+	ls -l test_venus*.diff
 
 ### TESTS FOR MODELING SATURN ###
 
