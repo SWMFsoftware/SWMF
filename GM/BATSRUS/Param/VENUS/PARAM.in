@@ -66,7 +66,7 @@ F			UseUserPerturbation
 F                       UseUserOuterBcs
 T                       UseUserICs
 T                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
+T                       UseUserLogFiles
 F                       UseUserWritePlot
 F                       UseUserAMR
 F                       UseUserEchoInput
@@ -99,10 +99,11 @@ update_states calc_sources calc_facefluxes calc_timestep
 
 #SAVELOGFILE
 T                       DoSaveLogfile, rest of parameters read if true
-RAW step	        StringLog
-1	                DnSaveLogfile
+VAR step                StringLog
+1                       DnSaveLogfile
 -1.                     DtSaveLogfile [sec]
-
+dt pmin pmax rho p hpflx opflx o2pflx co2pflx
+3.0 5.0
 
 MULTISPECIES
 T
