@@ -57,7 +57,7 @@ contains
     integer,intent(in)   :: nPoint,nTriangle
     real,   intent(in)   :: CoordIN_D(2)
     real,   intent(in)   :: XyNode_DI(2,nPoint)
-    integer,intent(in)   :: iNodeTriangle_II(3,2*nTriangle)
+    integer,intent(in)   :: iNodeTriangle_II(3,nTriangle)
     integer,intent(out)  :: iNode1,iNode2,iNode3
     logical,intent(out)  :: IsTriangleFound
 
