@@ -134,6 +134,8 @@ subroutine ionosphere_fine_grid
         write(iUnitOut,'(a)') "Restricted oval"
      case(5)
         write(iUnitOut,'(a)') "Realistic oval"
+     case(6)
+        write(iUnitOut,'(a)') "More Realistic oval"
      case default
         call CON_stop(NameSub//" IE_ERROR invalid conductance_model")
      end select

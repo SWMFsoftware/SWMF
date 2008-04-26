@@ -112,7 +112,8 @@ module ModIonosphere
   real, dimension(1:IONO_nTheta,1:IONO_nPsi) ::     &
        IONO_NORTH_invB,IONO_SOUTH_invB,             & !Ray tracing 1/B integral
        IONO_NORTH_rho, IONO_SOUTH_rho,              & !Ray tracing density integral
-       IONO_NORTH_p,   IONO_SOUTH_p                   !Ray tracing pressure integral
+       IONO_NORTH_p,   IONO_SOUTH_p, &                !Ray tracing pressure integral
+       IONO_NORTH_t,   IONO_SOUTH_t                   !Ray tracing temperature integral
        
 
   ! Pentadiagonal matrix for the Poisson equation

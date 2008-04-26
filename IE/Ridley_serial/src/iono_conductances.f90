@@ -44,7 +44,9 @@ subroutine FACs_to_fluxes(iModel, iBlock)
   integer :: i,j, n, nloc
   real, dimension(1:IONO_nPsi) :: Strength_of_Oval,               &
        Loc_of_Oval, Width_of_Oval
-  logical :: polarcap
+  logical :: polarcap, IsPeakFound
+  integer :: Poleward, Equatorward, Center, Width
+  real :: f, MaxP, MulFac
   !---------------------------------------------------------------------------
   Hall_to_Ped_Ratio = 1.5
 
@@ -532,6 +534,143 @@ subroutine FACs_to_fluxes(iModel, iBlock)
         enddo
      end select
   end if
+
+  if (iModel.eq.6) then
+
+     iono_north_eflux = 1.0e-6
+     iono_north_ave_e = 1.0
+
+     MulFac = 1.0e6
+
+     do j = 1, IONO_nPsi
+        IsPeakFound = .false.
+        Poleward = -1
+        Equatorward = -1
+        MaxP = max(maxval(iono_north_p(:,j)),1.0e-15)
+        do i = 1, IONO_nTheta
+           if (iono_north_p(i,j) > 0 .and. .not. IsPeakFound) then
+              iono_north_eflux(i,j) = MulFac*MaxP
+              iono_north_ave_e(i,j) = 3.0
+              if (iono_north_p(i,j) == MaxP) IsPeakFound = .true.
+              if (Poleward == -1) Poleward = i
+              if (IsPeakFound) Equatorward = i
+           endif
+        enddo
+        if (.not. IsPeakFound) then
+           Poleward = 10
+           Equatorward = 20
+        endif
+        if (Poleward < 3) Poleward = 3
+        Width = (Equatorward - Poleward)/2 + 1
+        Center = (Equatorward + Poleward)/2
+        iono_north_eflux(Poleward-1,j) = MulFac*MaxP
+        iono_north_eflux(Poleward-2,j) = MulFac*MaxP
+        iono_north_eflux(Equatorward+1,j) = MulFac*MaxP
+        iono_north_eflux(Equatorward+2,j) = MulFac*MaxP
+
+        iono_north_ave_e(Poleward-1,j) = 3.0
+        iono_north_ave_e(Poleward-2,j) = 3.0
+        iono_north_ave_e(Equatorward+1,j) = 3.0
+        iono_north_ave_e(Equatorward+2,j) = 3.0
+
+        do i = Poleward-2, Equatorward+2
+           f = exp(-abs(float(i-Center))/float(width))
+           if (j == 51) write(*,*) "i : ",j,i,f, iono_north_eflux(i,j) * f
+           iono_north_eflux(i,j) = iono_north_eflux(i,j) * f
+!           iono_north_ave_e(i,j) = iono_north_ave_e(i,j) !* f
+        enddo
+     enddo
+
+     iono_south_eflux = 1.0e-6
+     iono_south_ave_e = 1.0
+
+     do j = 1, IONO_nPsi
+        IsPeakFound = .false.
+        Poleward = -1
+        Equatorward = -1
+        MaxP = max(maxval(iono_south_p(:,j)),1.0e-15)
+        do i = IONO_nTheta, 1, -1
+           if (iono_south_p(i,j) > 0 .and. .not. IsPeakFound) then
+              iono_south_eflux(i,j) = MulFac*MaxP
+              iono_south_ave_e(i,j) = 3.0
+              if (iono_south_p(i,j) == MaxP) IsPeakFound = .true.
+              if (Poleward == -1) Poleward = i
+              if (IsPeakFound) Equatorward = i
+           endif
+        enddo
+        if (.not. IsPeakFound) then
+           Poleward = Iono_nPsi - 10
+           Equatorward = Iono_nPsi - 20
+        endif
+        if (Poleward > Iono_nPsi - 3) Poleward = Iono_nPsi - 3
+        Width = abs(Equatorward - Poleward)/2 + 1
+        Center = abs(Equatorward + Poleward)/2
+        iono_south_eflux(Poleward+1,j) = MulFac*MaxP
+        iono_south_eflux(Poleward+2,j) = MulFac*MaxP
+        iono_south_eflux(Equatorward-1,j) = MulFac*MaxP
+        iono_south_eflux(Equatorward-2,j) = MulFac*MaxP
+
+        iono_south_ave_e(Poleward+1,j) = 3.0
+        iono_south_ave_e(Poleward+2,j) = 3.0
+        iono_south_ave_e(Equatorward-1,j) = 3.0
+        iono_south_ave_e(Equatorward-2,j) = 3.0
+
+        do i = Poleward-2, Equatorward+2, -1
+           f = exp(-abs(float(i-Center))/float(width))
+           if (j == 51) write(*,*) "i : ",j,i,f, iono_south_eflux(i,j) * f,width
+           iono_south_eflux(i,j) = iono_south_eflux(i,j) * f
+!           iono_south_ave_e(i,j) = iono_south_ave_e(i,j) !* f
+        enddo
+     enddo
+
+
+!!!     ! This works well for ions.  Electrons???  Hmmm....
+!!!
+!!!     do j = 1, IONO_nPsi
+!!!        do i = 1, IONO_nTheta
+!!!
+!!!           if (IONO_SOUTH_rho(i,j).le.1e-21) then
+!!!              IONO_SOUTH_Ave_E(i,j) = 0.0 
+!!!           else
+!!!              IONO_SOUTH_t(i,j) = &
+!!!                   1e17*IONO_SOUTH_p(i,j)/(IONO_SOUTH_rho(i,j)*1.38)
+!!!              IONO_SOUTH_Ave_E(i,j) = 0.05*IONO_SOUTH_t(i,j)*1e-27
+!!!           endif
+!!!
+!!!           IONO_SOUTH_EFlux(i,j) = IONO_SOUTH_p(i,j)*1e5
+!!!
+!!!!           if (IONO_SOUTH_EFlux(i,j).le.1e-3) then
+!!!!              IONO_SOUTH_EFlux(i,j) = 1e-21
+!!!!           endif
+!!!
+!!!           if ((PolarCap_AveE > 0.0).and.(IONO_SOUTH_p(i,j).eq.0.0)) then
+!!!              IONO_SOUTH_Ave_E(i,j) = max(IONO_SOUTH_Ave_E(i,j), &
+!!!                   PolarCap_AveE)
+!!!              IONO_SOUTH_EFlux(i,j) = max(IONO_SOUTH_EFlux(i,j),        &
+!!!                   PolarCap_EFlux)
+!!!           endif
+!!!
+!!!           if (IONO_NORTH_rho(i,j).le.1e-21) then
+!!!              IONO_NORTH_Ave_E(i,j) = 0.0
+!!!           else                 
+!!!              IONO_NORTH_t(i,j) = &
+!!!                   1e17*IONO_NORTH_p(i,j)/(IONO_NORTH_rho(i,j)*1.38)
+!!!              IONO_NORTH_Ave_E(i,j) = 0.05*IONO_NORTH_t(i,j)*1e-27
+!!!           endif
+!!!           IONO_NORTH_EFlux(i,j) = IONO_NORTH_p(i,j)*6e5
+!!!!           if (IONO_NORTH_EFlux(i,j).le.1e-3) IONO_NORTH_EFlux(i,j) = 1e-21
+!!!
+!!!           if ((PolarCap_AveE > 0.0).and.(IONO_NORTH_p(i,j).eq.0.0)) then
+!!!              IONO_NORTH_Ave_E(i,j) = max(IONO_NORTH_Ave_E(i,j), &
+!!!                   PolarCap_AveE)
+!!!              IONO_NORTH_EFlux(i,j) = max(IONO_NORTH_EFlux(i,j), &
+!!!                   PolarCap_EFlux)
+!!!           endif
+!!!
+!!!        enddo
+!!!     enddo
+
+  endif
 
 end subroutine FACs_to_fluxes
 
