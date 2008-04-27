@@ -214,9 +214,6 @@ subroutine read_upstream_input_file(upstreamfilename)
      do
         read(UNITTMP_,*,iostat=iError) &
              Tmp_Time, TmpData_V(1:nVarImf)
-        write(*,*)'Upstream_Npts=',Upstream_Npts
-        write(*,*) "Tmp_Time=", Tmp_Time
-        write(*,*) "TmpData_V=",TmpData_V
         if (iError /= 0) EXIT
 
         if (Upstream_Npts >= Max_Upstream_Npts) then
