@@ -897,7 +897,7 @@ contains
        HNuSpeciesDim_I(O_  )=15.e3
 
     case default
-       call stop_mpi('unknow solar condition',SolarCond)
+       call stop_mpi('unknow solar condition='//SolarCond)
     end select
 
 
