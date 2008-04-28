@@ -1,0 +1,189 @@
+c	this program calculates the growth rates and collis damping
+c	Te=Ti=1eV; Coulln=15
+
+	subroutine WGRDAR(Lsh,XNE,DN1,EP1,A1,DN2,EP2,A2,
+     >	DN3,EP3,A3,WGG,XFR,GRP,VGP)
+	PARAMETER (NRP=3)
+	PARAMETER (NLJ=2)
+	PARAMETER (NW=5)	!279 for Janet
+	REAL FCYC(NRP),A(NRP),FPL(NLJ,NRP),RDEN(NLJ,NRP),RMAS(NRP),
+     >	RA(NRP),X(NW),Lsh,EPAR(NRP),K(NW),VG(NW),GRATE(NW),
+     >	CGRATE(NW),DN(NLJ,NRP),AMU(NRP),VTH(NRP),VP(NW),
+     >	WDAMP(NW),PARK(NW)
+
+	OPEN(19,FILE='wgrda.dat',STATUS='unknown')
+	DATA AMU/1.,4.,16/
+	DATA RA/0.77,0.2,0.03/
+c	DATA RA/1.,1e-15,1e-15/
+c	DATA RA/0.9,0.095,0.005/
+	ESU=4.803E-10
+	EMM=8.06E+25
+	ER=6.37824E+8
+	C=2.9979E+10
+	GMAS=1.66E-24
+	PI=3.141592654
+	DO J=1,NRP
+	 DN(2,J)=RA(J)*XNE
+	ENDDO
+	DN(1,1)=DN1		
+	DN(1,2)=DN2		
+	DN(1,3)=DN3		
+	A(1)=A1
+	A(2)=A2
+	A(3)=A3
+	EPAR(1)=EP1
+	EPAR(2)=EP2
+	EPAR(3)=EP3
+	EFFM=2.5*GMAS
+	EMAS=(5.4462E-4)*GMAS
+	CNEE=(3.08E-5)*XNE
+	CRMAS=EMAS/EFFM
+	CNII=CNEE*SQRT(CRMAS)
+	CVTH2=2*(1.6E-12)/EFFM
+	THETA=45.
+	RTHETA=THETA*PI/180.
+c......
+c	calcul magn field [gauss]
+c......
+	BG=EMM/(ER*Lsh)**3		! equatorial field
+	COMEG=ESU*BG/EFFM/C
+	COMEG2=COMEG*COMEG
+c.......
+c	calcul plasma param	
+c.......
+	PRATIO=DN(2,1)/DN(1,1)
+	DO 30 I=1,NRP
+	 VTH(I)=2.*EPAR(I)*1.60E-9/(AMU(I)*GMAS)
+	 VTH(I)=SQRT(VTH(I))
+	 FCYC(I)=(ESU*BG)/(AMU(I)*GMAS*C)
+	 RMAS(I)=AMU(I)/AMU(1)
+	 DO 30 J=1,NLJ
+	  FPL(J,I)=(4*PI*DN(J,I)*ESU**2)/(AMU(I)*GMAS)
+	  RDEN(J,I)=DN(J,I)/DN(1,1)
+30	CONTINUE
+C.......
+C	calcul wave param
+c.......
+	X(1)=0.12
+	DO 40 I=1,NW		
+c	 X(I)=I*0.001		! for Janet's grid
+c	 X(I)=XFR		! 0.22 old
+c	 IF(I.GT.100) X(I)=0.1+(I-100)*0.005
+	 FAC1=0.0
+	 FAC2=0.0
+	 DO 45 J=2,3
+	  IF ((1-RMAS(J)*X(I)).EQ.0) GO TO 57
+	  FAC1=FAC1+((RDEN(1,J)+RDEN(2,J))*RMAS(J))/(1-RMAS(J)*X(I))
+	  FAC2=FAC2+((RDEN(1,J)+RDEN(2,J))*RMAS(J)*(2-RMAS(J)*X(I)))/
+     >	  (1-RMAS(J)*X(I))**2
+45	 CONTINUE
+	 K(I)=((1+PRATIO)*X(I)**2)/(1-X(I))+FAC1*X(I)**2
+	 K(I)=K(I)*FPL(1,1)/C**2
+	 IF(K(I).LE.0) GO TO 55
+	 K(I)=SQRT(K(I))
+	 IF(K(I).GT.1E+20) GO TO 57
+	 VP(I)=X(I)*FCYC(1)/K(I)/2/PI
+	 VFAC1=(2*FCYC(1)*C)/SQRT(FPL(1,1))
+	 VFAC1=VFAC1*SQRT((1+PRATIO)/(1-X(I))+FAC1)
+	 VFAC2=((1+PRATIO)*(2-X(I)))/(1-X(I))**2+FAC2
+	 VG(I)=VFAC1/VFAC2
+	 GRFAC2=X(I)*(PRATIO+1)*(2-X(I))/(X(I)-1)**2
+	 GRFAC2=GRFAC2+X(I)*FAC2
+	 GRFAC1=0.
+	 DO 50 J=1,NRP
+	  FAC3=FCYC(1)*RDEN(1,J)*SQRT(PI)/(RMAS(J)**2*VTH(J)*K(I))
+	  FAC4=-(FCYC(1)*(RMAS(J)*X(I)-1))**2/(RMAS(J)*VTH(J)*K(I))**2
+	  FAC4=EXP(FAC4)*((A(J)+1)*(1-RMAS(J)*X(I))-1)
+50	 GRFAC1=GRFAC1+FAC3*FAC4
+	 GRATE(I)=GRFAC1/GRFAC2
+	 GO TO 56
+57	 K(I)=1E+20
+c	write(19,*)'k gt 1e20, l=',lsh,' ne=',xne
+	print*,'k gt 1e20, l=',lsh,' ne=',xne
+	 VP(I)=0.
+	 GO TO 58
+55	 K(I)=0.
+c	write(19,*)'k lt 0, l=',lsh,' ne=',xne
+c	print*,'k lt 0, l=',lsh,' ne=',xne
+	 VP(I)=1E+20
+58	 GRATE(I)=0
+	 VG(I)=0
+	 CGRATE(I)=0.
+	 GO TO 40
+56	 GRATE(I)=GRATE(I)*FCYC(1)
+	 CGRATE(I)=GRATE(I)/VG(I)
+	 IF(I.LT.NW) X(I+1)=X(I)+0.02
+40	CONTINUE
+c.......
+c	find max conv growth rate
+c.......
+	CGRMAX=AMAX1(CGRATE(1),CGRATE(2),CGRATE(3),CGRATE(4),
+     >	 CGRATE(5))
+	DO 80 I=1,NW
+	 IF((CGRMAX-CGRATE(I)).EQ.0) THEN
+	  XFR=X(I)
+	  IMAX=I
+	  GO TO 80 
+	 ENDIF
+80	CONTINUE
+c	calcul collis damping
+c.......
+	FAC5=CRMAS*CNEE
+	FAC6=7*CNII*CVTH2/20/COMEG2	
+c	DO 70 I=1,NW
+	 I=IMAX
+cl	 IF(K(I).GE.1E+20) GO TO 70
+	 PARK(I)=K(I)*SIN(RTHETA)
+cl	 WDAMP(I)=-(FAC5+FAC6*PARK(I)*PARK(I))
+	 WDAMP(I)=0.
+	 WGG=0
+	 IF(VG(I).NE.0.) WGG=(CGRATE(I)+WDAMP(I)/VG(I))
+	 IF(K(I).GE.1E+20) WGG=-1E+20
+	 VGP=VG(I)
+	 GRP=GRATE(I)
+70	CONTINUE
+c.......
+c	reson with kin Alfven waves
+c.......
+	NTOT=DN(2,1)+DN(2,2)+DN(2,3)
+	Z=1*DN(2,1)+2*DN(2,2)+8*DN(2,3)
+	Z=Z/NTOT
+	EALF=(BG*1E+5)**2/(NTOT*Z*1E+3)
+c.......
+c	write output
+c.......
+	DO 60 J=1,NRP
+	 FCYC(J)=FCYC(J)/2/PI
+	 DO 60 I=1,NLJ
+60	  FPL(I,J)=SQRT(FPL(I,J))/2/PI
+	WRITE(19,*)' PLASMA PARAMETERS'
+	WRITE(19,*)' WARM H+     HE+     O+     COLD H+	  HE+     O+'
+	WRITE(19,110)DN(1,1),DN(1,2),DN(1,3),DN(2,1),DN(2,2),DN(2,3)
+	WRITE(19,120)FCYC(1),FCYC(2),FCYC(3),FCYC(1),FCYC(2),FCYC(3)
+	WRITE(19,130)FPL(1,1),FPL(1,2),FPL(1,3),FPL(2,1),FPL(2,2),FPL(2,3)
+	WRITE(19,140)A(1),A(2),A(3)
+	WRITE(19,145)(EPAR(I),I=1,NRP)
+	WRITE(19,146)(VTH(I),I=1,NRP)
+	WRITE(19,150)Lsh,BG
+	WRITE(19,160)
+	WRITE(19,165)(X(I),K(I),(CGRATE(I)+WDAMP(I)/VG(I)),WDAMP(I),
+     >	GRATE(I),CGRATE(I),I=1,NW)
+	WRITE(19,170)EALF
+10	FORMAT(1X,F7.2,2X,F7.2,2X,F7.2)
+15	FORMAT(1X,3F7.2)
+25	FORMAT(1X,2F7.2)
+110	FORMAT(1X,14HDENSITY [CM-3],6(3X,F7.2))
+120	FORMAT(1X,21HCYCLOTRON FREQ [HZ]  ,6(3X,F7.2))
+130	FORMAT(1X,16HPLASMA FREQ [HZ],6(3X,E10.3))
+140	FORMAT(1X,10HANISOTROPY,3(3X,F7.2))
+145	FORMAT(1X,16HE PARALLEL [KEV],3(3X,F7.2))
+146	FORMAT(1X,17HV PARALLEL [CM/S],8X,3E10.3)
+150	FORMAT(1X,3H L=,F8.3,1X,11H B [GAUSS]=,F8.3)
+160	FORMAT(1X,1HX,15X,1HK,5X,13HWGG IND [1/S],2X,16HCCOLL DAMP [1/S],
+     >	2X,15HGROW RATE [1/S],2X,16HCONV RATE [1/CM])
+165	FORMAT(1X,F7.3,5X,E10.3,5X,E10.3,5X,E10.3,5X,E10.3,5X,E10.3)
+170	FORMAT(1X,22HRES ENER FOR ALF WAVES,E10.3,2HEV)
+	CLOSE(19)
+
+	RETURN
+	END
