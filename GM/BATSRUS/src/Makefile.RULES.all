@@ -23,6 +23,7 @@ $OS eq "IRIX64" and $Compiler eq "f90"
 $Compiler eq "f95" and $Debug eq "yes"
 	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModIO.f90
 
+# Do not use -nan for these files if arrays are static (compiler would fail)
 $Compiler eq "f95" and $Debug eq "yes" and $IsDynamic eq "no"
 	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModAdvance.f90
 	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModGeometry.f90
@@ -31,5 +32,14 @@ $Compiler eq "f95" and $Debug eq "yes" and $IsDynamic eq "no"
 	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModRaytrace.f90
 	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModNodes.f90
 
+# This user file does not compile with -nan
 $Compiler eq "f95" and $Debug eq "yes" and $UserModule =~ /Mars 4 species/i
 	${COMPILE.f90} ${SEARCH} -c -O0 -gline ${PRECISION} ModUser.f90
+
+# Do not optimize the implicit source code if only 1 implicit block is allowed
+$MaxImplBlock == 1
+	${COMPILE.f90}  ${Cflag0} implicit.f90
+	${COMPILE.f90}  ${Cflag0} impl_interface.f90
+	${COMPILE.f90}  ${Cflag0} impl_jacobian.f90
+	${COMPILE.f90}  ${Cflag0} impl_matvec.f90
+	${COMPILE.f90}  ${Cflag0} impl_newton.f90
