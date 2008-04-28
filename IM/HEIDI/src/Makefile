@@ -17,7 +17,7 @@ FORTRAN = f95
 
 # for runs:
 #CFLAGS = -132 -maxcontin=100 -c 
-CFLAGS = -132 -c -dusty -w -gline -I../srcIE -maxcontin=50 -g -O3
+CFLAGS = -132 -c -dusty -w -gline -I../srcInterface/srcIE -maxcontin=50 -g -O3
 
 # for compiling smaller programs:
 CCFLAGS = -132 -maxcontin=100 
@@ -78,18 +78,18 @@ IONO = \
 	../srcInterface/srcIONO/iono_init.o
 
 heidi:
-	cd ..srcInterface/srcIONO ; make LIB
-	cd ..srcInterface/srcIE ; make LIB
+	cd ../srcInterface/srcIONO ; make LIB
+	cd ../srcInterface/srcIE ; make LIB
 	make heidi010.exe
 
 heidi010:
-	cd ..srcInterface/srcIONO ; make LIB
-	cd ..srcInterface/srcIE ; make LIB
+	cd ../srcInterface/srcIONO ; make LIB
+	cd ../srcInterface/srcIE ; make LIB
 	make heidi010.exe
 
-heidi010.exe:	${MODULES} ${OBJECTS_010} ${IONO} ../srcIE/libIE.a
+heidi010.exe:	${MODULES} ${OBJECTS_010} ${IONO} ../srcInterface/srcIE/libIE.a
 	$(LFORTRAN) $(LFLAGS) -o heidi010.exe ${MODULES} ${OBJECTS_010} ${IONO}\
-	-L../srcIE -lIE
+	-L../srcInterface/srcIE -lIE
 
 .SUFFIXES:
 .SUFFIXES: .f90 .f .o
@@ -102,8 +102,8 @@ heidi010.exe:	${MODULES} ${OBJECTS_010} ${IONO} ../srcIE/libIE.a
 
 clean:
 	/bin/rm -f *.o *.mod
-	cd ..srcInterface/srcIONO ; make clean
-	cd ..srcInterface/srcIE ; make clean
+	cd ../srcInterface/srcIONO ; make clean
+	cd ../srcInterface/srcIE ; make clean
 
 #
 # Older versions :
@@ -140,16 +140,16 @@ mram03.exe:	${MODULES} ${OBJECTS} ${HEADERS}
 	$(FORTRAN) $(LFLAGS) -o mram03.exe ${MODULES} ${OBJECTS} ${IONO}
 
 mram05:
-	cd ..srcInterface/srcIONO ; make LIB
-	cd ..srcInterface/srcIE ; make LIB
+	cd ../srcInterface/srcIONO ; make LIB
+	cd ../srcInterface/srcIE ; make LIB
 	make mram05.exe
 
-mram05.exe:	${MODULES} ${OBJECTS_5} ${HEADERS} ../srcIE/libIE.a
+mram05.exe:	${MODULES} ${OBJECTS_5} ${HEADERS} ../srcInterface/srcIE/libIE.a
 	$(FORTRAN) $(LFLAGS) -o mram05.exe ${MODULES} ${OBJECTS_5} ${IONO}\
-	-L../srcIE -lIE
+	-L../srcInterface/srcIE -lIE
 
 mram04:
-	cd ..srcInterface/srcIONO ; make
+	cd ../srcInterface/srcIONO ; make
 	make mram04.exe
 
 mram04.exe:	${MODULES} ${OBJECTS_4} ${HEADERS}
