@@ -23,6 +23,7 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 
   use ModIonosphere
   use IE_ModMain
+  use ModNumConst
   implicit none
 
   integer, intent(in) :: iModel  ! model number, 
@@ -44,9 +45,9 @@ subroutine FACs_to_fluxes(iModel, iBlock)
   integer :: i,j, n, nloc
   real, dimension(1:IONO_nPsi) :: Strength_of_Oval,               &
        Loc_of_Oval, Width_of_Oval
-  logical :: polarcap, IsPeakFound
+  logical :: polarcap, IsPeakFound, IsDone
   integer :: Poleward, Equatorward, Center, Width
-  real :: f, MaxP, MaxT, MulFac
+  real :: f, MaxP, MaxT, MulFac, MinWidth, ThetaOCB, AuroraWidth
   real :: nden(IONO_nTheta,IONO_nPsi)
   !---------------------------------------------------------------------------
   Hall_to_Ped_Ratio = 1.5
@@ -539,6 +540,7 @@ subroutine FACs_to_fluxes(iModel, iBlock)
   if (iModel.eq.6) then
 
      MulFac = 0.75e7
+     MinWidth = 5.0 * cPi / 180.0
 
      if (iBlock == 1) then 
 
@@ -557,13 +559,36 @@ subroutine FACs_to_fluxes(iModel, iBlock)
            Poleward = -1
            Equatorward = -1
            MaxP = max(maxval(iono_north_p(:,j)),1.0e-15)
-           do i = 1, IONO_nTheta
-              if (iono_north_p(i,j) > 0 .and. .not. IsPeakFound) then
+           ThetaOCB = -1.0
+           AuroraWidth = -1.0
+           IsDone = .false.
+           i = 1
+           do while (.not. IsDone)
+
+              if (iono_north_p(i,j) > 0) then
+
+                 if (ThetaOCB == -1) ThetaOCB = iono_north_theta(i,j)
+                 AuroraWidth = iono_north_theta(i,j) - ThetaOCB
                  iono_north_eflux(i,j) = MulFac*MaxP
+
                  if (iono_north_p(i,j) == MaxP) IsPeakFound = .true.
-                 if (IsPeakFound) Equatorward = i
+
                  if (Poleward == -1) Poleward = i
+                 if (IsPeakFound .and. AuroraWidth >= MinWidth) then
+                    Equatorward = i
+                    IsDone = .true.
+                 endif
+
+                 if (i == IONO_nTheta) IsDone = .true.
+
+                 if (j == 51) write(*,*) "theta : ",i,ThetaOCB, &
+                      iono_north_theta(i,j), AuroraWidth,&
+                      MinWidth, IsPeakFound, Equatorward, Poleward
+
               endif
+
+              i = i + 1
+
            enddo
            if (.not. IsPeakFound) then
               Poleward = 10
@@ -593,6 +618,9 @@ subroutine FACs_to_fluxes(iModel, iBlock)
            enddo
         enddo
 
+        where (iono_north_ave_e < IONO_Min_Ave_E) &
+             iono_north_ave_e = IONO_Min_Ave_E
+
      else
 
         iono_south_eflux = 1.0e-6
@@ -611,15 +639,39 @@ subroutine FACs_to_fluxes(iModel, iBlock)
            Equatorward = -1
            MaxP = max(maxval(iono_south_p(:,j)),1.0e-15)
            MaxT = max(maxval(iono_south_t(:,j)),1.0e-3)
-           do i = IONO_nTheta, 1, -1
-              if (iono_south_p(i,j) > 0 .and. .not. IsPeakFound) then
+
+           ThetaOCB = -1.0
+           AuroraWidth = -1.0
+           IsDone = .false.
+           i = IONO_nTheta
+           do while (.not. IsDone)
+
+              if (iono_south_p(i,j) > 0) then
+
+                 if (ThetaOCB == -1) ThetaOCB = iono_south_theta(i,j)
+                 AuroraWidth = ThetaOCB - iono_south_theta(i,j)
                  iono_south_eflux(i,j) = MulFac*MaxP
-                 iono_south_ave_e(i,j) = MaxT
+
                  if (iono_south_p(i,j) == MaxP) IsPeakFound = .true.
+
                  if (Poleward == -1) Poleward = i
-                 if (IsPeakFound) Equatorward = i
+                 if (IsPeakFound .and. AuroraWidth >= MinWidth) then
+                    Equatorward = i
+                    IsDone = .true.
+                 endif
+
+                 if (i == 1) IsDone = .true.
+
+                 if (j == 51) write(*,*) "theta(s) : ",i,ThetaOCB, &
+                      iono_south_theta(i,j), AuroraWidth,&
+                      MinWidth, IsPeakFound, Equatorward, Poleward
+
               endif
+
+              i = i - 1
+
            enddo
+
            if (.not. IsPeakFound) then
               Poleward = Iono_nPsi - 10
               Equatorward = Iono_nPsi - 20
@@ -643,6 +695,9 @@ subroutine FACs_to_fluxes(iModel, iBlock)
               iono_south_eflux(i,j) = iono_south_eflux(i,j) * f
            enddo
         enddo
+
+        where (iono_south_ave_e < IONO_Min_Ave_E) &
+             iono_south_ave_e = IONO_Min_Ave_E
 
      endif
 
