@@ -34,12 +34,12 @@ MODULES = \
 	ModHeidiDrifts.o\
 	ModHeidiIO.o\
 	ModHeidiWaves.o\
-	../srcIONO/ModIonosphere.o\
-	../srcIONO/ModConductance.o\
-	../srcIONO/ModPhysics.o\
-	../srcIONO/ModSize.o\
-	../srcIONO/ModMain.o\
-	../srcIONO/ModIO.o
+	../srcInterface/srcIONO/ModIonosphere.o\
+	../srcInterface/srcIONO/ModConductance.o\
+	../srcInterface/srcIONO/ModPhysics.o\
+	../srcInterface/srcIONO/ModSize.o\
+	../srcInterface/srcIONO/ModMain.o\
+	../srcInterface/srcIONO/ModIO.o
 
 OBJECTS_010 = \
 	heidi_main_010.o\
@@ -56,35 +56,35 @@ OBJECTS_010 = \
 	get_potential.o
 
 IONO = \
-	../srcIONO/precision.o \
-	../srcIONO/io.o \
-	../srcIONO/CSR.o \
-	../srcIONO/MSR.o \
-	../srcIONO/LUCSRMSR.o \
-	../srcIONO/BandLU.o \
-	../srcIONO/matrix-arithmetic.o \
-	../srcIONO/flop_module.o \
-	../srcIONO/iteration-defaults.o \
-	../srcIONO/GMRES.o \
-	../srcIONO/ilu.o\
-	../srcIONO/iono_conductances.o\
-	../srcIONO/iono_solver.o\
-	../srcIONO/iono_coupling.o\
-	../srcIONO/read_ring_current.o\
-	../srcIONO/write_ring_current.o\
-	../srcIONO/read_amie.o\
-	../srcIONO/epencalc.o\
-	../srcIONO/convert_time_routines.o\
-	../srcIONO/iono_init.o
+	../srcInterface/srcIONO/precision.o \
+	../srcInterface/srcIONO/io.o \
+	../srcInterface/srcIONO/CSR.o \
+	../srcInterface/srcIONO/MSR.o \
+	../srcInterface/srcIONO/LUCSRMSR.o \
+	../srcInterface/srcIONO/BandLU.o \
+	../srcInterface/srcIONO/matrix-arithmetic.o \
+	../srcInterface/srcIONO/flop_module.o \
+	../srcInterface/srcIONO/iteration-defaults.o \
+	../srcInterface/srcIONO/GMRES.o \
+	../srcInterface/srcIONO/ilu.o\
+	../srcInterface/srcIONO/iono_conductances.o\
+	../srcInterface/srcIONO/iono_solver.o\
+	../srcInterface/srcIONO/iono_coupling.o\
+	../srcInterface/srcIONO/read_ring_current.o\
+	../srcInterface/srcIONO/write_ring_current.o\
+	../srcInterface/srcIONO/read_amie.o\
+	../srcInterface/srcIONO/epencalc.o\
+	../srcInterface/srcIONO/convert_time_routines.o\
+	../srcInterface/srcIONO/iono_init.o
 
 heidi:
-	cd ../srcIONO ; make LIB
-	cd ../srcIE ; make LIB
+	cd ..srcInterface/srcIONO ; make LIB
+	cd ..srcInterface/srcIE ; make LIB
 	make heidi010.exe
 
 heidi010:
-	cd ../srcIONO ; make LIB
-	cd ../srcIE ; make LIB
+	cd ..srcInterface/srcIONO ; make LIB
+	cd ..srcInterface/srcIE ; make LIB
 	make heidi010.exe
 
 heidi010.exe:	${MODULES} ${OBJECTS_010} ${IONO} ../srcIE/libIE.a
@@ -102,8 +102,8 @@ heidi010.exe:	${MODULES} ${OBJECTS_010} ${IONO} ../srcIE/libIE.a
 
 clean:
 	/bin/rm -f *.o *.mod
-	cd ../srcIONO ; make clean
-	cd ../srcIE ; make clean
+	cd ..srcInterface/srcIONO ; make clean
+	cd ..srcInterface/srcIE ; make clean
 
 #
 # Older versions :
@@ -140,8 +140,8 @@ mram03.exe:	${MODULES} ${OBJECTS} ${HEADERS}
 	$(FORTRAN) $(LFLAGS) -o mram03.exe ${MODULES} ${OBJECTS} ${IONO}
 
 mram05:
-	cd ../srcIONO ; make LIB
-	cd ../srcIE ; make LIB
+	cd ..srcInterface/srcIONO ; make LIB
+	cd ..srcInterface/srcIE ; make LIB
 	make mram05.exe
 
 mram05.exe:	${MODULES} ${OBJECTS_5} ${HEADERS} ../srcIE/libIE.a
@@ -149,7 +149,7 @@ mram05.exe:	${MODULES} ${OBJECTS_5} ${HEADERS} ../srcIE/libIE.a
 	-L../srcIE -lIE
 
 mram04:
-	cd ../srcIONO ; make
+	cd ..srcInterface/srcIONO ; make
 	make mram04.exe
 
 mram04.exe:	${MODULES} ${OBJECTS_4} ${HEADERS}
