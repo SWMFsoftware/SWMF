@@ -338,11 +338,11 @@ contains
 
     if(body1)then
        write(unit_tmp,'(a)')'#BODY'
-       write(unit_tmp,'(l1,a39)')      body1, 'UseBody'
-       write(unit_tmp,'(1pe13.5,a27)') Rbody, 'rBody'
+       write(unit_tmp,'(l1,a39)')      .true., 'UseBody'
+       write(unit_tmp,'(1pe13.5,a27)') rBody, 'rBody'
        if(NameThisComp=='GM') &
-            write(unit_tmp,'(1pe13.5,a27)') Rcurrents, 'rCurrents'
-       do iFluid = 1, nFluid
+            write(unit_tmp,'(1pe13.5,a27)') rCurrents, 'rCurrents'
+       do iFluid = IonFirst_, nFluid
           write(unit_tmp,'(1pe13.5,a27)') BodyNDim_I(iFluid), 'BodyNDim'
           write(unit_tmp,'(1pe13.5,a27)') BodyTDim_I(iFluid), 'BodyTDim'
        end do
