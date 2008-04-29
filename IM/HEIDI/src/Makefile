@@ -2,6 +2,8 @@
 #  Makefile for 
 #
 
+default : HEIDI
+
 FORTRAN = f95
 
 #FORTRAN = f77
@@ -77,18 +79,14 @@ IONO = \
 	../srcInterface/srcIONO/convert_time_routines.o\
 	../srcInterface/srcIONO/iono_init.o
 
-heidi:
+HEIDI:
 	cd ../srcInterface/srcIONO ; make LIB
 	cd ../srcInterface/srcIE ; make LIB
-	make heidi010.exe
+	make HEIDI.exe
 
-heidi010:
-	cd ../srcInterface/srcIONO ; make LIB
-	cd ../srcInterface/srcIE ; make LIB
-	make heidi010.exe
 
-heidi010.exe:	${MODULES} ${OBJECTS_010} ${IONO} ../srcInterface/srcIE/libIE.a
-	$(LFORTRAN) $(LFLAGS) -o heidi010.exe ${MODULES} ${OBJECTS_010} ${IONO}\
+HEIDI.exe:	${MODULES} ${OBJECTS_010} ${IONO} ../srcInterface/srcIE/libIE.a
+	$(LFORTRAN) $(LFLAGS) -o ${BINDIR}/HEIDI.exe ${MODULES} ${OBJECTS_010} ${IONO}\
 	-L../srcInterface/srcIE -lIE
 
 .SUFFIXES:
