@@ -103,22 +103,6 @@ subroutine GM_put_from_ie(Buffer_II,iSize,jSize)
   IonoPotential_II = Buffer_II * Si2No_V(UnitElectric_)*Si2No_V(UnitX_)
   call calc_grad_iono_potential
 
-!!!  if(DoTest)write(*,*)NameSub,': putting potential'
-!!!  select case(NameVar)
-!!!  case('PotNorth')
-!!!     IonoPotential_II(1:iSize,:)         = &
-!!!          Buffer_II* Si2No_V(UnitElectric_)*Si2No_V(UnitX_)
-!!!  case('PotSouth')
-!!!     IonoPotential_II(iSize:2*iSize-1,:) = &
-!!!          Buffer_II* Si2No_V(UnitElectric_)*Si2No_V(UnitX_)
-!!!
-!!!     ! After getting the southern potential as well, get the gradients
-!!!     call calc_grad_iono_potential
-!!!  case default
-!!!     call CON_stop(NameSub//' invalid NameVar='//NameVar)
-!!!  end select
-
-
   if(DoTest)write(*,*)NameSub,': done'
 
 end subroutine GM_put_from_ie
@@ -176,10 +160,10 @@ subroutine calc_inner_bc_velocity(tSimulation,Xyz_D,B1_D,B0_D,u_D)
   integer :: iTheta, iPhi, iHemisphere
 
   character(len=*), parameter :: NameSub = 'calc_inner_bc_velocity'
-  logical :: DoTest, DoTestMe
+  logical :: DoTest = .false., DoTestMe = .false.
   !-------------------------------------------------------------------------
 
-  call set_oktest(NameSub, DoTest, DoTestMe)
+  ! call set_oktest(NameSub, DoTest, DoTestMe)
 
   if(DoTestMe)write(*,*)NameSub,' Xyz_D=',Xyz_D
 
@@ -236,16 +220,12 @@ subroutine calc_inner_bc_velocity(tSimulation,Xyz_D,B1_D,B0_D,u_D)
      write(*,*)NameSub,' E_D=',eField_D
      write(*,*)NameSub,' b_D=',b_D
      write(*,*)NameSub,' u_D=',u_D
-     ! call CON_stop(NameSub) !!!
   endif
 
   ! Subtract the radial component of the velocity
   u_D = u_D - Xyz_D * sum(Xyz_D * u_D) / sum(Xyz_D**2)
 
-  if(DoTestMe)then
-     write(*,*)NameSub,' Final u_D=',u_D
-     !!! if(maxval(abs(u_D))>0.00001)call stop_mpi(NameSub)
-  end if
+  if(DoTestMe)write(*,*)NameSub,' Final u_D=',u_D
 
 end subroutine calc_inner_bc_velocity
 
@@ -377,7 +357,6 @@ subroutine calc_inner_bc_velocity1(tSimulation,Xyz_D,B1_D,B0_D,u_D)
 
   if(DoTestMe)then
      write(*,*)NameSub,' Final u_D=',u_D
-     !!! if(maxval(abs(u_D))>0.00001)call stop_mpi(NameSub)
   end if
 
 end subroutine calc_inner_bc_velocity1
