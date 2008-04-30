@@ -1024,6 +1024,8 @@ subroutine IE_init_session(iSession, tSimulation)
      IsUninitialized = .false.
   end if
 
+  time_simulation = tSimulation
+
   call get_time(  DoTimeAccurateOut = time_accurate)
   call get_planet(DipoleStrengthOut = IONO_Bdp)
   call get_axes(tSimulation, MagAxisTiltGsmOut = ThetaTilt)
