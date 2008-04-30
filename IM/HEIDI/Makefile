@@ -50,6 +50,5 @@ rundir:
 		mkdir restartOUT restartIN plots
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR} ; \
-		ln -s ${BINDIR}/HEIDI.exe .
-		touch core ; chmod 444 core;\
+		ln -s ${BINDIR}/HEIDI.exe .;\
 	fi);
