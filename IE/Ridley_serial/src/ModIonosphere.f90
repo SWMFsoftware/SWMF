@@ -51,7 +51,7 @@ module ModIonosphere
   ! Ionosphere Solution on the whole grid
   !/
   real, dimension(2*IONO_nTheta-1, IONO_nPsi) :: &
-       IONO_Phi
+       IONO_Phi = 0.0
 
   !\
   ! Ionosphere solution array definitions
@@ -73,11 +73,11 @@ module ModIonosphere
        IONO_NORTH_EFlux,IONO_NORTH_Ave_E,           & !Ionospheric particle inputs
        IONO_SOUTH_EFlux,IONO_SOUTH_Ave_E,           & !
        IONO_NORTH_Sigma0,                           & !Ionospheric conductances
-       IONO_NORTH_SigmaH,IONO_NORTH_SigmaP,         &
+       IONO_NORTH_SigmaH=0.0, IONO_NORTH_SigmaP=0.0,&
        IONO_NORTH_SigmaThTh,IONO_NORTH_SigmaThPs,   & !
        IONO_NORTH_SigmaPsPs,                        & !
        IONO_SOUTH_Sigma0,                           &
-       IONO_SOUTH_SigmaH,IONO_SOUTH_SigmaP,         & !
+       IONO_SOUTH_SigmaH=0.0, IONO_SOUTH_SigmaP=0.0,& !
        IONO_SOUTH_SigmaThTh,IONO_SOUTH_SigmaThPs,   & !
        IONO_SOUTH_SigmaPsPs,                        & !
        IONO_NORTH_dSigmaThTh_dTheta,                &
