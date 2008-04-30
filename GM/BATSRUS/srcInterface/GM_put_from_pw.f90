@@ -192,7 +192,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
   character (len=*), parameter :: NameSub = 'read_pw_buffer'
   
-  logical :: DoTest, DoTestMe
+  logical :: DoTest = .false., DoTestMe = .false.
   !--------------------------------------------------------
 
   if(DoInitialize)then
@@ -237,7 +237,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   ! Point is not covered: leave the input state variables alone
   if (.not.IsTriangleFound) RETURN
 
-  call CON_set_do_test(NameSub, DoTest, DoTestMe)
+  ! call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
   ! interpolate values
 
