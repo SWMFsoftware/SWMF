@@ -1528,14 +1528,14 @@ contains
     ! the correction is not done if any of the finer block neighbors are unused
 
     use ModSize
-    use ModVarIndexes, ONLY: DefaultState_V, nVar
+    use ModVarIndexes, ONLY: DefaultState_V, nVar, nFluid
     use ModAdvance,    ONLY: State_VGB
     use ModAMR,        ONLY: unusedBlock_BP
     use ModParallel,   ONLY: neiLEV, &
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &
          neiBtop, neiBbot, neiBeast, neiBwest, neiBnorth, neiBsouth, &
          neiPtop, neiPbot, neiPeast, neiPwest, neiPnorth, neiPsouth
-    use ModNumConst
+    use ModNumConst, ONLY: cTiny
 
     implicit none
 
@@ -1554,6 +1554,7 @@ contains
                   State_VGB(1:nVar,i,nJ+1,k,iBLK)+ cThird*(&
                   State_VGB(1:nVar,i,nJ+1,k,iBLK)-&
                   State_VGB(1:nVar,i,nJ,k,iBLK))
+             if(nFluid > 1)CYCLE
              where(DefaultState_V(1:nVar)>cTiny)
                 State_VGB(1:nVar,i,nJ+1,k,iBLK) = max(&
                      State_VGB(1:nVar,i,nJ+1,k,iBLK),cTiny)
@@ -1571,6 +1572,7 @@ contains
                   State_VGB(1:nVar,i,0,k,iBLK)+ cThird*(&
                   State_VGB(1:nVar,i,0,k,iBLK)- &
                   State_VGB(1:nVar,i,1,k,iBLK))
+             if(nFluid > 1)CYCLE
              where(DefaultState_V(1:nVar)>cTiny)
                 State_VGB(1:nVar,i,0,k,iBLK) =max(&
                      State_VGB(1:nVar,i,0,k,iBLK),cTiny)
@@ -1588,6 +1590,7 @@ contains
                   State_VGB(1:nVar,0,j,k,iBLK)+ cThird*(&
                   State_VGB(1:nVar,0,j,k,iBLK)- &
                   State_VGB(1:nVar,1,j,k,iBLK))
+             if(nFluid > 1)CYCLE
              where(DefaultState_V(1:nVar)>cTiny)
                 State_VGB(1:nVar,0,j,k,iBLK) =max(&
                      State_VGB(1:nVar,0,j,k,iBLK),cTiny)
@@ -1605,6 +1608,7 @@ contains
                   State_VGB(1:nVar,nI+1,j,k,iBLK) + cThird*(&
                   State_VGB(1:nVar,nI+1,j,k,iBLK) - &
                   State_VGB(1:nVar,nI,  j,k,iBLK))
+             if(nFluid > 1)CYCLE
              where(DefaultState_V(1:nVar)>cTiny)
                 State_VGB(1:nVar,nI+1,j,k,iBLK) = max(&
                      State_VGB(1:nVar,nI+1,j,k,iBLK),cTiny)
@@ -1622,6 +1626,7 @@ contains
                   State_VGB(1:nVar,i,j,nK+1,iBLK) + cThird*(&
                   State_VGB(1:nVar,i,j,nK+1,iBLK) - &
                   State_VGB(1:nVar,i,j,nK,iBLK))
+             if(nFluid > 1)CYCLE
              where(DefaultState_V(1:nVar)>cTiny)
                 State_VGB(1:nVar,i,j,nK+1,iBLK) =max( &
                      State_VGB(1:nVar,i,j,nK+1,iBLK),cTiny)
@@ -1639,6 +1644,7 @@ contains
                   State_VGB(1:nVar,i,j,0,iBLK) + cThird*(&
                   State_VGB(1:nVar,i,j,0,iBLK) - &
                   State_VGB(1:nVar,i,j,1,iBLK))
+             if(nFluid > 1)CYCLE
              where(DefaultState_V(1:nVar)>cTiny)
                 State_VGB(1:nVar,i,j,0,iBLK) =max( &
                      State_VGB(1:nVar,i,j,0,iBLK),cTiny)
