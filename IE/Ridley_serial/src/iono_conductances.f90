@@ -48,7 +48,8 @@ subroutine FACs_to_fluxes(iModel, iBlock)
   logical :: polarcap, IsPeakFound, IsDone
   integer :: Poleward, Equatorward, Center, Width
   real :: f, MaxP, MaxT, MulFac, MinWidth, ThetaOCB, AuroraWidth
-  real :: nden(IONO_nTheta,IONO_nPsi)
+  real, dimension(IONO_nTheta,IONO_nPsi) :: nDen, &
+       discrete_k, discrete_ae, discrete_ef, diffuse_ae, diffuse_ef
   !---------------------------------------------------------------------------
   Hall_to_Ped_Ratio = 1.5
 
@@ -581,10 +582,6 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 
                  if (i == IONO_nTheta) IsDone = .true.
 
-                 if (j == 51) write(*,*) "theta : ",i,ThetaOCB, &
-                      iono_north_theta(i,j), AuroraWidth,&
-                      MinWidth, IsPeakFound, Equatorward, Poleward
-
               endif
 
               i = i + 1
@@ -617,6 +614,32 @@ subroutine FACs_to_fluxes(iModel, iBlock)
               iono_north_eflux(i,j) = iono_north_eflux(i,j) * f
            enddo
         enddo
+
+        diffuse_ef = iono_north_eflux
+        diffuse_ae = iono_north_ave_e
+
+        discrete_ef = 0.0
+        discrete_k  = 0.0
+        ! This is from Jimmy's Paper on the Knight Relationship
+        where (iono_north_p > 0) discrete_k = &
+             (iono_north_rho**1.5) / iono_north_p
+        where (iono_north_jr > 1.0e-7) &
+             discrete_ef = (iono_north_jr*1e6)*discrete_k
+        discrete_ae = discrete_ef*5.0e20
+        discrete_ef = (iono_north_jr*1e6)*discrete_ef*10e18
+
+        where (diffuse_ae < IONO_Min_Ave_E/2) diffuse_ae = IONO_Min_Ave_E/2
+        where (discrete_ae < IONO_Min_Ave_E/2) discrete_ae = IONO_Min_Ave_E/2
+
+        ! Let's weight the average energy by the number flux, which is ef/av
+        iono_north_ave_e = &
+             (diffuse_ef + discrete_ef) / &
+             (diffuse_ef/diffuse_ae + discrete_ef/discrete_ae)
+
+        ! The energy flux should be weighted by the average energy
+        iono_north_eflux = &
+             (diffuse_ef/diffuse_ae + discrete_ef/discrete_ae) * &
+             iono_north_ave_e
 
         where (iono_north_ave_e < IONO_Min_Ave_E) &
              iono_north_ave_e = IONO_Min_Ave_E
@@ -662,10 +685,6 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 
                  if (i == 1) IsDone = .true.
 
-                 if (j == 51) write(*,*) "theta(s) : ",i,ThetaOCB, &
-                      iono_south_theta(i,j), AuroraWidth,&
-                      MinWidth, IsPeakFound, Equatorward, Poleward
-
               endif
 
               i = i - 1
@@ -695,6 +714,32 @@ subroutine FACs_to_fluxes(iModel, iBlock)
               iono_south_eflux(i,j) = iono_south_eflux(i,j) * f
            enddo
         enddo
+
+        diffuse_ef = iono_south_eflux
+        diffuse_ae = iono_south_ave_e
+
+        discrete_ef = 0.0
+        discrete_k  = 0.0
+        ! This is from Jimmy's Paper on the Knight Relationship
+        where (iono_south_p > 0) discrete_k = &
+             (iono_south_rho**1.5) / iono_north_p
+        where (iono_south_jr > 1.0e-7) &
+             discrete_ef = (iono_south_jr*1e6)*discrete_k
+        discrete_ae = discrete_ef*5.0e20
+        discrete_ef = (iono_south_jr*1e6)*discrete_ef*10e18
+
+        where (diffuse_ae < IONO_Min_Ave_E/2) diffuse_ae = IONO_Min_Ave_E/2
+        where (discrete_ae < IONO_Min_Ave_E/2) discrete_ae = IONO_Min_Ave_E/2
+
+        ! Let's weight the average energy by the number flux, which is ef/av
+        iono_outh_ave_e = &
+             (diffuse_ef + discrete_ef) / &
+             (diffuse_ef/diffuse_ae + discrete_ef/discrete_ae)
+
+        ! The energy flux should be weighted by the average energy
+        iono_south_eflux = &
+             (diffuse_ef/diffuse_ae + discrete_ef/discrete_ae) * &
+             iono_south_ave_e
 
         where (iono_south_ave_e < IONO_Min_Ave_E) &
              iono_south_ave_e = IONO_Min_Ave_E
