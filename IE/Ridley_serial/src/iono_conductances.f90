@@ -732,7 +732,7 @@ subroutine FACs_to_fluxes(iModel, iBlock)
         where (discrete_ae < IONO_Min_Ave_E/2) discrete_ae = IONO_Min_Ave_E/2
 
         ! Let's weight the average energy by the number flux, which is ef/av
-        iono_outh_ave_e = &
+        iono_south_ave_e = &
              (diffuse_ef + discrete_ef) / &
              (diffuse_ef/diffuse_ae + discrete_ef/discrete_ae)
 
