@@ -718,11 +718,15 @@ subroutine FACs_to_fluxes(iModel, iBlock)
         diffuse_ef = iono_south_eflux
         diffuse_ae = iono_south_ave_e
 
+!        write(*,*) "Diffuse (south) : ",&
+!             minval(diffuse_ef), maxval(diffuse_ef),&
+!             minval(diffuse_ae), maxval(diffuse_ae)
+
         discrete_ef = 0.0
         discrete_k  = 0.0
         ! This is from Jimmy's Paper on the Knight Relationship
         where (iono_south_p > 0) discrete_k = &
-             (iono_south_rho**1.5) / iono_north_p
+             (iono_south_rho**1.5) / iono_south_p
         where (iono_south_jr > 1.0e-7) &
              discrete_ef = (iono_south_jr*1e6)*discrete_k
         discrete_ae = discrete_ef*5.0e20
@@ -730,6 +734,10 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 
         where (diffuse_ae < IONO_Min_Ave_E/2) diffuse_ae = IONO_Min_Ave_E/2
         where (discrete_ae < IONO_Min_Ave_E/2) discrete_ae = IONO_Min_Ave_E/2
+
+!        write(*,*) "Discrete (south) : ",&
+!             minval(discrete_ef), maxval(discrete_ef),&
+!             minval(discrete_ae), maxval(discrete_ae)
 
         ! Let's weight the average energy by the number flux, which is ef/av
         iono_south_ave_e = &
@@ -743,6 +751,10 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 
         where (iono_south_ave_e < IONO_Min_Ave_E) &
              iono_south_ave_e = IONO_Min_Ave_E
+
+!        write(*,*) "total (south) : ",&
+!             minval(iono_south_eflux), maxval(iono_south_eflux),&
+!             minval(iono_south_ave_e), maxval(iono_south_ave_e)
 
      endif
 
