@@ -3,9 +3,11 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
   use CON_coupler, ONLY: PW_, Grid_C
   use ModMain, ONLY: x_, y_, TypeCoordSystem, Time_Simulation
   use ModVarIndexes, ONLY: UseMultiSpecies, SpeciesFirst_, SpeciesLast_
+  use ModMultiFluid, ONLY: UseMultiIon, nIonFluid
   use ModUtilities, ONLY: lower_case
-  use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitRhoU_, rCurrents
+  use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitU_, rCurrents
   use ModPwGrid
+  use ModPhysics, ONLY: rBody
   use ModNumConst, ONLY: cTwoPi
   use ModTriangulate,ONLY:calc_triangulation
   use CON_axes, ONLY: transform_matrix
@@ -25,7 +27,7 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
   logical, save :: DoInitialize = .true.
 
   integer :: iVar, i, iLine, iHemisphere
-  real    :: SinThetaOuter, GmPw_DD(3,3), Theta, Phi, XyzPw_D(3)
+  real    :: SinThetaOuter, GmPw_DD(3,3), Theta, Phi, XyzPw_D(3), Factor
   character (len=40):: NameVar
   logical :: DoTest, DoTestMe
   !----------------------------------------------------------------------------
@@ -69,40 +71,42 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
      nLinePw = nFieldLine
      nPoint = nLinePw + nOuterPoint
 
-     do iVar = 1, nVar
-        NameVar = Name_V(iVar)
-        call lower_case(NameVar)
-        if(iRhoPwFirst == -1 .and. NameVar(1:1) == 'd') iRhoPwFirst = iVar
-        if(NameVar(1:1) == 'd')                         iRhoPwLast  = iVar
-        if(iUPwFirst == -1 .and. NameVar(1:1) == 'v')   iUPwFirst   = iVar
-        if(NameVar(1:1) == 'v')                         iUPwLast    = iVar
-     end do
-
-     nSpeciesPw = iRhoPwLast - iRhoPwFirst + 1
-
-     if(nSpeciesPw /= iUPwLast - iUPwFirst + 1) then
-        write(*,*)NameSub,'iRhoPwFirst,iRhoPwLast,iUPwFirst,iUPwLast=',&
-             iRhoPwFirst,iRhoPwLast,iUPwFirst,iUPwLast
-        call stop_mpi(NameSub// &
-             ' ERROR: iRhoPwLast - iRhoPwFirst /= iUPwLast - iUPwFirst !')
-     end if
-
-     allocate(CoordXyPw_DI(nCoord, nPoint), iNodeTriangle_II(3, 2*nPoint))
+     ! Subtract 2 coords and half of the remaining variables are velocities
+     nSpeciesPw = (nVar-2)/2
+     ! First 2 variables are coordinates, 
+     ! then nSpeciesPw densities then nSpeciesPw velocities
+     iRhoPwFirst = 3
+     iRhoPwLast  = 2 + nSpeciesPw
+     iUPwFirst   = iRhoPwLast + 1
+     iUPwLast    = nVar
 
      if(UseMultiSpecies)then
+        ! Species densities and total velocity
+        iRhoGmFirst = 1
+        iRhoGmLast  = SpeciesLast_-SpeciesFirst_+1
+        iUGmFirst   = iRhoGmLast + 1
+        iUGmLast    = iUGmFirst
 
-        if(SpeciesLast_-SpeciesFirst_+1 /= nSpeciesPw) then
-           write(*,*)NameSub,' SpeciesFirst_, SpeciesLast_, nSpeciesPw=',&
-                SpeciesFirst_, SpeciesLast_, nSpeciesPw
-           call stop_mpi(NameSub// &
-                ' ERROR: nSpeciesPw /= nSpecies in ModEquation')
-        end if
-        ! Total momentum, density and species densities
-        allocate(StatePw_VI(nSpeciesPw + 2, nPoint))
+        iRhoPwLast = min(iRhoPwLast, iRhoPwFirst + SpeciesLast_ - SpeciesFirst_)
+     elseif(UseMultiIon)then
+        ! Fluid densities and velocities
+        iRhoGmFirst = 1
+        iRhoGmLast  = nIonFluid
+        iUGmFirst   = nIonFluid + 1
+        iUGmLast    = 2*nIonFluid
+        
+        iRhoPwLast = min(iRhoPwLast, iRhoPwFirst + nIonFluid - 1)
+        iUPwLast   = min(iUPwLast,   iUPwFirst   + nIonFluid - 1)
      else
-        ! Total momentum and density
-        allocate(StatePw_VI(2, nPoint))
+        ! Total density and velocity
+        iRhoGmFirst = 1
+        iRhoGmLast  = 1
+        iUGmFirst   = 2
+        iUGmLast    = 2
      end if
+     allocate(StateGm_VI(1:iUGmLast, nPoint))
+     allocate(CoordXyPw_DI(nCoord, nPoint), iNodeTriangle_II(3, 2*nPoint))
+
   end if
 
   if(nLinePw /= nFieldLine .or. nVarPw /= nVar)then
@@ -117,17 +121,36 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
   CoordXyPw_DI(y_,1:nLinePw) =  &
          sin(Buffer_VI(Theta_,:)) * sin(Buffer_VI(Phi_,:))
 
-  ! Total density in normalized units
-  StatePw_VI(RhoPw_,1:nLinePw)=sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:),dim=1) &
-       * Si2No_V(UnitRho_)
+  if(UseMultiIon)then
+     StateGm_VI(iRhoGmFirst:iRhoGmLast, 1:nLinePw) &
+          = Buffer_VI(iRhoPwFirst:iRhoPwLast,:)*Si2No_V(UnitRho_)
 
-  ! Field aligned velocity = total moment/total density
-  StatePw_VI(Ub_,1:nLinePw)=sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:) &
-       *Buffer_VI(iUPwFirst:iUPwLast,:), dim=1) &
-       * Si2No_V(UnitRhou_) / StatePw_VI(RhoPw_,1:nLinePw)
+     StateGm_VI(iUGmFirst:iUGmLast, 1:nLinePw) &
+          = Buffer_VI(iUPwFirst:iUPwLast,:) * Si2No_V(UnitU_)
+  else
+     ! Set total 
+     if(UseMultiSpecies)then
+        StateGm_VI(iRhoGmFirst:iRhoGmLast, 1:nLinePw) &
+             = Buffer_VI(iRhoPwFirst:iRhoPwLast,:) * Si2No_V(UnitRho_)
+     else
+        ! Total density in normalized units
+        StateGm_VI(iRhoGmFirst, 1:nLinePw) &
+             = sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:),dim=1) * Si2No_V(UnitRho_)
+     end if
 
-  if(UseMultiSpecies) StatePw_VI(RhoPw_+1: RhoPw_+nSpeciesPw, 1:nLinePw) &
-       = Buffer_VI(iRhoPwFirst:iRhoPwLast,:) * Si2No_V(UnitRho_)
+     ! Field aligned velocity = total moment/total density
+     StateGm_VI(iUGmFirst,1:nLinePw) &
+          = sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:) &
+          *     Buffer_VI(iUPwFirst:iUPwLast,:), dim=1) &
+          / sum(StateGm_VI(iRhoPwFirst:iRhoPwLast,1:nLinePw), dim=1) &
+          * Si2No_V(UnitU_) 
+  end if
+
+  ! Reduce densities according to a 1/r3 law based on magnetic field strength
+  ! and assuming that PWOM solves up to R=2.25
+  !Factor = (2.25/rBody)**3
+  !StateGm_VI(iRhoGmFirst:iRhoGmLast,1:nLinePw) = &
+  !     StateGm_VI(iRhoGmFirst:iRhoGmLast,1:nLinePw)*Factor
 
   ! Set coordinates for the outer points
   SinThetaOuter = sin(maxval(Buffer_VI(Theta_,:)+dThetaOuter))
@@ -162,8 +185,11 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   use CON_coupler, ONLY: PW_, Grid_C
   use CON_axes, ONLY: transform_matrix
   use ModMain, ONLY: TypeCoordSystem, Time_Simulation, x_, y_, z_
-  use ModVarIndexes, ONLY: Rho_, Ux_, Uz_, &
+  use ModVarIndexes, ONLY: Rho_, Ux_, Uy_, Uz_, &
        SpeciesFirst_, SpeciesLast_, UseMultiSpecies
+  use ModMultiFluid, ONLY: UseMultiIon, nIonFluid, IsMhd, &
+       iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I
+      
   use ModPwGrid
   use ModTriangulate, ONLY: find_triangle, triangle_area
   use ModPhysics, ONLY: No2Io_V, UnitU_, UnitRho_
@@ -178,8 +204,8 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   real       :: Node_DI(2,3)
   real       :: Triangle1_DI(2,3), Triangle2_DI(2,3), Triangle3_DI(2,3)
   logical    :: IsTriangleFound
-  integer    :: iNode1,iNode2,iNode3
-  real       :: Area1,Area2,Area3,Area
+  integer    :: iNode1, iNode2, iNode3, iIon, iUGm
+  real       :: Area1, Area2, Area3, Area
 
   ! A short time relative to the rotation period of Earth
   real, parameter :: dTimeMax = 600.0 ! [s]
@@ -199,10 +225,15 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
      DoInitialize = .false.
      ! Fill in outer points with body values coming in via State_V
      do iPoint=nLinePw+1, nPoint
-        StatePw_VI(Ub_, iPoint) = 0.0
-        StatePw_VI(RhoPw_, iPoint) = State_V(Rho_)
-        if(UseMultiSpecies) StatePw_VI(RhoPw_+1:nVarPw, iPoint) = &
-             State_V(SpeciesFirst_:SpeciesLast_)
+        StateGm_VI(iUGmFirst:iUGmLast, iPoint) = 0.0
+        if(UseMultiSpecies)then
+           StateGm_VI(iRhoGmFirst:iRhoGmLast, iPoint) = &
+                State_V(SpeciesFirst_:SpeciesLast_)
+        elseif(UseMultiIon)then
+           StateGm_VI(iRhoGmFirst:iRhoGmLast, iPoint) = State_V(iRhoIon_I)
+        else
+           StateGm_VI(iRhoGmFirst, iPoint) = State_V(Rho_)
+        end if
      end do
 
      NamePwCoord = Grid_C(PW_) % TypeCoord
@@ -231,13 +262,15 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
   !Find triangle containing point Xy_D
 
-  call find_triangle(nPoint, nTriangle, Xy_D, CoordXyPw_DI, iNodeTriangle_II, &
+  call find_triangle(&
+       nPoint, nTriangle, Xy_D, CoordXyPw_DI, &
+       iNodeTriangle_II(:,1:nTriangle), &
        iNode1, iNode2, iNode3, IsTriangleFound)
 
   ! Point is not covered: leave the input state variables alone
   if (.not.IsTriangleFound) RETURN
 
-  ! call CON_set_do_test(NameSub, DoTest, DoTestMe)
+!!!  call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
   ! interpolate values
 
@@ -264,27 +297,56 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   Area2 = Area2 / Area
   Area3 = Area3 / Area
 
-  State_V(Rho_) = &
-       Area1*StatePw_VI(RhoPw_,iNode1) + &
-       Area2*StatePw_VI(RhoPw_,iNode2) + &
-       Area3*StatePw_VI(RhoPw_,iNode3)
-
   ! Calculate field aligned momentum vector
   call get_b0(CoordIn_D(x_), CoordIn_D(y_), CoordIn_D(z_), B0_D)
   B0_D = B0_D / sqrt(sum(B0_D**2))
+
   ! Make sure unit vector is pointing outward
   if(sum(B0_D*CoordIn_D) < 0.)B0_D = -B0_D
-  State_V(Ux_:Uz_) = B0_D * ( &
-       Area1*StatePw_VI(Ub_,iNode1) + &
-       Area2*StatePw_VI(Ub_,iNode2) + &
-       Area3*StatePw_VI(Ub_,iNode3))
 
-  if(UseMultiSpecies) &
-       State_V(SpeciesFirst_:SpeciesLast_) = &
-       Area1*StatePw_VI(iRhoPwFirst:iRhoPwLast,iNode1) + &
-       Area2*StatePw_VI(iRhoPwFirst:iRhoPwLast,iNode2) + &
-       Area3*StatePw_VI(iRhoPwFirst:iRhoPwLast,iNode3)
+  if(UseMultiIon)then
+     State_V(iRhoIon_I) = &
+          Area1*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode1) + &
+          Area2*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode2) + &
+          Area3*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode3)
+     do iIon = 1, nIonFluid
+        ! Calculate field aligned velocity vector per fluid
+        iUGm = iUGmFirst + iIon - 1
+        State_V(iUxIon_I(iIon):iUzIon_I(iIon)) = B0_D * &
+             ( Area1*StateGm_VI(iUGm, iNode1) &
+             + Area2*StateGm_VI(iUGm, iNode2) &
+             + Area3*StateGm_VI(iUGm, iNode3))
+     end do
+     if(IsMhd)then
+        ! Calculate total density and average velocity
+        State_V(Rho_)= sum(State_V(iRhoIon_I))
+        State_V(Ux_) = sum(State_V(iRhoIon_I)*State_V(iUxIon_I))/State_V(Rho_)
+        State_V(Uy_) = sum(State_V(iRhoIon_I)*State_V(iUyIon_I))/State_V(Rho_)
+        State_V(Uz_) = sum(State_V(iRhoIon_I)*State_V(iUzIon_I))/State_V(Rho_)
+     end if
+  else
+     if(UseMultiSpecies) then
+        ! Interpolate species densities and put total into Rho_
+        State_V(SpeciesFirst_:SpeciesLast_) = &
+             Area1*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode1) + &
+             Area2*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode2) + &
+             Area3*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode3)
+        State_V(Rho_) = sum(State_V(SpeciesFirst_:SpeciesLast_))
+     else
+        ! For simple MHD the StateGm_VI contains the total density
+        State_V(Rho_) = &
+             Area1*StateGm_VI(iRhoGmFirst, iNode1) + &
+             Area2*StateGm_VI(iRhoGmFirst, iNode2) + &
+             Area3*StateGm_VI(iRhoGmFirst, iNode3)
+     end if
 
+     ! Field aligned velocity
+     State_V(Ux_:Uz_) = B0_D * ( &
+          Area1*StateGm_VI(iUGmFirst, iNode1) + &
+          Area2*StateGm_VI(iUGmFirst, iNode2) + &
+          Area3*StateGm_VI(iUGmFirst, iNode3))
+
+  end if
   if(DoTestMe)then
      write(*,*)NameSub,' finished with'
      write(*,*)'CoordIn_D   =',CoordIn_D
