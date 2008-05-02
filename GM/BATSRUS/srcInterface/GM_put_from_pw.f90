@@ -142,7 +142,7 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
      StateGm_VI(iUGmFirst,1:nLinePw) &
           = sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:) &
           *     Buffer_VI(iUPwFirst:iUPwLast,:), dim=1) &
-          / sum(StateGm_VI(iRhoPwFirst:iRhoPwLast,1:nLinePw), dim=1) &
+          / sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:), dim=1) &
           * Si2No_V(UnitU_) 
   end if
 
