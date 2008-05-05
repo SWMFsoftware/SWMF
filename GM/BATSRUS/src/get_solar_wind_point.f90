@@ -3,8 +3,6 @@
 module ModUpstreamData
   use ModKind
   use ModVarIndexes
-  use ModMultiFluid, ONLY: select_fluid, iFluid, &
-       iRho, iRhoUx, iRhoUy, iRhoUz, iP, MassIon_I
   use ModPhysics, ONLY: LowDensityRatio, inv_g
   use ModNumConst, ONLY: cTiny8  
   implicit none
@@ -31,11 +29,12 @@ module ModUpstreamData
   real :: Propagation_Plane_XY=0.0, Propagation_Plane_XZ=0.0
   real :: Normal_D(3)=(/1.0, 0.0, 0.0/), MagNormal
 
-end Module ModUpstreamData
+end module ModUpstreamData
 
 !============================================================================
 
 subroutine read_upstream_input_file(upstreamfilename)
+
   use ModProcMH
   use ModMain
   use ModIoUnit, ONLY : UNITTMP_
@@ -91,14 +90,7 @@ subroutine read_upstream_input_file(upstreamfilename)
      Propagation_Plane_XZ = 0.0
 
      nVarImf = 8
-     iVarImf_V(1)=Bx_
-     iVarImf_V(2)=By_
-     iVarImf_V(3)=Bz_
-     iVarImf_V(4)=Ux_
-     iVarImf_V(5)=Uy_
-     iVarImf_V(6)=Uz_
-     iVarImf_V(7)=Rho_
-     iVarImf_V(8)=p_
+     iVarImf_V(1:8) = (/ Bx_, By_, Bz_, Ux_, Uy_, Uz_, Rho_, p_ /)
         
      if(lVerbose>0)then
         call write_prefix; write(iUnitOut,*) NameSub, &
@@ -130,38 +122,38 @@ subroutine read_upstream_input_file(upstreamfilename)
 
         if(index(line,'#VAR')>0)then
            read(UNITTMP_,'(a)', iostat = iError )NameImfVars
-           call split_str(NameImfVars, MaxVarImf, NameImfVar_I,nVarImf)
-           UseNumberDensity=.false.
-           UseTemperature =.false.
-           iVarImf_V(:)=0
+           call split_str(NameImfVars, MaxVarImf, NameImfVar_I, nVarImf)
+           UseNumberDensity = .false.
+           UseTemperature   = .false.
+           iVarImf_V = 0
            if(DoTest)then
               write(*,*)'NameImfVars=', NameImfVars
               write(*,*)'NameImfVar_I=',NameImfVar_I
               write(*,*)'Max Number of input variables =',MaxVarImf
               write(*,*)'user input number of variables=',nVarImf
            end if
-           Do iVar= 1, nVarImf
+           do iVar= 1, nVarImf
               String=NameImfVar_I(iVar)
               call lower_case(String)
-              select case ( String)
+              select case (String)
               case ('n')
-                 iVarImf_V(iVar)=rho_
-                 UseNumberDensity=.true.
+                 iVarImf_V(iVar)  = rho_
+                 UseNumberDensity = .true.
               case ('ux')
-                 iVarImf_V(iVar)=Ux_
+                 iVarImf_V(iVar) = Ux_
               case ('uy')
-                 iVarImf_V(iVar)=Uy_
+                 iVarImf_V(iVar) = Uy_
               case ('uz')
-                 iVarImf_V(iVar)=Uz_
+                 iVarImf_V(iVar) = Uz_
               case ('bx')
-                 iVarImf_V(iVar)=Bx_
+                 iVarImf_V(iVar) = Bx_
               case ('by')
-                 iVarImf_V(iVar)=By_
+                 iVarImf_V(iVar) = By_
               case ('bz')
-                 iVarImf_V(iVar)=Bz_
+                 iVarImf_V(iVar) = Bz_
               case ('t')
-                 iVarImf_V(iVar)=p_
-                 UseTemperature =.true.
+                 iVarImf_V(iVar) = p_
+                 UseTemperature  = .true.
               case  default
                  do jVar=1, nVar
                     NameVar=NameVar_V(jVar)
@@ -170,8 +162,9 @@ subroutine read_upstream_input_file(upstreamfilename)
                     iVarImf_V(iVar)=jVar
                  end do
                  if(iVarImf_V(iVar)==0.)then
-                    write(*,*)'unknown input variable', iVar, String
-                    !call stop_mpi('wrong input variables',iVar, String)
+                    write(*,*)NameSub,': unknown solarwind variable',&
+                         iVar, String
+                    call stop_mpi(NameSub//' wrong solarwind variables')
                  end if
               end select
            end do
@@ -197,12 +190,6 @@ subroutine read_upstream_input_file(upstreamfilename)
      Upstream_Data = 0.0
      Upstream_Data(:, Rho_)   = 1.0
      Upstream_Data(:, P_)     = inv_g
-     do iFluid = IonFirst_+1, nFluid
-        call select_fluid 
-        Upstream_Data(:, Rho_)   = LowDensityRatio
-        Upstream_Data(:, iP)     = inv_g*LowDensityRatio &
-             *MassIon_I(1)/MassFluid_I(iFluid)
-     end do
      if(UseMultiSpecies)then
         Upstream_Data(:, SpeciesFirst_) = &
              1.0 - cTiny8*(SpeciesLast_-SpeciesFirst_)
@@ -337,35 +324,15 @@ subroutine read_upstream_input_file(upstreamfilename)
   endif
 
   call MPI_Bcast(Upstream_Npts,1,MPI_Integer,0,iComm,iError)
-  if(iError>0)call stop_mpi( NameSub//": Upstream_Npts could not be broadcast")
-
   call MPI_Bcast(Upstream_Time,Max_Upstream_Npts,MPI_DOUBLE_PRECISION, &
        0,iComm,iError)
-  if(iError>0)call stop_mpi(NameSub//": Upstream_Time could not be broadcast")
-
-  call MPI_Bcast(Upstream_Data,Max_Upstream_Npts*MaxVarImf,MPI_Real, &
+  call MPI_Bcast(Upstream_Data,Max_Upstream_Npts*MaxVarImf,MPI_REAL, &
        0,iComm,iError)
-  if(iError>0)call stop_mpi(NameSub//": Upstream_Data could not be broadcast")
-
   call MPI_Bcast(TypeInputCoordSystem,3,MPI_CHARACTER,0,iComm,iError)
-  if(iError>0)call stop_mpi(NameSub// &
-       ": TypeInputCoordSystem could not be broadcast")
-
-  call MPI_Bcast(Propagation_Plane_XY,1,MPI_Real,0,iComm,iError)
-  if(iError>0)call stop_mpi(NameSub// &
-       ": Propagation_Plane_XY could not be broadcast")
-
-  call MPI_Bcast(Propagation_Plane_XZ,1,MPI_Real,0,iComm,iError)
-  if(iError>0)call stop_mpi(NameSub// &
-       ": Propagation_Plane_XZ could not be broadcast")
-
-  call MPI_Bcast(Satellite_Y_Pos,1,MPI_Real,0,iComm,iError)
-  if(iError>0)call stop_mpi(NameSub// &
-       ": Satellite_Y_Pos could not be broadcast")
-
-  call MPI_Bcast(Satellite_Z_Pos,1,MPI_Real,0,iComm,iError)
-  if(iError>0)call stop_mpi(NameSub// &
-       ": Satellite_Z_Pos could not be broadcast")
+  call MPI_Bcast(Propagation_Plane_XY,1,MPI_REAL,0,iComm,iError)
+  call MPI_Bcast(Propagation_Plane_XZ,1,MPI_REAL,0,iComm,iError)
+  call MPI_Bcast(Satellite_Y_Pos,1,MPI_REAL,0,iComm,iError)
+  call MPI_Bcast(Satellite_Z_Pos,1,MPI_REAL,0,iComm,iError)
 
   ! This part will be removed by KC.
   if (SW_T_dim <= 0.0) then
@@ -442,10 +409,10 @@ end subroutine read_upstream_input_file
 subroutine normalize_upstream_data
 
   use ModPhysics, ONLY: &
-       Io2No_V, UnitTemperature_, UnitN_, UnitP_, UnitU_, UnitB_,&
+       Io2No_V, UnitTemperature_, UnitN_, UnitRho_, UnitP_, UnitU_, UnitB_, &
        AverageIonCharge, ElectronTemperatureRatio
   use ModUpstreamData
-  use ModMultiFluid, ONLY: MassIon_I
+  use ModMultiFluid
   use ModConst
 
   implicit none
@@ -462,63 +429,103 @@ subroutine normalize_upstream_data
   Upstream_Data(:,Bx_:Bz_) = Upstream_Data(:, Bx_:Bz_)*Io2No_V(UnitB_)
   Upstream_Data(:,Ux_:Uz_) = Upstream_Data(:, Ux_:Uz_)*Io2No_V(UnitU_)
   
-  do iFluid = IonFirst_+1, nFluid
-     call select_fluid
-     Upstream_Data(:, iRho  )=Upstream_Data(:, iRho)*Io2No_V(UnitN_)
-     Upstream_Data(:, iRhoUx)=Upstream_Data(:, iRhoUx)*Io2No_V(UnitU_)
-     Upstream_Data(:, iRhoUy)=Upstream_Data(:, iRhoUy)*Io2No_V(UnitU_)
-     Upstream_Data(:, iRhoUz)=Upstream_Data(:, iRhoUz)*Io2No_V(UnitU_)
-
-     !change number density to mass density
-     if (UseNumberDensity) &
-          Upstream_Data(:,irho)=Upstream_Data(:,irho)*MassFluid_I(iFluid)
-
-     !change temperature to pressure
-     if(UseTemperature)  Upstream_Data(:,p_)= &
-          Upstream_Data(:,iP)*Io2No_V(UnitTemperature_)&
-          *Upstream_Data(:,irho)/MassFluid_I(iFluid)
-  end do
-
   if(UseMultiSpecies) then
-     Upstream_Data(:,rho_)=0.0
+     Upstream_Data(:, Rho_) = 0.0
 
      !calculate number density to get the right pressure p=n*T
      do jVar=SpeciesFirst_, SpeciesLast_
-        Upstream_Data(:,jVar)=Upstream_Data(:,jVar)*Io2No_V(UnitN_) 
-        Upstream_Data(:,rho_)=Upstream_Data(:,rho_)+Upstream_Data(:,jVar)
+        Upstream_Data(:,jVar) = Upstream_Data(:,jVar)*Io2No_V(UnitN_) 
+        Upstream_Data(:,rho_) = Upstream_Data(:,rho_)+Upstream_Data(:,jVar)
      end do
 
      !normalize p = n*T 
      if(UseTemperature)  Upstream_Data(:,p_)= &
-          Upstream_Data(:,T_)*Io2No_V(UnitTemperature_)*Upstream_Data(:,rho_)
+          Upstream_Data(:,T_)*Io2No_V(UnitTemperature_)*Upstream_Data(:,Rho_)
 
      !calculate mass density of each ion species and the total mass density
-     Upstream_Data(:,rho_)=0.0
+     Upstream_Data(:, Rho_) = 0.0
      do jVar=SpeciesFirst_, SpeciesLast_
-        Upstream_Data(:,jVar)=Upstream_Data(:,jVar)*MassSpecies_V(jVar) 
-        Upstream_Data(:,rho_)=Upstream_Data(:,rho_)+Upstream_Data(:,jVar)
+        Upstream_Data(:,jVar) = Upstream_Data(:,jVar)*MassSpecies_V(jVar) 
+        Upstream_Data(:,rho_) = Upstream_Data(:,rho_)+Upstream_Data(:,jVar)
      end do
 
   else
-     Upstream_Data(:,rho_) = &
-          Upstream_Data(:, rho_)*Io2No_V(UnitN_)
-     
-     if (UseNumberDensity) &
-          Upstream_Data(:,rho_)=Upstream_Data(:,rho_)*MassIon_I(1)
-
-     if(UseTemperature)  Upstream_Data(:,p_)= &
-          Upstream_Data(:,T_)*Io2No_V(UnitTemperature_)&
-          *Upstream_Data(:,rho_)/MassIon_I(1)
-     
+     if(UseNumberDensity) then
+        Upstream_Data(:,rho_) = Upstream_Data(:,Rho_)*Io2No_V(UnitN_) &
+             *MassIon_I(1)
+     else
+        Upstream_Data(:,rho_) = Upstream_Data(:,Rho_)*Io2No_V(UnitRho_)
+     end if
+     if(UseTemperature) then
+        Upstream_Data(:,p_) =  Upstream_Data(:,T_)*Io2No_V(UnitTemperature_)&
+             *Upstream_Data(:,rho_)/MassIon_I(1)
+     else
+        Upstream_Data(:,p_) =  Upstream_Data(:,p_)*Io2No_V(UnitP_)
+     end if
   end if
 
-  ! normalize pressure or temperature
-  if(UseTemperature)then
-     Upstream_Data(:,p_) = Upstream_Data(:,p_) * &
-          (1.0 + AverageIonCharge*ElectronTemperatureRatio)
-  else
-     Upstream_Data(:, p_) = Upstream_Data(:, p_)*Io2No_V(UnitP_)
-  end if
+  ! Modify pressure with electron pressure
+  if(UseTemperature) Upstream_Data(:,p_) = Upstream_Data(:,p_) * &
+       (1.0 + AverageIonCharge*ElectronTemperatureRatio)
+
+  ! Set or normalize other fluids for multi-fluid equations
+  do iFluid = 2, nFluid
+     call select_fluid
+
+     ! Set fluid density
+     if(all(iVarImf_V(1:nVarImf) /= iRho)) then
+        if(iFluid == IonFirst_)then
+           ! By default the solar wind contains the first ion fluid
+           Upstream_Data(:, iRho) = Upstream_Data(:, Rho_)* &
+                (1.0 - LowDensityRatio*(nFluid - IonFirst_))
+        else
+           ! Other ion fluids are set to a very small fraction
+           Upstream_Data(:, iRho) = Upstream_Data(:, Rho_)*LowDensityRatio
+        end if
+     elseif(UseNumberDensity)then
+        Upstream_Data(:, iRho) = Upstream_Data(:, iRho) * Io2No_V(UnitN_) &
+             * MassFluid_I(iFluid)
+     else
+        Upstream_Data(:, iRho) = Upstream_Data(:, iRho) * Io2No_V(UnitRho_)
+     end if
+
+     ! Set fluid pressure
+     if(all(iVarImf_V(1:nVarImf) /= iP)) then
+        !By default all fluids have the same temperature as the first ion fluid
+        Upstream_Data(:, iP) = Upstream_Data(:, p_)/Upstream_Data(:, Rho_) &
+             *Upstream_Data(:, iRho)*MassIon_I(1)/MassFluid_I(iFluid)
+     elseif(UseTemperature)then
+        ! Calculate normalized fluid pressure from temperature
+        Upstream_Data(:, iP) = &
+             Upstream_Data(:, iP)*Io2No_V(UnitTemperature_) &
+             *Upstream_Data(:, iRho)/MassFluid_I(iFluid)
+     else
+        ! Normalize fluid pressure
+        Upstream_Data(Upstream_Npts, iP) = Upstream_Data(Upstream_Npts, iP) &
+             * Io2No_V(UnitP_)
+     end if
+
+     ! Set fluid velocity
+     if(all(iVarImf_V(1:nVarImf) /= iUx)) then
+        Upstream_Data(:, iUx) = Upstream_Data(:, Ux_)
+     else
+        Upstream_Data(:, iUx) = Upstream_Data(:, iUx) * Io2No_V(UnitU_)
+     end if
+     if(all(iVarImf_V(1:nVarImf) /= iUy)) then
+        Upstream_Data(:, iUy) = Upstream_Data(:, Uy_)
+     else
+        Upstream_Data(:, iUy) = Upstream_Data(:, iUy) * Io2No_V(UnitU_)
+     end if
+     if(all(iVarImf_V(1:nVarImf) /= iUz)) then
+        Upstream_Data(:, iUz) = Upstream_Data(:, Uz_)
+     else
+        Upstream_Data(:, iUz) = Upstream_Data(:, iUz) * Io2No_V(UnitU_)
+     end if
+
+  end do ! iFluid
+
+  if(IsMhd .and. UseMultiIon) &
+       Upstream_Data(:, p_) = sum( Upstream_Data(:, iPIon_I), DIM=2 )
 
   if(DoTestMe)then
      write(*,*)'Io2No_V(UnitP_)',Io2No_V(UnitP_)
@@ -611,7 +618,7 @@ subroutine get_solar_wind_point(TimeSimulation, x, y, z, SolarWind_V)
         if ((iData == Upstream_Npts .and. &
              Upstream_Time(iData) <= time_now).or.(iData==1)) then 
 
-           SolarWind_V(:)  = Upstream_Data(iData,:)
+           SolarWind_V = Upstream_Data(iData,:)
 
         else
 
@@ -619,7 +626,7 @@ subroutine get_solar_wind_point(TimeSimulation, x, y, z, SolarWind_V)
                 (Upstream_Time(iData) - Upstream_Time(iData-1) + 1.0e-6)
            DtData1 = 1.0 - DtData2
 
-           SolarWind_V(:)  = DtData1 * Upstream_Data(iData,:) + &
+           SolarWind_V = DtData1 * Upstream_Data(iData,:) + &
                 DtData2 * Upstream_Data(iData-1,:)
 
         endif
