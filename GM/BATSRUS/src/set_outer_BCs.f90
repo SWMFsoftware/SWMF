@@ -386,12 +386,13 @@ end subroutine BC_fixed_B
 !==========================================================================  
 
 subroutine BC_solar_wind(time_now)
+
   use ModGeometry,ONLY:x_BLK, z_BLK,y_BLK, x2
   use ModVarIndexes
   use ModAdvance, ONLY : State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
   use ModSetOuterBC
-  use ModMultiFluid, ONLY: select_fluid, iFluid, &
-       iRho, iRhoUx, iRhoUy, iRhoUz, iP, MassIon_I
+  use ModMultiFluid, ONLY: &
+       iRho_I, iUx_I, iUy_I, iUz_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
   use ModPhysics, ONLY: LowDensityRatio
   use ModNumConst, ONLY: cTiny
   implicit none
@@ -414,27 +415,26 @@ subroutine BC_solar_wind(time_now)
            !x= x_BLK(i,j,k,iBLK)
             x=x2
            !warning: only work for west side to be inflow
-           call get_solar_wind_point(time_now, x, y, z, &
-                SolarWind_V)
+           call get_solar_wind_point(time_now, x, y, z, SolarWind_V)
 
-           State_VGB(:,i,j,k,iBLK)   = SolarWind_V
+           State_VGB(:,i,j,k,iBLK) = SolarWind_V
 
-           do iFluid = IonFirst_, nFluid
-              call select_fluid
-              State_VGB(iRhoUx, i,j,k,iBLK) = &
-                   State_VGB(iRhoUx, i,j,k,iBLK)*State_VGB(iRho,   i,j,k,iBLK)
-              State_VGB(iRhoUy, i,j,k,iBLK) = &
-                   State_VGB(iRhoUy, i,j,k,iBLK)*State_VGB(iRho,   i,j,k,iBLK)
-              State_VGB(iRhoUz, i,j,k,iBLK) = &
-                   State_VGB(iRhoUz, i,j,k,iBLK)*State_VGB(iRho,   i,j,k,iBLK)
-           end do
+           ! Convert velocities to momenta
+           State_VGB(iRhoUx_I, i,j,k,iBLK) = &
+                State_VGB(iUx_I, i,j,k,iBLK)*State_VGB(iRho_I,i,j,k,iBLK)
+           State_VGB(iRhoUy_I, i,j,k,iBLK) = &
+                State_VGB(iUy_I, i,j,k,iBLK)*State_VGB(iRho_I,i,j,k,iBLK)
+           State_VGB(iRhoUz_I, i,j,k,iBLK) = &
+                State_VGB(iUz_I, i,j,k,iBLK)*State_VGB(iRho_I,i,j,k,iBLK)
 
+           ! Subtract B0:   B1 = B - B0
            State_VGB(Bx_,i,j,k,iBLK)    = &
                 State_VGB(Bx_,i,j,k,iBLK) - B0xCell_BLK(i,j,k,iBLK)
            State_VGB(By_,i,j,k,iBLK)    = &
                 State_VGB(By_,i,j,k,iBLK) - B0yCell_BLK(i,j,k,iBLK)
            State_VGB(Bz_,i,j,k,iBLK)    = &
                 State_VGB(Bz_,i,j,k,iBLK) - B0zCell_BLK(i,j,k,iBLK)
+
         end do
      end do
   end do
