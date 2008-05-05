@@ -113,11 +113,19 @@ subroutine read_upstream_input_file(upstreamfilename)
            read(UNITTMP_,*) Propagation_Plane_XZ
            Propagation_Plane_XY = Propagation_Plane_XY * cDegToRad
            Propagation_Plane_XZ = Propagation_Plane_XZ * cDegToRad
-           Normal_D(2) = tan(Propagation_Plane_XY)
-           Normal_D(3) = tan(Propagation_Plane_XZ)
-           MagNormal = sqrt(dot_product(Normal_D, Normal_D))
-           if(MagNormal > 1.0e5 )call stop_mpi('too large angle with X plane')
-           Normal_D =  Normal_D /MagNormal
+           if((abs(Propagation_Plane_XY)-90.0)<1.0e-5)then
+              Normal_D=(/0.0, sign(1.0,Propagation_Plane_XY), 0.0/)
+           else if ((abs(Propagation_Plane_XZ)-90.0)<1.0e-5)then
+              Normal_D=(/0.0, 0.0, sign(1.0,Propagation_Plane_XZ)/)
+           else
+              Propagation_Plane_XY = Propagation_Plane_XY * cDegToRad
+              Propagation_Plane_XZ = Propagation_Plane_XZ * cDegToRad
+              Normal_D(2) = tan(Propagation_Plane_XY)
+              Normal_D(3) = tan(Propagation_Plane_XZ)
+              MagNormal = sqrt(dot_product(Normal_D, Normal_D))
+              Normal_D =  Normal_D /MagNormal
+           end if
+           write(*,*)'Normal_D=',Normal_D
         endif
 
         if(index(line,'#VAR')>0)then
@@ -329,6 +337,7 @@ subroutine read_upstream_input_file(upstreamfilename)
   call MPI_Bcast(Upstream_Data,Max_Upstream_Npts*MaxVarImf,MPI_REAL, &
        0,iComm,iError)
   call MPI_Bcast(TypeInputCoordSystem,3,MPI_CHARACTER,0,iComm,iError)
+  call MPI_Bcast(Normal_D,3,MPI_REAL,0,iComm,iError)
   call MPI_Bcast(Propagation_Plane_XY,1,MPI_REAL,0,iComm,iError)
   call MPI_Bcast(Propagation_Plane_XZ,1,MPI_REAL,0,iComm,iError)
   call MPI_Bcast(Satellite_Y_Pos,1,MPI_REAL,0,iComm,iError)
@@ -583,8 +592,7 @@ subroutine get_solar_wind_point(TimeSimulation, x, y, z, SolarWind_V)
            iData = iData + 1
         enddo
         
-        if ((abs(x-Satellite_X_Pos) > 1.0e-5) .or.   &
-             (Propagation_Plane_XY /= 0.0)    .or.   &
+        if((Propagation_Plane_XY /= 0.0)    .or.   &
              (Propagation_Plane_XZ /= 0.0)) then
 
            SatDistance_D = &
@@ -604,10 +612,12 @@ subroutine get_solar_wind_point(TimeSimulation, x, y, z, SolarWind_V)
            endif
            
            ! Time is in SI units
-           time_now = time_now - &
-                dot_product(SatDistance_D, Normal_D)/ &
-                dot_product(U_D, Normal_D) * No2Si_V(UnitT_)
-           
+           if(abs(dot_product(U_D,Normal_D))>1.0e-5)then  
+              time_now = time_now - &
+                   dot_product(SatDistance_D, Normal_D)/ &
+                   dot_product(U_D, Normal_D) * No2Si_V(UnitT_)
+           end if
+
            iData = 1
            do while ((iData < Upstream_Npts).and. &
                 (Upstream_Time(iData) < time_now))
