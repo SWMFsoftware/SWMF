@@ -10,6 +10,10 @@ module ModMultiFluid
 
   integer, parameter :: nIonFluid   = IonLast_ - IonFirst_ + 1
 
+  integer, parameter :: iUx_I(nFluid) = iRhoUx_I(1:nFluid)
+  integer, parameter :: iUy_I(nFluid) = iRhoUy_I(1:nFluid)
+  integer, parameter :: iUz_I(nFluid) = iRhoUz_I(1:nFluid)
+
   integer, parameter :: iRhoIon_I(nIonFluid)   = iRho_I(IonFirst_:IonLast_)
   integer, parameter :: iRhoUxIon_I(nIonFluid) = iRhoUx_I(IonFirst_:IonLast_)
   integer, parameter :: iRhoUyIon_I(nIonFluid) = iRhoUy_I(IonFirst_:IonLast_)
