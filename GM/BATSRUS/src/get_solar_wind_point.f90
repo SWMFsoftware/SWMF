@@ -113,19 +113,17 @@ subroutine read_upstream_input_file(upstreamfilename)
            read(UNITTMP_,*) Propagation_Plane_XZ
            Propagation_Plane_XY = Propagation_Plane_XY * cDegToRad
            Propagation_Plane_XZ = Propagation_Plane_XZ * cDegToRad
-           if((abs(Propagation_Plane_XY)-90.0)<1.0e-5)then
+           if((abs(Propagation_Plane_XY)-cHalfPi)<1.0e-3)then
               Normal_D=(/0.0, sign(1.0,Propagation_Plane_XY), 0.0/)
-           else if ((abs(Propagation_Plane_XZ)-90.0)<1.0e-5)then
+           else if ((abs(Propagation_Plane_XZ)-cHalfPi)<1.0e-3)then
               Normal_D=(/0.0, 0.0, sign(1.0,Propagation_Plane_XZ)/)
            else
-              Propagation_Plane_XY = Propagation_Plane_XY * cDegToRad
-              Propagation_Plane_XZ = Propagation_Plane_XZ * cDegToRad
               Normal_D(2) = tan(Propagation_Plane_XY)
               Normal_D(3) = tan(Propagation_Plane_XZ)
               MagNormal = sqrt(dot_product(Normal_D, Normal_D))
               Normal_D =  Normal_D /MagNormal
            end if
-           write(*,*)'Normal_D=',Normal_D
+           if(DoTest)write(*,*)'Normal propagation direction is',Normal_D
         endif
 
         if(index(line,'#VAR')>0)then
@@ -338,8 +336,6 @@ subroutine read_upstream_input_file(upstreamfilename)
        0,iComm,iError)
   call MPI_Bcast(TypeInputCoordSystem,3,MPI_CHARACTER,0,iComm,iError)
   call MPI_Bcast(Normal_D,3,MPI_REAL,0,iComm,iError)
-  call MPI_Bcast(Propagation_Plane_XY,1,MPI_REAL,0,iComm,iError)
-  call MPI_Bcast(Propagation_Plane_XZ,1,MPI_REAL,0,iComm,iError)
   call MPI_Bcast(Satellite_Y_Pos,1,MPI_REAL,0,iComm,iError)
   call MPI_Bcast(Satellite_Z_Pos,1,MPI_REAL,0,iComm,iError)
 
@@ -592,9 +588,8 @@ subroutine get_solar_wind_point(TimeSimulation, x, y, z, SolarWind_V)
            iData = iData + 1
         enddo
         
-        if((Propagation_Plane_XY /= 0.0)    .or.   &
-             (Propagation_Plane_XZ /= 0.0)) then
-
+        if(x/=Satellite_X_Pos.or.Normal_D(1)/= 1.0)then
+           
            SatDistance_D = &
                 (/x-Satellite_X_Pos, y-Satellite_Y_Pos, z-Satellite_Z_Pos /)
 
