@@ -29,7 +29,8 @@ contains
     use ModProcMH,  ONLY: iProc
     use ModPointImplicit, ONLY:  UsePointImplicit, IsPointImplSource, &
          IsPointImplMatrixSet
-    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, Test_String, BlkTest, ProcTest
+    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, &
+         iTest, jTest, kTest, Test_String, BlkTest, ProcTest
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModAdvance, ONLY: B0XCell_BLK, B0YCell_BLK, B0ZCell_BLK
     use ModAdvance, ONLY: bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
@@ -50,7 +51,7 @@ contains
     real :: CollisionRate_II(nIonFluid, nIonFluid), CollisionRate
 
     character (len=*), parameter :: NameSub = 'multi_ion_sources'
-    logical :: DoTest, DoTestMe
+    logical :: DoTest, DoTestMe, DoTestCell
     !-----------------------------------------------------------------------
     if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
 
@@ -61,6 +62,7 @@ contains
     else
        DoTest = .false.; DoTestMe = .false.
     end if
+    DoTestCell = .false.
 
     ! Add user defined point implicit source terms here
     ! Explicit user sources are added in calc_sources
@@ -86,6 +88,9 @@ contains
     end do
 
     do k=1,nK; do j=1,nJ; do i=1,nI
+
+       DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest
+
        ! Extract conservative variables
        State_V = State_VGB(:,i,j,k,iBlock)
 
@@ -149,6 +154,21 @@ contains
 
           Force_D = &
                ElectronCharge*NumDens_I(iIon)*cross_product(u_D, FullB_D) 
+
+          if(DoTestCell)then
+             write(*,*) NameSub,' iIon =', iIon
+             write(*,*)'bxO_DX(:,i+1)=', bCrossArea_DX(:,i+1,j,k)
+             write(*,*)'bxO_DX(:,i  )=', bCrossArea_DX(:,i,j,k)
+             write(*,*)'bxO_DY(:,j+1)=', bCrossArea_DY(:,i,j+1,k)
+             write(*,*)'bxO_DY(:,j  )=', bCrossArea_DY(:,i,j,k)
+             write(*,*)'bxO_DZ(:,k+1)=', bCrossArea_DZ(:,i,j,k+1)
+             write(*,*)'bxO_DZ(:,k  )=', bCrossArea_DZ(:,i,j,k)
+             write(*,*) NameSub,' uPlus_D  =', uPlus_D
+             write(*,*) NameSub,' uIon_D   =', uIon_D
+             write(*,*) NameSub,' Current_D=', Current_D
+             write(*,*) NameSub,' uPlusHall=', uPlusHallU_D
+             write(*,*) NameSub,' Force_D  =', Force_D
+          end if
 
           Heating = 0.0
 

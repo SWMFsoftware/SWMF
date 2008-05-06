@@ -242,8 +242,10 @@ subroutine calc_sources
 
   ! Explicit evaluation of multi-ion source for development purposes only
   if(UseMultiIon .and. &
-       .not. (UsePointImplicit .and. UsePointImplicit_B(iBlock)) ) &
-       call multi_ion_sources
+       .not. (UsePointImplicit .and. UsePointImplicit_B(iBlock)) ) then
+     call multi_ion_sources
+     if(DoTestMe) call write_source('After MultiIon sources')
+  end if
 
   if(UseHallResist .and. HallHyperFactor > 0.0) then
      call calc_hyper_resistivity(iBlock)
