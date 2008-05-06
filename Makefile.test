@@ -16,6 +16,7 @@ test_help:
 	@echo "    test_esmf                  (run ESMF_SWMF test only)"
 	@echo "    test1                      (run GM-IE-PW test only )"
 	@echo "    test2                      (run SC-IH test only )"
+	@echo "    test3                      (run GM-IE-IM test only )"
 
 test:
 	-@(make test_comp)
@@ -234,6 +235,58 @@ test2_check:
 		output/test2/IH_sat_earth_traj_n000000.sat \
 		>> test2_ih.diff)
 	ls -l test2*.diff
+
+### Test3: GM+IE+IM ###
+
+test3:
+	@echo "test3_compile..." > test3_gm.diff
+	@echo "test3_compile..." > test3_ie.diff
+	@echo "test3_compile..." > test3_im.diff
+	make test3_compile
+	@echo "test3_rundir..." >> test3_gm.diff
+	@echo "test3_rundir..." >> test3_ie.diff
+	@echo "test3_rundir..." >> test3_im.diff
+	make test3_rundir
+	@echo "test3_run..." >> test3_gm.diff
+	@echo "test3_run..." >> test3_ie.diff
+	@echo "test3_run..." >> test3_im.diff
+	make test3_run
+	@echo "test3_check..." >> test3_gm.diff
+	@echo "test3_check..." >> test3_ie.diff
+	@echo "test3_check..." >> test3_im.diff
+	make test3_check
+
+test3_compile:
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
+	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd
+	make SWMF
+
+test3_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.GMIEIM ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.GMIEIM ${TESTDIR}/LAYOUT.in
+	cp Param/midn_05.dat ${TESTDIR}/midn_05.dat
+	cp Param/noon_05.dat ${TESTDIR}/noon_05.dat
+
+test3_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./Postproc.pl -M RESULT
+
+test3_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-7 \
+		${TESTDIR}/RESULT/IM/2d__max_t00000010.idl \
+		output/test3/2d__max_t00000010.idl \
+		> test3_im.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
+		${TESTDIR}/RESULT/GM/log_n000001.log \
+		output/test3/GM_log_n000001.log \
+		> test3_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
+		${TESTDIR}/RESULT/IE/logIE.log \
+		output/test3/IE_logIE.log \
+		> test3_ie.diff)
+	ls -l test3*.diff
 
 ### ESMF test ###
 #
