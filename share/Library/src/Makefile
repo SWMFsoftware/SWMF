@@ -40,12 +40,8 @@ MODULES = \
 	CON_planet_field.o\
 	CON_ray_trace.o
 
-OBJECTS=\
-	heat_capacity.o \
-	get_ionization.o
-
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${MODULES} ${OBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${MODULES}
 
 MY_LIB = ${LIBDIR}/libSHARE.a
 
@@ -55,7 +51,7 @@ LIB:	DEPEND
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}: ${MODULES} ${OBJECTS}
+${MY_LIB}: ${MODULES}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${MODULES}
 
