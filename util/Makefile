@@ -1,7 +1,8 @@
 INSTALLFILE = \
 	DATAREAD/srcIndices/Makefile.DEPEND \
 	EMPIRICAL/srcIE/Makefile.DEPEND \
-	EMPIRICAL/srcUA/Makefile.RULES
+	EMPIRICAL/srcUA/Makefile.RULES \
+	CRASH/src/Makefile.DEPEND
 
 install:
 	touch ${INSTALLFILE}
@@ -16,7 +17,8 @@ clean:
 	cd DATAREAD/srcMagnetogram;   make clean
 	cd EMPIRICAL/srcIE;           make clean
 	cd EMPIRICAL/srcGM;           make clean
-	cd EMPIRICAL/srcUA;           make clean  
+	cd EMPIRICAL/srcUA;           make clean
+	cd CRASH/src;                 make clean
 
 distclean:
 	touch ${INSTALLFILE}
@@ -29,6 +31,7 @@ distclean:
 	cd EMPIRICAL/srcIE;           make distclean
 	cd EMPIRICAL/srcGM;           make distclean
 	cd EMPIRICAL/srcUA;           make distclean
+	cd CRASH/src;                 make distclean
 	rm -f *~
 
 dist: distclean
