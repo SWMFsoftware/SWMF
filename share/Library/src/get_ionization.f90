@@ -89,7 +89,7 @@
 
 
   double precision function   Conc( N0after )
-    use CAXA
+    use ModSaha
     implicit NONE
     double precision, intent(in) :: N0after !// conc neautrals
 
@@ -270,7 +270,7 @@ end function Conc
 
 
  subroutine    ConcNafter  ! // for given summ(No+Niz) on boundary II, calc. Ci[z]
-    use CAXA
+    use ModSaha
     implicit NONE
 
     integer          ::    iter 

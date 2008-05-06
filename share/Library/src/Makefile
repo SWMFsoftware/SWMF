@@ -41,7 +41,8 @@ MODULES = \
 	CON_ray_trace.o
 
 OBJECTS=\
-	heat_capacity.o
+	heat_capacity.o \
+	get_ionization.o
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${MODULES} ${OBJECTS}
