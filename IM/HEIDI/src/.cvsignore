@@ -1,3 +1,5 @@
+Makefile.RULES
+Makefile.DEPEND
 *.mod
 *.o
 Makefile.DEPEND
