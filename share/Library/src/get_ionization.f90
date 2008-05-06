@@ -39,7 +39,7 @@
 
   module ModSaha
     implicit NONE
-
+    include 'CRASH_definitions.h'
     real,  parameter ::  &
         Err =  1.00e-012  ,         &  !*f9 9 //09        //009 work up to 4-5 poin
         Pi  = (3.1415926) ,        &
@@ -81,17 +81,10 @@
 !===========================================\
 !=============================================\
 !===============================================\
-
-
-
-
-
-
-
-  double precision function   Conc( N0after )
+ real function   Conc( N0after )
     use ModSaha
     implicit NONE
-    double precision, intent(in) :: N0after !// conc neautrals
+    real, intent(in) :: N0after !// conc neautrals
 
    integer::  k=1     ,  &   
               iter    ,  &
@@ -99,7 +92,7 @@
               iZer =1 ,  &   !  start of slider   zb+{|+0,|+1,|+2,|+3,|+4}
               zb
 
-    double precision ::       &
+    real ::       &
         NORM  ,      &!= N0after,         &
 	te, t32 ,    &!= Telectrons ,     	t32  = te*sqrt(te) 
 	a4,          &!
@@ -274,7 +267,7 @@ end function Conc
     implicit NONE
 
     integer          ::    iter 
-    double precision ::               &
+    real ::               &
 	         nsum  ,   bs,        &  
                  x3, x1,x2,f1,f2, df, &
                  Conc
@@ -321,7 +314,7 @@ end function Conc
 !debuT:
        write (*,*) '...f2=', DABS (f2) ,' <2-1> ', DABS(f1) 
 
-      end do  neutral  !wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww 
+      end do  neutral   
   return
 end subroutine ConcNafter
 
