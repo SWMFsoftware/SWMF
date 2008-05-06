@@ -1,0 +1,4 @@
+Makefile.DEPEND
+Makefile.RULES
+*.mod
+*.o
