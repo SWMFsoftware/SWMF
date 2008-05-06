@@ -155,15 +155,21 @@ contains
     real :: ShearLattitude, ShearLongitude
     real :: SinLattitude, CosLattitude, SinLongitude, CosLongitude
     !--------------------------------------------------------------------------
-    DoShearFlow = .true.
+    DoShearFlow = .false.
 
     ! 1 = Hydrodynamical vortical flow
-    ! 2 = Magnetic flux conserving voritical flow
+    ! 2 = Magnetic flux conserving vortical flow
     iVorticalFlow = 1
 
-    MaxBnARDim = 20.0 ! [Gauss]
-    ShearAmplitude = 1.088e-2   ! 2.0 percent U_A
-    ShearAngle = 10.0*cDegToRad
+    select case(iVorticalFlow)
+    case(1)
+       ShearAmplitude = 1.088e-2   ! 2.0 percent U_A
+    case(2)
+       MaxBnARDim = 20.0 ! [Gauss]
+       ShearAmplitude = 1.08e-5   ! 2.5 percent U_A
+       ShearAngle = 10.0*cDegToRad
+    end select
+
     RampUpTime = 2400.0 ! [Seconds]
     RampDownTime = 2400.0 ! [Seconds]
     StartTimeRampDown = 20000.0 ! [Seconds]
@@ -252,9 +258,9 @@ contains
 
     real, intent(out) :: VarsGhostFace_V(nVar)
 
-    real :: Dens, Pres, Gamma, r, Un, B1n, FullBn, Bnorm
-    real, dimension(nDim) :: UnitR_D, U_D, UparB_D, &
-         B1_D, B1n_D, B1t_D, FullB_D, Bunit_D
+    real :: Dens, Pres, Gamma, r, Un, B1n, FullBn
+    real, dimension(nDim) :: UnitR_D, U_D, &
+         B1_D, B1n_D, B1t_D, FullB_D
     real :: UTheta, UPhi, Ux, Uy, Uz
     !--------------------------------------------------------------------------
     r = sqrt(sum(FaceCoords_D**2))
@@ -269,22 +275,19 @@ contains
     !\
     ! Update BCs for induction field
     !/
-    VarsGhostFace_V(Bx_:Bz_) = B1t_D
+    VarsGhostFace_V(Bx_:Bz_) = B1t_D !!!- B1n_D
 
     !\
     ! Update BCs for velocity field
     !/
-    FullB_D = B0Face_D + VarsGhostFace_V(Bx_:Bz_)
+    FullB_D = B0Face_D + B1t_D
     FullBn = dot_product(UnitR_D,FullB_D)
 
     if(abs(FullBn) < cTolerance .or. Un < 0.0)then
        ! No flow at polarity inversion lines and no backflow
-       VarsGhostFace_V(Ux_:Uz_) = -Un*UnitR_D
+       VarsGhostFace_V(Ux_:Uz_) = -U_D
     else
-       Bnorm    = sqrt(dot_product(FullB_D,FullB_D))
-       Bunit_D  = FullB_D/Bnorm
-       UparB_D  = dot_product(VarsTrueFace_V(Ux_:Uz_),Bunit_D)*Bunit_D
-       VarsGhostFace_V(Ux_:Uz_) = UparB_D
+       VarsGhostFace_V(Ux_:Uz_) = -U_D !!!+ 2.0*Un*FullB_D/FullBn
     end if
 
 !!!    if(DoShearFlow .and. Time_Accurate .and. Time_Simulation>0.0 &
@@ -292,9 +295,9 @@ contains
 !!!    if(DoShearFlow .and. Time_Simulation<ShearTime .and. Time_Accurate)then
     if(DoShearFlow .and. Time_Accurate)then
        call get_shear_flow(UTheta,UPhi,Ux,Uy,Uz,jFace,kFace,iBlockBc,FullBn)
-       VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_) + Ux
-       VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) + Uy
-       VarsGhostFace_V(Uz_) = VarsGhostFace_V(Uz_) + Uz
+       VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_) + 2.0*Ux
+       VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) + 2.0*Uy
+       VarsGhostFace_V(Uz_) = VarsGhostFace_V(Uz_) + 2.0*Uz
     end if
 
     !\
@@ -499,6 +502,7 @@ contains
 
     Del_D = xShear_D - UnitR_D
     Angle = 2.0*asin(0.5*sqrt(dot_product(Del_D,Del_D)))
+    Mask = exp(-(Angle/ShearAngle)**2)
 
     Ramp = 1.0
 
@@ -539,9 +543,8 @@ contains
     character (len=*), parameter :: Name='user_set_outerbcs'
 
     integer :: i, j, k, iMin, jMin, kMin, iMax, jMax, kMax
-    real :: B1_D(nDim), B1n, B1t_D(nDim), Bnorm, Bunit_D(nDim), &
-         FullB_D(nDim), FullBn
-    real :: U_D(nDim), Un, UparB_D(nDim), Umesh_D(nDim)
+    real :: B1_D(nDim), B1n, B1t_D(nDim), FullB_D(nDim), FullBn
+    real :: U_D(nDim), Un, Umesh_D(nDim), RhoU_D(nDim)
     real, dimension(nDim) :: UnitR_D
     real :: x, y, z, r, Dens, Pres, Gamma
     real :: UTheta, UPhi, Ux, Uy, Uz
@@ -600,7 +603,8 @@ contains
           State_VGB(Bx_:Bz_,i,j,k,iBlock) = B1t_D
        end do
 
-       U_D = State_VGB(RhoUx_:RhoUz_,1,j,k,iBlock)/State_VGB(Rho_,1,j,k,iBlock)
+       RhoU_D = State_VGB(RhoUx_:RhoUz_,1,j,k,iBlock)
+       U_D = RhoU_D/State_VGB(Rho_,1,j,k,iBlock)
        Un = dot_product(UnitR_D,U_D)
 
        FullB_D(x_) = B0xFace_x_BLK(1,j,k,iBlock) + B1t_D(x_)
@@ -608,8 +612,10 @@ contains
        FullB_D(z_) = B0zFace_x_BLK(1,j,k,iBlock) + B1t_D(z_)
        FullBn = dot_product(UnitR_D,FullB_D)
 
-       if(abs(FullBn) < cTolerance .or. Un < 0.0)then
-          ! No flow at polarity inversion lines and no backflow
+!!!       if(abs(FullBn) < cTolerance .or. Un < 0.0)then
+!!!          ! No flow at polarity inversion lines and no backflow
+       if(Un < 0.0)then
+          ! No backflow
           do i=iMin,iMax
              Umesh_D = State_VGB(RhoUx_:RhoUz_,1-i,j,k,iBlock) &
                   /State_VGB(Rho_,1-i,j,k,iBlock)
@@ -618,12 +624,11 @@ contains
                   *dot_product(UnitR_D,Umesh_D)*UnitR_D
           end do
        else
-          Bnorm   = sqrt(dot_product(FullB_D,FullB_D))
-          Bunit_D = FullB_D/Bnorm
-          UparB_D = dot_product(U_D,Bunit_D)*Bunit_D
           do i=iMin,iMax
+!!!             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+!!!                  State_VGB(Rho_,i,j,k,iBlock)*Un*FullB_D/FullBn
              State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
-                  State_VGB(Rho_,i,j,k,iBlock)*UparB_D
+                  dot_product(UnitR_D,RhoU_D)*UnitR_D
           end do
        end if
 
@@ -653,11 +658,11 @@ contains
     if(.not.UseRotatingFrame)then
        State_VGB(RhoUx_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) = &
             State_VGB(RhoUx_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) &
-            -2.0*OmegaBody*y_Blk(iMin:iMax,jMin:jMax,kMin:kMax,iBlock) &
+            -OmegaBody*y_Blk(iMin:iMax,jMin:jMax,kMin:kMax,iBlock) &
             *State_VGB(Rho_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)
        State_VGB(RhoUy_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) = &
             State_VGB(RhoUy_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) &
-            -2.0*OmegaBody*x_Blk(iMin:iMax,jMin:jMax,kMin:kMax,iBlock) &
+            -OmegaBody*x_Blk(iMin:iMax,jMin:jMax,kMin:kMax,iBlock) &
             *State_VGB(Rho_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)
     end if
 
