@@ -40,17 +40,17 @@ subroutine write_plot_los(iFile)
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK
   use ModPhysics, ONLY : No2Io_V, UnitX_
   use ModIO
-  use ModAdvance, ONLY : rho_,rhoUx_,State_VGB
-  use ModNumConst, ONLY : cTiny,cTwo,cPi,cHalf,cDegtoRad, &
-       cUnit_DD,cOne,cTolerance
+  use ModAdvance, ONLY : rho_, State_VGB
+  use ModNumConst, ONLY : cTiny, cUnit_DD, cTolerance
   use ModMpi
   use CON_axes, ONLY : transform_matrix
   use ModCoordTransform, ONLY : rot_matrix_z
+  use ModUtilities, ONLY: lower_case
   implicit none
 
   ! Arguments
 
-  integer, intent(in) :: ifile
+  integer, intent(in) :: iFile
 
   ! Local variables
 
@@ -69,6 +69,8 @@ subroutine write_plot_los(iFile)
   real ::     eqpar(neqparmax)
   character (len=10) :: eqparnames(neqparmax)
   character (len=10) :: plotvarnames(nplotvarlosmax)
+  character (len=10) :: NameVar
+
 
   integer :: nEqpar, nPlotvar
   integer :: iPix, jPix
@@ -95,9 +97,10 @@ subroutine write_plot_los(iFile)
   character (LEN=40) :: file_format
 
   ! block and variable Indices
-  integer :: iBLK,iVar
+  integer :: iBLK, iVar
 
   logical :: oktest,oktest_me,DoTiming,DoTimingMe, DoCheckBlock
+  logical :: UseScattering
   !---------------------------------------------------------------------------
 
   ! Initialize stuff
@@ -115,7 +118,7 @@ subroutine write_plot_los(iFile)
      rInner = rBuffMax
      rOuter = 1000.0
   case('GM')
-     rInner = 0.5
+     rInner = 0.0 ! needed for comet applications
      rOuter = 1000.0
   end select
   rInner2 = rInner**2
@@ -174,7 +177,8 @@ subroutine write_plot_los(iFile)
   if(oktest_me)write(*,*)'ifile=',ifile,' plot_type=',plot_type1, &
        ' form = ',plot_form(ifile)
 
-  call split_str(plot_vars1,nplotvarlosmax,plotvarnames,nplotvar)
+  call lower_case(plot_vars1)
+  call split_str(plot_vars1,nPlotvarLosMax,plotvarnames,nplotvar)
   call split_str(plot_pars1,neqparmax,eqparnames,neqpar)
   call set_eqpar(ifile-plot_,neqpar,eqparnames,eqpar)
 
@@ -211,14 +215,18 @@ subroutine write_plot_los(iFile)
   aOffset = dot_product(ImageCenter_D, a_Pix)
   bOffset = dot_product(ImageCenter_D, b_Pix)
 
-  !!!aOffset = aOffset + dot_product(ObsPos_D, a_Pix)
+!!!aOffset = aOffset + dot_product(ObsPos_D, a_Pix)
 
   allocate( &
        PlotVar(nPix,nPix,nplotvar), &
        PlotBLK(nPix,nPix,nplotvar), &
        los_image(nPix,nPix,nplotvar))
-  
+
   PlotVar = 0.0
+
+  UseScattering = any(plotvarnames(1:nPlotVar) == 'wl') &
+       .or.       any(plotvarnames(1:nPlotVar) == 'pb')
+
 
   if(DoTiming)call timing_start('los_block_loop')
 
@@ -254,7 +262,7 @@ subroutine write_plot_los(iFile)
              - ImageCenter_D
         xLosBlock = dot_product(XyzBlockCenter_D,a_pix)
         yLosBlock = dot_product(XyzBlockCenter_D,b_pix)
-  
+
         ! Project block size
         rBlockSize = rBlockSize*Ratio
 
@@ -283,7 +291,7 @@ subroutine write_plot_los(iFile)
            ! Check if block can intersect this pixel
            if(DoCheckBlock)then
               if( (x_Pix-xLosBlock)**2 + (y_Pix-yLosBlock)**2 > &
-                rBlockSize**2 ) CYCLE 
+                   rBlockSize**2 ) CYCLE 
            end if
 
            r2Pix = (x_Pix + aOffset)**2 + (y_Pix + bOffset)**2
@@ -295,7 +303,7 @@ subroutine write_plot_los(iFile)
            if( r2Pix > rSizeImage2 ) CYCLE 
 
            ! Calculate contribution of this block to this pixel
-           call set_plotvar_los(iFile-plot_)
+           call set_plotvar_los
 
         end do ! jPix loop
      end do ! iPix loop
@@ -306,7 +314,7 @@ subroutine write_plot_los(iFile)
 
   if(DoTiming)call timing_stop('los_block_loop')
 
-  if (plot_dimensional(ifile)) call dimensionalize_plotvar_los(ifile-plot_)
+  if (plot_dimensional(ifile)) call dimensionalize_plotvar_los
 
   ! collect the pixels on one node and then write out the file 
   if(nProc>1)then
@@ -383,7 +391,7 @@ subroutine write_plot_los(iFile)
         write(unit_tmp,"(2i4)") nPix, nPix
 
         ! Equation parameters
-        write(unit_tmp,"(100(1pe13.5))") eqpar(1:neqpar)
+        write(unit_tmp,"(100es13.5)") eqpar(1:neqpar)
 
         ! Coordinate, variable and equation parameter names
         write(unit_tmp,"(a)")allnames
@@ -399,7 +407,7 @@ subroutine write_plot_los(iFile)
                  y_Pix = y_Pix * No2Io_V(UnitX_)
               end if
 
-              write(unit_tmp,fmt="(30(1pe13.5))") &
+              write(unit_tmp,fmt="(30es18.10)") &
                    x_Pix, y_Pix, los_image(iPix,jPix,1:nPlotVar)
 
            end do
@@ -425,9 +433,7 @@ subroutine write_plot_los(iFile)
 contains
   !===========================================================================
 
-  subroutine set_plotvar_los(iPlotfile)
-
-    integer, intent(in) :: iPlotFile
+  subroutine set_plotvar_los
 
     ! Local variables
     integer :: i, j, k, counter
@@ -439,7 +445,7 @@ contains
     real :: Discr
     real :: Solution1, Solution1_D(3), Solution2, Solution2_D(3)
     logical :: IsOuter, IsGoodSolution1, IsGoodSolution2  
- 
+
     !-------------------------------------------------------------------------
     !if(DoTiming)call timing_start('los_set_plotvar')
 
@@ -496,9 +502,9 @@ contains
                    counter = counter + 1
                    if(counter == 1) point_1 = intrsct(i,j,:)
                    if(counter == 2) then
-                           point_2 = intrsct(i,j,:)
+                      point_2 = intrsct(i,j,:)
                       ! If point 2 is different from point 1, we are done
-                      if(sum(abs(point_1 - point_2))>cTolerance) EXIT CHECK
+                      if(sum(abs(point_1 - point_2)) > cTolerance) EXIT CHECK
                       ! Ignore the second point, keep checking
                       counter = 1
                    end if
@@ -544,8 +550,8 @@ contains
 
        if(Discr < 0.0)then
           write(*,*)'Warning: Discr=',Discr
-       !   call stop_mpi("Negative discriminant")
-           RETURN
+          !   call stop_mpi("Negative discriminant")
+          RETURN
        end if
 
        ! Line of sight tangent to the outer sphere
@@ -555,11 +561,11 @@ contains
        Discr = sqrt(Discr)
        Solution1 = (-coeff2-Discr)/(2*coeff1)
        Solution2 = (-coeff2+Discr)/(2*coeff1)
-     
+
        Solution1_D = point_1 + (point_2 - point_1) * Solution1
        Solution2_D = point_1 + (point_2 - point_1) * Solution2
 
- 
+
        ! Check if the solutions are within the segment
        IsGoodSolution1 = (Solution1 >= 0.0 .and. Solution1 <= 1.0)
        IsGoodSolution2 = (Solution2 >= 0.0 .and. Solution2 <= 1.0)
@@ -570,16 +576,16 @@ contains
           ! outlying point2 with solution2
           if(R2Point1 > rOuter2) then
              if(IsGoodSolution1)then
-                 point_1 = Solution1_D
+                point_1 = Solution1_D
              else
-                 RETURN
+                RETURN
              end if
           end if
           if(R2Point2 > rOuter2) then
              if(IsGoodSolution2)then
-                 point_2 = Solution2_D
+                point_2 = Solution2_D
              else
-                 RETURN
+                RETURN
              end if
           end if
        else
@@ -594,11 +600,11 @@ contains
              ! from point1 to solution1 and
              ! from point2 to solution2
              if(Discr > 0.0)then
-                if(Solution1>cTiny) &
+                if(Solution1 > cTiny) &
                      call integrate_segment(point_1, Solution1_D)
-                if(solution2<cOne-cTiny) &
+                if(solution2< 1 - cTiny) &
                      call integrate_segment(point_2, Solution2_D)
-             RETURN
+                RETURN
              end if
           end if
 
@@ -607,8 +613,8 @@ contains
 
     call integrate_segment(point_1, point_2)
 
-  end subroutine set_plotvar_los 
-     
+  end subroutine set_plotvar_los
+
   !===========================================================================
 
   subroutine integrate_segment(Point_1, Point_2)
@@ -617,8 +623,7 @@ contains
     integer, parameter ::  nline_seg = nI + nJ + nK
 
     real :: Direction, s_los_sqrd
-    integer :: iVar
-    integer :: i, j, k, i_los
+    integer :: i_los
     real :: x_los, y_los, z_los, r_los
     real :: x_q, y_q, z_q, q_mag
     real :: a_los, b_los, c_los, d_los
@@ -626,13 +631,14 @@ contains
     real :: rho_los, ds_los
     real :: point_in(3), point_los(3)
     !------------------------------------------------------------------------
+
     Direction  = dot_product((Point_1 - Point_2), LosPix_D)
     s_los_sqrd = sum((Point_2 - Point_1)**2)
 
     if(direction > 0) then 
-        point_in = point_2
+       point_in = point_2
     else 
-        point_in = point_1
+       point_in = point_1
     endif
     ds_los = sqrt(s_los_sqrd) / nline_seg
 
@@ -646,81 +652,72 @@ contains
        point_los(2) = y_los
        point_los(3) = z_los
 
-       sin_omega = 1.0/r_los
-       Sin2Omega = sin_omega**2
-       Cos2Omega = 1 - Sin2Omega
+       if(UseScattering .and. r_los > 1.0)then
+          ! This calculation is useful for light scattering in SC and IH
+          ! as it assumes that the radiation comes from a central 
+          ! body with radius 1. Normally setting rOccult > 1 ensures r_los > 1.
+          sin_omega = 1.0/r_los
+          Sin2Omega = sin_omega**2
+          Cos2Omega = 1 - Sin2Omega
+          cos_omega = sqrt(Cos2Omega)
+          Logarithm = log((1.0 + sin_omega)/cos_omega)  
 
-       if(Cos2Omega < 0)then
-          write(*,*)'ERROR!!!!'
-          write(*,*)'iPix, jPix, iBLK=',iPix, jPix, iBLK
-          write(*,*)'aOffset,bOffset=',aOffset, bOffset
-          write(*,*)'X_pix, Y_pix   =',x_pix,y_pix
-          write(*,*)'r2Pix, rOccult2=',r2Pix,rOccult2
-          
-          write(*,*)'point_1 =',point_1
-          write(*,*)'point_2 =',point_2
-          write(*,*)'point_in=',point_in
-          write(*,*)'LosPix_D=',LosPix_D
-          write(*,*)'point_los=',point_los
-          write(*,*)'r_los=',r_los
+          !omega and functions of omega are unique to a given line of sight
+          a_los = cos_omega*Sin2Omega
+          b_los = -0.125*( 1.0 - 3.0*Sin2Omega - (Cos2Omega/sin_omega)* &
+               (1.0 + 3.0*Sin2Omega)*Logarithm )
+          c_los = 4.0/3.0 - cos_omega - (1.0/3.0)*cos_omega*Cos2Omega
+          d_los = 0.125*( 5.0 + sin_omega**2 - (Cos2omega/sin_omega) * &
+               (5.0 - Sin2Omega)*Logarithm )
+
+          z_q =   (LosPix_D(1)**2 + LosPix_D(2)**2)*z_los            &
+               - LosPix_D(3)*(LosPix_D(1)*x_los + LosPix_D(2)*y_los)
+          x_q = x_los + (LosPix_D(1)/LosPix_D(3)) * (z_q - z_los)
+          y_q = y_los + (LosPix_D(2)/LosPix_D(3)) * (z_q - z_los)
+          q_mag = sqrt(x_q**2 + y_q**2 + z_q**2)
+
+          cos_theta = q_mag/r_los       
        end if
-       cos_omega = sqrt(Cos2Omega)
-       Logarithm = log((1.0 + sin_omega)/cos_omega)  
 
-       !omega and functions of omega are unique to a given line of sight
-       a_los = cos_omega*Sin2Omega
-       b_los = -0.125*( 1.0 - 3.0*Sin2Omega - (Cos2Omega/sin_omega)* &
-            (1.0 + 3.0*Sin2Omega)*Logarithm )
-       c_los = 4.0/3.0 - cos_omega - (1.0/3.0)*cos_omega*Cos2Omega
-       d_los = 0.125*( 5.0 + sin_omega**2 - (Cos2omega/sin_omega) * &
-            (5.0 - Sin2Omega)*Logarithm )
-
-       z_q =   (LosPix_D(1)**2 + LosPix_D(2)**2)*z_los            &
-            - LosPix_D(3)*(LosPix_D(1)*x_los + LosPix_D(2)*y_los)
-       x_q = x_los + (LosPix_D(1)/LosPix_D(3)) * (z_q - z_los)
-       y_q = y_los + (LosPix_D(2)/LosPix_D(3)) * (z_q - z_los)
-       q_mag = sqrt(x_q**2 + y_q**2 + z_q**2)
-
-       cos_theta = q_mag/r_los       
-       
        ! interpolate density at this point with bilinear interpolation
-       rho_los = point_value_los(point_los,iBLK)
+       rho_los = point_value_los(point_los, iBLK)
 
+       do iVar = 1, nPlotvar
+          NameVar = plotvarnames(iVar)
+          select case(NameVar)
+          case ('len')
+             ! Integrate the length of the integration lines
+             PlotBLK(iPix,jPix,iVar) = PlotBLK(iPix,jPix,iVar) + ds_los
 
-        do iVar=1,nplotvar
-             TypeLosImage = plotvarnames(iVar)
-             select case(TypeLosImage)
-             case ('len')
-                ! Integrate the length of the integration lines
-                PlotBLK(iPix,jPix,iVar) = PlotBLK(iPix,jPix,iVar) + ds_los
-                     
              !case('vlos','Vlos','ulos','Ulos')
              !   ! Integrate the velocity
              !   PlotBLK(iPix,jPix,iVar) = PlotBLK(iPix,jPix,iVar) + &
              !        (rhoU_los/rho_los)*ds_los
 
-             case('WL','wl')
-                ! White light with limb darkening
-                PlotBLK(iPix,jPix,iVar) = PlotBLK(iPix,jPix,iVar) + &
-                     rho_los*( &
-                     (1.0 - mu_los)*(2.0*c_los - a_los*cos_theta**2) &
-                     + mu_los*(2.0*d_los - b_los*cos_theta**2) )*ds_los
+          case('wl')
+             ! White light with limb darkening
+             if(r_los > 1.0) &
+                  PlotBLK(iPix,jPix,iVar) = PlotBLK(iPix,jPix,iVar) + &
+                  rho_los*( &
+                  (1.0 - mu_los)*(2.0*c_los - a_los*cos_theta**2) &
+                  + mu_los*(2.0*d_los - b_los*cos_theta**2) )*ds_los
 
-             case('PB','pb')
-                ! Polarization brightness
-                PlotBLK(iPix,jPix,iVar) = PlotBLK(iPix,jPix,iVar) + &
+          case('pb')
+             ! Polarization brightness
+             if(r_los > 1.0) &
+                  PlotBLK(iPix,jPix,iVar) = PlotBLK(iPix,jPix,iVar) + &
                   rho_los*( (1.0 - mu_los)*a_los + mu_los*b_los) &
                   *cos_theta**2*ds_los
 
-             case('rho','RHO')
-                ! Simple density integral
-                PlotBLK(iPix,jPix,iVar) = PlotBLK(iPix,jPix,iVar) + &
-                     rho_los*ds_los
+          case('rho')
+             ! Simple density integral
+             PlotBLK(iPix,jPix,iVar) = PlotBLK(iPix,jPix,iVar) + &
+                  rho_los*ds_los
 
-             case default
-                PlotBLK(iPix,jPix,iVar)=-7777.
-             end select
-        end do ! iVar
+          case default
+             PlotBLK(iPix,jPix,iVar)=-7777.
+          end select
+       end do ! iVar
 
     end do !line segment interation loop 
 
@@ -758,7 +755,7 @@ contains
     dy1=x(2)-j1; dy2=1.-dy1
     dz1=x(3)-k1; dz2=1.-dz1
 
-    ! Bilinear interpolation in 3D
+    ! Trilinear interpolation of density
     point_value_los = &
          dx1*(   dy1*(   dz1*State_VGB(rho_,i2,j2,k2,iBLK)+&
          dz2*State_VGB(rho_,i2,j2,k1,iBLK))+&
@@ -773,21 +770,15 @@ contains
 
   !==========================================================================
 
-  subroutine dimensionalize_plotvar_los(iplotfile)
+  subroutine dimensionalize_plotvar_los
 
     use ModPhysics, ONLY : No2Io_V, No2Si_V, UnitX_, UnitU_, UnitRho_
-
-    integer, intent(in) :: iPlotFile
-
-    character (len=10) :: s
-
-    integer :: iVar,i,j,k
     !--------------------------------------------------------------------------
 
-    do iVar=1,nPlotVar
-       s=plotvarnames(iVar)
+    do iVar = 1, nPlotVar
+       NameVar = plotvarnames(iVar)
 
-       select case(s)
+       select case(NameVar)
        case ('len')
           PlotVar(:,:,iVar)=PlotVar(:,:,iVar)*No2Si_V(UnitX_)
        case('rho')
@@ -818,8 +809,8 @@ subroutine get_TEC_los_variables(iFile,nplotvar,plotvarnames,unitstr_TEC)
   character (len=500), intent(out) :: unitstr_TEC 
   character (len=10) :: s
 
-  integer :: iVar, len
-
+  integer :: iVar
+  !--------------------------------------------------------------------------
 
   !\
   ! This routine takes the plot_var information and loads the header file with
@@ -904,7 +895,7 @@ subroutine get_TEC_los_variables(iFile,nplotvar,plotvarnames,unitstr_TEC)
 
 end subroutine get_TEC_los_variables
 
-!======================================================================
+!==============================================================================
 subroutine get_IDL_los_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
 
   use ModPhysics, ONLY : NameIdlUnit_V, UnitX_, UnitU_
@@ -919,8 +910,8 @@ subroutine get_IDL_los_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
   character (len=79), intent(out) :: unitstr_IDL 
   character (len=10) :: s
 
-  integer :: iVar, len
-
+  integer :: iVar
+  !----------------------------------------------------------------------------
 
   !\
   ! This routine takes the plot_var information and loads the header file with
