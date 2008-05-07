@@ -25,6 +25,7 @@ test:
 	-@(make test_esmf)
 	-@(make test1)
 	-@(make test2)
+	-@(make test3)
 	-@(make test_check)
 
 test_check:
