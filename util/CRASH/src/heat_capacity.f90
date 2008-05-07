@@ -36,7 +36,9 @@ end subroutine get_e_heat_capacity_per_vol
 !=====================  Heat capacity per mass:  ========================!!!!
 !                \left(\frac{\partial E}{\partial T_e}\right)_{V,T_i}    !!!!
 subroutine get_e_heat_capacity_per_mass(HeatCapacity,Te,Rho,iMaterial)      !!!!
+
   use ModConst
+
   implicit none
   include 'CRASH_definitions.h'
   real,intent(out)::HeatCapacity  !In SI: J/(K m^3)
