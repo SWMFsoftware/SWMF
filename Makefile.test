@@ -267,8 +267,9 @@ test3_rundir:
 	make rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.GMIEIM ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.GMIEIM ${TESTDIR}/LAYOUT.in
-	cp Param/midn_05.dat ${TESTDIR}/midn_05.dat
-	cp Param/noon_05.dat ${TESTDIR}/noon_05.dat
+
+#	cp Param/midn_05.dat ${TESTDIR}/midn_05.dat
+#	cp Param/noon_05.dat ${TESTDIR}/noon_05.dat
 
 test3_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
