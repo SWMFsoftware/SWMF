@@ -72,7 +72,7 @@ end subroutine PW_set_param
 !==============================================================================
 
 subroutine PW_init_session(iSession, TimeSimulation)
-  use ModPWOM, ONLY: UseIE
+  use ModPWOM, ONLY: iProc, UseIE, Time
   use ModPwTime
   use ModTimeConvert, ONLY: time_real_to_int
   use CON_coupler, ONLY: Couple_CC, IE_, PW_
@@ -90,12 +90,16 @@ subroutine PW_init_session(iSession, TimeSimulation)
   UseIE = Couple_CC(IE_, PW_) % DoThis
   
   if(DoInitialize) then
+     ! Initialize PW
+     call PW_initialize
      ! Set time related variables for UA 
      call get_time(tStartOut = StartTime)
      CurrentTime = StartTime + TimeSimulation
      call time_real_to_int(StartTime, iStartTime)
-     ! Initialize PW
-     call PW_initialize
+     if(Time /= TimeSimulation .and. iProc==0) &
+          write(*,*)'WARNING ',NameSub,': PWOM Time=',Time, &
+          ' differs from SWMF TimeSimulation=',TimeSimulation 
+     Time = TimeSimulation
   endif
   DoInitialize = .false.
 
@@ -192,10 +196,13 @@ subroutine PW_run(TimeSimulation,TimeSimulationLimit)
   logical :: DoTest, DoTestMe
   !---------------------------------------------------------------------------
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
-  if(DoTestMe)write(*,*) NameSub,': TimeSimulation,TimeSimulationLimit=',&
-       TimeSimulation,TimeSimulationLimit
+  if(DoTestMe)write(*,*) NameSub,': Time,TimeSimulation,TimeSimulationLimit=',&
+       Time,TimeSimulation,TimeSimulationLimit
 
   DtHorizontal = min(DtHorizontalOrig, TimeSimulationLimit - Time)
+
+  if(DoTestMe)write(*,*) NameSub,': DtHorizontalOrig,DtHorizontal=',&
+       DtHorizontalOrig,DtHorizontal
 
   ! Avoid taking tiny little steps
   if(DtHorizontal < 1e-6)then
@@ -204,8 +211,6 @@ subroutine PW_run(TimeSimulation,TimeSimulationLimit)
      RETURN
   end if
 
-  if(DoTestMe)write(*,*) NameSub,': DtHorizontalOrig,DtHorizontal=',&
-       DtHorizontalOrig,DtHorizontal
 
   do iLine=1,nLine
      call move_line
