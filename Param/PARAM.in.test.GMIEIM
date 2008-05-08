@@ -1,8 +1,7 @@
+Begin session: 1
+
 #ECHO
 T
-
-VERBOSE
-100
 
 #TIMEACCURATE
 F			DoTimeAccurate
@@ -15,10 +14,10 @@ F			DoTimeAccurate
 Test for GM-IM-IE.
 
 #PLANET
-EARTH
+EARTH			NamePlanet
 
 #SAVERESTART
-F
+F			DoSaveRestart
 
 #ROTATION
 F			UseRotation
@@ -42,31 +41,33 @@ IE			NameComp2
 5                      	DnCouple
 -1.0                    DtCouple
 
-
-#BEGIN_COMP GM ---------------------------------------------------------------
+#BEGIN_COMP GM ----------------------------------------
 
 #GRID
-1			nRootBlock_D(x_)
-1			nRootBlock_D(y_)
-1			nRootBlock_D(z_)
--224.			x1
- 32.			x2
--128.			y1
- 128.			y2
--128.			z1
- 128.			z2
+1			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-224.			xMin
+32.			xMax
+-128.			yMin
+128.			yMax
+-128.			zMin
+128.			zMax
 
 ! Maximum resolution initially
+
 #GRIDRESOLUTION
 2.0			Resolution
 initial			NameArea
 
 ! Minimum resolution in the computational domain
+
 #GRIDRESOLUTION
 8.0			Resolution
 all			NameArea
 
 ! Far tail for wind satellite and inflow
+
 #GRIDRESOLUTION
 2.0			Resolution
 box			NameArea
@@ -78,6 +79,7 @@ box			NameArea
   16.0			xMaxBox
 
 ! r currents resolution for the ionosphere
+
 #GRIDRESOLUTION
 1/4			Resolution
 shell0			NameArea
@@ -134,18 +136,17 @@ noon_05.dat		NameTrajectoryFile
 T                                                     UseUpstreamInputFile
 GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat   NameUpstreamFile
 
-#END_COMP GM -----------------------------------------------------------------
+#END_COMP GM   ----------------------------------------
 
-
-#BEGIN_COMP IE ---------------------------------------------------------------
+#BEGIN_COMP IE ----------------------------------------
 
 #IONOSPHERE
-0                       iConductanceModel
-F                       UseFullCurrent
-F                       UseFakeRegion2
-150.0                   F10.7 Flux
-5.0                     StarLightPedConductance
-0.25                    PolarCapPedConductance
+0			iConductanceModel
+F			UseFullCurrent
+F			UseFakeRegion2
+150.0			F107Flux
+5.0			StarLightPedConductance
+0.25			PolarCapPedConductance
 
 #SAVEPLOT
 2			nPlotFile
@@ -156,14 +157,15 @@ max tec                 StringPlot
 5			DnSavePlot
 -1.0			DtSavePlot
 
-#END_COMP IE -----------------------------------------------------------------
+#END_COMP IE   ----------------------------------------
 
 #STOP
 5                    	MaxIter
 -1.			TimeMax
 
-#RUN	######################################################################
-
+End session: 1
+#RUN ############################################################
+Begin session: 2
 
 #TIMEACCURATE
 T	
@@ -202,44 +204,40 @@ IM			NameComp2
 GM			NameComp
 F			DoCoupleOnTime
 
-#BEGIN_COMP GM ---------------------------------------------------------------
+#BEGIN_COMP GM ----------------------------------------
 
 #IM
 20.0                    TauImP
 F			DoImSatTrace 
 
 #SAVEPLOT
-3                       nPlotFile
-x=0 FUL idl             StringPlot
--1                      DnSavePlot
+3			nPlotFile
+idl x=0 FUL			StringPlot
+-1			DnSavePlot
 10.			DtSavePlot
--1.                     DxSavePlot 
-y=0 FUL idl             StringPlot
--1                      DnSavePlot
-10.			DtSavePlot
--1.                     DxSavePlot 
-z=0 FUL idl             StringPlot
--1                      DnSavePlot
-10.			DtSavePlot
--1.                     DxSavePlot
+-1.0			DxSavePlot
+idl y=0 FUL			StringPlot
+-1			DnSavePlot
+10.0			DtSavePlot
+-1.0			DxSavePlot
+idl z=0 FUL			StringPlot
+-1			DnSavePlot
+10.0			DtSavePlot
+-1.0			DxSavePlot
 
-#END_COMP GM -----------------------------------------------------------------
+#END_COMP GM   ----------------------------------------
 
-
-
-#BEGIN_COMP IM ---------------------------------------------------------------
+#BEGIN_COMP IM ----------------------------------------
 
 #SAVEPLOT
-1                  	nFilesPlot
-RCM 2d idl              StringPlot
--1	 		DnSavePlot
-5	   		DtSavePlot
+1			nFilesPlot
+2d max tec			StringPlot
+-1			DnSavePlot
+5			iDtSavePlot
 
-#END_COMP IM -----------------------------------------------------------------
+#END_COMP IM   ----------------------------------------
 
-
-
-#BEGIN_COMP IE ---------------------------------------------------------------
+#BEGIN_COMP IE ----------------------------------------
 
 #SAVEPLOT
 2			nPlotFile
@@ -250,10 +248,18 @@ max tec                 StringPlot
 -1			DnSavePlot
 5.0			DtSavePlot
 
-#END_COMP IE -----------------------------------------------------------------
+#END_COMP IE   ----------------------------------------
 
 #STOP
 -1			MaxIter
 10.0			TimeMax
 
-#END
+End session: 2
+#END ############################################################
+#IONOSPHERE
+5			iConductanceModel
+F			UseFullCurrent
+F			UseFakeRegion2
+150.0			F107Flux
+5.0			StarLightPedConductance
+0.25			PolarCapPedConductance
