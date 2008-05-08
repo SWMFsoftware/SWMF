@@ -75,14 +75,65 @@
 
  end subroutine  get_ionization_equilibrium
 
-!==============================\
-!================================\
-!==================================\
-!====================================\
-!======================================\
-!========================================\
-!==========================================\
-!============================================\
+!=============================\
+!===============================\
+!=================================\
+!===================================\
+!=====================================\
+!=======================================\
+!=========================================\
+!===========================================\
+
+
+
+!*//======================================
+!// exp( 2.303)=10. <~> exp(57.565)=1.e25;
+
+ subroutine    ConcNafter  ! for given summ(No+Niz) on boundary II, calc. Ci[z]
+    use ModSaha
+    implicit NONE
+
+    integer   :: iter 
+    real      ::                      &
+	         nsum  ,   bs,        &  
+                 x3, x1,x2,f1,f2, df  !  , &!                 Conc
+  
+        nsum =     NatomII     
+        bs   = 1.0/NatomII 
+        Ci(0)= nsum
+
+! debuT:       
+        write (*,*) 'ConcN: NatomII=', NatomII, ' Te=', Telectrons
+
+        x1= Ci(0)*1.001;    f1=( Conc(x1) -nsum)*bs;
+        x2= Ci(0)*0.011;    f2=( Conc(x2) -nsum)*bs;
+
+        iter = 0
+
+     neutral:   do while(  (f2*f2 > Err).AND.( iter < 55 )   )
+                    df = (f2 -f1)
+            if (0.==df) then
+                    df = Err
+            end if
+		     x3 = (-x2*f1 +  x1*f2 )/df !   (f2 - f1);
+            if(      x3 < 1.00d-22 ) then
+                     x3 = 1.00d-22  ;
+            else if( x3 > 1.00d+33 ) then  
+                     x3 = 1.00d+33  ;
+            end if
+	    if( f1*f1 > f2*f2 ) then 
+                x1=x2;  f1=f2; 
+            end if
+	    x2 = x3;
+	    f2 = ( Conc(x3)-nsum )*bs;
+	  if( 0.0 == f2  )  exit
+          iter =iter +1
+
+      end do  neutral 
+    return
+!..........
+    contains
+
  real function   Conc( N0after )
     use ModSaha
     implicit NONE
@@ -91,11 +142,11 @@
    integer::  k=1     ,  &   
               iter    ,  &
               iter2   ,  &
-              iZer    ,  &   !  start of slider   zb{|+0,|+1,|+2,|+3,|+4}
+              iZer    ,  & !  start of slider   zb{|+0,|+1,|+2,|+3,|+4}
               zb
     real ::       &
-               NORM  ,    &!= N0after, 
-               te, t32 ,    &!= Telectrons ,     t32  = te*sqrt(te) 
+               NORM  ,   & != N0after, 
+               te, t32 , & != Telectrons ,     t32  = te*sqrt(te) 
                a4,                          &
                c1   , c11, c2,              & 
                bc   , d   ,dc   ,           &
@@ -118,14 +169,13 @@
         write (*,*) 'Conc: Norm=', NORM
 
         iZer =1  ! for the start of SLIDing
-!....................................................
+       !....................................................
 
-
-        Ci(5)=10.  ; Ci(4)=1.;  !only 11 Ui used now, 5 is the wide of sliding window 
+        Ci(5)=10.  ; Ci(4)=1.;  !only 11 Ui in use now, 5 is the wide of sliding window 
  SLIDER: do while ( izer <= (11-4)  ) 
 
 !debuT   
-         write(*,*)'SLIDer====== iZer=',izer
+         write(*,*)'SLIDer==== iZer=',izer
 
          c11=1.0
          c2  =1.0
@@ -157,8 +207,8 @@
            a12 = a11   !
            a22 = a21   !
            a32 = a31   ! 
-           a42 = a41   !*exp(dui*(zb+4.);
-           a52 = a51   !<======== plasma NonIDeality would be  later
+           a42 = a41   !*exp( dui(zb+4.) );
+           a52 = a51   !<==== plasma NonIDeality would be  later
 
               iter =0; 
               d    =1.;
@@ -171,10 +221,10 @@
                         d7 = (c7) * a42*bc;
                         e7 = (d7) * a52*bc;
 
-                        s  = a7* zb              +b7*(zb+1.)           &  
+                        s  = a7* zb            +b7*(zb+1.)           &  
                             +c7*(zb+2.)        +d7*(zb+3.)           &
                             +e7*(zb+4.)                              
-                       s1 = a7* zb*zb              +b7*(zb+1.)*(zb+1.)  &
+                       s1 = a7* zb*zb           +b7*(zb+1.)*(zb+1.)  &
                             +c7*(zb+2.)*(zb+2.) +d7*(zb+3.)*(zb+3.)  &
                             +e7*(zb+4.)*(zb+4.) 
 
@@ -183,8 +233,8 @@
                      iter= iter +1
           end do NEWTON 
 
-                      s2 = a7+b7+c7+d7+e7;         
-                     Z  = s /s2;
+                    s2 = a7+b7+c7+d7+e7;         
+                    Z  = s /s2;
         
                     dc  = (c1 -c11)/(c1+c11);   
                     dc  = dc*dc;
@@ -242,62 +292,11 @@
            SUi = SUi +Uis*Ci(k)
          end do
            
-        SUi = SUi/Neplasma     
+        SUi = SUi/Neplasma   ! [eV]*[cm^3]     
 
-  return 
-end function Conc
-
-
-
-
-
-
-!*//======================================
-!// exp( 2.303)=10. <~> exp(57.565)=1.e25;
-
- subroutine    ConcNafter  ! for given summ(No+Niz) on boundary II, calc. Ci[z]
-    use ModSaha
-    implicit NONE
-
-    integer   :: iter 
-    real      ::                      &
-	         nsum  ,   bs,        &  
-                 x3, x1,x2,f1,f2, df, &
-                 Conc
-  
-        nsum =     NatomII     
-        bs   = 1.0/NatomII 
-        Ci(0)= nsum
-
-! debuT:       
-        write (*,*) 'ConcN: NatomII=', NatomII, ' Te=', Telectrons
-
-        x1= Ci(0)*1.001;    f1=( Conc(x1) -nsum)*bs;
-        x2= Ci(0)*0.011;    f2=( Conc(x2) -nsum)*bs;
-
-        iter = 0
-
-     neutral:   do while(  (f2*f2 > Err).AND.( iter < 55 )   )
-                    df = (f2 -f1)
-            if (0.==df) then
-                    df = Err
-            end if
-		     x3 = (-x2*f1 +  x1*f2 )/df !   (f2 - f1);
-            if(      x3 < 1.00d-22 ) then
-                     x3 = 1.00d-22  ;
-	    else if( x3 > 1.00d+33 ) then  
-                     x3 = 1.00d+33  ;
-            end if
-	    if( f1*f1 > f2*f2 ) then 
-                x1=x2;  f1=f2; 
-            end if
-	    x2 = x3;
-	    f2 = ( Conc(x3)-nsum )*bs;
-	  if( 0.0 == f2  )  exit
-          iter =iter +1
-
-      end do  neutral 
-    return
+      return 
+ end function Conc
+!........................
 end subroutine ConcNafter
 
 
