@@ -117,7 +117,8 @@ test_rb_check:
 	gunzip -c ${RBDIR}/output/2000f223_e.fls.gz \
 		> ${TESTDIR}/2000f223_e.fls.ref
 	${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
-		${TESTDIR}/RB/plots/2000f223_e.fls ${TESTDIR}/2000f223_e.fls.ref \
+		${TESTDIR}/RB/plots/2000f223_e.fls \
+		${TESTDIR}/2000f223_e.fls.ref \
 		> test_rb.diff
 	ls -l test_rb.diff
 
@@ -273,21 +274,28 @@ test3_rundir:
 
 test3_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./Postproc.pl -M RESULT
+	cd ${TESTDIR}/GM; ./pIDL -M;
+	cd ${TESTDIR}/IE; ./pION;
 
 test3_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-7 \
-		${TESTDIR}/RESULT/IM/2d__max_t00000010.idl \
-		output/test3/2d__max_t00000010.idl \
-		> test3_im.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
-		${TESTDIR}/RESULT/GM/log_n000001.log \
+		${TESTDIR}/GM/IO2/log_n000001.log \
 		output/test3/GM_log_n000001.log \
 		> test3_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
-		${TESTDIR}/RESULT/IE/logIE.log \
+		${TESTDIR}/IE/ionosphere/logIE.log \
 		output/test3/IE_logIE.log \
 		> test3_ie.diff)
+	gunzip -c output/test3/IM_2d__max_t00000010.dat.gz \
+		> ${TESTDIR}/IM/plots/t10.dat
+	# Remove date stamp from tecplot files
+	cd ${TESTDIR}/IM/plots/; \
+		perl -pi -e 's/AUXDATA SAVEDATE=.*//' \
+			t10.dat 2d__max_t00000010.dat
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-7 \
+		${TESTDIR}/IM/plots/2d__max_t00000010.dat \
+		${TESTDIR}/IM/plots/t10.dat \
+		> test3_im.diff)
 	ls -l test3*.diff
 
 ### ESMF test ###
