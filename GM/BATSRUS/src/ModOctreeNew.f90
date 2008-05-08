@@ -74,6 +74,13 @@ module ModOctreeNew
   ! Cylindrical or spherical coordinates
   logical :: IsSpherical = .false., IsCylindrical = .false.
 
+  ! Ordering along the Peano-Hilbert space filling curve
+  integer, allocatable :: iBlockPeano_I(:)
+
+  ! The index along the Peano curve is global so that it can be used by the 
+  ! recursive subroutine order_children 
+  integer :: iPeano
+
 contains
 
   subroutine init_mod_octree(nBlockProc, nBlockAll)
@@ -94,10 +101,12 @@ contains
     MaxBlock = nBlockProc
     allocate(iBlockNei_IIIB(0:3,0:3,0:3,MaxBlock))
     allocate(DiLevelNei_IIIB(-1:1,-1:1,-1:1,MaxBlock))
+    allocate(iBlockPeano_I(MaxBlock))
 
     ! Initialize all elements and make neighbors unknown
     iBlockNei_IIIB  = NoBlock_
     DiLevelNei_IIIB = NoBlock_
+    iBlockPeano_I   = NoBlock_
 
   end subroutine init_mod_octree
 
@@ -464,6 +473,12 @@ contains
 
     end do
 
+    ! Fix the block indexes along the peano curve
+    do iPeano = 1, iBlock - 1
+       iBlockOld = iBlockPeano_I(iPeano)
+       iBlockPeano_I(iPeano) = iBlockNew_A(iBlockOld)
+    end do
+
     if(present(nBlockAll)) nBlockAll = iBlock - 1
 
   end subroutine compact_octree
@@ -504,8 +519,49 @@ contains
 
     close(UnitTmp_)
 
+    call order_octree
+
   end subroutine read_octree_file
   
+  !==========================================================================
+
+  subroutine order_octree
+
+    integer :: iBlock, iRoot, jRoot, kRoot
+    !-----------------------------------------------------------------------
+    iBlock = 0
+    iPeano = 0
+    iBlockPeano_I = NoBlock_
+    do kRoot = 1, nRoot_D(3)
+       do jRoot = 1, nRoot_D(2)
+          do iRoot = 1, nRoot_D(1)
+             ! Root blocks are the first ones
+             iBlock = iBlock + 1
+
+             ! All root blocks are handled as if they were first child
+             call order_children(iBlock, Child1_)
+          end do
+       end do
+    end do
+
+  end subroutine order_octree
+  !==========================================================================
+  recursive subroutine order_children(iBlock, iChildMe)
+
+    integer, intent(in) :: iBlock, iChildMe
+    integer :: iChild
+    !-----------------------------------------------------------------------
+    if(iOctree_IA(Status_, iBlock) == Used_)then
+       iPeano = iPeano + 1
+       iBlockPeano_I(iPeano) = iBlock
+    else
+       do iChild = Child1_, ChildLast_
+          ! iChild = iChildOrder_II(i, iChildMe)
+          call order_children(iOctree_IA(iChild, iBlock), iChild)
+       end do
+    end if
+
+  end subroutine order_children
   !==========================================================================
 
   subroutine test_octree
@@ -562,12 +618,17 @@ contains
          write(*,*)'ERROR: Test find point failed'
 
     ! Refine another block
+    write(*,*)'nRoot=',nRoot
     call refine_block(nRoot-2)
 
     write(*,*)'Testing find_neighbors'
     call find_neighbors(5)
     write(*,*)'DiLevelNei_IIIB(:,:,:,5)=',DiLevelNei_IIIB(:,:,:,5)
     write(*,*)'iBlockNei_IIIB(:,:,:,5)=',iBlockNei_IIIB(:,:,:,5)
+
+    write(*,*)'Testing order_octree'
+    call order_octree
+    write(*,*)'iBlockPeano_I =',iBlockPeano_I(1:22)
 
     write(*,*)'Testing coarsen_block'
 
@@ -578,6 +639,12 @@ contains
          iBlock,' instead of',nRoot
     if(.not.is_point_inside_block(XyzTest_D(1:nDim), iBlock)) &
          write(*,*)'ERROR: is_point_inside_block failed'
+
+
+    write(*,*)'Testing order_octree'
+    call order_octree
+    write(*,*)'iBlockPeano_I =',iBlockPeano_I(1:22)
+
 
     write(*,*)'Testing compact_octree'
     call compact_octree(nBlockAll)
@@ -595,9 +662,13 @@ contains
     if(.not.is_point_inside_block(XyzTest_D(1:nDim), iBlock)) &
          write(*,*)'ERROR: is_point_inside_block failed'
 
+
+    write(*,*)'Testing order_octree'
+    call order_octree
+    write(*,*)'iBlockPeano_I =',iBlockPeano_I(1:22)
+
     write(*,*)'Testing write_octree_file'
     call write_octree_file('octree.rst')
-
 
     write(*,*)'Testing read_octree_file'
     iOctree_IA = NoBlock_
@@ -607,6 +678,11 @@ contains
     call find_point(XyzTest_D,iBlock)
     if(iBlock /= nRoot)write(*,*)'ERROR: compact_octree faild, iBlock=',&
          iBlock,' instead of',nRoot
+
+    write(*,*)'Testing order_octree'
+    call order_octree
+    write(*,*)'iBlockPeano_I =',iBlockPeano_I(1:22)
+
     
   end subroutine test_octree
 
