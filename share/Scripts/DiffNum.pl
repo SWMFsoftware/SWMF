@@ -24,9 +24,12 @@ die "$ERROR: there should be two file arguments!\n" unless $#ARGV == 1;
 my $File1 = $ARGV[0];
 my $File2 = $ARGV[1];
 
-open(FILE1, $File1) or die "$ERROR: could not open $File1\n";
-open(FILE2, $File2) or die "$ERROR: could not open $File2\n";
-
+if(not open(FILE1, $File1)){
+    print "$ERROR: could not open $File1\n"; die "$ERROR\n";
+}
+if(not open(FILE2, $File2)){
+    print "$ERROR: could not open $File2\n"; die "$ERROR\n";
+}
 my $Text1 = $File1 . "_txt_";
 my $Text2 = $File2 . "_txt_";
 
@@ -136,7 +139,10 @@ warn "$WARNING: there are extra numbers in $File1\n"
 warn "$WARNING: there are extra numbers in $File2\n" 
     if $Found1 and not $Found2;
 
-die $Message if $Message;
+if($Message){
+    print $Message;
+    die "$ERROR\n";
+}
 
 exit 0;
 
