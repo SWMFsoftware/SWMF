@@ -28,6 +28,8 @@ module ModUser
   character (len=*), parameter :: NameUserModule = &
        'Mars 4 species MHD code, Yingjuan Ma'
 
+  character (len=10) :: SolarCond='solarmax  '
+
   ! Radius within which the point implicit scheme should be used
   real :: rPointImplicit = 2.0
 
@@ -222,6 +224,9 @@ contains
              end do
              close(15)
           endif
+
+       case("#SOLARCON") !solar cycle condition
+          call read_var('SolarCon',SolarCond)
 
        case("#UseSolarMax") !solar cycle condition
           call read_var('UseSolarMax',UseSolarMax)
@@ -1111,7 +1116,9 @@ contains
             BodynDenNuSpdim_I(:)
     end if
 
-    if(UseSolarMax)then
+    select case(SolarCond)
+
+    case('solarmax')
        Tnu_body_dim = 134.0      ! neutral temperature 
        BodynDenNuSpDim_I(CO2_)= 4.435e12
        BodynDenNuSpDim_I(O_)= 8.0283e9
@@ -1137,7 +1144,7 @@ contains
        RateDim_I(O_hv__Op_em_) = 2.734e-7
        RateDim_I(H_hv__Hp_em_) = 8.59e-8
 
-    else  ! for solar min condition
+    case('solarmin')  ! for solar min condition
 
        Tnu_body_dim = 117.0      ! neutral temperature 
 
@@ -1165,7 +1172,49 @@ contains
        RateDim_I(O_hv__Op_em_) = 8.89e-8
        RateDim_I(H_hv__Hp_em_) = 5.58e-8
 
-    end if
+    case ('earlymars1')
+       Tnu_body_dim = 180.0      ! neutral temperature 
+       !increase to 1000k to exobase
+
+       RateDim_I(CO2_hv__CO2p_em_)=6.6e-7*6.0/2.25
+       RateDim_I(O_hv__Op_em_) = 2.0e-7*6.0/2.25
+       RateDim_I(H_hv__Hp_em_) = 8.59e-8*6.0/2.25       
+
+       BodynDenNuSpDim_I(CO2_)= 5.1e11
+       HNuSpeciesDim_I(CO2_)=11.0  !scale height in km
+       BodynDenNuSpDim_I(O_)= 3.8e10
+       HNuSpeciesDim_I(O_)=2.3e5
+
+       BodynDenNuSpDim_I(CO2_)= 5.1e11
+       BodynDenNuSpDim_I(O_)= 3.8e10
+       BodynDenNuSpDim_I(H_)= 2.3e5
+       BodynDenNuSpDim_I(Hx_)= 5.0e4
+       BodynDenNuSpDim_I(Ox_)= 2.2e9
+       BodynDenNuSpDim_I(CO2x_)= 6.8e9
+
+       HNuSpeciesDim_I(O_)=24.5  !scale height in km
+       HNuSpeciesDim_I(Ox_)=100.
+       HNuSpeciesDim_I(CO2_)=11.0
+       HNuSpeciesDim_I(CO2x_)=32.0
+       HNuSpeciesDim_I(H_)=24.0
+       HNuSpeciesDim_I(Hx_)=650.
+
+    case ('earlymars2')
+       Tnu_body_dim = 180.0      ! neutral temperature 
+       !increase to 1000k to exobase
+
+       RateDim_I(CO2_hv__CO2p_em_)=6.6e-7*6.0/2.25
+       RateDim_I(O_hv__Op_em_) = 2.0e-7*6.0/2.25
+       RateDim_I(H_hv__Hp_em_) = 8.59e-8*6.0/2.25       
+
+       BodynDenNuSpDim_I(CO2_)= 0.0
+       HNuSpeciesDim_I(CO2_)=0.0  !scale height in km
+       BodynDenNuSpDim_I(O_)= 0.0
+       HNuSpeciesDim_I(O_)=0.0
+
+    case default
+       call stop_mpi('unknow solar condition',SolarCond)
+    end select
 
     kTn = TNu_body_dim*Si2No_V(UnitTemperature_)
     kTi0 = kTn
