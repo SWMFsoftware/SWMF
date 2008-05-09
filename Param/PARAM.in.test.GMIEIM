@@ -230,10 +230,16 @@ idl z=0 FUL			StringPlot
 #BEGIN_COMP IM ----------------------------------------
 
 #SAVEPLOT
-1			nFilesPlot
-2d max tec			StringPlot
+3			nFilesPlot
+2d max tec		StringPlot
 -1			DnSavePlot
 5			iDtSavePlot
+2d min idl		StringPlot
+-1			DnSavePlot
+10			iDtSavePlot
+2d max idl		StringPlot
+-1			DnSavePlot
+10			iDtSavePlot
 
 #END_COMP IM   ----------------------------------------
 
