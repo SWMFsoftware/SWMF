@@ -199,7 +199,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
   real, intent(in)    :: CoordIn_D(3)
   integer, intent(in) :: nVarIn
-  real, intent(inout)   :: State_V(nVarIn)
+  real, intent(inout) :: State_V(nVarIn)
 
   real       :: Node_DI(2,3)
   real       :: Triangle1_DI(2,3), Triangle2_DI(2,3), Triangle3_DI(2,3)
@@ -266,6 +266,9 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
        nPoint, nTriangle, Xy_D, CoordXyPw_DI, &
        iNodeTriangle_II(:,1:nTriangle), &
        iNode1, iNode2, iNode3, IsTriangleFound)
+
+  if(DoTestMe)write(*,*)'x, y, iNode1,2,3, IsFound=',&
+       Xy_D, iNode1, iNode2, iNode3, IsTriangleFound
 
   ! Point is not covered: leave the input state variables alone
   if (.not.IsTriangleFound) RETURN
