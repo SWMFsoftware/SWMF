@@ -1,4 +1,4 @@
-program caxaTe
+program caxa
   use ModSaha    ! CAXA
   implicit NONE
 
@@ -15,7 +15,7 @@ program caxaTe
         Ube(1) = 14.4  !<->NO {-dusty -w}                  
 
       do i=1,11
-         Ui(i)=Uxe(i)
+         U_I(i)=Uxe(i)
       end do
 
 
@@ -24,13 +24,13 @@ program caxaTe
 
    OCTPOGA:   do i=5,300,25
 
-      Telectrons = 1.0*i     ! eV
+      vTe = 1.0*i     ! eV
 
       call ConcNafter
 
-     write (*,*) "No=", NatomII," Te=",Telectrons," Z=",Z," Ne=", Neplasma," SUi=",SUi
+     write (*,*) "No=", NatomII," Te=",vTe," Z=",Z," Ne=", vNe," SUi=",SUi
      write (*,*) "oooooooooooooo\ "      
-     write (*,*) "oooooooo  ooooo\  Te[K]=", Telectrons/Tev  
+     write (*,*) "oooooooo  ooooo\  Te[K]=", vTe*cEvToK 
      write (*,*) "oooooooooooooooo\  "
      
      write (*,*) "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
@@ -40,7 +40,7 @@ program caxaTe
      ! contains      ! 
      ! <insert  ALL internal procedures HERE>
 !.............................................
- end program caxaTe 
+ end program caxa
 !============================================================================
 ! The following subroutines are here so that we can use SWMF library routines
 ! Also some features available in SWMF mode only require empty subroutines

@@ -1,4 +1,4 @@
-
+!^CFG COPYRIGHT UM
 ! In the initial CRASH treatment of materials,
 !
 ! 1. We can treat any given material as having a single average Z.
@@ -30,273 +30,219 @@
 ! Beryllium
 ! Xenon
 ! Polyimide (C_22 H_10 N_2 O_5)
-
+!
 !***********************************************************************
 !    calculation of ionization equilibrium
 !    for given - concentration of  atomic particles Co+Ciz [1/cm^3]
 !              - electron temperature Te[eV]
 !***********************************************************************
 
-  module ModSaha
-    implicit NONE
-    include 'CRASH_definitions.h'
-    real,  parameter ::  &
-        Err =  1.00e-012  ,    &  ! 009 givs up to 4-5 poin
-        Pi  = (3.1415926) ,    &
-        Pi2 = (0.5/Pi)    ,    &
-        Tev   = (1./11610.),   &  !   ( T[K]  to [eV])
-        Hmax  = (6.6200e-027), &  !   erg*cek Planck
-        HmaxT = (6.6200e-027*Pi2) !   the same/2Pi
+module ModSaha
+  use ModConst
+  implicit NONE
+  include 'CRASH_definitions.h'
+  real,  parameter ::  &
+       cToleranceHere =  cTiny**2  ,    &  !012, 009 givs up to 4-5 poin
+       cTwoPiInv = cOne/cTwo       ,    &
+       Hmax  = cPlankH/cErg,            &  !   erg*s Planck
+       HmaxT = cPlankHBar                  !   the same/2Pi
 
 
-     real:: &  
-           Neplasma  , &
-           Telectrons, &  
-	   NatomII   , &  !   summa conc (atoms+ions) at the ioniz.reg.
-	   Z         , &
-	   Ci(0:99  ), &  !  Ci[0]-neutrals AFTER ionization
-           Ui(99)    , &
-           SUi            ! summa (Uiz*Ciz)
-     integer :: nCi = 54  ! for Xenon, must be a var for other elements
-   end module ModSaha
+  real:: &  
+       vNe        , &   ! cm^{-3}
+       vTe        , &   ! eV
+       NatomII    , &   ! a sum over concentrations of atoms+ions, cm^{-3}
+       Z          , &   ! vNe/NatomII
+       C_I(0:99)  , &   ! C_I[0]-neutrals resided after ionization
+       U_I(99)     , &  ! U_I(iZ) - the energy to make an ion iZ+ from (iZ-1)+    
+       SUi              ! sum(Uiz*Ciz)
+  integer :: nCi = 54   ! for Xenon, must be a var for other elements
+end module ModSaha
+!=============================================================================
 
+subroutine    ConcNafter  ! for given summ(No+Niz) on boundary II, calc. C_I[z]
+  use ModSaha
+  implicit NONE
 
-!==============================================/
-!===========================================/
-!========================================/
-!=====================================/
-!==================================/
- subroutine      get_ionization_equilibrium
- 
- 
- !****   All   input PARAMETERS 
- !****   MUST   BE transformed 
- !****   before  CONCnAFTER call
+  integer   :: iter 
+  real      :: &
+       vNTotal  ,   vNTotalInv,        &  
+       x3, x1,x2,f1,f2, df 
 
- end subroutine  get_ionization_equilibrium
+  vNTotal   =     NatomII     
+  vNTotalInv= 1.0/NatomII 
+  C_I(0)    = vNTotal
 
-!=============================\
-!===============================\
-!=================================\
-!===================================\
-!=====================================\
-!=======================================\
-!=========================================\
-!===========================================\
+  ! debuT:       
+  write (*,*) 'ConcN: NatomII=', NatomII, ' Te=', vTe
 
+  x1= C_I(0)*1.001;    f1=( Conc(x1) -vNTotal )*vNTotalInv;
+  x2= C_I(0)*0.011;    f2=( Conc(x2) -vNTotal )*vNTotalInv;
 
+  iter = 0
 
-!*//======================================
-!// exp( 2.303)=10. <~> exp(57.565)=1.e25;
-
- subroutine    ConcNafter  ! for given summ(No+Niz) on boundary II, calc. Ci[z]
-    use ModSaha
-    implicit NONE
-
-    integer   :: iter 
-    real      ::                      &
-	         nsum  ,   bs,        &  
-                 x3, x1,x2,f1,f2, df  !  , &!                 Conc
-  
-        nsum =     NatomII     
-        bs   = 1.0/NatomII 
-        Ci(0)= nsum
-
-! debuT:       
-        write (*,*) 'ConcN: NatomII=', NatomII, ' Te=', Telectrons
-
-        x1= Ci(0)*1.001;    f1=( Conc(x1) -nsum)*bs;
-        x2= Ci(0)*0.011;    f2=( Conc(x2) -nsum)*bs;
-
-        iter = 0
-
-     neutral:   do while(  (f2*f2 > Err).AND.( iter < 55 )   )
-                    df = (f2 -f1)
-            if (0.==df) then
-                    df = Err
-            end if
-		     x3 = (-x2*f1 +  x1*f2 )/df !   (f2 - f1);
-            if(      x3 < 1.00d-22 ) then
-                     x3 = 1.00d-22  ;
-            else if( x3 > 1.00d+33 ) then  
-                     x3 = 1.00d+33  ;
-            end if
-	    if( f1*f1 > f2*f2 ) then 
-                x1=x2;  f1=f2; 
-            end if
-	    x2 = x3;
-	    f2 = ( Conc(x3)-nsum )*bs;
-	  if( 0.0 == f2  )  exit
-          iter =iter +1
-
-      end do  neutral 
-    return
-!..........
-    contains
-
- real function   Conc( N0after )
-    use ModSaha
-    implicit NONE
-    real, intent(in) :: N0after  !  conc [1/cm3] of neautrals after ionization
-
-   integer::  k=1     ,  &   
-              iter    ,  &
-              iter2   ,  &
-              iZer    ,  & !  start of slider   zb{|+0,|+1,|+2,|+3,|+4}
-              zb
-    real ::       &
-               NORM  ,   & != N0after, 
-               te, t32 , & != Telectrons ,     t32  = te*sqrt(te) 
-               a4,                          &
-               c1   , c11, c2,              & 
-               bc   , d   ,dc   ,           &
-               a11  ,a21  ,a31  ,a41  ,a51, &
-               a12  ,a22  ,a32  ,a42  ,a52, &
-               a7   , b7  , c7  , d7  , e7, & 
-               s    , s1  , s2  , st  ,     &
-               U1,U2,U3,U4,U5, Uis          ;
-	
-     s     = 0.0
-     Ci(0) = N0after
-
-     te   = Telectrons
-     t32  = te*SQRT(te)      
-     NORM = N0after
-     a4   =  6.050e21*t32/NORM 
-
-
-!debuT:       
-        write (*,*) 'Conc: Norm=', NORM
-
-        iZer =1  ! for the start of SLIDing
-       !....................................................
-
-        Ci(5)=10.  ; Ci(4)=1.;  !only 11 Ui in use now, 5 is the wide of sliding window 
- SLIDER: do while ( izer <= (11-4)  ) 
-
-!debuT   
-         write(*,*)'SLIDer==== iZer=',izer
-
-         c11=1.0
-         c2  =1.0
-
+  neutral:   do while(  (f2*f2 > cToleranceHere).AND.( iter < 55 )   )
+     df = (f2 -f1)
+     if (0.0 == df) then
+        df = cToleranceHere
+     end if
+              x3 = (-x2*f1 +  x1*f2 )/df !   (f2 - f1);
+     if(      x3 < 1.00d-22 ) then
+              x3 = 1.00d-22  ;
+     else if( x3 > 1.00d+33 ) then  
+              x3 = 1.00d+33  ;
+     end if
+     if(f1*f1 > f2*f2 ) then 
+        x1=x2;  f1=f2; 
+     end if
+     x2 = x3;
+     f2 = ( Conc(x3) - vNTotal )*vNTotalInv;
      
-         do    k = 1,  nCi 
-            Ci(k)= 0.
-         end do
 
-         U1 = Ui(izer )	
-         U2 = Ui(izer+1)	
-         U3 = Ui(izer+2)	
-         U4 = Ui(izer+3)	
-         U5 = Ui(izer+4)	
+     if( 0.0 == f2  )  exit
+     iter =iter +1
 
-         st=U1/te;  a11= a4*exp(-st )   !*1./2. ;
-         st=U2/te;  a21= a4*exp(-st )   !*6./1. ;
-         st=U3/te;  a31= a4*exp(-st )   !*9./6. ;
-         st=U4/te;  a41= a4*exp(-st )   !*6./1. ;
-         st=U5/te;  a51= a4*exp(-st )   !*6./1. ;
+  end do  neutral
+  return
+  !..........
+contains
 
-         c1=1.3*sqrt(c2*a11);
-
-         iter2= 1
-         dc   = 1.
-         zb   = iZer
-      OKNO: do while ( ( dc>err ).AND.( iter2 < 30 )  )
-
-           a12 = a11   !
-           a22 = a21   !
-           a32 = a31   ! 
-           a42 = a41   !*exp( dui(zb+4.) );
-           a52 = a51   !<==== plasma NonIDeality would be  later
-
-              iter =0; 
-              d    =1.;
-              
-         NEWTON : do while(  (iter <30  ).AND.( d*d > Err)) 
-                        bc = 1. / c1;			
-                        a7 =        a12*bc;
-                        b7 = (a7) * a22*bc; 
-                        c7 = (b7) * a32*bc;
-                        d7 = (c7) * a42*bc;
-                        e7 = (d7) * a52*bc;
-
-                        s  = a7* zb            +b7*(zb+1.)           &  
-                            +c7*(zb+2.)        +d7*(zb+3.)           &
-                            +e7*(zb+4.)                              
-                       s1 = a7* zb*zb           +b7*(zb+1.)*(zb+1.)  &
-                            +c7*(zb+2.)*(zb+2.) +d7*(zb+3.)*(zb+3.)  &
-                            +e7*(zb+4.)*(zb+4.) 
-
-                         d  =  c1 -c2 * s  ;
-                         c1 =( c1 *c2 *(s +s1)/(c1 +c2*s1) );
-                     iter= iter +1
-          end do NEWTON 
-
-                    s2 = a7+b7+c7+d7+e7;         
-                    Z  = s /s2;
-        
-                    dc  = (c1 -c11)/(c1+c11);   
-                    dc  = dc*dc;
-                    c11 = c1; 
-                    iter2 = iter2+1  
-        end do OKNO
+  real function   Conc( N0after )
+    real, intent(in) :: N0after  !  conc [1/cm3] of neautrals after ionization
+    integer,parameter::nW=5
+    integer:: &  
+         k=1     ,  &
+         iW      ,  &
+         iter    ,  &
+         iter2   ,  &
+         iZer    ,  & !  start of slider   zb{|+0,|+1,|+2,|+3,|+4}
+         zb
+    real ::         &
+         NORM    ,  & != N0after, 
+         Te32    ,  & != vTe ,     Te32  = te*sqrt(te) 
+         CTotal,                        &
+         a4,                            &
+         c1   ,  c2,                    & 
+         bc   , d   ,dc   ,             &
+         PopulationRatio_I(nW)      ,   &
+         PopulationRatioNonid_I(nW) ,   &
+         StatWeight_I(nW)           ,   & 
+         s    , s1  , s2  , st  ,       &
+         UW_I(1:5), Uis          ;
 
 
-                       Ci(izer  ) = a7* NORM
-                       Ci(izer+1) = b7* NORM
-                       Ci(izer+2) = c7* NORM
-                       Ci(izer+3) = d7* NORM
-                       Ci(izer+4) = e7* NORM
-                       Neplasma   = c1* NORM ;
+    s     = 0.0
+    C_I(0)= N0after
 
-               c11=0.0;  
-       BCE: do  k  = 0, nCi     
-               c11 =c11+ Ci(k)
+    Te32 = vTe*SQRT(vTe)      
+    NORM = N0after
+    a4   =  6.050e21*Te32/NORM 
 
-!debuT:  
-            if( 1.00<Ci(k) ) then
-               write(*,*)'#### ',k,' summa=',c11  ,'<=',k,'<=>', Ci(k)
-            end if 
-       end do BCE 
 
-       if( Ci(izer+4) < Ci(izer+0) ) then
-!debuT:
-               write(*,*) '===> exit iZer=',izer , &
-                          'Ci(',izer+0,')=',Ci(izer+0), &
-                          'Ci(',izer+1,')=',Ci(izer+1), &
-                          'Ci(',izer+2,')=',Ci(izer+2), &
-                          'Ci(',izer+3,')=',Ci(izer+3), &
-                          'Ci(',izer+4,')=',Ci(izer+4), &
-                          '######'                     
-                exit
-        else 
-                 iZer=iZer+1
-        end if
+    !debuT:       
+    write (*,*) 'Conc: Norm=', NORM
 
- end do SLIDER 
+    iZer =1  ! for the start of SLIDing
+    !....................................................
 
-       Conc = c11
+!    C_I(iZer+4)=10.  ; C_I(iZer4)=1.;  !only 11 Ui in use now, 5 is the wide of sliding window 
+    SLIDER: do while ( izer <= (11-4)  ) 
+
+       !debuT   
+       write(*,*)'SLIDer==== iZer=',izer
+
+       CTotal=1.0
+
+       c2  =1.0
+
+       C_I(1 : nCi)=0.0
  
-          SUi  = 0.0  ![eV]
-          Uis  = 0.0  ![eV]
-  
-         do k  = 1, iZer
-           Uis = Uis +Ui(k)      
-         end do
 
-           SUi = Uis *Ci(iZer)   
+       UW_I = U_I(izer : izer+nW-1)	
+       PopulationRatio_I = a4*exp(- UW_I/vTe)
+     
+       c1 = 1.3*sqrt(c2*PopulationRatio_I(1));
 
-         do  k = iZer+1, iZer+4
-           Uis = Uis +Ui(k)
-           SUi = SUi +Uis*Ci(k)
-         end do
-           
-        SUi = SUi/Neplasma   ! [eV]*[cm^3]     
+       iter2= 1
+       dc   = 1.
+       zb   = iZer
 
-      return 
- end function Conc
-!........................
+
+       WINDOW: do while ( ( dc>cToleranceHere ).AND.( iter2 < 30 )  )
+
+          PopulationRatioNonid_I=PopulationRatio_I !To be mofified for non-ideal plasma
+          
+          iter =0 
+          d    =1.
+
+          NEWTON : do while(  (iter <30  ).AND.( d*d > cToleranceHere)) 
+        
+             bc = 1. / c1			
+             StatWeight_I(1) = PopulationRatioNonid_I(1)*bc
+             do iW=2,nW
+                StatWeight_I(iW)=StatWeight_I(iW-1)*&
+                         PopulationRatioNonid_I(iW)*bc
+             end do
+             s=0.0; s1=0
+             do iW=1,nW
+                s  = s  + StatWeight_I(iW)*(zb+iW-1)       
+                s1 = s1 + StatWeight_I(iW)*(zb+iW-1)**2  
+             end do
+             d  =  c1 -c2 * s 
+             c1 =( c1 *c2 *(s +s1)/(c1 +c2*s1) )
+             iter= iter +1
+          end do NEWTON
+
+          s2 = sum(StatWeight_I)         
+          Z  = s /s2;
+
+          dc  = (c1 -CTotal)/(c1+CTotal)
+          dc  = dc*dc;
+          CTotal = c1; 
+          iter2  = iter2+1  
+       end do WINDOW
+
+
+       C_I(izer : izer+4 ) = StatWeight_I* NORM
+       vNe    = c1* NORM ;
+
+       CTotal =   sum(C_I( 0 : iZer+4 )) 
+     
+
+       if( C_I(izer+4) < C_I(izer+0) ) EXIT
+       iZer=iZer+1
+
+    end do SLIDER
+
+    Conc = CTotal
+
+    SUi  = 0.0  ![eV]
+
+    Uis  = sum( U_I(1:iZer) )  ![eV]
+
+    SUi = Uis *C_I(iZer)   
+
+    do   k = iZer+1, iZer+nW-1
+       Uis = Uis +U_I(k)
+       SUi = SUi +Uis*C_I(k)
+    end do
+
+    SUi = SUi/vNe   ! [eV]*[cm^3]     
+
+    return 
+  end function Conc
+  !........................
 end subroutine ConcNafter
 
 
+!=======================================================================
+subroutine      get_ionization_equilibrium
+
+
+  !****   All   input PARAMETERS 
+  !****   MUST   BE transformed 
+  !****   before  CONCnAFTER call
+
+end subroutine  get_ionization_equilibrium
+
+!=======================================================================
