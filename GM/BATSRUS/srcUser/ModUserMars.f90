@@ -1181,11 +1181,6 @@ contains
        RateDim_I(H_hv__Hp_em_) = 8.59e-8*6.0/2.25       
 
        BodynDenNuSpDim_I(CO2_)= 5.1e11
-       HNuSpeciesDim_I(CO2_)=11.0  !scale height in km
-       BodynDenNuSpDim_I(O_)= 3.8e10
-       HNuSpeciesDim_I(O_)=2.3e5
-
-       BodynDenNuSpDim_I(CO2_)= 5.1e11
        BodynDenNuSpDim_I(O_)= 3.8e10
        BodynDenNuSpDim_I(H_)= 2.3e5
        BodynDenNuSpDim_I(Hx_)= 5.0e4
@@ -1207,13 +1202,22 @@ contains
        RateDim_I(O_hv__Op_em_) = 2.0e-7*6.0/2.25
        RateDim_I(H_hv__Hp_em_) = 8.59e-8*6.0/2.25       
 
-       BodynDenNuSpDim_I(CO2_)= 0.0
-       HNuSpeciesDim_I(CO2_)=0.0  !scale height in km
-       BodynDenNuSpDim_I(O_)= 0.0
-       HNuSpeciesDim_I(O_)=0.0
+       BodynDenNuSpDim_I(CO2_)= 1.5e14 !/cc
+       BodynDenNuSpDim_I(O_)= 1.8e12
+       BodynDenNuSpDim_I(H_)= 2.5e5
+       BodynDenNuSpDim_I(Hx_)= 2.0e1
+       BodynDenNuSpDim_I(Ox_)= 1.3e9
+       BodynDenNuSpDim_I(CO2x_)= 1.0e9
+
+       HNuSpeciesDim_I(O_)=25.5  !scale height in km
+       HNuSpeciesDim_I(Ox_)=190.
+       HNuSpeciesDim_I(CO2_)=11.3
+       HNuSpeciesDim_I(CO2x_)=51.0
+       HNuSpeciesDim_I(H_)=15.0
+       HNuSpeciesDim_I(Hx_)=850.
 
     case default
-       call stop_mpi('unknow solar condition',SolarCond)
+       call stop_mpi('unknow solar condition '//SolarCond)
     end select
 
     kTn = TNu_body_dim*Si2No_V(UnitTemperature_)
