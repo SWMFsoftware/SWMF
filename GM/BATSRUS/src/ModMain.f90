@@ -66,7 +66,8 @@ Module ModMain
 
   logical :: UseRaytrace=.false.                           !^CFG IF RAYTRACE
 
-  logical :: UseIM = .false.                               !^CFG IF RCM BEGIN
+  logical :: UseIm = .false.                               !^CFG IF RCM BEGIN
+  logical :: UsePw = .false.
   logical :: DoCoupleImPressure = .true.
   logical :: DoCoupleImDensity  = .false.
   logical :: DoFixPolarRegion   = .false.
