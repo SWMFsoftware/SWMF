@@ -186,8 +186,8 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   use CON_axes, ONLY: transform_matrix
   use ModMain, ONLY: TypeCoordSystem, Time_Simulation, x_, y_, z_
   use ModVarIndexes, ONLY: Rho_, Ux_, Uy_, Uz_, &
-       SpeciesFirst_, SpeciesLast_, UseMultiSpecies
-  use ModMultiFluid, ONLY: UseMultiIon, nIonFluid, IsMhd, &
+       SpeciesFirst_, SpeciesLast_, UseMultiSpecies, IsMhd
+  use ModMultiFluid, ONLY: UseMultiIon, nIonFluid, &
        iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I
       
   use ModPwGrid
