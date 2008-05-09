@@ -46,12 +46,12 @@ subroutine FACs_to_fluxes(iModel, iBlock)
   real, dimension(1:IONO_nPsi) :: Strength_of_Oval,               &
        Loc_of_Oval, Width_of_Oval
   logical :: polarcap, IsPeakFound, IsDone
-  real :: Center, Width, Smooth
+  real :: Center, Width
   real :: f, MaxP, MaxT, MulFac_ae, MulFac_ef, MinWidth, ThetaOCB, AuroraWidth
   real :: MulFac_Dae, MulFac_Def
   real, dimension(IONO_nTheta,IONO_nPsi) :: nDen, &
        discrete_k, discrete_ae, discrete_ef, diffuse_ae, diffuse_ef
-  real, dimension(IONO_nPsi) :: OCFLB, EquatorwardEdge
+  real, dimension(IONO_nPsi) :: OCFLB, EquatorwardEdge, Smooth
 
   !---------------------------------------------------------------------------
   Hall_to_Ped_Ratio = 1.5
@@ -544,6 +544,7 @@ subroutine FACs_to_fluxes(iModel, iBlock)
   if (iModel.eq.6) then
 
      MinWidth = 5.0 * cPi / 180.0
+     nHalfSmooth = 5
 !     MulFac_Dae = 1.0e22
 !     MulFac_Def = 5.0e19
 !     MulFac_ef = 0.2e7
@@ -571,6 +572,7 @@ subroutine FACs_to_fluxes(iModel, iBlock)
               if (iono_north_p(i,IONO_nPsi-j+1) > 0) then
 
                  if (OCFLB(j) == -1) OCFLB(j) = iono_north_theta(i,j)
+                 AuroraWidth = iono_north_theta(i,j) - OCFLB(j)
                  iono_north_eflux(i,j) = MulFac_ef*MaxP
 
                  if (iono_north_p(i,IONO_nPsi-j+1)==MaxP) IsPeakFound = .true.
@@ -594,22 +596,27 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 
         enddo
 
-        nHalfSmooth = 5
+        do j = 1, IONO_nPsi
+           smooth(j) = 0.0
+           do i = j-nHalfSmooth-1, j+nHalfSmooth-1
+              smooth(j) = smooth(j) + OCFLB(mod(i+IONO_nPsi,IONO_nPsi)+1)
+           enddo
+        enddo
+        OCFLB = smooth/(nHalfSmooth*2+1)
+           
+        do j = 1, IONO_nPsi
+           smooth(j) = 0.0
+           do i = j-nHalfSmooth-1, j+nHalfSmooth-1
+              smooth(j) = smooth(j) + &
+                   EquatorWardEdge(mod(i+IONO_nPsi,IONO_nPsi)+1)
+           enddo
+        enddo
+        EquatorWardEdge = smooth/(nHalfSmooth*2+1)
+
         do j = 1, IONO_nPsi
 
-           smooth = 0.0
-           do i = j-nHalfSmooth, j+nHalfSmooth
-              smooth = smooth + OCFLB(mod(i+IONO_nPsi,IONO_nPsi))
-           enddo
-           OCFLB(j) = smooth/(nHalfSmooth*2+1)
-           
-           smooth = 0.0
-           do i = j-nHalfSmooth, j+nHalfSmooth
-              smooth = smooth + EquatorWardEdge(mod(i+IONO_nPsi,IONO_nPsi))
-           enddo
-           EquatorWardEdge(j) = smooth/(nHalfSmooth*2+1)
-
            Center = (OCFLB(j) + EquatorWardEdge(j))/2.0
+           Width = abs(EquatorWardEdge(j) - OCFLB(j))
 
            iono_north_eflux(:,j) = &
                 MulFac_ef*MaxP * &
@@ -708,11 +715,13 @@ subroutine FACs_to_fluxes(iModel, iBlock)
               if (iono_south_p(i,IONO_nPsi-j+1) > 0) then
 
                  if (OCFLB(j) == -1) OCFLB(j) = iono_south_theta(i,j)
+                 AuroraWidth = OCFLB(j) - iono_south_theta(i,j)
                  iono_south_eflux(i,j) = MulFac_ef*MaxP
 
                  if (iono_south_p(i,IONO_nPsi-j+1)==MaxP) IsPeakFound = .true.
 
                  if (IsPeakFound .and. AuroraWidth >= MinWidth) then
+                    EquatorWardEdge(j) = iono_south_theta(i,j)
                     IsDone = .true.
                  endif
 
@@ -731,21 +740,27 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 
         enddo
 
+
+        smooth = 0.0
         do j = 1, IONO_nPsi
-
-           smooth = 0.0
-           do i = j-nHalfSmooth, j+nHalfSmooth
-              smooth = smooth + OCFLB(mod(i+IONO_nPsi,IONO_nPsi))
+           do i = j-nHalfSmooth-1, j+nHalfSmooth-1
+              smooth(j) = smooth(j) + OCFLB(mod(i+IONO_nPsi,IONO_nPsi)+1)
            enddo
-           OCFLB(j) = smooth/(nHalfSmooth*2+1)
+        enddo
+        OCFLB = smooth/(nHalfSmooth*2+1)
            
-           smooth = 0.0
-           do i = j-nHalfSmooth, j+nHalfSmooth
-              smooth = smooth + EquatorWardEdge(mod(i+IONO_nPsi,IONO_nPsi))
+        smooth = 0.0
+        do j = 1, IONO_nPsi
+           do i = j-nHalfSmooth-1, j+nHalfSmooth-1
+              smooth(j) = smooth(j) + &
+                   EquatorWardEdge(mod(i+IONO_nPsi,IONO_nPsi)+1)
            enddo
-           EquatorWardEdge(j) = smooth/(nHalfSmooth*2+1)
-
+        enddo
+        EquatorWardEdge = smooth/(nHalfSmooth*2+1)
+          
+        do j = 1, IONO_nPsi
            Center = (OCFLB(j) + EquatorWardEdge(j))/2.0
+           Width = abs(EquatorWardEdge(j) - OCFLB(j))
 
            iono_south_eflux(:,j) = &
                 MulFac_ef*MaxP * &
@@ -759,10 +774,6 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 
         diffuse_ef = iono_south_eflux
         diffuse_ae = iono_south_ave_e
-
-!        write(*,*) "Diffuse (south) : ",&
-!             minval(diffuse_ef), maxval(diffuse_ef),&
-!             minval(diffuse_ae), maxval(diffuse_ae)
 
         discrete_ef = 0.0
         discrete_k  = 0.0
@@ -810,6 +821,8 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 
         where (iono_south_ave_e < IONO_Min_Ave_E) &
              iono_south_ave_e = IONO_Min_Ave_E
+
+        write(*,*) "Done with aurora"
 
 !        do j = 1, IONO_nPsi
 !           do i = 1, IONO_nTheta
