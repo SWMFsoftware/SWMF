@@ -292,7 +292,7 @@ test3_check:
 	cd ${TESTDIR}/IM/plots/; \
 		perl -pi -e 's/AUXDATA SAVEDATE=.*//' \
 			t10.dat 2d__max_t00000010.dat
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-7 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
 		${TESTDIR}/IM/plots/2d__max_t00000010.dat \
 		${TESTDIR}/IM/plots/t10.dat \
 		> test3_im.diff)
