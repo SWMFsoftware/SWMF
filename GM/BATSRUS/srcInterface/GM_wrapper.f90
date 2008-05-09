@@ -198,11 +198,11 @@ end subroutine GM_print_variables
 subroutine GM_init_session(iSession, TimeSimulation)
 
   use ModProcMH,   ONLY: iProc
-  use ModMain,     ONLY: Time_Simulation, UseIonosphere, &
+  use ModMain,     ONLY: Time_Simulation, UseIonosphere, UsePw, &
        TypeBC_I, west_
   use ModMain,     ONLY: UseIM                            !^CFG IF RCM
   use CON_physics, ONLY: get_time
-  use CON_coupler, ONLY: Couple_CC, IE_, IM_, GM_, IH_
+  use CON_coupler, ONLY: Couple_CC, IE_, IM_, GM_, IH_, PW_
   implicit none
 
   !INPUT PARAMETERS:
@@ -216,7 +216,8 @@ subroutine GM_init_session(iSession, TimeSimulation)
   !----------------------------------------------------------------------------
   call CON_set_do_test(NameSub,DoTest, DoTestMe)
 
-  UseIM         = Couple_CC(IM_,GM_) % DoThis !^CFG IF RCM
+  UseIm         = Couple_CC(IM_,GM_) % DoThis !^CFG IF RCM
+  UsePw         = Couple_CC(PW_,GM_) % DoThis
   UseIonosphere = Couple_CC(IE_,GM_) % DoThis
 
   ! Check if the boundary condition is properly set
