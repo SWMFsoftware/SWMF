@@ -91,12 +91,15 @@ module ModPhysics
 
   ! The dimensional quantities are given for individual ion and neutral fluids
   real, dimension(IonFirst_:nFluid) :: &
-       BodyNDim_I=0.0, BodyTDim_I=0.0, PolarNDim_I=0.0, PolarTDim_I=0.0, PolarUDim_I=0.0
+       BodyNDim_I = 1.0, BodyTDim_I = 1.0, &
+       PolarNDim_I= 1.0, PolarTDim_I= 1.0, PolarUDim_I = 0.0
 
   ! The normalized quantities include the total ion fluid (if present)
   real, dimension(nFluid) :: &
-       BodyRho_I=0.0, BodyP_I=0.0, PolarRho_I=0.0 ,PolarP_I=0.0, PolarRhoU_I=0.0
+       BodyRho_I = 1.0, BodyP_I = 1.0, &
+       PolarRho_I= 1.0, PolarP_I= 1.0, PolarU_I=0.0
 
+  ! Polar boundary conditions are applied above this latitude only
   real :: PolarLatitude = 75.0, PolarTheta = 15.0*cDegToRad
 
   ! Density ratio of major and minor ions/neutrals (e.g. in the solar wind)

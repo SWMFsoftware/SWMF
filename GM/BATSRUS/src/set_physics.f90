@@ -184,19 +184,23 @@ subroutine set_physics_constants
 
   ! The normalized quantities extend to the first MHD fluid too
   BodyRho_I(IonFirst_:) = BodyNDim_I*Io2No_V(UnitN_)*MassFluid_I
-  BodyP_I(IonFirst_:)   = BodyNDim_I*Io2No_V(UnitN_)*BodyTDim_I*Io2No_V(UnitTemperature_)
+  BodyP_I(IonFirst_:)   = BodyNDim_I*Io2No_V(UnitN_)*BodyTDim_I &
+       * Io2No_V(UnitTemperature_)
 
   PolarRho_I(IonFirst_:) = PolarNDim_I*Io2No_V(UnitN_)*MassFluid_I
-  PolarP_I(IonFirst_:)   = PolarNDim_I*Io2No_V(UnitN_)*PolarTDim_I*Io2No_V(UnitTemperature_)
-  PolarRhoU_I(IonFirst_:)= PolarRho_I(IonFirst_:) * PolarUDim_I * Io2No_V(UnitU_)
+  PolarP_I(IonFirst_:)   = PolarNDim_I*Io2No_V(UnitN_)*PolarTDim_I &
+       * Io2No_V(UnitTemperature_)
+  PolarU_I(IonFirst_:)   = PolarUDim_I*Io2No_V(UnitU_)
 
   if(UseMultiIon .and. IsMhd)then
-     ! Add up quantities for first total ion fluid
+     ! Add up ion fluids for total ion fluid
      BodyRho_I(1)  = sum(BodyRho_I(IonFirst_:IonLast_))
      BodyP_I(1)    = sum(BodyP_I(IonFirst_:IonLast_))
      PolarRho_I(1) = sum(PolarRho_I(IonFirst_:IonLast_))
      PolarP_I(1)   = sum(PolarP_I(IonFirst_:IonLast_))
-     PolarRhoU_I(1)= sum(PolarRhoU_I(IonFirst_:IonLast_))
+     PolarU_I(1)   = &
+          sum(PolarRho_I(IonFirst_:IonLast_)*PolarU_I(IonFirst_:IonLast_)) &
+          /sum(PolarRho_I(IonFirst_:IonLast_))
   end if
 
   !^CFG IF SECONDBODY BEGIN
