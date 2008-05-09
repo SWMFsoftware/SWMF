@@ -5,15 +5,7 @@
 !
 !*************************************************************************
 
-
-!-------------------------------------------------------------------------
-! FACs_to_fluxes
-!
-!
-!
-!-------------------------------------------------------------------------
-
-subroutine FACs_to_fluxes(iModel, iBlock)
+subroutine facs_to_fluxes(iModel, iBlock)
 
   !\
   ! The goal here is to convert the ionospheric FAC pattern into a 
@@ -39,7 +31,7 @@ subroutine FACs_to_fluxes(iModel, iBlock)
   real    :: day_colat, dusk_colat, midnight_colat, dawn_colat
   real    :: day_fac, dusk_fac, midnight_fac, dawn_fac
   real    :: noon_mid, dusk_dawn, oval_shift
-  real    :: mean_colat, dev_colat, sum, night_width
+  real    :: mean_colat, dev_colat, night_width
   real    :: PolarCapHallConductance, PolarCap_AveE, PolarCap_EFlux
   integer :: jlat, imlt
   integer :: i,j, n, nloc
@@ -806,15 +798,9 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 
   endif
 
-end subroutine FACs_to_fluxes
+end subroutine facs_to_fluxes
 
-
-!-------------------------------------------------------------------------
-! ionosphere_conductance
-!
-!
-!
-!-------------------------------------------------------------------------
+!=============================================================================
 
 subroutine ionosphere_conductance(Sigma0, SigmaH, SigmaP,               &
      SigmaThTh, SigmaThPs, SigmaPsPs,      &
@@ -1184,7 +1170,7 @@ subroutine ionosphere_conductance(Sigma0, SigmaH, SigmaP,               &
 
 end subroutine ionosphere_conductance
 
-
+!=============================================================================
 
 subroutine Determine_Oval_Characteristics(Current_in, Theta_in, Psi_in, &
      Loc_of_Oval, Width_of_Oval, &
@@ -1224,7 +1210,7 @@ subroutine Determine_Oval_Characteristics(Current_in, Theta_in, Psi_in, &
   real    :: day_colat, dusk_colat, midnight_colat, dawn_colat
   real    :: day_fac, dusk_fac, midnight_fac, dawn_fac
   real    :: noon_mid, dusk_dawn, day_strength, night_strength
-  real    :: mean_colat, dev_colat, sum, Night_Width, Day_Width
+  real    :: mean_colat, dev_colat, SumFac, Night_Width, Day_Width
 
   integer :: i, j, n, nloc, dJ, J_Start, J_End
 
@@ -1305,17 +1291,17 @@ subroutine Determine_Oval_Characteristics(Current_in, Theta_in, Psi_in, &
   dawn_fac = (max_fac(6) + max_fac(7))/2.0
 
   night_width = 0.0
-  sum = 0.0
+  SumFac = 0.0
   mean_colat = 0.0
 
   do n=1,8
      night_width = night_width + width(n) * max_fac(n)
      mean_colat = mean_colat + max_fac_colat(n) * max_fac(n)
-     sum = sum + max_fac(n)
+     SumFac = SumFac + max_fac(n)
   enddo
 
-  mean_colat = mean_colat/sum
-  Night_Width = Night_Width/sum
+  mean_colat = mean_colat/SumFac
+  Night_Width = Night_Width/SumFac
 
   if (Night_Width > 6.0*cDegToRad) Night_Width=6.0*cDegToRad
   Day_Width = max(Night_Width/2.0,1.0*cDegToRad)
@@ -1336,7 +1322,7 @@ subroutine Determine_Oval_Characteristics(Current_in, Theta_in, Psi_in, &
   endif
 
   Day_Strength = dawn_fac
-  Night_Strength = sum
+  Night_Strength = SumFac
 
 
   !  dev_colat = 1.0*cDegToRad
