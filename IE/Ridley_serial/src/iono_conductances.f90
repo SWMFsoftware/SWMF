@@ -5,7 +5,15 @@
 !
 !*************************************************************************
 
-subroutine facs_to_fluxes(iModel, iBlock)
+
+!-------------------------------------------------------------------------
+! FACs_to_fluxes
+!
+!
+!
+!-------------------------------------------------------------------------
+
+subroutine FACs_to_fluxes(iModel, iBlock)
 
   !\
   ! The goal here is to convert the ionospheric FAC pattern into a 
@@ -34,14 +42,17 @@ subroutine facs_to_fluxes(iModel, iBlock)
   real    :: mean_colat, dev_colat, night_width
   real    :: PolarCapHallConductance, PolarCap_AveE, PolarCap_EFlux
   integer :: jlat, imlt
-  integer :: i,j, n, nloc
+  integer :: i,j, n, nloc, nHalfSmooth
   real, dimension(1:IONO_nPsi) :: Strength_of_Oval,               &
        Loc_of_Oval, Width_of_Oval
   logical :: polarcap, IsPeakFound, IsDone
-  integer :: Poleward, Equatorward, Center, Width
-  real :: f, MaxP, MaxT, MulFac, MinWidth, ThetaOCB, AuroraWidth
+  real :: Center, Width, Smooth
+  real :: f, MaxP, MaxT, MulFac_ae, MulFac_ef, MinWidth, ThetaOCB, AuroraWidth
+  real :: MulFac_Dae, MulFac_Def
   real, dimension(IONO_nTheta,IONO_nPsi) :: nDen, &
        discrete_k, discrete_ae, discrete_ef, diffuse_ae, diffuse_ef
+  real, dimension(IONO_nPsi) :: OCFLB, EquatorwardEdge
+
   !---------------------------------------------------------------------------
   Hall_to_Ped_Ratio = 1.5
 
@@ -532,43 +543,40 @@ subroutine facs_to_fluxes(iModel, iBlock)
 
   if (iModel.eq.6) then
 
-     MulFac = 0.75e7
      MinWidth = 5.0 * cPi / 180.0
+!     MulFac_Dae = 1.0e22
+!     MulFac_Def = 5.0e19
+!     MulFac_ef = 0.2e7
+!     MulFac_ae = 1.0 / 1.0e11
+     MulFac_Dae = 1.0e22
+     MulFac_Def = 5.0e19
+     MulFac_ef = 0.2e6
+     MulFac_ae = 2.5e-12
 
      if (iBlock == 1) then 
 
         iono_north_eflux = 1.0e-6
         iono_north_ave_e = 1.0
 
-        ! InvB is -1 in the pole, so we add 2 to make it not negative and not 0
-        nden = iono_north_rho / (iono_north_invb+2.0) / 1.6726e-27 * 100.0**3+1
-        iono_north_t = iono_north_p / (nden * 1.3807e-23)
+        OCFLB = -1.0
+        EquatorWardEdge = -1.0
 
-        ! Change units from K to eV, and from ions to electrons
-        iono_north_t = iono_north_t / 11000.0 * 7.0
-        
         do j = 1, IONO_nPsi
            IsPeakFound = .false.
-           Poleward = -1
-           Equatorward = -1
-           MaxP = max(maxval(iono_north_p(:,j)),1.0e-15)
-           ThetaOCB = -1.0
-           AuroraWidth = -1.0
+           MaxP = max(maxval(iono_north_p(:,IONO_nPsi-j+1)),1.0e-15)
            IsDone = .false.
            i = 1
            do while (.not. IsDone)
 
-              if (iono_north_p(i,j) > 0) then
+              if (iono_north_p(i,IONO_nPsi-j+1) > 0) then
 
-                 if (ThetaOCB == -1) ThetaOCB = iono_north_theta(i,j)
-                 AuroraWidth = iono_north_theta(i,j) - ThetaOCB
-                 iono_north_eflux(i,j) = MulFac*MaxP
+                 if (OCFLB(j) == -1) OCFLB(j) = iono_north_theta(i,j)
+                 iono_north_eflux(i,j) = MulFac_ef*MaxP
 
-                 if (iono_north_p(i,j) == MaxP) IsPeakFound = .true.
+                 if (iono_north_p(i,IONO_nPsi-j+1)==MaxP) IsPeakFound = .true.
 
-                 if (Poleward == -1) Poleward = i
                  if (IsPeakFound .and. AuroraWidth >= MinWidth) then
-                    Equatorward = i
+                    EquatorWardEdge(j) = iono_north_theta(i,j)
                     IsDone = .true.
                  endif
 
@@ -580,31 +588,47 @@ subroutine facs_to_fluxes(iModel, iBlock)
 
            enddo
            if (.not. IsPeakFound) then
-              Poleward = 10
-              Equatorward = 20
+              OCFLB(j) = MinWidth
+              EquatorwardEdge(j) = MinWidth*2
            endif
-           if (Poleward < 3) Poleward = 3
-           Width = (Equatorward - Poleward)/2 + 1
-           Center = (Equatorward + Poleward)/2
-           iono_north_eflux(Poleward-2:Equatorward+2,j) = MulFac*MaxP
 
-           ! This is the way that it should be, but it doesn't seem to work...
-           MaxT = sum(iono_north_t(Poleward-2:Equatorward+2,j)) / &
-                (Equatorward-Poleward+5)
+        enddo
 
-           ! Divide by 1000 for eV to keV
-           iono_north_ave_e(Poleward-2:Equatorward+2,j) = MaxT / 1000.0 / 300.0
+        nHalfSmooth = 5
+        do j = 1, IONO_nPsi
+
+           smooth = 0.0
+           do i = j-nHalfSmooth, j+nHalfSmooth
+              smooth = smooth + OCFLB(mod(i+IONO_nPsi,IONO_nPsi))
+           enddo
+           OCFLB(j) = smooth/(nHalfSmooth*2+1)
+           
+           smooth = 0.0
+           do i = j-nHalfSmooth, j+nHalfSmooth
+              smooth = smooth + EquatorWardEdge(mod(i+IONO_nPsi,IONO_nPsi))
+           enddo
+           EquatorWardEdge(j) = smooth/(nHalfSmooth*2+1)
+
+           Center = (OCFLB(j) + EquatorWardEdge(j))/2.0
+
+           iono_north_eflux(:,j) = &
+                MulFac_ef*MaxP * &
+                exp(-abs(Center-iono_north_theta(:,j))/Width)
 
            ! This is the way that seems to work
            iono_north_ave_e(:,j) = &
-                iono_north_p(:,j) / (iono_north_rho(:,j)+1.0e-32) / 1.5e10
-           iono_north_ave_e(Poleward-2,j) = iono_north_ave_e(Poleward,j)
-           iono_north_ave_e(Poleward-1,j) = iono_north_ave_e(Poleward,j)
+                iono_north_p(:,IONO_nPsi-j+1) / &
+                (iono_north_rho(:,IONO_nPsi-j+1)+1.0e-32) * MulFac_ae
 
-           do i = Poleward-2, Equatorward+2
-              f = exp(-abs(float(i-Center))/float(width))
-              iono_north_eflux(i,j) = iono_north_eflux(i,j) * f
-           enddo
+!           iono_north_ave_e(Poleward-2,j) = iono_north_ave_e(Poleward+1,j)
+!           iono_north_ave_e(Poleward-1,j) = iono_north_ave_e(Poleward+1,j)
+
+!           do i = Poleward-2, Equatorward+2
+!           do i = Poleward, Equatorward
+!              f = exp(-abs(float(i-Center))/float(width))
+!              iono_north_eflux(i,j) = iono_north_eflux(i,j) * f
+!           enddo
+
         enddo
 
         diffuse_ef = iono_north_eflux
@@ -612,13 +636,31 @@ subroutine facs_to_fluxes(iModel, iBlock)
 
         discrete_ef = 0.0
         discrete_k  = 0.0
+
         ! This is from Jimmy's Paper on the Knight Relationship
         where (iono_north_p > 0) discrete_k = &
              (iono_north_rho**1.5) / iono_north_p
-        where (iono_north_jr > 1.0e-7) &
+        ! Mirror the particles, since we are dealing with electrons and not
+        ! ions.
+        do j = 1, IONO_nPsi
+           discrete_k(:,j) = discrete_k(:,IONO_nPsi-j+1)
+        enddo
+        where (iono_north_jr > 0.0) &
              discrete_ef = (iono_north_jr*1e6)*discrete_k
-        discrete_ae = discrete_ef*5.0e20
-        discrete_ef = (iono_north_jr*1e6)*discrete_ef*10e18
+        discrete_ae = discrete_ef*MulFac_Dae
+        discrete_ef = (iono_north_jr*1e6)*discrete_ef*MulFac_Def
+
+        ! Let's add a little conductance on ANY not in the polar cap,
+        ! so the code doesn't blow up
+        do j = 1, IONO_nPsi
+           do i = 1, IONO_nTheta
+              if (abs(iono_north_jr(i,j)) > 0.0 .and. &
+                   discrete_ef(i,j) < 5.0e-3) then
+                 discrete_ef(i,j) = MulFac_Def/2.5 * &
+                      (iono_north_jr(i,j)*1e6)**2*discrete_k(i,j)
+              endif
+           enddo
+        enddo
 
         where (diffuse_ae < IONO_Min_Ave_E/2) diffuse_ae = IONO_Min_Ave_E/2
         where (discrete_ae < IONO_Min_Ave_E/2) discrete_ae = IONO_Min_Ave_E/2
@@ -636,42 +678,41 @@ subroutine facs_to_fluxes(iModel, iBlock)
         where (iono_north_ave_e < IONO_Min_Ave_E) &
              iono_north_ave_e = IONO_Min_Ave_E
 
+!        ! Let's add a little conductance on ANY not in the polar cap,
+!        ! so the code doesn't blow up
+!        do j = 1, IONO_nPsi
+!           do i = 1, IONO_nTheta
+!              if (iono_north_p(i,j) <= 0.0) then
+!                 iono_north_ave_e(i,j) = max(iono_north_ave_e(i,j),polarcap_avee)
+!                 iono_north_eflux(i,j) = &
+!                      max(iono_north_eflux(i,j),polarcap_eflux)
+!              endif
+!           enddo
+!        enddo
+
      else
 
         iono_south_eflux = 1.0e-6
         iono_south_ave_e = 1.0
         
-        ! T = P/nk, where n = rho/mp, but n=
-
-        nden = iono_south_rho / (iono_south_invb+2.0) / 1.6726e-27 * 100.0**3+1
-        iono_south_t = iono_south_p / nden / 1.3807e-23
-
-        iono_south_t = iono_south_t * 11.0 * 7.0
-
         do j = 1, IONO_nPsi
            IsPeakFound = .false.
-           Poleward = -1
-           Equatorward = -1
-           MaxP = max(maxval(iono_south_p(:,j)),1.0e-15)
-           MaxT = max(maxval(iono_south_t(:,j)),1.0e-3)
+           MaxP = max(maxval(iono_south_p(:,IONO_nPsi-j+1)),1.0e-15)
 
-           ThetaOCB = -1.0
            AuroraWidth = -1.0
            IsDone = .false.
            i = IONO_nTheta
+           OCFLB = -1.0
            do while (.not. IsDone)
 
-              if (iono_south_p(i,j) > 0) then
+              if (iono_south_p(i,IONO_nPsi-j+1) > 0) then
 
-                 if (ThetaOCB == -1) ThetaOCB = iono_south_theta(i,j)
-                 AuroraWidth = ThetaOCB - iono_south_theta(i,j)
-                 iono_south_eflux(i,j) = MulFac*MaxP
+                 if (OCFLB(j) == -1) OCFLB(j) = iono_south_theta(i,j)
+                 iono_south_eflux(i,j) = MulFac_ef*MaxP
 
-                 if (iono_south_p(i,j) == MaxP) IsPeakFound = .true.
+                 if (iono_south_p(i,IONO_nPsi-j+1)==MaxP) IsPeakFound = .true.
 
-                 if (Poleward == -1) Poleward = i
                  if (IsPeakFound .and. AuroraWidth >= MinWidth) then
-                    Equatorward = i
                     IsDone = .true.
                  endif
 
@@ -684,27 +725,36 @@ subroutine facs_to_fluxes(iModel, iBlock)
            enddo
 
            if (.not. IsPeakFound) then
-              Poleward = Iono_nPsi - 10
-              Equatorward = Iono_nPsi - 20
+              OCFLB(j) = cPi - MinWidth
+              EquatorwardEdge(j) = cPi - MinWidth*2
            endif
-           if (Poleward > Iono_nPsi - 3) Poleward = Iono_nPsi - 3
-           Width = abs(Equatorward - Poleward)/2 + 1
-           Center = abs(Equatorward + Poleward)/2
-           iono_south_eflux(Poleward+1,j) = MulFac*MaxP
-           iono_south_eflux(Poleward+2,j) = MulFac*MaxP
-           iono_south_eflux(Equatorward-1,j) = MulFac*MaxP
-           iono_south_eflux(Equatorward-2,j) = MulFac*MaxP
-           
-           ! This is the way that seems to work
-           iono_south_ave_e(:,j) = &
-                iono_south_p(:,j) / (iono_south_rho(:,j)+1.0e-32) / 1.5e10
-           iono_south_ave_e(Poleward+2,j) = iono_south_ave_e(Poleward,j)
-           iono_south_ave_e(Poleward+1,j) = iono_south_ave_e(Poleward,j)
- 
-           do i = Poleward+2, Equatorward-2, -1
-              f = exp(-abs(float(i-Center))/float(width))
-              iono_south_eflux(i,j) = iono_south_eflux(i,j) * f
+
+        enddo
+
+        do j = 1, IONO_nPsi
+
+           smooth = 0.0
+           do i = j-nHalfSmooth, j+nHalfSmooth
+              smooth = smooth + OCFLB(mod(i+IONO_nPsi,IONO_nPsi))
            enddo
+           OCFLB(j) = smooth/(nHalfSmooth*2+1)
+           
+           smooth = 0.0
+           do i = j-nHalfSmooth, j+nHalfSmooth
+              smooth = smooth + EquatorWardEdge(mod(i+IONO_nPsi,IONO_nPsi))
+           enddo
+           EquatorWardEdge(j) = smooth/(nHalfSmooth*2+1)
+
+           Center = (OCFLB(j) + EquatorWardEdge(j))/2.0
+
+           iono_south_eflux(:,j) = &
+                MulFac_ef*MaxP * &
+                exp(-abs(Center-iono_south_theta(:,j))/Width)
+
+           iono_south_ave_e(:,j) = &
+                iono_south_p(:,IONO_nPsi-j+1) / &
+                (iono_south_rho(:,IONO_nPsi-j+1)+1.0e-32) * MulFac_ae
+
         enddo
 
         diffuse_ef = iono_south_eflux
@@ -719,10 +769,27 @@ subroutine facs_to_fluxes(iModel, iBlock)
         ! This is from Jimmy's Paper on the Knight Relationship
         where (iono_south_p > 0) discrete_k = &
              (iono_south_rho**1.5) / iono_south_p
-        where (iono_south_jr > 1.0e-7) &
+        ! Reverse the particles again.
+        do j = 1, IONO_nPsi
+           discrete_k(:,j) = discrete_k(:,IONO_nPsi-j+1)
+        enddo
+
+        where (iono_south_jr > 0.5e-7) &
              discrete_ef = (iono_south_jr*1e6)*discrete_k
-        discrete_ae = discrete_ef*5.0e20
-        discrete_ef = (iono_south_jr*1e6)*discrete_ef*10e18
+        discrete_ae = discrete_ef*MulFac_Dae
+        discrete_ef = (iono_south_jr*1e6)*discrete_ef*MulFac_Def
+
+        ! Let's add a little conductance on ANY not in the polar cap,
+        ! so the code doesn't blow up
+        do j = 1, IONO_nPsi
+           do i = 1, IONO_nTheta
+              if (abs(iono_south_jr(i,j)) > 0.0 .and. &
+                   discrete_ef(i,j) < 5.0e-3) then
+                 discrete_ef(i,j) = MulFac_Def/2.5 * &
+                      (iono_south_jr(i,j)*1e6)**2*discrete_k(i,j)
+              endif
+           enddo
+        enddo
 
         where (diffuse_ae < IONO_Min_Ave_E/2) diffuse_ae = IONO_Min_Ave_E/2
         where (discrete_ae < IONO_Min_Ave_E/2) discrete_ae = IONO_Min_Ave_E/2
@@ -744,63 +811,29 @@ subroutine facs_to_fluxes(iModel, iBlock)
         where (iono_south_ave_e < IONO_Min_Ave_E) &
              iono_south_ave_e = IONO_Min_Ave_E
 
-!        write(*,*) "total (south) : ",&
-!             minval(iono_south_eflux), maxval(iono_south_eflux),&
-!             minval(iono_south_ave_e), maxval(iono_south_ave_e)
+!        do j = 1, IONO_nPsi
+!           do i = 1, IONO_nTheta
+!              if (iono_south_p(i,j) <= 0.0) then
+!                 iono_south_ave_e(i,j) = max(iono_south_ave_e(i,j),polarcap_avee)
+!                 iono_south_eflux(i,j) = &
+!                      max(iono_south_eflux(i,j),polarcap_eflux)
+!              endif
+!           enddo
+!        enddo
 
      endif
 
-!!!     ! This works well for ions.  Electrons???  Hmmm....
-!!!
-!!!     do j = 1, IONO_nPsi
-!!!        do i = 1, IONO_nTheta
-!!!
-!!!           if (IONO_SOUTH_rho(i,j).le.1e-21) then
-!!!              IONO_SOUTH_Ave_E(i,j) = 0.0 
-!!!           else
-!!!              IONO_SOUTH_t(i,j) = &
-!!!                   1e17*IONO_SOUTH_p(i,j)/(IONO_SOUTH_rho(i,j)*1.38)
-!!!              IONO_SOUTH_Ave_E(i,j) = 0.05*IONO_SOUTH_t(i,j)*1e-27
-!!!           endif
-!!!
-!!!           IONO_SOUTH_EFlux(i,j) = IONO_SOUTH_p(i,j)*1e5
-!!!
-!!!!           if (IONO_SOUTH_EFlux(i,j).le.1e-3) then
-!!!!              IONO_SOUTH_EFlux(i,j) = 1e-21
-!!!!           endif
-!!!
-!!!           if ((PolarCap_AveE > 0.0).and.(IONO_SOUTH_p(i,j).eq.0.0)) then
-!!!              IONO_SOUTH_Ave_E(i,j) = max(IONO_SOUTH_Ave_E(i,j), &
-!!!                   PolarCap_AveE)
-!!!              IONO_SOUTH_EFlux(i,j) = max(IONO_SOUTH_EFlux(i,j),        &
-!!!                   PolarCap_EFlux)
-!!!           endif
-!!!
-!!!           if (IONO_NORTH_rho(i,j).le.1e-21) then
-!!!              IONO_NORTH_Ave_E(i,j) = 0.0
-!!!           else                 
-!!!              IONO_NORTH_t(i,j) = &
-!!!                   1e17*IONO_NORTH_p(i,j)/(IONO_NORTH_rho(i,j)*1.38)
-!!!              IONO_NORTH_Ave_E(i,j) = 0.05*IONO_NORTH_t(i,j)*1e-27
-!!!           endif
-!!!           IONO_NORTH_EFlux(i,j) = IONO_NORTH_p(i,j)*6e5
-!!!!           if (IONO_NORTH_EFlux(i,j).le.1e-3) IONO_NORTH_EFlux(i,j) = 1e-21
-!!!
-!!!           if ((PolarCap_AveE > 0.0).and.(IONO_NORTH_p(i,j).eq.0.0)) then
-!!!              IONO_NORTH_Ave_E(i,j) = max(IONO_NORTH_Ave_E(i,j), &
-!!!                   PolarCap_AveE)
-!!!              IONO_NORTH_EFlux(i,j) = max(IONO_NORTH_EFlux(i,j), &
-!!!                   PolarCap_EFlux)
-!!!           endif
-!!!
-!!!        enddo
-!!!     enddo
-
   endif
 
-end subroutine facs_to_fluxes
+end subroutine FACs_to_fluxes
 
-!=============================================================================
+
+!-------------------------------------------------------------------------
+! ionosphere_conductance
+!
+!
+!
+!-------------------------------------------------------------------------
 
 subroutine ionosphere_conductance(Sigma0, SigmaH, SigmaP,               &
      SigmaThTh, SigmaThPs, SigmaPsPs,      &
@@ -1170,7 +1203,7 @@ subroutine ionosphere_conductance(Sigma0, SigmaH, SigmaP,               &
 
 end subroutine ionosphere_conductance
 
-!=============================================================================
+
 
 subroutine Determine_Oval_Characteristics(Current_in, Theta_in, Psi_in, &
      Loc_of_Oval, Width_of_Oval, &
@@ -1210,7 +1243,7 @@ subroutine Determine_Oval_Characteristics(Current_in, Theta_in, Psi_in, &
   real    :: day_colat, dusk_colat, midnight_colat, dawn_colat
   real    :: day_fac, dusk_fac, midnight_fac, dawn_fac
   real    :: noon_mid, dusk_dawn, day_strength, night_strength
-  real    :: mean_colat, dev_colat, SumFac, Night_Width, Day_Width
+  real    :: mean_colat, dev_colat, sumFAC, Night_Width, Day_Width
 
   integer :: i, j, n, nloc, dJ, J_Start, J_End
 
@@ -1291,17 +1324,17 @@ subroutine Determine_Oval_Characteristics(Current_in, Theta_in, Psi_in, &
   dawn_fac = (max_fac(6) + max_fac(7))/2.0
 
   night_width = 0.0
-  SumFac = 0.0
+  sumFAC = 0.0
   mean_colat = 0.0
 
   do n=1,8
      night_width = night_width + width(n) * max_fac(n)
      mean_colat = mean_colat + max_fac_colat(n) * max_fac(n)
-     SumFac = SumFac + max_fac(n)
+     sumFAC = sumFAC + max_fac(n)
   enddo
 
-  mean_colat = mean_colat/SumFac
-  Night_Width = Night_Width/SumFac
+  mean_colat = mean_colat/sumFAC
+  Night_Width = Night_Width/sumFAC
 
   if (Night_Width > 6.0*cDegToRad) Night_Width=6.0*cDegToRad
   Day_Width = max(Night_Width/2.0,1.0*cDegToRad)
@@ -1322,7 +1355,7 @@ subroutine Determine_Oval_Characteristics(Current_in, Theta_in, Psi_in, &
   endif
 
   Day_Strength = dawn_fac
-  Night_Strength = SumFac
+  Night_Strength = sumFAC
 
 
   !  dev_colat = 1.0*cDegToRad
