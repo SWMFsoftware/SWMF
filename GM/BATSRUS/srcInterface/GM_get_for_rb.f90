@@ -40,13 +40,14 @@ end subroutine GM_get_for_rb_trace
 
 !==========================================================================
 
-subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVar, &
+subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
      BufferLine_VI, nVarLine, nPointLine, NameVar)
 
   !call stop_mpi('RAYTRACE is OFF') !^CFG UNCOMMENT IF NOT RAYTRACE
   !^CFG IF RAYTRACE BEGIN
 
-  use ModProcMH, ONLY: iProc
+  use ModGeometry,ONLY: x2
+  use ModProcMH,  ONLY: iProc
 
   use ModMain, ONLY: Time_Simulation
 
@@ -58,9 +59,10 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVar, &
   use ModRaytrace, ONLY: RayResult_VII, RayIntegral_VII, &
        InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_, xEnd_, CLOSEDRAY
 
-  use ModVarIndexes, ONLY: Bx_, Bz_, MassFluid_I, IonFirst_
+  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_,&
+                           MassFluid_I, IonFirst_, nVar
 
-  use ModPhysics, ONLY: No2Si_V, UnitN_, UnitU_, UnitB_, UnitP_
+  use ModPhysics, ONLY: No2Si_V, UnitN_, UnitU_, UnitB_, UnitP_,UnitRho_
 
   use CON_line_extract, ONLY: line_get, line_clean
 
@@ -68,8 +70,8 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVar, &
 
   character (len=*), parameter :: NameSub='GM_get_for_rb'
 
-  integer, intent(in)                                :: iSizeIn, jSizeIn, nVar
-  real, intent(out), dimension(iSizeIn,jSizeIn,nVar) :: Buffer_IIV
+  integer, intent(in)                                :: iSizeIn, jSizeIn, nVarIn
+  real, intent(out), dimension(iSizeIn,jSizeIn,nVarIn) :: Buffer_IIV
 
   integer, intent(in) :: nPointLine, nVarLine
   real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
@@ -83,6 +85,7 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVar, &
   logical :: DoTest, DoTestMe
 
   integer :: iLat,iLon,iLine
+  real    :: SolarWind_V(nVar)
   !--------------------------------------------------------------------------
 
   if(NameVar /= 'Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:IMF') &
@@ -175,17 +178,16 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVar, &
   ! Send solar wind values in the array of the extra integral
   ! This is a temporary solution. RB should use MHD_SUM_rho and MHD_SUM_p
 
-  call get_solar_wind_point(Time_Simulation, 0.0, 0.0, &
-       Rho, Ux, Uy, Uz, Bx, By, Bz, p)
+  call get_solar_wind_point(Time_Simulation, x2, 0.0, 0.0, SolarWind_V)
 
-  Buffer_IIV(1,:,4) = Rho/MassFluid_I(IonFirst_)  * No2Si_V(UnitN_)
-  Buffer_IIV(2,:,4) = Ux * No2Si_V(UnitU_)
-  Buffer_IIV(3,:,4) = Uy * No2Si_V(UnitU_)
-  Buffer_IIV(4,:,4) = Uz * No2Si_V(UnitU_)
-  Buffer_IIV(5,:,4) = Bx * No2Si_V(UnitB_)
-  Buffer_IIV(6,:,4) = By * No2Si_V(UnitB_)
-  Buffer_IIV(7,:,4) = Bz * No2Si_V(UnitB_)
-  Buffer_IIV(8,:,4) = p  * No2Si_V(UnitP_)
+  Buffer_IIV(1,:,4) = SolarWind_V(Rho_) / MassFluid_I(IonFirst_) * No2Si_V(UnitN_)
+  Buffer_IIV(2,:,4) = SolarWind_V(RhoUx_) * No2Si_V(UnitU_)
+  Buffer_IIV(3,:,4) = SolarWind_V(RhoUy_) * No2Si_V(UnitU_)
+  Buffer_IIV(4,:,4) = SolarWind_V(RhoUz_) * No2Si_V(UnitU_)
+  Buffer_IIV(5,:,4) = SolarWind_V(Bx_) * No2Si_V(UnitB_)
+  Buffer_IIV(6,:,4) = SolarWind_V(By_) * No2Si_V(UnitB_)
+  Buffer_IIV(7,:,4) = SolarWind_V(Bz_) * No2Si_V(UnitB_)
+  Buffer_IIV(8,:,4) = SolarWind_V(p_)  * No2Si_V(UnitP_)
 
   !^CFG END RAYTRACE
 end subroutine GM_get_for_rb
