@@ -230,7 +230,11 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
      !write(*,*)NameSub,' Integral_IIV(21,1,:)=',Integral_IIV(21,1,:)
      write(*,*)NameSub,' BufferLine_VI(:,1) =',BufferLine_VI(:,1)
      write(*,*)NameSub,' BufferLine_VI(:,2) =',BufferLine_VI(:,2)
-     write(*,*)NameSub,' IMF=',Integral_IIV(1:8,1,4)
+     write(*,*)NameSub,' IMF: Density  = ',Integral_IIV(1,1,4)
+     write(*,*)NameSub,' IMF: Velocity = ',Integral_IIV(2,1,4)
+     write(*,*)NameSub,' IMF: Bx       = ',Integral_IIV(5,1,4)
+     write(*,*)NameSub,' IMF: By       = ',Integral_IIV(6,1,4)
+     write(*,*)NameSub,' IMF: Bz       = ',Integral_IIV(7,1,4)
   end if
   
   if (allocated(StateLine_VI)) then
