@@ -67,8 +67,12 @@ public:
 
   void flush() {
     if (sendptr!=0) {
+
+#ifdef MPI_ON
       MPI_Send(&sendptr,1,MPI_LONG,sendThread,0,MPI_COMM_WORLD);
       MPI_Send(sendBuffer,sendptr,MPI_CHAR,sendThread,0,MPI_COMM_WORLD);
+#endif
+
       sendptr=0;
     }
   };
@@ -90,8 +94,12 @@ public:
     register char *ptr;
    
     if (sendptr+length>=max_MPIbuffer_size) {
+
+#ifdef MPI_ON
       MPI_Send(&sendptr,1,MPI_LONG,sendThread,0,MPI_COMM_WORLD); 
       MPI_Send(sendBuffer,sendptr,MPI_CHAR,sendThread,0,MPI_COMM_WORLD);
+#endif
+
       sendptr=0;
     } 
      
@@ -152,10 +160,13 @@ public:
     register char *ptr;
 
     if (recvptr[thread]==RecvDataLength[thread]) {
+
+#ifdef MPI_ON
       MPI_Status status;
 
       MPI_Recv(RecvDataLength+thread,1,MPI_LONG,thread,0,MPI_COMM_WORLD,&status);
       MPI_Recv(recvBuffer[thread],RecvDataLength[thread],MPI_CHAR,thread,0,MPI_COMM_WORLD,&status);
+#endif
 
       recvptr[thread]=0;
     }

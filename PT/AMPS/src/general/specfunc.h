@@ -3,7 +3,10 @@
 
 #include <math.h>
 #include <iostream>
+
+#ifdef MPI_ON
 #include "mpi.h"
+#endif
 
 extern int DIM;
 extern int ThisThread;
@@ -19,11 +22,11 @@ double erf(double);
 double gam(double);
 */
 
-void PrintErrorLog(char*);
-void PrintErrorLog(long int,char*,char*);
+void PrintErrorLog(const char*);
+void PrintErrorLog(long int,const char*,const char*);
 
 void StampSignature(char*);
-void exit(long int,char*,char* =NULL);
+void exit(long int,const char*,const char* =NULL);
 void PrintLineMark(long int,char*,char* =NULL);
 
 template<class T>
@@ -31,7 +34,14 @@ void PrintLineMark(long int nline ,char* fname ,T code) {
   long thread;
   char *buffer=new char[sizeof(T)*TotalThreadsNumber];
 
+#ifdef MPI_ON
   MPI_Gather((char*)&code,sizeof(T),MPI_CHAR,buffer,sizeof(T),MPI_CHAR,0,MPI_COMM_WORLD);
+#else
+  char *ptr;
+  int i;  
+
+  for (ptr=(char*)&code,i=0;i<sizeof(T);i++,ptr++) buffer[i]=*ptr;  
+#endif
 
   if (ThisThread==0) {
     std::cout << "linemark: line=" << nline << ", file=" << fname, " << code="; 
@@ -168,7 +178,10 @@ public:
     long int i,thread;
 
     buffer[0]=checksum();
+
+#ifdef MPI_ON
     MPI_Gather(buffer,1,MPI_UNSIGNED_LONG,buffer,1,MPI_UNSIGNED_LONG,0,MPI_COMM_WORLD);
+#endif
 
     if (ThisThread==0) {
       CRC32 cumulativeSignature;

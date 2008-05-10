@@ -3,7 +3,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#ifdef MPI_ON
 #include "mpi.h"
+#endif
 
 extern int ThisThread;
 extern int TotalThreadsNumber;
@@ -76,7 +78,7 @@ double gam(double x) {
 }
 */
 //===================================================
-void PrintErrorLog(char* message) {
+void PrintErrorLog(const char* message) {
   FILE* errorlog=fopen("error.log","a+");
 
   time_t TimeValue=time(0);
@@ -89,7 +91,7 @@ void PrintErrorLog(char* message) {
 }
 
 //use: PrintErrorLog(__LINE__,__FILE__, "mesage")
-void PrintErrorLog(long int nline, char* fname, char* message) {
+void PrintErrorLog(long int nline, const char* fname, const char* message) {
 
   FILE* errorlog=fopen("error.log","a+");
 
@@ -111,7 +113,10 @@ void StampSignature(char* message) {
   int thread;
 
   buffer[0]=rnd();
+
+#ifdef MPI_ON
   MPI_Gather(buffer,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+#endif
 
   if (ThisThread==0) {
     for (thread=0;thread<TotalThreadsNumber;thread++) sign+=buffer[thread];
@@ -124,7 +129,7 @@ void StampSignature(char* message) {
 
 //===================================================
 //use: exit(__LINE__,__FILE__, "mesage")
-void exit(long int nline, char* fname, char* msg) { 
+void exit(long int nline, const char* fname, const char* msg) { 
   char str[1000];
 
   if (msg==NULL) sprintf(str," exit: line=%ld, file=%s\n",nline,fname);
@@ -135,7 +140,9 @@ void exit(long int nline, char* fname, char* msg) {
 }
 
 void PrintLineMark(long int nline ,char* fname ,char* msg) {
+#ifdef MPI_ON
   MPI_Barrier(MPI_COMM_WORLD);
+#endif
 
   if (ThisThread==0) {
     if (msg==NULL) printf("linemark: line=%ld, file=%s\n",nline,fname);
