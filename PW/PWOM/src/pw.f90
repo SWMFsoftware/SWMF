@@ -301,8 +301,8 @@ subroutine PW_advance_line
        OmegaLine_I(iLine), uJoule2=uJoule2,iUnitOutput=iUnitOutput(iLine), &
        NameRestart=NameRestart(iLine),  &
        iLine=iLine,Time=Time,MaxLineTime=MaxLineTime,TypeSolver=TypeSolver,&
-       IsVariableDt=IsVariableDt,DToutput=DToutput,    &
-       DoLog=DoLog,nStep=nStep)
+       DToutput=DToutput,    &
+       DoLog=DoLog,nStep=nStep,Dt=Dt_I(iLine))
     
   call polar_wind
   
@@ -311,14 +311,15 @@ subroutine PW_advance_line
        State_CVI(:,:,iLine),&
        GeoMagLat_I(iLine),GeoMagLon_I(iLine),JrLine_I(iLine),               &
        OmegaLine_I(iLine),       &
-       iLine=iLine,Time=Time,MaxLineTime=MaxLineTime,nStep=nStep,r_C=r_C)
+       iLine=iLine,Time=Time,MaxLineTime=MaxLineTime,nStep=nStep,r_C=r_C, &
+       Dt=Dt_I(iLine))
      DoSavePlot=.true.
   else
      call get_field_line( nAlt,&
        State_CVI(:,:,iLine),&
        GeoMagLat_I(iLine),GeoMagLon_I(iLine),JrLine_I(iLine),               &
        OmegaLine_I(iLine),       &
-       iLine=iLine,MaxLineTime=MaxLineTime)
+       iLine=iLine,MaxLineTime=MaxLineTime,Dt=Dt_I(iLine))
   endif
   
 end subroutine PW_advance_line
