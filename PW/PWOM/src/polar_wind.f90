@@ -15,7 +15,7 @@ subroutine polar_wind
   
   use ModPWOM, only: DtVertical,nLine,IsStandAlone,DoSavePlot,iLine,&
        IsFullyImplicit,UseExplicitHeat,DoTimeAccurate,MaxStep,DnOutput,&
-       nAlt
+       nAlt, IsVariableDt
   use ModIoUnit, ONLY: UnitTmp_
   use ModCommonVariables
   use ModFieldLine
@@ -25,9 +25,9 @@ subroutine polar_wind
   !     define the output files and attaching units
   character*100 :: NameRestart
   logical,save  :: IsFirstCall=.true.
-  real    :: Jr
+  real    :: Jr, DtVariable
   real    :: NewState_GV(-1:maxGrid,nVar)
-
+  
   !-----------------------------------------------------------------------
   nDim = nAlt
   call get_field_line(nDim,State_GV(1:nDim,:),                       &
@@ -35,15 +35,18 @@ subroutine polar_wind
        iUnitOutput=iUnitOutput,       &
        NameRestart=NameRestart,                                    &
        iLine=iLine, Time=Time,MaxLineTime=Tmax,                    &
-       TypeSolver=TypeSolver,IsVariableDT=IsVariableDT,            &
+       TypeSolver=TypeSolver,                                      &
        DToutput=DToutput,DoLog=DoLog,&
-       nStep=nStep)
+       nStep=nStep,Dt=DtVariable)
   
-  DT=DtVertical
-  DtImpl = Dt
-  DtExpl = Dt*0.1
-
-  CURR(1)      = Jr
+  ! If using variable timestep, then set Dt=Dt(Last line call)
+  if (IsVariableDt) then
+     Dt = DtVariable
+  else
+     DT=DtVertical
+  endif
+  
+  CURR(1) = Jr
   
   NTS = 1
   NCL = 60
@@ -64,24 +67,15 @@ subroutine polar_wind
      if(iLine == nLine) IsFirstCall = .false.
   endif
   
-  !******************************************************************************
+  !***************************************************************************
   ! This is the start of a while loop that carries out the main steps of
   ! the simulation
-  !******************************************************************************
+  !***************************************************************************
   
   TIMELOOP: DO
+     StateOld_GV=State_GV
      If (IsFullyImplicit) then
         call PW_implicit_update
-
-!!!        CALL PW_set_upper_bc
-        
-!        CALL PW_iheat_flux
-        
-!        CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
-!        CALL PW_eheat_flux
-!!!        CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
-!!!        CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
-        
      else
         !       advect and add collisional and chemistry sources
         !       calculate heatflux for ions and update ion temp.
@@ -89,16 +83,8 @@ subroutine polar_wind
         !       update boundaries
         !       calculate collisional and chemistry source
         !       calculate electric field with new electron temp.
-        
-        
         call advect
         CALL PW_iheat_flux
-        !BEGIN KLUGE
-        !HeatCon_GI(:,nIon) = 0.0
-        !Source_CV(:,iRho_I(nIon))  = 0.0
-        !Source_CV(:,iP_I(nIon))    = 0.0
-        !State_GV(-1:nDim+2,iU_I(nIon)) = 0.0
-        !END KLUDGE
         if (.not.UseExplicitHeat) call PW_eheat_flux
         CALL PW_set_upper_bc
         CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
@@ -107,6 +93,8 @@ subroutine polar_wind
      endif
 
      NSTEP=NSTEP+1
+      if (IsVariableDt) call calc_dt
+     StateOld_GV=State_GV
      if (DoTimeAccurate)then
         TIME=TIME+DT
         if (floor((Time+1.0e-5)/DToutput)/=floor((Time+1.0e-5-DT)/DToutput) )& 
@@ -118,24 +106,9 @@ subroutine polar_wind
      
  
      If (IsFullyImplicit) then
- !       CALL PW_iheat_flux
-!!!        CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
-!!!        call PW_set_upper_bc
-!        CALL PW_eheat_flux
-        
         call PW_implicit_update
-        
-!!!        call PW_set_upper_bc
-!!!        CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
-!!!        CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
      else
         CALL PW_iheat_flux
-        !BEGIN KLUGE
-        !HeatCon_GI(:,nIon) = 0.0
-        !Source_CV(:,iRho_I(nIon))  = 0.0
-        !Source_CV(:,iP_I(nIon))    = 0.0
-        !State_GV(-1:nDim+2,iU_I(nIon)) = 0.0
-        !END KLUDGE
         if (.not.UseExplicitHeat) call PW_eheat_flux
         CALL advect
         CALL PW_set_upper_bc
@@ -148,7 +121,7 @@ subroutine polar_wind
      !    these will be used in the next time step
 
      NSTEP=NSTEP+1
-     
+     if (IsVariableDt) call calc_dt
      if (DoTimeAccurate)then
         TIME=TIME+DT
         if (floor((Time+1.0e-5)/DToutput)/=floor((Time+1.0e-5-DT)/DToutput) )& 
@@ -179,10 +152,6 @@ subroutine polar_wind
            RETURN
         end if
      endif
-     
-     
-     
-     
   enddo TIMELOOP
   
 contains      
