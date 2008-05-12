@@ -60,7 +60,8 @@ subroutine PW_initialize
        JrLine_I(nLine), iThetaLine_I(nLine),iPhiLine_I(nLine), &
        NameRestartIn(nLine), NameRestart(nLine), NameGraphics(nLine),&
        NameOutput(nLine),  iUnitRestart(nLine),iUnitRestartIn(nLine),&
-       iUnitGraphics(nLine),iUnitOutput(nLine), iLineGlobal(nLine))
+       iUnitGraphics(nLine),iUnitOutput(nLine), iLineGlobal(nLine), &
+       Dt_I(nLine))
 
   !**************************************************************************
   !  Define file names and unit numbers, and open for reading and writing.
