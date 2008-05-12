@@ -29,7 +29,8 @@ module ModCommonVariables
   ! plasma parameters, U=velocity, D=density, P=pressure, T=electrons
   ! the parameter is followed by the quantity e.g. TOXY=temp of oxygen
 
-  real :: State_GV(-1:MaxGrid,nVar),SoundSpeed_GI(0:MaxGrid,nIon),Source_CV(MaxGrid,nVar)
+  real :: State_GV(-1:MaxGrid,nVar),StateOld_GV(-1:MaxGrid,nVar),&
+          SoundSpeed_GI(0:MaxGrid,nIon),Source_CV(MaxGrid,nVar)
   real :: HeatCon_GI(0:maxGrid,nIon)
      
   REAL EFIELD(MaxGrid),GRAVTY(MaxGrid),CURR(MaxGrid),EfieldConstant
@@ -39,8 +40,6 @@ module ModCommonVariables
        QELECT(MaxGrid)
   REAL ELFXIN
 
-  logical IsVariableDt
-       
   REAL  CZHN2,CZHO2,CZHO,CZHOX,CZHEN2,CZHEO2,CZHEHE,&
        CZHEO,CZHEH,CZHEOX,CZHEHD,XTNMAX
 
