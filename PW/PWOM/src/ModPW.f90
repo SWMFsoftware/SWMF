@@ -57,7 +57,7 @@ module ModPWOM
   
   integer, dimension(:), allocatable        ::  iThetaLine_I,iPhiLine_I
   real   ::  DtHorizontalOrig = 50.0, DtHorizontal=50.0, Time, TimeMax
-
+  real, allocatable   ::  Dt_I(:)
   logical::  DoMoveLine=.true., UseJr=.true., UseCentrifugal=.true.
   logical::  UseIE=.false.,UseAurora=.false.
   logical::  DoPlotElectrodynamics=.false.
@@ -88,7 +88,7 @@ module ModPWOM
        IsPointImplicit    = .false.,  & 
        IsPointImplicitAll = .false.,  & ! Including ion-ion friction
        IsRestart          = .true.,   &
-       IsVariableDt       = .true.
+       IsVariableDt       = .false.
 
   character(7)   :: TypeSolver='Godunov'
   character(13)  :: TypeDiffusion='LaxFriedrichs'
