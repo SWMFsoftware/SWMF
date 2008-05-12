@@ -4,7 +4,7 @@ subroutine PW_read_restart
   use ModIoUnit,      ONLY: io_unit_new,UnitTmp_
   use ModPwom,        ONLY: nLine, Time, GeoMagLat_I, GeoMagLon_I, nStep, &
                             ThetaLine_I, PhiLine_I , State_CVI, nAlt, &
-                            NameRestartIn
+                            NameRestartIn, Dt_I
   use ModCommonPlanet,ONLY: nIon,iRho_I,iU_I,iP_I,iT_I,nVar
   use ModCommonVariables,ONLY: DrBnd
 
@@ -21,7 +21,7 @@ subroutine PW_read_restart
   !read in restart data for each line
   do iLine=1,nLine
      OPEN(UNIT=UnitTmp_, FILE=NameRestartIn(iLine), STATUS='OLD')
-     READ (UnitTmp_,*) Time,DDT1,nAltFile, nStep
+     READ (UnitTmp_,*) Time,Dt_I(iLine),nAltFile, nStep
      READ (UnitTmp_,*) GeoMagLat_I(iLine),GeoMagLon_I(iLine)
      
      ThetaLine_I (iLine) = (90.0-GeoMagLat_I(iLine)) * cDegToRad
