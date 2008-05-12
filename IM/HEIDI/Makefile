@@ -1,9 +1,12 @@
-#default : HEIDI
+default: HEIDI
 
 include Makefile.def
 
 INSTALLFILES =  src/Makefile.DEPEND \
-		src/Makefile.RULES 
+		src/Makefile.RULES \
+		srcInterface/Makefile.DEPEND \
+		srcInterface/srcIONO/Makefile.DEPEND \
+		srcInterface/srcIE/Makefile.DEPEND
 
 install: 
 	touch ${INSTALLFILES}
@@ -12,7 +15,7 @@ install:
 #       General Housekeeping
 #
 
-HEIDI:
+HEIDI:  install
 	@cd ${NOMPIDIR};	make LIB
 	@cd ${SHAREDIR};  	make LIB
 	@cd ${TIMINGDIR}; 	make LIB 
@@ -28,17 +31,17 @@ test:
 clean: install
 	@(if [ -r "Makefile.conf" ]; then  \
 	cd src;                      make clean;\
-	cd srcInterface;             make clean;\
-	cd srcInterface/srcIONO;     make clean;\
-	cd srcInterface/srcIE;       make clean;\
+	cd ../srcInterface;             make clean;\
+	cd srcIONO;     make clean;\
+	cd ../srcIE;       make clean;\
 	fi)
 
 distclean: install
 	@(if [ -r "Makefile.conf" ]; then \
 		cd src;                      make distclean;\
-		cd srcInterface;             make distclean;\
-		cd srcInterface/srcIONO;     make distclean;\
-		cd srcInterface/srcIE;       make distclean;\
+		cd ../srcInterface;             make distclean;\
+		cd srcIONO;     make distclean;\
+		cd ../srcIE;       make distclean;\
 	fi)
 	rm -f *~
 #
