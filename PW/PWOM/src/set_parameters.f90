@@ -78,6 +78,8 @@ subroutine PW_set_parameters(NameAction)
            call read_var('IsPointImplicit'   ,IsPointImplicit)
            call read_var('IsPointImplicitAll',IsPointImplicitAll)
         end if
+     case('#VARIABLEDT')
+        call read_var('IsVariableDt',IsVariableDt)
      case('#DIFFUSION')
         call read_var('TypeDiffusion',TypeDiffusion)
      case('#LIMITER')
