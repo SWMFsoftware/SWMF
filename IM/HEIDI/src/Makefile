@@ -7,11 +7,6 @@ default : HEIDI.exe
 include ../Makefile.def
 include ../Makefile.conf
 include Makefile.DEPEND
-#
-#  Makefile for 
-#
-
-
 
 MODULES = \
 	ModHeidiSize.o\
@@ -99,7 +94,7 @@ DEPEND:
 
 IE_LIB = libIE.a
 
-${IE_LIB}: ${MODULES_IE} ${OBJECTS_IE}
+${IE_LIB}: DEPEND ${MODULES_IE} ${OBJECTS_IE}
 	rm -f ${IE_LIB}
 	${AR} ${IE_LIB} ${MODULES_IE} ${OBJECTS_IE}
 
@@ -116,16 +111,16 @@ interface: ${IE_LIB} Interface.o
 
 IONO_LIB = libIONO.a
 
-${IONO_LIB}: ${MODULES} ${OBJECTS_IONO} ${IE_LIB}
+${IONO_LIB}: DEPEND ${MODULES} ${OBJECTS_IONO} ${IE_LIB}
 	cp -f ${IE_LIB} ${IONO_LIB}
 	${AR} ${IONO_LIB} ${MODULES} ${OBJECTS_IONO}
 
 MY_LIB = libHEIDI.a
 
-${MY_LIB}: ${OBJECTS}
+${MY_LIB}: DEPEND ${OBJECTS}
 	${AR} ${MY_LIB} ${OBJECTS} 
 
-LIB : 
+LIB : DEPEND
 	make ${MY_LIB}
 
 #IONOSPHERE
