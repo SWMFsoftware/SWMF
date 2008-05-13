@@ -135,8 +135,12 @@ subroutine update_check(iStage)
   logical :: oktest2, oktest2_me
   logical :: oktest3, oktest3_me
 
+  logical :: DoTest, DoTestMe
+
   integer :: iError1=-1
   !-----------------------------------------------------------------------
+
+  call set_oktest('fix_update',DoTest,DoTestMe)
 
   call set_oktest('update_check',oktest,oktest_me)
   call set_oktest('convergence_history',oktest1,oktest1_me)
@@ -469,14 +473,25 @@ contains
     real :: rhoUx_Boris, rhoUy_Boris, rhoUz_Boris, E_Boris, &
          rhoUx_o_Boris, rhoUy_o_Boris, rhoUz_o_Boris, E_o_Boris
 
+    character(len=*), parameter:: NameSub='fix_update'
+    logical, parameter :: DoTestCell = .false.
     !-------------------------------------------------------------------------
+    !DoTestCell = DoTestMe .and. iBlock==BlkTest .and. &
+    !     i==iTest .and. j==jTest .and. k==kTest 
+
+    if(DoTestCell)then
+       write(*,*)NameSub,' IsConserv    =',IsConserv
+       write(*,*)NameSub,' initial state=',State_VGB(:,i,j,k,iBlock)
+       write(*,*)NameSub,' old     state=',StateOld_VCB(:,i,j,k,iBlock)
+    end if
+
     if(allocated(IsConserv_CB))then
        IsConserv = IsConserv_CB(i,j,k,iBlock)
     else
        IsConserv = .not. UseNonConservative
     end if
 
-    if(boris_correction) then                  !^CFG IF BORISCORR BEGIN
+    if(boris_correction .and. nFluid==1) then                  !^CFG IF BORISCORR BEGIN
 
        ! Convert old state
        fullBx = B0xCell_BLK(i,j,k,iBlock) + &
@@ -548,6 +563,10 @@ contains
        end if
 
        ! Interpolate
+       !For possible extension to multifluid
+       !State_VGB(iRho_I,i,j,k,iBlock) = &
+       !     (   time_fraction) *   State_VGB(iRho_I,i,j,k,iBlock) + &
+       !     (cOne-time_fraction) * StateOld_VCB(iRho_I,i,j,k,iBlock)
        State_VGB(rho_,i,j,k,iBlock) = &
             (   time_fraction) *   State_VGB(rho_,i,j,k,iBlock) + &
             (cOne-time_fraction) * StateOld_VCB(rho_,i,j,k,iBlock)
@@ -615,10 +634,18 @@ contains
                StateOld_VCB(Bz_,i,j,k,iBlock))**2 )
 
           call calc_pressure1_point(i,j,k,iBlock)
+
+          ! For multifluid update all other energies and call calc_pressure_point
        else
-          State_VGB(P_,i,j,k,iBlock) = &
-               (   time_fraction) *   State_VGB(P_,i,j,k,iBlock) + &
-               (cOne-time_fraction) * StateOld_VCB(P_,i,j,k,iBlock)
+          ! For possible extension to multifluid
+          !State_VGB(iP_I,i,j,k,iBlock) = &
+          !     (   time_fraction) *   State_VGB(iP_I,i,j,k,iBlock) + &
+          !     (cOne-time_fraction) * StateOld_VCB(iP_I,i,j,k,iBlock)
+          !call calc_energy_point(i,j,k,iBlock)
+
+          State_VGB(p_,i,j,k,iBlock) = &
+               (   time_fraction) *   State_VGB(p_,i,j,k,iBlock) + &
+               (cOne-time_fraction) * StateOld_VCB(p_,i,j,k,iBlock)
 
           call calc_energy1_point(i,j,k,iBlock)
        end if
@@ -647,6 +674,9 @@ contains
        end if
     end if                       !^CFG IF BORISCORR
     time_BLK(i,j,k,iBlock) = time_BLK(i,j,k,iBlock)*time_fraction
+
+    if(DoTestCell)write(*,*)NameSub,' final state=',State_VGB(:,i,j,k,iBlock)
+
   end subroutine fix_update
 
 end subroutine update_check
