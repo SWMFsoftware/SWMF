@@ -1,8 +1,9 @@
-! File name: heidi_setup_010.f90
+! File name: heidi_setup_011.f90
 !
 ! Contains: input and array setup routines for HEIDI
 !	READPARA
 !	CONSTANT
+!       BFIELD_SETUP
 !	ARRAYS
 !	GETKPA
 !	GETSWIND
@@ -15,6 +16,9 @@
 !	ASIND (unused)
 !	COSD (unused)
 !	SIND (unused)
+!
+! Change from 010 to 011: Dipole field definition now a subroutine
+!	instead of embedded in ARRAYS
 !
 ! Last Modified: March 2006, Mike Liemohn
 !
@@ -149,6 +153,50 @@
 !
 
 !***********************************************************************
+!				BFIELD_SETUP
+!			Set up all the arrays
+!***********************************************************************
+	SUBROUTINE BFIELD_SETUP(cone)
+
+	use ModHeidiSize
+	use ModHeidiMain
+	use ModHeidiWaves
+        use ModHeidiIO
+
+	Implicit None
+
+	REAL CONE(NR+4),degrad,camlra,asind
+	integer i,iml
+        external asind
+
+	degrad=pi/180.
+	do i=1,IO
+	 DO IML=1,ISO
+          camlra=amla(iml)*degrad
+	  BE(I,IML)=0.32/LZ(I)**3*SQRT(1.+3.*SIN(camlra)**2)  &
+     		/COS(camlra)**6				! in gauss
+	  ENDDO
+	  BFC(I)=ME/Z(I)**3/40./SQRT(PI*Q)		! in SI units
+	END DO
+
+!.......CONE - pitch angle loss cone in degree
+	do i=1,io	
+	  CONE(I)=ASIND(SQRT(((RE+HMIN)/Z(I))**3   &
+                    /SQRT(4.-3.*((RE+HMIN)/Z(I)))))
+	end do
+	CONE(IO+1)=2.5    ! to calcul PA grid near 0 deg for IPA=1
+	CONE(IO+2)=1.5
+	CONE(IO+3)=1.
+	CONE(IO+4)=0.
+
+	RETURN
+	END
+
+!
+! End of subroutine BFIELD_SETUP
+!
+
+!***********************************************************************
 !				ARRAYS
 !			Set up all the arrays
 !***********************************************************************
@@ -202,14 +250,8 @@
 	end do
 	Z(1:IO)=RE*LZ(1:IO)
 	degrad=pi/180.
-	do i=1,IO
-	 DO IML=1,ISO
-          camlra=amla(iml)*degrad
-	  BE(I,IML)=0.32/LZ(I)**3*SQRT(1.+3.*SIN(camlra)**2)  &
-     		/COS(camlra)**6				! in gauss
-	  ENDDO
-	  BFC(I)=ME/Z(I)**3/40./SQRT(PI*Q)		! in SI units
-	END DO
+
+	CALL BFIELD_SETUP(cone)
 
 	DPHI=2.*PI/JO		      ! Grid size for local time [rad]
 	IF(MOD(NLT,JO).NE.0) THEN
@@ -282,16 +324,6 @@
 	  VBND(1:ko,s)=SQRT(2.*EBND(1:ko)*1000.*Q/MAS(S)) ! Vel [m/s] at bound
 	END DO
 
-!.......CONE - pitch angle loss cone in degree
-	do i=1,io	
-	  CONE(I)=ASIND(SQRT(((RE+HMIN)/Z(I))**3   &
-                    /SQRT(4.-3.*((RE+HMIN)/Z(I)))))
-	end do
-	CONE(IO+1)=2.5    ! to calcul PA grid near 0 deg for IPA=1
-	CONE(IO+2)=1.5
-	CONE(IO+3)=1.
-	CONE(IO+4)=0.
-
 !.......PA is equatorial pitch angle in deg - PA(1)=90, PA(LO)=0.
 !.......MU is cosine of equatorial PA
 	IF (IPA.NE.1) THEN	! Constant DPA based on LO
@@ -301,14 +333,18 @@
 	  do L=1,LO-2
  	    PA(L+1)=PA(L)+DPA
 	  end do
-	  MUB(1:lo-1)=COSD(PA(1:lo-1)+DPA/2.)
+	  do l=1,lo-1
+          MUB(l)=COSD(PA(l)+DPA/2.)
+          end do
 	  WMU(1)=2*MUB(1)
 	  WMU(2:lo-1)=MUB(2:lo-1)-MUB(2:lo-1)
 	  DMU(1:lo-2)=0.5*(WMU(2:lo-1)+WMU(1:lo-2))
 	  do l=1,lo-2
-	    MU(L+1)=MU(L)+DMU(L)
-	  end do
-	  PA(2:LO-1)=ACOSD(MU(2:LO-1))
+             MU(L+1)=MU(L)+DMU(L)
+          end do
+          do l=2,LO-1
+	  PA(l)=ACOSD(MU(l))
+          end do
 	  PA(LO)=0.
 	  MU(LO)=1.
 	  WMU(LO)=2*(1.-MUB(LO-1))
@@ -344,7 +380,9 @@
 	 do l=1,46
             MU(L+1)=MU(L)+DMU(L)
 	 end do
-         PA(2:47)=ACOSD(MU(2:47))
+         do l=2,47
+         PA(l)=ACOSD(MU(l))
+         end do
 	 PA(48)=18.65
  	 MU(48)=COSD(PA(48))
 	 DMU(47)=(MU(48)-MU(47))
@@ -360,7 +398,7 @@
             IC=IC+1
           ENDIF
           MU(l+1)=COSD(PA(l+1))
-	 end do
+       end do
          DMU(48:lo-1)=(MU(49:lo)-MU(48:lo-1))	! Grid size in cos(PA) 
 	 do l=48,55
   	  WMU(L)=2.*(DMU(L-1)-0.5*WMU(L-1))
