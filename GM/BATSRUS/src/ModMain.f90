@@ -93,10 +93,6 @@ Module ModMain
   ! Inner and outer boundary conditions
   character (len=20) :: TypeBc_I(body2_:top_) = 'float'
 
-  ! Solar Wind Input Parameters
-  logical :: UseUpstreamInputFile
-  real :: Satellite_Y_Pos = 0.0, Satellite_Z_Pos = 0.0
-
   ! Logicals for bodies
   logical :: Body1    = .false.
   logical :: UseBody2 = .false.         !^CFG IF SECONDBODY
