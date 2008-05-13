@@ -100,7 +100,7 @@ module ModPhysics
        PolarRho_I= 1.0, PolarP_I= 1.0, PolarU_I=0.0
 
   ! Polar boundary conditions are applied above this latitude only
-  real :: PolarLatitude = 75.0, PolarTheta = 15.0*cDegToRad
+  real :: PolarLatitude = 0.0, PolarTheta = 90.0*cDegToRad
 
   ! Density ratio of major and minor ions/neutrals (e.g. in the solar wind)
   real :: LowDensityRatio = 0.0001
