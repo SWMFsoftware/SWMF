@@ -14,6 +14,10 @@ module ModSolarwind
   public :: normalize_solar_wind_data
   public :: get_solar_wind_point
 
+  logical, public :: UseSolarwindFile = .false.
+
+  character(len=500), public :: NameSolarwindFile
+
   integer, parameter :: nTimeVar = 7
   integer, parameter :: MaxData  = 50000
 
@@ -51,23 +55,29 @@ module ModSolarwind
   ! Position of the satellite
   real :: SatelliteXyz_D(3)
 
+  ! Shall we reread the file
+  logical :: DoReadAgain = .false.
+
 contains
   !============================================================================
-  subroutine read_solar_wind_file(NameFile)
+  subroutine read_solar_wind_file
 
     use ModProcMH
-    use ModMain
+    use ModMain, ONLY: lVerbose, StartTime, iStartTime_I, UseStrict, &
+         TypeCoordSystem
+    use ModPhysics, ONLY: SW_Bx_dim, SW_By_dim, SW_Bz_dim, &
+         SW_Ux_dim, SW_Uy_dim, SW_Uz_dim, SW_n_dim, SW_T_dim
+
     use ModIoUnit, ONLY : UNITTMP_
-    use ModPhysics
-    use ModNumConst
-    use CON_geopack
+    use ModNumConst, ONLY: cDegToRad, cHalfPi
+    use ModConst, ONLY: cDay => cSecondPerDay
+    use CON_geopack, ONLY: CON_recalc, HgiGse_DD, GsmGse_DD
     use ModIO, ONLY: iUnitOut, write_prefix
     use ModTimeConvert, ONLY: time_int_to_real
     use ModUtilities, ONLY: upper_case, lower_case
-    use ModMpi
+
     implicit none
 
-    character(len=100), intent(in) :: NameFile
     character(len=500):: StringInputVar
 
     integer :: iError, i , iVar, jVar, iYear
@@ -89,40 +99,41 @@ contains
     real    :: Solarwind_V(nVar)
     logical :: DoSetMatrix=.true.
 
-    character (len=*), parameter:: NameSub='read_upstream_input_file'
+    character (len=*), parameter:: NameSub='read_solar_wind_file'
     logical :: DoTest, DoTestMe
     !--------------------------------------------------------------------------
 
     call set_oktest(NameSub, DoTest, DoTestMe)
 
+    ! Set defaults
     UseZeroBx = .false.
     TimeDelay = 0.0
-
-    ! Read and convert INPUT data on processor 0 then broadcast to others
-    open(UNITTMP_, file=NameFile, status="old", iostat = iError)
-
-    if (iError /= 0) call stop_mpi(NameSub// &
-         ": Unable to open file "//trim(NameFile))
-
-    nData = 0
     PlaneAngleXY = 0.0
     PlaneAngleXZ = 0.0
 
     nVarInput = 8
     iVarInput_V(1:8) = (/ Bx_, By_, Bz_, Ux_, Uy_, Uz_, Rho_, p_ /)
-
     if(UseMultiSpecies) iVarInput_V(7) = SpeciesFirst_
 
+    ! Read and convert INPUT data on processor 0 then broadcast to others
+    open(UNITTMP_, file=NameSolarwindFile, status="old", iostat = iError)
+
+    if (iError /= 0) call stop_mpi(NameSub// &
+         ": Unable to open file "//trim(NameSolarwindFile))
+
+    nData = 0
     if(lVerbose>0)then
-       call write_prefix; write(iUnitOut,*) NameSub, &
-            ' reading ',trim(NameFile)
+       call write_prefix
+       write(iUnitOut,*) NameSub,' reading ',trim(NameSolarwindFile)
     end if
 
     ! Read header information
     do
        read(UNITTMP_,'(a)', iostat = iError ) line
        if (iError /= 0) call stop_mpi(NameSub// &
-            ': could not find #START in '//trim(NameFile))
+            ': could not find #START in '//trim(NameSolarwindFile))
+
+       if(index(line,'#REREAD')>0) read(UNITTMP_,*) DoReadAgain
 
        if(index(line,'#COOR')>0)then
           read(UNITTMP_,'(a)') NameInputCoord
@@ -135,10 +146,11 @@ contains
           PlaneAngleXY = PlaneAngleXY * cDegToRad
           PlaneAngleXZ = PlaneAngleXZ * cDegToRad
 
-          if((abs(PlaneAngleXY)-cHalfPi)<1.0e-3)then
-             Normal_D=(/0.0, sign(1.0,PlaneAngleXY), 0.0/)
-          else if ((abs(PlaneAngleXZ)-cHalfPi)<1.0e-3)then
-             Normal_D=(/0.0, 0.0, sign(1.0, PlaneAngleXZ)/)
+          ! Calculate normal vector
+          if( abs(abs(PlaneAngleXY)-cHalfPi) < 1.0e-3 )then
+             Normal_D=(/ 0.0, sign(1.0,PlaneAngleXY), 0.0 /)
+          else if ( abs(abs(PlaneAngleXZ)-cHalfPi) < 1.0e-3 )then
+             Normal_D=(/ 0.0, 0.0, sign(1.0, PlaneAngleXZ) /)
           else
              Normal_D(2) = tan(PlaneAngleXY)
              Normal_D(3) = tan(PlaneAngleXZ)
@@ -159,6 +171,7 @@ contains
              write(*,*)'Max Number of input variables =',nVar
              write(*,*)'user input number of variables=',nVarInput
           end if
+
           do iVar= 1, nVarInput
              String = NameInputVar_I(iVar)
              call lower_case(String)
@@ -202,20 +215,22 @@ contains
           read(UNITTMP_,*) SatelliteXyz_D(3)
        endif
 
-       if(index(line,'#ZEROBX')>0)then
-          read(UNITTMP_,*) UseZeroBx
+       if(index(line,'#SATELLITEXYZ')>0)then
+          read(UNITTMP_,*) SatelliteXyz_D(1)
+          read(UNITTMP_,*) SatelliteXyz_D(2)
+          read(UNITTMP_,*) SatelliteXyz_D(3)
        endif
 
-       if(index(line,'#TIMEDELAY')>0)then
-          read(UNITTMP_,*) TimeDelay
-       endif
+       if(index(line,'#ZEROBX')>0)    read(UNITTMP_,*) UseZeroBx
+
+       if(index(line,'#TIMEDELAY')>0) read(UNITTMP_,*) TimeDelay
 
        if(index(line,'#START')>0) EXIT
     end do
 
     ! Set logicals telling if a variable is read from the input file
     do iVar = 1, nVar
-       IsInput_V(iVar) = any(iVarInput_V == iVar)
+       IsInput_V(iVar) = any(iVarInput_V(1:nVarInput) == iVar)
     end do
 
     ! Initialize array so all elements are set
@@ -227,20 +242,16 @@ contains
        if (iError /= 0) EXIT
 
        if (nData >= MaxData) then
-          write(*,*) "=> This upstream boundary condition file"
-          write(*,*) "   contains too many lines! (Max lines ="
-          write(*,*) MaxData,"). One method for getting"
-          write(*,*) "   around this limitation is to have multiple"
-          write(*,*) "   files which are read in at different times"
-          write(*,*) "   during the run.  These files can overlap"
-          write(*,*) "   in time."
+          write(*,*) "=> The solar file ",trim(NameSolarwindFile)
+          write(*,*) "   contains too many lines! (Max lines =", MaxData,")."
+          write(*,*) "   Try reading (overlapping) files multiple times."
           EXIT
        end if
 
        nData = nData + 1
 
        do iVar =1, nVarInput
-          jVar=iVarInput_V(iVar)
+          jVar = iVarInput_V(iVar)
           Solarwind_VI(jVar, nData) = TmpData_V(iVar)              
        end do
 
@@ -277,6 +288,7 @@ contains
                   matmul(GsmGse_DD, Solarwind_VI(Bx_:Bz_, nData))
              Solarwind_VI(Ux_:Uz_, nData)=&
                   matmul(GsmGse_DD, Solarwind_VI(Ux_:Uz_, nData))
+
           elseif(TypeCoordSystem == 'HGI' .and. NameInputCoord == 'GSM') then
 
              if(DoSetMatrix)then
@@ -306,9 +318,8 @@ contains
 
     close(UNITTMP_)
 
-    ! Check if the INPUT data is within 1 day of the start time.
-    if (minval(abs(Time_I(1:nData)-StartTime)) &
-         > 24.0*3600.0) then
+    ! Check if the start time is within 1 day of the input data
+    if (StartTime < Time_I(1)-cDay .or. StartTime > Time_I(nData)+cDay) then
        write(*,*) "**********************************************************"
        write(*,*) "*                                                        *"
        write(*,*) "*         Warning! Warning! Warning! Warning! Warning!   *"
@@ -329,10 +340,10 @@ contains
 
     if(lVerbose>0)then
        call write_prefix; write(iUnitOut,*) NameSub, &
-            ' read ',nData,' points from ',trim(NameFile)
+            ' read ',nData,' points from ',trim(NameSolarwindFile)
     end if
 
-    ! This part is only needed for solar wind normalization based on 
+        ! This part is only needed for solar wind normalization based on
     ! the input file. This should be eliminated.
     if (SW_T_dim <= 0.0) then
 
@@ -350,7 +361,7 @@ contains
           enddo
 
           if ((i == nData .and. &
-               Time_I(i) <= StartTime).or.(i==1)) then 
+               Time_I(i) <= StartTime).or.(i==1)) then
 
              Solarwind_V = Solarwind_VI(:, i)
 
@@ -369,7 +380,7 @@ contains
        ! These scalars should be removed eventually
        SW_Bx_dim  = Solarwind_V(Bx_)
        SW_By_dim  = Solarwind_V(By_)
-       SW_Bz_dim  = Solarwind_V(Bz_)        
+       SW_Bz_dim  = Solarwind_V(Bz_)
        SW_Ux_dim  = Solarwind_V(Ux_)
        SW_Uy_dim  = Solarwind_V(Uy_)
        SW_Uz_dim  = Solarwind_V(Uz_)
@@ -537,6 +548,7 @@ contains
     use ModPhysics
     use ModVarIndexes
     use ModGeometry, ONLY: x1, x2
+    use ModUtilities, ONLY: sleep
 
     implicit none
     real, intent(in)  :: TimeSimulation
@@ -546,9 +558,12 @@ contains
     integer :: iData
     real(Real8_) :: DtData1, DtData2, Time
     real         :: SatDistance_D(3), U_D(3)
+
+    logical, parameter:: DoTestCell = .false.
+    character(len=*), parameter :: NameSub = 'get_solar_wind_point'
     !--------------------------------------------------------------------------
 
-    if(nData <= 0 .or. .not.UseUpstreamInputFile)then
+    if(nData <= 0 .or. .not.UseSolarwindFile)then
        ! Use fixed boundary conditon if there is no input data
        SolarWind_V = FaceState_VI(:,east_)
        RETURN
@@ -558,6 +573,9 @@ contains
        SolarWind_V = Solarwind_VI(:,1)
        RETURN
     end if
+    
+    ! DoTestCell = maxval(abs(Xyz_D - (/ xTest, yTest, zTest /))) < 0.1
+    if(DoTestCell) write(*,*) NameSub, 'TimeSim, Xyz_D=',TimeSimulation, Xyz_D
 
     ! Assume that the satellite is at the east or west boundary
     if(Solarwind_VI(Ux_,1) > 0.0)then
@@ -569,10 +587,25 @@ contains
     ! Calculate absolute time
     Time = StartTime + TimeSimulation
 
+    ! Read the input file again if Time exceeds last time in the file
+    if(DoReadAgain .and. Time > Time_I(nData))then
+       do
+          call read_solar_wind_file
+          call normalize_solar_wind_data
+          if(Time < Time_I(nData)) EXIT
+          call sleep(1.0) ! sleep for 1 second CPU time
+       end do
+    end if
+
     ! Find data point preceeding this time
     do iData = 1, nData-1
-       if(Time >= Time_I(iData)) EXIT
+       if(Time_I(iData) >= Time) EXIT
     end do
+
+    if(DoTestCell)then
+       write(*,*)NameSub,' Time, Time_I(iData), iData=',&
+            Time, Time_I(iData), iData
+    end if
 
     ! Take into account the propagation time from the satellite plane
     if(abs(Xyz_D(1)-SatelliteXyz_D(1)) > cTiny .or. Normal_D(1) /= 1.0)then
@@ -591,6 +624,8 @@ contains
 
        endif
 
+       if(DoTestCell) write(*,*)NameSub,' u_D=',u_D
+
        ! Shift Time with travel time from the satellite plane
        if(abs(dot_product(U_D, Normal_D))>1.0e-5)then  
           ! Absolute time is in SI units
@@ -601,8 +636,13 @@ contains
 
           ! Find data point preceeding this time
           do iData = 1, nData-1
-             if(Time >= Time_I(iData)) EXIT
+             if(Time_I(iData) >= Time) EXIT
           end do
+
+          if(DoTestCell) write(*,*)NameSub,&
+               ' corrected Time, Time_I(iData), iData=',&
+                  Time, Time_I(iData), iData
+
        end if
 
     end if
@@ -620,7 +660,12 @@ contains
        SolarWind_V = DtData1 * Solarwind_VI(:, iData) &
             +        DtData2 * Solarwind_VI(:, iData-1)
 
+       if(DoTestCell)write(*,*)NameSub,' DtData1, DtData2=',DtData1, DtData2
+
     endif
+
+    if(DoTestCell)write(*,*)NameSub,' SolarWind_V =',SolarWind_V
+    
 
   end subroutine get_solar_wind_point
 
