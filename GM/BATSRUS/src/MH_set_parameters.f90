@@ -50,6 +50,8 @@ subroutine MH_set_parameters(TypeAction)
        zSizeBoxHall, DzSizeBoxHall
   use ModResistivity                              !^CFG IF DISSFLUX
   use ModMultiFluid, ONLY: MassIon_I
+  use ModSolarwind, ONLY: UseSolarwindFile, NameSolarwindFile, &
+       read_solar_wind_file, normalize_solar_wind_data
 
   implicit none
 
@@ -64,15 +66,12 @@ subroutine MH_set_parameters(TypeAction)
   integer :: ifile, i,j, iError
   real :: local_root_dx
 
-  logical :: IsUninitialized=.true.
-  logical :: read_new_upstream=.false.
-  logical :: DoReadSatelliteFiles=.false.
+  logical :: IsUninitialized      = .true.
+  logical :: DoReadSolarwindFile  = .false.
+  logical :: DoReadSatelliteFiles = .false.
 
   ! The name of the command
   character (len=lStringLine) :: NameCommand, StringLine
-
-  ! Variables to remember for multiple calls
-  character (len=lStringLine) :: UpstreamFileName='???'
 
   ! Temporary variables
   logical :: DoEcho=.false.
@@ -116,7 +115,6 @@ subroutine MH_set_parameters(TypeAction)
 
   if(iSession>1)then
      restart=.false.           ! restart in session 1 only
-     read_new_upstream=.false. ! upstream file reading in session 1 only
   end if
 
   if(DoReadSatelliteFiles)then
@@ -193,10 +191,13 @@ subroutine MH_set_parameters(TypeAction)
      ! clean dynamic storage
      call clean_block_data
 
-     if (read_new_upstream) &
-          call read_upstream_input_file(UpstreamFileName)
+     ! set physics uses dimensional solar wind data
+     if (DoReadSolarwindFile) call read_solar_wind_file
 
      call set_physics_constants
+
+     ! Normalization of solar wind data requires normalization in set_physics
+     if (DoReadSolarwindFile) call normalize_solar_wind_data
 
      call set_extra_parameters
 
@@ -225,6 +226,9 @@ subroutine MH_set_parameters(TypeAction)
      call stop_mpi(NameSub//': TypeAction='//TypeAction// &
           ' must be "CHECK" or "READ"!')
   end select
+
+  ! Read solarindfile if #SOLARWIND command is present
+  DoReadSolarwindFile = .false.
 
   !\
   ! Read parameters from the text
@@ -750,32 +754,33 @@ subroutine MH_set_parameters(TypeAction)
            if (plot_area == 'sph') then
               select case(TypeGeometry)                
               case('cartesian')                        
-                 plot_dx(1,ifile) = 1.0    ! set to match value in write_plot_sph
-                 plot_dx(2:3,ifile) = 1.0  ! set to degrees desired in angular resolution
-                 plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4  ! so that R/=0
+                 plot_dx(1,ifile) = 1.0    ! set to match write_plot_sph
+                 plot_dx(2:3,ifile) = 1.0  ! angular resolution in degrees
+                 plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4 !so that R/=0
                  plot_range(3,ifile)= 0.   - 0.5*plot_dx(2,ifile)
                  plot_range(4,ifile)= 90.0 + 0.5*plot_dx(2,ifile)
                  plot_range(5,ifile)= 0.   - 0.5*plot_dx(3,ifile)
                  plot_range(6,ifile)= 360.0- 0.5*plot_dx(3,ifile)
               case('spherical')                    
                  plot_dx(1,ifile) = -1.0   
-                 plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4   ! so that R/=0 
+                 plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4 !so that R/=0
                  do i=Phi_,Theta_
-                    plot_range(2*i-1,ifile)=XyzMin_D(i)
-                    plot_range(2*i,ifile)=XyzMax_D(i)  
+                    plot_range(2*i-1,ifile) = XyzMin_D(i)
+                    plot_range(2*i,ifile)   = XyzMax_D(i)  
                  end do
-                 plot_area='R=0'           ! to disable the write_plot_sph routine
+                 plot_area='R=0' ! to disable the write_plot_sph routine
               case('spherical_lnr')           
                  plot_dx(1,ifile) = -1.0  
                  plot_range(1,ifile)=alog(max(plot_range(1,ifile),cTiny)) 
-                 plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4   ! so that R/=0 
+                 plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4 !so that R/=0
                  do i=Phi_,Theta_
-                    plot_range(2*i-1,ifile)=XyzMin_D(i)
-                    plot_range(2*i,ifile)=XyzMax_D(i)  
+                    plot_range(2*i-1,ifile) = XyzMin_D(i)
+                    plot_range(2*i,ifile)   = XyzMax_D(i)  
                  end do
-                 plot_area='R=0'           ! to disable the write_plot_sph routine
+                 plot_area='R=0'       ! to disable the write_plot_sph routine
               case default
-                 call stop_mpi(NameSub//' Sph-plot is not implemented for geometry= '&
+                 call stop_mpi(NameSub// &
+                      ' Sph-plot is not implemented for geometry= '&
                       //TypeGeometry)
               end select
            end if
@@ -1323,11 +1328,10 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('ShockPosition',ShockPosition)
         call read_var('ShockSlope',ShockSlope)
      case("#SOLARWINDFILE", "#UPSTREAM_INPUT_FILE")
-        call read_var('UseSolarWindFile',UseUpstreamInputFile)
-        if (UseUpstreamInputFile) then
-           read_new_upstream = .true.
-           call read_var('NameSolarWindFile', UpstreamFileName)
-        end if
+        call read_var('UseSolarWindFile',UseSolarwindFile)
+        DoReadSolarwindFile = UseSolarwindFile
+        if (UseSolarwindFile) &
+             call read_var('NameSolarWindFile', NameSolarWindFile)
         !                                               ^CFG IF RAYTRACE BEGIN
      case("#RAYTRACE")
         call read_var('UseAccurateIntegral',UseAccurateIntegral)
@@ -1669,11 +1673,9 @@ subroutine MH_set_parameters(TypeAction)
         select case(TypeGeometry)
         case('spherical','spherical_lnr')
            If(UseStrict)then
-              if(iProc==0.and.MaxBoundary/=Top_)&
-                   write(*,*)&
-                   NameSub&
-                   //': Set UseStrict=.false. if you want to apply BC ar R=RMin and R=RMax.'&
-                   //'Set Maxboundary=Top_'
+              if(iProc==0 .and. MaxBoundary/=Top_) write(*,*) NameSub, &
+                   ': Set UseStrict=.false. if you want to apply BC ', &
+                   'at R=RMin and R=RMax. Setting Maxboundary=Top_'
               MaxBoundary = Top_
            else
               if(MaxBoundary/=Top_)then
@@ -1688,11 +1690,9 @@ subroutine MH_set_parameters(TypeAction)
            end If
         case('cylindrical')
            If(UseStrict)then
-              if(iProc==0.and.MaxBoundary<North_)&
-                   write(*,*)&
-                   NameSub&
-                   //': Set UseStrict=.false. if you want to apply BC ar R=RMin and R=RMax.'&
-                   //'Set Maxboundary=North_'
+              if(iProc==0 .and. MaxBoundary<North_) write(*,*) NameSub, &
+                   ': Set UseStrict=.false. if you want to apply BC ', &
+                   'at r=rMin and r=rMax. Setting Maxboundary=North_'
               MaxBoundary = max(MaxBoundary,North_)
            else
               if(MaxBoundary<North_)then
@@ -2020,13 +2020,10 @@ contains
 
     optimize_message_pass = 'allopt'
 
-    UseUpstreamInputFile = .false.
-
     plot_dimensional      = .true.
     save_satellite_data   = .false.
 
     restart           = .false.
-    read_new_upstream = .false.
 
     !\
     ! Give some "reasonable" default values
@@ -2473,7 +2470,7 @@ contains
     real :: dx, dy, dz, dxmax, dymax, dzmax, dsmall, r
 
     logical :: oktest,oktest_me
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     call set_oktest('check_plot_range',oktest,oktest_me)
 
@@ -2573,9 +2570,6 @@ contains
           Cfl=1.0
        end if
     end if
-
-    ! You have to have the normalizations first
-    if (read_new_upstream)  call normalize_upstream_data
 
     ! Set MinBoundary and MaxBoundary
     if(UseBody2) MinBoundary=min(Body2_,MinBoundary)   !^CFG IF SECONDBODY

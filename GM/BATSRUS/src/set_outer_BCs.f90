@@ -395,6 +395,7 @@ subroutine BC_solar_wind(time_now)
        iRho_I, iUx_I, iUy_I, iUz_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
   use ModPhysics, ONLY: LowDensityRatio
   use ModNumConst, ONLY: cTiny
+  use ModSolarwind, ONLY: get_solar_wind_point
   implicit none
 
   ! Current simulation time in seconds
@@ -407,15 +408,15 @@ subroutine BC_solar_wind(time_now)
   real :: SolarWind_V(nVar)
   !-----------------------------------------------------------------------
   
-  do k=kmin1g,kmax1g 
+  do k = kmin1g, kmax1g 
      z = z_BLK(1,1,k,iBLK)
-     do j=jmin1g,jmax2g
+     do j = jmin1g, jmax2g
         y = y_BLK(1,j,1,iBLK)
-        do i=imin1g,imax2g,sign(1,imax2g-imin1g)
-           !x= x_BLK(i,j,k,iBLK)
-            x=x2
-           !warning: only work for west side to be inflow
-           call get_solar_wind_point(time_now, x, y, z, SolarWind_V)
+        do i = imin1g, imax2g, sign(1,imax2g-imin1g)
+
+           ! x= x_BLK(i,j,k,iBLK) ! for cell based BC this would be best
+           x=x2 ! for face based and for west side as the inflow
+           call get_solar_wind_point(time_now, (/x, y, z/), SolarWind_V)
 
            State_VGB(:,i,j,k,iBLK) = SolarWind_V
 

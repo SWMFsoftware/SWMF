@@ -45,6 +45,7 @@ MODULES = \
 	ModProcMH.o\
 	ModRestartFile.o\
 	ModSize.o\
+	ModSolarwind.o \
 	ModUserEmpty.o \
 	ModUser.o \
 	ModMagnetogram.o \
@@ -92,7 +93,6 @@ OBJECTS = \
 	explicit.o\
 	find_neighbors.o\
 	fix_axis_cells.o\
-	get_solar_wind_point.o\
 	library.o\
 	load_balance.o\
 	message_pass_cells.o\
