@@ -63,6 +63,7 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
                            MassFluid_I, IonFirst_, nVar
 
   use ModPhysics, ONLY: No2Si_V, UnitN_, UnitU_, UnitB_, UnitP_,UnitRho_
+  use ModSolarwind, ONLY: get_solar_wind_point
 
   use CON_line_extract, ONLY: line_get, line_clean
 
@@ -178,9 +179,9 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   ! Send solar wind values in the array of the extra integral
   ! This is a temporary solution. RB should use MHD_SUM_rho and MHD_SUM_p
 
-  call get_solar_wind_point(Time_Simulation, x2, 0.0, 0.0, SolarWind_V)
+  call get_solar_wind_point(Time_Simulation, (/x2, 0.0, 0.0/), SolarWind_V)
 
-  Buffer_IIV(1,:,4) = SolarWind_V(Rho_) / MassFluid_I(IonFirst_) * No2Si_V(UnitN_)
+  Buffer_IIV(1,:,4) = SolarWind_V(Rho_)/MassFluid_I(IonFirst_)*No2Si_V(UnitN_)
   Buffer_IIV(2,:,4) = SolarWind_V(RhoUx_) * No2Si_V(UnitU_)
   Buffer_IIV(3,:,4) = SolarWind_V(RhoUy_) * No2Si_V(UnitU_)
   Buffer_IIV(4,:,4) = SolarWind_V(RhoUz_) * No2Si_V(UnitU_)
