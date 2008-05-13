@@ -12,7 +12,7 @@ program caxa
                   (/ 15.5  ,  25.5 , 35.5 , 45.5 /)    
   
 
-        Ube(1) = 14.4  !<->NO {-dusty -w}                  
+        Ube(1) = 14.4  !<-> {-dusty -w} NOT required with  that  program         
 
       do i=1,11
          U_I(i)=Uxe(i)
@@ -28,19 +28,19 @@ program caxa
 
       call ConcNafter
 
-     write (*,*) "No=", NatomII," Te=",vTe," Z=",Z," Ne=", vNe," SUi=",SUi
+     write (*,*) "No=", NatomII," Te=",vTe," Z=",Z," Ne=", vNe," SUi=",CUiTotal
      write (*,*) "oooooooooooooo\ "      
      write (*,*) "oooooooo  ooooo\  Te[K]=", vTe*cEvToK 
      write (*,*) "oooooooooooooooo\  "
      
      write (*,*) "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
-
    end do OCTPOGA
 !............................................
      ! contains      ! 
      ! <insert  ALL internal procedures HERE>
 !.............................................
  end program caxa
+
 !============================================================================
 ! The following subroutines are here so that we can use SWMF library routines
 ! Also some features available in SWMF mode only require empty subroutines

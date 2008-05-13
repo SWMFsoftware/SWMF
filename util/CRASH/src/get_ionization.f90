@@ -43,9 +43,9 @@ module ModSaha
   include 'CRASH_definitions.h'
   real,  parameter ::  &
        cToleranceHere =  cTiny**2  ,    &  !012, 009 givs up to 4-5 poin
-       cTwoPiInv = cOne/cTwoPi          &
-       Hmax  = cPlankH/cErg,               &  !   erg*s Planck
-       HmaxT = cPlankHBar                      !   the same/2Pi
+       cTwoPiInv = cOne /cTwoPi   ,      &
+       Hmax  = cPlankH  /cErg     ,     &  !   erg*s Planck
+       HmaxT = cPlankHBar                  !   the same/2Pi
 
 
   real:: &  
@@ -55,7 +55,7 @@ module ModSaha
        Z          , &   ! vNe/NatomII
        C_I(0:99)  , &   ! C_I[0]-neutrals resided after ionization
        U_I(99)     , &  ! U_I(iZ) - the energy to make an ion iZ+ from (iZ-1)+    
-       CUITotal              ! sum(Uiz*Ciz)
+       CUITotal         ! sum(Uiz*Ciz)/Ce  <~> ionization energy per 1 electron
   integer :: nCi = 54   ! for Xenon, must be a var for other elements
 end module ModSaha
 !=============================================================================
@@ -114,38 +114,38 @@ contains
  !  the residual nuetrals we take the concentration of ions in such
  !  charge state that the states with lower Z can be treated as non-populated.  
  !
-    function   conc( N0after) result(CTotal)
+  function   conc( N0after) result(CTotal)
     real, intent(in) :: N0after  !  conc [1/cm3] of neautrals after ionization
-    integer,parameter::nW=5
+    integer,parameter::nW=5      !range of most populated Zi cncentrations
     integer:: &  
          k=1     ,  &
-         iW      ,  &
+         iW      ,  &  ! index within nW
          iter    ,  &
          iter2   ,  &
-         iZMin    ,  & !  start of slider   zb{|+0,|+1,|+2,|+3,|+4}
+         iZMin    ,  & ! start of slider   zb{|+0,|+1,|+2,|+3,|+4}
          zb
     real ::         &
-         NORM    ,  & != N0after, 
-         Te32    ,  & != vTe ,     Te32  = te*sqrt(te) 
+         NORM    ,  &  !  == N0after, 
+         Te32    ,  &  !  Te32  = Te*sqrt(Te) 
          CTotal,                        &
          a4,                            &
-         NeIterated   ,     & 
-         NeInv   , DeltaNe   ,DeltaC   ,          &
+         NeIterated   ,     NeInv   ,   &
+         DeltaNe   ,DeltaC   ,          &
          PopulationRatio_I(nW)      ,   &
          PopulationRatioNonid_I(nW) ,   &
          StatWeight_I(nW)           ,   & 
          CZTotal    , CZ2Total ,        &
          UW_I(1:5), UITotal          
 
-    real,parameter::cElectronStatWeight=6.050e21 !To be clarified
+    real,parameter :: cElectronStatWeight=6.050e21 !To be clarified,<~> CGS units!
 
 
-    CZTotal     = 0.0
+    CZTotal  = 0.0
     C_I(0)= N0after
 
-    Te32 = vTe*SQRT(vTe)      
-    NORM = N0after
-    a4   =  *Te32/NORM 
+    Te32  = vTe*SQRT(vTe)      
+    NORM  = N0after
+    a4    = Te32/NORM *  cElectronStatWeight
 
 
     !debuT:       
@@ -154,70 +154,75 @@ contains
     iZMin =1  ! for the start of SLIDing
     !....................................................
 
-    SLIDER: do while ( izer <= (11-4)  ) 
+    SLIDER: do while ( iZmin <= (11-(nW-1))  ) 
 
        !debuT   
-       write(*,*)'SLIDer==== iZMin=',izer
+       write(*,*)'SLIDer==== iZMin=',iZmin
 
        C_I(1 : nCi)=0.0   !Initialization
        CTotal=1.0         !To start do loop
 
        !Get nw values of the ionization potentials from the table	
-       UW_I = U_I(izer : izer+nW-1)  
+       UW_I = U_I(iZmin : iZmin+nW-1)  
 
        !Population ratio, according to the Boltzmann principle
        PopulationRatio_I = a4*exp(- UW_I/vTe)
-     
+
        !Trial value for the electron concentration
        NeIterated = 1.3*sqrt(cOne*PopulationRatio_I(1));
 
-       iter2= 1
-       DeltaC   = 1.      !To start do loop
-       zb   = iZMin
+       iter2   = 1
+       DeltaC  = 1.      !To start do loop
+       zb      = iZMin
 
 
        WINDOW: do while ( ( DeltaC>cToleranceHere ).AND.( iter2 < 30 )  )
 
           PopulationRatioNonid_I=PopulationRatio_I !To be mofified for non-ideal plasma
-          
+
           iter =0 
           DeltaNe    =1.            !To start do loop
 
-          NEWTON : do while(  (iter <30  ).AND.( DeltaNe*DeltaNe > cToleranceHere)) 
-        
+          NEWNe : do while(  (iter <30  ).AND.( DeltaNe*DeltaNe > cToleranceHere)) 
+
              NeInv = 1. / NeIterated			
              StatWeight_I(1) = PopulationRatioNonid_I(1)*NeInv
              do iW=2,nW
                 StatWeight_I(iW)=StatWeight_I(iW-1)*&
-                         PopulationRatioNonid_I(iW)*NeInv
+                     PopulationRatioNonid_I(iW)*NeInv
              end do
-             CZTotal=0.0; CZ2Total=0
+
+             CZTotal=0.0; CZ2Total=0.0
              do iW=1,nW
                 CZTotal  = CZTotal  + StatWeight_I(iW)*(zb+iW-1)       
                 CZ2Total = CZ2Total + StatWeight_I(iW)*(zb+iW-1)**2  
              end do
-             DeltaNe  =  NeIterated -cOne * CZTotal 
-             NeIterated =( NeIterated *cOne *(CZTotal +CZ2Total)/&
-                  (NeIterated +cOne*CZ2Total) )
+
+             DeltaNe    =  NeIterated -cOne * CZTotal 
+             NeIterated =( NeIterated *cOne *(CZTotal    +CZ2Total)/&
+                  (NeIterated +cOne * CZ2Total) )
              iter= iter +1
-          end do NEWTON
+
+          end do NEWNe
 
           Z  = CZTotal /sum(StatWeight_I)  
 
-          DeltaC  = (NeIterated -CTotal)/(NeIterated+CTotal)
-          DeltaC  = DeltaC*DeltaC;
+          DeltaC = (NeIterated - CTotal)/(NeIterated + CTotal)
+          DeltaC = DeltaC*DeltaC;
           CTotal = NeIterated; 
           iter2  = iter2+1  
        end do WINDOW
 
 
-       C_I(izer : izer+4 ) = StatWeight_I* NORM ![cm^{-3}]
-       vNe    = NeIterated* NORM ;
-
+       C_I(iZmin : iZmin+4 ) = StatWeight_I* NORM ![cm^{-3}]
+       vNe    = NeIterated * NORM ;
        CTotal =   sum(C_I( 0 : iZMin+nW-1 )) 
-     
 
-       if( C_I(iZMin+nW-1) < C_I(iZMin+0) ) EXIT
+       if( C_I(iZMin+nW-1) < C_I(iZMin+0) ) then
+       !debuT:             write (*,*) 'Conc: Norm=', NORM
+              EXIT
+       end if 
+
        iZMin=iZMin+1
 
     end do SLIDER
@@ -229,12 +234,12 @@ contains
     CUITotal = UITotal *C_I(iZMin)  ![eV]*[cm^{-3}]
 
     do   k = iZMin+1, iZMin+nW-1
-       UITotal = UITotal +U_I(k)
+       UITotal  = UITotal  +U_I(k)
        CUITotal = CUITotal +UITotal*C_I(k)
     end do
 
     CUITotal = CUITotal/vNe   ! [eV] per electron    
-  end function cons
+  end function conc
   !........................
 end subroutine ConcNafter
 
