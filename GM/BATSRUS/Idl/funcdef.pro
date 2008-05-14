@@ -65,7 +65,10 @@ if siz(0) eq ndim then nw=1 else nw=siz(ndim+1)
 nEqpar = n_elements(eqpar)
 
 ; Extract equation parameters
-amu    =  1.67e-24 ;[g]
+amu        = 1.67e-24; [g]
+kboltzmann = 1.38e-23; [SI]
+tunit      = 1.0/kboltzmann*1e-15; [using amu/cc and nPa]
+
 gamma  =  5./3.
 clight =  1.0
 rbody  = -1.0
