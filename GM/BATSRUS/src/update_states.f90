@@ -138,7 +138,7 @@ subroutine update_check(iStage)
   real    :: RhoChangeMax_I(2), pChangeMax_I(2)
   logical :: DoTest, DoTestMe
   character(len=*), parameter:: NameSub = 'update_check'
-  character(len=*), parameter:: format="(a,a,f6.1,a,3i3,i5,i4,a,3es10.2)"
+  character(len=*), parameter:: format="(a,i5,a,f6.1,a,3es11.3)"
 
   integer :: iError1=-1
   !-----------------------------------------------------------------------
@@ -225,10 +225,9 @@ subroutine update_check(iStage)
                             (   State_VGB(P_,i,j,k,iBlock)- &
                             StateOld_VCB (P_,i,j,k,iBlock)) &
                             /StateOld_VCB(P_,i,j,k,iBlock) ))) &
-                            write(*,format)NameSub,' max p drop=',&
-                            pChangeMax_I(1),' at i,j,k,iBlock,iProc=',&
-                            i,j,k,iBlock,iProc, &
-                            ' x,y,z=',&
+                            write(*,format)NameSub//' nStep=',n_step,&
+                            ' max p drop=',pChangeMax_I(1),&
+                            '% at x,y,z=',&
                             x_BLK(i,j,k,iBlock),&
                             y_BLK(i,j,k,iBlock),&
                             z_BLK(i,j,k,iBlock)
@@ -239,10 +238,10 @@ subroutine update_check(iStage)
                             (   State_VGB(P_,i,j,k,iBlock)- &
                             StateOld_VCB (P_,i,j,k,iBlock)) &
                             /StateOld_VCB(P_,i,j,k,iBlock)  ))) &
-                            write(*,format)NameSub,' max p increase=',&
-                            pChangeMax_I(2),' at i,j,k,iBlock,iProc=',&
-                            i,j,k,iBlock,iProc, &
-                            ' x,y,z=',&
+                            write(*,format)NameSub//' nStep=',n_step,&
+                            ' max p increase=',&
+                            pChangeMax_I(2), &
+                            '% at x,y,z=',&
                             x_BLK(i,j,k,iBlock),&
                             y_BLK(i,j,k,iBlock),&
                             z_BLK(i,j,k,iBlock)
@@ -255,11 +254,10 @@ subroutine update_check(iStage)
                          (State_VGB(iVar,i,j,k,iBlock)- &
                          StateOld_VCB(iVar,i,j,k,iBlock)) &
                          /StateOld_VCB(iVar,i,j,k,iBlock) ))) &
-                         write(*,format) &
-                         NameSub,' max '//trim(NameVar_V(iVar))//' drop=', &
+                         write(*,format)NameSub//' nStep=',n_step,&
+                         ' max '//trim(NameVar_V(iVar))//' drop=', &
                          RhoChangeMax_I(1), &
-                         ' at i,j,k,iBlock,iProc=',i,j,k,iBlock,iProc, &
-                         ' x,y,z=',&
+                         '% at x,y,z=',&
                          x_BLK(i,j,k,iBlock),&
                          y_BLK(i,j,k,iBlock),&
                          z_BLK(i,j,k,iBlock)
@@ -269,11 +267,10 @@ subroutine update_check(iStage)
                          (State_VGB(iVar,i,j,k,iBlock)- &
                          StateOld_VCB(iVar,i,j,k,iBlock)) &
                          /StateOld_VCB(iVar,i,j,k,iBlock) ))) &
-                         write(*,format) &
-                         NameSub,' max '//trim(NameVar_V(iVar))//' increase=',&
+                         write(*,format)NameSub//' nStep=',n_step,&
+                         ' max '//trim(NameVar_V(iVar))//' increase=',&
                          RhoChangeMax_I(2), &
-                         ' at i,j,k,iBlock,iProc=',i,j,k,iBlock,iProc, &
-                         ' x,y,z=',&
+                         '% at x,y,z=',&
                          x_BLK(i,j,k,iBlock),&
                          y_BLK(i,j,k,iBlock),&
                          z_BLK(i,j,k,iBlock)
@@ -322,7 +319,7 @@ subroutine update_check(iStage)
      if(oktest) then
         if (iProc == 0 .and. report_tf < 1.) &
              write(*,'(a,a,i6,a,f12.8,a,f12.8)') 'update_check TA:', &
-             ' ITER=',n_step,'     dt reduction=',report_tf,' dt=',dt
+             ' nStep=',n_step,'     dt reduction=',report_tf,' dt=',dt
      end if
   else
      !\\\
@@ -424,7 +421,7 @@ subroutine update_check(iStage)
      if(oktest) then
         if (iProc == 0 .and. report_tf < 1.) &
              write(*,'(a,a,i6,a,f12.8)') 'update_check LT:', &
-             ' ITER=',n_step,' max dt reduction=',report_tf
+             ' nStep=',n_step,' max dt reduction=',report_tf
      end if
   end if
 
@@ -535,12 +532,12 @@ subroutine update_check(iStage)
      if(time_accurate) then
         write(*,'(a,i4,a,a,i6,a,f12.8,a,f12.8)') &
              'Negative updated value: PE=',iProc, &
-             'update_check TA:',' ITER=',n_step, &
+             'update_check TA:',' nStep=',n_step, &
              '     dt reduction=',report_tf,' dt=',dt
      else
         write(*,'(a,i4,a,a,i6,a,f12.8)') &
              'Negative updated value: PE=',iProc, &
-             'update_check LT:',' ITER=',n_step, &
+             'update_check LT:',' nStep=',n_step, &
              ' max dt reduction=',report_tf
      end if
   end if
