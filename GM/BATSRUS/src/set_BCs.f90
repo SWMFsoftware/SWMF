@@ -502,7 +502,7 @@ contains
     end select
 
     !^CFG IF IONOSPHERE BEGIN
-    if (UseIonosphere .and. iBoundary == Body1_) then
+    if (UseIe .and. iBoundary == Body1_) then
        call calc_inner_bc_velocity(TimeBc, FaceCoords_D, &
             VarsTrueFace_V(Bx_:Bz_), B0Face_D, uIono_D)
        
@@ -513,7 +513,7 @@ contains
           VarsGhostFace_V(iUz_I) = 2*uIono_D(z_) + VarsGhostFace_V(iUz_I)
 
        case default
-          call stop_mpi('UseIonosphere is not compatible with TypeBc_I=' &
+          call stop_mpi('Coupling with IE is not compatible with TypeBc_I=' &
                //TypeBc)
        end select
     end if

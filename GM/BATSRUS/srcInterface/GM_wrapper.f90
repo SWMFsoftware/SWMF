@@ -198,8 +198,7 @@ end subroutine GM_print_variables
 subroutine GM_init_session(iSession, TimeSimulation)
 
   use ModProcMH,   ONLY: iProc
-  use ModMain,     ONLY: Time_Simulation, UseIonosphere, UsePw, &
-       TypeBC_I, west_
+  use ModMain,     ONLY: Time_Simulation, UseIe, UsePw, TypeBC_I, west_
   use ModMain,     ONLY: UseIM                            !^CFG IF RCM
   use CON_physics, ONLY: get_time
   use CON_coupler, ONLY: Couple_CC, IE_, IM_, GM_, IH_, PW_
@@ -216,9 +215,9 @@ subroutine GM_init_session(iSession, TimeSimulation)
   !----------------------------------------------------------------------------
   call CON_set_do_test(NameSub,DoTest, DoTestMe)
 
-  UseIm         = Couple_CC(IM_,GM_) % DoThis !^CFG IF RCM
-  UsePw         = Couple_CC(PW_,GM_) % DoThis
-  UseIonosphere = Couple_CC(IE_,GM_) % DoThis
+  UseIm = Couple_CC(IM_,GM_) % DoThis !^CFG IF RCM
+  UsePw = Couple_CC(PW_,GM_) % DoThis
+  UseIe = Couple_CC(IE_,GM_) % DoThis
 
   ! Check if the boundary condition is properly set
   if(Couple_CC(IH_,GM_) % DoThis .neqv. (TypeBc_I(west_)=='coupled'))then
@@ -247,7 +246,7 @@ end subroutine GM_init_session
 
 subroutine GM_finalize(TimeSimulation)
 
-  use ModMain, ONLY: UseIonosphere, time_loop
+  use ModMain, ONLY: UseIe, time_loop
   use ModFieldAlignedCurrent, ONLY: &     !^CFG IF IONOSPHERE
        clean_mod_field_aligned_current    !^CFG IF IONOSPHERE
   implicit none
@@ -264,7 +263,7 @@ subroutine GM_finalize(TimeSimulation)
 
   call BATS_save_files('FINAL')
 
-  if (UseIonosphere) call clean_mod_field_aligned_current  !^CFG IF IONOSPHERE
+  if (UseIe) call clean_mod_field_aligned_current  !^CFG IF IONOSPHERE
 
   call error_report('PRINT',0.,iError,.true.)
 

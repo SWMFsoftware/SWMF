@@ -62,18 +62,18 @@ Module ModMain
   integer :: nPhiBuff = 90,   nThetaBuff = 45
   real    :: rBuffMin = 19.0, rBuffMax = 21.0 
 
-  logical :: UseIonosphere=.false.
-
-  logical :: UseRaytrace=.false.                           !^CFG IF RAYTRACE
+  logical :: UseIe = .false.
+  logical :: UsePw = .false.
 
   logical :: UseIm = .false.                               !^CFG IF RCM BEGIN
-  logical :: UsePw = .false.
   logical :: DoCoupleImPressure = .true.
   logical :: DoCoupleImDensity  = .false.
   logical :: DoFixPolarRegion   = .false.
   logical :: DoImSatTrace       = .false.    
   real    :: rFixPolarRegion    = 5.0
   real    :: TauCoupleIM = 20.0                            !^CFG END RCM
+
+  logical :: UseRaytrace=.false.                           !^CFG IF RAYTRACE
 
   !\
   ! Parameters for the B0 field
