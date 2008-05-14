@@ -550,9 +550,9 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 !     MulFac_ef = 0.2e7
 !     MulFac_ae = 1.0 / 1.0e11
      MulFac_Dae = 1.0e22
-     MulFac_Def = 5.0e19
-     MulFac_ef = 0.2e6
-     MulFac_ae = 2.5e-12
+     MulFac_Def = 1.0e19
+     MulFac_ef = 0.3e6
+     MulFac_ae = 4.0e-12
 
      if (iBlock == 1) then 
 
@@ -615,12 +615,14 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 
         do j = 1, IONO_nPsi
 
-           Center = (OCFLB(j) + EquatorWardEdge(j))/2.0
-           Width = abs(EquatorWardEdge(j) - OCFLB(j))
+           Center = (OCFLB(j)*2.0 + EquatorWardEdge(j))/3.0
+           Width = abs(EquatorWardEdge(j) - OCFLB(j))/2
 
+           MaxP = max(maxval(iono_south_p(:,IONO_nPsi-j+1)),1.0e-15)
            iono_north_eflux(:,j) = &
                 MulFac_ef*MaxP * &
-                exp(-abs(Center-iono_north_theta(:,j))/Width)
+                exp(-abs(Center-iono_north_theta(:,j))/Width) * &
+                (0.375*cos(iono_north_psi(:,j)-cPi)+0.625)
 
            ! This is the way that seems to work
            iono_north_ave_e(:,j) = &
@@ -716,6 +718,7 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 
                  if (OCFLB(j) == -1) OCFLB(j) = iono_south_theta(i,j)
                  AuroraWidth = OCFLB(j) - iono_south_theta(i,j)
+                 MaxP = max(maxval(iono_south_p(:,IONO_nPsi-j+1)),1.0e-15)
                  iono_south_eflux(i,j) = MulFac_ef*MaxP
 
                  if (iono_south_p(i,IONO_nPsi-j+1)==MaxP) IsPeakFound = .true.
@@ -759,12 +762,14 @@ subroutine FACs_to_fluxes(iModel, iBlock)
         EquatorWardEdge = smooth/(nHalfSmooth*2+1)
           
         do j = 1, IONO_nPsi
-           Center = (OCFLB(j) + EquatorWardEdge(j))/2.0
-           Width = abs(EquatorWardEdge(j) - OCFLB(j))
+           Center = (OCFLB(j)*2.0 + EquatorWardEdge(j))/3.0
+           Width = abs(EquatorWardEdge(j) - OCFLB(j))/2
 
+           MaxP = max(maxval(iono_south_p(:,IONO_nPsi-j+1)),1.0e-15)
            iono_south_eflux(:,j) = &
                 MulFac_ef*MaxP * &
-                exp(-abs(Center-iono_south_theta(:,j))/Width)
+                exp(-abs(Center-iono_south_theta(:,j))/Width) * &
+                (0.375*cos(iono_south_psi(:,j)-cPi)+0.625)
 
            iono_south_ave_e(:,j) = &
                 iono_south_p(:,IONO_nPsi-j+1) / &
