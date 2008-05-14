@@ -135,14 +135,17 @@ subroutine update_check(iStage)
   logical :: oktest2, oktest2_me
   logical :: oktest3, oktest3_me
 
+  real    :: RhoChangeMax_I(2), pChangeMax_I(2)
   logical :: DoTest, DoTestMe
+  character(len=*), parameter:: NameSub = 'update_check'
+  character(len=*), parameter:: format="(a,a,f6.1,a,3i3,i5,i4,a,3es10.2)"
 
   integer :: iError1=-1
   !-----------------------------------------------------------------------
 
   call set_oktest('fix_update',DoTest,DoTestMe)
 
-  call set_oktest('update_check',oktest,oktest_me)
+  call set_oktest(NameSub, oktest,oktest_me)
   call set_oktest('convergence_history',oktest1,oktest1_me)
   call set_oktest('update_check_detail',oktest2,oktest2_me)
   call set_oktest('locations',oktest3,oktest3_me)
@@ -197,6 +200,87 @@ subroutine update_check(iStage)
                 StateOld_VCB(P_,1:nI,1:nJ,1:nK,iBlock)) &
                 /StateOld_VCB(P_,1:nI,1:nJ,1:nK,iBlock) ) ) ) )
         end do
+        if(oktest)then
+           ! Find location of maximum change
+           call MPI_allreduce(percent_chg_rho, RhoChangeMax_I, 2, &
+                MPI_REAL, MPI_MAX, iComm, iError)
+           call MPI_allreduce(percent_chg_p, pChangeMax_I, 2, &
+                MPI_REAL, MPI_MAX, iComm, iError)
+
+           do iBlock = 1, nBlockMax
+              if (unusedBLK(iBlock)) CYCLE
+              do k=1,nK; do j=1,nJ; do i=1,nI
+                 do iVar = 1, nVar
+                    if (DefaultState_V(iVar) <= cTiny) CYCLE
+
+                    if(UseMultiSpecies .and. &
+                         iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_ &
+                         .and. StateOld_VCB(iVar,i,j,k,iBlock) &
+                         < SpeciesPercentCheck*0.01*&
+                         StateOld_VCB(Rho_,i,j,k,iBlock)) CYCLE
+                    
+                    if(iVar == p_)then
+                       if(pChangeMax_I(1) > percent_max_p(1) .and. &
+                            1e-4 > abs(pChangeMax_I(1) - 100. * abs( &
+                            (   State_VGB(P_,i,j,k,iBlock)- &
+                            StateOld_VCB (P_,i,j,k,iBlock)) &
+                            /StateOld_VCB(P_,i,j,k,iBlock) ))) &
+                            write(*,format)NameSub,' max p drop=',&
+                            pChangeMax_I(1),' at i,j,k,iBlock,iProc=',&
+                            i,j,k,iBlock,iProc, &
+                            ' x,y,z=',&
+                            x_BLK(i,j,k,iBlock),&
+                            y_BLK(i,j,k,iBlock),&
+                            z_BLK(i,j,k,iBlock)
+
+
+                       if(pChangeMax_I(2) > percent_max_p(2) .and. &
+                            1e-4 > abs(pChangeMax_I(2) - 100. * abs( &
+                            (   State_VGB(P_,i,j,k,iBlock)- &
+                            StateOld_VCB (P_,i,j,k,iBlock)) &
+                            /StateOld_VCB(P_,i,j,k,iBlock)  ))) &
+                            write(*,format)NameSub,' max p increase=',&
+                            pChangeMax_I(2),' at i,j,k,iBlock,iProc=',&
+                            i,j,k,iBlock,iProc, &
+                            ' x,y,z=',&
+                            x_BLK(i,j,k,iBlock),&
+                            y_BLK(i,j,k,iBlock),&
+                            z_BLK(i,j,k,iBlock)
+                            
+                       CYCLE
+                    end if
+                    
+                    if(RhoChangeMax_I(1) > percent_max_rho(1) .and. &
+                         1e-4 > abs(RhoChangeMax_I(1) - 100*abs( &
+                         (State_VGB(iVar,i,j,k,iBlock)- &
+                         StateOld_VCB(iVar,i,j,k,iBlock)) &
+                         /StateOld_VCB(iVar,i,j,k,iBlock) ))) &
+                         write(*,format) &
+                         NameSub,' max '//trim(NameVar_V(iVar))//' drop=', &
+                         RhoChangeMax_I(1), &
+                         ' at i,j,k,iBlock,iProc=',i,j,k,iBlock,iProc, &
+                         ' x,y,z=',&
+                         x_BLK(i,j,k,iBlock),&
+                         y_BLK(i,j,k,iBlock),&
+                         z_BLK(i,j,k,iBlock)
+
+                    if(RhoChangeMax_I(2) > percent_max_rho(2) .and. &
+                         1e-4 > abs(RhoChangeMax_I(2) - 100*abs( &
+                         (State_VGB(iVar,i,j,k,iBlock)- &
+                         StateOld_VCB(iVar,i,j,k,iBlock)) &
+                         /StateOld_VCB(iVar,i,j,k,iBlock) ))) &
+                         write(*,format) &
+                         NameSub,' max '//trim(NameVar_V(iVar))//' increase=',&
+                         RhoChangeMax_I(2), &
+                         ' at i,j,k,iBlock,iProc=',i,j,k,iBlock,iProc, &
+                         ' x,y,z=',&
+                         x_BLK(i,j,k,iBlock),&
+                         y_BLK(i,j,k,iBlock),&
+                         z_BLK(i,j,k,iBlock)
+                 end do
+              end do; end do; end do
+           end do
+        end if
         time_fraction_rho = 1.0 / maxval(percent_chg_rho/percent_max_rho)
         call MPI_allreduce(time_fraction_rho, min_time_fraction_rho, 1, &
              MPI_REAL, MPI_MIN, iComm, iError)
@@ -204,6 +288,7 @@ subroutine update_check(iStage)
         call MPI_allreduce(time_fraction_p, min_time_fraction_p, 1, &
              MPI_REAL, MPI_MIN, iComm, iError)
         if (min_time_fraction_rho >= 1. .and. min_time_fraction_p >= 1.) EXIT
+
         if (num_checks == 1) then
            time_fraction = 1.
            if (min_time_fraction_rho < 1.) &
