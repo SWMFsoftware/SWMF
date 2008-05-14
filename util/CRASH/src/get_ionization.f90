@@ -42,8 +42,8 @@ module ModSaha
   implicit NONE
   include 'CRASH_definitions.h'
   real,  parameter ::  &
-       cToleranceHere =  cTiny**2  ,    &  !012, 009 givs up to 4-5 poin
-       cTwoPiInv = cOne /cTwoPi   ,      &
+       cToleranceHere =  cTiny**2 ,     &  !012, 009 givs up to 4-5 digits
+       cTwoPiInv = cOne /cTwoPi   ,     &
        Hmax  = cPlankH  /cErg     ,     &  !   erg*s Planck
        HmaxT = cPlankHBar                  !   the same/2Pi
 
@@ -51,10 +51,10 @@ module ModSaha
   real:: &  
        vNe        , &   ! cm^{-3}
        vTe        , &   ! eV
-       NatomII    , &   ! a sum over concentrations of atoms+ions, cm^{-3}
-       Z          , &   ! vNe/NatomII
+       vNatomII   , &   ! a sum over concentrations of atoms+ions, cm^{-3}
+       Z          , &   ! vNe/sum(C_I) <= only ions  
        C_I(0:99)  , &   ! C_I[0]-neutrals resided after ionization
-       U_I(99)     , &  ! U_I(iZ) - the energy to make an ion iZ+ from (iZ-1)+    
+       U_I(1:99)  , &   ! U_I(iZ) - the energy to make an ion iZ+ from (iZ-1)+    
        CUITotal         ! sum(Uiz*Ciz)/Ce  <~> ionization energy per 1 electron
   integer :: nCi = 54   ! for Xenon, must be a var for other elements
 end module ModSaha
@@ -66,31 +66,31 @@ subroutine    ConcNafter  ! for given summ(No+Niz) on boundary II, calc. C_I[z]
 
   integer   :: iter 
   real      :: &
-       vNTotal  ,   vNTotalInv,        &  
-       x3, x1,x2,f1,f2, df 
+       vNTotal  ,   vNTotalInv,   & !  
+       x3, x1,x2,f1,f2, df            
 
-  vNTotal   =     NatomII     
-  vNTotalInv= 1.0/NatomII 
+  vNTotal   =     vNatomII     
+  vNTotalInv= 1.0/vNatomII   ! Inverted value, often used       
   C_I(0)    = vNTotal
 
-  ! debuT:       
-  !write (*,*) 'ConcN: NatomII=', NatomII, ' Te=', vTe
+  ! debuT:    !write (*,*) 'ConcN: NatomII=', NatomII, ' Te=', vTe
 
-  x1= C_I(0)*1.001;    f1=( Conc(x1) -vNTotal )*vNTotalInv;
-  x2= C_I(0)*0.011;    f2=( Conc(x2) -vNTotal )*vNTotalInv;
+  x1= C_I(0)*1.001;  f1=( Conc(x1) -vNTotal )*vNTotalInv; ! loop initiation 
+  x2= C_I(0)*0.011;  f2=( Conc(x2) -vNTotal )*vNTotalInv; ! to find  
 
   iter = 0
 
-  neutral:   do while(  (f2*f2 > cToleranceHere).AND.( iter < 55 )   )
+  neutral:  do while(  (f2*f2 > cToleranceHere).AND.( iter < 55 )   )
      df = (f2 -f1)
      if (0.0 == df) then
-        df = cToleranceHere
+        df = cToleranceHere    ! if (x1!=x2) must  be additional analysis
+        EXIT                   ! befor  ABORT
      end if
               x3 = (-x2*f1 +  x1*f2 )/df !   (f2 - f1);
-     if(      x3 < 1.00d-22 ) then
-              x3 = 1.00d-22  ;
-     else if( x3 > 1.00d+33 ) then  
-              x3 = 1.00d+33  ;
+     if(      x3 < 1.00d-22 )  then
+              x3 = 1.00d-22  ; ! bottom limit for trial concentration
+     else if( x3 > 1.00d+33 )  then  
+              x3 = 1.00d+33  ; ! upper limit, , to avoid precision lost or overflow  
      end if
      if(f1*f1 > f2*f2 ) then 
         x1=x2;  f1=f2; 
@@ -98,9 +98,10 @@ subroutine    ConcNafter  ! for given summ(No+Niz) on boundary II, calc. C_I[z]
      x2 = x3;
      f2 = ( Conc(x3) - vNTotal )*vNTotalInv;
      
-
      if( 0.0 == f2  )  exit
      iter =iter +1
+
+  ! debuT:  !write (*,*) 'ConcN: Iter=',iter
 
   end do  neutral
   return
@@ -114,18 +115,15 @@ contains
  !  the residual nuetrals we take the concentration of ions in such
  !  charge state that the states with lower Z can be treated as non-populated.  
  !
-  function   conc( N0after) result(CTotal)
-    real, intent(in) :: N0after  !  conc [1/cm3] of neautrals after ionization
-    integer,parameter::nW=5      !range of most populated Zi cncentrations
-    integer:: &  
-         k=1     ,  &
+  function   conc( vN0after) result(CTotal)
+    real, intent(in) :: vN0after ! conc [cm^{-3}] of neautrals(*) after ionization
+    integer,parameter:: nW=5    ! range of most populated Zi cncentrations above iZmin
+    integer:: &        
          iW      ,  &  ! index within nW
-         iter    ,  &
-         iter2   ,  &
-         iZMin    ,  & ! start of slider   zb{|+0,|+1,|+2,|+3,|+4}
-         zb
+         iZMin   ,  &  ! start of slider   iZmin{|+0,|+1,|+2,|+3,|+4...!nW-1}
+         iter, iter2    
     real ::         &
-         NORM    ,  &  !  == N0after, 
+         vNORM   ,  &  !  == vN0after, 
          Te32    ,  &  !  Te32  = Te*sqrt(Te) 
          CTotal,                        &
          a4,                            &
@@ -141,15 +139,15 @@ contains
 
 
     CZTotal  = 0.0
-    C_I(0)= N0after
+    C_I(0) = vN0after
 
-    Te32  = vTe*SQRT(vTe)      
-    NORM  = N0after
-    a4    = Te32/NORM *  cElectronStatWeight
+    Te32   = vTe*SQRT(vTe)      
+    vNORM  = vN0after
+    a4     = Te32/vNORM *  cElectronStatWeight
 
 
     !debuT:       
-    write (*,*) 'Conc: Norm=', NORM
+    write (*,*) 'Conc: Norm=', vNORM
 
     iZMin =1  ! for the start of SLIDing
     !....................................................
@@ -159,8 +157,8 @@ contains
        !debuT   
        write(*,*)'SLIDer==== iZMin=',iZmin
 
-       C_I(1 : nCi)=0.0   !Initialization
-       CTotal=1.0         !To start do loop
+       C_I(1 : nCi)=0.0   ! Initialization
+       CTotal=1.0         ! To start do loop
 
        !Get nw values of the ionization potentials from the table	
        UW_I = U_I(iZmin : iZmin+nW-1)  
@@ -168,20 +166,19 @@ contains
        !Population ratio, according to the Boltzmann principle
        PopulationRatio_I = a4*exp(- UW_I/vTe)
 
+
        !Trial value for the electron concentration
-       NeIterated = 1.3*sqrt(cOne*PopulationRatio_I(1));
+       NeIterated = 1.3*sqrt( PopulationRatio_I(1));
 
        iter2   = 1
-       DeltaC  = 1.      !To start do loop
-       zb      = iZMin
-
+       DeltaC  = 1.      ! To start do loop
 
        WINDOW: do while ( ( DeltaC>cToleranceHere ).AND.( iter2 < 30 )  )
 
           PopulationRatioNonid_I=PopulationRatio_I !To be mofified for non-ideal plasma
 
           iter =0 
-          DeltaNe    =1.            !To start do loop
+          DeltaNe    =1.   ! To start do loop
 
           NEWNe : do while(  (iter <30  ).AND.( DeltaNe*DeltaNe > cToleranceHere)) 
 
@@ -194,13 +191,13 @@ contains
 
              CZTotal=0.0; CZ2Total=0.0
              do iW=1,nW
-                CZTotal  = CZTotal  + StatWeight_I(iW)*(zb+iW-1)       
-                CZ2Total = CZ2Total + StatWeight_I(iW)*(zb+iW-1)**2  
+                CZTotal  = CZTotal  + StatWeight_I(iW)*(iZMin+iW-1)       
+                CZ2Total = CZ2Total + StatWeight_I(iW)*(iZMin+iW-1)**2  
              end do
 
-             DeltaNe    =  NeIterated -cOne * CZTotal 
-             NeIterated =( NeIterated *cOne *(CZTotal    +CZ2Total)/&
-                  (NeIterated +cOne * CZ2Total) )
+             DeltaNe    =  NeIterated - CZTotal 
+             NeIterated =( NeIterated *(CZTotal    +CZ2Total)/&
+                  (NeIterated + CZ2Total) )
              iter= iter +1
 
           end do NEWNe
@@ -214,12 +211,12 @@ contains
        end do WINDOW
 
 
-       C_I(iZmin : iZmin+4 ) = StatWeight_I* NORM ![cm^{-3}]
-       vNe    = NeIterated * NORM ;
+       C_I(iZmin : iZmin+4 ) = StatWeight_I* vNORM ![cm^{-3}]
+       vNe    = NeIterated * vNORM ;
        CTotal =   sum(C_I( 0 : iZMin+nW-1 )) 
 
        if( C_I(iZMin+nW-1) < C_I(iZMin+0) ) then
-       !debuT:             write (*,*) 'Conc: Norm=', NORM
+       !debuT:             write (*,*) 'Conc: Norm=', vNORM
               EXIT
        end if 
 
@@ -233,12 +230,12 @@ contains
 
     CUITotal = UITotal *C_I(iZMin)  ![eV]*[cm^{-3}]
 
-    do   k = iZMin+1, iZMin+nW-1
-       UITotal  = UITotal  +U_I(k)
-       CUITotal = CUITotal +UITotal*C_I(k)
+    do   iw = iZMin+1, iZMin+nW-1
+       UITotal  = UITotal  +U_I(iw)
+       CUITotal = CUITotal +UITotal*C_I(iw)
     end do
 
-    CUITotal = CUITotal/vNe   ! [eV] per electron    
+    CUITotal = CUITotal / vNe   ! [eV] per electron    
   end function conc
   !........................
 end subroutine ConcNafter
@@ -246,7 +243,6 @@ end subroutine ConcNafter
 
 !=======================================================================
 subroutine      get_ionization_equilibrium
-
 
   !****   All   input PARAMETERS 
   !****   MUST   BE transformed 

@@ -1,5 +1,5 @@
-program caxa
-  use ModSaha    ! CAXA
+program caxa     ! test of get_ionization()
+  use ModSaha    ! 
   implicit NONE
 
      integer          :: i
@@ -14,27 +14,28 @@ program caxa
 
         Ube(1) = 14.4  !<-> {-dusty -w} NOT required with  that  program         
 
-      do i=1,11
+
+      do i=1,11        ! 
          U_I(i)=Uxe(i)
       end do
 
 
-      NatomII    = 1.d025  !1/cm^3
+      vNatomII    = 1.d025  ! [cm^{-3}]
 
 
-   OCTPOGA:   do i=5,300,25
+   OCTPOBA:   do i=5,300,25
 
-      vTe = 1.0*i     ! eV
+      vTe = 1.0*i             ! [eV]
 
       call ConcNafter
 
-     write (*,*) "No=", NatomII," Te=",vTe," Z=",Z," Ne=", vNe," SUi=",CUiTotal
+     write (*,*) "No=", vNatomII," Te=",vTe," Z=",Z," Ne=", vNe," SUi=",CUiTotal
      write (*,*) "oooooooooooooo\ "      
      write (*,*) "oooooooo  ooooo\  Te[K]=", vTe*cEvToK 
      write (*,*) "oooooooooooooooo\  "
      
      write (*,*) "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
-   end do OCTPOGA
+   end do OCTPOBA
 !............................................
      ! contains      ! 
      ! <insert  ALL internal procedures HERE>
