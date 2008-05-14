@@ -421,6 +421,57 @@ To get a complete description of the {\tt Config.pl}  script type
   Config.pl -h
 \end{verbatim}
 
+\section{Platform specific information}
+
+\subsection{Altix machine columbia at NASA Ames}
+
+On columbia you should load the 10.0.026 version of the Intel Fortran compiler 
+with the command
+\begin{verbatim}
+  module load intel-comp.10.0.026
+\end{verbatim}
+Selecting the correct compiler version is 
+necessary both to compile and to run the code. This can be done
+by manually loading the module before compilation and inserting
+the module load command into the job script. A simpler and more
+reliable solution is to load the module during login. 
+Simply add the following into the .cshrc file in the home directory
+\begin{verbatim}
+   if(`which ifort` != "/opt/intel/comp/10.0.026/bin/ifort") then
+      module load intel-comp.10.0.026
+   endif
+\end{verbatim}
+The if statement avoids loading the module repeatedly.
+
+\subsection{Linux cluster nyx at the University of Michigan}
+
+On nyx at you can either use the pgf90 compiler with the OpenMPI library
+\begin{verbatim}
+   Config.pl -install -compiler=pgf90 -mpi=openmpi
+\end{verbatim}
+or the NAG compiler with MPICH library
+\begin{verbatim}
+   Config.pl -install
+\end{verbatim}
+In the latter case the PGF90 and OpenMPI modules need to be 
+unloaded and the NAG compiler and corresponding MPICH library loaded:
+\begin{verbatim}
+   module unload openmpi/1.0.2-pgi
+   module unload pgi/6.1
+   module load mpich/1.2.7-nag
+\end{verbatim}
+This can be automated by adding the following lines to the .cshrc file:
+\begin{verbatim}
+if ('which mpif90' != ``/home/software/rhel4/mpich/1.2.7-nag/bin/mpif90'') then
+   module unload openmpi/1.0.2-pgi
+   module unload pgi/6.1
+   module load mpich/1.2.7-nag
+endif
+\end{verbatim}
+The if statement avoids loading the module repeatedly.
+Note that on nyx the tcsh shell has to be started manually after login
+by typing 'tcsh'.
+
 \section{Creating Documentation}
 
 The documentation for SWMF can be generated from the distribution by
@@ -515,28 +566,6 @@ with
 \begin{verbatim}
   Config.pl -show
 \end{verbatim}
-
-{\bf IMPORTANT NOTES:
-On the Altix machine at NASA Ames (columbia)
-you should load the 10.0.026 version 
-of the Intel Fortran compiler 
-with the command
-\begin{verbatim}
-  module load intel-comp.10.0.026
-\end{verbatim}
-Selecting the correct compiler version is 
-necessary both to compile and to run the code. This can be done
-by manually loading the module before compilation and inserting
-the module load command into the job script. A simpler and more
-reliable solution is to load the module during login. 
-Simply add the following into the .cshrc file in the home directory
-\begin{verbatim}
-   if(`which ifort` != "/opt/intel/comp/10.0.026/bin/ifort") then
-      module load intel-comp.10.0.026
-   endif
-\end{verbatim}
-The if statement avoids loading the module repeatedly.
-}
 
 To build the executable {\bf bin/SWMF.exe}, type:
 \begin{verbatim}
