@@ -167,7 +167,7 @@ test_corona_rundir:
 
 test_corona_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_corona_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 \
@@ -228,8 +228,7 @@ test_titan_rundir: test_rundir
 
 test_titan_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf TitanTest
-	cd ${TESTDIR}; ./PostProc.pl -M -o TitanTest
+	cd ${TESTDIR}; rm -rf TitanTest; ./PostProc.pl -M -o TitanTest
 
 test_titan_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
@@ -298,8 +297,7 @@ test_mars_rundir: test_rundir
 
 test_mars_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf MarsTest
-	cd ${TESTDIR}; ./PostProc.pl -M -o MarsTest
+	cd ${TESTDIR}; rm -rf MarsTest; ./PostProc.pl -M -o MarsTest
 
 test_mars_check:
 	${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
@@ -335,8 +333,7 @@ test_venus_rundir: test_rundir
 
 test_venus_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf VenusTest
-	cd ${TESTDIR}; ./PostProc.pl -M -o VenusTest
+	cd ${TESTDIR}; rm -rf VenusTest; ./PostProc.pl -M -o VenusTest
 
 test_venus_check:
 	${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-17 \
@@ -404,8 +401,7 @@ test_saturn_rundir: test_rundir
 
 test_saturn_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_saturn_check:
 	${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-17 \
@@ -437,8 +433,7 @@ test_comet_rundir: test_rundir
 
 test_comet_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf CometTest
-	cd ${TESTDIR}; ./PostProc.pl -M -o CometTest
+	cd ${TESTDIR}; rm -rf CometTest; ./PostProc.pl -M -o CometTest
 
 test_comet_check:
 	${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-10 \
