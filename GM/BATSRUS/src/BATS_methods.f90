@@ -167,7 +167,6 @@ contains
        call set_ICs
     end do
 
-
     !\
     ! Allow the user to add a perturbation to the initial condition.
     !/
@@ -175,7 +174,6 @@ contains
        call user_initial_perturbation
        UseUserPerturbation=.false.
     end if
-
 
     if (restart) then
        if(iProc==0)then
@@ -231,11 +229,12 @@ end subroutine BATS_setup
 
 subroutine BATS_init_session
 
-  use ModMain, ONLY: DoTransformToHgi
+  use ModMain, ONLY: DoTransformToHgi, UseUserPerturbation
   use ModMain, ONLY: UseProjection                 !^CFG IF PROJECTION
   use ModMain, ONLY: UseConstrainB                 !^CFG IF CONSTRAINB
   use ModCT,   ONLY: DoInitConstrainB              !^CFG IF CONSTRAINB
   use ModHallResist, ONLY: UseHallResist, init_hall_resist,test_face_current
+  use ModUser, ONLY: user_initial_perturbation
   implicit none
 
   ! Local variables
@@ -243,6 +242,14 @@ subroutine BATS_init_session
   !--------------------------------------------------------------------------
   ! Find the test cell defined by #TESTIJK or #TESTXYZ commands
   call find_test_cell
+
+  !\
+  ! Allow the user to add a perturbation to the initial condition.
+  !/
+  if (UseUserPerturbation) then
+     call user_initial_perturbation
+     UseUserPerturbation=.false.
+  end if
 
   ! Set number of explicit and implicit blocks !^CFG IF  IMPLICIT BEGIN
   ! Partially implicit/local selection will be done in each time step
