@@ -8,7 +8,7 @@ subroutine SC_get_for_ih(&
 
 
   use SC_ModPhysics,ONLY:No2Si_V,UnitRho_,UnitP_,UnitRhoU_,UnitB_,inv_g
-  use SC_ModMain,ONLY:DoSendMHD, x_,y_,z_,nDim
+  use SC_ModMain,ONLY: x_,y_,z_,nDim
   use SC_ModGeometry,ONLY:x_BLK,y_BLK,z_BLK
   use SC_ModMagnetogram,ONLY:get_magnetogram_field
   use ModConst,ONLY: cMu 
@@ -40,7 +40,7 @@ subroutine SC_get_for_ih(&
 
 
   !----------------------------------------------------------
-  if(DoSendMHD)then
+  if(.true.)then
      i      = Get%iCB_II(1,iGetStart)
      j      = Get%iCB_II(2,iGetStart)
      k      = Get%iCB_II(3,iGetStart)
