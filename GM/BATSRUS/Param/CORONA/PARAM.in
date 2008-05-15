@@ -92,7 +92,7 @@ T			UseCurlB0
 2.5			rCurrentFreeB0
 
 #AMR
-30			DnRefine
+20			DnRefine
 F			DoAutomaticRefinement 
 
 #SCHEME
@@ -119,21 +119,21 @@ RAW			StringLogfile
 
 #SAVEPLOT
 3			nPlotFiles
-y=0 MHD idl		StringPlot
-1000                   	DnSavePlot
+x=0 MHD idl		StringPlot
+10                   	DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
 y=0 MHD idl		StringPlot
-1000			DnSavePlot
+10			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
 z=0 MHD idl		StringPlot
-1000			DnSavePlot
+10			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
 
 #STOP
-100			MaxIteration
+70			MaxIteration
 -1.0			tSimulationMax
 
 #RUN ########################################################################
@@ -141,6 +141,49 @@ z=0 MHD idl		StringPlot
 #AMR
 -1			DnRefine
 
+#TIMEACCURATE
+T			DoTimeAccurate
+
+#USER_FLAGS
+T                       UseUserInnerBCs
+F                       UseUserSource
+T                       UseUserPerturbation
+F                       UseUserOuterBcs
+F                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+T                       UseUserB0
+F                       UseUserSetPhysConst
+T                       UseUserUpdateStates
+
+#USERINPUTBEGIN ---------------
+
+#TD99FLUXROPE
+T                       UseTD99Perturbation
+F                       UseVariedCurrent
+0.000E+00               CurrentStartTime
+0.000E+00               CurrentRiseTime
+T                       DoTD99FluxRope
+F                       DoEquilItube
+F                       DoRevCurrent
+8.000E-01               aratio_TD99 in [-]              
+5.000E+12               Itube_TD99 in [A] 
+7.000E+08               Rtube_TD99 in [m]
+3.000E+08               atube_TD99 in [m]
+1.000E+08               d_TD99     in [m]
+1.000E+13               Mass_TD99  in [kg]
+180.0                   LongitudeTD99 in [deg]
+15.0                    LatitudeTD99    in [deg]
+30.0                    OrientationTD99 in [deg]
+F                       DoBqField
+1.820E+13               q_TD99 in [T*m**2]
+6.000E+08               L_TD99 in [m]
+
+#USERINPUTEND ---------------
+
 #STOP
-200
+100
 -1.0
