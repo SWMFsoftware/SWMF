@@ -6,34 +6,34 @@
 ! 2. Mixtures can be treated either as an average material or as mixtures.
 !
 ! 3. If mixtures are treated as mixtures, then collisional rates should be 
-! calculated using the "effective Z", which is the average of Z squared 
-! divided by the average Z.
+!    calculated using the "effective Z", which is the average of Z squared 
+!    divided by the average Z.
 !
 ! 4. The average Z can be determined from the Saha equation, but must not 
-! exceed the nuclear charge of the material in question.
+!    exceed the nuclear charge of the material in question.
 !
 ! 5. We do not need to account for electron degeneracy in the initial model.
 !
 ! 6. In our regime of interest, the electrons behave as an ideal gas in an 
-! ion-sphere environment within which Coulomb interactions do affect the 
-! electron pressure and internal energy. The electron pressure and internal 
-! energy are best calculated using equations 3.47 through 3.50 in 
-! R. P. Drake, High Energy Density Physics
+!    ion-sphere environment within which Coulomb interactions do affect the 
+!    electron pressure and internal energy. The electron pressure and internal 
+!    energy are best calculated using equations 3.47 through 3.50 in 
+!    R. P. Drake, High Energy Density Physics
 !
 ! 7. The ion pressure is the ideal gas pressure. The ion internal energy 
-! includes the particle energy of random motion and the energy of ionization. 
-! The model of eqs. 3.74 through 3.76 in the mentioned book is acceptable. 
-! Alternatively, a more complex model using actual ionization energies would 
-! be acceptable.
+!    includes the particle energy of random motion and the energy of ionization. 
+!    The model of eqs. 3.74 through 3.76 in the mentioned book is acceptable. 
+!    Alternatively, a more complex model using actual ionization energies would 
+!    be acceptable.
 !
 ! 8. The materials that matter are
-! Beryllium
-! Xenon
-! Polyimide (C_22 H_10 N_2 O_5)
+!    - Beryllium
+!    - Xenon
+!    - Polyimide (C_22 H_10 N_2 O_5)
 !
 !***********************************************************************
-!    calculation of ionization equilibrium
-!    for given - concentration of  atomic particles Co+Ciz [1/cm^3]
+!    calculation of ionization equilibrium, single material
+!    for given - concentration of  atomic particles Co+Ciz [cm^{-3}]
 !              - electron temperature Te[eV]
 !***********************************************************************
 
@@ -49,8 +49,8 @@ module ModSaha
 
 
   real:: &  
-       vNe        , &   ! cm^{-3}
-       vTe        , &   ! eV
+       vNe        , &   ! [cm^{-3}]
+       vTe        , &   ! [eV]
        vNatomII   , &   ! a sum over concentrations of atoms+ions, cm^{-3}
        Z          , &   ! vNe/sum(C_I) <= only ions  
        C_I(0:99)  , &   ! C_I[0]-neutrals resided after ionization
@@ -82,11 +82,13 @@ subroutine    ConcNafter  ! for given summ(No+Niz) on boundary II, calc. C_I[z]
 
   neutral:  do while(  (f2*f2 > cToleranceHere).AND.( iter < 55 )   )
      df = (f2 -f1)
-     if (0.0 == df) then
-        df = cToleranceHere    ! if (x1!=x2) must  be additional analysis
-        EXIT                   ! befor  ABORT
+     if (0.0 /= df) then
+       x3 = (-x2*f1 +  x1*f2 )/df !   (f2 - f1); 
+     else
+       df = cToleranceHere        ! if (x1!=x2) must  be additional analysis
+       x3 = (x1+x2)*0.500         ! or  EXIT  to avoid  AVOST
      end if
-              x3 = (-x2*f1 +  x1*f2 )/df !   (f2 - f1);
+
      if(      x3 < 1.00d-22 )  then
               x3 = 1.00d-22  ; ! bottom limit for trial concentration
      else if( x3 > 1.00d+33 )  then  
@@ -196,11 +198,11 @@ contains
              end do
 
              DeltaNe    =  NeIterated - CZTotal 
-             NeIterated =( NeIterated *(CZTotal    +CZ2Total)/&
-                  (NeIterated + CZ2Total) )
+             NeIterated =( NeIterated *(CZTotal    + CZ2Total) /  &
+                                       (NeIterated + CZ2Total)   )
              iter= iter +1
 
-          end do NEWNe
+          end do NEWNe ! 
 
           Z  = CZTotal /sum(StatWeight_I)  
 
@@ -210,14 +212,13 @@ contains
           iter2  = iter2+1  
        end do WINDOW
 
-
        C_I(iZmin : iZmin+4 ) = StatWeight_I* vNORM ![cm^{-3}]
        vNe    = NeIterated * vNORM ;
        CTotal =   sum(C_I( 0 : iZMin+nW-1 )) 
 
        if( C_I(iZMin+nW-1) < C_I(iZMin+0) ) then
        !debuT:             write (*,*) 'Conc: Norm=', vNORM
-              EXIT
+             EXIT
        end if 
 
        iZMin=iZMin+1

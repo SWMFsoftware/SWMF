@@ -19,7 +19,6 @@ program caxa     ! test of get_ionization()
          U_I(i)=Uxe(i)
       end do
 
-
       vNatomII    = 1.d025  ! [cm^{-3}]
 
 
@@ -39,6 +38,14 @@ program caxa     ! test of get_ionization()
 !............................................
      ! contains      ! 
      ! <insert  ALL internal procedures HERE>
+! vDens <== density, kG/m^{3}
+! vTmas <== temperature, K
+! vnUi   <== max ionization      for given mat
+! vmUi   <== ioniz.potent.array  ------/------
+! nMat  <== simple or compl. mat [0,1]
+!           if complex : nUi & mUi complex
+!                        common vNe, ROTation on mCi<~>mZi
+
 !.............................................
  end program caxa
 
