@@ -4422,19 +4422,6 @@ while HelioDipoleTilt is the tilt relative to the ecliptic North
 Default value is HelioDipoleStrength = 0.0.
 </command>
 
-<command name="HELIOTEST" if="$_NameComp ne 'GM'">
-	<parameter name="DoSendMHD" type="logical" default="F"/>
-
-#HELIOTEST
-F			DoSendMHD
-
-If DoSendMHD is true, IH sends the real MHD solution to GM in the coupling.
-If DoSendMHD is false then the values read from the IMF file are sent,
-so there is no real coupling. Mostly used for testing the framework.
-
-Default value is true, i.e. real coupling.
-</command>
-
 <command name="HELIOBUFFERGRID" if="$_IsFirstSession and $_NameComp eq 'IH'">
 	<parameter name="rBuffMin"   type="real" min="1" default="19"/>
 	<parameter name="rBuffMax"   type="real" min="1" default="21"/>

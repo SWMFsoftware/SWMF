@@ -54,10 +54,6 @@ Module ModMain
   !\
   ! Model Coupling variables
   !/
-  
-  ! Send true MHD solution from IH to GM or values from an IMF file
-  logical :: DoSendMHD   = .true.
-
   ! Dimensions of the buffer grid between SC and IH
   integer :: nPhiBuff = 90,   nThetaBuff = 45
   real    :: rBuffMin = 19.0, rBuffMax = 21.0 
