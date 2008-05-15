@@ -3,8 +3,8 @@ subroutine calc_dt
   use ModNumConst,        ONLY: cHalf
   use ModPWOM,            ONLY: DtVertical
   implicit none
-  real, parameter   :: RatioMin = 0.9, RatioMax = 1.1, cIncrease = 1.1
-  real, parameter   :: DtMin = 1.0e-2
+  real, parameter   :: RatioMin = 0.8, RatioMax = 1.2, cIncrease = 1.2
+  real, parameter   :: DtMin = 1.0e-1
   real, allocatable :: pRatioState_CV(:,:),RhoRatioState_CV(:,:)
   real :: RhoRatioMin, RhoRatioMax, pRatioMin, pRatioMax
   integer :: iIon
@@ -33,12 +33,17 @@ subroutine calc_dt
   ! Change Dt based on change from timestep to timestep
   if (pRatioMin < RatioMin .or. pRatioMax > RatioMax &
        .or. RhoRatioMin < RatioMin .or. RhoRatioMax > RatioMax) then
-     Dt = Dt / cHalf
+!     write(*,*) 'reducing orig timestep, Dt = ',Dt 
+     Dt = Dt * cHalf
      Dt = max(Dt,DtMin)
-     write(*,*) 'reducing timestep'
+     Dt = min(Dt,DtVertical)
+!     write(*,*) 'reducing timestep, Dt = ',Dt
   else
+!     write(*,*) 'increasing orig timestep, Dt = ',Dt 
      Dt = Dt * cIncrease
      Dt = min(Dt,DtVertical)
+     Dt = max(Dt,DtMin)
+!     write(*,*) 'increasing timestep, Dt = ',Dt
   endif
   deallocate(RhoRatioState_CV,pRatioState_CV)
 end subroutine calc_dt
