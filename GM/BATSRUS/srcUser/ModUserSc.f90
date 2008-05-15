@@ -1135,8 +1135,7 @@ contains
   !========================================================================
 
   subroutine user_initial_perturbation
-    use ModMain,      ONLY: nI, nJ, nK, nBLK, unusedBLK, gcn, x_, y_, z_
-    use ModIO,        ONLY: restart
+    use ModMain, ONLY: nI, nJ, nK, nBLK, unusedBLK, gcn, x_, y_, z_, n_step
     use ModVarIndexes
     use ModAdvance,   ONLY: State_VGB 
     use ModNumConst
@@ -1154,19 +1153,15 @@ contains
     real:: xx,yy,zz,RR,ROne,Rmax,Speed
     real, dimension(3):: R_TD99_D,B_TD99_D,U_TD99  ! To include TD99 flux rope.
     real:: Rho_TD99=cZero                          ! To include TD99 flux rope.
-    !
-    !---------------------------------------------------------------------------
-    !\
-    ! Variable meanings:
-    !
-    !
-    !/
-    !---------------------------------------------------------------------------
-    !
+    !------------------------------------------------------------------------
     call set_oktest('user_initial_perturbation',oktest,oktest_me)
+
+    if(oktest_me)write(*,*)'user_initial_perturbation: UseTD99Perturbation=',&
+         UseTD99Perturbation
+
     do iBLK=1,nBLK
        if(unusedBLK(iBLK))CYCLE
-       if ((.not.restart)) then   
+       if (n_step==0) then   
           do k=1,nK;do j=1,nJ; do i=1,nI
              xx = x_BLK(i,j,k,iBLK)
              yy = y_BLK(i,j,k,iBLK)
