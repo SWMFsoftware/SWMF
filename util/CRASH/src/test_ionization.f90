@@ -5,26 +5,25 @@ program caxa     ! test of get_ionization()
      integer          :: i
       
      real :: Uxe(11)=  &  !<> Xenon
-                  (/ 12.1299, 21.21 ,  32.10,  52.42, 65.31, 89.80, 103.41,   & !1-7
+                  (/ 12.1299, 21.21 ,  32.10,  52.42, 65.31, 89.80, 103.41,   &  !1-7
                      176.88,  204.09, 225.86, 255.79                        /)   !8-11
 
      real  :: Ube(4)= &    !<> Beryllium 
                   (/ 15.5  ,  25.5 , 35.5 , 45.5 /)    
   
 
-        Ube(1) = 14.4  !<-> {-dusty -w} NOT required with  that  program         
+        Ube(1) = 14.4  !<~> {-dusty -w} is  NOT required          
 
 
       do i=1,11        ! 
          U_I(i)=Uxe(i)
       end do
 
-      vNatomII    = 1.d025  ! [cm^{-3}]
+      vNatomII    = 1.d025      ! [cm^{-3}]  <== set for default test
+                                !deb:> vNatomII    = vNatomII *0.0001
+   OCTPOBA:   do i= 5,300,25    ! 5,300,25  <== set for default test
 
-
-   OCTPOBA:   do i=5,300,25
-
-      vTe = 1.0*i             ! [eV]
+      vTe = 1.0*i               ! [eV]
 
       call ConcNafter
 

@@ -175,14 +175,13 @@ contains
        iter2   = 1
        DeltaC  = 1.      ! To start do loop
 
-       WINDOW: do while ( ( DeltaC>cToleranceHere ).AND.( iter2 < 30 )  )
+       WINDOW: do while ( ( DeltaC>cToleranceHere ).AND.( iter2 < 99 )  )
 
           PopulationRatioNonid_I=PopulationRatio_I !To be mofified for non-ideal plasma
 
-          iter =0 
-          DeltaNe    =1.   ! To start do loop
-
-          NEWNe : do while(  (iter <30  ).AND.( DeltaNe*DeltaNe > cToleranceHere)) 
+          iter    =0 
+          DeltaNe =1.0   ! To start do loop
+          NEWNe : do while(  (iter <99  ).AND.( DeltaNe*DeltaNe > cToleranceHere)) 
 
              NeInv = 1. / NeIterated			
              StatWeight_I(1) = PopulationRatioNonid_I(1)*NeInv
@@ -197,11 +196,15 @@ contains
                 CZ2Total = CZ2Total + StatWeight_I(iW)*(iZMin+iW-1)**2  
              end do
 
-             DeltaNe    =  NeIterated - CZTotal 
-             NeIterated =( NeIterated *(CZTotal    + CZ2Total) /  &
-                                       (NeIterated + CZ2Total)   )
+             NeIterated =  NeIterated *(CZTotal    + CZ2Total) /  &
+                                       (NeIterated + CZ2Total)   
+
+             DeltaNe    =  (NeIterated - CZTotal)/    &
+                      ( abs(NeIterated + CZTotal) +cToleranceHere) 
+
              iter= iter +1
 
+  !debuT:   write (*,*)".New: i2=",iter2," iter=",iter," dNe=",DeltaNe," xNe=",NeIterated          
           end do NEWNe ! 
 
           Z  = CZTotal /sum(StatWeight_I)  
