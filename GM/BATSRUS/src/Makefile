@@ -3,6 +3,9 @@
 SHELL =/bin/sh
 
 include ../Makefile.def
+
+SEARCH_EXTRA = -I${EMPIRICALEEDIR}
+
 include ../Makefile.conf
 include Makefile.DEPEND
 include Makefile.RULES
@@ -239,12 +242,16 @@ ${EXE}: ${OBJECTS_EXE}
 
 BATSRUS_general:
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} \
-		-L. -lBATSRUS -L${LIBDIR} -lTIMING -lSHARE \
+		-L. -lBATSRUS -L${LIBDIR} -lEMPIRICALEE -lTIMING -lSHARE \
 		${LBLAS} ${Lflag1}
 
 BATSRUS_for_Darwin:
 	rm -rf Tmp_; mkdir Tmp_
-	cd Tmp_; ar -x ../${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE}
+	cd Tmp_; \
+		ar -x ../${MY_LIB}; \
+		ar -x ${LIBDIR}/libEMPIRICALEE.a; \
+		ar -x ${LIBTIMING}; \
+		ar -x ${LIBSHARE}
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} Tmp_/*.o \
 		${LBLAS} ${Lflag1}
 	rm -rf Tmp_

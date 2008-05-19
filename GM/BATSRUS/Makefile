@@ -75,6 +75,7 @@ LIB:
 BATSRUS:
 	cd ${SHAREDIR}; make LIB
 	cd ${TIMINGDIR}; make LIB
+	cd ${EMPIRICALEEDIR}; make LIB
 	cd src; make LIB
 	cd src; make BATSRUS
 
