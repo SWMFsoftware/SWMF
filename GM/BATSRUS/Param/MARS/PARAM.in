@@ -43,7 +43,7 @@ T
  16.                    z2
 
 #LIMITGENCOORD1
-0.0294464               rMin = alog(1.281553)
+0.0294464               rMin = alog(1.0294464)
 3.49605			rMax = alog(sqrt(24^2+16^2+16^2))
 
 #AMRINIT
