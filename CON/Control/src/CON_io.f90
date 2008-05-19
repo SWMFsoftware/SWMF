@@ -55,8 +55,8 @@ module CON_io
   ! Saving restart information
   character(len=lNameFile)    :: NameRestartFile='RESTART.out'
 
-  ! How often shall we save restart files. Default is at the end only
-  type(FreqType), public :: SaveRestart=FreqType(.true.,-1,-1.0,-1,-1.0)
+  ! How often shall we save restart files. Default: at the end of run only
+  type(FreqType), public :: SaveRestart = FreqType(.true.,-1,-1.0,-1,-1.0)
 
   ! Showing progress
   integer, public :: DnShowProgressShort = 10
@@ -76,7 +76,7 @@ contains
 
     implicit none
 
-    character (LEN=*), parameter:: NameSub=NameMod//'::read_inputs'
+    character (LEN=*), parameter:: NameSub = NameMod//'::read_inputs'
     real :: VersionRead
 
     !OUTPUT ARGUMENTS:
@@ -559,17 +559,30 @@ contains
     !^CMP END UA
     !^CMP END IE
 
-    ! Adjust nNext and tNext fields
-    call adjust_freq(SaveRestart,nStep,tSimulation,DoTimeAccurate)
-    call adjust_freq(CheckStop  ,nStep+1,tSimulation+cTiny,DoTimeAccurate)
-
+    ! Switch off couplings for unused/switched off components
     do iComp1=1,MaxComp;
+       if(use_comp(iComp1)) CYCLE
+       Couple_CC(iComp1,:) % DoThis = .false.
+       Couple_CC(:,iComp1) % DoThis = .false.
+    end do
+
+    ! Adjust nNext and tNext fields
+    if(is_proc0()) then
+       call check_freq('SWMF save restart', SaveRestart, DoTimeAccurate)
+       call check_freq('SWMF check stop', CheckStop, DoTimeAccurate)
+    end if
+    call adjust_freq(SaveRestart, nStep  , tSimulation, DoTimeAccurate)
+    call adjust_freq(CheckStop  , nStep+1, tSimulation+cTiny, DoTimeAccurate)
+
+    do iComp1=1,MaxComp
        do iComp2=1,MaxComp
-          call adjust_freq(Couple_CC(iComp1,iComp2),nStep+1,tSimulation+cTiny,&
-               DoTimeAccurate)
-          !if(Couple_CC(iComp1,iComp2) % DoThis) &
-          !     write(*,*)NameSub,': iComp1,iComp2,Couple_CC=',iComp1,iComp2,&
-          !     Couple_CC(iComp1,iComp2)
+
+          if(is_proc0())call check_freq(&
+               'SWMF couple '//NameComp_I(iComp1)//'->'//NameComp_I(iComp2), &
+               Couple_CC(iComp1,iComp2), DoTimeAccurate)
+
+          call adjust_freq( Couple_CC(iComp1,iComp2), &
+               nStep+1,tSimulation+cTiny, DoTimeAccurate)
        end do
     end do
 
