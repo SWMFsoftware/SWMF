@@ -15,6 +15,7 @@ clean:
 	cd TIMING/doc;                make clean
 	cd DATAREAD/srcIndices;       make clean
 	cd DATAREAD/srcMagnetogram;   make clean
+	cd EMPIRICAL/srcEE;           make clean
 	cd EMPIRICAL/srcIE;           make clean
 	cd EMPIRICAL/srcGM;           make clean
 	cd EMPIRICAL/srcUA;           make clean
@@ -28,6 +29,7 @@ distclean:
 	cd TIMING/doc;                make distclean
 	cd DATAREAD/srcIndices;       make distclean
 	cd DATAREAD/srcMagnetogram;   make distclean
+	cd EMPIRICAL/srcEE;           make distclean
 	cd EMPIRICAL/srcIE;           make distclean
 	cd EMPIRICAL/srcGM;           make distclean
 	cd EMPIRICAL/srcUA;           make distclean
