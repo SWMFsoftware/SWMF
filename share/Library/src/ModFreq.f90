@@ -27,15 +27,16 @@ module ModFreq
 
   ! Derived type to store data about the frequency of some action
   type FreqType
-     logical :: DoThis     ! Do the action or not
-     integer :: Dn         ! Frequency in terms of time steps
-     real    :: Dt         ! Frequency in terms of seconds
-     integer :: nNext      ! The next time step the action should be done
-     real    :: tNext      ! The next time the action should be done
+     logical           :: DoThis ! Do the action or not
+     integer           :: Dn     ! Frequency in terms of time steps
+     real              :: Dt     ! Frequency in terms of seconds
+     integer           :: nNext  ! The next time step the action should be done
+     real              :: tNext  ! The next time the action should be done
   end type FreqType
 
   !PUBLIC MEMBER FUNCTIONS:
   public :: adjust_freq      ! Adjust initial step and time to current values
+  public :: check_freq       ! Check frequency settings for correctness
   public :: is_time_to       ! Returns true it is time to act and updates act
 
   !PUBLIC DATA MEMBERS:
@@ -45,6 +46,7 @@ module ModFreq
   ! 22Aug03 G. Toth - added TypeFreq and is_time_to function
   ! 25Aug03 G. Toth - added adjust_freq subroutine
   ! 23Mar04 G. Toth - splitting CON_time into CON_time, ModTime, ModTimeFreq
+  ! 19May08 G. Toth - added check_freq subroutine
   !EOP
 
   character(len=*), parameter, private :: NameMod='ModFreq'
@@ -52,9 +54,41 @@ module ModFreq
 contains
 
   !BOP ========================================================================
+  !IROUTINE: check_freq - check frequency settings
+  !INTERFACE:
+  subroutine check_freq(NameAct, Act, DoTimeAccurate)
+
+    !INPUT ARGUMENTS:
+    character(len=*), intent(in) :: NameAct        ! Name of action
+    type(FreqType),   intent(in) :: Act            ! Frequency of some action
+    logical,          intent(in) :: DoTimeAccurate ! Time accurate run?
+
+    !DESCRIPTION:
+    ! Check if Dt > 0 in time accurate mode and Dn > 0 in steady state mode
+    !EOP
+    character(len=*), parameter :: NameSub = NameMod//'::check_freq'
+    !------------------------------------------------------------------------
+
+    if(.not. Act % DoThis) RETURN
+
+    if(Act % Dt <= 0.0 .and. DoTimeAccurate) then
+
+       write(*,*)NameSub,' ERROR: Dt=',Act % Dt,' for action ',NameAct
+       call CON_stop(NameSub//' Dt must be positive in time accurate mode!')
+
+    else if(Act % Dn <= 0.0 .and. .not. DoTimeAccurate) then
+
+       write(*,*)NameSub,' ERROR: Dn=',Act % Dn,' for action ',NameAct
+       call CON_stop(NameSub//' Dn must be positive in steady state mode!')
+
+    end if
+
+  end subroutine check_freq
+
+  !BOP ========================================================================
   !IROUTINE: adjust_freq - adjust initial values to current values
   !INTERFACE:
-  subroutine adjust_freq(Act,nStep,tSim,DoTimeAccurate)
+  subroutine adjust_freq(Act, nStep, tSim, DoTimeAccurate)
 
     !INPUT/OUTPUT ARGUMENTS:
     type(FreqType), intent(inout) :: Act    ! Frequency of some action
@@ -68,6 +102,7 @@ contains
     ! Adjust the nNext and tNext fields of Act based on the
     ! current time step nStep and current simulation time tSim.
     !EOP
+    character(len=*), parameter :: NameSub = NameMod//'::adjust_freq'
     !------------------------------------------------------------------------
 
     if(.not. Act % DoThis) RETURN
