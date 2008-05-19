@@ -67,9 +67,8 @@ module CON_time
   ! Shall we check for the stop file?
   logical :: DoCheckStopFile = .true.
 
-  ! How often shall we check cpu time and stop file
-  ! Default is every time step
-  type(FreqType):: CheckStop = FreqType(.false.,-1,-1.0,0,0.0)
+  ! How often shall we check cpu time and stop file. Default is never.
+  type(FreqType):: CheckStop = FreqType(.false., -1, -1.0, 0, 0.0)
 
   !REVISION HISTORY:
   ! 01Aug03 Aaron Ridley and G. Toth - initial implementation
