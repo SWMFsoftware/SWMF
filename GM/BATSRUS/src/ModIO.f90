@@ -20,7 +20,7 @@ Module ModIO
   integer, parameter :: Max_Satellite_Npts = 50000
   integer, parameter :: nPlotvarLosMax=10
   integer, parameter :: nPlotRfrFreqMax=20
-  integer, parameter :: nPlotvarMax = min(30,nVar+10) ! Max number of plot vars
+  integer, parameter :: nPlotvarMax = max(30,nVar+10) ! Max number of plot vars
   integer, parameter :: MaxLine=20          ! Max number of lines/plot file
 
   ! Named indexes for output files
