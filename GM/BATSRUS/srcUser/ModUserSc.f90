@@ -6,21 +6,20 @@ module ModUser
   use ModExpansionFactors
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
-       IMPLEMENTED2 => user_initial_perturbation,       &
-       IMPLEMENTED3 => user_face_bcs,                   &
-       IMPLEMENTED4 => user_get_log_var,                &
-       IMPLEMENTED5 => user_get_b0,                     &
-       IMPLEMENTED6 => user_update_states,              &
-       IMPLEMENTED7 => user_specify_initial_refinement
+       IMPMENENTED2 => user_set_ics,                    &
+       IMPLEMENTED3 => user_initial_perturbation,       &
+       IMPLEMENTED4 => user_face_bcs,                   &
+       IMPLEMENTED5 => user_get_log_var,                &
+       IMPLEMENTED6 => user_get_b0,                     &
+       IMPLEMENTED7 => user_update_states,              &
+       IMPLEMENTED8 => user_specify_initial_refinement
 
   include 'user_module.h' !list of public methods
 
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: &
        NameUserModule = 'EMPIRICAL SC - Cohen, Sokolov'
-  !\
-  ! Parameters related to the empirical heating::
-  !/
+
 contains
   !============================================================================
   subroutine user_read_inputs
@@ -44,20 +43,6 @@ contains
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
        select case(NameCommand)
-       case("#USER_FLAGS")
-          call read_var('UseUserInnerBCs'         ,UseUserInnerBCs)
-          call read_var('UseUserSource'           ,UseUserSource)
-          call read_var('UseUserPerturbation'     ,UseUserPerturbation)
-          call read_var('UseUserOuterBcs'         ,UseUserOuterBcs)
-          call read_var('UseUserICs'              ,UseUserICs)
-          call read_var('UseUserSpecifyRefinement',UseUserSpecifyRefinement)
-          call read_var('UseUserLogFiles'         ,UseUserLogFiles)
-          call read_var('UseUserWritePlot'        ,UseUserWritePlot)
-          call read_var('UseUserAMR'              ,UseUserAMR)
-          call read_var('UseUserEchoInput'        ,UseUserEchoInput)
-          call read_var('UseUserB0'               ,UseUserB0)
-          call read_var('UseUserInitSession'     ,UseUserInitSession)
-          call read_var('UseUserUpdateStates'     ,UseUserUpdateStates)
        case("#PFSSM")
           call read_var('UseUserB0'  ,UseUserB0)
           if (UseUserB0)then
@@ -65,12 +50,6 @@ contains
              call read_var('dt_UpdateB0',dt_UpdateB0)
              DoUpdateB0 = dt_updateb0 > 0.0
           endif
-          !       case("#AWHEAT")
-          !          call read_var('Bnot        ',Bnot)
-          !          call read_var('Tnot        ',Tnot)
-          !          call read_var('DegFrm1     ',DegFrm1)
-          !          call read_var('DegF_Ratio  ',DegF_Ratio)
-          !          call read_var('Dens_Ratio  ',Dens_Ratio)
        case("#TD99FLUXROPE")
           call read_var('UseTD99Perturbation' ,UseTD99Perturbation)
           call read_var('UseVariedCurrent'    ,UseVariedCurrent)
@@ -268,7 +247,7 @@ contains
          y_BLK(iCell,jCell,kCell,iBlock)/R_BLK(iCell,jCell,kCell,iBlock),&
          z_BLK(iCell,jCell,kCell,iBlock)/R_BLK(iCell,jCell,kCell,iBlock),UFinal)
     URatio=UFinal/UMin
-    DensCell  = ((1.0/URatio)**2)*&               !This is the density variation
+    DensCell  = ((1.0/URatio)**2)*&          !This is the density variation
          exp(-GBody*g*&
          (min(URatio,2.0)*BodyTdim_I(1)/T0)*&!This is the temperature variation
          (1.0/max(R_BLK(iCell,jCell,kCell,iBlock),0.90)&
@@ -281,25 +260,28 @@ contains
   !============================================================================
 
   subroutine user_initial_perturbation
-    use ModMain, ONLY: nI, nJ, nK, nBLK, unusedBLK, gcn, x_, y_, z_, &
-         n_step,Iteration_Number
+    use ModMain, ONLY: nI,nJ,nK,nBLK,unusedBLK,x_,y_,z_,n_step,Iteration_Number
     use ModVarIndexes
     use ModAdvance,   ONLY: State_VGB 
-    use ModNumConst
-    use ModPhysics,   ONLY: inv_gm1,Si2No_V,UnitU_,UnitRho_,UnitB_
+    use ModPhysics,   ONLY: Si2No_V,UnitU_,UnitRho_,UnitP_,UnitB_
     use ModGeometry
     use ModEnergy,    ONLY: calc_energy_cell
     implicit none
 
+    integer :: i,j,k,iBLK
+    logical :: oktest,oktest_me
+    real :: x_D(nDim)
+
     !\
-    ! Variables required by this user subroutine::
+    ! Titov & Demoulin 1999 related variables
     !/
-    integer:: i,j,k,iBLK,iError
-    logical:: oktest,oktest_me
-    real:: Dens_BLK,Pres_BLK,Gamma_BLK
-    real:: xx,yy,zz,RR,ROne,Rmax,Speed
-    real, dimension(3) :: R_TD99_D,B_TD99_D,U_TD99_D  ! To include TD99 flux rope.
-    real:: Rho_TD99=0.0                          ! To include TD99 flux rope.
+    real :: B_TD99_D(nDim), U_TD99_D(nDim)
+    real :: Rho_TD99=0.0
+    !\
+    ! Gibson & Low 1998 related variables::
+    !/
+    real :: Mrope_GL98=0.0
+    real :: rho_GL98, p_GL98, B_GL98_D(nDim)
     !--------------------------------------------------------------------------
     call set_oktest('user_initial_perturbation',oktest,oktest_me)
 
@@ -308,53 +290,19 @@ contains
 
     do iBLK=1,nBLK
        if(unusedBLK(iBLK))CYCLE
-       if (n_step==0) then   
-          do k=1,nK;do j=1,nJ; do i=1,nI
-             xx = x_BLK(i,j,k,iBLK)
-             yy = y_BLK(i,j,k,iBLK)
-             zz = z_BLK(i,j,k,iBLK)
-             RR = sqrt(xx**2+yy**2+zz**2+cTolerance**2)
-             ROne  = max(1.0,RR)
-             Rmax  = max(2.1E+01,sqrt(x2**2+y2**2+z2**2))
-             State_VGB(Bx_      ,i,j,k,iBLK) = 0.0
-             State_VGB(By_      ,i,j,k,iBLK) = 0.0
-             State_VGB(Bz_      ,i,j,k,iBLK) = 0.0
-             call get_plasma_parameters_cell(i,j,k,iBLK,&
-                  Dens_BLK,Pres_BLK,Gamma_BLK)
-             State_VGB(rho_     ,i,j,k,iBLK) = Dens_BLK
-             State_VGB(P_       ,i,j,k,iBLK) = Pres_BLK
-             State_VGB(rhoUx_   ,i,j,k,iBLK) = Dens_BLK*&
-                  4.0E+00*((ROne-1.0)/(Rmax-1.0))*xx/RR
-             State_VGB(rhoUy_   ,i,j,k,iBLK) = Dens_BLK*&
-                  4.0E+00*((ROne-1.0)/(Rmax-1.0))*yy/RR
-             State_VGB(rhoUz_   ,i,j,k,iBLK) = Dens_BLK*&
-                  4.0E+00*((ROne-1.0)/(Rmax-1.0))*zz/RR
-             State_VGB(Ew_,i,j,k,iBLK) = Pres_BLK   *&
-                  (1.0/(Gamma_BLK-1.0)-inv_gm1) 
-          end do;end do; end do
-       elseif(UseTD99Perturbation)then
-          !----------------------------------------------------------------
-          !\
-          ! Add Titov & Demoulin (TD99) flux rope here:: 
-          !/
-          !----------------------------------------------------------------
-          do k=1,nK; do j=1,nJ; do i=1,nI
-             !-------------------------------------------------------------
+       do k=1,nK; do j=1,nJ; do i=1,nI
+
+          x_D(x_) = x_BLK(i,j,k,iBLK)
+          x_D(y_) = y_BLK(i,j,k,iBLK)
+          x_D(z_) = z_BLK(i,j,k,iBLK)
+
+          if(UseTD99Perturbation)then
              !\
-             ! Assign the coordinates at which to compute the field::
+             ! Add Titov & Demoulin (TD99) flux rope here:: 
              !/
-             !-------------------------------------------------------------
-             R_TD99_D(x_) = x_BLK(i,j,k,iBLK)
-             R_TD99_D(y_) = y_BLK(i,j,k,iBLK)
-             R_TD99_D(z_) = z_BLK(i,j,k,iBLK)
-             !-------------------------------------------------------------
-             !\
-             ! Computed the magnetic field::
-             !/
-             !-------------------------------------------------------------
              if (.not.UseVariedCurrent) then
 
-                call get_transformed_TD99fluxrope(R_TD99_D,B_TD99_D,&
+                call get_transformed_TD99fluxrope(x_D,B_TD99_D,&
                      U_TD99_D,n_step,Iteration_Number,Rho_TD99)
 
                 B_TD99_D = B_TD99_D*Si2No_V(UnitB_)
@@ -363,31 +311,110 @@ contains
              else
                 B_TD99_D=0.0
              end if
-             !-------------------------------------------------------------
              !\
              ! Add the flux rope field to the induction field, B1::
              !/
-             !-------------------------------------------------------------
-             State_VGB(rho_,i,j,k,iBLK)          = &
-                  State_VGB(rho_,i,j,k,iBLK)+Rho_TD99
-             State_VGB(Bx_ ,i,j,k,iBLK)          = &
-                  State_VGB(Bx_ ,i,j,k,iBLK)+B_TD99_D(x_)
-             State_VGB(By_ ,i,j,k,iBLK)          = &
-                  State_VGB(By_ ,i,j,k,iBLK)+B_TD99_D(y_)
-             State_VGB(Bz_ ,i,j,k,iBLK)          = &
-                  State_VGB(Bz_ ,i,j,k,iBLK)+B_TD99_D(z_)
-             !-------------------------------------------------------------
-          end do; end do; end do
-       endif
-       !----------------------------------------------------------------
+             State_VGB(rho_,i,j,k,iBLK) = &
+                  State_VGB(rho_,i,j,k,iBLK) + Rho_TD99
+             State_VGB(Bx_,i,j,k,iBLK) = &
+                  State_VGB(Bx_,i,j,k,iBLK) + B_TD99_D(x_)
+             State_VGB(By_,i,j,k,iBLK) = &
+                  State_VGB(By_,i,j,k,iBLK) + B_TD99_D(y_)
+             State_VGB(Bz_,i,j,k,iBLK) = &
+                  State_VGB(Bz_,i,j,k,iBLK) + B_TD99_D(z_)
+          endif
 
+          if (UseFluxRope) then
+             call add_GL98_fluxrope(x_D,rho_GL98,p_GL98,B_GL98_D)
+
+             rho_GL98 = rho_GL98*Si2No_V(UnitRho_)
+             p_GL98 = p_GL98*Si2No_V(UnitP_)
+             B_GL98_D = B_GL98_D*Si2No_V(UnitB_)
+
+             State_VGB(Bx_,i,j,k,iBLK) = &
+                  State_VGB(Bx_,i,j,k,iBLK) + B_GL98_D(x_)
+             State_VGB(By_,i,j,k,iBLK) = &
+                  State_VGB(By_,i,j,k,iBLK) + B_GL98_D(y_)
+             State_VGB(Bz_,i,j,k,iBLK) = &
+                  State_VGB(Bz_,i,j,k,iBLK) + B_GL98_D(z_)
+             !\
+             ! Add just `ModulationRho' times of the CME mass
+             ! to the mass density::
+             !/
+             if (ModulationRho*rho_GL98 >= 0.0) then
+                State_VGB(rho_,i,j,k,iBLK) = &
+                     State_VGB(rho_,i,j,k,iBLK) + ModulationRho*rho_GL98
+             endif
+             !\
+             ! Add just `ModulationP' times of the CME pressure
+             ! to the kinetic pressure::
+             !/
+             if (ModulationP*p_GL98 >= 0.0) then
+                State_VGB(P_,i,j,k,iBLK) = &
+                     State_VGB(P_,i,j,k,iBLK) + ModulationP*p_GL98
+             endif
+             !\
+             ! Calculate the mass added to the flux rope::
+             !/
+             Mrope_GL98 = Mrope_GL98 &
+                  + ModulationRho*rho_GL98/vInv_CB(i,j,k,iBLK)
+          endif
+       end do; end do; end do
 
        !\
        ! Update the total energy::
        !/
        call calc_energy_cell(iBLK)
+
     end do
+
   end subroutine user_initial_perturbation
+
+  !============================================================================
+
+  subroutine user_set_ics
+    use ModMain,      ONLY: globalBLK,nI,nJ,nK
+    use ModVarIndexes
+    use ModAdvance,   ONLY: State_VGB 
+    use ModPhysics,   ONLY: inv_gm1
+    use ModGeometry
+    use ModEnergy,    ONLY: calc_energy_cell
+    implicit none
+
+    integer :: i,j,k,iBLK
+    logical :: oktest,oktest_me
+    real :: Dens_BLK,Pres_BLK,Gamma_BLK
+    real :: x,y,z,R,ROne,Rmax
+    !--------------------------------------------------------------------------
+    call set_oktest('user_set_ics',oktest,oktest_me)
+
+    iBLK = globalBLK
+
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       x = x_BLK(i,j,k,iBLK)
+       y = y_BLK(i,j,k,iBLK)
+       z = z_BLK(i,j,k,iBLK)
+       R = sqrt(x**2+y**2+z**2+cTolerance**2)
+       ROne  = max(1.0,R)
+       Rmax  = max(2.1E+01,sqrt(x2**2+y2**2+z2**2))
+       State_VGB(Bx_,i,j,k,iBLK) = 0.0
+       State_VGB(By_,i,j,k,iBLK) = 0.0
+       State_VGB(Bz_,i,j,k,iBLK) = 0.0
+       call get_plasma_parameters_cell(i,j,k,iBLK,&
+            Dens_BLK,Pres_BLK,Gamma_BLK)
+       State_VGB(rho_,i,j,k,iBLK) = Dens_BLK
+       State_VGB(P_,i,j,k,iBLK)   = Pres_BLK
+       State_VGB(RhoUx_,i,j,k,iBLK) = Dens_BLK &
+            *4.0*((ROne-1.0)/(Rmax-1.0))*x/R
+       State_VGB(RhoUy_,i,j,k,iBLK) = Dens_BLK &
+            *4.0*((ROne-1.0)/(Rmax-1.0))*y/R
+       State_VGB(RhoUz_,i,j,k,iBLK) = Dens_BLK &
+            *4.0*((ROne-1.0)/(Rmax-1.0))*z/R
+       State_VGB(Ew_,i,j,k,iBLK) = Pres_BLK &
+            *(1.0/(Gamma_BLK-1.0)-inv_gm1) 
+    end do; end do; end do
+
+  end subroutine user_set_ics
 
   !============================================================================
   subroutine user_get_b0(xInput,yInput,zInput,B0_D)
@@ -399,7 +426,8 @@ contains
     B0_D = B0_D*Io2No_V(UnitB_)
   end subroutine user_get_b0
 
-  !===========================================================================
+  !============================================================================
+
   subroutine user_update_states(iStage,iBlock)
     use ModVarIndexes
     use ModSize

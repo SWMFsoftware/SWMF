@@ -9,8 +9,10 @@ MY_LIB = ${LIBDIR}/libEMPIRICALEE.a
 #include Makefile.RULES
 
 OBJECTS = \
+	EEE_ModCommonVariables.o \
+	EEE_ModTD99.o \
+	EEE_ModGL98.o \
 	EEE_ModMain.o
-
 
 LIB:
 	make ${MY_LIB}

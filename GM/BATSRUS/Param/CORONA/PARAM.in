@@ -25,9 +25,9 @@ HGR                     TypeCoordSystem
 #USER_FLAGS
 T			UseUserInnerBcs
 F			UseUserSource
-T			UseUserPerturbation
+F			UseUserPerturbation
 F			UseUserOuterBcs
-F			UseUserICs
+T			UseUserICs
 T			UseUserSpecifyRefinement
 F			UseUserLogFiles
 F			UseUserWritePlot
