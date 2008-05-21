@@ -1,4 +1,4 @@
-! File name: heidi_main_010.f90
+! File name: heidi_main.f90
 !
 ! Contains: the main driver program for HEIDI
 !	HEIDI
@@ -22,23 +22,27 @@
 !	NE=no. of energy grids, NS=no. of species (e-, H+, He+, O+),
 !	NPA=no. of grids in equatorial pitch angle
 
-program heidi_main_010
+program heidi_main
   use ModHeidiSize
   use ModHeidiMain
   use ModHeidiDrifts
   use ModHeidiWaves
   use ModHeidiIO
+  use ModProcIM
 
   implicit none
 
-  integer nst,npr,i3,nkp,NIBC,i2
-  REAL XN(NR,NS),LNC(NR,NS)
+  integer:: nst,npr,i3,nkp,NIBC,i2
+  REAL:: XN(NR,NS),LNC(NR,NS)
 
   !.......Preparation
 
-  call MPI_INIT(ira)
-  call MPI_COMM_RANK(MPI_COMM_WORLD, me_world, ira)
-  call MPI_COMM_SIZE(MPI_COMM_WORLD, numprocs, ira)
+  call MPI_INIT(iError)
+
+  iComm= MPI_COMM_WORLD
+
+  call MPI_COMM_RANK(iComm, iProc, iError)
+  call MPI_COMM_SIZE(iComm, nProc, iError)
 
   CALL READPARA
 
@@ -63,7 +67,7 @@ program heidi_main_010
            write(*,*) "scalc         : ", scalc
         endif
 
-        call MPI_abort(MPI_COMM_WORLD, erno, ira)
+        call MPI_abort(iComm, erno, iError)
 
      else
 
@@ -189,10 +193,10 @@ program heidi_main_010
   CLOSE(16)               ! Closes SOPA input file
   CLOSE(18)               ! Closes FPOT input file
 
-  call MPI_BARRIER(MPI_COMM_WORLD,ira) ! ----------- BARRIER ------  
-  call MPI_finalize(ira)
+  call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------  
+  call MPI_finalize(iError)
 
-end program heidi_main_010
+end program heidi_main
 ! ************************  END OF MAIN  *******************************
 
 
