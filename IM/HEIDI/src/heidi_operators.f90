@@ -23,7 +23,7 @@
 
 	implicit none
 
-	integer i,j,k,l
+	integer :: i,j,k,l
 
 !	do s=1,ns
 !	 if (SCALC(S).EQ.1) THEN
@@ -57,9 +57,9 @@
 
 	implicit none
 
-	integer mark
+	integer :: mark
 
-	integer Ibad,i,j,k,l,i1,j1,k1,l1,Ibadt,m
+	integer :: Ibad,i,j,k,l,i1,j1,k1,l1,Ibadt,m
 
 	Ibadt=0
 	DO m=1,NS
@@ -122,12 +122,12 @@
 
 	implicit none
 
-        REAL f01(nt,ne,npa,ns),f02(nt,ne,npa,ns)
-        REAL F(NR+2),FBND(NR),C(NR),LIMITER
-        INTEGER UR,isign
-	integer i,j,k,l,n
-	real fup,RR,corr,x
-	real fbc
+        REAL :: f01(nt,ne,npa,ns),f02(nt,ne,npa,ns)
+        REAL ::F(NR+2),FBND(NR),C(NR),LIMITER
+        INTEGER :: UR,isign
+	integer ::i,j,k,l,n
+	real :: fup,RR,corr,x
+	real :: fbc
         save f01,f02
 
 !...Set up injection boundary fluxes
@@ -241,10 +241,10 @@
 
 	implicit none
 
-	REAL FBND(0:NT),F(0:NT+2),C(0:NT),LIMITER
-	integer i,j,k,l,n,isign,imag
-	real fup,RR,corr,x
-	real fbc
+	REAL :: FBND(0:NT),F(0:NT+2),C(0:NT),LIMITER
+	integer :: i,j,k,l,n,isign,imag
+	real :: fup,RR,corr,x
+	real :: fbc
 
   	do I=2,IO
 	 do K=2,KO
@@ -340,9 +340,9 @@
 
 	implicit none
 
-	REAL FBND(NE),F(0:NE+2),C(NE),LIMITER,corr,fup,RR,x,CD
-	integer i,j,k,l,n,isign
-	real fbc
+	REAL :: FBND(NE),F(0:NE+2),C(NE),LIMITER,corr,fup,RR,x,CD
+	integer :: i,j,k,l,n,isign
+	real :: fbc
 
 	do J=1,JO
 	 do I=2,ILMP(J)
@@ -456,10 +456,10 @@
 
 	implicit none
 
-	REAL FBND(NPA),F(NPA),C(NPA),LIMITER,corr,fup,RR,x
-	INTEGER UL,ULL
-	integer i,j,k,l,n,isign
-	real fbc
+	REAL :: FBND(NPA),F(NPA),C(NPA),LIMITER,corr,fup,RR,x
+	INTEGER :: UL,ULL
+	integer :: i,j,k,l,n,isign
+	real :: fbc
 
 	do J=1,JO
 	 do I=2,ILMP(J)
@@ -535,8 +535,8 @@
 
 	implicit none
 
-	integer i,j,k,l
-	real FL,fbc,FN
+	integer :: i,j,k,l
+	real :: FL,fbc,FN
 
 	IF (S.GE.2) THEN
 	 do L=2,LO
@@ -599,8 +599,8 @@
 
 	implicit none
 
-	REAL F(NPA),AN,BN,GN,RP,DENOM,RK(NPA),RL(NPA),FBC,BTAW
-	INTEGER IL,i,j,k,l,ll,UL
+	REAL :: F(NPA),AN,BN,GN,RP,DENOM,RK(NPA),RL(NPA),FBC,BTAW
+	INTEGER :: IL,i,j,k,l,ll,UL
 
 	il=1				! =0 for fully implicit
 	do J=1,JO

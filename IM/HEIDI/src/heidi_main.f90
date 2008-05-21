@@ -32,8 +32,8 @@ program heidi_main
 
   implicit none
 
-  integer:: nst,npr,i3,nkp,NIBC,i2
-  REAL:: XN(NR,NS),LNC(NR,NS)
+  integer :: nst,npr,i3,nkp,NIBC,i2
+  real :: XN(NR,NS),LNC(NR,NS)
 
   !.......Preparation
 

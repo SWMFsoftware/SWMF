@@ -21,10 +21,10 @@
 
 	implicit none
 
-	integer i,j,k,l,Im,Km,Jm,Lm,ibad
-	real cfl,cmax
-	real acosd
-	INTEGER NTC
+	integer :: i,j,k,l,Im,Km,Jm,Lm,ibad
+	real :: cfl,cmax
+	real :: acosd
+	INTEGER :: NTC
 	CHARACTER*5 ST1,ST3
 	CHARACTER*3 SUF
 	CHARACTER*2 ST2,SUF2
@@ -217,15 +217,15 @@
 
 	implicit none
 
-	integer i,j,k,l,nec,nec1,nec2,il,ibad,ii,nlc,ifn,ir2,IFIR
-	real flux,esum,csum,psum,erate,xlec,xlnc,cfl,weight,xr2,   &
+	integer :: i,j,k,l,nec,nec1,nec2,il,ibad,ii,nlc,ifn,ir2,IFIR
+	real :: flux,esum,csum,psum,erate,xlec,xlnc,cfl,weight,xr2,   &
      		edr,xe,xn1,FUNI,FUNT
-	EXTERNAL FUNI,FUNT
-	real acosd
-	REAL LNC(NR,NS),XN(NR,NS),XNO(NR)
-     	REAL NSUM,TAUD,TAUBO,TAUCHE,EO(NR),AVEFL(NR,NT,NE),RFAC,   &
+	EXTERNAL :: FUNI,FUNT
+	real :: acosd
+	REAL :: LNC(NR,NS),XN(NR,NS),XNO(NR)
+     	REAL :: NSUM,TAUD,TAUBO,TAUCHE,EO(NR),AVEFL(NR,NT,NE),RFAC,   &
      	     FZERO(NR,NT,NE),DEP(NR,NT),NBC(NT)
-	INTEGER NTC,NIC(3),IFM(38),PAV(3),EV(3)
+	INTEGER :: NTC,NIC(3),IFM(38),PAV(3),EV(3)
 	CHARACTER*5 ST1,ST3,IPF(3)
 	CHARACTER*3 SUF
 	CHARACTER*2 ST2,SUF2
@@ -941,7 +941,7 @@
 
 	implicit none
 
-	REAL T,DN,DE
+	REAL :: T,DN,DE
 
 	DN=RNS-RNL+ESN-ELN+ECN-ALN-CEN
 	DE=RES-REL+ESE-ELE+ECE-ALE-CEE

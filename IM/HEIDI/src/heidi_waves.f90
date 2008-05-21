@@ -22,8 +22,8 @@
         CHARACTER*80 HEADER
 	CHARACTER*5 ST1
 	CHARACTER*2 ST2
-	REAL keVerg
-	INTEGER KN,L,KK
+	REAL :: keVerg
+	INTEGER :: KN,L,KK
         DATA keVerg/1.602E-9/
 
 	IF (T.EQ.0.0) 	   ST1='fc_12'	! initial
@@ -101,20 +101,20 @@
 
 	implicit none
 
-	REAL DWAVE(NPA),CMRA(SLEN),AVDAA(NPA),TAVDAA(NPA),cubL,   &
+	REAL :: DWAVE(NPA),CMRA(SLEN),AVDAA(NPA),TAVDAA(NPA),cubL,   &
           DAA(NE,NPA,Slen),DN(2,25),EPO(2,25),AII(2,25),XFR(NR,NT),   &
       	  Bline,RLD,PHID,CAML,degrad,rlmas,pmas,cv,gausgam,   &
       	  WGG,GRP,VGP,rat,bf,ZE,QFAC,omega,y,res1,res2,fac6,band,esu,   &
       	  bwave2,fnorm,ETN,tang,delf,pr1,pr2,prm1,prm2,keVerg,   &
       	  tfac11,tfac21,daabar,delml,muboun,taudaa,afir,cjper,pero,   &
           paro,wuc,wlc,delw,asec,erf,funt,eden1
-	INTEGER MINP(NT),MAXP(NT),kprint,I,J,K,L,j_2,IML,ical,KN,iwn,   &
+	INTEGER :: MINP(NT),MAXP(NT),kprint,I,J,K,L,j_2,IML,ical,KN,iwn,   &
           IER, kres
 	CHARACTER*5 ST1
 	CHARACTER*2 ST2
 	CHARACTER*5 ST4
 	CHARACTER*80 HEADER
-	external erf,funt
+	external :: erf,funt
 
       DATA pmas/1.672E-24/, keVerg/1.602E-9/,    &
            cv/3E10/, esu/4.803E-10/, gausgam/1.E-5/

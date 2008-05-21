@@ -1,4 +1,4 @@
-! File name: heidi_initial_010.f90
+! File name: heidi_initial.f90
 !
 ! Contains: initial and boundary condition definition routines for HEIDI
 !	INITIAL
@@ -22,25 +22,25 @@
 
 	implicit none
 
-	integer j6,j18,i,j,k,l,ifn,jj,ii,kk,ig1,ig2,ig3,ig4,  &
+	integer :: j6,j18,i,j,k,l,ifn,jj,ii,kk,ig1,ig2,ig3,ig4,  &
      		kg,kg1,kg2,IER,Iin,Kin
-	real weight,elat1,elat2,etotal,efractn,pg,sg,y,yz,y10,y12,x,xlt
-	real fbc,Cst1,Cst2,GAMMLN,esum
-	REAL XN(NR,NS),LNC(NR,NS),N,FAC
-	INTEGER I1,J1,K1,L1
+	real :: weight,elat1,elat2,etotal,efractn,pg,sg,y,yz,y10,y12,x,xlt
+	real :: fbc,Cst1,Cst2,GAMMLN,esum
+	REAL :: XN(NR,NS),LNC(NR,NS),N,FAC
+	integer ::I1,J1,K1,L1
 	PARAMETER (I1=5, J1=9, K1=25, L1=19)	! From restart.bcf sizes
 !	PARAMETER (I1=5, J1=9, K1=22, L1=19)	! From restart.bcf sizes
-	REAL FI(6,11),LI(6),EI(11),  &
+	REAL :: FI(6,11),LI(6),EI(11),  &
             LIN(3),EIN(5),NI(3,5),E1(NE),E2(NE),F0(K1,L1),DUMMY,  &
             MU0(L1),E0(K1),MLT0(J1),R0(I1),G0(I1,J1)
-	INTEGER IFM(38)
+	INTEGER ::IFM(38)
 	CHARACTER*80 HEADER
 	CHARACTER*5 ST1
 	CHARACTER*2 ST2
 	CHARACTER*3 ST3
 
 ! Common block for tests
-        REAL XL1(4),XL2(2),XL3
+        REAL :: XL1(4),XL2(2),XL3
         COMMON /CLIN2/ XL1,XL2,XL3
 
 	DATA LI/2.,3.,3.5,4.5,5.5,6.5/  ! for moder storm input
@@ -50,7 +50,7 @@
         DATA EIN/2.05,21.6,50.15,153.,350./	! EIN => E[keV]
 	DATA IFM/2,7,13,20,28,35,42,47,50,52,54,56,58,60,62,64,66,68,70,  &
                2,11,21,31,41,51,61,70,75,79,82,83,84,85,86,87,88,89,90/
-	EXTERNAL GAMMLN
+	external :: GAMMLN
 
 !.......Start the loop over RC species
 	DO S=1,NS
@@ -531,8 +531,8 @@
 
 	IMPLICIT NONE
 
-	REAL FLO
-	INTEGER I,K,L,J
+	REAL :: FLO
+	INTEGER :: I,K,L,J
 
 	DO J=1,JO
 	 IF (ILMP(J).LT.ILold(J)) THEN
@@ -571,14 +571,14 @@
 	IMPLICIT NONE
 
         CHARACTER*80 HEADER
-	REAL Fkapb(NE),Foutb,X,DATA(9),fac
-	REAL TM1,TM2,NM1,NM2,TFM1,TFM2,TCM1,TCM2,NM,TFM,TCM,TS1,TS2,  &
+	REAL :: Fkapb(NE),Foutb,X,DATA(9),fac
+	REAL :: TM1,TM2,NM1,NM2,TFM1,TFM2,TCM1,TCM2,NM,TFM,TCM,TS1,TS2,  &
             Flanl(NE,NPA,NS),FS1(7),FS2(7),ES(7),FS(7),NY(NS),NEL,  &
             NE1,NE2,TEF1,TEF2,TEC1,TEC2,NMFAC(NS),FSFAC(NS),TEF,TEC,  &
             Ekap,Kappa,GAMMLN
-	integer I,J,K,L,IER,GetBCI,BCI,I2,KES(NS),I6,I7,I9,IG7
-	integer SKAPPA(4)
-	external GetBCI,GAMMLN
+	integer :: I,J,K,L,IER,GetBCI,BCI,I2,KES(NS),I6,I7,I9,IG7
+	integer :: SKAPPA(4)
+	external :: GetBCI,GAMMLN
 	DATA ES/45.,60.,94.,141.,210.,325.,535./, Kappa/5.00/
 	DATA SKAPPA/1,1,1,1/
 	SAVE KES,TM1,TM2,NM1,NM2,TFM1,TFM2,TCM1,TCM2,TS1,TS2,FS1,FS2,  &
@@ -816,7 +816,7 @@
 
 	implicit none
 
-	real e,fac,f1
+	real :: e,fac,f1
 
 	IF (Ab.GT.0.) THEN
 	  FBC=Ab*EXP(-E/Eob)*FAC
@@ -841,12 +841,12 @@
 
 	IMPLICIT NONE
 
-	INTEGER K,IER,I
-        REAL F(NE),Cst1,Cst2,GAMMLN,CONV
-	real T1,T2,BZ1,BZ2,MD1,MD2,U1,U2,FAC,ERF,NY(NS),TLAG
+	INTEGER :: K,IER,I
+        REAL :: F(NE),Cst1,Cst2,GAMMLN,CONV
+	real :: T1,T2,BZ1,BZ2,MD1,MD2,U1,U2,FAC,ERF,NY(NS),TLAG
 	character header*80
 	SAVE T1,T2,BZ1,BZ2,MD1,MD2,U1,U2
- 	EXTERNAL GAMMLN,ERF
+ 	external :: GAMMLN,ERF
 
 	TLAG=4.*3600.			! From Borovsky et al, Aug 98
 	IF (ISWB.EQ.1) THEN
