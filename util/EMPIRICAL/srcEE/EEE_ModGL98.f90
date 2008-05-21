@@ -7,7 +7,7 @@ module EEE_ModGL98
 
   private
 
-  public add_GL98_fluxrope
+  public get_GL98_fluxrope, adjust_GL98_fluxrope
 
   real, public :: ModulationRho, ModulationP
   logical, public :: UseFluxRope=.false.
@@ -16,7 +16,7 @@ contains
 
   !============================================================================
 
-  subroutine add_GL98_fluxrope(R_GL98_D,rho_GL98,p_GL98,B_GL98_D)
+  subroutine get_GL98_fluxrope(R_GL98_D,rho_GL98,p_GL98,B_GL98_D)
     !--------------------------------------------------------------------------
     ! PARAMETER LIST: cme_a, cme_r1, cme_r0, cme_a1, cme_rho1, cme_rho2,
     !                 B1_dim,RHOsun,Vscl
@@ -325,14 +325,45 @@ contains
        ! Add background pressure
        !/
        p_GL98 = p_GL98 + abs(Gbody)*rho2scl/(4.0*r**4)
+
+       rho_GL98 = rho_GL98*No2Si_V(UnitRho_)
+       p_GL98 = p_GL98*No2Si_V(UnitP_)
+       B_GL98_D = B_GL98_D*No2Si_V(UnitB_)
+
     else
        B_GL98_D = 0.0; rho_GL98 = 0.0; p_GL98 = 0.0
     endif
 
-    rho_GL98 = rho_GL98*No2Si_V(UnitRho_)
-    p_GL98 = p_GL98*No2Si_V(UnitP_)
-    B_GL98_D = B_GL98_D*No2Si_V(UnitB_)
+  end subroutine get_GL98_fluxrope
 
-  end subroutine add_GL98_fluxrope
+  !============================================================================
+
+  subroutine adjust_GL98_fluxrope(Rho,p)
+    implicit none
+
+    real, intent(inout) :: Rho,p
+    !--------------------------------------------------------------------------
+
+    !\
+    ! Add just `ModulationRho' times of the CME mass
+    ! to the mass density::
+    !/
+    if(ModulationRho*Rho <= 0.0)then
+       Rho = 0.0
+    else
+       Rho = ModulationRho*Rho
+    end if
+
+    !\
+    ! Add just `ModulationP' times of the CME pressure
+    ! to the kinetic pressure::
+    !/
+    if(ModulationP*p <= 0.0) then
+       p = 0.0
+    else
+       p = ModulationP*p
+    end if
+
+  end subroutine adjust_GL98_fluxrope
 
 end module EEE_ModGL98

@@ -119,10 +119,8 @@ contains
     real:: DensCell,PresCell,GammaCell, B1dotR  
     real, dimension(3):: RFace_D,B1_D,U_D,B1t_D,B1n_D
 
-    ! Variables related to the TD99 flux rope::
-    real:: BFRdotR,RhoFRope=0.0
-    real, dimension(3):: BFRope_D,BFRn_D,BFRt_D,UVorT_D
-
+    real :: RhoCME,UCME_D(nDim),BCME_D(nDim),pCME
+    real :: BCMEn, BCMEn_D(nDim)
     !--------------------------------------------------------------------------
 
     RFace_D  = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
@@ -138,35 +136,27 @@ contains
     !/
     VarsGhostFace_V(Ux_:Uz_) = -U_D(x_:z_)
     VarsGhostFace_V(Bx_:Bz_) = B1t_D(x_:z_)!-B1n_D(x_:z_)
+
     !\
-    ! Compute the magnetic field of TD99 flux rope at RFace_D::
+    ! Compute the perturbed state of the eruptive event at RFace_D::
     !/
-    if (DoTD99FluxRope.or.DoBqField) then
+    call EEE_get_state_BC(RFace_D,RhoCME,UCME_D,BCME_D,pCME,TimeBc, &
+         n_step,iteration_number)
 
-       call get_transformed_TD99fluxrope(RFace_D,BFRope_D,&
-            UVorT_D,n_step,Iteration_Number,RhoFRope,TimeBc)
+    RhoCME = RhoCME*Si2No_V(UnitRho_)
+    UCME_D = UCME_D*Si2No_V(UnitU_)
+    BCME_D = BCME_D*Si2No_V(UnitB_)
+    pCME = pCME*Si2No_V(UnitP_)
 
-       BFRope_D = BFRope_D*Si2No_V(UnitB_)
-       UVorT_D = UVorT_D*Si2No_V(UnitU_)
-       RhoFRope = RhoFRope*Si2No_V(UnitRho_)
+    BCMEn   = dot_product(RFace_D,BCME_D)
+    BCMEn_D = BCMEn*RFace_D
+    !\
+    ! Fix the normal component of the CME field to BCMEn_D at the Sun::
+    !/
+    VarsGhostFace_V(Bx_:Bz_) = VarsGhostFace_V(Bx_:Bz_) + BCMEn_D
 
-       if(.not.DoBqField)UVorT_D=0.0
-       !\
-       ! Compute the normal, BFRn_D, and tangential, BFRt_D,
-       ! field components of the flux rope::
-       !/
-       BFRdotR       = dot_product(RFace_D,BFRope_D)
-       BFRn_D(x_:z_) = BFRdotR*RFace_D(x_:z_)
-       BFRt_D        = BFRope_D-BFRn_D
-       !\
-       ! Fix the normal component of the flux rope's field
-       ! to BFRn_D at the Sun::
-       !/
-       VarsGhostFace_V(Bx_:Bz_) = VarsGhostFace_V(Bx_:Bz_)+&
-            BFRn_D(x_:z_)
-    else
-       RhoFRope=0.0
-    end if
+    ! CME velocity update should be added here
+
     !\
     ! Update BCs for the mass density, EnergyRL,
     ! and pressure::
@@ -192,27 +182,24 @@ contains
 
     call get_plasma_parameters_cell(iCell,jCell,kCell,iBlockBc,&
          DensCell,PresCell,GammaCell)
-    VarsGhostFace_V(rho_     ) = max(-VarsTrueFace_V(rho_     )+ &
-         2*(DensCell+RhoFRope),&!+RhoFRope)
-         VarsTrueFace_V(rho_))
-    VarsGhostFace_V(P_       ) =max(VarsGhostFace_V(rho_     )*&
-         PresCell/(DensCell+RhoFRope),&
-                                !max(-VarsTrueFace_V(P_       )+ &
-                                !2*PresCell,&
-         VarsTrueFace_V(P_  ))
-    VarsGhostFace_V(Ew_) = &!max(-VarsTrueFace_V(Ew_)+ &  
-         VarsGhostFace_V(rho_     )/(DensCell+RhoFRope)*&  !2* ???
-         PresCell*(1.0/(GammaCell-1.0)-inv_gm1)
+    VarsGhostFace_V(Rho_) = &
+         max(-VarsTrueFace_V(Rho_) + 2.0*(DensCell+RhoCME), &
+         VarsTrueFace_V(Rho_))
+    VarsGhostFace_V(P_) = &
+         max(VarsGhostFace_V(Rho_)*(PresCell+pCME)/(DensCell+RhoCME), &
+         VarsTrueFace_V(P_))
+    VarsGhostFace_V(Ew_) = &!max(-VarsTrueFace_V(Ew_)+ &
+         VarsGhostFace_V(Rho_)*(PresCell+pCME)/(DensCell+RhoCME) &
+         *(1.0/(GammaCell-1.0)-inv_gm1)
 
     !\
     ! Apply corotation
     !/
     if (.not.UseRotatingFrame) then
-
-       VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_) -&
-            2*OmegaBody*FaceCoords_D(y_)
-       VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) +&
-            2*OmegaBody*FaceCoords_D(x_)
+       VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_) &
+            - 2*OmegaBody*FaceCoords_D(y_)
+       VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) &
+            + 2*OmegaBody*FaceCoords_D(x_)
     end if
   end subroutine user_face_bcs
 
@@ -260,7 +247,7 @@ contains
   !============================================================================
 
   subroutine user_initial_perturbation
-    use ModMain, ONLY: nI,nJ,nK,nBLK,unusedBLK,x_,y_,z_,n_step,Iteration_Number
+    use ModMain, ONLY: nI,nJ,nK,nBLK,unusedBLK,x_,y_,z_,n_step,iteration_number
     use ModVarIndexes
     use ModAdvance,   ONLY: State_VGB 
     use ModPhysics,   ONLY: Si2No_V,UnitU_,UnitRho_,UnitP_,UnitB_
@@ -270,23 +257,11 @@ contains
 
     integer :: i,j,k,iBLK
     logical :: oktest,oktest_me
-    real :: x_D(nDim)
+    real :: x_D(nDim),Rho,U_D(nDim),B_D(nDim),p
 
-    !\
-    ! Titov & Demoulin 1999 related variables
-    !/
-    real :: B_TD99_D(nDim), U_TD99_D(nDim)
-    real :: Rho_TD99=0.0
-    !\
-    ! Gibson & Low 1998 related variables::
-    !/
-    real :: Mrope_GL98=0.0
-    real :: rho_GL98, p_GL98, B_GL98_D(nDim)
+    real :: Mass=0.0
     !--------------------------------------------------------------------------
     call set_oktest('user_initial_perturbation',oktest,oktest_me)
-
-    if(oktest_me)write(*,*)'user_initial_perturbation: UseTD99Perturbation=',&
-         UseTD99Perturbation
 
     do iBLK=1,nBLK
        if(unusedBLK(iBLK))CYCLE
@@ -296,69 +271,33 @@ contains
           x_D(y_) = y_BLK(i,j,k,iBLK)
           x_D(z_) = z_BLK(i,j,k,iBLK)
 
-          if(UseTD99Perturbation)then
-             !\
-             ! Add Titov & Demoulin (TD99) flux rope here:: 
-             !/
-             if (.not.UseVariedCurrent) then
+          call EEE_get_state_init(x_D,Rho,U_D,B_D,p, &
+               n_step,iteration_number)
 
-                call get_transformed_TD99fluxrope(x_D,B_TD99_D,&
-                     U_TD99_D,n_step,Iteration_Number,Rho_TD99)
+          Rho = Rho*Si2No_V(UnitRho_)
+          U_D = U_D*Si2No_V(UnitU_)
+          B_D = B_D*Si2No_V(UnitB_)
+          p = p*Si2No_V(UnitP_)
 
-                B_TD99_D = B_TD99_D*Si2No_V(UnitB_)
-                U_TD99_D = U_TD99_D*Si2No_V(UnitU_)
-                Rho_TD99 = Rho_TD99*Si2No_V(UnitRho_)
-             else
-                B_TD99_D=0.0
-             end if
-             !\
-             ! Add the flux rope field to the induction field, B1::
-             !/
-             State_VGB(rho_,i,j,k,iBLK) = &
-                  State_VGB(rho_,i,j,k,iBLK) + Rho_TD99
-             State_VGB(Bx_,i,j,k,iBLK) = &
-                  State_VGB(Bx_,i,j,k,iBLK) + B_TD99_D(x_)
-             State_VGB(By_,i,j,k,iBLK) = &
-                  State_VGB(By_,i,j,k,iBLK) + B_TD99_D(y_)
-             State_VGB(Bz_,i,j,k,iBLK) = &
-                  State_VGB(Bz_,i,j,k,iBLK) + B_TD99_D(z_)
-          endif
+          !\
+          ! Add the eruptive event state to the solar wind
+          !/
+          State_VGB(Rho_,i,j,k,iBLK) = State_VGB(Rho_,i,j,k,iBLK) + Rho
+          State_VGB(RhoUx_,i,j,k,iBLK) = &
+               State_VGB(RhoUx_,i,j,k,iBLK) + Rho*U_D(x_)
+          State_VGB(RhoUy_,i,j,k,iBLK) = &
+               State_VGB(RhoUy_,i,j,k,iBLK) + Rho*U_D(y_)
+          State_VGB(RhoUz_,i,j,k,iBLK) = &
+               State_VGB(RhoUz_,i,j,k,iBLK) + Rho*U_D(z_)
+          State_VGB(Bx_,i,j,k,iBLK) = State_VGB(Bx_,i,j,k,iBLK) + B_D(x_)
+          State_VGB(By_,i,j,k,iBLK) = State_VGB(By_,i,j,k,iBLK) + B_D(y_)
+          State_VGB(Bz_,i,j,k,iBLK) = State_VGB(Bz_,i,j,k,iBLK) + B_D(z_)
+          State_VGB(P_,i,j,k,iBLK) = State_VGB(P_,i,j,k,iBLK) + p
 
-          if (UseFluxRope) then
-             call add_GL98_fluxrope(x_D,rho_GL98,p_GL98,B_GL98_D)
-
-             rho_GL98 = rho_GL98*Si2No_V(UnitRho_)
-             p_GL98 = p_GL98*Si2No_V(UnitP_)
-             B_GL98_D = B_GL98_D*Si2No_V(UnitB_)
-
-             State_VGB(Bx_,i,j,k,iBLK) = &
-                  State_VGB(Bx_,i,j,k,iBLK) + B_GL98_D(x_)
-             State_VGB(By_,i,j,k,iBLK) = &
-                  State_VGB(By_,i,j,k,iBLK) + B_GL98_D(y_)
-             State_VGB(Bz_,i,j,k,iBLK) = &
-                  State_VGB(Bz_,i,j,k,iBLK) + B_GL98_D(z_)
-             !\
-             ! Add just `ModulationRho' times of the CME mass
-             ! to the mass density::
-             !/
-             if (ModulationRho*rho_GL98 >= 0.0) then
-                State_VGB(rho_,i,j,k,iBLK) = &
-                     State_VGB(rho_,i,j,k,iBLK) + ModulationRho*rho_GL98
-             endif
-             !\
-             ! Add just `ModulationP' times of the CME pressure
-             ! to the kinetic pressure::
-             !/
-             if (ModulationP*p_GL98 >= 0.0) then
-                State_VGB(P_,i,j,k,iBLK) = &
-                     State_VGB(P_,i,j,k,iBLK) + ModulationP*p_GL98
-             endif
-             !\
-             ! Calculate the mass added to the flux rope::
-             !/
-             Mrope_GL98 = Mrope_GL98 &
-                  + ModulationRho*rho_GL98/vInv_CB(i,j,k,iBLK)
-          endif
+          !\
+          ! Calculate the mass added to the eruptive event
+          !/
+          Mass = Mass + Rho/vInv_CB(i,j,k,iBLK)
        end do; end do; end do
 
        !\

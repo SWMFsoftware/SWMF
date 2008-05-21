@@ -7,15 +7,12 @@ module EEE_ModMain
   implicit none
   save
 
-!!!  public EEE_initialize, EEE_set_parameter, EEE_get_state
-  public EEE_initialize
-
-
 contains
 
   !============================================================================
 
   subroutine EEE_initialize(BodyNDim,BodyTDim,gamma)
+    implicit none
 
     real, intent(in) :: BodyNDim,BodyTDim,gamma
 
@@ -89,5 +86,64 @@ contains
     Gbody  = -cGravitation*mSun*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
 
   end subroutine EEE_initialize
+
+  !============================================================================
+
+  subroutine EEE_get_state_init(x_D,Rho,U_D,B_D,p,n_step,iteration_number)
+    implicit none
+
+    real, intent(in) :: x_D(3)
+    real, intent(out) :: Rho,U_D(3),B_D(3),p
+    integer, intent(in) :: n_step,iteration_number
+    !--------------------------------------------------------------------------
+
+    ! initialize perturbed state variables
+    Rho=0.0; U_D=0.0; B_D=0.0; p=0.0
+
+    if(UseTD99Perturbation)then
+       !\
+       ! Add Titov & Demoulin (TD99) flux rope
+       !/
+       if(UseVariedCurrent)then
+          B_D = 0.0
+       else
+          call get_transformed_TD99fluxrope(x_D,B_D,&
+               U_D,n_step,iteration_number,Rho)
+       end if
+    end if
+
+    if(UseFluxRope)then
+       !\
+       ! Add Gibson & Low (GL98) flux rope
+       !/
+       call get_GL98_fluxrope(x_D,Rho,p,B_D)
+
+       call adjust_GL98_fluxrope(Rho,p)
+    end if
+
+  end subroutine EEE_get_state_init
+
+  !============================================================================
+
+  subroutine EEE_get_state_BC(x_D,Rho,U_D,B_D,p,Time,n_step,iteration_number)
+    implicit none
+
+    real, intent(in) :: x_D(3),Time
+    real, intent(out) :: Rho,U_D(3),B_D(3),p
+    integer, intent(in) :: n_step,iteration_number
+    !--------------------------------------------------------------------------
+
+    ! initialize perturbed state variables
+    Rho=0.0; U_D=0.0; B_D=0.0; p=0.0
+
+    if (DoTD99FluxRope.or.DoBqField) then
+
+       call get_transformed_TD99fluxrope(x_D,B_D,&
+            U_D,n_step,Iteration_Number,Rho,Time)
+
+       if(.not.DoBqField) U_D=0.0
+    end if
+
+  end subroutine EEE_get_state_BC
 
 end module EEE_ModMain
