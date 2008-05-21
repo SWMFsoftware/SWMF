@@ -204,7 +204,8 @@ contains
 
              iter= iter +1
 
-  !debuT:   write (*,*)".New: i2=",iter2," iter=",iter," dNe=",DeltaNe," xNe=",NeIterated          
+  !debuT:
+   write (*,*)".New: i2=",iter2," iter=",iter," dNe=",DeltaNe," xNe=",NeIterated          
           end do NEWNe ! 
 
           Z  = CZTotal /sum(StatWeight_I)  
