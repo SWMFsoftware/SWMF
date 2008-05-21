@@ -1,5 +1,6 @@
 program caxa     ! test of get_ionization()
   use ModSaha    ! 
+  use ModIonizPotential
   implicit NONE
 
      integer          :: i
@@ -32,7 +33,7 @@ program caxa     ! test of get_ionization()
      write (*,*) "oooooooo  ooooo\  Te[K]=", vTe*cEvToK 
      write (*,*) "oooooooooooooooo\  "
      
-     write (*,*) "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+     write (*,*) "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
    end do OCTPOBA
 !............................................
      ! contains      ! 

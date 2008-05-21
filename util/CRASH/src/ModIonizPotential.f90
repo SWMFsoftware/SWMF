@@ -25,7 +25,7 @@ module ModIonizPotential
   21.56454, 40.96328, 63.45  , 97.12  , 126.21, 157.93, 207.28, 239.10, 1195.8, 1362.2 /),&  !10 - Ne
                                                                        (/10,10/))
 
- real, parameter, dimention(20,11:20) :: cPotentials20_II = reshape((/&
+ real, parameter, dimension(20,11:20) :: cPotentials20_II = reshape((/&
 
   !   1   !    2    !    3  !    4   !    5  !   6   !   7   !    8  !   9  !   10  !
   5.13908 , 47.2864 , 71.620, 98.91  , 138.40, 172.18, 208.50, 264.25, 299.9, 1465.1,& ! 11 - Na
@@ -60,7 +60,7 @@ module ModIonizPotential
 
   (/20,10/))
 
- real, parameter, dimention(30,21:30) :: cPotentials30_II = reshape((/&
+ real, parameter, dimension(30,21:30) :: cPotentials30_II = reshape((/&
 
   !   1  !    2    !   3   !   4   !   5  !   6   !   7   !   8   !   9  !  10  !
   6.56144, 12.79967, 24.757, 73.489, 91.65, 111.68, 138.0 , 158.1 , 180.0, 225.2,& ! 21 - Sc

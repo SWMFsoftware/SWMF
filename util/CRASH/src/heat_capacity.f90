@@ -19,10 +19,10 @@
 subroutine get_e_heat_capacity_per_vol(HeatCapacity,Te,Rho,iMaterial)
   implicit none
   include 'CRASH_definitions.h'
-  real,intent(out)::HeatCapacity  !In SI: J/(K m^3)
-  real,intent(in):: Te            !Electron temperature in SI: K
-  real,intent(in):: Rho           !Mass density in SI: kg/m^3
-  integer,intent(in)::iMaterial   !iMaterial=0 - xenon,iMaterial=1 - beryllium
+  real,intent(out)::HeatCapacity  ! In SI: J/(K m^3)
+  real,intent(in):: Te            ! Electron temperature in SI: K
+  real,intent(in):: Rho           ! Mass density in SI: kg/m^3
+  integer,intent(in)::iMaterial   ! iMaterial=0 - xenon,iMaterial=1 - beryllium
   !-----------------------------------------------------------------------!
   real::HeatCapacityPerMass
   !-------------------------!
@@ -41,16 +41,16 @@ subroutine get_e_heat_capacity_per_mass(HeatCapacity,Te,Rho,iMaterial)      !!!!
 
   implicit none
   include 'CRASH_definitions.h'
-  real,intent(out)::HeatCapacity  !In SI: J/(K m^3)
-  real,intent(in):: Te            !Electron temperature in SI: K
-  real,intent(in):: Rho           !Mass density in SI: kg/m^3
-  integer,intent(in)::iMaterial   !iMaterial=0 - xenon, iMaterial=1 - beryllium
+  real,intent(out)::HeatCapacity  ! In SI: J/(K m^3)
+  real,intent(in):: Te            ! Electron temperature in SI: K
+  real,intent(in):: Rho           ! Mass density in SI: kg/m^3
+  integer,intent(in)::iMaterial   ! iMaterial=0 - xenon, iMaterial=1 - beryllium
   !----------------------------------------------------------------------!
-  real,parameter :: cAtomicToMass = cBoltzmann / cAtomicMass 
-  real,parameter,dimension(0:1) :: AtomicMass_I=(/131.29, &
-                                                  9.012 /)
-  integer,parameter,dimension(0:1) :: nZ_I=(/54, &
-                                              4/)
+  real,   parameter                 :: cAtomicToMass = cBoltzmann / cAtomicMass 
+  real,   parameter, dimension(0:1) :: AtomicMass_I=(/131.29, &
+                                                        9.012 /)
+  integer,parameter, dimension(0:1) :: nZ_I=(/54, &
+                                               4  /)
   real::HeatCapacityPerAtom
   !----------------------------------------------------------------------!
   !        Version for fully ionized plasma                              !

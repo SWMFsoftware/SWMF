@@ -47,7 +47,7 @@ module ModSaha
        Hmax  = cPlankH  /cErg     ,     &  !   erg*s Planck
        HmaxT = cPlankHBar                  !   the same/2Pi
 
-
+!  PRIVATE
   real:: &  
        vNe        , &   ! [cm^{-3}]
        vTe        , &   ! [eV]
@@ -56,12 +56,17 @@ module ModSaha
        C_I(0:99)  , &   ! C_I[0]-neutrals resided after ionization
        U_I(1:99)  , &   ! U_I(iZ) - the energy to make an ion iZ+ from (iZ-1)+    
        CUITotal         ! sum(Uiz*Ciz)/Ce  <~> ionization energy per 1 electron
+
+
   integer :: nCi = 54   ! for Xenon, must be a var for other elements
-end module ModSaha
+
+! end module ModSaha
 !=============================================================================
+  contains
+
 
 subroutine    ConcNafter  ! for given summ(No+Niz) on boundary II, calc. C_I[z]
-  use ModSaha
+!  use ModSaha
   implicit NONE
 
   integer   :: iter 
@@ -90,15 +95,14 @@ subroutine    ConcNafter  ! for given summ(No+Niz) on boundary II, calc. C_I[z]
      end if
 
      if(      x3 < 1.00d-22 )  then
-              x3 = 1.00d-22  ; ! bottom limit for trial concentration
+              x3 = 1.00d-22  ;    ! bottom limit for trial concentration
      else if( x3 > 1.00d+33 )  then  
-              x3 = 1.00d+33  ; ! upper limit, , to avoid precision lost or overflow  
+              x3 = 1.00d+33  ;    ! upper limit, , to avoid precision lost or overflow  
      end if
      if(f1*f1 > f2*f2 ) then 
         x1=x2;  f1=f2; 
      end if
-     x2 = x3;
-     f2 = ( Conc(x3) - vNTotal )*vNTotalInv;
+     x2 = x3;   f2 = ( Conc(x3) - vNTotal )*vNTotalInv;
      
      if( 0.0 == f2  )  exit
      iter =iter +1
@@ -256,3 +260,5 @@ subroutine      get_ionization_equilibrium
 end subroutine  get_ionization_equilibrium
 
 !=======================================================================
+
+end module ModSaha
