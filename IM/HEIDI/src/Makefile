@@ -21,6 +21,7 @@ MODULES = \
 	ModIonosphere.o\
 	ModConductance.o\
 	ModPhysics.o\
+	ModProcIM.o\
 	ModIO.o\
 	precision.o \
 	io.o \
