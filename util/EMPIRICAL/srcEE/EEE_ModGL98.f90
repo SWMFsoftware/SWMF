@@ -96,7 +96,7 @@ contains
     real :: A2,dA2dr,dA2dth, d2A2dr2,d2A2drdth,d2A2dth2
     real :: pres_1,dpres_1dr1,F_grav,alpha0,ga0r0,delta 
     real, dimension(3) :: R1_GL98_D,B1_GL98_D
-    real, dimension(3,3) :: RotateGL98_DD
+    real, dimension(3,3), save :: RotateGL98_DD
     logical, save :: DoFirst_GL=.true.
 
     real :: a1scl,rho1scl,rho2scl,SSPscl
