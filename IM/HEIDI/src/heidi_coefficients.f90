@@ -877,8 +877,6 @@ SUBROUTINE MAGCONV(I3,NST)
      !	  end do
      !CC Here the Jfac from the various species are summed together
 
-     iComm= MPI_COMM_WORLD
-
      if (numprocs.gt.1) then
         
         call MPI_BARRIER(iComm,iError)

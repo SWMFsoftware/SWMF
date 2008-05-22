@@ -27,10 +27,9 @@ subroutine ionosphere_solver(PHI, Jr, &
   USE ILU_Module
   USE GMRES_Module
   USE Iteration_Defaults_Module
-
+  use ModMpi
   implicit none
 
-  include 'mpif90.h'
 
   integer :: nTheta, nPsi, ncycle, iboundary
   real :: Radius

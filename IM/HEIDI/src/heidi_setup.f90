@@ -739,7 +739,6 @@ end SUBROUTINE ARRAYS
              character*80 filename
              external :: sind
 
-             !iComm= MPI_COMM_WORLD
 
              par(1)=-1.0
              par(2)=-1.0

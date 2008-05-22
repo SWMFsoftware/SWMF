@@ -3,7 +3,8 @@ Module ModHeidiMain
   ! The main variable definition module for the HEIDI program.
   ! Mike Liemohn, March 2006
   !/
-
+! Include the parameter settings for MPI parallel processing
+	use ModMpi
 	use ModHeidiSize
 
 ! Define "constants" of the simulation
@@ -33,8 +34,6 @@ Module ModHeidiMain
 	real xne(NR,NT)
 	integer itherminit,ithermfirst
 
-! Include the parameter settings for MPI parallel processing
-	include 'mpif90.h'
 
 ! Define parallel computing variables
 ! Formerly: Common block PAR
