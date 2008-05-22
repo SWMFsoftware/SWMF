@@ -35,8 +35,13 @@ Module ModIndices
   integer, parameter :: f107a_    = 22
   integer, parameter :: ap_       = 23
 
+<<<<<<< ModIndices.f90
+  integer, parameter :: nIndices  = f107a_
+  integer, parameter :: MaxIndicesEntries = 60000
+=======
   integer, parameter :: nIndices  = ap_
   integer, parameter :: MaxIndicesEntries = 25000
+>>>>>>> 1.4
 
   real, allocatable           :: Indices_TV(:,:)
   integer, dimension(nIndices)                           :: nIndices_V=0
