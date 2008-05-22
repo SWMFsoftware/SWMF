@@ -66,7 +66,12 @@ foreach $HeaderFile (@HeaderFiles){
     my $OutFile = "$BaseFile.out"; 
     die "$ERROR: no out file $OutFile was produced\n" unless -s $OutFile;
     unless($Keep){
-	unlink $HeaderFile, glob("$BaseFile*.idl");
+	if($BaseFile =~ /3d_/){
+	    rename $HeaderFile, $BaseFile.".info";
+	}else{
+	    unlink $HeaderFile;
+	}
+	unlink glob("$BaseFile*.idl");
 	print "unlink ",join(" ",glob("$BaseFile*.idl")),"\n" if $Verbose;
     }
 }
