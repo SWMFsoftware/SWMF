@@ -185,7 +185,7 @@ contains
 
           iter    =0 
           DeltaNe =1.0   ! To start do loop
-          NEWNe : do while(  (iter <99  ).AND.( DeltaNe*DeltaNe > cToleranceHere)) 
+          NEWNe : do while(  (iter <22  ).AND.( DeltaNe*DeltaNe > cToleranceHere)) 
 
              NeInv = 1. / NeIterated			
              StatWeight_I(1) = PopulationRatioNonid_I(1)*NeInv
