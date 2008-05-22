@@ -8,12 +8,13 @@ subroutine write_plot_common(ifile)
   use ModProcMH
   use ModMain
   use ModGeometry, ONLY : XyzMin_D,XyzMax_D,true_cell
-  use ModGeometry, ONLY : TypeGeometry,UseCovariant     
-  use ModPhysics, ONLY : No2Io_V, UnitX_, thetaTilt,Rbody
+  use ModGeometry, ONLY : TypeGeometry,UseCovariant
+  use ModPhysics, ONLY : No2Io_V, UnitX_, rBody, ThetaTilt, DipoleStrengthSi
   use ModIO
   use ModIoUnit, ONLY : io_unit_new
   use ModNodes
-  use ModNumConst, ONLY : cPi
+  use ModNumConst, ONLY : cRadToDeg
+  use ModParallel, ONLY: proc_dims
   use ModMpi
   implicit none
 
@@ -404,7 +405,7 @@ subroutine write_plot_common(ifile)
                 write(unit_tmp,'(2(1pe13.5),a)') plot_dx(2:3,ifile),' plot_dx'
            call get_date_time(iTime_I)
            write(unit_tmp,*) iTime_I(1:7),' year mo dy hr mn sc msc'        
-           write(unit_tmp,'(2(1pe13.5),a)') thetaTilt*180.0/cPi, 0.0,  &
+           write(unit_tmp,'(2(1pe13.5),a)') thetaTilt*cRadToDeg, 0.0,  &
                                             ' thetatilt[deg] phitilt[deg]'
            if (index(plot_type1,'sph')>0) then
               write(unit_tmp,'(es13.5,a)')rplot,' rplot'
@@ -422,18 +423,26 @@ subroutine write_plot_common(ifile)
            else
               write(unit_tmp,'(6(1pe18.10),a)') &
                    plot_range(:,ifile),' plot_range'
-              write(unit_tmp,'(6(1pe18.10),i8,a)') &
+              write(unit_tmp,'(6(1pe18.10),i10,a)') &
                    plot_dx(:,ifile), dxGLOBALmin, nGLOBALcells,&
                    ' plot_dx, dxmin, ncell'
            end if
            write(unit_tmp,'(i8,a)')nplotvar  ,' nplotvar'
            write(unit_tmp,'(i8,a)')neqpar,' neqpar'
-           write(unit_tmp,'(10(1pe13.5))')eqpar(1:neqpar)
+           write(unit_tmp,'(10es13.5)')eqpar(1:neqpar)
            write(unit_tmp,'(a)')trim(allnames)
            write(unit_tmp,'(a)')trim(unitstr_IDL)
            write(unit_tmp,'(l8,a)')save_binary,' save_binary'
            if(save_binary)write(unit_tmp,'(i8,a)')nByteReal,' nByteReal'
            write(unit_tmp,'(a)')TypeGeometry
+           if(plot_type1(1:3) == '3d_')then
+              ! This information is written out for CCMC runs
+              write(unit_tmp,'(3i6,a)')    nI,nJ,nK,' nCellXyz'
+              write(unit_tmp,'(3i6,a)')    proc_dims,' nRootBlockXyz'
+              write(unit_tmp,'(f10.5,a)')  ThetaTilt*cRadToDeg,' DipoleTiltDeg'
+              write(unit_tmp,'(f10.5,a)')  rBody,' rBody/rPlanet'
+              write(unit_tmp,'(es13.5,a)') DipoleStrengthSi,' DipoleStrengthSi'
+           end if
         end select
         close(unit_tmp)
      end do
