@@ -16,6 +16,7 @@ subroutine write_plot_common(ifile)
   use ModNumConst, ONLY : cRadToDeg
   use ModParallel, ONLY: proc_dims
   use ModMpi
+  use ModUtilities, ONLY: lower_case
   implicit none
 
 
@@ -80,6 +81,8 @@ subroutine write_plot_common(ifile)
   plot_type1=plot_type(ifile)
   plot_vars1=plot_vars(ifile)
   plot_pars1=plot_pars(ifile)
+
+  call lower_case(plot_pars1)
 
   if(oktest_me)write(*,*)'ifile=',ifile,' plot_type=',plot_type1, &
        ' form = ',plot_form(ifile)
@@ -515,59 +518,63 @@ contains
 end subroutine write_plot_common
 
 !==============================================================================
-subroutine set_eqpar(iplotfile,neqpar,eqparnames,eqpar)
+subroutine set_eqpar(iPlotFile,nEqPar,NameEqPar_I,EqPar_I)
 
   use ModProcMH
-  use ModPhysics, ONLY : g,cLIGHT,rBody,No2Io_V, UnitU_, UnitX_, UnitRho_
+  use ModPhysics, ONLY : g, cLight, rBody, ThetaTilt, &
+       No2Io_V, UnitU_, UnitX_, UnitRho_
   use ModRaytrace, ONLY : R_raytrace                !^CFG  IF RAYTRACE
+  use ModNumConst, ONLY : cRadToDeg
   use ModIO
 
   implicit none
-  integer, intent(in)      :: iplotfile,neqpar
-  character*10, intent(in) :: eqparnames(neqpar)
-  real, intent(out)        :: eqpar(neqpar)
+  integer, intent(in)      :: iPlotFile,nEqPar
+  character*10, intent(in) :: NameEqPar_I(nEqPar)
+  real, intent(out)        :: EqPar_I(nEqPar)
 
-  integer :: ipar
+  integer :: iPar
   !---------------------------------------------------------------------------
-  do ipar=1,neqpar
-     select case(eqparnames(ipar))
-     case('g')
-        eqpar(ipar)=g
-     case('c')
-        if(plot_dimensional(plot_+iplotfile)) then
-           eqpar(ipar)=Clight*No2Io_V(UnitU_)
+  do iPar=1,nEqPar
+     select case(NameEqPar_I(iPar))
+     case('g','gamma')
+        EqPar_I(iPar)=g
+     case('c','clight')
+        if(plot_dimensional(plot_+iPlotFile)) then
+           EqPar_I(iPar)=Clight*No2Io_V(UnitU_)
         else
-           eqpar(ipar)=Clight
+           EqPar_I(iPar)=Clight
         end if
-     case('rbody','rBody','RBODY')
-        eqpar(ipar)=rBody
-        if(plot_dimensional(plot_+iplotfile))&
-             eqpar(ipar)=eqpar(ipar)*No2Io_V(UnitX_)
+     case('r','rbody')
+        EqPar_I(iPar)=rBody
+        if(plot_dimensional(plot_+iPlotFile))&
+             EqPar_I(iPar)=EqPar_I(iPar)*No2Io_V(UnitX_)
+     case('t','tilt')
+        EqPar_I(iPar)=ThetaTilt*cRadToDeg
      case('eta')
-        eqpar(ipar)=0.
+        EqPar_I(iPar)=0.
      case('unitx')
-        eqpar(ipar)=No2Io_V(UnitX_)
+        EqPar_I(iPar)=No2Io_V(UnitX_)
      case('unitrho')
-        eqpar(ipar)=No2Io_V(UnitRho_)
+        EqPar_I(iPar)=No2Io_V(UnitRho_)
      case('unitv')
-        eqpar(ipar)=No2Io_V(UnitU_)
+        EqPar_I(iPar)=No2Io_V(UnitU_)
      case('mu')
-        eqpar(ipar)=mu_los
+        EqPar_I(iPar)=mu_los
 !!$!^CFG  IF RAYTRACE BEGIN
      case('R_ray')
-        eqpar(ipar)=R_raytrace
+        EqPar_I(iPar)=R_raytrace
 !!$!^CFG END RAYTRACE
      case default
-        eqpar(ipar)=-7777.
+        EqPar_I(iPar)=-7777.
         if(iProc==0)write(*,*)'Error in set_eqpar: unknown eqparname=',&
-             eqparnames(ipar),' for iplotfile=',iplotfile
+             NameEqPar_I(iPar),' for iPlotFile=',iPlotFile
      end select
   end do
 
 end subroutine set_eqpar
 
 !==============================================================================
-subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
+subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      plotvar_inBody,plotvar_useBody)
 
   use ModProcMH
@@ -1272,7 +1279,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
               PlotVar(:,:,:,iVar)=-7777.
               if(iProc==0.and.iBLK==1)write(*,*) &
                    'Warning in set_plotvar: unknown plotvarname=',&
-                   plotvarnames(iVar),' for iplotfile=',iplotfile
+                   plotvarnames(iVar),' for iPlotFile=',iPlotFile
            end if
         end if
      end select
