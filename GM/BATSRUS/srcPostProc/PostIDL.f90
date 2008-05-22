@@ -7,6 +7,13 @@ program PostIDL
 
   implicit none
 
+  ! This is copied from ModKind, because PostIDL.exe may be compiled with
+  ! different precision then the rest of the codes.
+  integer, parameter :: Real4_=selected_real_kind(6,30)
+  integer, parameter :: Real8_=selected_real_kind(12,100)
+  integer, parameter :: nByteReal = 4 + (1.00000000041 - 1.0)*10000000000.0
+
+
   ! Global variables
 
   integer, parameter :: unit_tmp=99
@@ -17,6 +24,11 @@ program PostIDL
   real :: t
   real, dimension(:,:,:,:), allocatable :: xx, w
   real, dimension(:), allocatable :: w1, eqpar, dxdoubled
+
+  real(Real4_)              :: DxCell4, Xyz4_D(3)
+  real(Real4_), allocatable :: State4_V(:)
+  real(Real8_)              :: DxCell8, Xyz8_D(3)
+  real(Real8_), allocatable :: State8_V(:)
 
   ! Coordinates, sizes, indices
   real, dimension(3) :: Xyz_D, xyzmin, xyzmax, dxyz, dxyzmin, dxyzcell
@@ -47,7 +59,6 @@ program PostIDL
   integer, dimension(:,:), allocatable :: lookup
 
   ! Variables for checking binary compatibility
-  integer, parameter :: nByteReal = 4 + (1.00000000041 - 1.0)*10000000000.0
   integer            :: nByteRealRead
 
   ! Variables for generalized coordinates
@@ -109,11 +120,11 @@ program PostIDL
      else if(nByteRealRead==-1)then
         write(*,*)'!!! Warning: PostIDL was compiled with ',&
              nByteReal,' byte reals but nByteReal is not given in file !!!'
-     else
-        write(*,*)'!!! Error: PostIDL was compiled with ',&
+     else if(nByteRealRead < nByteReal)then
+        write(*,*)'!!! Warning: PostIDL was compiled with ',&
              nByteReal,' byte reals but file contains nByteReal=',nByteRealRead
-        stop '!!! Change PRECISION in Makefile.${OS} and make PIDL !!!'
      end if
+     write(*,*)'nByteReal=',nByteRealRead
   end if
 
   !Read TypeGeometry, if possible
@@ -218,7 +229,11 @@ program PostIDL
 
   ! Allocate w and xx, the arrays of variables and coordinates
   allocate(w1(nw),w(nx,ny,nz,nw),xx(nx,ny,nz,ndim),STAT=iError)
-  if(iError /= 0) stop 'PostIDL.exe ERROR: could not allocate w and x arrays'
+  if(iError /= 0) stop 'PostIDL.exe ERROR: could not allocate arrays'
+
+  if(read_binary.and.nByteRealRead==4) allocate(State4_V(nw))
+  if(read_binary.and.nByteRealRead==8) allocate(State8_V(nw))
+
 
   !Initialize w
   w=0.0
@@ -265,9 +280,15 @@ program PostIDL
         !Debug
         !write(*,*)'START READING'
         if(read_binary)then
-           read(unit_tmp,ERR=999,END=999)   dxcell, Xyz_D, w1
+           if(nByteRealRead == 4)then
+              read(unit_tmp,ERR=999,END=999) DxCell4, Xyz4_D, State4_V
+              DxCell = DxCell4; Xyz_D = Xyz4_D; w1 = State4_V
+           else
+              read(unit_tmp,ERR=999,END=999) DxCell8, Xyz8_D, State8_V
+              DxCell = DxCell8; Xyz_D = Xyz8_D; w1 = State8_V
+           end if
         else
-           read(unit_tmp,*,ERR=999,END=999) dxcell, Xyz_D, w1
+           read(unit_tmp,*,ERR=999,END=999) DxCell, Xyz_D, w1
         end if
 
         countcell=countcell+1
@@ -385,8 +406,10 @@ program PostIDL
      call save_vacfile_ascii
   end if
 
-  deallocate(w1,w,xx,eqpar)
-  if(UseLookup)deallocate(lookup, dxdoubled)
+  deallocate(w1, w, xx, eqpar)
+  if(read_binary.and.nByteRealRead==4) deallocate(State4_V)
+  if(read_binary.and.nByteRealRead==8) deallocate(State8_V)
+  if(UseLookup) deallocate(lookup, dxdoubled)
 
   write(*,'(a)')'PostIDL finished'
 
