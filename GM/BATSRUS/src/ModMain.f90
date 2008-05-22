@@ -25,15 +25,6 @@ Module ModMain
   character (len=2)   :: NameThisComp='GM'
 
   !\
-  ! Precision of reals
-  !/
-  ! Number of bytes in the default real number (precision)
-  ! nByteReal = 4 if range(1.0) is smaller than range(1.D0), otherwise 8
-  ! This is a standard F90 initialization expression but may give warnings:
-  integer, parameter :: nByteReal = 4 + (1.00000000041 - 1.0)*10000000000.0
-
-
-  !\
   ! Named indexes for directions
   !/
   integer, parameter :: x_ = 1,  y_   = 2,  z_     = 3

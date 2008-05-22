@@ -82,7 +82,8 @@ contains
        calc_point_impl_source, init_point_implicit)
 
     use ModProcMH,  ONLY: iProc
-    use ModMain,    ONLY: nI, nJ, nK, nIJK, Cfl, nStage, nByteReal, &
+    use ModKind,    ONLY: nByteReal
+    use ModMain,    ONLY: nI, nJ, nK, nIJK, Cfl, nStage, &
          iTest, jTest, kTest, ProcTest, BlkTest, Test_String
     use ModAdvance, ONLY: nVar, State_VGB, StateOld_VCB, Source_VC, Time_Blk, &
          DoReplaceDensity

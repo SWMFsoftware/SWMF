@@ -20,5 +20,9 @@ module ModKind
   integer, parameter :: Real4_=selected_real_kind(6,30)
   integer, parameter :: Real8_=selected_real_kind(12,100)
 
+  ! Number of bytes in the default real number (precision)
+  ! This is standard F90 initialization expression but may give warnings:
+  integer, parameter :: nByteReal = 4 + (1.00000000041 - 1.0)*10000000000.0
+
   !EOP
 end module ModKind
