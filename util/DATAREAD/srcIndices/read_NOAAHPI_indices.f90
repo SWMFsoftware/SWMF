@@ -11,7 +11,7 @@ subroutine read_NOAAHPI_Indices(iOutputError)
   integer, intent(out) :: iOutputError
 
   integer :: ierror, year, month, i, j, npts, npts_hpi, k
-  integer :: idir, input_coor_system, iday 
+  integer :: idir, input_coor_system, iday, datatype
   logical :: done, found
 
   ! One line of input
@@ -50,6 +50,9 @@ subroutine read_NOAAHPI_Indices(iOutputError)
      if (ierror.ne.0) done = .true.
 
      if(index(line,'Normalizing factor')>0)then
+        if(index(line,'F8.3')>0) datatype = 1
+        if(index(line,'F7.2')>0) datatype = 2
+        
         call read_values
         call merge_hpi_data
      endif
@@ -99,20 +102,31 @@ contains
     missing = -1.0e32
 
     read(LunIndices_,'(a)', iostat = ierror ) line
-    read(LunIndices_,'(i4)', iostat = ierror ) iYear
 
     if (ierror.eq.0) then
 
        done_inner = .false.
 
-       i = 1
-
+       i = 1 
+      
        do while (.not.done_inner)
 
-          tmp(1,i) = iYear
-          tmp(2,i) = 1
-          read(LunIndices_,'(a10,f3.0,f2.0,f2.0,f8.1)', iostat = ierror ) &
-               line,tmp(3:6,i)
+          if(datatype.eq.1) then
+             ! OLD NOAA HPI FILES
+             read(LunIndices_,'(i4)', iostat = ierror ) iYear
+             tmp(1,i) = iYear
+             tmp(2,i) = 1
+             read(LunIndices_,'(a10,f3.0,f2.0,f2.0,f8.1)', iostat = ierror ) &
+                  line,tmp(3:6,i)
+          endif
+
+          if(datatype.eq.2) then
+             ! NEW NOAA HPI FILES
+             read(LunIndices_,'(f4.0,a1,f2.0,a1,f2.0,a1,f2.0,a1,f2.0,a1,f2.0,a15,f8.1)', &
+                  iostat = ierror ) &
+                  tmp(1,i),line,tmp(2,i),line,tmp(3,i),line,tmp(4,i),line,tmp(5,i),line,tmp(6,i), &
+                  line,tmp(6,i)
+          endif
 
           if (ierror /= 0) then
              done_inner = .true.
