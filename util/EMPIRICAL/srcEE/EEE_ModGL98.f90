@@ -9,8 +9,10 @@ module EEE_ModGL98
 
   public get_GL98_fluxrope, adjust_GL98_fluxrope
 
-  real, public :: ModulationRho, ModulationP
   logical, public :: UseFluxRope=.false.
+  real, public :: cme_a,cme_r1,cme_r0,cme_a1,cme_alpha,cme_rho1,cme_rho2
+  real, public :: ModulationRho,ModulationP
+  real, public :: LongitudeGL98,LatitudeGL98,OrientationGL98
 
 contains
 
@@ -84,10 +86,9 @@ contains
     real, dimension(3,3) :: RotateGL98_DD
     logical, save :: DoFirst_GL=.true.
 
-    real :: cme_a,cme_r1,cme_r0,cme_a1,a1scl,rho1scl,rho2scl, &
-         SSPscl,cme_B1_dim,cme_alpha,ModulationRho,        &
-         ModulationP,OrientationGL98,LatitudeGL98,LongitudeGL98
+    real, save :: a1scl,rho1scl,rho2scl,SSPscl
     !------------------------------------------------------------------------
+    stop "some outdated scaling factors should be removed"
     if (DoFirst_GL) then
 
        DoFirst_GL=.false.
@@ -109,7 +110,6 @@ contains
           write(*,*) prefix, &
                '>>>>>>>>>>>>>>>>>>>                  <<<<<<<<<<<<<<<<<<<<<'
           write(*,*) prefix
-          write(*,*) prefix, 'B1_dim = ',cme_B1_dim
           write(*,*) prefix, 'cme_a  = ',cme_a
           write(*,*) prefix, 'cme_r1 = ',cme_r1
           write(*,*) prefix, 'cme_r0 = ',cme_r0
