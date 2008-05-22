@@ -20,20 +20,11 @@ contains
 
   subroutine get_GL98_fluxrope(R_GL98_D,rho_GL98,p_GL98,B_GL98_D)
     !--------------------------------------------------------------------------
-    ! PARAMETER LIST: cme_a, cme_r1, cme_r0, cme_a1, cme_rho1, cme_rho2,
-    !                 B1_dim,RHOsun,Vscl
     ! Definition of Parameters used for the initial state
     !   cme_a    = contraction distance as in   r --> r -a
     !   cme_r1   = distance of flux rope from sun center = 1.2
     !   cme_r0   = radius of flux rope
     !   cme_a1   = constant for setting pressure in flux rope
-    !   Rscl     = 1.0  scaled radius of the sun
-    !   RHOscl   = 1.0  scaled density of RHOsun
-    !   SSPscl   = 1.0  scaled soundspeed of the sun
-    !   rho1scl  = uniform backround density of the solution before contraction
-    !   rho2scl  = background powerlaw density added to after contraction
-    !   B1scl    = magnetic field strength parameter of the flux rope
-    !   Vscl     = V/SSPsun     
     !\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\//////////////////////////////////
     !=====================================================================
     !\
@@ -86,11 +77,9 @@ contains
     real, dimension(3,3) :: RotateGL98_DD
     logical, save :: DoFirst_GL=.true.
 
-    real, save :: a1scl,rho1scl,rho2scl,SSPscl
+    real :: a1scl,rho1scl,rho2scl,SSPscl
     !------------------------------------------------------------------------
-    stop "some outdated scaling factors should be removed"
     if (DoFirst_GL) then
-
        DoFirst_GL=.false.
        !\
        ! Construct the rotational matrix RotateGL98_DD,
@@ -106,18 +95,30 @@ contains
           write(*,*) prefix, &
                '>>>>>>>>>>>>>>>>>>>                  <<<<<<<<<<<<<<<<<<<<<'
           write(*,*) prefix, &
-               '            Initial Perturbation Is Initiated!!!'
+               '            Gibson and Low CME is initiated!!!'
+          write(*,*) prefix, &
+               '            CAUTION: this module is NOT tested!!!'
           write(*,*) prefix, &
                '>>>>>>>>>>>>>>>>>>>                  <<<<<<<<<<<<<<<<<<<<<'
           write(*,*) prefix
-          write(*,*) prefix, 'cme_a  = ',cme_a
-          write(*,*) prefix, 'cme_r1 = ',cme_r1
-          write(*,*) prefix, 'cme_r0 = ',cme_r0
-          write(*,*) prefix, 'cme_a1 = ',cme_a1
+          write(*,*) prefix, 'cme_a  = ',cme_a, '[rSun]'
+          write(*,*) prefix, 'cme_r1 = ',cme_r1,'[rSun]'
+          write(*,*) prefix, 'cme_r0 = ',cme_r0,'[rSun]'
+          write(*,*) prefix, 'cme_a1 = ',cme_a1,'[Gauss]'
+          write(*,*) prefix, 'cme_rho1 = ',cme_rho1,'[kg/m^3]'
+          write(*,*) prefix, 'cme_rho2 = ',cme_rho2,'[kg/m^3]'
           write(*,*) prefix, 'ModulationRho = ',ModulationRho
           write(*,*) prefix, 'ModulationP   = ',ModulationP
+          write(*,*) prefix, 'LongitudeGL98 = ',LongitudeGL98,'[degrees]'
+          write(*,*) prefix, 'LatitudeGL98 = ',LatitudeGL98,'[degrees]'
+          write(*,*) prefix, 'OrientationGL98 = ',OrientationGL98,'[degrees]'
        end if
     end if
+
+    a1scl   = cme_a1*Io2No_V(UnitB_)
+    rho1scl = cme_rho1*Si2No_V(UnitRho_)
+    rho2scl = cme_rho2*Si2No_V(UnitRho_)
+    SSPscl  = 1.0
 
     delta = 0.1
     !\
