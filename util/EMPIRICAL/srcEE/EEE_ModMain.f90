@@ -1,17 +1,21 @@
 !^CFG COPYRIGHT UM
 !==============================================================================
 module EEE_ModMain
-  use EEE_ModCommonVariables
-  use EEE_ModGL98
-  use EEE_ModTD99
   implicit none
-  save
+
+  private
+
+  public :: EEE_initialize
+  public :: EEE_set_parameters
+  public :: EEE_get_state_init
+  public :: EEE_get_state_BC
 
 contains
 
   !============================================================================
 
   subroutine EEE_initialize(BodyNDim,BodyTDim,gamma)
+    use EEE_ModCommonVariables
     implicit none
 
     real, intent(in) :: BodyNDim,BodyTDim,gamma
@@ -89,7 +93,28 @@ contains
 
   !============================================================================
 
+  subroutine EEE_set_parameters(NameCommand)
+    use ModReadParam, ONLY: read_var
+    use EEE_ModGL98,  ONLY: set_parameters_GL98
+    use EEE_ModTD99,  ONLY: set_parameters_TD99
+    implicit none
+
+    character(len=*), intent(in) :: NameCommand
+    !--------------------------------------------------------------------------
+    select case(NameCommand)
+    case("#TD99FLUXROPE")
+       call set_parameters_TD99
+    case("#GL98FLUXROPE")
+       call set_parameters_GL98
+    end select
+
+  end subroutine EEE_set_parameters
+
+  !============================================================================
+
   subroutine EEE_get_state_init(x_D,Rho,U_D,B_D,p,n_step,iteration_number)
+    use EEE_ModGL98
+    use EEE_ModTD99
     implicit none
 
     real, intent(in) :: x_D(3)
@@ -126,6 +151,7 @@ contains
   !============================================================================
 
   subroutine EEE_get_state_BC(x_D,Rho,U_D,B_D,p,Time,n_step,iteration_number)
+    use EEE_ModTD99
     implicit none
 
     real, intent(in) :: x_D(3),Time

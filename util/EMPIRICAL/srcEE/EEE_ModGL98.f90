@@ -7,14 +7,36 @@ module EEE_ModGL98
 
   private
 
-  public get_GL98_fluxrope, adjust_GL98_fluxrope
+  public :: set_parameters_GL98,get_GL98_fluxrope,adjust_GL98_fluxrope
 
   logical, public :: UseFluxRope=.false.
-  real, public :: cme_a,cme_r1,cme_r0,cme_a1,cme_alpha,cme_rho1,cme_rho2
-  real, public :: ModulationRho,ModulationP
-  real, public :: LongitudeGL98,LatitudeGL98,OrientationGL98
+  real :: cme_a,cme_r1,cme_r0,cme_a1,cme_alpha,cme_rho1,cme_rho2
+  real :: ModulationRho,ModulationP
+  real :: LongitudeGL98,LatitudeGL98,OrientationGL98
 
 contains
+
+  !============================================================================
+
+  subroutine set_parameters_GL98
+    use ModReadParam, ONLY: read_var
+    implicit none
+    !--------------------------------------------------------------------------
+    call read_var('UseFluxRope',     UseFluxRope)
+    call read_var('cme_a',           cme_a)
+    call read_var('cme_r1',          cme_r1)
+    call read_var('cme_r0',          cme_r0)
+    call read_var('cme_a1',          cme_a1)
+    call read_var('cme_alpha',       cme_alpha)
+    call read_var('cme_rho1',        cme_rho1)
+    call read_var('cme_rho2',        cme_rho2)
+    call read_var('ModulationRho',   ModulationRho)
+    call read_var('ModulationP',     ModulationP)
+    call read_var('LongitudeGL98',   LongitudeGL98)
+    call read_var('LatitudeGL98',    LatitudeGL98)
+    call read_var('OrientationGL98', OrientationGL98)
+
+  end subroutine set_parameters_GL98
 
   !============================================================================
 

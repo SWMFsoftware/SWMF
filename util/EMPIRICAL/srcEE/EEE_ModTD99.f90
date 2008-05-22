@@ -7,17 +7,28 @@ module EEE_ModTD99
 
   private
 
-  public get_transformed_TD99fluxrope
+  public :: set_parameters_TD99,get_transformed_TD99fluxrope
+
+  !----------------------------------------------------------------------
+  ! Logical variables related to the magnetic field computation::
+  logical, public :: UseTD99Perturbation=.false.
+  logical, public :: DoTD99FluxRope=.false.
+  logical :: DoEquilItube=.false.
+  logical :: DoRevCurrent=.false.
+  logical, public :: DoBqField=.false.
+  logical, public :: UseVariedCurrent=.false.
+  logical :: DoMaintainEpot=.false.
+  real :: CurrentRiseTime,CurrentStartTime
 
   !----------------------------------------------------------------------
   ! Variables related to the position of the flux rope::
   real, parameter :: Li_TD99=0.5
-  real, public :: LongitudeTD99,LatitudeTD99,OrientationTD99
+  real :: LongitudeTD99,LatitudeTD99,OrientationTD99
 
   !----------------------------------------------------------------------
   ! Variables related to the flux rope properties::
-  real, public :: Itube_TD99,Rtube_TD99,atube_TD99,d_TD99,aratio_TD99
-  real, public :: Mass_TD99
+  real :: Itube_TD99,Rtube_TD99,atube_TD99,d_TD99,aratio_TD99
+  real :: Mass_TD99
   real :: InvH0_TD99,Rho0_TD99
   real :: ItubeSaved
 
@@ -30,24 +41,41 @@ module EEE_ModTD99
   real, parameter :: UVorCMax0=2.5                 !in units of 100 km/s
   real, parameter :: BqZMax0=3.768210E+01          !in [Gauss]
   real :: BqZMax,BqZMaxSaved,UVorCMax
-  real, public :: q_TD99,L_TD99
-
-  !----------------------------------------------------------------------
-  ! Logical variables related to the magnetic field computation::
-  logical, public :: UseTD99Perturbation=.false.
-  logical, public :: DoTD99FluxRope=.false.
-  logical, public :: DoEquilItube=.false.
-  logical, public :: DoRevCurrent=.false.
-  logical, public :: DoBqField=.false.
-  logical, public :: UseVariedCurrent=.false.
-  logical :: DoMaintainEpot=.false.
-  real, public :: CurrentRiseTime,CurrentStartTime
+  real :: q_TD99,L_TD99
 
   !----------------------------------------------------------------------
   ! Declare the rotational matrix of coordinate transformation::
   real, dimension(3,3) :: RotateTD99_DD
 
 contains
+
+  !============================================================================
+
+  subroutine set_parameters_TD99
+    use ModReadParam, ONLY: read_var
+    implicit none
+    !--------------------------------------------------------------------------
+    call read_var('UseTD99Perturbation' ,UseTD99Perturbation)
+    call read_var('UseVariedCurrent'    ,UseVariedCurrent)
+    call read_var('CurrentStartTime'    ,CurrentStartTime)
+    call read_var('CurrentRiseTime '    ,CurrentRiseTime)
+    call read_var('DoTD99FluxRope'      ,DoTD99FluxRope)
+    call read_var('DoEquilItube'        ,DoEquilItube)
+    call read_var('DoRevCurrent'        ,DoRevCurrent)
+    call read_var('aratio_TD99'         ,aratio_TD99)
+    call read_var('Itube_TD99'          ,Itube_TD99)
+    call read_var('Rtube_TD99'          ,Rtube_TD99)
+    call read_var('atube_TD99'          ,atube_TD99)
+    call read_var('d_TD99'              ,d_TD99)
+    call read_var('Mass_TD99'           ,Mass_TD99)
+    call read_var('LongitudeTD99'       ,LongitudeTD99)
+    call read_var('LatitudeTD99'        ,LatitudeTD99)
+    call read_var('OrientationTD99'     ,OrientationTD99)
+    call read_var('DoBqField'           ,DoBqField)
+    call read_var('q_TD99'              ,q_TD99)
+    call read_var('L_TD99'              ,L_TD99)
+
+  end subroutine set_parameters_TD99
 
   !============================================================================
 

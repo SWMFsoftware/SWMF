@@ -1,7 +1,6 @@
 !^CFG COPYRIGHT UM
 !==============================================================================
 module ModUser
-  use EEE_ModMain
   use ModMagnetogram
   use ModExpansionFactors
   use ModUserEmpty,                                     &
@@ -28,12 +27,13 @@ contains
     use ModReadParam
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
     use ModPhysics,   ONLY: BodyNDim_I,BodyTDim_I,g
+    use EEE_ModMain,  ONLY: EEE_initialize,EEE_set_parameters
+    implicit none
 
     integer:: i
     character (len=100) :: NameCommand
     character (len=lStringLine)   :: NameModel
-    !-------------------------------------------------------------------------
-
+    !--------------------------------------------------------------------------
     call EEE_initialize(BodyNDim_I(1),BodyTDim_I(1),g)
 
     if(iProc==0.and.lVerbose > 0)then
@@ -50,40 +50,9 @@ contains
              call read_var('dt_UpdateB0',dt_UpdateB0)
              DoUpdateB0 = dt_updateb0 > 0.0
           endif
-       case("#TD99FLUXROPE")
-          call read_var('UseTD99Perturbation' ,UseTD99Perturbation)
-          call read_var('UseVariedCurrent'    ,UseVariedCurrent)
-          call read_var('CurrentStartTime'    ,CurrentStartTime)
-          call read_var('CurrentRiseTime '    ,CurrentRiseTime)
-          call read_var('DoTD99FluxRope'      ,DoTD99FluxRope)
-          call read_var('DoEquilItube'        ,DoEquilItube)
-          call read_var('DoRevCurrent'        ,DoRevCurrent)
-          call read_var('aratio_TD99'         ,aratio_TD99)
-          call read_var('Itube_TD99'          ,Itube_TD99)
-          call read_var('Rtube_TD99'          ,Rtube_TD99)
-          call read_var('atube_TD99'          ,atube_TD99)
-          call read_var('d_TD99'              ,d_TD99)
-          call read_var('Mass_TD99'           ,Mass_TD99)
-          call read_var('LongitudeTD99'       ,LongitudeTD99)
-          call read_var('LatitudeTD99'        ,LatitudeTD99)
-          call read_var('OrientationTD99'     ,OrientationTD99)
-          call read_var('DoBqField'           ,DoBqField)
-          call read_var('q_TD99'              ,q_TD99)
-          call read_var('L_TD99'              ,L_TD99)
-       case("#GL98FLUXROPE")
-          call read_var('UseFluxRope',     UseFluxRope)
-          call read_var('cme_a',           cme_a)
-          call read_var('cme_r1',          cme_r1)
-          call read_var('cme_r0',          cme_r0)
-          call read_var('cme_a1',          cme_a1)
-          call read_var('cme_alpha',       cme_alpha)
-          call read_var('cme_rho1',        cme_rho1)
-          call read_var('cme_rho2',        cme_rho2)
-          call read_var('ModulationRho',   ModulationRho)
-          call read_var('ModulationP',     ModulationP)
-          call read_var('LongitudeGL98',   LongitudeGL98)
-          call read_var('LatitudeGL98',    LatitudeGL98)
-          call read_var('OrientationGL98', OrientationGL98)
+
+       case("#TD99FLUXROPE","#GL98FLUXROPE")
+          call EEE_set_parameters(NameCommand)
        case("#EMPIRICALSW")
           call read_var('NameModel',NameModel)
           call set_empirical_model(trim(NameModel))
@@ -113,17 +82,13 @@ contains
     use ModMain,       ONLY: time_accurate,x_,y_,z_, UseRotatingFrame, &
          n_step, Iteration_Number
     use ModVarIndexes, ONLY: nVar,Ew_,rho_,Ux_,Uy_,Uz_,Bx_,By_,Bz_,P_
-
-    use ModGeometry,   ONLY: R_BLK
     use ModAdvance,    ONLY: State_VGB
-    use ModPhysics,    ONLY: inv_gm1,OmegaBody,Si2No_V,UnitB_,UnitU_,UnitRho_
+    use ModPhysics,    ONLY: inv_gm1,OmegaBody,Si2No_V, &
+         UnitB_,UnitU_,UnitRho_,UnitP_
     use ModNumConst,   ONLY: cTolerance,cTiny
-
-    use ModBlockData, ONLY: use_block_data, put_block_data, get_block_data
-
     use ModFaceBc, ONLY: FaceCoords_D, VarsTrueFace_V, TimeBc, &
          iFace, jFace, kFace, iSide, iBlockBc
-
+    use EEE_ModMain,   ONLY: EEE_get_state_BC
     implicit none
 
     real, intent(out):: VarsGhostFace_V(nVar)
@@ -267,6 +232,7 @@ contains
     use ModPhysics,   ONLY: Si2No_V,UnitU_,UnitRho_,UnitP_,UnitB_
     use ModGeometry
     use ModEnergy,    ONLY: calc_energy_cell
+    use EEE_ModMain,  ONLY: EEE_get_state_init
     implicit none
 
     integer :: i,j,k,iBLK
