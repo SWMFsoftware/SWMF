@@ -30,6 +30,8 @@ Module ModConst
   ! Atomic unit of mass [kg]
   real,parameter :: cAtomicMass = 1.66053E-27
 
+
+
   ! Proton mass [kg]
   real, parameter :: cProtonMass = 1.6726E-27
 
@@ -38,6 +40,10 @@ Module ModConst
 
   ! Speed of light [m/s]
   real, parameter :: cLightSpeed =  2.9979E+8
+
+  !Plank constant  [J*s]
+  real,parameter  :: cPlankH    = 6.62E-34        !J * s
+  real,parameter  :: cPlankHBar = cPlankH /cTwoPi
 
   ! Vacuum permeability [H/m]
   real, parameter :: cMu = cPi*4E-7
@@ -60,6 +66,9 @@ Module ModConst
   !\
   ! Units for energy.
   !/
+  
+  real,parameter:: cErg=1.0E-7 !J
+
   real, parameter :: cEV  = cElectronCharge
   real, parameter :: cKEV = 1000 * cEV
   real, parameter :: cMEV = 1000 * cKEV
@@ -69,6 +78,10 @@ Module ModConst
   real, parameter :: cEVToK  =  cEV / cBoltzmann
   real, parameter :: cKEVToK = cKEV / cBoltzmann
   real, parameter :: cMEVToK = cMEV / cBoltzmann
+
+  real, parameter :: cKToEV  = cOne / cEVToK
+  real, parameter :: cKToKEV = cOne / cKEVToK
+  real, parameter :: cKToMEV = cOne / cMEVToK
 
   !\
   ! Here RME stands for Rest Mass Energy.
