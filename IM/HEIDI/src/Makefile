@@ -96,7 +96,7 @@ DEPEND:
 IE_LIB = libIE.a
 
 ${IE_LIB}: DEPEND ${MODULES_IE} ${OBJECTS_IE}
-	rm -f ${IE_LIB}
+	cp -f ${LIBDIR}/libSHARE.a ${IE_LIB}
 	${AR} ${IE_LIB} ${MODULES_IE} ${OBJECTS_IE}
 
 # Object files not included into the library
@@ -104,11 +104,11 @@ ${IE_LIB}: DEPEND ${MODULES_IE} ${OBJECTS_IE}
 main.o : ${IE_LIB}
 
 standalone : main.o
-	${LINK.f90} -o test.exe main.o $ -L. -lIE ${Lflag1}
+	${LINK.f90} -o test.exe main.o ${MODULES_IE}$  -L. -lIE ${Lflag1}
 
 #	${LINK.f90} -o test.exe ${MODULES} ${OBJECTS} main.o 
 interface: ${IE_LIB} Interface.o
-	${LINK.f90} -o Interface.exe Interface.o ${MODULES} -L. -lIE ${Lflag1}
+	${LINK.f90} -o Interface.exe Interface.o ${MODULES_IE} -L. -lIE ${Lflag1}
 
 IONO_LIB = libIONO.a
 
@@ -119,6 +119,7 @@ ${IONO_LIB}: DEPEND ${MODULES} ${OBJECTS_IONO} ${IE_LIB}
 MY_LIB = libHEIDI.a
 
 ${MY_LIB}: DEPEND ${OBJECTS}
+	cp ${LIBDIR}/libSHARE.a ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS} 
 
 LIB : DEPEND
@@ -132,7 +133,7 @@ iono.o : ${IONO_LIB}
 #main.o : ${IONO_LIB}
 
 IONO.exe :	iono.o #main.o
-	${LINK.f90} -o IONO.exe iono.o -L. -lIONO ${Lflag1} 
+	${LINK.f90} -o IONO.exe iono.o ${MODULES} -L. -lIONO  -L${LIBDIR} -lSHARE ${Lflag1}
 
 HEIDI:  LIB
 	make HEIDI.exe
@@ -140,7 +141,7 @@ HEIDI:  LIB
 SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
 
 HEIDI.exe: ${OBJECTS} heidi_main.o
-	${LINK.f90} -o ${BINDIR}/HEIDI.exe heidi_main.o ${OBJECTS}
+	${LINK.f90} -o ${BINDIR}/HEIDI.exe heidi_main.o ${OBJECTS} -L${LIBDIR} -lSHARE ${Lflag1}
 
 #clean:
 #	/bin/rm -f *.o *.mod
