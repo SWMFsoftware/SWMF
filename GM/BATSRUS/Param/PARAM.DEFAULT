@@ -50,12 +50,8 @@ F			DoAutoRefine
 T			UseBody
 2.5			rBody      [rEarth]
 3.5			rCurrents  [rEarth]
-10.0			BodyRhoDim [amu/cc]
+28.0			BodyRhoDim [amu/cc]
 25000.0			BodyTDim   [K]
-
-! This is based on the SC-IH steady state but Bz sign is flipped to northward,
-! the temperature is increased to 250000 K and density is decreased so that
-! the pressure remains constant.
 
 #SOLARWIND
 5.0                     SwRhoDim [amu/cc]
