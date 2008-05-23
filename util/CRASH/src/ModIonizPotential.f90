@@ -6,12 +6,16 @@
 !Published in 2000 by Springer
 !=================================
 
+
+
 module ModIonizPotential
   implicit none
   PRIVATE !Except
  !/////////////////////////////////////////////////////////////////////////////
- 
-  real, parameter, dimension(10,10) :: cPotentials10_II = reshape(  (/   &
+
+!First 10 elements - full ionizations 
+
+real, parameter, dimension(10,10) :: cPotentials10_II = reshape(  (/   &
   !   1   !    2    !    3   !    4   !   5   !   6   !   7   !   8   !   9   !    10    !
   13.59844, 0.      , 0.     , 0.     , 0.    , 0.    , 0.    , 0.    , 0.    ,  0.      ,&  ! 1 - H
   24.58741, 54.41778, 0.     , 0.     , 0.    , 0.    , 0.    , 0.    , 0.    ,  0.      ,&  ! 2 - He
@@ -24,6 +28,8 @@ module ModIonizPotential
   17.42282, 34.97082, 62.708 , 87.140 , 114.24, 157.17, 185.19, 953.91, 1103.1,  0.      ,&  ! 9 - F
   21.56454, 40.96328, 63.45  , 97.12  , 126.21, 157.93, 207.28, 239.10, 1195.8, 1362.2 /),&  !10 - Ne
                                                                                           (/10,10/))
+
+ !Elements 11 - 20 full ionizations
 
  real, parameter, dimension(20,11:20) :: cPotentials20_II = reshape((/&
   !   1   !    2    !    3  !    4   !    5  !   6   !   7   !    8  !   9  !   10  !
@@ -58,6 +64,8 @@ module ModIonizPotential
   591.9   , 657.    , 727.  , 818.   , 895.  , 972.  , 1087. , 1157. , 5129., 5470./),& !10-s
                                                                                      (/20,10/))
 
+  !Elements 21 - 30 - full ionizations
+
   !   1  !    2    !   3   !   4   !   5  !   6   !   7   !   8   !   9  !  10  !
   real, parameter, dimension(30,21:30) :: cPotentials30_II = reshape((/&
   6.56144, 12.79967, 24.757, 73.489, 91.65, 111.68, 138.0 , 158.1 , 180.0, 225.2,& !    21 - Sc
@@ -86,11 +94,18 @@ module ModIonizPotential
   1756.  , 1894.   , 2010. , 2131. , 2295., 2398. , 10280., 10790., 0.   , 0.   ,& ! 20-s
   7.72638, 20.29240, 36.841, 55.2  , 79.9 , 103.  , 139.  , 167.  , 199. , 232. ,& ! 29 - Cu
   266.   , 369.    , 401.  , 435.  , 484. , 520.  , 557.  , 633.  , 671. , 1698.,& ! 10-s
-  1804.  , 1919.   , 2060. , 2182. , 2310., 2478. , 2560. , 11050., 11400., 0. ,&  ! 20-s  <==29 is  APPROXIMATE
+  1804.  , 1919.   , 2060. , 2182. , 2310., 2478. , 2560. , 11050., 11567.617, 0. ,&  ! 20-s  <==29 is  APPROXIMATE (HandBook of...
   9.39405, 17.96440, 39.723, 59.4  , 82.6 , 108.  , 136.  , 175.  , 203. , 238. ,& ! 30 - Zn
   274.   , 311.    , 412.  , 454.  , 490. , 542.  , 579.  , 619.  , 698. , 738. ,& ! 10-s
   1856.  , 1970.   , 2088. , 2234. , 2363., 2495. , 2660. , 2730. , 11200., 12200./), (/30,10/))! 20-s  <== 29,30 is APPROXIMATE
  
+
+  !Xe (54) - first 11 ionization potentials
+  real, parameter, dimension(11) :: cPotentialsXe = (/&
+   !   1  !   2   !   3  !	 4	!  5   !   6  !	  7	  !	  8	  !   9   !	 10	  !
+   12.1299, 21.21 , 32.10, 52.42, 65.31, 89.80, 103.41, 176.88, 204.09, 225.86,& ! Ionization levels 1-10
+   255.79/)	! 11
+
 
  public :: get_ioniz_potential
 
@@ -107,6 +122,8 @@ contains
              cPotential_I = cPotentials20_II( 1:nZ, nZ)
            case (21:30)
              cPotential_I = cPotentials30_II( 1:nZ, nZ)
+		   case (54)
+		     cPotential_I(1:11) = cPotentialsXe
            case default
              write(*,*) "No such element found in the database"
          end select
