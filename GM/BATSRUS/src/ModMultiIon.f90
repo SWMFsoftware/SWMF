@@ -227,15 +227,17 @@ contains
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
 
     logical :: IsPointImpl_V(nVar)
-    integer :: iVar, iPointImplVar, nPointImplVar
+    integer :: iVar, iPointImplVar, nPointImplVar,n
     !------------------------------------------------------------------------
 
     IsPointImpl_V = .false.
 
     if(UseUserSource)then
        call user_init_point_implicit
-       if(allocated(iVarPointImpl_I)) &
-            IsPointImpl_V(iVarPointImpl_I) = .true.
+       if(allocated(iVarPointImpl_I)) then
+          IsPointImpl_V(iVarPointImpl_I) = .true.
+          deallocate(iVarPointImpl_I)
+       end if
     end if
 
     IsPointImplMatrixSet = .false.
