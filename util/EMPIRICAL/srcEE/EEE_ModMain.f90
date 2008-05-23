@@ -112,14 +112,16 @@ contains
 
   !============================================================================
 
-  subroutine EEE_get_state_init(x_D,Rho,U_D,B_D,p,n_step,iteration_number)
+  subroutine EEE_get_state_init(x_D,Rho,B_D,p,n_step,iteration_number)
     use EEE_ModGL98
     use EEE_ModTD99
     implicit none
 
     real, intent(in) :: x_D(3)
-    real, intent(out) :: Rho,U_D(3),B_D(3),p
+    real, intent(out) :: Rho,B_D(3),p
     integer, intent(in) :: n_step,iteration_number
+
+    real :: U_D(3)
     !--------------------------------------------------------------------------
 
     ! initialize perturbed state variables

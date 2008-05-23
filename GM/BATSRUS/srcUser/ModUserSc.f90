@@ -95,11 +95,11 @@ contains
 
     integer:: iCell,jCell,kCell
 
-    real:: DensCell,PresCell,GammaCell, B1dotR  
+    real:: DensCell,PresCell,GammaCell,TBase,B1dotR  
     real, dimension(3):: RFace_D,B1_D,U_D,B1t_D,B1n_D
 
     real :: RhoCME,UCME_D(nDim),BCME_D(nDim),pCME
-    real :: BCMEn, BCMEn_D(nDim)
+    real :: BCMEn,BCMEn_D(nDim),UCMEn,UCMEn_D(nDim),UCMEt_D(nDim)
     !--------------------------------------------------------------------------
 
     RFace_D  = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
@@ -127,14 +127,20 @@ contains
     BCME_D = BCME_D*Si2No_V(UnitB_)
     pCME = pCME*Si2No_V(UnitP_)
 
-    BCMEn   = dot_product(RFace_D,BCME_D)
-    BCMEn_D = BCMEn*RFace_D
     !\
     ! Fix the normal component of the CME field to BCMEn_D at the Sun::
     !/
+    BCMEn   = dot_product(RFace_D,BCME_D)
+    BCMEn_D = BCMEn*RFace_D
     VarsGhostFace_V(Bx_:Bz_) = VarsGhostFace_V(Bx_:Bz_) + BCMEn_D
 
-    ! CME velocity update should be added here
+    !\
+    ! Fix the tangential components of the CME velocity at the Sun
+    !/
+    UCMEn   = dot_product(RFace_D,UCME_D)
+    UCMEn_D = UCMEn*RFace_D
+    UCMEt_D = UCME_D-UCMEn_D   
+    VarsGhostFace_V(Ux_:Uz_) = VarsGhostFace_V(Ux_:Uz_) + 2.0*UCMEt_D
 
     !\
     ! Update BCs for the mass density, EnergyRL,
@@ -164,11 +170,12 @@ contains
     VarsGhostFace_V(Rho_) = &
          max(-VarsTrueFace_V(Rho_) + 2.0*(DensCell+RhoCME), &
          VarsTrueFace_V(Rho_))
+    TBase = (PresCell+pCME)/(DensCell+RhoCME)
     VarsGhostFace_V(P_) = &
-         max(VarsGhostFace_V(Rho_)*(PresCell+pCME)/(DensCell+RhoCME), &
+         max(VarsGhostFace_V(Rho_)*TBase, &
          VarsTrueFace_V(P_))
     VarsGhostFace_V(Ew_) = &!max(-VarsTrueFace_V(Ew_)+ &
-         VarsGhostFace_V(Rho_)*(PresCell+pCME)/(DensCell+RhoCME) &
+         VarsGhostFace_V(Rho_)*TBase &
          *(1.0/(GammaCell-1.0)-inv_gm1)
 
     !\
@@ -237,7 +244,7 @@ contains
 
     integer :: i,j,k,iBLK
     logical :: oktest,oktest_me
-    real :: x_D(nDim),Rho,U_D(nDim),B_D(nDim),p
+    real :: x_D(nDim),Rho,B_D(nDim),p
 
     real :: Mass=0.0
     !--------------------------------------------------------------------------
@@ -251,11 +258,10 @@ contains
           x_D(y_) = y_BLK(i,j,k,iBLK)
           x_D(z_) = z_BLK(i,j,k,iBLK)
 
-          call EEE_get_state_init(x_D,Rho,U_D,B_D,p, &
+          call EEE_get_state_init(x_D,Rho,B_D,p, &
                n_step,iteration_number)
 
           Rho = Rho*Si2No_V(UnitRho_)
-          U_D = U_D*Si2No_V(UnitU_)
           B_D = B_D*Si2No_V(UnitB_)
           p = p*Si2No_V(UnitP_)
 
@@ -263,15 +269,7 @@ contains
           ! Add the eruptive event state to the solar wind
           !/
           State_VGB(Rho_,i,j,k,iBLK) = State_VGB(Rho_,i,j,k,iBLK) + Rho
-          State_VGB(RhoUx_,i,j,k,iBLK) = &
-               State_VGB(RhoUx_,i,j,k,iBLK) + Rho*U_D(x_)
-          State_VGB(RhoUy_,i,j,k,iBLK) = &
-               State_VGB(RhoUy_,i,j,k,iBLK) + Rho*U_D(y_)
-          State_VGB(RhoUz_,i,j,k,iBLK) = &
-               State_VGB(RhoUz_,i,j,k,iBLK) + Rho*U_D(z_)
-          State_VGB(Bx_,i,j,k,iBLK) = State_VGB(Bx_,i,j,k,iBLK) + B_D(x_)
-          State_VGB(By_,i,j,k,iBLK) = State_VGB(By_,i,j,k,iBLK) + B_D(y_)
-          State_VGB(Bz_,i,j,k,iBLK) = State_VGB(Bz_,i,j,k,iBLK) + B_D(z_)
+          State_VGB(Bx_:Bz_,i,j,k,iBLK) = State_VGB(Bx_:Bz_,i,j,k,iBLK) + B_D
           State_VGB(P_,i,j,k,iBLK) = State_VGB(P_,i,j,k,iBLK) + p
 
           !\
