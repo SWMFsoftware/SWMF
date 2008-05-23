@@ -111,24 +111,24 @@ real, parameter, dimension(10,10) :: cPotentials10_II = reshape(  (/   &
 
 contains
   subroutine get_ioniz_potential( nZ, cPotential_I)
-         integer,intent(in) :: nZ
+    integer,intent(in) :: nZ
 
-         real,intent(out), dimension(nZ) :: cPotential_I
-	   
-         select case (nZ)
-           case (1:10)
-             cPotential_I = cPotentials10_II( 1:nZ, nZ)
-           case (11:20)
-             cPotential_I = cPotentials20_II( 1:nZ, nZ)
-           case (21:30)
-             cPotential_I = cPotentials30_II( 1:nZ, nZ)
-		   case (54)
-		     cPotential_I(1:11) = cPotentialsXe
-           case default
-             write(*,*) "No such element found in the database"
-         end select
-
-  end subroutine get_ioniz_potential  
+    real,intent(out), dimension(nZ) :: cPotential_I
+    
+    select case (nZ)
+    case (1:10)
+       cPotential_I = cPotentials10_II( 1:nZ, nZ)
+    case (11:20)
+       cPotential_I = cPotentials20_II( 1:nZ, nZ)
+    case (21:30)
+       cPotential_I = cPotentials30_II( 1:nZ, nZ)
+    case (54)
+       cPotential_I(1:11) = cPotentialsXe
+    case default
+       write(*,*) "No such element found in the database"
+    end select
+    
+  end subroutine get_ioniz_potential
 end module ModIonizPotential
   
 
