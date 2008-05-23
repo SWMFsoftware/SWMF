@@ -143,80 +143,9 @@ SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
 HEIDI.exe: ${OBJECTS} heidi_main.o
 	${LINK.f90} -o ${BINDIR}/HEIDI.exe heidi_main.o ${OBJECTS} -L${LIBDIR} -lSHARE ${Lflag1}
 
-#clean:
-#	/bin/rm -f *.o *.mod
-#	cd ../srcInterface/srcIONO ; make clean
-#	cd ../srcInterface/srcIE ; make clean
 
 distclean: clean
 	rm -f Makefile.DEPEND Makefile.RULES
 
 
-# HEADERS = \
-# 	numv.h
-# 
-# OBJECTS = \
-# 	mram03.o\
-# 	fct-source.o\
-# 	msis86.o\
-# 	iri87.o\
-# 	recipes.o\
-# 	plane.o\
-# 	wgrdar.o
-# 
-# OBJECTS_4 = \
-# 	mram04.o\
-# 	recipes.o\
-# 	pbo.o\
-# 	wgrdar.o
-# 
-# OBJECTS_5 = \
-# 	mram05.o\
-# 	recipes.o\
-# 	pbo.o\
-# 	wgrdar.o\
-# 	get_potential.o
-# 
-# ${OBJECTS}:	${HEADERS}
-# 
-# mram03.exe:	${MODULES} ${OBJECTS} ${HEADERS}
-# 	$(FORTRAN) $(LFLAGS) -o mram03.exe ${MODULES} ${OBJECTS} ${IONO}
-# 
-# mram05:
-# 	cd ../srcInterface/srcIONO ; make LIB
-# 	cd ../srcInterface/srcIE ; make LIB
-# 	make mram05.exe
-# 
-# mram05.exe:	${MODULES} ${OBJECTS_5} ${HEADERS} ../srcInterface/srcIE/libIE.a
-# 	$(FORTRAN) $(LFLAGS) -o mram05.exe ${MODULES} ${OBJECTS_5} ${IONO}\
-# 	-L../srcInterface/srcIE -lIE
-# 
-# mram04:
-# 	cd ../srcInterface/srcIONO ; make
-# 	make mram04.exe
-# 
-# mram04.exe:	${MODULES} ${OBJECTS_4} ${HEADERS}
-# 	$(FORTRAN) $(LFLAGS) -o mram04.exe ${MODULES} ${OBJECTS_4} ${IONO}
-# 
-# mram02_epen:  mram02_epen.o fct-source.o iri87.o msis86.o recipes.o plane.o wgrdar.o numv.h
-# 	$(FORTRAN) $(CFLAGS) -o mram02_epen mram02_epen.o fct-source.o msis86.o iri87.o recipes.o plane.o wgrdar.o
-# 
-# mram01:  mram01.o fct-source.o iri87.o msis86.o recipes.o plane.o wgrdar.o numv.h
-# 	$(FORTRAN) $(CFLAGS) -o mram01 mram01.o fct-source.o msis86.o iri87.o recipes.o plane.o wgrdar.o
-# 
-# mram02:  mram02.o fct-source.o iri87.o msis86.o recipes.o plane.o wgrdar.o numv.h
-# 	$(FORTRAN) $(CFLAGS) -o mram02 mram02.o fct-source.o msis86.o iri87.o recipes.o plane.o wgrdar.o
-# 
-# mram01_ios:  mram01_ios.o fct-source.o iri87.o msis86.o recipes.o plane.o wgrdar.o numv.h
-# 	$(FORTRAN) $(CFLAGS) -o mram01_ios mram01_ios.o fct-source.o msis86.o iri87.o recipes.o plane.o wgrdar.o
-# 
-# mram01_ena:  mram01_ena.o fct-source.o iri87.o msis86.o recipes.o plane.o wgrdar.o numv.h
-# 	$(FORTRAN) $(CFLAGS) -o mram01_ena mram01_ena.o fct-source.o msis86.o iri87.o recipes.o plane.o wgrdar.o
-# 
-# thermal:  therm1.o fct-source.o iri87.o msis86.o recipes.o plane.o numv.h
-# 	$(FORTRAN) $(CCFLAGS) -o thermal therm1.o fct-source.o msis86.o iri87.o recipes.o plane.o
-# 
-# SOURCES = cross7.f cross7c.f diff7b.f espec7.f geomag.f getf107.f glowsub7.f iri90.f maincpl7c.f math.f msis90.f rcolum.f solzen.f ssflux.f stet7c.f stetprn7c.f stetsub7.f substet7c.f thermstet7c.f wave7.f
-# 
-# all:	
-# 	$(FORTRAN) $(CFLAGS) -c $(SOURCES)
+
