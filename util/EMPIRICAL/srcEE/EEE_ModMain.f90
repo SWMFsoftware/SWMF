@@ -122,6 +122,7 @@ contains
     integer, intent(in) :: n_step,iteration_number
 
     real :: U_D(3)
+    real :: Rho1,U1_D(3),B1_D(3),p1
     !--------------------------------------------------------------------------
 
     ! initialize perturbed state variables
@@ -131,21 +132,29 @@ contains
        !\
        ! Add Titov & Demoulin (TD99) flux rope
        !/
+       Rho1=0.0; U1_D=0.0; B1_D=0.0
+
        if(UseVariedCurrent)then
-          B_D = 0.0
+          B1_D = 0.0
        else
-          call get_transformed_TD99fluxrope(x_D,B_D,&
-               U_D,n_step,iteration_number,Rho)
+          call get_transformed_TD99fluxrope(x_D,B1_D,&
+               U1_D,n_step,iteration_number,Rho1)
        end if
+
+       Rho=Rho+Rho1; U_D=U_D+U1_D; B_D=B_D+B1_D
     end if
 
     if(UseFluxRope)then
        !\
        ! Add Gibson & Low (GL98) flux rope
        !/
-       call get_GL98_fluxrope(x_D,Rho,p,B_D)
+       Rho1=0.0; B1_D=0.0; p1=0.0
 
-       call adjust_GL98_fluxrope(Rho,p)
+       call get_GL98_fluxrope(x_D,Rho1,p1,B1_D)
+
+       call adjust_GL98_fluxrope(Rho1,p1)
+
+       Rho=Rho+Rho1; B_D=B_D+B1_D; p=p+p1
     end if
 
   end subroutine EEE_get_state_init
@@ -159,17 +168,22 @@ contains
     real, intent(in) :: x_D(3),Time
     real, intent(out) :: Rho,U_D(3),B_D(3),p
     integer, intent(in) :: n_step,iteration_number
+
+    real :: Rho1,U1_D(3),B1_D(3),p1
     !--------------------------------------------------------------------------
 
     ! initialize perturbed state variables
     Rho=0.0; U_D=0.0; B_D=0.0; p=0.0
 
     if (DoTD99FluxRope.or.DoBqField) then
+       Rho1=0.0; U1_D=0.0; B1_D=0.0
 
-       call get_transformed_TD99fluxrope(x_D,B_D,&
-            U_D,n_step,Iteration_Number,Rho,Time)
+       call get_transformed_TD99fluxrope(x_D,B1_D,&
+            U1_D,n_step,Iteration_Number,Rho1,Time)
 
-       if(.not.DoBqField) U_D=0.0
+       if(.not.DoBqField) U1_D=0.0
+
+       Rho=Rho+Rho1; U_D=U_D+U1_D; B_D=B_D+B1_D
     end if
 
   end subroutine EEE_get_state_BC
