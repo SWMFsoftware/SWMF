@@ -5,8 +5,8 @@ subroutine specify_initial_refinement(refb, lev)
        UseUserSpecifyRefinement,&
        body1,UseRotatingBc,unusedBLK
   use ModGeometry, ONLY : XyzMin_D,XyzMax_D,XyzStart_BLK,&
-       dy_BLK,dz_BLK,TypeGeometry,x1,x2,&                
-       x_BLK,y_BLK,z_BLK,dx_BLK,far_field_BCs_BLK
+       x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK,dz_BLK, &
+       TypeGeometry,x1,x2,far_field_BCs_BLK
   use ModPhysics, ONLY : Rbody,Rcurrents
   use ModAMR, ONLY : InitialRefineType
   use ModNumConst
@@ -161,9 +161,11 @@ subroutine specify_area_refinement(DoRefine_B)
   ! if the area has a finer resolution than the block
 
   use ModProcMH,   ONLY: iProc
-  use ModMain,     ONLY: MaxBlock, nBlock, nBlockMax, nI, nJ, nK, UnusedBlk
+  use ModMain,     ONLY: MaxBlock, nBlock, nBlockMax, nI, nJ, nK, UnusedBlk, &
+       BlkTest, Test_String
   use ModAMR,      ONLY: nArea, Area_I
-  use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, dx_BLK
+  use ModGeometry, ONLY: dx_BLK, UseCovariant
+  use ModNodes,    ONLY: NodeX_NB, NodeY_NB, NodeZ_NB
 
   implicit none
 
@@ -171,19 +173,26 @@ subroutine specify_area_refinement(DoRefine_B)
   logical, intent(inout) :: DoRefine_B(MaxBlock)
 
   !LOCAL VARIABLES:
+  logical :: DoRefine
   integer, parameter :: nCorner = 8
   real     :: CornerOrig_DI(3, nCorner), Corner_DI(3, nCorner)
-  real     :: DistMin_D(3), DistMax_D(3)
+  real     :: DistMin_D(3), DistMax_D(3), Radius1Sqr
   integer  :: i, j, k, iDim, iArea, iBlock, iCorner
   real     :: CurrentResolution
 
+  ! These variables are needed for generalized coordinates
+  real :: Xyz_D(3)
+  real, dimension(nI+1,nJ+1,nK+1):: x_N, y_N, z_N, R2_N
+
   character(len=*), parameter :: NameSub = 'specify_area_refinement'
 
-  logical :: DoTest, DoTestMe
+  logical :: DoTest, DoTestMe, DoTestBlock
   !---------------------------------------------------------------------------
   if(nArea <= 0) RETURN
 
+
   call set_oktest(NameSub,DoTest,DoTestMe)
+
   if(DoTestMe)write(*,*)NameSub,' nArea, nBlock, nBlockMax, MaxBlock=',&
        nArea, nBlock, nBlockMax, MaxBlock
 
@@ -191,20 +200,28 @@ subroutine specify_area_refinement(DoRefine_B)
 
      if( UnusedBlk(iBlock) ) CYCLE BLOCK
 
+     DoTestBlock = DoTestMe .and. iBlock == BlkTest
+
      ! No need to check block if it is to be refined already
      if(DoRefine_B(iBlock)) CYCLE BLOCK
 
      CurrentResolution = dx_BLK(iBlock)
 
+     if(DoTestBlock)write(*,*)NameSub,' CurrentResolution=',CurrentResolution
+
      iCorner = 0
      do k=1,nK+1,nK; do j=1,nJ+1,nJ; do i=1,nI+1,nI
         iCorner = iCorner+1
-        CornerOrig_DI(1,iCorner) = 0.125 * sum(x_BLK(i-1:i,j-1:j,k-1:k,iBlock))
-        CornerOrig_DI(2,iCorner) = 0.125 * sum(y_BLK(i-1:i,j-1:j,k-1:k,iBlock))
-        CornerOrig_DI(3,iCorner) = 0.125 * sum(z_BLK(i-1:i,j-1:j,k-1:k,iBlock))
+        CornerOrig_DI(1,iCorner) = NodeX_NB(i,j,k,iBlock)
+        CornerOrig_DI(2,iCorner) = NodeY_NB(i,j,k,iBlock)
+        CornerOrig_DI(3,iCorner) = NodeZ_NB(i,j,k,iBlock)
      end do; end do; end do
 
      AREA: do iArea = 1, nArea
+
+        if(DoTestBlock)write(*,*)NameSub,' iArea,Name,Resolution=',&
+             iArea, ' ',trim(Area_I(iArea) % Name),' ',&
+             Area_I(iArea) % Resolution
 
         ! No need to check area if block is finer than area resolution
         if(Area_I(iArea) % Resolution >= CurrentResolution) CYCLE AREA
@@ -214,7 +231,7 @@ subroutine specify_area_refinement(DoRefine_B)
            DoRefine_B(iBlock) = .true.
            CYCLE AREA
         endif
-           
+
         ! Shift corner coordinates to the center of area
         do iCorner = 1, nCorner
            Corner_DI(:,iCorner) = &
@@ -243,53 +260,41 @@ subroutine specify_area_refinement(DoRefine_B)
            end if
         end do
 
+        ! This occurs multiple times
+        Radius1Sqr = Area_I(iArea) % Radius1
+
+        if(DoTestBlock)then
+           write(*,*)NameSub,' DistMin_D=',DistMin_D
+           write(*,*)NameSub,' DistMax_D=',DistMax_D
+        end if
+
         ! Check if this area is intersecting with the block
         select case( Area_I(iArea) % Name)
         case('brick')
-           if( all( DistMin_D < 1.0 ) ) DoRefine_B(iBlock) = .true.
-
+           DoRefine = all( DistMin_D < 1.0 )
         case('sphere')
-           if( sum(DistMin_D**2) < 1.0 ) DoRefine_B(iBlock) = .true.
-
+           DoRefine = sum(DistMin_D**2) < 1.0
         case('shell')
            ! Check if block intersects with the enclosing sphere
            ! but it is not fully inside the inner sphere
-           if(  sum(DistMin_D**2) < 1.0 .and. &
-                sum(DistMax_D**2) > Area_I(iArea) % Radius1**2 ) &
-                DoRefine_B(iBlock) = .true.
-
+           DoRefine = sum(DistMin_D**2)<1.0 .and. sum(DistMax_D**2)>Radius1Sqr
         case('cylinderx')
-           if( DistMin_D(1) < 1.0 .and. sum(DistMin_D(2:3)**2) < 1.0 ) &
-                DoRefine_B(iBlock) = .true.
-
+           DoRefine = DistMin_D(1) < 1.0 .and. sum(DistMin_D(2:3)**2) < 1.0
         case('cylindery')
-           if( DistMin_D(2) < 1.0 .and. sum(DistMin_D(1:3:2)**2) < 1.0 ) &
-                DoRefine_B(iBlock) = .true.
-
+           DoRefine = DistMin_D(2) < 1.0 .and. sum(DistMin_D(1:3:2)**2) < 1.0
         case('cylinderz')
-           if( DistMin_D(3) < 1.0 .and. sum(DistMin_D(1:2)**2) < 1.0 ) &
-                DoRefine_B(iBlock) = .true.
-
+           DoRefine = DistMin_D(3) < 1.0 .and. sum(DistMin_D(1:2)**2) < 1.0
         case('ringx')
            ! Check if block intersects with the enclosing cylinder
            ! but it is not fully inside the inner cylinder
-           if( DistMin_D(1) < 1.0 .and. sum(DistMin_D(2:3)**2) < 1.0    &
-                .and. sum(DistMax_D(2:3)**2) > Area_I(iArea) % Radius1**2 ) &
-                DoRefine_B(iBlock) = .true.
-
+           DoRefine = DistMin_D(1) < 1.0 .and. sum(DistMin_D(2:3)**2) < 1.0 &
+                .and. sum(DistMax_D(2:3)**2) > Radius1Sqr 
         case('ringy')
-           ! Check if block intersects with the enclosing cylinder
-           ! but it is not fully inside the inner cylinder
-           if( DistMin_D(2) < 1.0 .and. sum(DistMin_D(1:3:2)**2) < 1.0 &
-                .and. sum(DistMax_D(1:3:2)**2) > Area_I(iArea) % Radius1**2 ) &
-                DoRefine_B(iBlock) = .true.
-
+           DoRefine = DistMin_D(2) < 1.0 .and. sum(DistMin_D(1:3:2)**2) < 1.0 &
+                .and. sum(DistMax_D(1:3:2)**2) > Radius1Sqr
         case('ringz')
-           ! Check if block intersects with the enclosing cylinder
-           ! but it is not fully inside the inner cylinder
-           if( DistMin_D(3) < 1.0 .and. sum(DistMin_D(1:2)**2) < 1.0 &
-                .and. sum(DistMax_D(1:2)**2) > Area_I(iArea) % Radius1**2 ) &
-                DoRefine_B(iBlock) = .true.
+           DoRefine = DistMin_D(3) < 1.0 .and. sum(DistMin_D(1:2)**2) < 1.0 &
+                .and. sum(DistMax_D(1:2)**2) > Radius1Sqr 
 
         case default
            call stop_mpi(NameSub // &
@@ -297,10 +302,78 @@ subroutine specify_area_refinement(DoRefine_B)
 
         end select
 
-        ! No need to check more areas if block is to be refined already
-        if(DoRefine_B(iBlock)) EXIT AREA
+        if(DoTestBlock)write(*,*) NameSub,' DoRefine (from corners)=',DoRefine
+
+        if(DoRefine) DoRefine_B(iBlock) = .true.
+
+        if(.not.UseCovariant)then
+           if(DoRefine_B(iBlock)) EXIT AREA
+           CYCLE
+        end if
+
+        ! Covariant case
+        if(.not.DoRefine_B(iBlock)) CYCLE AREA
+
+        ! Check if the covariant block is really inside the area
+        ! Check all nodes of the block
+        do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
+           Xyz_D(1) = NodeX_NB(i,j,k,iBlock)
+           Xyz_D(2) = NodeY_NB(i,j,k,iBlock)
+           Xyz_D(3) = NodeZ_NB(i,j,k,iBlock)
+
+           ! Shift to area center
+           Xyz_D = Xyz_D - Area_I(iArea) % Center_D
+
+           ! Rotate into area coordinates
+           if(Area_I(iArea) % DoRotate) &
+                Xyz_D = matmul(Area_I(iArea) % Rotate_DD, Xyz_D)
+
+           ! Rescale coordinates to the size of the area in all directions
+           Xyz_D = Xyz_D / Area_I(iArea) % Size_D
+
+           ! We only need the absolute values of the coordinates
+           x_N(i,j,k) = abs(Xyz_D(1))
+           y_N(i,j,k) = abs(Xyz_D(2))
+           z_N(i,j,k) = abs(Xyz_D(3))
+        end do; end do; end do
+
+        select case( Area_I(iArea) % Name)
+        case('brick')
+           if( any( x_N<1.0 .and. y_N<1.0 .and. z_N<1.0) ) EXIT AREA
+        case('sphere')
+           if( any(x_N**2 + y_N**2 + z_N**2 < 1.0) ) EXIT AREA
+        case('shell')
+           R2_N = x_N**2 + y_N**2 + z_N**2
+           if( any(R2_N < 1.0 .and. R2_N > Radius1Sqr )) EXIT AREA
+        case('cylinderx')
+           if( any(x_N < 1.0 .and. y_N**2+z_N**2 < 1.0 ) ) EXIT AREA
+        case('cylindery')
+           if( any(y_N < 1.0 .and. x_N**2+z_N**2 < 1.0 ) ) EXIT AREA
+        case('cylinderz')
+           if( any(z_N < 1.0 .and. x_N**2+y_N**2 < 1.0 ) ) EXIT AREA
+        case('ringx')
+           R2_N = y_N**2+z_N**2
+           if( any(x_N<1.0 .and. R2_N<1.0 .and. R2_N>Radius1Sqr) ) EXIT AREA
+        case('ringy')
+           R2_N = x_N**2+z_N**2
+           if( any(y_N<1.0 .and. R2_N<1.0 .and. R2_N>Radius1Sqr) ) EXIT AREA
+        case('ringz')
+           R2_N = x_N**2+y_N**2
+           if( any(z_N<1.0 .and. R2_N<1.0 .and. R2_N>Radius1Sqr) ) EXIT AREA
+        case default
+           call stop_mpi(NameSub // &
+                ' ERROR: Unknown NameArea = '//Area_I(iArea) % Name)
+
+        end select
+
+        ! The block is not inside
+        DoRefine_B(iBlock) = .false.
+
+        if(DoTestBlock)write(*,*)NameSub,' DoRefine=false for iArea=',iArea
 
      end do AREA
+
+     if(DoTestBlock)write(*,*)NameSub,' DoRefine final=',DoRefine_B(iBlock)
 
   end do BLOCK
 
