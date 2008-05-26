@@ -122,7 +122,7 @@ contains
          ": Unable to open file "//trim(NameSolarwindFile))
 
     nData = 0
-    if(lVerbose>0)then
+    if(lVerbose>0 .and. iProc==0)then
        call write_prefix
        write(iUnitOut,*) NameSub,' reading ',trim(NameSolarwindFile)
     end if
@@ -338,7 +338,7 @@ contains
        write(*,*) "**********************************************************"
     endif
 
-    if(lVerbose>0)then
+    if(lVerbose>0 .and. iProc==0)then
        call write_prefix; write(iUnitOut,*) NameSub, &
             ' read ',nData,' points from ',trim(NameSolarwindFile)
     end if
