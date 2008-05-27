@@ -13,7 +13,7 @@ program caxa     ! test of get_ionization()
   !       (/ 15.5  ,  25.5 , 35.5 , 45.5 /)    
   !  Ube(1) = 14.4  !<~> {-dusty -w} is  NOT required          
   !      do i=1,11        ! 
-  !         U_I(i)=Uxe(i) !  version for XENON, keep it
+  !         U_I(i)=Uxe(i) !  version for XENON, keep it, temporary
   !      end do           !
 
 
