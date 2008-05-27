@@ -199,7 +199,7 @@ contains
     
     use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK
     use ModNumConst
-    use ModPhysics,    ONLY: g,inv_g,GBody,BodyTdim_I
+    use ModPhysics,    ONLY: GBody,BodyRho_I,Si2No_V,UnitTemperature_
     use ModExpansionFactors,  ONLY: UMin,T0
     implicit none
 
@@ -209,6 +209,7 @@ contains
                          !which originates from the given cell
     real :: URatio       !The coronal based values for temperature density 
                          !are scaled as functions of UFinal/UMin ratio
+    real :: Temperature
     !--------------------------------------------------------------------------
 
     call get_gamma_emp(x_BLK(iCell,jCell,kCell,iBlock),&
@@ -220,14 +221,16 @@ contains
          y_BLK(iCell,jCell,kCell,iBlock)/R_BLK(iCell,jCell,kCell,iBlock),&
          z_BLK(iCell,jCell,kCell,iBlock)/R_BLK(iCell,jCell,kCell,iBlock),UFinal)
     URatio=UFinal/UMin
-    DensCell  = ((1.0/URatio)**2)*&          !This is the density variation
-         exp(-GBody*g*&
-         (min(URatio,2.0)*BodyTdim_I(1)/T0)*&!This is the temperature variation
-         (1.0/max(R_BLK(iCell,jCell,kCell,iBlock),0.90)&
-         -1.0))
 
-    PresCell  = inv_g*DensCell*&
-         T0/(min(URatio,2.0)*BodyTdim_I(1))  !This is the temperature variation
+    !This is the temperature variation
+    Temperature = T0/(min(URatio,2.0))*Si2No_V(UnitTemperature_)
+
+    DensCell  = ((1.0/URatio)**2) &          !This is the density variation
+         *BodyRho_I(1)*exp(-GBody/Temperature &
+         *(1.0/max(R_BLK(iCell,jCell,kCell,iBlock),0.90)-1.0))
+
+    PresCell = DensCell*Temperature
+
   end subroutine get_plasma_parameters_cell
 
   !============================================================================
