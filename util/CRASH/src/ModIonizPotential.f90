@@ -1,6 +1,6 @@
 !^CFG COPYRIGHT UM
 !
-!Data is given in electron volts (eV)
+!Data are provided in electron volts (eV)
 !=================================
 
 
@@ -10,13 +10,13 @@ module ModIonizPotential
   PRIVATE !Except
  !/////////////////////////////////////////////////////////////////////////////
 
-!The data for the first 2 tables is taken from the book "Allen' Astrophysical Quantities, fourth edition" pg. 36
+!The data for the first 3 tables are taken from the book "Allen' Astrophysical Quantities, Edn iV" p. 36
 !by Allen, Clabon W. Editor: Cox, Arthur N.
-!Published in 2000 by Springer
+!Publisher: Springer (2000)
 
 !First 10 elements - full ionizations 
 
-real, parameter, dimension(10,10) :: cPotentials10_II = reshape(  (/   &
+real, parameter, dimension(10,10) :: cPotential10_II = reshape(  (/   &
   !   1   !    2    !    3   !    4   !   5   !   6   !   7   !   8   !   9   !    10    !
   13.59844, 0.      , 0.     , 0.     , 0.    , 0.    , 0.    , 0.    , 0.    ,  0.      ,&  ! 1 - H
   24.58741, 54.41778, 0.     , 0.     , 0.    , 0.    , 0.    , 0.    , 0.    ,  0.      ,&  ! 2 - He
@@ -32,7 +32,7 @@ real, parameter, dimension(10,10) :: cPotentials10_II = reshape(  (/   &
 
  !Elements 11 - 20 full ionizations
 
- real, parameter, dimension(20,11:20) :: cPotentials20_II = reshape((/&
+ real, parameter, dimension(20,11:20) :: cPotential20_II = reshape((/&
   !   1   !    2    !    3  !    4   !    5  !   6   !   7   !    8  !   9  !   10  !
   5.13908 , 47.2864 , 71.620, 98.91  , 138.40, 172.18, 208.50, 264.25, 299.9, 1465.1,& ! 11 - Na
   1648.7  , 0.      , 0.    , 0.     , 0.    , 0.    , 0.    , 0.    , 0.   , 0.     & ! 10-s Ionization levels
@@ -68,7 +68,7 @@ real, parameter, dimension(10,10) :: cPotentials10_II = reshape(  (/   &
   !Elements 21 - 30 - full ionizations
 
   !   1  !    2    !   3   !   4   !   5  !   6   !   7   !   8   !   9      !  10  !
-  real, parameter, dimension(30,21:30) :: cPotentials30_II = reshape((/&
+  real, parameter, dimension(30,21:30) :: cPotential30_II = reshape((/&
   6.56144, 12.79967, 24.757, 73.489, 91.65, 111.68, 138.0 , 158.1 , 180.0    , 225.2,& !    21 - Sc
   249.8  , 688.    , 757.  , 831.  , 927. , 1009. , 1094. , 1213. , 1288.    , 5675.,& ! 10-s Ionization levels
   6034.  , 0.      , 0.    , 0.    , 0.   , 0.    , 0.    , 0.    , 0.       , 0.   ,& ! 20-s Ionization levels
@@ -95,31 +95,29 @@ real, parameter, dimension(10,10) :: cPotentials10_II = reshape(  (/   &
   1756.  , 1894.   , 2010. , 2131. , 2295., 2398. , 10280., 10790., 0.       , 0.   ,& ! 20-s
   7.72638, 20.29240, 36.841, 55.2  , 79.9 , 103.  , 139.  , 167.  , 199.     , 232. ,& ! 29 - Cu
   266.   , 369.    , 401.  , 435.  , 484. , 520.  , 557.  , 633.  , 671.     , 1698.,& ! 10-s
-  1804.  , 1919.   , 2060. , 2182. , 2310., 2478. , 2560. , 11050., 11567.617, 0.   ,& ! 20-s  <==29 is taken from CRC Handbook of Chemistry and Physics, by David R. Lide, 2004, pg 10-187
+  1804.  , 1919.   , 2060. , 2182. , 2310., 2478. , 2560. , 11050., 11567.617, 0.   ,& ! 20-s  
   9.39405, 17.96440, 39.723, 59.4  , 82.6 , 108.  , 136.  , 175.  , 203.     , 238. ,& ! 30 - Zn
   274.   , 311.    , 412.  , 454.  , 490. , 542.  , 579.  , 619.  , 698.     , 738. ,& ! 10-s
-  1856.  , 1970.   , 2088. , 2234. , 2363., 2495. , 2664.4, 2781.7, 11864.8  , 12389./), (/30,10/))! 20-s  <== 27 - 30 are taken from the database sited below
+  1856.  , 1970.   , 2088. , 2234. , 2363., 2495. , 2664.4, 2781.7, 11864.8  , 12389./), (/30,10/))! 20-s  
+  !Cu: 29th potential is taken from: David R. Lide, CRC Handbook of Chemistry and Physics,(2004),p.10-187
+  !Zn: 27 - 30 potentials are taken from the database sited below
  
 
-  ! Xe (54) - full ionization
-  ! The data was taken from an online data base SPECTR-W3 (online database on spectral properties of atoms and ions)
+  !  Xe (54) - full ionization
+  !  The data are taken from an online data base SPECTR-W3 
+  !  (online database on spectral properties of atoms and ions)
   !  Database supported by: ISTC (International Science And Technology Center);
-  !  Leading Institution: Russian Federal Nuclear Center
+  !  Leading Institution: Russian Federal Nuclear Center, Snezhinsk, Russia
   !  Website: http://spectr-w3.snz.ru/new/index.phtml
-  ! Most of the data is based on theoretical calculations with accuracy approximately as shown
-  real, parameter, dimension(54) :: cPotentialsXe = (/&
+  !  Most of the data is based on theoretical calculations with accuracy estimated as shown
+  real, parameter, dimension(54) :: cPotentialXe_I = (/&
    !    1   !    2    !    3    !   4  !   5  !    6   !    7   !   8  !   9  !   10   !
-   12.129874, 21.20979, 32.12295, 46.68, 59.69, 82.    , 100.   , 120. , 204.7, 225.86,& ! accuracy: about +- 10 for the last 4
-   240.     , 263.5   , 294.4   , 325.3, 358.3, 389.6  , 420.9  , 452.2, 572.5, 607.7 ,& ! 10-s; accuracy: from +-10 for E11 to +-30 for E20
-   642.9    , 678.1   , 724.    , 762.4, 852.7, 857.487, 1489.67, 1491., 1587., 1684. ,& ! 20-s; accuracy: from +-32 for E21 to +-84 for E30
-   1781.    , 1877.   , 1937.   , 2085., 2183., 2281.  , 2548.  , 2637., 2726., 2814. ,& ! 30-s; accuracy: from +-89 for E31 to +-141 for E40
-   3001.    , 3093.   , 3296.   , 3386., 7224., 7491.  , 7758.  , 8024., 8617., 8899. ,& ! 40-s; accuracy: from +-150 for E41 to +-445 for E50
-   9330.    , 9809.24 , 40267.6 , 41298./) ! 50-s; accuracy: +-467 for E51, +-22 for E54, others are unknown. 
-
-   ! Old array:
-   ! 12.1299, 21.21   , 32.10   , 52.42 , 65.31, 89.80 , 103.41 , 176.88, 204.09, 225.86,& ! Ionization levels 1-10
-   !255.79/)	! 11
-
+   12.129874, 21.20979, 32.12295, 46.68, 59.69, 82.    , 100.   , 120. , 204.7, 225.86,& ! error: \pm 10 for 7-10
+   240.     , 263.5   , 294.4   , 325.3, 358.3, 389.6  , 420.9  , 452.2, 572.5, 607.7 ,& ! 10-s; error: \pm 10: \pm 30
+   642.9    , 678.1   , 724.    , 762.4, 852.7, 857.487, 1489.67, 1491., 1587., 1684. ,& ! 20-s; error: \pm 32: \pm 84
+   1781.    , 1877.   , 1937.   , 2085., 2183., 2281.  , 2548.  , 2637., 2726., 2814. ,& ! 30-s; error: \pm 89: \pm 141
+   3001.    , 3093.   , 3296.   , 3386., 7224., 7491.  , 7758.  , 8024., 8617., 8899. ,& ! 40-s; error: \pm 150:\pm 445
+   9330.    , 9809.24 , 40267.6 , 41298./) ! 50-s; error: \pm 467 for I51, \pm 22 for I54, no estimate for others. 
 
 
  public :: get_ioniz_potential
@@ -132,13 +130,13 @@ contains
 	   
          select case (nZ)
            case (1:10)
-             cPotential_I = cPotentials10_II( 1:nZ, nZ)
+             cPotential_I = cPotential10_II( 1:nZ, nZ)
            case (11:20)
-             cPotential_I = cPotentials20_II( 1:nZ, nZ)
+             cPotential_I = cPotential20_II( 1:nZ, nZ)
            case (21:30)
-             cPotential_I = cPotentials30_II( 1:nZ, nZ)
+             cPotential_I = cPotential30_II( 1:nZ, nZ)
 		   case (54)
-		     cPotential_I = cPotentialsXe
+		     cPotential_I = cPotentialXe_I
            case default
              write(*,*) "No such element found in the database"
          end select
