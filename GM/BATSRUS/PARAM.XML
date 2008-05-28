@@ -3736,6 +3736,7 @@ DtExchangeRay = 0.1 and DnRaytrace=1.
 <!-- ^CFG END RAYTRACE -->
 
 <command name="IE">
+	<parameter name="DoTraceIE" type="logical" default="F"/>
 
 #IE
 T                       DoTraceIE
