@@ -61,6 +61,7 @@ subroutine read_satellites(iError)
 
            IsFine = .true.
 
+           if (Pos(iEast_) < 0.0) Pos(iEast_) = Pos(iEast_) + 360.0
            Pos(iEast_)  = Pos(iEast_)*pi/180.0
            Pos(iNorth_) = Pos(iNorth_)*pi/180.0
            Pos(iUp_)    = Pos(iUp_)*1000.0
