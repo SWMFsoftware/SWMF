@@ -10,7 +10,8 @@ Contains
    !Set the element and its Ionization Potentials
    subroutine set_element(nZIn)
         integer,intent(in)::nZIn
-        call get_ioniz_potential(nZIn,IonizPotential_I)
+        nZ=nZIn
+        call get_ioniz_potential(nZ,IonizPotential_I(1:nZ))
    end subroutine set_element
 
    !Finding the populations of the ions
