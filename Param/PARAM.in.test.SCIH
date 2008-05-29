@@ -27,7 +27,7 @@ F			DoSaveRestart
 T			UseBody
 20.0			rBody
 3.0E+8			Body_Rho_Dim
-2.0E+6			Body_T_Dim
+3.5E+6			Body_T_Dim
 
 #INNERBOUNDARY
 coronatoih		TypeBcInner
@@ -136,7 +136,7 @@ F			UseUserWritePlot
 F			UseUserAMR
 F			UseUserEchoInput
 T			UseUserB0
-F			UseUserInitSession
+T			UseUserInitSession
 T			UseUserUpdateStates
 
 #USERINPUTBEGIN ------------------------
@@ -161,7 +161,7 @@ WSA			NameModel
 T			Usebody
 1.0			rBody
 3.0E+8			BodyNDim
-2.0E+6			BodyTDim
+3.5E+6			BodyTDim
 
 #GAMMA
 1.5000E+00		Gamma

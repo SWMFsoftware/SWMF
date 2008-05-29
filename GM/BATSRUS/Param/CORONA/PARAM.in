@@ -34,7 +34,7 @@ F			UseUserWritePlot
 F			UseUserAMR
 F			UseUserEchoInput
 T			UseUserB0
-F			UseUserInitSession
+T			UseUserInitSession
 T			UseUserUpdateStates
 
 #USERINPUTBEGIN ------------------------
@@ -59,7 +59,7 @@ WSA			NameModel
 T			UseBody
 1.0			rBody
 3.0E+8			BodyNDim
-2.0E+6			BodyTDim
+3.5E+6			BodyTDim
 
 #GAMMA
 1.5000E+00		Gamma
@@ -156,7 +156,7 @@ F                       UseUserWritePlot
 F                       UseUserAMR
 F                       UseUserEchoInput
 T                       UseUserB0
-F                       UseUserSetPhysConst
+T                       UseUserInitSession
 T                       UseUserUpdateStates
 
 #USERINPUTBEGIN ---------------

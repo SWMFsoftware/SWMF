@@ -7,7 +7,7 @@ module ModExpansionFactors
 
   !Gravity potential, m^2/s^2
   real,parameter :: cSunGravitySI=cGravitation*mSun/Rsun
-  real, parameter :: T0=3.5E+6 !in K
+  real :: T0=3.5E+6 !in K
 
   !Gravity potential of a proton, in K
   real,parameter :: cSunGravityK =cSunGravitySI*cProtonMass/cBoltzmann
@@ -378,13 +378,15 @@ contains
   end subroutine set_expansion_factors
 end module ModExpansionFactors
 !=================================set_empirical_model=============
-subroutine set_empirical_model(TypeRead)
-
+subroutine set_empirical_model(TypeRead,BodyT0)
   use ModExpansionFactors
   implicit none
+
   character(LEN=*),intent(in) :: TypeRead
+  real, intent(in) :: BodyT0
   !------------------------------------------------------------------
-  TypeModel=trim(TypeRead)  
+  TypeModel=trim(TypeRead)
+     T0 = BodyT0
      call set_expansion_factors
      if(iProc==0)call write_expansion_tec
 

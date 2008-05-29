@@ -2,22 +2,25 @@
 !==============================================================================
 module ModUser
   use ModMagnetogram
-  use ModExpansionFactors
+  use ModReadParam, ONLY: lStringLine
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
-       IMPMENENTED2 => user_set_ics,                    &
-       IMPLEMENTED3 => user_initial_perturbation,       &
-       IMPLEMENTED4 => user_face_bcs,                   &
-       IMPLEMENTED5 => user_get_log_var,                &
-       IMPLEMENTED6 => user_get_b0,                     &
-       IMPLEMENTED7 => user_update_states,              &
-       IMPLEMENTED8 => user_specify_initial_refinement
+       IMPLEMENTED2 => user_init_session,               &
+       IMPLEMENTED3 => user_set_ics,                    &
+       IMPLEMENTED4 => user_initial_perturbation,       &
+       IMPLEMENTED5 => user_face_bcs,                   &
+       IMPLEMENTED6 => user_get_log_var,                &
+       IMPLEMENTED7 => user_get_b0,                     &
+       IMPLEMENTED8 => user_update_states,              &
+       IMPLEMENTED9 => user_specify_initial_refinement
 
   include 'user_module.h' !list of public methods
 
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: &
        NameUserModule = 'EMPIRICAL SC - Cohen, Sokolov'
+
+  character(len=lStringLine) :: NameModel
 
 contains
   !============================================================================
@@ -26,15 +29,12 @@ contains
     use ModProcMH,    ONLY: iProc
     use ModReadParam
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
-    use ModPhysics,   ONLY: BodyNDim_I,BodyTDim_I,g
-    use EEE_ModMain,  ONLY: EEE_initialize,EEE_set_parameters
+    use EEE_ModMain,  ONLY: EEE_set_parameters
     implicit none
 
-    integer:: i
     character (len=100) :: NameCommand
-    character (len=lStringLine)   :: NameModel
     !--------------------------------------------------------------------------
-    call EEE_initialize(BodyNDim_I(1),BodyTDim_I(1),g)
+    UseUserInitSession=.true.
 
     if(iProc==0.and.lVerbose > 0)then
        call write_prefix; write(iUnitOut,*)'User read_input HELIOSPHERE starts'
@@ -55,7 +55,6 @@ contains
           call EEE_set_parameters(NameCommand)
        case("#EMPIRICALSW")
           call read_var('NameModel',NameModel)
-          call set_empirical_model(trim(NameModel))
        case('#USERINPUTEND')
           if(iProc==0.and.lVerbose > 0)then
              call write_prefix;
@@ -74,7 +73,20 @@ contains
        end select
     end do
   end subroutine user_read_inputs
-  
+
+  !============================================================================
+
+  subroutine user_init_session
+    use ModPhysics,   ONLY: BodyNDim_I,BodyTDim_I,g
+    use EEE_ModMain,  ONLY: EEE_initialize
+    implicit none
+    !--------------------------------------------------------------------------
+    call set_empirical_model(trim(NameModel),BodyTDim_I(1))
+
+    call EEE_initialize(BodyNDim_I(1),BodyTDim_I(1),g)
+
+  end subroutine user_init_session
+
   !============================================================================
   subroutine user_face_bcs(VarsGhostFace_V)
 
@@ -298,7 +310,6 @@ contains
     use ModAdvance,   ONLY: State_VGB 
     use ModPhysics,   ONLY: inv_gm1
     use ModGeometry
-    use ModEnergy,    ONLY: calc_energy_cell
     implicit none
 
     integer :: i,j,k,iBLK
