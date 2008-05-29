@@ -1,41 +1,143 @@
 #!/usr/bin/perl -s
 
-
 my $Help     = ($h or $help); undef $h; 
 my $Commands = $c;            undef $c;
+my $Force    = $f;            undef $f;
 
 use strict;
 
 &print_help if $Help or not @ARGV;
 
-require 'share/Scripts/XmlRead.pl';
-
 my $ERROR = "ERROR in XmlToF90.pl:";
+
+die "$ERROR cannot use -f and -c switches together!\n" if $Force and $Commands;
+die "$ERROR input file argument is missing!\n" unless @ARGV;
+
+require 'share/Scripts/XmlRead.pl';
 
 my $InputFile  = $ARGV[0];
 my $OutputFile = $ARGV[1];
 
 open(IN, $InputFile) or die "$ERROR could not open input file $InputFile\n";
-
 my $Input = join('',<IN>);
 close(IN);
 
-my $Indent  = "    ";
-my $Indent1 = "    ";
-my $F90;
-$F90 = $Indent."select case(NameCommand)\n"; 
-my $Xml = &XmlRead($Input);
+my $Update = ($OutputFile and -f $OutputFile and not $Force);
 
-&process_elements($Xml);
+my $NewFile = ($OutputFile and not ($Update or $Commands));
 
-$F90 .= $Indent."end select\n";
+my $Indent     = (' ' x 5);  # initial indentation for case statements
+my $Indent1    = (' ' x 3);  # incremental indentation
+my $IndentCont = (' ' x 5);  # indentation for continuation lines
 
-print $F90;
+my $F90;                # F90 source code written by process_xml
+my $iPart;              # part index for multi-part parameters
+my $ForeachName;        # name of the index variable in a foreach loop
+my $ForeachValue;       # value of the index variable in a foreach loop
+my %VariableType;       # Hash for variable types
+my %DefaultValue;       # Hash for default values
+
+# put in UseStrict
+$VariableType{"UseStrict"} = "logical";
+$DefaultValue{"UseStrict"} = "F";
+
+my $Xml = &XmlRead($Input); # XML tree data structure created from XML text
+
+&process_xml($Xml);
+
+if($NewFile){
+    my $Subroutine = $OutputFile;
+    $Subroutine = $1 if $Subroutine =~ /\/([^\/]+)$/;  # remove path
+    $Subroutine =~ s/\..*$//;                          # remove extension
+
+    # replace variables with their default values if possible
+    foreach my $Variable (keys %DefaultValue){
+	$_ = $DefaultValue{$Variable};
+	while(/\$(\w+)/ and $DefaultValue{$1}){
+	    s/\$(\w+)/$DefaultValue{$1}/;
+	    $DefaultValue{$Variable} = $_;
+	}
+    }
+
+    my $Declarations;
+    foreach my $Variable (sort keys %VariableType){
+	my $Type  = $VariableType{$Variable};
+	my $Value = $DefaultValue{$Variable};
+
+	$Type =~ s/strings?/character(len=100)/;
+
+	# Fix value
+	$Value =~ s/T/.true./ if $Type eq "logical";
+	$Value =~ s/F/.false./ if $Type eq "logical";
+	$Value =  "'$Value'" if $Type =~ /character/ and length($Value);
+	$Value .= ".0" if $Type eq "real" and $Value =~ /^\d+$/;
+
+	# Add declaration
+	if(length($Value)){
+	    $Declarations .= "  $Type :: $Variable = $Value\n";
+	}else{
+	    $Declarations .= "  $Type :: $Variable\n";
+	}
+    }
+    $F90 = 
+"subroutine $Subroutine
+
+  use ModReadParam, ONLY: i_session_read, read_line, read_command, read_var
+  use ModUtilities, ONLY: split_string
+
+  implicit none
+
+  integer :: iSession
+  character (len=100) :: NameCommand
+  character(len=*), parameter:: NameSub = '$Subroutine'
+
+$Declarations
+
+  !---------------------------------------------------------------------------
+  iSession = i_session_read()
+  do
+     if(.not.read_line() ) EXIT
+     if(.not.read_command(NameCommand)) CYCLE
+     select case(NameCommand)
+$F90
+     case default
+        !if(iProc==0) then
+        write(*,*) NameSub // ' WARNING: unknown command ' // &
+             trim(NameCommand),' !'
+        if(UseStrict)call CON_stop('Correct PARAM.in!')
+        !end if
+     end select
+  end do
+
+contains
+
+  logical function is_first_session()
+    is_first_session = iSession == 1
+    if(iSession > 1)then
+       ! if(iProc==0) then
+       write(*,*) NameSub // ' WARNING: command ',trim(NameCommand), &
+            ' can be used in first session only!'
+       if(UseStrict)call CON_stop('Correct PARAM.in!')
+       ! end if
+    end if
+  end function is_first_session
+
+end subroutine $Subroutine
+";
+}
+if($OutputFile){
+    open(OUT, ">$OutputFile") or 
+	die "$ERROR could not open output file $OutputFile\n";
+    print OUT $F90;
+    close(OUT);
+}else{
+    print $F90;
+}
 
 exit 0;
 
 ##############################################################################
-sub process_elements{
+sub process_xml{
 
     # recursive subroutine that processes the XML file
 
@@ -48,10 +150,10 @@ sub process_elements{
 	my $name = lc( $element->{"name"} );
 
 	if($name eq 'commandlist'){
-	    &process_elements($element->{content});
+	    &process_xml($element->{content});
 	}elsif($name eq 'commandgroup'){
-	    $F90 .= $Indent."! $element->{attrib}->{name}\n";
-	    &process_elements($element->{content});
+	    $F90 .= "\n!!! $element->{attrib}->{name}\n";
+	    &process_xml($element->{content});
 	}elsif($name eq 'command'){
 	    my $Attrib = $element->{attrib};
             my $Name   = "\"\#$Attrib->{name}\"";
@@ -65,54 +167,101 @@ sub process_elements{
 	    if($If =~ /IsFirstSession/){
 		$F90 .= $Indent."if(.not.is_first_session())CYCLE\n";
 	    }
-	    &process_elements($element->{content});
+	    &process_xml($element->{content});
 	    $Indent =~ s/$Indent1//;
 	}elsif($name eq 'parameter'){
 	    my $Attrib = $element->{attrib};
-	    my $Name   = $Attrib->{name};
+	    my $Name   = perl_to_f90($Attrib->{name});
+	    my $Type   = $Attrib->{type};
+	    my $Case   = $Attrib->{case};
 	    my $If     = perl_to_f90($Attrib->{if});
-	    $F90 .= $Indent."if($If) &\n".$Indent1 if $If;
+
+	    # Store variable name and type
+	    $VariableType{$Name} = $Type;
+	    $DefaultValue{$Name} = $Attrib->{default};;
+
+	    # Create line
+	    $F90 .= $Indent."if($If) &\n".$IndentCont if $If;
 	    $F90 .= $Indent."call read_var('$Name', $Name)\n";
+
+	    $F90 =~ s/\)\n$/, IsUpperCase=.true.)\n/ if $Case eq "upper";
+	    $F90 =~ s/\)\n$/, IsLowerCase=.true.)\n/ if $Case eq "lower";
+
+	    if($Type eq "strings"){
+		my $MaxPart = $Attrib -> {max};
+		$VariableType{"nStringPart"} = "integer";
+		$VariableType{"StringPart_I(100)"} = "string";
+		$F90 .= $Indent . "call split_string" . 
+		    "($Name, $MaxPart, StringPart_I, nStringPart)\n";
+		$iPart = 0;
+		&process_xml($element->{content});
+	    }
+	}elsif($name eq 'part'){
+	    my $Name = $element->{attrib}->{name};
+	    $VariableType{$Name} = "string";
+	    $iPart++;
+	    $F90 .= $Indent."$Name = StringPart_I($iPart)\n";
 	}elsif($name eq 'if'){
 	    my $Expr = perl_to_f90($element->{attrib}->{expr});
 	    $F90 .= $Indent."if($Expr)then\n";
 	    $Indent .= $Indent1;
-	    &process_elements($element->{content});
+	    &process_xml($element->{content});
 	    $Indent =~ s/$Indent1//;
 	    $F90 .= $Indent."end if\n";
 	}elsif($name eq 'for'){
 	    my $Attrib = $element->{attrib};
-	    my $From = perl_to_f90($Attrib->{from});
-	    my $To   = perl_to_f90($Attrib->{to});
+	    my $From  =  perl_to_f90($Attrib->{from});
+	    my $To    =  perl_to_f90($Attrib->{to});
 	    my $Index = (perl_to_f90($Attrib->{name}) or "i");
+	    $VariableType{$Index} = "integer";
 	    $F90 .= $Indent."do $Index = $From, $To\n";
 	    $Indent .= $Indent1;
-	    &process_elements($element->{content});
+	    &process_xml($element->{content});
 	    $Indent =~ s/$Indent1//;
 	    $F90 .= $Indent."end do\n";
+	}elsif($name eq 'foreach'){
+	    my $Attrib = $element->{attrib};
+	    $ForeachName = $Attrib->{name};
+	    foreach (split(/,/, $Attrib->{values})){
+		$ForeachValue = $_;
+		&process_xml($element->{content});
+	    }
+	    $ForeachName = ''; $ForeachValue = '';
 	}
     }
 }
+
 ###############################################################################
+
 sub perl_to_f90{
 
     $_ = shift;
 
-    # replace special variables
-    s/\$_command/NameCommand/g;
+    # replace special variables provided by the CheckParam.pl script
+    s/\$_command/NameCommand/ig;
+    s/\$_namecomp/NameComp/ig;
 
-    # remove dollar signs
+    # replace foreach variable with actual value
+    s/\$$ForeachName/$ForeachValue/g if $ForeachName;
+
+    # remove all dollar signs from variable names
     s/\$//g;
 
-    # convert logical relations
+    # convert relation operator
     s/ eq / == /g;
+    s/ ne / \/= /g;
     s/ and / .and. /g;
     s/ or / .or. /g;
     s/ != / \/= /g;
     s/\bnot /.not. /g;
 
-    # replace string matching (this is not exact!)
+    # replace string matching (this is not quite right!)
     s/(\w+)\s*=~\s*\/([^\/]+)\/i?/index($1, "$2") > 0/g;
+
+    s/(\w+)\s*\!~\s*\/([^\/]+)\/i?/index($1, "$2") < 1/g;
+
+    # Remove \b from patterns (this is not quite right!)
+    s/\\b//g;
 
     return $_;
 }
@@ -142,18 +291,21 @@ sub print_help{
 
 Usage:
 
-   XmlToF90 [-h] [-c=COMMANDS] infile [outfile]
+   XmlToF90 [-h] [-f | -c=COMMANDS] infile [outfile]
 
 -h          This help message
 
 -c=COMMANDS COMMANDS is a comma separated list of commands to be transformed
             from XML to F90. Default is transforming all the commands.
 
+-f          Force creating a new output file even if it already exists. 
+            This flag cannot be combined with the -c=COMMAND switch.
+            Default is to update the (selected) commands only in an existing
+            file.
+
 infile      Input XML file.
 
 outfile     Output F90 file. Default is writing to STDOUT.
-            If output file already exists, only update it.
-            This allows hand made modifications to be preserved.
 
 Examples:
 
