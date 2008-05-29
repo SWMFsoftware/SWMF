@@ -29,7 +29,7 @@ ${MY_LIB}: ${OBJ_WRAPPER} ${MAKEFILE_COMP_SELECT}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJ_WRAPPER}
 
-IH_wrapper.o: ${LIBRARYDIR}/CON_comp_info.o
+SC_wrapper.o: ${LIBRARYDIR}/CON_comp_info.o
 
 #
 #	cleaning
