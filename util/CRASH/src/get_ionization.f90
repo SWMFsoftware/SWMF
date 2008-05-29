@@ -39,6 +39,9 @@
 
 module ModSaha
   use ModConst
+
+  use ModStatSum  ! separated computations of StatSum
+
   implicit NONE
   include 'CRASH_definitions.h'
   real,  parameter ::  &
@@ -63,6 +66,14 @@ module ModSaha
 ! end module ModSaha
 !=============================================================================
   contains
+
+ !===========================================================================
+subroutine prep_ionization ( MAT ) ! for given material must be selected    
+ integer, intent(in) :: MAT        ! ionizpotentials , nZmax,  range for 
+                                   ! ioniz. window
+
+end subroutine prep_ionization
+ !============================================================================
 
 
 subroutine    ConcNafter  ! for given summ(No+Niz) on boundary II, calc. C_I[z]
@@ -158,7 +169,7 @@ contains
     iZMin =1  ! for the start of SLIDing
     !....................................................
 
-    SLIDER: do while ( iZmin <= (11-(nW-1))  ) 
+    SLIDER: do while ( (iZmin +nW-1) <=   nZMax ) ! (11-(nW-1))  ) 
 
        !debuT   
        write(*,*)'SLIDer==== iZMin=',iZmin
@@ -186,6 +197,7 @@ contains
           iter    =0 
           DeltaNe =1.0   ! To start do loop
           NEWNe : do while(  (iter <22  ).AND.( DeltaNe*DeltaNe > cToleranceHere)) 
+
 
              NeInv = 1. / NeIterated			
              StatWeight_I(1) = PopulationRatioNonid_I(1)*NeInv
@@ -224,7 +236,7 @@ contains
        vNe    = NeIterated * vNORM ;
        CTotal =   sum(C_I( 0 : iZMin+nW-1 )) 
 
-       if( C_I(iZMin+nW-1) < C_I(iZMin+0) ) then
+       if( C_I(iZMin+nW-1) < C_I(iZMin+0) ) then   ! po
        !debuT:             write (*,*) 'Conc: Norm=', vNORM
              EXIT
        end if 
@@ -244,7 +256,7 @@ contains
        CUITotal = CUITotal +UITotal*C_I(iw)
     end do
 
-    CUITotal = CUITotal / vNe   ! [eV] per electron    
+    CUITotal = CUITotal / vNe      ! [eV] per electron    
   end function conc
   !........................
 end subroutine ConcNafter

@@ -6,8 +6,11 @@ include Makefile.DEPEND
 
 OBJECTS=\
 	heat_capacity.o \
-	get_ionization.o \
-        ModIonizPotential.o
+	ModStatSum.o\
+	ModAtomicMass.o\
+        ModIonizPotential.o\
+	get_ionization.o 
+
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}

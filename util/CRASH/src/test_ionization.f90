@@ -1,9 +1,10 @@
 program caxa     ! test of get_ionization()
   use ModSaha    
   use ModIonizPotential
+
   implicit NONE
 
-  integer          :: i, NZ
+  integer          :: i 
 
   !  real :: Uxe(11)=  &  !<> Xenon
   !       (/ 12.1299, 21.21 ,  32.10,  52.42, 65.31, 89.80, 103.41,   &  !1-7
@@ -49,6 +50,7 @@ program caxa     ! test of get_ionization()
 
   !.............................................
 end program caxa
+
 
 !============================================================================
 ! The following subroutines are here so that we can use SWMF library routines
