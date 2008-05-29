@@ -176,6 +176,11 @@ sub process_xml{
 	    my $Case   = $Attrib->{case};
 	    my $If     = perl_to_f90($Attrib->{if});
 
+            if($Type eq "string"){
+		my $Length = $Attrib->{length};
+		$Type = "character(len=$Length)" if $Length;
+	    }
+
 	    # Store variable name and type
 	    $VariableType{$Name} = $Type;
 	    $DefaultValue{$Name} = $Attrib->{default};;
@@ -186,6 +191,7 @@ sub process_xml{
 
 	    $F90 =~ s/\)\n$/, IsUpperCase=.true.)\n/ if $Case eq "upper";
 	    $F90 =~ s/\)\n$/, IsLowerCase=.true.)\n/ if $Case eq "lower";
+
 
 	    if($Type eq "strings"){
 		my $MaxPart = $Attrib -> {max};
