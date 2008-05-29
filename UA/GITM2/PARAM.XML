@@ -93,10 +93,10 @@ added to the #STARTTIME input time.
 </command>
 
 <command name="CPUTIMEMAX">
-	<parameter name="CPUTimeMax"    type="real, seconds" default="" />
+	<parameter name="CPUTimeMax" type="real" default="" />
 
 #CPUTIMEMAX
-7200.0
+7200.0			CPUTimeMax (seconds)
 
 When you are running on a queue-based system, you can use this command
 to set the exact amount of time that the code should run, then stop
@@ -116,22 +116,21 @@ will write all of the correct files and exit before the queue is up.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 <command name="INITIAL">
-	<parameter name="UseMSIS"      type="logical" default="" />
-	<parameter name="UseIRI"       type="logical" default="" />
+	<parameter name="UseMSIS" type="logical" default="T" />
+	<parameter name="UseIRI"  type="logical" default="T" />
 	<if expr="$UseMSIS">
-		<parameter name="TempMin"      type="real"    default="" />
-		<parameter name="TempMax"      type="real"    default="" />
-		<for from="1" to="3">
-			<parameter name="Number Density" type="real" 
-				default="" min="0.01" />
-		</for>
+		<parameter name="TempBottom"   type="real"              />
+		<parameter name="TempTop"      type="real"              />
+		<parameter name="NumberDensity1" type="real" min="0.01" />
+		<parameter name="NumberDensity2" type="real" min="0.01" />
+		<parameter name="NumberDensity3" type="real" min="0.01" />
 	</if>
 
 #INITIAL
 F			UseMSIS
 T			UseIRI
-200.0			TBottom
-1200.0			TTop
+200.0			TempBottom
+1200.0			TempTop
 5.0e17			NDensity1
 7.0e18			NDensity2
 3.0e19			NDensity3
@@ -457,12 +456,12 @@ You can turn off the chemistry and the ion advection with these terms.
 </command>
 
 <command name="ELECTRODYNAMICS">
-	<parameter name="DtPotential" type="real, seconds" default="60.0" />
-	<parameter name="DtAurora"    type="real, seconds" default="60.0" />
+	<parameter name="DtPotential" type="real" default="60.0" />
+	<parameter name="DtAurora"    type="real" default="60.0" />
 
 #ELECTRODYNAMICS
-60.0
-60.0
+60.0			DtPotential [s]
+60.0			DtAurora    [s]
 
 The electric potential and aurora are two of the most expensive
 routines to run.  In addition, they typically don't change on a
@@ -578,10 +577,10 @@ The default is DtRestart=-1 and nPlotFile=0
 </command>
 
 <command name="SATELLITES">
-	<parameter name="nSats "    type="integer - max = 20" default="" />
+	<parameter name="nSats "    type="integer" max="20" default="0" />
 	<for from="1" to="$nSats">
-		<parameter name="SatFile1"  type="string" default="" />
-		<parameter name="DtPlot1"   type="real" default="" />
+		<parameter name="SatFile1"  type="string" />
+		<parameter name="DtPlot1"   type="real"   />
 	</for>
 
 #SATELLITES

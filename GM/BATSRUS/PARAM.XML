@@ -210,7 +210,7 @@ These modified commands cannot precede the #PLANET command!
 			<option name="DIPOLE" default="T" />
 		</parameter>
 	</if>
-	<if expr="$TyepBField eq 'DIPOLE'">
+	<if expr="$TypeBField eq 'DIPOLE'">
 		<parameter name="MagAxisThetaGeo" type="real" 
 						min="0" max="180"/>
 		<parameter name="MagAxisPhiGeo"   type="real"
@@ -1540,7 +1540,7 @@ implicit schemes. Ignored if UseDtFixed is true.
 		<option name="Test block"	value="test"		/>
 	</parameter>
 	<parameter name="rImplicit" type="real" min="0"
-		if="$TypeImplCrit eq 'R'" />
+		if="$TypeImplCrit eq 'r'" />
 
 #IMPLICITCRITERIA
 r		TypeImplCrit (dt or r or test)
@@ -1774,7 +1774,7 @@ of matrix-vector multiplications is exceeded.
 </command>
 <command name="KRYLOVSIZE">
 	<parameter name="nKrylovVector" type="integer" min="1" 
-						default="MaxMatvecKrylov"/>
+						default="$MaxMatvecKrylov"/>
 #KRYLOVSIZE
 10		nKrylovVector
 
@@ -1941,7 +1941,7 @@ Default value is "GM/IO2".
 	<parameter name="DoSaveLogfile" type="logical" default="F" />
 	<if expr="$DoSaveLogfile">
 		<parameter name="StringLog" type="strings" min="1" max="4">
-			<part name="TypeLogVar" type="string" input="select"
+			<part name="NameLogVar" type="string" input="select"
 							required="T">
 				<option name="MHD variables"     value="MHD"
 								 default="T" />
@@ -1953,7 +1953,7 @@ Default value is "GM/IO2".
 				<option name="Set variables"     value="VAR" />
 				<option name="Set vars. scaled"  value="var" />
 			</part>
-			<part name="TypeTime" type="string" input="select"
+			<part name="StringLogTime" type="string" input="select"
 				required="F" multiple="T">
 				<option name="none" exclusive="T" />
 				<option name="step" 		/>
@@ -1966,10 +1966,10 @@ Default value is "GM/IO2".
 		<parameter name="DtSaveLogfile" type="real"    min="-1"
 								default="-1" />
 		<parameter name="NameLogVars" type="string" length="100"
-			if="$TypeLogVar =~ /var/i" />
+			if="$NameLogVar =~ /var/i" />
 		<parameter name="StringLogRadii" type="strings" 
 			min="1" max="10" length="100"
-			if="($TypeLogVar=~/flx/i or $NameLogVars=~/flx/i)">
+			if="($NameLogVar=~/flx/i or $NameLogVars=~/flx/i)">
 			<part name="LogRadii" type="real" min="$rBody" 
 								multiple="T"/>
 		</parameter>
@@ -2057,7 +2057,7 @@ is a list of radii at which to calculate the flux through a sphere.
 	<for from="1" to="$nSatellite">
 		<parameter name="StringSatellite" type="strings"
 							min="1" max="5">
-			<part name="TypeSatelliteVar" type="string" 
+			<part name="NameSatelliteVar" type="string" 
 						 input="select" required="T">
 				<option name="MHD variables"    value="MHD"
 								default="T" />
@@ -2086,7 +2086,7 @@ is a list of radii at which to calculate the flux through a sphere.
 			Trajectory file $NameTrajectoryFile must exist
 		</rule>
 		<parameter name="NameSatelliteVars" type="string" length="100"
-			if="$TypeSatelliteVar =~ /\bvar\b/i" />
+			if="$NameSatelliteVar =~ /\bvar\b/i" />
 	</for>
 #SATELLITE
 2                       nSatellite
@@ -2236,7 +2236,7 @@ example), the start and end times should be set for all of them.
 <command name="SAVEPLOT">
 	<parameter name="nPlotFile" type="integer" min="0" max="15"
 		default="1" />
-	<for from="1" to="$nPlotFile">
+	<for name="iPlot" from="1" to="$nPlotFile">
 		<parameter name="StringPlot" type="strings" min="3" max="3">
 			<part name="plotform" type="string" input="select" 
 								required="T">
@@ -2348,10 +2348,10 @@ example), the start and end times should be set for all of them.
 			<parameter name="nLine" type="integer" min="1" max="20"
 							default="1" />
 			<for name="i" from="1" to="$nLine">
-				<parameter name="xStartLine$i" type="real"/>
-				<parameter name="yStartLine$i" type="real"/>
-				<parameter name="zStartLine$i" type="real"/>
-				<parameter name="IsParallel$i" type="logical"/>
+				<parameter name="xStartLine" type="real"/>
+				<parameter name="yStartLine" type="real"/>
+				<parameter name="zStartLine" type="real"/>
+				<parameter name="IsParallel" type="logical"/>
 			</for>
 		</if>
 		<parameter name="DxSavePlot" type="real" min="-1.0" 

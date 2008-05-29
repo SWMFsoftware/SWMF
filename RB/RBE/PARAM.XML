@@ -59,18 +59,25 @@ This command specifies the simulation time.
 </command>
 
 <command name="SPECIES">
-        <parameter name="NameSpecies" type="string" default="e" />
+        <parameter name="NameSpecies" type="string" length="1" input="select">
+		<option name="e" default="T"/>
+		<option name="p"/>
+	</parameter>
 
 #SPECIES
 e               NameSpecies
 
 Determine whether electrons or protons are solved for in RBE.
- The default is shown.
+The default is shown.
 </command>
 
 <command name="BMODEL">
-        <parameter name="NameModel" type="string"  />
-        <parameter name="UseFixedB" type="logical" />
+        <parameter name="NameModel" type="string" length="3" input="select">
+		<option name="t96"/>
+		<option name="t04"/>
+		<option name="MHD" default="T"/>
+	</parameter>
+        <parameter name="UseFixedB" type="logical"/>
 
 #BMODEL
 MHD               NameModel
@@ -114,7 +121,7 @@ Startup time for RBE model.
 <commandgroup name="INPUT/OUTPUT">
 
 <command name="INPUTDATA">
-	<parameter name="NameStorm" type="string" />
+	<parameter name="NameStorm" type="string" length="20"/>
 
 #INPUTDATA
 2000f223		NameStorm
@@ -124,7 +131,7 @@ The name of the input data associated with the storm
 
 <command name="SAVEPLOT">
 	<parameter name="DtSavePlot" type="real" />
-	<parameter name="OutName" type="string" />
+	<parameter name="OutName" type="string" length="20" />
 
 #SAVEPLOT
 2		DtSavePlot

@@ -1054,7 +1054,7 @@ These modifier commands cannot proceed the #PLANET command!
 			<option name="DIPOLE" default="T" />
 		</parameter>
 	</if>
-	<if expr="$TyepBField eq 'DIPOLE'">
+	<if expr="$TypeBField eq 'DIPOLE'">
 		<parameter name="MagAxisThetaGeo" type="real" 
 						min="0" max="180"/>
 		<parameter name="MagAxisPhiGeo"   type="real"
