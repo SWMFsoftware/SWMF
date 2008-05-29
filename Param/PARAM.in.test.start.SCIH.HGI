@@ -1,0 +1,402 @@
+#ECHO
+T
+
+#DESCRIPTION
+Input file for creating a steady state solar corona
+
+#TIMEACCURATE
+F
+
+#STARTTIME
+2007
+3
+31
+11
+39
+37
+0
+
+#SAVERESTART
+T			DoSaveRestart
+2000			DnSaveRestart
+-1.0			DtSaveRestart
+
+#BEGIN_COMP SC --------------------------------------------------------------
+
+#COORDSYSTEM
+HGR                     TypeCoordSystem
+
+#USER_FLAGS
+T			UseUserInnerBCs
+F			UseUserSource
+F			UseUserPerturbation
+F			UseUserOuterBcs
+T			UseUserICs
+T			UseUserSpecifyRefinement
+F			UseUserLogFiles
+F			UseUserWritePlot
+F			UseUserAMR
+F			UseUserEchoInput
+T			UseUserB0
+T			UseUserInitSession
+T			UseUserUpdateStates
+
+#USERINPUTBEGIN ------------------------
+
+#PFSSM
+T			UseUserB0
+1.0			Ro_PFSSM
+2.5			Rs_PFSSM
+0.0			H_PFSSM
+SC/CR1922_MDI.dat       File_PFSSM
+12			iHead_PFSSM
+-1.0			PhiShift
+2.5			UnitB
+-1.0			dt_UpdateB0
+
+#EMPIRICALSW
+WSA			SWModelType
+
+#USERINPUTEND ----------------------------
+
+#BODY
+T			Usebody
+1.0			rBody
+4.3E+8			Body_Rho_Dim
+3.5E+6			Body_T_Dim
+
+#GAMMA
+1.5000E+00		g
+
+#GRID
+1			nProcX
+1			nProcY
+1			nProcZ
+-24.0			xMin
+ 24.0			xMax 
+-24.0			yMin
+ 24.0			yMax
+-24.0			zMin
+ 24.0			zMax
+
+#OUTERBOUNDARY
+float	                TypeBcOuter_E(East_)
+float   	        TypeBcOuter_E(West_)
+float	                TypeBcOuter_E(South_)
+float	  		TypeBcOuter_E(North_)
+float	 	        TypeBcOuter_E(Bot_)
+float	   		TypeBcOuter_E(Top_)
+
+#AMRINIT
+helio_init		TypeAmrInit
+9			nRefineLevelInit
+
+#USECURLB0
+T
+2.5
+
+#AMR
+6000			DnRefine
+F			DoAutomaticRefinement 
+
+#USERS7
+F
+
+#SCHEME
+2			nOrder (1 or 2)
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
+mc                      TypeLimiter
+1.2			BetaLimiter
+
+#TVDRESCHANGE
+T                       UseTVDatResChange
+
+#RESCHANGEBOUNDARY
+T
+
+#DIVB
+T
+F
+F
+F
+
+#TIMESTEPPING
+2                       nStage
+0.80                    CflExpl
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+100			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEPLOT
+5			nPlotFiles
+x=0 MHD tec		StringPlot
+14000                   DnSavePlot
+-1.			DtSavePlot
+y=0 MHD tec		StringPlot
+14000			DnSavePlot
+-1			DtSavePlot
+z=0 MHD tec		StringPlot
+14000			DnSavePlot
+-1.			DtSavePlot
+los sol tec             StringPlot ! line of sight plot
+14000                   	DnSavePlot
+-1.                     DtSavePlot
+-215.                   xLosVector
+0.                      yLosVector
+0.                      zLosVector
+0.                      Offset
+7.                      SizeImage
+0.                      xOffset
+0.                      yOffset
+1.                      rOccult
+0.5                     MuLimbDarkening
+300                     nPix
+3d MHD tec		StringPlot
+14000                   DnSavePlot
+-1.			DtSavePlot    
+
+#END_COMP SC ----------------------------------------------------------------
+
+#BEGIN_COMP IH --------------------------------------------------------------
+
+#USER_FLAGS
+F			UseUserInnerBCs
+F			UseUserSource
+F			UseUserPerturbation
+F			UseUserOuterBcs
+F			UseUserICs
+T			UseUserSpecifyRefinement
+F			UseUserLogFiles
+F			UseUserWritePlot
+F			UseUserAMR
+F			UseUserEchoInput
+F			UseUserB0
+F			UseUserSetPhysConst
+F			UseUserUpdateStates
+
+#FACEOUTERBC
+6                       MaxBoundary
+F                       DoFixOuterBoundary
+
+#COORDSYSTEM
+HGI                     TypeCoordSystem
+
+#HELIOBUFFERGRID
+16.0                     rBuffMin
+17.0                     rBuffMax
+180                      nThetaBuff
+360                      nPhiBuff
+
+#BODY
+T                       UseBody1
+16.0                    rBody
+4.3E+8			Body_N_Dim
+3.5E+6			Body_T_Dim
+
+#BODY                                  !
+F			UseBody1
+
+#EXTRABOUNDARY                         !
+T                                      !Inner boundary condition
+coronatoih                             !Is formulated without fixing
+F                                      !the body refinement level
+
+#GAMMA
+1.50000E+00		Gamma
+
+#OUTERBOUNDARY
+float   			TypeBcEast
+float   			TypeBcWest
+float   			TypeBcSouth 
+float   			TypeBcNorth 
+float   			TypeBcBottom  
+float   			TypeOuterBcTop
+
+#GRID
+1                     	nRootBlockX
+1                     	nRootBlockY
+1                     	nRootBlockZ
+-250.0	                xMin
+ 250.0                  xMax
+-250.0                  yMin
+ 250.0                  yMax
+-250.0                  zMin
+ 250.0                  zMax
+
+#AMRINIT
+coupledhelio    	TypeRefineInit
+8			nLevelRefineInit
+
+#DIVB
+T
+T
+F
+F
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#USERS7
+T
+
+#SCHEME
+2			nOrder
+Roe			TypeFlux
+mc
+1.2
+
+#MESSAGEPASS
+allopt                  TypeMessagePass
+
+#AMR
+-1			DnRefine
+F			DoAutomaticRefinement 
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+-1			DnSaveLogfile
+3600.			DtSaveLogfile
+
+SATELLITE
+1
+MHD file
+-1
+3600.0
+IH/earth_traj.dat
+
+#SAVEPLOT
+4			nPlotFiles
+x=0 MHD tec		StringPlot
+-1                  	DnSavePlot
+518400.0			DtSavePlot
+y=0 MHD tec		StringPlot
+-1			DnSavePlot
+518400.0			DtSavePlot
+z=0 MHD tec		StringPlot
+-1			DnSavePlot
+518400.0			DtSavePlot
+3d MHD tec		StringPlot
+-1                    DnSavePlot
+518400.0			DtSavePlot
+
+#TVDRESCHANGE
+T                       UseTVDatResChange
+
+#RESCHANGEBOUNDARY
+T
+
+#END_COMP IH -----------------------------------------------------------------
+
+#COMPONENT
+IH
+F
+
+#STOP
+1000
+-1.0
+
+#RUN ########################################################################
+
+#BEGIN_COMP SC --------------------------------------------------------------
+
+#USERS7
+T
+
+#SCHEME
+2			nOrder (1 or 2)
+Roe			TypeFlux (Roe, Rusanov, Linde, Sokolov
+mc                      TypeLimiter
+1.2			BetaLimiter
+
+#END_COMP SC --------------------------------------------------------------
+
+#STOP
+6001
+-1.0
+
+#RUN ########################################################################
+
+#BEGIN_COMP SC --------------------------------------------------------------
+
+#AMR
+3000			DnRefine
+F			DoAutomaticRefinement 
+
+#END_COMP SC -----------------------------------------------------------------
+
+#STOP
+9005
+-1.0
+
+#RUN ########################################################################
+
+#BEGIN_COMP SC --------------------------------------------------------------
+
+#AMR
+-1			DnRefine
+F			DoAutomaticRefinement 
+
+#END_COMP SC -----------------------------------------------------------------
+
+#STOP
+14000
+-1.0
+
+#RUN ########################################################################
+
+#COMPONENT
+IH
+T
+
+#COUPLE2
+SC
+IH
+1
+-1.0
+
+#BEGIN_COMP SC --------------------------------------------------------------
+
+#OUTERBOUNDARY
+coupled	                TypeBcOuter_E(East_)
+coupled   	        TypeBcOuter_E(West_)
+coupled	                TypeBcOuter_E(South_)
+coupled	  		TypeBcOuter_E(North_)
+coupled	 	        TypeBcOuter_E(Bot_)
+coupled	   		TypeBcOuter_E(Top_)
+
+#END_COMP SC -----------------------------------------------------------------
+
+#STOP
+14001
+-1
+
+#RUN #########################################################################
+
+#COUPLE2
+SC
+IH
+-1
+-1.0
+
+#COMPONENT
+SC
+F
+
+#TIMEACCURATE
+T
+
+#SAVERESTART
+T			DoSaveRestart
+-1			DnSaveRestart
+36000.0			DtSaveRestart
+
+#STOP
+-1
+518400.0
+
+#END
