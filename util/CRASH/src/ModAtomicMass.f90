@@ -4,7 +4,7 @@ module ModAtomicMass
 
  !Atomic masses of the first 54 elements
  !Given in atomic mass units (1 atomic mass unit = 1.66053886 × 10e-27 kilograms)
- real,parameter,dimension(nZMax)::cAtomicMass_I=(/&
+ real,parameter,dimension(nZMax) :: cAtomicMass_I=(/&
   !    1    !     2    !      3    !     4    !     5     !    6   !     7    !    8    !      9     !    10   !
   1.007947  , 4.0026022, 6.9412    , 9.0121823, 10.8115   , 12.0111, 14.006747, 15.99943, 18.99840329, 20.17976, &
   22.9897686, 24.30506 , 26.9815395, 28.08553 , 30.9737624, 32.0666, 35.45279 , 39.9481 , 39.09831   , 40.0789 , & ! 10-s
