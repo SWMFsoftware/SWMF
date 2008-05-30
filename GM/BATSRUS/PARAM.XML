@@ -12,8 +12,9 @@ List of MH (GM, IH and SC) commands used in the PARAM.in file
 <set name="MaxBlockALL" type="integer"
         value="$_nProc and $MaxBlock and $_nProc*$MaxBlock" />
 
-<set name="NameRestartOutDir" type="string" value="$_NameComp/restartOUT"/>
-<set name="NamePlotDir"       type="string" value="$_NameComp/IO2"/>
+<set name="NameComp"          type="string" value="$_NameComp"/>
+<set name="NameRestartOutDir" type="string" value="$NameComp/restartOUT"/>
+<set name="NamePlotDir"       type="string" value="$NameComp/IO2"/>
 
 <commandgroup name="STAND ALONE MODE">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -817,8 +818,8 @@ The default normalization is PLANETARY.
 <command name="IOUNITS" if="$_IsFirstSession">
 	<parameter name="TypeIoUnit" type="string" input="select">
 		<option name="SI"/>
-		<option name="PLANETARY"    default="$_NameComp eq 'GM'"/>
-		<option name="HELIOSPHERIC" default="$_NameComp ne 'GM'"/>
+		<option name="PLANETARY"    default="$NameComp eq 'GM'"/>
+		<option name="HELIOSPHERIC" default="$NameComp ne 'GM'"/>
 		<option name="NONE"/>
 		<option name="USER"/>
 	</parameter>
@@ -1175,9 +1176,9 @@ The #GRID command should be used before the #SAVEPLOT command.
 
 <command name="COORDSYSTEM" alias="COORDINATESYSTEM" multiple="T">
 	<parameter name="TypeCoordSystem" type="string" input="select">
-		<option name="GSM" default="$_NameComp eq 'GM'"/>
-		<option name="HGR" default="$_NameComp eq 'SC'"/>
-		<option name="HGI" default="$_NameComp eq 'IH'"/>
+		<option name="GSM" default="$NameComp eq 'GM'"/>
+		<option name="HGR" default="$NameComp eq 'SC'"/>
+		<option name="HGI" default="$NameComp eq 'IH'"/>
 		<option name="HGC" 		               />
 	</parameter>
 
@@ -1213,7 +1214,13 @@ BATSRUS uses a Cartesian geometry by default. Setting this command
 allows using more complicated grids. Note that setting "cartesian"
 is not identical with not setting the command at all, because
 the code will use the general formulas. The results should be essentially
-identical though.
+identical though, but the code may run somewhat slower. 
+
+The spherical coordinates are ordered as r, longitude, latitude. The longitude
+is between 0 and 360 degrees, the latitude is between -90 and 90 degrees. The
+cylindrical and toroidal coordinates are r, phi, z with phi between 0 and 360 
+degrees. The toroidal radial coordinate is the radial distance relative to
+the large radius of the torus (see the #TORUSSIZE command).
 </command>
 
 <command name="LIMITRADIUS" alias="LIMITGENCOORD1" if="$_IsFirstSession">
@@ -1237,12 +1244,12 @@ The default is to use the whole radial extent allowed by the #GRID command.
 6.0		rTorusLarge
 0.5		rTorusSmall
 
-This command can sets the large and small radii for a toroidal grid
+This command sets the large and small radii for a toroidal grid
 (see the #GRID command). The default values are shown.
 </command>
 
 <command name="VERTEXBASEDGRID" if="$_IsFirstSession and $_IsStandAlone">
-	<parameter name="UseVertexBasedGrid"    type="logical" default="F"/>
+	<parameter name="UseVertexBasedGrid"    type="logical" default="T"/>
 
 #VERTEXBASEDGRID
 F                         UseVertexBasedGrid
@@ -1276,13 +1283,13 @@ T			DoFixAxis
 5.0			rFixAxis
 1.5			r2FixAxis
 
-The computational cells become where small near the symmetry axis 
-of a spherical (or cylindrical) grid. When DoFixAxis is true, the
-cells around the pole are merged into one 'supercell' upto the blocks
+The computational cells become very small near the symmetry axis 
+of a spherical or cylindrical grid. When DoFixAxis is true, the
+cells around the pole are merged into one 'supercell' for the blocks
 that are (partially) inside radius rFixAxis. 
-For blocks within r2FixAxis the radius of the supercell is 2 normal
-cells. Merging the small cells allows larger time steps 
-(about a factor of 2 if only rFixAxis is used, and around factor of 3 
+For blocks within r2FixAxis, the radius of the supercell is 2 normal
+cells. Merging the small cells allows larger time steps in time accurate runs:
+about a factor of 2 if only rFixAxis is used, and around factor of 3 
 if r2FixAxis is also used.
 </command>
 
@@ -4083,7 +4090,7 @@ in the file GM/BATSRUS/get_solar_wind_point.f90.
 	<if expr="$UseBody">
 		<parameter name="rBody" type="real" min="0" default="3"/>
 		<parameter name="rCurrents" type="real" min="-1" default="4"
-			if="$_NameComp eq 'GM'"/>
+			if="$NameComp eq 'GM'"/>
 		<parameter name="BodyNDim" type="real" min="0" default="1"/>
 		<parameter name="BodyTDim" type="real" min="0" default="1000"/>
 	</if>
@@ -4397,7 +4404,7 @@ For now the dipole of the second body can only be aligned with the z-axis
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!! HELIOSPHERE SPECIFIC COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-<command name="HELIOUPDATEB0" if="$_NameComp ne 'GM'">
+<command name="HELIOUPDATEB0" if="$NameComp ne 'GM'">
 	<parameter name="DtUpdateB0" type="real" min="-1" default="0.0001"/>
 
 #HELIOUPDATEB0
@@ -4407,7 +4414,7 @@ Set the frequency of updating the B0 field for the solar corona.
 A negative value means that the B0 field is not updated.
 </command>
 
-<command name="HELIODIPOLE" if="$_NameComp ne 'GM'">
+<command name="HELIODIPOLE" if="$NameComp ne 'GM'">
 	<parameter name="HelioDipoleStrength" type="real" />
 	<parameter name="HelioDipoleTilt" type="real" min="-90" max="90" 
 								default="0"/>
@@ -4423,7 +4430,7 @@ while HelioDipoleTilt is the tilt relative to the ecliptic North
 Default value is HelioDipoleStrength = 0.0.
 </command>
 
-<command name="HELIOBUFFERGRID" if="$_IsFirstSession and $_NameComp eq 'IH'">
+<command name="HELIOBUFFERGRID" if="$_IsFirstSession and $NameComp eq 'IH'">
 	<parameter name="rBuffMin"   type="real" min="1" default="19"/>
 	<parameter name="rBuffMax"   type="real" min="1" default="21"/>
 	<parameter name="nThetaBuff" type="integer" min="18" default="45"/>
