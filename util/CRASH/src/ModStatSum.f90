@@ -1,8 +1,12 @@
 module ModStatSum
    use ModIonizPotential
+   use ModAtomicMass,ONLY:nZMax
    implicit none  
-   integer,parameter::nZMax=54 !Atomic number of element in question
-   integer:: nZ,iZMin,iZMax
+   integer:: nZ           !Atomic number of element in question
+   integer::iZDominant    !Most populated ion state
+   integer::iZMin         !Numbers of the ionization states, such that &
+   integer::iZMax         !the population of ion states with iZ<iZMin or &
+                          !iZ>iZMax is negligible.
    real,dimension(nZMax)::IonizPotential_I
    real,dimension(nZMax)::Population_I
 

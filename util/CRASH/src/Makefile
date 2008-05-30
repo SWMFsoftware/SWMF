@@ -11,26 +11,29 @@ OBJECTS=\
         ModIonizPotential.o\
 	get_ionization.o 
 
+OBJECTS_EXE= test_ionization.o
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS} ${OBJECTS_EXE} 
 
 MY_LIB = libCRASH.a
 
-LIB:	DEPEND
+LIB:
 	make ${MY_LIB}
 	@echo
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}: ${OBJECTS}
+${MY_LIB}: 
+	make DEPEND  
+	make ${OBJECTS}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
 
 LIBSHARE  = ${LIBDIR}/libSHARE.a
 LIBTIMING = ${LIBDIR}/libTIMING.a
 
-OBJECTS_EXE= test_ionization.o
+
 
 ${OBJECTS_EXE} : ${MY_LIB} ${LIBSHARE} ${LIBTIMING}
 
