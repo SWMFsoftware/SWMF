@@ -23,9 +23,6 @@ T			DoSaveRestart
 
 #BEGIN_COMP SC --------------------------------------------------------------
 
-#COORDSYSTEM
-HGR                     TypeCoordSystem
-
 #USER_FLAGS
 T			UseUserInnerBCs
 F			UseUserSource
@@ -99,26 +96,14 @@ T
 6000			DnRefine
 F			DoAutomaticRefinement 
 
-#USERS7
-F
-
 #SCHEME
 2			nOrder (1 or 2)
 Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
 mc                      TypeLimiter
 1.2			BetaLimiter
 
-#TVDRESCHANGE
-T                       UseTVDatResChange
-
 #RESCHANGEBOUNDARY
 T
-
-#DIVB
-T
-F
-F
-F
 
 #TIMESTEPPING
 2                       nStage
@@ -240,17 +225,11 @@ F
 2			nStage
 0.8			CflExpl
 
-#USERS7
-T
-
 #SCHEME
 2			nOrder
 Roe			TypeFlux
 mc
 1.2
-
-#MESSAGEPASS
-allopt                  TypeMessagePass
 
 #AMR
 -1			DnRefine
@@ -261,13 +240,6 @@ T			DoSaveLogfile
 RAW			StringLogfile
 -1			DnSaveLogfile
 3600.			DtSaveLogfile
-
-SATELLITE
-1
-MHD file
--1
-3600.0
-IH/earth_traj.dat
 
 #SAVEPLOT
 4			nPlotFiles
@@ -283,9 +255,6 @@ z=0 MHD tec		StringPlot
 3d MHD tec		StringPlot
 -1                    DnSavePlot
 518400.0			DtSavePlot
-
-#TVDRESCHANGE
-T                       UseTVDatResChange
 
 #RESCHANGEBOUNDARY
 T
@@ -303,9 +272,6 @@ F
 #RUN ########################################################################
 
 #BEGIN_COMP SC --------------------------------------------------------------
-
-#USERS7
-T
 
 #SCHEME
 2			nOrder (1 or 2)
@@ -353,35 +319,17 @@ F			DoAutomaticRefinement
 IH
 T
 
-#COUPLE2
+#COUPLE1
 SC
 IH
 1
 -1.0
-
-#BEGIN_COMP SC --------------------------------------------------------------
-
-#OUTERBOUNDARY
-coupled	                TypeBcOuter_E(East_)
-coupled   	        TypeBcOuter_E(West_)
-coupled	                TypeBcOuter_E(South_)
-coupled	  		TypeBcOuter_E(North_)
-coupled	 	        TypeBcOuter_E(Bot_)
-coupled	   		TypeBcOuter_E(Top_)
-
-#END_COMP SC -----------------------------------------------------------------
 
 #STOP
 14001
 -1
 
 #RUN #########################################################################
-
-#COUPLE2
-SC
-IH
--1
--1.0
 
 #COMPONENT
 SC
@@ -399,4 +347,3 @@ T			DoSaveRestart
 -1
 518400.0
 
-#END
