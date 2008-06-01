@@ -127,6 +127,10 @@ install: ENV_CHECK mkdir
 		then cp GM/BATSRUS/Config.pl SC/BATSRUS; \
 		     perl -i -pe 's/GM/SC/' SC/BATSRUS/Config.pl; \
 	fi
+	if([ -d "OH/BATSRUS" ]); \
+		then cp GM/BATSRUS/Config.pl OH/BATSRUS; \
+		     perl -i -pe 's/GM/OH/' OH/BATSRUS/Config.pl; \
+	fi
 	if([ -d "IH/BATSRUS" ]); \
 		then cp GM/BATSRUS/Config.pl IH/BATSRUS; \
 		     perl -i -pe 's/GM/IH/' IH/BATSRUS/Config.pl; \
@@ -414,6 +418,49 @@ IHBATSRUS: IH/BATSRUS/src/Makefile \
 		./Config.pl -u=Ih -e=Mhd
 
 #^CMP END IH
+
+#^CMP IF OH BEGIN
+#
+# configure and collect source files for SC/BATSRUS component
+#
+OH/BATSRUS/src/Makefile:
+	rm -rf \
+	OH/BATSRUS/src \
+	OH/BATSRUS/srcUser \
+	OH/BATSRUS/srcInterface/OH_wrapper.f90
+	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../OH/BATSRUS/src
+	cd GM/BATSRUS/srcInterface/; \
+		cp ModGridDescriptor.f90 ModBuffer.f90 \
+		update_lagrangian_grid.f90 \
+		../../../OH/BATSRUS/srcInterface
+	cp GM/BATSRUS/srcUser/*.f90 OH/BATSRUS/srcUser/
+	cd GM/BATSRUS; \
+		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
+			../../OH/BATSRUS/
+	echo '*' > OH/BATSRUS/src/.cvsignore
+	cp -f IH/BATSRUS_share/src/IH_wrapper.f90 \
+		OH/BATSRUS/srcInterface/OH_wrapper.f90
+	cd OH/BATSRUS/srcInterface/; perl -i -pe \
+	's/IH/OH/g;s/BATSRUS/OH_BATSRUS/;s/Inner/Outer/;'\
+		OH_wrapper.f90 
+	cd OH/BATSRUS/src; rm -f main.f90
+
+# rename OH source files to avoid name conflicts
+OH_SRC = src/*.f90 src/*.h srcInterface/*.f90 srcUser/*.f90
+
+OHBATSRUS: OH/BATSRUS/src/Makefile \
+		${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
+	cd OH/BATSRUS; \
+		${SCRIPTDIR}/Methods.pl OH ${OH_SRC}; \
+		${SCRIPTDIR}/Rename.pl -w -r -common=OH ${OH_SRC}
+	touch OH/BATSRUS/srcInterface/Makefile.DEPEND
+	cd OH/BATSRUS; \
+		perl -i -pe 's/GM/OH/' Config.pl; \
+		./Config.pl -install=c -e=Mhd
+
+#^CMP END OH
+
+
 #^CMP IF SC BEGIN
 #
 # configure and collect source files for SC/BATSRUS component
