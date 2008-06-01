@@ -272,7 +272,7 @@ contains
     if(n_prev == n_step)then                            !^CFG IF IMPLICIT BEGIN
        write(unit_tmp,'(a)')'#NPREVIOUS'
        write(unit_tmp,'(i8,a32)')n_prev,'nPrev'
-       write(unit_tmp,'(1pe20.12,a20)')dt_prev,'DtPrev'
+       write(unit_tmp,'(es22.15,a18)')dt_prev,'DtPrev'
        write(unit_tmp,*)
     end if                                              !^CFG END IMPLICIT
     write(unit_tmp,'(a)')'#STARTTIME'
@@ -284,7 +284,7 @@ contains
     write(unit_tmp,'(i8,a32)')iStartTime_I(6),'iSecond'
     write(unit_tmp,*)
     write(unit_tmp,'(a)')'#TIMESIMULATION'
-    write(unit_tmp,'(es15.8,a25)')time_simulation,'tSimulation'
+    write(unit_tmp,'(es22.15,a18)')time_simulation,'tSimulation'
     write(unit_tmp,*)
     if(UseCovariant)then                        
        write(unit_tmp,'(a)')'#GRIDGEOMETRY'
@@ -293,44 +293,45 @@ contains
        write(unit_tmp,'(a)')'#VERTEXBASEDGRID'
        write(unit_tmp,'(l1,a39)') UseVertexBasedGrid,'UseVertexBasedGrid'
        write(unit_tmp,*)
-       write(unit_tmp,'(a)')'#LIMITGENCOORD1'                   
-       write(unit_tmp,'(1pe13.5,a27)')XyzMin_D(1),'XyzMin_D(1)' 
-       write(unit_tmp,'(1pe13.5,a27)')XyzMax_D(1),'XyzMax_D(1)' 
-       write(unit_tmp,*)
-    end if                                      
-    write(unit_tmp,*)
+    end if
     write(unit_tmp,'(a)')'#GRID'
     write(unit_tmp,'(i8,a32)')proc_dims(1),'nRootBlockX'
     write(unit_tmp,'(i8,a32)')proc_dims(2),'nRootBlockY'
     write(unit_tmp,'(i8,a32)')proc_dims(3),'nRootBlockZ'
-    write(unit_tmp,'(1pe13.5,a27)')x1,'xMin'
-    write(unit_tmp,'(1pe13.5,a27)')x2,'xMax'
-    write(unit_tmp,'(1pe13.5,a27)')y1,'yMin'
-    write(unit_tmp,'(1pe13.5,a27)')y2,'yMax'
-    write(unit_tmp,'(1pe13.5,a27)')z1,'zMin'
-    write(unit_tmp,'(1pe13.5,a27)')z2,'zMax'
+    write(unit_tmp,'(es22.15,a18)')x1,'xMin'
+    write(unit_tmp,'(es22.15,a18)')x2,'xMax'
+    write(unit_tmp,'(es22.15,a18)')y1,'yMin'
+    write(unit_tmp,'(es22.15,a18)')y2,'yMax'
+    write(unit_tmp,'(es22.15,a18)')z1,'zMin'
+    write(unit_tmp,'(es22.15,a18)')z2,'zMax'
     write(unit_tmp,*)
+    if(UseCovariant)then                        
+       write(unit_tmp,'(a)')'#LIMITGENCOORD1'                   
+       write(unit_tmp,'(es22.15,a18)')XyzMin_D(1),'XyzMin_D(1)' 
+       write(unit_tmp,'(es22.15,a18)')XyzMax_D(1),'XyzMax_D(1)' 
+       write(unit_tmp,*)
+    end if                                      
     write(unit_tmp,'(a)')'#COORDSYSTEM'
     write(unit_tmp,'(a3,a37)') TypeCoordSystem,'TypeCoordSystem'
     write(unit_tmp,*)
     write(unit_tmp,'(a)')'#SOLARWIND'
-    write(unit_tmp,'(1pe15.7,a25)')SW_n_dim,  'SwNDim'
-    write(unit_tmp,'(1pe15.7,a25)')SW_T_dim,  'SwTDim'
-    write(unit_tmp,'(1pe15.7,a25)')SW_Ux_dim, 'SwUxDim'
-    write(unit_tmp,'(1pe15.7,a25)')SW_Uy_dim, 'SwUyDim'
-    write(unit_tmp,'(1pe15.7,a25)')SW_Uz_dim, 'SwUzDim'
-    write(unit_tmp,'(1pe15.7,a25)')SW_Bx_dim, 'SwBxDdim'
-    write(unit_tmp,'(1pe15.7,a25)')SW_By_dim, 'SwByDim'
-    write(unit_tmp,'(1pe15.7,a25)')SW_Bz_dim, 'SwBzDim'
+    write(unit_tmp,'(es22.15,a18)')SW_n_dim,  'SwNDim'
+    write(unit_tmp,'(es22.15,a18)')SW_T_dim,  'SwTDim'
+    write(unit_tmp,'(es22.15,a18)')SW_Ux_dim, 'SwUxDim'
+    write(unit_tmp,'(es22.15,a18)')SW_Uy_dim, 'SwUyDim'
+    write(unit_tmp,'(es22.15,a18)')SW_Uz_dim, 'SwUzDim'
+    write(unit_tmp,'(es22.15,a18)')SW_Bx_dim, 'SwBxDdim'
+    write(unit_tmp,'(es22.15,a18)')SW_By_dim, 'SwByDim'
+    write(unit_tmp,'(es22.15,a18)')SW_Bz_dim, 'SwBzDim'
     write(unit_tmp,*)
     write(unit_tmp,'(a)')'#IOUNITS'
     write(unit_tmp,'(a20,a20)')TypeIoUnit,'TypeIoUnit'
     write(unit_tmp,*)
     write(unit_tmp,'(a)')'#NORMALIZATION'
     write(unit_tmp,'(a)')'READ'
-    write(unit_tmp,'(1pe23.15,a17)')No2Si_V(UnitX_),   'No2SiUnitX'
-    write(unit_tmp,'(1pe23.15,a17)')No2Si_V(UnitU_),   'No2SiUnitU'
-    write(unit_tmp,'(1pe23.15,a17)')No2Si_V(UnitRho_), 'No2SiUnitRho'
+    write(unit_tmp,'(es22.15,a18)')No2Si_V(UnitX_),   'No2SiUnitX'
+    write(unit_tmp,'(es22.15,a18)')No2Si_V(UnitU_),   'No2SiUnitU'
+    write(unit_tmp,'(es22.15,a18)')No2Si_V(UnitRho_), 'No2SiUnitRho'
     write(unit_tmp,*)
     write(unit_tmp,'(a)')'#PLOTFILENAME'
     write(unit_tmp,'(a10,a30)') NameMaxTimeUnit, 'NameMaxTimeUnit'
@@ -339,12 +340,12 @@ contains
     if(body1)then
        write(unit_tmp,'(a)')'#BODY'
        write(unit_tmp,'(l1,a39)')      .true., 'UseBody'
-       write(unit_tmp,'(1pe13.5,a27)') rBody, 'rBody'
+       write(unit_tmp,'(es22.15,a18)') rBody, 'rBody'
        if(NameThisComp=='GM') &
-            write(unit_tmp,'(1pe13.5,a27)') rCurrents, 'rCurrents'
+            write(unit_tmp,'(es22.15,a18)') rCurrents, 'rCurrents'
        do iFluid = IonFirst_, nFluid
-          write(unit_tmp,'(1pe13.5,a27)') BodyNDim_I(iFluid), 'BodyNDim'
-          write(unit_tmp,'(1pe13.5,a27)') BodyTDim_I(iFluid), 'BodyTDim'
+          write(unit_tmp,'(es22.15,a18)') BodyNDim_I(iFluid), 'BodyNDim'
+          write(unit_tmp,'(es22.15,a18)') BodyTDim_I(iFluid), 'BodyTDim'
        end do
        write(unit_tmp,*)
     end if
@@ -352,13 +353,13 @@ contains
     if(UseBody2)then
        write(unit_tmp,'(a)')'#SECONDBODY'
        write(unit_tmp,'(l1,a39)')     UseBody2,      'UseBody2'
-       write(unit_tmp,'(1pe13.5,a27)')Rbody2,        'rBody2'
-       write(unit_tmp,'(1pe13.5,a27)')xbody2,        'xBody2'
-       write(unit_tmp,'(1pe13.5,a27)')ybody2,        'yBody2'
-       write(unit_tmp,'(1pe13.5,a27)')zbody2,        'zBody2'
-       write(unit_tmp,'(1pe13.5,a27)')rCurrentsBody2,'rCurrentsBody2'
-       write(unit_tmp,'(1pe13.5,a27)')RhoDimBody2,   'RhoDimBody2'
-       write(unit_tmp,'(1pe13.5,a27)')tDimBody2,     'tDimBody2'
+       write(unit_tmp,'(es22.15,a18)')Rbody2,        'rBody2'
+       write(unit_tmp,'(es22.15,a18)')xbody2,        'xBody2'
+       write(unit_tmp,'(es22.15,a18)')ybody2,        'yBody2'
+       write(unit_tmp,'(es22.15,a18)')zbody2,        'zBody2'
+       write(unit_tmp,'(es22.15,a18)')rCurrentsBody2,'rCurrentsBody2'
+       write(unit_tmp,'(es22.15,a18)')RhoDimBody2,   'RhoDimBody2'
+       write(unit_tmp,'(es22.15,a18)')tDimBody2,     'tDimBody2'
        write(unit_tmp,*)
     end if
     !^CFG END SECONDBODY
@@ -368,8 +369,8 @@ contains
     write(unit_tmp,*)
     write(unit_tmp,'(l8,a)') time_accurate,   ' time_accurate'
     write(unit_tmp,*)
-    if(time_accurate)write(unit_tmp,'(2(1pe13.5),a)')&
-         time_simulation, dt,                 ' time_simulation, dt'
+    if(time_accurate)write(unit_tmp,'(2es13.5,a)')&
+         time_simulation, dt, ' time_simulation, dt'
 
     write(unit_tmp,'(a)')'Io2Si_V='
     write(unit_tmp,'(100es13.5)') Io2Si_V
