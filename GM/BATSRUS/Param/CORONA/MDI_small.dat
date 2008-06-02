@@ -1,0 +1,15 @@
+Coefficients order=1  center=CT2044:180
+Observation time: 2006.06.17_23:05:48
+B0 angle & Nmax:        0          1
+
+
+
+
+
+Max Harmonic Order:1    Units: microTesla (0.01G)
+
+  l   m      g(uT)      h(uT)
+
+       0       0      0.00000      0.00000
+       1       0     20.00000      0.00000
+       1       1     10.00000      0.00000
