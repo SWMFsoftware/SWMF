@@ -12,9 +12,6 @@ SOLARWIND
 #PLANET
 VENUS                      problem_type: 14=Venus Ionosphere
 
-#DIPOLE
-0.0			DipoleStrength
-
 #ROTATION 
 F
 
@@ -22,27 +19,12 @@ F
 T
 0
 
-#COVARIANTGEOMETRY
-spherical_lnr
+#INCLUDE
+Param/VENUS/Grid
 
-#LIMITGENCOORD1
-1.02			Radius1
-53.0			Radius2
-
-#GRID
-8                      proc_dims(1)
-4                       proc_dims(2)
-2                       proc_dims(3),
--40.                    x1
-  8.                    x2
--24.                    y1
- 24.                    y2
--24.                    z1
- 24.                    z2
-
-#AMRINIT
-Venus3Dbodyfocus       InitialRefineType
-2                      InitialRefineLevel
+#GRIDLEVEL
+2			nLevelArea
+initial			NameArea
 
 #BODY
 T			body1
@@ -65,7 +47,7 @@ T			UseUserSource
 F			UseUserPerturbation
 F                       UseUserOuterBcs
 T                       UseUserICs
-T                       UseUserSpecifyRefinement
+F                       UseUserSpecifyRefinement
 T                       UseUserLogFiles
 F                       UseUserWritePlot
 F                       UseUserAMR
@@ -73,11 +55,6 @@ F                       UseUserEchoInput
 F                       UseUserB0
 T                       UseUserInitSession
 F                       UseUserUpdateStates
-
-HALLRESISTIVITY
-T	UseHallResistFlux
-1.0    HallFactor
-0.0     HallCmaxFactor
 
 #TEST
 read_inputs amr 
@@ -105,17 +82,6 @@ VAR step                StringLog
 dt pmin pmax rho p hpflx opflx o2pflx co2pflx
 3.0 5.0
 
-MULTISPECIES
-T
-4
-
-HEATFLUX
-F			UseHeatFlux
-F 			UseSpitzerForm	
-1.23354e-11		Kappa0Heat
-2.5			ExponentHeat
-
-
 #INNERBOUNDARY
 user
 
@@ -134,9 +100,7 @@ T			DoReplaceDensity
 0.0                     SW_Bz_dim [nT]       /
 
 #SAVERESTART
-T
-3000
--1.0
+F
 
 #SAVEPLOT
 5			nplotfiles
