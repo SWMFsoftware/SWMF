@@ -1,5 +1,3 @@
-!- PARAM.in:  Example input file for BATSRUS --
-
 #ECHO
 T                       DoEcho
 
@@ -7,45 +5,33 @@ T                       DoEcho
 SOLARWIND
 
 #DESCRIPTION
-Titan test save restart
+Titan test
 
 #VERTEXBASEDGRID
-T
+T			UseVertexBasedGrid
 
 #COVARIANTGEOMETRY
-spherical_lnr
+spherical_lnr		TypeGeometry
 
 #PLANET
-Titan
+Titan			NamePlanet
 
 #DIPOLE
 0.0			DipoleStrength
 
 #ROTATION 
-F
+F			UseRotation
 
 #GRAVITY
-T
-0
+T			UseGravity
+0			iDirGravity
 
-#GRID
-4                       nRootBlockX
-2                       nRootBlockY
-1                       nRootBlockZ
--32.                    x1
- 96.                    x2
--64.                    y1
- 64.                    y2
--64.                    z1
- 64.                    z2
+#INCLUDE
+Param/TITAN/Grid
 
-#LIMITGENCOORD1
-0.248073                rMin = alog(1.281553)
-4.88234			rMax = alog(sqrt(64^2+96^2+64^2))
-
-#AMRINIT
-Titan3Dbodyfocus             InitialRefineType
-3                      InitialRefineLevel
+#GRIDLEVEL
+3			nLevelArea
+initial			NameArea
 
 #BODY
 T			body1
@@ -62,9 +48,9 @@ F			DoTimeAccurate
 0.8			CflExpl
 
 #SCHEME
-2                       nOrder (1 or 2)
-Linde                   FluxType
-minmod                  LimiterType
+2                       nOrder
+Linde                   TypeFlux
+minmod                  TypeLimiter
 
 #USERFLAGS
 T			UseUserInnerBcs
@@ -82,24 +68,24 @@ T                       UseUserInitSession
 F                       UseUserUpdateStates
 
 #NONCONSERVATIVE
-F
+F			UseNonConservative
 
 #TEST
 init_hall_resist
 update_states calc_sources calc_facefluxes calc_timestep
 
 #SAVELOGFILE
-T                       DoSaveLogfile, rest of parameters read if true
+T                       DoSaveLogfile
 RAW step time	        StringLog
 1	                DnSaveLogfile
--1.                     DtSaveLogfile [sec]
+-1.                     DtSaveLogfile
 
 #INNERBOUNDARY
-user
+user			TypeInnerBc
 
 #OUTERBOUNDARY
-inflow                 TypeBcEast
-outflow                TypeBcWest
+inflow                  TypeBcEast
+outflow                 TypeBcWest
 fixed                   TypeBcSouth
 fixed                   TypeBcNorth
 fixed                   TypeBcBottom
@@ -130,7 +116,7 @@ SUBSOLARLOC
 0.0
 
 #USETITANINPUT
-CassiniTA		Solarmax: CassiniTA:Solarmin
+CassiniTA	        Solarmax: CassiniTA:Solarmin
 T                       Including impact ionization
 
 #UPSTREAM
@@ -138,8 +124,8 @@ T                       Including impact ionization
 0.05                     N^+ density(cm^-3)
 500.0                   plasma temperature(eV) 200+50
 
-USECOSSZA
-T			default
+#USECOSSZA
+T
 
 #USERINPUTEND ---------------------------------------------------------
 
@@ -152,9 +138,9 @@ T			DoReplaceDensity
 block			TypeRestartInFile
 
 #SAVERESTART
-T
-100
--1.0
+T			DoSaveRestart
+2000			DnSaveRestart
+-1.0			DtSaveRestart
 
 #SAVEPLOT
 6			nPlotFiles
@@ -193,4 +179,3 @@ cut MHD idl             StringPlot
 #STOP
 25			MaxIteration
 -1.0			tSimulationMax
-

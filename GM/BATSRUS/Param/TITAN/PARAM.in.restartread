@@ -1,5 +1,3 @@
-!- PARAM.in:  Example input file for BATSRUS --
-
 #ECHO
 T                       DoEcho
 
@@ -9,19 +7,12 @@ GM/restartIN/restart.H
 #DESCRIPTION
 Titan test read restart
 
-#DIPOLE
-0.0			DipoleStrength
-
 #ROTATION 
-F
+F			UseRotation
 
 #GRAVITY
-T
-0
-
-#AMRINIT
-Titan3Dbodyfocus             InitialRefineType
-3                      InitialRefineLevel
+T			UseGravity
+0			iDirGravity
 
 #TIMEACCURATE
 F			DoTimeAccurate
@@ -31,9 +22,9 @@ F			DoTimeAccurate
 0.8			CflExpl
 
 #SCHEME
-2                       nOrder (1 or 2)
-Linde                   FluxType
-minmod                  LimiterType
+2                       nOrder
+Linde                   TypeFlux
+minmod                  TypeLimiter
 
 #USERFLAGS
 T			UseUserInnerBcs
@@ -51,24 +42,24 @@ T                       UseUserInitSession
 F                       UseUserUpdateStates
 
 #NONCONSERVATIVE
-F
+F			UseNonConservative
 
 #TEST
 init_hall_resist
 update_states calc_sources calc_facefluxes calc_timestep
 
 #SAVELOGFILE
-T                       DoSaveLogfile, rest of parameters read if true
+T                       DoSaveLogfile
 RAW step time	        StringLog
 1	                DnSaveLogfile
--1.                     DtSaveLogfile [sec]
+-1.                     DtSaveLogfile
 
 #INNERBOUNDARY
-user
+user			TypeInnerBc
 
 #OUTERBOUNDARY
-inflow                 TypeBcEast
-outflow                TypeBcWest
+inflow                  TypeBcEast
+outflow                 TypeBcWest
 fixed                   TypeBcSouth
 fixed                   TypeBcNorth
 fixed                   TypeBcBottom
@@ -150,4 +141,3 @@ cut MHD idl             StringPlot
 #STOP
 25			MaxIteration
 -1.0			tSimulationMax
-
