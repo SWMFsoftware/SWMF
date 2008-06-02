@@ -50,6 +50,9 @@ help:
 	@#^CMP IF IH BEGIN
 	@echo '    IHBATSRUS   (copy and rename GM/BATSRUS source into IH/BATSRUS)'
 	@#^CMP END IH
+	@#^CMP IF OH BEGIN
+	@echo '    OHBATSRUS   (copy and rename GM/BATSRUS source into OH/BATSRUS)'
+	@#^CMP END OH
 	@#^CMP IF SC BEGIN
 	@echo '    SCBATSRUS   (configure and rename GM/BATSRUS source into SC/BATSRUS)'
 	@#^CMP END SC
@@ -140,6 +143,7 @@ install: ENV_CHECK mkdir
 		     perl -i -pe "s/GM/IH/; s#'src#'../../GM/BATSRUS/src#" \
 			IH/BATSRUS_share/Config.pl; \
 	fi
+
 	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v /Empty/`; \
 		do (echo Installing $$i; cd $$i; ./Config.pl -install=c); done
 	@echo
@@ -335,6 +339,7 @@ rundir: ENV_CHECK
 	cd ${GMDIR}; make rundir                 #^CMP IF GM
 	cd ${IEDIR}; make rundir                 #^CMP IF IE
 	cd ${IHDIR}; make rundir                 #^CMP IF IH
+	cd ${OHDIR}; make rundir                 #^CMP IF OH
 	cd ${IMDIR}; make rundir                 #^CMP IF IM
 	cd ${LADIR}; make rundir                 #^CMP IF LA
 	cd ${PSDIR}; make rundir                 #^CMP IF PS
@@ -418,6 +423,7 @@ IHBATSRUS: IH/BATSRUS/src/Makefile \
 		./Config.pl -u=Ih -e=Mhd
 
 #^CMP END IH
+
 
 #^CMP IF OH BEGIN
 #
