@@ -54,7 +54,7 @@ module ModSaha
        vNe        , &   ! [cm^{-3}]
        vTe        , &   ! [eV]
        vNatomII   , &   ! a sum over concentrations of atoms+ions, cm^{-3}
-       Z              , &   ! vNe/sum(C_I) <= only ions  
+       Z          , &   ! vNe/sum(C_I) <= only ions  
        C_I(0:99)  , &   ! C_I[0]-neutrals resided after ionization
        U_I(1:99)  , &   ! U_I(iZ) - the energy to make an ion iZ+ from (iZ-1)+    
        CUITotal         ! sum(Uiz*Ciz)/Ce  <~> ionization energy per 1 electron
@@ -64,6 +64,8 @@ module ModSaha
 
 ! end module ModSaha
 !=============================================================================
+ 
+
   contains
 
  !===========================================================================
@@ -73,6 +75,9 @@ subroutine prep_ionization ( MAT ) ! for given material must be selected
 
 end subroutine prep_ionization
  !============================================================================
+
+
+
 
 
 subroutine    ConcNafter  ! for given summ(No+Niz) on boundary II, calc. C_I[z]
@@ -88,7 +93,7 @@ subroutine    ConcNafter  ! for given summ(No+Niz) on boundary II, calc. C_I[z]
   vNTotalInv= 1.0/vNatomII   ! Inverted value, often used       
   C_I(0)    = vNTotal
 
-  ! debuT:    !write (*,*) 'ConcN: NatomII=', NatomII, ' Te=', vTe
+! debuT:    !write (*,*) 'ConcN: NatomII=', NatomII, ' Te=', vTe
 
   x1= C_I(0)*1.001;  f1=( Conc(x1) -vNTotal )*vNTotalInv; ! loop initiation 
   x2= C_I(0)*0.011;  f2=( Conc(x2) -vNTotal )*vNTotalInv; ! to find  
@@ -102,26 +107,37 @@ subroutine    ConcNafter  ! for given summ(No+Niz) on boundary II, calc. C_I[z]
      else
        df = cToleranceHere        ! if (x1!=x2) must  be additional analysis
        x3 = (x1+x2)*0.500         ! or  EXIT  to avoid  AVOST
+!debuT:    
+             write(*,*)"_conc:",f1,x1, f2,x2 , " A case?  f2==f1" 
      end if
 
+
      if(      x3 < 1.00d-22 )  then
-              x3 = 1.00d-22  ;    ! bottom limit for trial concentration
+!debuT:   
+          write(*,*)"_conc:",f1,x1, f2,x2 , " A case?"
+              x3 = (x1+x2)*0.1
+          write(*,*)"____ x2 <~>x1:", df, (x2-x1), "=> x3:",x3  
+             !x3 = 1.00d-22  ;    ! bottom limit for trial concentration
+
      else if( x3 > 1.00d+33 )  then  
               x3 = 1.00d+33  ;    ! upper limit, , to avoid precision lost or overflow  
      end if
      if( f1*f1 > f2*f2 ) then 
-        x1=x2;  f1=f2; 
+         x1=x2;  f1=f2; 
      end if
      x2 = x3;   f2 = ( Conc(x3) - vNTotal )*vNTotalInv;
      
      if( 0.0 == f2  )  exit
      iter =iter +1
 
-  ! debuT:  !write (*,*) 'ConcN: Iter=',iter
+  ! debuT:  !
+        write (*,*) 'ConcN: Iter=',iter
 
   end do  neutral
   return
+
   !..........
+
 contains
  ! 
  !  To solve an equation: sum(C)=Na, where Na is a given consentration
@@ -151,7 +167,9 @@ contains
          CZTotal    , CZ2Total ,        &
          UW_I(1:5), UITotal          
 
-    real,parameter :: cElectronStatWeight=6.050e21 !To be clarified,<~> CGS units!
+    real, parameter :: cElectronStatWeight=6.050e21 !may  be clarified,<~> CGS units!
+
+    real   :: xx789    !any temporary value for debugging output
 
 
     CZTotal  = 0.0
@@ -219,7 +237,7 @@ contains
 
              iter= iter +1
 
-  !debuT:    write (*,*)".New: i2=",iter2," iter=",iter," dNe=",DeltaNe," xNe=",NeIterated          
+  !debuT:    write (*,*)".New: i2=",iter2," iter=",iter," dNe=",DeltaNe," xNe=",NeIterated   
           end do NEWNe ! 
 
           Z  = CZTotal /sum(StatWeight_I)  
@@ -256,15 +274,30 @@ contains
 
     CUITotal = CUITotal / vNe      ! [eV] per electron    
 
-! here: test functions from the ModStatSum:
+!
+! here: test  the ModStatSum methods:
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   set_population(vTe,        cElectronStatWeight/vNe    )  ! TeInv, GeLog)
-!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+!    write(*,*) " StatSum ______________________________ "
+    call  set_element( 54 )
+    xx789 =  cElectronStatWeight/vNe 
+!    write(*,*) " StatSum _____set population __________ ", vTe, "eStatW/Ne=",xx789,vNe
+ 
+    xx789 = 1.00/vTe
+!    call  set_population( xx789 , cElectronStatWeight/vNe    )  ! TeInv, GeLog)
+!    write(*,*) "___<<Stat:", "iZmin=",iZmin, " iZdom=", iZdominant, " iZmax=",iZmax
+
+
+
+!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+!
 
   end function conc
   !........................
+
+
 end subroutine ConcNafter
+
 
 
 !=======================================================================
