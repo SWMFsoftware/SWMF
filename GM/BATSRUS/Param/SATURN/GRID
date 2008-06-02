@@ -1,24 +1,24 @@
 #GRID
-       7                    proc_dims(1)		nRootBlockX
-       4                    proc_dims(2)		nRootBlockY
-       4                    proc_dims(3)		nRootBlockZ
- -5.76000E+02                         x1		xMin
-  0.96000E+02                         x2		xMax
- -1.92000E+02                         y1		yMin
-  1.92000E+02                         y2		yMax
- -1.92000E+02                         z1		zMin
-  1.92000E+02                         z2		zMax
+       7                nRootBlockX
+       4                nRootBlockY
+       4                nRootBlockZ
+ -5.76000E+02           xMin
+  0.96000E+02           xMax
+ -1.92000E+02           yMin
+  1.92000E+02           yMax
+ -1.92000E+02           zMin
+  1.92000E+02           zMax
 
 #GRIDRESOLUTION
-3.0			Resolution		AreaResolution
+3.0			AreaResolution
 initial			NameArea
 
 #GRIDRESOLUTION
-6.0			Resolution		AreaResolution
+6.0			AreaResolution
 all			NameArea
 
 #GRIDRESOLUTION
-3.0			Resolution		AreaResolution
+3.0			AreaResolution
 box			NameArea
 -336.0			xMinBox
  -96.0			yMinBox
@@ -28,18 +28,18 @@ box			NameArea
   48.0			zMaxBox
 
 #GRIDRESOLUTION
-3.0			Resolution		AreaResolution (default/unchanged) (default/unchanged)
-box			NameArea (default/unchanged) (default/unchanged)
+3.0			AreaResolution
+box			NameArea
 -288.0			xMinBox
 -144.0			yMinBox
- -48.0			zMinBox (default/unchanged) (default/unchanged)
+ -48.0			zMinBox
  -48.0			xMaxBox
  144.0			yMaxBox
-  48.0			zMaxBox (default/unchanged) (default/unchanged)
+  48.0			zMaxBox
 
 #GRIDRESOLUTION
-3/2			Resolution		AreaResolution
-box			NameArea (default/unchanged) (default/unchanged)
+3/2			AreaResolution
+box			NameArea
 -264.0			xMinBox
  -48.0			yMinBox
  -24.0			zMinBox
@@ -48,70 +48,70 @@ box			NameArea (default/unchanged) (default/unchanged)
   24.0			zMaxBox
 
 #GRIDRESOLUTION
-3/2			Resolution		AreaResolution (default/unchanged) (default/unchanged)
-box			NameArea (default/unchanged) (default/unchanged)
--264.0			xMinBox (default/unchanged) (default/unchanged)
+3/2			AreaResolution
+box			NameArea
+-264.0			xMinBox
 -120.0			yMinBox
- -24.0			zMinBox (default/unchanged) (default/unchanged)
+ -24.0			zMinBox
  -72.0			xMaxBox
  120.0			yMaxBox
-  24.0			zMaxBox (default/unchanged) (default/unchanged)
+  24.0			zMaxBox
 
 #GRIDRESOLUTION
-3/2			Resolution		AreaResolution (default/unchanged) (default/unchanged)
+3/2			AreaResolution
 ringz0   		NameArea
  24.0			HeightRing
  20.0			Radius1
  110.0			Radius2
 
 #GRIDRESOLUTION
-3/4			Resolution		AreaResolution
+3/4			AreaResolution
 box			NameArea
 -120.0			xMinBox
  -72.0			yMinBox
- -12.0			zMinBox (default/unchanged)
+ -12.0			zMinBox
  -12.0			xMaxBox
   72.0			yMaxBox
   12.0			zMaxBox
 
 #GRIDRESOLUTION
-3/4			Resolution		AreaResolution (default/unchanged) (default/unchanged)
+3/4			AreaResolution
 sphere0			NameArea
- 24.0			rSphere		Radius
+ 24.0			Radius
 
 #GRIDRESOLUTION
-3/4			Resolution		AreaResolution (default/unchanged) (default/unchanged)
+3/4			AreaResolution
 ringz0   		NameArea
  12.0			HeightRing
  20.0			Radius1
  50.0			Radius2
 
 #GRIDRESOLUTION
-3/8			Resolution		AreaResolution
+3/8			AreaResolution
 sphere0			NameArea
- 12.0			rSphere		Radius
+ 12.0			Radius
 
 #GRIDRESOLUTION
-3/8			Resolution		AreaResolution (default/unchanged) (default/unchanged)
+3/8			AreaResolution
 ringz0 rotated 		NameArea
   8.0			HeightRing
   3.0			Radius1
  25.0			Radius2
   0.0                   xRotate
--17.0                  yRotate
+-17.0                   yRotate
   0.0                   zRotate
 
 #GRIDRESOLUTION
-3/16			Resolution		AreaResolution
+3/16			AreaResolution
 sphere0			NameArea
- 5.0			rSphere		Radius
+ 5.0			Radius
 
 #GRIDRESOLUTION
-3/16			Resolution		AreaResolution (default/unchanged) (default/unchanged)
+3/16			AreaResolution
 ringz0 rotated 		NameArea
   6.0			HeightRing
   3.0			Radius1
  17.5			Radius2
-  0.0                   xRotate (default/unchanged) (default/unchanged)
--17.0                   yRotate (default/unchanged) (default/unchanged)
-  0.0                   zRotate (default/unchanged) (default/unchanged)
+  0.0                   xRotate
+-17.0                   yRotate
+  0.0                   zRotate
