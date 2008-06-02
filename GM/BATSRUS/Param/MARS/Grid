@@ -1,0 +1,30 @@
+#GRIDGEOMETRY
+spherical_lnr		TypeGeometry
+
+#GRID
+4                       nRootBlockX
+2                       nRootBlockY
+1                       nRootBlockZ
+-24.                    xMin
+  8.                    xMax
+-16.                    yMin
+ 16.                    yMax
+-16.                    zMin
+ 16.                    zMax
+
+#LIMITRADIUS
+1.029884232197		rMin
+32.9849			rMax = sqrt(24^2+16^2+16^2)
+
+#GRIDLEVEL
+2			nLevelArea
+initial			NameArea
+
+#GRIDLEVEL
+1			nLevelArea
+all			NameArea
+
+#GRIDLEVEL
+10			nLevelArea
+sphere0			NameArea
+1.544			Radius = 1.5*rBody
