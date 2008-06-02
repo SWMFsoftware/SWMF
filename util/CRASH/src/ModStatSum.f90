@@ -9,7 +9,7 @@ module ModStatSum
   integer :: iZMax  !of ion states with iZ<iZMin or iZ>iZMax is negligible.
   
  
-  real,dimension(nZMax) :: IonizPotential_I
+  real,dimension(1:nZMax) :: IonizPotential_I
   real,dimension(0:nZMax) :: Population_I, StatSumTermLog_I
 
 
@@ -24,31 +24,32 @@ Contains
   end subroutine set_element
   
   !=========================================================================
-  !Finding the populations of the ion states
-  subroutine set_population(TeInv,GeLog)
-    real,intent(in)::TeInv !the inverse of the electron temperature, [eV]
-    real,intent(in)::GeLog !Natural logarithm of the electron stat weight: log(1/(Ne*lambda^3))
-    real::StatSumTermMax,StatSumTermMin
+  ! Finding the populations of the ion states
+  subroutine set_population(TeInv, GeLog)
+    real, intent(in) :: TeInv     ! the inverse of the electron temperature, [eV]
+    real, intent(in) :: GeLog   ! Natural logarithm of the electron stat weight:  log(1/(Ne*lambda^3)) !<*>yv:calc.it.ind
+    real :: StatSumTermMax,StatSumTermMin
 
-    !ln(1.0e-2), to truncate terms of the statistical sum, which a factor of 
-    !1e-2 less than the maximal one: 
-    real,parameter::StatSumToleranceLog=4.6 
+    ! ln(1.0e-2), to truncate terms of the statistical sum, which a factor of 
+    ! 1e-2 less than the maximal one: 
+    real, parameter :: StatSumToleranceLog = 4.6 
 
     integer :: iZ
-    real:: PITotal
+    real :: PITotal
     !--------------------------------------!
 
-    !First, make the sequence of ln(StatSumTerm) values; let ln(P0)=0 )
+    ! First, make the sequence of ln(StatSumTerm) values; let ln(P0)=0 )
     StatSumTermLog_I(0) = 0.	
-    do iZ = 1, nZ  !Fill up the sequence using the following equation:
-       StatSumTermLog_I(iZ) = StatSumTermLog_I(iZ-1) - IonizPotential_I(iZ)*TeInv + GeLog
+    do iZ = 1, nZ   !Fill up the sequence using the following equation:
+       StatSumTermLog_I(iZ)  =  StatSumTermLog_I(iZ-1)                          &
+                              - IonizPotential_I(iZ  )*TeInv + GeLog
     end do
 
 	
     iZDominant = maxloc(StatSumTermLog_I(0:nZ)) !Find the location of that maximum value
 
-    StatSumTermMax=StatSumTermLog_I(iZDominant(1))
-    StatSumTermMin=StatSumTermMax-StatSumToleranceLog
+    StatSumTermMax = StatSumTermLog_I(iZDominant(1))
+    StatSumTermMin = StatSumTermMax-StatSumToleranceLog
     
     !Find the lower boundary of the array 
     !below which the values of Pi can be neglected

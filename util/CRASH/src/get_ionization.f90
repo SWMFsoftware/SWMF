@@ -39,7 +39,6 @@
 
 module ModSaha
   use ModConst
-
   use ModStatSum  ! separated computations of StatSum
 
   implicit NONE
@@ -55,7 +54,7 @@ module ModSaha
        vNe        , &   ! [cm^{-3}]
        vTe        , &   ! [eV]
        vNatomII   , &   ! a sum over concentrations of atoms+ions, cm^{-3}
-       Z          , &   ! vNe/sum(C_I) <= only ions  
+       Z              , &   ! vNe/sum(C_I) <= only ions  
        C_I(0:99)  , &   ! C_I[0]-neutrals resided after ionization
        U_I(1:99)  , &   ! U_I(iZ) - the energy to make an ion iZ+ from (iZ-1)+    
        CUITotal         ! sum(Uiz*Ciz)/Ce  <~> ionization energy per 1 electron
@@ -110,7 +109,7 @@ subroutine    ConcNafter  ! for given summ(No+Niz) on boundary II, calc. C_I[z]
      else if( x3 > 1.00d+33 )  then  
               x3 = 1.00d+33  ;    ! upper limit, , to avoid precision lost or overflow  
      end if
-     if(f1*f1 > f2*f2 ) then 
+     if( f1*f1 > f2*f2 ) then 
         x1=x2;  f1=f2; 
      end if
      x2 = x3;   f2 = ( Conc(x3) - vNTotal )*vNTotalInv;
@@ -220,8 +219,7 @@ contains
 
              iter= iter +1
 
-  !debuT:
-   write (*,*)".New: i2=",iter2," iter=",iter," dNe=",DeltaNe," xNe=",NeIterated          
+  !debuT:    write (*,*)".New: i2=",iter2," iter=",iter," dNe=",DeltaNe," xNe=",NeIterated          
           end do NEWNe ! 
 
           Z  = CZTotal /sum(StatWeight_I)  
@@ -257,6 +255,13 @@ contains
     end do
 
     CUITotal = CUITotal / vNe      ! [eV] per electron    
+
+! here: test functions from the ModStatSum:
+! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   set_population(vTe,        cElectronStatWeight/vNe    )  ! TeInv, GeLog)
+!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
   end function conc
   !........................
 end subroutine ConcNafter
