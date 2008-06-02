@@ -8,7 +8,16 @@ include Makefile.DEPEND
 
 
 OBJECTS = \
-	SC_wrapper.o
+	ModGridDescriptor.o\
+        ModBuffer.o\
+        update_lagrangian_grid.o\
+        ModRadioWaveImage.o\
+        ModRadioWaveRaytracing.o\
+        ModDensityAndGradient.o\
+        OH_set_buffer_grid.o\
+        OH_get_for_gm.o\
+        OH_get_for_ih.o\
+	OH_wrapper.o
 
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I${EMPIRICALEEDIR} -I../src
 
