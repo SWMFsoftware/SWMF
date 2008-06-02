@@ -169,7 +169,7 @@ contains
 
     real, parameter :: cElectronStatWeight=6.050e21 !may  be clarified,<~> CGS units!
 
-    real   :: xx789    !any temporary value for debugging output
+    real   :: xx789, xx678    ! temporary value for debugging output
 
 
     CZTotal  = 0.0
@@ -281,11 +281,21 @@ contains
 !    write(*,*) " StatSum ______________________________ "
     call  set_element( 54 )
     xx789 =  cElectronStatWeight/vNe 
-!    write(*,*) " StatSum _____set population __________ ", vTe, "eStatW/Ne=",xx789,vNe
+!    
+     write(*,*) " StatSum _____set population ________ ", vTe, "eStatW/Ne=",xx789,"Ne:",vNe
  
-    xx789 = 1.00/vTe
-!    call  set_population( xx789 , cElectronStatWeight/vNe    )  ! TeInv, GeLog)
-!    write(*,*) "___<<Stat:", "iZmin=",iZmin, " iZdom=", iZdominant, " iZmax=",iZmax
+    xx678 = 1.00/vTe
+    xx789 =  log(cElectronStatWeight/vNe)  
+!    
+      call  set_population( xx678 , xx789  )  ! TeInv, GeLog)
+!    
+      write(*,*) "___<>Stat:", "iZmin=",iZmin, " iZdom=", iZdominant, " iZmax=",iZmax
+
+
+    xx678 = z_averaged()
+    xx789 = z2_averaged()/xx678
+    
+       write(*,*) "___<<Stat:", " <Z>=",xx678, " <Z^2>/<Z>=", xx789
 
 
 

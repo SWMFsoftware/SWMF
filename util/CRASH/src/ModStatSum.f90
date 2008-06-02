@@ -30,7 +30,7 @@ Contains
     real, intent(in) :: GeLog   ! Natural logarithm of the electron stat weight:
                                 !  log(1/(Ne*lambda^3)) !<*>yv:calc.it.ind
     real :: StatSumTermMax,StatSumTermMin
-
+    
 
     ! ln(1.0e-2), to truncate terms of the statistical sum, which a factor of 
     ! 1e-2 less than the maximal one: 
@@ -49,15 +49,15 @@ Contains
     end do
 
 	
-    iZDominant = maxloc(StatSumTermLog_I(0:nZ)) !Find the location of that maximum value
+    iZDominant = maxloc(StatSumTermLog_I(0:nZ))-1 !Find the location of that maximum value
     !debuT       
-      write (*,*)"_set_pop:", iZdominant
+      write (*,*)"_set_pop: iZdom", iZdominant
     
     StatSumTermMax = StatSumTermLog_I(iZDominant(1))
-      write (*,*)"_set_pop:", iZdominant
+      write (*,*)"_set_pop: terMax", StatSumTermMax
 
     StatSumTermMin = StatSumTermMax -StatSumToleranceLog
-      write (*,*)"_set_pop: iZdom", iZdominant    
+      write (*,*)"_set_pop: terMin",  StatSumTermMin     
 
 
                      !Find the lower boundary of the array 
@@ -74,13 +74,22 @@ Contains
                      !Get rid of all the negligible values
     Population_I(0:nZ) = cZero 
 
-    !Convert the array into the Pi values from ln(Pi)
+
+                     !Convert the array into the Pi values from ln(Pi)
     Population_I(iZMin:iZMax) = exp(StatSumTermLog_I(iZMin:iZMax)-StatSumTermMax)
+    write(*,*)"_set_pop: poPi :",  Population_I(iZMin:iZMax)   
  
+
     PITotal = sum(Population_I(iZMin:iZMax))	!Add up all the values of Pi found so far
-    Population_I(iZMin:iZMax) = Population_I(iZMin:iZMax)/PITotal !Normalize the Pi-s so that their sum =1
-		                        
+                                                !Normalize the Pi-s so that their sum =1
+    Population_I(iZMin:iZMax) = Population_I(iZMin:iZMax)/PITotal 
+
+       write(*,*)"_set_pop: poPiN:",  Population_I(iZMin:iZMax)   		  
+
+                      
   end subroutine set_population
+
+
   !=======================================!
   !Calculating the Z average values
   real function z_averaged()

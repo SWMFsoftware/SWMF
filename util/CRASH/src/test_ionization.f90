@@ -8,7 +8,7 @@ program caxa     ! test of get_ionization()
 
   call get_ioniz_potential( 54 , U_I)  ! new, 1-30 materials in use
 
-  vNatomII    = 1.d019 ! 25!<=std TEST         ! [cm^{-3}]  <== set for default test
+  vNatomII    = 1.d025!19 ! 25!<=std TEST         ! [cm^{-3}]  <== set for default test
                                ! deb:> vNatomII    = vNatomII *0.0001
   OCTPOBA:   do i= 5,300,25    ! 5,300,25  <== set for default test
      vTe = 1.0*i               ! [eV]
