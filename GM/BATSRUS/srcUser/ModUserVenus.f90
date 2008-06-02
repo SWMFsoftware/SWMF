@@ -15,8 +15,7 @@ module ModUser
        IMPLEMENTED6 => user_calc_sources,               &
        IMPLEMENTED7 => user_init_point_implicit,        &
        IMPLEMENTED9 => user_set_resistivity,            &        
-       IMPLEMENTED10=> user_get_log_var,                &
-       IMPLEMENTED11=> user_specify_initial_refinement
+       IMPLEMENTED10=> user_get_log_var
 
   include 'user_module.h' !list of public methods
 
@@ -1415,38 +1414,5 @@ contains
     end do; end do; end do
 
   end subroutine user_set_resistivity
-
-
-!=====================================================================
-  subroutine user_specify_initial_refinement(iBLK,refineBlock,lev,DxBlock, &
-       xCenter,yCenter,zCenter,rCenter,                        &
-       minx,miny,minz,minR,maxx,maxy,maxz,maxR,found)
-
-    use ModPhysics, ONLY: Rbody
-
-    logical,intent(out) :: refineBlock, found
-    integer, intent(in) :: lev
-    real, intent(in)    :: DxBlock
-    real, intent(in)    :: xCenter,yCenter,zCenter,rCenter
-    real, intent(in)    :: minx,miny,minz,minR
-    real, intent(in)    :: maxx,maxy,maxz,maxR
-    integer, intent(in) :: iBLK
-
-    character (len=*), parameter :: Name='user_specify_initial_refinement'
-
-    !-------------------------------------------------------------------
-    !    select case (InitialRefineType)
-    !    case ('Venus3Dbodyfocus')
-    ! Refine, focusing on body
-    found=.true.
-    refineBlock=.false.
-    if (maxR > Rbody.and.(lev <= 1 .or. minR < 1.2*Rbody))&
-         refineBlock = .true.
-
-    !    case default
-
-    !   end select
-
-  end subroutine user_specify_initial_refinement
 
 end module ModUser
