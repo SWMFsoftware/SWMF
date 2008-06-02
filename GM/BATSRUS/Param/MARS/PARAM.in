@@ -1,66 +1,37 @@
-!- PARAM.in:  Example input file for BATSRUS --
-
 #ECHO
 T                       DoEcho
 
 #NORMALIZATION
-SOLARWIND
-
-VERBOSE
-10
+SOLARWIND		TypeNormalization
 
 #DESCRIPTION
 Mars test
 
 #VERTEXBASEDGRID
-F
-
-#COVARIANTGEOMETRY
-spherical_lnr
+F			UseVertexBasedGrid
 
 #PLANET
-Mars
+Mars			NamePlanet
 
 #DIPOLE
 0.0			DipoleStrength
 
 #ROTATION 
-F
+F			UseRotation
 
 #GRAVITY
-T
-0
+T			UseGravity
+0			iDirGravity
 
-#GRID
-4                       nRootBlockX
-2                       nRootBlockY
-1                       nRootBlockZ
--24.                    x1
-  8.                    x2
--16.                    y1
- 16.                    y2
--16.                    z1
- 16.                    z2
-
-#LIMITGENCOORD1
-0.0294464               rMin = alog(1.0294464)
-3.49605			rMax = alog(sqrt(24^2+16^2+16^2))
-
-#AMRINIT
-Mars3Dbodyfocus        InitialRefineType
-2                      InitialRefineLevel
-
-#TESTXYZ
-1.2
-0.1
-0.1
+#INCLUDE
+Param/MARS/Grid
 
 #BODY
-T			body1
-1.0294464		Rbody
-1.0        		Rcurrents
-1.0e6                 	Body_Rho_Dim
-300                 	Body_T_dim
+T			UseBody
+1.0294464		rBody
+1.0        		rCurrents
+1.0e6                 	BodyNDim
+300                 	BodyTDim
 
 #TIMEACCURATE
 F			DoTimeAccurate
@@ -70,9 +41,9 @@ F			DoTimeAccurate
 0.8			CflExpl
 
 #SCHEME
-2                       nOrder (1 or 2)
-Linde                   FluxType
-minmod                  LimiterType
+2                       nOrder
+Linde                   TypeF
+minmod                  TypeLimiter
 
 #USERFLAGS
 T			UseUserInnerBcs
@@ -80,7 +51,7 @@ T			UseUserSource
 F			UseUserPerturbation
 F                       UseUserOuterBcs
 T                       UseUserICs
-T                       UseUserSpecifyRefinement
+F                       UseUserSpecifyRefinement
 T                       UseUserLogFiles
 F                       UseUserWritePlot
 F                       UseUserAMR
@@ -90,40 +61,37 @@ T                       UseUserInitSession
 F                       UseUserUpdateStates
 
 #NONCONSERVATIVE
-F
-
-#TEST
-init_hall_resist 
-update_states calc_sources calc_facefluxes calc_timestep
+F			UseNonConservative
 
 #SAVELOGFILE
-T                       DoSaveLogfile, rest of parameters read if true
+T                       DoSaveLogfile
 VAR step time	        StringLog
 1	                DnSaveLogfile
--1.                     DtSaveLogfile [sec]
+-1.                     DtSaveLogfile
 rho p rhopnt ppnt bxpnt pmin pmax Hpflx Opflx O2pflx CO2pflx
 3.0
 
 #INNERBOUNDARY
-user
+user			TypeBcInner
 
 OUTERBOUNDARY
 outflow                 TypeBcEast
-inflow                TypeBcWest
+inflow                  TypeBcWest
 fixed                   TypeBcSouth
 fixed                   TypeBcNorth
 fixed                   TypeBcBottom
 fixed                   TypeBcTop
 
+! 3nT parker's spiral
 #SOLARWIND
-4.0                     SW_rho_dim [n/cc] \  
-3.5E5                   SW_T_dim [K]       | 
--500.0                  SW_Ux_dim [km/s]   | 
-0.0                     SW_Uy_dim [km/s]   |
-0.0                     SW_Uz_dim [km/s]   |
--1.6776                 SW_Bx_dim [nT]     |3nT parker's spiral
-2.4871                  SW_By_dim [nT]     |
-0.00                    SW_Bz_dim [nT]    /
+4.0                     SwNDim  [n/cc]
+3.5E5                   SwTDim  [K]
+-500.0                  SwUxDim [km/s]
+0.0                     SwUyDim [km/s]
+0.0                     SwUzDim [km/s]
+-1.6776                 SwBxDim [nT]
+2.4871                  SwByDim [nT]
+0.00                    SwBzDim [nT]
 
 #USERINPUTBEGIN -----------------------------------------------------
 
@@ -150,10 +118,6 @@ T
 #MULTISPECIES
 T			DoReplaceDensity
 5.0			SpeciesPercentCheck
-
-! For nyx or dc only
-#RESTARTOUTFILE
-block			TypeRestartInFile
 
 #SAVERESTART
 F			DoSaveRestart
@@ -195,4 +159,3 @@ cut MHD idl             StringPlot
 #STOP
 50			MaxIteration
 -1.0			tSimulationMax
-
