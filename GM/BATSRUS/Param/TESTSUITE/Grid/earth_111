@@ -11,9 +11,6 @@
 -128.			z1
  128.			z2
 
-#INCLUDE
-Res
-
 !refine inside 1.5*rcurrents, rcurrents = 3.5
 #GRIDRESOLUTION
 1/8                     Resolution
