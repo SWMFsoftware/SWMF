@@ -227,7 +227,7 @@ subroutine MH_set_parameters(TypeAction)
           ' must be "CHECK" or "READ"!')
   end select
 
-  ! Read solarindfile if #SOLARWIND command is present
+  ! Read solarwindfile if #SOLARWINDFILE command is in this session
   DoReadSolarwindFile = .false.
 
   !\
@@ -870,9 +870,8 @@ subroutine MH_set_parameters(TypeAction)
                 alog(((XyzMax_D(x_)-XyzMin_D(x_)) / (proc_dims(x_) * nI))  &
                 / AreaResolution) / alog(2.0) )
 
-           ! Set the initial levels and the refinement type to 'none'
+           ! Set the initial levels
            initial_refine_levels = nLevelArea
-           InitialRefineType     = 'none'
 
            ! No area is created, continue reading the parameters
            CYCLE READPARAM
@@ -902,33 +901,38 @@ subroutine MH_set_parameters(TypeAction)
         Area_I(nArea)%Center_D  = 0.0
         Area_I(nArea)%Size_D    = 1.
 
+        ! Remove leading spaces
+        NameArea = adjustl(NameArea)
+
         ! Check for the word rotated in the name
         i = index(NameArea,'rotated')
         Area_I(nArea)%DoRotate = i > 0
         if(i>0) NameArea = NameArea(1:i-1)//NameArea(i+7:len(NameArea))
 
-        ! Check for the character '0' in the name
+        ! Extract character '0' from the name
         i = index(NameArea,'0')
-        DoReadAreaCenter = i < 1
         if(i>0) NameArea = NameArea(1:i-1)//NameArea(i+1:len(NameArea))
 
-        ! Remove leading spaces
-        NameArea = adjustl(NameArea)
+        DoReadAreaCenter = (i < 1 .and. NameArea(1:3) /= 'box')
+
+        ! Store name
         Area_I(nArea)%Name = NameArea
 
+        ! These types do not need any more parameters
+        select case(NameArea)
+        case('all','currentsheet','currentsheetorig','user')
+           CYCLE READPARAM
+        end select
+
         ! Read center of area if needed
-        if(DoReadAreaCenter .and. &
-             NameArea /= 'all' .and. NameArea /= 'box') then
+        if(DoReadAreaCenter)then
            call read_var("xCenter",Area_I(nArea)%Center_D(1))
            call read_var("yCenter",Area_I(nArea)%Center_D(2))
            call read_var("zCenter",Area_I(nArea)%Center_D(3))
         endif
 
         select case(NameArea)
-        case("all")
-           ! No geometry info is needed for uniform refinement
-
-        case("box")
+        case("box", "box_gen")
            call read_var("xMinBox",XyzStartArea_D(1))
            call read_var("yMinBox",XyzStartArea_D(2))
            call read_var("zMinBox",XyzStartArea_D(3))
@@ -938,11 +942,14 @@ subroutine MH_set_parameters(TypeAction)
            ! Convert to center and size information
            Area_I(nArea)%Center_D = 0.5*   (XyzStartArea_D + XyzEndArea_D)
            Area_I(nArea)%Size_D   = 0.5*abs(XyzEndArea_D - XyzStartArea_D)
-
+ 
            ! Overwrite name with brick
-           Area_I(nArea)%Name     = "brick"
-
-        case("brick")
+           if(NameArea == "box_gen")then
+              Area_I(nArea)%Name = "brick_gen"
+           else
+              Area_I(nArea)%Name = "brick"
+           end if
+        case("brick", "brick_gen")
            call read_var("xSize", Area_I(nArea)%Size_D(1))
            call read_var("ySize", Area_I(nArea)%Size_D(2))
            call read_var("zSize", Area_I(nArea)%Size_D(3))
@@ -1023,6 +1030,7 @@ subroutine MH_set_parameters(TypeAction)
            !write(*,*)'Matrix=',Area_I(nArea)%Rotate_DD
 
         end if
+
      case("#AMRLEVELS")
         call read_var('MinBlockLevel',min_block_level)
         call read_var('MaxBlockLevel',max_block_level)
@@ -1072,9 +1080,6 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('MaxTotalBlocks',MaxTotalBlocks)
            end if
         end if
-     case("#AMRINIT")
-        call read_var('TypeRefineInit'  ,InitialRefineType)
-        call read_var('nRefineLevelInit',initial_refine_levels)
      case("#AMRCRITERIA")
         call read_var('nRefineCrit',nRefineCrit)
         if(nRefineCrit<0 .or. nRefineCrit>3)&
@@ -1950,7 +1955,7 @@ contains
     dt            = 0.0
     dt_BLK        = 0.0
 
-    initial_refine_levels = 4   
+    initial_refine_levels = 0
     nRefineLevelIC        = 0
 
     min_block_level =  0
@@ -2040,8 +2045,6 @@ contains
     TDimBody2   = 10000.0! K                          !^CFG END SECONDBODY
 
     MassIon_I = MassFluid_I(IonFirst_:IonLast_) ! Ion masses
-
-    InitialRefineType = 'none'
 
     !\
     ! Set component dependent defaults
@@ -2194,9 +2197,6 @@ contains
     if(any(TypeBc_I(1:2)=='periodic')) TypeBc_I(1:2)='periodic'
     if(any(TypeBc_I(3:4)=='periodic')) TypeBc_I(3:4)='periodic'
     if(any(TypeBc_I(5:6)=='periodic')) TypeBc_I(5:6)='periodic'
-
-    ! Reset initial refine type if it is set to 'default'
-    if(InitialRefineType=='default') InitialRefineType='none'
 
     if(UseConstrainB .and. .not.time_accurate)then  !^CFG IF CONSTRAINB BEGIN
        if(iProc==0)then
