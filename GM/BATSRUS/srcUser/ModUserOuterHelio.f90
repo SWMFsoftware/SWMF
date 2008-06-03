@@ -24,8 +24,6 @@ module ModUser
        IMPLEMENTED3 => user_normalization,               &
        IMPLEMENTED4 => user_set_outerbcs,               &
        IMPLEMENTED5 => user_set_ics,                    &
-       IMPLEMENTED6 => user_specify_initial_refinement,     &
-       IMPLEMENTED7 => user_amr_criteria,               &
        IMPLEMENTED8 => user_write_progress,            & 
        IMPLEMENTED9 => user_io_units,                  &
        IMPLEMENTED10 => user_set_plot_var,              &
@@ -151,8 +149,6 @@ contains
     integer:: i, j, k, n, m
 
     !-------------------------------------------------------------------
-
-
     do
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
@@ -205,7 +201,7 @@ contains
 
   end subroutine user_read_inputs
 
-  !=================  !  SUBROUTINE USER_SET_INNER_BCS  !======================
+  !=========================================================================
   subroutine user_face_bcs(VarsGhostFace_V)
 
     use ModSize,     ONLY: nDim,West_,North_,Top_
@@ -477,7 +473,7 @@ contains
 
   end subroutine user_face_bcs
 
-  !-------------------------------------------------------------------
+  !============================================================================
   subroutine user_normalization
 
     use ModProcMH, ONLY:iProc  
@@ -494,7 +490,8 @@ contains
     No2Si_V(UnitRho_)=cProtonMass*SWH_rho_dim*1.0E+6           ! kg/m^3
 
   end subroutine user_normalization
-  !-------------------------------------------------------------------
+
+  !============================================================================
 
   subroutine user_set_outerbcs(iBlock,iSide,TypeBc,found)
 
@@ -722,132 +719,6 @@ contains
   end subroutine user_set_ics
 
   !=====================================================================
-  subroutine user_specify_initial_refinement(iBLK,refineBlock,lev, &
-       DxBlock,xCenter,yCenter,zCenter,rCenter,minx,miny,minz,minR,&
-       maxx,maxy,maxz,maxR,IsFound)
-    use ModSize 
-    use ModVarIndexes, ONLY: Bx_,By_,Bz_,P_
-    use ModAdvance,ONLY:&
-         State_VGB,Bx_,By_,Bz_,B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
-    use ModAMR,        ONLY: InitialRefineType
-    use ModMain,       ONLY: x_,y_,z_,iteration_number,     &
-         time_loop, unusedBLK, nI,nJ,nK
-    use ModGeometry,   ONLY: XyzMin_D,XyzMax_D,x_BLK,y_BLK, &
-         z_BLK,R_BLK,dx_BLK,dy_BLK,dz_BLK
-    use ModNumConst,   ONLY: cTiny,cHundredth,cEighth,cHalf,&
-         cQuarter,cOne,cTwo,cFour,cE1,cE2,cZero
-    implicit none 
-    logical,intent(out) :: refineBlock,IsFound
-    integer, intent(in) :: lev
-    real, intent(in)    :: DxBlock
-    real, intent(in)    :: xCenter,yCenter,zCenter,rCenter
-    real, intent(in)    :: minx,miny,minz,minR
-    real, intent(in)    :: maxx,maxy,maxz,maxR
-    integer, intent(in) :: iBLK
-
-    real:: critx,critvRdotR0,critxCenter
-    real:: RminRv,RdotRv,RminRn,RdotR0,R2Cell
-    real, dimension(3):: RCell_D,RvCell_D,RnCell_D,R0Cell_D
-
-    integer:: i,j,k
-    real :: Rbody, RR, xxx, yyy, zzz
-    real :: xx1, xx2, yy1, yy2, zz1, zz2, minRblk, maxRblk
-
-    character(len=*), parameter :: NameSub='user_specify_initial_refinement'
-
-    Rbody = 30.
-
-    !-------------------------------------------------------------------
-
-    ! Block center coordinates
-    xx1 = cHalf*(x_BLK( 0, 0, 0,iBLK)+x_BLK(   1,   1  , 1,iBLK))
-    xx2 = cHalf*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(nI+1,nJ+1,nK+1,iBLK))
-    yy1 = cHalf*(y_BLK( 0, 0, 0,iBLK)+y_BLK(   1,   1,   1,iBLK))
-    yy2 = cHalf*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(nI+1,nJ+1,nK+1,iBLK))
-    zz1 = cHalf*(z_BLK( 0, 0, 0,iBLK)+z_BLK(   1,   1,   1,iBLK))
-    zz2 = cHalf*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(nI+1,nJ+1,nK+1,iBLK))
-    xxx = cHalf*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(1,1,1,iBLK))
-    yyy = cHalf*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(1,1,1,iBLK))
-    zzz = cHalf*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(1,1,1,iBLK))
-    RR = sqrt( xxx*xxx + yyy*yyy + zzz*zzz )
-    minRblk = sqrt((min(abs(xx1),abs(xx2)))**2 + &
-         (min(abs(yy1),abs(yy2)))**2 + &
-         (min(abs(zz1),abs(zz2)))**2)
-
-    select case (InitialRefineType)
-    case('global_test')
-       !
-       ! Initial refinement criteria for globalheliosphere
-
-       !/
-       if (lev <= 4) then
-          ! Refine all blocks first times through
-          refineBlock = .true.
-       else
-          if (lev <= 9) then
-             !Refine the blocks near the body
-             critx=(XyzMax_D(1)-XyzMin_D(1))/(2.0**real(lev-1))
-             if ( RR < 30. + critx ) then
-                refineBlock = .true.
-             end if
-          else
-             ! Refine blocks between radii 100-400AU 
-             !testing a coarse grid
-             ! i have to move the grid because of the neutrals
-             !               !refinement done march 2007 to refine better the heliosheath
-             !               if ((minRblk < 300.).and.(xxx<-10.0).and.(minRblk>90.)) then
-             if ((minRblk < 400.).and.(xxx<-10.0).and.(minRblk>100.)) then
-                !           if ((minRblk < 400.).and.(xxx<-20.0).and.(minRblk>50.)) then
-                refineBlock = .true.
-             end if
-          end if
-       endif
-       IsFound=.true.
-    endselect
-  end subroutine user_specify_initial_refinement
-
-  !=====================================================================
-
-  subroutine user_amr_criteria(iBLK, UserCriteria, TypeCriteria, IsFound)
-
-    use ModMain
-    use ModAdvance
-    use ModGeometry, ONLY:x_BLK,y_BLK,z_BLK,R_BLK,&
-         dx_BLK,dy_BLK,dz_BLK,true_cell
-    use ModPhysics
-    use ModConst
-    ! 
-    ! Variables required by this user subroutine::
-    !/
-    integer, intent(in):: iBLK
-    logical:: IsInRange
-    logical, intent(out):: IsFound
-    integer:: i,j,k
-
-    real, intent(out):: userCriteria
-    !
-    ! Local variables::
-    !/
-    real:: dsMin,dsMax,dsTwo
-    real:: XCell,YCell,ZCell,RCell,RCenter
-    real:: B0xCell,B0yCell,B0zCell,MinBr,MaxBr
-    real:: BIxCell,BIyCell,BIzCell
-    real, dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn):: Br_D
-    logical,dimension(3)::IsGhostCell_D
-
-    character (len=20),intent(in):: TypeCriteria
-    !-------------------------------------------------------------------
-
-    !
-    ! Find the radial location of the center of the block and
-
-    ! the min/max cell size::
-    !/
-    !    RCenter = cEighth*&
-
-  end subroutine user_amr_criteria
-
-  !=====================================================================
 
   subroutine user_write_progress
     use ModMain
@@ -904,6 +775,7 @@ contains
   end subroutine user_write_progress
 
   !=====================================================================
+
   subroutine user_io_units
     use ModPhysics 
     use ModProcMH, ONLY:iProc
@@ -993,7 +865,9 @@ contains
     NameTecUnit_V(UnitB_)            = 'nT'
 
   end subroutine user_io_units
+
   !==============================================================
+
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
