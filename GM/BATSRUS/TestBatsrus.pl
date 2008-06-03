@@ -162,7 +162,7 @@ if(-f "Makefile"){
     # Make run directory if necessary
     if(not -d $rundir){
 	print "Making $rundir directory...\n";
-	&execute("make rundir");
+	&execute("make rundir RUNDIR=$rundir STANDALONE=YES");
 	die "ERROR: $rundir could not be made with make rundir\n" 
 	    unless -d $rundir;
     }
