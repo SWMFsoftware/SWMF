@@ -920,7 +920,7 @@ subroutine MH_set_parameters(TypeAction)
 
         ! These types do not need any more parameters
         select case(NameArea)
-        case('all','currentsheet','currentsheetorig','user')
+        case('all','currentsheet','user')
            CYCLE READPARAM
         end select
 
