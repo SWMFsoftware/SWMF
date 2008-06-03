@@ -26,6 +26,11 @@ T			UseGravity
 #INCLUDE
 Param/MARS/Grid
 
+#TESTXYZ
+1.2
+0.1
+0.1
+
 #BODY
 T			UseBody
 1.0294464		rBody
