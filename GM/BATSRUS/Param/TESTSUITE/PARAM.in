@@ -33,6 +33,9 @@ Geometry
 #INCLUDE
 Grid
 
+#INCLUDE
+Res
+
 ^CFG IF SECONDBODY BEGIN
 #INCLUDE
 SecondBody
