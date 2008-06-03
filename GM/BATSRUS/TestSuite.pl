@@ -23,7 +23,8 @@ my $testbatsrus = "$Dir"."TestBatsrus.pl ".
 
 my $Table  =$ARGV[0];
 
-my $Empty = "-Planet=earth_simple -Grid=earth_211 -Length=tiny_simple".
+my $Empty = "-Planet=earth_simple -Grid=earth_211 -Res=1.0".
+    " -Length=tiny_simple".
     " -B0source=empty -Cfl=empty -Conservative=empty".
     " -Corotation=empty -Divb=empty -Reschange=empty".
     " -Implicit=empty".                                    #^CFG IF IMPLICIT
