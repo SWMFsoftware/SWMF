@@ -4,12 +4,12 @@
 module ModUser
   use ModExpansionFactors
   use ModMagnetogram
-  use ModUserEmpty,                                     &
+  use ModUserEmpty,                                      &
        IMPLEMENTED1  => user_read_inputs,                &
        IMPLEMENTED2  => user_set_ics,                    &
        IMPLEMENTED3  => user_get_b0,                     &
        IMPLEMENTED4  => user_update_states,              &
-       IMPLEMENTED5  => user_specify_initial_refinement, &
+       IMPLEMENTED5  => user_specify_refinement,         &
        IMPLEMENTED6  => user_set_outerbcs,               &
        IMPLEMENTED7  => user_set_boundary_cells,         &
        IMPLEMENTED8  => user_face_bcs,                   &
@@ -903,9 +903,8 @@ contains
   end subroutine correct_gamma
 
   !============================================================================
-  subroutine user_specify_initial_refinement(iBLK,refineBlock,lev,DxBlock, &
-       xCenter,yCenter,zCenter,rCenter,                        &
-       minx,miny,minz,minR,maxx,maxy,maxz,maxR,found)
+  subroutine user_specify_refinement(iBlock, iArea, Resolution, DoRefine)
+
     use ModMain,ONLY:time_loop,nI,nJ,nK
     use ModAMR,ONLY:InitialRefineType, initial_refine_levels
     use ModNumConst, ONLY: cTwoPi, cDegToRad
@@ -916,131 +915,82 @@ contains
     use ModOctree
     implicit none
 
-    logical,intent(out) :: refineBlock, found
-    integer, intent(in) :: lev
-    real, intent(in)    :: DxBlock
-    real, intent(in)    :: xCenter,yCenter,zCenter,rCenter
-    real, intent(in)    :: minx,miny,minz,minR
-    real, intent(in)    :: maxx,maxy,maxz,maxR
-    integer, intent(in) :: iBLK
+    integer, intent(in) :: iBlock, iArea
+    real,    intent(in) :: Resolution
+    logical, intent(out):: DoRefine
 
-    character (len=*), parameter :: Name='user_specify_initial_refinement'
-    real :: BDotRMin,BDotRMax,CritR
+    character (len=*), parameter :: Name='user_specify_refinement'
+    real :: CritR
     integer :: i,j,k, levmin, levbodyfocus
     logical :: IsSouth, IsNorth
-    real :: MinThetaBlk, MaxThetaBlk, MinPhiBlk, MaxPhiBlk
+    real :: MinThetaBlk, MaxThetaBlk, MinPhiBlock, MaxPhiBlock
+    real :: MinR
     !--------------------------------------------------------------------------
-    ! Do not use minx,miny,minz,maxx,maxy,maxz, since they are not set.
 
-    select case (InitialRefineType)
-    case ('helio_init')
+    MinR = minval(r_BLK(1:nI, 1:nK, 1:nK, iBlock)
 
-       select case(TypeGeometry)
-       case('spherical_lnr')
-          ! assumes 1x2x1 blocks on root level
-          levmin=4
-          levbodyfocus=5
-          if(.not.time_loop)then
-             !refine to have resolution not worse than levmin
-             if(lev<=levmin)then
-                RefineBlock = .true.
-             elseif(lev<=levbodyfocus)then
-                ! Additional bodyfocus refinement
-                CritR=rBody + (exp(XyzMax_D(1))-exp(XyzMin_D(1))) &
-                     /real(2**(lev+2-levmin))
+    ! assumes 1x2x1 blocks on root level
+    levmin=4
+    levbodyfocus=5
+    if(.not.time_loop)then
+       !refine to have resolution not worse than levmin
+       if(lev<=levmin)then
+          DoRefine = .true.
+       elseif(lev<=levbodyfocus)then
+          ! Additional bodyfocus refinement
+          CritR=rBody + (exp(XyzMax_D(1))-exp(XyzMin_D(1))) &
+               /real(2**(lev+2-levmin))
 
-                ! But no additional refinement near poles
-                IsSouth = XyzStart_BLK(3,iBlk) - Dz_Blk(iBlk) &
-                     < XyzMin_D(3) + real(nK*(2**(lev-levmin)-2))*Dz_Blk(iBlk)
-                IsNorth = XyzStart_BLK(3,iBlk) + real(nK)*Dz_Blk(iBlk) &
-                     > XyzMax_D(3) - real(nK*(2**(lev-levmin)-2))*Dz_Blk(iBlk)
+          ! But no additional refinement near poles
+          IsSouth = XyzStart_BLK(3,iBlock) - Dz_Blk(iBlock) &
+               < XyzMin_D(3) + real(nK*(2**(lev-levmin)-2))*Dz_Blk(iBlock)
+          IsNorth = XyzStart_BLK(3,iBlock) + real(nK)*Dz_Blk(iBlock) &
+               > XyzMax_D(3) - real(nK*(2**(lev-levmin)-2))*Dz_Blk(iBlock)
 
 !!!                if( .not.(IsSouth.or.IsNorth) )then
-                if( MinR < CritR .and. .not.(IsSouth.or.IsNorth) )then
-                   RefineBlock = .true.
-                else
-                   RefineBlock = .false.
-                endif
-             else
-                RefineBlock = .false.
-             end if
+          if( MinR < CritR .and. .not.(IsSouth.or.IsNorth) )then
+             DoRefine = .true.
           else
-             MinPhiBlk = XyzStart_BLK(2,iBlk) - 0.5*Dy_Blk(iBlk)
-             MaxPhiBlk = MinPhiBlk + real(nJ)*Dy_Blk(iBlk)
-             MinThetaBlk = XyzStart_BLK(3,iBlk) - 0.5*Dz_Blk(iBlk)
-             MaxThetaBlk = MinThetaBlk + real(nK)*Dz_Blk(iBlk)
-             if(DoARRefinement &
-                  .and. MinR < MaxRadiusAR &
-                  .and. MaxThetaBlk > MinLattitudeAR &
-                  .and. MinThetaBlk < MaxLattitudeAR &
-                  .and. ((MaxPhiBlk > MinLongitudeAR &
-                  .and.   MinPhiBlk < MaxLongitudeAR) &
-                  .or.   (MaxPhiBlk > MinLongitudeAR-cTwoPi &
-                  .and.   MinPhiBlk < MaxLongitudeAR-cTwoPi) &
-                  .or.   (MaxPhiBlk > MinLongitudeAR+cTwoPi &
-                  .and.   MinPhiBlk < MaxLongitudeAR+cTwoPi)) &
-                  .and. Dz_Blk(iBlk) > MinDelThetaAR)then
-                RefineBlock = .true.
-             else if(DoARRefinement2 &
-                  .and. MinR < MaxRadiusAR2 &
-                  .and. MaxThetaBlk > MinLattitudeAR2 &
-                  .and. MinThetaBlk < MaxLattitudeAR2 &
-                  .and. ((MaxPhiBlk > MinLongitudeAR2 &
-                  .and.   MinPhiBlk < MaxLongitudeAR2) &
-                  .or.   (MaxPhiBlk > MinLongitudeAR2-cTwoPi &
-                  .and.   MinPhiBlk < MaxLongitudeAR2-cTwoPi) &
-                  .or.   (MaxPhiBlk > MinLongitudeAR2+cTwoPi &
-                  .and.   MinPhiBlk < MaxLongitudeAR2+cTwoPi)) &
-                  .and. Dz_Blk(iBlk) > MinDelThetaAR2)then
-                RefineBlock = .true.
-             elseif( Dz_Blk(iBlk) > 2.0*cDegToRad )then
-                call refine_heliosheath
-             else
-                RefineBlock = .false.
-             end if
-          end if
-       case default
-          call stop_mpi('user_specify_initial_refinement is ' &
-               //'not implemented for geometry= '//TypeGeometry)
-       end select
-       found=.true.
-    end select
+             DoRefine = .false.
+          endif
+       else
+          DoRefine = .false.
+       end if
+    else
+       MinPhiBlock = XyzStart_BLK(2,iBlock) - 0.5*Dy_Blk(iBlock)
+       MaxPhiBlock = MinPhiBlock + real(nJ)*Dy_Blk(iBlock)
+       MinThetaBlk = XyzStart_BLK(3,iBlock) - 0.5*Dz_Blk(iBlock)
+       MaxThetaBlk = MinThetaBlk + real(nK)*Dz_Blk(iBlock)
+       if(DoARRefinement &
+            .and. MinR < MaxRadiusAR &
+            .and. MaxThetaBlk > MinLattitudeAR &
+            .and. MinThetaBlk < MaxLattitudeAR &
+            .and. ((MaxPhiBlock > MinLongitudeAR &
+            .and.   MinPhiBlock < MaxLongitudeAR) &
+            .or.   (MaxPhiBlock > MinLongitudeAR-cTwoPi &
+            .and.   MinPhiBlock < MaxLongitudeAR-cTwoPi) &
+            .or.   (MaxPhiBlock > MinLongitudeAR+cTwoPi &
+            .and.   MinPhiBlock < MaxLongitudeAR+cTwoPi)) &
+            .and. Dz_Blk(iBlock) > MinDelThetaAR)then
+          DoRefine = .true.
+       else if(DoARRefinement2 &
+            .and. MinR < MaxRadiusAR2 &
+            .and. MaxThetaBlk > MinLattitudeAR2 &
+            .and. MinThetaBlk < MaxLattitudeAR2 &
+            .and. ((MaxPhiBlock > MinLongitudeAR2 &
+            .and.   MinPhiBlock < MaxLongitudeAR2) &
+            .or.   (MaxPhiBlock > MinLongitudeAR2-cTwoPi &
+            .and.   MinPhiBlock < MaxLongitudeAR2-cTwoPi) &
+            .or.   (MaxPhiBlock > MinLongitudeAR2+cTwoPi &
+            .and.   MinPhiBlock < MaxLongitudeAR2+cTwoPi)) &
+            .and. Dz_Blk(iBlock) > MinDelThetaAR2)then
+          DoRefine = .true.
+       else
+          DoRefine = .false.
+       end if
+    end if
 
-    contains
-      subroutine refine_heliosheath
-        !----------------------------------------------------------------------
-
-        BDotRMin=0.0
-        do k=0,nK+1;do j=1,nJ
-           BDotRMin=min( BDotRMin,minval(&
-                (B0xCell_BLK(1:nI,j,k,iBLK)+&
-                State_VGB(Bx_,1:nI,j,k,iBLK))*&
-                x_BLK(1:nI,j,k,iBLK)+&
-                (B0yCell_BLK(1:nI,j,k,iBLK)+&
-                State_VGB(By_,1:nI,j,k,iBLK))*&
-                y_BLK(1:nI,j,k,iBLK)+&
-                (B0zCell_BLK(1:nI,j,k,iBLK)+&
-                State_VGB(Bz_,1:nI,j,k,iBLK))*&
-                z_BLK(1:nI,j,k,iBLK)))
-        end do;end do
-        BDotRMax=0.0
-        do k=0,nK+1;do j=1,nJ
-           BDotRMax=max( BDotRMax,maxval(&
-                (B0xCell_BLK(1:nI,j,k,iBLK)+&
-                State_VGB(Bx_,1:nI,j,k,iBLK))*&
-                x_BLK(1:nI,j,k,iBLK)+&
-                (B0yCell_BLK(1:nI,j,k,iBLK)+&
-                State_VGB(By_,1:nI,j,k,iBLK))*&
-                y_BLK(1:nI,j,k,iBLK)+&
-                (B0zCell_BLK(1:nI,j,k,iBLK)+&
-                State_VGB(Bz_,1:nI,j,k,iBLK))*&
-                z_BLK(1:nI,j,k,iBLK)))
-        end do;end do
-        refineBlock =BDotRMin<-cTiny.and.&
-             BDotRMax>cTiny
-      end subroutine refine_heliosheath
-
-  end subroutine user_specify_initial_refinement
+  end subroutine user_specify_refinement
 
   !============================================================================
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
