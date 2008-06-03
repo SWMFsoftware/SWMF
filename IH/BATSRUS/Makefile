@@ -31,7 +31,7 @@ rundir: check_src
 		ln -s ${BINDIR}/EARTH_TRAJ.exe .; \
 		cp    ${DIR}/GM/BATSRUS/Scripts/IDL/pIDL .; \
 		cp    ${DIR}/GM/BATSRUS/Scripts/TEC/pTEC .; \
-		cp    ${DIR}/GM/BATSRUS/Param/HELIOSPHERE/EARTH_TRAJ.in .
+		ln -s ${DIR}/GM/BATSRUS/Param/HELIOSPHERE Param
 
 clean:  
 	@(if([ -f src/Makefile ]); then \
