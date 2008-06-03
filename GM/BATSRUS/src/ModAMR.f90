@@ -48,7 +48,7 @@ module ModAMR
   !/
   integer            :: nRefineCrit, MaxTotalBlocks
   real               :: PercentCoarsen, PercentRefine
-  character (len=20) :: RefineCrit(3),TypeTransient_I(3),InitialRefineType
+  character (len=20) :: RefineCrit(3), TypeTransient_I(3)
 
   ! Refine for criterion n only if it is above RefineCritMin_I(n)
   real               :: RefineCritMin_I(3) = (/-1.0,-1.0,-1.0/)
