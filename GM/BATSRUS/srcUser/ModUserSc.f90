@@ -12,7 +12,8 @@ module ModUser
        IMPLEMENTED6 => user_get_log_var,                &
        IMPLEMENTED7 => user_get_b0,                     &
        IMPLEMENTED8 => user_update_states,              &
-       IMPLEMENTED9 => user_specify_initial_refinement
+       IMPLEMENTED9 => user_specify_refinement,         &
+       IMPLEMENTED10=> user_set_boundary_cells
 
   include 'user_module.h' !list of public methods
 
@@ -474,82 +475,63 @@ contains
        write(*,*) 'Warning in set_user_logvar: unknown logvarname = ',TypeVar
     end select
   end subroutine user_get_log_var
-  !----------------------------------------------------------
-  subroutine user_specify_initial_refinement(iBLK,refineBlock,lev,DxBlock, &
-       xCenter,yCenter,zCenter,rCenter,                        &
-       minx,miny,minz,minR,maxx,maxy,maxz,maxR,found)
-    use ModMain,ONLY:time_loop,nI,nJ,nK
-    use ModAMR,ONLY:InitialRefineType
-    use ModNumConst
-    use ModAdvance,ONLY:&
-         State_VGB,Bx_,By_,Bz_,B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
-    use ModGeometry
-    use ModPhysics,ONLY:rBody
-    implicit none
-    logical,intent(out) :: refineBlock, found
-    integer, intent(in) :: lev
-    real, intent(in)    :: DxBlock
-    real, intent(in)    :: xCenter,yCenter,zCenter,rCenter
-    real, intent(in)    :: minx,miny,minz,minR
-    real, intent(in)    :: maxx,maxy,maxz,maxR
-    integer, intent(in) :: iBLK
+  
+  !===========================================================================
 
-    character (len=*), parameter :: Name='user_specify_initial_refinement'
-    real::BDotRMin,BDotRMax,critx
-    integer::i,j,k
+  subroutine user_specify_refinement(iBlock, iArea, DoRefine)
+
+    use ModSize,     ONLY: nI, nJ, nK
+    use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_, &
+         B0xCell_Blk, B0yCell_Blk, B0zCell_Blk
+    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, far_field_BCs_BLK
+    use ModNumConst, ONLY: cTiny
+
+    integer, intent(in) :: iBlock, iArea
+    logical,intent(out) :: DoRefine
+
+    real :: rDotB_G(1:nI,1:nJ,0:nK+1)
+
+    character (len=*), parameter :: NameSub = 'user_specify_refinement'
     !-------------------------------------------------------------------
-    select case (InitialRefineType)
-    case ('helio_init')
-       if(.not.time_loop)then
-          !refine to have resolution not worse 4.0 and
-          !refine the body intersecting blocks
-          ! Refine all blocks time through (starting with 1 block)
-          if (lev <= 4) then
-             refineBlock = .true.
-          else
-             critx=(XyzMax_D(1)-XyzMin_D(1))/(2.0**real(lev-2))
-             if ( rCenter < 1.10*rBody + critx ) then
-                refineBlock = .true.
-             else
-                refineBlock = .false.
-             end if
-          endif
-       elseif(dx_BLK(iBLK)<0.20.or.far_field_BCs_BLK(iBLK))then
-          refineBlock=.false. !Do not refine body or outer boundary
-       else
-          !refine heliosheath
-          BDotRMin=0.0
-          do k=0,nK+1;do j=1,nJ
-             BDotRMin=min( BDotRMin,minval(&
-                  (B0xCell_BLK(1:nI,j,k,iBLK)+&
-                  State_VGB(Bx_,1:nI,j,k,iBLK))*&
-                  x_BLK(1:nI,j,k,iBLK)+&
-                  (B0yCell_BLK(1:nI,j,k,iBLK)+&
-                  State_VGB(By_,1:nI,j,k,iBLK))*&
-                  y_BLK(1:nI,j,k,iBLK)+&
-                  (B0zCell_BLK(1:nI,j,k,iBLK)+&
-                  State_VGB(Bz_,1:nI,j,k,iBLK))*&
-                  z_BLK(1:nI,j,k,iBLK)))
-          end do;end do
-          BDotRMax=0.0
-          do k=0,nK+1;do j=1,nJ
-             BDotRMax=max( BDotRMax,maxval(&
-                  (B0xCell_BLK(1:nI,j,k,iBLK)+&
-                  State_VGB(Bx_,1:nI,j,k,iBLK))*&
-                  x_BLK(1:nI,j,k,iBLK)+&
-                  (B0yCell_BLK(1:nI,j,k,iBLK)+&
-                  State_VGB(By_,1:nI,j,k,iBLK))*&
-                  y_BLK(1:nI,j,k,iBLK)+&
-                  (B0zCell_BLK(1:nI,j,k,iBLK)+&
-                  State_VGB(Bz_,1:nI,j,k,iBLK))*&
-                  z_BLK(1:nI,j,k,iBLK)))
-          end do;end do
-          refineBlock =BDotRMin<-cTiny.and.&
-               BDotRMax>cTiny
-       end if
-       found=.true.
-    end select
-  end subroutine user_specify_initial_refinement
+
+    if(far_field_BCs_BLK(iBlock))then
+       DoRefine = .false.
+       RETURN
+    end if
+
+    ! Calculate r.B in all physical cells and ghost cells in the Z direction
+    rDotB_G =      x_BLK(1:nI,1:nJ,0:nK+1,iBlock)   &
+         * ( B0xCell_BLK(1:nI,1:nJ,0:nK+1,iBlock)   &
+         + State_VGB(Bx_,1:nI,1:nJ,0:nK+1,iBlock) ) &
+         +         y_BLK(1:nI,1:nJ,0:nK+1,iBlock)   &
+         * ( B0yCell_BLK(1:nI,1:nJ,0:nK+1,iBlock)   &
+         + State_VGB(By_,1:nI,1:nJ,0:nK+1,iBlock) ) &
+         +         z_BLK(1:nI,1:nJ,0:nK+1,iBlock)   &
+         * ( B0zCell_BLK(1:nI,1:nJ,0:nK+1,iBlock)   &
+         + State_VGB(Bz_,1:nI,1:nJ,0:nK+1,iBlock) )
+
+    DoRefine = maxval(rDotB_G) > cTiny .and. minval(rDotB_G) < -cTiny
+
+  end subroutine user_specify_refinement
+
+  !============================================================================
+  subroutine user_set_boundary_cells(iBLK)
+    use ModGeometry,      ONLY: ExtraBc_, IsBoundaryCell_GI, r_Blk
+    use ModBoundaryCells, ONLY: SaveBoundaryCells
+    use ModPhysics,       ONLY: rBody
+    implicit none
+
+    integer, intent(in):: iBLK
+
+    character (len=*), parameter :: Name='user_set_boundary_cells'
+    !--------------------------------------------------------------------------
+    IsBoundaryCell_GI(:,:,:,ExtraBc_) = r_Blk(:,:,:,iBLK) < rBody
+
+    if(SaveBoundaryCells) return
+    call stop_mpi('Set SaveBoundaryCells=.true. in PARAM.in file')
+
+  end subroutine user_set_boundary_cells
+
 
 end module ModUser
 
