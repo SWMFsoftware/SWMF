@@ -1,0 +1,36 @@
+#GRIDGEOMETRY
+spherical_lnr		TypeGeometry
+
+! Use a true sphere, so box is made much larger
+#GRID
+1			nRootBlockX
+2			nRootBlockY
+1			nRootBlockZ
+-100.0			xMin
+ 100.0			xMax
+-100.0			yMin
+ 100.0			yMax
+-100.0			zMin
+ 100.0			zMax
+
+#LIMITRADIUS
+1.0			rMin
+24.0			rMax
+
+#GRIDLEVEL
+4			nLevelArea
+all			NameArea
+
+#GRIDLEVEL
+10			nLevelArea
+box_gen			NameArea
+1.0			rMin
+0.0			LonMin
+-65.0			LatMin
+24.0			rMax
+360.0			LonMax
+65.0			LatMax
+
+#GRIDLEVEL
+6			nLevelArea
+currentsheet		NameArea
