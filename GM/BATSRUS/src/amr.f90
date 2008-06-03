@@ -32,7 +32,7 @@ subroutine amr(idepth)
      !-----------------------------------------------------------------
      ! Prespecified refinement.
      !
-     call specify_initial_refinement(local_refine, idepth)
+     call specify_refinement(local_refine)
      call refine_grid(local_refine)
 
   end if

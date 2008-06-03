@@ -73,7 +73,7 @@ contains
              call write_prefix; write (iUnitOut,*) NameSub, &
                   ' starting initial refinement level ',nRefineLevel
           end if
-          call specify_initial_refinement(local_refine, nRefineLevel)
+          call specify_refinement(local_refine)
           call refine_grid(local_refine)
           call fixRefinementLevels
        end do
