@@ -15,8 +15,3 @@
 -2.
  2.
 
-#AMRINIT
-default			InitialRefineType
-0			initial_refinement_levels
-
-#END
