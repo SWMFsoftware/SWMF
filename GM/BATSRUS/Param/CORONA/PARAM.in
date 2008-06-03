@@ -44,7 +44,7 @@ T			UseUserB0
 1.0			Ro_PFSSM
 2.5			Rs_PFSSM
 0.0			H_PFSSM
-CR1935_WSO.dat          File_PFSSM
+Param/CORONA/CR1935_WSO.dat    File_PFSSM
 12			iHead_PFSSM
 -1.0			PhiShift
 1.0			UnitB
@@ -64,16 +64,6 @@ T			UseBody
 #GAMMA
 1.5000E+00		Gamma
 
-#GRID
-1			nRootBlockX
-1			nRootBlockY
-1			nRootBlockZ
--24.0			xMin
- 24.0			xMax
--24.0			yMin
- 24.0			yMax
--24.0			zMin
- 24.0			zMax
 
 #OUTERBOUNDARY
 float	                TypeBcEast
@@ -83,9 +73,12 @@ float	  		TypeBcNorth
 float	 	        TypeBcBot
 float	   		TypeBcTop
 
-#AMRINIT
-helio_init		TypeRefineInit
-2			nRefineLevelInit
+#INCLUDE
+Param/CORONA/Grid
+
+#GRIDLEVEL
+2			nLevelArea
+initial			NameArea
 
 #USECURLB0
 T			UseCurlB0
@@ -156,7 +149,7 @@ F                       UseUserWritePlot
 F                       UseUserAMR
 F                       UseUserEchoInput
 T                       UseUserB0
-T                       UseUserInitSession
+T			UseUserInitSession
 T                       UseUserUpdateStates
 
 #USERINPUTBEGIN ---------------
