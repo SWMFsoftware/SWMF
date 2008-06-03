@@ -1,27 +1,36 @@
+Begin session: 1
+
 #ECHO
-T
+T			DoEcho
 
 #DESCRIPTION
 Input file for creating a steady state solar corona
 
 #TIMEACCURATE
-F
+F			DoTimeAccurate
 
 #STARTTIME
-2007
-3
-31
-11
-39
-37
-0
+2007			iYear
+3			iMonth
+31			iDay
+11			iHour
+39			iMinute
+37			iSecond
+0.0			FracSecond
 
 #SAVERESTART
 T			DoSaveRestart
 2000			DnSaveRestart
 -1.0			DtSaveRestart
 
-#BEGIN_COMP SC --------------------------------------------------------------
+#BEGIN_COMP SC ----------------------------------------
+
+#INCLUDE
+SC/Param/Grid
+
+#GRIDLEVEL
+9			nLevelArea
+initial			NameArea
 
 #USER_FLAGS
 T			UseUserInnerBCs
@@ -38,7 +47,7 @@ T			UseUserB0
 T			UseUserInitSession
 T			UseUserUpdateStates
 
-#USERINPUTBEGIN ------------------------
+#USERINPUTBEGIN ----------------
 
 #PFSSM
 T			UseUserB0
@@ -54,56 +63,41 @@ SC/CR1922_MDI.dat       File_PFSSM
 #EMPIRICALSW
 WSA			SWModelType
 
-#USERINPUTEND ----------------------------
+#USERINPUTEND   ----------------
 
 #BODY
-T			Usebody
+T			UseBody
 1.0			rBody
-4.3E+8			Body_Rho_Dim
-3.5E+6			Body_T_Dim
+4.3E+8			BodyNDim
+3.5E+6			BodyTDim
 
 #GAMMA
-1.5000E+00		g
-
-#GRID
-1			nProcX
-1			nProcY
-1			nProcZ
--24.0			xMin
- 24.0			xMax 
--24.0			yMin
- 24.0			yMax
--24.0			zMin
- 24.0			zMax
+1.5000E+00			Gamma
 
 #OUTERBOUNDARY
-float	                TypeBcOuter_E(East_)
-float   	        TypeBcOuter_E(West_)
-float	                TypeBcOuter_E(South_)
-float	  		TypeBcOuter_E(North_)
-float	 	        TypeBcOuter_E(Bot_)
-float	   		TypeBcOuter_E(Top_)
-
-#AMRINIT
-helio_init		TypeAmrInit
-9			nRefineLevelInit
+float			TypeBcEast
+float			TypeBcWest
+float			TypeBcSouth
+float			TypeBcNorth
+float			TypeBcBot
+float			TypeBcTop
 
 #USECURLB0
-T
-2.5
+T			UseCurlB0
+2.5			rCurlB0
 
 #AMR
 6000			DnRefine
-F			DoAutomaticRefinement 
+F			DoAutoRefine
 
 #SCHEME
-2			nOrder (1 or 2)
-Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
-mc                      TypeLimiter
-1.2			BetaLimiter
+2			nOrder
+SOKOLOV			TypeFlux
+mc			TypeLimiter
+1.2			LimiterBeta
 
 #RESCHANGEBOUNDARY
-T
+T			DoSaveBoundaryCells
 
 #TIMESTEPPING
 2                       nStage
@@ -143,9 +137,9 @@ los sol tec             StringPlot ! line of sight plot
 14000                   DnSavePlot
 -1.			DtSavePlot    
 
-#END_COMP SC ----------------------------------------------------------------
+#END_COMP SC   ----------------------------------------
 
-#BEGIN_COMP IH --------------------------------------------------------------
+#BEGIN_COMP IH ----------------------------------------
 
 #USER_FLAGS
 F			UseUserInnerBCs
@@ -181,24 +175,26 @@ T                       UseBody1
 4.3E+8			Body_N_Dim
 3.5E+6			Body_T_Dim
 
-#BODY                                  !
+!Inner boundary condition without fixing the body refinement level
+
+#BODY
 F			UseBody1
 
-#EXTRABOUNDARY                         !
-T                                      !Inner boundary condition
-coronatoih                             !Is formulated without fixing
-F                                      !the body refinement level
+#EXTRABOUNDARY
+T
+coronatoih
+F
 
 #GAMMA
 1.50000E+00		Gamma
 
 #OUTERBOUNDARY
-float   			TypeBcEast
-float   			TypeBcWest
-float   			TypeBcSouth 
-float   			TypeBcNorth 
-float   			TypeBcBottom  
-float   			TypeOuterBcTop
+float   		TypeBcEast
+float   		TypeBcWest
+float  			TypeBcSouth 
+float   		TypeBcNorth 
+float   		TypeBcBottom  
+float   		TypeOuterBcTop
 
 #GRID
 1                     	nRootBlockX
@@ -211,15 +207,21 @@ float   			TypeOuterBcTop
 -250.0                  zMin
  250.0                  zMax
 
-#AMRINIT
-coupledhelio    	TypeRefineInit
-8			nLevelRefineInit
+#GRIDLEVEL
+8			nLevelArea
+initial			NameArea
+
+#GRIDLEVEL
+8			nLevelArea
+shell0			NameArea
+16.0			Radius1
+21.0			Radius2
 
 #DIVB
-T
-T
-F
-F
+T			UseDivbSource
+T			UseDivbDiffusion
+F			UseProjection
+F			UseConstrainB
 
 #TIMESTEPPING
 2			nStage
@@ -228,12 +230,8 @@ F
 #SCHEME
 2			nOrder
 Roe			TypeFlux
-mc
-1.2
-
-#AMR
--1			DnRefine
-F			DoAutomaticRefinement 
+mc			TypeLimiter
+1.2			BetaLimiter
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -245,98 +243,107 @@ RAW			StringLogfile
 4			nPlotFiles
 x=0 MHD tec		StringPlot
 -1                  	DnSavePlot
-518400.0			DtSavePlot
+518400.0		DtSavePlot
 y=0 MHD tec		StringPlot
 -1			DnSavePlot
-518400.0			DtSavePlot
+518400.0		DtSavePlot
 z=0 MHD tec		StringPlot
 -1			DnSavePlot
-518400.0			DtSavePlot
+518400.0		DtSavePlot
 3d MHD tec		StringPlot
--1                    DnSavePlot
-518400.0			DtSavePlot
+-1			DnSavePlot
+518400.0		DtSavePlot
 
 #RESCHANGEBOUNDARY
-T
+T			DoSaveBoundaryCells
 
-#END_COMP IH -----------------------------------------------------------------
+#END_COMP IH   ----------------------------------------
 
 #COMPONENT
-IH
-F
+IH			NameComp
+F			UseComp
 
 #STOP
-1000
--1.0
+1000			MaxIteration
+-1.0			tSimulationMax
 
-#RUN ########################################################################
+End session: 1
+#RUN ############################################################
+Begin session: 2
 
 #BEGIN_COMP SC --------------------------------------------------------------
 
 #SCHEME
-2			nOrder (1 or 2)
-Roe			TypeFlux (Roe, Rusanov, Linde, Sokolov
-mc                      TypeLimiter
-1.2			BetaLimiter
+2			nOrder
+ROE			TypeFlux
+mc			TypeLimiter
+1.2			LimiterBeta
 
-#END_COMP SC --------------------------------------------------------------
+#END_COMP SC   ----------------------------------------
 
 #STOP
-6001
--1.0
+6001			MaxIter
+-1.0			TimeMax
 
-#RUN ########################################################################
+End session: 2
+#RUN ############################################################
+Begin session: 3
 
-#BEGIN_COMP SC --------------------------------------------------------------
+#BEGIN_COMP SC ----------------------------------------
 
 #AMR
 3000			DnRefine
-F			DoAutomaticRefinement 
+F			DoAutoRefine
 
-#END_COMP SC -----------------------------------------------------------------
+#END_COMP SC   ----------------------------------------
 
 #STOP
-9005
--1.0
+9005			MaxIter
+-1.0			TimeMax
 
-#RUN ########################################################################
+End session: 3
+#RUN ############################################################
+Begin session: 4
 
-#BEGIN_COMP SC --------------------------------------------------------------
+#BEGIN_COMP SC ----------------------------------------
 
 #AMR
 -1			DnRefine
-F			DoAutomaticRefinement 
 
-#END_COMP SC -----------------------------------------------------------------
+#END_COMP SC   ----------------------------------------
 
 #STOP
-14000
--1.0
+14000			MaxIter
+-1.0			TimeMax
 
-#RUN ########################################################################
+End session: 4
+#RUN ############################################################
+Begin session: 5
 
 #COMPONENT
-IH
-T
+IH			NameComp
+T			UseComp
 
 #COUPLE1
-SC
-IH
-1
--1.0
+SC			NameSource
+IH			NameTarget
+1			DnCouple
+-1.0			DtCouple
 
 #STOP
-14001
--1
+14001			MaxIter
+-1.0			TimeMax
 
-#RUN #########################################################################
+End session: 5
+#RUN ############################################################
+Begin session: 6
 
 #COMPONENT
-SC
-F
+SC			NameComp
+F			UseComp
 
 #TIMEACCURATE
-T
+T			DoTimeAccurate
 
 #SAVERESTART
 T			DoSaveRestart
@@ -344,6 +351,8 @@ T			DoSaveRestart
 36000.0			DtSaveRestart
 
 #STOP
--1
-518400.0
+-1			MaxIter
+518400.0			TimeMax
 
+End session: 6
+#END ############################################################
