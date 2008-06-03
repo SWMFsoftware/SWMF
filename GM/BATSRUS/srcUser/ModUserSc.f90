@@ -1,7 +1,6 @@
 !^CFG COPYRIGHT UM
 !==============================================================================
 module ModUser
-  use ModMagnetogram
   use ModReadParam, ONLY: lStringLine
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
@@ -27,10 +26,11 @@ contains
   !============================================================================
   subroutine user_read_inputs
     use ModMain
-    use ModProcMH,    ONLY: iProc
+    use ModProcMH,      ONLY: iProc
     use ModReadParam
-    use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
-    use EEE_ModMain,  ONLY: EEE_set_parameters
+    use ModIO,          ONLY: write_prefix, write_myname, iUnitOut
+    use ModMagnetogram, ONLY: read_magnetogram_file
+    use EEE_ModMain,    ONLY: EEE_set_parameters
     implicit none
 
     character (len=100) :: NameCommand
@@ -91,7 +91,7 @@ contains
   !============================================================================
   subroutine user_face_bcs(VarsGhostFace_V)
 
-    use ModSize,       ONLY: East_,West_,South_,North_,Bot_,Top_
+    use ModSize,       ONLY: East_,West_,South_,North_,Bot_,Top_,nDim
     use ModMain,       ONLY: time_accurate,x_,y_,z_, UseRotatingFrame, &
          n_step, Iteration_Number
     use ModVarIndexes, ONLY: nVar,Ew_,rho_,Ux_,Uy_,Uz_,Bx_,By_,Bz_,P_
@@ -322,16 +322,20 @@ contains
 
     iBLK = globalBLK
 
+    select case(TypeGeometry)
+    case('cartesian')
+       Rmax = max(2.1E+01,sqrt(x2**2+y2**2+z2**2))
+    case('spherical_lnr')
+       Rmax = max(2.1E+01,exp(XyzMax_D(1)))
+    end select
+
     do k=1,nK; do j=1,nJ; do i=1,nI
        x = x_BLK(i,j,k,iBLK)
        y = y_BLK(i,j,k,iBLK)
        z = z_BLK(i,j,k,iBLK)
-       R = sqrt(x**2+y**2+z**2+cTolerance**2)
-       ROne  = max(1.0,R)
-       Rmax  = max(2.1E+01,sqrt(x2**2+y2**2+z2**2))
-       State_VGB(Bx_,i,j,k,iBLK) = 0.0
-       State_VGB(By_,i,j,k,iBLK) = 0.0
-       State_VGB(Bz_,i,j,k,iBLK) = 0.0
+       R = max(R_BLK(i,j,k,iBLK),cTolerance)
+       ROne = max(1.0,R)
+       State_VGB(Bx_:Bz_,i,j,k,iBLK) = 0.0
        call get_plasma_parameters_cell(i,j,k,iBLK,&
             Dens_BLK,Pres_BLK,Gamma_BLK)
        State_VGB(rho_,i,j,k,iBLK) = Dens_BLK
@@ -350,12 +354,16 @@ contains
 
   !============================================================================
   subroutine user_get_b0(xInput,yInput,zInput,B0_D)
-    use ModPhysics,  ONLY: Io2No_V,UnitB_
+    use ModPhysics,     ONLY: Io2No_V,UnitB_
+    use ModMagnetogram, ONLY: get_magnetogram_field
     implicit none
+
     real, intent(in):: xInput,yInput,zInput
     real, intent(out), dimension(3):: B0_D
+
     call get_magnetogram_field(xInput,yInput,zInput,B0_D)
     B0_D = B0_D*Io2No_V(UnitB_)
+
   end subroutine user_get_b0
 
   !============================================================================
@@ -403,10 +411,8 @@ contains
   !========================================================================
   subroutine user_get_log_var(VarValue,TypeVar,Radius)
 
-    use ModProcMH,     ONLY: nProc
-    use ModIO,         ONLY: dn_output,logfile_,write_myname
-    use ModMain,       ONLY: unusedBLK,nBLK,iteration_number,   &
-         x_,y_,z_
+    use ModIO,         ONLY: write_myname
+    use ModMain,       ONLY: unusedBLK,nBLK
     use ModVarIndexes, ONLY: Ew_,Bx_,By_,Bz_,rho_,rhoUx_,rhoUy_,rhoUz_,P_ 
     use ModGeometry,   ONLY: R_BLK
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK,B0xCell_BLK,    &
