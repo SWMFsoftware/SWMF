@@ -2782,37 +2782,13 @@ The default is to flush the output, i.e. DoFlush=T.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!  AMR PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-<command name="AMRINIT" if="$_IsFirstSession">
-	<parameter name="InitialRefineType" type="string" length="100"
-							default="none"/>
-	<parameter name="InitialRefineLevel" type="integer" min="0" 
-							default="4" />
-#AMRINIT
-3Dbodyfocus		TypeRefineInit
-4			nRefineLevelInit
-
-This command defines the geometry based refinement type and
-the number of initial refinement levels. The exact meaning
-of the various refinement types can be figured out from the
-source code in specify_refinement.f90 and/or the 
-subroutine user_specify_derinement in the user module. 
-
-This is an obscure way of defining the grid, because the meaning
-of the various names keep changing from version to version.
-It is much better to use the #GRIDRESOLUTION and #GRIDLEVEL commands
-that define the grid structure in geometric terms.
-
-The default is TypeRefineInit='none' that results in no refinement
-of the base grid.
-</command>
-
 <command name="AMRINITPHYSICS" if="$_IsFirstSession">
 	<parameter name="nRefineLevelIC" type="integer" min="0" default="0" />
 #AMRINITPHYSICS
 3			nRefineLevelIC
 
 Defines number of physics (initial condition) based AMR-s AFTER the 
-geometry based initial AMR-s defined by #AMRINIT were done.
+geometry based grid refinement was finished.
 Only useful if the initial condition has a non-trivial analytic form.
 </command>
 
@@ -2822,15 +2798,18 @@ Only useful if the initial condition has a non-trivial analytic form.
 		if="$_command =~ /RESOLUTION/" />
 	<parameter name="nLevel" type="integer" min="0" max="30"
 		if="$_command =~ /LEVEL/" />
-	<parameter name="StringArea" type="strings" min="1" max="2">
+	<parameter name="StringArea" type="strings" min="1" max="2"
+		case="lower">
 		<part name="NameArea" type="string" input="select" 
 							required="T">
-			<option name="initial" value="initial/init"
-								default="T" />
+			<option name="initial"		default="T" 	/>
 			<option name="all"				/>
 			<option name="box"				/>
+			<option name="box_gen"				/>
 			<option name="brick"				/>
+			<option name="brick_gen"			/>
 			<option name="brick0"				/>
+			<option name="brick_gen0"			/>
 			<option name="sphere"				/>
 			<option name="sphere0"				/>
 			<option name="shell"				/>
@@ -2847,13 +2826,16 @@ Only useful if the initial condition has a non-trivial analytic form.
 			<option name="ringy0"				/>
 			<option name="ringz"				/>
 			<option name="ringz0"				/>
+			<option name="currentsheet"			/>
+			<option name="user"				/>
 		</part>
-		<part name="RotateArea" type="string" input="select"
-							required="F">
+		<part name="RotateArea" type="string" input="select" 
+			required="F" 
+			if="$NameArea =~ /box\b|brick0?\b|cylinder|ring/">
 			<option name="rotated" />
 		</part>
 	</parameter>
-	<if expr="$NameArea !~ /box|all|init|0/">
+	<if expr="$NameArea !~ /box|all|initial|currentsheet|user|0/">
 		<parameter name="xCenter" type="real" default="0"/>
 		<parameter name="yCenter" type="real" default="0"/>
 		<parameter name="zCenter" type="real" default="0"/>
@@ -2866,28 +2848,28 @@ Only useful if the initial condition has a non-trivial analytic form.
 		<parameter name="yMaxBox" type="real" />
 		<parameter name="zMaxBox" type="real" />
 	</if>
-	<if expr="$NameArea =~ /brick/i">
+	<if expr="$NameArea =~ /brick/">
 		<parameter name="xSizeBrick" type="real" min="0" />
 		<parameter name="ySizeBrick" type="real" min="0" />
 		<parameter name="zSizeBrick" type="real" min="0" />
 	</if>
-	<if expr="$NameArea =~ /sphere/i">
+	<if expr="$NameArea =~ /sphere/">
 		<parameter name="Radius"  type="real" min="0"/>
 	</if>
-	<if expr="$NameArea =~ /shell/i">
+	<if expr="$NameArea =~ /shell/">
 		<parameter name="Radius1" type="real" min="0"/>
 		<parameter name="Radius2" type="real" min="0"/>
 	</if>
-	<if expr="$NameArea =~ /cylinder/i">
+	<if expr="$NameArea =~ /cylinder/">
 		<parameter name="LengthCylinder" type="real" min="0" />
 		<parameter name="Radius"         type="real" min="0" />
 	</if>
-	<if expr="$NameArea =~ /ring/i">
+	<if expr="$NameArea =~ /ring/">
 		<parameter name="HeightRing" type="real" min="0" />
 		<parameter name="Radius1"    type="real" min="0" />
 		<parameter name="Radius2"    type="real" min="0" />
 	</if>
-	<if expr="$RotateArea =~ /rotated/i">
+	<if expr="$RotateArea =~ /rotated/">
 		<parameter name="xRotate" type="real" min="-360" max="360" 
 								default="0"/>
 		<parameter name="yRotate" type="real" min="-360" max="360" 
@@ -2957,23 +2939,23 @@ ringz0 rotated		NameArea
  10.0			yRotate
   0.0			zRotate
 
+#GRIDRESOLUTION
+0.15			Resolution
+currentsheet		NameArea
+
+#GRIDRESOLUTION
+1/8			Resolution
+user			NameArea
+
 The #GRIDRESOLUTION and #GRIDLEVEL commands allow to set the grid resolution
 or refinement level, respectively, in a given area. The Resolution parameter
-refers to the size of the cell in the X direction (Dx).
+refers to the size of the cell in the first direction (Dx or Dr).
 The nLevel parameter is an integer with level 0 meaning no refinement relative
 to the root block, while level N is a refinement by 2 to the power N.
 
-If NameArea is set to 'initial' or 'init', the highest initial resolution
-or level is set by the command. This is similar to the #AMRINIT command,
-but there is no 'TypeRefineInit' parameter, because all refinement areas 
-are defined with the additional #GRIDLEVEL and #GRIDRESOLUTION commands.
-Do not use #AMRINIT if the #GRIDLEVEL or #GRIDRESOLUTION command is used 
-with the 'initial' area! The #AMRINIT command may be combined with
-the #GRIDLEVEL and #GRIDRESOLUTION commands (these add additional areas
-of refinement to the areas defined by TypeRefineInit), but in general 
-the use of #AMRINIT is not recommended, because the refinement definitions
-are defined in the source code which is difficult to understand and may
-change from version to version.
+If NameArea is set to 'initial', the highest initial resolution
+or level is set by the command. This level can be increased during the
+run with the AMR-s (see #AMR command). The default is no refinement initially.
 
 For other values of NameArea, the command specifies the shape of the area. 
 where the blocks are to be refined. If the desired grid resolution is finer
@@ -2988,15 +2970,23 @@ determines the desired grid resolution.
 All computational blocks that intersect the area and have a coarser
 resolution than the resolution set for the area are selected for refinement.
 There are the following basic shapes: 
-'all', 'box', 'brick', 'sphere', 'shell', 'cylinderx', 'cylindery', 
-'cylinderz', 'ringx', 'ringy' and 'ringz'.
+'all', 'box', 'box_gen', 'brick', 'brick_gen', 'sphere', 'shell', 'cylinderx', 
+'cylindery', 'cylinderz', 'ringx', 'ringy' and 'ringz'.
 
 The area 'all' refers to the whole computational domain, and it can be
 used to set the overall minimum resolution. The area 'box' is a box
 aligned with the X, Y and Z axes, and it is given with the coordinates
 of two diagonally opposite corners. The area 'brick' has the same shape
 as 'box', but it is defined with the center of the brick and the 
-size of the brick. The area 'sphere' is a sphere around an arbitrary point,
+size of the brick. The 'box_gen' and 'brick_gen' areas can be used 
+for non-Cartesian grids to define a box in the generalized coordinates.
+For example a sphere around the origin can be described as a box in 
+generalized coordinates with radius going from 0 to R, 
+phi going from 0 to 360 degrees and latitude going from -90 to +90 degrees.
+Note that angles are given in degrees, and radius is given even if the 
+generalized coordinates use its logarithm.
+
+The area 'sphere' is a sphere around an arbitrary point,
 which is defined with the center point and the radius of the sphere.
 The area 'shell' consists of the volume between two concentric spherical
 surfaces, which is given with the center point and the two radii.
@@ -3009,8 +2999,21 @@ two cylindrical surfaces parallel with the X, Y and Z axes, respectively.
 The ring area is given with the center, the height and the two radii.
 
 If the area name contains the number '0', the center is taken to be at the 
-origin. If the word 'rotated' is added, the area can be rotated by 3 angles 
-around the X, Y and Z axes in this order.
+origin and the center coordinates are not read. Note that the areas 'box'
+and 'box_gen' are defined with the corners so the '0' cannot be used for these.
+
+If the word 'rotated' is added after the area name, the area can be 
+rotated by 3 angles around the X, Y and Z axes in this order. Only the
+areas 'box', 'brick', 'cylinder*' and 'ring*' can be rotated.
+
+The 'currentsheet' area is defined as the blocks containing a reversal of the 
+radial magnetic field. This is mostly useful for the solar corona and 
+heliosphere. This special area type cannot be rotated or centered.
+
+The 'user' area results in a call of the subroutine user_specify_refinement 
+defined in the user module. The user can define an arbitrary set of criteria 
+for refinement.  Again, the rotation and centering cannot be applied to the
+'user' area.
 </command>
 
 <command name="AMRLEVELS">
@@ -3091,8 +3094,7 @@ The DnRefine parameter determines the frequency of adaptive mesh refinements
 in terms of total steps nStep.
 
 When DoAutoRefine is false, the grid is refined by one more level
-based on the TypeRefineInit parameter given in the #AMRINIT command
-and/or the areas and resolutions defined by the 
+based on the areas and resolutions defined by the 
 #GRIDLEVEL and #GRIDRESOLUTION commands.
 If the number of blocks is not sufficient for this pre-specified refinement, 
 the code stops with an error.
