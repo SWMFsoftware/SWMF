@@ -27,7 +27,8 @@ end subroutine refine_grid
 !------------------------------------------------------------------------
 subroutine parallel_refine
   use ModProcMH
-  use ModMain, ONLY : iNewGrid,nBlock,nBlockMax,unusedBLK,nBLK,lVerbose
+  use ModMain, ONLY : iNewGrid,nBlock,nBlockMax,unusedBLK,nBLK,lVerbose, &
+       BlkTest
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,R_BLK,dx_BLK,dy_BLK,dz_BLK,&
        XyzStart_BLK
   use ModAMR, ONLY : local_cube,local_cubeBLK,availableBLKs,refine_list
@@ -44,10 +45,14 @@ subroutine parallel_refine
 
   type (adaptive_block_ptr) :: refine_block_ptr
 
+  character(len=*), parameter:: NameSub = 'parallel_refine'
   !---------------------------------------------------------------------------
   UseOldBlock = .false.
 
-  call set_oktest('refine',oktest,oktest_me)
+  call set_oktest(NameSub,oktest,oktest_me)
+
+  if(oktest_me) write(*,*)NameSub,' refine_list(Test), dx=',&
+       refine_list(BlkTest, iProc+1), dx_Blk(BlkTest)
 
   if (.not. any(refine_list)) RETURN
   if(iProc==0 .and. lVerbose>0)then
@@ -148,14 +153,14 @@ subroutine parallel_refine
              unusedBLK(local_cubeBLK(icube)) = .false.
      end do
 
-     if(oktest .and. iProc == iPE) then
-        write(*,'(a,i4,/,a,i1,/,a,9i4,/,2(a,8i4,/))') &
-             "R--> refine_grid: PE = ",iProc, &
-             "R-     nPEsRefBlk    = ",nPEsRefBlk, &
-             "R-     PEsRefBlk     = ",PEsRefBlk, &
-             "R-     local_cube    = ",local_cube, &
-             "R-     local_cubeBLK = ",local_cubeBLK
-     end if
+!     if(oktest .and. iProc == iPE) then
+!        write(*,'(a,i4,/,a,i1,/,a,9i4,/,2(a,8i4,/))') &
+!             "R--> refine_grid: PE = ",iProc, &
+!             "R-     nPEsRefBlk    = ",nPEsRefBlk, &
+!             "R-     PEsRefBlk     = ",PEsRefBlk, &
+!             "R-     local_cube    = ",local_cube, &
+!             "R-     local_cubeBLK = ",local_cubeBLK
+!     end if
 
      call create_refined_soln_blocks(nPEsRefBlk, PEsRefBlk, iPE,iBLK)
      call refine_octree_block(refine_block_ptr, local_cube, &
@@ -182,5 +187,7 @@ subroutine parallel_refine
         end do
      end if
   end do; end do
+
+  if(oktest_me)write(*,*)NameSub,' final dx=',dx_BLK(BlkTest)
 
 end subroutine parallel_refine
