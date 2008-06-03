@@ -11,7 +11,7 @@
   public :: user_initial_perturbation
   public :: user_set_ics
   public :: user_init_session
-  public :: user_specify_initial_refinement
+  public :: user_specify_refinement
   public :: user_amr_criteria
   public :: user_read_inputs
   public :: user_write_progress
