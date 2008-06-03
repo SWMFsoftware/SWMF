@@ -52,6 +52,7 @@ Contains
     iZDominant = maxloc(StatSumTermLog_I(0:nZ))-1 !Find the location of that maximum value
     !debuT       
       write (*,*)"_set_pop: iZdom", iZdominant
+      iZdominant = iZdominant +1   ! <==temp+1
     
     StatSumTermMax = StatSumTermLog_I(iZDominant(1))
       write (*,*)"_set_pop: terMax", StatSumTermMax
@@ -60,14 +61,16 @@ Contains
       write (*,*)"_set_pop: terMin",  StatSumTermMin     
 
 
+
+
                      !Find the lower boundary of the array 
                      !below which the values of Pi can be neglected
-    iZMin = count( StatSumTermLog_I(0:iZDominant(1)) <StatSumTermMin) 
+    iZMin = count( StatSumTermLog_I(0:iZDominant(1)) < StatSumTermMin) 
       write (*,*)"_set_pop: iZmin", iZmin
 
 
                      !Find the similar upper boundary
-    iZMax = nZ - count(StatSumTermLog_I(iZDominant(1):nZ) <StatSumTermMin)
+    iZMax = nZ - count(StatSumTermLog_I(iZDominant(1):nZ) < StatSumTermMin)
       write (*,*)"_set_pop: iZmax", iZmax
 
 
@@ -79,6 +82,7 @@ Contains
     Population_I(iZMin:iZMax) = exp(StatSumTermLog_I(iZMin:iZMax)-StatSumTermMax)
     write(*,*)"_set_pop: poPi :",  Population_I(iZMin:iZMax)   
  
+
 
     PITotal = sum(Population_I(iZMin:iZMax))	!Add up all the values of Pi found so far
                                                 !Normalize the Pi-s so that their sum =1
