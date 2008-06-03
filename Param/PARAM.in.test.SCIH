@@ -116,8 +116,8 @@ IH/earth_traj.dat
 #END_COMP IH ---------------------------------------------------------------
 
 #COMPONENT
-IH
-F
+IH			NameComp
+F			UseComp
 
 #BEGIN_COMP SC --------------------------------------------------------------
 
@@ -146,7 +146,7 @@ T			UseUserB0
 1.0			Ro_PFSSM
 2.5			Rs_PFSSM
 0.0			H_PFSSM
-SC/CR1935_WSO.dat       File_PFSSM
+SC/Param/CR1935_WSO.dat
 12			iHead_PFSSM
 -1.0			PhiShift
 1.0			UnitB
@@ -166,17 +166,6 @@ T			Usebody
 #GAMMA
 1.5000E+00		Gamma
 
-#GRID
-1			nRootBlockX
-1			nRootBlockY
-1			nRootBlockZ
--24.0			xMin
- 24.0			xMax
--24.0			yMin
- 24.0			yMax
--24.0			zMin
- 24.0			zMax
-
 #OUTERBOUNDARY
 float	                TypeBcEast
 float   	        TypeBcWest
@@ -185,9 +174,12 @@ float	  		TypeBcNorth
 float	 	        TypeBcBot
 float	   		TypeBcTop
 
-#AMRINIT
-helio_init		TypeRefineInit
-2			nRefineLevelInit
+#INCLUDE
+SC/Param/Grid
+
+#GRIDLEVEL
+2			nLevelArea
+initial			NameArea
 
 #USECURLB0
 T			UseCurlB0
@@ -279,7 +271,7 @@ SC			NameComp
 F			UseComp
 
 #STOP
-300                    MaxIteration
+300			MaxIteration
 -1.			tSimulationMax
 
 #END
