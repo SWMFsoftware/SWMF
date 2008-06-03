@@ -858,26 +858,29 @@ end function test_cell_value
 
 !=============================================================================
 
-subroutine xyz_to_spherical(xFace,yFace,zFace,rFace,phiFace,ThetaFace)
+subroutine xyz_to_spherical(x, y, z, r, Phi, Latitude)
 
-  use ModNumConst
+  use ModNumConst, ONLY: cTwoPi
   implicit none
 
-  real, intent(in)  :: xFace,yFace,zFace
-  real, intent(out) :: rFace,thetaFace,phiFace
+  real, intent(in)  :: x, y, z
+  real, intent(out) :: r, Phi, Latitude
+  !---------------------------------------------------------------------------
+  r = sqrt(x**2 + y**2 + z**2)
 
-
-  rFace = sqrt(xFace**2 + yFace**2 + zFace**2)
-
-  ! get the phi(lonitude relative to +x) and 
-  ! theta (co-latitude) position of the face
-  if (XFace == cZero .and. YFace == cZero) then
-     PhiFace = cZero
-  else
-     PhiFace = atan2(YFace/RFace, XFace/RFace)
+  if(r == 0.0)then
+     Phi      = 0.0
+     Latitude = 0.0
+     RETURN
   end if
-  if (PhiFace < cZero) PhiFace = PhiFace + cTwoPi
-  ThetaFace = acos(zFace/RFace)
+
+  ! get the phi(longitude relative to +x) and latitude (relative to equator)
+  if (x == 0.0 .and. y == 0.0) then
+     Phi = 0.0
+  else
+     Phi = modulo(atan2(y, x), cTwoPi)
+  end if
+  Latitude = acos(z/R)
 
 end subroutine xyz_to_spherical
 
