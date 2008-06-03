@@ -217,7 +217,8 @@ test2_rundir:
 	make rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.SCIH ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.SCIH ${TESTDIR}/LAYOUT.in
-	cd ${TESTDIR}/IH; ./EARTH_TRAJ.exe > earth_traj.dat
+	cd ${TESTDIR}/IH; cp Param/EARTH_TRAJ.in .; \
+		${BINDIR}/EARTH_TRAJ.exe > earth_traj.dat
 
 test2_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
