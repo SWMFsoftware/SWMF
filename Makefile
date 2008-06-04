@@ -449,9 +449,11 @@ OH/BATSRUS/src/Makefile:
 	echo '*' > OH/BATSRUS/src/.cvsignore
 	cp -f IH/BATSRUS_share/src/IH_wrapper.f90 \
 		OH/BATSRUS/srcInterface/OH_wrapper.f90
+	cp -f IH/BATSRUS_share/src/IH_set_buffer_grid.f90 \
+		OH/BATSRUS/srcInterface/OH_set_buffer_grid.f90
 	cd OH/BATSRUS/srcInterface/; perl -i -pe \
 	's/IH/OH/g;s/BATSRUS/OH_BATSRUS/;s/Inner/Outer/;'\
-		OH_wrapper.f90 
+		OH_wrapper.f90 OH_set_buffer_grid.f90
 	cd OH/BATSRUS/src; rm -f main.f90
 
 # rename OH source files to avoid name conflicts
