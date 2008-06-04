@@ -1,4 +1,4 @@
-#^CFG COPYRIGHT UM
+ #^CFG COPYRIGHT UM
 
 SHELL =/bin/sh
 
@@ -17,8 +17,10 @@ OBJECTS = \
 	ModDensityAndGradient.o\
 	IH_set_buffer_grid.o\
 	IH_get_for_gm.o\
+	IH_get_for_oh.o\
 	IH_get_for_sc.o\
 	IH_get_for_sp.o\
+	IH_put_from_oh.o\
 	IH_wrapper.o
 
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src
