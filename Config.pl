@@ -67,6 +67,10 @@ if($Installed){
     &shell_command("make IHBATSRUS")
 	if $Version{"IH"} eq "BATSRUS" and not -f "IH/BATSRUS/src/Makefile";
 
+    # Create OH/BATSRUS if needed
+    &shell_command("make OHBATSRUS")
+	if $Version{"OH"} eq "BATSRUS" and not -f "OH/BATSRUS/src/Makefile";
+
     # Create SC/BATSRUS if needed
     &shell_command("make SCBATSRUS")
 	if $Version{"SC"} eq "BATSRUS" and not -f "SC/BATSRUS/src/Makefile";
@@ -341,6 +345,7 @@ sub set_version_makefile_comp{
 #                      several extensions and modifications
 # 01/20/2007           renamed from SetSWMF.pl to Config.pl and the
 #                      core of the script is moved into share/Scripts/Config.pl
+#06/01/2008  R. Oran   Modifications to include new OH component
 #EOP
 sub print_help{
 
