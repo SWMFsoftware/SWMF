@@ -15,7 +15,6 @@ OBJECTS = \
         ModRadioWaveRaytracing.o\
         ModDensityAndGradient.o\
         OH_set_buffer_grid.o\
-        OH_get_for_gm.o\
         OH_get_for_ih.o\
 	OH_wrapper.o
 
