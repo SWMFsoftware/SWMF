@@ -116,10 +116,10 @@ contains
           write(*,*) prefix
           write(*,*) prefix, &
                '>>>>>>>>>>>>>>>>>>>                  <<<<<<<<<<<<<<<<<<<<<'
+          write(*,*) prefix
           write(*,*) prefix, &
                '            Gibson and Low CME is initiated!!!'
-          write(*,*) prefix, &
-               '            CAUTION: this module is NOT tested!!!'
+          write(*,*) prefix
           write(*,*) prefix, &
                '>>>>>>>>>>>>>>>>>>>                  <<<<<<<<<<<<<<<<<<<<<'
           write(*,*) prefix
@@ -134,6 +134,7 @@ contains
           write(*,*) prefix, 'LongitudeGL98 = ',LongitudeGL98,'[degrees]'
           write(*,*) prefix, 'LatitudeGL98 = ',LatitudeGL98,'[degrees]'
           write(*,*) prefix, 'OrientationGL98 = ',OrientationGL98,'[degrees]'
+          write(*,*) prefix
        end if
     end if
 
