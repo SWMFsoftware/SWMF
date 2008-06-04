@@ -72,7 +72,7 @@ our %Remaining;
 # These file names are provided to the calling script
 our $MakefileDef      = 'Makefile.def';
 our $MakefileConf     = 'Makefile.conf';
-our $MakefileConfOrig = 'share/build/Makefile.';
+our $MakefileConfOrig = 'share/build/Makefile';
 our $MpiHeader        = 'share/Library/src/mpif90.h';
 our $MpiHeaderOrig    = 'share/include/mpif90_';
 our $MakefileRules    = 'Makefile.RULES';
@@ -296,8 +296,32 @@ sub install_code_{
 	&shell_command("echo ${Component}DIR=$DIR >> $MakefileDef");
 	&shell_command("echo COMPILER=$Compiler >> $MakefileDef");
 	&shell_command("cat $MakefileDefOrig >> $MakefileDef");
-	&shell_command("cat $MakefileConfOrig$OS.$Compiler > $MakefileConf");
-	&shell_command("cat $MpiHeaderOrig${OS}_$MpiVersion.h > $MpiHeader");
+
+	my $Makefile = "$MakefileConfOrig.$OS.$Compiler";
+	if(-f $Makefile){
+	    &shell_command("cat $Makefile > $MakefileConf");
+	}else{
+	    # Try to use generic Makefile with provided compiler
+	    warn "$WARNING_: $Makefile was not found,".
+		" using generic $MakefileConfOrig.conf\n";
+	    $Makefile = "$MakefileConfOrig.conf";
+	    open(IN, $Makefile) or die "$ERROR_ $Makefile is missing\n";
+	    open(OUT, ">$MakefileConf") 
+		or die "$ERROR_ could not open $MakefileConf\n";
+	    while(<IN>){
+		s/_COMPILER_/$Compiler/; print OUT $_;
+	    }
+	    close IN; close OUT;
+	}
+	
+	my $Header = "$MpiHeaderOrig${OS}_$MpiVersion.h";
+	if(-f $Header){
+	    &shell_command("cat $Header > $MpiHeader");
+	}else{
+	    warn "$WARNING_: $Header was not found,".
+		" using generic ${MpiHeaderOrig}mpich.h\n";
+	    &shell_command("cat ${MpiHeaderOrig}mpich.h > $MpiHeader");
+	}
     }
 
     # Read info from main Makefile.def
@@ -544,7 +568,7 @@ Show current settings with more detail:
 
     Config.pl -show
 
-Install code with the g95 compiler and Intal MPI and select single precision:
+Install code with the g95 compiler and Intel MPI and select single precision:
 
     Config.pl -install -compiler=g95 -mpi=Intel -single
 
