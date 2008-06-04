@@ -3,7 +3,7 @@
 !==========================================================================
 subroutine OH_set_param(CompInfo, TypeAction)
 
-  use CON_comp_info, ONLY: CompInfoType, put
+  use CON_comp_info
 
   implicit none
 
@@ -102,48 +102,20 @@ subroutine OH_synchronize_refinement(iProc0,iCommUnion)
 
 end subroutine OH_synchronize_refinement
 
-subroutine OH_put_from_ih(nPartial,&
-     iPutStart,&
-     Put,& 
-     Weight,&
-     DoAdd,&
-     StateSI_V,&
-     nVar)
-  !USES:
-  integer,intent(in)::nPartial,iPutStart,nVar
-  logical,intent(in)::DoAdd
-  real,dimension(nVar),intent(in)::StateSI_V
-
-  character (len=*), parameter :: NameSub='OH_put_from_ih.f90'
-
-  call CON_stop(NameSub//': OH_ERROR: empty version cannot be used!')
-end subroutine OH_put_from_ih
-!===================================================================!
+!===============================================================
 subroutine OH_get_for_ih(&
      nPartial,iGetStart,Get,W,State_V,nVar)
-  integer,intent(in)::nPartial,iGetStart,nVar
-  real,dimension(nVar),intent(in)::State_V
-
-  character (len=*), parameter :: NameSub='OH_get_for_ih.f90'
+! derived type parameters, it is easier not to declare them
+  character(len=*), parameter :: NameSub='OH_get_for_ih'
 
   call CON_stop(NameSub//': OH_ERROR: empty version cannot be used!')
 end subroutine OH_get_for_ih
 !===================================================================!
-subroutine OH_get_for_sp(&
-     nPartial,iGetStart,Get,W,State_V,nVar)
-  use CON_coupler, ONLY: IndexPtrType, WeightPtrType
-  implicit none
-
-  !INPUT ARGUMENTS:
-  integer,intent(in)::nPartial,iGetStart,nVar
-  type(IndexPtrType),intent(in)::Get
-  type(WeightPtrType),intent(in)::W
-  real,dimension(nVar),intent(out)::State_V
-
-  character(len=*), parameter :: NameSub='OH_get_for_sp'
+subroutine OH_set_buffer_grid(DD,CompID_)
+  character(len=*), parameter :: NameSub='OH_set_buffer_grid'
 
   call CON_stop(NameSub//': OH_ERROR: empty version cannot be used!')
-end subroutine OH_get_for_sp
+end subroutine OH_set_buffer_grid
 !===================================================================!
 subroutine OH_get_a_line_point(&
      nPartial,iGetStart,Get,W,State_V,nVar)
@@ -161,10 +133,9 @@ subroutine OH_get_a_line_point(&
   call CON_stop(NameSub//': OH_ERROR: empty version cannot be used!')
 end subroutine OH_get_a_line_point
 !===================================================================!
-subroutine OH_inquire_if_spherical(IsSphericalSc)
-  logical,intent(out)::IsSphericalSc
-  character(len=*), parameter :: NameSub='OH_inquire_if_spherical'
+subroutine OH_match_ibc
+  implicit none
+  character(len=*), parameter :: NameSub='OH_match_ibc'
 
   call CON_stop(NameSub//': OH_ERROR: empty version cannot be used!')
-end subroutine OH_inquire_if_spherical
-!===================================================================!
+end subroutine OH_match_ibc
