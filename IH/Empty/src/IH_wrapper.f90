@@ -122,6 +122,14 @@ subroutine IH_get_for_sc(&
   call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
 end subroutine IH_get_for_sc
 !===================================================================!
+subroutine IH_get_for_oh(&
+     nPartial,iGetStart,Get,W,State_V,nVar)
+! derived type parameters, it is easier not to declare them
+  character(len=*), parameter :: NameSub='IH_get_for_OH'
+
+  call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+end subroutine IH_get_for_oh
+!===================================================================!
 subroutine IH_set_buffer_grid(DD,CompID_)
   character(len=*), parameter :: NameSub='IH_set_buffer_grid'
 
@@ -159,6 +167,23 @@ subroutine IH_get_a_line_point(&
 
   call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
 end subroutine IH_get_a_line_point
+!===================================================================!
+subroutine IH_put_from_oh(nPartial,&
+     iPutStart,&
+     Put,& 
+     Weight,&
+     DoAdd,&
+     StateSI_V,&
+     nVar)
+  !USES:
+  integer,intent(in)::nPartial,iPutStart,nVar
+  logical,intent(in)::DoAdd
+  real,dimension(nVar),intent(in)::StateSI_V
+
+  character (len=*), parameter :: NameSub='IH_put_from_oh.f90'
+
+  call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+end subroutine IH_put_from_oh
 !===================================================================!
 subroutine IH_match_ibc
   implicit none
