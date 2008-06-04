@@ -434,10 +434,13 @@ OH/BATSRUS/src/Makefile:
 	OH/BATSRUS/src \
 	OH/BATSRUS/srcUser \
 	OH/BATSRUS/srcInterface/OH_wrapper.f90
+	mkdir -p OH/BATSRUS/src OH/BATSRUS/srcUser
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../OH/BATSRUS/src
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
 		update_lagrangian_grid.f90 \
+		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
+		ModDensityAndGradient.f90\
 		../../../OH/BATSRUS/srcInterface
 	cp GM/BATSRUS/srcUser/*.f90 OH/BATSRUS/srcUser/
 	cd GM/BATSRUS; \
