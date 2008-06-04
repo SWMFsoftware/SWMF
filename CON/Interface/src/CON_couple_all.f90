@@ -31,6 +31,7 @@ module CON_couple_all
   !^CMP END IE
   !^CMP IF IH BEGIN
   use CON_couple_ih_sc        !^CMP IF SC
+  use CON_couple_ih_oh        !^CMP IF OH
   !^CMP END IH
   use CON_couple_mh_sp        !^CMP IF SP
 
@@ -46,6 +47,7 @@ module CON_couple_all
   !REVISION HISTORY:
   ! 27Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
   ! 14Jan05 - G. Toth commented out _swmf version of GM-IE couplers.
+  ! 03Jun08 - R. Oran <oran@umich.edu> added ih_oh coupling
   !EOP
   character(len=*), parameter :: NameMod='CON_couple_all'
 
@@ -73,6 +75,7 @@ contains
     !                                                     ^CMP END IE
     !                                                     ^CMP IF IH BEGIN
     if(use_comp(IH_).and.use_comp(SC_))call couple_ih_sc_init  !^CMP IF SC
+    if(use_comp(IH_).and.use_comp(OH_))call couple_oh_ih_init  !^CMP IF OH
     !                                                     ^CMP END IH
     if((&                                                 !^CMP IF SP BEGIN
          use_comp(IH_).or.&                               !^CMP IF IH
@@ -97,6 +100,7 @@ contains
 
     !REVISION HISTORY:
     ! 27Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
+    ! 03Jun08 - R. Oran <oran@umich.edu> add IH OH coupling
     !EOP
 
     character(len=*), parameter :: NameSub = NameMod//'::couple_two_comp'
@@ -138,11 +142,20 @@ contains
           call couple_ih_gm(TimeSimulation)        !^CMP IF GM
        case(SC_)                                   !^CMP IF SC
           call couple_ih_sc(TimeSimulation)        !^CMP IF SC
+       case(OH_)                                   !^CMP IF OH
+          call couple_ih_oh(TimeSimulation)        !^CMP IF OH
        case(SP_)                                   !^CMP IF SP
           call couple_ih_sp(TimeSimulation)        !^CMP IF SP
        case default
           call error
        end select                             !^CMP END IH
+    case(OH_)
+       select case(iCompTarget)               !^CMP IF OH BEGIN
+       case(IH_)                                   !^CMP IF IH
+          call couple_oh_ih(TimeSimulation)        !^CMP IF IH
+       case default
+          call error
+       end select                                  !^CMP END OH
     case(GM_)                                 !^CMP IF GM BEGIN
        select case(iCompTarget)
        case(IE_)                                   !^CMP IF IE

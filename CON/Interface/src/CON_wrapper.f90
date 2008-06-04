@@ -119,6 +119,7 @@ contains
     !REVISION HISTORY:
     ! 19Jul03 - G. Toth <gtoth@umich.edu> - simplified and generalized version
     ! 09Jul03 - G. Toth <gtoth@umich.edu> - initial prototype/prolog/code
+    ! 03Jun08 - R Oran  <oran@umich.edu>  - add component OH
     !EOP ___________________________________________________________________
 
     character(len=*),parameter :: NameSub=NameMod//'.set_param_id'
@@ -152,6 +153,8 @@ contains
        call IE_set_param(CompInfo,TypeAction)     !^CMP IF IE
     case(IH_)                                     !^CMP IF IH
        call IH_set_param(CompInfo,TypeAction)     !^CMP IF IH
+    case(OH_)                                     !^CMP IF OH                  
+       call OH_set_param(CompInfo,TypeAction)     !^CMP IF OH  
     case(IM_)                                     !^CMP IF IM
        call IM_set_param(CompInfo,TypeAction)     !^CMP IF IM
     case(LA_)                                     !^CMP IF LA
@@ -239,6 +242,7 @@ contains
     !REVISION HISTORY:
     ! 21Jul03 - G. Toth <gtoth@umich.edu> - use temporary CompInfo
     ! 15Jul03 - G. Toth <gtoth@umich.edu> - initial prototype/prolog/code
+    ! 03Jun08 - R. Oran <oran@umich.edu>  - added component OH
     !EOP ___________________________________________________________________
 
     character(len=*),parameter :: NameSub=NameMod//'::get_version_id'
@@ -258,6 +262,8 @@ contains
        call IE_set_param(CompInfo,'VERSION')     !^CMP IF IE
     case(IH_)                                    !^CMP IF IH
        call IH_set_param(CompInfo,'VERSION')     !^CMP IF IH
+    case(OH_)                                    !^CMP IF OH                   
+       call OH_set_param(CompInfo,'VERSION')     !^CMP IF OH   
     case(IM_)                                    !^CMP IF IM
        call IM_set_param(CompInfo,'VERSION')     !^CMP IF IM
     case(LA_)                                    !^CMP IF LA
@@ -298,6 +304,7 @@ contains
     !REVISION HISTORY:
     ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu> 
     !         - initial prototype/prolog/code
+    ! 03Jun   - R. Oran <oran@umich.edu> - added component OH
     !EOP ___________________________________________________________________
     character(len=*), parameter :: NameSub = NameMod//'::init_session_comp_id'
     logical :: DoTest, DoTestMe
@@ -318,6 +325,8 @@ contains
        call IE_init_session(iSession,TimeSimulation)     !^CMP IF IE
     case(IH_)                                            !^CMP IF IH
        call IH_init_session(iSession,TimeSimulation)     !^CMP IF IH
+    case(OH_)                                            !^CMP IF OH           
+       call OH_init_session(iSession,TimeSimulation)     !^CMP IF OH           
     case(IM_)                                            !^CMP IF IM
        call IM_init_session(iSession,TimeSimulation)     !^CMP IF IM
     case(LA_)                                            !^CMP IF LA
@@ -359,6 +368,7 @@ contains
     !REVISION HISTORY:
     ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu> 
     !         - initial prototype/prolog/code
+    ! 03Jun08 - R. Oran <oran@umich.edu> - added component OH
     !EOP ___________________________________________________________________
     character(len=*), parameter :: NameSub = NameMod//'::finalize_comp_id'
     logical :: DoTest, DoTestMe
@@ -379,6 +389,8 @@ contains
        call IE_finalize(TimeSimulation)     !^CMP IF IE
     case(IH_)                               !^CMP IF IH
        call IH_finalize(TimeSimulation)     !^CMP IF IH
+    case(OH_)                               !^CMP IF OH                        
+       call OH_finalize(TimeSimulation)     !^CMP IF OH      
     case(IM_)                               !^CMP IF IM
        call IM_finalize(TimeSimulation)     !^CMP IF IM
     case(LA_)                               !^CMP IF LA
@@ -419,6 +431,7 @@ contains
     !REVISION HISTORY:
     ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu> 
     !         - initial prototype/prolog/code
+    ! 03Jun08 - R. Oran <oran@umich.edu> - added component OH
     !EOP ___________________________________________________________________
     character(len=*), parameter :: NameSub = NameMod//'::save_restart_comp_id'
     logical :: DoTest, DoTestMe
@@ -439,6 +452,8 @@ contains
        call IE_save_restart(TimeSimulation)     !^CMP IF IE
     case(IH_)                                   !^CMP IF IH
        call IH_save_restart(TimeSimulation)     !^CMP IF IH
+    case(OH_)                                   !^CMP IF OH                    
+       call OH_save_restart(TimeSimulation)     !^CMP IF OH 
     case(IM_)                                   !^CMP IF IM
        call IM_save_restart(TimeSimulation)     !^CMP IF IM
     case(LA_)                                   !^CMP IF LA
@@ -483,6 +498,7 @@ contains
     !REVISION HISTORY:
     ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu> 
     !         - initial prototype/prolog/code
+    ! 03Jun08 - R. Oran <oran@umich.edu - added component OH
     !EOP ___________________________________________________________________
     character(len=*), parameter :: NameSub = NameMod//'::run_comp_id'
     logical :: DoTest, DoTestMe
@@ -504,6 +520,8 @@ contains
        call IE_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF IE
     case(IH_)                                               !^CMP IF IH
        call IH_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF IH
+    case(OH_)                                               !^CMP IF OH        
+       call OH_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF OH   
     case(IM_)                                               !^CMP IF IM
        call IM_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF IM
     case(LA_)                                               !^CMP IF LA

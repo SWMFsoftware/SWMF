@@ -50,6 +50,8 @@ LIBIE = ${LIBDIR}/libIE.a	#^CMP IF IE
 
 LIBIH = ${LIBDIR}/libIH.a	#^CMP IF IH
 
+LIBOH = ${LIBDIR}/libOH.a       #^CMP IF OH
+
 LIBIM = ${LIBDIR}/libIM.a	#^CMP IF IM
 
 LIBLA = ${LIBDIR}/libLA.a	#^CMP IF LA
@@ -138,6 +140,7 @@ LIB:
 	@cd ${GMDIR};                make LIB	#^CMP IF GM
 	@cd ${IEDIR};                make LIB	#^CMP IF IE
 	@cd ${IHDIR};                make LIB	#^CMP IF IH
+	@cd ${OHDIR};                make LIB   #^CMP IF OH
 	@cd ${IMDIR};                make LIB	#^CMP IF IM
 	@cd ${LADIR};                make LIB	#^CMP IF LA
 	@cd ${PSDIR};                make LIB	#^CMP IF PS
@@ -185,6 +188,7 @@ ${SWMFLIB}:	${LIBSHARE} \
 		${LIBGM} \
 		${LIBIE} \
 		${LIBIH} \
+		${LIBOH} \
 		${LIBIM} \
 		${LIBLA} \
 		${LIBPS} \
@@ -208,6 +212,7 @@ ${SWMFLIB}:	${LIBSHARE} \
 	mkdir Tmp_LIBGM;       cd Tmp_LIBGM;     ${AR_X} ${LIBGM} #^CMP IF GM
 	mkdir Tmp_LIBIE;       cd Tmp_LIBIE;     ${AR_X} ${LIBIE} #^CMP IF IE
 	mkdir Tmp_LIBIH;       cd Tmp_LIBIH;     ${AR_X} ${LIBIH} #^CMP IF IH
+	mkdir Tmp_LIBOH;       cd Tmp_LIBOH;     ${AR_X} ${LIBOH} #^CMP IF OH
 	mkdir Tmp_LIBIM;       cd Tmp_LIBIM;     ${AR_X} ${LIBIM} #^CMP IF IM
 	mkdir Tmp_LIBLA;       cd Tmp_LIBLA;     ${AR_X} ${LIBLA} #^CMP IF LA
 	mkdir Tmp_LIBPS;       cd Tmp_LIBPS;     ${AR_X} ${LIBPS} #^CMP IF PS
