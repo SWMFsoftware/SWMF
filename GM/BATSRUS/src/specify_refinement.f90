@@ -96,19 +96,16 @@ subroutine specify_refinement(DoRefine_B)
         case('user')
            call user_specify_refinement(iBlock, iArea, DoRefine_B(iBlock))
         case('currentsheet')
-           do k=0,nK+1; do j=1,nJ; do i=1,nI
-           ! Calculate BdotR including ghost cells in all directions
-           rDotB_G(i,j,k)=x_BLK(i,j,k,iBlock)   &
-                * ( B0xCell_BLK(i,j,k,iBlock)   &
-                + State_VGB(Bx_,i,j,k,iBlock) ) &
-                +         y_BLK(i,j,k,iBlock)   &
-                * ( B0yCell_BLK(i,j,k,iBlock)   &
-                + State_VGB(By_,i,j,k,iBlock) ) &
-                +         z_BLK(i,j,k,iBlock)   &
-                * ( B0zCell_BLK(i,j,k,iBlock)   &
-                + State_VGB(Bz_,i,j,k,iBlock) )
-           end do;end do;end do
 
+           ! Calculate BdotR including ghost cells in all directions
+           do k=0, nK+1; do j=1, nJ; do i=1, nI
+              rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
+                * (B0xCell_BLK(i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)) &
+                +              y_BLK(i,j,k,iBlock)   &
+                * (B0yCell_BLK(i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)) &
+                +              z_BLK(i,j,k,iBlock)   &
+                * (B0zCell_BLK(i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock))
+           end do; end do; end do;
            DoRefine_B(iBlock) = &
                 maxval(rDotB_G) > cTiny .and. minval(rDotB_G) < -cTiny
 
