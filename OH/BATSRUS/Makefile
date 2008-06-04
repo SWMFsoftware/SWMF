@@ -30,8 +30,7 @@ rundir: check_src
 		ln -s ${BINDIR}/PostIDL.exe .; \
 		ln -s ${BINDIR}/PostSPH.exe .; \
 		cp    ${DIR}/GM/BATSRUS/Scripts/IDL/pIDL .; \
-		cp    ${DIR}/GM/BATSRUS/Scripts/TEC/pTEC .; \
-		cp    ${DIR}/GM/BATSRUS/Param/CORONA/CR1935_WSO.dat .
+		cp    ${DIR}/GM/BATSRUS/Scripts/TEC/pTEC .
 
 clean:  
 	@(if([ -f src/Makefile ]); then \
