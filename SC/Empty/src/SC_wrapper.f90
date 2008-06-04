@@ -101,7 +101,7 @@ subroutine SC_synchronize_refinement(iProc0,iCommUnion)
   call CON_stop(NameSub//': SC_ERROR: empty version cannot be used!')
 
 end subroutine SC_synchronize_refinement
-
+!===================================================================!
 subroutine SC_put_from_ih(nPartial,&
      iPutStart,&
      Put,& 
