@@ -309,14 +309,14 @@ contains
     use ModMain,      ONLY: globalBLK,nI,nJ,nK
     use ModVarIndexes
     use ModAdvance,   ONLY: State_VGB 
-    use ModPhysics,   ONLY: inv_gm1
+    use ModPhysics,   ONLY: inv_gm1,BodyTDim_I
     use ModGeometry
     implicit none
 
     integer :: i,j,k,iBLK
     logical :: oktest,oktest_me
     real :: Dens_BLK,Pres_BLK,Gamma_BLK
-    real :: x,y,z,R,ROne,Rmax
+    real :: x,y,z,R,ROne,Rmax,U0
     !--------------------------------------------------------------------------
     call set_oktest('user_set_ics',oktest,oktest_me)
 
@@ -328,6 +328,9 @@ contains
     case('spherical_lnr')
        Rmax = max(2.1E+01,exp(XyzMax_D(1)))
     end select
+
+    ! The sqrt is for backward compatibility with older versions of the Sc
+    U0 = 4.0*sqrt(2.0E+6/BodyTDim_I(1))
 
     do k=1,nK; do j=1,nJ; do i=1,nI
        x = x_BLK(i,j,k,iBLK)
@@ -341,11 +344,11 @@ contains
        State_VGB(rho_,i,j,k,iBLK) = Dens_BLK
        State_VGB(P_,i,j,k,iBLK)   = Pres_BLK
        State_VGB(RhoUx_,i,j,k,iBLK) = Dens_BLK &
-            *4.0*((ROne-1.0)/(Rmax-1.0))*x/R
+            *U0*((ROne-1.0)/(Rmax-1.0))*x/R
        State_VGB(RhoUy_,i,j,k,iBLK) = Dens_BLK &
-            *4.0*((ROne-1.0)/(Rmax-1.0))*y/R
+            *U0*((ROne-1.0)/(Rmax-1.0))*y/R
        State_VGB(RhoUz_,i,j,k,iBLK) = Dens_BLK &
-            *4.0*((ROne-1.0)/(Rmax-1.0))*z/R
+            *U0*((ROne-1.0)/(Rmax-1.0))*z/R
        State_VGB(Ew_,i,j,k,iBLK) = Pres_BLK &
             *(1.0/(Gamma_BLK-1.0)-inv_gm1) 
     end do; end do; end do
