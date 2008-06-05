@@ -8,6 +8,7 @@ test:
 	-@(make test_multifluid)
 	-@(make test_multiion)
 	-@(make test_corona)
+	-@(make test_coronasph)
 	-@(make test_titan)
 	-@(make test_mars)
 	-@(make test_venus)
@@ -34,6 +35,7 @@ test_help:
 	@echo "    test_multifluid            (run multi-fluid test only)"
 	@echo "    test_multiion              (run multi-ion test only)"
 	@echo "    test_corona                (run Solar Corona test only)"
+	@echo "    test_coronasph             (run spherical Solar Corona test)"
 	@echo "    test_mars                  (run Mars test only)"
 	@echo "    test_venus                 (run Venus test only)"
 	@echo "    test_saturn                (run Saturn test only)"
