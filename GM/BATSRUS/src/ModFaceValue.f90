@@ -377,7 +377,6 @@ contains
     integer, intent(in):: iBlock
 
 
-    logical::DoTest,DoTestMe
     integer:: i,j,k,iSide,iFluid
     real:: RhoInv
 
@@ -386,6 +385,9 @@ contains
 
     !primitive variables
     real, dimension(nVar,-1:nI+2,-1:nJ+2,-1:nK+2):: Primitive_VG
+
+    logical::DoTest,DoTestMe
+    character(len=*), parameter :: NameSub = 'calc_face_value'
     !-------------------------------------------------------------------------
 
     if(iBlock==BLKtest .and. .not. DoResChangeOnly )then
@@ -663,6 +665,7 @@ contains
                  Primitive_VG(iVar,i,j,k) = log(Primitive_VG(iVar,i,j,k))
          end do
       end if
+         
     end subroutine calc_primitives_MHD
     !==========================================================================
     !^CFG IF BORISCORR BEGIN
@@ -788,7 +791,6 @@ contains
               Ga2Boris * (RightState_VX(Uz_,i,j,k)+uBC2Inv*BzFull)
 
       end do; end do; end do
-
     end subroutine BorisFaceXtoMHD
     !=========================================================================
     subroutine BorisFaceYtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
@@ -1260,7 +1262,6 @@ contains
             i1=i-1
             LeftState_VX(:,i,j,k)  = Primitive_VI(:,i1) + dVarLimL_VI(:,i1)
             RightState_VX(:,i,j,k) = Primitive_VI(:,i ) - dVarLimR_VI(:,i )
-
          end do
       end do; end do
       !^CFG IF BORISCORR BEGIN
@@ -1528,7 +1529,8 @@ contains
     ! the correction is not done if any of the finer block neighbors are unused
 
     use ModSize
-    use ModVarIndexes, ONLY: DefaultState_V, nVar, nFluid
+    use ModVarIndexes, ONLY: DefaultState_V, nVar, nFluid, &
+         iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModAdvance,    ONLY: State_VGB
     use ModAMR,        ONLY: unusedBlock_BP
     use ModParallel,   ONLY: neiLEV, &
@@ -1537,13 +1539,41 @@ contains
          neiPtop, neiPbot, neiPeast, neiPwest, neiPnorth, neiPsouth
     use ModNumConst, ONLY: cTiny
 
+    ! For debugging
+    use ModProcMH, ONLY: iProc
+    use ModMain, ONLY: VarTest, ProcTest, BlkTest, iTest, jTest, kTest
+
     implicit none
 
     integer, intent(in) :: iBLK
     integer             :: i, j, k
-    !--------------------------------------------------------------------------
+    logical :: DoTest, DoTestMe
 
+    character(len=*), parameter:: NameSub = 'correct_monotone_restrict'
+    !--------------------------------------------------------------------------
     if(all(neiLEV(:,iBLK) /= -1))RETURN
+
+    if(iProc == ProcTest .and. iBlk == BlkTest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest = .false.; DoTestMe = .false.
+    end if
+
+    if(DoTestMe)write(*,*)NameSub, ' state before: ',&
+         State_VGB(VarTest, nI:nI+1, jTest, kTest, iBlk)
+
+    if(nFluid > 1 .and. .not.DoLimitMomentum)then
+       ! Convert momenta to velocities (that will be limited)
+       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          State_VGB(iRhoUx_I,i,j,k,iBLK)=State_VGB(iRhoUx_I,i,j,k,iBLK) &
+               / State_VGB(iRho_I,i,j,k,iBLK)
+          State_VGB(iRhoUy_I,i,j,k,iBLK)=State_VGB(iRhoUy_I,i,j,k,iBLK) &
+               / State_VGB(iRho_I,i,j,k,iBLK)
+          State_VGB(iRhoUz_I,i,j,k,iBLK)=State_VGB(iRhoUz_I,i,j,k,iBLK) &
+               / State_VGB(iRho_I,i,j,k,iBLK)
+       end do; end do; end do
+    end if
+
     if(neiLnorth(iBLK) == -1)then
        if(     .not.unusedBlock_BP(neiBnorth(1,iBLK),neiPnorth(1,iBLK)) &
             .and. .not.unusedBlock_BP(neiBnorth(2,iBLK),neiPnorth(2,iBLK)) &
@@ -1652,6 +1682,21 @@ contains
           end do;end do
        end if
     end if
+
+    if(nFluid > 1 .and. .not.DoLimitMomentum)then
+       ! Convert velocities back to momenta
+       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          State_VGB(iRhoUx_I,i,j,k,iBLK)=State_VGB(iRhoUx_I,i,j,k,iBLK) &
+               * State_VGB(iRho_I,i,j,k,iBLK)
+          State_VGB(iRhoUy_I,i,j,k,iBLK)=State_VGB(iRhoUy_I,i,j,k,iBLK) &
+               * State_VGB(iRho_I,i,j,k,iBLK)
+          State_VGB(iRhoUz_I,i,j,k,iBLK)=State_VGB(iRhoUz_I,i,j,k,iBLK) &
+               * State_VGB(iRho_I,i,j,k,iBLK)
+       end do; end do; end do
+    end if
+
+    if(DoTestMe)write(*,*)NameSub, ' state after: ',&
+         State_VGB(VarTest, nI:nI+1, jTest, kTest, iBlk)
 
   end subroutine correct_monotone_restrict
 
