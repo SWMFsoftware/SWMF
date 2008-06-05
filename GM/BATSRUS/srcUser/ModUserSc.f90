@@ -499,7 +499,7 @@ contains
     logical,intent(out) :: DoRefine
 
     real :: rDotB_G(1:nI,1:nJ,0:nK+1)
-
+    integer :: i,j,k
     character (len=*), parameter :: NameSub = 'user_specify_refinement'
     !-------------------------------------------------------------------
 
@@ -508,16 +508,17 @@ contains
        RETURN
     end if
 
-    ! Calculate r.B in all physical cells and ghost cells in the Z direction
-    rDotB_G =      x_BLK(1:nI,1:nJ,0:nK+1,iBlock)   &
-         * ( B0xCell_BLK(1:nI,1:nJ,0:nK+1,iBlock)   &
-         + State_VGB(Bx_,1:nI,1:nJ,0:nK+1,iBlock) ) &
-         +         y_BLK(1:nI,1:nJ,0:nK+1,iBlock)   &
-         * ( B0yCell_BLK(1:nI,1:nJ,0:nK+1,iBlock)   &
-         + State_VGB(By_,1:nI,1:nJ,0:nK+1,iBlock) ) &
-         +         z_BLK(1:nI,1:nJ,0:nK+1,iBlock)   &
-         * ( B0zCell_BLK(1:nI,1:nJ,0:nK+1,iBlock)   &
-         + State_VGB(Bz_,1:nI,1:nJ,0:nK+1,iBlock) )
+    ! Calculate r.B in all physical cells and ghost cells 
+    ! in the Z/Theta direction to find current sheet 
+    ! passing between blocks
+    do k=0, nK+1; do j=1, nJ; do i=1, nI
+       rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
+            * (B0xCell_BLK(i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)) &
+            +              y_BLK(i,j,k,iBlock)   &
+            * (B0yCell_BLK(i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)) &
+            +              z_BLK(i,j,k,iBlock)   &
+            * (B0zCell_BLK(i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock))
+    end do; end do; end do;
 
     DoRefine = maxval(rDotB_G) > cTiny .and. minval(rDotB_G) < -cTiny
 
