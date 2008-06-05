@@ -15,8 +15,9 @@ module ModMultiIon
 
   public:: multi_ion_sources
   public:: multi_ion_init_point_impl
+  real, public  :: CollisionCoefDim = -1.0
 
-  real    :: CollisionCoefDim = 1.0, CollisionCoef = 0.0
+  real :: CollisionCoef = -1.0
 
 contains
   !===========================================================================
@@ -30,13 +31,15 @@ contains
     use ModPointImplicit, ONLY:  UsePointImplicit, IsPointImplSource, &
          IsPointImplMatrixSet
     use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, &
+         UseBoris => boris_correction, &                !^CFG IF BORISCORR
          iTest, jTest, kTest, Test_String, BlkTest, ProcTest
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModAdvance, ONLY: B0XCell_BLK, B0YCell_BLK, B0ZCell_BLK
     use ModAdvance, ONLY: bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
     use ModGeometry,ONLY: vInv_CB, x_BLK, y_BLK, z_BLK
     use ModPhysics, ONLY: ElectronCharge, gm1, inv_gm1, &
-         Si2No_V, No2Si_V, UnitTemperature_, UnitT_
+         InvClight2 => Inv_C2light, Si2No_V, No2Si_V, UnitTemperature_, UnitT_
+         
     use ModMain,    ONLY: x_, y_, z_
     use ModCoordTransform, ONLY: cross_product
 
@@ -45,6 +48,9 @@ contains
     real, dimension(3) :: FullB_D, uIon_D, uIon2_D, u_D, uPlus_D, uPlusHallU_D
     real, dimension(3) :: Current_D, Force_D
     real, dimension(nIonFluid) :: NumDens_I, InvRho_I, Ux_I, Uy_I, Uz_I, Temp_I
+
+    ! Alfven Lorentz factor for Boris correction
+    real :: Ga2
 
     integer :: iBlock, i, j, k, iIon, jIon, iRhoUx, iRhoUz, iP, iEnergy
     real :: CoefBx, CoefBy, CoefBz, Coef, AverageTemp, TemperatureCoef, Heating
@@ -75,17 +81,19 @@ contains
 
     InvCharge = 1.0/ElectronCharge
 
-    ! Rate = n*CoefDim / T^1.5 with T [K], n [/cc] and Rate [1/s]
-    CollisionCoef = CollisionCoefDim &
-         /No2Si_V(UnitTemperature_)**1.5/Si2No_V(UnitT_)
+    if(CollisionCoefDim > 0.0)then
+       ! Rate = n*CoefDim / T^1.5 with T [K], n [/cc] and Rate [1/s]
+       CollisionCoef = CollisionCoefDim &
+            /No2Si_V(UnitTemperature_)**1.5/Si2No_V(UnitT_)
 
-    do jIon = 1, nIonFluid
-       do iIon = 1, nIonFluid
-          CollisionRate_II(iIon, jIon) = CollisionCoef* &
-               MassIon_I(iIon)*MassIon_I(jIon) &
-               /(MassIon_I(iIon)+MassIon_I(jIon))
+       do jIon = 1, nIonFluid
+          do iIon = 1, nIonFluid
+             CollisionRate_II(iIon, jIon) = CollisionCoef* &
+                  MassIon_I(iIon)*MassIon_I(jIon) &
+                  /(MassIon_I(iIon)+MassIon_I(jIon))
+          end do
        end do
-    end do
+    end if
 
     do k=1,nK; do j=1,nJ; do i=1,nI
 
@@ -144,7 +152,12 @@ contains
 
        TemperatureCoef = 1.0/(AverageTemp*sqrt(AverageTemp))
 
-       CollisionRate = CollisionCoef
+       Ga2 = 1.0
+       if(UseBoris)then                       !^CFG IF BORISCORR BEGIN
+          ! Reduce the J x B like terms by a factor of 
+          ! Ga2 = 1/(1+v_A^2/c^2) = rho/(rho+B^2/c^2)
+          Ga2 = State_V(Rho_)/(State_V(Rho_) + InvClight2*sum(FullB_D**2))
+       end if                                 !^CFG END BORISCORR
 
        ! Calculate the source term for all the ion fluids
        do iIon = 1, nIonFluid
@@ -152,7 +165,7 @@ contains
           uIon_D = (/ Ux_I(iIon),  Uy_I(iIon), Uz_I(iIon) /)
           u_D    = uIon_D - uPlusHallU_D
 
-          Force_D = &
+          Force_D = Ga2 * &
                ElectronCharge*NumDens_I(iIon)*cross_product(u_D, FullB_D) 
 
           if(DoTestCell)then
@@ -172,21 +185,21 @@ contains
 
           Heating = 0.0
 
-          if(.false.)then
+          if(CollisionCoefDim > 0.0)then
              do jIon = 1, nIonFluid
                 if(jIon == iIon) CYCLE
                 
                 ! Add collisional term
                 uIon2_D = (/ Ux_I(jIon),  Uy_I(jIon), Uz_I(jIon) /)
 
-                if(  InvNumDens*NumDens_I(iIon) < 0.01 .or. &
-                     InvNumDens*NumDens_I(jIon) < 0.01) then
-                   CollisionRate = 100 * NumDens_I(iIon) * NumDens_I(jIon)
-                else
+                !if(  InvNumDens*NumDens_I(iIon) < 0.01 .or. &
+                !     InvNumDens*NumDens_I(jIon) < 0.01) then
+                !   CollisionRate = 100 * NumDens_I(iIon) * NumDens_I(jIon)
+                !else
                    CollisionRate = CollisionRate_II(iIon, jIon) * &
                         NumDens_I(iIon) * NumDens_I(jIon) &
                         * TemperatureCoef
-                end if
+                !end if
 
                 Force_D = Force_D + CollisionRate*(uIon2_D - uIon_D)
 
@@ -214,7 +227,6 @@ contains
 
     if(DoTestMe)then
        write(*,*)NameSub,' CollisionCoef=',CollisionCoef
-       write(*,*)NameSub,' CollisionRate=',CollisionRate
        write(*,*)NameSub,' AverageTemp  =',AverageTemp
        write(*,*)NameSub,' AverageTempDim=', &
             AverageTemp*No2Si_V(UnitTemperature_)
