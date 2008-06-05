@@ -1,10 +1,6 @@
-!April 30, 2007 implementing MultiFluid
-!June 01, 2007 correcting normalization
-!June 08, 2007 correcting source terms
-!August 18, 2007 Implementing 3-fluids
-!October 23, 2007 more little corrections
-!January 01, 2008 Source terms in point-implicit form - with help
-! of Gabor Toth
+! ModUser Outer Helio written by Merav Opher
+! Modified for coupling with IH (Museum Project): boundary at 10AU and ISM flowing from +x direction.
+! for this project its a single fluid so i deleted the calc_sources and the multi-fluid parts
 !==============================================================================
 module ModUser
 
@@ -24,20 +20,18 @@ module ModUser
        IMPLEMENTED3 => user_normalization,               &
        IMPLEMENTED4 => user_set_outerbcs,               &
        IMPLEMENTED5 => user_set_ics,                    &
-       IMPLEMENTED8 => user_write_progress,            & 
-       IMPLEMENTED9 => user_io_units,                  &
-       IMPLEMENTED10 => user_set_plot_var,              &
-       IMPLEMENTED11 => user_calc_sources,              &
-       IMPLEMENTED12 => user_init_point_implicit
-
+       IMPLEMENTED6 => user_amr_criteria,               &
+       IMPLEMENTED7 => user_write_progress,            & 
+       IMPLEMENTED8 => user_io_units,                  &
+       IMPLEMENTED9 => user_set_plot_var,              &
+       IMPLEMENTED10 => user_calc_sources              
+      
 
   include 'user_module.h' !list of public methods
 
   real,              parameter :: VersionUserModule = 2.0
   ! I am calling Version Module = 2.0 the version with 3-fluids
   character (len=*), parameter :: NameUserModule = 'Global Heliosphere'
-
-  real :: rFriction = 1.0
 
   ! 
   ! SWH variables.
@@ -54,7 +48,7 @@ module ModUser
        SWH_Bz=0.0 , SWH_Bz_dim=0.0 , &
        SWH_B_factor=0.0
 
-  real, dimension(0:1) :: &
+  real, dimension(0:1) :: & 
        SWH_rho_t,  &
        SWH_p_t  ,  &
        SWH_Ux_t ,  &
@@ -115,24 +109,6 @@ module ModUser
        SWfast_By_t ,  &
        SWfast_Bz_t ,  &
        SWfast_time_t
-  !
-  ! neutrals variables
-  !/
-
-  real :: TNeutralsISW_dim=0.0, &
-       RhoNeutralsISW=0.0, RhoNeutralsISW_dim=0.0 , &
-       PNeutralsISW=0.0  , PNeutralsISW_dim=0.0  , &
-       UxNeutralsISW=0.0 , UxNeutralsISW_dim=0.0 , &
-       UyNeutralsISW=0.0 , UyNeutralsISW_dim=0.0 , &
-       UzNeutralsISW=0.0 , UzNeutralsISW_dim=0.0 ,  &
-       mNeutralsmp, mNeutrals
-
-  real, dimension(0:1) :: &
-       RhoNeutralsISW_t,  &
-       PneutralsISW_t  ,  &
-       UxNeutralsISW_t ,  &
-       UyNeutralsISW_t ,  &
-       UzNeutralsISW_t
 
 contains
 
@@ -149,6 +125,8 @@ contains
     integer:: i, j, k, n, m
 
     !-------------------------------------------------------------------
+
+
     do
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
@@ -182,16 +160,6 @@ contains
           call read_var('VLISW_Bx_dim' ,VLISW_Bx_dim)
           call read_var('VLISW_By_dim' ,VLISW_By_dim)
           call read_var('VLISW_Bz_dim' ,VLISW_Bz_dim)
-       case("#NEUTRALS")
-          call read_var('RhoNeutralsISW_dim' ,RhoNeutralsISW_dim)
-          call read_var('TNeutralsISW_dim' ,TNeutralsISW_dim)
-          call read_var('UxNeutralsISW_dim' ,UxNeutralsISW_dim)
-          call read_var('UyNeutralsISW_dim' ,UyNeutralsISW_dim)
-          call read_var('UzNeutralsISW_dim' ,UzNeutralsISW_dim)
-          call read_var('mNeutralsmp',mNeutralsmp)
-          ! Probably in this case i will define rFriction as larger than the domain
-       case("#FRICTION")
-          call read_var('rFriction',rFriction)
 
        case default
           if(iProc==0) call stop_mpi( &
@@ -201,7 +169,7 @@ contains
 
   end subroutine user_read_inputs
 
-  !=========================================================================
+  !=================  !  SUBROUTINE USER_SET_INNER_BCS  !======================
   subroutine user_face_bcs(VarsGhostFace_V)
 
     use ModSize,     ONLY: nDim,West_,North_,Top_
@@ -296,7 +264,7 @@ contains
 
        rot_period_dim = 26.0*24.0     ! rotation period in hours
        OMEGAbodyH = (2.00*cPi/(rot_period_dim*3600.00)) !in sec^-1
-       Rbody = 30. !define it
+       Rbody = 10. !define it
 
        !
        ! calculating the parker field components, Br, Btheta and Bphi
@@ -315,7 +283,7 @@ contains
        BphiSolar   = -(sg*B0mag*OMEGAbodyH*Rbody*(1.496E8)*sinTheta)/(SWH_Ux_dim)
        BthetaSolar =  0.0
 
-       !      VphiSolar = OMEGAbody*(6.96E5)*sinTheta/unitUSER_U
+       ! VphiSolar = OMEGAbody*(6.96E5)*sinTheta/unitUSER_U
        ! Vphi=omega*r*sinTheta - 6.96E5 is the solar radii in km
        ! No2Si_V(UnitU_) is in m/s so its ok
        ! No2Io_V(UnitU_) is in km/s
@@ -345,7 +313,6 @@ contains
        !  sin2Theta_fast_wind = 0.1786062   ! 25 degrees
        !  sin2Theta_fast_wind = 0.116980    ! 20 degrees
        !  sin2Theta_fast_wind = 1.000000    ! 90 degrees
-
 !!!      if (sinTheta*sinTheta > sin2Theta_fast_wind) then
        !SLOW WIND
        VrSolarWind     = SWH_Ux
@@ -358,19 +325,12 @@ contains
 !!!       else
 !!!          ! FAST WIND
 !!!          VrSolarWind     =  SWfast_Ux
-
 !!!          VthetaSolarWind =  0.0
-
 !!!          VphiSolarWind   =  VphiSolar
-
 !!!          BrSolarWind     =  BrSolar
-
 !!!          BthetaSolarWind =  BthetaSolar
-
 !!!          BphiSolarWind   =  BphiSolar
-
 !!!          RhoSolarWind    =  SWfast_rho
-
 !!!      end if
 
        ! Latitude variating wind
@@ -434,46 +394,14 @@ contains
             BphiFaceInside*cosPhi
        VarsGhostFace_V(Bz_) = BrFaceInside*ZFace/RFace-&
             BthetaFaceInside*sinTheta
-       !attempt to deal with neutrals
-
-       !!    VarsGhostFace_V(NeuRho_) = RhoNeutralsISW
-       !!    VarsGhostFace_V(NeuRhoUx_)= 0.0
-       !!    VarsGhostFace_V(NeuRhoUy_)= 0.0
-       !!    VarsGhostFace_V(NeuRhoUz_)= 0.0
-       !!    VarsGhostFace_V(NeuP_)= PNeutralsISW
-
-       ! NeuRho is PopI; NeuIIRho is PopII and NeuIIIRho is PopIII
-       !
-       ! Pop I
-       !/  
-       VarsGhostFace_V(NeuRho_) = VarsTrueFace_V(NeuRho_)
-       VarsGhostFace_V(NeuRhoUx_) = VarsTrueFace_V(NeuRhoUx_)
-       VarsGhostFace_V(NeuRhoUy_) = VarsTrueFace_V(NeuRhoUy_)
-       VarsGhostFace_V(NeuRhoUz_) = VarsTrueFace_V(NeuRhoUz_)
-       VarsGhostFace_V(NeuP_) = VarsTrueFace_V(NeuP_)
-       !
-       ! Pop II
-       !/  
-       VarsGhostFace_V(Ne2Rho_) = VarsTrueFace_V(Ne2Rho_) 
-       VarsGhostFace_V(Ne2RhoUx_) = VarsTrueFace_V(Ne2RhoUx_)
-       VarsGhostFace_V(Ne2RhoUy_) = VarsTrueFace_V(Ne2RhoUy_)
-       VarsGhostFace_V(Ne2RhoUz_) = VarsTrueFace_V(Ne2RhoUz_)
-       VarsGhostFace_V(Ne2P_) = VarsTrueFace_V(Ne2P_)
-       !
-       ! Pop III
-       !/  
-       VarsGhostFace_V(Ne3Rho_) = VarsTrueFace_V(Ne3Rho_) 
-       VarsGhostFace_V(Ne3RhoUx_) = VarsTrueFace_V(Ne3RhoUx_)
-       VarsGhostFace_V(Ne3RhoUy_) = VarsTrueFace_V(Ne3RhoUy_)
-       VarsGhostFace_V(Ne3RhoUz_) = VarsTrueFace_V(Ne3RhoUz_)
-       VarsGhostFace_V(Ne3P_) = VarsTrueFace_V(Ne3P_)
+ 
 
     end select
     !-------------------------------------------------------------------
 
   end subroutine user_face_bcs
 
-  !============================================================================
+  !-------------------------------------------------------------------
   subroutine user_normalization
 
     use ModProcMH, ONLY:iProc  
@@ -483,21 +411,20 @@ contains
     character (len=*), parameter :: Name='user_normalization'
     !-------------------------------------------------------------------
 
-    SWH_rho_dim = 7.8E-3 !n/cm^3
-    SWH_T_dim=1.609E3   !K
+    SWH_rho_dim = 7.02E-2 !n/cm^3
+    SWH_T_dim=6.962E3   !K
     No2Si_V(UnitX_)= 215.0*Rsun                                ! m
     No2Si_V(UnitU_)= sqrt(g*cBoltzmann*SWH_T_dim/cProtonMass)
     No2Si_V(UnitRho_)=cProtonMass*SWH_rho_dim*1.0E+6           ! kg/m^3
 
   end subroutine user_normalization
-
-  !============================================================================
+  !-------------------------------------------------------------------
 
   subroutine user_set_outerbcs(iBlock,iSide,TypeBc,found)
 
     use ModMain
     use ModVarIndexes
-    use ModAdvance,   ONLY : State_VGB
+     use ModAdvance,   ONLY : State_VGB
     use ModPhysics,   ONLY : CellState_VI
     use ModSetOuterBC
     use ModProcMH
@@ -520,34 +447,7 @@ contains
     State_VGB(Bz_,:,:,:,iBlock)=VLISW_Bz
     State_VGB(p_,:,:,:,iBlock)=VLISW_p
     !
-    ! PopI
-    !/    
-    State_VGB(NeuRho_,:,:,:,iBlock)=RhoNeutralsISW    
-    State_VGB(NeuRhoUx_,:,:,:,iBlock)=RhoNeutralsISW*UxNeutralsISW    
-    State_VGB(NeuRhoUy_,:,:,:,iBlock)=RhoNeutralsISW*UyNeutralsISW   
-    State_VGB(NeuRhoUz_,:,:,:,iBlock)=RhoNeutralsISW*UzNeutralsISW    
-    State_VGB(NeuP_,:,:,:,iBlock)=PNeutralsISW
-    !
-    ! PopII
-    !/ 
-    !we want for NeuIIRho outflow
 
-    State_VGB(Ne2Rho_,:,:,:,iBlock)=RhoNeutralsISW*cTiny
-    State_VGB(Ne2RhoUx_,:,:,:,iBlock)=RhoNeutralsISW*UxNeutralsISW*cTiny
-    State_VGB(Ne2RhoUy_,:,:,:,iBlock)=0.0
-    State_VGB(Ne2RhoUz_,:,:,:,iBlock)=0.0
-    State_VGB(Ne2P_,:,:,:,iBlock)=PNeutralsISW*cTiny
-
-    !
-    !    call BC_cont(Ne2Rho_,Ne2p_)
-    ! erro discover Nov 11, 2007
-    !
-    ! PopIII
-    !/ 
-
-    call BC_cont(Ne3Rho_,Ne3p_)
-
-    !we want for NeuIII outflow
   end subroutine user_set_outerbcs
 
   !=====================================================================
@@ -578,10 +478,10 @@ contains
     iBlock = globalBLK
     rot_period_dim = 26.0*24.0     ! rotation period in hours
     OMEGAbodyH = (2.00*cPi/(rot_period_dim*3600.00))
-    Rbody = 30. !define it
+    Rbody = 10. !define it
 
-    SWH_rho_dim = 7.8E-3 !n/cm^3      
-    SWH_T_dim=1.609E3   !K      
+    SWH_rho_dim = 7.02E-2 !n/cm^3      
+    SWH_T_dim=6.962E3   !K      
     No2Si_V(UnitX_)= 215.0*Rsun    ! m      
     No2Si_V(UnitU_)= sqrt(g*cBoltzmann*SWH_T_dim/cProtonMass)      
     No2Si_V(UnitRho_)=cProtonMass*SWH_rho_dim*1.0E+6             ! kg/m^3 
@@ -612,9 +512,7 @@ contains
              lambda = 4.0
              !so pra iniciar eu fixei lambda como 4.0 (olha a expressao 3.53 da tese do Linde)
 
-
              !calculating the parker field components, Br, Btheta and Bphi
-
 
              sg=sign(1.0,cos_theta)
              !       sg=-sign(1.0,cos_theta)
@@ -690,26 +588,8 @@ contains
                 State_VGB(rhoUx_,i,j,k,iBlock) = State_VGB(rho_,i,j,k,iBlock)*vel(1)
                 State_VGB(rhoUy_,i,j,k,iBlock) = State_VGB(rho_,i,j,k,iBlock)*vel(2)
                 State_VGB(rhoUz_,i,j,k,iBlock) = State_VGB(rho_,i,j,k,iBlock)*vel(3) 
-                !
-                ! PopI
-                !/
-                State_VGB(NeuRho_,i,j,k,iBlock) = RhoNeutralsISW*Exp(-lambda*thetaN/(rp*SinThetaN))
-                State_VGB(NeuP_,i,j,k,iBlock) = PNeutralsISW*Exp(-lambda*thetaN/(rp*SinThetaN))
-                State_VGB(NeuRhoUx_,i,j,k,iBlock) = UxNeutralsISW*RhoNeutralsISW*Exp(-lambda*thetaN/(rp*SinThetaN)) 
 
-                !
-                ! PopII - o que fazer com set_ICs popII?
-                !/
-                State_VGB(Ne2Rho_,i,j,k,iBlock) = RhoNeutralsISW*cTiny
-                State_VGB(Ne2P_,i,j,k,iBlock) = PNeutralsISW*cTiny
-                State_VGB(Ne2RhoUx_,i,j,k,iBlock) = UxNeutralsISW*RhoNeutralsISW*cTiny  
-
-                !
-                ! PopIII - o que fazer com set_ICs popIII?
-                !/
-                State_VGB(Ne3Rho_,i,j,k,iBlock) = RhoNeutralsISW*cTiny
-                State_VGB(Ne3P_,i,j,k,iBlock) = PNeutralsISW*cTiny
-                State_VGB(Ne3RhoUx_,i,j,k,iBlock) = 0.0
+                
 
              end if
           end do
@@ -717,6 +597,47 @@ contains
     end do
 
   end subroutine user_set_ics
+
+  !=====================================================================
+
+  subroutine user_amr_criteria(iBLK, UserCriteria, TypeCriteria, IsFound)
+
+    use ModMain
+    use ModAdvance
+    use ModGeometry, ONLY:x_BLK,y_BLK,z_BLK,R_BLK,&
+         dx_BLK,dy_BLK,dz_BLK,true_cell
+    use ModPhysics
+    use ModConst
+    ! 
+    ! Variables required by this user subroutine::
+    !/
+    integer, intent(in):: iBLK
+    logical:: IsInRange
+    logical, intent(out):: IsFound
+    integer:: i,j,k
+
+    real, intent(out):: userCriteria
+    !
+    ! Local variables::
+    !/
+    real:: dsMin,dsMax,dsTwo
+    real:: XCell,YCell,ZCell,RCell,RCenter
+    real:: B0xCell,B0yCell,B0zCell,MinBr,MaxBr
+    real:: BIxCell,BIyCell,BIzCell
+    real, dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn):: Br_D
+    logical,dimension(3)::IsGhostCell_D
+
+    character (len=20),intent(in):: TypeCriteria
+    !-------------------------------------------------------------------
+
+    !
+    ! Find the radial location of the center of the block and
+
+    ! the min/max cell size::
+    !/
+    !    RCenter = cEighth*&
+
+  end subroutine user_amr_criteria
 
   !=====================================================================
 
@@ -742,14 +663,7 @@ contains
     write(*,'(10X,A19,F15.6)')           'SWH_T_dim   [   K]:',SWH_T_dim
     ! fast solar wind
     write(*,*)
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'SWfast_rho_dim:',SWfast_rho_dim,'SWfast_rho:',SWfast_rho
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'SWfast_Ux_dim[km/s]:',SWfast_Ux_dim,'SWfast_rho:',SWfast_rho
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'SWfast_Uy_dim[km/s]:',SWfast_Uy_dim,'SWfast_Uy:',SWfast_Uy 
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'SWfast_Uz_dim[km/s]:',SWfast_Uz_dim,'SWfast_Uz:',SWfast_Uz 
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'SWfast_p_dim[nPa]:',SWfast_p_dim,'SWfast_p:',SWfast_p  
-    write(*,'(10X,A19,F15.6)')           'SWfast_a_dim[km/s]:',SWfast_a_dim
-    write(*,'(10X,A19,F15.6)')           'SWfast_T_dim[K]:',SWfast_T_dim
-    write(*,*)
+
     write(*,'(10X,A19,F15.6,A11,F15.6)') 'VLISW_rho_dim[n/cc]:',VLISW_rho_dim,'VLISW_rho:',VLISW_rho 
     write(*,'(10X,A19,F15.6,A11,F15.6)') 'VLISW_Ux_dim[km/s]: ',VLISW_Ux_dim,'VLISW_Ux:',VLISW_Ux
     write(*,'(10X,A19,F15.6,A11,F15.6)') 'VLISW_Uy_dim[km/s]: ',VLISW_Uy_dim,'VLISW_Uy:',VLISW_Uy
@@ -760,22 +674,13 @@ contains
     write(*,'(10X,A19,F15.6,A11,F15.6)') 'VLISW_Bz_dim[nT]:',VLISW_Bz_dim,'VLISW_Bz:',VLISW_Bz
     write(*,'(10X,A19,F15.6)')           'VLISW_a_dim[km/s]: ',VLISW_a_dim
     write(*,'(10X,A19,F15.6)')           'VLISW_T_dim[K]: ',VLISW_T_dim! 
-    !neutrals
-    write(*,*)     
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'RhoNeutralsISW_dim:',RhoNeutralsISW_dim ,'RhoNeutralsISW:',RhoNeutralsISW 
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'UxNeutralsISW_dim:',UxNeutralsISW_dim,'UxNeutralsISW:',UxNeutralsISW 
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'UyNeutralsISW_dim:',UyNeutralsISW_dim,'UyNeutralsISW:',UyNeutralsISW
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'UzNeutralsISW_dim:',UzNeutralsISW_dim,'UzNeutralsISW:',UzNeutralsISW 
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'PNeutralsISW_dim:',PNeutralsISW_dim,'PNeutralsISW:',PNeutralsISW
-    write(*,'(10X,A19,F15.6)')           'TNeutralsISW_dim:',TNeutralsISW_dim     
-    write(*,*)
+  
 
     !------------------------------------------------------------------
 
   end subroutine user_write_progress
 
   !=====================================================================
-
   subroutine user_io_units
     use ModPhysics 
     use ModProcMH, ONLY:iProc
@@ -841,21 +746,6 @@ contains
     SWfast_p = SWfast_p_dim*Io2No_V(UnitP_)
     !
     !
-    ! The units of rho_dim are n/cc and unitUSER_rho g/cc
-    !/
-    !merav june01    PNeutralsISW   = RhoNeutralsISW * 
-    !TNeutralsISW_dim*Io2No_V(UnitTemperature_)
-    !merav june01  SWH_p   = SWH_rho * SW_T_dim*Io2No_V(UnitTemperature_)
-
-    RhoNeutralsISW = RhoNeutralsISW_dim*Io2No_V(UnitRho_)
-    PNeutralsISW_dim = No2Io_V(UnitP_)*inv_g*(RhoNeutralsISW_dim/SWH_rho_dim)*(TNeutralsISW_dim /SWH_T_dim)
-
-    PNeutralsISW = PNeutralsISW_dim*Io2No_V(UnitP_)
-    UxNeutralsISW  = UxNeutralsISW_dim*Io2No_V(UnitU_)
-    UyNeutralsISW  = UyNeutralsISW_dim*Io2No_V(UnitU_)
-    UzNeutralsISW  = UzNeutralsISW_dim*Io2No_V(UnitU_)
-    mNeutrals    = mNeutralsmp*cProtonMass
-
     ! set strings for writing Tecplot output
     !/
     NameTecUnit_V(UnitX_)            = 'AU'
@@ -865,9 +755,7 @@ contains
     NameTecUnit_V(UnitB_)            = 'nT'
 
   end subroutine user_io_units
-
   !==============================================================
-
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
@@ -892,12 +780,9 @@ contains
 
     UsePlotVarBody = .true.
     PlotVarBody    = 0.0
-    
+
     select case(NameVar)
-    case('srho')
-       NameTecVar = 'Srho'
-       PlotVar_G(1:nI,1:nJ,1:nK) = Source_VC(NeuRho_,:,:,:)
-       IsFound = .true.
+    
     case default
        IsFound = .false.
     end select
@@ -907,531 +792,38 @@ contains
   !====================================================================
 
   subroutine user_calc_sources
+    !\
     ! Calculates the charge exchange cross sections for the neutrals
+    !
     ! 
-    ! Written by Merav Opher April 21, 2002
-    !/
-    ! *modified for the version 7.5.2 May, 2002*
-    ! *revistied and modified on Nov, 2002*
-    ! source terms for the plasma
-    ! modified to take of the S=0 Feb 08 (initialization) 
-    ! modified June 08, 2007 to take into account multi-fluids
-    ! modified August 18;September10, 2007 to take into account 3-fluids
-    ! october 27 checking units 
-    ! January 01, implementing implicit source terms 
-    ! Help of Gabor Toth
     !-------------------------------------------------------------------
     use ModProcMH
     use ModPointImplicit, ONLY:  UsePointImplicit, UsePointImplicit_B, &
          IsPointImplSource, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
-
     use ModMain
-    use ModVarIndexes, ONLY: rho_, rhoUx_, rhoUy_, rhoUz_,p_,Bx_, By_, Bz_, nVar
+    use ModVarIndexes
+    use ModAdvance
     use ModGeometry, ONLY : dx_BLK, dy_BLK, dz_BLK, R_BLK,&
          body_BLK, Rmin_BLK, vInv_CB
-    use ModAdvance,  ONLY: State_VGB, Source_VC, &
-         Rho_, RhoUx_, RhoUy_, RhoUz_, Energy_
     use ModPhysics
     use ModNumConst
-    use ModCovariant, ONLY: UseCovariant 
 
     character (len=*), parameter :: Name='user_calc_sources'
-    real ::  Ux, Uy, Uz
-    real :: usq, usqdim, Tproton
-    real :: cstar,cstarl,cstarln,cTpro,cth, term3, term4
-    real :: test,test1,  testterm1, testterm2, testusq, testneutrals
-    real :: testterm3, testterm4 
-    real :: Entropy, Mask 
-    real::UTh2
-    real::x0,y0,z0,rp
+    
+    real:: x0,y0,z0,rp
+    real :: cTpro, cth, usqdim, Tproton, Mask
+    real :: State_V(nVar)  
 
-    real, dimension(3)::I0xp,I0px,Tneutral,urel2,urel2dim,vNeutrals,UThN2
-    real, dimension(3)::JpxUx,JpxUy,JpxUz,ureldim,termpx,termxp,termepx
-    real, dimension(3)::JxpUx,JxpUy,JxpUz,QmxpUx,QmxpUy,QmxpUz,Kxp,Kpx,Qexp
-    real, dimension(3)::ustar,sigma,n_H,nuc,nucNORM,UxN,UyN,UzN,Friction
-    real, dimension(3)::QmpxUx,QmpxUy,QmpxUz,Qepx
-
-    integer :: xN  !this is the index to indicate Pop 1, 2, 3 of neutrals
-
-    logical :: OutsideHeliopause = .false.
+   
     logical:: oktest=.false.,oktest_me
 
-    integer :: i, j, k, iDim, iBlock
-    real    :: Coef
+    ! to help testing the calc sources for the different populations
+
+    
+
+    integer :: i, j, k, jFluid, iDim, iBlock
 
     !-----------------------------------------------------------------------
-    iBlock = GlobalBlk
-
-    ! Only blocks within radius rFriction need to be point implicit
-    UsePointImplicit_B(iBlock) = rMin_BLK(iBlock) < rFriction
-
-    ! Tproton has units of kelvin
-    ! It's the proton temperature that enters here. Tproton = 0.5*Tplasma
-    ! see Liewer & Brackbill '97
-    ! unitUSER_p is in cgs dyne/cm2. The factor of 1E3 bring the mp to g and
-    ! the factor of 1.E7 bring kB to erg/K
-    !
-    if(oktest_me)then
-       write(*,*)'Source(p,E)', Source_VC(P_:P_+1,iTest,jTest,kTest)
-    end if
-
-    !  calculating first some constants
-    cTpro = 1.0/(cBoltzmann*1.E5)
-    cstar = (128.0*cBoltzmann)/(9.0*cPi*mNeutrals)
-    cstarl = 8.0*cBoltzmann/(cPi*mNeutrals)
-    cth = 2.0*cBoltzmann/mNeutrals
-    cstarln = (9.0*cPi*cPi/16.0)*cstarl
-    !cstar eh J/kg
-    !cstar*T eh (m/s)^2 
-    !No2Si_V m/s
-    !/
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
-
-       x0 = x_BLK(i,j,k,iBlock)
-       y0 = y_BLK(i,j,k,iBlock)
-       z0 = z_BLK(i,j,k,iBlock)
-
-       rp=sqrt(x0**2+y0**2+z0**2)
-
-       Ux = State_VGB(rhoUx_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
-       Uy = State_VGB(rhoUy_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
-       Uz = State_VGB(rhoUz_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock) 
-
-       UxN(1)=State_VGB(NeuRhoUx_,i,j,k,iBlock)/State_VGB(NeuRho_,i,j,k,iBlock)
-       UyN(1)=State_VGB(NeuRhoUy_,i,j,k,iBlock)/State_VGB(NeuRho_,i,j,k,iBlock)
-       UzN(1)=State_VGB(NeuRhoUz_,i,j,k,iBlock)/State_VGB(NeuRho_,i,j,k,iBlock)
-
-       UxN(2)=State_VGB(Ne2RhoUx_,i,j,k,iBlock)/State_VGB(Ne2Rho_,i,j,k,iBlock)
-       UyN(2)=State_VGB(Ne2RhoUy_,i,j,k,iBlock)/State_VGB(Ne2Rho_,i,j,k,iBlock)
-       UzN(2)=State_VGB(Ne2RhoUz_,i,j,k,iBlock)/State_VGB(Ne2Rho_,i,j,k,iBlock)
-
-       UxN(3)=State_VGB(Ne3RhoUx_,i,j,k,iBlock)/State_VGB(Ne3Rho_,i,j,k,iBlock)
-       UyN(3)=State_VGB(Ne3RhoUy_,i,j,k,iBlock)/State_VGB(Ne3Rho_,i,j,k,iBlock)
-       UzN(3)=State_VGB(Ne3RhoUz_,i,j,k,iBlock)/State_VGB(Ne3Rho_,i,j,k,iBlock)
-
-       usq = sqrt(Ux**2.0 + Uy**2.0 + Uz**2.0) 
-
-       usqdim = usq*(No2Si_V(UnitU_))*1.E-3
-
-       !units of usqdim is km/s
-
-       Tproton = 0.5*cTpro*State_VGB(P_,i,j,k,iBlock)*No2Io_V(UnitP_)/ & 
-            (State_VGB(Rho_,i,j,k,iBlock)*No2Io_V(UnitRho_))
-
-       Tneutral(1) = 0.5*cTpro*State_VGB(NeuP_,i,j,k,iBlock)*No2Io_V(UnitP_)/ &
-            (State_VGB(NeuRho_,i,j,k,iBlock)*No2Io_V(UnitRho_))
-
-       Tneutral(2) = 0.5*cTpro*State_VGB(Ne2P_,i,j,k,iBlock)*No2Io_V(UnitP_)/ &
-            (State_VGB(Ne2Rho_,i,j,k,iBlock)*No2Io_V(UnitRho_))
-
-       Tneutral(3) = 0.5*cTpro*State_VGB(Ne3P_,i,j,k,iBlock)*No2Io_V(UnitP_)/ &
-            (State_VGB(Ne3Rho_,i,j,k,iBlock)*No2Io_V(UnitRho_))
-
-       ! Calculating the thermal speed for the three populations of neutrals
-       ! units of UthN2 and Uth2 are (m/s)^2
-
-       UThN2(1)=cth*Tneutral(1)
-       UThN2(2)=cth*Tneutral(2)
-       UThN2(3)=cth*Tneutral(3)
-       UTh2=cth*Tproton
-
-       ! Relative velocity between neutrals and plasma 
-       ! the sqrt is to ensure that urel >0.
-
-       vNeutrals(1) = sqrt(UxN(1)**2.0 + UyN(1)**2.0 + UzN(1)**2.0)
-       !!               urel2(1) = (vNeutrals(1)-usq)**2.0
-       !! i am not doing this way above because of regions where urel2 drops to zero or negative
-
-       urel2(1) = (UxN(1) - Ux)**2 + (UyN(1) - Uy)**2 + (UzN(1) - Uz)**2 
-
-       vNeutrals(2) = sqrt(UxN(2)**2.0 + UyN(2)**2.0 + UzN(2)**2.0)
-
-       urel2(2) = (UxN(2) - Ux)**2 + (UyN(2) - Uy)**2 + (UzN(2) - Uz)**2
-       !!              urel2(2) = (vNeutrals(2)-usq)**2.0
-
-       vNeutrals(3) = sqrt(UxN(3)**2.0 + UyN(3)**2.0 + UzN(3)**2.0)
-       urel2(3) = (UxN(3) - Ux)**2 + (UyN(3) - Uy)**2 + (UzN(3) - Uz)**2
-       !!              urel2(3) = (vNeutrals(3)-usq)**2.0
-
-       ! Incorporating units in variables so we can calculate the charge exchange cross 
-       ! sections
-       ! No2Si_V has units of m/s like cstartT so ureldim and ustar has units of m/s
-
-       urel2dim(1) = urel2(1)*((No2Si_V(UnitU_))**2.0)
-       ustar(1) = sqrt(urel2dim(1) + cstar*(Tproton + TNeutral(1)))   
-       ureldim(1)=sqrt(urel2dim(1)) 
-
-       ! here i put cstar  to be consistent with i did before but
-       ! seem to me Zank et al. 1996 is using cstartl 
-       ! also before i was using ureldim (uxN-ux)**2 etc instead of vneutrals-usq like i am 
-       ! doing here
-       !
-       urel2dim(2) = urel2(2)*((No2Si_V(UnitU_))**2.0)
-       ustar(2) = sqrt(urel2dim(2) + cstarl*(Tproton + TNeutral(2)))   
-       ureldim(2)=sqrt(urel2dim(2))
-
-       urel2dim(3) = urel2(3)*((No2Si_V(UnitU_))**2.0)
-       ustar(3) = sqrt(urel2dim(3) + cstarl*(Tproton + TNeutral(3)))   
-       ureldim(3)=sqrt(urel2dim(3))
-
-       !Calculating some common terms
-       ! units of tempx and termxp are (m/s)^-1
-
-       termpx(1)=1.0/sqrt(4*(cstarl*Tproton+urel2dim(1))+cstarln*Tneutral(1))
-       termpx(2)=1.0/sqrt(4*(cstarl*Tproton+urel2dim(2))+cstarln*Tneutral(2))
-       termpx(3)=1.0/sqrt(4*(cstarl*Tproton+urel2dim(3))+cstarln*Tneutral(3))     
-
-       termxp(1)=1.0/sqrt(4*(cstarl*Tneutral(1)+urel2dim(1))+cstarln*Tproton)     
-       termxp(2)=1.0/sqrt(4*(cstarl*Tneutral(2)+urel2dim(2))+cstarln*Tproton)
-       termxp(3)=1.0/sqrt(4*(cstarl*Tneutral(3)+urel2dim(3))+cstarln*Tproton) 
-
-       ! units of termepx is m/s
-
-       termepx(1)=sqrt(cstarl*Tproton+cstar*Tneutral(1)+urel2dim(1))
-       termepx(2)=sqrt(cstarl*Tproton+cstar*Tneutral(2)+urel2dim(2))
-       termepx(3)=sqrt(cstarl*Tproton+cstar*Tneutral(3)+urel2dim(3))
-
-       ! Maher and Tinsley cross section - units of cm^2 (Timur's paper has a misprint 
-       ! where he
-       ! had + instead of a -
-       ! sigma has ureldim look at Baranov et al. 1991              
-       ! ureldim has to have units of cm/s so the factor 100 is to pass m to cm
-       ! probken when ureldim=0             sigma = (1.64E-7 - (6.95E-9)*log(ureldim*100))**2.0 
-       ! Linde uses ustar, page 53
-
-       sigma(1) = (1.64E-7 - (6.95E-9)*log(ustar(1)*100.))**2.0
-       sigma(2) = (1.64E-7 - (6.95E-9)*log(ustar(2)*100.))**2.0
-       sigma(3) = (1.64E-7 - (6.95E-9)*log(ustar(3)*100.))**2.0
-
-       ! Get the neutral density in units
-       ! The charge exhange cross section 
-       ! 100 to change ustar to cm/s
-
-       nuc(1) = sigma(1)*State_VGB(NeuRho_,i,j,k,iBlock)*No2Io_V(UnitRho_)*ustar(1)*100.
-       nuc(2) = sigma(2)*State_VGB(Ne2Rho_,i,j,k,iBlock)*No2Io_V(UnitRho_)*ustar(2)*100.
-       nuc(3) = sigma(3)*State_VGB(Ne3Rho_,i,j,k,iBlock)*No2Io_V(UnitRho_)*ustar(3)*100.
-       ! Now everything normalized
-
-       nucNORM(1)=nuc(1)*No2Io_V(UnitT_)
-       nucNORM(2)=nuc(2)*No2Io_V(UnitT_)
-       nucNORM(3)=nuc(3)*No2Io_V(UnitT_)
-
-       !
-       ! source terms for neutrals
-       !/
-       ! we are ignoring the creation of very energetic neutrals, which are created by charge exchange
-       ! see Liewer et al. 1996
-       ! we probably want to put a flag based on entropy do identify the heliopause   
-
-       Mask = 0.0
-
-       if (rp > 40.0) then 
-          Mask = 0.5*(1.0-sign(1.0,usqdim-24.8))+(1.0-sign(1.0,usqdim-400.0))+ &
-               0.5*(1.0-sign(1.0,Tproton - 1.15E4))
-       end if
-
-       Friction(1) = nucNORM(1)*State_VGB(Rho_,i,j,k,iBlock)
-       Friction(2) = nucNORM(2)*State_VGB(Rho_,i,j,k,iBlock)
-       Friction(3) = nucNORM(3)*State_VGB(Rho_,i,j,k,iBlock)
-
-       !
-       ! Declaration of all the I',J,K !following my notes of Sep 10, 2007
-       !/
-
-       I0xp(1)=Friction(1)
-       I0xp(2)=Friction(2)
-       I0xp(3)=Friction(3)
-       I0px(1)=Friction(1)
-       I0px(2)=Friction(2)
-       I0px(3)=Friction(3)
-
-       ! units are fine: (Uth2/ustar)*termxp is unitless as it should be
-
-       JxpUx(1)=Friction(1)*(Ux+((UxN(1)-Ux)*(UTh2/ustar(1))*termxp(1)))
-       JxpUy(1)=Friction(1)*(Uy+((UyN(1)-Uy)*(UTh2/ustar(1))*termxp(1)))
-       JxpUz(1)=Friction(1)*(Uz+((UzN(1)-Uz)*(UTh2/ustar(1))*termxp(1)))
-
-       JxpUx(2)=Friction(2)*(Ux+((UxN(2)-Ux)*(UTh2/ustar(2))*termxp(2)))
-       JxpUy(2)=Friction(2)*(Uy+((UyN(2)-Uy)*(UTh2/ustar(2))*termxp(2)))
-       JxpUz(2)=Friction(2)*(Uz+((UzN(2)-Uz)*(UTh2/ustar(2))*termxp(2)))
-
-       JxpUx(3)=Friction(3)*(Ux+((UxN(3)-Ux)*(UTh2/ustar(3))*termxp(3)))
-       JxpUy(3)=Friction(3)*(Uy+((UyN(3)-Uy)*(UTh2/ustar(3))*termxp(3)))
-       JxpUz(3)=Friction(3)*(Uz+((UzN(3)-Uz)*(UTh2/ustar(3))*termxp(3)))
-
-       JpxUx(1)=Friction(1)*(UxN(1)+((Ux-UxN(1))*(UThN2(1)/ustar(1))*termpx(1)))
-       JpxUy(1)=Friction(1)*(UyN(1)+((Uy-UyN(1))*(UThN2(1)/ustar(1))*termpx(1)))
-       JpxUz(1)=Friction(1)*(UzN(1)+((Uz-UzN(1))*(UThN2(1)/ustar(1))*termpx(1)))
-
-       JpxUx(2)=Friction(2)*(UxN(2)+((Ux-UxN(2))*(UThN2(2)/ustar(2))*termpx(2)))
-       JpxUy(2)=Friction(2)*(UyN(2)+((Uy-UyN(2))*(UThN2(2)/ustar(2))*termpx(2)))
-       JpxUz(2)=Friction(2)*(UzN(2)+((Uz-UzN(2))*(UThN2(2)/ustar(2))*termpx(2)))
-
-
-       JpxUx(3)=Friction(3)*(UxN(3)+((Ux-UxN(3))*(UThN2(3)/ustar(3))*termpx(3)))
-       JpxUy(3)=Friction(3)*(UyN(3)+((Uy-UyN(3))*(UThN2(3)/ustar(3))*termpx(3)))
-       JpxUz(3)=Friction(3)*(UzN(3)+((Uz-UzN(3))*(UThN2(3)/ustar(3))*termpx(3)))
-
-       QmxpUx(1)=JxpUx(1)-JpxUx(1)
-       QmxpUy(1)=JxpUy(1)-JpxUy(1)
-       QmxpUz(1)=JxpUz(1)-JpxUz(1)
-
-       QmxpUx(2)=JxpUx(2)-JpxUx(2)
-       QmxpUy(2)=JxpUy(2)-JpxUy(2)
-       QmxpUz(2)=JxpUz(2)-JpxUz(2)
-
-       QmxpUx(3)=JxpUx(3)-JpxUx(3)
-       QmxpUy(3)=JxpUy(3)-JpxUy(3)
-       QmxpUz(3)=JxpUz(3)-JpxUz(3)
-
-       Kxp(1)=0.5*Friction(1)*(usq**2+(1.5*(UTh2/ustar(1))*termepx(1)*(1/((No2Si_V(UnitU_))**2.0)))+ &
-            2*usq*(vNeutrals(1)-usq)*(UThN2(1)/ustar(1))*termpx(1))
-
-       Kxp(2)=0.5*Friction(2)*(usq**2+(1.5*(UTh2/ustar(2))*termepx(2)*(1/((No2Si_V(UnitU_))**2.0)))+ &
-            2*usq*(vNeutrals(2)-usq)*(UThN2(2)/ustar(2))*termpx(2))
-
-       Kxp(3)=0.5*Friction(3)*(usq**2+(1.5*(UTh2/ustar(3))*termepx(3)*(1/((No2Si_V(UnitU_))**2.0)))+ &
-            2*usq*(vNeutrals(3)-usq)*(UThN2(3)/ustar(3))*termpx(3))
-
-       Kpx(1)=0.5*Friction(1)*(vNeutrals(1)**2+(1.5*(UThN2(1)/ustar(1))*termepx(1)*(1/((No2Si_V(UnitU_))**2.0)))+ &
-            2*vNeutrals(1)*(usq-vNeutrals(1))*(UThN2(1)/ustar(1))*termpx(1))
-
-       Kpx(2)=0.5*Friction(2)*(vNeutrals(2)**2+(1.5*(UThN2(2)/ustar(2))*termepx(2)*(1/((No2Si_V(UnitU_))**2.0)))+ &
-            2*vNeutrals(2)*(usq-vNeutrals(2))*(UThN2(2)/ustar(2))*termpx(2))
-
-       Kpx(3)=0.5*Friction(3)*(vNeutrals(3)**2+(1.5*(UThN2(3)/ustar(3))*termepx(3)*(1/((No2Si_V(UnitU_))**2.0)))+ &
-            2*vNeutrals(3)*(usq-vNeutrals(3))*(UThN2(3)/ustar(3))*termpx(3))
-
-       Qexp(1)=Kxp(1)-Kpx(1)
-       Qexp(2)=Kxp(2)-Kpx(2)
-       Qexp(3)=Kxp(3)-Kpx(3)
-
-       ! Check if point implicit scheme is on (part implicit may switch it off)
-       ! Also check if this particular block is point implicit or not
-       if(.not.(UsePointImplicit .and. UsePointImplicit_B(iBlock)))then
-          ! Add all source terms if we do not use the point implicit scheme
-          call user_expl_source
-          call user_impl_source
-       elseif(IsPointImplSource)then
-          ! Add implicit sources only
-          call user_impl_source
-       else
-          ! Add explicit sources only
-          call user_expl_source
-       end if
-    end do; end do; end do
-
-  contains
-
-    !==========================================================================
-    subroutine user_expl_source
-      ! Add explicit source here
-
-      ! Here come the explicit source terms
-      !
-      ! Pop I
-      !/
-      if (Mask >= 3.0) then
-         Source_VC(NeuRho_,i,j,k) = Source_VC(NeuRho_,i,j,k) +I0xp(2) + I0xp(3)
-         Source_VC(NeuEnergy_,i,j,k) = Source_VC(NeuEnergy_,i,j,k) +        &
-              Qexp(1) + Kxp(2) + Kxp(3)
-         ! writing the source P as SP = [SE -uxS(rhoux)-uyS(rhoUy) - uzS(rhoUz)]*gamma-1
-
-      else
-         Source_VC(NeuRho_,i,j,k) = Source_VC(NeuRho_,i,j,k) - I0px(1)
-         Source_VC(NeuEnergy_,i,j,k) = Source_VC(NeuEnergy_,i,j,k) &
-              - Kpx(1)
-      end if
-      !
-      ! Pop II
-      !/
-      if (Mask < 3.0) then
-         if (Mask > 1.0) then
-            Source_VC(Ne2Rho_,i,j,k) = Source_VC(Ne2Rho_,i,j,k) + &
-                 I0xp(1) + I0xp(3)
-            Source_VC(Ne2Energy_,i,j,k) = Source_VC(Ne2Energy_,i,j,k) &
-                 + Qexp(2) + Kxp(1) + Kxp(3)
-         else
-            Source_VC(Ne2Rho_,i,j,k) = Source_VC(Ne2Rho_,i,j,k) -I0px(2) 
-            Source_VC(Ne2Energy_,i,j,k) = Source_VC(Ne2Energy_,i,j,k) &
-                 - Kpx(2)
-         end if
-      end if
-      !
-      ! Pop III
-      !/
-      if (Mask <= 1.0) then
-         Source_VC(Ne3Rho_,i,j,k) = Source_VC(Ne3Rho_,i,j,k) & 
-              + I0xp(1) + I0xp(2)
-         Source_VC(Ne3Energy_,i,j,k) = Source_VC(Ne3Energy_,i,j,k) &
-              + Qexp(3) + Kxp(1) + Kxp(2)
-      else
-         Source_VC(Ne3Rho_,i,j,k) = Source_VC(Ne3Rho_,i,j,k) -I0px(3) 
-         Source_VC(Ne3Energy_,i,j,k) = Source_VC(Ne3Energy_,i,j,k) &
-              -Kpx(3)
-      end if
-      !
-      ! Source terms for Plasma
-      !/
-      Source_VC(Rho_,i,j,k)   = Source_VC(Rho_,i,j,k)  + 0.0
-
-      !correcting the source terms (see Gombosi 2000)
-
-      Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) +        &
-           Qepx(1)+ Qepx(2) + Qepx(3)
-
-    end subroutine user_expl_source
-    !==========================================================================
-    subroutine user_impl_source
-
-      !  This is where the point implicit source terms go
-      if(r_BLK(i,j,k,iBlock) > rFriction ) RETURN
-
-
-      !   All the neutrals momenta are implicit
-
-      ! Source terms for Plasma
-
-      Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) +    &
-           (g-1)*(Qepx(1)+ Qepx(2) + Qepx(3) &
-           - Ux*Source_VC(RhoUx_,i,j,k) &
-           - Uy*Source_VC(RhoUy_,i,j,k) &
-           - Uz*Source_VC(RhoUz_,i,j,k))
-
-
-      !
-      ! Pop I
-      !/
-      if (Mask >= 3.0) then
-
-         Source_VC(NeuRhoUx_,i,j,k) = Source_VC(NeuRhoUx_,i,j,k) +  &
-              QmxpUx(1) + JxpUx(2) + JxpUx(3)
-         Source_VC(NeuRhoUy_,i,j,k) = Source_VC(NeuRhoUy_,i,j,k) +  &
-              QmxpUy(1) + JxpUy(2) + JxpUy(3)
-         Source_VC(NeuRhoUz_,i,j,k) = Source_VC(NeuRhoUz_,i,j,k) +  & 
-              QmxpUz(1) + JxpUz(2) + JxpUz(3)
-
-         Source_VC(NeuP_,i,j,k) = Source_VC(NeuP_,i,j,k) +    &
-              (g-1)*(Qexp(1) + Kxp(2) + Kxp(3) &
-              - UxN(1)*Source_VC(NeuRhoUx_,i,j,k) &
-              - UyN(1)*Source_VC(NeuRhoUy_,i,j,k) &
-              - UzN(1)*Source_VC(NeuRhoUz_,i,j,k)) 
-      else
-         Source_VC(NeuRhoUx_,i,j,k) = Source_VC(NeuRhoUx_,i,j,k) &
-              -JpxUx(1)
-         Source_VC(NeuRhoUy_,i,j,k) = Source_VC(NeuRhoUy_,i,j,k) &
-              -JpxUy(1)
-         Source_VC(NeuRhoUz_,i,j,k) = Source_VC(NeuRhoUz_,i,j,k) &
-              -JpxUz(1)
-         Source_VC(NeuP_,i,j,k) = Source_VC(NeuP_,i,j,k) +    &
-              (g-1)*( -kpx(1) &
-              - UxN(1)*Source_VC(NeuRhoUx_,i,j,k) &
-              - UyN(1)*Source_VC(NeuRhoUy_,i,j,k) &
-              - UzN(1)*Source_VC(NeuRhoUz_,i,j,k))
-      end if
-      !
-      ! Pop II
-      !/
-      if (Mask < 3.0) then
-         if (Mask > 1.0) then
-            Source_VC(Ne2RhoUx_,i,j,k) = Source_VC(Ne2RhoUx_,i,j,k) +  &
-                 QmxpUx(2) + JxpUx(1) + JxpUx(3)
-            Source_VC(Ne2RhoUy_,i,j,k) = Source_VC(Ne2RhoUy_,i,j,k) +  &
-                 QmxpUy(2) + JxpUy(1) + JxpUy(3)
-            Source_VC(Ne2RhoUz_,i,j,k) = Source_VC(Ne2RhoUz_,i,j,k) +  & 
-                 QmxpUz(2) + JxpUz(1) + JxpUz(3)
-            Source_VC(Ne2P_,i,j,k) = Source_VC(Ne2P_,i,j,k) +    &
-                 (g-1)*(Qexp(2) + Kxp(1) + Kxp(3) &
-                 - UxN(2)*Source_VC(Ne2RhoUx_,i,j,k) &
-                 - UyN(2)*Source_VC(Ne2RhoUy_,i,j,k) &
-                 - UzN(2)*Source_VC(Ne2RhoUz_,i,j,k))
-         else
-            Source_VC(Ne2RhoUx_,i,j,k) = Source_VC(Ne2RhoUx_,i,j,k) &
-                 -JpxUx(2)
-            Source_VC(Ne2RhoUy_,i,j,k) = Source_VC(Ne2RhoUy_,i,j,k) &
-                 -JpxUy(2)
-            Source_VC(Ne2RhoUz_,i,j,k) = Source_VC(Ne2RhoUz_,i,j,k) &
-                 -JpxUz(2)
-            Source_VC(Ne2P_,i,j,k) = Source_VC(Ne2P_,i,j,k) +    &
-                 (g-1)*(- Kpx(2) &
-                 - UxN(2)*Source_VC(Ne2RhoUx_,i,j,k) &
-                 - UyN(2)*Source_VC(Ne2RhoUy_,i,j,k) &
-                 - UzN(2)*Source_VC(Ne2RhoUz_,i,j,k))
-
-         end if
-      end if
-      !
-      ! Pop III
-      !/
-      if (Mask <= 1.0) then
-         Source_VC(Ne3RhoUx_,i,j,k) = Source_VC(Ne3RhoUx_,i,j,k) +  &
-              QmxpUx(3) + JxpUx(2) + JxpUx(1)
-         Source_VC(Ne3RhoUy_,i,j,k) = Source_VC(Ne3RhoUy_,i,j,k) +  &
-              QmxpUy(3) + JxpUy(2) + JxpUy(1)
-         Source_VC(Ne3RhoUz_,i,j,k) = Source_VC(Ne3RhoUz_,i,j,k) +  & 
-              QmxpUz(3) + JxpUz(2) + JxpUz(1)
-         Source_VC(Ne3P_,i,j,k) = Source_VC(Ne3P_,i,j,k) +    &
-              (g-1)*(Qexp(3) + Kxp(1) + Kxp(2) &
-              - UxN(3)*Source_VC(Ne3RhoUx_,i,j,k) &
-              - UyN(3)*Source_VC(Ne3RhoUy_,i,j,k) &
-              - UzN(3)*Source_VC(Ne3RhoUz_,i,j,k))
-      else
-         Source_VC(Ne3RhoUx_,i,j,k) = Source_VC(Ne3RhoUx_,i,j,k)  &
-              -JpxUx(3)
-         Source_VC(Ne3RhoUy_,i,j,k) = Source_VC(Ne3RhoUy_,i,j,k)  &
-              -JpxUy(3)
-         Source_VC(Ne3RhoUz_,i,j,k) = Source_VC(Ne3RhoUz_,i,j,k)  &
-              -JpxUz(3)
-         Source_VC(Ne3P_,i,j,k) = Source_VC(Ne3P_,i,j,k) +    &
-              (g-1)*(-Kpx(3) &
-              - UxN(3)*Source_VC(Ne3RhoUx_,i,j,k) &
-              - UyN(3)*Source_VC(Ne3RhoUy_,i,j,k) &
-              - UzN(3)*Source_VC(Ne3RhoUz_,i,j,k))
-      end if
-      !
-      ! Source terms for Plasma
-      !/
-      Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k) +        &
-           QmpxUx(1) + QmpxUx(2) + QmpxUx(3)
-      Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k) +        &
-           QmpxUy(1) + QmpxUy(2) + QmpxUy(3)
-      Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k) +        & 
-           QmpxUz(1) + QmpxUz(2) + QmpxUz(3)
-
-    end subroutine user_impl_source
-
-  end subroutine user_calc_sources
-
-  !============================================================================
-
-  subroutine user_init_point_implicit
-
-    use ModVarIndexes, ONLY: RhoUx_,RhoUy_,RhoUz_,P_,NeuRhoUx_,NeuRhoUy_,&
-         NeuRhoUz_,NeuP_,Ne2RhoUx_,Ne2RhoUy_,Ne2RhoUz_,Ne2P_,&
-         Ne3RhoUx_,Ne3RhoUy_,Ne3RhoUz_,Ne3P_
-
-    use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
-    !------------------------------------------------------------------------
-
-    ! Allocate and set iVarPointImpl_I
-    ! In this example there are 3 implicit variables
-
-
-    ! All the neutrals momenta and plasma are implicit 
-    ! (3 neutral fluid and 1 ion)
-
-    allocate(iVarPointImpl_I(16))
-
-    iVarPointImpl_I = (/RhoUx_, RhoUy_, RhoUz_, P_, NeuRhoUx_ ,&
-         NeuRhoUy_, NeuRhoUz_ , NeuP_, Ne2RhoUx_, Ne2RhoUy_, Ne2RhoUz_ ,&
-         Ne2P_, Ne3RhoUx_, Ne3RhoUy_, Ne3RhoUz_, Ne3P_/)
-
-
-    ! Tell the point implicit scheme if dS/dU will be set analytically
-    ! If this is set to true the DsDu_VVC matrix has to be set below.
-
-    IsPointImplMatrixSet = .false.
-
-  end subroutine user_init_point_implicit
-
+   
+end subroutine user_calc_sources
 end module ModUser
