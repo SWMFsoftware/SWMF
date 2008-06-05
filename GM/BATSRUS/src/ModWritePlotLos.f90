@@ -142,7 +142,7 @@ subroutine write_plot_los(iFile)
   rOccult2   = rOccult**2
   OffsetAngle= offset_angle(iFile)
 
-  ! Rotate observation point into the HGI system
+  ! Rotate observation point from HGI system to the current coordinate system
   ObsPos_D    = matmul(FromHgi_DD, ObsPos_DI(:,ifile))
   ObsDistance = sqrt(sum(ObsPos_D**2))
   ! Normalize line of sight vector pointing towards the origin
