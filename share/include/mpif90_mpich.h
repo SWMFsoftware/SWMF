@@ -199,12 +199,13 @@
 !     if you have trouble with them.
 !
       DOUBLE PRECISION MPI_WTIME, MPI_WTICK,PMPI_WTIME, PMPI_WTICK
-      EXTERNAL MPI_WTIME, MPI_WTICK,PMPI_WTIME, PMPI_WTICK
+      EXTERNAL MPI_WTIME
+!     , MPI_WTICK,PMPI_WTIME, PMPI_WTICK
 !
 !     The attribute copy/delete subroutines are symbols that can be passed
 !     to MPI routines
 !
-      EXTERNAL MPI_NULL_COPY_FN, MPI_NULL_DELETE_FN, MPI_DUP_FN
+!      EXTERNAL MPI_NULL_COPY_FN, MPI_NULL_DELETE_FN, MPI_DUP_FN
 ! 
 !     $Id$    
 ! 
