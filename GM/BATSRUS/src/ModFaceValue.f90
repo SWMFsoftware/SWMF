@@ -11,7 +11,7 @@ module ModFaceValue
 
   logical, public :: UseAccurateResChange = .false.
   logical, public :: UseTvdResChange      = .true.
-  logical, public :: DoLimitMomentum      = .false.  !^CFG IF BORISCORR
+  logical, public :: DoLimitMomentum      = .false.
 
   real,             public :: BetaLimiter = 1.0
   character(len=6), public :: TypeLimiter = 'minmod'
@@ -573,9 +573,7 @@ contains
                call get_faceZ_second(1,nI,1,nJ,nKFace,nKFace)
        endif
 
-       if(UseLogLimiter &
-            .and..not.DoLimitMomentum &                     !^CFG IF BORISCORR
-            )then
+       if(UseLogLimiter .and. .not.DoLimitMomentum)then
           if(DoResChangeOnly)then
              if(neiLeast(iBlock)==+1) &
                   call logfaceX_to_faceX(1,1,1,nJ,1,nK)
