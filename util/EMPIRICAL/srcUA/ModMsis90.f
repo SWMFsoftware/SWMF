@@ -858,7 +858,7 @@ C
       COMMON/PARMB/GSURF,RE
       COMMON/METSEL/IMR
       SAVE
-      EXTERNAL GTD6BK
+      EXTERNAL EUA_GTD6BK
       DATA MN3/5/,ZN3/32.5,20.,15.,10.,0./
       DATA MN2/4/,ZN2/72.5,55.,45.,32.5/
       DATA ZMIX/62.5/,ALAST/99999./,MSSL/-999/
@@ -1284,7 +1284,7 @@ C       N2 variation factor at Zlb
       G28=SW(21)*GLOBE6(YRD,SEC,GLAT,GLONG,STL,F107A,F107, 
      & AP,PD(1,3))
 C        Variation of turbopause height
-      DAY=AMOD(YRD,1000.)
+      DAY=MOD(YRD,1000.)
       ZHF=PDL(25,2)
      $    *(1.+SW(5)*PDL(25,1)*SIN(DGTR*GLAT)*COS(DR*(DAY-PT(14))))
 C
@@ -1777,7 +1777,7 @@ C        SW FOR MAIN TERMS, SWC FOR CROSS TERMS
       SAVE
       DO 100 I = 1,25
         SAV(I)=SV(I)
-        SW(I)=AMOD(SV(I),2.)
+        SW(I)=MOD(SV(I),2.)
         IF(ABS(SV(I)).EQ.1.OR.ABS(SV(I)).EQ.2.) THEN
           SWC(I)=1.
         ELSE
