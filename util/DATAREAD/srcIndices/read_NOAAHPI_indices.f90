@@ -27,8 +27,6 @@ subroutine read_NOAAHPI_Indices(iOutputError)
 
   integer, dimension(7) :: itime
 
-  integer, external :: jday
-
   iOutputError = 0
   !-------------------------------------------------------------------------
   call init_mod_indices
