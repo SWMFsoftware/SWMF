@@ -52,7 +52,7 @@ contains
              DoUpdateB0 = dt_updateb0 > 0.0
           endif
 
-       case("#TD99FLUXROPE","#GL98FLUXROPE")
+       case("#ARCH","#TD99FLUXROPE","#GL98FLUXROPE")
           call EEE_set_parameters(NameCommand)
        case("#EMPIRICALSW")
           call read_var('NameModel',NameModel)
@@ -357,15 +357,23 @@ contains
 
   !============================================================================
   subroutine user_get_b0(xInput,yInput,zInput,B0_D)
-    use ModPhysics,     ONLY: Io2No_V,UnitB_
+    use ModPhysics,     ONLY: Io2No_V,Si2No_V,UnitB_
     use ModMagnetogram, ONLY: get_magnetogram_field
+    use EEE_ModMain,    ONLY: EEE_get_B0
     implicit none
 
     real, intent(in):: xInput,yInput,zInput
     real, intent(out), dimension(3):: B0_D
 
+    real :: x_D(3),B_D(3)
+    !--------------------------------------------------------------------------
+
     call get_magnetogram_field(xInput,yInput,zInput,B0_D)
     B0_D = B0_D*Io2No_V(UnitB_)
+
+    x_D = (/ xInput, yInput, zInput /)
+    call EEE_get_B0(x_D,B_D)
+    B0_D = B0_D + B_D*Si2No_V(UnitB_)
 
   end subroutine user_get_b0
 

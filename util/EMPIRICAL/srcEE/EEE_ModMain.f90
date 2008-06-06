@@ -9,6 +9,7 @@ module EEE_ModMain
   public :: EEE_set_parameters
   public :: EEE_get_state_init
   public :: EEE_get_state_BC
+  public :: EEE_get_B0
 
 contains
 
@@ -97,6 +98,7 @@ contains
     use ModReadParam, ONLY: read_var
     use EEE_ModGL98,  ONLY: set_parameters_GL98
     use EEE_ModTD99,  ONLY: set_parameters_TD99
+    use EEE_ModArch,  ONLY: set_parameters_arch
     implicit none
 
     character(len=*), intent(in) :: NameCommand
@@ -106,6 +108,8 @@ contains
        call set_parameters_TD99
     case("#GL98FLUXROPE")
        call set_parameters_GL98
+    case("#ARCH")
+       call set_parameters_arch
     end select
 
   end subroutine EEE_set_parameters
@@ -187,5 +191,29 @@ contains
     end if
 
   end subroutine EEE_get_state_BC
+
+
+  !============================================================================
+
+  subroutine EEE_get_B0(x_D,B0_D)
+    use EEE_ModArch
+    implicit none
+
+    real, intent(in) :: x_D(3)
+    real, intent(out) :: B0_D(3)
+
+    real :: B_D(3)
+    !--------------------------------------------------------------------------
+
+    ! initialize state variables
+    B0_D = 0.0
+
+    if(UseArch)then
+       call get_arch(x_D,B_D)
+
+       B0_D = B0_D + B_D
+    end if
+
+  end subroutine EEE_get_B0
 
 end module EEE_ModMain

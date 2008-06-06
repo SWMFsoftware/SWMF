@@ -12,6 +12,7 @@ OBJECTS = \
 	EEE_ModCommonVariables.o \
 	EEE_ModTD99.o \
 	EEE_ModGL98.o \
+	EEE_ModArch.o \
 	EEE_ModMain.o
 
 LIB:
