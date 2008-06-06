@@ -67,17 +67,17 @@ contains
        do iDipole=1,nDipole
           Phi = PhiFirstDipole + AngleBetweenDipoles*(iDipole - 1)
 
-          xDip_DI(x_,iDipole) = rDipole*sin(Phi*cDegToRad)
-          xDip_DI(y_,iDipole) = rDipole*cos(Phi*cDegToRad)
+          xDip_DI(x_,iDipole) = rDipole*cos(Phi*cDegToRad)
+          xDip_DI(y_,iDipole) = rDipole*sin(Phi*cDegToRad)
           xDip_DI(z_,iDipole) = 0.0
 
           Bdp  = DipoleStrengthSi*Si2No_V(UnitB_)
        end do
 
        ! Orientation rotates clockwise
-       Rotate_DD = matmul(rot_matrix_y(Orientation*cDegToRad), &
-            rot_matrix_x(-Latitude*cDegToRad))
-       Rotate_DD = matmul(Rotate_DD,rot_matrix_z((90-Longitude)*cDegToRad))
+       Rotate_DD = matmul(rot_matrix_x(Orientation*cDegToRad), &
+            rot_matrix_y(Latitude*cDegToRad))
+       Rotate_DD = matmul(Rotate_DD,rot_matrix_z(-Longitude*cDegToRad))
     end if
 
 
