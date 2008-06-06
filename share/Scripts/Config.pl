@@ -309,7 +309,9 @@ sub install_code_{
 	    open(OUT, ">$MakefileConf") 
 		or die "$ERROR_ could not open $MakefileConf\n";
 	    while(<IN>){
-		s/_COMPILER_/$Compiler/; print OUT $_;
+		s/_COMPILER_/$Compiler/;
+		s/_OS_/$OS/;
+		print OUT $_;
 	    }
 	    close IN; close OUT;
 	}
