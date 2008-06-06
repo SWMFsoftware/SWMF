@@ -32,7 +32,7 @@ contains
          IsPointImplMatrixSet
     use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, &
          UseBoris => boris_correction, &                !^CFG IF BORISCORR
-         iTest, jTest, kTest, Test_String, BlkTest, ProcTest
+         iTest, jTest, kTest, Test_String, VarTest, BlkTest, ProcTest
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModAdvance, ONLY: B0XCell_BLK, B0YCell_BLK, B0ZCell_BLK
     use ModAdvance, ONLY: bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
@@ -99,6 +99,9 @@ contains
 
        DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest
 
+       if(DoTestCell)write(*,*)NameSub, ' initial source = ',&
+            Source_VC(VarTest,i,j,k)
+
        ! Extract conservative variables
        State_V = State_VGB(:,i,j,k,iBlock)
 
@@ -159,6 +162,14 @@ contains
           Ga2 = State_V(Rho_)/(State_V(Rho_) + InvClight2*sum(FullB_D**2))
        end if                                 !^CFG END BORISCORR
 
+       if(DoTestCell)then
+          if(UseBoris)write(*,*) NameSub,'Ga2=',Ga2
+          write(*,*) NameSub,' FullB_D  =', FullB_D
+          write(*,*) NameSub,' Current_D=', Current_D
+          write(*,*) NameSub,' uPlus_D  =', uPlus_D
+          write(*,*) NameSub,' uPlusHall=', uPlusHallU_D
+       end if
+
        ! Calculate the source term for all the ion fluids
        do iIon = 1, nIonFluid
           ! call select_fluid
@@ -170,16 +181,8 @@ contains
 
           if(DoTestCell)then
              write(*,*) NameSub,' iIon =', iIon
-             write(*,*)'bxO_DX(:,i+1)=', bCrossArea_DX(:,i+1,j,k)
-             write(*,*)'bxO_DX(:,i  )=', bCrossArea_DX(:,i,j,k)
-             write(*,*)'bxO_DY(:,j+1)=', bCrossArea_DY(:,i,j+1,k)
-             write(*,*)'bxO_DY(:,j  )=', bCrossArea_DY(:,i,j,k)
-             write(*,*)'bxO_DZ(:,k+1)=', bCrossArea_DZ(:,i,j,k+1)
-             write(*,*)'bxO_DZ(:,k  )=', bCrossArea_DZ(:,i,j,k)
-             write(*,*) NameSub,' uPlus_D  =', uPlus_D
              write(*,*) NameSub,' uIon_D   =', uIon_D
-             write(*,*) NameSub,' Current_D=', Current_D
-             write(*,*) NameSub,' uPlusHall=', uPlusHallU_D
+             write(*,*) NameSub,' u_D      =', u_D
              write(*,*) NameSub,' Force_D  =', Force_D
           end if
 
@@ -223,6 +226,10 @@ contains
                + inv_gm1*Heating
 
        end do
+
+       if(DoTestCell)write(*,*)NameSub, ' final source = ',&
+            Source_VC(VarTest,i,j,k)
+
     end do; end do; end do
 
     if(DoTestMe)then
