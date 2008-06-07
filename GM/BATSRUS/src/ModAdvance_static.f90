@@ -176,13 +176,6 @@ Module ModAdvance
   !/
 
   !\
-  !  Face conservative or corrected flux.
-  !/
-  real :: CorrectedFlux_VXB(nCorrectedFaceValues, nJ, nK, 2, MaxBlock)
-  real :: CorrectedFlux_VYB(nCorrectedFaceValues, nI, nK, 2, MaxBlock)
-  real :: CorrectedFlux_VZB(nCorrectedFaceValues, nI, nJ, 2, MaxBlock)
-
-  !\
   ! Merge cells around the polar axis in spherical geometry
   !/
   logical :: DoFixAxis = .false.
