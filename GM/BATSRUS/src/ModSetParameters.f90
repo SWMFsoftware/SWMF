@@ -2553,6 +2553,8 @@ contains
   !===========================================================================
   subroutine set_extra_parameters
 
+    use ModMultiFluid, ONLY: UseMultiIon
+
     ! We need normalization for dt
     if(UseDtFixed)then
        if(.not.time_accurate)then
@@ -2588,6 +2590,10 @@ contains
          (UseTvdResChange .or. UseAccurateResChange))
     DoLimitMomentum = &                                !^CFG IF BORISCORR
          boris_correction .and. DoOneCoarserLayer      !^CFG IF BORISCORR
+
+    !!!
+    if(UseMultiIon)DoLimitMomentum = .false.
+    !!!
 
     if(UseConstrainB) then          !^CFG IF CONSTRAINB BEGIN
        jMinFaceX=0; jMaxFaceX=nJ+1
