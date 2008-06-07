@@ -31,7 +31,7 @@ contains
     use ModPointImplicit, ONLY:  UsePointImplicit, IsPointImplSource, &
          IsPointImplMatrixSet
     use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, &
-         UseBoris => boris_correction, &                !^CFG IF BORISCORR
+         UseBoris => boris_correction, &              !^CFG IF BORISCORR
          iTest, jTest, kTest, Test_String, VarTest, BlkTest, ProcTest
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModAdvance, ONLY: B0XCell_BLK, B0YCell_BLK, B0ZCell_BLK
@@ -159,11 +159,11 @@ contains
        if(UseBoris)then                       !^CFG IF BORISCORR BEGIN
           ! Reduce the J x B like terms by a factor of 
           ! Ga2 = 1/(1+v_A^2/c^2) = rho/(rho+B^2/c^2)
-          Ga2 = State_V(Rho_)/(State_V(Rho_) + InvClight2*sum(FullB_D**2))
+          Ga2 = State_V(Rho_)/(State_V(Rho_) + InvClight2*sum(FullB_D**2)) 
        end if                                 !^CFG END BORISCORR
 
        if(DoTestCell)then
-          if(UseBoris)write(*,*) NameSub,'Ga2=',Ga2
+          if(UseBoris)write(*,*) NameSub,'Ga2=',Ga2  !^CFG IF BORISCORR
           write(*,*) NameSub,' FullB_D  =', FullB_D
           write(*,*) NameSub,' Current_D=', Current_D
           write(*,*) NameSub,' uPlus_D  =', uPlus_D
