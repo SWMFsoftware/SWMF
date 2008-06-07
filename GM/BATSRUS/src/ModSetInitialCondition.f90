@@ -11,6 +11,7 @@ subroutine set_ics
   use ModUser, ONLY: user_set_ics
   use ModMultiFluid
   use ModEnergy, ONLY: calc_energy_ghost
+  use ModConserveFlux, ONLY: init_cons_flux
 
   implicit none
 
@@ -52,7 +53,7 @@ subroutine set_ics
   Flux_VY = cZero
   Flux_VZ = cZero
 
-  call init_conservative_facefluxes(iBlock)
+  call init_cons_flux(iBlock)
 
   if(unusedBLK(iBlock))then  
      do iVar=1,nVar
