@@ -12,7 +12,8 @@ module ModConserveFlux
        LeftState_VX, LeftState_VY, LeftState_VZ, &
        RightState_VX, RightState_VY, RightState_VZ, &
        uDotArea_XI, uDotArea_YI, uDotArea_ZI
-  use ModGeometry, ONLY: UseCovariant, Body_Blk, true_cell
+
+  use ModGeometry,  ONLY: UseCovariant, Body_Blk, true_cell
   use ModCovariant, ONLY: FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
   use ModParallel, ONLY : &
        neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &
@@ -309,115 +310,89 @@ contains
     !==========================================================================
 
     subroutine apply_corrected_flux_x
-      if (.not. body_BLK(iBlock)) then
-         do k = 1, nK; do j = 1, nJ
+
+      do k = 1, nK; do j = 1, nJ
+         if (.not.true_cell(lFaceTo-1, j, k, iBlock)) CYCLE
+         if (.not.true_cell(lFaceTo  , j, k, iBlock)) CYCLE
+         if(nFluid == 1)then
+            Flux_VX(1:nVar-1,lFaceTo,j,k) = &
+                 CorrectedFlux_VXB(1:nVar-1,j,k,lFaceFrom,iBlock)
+            Flux_VX(nVar+1,lFaceTo,j,k) = &
+                 CorrectedFlux_VXB(nVar+1,j,k,lFaceFrom,iBlock)
+         else
             Flux_VX(1:FluxLast_,lFaceTo,j,k) = &
                  CorrectedFlux_VXB(1:FluxLast_,j,k,lFaceFrom,iBlock)
             uDotArea_XI(lFaceTo,j,k,:) = &
                  CorrectedFlux_VXB(UnFirst_:UnLast_,j,k,lFaceFrom,iBlock)
-            VdtFace_x(lFaceTo,j,k) = &
-                 CorrectedFlux_VXB(Vdt_,j,k,lFaceFrom,iBlock)
-            if(UseCovariant)CYCLE
-            LeftState_VX(Bx_,lFaceTo,j,k) = &
-                 CorrectedFlux_VXB(BnL_,j,k,lFaceFrom,iBlock)
-            RightState_VX(Bx_,lFaceTo,j,k) = &
-                 CorrectedFlux_VXB(BnR_,j,k,lFaceFrom,iBlock)
-         end do;end do
-      else
-         do k = 1, nK; do j = 1, nJ
-            if (all(true_cell(lFaceTo-1:lFaceTo,j,k,iBlock))) then
-               Flux_VX(1:FluxLast_,lFaceTo,j,k) = &
-                    CorrectedFlux_VXB(1:FluxLast_,j,k,lFaceFrom,iBlock)
-               uDotArea_XI(lFaceTo,j,k,:) = &
-                    CorrectedFlux_VXB(UnFirst_:UnLast_,j,k,lFaceFrom,iBlock)
-               VdtFace_x(lFaceTo,j,k) = &
-                    CorrectedFlux_VXB(Vdt_,j,k,lFaceFrom,iBlock)
-               if(UseCovariant)CYCLE       
-               LeftState_VX(Bx_,lFaceTo,j,k) = &
-                    CorrectedFlux_VXB(BnL_,j,k,lFaceFrom,iBlock)
-               RightState_VX(Bx_,lFaceTo,j,k) = &
-                    CorrectedFlux_VXB(BnR_,j,k,lFaceFrom,iBlock)
-            end if
-         end do; end do 
-      end if
-      if(UseCovariant)call apply_bn_faceI(&     
-           lFaceFrom,lFaceTo,iBlock)          
+         end if
+         VdtFace_x(lFaceTo,j,k) = &
+              CorrectedFlux_VXB(Vdt_,j,k,lFaceFrom,iBlock)
+         if(UseCovariant)CYCLE       
+         LeftState_VX(Bx_,lFaceTo,j,k) = &
+              CorrectedFlux_VXB(BnL_,j,k,lFaceFrom,iBlock)
+         RightState_VX(Bx_,lFaceTo,j,k) = &
+              CorrectedFlux_VXB(BnR_,j,k,lFaceFrom,iBlock)
+      end do; end do 
+      if(UseCovariant)call apply_bn_face_i(lFaceFrom, lFaceTo, iBlock)          
     end subroutine apply_corrected_flux_x
 
     !==========================================================================
 
     subroutine apply_corrected_flux_y
-      if (.not. body_BLK(iBlock)) then
-         do k = 1, nK; do i = 1, nI
+      do k = 1, nK; do i = 1, nI
+         if (.not.true_cell(i, lFaceTo-1, k, iBlock))CYCLE
+         if (.not.true_cell(i, lFaceTo  , k, iBlock))CYCLE
+
+         if(nFluid == 1)then
+            Flux_VY(1:nVar-1,i,lFaceTo,k) = &
+                 CorrectedFlux_VYB(1:nVar-1,i,k,lFaceFrom,iBlock)
+            Flux_VY(nVar+1,i,lFaceTo,k) = &
+                 CorrectedFlux_VYB(nVar+1,i,k,lFaceFrom,iBlock)
+         else
             Flux_VY(1:FluxLast_,i,lFaceTo,k) = &
                  CorrectedFlux_VYB(1:FluxLast_,i,k,lFaceFrom,iBlock)
             uDotArea_YI(i,lFaceTo,k,:) = &
                  CorrectedFlux_VYB(UnFirst_:UnLast_,i,k,lFaceFrom,iBlock)
-            VdtFace_y(i,lFaceTo,k)= &
-                 CorrectedFlux_VYB(Vdt_,i,k,lFaceFrom,iBlock)
-            if(UseCovariant)CYCLE          
-            LeftState_VY(By_,i,lFaceTo,k) = &
-                 CorrectedFlux_VYB(BnL_,i,k,lFaceFrom,iBlock)
-            RightState_VY(By_,i,lFaceTo,k) = &
-                 CorrectedFlux_VYB(BnR_,i,k,lFaceFrom,iBlock)
-         end do; end do 
-      else
-         do k = 1, nK; do i = 1, nI
-            if (all(true_cell(i,lFaceTo-1:lFaceTo,k,iBlock))) then
-               Flux_VY(1:nVar+nFLuid,i,lFaceTo,k) = &
-                    CorrectedFlux_VYB(1:FluxLast_,i,k,lFaceFrom,iBlock)
-               uDotArea_YI(i,lFaceTo,k,:) = &
-                    CorrectedFlux_VYB(UnFirst_:UnLast_,i,k,lFaceFrom,iBlock)
-               VdtFace_y(i,lFaceTo,k)= &
-                    CorrectedFlux_VYB(Vdt_,i,k,lFaceFrom,iBlock)
-               if(UseCovariant)CYCLE    
-               LeftState_VY(By_,i,lFaceTo,k) = &
-                    CorrectedFlux_VYB(BnL_,i,k,lFaceFrom,iBlock)
-               RightState_VY(By_,i,lFaceTo,k) = &
-                    CorrectedFlux_VYB(BnR_,i,k,lFaceFrom,iBlock)
-            end if
-         end do; end do 
-      end if
-      if(UseCovariant)call apply_bn_faceJ(&      
-           lFaceFrom,lFaceTo,iBlock)          
+         end if
+         VdtFace_y(i,lFaceTo,k)= &
+              CorrectedFlux_VYB(Vdt_,i,k,lFaceFrom,iBlock)
+         if(UseCovariant)CYCLE          
+         LeftState_VY(By_,i,lFaceTo,k) = &
+              CorrectedFlux_VYB(BnL_,i,k,lFaceFrom,iBlock)
+         RightState_VY(By_,i,lFaceTo,k) = &
+              CorrectedFlux_VYB(BnR_,i,k,lFaceFrom,iBlock)
+      end do; end do 
+      if(UseCovariant)call apply_bn_face_j(lFaceFrom, lFaceTo, iBlock)          
     end subroutine apply_corrected_flux_y
 
     !==========================================================================
 
     subroutine apply_corrected_flux_z
-      if (.not. body_BLK(iBlock)) then
-         do j = 1, nJ; do i = 1, nI
+
+      do j = 1, nJ; do i = 1, nI
+         if(.not.true_cell(i, j, lFaceTo-1, iBlock)) CYCLE
+         if(.not.true_cell(i, j, lFaceTo  , iBlock)) CYCLE
+         if(nFluid == 1)then
+            Flux_VZ(1:nVar-1,i,j,lFaceTo) = &
+                 CorrectedFlux_VZB(1:nVar-1,i,j,lFaceFrom,iBlock)
+            Flux_VZ(nVar+1,i,j,lFaceTo) = &
+                 CorrectedFlux_VZB(nVar+1,i,j,lFaceFrom,iBlock)
+         else
             Flux_VZ(1:FluxLast_,i,j,lFaceTo) = &
                  CorrectedFlux_VZB(1:FluxLast_,i,j,lFaceFrom,iBlock)
             uDotArea_ZI(i,j,lFaceTo,:) = &
                  CorrectedFlux_VZB(UnFirst_:UnLast_,i,j,lFaceFrom,iBlock)
-            VdtFace_z(i,j,lFaceTo) = &
-                 CorrectedFlux_VZB(Vdt_,i,j,lFaceFrom,iBlock)
-            if(UseCovariant)CYCLE       
-            LeftState_VZ(Bz_,i,j,lFaceTo) = &
-                 CorrectedFlux_VZB(BnL_,i,j,lFaceFrom,iBlock)
-            RightState_VZ(Bz_,i,j,lFaceTo) = &
-                 CorrectedFlux_VZB(BnR_,i,j,lFaceFrom,iBlock)
-         end do; end do 
-      else
-         do j = 1, nJ; do i = 1, nI
-            if (all(true_cell(i,j,lFaceTo-1:lFaceTo,iBlock))) then
-               Flux_VZ(1:FluxLast_,i,j,lFaceTo) = &
-                    CorrectedFlux_VZB(1:FluxLast_,i,j,lFaceFrom,iBlock)
-               uDotArea_ZI(i,j,lFaceTo,:) = &
-                    CorrectedFlux_VZB(UnFirst_:UnLast_,i,j,lFaceFrom,iBlock)
-               VdtFace_z(i,j,lFaceTo) = &
-                    CorrectedFlux_VZB(Vdt_,i,j,lFaceFrom,iBlock)
-               if(UseCovariant)CYCLE   
-               LeftState_VZ(Bz_,i,j,lFaceTo) = &
-                    CorrectedFlux_VZB(BnL_,i,j,lFaceFrom,iBlock)
-               RightState_VZ(Bz_,i,j,lFaceTo) = &
-                    CorrectedFlux_VZB(BnR_,i,j,lFaceFrom,iBlock)
-            end if
-         end do; end do 
-      end if
-      if(UseCovariant)call apply_bn_faceK(&      
-           lFaceFrom,lFaceTo,iBlock)           
+         end if
+         VdtFace_z(i,j,lFaceTo) = &
+              CorrectedFlux_VZB(Vdt_,i,j,lFaceFrom,iBlock)
+         if(UseCovariant)CYCLE
+         LeftState_VZ(Bz_,i,j,lFaceTo) = &
+              CorrectedFlux_VZB(BnL_,i,j,lFaceFrom,iBlock)
+         RightState_VZ(Bz_,i,j,lFaceTo) = &
+              CorrectedFlux_VZB(BnR_,i,j,lFaceFrom,iBlock)
+      end do; end do 
+      if(UseCovariant)call apply_bn_face_k(lFaceFrom, lFaceTo, iBlock)           
+
     end subroutine apply_corrected_flux_z
 
   end subroutine apply_cons_flux
