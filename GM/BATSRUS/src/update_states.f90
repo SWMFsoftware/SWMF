@@ -12,16 +12,18 @@ subroutine update_states(iStage,iBlock)
   integer :: i,j,k, iVar
 
   logical :: oktest, oktest_me
+  character(len=*), parameter:: NameSub = 'update_states'
   !--------------------------------------------------------------------------
   if(iBlock==BLKtest .and. iProc==PROCtest)then
-     call set_oktest('update_states',oktest,oktest_me)
+     call set_oktest(NameSub,oktest,oktest_me)
   else
      oktest=.false.; oktest_me=.false.
   endif
 
   if(oktest_me)then
-     write(*,*)'Update_states, dt and initial state:'
-     write(*,*)'dt=',time_BLK(Itest,Jtest,Ktest,iBlock)
+     write(*,*)NameSub,'dt=',time_BLK(iTest, jTest, kTest, iBlock)
+     if(allocated(IsConserv_CB)) write(*,*)NameSub,' IsConserv=', &
+          IsConserv_CB(iTest,jTest,kTest,iBlock)
      write(*,*)
      do iVar=1,nVar
         write(*,*)NameVar_V(iVar), '(TestCell)=',&
@@ -29,7 +31,7 @@ subroutine update_states(iStage,iBlock)
      end do
 
      write(*,*)'Energy =',Energy_GBI(Itest,Jtest,Ktest,BLKtest,:)
-     write(*,*)'Fluxes and sources for ',NameVar_V(VARtest)
+     write(*,*)'Fluxes and sources for ',NameVar_V(VarTest)
      write(*,*)'X fluxes L,R=',Flux_VX(VARtest,Itest,Jtest,Ktest),&
           Flux_VX(VARtest,Itest+1,Jtest,Ktest)
      write(*,*)'Y fluxes L,R=',Flux_VY(VARtest,Itest,Jtest,Ktest),&
@@ -85,7 +87,7 @@ subroutine update_states(iStage,iBlock)
   !^CFG END DEBUGGING
 
   if(oktest_me)then
-     write(*,*)'Update states final:'
+     write(*,*)NameSub,' final:'
      do iVar=1,nVar
         write(*,*)NameVar_V(iVar),'(TestCell)  =',&
              State_VGB(iVar,Itest,Jtest,Ktest,BLKtest)
@@ -140,6 +142,8 @@ subroutine update_check(iStage)
   character(len=*), parameter:: NameSub = 'update_check'
   character(len=*), parameter:: format="(a,i5,a,f6.1,a,3es11.3)"
 
+  real :: Rho, RhoUx, p
+
   integer :: iError1=-1
   !-----------------------------------------------------------------------
 
@@ -170,6 +174,15 @@ subroutine update_check(iStage)
                     ! For sake of backward compatibility
                     if(iVar == P_) CYCLE
 
+                    if(nIonFluid > 1 .and. iVar > p_ .and. allocated(IsConserv_CB))then
+                       if(IsConserv_CB(i,j,k,iBlock))then
+                          Rho   = State_VGB(Rho_,i,j,k,iBlock)
+                          p     = State_VGB(p_,i,j,k,iBlock)
+                          RhoUx = State_VGB(RhoUx_,i,j,k,iBlock)
+
+                          if(RhoUx < 0.0 .and. RhoUx**2 > 4*g*p*Rho) CYCLE
+                       end if
+                    end if
                     if(UseMultiSpecies .and. &
                          iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_ &
                          .and. StateOld_VCB(iVar,i,j,k,iBlock) &
@@ -561,16 +574,16 @@ contains
     !DoTestCell = DoTestMe .and. iBlock==BlkTest .and. &
     !     i==iTest .and. j==jTest .and. k==kTest 
 
-    if(DoTestCell)then
-       write(*,*)NameSub,' IsConserv    =',IsConserv
-       write(*,*)NameSub,' initial state=',State_VGB(:,i,j,k,iBlock)
-       write(*,*)NameSub,' old     state=',StateOld_VCB(:,i,j,k,iBlock)
-    end if
-
     if(allocated(IsConserv_CB))then
        IsConserv = IsConserv_CB(i,j,k,iBlock)
     else
        IsConserv = .not. UseNonConservative
+    end if
+
+    if(DoTestCell)then
+       write(*,*)NameSub,' IsConserv    =',IsConserv
+       write(*,*)NameSub,' initial state=',State_VGB(:,i,j,k,iBlock)
+       write(*,*)NameSub,' old     state=',StateOld_VCB(:,i,j,k,iBlock)
     end if
 
     if(boris_correction .and. nFluid==1) then                  !^CFG IF BORISCORR BEGIN
