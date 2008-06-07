@@ -13,6 +13,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   use ModIO, ONLY: write_prefix, iUnitOut
   use ModMpi
   use ModEnergy, ONLY: calc_energy_ghost
+  use ModConserveFlux, ONLY: init_cons_flux
   implicit none
 
   ! Load balance grid using Peano-Hilbert ordering of blocks
@@ -265,7 +266,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
            else                                       
               call set_b0_matrix(iBlock)              
            end if                                     
-           call init_conservative_facefluxes(iBlock)
+           call init_cons_flux(iBlock)
         else
            call calc_other_soln_vars(iBlock)
         end if

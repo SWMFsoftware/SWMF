@@ -13,6 +13,7 @@ subroutine advance_expl(DoCalcTimestep)
   use ModBlockData, ONLY: set_block_data
   use ModImplicit,  ONLY: UsePartImplicit           !^CFG IF IMPLICIT
   use ModPhysics,   ONLY: No2Si_V, UnitT_
+  use ModConserveFlux, ONLY: save_cons_flux, apply_cons_flux
   
   implicit none
 
@@ -62,9 +63,8 @@ subroutine advance_expl(DoCalcTimestep)
 
         call timing_stop('calc_fluxes_bfo')
 
-        ! Save conservative flux correction for this solution
-        ! block as required.
-        call save_conservative_facefluxes
+        ! Save conservative flux correction for this solution block
+        call save_cons_flux(GlobalBlk)
      end do
 
      if(DoTestMe)write(*,*)NameSub,' done res change only'
@@ -104,7 +104,7 @@ subroutine advance_expl(DoCalcTimestep)
         ! Enforce flux conservation by applying corrected fluxes
         ! to each coarse grid cell face at block edges with 
         ! resolution changes.
-        call apply_cons_face_flux   
+        call apply_cons_flux(GlobalBlk)
 
         ! Compute source terms for each cell.
         call timing_start('calc_sources')

@@ -768,7 +768,8 @@ subroutine calc_other_soln_vars(iBLK)
        B0xFace_x_BLK,B0yFace_x_BLK,B0zFace_x_BLK, &
        B0xFace_y_BLK,B0yFace_y_BLK,B0zFace_y_BLK, &
        B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK
-  use ModImplicit,ONLY: UsePartImplicit             !^CFG IF IMPLICIT
+  use ModConserveFlux, ONLY: init_cons_flux
+  use ModImplicit, ONLY: UsePartImplicit             !^CFG IF IMPLICIT
   implicit none
 
   integer, intent(in) :: iBLK
@@ -794,7 +795,7 @@ subroutine calc_other_soln_vars(iBLK)
   fbody_y_BLK(:,:,:,iBLK) = 0.00
   fbody_z_BLK(:,:,:,iBLK) = 0.00
 
-  call init_conservative_facefluxes(iBLK)
+  call init_cons_flux(iBLK)
 
   globalBLK = iBLK
 
