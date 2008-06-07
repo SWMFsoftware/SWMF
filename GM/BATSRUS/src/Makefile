@@ -23,6 +23,7 @@ MODULES = \
 	ModAMR.o\
 	ModBlockData.o\
 	ModBoundaryCells.o\
+	ModConserveFlux.o\
 	ModCube.o\
 	ModSingleFluid.o\
 	ModMultiFluid.o\
@@ -89,7 +90,6 @@ OBJECTS = \
 	calc_sources.o\
 	calc_timestep.o\
 	coarsen_grid.o\
-	conserve_flux.o\
 	covariant.o\
 	create_soln_blocks.o\
 	exchange_messages.o\
