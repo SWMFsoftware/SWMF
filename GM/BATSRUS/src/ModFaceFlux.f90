@@ -383,6 +383,8 @@ contains
       end if
 
       if(DimTest==z_ .or. DimTest==0)then
+         write(*,*)&
+              'Calc_facefluxes, left and right states at k-1/2 and k+1/2:'
          do iVar=1,nVar
             write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
                  LeftState_VZ(iVar,iTest,jTest,kTest),&
@@ -1392,9 +1394,9 @@ contains
 
       write(*,*)'Eigenvalue_maxabs=', Cmax/Area
       write(*,*)'CmaxDt/Area      =', CmaxDt/Area
-      do iVar = 1, nVar + 1
-         write(*,'(a,i2,4(1pe13.5))') 'Var,F,F_L,F_R,dU=',&
-              iVar ,&
+      do iVar = 1, nVar + nFluid
+         write(*,'(a,a8,4(1pe13.5))') 'Var,F,F_L,F_R,dU=',&
+              NameVar_V(iVar),&
               Flux_V(iVar), &
               FluxLeft_V(iVar)/Area, &
               FluxRight_V(iVar)/Area,&
