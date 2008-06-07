@@ -104,12 +104,6 @@ module ModVarIndexes
   ! The user defined units for the variables
   real :: UnitUser_V(nVar+1) = 1.0
 
-  ! Named indexes for corrected fluxes
-  integer, parameter :: Vdt_ = nVar+1
-  integer, parameter :: BnL_ = nVar+2
-  integer, parameter :: BnR_ = nVar+3
-  integer, parameter :: nCorrectedFaceValues = BnR_
-
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 

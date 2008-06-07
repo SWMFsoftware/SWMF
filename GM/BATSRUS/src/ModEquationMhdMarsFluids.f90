@@ -174,12 +174,6 @@ module ModVarIndexes
   ! The user defined units for the variables
   real :: UnitUser_V(nVar+nFluid) = 1.0
 
-  ! Named indexes for corrected fluxes
-  integer, parameter :: Vdt_ = nVar+1
-  integer, parameter :: BnL_ = nVar+2
-  integer, parameter :: BnR_ = nVar+3
-  integer, parameter :: nCorrectedFaceValues = BnR_
-
   ! There are no extra scalars
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
