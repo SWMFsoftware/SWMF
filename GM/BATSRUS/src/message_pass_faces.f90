@@ -194,9 +194,8 @@ subroutine message_pass_faces_9conserve
   !
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK, nBLK, iNewGrid, iNewDecomposition
-  use ModAdvance, ONLY : nCorrectedFaceValues,&
-       CorrectedFlux_VXB, CorrectedFlux_VYB,&
-       CorrectedFlux_VZB
+  use ModConserveFlux, ONLY : nCorrectedFaceValues,&
+       CorrectedFlux_VXB, CorrectedFlux_VYB, CorrectedFlux_VZB
   use ModMPFaces
   use ModNumConst
   use ModMpi
@@ -371,7 +370,7 @@ subroutine mp_faces_set_indices
   !
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK, nBLK, iNewGrid, iNewDecomposition
-  use ModAdvance, ONLY: nCorrectedFaceValues
+  use ModConserveFlux, ONLY: nCorrectedFaceValues
   use ModMPFaces
   use ModMpi
   implicit none
