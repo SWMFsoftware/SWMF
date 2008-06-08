@@ -1,0 +1,24 @@
+#GRID
+1			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-800.0			xMin
+ 1500.0			xMax
+-1500.0			yMin
+ 1500.0			yMax
+-1500.0			zMin
+ 1500.0			zMax
+
+#GRIDLEVEL
+2			nLevelArea
+all			NameArea
+
+#GRIDLEVEL
+11
+initial
+
+#GRIDLEVEL
+11			nLevel
+shell0			NameArea
+10.0
+10.2
