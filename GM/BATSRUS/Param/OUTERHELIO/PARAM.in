@@ -1,0 +1,258 @@
+!- PARAM.in:  Example input file for BATSRUS --
+!refine project_B
+
+#COMPONENT
+IH
+
+#ECHO
+T
+
+#TIMEACCURATE           
+F  
+
+#PLOTFILENAME
+year                   NameMaxTimeUnit
+
+#SCHEME
+2
+Rusanov
+minmod
+
+#SAVERESTART
+T                       DoSaveRestart 
+1000                    DoSaveRestart 
+-1800.0                 dt
+
+#USERMODULE
+Global Heliosphere              NameUserModule
+2.0             VersionUserModule
+
+#MULTIFLUID
+T
+
+#RESTART
+F
+
+#GRAVITY
+F                       UseGravity (rest of parameters read if true)
+0                       iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
+
+#BODY
+T                       UseBody (rest of parameters read if true)
+10.0                    rBody (user units)
+7.02E-2                  BodyNDim(1) (/cc) number density for inner boundary
+6.962E3                 BodyTDim(K)(1) temperature for inner boundary
+
+#PLANET
+NONE
+
+#IOUNITS
+USER
+
+#NORMALIZATION
+READ
+1.496400000000000E+11       No2SiUnitX
+4.704960839671357E+03       No2SiUnitU
+1.304628000000000E-23     No2SiUnitRho
+
+#USERFLAGS
+T                       UseUserInnerBcs
+F                       UseUserSource
+F                       UseUserPerturbation
+T                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+T                       UseUserWritePlot
+F                       UseUserAMR
+T                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#USERINPUTBEGIN --------------------------------------------------------
+
+#GLOBALHELIOSPHERE
+10.
+
+#SOLARWINDH
+7.02E-2                  SWH_rho_dim [n/cc] (default/unchanged)
+6.962E3                 SWH_T_dim [K] (default/unchanged)
+450.0                   SWH_Ux_dim [km/s] (default/unchanged)
+0.0                     SWH_Uy_dim [km/s] (default/unchanged)
+0.0                     SWH_Uz_dim [km/s] (default/unchanged)
+6.453E-02         SWH_Bx_dim [nT] (default/unchanged)
+0.0                     SWH_By_dim [nT] (default/unchanged)
+0.0                     SWH_Bz_dim [nT] (default/unchanged)
+
+#VLISW
+7.0E-2             VLISW_rho_dim [n/cc]        
+1.E4               VLISW_T_dim
+-25.0               VLISW_Ux_dim
+0.0                VLISW_Uy_dim (default/unchanged)
+0.0              VLISW_Uz_dim (default/unchanged)
+-0.127            VLISW_Bx_dim (default/unchanged)
+0.064            VLISW_By_dim (default/unchanged)
+-0.110             VLISW_Bz_dim (default/unchanged)
+
+#USERINPUTEND ----------------------------------------------------------
+
+#GAMMA
+1.666666666666          g
+
+#INNERBOUNDARY
+user
+
+#OUTERBOUNDARY
+outflow                    TypeBcOuter_E(East_) 
+user               TypeBcOuter_E(West_) 
+outflow               TypeBcOuter_E(South_) 
+outflow               TypeBcOuter_E(North_) 
+outflow               TypeBcOuter_E(Bot_) 
+outflow               TypeBcOuter_E(Top_) 
+
+#INCLUDE
+Param/OUTERHELIO/Grid
+
+#GRIDRESOLUTION
+35.937
+box
+0.0
+-600
+-600
+600
+600
+600
+
+#GRIDRESOLUTION
+17.969
+box
+153.0
+-340.0
+-340.0
+600.0
+340.0
+340.0
+
+#GRIDRESOLUTION
+8.984
+box
+109.0
+-200.0
+-200.0
+400.0
+200.0
+200.0
+
+#GRIDRESOLUTION
+4.492
+box
+59.64
+-136.0
+-136.0
+272.0
+136.0
+136.0
+
+#GRIDRESOLUTION
+2.246
+box
+71.31
+-85.0
+-85.0
+170.0
+85.0
+85.0
+
+#GRIDRESOLUTION
+1.123
+box
+20.00
+-42.0
+-42.0 
+68.0
+42.0
+42.0
+
+#GRIDRESOLUTION
+0.5
+box
+5.0
+-20.0
+-20.0
+20.0
+20.0
+20.0
+
+#GRIDRESOLUTION
+0.2
+box
+-5.0
+-10.0
+-10.0
+10.0
+10.0
+10.0
+
+#TIMESTEPPING
+2                       nStage (1 or 2)
+0.80                    CflExpl
+
+#DIVB
+T			UseDivbSource
+F			UseDivbDiffusion
+F			UseProjection
+F			UseConstrainB
+
+#PLOTDIR
+IO2
+
+#SAVELOGFILE
+.true.			Rest of parameters read if true
+MHD			log_form
+1000			dn_output(logfile_)
+-1.			output(logfile_) in sec. Read only if time accurate!
+RHO 			log_vars (variable to write) Read when variable form.
+4.0  10.0		R_log  !radii where flx is calc. Read if vars inc. flx.
+-1.
+
+
+#NONCONSERVATIVE
+T               UseNonConservative
+
+#CONSERVATIVECRITERIA
+1       nConservCrit1
+p       TypeConservCrit
+0.0001
+
+#SAVEPLOT
+1
+y=0 MHD tec
+10
+-1.0
+
+#STOP
+1500
+-1.0
+
+#RUN
+
+#SCHEME
+2
+Linde
+minmod
+
+#TIMEACCURATE
+T
+
+#SAVEPLOT
+1
+y=0 MHD tec
+500
+-1.0
+
+#STOP
+90000
+-1.0
+
+#END
