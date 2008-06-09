@@ -99,6 +99,7 @@ contains
     use EEE_ModGL98,  ONLY: set_parameters_GL98
     use EEE_ModTD99,  ONLY: set_parameters_TD99
     use EEE_ModArch,  ONLY: set_parameters_arch
+    use EEE_ModShearFlow, ONLY: set_parameters_shearflow
     implicit none
 
     character(len=*), intent(in) :: NameCommand
@@ -110,6 +111,8 @@ contains
        call set_parameters_GL98
     case("#ARCH")
        call set_parameters_arch
+    case("#SHEARFLOW")
+       call set_parameters_shearflow
     end select
 
   end subroutine EEE_set_parameters
@@ -167,6 +170,7 @@ contains
 
   subroutine EEE_get_state_BC(x_D,Rho,U_D,B_D,p,Time,n_step,iteration_number)
     use EEE_ModTD99
+    use EEE_ModShearFlow
     implicit none
 
     real, intent(in) :: x_D(3),Time
@@ -188,6 +192,14 @@ contains
        if(.not.DoBqField) U1_D=0.0
 
        Rho=Rho+Rho1; U_D=U_D+U1_D; B_D=B_D+B1_D
+    end if
+
+    if(UseShearFlow)then
+       U1_D = 0.0
+
+       call get_shearflow(x_D,U1_D)
+
+       U_D = U_D + U1_D
     end if
 
   end subroutine EEE_get_state_BC
