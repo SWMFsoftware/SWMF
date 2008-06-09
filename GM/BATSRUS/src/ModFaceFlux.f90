@@ -2701,8 +2701,8 @@ subroutine roe_solver(Flux_V)
   Flux_V  = 0.5*(FluxLeft_V + FluxRight_V - Area*Flux_V)
 
   ! Normal velocity and maximum wave speed
-  Unormal_I(1) = Area*UnH
-  CmaxDt       = Area*(abs(UnH) + CfH)
+  Unormal_I = Area*UnH
+  CmaxDt    = Area*(abs(UnH) + CfH)
 
 end subroutine roe_solver
 !^CFG END ROEFLUX
