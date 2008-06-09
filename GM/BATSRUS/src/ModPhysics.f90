@@ -21,14 +21,15 @@ module ModPhysics
   real:: AverageIonCharge         = 1.0
   real:: ElectronTemperatureRatio = 0.0
 
-  ! thermal/total energy ratio limits for correctP  !^CFG IF PROJECTION
-  real    :: Pratio_lo=0.01, Pratio_hi=0.1          !^CFG IF PROJECTION
+  ! thermal/total energy ratio limits for correctP
+  real    :: Pratio_lo=0.01, Pratio_hi=0.1
 
   ! speed of light, inverse, square, inverse of square, boris correction
-  real :: Clight, InvClight, C2light, Inv_C2light, Boris_Clight_Factor   
+  real :: Clight, InvClight, C2light, Inv_C2light
+  real :: Boris_Clight_Factor = 1.0
 
-  ! the dipole moment for body2                    !^CFG IF SECONDBODY
-  real :: BdpBody2_D(3)=0.0, BdpDimBody2_D(3)=0.0  !^CFG IF SECONDBODY
+  ! the dipole moment for body2
+  real :: BdpBody2_D(3)=0.0, BdpDimBody2_D(3)=0.0
 
   !\
   ! Dipole and multipole expansion terms NOW ONLY IH SHOULD USE THESE
@@ -105,7 +106,6 @@ module ModPhysics
   ! Density ratio of major and minor ions/neutrals (e.g. in the solar wind)
   real :: LowDensityRatio = 0.0001
 
-  !^CFG IF SECONDBODY BEGIN
   !\
   ! General variables for the second body
   !/
@@ -113,7 +113,6 @@ module ModPhysics
   real :: xBody2=0.0, yBody2=0.0, zBody2=0.0
   real :: RhoDimBody2=0.0, tDimBody2=0.0, RhoBody2=0.0, pBody2=0.0
   real :: gBody2=0.0
-  !^CFG END SECONDBODY
 
   ! Variables for two-state shock tube problems
   logical :: UseShockTube = .false.
