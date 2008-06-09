@@ -334,10 +334,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('TypeBcTop'   ,TypeBc_I(top_))    
      case("#INNERBOUNDARY")
         call read_var('TypeBcInner',TypeBc_I(body1_))
-        !                                              ^CFG IF SECONDBODY BEGIN
-        if(UseBody2) &                                      
-             call read_var('TypeBcBody2',TypeBc_I(body2_)) 
-        !                                              ^CFG END SECONDBODY
+        if(UseBody2) call read_var('TypeBcBody2',TypeBc_I(body2_)) 
      case("#TIMESTEPPING")
         call read_var('nStage',nSTAGE)
         call read_var('CflExpl',Cfl)
@@ -1207,16 +1204,14 @@ subroutine MH_set_parameters(TypeAction)
      case('#TVDRESCHANGE')
         call read_var('UseTvdResChange',UseTvdResChange)
         if(UseTvdResChange) UseAccurateResChange=.false.
-     case("#BORIS")
-        !                                              ^CFG IF BORISCORR BEGIN
+     case("#BORIS")                                  !^CFG IF BORISCORR BEGIN
         call read_var('UseBorisCorrection', boris_correction)   
         if(boris_correction) then
-           call read_var('BorisClightFactor', boris_cLIGHT_factor)
-           UseBorisSimple=.false.     !^CFG IF SIMPLEBORIS
+           call read_var('BorisClightFactor', boris_cLight_factor)
+           UseBorisSimple = .false.
         else
            boris_cLIGHT_factor = 1.0
-        end if
-        !                                              ^CFG END BORISCORR
+        end if                                       !^CFG END BORISCORR
      case("#BORISSIMPLE")                            !^CFG IF SIMPLEBORIS BEGIN
         call read_var('UseBorisSimple',UseBorisSimple)
         if(UseBorisSimple) then
@@ -2006,8 +2001,6 @@ contains
     percent_max_rho(2) = 400.
     percent_max_p(1)   = 40.
     percent_max_p(2)   = 400.
-
-    boris_cLIGHT_factor = 1.0         
 
     proc_dims(1) = 1
     proc_dims(2) = 1  
