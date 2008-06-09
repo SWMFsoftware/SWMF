@@ -8,7 +8,8 @@ use strict;
 
 &print_help if $Help or not @ARGV;
 
-my $ERROR = "ERROR in XmlToF90.pl:";
+my $ERROR   = "ERROR in XmlToF90.pl:";
+my $WARNING = "WARNING in XmlToF90.pl:";
 
 die "$ERROR cannot use -f and -c switches together!\n" if $Force and $Commands;
 die "$ERROR input file argument is missing!\n" unless @ARGV;
@@ -26,11 +27,14 @@ my $Update = ($OutputFile and -f $OutputFile and not $Force);
 
 my $NewFile = ($OutputFile and not ($Update or $Commands));
 
-my $Indent     = (' ' x 5);  # initial indentation for case statements
+my $Indent     = (' ' x 7);  # initial indentation for case statements
 my $Indent1    = (' ' x 3);  # incremental indentation
 my $IndentCont = (' ' x 5);  # indentation for continuation lines
 
-my $F90;                # F90 source code written by process_xml
+my $SrcCode;            # F90 code produced by the script
+my $SrcDecl;            # Declaration of command parameters
+my $SrcIndex;           # Declaration of indexes used in loops
+my $SrcCase;            # The case statements reading in the parameters
 my $iPart;              # part index for multi-part parameters
 my $ForeachName;        # name of the index variable in a foreach loop
 my $ForeachValue;       # value of the index variable in a foreach loop
@@ -39,99 +43,82 @@ my %DefaultValue;       # Hash for default values
 
 # put in UseStrict
 $VariableType{"UseStrict"} = "logical";
-$DefaultValue{"UseStrict"} = "F";
+$DefaultValue{"UseStrict"} = "T";
 
 my $Xml = &XmlRead($Input); # XML tree data structure created from XML text
 
 &process_xml($Xml);
 
 if($NewFile){
-    my $Subroutine = $OutputFile;
-    $Subroutine = $1 if $Subroutine =~ /\/([^\/]+)$/;  # remove path
-    $Subroutine =~ s/\..*$//;                          # remove extension
+    my $Module = $OutputFile;
+    $Module = $1 if $Module =~ /\/([^\/]+)$/;  # remove path
+    $Module =~ s/\..*$//;                          # remove extension
 
-    # replace variables with their default values if possible
-    foreach my $Variable (keys %DefaultValue){
-	$_ = $DefaultValue{$Variable};
-	while(/\$(\w+)/ and $DefaultValue{$1}){
-	    s/\$(\w+)/$DefaultValue{$1}/;
-	    $DefaultValue{$Variable} = $_;
-	}
-    }
-
-    my $Declarations;
-    foreach my $Variable (sort keys %VariableType){
-	my $Type  = $VariableType{$Variable};
-	my $Value = $DefaultValue{$Variable};
-
-	$Type =~ s/strings?/character(len=100)/;
-
-	# Fix value
-	$Value =~ s/T/.true./ if $Type eq "logical";
-	$Value =~ s/F/.false./ if $Type eq "logical";
-	$Value =  "'$Value'" if $Type =~ /character/ and length($Value);
-	$Value .= ".0" if $Type eq "real" and $Value =~ /^\d+$/;
-
-	# Add declaration
-	if(length($Value)){
-	    $Declarations .= "  $Type :: $Variable = $Value\n";
-	}else{
-	    $Declarations .= "  $Type :: $Variable\n";
-	}
-    }
-    $F90 = 
-"subroutine $Subroutine
+    $SrcCode = 
+"module $Module
 
   use ModReadParam, ONLY: i_session_read, read_line, read_command, read_var
   use ModUtilities, ONLY: split_string
 
   implicit none
 
-  integer :: iSession
-  character (len=100) :: NameCommand
-  character(len=*), parameter:: NameSub = '$Subroutine'
+  character(len=*), parameter:: NameMod = '$Module'
 
-$Declarations
-
-  !---------------------------------------------------------------------------
-  iSession = i_session_read()
-  do
-     if(.not.read_line() ) EXIT
-     if(.not.read_command(NameCommand)) CYCLE
-     select case(NameCommand)
-$F90
-     case default
-        !if(iProc==0) then
-        write(*,*) NameSub // ' WARNING: unknown command ' // &
-             trim(NameCommand),' !'
-        if(UseStrict)call CON_stop('Correct PARAM.in!')
-        !end if
-     end select
-  end do
+$SrcDecl
 
 contains
 
-  logical function is_first_session()
-    is_first_session = iSession == 1
-    if(iSession > 1)then
-       ! if(iProc==0) then
-       write(*,*) NameSub // ' WARNING: command ',trim(NameCommand), &
-            ' can be used in first session only!'
-       if(UseStrict)call CON_stop('Correct PARAM.in!')
-       ! end if
-    end if
-  end function is_first_session
+  subroutine set_parameters
 
-end subroutine $Subroutine
+    character (len=100) :: NameCommand, StringPart_I(100)
+    integer :: iSession, nStringPart
+    logical :: UseStrict
+$SrcIndex
+
+    character(len=*), parameter:: NameSub = NameMod//'::set_parameters'
+    !-------------------------------------------------------------------------
+    iSession = i_session_read()
+    do
+       if(.not.read_line() ) EXIT
+       if(.not.read_command(NameCommand)) CYCLE
+       select case(NameCommand)
+$SrcCase
+       case default
+          !if(iProc==0) then
+          write(*,*) NameSub // ' WARNING: unknown command ' // &
+               trim(NameCommand),' !'
+          if(UseStrict)call CON_stop('Correct PARAM.in!')
+          !end if
+       end select
+    end do
+
+  contains
+
+    logical function is_first_session()
+      is_first_session = iSession == 1
+      if(iSession > 1)then
+         ! if(iProc==0) then
+         write(*,*) NameSub // ' WARNING: command ',trim(NameCommand), &
+              ' can be used in first session only!'
+         if(UseStrict)call CON_stop('Correct PARAM.in!')
+         ! end if
+      end if
+    end function is_first_session
+
+  end subroutine set_parameters
+
+end module $Module
 ";
+}else{
+    $SrcCode = "$SrcDecl"."  !".("-" x 75).$SrcCase;
 }
 if($OutputFile){
     open(OUT, ">$OutputFile") or 
 	die "$ERROR could not open output file $OutputFile\n";
-    print OUT $F90;
+    print OUT $SrcCode;
     close(OUT);
 }else{
-    print $F90;
+    print $SrcCode;
 }
 
 exit 0;
@@ -152,7 +139,11 @@ sub process_xml{
 	if($name eq 'commandlist'){
 	    &process_xml($element->{content});
 	}elsif($name eq 'commandgroup'){
-	    $F90 .= "\n!!! $element->{attrib}->{name}\n";
+	    my $Name = $element->{attrib}->{name};
+	    # Remove previous command comment if there were no parameters
+	    $SrcDecl =~ s/  ! \"\#\w+\"\n$//;
+	    $SrcDecl .= "\n  ! >>> $Name <<<\n";
+	    $SrcCase .= "\n".$Indent."! >>> $Name <<<\n\n";
 	    &process_xml($element->{content});
 	}elsif($name eq 'command'){
 	    my $Attrib = $element->{attrib};
@@ -161,11 +152,15 @@ sub process_xml{
 	    foreach my $Alias (split ",", $Attrib->{alias}){
 		$Name .= ", \"\#$Alias\"";
 	    }
-	    $F90 .= $Indent."case($Name)\n";
+	    # Remove previous command comment if there were no parameters
+	    $SrcDecl =~ s/  ! \"\#\w+\"\n$//;
+	    # Add new comment
+	    $SrcDecl .= "  ! $Name\n";
+	    $SrcCase .= $Indent."case($Name)\n";
 	    $Indent .= $Indent1;
 	    my $If = $Attrib->{if};
 	    if($If =~ /IsFirstSession/){
-		$F90 .= $Indent."if(.not.is_first_session())CYCLE\n";
+		$SrcCase .= $Indent."if(.not.is_first_session())CYCLE\n";
 	    }
 	    &process_xml($element->{content});
 	    $Indent =~ s/$Indent1//;
@@ -181,50 +176,51 @@ sub process_xml{
 		$Type = "character(len=$Length)" if $Length;
 	    }
 
-	    # Store variable name and type
-	    $VariableType{$Name} = $Type;
-	    $DefaultValue{$Name} = $Attrib->{default};;
+	    # Store variable
+	    &add_var($Name, $Type, $Attrib->{default});
 
 	    # Create line
-	    $F90 .= $Indent."if($If) &\n".$IndentCont if $If;
-	    $F90 .= $Indent."call read_var('$Name', $Name)\n";
+	    $SrcCase .= $Indent."if($If) &\n".$IndentCont if $If;
+	    $SrcCase .= $Indent."call read_var('$Name', $Name)\n";
 
-	    $F90 =~ s/\)\n$/, IsUpperCase=.true.)\n/ if $Case eq "upper";
-	    $F90 =~ s/\)\n$/, IsLowerCase=.true.)\n/ if $Case eq "lower";
+	    $SrcCase =~ s/\)\n$/, IsUpperCase=.true.)\n/ if $Case eq "upper";
+	    $SrcCase =~ s/\)\n$/, IsLowerCase=.true.)\n/ if $Case eq "lower";
 
 
 	    if($Type eq "strings"){
 		my $MaxPart = $Attrib -> {max};
-		$VariableType{"nStringPart"} = "integer";
-		$VariableType{"StringPart_I(100)"} = "string";
-		$F90 .= $Indent . "call split_string" . 
+		$SrcCase .= $Indent . "call split_string" . 
 		    "($Name, $MaxPart, StringPart_I, nStringPart)\n";
 		$iPart = 0;
 		&process_xml($element->{content});
 	    }
 	}elsif($name eq 'part'){
 	    my $Name = $element->{attrib}->{name};
-	    $VariableType{$Name} = "string";
+	    &add_var($Name, "string");
 	    $iPart++;
-	    $F90 .= $Indent."$Name = StringPart_I($iPart)\n";
+	    $SrcCase .= $Indent."$Name = StringPart_I($iPart)\n";
 	}elsif($name eq 'if'){
 	    my $Expr = perl_to_f90($element->{attrib}->{expr});
-	    $F90 .= $Indent."if($Expr)then\n";
+	    $SrcCase .= $Indent."if($Expr)then\n";
 	    $Indent .= $Indent1;
 	    &process_xml($element->{content});
 	    $Indent =~ s/$Indent1//;
-	    $F90 .= $Indent."end if\n";
+	    $SrcCase .= $Indent."end if\n";
 	}elsif($name eq 'for'){
 	    my $Attrib = $element->{attrib};
 	    my $From  =  perl_to_f90($Attrib->{from});
 	    my $To    =  perl_to_f90($Attrib->{to});
 	    my $Index = (perl_to_f90($Attrib->{name}) or "i");
-	    $VariableType{$Index} = "integer";
-	    $F90 .= $Indent."do $Index = $From, $To\n";
+
+	    # Declare index variable
+	    $SrcIndex .= "    integer :: $Index\n" 
+		unless $SrcIndex =~ /integer :: $Index\b/i;
+
+	    $SrcCase .= $Indent."do $Index = $From, $To\n";
 	    $Indent .= $Indent1;
 	    &process_xml($element->{content});
 	    $Indent =~ s/$Indent1//;
-	    $F90 .= $Indent."end do\n";
+	    $SrcCase .= $Indent."end do\n";
 	}elsif($name eq 'foreach'){
 	    my $Attrib = $element->{attrib};
 	    $ForeachName = $Attrib->{name};
@@ -270,6 +266,64 @@ sub perl_to_f90{
     s/\\b//g;
 
     return $_;
+}
+
+###############################################################################
+
+sub add_var{
+
+    my $Name  = shift;
+    my $Type  = shift;
+    my $Value = shift;
+
+    my $name = lc($Name); # F90 is not case sensitive
+
+    # Check if variable name has already occured or not
+    my $Type2 = $VariableType{$name};
+    if($Type2){
+	# Check if types agree
+	if($Type ne $Type2){
+	    warn "$WARNING: variable $Name has types $Type and $Type2\n";
+	    $SrcDecl .= "!!! $Type :: $Name was declared above with $Type2\n";
+	    return;
+	}
+	# Check if default values agree
+	my $Value2 = $DefaultValue{$name};
+	if(length($Value) and length($Value2) and ($Value ne $Value2)){
+	    warn "$WARNING: variable $Name has default values ".
+		"$Value and $Value2\n";
+	    $SrcDecl .= "!!! $Type :: $Name = $Value ".
+		"was declared above with value $Value2\n";
+	    return;
+	}
+	$SrcDecl .= "  ! $Type :: $Name has been declared above\n";
+	return;
+    }
+
+    # replace variables with their default values if possible
+    while($Value =~ /\$(\w+)/){
+	my $Value2 = $DefaultValue{lc($1)};
+	$Value =~ s/\$(\w+)/$Value2/ if $Value2;
+    }
+
+    # Store variable
+    $VariableType{$name} = $Type;
+    $DefaultValue{$name} = $Value;
+
+    $Type =~ s/strings?/character(len=100)/;
+
+    # Fix value
+    $Value =~ s/T/.true./ if $Type eq "logical";
+    $Value =~ s/F/.false./ if $Type eq "logical";
+    $Value =  "'$Value'" if $Type =~ /character/ and length($Value);
+    $Value .= ".0" if $Type eq "real" and $Value =~ /^\d+$/;
+
+    # Add declaration
+    if(length($Value)){
+	$SrcDecl .= "  $Type :: $Name = $Value\n";
+    }else{
+	$SrcDecl .= "  $Type :: $Name\n";
+    }
 }
 
 ###############################################################################
