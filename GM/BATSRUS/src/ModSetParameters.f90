@@ -30,9 +30,9 @@ subroutine MH_set_parameters(TypeAction)
   use ModCoordTransform,ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z
   use ModReadParam
   use ModMPCells,       ONLY: iCFExchangeType,DoOneCoarserLayer
-  use ModFaceValue,     ONLY: UseTvdResChange, UseAccurateResChange, &
-       DoLimitMomentum, &                              !^CFG IF BORISCORR
-       BetaLimiter, TypeLimiter, UseLogRhoLimiter, UseLogPLimiter
+  use ModFaceValue,     ONLY: &
+       UseTvdResChange, UseAccurateResChange, DoLimitMomentum, BetaLimiter, &
+       TypeLimiter, UseLogRhoLimiter, UseLogPLimiter
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
   use ModUser,          ONLY: user_read_inputs, user_init_session, &
@@ -1209,9 +1209,9 @@ subroutine MH_set_parameters(TypeAction)
         if(UseTvdResChange) UseAccurateResChange=.false.
      case("#BORIS")
         !                                              ^CFG IF BORISCORR BEGIN
-        call read_var('UseBorisCorrection',boris_correction)   
+        call read_var('UseBorisCorrection', boris_correction)   
         if(boris_correction) then
-           call read_var('BorisClightFactor',boris_cLIGHT_factor)
+           call read_var('BorisClightFactor', boris_cLIGHT_factor)
            UseBorisSimple=.false.     !^CFG IF SIMPLEBORIS
         else
            boris_cLIGHT_factor = 1.0
@@ -2007,8 +2007,6 @@ contains
     percent_max_p(1)   = 40.
     percent_max_p(2)   = 400.
 
-    UseBorisSimple = .false.          !^CFG IF SIMPLEBORIS
-    boris_correction = .false.        !^CFG IF BORISCORR
     boris_cLIGHT_factor = 1.0         
 
     proc_dims(1) = 1
@@ -2588,10 +2586,9 @@ contains
     MinBoundary=max(MinBoundary,body2_)
     DoOneCoarserLayer = .not. (nOrder==2 .and. &
          (UseTvdResChange .or. UseAccurateResChange))
-    DoLimitMomentum = &                                !^CFG IF BORISCORR
-         boris_correction .and. DoOneCoarserLayer      !^CFG IF BORISCORR
+    DoLimitMomentum = boris_correction .and. DoOneCoarserLayer
 
-    !!!
+    !!! momentum limiting fais for multiion: to be debugged
     if(UseMultiIon)DoLimitMomentum = .false.
     !!!
 
