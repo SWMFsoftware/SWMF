@@ -35,9 +35,9 @@ Module ModMain
   !/
   integer :: n_step, nOrder, nStage, iteration_number=0
   real :: dt, DtFixed, DtFixedOrig, DtFixedDim, cfl, dt_BLK(nBLK)
-  logical :: time_accurate=.true.,           &
-       boris_correction, &                   !^CFG IF BORISCORR       
-       UseBorisSimple,   &                   !^CFG IF SIMPLEBORIS
+  logical :: time_accurate=.true., &
+       boris_correction=.false.,   &
+       UseBorisSimple=.false.,     &
        time_loop=.false.
 
   logical :: UseDtFixed
@@ -52,15 +52,15 @@ Module ModMain
   logical :: UseIe = .false.
   logical :: UsePw = .false.
 
-  logical :: UseIm = .false.                               !^CFG IF RCM BEGIN
+  logical :: UseIm = .false.
   logical :: DoCoupleImPressure = .true.
   logical :: DoCoupleImDensity  = .false.
   logical :: DoFixPolarRegion   = .false.
   logical :: DoImSatTrace       = .false.    
   real    :: rFixPolarRegion    = 5.0
-  real    :: TauCoupleIM = 20.0                            !^CFG END RCM
+  real    :: TauCoupleIM = 20.0
 
-  logical :: UseRaytrace=.false.                           !^CFG IF RAYTRACE
+  logical :: UseRaytrace = .false.
 
   !\
   ! Parameters for the B0 field
@@ -82,7 +82,7 @@ Module ModMain
 
   ! Logicals for bodies
   logical :: Body1    = .false.
-  logical :: UseBody2 = .false.         !^CFG IF SECONDBODY
+  logical :: UseBody2 = .false.
 
   !\
   ! Block AMR grid parameters
@@ -99,7 +99,7 @@ Module ModMain
   ! nBlockALL is total number of blocks used.
   
   integer :: nBlockMax, nBlock, nBlockALL
-  integer :: nBlockExplALL, nBlockImplALL        !^CFG IF IMPLICIT
+  integer :: nBlockExplALL, nBlockImplALL
 
   ! The index of the block currently being dealt with.
   integer :: GlobalBLK
@@ -139,9 +139,9 @@ Module ModMain
   ! How to deal with div B = 0
   !/
   logical :: UseDivbSource    = .true.
-  logical :: UseDivbDiffusion = .false. !^CFG IF DIVBDIFFUSE
-  logical :: UseProjection    = .false. !^CFG IF PROJECTION
-  logical :: UseConstrainB    = .false. !^CFG IF CONSTRAINB
+  logical :: UseDivbDiffusion = .false.
+  logical :: UseProjection    = .false.
+  logical :: UseConstrainB    = .false.
   logical :: UseB0Source
   logical :: UseHyperbolicDivb= .false.
   real    :: SpeedHypDim = -1.0, SpeedHyp = 1.0, SpeedHyp2 = 1.0
@@ -169,7 +169,6 @@ Module ModMain
   logical::UseCurlB0=.false.
   real::rCurrentFreeB0=-1.0
 
-  !^CFG IF DISSFLUX BEGIN
   ! Logical for adding heat conduction
   logical:: UseHeatFlux=.false.
   logical:: UseSpitzerForm=.false.
@@ -177,7 +176,6 @@ Module ModMain
   ! Logical for adding resistivity
   logical:: UseResistFlux=.false.
   logical:: UseAnomResist=.false.
-  !^CFG END DISSFLUX
 
   ! Logical and type for gravity
   logical :: UseGravity
