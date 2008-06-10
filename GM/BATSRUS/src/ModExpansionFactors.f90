@@ -1,7 +1,13 @@
 !^CFG COPYRIGHT UM 
 module ModExpansionFactors
+  use ModMpi
+  use ModIoUnit,   ONLY: io_unit_new
   use ModMagnetogram
   use ModConst
+
+  !Dependecies to be removed
+  use ModProcMH,   ONLY: iProc,nProc,iComm
+  use ModIO, ONLY: iUnitOut, write_prefix
   implicit none
   save
 

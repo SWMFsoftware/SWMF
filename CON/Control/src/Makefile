@@ -23,6 +23,7 @@ LIBSHARE   = ${LIBDIR}/libSHARE.a
 
 LIBTIMING      = ${LIBDIR}/libTIMING.a
 LIBINDICES     = ${LIBDIR}/libINDICES.a
+LIBMAGNETOGRAM = ${LIBDIR}/libMAGNETOGRAM.a
 LIBEMPIRICALEE = ${LIBDIR}/libEMPIRICALEE.a
 LIBEMPIRICALGM = ${LIBDIR}/libEMPIRICALGM.a
 LIBEMPIRICALIE = ${LIBDIR}/libEMPIRICALIE.a
@@ -119,6 +120,7 @@ EXEOBJECT = swmf.o
 # - SHAREDIR  : contains shared library               --> libSHARE.a
 # - TIMINGDIR : contains TIMING software library      --> libTIMING.a
 # - INDICESDIR: contains INDICES software library     --> libINDICES.a
+# - MAGNETOGRAMDIR: contains magnetogram software library    --> LibMAGNETOGRAM.a
 # - EMPIRICALDIR: contains empirical models software library --> libEMPIRICAL.a
 # - LIBRARYDIR: the CON "infrastructure"              --> libLIBRARY.a
 # - COUPLERDIR: the coupling toolkit                  --> libCOUPLER.a
@@ -131,6 +133,7 @@ LIB:
 	@cd ${SHAREDIR};             make LIB
 	@cd ${TIMINGDIR};            make LIB
 	@cd ${DATAREADINDICESDIR};   make LIB
+	@cd ${MAGNETOGRAMDIR};       make LIB
 	@cd ${EMPIRICALEEDIR};       make LIB
 	@cd ${EMPIRICALGMDIR};       make LIB
 	@cd ${EMPIRICALIEDIR};       make LIB
@@ -177,6 +180,7 @@ AR_X = ar -x
 ${SWMFLIB}:	${LIBSHARE} \
 		${LIBTIMING} \
 		${LIBINDICES} \
+		${LIBMAGNETOGRAM} \
 		${LIBEMPIRICALEE} \
 		${LIBEMPIRICALGM} \
 		${LIBEMPIRICALIE} \
@@ -201,6 +205,7 @@ ${SWMFLIB}:	${LIBSHARE} \
 	mkdir Tmp_SHARE;       cd Tmp_SHARE;       ${AR_X} ${LIBSHARE}
 	mkdir Tmp_TIMING;      cd Tmp_TIMING;      ${AR_X} ${LIBTIMING} 
 	mkdir Tmp_INDICES;     cd Tmp_INDICES;     ${AR_X} ${LIBINDICES} 
+	mkdir Tmp_MAGNETOGRAM; cd Tmp_MAGNETOGRAM; ${AR_X} ${LIBMAGNETOGRAM} 
 	mkdir Tmp_EMPIRICALEE; cd Tmp_EMPIRICALEE; ${AR_X} ${LIBEMPIRICALEE} 
 	mkdir Tmp_EMPIRICALGM; cd Tmp_EMPIRICALGM; ${AR_X} ${LIBEMPIRICALGM} 
 	mkdir Tmp_EMPIRICALIE; cd Tmp_EMPIRICALIE; ${AR_X} ${LIBEMPIRICALIE} 

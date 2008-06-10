@@ -11,4 +11,5 @@ SHAREDIR  = ${GMDIR}/share/Library/src
 
 TIMINGDIR = ${GMDIR}/util/TIMING/src
 #TIMINGDIR = ${GMDIR}/util/TIMING/srcEmpty
+MAGNETOGRAMDIR = ${GMDIR}/util/DATAREAD/srcMagnetogram
 EMPIRICALEEDIR = ${GMDIR}/util/EMPIRICAL/srcEE

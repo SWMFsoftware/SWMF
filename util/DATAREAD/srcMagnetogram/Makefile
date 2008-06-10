@@ -3,9 +3,12 @@
 include ../../../Makefile.def
 include ../../../Makefile.conf
 
-MY_LIB = ${LIBDIR}/libINDICES.a
+MY_LIB = ${LIBDIR}/libMAGNETOGRAM.a
 
 OBJECTS = \
+	ModMagnetogram.o
+
+OBJECTS_EXE= \
 	main.o \
 	ModMagHarmonics.o
 
@@ -17,8 +20,18 @@ HARMONICS:
 
 EXE = ${BINDIR}/HARMONICS.exe
 
-${EXE}: ${OBJECTS}
-	${LINK.f90} -o ${EXE} ${OBJECTS} ${Lflag1}
+${EXE}: ${OBJECTS_EXE}
+	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} ${Lflag1}
+
+LIB:
+	make ${MY_LIB}
+	@echo
+	@echo ${MY_LIB} has been brought up to date.
+	@echo
+
+${MY_LIB}: ${OBJECTS}
+	rm -f ${MY_LIB}
+	${AR} ${MY_LIB} ${OBJECTS}
 
 distclean: clean
 

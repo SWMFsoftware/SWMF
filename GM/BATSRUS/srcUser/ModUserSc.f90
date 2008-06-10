@@ -29,7 +29,7 @@ contains
     use ModProcMH,      ONLY: iProc
     use ModReadParam
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut
-    use ModMagnetogram, ONLY: read_magnetogram_file
+    use ModMagnetogram, ONLY: set_parameters_magnetogram
     use EEE_ModMain,    ONLY: EEE_set_parameters
     implicit none
 
@@ -46,12 +46,11 @@ contains
        select case(NameCommand)
        case("#PFSSM")
           call read_var('UseUserB0'  ,UseUserB0)
-          if (UseUserB0)then
-             call read_magnetogram_file
+          if(UseUserB0)then
+             call set_parameters_magnetogram
              call read_var('dt_UpdateB0',dt_UpdateB0)
              DoUpdateB0 = dt_updateb0 > 0.0
-          endif
-
+          end if
        case("#ARCH","#TD99FLUXROPE","#GL98FLUXROPE")
           call EEE_set_parameters(NameCommand)
        case("#EMPIRICALSW")
@@ -78,13 +77,31 @@ contains
   !============================================================================
 
   subroutine user_init_session
-    use ModPhysics,   ONLY: BodyNDim_I,BodyTDim_I,g
-    use EEE_ModMain,  ONLY: EEE_initialize
+    use ModIO,          ONLY: write_prefix, iUnitOut
+    use ModMagnetogram, ONLY: read_magnetogram_file
+    use ModMain,        ONLY: UseUserB0
+    use ModPhysics,     ONLY: BodyNDim_I,BodyTDim_I,g
+    use ModProcMH,      ONLY: iProc
+    use EEE_ModMain,    ONLY: EEE_initialize
     implicit none
     !--------------------------------------------------------------------------
+    if(iProc == 0)then
+       call write_prefix; write(iUnitOut,*) ''
+       call write_prefix; write(iUnitOut,*) 'user_init_session:'
+       call write_prefix; write(iUnitOut,*) ''
+    end if
+
+    if(UseUserB0) call read_magnetogram_file
+
     call set_empirical_model(trim(NameModel),BodyTDim_I(1))
 
     call EEE_initialize(BodyNDim_I(1),BodyTDim_I(1),g)
+
+    if(iProc == 0)then
+       call write_prefix; write(iUnitOut,*) ''
+       call write_prefix; write(iUnitOut,*) 'user_init_session finished'
+       call write_prefix; write(iUnitOut,*) ''
+    end if
 
   end subroutine user_init_session
 

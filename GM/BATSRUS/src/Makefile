@@ -4,7 +4,7 @@ SHELL =/bin/sh
 
 include ../Makefile.def
 
-SEARCH_EXTRA = -I${EMPIRICALEEDIR}
+SEARCH_EXTRA = -I${MAGNETOGRAMDIR} -I${EMPIRICALEEDIR}
 
 include ../Makefile.conf
 include Makefile.DEPEND
@@ -52,7 +52,6 @@ MODULES = \
 	ModSolarwind.o \
 	ModUserEmpty.o \
 	ModUser.o \
-	ModMagnetogram.o \
 	ModExpansionFactors.o \
 	${MOD1}	${MOD2}	${MOD3} ${MOD4} 
 
@@ -242,13 +241,14 @@ ${EXE}: ${OBJECTS_EXE}
 
 BATSRUS_general:
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} \
-		-L. -lBATSRUS -L${LIBDIR} -lEMPIRICALEE -lTIMING -lSHARE \
+		-L. -lBATSRUS -L${LIBDIR} -lMAGNETOGRAM -lEMPIRICALEE -lTIMING -lSHARE \
 		${LBLAS} ${Lflag1}
 
 BATSRUS_for_Darwin:
 	rm -rf Tmp_; mkdir Tmp_
 	cd Tmp_; \
 		ar -x ../${MY_LIB}; \
+		ar -x ${LIBDIR}/libMAGNETOGRAM.a; \
 		ar -x ${LIBDIR}/libEMPIRICALEE.a; \
 		ar -x ${LIBTIMING}; \
 		ar -x ${LIBSHARE}

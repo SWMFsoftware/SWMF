@@ -20,7 +20,8 @@ OBJECTS = \
 	ModRadioWaveImage.o\
 	ModRadioWaveRaytracing.o\
 
-SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I${EMPIRICALEEDIR} -I../src
+SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
+	-I${EMPIRICALEEDIR} -I../src
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
