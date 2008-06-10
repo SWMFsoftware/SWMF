@@ -115,6 +115,7 @@ subroutine update_check(iStage)
   use ModMpi
   use ModEnergy
   use ModMultiFluid, ONLY: IsMhd
+  use ModMultiIon,   ONLY: DoRestrictMultiIon, IsMultiIon_CB
 
   implicit none
 
@@ -141,8 +142,6 @@ subroutine update_check(iStage)
   logical :: DoTest, DoTestMe
   character(len=*), parameter:: NameSub = 'update_check'
   character(len=*), parameter:: format="(a,i5,a,f6.1,a,3es11.3)"
-
-  real :: Rho, RhoUx, p
 
   integer :: iError1=-1
   !-----------------------------------------------------------------------
@@ -174,15 +173,13 @@ subroutine update_check(iStage)
                     ! For sake of backward compatibility
                     if(iVar == P_) CYCLE
 
-                    if(nIonFluid > 1 .and. iVar > p_ .and. allocated(IsConserv_CB))then
-                       if(IsConserv_CB(i,j,k,iBlock))then
-                          Rho   = State_VGB(Rho_,i,j,k,iBlock)
-                          p     = State_VGB(p_,i,j,k,iBlock)
-                          RhoUx = State_VGB(RhoUx_,i,j,k,iBlock)
-
-                          if(RhoUx < 0.0 .and. RhoUx**2 > 4*g*p*Rho) CYCLE
-                       end if
+                    ! Do not check multi-ion variables in regions that are
+                    ! not truely multi-ion
+                    if(UseMultiIon .and. iVar>p_ .and. DoRestrictMultiIon)then
+                       if(.not.IsMultiIon_CB(i,j,k,iBlock)) CYCLE
                     end if
+
+                    ! Do not check minor species if not necessary
                     if(UseMultiSpecies .and. &
                          iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_ &
                          .and. StateOld_VCB(iVar,i,j,k,iBlock) &
@@ -785,7 +782,6 @@ subroutine select_conservative
   use ModMain
   use ModAdvance
   use ModGeometry
-  use ModPhysics, ONLY: g
   implicit none
 
   integer :: iBlock, iCrit, i, j, k
