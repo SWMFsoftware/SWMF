@@ -6,6 +6,7 @@ module ModUser
   use ModSize
   use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_,&
        MassSpecies_V,SpeciesFirst_,SpeciesLast_  
+  use ModPhysics, ONLY: BodyTDim_I
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -122,7 +123,7 @@ module ModUser
        em_=-1 ,&
        hv_=-2   
 
-  real :: body_Tn_dim = 1000.0!neutral temperature at the body
+!  real :: body_Tn_dim = 2000.0!neutral temperature at the body
   real :: kTn, kTi0, kTp0  !dimensionless temperature of neutral, &
                            !new created ions, plasma at the body
   real :: Te_new_dim=3000., KTe0 !temperature of new created electrons
@@ -878,29 +879,29 @@ contains
 
     case('solarmax')
 
-       RateDim_I(CO2_hv__CO2p_em_)=1.695e-6/0.72/0.72 !scale to Venus
-       RateDim_I(O_hv__Op_em_) = 6.346e-7/0.72/0.72
-       BodynDenNuSpDim_I(CO2_)= 2.5e12
-       BodynDenNuSpDim_I(O_  )= 7.0e10
-       HNuSpeciesDim_I(CO2_)=7.1e3
-       HNuSpeciesDim_I(O_  )=19.1e3
+       RateDim_I(CO2_hv__CO2p_em_)=1.695e-6/0.723/0.723/2.5 !scale to Venus
+       RateDim_I(O_hv__Op_em_) = 6.346e-7/0.723/0.723
+       BodynDenNuSpDim_I(CO2_)= 1.0e15
+       BodynDenNuSpDim_I(O_  )= 2.0e11
+       HNuSpeciesDim_I(CO2_)=17.0e3
+       HNuSpeciesDim_I(O_  )=5.5e3
               
        
     case('solarmin')   
 
-       RateDim_I(CO2_hv__CO2p_em_)=6.696e-7/0.72/0.72 !scale to Venus
-       RateDim_I(O_hv__Op_em_) = 2.44e-7/0.72/0.72
+       RateDim_I(CO2_hv__CO2p_em_)=6.696e-7/0.723/0.723/3.0 !scale to Venus
+       RateDim_I(O_hv__Op_em_) = 2.44e-7/0.723/0.723
        BodynDenNuSpDim_I(CO2_)=1.0e15 !neutral density in cm^-3
        BodynDenNuSpDim_I(O_  )=1.3e11
        HNuSpeciesDim_I(CO2_)=5.07e3  !scale height in meter
-       HNuSpeciesDim_I(O_  )=15.e3
+       HNuSpeciesDim_I(O_  )=15.5e3
 
     case default
        call stop_mpi('unknow solar condition='//SolarCond)
     end select
 
 
-    KTn = body_Tn_dim*Si2No_V(UnitTemperature_) !normalized body neutral temperature
+    KTn = bodyTDim_I(1)*Si2No_V(UnitTemperature_) !normalized body neutral temperature
     kTi0=kTn                                    !normalized body ion temperature
     kTp0=2.0*kTn                                !normalized body plasma temperature
     kTe0=Te_new_dim*Si2No_V(UnitTemperature_)   !normalized newly created electron temperature
