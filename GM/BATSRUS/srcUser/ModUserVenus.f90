@@ -883,8 +883,8 @@ contains
        RateDim_I(O_hv__Op_em_) = 6.346e-7/0.723/0.723
        BodynDenNuSpDim_I(CO2_)= 1.0e15
        BodynDenNuSpDim_I(O_  )= 2.0e11
-       HNuSpeciesDim_I(CO2_)=17.0e3
-       HNuSpeciesDim_I(O_  )=5.5e3
+       HNuSpeciesDim_I(CO2_)=5.5e3
+       HNuSpeciesDim_I(O_  )=17.0e3
               
        
     case('solarmin')   
@@ -1375,6 +1375,7 @@ contains
     else
        oktest=.false.; oktest_me=.false.
     end if
+    oktest_me=.false.
 
     !\
     ! Dimensionalize:: Eta* is in units of [m^2/s]
@@ -1393,18 +1394,24 @@ contains
        Te_dim= State_VGB(p_,i,j,k,iBlock)/(totalNumRho+1.0e-8)&
             *No2Si_V(UnitTemperature_)/cTwo
        
-       loc_c(:)=1.5e17* sqrt(Te_dim)
-       
+       loc_c(:)=4.243e-4* sqrt(Te_dim)  
+       !mu_en=1.5e-17*N(cm^-3)*Te^(1/2)
+       !eta = me*mu_en/mu0/e^2/n
+       !1.5e-17*me/mu0/e^2 = 4.243e-4
+       !eta = loc *N(cm^3)/n(cm^3)
+
        NumDenNeutral_V= nDenNuSpecies_CBI(i,j,k,iBlock,1:3)
        
-       NumDenNeutral_V = max(0.0, NumDenNeutral_V)*Io2No_V(UnitN_)
+       NumDenNeutral_V = max(0.0, NumDenNeutral_V)
 
-       loc_c(:)=loc_c(:)*No2Io_V(UnitN_)/1.0e8
        Eta_G(i,j,k) = Eta0* &
             sum(loc_c(:)*NumDenNeutral_V(1:3))/&
-            (totalNumRho+1.0e-8)*Io2No_V(unitN_)
+            (totalNumRho+1.0e-8)
 
-       if(oktest_me.and.itest==i.and.jtest==j.and.ktest==k)then
+!       if(iProc==PROCtest .and. iBlock == BlkTest.and.&
+
+       if(oktest_me.and. &
+            itest==i.and.jtest==j.and.ktest==k)then
           write(*,*)'loc_c=', loc_c
           write(*,*)'Te_dim=', Te_dim
           write(*,*)'TotalNumRho=',TotalNumRho
