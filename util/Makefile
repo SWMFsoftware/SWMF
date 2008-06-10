@@ -1,5 +1,6 @@
 INSTALLFILE = \
 	DATAREAD/srcIndices/Makefile.DEPEND \
+	EMPIRICAL/srcEE/Makefile.DEPEND \
 	EMPIRICAL/srcIE/Makefile.DEPEND \
 	EMPIRICAL/srcUA/Makefile.RULES \
 	CRASH/src/Makefile.DEPEND

@@ -30,7 +30,6 @@ contains
     use ModReadParam
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut
     use ModMagnetogram, ONLY: set_parameters_magnetogram
-    use EEE_ModMain,    ONLY: EEE_set_parameters
     implicit none
 
     character (len=100) :: NameCommand
@@ -82,7 +81,6 @@ contains
     use ModMain,        ONLY: UseUserB0
     use ModPhysics,     ONLY: BodyNDim_I,BodyTDim_I,g
     use ModProcMH,      ONLY: iProc
-    use EEE_ModMain,    ONLY: EEE_initialize
     implicit none
     !--------------------------------------------------------------------------
     if(iProc == 0)then
@@ -118,7 +116,6 @@ contains
     use ModNumConst,   ONLY: cTolerance,cTiny
     use ModFaceBc, ONLY: FaceCoords_D, VarsTrueFace_V, TimeBc, &
          iFace, jFace, kFace, iSide, iBlockBc
-    use EEE_ModMain,   ONLY: EEE_get_state_BC
     implicit none
 
     real, intent(out):: VarsGhostFace_V(nVar)
@@ -272,7 +269,6 @@ contains
     use ModPhysics,   ONLY: Si2No_V,UnitU_,UnitRho_,UnitP_,UnitB_
     use ModGeometry
     use ModEnergy,    ONLY: calc_energy_cell
-    use EEE_ModMain,  ONLY: EEE_get_state_init
     implicit none
 
     integer :: i,j,k,iBLK
@@ -376,7 +372,6 @@ contains
   subroutine user_get_b0(xInput,yInput,zInput,B0_D)
     use ModPhysics,     ONLY: Io2No_V,Si2No_V,UnitB_
     use ModMagnetogram, ONLY: get_magnetogram_field
-    use EEE_ModMain,    ONLY: EEE_get_B0
     implicit none
 
     real, intent(in):: xInput,yInput,zInput

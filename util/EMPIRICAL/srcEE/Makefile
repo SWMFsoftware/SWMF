@@ -1,11 +1,14 @@
 #^CFG COPYRIGHT UM
 
 include ../../../Makefile.def
+
+SEARCH_EXTRA = -I${MAGNETOGRAMDIR}
+
 include ../../../Makefile.conf
 
 MY_LIB = ${LIBDIR}/libEMPIRICALEE.a
 
-#include Makefile.DEPEND
+include Makefile.DEPEND
 #include Makefile.RULES
 
 OBJECTS = \
@@ -14,9 +17,12 @@ OBJECTS = \
 	EEE_ModGL98.o \
 	EEE_ModArch.o \
 	EEE_ModShearFlow.o \
-	EEE_ModMain.o
+	EEE_main.o
 
-LIB:
+DEPEND:
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
+
+LIB:	DEPEND
 	make ${MY_LIB}
 	@echo
 	@echo ${MY_LIB} has been brought up to date.
@@ -27,3 +33,4 @@ ${MY_LIB}: ${OBJECTS}
 	${AR} ${MY_LIB} ${OBJECTS}
 
 distclean: clean
+	rm -f Makefile.DEPEND
