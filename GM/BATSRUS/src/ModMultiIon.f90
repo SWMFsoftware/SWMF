@@ -13,13 +13,75 @@ module ModMultiIon
 
   private
 
+  ! Public methods and variables
+  public:: multi_ion_set_parameters
+  public:: multi_ion_set_restrict
   public:: multi_ion_sources
   public:: multi_ion_init_point_impl
-  real, public  :: CollisionCoefDim = -1.0
 
+  logical, public :: DoRestrictMultiIon = .false.
+  logical, public, allocatable:: IsMultiIon_CB(:,:,:,:)
+
+  ! Local variables
+  real :: CollisionCoefDim = -1.0
   real :: CollisionCoef = -1.0
+  real :: MachNumberMultiIon = 0.0
+  real :: ParabolaWidthMultiIon = 0.0
 
 contains
+
+  !===========================================================================
+  subroutine multi_ion_set_parameters(NameCommand)
+    use ModSize, ONLY: nI, nJ, nK, MaxBlock
+    use ModPhysics, ONLY: LowDensityRatio
+    use ModReadParam, ONLY: read_var
+
+    character(len=*), intent(in):: NameCommand
+    !------------------------------------------------------------------------
+    select case(NameCommand)
+    case("#MULTIION")
+       call read_var('DoRestrictMultiIon', DoRestrictMultiIon)
+       if(DoRestrictMultiIon)then
+          call read_var('MachNumberMultiIon',    MachNumberMultiIon)
+          call read_var('ParabolaWidthMultiIon', ParabolaWidthMultiIon)
+          call read_var('LowDensityRatio',       LowDensityRatio)
+       end if
+    case("#COLLISION")
+       call read_var('CollisionCoefDim',CollisionCoefDim)
+    end select
+
+    if(DoRestrictMultiIon .and. .not.allocated(IsMultiIon_CB)) &
+         allocate(IsMultiIon_CB(nI,nJ,nK,MaxBlock))
+
+  end subroutine multi_ion_set_parameters
+
+  !===========================================================================
+
+  subroutine multi_ion_set_restrict(iBlock)
+
+    use ModSize,    ONLY: nI, nJ, nK, MaxBlock
+    use ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, p_
+    use ModPhysics, ONLY: g
+    use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK
+
+    integer, intent(in) :: iBlock
+
+    real    :: Rho, p, RhoUx
+    integer :: i, j, k
+    !----------------------------------------------------------------------
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       ! Check if we are in the solar wind
+       Rho   = State_VGB(Rho_,i,j,k,iBlock)
+       p     = State_VGB(p_,i,j,k,iBlock)
+       RhoUx = State_VGB(RhoUx_,i,j,k,iBlock)
+          
+       IsMultiIon_CB(i,j,k,iBlock) = .not. &
+            (RhoUx < 0.0 .and. RhoUx**2 > MachNumberMultiIon*g*p*Rho &
+            .and. y_BLK(i,j,k,iBlock)**2+ z_BLK(i,j,k,iBlock) < &
+            ParabolaWidthMultiIon * x_BLK(i,j,k,iBlock))
+    end do; end do; end do
+  
+  end subroutine multi_ion_set_restrict
   !===========================================================================
   subroutine multi_ion_sources
 
