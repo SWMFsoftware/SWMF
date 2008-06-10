@@ -10,7 +10,8 @@ subroutine update_states_MHD(iStage,iBLK)
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B, &
        update_point_implicit
   use ModUser, ONLY: user_calc_sources, user_init_point_implicit
-  use ModMultiIon, ONLY: multi_ion_sources, multi_ion_init_point_impl
+  use ModMultiIon, ONLY: multi_ion_sources, multi_ion_init_point_impl, &
+       multi_ion_set_restrict, DoRestrictMultiIon, IsMultiIon_CB
   use ModEnergy
 
   implicit none
@@ -25,7 +26,7 @@ subroutine update_states_MHD(iStage,iBLK)
        Rho,RhoInv,ECorr,p
   real:: DtFactor
   real:: DtLocal
-  logical :: IsSolarwind
+  logical :: IsMultiIon
   logical :: oktest, oktest_me
   !--------------------------------------------------------------------------
   if(iBLK==BLKtest .and. iProc==PROCtest)then
@@ -65,6 +66,8 @@ subroutine update_states_MHD(iStage,iBLK)
           + Flux_VZ(:,i,j,k) - Flux_VZ(:,i,j,k+1) )) 
   end do; end do; end do
 
+  if(UseMultiIon .and. DoRestrictMultiIon)call multi_ion_set_restrict(iBlk)
+
   call update_explicit
 
   ! Add point implicit user or multi-ion source terms
@@ -81,17 +84,10 @@ subroutine update_states_MHD(iStage,iBLK)
   if(UseMultiIon .and. IsMhd)then
      ! Distribute total conserative variables among the ion fluids
      do k=1,nK; do j=1,nJ; do i=1,nI
-        ! Check if we are in the solar wind
-        IsSolarwind = .false.
-        if(allocated(IsConserv_CB)) IsSolarwind = IsConserv_CB(i,j,k,iBlk)
-        if(IsSolarwind)then
-           Rho   = State_VGB(Rho_,i,j,k,iBlk)
-           p     = State_VGB(p_,i,j,k,iBlk)
-           RhoUx = State_VGB(RhoUx_,i,j,k,iBlk)
-           
-           IsSolarwind = RhoUx < 0.0 .and. RhoUx**2 > 4*g*p*Rho
-        end if
-        if(IsSolarwind)then
+        ! Check if we are in a region with multiple ions or not
+        IsMultiIon = .true.
+        if(DoRestrictMultiIon)IsMultiIon = IsMultiIon_CB(i,j,k,iBlk)
+        if(.not. IsMultiIon)then
            ! Put most of the stuff into the first ion fluid
            State_VGB(iRhoIon_I(1),i,j,k,iBlk) = &
                 Rho*(1.0 - LowDensityRatio*(IonLast_ - IonFirst_))
