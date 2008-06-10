@@ -1,4 +1,4 @@
-module ModStatSum
+ module ModStatSum
   use ModIonizPotential
   use ModAtomicMass,ONLY : nZMax
   use ModConst
@@ -12,8 +12,19 @@ module ModStatSum
   real,dimension(1:nZMax) :: IonizPotential_I
   real,dimension(0:nZMax) :: Population_I, StatSumTermLog_I
 
-
+  real,parameter :: cBoltzmannEVInv = cEV/cBoltzmann !Inverse of the Boltzmann constant in [K/eV]
+  real,dimension(nZMax) :: LogN_I
+  real :: C0 ! 2/(Lambda^3)
 Contains
+  !=========================================================================
+  !Calculates the natural logarithms of the first nZMax integers
+  subroutine mod_init
+    integer:: iZ  !Used for loops
+    real   :: DeBroglie
+    LogN_I = (/(log(real(iZ)), iZ = 1,nZMax)/)
+    DeBroglie=sqrt(cTwoPi*(cElectronMass/cPlankH)*(cBoltzmann/cPlankH))
+    C0 = cTwo*DeBroglie**3 ! 2/(Lambda^3)
+  end subroutine mod_init
   !Set the element and its Ionization Potentials
   !==========================================================================
   subroutine set_element( nZIn)
@@ -50,9 +61,7 @@ Contains
 
 	
     iZDominant = maxloc(StatSumTermLog_I(0:nZ))-1 !Find the location of that maximum value
-    !debuT       
       write (*,*)"_set_pop: iZdom", iZdominant
-      iZdominant = iZdominant +1   ! <==temp+1
     
     StatSumTermMax = StatSumTermLog_I(iZDominant(1))
       write (*,*)"_set_pop: terMax", StatSumTermMax
@@ -61,6 +70,9 @@ Contains
       write (*,*)"_set_pop: terMin",  StatSumTermMin     
 
 
+
+
+                     
 
 
                      !Find the lower boundary of the array 
@@ -72,7 +84,6 @@ Contains
                      !Find the similar upper boundary
     iZMax = nZ - count(StatSumTermLog_I(iZDominant(1):nZ) < StatSumTermMin)
       write (*,*)"_set_pop: iZmax", iZmax
-
 
                      !Get rid of all the negligible values
     Population_I(0:nZ) = cZero 
@@ -115,4 +126,53 @@ Contains
     end do
   end function z2_averaged
   !=======================================!
+  !Find the final values of Zav and the ion populations
+  
+  subroutine set_ionization_equilibrium(Na, Te)
+    !Concentration of heavy particles (atoms+ions) in the plasma 
+    !(# of particles per m^3)
+    real, intent(in)::   Na  
+    real, intent(in)::   Te   !Electron temperature (Kelvin)
+    real :: Zav,& !Average charge per ion	(elementary charge units)
+         lnC1,& !natural log C1 
+         TInv !the inverse of the electron temperature (k_BT_e [eV])
+    real,parameter :: ToleranceZ = 0.01 !Accuracy of Z needed
+    !==========================================
+    TInv = cBoltzmannEVInv / Te          !1/kT; units: [1/eV]
+    lnC1 = log(C0 * sqrt(Te)*Te / Na)
+    call set_Z()	
+  contains
+    !Calculating Z averaged iteratively
+    subroutine set_Z()
+      real :: ZTrial, Z1, Z2 !The trial values of Z for iterations
+      integer,dimension(1) :: InitZ !The initial approximation of Z
+      integer :: iIter
+      !=====================================
+      !First approximate the value of Z by finding for what i=Z 
+      !the derivative of the populations sequence~0 (population is maximum):
+      InitZ = minloc(abs(lnC1 - LogN_I(1:nZ) - IonizPotential_I(1:nZ)*TInv))
+                           !Find Zav in the case when Z~0
+      if(InitZ(1)==1)then
+         Zav  = min(real(InitZ(1)),exp(cHalf*(lnC1-IonizPotential_I(1)*TInv)))
+      else
+         ZAv = real(InitZ(1))-cHalf
+      end if
+
+      write(*,*) "Initial approximation of Z:", InitZ(1)
+
+      !Use Newton's method to iteratively get a better approximation of Z:
+      iIter=0
+      zTrial=-ToleranceZ
+      iterations: do while (abs(Zav-ZTrial) >= ToleranceZ.and.iIter<10)
+         ZTrial = Zav
+         call set_population(TInv, lnC1 - log(ZTrial))
+         Z1 = z_averaged()
+         Z2 = z2_averaged()
+         Zav = ZTrial - (ZTrial - Z1)/(cOne + (Z2 - Z1*Z1)/ZTrial)
+         iIter = iIter+1
+      end do iterations
+      write (*,*) "Iterations done:", iIter
+      write(*,*) "Final Zav = ", Zav
+    end subroutine set_Z
+  end subroutine set_ionization_equilibrium
 end module ModStatSum
