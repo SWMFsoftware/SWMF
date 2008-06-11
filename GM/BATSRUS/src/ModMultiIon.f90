@@ -59,10 +59,10 @@ contains
 
   subroutine multi_ion_set_restrict(iBlock)
 
-    use ModSize,    ONLY: nI, nJ, nK, MaxBlock
-    use ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, p_
-    use ModPhysics, ONLY: g
-    use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK
+    use ModSize,     ONLY: nI, nJ, nK, MaxBlock
+    use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, p_
+    use ModPhysics,  ONLY: g
+    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
 
     integer, intent(in) :: iBlock
 
@@ -77,8 +77,8 @@ contains
           
        IsMultiIon_CB(i,j,k,iBlock) = .not. &
             (RhoUx < 0.0 .and. RhoUx**2 > MachNumberMultiIon*g*p*Rho &
-            .and. y_BLK(i,j,k,iBlock)**2+ z_BLK(i,j,k,iBlock) < &
-            ParabolaWidthMultiIon * x_BLK(i,j,k,iBlock))
+            .and. y_BLK(i,j,k,iBlock)**2 + z_BLK(i,j,k,iBlock)**2 > &
+            -1.0 * ParabolaWidthMultiIon * x_BLK(i,j,k,iBlock))
     end do; end do; end do
   
   end subroutine multi_ion_set_restrict
