@@ -57,20 +57,13 @@ Contains
     StatSumTermLog_I(0) = 0.	
     do iZ = 1, nZ               !Fill up the sequence using the following equation:
        StatSumTermLog_I(iZ)  =  StatSumTermLog_I(iZ-1)                          &
-            - IonizPotential_I(iZ  )*TeInv + GeLog
-    !   write (*,*)"_set_pop: ", iZ, StatSumTermLog_I(iZ) 
+                              - IonizPotential_I(iZ  )*TeInv + GeLog
     end do
 
     ! Find the location of that maximum value
     iZDominant = maxloc(StatSumTermLog_I(0:nZ))-1 
     
-    !debuT       
-    !write (*,*)"_set_pop: iZdom", iZdominant
-    !  iZdominant = iZdominant +1   ! <==temp+1, due to 
-
-
     StatSumTermMax = StatSumTermLog_I(iZDominant(1))
-!      write (*,*)"_set_pop: terMax", StatSumTermMax    
 
     StatSumTermMin = StatSumTermMax -StatSumToleranceLog
       write (*,*)"_set_pop: terMin:",  StatSumTermMin  ," terMax:",  StatSumTermMax    
@@ -80,38 +73,28 @@ Contains
     !below which the values of Pi can be neglected
 
     iZMin = count( StatSumTermLog_I(0:iZDominant(1)) < StatSumTermMin) 
-!       write (*,*)"_set_pop: iZmin", iZmin
 
 
     !Find the similar upper boundary
     iZMax = max(nZ - count(StatSumTermLog_I(iZDominant(1):nZ) < StatSumTermMin),1)
-!      write (*,*)"_set_pop:  iZmin", iZmin," iZmax", iZmax
-
-
 
     !Get rid of all the negligible values
-
     Population_I(0:nZ) = cZero 
 
 
     !Convert the array into the Pi values from ln(Pi)
     Population_I(iZMin:iZMax) = exp(StatSumTermLog_I(iZMin:iZMax)-StatSumTermMax)
-    !   write(*,*)"_set_pop: poPi :",  Population_I(iZMin:iZMax)   
-
 
 
     PITotal = sum(Population_I(iZMin:iZMax))	!Add up all the values of Pi found so far
     !Normalize the Pi-s so that their sum =1
     Population_I(iZMin:iZMax) = Population_I(iZMin:iZMax)/PITotal 
 
-    !write(*,*)"_set_pop: poPiN:",  Population_I(iZMin:iZMax)   		  
-
-
   end subroutine set_population
 
 
   !=======================================!
-  !Calculating the Z average values
+  ! Calculating the Z average values
   real function z_averaged()
     integer::iLoop
     !-------------!
@@ -122,7 +105,7 @@ Contains
   end function z_averaged
 
   !=======================================!
-  !Calculating the Z^2 average values
+  ! Calculating the Z^2 average values
   real function z2_averaged()
     integer::iLoop
     z2_averaged=0
@@ -131,55 +114,63 @@ Contains
     end do
   end function z2_averaged
 !=======================================!
+
   
-  !Find the final values of Zav and the ion populations
+  ! Find the final values of Zav and the ion populations
   
   subroutine set_ionization_equilibrium(Na, Te)
-    !Concentration of heavy particles (atoms+ions) in the plasma 
-    !(# of particles per m^3)
-    real, intent(in)::   Na  
-    real, intent(in)::   Te   !Electron temperature (Kelvin)
-    real :: Zav,& !Average charge per ion	(elementary charge units)
-         lnC1,& !natural log C1 
-         TInv !the inverse of the electron temperature (k_BT_e [eV])
-    real,parameter :: ToleranceZ = 0.01 !Accuracy of Z needed
+    ! Concentration of heavy particles (atoms+ions) in the plasma 
+    ! (# of particles per m^3)
+    real, intent(in)::   Na   ! {1/m^3}  
+    real, intent(in)::   Te   ! Electron temperature (Kelvin)
+    real :: Zav ,  & ! Average charge per ion	(elementary charge units)
+            lnC1,  & ! natural log C1 
+            TInv     ! the inverse of the electron temperature (k_BT_e [eV])
+
+
+!    real,parameter :: ToleranceZ = 0.01 !Accuracy of Z needed
+    real,parameter :: ToleranceZ = cTiny**2 ! 0.01 !Accuracy of Z needed
+
+
     !==========================================
     write(*,*)'Start set_ionization_equilibrium', Na,Te
-    TInv = cBoltzmannEVInv / Te          !1/kT; units: [1/eV]
+
+    TInv = cBoltzmannEVInv / Te          ! 1/kT; units: [1/eV]
     lnC1 = log(C0 * sqrt(Te)*Te / Na)
     call set_Z()	
   contains
-    !Calculating Z averaged iteratively
+    ! Calculating Z averaged iteratively
     subroutine set_Z()
-      real :: ZTrial, Z1, Z2 !The trial values of Z for iterations
+      real    :: ZTrial, Z1, Z2 !The trial values of Z for iterations
       integer,dimension(1) :: InitZ !The initial approximation of Z
       integer :: iIter
+
       !=====================================
-      !First approximate the value of Z by finding for what i=Z 
-      !the derivative of the populations sequence~0 (population is maximum):
+      ! First approximate the value of Z by finding for what i=Z 
+      ! the derivative of the populations sequence~0 (population is maximum):
       InitZ = minloc(abs(lnC1 - LogN_I(1:nZ) - IonizPotential_I(1:nZ)*TInv))
                            !Find Zav in the case when Z~0
       if(InitZ(1)==1)then
          Zav  = min(real(InitZ(1)),exp(cHalf*(lnC1-IonizPotential_I(1)*TInv)))
       else
-         ZAv = real(InitZ(1))-cHalf
+         ZAv  = real(InitZ(1))-cHalf
       end if
 
       write(*,*) "Initial approximation of Z:", InitZ(1)
 
-      !Use Newton's method to iteratively get a better approximation of Z:
-      iIter=0
-      zTrial=-ToleranceZ
+      ! Use Newton's method to iteratively get a better approximation of Z:
+      iIter  =  0
+      zTrial = -ToleranceZ
       iterations: do while (abs(Zav-ZTrial) >= ToleranceZ.and.iIter<10)
          ZTrial = Zav
          call set_population(TInv, lnC1 - log(ZTrial))
-         Z1 = z_averaged()
-         Z2 = z2_averaged()
+         Z1  = z_averaged()
+         Z2  = z2_averaged()
          Zav = ZTrial - (ZTrial - Z1)/(cOne + (Z2 - Z1*Z1)/ZTrial)
          iIter = iIter+1
       end do iterations
       write (*,*) "Iterations done:", iIter
-      write(*,*) "Final Zav = ", Zav
+      write (*,*) "Final Zav = ", Zav
     end subroutine set_Z
   end subroutine set_ionization_equilibrium
 end module ModStatSum

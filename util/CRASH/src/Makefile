@@ -34,7 +34,6 @@ LIBSHARE  = ${LIBDIR}/libSHARE.a
 LIBTIMING = ${LIBDIR}/libTIMING.a
 
 
-
 ${OBJECTS_EXE} : ${MY_LIB} ${LIBSHARE} ${LIBTIMING}
 
 IONIZ : ${OBJECTS_EXE}
@@ -50,11 +49,13 @@ IONIZ_for_Darwin:
 	rm -rf Tmp_; mkdir Tmp_
 	cd Tmp_; ar -x ../${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE}
 	${LINK.f90} -o IONIZ.exe ${OBJECTS_EXE} Tmp_/*.o \
-		${Lflag1}
-	rm -rf Tmp_
+		${Lflag1}    ; \
+	rm -rf Tmp_ ;
 
 
-distclean: clean
-	rm -f Makefile.DEPEND
+distclean: clean \   # 	rm -f Makefile.DEPEND; \
+        rm -rf Tmp_;
+
+
 
 

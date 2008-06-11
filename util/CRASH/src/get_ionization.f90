@@ -76,20 +76,21 @@ module ModSaha
  !=========================!  IONIZation , based on ModStatSaha, only
    subroutine proGON       !  DO the whole cycle for IONIZ
    real, parameter  :: &
-                  Geo = 6.06e21 , &    ! cm-3 ev-3/2
-                  Nao = 1.00e19 , &! 25, &     ! cm-3
+                  Geo = 6.06e21 , &  ! cm-3 ev-3/2
+                  Nao = 1.00e19 , &  ! 25 , &  ! 25, &     ! cm-3
                   Zo  = 1.00
 
    real :: Ziter = Zo, ZoLd
-   real :: Ge, Na, Ne,  nn, dnn, dzz,  NeInv
-   real :: T32, dTe
-   real :: xx1,xx2,xx3
+   real :: Ge  , Na , Ne,  nn, dnn, dzz,  NeInv
+   real :: T32 , dTe
+   real :: xx1 ,xx2 ,xx3
   
    integer :: iT, iter 
 
      dTe = 50.0 
-     call  set_element( 54 )
+     call set_element( 54 )
      call mod_init
+
 
   razTe:    do  iT = 1,7
            
@@ -110,38 +111,34 @@ module ModSaha
 
 
 
-
-
-
-    razZ:  do while ( abs(dzz) >0.001  );!  cToleranceHere ) .AND. iter<22     )       
+    razZ:  do while ( (abs(dzz) >=  cToleranceHere ) .AND. (iter<22)     )       
       iter = iter+1
       vNe =  Na * Ziter
 
-          
+      xx1 =  1.00/vTe          
       xx2 =  Ge /vNe ;  xx2 =  log(xx2) 
+
       write(*,"(a,f6.1,a,f6.3,a,1pg12.4)") "_gonStatS__", vTe," eStatW/Ne=",xx1," Ne:",vNe
-      xx1 =  1.00/vTe
-       
       call  set_population( xx1 , xx2  )  ! TeInv, logGe)
         write(*,*) "_gon__<>Stat:", "iZmin=",iZmin, " iZdom=", iZdominant, " iZmax=",iZmax
-
-
-      xx1 = z_averaged() 
-      xx2 = z2_averaged()/xx1
+      xx1 = z_averaged() ;       xx2 = z2_averaged()/xx1
         write(*,*) "_gon__<<Stat:", " <Z>=",xx1, " <Z^2>/<Z>=", xx2
 
       Zold = Ziter
       Ziter= zNew(Zold)
        
-       dzz = (Zold-Ziter)/(Zold +Ziter)
+       dzz = (Zold-Ziter);!/(Zold +Ziter)
          write(*,*)'iTer=',Iter, " dZz=", dzz
 
      end do razZ
+
+         write(*,*)'============================================='
+
      call set_ionization_equilibrium(Na*1.0e6, vTe*11610.)
      write(*,*)'Pavels <z>, <z^2>/z=', z_averaged(), z2_averaged()/z_averaged()
    end do razTe
  contains
-!=======================================!
+  !=======================================!
   real function zNew( zOLD)! return (zITER)
   
    real, intent(in) :: zOLD
@@ -149,14 +146,15 @@ module ModSaha
   
    z1    = z_averaged()
    z2    = z2_averaged()
-   zITER = zOLD - ( zOLD - z1)/( 1.0 +( z2 -z1*z1)/zOLD )
+   zITER = zOLD - ( zOLD - z1)/( cOne +( z2 -z1*z1)/zOLD )
 
    !vNe   = NatomII * zIter
    zNEW  = zITER
   end function zNew
+  !=========================================
  end subroutine proGON
 
-   !=======================================!
+   
 
    !=======================================================================
    !=======================================================================
