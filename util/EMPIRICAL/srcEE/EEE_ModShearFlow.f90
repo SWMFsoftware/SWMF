@@ -37,6 +37,7 @@ contains
     ! Boundary shear flow that conserves the radial magnetic flux
 
     use EEE_ModCommonVariables
+    use EEE_ModGetB0,   ONLY: EEE_get_B0
     use ModMagnetogram, ONLY: get_magnetogram_field
     use ModNumConst,    ONLY: cTolerance, cDegToRad
     implicit none
@@ -118,6 +119,7 @@ contains
 
   real function shear_profile(R,Theta,Phi,Time,FullBn)
     use EEE_ModCommonVariables
+    use EEE_ModGetB0,   ONLY: EEE_get_B0
     use ModMagnetogram, ONLY: get_magnetogram_field
     implicit none
 

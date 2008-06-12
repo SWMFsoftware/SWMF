@@ -17,7 +17,10 @@ OBJECTS = \
 	EEE_ModGL98.o \
 	EEE_ModArch.o \
 	EEE_ModShearFlow.o \
-	EEE_main.o
+	EEE_ModGetStateInit.o \
+	EEE_ModGetStateBC.o \
+	EEE_ModGetB0.o \
+	EEE_ModMain.o
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}

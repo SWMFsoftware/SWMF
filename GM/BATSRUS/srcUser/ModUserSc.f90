@@ -25,6 +25,7 @@ module ModUser
 contains
   !============================================================================
   subroutine user_read_inputs
+    use EEE_ModMain,    ONLY: EEE_set_parameters
     use ModMain
     use ModProcMH,      ONLY: iProc
     use ModReadParam
@@ -76,6 +77,7 @@ contains
   !============================================================================
 
   subroutine user_init_session
+    use EEE_ModMain,    ONLY: EEE_initialize
     use ModIO,          ONLY: write_prefix, iUnitOut
     use ModMagnetogram, ONLY: read_magnetogram_file
     use ModMain,        ONLY: UseUserB0
@@ -105,7 +107,7 @@ contains
 
   !============================================================================
   subroutine user_face_bcs(VarsGhostFace_V)
-
+    use EEE_ModMain,   ONLY: EEE_get_state_BC
     use ModSize,       ONLY: East_,West_,South_,North_,Bot_,Top_,nDim
     use ModMain,       ONLY: time_accurate,x_,y_,z_, UseRotatingFrame, &
          n_step, Iteration_Number
@@ -263,6 +265,7 @@ contains
   !============================================================================
 
   subroutine user_initial_perturbation
+    use EEE_ModMain,  ONLY: EEE_get_state_init
     use ModMain, ONLY: nI,nJ,nK,nBLK,unusedBLK,x_,y_,z_,n_step,iteration_number
     use ModVarIndexes
     use ModAdvance,   ONLY: State_VGB 
@@ -370,6 +373,7 @@ contains
 
   !============================================================================
   subroutine user_get_b0(xInput,yInput,zInput,B0_D)
+    use EEE_ModMain,    ONLY: EEE_get_B0
     use ModPhysics,     ONLY: Io2No_V,Si2No_V,UnitB_
     use ModMagnetogram, ONLY: get_magnetogram_field
     implicit none

@@ -25,17 +25,18 @@ contains
     call read_var('UseArch',          UseArch)
     call read_var('DipoleStrengthSi', DipoleStrengthSi)
     call read_var('rDipole',          rDipole)
-    if(rDipole>=1.0)then
-       call CON_stop('rDipole in #ARCH should be smaller than 1 solar radius')
-    end if
     call read_var('nDipole', nDipole)
-    if(nDipole < 1)then
-       call CON_stop('nDipole need to be larger than 0 in #ARCH')
-    end if
     if(nDipole > 1) call read_var('AngleBetweenDipoles', AngleBetweenDipoles)
     call read_var('Longitude',   Longitude)
     call read_var('Latitude',    Latitude)
     call read_var('Orientation', Orientation)
+
+    if(rDipole>=1.0 .or. rDipole<0.0)then
+       call CON_stop('rDipole in #ARCH should be inside the Sun')
+    end if
+    if(nDipole < 1)then
+       call CON_stop('nDipole need to be larger than 0 in #ARCH')
+    end if
 
   end subroutine set_parameters_arch
 
