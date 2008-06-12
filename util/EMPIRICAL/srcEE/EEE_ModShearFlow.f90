@@ -71,9 +71,8 @@ contains
     CosPhi   = x_D(1)/Xy
 
     call get_magnetogram_field(x_D(1),x_D(2),x_D(3),B0_D)
-    B0_D = B0_D*Io2No_V(UnitB_)
     call EEE_get_B0(x_D,B_D)
-    B0_D = B0_D + B_D*Si2No_V(UnitB_)
+    B0_D = (B0_D + B_D)*Si2No_V(UnitB_)
 
     UnitR_D = x_D/R
     FullBn = dot_product(UnitR_D,B0_D)
@@ -137,9 +136,8 @@ contains
     x_D(3) = R*cos(Theta)
 
     call get_magnetogram_field(x_D(1),x_D(2),x_D(3),B0_D)
-    B0_D = B0_D*Io2No_V(UnitB_)
     call EEE_get_B0(x_D,B_D)
-    B0_D = B0_D + B_D*Si2No_V(UnitB_)
+    B0_D = (B0_D + B_D)*Si2No_V(UnitB_)
 
     UnitR_D = x_D/R
     FullBn = dot_product(UnitR_D,B0_D)

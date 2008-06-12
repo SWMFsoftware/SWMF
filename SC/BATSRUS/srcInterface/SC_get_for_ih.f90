@@ -121,8 +121,6 @@ subroutine SC_get_for_ih(&
    
      call get_magnetogram_field(X_D(x_),X_D(y_),X_D(z_),&
           State_V(BuffBx_:BuffBz_)) !Magnetogram field
-     !Transfrom from Gauss to Tesla
-     State_V(BuffBx_:BuffBz_)= State_V(BuffBx_:BuffBz_)/(cE1*cE3)
      !Remain only radial component of the field:
      State_V(BuffBx_:BuffBz_)=X_D*sum(State_V(BuffBx_:BuffBz_)*X_D)/sum(X_D**2)
 

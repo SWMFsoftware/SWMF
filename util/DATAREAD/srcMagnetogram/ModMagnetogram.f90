@@ -769,5 +769,8 @@ contains
 
     if (Rin_PFSSM > Rs_PFSSM) &
          B0_D  =  B0_D*(Rs_PFSSM/Rin_PFSSM)**2
+
+    ! Transform from Gauss to Tesla
+    B0_D = B0_D*1.0E-4
   end subroutine get_magnetogram_field
 end module ModMagnetogram

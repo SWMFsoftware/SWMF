@@ -385,7 +385,7 @@ contains
     !--------------------------------------------------------------------------
 
     call get_magnetogram_field(xInput,yInput,zInput,B0_D)
-    B0_D = B0_D*Io2No_V(UnitB_)
+    B0_D = B0_D*Si2No_V(UnitB_)
 
     x_D = (/ xInput, yInput, zInput /)
     call EEE_get_B0(x_D,B_D)
