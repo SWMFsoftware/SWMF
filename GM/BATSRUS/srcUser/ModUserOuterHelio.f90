@@ -290,6 +290,7 @@ contains
        ! factor 1000 for test
 
        VphiSolar = OMEGAbodyH*(6.96E5)*sinTheta/No2Io_V(UnitU_)
+       VphiSolar =0. !in 30AU it is negligble Merav June 04
 
        Btot = sqrt((BrSolar**2)+(BphiSolar**2))
 
