@@ -11,12 +11,15 @@ module ModStatSum
   integer :: iZMax  !of ion states with iZ<iZMin or iZ>iZMax is negligible.
   
  
-  real,dimension(1:nZMax) :: IonizPotential_I
+  real,dimension(1:nZMax) :: IonizPotential_I,&	!array of ionization potentials - energy needed to create i-level ion from (i-1)-level ion
+							 EnergyLevel_I !array of energy levels of ions - energy needed to create i-level ion from a neutral atom
   real,dimension(0:nZMax) :: Population_I, StatSumTermLog_I
 
   real,parameter :: cBoltzmannEVInv = cEV/cBoltzmann !Inverse of the Boltzmann constant in [K/eV]
   real,dimension(nZMax) :: LogN_I
   real :: C0 ! 2/(Lambda^3)
+  real :: TeInv,& ! the inverse of the electron temperature [1/eV] (1/(cBoltzmann in eV * Te in Kelvin)
+		  Zav  ! the average charge per ion - <Z> (elementary charge units)
 Contains
   !=========================================================================
   !Calculates the natural logarithms of the first nZMax integers
@@ -31,15 +34,20 @@ Contains
   !==========================================================================
   subroutine set_element( nZIn)
     integer,intent(in) :: nZIn
+	integer :: iZ !for loop
     !--------------------------!
     nZ = nZIn
     call get_ioniz_potential(nZ,IonizPotential_I(1:nZ))
+	EnergyLevel_I(1) = IonizPotential_I(1)
+	do iZ = 2,nZ
+	   EnergyLevel_I(iZ) = EnergyLevel_I(iZ-1) + IonizPotential_I(iZ)
+	end do
+	!EnergyLevel_I(1:nZ) = (/(sum(IonizPotential_I(1:iZ)), iZ = 1,nZ)/)
   end subroutine set_element
   
   !=========================================================================
   ! Finding the populations of the ion states
-  subroutine set_population(TeInv, GeLog)
-    real, intent(in) :: TeInv   ! the inverse of the electron temperature, [eV]
+  subroutine set_population(GeLog)
     real, intent(in) :: GeLog   ! Natural logarithm of the electron stat weight:
     !  log(1/(Ne*lambda^3)) !<*>yv:calc.it.ind
     real :: StatSumTermMax,StatSumTermMin
@@ -114,7 +122,7 @@ Contains
     end do
   end function z2_averaged
 !=======================================!
-
+		  
   
   ! Find the final values of Zav and the ion populations
   
@@ -123,19 +131,16 @@ Contains
     ! (# of particles per m^3)
     real, intent(in)::   Na   ! {1/m^3}  
     real, intent(in)::   Te   ! Electron temperature (Kelvin)
-    real :: Zav ,  & ! Average charge per ion	(elementary charge units)
-            lnC1,  & ! natural log C1 
-            TInv     ! the inverse of the electron temperature (k_BT_e [eV])
-
-
+    real :: lnC1     ! natural log C1 
+												 
 !    real,parameter :: ToleranceZ = 0.01 !Accuracy of Z needed
-    real,parameter :: ToleranceZ = cTiny**2 ! 0.01 !Accuracy of Z needed
+    real,parameter :: ToleranceZ = 0.001 !Accuracy of Z needed
 
 
     !==========================================
     write(*,*)'Start set_ionization_equilibrium', Na,Te
 
-    TInv = cBoltzmannEVInv / Te          ! 1/kT; units: [1/eV]
+    TeInv = cBoltzmannEVInv / Te        ! 1/kT; units: [1/eV]
     lnC1 = log(C0 * sqrt(Te)*Te / Na)
     call set_Z()	
   contains
@@ -148,22 +153,22 @@ Contains
       !=====================================
       ! First approximate the value of Z by finding for what i=Z 
       ! the derivative of the populations sequence~0 (population is maximum):
-      InitZ = minloc(abs(lnC1 - LogN_I(1:nZ) - IonizPotential_I(1:nZ)*TInv))
+      InitZ = minloc(abs(lnC1 - LogN_I(1:nZ) - IonizPotential_I(1:nZ)*TeInv))
                            !Find Zav in the case when Z~0
       if(InitZ(1)==1)then
-         Zav  = min(real(InitZ(1)),exp(cHalf*(lnC1-IonizPotential_I(1)*TInv)))
+         Zav  = min(real(InitZ(1)),exp(cHalf*(lnC1-IonizPotential_I(1)*TeInv)))
       else
-         ZAv  = real(InitZ(1))-cHalf
+         Zav  = real(InitZ(1))-cHalf
       end if
 
-      write(*,*) "Initial approximation of Z:", InitZ(1)
+      write(*,*) "Initial approximation of Z:", Zav
 
       ! Use Newton's method to iteratively get a better approximation of Z:
       iIter  =  0
-      zTrial = -ToleranceZ
+      ZTrial = -ToleranceZ
       iterations: do while (abs(Zav-ZTrial) >= ToleranceZ.and.iIter<10)
          ZTrial = Zav
-         call set_population(TInv, lnC1 - log(ZTrial))
+         call set_population(lnC1 - log(ZTrial))
          Z1  = z_averaged()
          Z2  = z2_averaged()
          Zav = ZTrial - (ZTrial - Z1)/(cOne + (Z2 - Z1*Z1)/ZTrial)
@@ -173,4 +178,14 @@ Contains
       write (*,*) "Final Zav = ", Zav
     end subroutine set_Z
   end subroutine set_ionization_equilibrium
+
+  !=======================================
+  real function internal_energy()
+      real :: Uparticle
+	  integer :: iZ	 
+	  !-------------
+	  Uparticle = 1.50/TeInv
+	  internal_energy = Uparticle + sum(Population_I(iZmin:iZmax)*((/(Uparticle*iZ, iZ = iZmin,iZmax)/) + EnergyLevel_I(iZmin:iZmax)))
+  end function internal_energy
+
 end module ModStatSum
