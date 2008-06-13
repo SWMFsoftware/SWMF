@@ -1,7 +1,6 @@
 !^CFG COPYRIGHT UM
 !==============================================================================
 module EEE_ModShearFlow
-  use EEE_ModCommonVariables
   implicit none
   save
 
@@ -10,9 +9,11 @@ module EEE_ModShearFlow
   public :: set_parameters_shearflow,get_shearflow
 
   logical, public :: UseShearFlow=.false.
-  real :: FlowAmplitude, Longitude, Latitude
+  real :: FlowAmplitude, FlowWidthAngle, MaxBnGauss
+  real :: StartTime, StopTime, RampUpTime, RampDownTime
+  real :: Longitude, Latitude
 
-  real :: xFlow_D(3)
+  real :: xFlow_D(3), MaxBn
 
 contains
 
@@ -22,10 +23,16 @@ contains
     use ModReadParam, ONLY: read_var
     implicit none
     !--------------------------------------------------------------------------
-    call read_var('UseShearFlow',  UseShearFlow)
-    call read_var('FlowAmplitude', FlowAmplitude)
-    call read_var('Longitude',     Longitude)
-    call read_var('Latitude',      Latitude)
+    call read_var('UseShearFlow',   UseShearFlow)
+    call read_var('FlowAmplitude',  FlowAmplitude)
+    call read_var('FlowWidthAngle', FlowWidthAngle)
+    call read_var('MaxBnGauss',     MaxBnGauss)
+    call read_var('StartTime',      StartTime)
+    call read_var('StopTime',       StopTime)
+    call read_var('RampUpTime',     RampUpTime)
+    call read_var('RampDownTime',   RampDownTime)
+    call read_var('Longitude',      Longitude)
+    call read_var('Latitude',       Latitude)
 
   end subroutine set_parameters_shearflow
 
@@ -45,6 +52,7 @@ contains
     real, intent(in)  :: x_D(3), Time
     real, intent(out) :: U_D(3)
 
+    real :: TimeProfile
     real :: R, Theta, Phi, Xy, SinTheta, CosTheta, SinPhi, CosPhi, UnitR_D(3)
     real :: dTheta, dPhi
     real :: B_D(3), B0_D(3), FullBn, FullBnL, FullBnR
@@ -59,7 +67,22 @@ contains
        xFlow_D(1) = cos(Latitude*cDegToRad)*cos(Longitude*cDegToRad)
        xFlow_D(2) = cos(Latitude*cDegToRad)*sin(Longitude*cDegToRad)
        xFlow_D(3) = sin(Latitude*cDegToRad)
+
+       FlowWidthAngle = FlowWidthAngle*cDegToRad
+       MaxBn = MaxBnGauss*Io2No_V(UnitB_)
     end if
+
+    if(Time < StartTime .or. Time > StopTime)then
+       U_D = 0.0
+       return
+    else
+       if(Time > StopTime - RampDownTime)then
+          TimeProfile = (StopTime - Time)/RampDownTime
+       else
+          TimeProfile = min((Time - StartTime)/RampUpTime,1.0)
+       end if
+    end if
+    !!! TimeProfile = 1.0
 
     R        = sqrt(sum(x_D**2))
     Theta    = acos(x_D(3)/R)
@@ -110,6 +133,8 @@ contains
     U_D(2) = UTheta*CosTheta*SinPhi + UPhi*CosPhi
     U_D(3) =-UTheta*SinTheta
 
+    U_D = U_D*TimeProfile
+
     U_D = U_D*No2Si_V(UnitU_)
 
   end subroutine get_shearflow
@@ -117,7 +142,7 @@ contains
   !============================================================================
 
   real function shear_profile(R,Theta,Phi,Time,FullBn)
-    use EEE_ModCommonVariables
+    use EEE_ModCommonVariables, ONLY: Si2No_V, UnitB_
     use EEE_ModGetB0,   ONLY: EEE_get_B0
     use ModMagnetogram, ONLY: get_magnetogram_field
     implicit none
@@ -126,9 +151,8 @@ contains
     real, intent(out) :: FullBn
 
     real :: Xy, x_D(3), UnitR_D(3)
-    real :: B0_D(3), B_D(3)
-    real :: Del_D(3), Mask, Ramp
-    real :: MaxBnAR, MaxBnARDim, BnRatio, ShearAngle, Angle
+    real :: B0_D(3), B_D(3), BnRatio
+    real :: Del_D(3), Angle, Mask
     !--------------------------------------------------------------------------
     Xy = R*sin(Theta)
     x_D(1) = Xy*cos(Phi)
@@ -142,16 +166,13 @@ contains
     UnitR_D = x_D/R
     FullBn = dot_product(UnitR_D,B0_D)
 
+    BnRatio = FullBn/MaxBn
+
     Del_D = xFlow_D - UnitR_D
     Angle = 2.0*asin(0.5*sqrt(dot_product(Del_D,Del_D)))
-    Mask = exp(-(Angle/ShearAngle)**2)
+    Mask = exp(-(Angle/FlowWidthAngle)**2)
 
-    Ramp = 1.0
-
-    MaxBnAR = MaxBnARDim*Io2No_V(UnitB_)
-    BnRatio = FullBn/MaxBnAR
-
-    shear_profile = FlowAmplitude*FullBn**3*exp(-BnRatio**2)*Mask*Ramp
+    shear_profile = FlowAmplitude*FullBn**3*exp(-BnRatio**2)*Mask
 
   end function shear_profile
 
