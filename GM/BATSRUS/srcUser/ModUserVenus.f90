@@ -15,6 +15,7 @@ module ModUser
        IMPLEMENTED5 => user_face_bcs,                   &
        IMPLEMENTED6 => user_calc_sources,               &
        IMPLEMENTED7 => user_init_point_implicit,        &
+       IMPLEMENTED8 => user_update_states,              &
        IMPLEMENTED9 => user_set_resistivity,            &        
        IMPLEMENTED10=> user_get_log_var
 
@@ -1422,5 +1423,37 @@ contains
     end do; end do; end do
 
   end subroutine user_set_resistivity
+
+  subroutine user_update_states(iStage,iBlock)
+    use ModVarIndexes
+    use ModSize
+    use ModAdvance, ONLY: State_VGB
+    use ModPhysics
+    use ModEnergy
+    integer,intent(in):: iStage,iBlock
+    integer:: i,j,k
+    real :: kTe
+
+    call update_states_MHD(iStage,iBlock)
+
+    !\
+    ! Begin update check of temperature::
+    ! now check to see if the temperature is less than some
+    ! prescribed minimum. If it is set it to the minimum value
+    !/
+
+    do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn; 
+       totalNumRho=sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock) &
+            /MassSpecies_V(rho_+1:rho_+MaxSpecies))
+       kTe= State_VGB(p_,i,j,k,iBlock)/(totalNumRho+1.0e-8)/2.0
+
+       if(kTe < kTn )then
+          State_VGB(p_,i,j,k,iBlock)= totalNumRho*kTn*2.0    
+       end if
+    end do; end do; end do
+
+    call calc_energy_cell(iBlock)
+
+  end subroutine user_update_states
 
 end module ModUser
