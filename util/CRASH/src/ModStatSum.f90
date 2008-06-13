@@ -185,7 +185,7 @@ Contains
 	  integer :: iZ	 
 	  !-------------
 	  Uparticle = 1.50/TeInv
-	  internal_energy = Uparticle + sum(Population_I(iZmin:iZmax)*((/(Uparticle*iZ, iZ = iZmin,iZmax)/) + EnergyLevel_I(iZmin:iZmax)))
+	  internal_energy = Uparticle * (1+Zav) + sum(Population_I(iZmin:iZmax)*EnergyLevel_I(iZmin:iZmax))
   end function internal_energy
 
 end module ModStatSum
