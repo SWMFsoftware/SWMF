@@ -31,7 +31,7 @@ module ModSolarwind
   character(len=10) :: NameInputVar_I(nVar)
 
   ! Variable index corresponding to the i-th input variable
-  integer :: iVarInput_V(nVar) 
+  integer :: iVarInput_V(max(nVar,8)) 
 
   ! true if the variable is read from the data file
   logical :: IsInput_V(nVar)
