@@ -25,7 +25,7 @@ module ModOctree
   type (adaptive_block_ptr), dimension(:), allocatable :: blocknumber_ptrs
   
   !\ 
-  ! Ordering blocks along the Koshi-Peano curve
+  ! Ordering blocks along the Peano curve
   !/
   ! Decides order based on child number
   integer, parameter, dimension(8,0:8):: iChildOrder_II = reshape(&
