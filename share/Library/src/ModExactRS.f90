@@ -3,9 +3,8 @@
 module ModExactRS
   implicit none
   real,private::GammaHere=1.6666666666666666
-  real        ::PStar,UStar !pressure and velocity in the Star Region
-  real,private::RhoL, UnL, PL, RhoR, UnR, PR !Rho,Un,P: (L)eft and (R)ight
-  real,private::GammaL,GammaR
+  real        ::PStar,UnStar !pressure and velocity in the Star Region
+  real        ::RhoL, UnL, PL, RhoR, UnR, PR !Rho,Un,P: (L)eft and (R)ight
   real,private::CL,CR       !Sound speeds
 contains
   !========================================================================!
@@ -13,7 +12,7 @@ contains
     real,intent(in)::GammaIn
     !Should be applied only if: 
     !FIRST, Gamma=const, and, 
-    !SECOND, Gamma /= (5/3)
+    !SECOND, Gamma=const /= (5/3)
     GammaHere=GammaIn
   end subroutine get_gamma
   !========================================================================!
@@ -52,7 +51,8 @@ contains
     integer,parameter::nIterMax=10
     integer::iIter
     real,parameter::TolP=0.0010,ChangeStart=2.0*TolP 
-    real::Change
+    real::Change,UVac,GammaL,GammaR
+    real,parameter::cSafetyFactor=0.999 !Limits the speed of expansion
     if(present(GammaLIn))then
        GammaL=GammaLIn
     else
@@ -66,12 +66,19 @@ contains
        GammaR=GammaHere
     end if
     CR=sqrt(GammaR*PR/RhoR)
+
+    UVac=2.0*(CL/(GammaL-1.0)+CR/(GammaR-1.0))
+
+    UDiff = UnR - UnL
+
+    !Prevents the formation of vacuum regions:
+    if(UDiff > cSafetyFactor*UVac)call CON_stop('Vacuum in RS')
+
     !
     !     Guessed value for PStar  is computed
     !
     call guess_p(POld)
 
-    UDiff = UnR - UnL
     !Initialize loop:
     Change=ChangeStart; iIter=0
     do while(Change > TolP.and.iIter<nIterMax)
@@ -85,14 +92,14 @@ contains
 
     !     Compute velocity in Star Region
 
-    UStar = 0.50*(UnL + UnR + FR - FL)
+    UnStar = 0.50*(UnL + UnR + FR - FL)
   contains
     !====================================================!
     subroutine pressure_function(F,FD,P,RhoK,PK,CK,GammaIn)
       !
       !     Purpose: to evaluate the pressure functions
       !              FL and FR in exact Riemann solver
-      !              and their first derivatives
+      !              and their first derivatives 
       !
       real,intent(in)::P,RhoK,PK,CK
       real,intent(out)::F,FD
@@ -118,10 +125,10 @@ contains
          !
          !        Shock wave
          !
-         BK = PK*(GAMMA - 1.0)/(GAMMA + 1.0)
-         QRT = SQRT(2.0/((GAMMA + 1.0)*RhoK*(BK + P)))
+         BK = PK*(GAMMA - 1.0)/(GAMMA + 1.0)+P
+         QRT = SQRT(2.0/((GAMMA + 1.0)*RhoK*BK))
          F   = (P - PK)*QRT
-         FD  = (1.0 - 0.5*(P - PK)/(BK + P))*QRT
+         FD  = (1.0 - 0.5*(P - PK)/BK)*QRT
       ENDIF
     end subroutine pressure_function
     !===============================================!
@@ -135,14 +142,17 @@ contains
       real,parameter::cTinyFractionOf=1.0e-8
       !----------------------------------------------------!
       ImpedanceL = RhoL*CL; ImpedanceR = RhoR*CR
+
       ImpedanceTotalInv=1.0/(ImpedanceL+ImpedanceR)
+
       PAvr=ImpedanceTotalInv*(PL*ImpedanceR+PR*ImpedanceL)
+
       PGuess=max(cTinyFractionOf*PAvr,&
            PAvr+(UnL-UnR)*ImpedanceTotalInv*ImpedanceL*ImpedanceR)
     end subroutine guess_p
   end subroutine pu_star
   !==================================================!
-  SUBROUTINE SAMPLE(S, Rho, Un, P)
+  subroutine sample(S, Rho, Un, P, GammaLIn,GammaRIn)
     !
     !     Purpose: to sample the solution throughout the wave
     !             pattern. Pressure and velocity in the
@@ -152,151 +162,95 @@ contains
     !
     real,intent(in)::S
     real,intent(out):: Rho, Un, P
-    !Misc:
-    real::SHL,CML,STL,SHR,CMR,STR,C,SL,SR,G3,G4,G5,G6,G7
-    real::PStarL,PStarR
+    real,optional,intent(in)::GammaLIn,GammaRIn
+   
     !
-    IF(S.LE.UStar)THEN
+    IF(S.LE.UnStar)THEN
        !
        !        Sampling point lies to the left of the contact
        !        discontinuity
-
-       IF(PStar.LE.PL)THEN
-          !
-          !           Left rarefaction
-          !
-          SHL = UnL - CL
-          !
-          IF(S.LE.SHL)THEN
-             !
-             !              Sampled point is left data state
-             !
-             Rho = RhoL
-             Un = UnL
-             P = PL
-          ELSE
-             CML = CL*(PStar/PL)**((GammaL - 1.0)/(2.0*GammaL))
-             STL = UStar - CML
-             IF(S.GT.STL)THEN
-                !
-                !                 Sampled point is Star Left state
-                !
-                Rho = RhoL*(PStar/PL)**(1.0/GammaL)
-                Un = UStar
-                P = PStar
-             ELSE
-                !
-                !                 Sampled point is inside left fan
-                !
-                G4 = 2.0/(GammaL - 1.0)
-                G3 = G4*GammaL
-                
-                G5 = 2.0/(GammaL + 1.0)    
-                G7 = (GammaL - 1.0)/2.0
- 
-                Un = G5*(CL + G7*UnL + S)
-                C = G5*(CL + G7*(UnL - S))
-                Rho = RhoL*(C/CL)**G4
-                P = PL*(C/CL)**G3
-             ENDIF
-          ENDIF
-       ELSE
-          !
-          !           Left shock
-          !
-          PStarL = PStar/PL
-          SL  = UnL - CL*SQRT(((GammaL + 1.0)*PStarL + (GammaL - 1.0))/&
-                           (2.0*GammaL))  
-          !
-          IF(S.LE.SL)THEN
-             !
-             !              Sampled point is left data state
-             !
-             Rho = RhoL
-             Un = UnL
-             P = PL
-             !
-          ELSE
-             !
-             !              Sampled point is Star Left state
-             !
-             G6 = (GammaL - 1.0)/(GammaL + 1.0)
-             
-             Rho = RhoL*(PStarL + G6)/(PStarL*G6 + 1.0)
-             Un = UStar
-             P = PStar
-          ENDIF
-       ENDIF
+       call simple_wave(-S+UnStar,RhoL,-UnL+UnStar,PL,CL,GammaLIn)
+       Un = UnStar - Un
     ELSE
        !
        !        Sampling point lies to the right of the contact
        !        discontinuity
-       !
-       IF(PStar.GT.PR)THEN
+       !    
+       call simple_wave(S-UnStar,RhoR,UnR-UnStar,PR,CR, GammaRIn)
+       Un = Un+UnStar
+    end IF
+  contains
+    subroutine simple_wave(SRel,RhoK,UnK,PK,CK, GammaIn)
+      real,intent(in)::SRel,RhoK,UnK,PK,CK
+      real,optional,intent(in)::GammaIn
+      real::Gamma
+      !Misc:
+      real::C,G7
+      if(present(GammaIn))then
+         Gamma=GammaIn
+      else
+         Gamma=GammaHere
+      end if
+      IF(PStar.LE.PK)THEN
           !
-          !           Right shock
+          !           rarefaction
           !
-          PStarR = PStar/PR
-          SR  = UnR + CR*SQRT(((GammaR + 1.0)*PStarR + (GammaR - 1.0))/&
-                           (2.0*GammaR))  
-          !
-          IF(S.GE.SR)THEN
+          IF(SRel >  UnK + CK)THEN
              !
-             !              Sampled point is right data state
+             !              Sampled point is data state
              !
-             Rho = RhoR
-             Un = UnR
-             P = PR
+             Rho = RhoK
+             Un = UnK
+             P = PK
           ELSE
-             !
-             !              Sampled point is Star Right state
-             !
-             G6 = (GammaR - 1.0)/(GammaR + 1.0)
-             Rho= RhoR*(PStarR + G6)/(PStarR*G6 + 1.0)
-             Un = UStar
-             P = PStar
-          ENDIF
-       ELSE
-          !
-          !           Right rarefaction
-          !
-          SHR = UnR + CR
-          !
-          IF(S.GE.SHR)THEN
-             !
-             !              Sampled point is right data state
-             !
-             Rho = RhoR
-             Un = UnR
-             P = PR
-          ELSE
-             CMR = CR*(PStar/PR)**((GammaR - 1.0)/(2.0*GammaR))
-             STR = UStar + CMR
-             !
-             IF(S.LE.STR)THEN
+             
+             IF(SRel< CK*(PStar/PK)**((Gamma - 1.0)/(2.0*Gamma)))THEN
                 !
-                !                 Sampled point is Star Right state
+                !                 Sampled point is Star  state
                 !
-                Rho = RhoR*(PStar/PR)**(1.0/GammaR)
-                Un = UStar
+         
+                Un = 0.0
                 P = PStar
              ELSE
                 !
                 !                 Sampled point is inside left fan
                 !
-                G4 = 2.0/(GammaR - 1.0)
-                G3 = G4*GammaR
-                
-                G5 = 2.0/(GammaR + 1.0)    
-                G7 = (GammaR - 1.0)/2.0
+                  
+                G7 = (Gamma - 1.0)/2.0
+ 
+                !Solve the system of equations:
+                !
+                ! CK - G7 * UnK = C - G7* Un
+                ! SRel = C + Un
 
-                Un = G5*(-CR + G7*UnR + S)
-                C = G5*(CR - G7*(UnR - S))
-                Rho = RhoR*(C/CR)**G4
-                P = PR*(C/CR)**G3
+                C = (CK - G7*(UnK - SRel))/(1.0+G7)
+                Un = C - SRel
+                P = PR*(C/CK)**(2.0*Gamma/(Gamma - 1.0))
              ENDIF
+             Rho = RhoK*(P/PK)**(1.0/Gamma)
+          ENDIF
+       ELSE
+          !
+          !          Shock
+          ! 
+          IF(SRel.GE.UnK + CK*SQRT(((Gamma + 1.0)*PStar + PK*(Gamma - 1.0))/&
+                           (2.0*Gamma*PK)))THEN
+             !
+             !              Sampled point is data state
+             !
+             Rho = RhoK
+             Un = UnK
+             P = PK
+          ELSE
+             !
+             !              Sampled point is Star state
+             !
+             Rho= RhoK*((Gamma + 1.0)*PStar + PK*(Gamma - 1.0))/&
+                  ((Gamma - 1.0)*PStar + PK*(Gamma + 1.0))
+             Un = 0.0
+             P = PStar
           ENDIF
        ENDIF
-    ENDIF
-  end SUBROUTINE SAMPLE
+     end  subroutine simple_wave
+   end subroutine sample
 end module ModExactRS
