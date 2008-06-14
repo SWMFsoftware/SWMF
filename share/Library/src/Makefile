@@ -18,6 +18,7 @@ MODULES = \
 	ModBlasLapack.o\
 	ModConst.o\
 	ModCoordTransform.o\
+	ModExactRS.o\
 	ModFreq.o\
 	ModInterpolate.o\
 	ModIoUnit.o\
