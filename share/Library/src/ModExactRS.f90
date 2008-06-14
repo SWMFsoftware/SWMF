@@ -224,8 +224,8 @@ contains
                 ! SRel = C + Un
 
                 C = (CK - G7*(UnK - SRel))/(1.0+G7)
-                Un = C - SRel
-                P = PR*(C/CK)**(2.0*Gamma/(Gamma - 1.0))
+                Un = SRel - C
+                P = PK*(C/CK)**(2.0*Gamma/(Gamma - 1.0))
              ENDIF
              Rho = RhoK*(P/PK)**(1.0/Gamma)
           ENDIF
