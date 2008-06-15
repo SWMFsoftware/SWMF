@@ -3,7 +3,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   use ModProcMH
   use ModMain
   use ModImplicit, ONLY : UsePartImplicit !^CFG IF IMPLICIT
-  use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
+  use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP, IsMhd,&
        SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, ImplBlock_
   use ModGeometry, ONLY: True_Blk
   use ModGeometry, ONLY: UseCovariant     
@@ -261,11 +261,13 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
         call calc_energy_ghost(iBlock)
 
         if(DoMoveExtraData)then
-           if(UseCovariant)then                      
-              call calc_b0source_covar(iBlock)  
-           else                                       
-              call set_b0_matrix(iBlock)              
-           end if                                     
+           if(IsMhd)then
+              if(UseCovariant)then                      
+                 call calc_b0source_covar(iBlock)  
+              else                                       
+                 call set_b0_matrix(iBlock)              
+              end if
+           end if
            call init_cons_flux(iBlock)
         else
            call calc_other_soln_vars(iBlock)
@@ -363,7 +365,7 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
        B0xFace_x_BLK, B0yFace_x_BLK, B0zFace_x_BLK, &
        B0xFace_y_BLK, B0yFace_y_BLK, B0zFace_y_BLK, &
        B0xFace_z_BLK, B0yFace_z_BLK, B0zFace_z_BLK, &
-       iTypeAdvance_B, iTypeAdvance_BP, SkippedBlock_
+       iTypeAdvance_B, iTypeAdvance_BP, SkippedBlock_,IsMhd
   use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,xyzStart_BLK
   use ModParallel
   use ModBlockData, ONLY: get_block_data, put_block_data, &
@@ -500,46 +502,47 @@ contains
        end if                                       !^CFG IF CONSTRAINB
 
        if(DoMoveExtraData)then
-          ! B0*Cell
-          do k=1-gcn,nK+gcn;do j=1-gcn,nJ+gcn;do i=1-gcn,nI+gcn
-             iData = iData+1
-             BlockData_I(iData) = B0xCell_BLK(i,j,k,iBlockFrom)
-             iData = iData+1
-             BlockData_I(iData) = B0yCell_BLK(i,j,k,iBlockFrom)
-             iData = iData+1
-             BlockData_I(iData) = B0zCell_BLK(i,j,k,iBlockFrom)
-          end do; end do; end do
+          if(IsMhd)then
+             ! B0*Cell
+             do k=1-gcn,nK+gcn;do j=1-gcn,nJ+gcn;do i=1-gcn,nI+gcn
+                iData = iData+1
+                BlockData_I(iData) = B0xCell_BLK(i,j,k,iBlockFrom)
+                iData = iData+1
+                BlockData_I(iData) = B0yCell_BLK(i,j,k,iBlockFrom)
+                iData = iData+1
+                BlockData_I(iData) = B0zCell_BLK(i,j,k,iBlockFrom)
+             end do; end do; end do
+             
+             ! B0*Face_x
+             do k=0,nK+1; do j=0,nJ+1; do i=0,nI+2
+                iData = iData+1
+                BlockData_I(iData) = B0xFace_x_BLK(i,j,k,iBlockFrom)
+                iData = iData+1
+                BlockData_I(iData) = B0yFace_x_BLK(i,j,k,iBlockFrom)
+                iData = iData+1
+                BlockData_I(iData) = B0zFace_x_BLK(i,j,k,iBlockFrom)
+             end do; end do; end do
+             
+             ! B0*Face_y
+             do k=0,nK+1; do j=0,nJ+2; do i=0,nI+1
+                iData = iData+1
+                BlockData_I(iData) = B0xFace_y_BLK(i,j,k,iBlockFrom)
+                iData = iData+1
+                BlockData_I(iData) = B0yFace_y_BLK(i,j,k,iBlockFrom)
+                iData = iData+1
+                BlockData_I(iData) = B0zFace_y_BLK(i,j,k,iBlockFrom)
+             end do; end do; end do
 
-          ! B0*Face_x
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+2
-             iData = iData+1
-             BlockData_I(iData) = B0xFace_x_BLK(i,j,k,iBlockFrom)
-             iData = iData+1
-             BlockData_I(iData) = B0yFace_x_BLK(i,j,k,iBlockFrom)
-             iData = iData+1
-             BlockData_I(iData) = B0zFace_x_BLK(i,j,k,iBlockFrom)
-          end do; end do; end do
-
-          ! B0*Face_y
-          do k=0,nK+1; do j=0,nJ+2; do i=0,nI+1
-             iData = iData+1
-             BlockData_I(iData) = B0xFace_y_BLK(i,j,k,iBlockFrom)
-             iData = iData+1
-             BlockData_I(iData) = B0yFace_y_BLK(i,j,k,iBlockFrom)
-             iData = iData+1
-             BlockData_I(iData) = B0zFace_y_BLK(i,j,k,iBlockFrom)
-          end do; end do; end do
-
-          ! B0*Face_z
-          do k=0,nK+2; do j=0,nJ+1; do i=0,nI+1
-             iData = iData+1
-             BlockData_I(iData) = B0xFace_z_BLK(i,j,k,iBlockFrom)
-             iData = iData+1
-             BlockData_I(iData) = B0yFace_z_BLK(i,j,k,iBlockFrom)
-             iData = iData+1
-             BlockData_I(iData) = B0zFace_z_BLK(i,j,k,iBlockFrom)
-          end do; end do; end do
-
+             ! B0*Face_z
+             do k=0,nK+2; do j=0,nJ+1; do i=0,nI+1
+                iData = iData+1
+                BlockData_I(iData) = B0xFace_z_BLK(i,j,k,iBlockFrom)
+                iData = iData+1
+                BlockData_I(iData) = B0yFace_z_BLK(i,j,k,iBlockFrom)
+                iData = iData+1
+                BlockData_I(iData) = B0zFace_z_BLK(i,j,k,iBlockFrom)
+             end do; end do; end do
+          end if
           ! fbody*
           if(UseGravity.or.UseRotatingFrame)then
              do k=1,nK; do j=1,nJ; do i=1,nI
@@ -678,46 +681,47 @@ contains
     end if                                      !^CFG IF CONSTRAINB
 
     if(DoMoveExtraData)then
-       ! B0*Cell
-       do k=1-gcn,nK+gcn;do j=1-gcn,nJ+gcn;do i=1-gcn,nI+gcn
-          iData = iData+1
-          B0xCell_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-          iData = iData+1
-          B0yCell_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-          iData = iData+1
-          B0zCell_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-       end do; end do; end do
-
-       ! B0*Face_x
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+2
-          iData = iData+1
-          B0xFace_x_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-          iData = iData+1
-          B0yFace_x_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-          iData = iData+1
-          B0zFace_x_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-       end do; end do; end do
+       if(IsMhd)then
+          ! B0*Cell
+          do k=1-gcn,nK+gcn;do j=1-gcn,nJ+gcn;do i=1-gcn,nI+gcn
+             iData = iData+1
+             B0xCell_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+             iData = iData+1
+             B0yCell_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+             iData = iData+1
+             B0zCell_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+          end do; end do; end do
+          
+          ! B0*Face_x
+          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+2
+             iData = iData+1
+             B0xFace_x_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+             iData = iData+1
+             B0yFace_x_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+             iData = iData+1
+             B0zFace_x_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+          end do; end do; end do
        
-       ! B0*Face_y
-       do k=0,nK+1; do j=0,nJ+2; do i=0,nI+1
-          iData = iData+1
-          B0xFace_y_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-          iData = iData+1
-          B0yFace_y_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-          iData = iData+1
-          B0zFace_y_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-       end do; end do; end do
+          ! B0*Face_y
+          do k=0,nK+1; do j=0,nJ+2; do i=0,nI+1
+             iData = iData+1
+             B0xFace_y_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+             iData = iData+1
+             B0yFace_y_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+             iData = iData+1
+             B0zFace_y_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+          end do; end do; end do
 
-       ! B0*Face_z
-       do k=0,nK+2; do j=0,nJ+1; do i=0,nI+1
-          iData = iData+1
-          B0xFace_z_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-          iData = iData+1
-          B0yFace_z_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-          iData = iData+1
-          B0zFace_z_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-       end do; end do; end do
-
+          ! B0*Face_z
+          do k=0,nK+2; do j=0,nJ+1; do i=0,nI+1
+             iData = iData+1
+             B0xFace_z_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+             iData = iData+1
+             B0yFace_z_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+             iData = iData+1
+             B0zFace_z_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+          end do; end do; end do
+       end if
        ! fbody*
        if(UseGravity.or.UseRotatingFrame)then
           do k=1,nK; do j=1,nJ; do i=1,nI
