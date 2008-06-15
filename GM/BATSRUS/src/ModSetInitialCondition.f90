@@ -63,7 +63,7 @@ subroutine set_ics
      !\
      ! If used, initialize solution variables and parameters.
      !/
-     call set_b0(iBlock)
+     if(IsMhd)call set_b0(iBlock)
      call body_force_averages
 
      if(.not.restart)then
@@ -106,6 +106,7 @@ subroutine set_ics
                     State_VGB(iUx:iUy,i,j,k,iBlock) = &
                          matmul(Rot_II,ShockLeft_V(iUx:iUy))
                  end do
+                 if(IsMhd)&
                  State_VGB(Bx_:By_,i,j,k,iBlock) = &
                       matmul(Rot_II,ShockLeft_V(Bx_:By_))
               else
@@ -117,6 +118,7 @@ subroutine set_ics
                     State_VGB(iUx:iUy,i,j,k,iBlock) = &
                          matmul(Rot_II,ShockRight_V(iUx:iUy))
                  end do
+                 if(IsMhd)&
                  State_VGB(Bx_:By_,i,j,k,iBlock) = &
                       matmul(Rot_II,ShockRight_V(Bx_:By_))
               end if
@@ -127,6 +129,7 @@ subroutine set_ics
                       State_VGB(iRho,i,j,k,iBlock) * &
                       State_VGB(iUx:iUz,i,j,k,iBlock)
               end do
+              if(.not.IsMhd)CYCLE
               ! Remove B0 from B (if any)
               State_VGB(Bx_,i,j,k,iBlock)=State_VGB(Bx_,i,j,k,iBlock) - &
                    B0xCell_BLK(i,j,k,iBlock)
