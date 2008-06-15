@@ -36,6 +36,7 @@ MODULES = \
 	ModFaceValue.o\
 	ModGeometry.o\
 	ModHallResist.o\
+	ModHEDPlasma.o\
 	ModIO.o\
 	ModMain.o\
 	ModMessagePass.o\
