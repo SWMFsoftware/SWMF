@@ -138,7 +138,7 @@ subroutine calc_sources
         end do; end do; end do
      end if
   else
-     call calc_divb(iBlock)
+     if(IsMhd)call calc_divb(iBlock)
   end if
 
   if(UseCurlB0)then
