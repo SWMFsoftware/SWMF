@@ -353,13 +353,13 @@ subroutine set_units
      ! rPlanet, rPlanet/sec, amu/cm^3
      No2Si_V(UnitX_)   = rPlanetSi
      No2Si_V(UnitU_)   = rPlanetSi
-     No2Si_V(UnitRho_) = 1000000*cAtomicMass
+     No2Si_V(UnitRho_) = 1000000*cProtonMass !AtomicMass
   case("SOLARWIND")
      ! rPlanet, SW sound speed, SW density in amu/cm^3
      No2Si_V(UnitX_)   = rPlanetSi
      if(NameThisComp=='OH')No2Si_V(UnitX_)=cAU
-     No2Si_V(UnitU_)   = sqrt(g*cBoltzmann*SW_T_dim/cAtomicMass/MassIon_I(1))
-     No2Si_V(UnitRho_) = 1000000*cAtomicMass*MassIon_I(1)*SW_n_dim
+     No2Si_V(UnitU_)   = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass/MassIon_I(1))
+     No2Si_V(UnitRho_) = 1000000*cProtonMass*MassIon_I(1)*SW_n_dim
   case("NONE", "READ")
      ! Already set in MH_set_parameters
   case("USER")
@@ -380,7 +380,7 @@ subroutine set_units
   ! Note that No2Si_V(UnitN_) is NOT EQUAL TO 1/No2Si_V(UnitX_)^3 !!!
   !/
   No2Si_V(UnitT_)          = No2Si_V(UnitX_)/No2Si_V(UnitU_)         ! s
-  No2Si_V(UnitN_)          = No2Si_V(UnitRho_)/cAtomicMass           ! #/m^3
+  No2Si_V(UnitN_)          = No2Si_V(UnitRho_)/cProtonMass           ! #/m^3
   No2Si_V(UnitP_)          = No2Si_V(UnitRho_)*No2Si_V(UnitU_)**2    ! Pa
   No2Si_V(UnitB_)          = No2Si_V(UnitU_) &
        *sqrt(cMu*No2Si_V(UnitRho_))                                  ! T
@@ -461,7 +461,7 @@ subroutine set_units
   case("PLANETARY")
      Io2Si_V(UnitX_)        = rPlanetSi                       ! planetary radii
      Io2Si_V(UnitDivB_)     = 1.0E-9/rPlanetSi                ! nT/R_planet
-     Io2Si_V(UnitRho_)      = 1.0E6*cAtomicMass               ! Mp/cm^3
+     Io2Si_V(UnitRho_)      = 1.0E6*cProtonMass               ! Mp/cm^3
      Io2Si_V(UnitN_)        = 1.0E6                           ! #/cm^3
      Io2Si_V(UnitU_)        = 1.0E3                           ! km/s
      Io2Si_V(UnitP_)        = 1.0E-9                          ! nPa
