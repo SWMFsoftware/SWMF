@@ -5,7 +5,7 @@ subroutine amr(idepth)
        unusedBLK,lVerbose
   use ModGeometry, ONLY : minDXvalue,maxDXvalue,dx_BLK
   use ModAMR, ONLY : automatic_refinement
-  use ModAdvance, ONLY : DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP
+  use ModAdvance, ONLY : DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP,IsMhd
   use ModBlockData, ONLY: clean_block_data
   use ModIO, ONLY : write_prefix, iUnitOut
   use ModMpi
@@ -73,7 +73,7 @@ subroutine amr(idepth)
 
   ! Update ghost cells
   call exchange_messages
-
+  if(.not.IsMhd)return
   ! Correct B0 face at newly created and removed resolution changes
   do iBlock=1,nBlock
      if (unusedBLK(iBlock)) CYCLE
