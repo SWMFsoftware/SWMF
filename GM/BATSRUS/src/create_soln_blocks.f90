@@ -767,7 +767,7 @@ subroutine calc_other_soln_vars(iBLK)
        B0xCell_BLK,B0yCell_BLK,B0zCell_BLK, &
        B0xFace_x_BLK,B0yFace_x_BLK,B0zFace_x_BLK, &
        B0xFace_y_BLK,B0yFace_y_BLK,B0zFace_y_BLK, &
-       B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK
+       B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK,IsMhd
   use ModConserveFlux, ONLY: init_cons_flux
   use ModImplicit, ONLY: UsePartImplicit             !^CFG IF IMPLICIT
   implicit none
@@ -789,7 +789,7 @@ subroutine calc_other_soln_vars(iBLK)
   B0zFace_z_BLK(:,:,:,iBLK) = 0.00
 
 
-  call set_b0(iBLK)
+  if(IsMhd)call set_b0(iBLK)
 
   fbody_x_BLK(:,:,:,iBLK) = 0.00
   fbody_y_BLK(:,:,:,iBLK) = 0.00
