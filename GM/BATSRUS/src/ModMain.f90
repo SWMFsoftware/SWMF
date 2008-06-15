@@ -5,6 +5,7 @@ Module ModMain
   !/
   use ModKind
   use ModSize
+  use ModVarIndexes,ONLY:IsMhd
 
   implicit none
 
@@ -66,7 +67,7 @@ Module ModMain
   ! Parameters for the B0 field
   !/
   real    :: Dt_UpdateB0  = 0.0001
-  logical :: DoUpdateB0   = .true.
+  logical :: DoUpdateB0   = IsMhd
   logical :: DoSplitDb0Dt = .true.
 
   !\
@@ -138,11 +139,11 @@ Module ModMain
   !\
   ! How to deal with div B = 0
   !/
-  logical :: UseDivbSource    = .true.
+  logical :: UseDivbSource    = IsMhd
   logical :: UseDivbDiffusion = .false.
   logical :: UseProjection    = .false.
   logical :: UseConstrainB    = .false.
-  logical :: UseB0Source
+  logical :: UseB0Source      = IsMhd
   logical :: UseHyperbolicDivb= .false.
   real    :: SpeedHypDim = -1.0, SpeedHyp = 1.0, SpeedHyp2 = 1.0
   real    :: HypDecay = 0.1
