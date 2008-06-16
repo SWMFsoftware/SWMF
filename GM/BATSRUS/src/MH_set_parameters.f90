@@ -1205,6 +1205,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseTvdResChange',UseTvdResChange)
         if(UseTvdResChange) UseAccurateResChange=.false.
      case("#BORIS")                                  !^CFG IF BORISCORR BEGIN
+        if(.not.UseB)CYCLE READPARAM
         call read_var('UseBorisCorrection', boris_correction)   
         if(boris_correction) then
            call read_var('BorisClightFactor', boris_cLight_factor)
@@ -1221,7 +1222,7 @@ subroutine MH_set_parameters(TypeAction)
            boris_cLIGHT_factor = 1.0
         end if                                       !^CFG END SIMPLEBORIS
      case("#DIVB")
-        if(.not.IsMhd)CYCLE READPARAM
+        if(.not.UseB)CYCLE READPARAM
         call read_var('UseDivbSource'   ,UseDivbSource)   
         call read_var('UseDivbDiffusion',UseDivbDiffusion)!^CFG IF DIVBDIFFUSE
         call read_var('UseProjection'   ,UseProjection)  !^CFG IF PROJECTION
@@ -1265,7 +1266,7 @@ subroutine MH_set_parameters(TypeAction)
         DoInitConstrainB = .true.                        !^CFG IF CONSTRAINB
 
      case("#HYPERBOLICDIVB")
-        if(.not.IsMhd)CYCLE READPARAM
+        if(.not.UseB)CYCLE READPARAM
         if(NameVar_V(Hyp_) /= 'Hyp')then
            if(iProc==0)then
               write(*,*) NameSub // 'WARNING: ',&
@@ -1280,15 +1281,15 @@ subroutine MH_set_parameters(TypeAction)
            end if
         endif
      case("#DIVBSOURCE")
-        if(.not.IsMhd)CYCLE READPARAM
+        if(.not.UseB)CYCLE READPARAM
 	call read_var('UseB0Source'   ,UseB0Source)
      case("#USECURLB0")
-        if(.not.IsMhd)CYCLE READPARAM
+        if(.not.UseB0)CYCLE READPARAM
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseCurlB0',UseCurlB0)
         if(UseCurlB0)call read_var('rCurrentFreeB0',rCurrentFreeB0)
      case("#PROJECTION")                              !^CFG IF PROJECTION BEGIN
-        if(.not.IsMhd)CYCLE READPARAM
+        if(.not.UseB)CYCLE READPARAM
         call read_var('TypeProjectIter' ,proj_method)
         call read_var('TypeProjectStop' ,proj_typestop)
         call read_var('RelativeLimit'   ,proj_divbcoeff)
@@ -1848,11 +1849,12 @@ subroutine MH_set_parameters(TypeAction)
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('tSimulation',time_simulation)
      case("#HELIOUPDATEB0")
-        if(.not.IsMhd)CYCLE READPARAM
+        if(.not.UseB0)CYCLE READPARAM
         call read_var('DtUpdateB0',dt_updateb0)
         DoUpdateB0 = dt_updateb0 > 0.0
      case("#HELIODIPOLE")
         if(.not.is_first_session())CYCLE READPARAM
+        if(.not.UseB0)CYCLE READPARAM
         call read_var('HelioDipoleStrengthSi',DipoleStrengthSi)
         call read_var('HelioDipoleTilt'      ,ThetaTilt)
         ThetaTilt = ThetaTilt * cDegToRad
@@ -1989,7 +1991,7 @@ contains
        JacobianEps   = 1.E-6
     end if                            !^CFG END IMPLICIT
 
-    UseDivbSource   =  IsMhd
+    UseDivbSource   =  UseB
     UseDivbDiffusion= .false.         !^CFG IF DIVBDIFFUSE
     UseProjection   = .false.         !^CFG IF PROJECTION
     UseConstrainB   = .false.         !^CFG IF CONSTRAINB

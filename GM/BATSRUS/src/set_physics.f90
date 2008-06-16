@@ -570,12 +570,12 @@ subroutine init_mhd_variables
   use ModPhysics
   use ModMultiFluid
   use ModAdvance, ONLY: Hyp_, Pe_, UseElectronPressure
-
+  use ModMain,ONLY:UseB
   implicit none
 
   integer :: iVar
   !--------------------------------------------------------------------------
-  if(IsMhd)then
+  if(UseB)then
      UnitUser_V(Bx_:Bz_)        = No2Io_V(UnitB_)
      NameUnitUserTec_V(Bx_:Bz_) = NameTecUnit_V(UnitB_)
      NameUnitUserIdl_V(Bx_:Bz_) = NameIdlUnit_V(UnitB_)

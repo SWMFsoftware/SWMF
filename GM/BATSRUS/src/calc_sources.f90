@@ -128,7 +128,7 @@ subroutine calc_sources
              State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock))*RhoInv
      end do;end do;end do
 
-     if (UseB0Source .and. IsMhd) then
+     if (UseB0Source) then
         do k=1,nK; do j=1,nJ; do i=1,nI
            Source_VC(rhoUx_:rhoUz_,i,j,k)=Source_VC(rhoUx_:rhoUz_,i,j,k) - &
                 State_VGB(Bx_:Bz_,i,j,k,iBlock)*DivB0_CB(i,j,k,iBlock)+&
@@ -138,7 +138,7 @@ subroutine calc_sources
         end do; end do; end do
      end if
   else
-     if(IsMhd)call calc_divb(iBlock)
+     if(UseB)call calc_divb(iBlock)
   end if
 
   if(UseCurlB0)then

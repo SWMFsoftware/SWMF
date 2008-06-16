@@ -2,10 +2,10 @@
 subroutine amr(idepth)
   use ModProcMH
   use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,MaxBlock,&
-       unusedBLK,lVerbose
+       unusedBLK,lVerbose,UseB,UseB0
   use ModGeometry, ONLY : minDXvalue,maxDXvalue,dx_BLK
   use ModAMR, ONLY : automatic_refinement
-  use ModAdvance, ONLY : DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP,IsMhd
+  use ModAdvance, ONLY : DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP
   use ModBlockData, ONLY: clean_block_data
   use ModIO, ONLY : write_prefix, iUnitOut
   use ModMpi
@@ -73,14 +73,14 @@ subroutine amr(idepth)
 
   ! Update ghost cells
   call exchange_messages
-  if(.not.IsMhd)return
-  ! Correct B0 face at newly created and removed resolution changes
-  do iBlock=1,nBlock
-     if (unusedBLK(iBlock)) CYCLE
-     call set_b0_face(iBlock)
-  end do
-
+  if(UseB0)then
+     ! Correct B0 face at newly created and removed resolution changes
+     do iBlock=1,nBlock
+        if (unusedBLK(iBlock)) CYCLE
+        call set_b0_face(iBlock)
+     end do
+  end if
   ! Reset divb (it is undefined in newly created/moved blocks)
-  DivB1_GB=-7.70
+  if(UseB)DivB1_GB=-7.70
 
 end subroutine amr

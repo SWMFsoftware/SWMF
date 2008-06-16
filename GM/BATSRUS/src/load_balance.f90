@@ -3,7 +3,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   use ModProcMH
   use ModMain
   use ModImplicit, ONLY : UsePartImplicit !^CFG IF IMPLICIT
-  use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP, IsMhd,&
+  use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP,&
        SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, ImplBlock_
   use ModGeometry, ONLY: True_Blk
   use ModGeometry, ONLY: UseCovariant     
@@ -261,7 +261,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
         call calc_energy_ghost(iBlock)
 
         if(DoMoveExtraData)then
-           if(IsMhd)then
+           if(UseB0)then
               if(UseCovariant)then                      
                  call calc_b0source_covar(iBlock)  
               else                                       
@@ -365,7 +365,7 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
        B0xFace_x_BLK, B0yFace_x_BLK, B0zFace_x_BLK, &
        B0xFace_y_BLK, B0yFace_y_BLK, B0zFace_y_BLK, &
        B0xFace_z_BLK, B0yFace_z_BLK, B0zFace_z_BLK, &
-       iTypeAdvance_B, iTypeAdvance_BP, SkippedBlock_,IsMhd
+       iTypeAdvance_B, iTypeAdvance_BP, SkippedBlock_
   use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,xyzStart_BLK
   use ModParallel
   use ModBlockData, ONLY: get_block_data, put_block_data, &
@@ -502,7 +502,7 @@ contains
        end if                                       !^CFG IF CONSTRAINB
 
        if(DoMoveExtraData)then
-          if(IsMhd)then
+          if(UseB0)then
              ! B0*Cell
              do k=1-gcn,nK+gcn;do j=1-gcn,nJ+gcn;do i=1-gcn,nI+gcn
                 iData = iData+1
@@ -681,7 +681,7 @@ contains
     end if                                      !^CFG IF CONSTRAINB
 
     if(DoMoveExtraData)then
-       if(IsMhd)then
+       if(UseB0)then
           ! B0*Cell
           do k=1-gcn,nK+gcn;do j=1-gcn,nJ+gcn;do i=1-gcn,nI+gcn
              iData = iData+1

@@ -5,7 +5,7 @@ Module ModMain
   !/
   use ModKind
   use ModSize
-  use ModVarIndexes,ONLY:IsMhd
+  use ModVarIndexes
 
   implicit none
 
@@ -24,6 +24,9 @@ Module ModMain
 
   ! In the SWMF the BATSRUS may run as GM, SC or IH component
   character (len=2)   :: NameThisComp='GM'
+
+  logical,parameter::UseB=B_/=rhoU_
+  logical::UseB0=UseB
 
   !\
   ! Named indexes for directions
@@ -67,7 +70,7 @@ Module ModMain
   ! Parameters for the B0 field
   !/
   real    :: Dt_UpdateB0  = 0.0001
-  logical :: DoUpdateB0   = IsMhd
+  logical :: DoUpdateB0   = UseB
   logical :: DoSplitDb0Dt = .true.
 
   !\
@@ -139,11 +142,11 @@ Module ModMain
   !\
   ! How to deal with div B = 0
   !/
-  logical :: UseDivbSource    = IsMhd
+  logical :: UseDivbSource    = UseB
   logical :: UseDivbDiffusion = .false.
   logical :: UseProjection    = .false.
   logical :: UseConstrainB    = .false.
-  logical :: UseB0Source      = IsMhd
+  logical :: UseB0Source      = UseB
   logical :: UseHyperbolicDivb= .false.
   real    :: SpeedHypDim = -1.0, SpeedHyp = 1.0, SpeedHyp2 = 1.0
   real    :: HypDecay = 0.1
