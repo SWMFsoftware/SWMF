@@ -6,7 +6,8 @@ module ModMultiIon
   ! Allow for extra point-implicit sources in ModUser
 
   use ModMultiFluid
-  use ModMain, ONLY: UseUserSource
+  use ModProcMH, ONLY: iProc
+  use ModMain, ONLY: UseUserSource, iTest, jTest, kTest, VarTest, BlkTest, ProcTest
   use ModUser, ONLY: user_calc_sources, user_init_point_implicit
 
   implicit none
@@ -68,7 +69,16 @@ contains
 
     real    :: Rho, p, RhoUx
     integer :: i, j, k
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub = 'multi_ion_set_restrict'
     !----------------------------------------------------------------------
+
+    if (iBlock == BlkTest .and. iProc == ProcTest) then 
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest = .false. ; DoTestMe = .false.
+    end if
+    
     do k=1,nK; do j=1,nJ; do i=1,nI
        ! Check if we are in the solar wind
        Rho   = State_VGB(Rho_,i,j,k,iBlock)
@@ -78,7 +88,16 @@ contains
        IsMultiIon_CB(i,j,k,iBlock) = .not. &
             (RhoUx < 0.0 .and. RhoUx**2 > MachNumberMultiIon*g*p*Rho &
             .and. y_BLK(i,j,k,iBlock)**2 + z_BLK(i,j,k,iBlock)**2 > &
-            -1.0 * ParabolaWidthMultiIon * x_BLK(i,j,k,iBlock))
+            -ParabolaWidthMultiIon * x_BLK(i,j,k,iBlock))
+       if(DoTestMe .and. i == iTest .and. j == jTest .and. k == kTest) then
+          write(*,*) NameSub,'Rho, p, RhoUx =',Rho, p, RhoUx
+          write(*,*) NameSub,'RhoUx**2, MachNumberMultiIon*g*p*Rho=', &
+               RhoUx**2, MachNumberMultiIon*g*p*Rho
+          write(*,*) NameSub,'y**2, z**2, -ParabolaWidthMultiIon*x=', &
+               y_BLK(i,j,k,iBlock)**2 , z_BLK(i,j,k,iBlock)**2, &
+                -ParabolaWidthMultiIon * x_BLK(i,j,k,iBlock)
+          write(*,*) NameSub, ' IsMultiIon_CB=',  IsMultiIon_CB(i,j,k,iBlock) 
+       end if
     end do; end do; end do
   
   end subroutine multi_ion_set_restrict
@@ -89,12 +108,9 @@ contains
     ! If there is no explicit source term, the subroutine user_expl_source 
     ! and the corresponding calls can be removed.
 
-    use ModProcMH,  ONLY: iProc
     use ModPointImplicit, ONLY:  UsePointImplicit, IsPointImplSource, &
          IsPointImplMatrixSet
-    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, &
-         UseBoris => boris_correction, &              !^CFG IF BORISCORR
-         iTest, jTest, kTest, Test_String, VarTest, BlkTest, ProcTest
+    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, UseBoris => boris_correction
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModAdvance, ONLY: B0XCell_BLK, B0YCell_BLK, B0ZCell_BLK
     use ModAdvance, ONLY: bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
@@ -225,7 +241,7 @@ contains
        end if                                 !^CFG END BORISCORR
 
        if(DoTestCell)then
-          if(UseBoris)write(*,*) NameSub,'Ga2=',Ga2  !^CFG IF BORISCORR
+          if(UseBoris)write(*,*) NameSub,'Ga2=',Ga2
           write(*,*) NameSub,' FullB_D  =', FullB_D
           write(*,*) NameSub,' Current_D=', Current_D
           write(*,*) NameSub,' uPlus_D  =', uPlus_D
