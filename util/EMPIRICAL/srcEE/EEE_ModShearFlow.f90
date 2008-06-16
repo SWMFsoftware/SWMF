@@ -111,12 +111,12 @@ contains
     CosTheta = x_D(3)/R
     SinPhi   = x_D(2)/Xy
     CosPhi   = x_D(1)/Xy
+    UnitR_D  = x_D/R
 
-    call get_magnetogram_field(x_D(1),x_D(2),x_D(3),B0_D)
-    call EEE_get_B0(x_D,B_D)
+    call get_magnetogram_field(UnitR_D(1),UnitR_D(2),UnitR_D(3),B0_D)
+    call EEE_get_B0(UnitR_D,B_D)
     B0_D = (B0_D + B_D)*Si2No_V(UnitB_)
 
-    UnitR_D = x_D/R
     FullBr = dot_product(UnitR_D,B0_D)
 
     dTheta = cTiny
@@ -182,14 +182,13 @@ contains
     x_D(1) = Xy*cos(Phi)
     x_D(2) = Xy*sin(Phi)
     x_D(3) = R*cos(Theta)
+    UnitR_D = x_D/R
 
-    call get_magnetogram_field(x_D(1),x_D(2),x_D(3),B0_D)
-    call EEE_get_B0(x_D,B_D)
+    call get_magnetogram_field(UnitR_D(1),UnitR_D(2),UnitR_D(3),B0_D)
+    call EEE_get_B0(UnitR_D,B_D)
     B0_D = (B0_D + B_D)*Si2No_V(UnitB_)
 
-    UnitR_D = x_D/R
     FullBr = dot_product(UnitR_D,B0_D)
-
     BrRatio = FullBr/MaxBr
 
     Del_D = xFlow_D - UnitR_D
