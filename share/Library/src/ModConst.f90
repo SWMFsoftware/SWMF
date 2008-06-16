@@ -41,9 +41,9 @@ Module ModConst
   ! Speed of light [m/s]
   real, parameter :: cLightSpeed =  2.9979E+8
 
-  !Plank constant  [J*s]
-  real,parameter  :: cPlankH    = 6.626069311E-34        !J * s
-  real,parameter  :: cPlankHBar = cPlankH /cTwoPi
+  !Planck constant  [J*s]
+  real,parameter  :: cPlanckH    = 6.626069311E-34        !J * s
+  real,parameter  :: cPlanckHBar = cPlanckH /cTwoPi
 
   ! Vacuum permeability [H/m]
   real, parameter :: cMu = cPi*4E-7

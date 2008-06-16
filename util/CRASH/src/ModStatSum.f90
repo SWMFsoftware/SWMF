@@ -27,7 +27,7 @@ Contains
     integer:: iZ  !Used for loops
     real   :: DeBroglie
     LogN_I = (/(log(real(iZ)), iZ = 1,nZMax)/)
-    DeBroglie=sqrt(cTwoPi*(cElectronMass/cPlankH)*(cBoltzmann/cPlankH))
+    DeBroglie=sqrt(cTwoPi*(cElectronMass/cPlanckH)*(cBoltzmann/cPlanckH))
     C0 = cTwo*DeBroglie**3 ! 2/(Lambda^3)
   end subroutine mod_init
   !Set the element and its Ionization Potentials

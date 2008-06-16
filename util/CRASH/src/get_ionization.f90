@@ -46,8 +46,8 @@ module ModSaha
   real,  parameter ::  &
        cToleranceHere =  cTiny**2 ,     &  !012, 009 givs up to 4-5 digits
        cTwoPiInv = cOne /cTwoPi   ,     &
-       Hmax  = cPlankH  /cErg     ,     &  !   erg*s Planck
-       HmaxT = cPlankHBar                  !   the same/2Pi
+       Hmax  = cPlanckH  /cErg     ,     &  !   erg*s Planck
+       HmaxT = cPlanckHBar                  !   the same/2Pi
 
   PUBLIC  proGON;  
 
