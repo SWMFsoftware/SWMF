@@ -27,18 +27,18 @@ subroutine update_states_MHD(iStage,iBLK)
   real:: DtFactor
   real:: DtLocal
   logical :: IsMultiIon
-  logical :: oktest, oktest_me
+  logical :: DoTest, DoTestMe
+  character(len=*), parameter :: NameSub = 'update_states_mhd'
   !--------------------------------------------------------------------------
   if(iBLK==BLKtest .and. iProc==PROCtest)then
-     call set_oktest('update_states_MHD',oktest,oktest_me)
+     call set_oktest(NameSub,DoTest,DoTestMe)
   else
-     oktest=.false.; oktest_me=.false.
+     DoTest=.false.; DoTestMe=.false.
   endif
 
   !\
   ! Set variables depending on stage number
   !/
-
   DtFactor = iStage*(Cfl/nStage)
 
   !\
@@ -50,9 +50,6 @@ subroutine update_states_MHD(iStage,iBLK)
      StateOld_VCB(1:nVar,1:nI,1:nJ,1:nK,iBLK) = & 
           State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBLK)
      EnergyOld_CBI(:,:,:,iBLK,:) = Energy_GBI(1:nI,1:nJ,1:nK,iBLK,:)
-
-     if(oktest_me)write(*,*)'EnergyOld=',EnergyOld_CBI(iTest,jTest,kTest,iBlk,:)
-
   end if
 
   !Get Residual.
@@ -70,6 +67,9 @@ subroutine update_states_MHD(iStage,iBLK)
 
   call update_explicit
 
+  if(DoTestMe)write(*,*) NameSub, ' after explicit state=', &
+       State_VGB(VarTest, iTest, jTest, kTest, iBlk)
+
   ! Add point implicit user or multi-ion source terms
   if (UsePointImplicit .and. UsePointImplicit_B(iBLK))then
      if(UseMultiIon)then
@@ -79,6 +79,10 @@ subroutine update_states_MHD(iStage,iBLK)
         call update_point_implicit(iStage, iBLK, user_calc_sources, &
              user_init_point_implicit)
      end if
+
+     if(DoTestMe)write(*,*) NameSub, ' after point impl state=', &
+          State_VGB(VarTest, iTest,jTest,kTest,iBlk)
+
   end if
 
   if(UseMultiIon .and. IsMhd)then
@@ -89,6 +93,7 @@ subroutine update_states_MHD(iStage,iBLK)
         if(DoRestrictMultiIon)IsMultiIon = IsMultiIon_CB(i,j,k,iBlk)
         if(.not. IsMultiIon)then
            ! Put most of the stuff into the first ion fluid
+           Rho = State_VGB(Rho_, i, j, k, iBlk)
            State_VGB(iRhoIon_I(1),i,j,k,iBlk) = &
                 Rho*(1.0 - LowDensityRatio*(IonLast_ - IonFirst_))
            State_VGB(iRhoIon_I(2:nIonFluid),i,j,k,iBlk) = &
@@ -141,12 +146,19 @@ subroutine update_states_MHD(iStage,iBLK)
                 ) / State_VGB(iRhoIon_I,i,j,k,iBLK)
         end if
      end do; end do; end do
+
+     if(DoTestMe)write(*,*) NameSub,' after multiion state=', &
+          State_VGB(VarTest,iTest,jTest,kTest,iBlk)
+
   end if
 
 
   if(UseHyperbolicDivb .and. HypDecay > 0 .and. iStage == nStage) &
        State_VGB(Hyp_,1:nI,1:nJ,1:nK,iBlk) = &
        State_VGB(Hyp_,1:nI,1:nJ,1:nK,iBlk)*(1 - HypDecay)
+
+  if(DoTestMe)write(*,*) NameSub, ' after final state=', &
+       State_VGB(VarTest,iTest,jTest,kTest,iBlk)
 
 contains
 
@@ -161,8 +173,6 @@ contains
        Energy_GBI(i,j,k,iBLK,:) = EnergyOld_CBI(i,j,k,iBLK,:) + &
             Source_VC(Energy_:Energy_-1+nFluid,i,j,k)
     end do; end do; end do
-
-    if(oktest_me)write(*,*)'EnergyNew=',Energy_GBI(iTest,jTest,kTest,iBlk,:)
 
     if(UseMultiSpecies)then
        ! Fix negative species densities
@@ -186,8 +196,6 @@ contains
                Source_VC(By_,i,j,k)**2 + &
                Source_VC(Bz_,i,j,k)**2)
        end do; end do; end do
-
-       if(oktest_me)write(*,*)'EnergyFix=',Energy_GBI(iTest,jTest,kTest,iBlk,:)
 
     end if
 
@@ -347,12 +355,8 @@ contains
        end do; end do; end do
     end if                                   !^CFG END SIMPLEBORIS
 
-    if(oktest_me)write(*,*)'EnergyBef=',Energy_GBI(iTest,jTest,kTest,iBlk,:)
-
     ! Update energy or pressure based on UseConservative and IsConserv_CB
     call calc_energy_or_pressure(iBlk)
-
-    if(oktest_me)write(*,*)'EnergyAft=',Energy_GBI(iTest,jTest,kTest,iBlk,:)
 
   end subroutine update_explicit
 
