@@ -37,7 +37,7 @@ contains
     end if
 
     if(UseShearFlow)then
-       call get_shearflow(x_D,Time,U1_D)
+       call get_shearflow(x_D,Time,U1_D,iteration_number)
 
        U_D = U_D + U1_D
     end if
