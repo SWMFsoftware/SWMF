@@ -1,7 +1,7 @@
 module ModFaceFlux
 
   use ModProcMH, ONLY: iProc
-  use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK
+  use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK,UseB
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
   use ModVarIndexes, ONLY: nVar, NameVar_V, UseMultiSpecies, nFluid
@@ -44,7 +44,7 @@ module ModFaceFlux
   logical :: DoAw                !^CFG IF AWFLUX
   logical :: DoRoeOld            !^CFG IF ROEFLUX
   logical :: DoRoe               !^CFG IF ROEFLUX
-
+  logical :: DoGodunov           
   logical :: UseLindeFix
   logical :: DoTestCell
   logical :: IsBoundary
@@ -66,7 +66,7 @@ module ModFaceFlux
   real :: FluxLeft_V(nFlux), FluxRight_V(nFlux)
   real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
   real :: DissipationFlux_V(nFlux)
-  real :: B0x, B0y, B0z
+  real :: B0x=0.0, B0y=0.0, B0z=0.0
   real :: DiffBb  !     (1/4)(BnL-BnR)^2
   real :: DeltaBnL, DeltaBnR
   real :: Area, Area2, AreaX, AreaY, AreaZ
@@ -275,7 +275,7 @@ contains
          iMinFaceY, iMaxFaceY, kMinFaceY,kMaxFaceY, &
          iMinFaceZ,iMaxFaceZ, jMinFaceZ, jMaxFaceZ, &
          iTest, jTest, kTest, ProcTest, BlkTest, DimTest, &
-         UseHyperbolicDivb
+         UseHyperbolicDivb,UseB,UseB0
 
     implicit none
 
@@ -298,14 +298,15 @@ contains
     DoAw     = TypeFlux == 'Sokolov'     !^CFG IF AWFLUX
     DoRoeOld = TypeFlux == 'RoeOld'      !^CFG IF ROEFLUX
     DoRoe    = TypeFlux == 'Roe'         !^CFG IF ROEFLUX
+    DoGodunov= TypeFlux == 'Godunov'
 
     UseRS7 = DoRoe  ! This is always true for the current implementation
 
-    UseLindeFix = UseHyperbolicDivb &
+    UseLindeFix = (UseHyperbolicDivb &
          .or. DoHll      &               !^CFG IF LINDEFLUX
          .or. DoHllD     &               !^CFG IF HLLDFLUX
-         .or. DoAw                       !^CFG IF AWFLUX
-
+         .or. DoAw       &               !^CFG IF AWFLUX
+          ).and.UseB
     ! Make sure that Hall MHD recalculates the magnetic field 
     ! in the current block that will be used for the Hall term
     IsNewBlockHall = .true.
@@ -349,15 +350,17 @@ contains
                  LeftState_VX(iVar,iTest+1,jTest,kTest),&
                  RightState_VX(iVar,iTest+1,jTest,kTest)
          end do
-         write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
-              B0xFace_x_BLK(iTest,jTest,kTest,BlkTest),' ',&
-              B0xFace_x_BLK(iTest+1,jTest,kTest,BlkTest)
-         write(*,'(a,1pe13.5,a13,1pe13.5)')'B0y:',&
-              B0yFace_x_BLK(iTest,jTest,kTest,BlkTest),' ',&
-              B0yFace_x_BLK(iTest+1,jTest,kTest,BlkTest)
-         write(*,'(a,1pe13.5,a13,1pe13.5)')'B0z:',&
-              B0zFace_x_BLK(iTest,jTest,kTest,BlkTest),' ',&
-              B0zFace_x_BLK(iTest+1,jTest,kTest,BlkTest)
+         if(UseB0)then
+            write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
+                 B0xFace_x_BLK(iTest,jTest,kTest,BlkTest),' ',&
+                 B0xFace_x_BLK(iTest+1,jTest,kTest,BlkTest)
+            write(*,'(a,1pe13.5,a13,1pe13.5)')'B0y:',&
+                 B0yFace_x_BLK(iTest,jTest,kTest,BlkTest),' ',&
+                 B0yFace_x_BLK(iTest+1,jTest,kTest,BlkTest)
+            write(*,'(a,1pe13.5,a13,1pe13.5)')'B0z:',&
+                 B0zFace_x_BLK(iTest,jTest,kTest,BlkTest),' ',&
+                 B0zFace_x_BLK(iTest+1,jTest,kTest,BlkTest)
+         end if
       end if
 
       if(DimTest==y_ .or. DimTest==0)then
@@ -371,15 +374,17 @@ contains
                  LeftState_VY(iVar,iTest,jTest+1,kTest),&
                  RightState_VY(iVar,iTest,jTest+1,kTest)
          end do
-         write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
-              B0xFace_y_BLK(iTest,jTest,kTest,BlkTest),' ',&
-              B0xFace_y_BLK(iTest,jTest+1,kTest,BlkTest)
-         write(*,'(a,1pe13.5,a13,1pe13.5)')'B0y:',&
-              B0yFace_y_BLK(iTest,jTest,kTest,BlkTest),' ',&
-              B0yFace_y_BLK(iTest,jTest+1,kTest,BlkTest)
-         write(*,'(a,1pe13.5,a13,1pe13.5)')'B0z:',&
-              B0zFace_y_BLK(iTest,jTest,kTest,BlkTest),' ',&
-              B0zFace_y_BLK(iTest,jTest+1,kTest,BlkTest)
+         if(UseB0)then
+            write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
+                 B0xFace_y_BLK(iTest,jTest,kTest,BlkTest),' ',&
+                 B0xFace_y_BLK(iTest,jTest+1,kTest,BlkTest)
+            write(*,'(a,1pe13.5,a13,1pe13.5)')'B0y:',&
+                 B0yFace_y_BLK(iTest,jTest,kTest,BlkTest),' ',&
+                 B0yFace_y_BLK(iTest,jTest+1,kTest,BlkTest)
+            write(*,'(a,1pe13.5,a13,1pe13.5)')'B0z:',&
+                 B0zFace_y_BLK(iTest,jTest,kTest,BlkTest),' ',&
+                 B0zFace_y_BLK(iTest,jTest+1,kTest,BlkTest)
+         end if
       end if
 
       if(DimTest==z_ .or. DimTest==0)then
@@ -392,15 +397,17 @@ contains
                  LeftState_VZ(iVar,iTest,jTest,kTest+1),&
                  RightState_VZ(iVar,iTest,jTest,kTest+1)
          end do
-         write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
-              B0xFace_z_BLK(iTest,jTest,kTest,BlkTest),' ',&
-              B0xFace_z_BLK(iTest,jTest,kTest+1,BlkTest)
-         write(*,'(a,1pe13.5,a13,1pe13.5)')'B0y:',&
-              B0yFace_z_BLK(iTest,jTest,kTest,BlkTest),' ',&
-              B0yFace_z_BLK(iTest,jTest,kTest+1,BlkTest)
-         write(*,'(a,1pe13.5,a13,1pe13.5)')'B0z:',&
-              B0zFace_z_BLK(iTest,jTest,kTest,BlkTest),' ',&
-              B0zFace_z_BLK(iTest,jTest,kTest+1,BlkTest)
+         if(UseB0)then
+            write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
+                 B0xFace_z_BLK(iTest,jTest,kTest,BlkTest),' ',&
+                 B0xFace_z_BLK(iTest,jTest,kTest+1,BlkTest)
+            write(*,'(a,1pe13.5,a13,1pe13.5)')'B0y:',&
+                 B0yFace_z_BLK(iTest,jTest,kTest,BlkTest),' ',&
+                 B0yFace_z_BLK(iTest,jTest,kTest+1,BlkTest)
+            write(*,'(a,1pe13.5,a13,1pe13.5)')'B0z:',&
+                 B0zFace_z_BLK(iTest,jTest,kTest,BlkTest),' ',&
+                 B0zFace_z_BLK(iTest,jTest,kTest+1,BlkTest)
+         end if
       end if
 
     end subroutine print_values
@@ -420,11 +427,11 @@ contains
          DoTestCell = DoTestMe &
               .and. (iFace == iTest .or. iFace == iTest+1) &
               .and. jFace == jTest .and. kFace == kTest
-
-         B0x = B0xFace_x_BLK(iFace, jFace, kFace, iBlockFace)
-         B0y = B0yFace_x_BLK(iFace, jFace, kFace, iBlockFace)
-         B0z = B0zFace_x_BLK(iFace, jFace, kFace, iBlockFace)
-
+         if(UseB0)then
+            B0x = B0xFace_x_BLK(iFace, jFace, kFace, iBlockFace)
+            B0y = B0yFace_x_BLK(iFace, jFace, kFace, iBlockFace)
+            B0z = B0zFace_x_BLK(iFace, jFace, kFace, iBlockFace)
+         end if
          if(UseRS7.and..not.IsBoundary)then
             DeltaBnR=sum((RightState_VX(Bx_:Bz_, iFace, jFace, kFace)-&
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
@@ -468,11 +475,11 @@ contains
 
          DoTestCell = DoTestMe .and. iFace == iTest .and. &
               (jFace == jTest .or. jFace == jTest+1) .and. kFace == kTest
-
-         B0x = B0xFace_y_BLK(iFace, jFace, kFace, iBlockFace)
-         B0y = B0yFace_y_BLK(iFace, jFace, kFace, iBlockFace)
-         B0z = B0zFace_y_BLK(iFace, jFace, kFace, iBlockFace)
-
+         if(UseB0)then
+            B0x = B0xFace_y_BLK(iFace, jFace, kFace, iBlockFace)
+            B0y = B0yFace_y_BLK(iFace, jFace, kFace, iBlockFace)
+            B0z = B0zFace_y_BLK(iFace, jFace, kFace, iBlockFace)
+         end if
          if(UseRS7.and..not.IsBoundary)then
             DeltaBnR=sum((RightState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
@@ -519,11 +526,11 @@ contains
 
          DoTestCell = DoTestMe .and. iFace == iTest .and. &
               jFace == jTest .and. (kFace == kTest .or. kFace == kTest+1)
-
-         B0x = B0xFace_z_BLK(iFace, jFace, kFace,iBlockFace)
-         B0y = B0yFace_z_BLK(iFace, jFace, kFace,iBlockFace)
-         B0z = B0zFace_z_BLK(iFace, jFace, kFace,iBlockFace)
-
+         if(UseB0)then
+            B0x = B0xFace_z_BLK(iFace, jFace, kFace,iBlockFace)
+            B0y = B0yFace_z_BLK(iFace, jFace, kFace,iBlockFace)
+            B0z = B0zFace_z_BLK(iFace, jFace, kFace,iBlockFace)
+         end if
          if(UseRS7.and..not.IsBoundary)then
             DeltaBnR=sum((RightState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
@@ -717,7 +724,7 @@ contains
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, &
          UseMultiSpecies, SpeciesFirst_, SpeciesLast_
     use ModAdvance, ONLY: DoReplaceDensity,State_VGB,Hyp_
-    use ModCharacteristicMhd,ONLY:dissipation_matrix
+    use ModCharacteristicMhd,ONLY:dissipation_matriz_mhd=>dissipation_matrix
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp
 
@@ -754,33 +761,35 @@ contains
     end if
 
     if(DoRoe)then
-       if(IsBoundary)then
-          uLeft_D=StateLeft_V(Ux_:Uz_); uRight_D=StateRight_V(Ux_:Uz_)
-       else
-          !Since the divB source term is calculated using the
-          !cell centered velocity, the numerical diffusion
-          !for the normal magnetic field should be evaluated
-          !in terms of the cell centered velocity too
-          uLeft_D =State_VGB(RhoUx_:RhoUz_, iLeft, jLeft, kLeft, iBlockFace)/&
-               State_VGB(Rho_, iLeft, jLeft, kLeft, iBlockFace)
-          uRight_D=State_VGB(RhoUx_:RhoUz_, iRight,jRight,kRight,iBlockFace)/&
-               State_VGB(Rho_, iRight,jRight,kRight,iBlockFace)
+       if(UseB)then
+          if(IsBoundary)then
+             uLeft_D=StateLeft_V(Ux_:Uz_); uRight_D=StateRight_V(Ux_:Uz_)
+          else
+             !Since the divB source term is calculated using the
+             !cell centered velocity, the numerical diffusion
+             !for the normal magnetic field should be evaluated
+             !in terms of the cell centered velocity too
+             uLeft_D =State_VGB(RhoUx_:RhoUz_, iLeft, jLeft, kLeft, iBlockFace)/&
+                  State_VGB(Rho_, iLeft, jLeft, kLeft, iBlockFace)
+             uRight_D=State_VGB(RhoUx_:RhoUz_, iRight,jRight,kRight,iBlockFace)/&
+                  State_VGB(Rho_, iRight,jRight,kRight,iBlockFace)
+          end if
+          B0xL = B0xCell_BLK(iLeft,  jLeft,  kLeft,  iBlockFace)
+          B0yL = B0yCell_BLK(iLeft,  jLeft,  kLeft,  iBlockFace)
+          B0zL = B0zCell_BLK(iLeft,  jLeft,  kLeft,  iBlockFace)
+          B0xR = B0xCell_BLK(iRight, jRight, kRight, iBlockFace)
+          B0yR = B0yCell_BLK(iRight, jRight, kRight, iBlockFace)
+          B0zR = B0zCell_BLK(iRight, jRight, kRight, iBlockFace)
+          call dissipation_matrix_mhd(Normal_D,               &
+               StateLeft_V, StateRight_V,                 &
+               B0x,B0y,B0z,B0xL,B0yL,B0zL,B0xR,B0yR,B0zR, &
+               uLeft_D, uRight_D, DeltaBnL, DeltaBnR,     &
+               DissipationFlux_V, cMax, Unormal_I(1),     &
+               IsBoundary, .false.)
+          Unormal_I=Unormal_I(1)
        end if
-       B0xL = B0xCell_BLK(iLeft,  jLeft,  kLeft,  iBlockFace)
-       B0yL = B0yCell_BLK(iLeft,  jLeft,  kLeft,  iBlockFace)
-       B0zL = B0zCell_BLK(iLeft,  jLeft,  kLeft,  iBlockFace)
-       B0xR = B0xCell_BLK(iRight, jRight, kRight, iBlockFace)
-       B0yR = B0yCell_BLK(iRight, jRight, kRight, iBlockFace)
-       B0zR = B0zCell_BLK(iRight, jRight, kRight, iBlockFace)
-       call dissipation_matrix(Normal_D,               &
-            StateLeft_V, StateRight_V,                 &
-            B0x,B0y,B0z,B0xL,B0yL,B0zL,B0xR,B0yR,B0zR, &
-            uLeft_D, uRight_D, DeltaBnL, DeltaBnR,     &
-            DissipationFlux_V, cMax, Unormal_I(1),     &
-            IsBoundary, .false.)
-       Unormal_I=Unormal_I(1)
     end if
-    if(UseRS7 .or. UseLindeFix)then
+    if(UseRS7 .or. (UseLindeFix))then
        ! Sokolov's algorithm
        ! Calculate and store the jump in the normal magnetic field
        DiffBn    = 0.5* &
@@ -1455,7 +1464,7 @@ contains
     else
        ! If there is no MHD fluid, calculate fluxes for magnetic field
        ! together with hydro fluxes for the first fluid
-       call get_magnetic_flux
+       if(UseB)call get_magnetic_flux
        call select_fluid
        call get_hd_flux
     end if
@@ -1773,15 +1782,20 @@ contains
     end subroutine get_magnetic_flux
 
     !==========================================================================
-    subroutine get_hd_flux
+    subroutine get_hd_flux(Gamma,EPerRhoExtra)
 
       use ModPhysics, ONLY: inv_gm1
       use ModVarIndexes
+      real,optional::Gamma,EPerRhoExtra
       ! Variables for conservative state and flux calculation
-      real :: Rho, Ux, Uy, Uz, p, e, RhoUn
+      real :: Rho, Ux, Uy, Uz, p, e, RhoUn,GM1Inv
       integer :: iVar
       !-----------------------------------------------------------------------
-
+      if(present(Gamma))then
+         GM1Inv=1.0/(Gamma-1.0)
+      else
+         GM1Inv=inv_gm1
+      end if
       ! Extract primitive variables
       Rho     = State_V(iRho)
       Ux      = State_V(iUx)
@@ -1790,8 +1804,8 @@ contains
       p       = State_V(iP)
 
       ! Calculate energy
-      e = inv_gm1*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2)
-
+      e = GM1Inv*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2)
+      if(present(EPerRhoExtra))e=e+EPerRhoExtra*Rho
       ! Calculate conservative state
       StateCons_V(iRhoUx)  = Rho*Ux
       StateCons_V(iRhoUy)  = Rho*Uy
