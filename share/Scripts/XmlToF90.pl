@@ -32,9 +32,15 @@ my $Indent1    = (' ' x 3);  # incremental indentation
 my $IndentCont = (' ' x 5);  # indentation for continuation lines
 
 my $SrcCode;            # F90 code produced by the script
+my $SrcBeforeDecl;      # Source code before the parameter declarations
 my $SrcDecl;            # Declaration of command parameters
+my $SrcDecl2;           # Declarations after the command being processed
+my $SrcAfterDecl;       # Source code after the declarations but before indexes
 my $SrcIndex;           # Declaration of indexes used in loops
-my $SrcCase;            # The case statements reading in the parameters
+my $SrcBeforeCase;      # Source code after indexes and before case statements
+my $SrcCase;            # Case statements reading in the parameters
+my $SrcCase2;           # Case statements after the command being processed
+my $SrcAfterCase;       # Source code after the case statements
 my $iPart;              # part index for multi-part parameters
 my $ForeachName;        # name of the index variable in a foreach loop
 my $ForeachValue;       # value of the index variable in a foreach loop
@@ -45,9 +51,14 @@ my %DefaultValue;       # Hash for default values
 $VariableType{"UseStrict"} = "logical";
 $DefaultValue{"UseStrict"} = "T";
 
+# Read in current file if this is an update. Also make a copy
+&read_original if $Update;
+
 my $Xml = &XmlRead($Input); # XML tree data structure created from XML text
 
 &process_xml($Xml);
+
+### &check_declarations;
 
 if($NewFile){
     my $Module = $OutputFile;
@@ -63,8 +74,9 @@ if($NewFile){
   implicit none
 
   character(len=*), parameter:: NameMod = '$Module'
-
+  ! GIPHT BEGIN DECLARATIONS
 $SrcDecl
+  ! GIPHT END DECLARATIONS
 
 contains
 
@@ -73,16 +85,19 @@ contains
     character (len=100) :: NameCommand, StringPart_I(100)
     integer :: iSession, nStringPart
     logical :: UseStrict
+    ! GIPHT BEGIN INDEXES
 $SrcIndex
-
+    ! GIPHT END INDEXES
     character(len=*), parameter:: NameSub = NameMod//'::set_parameters'
     !-------------------------------------------------------------------------
     iSession = i_session_read()
     do
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
+       ! GIPHT BEGIN COMMANDS
        select case(NameCommand)
 $SrcCase
+       ! GIPHT END COMMANDS
        case default
           !if(iProc==0) then
           write(*,*) NameSub // ' WARNING: unknown command ' // &
@@ -109,9 +124,15 @@ $SrcCase
 
 end module $Module
 ";
+}elsif($Update){
+    $SrcCode  = $SrcBeforeDecl . $SrcDecl. $SrcDecl2 . $SrcAfterDecl;
+    $SrcCode .= $SrcIndex if $SrcIndex;
+    $SrcCode .= $SrcBeforeCase . $SrcCase . $SrcCase2 . $SrcAfterCase;
 }else{
-    $SrcCode = "$SrcDecl"."  !".("-" x 75).$SrcCase;
+    $SrcCode .= "$SrcDecl"."  !".("-" x 75)."\n" if $SrcDecl;
+    $SrcCode .= $SrcCase;
 }
+
 if($OutputFile){
     open(OUT, ">$OutputFile") or 
 	die "$ERROR could not open output file $OutputFile\n";
@@ -122,6 +143,30 @@ if($OutputFile){
 }
 
 exit 0;
+
+##############################################################################
+sub read_original{
+    my $Part = "Before decl";
+    open(IN, $OutputFile) or die "$ERROR could not open file $OutputFile\n";
+    `cp $OutputFile $OutputFile.orig`;
+    while(<IN>){
+	$Part = "Declaration" if /^ *\! *GIPHT BEGIN DECLARATIONS/;
+	$Part = "After decl"  if /^ *\! *GIPHT END DECLARATIONS/;
+	$Part = "Index"       if /^ *\! *GIPHT BEGIN INDEXES/;
+	$Part = "Before case" if /^ *\! *GIPHT END INDEXES/;
+	$Part = "Case"        if /^ *\! *GIPHT BEGIN COMMANDS/;
+	$Part = "After case"  if /^ *\! *GIPHT END COMMANDS/;
+
+	$SrcBeforeDecl .= $_ if $Part eq "Before decl";
+	$SrcDecl       .= $_ if $Part eq "Declaration";
+	$SrcAfterDecl  .= $_ if $Part eq "After decl";
+	$SrcIndex      .= $_ if $Part eq "Index";
+	$SrcBeforeCase .= $_ if $Part eq "Before case";
+	$SrcCase       .= $_ if $Part eq "Case";
+	$SrcAfterCase  .= $_ if $Part eq "After case";
+    }
+}
+
 
 ##############################################################################
 sub process_xml{
@@ -140,27 +185,72 @@ sub process_xml{
 	    &process_xml($element->{content});
 	}elsif($name eq 'commandgroup'){
 	    my $Name = $element->{attrib}->{name};
-	    # Remove previous command comment if there were no parameters
-	    $SrcDecl =~ s/  ! \"\#\w+\"\n$//;
-	    $SrcDecl .= "\n  ! >>> $Name <<<\n";
-	    $SrcCase .= "\n".$Indent."! >>> $Name <<<\n\n";
+
+	    if($Update){
+		# Find commandgroup comment and split there
+		my $Src = $SrcCase . $SrcCase2;
+		if($Src =~ /( *! >>> $Name <<<\n+)/){
+		    $SrcCase  = $`.$1;
+		    $SrcCase2 = $';
+		}
+		my $Src = $SrcDecl . $SrcDecl2;
+		if($Src =~ /( *! >>> $Name <<<\n)/ ){
+		    $SrcDecl  = $`.$1;
+		    $SrcDecl2 = $'; 
+		}
+	    }else{
+		# Remove previous command comment if there were no parameters
+		$SrcDecl =~ s/  ! \"\#\w+\"\n$//;
+		# Remove previous commandgroup comment if there are no commands
+		$SrcDecl =~ s/  ! >>> .*\n$//;
+	    }
+	    $SrcDecl .= "\n  ! >>> $Name <<<\n" unless $Commands;
+	    $SrcCase .= "\n".$Indent."! >>> $Name <<<\n\n" unless $Commands;
 	    &process_xml($element->{content});
 	}elsif($name eq 'command'){
+	    # Remove previous command comment if there were no parameters
+	    $SrcDecl =~ s/  ! \"\#\w+\"\n$//;
+
 	    my $Attrib = $element->{attrib};
-            my $Name   = "\"\#$Attrib->{name}\"";
+	    my $NameCommand = $Attrib->{name};
+            my $Name   = "\"\#$NameCommand\"";
+	    my $SrcCase1 = $SrcCase;
+	    my $SrcDecl1 = $SrcDecl;
+	    if($Update){
+		# Find command and split SrcCase and SrcDecl
+		my $Src = $SrcCase . $SrcCase2;
+		if($Src =~ s/(( *)case\($Name.*\n(\2 .*\n)*)//i){
+		    $SrcCase1 = $`;
+		    $SrcCase  = $`.$1;
+		    $SrcCase2 = $';
+		}
+		my $Src = $SrcDecl . $SrcDecl2;
+		if($Src =~ /( *! *$Name\n(.*::.*\n)*)/i){
+		    $SrcDecl1 = $`;
+		    $SrcDecl  = $`.$1;
+		    $SrcDecl2 = $'; 
+		}
+	    }
+
+	    next if $Commands and $Commands !~ /\b$NameCommand\b/;
+
+	    if($Update){
+		# Remove previous version of the command if any
+		$SrcCase = $SrcCase1;
+		$SrcDecl = $SrcDecl1;
+	    }
+
 	    my $Alias  = $Attrib->{alias};
 	    foreach my $Alias (split ",", $Attrib->{alias}){
 		$Name .= ", \"\#$Alias\"";
 	    }
-	    # Remove previous command comment if there were no parameters
-	    $SrcDecl =~ s/  ! \"\#\w+\"\n$//;
 	    # Add new comment
 	    $SrcDecl .= "  ! $Name\n";
 	    $SrcCase .= $Indent."case($Name)\n";
 	    $Indent .= $Indent1;
 	    my $If = $Attrib->{if};
 	    if($If =~ /IsFirstSession/){
-		$SrcCase .= $Indent."if(.not.is_first_session())CYCLE\n";
+	    	$SrcCase .= $Indent."if(.not.is_first_session())CYCLE\n";
 	    }
 	    &process_xml($element->{content});
 	    $Indent =~ s/$Indent1//;
@@ -183,9 +273,8 @@ sub process_xml{
 	    $SrcCase .= $Indent."if($If) &\n".$IndentCont if $If;
 	    $SrcCase .= $Indent."call read_var('$Name', $Name)\n";
 
-	    $SrcCase =~ s/\)\n$/, IsUpperCase=.true.)\n/ if $Case eq "upper";
-	    $SrcCase =~ s/\)\n$/, IsLowerCase=.true.)\n/ if $Case eq "lower";
-
+	    $SrcCase =~ s/\)\n$/, IsUpperCase=.true.\)\n/ if $Case eq "upper";
+	    $SrcCase =~ s/\)\n$/, IsLowerCase=.true.\)\n/ if $Case eq "lower";
 
 	    if($Type eq "strings"){
 		my $MaxPart = $Attrib -> {max};
@@ -276,47 +365,13 @@ sub add_var{
     my $Type  = shift;
     my $Value = shift;
 
-    my $name = lc($Name); # F90 is not case sensitive
-
-    # Check if variable name has already occured or not
-    my $Type2 = $VariableType{$name};
-    if($Type2){
-	# Check if types agree
-	if($Type ne $Type2){
-	    warn "$WARNING: variable $Name has types $Type and $Type2\n";
-	    $SrcDecl .= "!!! $Type :: $Name was declared above with $Type2\n";
-	    return;
-	}
-	# Check if default values agree
-	my $Value2 = $DefaultValue{$name};
-	if(length($Value) and length($Value2) and ($Value ne $Value2)){
-	    warn "$WARNING: variable $Name has default values ".
-		"$Value and $Value2\n";
-	    $SrcDecl .= "!!! $Type :: $Name = $Value ".
-		"was declared above with value $Value2\n";
-	    return;
-	}
-	$SrcDecl .= "  ! $Type :: $Name has been declared above\n";
-	return;
-    }
-
-    # replace variables with their default values if possible
-    while($Value =~ /\$(\w+)/){
-	my $Value2 = $DefaultValue{lc($1)};
-	$Value =~ s/\$(\w+)/$Value2/ if $Value2;
-    }
-
-    # Store variable
-    $VariableType{$name} = $Type;
-    $DefaultValue{$name} = $Value;
-
     $Type =~ s/strings?/character(len=100)/;
 
     # Fix value
     $Value =~ s/T/.true./ if $Type eq "logical";
     $Value =~ s/F/.false./ if $Type eq "logical";
     $Value =  "'$Value'" if $Type =~ /character/ and length($Value);
-    $Value .= ".0" if $Type eq "real" and $Value =~ /^\d+$/;
+    $Value .= ".0" if $Type eq "real" and $Value =~ /^[\+\-\d]+$/;
 
     # Add declaration
     if(length($Value)){
@@ -324,6 +379,60 @@ sub add_var{
     }else{
 	$SrcDecl .= "  $Type :: $Name\n";
     }
+}
+
+###############################################################################
+
+sub check_declarations{
+
+    my @Decl = split("\n",$SrcDecl . $SrcDecl2);
+    foreach (@Decl){
+	next unless /^ *(integer|real|logical|character)/i;
+	my $Type = lc($1);
+	my $Name;
+	my $Value;
+	if(/(\w+) *= *(.*)$/){
+	    $Name  = $1;
+	    $Value = $2;
+	}else{
+	    /(\w+)$/;
+	    $Name = $1;
+	}
+	my $name = lc($Name);
+	my $Type2 = $VariableType{$name};
+	if($Type2){
+	    # Check if types agree
+	    if($Type ne $Type2){
+		warn "$WARNING: variable $Name has types $Type and $Type2\n";
+		$_ = "!!! $Type :: $Name was declared above with $Type2\n";
+		next;
+	    }
+	    # Check if default values agree
+	    my $Value2 = $DefaultValue{$name};
+
+	    if(length($Value) and length($Value2) and ($Value ne $Value2)){
+		warn "$WARNING: variable $Name has default values ".
+		    "$Value and $Value2\n";
+		$_ = "!!! $Type :: $Name = $Value ".
+		    "was declared above with value $Value2\n";
+		next;
+	    }
+	    $_ = "  ! $Type :: $Name has been declared above\n";
+	    next;
+	}
+	$DefaultValue{$name} = $Value if length($Value);
+	$VariableType{$name} = $Type;
+    }
+
+    $SrcDecl = join('', @Decl);
+    $SrcDecl2 = '';
+
+    # Check if variable name has already occured or not
+    # replace variables with their default values if possible
+    #while($Value =~ /\$(\w+)/){
+    #	my $Value2 = $DefaultValue{lc($1)};
+    #	$Value =~ s/\$(\w+)/$Value2/ if $Value2;
+    #}
 }
 
 ###############################################################################
