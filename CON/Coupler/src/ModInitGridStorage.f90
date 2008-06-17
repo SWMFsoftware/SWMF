@@ -10,7 +10,7 @@ module ModInitGridStorage
   !EOP
   integer,parameter:: MaxGrid = MaxComp+3
   type(DomainDecompositionType),private,save,target::&
-       GmGrid, IeGrid, IhGrid, ImGrid, LaGrid, PsGrid, PwGrid, RbGrid, &
+       GmGrid, IeGrid, IhGrid, ImGrid, LaGrid, OhGrid, PsGrid, PwGrid, RbGrid, &
        ScGrid, SpGrid, UaGrid
 contains
   !BOP
@@ -45,6 +45,8 @@ contains
        DD_I(GridID_)%Ptr=>IhGrid
     case(LA_)
        DD_I(GridID_)%Ptr=>LaGrid
+    case(OH_)
+       DD_I(GridID_)%Ptr=>OhGrid
     case(PS_)
        DD_I(GridID_)%Ptr=>PsGrid
     case(PW_)
