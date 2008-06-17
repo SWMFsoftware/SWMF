@@ -724,7 +724,7 @@ contains
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, &
          UseMultiSpecies, SpeciesFirst_, SpeciesLast_
     use ModAdvance, ONLY: DoReplaceDensity,State_VGB,Hyp_
-    use ModCharacteristicMhd,ONLY:dissipation_matriz_mhd=>dissipation_matrix
+    use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp
 
@@ -736,7 +736,7 @@ contains
     real :: DiffBn, DiffBx, DiffBy, DiffBz, DiffE
     real :: EnLeft, EnRight, Jx, Jy, Jz
     real :: uLeft_D(3),uRight_D(3) !,cDivBWave
-    real :: B0xL, B0yL, B0zL, B0xR, B0yR, B0zR
+    real :: dB0_D(3)
     !-----------------------------------------------------------------------
 
     if(UseMultiSpecies .and. DoReplaceDensity)then
@@ -769,23 +769,30 @@ contains
              !cell centered velocity, the numerical diffusion
              !for the normal magnetic field should be evaluated
              !in terms of the cell centered velocity too
-             uLeft_D =State_VGB(RhoUx_:RhoUz_, iLeft, jLeft, kLeft, iBlockFace)/&
+             uLeft_D = &
+                  State_VGB(RhoUx_:RhoUz_, iLeft, jLeft, kLeft, iBlockFace)/&
                   State_VGB(Rho_, iLeft, jLeft, kLeft, iBlockFace)
-             uRight_D=State_VGB(RhoUx_:RhoUz_, iRight,jRight,kRight,iBlockFace)/&
+             uRight_D = &
+                  State_VGB(RhoUx_:RhoUz_, iRight,jRight,kRight,iBlockFace)/&
                   State_VGB(Rho_, iRight,jRight,kRight,iBlockFace)
           end if
-          B0xL = B0xCell_BLK(iLeft,  jLeft,  kLeft,  iBlockFace)
-          B0yL = B0yCell_BLK(iLeft,  jLeft,  kLeft,  iBlockFace)
-          B0zL = B0zCell_BLK(iLeft,  jLeft,  kLeft,  iBlockFace)
-          B0xR = B0xCell_BLK(iRight, jRight, kRight, iBlockFace)
-          B0yR = B0yCell_BLK(iRight, jRight, kRight, iBlockFace)
-          B0zR = B0zCell_BLK(iRight, jRight, kRight, iBlockFace)
-          call dissipation_matrix_mhd(Normal_D,               &
+
+          dB0_D = (/ &
+               B0xCell_BLK(iLeft,  jLeft,  kLeft,  iBlockFace)    &
+               - B0xCell_BLK(iRight, jRight, kRight, iBlockFace), &
+               B0yCell_BLK(iLeft,  jLeft,  kLeft,  iBlockFace)    &
+               - B0yCell_BLK(iRight, jRight, kRight, iBlockFace), &
+               B0zCell_BLK(iLeft,  jLeft,  kLeft,  iBlockFace)    &
+               - B0zCell_BLK(iRight, jRight, kRight, iBlockFace)  &
+               /)
+
+          call get_dissipation_flux_mhd(Normal_D,         &
                StateLeft_V, StateRight_V,                 &
-               B0x,B0y,B0z,B0xL,B0yL,B0zL,B0xR,B0yR,B0zR, &
+               (/B0x,B0y,B0z/), dB0_D,                    &
                uLeft_D, uRight_D, DeltaBnL, DeltaBnR,     &
-               DissipationFlux_V, cMax, Unormal_I(1),     &
-               IsBoundary, .false.)
+               IsBoundary, .false.,                       &
+               DissipationFlux_V, cMax, Unormal_I(1))
+
           Unormal_I=Unormal_I(1)
        end if
     end if
