@@ -492,12 +492,15 @@ Components which are not used in a session can be switched off.
 
 <command name="COMPONENT" multiple="T">
 	<parameter name="NameComp" type="string" input="options">
-		<option name="SC" />
-		<option name="IH" default="T" />
+		<option name="SC" default="T"/>
+		<option name="IH" />
+		<option name="OH" />
 		<option name="SP" />
 		<option name="GM" />
 		<option name="IM" />
+		<option name="LA" />
 		<option name="RB" />
+		<option name="PS" />
 		<option name="IE" />
 		<option name="UA" />
 	</parameter>
@@ -524,14 +527,17 @@ file are used.
 
 <command name="CYCLE" multiple="T">
 	<parameter name="NameComp" type="string" input="options">
-		<option name="SC" default="T" />
-                <option name="IH" />
+		<option name="SC" default="T"/>
+		<option name="IH" />
+		<option name="OH" />
 		<option name="SP" />
-                <option name="GM" />
-                <option name="IM" />
+		<option name="GM" />
+		<option name="IM" />
+		<option name="LA" />
 		<option name="RB" />
-                <option name="IE" />
-                <option name="UA" />
+		<option name="PS" />
+		<option name="IE" />
+		<option name="UA" />
         </parameter>
 	<parameter name="DnRun" type="integer" min="1" default="1"/>
 
@@ -553,8 +559,8 @@ The default is DnRun = 1 for all the active components.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 <command name="COUPLEORDER">
-	<parameter name="nCouple" type="integer" min="0" max="18" 
-							default="18" />
+	<parameter name="nCouple" type="integer" min="0" max="20" 
+							default="20" />
 	<for name="iCouple" from="1" to="$nCouple">
 		<parameter name="NameSourceTarget" type="string"
 							input="select">
@@ -576,11 +582,13 @@ The default is DnRun = 1 for all the active components.
 			<option name="IE PW" default="$iCouple==16" />
 			<option name="IE PS" default="$iCouple==17" />
 			<option name="IE RB" default="$iCouple==18" />
+			<option name="IH OH" default="$iCouple==19" />
+			<option name="OH IH" default="$iCouple==20" />
 		</parameter>
 	</for>
 
 #COUPLEORDER
-16                nCouple
+20                nCouple
 SC IH             NameSourceTarget
 IH SC             NameSourceTarget
 SC SP             NameSourceTarget
@@ -597,6 +605,10 @@ PW GM             NameSourceTarget
 IE UA             NameSourceTarget
 IE GM             NameSourceTarget
 IE PW             NameSourceTarget
+IE PS             NameSourceTarget
+IE RB             NameSourceTarget
+IH OH             NameSourceTarget
+OH IH             NameSourceTarget
 
 The nCouple variable determines the maximum number of couplings
 among the components. The NameSourceTarget string contains the
@@ -788,14 +800,17 @@ The default is no shifting.
 
 <command name="COUPLETIME" multiple="T">
 	<parameter name="NameComp" type="string" input="options">
-		<option name="SC" default="T" />
-                <option name="IH" />
+		<option name="SC" default="T"/>
+		<option name="IH" />
+		<option name="OH" />
 		<option name="SP" />
-                <option name="GM" />
-                <option name="IM" />
+		<option name="GM" />
+		<option name="IM" />
+		<option name="LA" />
 		<option name="RB" />
-                <option name="IE" />
-                <option name="UA" />
+		<option name="PS" />
+		<option name="IE" />
+		<option name="UA" />
 	</parameter>
 	<parameter name="DoCoupleOnTime" type="logical" default="T"/>
 
