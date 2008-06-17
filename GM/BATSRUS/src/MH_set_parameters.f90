@@ -759,23 +759,16 @@ subroutine MH_set_parameters(TypeAction)
                  plot_range(4,ifile)= 90.0 + 0.5*plot_dx(2,ifile)
                  plot_range(5,ifile)= 0.   - 0.5*plot_dx(3,ifile)
                  plot_range(6,ifile)= 360.0- 0.5*plot_dx(3,ifile)
-              case('spherical')                    
-                 plot_dx(1,ifile) = -1.0   
+              case('spherical', 'spherical_lnr')
+                 plot_dx(1,ifile) = -1.0
+                 if(TypeGeometry == 'spherical_lnr') &
+                      plot_range(1,ifile) = log(plot_range(1,ifile))
                  plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4 !so that R/=0
                  do i=Phi_,Theta_
                     plot_range(2*i-1,ifile) = XyzMin_D(i)
                     plot_range(2*i,ifile)   = XyzMax_D(i)  
                  end do
-                 plot_area='R=0' ! to disable the write_plot_sph routine
-              case('spherical_lnr')           
-                 plot_dx(1,ifile) = -1.0  
-                 plot_range(1,ifile)=alog(max(plot_range(1,ifile),cTiny)) 
-                 plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4 !so that R/=0
-                 do i=Phi_,Theta_
-                    plot_range(2*i-1,ifile) = XyzMin_D(i)
-                    plot_range(2*i,ifile)   = XyzMax_D(i)  
-                 end do
-                 plot_area='R=0'       ! to disable the write_plot_sph routine
+                 plot_area='r=r' ! to disable the write_plot_sph routine
               case default
                  call stop_mpi(NameSub// &
                       ' Sph-plot is not implemented for geometry= '&
