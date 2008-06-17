@@ -1,8 +1,8 @@
 <!-- The syntax is described by share/Scripts/CheckParam.pl and the manual -->
 
-<commandList name="BATSRUS: GM, SC and IH Components">
+<commandList name="BATSRUS: GM, SC, IH and OH Components">
 
-List of MH (GM, IH and SC) commands used in the PARAM.in file
+List of MH (GM, IH, OH and SC) commands used in the PARAM.in file
 
 <!-- Grid size array is transformed into scalars to simplify rules -->
 <set name="MaxBlock"     type="integer" value="$_GridSize[3]" />
@@ -26,6 +26,7 @@ List of MH (GM, IH and SC) commands used in the PARAM.in file
 		<option name="GM" default="T" />
 		<option name="SC" />
 		<option name="IH" />
+		<option name="OH" />
 	</parameter>
 	<set name="NameRestartOutDir" type="string" 
 						value="$NameComp/restartOUT"/>
@@ -35,8 +36,8 @@ List of MH (GM, IH and SC) commands used in the PARAM.in file
 GM			NameComp
 
 This command can be used in the stand-alone mode to make BATSRUS behave as
-if it was the Global Magnetosphere (GM), Solar Corona (SC) or 
-Inner Heliosphere (IH) component of the SWMF. The NameComp variable 
+if it was the Global Magnetosphere (GM), Solar Corona (SC), 
+Inner Heliosphere (IH) or Outer Heliosphere (OH) component of the SWMF. The NameComp variable 
 contains the two-character component ID of the selected component.
 If NameComp is different from the default component value, then
 the default values for all parameters (including the component dependent 
@@ -868,7 +869,7 @@ restart header file so that one continues with the same I/O units
 after restart.
 
 The default is "PLANETARY" unit if BATSRUS is used as the GM component
-and "HELIOSPHERIC" otherwise (SC or IH). 
+and "HELIOSPHERIC" otherwise (SC, IH or OH). 
 </command>
 
 <command name="RESTARTINDIR" if="$_IsFirstSession">
@@ -1179,6 +1180,7 @@ The #GRID command should be used before the #SAVEPLOT command.
 		<option name="GSM" default="$NameComp eq 'GM'"/>
 		<option name="HGR" default="$NameComp eq 'SC'"/>
 		<option name="HGI" default="$NameComp eq 'IH'"/>
+		<option name="HGI" default="$NameComp eq 'OH'"/>
 		<option name="HGC" 		               />
 	</parameter>
 
@@ -1187,11 +1189,11 @@ GSM			TypeCoordSystem
 
 TypeCoordSystem defines the coordinate system for the component.
 Currently only one coordinate system is available for GM ("GSM")
-and two for IH ("HGI" or "HGC") and two for SC ("HGR" or "HGI"). 
+and two for IH, OH ("HGI" or "HGC") and two for SC ("HGR" or "HGI"). 
 In the future "GSE" should be also an option for GM.
 The coordinate systems are defined in share/Library/src/CON_axes.
 
-Default is component dependent: "GSM" for GM, "HGI" for IH, and "HGR" for SC.
+Default is component dependent: "GSM" for GM, "HGI" for IHand OH, and "HGR" for SC.
 </command>
 
 <command name="GRIDGEOMETRY" alias="COVARIANTGEOMETRY" if="$_IsFirstSession">
@@ -4432,7 +4434,7 @@ while HelioDipoleTilt is the tilt relative to the ecliptic North
 Default value is HelioDipoleStrength = 0.0.
 </command>
 
-<command name="HELIOBUFFERGRID" if="$_IsFirstSession and $NameComp eq 'IH'">
+<command name="HELIOBUFFERGRID" if="$_IsFirstSession and $NameComp =~ /IH|OH/">
 	<parameter name="rBuffMin"   type="real" min="1" default="19"/>
 	<parameter name="rBuffMax"   type="real" min="1" default="21"/>
 	<parameter name="nThetaBuff" type="integer" min="18" default="45"/>
@@ -4445,9 +4447,9 @@ Default value is HelioDipoleStrength = 0.0.
 
 Define the radius and the grid resolution for the uniform 
 spherical buffer grid which passes information 
-from the SC component to the IH component. The resolution should
-be similar to the grid resolution of the coarser of the SC and IH grids.
-This command can only be used in the first session by the IH component. 
+from the SC(IH) component to the IH(OH) component. The resolution should
+be similar to the grid resolution of the coarser of the SC(IH) and IH(OH) grids.
+This command can only be used in the first session by the IH(OH) component. 
 Default values are shown above.
 </command>
 </commandgroup>
