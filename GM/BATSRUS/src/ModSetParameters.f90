@@ -1784,7 +1784,7 @@ subroutine MH_set_parameters(TypeAction)
            if(TypeCoordSystem /= 'GSM')call stop_mpi(NameSub// &
                 ' ERROR: cannot handle coordinate system '&
                 //TypeCoordSystem)
-        case('IH')
+        case('IH','OH')
            select case(TypeCoordSystem)
            case('HGI')
               ! Note: transformation from HGR to HGI does not work properly
@@ -1799,7 +1799,7 @@ subroutine MH_set_parameters(TypeAction)
                    ' ERROR: cannot handle coordinate system '&
                    //TypeCoordSystem)
            end select
-        case('SC')
+       case('SC')
            select case(TypeCoordSystem)
            case('HGR','HGC')
               UseRotatingFrame = .true.
@@ -1856,8 +1856,9 @@ subroutine MH_set_parameters(TypeAction)
              ' #HELIOROTATION / #INERTIAL command is obsolete and ignored'
      case("#HELIOBUFFERGRID")
         if(.not.is_first_session())CYCLE READPARAM
-        if(NameThisComp /= "IH")call stop_mpi(NameSub//' ERROR:'// &
-             ' #HELIOBUFFERGRID command can be used in IH component only')
+        if(NameThisComp == 'SC') &
+             call stop_mpi(NameSub//' ERROR:'// &
+             ' #HELIOBUFFERGRID command can be used in IH and OH components only')
         call read_var('rBuffMin',  rBuffMin)
         call read_var('rBuffMax',  rBuffMax)
         call read_var('nThetaBuff',nThetaBuff)
@@ -1916,7 +1917,7 @@ contains
 
     ! Default coordinate systems
     select case(NameThisComp)
-    case('IH')
+    case('IH','OH')
        ! Do not start line with Type... to avoid an Emacs indentation bug
        UseRotatingFrame  = .false.
        UseRotatingBc     = .false.; TypeCoordSystem   = 'HGI'
@@ -2049,7 +2050,7 @@ contains
     if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
 
     select case(NameThisComp)
-    case('IH','SC')
+    case('IH','SC','OH')
        ! Body parameters
        UseGravity=.true.
        body1      =.true.
