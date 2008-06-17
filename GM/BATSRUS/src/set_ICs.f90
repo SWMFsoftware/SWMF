@@ -106,8 +106,7 @@ subroutine set_ics
                     State_VGB(iUx:iUy,i,j,k,iBlock) = &
                          matmul(Rot_II,ShockLeft_V(iUx:iUy))
                  end do
-                 if(UseB)&
-                 State_VGB(Bx_:By_,i,j,k,iBlock) = &
+                 if(UseB) State_VGB(Bx_:By_,i,j,k,iBlock) = &
                       matmul(Rot_II,ShockLeft_V(Bx_:By_))
               else
                  ! Set all variables first
@@ -118,8 +117,7 @@ subroutine set_ics
                     State_VGB(iUx:iUy,i,j,k,iBlock) = &
                          matmul(Rot_II,ShockRight_V(iUx:iUy))
                  end do
-                 if(UseB)&
-                 State_VGB(Bx_:By_,i,j,k,iBlock) = &
+                 if(UseB) State_VGB(Bx_:By_,i,j,k,iBlock) = &
                       matmul(Rot_II,ShockRight_V(Bx_:By_))
               end if
               ! Convert velocity to momentum
