@@ -142,7 +142,7 @@ RAW			StringLogfile
 1			nStage
 0.6			CflExpl
 
-#UPSTREAM_INPUT_FILE
+#SOLARWINDFILE
 T                                                     UseUpstreamInputFile
 GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat   NameUpstreamFile
 
