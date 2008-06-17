@@ -172,6 +172,8 @@ foreach $method (sort values %method){
 
     s/^(GM|IH|MH)_// if $Comp eq "SC";#IH_ GM_ and MH_ prefix removed for SC
 
+    s/^(GM|IH|MH)_// if $Comp eq "OH";#IH_ GM_ and MH_ prefix removed for OH
+
     $replace = $Comp."_$_";          # Add component prefix
 
     $replace = "NO$replace" 
