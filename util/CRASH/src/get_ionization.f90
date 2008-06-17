@@ -142,13 +142,12 @@ module ModSaha
   real function zNew( zOLD)! return (zITER)
   
    real, intent(in) :: zOLD
-   real           :: z1, z2, zITER 
+   real             :: z1, z2, zITER 
   
    z1    = z_averaged()
    z2    = z2_averaged()
    zITER = zOLD - ( zOLD - z1)/( cOne +( z2 -z1*z1)/zOLD )
 
-   !vNe   = NatomII * zIter
    zNEW  = zITER
   end function zNew
   !=========================================

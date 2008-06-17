@@ -11,25 +11,28 @@ module ModStatSum
   integer :: iZMax  !of ion states with iZ<iZMin or iZ>iZMax is negligible.
   
  
-  real,dimension(1:nZMax) :: IonizPotential_I,&	!array of ionization potentials - energy needed to create i-level ion from (i-1)-level ion
-							 EnergyLevel_I !array of energy levels of ions - energy needed to create i-level ion from a neutral atom
+  real,dimension(1:nZMax) :: 
+         IonizPotential_I,&	!array of ionization potentials - energy needed to create i-level ion from (i-1)-level ion
+	 EnergyLevel_I !array of energy levels of ions - energy needed to create i-level ion from a neutral atom
   real,dimension(0:nZMax) :: Population_I, StatSumTermLog_I
 
   real,parameter :: cBoltzmannEVInv = cEV/cBoltzmann !Inverse of the Boltzmann constant in [K/eV]
   real,dimension(nZMax) :: LogN_I
-  real :: C0 ! 2/(Lambda^3)
+  real :: C0      ! 2/(Lambda^3)
   real :: TeInv,& ! the inverse of the electron temperature [1/eV] (1/(cBoltzmann in eV * Te in Kelvin)
-		  Zav  ! the average charge per ion - <Z> (elementary charge units)
+           Zav    ! the average charge per ion - <Z> (elementary charge units)
 Contains
+
   !=========================================================================
   !Calculates the natural logarithms of the first nZMax integers
   subroutine mod_init
     integer:: iZ  !Used for loops
     real   :: DeBroglie
-    LogN_I = (/(log(real(iZ)), iZ = 1,nZMax)/)
-    DeBroglie=sqrt(cTwoPi*(cElectronMass/cPlanckH)*(cBoltzmann/cPlanckH))
-    C0 = cTwo*DeBroglie**3 ! 2/(Lambda^3)
+    LogN_I   = (/(log(real(iZ)), iZ = 1,nZMax)/)
+    DeBroglie= sqrt(cTwoPi*(cElectronMass/cPlanckH)*(cBoltzmann/cPlanckH))
+    C0       = cTwo*DeBroglie**3 ! 2/(Lambda^3)
   end subroutine mod_init
+
   !Set the element and its Ionization Potentials
   !==========================================================================
   subroutine set_element( nZIn)
@@ -166,7 +169,8 @@ Contains
       ! Use Newton's method to iteratively get a better approximation of Z:
       iIter  =  0
       ZTrial = -ToleranceZ
-      iterations: do while (abs(Zav-ZTrial) >= ToleranceZ.and.iIter<10)
+      iterations: do while (abs(Zav-ZTrial) >= ToleranceZ .and. iIter<10)
+
          ZTrial = Zav
          call set_population(lnC1 - log(ZTrial))
          Z1  = z_averaged()
@@ -175,7 +179,7 @@ Contains
          iIter = iIter+1
       end do iterations
       write (*,*) "Iterations done:", iIter
-      write (*,*) "Final Zav = ", Zav
+      write (*,*) "Final Zav = ", Zav , " eR=", abs(Zav -Ztrial)
     end subroutine set_Z
   end subroutine set_ionization_equilibrium
 
@@ -189,3 +193,4 @@ Contains
   end function internal_energy
 
 end module ModStatSum
+

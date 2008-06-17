@@ -46,10 +46,10 @@ IONIZ_general:
 		${Lflag1}
 
 IONIZ_for_Darwin:
-	rm -rf Tmp_; mkdir Tmp_
-	cd Tmp_; ar -x ../${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE}
+	rm -rf Tmp_; mkdir Tmp_ ;
+	cd Tmp_; ar -x ../${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE};
 	${LINK.f90} -o IONIZ.exe ${OBJECTS_EXE} Tmp_/*.o \
-		${Lflag1}    ; \
+		${Lflag1}    ; 
 	rm -rf Tmp_ ;
 
 
