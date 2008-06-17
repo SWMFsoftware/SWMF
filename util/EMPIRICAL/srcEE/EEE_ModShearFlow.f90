@@ -9,7 +9,7 @@ module EEE_ModShearFlow
   public :: set_parameters_shearflow,get_shearflow
 
   logical, public :: UseShearFlow=.false.
-  real :: MaximumFlow, FlowWidthAngle, MaxBrActiveRegion
+  real :: FlowAmplitude, FlowWidthAngle, MaxBrActiveRegion
   real :: StartTime, StopTime, RampUpTime, RampDownTime
   real :: Longitude, Latitude
 
@@ -24,7 +24,7 @@ contains
     implicit none
     !--------------------------------------------------------------------------
     call read_var('UseShearFlow',      UseShearFlow)
-    call read_var('MaximumFlow',       MaximumFlow)
+    call read_var('FlowAmplitude',     FlowAmplitude)
     call read_var('FlowWidthAngle',    FlowWidthAngle)
     call read_var('MaxBrActiveRegion', MaxBrActiveRegion)
     call read_var('StartTime',         StartTime)
@@ -68,8 +68,7 @@ contains
     real :: UTheta, UPhi
     integer :: iComm, iError
 
-    real, save :: AmplitudePE=0.0, Amplitude, FlowAmplitude
-    logical, save :: DoFirst=.true., IsIteration2First=.true.
+    logical, save :: DoFirst=.true.
     !--------------------------------------------------------------------------
     if(DoFirst)then
        DoFirst = .false.
@@ -79,16 +78,6 @@ contains
 
        FlowWidthAngle = FlowWidthAngle*cDegToRad
        MaxBr = abs(MaxBrActiveRegion)*Si2No_V(UnitB_)
-    end if
-
-    if(iteration_number == 2)then
-       if(IsIteration2First)then
-          IsIteration2First = .false.
-          iComm = MPI_COMM_WORLD
-          call MPI_allreduce(AmplitudePE, Amplitude, 1, MPI_REAL, MPI_MAX, &
-               iComm, iError)
-          FlowAmplitude = MaximumFlow/Amplitude
-       end if
     end if
 
     if(Time < StartTime .or. Time > StopTime)then
@@ -152,14 +141,11 @@ contains
     U_D(2) = UTheta*CosTheta*SinPhi + UPhi*CosPhi
     U_D(3) =-UTheta*SinTheta
 
-    ! Sacrifice the first iteration step to determine the flow amplitude
-    if(iteration_number == 1)then
-       AmplitudePE = max(sqrt(dot_product(U_D,U_D)),AmplitudePE)
-       U_D = 0.0
-       return
+    if(iteration_number == -1)then
+       U_D = FlowAmplitude*U_D
+    else
+       U_D = FlowAmplitude*U_D*TimeProfile
     end if
-          
-    U_D = FlowAmplitude*U_D*TimeProfile
 
   end subroutine get_shearflow
 
