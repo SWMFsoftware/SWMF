@@ -1,3 +1,4 @@
+
 program caxa     ! test of get_ionization()
   use ModSaha    
 
@@ -11,6 +12,7 @@ program caxa     ! test of get_ionization()
 
 
 end program caxa
+
 
 !============================================================================
 ! The following subroutines are here so that we can use SWMF library routines

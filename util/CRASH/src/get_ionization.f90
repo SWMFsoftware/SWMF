@@ -46,7 +46,7 @@ module ModSaha
   real,  parameter ::  &
        cToleranceHere =  cTiny**2 ,     &  !012, 009 givs up to 4-5 digits
        cTwoPiInv = cOne /cTwoPi   ,     &
-       Hmax  = cPlanckH  /cErg     ,     &  !   erg*s Planck
+       Hmax  = cPlanckH /cErg     ,     &  !   erg*s Planck
        HmaxT = cPlanckHBar                  !   the same/2Pi
 
   PUBLIC  proGON;  
@@ -92,6 +92,7 @@ module ModSaha
      call mod_init
 
 
+
   razTe:    do  iT = 1,7
            
            Na  = Nao
@@ -100,9 +101,9 @@ module ModSaha
             Ge =  Geo* T32
  
            dzz =  1.0
-! assigned above Ziter =  Zo
-! Ziter would be saved between steps with different {Na,Te} values 
-! and will used as a
+! due to initialization of  Ziter =  Zo on the stage of description
+! this variable has a SAVE attribute and  would be saved between 
+! steps with different {Na,Te} values  and will be 
 ! good initial value 
            iter = 0
       
@@ -111,37 +112,44 @@ module ModSaha
 
 
 
-    razZ:  do while ( (abs(dzz) >=  cToleranceHere ) .AND. (iter<22)     )       
+    razZ:  do while ( (abs(dzz) >=  cToleranceHere ) .AND. (iter <22)     )       
       iter = iter+1
       vNe =  Na * Ziter
 
       xx1 =  1.00/vTe          
       xx2 =  Ge /vNe ;  xx2 =  log(xx2) 
 
-      write(*,"(a,f6.1,a,f6.3,a,1pg12.4)") "_gonStatS__", vTe," eStatW/Ne=",xx1," Ne:",vNe
+        write(*,"(a,f6.1,a,f6.3,a,1pg12.4)") "_gon__", vTe," eStatW/Ne=",xx1," Ne:",vNe
+`
       call  set_population( xx1 , xx2  )  ! TeInv, logGe)
-        write(*,*) "_gon__<>Stat:", "iZmin=",iZmin, " iZdom=", iZdominant, " iZmax=",iZmax
-      xx1 = z_averaged() ;       xx2 = z2_averaged()/xx1
-        write(*,*) "_gon__<<Stat:", " <Z>=",xx1, " <Z^2>/<Z>=", xx2
+        write(*,*) "_gon_>>Stat:", "iZmin=",iZmin, " iZdom=", iZdominant, " iZmax=",iZmax
+   
+       xx1 = z_averaged() ;       xx2 = z2_averaged()/xx1
+        write(*,*) "_gon_<<Stat:", " <Z>=",xx1, " <Z^2>/<Z>=", xx2
 
       Zold = Ziter
       Ziter= zNew(Zold)
        
-       dzz = (Zold-Ziter);!/(Zold +Ziter)
+       dzz = (Zold-Ziter);
          write(*,*)'iTer=',Iter, " dZz=", dzz
 
      end do razZ
 
-         write(*,*)'============================================='
+      write(*,*)'======= compare ================='
 
-     call set_ionization_equilibrium(Na*1.0e6, vTe*11610.)
-     write(*,*)'Pavels <z>, <z^2>/z=', z_averaged(), z2_averaged()/z_averaged()
+      call set_ionization_equilibrium(Na*1.0e6, vTe*11610.)
+      write(*,*)'Pavels <z>, <z^2>/z=', z_averaged(), z2_averaged()/z_averaged()
    end do razTe
+
+
+
+
  contains
+
   !=======================================!
   real function zNew( zOLD)! return (zITER)
   
-   real, intent(in) :: zOLD
+   real, intent(IN) :: zOLD
    real             :: z1, z2, zITER 
   
    z1    = z_averaged()
@@ -151,9 +159,20 @@ module ModSaha
    zNEW  = zITER
   end function zNew
   !=========================================
+  real function razZ( vTe, vNa)
+
+   real, intent (IN):: vTe, vNa
+   
+
+
+  end function razZ
+  !=========================================
+
+
  end subroutine proGON
 
    
+
 
    !=======================================================================
    !=======================================================================
