@@ -1,4 +1,4 @@
- 
+
 module ModStatSum
   use ModIonizPotential
   use ModAtomicMass,ONLY : nZMax
@@ -21,7 +21,7 @@ module ModStatSum
   real :: Zav,&  ! the average charge per ion - <Z> (elementary charge units)
 		  Z2_av,& ! the average of the squares of the ion charges 
 		  Uinternal,& ! the average internal energy in the plasma
-		  Eav,& ! The average ionization energy from neutrality of ions
+		  Eav,& ! The average energy level of ions
 		  cV ! The heat capacity at constant volume for the plasma
   real,save :: Te = 1. ! the electron temperature [eV] (cBoltzmann in eV * Te in Kelvin)
   
@@ -58,10 +58,11 @@ Contains
   
   ! Find the final values of Zav and the ion populations from Temperature and heavy particle density
   
-  subroutine set_ionization_equilibrium(Na)
+  subroutine set_ionization_equilibrium(TeIn, Na)
     ! Concentration of heavy particles (atoms+ions) in the plasma 
     ! (# of particles per m^3):
-    real, intent(in)::   Na ![1/m^3] 
+    real, intent(in)::   Na,& ![1/m^3]
+	                     TeIn !electron temperature [eV] 
     real :: lnC1,&     ! natural log C1 
 			TeInv ! The inverse of the electron temperature	[1/eV]
 												 
@@ -69,10 +70,10 @@ Contains
 
 
     !==========================================
-    write(*,*)'Start set_ionization_equilibrium', Te, Na
+    write(*,*)'Start set_ionization_equilibrium', TeIn, Na
 	
-    TeInv = cOne / Te        ! 1/kT; units: [1/eV]
-    lnC1 = log(C0 * sqrt(Te)*Te / Na)
+    TeInv = cOne / TeIn        ! 1/kT; units: [1/eV]
+    lnC1 = log(C0 * sqrt(TeIn)*TeIn / Na)
     call set_Z()	
 
   contains
@@ -187,7 +188,7 @@ Contains
 	  !Udiviation = ToleranceU	  
 	  iterations: do !while (abs(Udiviation) >= ToleranceUeV .and. iIter<10)
 	      write(*,*) "Temp iteration: ", iIter
-		  call set_ionization_equilibrium(Na) !Find the populations for the trial Te
+		  call set_ionization_equilibrium(Te, Na) !Find the populations for the trial Te
 	      Eav = E_averaged() !Find the average of the ionization energry levels of the ions
 	      Udiviation = internal_energy()-Uin
 		  write(*,*) "internal energy diviation: ", Udiviation 
