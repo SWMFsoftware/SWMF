@@ -25,8 +25,8 @@ Module ModMain
   ! In the SWMF the BATSRUS may run as GM, SC or IH component
   character (len=2)   :: NameThisComp='GM'
 
-  logical,parameter::UseB=B_/=rhoU_
-  logical::UseB0=UseB
+  ! In hydro equations B_ = U_ is set.
+  logical, parameter:: UseB = B_ /= U_
 
   !\
   ! Named indexes for directions
@@ -39,10 +39,10 @@ Module ModMain
   !/
   integer :: n_step, nOrder, nStage, iteration_number=0
   real :: dt, DtFixed, DtFixedOrig, DtFixedDim, cfl, dt_BLK(nBLK)
-  logical :: time_accurate=.true., &
-       boris_correction=.false.,   &
-       UseBorisSimple=.false.,     &
-       time_loop=.false.
+  logical :: time_accurate = .true.,   &
+       boris_correction    = .false.,  &
+       UseBorisSimple      = .false.,  &
+       time_loop           = .false.
 
   logical :: UseDtFixed
 
@@ -69,6 +69,8 @@ Module ModMain
   !\
   ! Parameters for the B0 field
   !/
+  ! Intrinsic field B0 may or may not be used if UseB is true.
+  logical :: UseB0        = UseB
   real    :: Dt_UpdateB0  = 0.0001
   logical :: DoUpdateB0   = UseB
   logical :: DoSplitDb0Dt = .true.
