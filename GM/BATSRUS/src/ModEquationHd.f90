@@ -26,7 +26,7 @@ module ModVarIndexes
   ! This allows to calculate RhoUx_ as RhoU_+x_ and so on.
   integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1
 
-  
+
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:
@@ -66,9 +66,11 @@ module ModVarIndexes
   ! The user defined units for the variables
   real :: UnitUser_V(nVar+nFluid) = 1.0
 
-  integer,parameter::Bx_=2, By_=3, Bz_=4, B_ = Bx_-1
+  ! Bx_, By_, Bz_ have to be defined so that the code compiles
+  ! but the Bx_ = Ux_ choice indicates that B is not used (see UseB in ModMain)
+  integer, parameter :: Bx_ = Ux_, By_ = Uy_, Bz_ = Uz_, B_ = U_
 
- ! There are no extra scalars
+  ! There are no extra scalars
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
   ! There are no multi-species
@@ -82,7 +84,6 @@ module ModVarIndexes
   integer, parameter :: iRhoUy_I(nFluid) = (/RhoUy_/)
   integer, parameter :: iRhoUz_I(nFluid) = (/RhoUz_/)
   integer, parameter :: iP_I(nFluid)     = (/p_/)
- 
 
 contains
 
