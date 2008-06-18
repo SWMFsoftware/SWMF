@@ -139,6 +139,16 @@ if(not $MakefileDefOrig and not $IsComponent){
     $IsComponent = 1;
 }
 
+if(-f $MakefileDef and not $IsComponent){
+    my @Stat = stat $MakefileDef;
+    my $Time = $Stat[9];
+    my @Stat = stat $MakefileDefOrig;
+    my $TimeOrig = $Stat[9];
+    die "$ERROR $MakefileDefOrig is newer than $MakefileDef !\n".
+	"   Reinstall or merge changes into $MakefileDef !\n"
+	if $Time < $TimeOrig;
+}
+
 &print_help_ if $Help;
 
 if($Uninstall){
