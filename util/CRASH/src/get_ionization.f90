@@ -80,64 +80,63 @@ module ModSaha
                   Nao = 1.00e19 , &  ! 25 , &  ! 25, &     ! cm-3
                   Zo  = 1.00
 
-   real :: Ziter = Zo, ZoLd
+   real :: Ziter = Zo, ZoLd     ! formally, ZITER now has SAVE attribute
    real :: Ge  , Na , Ne,  nn, dnn, dzz,  NeInv
-   real :: T32 , dTe
-   real :: xx1 ,xx2 ,xx3
-  
-   integer :: iT, iter 
+   real ::  dTe
 
-     dTe = 50.0 
+!   real :: xx1 , xx2, xx3 
+!   integer :: iT, iter 
+
+     dTe = 50.0
+ 
      call set_element( 54 )
      call mod_init
-
-
 
   razTe:    do  iT = 1,7
            
            Na  = Nao
            vTe = dTe * (iT-1) +5.
-           T32 = vTe * sqrt(vTe)
-            Ge =  Geo* T32
  
-           dzz =  1.0
-! due to initialization of  Ziter =  Zo on the stage of description
-! this variable has a SAVE attribute and  would be saved between 
-! steps with different {Na,Te} values  and will be 
-! good initial value 
-           iter = 0
+!           dzz =  1.0
+!           iter = 0
       
        write (*,*) " ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
        write (*,"( a,f6.1,a,1pg12.4)") " ~~~~~~ Te=", vTe, " No=", Na
 
 
 
-    razZ:  do while ( (abs(dzz) >=  cToleranceHere ) .AND. (iter <22)     )       
-      iter = iter+1
-      vNe =  Na * Ziter
+!    razZ:  do while ( (abs(dzz) >=  cToleranceHere ) .AND. (iter <22)     )       
+!      iter = iter+1
 
-      xx1 =  1.00/vTe          
-      xx2 =  Ge /vNe ;  xx2 =  log(xx2) 
 
-        write(*,"(a,f6.1,a,f6.3,a,1pg12.4)") "_gon__", vTe," eStatW/Ne=",xx1," Ne:",vNe
-`
-      call  set_population( xx1 , xx2  )  ! TeInv, logGe)
-        write(*,*) "_gon_>>Stat:", "iZmin=",iZmin, " iZdom=", iZdominant, " iZmax=",iZmax
+!      xx1 =  1.00/vTe          
+!      xx2 =  Ge /vNe ;  xx2 =  log(xx2) 
+!        write(*,"(a,f6.1,a,f6.3,a,1pg12.4)") "_gon__", vTe," eStatW/Ne=",xx1," Ne:",vNe
+!
+!      call  set_population( xx1 , xx2  )  ! TeInv, logGe)
+!        write(*,*) "_gon_>>Stat:", "iZmin=",iZmin, " iZdom=", iZdominant, " iZmax=",iZmax
    
-       xx1 = z_averaged() ;       xx2 = z2_averaged()/xx1
-        write(*,*) "_gon_<<Stat:", " <Z>=",xx1, " <Z^2>/<Z>=", xx2
 
-      Zold = Ziter
-      Ziter= zNew(Zold)
-       
-       dzz = (Zold-Ziter);
-         write(*,*)'iTer=',Iter, " dZz=", dzz
+!       xx1 = z_averaged() ;       xx2 = z2_averaged()/xx1
+!        write(*,*) "_gon_<<Stat:", " <Z>=",xx1, " <Z^2>/<Z>=", xx2
 
-     end do razZ
+!      Zold = Ziter
+!      Ziter= zNew(Zold)
+!       
+!       dzz = (Zold-Ziter);
+!         write(*,*)'iTer=',Iter, " dZz=", dzz
+!
+!
+!     end do razZ
+
+
+      
+
+
 
       write(*,*)'======= compare ================='
 
-      call set_ionization_equilibrium(Na*1.0e6, vTe*11610.)
+      call set_ionization_equilibrium(Na*1.0d06, vTe*11610.0d0)
       write(*,*)'Pavels <z>, <z^2>/z=', z_averaged(), z2_averaged()/z_averaged()
    end do razTe
 
@@ -147,22 +146,41 @@ module ModSaha
  contains
 
   !=======================================!
-  real function zNew( zOLD)! return (zITER)
-  
-   real, intent(IN) :: zOLD
-   real             :: z1, z2, zITER 
-  
-   z1    = z_averaged()
-   z2    = z2_averaged()
-   zITER = zOLD - ( zOLD - z1)/( cOne +( z2 -z1*z1)/zOLD )
 
-   zNEW  = zITER
-  end function zNew
   !=========================================
-  real function razZ( vTe, vNa)
+  real function razZ( vTe, vNa)  result (zNEW)  ! , Ziter)
 
-   real, intent (IN):: vTe, vNa
-   
+   real, intent (IN)  :: vTe, vNa
+   real, parameter    :: Geo = 6.06e21 ! cm-3 ev-3/2  
+   real :: xx1, xx2,  z1,z2 , dzz
+   real :: Ge, vNe, T32, Ziter = 1.0
+
+   integer :: iter
+
+      T32  = vTe * sqrt(vTe)
+       Ge  =  Geo* T32
+      dZz  =  1.0
+      xx1  =  1.00/vTe          
+      iter = 0
+
+
+    raZ:  do while ( (abs(dzz) >=  cToleranceHere ) .AND. (iter <22)     )       
+      iter = iter+1
+
+      vNe  =  Na * Ziter
+
+      xx2  =  Ge /vNe ;  xx2 =  log(xx2) 
+      call  set_population( xx1 , xx2  )  ! TeInv, logGe)
+
+      z1  = z_averaged() ;       z2 = z2_averaged()/xx1
+
+      Zold = Ziter
+
+   zITER = zOLD - ( zOLD - z1)/( cOne +( z2 -z1*z1)/zOLD )
+   zNEW  = zITER
+
+  end do raZ
+
 
 
   end function razZ
