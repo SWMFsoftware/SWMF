@@ -1,4 +1,4 @@
-
+ 
 module ModStatSum
   use ModIonizPotential
   use ModAtomicMass,ONLY : nZMax
@@ -9,16 +9,11 @@ module ModStatSum
   integer,dimension(1) :: iZDominant    !Most populated ion state
   integer :: iZMin  !Numbers of the ionization states, such that the population
   integer :: iZMax  !of ion states with iZ<iZMin or iZ>iZMax is negligible.
-
   
-  real,dimension(1:nZMax) ::
-       IonizPotential_I,&   ! array of ionization potentials -  create i-charged ion from (i-1)-level ion
-       IonizEnergyNeutral_I !array of energies needed to create i-charged  ion from a neutral atom
-
-
+ 
+  real,dimension(1:nZMax) :: IonizPotential_I,&	!array of ionization potentials - energy needed to create i-level ion from (i-1)-level ion
+							 IonizEnergyNeutral_I !array of energies needed to create i-level ion from a neutral atom
   real,dimension(0:nZMax) :: Population_I, StatSumTermLog_I
-
-
 
   real,dimension(nZMax) :: LogN_I,& !array of natural logarithms of consecutive integers
 						   N_I !array of consecutive integers (with type real)
@@ -28,34 +23,26 @@ module ModStatSum
 		  Uinternal,& ! the average internal energy in the plasma
 		  Eav,& ! The average ionization energy from neutrality of ions
 		  cV ! The heat capacity at constant volume for the plasma
-  real,save :: Te = 5. ! the electron temperature [eV] (cBoltzmann in eV * Te in Kelvin)
+  real,save :: Te = 1. ! the electron temperature [eV] (cBoltzmann in eV * Te in Kelvin)
   
-
-
 Contains
   !=========================================================================
   !Severl initialazations of constants, such as
   !calculating the natural logarithms of the first nZMax integers
   subroutine mod_init
-
     integer:: iZ  !Used for loops
     real   :: DeBroglieInv
 	!-----------------
     LogN_I = (/(log(real(iZ)), iZ = 1,nZMax)/)
-       N_I = (/(real(iZ), iZ = 1,nZMax)/)
+	N_I = (/(real(iZ), iZ = 1,nZMax)/)
     DeBroglieInv=sqrt(cTwoPi*(cElectronMass/cPlankH)*(cEV/cPlankH)) !*sqrt(cBoltzmann/cEV * T) - temperature in eV
     C0 = cTwo*DeBroglieInv**3 ! 2/(Lambda^3)
-
-
   end subroutine mod_init
-
-
-
   !Set the element and its Ionization Potentials
   !==========================================================================
   subroutine set_element( nZIn)
     integer,intent(in) :: nZIn
-    integer            :: iZ   !for loop
+	integer :: iZ !for loop
     !--------------------------!
     nZ = nZIn
     call get_ioniz_potential(nZ,IonizPotential_I(1:nZ))
@@ -66,98 +53,17 @@ Contains
 	!IonizEnergyNeutral_I(1:nZ) = (/(sum(IonizPotential_I(1:iZ)), iZ = 1,nZ)/)
   end subroutine set_element
   
-
-
-
-
-
-
   !=========================================================================
-  ! Finding the populations of the ion states
-  subroutine set_population(GeLog)
-    real, intent(in) :: GeLog   ! Natural logarithm of the electron stat weight:
-    !  log(1/(Ne*lambda^3)) !<*>yv:calc.it.ind
-    real :: StatSumTermMax,StatSumTermMin
-
-
-    ! ln(1.0e-2), to truncate terms of the statistical sum, which a factor of 
-    ! 1e-2 less than the maximal one: 
-    real, parameter :: StatSumToleranceLog = 4.6 
-
-    integer :: iZ
-    real    :: PITotal
-    !--------------------------------------!
-
-    ! First, make the sequence of ln(StatSumTerm) values; let ln(P0)=0 )
-    StatSumTermLog_I(0) = 0.	
-    do iZ = 1, nZ               !Fill up the sequence using the following equation:
-       StatSumTermLog_I(iZ)  =  StatSumTermLog_I(iZ-1)                          &
-                              - IonizPotential_I(iZ  )*TeInv + GeLog
-    end do
-
-    ! Find the location of that maximum value
-    iZDominant = maxloc(StatSumTermLog_I(0:nZ))-1 
-    
-    StatSumTermMax = StatSumTermLog_I(iZDominant(1))
-
-    StatSumTermMin = StatSumTermMax -StatSumToleranceLog
-      write (*,*)"_set_pop: terMin:",  StatSumTermMin  ," terMax:",  StatSumTermMax    
-
-
-    !Find the lower boundary of the array 
-    !below which the values of Pi can be neglected
-
-    iZMin = count( StatSumTermLog_I(0:iZDominant(1)) < StatSumTermMin) 
-
-
-    !Find the similar upper boundary
-    iZMax = max(nZ - count(StatSumTermLog_I(iZDominant(1):nZ) < StatSumTermMin),1)
-
-    !Get rid of all the negligible values
-    Population_I(0:nZ) = cZero 
-
-
-    !Convert the array into the Pi values from ln(Pi)
-    Population_I(iZMin:iZMax) = exp(StatSumTermLog_I(iZMin:iZMax)-StatSumTermMax)
-
-
-    PITotal = sum(Population_I(iZMin:iZMax))	!Add up all the values of Pi found so far
-    !Normalize the Pi-s so that their sum =1
-    Population_I(iZMin:iZMax) = Population_I(iZMin:iZMax)/PITotal 
-
-  end subroutine set_population
-
-
-  !=======================================!
-  ! Calculating the Z average values
-  real function z_averaged()
-    integer::iLoop
-    !-------------!
-    z_averaged = 0
-    do iLoop = iZMin,iZMax
-       z_averaged = z_averaged + Population_I(iLoop)*real(iLoop)
-    end do
-  end function z_averaged
-
-  !=======================================!
-  ! Calculating the Z^2 average values
-  real function z2_averaged()
-    integer::iLoop
-    z2_averaged=0
-    do iLoop=iZMin,iZMax
-       z2_averaged = z2_averaged + Population_I(iLoop) * real(iLoop)**2
-    end do
-  end function z2_averaged
-!=======================================!
+		  
   
   ! Find the final values of Zav and the ion populations from Temperature and heavy particle density
   
   subroutine set_ionization_equilibrium(Na)
     ! Concentration of heavy particles (atoms+ions) in the plasma 
     ! (# of particles per m^3):
-    real, intent(in)::   Na        ![1/m^3] 
-    real            ::  lnC1,&     ! natural log C1 
-			TeInv      ! The inverse of the electron temperature	[1/eV]
+    real, intent(in)::   Na ![1/m^3] 
+    real :: lnC1,&     ! natural log C1 
+			TeInv ! The inverse of the electron temperature	[1/eV]
 												 
     real,parameter :: ToleranceZ = 0.001 !Accuracy of Z needed
 
@@ -165,7 +71,7 @@ Contains
     !==========================================
     write(*,*)'Start set_ionization_equilibrium', Te, Na
 	
-    TeInv = cOne / Te                ! 1/kT; units: [1/eV]
+    TeInv = cOne / Te        ! 1/kT; units: [1/eV]
     lnC1 = log(C0 * sqrt(Te)*Te / Na)
     call set_Z()	
 
@@ -173,7 +79,7 @@ Contains
 
     ! Calculating Z averaged iteratively
     subroutine set_Z()
-      real    :: ZTrial, Z1        !The trial values of Z for iterations
+      real    :: ZTrial, Z1 !The trial values of Z for iterations
       integer,dimension(1) :: InitZ !The initial approximation of Z
       integer :: iIter
 
@@ -196,9 +102,9 @@ Contains
       iterations: do while (abs(Zav-ZTrial) >= ToleranceZ .and. iIter<10)
          ZTrial = Zav
          call set_population(lnC1 - log(ZTrial))
-         Z1     = z_averaged()
+         Z1  = z_averaged()
          Z2_av  = z2_averaged()
-         Zav   = ZTrial - (ZTrial - Z1)/(cOne + (Z2_av - Z1*Z1)/ZTrial)
+         Zav = ZTrial - (ZTrial - Z1)/(cOne + (Z2_av - Z1*Z1)/ZTrial)
          iIter = iIter+1
       end do iterations
       write (*,*) "Zav iterations done:", iIter
@@ -268,28 +174,30 @@ Contains
       real,intent(in) :: Uin,& !Average internal energy per atomic unit [eV]
 	                     Na !Density of heavy particles [# of particles/m^3]
 	  integer :: iIter !iteration counter
-	  real,parameter :: ToleranceU = 0.001 !accuracy of internal energy needed [eV]
-	  real :: Udiviation !The difference between the given internal energy and the calculated one
+	  real,parameter :: ToleranceU = 0.001 !accuracy of internal energy needed [(% diviation)/100]
+	  real :: Udiviation,& !The difference between the given internal energy and the calculated one
+	  		  ToleranceUeV
 	  !-------------------------
 	  write(*,*) "Begin set_temp: ", Uin, Na
+	  ToleranceUeV = ToleranceU * Uin
 	  iIter = 0
 	  Uinternal = Uin
 	  !For initial approximation, use the value for Te found last time
 	  !Use Newton-Rapson iterations to get a better approximation of Te:
 	  !Udiviation = ToleranceU	  
-	  iterations: do !while (abs(Udiviation) >= ToleranceU .and. iIter<10)
+	  iterations: do !while (abs(Udiviation) >= ToleranceUeV .and. iIter<10)
 	      write(*,*) "Temp iteration: ", iIter
 		  call set_ionization_equilibrium(Na) !Find the populations for the trial Te
 	      Eav = E_averaged() !Find the average of the ionization energry levels of the ions
 	      Udiviation = internal_energy()-Uin
+		  write(*,*) "internal energy diviation: ", Udiviation 
 
 		  !The exit condition for the loop:
 		  !(has to be here because it is based on Udiviation)
-		  if (abs(Udiviation) < ToleranceU .or. iIter>10) exit iterations
+		  if (abs(Udiviation) < ToleranceUeV .or. iIter>10) exit iterations
 
 		  cV = heat_capacity() !Find the heat capacity at const. V
 		  Te = Te - Udiviation/cV !Calculate the improved value of Te
-		  write(*,*) "internal energy diviation: ", Udiviation 
 		  iIter = iIter+1
 	  end do iterations
 	  write(*,*) "Temp iterations done:", iIter
@@ -302,9 +210,6 @@ Contains
   real function internal_energy()
 	 internal_energy = 1.50*Te*(1+Zav) + Eav
   end function internal_energy
-
-
-
 
   !==================================
   !Calculate the specific heat capacity at constant volume 
@@ -333,8 +238,6 @@ Contains
 			  & (Zav + deltaZ2_av)
 
   end function heat_capacity 
-
-
 
   !=======================================!
   ! Calculating the Z average values from populations
