@@ -74,120 +74,39 @@ module ModSaha
 
  
  !=========================!  IONIZation , based on ModStatSaha, only
-   subroutine proGON       !  DO the whole cycle for IONIZ
-   real, parameter  :: &
-                  Geo = 6.06e21 , &  ! cm-3 ev-3/2
-                  Nao = 1.00e19 , &  ! 25 , &  ! 25, &     ! cm-3
-                  Zo  = 1.00
+    subroutine proGON       !  DO the whole cycle for IONIZ
+      real, parameter  :: &
+           Geo = 6.06e21 , &  ! cm-3 ev-3/2
+           Nao = 1.00e19 , &  ! 25 , &  ! 25, &     ! cm-3
+           Zo  = 1.00
 
-   real :: Ziter = Zo, ZoLd     ! formally, ZITER now has SAVE attribute
-   real :: Ge  , Na , Ne,  nn, dnn, dzz,  NeInv
-   real ::  dTe
+      real :: Ziter = Zo, ZoLd     ! formally, ZITER now has SAVE attribute
+      real :: Ge  , Na , Ne,  nn, dnn, dzz,  NeInv
+      real ::  dTe
+      integer :: iT 
 
-!   real :: xx1 , xx2, xx3 
-!   integer :: iT, iter 
+      dTe = 50.0
 
-     dTe = 50.0
- 
-     call set_element( 54 )
-     call mod_init
+      call set_element( 54 )
+      call mod_init
 
-  razTe:    do  iT = 1,7
-           
-           Na  = Nao
-           vTe = dTe * (iT-1) +5.
- 
-!           dzz =  1.0
-!           iter = 0
-      
-       write (*,*) " ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-       write (*,"( a,f6.1,a,1pg12.4)") " ~~~~~~ Te=", vTe, " No=", Na
+      Te:    do  iT = 1,7
+
+         Na  = Nao
+         vTe = dTe * (iT-1) +5.
+
+         write (*,*) " ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+         write (*,"( a,f6.1,a,1pg12.4)") " ~~~~~~ Te=", vTe, " No=", Na
 
 
 
-!    razZ:  do while ( (abs(dzz) >=  cToleranceHere ) .AND. (iter <22)     )       
-!      iter = iter+1
+         write(*,*)'======= compare ================='
 
+         call set_ionization_equilibrium(Na*1.0d06, vTe*11610.0d0)
+         write(*,*)'<z>, <z^2>/z=', z_averaged(), z2_averaged()/z_averaged()
+      end do Te
 
-!      xx1 =  1.00/vTe          
-!      xx2 =  Ge /vNe ;  xx2 =  log(xx2) 
-!        write(*,"(a,f6.1,a,f6.3,a,1pg12.4)") "_gon__", vTe," eStatW/Ne=",xx1," Ne:",vNe
-!
-!      call  set_population( xx1 , xx2  )  ! TeInv, logGe)
-!        write(*,*) "_gon_>>Stat:", "iZmin=",iZmin, " iZdom=", iZdominant, " iZmax=",iZmax
-   
-
-!       xx1 = z_averaged() ;       xx2 = z2_averaged()/xx1
-!        write(*,*) "_gon_<<Stat:", " <Z>=",xx1, " <Z^2>/<Z>=", xx2
-
-!      Zold = Ziter
-!      Ziter= zNew(Zold)
-!       
-!       dzz = (Zold-Ziter);
-!         write(*,*)'iTer=',Iter, " dZz=", dzz
-!
-!
-!     end do razZ
-
-
-      
-
-
-
-      write(*,*)'======= compare ================='
-
-      call set_ionization_equilibrium(Na*1.0d06, vTe*11610.0d0)
-      write(*,*)'Pavels <z>, <z^2>/z=', z_averaged(), z2_averaged()/z_averaged()
-   end do razTe
-
-
-
-
- contains
-
-  !=======================================!
-
-  !=========================================
-  real function razZ( vTe, vNa)  result (zNEW)  ! , Ziter)
-
-   real, intent (IN)  :: vTe, vNa
-   real, parameter    :: Geo = 6.06e21 ! cm-3 ev-3/2  
-   real :: xx1, xx2,  z1,z2 , dzz
-   real :: Ge, vNe, T32, Ziter = 1.0
-
-   integer :: iter
-
-      T32  = vTe * sqrt(vTe)
-       Ge  =  Geo* T32
-      dZz  =  1.0
-      xx1  =  1.00/vTe          
-      iter = 0
-
-
-    raZ:  do while ( (abs(dzz) >=  cToleranceHere ) .AND. (iter <22)     )       
-      iter = iter+1
-
-      vNe  =  Na * Ziter
-
-      xx2  =  Ge /vNe ;  xx2 =  log(xx2) 
-      call  set_population( xx1 , xx2  )  ! TeInv, logGe)
-
-      z1  = z_averaged() ;       z2 = z2_averaged()/xx1
-
-      Zold = Ziter
-
-   zITER = zOLD - ( zOLD - z1)/( cOne +( z2 -z1*z1)/zOLD )
-   zNEW  = zITER
-
-  end do raZ
-
-
-
-  end function razZ
-  !=========================================
-
-
- end subroutine proGON
+    end subroutine proGON
 
    
 
