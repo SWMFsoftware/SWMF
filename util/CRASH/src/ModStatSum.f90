@@ -64,11 +64,12 @@ Contains
   
   ! Find the final values of ZAv and the ion populations from Temperature and heavy particle density
   
-  subroutine set_ionization_equilibrium(TeIn, Na)
+  subroutine set_ionization_equilibrium(TeIn, Na,IsDegenerated)
     ! Concentration of heavy particles (atoms+ions) in the plasma 
     ! (# of particles per m^3):
     real, intent(in)::   Na,& ![1/m^3]
 	                 TeIn !electron temperature [eV] 
+    logical,optional,intent(out)::IsDegenerated
     real :: lnC1,&     ! natural log C1 
 	    TeInv ! The inverse of the electron temperature	[1/eV]
 												 
@@ -78,7 +79,7 @@ Contains
     TeInv = cOne / TeIn        ! 1/kT; units: [1/eV]
     lnC1 = log(C0 * sqrt(TeIn)*TeIn / Na)
     call set_Z()	
-
+    if(present(IsDegenerated))IsDegenerated=lnC1-log(ZAv)<2.0
   contains
 
     ! Calculating Z averaged iteratively
@@ -236,18 +237,18 @@ Contains
   !=======================================!
   ! Calculating the Z average values from populations
   real function z_averaged()
-    z_averaged = sum(Population_I(iZMin:iZMax)*N_I(iZMin:iZMax))
+    z_averaged = sum(Population_I(max(iZMin,1):iZMax)*N_I(max(iZMin,1):iZMax))
   end function z_averaged
 
   !=======================================!
   ! Calculating the Z^2 average values from populations
   real function z2_averaged()
-    z2_averaged = sum(Population_I(iZMin:iZMax)*N_I(iZMin:iZMax)**2)
+    z2_averaged = sum(Population_I(max(iZMin,1):iZMax)*N_I(max(iZMin,1):iZMax)**2)
   end function z2_averaged
 
   !==================================
   !Calculate the average ionization energy from neutral atoms of the ions
   real function E_averaged()
-     E_averaged = sum(Population_I(iZmin:iZmax)*IonizEnergyNeutral_I(iZmin:iZmax))
+     E_averaged = sum(Population_I(max(iZMin,1):iZmax)*IonizEnergyNeutral_I(max(iZMin,1):iZmax))
   end function E_averaged				  
 end module ModStatSum

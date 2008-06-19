@@ -3,17 +3,17 @@ program saha
   use ModStatSum
   implicit NONE
   real :: &
-       Nao = 1.00e19,  &  ! 25 , &  ! 25, &     ! cm-3
-       vTe,nA 
+       Nao = 1.00e18,  &  ! 25 , &  ! 25, &     ! cm-3
+       vTe,Na 
 
   real    ::  dTe,dLogN
-  integer :: iT,nT=10,iN
-  integer,parameter::nN=4
+  integer :: iT,nT=1000,iN
+  integer,parameter::nN=5
   real    ::z_I(0:nN),z2_I(0:nN)
   character(LEN=*),parameter,dimension(0:nN)::Separator_I='|'
   character(LEN=*),parameter,dimension(0:nN)::Separator1_I='/'
-
-  dTe = 1.0; dLogN=log(10.0)
+  logical::IsDegenerated
+  dTe = 2.0; dLogN=log(10.0)
 
   call set_element( 54 )
   call mod_init
@@ -22,11 +22,15 @@ program saha
      vTe = dTe * iT
      do iN=0,nN
         Na  = Nao*exp(iN*dLogN)
-        call set_ionization_equilibrium(vTe,Na*1000000.0)
+        call set_ionization_equilibrium(vTe,Na*1000000.0,IsDegenerated)
         Z_I(iN) = z_averaged() 
         Z2_I(iN)= z2_averaged()/Z_I(iN)
+        if(IsDegenerated)then
+           Z_I(iN)=-1.0
+           Z2_I(iN)=-1.0
+        end if
      end do
-     write(*,'(a,f4.0,a,5(f4.1,a,f4.1,a))')'|',vTe,'|',&
+     write(*,'(a,f5.0,a,6(f4.1,a,f4.1,a))')'|',vTe,'|',&
           (Z_I(iN), Separator1_I(iN), Z2_I(iN), Separator_I(iN), iN=0,nN )
   end do
 end program saha
