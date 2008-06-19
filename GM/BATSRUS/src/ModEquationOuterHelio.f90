@@ -43,19 +43,19 @@ module ModVarIndexes
         Bz_        =  7, &
         p_         =  8, &
         NeuRho_    =  9, &
-        NeuRhoUx_  = 10, &
-        NeuRhoUy_  = 11, &
-        NeuRhoUz_  = 12, &
+        NeuRhoUx_  = 10, NeuUx_ = 10, &
+        NeuRhoUy_  = 11, NeuUy_ = 11, &
+        NeuRhoUz_  = 12, NeuUz_ = 12, &
         NeuP_      = 13, &
         Ne2Rho_    = 14, &
-        Ne2RhoUx_  = 15, &
-        Ne2RhoUy_  = 16, &
-        Ne2RhoUz_  = 17, &
+        Ne2RhoUx_  = 15, Ne2Ux_ = 15, &
+        Ne2RhoUy_  = 16, Ne2Uy_ = 16, &
+        Ne2RhoUz_  = 17, Ne2Uz_ = 17, &
         Ne2P_      = 18, &
         Ne3Rho_    = 19, &
-        Ne3RhoUx_  = 20, &
-        Ne3RhoUy_  = 21, &
-        Ne3RhoUz_  = 22, &
+        Ne3RhoUx_  = 20, Ne3Ux_ = 20, &
+        Ne3RhoUy_  = 21, Ne3Uy_ = 21, &
+        Ne3RhoUz_  = 22, Ne3Uz_ = 22, &
         Ne3P_      = 23, &
         Energy_    = nVar+1, &
         NeuEnergy_ = nVar+2, &
