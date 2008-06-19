@@ -8,8 +8,7 @@ OBJECTS=\
 	heat_capacity.o \
 	ModStatSum.o\
 	ModAtomicMass.o\
-        ModIonizPotential.o\
-	get_ionization.o 
+        ModIonizPotential.o 
 
 OBJECTS_EXE= test_ionization.o
 
