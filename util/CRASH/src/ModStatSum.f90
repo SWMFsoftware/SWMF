@@ -16,7 +16,7 @@ module ModStatSum
   !Array of energies needed to create i-level ion from a neutral atom
   real,dimension(1:nZMax) :: IonizEnergyNeutral_I 
   
-  real,dimension(0:nZMax) :: Population_I, StatSumTermLog_I
+  real,dimension(0:nZMax) :: Population_I
 
   real,dimension(nZMax) :: LogN_I,& !array of natural logarithms of consecutive integers
 			   N_I !array of consecutive integers (with type real)
@@ -117,7 +117,7 @@ Contains
       real, intent(in) :: GeLog   ! Natural logarithm of the electron stat weight:
                                   !  log(1/(Ne*lambda^3)) !<*>yv:calc.it.ind
       real :: StatSumTermMax,StatSumTermMin
-
+      real,dimension(0:nZMax) :: StatSumTermLog_I
 
       ! ln(1.0e-2), to truncate terms of the statistical sum, which a factor of 
       ! 1e-2 less than the maximal one:

@@ -6,10 +6,10 @@ program saha
        Nao = 1.00e19,  &  ! 25 , &  ! 25, &     ! cm-3
        vTe,nA 
 
-  real ::  dTe,dLogN
-  integer :: iT,nT=1000,iN
+  real    ::  dTe,dLogN
+  integer :: iT,nT=10,iN
   integer,parameter::nN=4
-  real::z_I(0:nN),z2_I(0:nN)
+  real    ::z_I(0:nN),z2_I(0:nN)
   character(LEN=*),parameter,dimension(0:nN)::Separator_I='|'
   character(LEN=*),parameter,dimension(0:nN)::Separator1_I='/'
 
@@ -22,12 +22,12 @@ program saha
      vTe = dTe * iT
      do iN=0,nN
         Na  = Nao*exp(iN*dLogN)
-        call set_ionization_equilibrium(Na*1000000.0, vTe*11610.0)
+        call set_ionization_equilibrium(vTe,Na*1000000.0)
         Z_I(iN) = z_averaged() 
         Z2_I(iN)= z2_averaged()/Z_I(iN)
      end do
-     write(*,'(a,f4.0,a,5(a,f4.1,a,f4.1))')'|',vTe,'|',&
-          ((Z_I(iN),Separator1_I(iN),Z2_I(iN),Separator_I(iN)),(iN=0,nN))
+     write(*,'(a,f4.0,a,5(f4.1,a,f4.1,a))')'|',vTe,'|',&
+          (Z_I(iN), Separator1_I(iN), Z2_I(iN), Separator_I(iN), iN=0,nN )
   end do
 end program saha
 
