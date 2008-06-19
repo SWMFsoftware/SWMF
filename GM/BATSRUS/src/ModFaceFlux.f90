@@ -25,7 +25,8 @@ module ModFaceFlux
        EDotFA_X, EDotFA_Y, EDotFA_Z,     & ! output: E.Area for Boris !^CFG IF BORISCORR
        uDotArea_XI, uDotArea_YI, uDotArea_ZI,& ! output: U.Area for P source
        bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,& ! output: B x Area for J
-       UseRS7, UseTotalSpeed
+       UseRS7, UseTotalSpeed, &
+       eFluid_                          ! index for electron fluid (nFluid+1)
 
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        IsNewBlockHall, hall_factor, get_face_current, set_ion_mass_per_charge
@@ -796,7 +797,7 @@ contains
           Unormal_I=Unormal_I(1)
        end if
     end if
-    if(UseRS7 .or. (UseLindeFix))then
+    if(UseRS7 .or. UseLindeFix)then
        ! Sokolov's algorithm
        ! Calculate and store the jump in the normal magnetic field
        DiffBn    = 0.5* &
@@ -977,6 +978,7 @@ contains
 
       call get_speed_max(StateLeft_V,  B0x, B0y, B0z, &
            Cleft_I =CleftStateLeft_I)
+
       call get_speed_max(StateRight_V, B0x, B0y, B0z, &
            Cright_I=CrightStateRight_I)
       call get_speed_max(State_V, B0x, B0y, B0z, &
@@ -1019,10 +1021,12 @@ contains
                  (WeightRight*FluxRight_V(iVar)+WeightLeft*FluxLeft_V(iVar) &
                  - Diffusion*(StateRightCons_V(iVar)-StateLeftCons_V(iVar)))
 
-
             ! Weighted average of the normal speed
             Unormal_I(iFluid) = &
                  WeightRight*UnRight_I(iFluid) + WeightLeft*UnLeft_I(iFluid)
+
+            if(iFluid==1) Unormal_I(eFluid_) = &
+                 WeightRight*UnRight_I(eFluid_) + WeightLeft*UnLeft_I(eFluid_)
 
          end do
       end if
@@ -1430,7 +1434,7 @@ contains
 
     use ModMultiFluid
     use ModMain,    ONLY: UseHyperbolicDivb, SpeedHyp2
-    use ModAdvance, ONLY: Hyp_, eFluid_
+    use ModAdvance, ONLY: Hyp_
 
     real,    intent(in) :: State_V(nVar)       ! input primitive state
     real,    intent(in) :: B0x, B0y, B0z       ! B0
