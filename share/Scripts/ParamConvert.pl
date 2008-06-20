@@ -1976,6 +1976,15 @@ sub convert_type{
     die "$ERROR: input file $InputFile does not exist\n"
 	unless -f $InputFile;
 
+    # Simple expansion of text file. Avoid checking components etc.
+    if($InputType ne "xml" and $OutputType eq "expand"){
+	open(OUT, ">$OutputFile") 
+	    or die "$ERROR: could not open $OutputFile\n";
+	print OUT &expand_param($InputFile);
+	close OUT;
+	exit 0;
+    }
+
     &set_framework_components;
 
     # Read input file
