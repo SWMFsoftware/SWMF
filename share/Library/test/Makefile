@@ -55,6 +55,7 @@ OBJ_TIME_CONVERT = \
 
 test_time_convert.exe:
 	@(cd ../src; make ModTimeConvert.o)
+	@make test_time_convert.o
 	${LINK.f90} -o test_time_convert.exe ${OBJ_TIME_CONVERT} ${Lflag2}
 
 test_time_convert:
@@ -76,6 +77,7 @@ OBJ_COORD_TRANSFORM = \
 
 test_coord_transform.exe:
 	@(cd ../src; make ModCoordTransform.o)
+	@make test_coord_transform.o
 	${LINK.f90} -o test_coord_transform.exe ${OBJ_COORD_TRANSFORM} \
 		${Lflag2}
 
@@ -85,8 +87,9 @@ test_coord_transform:
 	@echo
 	@make test_coord_transform.exe
 	@echo
-	@echo 'test_coord_transform.exe > test_coord_transform.tmp'
+	@echo './test_coord_transform.exe > test_coord_transform.tmp'
 	-@(./test_coord_transform.exe > test_coord_transform.tmp)
+	@echo 'DiffNum.pl test_coord_transform.tmp test_coord_transform.log'
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-12 \
 		test_coord_transform.tmp test_coord_transform.log)
 	@echo
@@ -100,6 +103,7 @@ OBJ_FREQ = \
 
 test_freq.exe:
 	@(cd ../src; make ModFreq.o)
+	@make test_freq.o
 	${LINK.f90} -o test_freq.exe ${OBJ_FREQ} ${Lflag2}
 
 test_freq:
@@ -124,14 +128,15 @@ OBJ_LINEAR_SOLVER = \
 	../src/ModBlasLapack.o \
 	../src/ModLinearSolver.o
 
-test_linear_solver.exe: ${OBJ_LINEAR_SOLVER}
+test_linear_solver.exe:
+	@(cd ..; make blas.o lapack.o ModLinearSolver.o)
+	@make test_linear_solver.o
 	${LINK.f90} -o test_linear_solver.exe ${OBJ_LINEAR_SOLVER} ${Lflag1}
 
 test_linear_solver:
 	@echo -----------------------------------------------------------------
 	@echo test_linear_solver starting
 	@echo
-	@(cd ..; make blas.o lapack.o ModLinearSolver.o)
 	@make test_linear_solver.exe
 	@echo
 	@echo './test_linear_solver.exe'
@@ -147,6 +152,7 @@ OBJ_SORT = \
 
 test_sort.exe:
 	@(cd ../src; make ModSort.o)
+	@make test_sort.o
 	${LINK.f90} -o test_sort.exe ${OBJ_SORT} ${Lflag2}
 
 test_sort:
@@ -168,6 +174,7 @@ OBJ_IO_UNIT = \
 
 test_io_unit.exe:
 	@(cd ../src; make ModIoUnit.o)
+	@make test_io_unit.o
 	${LINK.f90} -o test_io_unit.exe ${OBJ_IO_UNIT} ${Lflag2}
 
 test_io_unit:
@@ -189,6 +196,7 @@ OBJ_INTERPOLATE = \
 
 test_interpolate.exe:
 	@(cd ../src; make ModInterpolate.o)
+	@make test_interpolate.o
 	${LINK.f90} -o test_interpolate.exe ${OBJ_INTERPOLATE} ${Lflag2}
 
 test_interpolate:
@@ -211,6 +219,7 @@ OBJ_RAY_TRACE = \
 
 test_ray_trace.exe:
 	@(cd ../src; make CON_ray_trace.o)
+	@make test_ray_trace.o
 	${LINK.f90} -o test_ray_trace.exe \
 		test_ray_trace.o ${OBJ_RAY_TRACE} ${Lflag1}
 
@@ -237,6 +246,8 @@ OBJ_LINE_EXTRACT = \
 	../src/CON_line_extract.o
 
 test_line_extract.exe: ${OBJ_LINE_EXTRACT}
+	@(cd ../src; make CON_line_extract.o)
+	@make test_line_extract.o
 	${LINK.f90} -o test_line_extract.exe ${OBJ_LINE_EXTRACT} ${Lflag1}
 
 test_line_extract:
@@ -259,6 +270,7 @@ OBJ_GEOPACK = \
 
 test_geopack.exe:
 	@(cd ../src; make ModCoordTransform.o CON_geopack.o)
+	@make test_geopack.o
 	${LINK.f90} -o test_geopack.exe ${OBJ_GEOPACK} ${Lflag2}
 
 test_geopack:
@@ -295,6 +307,7 @@ OBJ_AXES = \
 
 test_axes.exe:
 	@(cd ../src; make CON_axes.o)
+	@make test_axes.o
 	${LINK.f90} -o test_axes.exe ${OBJ_AXES} ${Lflag1}
 
 test_axes: 
@@ -327,6 +340,7 @@ OBJ_PLANET_FIELD = \
 
 test_planet_field.exe:
 	@(cd ../src; make CON_planet_field.o)
+	@make test_planet_field.o
 	${LINK.f90} -o test_planet_field.exe ${OBJ_PLANET_FIELD} ${Lflag1}
 
 test_planet_field: 
