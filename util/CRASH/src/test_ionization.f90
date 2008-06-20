@@ -25,7 +25,7 @@ program saha
   call set_element( 54 )
   call mod_init
 
-  nT1 =  nN*nT/1000000 
+  nT1 =  (nN +1)*nT/1000000 
   write(*,*)"Start,", nT1 , " million iterations"
 
   do iT  = 1,nT
