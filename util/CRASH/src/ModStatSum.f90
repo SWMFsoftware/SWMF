@@ -53,6 +53,7 @@ Contains
     !--------------------------!
     nZ = nZIn
     call get_ioniz_potential(nZ,IonizPotential_I(1:nZ))
+
 	IonizEnergyNeutral_I(1) = IonizPotential_I(1)
 	do iZ = 2,nZ
 	   IonizEnergyNeutral_I(iZ) = IonizEnergyNeutral_I(iZ-1) + IonizPotential_I(iZ)
@@ -64,12 +65,12 @@ Contains
   
   ! Find the final values of ZAv and the ion populations from Temperature and heavy particle density
   
-  subroutine set_ionization_equilibrium(TeIn, Na,IsDegenerated)
+  subroutine set_ionization_equilibrium(TeIn, Na, IsDegenerated )
     ! Concentration of heavy particles (atoms+ions) in the plasma 
     ! (# of particles per m^3):
     real, intent(in)::   Na,& ![1/m^3]
 	                 TeIn !electron temperature [eV] 
-    logical,optional,intent(out)::IsDegenerated
+    logical,optional,intent(out) :: IsDegenerated
     real :: lnC1,&     ! natural log C1 
 	    TeInv ! The inverse of the electron temperature	[1/eV]
 												 
@@ -77,15 +78,15 @@ Contains
     !---------------------------------------------------------
 	
     TeInv = cOne / TeIn        ! 1/kT; units: [1/eV]
-    lnC1 = log(C0 * sqrt(TeIn)*TeIn / Na)
+    lnC1  = log(C0 * sqrt(TeIn)*TeIn / Na)
     call set_Z()	
-    if(present(IsDegenerated))IsDegenerated=lnC1-log(ZAv)<2.0
+    if( present(IsDegenerated) ) IsDegenerated = lnC1 -log(ZAv)<2.0
   contains
 
     ! Calculating Z averaged iteratively
     subroutine set_Z()
-      real    :: ZTrial, Z1 !The trial values of Z for iterations
-      integer,dimension(1) :: InitZ !The initial approximation of Z
+      real    :: ZTrial, Z1 ! The trial values of Z for iterations
+      integer,dimension(1) :: InitZ ! The initial approximation of Z
       integer :: iIter
 
       !=====================================
@@ -94,9 +95,9 @@ Contains
       InitZ = minloc(abs(lnC1 - LogN_I(1:nZ) - IonizPotential_I(1:nZ)*TeInv))
                            !Find ZAv in the case when Z~0
       if(InitZ(1)==1)then
-         ZAv  = min(real(InitZ(1)),exp(cHalf*(lnC1-IonizPotential_I(1)*TeInv)))
+         ZAv  = min( real(InitZ(1) ), exp(cHalf*( lnC1 -IonizPotential_I(1)*TeInv)))
       else
-         ZAv  = real(InitZ(1))-cHalf
+         ZAv  = real(InitZ(1)) -cHalf
       end if
 
       ! Use Newton's method to iteratively get a better approximation of Z:
@@ -146,7 +147,7 @@ Contains
       !Find the lower boundary of the array 
       !below which the values of Pi can be neglected
       
-      iZMin = count( StatSumTermLog_I(0:iZDominant(1)) < StatSumTermMin) 
+      iZMin = count( StatSumTermLog_I(0:iZDominant(1)) < StatSumTermMin ) 
       
       
       !Find the similar upper boundary
@@ -210,9 +211,9 @@ Contains
   !(derivative of internal energy wrt Te) from temperature:
   real function heat_capacity()
     real :: TeInv,& !The inverse of the electron temperature [1/eV]
-            ETeInvAv,&          ! <Ei/Te> (Ei - energy levels, Te - electron temperature [eV])
-            DeltaETeInv2Av,&	 ! <(Ei/Te)^2> - <Ei/Te>^2
-	    DeltaZ2Av,&          ! <i^2>-<i>^2
+            ETeInvAv,&          ! < Ei/Te> (Ei - energy levels, Te - electron temperature [eV])
+            DeltaETeInv2Av,&	! <(Ei/Te)^2> - <Ei/Te>^2
+	    DeltaZ2Av,&         ! <i^2>-<i>^2
    	    DeltaZDeltaETeInvAv ! <i*Ei/Te> - <i><Ei/Te>
 
     ! Array of energy levels of ions divided by the temperature in eV
@@ -220,19 +221,22 @@ Contains
     !------------------
     !calculate the values of the variables defined above:
     TeInv = cOne/Te
-    ETeInv_I(iZMin:iZMax) = IonizEnergyNeutral_I(iZMin:iZMax)*TeInv
-    ETeInvAv = EAv*TeInv
-    DeltaETeInv2Av = sum(Population_I(iZmin:iZmax)*ETeInv_I(iZmin:iZmax)**2)&
-                         & - ETeInvAv**2
-    DeltaZ2Av = Z2Av - ZAv*ZAv
-    DeltaZDeltaETeInvAv = sum(Population_I(iZMin:iZMax)*ETeInv_I(iZmin:iZmax)*N_I(iZMin:iZMax))&
-	                 & - ZAv * ETeInvAv
+    ETeInv_I(iZMin:iZMax) = IonizEnergyNeutral_I( max(iZMin,1):iZMax )*TeInv
+    ETeInvAv              = EAv*TeInv
+    DeltaETeInv2Av        = sum( Population_I(max(iZMin,1):iZmax) * ETeInv_I(max(iZMin,1):iZmax)**2 )&
+                           - ETeInvAv**2
+    DeltaZ2Av             = Z2Av - ZAv*ZAv
+    DeltaZDeltaETeInvAv   = sum( Population_I(max(iZMin,1):iZMax) * ETeInv_I(max(iZMin,1):iZmax)
+                           *N_I(max(iZMin,1):iZMax) )  - ZAv * ETeInvAv
     !calculate the heat capacity:
-    heat_capacity = 1.50*(1+ZAv) + DeltaETeInv2Av + &
-	          & (3*ZAv*(0.75*DeltaZ2Av + DeltaZDeltaETeInvAv) - DeltaZDeltaETeInvAv**2)/&
-			  & (ZAv + DeltaZ2Av)
+    heat_capacity = 1.50*(cOne +ZAv) + DeltaETeInv2Av &
+	           +( 3.0d0*ZAv*(0.75d0*DeltaZ2Av + DeltaZDeltaETeInvAv) &
+                   - DeltaZDeltaETeInvAv**2)/	(ZAv + DeltaZ2Av)
 
-  end function heat_capacity 
+  end function heat_capacity ! ^^^^^^ /\ iZmin >=1 /\ 
+
+
+
 
   !=======================================!
   ! Calculating the Z average values from populations
@@ -245,6 +249,8 @@ Contains
   real function z2_averaged()
     z2_averaged = sum(Population_I(max(iZMin,1):iZMax)*N_I(max(iZMin,1):iZMax)**2)
   end function z2_averaged
+
+
 
   !==================================
   !Calculate the average ionization energy from neutral atoms of the ions
