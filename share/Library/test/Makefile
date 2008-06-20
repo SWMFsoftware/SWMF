@@ -6,7 +6,7 @@ SEARCH_EXTRA = -I../src
 
 include ../../../Makefile.conf
 
-NP = 2
+MPIRUN = mpirun -np 2
 
 help:
 	@echo "You can test the following modules in ../src:"
@@ -23,19 +23,19 @@ help:
 	@echo "   test_geopack          - test CON_geopack"
 	@echo "   test_axes             - test CON_axes"
 	@echo "   test_planet_field     - test CON_planet_field"
-	@echo "   tests                 - test all the above"
+	@echo "   test                  - test all the above"
 	@echo
 	@echo "To test everything with easy to read output try"
 	@echo
-	@echo "   make -s tests"
+	@echo "   make -s test"
 	@echo
-	@echo "The number of PE-s for the parallel tests can be set by"
+	@echo "The parallel tests can be executed like this"
 	@echo
-	@echo "   make NP=4 test_line_extract"
+	@echo "   make MPIRUN='mpirun -np 4' test_line_extract"
 	@echo
-	@echo "The default value is 2."
+	@echo "The default value for MPIRUN is mpirun -np 2."
 
-tests: \
+test: \
 	test_time_convert \
 	test_coord_transform \
 	test_freq \
@@ -53,18 +53,18 @@ OBJ_TIME_CONVERT = \
 	test_time_convert.o \
 	../src/ModTimeConvert.o
 
-test_time_convert.exe: ${OBJ_TIME_CONVERT}
+test_time_convert.exe:
+	@(cd ../src; make ModTimeConvert.o)
 	${LINK.f90} -o test_time_convert.exe ${OBJ_TIME_CONVERT} ${Lflag2}
 
 test_time_convert:
 	@echo -----------------------------------------------------------------
 	@echo test_time_convert starting
 	@echo
-	@(cd ../src; make ModTimeConvert.o)
 	@make test_time_convert.exe
 	@echo
-	@echo './test_time_convert.exe'
-	@./test_time_convert.exe
+	@echo ./test_time_convert.exe
+	-@(./test_time_convert.exe)
 	@echo
 	@echo test_time_convert done
 	@echo -----------------------------------------------------------------
@@ -74,21 +74,21 @@ OBJ_COORD_TRANSFORM = \
 	test_coord_transform.o \
 	../src/ModCoordTransform.o
 
-test_coord_transform.exe: ${OBJ_COORD_TRANSFORM}
+test_coord_transform.exe:
+	@(cd ../src; make ModCoordTransform.o)
 	${LINK.f90} -o test_coord_transform.exe ${OBJ_COORD_TRANSFORM} \
 		${Lflag2}
 
-test_coord_transform:
+test_coord_transform: 
 	@echo -----------------------------------------------------------------
 	@echo test_coord_transform starting
 	@echo
-	@(cd ../src; make ModCoordTransform.o)
 	@make test_coord_transform.exe
 	@echo
-	@echo './test_coord_transform.exe > test_coord_transform.tmp'
-	@./test_coord_transform.exe > test_coord_transform.tmp
-	@echo 'diff test_coord_transform.tmp test_coord_transform.log'
-	-@(diff test_coord_transform.tmp test_coord_transform.log)
+	@echo 'test_coord_transform.exe > test_coord_transform.tmp'
+	-@(./test_coord_transform.exe > test_coord_transform.tmp)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-12 \
+		test_coord_transform.tmp test_coord_transform.log)
 	@echo
 	@echo test_coord_transform done
 	@echo -----------------------------------------------------------------
@@ -98,18 +98,18 @@ OBJ_FREQ = \
 	test_freq.o \
 	../src/ModFreq.o
 
-test_freq.exe: ${OBJ_FREQ}
+test_freq.exe:
+	@(cd ../src; make ModFreq.o)
 	${LINK.f90} -o test_freq.exe ${OBJ_FREQ} ${Lflag2}
 
 test_freq:
 	@echo -----------------------------------------------------------------
 	@echo test_freq starting
 	@echo
-	@(cd ../src; make ModFreq.o)
 	@make test_freq.exe
 	@echo
 	@echo './test_freq.exe'
-	@./test_freq.exe
+	-@(./test_freq.exe)
 	@echo
 	@echo test_freq done
 	@echo -----------------------------------------------------------------
@@ -120,6 +120,7 @@ OBJ_LINEAR_SOLVER = \
 	../src/blas.o \
 	../src/lapack.o \
 	../src/ModMpi.o \
+	../src/ModMpiInterfaces.o \
 	../src/ModBlasLapack.o \
 	../src/ModLinearSolver.o
 
@@ -130,12 +131,11 @@ test_linear_solver:
 	@echo -----------------------------------------------------------------
 	@echo test_linear_solver starting
 	@echo
-	@(cd ../src; \
-		make blas.o lapack.o ModBlasLapack.o ModLinearSolver.o ModMpi.o)
+	@(cd ..; make blas.o lapack.o ModLinearSolver.o)
 	@make test_linear_solver.exe
 	@echo
 	@echo './test_linear_solver.exe'
-	@./test_linear_solver.exe
+	-@(./test_linear_solver.exe)
 	@echo
 	@echo test_linear_solver done
 	@echo -----------------------------------------------------------------
@@ -145,18 +145,18 @@ OBJ_SORT = \
 	test_sort.o \
 	../src/ModSort.o
 
-test_sort.exe: ${OBJ_SORT}
+test_sort.exe:
+	@(cd ../src; make ModSort.o)
 	${LINK.f90} -o test_sort.exe ${OBJ_SORT} ${Lflag2}
 
 test_sort:
 	@echo -----------------------------------------------------------------
 	@echo test_sort starting
 	@echo
-	@(cd ../src; make ModSort.o)
 	@make test_sort.exe
 	@echo
 	@echo './test_sort.exe'
-	@./test_sort.exe
+	-@(./test_sort.exe)
 	@echo
 	@echo test_sort done
 	@echo -----------------------------------------------------------------
@@ -166,18 +166,18 @@ OBJ_IO_UNIT = \
 	test_io_unit.o \
 	../src/ModIoUnit.o
 
-test_io_unit.exe: ${OBJ_IO_UNIT}
+test_io_unit.exe:
+	@(cd ../src; make ModIoUnit.o)
 	${LINK.f90} -o test_io_unit.exe ${OBJ_IO_UNIT} ${Lflag2}
 
 test_io_unit:
 	@echo -----------------------------------------------------------------
 	@echo test_io_unit starting
 	@echo
-	@(cd ../src; make ModIoUnit.o)
 	@make test_io_unit.exe
 	@echo
-	@echo './test_io_unit.exe'
-	@./test_io_unit.exe
+	@echo ./test_io_unit.exe
+	-@(./test_io_unit.exe)
 	@echo
 	@echo test_io_unit done
 	@echo -----------------------------------------------------------------
@@ -187,40 +187,41 @@ OBJ_INTERPOLATE = \
 	test_interpolate.o \
 	../src/ModInterpolate.o
 
-test_interpolate.exe: ${OBJ_INTERPOLATE}
+test_interpolate.exe:
+	@(cd ../src; make ModInterpolate.o)
 	${LINK.f90} -o test_interpolate.exe ${OBJ_INTERPOLATE} ${Lflag2}
 
 test_interpolate:
 	@echo -----------------------------------------------------------------
 	@echo test_interpolate starting
 	@echo
-	@(cd ../src; make ModInterpolate.o)
 	@make test_interpolate.exe
 	@echo
 	@echo './test_interpolate.exe'
-	@./test_interpolate.exe
+	-@(./test_interpolate.exe)
 	@echo
 	@echo test_interpolate done
 	@echo -----------------------------------------------------------------
 
 #######################################################################
 OBJ_RAY_TRACE = \
-	test_ray_trace.o \
+	../src/ModMpiInterfaces.o \
 	../src/ModMpi.o \
 	../src/CON_ray_trace.o
 
-test_ray_trace.exe: ${OBJ_RAY_TRACE}
-	${LINK.f90} -o test_ray_trace.exe ${OBJ_RAY_TRACE} ${Lflag1}
+test_ray_trace.exe:
+	@(cd ../src; make CON_ray_trace.o)
+	${LINK.f90} -o test_ray_trace.exe \
+		test_ray_trace.o ${OBJ_RAY_TRACE} ${Lflag1}
 
 test_ray_trace:
 	@echo -----------------------------------------------------------------
 	@echo test_ray_trace starting
 	@echo
-	@(cd ../src; make ModMpi.o CON_ray_trace.o)
 	@make test_ray_trace.exe
 	@echo
-	@echo 'mpirun -np ${NP} test_ray_trace.exe > test_ray_trace.tmp'
-	@mpirun -np ${NP} test_ray_trace.exe > test_ray_trace.tmp
+	@echo '${MPIRUN} test_ray_trace.exe > test_ray_trace.tmp'
+	-@${MPIRUN} test_ray_trace.exe > test_ray_trace.tmp
 	@echo 'diff test_ray_trace.tmp test_ray_trace.log'
 	-@(diff test_ray_trace.tmp test_ray_trace.log)
 	@echo
@@ -230,6 +231,7 @@ test_ray_trace:
 #######################################################################
 OBJ_LINE_EXTRACT = \
 	test_line_extract.o \
+	../src/ModMpiInterfaces.o \
 	../src/ModMpi.o \
 	../src/ModSort.o \
 	../src/CON_line_extract.o
@@ -241,11 +243,10 @@ test_line_extract:
 	@echo -----------------------------------------------------------------
 	@echo test_line_extract starting
 	@echo
-	@(cd ../src; make ModMpi.o CON_line_extract.o)
 	@make test_line_extract.exe
 	@echo
-	@echo 'mpirun -np ${NP} test_line_extract.exe'
-	@mpirun -np ${NP} test_line_extract.exe 
+	@echo '${MPIRUN} test_line_extract.exe'
+	-@(${MPIRUN} test_line_extract.exe)
 	@echo
 	@echo test_line_extract done
 	@echo -----------------------------------------------------------------
@@ -256,20 +257,21 @@ OBJ_GEOPACK = \
 	../src/CON_geopack.o \
 	../src/ModCoordTransform.o
 
-test_geopack.exe: ${OBJ_GEOPACK}
+test_geopack.exe:
+	@(cd ../src; make ModCoordTransform.o CON_geopack.o)
 	${LINK.f90} -o test_geopack.exe ${OBJ_GEOPACK} ${Lflag2}
 
 test_geopack:
 	@echo -----------------------------------------------------------------
 	@echo test_geopack starting
 	@echo
-	@(cd ../src; make ModCoordTransform.o CON_geopack.o)
 	@make test_geopack.exe
 	@echo
 	@echo './test_geopack.exe > test_geopack.tmp'
-	@./test_geopack.exe > test_geopack.tmp
-	@echo 'diff test_geopack.tmp test_geopack.log'
-	-@(diff test_geopack.tmp test_geopack.log)
+	-@(./test_geopack.exe > test_geopack.tmp)
+	@echo DiffNum.pl -b -r=1e-8 test_geopack.tmp test_geopack.log
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
+		test_geopack.tmp test_geopack.log)
 	@echo
 	@echo test_geopack done
 	@echo -----------------------------------------------------------------
@@ -280,26 +282,29 @@ OBJ_AXES = \
 	../src/CON_axes.o \
 	../src/CON_geopack.o \
 	../src/CON_planet.o \
+	../src/ModMpi.o \
+	../src/ModMpiInterfaces.o \
 	../src/ModCoordTransform.o \
 	../src/ModIoUnit.o \
 	../src/ModReadParam.o \
 	../src/ModTimeConvert.o \
 	../src/ModUtilities.o \
 	../src/ModKind.o \
-	../src/ModConst.o 
+	../src/ModConst.o \
+	../src/ModPlanetConst.o 
 
-test_axes.exe: ${OBJ_AXES}
+test_axes.exe:
+	@(cd ../src; make CON_axes.o)
 	${LINK.f90} -o test_axes.exe ${OBJ_AXES} ${Lflag1}
 
 test_axes: 
 	@echo -----------------------------------------------------------------
 	@echo test_axes starting
 	@echo
-	@(cd ../src; make CON_axes.o)
 	@make test_axes.exe
 	@echo
 	@echo './test_axes.exe'
-	@./test_axes.exe
+	-@(./test_axes.exe)
 	@echo
 	@echo test_axes done
 	@echo -----------------------------------------------------------------
@@ -311,26 +316,30 @@ OBJ_PLANET_FIELD = \
 	../src/CON_planet.o \
 	../src/CON_axes.o \
 	../src/CON_geopack.o \
+	../src/ModMpi.o \
+	../src/ModMpiInterfaces.o \
+	../src/ModPlanetConst.o \
 	../src/ModCoordTransform.o \
 	../src/ModIoUnit.o \
 	../src/ModReadParam.o \
 	../src/ModTimeConvert.o \
 	../src/ModUtilities.o
 
-test_planet_field.exe: ${OBJ_PLANET_FIELD}
+test_planet_field.exe:
+	@(cd ../src; make CON_planet_field.o)
 	${LINK.f90} -o test_planet_field.exe ${OBJ_PLANET_FIELD} ${Lflag1}
 
 test_planet_field: 
 	@echo -----------------------------------------------------------------
 	@echo test_planet_field starting
 	@echo
-	@(cd ../src; make CON_planet_field.o)
-	@make test_planet_field.exe
+	make test_planet_field.exe
 	@echo
 	@echo './test_planet_field.exe > test_planet_field.tmp'
-	@./test_planet_field.exe > test_planet_field.tmp
-	@echo 'diff test_planet_field.tmp test_planet_field.log'
-	-@(diff test_planet_field.tmp test_planet_field.log)
+	-(./test_planet_field.exe > test_planet_field.tmp)
+	@echo DiffNum.pl -b -r=1e-6 test_planet_field.tmp test_planet_field.log
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
+		 test_planet_field.tmp test_planet_field.log)
 	@echo
 	@echo test_planet_field done
 	@echo -----------------------------------------------------------------
@@ -338,6 +347,3 @@ test_planet_field:
 
 distclean: clean
 	rm -f *.tmp
-
-# keep this line
-
