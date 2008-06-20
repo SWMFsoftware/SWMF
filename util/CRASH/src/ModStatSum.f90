@@ -226,7 +226,7 @@ Contains
     DeltaETeInv2Av        = sum( Population_I(max(iZMin,1):iZmax) * ETeInv_I(max(iZMin,1):iZmax)**2 )&
                            - ETeInvAv**2
     DeltaZ2Av             = Z2Av - ZAv*ZAv
-    DeltaZDeltaETeInvAv   = sum( Population_I(max(iZMin,1):iZMax) * ETeInv_I(max(iZMin,1):iZmax)
+    DeltaZDeltaETeInvAv   = sum( Population_I(max(iZMin,1):iZMax) * ETeInv_I(max(iZMin,1):iZmax) &
                            *N_I(max(iZMin,1):iZMax) )  - ZAv * ETeInvAv
     !calculate the heat capacity:
     heat_capacity = 1.50*(cOne +ZAv) + DeltaETeInv2Av &

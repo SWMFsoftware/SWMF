@@ -14,10 +14,11 @@ program saha
   integer,parameter :: nN=5 , nT= 1000000
   real    :: dTe, dLogN
   integer :: iT , nT1=1000000, iN
-
+  integer :: tm_1
+  
   real    :: z_I(0:nN),z2_I(0:nN)
-  character(LEN=*),parameter,dimension(0:nN)::Separator_I='|'
-  character(LEN=*),parameter,dimension(0:nN)::Separator1_I='/'
+  character(LEN=*),parameter,dimension(0:nN) :: Separator_I='|'
+  character(LEN=*),parameter,dimension(0:nN) :: Separator1_I='/'
   logical :: IsDegenerated
 
   dTe = 0.1; dLogN=log(10.0)
@@ -25,8 +26,12 @@ program saha
   call set_element( 54 )
   call mod_init
 
+  tm_1 = diff_sec()!
+
   nT1 =  (nN +1)*nT/1000000 
   write(*,*)"Start,", nT1 , " million iterations"
+
+
 
   do iT  = 1,nT
      vTe = dTe * iT
@@ -44,7 +49,21 @@ program saha
      !     write(*,'(a,f5.0,a,6(f4.1,a,f4.1,a))')'|',vTe,'|',&
      !          (Z_I(iN), Separator1_I(iN), Z2_I(iN), Separator_I(iN), iN=0,nN )
   end do
-  write(*,*)"End ", nT1," million iterations"
+  write(*,*)"End,  ", nT1," million iterations"
+
+
+  tm_1 = diff_sec() -tm_1;
+  write(*,'(f4.2,a,i4,a)') nT1/(tm_1 +1.0d0)," [MOPs/s], t:",tm_1,"s" 
+
+contains
+
+  function  diff_sec  ( ) result (sec) 
+    integer,dimension (8) :: val
+    integer               :: sec
+    call date_and_time(VALUES=val)    
+    write (*,'("time ",i2.2,":",i2.2,":",i2.2))') val(5:7)
+    sec = val(7) +(val(6) +val(5)*60)*60                
+  end function diff_sec 
 
 end program saha
 
