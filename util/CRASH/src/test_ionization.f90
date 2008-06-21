@@ -11,7 +11,7 @@ program saha
        Nao = 1.00e18,  &  ! 25 , &  ! 25, &     ! cm-3
        vTe, Na 
 
-  integer,parameter :: nN=5 , nT= 1000000
+  integer,parameter :: nN=5 , nT=1000
   real    :: dTe, dLogN
   integer :: iT , nT1=1000000, iN
   integer :: tm_1
@@ -21,7 +21,7 @@ program saha
   character(LEN=*),parameter,dimension(0:nN) :: Separator1_I='/'
   logical :: IsDegenerated
 
-  dTe = 0.1; dLogN=log(10.0)
+  dTe = 1; dLogN=log(10.0)
 
   call set_element( 54 )
   call mod_init
@@ -46,8 +46,8 @@ program saha
         end if
      end do
 
-     !     write(*,'(a,f5.0,a,6(f4.1,a,f4.1,a))')'|',vTe,'|',&
-     !          (Z_I(iN), Separator1_I(iN), Z2_I(iN), Separator_I(iN), iN=0,nN )
+          write(*,'(a,f5.0,a,6(f4.1,a,f4.1,a))')'|',vTe,'|',&
+               (Z_I(iN), Separator1_I(iN), Z2_I(iN), Separator_I(iN), iN=0,nN )
   end do
   write(*,*)"End,  ", nT1," million iterations"
 

@@ -3,10 +3,10 @@ module ModStatSum
   use ModIonizPotential
   use ModAtomicMass,ONLY : nZMax
   use ModConst
-
-  implicit none  
-  integer :: nZ                         !Atomic number of element in question
-  integer,dimension(1) :: iZDominant    !Most populated ion state
+  implicit none
+  SAVE
+  integer :: nZ=-1                      !Atomic number of element in question
+  
   integer :: iZMin  !Numbers of the ionization states, such that the population
   integer :: iZMax  !of ion states with iZ<iZMin or iZ>iZMax is negligible.
   
@@ -27,7 +27,7 @@ module ModStatSum
           UInternal,& ! the average internal energy in the plasma
           EAv,&       ! The average energy level of ions
           Cv          ! The heat capacity at constant volume for the plasma
-  real,save :: Te = 1.! the electron temperature [eV] (cBoltzmann in eV * Te in Kelvin)
+  real :: Te = 1.! the electron temperature [eV] (cBoltzmann in eV * Te in Kelvin)
   
 Contains
   !=========================================================================
@@ -51,6 +51,7 @@ Contains
     integer,intent(in) :: nZIn
 	integer :: iZ !for loop
     !--------------------------!
+    if(nZIn==nZ)return
     nZ = nZIn
     call get_ioniz_potential(nZ,IonizPotential_I(1:nZ))
 
@@ -88,7 +89,6 @@ Contains
       real    :: ZTrial, Z1 ! The trial values of Z for iterations
       integer,dimension(1) :: InitZ ! The initial approximation of Z
       integer :: iIter
-
       !=====================================
       ! First approximate the value of Z by finding for what i=Z 
       ! the derivative of the populations sequence~0 (population is maximum):
@@ -111,6 +111,7 @@ Contains
          ZAv = ZTrial - (ZTrial - Z1)/(cOne + (Z2Av - Z1*Z1)/ZTrial)
          iIter = iIter+1
       end do iterations
+      ZAv=Z1
     end subroutine set_Z
 
     !==============================================
@@ -120,7 +121,7 @@ Contains
                                   !  log(1/(Ne*lambda^3)) !<*>yv:calc.it.ind
       real :: StatSumTermMax,StatSumTermMin
       real,dimension(0:nZMax) :: StatSumTermLog_I
-
+      integer,dimension(1) :: iZDominant    !Most populated ion state
       ! ln(1.0e-2), to truncate terms of the statistical sum, which a factor of 
       ! 1e-2 less than the maximal one:
       real, parameter :: StatSumToleranceLog = 4.6 
@@ -230,7 +231,7 @@ Contains
                            *N_I(max(iZMin,1):iZMax) )  - ZAv * ETeInvAv
     !calculate the heat capacity:
     heat_capacity = 1.50*(cOne +ZAv) + DeltaETeInv2Av &
-	           +( 3.0d0*ZAv*(0.75d0*DeltaZ2Av + DeltaZDeltaETeInvAv) &
+	           +( 3.0*ZAv*(0.750*DeltaZ2Av + DeltaZDeltaETeInvAv) &
                    - DeltaZDeltaETeInvAv**2)/	(ZAv + DeltaZ2Av)
 
   end function heat_capacity ! ^^^^^^ /\ iZmin >=1 /\ 
