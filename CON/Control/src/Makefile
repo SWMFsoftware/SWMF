@@ -28,7 +28,7 @@ LIBEMPIRICALEE = ${LIBDIR}/libEMPIRICALEE.a
 LIBEMPIRICALGM = ${LIBDIR}/libEMPIRICALGM.a
 LIBEMPIRICALIE = ${LIBDIR}/libEMPIRICALIE.a
 LIBEMPIRICALUA = ${LIBDIR}/libEMPIRICALUA.a
-LIBCRASH       = ${LIBDIR}/LibCRASH.a
+LIBCRASH       = ${LIBDIR}/libCRASH.a
 #######################
 # CON infrastructure: #
 #######################
