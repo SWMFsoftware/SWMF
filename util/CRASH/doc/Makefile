@@ -1,5 +1,8 @@
 #^CFG COPYRIGHT UM
 
+include ../../../Makefile.def
+include ../../../Makefile.conf
+
 ../src/IONIZ.exe:
 	cd ../src/;make IONIZ
 
@@ -14,6 +17,7 @@ ionization_equilibrium.pdf: ionization_equilibrium.tex
 
 PDF: ionization_equilibrium.pdf
 
-
+distclean: clean
+	rm -f *.pdf *.aux *.log *.dvi Table*
 
 
