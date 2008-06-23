@@ -12,6 +12,7 @@ OBJECTS=\
 	ModAtomicMass.o\
         ModIonizPotential.o 
 
+
 OBJECTS_EXE= test_ionization.o
 
 
@@ -57,6 +58,7 @@ IONIZ_for_Darwin:
 distclean: clean 
 	rm -f Makefile.DEPEND; \
         rm -rf Tmp_;
+
 
 
 

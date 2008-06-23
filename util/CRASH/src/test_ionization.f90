@@ -8,7 +8,7 @@ program saha
   use ModStatSum
   implicit NONE
   real :: &
-       Nao = 1.00e18,  &  ! 25 , &  ! 25, &     ! cm-3
+       Nao = 1.00e18,  &  ! cm-3
        vTe, Na 
 
   integer,parameter :: nN=5 , nT=30
@@ -25,12 +25,11 @@ program saha
   call set_element( 54 )
   call mod_init
 
-  tm_1 = diff_sec()!
+!  tm_1 = diff_sec()!
+!  nT1 =  (nN +1)*nT/1000000 
+!  write(*,*)"Start,", nT1 , " million iterations"
 
-  nT1 =  (nN +1)*nT/1000000 
-  write(*,*)"Start,", nT1 , " million iterations"
-
-  open(24,file='../doc/Table1.tex',status='unknown')
+  open(24,file='../doc/Table1_vvv.tex',status='unknown')
   write(24,'(a)')'\begin{verbatim}'
   write(24,'(a)')'____________________________________'//&
 '______________________________'
