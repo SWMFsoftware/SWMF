@@ -206,7 +206,7 @@ subroutine set_temperature(Uin, NaIn)
   !Calculate the pressure in the plasma
   !Can only be called after set_ionization_equilibrium has executed
   real function pressure()
-     pressure = (1+Zav)*Na*Te
+     pressure = (1+Zav)*Na*Te*ceV
   end function pressure
 
   !============================================
