@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+ !^CFG COPYRIGHT UM
 !***********************************************************************
 !    calculation of ionization equilibrium, single material
 !    for given - concentration of  atomic particles Co+Ciz [cm^{-3}]
@@ -9,7 +9,7 @@ program saha
   implicit NONE
   real :: &
        Nao = 1.00e18,  &  ! cm-3
-       vTe, Na 
+       vTe, NaTrial 
 
   integer,parameter :: nN=5 , nT=30
   real    :: dTe, dLogN
@@ -45,8 +45,8 @@ program saha
   do iT  = 1,nT
      vTe = dTe * iT
      do iN = 0,nN
-        Na = Nao*exp(iN*dLogN)
-        call set_ionization_equilibrium(vTe,Na*1000000.0,IsDegenerated)
+        NaTrial = Nao*exp(iN*dLogN)
+        call set_ionization_equilibrium(vTe,NaTrial*1000000.0,IsDegenerated)
         Z_I(iN) = z_averaged() 
         Z2_I(iN)= z2_averaged()/Z_I(iN)
         if(IsDegenerated)then

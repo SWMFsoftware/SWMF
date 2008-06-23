@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+    !^CFG COPYRIGHT UM
 module ModStatSum
   use ModIonizPotential
   use ModAtomicMass,ONLY : nZMax
@@ -16,19 +16,18 @@ module ModStatSum
   !Array of energies needed to create i-level ion from a neutral atom
   real,dimension(1:nZMax) :: IonizEnergyNeutral_I 
   
-  real,dimension(0:nZMax) :: Population_I
+  real,dimension(0:nZMax) :: Population_I,& !Array of the populations of ions
+                             N_I !array of consecutive integers (with type real)
 
-  real,dimension(nZMax) :: LogN_I,& !array of natural logarithms of consecutive integers
-			   N_I !array of consecutive integers (with type real)
+  real,dimension(nZMax) :: LogN_I !array of natural logarithms of consecutive integers
   
   real :: C0          ! 2/(Lambda^3)
   real :: ZAv,&       ! the average charge per ion - <Z> (elementary charge units)
-          Z2Av,&      ! the average of the squares of the ion charges 
-          UInternal,& ! the average internal energy in the plasma
-          EAv,&       ! The average energy level of ions
-          Cv          ! The heat capacity at constant volume for the plasma
-  real :: Te = 1.! the electron temperature [eV] (cBoltzmann in eV * Te in Kelvin)
+          EAv,&       ! The average ionization energy level of ions
+          Te = 1.,&   ! the electron temperature [eV] (cBoltzmann in eV * Te in Kelvin)
+          Na          ! The density of heavy particles in the plasma
   
+  !private :: z_averaged, z2_averaged, E_averaged
 Contains
   !=========================================================================
   !Severl initialazations of constants, such as
@@ -38,9 +37,9 @@ Contains
     real   :: DeBroglieInv
 	!-----------------
     LogN_I = (/(log(real(iZ)), iZ = 1,nZMax)/)
-    N_I    = (/(real(iZ), iZ = 1,nZMax)/)
+    N_I    = (/(real(iZ), iZ = 0,nZMax)/)
 
-    DeBroglieInv=sqrt(cTwoPi*(cElectronMass/cPlanckH)*(cEV/cPlanckH)) 
+    DeBroglieInv=sqrt(cTwoPi*(cElectronMass/cPlankH)*(cEV/cPlankH)) 
     !*sqrt(cBoltzmann/cEV * T) - temperature in eV
 
     C0 = cTwo*DeBroglieInv**3 ! 2/(Lambda^3)
@@ -66,10 +65,11 @@ Contains
   
   ! Find the final values of ZAv and the ion populations from Temperature and heavy particle density
   
-  subroutine set_ionization_equilibrium(TeIn, Na, IsDegenerated )
+  subroutine set_ionization_equilibrium(TeIn, NaIn, IsDegenerated )
     ! Concentration of heavy particles (atoms+ions) in the plasma 
     ! (# of particles per m^3):
-    real, intent(in)             ::  Na,& ![1/m^3]
+
+    real, intent(in)             ::  NaIn,& ![1/m^3]
 	                             TeIn !electron temperature [eV] 
     logical,optional,intent(out) :: IsDegenerated
     real :: lnC1,&  ! natural log C1 
@@ -77,16 +77,20 @@ Contains
 												 
     real,parameter :: ToleranceZ = 0.001 !Accuracy of Z needed
     !---------------------------------------------------------
-	
+    
+    Te = TeIn
+    Na = NaIn	
     TeInv = cOne / TeIn        ! 1/kT; units: [1/eV]
     lnC1  = log(C0 * sqrt(TeIn)*TeIn / Na)
-    call set_Z()	
+    call set_Z()
+    EAv = E_averaged()	
     if( present(IsDegenerated) ) IsDegenerated = lnC1 -log(ZAv) < 2.0
+
   contains
 
     ! Calculating Z averaged iteratively
     subroutine set_Z()
-      real    :: ZTrial, Z1         ! The trial values of Z for iterations
+      real    :: ZTrial, Z1, Z2 ! The trial values of Z for iterations
       integer,dimension(1) :: InitZ ! The initial approximation of Z
       integer :: iIter
       !=====================================
@@ -107,8 +111,8 @@ Contains
          ZTrial = ZAv
          call set_population(lnC1 - log(ZTrial))
          Z1  = z_averaged()
-         Z2Av  = z2_averaged()
-         ZAv = ZTrial - (ZTrial - Z1)/(cOne + (Z2Av - Z1*Z1)/ZTrial)
+         Z2  = z2_averaged()
+         ZAv = ZTrial - (ZTrial - Z1)/(cOne + (Z2 - Z1*Z1)/ZTrial)
          iIter = iIter+1
       end do iterations
       ZAv=Z1
@@ -170,36 +174,40 @@ Contains
 
   end subroutine set_ionization_equilibrium
 
-  !=======================================
-
-  subroutine set_temp(Uin, Na)
+!=======================================  
+subroutine set_temperature(Uin, NaIn)
     real,intent(in) :: Uin,& !Average internal energy per atomic unit [eV]
-	               Na !Density of heavy particles [# of particles/m^3]
+	               NaIn !Density of heavy particles [# of particles/m^3]
     integer :: iIter !iteration counter
     real,parameter :: ToleranceU = 0.001 !accuracy of internal energy needed [(% deviation)/100]
     real :: UDeviation,& !The difference between the given internal energy and the calculated one
-            ToleranceUeV
+            ToleranceUeV ! The required accuracy of U in eV
     !-------------------------
+    Na = NaIn
     ToleranceUeV = ToleranceU * Uin
     iIter = 0
-    UInternal = Uin
     !For initial approximation, use the value for Te found last time
     !Use Newton-Rapson iterations to get a better approximation of Te:
     !UDeviation = ToleranceU	  
     iterations: do 
        call set_ionization_equilibrium(Te, Na) !Find the populations for the trial Te
-       EAv = E_averaged() !Find the average of the ionization energry levels of the ions
        UDeviation = internal_energy()-Uin 
 
        !The exit condition for the loop:
        !(has to be here because it is based on UDeviation)
        if (abs(UDeviation) < ToleranceUeV .or. iIter>10) exit iterations
        
-       Cv = heat_capacity() !Find the heat capacity at const. V
-       Te = Te - UDeviation/Cv !Calculate the improved value of Te
+       Te = Te - UDeviation/heat_capacity() !Calculate the improved value of Te
        iIter = iIter+1
     end do iterations
-  end subroutine set_temp
+  end subroutine set_temperature
+  
+  !============================================
+  !Calculate the pressure in the plasma
+  !Can only be called after set_ionization_equilibrium has executed
+  real function pressure()
+     pressure = (1+Zav)*Na*Te
+  end function pressure
 
   !============================================
   !calculate the average internal energy per atomic unit from 
@@ -214,41 +222,38 @@ Contains
     real :: TeInv,& !The inverse of the electron temperature [1/eV]
             ETeInvAv,&          ! < Ei/Te> (Ei - energy levels, Te - electron temperature [eV])
             DeltaETeInv2Av,&	! <(Ei/Te)^2> - <Ei/Te>^2
-	    DeltaZ2Av,&         ! <i^2>-<i>^2
-   	    DeltaZDeltaETeInvAv ! <i*Ei/Te> - <i><Ei/Te>
+	      DeltaZ2Av,&         ! <i^2>-<i>^2
+   	      DeltaZDeltaETeInvAv ! <i*Ei/Te> - <i><Ei/Te>
 
-    ! Array of energy levels of ions divided by the temperature in eV
+    ! Array of ionization energy levels of ions divided by the temperature in eV
     real,dimension(1:nZMax) :: ETeInv_I 
     !------------------
     !calculate the values of the variables defined above:
     TeInv = cOne/Te
-    ETeInv_I(iZMin:iZMax) = IonizEnergyNeutral_I( max(iZMin,1):iZMax )*TeInv
+    ETeInv_I(iZMin:iZMax) = IonizEnergyNeutral_I( iZMin:iZMax )*TeInv
     ETeInvAv              = EAv*TeInv
-    DeltaETeInv2Av        = sum( Population_I(max(iZMin,1):iZmax) * ETeInv_I(max(iZMin,1):iZmax)**2 )&
-                           - ETeInvAv**2
-    DeltaZ2Av             = Z2Av - ZAv*ZAv
-    DeltaZDeltaETeInvAv   = sum( Population_I(max(iZMin,1):iZMax) * ETeInv_I(max(iZMin,1):iZmax) &
-                           *N_I(max(iZMin,1):iZMax) )  - ZAv * ETeInvAv
+    DeltaETeInv2Av        = sum( Population_I(iZMin:iZmax) * (ETeInv_I(iZMin:iZmax)-ETeInvAv)**2 )
+    DeltaZ2Av             = sum( Population_I(iZMin:iZmax) * (N_I(iZMin:iZMax)-Zav)**2 )
+    DeltaZDeltaETeInvAv   = sum( Population_I(iZMin:iZMax) * (ETeInv_I(iZMin:iZmax)-ETeInvAv) * &
+                           (N_I(iZMin:iZMax)-ZAv) )
     !calculate the heat capacity:
     heat_capacity = 1.50*(cOne +ZAv) + DeltaETeInv2Av &
 	           +( 3.0*ZAv*(0.750*DeltaZ2Av + DeltaZDeltaETeInvAv) &
-                   - DeltaZDeltaETeInvAv**2)/	(ZAv + DeltaZ2Av)
+                   - DeltaZDeltaETeInvAv**2 ) / (ZAv + DeltaZ2Av)
 
   end function heat_capacity ! ^^^^^^ /\ iZmin >=1 /\ 
-
-
 
 
   !=======================================!
   ! Calculating the Z average values from populations
   real function z_averaged()
-    z_averaged = sum(Population_I(max(iZMin,1):iZMax)*N_I(max(iZMin,1):iZMax))
+    z_averaged = sum(Population_I(iZMin:iZMax)*N_I(iZMin:iZMax))
   end function z_averaged
 
   !=======================================!
   ! Calculating the Z^2 average values from populations
   real function z2_averaged()
-    z2_averaged = sum(Population_I(max(iZMin,1):iZMax)*N_I(max(iZMin,1):iZMax)**2)
+    z2_averaged = sum(Population_I(iZMin:iZMax)*N_I(iZMin:iZMax)**2)
   end function z2_averaged
 
 
@@ -256,6 +261,6 @@ Contains
   !==================================
   !Calculate the average ionization energy from neutral atoms of the ions
   real function E_averaged()
-     E_averaged = sum(Population_I(max(iZMin,1):iZmax)*IonizEnergyNeutral_I(max(iZMin,1):iZmax))
+     E_averaged = sum(Population_I(iZMin:iZmax)*IonizEnergyNeutral_I(iZMin:iZmax))
   end function E_averaged				  
 end module ModStatSum
