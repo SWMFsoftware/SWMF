@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+   !^CFG COPYRIGHT UM
 module ModStatSum
   use ModIonizPotential
   use ModAtomicMass,ONLY : nZMax
@@ -39,7 +39,7 @@ Contains
     LogN_I = (/(log(real(iZ)), iZ = 1,nZMax)/)
     N_I    = (/(real(iZ), iZ = 0,nZMax)/)
 
-    DeBroglieInv=sqrt(cTwoPi*(cElectronMass/cPlanckH)*(cEV/cPlanckH)) 
+    DeBroglieInv=sqrt(cTwoPi*(cElectronMass/cPlankH)*(cEV/cPlankH)) 
     !*sqrt(cBoltzmann/cEV * T) - temperature in eV
 
     C0 = cTwo*DeBroglieInv**3 ! 2/(Lambda^3)
@@ -203,14 +203,15 @@ subroutine set_temperature(Uin, NaIn)
   end subroutine set_temperature
   
   !============================================
-  !Calculate the pressure in the plasma
+  !Calculate the pressure in the plasma [Pa]
   !Can only be called after set_ionization_equilibrium has executed
   real function pressure()
-     pressure = (1+Zav)*Na*Te*ceV
+     pressure = (1+Zav)*Na*Te*cEV
   end function pressure
 
   !============================================
-  !calculate the average internal energy per atomic unit from 
+  !calculate the average internal energy per atomic unit [eV]
+  !Can only be called after set_ionization_equilibrium has executed 
   real function internal_energy()
 	 internal_energy = 1.50*Te*(1+ZAv) + EAv
   end function internal_energy
@@ -218,6 +219,7 @@ subroutine set_temperature(Uin, NaIn)
   !==================================
   !Calculate the specific heat capacity at constant volume 
   !(derivative of internal energy wrt Te) from temperature:
+  !Can only be called after set_ionization_equilibrium has executed
   real function heat_capacity()
     real :: TeInv,& !The inverse of the electron temperature [1/eV]
             ETeInvAv,&          ! < Ei/Te> (Ei - energy levels, Te - electron temperature [eV])
