@@ -29,7 +29,7 @@ program saha
 !  nT1 =  (nN +1)*nT/1000000 
 !  write(*,*)"Start,", nT1 , " million iterations"
 
-  open(24,file='../doc/Table1_vvv.tex',status='unknown')
+  open(24,file='../doc/Table1.tex',status='replace')
   write(24,'(a)')'\begin{verbatim}'
   write(24,'(a)')'____________________________________'//&
 '______________________________'
