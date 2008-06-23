@@ -11,7 +11,7 @@ Module ModUser
  
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: &
-       NameUserModule = 'Saturn Magnetosphere, Hansen, Nov, 2006'
+       NameUserModule = 'Jupiter Magnetosphere, Hansen, Nov, 2006'
 
   real :: MassLoadingRate
   logical :: UseMassLoading = .false., AccelerateMassLoading
