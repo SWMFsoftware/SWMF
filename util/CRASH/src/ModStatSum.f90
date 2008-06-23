@@ -49,7 +49,7 @@ Contains
   !==========================================================================
   subroutine set_element( nZIn)
     integer,intent(in) :: nZIn
-	integer :: iZ !for loop
+    integer            :: iZ   ! for loop
     !--------------------------!
     if(nZIn==nZ)return
     nZ = nZIn
@@ -69,11 +69,11 @@ Contains
   subroutine set_ionization_equilibrium(TeIn, Na, IsDegenerated )
     ! Concentration of heavy particles (atoms+ions) in the plasma 
     ! (# of particles per m^3):
-    real, intent(in)::   Na,& ![1/m^3]
-	                 TeIn !electron temperature [eV] 
+    real, intent(in)             ::  Na,& ![1/m^3]
+	                             TeIn !electron temperature [eV] 
     logical,optional,intent(out) :: IsDegenerated
-    real :: lnC1,&     ! natural log C1 
-	    TeInv ! The inverse of the electron temperature	[1/eV]
+    real :: lnC1,&  ! natural log C1 
+	    TeInv   ! The inverse of the electron temperature	[1/eV]
 												 
     real,parameter :: ToleranceZ = 0.001 !Accuracy of Z needed
     !---------------------------------------------------------
@@ -81,21 +81,21 @@ Contains
     TeInv = cOne / TeIn        ! 1/kT; units: [1/eV]
     lnC1  = log(C0 * sqrt(TeIn)*TeIn / Na)
     call set_Z()	
-    if( present(IsDegenerated) ) IsDegenerated = lnC1 -log(ZAv)<2.0
+    if( present(IsDegenerated) ) IsDegenerated = lnC1 -log(ZAv) < 2.0
   contains
 
     ! Calculating Z averaged iteratively
     subroutine set_Z()
-      real    :: ZTrial, Z1 ! The trial values of Z for iterations
+      real    :: ZTrial, Z1         ! The trial values of Z for iterations
       integer,dimension(1) :: InitZ ! The initial approximation of Z
       integer :: iIter
       !=====================================
       ! First approximate the value of Z by finding for what i=Z 
       ! the derivative of the populations sequence~0 (population is maximum):
-      InitZ = minloc(abs(lnC1 - LogN_I(1:nZ) - IonizPotential_I(1:nZ)*TeInv))
+      InitZ = minloc( abs(lnC1 - LogN_I(1:nZ) - IonizPotential_I(1:nZ)*TeInv) )
                            !Find ZAv in the case when Z~0
       if(InitZ(1)==1)then
-         ZAv  = min( real(InitZ(1) ), exp(cHalf*( lnC1 -IonizPotential_I(1)*TeInv)))
+         ZAv  = min( real(InitZ(1) ), exp(cHalf*( lnC1 -IonizPotential_I(1)*TeInv) ) )
       else
          ZAv  = real(InitZ(1)) -cHalf
       end if
