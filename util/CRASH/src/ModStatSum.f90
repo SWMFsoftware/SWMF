@@ -39,7 +39,7 @@ Contains
     LogN_I = (/(log(real(iZ)), iZ = 1,nZMax)/)
     N_I    = (/(real(iZ), iZ = 0,nZMax)/)
 
-    DeBroglieInv=sqrt(cTwoPi*(cElectronMass/cPlankH)*(cEV/cPlankH)) 
+    DeBroglieInv=sqrt(cTwoPi*(cElectronMass/cPlanckH)*(cEV/cPlanckH)) 
     !*sqrt(cBoltzmann/cEV * T) - temperature in eV
 
     C0 = cTwo*DeBroglieInv**3 ! 2/(Lambda^3)
