@@ -192,11 +192,11 @@ subroutine set_temperature(Uin, NaIn,IsDegenerated)
     ToleranceUeV = ToleranceU * Uin
     iIterTe = 0
     !Use Newton-Rapson iterations to get a better approximation of Te:
-    UDeviation = 2.*ToleranceU
-    iterations: do while(abs(UDeviation) >ToleranceUeV .and. iIterTe<=10)
+    UDeviation = 2.*ToleranceUeV
+    iterations: do while(abs(UDeviation) >ToleranceUeV .and. iIterTe<=20)
        !Find the populations for the trial Te
        call set_ionization_equilibrium(Te, Na, IsDegenerated) 
-       UDeviation = internal_energy()-U
+       UDeviation = internal_energy()-Uin
 
        !Calculate the improved value of Te, limiting the iterations so 
        !they can't jump too far out

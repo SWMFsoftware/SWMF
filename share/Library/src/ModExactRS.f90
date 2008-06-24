@@ -6,6 +6,9 @@ module ModExactRS
   real        ::PStar,UnStar !pressure and velocity in the Star Region
   real        ::RhoL, UnL, PL, RhoR, UnR, PR !Rho,Un,P: (L)eft and (R)ight
   real,private::CL,CR       !Sound speeds
+  real,private::WL,WR       !Total perturbation speed 
+                            !(advection+speed of sound for weak wave)
+                            !Shock wave speed for a shock.
 contains
   !========================================================================!
   subroutine get_gamma(GammaIn)
@@ -83,8 +86,8 @@ contains
     Change=ChangeStart; iIter=0
     do while(Change > TolP.and.iIter<nIterMax)
 
-       call pressure_function(FL, FLD, POLD, RhoL, PL, CL, GammaLIn)
-       call pressure_function(FR, FRD, POLD, RhoR, PR, CR, GammaRIn)
+       call pressure_function(FL, FLD, POLD, RhoL, PL, CL,WL, GammaLIn)
+       call pressure_function(FR, FRD, POLD, RhoR, PR, CR,WR, GammaRIn)
        PStar      = POld - (FL + FR + UDiff)/(FLD + FRD)
        Change= 2.0*abs((PStar - POld)/(PStar + POld))
        POLD  = PStar; iIter=iIter+1
@@ -93,16 +96,18 @@ contains
     !     Compute velocity in Star Region
 
     UnStar = 0.50*(UnL + UnR + FR - FL)
+    WR= UnR + WR
+    WL= UnL - WL
   contains
     !====================================================!
-    subroutine pressure_function(F,FD,P,RhoK,PK,CK,GammaIn)
+    subroutine pressure_function(F,FD,P,RhoK,PK,CK,WK,GammaIn)
       !
       !     Purpose: to evaluate the pressure functions
       !              FL and FR in exact Riemann solver
       !              and their first derivatives 
       !
       real,intent(in)::P,RhoK,PK,CK
-      real,intent(out)::F,FD
+      real,intent(out)::F,FD,WK
       real,optional,intent(in)::GammaIn
       real::Gamma
       !Misc:
@@ -121,6 +126,7 @@ contains
          PRatioPowG1= PRatio**((GAMMA - 1.0)/(2.0*GAMMA))
          F    = CK*(PRatioPowG1 - 1.0)*2.0/(GAMMA - 1.0)
          FD   = PRatioPowG1/(PRatio*RhoK*CK)
+         WK = CK
       ELSE
          !
          !        Shock wave
@@ -129,6 +135,7 @@ contains
          QRT = SQRT(2.0/((GAMMA + 1.0)*RhoK*BK))
          F   = (P - PK)*QRT
          FD  = (1.0 - 0.5*(P - PK)/BK)*QRT
+         WK=0.50*(GAMMA + 1.0)*BK*QRT
       ENDIF
     end subroutine pressure_function
     !===============================================!
@@ -163,9 +170,23 @@ contains
     real,intent(in)::S
     real,intent(out):: Rho, Un, P
     real,optional,intent(in)::GammaLIn,GammaRIn
-   
+
     !
-    IF(S.LE.UnStar)THEN
+    IF(S >  WR)THEN
+       !
+       !              Sampled point is data state
+       !
+       Rho = RhoR
+       Un = UnR
+       P = PR
+    ELSEIF(S < WL)THEN
+       !
+       !              Sampled point is data state
+       !
+       Rho = RhoL
+       Un = UnL
+       P = PL
+    ELSEIF(S.LE.UnStar)THEN
        !
        !        Sampling point lies to the left of the contact
        !        discontinuity
@@ -192,65 +213,45 @@ contains
          Gamma=GammaHere
       end if
       IF(PStar.LE.PK)THEN
-          !
-          !           rarefaction
-          !
-          IF(SRel >  UnK + CK)THEN
-             !
-             !              Sampled point is data state
-             !
-             Rho = RhoK
-             Un = UnK
-             P = PK
-          ELSE
-             
-             IF(SRel< CK*(PStar/PK)**((Gamma - 1.0)/(2.0*Gamma)))THEN
-                !
-                !                 Sampled point is Star  state
-                !
-         
-                Un = 0.0
-                P = PStar
-             ELSE
-                !
-                !                 Sampled point is inside left fan
-                !
-                  
-                G7 = (Gamma - 1.0)/2.0
- 
-                !Solve the system of equations:
-                !
-                ! CK - G7 * UnK = C - G7* Un
-                ! SRel = C + Un
+         !
+         !           rarefaction
+         !
+         IF(SRel< CK*(PStar/PK)**((Gamma - 1.0)/(2.0*Gamma)))THEN
+            !
+            !                 Sampled point is Star  state
+            !
 
-                C = (CK - G7*(UnK - SRel))/(1.0+G7)
-                Un = SRel - C
-                P = PK*(C/CK)**(2.0*Gamma/(Gamma - 1.0))
-             ENDIF
-             Rho = RhoK*(P/PK)**(1.0/Gamma)
-          ENDIF
-       ELSE
-          !
-          !          Shock
-          ! 
-          IF(SRel.GE.UnK + CK*SQRT(((Gamma + 1.0)*PStar + PK*(Gamma - 1.0))/&
-                           (2.0*Gamma*PK)))THEN
-             !
-             !              Sampled point is data state
-             !
-             Rho = RhoK
-             Un = UnK
-             P = PK
-          ELSE
-             !
-             !              Sampled point is Star state
-             !
-             Rho= RhoK*((Gamma + 1.0)*PStar + PK*(Gamma - 1.0))/&
-                  ((Gamma - 1.0)*PStar + PK*(Gamma + 1.0))
-             Un = 0.0
-             P = PStar
-          ENDIF
-       ENDIF
-     end  subroutine simple_wave
-   end subroutine sample
+            Un = 0.0
+            P = PStar
+         ELSE
+            !
+            !                 Sampled point is inside left fan
+            !
+
+            G7 = (Gamma - 1.0)/2.0
+
+            !Solve the system of equations:
+            !
+            ! CK - G7 * UnK = C - G7* Un
+            ! SRel = C + Un
+
+            C = (CK - G7*(UnK - SRel))/(1.0+G7)
+            Un = SRel - C
+            P = PK*(C/CK)**(2.0*Gamma/(Gamma - 1.0))
+         ENDIF
+         Rho = RhoK*(P/PK)**(1.0/Gamma)
+      ELSE
+         !
+         !          Shock
+         ! 
+         !
+         !              Sampled point is Star state
+         !
+         Rho= RhoK*((Gamma + 1.0)*PStar + PK*(Gamma - 1.0))/&
+              ((Gamma - 1.0)*PStar + PK*(Gamma + 1.0))
+         Un = 0.0
+         P = PStar
+      ENDIF
+    end  subroutine simple_wave
+  end subroutine sample
 end module ModExactRS
