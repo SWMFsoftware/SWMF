@@ -48,8 +48,8 @@ program saha
   write(24,'(a)')'\hline'
   write(24,'(a)')'Te[eV] & z | $<z^2>/z$ & z | $<z^2>/z$ & z | $<z^2>/z$ & z | $<z^2>/z$ &'//&
                  'z | $<z^2>/z$ & z | $<z^2>/z$\tabularnewline'
-  write(24,'(a)')'& Uav | Cv &  Uav | Cv &  Uav | Cv &  Uav | Cv &  Uav | Cv &'//&
-                 'Uav | Cv\tabularnewline'
+  write(24,'(a)')'& $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ '//&
+                 '& $U_{av} | C_v$ & $U_{av} | C_v$\tabularnewline'
   write(24,'(a)')'\hline' 
   write(24,'(a)')'\hline'
   
@@ -68,8 +68,8 @@ program saha
         write(24,'(a)')'\hline'
         write(24,'(a)')'Te[eV] & $z | <z^2>/z$ & $z | <z^2>/z$ & $z | <z^2>/z$ & $z | <z^2>/z$ &'//&
                         '$z | <z^2>/z$ & $z | <z^2>/z$\tabularnewline'
-        write(24,'(a)')'& Uav | Cv &  Uav | Cv &  Uav | Cv &  Uav | Cv &  Uav | Cv &'//&
-                 'Uav | Cv\tabularnewline'
+        write(24,'(a)')'& $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ '//&
+                 '& $U_{av} | C_v$ & $U_{av} | C_v$\tabularnewline'
         write(24,'(a)')'\hline' 
         write(24,'(a)')'\hline'
      end if
