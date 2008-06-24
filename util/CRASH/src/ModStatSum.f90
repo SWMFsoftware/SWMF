@@ -1,11 +1,11 @@
-   !^CFG COPYRIGHT UM
+        !^CFG COPYRIGHT UM
 module ModStatSum
   use ModIonizPotential
   use ModAtomicMass,ONLY : nZMax
   use ModConst
   implicit none
   SAVE
-  logical::DoInit=.true.
+  logical::DoInit = .true.
   integer::iIter     !To provide the output, if needed
 
   integer :: nZ=-1                      !Atomic number of element in question
@@ -27,9 +27,10 @@ module ModStatSum
   real :: C0          ! 2/(Lambda^3)
   real :: ZAv,&       ! the average charge per ion - <Z> (elementary charge units)
           EAv,&       ! The average ionization energy level of ions
-          Te = 1.,&   ! the electron temperature [eV] (cBoltzmann in eV * Te in Kelvin)
+          Te=1.0,&   ! the electron temperature [eV] (cBoltzmann in eV * Te in Kelvin)
           Na          ! The density of heavy particles in the plasma
-  private::mod_init,Te,Na
+  integer :: iIterTe !Temperature iterations counter
+  private::mod_init,Na
   !private :: z_averaged, z2_averaged, E_averaged
 Contains
   !=========================================================================
@@ -189,23 +190,28 @@ subroutine set_temperature(Uin, NaIn,IsDegenerated)
     !-------------------------
     Na = NaIn
     ToleranceUeV = ToleranceU * Uin
-    iIter = 0
-    ! For initial approximation, use the value for Te found last time
-    ! Use Newton-Rapson iterations to get a better approximation of Te:
-    ! UDeviation = ToleranceU	  
-    iterations: do 
-       call set_ionization_equilibrium(Te, Na,IsDegenerated) 
-       !Find the populations for the trial Te
-
+    iIterTe = 0
+    !Roughly approximate the temperature assuming that all ions are about half ionized:
+    !This is only done when the element is changed, otherwise use the value for Te found last time
+    if (Te < 0.) Te = max((Uin-IonizEnergyNeutral_I(nZ/5))/nZ, 1.0)
+    
+    !Use Newton-Rapson iterations to get a better approximation of Te:
+    !UDeviation = ToleranceU	  
+    iterations: do
+       !write(*,*) "current Te:", Te 
+       call set_ionization_equilibrium(Te, Na, IsDegenerated) !Find the populations for the trial Te
+       !write(*,*) "Z here:", Zav
        UDeviation = internal_energy()-Uin 
 
-       ! The exit condition for the loop:
-       ! (has to be here because it is based on UDeviation)
-       if (abs(UDeviation) < ToleranceUeV .or. iIter>10) exit iterations
+       !The exit condition for the loop:
+       !(has to be here because it is based on UDeviation)
+       if (abs(UDeviation) < ToleranceUeV .or. iIterTe>10) exit iterations
        
        Te = Te - UDeviation/heat_capacity() !Calculate the improved value of Te
-       iIter = iIter+1
+       iIterTe = iIterTe+1
     end do iterations
+    write(*,*) "the final temperature calculated:", Te
+    write(*,*) "Iterations done:", iIterTe
   end subroutine set_temperature
   
   !============================================
@@ -227,11 +233,11 @@ subroutine set_temperature(Uin, NaIn,IsDegenerated)
   !(derivative of internal energy wrt Te) from temperature:
   !Can only be called after set_ionization_equilibrium has executed
   real function heat_capacity()
-    real :: TeInv,&             !The inverse of the electron temperature [1/eV]
-            ETeInvAv,&          ! < Ei/Te>     (Ei - energy levels, Te - electron temperature [eV])
-            DeltaETeInv2Av,&	! <(Ei/Te)^2> - <Ei/Te>^2
-	    DeltaZ2Av,&         ! <i^2>-<i>^2
-            DeltaZDeltaETeInvAv ! <i*Ei/Te> - <i><Ei/Te>
+    real :: TeInv,& !The inverse of the electron temperature [1/eV]
+            ETeInvAv,&          ! < Ei/Te> (Ei - energy levels, Te - electron temperature [eV])
+            DeltaETeInv2Av,&	! <(delta Ei/Te)^2>
+	    DeltaZ2Av,&         ! <(delta i)^2>
+   	    DeltaZDeltaETeInvAv ! <delta i * delta Ei/Te>
 
     ! Array of ionization energy levels of ions divided by the temperature in eV
     real,dimension(0:nZMax) :: ETeInv_I 

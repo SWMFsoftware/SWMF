@@ -35,7 +35,7 @@ end subroutine get_e_heat_capacity_per_vol
 !
 !=====================  Heat capacity per mass:  ========================!!!!
 !                \left(\frac{\partial E}{\partial T_e}\right)_{V,T_i}    !!!!
-subroutine get_e_heat_capacity_per_mass(HeatCapacity,Te,Rho,iMaterial)      !!!!
+subroutine get_e_heat_capacity_per_mass(HeatCapacity,TeIn,Rho,iMaterial)      !!!!
   use ModAtomicMass
   use ModStatSum
   use ModConst
@@ -43,7 +43,7 @@ subroutine get_e_heat_capacity_per_mass(HeatCapacity,Te,Rho,iMaterial)      !!!!
   implicit none
   include 'CRASH_definitions.h'
   real,intent(out)::HeatCapacity  ! In SI: J/(K m^3)
-  real,intent(in):: Te            ! Electron temperature in SI: K
+  real,intent(in):: TeIn            ! Electron temperature in SI: K
   real,intent(in):: Rho           ! Mass density in SI: kg/m^3
   integer,intent(in)::iMaterial   ! iMaterial=0 - xenon, iMaterial=1 - beryllium
   !----------------------------------------------------------------------!
@@ -52,7 +52,7 @@ subroutine get_e_heat_capacity_per_mass(HeatCapacity,Te,Rho,iMaterial)      !!!!
   
   !----------------------------------------------------------------------!
   call set_element(nZ_I(iMaterial) )
-  call set_ionization_equilibrium(TeIn=Te*cKToEv,&
+  call set_ionization_equilibrium(TeIn=TeIn*cKToEv,&
                                   NaIn=Rho/&
                                   (cAtomicMass*cAtomicMass_I(nZ_I(iMaterial))))
 

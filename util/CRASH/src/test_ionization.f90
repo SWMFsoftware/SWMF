@@ -1,4 +1,4 @@
-    !^CFG COPYRIGHT UM
+!^CFG COPYRIGHT UM
 
 !***********************************************************************
 !    calculation of ionization equilibrium, single material
@@ -10,20 +10,20 @@ program saha
   implicit NONE
   real :: &
        Nao = 1.00e18,  &  ! cm-3
-       vTe=5., NaTrial 
+       vTe=5., NaTrial, vU 
 
-  integer,parameter :: nN=5 , nT=120
-  real    :: dTe, dLogN
-  integer :: iT, nT1=1000000, iN
+  integer,parameter :: nN=5 , nT=120, nU=100
+  real    :: dTe, dLogN, dU
+  integer :: iT, nT1=1000000, iN, iU, iLoop
   
-  real    :: z_I(0:nN),z2_I(0:nN),Uav_I(0:nN),Cv_I(0:nN)
+  real    :: z_I(0:nN),z2_I(0:nN),Uav_I(0:nN),Cv_I(0:nN), Te_I(0:nN), iIter_I(0:nN)
   !character(LEN=*),parameter,dimension(0:nN) :: Separator_I='|'
   !character(LEN=*),parameter,dimension(0:nN) :: Separator1_I='/'
   logical :: IsDegenerated
   !-------------------------------------------
   dTe = 5.0; dLogN=log(10.0)
 
-
+  
   call set_element( 54 )
 
 !  tm_1 = diff_sec()!
@@ -54,22 +54,23 @@ program saha
 
 
   do iT  = 1,nT
-     vTe = dTe * iT
-     if (vTe == 130.) then
+     if (count((/(iT == iLoop*25+1, iLoop = 1,10)/))>0) then
         write(24,'(a)')'\end{tabular}'
         write(24,'(a)')'\end{table}', char(10)
+        !--------------
         write(24,'(a)')'\begin{table}'
         write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
         write(24,'(a)')'\hline'
         write(24,'(a)')'Na/cm3 & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
         write(24,'(a)')'\hline'
-        write(24,'(a)')'Te[K] & $z | <z^2>/z$ & $z | <z^2>/z$ & $z | <z^2>/z$ & $z | <z^2>/z$ &'//&
+        write(24,'(a)')'Te[eV] & $z | <z^2>/z$ & $z | <z^2>/z$ & $z | <z^2>/z$ & $z | <z^2>/z$ &'//&
                         '$z | <z^2>/z$ & $z | <z^2>/z$\tabularnewline'
         write(24,'(a)')'& Uav | Cv &  Uav | Cv &  Uav | Cv &  Uav | Cv &  Uav | Cv &'//&
                  'Uav | Cv\tabularnewline'
         write(24,'(a)')'\hline' 
         write(24,'(a)')'\hline'
-     end if 
+     end if
+     vTe = dTe * iT 
 
      do iN = 0,nN
         NaTrial = Nao*exp(iN*dLogN)
@@ -104,23 +105,56 @@ program saha
 
   close(24)
 
+!_____________________________________
+
+ open(25,file='../doc/Table2.tex',status='unknown')
+  write(25,'(a)')'\begin{table}'
+  write(25,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
+  write(25,'(a)')'\hline'
+  write(25,'(a)')'Na/cm3 & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
+  write(25,'(a)')'\hline'
+  write(25,'(a)')'U[eV] & Te | Iterations &  Te | Iterations &  Te | Iterations & '//&
+                 ' Te | Iterations &  Te | Iterations &  Te | Iterations \tabularnewline'
+  write(25,'(a)')'\hline' 
+  write(25,'(a)')'\hline'
+  
+  do iU  = 1,nU
+     if (count((/(iU == iLoop*25+1, iLoop = 1,10)/))>0) then
+        write(25,'(a)')'\end{tabular}'
+        write(25,'(a)')'\end{table}', char(10)
+        !------------
+        write(25,'(a)')'\begin{table}'
+        write(25,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
+        write(25,'(a)')'\hline'
+        write(25,'(a)')'Na/cm3 & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
+        write(25,'(a)')'\hline'
+        write(25,'(a)')'U[eV] & Te | Iterations &  Te | Iterations &  Te | Iterations & '//&
+                 ' Te | Iterations &  Te | Iterations &  Te | Iterations \tabularnewline'
+        write(25,'(a)')'\hline' 
+        write(25,'(a)')'\hline'
+     end if
+     vU = dU * iU 
+     do iN = 0,nN
+        NaTrial = Nao*exp(iN*dLogN)
+        call set_temperature(vU,NaTrial*1000000.0)
+        Te_I(iN) = Te 
+        iIter_I(iN) = iIterTe
+        !if(IsDegenerated)then
+        !   Z_I(iN) = -1.0
+        !   Z2_I(iN)= -1.0
+        !end if
+     end do
+
+     write(25,'(f5.0,6(a,f7.1,a,f7.1),a)') vU,&
+               (' & ', Te_I(iN), ' | ', iIter_I(iN), iN=0,nN ),'\tabularnewline'
+     write(25,'(a)')'\hline'
+
+  end do
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  write(25,'(a)')'\end{tabular}'
+  write(25,'(a)')'\end{table}'
+  close(25)
 
 
 
