@@ -11,7 +11,7 @@ program saha
        Nao = 1.00e18,  &  ! cm-3
        vTe=5., NaTrial 
 
-  integer,parameter :: nN=5 , nT=30
+  integer,parameter :: nN=5 , nT=120
   real    :: dTe, dLogN
   integer :: iT, nT1=1000000, iN
   
@@ -21,7 +21,7 @@ program saha
   logical :: IsDegenerated
 
   !-------------------------------------------
-  dTe = 5.0; dLogN=log(10.0)
+  dTe = 1.0; dLogN=log(10.0)
 
   call set_element( 54 )
   call mod_init

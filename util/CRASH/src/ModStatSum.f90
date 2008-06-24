@@ -14,7 +14,7 @@ module ModStatSum
   real,dimension(1:nZMax) :: IonizPotential_I
 
   !Array of energies needed to create i-level ion from a neutral atom
-  real,dimension(1:nZMax) :: IonizEnergyNeutral_I 
+  real,dimension(0:nZMax) :: IonizEnergyNeutral_I 
   
   real,dimension(0:nZMax) :: Population_I,& !Array of the populations of ions
                              N_I !array of consecutive integers (with type real)
@@ -54,8 +54,8 @@ Contains
     nZ = nZIn
     call get_ioniz_potential(nZ,IonizPotential_I(1:nZ))
 
-	IonizEnergyNeutral_I(1) = IonizPotential_I(1)
-	do iZ = 2,nZ
+	IonizEnergyNeutral_I(0) = 0.0
+	do iZ = 1,nZ
 	   IonizEnergyNeutral_I(iZ) = IonizEnergyNeutral_I(iZ-1) + IonizPotential_I(iZ)
 	end do
   end subroutine set_element
@@ -228,7 +228,7 @@ subroutine set_temperature(Uin, NaIn)
    	      DeltaZDeltaETeInvAv ! <i*Ei/Te> - <i><Ei/Te>
 
     ! Array of ionization energy levels of ions divided by the temperature in eV
-    real,dimension(1:nZMax) :: ETeInv_I 
+    real,dimension(0:nZMax) :: ETeInv_I 
     !------------------
     !calculate the values of the variables defined above:
     TeInv = cOne/Te
