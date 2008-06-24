@@ -133,7 +133,7 @@ Contains
       integer,dimension(1) :: iZDominant    !Most populated ion state
       ! ln(1.0e-2), to truncate terms of the statistical sum, which a factor of 
       ! 1e-2 less than the maximal one:
-      real, parameter :: StatSumToleranceLog = 4.6 
+      real, parameter :: StatSumToleranceLog = 7.0 
       
       integer :: iZ
       real    :: PITotal
@@ -191,23 +191,18 @@ subroutine set_temperature(Uin, NaIn,IsDegenerated)
     Na = NaIn
     ToleranceUeV = ToleranceU * Uin
     iIterTe = 0
-    !Roughly approximate the temperature assuming that all ions are about half ionized: 
-    !Te = max((Uin-IonizEnergyNeutral_I(nZ/10))/nZ, 1.0)   
     !Use Newton-Rapson iterations to get a better approximation of Te:
-    !UDeviation = ToleranceU
-    iterations: do 
-       !write(*,*) Te, iIterTe 
-       call set_ionization_equilibrium(Te, Na, IsDegenerated) !Find the populations for the trial Te
-       UDeviation = internal_energy()-Uin
+    UDeviation = 2.*ToleranceU
+    iterations: do while(abs(UDeviation) >ToleranceUeV .and. iIterTe<=10)
+       !Find the populations for the trial Te
+       call set_ionization_equilibrium(Te, Na, IsDegenerated) 
+       UDeviation = internal_energy()-U
 
-       if (abs(UDeviation) <= ToleranceUeV .or. iIterTe>10) exit iterations
-   
-       !Calculate the improved value of Te, limiting the iterations so they can't jump too far out
+       !Calculate the improved value of Te, limiting the iterations so 
+       !they can't jump too far out
        Te = min(2.0*Te, max(0.5*Te, Te - UDeviation/heat_capacity()))  
        iIterTe = iIterTe+1
     end do iterations
-    !write(*,*) "the final temperature calculated:", Te
-    !write(*,*) "Iterations done:", iIterTe
   end subroutine set_temperature
   
   !============================================
@@ -229,8 +224,8 @@ subroutine set_temperature(Uin, NaIn,IsDegenerated)
   !(derivative of internal energy wrt Te) from temperature:
   !Can only be called after set_ionization_equilibrium has executed
   real function heat_capacity()
-    real :: TeInv,& !The inverse of the electron temperature [1/eV]
-            ETeInvAv,&          ! < Ei/Te> (Ei - energy levels, Te - electron temperature [eV])
+    real :: TeInv,   & !The inverse of the electron temperature [1/eV]
+            ETeInvAv,& ! < Ei/Te> (Ei - energy levels, Te - electron temperature [eV])
             DeltaETeInv2Av,&	! <(delta Ei/Te)^2>
 	    DeltaZ2Av,&         ! <(delta i)^2>
    	    DeltaZDeltaETeInvAv ! <delta i * delta Ei/Te>
