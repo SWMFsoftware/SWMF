@@ -21,7 +21,7 @@ program saha
   !character(LEN=*),parameter,dimension(0:nN) :: Separator1_I='/'
   logical :: IsDegenerated
   !-------------------------------------------
-  dTe = 5.0; dLogN=log(10.0)
+  dTe = 5.0; dLogN=log(10.0); dU = 100
 
   
   call set_element( 54 )
@@ -54,7 +54,7 @@ program saha
 
 
   do iT  = 1,nT
-     if (count((/(iT == iLoop*25+1, iLoop = 1,10)/))>0) then
+     if (((iT-1)/25)*25==(iT-1).and.iT>25) then
         write(24,'(a)')'\end{tabular}'
         write(24,'(a)')'\end{table}', char(10)
         !--------------
@@ -90,7 +90,7 @@ program saha
                (Z_I(iN), '/', Z2_I(iN), '|', iN=0,nN )
      write(24,'(f5.0,6(a,f7.1,a,f7.1),a)') vTe,&
                (' & ', Z_I(iN), ' | ', Z2_I(iN), iN=0,nN ),'\tabularnewline'
-     write(24,'(6(a,f7.1,a,f7.1),a)') &
+     write(24,'(6(a,f8.1,a,f7.1),a)') &
                (' & ', Uav_I(iN), ' | ', Cv_I(iN), iN=0,nN ),'\tabularnewline'
      write(24,'(a)')'\hline'
 
@@ -119,7 +119,7 @@ program saha
   write(25,'(a)')'\hline'
   
   do iU  = 1,nU
-     if (count((/(iU == iLoop*25+1, iLoop = 1,10)/))>0) then
+     if (((iU-1)/50)*50==(iU-1).and.iU>50) then
         write(25,'(a)')'\end{tabular}'
         write(25,'(a)')'\end{table}', char(10)
         !------------
@@ -128,8 +128,8 @@ program saha
         write(25,'(a)')'\hline'
         write(25,'(a)')'Na/cm3 & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
         write(25,'(a)')'\hline'
-        write(25,'(a)')'U[eV] & Te | Iterations &  Te | Iterations &  Te | Iterations & '//&
-                 ' Te | Iterations &  Te | Iterations &  Te | Iterations \tabularnewline'
+        write(25,'(a)')'U[eV] & Te (Iterations) &  Te (Iterations) &  Te (Iterations) & '//&
+                 ' Te (Iterations) &  Te (Iterations) &  Te (Iterations) \tabularnewline'
         write(25,'(a)')'\hline' 
         write(25,'(a)')'\hline'
      end if
@@ -145,8 +145,8 @@ program saha
         !end if
      end do
 
-     write(25,'(f5.0,6(a,f7.1,a,f7.1),a)') vU,&
-               (' & ', Te_I(iN), ' | ', iIter_I(iN), iN=0,nN ),'\tabularnewline'
+     write(25,'(f6.0,6(a,f7.1,a,f7.1,a),a)') vU,&
+               (' & ', Te_I(iN), ' (', iIter_I(iN),')', iN=0,nN ),'\tabularnewline'
      write(25,'(a)')'\hline'
 
   end do

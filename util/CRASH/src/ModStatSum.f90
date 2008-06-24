@@ -1,4 +1,4 @@
-        !^CFG COPYRIGHT UM
+!^CFG COPYRIGHT UM
 module ModStatSum
   use ModIonizPotential
   use ModAtomicMass,ONLY : nZMax
@@ -191,27 +191,23 @@ subroutine set_temperature(Uin, NaIn,IsDegenerated)
     Na = NaIn
     ToleranceUeV = ToleranceU * Uin
     iIterTe = 0
-    !Roughly approximate the temperature assuming that all ions are about half ionized:
-    !This is only done when the element is changed, otherwise use the value for Te found last time
-    if (Te < 0.) Te = max((Uin-IonizEnergyNeutral_I(nZ/5))/nZ, 1.0)
-    
+    !Roughly approximate the temperature assuming that all ions are about half ionized: 
+    !Te = max((Uin-IonizEnergyNeutral_I(nZ/10))/nZ, 1.0)   
     !Use Newton-Rapson iterations to get a better approximation of Te:
-    !UDeviation = ToleranceU	  
-    iterations: do
-       !write(*,*) "current Te:", Te 
+    !UDeviation = ToleranceU
+    iterations: do 
+       !write(*,*) Te, iIterTe 
        call set_ionization_equilibrium(Te, Na, IsDegenerated) !Find the populations for the trial Te
-       !write(*,*) "Z here:", Zav
-       UDeviation = internal_energy()-Uin 
+       UDeviation = internal_energy()-Uin
 
-       !The exit condition for the loop:
-       !(has to be here because it is based on UDeviation)
-       if (abs(UDeviation) < ToleranceUeV .or. iIterTe>10) exit iterations
-       
-       Te = Te - UDeviation/heat_capacity() !Calculate the improved value of Te
+       if (abs(UDeviation) <= ToleranceUeV .or. iIterTe>10) exit iterations
+   
+       !Calculate the improved value of Te, limiting the iterations so they can't jump too far out
+       Te = min(2.0*Te, max(0.5*Te, Te - UDeviation/heat_capacity()))  
        iIterTe = iIterTe+1
     end do iterations
-    write(*,*) "the final temperature calculated:", Te
-    write(*,*) "Iterations done:", iIterTe
+    !write(*,*) "the final temperature calculated:", Te
+    !write(*,*) "Iterations done:", iIterTe
   end subroutine set_temperature
   
   !============================================
