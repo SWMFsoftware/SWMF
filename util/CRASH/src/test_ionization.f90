@@ -16,12 +16,14 @@ program saha
   real    :: dTe, dLogN, dU
   integer :: iT, nT1=1000000, iN, iU, iLoop
   
-  real    :: z_I(0:nN),z2_I(0:nN),Uav_I(0:nN),Cv_I(0:nN), Te_I(0:nN), iIter_I(0:nN)
+  real    :: z_I(0:nN),z2_I(0:nN),Uav_I(0:nN),Cv_I(0:nN), Te_I(0:nN) 
+  integer :: iIter_I(0:nN)
   !character(LEN=*),parameter,dimension(0:nN) :: Separator_I='|'
   !character(LEN=*),parameter,dimension(0:nN) :: Separator1_I='/'
   logical :: IsDegenerated
   !-------------------------------------------
-  dTe = 5.0; dLogN=log(10.0); dU = 100
+
+  dTe = 5.0; dLogN=log(10.0); dU=100.0
 
   
   call set_element( 54 )
@@ -32,7 +34,7 @@ program saha
 
 
 
-  open(24,file='../doc/Table1.tex',status='unknown')
+  open(24,file='../doc/Table1.tex',status='replace')
   write(24,'(a)')'\begin{table}'
   write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
   write(24,'(a)')'\hline'
@@ -55,6 +57,7 @@ program saha
 
   do iT  = 1,nT
      if (((iT-1)/25)*25==(iT-1).and.iT>25) then
+        
         write(24,'(a)')'\end{tabular}'
         write(24,'(a)')'\end{table}', char(10)
         !--------------
@@ -70,7 +73,7 @@ program saha
         write(24,'(a)')'\hline' 
         write(24,'(a)')'\hline'
      end if
-     vTe = dTe * iT 
+     vTe = dTe * iT
 
      do iN = 0,nN
         NaTrial = Nao*exp(iN*dLogN)
@@ -97,9 +100,6 @@ program saha
 
   end do
   
-
-
-
   write(24,'(a)')'\end{tabular}'
   write(24,'(a)')'\end{table}'
 
@@ -107,7 +107,7 @@ program saha
 
 !_____________________________________
 
- open(25,file='../doc/Table2.tex',status='unknown')
+  open(25,file='../doc/Table2.tex',status='replace')
   write(25,'(a)')'\begin{table}'
   write(25,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
   write(25,'(a)')'\hline'
@@ -129,23 +129,20 @@ program saha
         write(25,'(a)')'Na/cm3 & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
         write(25,'(a)')'\hline'
         write(25,'(a)')'U[eV] & Te (Iterations) &  Te (Iterations) &  Te (Iterations) & '//&
-                 ' Te (Iterations) &  Te (Iterations) &  Te (Iterations) \tabularnewline'
+             ' Te (Iterations) &  Te (Iterations) &  Te (Iterations) \tabularnewline'
         write(25,'(a)')'\hline' 
         write(25,'(a)')'\hline'
      end if
      vU = dU * iU 
      do iN = 0,nN
         NaTrial = Nao*exp(iN*dLogN)
-        call set_temperature(vU,NaTrial*1000000.0)
+        call set_temperature(vU,NaTrial*1000000.0,IsDegenerated)
         Te_I(iN) = Te 
         iIter_I(iN) = iIterTe
-        !if(IsDegenerated)then
-        !   Z_I(iN) = -1.0
-        !   Z2_I(iN)= -1.0
-        !end if
+        if(IsDegenerated)Te_I(iN)=-1.0
      end do
 
-     write(25,'(f6.0,6(a,f7.1,a,f7.1,a),a)') vU,&
+     write(25,'(f6.0,6(a,f7.1,a,i7,a),a)') vU,&
                (' & ', Te_I(iN), ' (', iIter_I(iN),')', iN=0,nN ),'\tabularnewline'
      write(25,'(a)')'\hline'
 
