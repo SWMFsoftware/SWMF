@@ -36,7 +36,8 @@ end subroutine get_e_heat_capacity_per_vol
 !=====================  Heat capacity per mass:  ========================!!!!
 !                \left(\frac{\partial E}{\partial T_e}\right)_{V,T_i}    !!!!
 subroutine get_e_heat_capacity_per_mass(HeatCapacity,Te,Rho,iMaterial)      !!!!
-
+  use ModAtomicMass
+  use ModStatSum
   use ModConst
 
   implicit none
@@ -46,18 +47,17 @@ subroutine get_e_heat_capacity_per_mass(HeatCapacity,Te,Rho,iMaterial)      !!!!
   real,intent(in):: Rho           ! Mass density in SI: kg/m^3
   integer,intent(in)::iMaterial   ! iMaterial=0 - xenon, iMaterial=1 - beryllium
   !----------------------------------------------------------------------!
-  real,   parameter                 :: cAtomicToMass = cBoltzmann / cAtomicMass 
-  real,   parameter, dimension(0:1) :: AtomicMass_I=(/131.29, &
-                                                        9.012 /)
-  integer,parameter, dimension(0:1) :: nZ_I=(/54, &
-                                               4  /)
-  real::HeatCapacityPerAtom
+  real,   parameter                 :: cAtomicToMass = cBoltzmann / cAtomicMass
+  !dimensionless, per atom
+  
   !----------------------------------------------------------------------!
-  !        Version for fully ionized plasma                              !
-  !         Only a stab, should be 1.5*Z(n,Te)+(1.5*Te +I(Z))dZ/dTe      !
-  HeatCapacityPerAtom = 1.50*real(nZ_I(iMaterial))
-  !----------------------------------------------------------------------!
-  HeatCapacity = HeatCapacityPerAtom * cAtomicToMass / &
-                     AtomicMass_I(iMaterial)
+  call set_element(nZ_I(iMaterial) )
+  call set_ionization_equilibrium(TeIn=Te*cKToEv,&
+                                  NaIn=Rho/&
+                                  (cAtomicMass*cAtomicMass_I(nZ_I(iMaterial))))
+
+  HeatCapacity =(heat_capacity() &!dimensionless, per atom 
+                 -1.5           )&!Contribution from ions
+                 * cAtomicToMass /cAtomicMass_I(nZ_I(iMaterial))
 end subroutine get_e_heat_capacity_per_mass
 !========================================================================!
