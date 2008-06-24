@@ -5,6 +5,9 @@ module ModStatSum
   use ModConst
   implicit none
   SAVE
+  logical::DoInit=.true.
+  integer::iIter     !To provide the output, if needed
+
   integer :: nZ=-1                      !Atomic number of element in question
   
   integer :: iZMin  ! Numbers of the ionization states, such that the population
@@ -26,7 +29,7 @@ module ModStatSum
           EAv,&       ! The average ionization energy level of ions
           Te = 1.,&   ! the electron temperature [eV] (cBoltzmann in eV * Te in Kelvin)
           Na          ! The density of heavy particles in the plasma
-  
+  private::mod_init,Te,Na
   !private :: z_averaged, z2_averaged, E_averaged
 Contains
   !=========================================================================
@@ -43,6 +46,7 @@ Contains
     !*sqrt(cBoltzmann/cEV * T) - temperature in eV
 
     C0 = cTwo*DeBroglieInv**3 ! 2/(Lambda^3)
+    DoInit=.false.
   end subroutine mod_init
   !Set the element and its Ionization Potentials
   !==========================================================================
@@ -50,6 +54,7 @@ Contains
     integer,intent(in) :: nZIn
     integer            :: iZ   ! for loop
     !--------------------------!
+    if(DoInit)call mod_init
     if(nZIn==nZ)return
     nZ = nZIn
     call get_ioniz_potential(nZ,IonizPotential_I(1:nZ))
@@ -92,7 +97,6 @@ Contains
     subroutine set_Z()
       real    :: ZTrial, Z1, Z2 ! The trial values of Z for iterations
       integer,dimension(1) :: InitZ ! The initial approximation of Z
-      integer :: iIter
       !=====================================
       ! First approximate the value of Z by finding for what i=Z 
       ! the derivative of the populations sequence~0 (population is maximum):
@@ -175,10 +179,10 @@ Contains
   end subroutine set_ionization_equilibrium
 
 !=======================================  
-subroutine set_temperature(Uin, NaIn)
-    real,intent(in) :: Uin,& ! Average internal energy per atomic unit [eV]
-	               NaIn  ! Density of heavy particles [# of particles/m^3]
-    integer :: iIter ! iteration counter
+subroutine set_temperature(Uin, NaIn,IsDegenerated)
+    real,intent(in) :: Uin,& !Average internal energy per atomic unit [eV]
+	               NaIn !Density of heavy particles [# of particles/m^3]
+    logical,intent(out),optional::IsDegenerated
     real,parameter :: ToleranceU = 0.001 !accuracy of internal energy needed [(% deviation)/100]
     real :: UDeviation,& ! The difference between the given internal energy and the calculated one
             ToleranceUeV ! The required accuracy of U in eV
@@ -190,7 +194,9 @@ subroutine set_temperature(Uin, NaIn)
     ! Use Newton-Rapson iterations to get a better approximation of Te:
     ! UDeviation = ToleranceU	  
     iterations: do 
-       call set_ionization_equilibrium(Te, Na) !Find the populations for the trial Te
+       call set_ionization_equilibrium(Te, Na,IsDegenerated) 
+       !Find the populations for the trial Te
+
        UDeviation = internal_energy()-Uin 
 
        ! The exit condition for the loop:
@@ -257,8 +263,6 @@ subroutine set_temperature(Uin, NaIn)
   real function z2_averaged()
     z2_averaged = sum(Population_I(iZMin:iZMax)*N_I(iZMin:iZMax)**2)
   end function z2_averaged
-
-
 
   !==================================
   !Calculate the average ionization energy from neutral atoms of the ions
