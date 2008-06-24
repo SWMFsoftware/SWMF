@@ -139,8 +139,8 @@ contains
              cPotential_I = cPotential20_II( 1:nZ, nZ)
            case (21:30)
              cPotential_I = cPotential30_II( 1:nZ, nZ)
-		   case (54)
-		     cPotential_I = cPotentialXe_I
+          case (54)
+             cPotential_I = cPotentialXe_I
            case default
              write(*,*) "No such element found in the database"
          end select
