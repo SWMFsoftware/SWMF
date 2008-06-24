@@ -44,11 +44,11 @@ subroutine IE_FindPoint(LocIn, LocOut, IsNormalGrid, iError)
 
   LatIn = LocIn(2)
   if (LatIn > 90.0-IONO_TOLER*cRadToDeg) then
-     LatIn = 180.0-cTwo*IONO_TOLER*cRadToDeg - LatIn
+     LatIn = 180.0 - 2*IONO_TOLER*cRadToDeg - LatIn
      MLTIn = mod(MLTIn+12.0,24.0)
   endif
   if (LatIn < -90.0+IONO_TOLER*cRadToDeg) then
-     LatIn = -180.0+cTwo*IONO_TOLER*cRadToDeg - LatIn
+     LatIn = -180.0 + 2*IONO_TOLER*cRadToDeg - LatIn
      MLTIn = mod(MLTIn+12.0,24.0)
   endif
 

@@ -315,25 +315,25 @@ contains
        iFace=1+nI*(iSide-East_)
        do k=1,nK; do j=1,nJ
           call get_refined_b0(2*iFace-3,2*j-2,2*k-2)
-          B0xFace_x_BLK(iFace,j,k,iBlock) = cEighth*sum(RefB0_DIII(x_,:,:,:))
-          B0yFace_x_BLK(iFace,j,k,iBlock) = cEighth*sum(RefB0_DIII(y_,:,:,:))
-          B0zFace_x_BLK(iFace,j,k,iBlock) = cEighth*sum(RefB0_DIII(z_,:,:,:))
+          B0xFace_x_BLK(iFace,j,k,iBlock) = 0.125*sum(RefB0_DIII(x_,:,:,:))
+          B0yFace_x_BLK(iFace,j,k,iBlock) = 0.125*sum(RefB0_DIII(y_,:,:,:))
+          B0zFace_x_BLK(iFace,j,k,iBlock) = 0.125*sum(RefB0_DIII(z_,:,:,:))
        end do; end do
     case(South_,North_)
        jFace=1+nJ*(iSide-South_)
        do k=1,nK; do i=1,nI
           call get_refined_b0(2*i-2,2*jFace-3,2*k-2)
-          B0xFace_y_BLK(i,jFace,k,iBlock) = cEighth*sum(RefB0_DIII(x_,:,:,:))
-          B0yFace_y_BLK(i,jFace,k,iBlock) = cEighth*sum(RefB0_DIII(y_,:,:,:))
-          B0zFace_y_BLK(i,jFace,k,iBlock) = cEighth*sum(RefB0_DIII(z_,:,:,:))
+          B0xFace_y_BLK(i,jFace,k,iBlock) = 0.125*sum(RefB0_DIII(x_,:,:,:))
+          B0yFace_y_BLK(i,jFace,k,iBlock) = 0.125*sum(RefB0_DIII(y_,:,:,:))
+          B0zFace_y_BLK(i,jFace,k,iBlock) = 0.125*sum(RefB0_DIII(z_,:,:,:))
        end do; end do
     case(Bot_,Top_)
        kFace=1+nK*(iSide-Bot_)
        do j=1,nJ; do i=1,nI
           call get_refined_b0(2*i-2,2*j-2,2*kFace-3)
-          B0xFace_z_BLK(i,j,kFace,iBlock) = cEighth*sum(RefB0_DIII(x_,:,:,:))
-          B0yFace_z_BLK(i,j,kFace,iBlock) = cEighth*sum(RefB0_DIII(y_,:,:,:))
-          B0zFace_z_BLK(i,j,kFace,iBlock) = cEighth*sum(RefB0_DIII(z_,:,:,:))
+          B0xFace_z_BLK(i,j,kFace,iBlock) = 0.125*sum(RefB0_DIII(x_,:,:,:))
+          B0yFace_z_BLK(i,j,kFace,iBlock) = 0.125*sum(RefB0_DIII(y_,:,:,:))
+          B0zFace_z_BLK(i,j,kFace,iBlock) = 0.125*sum(RefB0_DIII(z_,:,:,:))
        end do; end do
     end select
   end subroutine correct_b0_face

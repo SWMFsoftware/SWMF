@@ -23,8 +23,6 @@ module ModFaceValue
   ! Local variables:
   logical :: UseLogLimiter=.false., UseLogLimiter_V(nVar)=.false.
 
-  real, parameter :: cSixth=1./6.
-
   ! Maximum length of the stencil in 1D
   integer,parameter:: MaxIJK= max(nI,nJ,nK)
 
@@ -32,7 +30,7 @@ module ModFaceValue
   integer, parameter:: Lo2_=nVar+1, Hi2_=nVar+nVar, Lo3_=Hi2_+1, Hi3_=nVar+Hi2_
 
   ! local constant
-  real, parameter   :: cTwoThird = 2./3.
+  real, parameter :: cThird = 1./3., cTwoThird = 2./3., cSixth=1./6.
 
   ! Locally set variables
   real   :: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
@@ -74,7 +72,7 @@ contains
     !-------------------------------------------------------------------------
     !Calculate averaged Fine1_VII 
     do iVar=1,nVar
-       AveragedFine1_V(iVar)=cQuarter*sum(Fine1_VII(iVar,:,:))
+       AveragedFine1_V(iVar) = 0.25*sum(Fine1_VII(iVar,:,:))
     end do
     GradNormal_V= AveragedFine1_V-Coarse1_V
     !Save gradients squared
@@ -86,7 +84,7 @@ contains
             min(BetaLimiter*cTwoThird*abs(GradNormal_V),&
             BetaLimiter*cHalf*SignGradNormal_V*(Coarse1_V-Coarse2_V),&
             cThird*abs(GradNormal_V)+&
-            cQuarter*SignGradNormal_V*(Coarse1_V-Coarse2_V)))
+            0.25*SignGradNormal_V*(Coarse1_V-Coarse2_V)))
 
        do j2=1,2;do i2=1,2
           !Limit transverse gradients, if they are larger than the normal one
@@ -118,7 +116,7 @@ contains
                   SignGradNormal_V*(Fine1_VII(:,i2,j2)-Coarse1_V),&
                   BetaLimiter*cHalf*SignGradNormal_V*&
                   (Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2)),&
-                  cSixth*abs(GradNormal_V)+cQuarter*SignGradNormal_V*&
+                  cSixth*abs(GradNormal_V) + 0.25*SignGradNormal_V*&
                   (Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2))))
           else
              !First order scheme
@@ -160,7 +158,7 @@ contains
 
     !Calculate averaged Fine1_VII 
     do iVar=1,nVar
-       AveragedFine1_V(iVar)=cQuarter*sum(Fine1_VII(iVar,:,:))
+       AveragedFine1_V(iVar) = 0.25*sum(Fine1_VII(iVar,:,:))
     end do
     GradNormal_V= AveragedFine1_V-Coarse1_V
 
@@ -170,7 +168,7 @@ contains
     GradNormalLtd_V= SignGradNormal_V*max(cZero,min( &
          BetaLimiter*cTwoThird*abs(GradNormal_V),&
          BetaLimiter*cHalf*SignGradNormal_V*(Coarse1_V-Coarse2_V), &
-         cThird*abs(GradNormal_V)+cQuarter*&
+         cThird*abs(GradNormal_V) + 0.25*&
          SignGradNormal_V*(Coarse1_V-Coarse2_V)))
 
     do j2=1,2;do i2=1,2
@@ -190,7 +188,7 @@ contains
             BetaLimiter*cThird*abs(GradNormal_V),&
             BetaLimiter*cHalf*SignGradNormal_V &
             *(Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2)), &
-            cSixth*abs(GradNormal_V)+cQuarter*SignGradNormal_V&
+            cSixth*abs(GradNormal_V)+0.25*SignGradNormal_V&
             *(Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2)) &
             ))
        FineToCoarseF_VII(:,i2,j2)=Fine1_VII(:,i2,j2)-GradNormalLtd_V
@@ -1354,14 +1352,14 @@ contains
        dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
        dVar1_I(Lo3_:Hi3_)=BetaLimiter*&
             dVar1_I(Lo2_:Hi2_)
-       dVar1_I(1:nVar)=sign(cQuarter,dVar1_I(1:nVar))
+       dVar1_I(1:nVar)=sign(0.25,dVar1_I(1:nVar))
        do l=lMax,lMin-1,-1
           dVar2_I=dVar1_I
           dVar1_I(1:nVar)=Primitive_VI(:,l)-Primitive_VI(:,l-1)
           dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
           dVar1_I(Lo3_:Hi3_)=BetaLimiter*&
                dVar1_I(Lo2_:Hi2_)
-          dVar1_I(1:nVar)=sign(cQuarter,dVar1_I(1:nVar))
+          dVar1_I(1:nVar)=sign(0.25,dVar1_I(1:nVar))
           if(all(IsTrueCell_I(l-1:l+1)))then
              dVar2_I(1:nVar)=dVar2_I(1:nVar)+dVar1_I(1:nVar)
              dVar2_I(Lo2_:Hi2_)=min(dVar2_I(Lo2_:Hi2_),dVar1_I(Lo3_:Hi3_))
@@ -1376,12 +1374,12 @@ contains
     case('minmod')
        dVar1_I(1:nVar)=Primitive_VI(:,lMax+1)-Primitive_VI(:,lMax)
        dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
-       dVar1_I(1:nVar)=sign(cQuarter,dVar1_I(1:nVar))
+       dVar1_I(1:nVar)=sign(0.25,dVar1_I(1:nVar))
        do l=lMax,lMin-1,-1
           dVar2_I(1:Hi2_)=dVar1_I(1:Hi2_)
           dVar1_I(1:nVar)=Primitive_VI(:,l)-Primitive_VI(:,l-1)
           dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
-          dVar1_I(1:nVar)=sign(cQuarter,dVar1_I(1:nVar))
+          dVar1_I(1:nVar)=sign(0.25,dVar1_I(1:nVar))
           if(all(IsTrueCell_I(l-1:l+1)))then
              dVar2_I(1:nVar)=dVar2_I(1:nVar)+dVar1_I(1:nVar)
              dVar2_I(Lo2_:Hi2_)=min(dVar2_I(Lo2_:Hi2_),dVar1_I(Lo2_:Hi2_))
@@ -1398,7 +1396,7 @@ contains
           dVar1_V = Primitive_VI(:,l) - Primitive_VI(:,l-1)
           if(all(IsTrueCell_I(l-1:l+1)))then
              dVarLimR_VI(:,l) = &
-                  (sign(cQuarter,dVar1_V)+sign(cQuarter,dVar2_V))*&
+                  (sign(0.25,dVar1_V)+sign(0.25,dVar2_V))*&
                   min(BetaLimiter*abs(dVar1_V), BetaLimiter*abs(dVar2_V), &
                   cHalf*abs(dVar1_V+dVar2_V))
           else
@@ -1413,11 +1411,11 @@ contains
           dVar1_V = Primitive_VI(:,l) - Primitive_VI(:,l-1)
           if(all(IsTrueCell_I(l-1:l+1)))then
              dVarLimR_VI(:,l) = &
-                  (sign(cQuarter,dVar1_V)+sign(cQuarter,dVar2_V))*&
+                  (sign(0.25,dVar1_V)+sign(0.25,dVar2_V))*&
                   min(BetaLimiter*abs(dVar1_V), BetaLimiter*abs(dVar2_V), &
                   cThird*abs(2*dVar1_V+dVar2_V))
              dVarLimL_VI(:,l) = &
-                  (sign(cQuarter,dVar1_V)+sign(cQuarter,dVar2_V))*&
+                  (sign(0.25,dVar1_V)+sign(0.25,dVar2_V))*&
                   min(BetaLimiter*abs(dVar1_V), BetaLimiter*abs(dVar2_V), &
                   cThird*abs(dVar1_V+2*dVar2_V))
           else
@@ -1446,13 +1444,13 @@ contains
        dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
        dVar1_I(Lo3_:Hi3_)=BetaLimiter*&
             dVar1_I(Lo2_:Hi2_)
-       dVar1_I(1:nVar)=sign(cQuarter,dVar1_I(1:nVar))
+       dVar1_I(1:nVar)=sign(0.25,dVar1_I(1:nVar))
        do l=lMax,lMin-1,-1
           dVar2_I=dVar1_I
           dVar1_I(1:nVar)=Primitive_VI(:,l)-Primitive_VI(:,l-1)
           dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
           dVar1_I(Lo3_:Hi3_)=BetaLimiter*dVar1_I(Lo2_:Hi2_)
-          dVar1_I(1:nVar)=sign(cQuarter,dVar1_I(1:nVar))
+          dVar1_I(1:nVar)=sign(0.25,dVar1_I(1:nVar))
           dVar2_I(1:nVar)=dVar2_I(1:nVar)+dVar1_I(1:nVar)
           dVar2_I(Lo2_:Hi2_)=min(dVar2_I(Lo2_:Hi2_),dVar1_I(Lo3_:Hi3_))
           dVar2_I(Lo3_:Hi3_)=min(dVar1_I(Lo2_:Hi2_),dVar2_I(Lo3_:Hi3_))
@@ -1464,12 +1462,12 @@ contains
     case('minmod')
        dVar1_I(1:nVar)=Primitive_VI(:,lMax+1)-Primitive_VI(:,lMax)
        dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
-       dVar1_I(1:nVar)=sign(cQuarter,dVar1_I(1:nVar))
+       dVar1_I(1:nVar)=sign(0.25,dVar1_I(1:nVar))
        do l=lMax,lMin-1,-1
           dVar2_I(1:Hi2_)=dVar1_I(1:Hi2_)
           dVar1_I(1:nVar)=Primitive_VI(:,l)-Primitive_VI(:,l-1)
           dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
-          dVar1_I(1:nVar)=sign(cQuarter,dVar1_I(1:nVar))
+          dVar1_I(1:nVar)=sign(0.25,dVar1_I(1:nVar))
           dVar2_I(1:nVar)=dVar2_I(1:nVar)+dVar1_I(1:nVar)
           dVar2_I(Lo2_:Hi2_)=min(dVar2_I(Lo2_:Hi2_),dVar1_I(Lo2_:Hi2_))
           dVarLimR_VI(:,l) = dVar2_I(1:nVar)*dVar2_I(Lo2_:Hi2_)
@@ -1485,7 +1483,7 @@ contains
           ! Calculate left slope
           dVar1_V = Primitive_VI(:,l) - Primitive_VI(:,l-1)
           ! Calculate the limited slope
-          dVarLimR_VI(:,l) = (sign(cQuarter,dVar1_V)+sign(cQuarter,dVar2_V))* &
+          dVarLimR_VI(:,l) = (sign(0.25,dVar1_V)+sign(0.25,dVar2_V))* &
                min(BetaLimiter*abs(dVar1_V), BetaLimiter*abs(dVar2_V), &
                cHalf*abs(dVar1_V+dVar2_V))
 
@@ -1500,10 +1498,10 @@ contains
           ! Calculate left slope
           dVar1_V = Primitive_VI(:,l) - Primitive_VI(:,l-1)
           ! Calculate the limited slopes
-          dVarLimR_VI(:,l) = (sign(cQuarter,dVar1_V)+sign(cQuarter,dVar2_V))* &
+          dVarLimR_VI(:,l) = (sign(0.25,dVar1_V)+sign(0.25,dVar2_V))* &
                min(BetaLimiter*abs(dVar1_V), BetaLimiter*abs(dVar2_V), &
                cThird*abs(2*dVar1_V+dVar2_V))
-          dVarLimL_VI(:,l) = (sign(cQuarter,dVar1_V)+sign(cQuarter,dVar2_V))* &
+          dVarLimL_VI(:,l) = (sign(0.25,dVar1_V)+sign(0.25,dVar2_V))* &
                min(BetaLimiter*abs(dVar1_V), BetaLimiter*abs(dVar2_V), &
                cThird*abs(dVar1_V+2*dVar2_V))
        end do

@@ -79,9 +79,9 @@ Module ModConst
   real, parameter :: cKEVToK = cKEV / cBoltzmann
   real, parameter :: cMEVToK = cMEV / cBoltzmann
 
-  real, parameter :: cKToEV  = cOne / cEVToK
-  real, parameter :: cKToKEV = cOne / cKEVToK
-  real, parameter :: cKToMEV = cOne / cMEVToK
+  real, parameter :: cKToEV  = 1.0 / cEVToK
+  real, parameter :: cKToKEV = 1.0 / cKEVToK
+  real, parameter :: cKToMEV = 1.0 / cMEVToK
 
   !\
   ! Here RME stands for Rest Mass Energy.

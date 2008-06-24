@@ -932,7 +932,7 @@ subroutine fix_covariant_geometry(iBLK)
      end do; end do; end do
   else
      do k=1,nK; do j=1,nJ; do i=1,nI+1
-        RDotFaceAreaI_F(i,j,k)=cQuarter*dot_product(&
+        RDotFaceAreaI_F(i,j,k)=0.25*dot_product(&
              XyzNode_DN(:,i,j  ,k  )+ &
              XyzNode_DN(:,i,j+1,k  )+ &
              XyzNode_DN(:,i,j+1,k+1)+ &
@@ -963,7 +963,7 @@ subroutine fix_covariant_geometry(iBLK)
      end do; end do; end do
   else
      do k=1,nK; do j=1,nJ+1; do i=1,nI
-        RDotFaceAreaJ_F(i,j,k)=cQuarter*dot_product(&
+        RDotFaceAreaJ_F(i,j,k)=0.25*dot_product(&
              XyzNode_DN(:,i  ,j,k  )+ &
              XyzNode_DN(:,i  ,j,k+1)+ &
              XyzNode_DN(:,i+1,j,k+1)+ &
@@ -995,7 +995,7 @@ subroutine fix_covariant_geometry(iBLK)
      end do; end do; end do
   else
      do k=1,nK+1; do j=1,nJ; do i=1,nI
-        RDotFaceAreaK_F(i,j,k)=cQuarter*dot_product(&
+        RDotFaceAreaK_F(i,j,k)=0.25*dot_product(&
              XyzNode_DN(:,i  ,j  ,k)+ &
              XyzNode_DN(:,i+1,j  ,k)+ &
              XyzNode_DN(:,i+1,j+1,k)+ &
@@ -1087,11 +1087,11 @@ subroutine calc_b0source_covar(iBlock)
            if(i==nI.and.neiLWest(iBlock)==-1)then
               call correct_b0_face(West_)
               B0xFace_x_BLK(i+1,j,k,iBlock)=&
-                   sum(B0_DIIS(x_,:,:,West_))*cQuarter
+                   sum(B0_DIIS(x_,:,:,West_))*0.25
               B0yFace_x_BLK(i+1,j,k,iBlock)=&
-                   sum(B0_DIIS(y_,:,:,West_))*cQuarter
+                   sum(B0_DIIS(y_,:,:,West_))*0.25
               B0zFace_x_BLK(i+1,j,k,iBlock)=&
-                   sum(B0_DIIS(z_,:,:,West_))*cQuarter
+                   sum(B0_DIIS(z_,:,:,West_))*0.25
            else
               FaceArea_DIIS(:,0,0,West_)=FaceAreaI_DFB(:,i+1,j,k,iBlock)
               B0_DIIS(x_,0,0,West_)= B0xFace_x_BLK(i+1,j,k,iBlock)
@@ -1101,9 +1101,9 @@ subroutine calc_b0source_covar(iBlock)
 
            if(i==1.and.neiLEast(iBlock)==-1)then
               call correct_b0_face(East_)
-              B0xFace_x_BLK(i,j,k,iBlock)=sum(B0_DIIS(x_,:,:,East_))*cQuarter
-              B0yFace_x_BLK(i,j,k,iBlock)=sum(B0_DIIS(y_,:,:,East_))*cQuarter
-              B0zFace_x_BLK(i,j,k,iBlock)=sum(B0_DIIS(z_,:,:,East_))*cQuarter
+              B0xFace_x_BLK(i,j,k,iBlock)=sum(B0_DIIS(x_,:,:,East_))*0.25
+              B0yFace_x_BLK(i,j,k,iBlock)=sum(B0_DIIS(y_,:,:,East_))*0.25
+              B0zFace_x_BLK(i,j,k,iBlock)=sum(B0_DIIS(z_,:,:,East_))*0.25
            else
               FaceArea_DIIS(:,0,0,East_)=FaceAreaI_DFB(:,i,j,k,iBlock)
               B0_DIIS(x_,0,0,East_)= B0xFace_x_BLK(i,j,k,iBlock)
@@ -1114,11 +1114,11 @@ subroutine calc_b0source_covar(iBlock)
            If(j==nJ.and.neiLNorth(iBlock)==-1)then
               call correct_b0_face(North_)
               B0xFace_y_BLK(i,j+1,k,iBlock)=&
-                   sum(B0_DIIS(x_,:,:,North_))*cQuarter
+                   sum(B0_DIIS(x_,:,:,North_))*0.25
               B0yFace_y_BLK(i,j+1,k,iBlock)=&
-                   sum(B0_DIIS(y_,:,:,North_))*cQuarter
+                   sum(B0_DIIS(y_,:,:,North_))*0.25
               B0zFace_y_BLK(i,j+1,k,iBlock)=&
-                   sum(B0_DIIS(z_,:,:,North_))*cQuarter
+                   sum(B0_DIIS(z_,:,:,North_))*0.25
            else
               FaceArea_DIIS(:,0,0,North_)=FaceAreaJ_DFB(:,i,j+1,k,iBlock) 
               B0_DIIS(x_,0,0,North_)= B0xFace_y_BLK(i,j+1,k,iBlock)
@@ -1128,9 +1128,9 @@ subroutine calc_b0source_covar(iBlock)
 
            if(j==1.and.neiLsouth(iBlock)==-1)then
               call correct_b0_face(South_)
-              B0xFace_y_BLK(i,j,k,iBlock)=sum(B0_DIIS(x_,:,:,South_))*cQuarter
-              B0yFace_y_BLK(i,j,k,iBlock)=sum(B0_DIIS(y_,:,:,South_))*cQuarter
-              B0zFace_y_BLK(i,j,k,iBlock)=sum(B0_DIIS(z_,:,:,South_))*cQuarter
+              B0xFace_y_BLK(i,j,k,iBlock)=sum(B0_DIIS(x_,:,:,South_))*0.25
+              B0yFace_y_BLK(i,j,k,iBlock)=sum(B0_DIIS(y_,:,:,South_))*0.25
+              B0zFace_y_BLK(i,j,k,iBlock)=sum(B0_DIIS(z_,:,:,South_))*0.25
            else
               FaceArea_DIIS(:,0,0,South_)=FaceAreaJ_DFB(:,i,j,k,iBlock)   
               B0_DIIS(x_,0,0,South_)= B0xFace_y_BLK(i,j,k,iBlock)
@@ -1141,11 +1141,11 @@ subroutine calc_b0source_covar(iBlock)
            if(k==nK.and.neiLTop(iBlock)==-1)then
               call correct_b0_face(Top_)
               B0xFace_z_BLK(i,j,k+1,iBlock)=&
-                   sum(B0_DIIS(x_,:,:,Top_))*cQuarter
+                   sum(B0_DIIS(x_,:,:,Top_))*0.25
               B0yFace_z_BLK(i,j,k+1,iBlock)=&
-                   sum(B0_DIIS(y_,:,:,Top_))*cQuarter
+                   sum(B0_DIIS(y_,:,:,Top_))*0.25
               B0zFace_z_BLK(i,j,k+1,iBlock)=&
-                   sum(B0_DIIS(z_,:,:,Top_))*cQuarter
+                   sum(B0_DIIS(z_,:,:,Top_))*0.25
            else
               FaceArea_DIIS(:,0,0,Top_)=FaceAreaK_DFB(:,i,j,k+1,iBlock)   
               B0_DIIS(x_,0,0,Top_)= B0xFace_z_BLK(i,j,k+1,iBlock)
@@ -1156,11 +1156,11 @@ subroutine calc_b0source_covar(iBlock)
            if(k==1.and.neiLBot(iBlock)==-1)then
               call correct_b0_face(Bot_)
               B0xFace_z_BLK(i,j,k,iBlock)=&
-                   sum(B0_DIIS(x_,:,:,Bot_))*cQuarter
+                   sum(B0_DIIS(x_,:,:,Bot_))*0.25
               B0yFace_z_BLK(i,j,k,iBlock)=&
-                   sum(B0_DIIS(y_,:,:,Bot_))*cQuarter
+                   sum(B0_DIIS(y_,:,:,Bot_))*0.25
               B0zFace_z_BLK(i,j,k,iBlock)=&
-                   sum(B0_DIIS(z_,:,:,Bot_))*cQuarter
+                   sum(B0_DIIS(z_,:,:,Bot_))*0.25
            else
               FaceArea_DIIS(:,0,0,Bot_)=FaceAreaK_DFB(:,i,j,k,iBlock)  
               B0_DIIS(x_,0,0,Bot_)= B0xFace_z_BLK(i,j,k,iBlock)
@@ -1585,12 +1585,12 @@ subroutine covariant_curlb(i,j,k,iBLK,CurlB_D,IsTrueBlock)
      if(true_cell(i-1,j,k,iBLK))then
         MagneticField_DS(:,East_ )=-(+State_VGB(Bx_:Bz_,i-1,j,k,iBLK)+B_D)
      else
-        MagneticField_DS(:,East_ )=-(-State_VGB(Bx_:Bz_,i+1,j,k,iBLK)+cTwo*B_D)
+        MagneticField_DS(:,East_ )=-(-State_VGB(Bx_:Bz_,i+1,j,k,iBLK)+2*B_D)
      end if
      if(true_cell(i+1,j,k,iBLK))then
         MagneticField_DS(:,West_ )=+(+State_VGB(Bx_:Bz_,i+1,j,k,iBLK)+B_D)
      else
-        MagneticField_DS(:,West_ )=+(-State_VGB(Bx_:Bz_,i-1,j,k,iBLK)+cTwo*B_D)
+        MagneticField_DS(:,West_ )=+(-State_VGB(Bx_:Bz_,i-1,j,k,iBLK)+2*B_D)
      end if
 
      !Input from J faces
@@ -1602,12 +1602,12 @@ subroutine covariant_curlb(i,j,k,iBLK,CurlB_D,IsTrueBlock)
      if(true_cell(i,j-1,k,iBLK))then
         MagneticField_DS(:,South_ )=-(+State_VGB(Bx_:Bz_,i,j-1,k,iBLK)+B_D)
      else
-        MagneticField_DS(:,South_ )=-(-State_VGB(Bx_:Bz_,i,j+1,k,iBLK)+cTwo*B_D)
+        MagneticField_DS(:,South_ )=-(-State_VGB(Bx_:Bz_,i,j+1,k,iBLK)+2*B_D)
      end if
      if(true_cell(i,j+1,k,iBLK))then
         MagneticField_DS(:,North_ )=+(+State_VGB(Bx_:Bz_,i,j+1,k,iBLK)+B_D)
      else
-        MagneticField_DS(:,North_ )=+(-State_VGB(Bx_:Bz_,i,j-1,k,iBLK)+cTwo*B_D)
+        MagneticField_DS(:,North_ )=+(-State_VGB(Bx_:Bz_,i,j-1,k,iBLK)+2*B_D)
      end if
      
      !Input from K faces
@@ -1619,12 +1619,12 @@ subroutine covariant_curlb(i,j,k,iBLK,CurlB_D,IsTrueBlock)
      if(true_cell(i,j,k-1,iBLK))then
         MagneticField_DS(:,Bot_ )=-(+State_VGB(Bx_:Bz_,i,j,k-1,iBLK)+B_D)
      else
-        MagneticField_DS(:,Bot_ )=-(-State_VGB(Bx_:Bz_,i,j,k+1,iBLK)+cTwo*B_D)
+        MagneticField_DS(:,Bot_ )=-(-State_VGB(Bx_:Bz_,i,j,k+1,iBLK)+2*B_D)
      end if
      if(true_cell(i,j,k+1,iBLK))then
         MagneticField_DS(:,Top_ )=+(+State_VGB(Bx_:Bz_,i,j,k+1,iBLK)+B_D)
      else
-        MagneticField_DS(:,Top_ )=+(-State_VGB(Bx_:Bz_,i,j,k-1,iBLK)+cTwo*B_D)
+        MagneticField_DS(:,Top_ )=+(-State_VGB(Bx_:Bz_,i,j,k-1,iBLK)+2*B_D)
      end if
   end if
   CurlB_D(1)=dot_product(FaceArea_DS(2,:),MagneticField_DS(3,:))-&

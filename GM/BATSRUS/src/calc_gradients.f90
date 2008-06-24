@@ -84,28 +84,28 @@ subroutine central_differences(iBlock, Var_G,&
              OneTrue_G(i,j,k)*(&
              (Var_G(i+1,j,k)-Var_G(i,j,k))*&
              OneTrue_G(i+1,j,k)*&
-             (cTwo - OneTrue_G(i-1,j,k)) + &
+             (2.0 - OneTrue_G(i-1,j,k)) + &
              (Var_G(i,j,k)-Var_G(i-1,j,k))*&
              OneTrue_G(i-1,j,k)*&
-             (cTwo - OneTrue_G(i+1,j,k)) )*vInv_CB(i,j,k,iBlock)
+             (2.0 - OneTrue_G(i+1,j,k)) )*vInv_CB(i,j,k,iBlock)
 
         DifferenceY_G(i,j,k) = cHalf*fAY_BLK(iBlock)*&
              OneTrue_G(i,j,k)*(&
              (Var_G(i,j+1,k)-Var_G(i,j,k))*&
              OneTrue_G(i,j+1,k)*&
-             (cTwo - OneTrue_G(i,j-1,k))+&
+             (2.0 - OneTrue_G(i,j-1,k))+&
              (Var_G(i,j,k)-Var_G(i,j-1,k))*&
              OneTrue_G(i,j-1,k)*&
-             (cTwo - OneTrue_G(i,j+1,k)) )*vInv_CB(i,j,k,iBlock)
+             (2.0 - OneTrue_G(i,j+1,k)) )*vInv_CB(i,j,k,iBlock)
 
         DifferenceZ_G(i,j,k) = cHalf*fAZ_BLK(iBlock)*&
              OneTrue_G(i,j,k)*(&
              (Var_G(i,j,k+1)-Var_G(i,j,k))*&
              OneTrue_G(i,j,k+1)*&
-             (cTwo - OneTrue_G(i,j,k-1))+&
+             (2.0 - OneTrue_G(i,j,k-1))+&
              (Var_G(i,j,k)-Var_G(i,j,k-1))*&
              OneTrue_G(i,j,k-1)*&
-             (cTwo - OneTrue_G(i,j,k+1)) )*vInv_CB(i,j,k,iBlock)
+             (2.0 - OneTrue_G(i,j,k+1)) )*vInv_CB(i,j,k,iBlock)
      end do; end do; end do
   end if
 end subroutine central_differences

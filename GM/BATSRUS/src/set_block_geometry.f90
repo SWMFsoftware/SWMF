@@ -141,9 +141,9 @@ subroutine fix_block_geometry(iBLK)
 
      !Calculate the node coordinates
      do i=1,1+nI; do j=1,1+nJ; do k=1,1+nK
-        NodeX_NB(i,j,k,iBLK) = cEighth*sum(x_BLK(i-1:i,j-1:j,k-1:k,iBLK))
-        NodeY_NB(i,j,k,iBLK) = cEighth*sum(y_BLK(i-1:i,j-1:j,k-1:k,iBLK))
-        NodeZ_NB(i,j,k,iBLK) = cEighth*sum(z_BLK(i-1:i,j-1:j,k-1:k,iBLK))
+        NodeX_NB(i,j,k,iBLK) = 0.125*sum(x_BLK(i-1:i,j-1:j,k-1:k,iBLK))
+        NodeY_NB(i,j,k,iBLK) = 0.125*sum(y_BLK(i-1:i,j-1:j,k-1:k,iBLK))
+        NodeZ_NB(i,j,k,iBLK) = 0.125*sum(z_BLK(i-1:i,j-1:j,k-1:k,iBLK))
      end do; end do; end do                  
   else                                      
      !Cell center coordinates are calculated directly as the

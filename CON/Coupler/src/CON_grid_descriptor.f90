@@ -575,7 +575,7 @@ contains
     logical,dimension(nDim)::IsAtFace_D
     real,dimension(nDim,2**nDim)&
          :: Xyz_DI
-    real,parameter::Tolerance=cOne/cE3
+    real,parameter::Tolerance = 0.001
     integer::lGlobalTreeNode,iDim,iImages
     logical,dimension(nDim,2**nDim)::&
          Up_DI,Down_DI
@@ -618,7 +618,7 @@ contains
             GridDescriptor%iGridPointMax_D)
        where(Index_II(1:nDim,1)>&
             GridDescriptor%iGridPointMax_D)&
-            XyzStored_D=XyzStored_D+DXyzTolerance_D*cQuarter
+            XyzStored_D=XyzStored_D+DXyzTolerance_D*0.25
     end do
     nImages=1;Weight_I(1)=cOne
 
@@ -1011,8 +1011,8 @@ contains
                   d_xyz_cell_d(GridDescriptor%DD%Ptr,&
                   lNeighbor_I(iImages))
              lLevel_I(iImages)=int(&
-                  cTwo*DXyz_DI(1,iImages)&
-                  /DXyz_DI(1,0) -cThree+cTiny)
+                  2*DXyz_DI(1,iImages)&
+                  /DXyz_DI(1,0) -3+cTiny)
              if(lLevel_I(iImages)>0)then
                 nImages=iImages
                 lGlobalTreeNode=lNeighbor_I(iImages)

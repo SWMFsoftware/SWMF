@@ -264,7 +264,7 @@ contains !=========================================================
           !
 
           if (Curv .ge. ToleranceSqr) then
-             DeltaS_I(iRay) = DeltaS_I(iRay)/(cTwo*sqrt(Curv/ToleranceSqr))
+             DeltaS_I(iRay) = DeltaS_I(iRay)/(2*sqrt(Curv/ToleranceSqr))
              Position_DI(:,iRay) = PositionHalfBack_D
              CYCLE
           end if
@@ -274,7 +274,7 @@ contains !=========================================================
           ! part of space with "negative" dielectric permittivity
           !
 
-          if (GradEpsDotSlope*HalfDeltaS .le. -cThird*DielPermHalfBack) then
+          if (3*GradEpsDotSlope*HalfDeltaS <= -DielPermHalfBack) then
              !
              ! Mark the ray as steep; 
              ! memorize the distance to the critical surface;
@@ -295,7 +295,7 @@ contains !=========================================================
        ! or make a Boris step
        !
 
-       if ((GradEpsDotSlope*HalfDeltaS .le. -cThird*DielPermHalfBack) &
+       if ((3*GradEpsDotSlope*HalfDeltaS <= -DielPermHalfBack) &
             .or. (DeltaS_I(iRay) .lt. AbsoluteMinimumStep)) then
 
           ! Switch to the opposite branch of parabolic trajectory
@@ -329,7 +329,7 @@ contains !=========================================================
           StepY_D = Slope_DI(:,iRay) - ProjSlopeOnMinusGradEps_D 
           ! Here c; |c| = sin \alpha
 
-          Slope_DI(:,iRay) = Slope_DI(:,iRay) - cTwo*ProjSlopeOnMinusGradEps_D
+          Slope_DI(:,iRay) = Slope_DI(:,iRay) - 2*ProjSlopeOnMinusGradEps_D
 
           !
           ! We need to have 
@@ -339,7 +339,7 @@ contains !=========================================================
           ! Multiply it by L*Cos(\alpha)*DielPermHalfBack
           !
 
-          StepY_D = cFour*StepY_D*LCosAl*DielPermHalfBack 
+          StepY_D = 4*StepY_D*LCosAl*DielPermHalfBack 
 
           Position_DI(:,iRay) = PositionHalfBack_D + StepY_D
 
@@ -353,7 +353,7 @@ contains !=========================================================
           StepX_D = (DielPermHalfBack*LCosAl**2)*GradDielPerm_D
 
 
-          ParabLen = sqrt(sum((cTwo*StepX_D)**2) + sum(StepY_D**2))
+          ParabLen = sqrt(sum((2*StepX_D)**2) + sum(StepY_D**2))
 
           Intensity_I(iRay) = Intensity_I(iRay)  &
                + ParabLen*(Dens2DensCr**2)*(cHalf - Dens2DensCr)**2
@@ -375,7 +375,7 @@ contains !=========================================================
                + cross_product(Slope_DI(:,iRay), Omega_D)
 
           Curv1 = sum(Omega_D**2)
-          Coef = cTwo/(cOne + Curv1)
+          Coef = 2/(1 + Curv1)
           Slope_DI(:,iRay) = Slope_DI(:,iRay) &
                + Coef*cross_product(Slope1_D, Omega_D)
 
@@ -414,7 +414,7 @@ contains !=========================================================
           !
           ! For shallow rays the DeltaS is increased unconditionally
           !
-          DeltaS_I(iRay) = (cTwo - DeltaS_I(iRay)/DeltaSNew_I(iRay)) &
+          DeltaS_I(iRay) = (2 - DeltaS_I(iRay)/DeltaSNew_I(iRay)) &
                *DeltaS_I(iRay)
        else 
           !
@@ -436,7 +436,7 @@ contains !=========================================================
           if (DielPermHalfBack .gt. &
                DistanceToCritSurf_I(iRay)*sqrt(GradDielPermSqr)) then
              GentleRay_I(iRay) = .true.
-             DeltaS_I(iRay) = (cTwo - DeltaS_I(iRay)/DeltaSNew_I(iRay)) &
+             DeltaS_I(iRay) = (2 - DeltaS_I(iRay)/DeltaSNew_I(iRay)) &
                   *DeltaS_I(iRay)
           end if
        end if

@@ -1631,12 +1631,12 @@ subroutine MH_set_parameters(TypeAction)
         !\
         ! Compute gamma related values.
         !/
-        gm1     = g-cOne
-        gm2     = g-cTwo
-        gp1     = g+cOne
-        inv_g   = cOne/g
-        inv_gm1 = cOne/gm1
-        g_half  = cHalf*g
+        gm1     = g - 1.0
+        gm2     = g - 2.0
+        gp1     = g + 1.0
+        inv_g   = 1.0 / g
+        inv_gm1 = 1.0 /gm1
+        g_half  = 0.5*g
      case("#PLASMA")
         do iFluid = IonFirst_, nFluid
            call read_var('MassFluid', MassFluid_I(iFluid))

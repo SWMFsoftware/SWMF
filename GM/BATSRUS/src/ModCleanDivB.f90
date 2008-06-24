@@ -220,37 +220,37 @@ contains
              !to define somehow tmp1 in the outer ghostcells
 
           elseif(abs(NeiLev(East_,iBlock))==1)then           
-             Q_G(0,:,:)=cFour**NeiLev(East_,iBlock)
+             Q_G(0,:,:)=4.0**NeiLev(East_,iBlock)
              !if the neighboring block is coarser, the input from FA^2 should be multipled by four
              !If the neighborig block is finer, the input from FA^2  should be multiplied by 1/4
           end if
           if(NeiLev(West_,iBlock)==NoBLK)then
              tmp1_blk(nI+1,1:nJ,1:nK,iBlock)=vInv_CB(nI,:,:,iBlock)
           elseif(abs(NeiLev(West_,iBlock))==1)then
-             Q_G(nI+1,:,:)=cFour**NeiLev(West_,iBlock)
+             Q_G(nI+1,:,:)=4.0**NeiLev(West_,iBlock)
           end if
           if(NeiLev(South_,iBlock)==NoBLK)then
              tmp1_blk(1:nI,0,1:nK,iBlock)=vInv_CB(:,1,:,iBlock)
           elseif(abs(NeiLev(South_,iBlock))==1)then
-             Q_G(:,0,:)=cFour**NeiLev(South_,iBlock)
+             Q_G(:,0,:)=4.0**NeiLev(South_,iBlock)
           end if
           if(NeiLev(North_,iBlock)==NoBLK)then
              tmp1_blk(1:nI,nJ+1,1:nK,iBlock)=vInv_CB(:,nJ,:,iBlock)
           elseif(abs(NeiLev(North_,iBlock))==1)then
-             Q_G(:,nJ+1,:)=cFour**NeiLev(North_,iBlock)
+             Q_G(:,nJ+1,:)=4.0**NeiLev(North_,iBlock)
           end if
           if(NeiLev(Bot_,iBlock)==NoBLK)then
              tmp1_blk(1:nI,1:nJ,0,iBlock)=vInv_CB(:,:,1,iBlock)
           elseif(abs(NeiLev(Bot_,iBlock))==1)then
-             Q_G(:,:,0)=cFour**NeiLev(Bot_,iBlock)
+             Q_G(:,:,0)=4.0**NeiLev(Bot_,iBlock)
           end if
           if(NeiLev(Top_,iBlock)==NoBLK)then
              tmp1_blk(1:nI,1:nJ,nK+1,iBlock)=vInv_CB(:,:,nK,iBlock)
           elseif(abs(NeiLev(Top_,iBlock))==1)then
-             Q_G(:,:,nK+1)=cFour**NeiLev(Top_,iBlock)
+             Q_G(:,:,nK+1)=4.0**NeiLev(Top_,iBlock)
           end if
        end if
-       Prec_CB(:,:,:,iBlock)=cFour/(&
+       Prec_CB(:,:,:,iBlock)=4.0/(&
             (Q_G(2:nI+1,1:nJ,1:nK)*tmp1_blk(2:nI+1,1:nJ,1:nK,iBlock)+& 
             Q_G(0:nI-1,1:nJ,1:nK)*tmp1_blk(0:nI-1,1:nJ,1:nK,iBlock))& 
             *FaX_BLK(iBlock)**2+&
@@ -368,9 +368,9 @@ contains
     if(nProc>1)then
        call MPI_allreduce(EstimateForMAMNorm,divb_diffcoeff,  &
             1, MPI_REAL, MPI_MAX, iComm, iError)
-       divb_diffcoeff=cTwo/divb_diffcoeff
+       divb_diffcoeff = 2/divb_diffcoeff
     else
-       divb_diffcoeff=cTwo/EstimateForMAMNorm
+       divb_diffcoeff = 2/EstimateForMAMNorm
     end if
     if(iProc==0)write(*,*)"Divb diffusion coefficient is: ",divb_diffcoeff
     

@@ -218,12 +218,12 @@ subroutine SP_put_from_mh(nPartial,&
 !
 !dd - density in nucleons/cm^3
 
-  real,parameter::NucleonPerCm3Inv=cOne/(cProtonMass*cE6)
+  real,parameter::NucleonPerCm3Inv = 1E-6/cProtonMass
 
 !
 !pp - pressure in erg/cm^3
 
-  real,parameter::ErgPerCm3Inv=cE1
+  real, parameter :: ErgPerCm3Inv = 10.0
 
 !      real rx,ry,rz,vx,vy,vz,bx,by,bz,dd,pp
 !      integer  iMax,nMax
@@ -278,7 +278,7 @@ subroutine SP_put_from_mh(nPartial,&
 
      Smooth_VII(Bx_:Bz_,iCell,New_)=&
          Smooth_VII(Bx_:Bz_,iCell,New_) + Buff_I(BuffBx_:BuffBz_)*&
-                                 Weight*cE9    !Tesla to nanotesla
+                                 Weight*1E9    !Tesla to nanotesla
 
      Smooth_VII(P_,iCell,New_)    =&
           Smooth_VII(P_,iCell,New_) + Buff_I(BuffP_)*&
@@ -297,7 +297,7 @@ subroutine SP_put_from_mh(nPartial,&
                                  Weight*AuPerHourInv 
 
      Smooth_VII(Bx_:Bz_,iCell,New_)=Buff_I(BuffBx_:BuffBz_)*&
-                                 Weight*cE9  !Tesla to nanotesla
+                                 Weight*1E9  !Tesla to nanotesla
 
      Smooth_VII(P_,iCell,New_)    =Buff_I(BuffP_)*&
                                  Weight*ErgPerCm3Inv
@@ -334,11 +334,11 @@ subroutine SP_smooth_data
      SMOOTH:do iSmooth=1,nSmooth
         DoSmooth_I=abs(Smooth_VII(iVar,1:iMax-2,New_)-    &
                        Smooth_VII(iVar,2:iMax-1,New_))>   &
-              cTwo*abs(Smooth_VII(iVar,3:iMax  ,New_)-    &
+                       2*abs(Smooth_VII(iVar,3:iMax  ,New_)-    &
                        Smooth_VII(iVar,2:iMax-1,New_)).or.&
-              cTwo*abs(Smooth_VII(iVar,1:iMax-2,New_)-    &
+                       2*abs(Smooth_VII(iVar,1:iMax-2,New_)-    &
                        Smooth_VII(iVar,2:iMax-1,New_))<   &
-                   abs(Smooth_VII(iVar,3:iMax  ,New_)-    &
+                       abs(Smooth_VII(iVar,3:iMax  ,New_)-    &
                        Smooth_VII(iVar,2:iMax-1,New_)).or.&
                       (Smooth_VII(iVar,1:iMax-2,New_)-    &
                        Smooth_VII(iVar,2:iMax-1,New_))*   &

@@ -59,7 +59,7 @@ contains
 
     real*8:: DJ,FDAY
     real::Century,VL,G !Miscellaneous
-    real,parameter::cDegToRadHere=cOne/57.295779513
+    real,parameter::cDegToRadHere=1.0/57.295779513
     !----------------------------------------------------------------------
     IF(iYear.LT.1901.OR.iYear.GT.2099)then
        write(*,*)'CON_geopack ERROR: No ephemers data for the year of ',iYear

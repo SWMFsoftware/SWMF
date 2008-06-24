@@ -282,21 +282,21 @@ contains
     !     ( cOne+ExpansionFactorInv_N(:,:,:) )**(1.0/3.0)* &
     !     (5.9-1.5*exp( 1.0-(ThetaB_N(:,:,:)/7.0)**(5.0/2.0) ) &
     !     )**(7.0/2.0) ) &    !km/s so far
-    !     *cE3                 !To get the result in SI
+    !     *1.0E3                 !To get the result in SI
     
     ! Calculate WSA speed distribution using eq. obtained
     ! by personal communication with N. Arge (2006)                                              
     WSAspeed_N(:,:,:)=(240.0+&
          (675.0*ExpansionFactorInv_N(:,:,:)**(1./4.5)/(&
          ExpansionFactorInv_N(:,:,:)+1.0)**(1./4.5))*&
-         (1.0-0.8*exp(1.0-(ThetaB_N(:,:,:)/2.8)**1.25)/exp(1.0))**3.0)*cE3
+         (1.0-0.8*exp(1.0-(ThetaB_N(:,:,:)/2.8)**1.25)/exp(1.0))**3.0)*1.0E3
 
     ! Calculate WSA speed distribution using eq. 2 in Arge et al.
     ! 2003:
     !WSAspeed_N(:,:,:)=(265.0+25.0* exp(log(ExpansionFactorInv_N(:,:&
     !     &,:)+cTiny)*WSAPowerIndex)* (5.0-1.1*exp(1.0-(ThetaB_N(:,:&
     !     &,:)/4.0)**2))**2)& !km/s so far
-    !     *cE3         !To get the result in SI
+    !     *1.0E3         !To get the result in SI
 
     ! Get Fisk speed
     if(allocated(Fiskspeed_N))deallocate(Fiskspeed_N)
@@ -314,7 +314,7 @@ contains
 
     !Fiskspeed_N(:,:,:)=sqrt(max(2.0* (cFiskQ*& !m^2/s 
     !     max(FiskFactor_N(:,:,:)**2,cHalf**2)/cLoopTemp &
-    !     &-cSunGravitySI),(265.0*cE3)**2))
+    !     &-cSunGravitySI),(265.0*1.0E3)**2))
 
     ! Finding the minimum value of the final speed
     select case(TypeModel) 
@@ -333,7 +333,7 @@ contains
     subroutine advance_line_point(RInOut_D,Dir)
       real,intent(inout),dimension(nDim) :: RInOut_D
       real,intent(in) :: Dir
-      dS=0.25*min(dR,dPhi,dSinTheta,cOne)*cTwo**(iIteration/ (20&
+      dS=0.25*min(dR,dPhi,dSinTheta,cOne)*2.0**(iIteration/ (20&
            &*max(nR,nPhi,nTheta)))
       !To avoid the line bouncing near null points
       RInOut_D=RInOut_D+Dir*dS*f_d( RInOut_D+Dir*dS*cHalf&
@@ -347,15 +347,14 @@ contains
       R_D(R_)=Ro_PFSSM+real(iR)*dR
       R_D(Phi_)=real(iPhi)*dPhi
       R_D(Theta_)=colatitude(iTheta)
-      R_D(R_)=min(max(R_D(R_),Ro_PFSSM+cQuarter*dR),Rs_PFSSM-cQuarter&
-           &*dR)
+      R_D(R_)=min(max(R_D(R_),Ro_PFSSM + 0.25*dR),Rs_PFSSM-0.25*dR)
     end subroutine start_at_grid_point
     ! This fucnction calculates the value of 
     ! F(i)= B(i)/|B|/(1,r*sin(colatitude),r)
     function f_d(RIn_D)
       real,dimension(nDim) :: f_d
       real,dimension(nDim),intent(in) :: RIn_D
-      real,parameter :: cTol=cOne/(cE9*cE1)
+      real,parameter :: cTol= 1.0e-10
 
       !Get the vector (B_r,B_phi,B_theta)
       call interpolate_field(RIn_D,f_d)
@@ -523,7 +522,7 @@ subroutine set_empirical_model(TypeRead,BodyT0)
      else
         call get_bernoulli_integral(xx,yy,zz,Uf)
         BernoulliFactor=(cHalf*Uf**2+cSunGravitySI)/&
-             (T0*cBoltzmann/cProtonMass/min(Uf/UMin,cTwo))&
+             (T0*cBoltzmann/cProtonMass/min(Uf/UMin, 2.0))&
              *(R1-RR)*&
              & (Ro_PFSSM/RR)**nPowerIndex/ (R1-Ro_PFSSM)+ GammaSS&
              &/(GammaSS-cOne)*(cOne- (R1-RR)*(Ro_PFSSM/RR)&
@@ -596,8 +595,8 @@ subroutine set_empirical_model(TypeRead,BodyT0)
                 ExpansionFactorInv_N(nR,iPhi,iTheta),&
                 FiskFactor_N(nR,iPhi,iTheta),&
                 ThetaB_N(nR,iPhi,iTheta),&
-                WSAspeed_N(nR,iPhi,iTheta)/cE3,&   !in Km/s
-                Fiskspeed_N(nR,iPhi,iTheta)/cE3,&   !in Km/s
+                WSAspeed_N(nR,iPhi,iTheta)/1.0E3,&   !in Km/s
+                Fiskspeed_N(nR,iPhi,iTheta)/1.0E3,&   !in Km/s
                 GammaR0,&                       !At the solar surface
                 GammaRS                        !At the source surface
 

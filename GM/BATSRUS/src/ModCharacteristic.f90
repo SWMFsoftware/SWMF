@@ -196,7 +196,7 @@ contains
     B1H_D=WeightInv * (RhoSqrtL * BR_D + RhoSqrtR * BL_D)&
          + cHalf * (BnL+BnR) * Normal_D
 
-    XnH =cQuarter*RhoInvH*(BnR-BnL)**2 
+    XnH = 0.25*RhoInvH*(BnR-BnL)**2 
     XH  =cHalf*WeightInv**2*sum((BL_D-BR_D)**2)
 
     !Average the speed of sound
@@ -258,7 +258,7 @@ contains
     !Calculate wave amplitudes and eigenvectors
     Eigenvector_VV=cZero; DeltaWave_V=cZero ; NormCoef=cHalf/(RhoH*aH*aH)
     !---------------------------------------------------------------------! 
-    DeltaWave_V(EntropyW_)     = dRho*RhoInvH-dP*cTwo*NormCoef
+    DeltaWave_V(EntropyW_)     = dRho*RhoInvH-dP*2*NormCoef
 
     Eigenvector_VV(rho_,EntropyW_)= RhoH
     !---------------------------------------------------------------------!

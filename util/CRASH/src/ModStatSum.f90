@@ -46,7 +46,7 @@ Contains
     DeBroglieInv = sqrt(cTwoPi*(cElectronMass/cPlanckH)*(cEV/cPlanckH)) 
     !*sqrt(cBoltzmann/cEV * T) - temperature in eV
 
-    C0 = cTwo*DeBroglieInv**3 ! 2/(Lambda^3)
+    C0 = 2*DeBroglieInv**3 ! 2/(Lambda^3)
     DoInit=.false.
   end subroutine mod_init
   !Set the element and its Ionization Potentials

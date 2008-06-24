@@ -109,13 +109,13 @@ contains
     Weight = W%Weight_I(iGetStart)
     State_V(1)= Weight*(&
          State_VGB(rho_,i+1,j,k,iBlock)-State_VGB(rho_,i-1,j,k,iBlock))&
-         /(cTwo*Dx_BLK(iBlock))
+         /(2*Dx_BLK(iBlock))
     State_V(2)= Weight*(&
          State_VGB(rho_,i,j+1,k,iBlock)-State_VGB(rho_,i,j-1,k,iBlock))&
-         /(cTwo*Dy_BLK(iBlock))
+         /(2*Dy_BLK(iBlock))
     State_V(3)= Weight*(&
          State_VGB(rho_,i,j,k+1,iBlock)-State_VGB(rho_,i,j,k-1,iBlock))&
-         /(cTwo*Dz_BLK(iBlock))
+         /(2*Dz_BLK(iBlock))
     State_V(nDim+1)= Weight*&
          State_VGB(rho_,i,j,k,iBlock)
     State_V(nDim+1+1)=Weight*&

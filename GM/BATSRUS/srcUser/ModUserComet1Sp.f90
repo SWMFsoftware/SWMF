@@ -252,10 +252,10 @@ contains
 
   do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
 
-     if( R_BLK(i,j,k,globalBLK) < .7*cE9/NO2SI_V(UnitX_) .and.  &
-		R_BLK(i,j,k,globalBLK) > 2.*cE3/NO2SI_V(UnitX_) )then     !interpolate
+     if( R_BLK(i,j,k,globalBLK) < 7.0E8/NO2SI_V(UnitX_) .and.  &
+		R_BLK(i,j,k,globalBLK) > 2000.0/NO2SI_V(UnitX_) )then     !interpolate
 
-        iR = int( (NR_neutral-1)/6.*log10(R_BLK(i,j,k,globalBLK)*NO2SI_V(UnitX_)/cE3) ) + 1
+        iR = int( (NR_neutral-1)/6.*log10(R_BLK(i,j,k,globalBLK)*NO2SI_V(UnitX_)/1E3) ) + 1
         iR = max(iR,1)
         iR = min(iR, NR_neutral-1)
 	iRp1 = iR+1
@@ -264,7 +264,7 @@ contains
 	jThetap1 = jTheta+1
         Phi = acos( y_BLK(i,j,k,globalBLK)/sqrt( &
 		y_BLK(i,j,k,globalBLK)*y_BLK(i,j,k,globalBLK)+ &
-		z_BLK(i,j,k,globalBLK)*z_BLK(i,j,k,globalBLK) )+cTiny8/cE3 )
+		z_BLK(i,j,k,globalBLK)*z_BLK(i,j,k,globalBLK) )+cTiny8/1E3 )
 	Phi = Phi*sign( cOne,z_BLK(i,j,k,globalBLK) ) + &
 		cPi*( cOne-sign(cOne,z_BLK(i,j,k,globalBLK)) )
         Phi = Phi / cTwoPi
@@ -347,7 +347,7 @@ contains
                 ( cOne+1.2*(NeutralN(iR,jTh_axr,kPhi,NTh_)/180.-Theta) )
 	endif
 
-     else if( R_BLK(i,j,k,globalBLK) > .7*cE9/NO2SI_V(UnitX_)) then	!Extrapolate beyond 10^6km
+     else if( R_BLK(i,j,k,globalBLK) > 7.0E8/NO2SI_V(UnitX_)) then	!Extrapolate beyond 10^6km
 
         Theta = acos( x_BLK(i,j,k,globalBLK)/R_BLK(i,j,k,globalBLK) )/cPi
         jTheta = int( Theta*(NTheta_neutral-1) ) + 1
@@ -355,7 +355,7 @@ contains
         jTheta = min(jTheta, NTheta_neutral-jTh_axis)
         Phi = acos( y_BLK(i,j,k,globalBLK)/sqrt( &
 		y_BLK(i,j,k,globalBLK)*y_BLK(i,j,k,globalBLK)+ &
-		z_BLK(i,j,k,globalBLK)*z_BLK(i,j,k,globalBLK))+cTiny8/cE3 )
+		z_BLK(i,j,k,globalBLK)*z_BLK(i,j,k,globalBLK))+cTiny8/1E3 )
         Phi = Phi*sign( cOne,z_BLK(i,j,k,globalBLK) )
         Phi = ( Phi + cPi*(cOne-sign(cOne,z_BLK(i,j,k,globalBLK))) ) / cTwoPi
         kPhi = int( Phi*(NPhi_neutral-1) ) + 1
@@ -376,7 +376,7 @@ if(.false.) then
         jThetap1 = jTheta+1
         Phi = acos( y_BLK(i,j,k,globalBLK)/sqrt( &
 		y_BLK(i,j,k,globalBLK)*y_BLK(i,j,k,globalBLK)+ &
-		z_BLK(i,j,k,globalBLK)*z_BLK(i,j,k,globalBLK))+cTiny8/cE3 )
+		z_BLK(i,j,k,globalBLK)*z_BLK(i,j,k,globalBLK))+cTiny8/1E3 )
         Phi = Phi*sign( cOne,z_BLK(i,j,k,globalBLK) ) + &
 		cPi*( cOne-sign(cOne,z_BLK(i,j,k,globalBLK)) )
         Phi = Phi / cTwoPi
@@ -418,10 +418,10 @@ endif
 
 !write(*,*) '3rd choice', R_BLK(i,j,k,globalBLK)
         Neutral_BLK(i,j,k,globalBLK,1:3)= cOne
-        Neutral_BLK(i,j,k,globalBLK,4) = 40.*cE9*mbar
+        Neutral_BLK(i,j,k,globalBLK,4) = 40.*1E9*mbar
      end if
 
-     Neutral_BLK(i,j,k,globalBLK,4) = max( Neutral_BLK(i,j,k,globalBLK,4), 50.*cE3 )
+     Neutral_BLK(i,j,k,globalBLK,4) = max( Neutral_BLK(i,j,k,globalBLK,4), 50000.0 )
 
   end do;  end do;  end do
 
@@ -538,7 +538,7 @@ endif
     uz=State_VGB(rhoUz_,1:nI,1:nJ,1:nK,globalBLK) / &
           State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)
     usqr = ux*ux+uy*uy+uz*uz
-    Rkm = R_BLK(1:nI,1:nJ,1:nK,globalBLK)*NO2SI_V(UnitX_)/cE3	!km unit
+    Rkm = R_BLK(1:nI,1:nJ,1:nK,globalBLK)*NO2SI_V(UnitX_)/1E3	!km unit
     logR = log10(Rkm)
 
     if (jpattern == 50 ) then

@@ -586,7 +586,7 @@ contains
     real::GeiHgi_DD(3,3)
     real,parameter::RightAssention=286.13*cDegToRad,&
          Declination=63.87*cDegToRad,&
-         cQuarterPi=cQuarter*cPi
+         cQuarterPi=0.25*cPi
     integer::iYear=2000,iMonth,iDay,iHour,iMin=0,iSec=0,iDir
     do iDir=1,3
        write(*,*)'Show a rotational matrix for Phi=Pi/4 and iDir=',iDir

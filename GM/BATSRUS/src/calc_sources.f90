@@ -226,9 +226,9 @@ subroutine calc_sources
            ! This is a special case since Omega is parallel with the Z axis
            do k=1,nK; do j=1,nJ; do i=1,nI
               Source_VC(iRhoUx,i,j,k) = Source_VC(iRhoUx,i,j,k) + &
-                   cTwo*OmegaBody*State_VGB(iRhoUy,i,j,k,iBlock)
+                   2*OmegaBody*State_VGB(iRhoUy,i,j,k,iBlock)
               Source_VC(iRhoUy,i,j,k) = Source_VC(iRhoUy,i,j,k) - &
-                   cTwo*OmegaBody*State_VGB(iRhoUx,i,j,k,iBlock)
+                   2*OmegaBody*State_VGB(iRhoUx,i,j,k,iBlock)
            end do; end do; end do
         case default
            call stop_mpi('ERROR in calc_sources: '// &

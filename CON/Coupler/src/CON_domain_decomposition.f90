@@ -60,6 +60,8 @@ Module CON_domain_decomposition
 
   implicit none                                                 
   SAVE
+  real, parameter :: cThird = 1.0/3.0
+
   integer,parameter::Parent_=-1,&                               
        MyNumberAsAChild_ =0,&                                   
        FirstChild_  =1,&                                        
@@ -361,10 +363,13 @@ Module CON_domain_decomposition
   type DDPointerType
      type(DomainDecompositionType),pointer::Ptr
   end type DDPointerType
+
   !Needed for searching and interpolating algorithms
-  real,parameter::cAlmostOne=cOne -cOne/(ce3*ce3*ce1),&
-       cAlmostTwo=cTwo*cAlmostOne,&
-       cAlmostHalf=cHalf*cAlmostOne
+  real, parameter:: &
+       cAlmostOne   = 1.0 - 1.0E-7,&
+       cAlmostTwo   = 2*cAlmostOne,&
+       cAlmostHalf  = 0.5*cAlmostOne
+
 contains
 
   !BOP
@@ -1319,9 +1324,9 @@ contains
           return
        end if
        l_level_neighbor_dd=int(&
-            cTwo*DomainDecomposition%DXyzBlock_DI(1,lNeighBor)&
+            2*DomainDecomposition%DXyzBlock_DI(1,lNeighBor)&
             /DomainDecomposition%DXyzBlock_DI(1,lGlobalTreeNumber)&
-            -cThree+cTiny)
+            -3+cTiny)
     end if
   end function l_level_neighbor_dd
   !BOP

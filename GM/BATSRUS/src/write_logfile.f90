@@ -1161,7 +1161,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
      ! Get the angular resolution from the input parameter nTheta
      MaxPhi = 2*nTheta
      dTheta = cPi/nTheta
-     dArea0 = Radius**2 * cTwo * sin(cHalf*dTheta)
+     dArea0 = Radius**2 * 2 * sin(cHalf*dTheta)
 
      if (DoTestMe) write(*,*) 'nTheta,MaxPhi,dTheta[deg]:',nTheta,MaxPhi,&
           dTheta*cRadToDeg
@@ -1233,7 +1233,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
            SinTheta = sin(Theta)
 
            ! Number of Phi coordinates is proportional to 2*nTheta*SinTheta
-           nPhi = min(MaxPhi, 4 * ceiling(cQuarter*MaxPhi*SinTheta))
+           nPhi = min(MaxPhi, 4 * ceiling(0.25*MaxPhi*SinTheta))
            dPhi = cTwoPi/nPhi
 
            ! Area of the surface element

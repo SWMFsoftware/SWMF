@@ -19,8 +19,7 @@ subroutine add_heat_flux(DoResChangeOnly)
        Flux_VX,Flux_VY,Flux_VZ
   use ModConst,    ONLY:cBoltzmann,cProtonMass, &
        cElectronMass,cElectronCharge,cEps
-  use ModNumConst, ONLY:cOne,cTwo,cFour,cHalf, &
-       cZero,cTiny,cPi
+  use ModNumConst, ONLY:cOne,cHalf,cZero,cTiny,cTwoPi,cPi
   use ModPhysics,  ONLY:Kappa0Heat,ExponentHeat,g,gm1, &
        No2Si_V, UnitX_, UnitT_, UnitEnergyDens_, &
        UnitTemperature_, UnitB_, UnitRho_, &
@@ -159,7 +158,7 @@ Contains
          (PressureUp/DensityUp-PressureDown/DensityDown)
     ! Update the CFL condition
     VdtFace_x(i,j,k) = VdtFace_x(i,j,k)+ &
-         cTwo*HeatFluxCoefficient*gm1  / &
+         2*HeatFluxCoefficient*gm1  / &
          min(DensityUp,DensityDown)
     !\
     ! If Spitzer form is used, then add the cross-field conductive flux   
@@ -176,7 +175,7 @@ Contains
             (PressureUp/DensityUp-PressureDown/DensityDown)
        ! Update the CFL condition
        VdtFace_x(i,j,k) = VdtFace_x(i,j,k)+ &
-            cTwo*HeatFluxCoefficient*gm1  / &
+            2*HeatFluxCoefficient*gm1  / &
             min(DensityUp,DensityDown)  
     end if
   end subroutine add_heat_flux_x
@@ -199,7 +198,7 @@ Contains
          (PressureUp/DensityUp-PressureDown/DensityDown)
     ! Update the CFL condition
     VdtFace_y(i,j,k) = VdtFace_y(i,j,k)+ &
-         cTwo*HeatFluxCoefficient*gm1  / &
+         2*HeatFluxCoefficient*gm1  / &
          min(DensityUp,DensityDown)   
     !\
     ! If Spitzer form is used, then add the cross-field conductive flux   
@@ -216,7 +215,7 @@ Contains
             (PressureUp/DensityUp-PressureDown/DensityDown)
        ! Update the CFL condition
        VdtFace_y(i,j,k) = VdtFace_y(i,j,k)+ &
-            cTwo*HeatFluxCoefficient*gm1  / &
+            2*HeatFluxCoefficient*gm1  / &
             min(DensityUp,DensityDown)  
     end if
   end subroutine add_heat_flux_y
@@ -238,7 +237,7 @@ Contains
          (PressureUp/DensityUp-PressureDown/DensityDown)
     ! Update the CFL condition
     VdtFace_z(i,j,k) = VdtFace_z(i,j,k)+ &
-         cTwo*HeatFluxCoefficient*gm1  / &
+         2*HeatFluxCoefficient*gm1  / &
          min(DensityUp,DensityDown)
     !\
     ! If Spitzer form is used, then add the cross-field conductive flux   
@@ -255,7 +254,7 @@ Contains
             (PressureUp/DensityUp-PressureDown/DensityDown)
        ! Update the CFL condition
        VdtFace_z(i,j,k) = VdtFace_z(i,j,k)+ &
-            cTwo*HeatFluxCoefficient*gm1  / &
+            2*HeatFluxCoefficient*gm1  / &
             min(DensityUp,DensityDown)  
     end if
   end subroutine add_heat_flux_z
@@ -267,13 +266,13 @@ Contains
        !                  or 30 (magnetosphere)
        ! _________________or 10 (lab. plasma)
        !/
-       LogLambdaHeat = cFour*(cOne+cFour) ! Coronal value
+       LogLambdaHeat = 20.0 ! Coronal value
        !\
        ! KappaParConstHeat is in units of [W/m/K]=[m^2*(J/m^3)/(s*K)]
        ! KappaParConstHeat = 1.820173178845863049E-10
        !/
-       KappaParConstHeat = 3.16*(cTwo+cOne)*(sqrt(cElectronMass)   / &
-            cElectronCharge**2)*(cTwo*cPi*cBoltzmann)**(cOne+cHalf)/ &
+       KappaParConstHeat = 3.16*3*(sqrt(cElectronMass)   / &
+            cElectronCharge**2)*(cTwoPi*cBoltzmann)**(cOne+cHalf)/ &
             cElectronCharge**2*cEps**2*cBoltzmann                  / &
             cElectronMass*cBoltzmann
        !\
@@ -287,7 +286,7 @@ Contains
        !/
        KappaParHeat = KappaParConstHeat*(No2Si_V(UnitTemperature_)* &
             (PressureUp+PressureDown)                      / &
-            (DensityUp+DensityDown))**(cTwo+cHalf)
+            (DensityUp+DensityDown))**2.5
        ! Dimensionalize KappaParHeat::
        KappaParHeat = KappaParHeat*CU_t*CU_temperature     / &
             (CU_energydens*CU_x**2)
@@ -303,8 +302,8 @@ Contains
        ! KappaPerpConstHeat is in units of [W/m/K]=[m^2*(J/m^3)/(s*K)]
        ! KappaPerpConstHeat = 3.802064132280014164E-12
        !/
-       KappaPerpConstHeat = cTwo*(cTwo+cOne)*(sqrt(cTwo*cProtonMass)/ &
-            cElectronCharge**2)*(cTwo*cPi*cBoltzmann)**(cOne+cHalf) / &
+       KappaPerpConstHeat = 6*(sqrt(2*cProtonMass)/ &
+            cElectronCharge**2)*(cTwoPi*cBoltzmann)**1.5 / &
             cElectronCharge**2*cEps**2*cBoltzmann                   / &
             cProtonMass*cBoltzmann
        !\
@@ -316,8 +315,8 @@ Contains
        ! Compute Omega_i*Tau_ii2::
        ! Omega_i*Tau_ii2 = 2.552789521363004029E+30
        !/
-       Omega_iTau_ii2Heat = ((cOne+cTwo)*(sqrt(cTwo/cProtonMass)/ &
-            cElectronCharge)*(cTwo*cPi*cBoltzmann)**(cOne+cHalf)* &
+       Omega_iTau_ii2Heat = (3*(sqrt(2/cProtonMass)/ &
+            cElectronCharge)*(cTwoPi*cBoltzmann)**1.5* &
             cEps**2/cElectronCharge**2)**2
        !\
        ! Omega_i*Tau_ii2 = Omega_i*Tau_ii2*[B/(Ni*LogLambdaHeat)]^2*Ti^3
@@ -338,7 +337,7 @@ Contains
        !/       
        KappaPerpHeat = KappaPerpConstHeat*(No2Si_V(UnitTemperature_)  * &
             (PressureUp+PressureDown)                          / &
-            (DensityUp+DensityDown))**(cTwo+cHalf)             / &
+            (DensityUp+DensityDown))**2.5             / &
             (cOne+Omega_iTau_ii2Heat)
        ! Dimensionalize KappaPerpHeat::
        KappaPerpHeat = KappaPerpHeat*CU_t*CU_temperature       / &

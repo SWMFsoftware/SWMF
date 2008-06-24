@@ -408,7 +408,7 @@ subroutine set_refined_block_geometry
      ! Set refined block corner offsets.
      !/
      XyzStart_BLK(:,iBLK) = XyzStart(:) &
-          + (iShiftChild_DI(:,iPE)*nCell2_D - cQuarter)*DXyz(:)
+          + (iShiftChild_DI(:,iPE)*nCell2_D - 0.25)*DXyz(:)
      !\
      ! Assign refined block geometry parameters.
      !/
@@ -605,7 +605,7 @@ contains
        iBLK = local_cubeBLK(icube)
        if(true_BLK(iBLK))then
           restricted_soln_blks(&
-               1:nVar,1:nI/2,1:nJ/2,1:nK/2,icube)=cEighth*(&
+               1:nVar,1:nI/2,1:nJ/2,1:nK/2,icube) = 0.125*(&
                State_VGB(1:nVar,1:nI:2, 1:nJ:2, 1:nK:2,iBLK)+  &
                State_VGB(1:nVar,2:nI:2, 1:nJ:2, 1:nK:2,iBLK)+  &
                State_VGB(1:nVar,1:nI:2, 2:nJ:2, 1:nK:2,iBLK)+  &
@@ -632,7 +632,7 @@ contains
 
                    if(all(IsTrue_III) .or. .not. any(IsTrue_III)) then
                       do iVar = 1, nVar
-                         restricted_soln_blks(iVar,i,j,k,iCube) = cEighth * &
+                         restricted_soln_blks(iVar,i,j,k,iCube) = 0.125 * &
                               sum(State_VGB(iVar,iF:iF+1,jF:jF+1,kF:kF+1,iBLK))
                       end do
                    else
@@ -711,12 +711,12 @@ subroutine set_coarse_block_geometry(iBLK)
 
   integer, intent(in) :: iBLK
 
-  dxyz=cTwo*dxyz
+  dxyz = 2*dxyz
 
   ! Former the first child becomes the coarse block. Now his coordinates
   ! are in xyzStart_BLK(:,iBLK)
   XyzStart_BLK(:,iBLK)=XyzStart_BLK(:,iBLK)-&
-       (iShiftChild_DI(:,1)*nCell2_D - cQuarter)*DXyz(:)
+       (iShiftChild_DI(:,1)*nCell2_D - 0.25)*DXyz(:)
 
   !\
   ! Set dx, dy, and dz for the new coarsened block.

@@ -4,7 +4,7 @@ subroutine initialize_ie_ua_buffers(iOutputError)
   use ModIE_Interface
   use IE_ModMain, only: iDebugLevel
   use ModFiles
-  use ModConst
+  use ModConst, only: cRadToDeg, cTwoPi
   use CON_coupler, ONLY : Grid_C, ncells_decomposition_d, IE_
 
   implicit none
@@ -90,13 +90,13 @@ subroutine initialize_ie_ua_buffers(iOutputError)
      do j = 1, IEi_HavenMlts
 
         IEr3_HaveLats(j,i,1) = &
-             90.0 - Grid_C(IE_) % Coord1_I(i) * 180.0 / cPi
+             90.0 - Grid_C(IE_) % Coord1_I(i) * cRadToDeg
 
         IEr3_HaveLats(j,i,2) = &
-             - Grid_C(IE_) % Coord1_I(IEi_HavenLats-i+1) * 180.0 / cPi
+             - Grid_C(IE_) % Coord1_I(IEi_HavenLats-i+1) * cRadToDeg
 
         IEr3_HaveMLTs(j,i,:) = &
-             mod(12 + Grid_C(IE_) % Coord2_I(j) * 24.0 / (cTwo * cPi),24.0)
+             mod(12 + Grid_C(IE_) % Coord2_I(j) * 24.0 /cTwoPi, 24.0)
         do k=1,2
            if (IEr3_HaveMLTs(j,i,k) < 0.1)  IEr3_HaveMLTs(j,i,k)=0.0
            if (IEr3_HaveMLTs(j,i,k) > 23.9) IEr3_HaveMLTs(j,i,k)=23.9

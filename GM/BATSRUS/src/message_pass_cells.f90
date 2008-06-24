@@ -1,7 +1,4 @@
 !^CFG COPYRIGHT UM
-!==========================================================================
-!==========================================================================
-!==========================================================================
 module ModMPCells
 
   integer :: numSendRecv, numSend, numRecv, numCopy
@@ -27,6 +24,7 @@ module ModMPCells
   ! iCFExchangeType=3  Prolongation: send 8 different values to 8 fine cells
   !                    using simple prolongation
   integer, parameter :: iCFExchangeType=2
+  real, parameter    :: Inv12 = 1.0/12.0
 
   !With DoOneCoarserLayer=.false., the finer cells of the "second" layer are filled in 
   !with the values from the "second" layer of the coarser block
@@ -112,7 +110,7 @@ subroutine message_pass_cells(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,V)
            V(i,j,k,lR(7)) = V(lS(1),lS(3),lS(5),lS(7))
         end do; end do; end do
      elseif(lS(0)==3)then
-        V(lR(1),lR(3),lR(5),lR(7)) = (cOne/cTwelve)*(cNine* &
+        V(lR(1),lR(3),lR(5),lR(7)) = Inv12*(9.0* &
              V(lS(1),lS(3),lS(5),lS(7))+ &
              V(lS(2),lS(3),lS(5),lS(7))+ &
              V(lS(1),lS(4),lS(5),lS(7))+ &
@@ -133,7 +131,7 @@ subroutine message_pass_cells(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,V)
         if(lS(0)==1 .or. lS(0)==2)then
            VSend(iV) = V(lS(1),lS(3),lS(5),lS(7))
         elseif(lS(0)==3)then
-           VSend(iV) = (cOne/cTwelve)*(cNine* &
+           VSend(iV) = Inv12*(9.0* &
                 V(lS(1),lS(3),lS(5),lS(7))+ &
                 V(lS(2),lS(3),lS(5),lS(7))+ &
                 V(lS(1),lS(4),lS(5),lS(7))+ &
@@ -304,7 +302,7 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
            State_VGB(:,i,j,k,lR(7)) = State_VGB(:,lS(1),lS(3),lS(5),lS(7))
         end do; end do; end do
      elseif(lS(0)==3)then
-        State_VGB(:,lR(1),lR(3),lR(5),lR(7)) = (cOne/cTwelve)*(cNine* &
+        State_VGB(:,lR(1),lR(3),lR(5),lR(7)) = Inv12*(9.0* &
              State_VGB(:,lS(1),lS(3),lS(5),lS(7))+ &
              State_VGB(:,lS(2),lS(3),lS(5),lS(7))+ &
              State_VGB(:,lS(1),lS(4),lS(5),lS(7))+ &
@@ -328,7 +326,7 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
         if(lS(0)==0 .or. lS(0)==1)then
            VSend8(1:nVar,iV) =  State_VGB(:,lS(1),lS(3),lS(5),lS(7))
         elseif(lS(0)==3)then
-           VSend8(1:nVar,iV) = (cOne/cTwelve)*(cNine* &
+           VSend8(1:nVar,iV) = Inv12*(9.0* &
                 State_VGB(:,lS(1),lS(3),lS(5),lS(7))+ &
                 State_VGB(:,lS(2),lS(3),lS(5),lS(7))+ &
                 State_VGB(:,lS(1),lS(4),lS(5),lS(7))+ &
@@ -503,7 +501,7 @@ subroutine message_pass_cells_8state(DoOneLayer,DoFacesOnly,UseMonotoneRestrict)
            State_VGB(:,i,j,k,lR(7)) = State_VGB(:,lS(1),lS(3),lS(5),lS(7))
         end do; end do; end do
      elseif(lS(0)==3)then
-        State_VGB(:,lR(1),lR(3),lR(5),lR(7)) = (cOne/cTwelve)*(cNine* &
+        State_VGB(:,lR(1),lR(3),lR(5),lR(7)) = Inv12*(9.0* &
              State_VGB(:,lS(1),lS(3),lS(5),lS(7))+ &
              State_VGB(:,lS(2),lS(3),lS(5),lS(7))+ &
              State_VGB(:,lS(1),lS(4),lS(5),lS(7))+ &
@@ -527,7 +525,7 @@ subroutine message_pass_cells_8state(DoOneLayer,DoFacesOnly,UseMonotoneRestrict)
         if(lS(0)==0 .or. lS(0)==1)then
            VSend8(:,iV) = State_VGB(1:nVar,lS(1),lS(3),lS(5),lS(7))
         elseif(lS(0)==3)then
-           VSend8(1:nVar,iV) = (cOne/cTwelve)*(cNine* &
+           VSend8(1:nVar,iV) = Inv12*(9.0* &
                 State_VGB(:,lS(1),lS(3),lS(5),lS(7))+ &
                 State_VGB(:,lS(2),lS(3),lS(5),lS(7))+ &
                 State_VGB(:,lS(1),lS(4),lS(5),lS(7))+ &

@@ -32,7 +32,7 @@ subroutine amr_criteria(ref_criteria)
      dsMAX = max(dx_BLK(iBLK), dy_BLK(iBLK), dz_BLK(iBLK))
      ds2 = dsMIN*dsMIN
      if (UseSunEarth) then
-        RcritAMR = cOne+(cOne+cHalf)*sqrt(cTwo)*dsMAX
+        RcritAMR = cOne+(cOne+cHalf)*cSqrtTwo*dsMAX
      else
         RcritAMR = cZero
      end if
@@ -296,21 +296,21 @@ contains
     case('Rho_2nd_1')
        scrARR(1:nI,1:nJ,1:nK) = ( & 
             abs(Rho_G(0:nI-1,1:nJ,1:nK) + Rho_G(2:nI+1,1:nJ,1:nK) - &
-            cTwo * Rho_G(1:nI,1:nJ,1:nK))                                + &
+            2 * Rho_G(1:nI,1:nJ,1:nK))                                + &
             abs(Rho_G(1:nI,0:nJ-1,1:nK) + Rho_G(1:nI,2:nJ+1,1:nK) - &
-            cTwo * Rho_G(1:nI,1:nJ,1:nK))                                + &
+            2 * Rho_G(1:nI,1:nJ,1:nK))                                + &
             abs(Rho_G(1:nI,1:nJ,0:nK-1) + Rho_G(1:nI,1:nJ,2:nK+1) - &
-            cTwo * Rho_G(1:nI,1:nJ,1:nK)))                               / &
+            2 * Rho_G(1:nI,1:nJ,1:nK)))                               / &
             Rho_G(1:nI,1:nJ,1:nK)
        refine_crit = maxval(scrARR)
     case('Rho_2nd_2')
        scrARR(1:nI,1:nJ,1:nK) = abs( & 
             (Rho_G(0:nI-1,1:nJ,1:nK) + Rho_G(2:nI+1,1:nJ,1:nK) - &
-            cTwo * Rho_G(1:nI,1:nJ,1:nK))                             + &
+            2 * Rho_G(1:nI,1:nJ,1:nK))                             + &
             (Rho_G(1:nI,0:nJ-1,1:nK) + Rho_G(1:nI,2:nJ+1,1:nK) - &
-            cTwo * Rho_G(1:nI,1:nJ,1:nK))                             + &
+            2 * Rho_G(1:nI,1:nJ,1:nK))                             + &
             (Rho_G(1:nI,1:nJ,0:nK-1) + Rho_G(1:nI,1:nJ,2:nK+1) - &
-            cTwo * Rho_G(1:nI,1:nJ,1:nK)))                            / &
+            2 * Rho_G(1:nI,1:nJ,1:nK)))                            / &
             Rho_G(1:nI,1:nJ,1:nK)
        refine_crit = maxval(scrARR)
     case default
@@ -325,8 +325,7 @@ subroutine refine_sun_earth_cone(iBLK,xBLK,yBLK,zBLK,refine_profile)
   use ModMain,     ONLY:BLKtest
   use ModProcMH,   ONLY:iProc
   use ModPhysics,  ONLY:Rbody,xEarth,yEarth,zEarth,InvD2Ray
-  use ModNumConst, ONLY:cOne,cTwo,cFour,cHalf,cZero,&
-       cTiny,cHundred,cHundredth,cPi
+  use ModNumConst, ONLY:cOne,cHalf,cZero,cTiny,cPi
   implicit none
   
   integer, intent(in) :: iBLK
@@ -340,7 +339,7 @@ subroutine refine_sun_earth_cone(iBLK,xBLK,yBLK,zBLK,refine_profile)
   ! This module aims to restrict the refinement mainly along the ray 
   ! Sun-Earth, in a cone with a user-defined opening angle.
   !/
-  cutFACT = InvD2Ray*cTwo*cOneighty/cPi  
+  cutFACT = InvD2Ray*2*cOneighty/cPi  
   !\
   ! For InvD2Ray = 1. ==> refine_profile = 0.174587 at angle 5deg around the ray.
   ! For InvD2Ray = 2. ==> refine_profile = 0.030481 at angle 5deg around the ray.
@@ -379,7 +378,7 @@ subroutine refine_sun_earth_cone(iBLK,xBLK,yBLK,zBLK,refine_profile)
      cosTHETA_BLK = zBLK/sqrt(xBLK**2+yBLK**2+zBLK**2)
      cosPHI_BLK   = xBLK/sqrt(xBLK**2+yBLK**2)
      
-     refine_profile = abs((signY+signY_BLK)/cTwo* &
+     refine_profile = abs(0.5*(signY+signY_BLK)* &
           exp(-cutFACT*(acos(cosPHI_BLK)-acos(cosPHI))**2)* &
           exp(-cutFACT*(acos(cosTHETA_BLK)-acos(cosTHETA))**2))
   else
@@ -390,8 +389,7 @@ end subroutine refine_sun_earth_cone
 
 subroutine refine_sun_earth_cyl(iBLK,xBLK,yBLK,zBLK,refine_profile)
   use ModPhysics,  ONLY:Rbody,xEarth,yEarth,zEarth,InvD2Ray
-  use ModNumConst, ONLY:cOne,cTwo,cFour,cHalf,cZero,&
-       cTiny,cHundred,cHundredth
+  use ModNumConst, ONLY:cOne,cHalf,cZero,cTiny
   implicit none
   
   integer, intent(in) :: iBLK
@@ -404,7 +402,7 @@ subroutine refine_sun_earth_cyl(iBLK,xBLK,yBLK,zBLK,refine_profile)
   ! This module aims to restrict the refinement mainly along the ray 
   ! Sun-Earth, in a cylinder with user-defined profile across.
   !/
-  cutFact = (InvD2Ray*(cTwo*(cOne+cTwo+cTwo)))**2
+  cutFact = (InvD2Ray*10)**2
   !\
   ! For InvD2Ray = 1. ==> refine_profile = 0.3679 at distance 0.1*Rsun from the ray
   ! For InvD2Ray = 2. ==> refine_profile = 0.0183 at distance 0.1*Rsun from the ray
@@ -427,8 +425,8 @@ subroutine refine_sun_earth_cyl(iBLK,xBLK,yBLK,zBLK,refine_profile)
               zBLK*cosTHETA)
   
   rBLK = sqrt(xBLK**2+yBLK**2+zBLK**2)
-  if ((rBLK.gt.Rbody).and.(yPrimeBLK.ge.cZero)) then
-     if (cutFact*dist2BLK.le.(cOne+cHalf)*cHundred) then
+  if ((rBLK.gt.Rbody).and.(yPrimeBLK >= 0.0)) then
+     if (cutFact*dist2BLK <= 150.0) then
         refine_profile = exp(-cutFact*dist2BLK)
      else
         refine_profile = cZero
