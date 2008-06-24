@@ -25,7 +25,6 @@ program saha
 
 
   call set_element( 54 )
-  call mod_init
 
 !  tm_1 = diff_sec()!
 !  nT1 =  (nN +1)*nT/1000000 
