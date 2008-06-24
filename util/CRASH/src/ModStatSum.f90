@@ -7,19 +7,19 @@ module ModStatSum
   SAVE
   integer :: nZ=-1                      !Atomic number of element in question
   
-  integer :: iZMin  !Numbers of the ionization states, such that the population
-  integer :: iZMax  !of ion states with iZ<iZMin or iZ>iZMax is negligible.
+  integer :: iZMin  ! Numbers of the ionization states, such that the population
+  integer :: iZMax  ! of ion states with iZ<iZMin or iZ>iZMax is negligible.
   
-  !Array of ionization potentials - energy needed to create i-level ion from (i-1)-level ion
+  ! Array of ionization potentials - energy needed to create i-level ion from (i-1)-level ion
   real,dimension(1:nZMax) :: IonizPotential_I
 
-  !Array of energies needed to create i-level ion from a neutral atom
+  ! Array of energies needed to create i-level ion from a neutral atom
   real,dimension(0:nZMax) :: IonizEnergyNeutral_I 
   
-  real,dimension(0:nZMax) :: Population_I,& !Array of the populations of ions
-                             N_I !array of consecutive integers (with type real)
+  real,dimension(0:nZMax) :: Population_I,& ! Array of the populations of ions
+                             N_I ! array of consecutive integers (with type real)
 
-  real,dimension(nZMax) :: LogN_I !array of natural logarithms of consecutive integers
+  real,dimension(nZMax) :: LogN_I ! array of natural logarithms of consecutive integers
   
   real :: C0          ! 2/(Lambda^3)
   real :: ZAv,&       ! the average charge per ion - <Z> (elementary charge units)
@@ -39,7 +39,7 @@ Contains
     LogN_I = (/(log(real(iZ)), iZ = 1,nZMax)/)
     N_I    = (/(real(iZ), iZ = 0,nZMax)/)
 
-    DeBroglieInv=sqrt(cTwoPi*(cElectronMass/cPlanckH)*(cEV/cPlanckH)) 
+    DeBroglieInv = sqrt(cTwoPi*(cElectronMass/cPlanckH)*(cEV/cPlanckH)) 
     !*sqrt(cBoltzmann/cEV * T) - temperature in eV
 
     C0 = cTwo*DeBroglieInv**3 ! 2/(Lambda^3)
@@ -149,8 +149,8 @@ Contains
       StatSumTermMin = StatSumTermMax -StatSumToleranceLog 
       
       
-      !Find the lower boundary of the array 
-      !below which the values of Pi can be neglected
+      ! Find the lower boundary of the array 
+      ! below which the values of Pi can be neglected
       
       iZMin = count( StatSumTermLog_I(0:iZDominant(1)) < StatSumTermMin ) 
       
@@ -176,25 +176,25 @@ Contains
 
 !=======================================  
 subroutine set_temperature(Uin, NaIn)
-    real,intent(in) :: Uin,& !Average internal energy per atomic unit [eV]
-	               NaIn !Density of heavy particles [# of particles/m^3]
-    integer :: iIter !iteration counter
+    real,intent(in) :: Uin,& ! Average internal energy per atomic unit [eV]
+	               NaIn  ! Density of heavy particles [# of particles/m^3]
+    integer :: iIter ! iteration counter
     real,parameter :: ToleranceU = 0.001 !accuracy of internal energy needed [(% deviation)/100]
-    real :: UDeviation,& !The difference between the given internal energy and the calculated one
+    real :: UDeviation,& ! The difference between the given internal energy and the calculated one
             ToleranceUeV ! The required accuracy of U in eV
     !-------------------------
     Na = NaIn
     ToleranceUeV = ToleranceU * Uin
     iIter = 0
-    !For initial approximation, use the value for Te found last time
-    !Use Newton-Rapson iterations to get a better approximation of Te:
-    !UDeviation = ToleranceU	  
+    ! For initial approximation, use the value for Te found last time
+    ! Use Newton-Rapson iterations to get a better approximation of Te:
+    ! UDeviation = ToleranceU	  
     iterations: do 
        call set_ionization_equilibrium(Te, Na) !Find the populations for the trial Te
        UDeviation = internal_energy()-Uin 
 
-       !The exit condition for the loop:
-       !(has to be here because it is based on UDeviation)
+       ! The exit condition for the loop:
+       ! (has to be here because it is based on UDeviation)
        if (abs(UDeviation) < ToleranceUeV .or. iIter>10) exit iterations
        
        Te = Te - UDeviation/heat_capacity() !Calculate the improved value of Te
@@ -203,15 +203,15 @@ subroutine set_temperature(Uin, NaIn)
   end subroutine set_temperature
   
   !============================================
-  !Calculate the pressure in the plasma [Pa]
-  !Can only be called after set_ionization_equilibrium has executed
+  ! Calculate the pressure in the plasma [Pa]
+  ! Can only be called after set_ionization_equilibrium has executed
   real function pressure()
      pressure = (1+Zav)*Na*Te*cEV
   end function pressure
 
   !============================================
-  !calculate the average internal energy per atomic unit [eV]
-  !Can only be called after set_ionization_equilibrium has executed 
+  ! calculate the average internal energy per atomic unit [eV]
+  ! Can only be called after set_ionization_equilibrium has executed 
   real function internal_energy()
 	 internal_energy = 1.50*Te*(1+ZAv) + EAv
   end function internal_energy
@@ -221,11 +221,11 @@ subroutine set_temperature(Uin, NaIn)
   !(derivative of internal energy wrt Te) from temperature:
   !Can only be called after set_ionization_equilibrium has executed
   real function heat_capacity()
-    real :: TeInv,& !The inverse of the electron temperature [1/eV]
-            ETeInvAv,&          ! < Ei/Te> (Ei - energy levels, Te - electron temperature [eV])
+    real :: TeInv,&             !The inverse of the electron temperature [1/eV]
+            ETeInvAv,&          ! < Ei/Te>     (Ei - energy levels, Te - electron temperature [eV])
             DeltaETeInv2Av,&	! <(Ei/Te)^2> - <Ei/Te>^2
-	      DeltaZ2Av,&         ! <i^2>-<i>^2
-   	      DeltaZDeltaETeInvAv ! <i*Ei/Te> - <i><Ei/Te>
+	    DeltaZ2Av,&         ! <i^2>-<i>^2
+            DeltaZDeltaETeInvAv ! <i*Ei/Te> - <i><Ei/Te>
 
     ! Array of ionization energy levels of ions divided by the temperature in eV
     real,dimension(0:nZMax) :: ETeInv_I 
@@ -238,7 +238,7 @@ subroutine set_temperature(Uin, NaIn)
     DeltaZ2Av             = sum( Population_I(iZMin:iZmax) * (N_I(iZMin:iZMax)-Zav)**2 )
     DeltaZDeltaETeInvAv   = sum( Population_I(iZMin:iZMax) * (ETeInv_I(iZMin:iZmax)-ETeInvAv) * &
                            (N_I(iZMin:iZMax)-ZAv) )
-    !calculate the heat capacity:
+    ! calculate the heat capacity:
     heat_capacity = 1.50*(cOne +ZAv) + DeltaETeInv2Av &
 	           +( 3.0*ZAv*(0.750*DeltaZ2Av + DeltaZDeltaETeInvAv) &
                    - DeltaZDeltaETeInvAv**2 ) / (ZAv + DeltaZ2Av)

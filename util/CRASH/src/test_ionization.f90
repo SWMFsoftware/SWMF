@@ -1,4 +1,5 @@
     !^CFG COPYRIGHT UM
+
 !***********************************************************************
 !    calculation of ionization equilibrium, single material
 !    for given - concentration of  atomic particles Co+Ciz [cm^{-3}]
@@ -19,9 +20,9 @@ program saha
   !character(LEN=*),parameter,dimension(0:nN) :: Separator_I='|'
   !character(LEN=*),parameter,dimension(0:nN) :: Separator1_I='/'
   logical :: IsDegenerated
-
   !-------------------------------------------
-  dTe = 1.0; dLogN=log(10.0)
+  dTe = 5.0; dLogN=log(10.0)
+
 
   call set_element( 54 )
   call mod_init
@@ -31,21 +32,28 @@ program saha
 !  write(*,*)"Start,", nT1 , " million iterations"
 
 
+
   open(24,file='../doc/Table1.tex',status='unknown')
   write(24,'(a)')'\begin{table}'
   write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
   write(24,'(a)')'\hline'
+
+
+
   write(*,'(a)')' \ Na |   10^18 |   10^19 |   10^20 |'//& 
 '   10^21 |   10^22 |   10^23 |'
+
   write(24,'(a)')'Na/cm3 & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
   write(24,'(a)')'\hline'
-  write(24,'(a)')'Te[K] & z | $<z^2>/z$ & z | $<z^2>/z$ & z | $<z^2>/z$ & z | $<z^2>/z$ &'//&
+  write(24,'(a)')'Te[eV] & z | $<z^2>/z$ & z | $<z^2>/z$ & z | $<z^2>/z$ & z | $<z^2>/z$ &'//&
                  'z | $<z^2>/z$ & z | $<z^2>/z$\tabularnewline'
   write(24,'(a)')'& Uav | Cv &  Uav | Cv &  Uav | Cv &  Uav | Cv &  Uav | Cv &'//&
                  'Uav | Cv\tabularnewline'
   write(24,'(a)')'\hline' 
   write(24,'(a)')'\hline'
   
+
+
   do iT  = 1,nT
      vTe = dTe * iT
      if (vTe == 130.) then
@@ -63,6 +71,7 @@ program saha
         write(24,'(a)')'\hline' 
         write(24,'(a)')'\hline'
      end if 
+
      do iN = 0,nN
         NaTrial = Nao*exp(iN*dLogN)
         call set_ionization_equilibrium(vTe,NaTrial*1000000.0,IsDegenerated)
@@ -85,12 +94,35 @@ program saha
                (' & ', Uav_I(iN), ' | ', Cv_I(iN), iN=0,nN ),'\tabularnewline'
      write(24,'(a)')'\hline'
 
+
   end do
+  
+
 
 
   write(24,'(a)')'\end{tabular}'
   write(24,'(a)')'\end{table}'
+
   close(24)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 contains
