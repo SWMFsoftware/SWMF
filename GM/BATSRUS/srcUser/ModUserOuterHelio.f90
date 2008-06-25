@@ -177,7 +177,7 @@ contains
     use ModVarIndexes
     use ModAdvance
     use ModPhysics  
-    use ModNumConst, ONLY: cZero,cOne,cTwo,cTolerance
+    use ModNumConst, ONLY: cTolerance
     use ModSetOuterBC
     use ModProcMH
     use ModFaceBc, ONLY: iBoundary, FaceCoords_D, VarsTrueFace_V
