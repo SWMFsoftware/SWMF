@@ -447,7 +447,7 @@ contains
     use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_
     use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
          vInv_CB
-    use ModConst,    ONLY: cZero,cHalf,cOne,cTwo,cTolerance
+    use ModConst,    ONLY: cHalf,cOne,cTolerance
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: Rbody, inv_gm1, gm1
 !    use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data
