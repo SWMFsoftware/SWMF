@@ -228,7 +228,7 @@ subroutine set_temperature(Uin, NaIn,IsDegenerated)
             ETeInvAv,& ! < Ei/Te> (Ei - energy levels, Te - electron temperature [eV])
             DeltaETeInv2Av,&	! <(delta Ei/Te)^2>
 	    DeltaZ2Av,&         ! <(delta i)^2>
-   	    DeltaZDeltaETeInvAv ! <delta i * delta Ei/Te>
+   	    ETeInvDeltaZAv ! <delta i * Ei/Te>
 
     ! Array of ionization energy levels of ions divided by the temperature in eV
     real,dimension(0:nZMax) :: ETeInv_I 
@@ -239,12 +239,12 @@ subroutine set_temperature(Uin, NaIn,IsDegenerated)
     ETeInvAv              = EAv*TeInv
     DeltaETeInv2Av        = sum( Population_I(iZMin:iZmax) * (ETeInv_I(iZMin:iZmax)-ETeInvAv)**2 )
     DeltaZ2Av             = sum( Population_I(iZMin:iZmax) * (N_I(iZMin:iZMax)-Zav)**2 )
-    DeltaZDeltaETeInvAv   = sum( Population_I(iZMin:iZMax) * (ETeInv_I(iZMin:iZmax)-ETeInvAv) * &
+    ETeInvDeltaZAv   = sum( Population_I(iZMin:iZMax) * ETeInv_I(iZMin:iZmax) * &
                            (N_I(iZMin:iZMax)-ZAv) )
     ! calculate the heat capacity:
     heat_capacity = 1.50*(cOne +ZAv) + DeltaETeInv2Av &
-	           +( 3.0*ZAv*(0.750*DeltaZ2Av + DeltaZDeltaETeInvAv) &
-                   - DeltaZDeltaETeInvAv**2 ) / (ZAv + DeltaZ2Av)
+	           +( 3.0*ZAv*(0.750*DeltaZ2Av + ETeInvDeltaZAv) &
+                   - ETeInvDeltaZAv**2 ) / (ZAv + DeltaZ2Av)
 
   end function heat_capacity ! ^^^^^^ /\ iZmin >=1 /\ 
 
