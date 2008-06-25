@@ -473,7 +473,6 @@ contains
     use ModAdvance,  ONLY: State_VGB,VdtFace_x,VdtFace_y,VdtFace_z
     use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
          vInv_CB, Rmin_BLK
-    use ModConst,    ONLY: cZero,cHalf,cOne,cTwo,cTolerance
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: Rbody, inv_gm1, gm1
     use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data
@@ -1219,7 +1218,7 @@ contains
   subroutine neutral_density_averages
     use ModMain, ONLY: globalBLK 
     use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, true_cell,vInv_CB, R_BLK
-    use ModNumConst, ONLY: cHalf,cTolerance
+    use ModNumConst, ONLY: cTolerance
     use ModCovariant, ONLY : FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
     integer :: i,j,k,iNu
     real:: FaceArea_DS(3,east_:top_),VInv
@@ -1234,9 +1233,9 @@ contains
 
        if(.not.true_cell(i,j,k,globalBLK))cycle
        !-------------------East----------------------------------
-       x = cHalf*(x_BLK(i-1,j,k,globalBLK) + x_BLK(i,j,k,globalBLK))
-       y = cHalf*(y_BLK(i-1,j,k,globalBLK) + y_BLK(i,j,k,globalBLK))
-       z = cHalf*(z_BLK(i-1,j,k,globalBLK) + z_BLK(i,j,k,globalBLK))
+       x = 0.5*(x_BLK(i-1,j,k,globalBLK) + x_BLK(i,j,k,globalBLK))
+       y = 0.5*(y_BLK(i-1,j,k,globalBLK) + y_BLK(i,j,k,globalBLK))
+       z = 0.5*(z_BLK(i-1,j,k,globalBLK) + z_BLK(i,j,k,globalBLK))
        R0 = sqrt(x*x + y*y + z*z+cTolerance**2)
        FaceArea_DS(:,East_)= FaceAreaI_DFB(:,i,j,k,globalBLK)
        factor = (FaceArea_DS(1,East_)*x+ &
@@ -1247,9 +1246,9 @@ contains
        end do
 
        !-------------------West----------------------------------
-       x = cHalf*(x_BLK(i+1,j,k,globalBLK)+x_BLK(i,j,k,globalBLK))
-       y = cHalf*(y_BLK(i+1,j,k,globalBLK)+y_BLK(i,j,k,globalBLK))
-       z = cHalf*(z_BLK(i+1,j,k,globalBLK)+z_BLK(i,j,k,globalBLK))
+       x = 0.5*(x_BLK(i+1,j,k,globalBLK)+x_BLK(i,j,k,globalBLK))
+       y = 0.5*(y_BLK(i+1,j,k,globalBLK)+y_BLK(i,j,k,globalBLK))
+       z = 0.5*(z_BLK(i+1,j,k,globalBLK)+z_BLK(i,j,k,globalBLK))
        R0 = sqrt(x*x + y*y + z*z+cTolerance**2)
        FaceArea_DS(:,West_)= FaceAreaI_DFB(:,i+1,j,k,globalBLK)
        factor = (FaceArea_DS(1,West_)*x+ &
@@ -1260,9 +1259,9 @@ contains
        end do
 
        !-------------------South----------------------------------
-       x = cHalf*(x_BLK(i,j-1,k,globalBLK)+x_BLK(i,j,k,globalBLK))
-       y = cHalf*(y_BLK(i,j-1,k,globalBLK)+y_BLK(i,j,k,globalBLK))
-       z = cHalf*(z_BLK(i,j-1,k,globalBLK)+z_BLK(i,j,k,globalBLK))
+       x = 0.5*(x_BLK(i,j-1,k,globalBLK)+x_BLK(i,j,k,globalBLK))
+       y = 0.5*(y_BLK(i,j-1,k,globalBLK)+y_BLK(i,j,k,globalBLK))
+       z = 0.5*(z_BLK(i,j-1,k,globalBLK)+z_BLK(i,j,k,globalBLK))
        R0 = sqrt(x*x + y*y + z*z+cTolerance**2)
        FaceArea_DS(:,South_)=FaceAreaJ_DFB(:,i,j,k,globalBLK)
        factor = (FaceArea_DS(1,South_)*x+ &
@@ -1273,9 +1272,9 @@ contains
        end do
 
        !-------------------North----------------------------------
-       x = cHalf*(x_BLK(i,j+1,k,globalBLK)+x_BLK(i,j,k,globalBLK))
-       y = cHalf*(y_BLK(i,j+1,k,globalBLK)+y_BLK(i,j,k,globalBLK))
-       z = cHalf*(z_BLK(i,j+1,k,globalBLK)+z_BLK(i,j,k,globalBLK))
+       x = 0.5*(x_BLK(i,j+1,k,globalBLK)+x_BLK(i,j,k,globalBLK))
+       y = 0.5*(y_BLK(i,j+1,k,globalBLK)+y_BLK(i,j,k,globalBLK))
+       z = 0.5*(z_BLK(i,j+1,k,globalBLK)+z_BLK(i,j,k,globalBLK))
        R0 = sqrt(x*x + y*y + z*z+cTolerance**2)
        FaceArea_DS(:,North_)=FaceAreaJ_DFB(:,i,j+1,k,globalBLK)
        factor = (FaceArea_DS(1,North_)*x+ &
@@ -1286,9 +1285,9 @@ contains
        end do
 
        !-------------------Bot----------------------------------
-       x = cHalf*(x_BLK(i,j,k-1,globalBLK)+x_BLK(i,j,k,globalBLK))
-       y = cHalf*(y_BLK(i,j,k-1,globalBLK)+y_BLK(i,j,k,globalBLK))
-       z = cHalf*(z_BLK(i,j,k-1,globalBLK)+z_BLK(i,j,k,globalBLK))
+       x = 0.5*(x_BLK(i,j,k-1,globalBLK)+x_BLK(i,j,k,globalBLK))
+       y = 0.5*(y_BLK(i,j,k-1,globalBLK)+y_BLK(i,j,k,globalBLK))
+       z = 0.5*(z_BLK(i,j,k-1,globalBLK)+z_BLK(i,j,k,globalBLK))
        R0 = sqrt(x*x + y*y + z*z+cTolerance**2)
        FaceArea_DS(:,Bot_)= FaceAreaK_DFB(:,i,j,k,globalBLK)
        factor = (FaceArea_DS(1,Bot_)*x+ &
@@ -1299,9 +1298,9 @@ contains
        end do
 
        !-------------------Top----------------------------------
-       x = cHalf*(x_BLK(i,j,k+1,globalBLK)+x_BLK(i,j,k,globalBLK))
-       y = cHalf*(y_BLK(i,j,k+1,globalBLK)+y_BLK(i,j,k,globalBLK))
-       z = cHalf*(z_BLK(i,j,k+1,globalBLK)+z_BLK(i,j,k,globalBLK))
+       x = 0.5*(x_BLK(i,j,k+1,globalBLK)+x_BLK(i,j,k,globalBLK))
+       y = 0.5*(y_BLK(i,j,k+1,globalBLK)+y_BLK(i,j,k,globalBLK))
+       z = 0.5*(z_BLK(i,j,k+1,globalBLK)+z_BLK(i,j,k,globalBLK))
        R0 = sqrt(x*x + y*y + z*z+cTolerance**2)
        FaceArea_DS(:,Top_)= FaceAreaK_DFB(:,i,j,k+1,globalBLK)
        factor = (FaceArea_DS(1,Top_)*x+ &
@@ -1842,7 +1841,6 @@ contains
          UnUsedBlk, nBlockMax
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: Rmin_BLK, R_BLK
-    use ModConst,    ONLY: cTwo
     use ModResistivity, ONLY: Eta0Si
 
     integer, intent(in) :: iBlock
@@ -1874,7 +1872,7 @@ contains
             /MassSpecies_V(rho_+1:rho_+MaxSpecies))
 
        Te_dim= State_VGB(p_,i,j,k,iBlock)/(totalNumRho+1.0e-8)&
-            *No2Si_V(UnitTemperature_)/cTwo
+            *No2Si_V(UnitTemperature_)/2
 
        nte=int( (log10(Te_dim)-2.0)/0.05 )+1
        if(Te_dim <= nu_Te(1))then
