@@ -1360,7 +1360,6 @@ contains
          UnUsedBlk, nBlockMax
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: Rmin_BLK, R_BLK
-    use ModConst,    ONLY: cTwo
     use ModResistivity, ONLY: Eta0Si
 
     integer, intent(in) :: iBlock
@@ -1393,7 +1392,7 @@ contains
             /MassSpecies_V(rho_+1:rho_+MaxSpecies))
        
        Te_dim= State_VGB(p_,i,j,k,iBlock)/(totalNumRho+1.0e-8)&
-            *No2Si_V(UnitTemperature_)/cTwo
+            *No2Si_V(UnitTemperature_)/2
        
        loc_c(:)=4.243e-4* sqrt(Te_dim)  
        !mu_en=1.5e-17*N(cm^-3)*Te^(1/2)
