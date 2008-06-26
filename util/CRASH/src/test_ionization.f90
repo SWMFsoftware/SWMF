@@ -35,7 +35,6 @@ program saha
 
 
   open(24,file='../doc/Table1.tex',status='replace')
-  write(24,'(a)')'\begin{table}'
   write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
   write(24,'(a)')'\hline'
 
@@ -58,10 +57,8 @@ program saha
   do iT  = 1,nT
      if (((iT-1)/25)*25==(iT-1).and.iT>25) then
         
-        write(24,'(a)')'\end{tabular}'
-        write(24,'(a)')'\end{table}', char(10)
+        write(24,'(a)')'\end{tabular}', char(10)
         !--------------
-        write(24,'(a)')'\begin{table}'
         write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
         write(24,'(a)')'\hline'
         write(24,'(a)')'Na/cm3 & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
@@ -101,14 +98,12 @@ program saha
   end do
   
   write(24,'(a)')'\end{tabular}'
-  write(24,'(a)')'\end{table}'
 
   close(24)
 
 !_____________________________________
 
   open(25,file='../doc/Table2.tex',status='replace')
-  write(25,'(a)')'\begin{table}'
   write(25,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
   write(25,'(a)')'\hline'
   write(25,'(a)')'Na/cm3 & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
@@ -120,8 +115,7 @@ program saha
   
   do iU  = 1,nU
      if (((iU-1)/50)*50==(iU-1).and.iU>50) then
-        write(25,'(a)')'\end{tabular}'
-        write(25,'(a)')'\end{table}', char(10)
+        write(25,'(a)')'\end{tabular}', char(10)
         !------------
         write(25,'(a)')'\begin{table}'
         write(25,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
@@ -150,7 +144,6 @@ program saha
 
 
   write(25,'(a)')'\end{tabular}'
-  write(25,'(a)')'\end{table}'
   close(25)
 
 
