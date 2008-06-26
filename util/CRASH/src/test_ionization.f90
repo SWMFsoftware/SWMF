@@ -117,7 +117,6 @@ program saha
      if (((iU-1)/50)*50==(iU-1).and.iU>50) then
         write(25,'(a)')'\end{tabular}', char(10)
         !------------
-        write(25,'(a)')'\begin{table}'
         write(25,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
         write(25,'(a)')'\hline'
         write(25,'(a)')'Na/cm3 & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
