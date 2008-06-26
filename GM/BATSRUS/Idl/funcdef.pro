@@ -79,6 +79,7 @@ if nEqpar gt 0 then begin
             'g'     : gamma  = eqpar(iEqpar)
             'gamma' : gamma  = eqpar(iEqpar)
             'c'     : clight = eqpar(iEqpar)
+            'r'     : rbody  = eqpar(iEqpar)
             'rbody' : rbody  = eqpar(iEqpar)
             else:
         endcase
