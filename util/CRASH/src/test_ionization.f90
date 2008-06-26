@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+  !^CFG COPYRIGHT UM
 
 !***********************************************************************
 !    calculation of ionization equilibrium, single material
@@ -12,7 +12,7 @@ program saha
        Nao = 1.00e18,  &  ! cm-3
        vTe=5., NaTrial, vU 
 
-  integer,parameter :: nN=5 , nT=120, nU=100
+  integer,parameter :: nN=5 , nT=10, nU=10
   real    :: dTe, dLogN, dU
   integer :: iT, nT1=1000000, iN, iU, iLoop
   
@@ -23,7 +23,7 @@ program saha
   logical :: IsDegenerated
   !-------------------------------------------
 
-  dTe = 5.0; dLogN=log(10.0); dU=100.0
+  dTe = 50.0; dLogN=log(10.0); dU=1000.0
 
   
   call set_element( 54 )
@@ -34,25 +34,14 @@ program saha
 
 
 
-  open(24,file='../doc/Table1.tex',status='replace')
-  write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
-  write(24,'(a)')'\hline'
-
-
-
-  write(*,'(a)')' \ Na |   10^18 |   10^19 |   10^20 |'//& 
-'   10^21 |   10^22 |   10^23 |'
-
-  write(24,'(a)')'Na/cm3 & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
-  write(24,'(a)')'\hline'
-  write(24,'(a)')'Te[eV] & z | $<z^2>/z$ & z | $<z^2>/z$ & z | $<z^2>/z$ & z | $<z^2>/z$ &'//&
-                 'z | $<z^2>/z$ & z | $<z^2>/z$\tabularnewline'
-  write(24,'(a)')'& $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ '//&
-                 '& $U_{av} | C_v$ & $U_{av} | C_v$\tabularnewline'
-  write(24,'(a)')'\hline' 
-  write(24,'(a)')'\hline'
+  open(24,file='../doc/TextTable1.tex')
+        write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
+        write(24,'(a)')'\hline'
+        write(24,'(a)')'Te[eV]\textbackslash \textbackslash Na[$1/cm^3$] & $10^{18}$'//&
+                      ' & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
+        write(24,'(a)')'\hline' 
+        write(24,'(a)')'\hline'
   
-
 
   do iT  = 1,nT
      if (((iT-1)/25)*25==(iT-1).and.iT>25) then
@@ -61,12 +50,8 @@ program saha
         !--------------
         write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
         write(24,'(a)')'\hline'
-        write(24,'(a)')'Na/cm3 & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
-        write(24,'(a)')'\hline'
-        write(24,'(a)')'Te[eV] & $z | <z^2>/z$ & $z | <z^2>/z$ & $z | <z^2>/z$ & $z | <z^2>/z$ &'//&
-                        '$z | <z^2>/z$ & $z | <z^2>/z$\tabularnewline'
-        write(24,'(a)')'& $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ '//&
-                 '& $U_{av} | C_v$ & $U_{av} | C_v$\tabularnewline'
+        write(24,'(a)')'Te[eV]\textbackslash \textbackslash Na[$1/cm^3$] & $10^{18}$ & $10^{19}$'//&
+                       ' & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
         write(24,'(a)')'\hline' 
         write(24,'(a)')'\hline'
      end if
@@ -86,11 +71,59 @@ program saha
            Cv_I(iN)= -1.0
         end if
      end do
-     write(* ,'(a,f5.0,a,6(f4.1,a,f4.1,a))')'|',vTe,'|',&
-               (Z_I(iN), '/', Z2_I(iN), '|', iN=0,nN )
-     write(24,'(f5.0,6(a,f7.1,a,f7.1),a)') vTe,&
-               (' & ', Z_I(iN), ' | ', Z2_I(iN), iN=0,nN ),'\tabularnewline'
-     write(24,'(6(a,f8.1,a,f7.1),a)') &
+     write(24,'(f5.0,6(a,f7.1),a)') vTe,&
+               (' & ', Z_I(iN), iN=0,nN ),'\tabularnewline'
+     write(24,'(a)')'\hline'
+
+
+  end do
+  
+  write(24,'(a)')'\end{tabular}'
+
+  close(24)
+!_______________________________________________
+open(24,file='../doc/TextTable2.tex')
+  write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
+  write(24,'(a)')'\hline'
+  write(24,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
+  write(24,'(a)')'\hline'
+  write(24,'(a)')'Te[eV] & $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ '//&
+                 '& $U_{av} | C_v$ & $U_{av} | C_v$\tabularnewline'
+  write(24,'(a)')'\hline' 
+  write(24,'(a)')'\hline'
+  
+
+  do iT  = 1,nT
+     if (((iT-1)/25)*25==(iT-1).and.iT>25) then
+        
+        write(24,'(a)')'\end{tabular}', char(10)
+        !--------------
+		write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
+		write(24,'(a)')'\hline'
+		write(24,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
+		write(24,'(a)')'\hline'
+		write(24,'(a)')'Te[eV] & $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ '//&
+					'& $U_{av} | C_v$ & $U_{av} | C_v$\tabularnewline'
+		write(24,'(a)')'\hline' 
+	write(24,'(a)')'\hline' 
+      end if
+     vTe = dTe * iT
+
+     do iN = 0,nN
+        NaTrial = Nao*exp(iN*dLogN)
+        call set_ionization_equilibrium(vTe,NaTrial*1000000.0,IsDegenerated)
+        Z_I(iN) = z_averaged() 
+        Z2_I(iN)= z2_averaged()/Z_I(iN)
+        Uav_I(iN)=internal_energy()
+        Cv_I(iN)=heat_capacity()
+        if(IsDegenerated)then
+           Z_I(iN) = -1.0
+           Z2_I(iN)= -1.0
+           Uav_I(iN)= -1.0
+           Cv_I(iN)= -1.0
+        end if
+     end do
+     write(24,'(f5.0,6(a,f8.1,a,f7.1),a)') vTe,&
                (' & ', Uav_I(iN), ' | ', Cv_I(iN), iN=0,nN ),'\tabularnewline'
      write(24,'(a)')'\hline'
 
@@ -103,13 +136,13 @@ program saha
 
 !_____________________________________
 
-  open(25,file='../doc/Table2.tex',status='replace')
+  open(25,file='../doc/TextTable3.tex')
   write(25,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
   write(25,'(a)')'\hline'
-  write(25,'(a)')'Na/cm3 & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
+  write(25,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
   write(25,'(a)')'\hline'
   write(25,'(a)')'U[eV] & Te (Iterations) &  Te (Iterations) &  Te (Iterations) & '//&
-           ' Te (Iterations) &  Te (Iterations) &  Te (Iterations) \tabularnewline'
+        ' Te (Iterations) &  Te (Iterations) &  Te (Iterations) \tabularnewline'
   write(25,'(a)')'\hline' 
   write(25,'(a)')'\hline'
   
@@ -119,7 +152,7 @@ program saha
         !------------
         write(25,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
         write(25,'(a)')'\hline'
-        write(25,'(a)')'Na/cm3 & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
+        write(25,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
         write(25,'(a)')'\hline'
         write(25,'(a)')'U[eV] & Te (Iterations) &  Te (Iterations) &  Te (Iterations) & '//&
              ' Te (Iterations) &  Te (Iterations) &  Te (Iterations) \tabularnewline'
