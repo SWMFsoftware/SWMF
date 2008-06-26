@@ -1250,14 +1250,14 @@ for hem = 0, isouth do begin
 
     if n_elements(ct_path) eq 0 then begin
         path = !path
-        Idl_loc = strpos(path,'Idl')
+        Idl_loc = strpos(path,'/Idl')
         if (Idl_loc lt 0) then begin
             ct_path = '.'
         endif else begin
             list = strsplit(path,':',/extract)
-            nlist_eles = n_elements(list)
-            for nl = 0,nlist_eles-1 do begin
-                if (strpos(list(nl),'Idl') gt -1) then ct_path = list(nl)
+            for nl = 0,n_elements(list)-1 do begin
+                dir=list(nl)
+                if strpos(dir,'/Idl') gt strlen(dir)-6 then ct_path = dir
             endfor
         endelse
     endif
