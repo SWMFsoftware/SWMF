@@ -34,7 +34,7 @@ program saha
 
 
 
-  open(24,file='../doc/TextTable1.tex')
+  open(24,file='../doc/Table1.tex')
         write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
         write(24,'(a)')'\hline'
         write(24,'(a)')'Te[eV]\textbackslash \textbackslash Na[$1/cm^3$] & $10^{18}$'//&
@@ -82,7 +82,7 @@ program saha
 
   close(24)
 !_______________________________________________
-open(24,file='../doc/TextTable2.tex')
+open(24,file='../doc/Table2.tex')
   write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
   write(24,'(a)')'\hline'
   write(24,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
@@ -136,7 +136,7 @@ open(24,file='../doc/TextTable2.tex')
 
 !_____________________________________
 
-  open(25,file='../doc/TextTable3.tex')
+  open(25,file='../doc/Table3.tex')
   write(25,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
   write(25,'(a)')'\hline'
   write(25,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
