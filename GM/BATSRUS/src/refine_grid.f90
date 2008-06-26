@@ -17,7 +17,7 @@ subroutine refine_grid(refBLK)
   call MPI_ALLGATHER(refBLK, nBLK, MPI_LOGICAL, &
        refine_list, nBLK, MPI_LOGICAL, iComm, iError)
 
-  call parallel_refine
+  call fix_refinement_and_refine
 
 end subroutine refine_grid
 

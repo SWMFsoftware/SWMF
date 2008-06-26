@@ -1,7 +1,7 @@
 !^CFG COPYRIGHT UM
 subroutine build_octree_roots
   use ModProcMH
-  use ModMain, ONLY : nBLK
+  use ModMain, ONLY : nBLK,nBlockAll
   use ModParallel, ONLY : proc_dims
   use ModOctree
   use ModMpi
@@ -51,7 +51,7 @@ subroutine build_octree_roots
         end do
      end do
   end do
-
+  nBlockAll=iBLK
 end subroutine build_octree_roots
 
 subroutine initialize_octree_block(octree, iPE, iBLK, iLEV, iLEVmin, iLEVmax)
@@ -90,6 +90,7 @@ end subroutine initialize_octree_block
 
 subroutine refine_octree_block(octree, iPEs, iBLKs, fromPE, fromBLK)
   use ModOctree
+  use ModMain,ONLY:nBlockAll
   implicit none
 
   type (adaptive_block_ptr) :: octree
@@ -130,8 +131,9 @@ subroutine refine_octree_block(octree, iPEs, iBLKs, fromPE, fromBLK)
         global_block_ptrs(iBLKs(iChild), iPEs(iChild)+1) % ptr => &
              octree % ptr % child(iChild)%ptr
      end do
+     nBlockAll=nBlockAll+7
   end if
-
+ 
 end subroutine refine_octree_block
 
 subroutine move_octree_block(iBlockFrom, iProcFrom, iBlockTo, iProcTo)
@@ -158,6 +160,7 @@ end subroutine move_octree_block
 
 subroutine coarsen_octree_block(octree, iPEs, iBLKs)
   use ModOctree
+  use ModMain,ONLY:nBlockAll
   implicit none
 
   type (adaptive_block_ptr) :: octree
@@ -194,7 +197,7 @@ subroutine coarsen_octree_block(octree, iPEs, iBLKs)
      do iChild=2,8
         nullify (global_block_ptrs(iBLKs(iChild), iPEs(iChild)+1) % ptr)
      end do
-
+     nBlockAll=nBlockAll-7
   end if
 
 end subroutine coarsen_octree_block

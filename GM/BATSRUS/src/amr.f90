@@ -36,7 +36,6 @@ subroutine amr(idepth)
      call refine_grid(local_refine)
 
   end if
-  call fixRefinementLevels
 
   ! Find new min and max dx
   minDX=minval(dx_BLK, MASK=(.not.unusedBLK))

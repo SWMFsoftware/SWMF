@@ -10,18 +10,22 @@ subroutine number_soln_blocks
   use ModIO, ONLY : iUnitOut, write_prefix
   implicit none
 
-  integer :: i,j,k
+  integer :: i,j,k,iBlock
   type (adaptive_block_ptr) :: octree
 
   do i = 1, nProc*nBLK
      nullify (blocknumber_ptrs(i) % ptr)
   end do
 
-  nBlockALL = 0
+  iBlock = 0
   do k=1,proc_dims(3); do j=1,proc_dims(2); do i=1,proc_dims(1)
      octree % ptr => octree_roots(i, j, k) % ptr
-     call renumber_octree_blocks(octree, nBlockALL)
+     call renumber_octree_blocks(octree, iBlock)
   end do; end do; end do
+  if(iBlock/=nBlockAll)then
+     write(*,*)iBlock,nBlockAll
+     call stop_mpi('Wrong count for nBlockAll')
+  end if
   if(iProc==0.and.lVerbose>0)then
      call write_prefix; write(iUnitOut,*) &
           'renumber_octree: finished renumbering',nBlockALL,' blocks.'

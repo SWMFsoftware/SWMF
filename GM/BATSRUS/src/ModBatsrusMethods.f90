@@ -75,7 +75,6 @@ contains
           end if
           call specify_refinement(local_refine)
           call refine_grid(local_refine)
-          call fixRefinementLevels
        end do
     else
        ! Read initial solution block geometry from octree restart file.
@@ -137,7 +136,6 @@ contains
                call user_initial_perturbation
 
           call amr_physics
-          call fixRefinementLevels
           call number_soln_blocks
        end do
        ! Move coordinates, but not data (?), there are new blocks

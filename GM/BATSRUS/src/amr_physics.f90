@@ -456,8 +456,8 @@ subroutine amr_physics
      end if
   end do; end do
   call parallel_coarsen
-  call parallel_refine
-
+  call fix_refinement_and_refine
+  
 Contains
 
   subroutine FlagBlockRefine

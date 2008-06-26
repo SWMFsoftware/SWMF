@@ -280,40 +280,28 @@ contains
   end subroutine ascend_tree
 end subroutine find_tree_neighbor
 !===========================================================================!
-subroutine fixRefinementLevels
+subroutine fix_refinement_and_refine
   use ModProcMH
-  use ModMain, ONLY : nBLK,lVerbose
+  use ModMain, ONLY : nBLK,lVerbose,nBlockAll
   use ModAMR, ONLY : refine_list
   use ModGeometry,ONLY: is_axial_geometry                
   use ModOctree
   implicit none
 
-  integer :: i,j,k, idir, inPE,inBLK, iLEV1,iLEV2, iCount, maxLev, curLev
+  integer :: i,j,k, idir, inPE,inBLK, iLev1, iLEV2, iCount
+  integer :: iCountOld,iLoop
   logical :: noNeighbor
   type (adaptive_block_ptr) :: inBlockPtr,outBlockPtr,tmpBlockPtr
-
-  call set_body_flag
-  do
-     iCount = 0
-     refine_list = .false.
-     !find max level
-     maxLev=0
-     do inPE = 1,nProc
-        do inBLK = 1,nBLK
-           inBlockPtr%ptr => global_block_ptrs(inBLK,inPE)%ptr
-           if (associated(inBlockPtr%ptr)) &
-                maxLev = max(maxLev, inBlockPtr%ptr%LEV)
-        end do
-     end do
-     !loop from max level down to zero
-     do curLev = maxLev,1,-1
+  
+  do iLoop=1,2
+     iCount=count(refine_list)
+  FIX: do
+        iCountOld=iCount
         do inPE=1,nProc; do inBLK=1,nBLK
            inBlockPtr%ptr => global_block_ptrs(inBLK,inPE)%ptr
            if (associated(inBlockPtr%ptr)) then
-              if (inBlockPtr%ptr%LEV == curLev) then
-                 iLEV1 = inBlockPtr%ptr%LEV
-                 if (refine_list(inBlockPtr%ptr%BLK,inBlockPtr%ptr%PE+1)) &
-                      iLEV1 = iLEV1 + 1
+              iLEV1 = inBlockPtr%ptr%LEV
+              if (refine_list(inBlockPtr%ptr%BLK,inBlockPtr%ptr%PE+1))iLev1=iLev1+1
                  do i=-1,1; do j=-1,1; do k=-1,1
                     call find_tree_neighbor(inBlockPtr,outBlockPtr,i,j,k,noNeighbor)
                     if (.not. noNeighbor)then
@@ -322,7 +310,7 @@ subroutine fixRefinementLevels
                              iLEV2 = outBlockPtr%ptr%LEV
                              if (refine_list(outBlockPtr%ptr%BLK,outBlockPtr%ptr%PE+1)) &
                                   iLEV2 = iLEV2 + 1
-                             if ( (iLEV1-iLEV2 > 1) .or. &
+                             if (((iLEV1-iLEV2 > 1) .or. &
                                   (iLEV1-iLEV2 > 0 .and. &
                                   ((inBlockPtr%ptr%body .and. outBlockPtr%ptr%body)&
                                   .or.(inBlockPtr%ptr%IsOuterBoundary .and. &    
@@ -331,26 +319,40 @@ subroutine fixRefinementLevels
                                   outBlockPtr%ptr%IsExtraBoundaryOrPole &
                                   .and.( (i==0.and.k==0).or.(.not.is_axial_geometry()))& 
                                   )&          
-                                  ))) then
-                                refine_list(outBlockPtr%ptr%BLK,outBlockPtr%ptr%PE+1) = .true.
+                                  ))).and.(.not.&
+                                     refine_list(outBlockPtr%ptr%BLK,&
+                                                 outBlockPtr%ptr%PE+1)))then
                                 iCount = iCount +1
+                                refine_list(outBlockPtr%ptr%BLK,outBlockPtr%ptr%PE+1) = .true.
                              end if
                           end if
                        end if
                     end if
                  end do; end do; end do
               end if
+           end do;end do
+           if(iCount==iCountOld)EXIT FIX
+        end do FIX
+        if (iCount == 0) return
+        if (iProc == 0.and.lVerbose>0)&
+             write (*,*) '     found ',iCount,' blocks to refine'
+        write(*,*)nProc
+        if(7*iCount>nProc*nBLK-nBlockAll)then
+           if(iLoop==1)then
+              write(*,*)'Insufficient amount of blocks, skip refinement'
+              refine_list=.false.
+              CYCLE
+           else
+              write(*,*)'Insufficient amount of blocks, can not fix a grid'
+              call stop_mpi('Stopped')
            end if
-        end do; end do
+        end if
+        call parallel_refine
+        call set_body_flag
+        refine_list=.false.
      end do
-     if (iCount == 0) EXIT
-     if (iProc == 0.and.lVerbose>0)&
-          write (*,*) '    FixRefinementLevels found ',iCount,' blocks to refine'
-     call parallel_refine
-     call set_body_flag
-  end do
-
-end subroutine fixRefinementLevels
+     
+end subroutine fix_refinement_and_refine
 !=============================================================================!
 
 
