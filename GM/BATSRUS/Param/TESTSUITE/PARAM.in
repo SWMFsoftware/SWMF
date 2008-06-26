@@ -2,13 +2,7 @@
 T
 
 #DESCRIPTION
-TestSuite for SWMF. Tests GM a lot and IE a little.
-
-TIMING
-T               UseTiming
--1              dnTiming
--1              TimingDepth
-tree            TimingStyle
+TestSuite for BATSRUS.
 
 #INCLUDE
 Planet
