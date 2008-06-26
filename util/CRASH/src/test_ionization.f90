@@ -113,8 +113,8 @@ program saha
   write(25,'(a)')'\hline'
   write(25,'(a)')'Na/cm3 & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
   write(25,'(a)')'\hline'
-  write(25,'(a)')'U[eV] & Te | Iterations &  Te | Iterations &  Te | Iterations & '//&
-                 ' Te | Iterations &  Te | Iterations &  Te | Iterations \tabularnewline'
+  write(25,'(a)')'U[eV] & Te (Iterations) &  Te (Iterations) &  Te (Iterations) & '//&
+           ' Te (Iterations) &  Te (Iterations) &  Te (Iterations) \tabularnewline'
   write(25,'(a)')'\hline' 
   write(25,'(a)')'\hline'
   
