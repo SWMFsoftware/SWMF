@@ -1887,14 +1887,22 @@ info=''
 if ninfo gt 2 then info='nx='+string(nx,format='(i6,2(",",i4))')+' '
 if ninfo gt 1 then info=info+'it='+string(it,format='(i8)')+', '
 
-if(time gt 3600)then begin
-    t    = round(time)
-    sec  = t mod 60
-    t    = t/60
-    min  = t mod 60
-    hour = t/60
-    info=info+'time='+string(hour,min,sec,format='(i4,"h",i2.2,"m",i2.2,"s")')
-endif else $
+t    = round(time)
+sec  = t mod 60
+t    = t/60
+min  = t mod 60
+t    = t/60
+hour = t mod 24
+t    = t/24
+day  = t mod 365
+year = t/365
+if year gt 0 then $
+  info=info+'time='+string(year,day,hour,format='(i3,"y",i3.3,"d",i2.2,"h")') $
+else if day gt 0 then $
+  info=info+'time='+string(day,hour,min,format='(i4,"d",i2.2,"h",i2.2,"m")') $
+else if hour gt 0 then $
+  info=info+'time='+string(hour,min,sec,format='(i4,"h",i2.2,"m",i2.2,"s")') $
+else $
   info=info+'time='+string(time,format='(g12.5)')
 xyouts,5+(ix*!d.x_size)/multix,8+(iy*!d.y_size)/multiy,/DEV,info
 
