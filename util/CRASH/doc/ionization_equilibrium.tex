@@ -3,6 +3,81 @@
 \documentclass[english]{revtex4}
 \usepackage[T1]{fontenc}
 \usepackage[latin9]{inputenc}
+\usepackage{nicefrac}
+
+\makeatletter
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
+%% Because html converters don't know tabularnewline
+\providecommand{\tabularnewline}{\\}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
+%% LyX 1.5.5 created this file.  For more info, see http://www.lyx.org/.
+%% Do not edit unless you really know what you are doing.
+
+
+
+\usepackage{nicefrac}
+
+
+\makeatletter
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
+%% Because html converters don't know tabularnewline
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
+%% LyX 1.5.5 created this file.  For more info, see http://www.lyx.org/.
+%% Do not edit unless you really know what you are doing.
+
+
+
+\usepackage{nicefrac}
+
+
+
+\makeatletter
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
+%% Because html converters don't know tabularnewline
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
+%% LyX 1.5.5 created this file.  For more info, see http://www.lyx.org/.
+%% Do not edit unless you really know what you are doing.
+
+
+
+\usepackage{nicefrac}
+
+
+
+
+\makeatletter
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
+%% Because html converters don't know tabularnewline
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
+%% LyX 1.5.5 created this file.  For more info, see http://www.lyx.org/.
+%% Do not edit unless you really know what you are doing.
+
+
+
+
+\makeatletter
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
+%% Because html converters don't know tabularnewline
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
+%% LyX 1.5.5 created this file.  For more info, see http://www.lyx.org/.
+%% Do not edit unless you really know what you are doing.
+
+
+
 
 \makeatletter
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
@@ -11,15 +86,44 @@
 
 \makeatother
 
+\makeatother
+
+
+
+
+
+\makeatother
+
+
+
+
+
+\makeatother
+
+
+
+
+
+\makeatother
+
+
+
+
+
+\makeatother
+
 \usepackage{babel}
 
 \begin{document}
 
-\title{Calculating Ion Populations in an Ideal Plasma}
+\title{{\Large Calculating Ion Populations in an Ideal Plasma}}
 
 \maketitle
 
-\section{ The Basics }
+\part{{\LARGE Calculating Populations from Known Temperature}}
+
+
+\section{The Basics }
 
 Population of an ion ($P_{i}$) in a plasma is the probability of
 finding that particle in the state possessing a certain charge, i.
@@ -47,19 +151,19 @@ equation by $N_{a}$, we get: \begin{equation}
  where <Z> = $N_{e}/N_{a}$ -- the average positive charge per ion
 in the plasma (measured in elementary charge units). From all these
 formulas we can see that to calculate practically any property of
-a plasma, we need to know the populations of all the levels of ions. 
+a plasma, we need to know the populations of all the levels of ions.
 
 
 \section{ Boltzmann Distribution}
 
 To calculate the population of an i-level ion at a certain temperature,
 we need to know for how many atoms/ions, the energy per atomic cell
-is greater than or equal to the energy level of the ith ion. Thus,
-we need to know the energy distribution between the atoms and ions
-for a given temperature T. Here, recall the Maxwell-Boltzmann Distribution,
-which formulates that the probability of finding a particle with certain
-energy in some volume of gas (population of that energy state) is
-proportional to the Boltzmann factor: \begin{equation}
+is greater than or equal to the energy level of the $i^{th}$ ion.
+Thus, we need to know the energy distribution between the atoms and
+ions for a given temperature T. Here, recall the Maxwell-Boltzmann
+Distribution, which formulates that the probability of finding a particle
+with certain energy in some volume of gas (population of that energy
+state) is proportional to the Boltzmann factor: \begin{equation}
 g_{i}e^{-\frac{E_{i}}{k_{B}T}},\end{equation}
  where the exponent gives the probability of finding a particle in
 a specific state with energy $E_{i}$, while $g_{i}$ -- degeneracy
@@ -76,8 +180,9 @@ must equal one, we can find the proportionality constant for the Boltzmann
 factor. Dividing each of these factors by the value of their sum,
 we will normalize them so that their sum after the transformation
 will be equal to unity (Eq. 1). Hence, if we also use the ion energy
-levels for $E_{i}$, then the ion populations become: \begin{equation}
-P_{i}=\frac{g_{i}(g_{e})^{i}e^{-\frac{E_{i}}{k_{B}T}}}{\sum_{i=0}^{X}g_{i}(g_{e})^{i}e^{-\frac{E_{i}}{k_{B}T}}},\end{equation}
+levels for $E_{i}$ (energy needed to ionize a neutral atom to an
+i-charged ion), then the ion populations become: \begin{equation}
+P_{i}=\frac{g_{i}(g_{e})^{i}e^{-\frac{E_{i}}{k_{B}T}}}{{\displaystyle \sum_{i=0}^{X}g_{i}(g_{e})^{i}e^{-\frac{E_{i}}{k_{B}T}}}},\label{eq:6}\end{equation}
  Here, the sum in the denominator is called the partition function.
 The main difficulty with finding the actual populations using this
 equation comes from the $g_{e}$ and $g_{i}$ values. Through statistical
@@ -89,9 +194,9 @@ which is found from Eq.(3) (or 4), which in turn takes the populations
 as an input parameter. Hence, we will have to solve a system of equations,
 instead of a single equation, to find the correct population values.
 This will be addressed later on in the paper. In regards to the $g_{i}$
-values, on the other hand, note that in a realistic plasma, while
-the value of $g_{e}$ might be of the order of $10^{1}5$, the value
-of $g_{i}$ is usually not grater than 3. Hence, after normalization,
+values, on the other hand, note that in most cases in a realistic
+plasma, while the value of $g_{e}$ might be of the order of $10^{15}$,
+the value of $g_{i}$ is usually not grater than 3. Hence, after normalization,
 the effect of $g_{i}$ on the final population values will be negligibly
 small in comparison. Furthermore, since in most cases we are not interested
 in the actual population values, but rather in properties of plasma,
@@ -99,7 +204,7 @@ such as <Z> (Eq.4), the slight inaccuracies in the populations will
 be evened out by the summation often used to calculate such properties,
 making the approximation even less evident. Hence, from now on, we
 will ignore the $g_{i}$ values in our equations, approximating them
-by $g_{i}\approx1$. 
+by $g_{i}\approx1$.
 
 
 \section{ Saha Ionization Equation and Calculation Speed Improvement}
@@ -137,7 +242,7 @@ populations corresponding to these values will be negligibly small
 at this point, it should not take long to find the exponents of the
 remaining part of the array, and normalize them as before so that
 their sum equals one. This method can then be used instead of Eq.(6)
-any time the population values are needed. 
+any time the population values are needed.
 
 
 \section{ The System of Equations}
@@ -177,13 +282,17 @@ for finding zeros of the function, considering equation (13), let
 \begin{equation}
 f(Z)=Z-\frac{\sum i\left(\frac{C_{1}}{Z}\right)^{i}e^{-\frac{E_{i}}{k_{B}T_{e}}}}{\sum\left(\frac{C_{1}}{Z}\right)^{i}e^{-\frac{E_{i}}{k_{B}T_{e}}}},\end{equation}
  then when f(Z)=0, Z will have the desired value. Now, to use the
-method as in Eq.(14), we need to know f'(Z). Let's first find the
-derivative \begin{equation}
-\frac{\partial}{\partial Z}\left[\sum\left(\frac{C_{1}}{Z}\right)^{i}e^{-\frac{E_{i}}{k_{B}T_{e}}}\right]=\sum i\left(\frac{C_{1}}{Z}\right)^{i-1}\ \frac{-C_{1}}{Z^{2}}e^{-\frac{E_{i}}{k_{B}T_{e}}}==-\frac{C_{1}}{Z^{2}}\frac{Z}{C_{1}}\sum i\left(\frac{C_{1}}{Z}\right)^{i}e^{-\frac{E_{i}}{k_{B}T_{e}}}=-\frac{1}{Z}\sum ip_{i},\end{equation}
+method as in Eq.(14), we need to know f '(Z). Let's first find the
+derivative \[
+\frac{\partial}{\partial Z}\left[\sum\left(\frac{C_{1}}{Z}\right)^{i}e^{-\frac{E_{i}}{k_{B}T_{e}}}\right]=\sum i\left(\frac{C_{1}}{Z}\right)^{i-1}\ \frac{-C_{1}}{Z^{2}}e^{-\frac{E_{i}}{k_{B}T_{e}}}=\]
+ \begin{equation}
+=-\frac{C_{1}}{Z^{2}}\frac{Z}{C_{1}}\sum i\left(\frac{C_{1}}{Z}\right)^{i}e^{-\frac{E_{i}}{k_{B}T_{e}}}=-\frac{1}{Z}\sum ip_{i},\end{equation}
  and similarly: \begin{equation}
 \frac{\partial}{\partial Z}\left[\sum ip_{i}\right]=-\frac{1}{Z}\sum i^{2}p_{i},\end{equation}
- Now, combining these answers to find f'(Z), we get: \begin{equation}
-\frac{\partial f}{\partial Z}=1-\frac{-\frac{1}{Z}\sum i^{2}p_{i}}{\sum p_{i}}-\frac{-\sum ip_{i}}{\left(\sum p_{i}\right)^{2}}\left(-\frac{1}{Z}\sum ip_{i}\right)==1+\frac{1}{Z}\left(\frac{\sum i^{2}p_{i}}{\sum p_{i}}-\left(\frac{\sum ip_{i}}{\sum p_{i}}\right)^{2}\right),\end{equation}
+ Now, combining these answers to find f '(Z), we get: \[
+\frac{\partial f}{\partial Z}=1-\frac{-\frac{1}{Z}\sum i^{2}p_{i}}{\sum p_{i}}-\frac{-\sum ip_{i}}{\left(\sum p_{i}\right)^{2}}\left(-\frac{1}{Z}\sum ip_{i}\right)=\]
+ \begin{equation}
+=1+\frac{1}{Z}\left(\frac{\sum i^{2}p_{i}}{\sum p_{i}}-\left(\frac{\sum ip_{i}}{\sum p_{i}}\right)^{2}\right),\end{equation}
  Therefore, looking back on Eq.(14) and combining Eq.(15) and (18),
 we get the overall resulting equation that can be used to find Z:
 \begin{equation}
@@ -204,7 +313,7 @@ $<Z^{2}>_{n}$ using the formulas: \begin{equation}
 squares is always greater than the square of the average, $<Z^{2}>-<Z>^{2}\geq0$,
 and hence $f'(Z)\geq1$, which then necessarily means that the iterations
 will converge. Hence, with these equations, we can fairly quickly
-find Z, if our initial guess is reasonably close. 
+find Z, if our initial guess is reasonably close.
 
 
 \section{ Initial Approximation}
@@ -243,7 +352,7 @@ Z\approx\sqrt{C_{1}e^{-\frac{I_{1}}{k_{B}T_{e}}}},\end{equation}
  which is a very good and simple approximation. Hence, when the method
 in Eq.(22) yields $i_{P}{}_{max}=1$, the method in Eq.(24) can be
 used instead, but only as long as it yields a value for Z less than
-1 (if it does not, than $Z\approx1$ and is too large for this method). 
+1 (if it does not, than $Z\approx1$ and is too large for this method).
 
 
 \section{Summary}
@@ -253,25 +362,25 @@ in a plasma, we can use the following procedure:
 
 \begin{enumerate}
 \item Approximate the value of <Z> (average charge per ion) by first, finding
-the value of i for which \begin{equation}
-\ln(\frac{C_{1}}{i})-\frac{I_{i}}{k_{B}T_{e}}\end{equation}
+the value of i for which \[
+\ln(\frac{C_{1}}{i})-\frac{I_{i}}{k_{B}T_{e}}\]
  is closest to 0, and then approximating $<Z>\approx i-0.5$. Note
 that if the i value found is =1, than <Z> might be very close to zero,
-in which case use: \begin{equation}
-Z\approx\sqrt{C_{1}e^{-\frac{I_{1}}{k_{B}T_{e}}}}\end{equation}
+in which case use: \[
+Z\approx\sqrt{C_{1}e^{-\frac{I_{1}}{k_{B}T_{e}}}}\]
 
 
 \begin{itemize}
 \item $I_{i}$ is the ionization energy (energy required to remove one electron
 from (i-1)-level ion, creating i charged ion) 
-\item $k_{B}$ is Boltzmann constant;
-\item $T_{e}$ is the electron temperature;
-\item $C_{1}=2/(N_{a}\Lambda^{3})$ 
+\item $k_{B}$ is Boltzmann constant; 
+\item $T_{e}$ is the electron temperature; 
+\item $C_{1}=2/(N_{a}\Lambda^{3})$
 
 \begin{itemize}
 \item $N_{a}$ is the total concentration of atoms and ions in the plasma 
 \item $\Lambda=\sqrt{\frac{h^{2}}{2\pi m_{e}k_{B}T}}$, which is the thermal
-De Broglie wavelength of an electron. 
+De Broglie wavelength of an electron.
 
 \begin{itemize}
 \item h is Plank's constant 
@@ -279,29 +388,304 @@ De Broglie wavelength of an electron.
 \end{itemize}
 \end{itemize}
 \end{itemize}
-\item Then, use \begin{equation}
-Z_{n+1}=Z_{n}-\frac{Z_{n}-<Z>_{n}}{1+\frac{1}{Z}_{n}(<Z^{2}>_{n}-<Z>_{n}\ ^{2})}\end{equation}
+\item Then, use \[
+Z_{n+1}=Z_{n}-\frac{Z_{n}-<Z>_{n}}{1+\frac{1}{Z}_{n}(<Z^{2}>_{n}-<Z>_{n}\ ^{2})}\]
  to iteratively get a better approximation of Z.
 
 \begin{itemize}
 \item To find $<Z>_{n}$ and $<Z^{2}>_{n}$, first find the population values
 using the equation in the next step, and using $Z_{n}$ for Z. Then,
-use the formulas:\begin{equation}
-<Z>=\sum_{i=1}^{X}iP_{i}\ \ \ \ \ \ \ \ <Z^{2}>=\sum_{i=1}^{X}i^{2}P_{i}\end{equation}
+use the formulas:\[
+<Z>=\sum_{i=1}^{X}iP_{i}\ \ \ \ \ \ \ \ <Z^{2}>=\sum_{i=1}^{X}i^{2}P_{i}\]
 
 \end{itemize}
-\item Finally, calculate the populations using: \begin{equation}
-P_{i}=\frac{\left(\frac{C_{1}}{Z}\right)^{i}e^{-\frac{E_{i}}{k_{B}T_{e}}}}{{\displaystyle \sum_{i=0}^{X}\left(\frac{C_{1}}{Z}\right)^{i}e^{-\frac{E_{i}}{k_{B}T_{e}}}}}\end{equation}
+\item Finally, calculate the populations using: \[
+P_{i}=\frac{\left(\frac{C_{1}}{Z}\right)^{i}e^{-\frac{E_{i}}{k_{B}T_{e}}}}{{\displaystyle \sum_{i=0}^{X}\left(\frac{C_{1}}{Z}\right)^{i}e^{-\frac{E_{i}}{k_{B}T_{e}}}}}\]
 
 \item If speed of calculation is important, use the method in section 3
-(Eq. 10) instead on the previous step.
+(Eq. 10) instead on the previous step. 
 \end{enumerate}
+Following is the table that was constructed using the above algorithm.
+It shows the Z values calculated for Xenon at various electron temperatures
+(given in electron-volts -- the value of $k_{B}T_{e}$, where $k_{B}$
+is in eV/K) and heavy particle concentrations (given in number of
+particles per $cm^{3}$). Note that the unphysical negative values
+of Z are used here to mark the domain, in which the electron degeneracy
+$g_{e}$ is not >\,>1, as assumed in section II, and hence the ion
+degeneracies $g_{i}$ are not negligible in comparison. Hence, finding
+Z at those points would then require more complex computations.
 
-The table of $Z$ for xenon, in wide ranges of temperature and atomic 
-concentrations are given in the following table
-\input{Table1}
-Note that the unphysical negatize values of $Z$ markes the parameters domain, 
-in whith the electron degeneracy is not negligible 
-\input{Table2}
+\begin{center}
+\input{Table1.tex} 
+\par\end{center}
 
+
+\part{{\LARGE Calculating Temperature from the Internal Energy}}
+
+
+\section{Internal Energy}
+
+In realistic experiments, it is usually not possible, or not easy,
+to measure the temperature directly. It is, however, possible to measure
+the total internal energy of a volume of plasma, which can then, using
+a known heavy particle density value, be converted to the average
+internal energy per atomic cell ($U$) -- the energy of the total
+combination of particles that originally used to be a whole atom.
+This energy can then be used to find the value of the temperature,
+however, because we are dealing with plasma, this will not be as simple
+as it would be for a gas. Recall that for an ideal gas, the average
+internal kinetic energy per particle is given by:
+
+\begin{equation}
+U=\frac{3}{2}k_{B}T\label{eq:25}\end{equation}
+
+
+Then, to find the internal energy of a whole atomic cell in a plasma,
+we have to look at the sum of the kinetic energies of the ion and
+all the electrons that have separated from it, as well as the energy
+that was used to separate these electrons ($E_{i}$). Then, averaging
+this out, we get:
+
+\begin{equation}
+U=\frac{3}{2}k_{B}T+\sum_{i=1}^{X}P_{i}(\frac{3}{2}k_{B}Ti+E_{i})=\frac{3}{2}k_{B}T(1+Z)+<E_{i}>\label{eq:26}\end{equation}
+
+
+Note that this also implies that in plasma, ions have the same average
+kinetic energy as electrons do, despite the immense difference in
+mass. Furthermore, because of the statistical averages used in this
+equation ($Z$ and $<E_{i}>$), which depend on the population values
+that in turn depend on the temperature, this equation cannot be solved
+for T by simple algebraic methods. Hence, we are once again forced
+to use the Newton-Rapson iteration approach. Since Newton's method
+can be used to iteratively find the zeros of a function, we need \begin{equation}
+f(T)=\frac{3}{2}k_{B}T(1+Z)+<E_{i}>-U,\label{eq:27}\end{equation}
+ where U is now known. Then when $f(T)=0$, we will have the desired
+value for T.
+
+
+\section{Heat Capacity}
+
+However, to use this method to find the temperature, we also need
+to know the value of $\partial f/\partial T$, which in this case
+will equal $\partial U/\partial T$ since the value of U in the equation
+for $f(T)$ is now a known constant. Note that this is also the value
+of the heat capacity of the plasma at a constant volume, because
+
+\[
+dU=dQ-dW=dQ-PdV=dQ\]
+
+
+\begin{equation}
+\frac{dU}{dT}=\frac{dQ}{dT}=C_{V},\label{eq:28}\end{equation}
+
+
+where dQ is the heat added to the system, while dW is the work done
+by that system, which in this case is 0. Hence, to find the temperature
+from a known value of U, we first need to find this heat capacity
+as a function of T.
+
+Let's start by first taking the derivative of the internal energy
+as given by Eq.\ref{eq:26}. Also, for simplicity, from now on we
+will use the value of the temperature measured in electron-volts --
+$T_{eV}=k_{B}T$, where $k_{B}$ is in eV/K.\[
+C_{V}=\frac{\partial U}{\partial T_{eV}}=\frac{3}{2}+\sum\left[P_{i}\left(\frac{3}{2}i\right)+\frac{\partial P_{i}}{\partial T_{eV}}\left(\frac{3}{2}T_{eV}i+E_{i}\right)\right]=\]
+ \begin{equation}
+=\frac{3}{2}(1+Z)+\sum\left[\frac{\partial P_{i}}{\partial T_{eV}}\left(\frac{3}{2}T_{eV}i+E_{i}\right)\right]\label{eq:29}\end{equation}
+
+
+Now, we need to find the partial derivative of the populations w.r.t.
+temperature. For this we can use the expression from Eq. \ref{eq:6},
+written as:
+
+\begin{equation}
+P_{i}=\frac{p_{i}}{\sum p_{i}},\ \text{where}\ \ \ \ \ \ \ \ \ \ p_{i}=\left(C_{0}\frac{(T_{eV})^{\nicefrac{3}{2}}}{Z}\right)^{i}e^{-\frac{E_{i}}{T_{eV}}},\label{eq:30}\end{equation}
+
+
+where $C_{0}$ is now independent of $T_{eV}$. Thus:
+
+\begin{equation}
+\frac{\partial P_{i}}{\partial T_{eV}}=\frac{p_{i}'}{\sum p_{i}}-\frac{p_{i}\sum p_{i}'}{\left(\sum p_{i}\right)^{2}},\label{eq:31}\end{equation}
+
+
+where primes denote the derivatives with respect to $T_{eV}$. Also,
+recall that Z is also a function of T, hence for $p_{i}'$ we have:
+
+\[
+p_{i}'=\left(C_{0}\frac{(T_{eV})^{\nicefrac{3}{2}}}{Z}\right)^{i}e^{-\frac{E_{i}}{T_{eV}}}\left(\frac{E_{i}}{(T_{eV})^{2}}\right)+\left(C_{0}^{\ \ i}\right)i\left(\frac{(T_{eV})^{\nicefrac{3}{2}}}{Z}\right)^{i-1}\left(\frac{\frac{3}{2}(T_{eV})^{\nicefrac{1}{2}}}{Z}-\frac{(T_{eV})^{\nicefrac{3}{2}}}{Z^{2}}Z'\right)e^{-\frac{E_{i}}{T_{eV}}}=\]
+
+
+\begin{equation}
+=p_{i}\left(\frac{E_{i}}{(T_{eV})^{2}}+i\frac{Z}{(T_{eV})^{\nicefrac{3}{2}}}\left(\frac{\frac{3}{2}(T_{eV})^{\nicefrac{1}{2}}}{Z}-\frac{(T_{eV})^{\nicefrac{3}{2}}}{Z^{2}}Z'\right)\right)=p_{i}\left(\frac{E_{i}}{(T_{eV})^{2}}+i\left(\frac{3}{2T_{eV}}-\frac{Z'}{Z}\right)\right)\label{eq:32}\end{equation}
+
+
+Also, since\begin{equation}
+Z=\frac{\sum ip_{i}}{\sum p_{i}},\ \text{it follows that}\ \ \ \ \ \ \ Z'=\frac{\sum ip_{i}'}{\sum p_{i}}-\frac{\sum ip_{i}\sum p_{i}'}{\left(\sum p_{i}\right)^{2}},\label{eq:33}\end{equation}
+
+
+where we can then plug in the expression found for $p_{i}'$ in Eq.\ref{eq:32}.
+Let's first simplify $\sum p_{i}'$:
+
+\begin{equation}
+\sum p_{i}'=\sum\left[\frac{E_{i}p_{i}}{(T_{eV})^{2}}+ip_{i}\left(\frac{3}{2T_{eV}}-\frac{Z'}{Z}\right)\right]=\frac{\sum E_{i}p_{i}}{(T_{eV})^{2}}+\left(\frac{3}{2T_{eV}}-\frac{Z'}{Z}\right)\sum ip_{i}\label{eq:34}\end{equation}
+ Further note that for any expression $a$ it is true that its statistical
+average is $<a>={\displaystyle \sum_{i=0}^{X}aP_{i}=\frac{\sum ap_{i}}{\sum p_{i}}}$.
+Hence, plugging everything into Eq.\ref{eq:33}:
+
+\[
+Z'=\frac{1}{(T_{eV})^{2}}\frac{\sum iE_{i}p_{i}}{\sum p_{i}}+\left(\frac{3}{2T_{eV}}-\frac{Z'}{Z}\right)\frac{\sum i^{2}p_{i}}{\sum p_{i}}-\frac{1}{(T_{eV})^{2}}\frac{\sum ip_{i}\sum E_{i}p_{i}}{\left(\sum p_{i}\right)^{2}}-\left(\frac{3}{2T_{eV}}-\frac{Z'}{Z}\right)\frac{\left(\sum ip_{i}\right)^{2}}{\left(\sum p_{i}\right)^{2}}=\]
+ \[
+=\frac{<iE_{i}>-<i><E_{i}>}{(T_{eV})^{2}}+\left(\frac{3}{2T_{eV}}-\frac{Z'}{Z}\right)\left(<i^{2}>-<i>^{2}\right)\]
+ \[
+Z'\left(\frac{Z+<i^{2}>-<i>^{2}}{Z}\right)=\frac{<iE_{i}>-<i><E_{i}>}{(T_{eV})^{2}}+\frac{3}{2T_{eV}}\left(<i^{2}>-<i>^{2}\right)\]
+
+
+\begin{equation}
+\frac{Z'}{Z}=\frac{\frac{3}{2}T_{eV}\left(<i^{2}>-<i>^{2}\right)+<iE_{i}>-<i><E_{i}>}{(T_{eV})^{2}\left(Z+<i^{2}>-<i>^{2}\right)}\label{eq:35}\end{equation}
+
+
+Finally, we have reached the bottom of this derivative -- everything
+in the above equation can be found using the methods presented in
+Part I. Now, we can significantly simplify this whole derivative by
+working our way up to the beginning. However first, we need to introduce
+the following transformation, which is true for any two expressions
+$a$ and $b$:
+
+\begin{equation}
+<ab>-<a><b>=<\delta a\ \delta b>,\ \text{where}\ \ \ \ \delta a=a-<a>\label{eq:36}\end{equation}
+ \[
+\text{proof:}\ \ \ <(a-<a>)\ (b-<b>)>=<ab-a<b>-b<a>+<a><b>>=\]
+ \[
+=<ab>-2<a><b>+<a><b>=<ab>-<a><b>\]
+
+
+This transformation makes the computation simpler, as well as, in
+some cases, gives better accuracy for the value of $<\delta a\ \delta b>$,
+which can determine the difference between a zero and a non-zero value.
+Hence, using this transformation and combining Eq.\ref{eq:35} and
+Eq.\ref{eq:32} we get:
+
+\[
+p_{i}'=p_{i}\left(\frac{E_{i}}{(T_{eV})^{2}}+i\ \frac{\frac{3}{2}T_{eV}\left(Z+<(\delta i)^{2}>\right)-\frac{3}{2}T_{eV}<(\delta i)^{2}>-<\delta i\ \delta E_{i}>}{(T_{eV})^{2}\left(Z+<(\delta i)^{2}>\right)}\right)=\]
+ \begin{equation}
+=\frac{p_{i}}{(T_{eV})^{2}}\left(E_{i}+i\ \frac{\frac{3}{2}T_{eV}Z-<\delta i\ \delta E_{i}>}{Z+<(\delta i)^{2}>}\right),\ \text{and let this}=\alpha p_{i}\label{eq:37}\end{equation}
+
+
+Here $\alpha$ is introduced only to simplify the notation for the
+next step, which then transforms Eq.\ref{eq:31} as:
+
+\[
+\frac{\partial P_{i}}{\partial T_{eV}}=\frac{\alpha p_{i}}{\sum p_{i}}-\frac{p_{i}\sum\alpha p_{i}}{\left(\sum p_{i}\right)^{2}}=P_{i}(\alpha-<\alpha>)=P_{i}(\delta\alpha)=\]
+ \begin{equation}
+=\frac{P_{i}}{(T_{eV})^{2}}\left(\delta E_{i}+\delta i\left(\frac{\frac{3}{2}T_{eV}Z-<\delta i\ \delta E_{i}>}{Z+<(\delta i)^{2}>}\right)\right),\ \text{and let this}=\frac{P_{i}}{(T_{eV})^{2}}\left(\delta E_{i}+\beta\delta i\right)\label{eq:38}\end{equation}
+
+
+Here, again, we introduce $\beta$ only for simplicity of notation.
+At this point, we can finally come back to our original Eq.\ref{eq:29}.
+First, however, note that the transformation given in Eq.\ref{eq:36}
+can also be written as:\begin{equation}
+<\delta a\ b>=<ab-<a>b>=<ab>-<a><b>=<\delta a\ \delta b>\label{eq:39}\end{equation}
+
+
+Using this and Eq.\ref{eq:38} we can now transform Eq.\ref{eq:29}
+as follows:
+
+\[
+C_{V}=\frac{\partial U}{\partial T_{eV}}=\frac{3}{2}(1+Z)+\sum\left[\frac{P_{i}}{(T_{eV})^{2}}\left(\delta E_{i}+\beta\delta i\right)\left(\frac{3}{2}T_{eV}i+E_{i}\right)\right]=\]
+
+
+\[
+=\frac{3}{2}(1+Z)+\frac{1}{(T_{eV})^{2}}<\left(\delta E_{i}+\beta\delta i\right)\left(\frac{3}{2}T_{eV}\delta i+\delta E_{i}\right)>=\]
+
+
+\[
+=\frac{3}{2}(1+Z)+\frac{1}{(T_{eV})^{2}}<(\delta E_{i})^{2}+\left(\frac{3}{2}T_{eV}+\beta\right)\delta i\ \delta E_{i}+\frac{3}{2}T_{eV}\beta(\delta i)^{2}>=\]
+
+
+\[
+=\frac{3}{2}(1+Z)+\frac{1}{(T_{eV})^{2}}\Biggl(<(\delta E_{i})^{2}>+\left(\frac{\frac{3}{2}T_{eV}\left(Z+<(\delta i)^{2}>\right)+\frac{3}{2}T_{eV}Z-<\delta i\ \delta E_{i}>}{Z+<(\delta i)^{2}>}\right)<\delta i\ \delta E_{i}>+\]
+
+
+\[
++\frac{3}{2}T_{eV}\frac{\frac{3}{2}T_{eV}Z-<\delta i\ \delta E_{i}>}{Z+<(\delta i)^{2}>}<(\delta i)^{2}>\Biggr)=\]
+
+
+\[
+=\frac{3}{2}(1+Z)+\frac{1}{(T_{eV})^{2}}\left(<(\delta E_{i})^{2}>+\frac{3T_{eV}Z<\delta i\ \delta E_{i}>-<\delta i\ \delta E_{i}>^{2}+\frac{9}{4}(T_{eV})^{2}Z<(\delta i)^{2}>}{Z+<(\delta i)^{2}>}\right)=\]
+
+
+\begin{equation}
+=\frac{3}{2}(1+Z)+<\left(\frac{\delta E_{i}}{T_{eV}}\right)^{2}>+\frac{3Z\left(\frac{3}{4}<(\delta i)^{2}>+<\delta i\ \frac{\delta E_{i}}{T_{eV}}>\right)-<\delta i\ \frac{\delta E_{i}}{T_{eV}}>^{2}}{Z+<(\delta i)^{2}>}=C_{V}\label{eq:Cv}\end{equation}
+
+
+This equation can then be used to find the heat capacity at constant
+volume when the temperature is known, as well as for the derivative
+$\frac{\partial U}{\partial T}$ used in the Newton-Rapson iteration
+method for finding T. Following is a table built using this equation,
+as well as Eq. \ref{eq:26}, that shows the values of average internal
+energy and heat capacity per atomic cell in electron-volts, calculated
+at various values of $T_{eV}$ and $N_{a}$. Once again, the unrealistic
+negative values mark the domain where our assumption that $g_{e}$
+>\,> 1 fails, and hence a different method is required for finding
+the correct plasma parameters.
+
+\begin{center}
+\input{Table2.tex} 
+\par\end{center}
+
+
+\section{The Iteration Method}
+
+At this point, we have everything needed to use the Newton-Rapson
+iteration method. If we use Eq. \ref{eq:27} for $f(T)$, where U
+is given, then $f'(T)=C_{V}$ and iterations should converge to the
+value of T needed. However, unlike with iterations on Z, here convergence
+is not guaranteed when starting at any value of T. Although in most
+cases the iterations will eventually converge, they will do so very
+slowly and before approaching the correct value, they might make huge
+jumps from one side of the correct T to another, which can lead to
+T becoming negative at one of the iterations. Since to calculate the
+populations and Z, which is necessary to do in every iteration, we
+need to at some point find the value of $\sqrt{T}^{3}$, when T becomes
+negative, this has no real answer and will make further iterations
+impossible. To make matters worse, because the relationship between
+U and T is so complex, there is no nice way to initially approximate
+the value of T so as to speed up the iterations and avoid huge jumps.
+
+Therefore, the only way left to avoid this problem is to hard-code
+some limits on the iteration jumps, such as not letting the iterations
+jump lower than 1/2 or higher than twice the trial value of T. This
+way, the Newton-Rapson equation will initially only point out the
+general direction of the correct value of T relative to the trial
+value, while the iterations will only half or double the trial value
+until it gets close to the actual T. Following is a table of the temperature
+values {[}eV] calculated at the given internal energies {[}eV] and
+heavy particle densities {[}$1/cm^{3}$]. The number of iterations
+for each temperature value found is also given. The negative values
+are used as before.
+
+\begin{center}
+\input{Table3.tex} 
+\par\end{center}
+
+
+\section{Summary}
+
+Hence, we can now outline the method for finding the temperature from
+a given average internal energy per atomic unit. The main idea is
+to use the Newton-Rapson iterations given by:
+
+\[
+T_{n+1}=T_{n}-\frac{U(T_{n})-U_{given}}{C_{V}(T_{n})},\ \text{where}\ \ U=\frac{3}{2}k_{B}T(1+Z)+<E_{i}>\text{and}\]
+
+
+\[
+C_{V}=\frac{3}{2}(1+Z)+<\left(\frac{\delta E_{i}}{T_{eV}}\right)^{2}>+\frac{3Z\left(\frac{3}{4}<(\delta i)^{2}>+<\delta i\ \frac{\delta E_{i}}{T_{eV}}>\right)-<\delta i\ \frac{\delta E_{i}}{T_{eV}}>^{2}}{Z+<(\delta i)^{2}>},\]
+
+
+while for any expression $a$, $<a>={\displaystyle \sum_{i=0}^{X}aP_{i}}$
+and $\delta a=a-<a>$. The populations are found using the trial value
+of T and the method presented in part I. Furthermore, these iterations
+also need to limited to avoid needless jumps from $T_{n}$ to $T_{n+1}$.
+This can be done, for example, by using the greater value out of $T_{n+1}$
+and $T_{n}/2$ or the lesser from $T_{n+1}$ and $2T_{n}$. 
 \end{document}
