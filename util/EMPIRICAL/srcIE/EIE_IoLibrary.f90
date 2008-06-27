@@ -351,8 +351,17 @@ subroutine IO_GetNonGridBasedPotential(PotentialOut, iError)
   iMinute = itime(5)
   iSecond = itime(6)
 
+  Lat = 0.0
+
   do iMLT = 1, IOi_NeednMLTs
      do iLat = 1, IOi_NeednLats
+
+        if (iLat == 1) then 
+           iChange = 1 
+        else
+           if (IOr2_NeedLats(iMLT,iLat)*IOr2_NeedLats(iMLT,iLat-1) <= 0.0) &
+                iChange = 1
+        endif
 
         MLT = IOr2_NeedMLTs(iMLT,iLat)
         Lat = IOr2_NeedLats(iMLT,iLat)
