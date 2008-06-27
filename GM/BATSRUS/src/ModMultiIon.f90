@@ -26,6 +26,8 @@ module ModMultiIon
   ! Local variables
   real :: CollisionCoefDim = -1.0
   real :: CollisionCoef = -1.0
+  real :: uCutOffDim = 0.0, TauCutOffDim = -1.0
+  integer :: nPowerCutOff = 0
   real :: MachNumberMultiIon = 0.0
   real :: ParabolaWidthMultiIon = 0.0
 
@@ -48,7 +50,12 @@ contains
           call read_var('LowDensityRatio',       LowDensityRatio)
        end if
     case("#COLLISION")
-       call read_var('CollisionCoefDim',CollisionCoefDim)
+       call read_var('CollisionCoefDim', CollisionCoefDim)
+       call read_var('TauCutOff', TauCutOffDim)
+       if(TauCutOffDim > 0.0)then
+          call read_var('uCutOff', uCutOffDim)
+          call read_var('nPowerCutOff', nPowerCutOff)
+       end if
     end select
 
     if(DoRestrictMultiIon .and. .not.allocated(IsMultiIon_CB)) &
@@ -89,6 +96,7 @@ contains
             (RhoUx < 0.0 .and. RhoUx**2 > MachNumberMultiIon*g*p*Rho &
             .and. y_BLK(i,j,k,iBlock)**2 + z_BLK(i,j,k,iBlock)**2 > &
             -ParabolaWidthMultiIon * x_BLK(i,j,k,iBlock))
+
        if(DoTestMe .and. i == iTest .and. j == jTest .and. k == kTest) then
           write(*,*) NameSub,'Rho, p, RhoUx =',Rho, p, RhoUx
           write(*,*) NameSub,'RhoUx**2, MachNumberMultiIon*g*p*Rho=', &
@@ -98,6 +106,7 @@ contains
                 -ParabolaWidthMultiIon * x_BLK(i,j,k,iBlock)
           write(*,*) NameSub, ' IsMultiIon_CB=',  IsMultiIon_CB(i,j,k,iBlock) 
        end if
+
     end do; end do; end do
   
   end subroutine multi_ion_set_restrict
@@ -116,7 +125,8 @@ contains
     use ModAdvance, ONLY: bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
     use ModGeometry,ONLY: vInv_CB, x_BLK, y_BLK, z_BLK
     use ModPhysics, ONLY: ElectronCharge, gm1, inv_gm1, &
-         InvClight2 => Inv_C2light, Si2No_V, No2Si_V, UnitTemperature_, UnitT_
+         InvClight2 => Inv_C2light, Si2No_V, No2Si_V, Io2No_V, &
+         UnitTemperature_, UnitT_, UnitU_
          
     use ModMain,    ONLY: x_, y_, z_
     use ModCoordTransform, ONLY: cross_product
@@ -125,7 +135,8 @@ contains
     real    :: InvCharge, NumDens, InvNumDens, pAverage, State_V(nVar)
     real, dimension(3) :: FullB_D, uIon_D, uIon2_D, u_D, uPlus_D, uPlusHallU_D
     real, dimension(3) :: Current_D, Force_D
-    real, dimension(nIonFluid) :: NumDens_I, InvRho_I, Ux_I, Uy_I, Uz_I, Temp_I
+    real, dimension(nIonFluid) :: &
+         NumDens_I, Rho_I, InvRho_I, Ux_I, Uy_I, Uz_I, Temp_I
 
     ! Alfven Lorentz factor for Boris correction
     real :: Ga2
@@ -133,6 +144,9 @@ contains
     integer :: iBlock, i, j, k, iIon, jIon, iRhoUx, iRhoUz, iP, iEnergy
     real :: CoefBx, CoefBy, CoefBz, Coef, AverageTemp, TemperatureCoef, Heating
     real :: CollisionRate_II(nIonFluid, nIonFluid), CollisionRate
+
+    ! Artificial friction
+    real :: InvuCutOff2, InvTauCutOff
 
     character (len=*), parameter :: NameSub = 'multi_ion_sources'
     logical :: DoTest, DoTestMe, DoTestCell
@@ -211,11 +225,12 @@ contains
           write(*,*)'Temp_I             =',Temp_I
           call stop_mpi(NameSub//': non-positive average temperature')
        end if
-
-       InvRho_I = 1.0/State_V(iRhoIon_I)
-       Ux_I  = InvRho_I*State_V(iUxIon_I)
-       Uy_I  = InvRho_I*State_V(iUyIon_I)
-       Uz_I  = InvRho_I*State_V(iUzIon_I)
+       
+       Rho_I    = State_V(iRhoIon_I)
+       InvRho_I = 1.0/Rho_I
+       Ux_I     = InvRho_I*State_V(iUxIon_I)
+       Uy_I     = InvRho_I*State_V(iUyIon_I)
+       Uz_I     = InvRho_I*State_V(iUzIon_I)
 
        ! calculate the average positive charge velocity
        uPlus_D(x_) = InvNumDens* sum(NumDens_I*Ux_I)
@@ -240,6 +255,11 @@ contains
           Ga2 = State_V(Rho_)/(State_V(Rho_) + InvClight2*sum(FullB_D**2)) 
        end if                                 !^CFG END BORISCORR
 
+
+       if(TauCutOffDim > 0)then
+          InvTauCutOff = 1.0/(Io2No_V(UnitT_)*TauCutOffDim)
+          InvuCutOff2  = 1.0/(Io2No_V(UnitU_)*uCutOffDim)**2
+       end if
        if(DoTestCell)then
           if(UseBoris)write(*,*) NameSub,'Ga2=',Ga2
           write(*,*) NameSub,' FullB_D  =', FullB_D
@@ -266,23 +286,31 @@ contains
 
           Heating = 0.0
 
-          if(CollisionCoefDim > 0.0)then
+          if(CollisionCoefDim > 0.0 .or. TauCutOffDim > 0.0)then
              do jIon = 1, nIonFluid
                 if(jIon == iIon) CYCLE
                 
-                ! Add collisional term
+                ! Add collisional terms
                 uIon2_D = (/ Ux_I(jIon),  Uy_I(jIon), Uz_I(jIon) /)
 
-                !if(  InvNumDens*NumDens_I(iIon) < 0.01 .or. &
-                !     InvNumDens*NumDens_I(jIon) < 0.01) then
-                !   CollisionRate = 100 * NumDens_I(iIon) * NumDens_I(jIon)
-                !else
+                ! Physical collision
+                if(CollisionCoefDim > 0.0)then
                    CollisionRate = CollisionRate_II(iIon, jIon) * &
                         NumDens_I(iIon) * NumDens_I(jIon) &
                         * TemperatureCoef
-                !end if
+                else
+                   CollisionRate = 0.0
+                end if
 
-                Force_D = Force_D + CollisionRate*(uIon2_D - uIon_D)
+                ! Artificial friction to keep the velocity difference in check
+                if(TauCutOffDim > 0.0)then
+                   CollisionRate = CollisionRate + &
+                        InvTauCutOff * min(Rho_I(iIon), Rho_I(jIon)) &
+                        * ( InvUCutOff2 * sum( (uIon2_D - uIon_D)**2 ) &
+                        ) ** nPowerCutOff
+                end if
+
+                Force_D = Force_D + CollisionRate * (uIon2_D - uIon_D)
 
                 Heating = Heating + CollisionRate* &
                      ( 2*(Temp_I(jIon) - Temp_I(iIon)) &
