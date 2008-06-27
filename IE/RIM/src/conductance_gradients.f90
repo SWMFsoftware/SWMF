@@ -4,6 +4,7 @@ subroutine conductance_gradients
   use ModSizeRIM
   use ModRIM
   use ModNumConst, only : cPi
+  use ModParamRIM
 
   implicit none
 
@@ -16,20 +17,83 @@ subroutine conductance_gradients
   real, dimension(0:nLons+1,nLats) :: &
        dLongitude2, dTheta, dTheta2
 
+  real :: r
+  integer :: iLon, iLat, iLh
+
   Theta = cPi/2 - Latitude
 
   sn = sin(Theta)
   cs = cos(Theta)
 
-  sn2= sn*sn
+  sn2 = sn*sn
   cs2 = cs*cs
   cs3 = 1.00 + 3.00*cs2
   cs4 = sqrt(cs3)
-  C = 4.00*Sigma0*cs2 + SigmaP*sn2
+  C   = 4.00*Sigma0*cs2 + SigmaP*sn2
 
-  SigmaThTh = Sigma0*SigmaP*cs3/C
-  SigmaThPs = 2.00*Sigma0*SigmaH*cs*cs4/C
-  SigmaPsPs = SigmaP+SigmaH*SigmaH*sn2/C
+  if (DoFold) then 
+
+     write(*,*) "Folding conductances!"
+
+     do iLon = 1, nLons
+        do iLat = 1, nLats
+           if (Latitude(iLon,iLat) < -OCFLB(iLon)-OCFLBBuffer .or. &
+                Latitude(iLon,iLat) > OCFLB(iLon)+OCFLBBuffer) then
+              SigmaThTh(iLon,iLat) = &
+                   Sigma0(iLon,iLat)*SigmaP(iLon,iLat)*cs3(iLon,iLat)/&
+                   C(iLon,iLat)
+              SigmaThPs(iLon,iLat) = &
+                   2.00*Sigma0(iLon,iLat)*SigmaH(iLon,iLat)*&
+                   cs(iLon,iLat)*cs4(iLon,iLat)/C(iLon,iLat)
+              SigmaPsPs(iLon,iLat) = SigmaP(iLon,iLat)+ &
+                   SigmaH(iLon,iLat)*SigmaH(iLon,iLat)*sn2(iLon,iLat)/&
+                   C(iLon,iLat)
+           else
+
+              ! linearly change from the OCFLB through the buffer region
+              if (Latitude(iLon,iLat) > -OCFLB(iLon) .and. &
+                   Latitude(iLon,iLat) < OCFLB(iLon)) then
+                 r = 1.0
+              else
+                 r = 1-(abs(Latitude(iLon,iLat))-OCFLB(iLon))/OCFLBBuffer
+              endif
+
+              ! iLh = latitude of other hemisphere
+              iLh = nLats - iLat + 1
+
+              ! We add the conductance from one hemisphere to the other
+              ! hemisphere.  Here we simply add them together, while you
+              ! could imagine having the magnetic field geometry incorporated
+              ! into this somehow....
+
+              SigmaThTh(iLon,iLat) = &
+                   (Sigma0(iLon,iLat)+r*Sigma0(iLon,iLh)) * &
+                   (SigmaP(iLon,iLat)+r*SigmaP(iLon,iLh))*cs3(iLon,iLat)/&
+                   (C(iLon,iLat)+r*C(iLon,iLh))
+
+              SigmaThPs(iLon,iLat) = &
+                   2.0*(Sigma0(iLon,iLat)+r*Sigma0(iLon,iLh))* &
+                   (SigmaH(iLon,iLat)+r*SigmaH(iLon,iLh))*&
+                   cs(iLon,iLat)*cs4(iLon,iLat)/&
+                   (C(iLon,iLat)+r*C(iLon,iLh))
+
+              SigmaPsPs(iLon,iLat) = &
+                   (SigmaP(iLon,iLat) + r*SigmaP(iLon,iLh)) + &
+                   (SigmaH(iLon,iLat) + r*SigmaH(iLon,iLh))**2 * &
+                   sn2(iLon,iLat)/&
+                   (C(iLon,iLat)+r*C(iLon,iLh))
+
+           endif
+        enddo
+     enddo
+
+  else
+
+     SigmaThTh = Sigma0*SigmaP*cs3/C
+     SigmaThPs = 2.00*Sigma0*SigmaH*cs*cs4/C
+     SigmaPsPs = SigmaP+SigmaH*SigmaH*sn2/C
+
+  endif
 
   ! Edge 1
 

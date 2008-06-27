@@ -2,12 +2,16 @@
 module ModRIM
   use ModSizeRIM
   use ModKind, ONLY: Real8_
+  use ModNumConst, ONLY: cDegToRad
 
   implicit none
 
   real :: Version = 0.1
 
   real :: Radius
+
+  real, dimension(0:nLons+1) :: OCFLB = 70.0 * cDegToRad
+  real :: OCFLBBuffer = 5.0 * cDegToRad
 
   real, dimension(0:nLons+1,nLats) :: &
        Latitude, Longitude, Potential, AveE, Eflux, SigmaH, SigmaP, &

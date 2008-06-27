@@ -79,8 +79,22 @@ subroutine solve
         SolveType = SolveWithFold_
 
         if (HighLatBoundary < Latitude(1,nLats)+dLatitude(1,nLats)) then
+           ! In this case we touch the pole, and we have to do the OCFLB
+           ! Complicated....
            DoTouchNorthPole = .true.
            DoTouchSouthPole = .true.
+        else
+           ! In this case, we have selected a high latitude boundary, and
+           ! can just assume that we are solving below this latitude
+           ! using a folded over conductance pattern.  This should be 
+           ! relatively easy to do. Maybe.
+           ! Only need to count northern hemishere, since we are doing a
+           ! fold over.
+           do iLat = nLats/2, nLats
+              if ( Latitude(1,iLat) <= HighLatBoundary) &
+                   nLatsSolve = nLatsSolve + 1
+           enddo
+
         endif
 
      endif
@@ -161,7 +175,32 @@ subroutine solve
         enddo
 
      case(SolveWithFold_)
-        write(*,*) "Doesn't Work!"
+
+        ! Do the same as for the Northern Hemisphere above, but
+        ! LowLatBoundary is equator, so we can remove the conditional
+        if (.not.DoTouchNorthPole) then
+           IsLowLat = .true.
+           do iLat = nLats/2, nLats
+              if (Latitude(1,iLat) <= HighLatBoundary) then
+                 IsHighLat = .false.
+                 if (iLat == nLats) then
+                    IsHighLat = .true.
+                 else
+                    if (Latitude(1,iLat+1) >= HighLatBoundary) then
+                       IsHighLat = .true.
+                    endif
+                 endif
+                 do iLon = 1, nLons
+                    call fill
+                 enddo
+                 IsLowLat = .false.
+              endif
+           enddo
+        else
+           write(*,*) "yikes!"
+           write(*,*) "Doesn't Work!"
+           stop
+        endif
 
   end select
 
@@ -498,12 +537,24 @@ contains
     iI = iI + 1
     
     if (iLat /= 1 .and. iLat /= nLats) then
-       y_I(iI) = &
-            SolverA(iLon, iLat)*x_G(iLon,  iLat  ) + &
-            SolverB(iLon, iLat)*x_G(iLon,  iLat-1) + &
-            SolverC(iLon, iLat)*x_G(iLon,  iLat+1) + &
-            SolverD(iLon, iLat)*x_G(iLon-1,iLat  ) + &
-            SolverE(iLon, iLat)*x_G(iLon+1,iLat  )
+       if (iLat == nLats/2 .and. DoFold) then
+          ! The boundary condition for the fold is that the potential
+          ! just below the equator is the same as the potential just
+          ! above the equator.
+          y_I(iI) = &
+               SolverA(iLon, iLat)*x_G(iLon,  iLat  ) + &
+               SolverB(iLon, iLat)*x_G(iLon,  iLat+1) + &
+               SolverC(iLon, iLat)*x_G(iLon,  iLat+1) + &
+               SolverD(iLon, iLat)*x_G(iLon-1,iLat  ) + &
+               SolverE(iLon, iLat)*x_G(iLon+1,iLat  )
+       else
+          y_I(iI) = &
+               SolverA(iLon, iLat)*x_G(iLon,  iLat  ) + &
+               SolverB(iLon, iLat)*x_G(iLon,  iLat-1) + &
+               SolverC(iLon, iLat)*x_G(iLon,  iLat+1) + &
+               SolverD(iLon, iLat)*x_G(iLon-1,iLat  ) + &
+               SolverE(iLon, iLat)*x_G(iLon+1,iLat  )
+       endif
     else
        if (iLat == 1) then
           y_I(iI) = &
