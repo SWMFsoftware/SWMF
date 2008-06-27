@@ -67,21 +67,22 @@ subroutine conductance_gradients
               ! into this somehow....
 
               SigmaThTh(iLon,iLat) = &
-                   (Sigma0(iLon,iLat)+r*Sigma0(iLon,iLh)) * &
-                   (SigmaP(iLon,iLat)+r*SigmaP(iLon,iLh))*cs3(iLon,iLat)/&
-                   (C(iLon,iLat)+r*C(iLon,iLh))
+                   ((Sigma0(iLon,iLat)+r*Sigma0(iLon,iLh))/(1+r)) * &
+                   ((SigmaP(iLon,iLat)+r*SigmaP(iLon,iLh))/(1+r)) * &
+                   cs3(iLon,iLat)/&
+                   ((C(iLon,iLat)+r*C(iLon,iLh))/(1+r))
 
               SigmaThPs(iLon,iLat) = &
-                   2.0*(Sigma0(iLon,iLat)+r*Sigma0(iLon,iLh))* &
-                   (SigmaH(iLon,iLat)+r*SigmaH(iLon,iLh))*&
+                   2.0*((Sigma0(iLon,iLat)+r*Sigma0(iLon,iLh))/(1+r))* &
+                   ((SigmaH(iLon,iLat)+r*SigmaH(iLon,iLh))/(1+r))*&
                    cs(iLon,iLat)*cs4(iLon,iLat)/&
-                   (C(iLon,iLat)+r*C(iLon,iLh))
+                   ((C(iLon,iLat)+r*C(iLon,iLh))/(1+r))
 
               SigmaPsPs(iLon,iLat) = &
-                   (SigmaP(iLon,iLat) + r*SigmaP(iLon,iLh)) + &
-                   (SigmaH(iLon,iLat) + r*SigmaH(iLon,iLh))**2 * &
+                   ((SigmaP(iLon,iLat) + r*SigmaP(iLon,iLh))/(1+r)) + &
+                   ((SigmaH(iLon,iLat) + r*SigmaH(iLon,iLh))/(1+r))**2 * &
                    sn2(iLon,iLat)/&
-                   (C(iLon,iLat)+r*C(iLon,iLh))
+                   ((C(iLon,iLat)+r*C(iLon,iLh))/(1+r))
 
            endif
         enddo

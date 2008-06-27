@@ -34,7 +34,7 @@ module ModParamRIM
   logical :: UsePreconditioner = .true.! Use preconditioner
   logical :: UseInitialGuess = .true.  ! Use previous solution as initial guess
   real    :: Tolerance = 1.e-2        ! Solution accuracy: 2nd norm of residual
-  integer :: MaxIteration = 100       ! Maximum number of Krylov iterations
+  integer :: MaxIteration = 500       ! Maximum number of Krylov iterations
 
   integer :: iDebugLevel=0
 

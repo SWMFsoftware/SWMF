@@ -42,7 +42,8 @@ subroutine solve
 
      SolveType = SolveWithOutEquator_
 
-     if (HighLatBoundary < Latitude(1,nLats)+dLatitude(1,nLats)) then
+     if ((HighLatBoundary < Latitude(1,nLats)+dLatitude(1,nLats)) .and. &
+          HighLatBoundary > Latitude(1,nLats)) then
         DoTouchNorthPole = .true.
         DoTouchSouthPole = .true.
      endif
@@ -64,8 +65,6 @@ subroutine solve
 
         SolveType = SolveAcrossEquator_
 
-        write(*,*) "hlb : ",HighLatBoundary, Latitude(1,nLats), &
-             dLatitude(1,nLats), Latitude(1,nLats)+dLatitude(1,nLats)
         if (HighLatBoundary < Latitude(1,nLats)+dLatitude(1,nLats) .and. &
              HighLatBoundary > Latitude(1,nLats)) then
            DoTouchNorthPole = .true.
@@ -78,7 +77,8 @@ subroutine solve
 
         SolveType = SolveWithFold_
 
-        if (HighLatBoundary < Latitude(1,nLats)+dLatitude(1,nLats)) then
+        if (HighLatBoundary < Latitude(1,nLats)+dLatitude(1,nLats) .and. &
+             HighLatBoundary > Latitude(1,nLats)) then
            ! In this case we touch the pole, and we have to do the OCFLB
            ! Complicated....
            DoTouchNorthPole = .true.
@@ -283,7 +283,19 @@ subroutine solve
         enddo
 
      case(SolveWithFold_)
-        write(*,*) "Doesn't Work!"
+
+        ! North with mirrored south
+        do iLat = 1, nLats
+           if ( Latitude(1,iLat) >= LowLatBoundary .and. &
+                Latitude(1,iLat) <= HighLatBoundary) then
+              do iLon = 1, nLons
+                 iI = iI + 1
+                 Potential(iLon, iLat) = x(iI)
+                 Potential(iLon, nLats-iLat+1) = x(iI)
+              enddo
+           endif
+        enddo
+
   end select
 
   ! If we include poles, then the pole solution is the average of all
@@ -318,7 +330,8 @@ contains
 
     if (IsLowLat  ) then 
        e_I(iI)  = 0.0
-       if (iLat > 1) b(iI)=b(iI)-SolverB(iLon,iLat)*Potential(iLon,iLat-1)
+       if (iLat > 1 .and. .not.DoFold) &
+            b(iI)=b(iI)-SolverB(iLon,iLat)*Potential(iLon,iLat-1)
     endif
 
     if (IsHighLat ) then
@@ -407,7 +420,17 @@ subroutine matvec_RIM(x_I, y_I, n)
         enddo
 
      case(SolveWithFold_)
-        write(*,*) "Doesn't Work!"
+
+        ! North
+        do iLat = nLats/2, nLats
+           if ( Latitude(1,iLat) <= HighLatBoundary) then
+              do iLon = 1, nLons
+                 iI = iI + 1
+                 x_G(iLon, iLat) = x_I(iI)
+              enddo
+           endif
+        enddo
+
   end select
 
   ! This is not really correct.
@@ -521,7 +544,26 @@ subroutine matvec_RIM(x_I, y_I, n)
         enddo
 
      case(SolveWithFold_)
-        write(*,*) "Doesn't Work!"
+
+        ! Northern Hemisphere
+        IsLowLat = .true.
+        do iLat = nLats/2, nLats
+           if (Latitude(1,iLat) <= HighLatBoundary) then
+              IsHighLat = .false.
+              if (iLat == nLats) then
+                 IsHighLat = .true.
+              else
+                 if (Latitude(1,iLat+1) >= HighLatBoundary) then
+                    IsHighLat = .true.
+                 endif
+              endif
+              do iLon = 1, nLons
+                 call fill
+              enddo
+              IsLowLat = .false.
+           endif
+        enddo
+
   end select
 
   ! Preconditioning: y'= U^{-1}.L^{-1}.y
@@ -574,9 +616,10 @@ contains
        endif
     endif
 
-    if (IsHighLat .and. iLat < nLats) &
-         y_I(iI) = y_I(iI) - SolverC(iLon, iLat)*x_G(iLon,  iLat+1)
-    if (IsLowLat .and. iLat > 1) &
+    if (IsHighLat .and. iLat < nLats) then
+       y_I(iI) = y_I(iI) - SolverC(iLon, iLat)*x_G(iLon,  iLat+1)
+    endif
+    if (IsLowLat .and. iLat > 1 .and. .not. DoFold) &
          y_I(iI) = y_I(iI) - SolverB(iLon, iLat)*x_G(iLon,  iLat-1)
 
   end subroutine fill
