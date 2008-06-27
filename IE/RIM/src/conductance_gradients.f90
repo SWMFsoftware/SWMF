@@ -17,7 +17,7 @@ subroutine conductance_gradients
   real, dimension(0:nLons+1,nLats) :: &
        dLongitude2, dTheta, dTheta2
 
-  real :: r
+  real :: r, s0point, sppoint, shpoint, cpoint
   integer :: iLon, iLat, iLh
 
   Theta = cPi/2 - Latitude
@@ -39,52 +39,43 @@ subroutine conductance_gradients
         do iLat = 1, nLats
            if (Latitude(iLon,iLat) < -OCFLB(iLon)-OCFLBBuffer .or. &
                 Latitude(iLon,iLat) > OCFLB(iLon)+OCFLBBuffer) then
-              SigmaThTh(iLon,iLat) = &
-                   Sigma0(iLon,iLat)*SigmaP(iLon,iLat)*cs3(iLon,iLat)/&
-                   C(iLon,iLat)
-              SigmaThPs(iLon,iLat) = &
-                   2.00*Sigma0(iLon,iLat)*SigmaH(iLon,iLat)*&
-                   cs(iLon,iLat)*cs4(iLon,iLat)/C(iLon,iLat)
-              SigmaPsPs(iLon,iLat) = SigmaP(iLon,iLat)+ &
-                   SigmaH(iLon,iLat)*SigmaH(iLon,iLat)*sn2(iLon,iLat)/&
-                   C(iLon,iLat)
+              s0point = Sigma0(iLon,iLat)
+              shpoint = SigmaH(iLon,iLat)
+              sppoint = SigmaP(iLon,iLat)
+              cpoint  = C(iLon,iLat)
            else
 
               ! linearly change from the OCFLB through the buffer region
               if (Latitude(iLon,iLat) > -OCFLB(iLon) .and. &
                    Latitude(iLon,iLat) < OCFLB(iLon)) then
-                 r = 1.0
+                 r = 1.0/2.0
               else
-                 r = 1-(abs(Latitude(iLon,iLat))-OCFLB(iLon))/OCFLBBuffer
+                 r = (1.0-(abs(Latitude(iLon,iLat))-OCFLB(iLon))/OCFLBBuffer)/2
               endif
 
               ! iLh = latitude of other hemisphere
               iLh = nLats - iLat + 1
 
               ! We add the conductance from one hemisphere to the other
-              ! hemisphere.  Here we simply add them together, while you
+              ! hemisphere.  Here we simply average them, while you
               ! could imagine having the magnetic field geometry incorporated
               ! into this somehow....
 
-              SigmaThTh(iLon,iLat) = &
-                   ((Sigma0(iLon,iLat)+r*Sigma0(iLon,iLh))/(1+r)) * &
-                   ((SigmaP(iLon,iLat)+r*SigmaP(iLon,iLh))/(1+r)) * &
-                   cs3(iLon,iLat)/&
-                   ((C(iLon,iLat)+r*C(iLon,iLh))/(1+r))
-
-              SigmaThPs(iLon,iLat) = &
-                   2.0*((Sigma0(iLon,iLat)+r*Sigma0(iLon,iLh))/(1+r))* &
-                   ((SigmaH(iLon,iLat)+r*SigmaH(iLon,iLh))/(1+r))*&
-                   cs(iLon,iLat)*cs4(iLon,iLat)/&
-                   ((C(iLon,iLat)+r*C(iLon,iLh))/(1+r))
-
-              SigmaPsPs(iLon,iLat) = &
-                   ((SigmaP(iLon,iLat) + r*SigmaP(iLon,iLh))/(1+r)) + &
-                   ((SigmaH(iLon,iLat) + r*SigmaH(iLon,iLh))/(1+r))**2 * &
-                   sn2(iLon,iLat)/&
-                   ((C(iLon,iLat)+r*C(iLon,iLh))/(1+r))
+              s0point = (1-r)*Sigma0(iLon,iLat) + r*Sigma0(iLon,iLh)
+              sppoint = (1-r)*SigmaP(iLon,iLat) + r*SigmaP(iLon,iLh)
+              shpoint = (1-r)*SigmaH(iLon,iLat) + r*SigmaH(iLon,iLh)
+              cpoint  = (1-r)*C(iLon,iLat) + r*C(iLon,iLh)
 
            endif
+
+           SigmaThTh(iLon,iLat) = &
+                s0point*sppoint*cs3(iLon,iLat)/cpoint
+           SigmaThPs(iLon,iLat) = &
+                2.00*s0point*shpoint*&
+                cs(iLon,iLat)*cs4(iLon,iLat)/cpoint
+           SigmaPsPs(iLon,iLat) = sppoint+ &
+                (shpoint**2)*sn2(iLon,iLat)/cpoint
+
         enddo
      enddo
 

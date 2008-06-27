@@ -11,16 +11,30 @@ subroutine solve
 
   real, dimension(0:nLons+1,nLats) :: sinTheta
   real, dimension(:), allocatable :: x, y, rhs, b
+  real, dimension(0:nLons+1) :: nPotential, sPotential
 
   integer :: iLat, iLon, nTotalSolve, iI
-  logical :: IsLowLat, IsHighLat, DoTest
+  logical :: IsLowLat, IsHighLat, DoTest, DoIdealTest=.false.
 
-  real :: Residual
+  real :: Residual, r
   integer :: nIteration, iError
 
   external :: matvec_RIM
 
   if (.not. DoSolve) return
+
+
+  DoIdealTest = .true.
+
+  if (DoIdealTest) then
+     write(*,*) "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+     write(*,*) "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+     write(*,*) "               IDEAL TEST"
+     write(*,*) "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+     write(*,*) "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+     jr = -1.0e-6*exp(-abs((abs(Latitude)-75.0*cDegToRad))/(5.0*cDegToRad)) &
+          * sin(Longitude)
+  endif
 
   sinTheta = sin(cPi/2 - Latitude)
 
@@ -93,6 +107,14 @@ subroutine solve
            do iLat = nLats/2, nLats
               if ( Latitude(1,iLat) <= HighLatBoundary) &
                    nLatsSolve = nLatsSolve + 1
+              if ( Latitude(1,iLat) >= HighLatBoundary .and. &
+                   Latitude(1,iLat) < HighLatBoundary+OCFLBBuffer) then
+                 r = (1-(Latitude(1,iLat) - HighLatBoundary)/OCFLBBuffer)/2
+                 nPotential = Potential(:,iLat)
+                 sPotential = Potential(:,nLats-iLat+1)
+                 Potential(:,iLat) = nPotential*(1-r) + sPotential*r
+                 Potential(:,nLats-iLat+1) = nPotential*r + sPotential*(1-r)
+              endif
            enddo
 
         endif
