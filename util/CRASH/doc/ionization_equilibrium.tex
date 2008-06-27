@@ -140,14 +140,14 @@
 
 \begin{document}
 
-\title{{\LARGE Calculating the Ionization Equilibrium in an Ideal Plasma}}
+\title{{\Large Calculating the Ionization Equilibrium in an Ideal Plasma}}
 
 \maketitle
 
-\part{{\Large Ionization Equilibrium at a Given Temperature}}
+\section{Ionization Equilibrium at a Given Temperature\label{sec:Ionization-Equilibrium}}
 
 
-\section{The Basics }
+\subsection{The Basics }
 
 Population of an ion ($P_{i}$) in a plasma is the probability of
 finding that particle in the state possessing a certain charge, i.
@@ -178,7 +178,7 @@ formulas we can see that to calculate practically any property of
 a plasma, we need to know the populations of all the levels of ions.
 
 
-\section{ Boltzmann Distribution}
+\subsection{Boltzmann Distribution}
 
 To calculate the population of an i-level ion at a certain temperature,
 we need to know for how many atoms/ions, the energy per atomic cell
@@ -231,7 +231,7 @@ will ignore the $g_{i}$ values in our equations, approximating them
 by $g_{i}\approx1$.
 
 
-\section{ Saha Ionization Equation and Calculation Speed Improvement}
+\subsection{Saha Ionization Equation and Calculation Speed Improvement}
 
 Another similar approach to finding the population values (if the
 value of $g_{e}$ is known) is using the Saha Ionization Equation.
@@ -269,7 +269,7 @@ their sum equals one. This method can then be used instead of Eq.(6)
 any time the population values are needed.
 
 
-\section{ The System of Equations}
+\subsection{The System of Equations}
 
 Both of the methods for finding the populations presented above can
 only be used if the value of $g_{e}$ is known. However, $g_{e}$
@@ -289,7 +289,7 @@ Z=\sum_{i=0}^{X}iP_{i}=\sum_{i=0}^{X}\left(i\frac{p_{i}}{\sum_{j=0}^{X}p_{j}}\ri
 
 
 
-\section{ Iterative Approach}
+\subsection{Iterative Approach}
 
 Finally, all the terms in the above equation are known. However, this
 expression is too complex to solve by simple algebraic methods and
@@ -340,7 +340,7 @@ will converge. Hence, with these equations, we can fairly quickly
 find Z, if our initial guess is reasonably close.
 
 
-\section{ Initial Approximation}
+\subsection{Initial Approximation}
 
 In order to make the above iterative approach quick and efficient,
 it is important to find a decent first approximation for what the
@@ -379,7 +379,7 @@ used instead, but only as long as it yields a value for Z less than
 1 (if it does not, than $Z\approx1$ and is too large for this method).
 
 
-\section{Summary}
+\subsection{Section Summary}
 
 Finally, we have concluded that in order to find the ion populations
 in a plasma, we can use the following procedure:
@@ -444,59 +444,60 @@ Z at those points would then require more complex computations.
 \par\end{center}
 
 
-\part{{\Large Plasma Thermodynamic Parameters and Temperature Calculation}}
+\section{Plasma Thermodynamic Parameters at a Given Temperature}
 
 
-\section{Internal Energy}
+\subsection{Internal Energy}
 
-In realistic experiments, it is usually not possible, or not easy,
-to measure the temperature directly. It is, however, possible to measure
-the total internal energy of a volume of plasma, which can then, using
-a known heavy particle density value, be converted to the average
-internal energy per atomic cell ($U$) -- the energy of the total
-combination of particles that originally used to be a whole atom.
-This energy can then be used to find the value of the temperature,
-however, because we are dealing with plasma, this will not be as simple
-as it would be for a gas. Recall that for an ideal gas, the average
-internal kinetic energy per particle is given by:
+After having set the populations of the ions as above, we can now
+calculate some important thermodynamic characteristics of the plasma.
+One such characteristic is the average internal energy per atomic
+cell ($U$) -- the energy of the total combination of particles that
+originally comprised a whole neutral atom. In fact, experimentally,
+this energy, which fundamentally depends on T, is usually much easier
+to find than the temperature itself, and hence the value of T actually
+has to be calcualted from this energy. This calcualation will be further
+discussed in section \ref{sec:Temperature-Calculation}. First, our
+goal is to find U as a function of T for plasma. Recall that for an
+ideal gas, the average internal kinetic energy per particle is given
+by:
 
 \begin{equation}
 U=\frac{3}{2}k_{B}T\label{eq:25}\end{equation}
 
 
-Then, to find the internal energy of a whole atomic cell in a plasma,
-we have to look at the sum of the kinetic energies of the ion and
-all the electrons that have separated from it, as well as the energy
-that was used to separate these electrons ($E_{i}$). Then, averaging
-this out, we get:
+Hence, to find the internal energy of a whole atomic cell in a plasma,
+we have to find the sum of the kinetic energies of the ion and all
+the electrons that have separated from it, as well as the energy that
+was used to separate these electrons ($E_{i}$). Then, averaging this
+out across the various charge ions that are present in the plasma,
+we get:
 
 \begin{equation}
-U=\frac{3}{2}k_{B}T+\sum_{i=1}^{X}P_{i}(\frac{3}{2}k_{B}Ti+E_{i})=\frac{3}{2}k_{B}T(1+Z)+<E_{i}>\label{eq:26}\end{equation}
+U=\frac{3}{2}k_{B}T+\sum_{i=1}^{X}P_{i}(\frac{3}{2}ik_{B}T+E_{i})=\frac{3}{2}k_{B}T(1+Z)+<E_{i}>\label{eq:26}\end{equation}
 
 
 Note that this also implies that in plasma, ions have the same average
 kinetic energy as electrons do, despite the immense difference in
-mass. Furthermore, because of the statistical averages used in this
-equation ($Z$ and $<E_{i}>$), which depend on the population values
-that in turn depend on the temperature, this equation cannot be solved
-for T by simple algebraic methods. Hence, we are once again forced
-to use the Newton-Rapson iteration approach. Since Newton's method
-can be used to iteratively find the zeros of a function, we need \begin{equation}
-f(T)=\frac{3}{2}k_{B}T(1+Z)+<E_{i}>-U,\label{eq:27}\end{equation}
- where U is now known. Then when $f(T)=0$, we will have the desired
-value for T.
+mass. Furthermore, notice that because of the statistical averages
+used in this equation ($Z$ and $<E_{i}>$), which depend on the population
+values that in turn depend on the temperature, this equation cannot
+be solved for T by simple algebraic methods, and hence finding the
+temperature will once again require an iterative approach.
 
 
-\section{Heat Capacity}
+\subsection{Heat Capacity}
 
-However, to use this method to find the temperature, we also need
-to know the value of $\partial f/\partial T$, which in this case
-will equal $\partial U/\partial T$ since the value of U in the equation
-for $f(T)$ is now a known constant. Note that this is also the value
-of the heat capacity of the plasma at a constant volume, because
+Another important thermodynamic parameter of a plasma is its heat
+capacity at a constant volume. This parameter is needed to study heat
+transmission through the plasma and the variation of temperature and
+internal energy of various parts of the plasma with time. This value
+will also be needed for the temperature calculation in the next section.
+First of all, realize that if volume is constant and $dV=0$, then
+the change in internal energy of a system is:
 
 \[
-dU=dQ-dW=dQ-PdV=dQ\]
+dU=dQ-dW=dQ-PdV=dQ,\ \text{and}\]
 
 
 \begin{equation}
@@ -504,14 +505,13 @@ dU=dQ-dW=dQ-PdV=dQ\]
 
 
 where dQ is the heat added to the system, while dW is the work done
-by that system, which in this case is 0. Hence, to find the temperature
-from a known value of U, we first need to find this heat capacity
-as a function of T.
+by that system. 
 
-Let's start by first taking the derivative of the internal energy
-as given by Eq.\ref{eq:26}. Also, for simplicity, from now on we
-will use the value of the temperature measured in electron-volts --
-$T_{eV}=k_{B}T$, where $k_{B}$ is in eV/K.\[
+Hence, our goal now is to find the partial derivative of U, as given
+by Eq.\ref{eq:26}, with respect to T. For simplicity, from now on
+we will use the value of the temperature measured in electron-volts
+-- $T_{eV}=k_{B}T$, where $k_{B}$ is in eV/K. First, begin by taking
+the derivative of Eq.\ref{eq:26} only:\[
 C_{V}=\frac{\partial U}{\partial T_{eV}}=\frac{3}{2}+\sum\left[P_{i}\left(\frac{3}{2}i\right)+\frac{\partial P_{i}}{\partial T_{eV}}\left(\frac{3}{2}T_{eV}i+E_{i}\right)\right]=\]
  \begin{equation}
 =\frac{3}{2}(1+Z)+\sum\left[\frac{\partial P_{i}}{\partial T_{eV}}\left(\frac{3}{2}T_{eV}i+E_{i}\right)\right]\label{eq:29}\end{equation}
@@ -642,61 +642,36 @@ C_{V}=\frac{\partial U}{\partial T_{eV}}=\frac{3}{2}(1+Z)+\sum\left[\frac{P_{i}}
 
 
 This equation can then be used to find the heat capacity at constant
-volume when the temperature is known, as well as for the derivative
-$\frac{\partial U}{\partial T}$ used in the Newton-Rapson iteration
-method for finding T. Following is a table built using this equation,
-as well as Eq. \ref{eq:26}, that shows the values of average internal
-energy and heat capacity per atomic cell in electron-volts, calculated
-at various values of $T_{eV}$ and $N_{a}$. Once again, the unrealistic
-negative values mark the domain where our assumption that $g_{e}$
->\,> 1 fails, and hence a different method is required for finding
-the correct plasma parameters.
+volume when the temperature is known. Following is a table built using
+this equation, as well as Eq. \ref{eq:26}, that shows the values
+of average internal energy {[}eV] and heat capacity per atomic cell,
+calculated at various values of $T_{eV}$ and $N_{a}$. Once again,
+the unrealistic negative values mark the domain where our assumption
+that $g_{e}\gg1$ fails, and hence a different method is required
+for finding the correct plasma parameters.
 
 \begin{center}
 \input{Table2.tex} 
 \par\end{center}
 
 
-\section{The Iteration Method}
+\section{Temperature Calculation from a Given Internal Energy\label{sec:Temperature-Calculation}}
 
-At this point, we have everything needed to use the Newton-Rapson
-iteration method. If we use Eq. \ref{eq:27} for $f(T)$, where U
-is given, then $f'(T)=C_{V}$ and iterations should converge to the
-value of T needed. However, unlike with iterations on Z, here convergence
-is not guaranteed when starting at any value of T. Although in most
-cases the iterations will eventually converge, they will do so very
-slowly and before approaching the correct value, they might make huge
-jumps from one side of the correct T to another, which can lead to
-T becoming negative at one of the iterations. Since to calculate the
-populations and Z, which is necessary to do in every iteration, we
-need to at some point find the value of $\sqrt{T}^{3}$, when T becomes
-negative, this has no real answer and will make further iterations
-impossible. To make matters worse, because the relationship between
-U and T is so complex, there is no nice way to initially approximate
-the value of T so as to speed up the iterations and avoid huge jumps.
-
-Therefore, the only way left to avoid this problem is to hard-code
-some limits on the iteration jumps, such as not letting the iterations
-jump lower than 1/2 or higher than twice the trial value of T. This
-way, the Newton-Rapson equation will initially only point out the
-general direction of the correct value of T relative to the trial
-value, while the iterations will only half or double the trial value
-until it gets close to the actual T. Following is a table of the temperature
-values {[}eV] calculated at the given internal energies {[}eV] and
-heavy particle densities {[}$1/cm^{3}$]. The number of iterations
-for each temperature value found is also given. The negative values
-are used as before.
-
-\begin{center}
-\input{Table3.tex} 
-\par\end{center}
-
-
-\section{Summary}
-
-Hence, we can now outline the method for finding the temperature from
-a given average internal energy per atomic unit. The main idea is
-to use the Newton-Rapson iterations given by:
+In realistic experiments, it is usually not possible, or not easy,
+to measure the temperature directly. It is, however, possible to measure
+the total internal energy of a volume of plasma, which can then, using
+a known heavy particle density value, be converted to the average
+internal energy per atomic cell ($U$). This energy can then be used
+to find the value of the temperature, however, as can be seen from
+Eq. \ref{eq:26}, this cannot be done algebraically and hence, we
+will once again use the Newton-Rapson iterations method. As before,
+since this approach can only be used to iteratively find the zeros
+of a function, this function needs to be \begin{equation}
+f(T)=\frac{3}{2}k_{B}T(1+Z)+<E_{i}>-U,\label{eq:27}\end{equation}
+ where U is a given constant. Then when $f(T)=0$, we will have the
+desired value for T. Furhtermore, to use this mehtod, we also need
+to have an expression for $f'(T)$, which now becomes simmply $\partial U/\partial T=C_{V}$.
+Hence, we have everything needed to prroceed with the Newton's method:
 
 \[
 T_{n+1}=T_{n}-\frac{U(T_{n})-U_{given}}{C_{V}(T_{n})},\ \text{where}\ \ U=\frac{3}{2}k_{B}T(1+Z)+<E_{i}>\text{and}\]
@@ -707,9 +682,35 @@ C_{V}=\frac{3}{2}(1+Z)+<\left(\frac{\delta E_{i}}{T_{eV}}\right)^{2}>+\frac{3Z\l
 
 
 while for any expression $a$, $<a>={\displaystyle \sum_{i=0}^{X}aP_{i}}$
-and $\delta a=a-<a>$. The populations are found using the trial value
-of T and the method presented in part I. Furthermore, these iterations
-also need to limited to avoid needless jumps from $T_{n}$ to $T_{n+1}$.
-This can be done, for example, by using the greater value out of $T_{n+1}$
-and $T_{n}/2$ or the lesser from $T_{n+1}$ and $2T_{n}$. 
+and $\delta a=a-<a>$, where the populations are found using the trial
+value of T and the method presented in section \ref{sec:Ionization-Equilibrium}. 
+
+However, unlike with iterations on Z, here convergence is not guaranteed
+when starting at any value of T. Although in most cases the iterations
+will eventually converge, they will do so slowly and before approaching
+the correct value, they might make huge jumps from one side of the
+correct T to another, which can lead to T becoming negative at one
+of the iterations. Since to calculate the populations and Z, which
+is necessary to do for every iteration, we need to at some point find
+the value of $\sqrt{T}^{3}$, when T becomes negative, this has no
+real answer and will make further iterations impossible. To make matters
+worse, because the relationship between U and T is so complex, there
+is no nice way to initially approximate the value of T so as to speed
+up the iterations and avoid huge jumps.
+
+Therefore, the only way left to avoid this problem is to hard-code
+some limits on the iteration jumps, such as not letting the iterations
+jump lower than half or higher than twice the trial value of T. This
+way, the Newton-Rapson equation will initially only point out the
+general direction of the correct value of T relative to the trial
+value, while the iterations will only half or double the trial value
+until it gets close enough to the actual T. Following is a table of
+the temperature values {[}eV] calculated at the given internal energies
+{[}eV] and heavy particle densities {[}$1/cm^{3}$]. The number of
+iterations it took to find each temperature value is also given and
+the negative values are used as before.
+
+\begin{center}
+\input{Table3.tex} 
+\par\end{center}
 \end{document}
