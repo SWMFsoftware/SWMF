@@ -285,9 +285,8 @@ subroutine solve
      case(SolveWithFold_)
 
         ! North with mirrored south
-        do iLat = 1, nLats
-           if ( Latitude(1,iLat) >= LowLatBoundary .and. &
-                Latitude(1,iLat) <= HighLatBoundary) then
+        do iLat = nLats/2, nLats
+           if (Latitude(1,iLat) <= HighLatBoundary) then
               do iLon = 1, nLons
                  iI = iI + 1
                  Potential(iLon, iLat) = x(iI)

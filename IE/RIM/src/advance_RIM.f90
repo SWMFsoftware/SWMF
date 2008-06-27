@@ -30,6 +30,7 @@ subroutine advance_RIM
      do iLat=1,nLats
         if (abs(Latitude(iLon,iLat)) > HighLatBoundary) then
            potential(iLon,iLat) = EmpiricalPotential(iLon,nEmpiricalLats)
+           if (iLon == 20) write(*,*) "pot : ",iLat,potential(iLon,iLat)
            nEmpiricalLats = nEmpiricalLats + 1
         endif
      enddo
