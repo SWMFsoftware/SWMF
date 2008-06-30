@@ -624,19 +624,31 @@ subroutine BATS_save_files(TypeSaveIn)
   call upper_case(TypeSave)
   select case(TypeSave)
   case('INITIAL')
+     ! Do not save current step or time
+     n_output_last = n_step
+
+     ! Initialize last save times
+     where(dt_output>0.) &
+          t_output_last=int(time_simulation/dt_output)
+
      ! DoSaveInitial may be set to true in the #SAVEINITIAL command
-     if(time_accurate .and. time_simulation == 0.0)DoSaveInitial = .true.
-     if(DoSaveInitial)then
-        n_output_last = -1
-        t_output_last = -1.0
-        ! Do not save restart file
+     if(DoSaveInitial .or. (time_accurate .and. time_simulation == 0.0))then
+        if(DoSaveInitial)then
+           ! Save all (except restart files)
+           n_output_last = -1
+           t_output_last = -1.0
+        else
+           ! Save only those with a positive time frequency
+           where(dt_output>0.)
+              n_output_last = -1
+              t_output_last = -1.0
+           end where
+        end if
+        ! Do not save restart file in any case
         n_output_last(restart_) = n_step
         call save_files
-     else
-        n_output_last = n_step
-        where(dt_output>0.) &
-             t_output_last=int(time_simulation/dt_output)
      end if
+     ! Set back to default value (for next session)
      DoSaveInitial = .false.
   case('FINAL')
      save_restart_file = .false.
