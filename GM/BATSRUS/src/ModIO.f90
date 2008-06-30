@@ -44,6 +44,8 @@ Module ModIO
   logical :: restart=.false.        ! read restart file
   logical :: restart_Bface =.false. ! Bface restarted ^CFG IF CONSTRAINB
 
+  logical :: DoSaveInitial = .false.
+
   logical :: save_restart_file=.true., save_satellite_data=.false., &
        save_plots_amr=.false.,save_logfile=.false.,save_binary=.true.
 
