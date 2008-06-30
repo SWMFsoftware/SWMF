@@ -2757,6 +2757,17 @@ not have to be repeated in restarted runs (unless the unit is changed).
 The default value is NameMaxTimeUnit='hour'.
 </command>
 
+<command name="SAVEINITIAL">
+	<parameter name="DoSaveInitial" type="logical" default="F" />
+#SAVEINITIAL
+T			DoSaveIntial
+
+Save plots and log/satellite files at the beggining of the session.
+Default is DoSaveInitial=.false. except for the first time accurate
+session (when simulation time is zero) when the initial state 
+is always saved.
+</command>
+
 <command name="SAVEPLOTSAMR">
 	<parameter name="DoSavePlotsAmr" type="logical" default="F" />
 #SAVEPLOTSAMR
@@ -3378,6 +3389,17 @@ T			UseUpdateCheck
 Default values are shown.  This will adjust the timestep so that
 density and pressure cannot change by more than the given percentages
 in a single timestep.
+</command>
+
+<command name="MULTIFLUID">
+	<parameter name="UseTotalSpeed" type="logical" default="T"/>
+#MULTIFLUID
+F		UseTotalSpeed
+
+Allows using individual maximum speeds for the numerical diffusion for 
+each fluid. This is useful for weakly coupled fluids, e.g. 
+low densitiy ions and neutrals. Default is to use the same maximum speed
+for the diffusion of all the fluids.
 </command>
 
 <command name="MULTISPECIES">
