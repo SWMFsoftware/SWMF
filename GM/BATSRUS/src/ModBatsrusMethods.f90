@@ -612,12 +612,10 @@ subroutine BATS_save_files(TypeSaveIn)
   character(len=*), intent(in) :: TypeSaveIn
 
   character(len=len(TypeSaveIn)) :: TypeSave
-  logical :: DoExchangeAgain, DoAssignNodeNumbers, IsFound
+  logical :: DoExchangeAgain, DoAssignNodeNumbers, IsFound, DoSaveRestartTmp
   integer :: iFile
   
   character(len=*), parameter :: NameSub='BATS_save_files'
-  logical :: DoSaveRestartTmp
-  logical :: IsTimeAccuratePrevious = .false.
   !--------------------------------------------------------------------------
 
   DoExchangeAgain     = .false.
@@ -626,28 +624,20 @@ subroutine BATS_save_files(TypeSaveIn)
   call upper_case(TypeSave)
   select case(TypeSave)
   case('INITIAL')
-     ! Do not save for current time step (unless next if statement is true)
-     n_output_last=n_step
-     if(time_accurate .and. .not.IsTimeAccuratePrevious)then
-
-        ! Save plot and log files at the beginning of a time accurate session
-
-        where(dt_output>0.)
-           ! The -1 allows a plot file to be written at the beginning 
-           ! of the first time accurate session
-           t_output_last=int(time_simulation/dt_output)-1
-           n_output_last=n_step-1
-        end where
-
-        DoSaveRestartTmp = save_restart_file
-        save_restart_file = .false.
+     ! DoSaveInitial may be set to true in the #SAVEINITIAL command
+     if(time_accurate .and. time_simulation == 0.0)DoSaveInitial = .true.
+     if(DoSaveInitial)then
+        n_output_last = -1
+        t_output_last = -1.0
+        ! Do not save restart file
+        n_output_last(restart_) = n_step
         call save_files
-        save_restart_file = DoSaveRestartTmp
      else
-        ! Do not save for current time
-        where(dt_output>0.) t_output_last=int(time_simulation/dt_output)
+        n_output_last = n_step
+        where(dt_output>0.) &
+             t_output_last=int(time_simulation/dt_output)
      end if
-     IsTimeAccuratePrevious = time_accurate
+     DoSaveInitial = .false.
   case('FINAL')
      save_restart_file = .false.
      call save_files_final
