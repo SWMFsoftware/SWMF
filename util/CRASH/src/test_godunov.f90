@@ -84,8 +84,9 @@ program test_Godunov
      do iX=1,nX+1
         call get_godunov_flux(1,(/1.0/),3,Prime_VG(:,iX-1),Prime_VG(:,iX),&
              Flux_VF(:,iX),CMax_F(iX),Gamma_G(iX-1),Gamma_G(iX))
+!        if(iX==1)write(*,*)Flux_VF(:,1)
      end do
-     Cons_VC(:,1:nX)=Cons_VC(:,1:nX)+(Dt/DX)*(Flux_VF(:,1:nX)-Flux_VF(:,1:nX))
+     Cons_VC(:,1:nX)=Cons_VC(:,1:nX)+(Dt/DX)*(Flux_VF(:,1:nX)-Flux_VF(:,2:nX+1))
      Time = Time + Dt
      call set_dt
   end do
@@ -95,3 +96,20 @@ contains
     Dt=CFL*DX/maxval(CMax_F(1:nX+1))
   end subroutine set_dt
 end program test_Godunov
+!============================================================================
+! The following subroutines are here so that we can use SWMF library routines
+! Also some features available in SWMF mode only require empty subroutines
+! for compilation of the stand alone code.
+!============================================================================
+subroutine CON_stop(StringError)
+  implicit none
+  character (len=*), intent(in) :: StringError
+end subroutine CON_stop
+!============================================================================
+subroutine CON_set_do_test(String,DoTest,DoTestMe)
+  implicit none
+  character (len=*), intent(in)  :: String
+  logical          , intent(out) :: DoTest, DoTestMe
+end subroutine CON_set_do_test
+
+

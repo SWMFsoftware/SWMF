@@ -14,7 +14,7 @@ OBJECTS=\
         ModIonizPotential.o 
 
 
-OBJECTS_EXE= test_ionization.o
+OBJECTS_EXE= test_ionization.o test_godunov.o
 
 
 
@@ -44,17 +44,32 @@ IONIZ : ${OBJECTS_EXE}
 	else                                    make IONIZ_general; fi)
 
 IONIZ_general:
-	${LINK.f90} -o IONIZ.exe ${OBJECTS_EXE} \
+	${LINK.f90} -o IONIZ.exe test_ionization.o \
 		-L${LIBDIR} -lCRASH  -lSHARE -lTIMING \
 		${Lflag1}
 
 IONIZ_for_Darwin:
 	rm -rf Tmp_; mkdir Tmp_ ;
 	cd Tmp_; ar -x ${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE};
-	${LINK.f90} -o IONIZ.exe ${OBJECTS_EXE} Tmp_/*.o \
+	${LINK.f90} -o IONIZ.exe test_ionization.o Tmp_/*.o \
 		${Lflag1}    ; 
 	rm -rf Tmp_ ;
 
+GODUNOV: ${OBJECTS_EXE}
+	@(if [ ${OS} = "Darwin" ];         then make GODUNOV_for_Darwin; \
+	else                                    make GODUNOV_general; fi)
+
+GODUNOV_general:
+	${LINK.f90} -o GODUNOV.exe test_godunov.o \
+		-L${LIBDIR} -lCRASH  -lSHARE -lTIMING \
+		${Lflag1}
+
+GODUNOV_for_Darwin:
+	rm -rf Tmp_; mkdir Tmp_ ;
+	cd Tmp_; ar -x ${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE};
+	${LINK.f90} -o GODUNOV.exe test_godunov.o Tmp_/*.o \
+		${Lflag1}    ; 
+	rm -rf Tmp_ ;
 
 distclean: clean 
 	rm -f Makefile.DEPEND; \
