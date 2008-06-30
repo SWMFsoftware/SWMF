@@ -511,7 +511,7 @@ cell ($U$) -- the energy of the total combination of particles that
 originally comprised a whole neutral atom. In fact, experimentally,
 this energy, which fundamentally depends on T, is usually much easier
 to find than the temperature itself, and hence the value of T actually
-has to be calcualted from this energy. This calcualation will be further
+has to be calculated from this energy. This calculation will be further
 discussed in section \ref{sec:Temperature-Calculation}. First, our
 goal is to find U as a function of T for plasma. Recall that for an
 ideal gas, the average internal kinetic energy per particle is given
@@ -688,7 +688,7 @@ for finding the correct plasma parameters.
 
 \section{Temperature Calculation from a Given Internal Energy\label{sec:Temperature-Calculation}}
 
-For all of the above calcualtions, it was assumed that the temperature
+For all of the above calculations, it was assumed that the temperature
 of the plasma was a given input parameter for the problem. However,
 in realistic experiments, it is usually not possible, or not easy,
 to measure the temperature directly. It is, however, possible to measure
@@ -702,10 +702,10 @@ since this approach can only be used to iteratively find the zeros
 of a function, this function needs to be \begin{equation}
 f(T)=\frac{3}{2}k_{B}T(1+Z)+<E_{i}>-U,\label{eq:27}\end{equation}
 where U is a given constant. Then when $f(T)=0$, we will have the
-desired value for T. Furhtermore, to use this mehtod, we also need
-to have an expression for $f^{\prime}(T)$, which now becomes simmply
+desired value for T. Furthermore, to use this method, we also need
+to have an expression for $f^{\prime}(T)$, which now becomes simply
 $\partial U/\partial T=C_{V}$. Hence, we have everything needed to
-prroceed with the Newton's method:
+proceed with the Newton's method:
 
 \begin{equation}
 T_{n+1}=T_{n}-\frac{U(T_{n})-U_{given}}{C_{V}(T_{n})},\ \text{where}\ \ U=\frac{3}{2}k_{B}T(1+Z)+<E_{i}>\text{and}\label{eq:CalcT}\end{equation}
@@ -757,7 +757,7 @@ element, as was assumed for all of the above calculations, but rather
 of a mixture of several different elements. If such is the case, then
 all the main formulas that the above methods were based on now take
 on a slightly different form. Hence, the entire procedure for finding
-the ionization equilibrium and then thromodynamic plasma parameters
+the ionization equilibrium and then thermodynamic plasma parameters
 will have to be reevaluated for this case. On the other hand, the
 changes will not be too drastic as the basic principles of plasma
 formation are still in effect.
@@ -771,7 +771,7 @@ these concentration factors will be taken here as a given input parameter
 to the problem.
 
 With regards to the populations, note that a population of a certain
-ion, by definision, still remains as the part that the ion comprises
+ion, by definition, still remains as the part that the ion comprises
 out of all the ions of only that same element, and not out of the
 entire $N_{a}$. Hence, we get the following formulas for the populations:
 
@@ -797,7 +797,7 @@ Notice that here, $<i_{j}>$ denotes the average along two dimensions,
 instead of just one as was done before and as in $<i>_{j}$. Hence,
 we can see that basically the only thing that is different about calculating
 the properties of a mixture plasma is that each calculation has to
-be performed seperately for each of the elements in the mixture, and
+be performed separately for each of the elements in the mixture, and
 then the statistical average of the obtained values has to be taken
 across all of the elements present.
 
@@ -813,7 +813,7 @@ be in the expression that we use for Z. Hence, transforming Eq. \ref{eq:13}
 to fit the form in Eq. \ref{eq:Zmix}, we get:\begin{equation}
 Z=\sum_{j=1}^{n}\left[C_{j}\frac{{\displaystyle \sum}ip_{ij}}{{\displaystyle \sum}p_{ij}}\right]\text{, where as before }p_{ij}=\left(\frac{C_{1}}{Z}\right)^{i}e^{-\frac{E_{ij}}{k_{B}T_{e}}}\label{eq:41}\end{equation}
 Since Z has to be found iteratively anyway, we do not need to worry
-about the addtional complexity introduced by the double summation
+about the additional complexity introduced by the double summation
 here. Furthermore, since $C_{j}$ values are given constants, they
 will not affect the value of the derivative of this expression with
 respect to Z, which is also needed to use the Newton's method. Hence,
@@ -826,7 +826,7 @@ becomes:
 
 \begin{equation}
 Z_{n+1}=Z_{n}-\frac{Z_{n}-\sum_{j}\left[C_{j}<i>_{j}\right]}{1+\frac{1}{Z_{n}}\sum_{j}\left[C_{j}<(\delta i)^{2}>_{j}\right]}\label{eq:IterMix}\end{equation}
-Here, once again, for any exppression $a,\ <a>_{j}={\displaystyle \sum_{i=0}^{X}aP_{ij}\text{, and }\delta a=a-<a>}$.
+Here, once again, for any expression $a,\ <a>_{j}={\displaystyle \sum_{i=0}^{X}aP_{ij}\text{, and }\delta a=a-<a>}$.
 This equation can then be used to find the population values and Z
 for a mixture plasma, while finding the populations exactly as for
 a single component plasma.
@@ -841,7 +841,7 @@ statistical average of these values across all elements:
 
 \begin{equation}
 U=\sum_{j}C_{j}\left(\frac{3}{2}k_{B}T(1+<i>_{j})+<E_{i}>_{j}\right)=\frac{3}{2}k_{B}T(1+Z)+<E_{ij}>\label{eq:Umix}\end{equation}
-Hence, the equation remains essencially the same, except here all
+Hence, the equation remains essentially the same, except here all
 averages are taken along 2 dimensions -- first across the populations
 and then across the elements (as in $<a_{ij}>=\sum_{j}[C_{j}\sum_{i}(P_{i}a_{ij})]$
 ).
