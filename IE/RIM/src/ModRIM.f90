@@ -18,7 +18,7 @@ module ModRIM
        dLatitude, dLongitude, SMX, SMY, SMZ, &
        SigmaEUVH, SigmaEUVP, SigmaScatH, SigmaScatP, SigmaStarH, SigmaStarP, &
        SigmaAurH, SigmaAurP, Sigma0, &
-       OldPotential, Jr, OuterMagJr, InnerMagJr, IonoJr, &
+       OldPotential=0.0, Jr, OuterMagJr, InnerMagJr, IonoJr, &
        OuterMagInvB, OuterMagRho, OuterMagP
 
   real, dimension(0:nLons+1,nLats) :: &
