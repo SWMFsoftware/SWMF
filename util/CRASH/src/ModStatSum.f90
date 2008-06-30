@@ -28,9 +28,10 @@ module ModStatSum
   real :: ZAv,&       ! the average charge per ion - <Z> (elementary charge units)
           EAv,&       ! The average ionization energy level of ions
           Te=1.0,&   ! the electron temperature [eV] (cBoltzmann in eV * Te in Kelvin)
-          Na          ! The density of heavy particles in the plasma
+          Na,&          ! The density of heavy particles in the plasma
+          DeltaZ2Av ! The value of <(delta i)^2>=<i^2>-<i>^2
   integer :: iIterTe !Temperature iterations counter
-  private::mod_init,Na
+  private::mod_init,Na,DeltaZ2Av
   !private :: z_averaged, z2_averaged, E_averaged
 Contains
   !=========================================================================
@@ -116,8 +117,8 @@ Contains
          ZTrial = ZAv
          call set_population(lnC1 - log(ZTrial))
          Z1  = z_averaged()
-         Z2  = z2_averaged()
-         ZAv = ZTrial - (ZTrial - Z1)/(cOne + (Z2 - Z1*Z1)/ZTrial)
+         DeltaZ2Av  = sum( Population_I(iZMin:iZmax) * (N_I(iZMin:iZMax)-Z1)**2 ) 
+         ZAv = ZTrial - (ZTrial - Z1)/(cOne + DeltaZ2Av/ZTrial)
          iIter = iIter+1
       end do iterations
       ZAv=Z1
@@ -227,7 +228,6 @@ subroutine set_temperature(Uin, NaIn,IsDegenerated)
     real :: TeInv,   & !The inverse of the electron temperature [1/eV]
             ETeInvAv,& ! < Ei/Te> (Ei - energy levels, Te - electron temperature [eV])
             DeltaETeInv2Av,&	! <(delta Ei/Te)^2>
-	    DeltaZ2Av,&         ! <(delta i)^2>
    	    ETeInvDeltaZAv ! <delta i * Ei/Te>
 
     ! Array of ionization energy levels of ions divided by the temperature in eV
@@ -238,7 +238,6 @@ subroutine set_temperature(Uin, NaIn,IsDegenerated)
     ETeInv_I(iZMin:iZMax) = IonizEnergyNeutral_I( iZMin:iZMax )*TeInv
     ETeInvAv              = EAv*TeInv
     DeltaETeInv2Av        = sum( Population_I(iZMin:iZmax) * (ETeInv_I(iZMin:iZmax)-ETeInvAv)**2 )
-    DeltaZ2Av             = sum( Population_I(iZMin:iZmax) * (N_I(iZMin:iZMax)-Zav)**2 )
     ETeInvDeltaZAv   = sum( Population_I(iZMin:iZMax) * ETeInv_I(iZMin:iZmax) * &
                            (N_I(iZMin:iZMax)-ZAv) )
     ! calculate the heat capacity:
