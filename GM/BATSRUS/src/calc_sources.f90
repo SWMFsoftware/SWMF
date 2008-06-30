@@ -27,8 +27,6 @@ subroutine calc_sources
 
   integer :: i, j, k, iDim
 
-  logical :: DoTest, DoTestMe
-
   real :: Coef
 
   ! Variable for div B diffusion
@@ -44,16 +42,19 @@ subroutine calc_sources
   real :: Current_D(3)
 
   integer:: iBlock
+
+  logical :: DoTest, DoTestMe
+  character(len=*), parameter :: NameSub = 'calc_sources'
   !---------------------------------------------------------------------------
   iBlock = GlobalBlk
 
   if(iProc==PROCtest .and. iBlock==BLKtest)then
-     call set_oktest('calc_sources', DoTest, DoTestMe)
+     call set_oktest(NameSub, DoTest, DoTestMe)
   else
      DoTest=.false.; DoTestMe=.false.
   end if
 
-  Source_VC   = cZero
+  Source_VC   = 0.0
 
   ! Calculate source terms for ion pressure
   if(UseNonconservative)then
@@ -157,7 +158,8 @@ subroutine calc_sources
              /State_VGB(rho_,i,j,k,iBlock)
      end do;end do;end do
 
-     if(DoTestMe.and.(VarTest==Energy_.or.VarTest>=RhoUx_.and.VarTest<=RhoUz_))&
+     if(DoTestMe .and. &
+          (VarTest==Energy_.or.VarTest>=RhoUx_.and.VarTest<=RhoUz_))&
           call write_source('After curl B0')
   end if
 
@@ -215,7 +217,7 @@ subroutine calc_sources
              fbody_z_BLK(:,:,:,iBlock)) 
 
         if(DoTestMe.and. &
-             (VarTest==Energy_.or.VarTest>=RhoUx_.and.VarTest<=RhoUz_)) &
+             (VarTest==Energy_ .or. VarTest>=iRhoUx .and. VarTest<=iRhoUz)) &
              call write_source('After gravity')
      end if
 
@@ -231,11 +233,11 @@ subroutine calc_sources
                    2*OmegaBody*State_VGB(iRhoUx,i,j,k,iBlock)
            end do; end do; end do
         case default
-           call stop_mpi('ERROR in calc_sources: '// &
-                'Coriolis force is not implemented for '// &
-                'TypeCoordSystem=',TypeCoordSystem)
+           call stop_mpi(NameSub // &
+                ' Coriolis force is not implemented for'// &
+                ' TypeCoordSystem='//TypeCoordSystem)
         end select
-        if(DoTestMe.and.VarTest>=RhoUx_.and.VarTest<=RhoUy_) &
+        if(DoTestMe.and.VarTest>=iRhoUx .and. VarTest<=iRhoUy) &
              call write_source('After Coriolis')
      end if
   end do
@@ -256,6 +258,9 @@ subroutine calc_sources
      call user_calc_sources
      if(DoTestMe) call write_source('After user sources')
   end if
+
+  if(DoTestMe) call write_source('final')
+
 contains
   !===========================================================================
   subroutine calc_divb_source
@@ -503,7 +508,7 @@ contains
  
   subroutine write_source(String)
     character(len=*), intent(in) :: String
-    write(*,'(a,es13.5)') "calc_sources: "//String//" S(VarTest)=",&
+    write(*,'(a,es13.5)') NameSub//": "//String//" S(VarTest)=",&
          Source_VC(VarTest,iTest,jTest,kTest) 
   end subroutine write_source
 
