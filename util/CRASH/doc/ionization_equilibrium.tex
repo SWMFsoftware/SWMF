@@ -156,23 +156,30 @@ total number of atoms and ions per unit of volume in a plasma -- then,
 $N_{i}=P_{i}*N_{a}$, where $N_{i}$ is the concentration of i-level
 ions (ions that lost i electrons), and $P_{i}$, their populations.
 Furthermore, since the total of probabilities of all the alternative
-events is always equal to one, we get \begin{equation}
-\sum_{i=0}^{Z}P_{i}=1,\end{equation}
- where X is the atomic number of the element -- hence the maximum
-charge it can attain. Or, similarly: \begin{equation}
-\sum_{i=0}^{Z}N_{i}=N_{a},\end{equation}
- which is the same equation multiplied by $N_{a}$. Furthermore, since
+events is always equal to one, we get 
+\begin{equation}
+\sum_{i=0}^{Z}P_{i}=1,
+\end{equation}
+where X is the atomic number of the element -- hence the maximum
+charge it can attain. Or, similarly: 
+\begin{equation}
+\sum_{i=0}^{Z}N_{i}=N_{a},
+\end{equation}
+which is the same equation multiplied by $N_{a}$. Furthermore, since
 in a single-component plasma, each of the $N_{i}$ ions looses i electrons,
 which is further true for each of the X types of ions, we obtain the
 formula for the total number of free electrons per unit volume, $N_{e}$:
 \begin{equation}
-N_{e}=\sum_{i=0}^{X}iN_{i},\end{equation}
- which is the condition of plasma neutrality -- the total positive
+N_{e}=\sum_{i=0}^{X}iN_{i},
+\end{equation}
+which is the condition of plasma neutrality -- the total positive
 charge on the ions per unit of volume in a plasma must be equal to
 the total number of free electrons in that volume. If we divide this
-equation by $N_{a}$, we get: \begin{equation}
-<Z>=\sum_{i=0}^{X}iP_{i},\end{equation}
- where <Z> = $N_{e}/N_{a}$ -- the average positive charge per ion
+equation by $N_{a}$, we get: 
+\begin{equation}
+<Z>=\sum_{i=0}^{X}iP_{i},
+\end{equation}
+where <Z> = $N_{e}/N_{a}$ -- the average positive charge per ion
 in the plasma (measured in elementary charge units). From all these
 formulas we can see that to calculate practically any property of
 a plasma, we need to know the populations of all the levels of ions.
@@ -187,9 +194,11 @@ Thus, we need to know the energy distribution between the atoms and
 ions for a given temperature T. Here, recall the Maxwell-Boltzmann
 Distribution, which formulates that the probability of finding a particle
 with certain energy in some volume of gas (population of that energy
-state) is proportional to the Boltzmann factor: \begin{equation}
-g_{i}e^{-\frac{E_{i}}{k_{B}T}},\end{equation}
- where the exponent gives the probability of finding a particle in
+state) is proportional to the Boltzmann factor: 
+\begin{equation}
+g_{i}e^{-\frac{E_{i}}{k_{B}T}},
+\end{equation}
+where the exponent gives the probability of finding a particle in
 a specific state with energy $E_{i}$, while $g_{i}$ -- degeneracy
 -- is the number of such distinct states that have the same desired
 energy. In the case of a plasma, however, the degeneracy value includes
@@ -205,14 +214,18 @@ factor. Dividing each of these factors by the value of their sum,
 we will normalize them so that their sum after the transformation
 will be equal to unity (Eq. 1). Hence, if we also use the ion energy
 levels for $E_{i}$ (energy needed to ionize a neutral atom to an
-i-charged ion), then the ion populations become: \begin{equation}
-P_{i}=\frac{g_{i}(g_{e})^{i}e^{-\frac{E_{i}}{k_{B}T}}}{{\displaystyle \sum_{i=0}^{X}g_{i}(g_{e})^{i}e^{-\frac{E_{i}}{k_{B}T}}}},\label{eq:6}\end{equation}
+i-charged ion), then the ion populations become: 
+\begin{equation}
+P_{i}=\frac{g_{i}(g_{e})^{i}e^{-\frac{E_{i}}{k_{B}T}}}{{\displaystyle \sum_{i=0}^{X}g_{i}(g_{e})^{i}e^{-\frac{E_{i}}{k_{B}T}}}},\label{eq:6}
+\end{equation}
  Here, the sum in the denominator is called the partition function.
 The main difficulty with finding the actual populations using this
 equation comes from the $g_{e}$ and $g_{i}$ values. Through statistical
-and quantum mechanics we can find that the value of $g_{e}$ is: \begin{equation}
-g_{e}=\frac{2}{N_{e}\Lambda^{3}}\ \ \ \ \ \ \ \ \ \ \ \ \ \Lambda=\sqrt{\frac{h^{2}}{2\pi m_{e}k_{B}T}},\end{equation}
- where $\Lambda$ is the thermal De Broglie wavelength of an electron.
+and quantum mechanics we can find that the value of $g_{e}$ is: 
+\begin{equation}
+g_{e}=\frac{2}{N_{e}\Lambda^{3}}\ \ \ \ \ \ \ \ \ \ \ \ \ \Lambda=\sqrt{\frac{h^{2}}{2\pi m_{e}k_{B}T}},
+\end{equation}
+where $\Lambda$ is the thermal De Broglie wavelength of an electron.
 Note that to calculate the value for $g_{e}$, we need to know $N_{e}$,
 which is found from Eq.(3) (or 4), which in turn takes the populations
 as an input parameter. Hence, we will have to solve a system of equations,
@@ -229,18 +242,20 @@ be evened out by the summation often used to calculate such properties,
 making the approximation even less evident. Hence, from now on, we
 will ignore the $g_{i}$ values in our equations, approximating them
 by $g_{i}\approx1$.
-
-
 \subsection{Saha Ionization Equation and Calculation Speed Improvement}
-
 Another similar approach to finding the population values (if the
 value of $g_{e}$ is known) is using the Saha Ionization Equation.
 This equation is obtained by taking the ratio of the populations of
-the two consecutive level ions as given by Eq.(6): \begin{equation}
-\frac{P_{i+1}}{P_{i}}=g_{e}\frac{g_{i+1}}{g_{i}}e^{-\frac{E_{i+1}-E_{i}}{k_{B}T_{e}}}=\frac{2}{N_{e}\Lambda^{3}}\frac{g_{i+1}}{g_{i}}e^{-\frac{I_{i+1}}{k_{B}T_{e}}},\end{equation}
- or, similarly: \begin{equation}
-\frac{N_{i+1}N_{e}}{N_{i}}=\frac{2}{\Lambda^{3}}\frac{g_{i+1}}{g_{i}}e^{-\frac{I_{i+1}}{k_{B}T_{e}}},\end{equation}
- which is a better known form of the Saha Equation. Note that here
+the two consecutive level ions as given by Eq.(6): 
+\begin{equation}
+\frac{P_{i+1}}{P_{i}}=g_{e}\frac{g_{i+1}}{g_{i}}e^{-\frac{E_{i+1}-E_{i}}{k_{B}T_{e}}}=\frac{2}{N_{e}\Lambda^{3}}\frac{g_{i+1}}{g_{i}}e^{-\frac{I_{i+1}}{k_{B}T_{e}}},
+\end{equation}
+or, similarly: 
+\begin{equation}
+\frac{N_{i+1}N_{e}}{N_{i}}=\frac{2}{\Lambda^{3}}
+\frac{g_{i+1}}{g_{i}}e^{-\frac{I_{i+1}}{k_{B}T_{e}}},
+\end{equation}
+which is a better known form of the Saha Equation. Note that here
 $I_{i+1}=E_{i+1}-E_{i}$ denotes the ionization energy -- energy required
 to remove a single electron from an i-charged ion, forming (i+1)-level
 ion. These equations can provide an advantage in finding the populations
@@ -248,9 +263,11 @@ if the speed of calculation is important. First, realize that if such
 is the case, than it is better to avoid the complex exponents of Eq.(6),
 which would take a long time to calculate. To do this, we could instead
 start with the natural logarithm of Eq.(8) (now ignoring the ratio
-$g_{i+1}/g_{i}\approx1$): \begin{equation}
-\ln P_{i+1}-\ln P_{i}=\ln g_{e}-\frac{I_{i+1}}{k_{B}T_{e}},\end{equation}
- Then, we will let $P_{0}=1$ (ln $P_{0}$ = 0), and using this relationship,
+$g_{i+1}/g_{i}\approx1$): 
+\begin{equation}
+\ln P_{i+1}-\ln P_{i}=\ln g_{e}-\frac{I_{i+1}}{k_{B}T_{e}},
+\end{equation}
+Then, we will let $P_{0}=1$ (ln $P_{0}$ = 0), and using this relationship,
 build up and array of non-normalized values of $P_{1}$, $P_{2}$,
 $P_{3}$, ..., $P_{X}$. The values of this array will vary greatly,
 and some will be very large. To avoid having to find exponents of
@@ -267,36 +284,35 @@ at this point, it should not take long to find the exponents of the
 remaining part of the array, and normalize them as before so that
 their sum equals one. This method can then be used instead of Eq.(6)
 any time the population values are needed.
-
-
 \subsection{The System of Equations}
-
 Both of the methods for finding the populations presented above can
 only be used if the value of $g_{e}$ is known. However, $g_{e}$
 depends on $N_{e}$, which in turn depends on the populations themselves,
 and hence we find ourselves faced with solving a system of two equations
 -- Eq.(3) (or 4) and Eq.(6) must both be satisfied in order to obtain
 the correct population values. To solve this system, we first need
-to rewrite the term $g_{e}$ as a function of Z: \begin{equation}
+to rewrite the term $g_{e}$ as a function of Z: 
+\begin{equation}
 g_{e}=\frac{2}{N_{e}\Lambda^{3}}=\frac{2}{ZN_{a}\Lambda^{3}}=\frac{C_{1}}{Z},\end{equation}
  $C_{1}$, which is independent of Z, is introduced here only to simplify
-this ratio. Hence, the Boltmznn factor from Eq.(5) becomes: \begin{equation}
+this ratio. Hence, the Boltmznn factor from Eq.(5) becomes: 
+\begin{equation}
 P_{i}\propto\left(\frac{C_{1}}{Z}\right)^{i}e^{-\frac{E_{i}}{k_{B}T_{e}}}=p_{i},\end{equation}
  Since this term appears frequently in the succeeding discussion,
 we will call it $p_{i}$ to simplify the notation. Now, we can combine
-equations (4) and (6) into a single equation in Z: \begin{equation}
-Z=\sum_{i=0}^{X}iP_{i}=\sum_{i=0}^{X}\left(i\frac{p_{i}}{\sum_{j=0}^{X}p_{j}}\right)=\frac{\sum_{i=0}^{X}ip_{i}}{\sum_{i=0}^{X}p_{i}},\end{equation}
-
-
-
+equations (4) and (6) into a single equation in Z: 
+\begin{equation}
+Z=\sum_{i=0}^{X}iP_{i}=\sum_{i=0}^{X}\left(i\frac{p_{i}}{\sum_{j=0}^{X}p_{j}}\right)=\frac{\sum_{i=0}^{X}ip_{i}}{\sum_{i=0}^{X}p_{i}},
+\end{equation}
 \subsection{Iterative Approach}
-
 Finally, all the terms in the above equation are known. However, this
 expression is too complex to solve by simple algebraic methods and
 requires an iterative approach. Direct iterations will converge to
 the answer very slowly, if at all. Hence, we will use the Newton-Rapson
-iteration method: \begin{equation}
-x_{n+1}=x_{n}-\frac{f(x_{n})}{f'(x_{n})},\end{equation}
+iteration method: 
+\begin{equation}
+x_{n+1}=x_{n}-\frac{f(x_{n})}{f^\prime(x_{n})},
+\end{equation}
  This method is used to approximate zeros of the function f. If $x_{n}$
 is an approximation of the solution (or a trial solution), than $x_{n+1}$
 will be a much better approximation. This method does have limitation
@@ -304,8 +320,9 @@ as to whether it will converge to the answer, but if $f'(x_{n})\geq1$,
 then convergence is guaranteed. Further, since this method works only
 for finding zeros of the function, considering equation (13), let
 \begin{equation}
-f(Z)=Z-\frac{\sum i\left(\frac{C_{1}}{Z}\right)^{i}e^{-\frac{E_{i}}{k_{B}T_{e}}}}{\sum\left(\frac{C_{1}}{Z}\right)^{i}e^{-\frac{E_{i}}{k_{B}T_{e}}}},\end{equation}
- then when f(Z)=0, Z will have the desired value. Now, to use the
+f(Z)=Z-\frac{\sum i\left(\frac{C_{1}}{Z}\right)^{i}e^{-\frac{E_{i}}{k_{B}T_{e}}}}{\sum\left(\frac{C_{1}}{Z}\right)^{i}e^{-\frac{E_{i}}{k_{B}T_{e}}}},
+\end{equation}
+then when f(Z)=0, Z will have the desired value. Now, to use the
 method as in Eq.(14), we need to know f '(Z). Let's first find the
 derivative \[
 \frac{\partial}{\partial Z}\left[\sum\left(\frac{C_{1}}{Z}\right)^{i}e^{-\frac{E_{i}}{k_{B}T_{e}}}\right]=\sum i\left(\frac{C_{1}}{Z}\right)^{i-1}\ \frac{-C_{1}}{Z^{2}}e^{-\frac{E_{i}}{k_{B}T_{e}}}=\]
