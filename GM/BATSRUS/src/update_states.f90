@@ -29,8 +29,10 @@ subroutine update_states(iStage,iBlock)
         write(*,*)NameVar_V(iVar), '(TestCell)=',&
              State_VGB(iVar,Itest,Jtest,Ktest,BLKtest)
      end do
-
-     write(*,*)'Energy =',Energy_GBI(Itest,Jtest,Ktest,BLKtest,:)
+     do iFluid = 1, nFluid
+        write(*,'(a,i2,a,g19.12)') &
+             'E(',iFluid,')=',Energy_GBI(Itest,Jtest,Ktest,BLKtest,iFluid)
+     end do
      write(*,*)'Fluxes and sources for ',NameVar_V(VarTest)
      write(*,*)'X fluxes L,R=',Flux_VX(VARtest,Itest,Jtest,Ktest),&
           Flux_VX(VARtest,Itest+1,Jtest,Ktest)
