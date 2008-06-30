@@ -566,6 +566,8 @@ subroutine MH_set_parameters(TypeAction)
            if (index(log_vars,'flx')>0) &
                 call read_var('log_R_str',log_R_str)
         end if
+     case("#SAVEINITIAL")
+        call read_var('DoSaveInitial',DoSaveInitial)
      case("#SAVEPLOT")
         call read_var('nPlotFile',nplotfile)
 
