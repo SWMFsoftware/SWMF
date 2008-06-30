@@ -7,6 +7,7 @@ include Makefile.DEPEND
 MY_LIB = ${LIBDIR}/libCRASH.a
 
 OBJECTS=\
+	eos.o\
 	heat_capacity.o \
 	ModStatSum.o\
 	ModAtomicMass.o\
