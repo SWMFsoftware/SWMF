@@ -254,4 +254,88 @@ contains
       ENDIF
     end  subroutine simple_wave
   end subroutine sample
+  !=====================================================================!
+  !Calculates the Godunov flux with the exact Riemann solver. The
+  !interface is the most generic (nDim may be 1,2,3), the state vector
+  !of nVar .ge. 2+nDim may inslude an arbitrary number of extra state 
+  !variable, for all of the the continuity equation being implied. At 
+  !the same time, the interface is the least convenient: it requires to
+  !pass nDim and nVar and the unity vector normal to the face which is 
+  !(/1,0,0/), (/0,1,0/), (0,0,1/) for 3D cartesian grid while calculate 
+  !the fluxes along x,y,z axis respectively. 
+  subroutine get_godunov_flux(&
+                 nDim,Normal_D, & !Unity vector normal to face 
+                 nVar,LeftState_V,RightState_V,&!Input states
+                 Flux_V, CMax, &  !Output flux and max perturbation speed
+                 GammaL,GammaR)   !Optional Gamma, if needed
+    integer,intent(in)::nDim,nVar
+    real,intent(in),dimension(nDim)::Normal_D !Unity vector normal to the face
+    real,intent(in),dimension(nVar)::LeftState_V,RightState_V
+    real,intent(out),dimension(nVar)::Flux_V
+    real,intent(out)::CMax
+    real,intent(in),optional::GammaL,GammaR
+    real::Rho, Un, P, StateStar_V(nVar)
+    real::RhoSide,UnSide,GammaSideM1Inv
+    integer::iVar
+    !----------------------------------------
+    !Take scalars
+
+    RhoL=LeftState_V(1)   ;RhoR=RightState_V(1)
+    PL  =LeftState_V(nVar);PR  =RightState_V(nVar)
+    UnL =sum( LeftState_V(2:1+nDim) * Normal_D)
+    UnR =sum(RightState_V(2:1+nDim) * Normal_D)
+
+    !Take the parameters at the Contact Discontinuity (CD)
+
+    call pu_star(GammaL,GammaR)
+
+    if(UnStar>0.0)then
+       !The CD is to the right from the face
+       !The Left gas passes through the face
+       RhoSide = RhoL ; UnSide = UnL
+       StateStar_V=LeftState_V
+       if(present(GammaL))then
+          GammaSideM1Inv=1.0/(1.0 - GammaL)
+       else
+          GammaSideM1Inv=1.0/(1.0 - GammaHere)
+       end if
+    else
+       !The CD is to the left from the face
+       !The Right gas passes through the face
+       RhoSide = RhoR ; UnSide = UnR
+       StateStar_V=RightState_V
+       if(present(GammaR))then
+          GammaSideM1Inv=1.0/(1.0 - GammaR)
+       else
+          GammaSideM1Inv=1.0/(1.0 - GammaHere)
+       end if
+    end if
+
+    !Take the parameters at the face
+
+    call sample(0.0,Rho, Un, P, GammaL,GammaR)
+    StateStar_V(1)=Rho
+    StateStar_V(2:1+nDim) = StateStar_V(2:1+nDim)+(Un-UnSide)*Normal_D
+    StateStar_V(nVar) = P
+    do iVar=2+nDim,nVar-1
+       StateStar_V(iVar) = StateStar_V(iVar)*(Rho/RhoSide)
+    end do
+
+    !Calculate flux (1) take conservative variable
+
+    StateStar_V(nVar) = (1.0 +  GammaSideM1Inv) *  StateStar_V(nVar) &
+         + 0.5 * Rho *sum(StateStar_V(2:1+nDim)**2)
+    StateStar_V(2:1+nDim) = StateStar_V(2:1+nDim) * Rho
+
+    ! (2) take advective part of the flux
+
+    Flux_V = StateStar_V * Un 
+
+    ! (3) add the pressure tensor
+
+    Flux_V(2:1+nDim) = Flux_V(2:1+nDim) + P * Normal_D
+
+    CMax = max( WR, -WL)
+  end subroutine get_godunov_flux
+  !==================================================================!
 end module ModExactRS
