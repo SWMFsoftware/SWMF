@@ -399,8 +399,8 @@ and similarly:
 \end{equation}
 Now, combining these answers to find $f^{\prime}(Z)$, we get: 
 \begin{eqnarray}
-\frac{\partial f}{\partial Z}=1-\frac{-\frac{1}{Z}\sum i^{2}p_{i}}{\sum p_{i}}-\frac{-\sum ip_{i}}{\left(\sum p_{i}\right)^{2}}\left(-\frac{1}{Z}\sum ip_{i}\right)=\nonumber\\
-=1+\frac{1}{Z}\left(\frac{\sum i^{2}p_{i}}{\sum p_{i}}-\left(\frac{\sum ip_{i}}{\sum p_{i}}\right)^{2}\right),\label{eq:18}
+\frac{\partial f}{\partial Z}&=&1-\frac{-\frac{1}{Z}\sum i^{2}p_{i}}{\sum p_{i}}-\frac{-\sum ip_{i}}{\left(\sum p_{i}\right)^{2}}\left(-\frac{1}{Z}\sum ip_{i}\right)=\nonumber\\
+&=&1+\frac{1}{Z}\left(\frac{\sum i^{2}p_{i}}{\sum p_{i}}-\left(\frac{\sum ip_{i}}{\sum p_{i}}\right)^{2}\right),\label{eq:18}
 \end{eqnarray}
 Therefore, looking back on Eq.(14) and combining Eq.(15) and (18),
 we get the overall resulting equation that can be used to find Z:
@@ -620,13 +620,12 @@ Further note that for any expression $a$ it is true that its statistical
 average is $<a>={\displaystyle \sum_{i=0}^{X}aP_{i}=\frac{\sum ap_{i}}{\sum p_{i}}}$.
 Hence, using these formulas in Eq.\ref{eq:33} we get:
 \begin{eqnarray}
-Z'=\frac{1}{(T_{eV})^{2}}\frac{\sum iE_{i}p_{i}}{\sum p_{i}}+\left(\frac{3}{2T_{eV}}-\frac{Z'}{Z}\right)\frac{\sum i^{2}p_{i}}{\sum p_{i}}-\frac{1}{(T_{eV})^{2}}\frac{\sum ip_{i}\sum E_{i}p_{i}}{\left(\sum p_{i}\right)^{2}}-\left(\frac{3}{2T_{eV}}-\frac{Z'}{Z}\right)\frac{\left(\sum ip_{i}\right)^{2}}{\left(\sum p_{i}\right)^{2}}=\nonumber\\
-=\frac{<iE_{i}>-<i><E_{i}>}{(T_{eV})^{2}}+\left(\frac{3}{2T_{eV}}-\frac{Z'}{Z}\right)\left(<i^{2}>-<i>^{2}\right)\nonumber\\
-Z'\left(\frac{Z+<i^{2}>-<i>^{2}}{Z}\right)=\frac{<iE_{i}>-<i><E_{i}>}{(T_{eV})^{2}}+\frac{3}{2T_{eV}}\left(<i^{2}>-<i>^{2}\right)\nonumber\\
-\frac{Z'}{Z}=\frac{\frac{3}{2}T_{eV}\left(<i^{2}>-<i>^{2}\right)+<iE_{i}>-<i><E_{i}>}{(T_{eV})^{2}\left(Z+<i^{2}>-<i>^{2}\right)}\label{eq:35}
+Z'&=&\frac{1}{(T_{eV})^{2}}\frac{\sum iE_{i}p_{i}}{\sum p_{i}}+\left(\frac{3}{2T_{eV}}-\frac{Z'}{Z}\right)\frac{\sum i^{2}p_{i}}{\sum p_{i}}-\frac{1}{(T_{eV})^{2}}\frac{\sum ip_{i}\sum E_{i}p_{i}}{\left(\sum p_{i}\right)^{2}}-\left(\frac{3}{2T_{eV}}-\frac{Z'}{Z}\right)\frac{\left(\sum ip_{i}\right)^{2}}{\left(\sum p_{i}\right)^{2}}=\nonumber\\
+&=&\frac{<iE_{i}>-<i><E_{i}>}{(T_{eV})^{2}}+\left(\frac{3}{2T_{eV}}-\frac{Z'}{Z}\right)\left(<i^{2}>-<i>^{2}\right)\nonumber\\
+%Z^\prime\left(\frac{Z + <i^{2}>-<i>^{2}}{Z}\right)&=&\frac{<iE_{i}>-<i><E_{i}>}{(T_{eV})^{2}}+\frac{3}{2T_{eV}}\left(<i^{2}>-<i>^{2}\right)\nonumber\\
+\frac{Z^\prime}{Z} &=& \frac{\frac{3}{2}T_{eV}\left(<i^{2}>-<i>^{2}\right)+<iE_{i}>-<i><E_{i}>}{(T_{eV})^{2}\left(Z+<i^{2}>-<i>^{2}\right)}\label{eq:35}
 \end{eqnarray}
-
-Finally, we have reached the bottom of this derivative -- everything
+Finally, we have reached the bottom of this derivation -- everything
 in the above equation can be found using the methods presented in
 Part I. Now, we can significantly simplify this whole derivative by
 working our way up to the beginning. However first, we need to introduce
@@ -664,16 +663,16 @@ can also be written as:
 Using this and Eq.\ref{eq:38} we can now transform Eq.\ref{eq:29}
 as follows:
 \begin{eqnarray}
-C_{V}=\frac{\partial U}{\partial T_{eV}}=\frac{3}{2}(1+Z)+\sum\left[\frac{P_{i}}{(T_{eV})^{2}}\left(\delta E_{i}+\beta\delta i\right)\left(\frac{3}{2}T_{eV}i+E_{i}\right)\right]=\nonumber\\
-=\frac{3}{2}(1+Z)+\frac{1}{(T_{eV})^{2}}<\left(\delta E_{i}+\beta\delta i\right)\left(\frac{3}{2}T_{eV}\delta i+\delta E_{i}\right)>=\nonumber\\
-=\frac{3}{2}(1+Z)+\frac{1}{(T_{eV})^{2}}<(\delta E_{i})^{2}+\left(\frac{3}{2}T_{eV}+\beta\right)\delta i\ \delta E_{i}+\frac{3}{2}T_{eV}\beta(\delta i)^{2}>=
+C_{V}&=&\frac{\partial U}{\partial T_{eV}}=\frac{3}{2}(1+Z)+\sum\left[\frac{P_{i}}{(T_{eV})^{2}}\left(\delta E_{i}+\beta\delta i\right)\left(\frac{3}{2}T_{eV}i+E_{i}\right)\right]=\nonumber\\
+&=&\frac{3}{2}(1+Z)+\frac{1}{(T_{eV})^{2}}<\left(\delta E_{i}+\beta\delta i\right)\left(\frac{3}{2}T_{eV}\delta i+\delta E_{i}\right)>=\nonumber\\
+&=&\frac{3}{2}(1+Z)+\frac{1}{(T_{eV})^{2}}<(\delta E_{i})^{2}+\left(\frac{3}{2}T_{eV}+\beta\right)\delta i\ \delta E_{i}+\frac{3}{2}T_{eV}\beta(\delta i)^{2}>=
 \nonumber\\
-=\frac{3}{2}(1+Z)+\frac{1}{(T_{eV})^{2}}\Biggl(<(\delta E_{i})^{2}>+\left(\frac{\frac{3}{2}T_{eV}\left(Z+<(\delta i)^{2}>\right)+\frac{3}{2}T_{eV}Z-<\delta i\ \delta E_{i}>}{Z+<(\delta i)^{2}>}\right)<\delta i\ \delta E_{i}>+
+&=&\frac{3}{2}(1+Z)+\frac{1}{(T_{eV})^{2}}\Biggl(<(\delta E_{i})^{2}>+\left(\frac{\frac{3}{2}T_{eV}\left(Z+<(\delta i)^{2}>\right)+\frac{3}{2}T_{eV}Z-<\delta i\ \delta E_{i}>}{Z+<(\delta i)^{2}>}\right)<\delta i\ \delta E_{i}>+
 \nonumber\\
-+\frac{3}{2}T_{eV}\frac{\frac{3}{2}T_{eV}Z-<\delta i\ \delta E_{i}>}{Z+<(\delta i)^{2}>}<(\delta i)^{2}>\Biggr)=
+&+&\frac{3}{2}T_{eV}\frac{\frac{3}{2}T_{eV}Z-<\delta i\ \delta E_{i}>}{Z+<(\delta i)^{2}>}<(\delta i)^{2}>\Biggr)=
 \nonumber\\
-=\frac{3}{2}(1+Z)+\frac{1}{(T_{eV})^{2}}\left(<(\delta E_{i})^{2}>+\frac{3T_{eV}Z<\delta i\ \delta E_{i}>-<\delta i\ \delta E_{i}>^{2}+\frac{9}{4}(T_{eV})^{2}Z<(\delta i)^{2}>}{Z+<(\delta i)^{2}>}\right)=\nonumber\\
-=\frac{3}{2}(1+Z)+<\left(\frac{\delta E_{i}}{T_{eV}}\right)^{2}>+\frac{3Z\left(\frac{3}{4}<(\delta i)^{2}>+<\delta i\ \frac{\delta E_{i}}{T_{eV}}>\right)-<\delta i\ \frac{\delta E_{i}}{T_{eV}}>^{2}}{Z+<(\delta i)^{2}>}=C_{V}.\label{eq:Cv}
+&=&\frac{3}{2}(1+Z)+\frac{1}{(T_{eV})^{2}}\left(<(\delta E_{i})^{2}>+\frac{3T_{eV}Z<\delta i\ \delta E_{i}>-<\delta i\ \delta E_{i}>^{2}+\frac{9}{4}(T_{eV})^{2}Z<(\delta i)^{2}>}{Z+<(\delta i)^{2}>}\right)=\nonumber\\
+&=&\frac{3}{2}(1+Z)+<\left(\frac{\delta E_{i}}{T_{eV}}\right)^{2}>+\frac{3Z\left(\frac{3}{4}<(\delta i)^{2}>+<\delta i\ \frac{\delta E_{i}}{T_{eV}}>\right)-<\delta i\ \frac{\delta E_{i}}{T_{eV}}>^{2}}{Z+<(\delta i)^{2}>}=C_{V}.\label{eq:Cv}
 \end{eqnarray}
 This equation can then be used to find the heat capacity at constant
 volume when the temperature is known. Following is a table built using
