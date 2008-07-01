@@ -267,13 +267,15 @@ contains
                  nDim,Normal_D, & !Unity vector normal to face 
                  nVar,LeftState_V,RightState_V,&!Input states
                  Flux_V, CMax, &  !Output flux and max perturbation speed
-                 GammaL,GammaR)   !Optional Gamma, if needed
+                 GammaL,GammaR,&  !Optional Gamma, if needed
+                 DoTest)
     integer,intent(in)::nDim,nVar
     real,intent(in),dimension(nDim)::Normal_D !Unity vector normal to the face
     real,intent(in),dimension(nVar)::LeftState_V,RightState_V
     real,intent(out),dimension(nVar)::Flux_V
     real,intent(out)::CMax
     real,intent(in),optional::GammaL,GammaR
+    logical,optional::DoTest
     real::Rho, Un, P, StateStar_V(nVar)
     real::RhoSide,UnSide,GammaSideM1Inv
     integer::iVar
@@ -295,9 +297,9 @@ contains
        RhoSide = RhoL ; UnSide = UnL
        StateStar_V=LeftState_V
        if(present(GammaL))then
-          GammaSideM1Inv=1.0/(1.0 - GammaL)
+          GammaSideM1Inv=1.0/(GammaL-1.0)
        else
-          GammaSideM1Inv=1.0/(1.0 - GammaHere)
+          GammaSideM1Inv=1.0/(GammaHere-1.0)
        end if
     else
        !The CD is to the left from the face
@@ -305,9 +307,9 @@ contains
        RhoSide = RhoR ; UnSide = UnR
        StateStar_V=RightState_V
        if(present(GammaR))then
-          GammaSideM1Inv=1.0/(1.0 - GammaR)
+          GammaSideM1Inv=1.0/(GammaR-1.0)
        else
-          GammaSideM1Inv=1.0/(1.0 - GammaHere)
+          GammaSideM1Inv=1.0/(GammaHere-1.0)
        end if
     end if
 
@@ -336,6 +338,18 @@ contains
     Flux_V(2:1+nDim) = Flux_V(2:1+nDim) + P * Normal_D
 
     CMax = max( WR, -WL)
+    if(present(DoTest))then
+       if(DoTest)then
+          write(*,'(a)')'Test for get_godunov_flux:'
+          write(*,*)'Left state:', LeftState_V
+          write(*,*)'Right state:',RightState_V
+          write(*,*)'Star state:',StateStar_V
+          write(*,*)'PStar,UStar=',PStar,UnStar
+          write(*,*)'Flux:',Flux_V
+          write(*,*)'CMax',CMax
+          if(present(GammaL))write(*,*)'GammaL,GammaR=',GammaL,GammaR
+       end if
+    end if
   end subroutine get_godunov_flux
   !==================================================================!
 end module ModExactRS
