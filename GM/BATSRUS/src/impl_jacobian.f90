@@ -734,10 +734,7 @@ contains
     use ModHallResist, ONLY: set_block_jacobian_cell, DgenDxyz_DDC, &
          BxPerN_G, ByPerN_G, BzPerN_G
 
-    integer, parameter :: cLeviCivita_III(3,3,3) = reshape( (/ &
-         0, 0, 0,   0, 0,-1,  0, 1, 0,   &
-         0, 0, 1,   0, 0, 0, -1, 0, 0,   &
-         0,-1, 0,   1, 0, 0,  0, 0, 0 /), (/3,3,3/) )
+    use ModNumConst,   ONLY: iLeviCivita_III
 
     ! Notation follows the Toth et. al. Hall MHD on Block Adaptive Grids paper
 
@@ -771,12 +768,12 @@ contains
           lB = B_ + lDim; 
           Coeff = ImplCoeff*wnrm(lB)/wnrm(jB)
 
-          jklEpsilon = cLeviCivita_III(jDim, kDim, lDim)
+          jklEpsilon = iLeviCivita_III(jDim, kDim, lDim)
 
           do iDim = 1,3
              if(iDim == jDim) CYCLE  ! Terms cancel out
 
-             iklEpsilon = cLeviCivita_III(iDim, kDim, lDim)
+             iklEpsilon = iLeviCivita_III(iDim, kDim, lDim)
              if(iklEpsilon == 0 .and. jklEpsilon == 0) CYCLE
 
              do iFace = 1,3      ! 3 directions of gen. coordinates

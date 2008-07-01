@@ -24,8 +24,15 @@ Module ModNumConst
        cPi8       =  3.1415926535897932384626433832795,  &
        cTwoPi8    =  2*cPi8
 
+  ! Unit matrix (also Kronecker delta)
   real, parameter, dimension(3,3) :: cUnit_DD = reshape( &
        (/1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0/),&
        (/3,3/))
 
+  ! Levi-Civita tensor
+  integer, parameter :: iLeviCivita_III(3,3,3) = reshape( (/ &
+       0, 0, 0,   0, 0,-1,  0, 1, 0,   &
+       0, 0, 1,   0, 0, 0, -1, 0, 0,   &
+       0,-1, 0,   1, 0, 0,  0, 0, 0 /), (/3,3,3/) )
+  
 end module ModNumConst
