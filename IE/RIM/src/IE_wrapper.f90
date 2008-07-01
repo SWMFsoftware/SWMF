@@ -356,8 +356,6 @@ subroutine IE_get_for_gm(Buffer_II,iSize,jSize,tSimulation)
 
   Buffer_II = PotentialAll
 
-  write(*,*) "potentialall : ", minval(potentialall), maxval(potentialall)
-
 end subroutine IE_get_for_gm
 
 !==============================================================================
@@ -713,6 +711,11 @@ subroutine IE_run(tSimulation,tSimulationLimit)
   if(DoTest)write(*,*)NameSub,': iProc,tSimulation,tSimulationLimit=',&
        iProc,tSimulation,tSimulationLimit
 
+  if(DoTest)write(*,*)NameSub,': iProc,IsNewInput=',iProc,IsNewInput
+
+  ! Do not solve if there is no new input from GM or UA
+  if(.not.IsNewInput) RETURN
+
   CurrentTime = StartTime + tSimulation
   call time_real_to_int(CurrentTime, TimeArray)
 
@@ -726,6 +729,8 @@ subroutine IE_run(tSimulation,tSimulationLimit)
   call get_axes(tSimulation,MagAxisTiltGsmOut = ThetaTilt)
 
   call advance_RIM
+
+  IsNewInput = .false.
 
 !   ! Solve for the ionosphere potential
 !   call IE_solve

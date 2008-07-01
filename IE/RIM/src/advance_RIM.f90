@@ -9,16 +9,17 @@ subroutine advance_RIM
 
   integer :: iLon, iLat, iError, iFile
 
+  iError = 0
+
   call IO_SetTime(CurrentTime)
   call IO_SetNorth
 
-  call set_imf
+  if (maxval(Latitude) > HighLatBoundary) call set_imf
 
   call distribute
 
-  call get_conductance
-
-  call IO_GetPotential(EmpiricalPotential, iError)
+  if (maxval(Latitude) > HighLatBoundary) &
+       call IO_GetPotential(EmpiricalPotential, iError)
 
   if (iError /= 0) then
      write(*,*) "Error : ", iError
@@ -26,18 +27,16 @@ subroutine advance_RIM
   endif
 
   do iLon=0,nLons+1 
-     nEmpiricalLats = 1
+     nEmpiricalLats = 0
      do iLat=1,nLats
         if (abs(Latitude(iLon,iLat)) > HighLatBoundary) then
            potential(iLon,iLat) = EmpiricalPotential(iLon,nEmpiricalLats)
-           if (iLon == 20) write(*,*) "pot : ",iLat,potential(iLon,iLat)
            nEmpiricalLats = nEmpiricalLats + 1
         endif
      enddo
   enddo
 
-  nSolve=nSolve+1
-
+  call get_conductance
   call conductance_gradients
   call solve
   call gather
@@ -50,6 +49,6 @@ subroutine advance_RIM
      end do
   end if
 
-  write(*,*) "nSolve : ", nSolve
+  nSolve=nSolve+1
 
 end subroutine advance_RIM

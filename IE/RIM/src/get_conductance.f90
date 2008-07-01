@@ -11,6 +11,8 @@ subroutine get_conductance
   real    :: cosLimit, MeetingValueP, MeetingValueH
   real    :: f107p49, f107p53
 
+  iError = 0
+
   ! Empirical Dayside Conductance
 
   if (iConductanceModel > 1) then
@@ -60,7 +62,7 @@ subroutine get_conductance
 
         if (iError /= 0) then
            write(*,*) "Error : ", iError
-           call stop_RIM("Stopping in advance_RIM, call to IO_GetAveE")
+           call stop_RIM("Stopping in get_conductance, call to IO_GetAveE")
         endif
 
         call IO_GetEFlux(EmpiricalEFlux, iError)
