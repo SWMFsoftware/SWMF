@@ -47,15 +47,15 @@ be useful in achieving the above goals:
 This document aims at introducing further steps to improve the quality of the
 software developed at CSEM and CRASH. These are
 \begin{itemize}
-\item General guide lines for software development
-\item Unit and functionality tests
-\item Guide lines for use of object oriented features
-\item Guide lines for formatting source code
-\item Guide lines for documenting source code
+\item general guidelines for software development
+\item unit and functionality tests
+\item guidelines for use of object oriented features
+\item guidelines for formatting source code
+\item guidelines for documenting source code
 \end{itemize}
 The rest of this document will discuss these items in some detail.
 
-Most of the guide lines are very general and apply to all kinds of 
+Most of the guidelines are very general and apply to all kinds of 
 software and programming language. Some of the standards are specific
 to the projects carried out at CSEM and CRASH and/or the Fortran 90
 programming language. Many of the language specific recommendations
@@ -63,7 +63,7 @@ can be easily applied to other programming languages. Fortran 90 is
 stressed because most of the development is done in this language
 at CSEM and CRASH. 
 
-Many of the guide lines may seem self-evident to many developers. That's good
+Many of the guidelines may seem self-evident to many developers. That's good
 news. On the other hand we know from experience that developers have radically
 different approaches to software development. To be on the safe side 
 a lot of basic ideas are explicitly discussed. The document may also be 
@@ -86,7 +86,7 @@ clear from the next section that developers do not own any part of the
 software, it can be modified by any other developer if and as necessary
 or useful.
 
-\section{General guide-lines for software development}
+\section{General guidelines for software development}
 
 Our software development approach follows several ideas of 
 'extreme programming', in particular:
@@ -291,7 +291,8 @@ http://herot.engin.umich.edu/~gtoth
 \end{verbatim}
 that is updated at 9 am Eastern Time every day, including weekends. The
 test page shows changes in test results, error reports and logs, and 
-changes in the source code relative to the previous day.
+changes in the source code relative to the previous day. It also has links
+to the manuals, so one can check if the manuals were generated successfully.
 
 If the tests fail, the developer is responsible for debugging the problem
 and fixing the code as soon as possible. 
@@ -347,7 +348,7 @@ four processors (this is the maximum number of processors used in the
 nightly tests).
 
 While the functionality tests are unlikely to produce physically 
-meaningful solutions (due to the coarsness of grids and small number 
+meaningful solutions (due to the coarseness of grids and small number 
 of time steps), checking the results against reference solutions 
 can still guarantee the proper functioning of the code. 
 We may use FCAT or similar software to ensure that
@@ -370,7 +371,7 @@ installs, configures, compiles and runs the tests, and compares with
 the reference solutions (also saved into CVS).
 This proceedure guarantees portability of the code and 
 platform independence of the solution. It also verifies
-that future development does not introduce unintended changes in the 
+that new development does not introduce unintended changes in the 
 already working and tested parts of the code.
 The results of the system tests are reported in an easy to interpret
 table on the web at
@@ -423,7 +424,7 @@ shows how one can do individual tests.
 These examples should be closely followed so that any developer can test
 any part of the code without reading a manual or source code.
 
-\section{Guide lines for the use of Object Oriented features 
+\section{Guidelines for the use of Object Oriented features 
          \label{sec:object}}
 
 Object oriented (OO) programming has proven to be a useful and productive 
@@ -446,9 +447,8 @@ With a lot of effort one can mimic essentially all features of OO, but it is
 not really convenient. In addition, the scientific code development 
 may not benefit as much from a full OO approach as commercial software
 development.
-Here we provide some guide lines on the use of some of the OO concepts 
-in our software development effort. These guide lines are based 
-on the experience gained in the past few years developing the SWMF.
+Here we provide some guidelines on the use of some of the OO concepts 
+in our software development effort. 
 
 \subsection{Use of modules}
 
@@ -480,7 +480,7 @@ of an object can be realized by pointer type data. Pointers can be allocated
 multiple times creating an arbitrary number of instances of an object.
 
 In practice we use modules to collect cohesive parts of the program. 
-For example the module ModLinerSolver may contain various methods to 
+For example the module ModLinearSolver may contain various methods to 
 solve a linear system of equations. The module starts with a short 
 description, the list of public data and methods:
 \begin{verbatim}
@@ -550,9 +550,9 @@ produce a portable code. Second, it is usually not a good idea to change
 the name of the same entity through the program. For example if the code
 contains a line
 \begin{verbatim}
-call linear_solver(x, y, b)
+call solve_linear(x, y, b)
 \end{verbatim}
-one tends to search for {\tt subroutine linear\_solver} in the source code.
+one tends to search for {\tt subroutine solve\_linear} in the source code.
 
 A nice way to reduce the number of public methods is the use of module
 procedures. Module procedures allow the same method to be used with
@@ -589,8 +589,8 @@ lists for a method that is only used once in the whole code is pointless.
 
 \subsection{Circular dependencies}
 
-Most scientific codes were written in the old Fortran style as a collection
-of subroutines and functions. As we are gradually moving towards the object 
+Most scientific codes are written as a collection of subroutines and 
+functions. As we are gradually moving towards the object 
 oriented style we are often confronted with a situation when {\tt module A} 
 uses something from {\tt module B} and vice versa, {\tt module B} uses
 something from {\tt module A}. Often the use is indirect through other modules.
@@ -602,7 +602,7 @@ hierarchy expresses the logical structure of the code.
 
 Circular dependency can sometimes be resolved by moving some variables or
 methods between the modules. Sometimes one can pass a variable as an argument
-instead of using it from the module. But often one has to change the 
+instead of using it from the module. But often it is necessary to change the 
 hierarchical structure of the modules. Typically one can introduce module C
 that is split off from module A and contains the variables and/or methods
 needed by module B. Module C is therefore used by modules A and B, 
@@ -664,7 +664,8 @@ statement, and there is a write statement inside the function itself (e.g.
 for debugging) the code crashes with a runtime error, since Fortran
 does not allow nested write statements. 
 
-Automatic arrays another nice feature of Fortran 90. Unfortunately we found
+Another nice feature of Fortran 90 are {\bf automatic arrays}. 
+Unfortunately we found
 that some F90 compilers fail to deallocate the automatic array after exiting 
 the subroutine or function, which results in a memory leak and eventually
 a run time crash. For this reason we have to use allocatable arrays instead
@@ -848,7 +849,7 @@ Protex does not guarantee that the source code is well documented.
 Ultimately it is the developers responsibility to produce a readable, 
 maintainable, well documented source code.
 
-\section{Guide lines for formatting source code}
+\section{Guidelines for formatting source code}
 
 Formatting the source code has the following purposes:
 \begin{itemize}
@@ -1011,7 +1012,7 @@ that extends over the whole loop.
 \section{Data Naming}
 
 Both CSEM and CRASH are developing a software framework.
-The software framework consist of the core and the components.
+The software framework consists of the core and the components.
 Each component corresponds to a particular physics domain 
 (for example the {\it solar corona} or {\it radiative transfer}). 
 A particular physics model is regarded as a {\it component version}.
@@ -1022,8 +1023,7 @@ to have consistent naming when many developers work together
 on the same part of the software.
 
 The naming standard refers to all variable, type, procedure, module and file 
-names.
-Here {\it variable name} means any constant or variable, while 
+names. Here {\it variable name} means any constant or variable, while 
 {\it procedure name} means subroutines, functions and main program units.
 
 The purposes of the naming standard are the following:
@@ -1036,7 +1036,7 @@ The purposes of the naming standard are the following:
 \end{itemize}
 
 The data naming standard consists of {\bf formal rules} and 
-{\bf guide lines} with respect to the choices made within 
+{\bf guidelines} with respect to the choices made within 
 the limits of the formal rules.
 Whether the data names obey the formal rules or not can be checked
 with the script
@@ -1044,9 +1044,9 @@ with the script
 share/Scripts/CheckDataName.pl
 \end{verbatim}
 Even if the data name conforms with the standars, it can still be a bad
-data name that does not conform with the guide-lines discussed next.
+data name that does not conform with the guidelines discussed next.
 
-\subsection{Guide lines on choosing data names and type}
+\subsection{Guidelines on choosing data names and type}
 
 In the good old days programmers worked alone, and they could come up
 with arbitrary names for their variables and procedures. A certain programmer
@@ -1206,7 +1206,7 @@ platform to platform.
 %   PARAMETER (MPI_DOUBLE_PRECISION=27)
 % \end{verbatim}
 
-\subsection{Guide lines on the use of abbreviations and acronyms}
+\subsection{Guidelines on the use of abbreviations and acronyms}
 
 It is quite customary to use abbreviations and acronyms
 in data names (variable names, file names etc). 
@@ -1238,7 +1238,7 @@ subroutine msg_pass_corr_face_flux
 This is fine as long as message is always replaced with 'msg' and 
 'corrected' is always replaced with 'corr'.
 
-So here are some guide lines on the use of abbreviations and acronyms
+So here are some guidelines on the use of abbreviations and acronyms
 \begin{itemize}
 \item Do not use acronyms that are not comprehensible to ALL developers
 \item Use abbreviations only if necessary
@@ -1253,8 +1253,8 @@ Since the science models are mostly developed by scientists and not
 by software engineers, it seems reasonable to minimize the constraints
 on the data naming. The minimum requirements are the following
 \begin{itemize}
-\item Procedure and module names of a model must start with a unique identifier
-      of the component.
+\item Procedure and module names of a model should start with a unique 
+      identifier of the component.
 \item Input and output file names used by a model should start with a directory
       named as the component identifier.
 \end{itemize}
@@ -1311,7 +1311,8 @@ function IE_is_spherical_grid
 NameLogFile = 'GM/plot/log.dat'
 \end{verbatim}
 Note that internal (contained) subroutines and functions cannot create
-a name conflict. Also note that a model can use arbitrary input/output 
+a name conflict and their name should not start with a component identifier. 
+Also note that a model can use arbitrary input/output 
 file names when it is running in stand-alone mode.
 
 \subsection{Directory structure and directory names}
@@ -1392,7 +1393,7 @@ calc_face_flux         ! calculate face fluxes
 set_b0                 ! set the B0 magnetic field
 read_restart_file      ! read restart files
 \end{verbatim}
-Function names should describe the tyep and meaning of the returned value.
+Function names should describe the type and meaning of the returned value.
 The type is defined by the first name part. The exact rules for the
 first name part will be given in the section for variable names. 
 Examples for function names:
@@ -1402,7 +1403,7 @@ is_first_session()     ! logical: true in first session
 cross_product()        ! real: cross product of two vectors
 \end{verbatim}
 
-\subsection{Module, Variable and Type Names}
+\subsection{Module, variable and type names}
 
 The variable name standard was developed by G. T\'oth, D. De Zeeuw
 and D. Chesney. We tried to create logical, unique, distinct and easy 
@@ -1490,6 +1491,7 @@ All integer variable names must start with one of the following name parts
   Dn               difference of number of
   Min              minimum number of
   Max              maximum number of
+  Int              generic integer
 \end{verbatim}
 All character and character string type variable names must start with
 any of 
@@ -1541,7 +1543,7 @@ character(len=100)::  StringLogVar        ! variables saved into the log file
 \caption{Index abbreviations used in array names}
 \begin{center}
 \begin{tabular}{lll}
-name &   typical range               &  meaning \\
+name &   typical range                 &  meaning \\
 \hline \\
 A    & {\tt 1:MaxBlock*nProc}          &  blocks on all processors \\
 B    & {\tt 1:MaxBlock}                &  blocks on one processor \\
@@ -1557,7 +1559,7 @@ P    & {\tt 1:nProc}                   &  processors \\
 V    & {\tt 1:nVar}                    &  (state/plot) variables \\
 X    & {\tt 1:nI+1,1:nJ,1:nK}          &  X faces (of grid cells) \\
 Y    & {\tt 1:nI,1:nJ+1,1:nK}          &  Y faces \\
-Z    & {\tt 1:nI,1:nJ,1:nK+1}         &  Z faces
+Z    & {\tt 1:nI,1:nJ,1:nK+1}          &  Z faces
 \end{tabular}
 \end{center}
 \label{tab:index}
