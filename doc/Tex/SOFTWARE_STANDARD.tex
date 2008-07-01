@@ -64,8 +64,8 @@ stressed because most of the development is done in this language
 at CSEM and CRASH. 
 
 Many of the guidelines may seem self-evident to many developers. That's good
-news. On the other hand we know from experience that developers have radically
-different approaches to software development. To be on the safe side 
+news. On the other hand developers have radically different approaches 
+to software development. To be on the safe side 
 a lot of basic ideas are explicitly discussed. The document may also be 
 used by graduate students who just start working with scientific software. 
 Some of the standards may seem arbitrary, although we try to explain the 
@@ -193,7 +193,7 @@ Concurrent Version control System (CVS), to
 \item to merge parallel changes in a gradual fashion
 \item to allow automatic testing of the latest (=HEAD) version
 \end{itemize}
-Our experience shows that we should maintain a single branch of our software. 
+We maintain {\bf a single branch} of our software. 
 Multiple branches result in bugs that are fixed in one version, but not the 
 other, features that exist in one version, but not the others, and mergers
 that can be extremely time consuming and frustrating.
@@ -369,7 +369,7 @@ The extended/modified test suite runs nightly on several platforms and
 compilers. Each machine checks out the latest version of the code, 
 installs, configures, compiles and runs the tests, and compares with
 the reference solutions (also saved into CVS).
-This proceedure guarantees portability of the code and 
+This procedure guarantees portability of the code and 
 platform independence of the solution. It also verifies
 that new development does not introduce unintended changes in the 
 already working and tested parts of the code.
@@ -391,7 +391,7 @@ share/Scripts/DiffNum.pl
 \end{verbatim}
 that compares numbers in two files and reports back differences 
 above a given absolute or relative tolerance. Tests should be done with
-double precision accuracy, and the refeerence solution should be written
+double precision accuracy, and the reference solution should be written
 out to sufficient number of digits to show changes that exceed round-off 
 errors.
 
@@ -775,7 +775,7 @@ to produce more efficient code (if efficiency matters for this data).
 Note that using plain numbers to represent elements of different meaning 
 should be avoided. This practice is widely used in old fashioned scientific
 codes (e.g. U(1) is density, U(2) is velocity, U(3) is pressure etc.)
-and it results in undreadable and unreliable software.
+and it results in unreadable and unreliable software.
 
 \section{Documentation}
 
@@ -874,7 +874,7 @@ these in future development.
 \item Indentation follows the rules used by the EMACS editor. One can
       easily format whole files using the ESC Ctrl-Q command in the
       EMACS editor.
-\item Comments are written with normal Engligh capitalization. All upper
+\item Comments are written with normal English capitalization. All upper
       case comments should be avoided unless there is a really good reason.
 \item No line can exceed 80 character width. 
 \item Subroutines and functions are separated from each other 
@@ -884,9 +884,10 @@ these in future development.
       about 78 characters
 \item Blanks are used to make the source code more readable. In particular
       commas, single or double colons, semi-colons should be followed
-      by a single space. The $=$, $+$ and $-$ and the logical relations 
+      by a single space. The $=$ sign, the $+$ and $-$ and the logical 
       $==$, $/=$, $>$, $<$, $>=$, $<=$ operators should be surrounded
-      by spaces on both sides.
+      by spaces on both sides. For unary $+$ or $-$ (as in $-2.0$) use 
+      space before, but not after the sign.
 \item Blank lines are used to separate logically coherent parts of the 
       source code.
 \end{itemize}
@@ -1578,7 +1579,7 @@ Examples:
   GradRho_C(:,:,:)  - real array indexed by cells
   B0x_XB(:,:,:,:)   - real array indexed by the X faces and blocks
   nRoot_D(:)        - integer array indexed by the 3 directions (x,y,z)
-  Buffer_VII(:,:)   - real buffer with one variable and two oter indexes
+  Buffer_VII(:,:,:) - real buffer with one variable and two other indexes
 \end{verbatim}
 
 \subsubsection{Named indexes \label{sec:named}}
