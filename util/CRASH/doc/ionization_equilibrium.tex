@@ -603,8 +603,8 @@ where primes denote the derivatives with respect to $T_{eV}$. Also,
 recall that Z is also a function of T, hence for $p_{i}^{\prime}$
 we have:
 \begin{eqnarray}
-p_{i}^{\prime}=\left(C_{0}\frac{(T_{eV})^{\nicefrac{3}{2}}}{Z}\right)^{i}e^{-\frac{E_{i}}{T_{eV}}}\left(\frac{E_{i}}{(T_{eV})^{2}}\right)+\left(C_{0}^{\ \ i}\right)i\left(\frac{(T_{eV})^{\nicefrac{3}{2}}}{Z}\right)^{i-1}\left(\frac{\frac{3}{2}(T_{eV})^{\nicefrac{1}{2}}}{Z}-\frac{(T_{eV})^{\nicefrac{3}{2}}}{Z^{2}}Z'\right)e^{-\frac{E_{i}}{T_{eV}}}=\nonumber\\
-=p_{i}\left(\frac{E_{i}}{(T_{eV})^{2}}+i\frac{Z}{(T_{eV})^{\nicefrac{3}{2}}}\left(\frac{\frac{3}{2}(T_{eV})^{\nicefrac{1}{2}}}{Z}-\frac{(T_{eV})^{\nicefrac{3}{2}}}{Z^{2}}Z'\right)\right)=p_{i}\left(\frac{E_{i}}{(T_{eV})^{2}}+i\left(\frac{3}{2T_{eV}}-\frac{Z'}{Z}\right)\right)\label{eq:32}
+p_{i}^{\prime}=\left(C_{0}\frac{(T_{eV})^{\nicefrac{3}{2}}}{Z}\right)^{i}e^{-\frac{E_{i}}{T_{eV}}}\left(\frac{E_{i}}{(T_{eV})^{2}}\right)+\left(C_{0}^{\ \ i}\right)i\left(\frac{(T_{eV})^{\nicefrac{3}{2}}}{Z}\right)^{i-1}\left(\frac{\frac{3}{2}(T_{eV})^{\nicefrac{1}{2}}}{Z}-\frac{(T_{eV})^{\nicefrac{3}{2}}}{Z^{2}} Z^\prime \right)e^{-\frac{E_{i}}{T_{eV}}}=\nonumber\\
+=p_{i}\left(\frac{E_{i}}{(T_{eV})^{2}}+i\frac{Z}{(T_{eV})^{\nicefrac{3}{2}}}\left(\frac{\frac{3}{2}(T_{eV})^{\nicefrac{1}{2}}}{Z}-\frac{(T_{eV})^{\nicefrac{3}{2}}}{Z^{2}} Z^\prime \right)\right)=p_{i}\left(\frac{E_{i}}{(T_{eV})^{2}}+i\left(\frac{3}{2T_{eV}}-\frac{ Z^\prime }{Z}\right)\right)\label{eq:32}
 \end{eqnarray}
 Also, since
 \begin{equation}
@@ -614,14 +614,14 @@ Z^\prime=\frac{\sum ip_{i}^{\prime}}{\sum p_{i}}-\frac{\sum ip_{i}\sum p_{i}^{\p
 where we can then plug in the expression found for $p_{i}^{\prime}$
 in Eq.\ref{eq:32}. Let's first simplify $\sum p_{i}^{\prime}$:
 \begin{equation}
-\sum p_{i}^{\prime}=\sum\left[\frac{E_{i}p_{i}}{(T_{eV})^{2}}+ip_{i}\left(\frac{3}{2T_{eV}}-\frac{Z'}{Z}\right)\right]=\frac{\sum E_{i}p_{i}}{(T_{eV})^{2}}+\left(\frac{3}{2T_{eV}}-\frac{Z'}{Z}\right)\sum ip_{i}\label{eq:34}.
+\sum p_{i}^{\prime}=\sum\left[\frac{E_{i}p_{i}}{(T_{eV})^{2}}+ip_{i}\left(\frac{3}{2T_{eV}}-\frac{ Z^\prime }{Z}\right)\right]=\frac{\sum E_{i}p_{i}}{(T_{eV})^{2}}+\left(\frac{3}{2T_{eV}}-\frac{ Z^\prime }{Z}\right)\sum ip_{i}\label{eq:34}.
 \end{equation}
 Further note that for any expression $a$ it is true that its statistical
 average is $<a>={\displaystyle \sum_{i=0}^{X}aP_{i}=\frac{\sum ap_{i}}{\sum p_{i}}}$.
 Hence, using these formulas in Eq.\ref{eq:33} we get:
 \begin{eqnarray}
-Z'&=&\frac{1}{(T_{eV})^{2}}\frac{\sum iE_{i}p_{i}}{\sum p_{i}}+\left(\frac{3}{2T_{eV}}-\frac{Z'}{Z}\right)\frac{\sum i^{2}p_{i}}{\sum p_{i}}-\frac{1}{(T_{eV})^{2}}\frac{\sum ip_{i}\sum E_{i}p_{i}}{\left(\sum p_{i}\right)^{2}}-\left(\frac{3}{2T_{eV}}-\frac{Z'}{Z}\right)\frac{\left(\sum ip_{i}\right)^{2}}{\left(\sum p_{i}\right)^{2}}=\nonumber\\
-&=&\frac{<iE_{i}>-<i><E_{i}>}{(T_{eV})^{2}}+\left(\frac{3}{2T_{eV}}-\frac{Z'}{Z}\right)\left(<i^{2}>-<i>^{2}\right)\nonumber\\
+Z^\prime&=&\frac{1}{(T_{eV})^{2}}\frac{\sum iE_{i}p_{i}}{\sum p_{i}}+\left(\frac{3}{2T_{eV}}-\frac{Z^\prime }{Z}\right)\frac{\sum i^{2}p_{i}}{\sum p_{i}}-\frac{1}{(T_{eV})^{2}}\frac{\sum ip_{i}\sum E_{i}p_{i}}{\left(\sum p_{i}\right)^{2}}-\left(\frac{3}{2T_{eV}}-\frac{Z^\prime }{Z}\right)\frac{\left(\sum ip_{i}\right)^{2}}{\left(\sum p_{i}\right)^{2}}=\nonumber\\
+&=&\frac{<iE_{i}>-<i><E_{i}>}{(T_{eV})^{2}}+\left(\frac{3}{2T_{eV}}-\frac{Z^\prime }{Z}\right)\left(<i^{2}>-<i>^{2}\right)\nonumber\\
 %Z^\prime\left(\frac{Z + <i^{2}>-<i>^{2}}{Z}\right)&=&\frac{<iE_{i}>-<i><E_{i}>}{(T_{eV})^{2}}+\frac{3}{2T_{eV}}\left(<i^{2}>-<i>^{2}\right)\nonumber\\
 \frac{Z^\prime}{Z} &=& \frac{\frac{3}{2}T_{eV}\left(<i^{2}>-<i>^{2}\right)+<iE_{i}>-<i><E_{i}>}{(T_{eV})^{2}\left(Z+<i^{2}>-<i>^{2}\right)}\label{eq:35}
 \end{eqnarray}
@@ -825,7 +825,7 @@ becomes:
 \begin{equation}
 Z_{n+1}=Z_{n}-\frac{Z_{n}-\sum_{j}\left[C_{j}<i>_{j}\right]}{1+\frac{1}{Z_{n}}\sum_{j}\left[C_{j}<(\delta i)^{2}>_{j}\right]}.\label{eq:IterMix}
 \end{equation}
-Here, once again, for any exppression $a,\ <a>_{j}={\displaystyle \sum_{i=0}^{X}aP_{ij}\text{, and }\delta a=a-<a>}$.
+Here, once again, for any expression $a,\ <a>_{j}={\displaystyle \sum_{i=0}^{X}aP_{ij}\text{, and }\delta a=a-<a>}$.
 This equation can then be used to find the population values and Z
 for a mixture plasma, while finding the populations exactly as for
 a single component plasma.
@@ -833,27 +833,31 @@ a single component plasma.
 As with most other characteristics of a mixture plasma, to find the
 average internal energy per atomic cell, we need to use Eq. \ref{eq:26}
 to find this energy for each individual element, and then find the
-statistical average of these values across all elements:
+statistical average of these values across all elements. Also, note that from here on, for any expression $a, \ll a\gg =\sum_{j}[C_{j}\sum_{i}(P_{i}a_{ij})]$, which is the statistical average first, across the populations and then, across the elements. 
 \begin{equation}
 U=\sum_{j}C_{j}\left(\frac{3}{2}k_{B}T(1+<i>_{j})+<E_{i}>_{j}\right)=\frac{3}{2}k_{B}T(1+Z)+<E_{ij}>.\label{eq:Umix}
 \end{equation}
-Hence, the equation remains essencially the same, except here all
+Hence, the equation remains essentially the same, except here all
 averages are taken along 2 dimensions -- first across the populations
-and then across the elements (as in $<a_{ij}>=\sum_{j}[C_{j}\sum_{i}(P_{i}a_{ij})]$
-).
+and then across the elements.
 
-Furthermore, from the sum given for U in Eq. \ref{eq:Umix}, we see
-that the derivative $\partial U/\partial T$, which is also the heat
-capacity at constant volume will remain the same here as for single
-element plasma, except for the summation, which will remain outside
-of the expression untouched:
-\[
-C_{V}=\frac{\partial U}{\partial T_{eV}}=\sum_{j}C_{j}\left(\frac{3}{2}(1+<i>_{j})+<\left(\frac{\delta E_{i}}{T_{eV}}\right)^{2}>_{j}+\frac{3<i>_{j}\left(\frac{3}{4}<(\delta i)^{2}>_{j}+<\delta i\ \frac{\delta E_{i}}{T_{eV}}>_{j}\right)-<\delta i\ \frac{\delta E_{i}}{T_{eV}}>_{j}^{\ 2}}{<i>_{j}+<(\delta i)^{2}>_{j}}\right)=\]
+Now, to find the derivative $\partial U/\partial T$, which is again the heat
+capacity at constant volume, we will use the sum given for U in Eq. \ref{eq:Umix}. Here, the summation across the elements remains outside of the expression unaffected by the differentiation. Further, the derivative of the inside expression is found in the same way as for single component plasma, except for the stage of finding $Z^\prime$, since Z is now given by Eq. \ref{eq:41}. Hence, using Eq. \ref{eq:35}, we can obtain the expression for $Z^\prime$:
+\begin{eqnarray}
+&&Z^{\prime}=\sum_{j}C_{j}\left[\frac{<\delta i\ \delta E_{i}>} {(T_{eV})^{2}} + \left(\frac{3}{2T_{eV}}-\frac{Z^{\prime}}{Z}\right)\left(<(\delta i)^{2}>\right)\right]\nonumber\\
+&&Z^{\prime}+\frac{Z^{\prime}}{Z}\ll(\delta i)^{2}\gg = \frac{\frac{3}{2}T_{eV}\ll(\delta i)^{2}\gg+\ll\delta i\ \delta E_{i}\gg} {(T_{eV})^{2}}\nonumber\\
+&&\frac{Z^{\prime}}{Z} = \frac{\frac{3}{2}T_{eV}\ll(\delta i)^{2}\gg+\ll\delta i\ \delta E_{i}\gg}{(T_{eV})^{2}\left(Z+\ll(\delta i)^{2}\gg\right)}.\label{eq:43}
+\end{eqnarray}
+This expression is the same as the one obtained for single component plasma, except now all the averages are separately taken along both dimensions. Now, if we follow this expression through the subsequent steps of the derivation of the heat capacity expression for a single component plasma, presented earlier, then we notice that it translates into the expression for $\beta$ introduced later on in the derivation. Hence, since the above expression is independent of the element ($j$), $\beta$ also becomes independent of $j$. Therefore, using the derivation for $C_V$ from Eq. \ref{eq:Cv} and recalling the outside summation from Eq. \ref{eq:Umix}, we obtain:
+\begin{eqnarray}
+C_V &=& \sum_{j}C_{j} \left[ \frac{3}{2}(1+<i>_{j}) + \frac{1}{(T_{eV})^{2}} \left(<(\delta E_{i})^{2}>_{j} + \left(\frac{3}{2}T_{eV}+\beta\right) <\delta i\ \delta E_{i}>_{j} + \frac{3}{2}T_{eV}\beta <(\delta i)^{2}>\right) \right]= \nonumber\\
+&=&\frac{3}{2}(1+Z)+\frac{1}{(T_{eV})^{2}}\Biggl(\ll(\delta E_{i})^{2}\gg+\left(\frac{3}{2}T_{eV}+\beta\right)\ll\delta i\ \delta E_{i}\gg+\frac{3}{2}T_{eV}\beta\ll(\delta i)^{2}\gg\Biggr).
+\end{eqnarray}
+This equation is again exactly the same as the one obtained in the derivation for single component plasma, except that all the averages are now separately taken across the elements as well. Therefore, we can conclude that the final expression for the heat capacity here will also be the same as for single element plasma except for the averaging domain. Hence, for a mixture plasma, the heat capacity is given by:
 \begin{equation}
-=\frac{3}{2}(1+Z)+<\left(\frac{\delta E_{i}}{T_{eV}}\right)_{j}^{\ 2}>+\sum_{j}C_{j}\left(\frac{3<i>_{j}\left(\frac{3}{4}<(\delta i)^{2}>_{j}+<\delta i\ \frac{\delta E_{i}}{T_{eV}}>_{j}\right)-<\delta i\ \frac{\delta E_{i}}{T_{eV}}>_{j}^{\ 2}}{<i>_{j}+<(\delta i)^{2}>_{j}}\right)\label{eq:CvMix}
+C_V = \frac{3}{2}(1+Z) + \ll\left(\frac{\delta E_{i}}{T_{eV}}\right)^{2}\gg + \frac{3Z\left(\frac{3}{4}\ll(\delta i)^{2}\gg+\ll\delta i\ \frac{\delta E_{i}}{T_{eV}}\gg\right)-\ll\delta i\ \frac{\delta E_{i}}{T_{eV}}\gg^{2}}{Z+\ll(\delta i)^{2}\gg},\label{eq:CvMix}
 \end{equation}
-Hence, this equation can be used to evaluate the heat capacity per
-atomic unit for a mixture plasma.
+where for any expressions $a$ and $b, \ll \delta a\ \delta b \gg = \sum_j \left[ C_j \sum_i \left(P_{ij} (a_{ij}-<a_i>_j)(b_{ij}-<b_i>_j)\right) \right]$.
 
 Finally, same way as before, we can use these two equations for $U$
 and $C_{V}$ to iteratively find the temperature from a given average
