@@ -97,7 +97,7 @@ Contains
 
     ! Calculating Z averaged iteratively
     subroutine set_Z()
-      real    :: ZTrial, Z1, Z2 ! The trial values of Z for iterations
+      real    :: ZTrial, Z1 ! The trial values of Z for iterations
       integer,dimension(1) :: InitZ ! The initial approximation of Z
       !=====================================
       ! First approximate the value of Z by finding for what i=Z 
