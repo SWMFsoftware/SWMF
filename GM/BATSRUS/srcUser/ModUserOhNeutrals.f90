@@ -12,7 +12,7 @@
 !May 02-setting the initial conditions to be closer to the 
 !final solution
 !May 30-31
-!June04
+!June30
 !==============================================================================
 module ModUser
 
@@ -47,9 +47,9 @@ module ModUser
   character (len=*), parameter :: NameUserModule = 'Global Heliosphere'
 
   real :: rFriction = 1.0
-  logical :: NeutralsI = .true.
-  logical :: NeutralsII = .true.
-  logical :: NeutralsIII = .true. 
+  logical :: NeutralsI = .false.
+  logical :: NeutralsII = .false.
+  logical :: NeutralsIII = .false. 
 
   ! 
   ! SWH variables.
@@ -265,7 +265,7 @@ contains
     !-------------------------------------------------------------------
 
     No2Si_V(UnitX_)= 215.0*Rsun                                ! m
-    No2Si_V(UnitU_)= sqrt(g*cBoltzmann*SWH_T_dim/cProtonMass)
+    No2Si_V(UnitU_)= sqrt(g*cBoltzmann*SWH_T_dim/cProtonMass)  ! m/s
     No2Si_V(UnitRho_)=cProtonMass*SWH_rho_dim*1.0E+6           ! kg/m^
 
     XFace = FaceCoords_D(1)
@@ -1093,7 +1093,7 @@ contains
     character (len=*), parameter :: Name='user_calc_sources'
     
     real:: x0,y0,z0,rp
-    real :: cTpro, cth, usqdim, Tproton, Mask
+    real :: cth, usqdim, Tproton, Mask
     real :: State_V(nVar)  
 
     real, dimension(nFluid) :: &
@@ -1114,15 +1114,18 @@ contains
     integer :: i, j, k, jFluid, iDim, iBlock
 
     !-----------------------------------------------------------------------
+    ! Do not provide explicit source term when point-implicit scheme is used
+    ! IsPointImplSource is true only when called from ModPointImplicit
+    if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
+
     iBlock = GlobalBlk
 
     NeutralsI=.true.
     NeutralsII=.true.
     NeutralsIII=.true.
 
-    !  calculating some constants cBoltzmann is J/K x1.E7 erg/K
-
-    cTpro = (1.0/(cBoltzmann*1.E7))*(No2Io_V(UnitP_)/No2Io_V(UnitRho_))
+    !  calculating some constants cBoltzmann is J/K 
+    
     cth = 2.0*cBoltzmann/mNeutrals
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1141,7 +1144,7 @@ contains
        Uz_I  = State_V(iRhoUz_I)/State_V(iRho_I)
 
        ! Total velocity of the ionized and three population of neutrals; 
-       UTotal_I  = sqrt(Ux_I**2.0 + Uy_I**2.0 + Uz_I**2.0)
+       UTotal_I  = sqrt(Ux_I**2 + Uy_I**2 + Uz_I**2)
 
        ! units of usqdim is km/s
        UTotalDim_I  = UTotal_I*No2Si_V(UnitU_)*1.E-3    
@@ -1152,7 +1155,7 @@ contains
        ! see Liewer & Brackbill '97 
        ! T = p/rho 
 
-       Temp_I    = cTpro*(State_V(iP_I)/State_V(iRho_I))
+       Temp_I    = (State_V(iP_I)/State_V(iRho_I))*No2Si_V(UnitTemperature_)
        Temp_I(1) = 0.5*Temp_I(1)
 
        ! Thermal speed (squared) for ionized and three populations of neutrals
@@ -1170,7 +1173,7 @@ contains
        ! No2Si_V(UnitU_) has units of m/s like cstartT so UReldim and UStar 
        ! has units of m/s
 
-       URelSdim_I  = URelS_I*((No2Si_V(UnitU_))**2.0)
+       URelSdim_I  = URelS_I*((No2Si_V(UnitU_))**2)
 
        ! UStar_I was slightly different in Liewer et al.. 
        ! I am using Zank et al.'96 UStar has units of m/s
@@ -1184,18 +1187,18 @@ contains
        ! Linde's, Thesis uses UStar
        ! Problem when URelSdim=0         
        ! UStar has to have units of cm/s so the factor 100 is to pass m to cm
-       ! Sigma has units of units of cm^2
+       ! Sigma has units of units of m^2
        
-       Sigma_I =(1.64E-7 - (6.95E-9)*log(UStar_I*100.))**2.0
+       Sigma_I =((1.64E-7 - (6.95E-9)*log(UStar_I*100.))**2)*(1.E-4)
 
        ! Calculating Rate  = \nu * nH * mp where nH is the density of neutrals
        ! \nu = Sigma*np*u_star where np is the density of the ionized flow and 
        ! For each population of neutrals there will be another Rate
        ! The charge exhange cross section 100 to change ustar to cm/s
-       ! Rate has no units (cm^2*cm/s*s*cm-3 )
+       ! Rate has no units (m^2*m/s*s*m-3 )
 
        Rate_I =Sigma_I*State_V(Rho_)*State_V(iRho_I)*UStar_I  &
-            *(100.)*No2Io_V(UnitRho_)*No2Io_V(UnitT_)
+              *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
        Rate_I(1)=0.
        ! Calculating some common terms
        ! Tempx and Termxp have units of (m/s)^-1
@@ -1219,10 +1222,8 @@ contains
        Tproton=Temp_I(1)
        Mask = 0.0
 
-!!!!       if (rp > 40.0) then 
-          Mask = 0.5*(1.0-sign(1.0,usqdim-24.8))+(1.0-sign(1.0,usqdim-350.0)) &
+       Mask = 0.5*(1.0-sign(1.0,usqdim-24.8))+(1.0-sign(1.0,usqdim-350.0)) &
                + 0.5*(1.0-sign(1.0,Tproton - 1.15E4))
-!!!!       end if
 
        ! Calculating the terms that enter in the Source terms
        ! The expressions for I0, Jxp, Kxp, Qexp are taken from Zank et al. 1996
@@ -1271,12 +1272,12 @@ contains
        QmpxUy_I = -QmxpUy_I 
        QmpxUz_I = -QmxpUz_I    
 
-       Kxp_I = 0.5*(UTotal_I(1)**2.)*Rate_I  + (3./4.)*I2xp_I   &
+       Kxp_I = 0.5*(UTotal_I(1)**2)*Rate_I  + (3./4.)*I2xp_I   &
             + (Ux_I(1)*(Ux_I-Ux_I(1)) &
             +  Uy_I(1)*(Uy_I-Uy_I(1)) &
             +  Uz_I(1)*(Uz_I-Uz_I(1)))*I1xp_I
        
-       Kpx_I = 0.5*(UTotal_I**2.)*Rate_I  + (3./4.)*I2px_I   &
+       Kpx_I = 0.5*(UTotal_I**2)*Rate_I  + (3./4.)*I2px_I   &
             + (Ux_I*(Ux_I(1)-Ux_I) &
             +  Uy_I*(Uy_I(1)-Uy_I) &
             +  Uz_I*(Uz_I(1)-Uz_I))*I1px_I 
@@ -1325,8 +1326,25 @@ contains
        write(*,*) 'Source_VC(Ne3P_,TestCell)',Source_VC(Ne3P_,Itest,Jtest,Ktest)
        write(*,*) 'Source_VC(Ne3Energy_,TestCell)',Source_VC(Ne3Energy_,Itest,Jtest,Ktest)   
        write(*,*) 'Mask',Mask
-
-    end if
+       write(*,*) 'Temp_I(1),Temp_I(2),Temp_(3),Temp_(4)',Temp_I(1),Temp_I(2),Temp_I(3),Temp_I(4)
+       write(*,*) 'Rate_I(1),Rate_I(2),Rate_I(3),Rate_I(4)',Rate_I(1),Rate_I(2),Rate_I(3),Rate_I(4)
+       write(*,*) 'UStar_I(1),UStar_I(2),UStar_I(3),UStar_I(4)',UStar_I(1),UStar_I(2),UStar_I(3),UStar_I(4)
+       write(*,*) 'UThS_I',UThS_I
+       write(*,*) 'URelSdim_I',URelSdim_I
+       write(*,*) 'UTotal_I',UTotal_I
+       write(*,*) 'I1xp_I',I1xp_I
+       write(*,*) 'I1px_I',I1px_I
+       write(*,*) 'I2xp_I',I2xp_I
+       write(*,*) 'I2px_I',I2px_I
+       write(*,*) 'JxpUx_I',JxpUx_I
+       write(*,*) 'JpxUx_I',JpxUx_I
+       write(*,*) 'QmxpUx_I',QmxpUx_I
+       write(*,*) 'QmpxUx_I',QmpxUx_I
+       write(*,*) 'Kxp_I',Kxp_I
+       write(*,*) 'Kpx_I',Kpx_I
+       write(*,*) 'Qexp_I',Qexp_I
+       write(*,*) 'Qepx_I',Qepx_I 
+   end if
 
   contains
 
@@ -1426,7 +1444,7 @@ contains
                  - Ux_I(2)*Source_VC(NeuRhoUx_,i,j,k) &
                  - Uy_I(2)*Source_VC(NeuRhoUy_,i,j,k) &
                  - Uz_I(2)*Source_VC(NeuRhoUz_,i,j,k) &
-                 + 0.5*(UTotal_I(2)**2.)*Source_VC(NeuRho_,i,j,k))         
+                 + 0.5*(UTotal_I(2)**2)*Source_VC(NeuRho_,i,j,k))         
    
           else
             Source_VC(NeuRho_,i,j,k) = Source_VC(NeuRho_,i,j,k) &
@@ -1443,7 +1461,7 @@ contains
                  - Ux_I(2)*Source_VC(NeuRhoUx_,i,j,k) &
                  - Uy_I(2)*Source_VC(NeuRhoUy_,i,j,k) &
                  - Uz_I(2)*Source_VC(NeuRhoUz_,i,j,k) &
-                 + 0.5*(UTotal_I(2)**2.)*Source_VC(NeuRho_,i,j,k))
+                 + 0.5*(UTotal_I(2)**2)*Source_VC(NeuRho_,i,j,k))
 
          end if
       end if
@@ -1461,13 +1479,13 @@ contains
                     + QmxpUy_I(3) + JxpUy_I(2) + JxpUy_I(4)
                Source_VC(Ne2RhoUz_,i,j,k) = Source_VC(Ne2RhoUz_,i,j,k)   & 
                     + QmxpUz_I(3) + JxpUz_I(2) + JxpUz_I(4)
-               Source_VC(Ne2P_,i,j,k) = Source_VC(Ne2P_,i,j,k)     &
+!!!               Source_VC(Ne2P_,i,j,k) = Source_VC(Ne2P_,i,j,k)     &
 !!$                    + (g-1.)*(3./4.)*( I2xp_I(3)+ I2xp_I(2)+  I2xp_I(4)- I2px_I(3) )      
-                    + (g-1.)*(Source_VC(Ne2Energy_,i,j,k) &
-                    - Ux_I(3)*Source_VC(Ne2RhoUx_,i,j,k) &
-                    - Uy_I(3)*Source_VC(Ne2RhoUy_,i,j,k) &
-                    - Uz_I(3)*Source_VC(Ne2RhoUz_,i,j,k) &
-                    + 0.5*(UTotal_I(3)**2.)*Source_VC(Ne2Rho_,i,j,k))
+!!!                    + (g-1.)*(Source_VC(Ne2Energy_,i,j,k) &
+!!!                    - Ux_I(3)*Source_VC(Ne2RhoUx_,i,j,k) &
+!!!                    - Uy_I(3)*Source_VC(Ne2RhoUy_,i,j,k) &
+!!!                    - Uz_I(3)*Source_VC(Ne2RhoUz_,i,j,k) &
+!!!                    + 0.5*(UTotal_I(3)**2)*Source_VC(Ne2Rho_,i,j,k))
               else
                Source_VC(Ne2Rho_,i,j,k) = Source_VC(Ne2Rho_,i,j,k) &
                     - I0px_I(3) 
@@ -1477,13 +1495,13 @@ contains
                     - JpxUy_I(3)
                Source_VC(Ne2RhoUz_,i,j,k) = Source_VC(Ne2RhoUz_,i,j,k) &
                     - JpxUz_I(3)
-               Source_VC(Ne2P_,i,j,k) = Source_VC(Ne2P_,i,j,k)     &
+!!!               Source_VC(Ne2P_,i,j,k) = Source_VC(Ne2P_,i,j,k)     &
 !!$                    + (g-1.)*(3./4.)*(-1.)* I2px_I(3)
-                    + (g-1.)*(Source_VC(Ne2Energy_,i,j,k) &
-                    - Ux_I(3)*Source_VC(Ne2RhoUx_,i,j,k) &
-                    - Uy_I(3)*Source_VC(Ne2RhoUy_,i,j,k) &
-                    - Uz_I(3)*Source_VC(Ne2RhoUz_,i,j,k) &
-                    + 0.5*(UTotal_I(3)**2.)*Source_VC(Ne2Rho_,i,j,k))
+!!!                    + (g-1.)*(Source_VC(Ne2Energy_,i,j,k) &
+!!!                    - Ux_I(3)*Source_VC(Ne2RhoUx_,i,j,k) &
+!!!                    - Uy_I(3)*Source_VC(Ne2RhoUy_,i,j,k) &
+!!!                    - Uz_I(3)*Source_VC(Ne2RhoUz_,i,j,k) &
+!!!                    + 0.5*(UTotal_I(3)**2)*Source_VC(Ne2Rho_,i,j,k))
             end if
        else
                Source_VC(Ne2Rho_,i,j,k) = Source_VC(Ne2Rho_,i,j,k) &
@@ -1494,13 +1512,13 @@ contains
                     - JpxUy_I(3)
                Source_VC(Ne2RhoUz_,i,j,k) = Source_VC(Ne2RhoUz_,i,j,k) &
                     - JpxUz_I(3)
-               Source_VC(Ne2P_,i,j,k) = Source_VC(Ne2P_,i,j,k)     &
+!!!               Source_VC(Ne2P_,i,j,k) = Source_VC(Ne2P_,i,j,k)     &
 !!$                    + (g-1.)*(3./4.)*(-1.)* I2px_I(3)
-                    + (g-1.)*(Source_VC(Ne2Energy_,i,j,k) &
-                    - Ux_I(3)*Source_VC(Ne2RhoUx_,i,j,k) &
-                    - Uy_I(3)*Source_VC(Ne2RhoUy_,i,j,k) &
-                    - Uz_I(3)*Source_VC(Ne2RhoUz_,i,j,k) &
-                    + 0.5*(UTotal_I(3)**2.)*Source_VC(Ne2Rho_,i,j,k))
+!!!                    + (g-1.)*(Source_VC(Ne2Energy_,i,j,k) &
+!!!                    - Ux_I(3)*Source_VC(Ne2RhoUx_,i,j,k) &
+!!!                    - Uy_I(3)*Source_VC(Ne2RhoUy_,i,j,k) &
+!!!                    - Uz_I(3)*Source_VC(Ne2RhoUz_,i,j,k) &
+!!!                    + 0.5*(UTotal_I(3)**2)*Source_VC(Ne2Rho_,i,j,k))
          end if
       end if
       !
@@ -1522,7 +1540,7 @@ contains
                  - Ux_I(4)*Source_VC(Ne3RhoUx_,i,j,k) &
                  - Uy_I(4)*Source_VC(Ne3RhoUy_,i,j,k) &
                  - Uz_I(4)*Source_VC(Ne3RhoUz_,i,j,k) &
-                 + 0.5*(UTotal_I(4)**2.)*Source_VC(Ne3Rho_,i,j,k))
+                 + 0.5*(UTotal_I(4)**2)*Source_VC(Ne3Rho_,i,j,k))
 
          else
             Source_VC(Ne3Rho_,i,j,k) = Source_VC(Ne3Rho_,i,j,k) &
@@ -1539,7 +1557,7 @@ contains
                  - Ux_I(4)*Source_VC(Ne3RhoUx_,i,j,k) &
                  - Uy_I(4)*Source_VC(Ne3RhoUy_,i,j,k) &
                  - Uz_I(4)*Source_VC(Ne3RhoUz_,i,j,k) &
-                 + 0.5*(UTotal_I(4)**2.)*Source_VC(Ne3Rho_,i,j,k))
+                 + 0.5*(UTotal_I(4)**2)*Source_VC(Ne3Rho_,i,j,k))
          end if
       end if
 
