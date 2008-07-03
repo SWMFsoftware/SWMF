@@ -16,8 +16,9 @@ module ModOctreeNew
   public:: read_octree_file
   public:: test_octree
 
-  integer, parameter :: MaxDim = 3
-  integer, parameter :: nDim   = 3
+  integer, public, parameter :: MaxDim = 3   ! This has to be 3 all the time
+  integer, public, parameter :: nDim   = 3   ! This can be 1, 2 or 3
+
   integer, parameter :: nChild = 2**nDim
 
   integer, allocatable :: iOctree_IA(:,:)
@@ -28,7 +29,7 @@ module ModOctreeNew
        LevelMin_ = 3, &
        LevelMax_ = 4, &
        Parent_   = 5, & ! Parent must be just before the first child!
-       Child0_   = 6, &
+       Child0_   = 5, &
        Child1_   = Child0_ + 1,      &
        ChildLast_= Child0_ + nChild, &
        Proc_     = Child0_ + 1,      & ! Overlaps with child 1
@@ -58,6 +59,9 @@ module ModOctreeNew
 
   ! Maximum number of blocks including unused and skipped ones
   integer :: MaxBlockAll = 0
+
+  ! Number of used blocks (leaves of the block tree)
+  integer :: nBlockUsed = 0
 
   ! Maximum number of blocks per processor
   integer :: MaxBlock = 0
@@ -162,6 +166,8 @@ contains
        end do
     end do
 
+    nBlockUsed = nRoot
+
     ! Set neighbor info
     !do iBlock = 1, nRoot
     !   call find_neighbors(iBlock)
@@ -217,6 +223,8 @@ contains
 
     end do
 
+    nBlockUsed = nBlockUsed + nChild - 1
+
     ! Find neighbors of children
     !do iChild = Child1_, ChildLast_
     !
@@ -253,6 +261,8 @@ contains
     ! set proc and block info from child1
     iOctree_IA(Proc_,  iBlock) = iOctree_IA(Proc_,  iBlockChild1)
     iOctree_IA(Block_, iBlock) = iOctree_IA(Block_, iBlockChild1)
+
+    nBlockUsed = nBlockUsed - nChild + 1
 
   end subroutine coarsen_block
 
@@ -464,7 +474,7 @@ contains
     do iBlock = 1, MaxBlockAll
 
        if(iOctree_IA(Status_, iBlock) == Skipped_) EXIT
-
+       write(*,*)'iBlock, Status=',iBlock,iOctree_IA(:, iBlock)
        do i = Parent_, ChildLast_
           iBlockOld = iOctree_IA(i, iBlock)
           if(iBlockOld /= NoBlock_) &
@@ -473,8 +483,8 @@ contains
 
     end do
 
-    ! Fix the block indexes along the peano curve
-    do iPeano = 1, iBlock - 1
+    ! Fix the block indexes along the Peano curve
+    do iPeano = 1, nBlockUsed
        iBlockOld = iBlockPeano_I(iPeano)
        iBlockPeano_I(iPeano) = iBlockNew_A(iBlockOld)
     end do
@@ -508,15 +518,23 @@ contains
 
     character(len=*), intent(in):: NameFile
     integer :: nInfoIn, nBlockIn, nDimIn, nRootIn_D(MaxDim)
+    character(len=*), parameter :: NameSub = 'read_octree_file'
     !----------------------------------------------------------------------
 
     open(UnitTmp_, file=NameFile, status='old', form='unformatted')
 
     read(UnitTmp_) nBlockIn, nInfoIn
+    if(nBlockIn > MaxBlock)then
+       write(*,*) NameSub,' nBlockIn, MaxBlock=',nBlockIn, MaxBlock 
+       call CON_stop(NameSub//' too many blocks in octree file!')
+    end if
     read(UnitTmp_) nDimIn, nRootIn_D
+    if(nDimIn /= nDim)then
+       write(*,*) NameSub,' nDimIn, nDim=',nDimIn, nDim
+       call CON_stop(NameSub//' nDim is different in octree file!')
+    end if
     call set_root_block(nRootIn_D, IsPeriodic_D)
     read(UnitTmp_) iOctree_IA(:,1:nBlockIn)
-
     close(UnitTmp_)
 
     call order_octree
@@ -543,6 +561,8 @@ contains
           end do
        end do
     end do
+
+    nBlockUsed = iPeano
 
   end subroutine order_octree
   !==========================================================================
@@ -626,7 +646,7 @@ contains
     write(*,*)'DiLevelNei_IIIB(:,:,:,5)=',DiLevelNei_IIIB(:,:,:,5)
     write(*,*)'iBlockNei_IIIB(:,:,:,5)=',iBlockNei_IIIB(:,:,:,5)
 
-    write(*,*)'Testing order_octree'
+    write(*,*)'Testing order_octree 1st'
     call order_octree
     write(*,*)'iBlockPeano_I =',iBlockPeano_I(1:22)
 
@@ -641,7 +661,7 @@ contains
          write(*,*)'ERROR: is_point_inside_block failed'
 
 
-    write(*,*)'Testing order_octree'
+    write(*,*)'Testing order_octree 2nd'
     call order_octree
     write(*,*)'iBlockPeano_I =',iBlockPeano_I(1:22)
 
@@ -662,8 +682,7 @@ contains
     if(.not.is_point_inside_block(XyzTest_D(1:nDim), iBlock)) &
          write(*,*)'ERROR: is_point_inside_block failed'
 
-
-    write(*,*)'Testing order_octree'
+    write(*,*)'Testing order_octree 3rd'
     call order_octree
     write(*,*)'iBlockPeano_I =',iBlockPeano_I(1:22)
 
@@ -679,7 +698,7 @@ contains
     if(iBlock /= nRoot)write(*,*)'ERROR: compact_octree faild, iBlock=',&
          iBlock,' instead of',nRoot
 
-    write(*,*)'Testing order_octree'
+    write(*,*)'Testing order_octree 4th'
     call order_octree
     write(*,*)'iBlockPeano_I =',iBlockPeano_I(1:22)
 
