@@ -358,24 +358,8 @@ contains
   end function det
 
 end subroutine fix_block_geometry
-!=============================================================================
-subroutine set_xyzminmax
-  use ModGeometry, ONLY:x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D
-  use ModGeometry,ONLY:UseCovariant                  
-  use ModMain,ONLY:x_,y_,z_
-  implicit none
-  if(UseCovariant)then                         
-     call set_xyz_minmax_covar
-     return
-  end if                                        
-  XyzMin_D(x_) = x1
-  XyzMin_D(y_) = y1
-  XyzMin_D(z_) = z1
-  XyzMax_D(x_) = x2
-  XyzMax_D(y_) = y2
-  XyzMax_D(z_) = z2
-end subroutine set_xyzminmax
 
+!=============================================================================
 
 subroutine set_boundary_cells(iBLK)
 
