@@ -1,6 +1,4 @@
 !^CFG COPYRIGHT UM
-!subroutine gen_to_xyz_arr maps the piece of an equally spaced grid
-!in the space of GENERALIZED COORDINATES to the cartesian space xyz
 subroutine gen_to_xyz_arr(&
      GenCoord111_D,    &!(in)Gen.coords.of the point (1,1,1)
      dGen1,dGen2,dGen3,&!(in)Mesh sizes in Gen coords.
@@ -10,6 +8,10 @@ subroutine gen_to_xyz_arr(&
      X_C,              &!(out)Cartesian x-coord. of the mapped points
      Y_C,              &!(out)Cartesian y-coord. of the mapped points    
      Z_C)               !(out)Cartesian z-coord. of the mapped points
+ 
+  !subroutine gen_to_xyz_arr maps the piece of an equally spaced grid
+  !in the space of GENERALIZED COORDINATES to the cartesian space xyz
+
   use ModNumConst
   use ModCovariant,ONLY:TypeGeometry,rTorusLarge,rTorusSmall
   use ModMain,     ONLY:nDim,R_,Phi_,Theta_,x_,y_,z_
@@ -18,14 +20,13 @@ subroutine gen_to_xyz_arr(&
   integer,intent(in)::  iStart,iMax,jStart,jMax,kStart,kMax
   real,dimension(iStart:iMax,jStart:jMax,kStart:kMax),&
        intent(out)::X_C,Y_C,Z_C
-!----------------------------------------------------------
+
   integer::i,j,k
   real::R,Theta,Phi,sinTheta,cosTheta,sinPhi,cosPhi
   real::PoloidalAngle,Z,StretchCoef
   real,external::wall_radius
-!----------------------------------------------------------
-  
-  
+  !----------------------------------------------------------
+
   select case(TypeGeometry)
   case('cartesian')
      !Gen1=x , Gen2=y, Gen3=z
@@ -39,7 +40,7 @@ subroutine gen_to_xyz_arr(&
         end do
      end do
   case('spherical')
-     ! Gen1=R, Gen2=Phi, Gen3=Theta
+     ! Gen1=R, Gen2=Phi, Gen3=Latitude
      do k = kStart, kMax
         Theta      =  (k-1)*dGen3 + GenCoord111_D(Theta_)
         sinTheta   =  sin(Theta)
@@ -50,8 +51,7 @@ subroutine gen_to_xyz_arr(&
            cosPhi  =  cos(Phi)
            do i = iStart, iMax
               R    =  (i-1)*dGen1 + GenCoord111_D(R_)
-             
-                        
+
               X_C(i,j,k) = R*cosTheta*cosPhi                      
               Y_C(i,j,k) = R*cosTheta*sinPhi                      
               Z_C(i,j,k) = R*sinTheta
@@ -59,7 +59,7 @@ subroutine gen_to_xyz_arr(&
         end do
      end do
   case('spherical_lnr')
-     ! Gen1=log(R), Gen2=Phi, Gen3=Theta
+     ! Gen1=log(R), Gen2=Phi, Gen3=Latitude
      do k = kStart, kMax
         Theta      =      (k-1)*dGen3 + GenCoord111_D(Theta_)
         sinTheta   =  sin(Theta)
@@ -70,7 +70,7 @@ subroutine gen_to_xyz_arr(&
            cosPhi  =  cos(Phi)
            do i = iStart, iMax
               R    =   exp((i-1)*dGen1 + GenCoord111_D(R_))
-             
+
               X_C(i,j,k) = R*cosTheta*cosPhi                      
               Y_C(i,j,k) = R*cosTheta*sinPhi                      
               Z_C(i,j,k) = R*sinTheta
@@ -78,7 +78,7 @@ subroutine gen_to_xyz_arr(&
         end do
      end do
   case('cylindrical')
-    ! Gen1=r, Gen2=Phi, Gen3=z
+     ! Gen1=r, Gen2=Phi, Gen3=z
      do k = kStart, kMax
         Z_C(:,:,k) = (k-1)*dGen3 + GenCoord111_D(z_)
         do j = jStart, jMax
@@ -87,7 +87,7 @@ subroutine gen_to_xyz_arr(&
            cosPhi  =  cos(Phi)
            do i = iStart, iMax
               R    =       (i-1)*dGen1 + GenCoord111_D(R_)
-             
+
               X_C(i,j,k) = R*cosPhi                      
               Y_C(i,j,k) = R*sinPhi                      
            end do
@@ -134,10 +134,10 @@ subroutine xyz_to_gen(XyzIn_D,GenOut_D)
   real,dimension(nDim),intent(out)::GenOut_D
   real::PoloidalAngle,R,Z,StretchCoef
   real,external::wall_radius
-  
+
   select case(TypeGeometry)           
   case('cartesian')                   
-    GenOut_D=XyzIn_D
+     GenOut_D=XyzIn_D
   case('spherical','spherical_lnr')   
      call xyz_to_spherical(XyzIn_D(x_),XyzIn_D(y_),XyzIn_D(z_),&
           GenOut_D(R_),GenOut_D(Phi_),GenOut_D(Theta_))
@@ -167,7 +167,7 @@ subroutine xyz_to_gen(XyzIn_D,GenOut_D)
      GenOut_D(R_)=R+rTorusLarge
   case default
      call stop_mpi('Unknown TypeGeometry='//TypeGeometry)
-  end select                          
+  end select
 end subroutine xyz_to_gen
 !=============================================================================
 real function wall_radius(PoloidalAngle)
@@ -186,58 +186,11 @@ real function wall_radius(PoloidalAngle)
      !Use linear interpolation:
      Residual=PoloidalAngle-iPoint*dAngle
      wall_radius=TorusSurface_I(iPoint)*(cOne-Residual)+&
-                 TorusSurface_I(iPoint+1)*Residual
+          TorusSurface_I(iPoint+1)*Residual
   end if
 end function wall_radius
-  
+
 !=============================================================================
-subroutine set_xyz_minmax_covar
-  use ModGeometry, ONLY: x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,TypeGeometry
-  use ModMain, ONLY: R_,Phi_,Theta_,x_,y_,z_
-  use ModNumConst
-  implicit none
-  select case(TypeGeometry)
-  case('cartesian')
-     XyzMin_D(x_) = x1
-     XyzMin_D(y_) = y1
-     XyzMin_D(z_) = z1
-     XyzMax_D(x_) = x2
-     XyzMax_D(y_) = y2
-     XyzMax_D(z_) = z2
-  case('spherical')
-     XyzMin_D(R_)     = cZero
-     XyzMin_D(Phi_)   = cZero
-     XyzMin_D(Theta_) = -cHalfPi
-     XyzMax_D(R_)     = sqrt(max(x1*x1,x2*x2)+max(y1*y1,y2*y2)+max(z1*z1,z2*z2))
-     XyzMax_D(Phi_)   = cTwoPi
-     XyzMax_D(Theta_) = +cHalfPi
-  case('spherical_lnr')
-     XyzMin_D(R_)     = cZero
-     XyzMin_D(Phi_)   = cZero
-     XyzMin_D(Theta_) = -cHalfPi
-     XyzMax_D(R_)     = cHalf*log(&
-          max(x1*x1,x2*x2)+max(y1*y1,y2*y2)+max(z1*z1,z2*z2))
-     XyzMax_D(Phi_)   = cTwoPi
-     XyzMax_D(Theta_) = cHalfPi
-  case('cylindrical')
-     XyzMin_D(R_)     = cZero
-     XyzMin_D(Phi_)   = cZero
-     XyzMin_D(z_)     = z1
-     XyzMax_D(R_)     = sqrt(max(x1*x1,x2*x2)+max(y1*y1,y2*y2))
-     XyzMax_D(Phi_)   = cTwoPi
-     XyzMax_D(z_)     = z2
-  case('axial_torus')
-     XyzMin_D(R_)     = x2-(z2-z1) 
-     XyzMin_D(Phi_)   = cZero
-     XyzMin_D(z_)     = z1
-     XyzMax_D(R_)     = x2
-     XyzMax_D(Phi_)   = cTwoPi
-     XyzMax_D(z_)     = z2
-  case default
-     call stop_mpi('Unknown geometry: '//TypeGeometry)
-  end select
-end subroutine set_xyz_minmax_covar
-!-------------------------------------------------------------!
 subroutine fix_pole(iBlock)
   use ModSize
   use ModMain,ONLY:R_,Theta_
@@ -248,11 +201,11 @@ subroutine fix_pole(iBlock)
   integer, intent(in)::iBlock
   real::dR,dTheta,Area2
   integer::k
-  
+
   !-------------------------------------------------------------!
   FaceArea2MinI_B(iBlock)=cZero
   FaceArea2MinK_B(iBlock)=cZero
-  
+
   if(.not.is_axial_geometry())return
   if(index(TypeGeometry,'spherical')>0)then
      !calculate a minimal non-zero face area squared along theta direction
@@ -263,9 +216,9 @@ subroutine fix_pole(iBlock)
         Area2=sum(FaceAreaK_DFB(:,1,1,2,iBlock)**2)
         !minimal Area2 is calculated over cell faces non-intersecting the pole
         !no dependence on Phi_
-        
+
         Area2=min(Area2,sum(FaceAreaK_DFB(:,1,1,nK,iBlock)**2))
-  
+
         FaceArea2MinK_B(iBlock)=Area2
      end if
   elseif(index(TypeGeometry,'cylindrical')>0.or.&
@@ -319,19 +272,19 @@ subroutine fix_geometry_at_reschange(iBlock)
   end do; end do; end do
 
   if(any(OldLevel_IIIB(:,:,:,iBlock)==-1.and.IsNotCorner_III))then
-    !Face areas are modified, recover original ones
+     !Face areas are modified, recover original ones
      call get_face_area_i(XyzNode_DN,&
-                          1,nI+1,1,nJ,1,nK,&
-                          FaceAreaI_DFB(:,:,:,:,iBlock))
+          1,nI+1,1,nJ,1,nK,&
+          FaceAreaI_DFB(:,:,:,:,iBlock))
      call get_face_area_j(XyzNode_DN,&
-                          1,nI,1,nJ+1,1,nK,&
-                          FaceAreaJ_DFB(:,:,:,:,iBlock))
+          1,nI,1,nJ+1,1,nK,&
+          FaceAreaJ_DFB(:,:,:,:,iBlock))
      call get_face_area_k(XyzNode_DN,&
-                       1,nI,1,nJ,1,nK+1,&
-                       FaceAreaK_DFB(:,:,:,:,iBlock))
+          1,nI,1,nJ,1,nK+1,&
+          FaceAreaK_DFB(:,:,:,:,iBlock))
   end if
- 
- 
+
+
   !\
   ! Face area vector dot product by the face 
   ! center radius-vector. FACE I
@@ -339,11 +292,11 @@ subroutine fix_geometry_at_reschange(iBlock)
   FaceCenterStart_D=XyzStart_BLK(:,iBlock)
   FaceCenterStart_D(x_)=FaceCenterStart_D(x_)-dx_BLK(iBlock)*cHalf
   call gen_to_xyz_arr(FaceCenterStart_D,&
-                      dx_BLK(iBlock),dy_BLK(iBlock),dz_BLK(iBlock),&
-                      1,1+nI,1,nJ,1,nK,&
-                      FaceCenterI_DF(x_,:,:,:),&
-                      FaceCenterI_DF(y_,:,:,:),&
-                      FaceCenterI_DF(z_,:,:,:))
+       dx_BLK(iBlock),dy_BLK(iBlock),dz_BLK(iBlock),&
+       1,1+nI,1,nJ,1,nK,&
+       FaceCenterI_DF(x_,:,:,:),&
+       FaceCenterI_DF(y_,:,:,:),&
+       FaceCenterI_DF(z_,:,:,:))
   do k=1,nK; do j=1,nJ; do i=1,nI+1
      RDotFaceAreaI_F(i,j,k)=dot_product(&
           FaceCenterI_DF(:,i,j,k),&
@@ -353,15 +306,15 @@ subroutine fix_geometry_at_reschange(iBlock)
   ! Face area vector dot product by the face 
   ! center radius-vector. FACE J
   !/
-  
+
   FaceCenterStart_D=XyzStart_BLK(:,iBlock)
   FaceCenterStart_D(y_)=FaceCenterStart_D(y_)-dy_BLK(iBlock)*cHalf
   call gen_to_xyz_arr(FaceCenterStart_D,&
-                      dx_BLK(iBlock),dy_BLK(iBlock),dz_BLK(iBlock),&
-                      1,nI,1,nJ+1,1,nK,&
-                      FaceCenterJ_DF(x_,:,:,:),&
-                      FaceCenterJ_DF(y_,:,:,:),&
-                      FaceCenterJ_DF(z_,:,:,:))
+       dx_BLK(iBlock),dy_BLK(iBlock),dz_BLK(iBlock),&
+       1,nI,1,nJ+1,1,nK,&
+       FaceCenterJ_DF(x_,:,:,:),&
+       FaceCenterJ_DF(y_,:,:,:),&
+       FaceCenterJ_DF(z_,:,:,:))
   do k=1,nK; do j=1,nJ+1; do i=1,nI
      RDotFaceAreaJ_F(i,j,k)=dot_product(&
           FaceCenterJ_DF(:,i,j,k),&
@@ -372,15 +325,15 @@ subroutine fix_geometry_at_reschange(iBlock)
   ! Face area vector dot product by the face 
   ! center radius-vector. FACE K
   !/
-  
+
   FaceCenterStart_D=XyzStart_BLK(:,iBlock)
   FaceCenterStart_D(z_)=FaceCenterStart_D(z_)-dz_BLK(iBlock)*cHalf
   call gen_to_xyz_arr(FaceCenterStart_D,&
-                      dx_BLK(iBlock),dy_BLK(iBlock),dz_BLK(iBlock),&
-                      1,nI,1,nJ,1,nK+1,&
-                      FaceCenterK_DF(x_,:,:,:),&
-                      FaceCenterK_DF(y_,:,:,:),&
-                      FaceCenterK_DF(z_,:,:,:))
+       dx_BLK(iBlock),dy_BLK(iBlock),dz_BLK(iBlock),&
+       1,nI,1,nJ,1,nK+1,&
+       FaceCenterK_DF(x_,:,:,:),&
+       FaceCenterK_DF(y_,:,:,:),&
+       FaceCenterK_DF(z_,:,:,:))
   do k=1,nK+1; do j=1,nJ; do i=1,nI
      RDotFaceAreaK_F(i,j,k)=dot_product(&
           FaceCenterK_DF(:,i,j,k),&
@@ -393,74 +346,74 @@ subroutine fix_geometry_at_reschange(iBlock)
   !Fix faces of i direction
   do i=1,nI+1
      if((i==   1.and.BLKneighborLEV(-1,0,0,iBlock)==-1).or.&
-        (i==nI+1.and.BLKneighborLEV(+1,0,0,iBlock)==-1))then
+          (i==nI+1.and.BLKneighborLEV(+1,0,0,iBlock)==-1))then
         call refine_face_i(i)
      else
         if((i==1   .and.BLKneighborLEV(-1,-1, 0,iBlock)==-1).or.&
-           (i==1+nI.and.BLKneighborLEV(+1,-1, 0,iBlock)==-1).or.&
-                        BLKneighborLEV( 0,-1, 0,iBlock)==-1)&
-                call refine_face_i_edge_j_minus(i)
+             (i==1+nI.and.BLKneighborLEV(+1,-1, 0,iBlock)==-1).or.&
+             BLKneighborLEV( 0,-1, 0,iBlock)==-1)&
+             call refine_face_i_edge_j_minus(i)
         if((i==1   .and.BLKneighborLEV(-1,+1, 0,iBlock)==-1).or.&
-           (i==1+nI.and.BLKneighborLEV(+1,+1, 0,iBlock)==-1).or.&
-                        BLKneighborLEV( 0,+1, 0,iBlock)==-1)&
-                call refine_face_i_edge_j_plus(i)
+             (i==1+nI.and.BLKneighborLEV(+1,+1, 0,iBlock)==-1).or.&
+             BLKneighborLEV( 0,+1, 0,iBlock)==-1)&
+             call refine_face_i_edge_j_plus(i)
         if((i==1   .and.BLKneighborLEV(-1, 0,-1,iBlock)==-1).or.&
-           (i==1+nI.and.BLKneighborLEV(+1, 0,-1,iBlock)==-1).or.&
-                        BLKneighborLEV( 0, 0,-1,iBlock)==-1)&
-                call refine_face_i_edge_k_minus(i)
+             (i==1+nI.and.BLKneighborLEV(+1, 0,-1,iBlock)==-1).or.&
+             BLKneighborLEV( 0, 0,-1,iBlock)==-1)&
+             call refine_face_i_edge_k_minus(i)
         if((i==1   .and.BLKneighborLEV(-1, 0,+1,iBlock)==-1).or.&
-           (i==1+nI.and.BLKneighborLEV(+1, 0,+1,iBlock)==-1).or.&
-                        BLKneighborLEV( 0, 0,+1,iBlock)==-1)&
-                call refine_face_i_edge_k_plus(i)
+             (i==1+nI.and.BLKneighborLEV(+1, 0,+1,iBlock)==-1).or.&
+             BLKneighborLEV( 0, 0,+1,iBlock)==-1)&
+             call refine_face_i_edge_k_plus(i)
      end if
   end do
 
   !Fix faces of J direction
   do j=1,nJ+1
      if((j==   1.and.BLKneighborLEV(0,-1,0,iBlock)==-1).or.&
-        (j==nJ+1.and.BLKneighborLEV(0,+1,0,iBlock)==-1))then
+          (j==nJ+1.and.BLKneighborLEV(0,+1,0,iBlock)==-1))then
         call refine_face_j(j)
      else
         if((j==1   .and.BLKneighborLEV(-1,-1, 0,iBlock)==-1).or.&
-           (j==1+nJ.and.BLKneighborLEV(-1,+1, 0,iBlock)==-1).or.&
-                        BLKneighborLEV(-1, 0, 0,iBlock)==-1)&
-                call refine_face_j_edge_i_minus(j)
+             (j==1+nJ.and.BLKneighborLEV(-1,+1, 0,iBlock)==-1).or.&
+             BLKneighborLEV(-1, 0, 0,iBlock)==-1)&
+             call refine_face_j_edge_i_minus(j)
         if((j==1   .and.BLKneighborLEV(+1,-1, 0,iBlock)==-1).or.&
-           (j==1+nJ.and.BLKneighborLEV(+1,+1, 0,iBlock)==-1).or.&
-                        BLKneighborLEV(+1, 0, 0,iBlock)==-1)&
-                call refine_face_j_edge_i_plus(j)
+             (j==1+nJ.and.BLKneighborLEV(+1,+1, 0,iBlock)==-1).or.&
+             BLKneighborLEV(+1, 0, 0,iBlock)==-1)&
+             call refine_face_j_edge_i_plus(j)
         if((j==1   .and.BLKneighborLEV( 0,-1,-1,iBlock)==-1).or.&
-           (j==1+nJ.and.BLKneighborLEV( 0,+1,-1,iBlock)==-1).or.&
-                        BLKneighborLEV( 0, 0,-1,iBlock)==-1)&
-                call refine_face_j_edge_k_minus(j)
+             (j==1+nJ.and.BLKneighborLEV( 0,+1,-1,iBlock)==-1).or.&
+             BLKneighborLEV( 0, 0,-1,iBlock)==-1)&
+             call refine_face_j_edge_k_minus(j)
         if((j==1   .and.BLKneighborLEV( 0,-1,+1,iBlock)==-1).or.&
-           (j==1+nJ.and.BLKneighborLEV( 0,+1,+1,iBlock)==-1).or.&
-                        BLKneighborLEV( 0, 0,+1,iBlock)==-1)&
-                call refine_face_j_edge_k_plus(j)
+             (j==1+nJ.and.BLKneighborLEV( 0,+1,+1,iBlock)==-1).or.&
+             BLKneighborLEV( 0, 0,+1,iBlock)==-1)&
+             call refine_face_j_edge_k_plus(j)
      end if
   end do
   !Fix faces of k direction
   do k=1,nK+1
      if((k==   1.and.BLKneighborLEV(0,0,-1,iBlock)==-1).or.&
-        (k==nK+1.and.BLKneighborLEV(0,0,+1,iBlock)==-1))then
+          (k==nK+1.and.BLKneighborLEV(0,0,+1,iBlock)==-1))then
         call refine_face_k(k)
      else
         if((k==1   .and.BLKneighborLEV(-1, 0,-1,iBlock)==-1).or.&
-           (k==1+nK.and.BLKneighborLEV(-1, 0,+1,iBlock)==-1).or.&
-                        BLKneighborLEV(-1, 0, 0,iBlock)==-1)&
-                call refine_face_k_edge_i_minus(k)
+             (k==1+nK.and.BLKneighborLEV(-1, 0,+1,iBlock)==-1).or.&
+             BLKneighborLEV(-1, 0, 0,iBlock)==-1)&
+             call refine_face_k_edge_i_minus(k)
         if((k==1   .and.BLKneighborLEV(+1, 0,-1,iBlock)==-1).or.&
-           (k==1+nK.and.BLKneighborLEV(+1, 0,+1,iBlock)==-1).or.&
-                        BLKneighborLEV(+1, 0, 0,iBlock)==-1)&
-                call refine_face_k_edge_i_plus(k)
+             (k==1+nK.and.BLKneighborLEV(+1, 0,+1,iBlock)==-1).or.&
+             BLKneighborLEV(+1, 0, 0,iBlock)==-1)&
+             call refine_face_k_edge_i_plus(k)
         if((k==1   .and.BLKneighborLEV( 0,-1,-1,iBlock)==-1).or.&
-           (k==1+nK.and.BLKneighborLEV( 0,-1,+1,iBlock)==-1).or.&
-                        BLKneighborLEV( 0,-1, 0,iBlock)==-1)&
-                call refine_face_k_edge_j_minus(k)
+             (k==1+nK.and.BLKneighborLEV( 0,-1,+1,iBlock)==-1).or.&
+             BLKneighborLEV( 0,-1, 0,iBlock)==-1)&
+             call refine_face_k_edge_j_minus(k)
         if((k==1   .and.BLKneighborLEV( 0,+1,-1,iBlock)==-1).or.&
-           (k==1+nK.and.BLKneighborLEV( 0,+1,+1,iBlock)==-1).or.&
-                        BLKneighborLEV( 0,+1, 0,iBlock)==-1)&
-                call refine_face_k_edge_j_plus(k)
+             (k==1+nK.and.BLKneighborLEV( 0,+1,+1,iBlock)==-1).or.&
+             BLKneighborLEV( 0,+1, 0,iBlock)==-1)&
+             call refine_face_k_edge_j_plus(k)
      end if
   end do
 
@@ -476,8 +429,8 @@ subroutine fix_geometry_at_reschange(iBlock)
   call fix_pole(iBlock)
   call test_block_geometry(iBlock,NameSub)
 contains
-!--------------------------------FACE I----------------------------------!
-!Fix face area vectors along I direction
+  !--------------------------------FACE I----------------------------------!
+  !Fix face area vectors along I direction
   subroutine refine_face_i(iFace)
     integer,intent(in)::iFace
     real,dimension(nDim,1,2*nJ,2*nK)::RefFaceAreaI_DF,RefFaceCenterI_DF
@@ -485,23 +438,23 @@ contains
     StartNode_D=XyzStart_BLK(:,iBlock)-DXyzRef_D
     StartNode_D(x_)=StartNode_D(x_)+(iFace-1)*dx_BLK(iBlock)
     call gen_to_xyz_arr(StartNode_D,&
-                        DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
-                        1,1,1,2*nJ+1,1,2*nK+1,&
-                        RefNodesI_DN(x_,:,:,:),&
-                        RefNodesI_DN(y_,:,:,:),&
-                        RefNodesI_DN(z_,:,:,:))
+         DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
+         1,1,1,2*nJ+1,1,2*nK+1,&
+         RefNodesI_DN(x_,:,:,:),&
+         RefNodesI_DN(y_,:,:,:),&
+         RefNodesI_DN(z_,:,:,:))
     call get_face_area_i(RefNodesI_DN,&
-                         1,1,1,2*nJ,1,2*nK,&
-                         RefFaceAreaI_DF)
+         1,1,1,2*nJ,1,2*nK,&
+         RefFaceAreaI_DF)
     FaceCenterStart_D=StartNode_D
     FaceCenterStart_D(y_)=FaceCenterStart_D(y_)+DXyzRef_D(y_)*cHalf
     FaceCenterStart_D(z_)=FaceCenterStart_D(z_)+DXyzRef_D(z_)*cHalf
     call gen_to_xyz_arr(FaceCenterStart_D,&
-                        DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
-                        1,1,1,2*nJ,1,2*nK,&
-                        RefFaceCenterI_DF(x_,:,:,:),&
-                        RefFaceCenterI_DF(y_,:,:,:),&
-                        RefFaceCenterI_DF(z_,:,:,:))
+         DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
+         1,1,1,2*nJ,1,2*nK,&
+         RefFaceCenterI_DF(x_,:,:,:),&
+         RefFaceCenterI_DF(y_,:,:,:),&
+         RefFaceCenterI_DF(z_,:,:,:))
     do k=1,nK;do j=1,nJ
        do iDim=1,nDim
           FaceAreaI_DFB(iDim,iFace,j,k,iBlock)=sum(&
@@ -512,24 +465,24 @@ contains
             RefFaceCenterI_DF(:,1,2*j-1:2*j,2*k-1:2*k))
     end do;end do
   end subroutine refine_face_i
-!--------------------------------EDGES OF FACE I------------------------!
-!          Fix edges. Start from the following formula:
-! FaceAreaI=cHalf*[&
-! cross_product(XyzNodes_DIII(:,i,j  ,k),XyzNodes_DIII(:,i,j+1,k  ))+&
-! cross_product(XyzNodes_DIII(:,i,j+1,k),XyzNodes_DIII(:,i,j+1,k+1))+&
-! cross_product(XyzNodes_DIII(:,i,j+1,k+1),XyzNodes_DIII(:,i,j  ,k+1))+&
-! cross_product(XyzNodes_DIII(:,i,j  ,k+1),XyzNodes_DIII(:,i,j  ,k))]
+  !--------------------------------EDGES OF FACE I------------------------!
+  !          Fix edges. Start from the following formula:
+  ! FaceAreaI=cHalf*[&
+  ! cross_product(XyzNodes_DIII(:,i,j  ,k),XyzNodes_DIII(:,i,j+1,k  ))+&
+  ! cross_product(XyzNodes_DIII(:,i,j+1,k),XyzNodes_DIII(:,i,j+1,k+1))+&
+  ! cross_product(XyzNodes_DIII(:,i,j+1,k+1),XyzNodes_DIII(:,i,j  ,k+1))+&
+  ! cross_product(XyzNodes_DIII(:,i,j  ,k+1),XyzNodes_DIII(:,i,j  ,k))]
   subroutine refine_face_i_edge_j_minus(iFace)
     integer,intent(in)::iFace
     real,dimension(nDim,1,1,2*nK+1)::RefNodesI_DN
     StartNode_D=XyzStart_BLK(:,iBlock)-DXyzRef_D
     StartNode_D(x_)= StartNode_D(x_)+(iFace-1)*dx_BLK(iBlock)
     call gen_to_xyz_arr(StartNode_D,&
-                        DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
-                        1,1,1,1,1,2*nK+1,&
-                        RefNodesI_DN(x_,:,:,:),&
-                        RefNodesI_DN(y_,:,:,:),&
-                        RefNodesI_DN(z_,:,:,:))
+         DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
+         1,1,1,1,1,2*nK+1,&
+         RefNodesI_DN(x_,:,:,:),&
+         RefNodesI_DN(y_,:,:,:),&
+         RefNodesI_DN(z_,:,:,:))
     do k=1,nK
        FaceAreaI_DFB(:,iFace,1,k,iBlock)=&
             FaceAreaI_DFB(:,iFace,1,k,iBlock)+cHalf*(&
@@ -537,8 +490,8 @@ contains
             +cross_product(RefNodesI_DN(:,1,1,2*k+1),RefNodesI_DN(:,1,1,2*k  ))&
             +cross_product(RefNodesI_DN(:,1,1,2*k),RefNodesI_DN(:,1,1,2*k-1)))
        RDotFaceAreaI_F(iFace,1,k)=dot_product(&
-          FaceCenterI_DF(:,iFace,1,k),&
-          FaceAreaI_DFB( :,iFace,1,k,iBlock))
+            FaceCenterI_DF(:,iFace,1,k),&
+            FaceAreaI_DFB( :,iFace,1,k,iBlock))
     end do
   end subroutine refine_face_i_edge_j_minus
   subroutine refine_face_i_edge_j_plus(iFace)
@@ -548,11 +501,11 @@ contains
     StartNode_D(x_)= StartNode_D(x_)+(iFace-1)*dx_BLK(iBlock)
     StartNode_D(y_)= StartNode_D(y_)+nJ*dy_BLK(iBlock)
     call gen_to_xyz_arr(StartNode_D,&
-                        DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
-                        1,1,1,1,1,2*nK+1,&
-                        RefNodesI_DN(x_,:,:,:),&
-                        RefNodesI_DN(y_,:,:,:),&
-                        RefNodesI_DN(z_,:,:,:))
+         DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
+         1,1,1,1,1,2*nK+1,&
+         RefNodesI_DN(x_,:,:,:),&
+         RefNodesI_DN(y_,:,:,:),&
+         RefNodesI_DN(z_,:,:,:))
     do k=1,nK
        FaceAreaI_DFB(:,iFace,nJ,k,iBlock)=&
             FaceAreaI_DFB(:,iFace,nJ,k,iBlock)+cHalf*(&
@@ -560,8 +513,8 @@ contains
             +cross_product(RefNodesI_DN(:,1,1,2*k-1),RefNodesI_DN(:,1,1,2*k  ))&
             +cross_product(RefNodesI_DN(:,1,1,2*k),RefNodesI_DN(:,1,1,2*k+1)))
        RDotFaceAreaI_F(iFace,nJ,k)=dot_product(&
-          FaceCenterI_DF(:,iFace,nJ,k),&
-          FaceAreaI_DFB( :,iFace,nJ,k,iBlock))
+            FaceCenterI_DF(:,iFace,nJ,k),&
+            FaceAreaI_DFB( :,iFace,nJ,k,iBlock))
     end do
   end subroutine refine_face_i_edge_j_plus
   subroutine refine_face_i_edge_k_minus(iFace)
@@ -570,11 +523,11 @@ contains
     StartNode_D=XyzStart_BLK(:,iBlock)-DXyzRef_D
     StartNode_D(x_)= StartNode_D(x_)+(iFace-1)*dx_BLK(iBlock)
     call gen_to_xyz_arr(StartNode_D,&
-                        DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
-                        1,1,1,2*nJ+1,1,1,&
-                        RefNodesI_DN(x_,:,:,:),&
-                        RefNodesI_DN(y_,:,:,:),&
-                        RefNodesI_DN(z_,:,:,:))
+         DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
+         1,1,1,2*nJ+1,1,1,&
+         RefNodesI_DN(x_,:,:,:),&
+         RefNodesI_DN(y_,:,:,:),&
+         RefNodesI_DN(z_,:,:,:))
     do j=1,nJ
        FaceAreaI_DFB(:,iFace,j,1,iBlock)=&
             FaceAreaI_DFB(:,iFace,j,1,iBlock)+cHalf*(&
@@ -582,8 +535,8 @@ contains
             +cross_product(RefNodesI_DN(:,1,2*j-1,1),RefNodesI_DN(:,1,2*j,1  ))&
             +cross_product(RefNodesI_DN(:,1,2*j  ,1),RefNodesI_DN(:,1,2*j+1,1)))
        RDotFaceAreaI_F(iFace,j,1)=dot_product(&
-          FaceCenterI_DF(:,iFace,j,1),&
-          FaceAreaI_DFB( :,iFace,j,1,iBlock))
+            FaceCenterI_DF(:,iFace,j,1),&
+            FaceAreaI_DFB( :,iFace,j,1,iBlock))
     end do
   end subroutine refine_face_i_edge_k_minus
   subroutine refine_face_i_edge_k_plus(iFace)
@@ -593,11 +546,11 @@ contains
     StartNode_D(x_)= StartNode_D(x_)+(iFace-1)*dx_BLK(iBlock)
     StartNode_D(z_)= StartNode_D(z_)+nK*dz_BLK(iBlock)
     call gen_to_xyz_arr(StartNode_D,&
-                        DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
-                        1,1,1,2*nJ+1,1,1,&
-                        RefNodesI_DN(x_,:,:,:),&
-                        RefNodesI_DN(y_,:,:,:),&
-                        RefNodesI_DN(z_,:,:,:))
+         DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
+         1,1,1,2*nJ+1,1,1,&
+         RefNodesI_DN(x_,:,:,:),&
+         RefNodesI_DN(y_,:,:,:),&
+         RefNodesI_DN(z_,:,:,:))
     do j=1,nJ
        FaceAreaI_DFB(:,iFace,j,nK,iBlock)=&
             FaceAreaI_DFB(:,iFace,j,nK,iBlock)+cHalf*(&
@@ -605,12 +558,12 @@ contains
             +cross_product(RefNodesI_DN(:,1,2*j+1,1),RefNodesI_DN(:,1,2*j  ,1))&
             +cross_product(RefNodesI_DN(:,1,2*j  ,1),RefNodesI_DN(:,1,2*j-1,1)))
        RDotFaceAreaI_F(iFace,j,nK)=dot_product(&
-          FaceCenterI_DF(:,iFace,j,nK),&
-          FaceAreaI_DFB( :,iFace,j,nK,iBlock))
+            FaceCenterI_DF(:,iFace,j,nK),&
+            FaceAreaI_DFB( :,iFace,j,nK,iBlock))
     end do
   end subroutine refine_face_i_edge_k_plus
-!--------------------------------FACE J----------------------------------!
-!Fix face area vectors along J direction
+  !--------------------------------FACE J----------------------------------!
+  !Fix face area vectors along J direction
   subroutine refine_face_j(jFace)
     integer,intent(in)::jFace
     real,dimension(nDim,2*nI,1,2*nK)::RefFaceAreaJ_DF,RefFaceCenterJ_DF
@@ -618,23 +571,23 @@ contains
     StartNode_D=XyzStart_BLK(:,iBlock)-DXyzRef_D
     StartNode_D(y_)=StartNode_D(y_)+(jFace-1)*dy_BLK(iBlock)
     call gen_to_xyz_arr(StartNode_D,&
-                        DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
-                        1,2*nI+1,1,1,1,2*nK+1,&
-                        RefNodesJ_DN(x_,:,:,:),&
-                        RefNodesJ_DN(y_,:,:,:),&
-                        RefNodesJ_DN(z_,:,:,:))
+         DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
+         1,2*nI+1,1,1,1,2*nK+1,&
+         RefNodesJ_DN(x_,:,:,:),&
+         RefNodesJ_DN(y_,:,:,:),&
+         RefNodesJ_DN(z_,:,:,:))
     call get_face_area_j(RefNodesJ_DN,&
-                         1,2*nI,1,1,1,2*nK,&
-                         RefFaceAreaJ_DF)
+         1,2*nI,1,1,1,2*nK,&
+         RefFaceAreaJ_DF)
     FaceCenterStart_D=StartNode_D
     FaceCenterStart_D(x_)=FaceCenterStart_D(x_)+DXyzRef_D(x_)*cHalf
     FaceCenterStart_D(z_)=FaceCenterStart_D(z_)+DXyzRef_D(z_)*cHalf
     call gen_to_xyz_arr(FaceCenterStart_D,&
-                        DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
-                        1,2*nI,1,1,1,2*nK,&
-                        RefFaceCenterJ_DF(x_,:,:,:),&
-                        RefFaceCenterJ_DF(y_,:,:,:),&
-                        RefFaceCenterJ_DF(z_,:,:,:))
+         DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
+         1,2*nI,1,1,1,2*nK,&
+         RefFaceCenterJ_DF(x_,:,:,:),&
+         RefFaceCenterJ_DF(y_,:,:,:),&
+         RefFaceCenterJ_DF(z_,:,:,:))
     do k=1,nK;do i=1,nI
        do iDim=1,nDim
           FaceAreaJ_DFB(iDim,i,jFace,k,iBlock)=sum(&
@@ -645,24 +598,24 @@ contains
             RefFaceCenterJ_DF(:,2*i-1:2*i,1,2*k-1:2*k))
     end do;end do
   end subroutine refine_face_j
-!--------------------------------EDGES OF FACE J------------------------!
-!          Fix edges. Start from the following formula:
-! FaceAreaJ=cHalf*[&
-! cross_product(XyzNodes_DIII(:,i,j  ,k),XyzNodes_DIII(:,i,j,k+1))+&
-! cross_product(XyzNodes_DIII(:,i,j,k+1),XyzNodes_DIII(:,i+1,j,k+1))+&
-! cross_product(XyzNodes_DIII(:,i+1,j,k+1),XyzNodes_DIII(:,i+1,j  ,k))+
-! cross_product(XyzNodes_DIII(:,i+1,j  ,k),XyzNodes_DIII(:,i,j  ,k))]
+  !--------------------------------EDGES OF FACE J------------------------!
+  !          Fix edges. Start from the following formula:
+  ! FaceAreaJ=cHalf*[&
+  ! cross_product(XyzNodes_DIII(:,i,j  ,k),XyzNodes_DIII(:,i,j,k+1))+&
+  ! cross_product(XyzNodes_DIII(:,i,j,k+1),XyzNodes_DIII(:,i+1,j,k+1))+&
+  ! cross_product(XyzNodes_DIII(:,i+1,j,k+1),XyzNodes_DIII(:,i+1,j  ,k))+
+  ! cross_product(XyzNodes_DIII(:,i+1,j  ,k),XyzNodes_DIII(:,i,j  ,k))]
   subroutine refine_face_j_edge_i_minus(jFace)
     integer,intent(in)::jFace
     real,dimension(nDim,1,1,2*nK+1)::RefNodesJ_DN
     StartNode_D=XyzStart_BLK(:,iBlock)-DXyzRef_D
     StartNode_D(y_)= StartNode_D(y_)+(jFace-1)*dy_BLK(iBlock)
     call gen_to_xyz_arr(StartNode_D,&
-                        DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
-                        1,1,1,1,1,2*nK+1,&
-                        RefNodesJ_DN(x_,:,:,:),&
-                        RefNodesJ_DN(y_,:,:,:),&
-                        RefNodesJ_DN(z_,:,:,:))
+         DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
+         1,1,1,1,1,2*nK+1,&
+         RefNodesJ_DN(x_,:,:,:),&
+         RefNodesJ_DN(y_,:,:,:),&
+         RefNodesJ_DN(z_,:,:,:))
     do k=1,nK
        FaceAreaJ_DFB(:,1,jFace,k,iBlock)=&
             FaceAreaJ_DFB(:,1,jFace,k,iBlock)+cHalf*(&
@@ -670,8 +623,8 @@ contains
             +cross_product(RefNodesJ_DN(:,1,1,2*k-1),RefNodesJ_DN(:,1,1,2*k  ))&
             +cross_product(RefNodesJ_DN(:,1,1,2*k),  RefNodesJ_DN(:,1,1,2*k+1)))
        RDotFaceAreaJ_F(1,jFace,k)=dot_product(&
-          FaceCenterJ_DF(:,1,jFace,k),&
-          FaceAreaJ_DFB( :,1,jFace,k,iBlock))
+            FaceCenterJ_DF(:,1,jFace,k),&
+            FaceAreaJ_DFB( :,1,jFace,k,iBlock))
     end do
   end subroutine refine_face_j_edge_i_minus
   subroutine refine_face_j_edge_i_plus(jFace)
@@ -681,11 +634,11 @@ contains
     StartNode_D(y_)= StartNode_D(y_)+(jFace-1)*dy_BLK(iBlock)
     StartNode_D(x_)= StartNode_D(x_)+nI*dx_BLK(iBlock)
     call gen_to_xyz_arr(StartNode_D,&
-                        DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
-                        1,1,1,1,1,2*nK+1,&
-                        RefNodesJ_DN(x_,:,:,:),&
-                        RefNodesJ_DN(y_,:,:,:),&
-                        RefNodesJ_DN(z_,:,:,:))
+         DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
+         1,1,1,1,1,2*nK+1,&
+         RefNodesJ_DN(x_,:,:,:),&
+         RefNodesJ_DN(y_,:,:,:),&
+         RefNodesJ_DN(z_,:,:,:))
     do k=1,nK
        FaceAreaJ_DFB(:,nI,jFace,k,iBlock)=&
             FaceAreaJ_DFB(:,nI,jFace,k,iBlock)+cHalf*(&
@@ -693,8 +646,8 @@ contains
             +cross_product(RefNodesJ_DN(:,1,1,2*k+1),RefNodesJ_DN(:,1,1,2*k  ))&
             +cross_product(RefNodesJ_DN(:,1,1,2*k)  ,RefNodesJ_DN(:,1,1,2*k-1)))
        RDotFaceAreaJ_F(nI,jFace,k)=dot_product(&
-          FaceCenterJ_DF(:,nI,jFace,k),&
-          FaceAreaJ_DFB( :,nI,jFace,k,iBlock))
+            FaceCenterJ_DF(:,nI,jFace,k),&
+            FaceAreaJ_DFB( :,nI,jFace,k,iBlock))
     end do
   end subroutine refine_face_j_edge_i_plus
   subroutine refine_face_j_edge_k_minus(jFace)
@@ -703,11 +656,11 @@ contains
     StartNode_D=XyzStart_BLK(:,iBlock)-DXyzRef_D
     StartNode_D(y_)= StartNode_D(y_)+(jFace-1)*dy_BLK(iBlock)
     call gen_to_xyz_arr(StartNode_D,&
-                        DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
-                        1,2*nI+1,1,1,1,1,&
-                        RefNodesJ_DN(x_,:,:,:),&
-                        RefNodesJ_DN(y_,:,:,:),&
-                        RefNodesJ_DN(z_,:,:,:))
+         DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
+         1,2*nI+1,1,1,1,1,&
+         RefNodesJ_DN(x_,:,:,:),&
+         RefNodesJ_DN(y_,:,:,:),&
+         RefNodesJ_DN(z_,:,:,:))
     do i=1,nI
        FaceAreaJ_DFB(:,i,jFace,1,iBlock)=&
             FaceAreaJ_DFB(:,i,jFace,1,iBlock)+cHalf*(&
@@ -715,8 +668,8 @@ contains
             +cross_product(RefNodesJ_DN(:,2*i+1,1,1),RefNodesJ_DN(:,2*i  ,1,1  ))&
             +cross_product(RefNodesJ_DN(:,2*i  ,1,1),RefNodesJ_DN(:,2*i-1,1,1)))
        RDotFaceAreaJ_F(i,jFace,1)=dot_product(&
-          FaceCenterJ_DF(:,i,jFace,1),&
-          FaceAreaJ_DFB( :,i,jFace,1,iBlock))
+            FaceCenterJ_DF(:,i,jFace,1),&
+            FaceAreaJ_DFB( :,i,jFace,1,iBlock))
     end do
   end subroutine refine_face_j_edge_k_minus
   subroutine refine_face_j_edge_k_plus(jFace)
@@ -726,11 +679,11 @@ contains
     StartNode_D(y_)= StartNode_D(y_)+(jFace-1)*dy_BLK(iBlock)
     StartNode_D(z_)= StartNode_D(z_)+nK*dz_BLK(iBlock)
     call gen_to_xyz_arr(StartNode_D,&
-                        DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
-                        1,2*nI+1,1,1,1,1,&
-                        RefNodesJ_DN(x_,:,:,:),&
-                        RefNodesJ_DN(y_,:,:,:),&
-                        RefNodesJ_DN(z_,:,:,:))
+         DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
+         1,2*nI+1,1,1,1,1,&
+         RefNodesJ_DN(x_,:,:,:),&
+         RefNodesJ_DN(y_,:,:,:),&
+         RefNodesJ_DN(z_,:,:,:))
     do i=1,nI
        FaceAreaJ_DFB(:,i,jFace,nK,iBlock)=&
             FaceAreaJ_DFB(:,i,jFace,nK,iBlock)+cHalf*(&
@@ -738,12 +691,12 @@ contains
             +cross_product(RefNodesJ_DN(:,2*i-1,1,1),RefNodesJ_DN(:,2*i  ,1,1))&
             +cross_product(RefNodesJ_DN(:,2*i  ,1,1),RefNodesJ_DN(:,2*i+1,1,1)))
        RDotFaceAreaJ_F(i,jFace,nK)=dot_product(&
-          FaceCenterJ_DF(:,i,jFace,nK),&
-          FaceAreaJ_DFB( :,i,jFace,nK,iBlock))
+            FaceCenterJ_DF(:,i,jFace,nK),&
+            FaceAreaJ_DFB( :,i,jFace,nK,iBlock))
     end do
   end subroutine refine_face_j_edge_k_plus
-!--------------------------------FACE K----------------------------------!
-!Fix face area vectors along K direction
+  !--------------------------------FACE K----------------------------------!
+  !Fix face area vectors along K direction
   subroutine refine_face_k(kFace)
     integer,intent(in)::kFace
     real,dimension(nDim,2*nI,2*nJ,1)::RefFaceAreaK_DF,RefFaceCenterK_DF
@@ -751,23 +704,23 @@ contains
     StartNode_D=XyzStart_BLK(:,iBlock)-DXyzRef_D
     StartNode_D(z_)=StartNode_D(z_)+(kFace-1)*dz_BLK(iBlock)
     call gen_to_xyz_arr(StartNode_D,&
-                        DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
-                        1,2*nI+1,1,2*nJ+1,1,1,&
-                        RefNodesK_DN(x_,:,:,:),&
-                        RefNodesK_DN(y_,:,:,:),&
-                        RefNodesK_DN(z_,:,:,:))
+         DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
+         1,2*nI+1,1,2*nJ+1,1,1,&
+         RefNodesK_DN(x_,:,:,:),&
+         RefNodesK_DN(y_,:,:,:),&
+         RefNodesK_DN(z_,:,:,:))
     call get_face_area_k(RefNodesK_DN,&
-                         1,2*nI,1,2*nJ,1,1,&
-                         RefFaceAreaK_DF)
+         1,2*nI,1,2*nJ,1,1,&
+         RefFaceAreaK_DF)
     FaceCenterStart_D=StartNode_D
     FaceCenterStart_D(x_)=FaceCenterStart_D(x_)+DXyzRef_D(x_)*cHalf
     FaceCenterStart_D(y_)=FaceCenterStart_D(y_)+DXyzRef_D(y_)*cHalf
     call gen_to_xyz_arr(FaceCenterStart_D,&
-                        DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
-                        1,2*nI,1,2*nJ,1,1,&
-                        RefFaceCenterK_DF(x_,:,:,:),&
-                        RefFaceCenterK_DF(y_,:,:,:),&
-                        RefFaceCenterK_DF(z_,:,:,:))
+         DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
+         1,2*nI,1,2*nJ,1,1,&
+         RefFaceCenterK_DF(x_,:,:,:),&
+         RefFaceCenterK_DF(y_,:,:,:),&
+         RefFaceCenterK_DF(z_,:,:,:))
     do j=1,nJ;do i=1,nI
        do iDim=1,nDim
           FaceAreaK_DFB(iDim,i,j,kFace,iBlock)=sum(&
@@ -778,13 +731,13 @@ contains
             RefFaceCenterK_DF(:,2*i-1:2*i,2*j-1:2*j,1))
     end do;end do
   end subroutine refine_face_k
-!--------------------------------EDGES OF FACE K------------------------!
-!          Fix edges. Start from the following formula:
-! FaceAreaK=cHalf*[&
-! cross_product(XyzNodes_DIII(:,i,j  ,k),XyzNodes_DIII(:,i+1,j,k))+&
-! cross_product(XyzNodes_DIII(:,i+1,j,k),XyzNodes_DIII(:,i+1,j+1,k))+&
-! cross_product(XyzNodes_DIII(:,i+1,j+1,k),XyzNodes_DIII(:,i,j+1  ,k))+&
-! cross_product(XyzNodes_DIII(:,i,j+1  ,k),XyzNodes_DIII(:,i,j  ,k))]
+  !--------------------------------EDGES OF FACE K------------------------!
+  !          Fix edges. Start from the following formula:
+  ! FaceAreaK=cHalf*[&
+  ! cross_product(XyzNodes_DIII(:,i,j  ,k),XyzNodes_DIII(:,i+1,j,k))+&
+  ! cross_product(XyzNodes_DIII(:,i+1,j,k),XyzNodes_DIII(:,i+1,j+1,k))+&
+  ! cross_product(XyzNodes_DIII(:,i+1,j+1,k),XyzNodes_DIII(:,i,j+1  ,k))+&
+  ! cross_product(XyzNodes_DIII(:,i,j+1  ,k),XyzNodes_DIII(:,i,j  ,k))]
 
   subroutine refine_face_k_edge_i_minus(kFace)
     integer,intent(in)::kFace
@@ -792,11 +745,11 @@ contains
     StartNode_D=XyzStart_BLK(:,iBlock)-DXyzRef_D
     StartNode_D(z_)= StartNode_D(z_)+(kFace-1)*dz_BLK(iBlock)
     call gen_to_xyz_arr(StartNode_D,&
-                        DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
-                        1,1,1,2*nJ+1,1,1,&
-                        RefNodesK_DN(x_,:,:,:),&
-                        RefNodesK_DN(y_,:,:,:),&
-                        RefNodesK_DN(z_,:,:,:))
+         DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
+         1,1,1,2*nJ+1,1,1,&
+         RefNodesK_DN(x_,:,:,:),&
+         RefNodesK_DN(y_,:,:,:),&
+         RefNodesK_DN(z_,:,:,:))
     do j=1,nJ
        FaceAreaK_DFB(:,1,j,kFace,iBlock)=&
             FaceAreaK_DFB(:,1,j,kFace,iBlock)+cHalf*(&
@@ -804,8 +757,8 @@ contains
             +cross_product(RefNodesK_DN(:,1,2*j+1,1),RefNodesK_DN(:,1,2*j  ,1))&
             +cross_product(RefNodesK_DN(:,1,2*j  ,1),RefNodesK_DN(:,1,2*j-1,1)))
        RDotFaceAreaK_F(1,j,kFace)=dot_product(&
-          FaceCenterK_DF(:,1,j,kFace),&
-          FaceAreaK_DFB( :,1,j,kFace,iBlock))
+            FaceCenterK_DF(:,1,j,kFace),&
+            FaceAreaK_DFB( :,1,j,kFace,iBlock))
     end do
   end subroutine refine_face_k_edge_i_minus
   subroutine refine_face_k_edge_i_plus(kFace)
@@ -815,11 +768,11 @@ contains
     StartNode_D(z_)= StartNode_D(z_)+(kFace-1)*dz_BLK(iBlock)
     StartNode_D(x_)= StartNode_D(x_)+nI*dx_BLK(iBlock)
     call gen_to_xyz_arr(StartNode_D,&
-                        DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
-                        1,1,1,2*nJ+1,1,1,&
-                        RefNodesK_DN(x_,:,:,:),&
-                        RefNodesK_DN(y_,:,:,:),&
-                        RefNodesK_DN(z_,:,:,:))
+         DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
+         1,1,1,2*nJ+1,1,1,&
+         RefNodesK_DN(x_,:,:,:),&
+         RefNodesK_DN(y_,:,:,:),&
+         RefNodesK_DN(z_,:,:,:))
     do j=1,nJ
        FaceAreaK_DFB(:,nI,j,kFace,iBlock)=&
             FaceAreaK_DFB(:,nI,j,kFace,iBlock)+cHalf*(&
@@ -827,8 +780,8 @@ contains
             +cross_product(RefNodesK_DN(:,1,2*j-1,1),RefNodesK_DN(:,1,2*j  ,1))&
             +cross_product(RefNodesK_DN(:,1,2*j  ,1),RefNodesK_DN(:,1,2*j+1,1)))
        RDotFaceAreaK_F(nI,j,kFace)=dot_product(&
-          FaceCenterK_DF(:,nI,j,kFace),&
-          FaceAreaK_DFB( :,nI,j,kFace,iBlock))
+            FaceCenterK_DF(:,nI,j,kFace),&
+            FaceAreaK_DFB( :,nI,j,kFace,iBlock))
     end do
   end subroutine refine_face_k_edge_i_plus
   subroutine refine_face_k_edge_j_minus(kFace)
@@ -837,11 +790,11 @@ contains
     StartNode_D=XyzStart_BLK(:,iBlock)-DXyzRef_D
     StartNode_D(z_)= StartNode_D(z_)+(kFace-1)*dz_BLK(iBlock)
     call gen_to_xyz_arr(StartNode_D,&
-                        DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
-                        1,2*nI+1,1,1,1,1,&
-                        RefNodesK_DN(x_,:,:,:),&
-                        RefNodesK_DN(y_,:,:,:),&
-                        RefNodesK_DN(z_,:,:,:))
+         DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
+         1,2*nI+1,1,1,1,1,&
+         RefNodesK_DN(x_,:,:,:),&
+         RefNodesK_DN(y_,:,:,:),&
+         RefNodesK_DN(z_,:,:,:))
     do i=1,nI
        FaceAreaK_DFB(:,i,1,kFace,iBlock)=&
             FaceAreaK_DFB(:,i,1,kFace,iBlock)+cHalf*(&
@@ -849,8 +802,8 @@ contains
             +cross_product(RefNodesK_DN(:,2*i-1,1,1),RefNodesK_DN(:,2*i  ,1,1  ))&
             +cross_product(RefNodesK_DN(:,2*i  ,1,1),RefNodesK_DN(:,2*i+1,1,1)))
        RDotFaceAreaK_F(i,1,kFace)=dot_product(&
-          FaceCenterK_DF(:,i,1,kFace),&
-          FaceAreaK_DFB( :,i,1,kFace,iBlock))
+            FaceCenterK_DF(:,i,1,kFace),&
+            FaceAreaK_DFB( :,i,1,kFace,iBlock))
     end do
   end subroutine refine_face_k_edge_j_minus
   subroutine refine_face_k_edge_j_plus(kFace)
@@ -860,11 +813,11 @@ contains
     StartNode_D(z_)= StartNode_D(z_)+(kFace-1)*dz_BLK(iBlock)
     StartNode_D(y_)= StartNode_D(y_)+nJ*dy_BLK(iBlock)
     call gen_to_xyz_arr(StartNode_D,&
-                        DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
-                        1,2*nI+1,1,1,1,1,&
-                        RefNodesK_DN(x_,:,:,:),&
-                        RefNodesK_DN(y_,:,:,:),&
-                        RefNodesK_DN(z_,:,:,:))
+         DXyzRef_D(x_),DXyzRef_D(y_),DXyzRef_D(z_),&
+         1,2*nI+1,1,1,1,1,&
+         RefNodesK_DN(x_,:,:,:),&
+         RefNodesK_DN(y_,:,:,:),&
+         RefNodesK_DN(z_,:,:,:))
     do i=1,nI
        FaceAreaK_DFB(:,i,nJ,kFace,iBlock)=&
             FaceAreaK_DFB(:,i,nJ,kFace,iBlock)+cHalf*(&
@@ -872,8 +825,8 @@ contains
             +cross_product(RefNodesK_DN(:,2*i+1,1,1),RefNodesK_DN(:,2*i  ,1,1))&
             +cross_product(RefNodesK_DN(:,2*i  ,1,1),RefNodesK_DN(:,2*i-1,1,1)))
        RDotFaceAreaK_F(i,nJ,kFace)=dot_product(&
-          FaceCenterK_DF(:,i,nJ,kFace),&
-          FaceAreaK_DFB( :,i,nJ,kFace,iBlock))
+            FaceCenterK_DF(:,i,nJ,kFace),&
+            FaceAreaK_DFB( :,i,nJ,kFace,iBlock))
     end do
   end subroutine refine_face_k_edge_j_plus
 
@@ -914,17 +867,17 @@ subroutine fix_covariant_geometry(iBLK)
   ! center radius-vector. FACE I
   !/
   call get_face_area_i(XyzNode_DN,&
-                       1,nI+1,1,nJ,1,nK,&
-                       FaceAreaI_DFB(:,:,:,:,iBLK))
+       1,nI+1,1,nJ,1,nK,&
+       FaceAreaI_DFB(:,:,:,:,iBLK))
   if(UseVertexBasedGrid)then
      FaceCenterStart_D=XyzStart_BLK(:,iBLK)
      FaceCenterStart_D(x_)=FaceCenterStart_D(x_)-dx_BLK(iBLK)*cHalf
      call gen_to_xyz_arr(FaceCenterStart_D,&
-                         dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK),&
-                         1,1+nI,1,nJ,1,nK,&
-                         FaceCenterI_DF(x_,:,:,:),&
-                         FaceCenterI_DF(y_,:,:,:),&
-                         FaceCenterI_DF(z_,:,:,:))
+          dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK),&
+          1,1+nI,1,nJ,1,nK,&
+          FaceCenterI_DF(x_,:,:,:),&
+          FaceCenterI_DF(y_,:,:,:),&
+          FaceCenterI_DF(z_,:,:,:))
      do k=1,nK; do j=1,nJ; do i=1,nI+1
         RDotFaceAreaI_F(i,j,k)=dot_product(&
              FaceCenterI_DF(:,i,j,k),&
@@ -945,17 +898,17 @@ subroutine fix_covariant_geometry(iBLK)
   ! center radius-vector. FACE J
   !/
   call get_face_area_j(XyzNode_DN,&
-                       1,nI,1,nJ+1,1,nK,&
-                       FaceAreaJ_DFB(:,:,:,:,iBLK))
+       1,nI,1,nJ+1,1,nK,&
+       FaceAreaJ_DFB(:,:,:,:,iBLK))
   if(UseVertexBasedGrid)then
      FaceCenterStart_D=XyzStart_BLK(:,iBLK)
      FaceCenterStart_D(y_)=FaceCenterStart_D(y_)-dy_BLK(iBLK)*cHalf
      call gen_to_xyz_arr(FaceCenterStart_D,&
-                         dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK),&
-                         1,nI,1,nJ+1,1,nK,&
-                         FaceCenterJ_DF(x_,:,:,:),&
-                         FaceCenterJ_DF(y_,:,:,:),&
-                         FaceCenterJ_DF(z_,:,:,:))
+          dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK),&
+          1,nI,1,nJ+1,1,nK,&
+          FaceCenterJ_DF(x_,:,:,:),&
+          FaceCenterJ_DF(y_,:,:,:),&
+          FaceCenterJ_DF(z_,:,:,:))
      do k=1,nK; do j=1,nJ+1; do i=1,nI
         RDotFaceAreaJ_F(i,j,k)=dot_product(&
              FaceCenterJ_DF(:,i,j,k),&
@@ -977,8 +930,8 @@ subroutine fix_covariant_geometry(iBLK)
   ! center radius-vector. FACE K
   !/
   call get_face_area_k(XyzNode_DN,&
-                       1,nI,1,nJ,1,nK+1,&
-                       FaceAreaK_DFB(:,:,:,:,iBLK))
+       1,nI,1,nJ,1,nK+1,&
+       FaceAreaK_DFB(:,:,:,:,iBLK))
   if(UseVertexBasedGrid)then
      FaceCenterStart_D=XyzStart_BLK(:,iBLK)
      FaceCenterStart_D(z_)=FaceCenterStart_D(z_)-dz_BLK(iBLK)*cHalf
@@ -1003,7 +956,7 @@ subroutine fix_covariant_geometry(iBLK)
              FaceAreaK_DFB(:,i,j,k,iBLK))
      end do; end do; end do 
   end if
-  
+
   !Calculate Volume (inverse)
   vInv_CB(:,:,:,iBLK)=nDim/(&
        RDotFaceAreaI_F(2:nI+1,:,:)-RDotFaceAreaI_F(1:nI,:,:)+&
@@ -1197,7 +1150,7 @@ subroutine calc_b0source_covar(iBlock)
               end do
 
               DivB0_CB(i,j,k,iBlock)=DivB0_CB(i,j,k,iBlock)*vInv_CB(i,j,k,iBlock)        
-              
+
 
               CurlB0_DCB(z_,i,j,k,iBlock) = &
                    B0SourceMatrix_DDC(2,1,i,j,k)*&
@@ -1225,9 +1178,9 @@ subroutine calc_b0source_covar(iBlock)
                       -DivB0_CB(i,j,k,iBlock)*cUnit_DD
                  NormB0_CB(i,j,k,iBlock)= sqrt(sqrt(eigenvalue_max(&
                       matmul(transpose(B0Nabla_DD),matmul(&
-                                       CurlB02_DD,&
-                                       B0Nabla_DD))               )&
-                                     )    )
+                      CurlB02_DD,&
+                      B0Nabla_DD))               )&
+                      )    )
               end if
            end if
         end do
@@ -1247,8 +1200,8 @@ contains
        !divided by dGenRef_D
        call get_nodes_and_ref_b0(2*iFace-3,2*j-2,2*k-2)
        call get_face_area_i(RefXyzNodes_DIII(:,1:1,:,:),&
-                            1,1,0,1,0,1,&
-                            RefFaceArea_DIII(:,1:1,:,:))
+            1,1,0,1,0,1,&
+            RefFaceArea_DIII(:,1:1,:,:))
        do j2=0,1
           do i2=0,1
              B0_DIIS(:,i2,j2,iSide)=(RefB0_DIII(:,0,i2,j2)+&
@@ -1265,8 +1218,8 @@ contains
        !divided by dXyzRef_D
        call get_nodes_and_ref_b0(2*i-2,2*jFace-3,2*k-2)
        call get_face_area_j(RefXyzNodes_DIII(:,:,1:1,:),&
-                            0,1,1,1,0,1,&
-                            RefFaceArea_DIII(:,:,1:1,:))
+            0,1,1,1,0,1,&
+            RefFaceArea_DIII(:,:,1:1,:))
        do j2=0,1
           do i2=0,1
              B0_DIIS(:,i2,j2,iSide)=(RefB0_DIII(:,i2,0,j2)+&
@@ -1283,8 +1236,8 @@ contains
        !divided by dXyzRef_D
        call get_nodes_and_ref_b0(2*i-2,2*j-2,2*kFace-3)
        call get_face_area_k(RefXyzNodes_DIII(:,:,:,1:1),&
-                            0,1,0,1,1,1,&
-                            RefFaceArea_DIII(:,:,:,1:1))
+            0,1,0,1,1,1,&
+            RefFaceArea_DIII(:,:,:,1:1))
        do j2=0,1
           do i2=0,1
              B0_DIIS(:,i2,j2,iSide)=(RefB0_DIII(:,i2,j2,0)+&
@@ -1302,9 +1255,9 @@ contains
     !Get the face center generalized coordinates, which is also
     !the generalized coordinates of the refined grid node (111),
     !if UseVertexBasedGrid=.true.
- 
+
     GenCoord111_D=XyzStart_BLK(:,iBlock)+(/iRef,jRef,kRef/)*dGenFine_D
-    
+
     !Get cell center coordinates of the refined grid
     !and nodes coordinates
     if(UseVertexBasedGrid)then
@@ -1328,16 +1281,16 @@ contains
             RefXyz_DIII(x_,-1:2,-1:2,-1:2),&
             RefXyz_DIII(y_,-1:2,-1:2,-1:2),&
             RefXyz_DIII(z_,-1:2,-1:2,-1:2))
-!REDO!!!!!!!!!
+       !REDO!!!!!!!!!
        call cell_centers_to_nodes
-    !  call gen_to_xyz_arr(GenCoord111_D,&
-    !        DGenFine_D(1),DGenFine_D(2),dGenFine_D(3),&
-    !        0,2,0,2,0,2,&
-    !        RefXyzNodes_DIII(x_,0:2,0:2,0:2),&
-    !        RefXyzNodes_DIII(y_,0:2,0:2,0:2),&
-    !        RefXyzNodes_DIII(z_,0:2,0:2,0:2))
+       !  call gen_to_xyz_arr(GenCoord111_D,&
+       !        DGenFine_D(1),DGenFine_D(2),dGenFine_D(3),&
+       !        0,2,0,2,0,2,&
+       !        RefXyzNodes_DIII(x_,0:2,0:2,0:2),&
+       !        RefXyzNodes_DIII(y_,0:2,0:2,0:2),&
+       !        RefXyzNodes_DIII(z_,0:2,0:2,0:2))
     end if
-     
+
     do k2=0,1; do j2=0,1; do i2=0,1
        call  get_B0(&
             RefXyz_DIII(x_,i2,j2,k2),&
@@ -1358,7 +1311,7 @@ contains
     end do; end do; end do
 
     do k2=0,2; do j2=0,2; do i2=0,2
-       
+
        A_DD(1,:)=RefXyz_DIII(:,i2,j2,k2)-RefXyz_DIII(:,i2-1,j2,k2)
        A_DD(2,:)=RefXyz_DIII(:,i2,j2,k2)-RefXyz_DIII(:,i2,j2-1,k2)
        A_DD(3,:)=RefXyz_DIII(:,i2,j2,k2)-RefXyz_DIII(:,i2,j2,k2-1)
@@ -1379,13 +1332,13 @@ contains
        A1_DD(:,2)=B_D
 
        RefXyzNodes_DIII(y_,i2,j2,k2) = det(A1_DD)*DetInv
-       
+
        A1_DD(:,1:2)=A_DD(:,1:2)
        A1_DD(:,3)=B_D
 
        RefXyzNodes_DIII(z_,i2,j2,k2) = det(A1_DD)*DetInv
     end do; end do; end do
-    
+
   end subroutine cell_centers_to_nodes
   !===========================================================================
   real function det(A_DD)
@@ -1417,7 +1370,7 @@ subroutine covariant_force_integral(i,j,k,iBLK,Fai_S)
   FaceArea_DS(:,East_ :West_ )=FaceAreaI_DFB(:,i:i+1,j,k,iBLK)
   FaceArea_DS(:,South_:North_)=FaceAreaJ_DFB(:,i,j:j+1,k,iBLK)
   FaceArea_DS(:,Bot_  :Top_  )=FaceAreaK_DFB(:,i,j,k:k+1,iBLK)
- 
+
   fbody_x_BLK(i,j,k,iBLK) = VInv*&              
        dot_product(FaceArea_DS(1,:),Fai_S(:))                     
   fbody_y_BLK(i,j,k,iBLK) = VInv*&              
@@ -1472,7 +1425,7 @@ subroutine covariant_gradient(iBlock, Var_G,&
         Difference_S(North_)= +Var_G(i,j+1,k)
         Difference_S(Bot_)  = -Var_G(i,j,k-1)
         Difference_S(Top_)  = +Var_G(i,j,k+1)
-  
+
         GradientX_G(i,j,k) = &
              dot_product(FaceArea_DS(x_,:),Difference_S)*VInvHalf
         GradientY_G(i,j,k) = &
@@ -1489,7 +1442,7 @@ subroutine covariant_gradient(iBlock, Var_G,&
      do k=1,nK;  do j=1,nJ;  do i=1,nI
         VInvHalf=&
              chalf*vInv_CB(i,j,k,iBlock)*OneTrue_G(i,j,k)
-        
+
         FaceArea_DS(:,East_ :West_ )=FaceAreaI_DFB(:,i:i+1,j,k,iBlock)
         FaceArea_DS(:,South_:North_)=FaceAreaJ_DFB(:,i,j:j+1,k,iBlock)
         FaceArea_DS(:,Bot_  :Top_  )=FaceAreaK_DFB(:,i,j,k:k+1,iBlock)        
@@ -1497,8 +1450,8 @@ subroutine covariant_gradient(iBlock, Var_G,&
         Difference_S(East_) =  OneTrue_G(i-1,j,k)*&
              (Var_G(i,j,k)-Var_G(i-1,j,k))+&
              (cOne- OneTrue_G(i-1,j,k))*&
-              OneTrue_G(i+1,j,k)*&
-              (Var_G(i+1,j,k)-Var_G(i,j,k))
+             OneTrue_G(i+1,j,k)*&
+             (Var_G(i+1,j,k)-Var_G(i,j,k))
 
         Difference_S(West_) =  OneTrue_G(i+1,j,k)*&
              (Var_G(i+1,j,k)-Var_G(i,j,k))+&
@@ -1598,7 +1551,7 @@ subroutine covariant_curlb(i,j,k,iBLK,CurlB_D,IsTrueBlock)
         CurlB_D=cZero
         return
      end if
-     
+
      if(true_cell(i,j-1,k,iBLK))then
         MagneticField_DS(:,South_ )=-(+State_VGB(Bx_:Bz_,i,j-1,k,iBLK)+B_D)
      else
@@ -1609,13 +1562,13 @@ subroutine covariant_curlb(i,j,k,iBLK,CurlB_D,IsTrueBlock)
      else
         MagneticField_DS(:,North_ )=+(-State_VGB(Bx_:Bz_,i,j-1,k,iBLK)+2*B_D)
      end if
-     
+
      !Input from K faces
      if(.not.true_cell(i,j,k-1,iBLK).and.(.not.true_cell(i,j,k+1,iBLK)))then
         CurlB_D=cZero
         return
      end if
-     
+
      if(true_cell(i,j,k-1,iBLK))then
         MagneticField_DS(:,Bot_ )=-(+State_VGB(Bx_:Bz_,i,j,k-1,iBLK)+B_D)
      else
@@ -1709,8 +1662,8 @@ real function integrate_BLK_covar(qnum,qa)
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,nBLK,nBlockMax,unusedBLK
   use ModGeometry, ONLY :&
-                          vInv_CB,&                   
-                          true_BLK,true_cell
+       vInv_CB,&                   
+       true_BLK,true_cell
   use ModMpi
   implicit none 
 
@@ -1730,7 +1683,7 @@ real function integrate_BLK_covar(qnum,qa)
   call set_oktest('integrate_BLK',oktest, oktest_me)
 
   qsum=0.0
-                                                     
+
   do iBLK=1,nBlockMax
      if(.not.unusedBLK(iBLK)) then
         if(true_BLK(iBLK)) then
@@ -1747,7 +1700,7 @@ real function integrate_BLK_covar(qnum,qa)
               do j=1,nJ
                  do i=1,nI
                     if(true_cell(i,j,k,iBLK))&
-                    qsum=qsum + qa(i,j,k,iBLK)/&
+                         qsum=qsum + qa(i,j,k,iBLK)/&
                          vInv_CB(i,j,k,iBLK)
                  end do
               end do
@@ -1755,7 +1708,7 @@ real function integrate_BLK_covar(qnum,qa)
         end if
      end if
   end do
-                                                    
+
   if(qnum>1)then
      call MPI_allreduce(qsum, qsum_all, 1,  MPI_REAL, MPI_SUM, &
           iComm, iError)
@@ -1765,7 +1718,7 @@ real function integrate_BLK_covar(qnum,qa)
      integrate_BLK_covar=qsum
      if(oktest)write(*,*)'me,qsum:',iProc,qsum
   end if
-  
+
 end function integrate_BLK_covar
 
 subroutine integrate_domain_covar(Sum_V, Pressure_GB)
@@ -1789,7 +1742,7 @@ subroutine integrate_domain_covar(Sum_V, Pressure_GB)
   call set_oktest('integrate_domain',DoTest, DoTestMe)
 
   Sum_V=cZero
-                                                     
+
   do iBlock = 1, nBlock
      if(unusedBLK(iBlock)) CYCLE
      if(true_BLK(iBlock)) then
@@ -1812,4 +1765,4 @@ subroutine integrate_domain_covar(Sum_V, Pressure_GB)
   end do
 
 end subroutine integrate_domain_covar
-!==============End of library programms=================================
+
