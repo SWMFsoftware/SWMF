@@ -19,6 +19,7 @@ test_help:
 	@echo "    test3                      (run GM-IE-IM test only )"
 
 test:
+	@rm -f *.diff
 	-@(make test_comp)
 	-@(make test_pw)
 	-@(make test_rb)
