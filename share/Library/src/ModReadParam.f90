@@ -139,6 +139,8 @@ module ModReadParam
 
   implicit none
 
+  save
+
   private ! except
 
   !PUBLIC DATA MEMBERS:
@@ -170,9 +172,9 @@ module ModReadParam
 
   ! Text buffer to hold all the input lines
   integer, parameter :: MaxLine=1000
-  character (len=lStringLine), save :: StringLine_I(MaxLine)
+  character (len=lStringLine) :: StringLine_I(MaxLine)
 
-  character(len=lStringLine)        :: StringLine, StringParam
+  character(len=lStringLine)  :: StringLine, StringParam
 
   character(len=2)  :: NameComp    = '  '  ! Name of the component
   character(len=3)  :: StringPrefix= '   ' ! Prefix for echo
@@ -188,7 +190,7 @@ module ModReadParam
   ! component and command name together.
   integer, parameter :: MaxCommand = MaxLine/3, MaxSession = 10
   integer            :: iCommand = 0
-  integer            :: iLineCommand_II(MaxCommand, MaxSession)
+  integer            :: iLineCommand_II(MaxCommand, MaxSession) = -1
   character(len=lStringLine) :: NameCommand_II(MaxCommand, MaxSession)
 
   interface read_var
@@ -755,7 +757,8 @@ contains
     j = iSession
     if(present(iSessionIn)) j = iSessionIn
 
-    do i = 1, iCommand
+    do i = 1, MaxCommand
+       if(iLineCommand_II(i, j) < 0) EXIT
        if(NameCommand == NameCommand_II(i, j)) then
           i_line_command = iLineCommand_II(i, j)
           RETURN
