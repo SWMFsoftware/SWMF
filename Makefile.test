@@ -66,7 +66,7 @@ test_pw:
 
 test_pw_compile:
 	./Config.pl -v=Empty,PW/PWOM -o=PW:Earth
-	make SWMF
+	make SWMF PIDL
 
 test_pw_rundir:
 	rm -rf ${TESTDIR}
@@ -101,7 +101,7 @@ test_rb:
 test_rb_compile:
 	./Config.pl -v=Empty,RB/RBE,GM/BATSRUS
 	./Config.pl -g=GM:8,8,8,770,1 -o=GM:e=Mhd,u=Default
-	make SWMF
+	make SWMF PIDL
 
 test_rb_rundir:
 	rm -rf ${TESTDIR}
@@ -146,7 +146,7 @@ test1:
 test1_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,PW/PWOM
 	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd,PW:Earth
-	make SWMF
+	make SWMF PIDL
 
 test1_rundir:
 	rm -rf ${TESTDIR}
@@ -211,7 +211,7 @@ test2_compile:
 	./Config.pl -g=SC:4,4,4,3000,IH:8,8,8,400,1
 	cd SC/BATSRUS; ./Config.pl -dynamic; cd ../..
 	cd IH/BATSRUS; ./Config.pl -dynamic; cd ../..
-	make SWMF EARTH_TRAJ
+	make SWMF PIDL EARTH_TRAJ
 
 test2_rundir:
 	rm -rf ${TESTDIR}
@@ -263,7 +263,7 @@ test3:
 test3_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
 	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd
-	make SWMF
+	make SWMF PIDL
 
 test3_rundir:
 	rm -rf ${TESTDIR}
@@ -274,29 +274,30 @@ test3_rundir:
 #	cp Param/midn_05.dat ${TESTDIR}/midn_05.dat
 #	cp Param/noon_05.dat ${TESTDIR}/noon_05.dat
 
+# Note: The RCM .dat file is copied to .txt to avoid conversion to .plt
 test3_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}/GM; ./pIDL -M;
-	cd ${TESTDIR}/IE; ./pION;
+	cp ${TESTDIR}/IM/plots/2d__max_t00000010.dat \
+		${TESTDIR}/IM/plots/t10.txt
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test3_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
-		${TESTDIR}/GM/IO2/log_n000001.log \
+		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		output/test3/GM_log_n000001.log \
 		> test3_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
-		${TESTDIR}/IE/ionosphere/logIE.log \
+		${TESTDIR}/RESULTS/IE/logIE.log \
 		output/test3/IE_logIE.log \
 		> test3_ie.diff)
 	gunzip -c output/test3/IM_2d__max_t00000010.dat.gz \
-		> ${TESTDIR}/IM/plots/t10.dat
+		> ${TESTDIR}/RESULTS/IM/t10.dat
 	# Remove date stamp from tecplot files
-	cd ${TESTDIR}/IM/plots/; \
-		perl -pi -e 's/AUXDATA SAVEDATE=.*//' \
-			t10.dat 2d__max_t00000010.dat
+	cd ${TESTDIR}/RESULTS/IM; \
+		perl -pi -e 's/AUXDATA SAVEDATE=.*//' t10.txt t10.dat
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
-		${TESTDIR}/IM/plots/2d__max_t00000010.dat \
-		${TESTDIR}/IM/plots/t10.dat \
+		${TESTDIR}/RESULTS/IM/t10.txt \
+		${TESTDIR}/RESULTS/IM/t10.dat \
 		> test3_im.diff)
 	ls -l test3*.diff
 
