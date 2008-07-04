@@ -227,7 +227,7 @@ contains
                    if(.not.UseStdout)call flush_unit(iUnitOut)
                 end if
 
-                ! reset READ module to read the CON parameters
+                ! reset ModReadParam to read the CON parameters
                 call read_init('  ',iSession,iLine)
 
                 ! Echo CON input on root PE of CON
@@ -594,8 +594,14 @@ contains
 
     do lComp=1,n_comp()
        iComp = i_comp(lComp)
-       if(use_comp(iComp))call set_param_comp(iComp,'CHECK')
+       if(use_comp(iComp))then
+          ! Set component name so that i_line_command() works
+          call read_init(NameComp_I(iComp),iSession,iLine)
+          call set_param_comp(iComp,'CHECK')
+       end if
     end do
+    ! reset ModReadParam to read the CON parameters
+    call read_init('  ',iSession,iLine)
 
     if(UseTiming)then
        call timing_version(IsOn,NameVersion,VersionNumber)
