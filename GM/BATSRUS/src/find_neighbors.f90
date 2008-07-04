@@ -294,63 +294,63 @@ subroutine fix_refinement_and_refine
   type (adaptive_block_ptr) :: inBlockPtr,outBlockPtr,tmpBlockPtr
   
   do iLoop=1,2
-     iCount=count(refine_list)
-  FIX: do
+     iCount = count(refine_list)
+     FIX: do
         iCountOld=iCount
         do inPE=1,nProc; do inBLK=1,nBLK
            inBlockPtr%ptr => global_block_ptrs(inBLK,inPE)%ptr
-           if (associated(inBlockPtr%ptr)) then
-              iLEV1 = inBlockPtr%ptr%LEV
-              if (refine_list(inBlockPtr%ptr%BLK,inBlockPtr%ptr%PE+1))iLev1=iLev1+1
-                 do i=-1,1; do j=-1,1; do k=-1,1
-                    call find_tree_neighbor(inBlockPtr,outBlockPtr,i,j,k,noNeighbor)
-                    if (.not. noNeighbor)then
-                       if(associated(outBlockPtr%ptr)) then
-                          if (.not. associated(outBlockPtr%ptr%child(1)%ptr)) then
-                             iLEV2 = outBlockPtr%ptr%LEV
-                             if (refine_list(outBlockPtr%ptr%BLK,outBlockPtr%ptr%PE+1)) &
-                                  iLEV2 = iLEV2 + 1
-                             if (((iLEV1-iLEV2 > 1) .or. &
-                                  (iLEV1-iLEV2 > 0 .and. &
-                                  ((inBlockPtr%ptr%body .and. outBlockPtr%ptr%body)&
-                                  .or.(inBlockPtr%ptr%IsOuterBoundary .and. &    
-                                  outBlockPtr%ptr%IsOuterBoundary)&
-                                  .or.(inBlockPtr%ptr%IsExtraBoundaryOrPole .and.& 
-                                  outBlockPtr%ptr%IsExtraBoundaryOrPole &
-                                  .and.( (i==0.and.k==0).or.(.not.is_axial_geometry()))& 
-                                  )&          
-                                  ))).and.(.not.&
-                                     refine_list(outBlockPtr%ptr%BLK,&
-                                                 outBlockPtr%ptr%PE+1)))then
-                                iCount = iCount +1
-                                refine_list(outBlockPtr%ptr%BLK,outBlockPtr%ptr%PE+1) = .true.
-                             end if
-                          end if
-                       end if
-                    end if
-                 end do; end do; end do
+           if (.not. associated(inBlockPtr%ptr)) CYCLE
+           iLEV1 = inBlockPtr%ptr%LEV
+           if (refine_list(inBlockPtr%ptr%BLK,inBlockPtr%ptr%PE+1)) &
+                iLev1=iLev1+1
+           do i=-1,1; do j=-1,1; do k=-1,1
+              call find_tree_neighbor(inBlockPtr,outBlockPtr,i,j,k,noNeighbor)
+              if (noNeighbor) CYCLE
+              if ( .not. associated(outBlockPtr%ptr)) CYCLE
+              if ( associated(outBlockPtr%ptr%child(1)%ptr)) CYCLE
+
+              iLEV2 = outBlockPtr%ptr%LEV
+                    
+              if (refine_list(outBlockPtr%ptr%BLK,outBlockPtr%ptr%PE+1))&
+                   iLEV2 = iLEV2 + 1
+              if (( iLEV1-iLEV2 > 1 .or. &
+                   (iLEV1-iLEV2 > 0 .and. &
+                   ((inBlockPtr%ptr%body .and. outBlockPtr%ptr%body)&
+                   .or.(inBlockPtr%ptr%IsOuterBoundary .and. &    
+                   outBlockPtr%ptr%IsOuterBoundary)&
+                   .or.(inBlockPtr%ptr%IsExtraBoundaryOrPole .and.& 
+                   outBlockPtr%ptr%IsExtraBoundaryOrPole &
+                   .and.( (i==0.and.k==0).or.(.not.is_axial_geometry()))&
+                   )))) &
+                   .and. .not. &
+                   refine_list(outBlockPtr%ptr%BLK, outBlockPtr%ptr%PE+1) )then
+                 iCount = iCount +1
+                 refine_list(outBlockPtr%ptr%BLK,outBlockPtr%ptr%PE+1) = .true.
               end if
-           end do;end do
-           if(iCount==iCountOld)EXIT FIX
-        end do FIX
-        if (iCount == 0) return
-        if (iProc == 0.and.lVerbose>0)&
-             write (*,*) '     found ',iCount,' blocks to refine'
-        write(*,*)nProc
-        if(7*iCount>nProc*nBLK-nBlockAll)then
-           if(iLoop==1)then
-              write(*,*)'Insufficient amount of blocks, skip refinement'
-              refine_list=.false.
-              CYCLE
-           else
-              write(*,*)'Insufficient amount of blocks, can not fix a grid'
-              call stop_mpi('Stopped')
+           end do; end do; end do
+        end do;end do
+        if(iCount==iCountOld)EXIT FIX
+     end do FIX
+
+     if (iCount == 0) return
+
+     if(nBlockAll + 7*iCount > nProc*nBLK)then
+        if(iLoop == 1)then
+           if(iProc == 0)then
+              write(*,*)'WARNING: Found ', iCount, ' blocks to refine'
+              write(*,*)'  Insufficient number of blocks, ', &
+                   'skipping refinement!'
            end if
+           refine_list=.false.
+           CYCLE
+        else
+           call stop_mpi('Insufficient number of blocks, cannot fix grid')
         end if
-        call parallel_refine
-        call set_body_flag
-        refine_list=.false.
-     end do
+     end if
+     call parallel_refine
+     call set_body_flag
+     refine_list = .false.
+  end do
      
 end subroutine fix_refinement_and_refine
 !=============================================================================!
