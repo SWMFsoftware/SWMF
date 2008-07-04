@@ -11,6 +11,7 @@ subroutine GM_get_for_pw(nTotalLine, Buffer_I)
   integer,intent(in)  :: nTotalLine
   real,   intent(out) :: Buffer_I(nTotalLine)
   real, allocatable   :: LocalBuffer_I(:)
+  real                :: WeightAndP_I(2)
   integer             :: iLine,iError
   !----------------------------------------------------------------------------
 
@@ -19,7 +20,8 @@ subroutine GM_get_for_pw(nTotalLine, Buffer_I)
   !Get the pressure at each field line location.
   do iLine=1,nTotalLine
      call get_point_data(&
-          0.0, CoordXyzPW_DI(:,iLine), 1, nBlock, p_, p_, LocalBuffer_I(iLine))
+          0.0, CoordXyzPW_DI(:,iLine), 1, nBlock, p_, p_, WeightAndP_I)
+     LocalBuffer_I(iLine) = WeightAndP_I(2)
   enddo
 
   Buffer_I = LocalBuffer_I
