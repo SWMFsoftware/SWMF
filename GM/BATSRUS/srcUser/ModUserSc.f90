@@ -28,21 +28,24 @@ contains
     use EEE_ModMain,    ONLY: EEE_set_parameters
     use ModMain
     use ModProcMH,      ONLY: iProc
-    use ModReadParam
+    use ModReadParam,   ONLY: read_line, read_command, read_var
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut
     use ModMagnetogram, ONLY: set_parameters_magnetogram
     implicit none
 
     character (len=100) :: NameCommand
     !--------------------------------------------------------------------------
-    UseUserInitSession=.true.
+    UseUserInitSession = .true.
 
-    if(iProc==0.and.lVerbose > 0)then
-       call write_prefix; write(iUnitOut,*)'User read_input HELIOSPHERE starts'
+    if(iProc == 0 .and. lVerbose > 0)then
+       call write_prefix;
+       write(iUnitOut,*)'User read_input SOLAR CORONA starts'
     endif
+
     do
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
+
        select case(NameCommand)
        case("#PFSSM")
           call read_var('UseUserB0'  ,UseUserB0)
@@ -51,18 +54,22 @@ contains
              call read_var('dt_UpdateB0',dt_UpdateB0)
              DoUpdateB0 = dt_updateb0 > 0.0
           end if
+
        case("#ARCH","#TD99FLUXROPE","#GL98FLUXROPE")
           call EEE_set_parameters(NameCommand)
+
        case("#EMPIRICALSW")
           call read_var('NameModel',NameModel)
+
        case('#USERINPUTEND')
-          if(iProc==0.and.lVerbose > 0)then
+          if(iProc == 0 .and. lVerbose > 0)then
              call write_prefix;
-             write(iUnitOut,*)'User read_input HELIOSPHERE ends'
+             write(iUnitOut,*)'User read_input SOLAR CORONA ends'
           endif
           EXIT
+
        case default
-          if(iProc==0) then
+          if(iProc == 0) then
              call write_myname; write(*,*) &
                   'ERROR: Invalid user defined #COMMAND in user_read_inputs. '
              write(*,*) '--Check user_read_inputs for errors'
@@ -72,6 +79,7 @@ contains
           end if
        end select
     end do
+
   end subroutine user_read_inputs
 
   !============================================================================
@@ -83,6 +91,7 @@ contains
     use ModMain,        ONLY: UseUserB0
     use ModPhysics,     ONLY: BodyNDim_I,BodyTDim_I,g
     use ModProcMH,      ONLY: iProc
+    use ModReadParam,   ONLY: i_line_command
     implicit none
     !--------------------------------------------------------------------------
     if(iProc == 0)then
@@ -91,8 +100,18 @@ contains
        call write_prefix; write(iUnitOut,*) ''
     end if
 
-    if(UseUserB0) call read_magnetogram_file
+    if(i_line_command("#PFSSM", iSessionIn = 1) < 0)then
+       write(*,*) 'In session 1, a magnetogram file has to be read via #PFSSM'
+       call stop_mpi('ERROR: Correct PARAM.in!')
+    end if
+    if(i_line_command("#PFSSM") > 0)then
+       call read_magnetogram_file
+    end if
 
+    if(i_line_command("#EMPIRICALSW", iSessionIn = 1) < 0)then
+       write(*,*) 'An empirical model has to be set via #EMPIRICALSW'
+       call stop_mpi('ERROR: Correct PARAM.in!')
+    end if
     call set_empirical_model(trim(NameModel),BodyTDim_I(1))
 
     call EEE_initialize(BodyNDim_I(1),BodyTDim_I(1),g)
