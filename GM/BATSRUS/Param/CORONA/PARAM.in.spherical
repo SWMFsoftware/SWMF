@@ -120,9 +120,10 @@ F			UseBody
 0			MinBoundary
 0			MaxBoundary
 
-#USERBOUNDARY
+#EXTRABOUNDARY
 T			UseExtraBoundary
 user			TypeExtraBc
+F			DoFixExtraBc
 
 #USECURLB0
 T			UseCurlB0
