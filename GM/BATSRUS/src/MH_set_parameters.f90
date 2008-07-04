@@ -90,10 +90,14 @@ subroutine MH_set_parameters(TypeAction)
   ! Variables for checking/reading #STARTTIME command
   real (Real8_)         :: StartTimeCheck = -1.0_Real8_
 
+  ! Variables for #LIMITGENCOORD1 or #LIMITRADIUS
+  real :: Coord1Min = -1.0, Coord1Max = -1.0
+
   ! Variables for the #GRIDRESOLUTION and #GRIDLEVEL commands
   character(len=lStringLine):: NameArea='all'
   integer                   :: nLevelArea=0
   real                      :: AreaResolution=0.0, RadiusArea=0.0
+  real                      :: InitialResolution = -1.0
   logical                   :: DoReadAreaCenter=.false.
   real, dimension(3)        :: XyzStartArea_D=0.0, XyzEndArea_D=0.0
   real                      :: xRotateArea=0., yRotateArea=0., zRotateArea=0.
@@ -178,8 +182,6 @@ subroutine MH_set_parameters(TypeAction)
 
      call correct_parameters
 
-     call check_plot_range
-
      ! initialize module variables
      call init_mod_advance
      DivB1_GB = 0.0
@@ -243,59 +245,74 @@ subroutine MH_set_parameters(TypeAction)
      if(.not.read_command(NameCommand)) CYCLE READPARAM
 
      select case(NameCommand)
+
      case("#COMPONENT")
         call read_var('NameComp', NameCompRead)
         if(NameThisComp /= NameCompRead)then
            NameThisComp = NameCompRead
            call set_defaults
         end if
+
      case("#DESCRIPTION")
         call check_stand_alone
+
      case("#BEGIN_COMP","#END_COMP")
         call check_stand_alone
         i = len_trim(NameCommand)
         if(StringLine(i+2:i+3) /= NameThisComp)&
              call stop_mpi(NameSub//' ERROR: the component is not '// &
              NameThisComp//'in '//trim(StringLine))
+
      case("#END")
         call check_stand_alone
         IslastRead=.true.
         EXIT READPARAM
+
      case("#RUN")
         call check_stand_alone
         IslastRead=.false.
         EXIT READPARAM
+
      case("#STOP")
         call check_stand_alone
         call read_var('MaxIteration',nIter)
         call read_var('tSimulationMax',t_max)
+
      case("#CPUTIMEMAX")
         call check_stand_alone
         call read_var('CpuTimeMax',cputime_max)
+
      case("#CHECKSTOPFILE")
         call check_stand_alone
         call read_var('DoCheckStopfile',check_stopfile)
+
      case("#PROGRESS")
         call check_stand_alone
         call read_var('DnProgressShort',dn_progress1)
         call read_var('DnProgressLong',dn_progress2)
+
      case("#TIMEACCURATE")
         call check_stand_alone
         call read_var('DoTimeAccurate',time_accurate)
+
      case("#ECHO")
         call check_stand_alone
         call read_var('DoEcho',DoEcho)
         if(iProc==0)call read_echo_set(DoEcho)
+
      case("#FLUSH")
         call read_var('DoFlush',DoFlush)
+
      case("#TEST")
         call read_var('StringTest',test_string)
+
      case("#TESTXYZ")
         coord_test=.true.
         UseTestCell=.true.
         call read_var('xTest',Xtest)
         call read_var('yTest',Ytest)
         call read_var('zTest',Ztest)
+
      case("#TESTIJK")
         coord_test=.false.
         UseTestCell=.true.
@@ -304,20 +321,27 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('kTest',Ktest)
         call read_var('iBlockTest',BLKtest)
         call read_var('iProcTest',PROCtest)
+
      case("#TESTVAR")
         call read_var('iVarTest ',VARtest)
+
      case("#TESTDIM")
         call read_var('iDimTest ',DIMtest)
+
      case("#TESTTIME")
         call read_var('nIterTest',ITERtest)
         call read_var('TimeTest',Ttest)
+
      case("#STRICT")
         call read_var('UseStrict',UseStrict)
+
      case("#VERBOSE")
         call read_var('lVerbose',lVerbose)
+
      case("#DEBUG")
         call read_var('DoDebug',okdebug)
         call read_var('DoDebugGhost',ShowGhostCells)
+
      case("#TIMING")
         call read_var('UseTiming',UseTiming)
         if(UseTiming)then
@@ -325,6 +349,7 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('nDepthTiming',TimingDepth)
            call read_var('TypeTimingReport',TimingStyle)
         end if
+
      case("#OUTERBOUNDARY")
         call read_var('TypeBcEast'  ,TypeBc_I(east_))  
         call read_var('TypeBcWest'  ,TypeBc_I(west_))
@@ -332,18 +357,23 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('TypeBcNorth' ,TypeBc_I(north_))
         call read_var('TypeBcBottom',TypeBc_I(bot_))
         call read_var('TypeBcTop'   ,TypeBc_I(top_))    
+
      case("#INNERBOUNDARY")
         call read_var('TypeBcInner',TypeBc_I(body1_))
         if(UseBody2) call read_var('TypeBcBody2',TypeBc_I(body2_)) 
+
      case("#TIMESTEPPING")
         call read_var('nStage',nSTAGE)
         call read_var('CflExpl',Cfl)
         ExplCfl = Cfl                                   !^CFG IF IMPLICIT
+
      case("#FIXEDTIMESTEP")
         call read_var('UseDtFixed',UseDtFixed)
         if(UseDtFixed)call read_var('DtFixedDim', DtFixedDim)
+
      case("#PARTSTEADY")
         call read_var('UsePartSteady',UsePartSteady)
+
      case("#PARTSTEADYCRITERIA","#STEADYCRITERIA")
         call read_var('MinCheckVar',MinCheckVar)
         call read_var('MaxCheckVar',MaxCheckVar)
@@ -393,15 +423,19 @@ subroutine MH_set_parameters(TypeAction)
            end if
            ImplCritType='R'
         end select
+
      case("#PARTIMPL", "#PARTIMPLICIT")
         call read_var('UsePartImplicit2',UsePartImplicit2)
+
      case("#IMPLSCHEME", "#IMPLICITSCHEME")
         call read_var('nOrderImpl',nOrder_Impl)
         call read_var('TypeFluxImpl',FluxTypeImpl,IsUpperCase=.true.)
+
      case("#IMPLSTEP", "#IMPLICITSTEP")
         call read_var('ImplCoeff ',ImplCoeff0)
         call read_var('UseBDF2   ',UseBdf2)
         call read_var('ImplSource',ImplSource)
+
      case("#IMPLCHECK", "#IMPLICITCHECK")
         call read_var('RejectStepLevel' ,   RejectStepLevel)
         call read_var('RejectStepFactor',   RejectStepFactor)
@@ -409,6 +443,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('ReduceStepFactor',   ReduceStepFactor)
         call read_var('IncreaseStepLevel' , IncreaseStepLevel)
         call read_var('IncreaseStepFactor', IncreaseStepFactor)
+
      case("#NEWTON")
         call read_var('UseConservativeImplicit',UseConservativeImplicit)
         call read_var('UseNewton',UseNewton)
@@ -416,21 +451,25 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('UseNewMatrix ',NewMatrix)
            call read_var('MaxIterNewton',NewtonIterMax)
         endif
+
      case("#JACOBIAN")
         call read_var('TypeJacobian',JacobianType)
         call read_var('JacobianEps', JacobianEps)
+
      case("#PRECONDITIONER")
         call read_var('TypePrecondSide',PrecondSide)
         call read_var('TypePrecond'    ,PrecondType)
         call read_var('GustafssonPar'  ,GustafssonPar)
         if(GustafssonPar<=0.)GustafssonPar=0.
         if(GustafssonPar>1.)GustafssonPar=1.
+
      case("#KRYLOV")
         call read_var('TypeKrylov'     ,KrylovType)
         call read_var('TypeInitKrylov' ,KrylovInitType)
         call read_var('ErrorMaxKrylov' ,KrylovErrorMax)
         call read_var('MaxMatvecKrylov',KrylovMatvecMax)
         nKrylovVector = KrylovMatvecMax
+
      case("#KRYLOVSIZE")
         call read_var('nKrylovVector',nKrylovVector)    !^CFG END IMPLICIT
 
@@ -441,6 +480,7 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('Kappa0Heat'  ,Kappa0Heat)
            call read_var('ExponentHeat',ExponentHeat)
         end if
+
      case("#RESISTIVITY")
         call read_var('UseResistivity',UseResistivity)
         if(UseResistivity)then
@@ -464,6 +504,7 @@ subroutine MH_set_parameters(TypeAction)
            end select
         end if
         !                                               ^CFG END DISSFLUX
+
      case("#HALLRESISTIVITY")
         call read_var('UseHallResist',  UseHallResist)
         if(UseHallResist)then
@@ -471,6 +512,7 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('HallCmaxFactor', HallCmaxFactor)
            call read_var('HallHyperFactor', HallHyperFactor)         
         end if
+
      case("#HALLREGION")
         call read_var('NameHallRegion', NameHallRegion)
 
@@ -566,8 +608,10 @@ subroutine MH_set_parameters(TypeAction)
            if (index(log_vars,'flx')>0) &
                 call read_var('log_R_str',log_R_str)
         end if
+
      case("#SAVEINITIAL")
         call read_var('DoSaveInitial',DoSaveInitial)
+
      case("#SAVEPLOT")
         call read_var('nPlotFile',nplotfile)
 
@@ -577,7 +621,8 @@ subroutine MH_set_parameters(TypeAction)
         if (nfile > maxfile .or. nplotfile > maxplotfile)call stop_mpi(&
              'The number of ouput files is too large in #SAVEPLOT:'&
              //' nplotfile>maxplotfile .or. nfile>maxfile')
-        do iFile=plot_+1,plot_+nplotfile
+
+        do iFile = Plot_ + 1, Plot_ + nPlotFile
 
            call read_var('StringPlot',plot_string)
 
@@ -685,53 +730,19 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('n_Pix_Y', n_Pix_Y(ifile))            
            elseif (index(plot_string,'ion')>0) then
               plot_area='ion'
+           elseif(index(plot_string,'1d')>0)then
+              plot_area='1d_'
+           elseif(index(plot_string,'3d')>0)then
+              plot_area='3d_'
+           elseif(index(plot_string,'x=0') > 0)then
+              plot_area = 'x=0'
+           elseif(index(plot_string,'y=0') > 0)then
+              plot_area = 'y=0'
+           elseif(index(plot_string,'z=0') > 0)then
+              plot_area = 'z=0'
            else
-              do i=1,3
-                 plot_range(2*i-1,ifile)=XyzMin_D(i)
-                 plot_range(2*i  ,ifile)=XyzMax_D(i)
-              end do
-              if(index(plot_string,'x=0')>0)then
-                 plot_area='x=0'
-                 if(index(plot_string,'tec')>0 &
-                      .or. .not.is_axial_geometry() & 
-                      )then     
-                    plot_range(1,ifile)=-cTiny*(XyzMax_D(x_)-XyzMin_D(x_)) &
-                         /(nCells(1)*proc_dims(1))
-                    plot_range(2,ifile)=+cTiny*(XyzMax_D(x_)-XyzMin_D(x_)) &
-                         /(nCells(1)*proc_dims(1))
-                 else                              
-                    plot_range(3,ifile)=cHalfPi                 &
-                         -cTiny*(XyzMax_D(Phi_)-XyzMin_D(Phi_)) &
-                         /(nCells(Phi_)*proc_dims(Phi_))            
-                    plot_range(4,ifile)=cHalfPi                 &
-                         +cTiny*(XyzMax_D(Phi_)-XyzMin_D(Phi_)) &
-                         /(nCells(Phi_)*proc_dims(Phi_))   
-                 end if
-
-              elseif(index(plot_string,'y=0')>0)then
-                 plot_area='y=0'
-                 plot_range(3,ifile)=-cTiny*(XyzMax_D(2)-XyzMin_D(2))&
-                      /(nCells(2)*proc_dims(2)) 
-                 plot_range(4,ifile)=+cTiny*(XyzMax_D(2)-XyzMin_D(2))&
-                      /(nCells(2)*proc_dims(2)) 
-
-                 if(index(plot_string,'idl')>0 .and. is_axial_geometry()) &
-                      plot_range(3:4,ifile)=plot_range(3:4,ifile)+cPi
-
-              elseif(index(plot_string,'z=0')>0)then
-                 plot_area='z=0'
-                 plot_range(5,ifile)=-cTiny*(XyzMax_D(3)-XyzMin_D(3))&
-                      /(nCells(3)*proc_dims(3)) 
-                 plot_range(6,ifile)=+cTiny*(XyzMax_D(3)-XyzMin_D(3))&
-                      /(nCells(3)*proc_dims(3)) 
-              elseif(index(plot_string,'1d')>0)then
-                 plot_area='1d_'
-              elseif(index(plot_string,'3d')>0)then
-                 plot_area='3d_'
-              else
-                 call stop_mpi('Area (1d,x=0,y=0,z=0,3d,cut,sph,ion) missing'&
-                      //' from plot_string='//plot_string)
-              endif
+              call stop_mpi('Area (1d,x=0,y=0,z=0,3d,cut,sph,ion) missing'&
+                   //' from plot_string='//plot_string)
            end if
 
            ! Plot file format
@@ -750,32 +761,6 @@ subroutine MH_set_parameters(TypeAction)
            else
               call stop_mpi('Format (idl,tec) missing from plot_string='&
                    //plot_string)
-           end if
-           if (plot_area == 'sph') then
-              select case(TypeGeometry)                
-              case('cartesian')                        
-                 plot_dx(1,ifile) = 1.0    ! set to match write_plot_sph
-                 plot_dx(2:3,ifile) = 1.0  ! angular resolution in degrees
-                 plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4 !so that R/=0
-                 plot_range(3,ifile)= 0.   - 0.5*plot_dx(2,ifile)
-                 plot_range(4,ifile)= 90.0 + 0.5*plot_dx(2,ifile)
-                 plot_range(5,ifile)= 0.   - 0.5*plot_dx(3,ifile)
-                 plot_range(6,ifile)= 360.0- 0.5*plot_dx(3,ifile)
-              case('spherical', 'spherical_lnr')
-                 plot_dx(1,ifile) = -1.0
-                 if(TypeGeometry == 'spherical_lnr') &
-                      plot_range(1,ifile) = log(plot_range(1,ifile))
-                 plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4 !so that R/=0
-                 do i=Phi_,Theta_
-                    plot_range(2*i-1,ifile) = XyzMin_D(i)
-                    plot_range(2*i,ifile)   = XyzMax_D(i)  
-                 end do
-                 plot_area='r=r' ! to disable the write_plot_sph routine
-              case default
-                 call stop_mpi(NameSub// &
-                      ' Sph-plot is not implemented for geometry= '&
-                      //TypeGeometry)
-              end select
            end if
 
            ! Plot variables
@@ -837,43 +822,40 @@ subroutine MH_set_parameters(TypeAction)
 
            plot_type(ifile)=plot_area//'_'//plot_var
         end do
+
      case("#SAVEPLOTSAMR")
         call read_var('DoSavePlotsAmr',save_plots_amr)
+
      case("#SAVEBINARY")
         call read_var('DoSaveBinary',save_binary)
+
      case("#PLOTFILENAME")
         call read_var('NameMaxTimeUnit', NameMaxTimeUnit)
 
      case("#GRIDRESOLUTION","#GRIDLEVEL","#AREARESOLUTION","#AREALEVEL")
         if(index(NameCommand,"RESOLUTION")>0)then
-           call read_var('AreaResolution',AreaResolution)
+           call read_var('AreaResolution', AreaResolution)
         else
            call read_var('nLevelArea',nLevelArea)
+           ! Store level as a negative integer resolution.
+           ! This will be converted to resolution in correct_grid_geometry
+           AreaResolution = -nLevelArea
         end if
-        call read_var('NameArea',NameArea,IsLowerCase=.true.)
+        call read_var('NameArea', NameArea, IsLowerCase=.true.)
 
         NameArea = adjustl(NameArea)
 
         if(NameArea(1:4) == 'init')then
            ! 'init' or 'initial' means that the initial resolution is set,
-           ! and no area is created. Replaces the #AMRINIT 'none' nlevel.
-           ! Convert resolution to level if necessary
-           if(index(NameCommand,"RESOLUTION")>0) &
-                nLevelArea = nint( &
-                alog(((XyzMax_D(x_)-XyzMin_D(x_)) / (proc_dims(x_) * nI))  &
-                / AreaResolution) / alog(2.0) )
-
-           ! Set the initial levels
-           initial_refine_levels = nLevelArea
-
+           ! and no area is created. 
+           if(AreaResolution > 0)then
+              InitialResolution = AreaResolution
+           else
+              initial_refine_levels = nLevelArea
+           end if
            ! No area is created, continue reading the parameters
            CYCLE READPARAM
         end if
-
-        ! Convert level to resolution if necessary
-        if(index(NameCommand,"LEVEL")>0) &
-             AreaResolution = (XyzMax_D(x_)-XyzMin_D(x_)) &
-             / (proc_dims(x_) * nI * 2.0**nLevelArea)
 
         nArea = nArea + 1
         if(nArea > MaxArea)then
@@ -1033,6 +1015,7 @@ subroutine MH_set_parameters(TypeAction)
         else
            call set_levels
         end if
+
      case("#AMRRESOLUTION")
         call read_var('DxCellMin',min_cell_dx)
         call read_var('DxCellMax',max_cell_dx)
@@ -1063,6 +1046,7 @@ subroutine MH_set_parameters(TypeAction)
         else
            call set_levels
         end if
+
      case("#AMR")
         call read_var('DnRefine',dn_refine)
         if (dn_refine > 0)then
@@ -1073,6 +1057,7 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('MaxTotalBlocks',MaxTotalBlocks)
            end if
         end if
+
      case("#AMRCRITERIA")
         call read_var('nRefineCrit',nRefineCrit)
         if(nRefineCrit<0 .or. nRefineCrit>3)&
@@ -1090,6 +1075,7 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('InvD2Ray',InvD2Ray)
            end if
         end do
+
      case("#SCHEME")
         call read_var('nOrder'  ,nOrder)
         nStage = nOrder
@@ -1101,13 +1087,17 @@ subroutine MH_set_parameters(TypeAction)
         else
            call read_var('LimiterBeta', BetaLimiter)
         end if
+
      case('#LIMITER')
         call read_var('UseLogRhoLimiter', UseLogRhoLimiter)
         call read_var('UseLogPLimiter',   UseLogPLimiter)
+
      case('#USERS7')
         call read_var('UseRS7',UseRS7)
+
      case("#NONCONSERVATIVE")
         call read_var('UseNonConservative',UseNonConservative)
+
      case("#CONSERVATIVECRITERIA")
         call read_var('nConservCrit',nConservCrit)
         if(nConservCrit > 0) then
@@ -1158,6 +1148,7 @@ subroutine MH_set_parameters(TypeAction)
               end if
            end do
         end if
+
      case("#UPDATECHECK")
         call read_var("UseUpdateCheck",UseUpdateCheck)          
         if(UseUpdateCheck)then
@@ -1166,9 +1157,11 @@ subroutine MH_set_parameters(TypeAction)
            call read_var("pMinPercent",   percent_max_p(1))
            call read_var("pMaxPercent",   percent_max_p(2))
         end if
+
      case("#PROLONGATION")
         call read_var('nOrderProlong',prolong_order)
         call read_var('TypeProlong' ,prolong_type)
+
      case("#MESSAGEPASS","#OPTIMIZE")               
         call read_var('TypeMessagePass',optimize_message_pass)
         if(is_axial_geometry().and.index(optimize_message_pass,'all')==0)then
@@ -1193,12 +1186,15 @@ subroutine MH_set_parameters(TypeAction)
                 ' is not available any longer, allopt is set !!!'
            optimize_message_pass='allopt'
         end if
+
      case('#RESCHANGE','#RESOLUTIONCHANGE')
         call read_var('UseAccurateResChange',UseAccurateResChange)
         if(UseAccurateResChange) UseTvdResChange=.false.
+
      case('#TVDRESCHANGE')
         call read_var('UseTvdResChange',UseTvdResChange)
         if(UseTvdResChange) UseAccurateResChange=.false.
+
      case("#BORIS")                                  !^CFG IF BORISCORR BEGIN
         if(.not.UseB)CYCLE READPARAM
         call read_var('UseBorisCorrection', boris_correction)   
@@ -1208,6 +1204,7 @@ subroutine MH_set_parameters(TypeAction)
         else
            boris_cLIGHT_factor = 1.0
         end if                                       !^CFG END BORISCORR
+
      case("#BORISSIMPLE")                            !^CFG IF SIMPLEBORIS BEGIN
         call read_var('UseBorisSimple',UseBorisSimple)
         if(UseBorisSimple) then
@@ -1216,6 +1213,7 @@ subroutine MH_set_parameters(TypeAction)
         else
            boris_cLIGHT_factor = 1.0
         end if                                       !^CFG END SIMPLEBORIS
+
      case("#DIVB")
         if(.not.UseB)CYCLE READPARAM
         call read_var('UseDivbSource'   ,UseDivbSource)   
@@ -1275,14 +1273,17 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('HypDecay'   ,HypDecay)
            end if
         endif
+
      case("#DIVBSOURCE")
         if(.not.UseB)CYCLE READPARAM
 	call read_var('UseB0Source'   ,UseB0Source)
+
      case("#USECURLB0")
         if(.not.UseB0)CYCLE READPARAM
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseCurlB0',UseCurlB0)
         if(UseCurlB0)call read_var('rCurrentFreeB0',rCurrentFreeB0)
+
      case("#PROJECTION")                              !^CFG IF PROJECTION BEGIN
         if(.not.UseB)CYCLE READPARAM
         call read_var('TypeProjectIter' ,proj_method)
@@ -1292,15 +1293,18 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('MaxMatvec'       ,proj_matvecmax)
         ! Make sure that DivbMax is recalculated
         DivbMax = -1.0                                !^CFG END PROJECTION
+
      case("#CORRECTP")                                !^CFG IF PROJECTION BEGIN
         call read_var('pRatioLow',Pratio_lo)
         call read_var('pRatioHigh',Pratio_hi)
         if(Pratio_lo>=Pratio_hi)&
              call stop_mpi(NameSub//' ERROR: Pratio_lo>=Pratio_hi')
         !                                              ^CFG END PROJECTION
+
      case("#IOUNITS")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('TypeIoUnit',TypeIoUnit,IsUpperCase=.true.)
+
      case("#NORMALIZATION")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('TypeNormalization',TypeNormalization,IsUpperCase=.true.)
@@ -1317,6 +1321,7 @@ subroutine MH_set_parameters(TypeAction)
            call stop_mpi(NameSub//' ERROR: unknown TypeNormalization=' &
                 //TypeNormalization)
         end select
+
      case("#SHOCKTUBE")
         UseShockTube = .true.
         call split_str(NamePrimitiveVar,nVar,NamePrimitive_V,nVarRead)
@@ -1326,15 +1331,18 @@ subroutine MH_set_parameters(TypeAction)
         do i=1,nVar
            call read_var(NamePrimitive_V(i)//' right',ShockRightState_V(i))
         end do
+
      case("#SHOCKPOSITION")
         call read_var('ShockPosition',ShockPosition)
         call read_var('ShockSlope',ShockSlope)
+
      case("#SOLARWINDFILE", "#UPSTREAM_INPUT_FILE")
         call read_var('UseSolarWindFile',UseSolarwindFile)
         DoReadSolarwindFile = UseSolarwindFile
         if (UseSolarwindFile) &
              call read_var('NameSolarWindFile', NameSolarWindFile)
         !                                               ^CFG IF RAYTRACE BEGIN
+
      case("#RAYTRACE")
         call read_var('UseAccurateIntegral',UseAccurateIntegral)
         call read_var('UseAccurateTrace'   ,UseAccurateTrace)
@@ -1349,9 +1357,11 @@ subroutine MH_set_parameters(TypeAction)
         end if
         call read_var('DtExchangeRay',DtExchangeRay)
         call read_var('DnRaytrace',   DnRaytrace)
+
      case("#IE")
         call read_var('DoTraceIE',DoTraceIE)
         !                                              ^CFG END RAYTRACE
+
      case("#IMCOUPLING","#IM")                        !^CFG IF RCM BEGIN
         call read_var('TauCoupleIm',TauCoupleIm)
         if(TauCoupleIm < 1.0)then
@@ -1369,6 +1379,7 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('DoFixPolarRegion',   DoFixPolarRegion)
            call read_var('rFixPolarRegion',    rFixPolarRegion)
         end if                                        !^CFG END RCM
+
      case("#USERFLAGS", "#USER_FLAGS")
         call read_var('UseUserInnerBcs'         ,UseUserInnerBcs)
         call read_var('UseUserSource'           ,UseUserSource)
@@ -1383,10 +1394,12 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseUserB0'               ,UseUserB0) 
         call read_var('UseUserInitSession'      ,UseUserInitSession)
         call read_var('UseUserUpdateStates'     ,UseUserUpdateStates)
+
      case("#USERINPUTBEGIN")
         call user_read_inputs
         ! Make sure that MassIon_I is consistent with MassFluid_I
         MassIon_I = MassFluid_I(IonFirst_:IonLast_)
+
      case("#CODEVERSION")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('CodeVersion',CodeVersionRead)
@@ -1394,6 +1407,7 @@ subroutine MH_set_parameters(TypeAction)
              write(*,'(a,f6.3,a,f6.3,a)')NameSub//&
              ' WARNING: CodeVersion in file=',CodeVersionRead,&
              ' but '//NameThisComp//' version is ',CodeVersion,' !!!'
+
      case("#EQUATION")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('NameEquation',NameEquationRead)
@@ -1410,26 +1424,20 @@ subroutine MH_set_parameters(TypeAction)
                 ' which is different from nVarRead=',nVarRead
            call stop_mpi(NameSub//' ERROR: Incompatible number of variables')
         end if
-     case("#PROBLEMTYPE")
-        if(iProc==0) then
-           write(*,'(a)')NameSub // &
-                'WARNING: problem_type is and obsolete command !!!'
-           write(*,'(a)')NameSub // &
-                '         Please use #PLANET and make sure '
-           write(*,'(a)')NameSub // &
-                '         all parameters are set correctly!'
-           if(UseStrict)call stop_mpi('Problem_type is obsolete!!')
-        end if
+
      case("#NEWRESTART","#RESTARTINDIR","#RESTARTINFILE",&
           "#PRECISION","#BLOCKLEVELSRELOADED")
         if(.not.is_first_session())CYCLE READPARAM
         call read_restart_parameters(NameCommand)
+
      case("#SAVERESTART", "#RESTARTOUTDIR","#RESTARTOUTFILE")
         call read_restart_parameters(NameCommand)
+
      case("#PLOTDIR")
         call read_var("NamePlotDir",NamePlotDir)
         call fix_dir_name(NamePlotDir)
         if (iProc==0) call check_dir(NamePlotDir)
+
      case("#SATELLITE")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('nSatellite',nsatellite)
@@ -1522,6 +1530,7 @@ subroutine MH_set_parameters(TypeAction)
            end if
 
         end do
+
      case('#STEADYSTATESATELLITE')
         do iFile = 1, nSatellite
            if (.not. time_accurate) then
@@ -1533,40 +1542,26 @@ subroutine MH_set_parameters(TypeAction)
      case('#RESCHANGEBOUNDARY')
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('SaveBoundaryCells',SaveBoundaryCells)
+
      case('#VERTEXBASEDGRID')          
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseVertexBasedGrid',UseVertexBasedGrid)
+
      case("#GRIDGEOMETRY", "#COVARIANTGEOMETRY")
         if(.not.is_first_session())CYCLE READPARAM
         UseCovariant=.true.
-
         call read_var('TypeGeometry', TypeGeometry)      
-        if(is_axial_geometry())then
-           DoFixExtraBoundaryOrPole=.true.
-           if(mod(proc_dims(Phi_),2)==1)proc_dims(Phi_) = proc_dims(Phi_)+1
-        end if
-        if(index(TypeGeometry,'spherical')>0)then      
-           automatic_refinement=.false.                  
-           MaxBoundary = Top_
-           SaveBoundaryCells=.true.
-        end if
-        if(index(TypeGeometry,'cylindrical')>0)then
-           automatic_refinement=.false.
-           MaxBoundary = max(MaxBoundary,North_)
-           SaveBoundaryCells=.true.
-        end if
+
      case("#LIMITRADIUS", "#LIMITGENCOORD1")
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('Coord1Min',XyzMin_D(1))
-        call read_var('Coord1Max',XyzMax_D(1))
-        if(index(TypeGeometry,'lnr')>0 .and. NameCommand=="#LIMITRADIUS")then
-           XyzMin_D(1)=log(XyzMin_D(1))
-           XyzMax_D(1)=log(XyzMax_D(1))
-        end if
+        call read_var('Coord1Min', Coord1Min)
+        call read_var('Coord1Max', Coord1Max)
+
      case("#FIXAXIS")
         call read_var('DoFixAxis',DoFixAxis)
         call read_var('rFixAxis',rFixAxis)
         call read_var('r2FixAxis',r2FixAxis)
+
      case('#TORUSSIZE')
         call read_var('rTorusLarge',rTorusLarge)
         call read_var('rTorusSmall',rTorusSmall)
@@ -1577,26 +1572,12 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('nRootBlockY',proc_dims(2))
         call read_var('nRootBlockZ',proc_dims(3))
 
-        if( is_axial_geometry() .and. mod(proc_dims(Phi_),2)==1 ) then
-           proc_dims(Phi_) = proc_dims(Phi_) + 1
-           if(iProc==0)then
-              write(*,*)'For axial symmetru nRootBlock2 must be even'
-              write(*,*)'nRootBlock2 is increased by 1 to ',proc_dims(Phi_)
-           end if
-        end if
-
-        if(product(proc_dims) > nBLK .and. iProc==0)then
-           write(*,*)'Root blocks will not fit on 1 processor, check nBLK'
-           call stop_mpi('product(proc_dims) > nBLK!')
-        end if
         call read_var('xMin',x1)
         call read_var('xMax',x2)
         call read_var('yMin',y1)
         call read_var('yMax',y2)
         call read_var('zMin',z1)
         call read_var('zMax',z2)
-
-        call set_xyzminmax  
 
      case("#USERMODULE")
         if(.not.is_first_session())CYCLE READPARAM
@@ -1609,6 +1590,7 @@ subroutine MH_set_parameters(TypeAction)
                 ' version',VersionUserModule
            if(UseStrict)call stop_mpi('Select the correct user module!')
         end if
+
      case("#CHECKGRIDSIZE")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('nI',nIJKRead_D(1))
@@ -1624,9 +1606,11 @@ subroutine MH_set_parameters(TypeAction)
            call stop_mpi('Use more processors'//&
                 ' or increase nBLK in ModSize and recompile!')
         end if
+
      case("#AMRINITPHYSICS")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('nRefineLevelIC',nRefineLevelIC)
+
      case("#GAMMA")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('Gamma',g)
@@ -1639,6 +1623,7 @@ subroutine MH_set_parameters(TypeAction)
         inv_g   = 1.0 / g
         inv_gm1 = 1.0 /gm1
         g_half  = 0.5*g
+
      case("#PLASMA")
         do iFluid = IonFirst_, nFluid
            call read_var('MassFluid', MassFluid_I(iFluid))
@@ -1646,73 +1631,29 @@ subroutine MH_set_parameters(TypeAction)
         MassIon_I = MassFluid_I(IonFirst_:IonLast_)
         call read_var('AverageIonCharge        ', AverageIonCharge)
         call read_var('ElectronTemperatureRatio', ElectronTemperatureRatio)
+
      case("#MULTISPECIES")
         call read_var('DoReplaceDensity', DoReplaceDensity)
         call read_var('SpeciesPercentCheck',SpeciesPercentCheck)
+
      case("#MULTIFLUID")
         call read_var('UseTotalSpeed',UseTotalSpeed)
+
      case("#MULTIION", "#COLLISION")
         call multi_ion_set_parameters(NameCommand)
+
      case('#USERBOUNDARY', '#EXTRABOUNDARY')
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseExtraBoundary',UseExtraBoundary)
-        if(UseExtraBoundary) call read_var('TypeBc_I(ExtraBc_)',&
-             TypeBc_I(ExtraBc_))      
-
-        if(.not.is_axial_geometry())&             
-             call read_var('DoFixExtraBoundary',&  
-             DoFixExtraBoundaryOrPole)  
+        if(UseExtraBoundary)then
+           call read_var('TypeBc_I(ExtraBc_)', TypeBc_I(ExtraBc_))      
+           call read_var('DoFixExtraBoundary', DoFixExtraBoundaryOrPole)
+        end if
 
      case("#FACEBOUNDARY")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('MinBoundary',MinBoundary)
         call read_var('MaxBoundary',MaxBoundary)
-        if(MaxBoundary>=East_)&
-             call read_var('DoFixOuterBoundary',DoFixOuterBoundary) 
-
-     case('#FACEOUTERBC')                      
-        if(.not.is_first_session())CYCLE READPARAM
-        call read_var('MaxBoundary',MaxBoundary)
-
-        select case(TypeGeometry)
-        case('spherical','spherical_lnr')
-           If(UseStrict)then
-              if(iProc==0 .and. MaxBoundary/=Top_) write(*,*) NameSub, &
-                   ': Set UseStrict=.false. if you want to apply BC ', &
-                   'at R=RMin and R=RMax. Setting Maxboundary=Top_'
-              MaxBoundary = Top_
-           else
-              if(MaxBoundary/=Top_)then
-                 if(iProc==0)then
-                    write(*,*)NameSub,': the boundary conditions are ',&
-                         TypeBC_I(East_),' at rMin and ',&
-                         TypeBC_I(West_),' at rMax'
-                    write(*,*)NameSub,': TypeBC_I(South_:Top_) are set to none'
-                 end if
-                 TypeBC_I(South_:Top_)='none'
-              end if
-           end If
-        case('cylindrical')
-           If(UseStrict)then
-              if(iProc==0 .and. MaxBoundary<North_) write(*,*) NameSub, &
-                   ': Set UseStrict=.false. if you want to apply BC ', &
-                   'at r=rMin and r=rMax. Setting Maxboundary=North_'
-              MaxBoundary = max(MaxBoundary,North_)
-           else
-              if(MaxBoundary<North_)then
-                 if(iProc==0)then
-                    write(*,*)&
-                         NameSub//': The boundary condition at R=RMin and R=RMax should be set.'
-                    write(*,*)NameSub//': Now they are:'//TypeBC_I(East_)&
-                         //' at R=RMin and '//TypeBC_I(West_)//' at R=RMax, TypeBC_I(3:4)=none'
-                    write(*,*)NameSub//': if you reset TypeBC_I, set TypeBC_I(South_:North_)=none'
-                 end if
-                 TypeBC_I(South_:North_)='none'
-              end if
-           end If
-
-        end select
-
         if(MaxBoundary>=East_)&
              call read_var('DoFixOuterBoundary',DoFixOuterBoundary) 
 
@@ -1726,11 +1667,12 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('SwBxDim' ,SW_Bx_dim)
         call read_var('SwByDim' ,SW_By_dim)
         call read_var('SwBzDim' ,SW_Bz_dim)
+
      case("#MAGNETOSPHERE","#BODY")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseBody',body1)
         if(body1)then
-           call read_var('rBody'     ,Rbody)
+           call read_var('rBody', rBody)
            if(NameThisComp=='GM') &
                 call read_var('rCurrents' ,Rcurrents)
            do iFluid = IonFirst_, nFluid
@@ -1738,6 +1680,7 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('BodyTDim', BodyTDim_I(iFluid))
            end do
         end if
+
      case("#POLARBOUNDARY")
         do iFluid = IonFirst_, nFluid
            call read_var('PolarNDim',  PolarNDim_I(iFluid))
@@ -1746,10 +1689,12 @@ subroutine MH_set_parameters(TypeAction)
         end do
         call read_var('PolarLatitude', PolarLatitude)
         PolarTheta = (90-PolarLatitude)*cDegToRad
+
      case("#GRAVITY")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseGravity',UseGravity)
         if(UseGravity)call read_var('iDirGravity',GravityDir)
+
      case("#SECONDBODY")                        !^CFG IF SECONDBODY BEGIN
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseBody2',UseBody2)
@@ -1762,6 +1707,7 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('RhoDimBody2',RhoDimBody2)
            call read_var('tDimBody2'  ,tDimBody2)
         end if
+
      case("#DIPOLEBODY2")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('BdpDimBody2x',BdpDimBody2_D(1))
@@ -1818,13 +1764,16 @@ subroutine MH_set_parameters(TypeAction)
                    //TypeCoordSystem)
            end select
         end select
+
      case("#NSTEP")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('nStep',n_step)
+
      case("#NPREVIOUS")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('nPrev',n_prev)             !^CFG IF IMPLICIT
         call read_var('DtPrev',dt_prev)           !^CFG IF IMPLICIT
+
      case("#STARTTIME", "#SETREALTIME")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('iYear'  ,iStartTime_I(1))
@@ -1840,31 +1789,37 @@ subroutine MH_set_parameters(TypeAction)
            ! Check if things work out or not
            call time_int_to_real(iStartTime_I, StartTimeCheck)
         end if
+
      case("#TIMESIMULATION")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('tSimulation',time_simulation)
+
      case("#HELIOUPDATEB0")
         if(.not.UseB0)CYCLE READPARAM
         call read_var('DtUpdateB0',dt_updateb0)
         DoUpdateB0 = dt_updateb0 > 0.0
+
      case("#HELIODIPOLE")
         if(.not.is_first_session())CYCLE READPARAM
         if(.not.UseB0)CYCLE READPARAM
         call read_var('HelioDipoleStrengthSi',DipoleStrengthSi)
         call read_var('HelioDipoleTilt'      ,ThetaTilt)
         ThetaTilt = ThetaTilt * cDegToRad
+
      case("#HELIOROTATION", "#INERTIAL")
         if(iProc==0)write(*,*) NameSub, ' WARNING: ',&
              ' #HELIOROTATION / #INERTIAL command is obsolete and ignored'
+
      case("#HELIOBUFFERGRID")
         if(.not.is_first_session())CYCLE READPARAM
         if(NameThisComp == 'SC') &
              call stop_mpi(NameSub//' ERROR:'// &
-             ' #HELIOBUFFERGRID command can be used in IH and OH components only')
+             ' #HELIOBUFFERGRID command can be used in IH,OH components only')
         call read_var('rBuffMin',  rBuffMin)
         call read_var('rBuffMax',  rBuffMax)
         call read_var('nThetaBuff',nThetaBuff)
         call read_var('nPhiBuff',  nPhiBuff)
+
      case default
         if(iProc==0) then
            write(*,*) NameSub // ' WARNING: unknown #COMMAND ' // &
@@ -2006,19 +1961,6 @@ contains
     percent_max_p(1)   = 40.
     percent_max_p(2)   = 400.
 
-    proc_dims(1) = 1
-    proc_dims(2) = 1  
-    proc_dims(3) = 1
-
-    x1 = -10.
-    x2 =  10.
-    y1 = -10.
-    y2 =  10.
-    z1 = -10.
-    z2 =  10.
-
-    call set_xyzminmax
-
     optimize_message_pass = 'allopt'
 
     plot_dimensional      = .true.
@@ -2116,12 +2058,38 @@ contains
     character (len=40) :: Name
     real               :: Version
     logical            :: IsOn
+
+    logical :: IsFirstCheck = .true.
+    integer :: iArea
     !---------------------------------------------------------------------
 
     !\
     ! Check for some combinations of things that cannot be accepted as input
     !/
     if (iProc==0) write (*,*) ' '
+
+    if(IsFirstCheck)then
+       call correct_grid_geometry
+       IsFirstCheck = .false.
+    end if
+
+    ! This depends on the grid geometry set above
+    call correct_plot_range
+
+    ! Fix resolutions (this depends on domain size set above)
+    if(InitialResolution > 0.0) initial_refine_levels = nint( &
+         alog(((XyzMax_D(x_)-XyzMin_D(x_)) / (proc_dims(x_) * nI))  &
+         / InitialResolution) / alog(2.0) )
+
+    do iArea = 1, nArea
+       AreaResolution = Area_I(iArea) % Resolution
+       if(AreaResolution > 0.0) CYCLE
+       ! Convert back to integer area
+       nLevelArea = nint(abs(AreaResolution))
+       ! Set actual resolution
+       Area_I(iArea) % Resolution = (XyzMax_D(x_)-XyzMin_D(x_)) &
+            / (proc_dims(x_) * nI * 2.0**nLevelArea)
+    end do
 
     if(UseTiming)then
        call timing_version(IsOn,Name,Version)
@@ -2341,8 +2309,8 @@ contains
 
     !Boris correction checks                        !^CFG IF BORISCORR BEGIN
     if((FluxType=='Roe' &                              !^CFG IF ROEFLUX BEGIN
-       .or. FluxTypeImpl=='Roe' &                       !^CFG IF IMPLICIT
-       ) .and. boris_correction)then
+         .or. FluxTypeImpl=='Roe' &                       !^CFG IF IMPLICIT
+         ) .and. boris_correction)then
        if (iProc == 0) then
           write(*,'(a)')NameSub//&
                ' WARNING: Boris correction not available for Roe flux !!!'
@@ -2458,96 +2426,272 @@ contains
 
   end subroutine correct_parameters
 
+  !===========================================================================
+  subroutine correct_grid_geometry
+
+    if(i_line_command("#GRID", iSessionIn = 1) < 0) &
+         call stop_mpi(NameSub // &
+         ' #GRID command must be specified in the first session!')
+
+    ! Check number of processors
+    if( is_axial_geometry())then
+       if( mod(proc_dims(Phi_),2) == 1 ) then
+          if(iProc == 0)write(*,*) NameSub, &
+               ' For axial symmetru nRootBlock2 must be even!'
+          if(UseStrict)call stop_mpi('Correct PARAM.in!')
+          proc_dims(Phi_) = proc_dims(Phi_) + 1
+          if(iProc == 0) write(*,*)NameSub, &
+               ' nRootBlock2 is increased by 1 to ',proc_dims(Phi_)
+       end if
+       if( proc_dims(Theta_) == 1 ) then
+          if(iProc==0) write(*,*) NameSub, &
+               ' WARNING: there must be at least two blocks along latitude', &
+               ' after initial refinement!'
+          ! if(UseStrict)call stop_mpi('Correct PARAM.in!')
+          ! proc_dims(Theta_) = 2
+          ! if(iProc==0) write(*,*)NameSub, &
+          !      ' nRootBlock3 is increased to 2'
+       end if
+    end if
+
+    if(product(proc_dims) > nBLK .and. iProc==0)then
+       write(*,*)'Root blocks will not fit on 1 processor, check nBLK'
+       call stop_mpi('product(proc_dims) > nBLK!')
+    end if
+
+    ! Set XyzMin_D, XyzMax_D based on 
+    ! #GRID, #GRIDGEOMETRY, and #LIMITGENCOORD/#LIMITRADIUS
+    select case(TypeGeometry)
+    case('cartesian')
+       !            X,  Y,  Z
+       XyzMin_D = (/x1, y1, z1/)
+       XyzMax_D = (/x2, y2, z2/)
+    case('spherical', 'spherical_lnr')
+       !             R,   Phi, Latitude
+       XyzMin_D = (/ 0.0, 0.0, -cHalfPi/)
+       XyzMax_D = (/ &
+            sqrt(max(x1**2,x2**2) + max(y1**2,y2**2) + max(z1**2,z2**2)), &
+            cTwoPi, cHalfPi /)
+       if(TypeGeometry == 'spherical_lnr') XyzMax_D(R_)=log(XyzMax_D(R_))
+    case('cylindrical')
+       !            R,   Phi, Z
+       XyzMin_D = (/0.0, 0.0, z1/) 
+       XyzMax_D = (/sqrt(max(x1**2,x2**2) + max(y1**2,y2**2)), cTwoPi, 0.0/)
+    case('axial_torus')
+       !                R,       Phi,     Z
+       XyzMin_D = (/ x2-(z2-z1), 0.0,    z1/)
+       XyzMax_D = (/ x2,         cTwoPi, z2/)
+    end select
+
+    if(i_line_command("#LIMITGENCOORD1", iSessionIn = 1) > 0)then
+       XyzMin_D(1) = Coord1Min
+       XyzMax_D(1) = Coord1Max
+    elseif(i_line_command("#LIMITRADIUS", iSessionIn = 1) > 0) then 
+       if(index(TypeGeometry,'lnr')>0)then
+          if(Coord1Min <= 0.0 .and. iProc == 0)call stop_mpi(NameSub// &
+               ' Coord1Min must be positive in #LIMITRADIUS command!')
+          XyzMin_D(1) = log(Coord1Min)
+          XyzMax_D(1) = log(Coord1Max)
+       else
+          XyzMin_D(1) = Coord1Min
+          XyzMax_D(1) = Coord1Max
+       end if
+    elseif(Body1 .and. rBody > 0.0)then
+       ! Set inner boundary to match rBody for spherical coordinates
+       if(TypeGeometry == 'spherical'    ) XyzMin_D(1) = rBody
+       if(TypeGeometry == 'spherical_lnr') XyzMin_D(1) = log(rBody)
+    end if
+
+    ! No resolution change along symmetry axis 
+!!! Seems to fix extra boundary as well, but it does not in the end !!!
+    if(is_axial_geometry()) DoFixExtraBoundaryOrPole = .true.
+
+    ! Boundary cells are saved by default for spherical and cylindrical
+    ! geometry (needed if a box is cut out of the sphere/cylinder)
+    ! May be overwritten by the #RESCHANGEBOUNDARY command
+    if(i_line_command("#RESCHANGEBOUNDARY", iSessionIn = 1) < 0) then
+       if(TypeGeometry(1:9) == 'spherical' .or. TypeGeometry == 'cylindrical')&
+            SaveBoundaryCells = .true.
+    end if
+
+    ! Set default MaxBoundary if it was not set by #FACEBOUNDARY command
+    if(i_line_command("#FACEBOUNDARY", iSessionIn = 1) < 0)then
+       ! Use all face based BCs by default for spherical geometry
+       if(TypeGeometry(1:9) == 'spherical')   MaxBoundary = Top_
+
+       ! Use face based boundaries by default for cylindrical geometry 
+       ! except for top and bottom 
+       if(TypeGeometry == 'cylindrical') MaxBoundary = North_
+    end if
+
+    ! Make sure MinBoundary and MaxBoundary cover face only boundaries
+    if(UseBody2) MinBoundary = min(Body2_, MinBoundary)   !^CFG IF SECONDBODY
+    if(body1) then   
+       MinBoundary = min(Body1_, MinBoundary)
+       MaxBoundary = max(Body1_, MaxBoundary)
+    end if
+    if(UseExtraBoundary) then                        
+       MinBoundary = min(ExtraBc_, MinBoundary)
+       MaxBoundary = max(ExtraBc_, MaxBoundary)
+    end if
+    MaxBoundary = min(MaxBoundary, Top_)
+    MinBoundary = max(MinBoundary, body2_)
+
+  end subroutine correct_grid_geometry
+
   !============================================================================
 
-  subroutine check_plot_range
-    use ModGeometry, ONLY : XyzMin_D,XyzMax_D,nCells
+  subroutine correct_plot_range
+
+    use ModGeometry, ONLY : XyzMin_D, XyzMax_D, nCells
     use ModParallel, ONLY : proc_dims
     use ModIO
+
     implicit none
 
-    integer :: ifile, iBLK
-    real :: dx, dy, dz, dxmax, dymax, dzmax, dsmall, r
+    integer :: iFile, iDim, iMin, iMax
+    real    :: Ratio, PlotRes_D(3)
 
-    logical :: oktest,oktest_me
+    real    :: CellSizeMax_D(3)
+    real    :: SmallSize_D(3)   ! Used for 2D plot areas
+
+    character(len=*), parameter:: NameSub = 'correct_plot_range'
+    logical :: DoTest, DoTestMe
     !--------------------------------------------------------------------------
 
-    call set_oktest('check_plot_range',oktest,oktest_me)
+    call set_oktest(NameSub, DoTest, DoTestMe)
 
-    if(oktest_me)write(*,*)&
-         'Check_Plot_Range: x1,y1,z1,x2,y2,z2=',XyzMin_D,XyzMax_D
+    if(DoTestMe)write(*,*) NameSub,' XyzMin_D, XyzMax_D=', XyzMin_D, XyzMax_D
 
-    dxmax=(XyzMax_D(1)-XyzMin_D(1))/(nCells(1)*proc_dims(1))
-    dymax=(XyzMax_D(2)-XyzMin_D(2))/(nCells(2)*proc_dims(2))
-    dzmax=(XyzMax_D(3)-XyzMin_D(3))/(nCells(3)*proc_dims(3))
-    dsmall=dxmax*1.e-6
+    ! Largest cell size and a much smaller distance for 2D cuts
+    CellSizeMax_D = (XyzMax_D - XyzMin_D)/(nCells*proc_dims)
+    SmallSize_D   = cTiny*CellSizeMax_D
 
-    if(oktest_me)write(*,*)'Check_Plot_Range: proc_dims,dxmax,dymax,dzmax=',&
-         proc_dims,dxmax,dymax,dzmax
+    if(DoTestMe)write(*,*)NameSub,' CellSizeMax_D=',CellSizeMax_D
 
-    do ifile=plot_+1,plot_+nplotfile
-       if(index(plot_type(ifile),'sph')>0) CYCLE
+    PLOTFILELOOP: do iFile = Plot_+1, Plot_ + nPlotFile
 
-       if(oktest_me)write(*,*)'For file ',ifile-plot_,&
+       plot_area = plot_type(iFile)(1:3)
+
+       if(DoTestMe)write(*,*)'iFile, plot_area=',iFile, plot_area
+
+       ! Fix plot range for sph, x=0, y=0, z=0 areas
+       select case(plot_area)
+       case('sph')
+          select case(TypeGeometry)
+          case('cartesian')                        
+             plot_dx(1,ifile) = 1.0    ! set to match write_plot_sph
+             plot_dx(2:3,ifile) = 1.0  ! angular resolution in degrees
+             plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4 !so that R/=0
+             plot_range(3,ifile)= 0.   - 0.5*plot_dx(2,ifile)
+             plot_range(4,ifile)= 90.0 + 0.5*plot_dx(2,ifile)
+             plot_range(5,ifile)= 0.   - 0.5*plot_dx(3,ifile)
+             plot_range(6,ifile)= 360.0- 0.5*plot_dx(3,ifile)
+          case('spherical', 'spherical_lnr')
+             plot_dx(1,ifile) = -1.0
+             if(TypeGeometry == 'spherical_lnr') &
+                  plot_range(1,ifile) = log(plot_range(1,ifile))
+             plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4 !so that R/=0
+             do i=Phi_,Theta_
+                plot_range(2*i-1,ifile) = XyzMin_D(i)
+                plot_range(2*i,ifile)   = XyzMax_D(i)  
+             end do
+             plot_area='r=r' ! to disable the write_plot_sph routine
+          case default
+             call stop_mpi(NameSub// &
+                  ' Sph-plot is not implemented for geometry= '&
+                  //TypeGeometry)
+          end select
+
+          ! There is nothing else to do for sph area
+          CYCLE PLOTFILELOOP
+
+       case('x=0')
+          plot_range(1:5:2, iFile) = XyzMin_D
+          plot_range(2:6:2, iFile) = XyzMax_D
+          if( plot_form(iFile)=='tec' .or. .not.is_axial_geometry() )then
+             ! Limit plot range along x direction to be very small
+             plot_range(1, iFile) = -SmallSize_D(x_)
+             plot_range(2, iFile) = +SmallSize_D(x_)
+          else
+             ! Limit Phi direction around cHalfPi
+             plot_range(3, iFile) = cHalfPi - SmallSize_D(Phi_)
+             plot_range(4, iFile) = cHalfPi + SmallSize_D(Phi_)
+          end if
+       case('y=0')
+          plot_range(1:5:2, iFile) = XyzMin_D
+          plot_range(2:6:2, iFile) = XyzMax_D
+          if(plot_form(iFile) == 'idl' .and. is_axial_geometry()) then
+             ! Limit plot range in Phi direction to be small around 180 degs
+             plot_range(3, iFile) = cPi - SmallSize_D(y_)
+             plot_range(4, iFile) = cPi + SmallSize_D(y_)
+          else
+             ! Limit plot range along y (or Phi) direction to be very small
+             plot_range(3, iFile) = -SmallSize_D(y_)
+             plot_range(4, iFile) = +SmallSize_D(y_)
+          end if
+
+       case('z=0')
+          ! Limit plot range along z direction to be very small
+          plot_range(1:5:2, iFile) = XyzMin_D
+          plot_range(2:6:2, iFile) = XyzMax_D
+          plot_range(5, iFile) = -SmallSize_D(z_)
+          plot_range(6, iFile) = +SmallSize_D(z_)
+
+       end select
+
+       if(DoTestMe)write(*,*)'For file ',ifile-plot_,&
             ' original range   =',plot_range(:,ifile)
 
-       plot_range(1,ifile)=max(XyzMin_D(1),plot_range(1,ifile))
-       plot_range(2,ifile)=min(XyzMax_D(1),plot_range(2,ifile))
-       plot_range(3,ifile)=max(XyzMin_D(2),plot_range(3,ifile))
-       plot_range(4,ifile)=min(XyzMax_D(2),plot_range(4,ifile))
-       plot_range(5,ifile)=max(XyzMin_D(3),plot_range(5,ifile))
-       plot_range(6,ifile)=min(XyzMax_D(3),plot_range(6,ifile))
-       if(plot_dx(1,ifile)<=1.e-6)then
-          ! No fixed resolution is required
-          plot_dx(:,ifile)=plot_dx(1,ifile)
-          if(oktest_me)write(*,*)'For file ',ifile-plot_,&
-               ' adjusted range   =',plot_range(:,ifile)
+       plot_range(1:5:2, iFile) = max(plot_range(1:5:2, iFile), XyzMin_D)
+       plot_range(2:6:2, iFile) = min(plot_range(2:6:2, iFile), XyzMax_D)
 
-          CYCLE
+       ! Regular grid is not (yet) working in generalized coordinates
+       ! because multiple pieces are used in the domain for x=0 and y=0 area
+!!! does Tecplot care about plot_dx and plot_range ???
+       if(is_axial_geometry() .and. plot_form(iFile) == 'idl') &
+            plot_dx(1, iFile) = -1.0
+
+       ! For plot_dx = 0.0 or -1.0 there is no need to adjust cut range
+       if(plot_dx(1, iFile) <= cTiny)then
+
+          plot_dx(:, iFile) = plot_dx(1, iFile) ! Define y and z
+
+          CYCLE PLOTFILELOOP
+
        end if
 
-       ! Make sure that dx is a power of 2 fraction of dxmax
-
-       dx=plot_dx(1,ifile)
-       r=dxmax/dx
-       r=2.0**nint(alog(r)/alog(2.))
-       dx=dxmax/r
-       dy=dymax/r
-       dz=dzmax/r
-       if(oktest_me)write(*,*)'For file ',ifile-plot_,&
-            ' original dx      =',plot_dx(1,ifile)
-       plot_dx(1,ifile)=dx
-       plot_dx(2,ifile)=dy
-       plot_dx(3,ifile)=dz
-       if(oktest_me)write(*,*)'For file ',ifile-plot_,&
-            ' adjusted dx,dy,dz=',plot_dx(:,ifile)
+       ! Make sure that plot resolution is a power of 2 fraction of cell size
+       Ratio     = CellSizeMax_D(x_)/plot_dx(1, iFile)
+       Ratio     = 2.0**nint(alog(Ratio)/alog(2.0))
+       PlotRes_D = CellSizeMax_D / Ratio
+       plot_dx(1:3, iFile) = PlotRes_D
 
        ! Make sure that plotting range is placed at an integer multiple of dx
 
-       if(plot_range(2,ifile)-plot_range(1,ifile)>1.5*dx)then
-          plot_range(1,ifile)=XyzMin_D(1)+&
-               nint((plot_range(1,ifile)-dsmall-XyzMin_D(1))/dx)*dx
-          plot_range(2,ifile)=XyzMin_D(1)+&
-               nint((plot_range(2,ifile)+dsmall-XyzMin_D(1))/dx)*dx
-       endif
-       if(plot_range(4,ifile)-plot_range(3,ifile)>1.5*dy)then
-          plot_range(3,ifile)=XyzMin_D(2)+&
-               nint((plot_range(3,ifile)-dsmall-XyzMin_D(2))/dy)*dy
-          plot_range(4,ifile)=XyzMin_D(2)+&
-               nint((plot_range(4,ifile)+dsmall-XyzMin_D(2))/dy)*dy
-       endif
-       if(plot_range(6,ifile)-plot_range(5,ifile)>1.5*dz)then
-          plot_range(5,ifile)=XyzMin_D(3)+&
-               nint((plot_range(5,ifile)-dsmall-XyzMin_D(3))/dz)*dz
-          plot_range(6,ifile)=XyzMin_D(3)+&
-               nint((plot_range(6,ifile)+dsmall-XyzMin_D(3))/dz)*dz
-       endif
-       if(oktest_me)write(*,*)'For file ',ifile-plot_,&
+       do iDim = 1, 3
+          iMin = 2*iDim - 1; iMax = i+1
+
+          ! Skip ignored dimensions of 2D and 1D cuts
+          if(plot_range(iMax, iFile) - plot_range(iMin, iFile) &
+               <= 1.5*PlotRes_D(iDim)) CYCLE
+
+          ! Shift plot range slightly outward
+          plot_range(iMin,iFile) = plot_range(iMin,iFile) - SmallSize_D(iDim)
+          plot_range(iMax,iFile) = plot_range(iMax,iFile) + SmallSize_D(iDim)
+
+          ! Round plot range to multiple of plot resolution
+          plot_range(iMin:iMax, iFile) = XyzMin_D(iDim) + PlotRes_D(iDim)* &
+               nint( (plot_range(iMin:iMax,iFile) &
+               -      XyzMin_D(iDim))/PlotRes_D(iDim) )
+       end do
+
+       if(DoTestMe)write(*,*)'For file ',ifile-plot_,&
             ' adjusted range   =',plot_range(:,ifile)
 
-    end do ! ifile
+    end do PLOTFILELOOP
 
-  end subroutine check_plot_range
+  end subroutine correct_plot_range
 
   !===========================================================================
   subroutine set_extra_parameters
@@ -2573,18 +2717,6 @@ contains
        end if
     end if
 
-    ! Set MinBoundary and MaxBoundary
-    if(UseBody2) MinBoundary=min(Body2_,MinBoundary)   !^CFG IF SECONDBODY
-    if(body1) then   
-       MinBoundary=min(Body1_,MinBoundary)
-       MaxBoundary=max(Body1_,MaxBoundary)
-    end if
-    if(UseExtraBoundary) then                        
-       MinBoundary=min(ExtraBc_,MinBoundary)
-       MaxBoundary=max(ExtraBc_,MaxBoundary)
-    end if
-    MaxBoundary=min(MaxBoundary,Top_)
-    MinBoundary=max(MinBoundary,body2_)
     DoOneCoarserLayer = .not. (nOrder==2 .and. &
          (UseTvdResChange .or. UseAccurateResChange))
     DoLimitMomentum = boris_correction .and. DoOneCoarserLayer
