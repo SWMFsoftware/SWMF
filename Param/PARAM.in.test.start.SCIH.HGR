@@ -156,10 +156,6 @@ F			UseUserB0
 F			UseUserSetPhysConst
 F			UseUserUpdateStates
 
-#FACEOUTERBC
-6                       MaxBoundary
-F                       DoFixOuterBoundary
-
 #COORDSYSTEM
 HGR                     TypeCoordSystem
 
@@ -242,7 +238,7 @@ RAW			StringLogfile
 #SATELLITE
 1			nSatelliteFile
 MHD			StringSatellite
-8000			DnSatellite
+1000			DnSatellite
 3600.0			DtSatellite
 IH/earth_traj.dat
 
