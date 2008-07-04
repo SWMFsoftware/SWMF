@@ -1075,41 +1075,51 @@ to select a certain type. The DoFixExtraboundary controls
 if resolution change is allowed.
 </command>
 
-<command name="FACEOUTERBC" if="$_IsFirstSession">
-	<parameter name="MaxBoundary" type="integer" min="0" max="6"
-							default="0" />
-	<if expr="$MaxBoundary >= 1">
-		<parameter name="DoFixOuterBoundary" type="logical" 
-							default="F"/>
-	</if>
-#FACEOUTERBC
-0              MaxBoundary            
-F              DoFixOuterBoundary)    !read only for MaxBoundary>=East_(=1).
-
-If MaxBoundary is East_(=1) or more then the outer boundaries indexed
-between East_ and MaxBoundary are treated using set_BCs.f90 subroutines 
-(face values are defined) instead of set_outerBCs.f90 (ghost cell values
-are defined).
-If DoFixOuterBoundary is .true., there is no resolution
-change along the outer boundaries indexed from East_ to MaxBoundary.
-</command>
-
 <command name="FACEBOUNDARY" if="$_IsFirstSession">
-	<parameter name="MinBoundary" type="integer" min="-2" max="6"
+	<parameter name="MinFaceBoundary" type="integer" min="-2" max="6"
 							default="-1" />
-	<parameter name="MaxBoundary" type="integer" min="0" max="6"
+	<parameter name="MaxFaceBoundary" type="integer" min="-2" max="6"
 							default="0" />
-	<if expr="$MaxBoundary >= 1">
-		<parameter name="DoFixOuterBoundary" type="logical" 
+	<parameter name="DoFixOuterBoundary" type="logical" 
 							default="F"/>
-	</if>
 #FACEBOUNDARY
-6		MinBoundary
--2		MaxBoundary
+6		MinFaceBoundary
+-2		MaxFaceBoundary
 F		DoFixOuterBoundary
 
-This command is similar to #FACEOUTERBC, but it allows setting both the
-first and the last boundaries and it allows switching OFF the face boundary
+General notes: face based boundary conditions are 1st order accurate 
+in general, while cell based boundary conditions can be 2nd order accurate.
+Sometimes, however, it is easier to define a face value than the state 
+of the ghost cells that are outside the computational domain. Depending
+on the shape of the boundary it can also happen that the same ghost cell
+is used by multiple physical cells and this may be a problem. In our
+current implementation cell based boundaries can be used only when the
+physical boundary coincides with the boundary of the grid blocks.
+
+Face based boundaries are allowed even when the physical boundary cuts
+through the grid blocks. In this case each cell center is marked as either
+physical or boundary cell, and the boundary conditions are applied at 
+cell faces between a physical and a boundary cell center.
+
+For Cartesian coordinates the inner (body2=-2 and body1=-1) 
+and extra (0) boundaries have to be face based because these are
+not aligned with the block boundaries.
+The outer boundaries (east=1 to top=6) are cell based by default,
+but they can also be face based if desired.
+
+For spherical and cylindircal grids the default is face based boundaries
+everywhere. The outer boundaries have to be face based if a brick-shaped
+computational domain is cut out from the sphere/cylinder 
+(see the #LIMITRADIUS and #GRID commands) because the boundary is
+not aligned with the block boundaries.
+If the computational domain is the full sphere/cylinder, then
+cell based boundaries can be used (by applying this command).
+For spherical grids the 'inner boundary' is simply at the minimum radius
+that normally coincides with the body radius, therefore it can be cell or 
+face based. 
+
+This command allows setting the first and the last boundaries that are
+handled as faces. It also allows switching off the face boundary 
 conditions for generalized coordinate grids (as shown by the example). 
 </command>
 
@@ -1168,11 +1178,14 @@ is defined.
 The nRootBlockX, nRootBlockY and nRootBlockZ parameters define the 
 number of blocks of the base grid, i.e. the roots of the octree. 
 By varying these parameters, one can setup a grid which is elongated
-in some direction. The xMin, ..., zMax parameters define the physical
-size of the grid.
+in some direction. The xMin, ..., zMax parameters define a brick shaped
+computational domain. An inner boundary may be cut out from the domain
+with the #BODY and/or #LIMITRADIUS commands. It is also possible to define 
+a shperical, cylindrical or toroidl computational domain using 
+the #GRIDGEOMETRY and the #LIMITRADIUS commands.
 
-There is no default value, the grid size must always be given.
-The #GRID command should be used before the #SAVEPLOT command.
+There are no default values, the grid size must always be given in the
+first session (even if the component is switched off in the first session!).
 </command>
 
 <command name="COORDSYSTEM" alias="COORDINATESYSTEM" multiple="T">
@@ -1188,12 +1201,42 @@ The #GRID command should be used before the #SAVEPLOT command.
 GSM			TypeCoordSystem
 
 TypeCoordSystem defines the coordinate system for the component.
-Currently only one coordinate system is available for GM ("GSM")
-and two for IH, OH ("HGI" or "HGC") and two for SC ("HGR" or "HGI"). 
-In the future "GSE" should be also an option for GM.
 The coordinate systems are defined in share/Library/src/CON_axes.
+Here we provide general suggestions.
 
-Default is component dependent: "GSM" for GM, "HGI" for IHand OH, and "HGR" for SC.
+For GM (Global Magnetopshere) currently only one coordinate system 
+is available: "GSM" which is aligned with the (moving) magnetic axis.
+In the future the essentially inertial "GSE" system should also be an option 
+(necessary for Uranus and Neptune).
+
+For SC (Solar Corona) one should always use the corotating HGR 
+system to get an accurate solution even for complicated active regions. 
+Using an inertial frame would result in huge numerical errors near the Sub.
+
+For time accurate IH solutions (e.g. CME propagation)
+one should use the inertial HGI system so the grid can be refined
+along the Sun-Earth line.
+To obtain a steady state initial condition, the corotating HGC system 
+can be used which is aligned with the HGI system for the initial time 
+of the simuation (see #STARTTIME command). When the
+run is switched to time accurate mode, the coordinate system should be
+switched to HGI. The necessary transformation of the velocity 
+(adding the corotating velocity) is automatically performed.
+
+For quiet steady state IH solutions the HGR system can be used.
+Note however that the corotating systems may not work well if the IH
+domain is extended way beyond 1AU. In this case the inertial HGI
+system should be used even for obtaining the initial state.
+
+For OH one should always use the inertial HGI system. A rotating frame
+would have extremeley fast rotational speeds.
+
+Note that the HGR and HGI systems can be rotated with a fixed angle
+using the #ROTATEHGR and #ROTATEHGI commands of the SWMF. This can be used to
+align the interesting plane of the simulation with the grid.
+
+The default is component dependent: 
+"GSM" for GM, "HGI" for IH and OH, and "HGR" for SC.
 </command>
 
 <command name="GRIDGEOMETRY" alias="COVARIANTGEOMETRY" if="$_IsFirstSession">
@@ -1232,11 +1275,27 @@ the large radius of the torus (see the #TORUSSIZE command).
  10.0			rMin
 100.0			rMax
 
-This command allows limiting the first coordinate (usually the radius) 
-of the grid when general coordinates are used. One can exclude the 
-origin of a spherical grid, for example.
+Note: 
+for the #LIMITRADIUS command the linear radii can and should be given even
+if TypeGeometry is 'spherical_lnr' with a logarithmic radius 
+(see command #GRIDGEOMETRY). The #LIMITGENCOORD1 command sets the
+first generalized coordinate directly.
 
-The default is to use the whole radial extent allowed by the #GRID command.
+This command allows setting the mimimum and maximum values for the 
+first generalized coordinate (usually the radius). Setting rMin to
+a positive value excludes the origin of a spherical grid, 
+or the axis of the cylindrical grid. 
+
+The rMax parameter can be used to choose a spherical or cylinrical domain 
+instead of the brick defined by the #GRID. To achieve this, rMax has to be
+set to a radius that fits insid the brick defined by #GRID.
+
+By default the inner radius is set to the radius of the inner body 
+(if it is present, see the #BODY command) and the outer radius is set 
+to the largest radial distance of the eight corners of the domain defined 
+by the #GRID command. If there is no inner body, the default inner radius
+is set to 0.0 for spherical and cylindrical grids, 
+and to 1.0 for logarithmic spherical grid.
 </command>
 
 <command name="TORUSSIZE">
