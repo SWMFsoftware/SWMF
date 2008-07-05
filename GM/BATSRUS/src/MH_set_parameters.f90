@@ -1317,6 +1317,8 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('No2SiUnitRho', No2Si_V(UnitRho_))
         case('PLANETARY', 'SOLARWIND')
            ! Depends on other commands, defined in set_physics
+        case('USER')
+           ! Call user_normalization to set the normalization units
         case default
            call stop_mpi(NameSub//' ERROR: unknown TypeNormalization=' &
                 //TypeNormalization)
