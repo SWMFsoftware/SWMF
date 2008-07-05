@@ -287,7 +287,7 @@ is .false.).
 	<parameter name="CpuTimeMax" type="real" min="-1" default="-1" />
 
 #CPUTIMEMAX
-3600                    CpuTimeMax [sec]
+3600.0                   CpuTimeMax [sec]
 
 The CpuTimeMax variable contains the maximum allowed CPU time (wall clock
 time) for the execution of the current run. If the CPU time reaches
