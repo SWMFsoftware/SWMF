@@ -852,7 +852,7 @@ the necessary information at the same simulation time.
 
 #SAVERESTART
 T			DoSaveRestart (Rest of parameters read if true)
--1			DnSaveRestart
+1000			DnSaveRestart
 -1.			DtSaveRestart
 
 The DoSaveRestart variable determines whether restart information 
@@ -862,12 +862,11 @@ For steady state runs the frequency of saving restart information is given by
 the DnSaveRestart variable in terms of the number of time steps nStep,
 while for time accurate run, the DtSaveRestart variable determines
 the frequency in terms of the simulation time tSimulation in seconds.
-Negative frequencies mean that no restart file is saved during the run,
-but they do not exclude the saving of the restart information at
-the very end. 
+The code stops with an error message if DoSaveRestart is true but 
+DnSaveRestart is negative in steady state mode or DtSaveRestart is negative
+in time accurate mode.
 
-The default is given above, which means that restart information
-is saved at the end of the run.
+The default is DoSaveRestart = .false.
 </command>
 
 <command name="RESTARTFILE">
