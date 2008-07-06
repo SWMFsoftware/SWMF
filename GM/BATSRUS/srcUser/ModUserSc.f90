@@ -112,7 +112,9 @@ contains
        write(*,*) 'An empirical model has to be set via #EMPIRICALSW'
        call stop_mpi('ERROR: Correct PARAM.in!')
     end if
-    call set_empirical_model(trim(NameModel),BodyTDim_I(1))
+    if(i_line_command("#EMPIRICALSW") > 0)then
+       call set_empirical_model(trim(NameModel),BodyTDim_I(1))
+    end if
 
     call EEE_initialize(BodyNDim_I(1),BodyTDim_I(1),g)
 
