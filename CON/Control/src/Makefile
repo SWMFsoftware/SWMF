@@ -102,33 +102,50 @@ LIBOBJECTS = \
 
 SWMFLIB = ${LIBDIR}/libSWMF.a
 
+# SWMFLIB is a single library that contains all SWMF object files
+SWMFLIB: TMP_DIRS
+	rm -f ${SWMFLIB}
+	${AR} ${SWMFLIB} Tmp_*/*.o
+	@rm -rf Tmp_*
+	@echo
+	@echo SWMF library ${SWMFLIB} has been brought up to date.
+	@echo
+
 #
 #	Main executable
 #
 
 SWMFEXE = ${BINDIR}/SWMF.exe
 
-SWMFEXE: SWMFLIB
-	@make ${SWMFEXE}
-	@echo ' '
-	@echo Program ${SWMFEXE} has been brought up to date.
-	@echo ' '
-
+# The main program unit
 EXEOBJECT = swmf.o
 
+# Linking SWMF.exe from the libSWMF.a library fails on Mac OSX.
+# As a work around we load the object files directly from Tmp_*
+
+SWMFEXE: TMP_DIRS
+	@make ${EXEOBJECT}
+	${LINK.f90} -o ${SWMFEXE} ${EXEOBJECT} Tmp_*/*.o ${LBLAS} ${Lflag1}
+	@rm -rf Tmp_*
+	@echo
+	@echo Program ${SWMFEXE} has been brought up to date.
+	@echo
+
+
 # The order of compilation:
-# - SHAREDIR  : contains shared library               --> libSHARE.a
-# - TIMINGDIR : contains TIMING software library      --> libTIMING.a
-# - INDICESDIR: contains INDICES software library     --> libINDICES.a
-# - MAGNETOGRAMDIR: contains magnetogram software library    --> LibMAGNETOGRAM.a
-# - EMPIRICALDIR: contains empirical models software library --> libEMPIRICAL.a
-# - LIBRARYDIR: the CON "infrastructure"              --> libLIBRARY.a
-# - COUPLERDIR: the coupling toolkit                  --> libCOUPLER.a
-# - GMDIR .. UADIR: the physics components            --> libGM.a ... libUA.a
-# - INTERFACEDIR: interface part of "superstructure"  --> libINTERFACE.a
-# - this directory: control part of "superstructure"  --> libCONTROL.a
+# - SHAREDIR  :     shared SWMF library                --> libSHARE.a
+# - TIMINGDIR :     timing/profiling library           --> libTIMING.a
+# - INDICESDIR:     space physics INDICES library      --> libINDICES.a
+# - MAGNETOGRAMDIR: magnetogram reading library        --> LibMAGNETOGRAM.a
+# - EMPIRICALDIR:   empirical models library           --> libEMPIRICAL.a
+# - LIBRARYDIR:     CON "infrastructure"               --> libLIBRARY.a
+# - COUPLERDIR:     coupling toolkit                   --> libCOUPLER.a
+# - GMDIR .. UADIR: physics components                 --> libGM.a ... libUA.a
+# - INTERFACEDIR:   interface part of "superstructure" --> libINTERFACE.a
+# - this directory: control   part of "superstructure" --> libCONTROL.a
 # - make SWMFEXE or SWMFLIB
 
+# Create all libraries and then libCONTROL.a (MY_LIB)
 LIB:
 	@cd ${SHAREDIR};             make LIB
 	@cd ${TIMINGDIR};            make LIB
@@ -167,42 +184,11 @@ ${MY_LIB}: ${LIBOBJECTS}
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${LIBOBJECTS} ${EXEOBJECT}
 
-# SWMFLIB is a single library that contains all object files
-SWMFLIB: LIB
-	make ${SWMFLIB}
-	@echo
-	@echo SWMF library ${SWMFLIB} has been brought up to date.
-	@echo
-
 # For now the archive extract is defined here. Should be in Makefile.conf
 AR_X = ar -x
 
 # Extract object files from libraries and collect them into SWMFLIB
-${SWMFLIB}:	${LIBSHARE} \
-		${LIBTIMING} \
-		${LIBINDICES} \
-		${LIBMAGNETOGRAM} \
-		${LIBEMPIRICALEE} \
-		${LIBEMPIRICALGM} \
-		${LIBEMPIRICALIE} \
-		${LIBEMPIRICALUA} \
-		${LIBCRASH} \
-		${LIBLIBRARY} \
-		${LIBCOUPLER} \
-		${LIBINTERFACE} \
-		${LIBCONTROL} \
-		${LIBGM} \
-		${LIBIE} \
-		${LIBIH} \
-		${LIBOH} \
-		${LIBIM} \
-		${LIBLA} \
-		${LIBPS} \
-		${LIBPW} \
-		${LIBRB} \
-		${LIBSC} \
-		${LIBSP} \
-		${LIBUA}
+TMP_DIRS: LIB
 	rm -rf Tmp_*
 	mkdir Tmp_SHARE;       cd Tmp_SHARE;       ${AR_X} ${LIBSHARE}
 	mkdir Tmp_TIMING;      cd Tmp_TIMING;      ${AR_X} ${LIBTIMING} 
@@ -229,38 +215,10 @@ ${SWMFLIB}:	${LIBSHARE} \
 	mkdir Tmp_LIBSC;       cd Tmp_LIBSC;     ${AR_X} ${LIBSC} #^CMP IF SC
 	mkdir Tmp_LIBSP;       cd Tmp_LIBSP;     ${AR_X} ${LIBSP} #^CMP IF SP
 	mkdir Tmp_LIBUA;       cd Tmp_LIBUA;     ${AR_X} ${LIBUA} #^CMP IF UA
-	rm -f ${SWMFLIB}
-	@echo '${AR} ${SWMFLIB} Tmp_*/*.o'
-	@${AR} ${SWMFLIB} Tmp_*/*.o
-	@rm -rf Tmp_*
-
-# Link the executable. The link procedure depends on the operating system.
-${SWMFEXE}: ${EXEOBJECT} ${SWMFLIB} ${MAKEFILE_COMP_SELECT}
-	@(if [ "${OS}" = "Darwin" ];         then make SWMF_for_Darwin;\
-	else                                      make SWMF_general; fi)
-
-# Link rule for all machines/compilers except for Darwin with NAG
-SWMF_general:
-	${LINK.f90} -o ${SWMFEXE} \
-		${EXEOBJECT} -L${LIBDIR} -lSWMF ${LBLAS} ${Lflag1}
-
-# Link rule for Darwin with the NAG compiler (and possibly other compilers)
-# Note: for the xlf compiler the above general rule works too.
-#
-# This work around creates a temporary object file from all the F90
-# libraries using the -all_load option of the linker.
-
-SWMF_for_Darwin:
-	ld -all_load -r -o LIBRARIES.o ${SWMFLIB}
-	${LINK.f90} -o ${SWMFEXE} \
-		${EXEOBJECT} LIBRARIES.o ${LBLAS} ${Lflag1}
-	rm -f LIBRARIES.o
 
 #
 #	cleaning
 #
 
 distclean: clean
-	rm -f Makefile.DEPEND
-
-# keep this line
+	rm -rf Makefile.DEPEND Tmp_*
