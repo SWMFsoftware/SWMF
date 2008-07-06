@@ -13,28 +13,27 @@
 !final solution
 !May 30-31
 !June30
+!July 03
 !==============================================================================
 module ModUser
 
-  use ModSize,     ONLY: nI,nJ,nK,gcn,nBLK
+  use ModSize,     ONLY: nI, nJ, nK, gcn, nBLK
   use ModMain
   use ModPhysics
   use ModSetOuterBC
-  use ModAdvance,  ONLY : State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
-  use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, far_field_BCs_BLK, MaxBoundary
+  use ModAdvance,  ONLY : State_VGB
+  use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK
   use ModVarIndexes
-  use ModConst, ONLY: cLightSpeed, cElectronCharge, cElectronMass
   use ModProcMH
   use ModMultiFluid
-  use ModUserEmpty,               &
-       IMPLEMENTED1 => user_read_inputs,                &
-       IMPLEMENTED2 => user_face_bcs,                   &
-       IMPLEMENTED3 => user_normalization,               &
-       IMPLEMENTED4 => user_set_outerbcs,               &
-       IMPLEMENTED5 => user_set_ics,                    &
-       IMPLEMENTED7 => user_amr_criteria,               &
-       IMPLEMENTED8 => user_write_progress,            & 
-       IMPLEMENTED9 => user_io_units,                  &
+  use ModUserEmpty,                                     &
+       IMPLEMENTED1  => user_read_inputs,               &
+       IMPLEMENTED2  => user_face_bcs,                  &
+       IMPLEMENTED3  => user_normalization,             &
+       IMPLEMENTED4  => user_set_outerbcs,              &
+       IMPLEMENTED5  => user_set_ics,                   &
+       IMPLEMENTED8  => user_write_progress,            & 
+       IMPLEMENTED9  => user_io_units,                  &
        IMPLEMENTED10 => user_set_plot_var,              &
        IMPLEMENTED11 => user_calc_sources,              &
        IMPLEMENTED12 => user_init_point_implicit
@@ -42,24 +41,26 @@ module ModUser
 
   include 'user_module.h' !list of public methods
 
-  real,              parameter :: VersionUserModule = 2.0
+  real,              parameter :: VersionUserModule = 2.1
   ! I am calling Version Module = 2.0 the version with 3-fluids
-  character (len=*), parameter :: NameUserModule = 'Global Heliosphere'
+  character (len=*), parameter :: &
+       NameUserModule = 'Outer Heliosphere with 3 neutrals, Opher & Toth'
 
-  real :: rFriction = 1.0
-  logical :: NeutralsI = .false.
-  logical :: NeutralsII = .false.
+  logical :: NeutralsI   = .false.
+  logical :: NeutralsII  = .false.
   logical :: NeutralsIII = .false. 
 
-  ! 
+  real :: OmegaSun   = 0.0  ! normalized angular speed of Sun
+  real :: ParkerTilt = 0.0  ! Bphi/Br at the equator at r=rBody
+
   ! SWH variables.
   !/
   real ::      SWH_T_dim=0.0  , &
        SWH_a_dim=0.0  , &
-       SWH_rho=0.0 , SWH_rho_dim=0.0, &
+       SWH_rho=0.0, SWH_rho_dim=0.0, &
        SWH_p=0.0  , SWH_p_dim=0.0   , &
        SWH_Ux=0.0 , SWH_Ux_dim=0.0 , &
-       SWH_Uy=0.0  , SWH_Uy_dim=0.0 , &
+       SWH_Uy=0.0 , SWH_Uy_dim=0.0 , &
        SWH_Uz=0.0 , SWH_Uz_dim=0.0 , &
        SWH_Bx=0.0 , SWH_Bx_dim=0.0 , &
        SWH_By=0.0 , SWH_By_dim=0.0 , &
@@ -92,16 +93,16 @@ module ModUser
        VLISW_Bz=0.0 , VLISW_Bz_dim=0.0 , &
        VLISW_B_factor=0.0
 
-  real, dimension(0:1) :: &
-       VLISW_rho_t,  &
-       VLISW_p_t  ,  &
-       VLISW_Ux_t ,  &
-       VLISW_Uy_t ,  &
-       VLISW_Uz_t ,  &
-       VLISW_Bx_t ,  &
-       VLISW_By_t ,  &
-       VLISW_Bz_t ,  &
-       VLISW_time_t
+  !real, dimension(0:1) :: &
+  !     VLISW_rho_t,  &
+  !     VLISW_p_t  ,  &
+  !     VLISW_Ux_t ,  &
+  !     VLISW_Uy_t ,  &
+  !     VLISW_Uz_t ,  &
+  !     VLISW_Bx_t ,  &
+  !     VLISW_By_t ,  &
+  !     VLISW_Bz_t   &
+  !     VLISW_time_t
   !
   ! FASTSW variables.
   !/
@@ -117,16 +118,16 @@ module ModUser
        SWfast_Bz=0.0 , SWfast_Bz_dim=0.0 , &
        SWfast_B_factor=0.0
 
-  real, dimension(0:1) :: &
-       SWfast_rho_t,  &
-       SWfast_p_t  ,  &
-       SWfast_Ux_t ,  &
-       SWfast_Uy_t ,  &
-       SWfast_Uz_t ,  &
-       SWfast_Bx_t,   &
-       SWfast_By_t ,  &
-       SWfast_Bz_t ,  &
-       SWfast_time_t
+  !real, dimension(0:1) :: &
+  !     SWfast_rho_t,  &
+  !     SWfast_p_t  ,  &
+  !     SWfast_Ux_t ,  &
+  !     SWfast_Uy_t ,  &
+  !     SWfast_Uz_t ,  &
+  !     SWfast_Bx_t,   &
+  !     SWfast_By_t ,  &
+  !     SWfast_Bz_t ,  &
+  !     SWfast_time_t
   !
   ! neutrals variables
   !/
@@ -146,7 +147,6 @@ module ModUser
        UyNeutralsISW_t ,  &
        UzNeutralsISW_t
 
-
 contains
 
   !=========================================================================
@@ -158,12 +158,7 @@ contains
 
     character (len=100) :: NameCommand
     character (len=*), parameter :: Name='user_read_inputs'
-
-    integer:: i, j, k, n, m
-
     !-------------------------------------------------------------------
-
-
     do
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
@@ -173,7 +168,7 @@ contains
           if(iProc==0) write(*,*)'USERINPUTEND'
           EXIT
        case("#SOLARWINDH")
-          call read_var('SWH_rho_dim' ,SWH_rho_dim)
+          call read_var('SWH_rho_dim',SWH_rho_dim)
           call read_var('SWH_T_dim'  ,SWH_T_dim)
           call read_var('SWH_Ux_dim' ,SWH_Ux_dim)
           call read_var('SWH_Uy_dim' ,SWH_Uy_dim)
@@ -209,9 +204,6 @@ contains
           call read_var('NeutralsI' ,NeutralsI)
           call read_var('NeutralsII' ,NeutralsII)
           call read_var('NeutralsIII' ,NeutralsIII)
-          ! Probably in this case i will define rFriction as larger than the domain
-       case("#FRICTION")
-          call read_var('rFriction',rFriction)
 
        case default
           if(iProc==0) call stop_mpi( &
@@ -224,299 +216,192 @@ contains
   !==========================================================================
   subroutine user_face_bcs(VarsGhostFace_V)
 
-    use ModSize,     ONLY: nDim,West_,North_,Top_
     use ModMain
     use ModVarIndexes
     use ModAdvance
     use ModPhysics  
-    use ModNumConst, ONLY: cTolerance
     use ModSetOuterBC
     use ModProcMH
-    use ModFaceBc, ONLY: iBoundary, FaceCoords_D, VarsTrueFace_V
-    !
+    use ModFaceBc, ONLY: iBoundary, FaceCoords_D, VarsTrueFace_V, &
+         iFace, jFace, kFace, iBlockBc
+
+    use ModCoordTransform, ONLY: rot_xyz_sph
+
     real, intent(out):: VarsGhostFace_V(nVar)
 
-    ! Variables required by this user subroutine
-    !/
-    real:: XFace,YFace,ZFace
-    real:: VxFaceOutside,VyFaceOutside,VzFaceOutside
-    real:: BxFaceOutside,ByFaceOutside,BzFaceOutside
-    real:: VrFaceOutside,VthetaFaceOutside,VphiFaceOutside,&
-         VrFaceInside,VthetaFaceInside,VphiFaceInside,     &
-         BrFaceOutside,BthetaFaceOutside,BphiFaceOutside,  &
-         BrFaceInside,BthetaFaceInside,BphiFaceInside
-    real :: RhoFaceInside, PFaceInside
-    real:: cosTheta,sinTheta,cosPhi,sinPhi,RFace
-    real, dimension(1:3):: location,v_phi
-    real:: cosThetaT,sinThetaT,cosPhiT,sinPhiT
-    ! Arguments
-    !
-    ! Global Heliospheric Variables
-    !/
-    real :: VrSolarWind,VthetaSolarWind,VphiSolarWind,BrSolarWind
-    real :: BthetaSolarWind,BphiSolarWind,RhoSolarWind,PSolarWind
-    real :: sg,BrSolar,BthetaSolar,BphiSolar,B0mag,Btot,Pmag,VphiSolar
-    real :: sin2Theta_fast_wind, PmagEquator
-    real::  rot_period_dim,OMEGAbodyH
-    real :: PSolarWindT
-    !/
-    !  integer,intent(in)::iBLK
+    ! local variables
+    real:: xFace, yFace, zFace
+    real:: SinTheta
+    real:: Bsph_D(3), Vsph_D(3)
 
+    real :: pSolarWind, Pmag, PmagEquator
+
+    real :: XyzSph_DD(3,3) ! rotation matrix Xyz_D = matmul(XyzSph_DD, Sph_D)
+
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub='user_face_bcs'
     !-------------------------------------------------------------------
 
-    No2Si_V(UnitX_)= 215.0*Rsun                                ! m
-    No2Si_V(UnitU_)= sqrt(g*cBoltzmann*SWH_T_dim/cProtonMass)  ! m/s
-    No2Si_V(UnitRho_)=cProtonMass*SWH_rho_dim*1.0E+6           ! kg/m^
+    if(iBoundary /= body1_) &
+         call stop_mpi(NameSub//' only inner BC is implemented!')
 
-    XFace = FaceCoords_D(1)
-    YFace = FaceCoords_D(2)
-    ZFace = FaceCoords_D(3)
-    VxFaceOutside = VarsTrueFace_V(Ux_)
-    VyFaceOutside = VarsTrueFace_V(Uy_)
-    VzFaceOutside = VarsTrueFace_V(Uz_)
-    BxFaceOutside = VarsTrueFace_V(Bx_)
-    ByFaceOutside = VarsTrueFace_V(By_)
-    BzFaceOutside = VarsTrueFace_V(Bz_)
+    if(iProc == ProcTest .and. iBlockBc == BlkTest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest = .false.; DoTestMe = .false.
+    end if
 
-    RFace = sqrt(XFace**2 + YFace**2 + ZFace**2)
-    !
-    ! Rotate to spherical coordinates
+    XyzSph_DD = rot_xyz_sph(FaceCoords_D)
+    
+    xFace = FaceCoords_D(1)
+    yFace = FaceCoords_D(2)
+    zFace = FaceCoords_D(3)
+
+    SinTheta = sqrt((xFace**2 + YFace**2)/(xFace**2 + yFace**2 + zFace**2))
+
+    ! calculating the spherical Parker field components
+    ! SWH_Bx is the value of the field at the pole B0
+
+    ! Note: use -zFace to invert polarity
+    Bsph_D(1) =  sign(SWH_Bx, zFace)             ! Br
+    Bsph_D(2) =  0.0                             ! Btheta
+    Bsph_D(3) = -Bsph_D(1)*SinTheta*ParkerTilt   ! Bphi
+
+    Vsph_D    = (/ SWH_Ux, 0.0, 0.0 /)           ! Vr, Vtheta, Vphi
+
+    ! This is wrong:
+    ! VphiSolar = OMEGAbody*(6.96E5)*sinTheta/unitUSER_U
+    ! Vphi=omega*r*sinTheta - 6.96E5 is the solar radii in km
+    ! No2Si_V(UnitU_) is in m/s so its ok
+    ! No2Io_V(UnitU_) is in km/s
+    ! factor 1000 for test
+    ! --------------
+    ! Correct:
+    ! From angular momentum conservation 
+    !    vPhi(rFace)*rFace*SinTheta = vPhi(rSun)*rSun*SinTheta
+    ! and
+    !    vPhi(rSun) = rSun*SinTheta*Omega
+    ! so
+    !    VphiSolar = OmegaSun*SinTheta*rSun**2/rFace
+    ! Approximately VphiSolar = 0.0 (about 3km/s at 10AU)
+
+    !! Introducing the Fast Solar Wind
+    !! sin2Theta_fast_wind = 0.250000    ! 30 degrees
+    !!  sin2Theta_fast_wind = 0.1786062   ! 25 degrees
+    !!  sin2Theta_fast_wind = 0.116980    ! 20 degrees
+    !!  sin2Theta_fast_wind = 1.000000    ! 90 degrees
+    !!      if (sinTheta*sinTheta > sin2Theta_fast_wind) then
+    !!       else
+    !!          ! FAST WIND
+    !!          VrSolarWind     =  SWfast_Ux
+    !!          VthetaSolarWind =  0.0
+    !!          VphiSolarWind   =  VphiSolar
+    !!          BrSolarWind     =  BrSolar
+    !!          BthetaSolarWind =  BthetaSolar
+    !!          BphiSolarWind   =  BphiSolar
+    !!          RhoSolarWind    =  SWfast_rho
+    !!      end if
+    !! Latitude variating wind
+    !! VrSolarWind = SWH_Ux+((SWfast_Ux - SWH_Ux)*cosTheta*cosTheta)
+    !! RhoSolarWind = SWH_rho + ((SWfast_rho - SWH_rho)*cosTheta*cosTheta)
+    !! pressure will vary for fast and slow wind         PSolarWind = SWH_p
     !/
+    !!test      VrSolarWind = SWH_Ux
 
-    !Apply boundary conditions
+    ! Calculate pressure (equilibrium, but why? It is supersonic!)
+    Pmag = sum(Bsph_D**2) / 2.0
 
-    select case(iBoundary)
-    case(body1_)
-       cosTheta = ZFace/RFace
-       sinTheta = sqrt(XFace**2+YFace**2)/RFace
-       cosPhi = XFace/sqrt(XFace**2+YFace**2+cTolerance**2)
-       sinPhi = YFace/sqrt(XFace**2+YFace**2+cTolerance**2)
-       VrFaceOutside = (VxFaceOutside*XFace + &
-            VyFaceOutside*YFace + &
-            VzFaceOutside*ZFace) / RFace
-       VthetaFaceOutside = ((VxFaceOutside*XFace + &
-            VyFaceOutside*YFace) * ZFace - &
-            VzFaceOutside*(XFace**2+YFace**2)) / &
-            (sqrt(XFace**2+YFace**2+cTolerance**2)*RFace)
-       VphiFaceOutside = (VyFaceOutside*XFace - &
-            VxFaceOutside*YFace)*sinTheta / &
-            ((XFace**2+YFace**2+cTolerance**2)/RFace)
-       BrFaceOutside = (BxFaceOutside*XFace + &
-            ByFaceOutside*YFace + &
-            BzFaceOutside*ZFace) / RFace
-       BthetaFaceOutside = ((BxFaceOutside*XFace + &
-            ByFaceOutside*YFace) * ZFace - &
-            BzFaceOutside*(XFace**2+YFace**2)) / &
-            (sqrt(XFace**2+YFace**2+cTolerance**2)*RFace)
-       BphiFaceOutside = (ByFaceOutside*XFace - &
-            BxFaceOutside*YFace)*sinTheta / &
-            ((XFace**2+YFace**2+cTolerance**2)/RFace)
+    ! magnetic pressure at the equator (actually wrong, neglects Br=SWH_Bx)
+    PmagEquator = (SWH_Bx*ParkerTilt)**2/2
+    pSolarWind  = SWH_p + PmagEquator -  Pmag
 
-       ! defining the rotation components of the Sun
+    ! Apply boundary conditions for ions
+    VarsGhostFace_V(Rho_) = SWH_rho
+    VarsGhostFace_V(p_)   = pSolarWind
+    VarsGhostFace_V(Ux_:Uz_) = matmul(XyzSph_DD, Vsph_D)
+    VarsGhostFace_V(Bx_:Bz_) = matmul(XyzSph_DD, Bsph_D)
 
-       rot_period_dim = 26.0*24.0     ! rotation period in hours
-       OMEGAbodyH = (2.00*cPi/(rot_period_dim*3600.00)) !in sec^-1
-       Rbody = 30. !define it
+    ! NeuRho is PopI; NeuIIRho is PopII and NeuIIIRho is PopIII
+    !
+    ! Pop I is going through the inner BCs
 
-       !
-       ! calculating the parker field components, Br, Btheta and Bphi
-       ! SW_Bx is the value of the field in the pole B0
-       !/
+    VarsGhostFace_V(NeuRho_) = RhoNeutralsISW !*0.9
+    VarsGhostFace_V(NeuUx_)  = UxNeutralsISW
+    VarsGhostFace_V(NeuUy_)  = UyNeutralsISW
+    VarsGhostFace_V(NeuUz_)  = UzNeutralsISW
+    VarsGhostFace_V(NeuP_)   = PNeutralsISW   !*0.9
 
-       sg = sign(1.0,cosTheta)
-       !     sg = -sign(1.0,cosTheta)
-       ! should I invert the polarity for this cycle?
+    ! PopII leaves the domain at a supersonic velocity 
+    ! (50km/s while for their temperature 1.E5K their C_s=30km/s)
+    ! For the transient case when it flows inward, use 0.001*ion density
 
-       B0mag       =  SWH_Bx
-       BrSolar     =  sg*B0mag
+    if( sum(VarsTrueFace_V(Ne2Ux_:Ne2Uz_)*FaceCoords_D) > 0.0)then
+       VarsGhostFace_V(Ne2Rho_)       = 1.E-3*RhoNeutralsISW
+       VarsGhostFace_V(Ne2Ux_:Ne2Uz_) = VarsGhostFace_V(Ux_:Uz_)
+       VarsGhostFace_V(Ne2P_)         = 1.E-3*VarsGhostFace_V(p_)
+    else
+       VarsGhostFace_V(Ne2Rho_:Ne2P_) = VarsTrueFace_V(Ne2Rho_:Ne2P_)
+    end if
 
-       ! the factor 1.496E8 is to convert Rbody in AU to km; 
+    ! Pop III has the velocity and temperature of the ions at inner boundary
+    ! the density is taken to be 10% of the ions
 
-       BphiSolar   = -(sg*B0mag*OMEGAbodyH*Rbody*(1.496E8)*sinTheta)/(SWH_Ux_dim)
-       BthetaSolar =  0.0
+    VarsGhostFace_V(Ne3Rho_)       = 0.1*VarsGhostFace_V(rho_)
+    VarsGhostFace_V(Ne3P_)         = 0.1*VarsGhostFace_V(p_)
+    VarsGhostFace_V(Ne3Ux_:Ne3Uz_) = VarsGhostFace_V(Ux_:Uz_)
 
-       ! VphiSolar = OMEGAbody*(6.96E5)*sinTheta/unitUSER_U
-       ! Vphi=omega*r*sinTheta - 6.96E5 is the solar radii in km
-       ! No2Si_V(UnitU_) is in m/s so its ok
-       ! No2Io_V(UnitU_) is in km/s
-       ! factor 1000 for test
-
-       VphiSolar = OMEGAbodyH*(6.96E5)*sinTheta/No2Io_V(UnitU_)
-       VphiSolar =0 ! merav june 04-at 30AU Vphi is negligble
-       Btot = sqrt((BrSolar**2)+(BphiSolar**2))
-
-       ! magnetic pressure Btot*unitUSER_B will be in nT  and the pressure in Pa
-       ! No2Si_V(UnitB_) is in T
-
-       Pmag = (((Btot*No2Io_V(UnitB_)*1.0E-9)**2)/(2.0*cMu))/(inv_g*0.1*No2Io_V(UnitP_))
-
-       !magnetic pressure in the equator
-       !
-       !     PmagEquator = (((SWH_Bx*27.9*unitUSER_B*1.0E-
-       !9)**2)/(2.0*cMu))/(inv_g*unitSI_p)
-
-       ! The factor 27.9 comes from Rbody*OMEGAbody/SW_Ux
-       !/
-       !
-       PmagEquator = (((SWH_Bx*27.9*No2Io_V(UnitB_)*1.0E-9)**2)/(2.0*cMu))/(inv_g*0.1*No2Io_V(UnitP_))
-
-       ! Introducing the Fast Solar Wind
-!!!    sin2Theta_fast_wind = 0.250000    ! 30 degrees
-       !  sin2Theta_fast_wind = 0.1786062   ! 25 degrees
-       !  sin2Theta_fast_wind = 0.116980    ! 20 degrees
-       !  sin2Theta_fast_wind = 1.000000    ! 90 degrees
-!!!      if (sinTheta*sinTheta > sin2Theta_fast_wind) then
-       !SLOW WIND
-       VrSolarWind     = SWH_Ux
-       VthetaSolarWind = 0.0
-       VphiSolarWind   = VphiSolar
-       BrSolarWind     = BrSolar
-       BthetaSolarWind = BthetaSolar
-       BphiSolarWind   = BphiSolar
-       RhoSolarWind    = SWH_rho
-!!!       else
-!!!          ! FAST WIND
-!!!          VrSolarWind     =  SWfast_Ux
-!!!          VthetaSolarWind =  0.0
-!!!          VphiSolarWind   =  VphiSolar
-!!!          BrSolarWind     =  BrSolar
-!!!          BthetaSolarWind =  BthetaSolar
-!!!          BphiSolarWind   =  BphiSolar
-!!!          RhoSolarWind    =  SWfast_rho
-!!!      end if
-
-       ! Latitude variating wind
-
-
-!!!         VrSolarWind = SWH_Ux+((SWfast_Ux - SWH_Ux)*cosTheta*cosTheta)
-
-!!!         RhoSolarWind = SWH_rho + ((SWfast_rho - SWH_rho)*cosTheta*cosTheta)
-
-       ! pressure will vary for fast and slow wind         PSolarWind = SWH_p
-
-       !
-       !
-       !/
-!!!test      VrSolarWind = SWH_Ux
-
-       VthetaSolarWind = 0.0
-       VphiSolarWind = VphiSolar
-       BrSolarWind = BrSolar
-       BthetaSolarWind = BthetaSolar
-       BphiSolarWind = BphiSolar
-
-       ! making sure that the total pressure Pt+Pb will be constant (PmagEquator is Pb 
-
-       !at the equator)
-       !/
-!!!               PSolarWindT = SWH_p + (SWH_p - SWfast_p)*cosTheta*cosTheta
-
-!!!               PsolarWind  = PSolarWindT + PmagEquator - Pmag
-
-       PSolarWind = SWH_p + PmagEquator -  Pmag
-
-       ! ISW
-       !
-       VrFaceInside      =   VrSolarWind
-       VthetaFaceInside =    VthetaSolarWind
-       VphiFaceInside   =    VphiSolarWind
-       BrFaceInside      =   BrSolarWind
-       BthetaFaceInside  =   BthetaSolarWind
-       BphiFaceInside    =   BphiSolarWind
-       RhoFaceInside     =   RhoSolarWind
-       PFaceInside       =   PSolarWind
-
-       VarsGhostFace_V(rho_) = RhoFaceInside
-       VarsGhostFace_V(p_) = PFaceInside
-
-       ! Rotate back to cartesian coordinates
-       VarsGhostFace_V(Ux_) = VrFaceInside*XFace/RFace+&
-            VthetaFaceInside*cosTheta*cosPhi          -&
-            VphiFaceInside*sinPhi
-       VarsGhostFace_V(Uy_) = VrFaceInside*YFace/RFace+&
-            VthetaFaceInside*cosTheta*sinPhi          +&
-            VphiFaceInside*cosPhi
-       VarsGhostFace_V(Uz_) = VrFaceInside*ZFace/RFace-&
-            VthetaFaceInside*sinTheta
-       VarsGhostFace_V(Bx_) = BrFaceInside*XFace/RFace+&
-            BthetaFaceInside*cosTheta*cosPhi          -&
-            BphiFaceInside*sinPhi
-       VarsGhostFace_V(By_) = BrFaceInside*YFace/RFace+&
-            BthetaFaceInside*cosTheta*sinPhi          +&
-            BphiFaceInside*cosPhi
-       VarsGhostFace_V(Bz_) = BrFaceInside*ZFace/RFace-&
-            BthetaFaceInside*sinTheta
-       !attempt to deal with neutrals
-
-       ! NeuRho is PopI; NeuIIRho is PopII and NeuIIIRho is PopIII
-       !
-       ! Pop I is going through the inner BCs
-       
-!       if( sum(VarsTrueFace_V(NeuUx_:NeuUz_)*FaceCoords_D) > 0.0)then
-          VarsGhostFace_V(NeuRho_) = RhoNeutralsISW !*0.9
-          VarsGhostFace_V(NeuUx_)  = UxNeutralsISW
-          VarsGhostFace_V(NeuUy_)  = UyNeutralsISW
-          VarsGhostFace_V(NeuUz_)  = UzNeutralsISW
-          VarsGhostFace_V(NeuP_)   = PNeutralsISW   !*0.9
-!       else
-!          VarsGhostFace_V(NeuRho_:NeuP_) = VarsTrueFace_V(NeuRho_:NeuP_)
-!       end if
-
-       ! Pop II (PopII leaves the domain at a supersonic velocity 
-       ! (50km/s while for their temperature 1.E5K their C_s=30km/s)
-       ! For the transient case when it flows inward, use 0.001*ion density
-
-       if( sum(VarsTrueFace_V(Ne2Ux_:Ne2Uz_)*FaceCoords_D) > 0.0)then
-          VarsGhostFace_V(Ne2Rho_)       = 1.E-3*RhoNeutralsISW
-          VarsGhostFace_V(Ne2Ux_:Ne2Uz_) = VarsGhostFace_V(Ux_:Uz_)
-          VarsGhostFace_V(Ne2P_)         = 1.E-3*VarsGhostFace_V(p_)
-       else
-          VarsGhostFace_V(Ne2Rho_:Ne2P_) = VarsTrueFace_V(Ne2Rho_:Ne2P_)
-       end if
-
-       ! Pop III has the velocity and temperature of the ions at inner boundary
-
-       VarsGhostFace_V(Ne3Rho_) = VarsGhostFace_V(rho_)*(1.E-1)
-       VarsGhostFace_V(Ne3Ux_) =  VarsGhostFace_V(Ux_)
-       VarsGhostFace_V(Ne3Uy_) =  VarsGhostFace_V(Uy_)
-       VarsGhostFace_V(Ne3Uz_) =  VarsGhostFace_V(Uz_)
-       VarsGhostFace_V(Ne3P_)   = VarsGhostFace_V(p_)*(1.E-1)
-
-    end select
-    !-------------------------------------------------------------------
+    if(DoTestMe)then
+       write(*,*) NameSub,' FaceCoord=', FaceCoords_D
+       write(*,*) NameSub,' i,j,kFace=', iFace, jFace, kFace
+       write(*,*) NameSub,' SinTheta =', SinTheta
+       write(*,*) NameSub,' Bsph_D   =', Bsph_D
+       write(*,*) NameSub,' Vsph_D   =', Vsph_D
+       write(*,*) NameSub,' Pmag, Peq=', Pmag, PmagEquator
+       write(*,*) NameSub,' RhoGhost =', VarsGhostFace_V(Rho_)
+       write(*,*) NameSub,' pGhost   =', VarsGhostFace_V(p_)
+       write(*,*) NameSub,' Ughost   =', VarsGhostFace_V(Ux_:Uz_)
+       write(*,*) NameSub,' Bghost   =', VarsGhostFace_V(Bx_:Bz_)
+       write(*,*) NameSub,'Pop1=',VarsGhostFace_V(NeuRho_:NeuP_)
+       write(*,*) NameSub,'Pop2=',VarsGhostFace_V(Ne2Rho_:Ne2P_)
+       write(*,*) NameSub,'Pop3=',VarsGhostFace_V(Ne3Rho_:Ne3P_)
+    end if
 
   end subroutine user_face_bcs
 
   !-------------------------------------------------------------------
   subroutine user_normalization
 
-    use ModProcMH, ONLY:iProc  
-    use ModMain 
-    use ModPhysics 
-    use ModVarIndexes       
-    character (len=*), parameter :: Name='user_normalization'
+    use ModConst, ONLY: cAU, cProtonMass
+    use ModPhysics, ONLY: No2Si_V, UnitX_, UnitU_, UnitRho_
+
+    character (len=*), parameter :: NameSub='user_normalization'
+    logical :: DoTest, DoTestMe
     !-------------------------------------------------------------------
 
-    SWH_rho_dim = 7.8E-3 !n/cm^3
-    SWH_T_dim=1.609E3   !K
-    No2Si_V(UnitX_)= 215.0*Rsun                                ! m
-    No2Si_V(UnitU_)= sqrt(g*cBoltzmann*SWH_T_dim/cProtonMass)
-    No2Si_V(UnitRho_)=cProtonMass*SWH_rho_dim*1.0E+6           ! kg/m^3
+    call set_oktest(NameSub, DoTest, DoTestMe)
+
+    No2Si_V(UnitX_)  = cAU                                      ! m
+    No2Si_V(UnitU_)  = sqrt(g*cBoltzmann*SWH_T_dim/cProtonMass) ! m/s
+    No2Si_V(UnitRho_)= cProtonMass*SWH_rho_dim*1.0E+6           ! kg/m^3
+
+    if(DoTestMe)then
+       write(*,*)NameSub,' No2Si_V(UnitX_)  =',No2Si_V(UnitX_)
+       write(*,*)NameSub,' No2Si_V(UnitU_)  =',No2Si_V(UnitU_)
+       write(*,*)NameSub,' No2Si_V(UnitRho_)=',No2Si_V(UnitRho_)
+    end if
 
   end subroutine user_normalization
   !-------------------------------------------------------------------
 
-  subroutine user_set_outerbcs(iBlock,iSide,TypeBc,IsFound)
+  subroutine user_set_outerbcs(iBlock, iSide, TypeBc, IsFound)
 
     ! The ISM enters at the east boundary (negative x)
 
     use ModMain
     use ModVarIndexes
-    use ModAdvance,   ONLY : State_VGB
-    use ModPhysics,   ONLY : CellState_VI
     use ModSetOuterBC
     use ModProcMH
-    use ModAdvance, ONLY : State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
+    use ModAdvance, ONLY : State_VGB
     use ModMultiFluid
 
     integer,intent(in)::iBlock, iSide
@@ -548,9 +433,9 @@ contains
     ! characteristic waves are present. For a neutral fluid this 
     ! is 0 for supersonic outflow, 1 for subsonic outflow, 
     ! 4 for subsonic inflow and 5 for supersonic inflow. 
-    !
+    !\
     ! PopII and III supersonic outflow
-    !
+    !/
     do iVar = Ne2Rho_, Ne3P_; do i = -1, 2
        State_VGB(iVar,i,:,:,iBlock) = State_VGB(iVar,3,:,:,iBlock)
     end do; end do
@@ -559,305 +444,175 @@ contains
 
   !=====================================================================
 
-  subroutine user_set_ics    
+  subroutine user_set_ics
+
     use ModMain,  ONLY: globalBLK    
     use ModGeometry, ONLY: r_BLK    
     use ModVarIndexes    
     use ModAdvance,  ONLY: State_VGB    
-    use ModPhysics,  ONLY: rBody, BodyRho_I, BodyP_I    
+    use ModPhysics,  ONLY: rBody
+    use ModCoordTransform, ONLY: rot_xyz_sph
 
     implicit none    
     integer :: iBlock    
 
     integer :: i,j,k
 
-    real :: x0,y0,z0,rho0
-    real, dimension(3) :: B0, vel
-    real :: rp,Br,Btheta,Bphi
-    real :: B0mag,VrS,VthetaS,VphiS
-    real :: cos_theta,sin_theta,cos_phi,sin_phi,sg
-    real :: rot_period_dim, OMEGAbodyH
-    real :: thetaN, sinthetaN, lambda, RhoSolarW
-    real :: sin2Theta_fast_wind
+    real :: x, y, z, r, rho0
+    real :: b_D(3), v_D(3), bSph_D(3), vSph_D(3)
+    real :: SinTheta, SignZ
 
+    real :: XyzSph_DD(3,3) ! rotation matrix Xyz_D = matmul(XyzSph_DD, Sph_D)
+
+    ! These variables are not used now
+    ! real :: thetaN, sinthetaN, lambda, RhoSolarW
+    ! real :: sin2Theta_fast_wind
+
+    character(len=*), parameter:: NameSub = 'user_set_ics'
+    logical :: DoTest, DoTestMe, DoTestCell
     !--------------------------------------------------------------------------
-
     iBlock = globalBLK
-    rot_period_dim = 26.0*24.0     ! rotation period in hours
-    OMEGAbodyH = (2.00*cPi/(rot_period_dim*3600.00))
-    Rbody = 30. !define it
 
-    SWH_rho_dim = 7.8E-3 !n/cm^3      
-    SWH_T_dim=1.609E3   !K      
-    No2Si_V(UnitX_)= 215.0*Rsun    ! m      
-    No2Si_V(UnitU_)= sqrt(g*cBoltzmann*SWH_T_dim/cProtonMass)      
-    No2Si_V(UnitRho_)=cProtonMass*SWH_rho_dim*1.0E+6             ! kg/m^3 
+    if(iProc == ProcTest .and. iBlock == BlkTest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest = .false.; DoTestMe = .false.
+    end if
 
-    do i=1-gcn,nI+gcn
-       do j=1-gcn,nJ+gcn
-          do k=1-gcn,nK+gcn
+    if(OmegaSun == 0.0)then
+       ! Calculate angular velocity in normalized units
+       ! Note: the rotation period is 25.38 days in ModConst.f90:
+       ! OmegaSun = cTwoPi/(RotationPeriodSun*Si2No_V(UnitT_))
 
-             x0 = x_BLK(i,j,k,iBlock)
-             y0 = y_BLK(i,j,k,iBlock)
-             z0 = z_BLK(i,j,k,iBlock)
+       OmegaSun   = cTwoPi/(26.0*24.0*3600.00*Si2No_V(UnitT_))
+       ParkerTilt = OmegaSun*rBody/SWH_Ux
 
-             ! defining the rotation components of the Sun
+       if(DoTestMe)then
+          write(*,*)NameSub,' OmegaSun         =',OmegaSun
+          write(*,*)NameSub,' ParkerTilt       =',ParkerTilt
+       end if
+    end if
 
-             ! transforming x0,y0,z0 to r, theta and phi
-             ! theta is the angle measured from the pole
+    do i=1-gcn,nI+gcn; do j=1-gcn,nJ+gcn; do k=1-gcn,nK+gcn
+       r  = r_BLK(i,j,k,iBlock)
+       if(r < rBody) CYCLE
 
-             rp=sqrt(x0**2+y0**2+z0**2)
+       DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest
 
-             cos_theta=z0/rp
-             sin_theta=sqrt(x0**2+y0**2)/rp
-             cos_phi=x0/sqrt(x0**2+y0**2)
-             sin_phi=y0/sqrt(x0**2+y0**2)
+       x = x_BLK(i,j,k,iBlock)
+       y = y_BLK(i,j,k,iBlock)
+       z = z_BLK(i,j,k,iBlock)
 
-             ! for the neutrals
-             thetaN = atan(sqrt(y0**2+z0**2)/(x0+cTiny))
-             sinThetaN=sqrt(y0**2+z0**2)/rp
-             lambda = 4.0
-             !so pra iniciar eu fixei lambda como 4.0 (olha a expressao 3.53 da tese do Linde)
+       XyzSph_DD = rot_xyz_sph(x,y,z)
 
-             !calculating the parker field components, Br, Btheta and Bphi
+       ! theta is the angle measured from the pole
+       SinTheta = sqrt(x**2+y**2)/r
 
-             sg=sign(1.0,cos_theta)
-             !       sg=-sign(1.0,cos_theta)
-             B0mag  =  SWH_Bx
-             Br     =  sg*B0mag*((Rbody/rp)**2)
-             Bphi   = -((sg*B0mag*OMEGAbodyH*Rbody*(1.496E8)*sin_theta)/(SWH_Ux_dim))*(Rbody/rp)
-             Btheta =  0.0
+       ! for the neutrals thetaN angle is relative to the X axis
+       ! thetaN = atan(sqrt(y**2+z**2)/(x+cTiny))
+       ! sinThetaN=sqrt(y**2+z**2)/r
+       ! lambda = 4.0
+       !so pra iniciar eu fixei lambda como 4.0 
+       !(olha a expressao 3.53 da tese do Linde)
 
-             ! Vphi =omega*Rs*sintheta*(Rs/r)
+       !calculating the Parker B field spherical components Bsph_D
 
-             VphiS = OMEGAbodyH*(6.96E5)*sin_theta/No2Io_V(UnitU_)
-             VrS = SWH_Ux
-             VthetaS = 0.
+       SignZ = sign(1.0, z)
+       !SignZ = -sign(1.0,z)
 
-             ! Introducing the Fast Solar Wind
-             !!    sin2Theta_fast_wind = 0.250000    ! 30 degrees
-             !  sin2Theta_fast_wind = 0.1786062   ! 25 degrees
-             !  sin2Theta_fast_wind = 0.116980    ! 20 degrees
-             !  sin2Theta_fast_wind = 1.000000    ! 90 degrees
+       Bsph_D(1) = SignZ*SWH_Bx*(rBody/r)**2  ! Br
+       Bsph_D(2) = 0.0                        ! Btheta
+       Bsph_D(3) = -SignZ*SWH_Bx*SinTheta*ParkerTilt*(rBody/r) !Bphi
 
-             !!      if (sin_theta*sin_theta > sin2Theta_fast_wind) then
-             !!          !SLOW WIND
-             !!          VrS     = SWH_Ux
-             !!          RhoSolarW    = SWH_rho
-             !!       else
-             !!          ! FAST WIND
-             !!          VrS     =  SWfast_Ux
-             !!          RhoSolarW    =  SWfast_rho
-             !!      end if
+       ! wrong:   Vphi = OmegaSun*(6.96E5)*sin_theta/No2Io_V(UnitU_)
+       ! correct: Vphi = OmegaSun*sin_theta*rSun**2/r
+       ! rSun must be in normalized units, of course
+       ! Vphi is approximately 0. (30km/s at 1AU, 1km/s at 30AU)
 
-             !!I still need to impemenet that the density vary from solar wind slow and fast
+       Vsph_D = (/ SWH_Ux, 0., 0. /)
 
-             !!
-             if (rp>Rbody) then
-                ! magnetic field components in cartesian coordinates    
-                ! x component of magnetic field  
-                ! magnetic field components in cartesian coordinates
-                !x component of magnetic field
-                B0(1)=Br    *sin_theta*cos_phi  + &
-                     Btheta*cos_theta*cos_phi - &
-                     Bphi  *sin_phi
-                !y component of magnetic field
-                B0(2)=Br    *sin_theta*sin_phi  + &
-                     Btheta*cos_theta*sin_phi + &
-                     Bphi  *cos_phi
-                !z component of magnetic field
-                B0(3)=Br    *cos_theta          - &
-                     Btheta*sin_theta
+       !! Introducing the Fast Solar Wind
+       !!    sin2Theta_fast_wind = 0.250000    ! 30 degrees
+       !!  sin2Theta_fast_wind = 0.1786062   ! 25 degrees
+       !!  sin2Theta_fast_wind = 0.116980    ! 20 degrees
+       !!  sin2Theta_fast_wind = 1.000000    ! 90 degrees
+       !!      if (sin_theta*sin_theta > sin2Theta_fast_wind) then
+       !!          !SLOW WIND
+       !!          VrS     = SWH_Ux
+       !!          RhoSolarW    = SWH_rho
+       !!       else
+       !!          ! FAST WIND
+       !!          VrS     =  SWfast_Ux
+       !!          RhoSolarW    =  SWfast_rho
+       !!      end if
+       !!
+       !! I still need to impemenet that the density 
+       !! varies between slow and fast solar wind
+       !!
 
-                VphiS = 0.      !NECESSARY TO WORK 
+       ! magnetic field components in cartesian coordinates
+       b_D = matmul(XyzSph_DD, Bsph_D)
 
-                State_VGB(Bx_,i,j,k,iBlock) =  B0(1) 
-                State_VGB(By_,i,j,k,iBlock) =  B0(2)
-                State_VGB(Bz_,i,j,k,iBlock) =  B0(3)
+       State_VGB(Bx_:Bz_,i,j,k,iBlock) = b_D
 
-                !velocity components in cartesian coordinates
-                !x component of magnetic field
-                vel(1)=VrS    *(x0/rp)  + &
-                     VthetaS*cos_theta*cos_phi - &
-                     VphiS  *sin_phi
-                !y component of magnetic field
-                vel(2)=VrS    *(y0/rp)  + &
-                     VthetaS*cos_theta*sin_phi + &
-                     VphiS  *cos_phi
+       !velocity components in cartesian coordinates
+       v_D = matmul(XyzSph_DD, Vsph_D)
 
-                !z component of magnetic field
-                vel(3)=VrS    *(z0/rp)  - &
-                     VthetaS*sin_theta
+       ! density and pressure
+       State_VGB(Rho_,i,j,k,iBlock) = SWH_rho * (rBody/r)**2
+       State_VGB(P_,i,j,k,iBlock)   = SWH_p   * (rBody/r)**(2*g)
 
-                ! density and pressure
-                State_VGB(rho_,i,j,k,iBlock) = SWH_rho*((Rbody/rp)**2)
-                State_VGB(P_,i,j,k,iBlock) = SWH_p*((Rbody/rp)**(2*g))
-                State_VGB(rhoUx_,i,j,k,iBlock) = State_VGB(rho_,i,j,k,iBlock)*vel(1)
-                State_VGB(rhoUy_,i,j,k,iBlock) = State_VGB(rho_,i,j,k,iBlock)*vel(2)
-                State_VGB(rhoUz_,i,j,k,iBlock) = State_VGB(rho_,i,j,k,iBlock)*vel(3) 
-                !
-                ! PopI
-                !/
-                State_VGB(NeuRho_,i,j,k,iBlock) = RhoNeutralsISW
-                State_VGB(NeuRhoUx_,i,j,k,iBlock) = State_VGB(NeuRho_,i,j,k,iBlock)*UxNeutralsISW 
-                State_VGB(NeuRhoUy_,i,j,k,iBlock) = State_VGB(NeuRho_,i,j,k,iBlock)*UyNeutralsISW 
-                State_VGB(NeuRhoUz_,i,j,k,iBlock) = State_VGB(NeuRho_,i,j,k,iBlock)*UzNeutralsISW                 
-                State_VGB(NeuP_,i,j,k,iBlock) = PNeutralsISW
+       ! momentum
+       State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = State_VGB(rho_,i,j,k,iBlock)*v_D
 
-!!!                State_VGB(NeuRho_,i,j,k,iBlock) = RhoNeutralsISW*Exp(-lambda*thetaN/((rp**2)*SinThetaN))
-!!!              *Exp(-lambda*thetaN/(rp*SinThetaN))              
-!!!                State_VGB(NeuP_,i,j,k,iBlock) = PNeutralsISW*Exp(-lambda*thetaN/(rp*SinThetaN))
-                !
-                ! PopII - I set it to be 100km/s radially. The temperature is set to be 10^5K for this population.
-                ! vel(1),vel(2) and vel(3) are the plasma velocity.
+       !\
+       ! PopI
+       !/
+       State_VGB(NeuRho_,i,j,k,iBlock)  =RhoNeutralsISW
+       State_VGB(NeuRhoUx_,i,j,k,iBlock)=RhoNeutralsISW*UxNeutralsISW 
+       State_VGB(NeuRhoUy_,i,j,k,iBlock)=RhoNeutralsISW*UyNeutralsISW 
+       State_VGB(NeuRhoUz_,i,j,k,iBlock)=RhoNeutralsISW*UzNeutralsISW
+       State_VGB(NeuP_,i,j,k,iBlock) = PNeutralsISW
 
-                !/
-                State_VGB(Ne2Rho_,i,j,k,iBlock) = (1.e-3)*RhoNeutralsISW
-                State_VGB(Ne2P_,i,j,k,iBlock) = PNeutralsISW*(1.e-3)   
-                State_VGB(Ne2RhoUx_,i,j,k,iBlock) = State_VGB(Ne2Rho_,i,j,k,iBlock)*vel(1)/4.
-                State_VGB(Ne2RhoUy_,i,j,k,iBlock) = State_VGB(Ne2Rho_,i,j,k,iBlock)*vel(2)/4. 
-                State_VGB(Ne2RhoUz_,i,j,k,iBlock) = State_VGB(Ne2Rho_,i,j,k,iBlock)*vel(3)/4.
-                ! 
-                ! PopIII - 
-                !/
-! nao estou colocando na grade pressao do plasma porque sao eh perturbado
-! pela frente do ISM que avanca na grade
-                State_VGB(Ne3Rho_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)*0.1 
-                State_VGB(Ne3P_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock)*0.1 
-                State_VGB(Ne3RhoUx_,i,j,k,iBlock) = State_VGB(Ne3Rho_,i,j,k,iBlock)*vel(1)
-                State_VGB(Ne3RhoUy_,i,j,k,iBlock) = State_VGB(Ne3Rho_,i,j,k,iBlock)*vel(2)
-                State_VGB(Ne3RhoUz_,i,j,k,iBlock) = State_VGB(Ne3Rho_,i,j,k,iBlock)*vel(3)
+       !! State_VGB(NeuRho_,i,j,k,iBlock) = &
+       !!    RhoNeutralsISW*Exp(-lambda*thetaN/((r**2)*SinThetaN)) &
+       !!    *Exp(-lambda*thetaN/(r*SinThetaN))              
+       !! State_VGB(NeuP_,i,j,k,iBlock) = &
+       !!    PNeutralsISW*Exp(-lambda*thetaN/(r*SinThetaN))
 
-             end if
-          end do
-       end do
-    end do
+       !\
+       ! PopII - I set it to be about 100km/s radially. 
+       ! The temperature is set to be 10^5K for this population.
+       ! v_D is the plasma velocity, we take one quarter of that.
+       !/
+       State_VGB(Ne2Rho_,i,j,k,iBlock) = 1.e-3 * RhoNeutralsISW
+       State_VGB(Ne2P_,i,j,k,iBlock)   = 1.e-3 * PNeutralsISW 
+       State_VGB(Ne2RhoUx_:Ne2RhoUz_,i,j,k,iBlock) = &
+            0.25*State_VGB(Ne2Rho_,i,j,k,iBlock)*v_D
+       !\ 
+       ! PopIII
+       !/
+       State_VGB(Ne3Rho_,i,j,k,iBlock) = 0.1 * State_VGB(Rho_,i,j,k,iBlock)
+       State_VGB(Ne3P_,i,j,k,iBlock)   = 0.1 * State_VGB(p_,i,j,k,iBlock)
+       State_VGB(Ne3RhoUx_:Ne3RhoUz_,i,j,k,iBlock) = &
+            State_VGB(Ne3Rho_,i,j,k,iBlock)*v_D
+
+       if(DoTestCell)then
+          write(*,*)NameSub,' x, y, z, r             =', x, y, z, r
+          write(*,*)NameSub,' SignZ, SWH_Bx, SinTheta=',SignZ, SWH_Bx, SinTheta
+          write(*,*)NameSub,' OmegaSun, rBody, SWH_Ux=',OmegaSun,rBody,SWH_Ux
+          write(*,*)NameSub,' Vsph_D                 =',Vsph_D
+          write(*,*)NameSub,' v_D                    =',v_D
+          write(*,*)NameSub,' Bsph_D                 =',Bsph_D
+          write(*,*)NameSub,' b_D    =',State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          write(*,*)NameSub,' RhoU_D =',State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
+          write(*,*)NameSub,' rho,   =',State_VGB(Rho_,i,j,k,iBlock)
+          write(*,*)NameSub,' p      =',State_VGB(P_,i,j,k,iBlock)
+       end if
+
+    end do; end do; end do
 
   end subroutine user_set_ics
-
-  !!=====================================================================
-  !subroutine user_specify_initial_refinement(iBLK,refineBlock,lev, &
-  !     DxBlock,xCenter,yCenter,zCenter,rCenter,minx,miny,minz,minR,&
-  !     maxx,maxy,maxz,maxR,IsFound)
-  !  use ModSize 
-  !  use ModVarIndexes, ONLY: Bx_,By_,Bz_,P_
-  !  use ModAdvance,ONLY:&
-  !       State_VGB,Bx_,By_,Bz_,B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
-  !  use ModAMR,        ONLY: InitialRefineType
-  !  use ModMain,       ONLY: x_,y_,z_,iteration_number,     &
-  !       time_loop, unusedBLK, nI,nJ,nK
-  !  use ModGeometry,   ONLY: XyzMin_D,XyzMax_D,x_BLK,y_BLK, &
-  !       z_BLK,R_BLK,dx_BLK,dy_BLK,dz_BLK
-  !  implicit none 
-  !  logical,intent(out) :: refineBlock,IsFound
-  !  integer, intent(in) :: lev
-  !  real, intent(in)    :: DxBlock
-  !  real, intent(in)    :: xCenter,yCenter,zCenter,rCenter
-  !  real, intent(in)    :: minx,miny,minz,minR
-  !  real, intent(in)    :: maxx,maxy,maxz,maxR
-  !  integer, intent(in) :: iBLK
-  !
-  !  real:: critx,critvRdotR0,critxCenter
-  !  real:: RminRv,RdotRv,RminRn,RdotR0,R2Cell
-  !  real, dimension(3):: RCell_D,RvCell_D,RnCell_D,R0Cell_D
-  !
-  !  integer:: i,j,k
-  !  real :: Rbody, RR, xxx, yyy, zzz
-  !  real :: xx1, xx2, yy1, yy2, zz1, zz2, minRblk, maxRblk
-  !
-  !  character(len=*), parameter :: NameSub='user_specify_initial_refinement'
-  !
-  !  Rbody = 30.
-  !
-  !  !-------------------------------------------------------------------
-  !
-  !  ! Block center coordinates
-  !  xx1 = cHalf*(x_BLK( 0, 0, 0,iBLK)+x_BLK(   1,   1  , 1,iBLK))
-  !  xx2 = cHalf*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(nI+1,nJ+1,nK+1,iBLK))
-  !  yy1 = cHalf*(y_BLK( 0, 0, 0,iBLK)+y_BLK(   1,   1,   1,iBLK))
-  !  yy2 = cHalf*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(nI+1,nJ+1,nK+1,iBLK))
-  !  zz1 = cHalf*(z_BLK( 0, 0, 0,iBLK)+z_BLK(   1,   1,   1,iBLK))
-  !  zz2 = cHalf*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(nI+1,nJ+1,nK+1,iBLK))
-  !  xxx = cHalf*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(1,1,1,iBLK))
-  !  yyy = cHalf*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(1,1,1,iBLK))
-  !  zzz = cHalf*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(1,1,1,iBLK))
-  !  RR = sqrt( xxx*xxx + yyy*yyy + zzz*zzz )
-  !  minRblk = sqrt((min(abs(xx1),abs(xx2)))**2 + &
-  !       (min(abs(yy1),abs(yy2)))**2 + &
-  !       (min(abs(zz1),abs(zz2)))**2)
-  !
-  !  select case (InitialRefineType)
-  !  case('global_test')
-  !     !
-  !     ! Initial refinement criteria for globalheliosphere
-  !
-  !     !/
-  !     if (lev <= 4) then
-  !        ! Refine all blocks first times through
-  !        refineBlock = .true.
-  !     else
-  !        if (lev <= 9) then
-  !           !Refine the blocks near the body
-  !           critx=(XyzMax_D(1)-XyzMin_D(1))/(2.0**real(lev-1))
-  !           if ( RR < 30. + critx ) then
-  !              refineBlock = .true.
-  !           end if
-  !        else
-  !           ! Refine blocks between radii 100-400AU 
-  !           !testing a coarse grid
-  !           ! i have to move the grid because of the neutrals
-  !           !               !refinement done march 2007 to refine better the heliosheath
-  !           !               if ((minRblk < 300.).and.(xxx<-10.0).and.(minRblk>90.)) then
-  !           if ((minRblk < 400.).and.(xxx<-10.0).and.(minRblk>100.)) then
-  !              !           if ((minRblk < 400.).and.(xxx<-20.0).and.(minRblk>50.)) then
-  !              refineBlock = .true.
-  !           end if
-  !        end if
-  !     endif
-  !     IsFound=.true.
-  !  endselect
-  !end subroutine user_specify_initial_refinement
-  !
-  !!=====================================================================
-
-  subroutine user_amr_criteria(iBLK, UserCriteria, TypeCriteria, IsFound)
-
-    use ModMain
-    use ModAdvance
-    use ModGeometry, ONLY:x_BLK,y_BLK,z_BLK,R_BLK,&
-         dx_BLK,dy_BLK,dz_BLK,true_cell
-    use ModPhysics
-    use ModConst
-    ! 
-    ! Variables required by this user subroutine::
-    !/
-    integer, intent(in):: iBLK
-    logical:: IsInRange
-    logical, intent(out):: IsFound
-    integer:: i,j,k
-
-    real, intent(out):: userCriteria
-    !
-    ! Local variables::
-    !/
-    real:: dsMin,dsMax,dsTwo
-    real:: XCell,YCell,ZCell,RCell,RCenter
-    real:: B0xCell,B0yCell,B0zCell,MinBr,MaxBr
-    real:: BIxCell,BIyCell,BIzCell
-    real, dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn):: Br_D
-    logical,dimension(3)::IsGhostCell_D
-
-    character (len=20),intent(in):: TypeCriteria
-    !-------------------------------------------------------------------
-
-    !
-    ! Find the radial location of the center of the block and
-
-    ! the min/max cell size::
-    !/
-    !    RCenter = cEighth*&
-
-  end subroutine user_amr_criteria
 
   !=====================================================================
 
@@ -883,13 +638,6 @@ contains
     write(*,'(10X,A19,F15.6)')           'SWH_T_dim   [   K]:',SWH_T_dim
     ! fast solar wind
     write(*,*)
-!!$    write(*,'(10X,A19,F15.6,A11,F15.6)') 'SWfast_rho_dim:',SWfast_rho_dim,'SWfast_rho:',SWfast_rho
-!!$    write(*,'(10X,A19,F15.6,A11,F15.6)') 'SWfast_Ux_dim[km/s]:',SWfast_Ux_dim,'SWfast_rho:',SWfast_rho
-!!$    write(*,'(10X,A19,F15.6,A11,F15.6)') 'SWfast_Uy_dim[km/s]:',SWfast_Uy_dim,'SWfast_Uy:',SWfast_Uy 
-!!$    write(*,'(10X,A19,F15.6,A11,F15.6)') 'SWfast_Uz_dim[km/s]:',SWfast_Uz_dim,'SWfast_Uz:',SWfast_Uz 
-!!$    write(*,'(10X,A19,F15.6,A11,F15.6)') 'SWfast_p_dim[nPa]:',SWfast_p_dim,'SWfast_p:',SWfast_p  
-!!$    write(*,'(10X,A19,F15.6)')           'SWfast_a_dim[km/s]:',SWfast_a_dim
-!!$    write(*,'(10X,A19,F15.6)')           'SWfast_T_dim[K]:',SWfast_T_dim
     write(*,*)
     write(*,'(10X,A19,F15.6,A11,F15.6)') 'VLISW_rho_dim[n/cc]:',VLISW_rho_dim,'VLISW_rho:',VLISW_rho 
     write(*,'(10X,A19,F15.6,A11,F15.6)') 'VLISW_Ux_dim[km/s]: ',VLISW_Ux_dim,'VLISW_Ux:',VLISW_Ux
@@ -917,14 +665,13 @@ contains
 
   !=====================================================================
   subroutine user_io_units
-    use ModPhysics 
-    use ModProcMH, ONLY:iProc
-    use ModMain
-    use ModVarIndexes
+
+    use ModPhysics
+    use ModConst, ONLY: cAU, cProtonMass
     !
     character (len=*), parameter :: Name='user_io_units'
-
-    Io2Si_V(UnitX_)           = 215*Rsun                  ! R  
+    !-------------------------------------------------------------------------
+    Io2Si_V(UnitX_)           = cAU                       ! R  
     Io2Si_V(UnitRho_)         = 1.0E+6*cProtonMass        ! Mp/cm^3
     Io2Si_V(UnitN_)           = 1.0E+6                    ! #/cm^3
     Io2Si_V(UnitU_)           = 1.0E+3                    ! km/s
@@ -946,8 +693,10 @@ contains
 
     !  normalization of SWH and VLISW and Neutrals
     VLISW_a_dim    = No2Io_V(UnitU_)*(VLISW_T_dim/SWH_T_dim)
-    VLISW_p_dim    = No2Io_V(UnitP_)*inv_g*(VLISW_rho_dim/SWH_rho_dim)*(VLISW_T_dim/SWH_T_dim)
-    VLISW_B_factor = No2Io_V(UnitB_)*sqrt((VLISW_T_dim/SWH_T_dim)*(VLISW_rho_dim/SWH_rho_dim))
+    VLISW_p_dim    = No2Io_V(UnitP_)*inv_g &
+         *(VLISW_rho_dim/SWH_rho_dim)*(VLISW_T_dim/SWH_T_dim)
+    VLISW_B_factor = No2Io_V(UnitB_)*sqrt((VLISW_T_dim/SWH_T_dim) &
+         *(VLISW_rho_dim/SWH_rho_dim))
 
     VLISW_rho = VLISW_rho_dim*Io2No_V(UnitRho_)
     VLISW_p   = VLISW_p_dim*Io2No_V(UnitP_)
@@ -1024,7 +773,6 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    integer :: i, j, k, iVar
     character (len=*), parameter :: Name='user_set_plot_var'
     !-------------------------------------------------------------------
 
@@ -1052,9 +800,11 @@ contains
     ! following the notation of Pauls et al. (1995) and Zank et al (1996)
     ! The three population of neutrals are the neutrals created by 
     ! charge exchange in different regions of the outer heliosphere
-    ! Neu are the neutrals created inside the Termination Shock (called PopI)
-    ! Ne2 are the neutrals created between the Termination Shock and Heliopause
-    ! Ne3 are the neutrals created beyond the Heliopause (PopIII)
+    !
+    ! Neu are the neutrals the comes from the interstellar medium  (PopI)
+    ! Ne2 are created between the Termination Shock and Heliopause (PopII)
+    ! Ne3 are the neutrals created inside the Termination Shock    (PopIII)
+    !
     ! As an example for Neu the source terms inside the Termination Shock will 
     ! take into account their creations and destruction; 
     ! outside the Termination Shock they will be just destroyed 
@@ -1077,22 +827,20 @@ contains
     ! January 01, 2008 implementing implicit source terms 
     ! January 08, 2008 all source terms for PopI as implicit
     ! January 24, 2008 comments included
+    ! January-June BUGS fixed
     ! 
     !-------------------------------------------------------------------
     use ModProcMH
     use ModPointImplicit, ONLY:  UsePointImplicit, UsePointImplicit_B, &
-         IsPointImplSource, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
+         IsPointImplSource
     use ModMain
     use ModVarIndexes
     use ModAdvance
-    use ModGeometry, ONLY : dx_BLK, dy_BLK, dz_BLK, R_BLK,&
-         body_BLK, Rmin_BLK, vInv_CB
     use ModPhysics
     use ModNumConst
 
     character (len=*), parameter :: Name='user_calc_sources'
     
-    real:: x0,y0,z0,rp
     real :: cth, usqdim, Tproton, Mask
     real :: State_V(nVar)  
 
@@ -1107,11 +855,7 @@ contains
 
     logical:: oktest=.false., oktest_me
 
-    ! to help testing the calc sources for the different populations
-
-    logical :: NeutralsI, NeutralsII, NeutralsIII 
-
-    integer :: i, j, k, jFluid, iDim, iBlock
+    integer :: i, j, k, iBlock, iRegion
 
     !-----------------------------------------------------------------------
     ! Do not provide explicit source term when point-implicit scheme is used
@@ -1119,10 +863,6 @@ contains
     if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
 
     iBlock = GlobalBlk
-
-    NeutralsI=.true.
-    NeutralsII=.true.
-    NeutralsIII=.true.
 
     !  calculating some constants cBoltzmann is J/K 
     
@@ -1132,12 +872,6 @@ contains
 
        ! Extract conservative variables
        State_V = State_VGB(:,i,j,k,globalBLK)
-
-       x0 = x_BLK(i,j,k,iBlock)
-       y0 = y_BLK(i,j,k,iBlock)
-       z0 = z_BLK(i,j,k,iBlock)
-
-       rp =  r_BLK(i,j,k,iBlock)
 
        Ux_I  = State_V(iRhoUx_I)/State_V(iRho_I)
        Uy_I  = State_V(iRhoUy_I)/State_V(iRho_I)
@@ -1173,7 +907,7 @@ contains
        ! No2Si_V(UnitU_) has units of m/s like cstartT so UReldim and UStar 
        ! has units of m/s
 
-       URelSdim_I  = URelS_I*((No2Si_V(UnitU_))**2)
+       URelSdim_I  = URelS_I * No2Si_V(UnitU_)**2
 
        ! UStar_I was slightly different in Liewer et al.. 
        ! I am using Zank et al.'96 UStar has units of m/s
@@ -1211,7 +945,7 @@ contains
        Termexp_I =sqrt((4./cPi)*UThS_I +(64./(9.*cPi))*UThS_I(1)+URelSdim_I) 
        Termepx_I =sqrt((4./cPi)*UThS_I(1)+(64./(9.*cPi))*UThS_I +URelSdim_I) 
 
-       ! Mask is a flag to identify the regions separating where the different
+       ! Mask is used to find in the domain to the regions separating where the different
        ! populations of Neutrals are created. In regions where the 
        ! different populations are not created they are just destroyed by
        ! charge exchange. 
@@ -1225,6 +959,15 @@ contains
        Mask = 0.5*(1.0-sign(1.0,usqdim-24.8))+(1.0-sign(1.0,usqdim-350.0)) &
                + 0.5*(1.0-sign(1.0,Tproton - 1.15E4))
 
+       if(Mask <= 1.0)then 
+            iRegion = 1       
+       endif
+       if (Mask >= 3.0)then 
+            iRegion = 3
+       endif
+       if (Mask < 3.0 .and. Mask > 1.0) then 
+            iRegion = 2
+       endif 
        ! Calculating the terms that enter in the Source terms
        ! The expressions for I0, Jxp, Kxp, Qexp are taken from Zank et al. 1996
        ! For example for population I; Neu:
@@ -1355,7 +1098,7 @@ contains
       ! Here come the explicit source terms
       !
       if(NeutralsI) then      
-         if (Mask >= 3.0) then
+         if (iRegion == 3) then
             Source_VC(NeuEnergy_,i,j,k) = Source_VC(NeuEnergy_,i,j,k)         &
                  + Qexp_I(2) + Kxp_I(3) + Kxp_I(4)
          else
@@ -1366,24 +1109,19 @@ contains
       ! Pop II
       !/
       if(NeutralsII) then
-         if (Mask < 3.0) then
-            if (Mask > 1.0) then
+         if (iRegion == 2) then
                Source_VC(Ne2Energy_,i,j,k) = Source_VC(Ne2Energy_,i,j,k) &
                     + Qexp_I(3) + Kxp_I(2) + Kxp_I(4)
-            else
-               Source_VC(Ne2Energy_,i,j,k) = Source_VC(Ne2Energy_,i,j,k) &
-                    - Kpx_I(3)
-           end if      
          else
                Source_VC(Ne2Energy_,i,j,k) = Source_VC(Ne2Energy_,i,j,k) &
                     - Kpx_I(3)
-         end if
+         end if      
       end if
       !
       ! Pop III
       !/
       if(NeutralsIII) then
-         if (Mask <= 1.0) then
+         if (iRegion == 1) then
             Source_VC(Ne3Energy_,i,j,k) = Source_VC(Ne3Energy_,i,j,k) &
                  + Qexp_I(4) + Kxp_I(2) + Kxp_I(3)
          else
@@ -1429,7 +1167,7 @@ contains
       ! Pop I
       !/
       if(NeutralsI) then
-         if (Mask >= 3.0) then
+         if (iRegion == 3) then
             Source_VC(NeuRho_,i,j,k) = Source_VC(NeuRho_,i,j,k) &
                  + I0xp_I(3) + I0xp_I(4)
             Source_VC(NeuRhoUx_,i,j,k) = Source_VC(NeuRhoUx_,i,j,k)   &
@@ -1445,7 +1183,6 @@ contains
                  - Uy_I(2)*Source_VC(NeuRhoUy_,i,j,k) &
                  - Uz_I(2)*Source_VC(NeuRhoUz_,i,j,k) &
                  + 0.5*(UTotal_I(2)**2)*Source_VC(NeuRho_,i,j,k))         
-   
           else
             Source_VC(NeuRho_,i,j,k) = Source_VC(NeuRho_,i,j,k) &
                  - I0px_I(2)
@@ -1469,8 +1206,7 @@ contains
       ! Pop II
       !/
       if(NeutralsII) then
-         if (Mask < 3.0) then
-            if (Mask > 1.0) then
+         if (iRegion == 2) then
                Source_VC(Ne2Rho_,i,j,k) = Source_VC(Ne2Rho_,i,j,k)  &
                     + I0xp_I(2) + I0xp_I(4)
                Source_VC(Ne2RhoUx_,i,j,k) = Source_VC(Ne2RhoUx_,i,j,k)   &
@@ -1486,7 +1222,7 @@ contains
 !!!                    - Uy_I(3)*Source_VC(Ne2RhoUy_,i,j,k) &
 !!!                    - Uz_I(3)*Source_VC(Ne2RhoUz_,i,j,k) &
 !!!                    + 0.5*(UTotal_I(3)**2)*Source_VC(Ne2Rho_,i,j,k))
-              else
+          else
                Source_VC(Ne2Rho_,i,j,k) = Source_VC(Ne2Rho_,i,j,k) &
                     - I0px_I(3) 
                Source_VC(Ne2RhoUx_,i,j,k) = Source_VC(Ne2RhoUx_,i,j,k) &
@@ -1502,30 +1238,13 @@ contains
 !!!                    - Uy_I(3)*Source_VC(Ne2RhoUy_,i,j,k) &
 !!!                    - Uz_I(3)*Source_VC(Ne2RhoUz_,i,j,k) &
 !!!                    + 0.5*(UTotal_I(3)**2)*Source_VC(Ne2Rho_,i,j,k))
-            end if
-       else
-               Source_VC(Ne2Rho_,i,j,k) = Source_VC(Ne2Rho_,i,j,k) &
-                    - I0px_I(3)
-               Source_VC(Ne2RhoUx_,i,j,k) = Source_VC(Ne2RhoUx_,i,j,k) &
-                    - JpxUx_I(3)
-               Source_VC(Ne2RhoUy_,i,j,k) = Source_VC(Ne2RhoUy_,i,j,k) &
-                    - JpxUy_I(3)
-               Source_VC(Ne2RhoUz_,i,j,k) = Source_VC(Ne2RhoUz_,i,j,k) &
-                    - JpxUz_I(3)
-!!!               Source_VC(Ne2P_,i,j,k) = Source_VC(Ne2P_,i,j,k)     &
-!!$                    + (g-1.)*(3./4.)*(-1.)* I2px_I(3)
-!!!                    + (g-1.)*(Source_VC(Ne2Energy_,i,j,k) &
-!!!                    - Ux_I(3)*Source_VC(Ne2RhoUx_,i,j,k) &
-!!!                    - Uy_I(3)*Source_VC(Ne2RhoUy_,i,j,k) &
-!!!                    - Uz_I(3)*Source_VC(Ne2RhoUz_,i,j,k) &
-!!!                    + 0.5*(UTotal_I(3)**2)*Source_VC(Ne2Rho_,i,j,k))
-         end if
+          end if     
       end if
       !
       ! Pop III
       !/
       if(NeutralsIII) then
-         if (Mask <= 1.0) then
+         if (iRegion == 1) then
             Source_VC(Ne3Rho_,i,j,k) = Source_VC(Ne3Rho_,i,j,k) & 
                  + I0xp_I(2) + I0xp_I(3)
             Source_VC(Ne3RhoUx_,i,j,k) = Source_VC(Ne3RhoUx_,i,j,k)   &
@@ -1541,7 +1260,6 @@ contains
                  - Uy_I(4)*Source_VC(Ne3RhoUy_,i,j,k) &
                  - Uz_I(4)*Source_VC(Ne3RhoUz_,i,j,k) &
                  + 0.5*(UTotal_I(4)**2)*Source_VC(Ne3Rho_,i,j,k))
-
          else
             Source_VC(Ne3Rho_,i,j,k) = Source_VC(Ne3Rho_,i,j,k) &
                  - I0px_I(4) 
