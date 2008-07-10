@@ -122,11 +122,11 @@ program PostProcess
        nBlocksLon, nBlocksLat, nBlocksAlt
   write(*,*) "  nLons,      nLats,      nAlts      : ", nLons, nLats, nAlts
   if (UseGhostCells) then
-     nLonsTotal = nBlocksLon*(nLons-nGhostLons)+nGhostLons
-     write(*,*) nBlocksLon, nLons, nGhostLons
-     nLatsTotal = nBlocksLat*(nLats-nGhostLats)+nGhostLats
-     write(*,*) nBlocksLat, nLats, nGhostLats, nLatsTotal
-     nAltsTotal = nBlocksAlt*(nAlts-nGhostAlts)+nGhostAlts
+     nLonsTotal = nBlocksLon*(nLons-nGhostLons*2)+nGhostLons*2
+!     write(*,*) nBlocksLon, nLons, nGhostLons
+     nLatsTotal = nBlocksLat*(nLats-nGhostLats*2)+nGhostLats*2
+!     write(*,*) nBlocksLat, nLats, nGhostLats, nLatsTotal
+     nAltsTotal = nBlocksAlt*(nAlts-nGhostAlts*2)+nGhostAlts*2
   else
      nLonsTotal = nBlocksLon*nLons
      nLatsTotal = nBlocksLat*nLats
@@ -134,6 +134,7 @@ program PostProcess
   endif
   write(*,*) "  nLonsTotal, nLatsTotal, nAltsTotal : ", &
        nLonsTotal, nLatsTotal, nAltsTotal, " (Predicted Values)"
+
 
   allocate(AllData(nLonsTotal,nLatsTotal,nAltsTotal,nVars))
 
