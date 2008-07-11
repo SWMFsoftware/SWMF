@@ -36,8 +36,7 @@ MODULES = \
         iteration-defaults.o \
         GMRES.o \
         ilu.o \
-	ModProcIM.o \
-	ModHeidiTimeStep.o
+	ModProcIM.o 
 
 OBJ_IONO = \
         iono_conductances.o\
