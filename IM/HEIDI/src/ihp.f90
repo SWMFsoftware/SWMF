@@ -30,15 +30,14 @@ subroutine read_conductance_model(iOutputError)
 
      if (iDebugLevel > 1) &
           write(*,*) 'Reading IHP background conductance model'
-
+    
      call merge_str(IE_NameOfModelDir, ihp_file)
-     
      open(iunit, file = ihp_file, status='old', iostat = ierr)
      if (ierr /= 0) then
         write(6,*) 'Error opening file :',ihp_file
         iOutputError = ecFileNotFound_
      endif
-
+          
      longmx = 30
      latmx = 20
      ndx = 10
@@ -188,7 +187,9 @@ subroutine read_conductance_model(iOutputError)
 
   enddo
 
+
 end subroutine read_conductance_model
+
 
 subroutine get_auroral_conductance(alatd, amlt, hpi, ped, hal, avkev, eflx)
 

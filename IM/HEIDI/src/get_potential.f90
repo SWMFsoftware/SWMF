@@ -35,7 +35,7 @@ subroutine get_potential(iModel, imf_by, imf_bz, sw_v, &
   if (IsFirstTime) then
 
      Lines(1) = "#BACKGROUND"
-     Lines(2) = "../srcData/"
+     Lines(2) = "../src/"
      Lines(3) = "weimer96"
      Lines(4) = "ihp"
      Lines(5) = "idontknow"

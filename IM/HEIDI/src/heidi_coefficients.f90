@@ -384,6 +384,7 @@ SUBROUTINE MAGCONV(I3,NST)
   
   implicit none
   
+
   integer :: ABASE(24),AEPEN(24),IER,j,i,ii,I4,I3,NST,jj,bc_choice
   integer ::L,IOpot,JOpot   !,iproc
   real :: KR,SPJ,CPJ,PJ,DLMAG,Ppc0,Eom,EOJ,EOJ1,NY(4),FAC,CRo

@@ -24,7 +24,6 @@ subroutine read_cond_model_coef
 
      if (DebugLevel > 1) &
           write(*,*) 'Reading IHP background conductance model'
-
      call merge_str(models_dir, ihp_file)
      
      open(iunit, file = ihp_file, status='old', iostat = ierr)

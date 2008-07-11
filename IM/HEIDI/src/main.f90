@@ -14,7 +14,7 @@ program GetIE
   real, dimension(25,1) :: mlts, lats, TempPotential
 
   Lines(1) = "#BACKGROUND"
-  Lines(2) = "../srcData/"
+  Lines(2) = "../src/"
   Lines(3) = "izmem"
   Lines(4) = "ihp"
   Lines(5) = "idontknow"

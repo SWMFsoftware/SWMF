@@ -126,8 +126,8 @@ subroutine IE_Initialize(iOutputError)
   if (iDebugLevel > 1) &
        write(*,*) "==> Conductance Model : ",IE_NameOfAuroralModel
 
-  if (index(IE_NameOfAuroralModel,'ihp') > 0) call read_conductance_model
-  if (index(IE_NameOfAuroralModel,'pem') > 0) call read_conductance_model
+  if (index(IE_NameOfAuroralModel,'ihp') > 0) call read_conductance_model(iOutputError)
+  if (index(IE_NameOfAuroralModel,'pem') > 0) call read_conductance_model(iOutputError)
 
   if (index(IE_NameOfEFieldModel,'amie') > 0) then
 

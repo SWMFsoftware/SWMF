@@ -1,7 +1,7 @@
 ! File name: heidi_setup.f90
 !
 ! Contains: input and array setup routines for HEIDI
-!	READPARA
+!	HEIDI_READ
 !	CONSTANT
 !       BFIELD_SETUP
 !	ARRAYS
@@ -23,10 +23,10 @@
 ! Last Modified: March 2006, Mike Liemohn
 !
 ! **********************************************************************
-!                             READPARA
+!                             HEIDI_READ
 !	Read parameters: DT, TMAX, Species, Storm, .......
 ! **********************************************************************
-SUBROUTINE READPARA
+SUBROUTINE heidi_read
 
   use ModHeidiSize
   use ModHeidiIO
@@ -97,9 +97,9 @@ SUBROUTINE READPARA
   END IF
 
   RETURN
-END SUBROUTINE READPARA
+END SUBROUTINE heidi_read
 !
-! End of subroutine READPARA
+! End of subroutine heidi_read
 !
 
 !***********************************************************************

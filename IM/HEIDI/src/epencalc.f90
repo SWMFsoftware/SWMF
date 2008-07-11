@@ -24,7 +24,7 @@ subroutine epencalc(utime,f107,bc_choice,IMF_By, IMF_Bz, SW_V)
   logical :: IsFirstTime = .true.
 
   debug = .false.
-
+  
   plot_vars(1) = 'minimum'
   plot_form(1) = 'idl'
   time_accurate = .true.
@@ -61,7 +61,7 @@ subroutine epencalc(utime,f107,bc_choice,IMF_By, IMF_Bz, SW_V)
         if (abs(bc_choice) == 1) then
 
            Lines(1) = "#BACKGROUND"
-           Lines(2) = "../srcData/"
+           Lines(2) = "../src/"
            Lines(3) = "weimer96"
            Lines(4) = "ihp"
            Lines(5) = "idontknow"
@@ -94,9 +94,9 @@ subroutine epencalc(utime,f107,bc_choice,IMF_By, IMF_Bz, SW_V)
         endif
 
         call IE_set_inputs(Lines)
-
+        
         call IE_Initialize(iError)
-
+        
         if (iError /=0) then
            write(*,*) "Error in IE_Initialize, called from get_potential"
            return

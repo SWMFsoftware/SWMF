@@ -1,5 +1,6 @@
 #^CFG COPYRIGHT UM
 
+
 SHELL =/bin/sh
 
 default : HEIDI.exe
@@ -16,6 +17,7 @@ MODULES = \
 	ModHeidiDrifts.o\
 	ModHeidiIO.o\
 	ModHeidiWaves.o\
+	ModInit.o\
 	ModSize.o\
 	ModMain.o\
 	ModIonosphere.o\
@@ -33,7 +35,9 @@ MODULES = \
         flop_module.o \
         iteration-defaults.o \
         GMRES.o \
-        ilu.o
+        ilu.o \
+	ModProcIM.o \
+	ModHeidiTimeStep.o
 
 OBJ_IONO = \
         iono_conductances.o\
@@ -44,7 +48,7 @@ OBJ_IONO = \
 	read_amie.o\
 	epencalc.o\
 	convert_time_routines.o\
-	iono_init.o
+	iono_init.o \
 
 OBJECTS_010 = \
 	heidi_setup.o\
@@ -57,7 +61,11 @@ OBJECTS_010 = \
 	recipes.o\
 	pbo.o\
 	wgrdar.o\
-	get_potential.o
+	get_potential.o \
+	ModProcIM.o \
+	heidi_check.o \
+	heidi_init.o \
+	heidi_run.o 
 
 MODULES_IE = \
 	ModConductance.o\
@@ -107,6 +115,7 @@ standalone : main.o
 	${LINK.f90} -o test.exe main.o ${MODULES_IE}$  -L. -lIE ${Lflag1}
 
 #	${LINK.f90} -o test.exe ${MODULES} ${OBJECTS} main.o 
+
 interface: ${IE_LIB} Interface.o
 	${LINK.f90} -o Interface.exe Interface.o ${MODULES_IE} -L. -lIE ${Lflag1}
 
@@ -140,8 +149,12 @@ HEIDI:  LIB
 
 SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
 
+#HEIDI.exe: ${OBJECTS} heidi_main.o
+#	${LINK.f90} -o ${BINDIR}/HEIDI.exe heidi_main.o ${OBJECTS}
+
 HEIDI.exe: ${OBJECTS} heidi_main.o
 	${LINK.f90} -o ${BINDIR}/HEIDI.exe heidi_main.o ${OBJECTS} -L${LIBDIR} -lSHARE ${Lflag1}
+
 
 
 distclean: clean
