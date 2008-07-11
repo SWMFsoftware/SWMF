@@ -215,7 +215,7 @@ Module ModMain
   integer :: lVerbose = 1
 
   ! A space separated list of words, typically names of subroutines.
-  character (len=79) :: test_string=''
+  character (len=100) :: test_string=''
 
   ! Location for test
   integer :: Itest=1, Jtest=1, Ktest=1, BLKtest=1, PROCtest=0, ITERtest=-1
