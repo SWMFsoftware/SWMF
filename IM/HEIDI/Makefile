@@ -48,7 +48,11 @@ test_compile:
 test_rundir:
 	rm -rf ${TESTDIR}
 	make rundir RUNDIR=${TESTDIR}
-	cp input/* ${TESTDIR}
+	cp input/*.in ${TESTDIR}
+	cp input/*.dat ${TESTDIR}
+	cp input/*.glo ${TESTDIR}
+	cp input/*.initial ${TESTDIR}
+	cp input/*.unff ${TESTDIR}
 	cd ${TESTDIR} ;\
 	mkdir test1_ionosphere
 
