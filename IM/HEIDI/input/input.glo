@@ -1,0 +1,62 @@
+20.,120.,60.,00.
+20,24,42,71,24
+.01,.006,1.26,1.E6
+3,4,1,0,0,0,1,13,0
+0,1,0,1
+2002,107,0.0,154.,15.,3.0
+0,0,0,0
+0,7,0,7
+120.,0.,0.03
+1,0,1,0,0,0,1,0,1,0,0,1,1,1,1
+test1
+
+Inputs:
+DT,TMAX,TINT,TIME
+IO,JO,KO,LO
+ELB,SWE,RW,HMIN
+ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,Itherminit
+S(k),k=1,4
+YEAR,DAY,UT,R,AP,KP
+INI(k),k=1,4
+IBC(k),k=1,4
+TINJ,Ab,Eob
+IRES(k), k=1,15
+NAME
+
+Variable list:
+NAME	TYPE	DESCRIPTION
+DT	R	Time step size [s]
+TMAX	R	Maximum time [s]
+TINT	R	Time interval between printouts [s]
+TIME	R	Start time [s]
+IO	I	Number of radial grid points
+JO	I	Number of azimuthal grid points
+KO	I	Number of energy grid points
+LO	I	Number of pitch angle grid points
+ELB	R	Lower energy boundary [keV]
+SWE	R	Width of lowest energy cell [keV]
+RW	R	Growth multiplier of energy cell width, WE(k+1)=WE(k)*RW
+HMIN	R	Altitude of ionosphere-plasmasphere boundary [m]
+ISTORM	I	Kind of storm: 1=major, 2=moderate, 3=test
+IKP	I	=0 Kp=const; =1 Kp-DKP; =2 table; =3 A=0; =4 file
+IPA	I	IPA=0 constant steps in PA, IPA=1 exact loss cone points
+IFAC	I	IFAC=1 for flux output, IFAC=2 for dist. function output
+IST	I	IST=0 for ion runs, =1 PE runs, =2 for PSE runs
+IWPI	I	IWPI=1 for self-consistent wave-particle interactions
+ISW	I	ISW>0 if solar wind data is available (swind.dat)
+Itherminit  I	=1, read DGCPM from file, otherwise 48 h or low activity
+S	I	Ring current specie: 1=e-, 2=H+, 3=He+, 4=O+
+YEAR	I	Calc. year (YEAR..KP are taken from file for INI=2,3)
+DAY	I	Calc. day of year
+UT	R	Universal time [s] (start of calc.)
+R	R	13 month sunspot average
+AP	R	Ap index
+KP	R	Kp index
+INI	I	Indicates which initial condition to use (match to IBC)
+IBC	I	Indicates which boundar condition to use (match to INI)
+TINJ	R	Time between injection BC updates (inject if >0)
+Ab	R	Scaling factor for Maxwellian initial condition (INI=1)
+Eob	R	Characteristic energy for INI=1; keV
+IRES	I	Output options flag array
+NAME	C*5	General name of the output files (suffixes added later)
+
