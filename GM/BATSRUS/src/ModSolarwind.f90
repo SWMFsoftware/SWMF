@@ -43,8 +43,8 @@ module ModSolarwind
   logical :: UseTemperature = .true.
 
   ! Arrays of input data and time
-  real         :: Solarwind_VI(nVar, MaxData)
-  real(Real8_) :: Time_I(MaxData)
+  real,         allocatable :: Solarwind_VI(:, :)
+  real(Real8_), allocatable :: Time_I(:)
 
   ! Coordinate system of input file
   character(len=3) :: NameInputCoord = 'GSM'
@@ -104,6 +104,9 @@ contains
     !--------------------------------------------------------------------------
 
     call set_oktest(NameSub, DoTest, DoTestMe)
+
+    if(.not.allocated(Solarwind_VI)) &
+         allocate(Solarwind_VI(nVar, MaxData), Time_I(MaxData))
 
     ! Set defaults
     UseZeroBx = .false.
