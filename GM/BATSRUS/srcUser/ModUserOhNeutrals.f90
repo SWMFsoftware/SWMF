@@ -13,7 +13,7 @@
 !final solution
 !May 30-31
 !June30
-!July 03
+!July 10
 !==============================================================================
 module ModUser
 
@@ -32,6 +32,7 @@ module ModUser
        IMPLEMENTED3  => user_normalization,             &
        IMPLEMENTED4  => user_set_outerbcs,              &
        IMPLEMENTED5  => user_set_ics,                   &
+       IMPLEMENTED6  => user_initial_perturbation,      &
        IMPLEMENTED8  => user_write_progress,            & 
        IMPLEMENTED9  => user_io_units,                  &
        IMPLEMENTED10 => user_set_plot_var,              &
@@ -41,14 +42,14 @@ module ModUser
 
   include 'user_module.h' !list of public methods
 
-  real,              parameter :: VersionUserModule = 2.1
-  ! I am calling Version Module = 2.0 the version with 3-fluids
+  real,              parameter :: VersionUserModule = 2.11
   character (len=*), parameter :: &
        NameUserModule = 'Outer Heliosphere with 3 neutrals, Opher & Toth'
 
-  logical :: NeutralsI   = .false.
-  logical :: NeutralsII  = .false.
-  logical :: NeutralsIII = .false. 
+  ! Named indexes for fluids
+  integer, parameter :: Ion_ = 1, Neu_ = 2, Ne2_ = 3, Ne3_ = 4 
+
+  logical :: UseNeutral_I(Neu_:Ne3_) = .false.
 
   real :: OmegaSun   = 0.0  ! normalized angular speed of Sun
   real :: ParkerTilt = 0.0  ! Bphi/Br at the equator at r=rBody
@@ -147,6 +148,16 @@ module ModUser
        UyNeutralsISW_t ,  &
        UzNeutralsISW_t
 
+  ! Velocity [km/s] and temperature [K] limits and widths for Pop I and II
+  ! The width is for the masking function that goes from 0 to 1
+  real :: TempPop1LimitDim = 1e5, dTempPop1LimitDim=100.0
+  real :: MachPop2Limit    = 1.5, dMachPop2Limit=-1.0
+
+  ! Various factors in initial and boundary conditions
+  real :: RhoNeuFactor = 1.0,   uNeuFactor = 1.0
+  real :: RhoNe2Factor = 1.e-3, uNe2Factor = 1.0
+  real :: RhoNe3Factor = 0.01,  uNe3Factor = 1.0
+
 contains
 
   !=========================================================================
@@ -201,10 +212,21 @@ contains
           call read_var('mNeutralsmp',mNeutralsmp)
           ! This is a flag to define how many population of Neutrals to run
        case("#NEUPOPULATIONS")
-          call read_var('NeutralsI' ,NeutralsI)
-          call read_var('NeutralsII' ,NeutralsII)
-          call read_var('NeutralsIII' ,NeutralsIII)
-
+          call read_var('UseNeu_', UseNeutral_I(Neu_))
+          call read_var('UseNe2_', UseNeutral_I(Ne2_))
+          call read_var('UseNe3_', UseNeutral_I(Ne3_))
+       case("#REGIONS")
+          call read_var('TempPop1LimitDim',  TempPop1LimitDim)
+          call read_var('dTempPop1LimitDim', dTempPop1LimitDim)
+          call read_var('MachPop2Limit',     MachPop2Limit)
+          call read_var('dMachPop2Limit',    dMachPop2Limit)
+       case("#FACTORS")
+          call read_var('RhoNeuFactor', RhoNeuFactor)
+          call read_var('uNeuFactor'  , uNeuFactor)
+          call read_var('RhoNe2Factor', RhoNeuFactor)
+          call read_var('uNe2Factor'  , uNe2Factor)
+          call read_var('RhoNe3Factor', RhoNeuFactor)
+          call read_var('uNe3Factor'  , uNe3Factor)
        case default
           if(iProc==0) call stop_mpi( &
                'read_inputs: unrecognized command: '//NameCommand)
@@ -316,8 +338,8 @@ contains
     pSolarWind  = SWH_p + PmagEquator -  Pmag
 
     ! Apply boundary conditions for ions
-    VarsGhostFace_V(Rho_) = SWH_rho
-    VarsGhostFace_V(p_)   = pSolarWind
+    VarsGhostFace_V(Rho_)    = SWH_rho
+    VarsGhostFace_V(p_)      = pSolarWind
     VarsGhostFace_V(Ux_:Uz_) = matmul(XyzSph_DD, Vsph_D)
     VarsGhostFace_V(Bx_:Bz_) = matmul(XyzSph_DD, Bsph_D)
 
@@ -325,30 +347,30 @@ contains
     !
     ! Pop I is going through the inner BCs
 
-    VarsGhostFace_V(NeuRho_) = RhoNeutralsISW !*0.9
-    VarsGhostFace_V(NeuUx_)  = UxNeutralsISW
-    VarsGhostFace_V(NeuUy_)  = UyNeutralsISW
-    VarsGhostFace_V(NeuUz_)  = UzNeutralsISW
-    VarsGhostFace_V(NeuP_)   = PNeutralsISW   !*0.9
+    VarsGhostFace_V(NeuRho_) = RhoNeutralsISW * RhoNeuFactor
+    VarsGhostFace_V(NeuUx_)  = UxNeutralsISW  * uNeuFactor
+    VarsGhostFace_V(NeuUy_)  = UyNeutralsISW  * uNeuFactor
+    VarsGhostFace_V(NeuUz_)  = UzNeutralsISW  * uNeuFactor
+    VarsGhostFace_V(NeuP_)   = pNeutralsISW   * RhoNeuFactor
 
     ! PopII leaves the domain at a supersonic velocity 
     ! (50km/s while for their temperature 1.E5K their C_s=30km/s)
-    ! For the transient case when it flows inward, use 0.001*ion density
+    ! For the transient case when it flows inward, we use a fraction of ions
 
     if( sum(VarsTrueFace_V(Ne2Ux_:Ne2Uz_)*FaceCoords_D) > 0.0)then
-       VarsGhostFace_V(Ne2Rho_)       = 1.E-3*RhoNeutralsISW
-       VarsGhostFace_V(Ne2Ux_:Ne2Uz_) = VarsGhostFace_V(Ux_:Uz_)
-       VarsGhostFace_V(Ne2P_)         = 1.E-3*VarsGhostFace_V(p_)
+       VarsGhostFace_V(Ne2Rho_)       = VarsGhostFace_V(Rho_)    *RhoNe2Factor
+       VarsGhostFace_V(Ne2P_)         = VarsGhostFace_V(p_)      *RhoNe2Factor
+       VarsGhostFace_V(Ne2Ux_:Ne2Uz_) = VarsGhostFace_V(Ux_:Uz_) *uNe2Factor
     else
        VarsGhostFace_V(Ne2Rho_:Ne2P_) = VarsTrueFace_V(Ne2Rho_:Ne2P_)
     end if
 
     ! Pop III has the velocity and temperature of the ions at inner boundary
-    ! the density is taken to be 10% of the ions
+    ! the density is taken to be a fraction of the ions
 
-    VarsGhostFace_V(Ne3Rho_)       = 0.1*VarsGhostFace_V(rho_)
-    VarsGhostFace_V(Ne3P_)         = 0.1*VarsGhostFace_V(p_)
-    VarsGhostFace_V(Ne3Ux_:Ne3Uz_) = VarsGhostFace_V(Ux_:Uz_)
+    VarsGhostFace_V(Ne3Rho_)       = VarsGhostFace_V(rho_)    *RhoNe3Factor
+    VarsGhostFace_V(Ne3P_)         = VarsGhostFace_V(p_)      *RhoNe3Factor
+    VarsGhostFace_V(Ne3Ux_:Ne3Uz_) = VarsGhostFace_V(Ux_:Uz_) *uNe3Factor
 
     if(DoTestMe)then
        write(*,*) NameSub,' FaceCoord=', FaceCoords_D
@@ -615,6 +637,34 @@ contains
   end subroutine user_set_ics
 
   !=====================================================================
+  subroutine user_initial_perturbation
+
+    use ModEnergy, only: calc_energy
+
+    ! Set Pop II to be the same state as the ions with smaller density
+    integer:: iBlock
+
+    character (len=*), parameter :: NameSub = 'user_initial_perturbation'
+    !-------------------------------------------------------------------
+    do iBlock = 1, nBlock
+
+       if( UnusedBlk(iBlock) ) CYCLE
+
+       State_VGB(Ne2Rho_,:,:,:,iBlock) = RhoNe2Factor * &
+            State_VGB(Rho_,:,:,:,iBlock)
+
+       State_VGB(Ne2RhoUx_:Ne2RhoUz_,:,:,:,iBlock) = RhoNe2Factor*uNe2Factor* &
+            State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock)
+
+       State_VGB(Ne2P_,:,:,:,iBlock) = RhoNe2Factor * &
+            State_VGB(p_,:,:,:,iBlock)
+
+       call calc_energy(-1, nI+2, -1, nJ+2, -1, nK+2, iBlock, Ne2_, Ne2_)
+    end do
+
+  end subroutine user_initial_perturbation
+
+  !=====================================================================
 
   subroutine user_write_progress
     use ModMain
@@ -772,18 +822,30 @@ contains
     character(len=*), intent(inout):: NameTecUnit
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
-
+    
+    real    :: Mask
+    integer :: i, j, k, iFluid
     character (len=*), parameter :: Name='user_set_plot_var'
     !-------------------------------------------------------------------
 
     UsePlotVarBody = .true.
     PlotVarBody    = 0.0
 
+    IsFound = .true.
     select case(NameVar)
     case('srho')
        NameTecVar = 'Srho'
        PlotVar_G(1:nI,1:nJ,1:nK) = Source_VC(NeuRho_,:,:,:)
-       IsFound = .true.
+    case('fluid')
+       do k=-1, nK+1; do j=-1, nJ+1; do i=-1, nI+1
+          call select_region(i, j, k, iBlock, iFluid, Mask)
+          PlotVar_G(i,j,k) = iFluid
+       end do; end do; end do
+    case('mask')
+       do k=-1, nK+1; do j=-1, nJ+1; do i=-1, nI+1
+          call select_region(i, j, k, iBlock, iFluid, Mask)
+          PlotVar_G(i,j,k) = Mask
+       end do; end do; end do
     case default
        IsFound = .false.
     end select
@@ -840,23 +902,25 @@ contains
     use ModNumConst
 
     character (len=*), parameter :: Name='user_calc_sources'
-    
-    real :: cth, usqdim, Tproton, Mask
+
+    real :: cth
     real :: State_V(nVar)  
 
     real, dimension(nFluid) :: &
-         Ux_I, Uy_I, Uz_I, UTotal_I, UTotalDim_I, Temp_I, &
+         Ux_I, Uy_I, Uz_I, U2_I, Temp_I, &
          UThS_I, URelS_I, URelSdim_I, UStar_I, Sigma_I, Rate_I, &
          Termpx_I, Termxp_I, Termexp_I, Termepx_I, &
          I0xp_I, I0px_I, I1xp_I, I1px_I, I2xp_I, I2px_I, &
          JxpUx_I, JxpUy_I, JxpUz_I, JpxUx_I, JpxUy_I, JpxUz_I, &
-         QmxpUx_I, QmxpUy_I, QmxpUz_I, Kxp_I, Kpx_I, Qexp_I, Qepx_I, &
-         QmpxUx_I, QmpxUy_I, QmpxUz_I
+         Kxp_I, Kpx_I, Qepx_I, QmpxUx_I, QmpxUy_I, QmpxUz_I
 
-    logical:: oktest=.false., oktest_me
+    logical:: UseSourceNe2P = .true., UseEnergySource = .true.
 
-    integer :: i, j, k, iBlock, iRegion
+    integer :: i, j, k, iBlock, iFluidProduced
+    real    :: Mask
 
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'user_calc_sources'
     !-----------------------------------------------------------------------
     ! Do not provide explicit source term when point-implicit scheme is used
     ! IsPointImplSource is true only when called from ModPointImplicit
@@ -864,24 +928,27 @@ contains
 
     iBlock = GlobalBlk
 
+    if(iBlock == BLKtest .and. iProc == PROCtest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest = .false.; DoTestMe = .false.
+    endif
+
     !  calculating some constants cBoltzmann is J/K 
-    
+
     cth = 2.0*cBoltzmann/mNeutrals
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
        ! Extract conservative variables
-       State_V = State_VGB(:,i,j,k,globalBLK)
+       State_V = State_VGB(:, i, j, k, iBlock)
 
        Ux_I  = State_V(iRhoUx_I)/State_V(iRho_I)
        Uy_I  = State_V(iRhoUy_I)/State_V(iRho_I)
        Uz_I  = State_V(iRhoUz_I)/State_V(iRho_I)
 
-       ! Total velocity of the ionized and three population of neutrals; 
-       UTotal_I  = sqrt(Ux_I**2 + Uy_I**2 + Uz_I**2)
-
-       ! units of usqdim is km/s
-       UTotalDim_I  = UTotal_I*No2Si_V(UnitU_)*1.E-3    
+       ! Velocity square for the ionized and three population of neutrals; 
+       U2_I  = Ux_I**2 + Uy_I**2 + Uz_I**2
 
        ! Temperature for the ionized and three population of neutrals (K)
        ! Temp_I(1) is the temperature of the ionized component
@@ -889,8 +956,8 @@ contains
        ! see Liewer & Brackbill '97 
        ! T = p/rho 
 
-       Temp_I    = (State_V(iP_I)/State_V(iRho_I))*No2Si_V(UnitTemperature_)
-       Temp_I(1) = 0.5*Temp_I(1)
+       Temp_I       = (State_V(iP_I)/State_V(iRho_I))*No2Si_V(UnitTemperature_)
+       Temp_I(Ion_) = 0.5*Temp_I(Ion_)
 
        ! Thermal speed (squared) for ionized and three populations of neutrals
        ! UThS units are (m/s)^2
@@ -914,7 +981,6 @@ contains
 
        UStar_I  = sqrt(URelSdim_I + (4./cPi)*(UThS_I +UThS_I(1)))
 
-
        ! Maher and Tinsley cross section Sigma 
        ! Linde et al. 1998 has a misprint where there is a + instead of a -
        ! Baranov et al. 1991 uses URelSdim instead of UStar; 
@@ -922,7 +988,7 @@ contains
        ! Problem when URelSdim=0         
        ! UStar has to have units of cm/s so the factor 100 is to pass m to cm
        ! Sigma has units of units of m^2
-       
+
        Sigma_I =((1.64E-7 - (6.95E-9)*log(UStar_I*100.))**2)*(1.E-4)
 
        ! Calculating Rate  = \nu * nH * mp where nH is the density of neutrals
@@ -932,7 +998,7 @@ contains
        ! Rate has no units (m^2*m/s*s*m-3 )
 
        Rate_I =Sigma_I*State_V(Rho_)*State_V(iRho_I)*UStar_I  &
-              *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
+            *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
        Rate_I(1)=0.
        ! Calculating some common terms
        ! Tempx and Termxp have units of (m/s)^-1
@@ -943,31 +1009,11 @@ contains
        ! Termepx has units of m/s
 
        Termexp_I =sqrt((4./cPi)*UThS_I +(64./(9.*cPi))*UThS_I(1)+URelSdim_I) 
-       Termepx_I =sqrt((4./cPi)*UThS_I(1)+(64./(9.*cPi))*UThS_I +URelSdim_I) 
+       Termepx_I =sqrt((4./cPi)*UThS_I(1)+(64./(9.*cPi))*UThS_I +URelSdim_I)
 
-       ! Mask is used to find in the domain to the regions separating where the different
-       ! populations of Neutrals are created. In regions where the 
-       ! different populations are not created they are just destroyed by
-       ! charge exchange. 
-       ! Mask = 1 inside the Termination Shock; = 2 between the 
-       ! Termination Shock and the Heliopause; = 3 beyond the Heliopause
+       ! Figure out which neutral population is produced at this point
+       call select_region(i, j, k, iBlock, iFluidProduced, Mask) 
 
-       usqdim= UTotalDim_I(1)
-       Tproton=Temp_I(1)
-       Mask = 0.0
-
-       Mask = 0.5*(1.0-sign(1.0,usqdim-24.8))+(1.0-sign(1.0,usqdim-350.0)) &
-               + 0.5*(1.0-sign(1.0,Tproton - 1.15E4))
-
-       if(Mask <= 1.0)then 
-            iRegion = 1       
-       endif
-       if (Mask >= 3.0)then 
-            iRegion = 3
-       endif
-       if (Mask < 3.0 .and. Mask > 1.0) then 
-            iRegion = 2
-       endif 
        ! Calculating the terms that enter in the Source terms
        ! The expressions for I0, Jxp, Kxp, Qexp are taken from Zank et al. 1996
        ! For example for population I; Neu:
@@ -1007,288 +1053,161 @@ contains
        JpxUy_I  = Uy_I*Rate_I  + (Uy_I(1)-Uy_I)*I1px_I 
        JpxUz_I  = Uz_I*Rate_I  + (Uz_I(1)-Uz_I)*I1px_I 
 
-       QmxpUx_I =JxpUx_I -JpxUx_I 
-       QmxpUy_I =JxpUy_I -JpxUy_I 
-       QmxpUz_I =JxpUz_I -JpxUz_I 
+       QmpxUx_I = JpxUx_I - JxpUx_I
+       QmpxUy_I = JpxUy_I - JxpUy_I
+       QmpxUz_I = JpxUz_I - JxpUz_I
 
-       QmpxUx_I = -QmxpUx_I 
-       QmpxUy_I = -QmxpUy_I 
-       QmpxUz_I = -QmxpUz_I    
-
-       Kxp_I = 0.5*(UTotal_I(1)**2)*Rate_I  + (3./4.)*I2xp_I   &
+       Kxp_I = 0.5*U2_I(1)*Rate_I  + (3./4.)*I2xp_I   &
             + (Ux_I(1)*(Ux_I-Ux_I(1)) &
             +  Uy_I(1)*(Uy_I-Uy_I(1)) &
             +  Uz_I(1)*(Uz_I-Uz_I(1)))*I1xp_I
-       
-       Kpx_I = 0.5*(UTotal_I**2)*Rate_I  + (3./4.)*I2px_I   &
+
+       Kpx_I = 0.5*U2_I*Rate_I  + (3./4.)*I2px_I   &
             + (Ux_I*(Ux_I(1)-Ux_I) &
             +  Uy_I*(Uy_I(1)-Uy_I) &
             +  Uz_I*(Uz_I(1)-Uz_I))*I1px_I 
 
-       Qexp_I = Kxp_I -Kpx_I 
-       Qepx_I = -Qexp_I  
+       Qepx_I = Kpx_I - Kxp_I
 
-
-       ! The energy source is used in the implicit for pressure source, 
-       ! and there are no explicit sources other than that. 
-       ! So call both subroutines no matter what.
-       call user_expl_source 
-       call user_impl_source 
+       ! Calculate the source terms for this cell
+       call calc_source_cell
 
     end do; end do; end do
-
-    if(iBlock==BLKtest .and. iProc==PROCtest)then
-       call set_oktest('user_calc_sources',oktest,oktest_me)
-    else
-       oktest=.false.; oktest_me=.false.
-    endif
-
-    if(oktest_me)then
-       write(*,*) 'Source_VC(Rho_,TestCell)',Source_VC(Rho_,Itest,Jtest,Ktest)
-       write(*,*) 'Source_VC(RhoUx_,TestCell)',Source_VC(RhoUx_,Itest,Jtest,Ktest)
-       write(*,*) 'Source_VC(RhoUy_,TestCell)',Source_VC(RhoUy_,Itest,Jtest,Ktest)
-       write(*,*) 'Source_VC(RhoUz_,TestCell)',Source_VC(RhoUz_,Itest,Jtest,Ktest)
-       write(*,*) 'Source_VC(P_,TestCell)',Source_VC(P_,Itest,Jtest,Ktest)
-       write(*,*) 'Source_VC(Energy_,TestCell)',Source_VC(Energy_,Itest,Jtest,Ktest)
-       write(*,*) 'Source_VC(NeuRho_,TestCell)',Source_VC(NeuRho_,Itest,Jtest,Ktest)
-       write(*,*) 'Source_VC(NeuRhoUx_,TestCell)',Source_VC(NeuRhoUx_,Itest,Jtest,Ktest) 
-       write(*,*) 'Source_VC(NeuRhoUy_,TestCell)',Source_VC(NeuRhoUy_,Itest,Jtest,Ktest)
-       write(*,*) 'Source_VC(NeuRhoUz_,TestCell)',Source_VC(NeuRhoUz_,Itest,Jtest,Ktest)        
-       write(*,*) 'Source_VC(NeuP_,TestCell)',Source_VC(NeuP_,Itest,Jtest,Ktest)
-       write(*,*) 'Source_VC(NeuEnergy_,TestCell)',Source_VC(NeuEnergy_,Itest,Jtest,Ktest)
-       write(*,*) 'Source_VC(Ne2Rho_,TestCell)',Source_VC(Ne2Rho_,Itest,Jtest,Ktest)
-       write(*,*) 'Source_VC(Ne2RhoUx_,TestCell)',Source_VC(Ne2RhoUx_,Itest,Jtest,Ktest)
-       write(*,*) 'Source_VC(Ne2RhoUy_,TestCell)',Source_VC(Ne2RhoUy_,Itest,Jtest,Ktest)
-       write(*,*) 'Source_VC(Ne2RhoUz_,TestCell)',Source_VC(Ne2RhoUz_,Itest,Jtest,Ktest)
-       write(*,*) 'Source_VC(Ne2P_,TestCell)',Source_VC(Ne2P_,Itest,Jtest,Ktest)
-       write(*,*) 'Source_VC(Ne2Energy_,TestCell)',Source_VC(Ne2Energy_,Itest,Jtest,Ktest)
-       write(*,*) 'Source_VC(Ne3Rho_,TestCell)',Source_VC(Ne3Rho_,Itest,Jtest,Ktest)
-       write(*,*) 'Source_VC(Ne3RhoUx_,TestCell)',Source_VC(Ne3RhoUx_,Itest,Jtest,Ktest) 
-       write(*,*) 'Source_VC(Ne3RhoUy_,TestCell)',Source_VC(Ne3RhoUy_,Itest,Jtest,Ktest)
-       write(*,*) 'Source_VC(Ne3RhoUz_,TestCell)',Source_VC(Ne3RhoUz_,Itest,Jtest,Ktest)        
-       write(*,*) 'Source_VC(Ne3P_,TestCell)',Source_VC(Ne3P_,Itest,Jtest,Ktest)
-       write(*,*) 'Source_VC(Ne3Energy_,TestCell)',Source_VC(Ne3Energy_,Itest,Jtest,Ktest)   
-       write(*,*) 'Mask',Mask
-       write(*,*) 'Temp_I(1),Temp_I(2),Temp_(3),Temp_(4)',Temp_I(1),Temp_I(2),Temp_I(3),Temp_I(4)
-       write(*,*) 'Rate_I(1),Rate_I(2),Rate_I(3),Rate_I(4)',Rate_I(1),Rate_I(2),Rate_I(3),Rate_I(4)
-       write(*,*) 'UStar_I(1),UStar_I(2),UStar_I(3),UStar_I(4)',UStar_I(1),UStar_I(2),UStar_I(3),UStar_I(4)
-       write(*,*) 'UThS_I',UThS_I
-       write(*,*) 'URelSdim_I',URelSdim_I
-       write(*,*) 'UTotal_I',UTotal_I
-       write(*,*) 'I1xp_I',I1xp_I
-       write(*,*) 'I1px_I',I1px_I
-       write(*,*) 'I2xp_I',I2xp_I
-       write(*,*) 'I2px_I',I2px_I
-       write(*,*) 'JxpUx_I',JxpUx_I
-       write(*,*) 'JpxUx_I',JpxUx_I
-       write(*,*) 'QmxpUx_I',QmxpUx_I
-       write(*,*) 'QmpxUx_I',QmpxUx_I
-       write(*,*) 'Kxp_I',Kxp_I
-       write(*,*) 'Kpx_I',Kpx_I
-       write(*,*) 'Qexp_I',Qexp_I
-       write(*,*) 'Qepx_I',Qepx_I 
-   end if
 
   contains
 
     !==========================================================================
-    subroutine user_expl_source
-      ! Add explicit source here
+    subroutine calc_source_cell
 
-      ! Here come the explicit source terms
-      !
-      if(NeutralsI) then      
-         if (iRegion == 3) then
-            Source_VC(NeuEnergy_,i,j,k) = Source_VC(NeuEnergy_,i,j,k)         &
-                 + Qexp_I(2) + Kxp_I(3) + Kxp_I(4)
+      ! Calculate source temrs for one cell. The pressures source is
+      ! S(p) = (gamma-1)[S(e) - u.S(rhou) + 0.5 u**2 S(rho)]
+
+      real:: Source_V(nVar + nFluid)
+      integer:: iVar
+      !---------------------------------------------------------------------
+
+      Source_V = 0.0
+
+      do iFluid = NeU_, Ne3_
+         if(.not.UseNeutral_I(iFluid)) CYCLE
+         call select_fluid
+         if (iFluid == iFluidProduced) then
+            Source_V(iRho)    = sum(I0xp_I(Neu_:Ne3_))  - I0xp_I(iFluid)
+            Source_V(iRhoUx)  = sum(JxpUx_I(Neu_:Ne3_)) - JpxUx_I(iFluid)
+            Source_V(iRhoUy)  = sum(JxpUy_I(Neu_:Ne3_)) - JpxUy_I(iFluid)
+            Source_V(iRhoUz)  = sum(JxpUz_I(Neu_:Ne3_)) - JpxUz_I(iFluid)
+            Source_V(iEnergy) = sum(Kxp_I(Neu_:Ne3_))   - Kpx_I(iFluid)
          else
-            Source_VC(NeuEnergy_,i,j,k) = Source_VC(NeuEnergy_,i,j,k) &
-                 - Kpx_I(2)
+            Source_V(iRho)    = - I0px_I(iFluid)
+            Source_V(iRhoUx)  = - JpxUx_I(iFluid)
+            Source_V(iRhoUy)  = - JpxUy_I(iFluid)
+            Source_V(iRhoUz)  = - JpxUz_I(iFluid)
+            Source_V(iEnergy) = - Kpx_I(iFluid)
          end if
-      end if
-      ! Pop II
-      !/
-      if(NeutralsII) then
-         if (iRegion == 2) then
-               Source_VC(Ne2Energy_,i,j,k) = Source_VC(Ne2Energy_,i,j,k) &
-                    + Qexp_I(3) + Kxp_I(2) + Kxp_I(4)
-         else
-               Source_VC(Ne2Energy_,i,j,k) = Source_VC(Ne2Energy_,i,j,k) &
-                    - Kpx_I(3)
-         end if      
-      end if
-      !
-      ! Pop III
-      !/
-      if(NeutralsIII) then
-         if (iRegion == 1) then
-            Source_VC(Ne3Energy_,i,j,k) = Source_VC(Ne3Energy_,i,j,k) &
-                 + Qexp_I(4) + Kxp_I(2) + Kxp_I(3)
-         else
-            Source_VC(Ne3Energy_,i,j,k) = Source_VC(Ne3Energy_,i,j,k) &
-                 - Kpx_I(4)
-         end if
-      end if
-      !
-      ! Source terms for Plasma
-      !/     
-      !correcting the source terms (see Gombosi 2000)
-
-      Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k)         &
-           + Qepx_I(2)+ Qepx_I(3) + Qepx_I(4)
-
-    end subroutine user_expl_source
-    !==========================================================================
-    subroutine user_impl_source
+         Source_V(iP) = (g-1)* ( Source_V(iEnergy) &
+              - Ux_I(iFluid)*Source_V(iRhoUx) &
+              - Uy_I(iFluid)*Source_V(iRhoUy) &
+              - Uz_I(iFluid)*Source_V(iRhoUz) &
+              + 0.5*U2_I(iFluid)*Source_V(iRho) )
+      end do
 
       !\
       ! Source terms for Plasma
-      ! writing the source P as SP = [SE -uxS(rhoux)-uyS(rhoUy) - uzS(rhoUz) +0.5u**2 S(rho)]*(gamma-1)
-      !/
-      ! Source terms for the pressure should be taken from the source terms of the energy
+      !/ 
+      Source_V(RhoUx_) = sum( QmpxUx_I(Neu_:Ne3_) )
+      Source_V(RhoUy_) = sum( QmpxUy_I(Neu_:Ne3_) )
+      Source_V(RhoUz_) = sum( QmpxUz_I(Neu_:Ne3_) )
+      Source_V(Energy_)= sum( Qepx_I(Neu_:Ne3_) )
 
-      Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)         &
-           + QmpxUx_I(2) + QmpxUx_I(3) + QmpxUx_I(4)
-      Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)         &
-           + QmpxUy_I(2) + QmpxUy_I(3) + QmpxUy_I(4)
-      Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)         & 
-           + QmpxUz_I(2) + QmpxUz_I(3) + QmpxUz_I(4)
-      Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k)     &
-!!$              +(g-1.)*(3./4.)*(I2px_I(2) - I2xp_I(2) &
-!!$                           +  I2px_I(3) - I2xp_I(3) &
-!!$                           +  I2px_I(4) - I2xp_I(4) )
-           + (g-1.0)*(Source_VC(Energy_,i,j,k) &
-           - Ux_I(1)*Source_VC(RhoUx_,i,j,k) &
-           - Uy_I(1)*Source_VC(RhoUy_,i,j,k) &
-           - Uz_I(1)*Source_VC(RhoUz_,i,j,k)) 
+      Source_V(p_) = (g-1)* ( Source_V(Energy_) &
+           - Ux_I(Ion_)*Source_V(RhoUx_) &
+           - Uy_I(Ion_)*Source_V(RhoUy_) &
+           - Uz_I(Ion_)*Source_V(RhoUz_) ) 
 
-! lines for testing
+      Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Mask*Source_V
 
-      ! Pop I
-      !/
-      if(NeutralsI) then
-         if (iRegion == 3) then
-            Source_VC(NeuRho_,i,j,k) = Source_VC(NeuRho_,i,j,k) &
-                 + I0xp_I(3) + I0xp_I(4)
-            Source_VC(NeuRhoUx_,i,j,k) = Source_VC(NeuRhoUx_,i,j,k)   &
-                 + QmxpUx_I(2) + JxpUx_I(3) + JxpUx_I(4)
-            Source_VC(NeuRhoUy_,i,j,k) = Source_VC(NeuRhoUy_,i,j,k)   &
-                 + QmxpUy_I(2) + JxpUy_I(3) + JxpUy_I(4)
-            Source_VC(NeuRhoUz_,i,j,k) = Source_VC(NeuRhoUz_,i,j,k)   & 
-                 + QmxpUz_I(2) + JxpUz_I(3) + JxpUz_I(4)
-            Source_VC(NeuP_,i,j,k) = Source_VC(NeuP_,i,j,k)     &
-!!$                 + (g-1.)*(3./4.)*( I2xp_I(2)+ I2xp_I(3)+ I2xp_I(4)- I2px_I(2) )           
-                 + (g-1.)*(Source_VC(NeuEnergy_,i,j,k) &
-                 - Ux_I(2)*Source_VC(NeuRhoUx_,i,j,k) &
-                 - Uy_I(2)*Source_VC(NeuRhoUy_,i,j,k) &
-                 - Uz_I(2)*Source_VC(NeuRhoUz_,i,j,k) &
-                 + 0.5*(UTotal_I(2)**2)*Source_VC(NeuRho_,i,j,k))         
-          else
-            Source_VC(NeuRho_,i,j,k) = Source_VC(NeuRho_,i,j,k) &
-                 - I0px_I(2)
-            Source_VC(NeuRhoUx_,i,j,k) = Source_VC(NeuRhoUx_,i,j,k) &
-                 - JpxUx_I(2)
-            Source_VC(NeuRhoUy_,i,j,k) = Source_VC(NeuRhoUy_,i,j,k) &
-                 - JpxUy_I(2)
-            Source_VC(NeuRhoUz_,i,j,k) = Source_VC(NeuRhoUz_,i,j,k) &
-                 - JpxUz_I(2)
-            Source_VC(NeuP_,i,j,k) = Source_VC(NeuP_,i,j,k)     &
-!!$                    + (g-1.)*(3./4.)*(-1.)* I2px_I(2)
-                 + (g-1.)*(Source_VC(NeuEnergy_,i,j,k) &
-                 - Ux_I(2)*Source_VC(NeuRhoUx_,i,j,k) &
-                 - Uy_I(2)*Source_VC(NeuRhoUy_,i,j,k) &
-                 - Uz_I(2)*Source_VC(NeuRhoUz_,i,j,k) &
-                 + 0.5*(UTotal_I(2)**2)*Source_VC(NeuRho_,i,j,k))
+      if(DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest)then
 
-         end if
-      end if
-      !
-      ! Pop II
-      !/
-      if(NeutralsII) then
-         if (iRegion == 2) then
-               Source_VC(Ne2Rho_,i,j,k) = Source_VC(Ne2Rho_,i,j,k)  &
-                    + I0xp_I(2) + I0xp_I(4)
-               Source_VC(Ne2RhoUx_,i,j,k) = Source_VC(Ne2RhoUx_,i,j,k)   &
-                    + QmxpUx_I(3) + JxpUx_I(2) + JxpUx_I(4)
-               Source_VC(Ne2RhoUy_,i,j,k) = Source_VC(Ne2RhoUy_,i,j,k)   &
-                    + QmxpUy_I(3) + JxpUy_I(2) + JxpUy_I(4)
-               Source_VC(Ne2RhoUz_,i,j,k) = Source_VC(Ne2RhoUz_,i,j,k)   & 
-                    + QmxpUz_I(3) + JxpUz_I(2) + JxpUz_I(4)
-!!!               Source_VC(Ne2P_,i,j,k) = Source_VC(Ne2P_,i,j,k)     &
-!!$                    + (g-1.)*(3./4.)*( I2xp_I(3)+ I2xp_I(2)+  I2xp_I(4)- I2px_I(3) )      
-!!!                    + (g-1.)*(Source_VC(Ne2Energy_,i,j,k) &
-!!!                    - Ux_I(3)*Source_VC(Ne2RhoUx_,i,j,k) &
-!!!                    - Uy_I(3)*Source_VC(Ne2RhoUy_,i,j,k) &
-!!!                    - Uz_I(3)*Source_VC(Ne2RhoUz_,i,j,k) &
-!!!                    + 0.5*(UTotal_I(3)**2)*Source_VC(Ne2Rho_,i,j,k))
-          else
-               Source_VC(Ne2Rho_,i,j,k) = Source_VC(Ne2Rho_,i,j,k) &
-                    - I0px_I(3) 
-               Source_VC(Ne2RhoUx_,i,j,k) = Source_VC(Ne2RhoUx_,i,j,k) &
-                    - JpxUx_I(3)
-               Source_VC(Ne2RhoUy_,i,j,k) = Source_VC(Ne2RhoUy_,i,j,k) &
-                    - JpxUy_I(3)
-               Source_VC(Ne2RhoUz_,i,j,k) = Source_VC(Ne2RhoUz_,i,j,k) &
-                    - JpxUz_I(3)
-!!!               Source_VC(Ne2P_,i,j,k) = Source_VC(Ne2P_,i,j,k)     &
-!!$                    + (g-1.)*(3./4.)*(-1.)* I2px_I(3)
-!!!                    + (g-1.)*(Source_VC(Ne2Energy_,i,j,k) &
-!!!                    - Ux_I(3)*Source_VC(Ne2RhoUx_,i,j,k) &
-!!!                    - Uy_I(3)*Source_VC(Ne2RhoUy_,i,j,k) &
-!!!                    - Uz_I(3)*Source_VC(Ne2RhoUz_,i,j,k) &
-!!!                    + 0.5*(UTotal_I(3)**2)*Source_VC(Ne2Rho_,i,j,k))
-          end if     
-      end if
-      !
-      ! Pop III
-      !/
-      if(NeutralsIII) then
-         if (iRegion == 1) then
-            Source_VC(Ne3Rho_,i,j,k) = Source_VC(Ne3Rho_,i,j,k) & 
-                 + I0xp_I(2) + I0xp_I(3)
-            Source_VC(Ne3RhoUx_,i,j,k) = Source_VC(Ne3RhoUx_,i,j,k)   &
-                 + QmxpUx_I(4) + JxpUx_I(3) + JxpUx_I(2)
-            Source_VC(Ne3RhoUy_,i,j,k) = Source_VC(Ne3RhoUy_,i,j,k)   &
-                 + QmxpUy_I(4) + JxpUy_I(3) + JxpUy_I(2)
-            Source_VC(Ne3RhoUz_,i,j,k) = Source_VC(Ne3RhoUz_,i,j,k)   & 
-                 + QmxpUz_I(4) + JxpUz_I(3) + JxpUz_I(2)
-            Source_VC(Ne3P_,i,j,k) = Source_VC(Ne3P_,i,j,k)     &
-!!$                 + (g-1.)*(3./4.)*( I2xp_I(4)+ I2xp_I(3)+ I2xp_I(2)- I2px_I(4) )
-                 + (g-1.)*(Source_VC(Ne3Energy_,i,j,k) &
-                 - Ux_I(4)*Source_VC(Ne3RhoUx_,i,j,k) &
-                 - Uy_I(4)*Source_VC(Ne3RhoUy_,i,j,k) &
-                 - Uz_I(4)*Source_VC(Ne3RhoUz_,i,j,k) &
-                 + 0.5*(UTotal_I(4)**2)*Source_VC(Ne3Rho_,i,j,k))
-         else
-            Source_VC(Ne3Rho_,i,j,k) = Source_VC(Ne3Rho_,i,j,k) &
-                 - I0px_I(4) 
-            Source_VC(Ne3RhoUx_,i,j,k) = Source_VC(Ne3RhoUx_,i,j,k)  &
-                 - JpxUx_I(4)
-            Source_VC(Ne3RhoUy_,i,j,k) = Source_VC(Ne3RhoUy_,i,j,k)  &
-                 - JpxUy_I(4)
-            Source_VC(Ne3RhoUz_,i,j,k) = Source_VC(Ne3RhoUz_,i,j,k)  &
-                 - JpxUz_I(4)
-            Source_VC(Ne3P_,i,j,k) = Source_VC(Ne3P_,i,j,k)     &
-!!$                 + (g-1.)*(3./4.)*(-1.)* I2px_I(4)
-                 + (g-1.)*(Source_VC(Ne3Energy_,i,j,k) &
-                 - Ux_I(4)*Source_VC(Ne3RhoUx_,i,j,k) &
-                 - Uy_I(4)*Source_VC(Ne3RhoUy_,i,j,k) &
-                 - Uz_I(4)*Source_VC(Ne3RhoUz_,i,j,k) &
-                 + 0.5*(UTotal_I(4)**2)*Source_VC(Ne3Rho_,i,j,k))
-         end if
+         Source_V = Source_VC(:,i,j,k)
+
+         write(*,*) NameSub, ' iFluidProduced, Mask=',iFluidProduced, Mask
+         do iVar = 1, nVar + nFLuid
+            write(*,*) ' Source(',NameVar_V(iVar),')=',Source_V(iVar)
+         end do
+         write(*,*) ' Temp_I    ', Temp_I
+         write(*,*) ' Rate_I    ', Rate_I
+         write(*,*) ' UStar_I   ', UStar_I
+         write(*,*) ' UTh_I     ', sqrt(UThS_I)
+         write(*,*) ' URelDim_I ', sqrt(URelSdim_I)
+         write(*,*) ' uDim_I    ', sqrt(U2_I)*No2Io_V(UnitU_)
+         write(*,*) ' I1xp_I    ', I1xp_I
+         write(*,*) ' I1px_I    ', I1px_I
+         write(*,*) ' I2xp_I    ', I2xp_I
+         write(*,*) ' I2px_I    ', I2px_I
+         write(*,*) ' JxpUx_I   ', JxpUx_I
+         write(*,*) ' JpxUx_I   ', JpxUx_I
+         write(*,*) ' QmpxUx_I  ', QmpxUx_I
+         write(*,*) ' Kxp_I     ', Kxp_I
+         write(*,*) ' Kpx_I     ', Kpx_I
+         write(*,*) ' Qepx_I    ', Qepx_I 
       end if
 
-    end subroutine user_impl_source
+    end subroutine calc_source_cell
 
   end subroutine user_calc_sources
 
   !============================================================================
 
+  subroutine select_region(i, j, k, iBlock, iFluidProduced, Mask)
+
+    ! select which neutral fluid is produced in this region and 
+    ! apply some mask function near the edges of regions
+
+    integer, intent(in):: i, j, k, iBlock
+    integer, intent(out):: iFluidProduced
+    real,    intent(out):: Mask
+
+    real    :: InvRho, u2, p, Mach2, uIonDim, TempDim
+    !------------------------------------------------------------------------
+    ! Ion velocity in km/s
+    InvRho = 1.0/State_VGB(Rho_,i,j,k,iBlock)
+    p      = State_VGB(p_,i,j,k,iBlock)
+    U2     = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)*InvRho**2
+
+!    uIonDim = uIon * No2Io_V(UnitU_)
+
+    Mach2      = U2/(g*p*InvRho)
+    TempDim = InvRho*p*No2Si_V(UnitTemperature_)
+
+    ! Apply full source except near the boundaries between regions
+    Mask = 1.0
+    if( TempPop1LimitDim > TempDim )then
+       ! Outside the heliopause
+       iFluidProduced = Neu_
+       if(dTempPop1LimitDim > 0.0) Mask = min( Mask, &
+            (TempPop1LimitDim - TempDim)/dTempPop1LimitDim )
+    elseif( MachPop2Limit**2 > Mach2 )then
+       ! Heliosheath
+       iFluidProduced = Ne2_
+       if(dTempPop1LimitDim > 0.0) Mask = min( Mask, &
+            (TempDim - TempPop1LimitDim)/dTempPop1LimitDim )
+       if(dMachPop2Limit > 0.0) Mask = min( Mask, &
+            (MachPop2Limit - sqrt(Mach2))/DMachPop2Limit )
+    else
+       ! Inside termination shock
+       iFluidProduced = Ne3_
+       if(dMachPop2Limit > 0.0) Mask = min( Mask, &
+            (sqrt(Mach2) - MachPop2Limit)/DMachPop2Limit )
+    end if
+
+  end subroutine select_region
+
+  !============================================================================
+
   subroutine user_init_point_implicit
 
-    use ModVarIndexes, ONLY: Rho_,RhoUx_,RhoUy_,RhoUz_,P_,NeuRho_,NeuRhoUx_,NeuRhoUy_,&
-
+    use ModVarIndexes, ONLY: &
+         Rho_,RhoUx_,RhoUy_,RhoUz_,P_,NeuRho_,NeuRhoUx_,NeuRhoUy_,&
          NeuRhoUz_,NeuP_,Ne2Rho_,Ne2RhoUx_,Ne2RhoUy_,Ne2RhoUz_,Ne2P_,&
          Ne3Rho_,Ne3RhoUx_,Ne3RhoUy_,Ne3RhoUz_,Ne3P_
 
@@ -1304,16 +1223,18 @@ contains
 
     allocate(iVarPointImpl_I(20))
 
-    iVarPointImpl_I = (/Rho_,RhoUx_, RhoUy_, RhoUz_, P_, NeuRho_,NeuRhoUx_ ,&
-         NeuRhoUy_, NeuRhoUz_ , NeuP_, Ne2Rho_,Ne2RhoUx_, Ne2RhoUy_, Ne2RhoUz_ ,&
-         Ne2P_, Ne3Rho_,Ne3RhoUx_, Ne3RhoUy_, Ne3RhoUz_, Ne3P_/)
+    iVarPointImpl_I = (/Rho_,RhoUx_, RhoUy_, RhoUz_, P_, &
+         NeuRho_, NeuRhoUx_, NeuRhoUy_, NeuRhoUz_, NeuP_, &
+         Ne2Rho_, Ne2RhoUx_, Ne2RhoUy_, Ne2RhoUz_, Ne2P_, &
+         Ne3Rho_, Ne3RhoUx_, Ne3RhoUy_, Ne3RhoUz_, Ne3P_/)
 
-    !Because the second and third populations of neutrals have initially very small values I'm
-    !setting EpsPointImpl_V to be small for their variables
-    EpsPointImpl_V(Ne2Rho_:Ne3P_)=1.e-11
+    ! Because the second and third populations of neutrals have initially 
+    ! very small values I'm
+    ! setting EpsPointImpl_V to be small for these variables ??? !!!
+    EpsPointImpl_V(Ne2Rho_:Ne3P_) = 1.e-11
 
     ! Tell the point implicit scheme if dS/dU will be set analytically
-    ! If this is set to true the DsDu_VVC matrix has to be set below.
+    ! If this is set to true the DsDu_VVC matrix has to be set.
 
     IsPointImplMatrixSet = .false.
 
