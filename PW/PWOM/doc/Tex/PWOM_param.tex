@@ -2,10 +2,10 @@
 %\documentclass{article}
 %\begin{document}
 
-\section{pw.input \label{section:param.in}}
+\section{PARAM.in \label{section:param.in}}
 
 The input parameters for the PWOM are read from the 
-{\tt pw.input} file which must be located in the run directory.
+{\tt PARAM.in} file which must be located in the run directory.
 
 We refer to the lines starting with a \# character as commands.
 
@@ -37,17 +37,17 @@ parameter file.
 
 \subsection{Commands, Parameters, and Comments \label{section:commands}}
 
-Discuss commands here
-
-Here are some examples of valid commands, parameters, and comments :
-
+The commands in the PARAM.in file are necessary for instucting the PWOM 
+to carry out the simulation. The following is an example of a parameter.
 \begin{verbatim}
 
 #TIMEACCURATE
 F                       DoTimeAccurate
 
 \end{verbatim}
-
+In this example, the parameter is \#TIMEACCURATE and the command is 
+DoTimeAccurate.
+  
 \subsection{The Order of Commands \label{section:order}}
 
 In essence, the order of parameter commands within a

@@ -4,8 +4,6 @@
 This document descibes the installation, configuration, execution and 
 usage of the Polar Wind Outflow Model (PWOM).
 
-Software usage.
-
 \section{Acknowledgments}
 
 The PWOM was developed at the Center for Space Environment Modeling
@@ -278,9 +276,9 @@ run}:
   cd run
 \end{verbatim}
 In order to run the PWOM you must have the input files: 
-pw.input. The pw.input 
+PARAM.in. The PARAM.in 
 file contains the detailed commands for controlling what you want the
-code to do during the run.  The default pw.input 
+code to do during the run.  The default PARAM.in 
 file in the run directory  suitable to perform a simple test.
 
 To run the PWOM interactively on four processors:
@@ -306,7 +304,7 @@ software failure (e.g. the machine crashes) or because the
 queue limits are exceeded. In such a case the run can be continued from
 the last saved state of PWOM. 
 
-The restart files are saved at the frequency determined in the pw.input file.
+The restart files are saved at the frequency determined in the PARAM.in file.
 Normally the restart files are saved into the PW/restartOUT directory. 
 The files in that directory need only be copied into the PW/restartIN 
 directory inorder to prepare a restarted run.

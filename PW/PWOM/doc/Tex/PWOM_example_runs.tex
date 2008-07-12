@@ -1,6 +1,6 @@
 In this chapter we will provide some examples of how to actually use the 
 PWOM. After reading this chapter you should be familiar enough with the 
-use of the model to setup your own simple runs. Three standalone examples are 
+use of the model to setup your own simple runs. Three stand-alone examples are 
 provided: 
 Two for Earth and one for Saturn. The tests will require two separate 
 configurations and compilations. One for each planet.
@@ -12,13 +12,114 @@ is provided. This example assumes that you already have the SWMF installed.
 \section{Earth Examples}
 
 \subsection{Configuration and Compilation for the Earth Examples}
+The default configuration of the PWOM is for the planet Earth. To check the 
+current configuration, type
+\begin{verbatim}
+  Config.pl
+\end{verbatim}
+from the PWOM directory. If the PWOM is not currently configured for Earth, 
+then type
+\begin{verbatim}
+  Config.pl -Earth
+\end{verbatim}
+and the planet configuration will be changed to Earth. After changing the 
+configuration to Earth, the code will need to be recompiled. This can be 
+accomplished by simply typing
+\begin{verbatim}
+  make
+\end{verbatim}
+To carry out the examples in the following subsections, a run directory is 
+needed. The creation of a run directory can be accomplished by typing
+\begin{verbatim}
+  make rundir
+\end{verbatim}
+This command creates a directory called 'run'. Changing into the newly created 
+run directory, we are now prepared to carry out the example simulations
 
 \subsection{Example 1: Single field line simulation and visualization}
+In the run directory there is a PARAM.in file that is set up for 4 
+field lines. Changing the \#FIELDLINES command from 4 to 1 allows us to 
+simulate a single field line. The initial solution for the field line 
+is given in 
+\begin{verbatim}
+  restartIN/restart_iline0001.dat
+\end{verbatim}
+The location of the field line can be changed by editing the restart file 
+above. The second line of said file gives the latitude and longitude of the 
+field line foot point. Modifying these numbers will change the location of the 
+field line. The code can then be run by typing. 
+\begin{verbatim}
+  ./PWOM.exe
+\end{verbatim}
+The result is given in the plots directory and the restart file is given in 
+the restartOUT directory.
 
+The results can be visualized using the IDL routines described in the 
+BATS-R-US user manual. Simply change into the plots directory and you will see 
+several files labeled as
+\begin{verbatim}
+  plots_iline*.out
+\end{verbatim}
+Where the star refers to the line number. Entering IDL you can then visualize 
+the solution using the 
+\begin{verbatim}
+  .r getpict
+  .r plotfunc
+\end{verbatim}
+commands as described in the BATS-R-US manual. 
 \subsection{Example 2: Multi field line simulation and visualization}
+To carry out a run with a multiple field lines, the first thing that 
+needs to be done, is to edit the PARAM.in file. Change the \#FIELDLINES 
+command 
+from 1 to 125. We then need initial solutions for each field line. Type
+\begin{verbatim}
+  cp ../Scripts/CreateRestart.pl restartIN/
+  cp ../Scripts/PARAMFILE restartIN/
+\end{verbatim}
+from the run directory. Change directories into the restartIN directory and 
+type
+\begin{verbatim}
+  CreateRestart.pl PARAMFILE
+\end{verbatim}
+Returning to the PWOM directory, we are now prepared to carry out a multi field 
+line simulation. Simply type 
+\begin{verbatim}
+  ./PWOM.exe
+\end{verbatim}
+or use mpirun to execute the code on as many processors as you desire (up to 
+the number of field lines).
+
+Each individual field line can be visualized as before, but sometimes a 
+horizontal slice is desired. To visualize a 2D horizontal slice change into 
+the plots directory. Then type 
+\begin{verbatim}
+  ../Scripts/PostProcessTec.pl
+  ../Scripts/CreateMacro.pl
+\end{verbatim}
+At each command you will be prompted for the altitude slice of interest. 
+There should now be 2D Tecplot files and a corresponding Tecplot 
+macro file called Macro.mcr. Now just open up Tecplot and run the macro.
 
 \section{Saturn Example}
-
-\subsection{Configuration and Compilation for the Earth Examples}
+Return to the PWOM directory. To change the planet configuration to Saturn, 
+simply type
+\begin{verbatim}
+  Config.pl -Saturn
+\end{verbatim}
+The code must then be recompiled. To do this, type 
+\begin{verbatim}
+  make
+\end{verbatim}
 
 \subsection{Example 3: Single field line simulation}
+Move the old run directory out of the way as follows:
+\begin{verbatim}
+  mv run run_earth
+\end{verbatim}
+Then create a new run directory by typing
+\begin{verbatim}
+  make rundir
+\end{verbatim}
+Then change into the run directory. Everything should now be prepared 
+for a Saturn simulation. Carry out the simulation as before. The visualization 
+is then the same as before. 
