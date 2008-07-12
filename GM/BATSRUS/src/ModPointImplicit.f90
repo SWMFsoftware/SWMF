@@ -54,13 +54,13 @@ module ModPointImplicit
 
   private ! except
 
-  logical, public :: UsePointImplicit = UseMultiIon  ! Use point implicit scheme?
-  logical, public :: UsePointImplicit_B(nBLK) = UseMultiIon
+  logical, public :: UsePointImplicit = UseMultiIon ! Use point impl scheme?
+  logical, public :: UsePointImplicit_B(nBLK) = UseMultiIon ! per block
   integer, public, allocatable :: &
        iVarPointImpl_I(:)                        ! Indexes of point impl. vars
   logical, public :: IsPointImplSource=.false.   ! Ask for implicit source
-  logical, public :: IsPointImplMatrixSet=.false.! Is the dS/dU matrix set
-                                                 ! analytically?
+  logical, public :: IsPointImplMatrixSet=.false.! Is dS/dU matrix analytic?
+  logical, public :: IsPointImplPerturbed=.false.! Is the state perturbed?
   real, public    :: BetaPointImpl = 1.0         ! Coeff. of implicit part: 
                                                  ! beta=0.5 second order
                                                  ! beta=1.0 first order
@@ -188,6 +188,9 @@ contains
     call calc_point_impl_source
 
     if(.not.IsPointImplMatrixSet)then
+       ! Let the source subroutine know that the state is perturbed
+       IsPointImplPerturbed = .true.
+
        ! Save unperturbed source
        Source0_VC = Source_VC(1:nVar,:,:,:)
 
@@ -237,6 +240,8 @@ contains
 
        ! Restore unperturbed source
        Source_VC(1:nVar,:,:,:) = Source0_VC
+
+       IsPointImplPerturbed = .false.
     end if
 
     if(DoTestMe)then
