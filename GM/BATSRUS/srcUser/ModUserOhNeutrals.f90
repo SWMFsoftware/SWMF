@@ -158,6 +158,9 @@ module ModUser
   real :: RhoNe2Factor = 1.e-3, uNe2Factor = 1.0
   real :: RhoNe3Factor = 0.01,  uNe3Factor = 1.0
 
+  integer :: iFluidProduced_C(nI, nJ, nK)
+  real    :: Mask_C(nI, nJ, nK)
+
 contains
 
   !=========================================================================
@@ -223,9 +226,9 @@ contains
        case("#FACTORS")
           call read_var('RhoNeuFactor', RhoNeuFactor)
           call read_var('uNeuFactor'  , uNeuFactor)
-          call read_var('RhoNe2Factor', RhoNeuFactor)
+          call read_var('RhoNe2Factor', RhoNe2Factor)
           call read_var('uNe2Factor'  , uNe2Factor)
-          call read_var('RhoNe3Factor', RhoNeuFactor)
+          call read_var('RhoNe3Factor', RhoNe3Factor)
           call read_var('uNe3Factor'  , uNe3Factor)
        case default
           if(iProc==0) call stop_mpi( &
@@ -823,8 +826,6 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
     
-    real    :: Mask
-    integer :: i, j, k, iFluid
     character (len=*), parameter :: Name='user_set_plot_var'
     !-------------------------------------------------------------------
 
@@ -837,15 +838,11 @@ contains
        NameTecVar = 'Srho'
        PlotVar_G(1:nI,1:nJ,1:nK) = Source_VC(NeuRho_,:,:,:)
     case('fluid')
-       do k=-1, nK+1; do j=-1, nJ+1; do i=-1, nI+1
-          call select_region(i, j, k, iBlock, iFluid, Mask)
-          PlotVar_G(i,j,k) = iFluid
-       end do; end do; end do
+       call select_region(iBlock)
+       PlotVar_G(1:nI,1:nJ,1:nK) = iFluidProduced_C
     case('mask')
-       do k=-1, nK+1; do j=-1, nJ+1; do i=-1, nI+1
-          call select_region(i, j, k, iBlock, iFluid, Mask)
-          PlotVar_G(i,j,k) = Mask
-       end do; end do; end do
+       call select_region(iBlock)
+       PlotVar_G(1:nI,1:nJ,1:nK) = Mask_C
     case default
        IsFound = .false.
     end select
@@ -894,7 +891,7 @@ contains
     !-------------------------------------------------------------------
     use ModProcMH
     use ModPointImplicit, ONLY:  UsePointImplicit, UsePointImplicit_B, &
-         IsPointImplSource
+         IsPointImplSource, IsPointImplPerturbed
     use ModMain
     use ModVarIndexes
     use ModAdvance
@@ -916,8 +913,7 @@ contains
 
     logical:: UseSourceNe2P = .true., UseEnergySource = .true.
 
-    integer :: i, j, k, iBlock, iFluidProduced
-    real    :: Mask
+    integer :: i, j, k, iBlock
 
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'user_calc_sources'
@@ -937,6 +933,10 @@ contains
     !  calculating some constants cBoltzmann is J/K 
 
     cth = 2.0*cBoltzmann/mNeutrals
+
+
+    ! Figure out which neutral population is produced at this point
+    if(.not.IsPointImplPerturbed) call select_region(iBlock) 
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
@@ -1010,9 +1010,6 @@ contains
 
        Termexp_I =sqrt((4./cPi)*UThS_I +(64./(9.*cPi))*UThS_I(1)+URelSdim_I) 
        Termepx_I =sqrt((4./cPi)*UThS_I(1)+(64./(9.*cPi))*UThS_I +URelSdim_I)
-
-       ! Figure out which neutral population is produced at this point
-       call select_region(i, j, k, iBlock, iFluidProduced, Mask) 
 
        ! Calculating the terms that enter in the Source terms
        ! The expressions for I0, Jxp, Kxp, Qexp are taken from Zank et al. 1996
@@ -1091,7 +1088,7 @@ contains
       do iFluid = NeU_, Ne3_
          if(.not.UseNeutral_I(iFluid)) CYCLE
          call select_fluid
-         if (iFluid == iFluidProduced) then
+         if (iFluid == iFluidProduced_C(i,j,k)) then
             Source_V(iRho)    = sum(I0xp_I(Neu_:Ne3_))  - I0xp_I(iFluid)
             Source_V(iRhoUx)  = sum(JxpUx_I(Neu_:Ne3_)) - JpxUx_I(iFluid)
             Source_V(iRhoUy)  = sum(JxpUy_I(Neu_:Ne3_)) - JpxUy_I(iFluid)
@@ -1124,13 +1121,14 @@ contains
            - Uy_I(Ion_)*Source_V(RhoUy_) &
            - Uz_I(Ion_)*Source_V(RhoUz_) ) 
 
-      Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Mask*Source_V
+      Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Mask_C(i,j,k)*Source_V
 
       if(DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest)then
 
          Source_V = Source_VC(:,i,j,k)
 
-         write(*,*) NameSub, ' iFluidProduced, Mask=',iFluidProduced, Mask
+         write(*,*) NameSub, ' iFluidProduced, Mask=', &
+              iFluidProduced_C(i,j,k), Mask_C(i,j,k)
          do iVar = 1, nVar + nFLuid
             write(*,*) ' Source(',NameVar_V(iVar),')=',Source_V(iVar)
          end do
@@ -1158,47 +1156,54 @@ contains
 
   !============================================================================
 
-  subroutine select_region(i, j, k, iBlock, iFluidProduced, Mask)
+  subroutine select_region(iBlock)
 
-    ! select which neutral fluid is produced in this region and 
-    ! apply some mask function near the edges of regions
+    ! set the global variables iFluidProduced_C and Mask_C
+    ! to select which neutral fluid is produced in each cell of the block
+    ! and apply some mask function near the edges of the regions if desired
 
-    integer, intent(in):: i, j, k, iBlock
-    integer, intent(out):: iFluidProduced
-    real,    intent(out):: Mask
+    integer, intent(in):: iBlock
 
-    real    :: InvRho, u2, p, Mach2, uIonDim, TempDim
+    integer :: i, j, k, iFluidProduced
+    real    :: InvRho, u2, p, Mach2, TempDim, Mask
     !------------------------------------------------------------------------
-    ! Ion velocity in km/s
-    InvRho = 1.0/State_VGB(Rho_,i,j,k,iBlock)
-    p      = State_VGB(p_,i,j,k,iBlock)
-    U2     = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)*InvRho**2
+    do k=1, nK; do j=1, nJ; do i=1, nI
+       InvRho = 1.0/State_VGB(Rho_,i,j,k,iBlock)
+       p      = State_VGB(p_,i,j,k,iBlock)
+       U2     = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)*InvRho**2
+       
+       ! Square of Mach number
+       Mach2      = U2/(g*p*InvRho)
 
-!    uIonDim = uIon * No2Io_V(UnitU_)
+       ! Temperature in Kelvins
+       TempDim = InvRho*p*No2Si_V(UnitTemperature_)
 
-    Mach2      = U2/(g*p*InvRho)
-    TempDim = InvRho*p*No2Si_V(UnitTemperature_)
+       ! Apply full source except near the boundaries between regions
+       Mask = 1.0
+       if( TempPop1LimitDim > TempDim )then
+          ! Outside the heliopause
+          iFluidProduced = Neu_
+          if(dTempPop1LimitDim > 0.0) Mask = min( Mask, &
+               (TempPop1LimitDim - TempDim)/dTempPop1LimitDim )
+       elseif( MachPop2Limit**2 > Mach2 )then
+          ! Heliosheath
+          iFluidProduced = Ne2_
+          if(dTempPop1LimitDim > 0.0) Mask = min( Mask, &
+               (TempDim - TempPop1LimitDim)/dTempPop1LimitDim )
+          if(dMachPop2Limit > 0.0) Mask = min( Mask, &
+               (MachPop2Limit - sqrt(Mach2))/DMachPop2Limit )
+       else
+          ! Inside termination shock
+          iFluidProduced = Ne3_
+          if(dMachPop2Limit > 0.0) Mask = min( Mask, &
+               (sqrt(Mach2) - MachPop2Limit)/DMachPop2Limit )
+       end if
 
-    ! Apply full source except near the boundaries between regions
-    Mask = 1.0
-    if( TempPop1LimitDim > TempDim )then
-       ! Outside the heliopause
-       iFluidProduced = Neu_
-       if(dTempPop1LimitDim > 0.0) Mask = min( Mask, &
-            (TempPop1LimitDim - TempDim)/dTempPop1LimitDim )
-    elseif( MachPop2Limit**2 > Mach2 )then
-       ! Heliosheath
-       iFluidProduced = Ne2_
-       if(dTempPop1LimitDim > 0.0) Mask = min( Mask, &
-            (TempDim - TempPop1LimitDim)/dTempPop1LimitDim )
-       if(dMachPop2Limit > 0.0) Mask = min( Mask, &
-            (MachPop2Limit - sqrt(Mach2))/DMachPop2Limit )
-    else
-       ! Inside termination shock
-       iFluidProduced = Ne3_
-       if(dMachPop2Limit > 0.0) Mask = min( Mask, &
-            (sqrt(Mach2) - MachPop2Limit)/DMachPop2Limit )
-    end if
+       ! Store results
+       iFluidProduced_C(i,j,k) = iFluidProduced
+       Mask_C(i,j,k)           = Mask
+
+    end do; end do; end do
 
   end subroutine select_region
 
