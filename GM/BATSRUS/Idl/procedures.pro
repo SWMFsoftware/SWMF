@@ -711,7 +711,7 @@ pro readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
    endif else begin
       if plotmode eq 'plot' then plotmode=''
       print,'2D plotmode: shade/surface/cont/tv/polar/velovect/vector/stream'
-      print,'2D +options: bar,body,fill,grid,irr,label,mesh,over,white'
+      print,'2D +options: bar,body,fill,grid,irr,label,log,mesh,over,white'
       askstr,'plotmode(s)                ',plotmode,doask
    endelse
    askstr,'plottitle(s) (e.g. B [G];J)',plottitle,doask
@@ -1562,9 +1562,6 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
 
    for ifunc=0,nfunc-1 do begin
 
-      !p.title=plottitles(ifunc)
-      if !p.title eq 'default' then !p.title=funcs(ifunc)
-
       plotmod=plotmodes(ifunc)
 
       ; stream2 --> stream
@@ -1632,6 +1629,15 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
           !p.multi(0) = !p.multi(0)+1
           if !p.multi(0) ge !p.multi(1)*!p.multi(2) then !p.multi(0)=0
       endif
+
+      i=strpos(plotmod,'log')
+      if i ge 0 then begin
+          plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+3)
+          logarithm=1
+      endif else logaritm=0
+
+      !p.title=plottitles(ifunc)
+      if !p.title eq 'default' then !p.title=funcs(ifunc)
 
       ; Calculate the next p.multi(0) explicitly
       if !p.multi(0) gt 0 then multi0=!p.multi(0)-1 $
@@ -1728,6 +1734,14 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
 
       f_min=fmin(ifunc)
       f_max=fmax(ifunc)
+
+      if logarithm and f_min gt 0 and min(f) gt 0 then begin
+          f     = alog10(f)
+          f_min = alog10(f_min)
+          f_max = alog10(f_max)
+          if plottitles(ifunc) eq 'default' then !p.title = 'log '+!p.title
+      endif
+
       if f_max eq f_min then begin
          f_max=f_max+1
          f_min=f_min-1
