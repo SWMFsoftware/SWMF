@@ -22,7 +22,7 @@ module ModUser
   use ModPhysics
   use ModSetOuterBC
   use ModAdvance,  ONLY : State_VGB
-  use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK
+  use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, r_BLK, true_cell
   use ModVarIndexes
   use ModProcMH
   use ModMultiFluid
@@ -49,17 +49,16 @@ module ModUser
   ! Named indexes for fluids
   integer, parameter :: Ion_ = 1, Neu_ = 2, Ne2_ = 3, Ne3_ = 4 
 
-  logical :: UseNeutral_I(Neu_:Ne3_) = .false.
+  logical :: UseSource_I(Ion_:Ne3_) = .true.
 
   real :: OmegaSun   = 0.0  ! normalized angular speed of Sun
   real :: ParkerTilt = 0.0  ! Bphi/Br at the equator at r=rBody
 
   ! SWH variables.
   !/
-  real ::      SWH_T_dim=0.0  , &
-       SWH_a_dim=0.0  , &
+  real :: SWH_a_dim=0.0  , &
        SWH_rho=0.0, SWH_rho_dim=0.0, &
-       SWH_p=0.0  , SWH_p_dim=0.0   , &
+       SWH_p=0.0  , SWH_T_dim  =0.0, &
        SWH_Ux=0.0 , SWH_Ux_dim=0.0 , &
        SWH_Uy=0.0 , SWH_Uy_dim=0.0 , &
        SWH_Uz=0.0 , SWH_Uz_dim=0.0 , &
@@ -150,7 +149,8 @@ module ModUser
 
   ! Velocity [km/s] and temperature [K] limits and widths for Pop I and II
   ! The width is for the masking function that goes from 0 to 1
-  real :: TempPop1LimitDim = 1e5, dTempPop1LimitDim=100.0
+  real :: TempPop1LimitDim = 1e5, dTempPop1LimitDim=-1.0
+  real :: uPop1LimitDim    = 100.0, duPop1LimitDim=-1.0
   real :: MachPop2Limit    = 1.5, dMachPop2Limit=-1.0
 
   ! Various factors in initial and boundary conditions
@@ -158,7 +158,7 @@ module ModUser
   real :: RhoNe2Factor = 1.e-3, uNe2Factor = 1.0
   real :: RhoNe3Factor = 0.01,  uNe3Factor = 1.0
 
-  integer :: iFluidProduced_C(nI, nJ, nK)
+  integer :: iFluidProduced_GB(-1:nI+2, -1:nJ+2, -1:nK+2, MaxBlock)
   real    :: Mask_C(nI, nJ, nK)
 
 contains
@@ -214,13 +214,16 @@ contains
           call read_var('UzNeutralsISW_dim' ,UzNeutralsISW_dim)
           call read_var('mNeutralsmp',mNeutralsmp)
           ! This is a flag to define how many population of Neutrals to run
-       case("#NEUPOPULATIONS")
-          call read_var('UseNeu_', UseNeutral_I(Neu_))
-          call read_var('UseNe2_', UseNeutral_I(Ne2_))
-          call read_var('UseNe3_', UseNeutral_I(Ne3_))
+       case("#SOURCES")
+          call read_var('UseIonSource', UseSource_I(Ion_))
+          call read_var('UseNeuSource', UseSource_I(Neu_))
+          call read_var('UseNe2Source', UseSource_I(Ne2_))
+          call read_var('UseNe3Source', UseSource_I(Ne3_))
        case("#REGIONS")
           call read_var('TempPop1LimitDim',  TempPop1LimitDim)
           call read_var('dTempPop1LimitDim', dTempPop1LimitDim)
+          call read_var('uPop1LimitDim',  uPop1LimitDim)
+          call read_var('duPop1LimitDim', duPop1LimitDim)
           call read_var('MachPop2Limit',     MachPop2Limit)
           call read_var('dMachPop2Limit',    dMachPop2Limit)
        case("#FACTORS")
@@ -342,7 +345,7 @@ contains
 
     ! Apply boundary conditions for ions
     VarsGhostFace_V(Rho_)    = SWH_rho
-    VarsGhostFace_V(p_)      = pSolarWind
+    VarsGhostFace_V(p_)      = SWH_p !!! pSolarWind
     VarsGhostFace_V(Ux_:Uz_) = matmul(XyzSph_DD, Vsph_D)
     VarsGhostFace_V(Bx_:Bz_) = matmul(XyzSph_DD, Bsph_D)
 
@@ -472,7 +475,6 @@ contains
   subroutine user_set_ics
 
     use ModMain,  ONLY: globalBLK    
-    use ModGeometry, ONLY: r_BLK    
     use ModVarIndexes    
     use ModAdvance,  ONLY: State_VGB    
     use ModPhysics,  ONLY: rBody
@@ -519,14 +521,15 @@ contains
     end if
 
     do i=1-gcn,nI+gcn; do j=1-gcn,nJ+gcn; do k=1-gcn,nK+gcn
-       r  = r_BLK(i,j,k,iBlock)
-       if(r < rBody) CYCLE
+
+       if(.not. true_cell(i,j,k,iBlock)) CYCLE
 
        DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest
 
        x = x_BLK(i,j,k,iBlock)
        y = y_BLK(i,j,k,iBlock)
        z = z_BLK(i,j,k,iBlock)
+       r = r_BLK(i,j,k,iBlock)
 
        XyzSph_DD = rot_xyz_sph(x,y,z)
 
@@ -675,41 +678,41 @@ contains
     use ModMultiFluid
     implicit none
 
-    !
-    !-------------------------------------------------------------------
+    character(len=*), parameter:: StringFormat = '(10X,A19,F15.6,A11,F15.6)'
+    !-----------------------------------------------------------------------
 
 
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'SWH_rho_dim [n/cc]:',SWH_rho_dim,'SWH_rho:',SWH_rho
+    write(*,StringFormat) 'SWH_rho_dim [n/cc]:',SWH_rho_dim,'SWH_rho:',SWH_rho
 
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'SWH_Ux_dim  [km/s]:',SWH_Ux_dim,'SWH_Ux:',SWH_Ux
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'SWH_Uy_dim  [km/s]:',SWH_Uy_dim,'SWH_Uy:',SWH_Uy 
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'SWH_Uz_dim  [km/s]:',SWH_Uz_dim,'SWH_Uz:',SWH_Uz
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'SWH_p_dim   [ nPa]:',SWH_p_dim,'SWH_p:',SWH_p
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'SWH_Bx_dim  [  nT]:',SWH_Bx_dim,'SWH_Bx:',SWH_Bx 
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'SWH_By_dim  [  nT]:',SWH_By_dim,'SWH_By:',SWH_By
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'SWH_Bz_dim  [  nT]:',SWH_Bz_dim,'SWH_Bz:',SWH_Bz
+    write(*,StringFormat) 'SWH_Ux_dim  [km/s]:',SWH_Ux_dim,'SWH_Ux:',SWH_Ux
+    write(*,StringFormat) 'SWH_Uy_dim  [km/s]:',SWH_Uy_dim,'SWH_Uy:',SWH_Uy 
+    write(*,StringFormat) 'SWH_Uz_dim  [km/s]:',SWH_Uz_dim,'SWH_Uz:',SWH_Uz
+    write(*,StringFormat) 'SWH_T_dim   [   K]:',SWH_T_dim,'SWH_p:',SWH_p
+    write(*,StringFormat) 'SWH_Bx_dim  [  nT]:',SWH_Bx_dim,'SWH_Bx:',SWH_Bx 
+    write(*,StringFormat) 'SWH_By_dim  [  nT]:',SWH_By_dim,'SWH_By:',SWH_By
+    write(*,StringFormat) 'SWH_Bz_dim  [  nT]:',SWH_Bz_dim,'SWH_Bz:',SWH_Bz
     write(*,'(10X,A19,F15.6)')           'SWH_T_dim   [   K]:',SWH_T_dim
     ! fast solar wind
     write(*,*)
     write(*,*)
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'VLISW_rho_dim[n/cc]:',VLISW_rho_dim,'VLISW_rho:',VLISW_rho 
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'VLISW_Ux_dim[km/s]: ',VLISW_Ux_dim,'VLISW_Ux:',VLISW_Ux
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'VLISW_Uy_dim[km/s]: ',VLISW_Uy_dim,'VLISW_Uy:',VLISW_Uy
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'VLISW_Uz_dim[km/s]: ',VLISW_Uz_dim,'VLISW_Uz:',VLISW_Uz 
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'VLISW_p_dim [nPa]: ',VLISW_p_dim,'VLISW_p:',VLISW_p 
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'VLISW_Bx_dim[nT]: ',VLISW_Bx_dim,'VLISW_Bx:',VLISW_Bx
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'VLISW_By_dim[nT]:',VLISW_By_dim,'VLISW_By:',VLISW_By
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'VLISW_Bz_dim[nT]:',VLISW_Bz_dim,'VLISW_Bz:',VLISW_Bz
-    write(*,'(10X,A19,F15.6)')           'VLISW_a_dim[km/s]: ',VLISW_a_dim
-    write(*,'(10X,A19,F15.6)')           'VLISW_T_dim[K]: ',VLISW_T_dim! 
+    write(*,StringFormat) 'VLISW_rho_dim[n/cc]:',VLISW_rho_dim,'VLISW_rho:',VLISW_rho 
+    write(*,StringFormat) 'VLISW_Ux_dim[km/s]: ',VLISW_Ux_dim,'VLISW_Ux:',VLISW_Ux
+    write(*,StringFormat) 'VLISW_Uy_dim[km/s]: ',VLISW_Uy_dim,'VLISW_Uy:',VLISW_Uy
+    write(*,StringFormat) 'VLISW_Uz_dim[km/s]: ',VLISW_Uz_dim,'VLISW_Uz:',VLISW_Uz 
+    write(*,StringFormat) 'VLISW_p_dim [nPa]: ',VLISW_p_dim,'VLISW_p:',VLISW_p 
+    write(*,StringFormat) 'VLISW_Bx_dim[nT]: ',VLISW_Bx_dim,'VLISW_Bx:',VLISW_Bx
+    write(*,StringFormat) 'VLISW_By_dim[nT]:',VLISW_By_dim,'VLISW_By:',VLISW_By
+    write(*,StringFormat) 'VLISW_Bz_dim[nT]:',VLISW_Bz_dim,'VLISW_Bz:',VLISW_Bz
+    write(*,'(10X,A19,F15.6)') 'VLISW_a_dim[km/s]: ',VLISW_a_dim
+    write(*,'(10X,A19,F15.6)') 'VLISW_T_dim[K]: ',VLISW_T_dim! 
     !neutrals
     write(*,*)     
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'RhoNeutralsISW_dim:',RhoNeutralsISW_dim ,'RhoNeutralsISW:',RhoNeutralsISW 
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'UxNeutralsISW_dim:',UxNeutralsISW_dim,'UxNeutralsISW:',UxNeutralsISW 
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'UyNeutralsISW_dim:',UyNeutralsISW_dim,'UyNeutralsISW:',UyNeutralsISW
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'UzNeutralsISW_dim:',UzNeutralsISW_dim,'UzNeutralsISW:',UzNeutralsISW 
-    write(*,'(10X,A19,F15.6,A11,F15.6)') 'PNeutralsISW_dim:',PNeutralsISW_dim,'PNeutralsISW:',PNeutralsISW
-    write(*,'(10X,A19,F15.6)')           'TNeutralsISW_dim:',TNeutralsISW_dim     
+    write(*,StringFormat) 'RhoNeutralsISW_dim:',RhoNeutralsISW_dim ,'RhoNeutralsISW:',RhoNeutralsISW 
+    write(*,StringFormat) 'UxNeutralsISW_dim:',UxNeutralsISW_dim,'UxNeutralsISW:',UxNeutralsISW 
+    write(*,StringFormat) 'UyNeutralsISW_dim:',UyNeutralsISW_dim,'UyNeutralsISW:',UyNeutralsISW
+    write(*,StringFormat) 'UzNeutralsISW_dim:',UzNeutralsISW_dim,'UzNeutralsISW:',UzNeutralsISW 
+    write(*,StringFormat) 'PNeutralsISW_dim:',PNeutralsISW_dim,'PNeutralsISW:',PNeutralsISW
+    write(*,'(10X,A19,F15.6)') 'TNeutralsISW_dim:',TNeutralsISW_dim     
     write(*,*)
 
     !------------------------------------------------------------------
@@ -768,10 +771,7 @@ contains
     SWfast_Uz  = SWfast_Uz_dim*Io2No_V(UnitU_)
 
     SWH_rho = SWH_rho_dim*Io2No_V(UnitRho_)
-
-    SWH_p_dim = No2Io_V(UnitP_)*inv_g*(SWH_rho_dim/SWH_rho_dim)*(SWH_T_dim/SWH_T_dim)
-
-    SWH_p   = SWH_p_dim*Io2No_V(UnitP_)
+    SWH_p   = SWH_T_dim*Io2No_V(UnitTemperature_)*SWH_rho
     SWH_Ux  = SWH_Ux_dim*Io2No_V(UnitU_)
     SWH_Uy  = SWH_Uy_dim*Io2No_V(UnitU_)
     SWH_Uz  = SWH_Uz_dim*Io2No_V(UnitU_)
@@ -839,10 +839,14 @@ contains
        PlotVar_G(1:nI,1:nJ,1:nK) = Source_VC(NeuRho_,:,:,:)
     case('fluid')
        call select_region(iBlock)
-       PlotVar_G(1:nI,1:nJ,1:nK) = iFluidProduced_C
+       PlotVar_G = iFluidProduced_GB(:,:,:,iBlock)
     case('mask')
        call select_region(iBlock)
        PlotVar_G(1:nI,1:nJ,1:nK) = Mask_C
+    case('mach')
+       PlotVar_G = &
+            sqrt( sum(State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock)**2, DIM=1)      &
+            /    (g *State_VGB(p_,:,:,:,iBlock)*State_VGB(Rho_,:,:,:,iBlock)) )
     case default
        IsFound = .false.
     end select
@@ -1086,9 +1090,9 @@ contains
       Source_V = 0.0
 
       do iFluid = NeU_, Ne3_
-         if(.not.UseNeutral_I(iFluid)) CYCLE
+         if(.not.UseSource_I(iFluid)) CYCLE
          call select_fluid
-         if (iFluid == iFluidProduced_C(i,j,k)) then
+         if (iFluid == iFluidProduced_GB(i,j,k,iBlock)) then
             Source_V(iRho)    = sum(I0xp_I(Neu_:Ne3_))  - I0xp_I(iFluid)
             Source_V(iRhoUx)  = sum(JxpUx_I(Neu_:Ne3_)) - JpxUx_I(iFluid)
             Source_V(iRhoUy)  = sum(JxpUy_I(Neu_:Ne3_)) - JpxUy_I(iFluid)
@@ -1108,18 +1112,17 @@ contains
               + 0.5*U2_I(iFluid)*Source_V(iRho) )
       end do
 
-      !\
-      ! Source terms for Plasma
-      !/ 
-      Source_V(RhoUx_) = sum( QmpxUx_I(Neu_:Ne3_) )
-      Source_V(RhoUy_) = sum( QmpxUy_I(Neu_:Ne3_) )
-      Source_V(RhoUz_) = sum( QmpxUz_I(Neu_:Ne3_) )
-      Source_V(Energy_)= sum( Qepx_I(Neu_:Ne3_) )
+      if(UseSource_I(Ion_))then
+         Source_V(RhoUx_) = sum( QmpxUx_I(Neu_:Ne3_) )
+         Source_V(RhoUy_) = sum( QmpxUy_I(Neu_:Ne3_) )
+         Source_V(RhoUz_) = sum( QmpxUz_I(Neu_:Ne3_) )
+         Source_V(Energy_)= sum( Qepx_I(Neu_:Ne3_) )
 
-      Source_V(p_) = (g-1)* ( Source_V(Energy_) &
-           - Ux_I(Ion_)*Source_V(RhoUx_) &
-           - Uy_I(Ion_)*Source_V(RhoUy_) &
-           - Uz_I(Ion_)*Source_V(RhoUz_) ) 
+         Source_V(p_) = (g-1)* ( Source_V(Energy_) &
+              - Ux_I(Ion_)*Source_V(RhoUx_) &
+              - Uy_I(Ion_)*Source_V(RhoUy_) &
+              - Uz_I(Ion_)*Source_V(RhoUz_) ) 
+      end if
 
       Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Mask_C(i,j,k)*Source_V
 
@@ -1128,7 +1131,7 @@ contains
          Source_V = Source_VC(:,i,j,k)
 
          write(*,*) NameSub, ' iFluidProduced, Mask=', &
-              iFluidProduced_C(i,j,k), Mask_C(i,j,k)
+              iFluidProduced_GB(i,j,k,iBlock), Mask_C(i,j,k)
          do iVar = 1, nVar + nFLuid
             write(*,*) ' Source(',NameVar_V(iVar),')=',Source_V(iVar)
          end do
@@ -1158,19 +1161,29 @@ contains
 
   subroutine select_region(iBlock)
 
-    ! set the global variables iFluidProduced_C and Mask_C
+    ! set the global variables iFluidProduced_GB and Mask_C
     ! to select which neutral fluid is produced in each cell of the block
     ! and apply some mask function near the edges of the regions if desired
 
     integer, intent(in):: iBlock
 
     integer :: i, j, k, iFluidProduced
-    real    :: InvRho, u2, p, Mach2, TempDim, Mask
+    real    :: InvRho, U2, p, Mach2, TempDim, U2Dim, Mask
     !------------------------------------------------------------------------
-    do k=1, nK; do j=1, nJ; do i=1, nI
+
+    ! Produce fluid3 at the inner boundary
+
+    do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
+
+       if(r_BLK(i,j,k,iBlock) < 50.0) then
+          iFluidProduced_GB(i,j,k,iBlock) = Ne3_
+          CYCLE
+       end if
+
        InvRho = 1.0/State_VGB(Rho_,i,j,k,iBlock)
        p      = State_VGB(p_,i,j,k,iBlock)
        U2     = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)*InvRho**2
+       U2Dim  = U2*No2Io_V(UnitU_)**2
        
        ! Square of Mach number
        Mach2      = U2/(g*p*InvRho)
@@ -1180,29 +1193,46 @@ contains
 
        ! Apply full source except near the boundaries between regions
        Mask = 1.0
-       if( TempPop1LimitDim > TempDim )then
+       if( TempPop1LimitDim > TempDim .and. uPop1LimitDim**2 > U2Dim)then
           ! Outside the heliopause
           iFluidProduced = Neu_
-          if(dTempPop1LimitDim > 0.0) Mask = min( Mask, &
-               (TempPop1LimitDim - TempDim)/dTempPop1LimitDim )
+!          if(dTempPop1LimitDim > 0.0) Mask = min( Mask, &
+!               (TempPop1LimitDim - TempDim)/dTempPop1LimitDim )
        elseif( MachPop2Limit**2 > Mach2 )then
+!       elseif( MachPop2Limit**2 > U2Dim )then
           ! Heliosheath
           iFluidProduced = Ne2_
-          if(dTempPop1LimitDim > 0.0) Mask = min( Mask, &
-               (TempDim - TempPop1LimitDim)/dTempPop1LimitDim )
-          if(dMachPop2Limit > 0.0) Mask = min( Mask, &
-               (MachPop2Limit - sqrt(Mach2))/DMachPop2Limit )
+!          if(dTempPop1LimitDim > 0.0) Mask = min( Mask, &
+!               (TempDim - TempPop1LimitDim)/dTempPop1LimitDim )
+!          if(dMachPop2Limit > 0.0) Mask = min( Mask, &
+!               (MachPop2Limit - sqrt(Mach2))/DMachPop2Limit )
        else
           ! Inside termination shock
           iFluidProduced = Ne3_
-          if(dMachPop2Limit > 0.0) Mask = min( Mask, &
-               (sqrt(Mach2) - MachPop2Limit)/DMachPop2Limit )
+!          if(dMachPop2Limit > 0.0) Mask = min( Mask, &
+!               (sqrt(Mach2) - MachPop2Limit)/DMachPop2Limit )
        end if
 
        ! Store results
-       iFluidProduced_C(i,j,k) = iFluidProduced
-       Mask_C(i,j,k)           = Mask
+       iFluidProduced_GB(i,j,k,iBlock) = iFluidProduced
 
+    end do; end do; end do
+
+    ! By default apply full source
+    Mask_C = 1.0
+
+    ! Check if cells next to this one are the same region or not
+    ! This procedure could be repeated multiple times to increase the
+    ! width of the separation zone
+    do k=1, nK; do j=1, nJ; do i=1, nI
+       iFluidProduced = iFluidProduced_GB(i,j,k,iBlock)
+       if(  iFluidProduced /= iFluidProduced_GB(i-1,j,k,iBlock) .or. &
+            iFluidProduced /= iFluidProduced_GB(i+1,j,k,iBlock) .or. &
+            iFluidProduced /= iFluidProduced_GB(i,j-1,k,iBlock) .or. &
+            iFluidProduced /= iFluidProduced_GB(i,j+1,k,iBlock) .or. &
+            iFluidProduced /= iFluidProduced_GB(i,j,k-1,iBlock) .or. &
+            iFluidProduced /= iFluidProduced_GB(i,j,k+1,iBlock) ) &
+            Mask_C(i,j,k) = 0.0
     end do; end do; end do
 
   end subroutine select_region
