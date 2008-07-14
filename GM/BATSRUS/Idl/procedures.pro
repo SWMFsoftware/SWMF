@@ -1634,7 +1634,7 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
       if i ge 0 then begin
           plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+3)
           logarithm=1
-      endif else logaritm=0
+      endif else logarithm=0
 
       !p.title=plottitles(ifunc)
       if !p.title eq 'default' then !p.title=funcs(ifunc)
