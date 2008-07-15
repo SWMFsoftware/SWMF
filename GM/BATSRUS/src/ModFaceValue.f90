@@ -1577,15 +1577,13 @@ contains
             .and. .not.unusedBlock_BP(neiBnorth(4,iBLK),neiPnorth(4,iBLK)))then
           do k=1,nK;do i=1,nI
              State_VGB(1:nVar,i,nJ+1,k,iBLK) =&
-                  State_VGB(1:nVar,i,nJ+1,k,iBLK)+ cThird*(&
-                  State_VGB(1:nVar,i,nJ+1,k,iBLK)-&
+                  State_VGB(1:nVar,i,nJ+1,k,iBLK) + cThird*( &
+                  State_VGB(1:nVar,i,nJ+1,k,iBLK) - &
                   State_VGB(1:nVar,i,nJ,k,iBLK))
-             if(nFluid > 1)CYCLE
-             where(DefaultState_V(1:nVar)>cTiny)
-                State_VGB(1:nVar,i,nJ+1,k,iBLK) = max(&
-                     State_VGB(1:nVar,i,nJ+1,k,iBLK),cTiny)
-             end where
-          end do;end do
+             where(DefaultState_V(1:nVar) > cTiny) &
+                  State_VGB(1:nVar,i,nJ+1,k,iBLK) = &
+                  max(State_VGB(1:nVar,i,nJ+1,k,iBLK), 1e-30)
+          end do; end do
        end if
     end if
     if(neiLsouth(iBLK) == -1)then
@@ -1595,15 +1593,13 @@ contains
             .and. .not.unusedBlock_BP(neiBsouth(4,iBLK),neiPsouth(4,iBLK)))then
           do k=1,nK;do i=1,nI
              State_VGB(1:nVar,i,0,k,iBLK) = &
-                  State_VGB(1:nVar,i,0,k,iBLK)+ cThird*(&
-                  State_VGB(1:nVar,i,0,k,iBLK)- &
+                  State_VGB(1:nVar,i,0,k,iBLK) + cThird*( &
+                  State_VGB(1:nVar,i,0,k,iBLK) - &
                   State_VGB(1:nVar,i,1,k,iBLK))
-             if(nFluid > 1)CYCLE
-             where(DefaultState_V(1:nVar)>cTiny)
-                State_VGB(1:nVar,i,0,k,iBLK) =max(&
-                     State_VGB(1:nVar,i,0,k,iBLK),cTiny)
-             end where
-          end do;end do
+             where(DefaultState_V(1:nVar) > cTiny) &
+                State_VGB(1:nVar,i,0,k,iBLK) = &
+                max(State_VGB(1:nVar,i,0,k,iBLK), 1e-30)
+          end do; end do
        end if
     end if
     if(neiLeast(iBLK) == -1)then
@@ -1613,15 +1609,13 @@ contains
             .and. .not.unusedBlock_BP(neiBeast(4,iBLK),neiPeast(4,iBLK)))then
           do k=1,nK;do j=1,nJ
              State_VGB(1:nVar,0,j,k,iBLK) = &
-                  State_VGB(1:nVar,0,j,k,iBLK)+ cThird*(&
-                  State_VGB(1:nVar,0,j,k,iBLK)- &
+                  State_VGB(1:nVar,0,j,k,iBLK) + cThird*(&
+                  State_VGB(1:nVar,0,j,k,iBLK) - &
                   State_VGB(1:nVar,1,j,k,iBLK))
-             if(nFluid > 1)CYCLE
-             where(DefaultState_V(1:nVar)>cTiny)
-                State_VGB(1:nVar,0,j,k,iBLK) =max(&
-                     State_VGB(1:nVar,0,j,k,iBLK),cTiny)
-             end where
-          end do;end do
+             where(DefaultState_V(1:nVar) > cTiny) &
+                  State_VGB(1:nVar,0,j,k,iBLK) = &
+                  max(State_VGB(1:nVar,0,j,k,iBLK), 1e-30)
+          end do; end do
        end if
     end if
     if(neiLwest(iBLK) == -1)then
@@ -1631,15 +1625,13 @@ contains
             .and. .not.unusedBlock_BP(neiBwest(4,iBLK),neiPwest(4,iBLK)))then
           do k=1,nK;do j=1,nJ
              State_VGB(1:nVar,nI+1,j,k,iBLK) = &
-                  State_VGB(1:nVar,nI+1,j,k,iBLK) + cThird*(&
+                  State_VGB(1:nVar,nI+1,j,k,iBLK) + cThird*( &
                   State_VGB(1:nVar,nI+1,j,k,iBLK) - &
                   State_VGB(1:nVar,nI,  j,k,iBLK))
-             if(nFluid > 1)CYCLE
-             where(DefaultState_V(1:nVar)>cTiny)
-                State_VGB(1:nVar,nI+1,j,k,iBLK) = max(&
-                     State_VGB(1:nVar,nI+1,j,k,iBLK),cTiny)
-             end where
-          end do;end do
+             where(DefaultState_V(1:nVar)>cTiny) &
+                  State_VGB(1:nVar,nI+1,j,k,iBLK) = &
+                  max(State_VGB(1:nVar,nI+1,j,k,iBLK), 1e-30)
+          end do; end do
        end if
     end if
     if(neiLtop(iBLK) == -1)then
@@ -1652,12 +1644,10 @@ contains
                   State_VGB(1:nVar,i,j,nK+1,iBLK) + cThird*(&
                   State_VGB(1:nVar,i,j,nK+1,iBLK) - &
                   State_VGB(1:nVar,i,j,nK,iBLK))
-             if(nFluid > 1)CYCLE
-             where(DefaultState_V(1:nVar)>cTiny)
-                State_VGB(1:nVar,i,j,nK+1,iBLK) =max( &
-                     State_VGB(1:nVar,i,j,nK+1,iBLK),cTiny)
-             end where
-          end do;end do
+             where(DefaultState_V(1:nVar) > cTiny) &
+                  State_VGB(1:nVar,i,j,nK+1,iBLK) = &
+                  max(State_VGB(1:nVar,i,j,nK+1,iBLK), 1e-30)
+          end do; end do
        end if
     end if
     if(neiLbot(iBLK) == -1)then
@@ -1667,15 +1657,13 @@ contains
             .and. .not.unusedBlock_BP(neiBbot(4,iBLK),neiPbot(4,iBLK)))then
           do j=1,nJ;do i=1,nI
              State_VGB(1:nVar,i,j,0,iBLK) = &
-                  State_VGB(1:nVar,i,j,0,iBLK) + cThird*(&
+                  State_VGB(1:nVar,i,j,0,iBLK) + cThird*( &
                   State_VGB(1:nVar,i,j,0,iBLK) - &
                   State_VGB(1:nVar,i,j,1,iBLK))
-             if(nFluid > 1)CYCLE
-             where(DefaultState_V(1:nVar)>cTiny)
-                State_VGB(1:nVar,i,j,0,iBLK) =max( &
-                     State_VGB(1:nVar,i,j,0,iBLK),cTiny)
-             end where
-          end do;end do
+             where(DefaultState_V(1:nVar) > cTiny) &
+                  State_VGB(1:nVar,i,j,0,iBLK) = &
+                  max(State_VGB(1:nVar,i,j,0,iBLK), 1e-30)
+          end do; end do
        end if
     end if
 
