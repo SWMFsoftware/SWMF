@@ -1,84 +1,63 @@
-!^CFG COPYRIGHT UM
+! Wrapper for Internal Magnetosphere (IM) component
+!=============================================================================
 
-!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-!               Space Weather Modeling Framework (SWMF)                !
-!    Center for Space Environment Modeling, The University of Michigan !
-!-----------------------------------------------------------------------
-!BOI
-subroutine IM_set_param(CompInfo, TypeAction)
-
-  !USES:
-  use CON_comp_info
-  use ModUtilities
-  use ModReadParam
-  use CON_coupler, ONLY: Couple_CC, GM_, IM_, IE_
-  use rbe_cread2,  ONLY: UseGm,UseIE
-  implicit none
-
-  character (len=*), intent(in)     :: TypeAction ! which action to perform
-  type(CompInfoType), intent(inout) :: CompInfo   ! component information
-
-  character (len=*), parameter :: NameSub='IM_set_param'
-  integer :: iError
-  character (len=100) :: NameCommand
-  logical             :: UseStrict=.true.
-
-  integer :: iProc, nProc, iComm
-
-  !------------------------------------------------------------------------
-
-  UseGm = Couple_CC(GM_, IM_) % DoThis
-  UseIE = Couple_CC(IE_, IM_) % DoThis
+subroutine IM_set_param(CompInfo,TypeAction)
   
-  !if(iProc>=0)then
-  !   call IM_write_prefix;  
-  !   write(iUnitOut,*) NameSub,' TypeAction= ',TypeAction, &
-  !        '    iProc=',iProc
-  !end if
+  use CON_comp_info
+  use ModProcIM
+  use ModHeidiMain
+  use ModUtilities, ONLY: fix_dir_name, check_dir, lower_case
+   
+  implicit none
+  character (len=*), parameter :: NameSub='IM_set_param'
+
+  ! Arguments
+  type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp.
+  character (len=*), intent(in)     :: TypeAction ! What to do
+  
+  !LOCAL VARIABLES:
+  character (len=100) :: NameCommand, StringPlot
+  logical             :: DoEcho=.false.
+  logical             :: UseStrict=.true.  
+  
   select case(TypeAction)
   case('VERSION')
-     call put(CompInfo,                                     &
-          Use=.true.,                                       &
-          NameVersion='Radiation Belt Environment, M. Fok', &
-          Version=1.0)
+     call put(CompInfo,                         &
+          Use=.true.,                           &
+          NameVersion='HEIDI (Liemohn)', &
+          Version=1.1)
   case('MPI')
+     call MPI_INIT(iError)
+     
+     iComm= MPI_COMM_WORLD
+     
+     call MPI_COMM_RANK(iComm, iProc, iError)
+     call MPI_COMM_SIZE(iComm, nProc, iError)   
      call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc)
-     if(nProc>1)call CON_stop('IM_ERROR this version can run on 1 PE only!')
-  case('STDOUT')
-     !iUnitOut=STDOUT_
-     !StringPrefix='IM:'
-  case('FILEOUT')
-     !call get(CompInfo,iUnitOut=iUnitOut)
-     !StringPrefix=''
+     if(nProc>4)call CON_stop(&
+          'IM_init_mpi: IM_ERROR this version can run on 4 PE !')
   case('READ')
-     call IM_set_parameters('READ')
-     call readinputdata
-
+     call heidi_read
   case('CHECK')
-     ! We should check and correct parameters here
-     !if(iProc==0)then
-     !   call IM_write_prefix;  write(iUnitOut,*)&
-     !        NameSub,': CHECK iSession =',i_session_read()
-     !end if
+     !We should check and correct parameters here
+     if(iProc==0)write(*,*) NameSub,': CHECK iSession =',i_session_read()
+     RETURN
+     call heidi_check
+  case('STDOUT')
+  case('FILEOUT')
   case('GRID')
-     call IM_set_grid
-  case default
-     call CON_stop(NameSub//' IM_ERROR: invalid TypeAction='//TypeAction)
   end select
-
 end subroutine IM_set_param
+
 !============================================================================
 subroutine IM_set_grid
-  use IME_grid, ONLY: ir, ip
-  use IME_cgrid, ONLY: xlati, phi
+  use ModHeidiSeize
+  use ModProcIM
   use ModNumConst
   use CON_coupler, ONLY: set_grid_descriptor, is_proc, IM_
-
+  use heidi_read
   implicit none
-
   character (len=*), parameter :: NameSub='IM_set_grid'
-  integer :: iSize,jSize
-  real, dimension (:,:), allocatable :: gridLat,gridLT
   real :: Radius_I(1)
   logical :: IsInitialized=.false.
   logical :: DoTest, DoTestMe
@@ -89,261 +68,164 @@ subroutine IM_set_grid
   if(IsInitialized) return
   IsInitialized=.true.
 
-  Radius_I(1) = (6375.0+120.0)*1000.0 ! radial size of the ionosphere in meters
+  if(is_proc(IM_))call read_grid()
+
+  Radius_I(1) = Ri*1000.0 ! radial size of the ionosphere in meters
 
   ! IM grid size in generalized coordinates
-  call set_grid_descriptor( IM_,                 & ! component index
-       nDim=2,                                   & ! dimensionality
-       nRootBlock_D=(/1,1/),                     & ! single block
-       nCell_D=(/ir+2, ip/),                     & ! size of cell based grid
-       XyzMin_D=(/cHalf, cHalf/),                & ! min gen.coords for cells
-       XyzMax_D=(/ir+2.5,ip-0.5/),               & ! max gen.coords for cells
-       TypeCoord='SMG',                          & ! solar magnetic coord
-       Coord1_I=cRadToDeg*xlati(0:ir+1),         & ! latitude in degrees
-       Coord2_I=mod(cRadToDeg*phi+180.0,360.0),  & ! longitude in degrees
-       Coord3_I=Radius_I,                        & ! radial size in meters
-       IsPeriodic_D=(/.false.,.true./))            ! periodic in longitude
-
-  if(DoTest)then
-     write(*,*)NameSub,' ir,ip=',ir,ip
-     write(*,*)NameSub,' size(xlati)=',size(xlati),' size(phi)=',size(phi)
-     write(*,*)NameSub,' xlati=',xlati
-     write(*,*)NameSub,' phi=',phi
-  end if
+  call set_grid_descriptor( IM_,                         & ! component index
+       nDim=4,                                           & ! dimensionality
+       nRootBlock_D=(/1,1/),                             & ! single block
+       nCell_D=(/iSize,jSize/),                          & ! size of cell based grid
+       XyzMin_D=(/cHalf, cHalf/),                        & ! min gen.coords for cells
+       XyzMax_D=(/iSize+cHalf,jSize+cHalf/),             & ! max gen.coords for cells
+       TypeCoord='SM',                                   & ! solar magnetic coord
+       Coord1_I=real(colat(1:NT,1)),                     & ! colatitudes
+       Coord2_I=real(aloct(1,1:NR)),                     & ! longitudes
+       Coord3_I=Radius_I,                                & ! radial size in meters
+       Coord4_I=NPA(0:90)                                & ! Grid in pitch angle
+       COORD5_I=NE                                       & ! Grid in energy
+       IsPeriodic_D=(/.true.,.false.,.false.,.false./))    ! periodic in longitude
 
 end subroutine IM_set_grid
 !==============================================================================
+subroutine IM_print_variables(NameSource)
 
-subroutine IM_init_session(iSession, TimeSimulation)
-  use rbe_constant
-  use rbe_cread2
-  use rbe_cgrid
-
+  use heidi_read
+  use ModNumConst
+  use ModIoUnit, ONLY: UNITTMP_
   implicit none
+  character(len=*), parameter :: NameSub='IM_print_variables'
 
-  integer,  intent(in) :: iSession         ! session number (starting from 1)
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+  character(len=*),intent(in) :: NameSource
+  integer            :: nFile=0
+  character(len=100) :: NameFile
+  character(len=100) :: NameVar
+  integer            :: i,j
+  real               :: Lat,Lon
+  !--------------------------------------------------------------------------
+  select case(NameSource)
+  case('IE')
+     NameVar='j i lon lat jr pot sigmaH sigmaP'
+  case('GM')
+     NameVar='j i lon lat density pressure vm xmin ymin bmin temperature'
+  case default
+     write(*,*)NameSub,': incorrect NameSource=',NameSource
+     RETURN
+  end select
 
-  character(len=*), parameter :: NameSub='IM_init_session'
-  !------------------------------------------------------------------------
-  ! GM info needed before initialization just set up latitude/longitude grid
+  nFile=nFile+1
+  write(NameFile,'(a,i1,a)')'IM_from_'//NameSource//'_',nFile,'.dat'
+  open(UNITTMP_,file=NameFile)
+  write(UNITTMP_,'(a)')trim(NameVar)
 
-  call grids(re,rc,xme,xmp,q,c,js)
-  
-end subroutine IM_init_session
-!==============================================================================
-
-subroutine IM_run(TimeSimulation,TimeSimulationLimit)
-
-  use rbe_time, ONLY: t, dt
-  use rbe_cread2, ONLY: dtmax
-
-  implicit none
-
-  real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
-  real, intent(inout) :: TimeSimulation   ! current time of component
-  
-  Logical, save :: IsInitiallized = .false.
-  character(len=*), parameter :: NameSub='IM_run'
-
-  !------------------------------------------------------------------------
-  
-  if (.not. IsInitiallized) then
-     call rbe_init
-     IsInitiallized = .true.
-  endif
-
-  dt = min(dtmax, 0.5*(TimeSimulationLimit - TimeSimulation))
-  call rbe_run
-
-  ! return time at the end of the time step to CON
-  TimeSimulation   = t
-  
-end subroutine IM_run
-!===========================================================================
-
-subroutine IM_finalize(TimeSimulation)
-
-  !USES:
-  implicit none
-
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
-  character(len=*), parameter :: NameSub='IM_finalize'
-
-  !-------------------------------------------------------------------------
-
-  !call IM_write_prefix; write(iUnitOut,*) &
-  !     NameSub,' at TimeSimulation=',TimeSimulation
-
-end subroutine IM_finalize
-!===========================================================================
-
-subroutine IM_save_restart(TimeSimulation)
-
-  implicit none
-
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
-  character(len=*), parameter :: NameSub='IM_save_restart'
-
-  !-------------------------------------------------------------------------
-  call rbe_save_restart
-
-end subroutine IM_save_restart
-!===========================================================================
-
-subroutine IM_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
-            BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
-  use ModGmRb
-  use rbe_grid,    ONLY: nLat => ir, nLon => ip
-  use rbe_constant,ONLY: rEarth => re
-  use rbe_cread2,  ONLY: xnswa,vswa,bxw,byw,bzw,nsw,iyear,iday
-  implicit none
-
-  integer, intent(in) :: iSizeIn, jSizeIn, nIntegralIn
-  real,    intent(in) :: Integral_IIV(iSizeIn,jSizeIn,nIntegralIn)
-  integer, intent(in) :: nVarLine, nPointLine
-  real,    intent(in) :: BufferLine_VI(nVarLine, nPointLine)
-
-  character (len=*),intent(in) :: NameVar
-  real, intent(in) :: tSimulation
-
-  real, parameter :: noValue=-99999.
-  integer :: n,iLat,iLon
-  logical :: DoTest, DoTestMe
-  character(len=*), parameter :: NameSub='IM_put_from_gm'
-  logical,save :: IsFirstCall = .true.
-  !-------------------------------------------------------------------------
-  call CON_set_do_test(NameSub, DoTest, DoTestMe)
-
-  if(NameVar /= 'Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:IMF') &
-       call CON_stop(NameSub//' invalid NameVar='//NameVar)
-
-  if(nVarLine /= 4) then
-     write(*,*)'nVarLine=',nVarLine
-     call CON_stop(NameSub//' invalid nVarLine (should be 4)')
-  end if
-
-  if(DoTestMe)then
-     write(*,*)NameSub,' iSizeIn,jSizeIn,nIntegralIn=',&
-          iSizeIn,jSizeIn,nIntegralIn
-     write(*,*)NameSub,' nVarLine,nPointLine=',nVarLine,nPointLine
-     !write(*,*)NameSub,' Integral_IIV(21,1,:)=',Integral_IIV(21,1,:)
-     write(*,*)NameSub,' BufferLine_VI(:,1) =',BufferLine_VI(:,1)
-     write(*,*)NameSub,' BufferLine_VI(:,2) =',BufferLine_VI(:,2)
-     write(*,*)NameSub,' IMF=',Integral_IIV(1:8,1,4)
-  end if
-  
-  if (allocated(StateLine_VI)) then
-     deallocate(StateLine_VI,StateIntegral_IIV)
-  endif
-  
-  if (.not.allocated(StateLine_VI)) then
-     allocate(StateLine_VI(nVarLine,nPointLine),&
-          StateIntegral_IIV(0:iSizeIn-1,jSizeIn,nIntegralIn))
-  endif
-  
-  StateLine_VI      = BufferLine_VI
-  StateIntegral_IIV = Integral_IIV
-  nPoint=nPointLine
-  
-  !Convert Units
-  StateLine_VI(2,:) = StateLine_VI(2,:) / rEarth ! m --> Earth Radii
-  StateLine_VI(3,:) = StateLine_VI(3,:) / rEarth ! m --> Earth Radii
-
-  !Solar wind values
-  xnswa(1) = Integral_IIV(1,1,4)*1.0e-6                   !m^-3 -->/cc
-  vswa (1) = sqrt(sum(Integral_IIV(2:4,1,4)**2.0))*1.0e-3 !m/s-->km/s
-  
-  bxw(1) = Integral_IIV(5,1,4)*1.0e9      !T --> nT
-  byw(1) = Integral_IIV(6,1,4)*1.0e9      !T --> nT
-  bzw(1) = Integral_IIV(7,1,4)*1.0e9      !T --> nT
-
-  nsw = 1
-  
-  iyear=2002
-  iday=1
-    
-
-  ! create an index array on the first call
-  if (IsFirstCall) then
-     n = 0
-     do iLon = 1, nLon
-        do iLat = 0, nLat+1
-           n = n+1
-           iLineIndex_II(iLon,iLat) = n
-        end do
+  do i=1,iSize
+     do j=1,jSize
+        Lon = (        aloct(i,j))*(180./cPi)
+        Lat = (cHalfPi-colat(i,j))*(180./cPi)
+        select case(NameSource)
+        case('IE')
+           write(UNITTMP_,'(2i4,6G14.6)')j,i,Lon,Lat,v(i,j),birk_mhd(i,j),&
+                sigmaH_mhd(i,j),sigmaP_mhd(i,j)
+        case('GM')
+           write(UNITTMP_,'(2i4,9G14.6)')j,i,Lon,Lat,density(i,j),pressure(i,j),&
+                vm(i,j),xmin(i,j),ymin(i,j),bmin(i,j),temperature(i,j)
+        end select
      end do
-     IsFirstCall = .false.
-  endif
-
-end subroutine IM_put_from_gm
-!============================================================================
-
-subroutine IM_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
-                 Name_V, iBlock)
-  
-  use rbe_grid,    ONLY: nLat => ir, nLon => ip
-  use rbe_cgrid,   ONLY: Lat_I => xlati, Lon_I => phi
-  use rbe_convect, ONLY: Potential_II => potent
-  use CON_coupler, ONLY: Grid_C, IE_
-  use ModNumConst, ONLY: cTwoPi,cPi,cHalfPi
-  use ModInterpolate, ONLY: bilinear
-  implicit none
-
-  character(len=*), parameter :: NameSub='IM_put_from_ie'
-
-  !INPUT ARGUMENTS:
-  integer, intent(in):: iSize, jSize, nVarIn, iBlock
-  real, intent(in) :: Buffer_IIV(iSize, jSize, nVarIn)
-  character(len=*), intent(in) :: Name_V(nVarIn)
-
-  integer, parameter :: nVar = 2
-  integer, parameter :: South_ = 1, North_ = 2
-
-  logical :: IsPotFound, IsJrFound
-  real    :: dPhiIono,dThetaIono
-  integer :: iLat, iLon, iVar, nThetaIono, nPhiIono
-  real,dimension(:,:),allocatable  :: x,y,z
-  Character(len=100) :: NameElectrodynamics
-  !----------------------------------------------------------------------------
-  if(iBlock /= north_) RETURN
-  
-  nThetaIono = Grid_C(IE_) % nCoord_D(1)
-  nPhiIono   = Grid_C(IE_) % nCoord_D(2)
-  if(nThetaIono /= 2*iSize - 1 .or. nPhiIono /= jSize)then
-     write(*,*)NameSub,': Grid_C(IE_)%nCoord_D(1:2)=',&
-          Grid_C(IE_) % nCoord_D(1:2)
-     write(*,*)NameSub,': iSize,2*iSize-1,jSize=',iSize,2*iSize-1,jSize
-     call CON_stop(NameSub//' ERROR: Inconsistent IE grid sizes')
-  endif
-  ! Get ionospheric grid spacing for use in interpolation
-  dPhiIono   = cTwoPi / (nPhiIono-1)
-  dThetaIono = maxval( Grid_C(IE_) % Coord1_I(:) ) / (nThetaIono -1)
-
-  IsPotFound = .false.
-  do iVar = 1, nVarIn
-     select case(Name_V(iVar))
-     case('Pot')
-        IsPotFound = .true.
-        do iLon=1,nLon
-           do iLat=0,nLat+1
-              !Interpolate IE potential onto IM grid
-              ! Note that the IM grid is 180 degrees rotated relative to 
-              ! the usual SM coordinates used by IE
-              Potential_II(iLat,iLon) = &
-                   bilinear (Buffer_IIV(:, :, iVar),1,iSize,1,jSize,&
-                   (/ (Lat_I(iLat))/dThetaIono+1,&
-                      modulo(Lon_I(iLon)+cPi,cTwoPi)/dPhiIono+1 /) )
-           end do
-        end do
-     end select
   end do
-  
+  close(UNITTMP_)
 
-  if(.not.IsPotFound)then
-     write(*,*)NameSub,': Name_V=',Name_V
-     call CON_stop(NameSub//' could not find Pot')
-  end if
-  
+end subroutine IM_print_variables
+!==============================================================================
+subroutine IM_put_from_ie(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
+
+ write(*,*) 'This is not working' 
+
 end subroutine IM_put_from_ie
 !==============================================================================
+subroutine IM_put_from_ie_complete
+
+write(*,*) 'This is not working'
+
+end subroutine IM_put_from_ie_complete
+!==============================================================================
+subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
+
+write(*,*) 'This is not working' 
+
+end subroutine IM_put_from_gm
+
+!==============================================================================
+subroutine IM_put_sat_from_gm(nSats, Buffer_I, Buffer_III)
+  ! Puts satellite locations and names from GM into IM variables.
+  !!!DTW 2007
+
+write(*,*) 'This is not working' 
+
+end subroutine IM_put_sat_from_gm
+
+!==============================================================================
+subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
+
+write(*,*) 'This is not working'  
+
+end subroutine IM_get_for_gm
+
+!==============================================================================
+
+ subroutine IM_init_session(iSession, TimeSimulation)
+    implicit none
+    !INPUT PARAMETERS:
+    integer,  intent(in) :: iSession       ! session number (starting from 1)
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
+    logical :: IsUninitialized = .true.
+    if(IsUninitialized)then
+       call heidi_init
+
+       IsUninitialized = .false.
+    end if
+  end subroutine IM_init_session
+
+!==============================================================================
+ subroutine IM_finalize(TimeSimulation)
+    use ModProcIM
+    use ModInit,ONLY:nS
+  
+    implicit none
+
+    !INPUT PARAMETERS:
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
+    integer:: iSpecies
+    !!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    do iSpecies=1,NS
+       CLOSE(15+iSpecies)          ! Closes continuous output file
+    end do
+
+    CLOSE(13)	            ! Closes sw1 input file
+    CLOSE(15)		    ! Closes sw2 input file
+    CLOSE(14)               ! Closes MPA input file
+    CLOSE(16)               ! Closes SOPA input file
+    CLOSE(18)               ! Closes FPOT input file
+    !!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------  
+    call MPI_finalize(iError)
+  end subroutine IM_finalize
+
+! =============================================================================
+ subroutine IM_run(TimeSimulation,TimeSimulationLimit)
+    implicit none
+
+    !INPUT/OUTPUT ARGUMENTS:
+    real, intent(inout) :: TimeSimulation   ! current time of component
+
+    !INPUT ARGUMENTS:
+    real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
+    call heidi_run 
+  end subroutine IM_run
+
+
+!===========================================================================
+!===========================================================================
+
+
