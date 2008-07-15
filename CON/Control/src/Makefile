@@ -44,6 +44,7 @@ LIBCOUPLER = ${LIBDIR}/libCOUPLER.a
 #######################
 # Components:         #
 #######################
+# Use alphabetic order for components!
 
 LIBGM = ${LIBDIR}/libGM.a	#^CMP IF GM
 
@@ -51,11 +52,11 @@ LIBIE = ${LIBDIR}/libIE.a	#^CMP IF IE
 
 LIBIH = ${LIBDIR}/libIH.a	#^CMP IF IH
 
-LIBOH = ${LIBDIR}/libOH.a       #^CMP IF OH
-
 LIBIM = ${LIBDIR}/libIM.a	#^CMP IF IM
 
 LIBLA = ${LIBDIR}/libLA.a	#^CMP IF LA
+
+LIBOH = ${LIBDIR}/libOH.a       #^CMP IF OH
 
 LIBPS = ${LIBDIR}/libPS.a	#^CMP IF PS
 
@@ -146,6 +147,7 @@ SWMFEXE: TMP_DIRS
 # - make SWMFEXE or SWMFLIB
 
 # Create all libraries and then libCONTROL.a (MY_LIB)
+# Use alphabetic order for components!
 LIB:
 	@cd ${SHAREDIR};             make LIB
 	@cd ${TIMINGDIR};            make LIB
@@ -161,9 +163,9 @@ LIB:
 	@cd ${GMDIR};                make LIB	#^CMP IF GM
 	@cd ${IEDIR};                make LIB	#^CMP IF IE
 	@cd ${IHDIR};                make LIB	#^CMP IF IH
-	@cd ${OHDIR};                make LIB   #^CMP IF OH
 	@cd ${IMDIR};                make LIB	#^CMP IF IM
 	@cd ${LADIR};                make LIB	#^CMP IF LA
+	@cd ${OHDIR};                make LIB   #^CMP IF OH
 	@cd ${PSDIR};                make LIB	#^CMP IF PS
 	@cd ${PWDIR};                make LIB	#^CMP IF PW
 	@cd ${RBDIR};                make LIB	#^CMP IF RB
@@ -188,6 +190,7 @@ DEPEND:
 AR_X = ar -x
 
 # Extract object files from libraries and collect them into SWMFLIB
+# Use alphabetic order for components!
 TMP_DIRS: LIB
 	rm -rf Tmp_*
 	mkdir Tmp_SHARE;       cd Tmp_SHARE;       ${AR_X} ${LIBSHARE}
@@ -206,9 +209,9 @@ TMP_DIRS: LIB
 	mkdir Tmp_LIBGM;       cd Tmp_LIBGM;     ${AR_X} ${LIBGM} #^CMP IF GM
 	mkdir Tmp_LIBIE;       cd Tmp_LIBIE;     ${AR_X} ${LIBIE} #^CMP IF IE
 	mkdir Tmp_LIBIH;       cd Tmp_LIBIH;     ${AR_X} ${LIBIH} #^CMP IF IH
-	mkdir Tmp_LIBOH;       cd Tmp_LIBOH;     ${AR_X} ${LIBOH} #^CMP IF OH
 	mkdir Tmp_LIBIM;       cd Tmp_LIBIM;     ${AR_X} ${LIBIM} #^CMP IF IM
 	mkdir Tmp_LIBLA;       cd Tmp_LIBLA;     ${AR_X} ${LIBLA} #^CMP IF LA
+	mkdir Tmp_LIBOH;       cd Tmp_LIBOH;     ${AR_X} ${LIBOH} #^CMP IF OH
 	mkdir Tmp_LIBPS;       cd Tmp_LIBPS;     ${AR_X} ${LIBPS} #^CMP IF PS
 	mkdir Tmp_LIBPW;       cd Tmp_LIBPW;     ${AR_X} ${LIBPW} #^CMP IF PW
 	mkdir Tmp_LIBRB;       cd Tmp_LIBRB;     ${AR_X} ${LIBRB} #^CMP IF RB
