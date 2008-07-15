@@ -35,8 +35,8 @@ module ModConserveFlux
        CorrectedFlux_VZB
 
   integer, parameter :: &
-       FluxLast_ = nVar+nFluid, &
-       UnFirst_=FluxLast_+1, UnLast_ = UnFirst_+nFluid, &
+       FluxLast_ = nVar + nFluid, &
+       UnFirst_=FluxLast_+1, UnLast_ = UnFirst_ + nFluid, &
        Vdt_ = UnLast_ + 1, BnL_ = Vdt_+1, BnR_ = BnL_ + 1, &
        nCorrectedFaceValues = BnR_
 
@@ -314,17 +314,11 @@ contains
       do k = 1, nK; do j = 1, nJ
          if (.not.true_cell(lFaceTo-1, j, k, iBlock)) CYCLE
          if (.not.true_cell(lFaceTo  , j, k, iBlock)) CYCLE
-         if(nFluid == 1)then
-            Flux_VX(1:nVar-1,lFaceTo,j,k) = &
-                 CorrectedFlux_VXB(1:nVar-1,j,k,lFaceFrom,iBlock)
-            Flux_VX(nVar+1,lFaceTo,j,k) = &
-                 CorrectedFlux_VXB(nVar+1,j,k,lFaceFrom,iBlock)
-         else
-            Flux_VX(1:FluxLast_,lFaceTo,j,k) = &
-                 CorrectedFlux_VXB(1:FluxLast_,j,k,lFaceFrom,iBlock)
-            uDotArea_XI(lFaceTo,j,k,:) = &
-                 CorrectedFlux_VXB(UnFirst_:UnLast_,j,k,lFaceFrom,iBlock)
-         end if
+
+         Flux_VX(1:FluxLast_,lFaceTo,j,k) = &
+              CorrectedFlux_VXB(1:FluxLast_,j,k,lFaceFrom,iBlock)
+         uDotArea_XI(lFaceTo,j,k,:) = &
+              CorrectedFlux_VXB(UnFirst_:UnLast_,j,k,lFaceFrom,iBlock)
          VdtFace_x(lFaceTo,j,k) = &
               CorrectedFlux_VXB(Vdt_,j,k,lFaceFrom,iBlock)
          if(UseCovariant)CYCLE       
@@ -343,17 +337,10 @@ contains
          if (.not.true_cell(i, lFaceTo-1, k, iBlock))CYCLE
          if (.not.true_cell(i, lFaceTo  , k, iBlock))CYCLE
 
-         if(nFluid == 1)then
-            Flux_VY(1:nVar-1,i,lFaceTo,k) = &
-                 CorrectedFlux_VYB(1:nVar-1,i,k,lFaceFrom,iBlock)
-            Flux_VY(nVar+1,i,lFaceTo,k) = &
-                 CorrectedFlux_VYB(nVar+1,i,k,lFaceFrom,iBlock)
-         else
-            Flux_VY(1:FluxLast_,i,lFaceTo,k) = &
-                 CorrectedFlux_VYB(1:FluxLast_,i,k,lFaceFrom,iBlock)
-            uDotArea_YI(i,lFaceTo,k,:) = &
-                 CorrectedFlux_VYB(UnFirst_:UnLast_,i,k,lFaceFrom,iBlock)
-         end if
+         Flux_VY(1:FluxLast_,i,lFaceTo,k) = &
+              CorrectedFlux_VYB(1:FluxLast_,i,k,lFaceFrom,iBlock)
+         uDotArea_YI(i,lFaceTo,k,:) = &
+              CorrectedFlux_VYB(UnFirst_:UnLast_,i,k,lFaceFrom,iBlock)
          VdtFace_y(i,lFaceTo,k)= &
               CorrectedFlux_VYB(Vdt_,i,k,lFaceFrom,iBlock)
          if(UseCovariant)CYCLE          
@@ -372,17 +359,11 @@ contains
       do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i, j, lFaceTo-1, iBlock)) CYCLE
          if(.not.true_cell(i, j, lFaceTo  , iBlock)) CYCLE
-         if(nFluid == 1)then
-            Flux_VZ(1:nVar-1,i,j,lFaceTo) = &
-                 CorrectedFlux_VZB(1:nVar-1,i,j,lFaceFrom,iBlock)
-            Flux_VZ(nVar+1,i,j,lFaceTo) = &
-                 CorrectedFlux_VZB(nVar+1,i,j,lFaceFrom,iBlock)
-         else
-            Flux_VZ(1:FluxLast_,i,j,lFaceTo) = &
-                 CorrectedFlux_VZB(1:FluxLast_,i,j,lFaceFrom,iBlock)
-            uDotArea_ZI(i,j,lFaceTo,:) = &
-                 CorrectedFlux_VZB(UnFirst_:UnLast_,i,j,lFaceFrom,iBlock)
-         end if
+
+         Flux_VZ(1:FluxLast_,i,j,lFaceTo) = &
+              CorrectedFlux_VZB(1:FluxLast_,i,j,lFaceFrom,iBlock)
+         uDotArea_ZI(i,j,lFaceTo,:) = &
+              CorrectedFlux_VZB(UnFirst_:UnLast_,i,j,lFaceFrom,iBlock)
          VdtFace_z(i,j,lFaceTo) = &
               CorrectedFlux_VZB(Vdt_,i,j,lFaceFrom,iBlock)
          if(UseCovariant)CYCLE
