@@ -58,7 +58,7 @@ my $Xml = &XmlRead($Input); # XML tree data structure created from XML text
 
 &process_xml($Xml);
 
-### &check_declarations;
+&check_declarations;
 
 if($NewFile){
     my $Module = $OutputFile;
@@ -203,9 +203,9 @@ sub process_xml{
 		$SrcDecl =~ s/  ! \"\#\w+\"\n$//;
 		# Remove previous commandgroup comment if there are no commands
 		$SrcDecl =~ s/  ! >>> .*\n$//;
+		$SrcDecl .= "\n  ! >>> $Name <<<\n" unless $Commands;
+		$SrcCase .= "\n".$Indent."! >>> $Name <<<\n\n" unless $Commands;
 	    }
-	    $SrcDecl .= "\n  ! >>> $Name <<<\n" unless $Commands;
-	    $SrcCase .= "\n".$Indent."! >>> $Name <<<\n\n" unless $Commands;
 	    &process_xml($element->{content});
 	}elsif($name eq 'command'){
 	    # Remove previous command comment if there were no parameters
@@ -225,7 +225,7 @@ sub process_xml{
 		    $SrcCase2 = $';
 		}
 		my $Src = $SrcDecl . $SrcDecl2;
-		if($Src =~ /( *! *$Name\n(.*::.*\n)*)/i){
+		if($Src =~ /( *! *$Name.*\n(.*::.*\n)*)/i){
 		    $SrcDecl1 = $`;
 		    $SrcDecl  = $`.$1;
 		    $SrcDecl2 = $'; 
@@ -385,19 +385,23 @@ sub add_var{
 
 sub check_declarations{
 
+
+    # Check and eliminate duplicate declarations
     my @Decl = split("\n",$SrcDecl . $SrcDecl2);
     foreach (@Decl){
 	next unless /^ *(integer|real|logical|character)/i;
 	my $Type = lc($1);
+
 	my $Name;
 	my $Value;
-	if(/(\w+) *= *(.*)$/){
+	if(/(\w+) *= *([^\(\)]*)$/){
 	    $Name  = $1;
 	    $Value = $2;
 	}else{
 	    /(\w+)$/;
 	    $Name = $1;
 	}
+
 	my $name = lc($Name);
 	my $Type2 = $VariableType{$name};
 	if($Type2){
@@ -424,15 +428,26 @@ sub check_declarations{
 	$VariableType{$name} = $Type;
     }
 
-    $SrcDecl = join('', @Decl);
+    # Replace $VarXyz patterns with their default values
+    foreach (@Decl){
+	next unless /^ *(integer|real|logical|character)/i;
+
+	while(/\$(\w+)/){
+	    my $Var2   = $1;
+	    my $Value2 = $DefaultValue{lc($Var2)};
+	    if(length($Value2)){
+		s/\$(\w+)/$Value2/;
+	    }else{
+		warn "$WARNING: default value of $Var2 could not be found\n";
+		s/\$(\w+)/?$Var2?/;
+	    }
+	}
+    }
+
+    # Put together the declaration string
+    $SrcDecl = join("\n", @Decl);
     $SrcDecl2 = '';
 
-    # Check if variable name has already occured or not
-    # replace variables with their default values if possible
-    #while($Value =~ /\$(\w+)/){
-    #	my $Value2 = $DefaultValue{lc($1)};
-    #	$Value =~ s/\$(\w+)/$Value2/ if $Value2;
-    #}
 }
 
 ###############################################################################
