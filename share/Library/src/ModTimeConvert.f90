@@ -76,9 +76,6 @@ module ModTimeConvert
   ! The earliest year which is already correctly handled
   integer, parameter :: iYearMin  = iYearBase
 
-  ! The latest year which is still correctly handled
-  integer, parameter :: iYearMax  = 2099
-
   !REVISION HISTORY:
   ! 01Aug03 Aaron Ridley and G. Toth - initial implementation
   ! 22Aug03 G. Toth - added TypeFreq and is_time_to function
@@ -110,7 +107,7 @@ contains
 
     call fix_year(Time % iYear)
     is_valid_int_time = .false.
-    if(Time % iYear < iYearMin .or. Time % iYear > iYearMax) RETURN
+    if(Time % iYear < iYearMin) RETURN
     if(Time % iMonth > 12 .or. Time % iMonth < 1) RETURN
     if(Time % iMonth == 2) call fix_february(Time % iYear)
 !    if(Time % iDay < 1 .or. Time % iDay > nDayInMonth_I(Time % iMonth)) RETURN
@@ -331,7 +328,6 @@ contains
     ! 50-99 --> 1950-1999
     !\end{verbatim}
     ! Using a 4 digit year is safer. You should convert before using.
-    ! The 4 digit years are checked to be in the iYearMin$-$iMaxYear range
     !EOP
 
     character (len=*), parameter :: NameSub = NameMod//'::fix_year'
@@ -341,12 +337,6 @@ contains
        iYear = iYear + 2000
     case(50:99)
        iYear = iYear + 1900
-    case(iYearMin:iYearMax)
-       ! Fine
-    case default
-       write(*,*)NameSub,': iYear = ',iYear,' iYearMin = ',iYearMin,&
-            'iYearMax = ',iYearMax
-       call CON_stop(NameSub//' ERROR year is out of range')
     end select
 
   end subroutine fix_year
@@ -358,14 +348,20 @@ contains
     !INPUT ARGUMENTS:
     integer, intent(in) :: iYear
 
+    !LOCAL VARIABLES:
+    integer, parameter :: iYearBase100 = 100*(iYearBase/100) + 1
+    integer, parameter :: iYearBase400 = 400*(iYearBase/400) + 1
+
     !DESCRIPTION:
-    ! This formula ASSUMES that there are NO leap years which are
-    ! the exceptions ( /100 but !/400, e.g. 2100).
+    ! Return the number of leap days from base year to the year preceeding iYear.
     ! The leap day in iYear itself is not counted!
     !EOP
     character (len=*), parameter :: NameSub = NameMod//'::n_leap_day'
     !BOC
-    n_leap_day = (iYear - iYearBase)/4
+    n_leap_day = &
+         (iYear - iYearBase)/4 &
+         - (iYear - iYearBase100)/100 &
+         + (iYear - iYearBase400)/400
     !EOC
   end function n_leap_day
 
@@ -404,6 +400,7 @@ contains
   !INTERFACE:
   subroutine test_time
 
+    integer, parameter :: iYearMax  = 2499
     type(TimeType) :: TimeConvert, TimeStart
 
     !EOP
@@ -426,7 +423,10 @@ contains
     !======================================================================
 
     subroutine check_all_days
+
+      ! The latest year to be tested
       integer :: iYear, iMonth, iDay
+      !-------------------------------------------------------------------
 
       do iYear = iYearMin,iYearMax
          TimeStart % iYear = iYear
