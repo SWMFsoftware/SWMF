@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <vector>
+#include <list>
 #include <algorithm>
 #include <math.h>
 
