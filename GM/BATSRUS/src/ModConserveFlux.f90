@@ -5,7 +5,7 @@ module ModConserveFlux
   use ModVarIndexes, ONLY: nFluid, nVar, Bx_, By_, Bz_
 
   use ModProcMH, ONLY: iProc
-  use ModMain, ONLY: BlkTest, ProcTest
+  use ModMain, ONLY: BlkTest, ProcTest, iTest, jTest, kTest
   use ModAdvance, ONLY: &
        Flux_VX, Flux_VY, Flux_VZ, &
        VdtFace_X, VdtFace_Y, VdtFace_Z, &
@@ -69,14 +69,15 @@ contains
 
     integer, intent(in) :: iBlock
 
-    logical :: oktest, oktest_me, oktest_row
+    logical :: DoTest, DoTestMe
     integer :: lFaceFrom,lFaceTo,i,j,k
+    character(len=*), parameter :: NameSub = 'save_cons_flux'
     !--------------------------------------------------------------------------
 
     if(iProc==PROCtest .and. iBlock==BLKtest)then
-       call set_oktest('save_conserv_flux',oktest,oktest_me)
+       call set_oktest(NameSub, DoTest, DoTestMe)
     else
-       oktest=.false.; oktest_me=.false.
+       DoTest=.false.; DoTestMe=.false.
     end if
 
     if (neiLeast(iBlock)==+1) then
@@ -148,6 +149,19 @@ contains
             CorrectedFlux_VXB(BnR_, j, k, lFaceTo,iBlock)= &
                  RightState_VX(Bx_, lFaceFrom, j, k)*0.25
          end do; end do
+      end if
+
+      if(DoTestMe)then
+         
+         write(*,*)NameSub,' lFaceFrom, lFaceTo=',lFaceFrom, lFaceTo
+         do i = 1, nFluid+1
+            write(*,*)NameSub,' iVar, uDotA=', &
+                 uDotArea_XI(lFaceFrom,jTest,kTest,i)
+         end do
+         do i = 1, nCorrectedFaceValues
+            write(*,*)NameSub,' iVar, flux=', i, &
+                 CorrectedFlux_VXB(i, iTest, jTest, kTest, iBlock)
+         end do
       end if
 
     end subroutine save_corrected_flux_x
@@ -229,14 +243,15 @@ contains
     integer, intent(in):: iBlock
 
     integer :: i, j, k
-    logical :: oktest, oktest_me
+    logical :: DoTest, DoTestMe
     integer :: lFaceFrom, lFaceTo
+    character(len=*), parameter :: NameSub = 'apply_cons_flux'
     !--------------------------------------------------------------------------
 
     if(iProc==PROCtest .and. iBlock==BLKtest)then
-       call set_oktest('apply_cons_flux',oktest,oktest_me)
+       call set_oktest(NameSub, DoTest, DoTestMe)
     else
-       oktest=.false.; oktest_me=.false.
+       DoTest=.false.; DoTestMe=.false.
     end if
 
     if (neiLeast(iBlock)==-1)then
