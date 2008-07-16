@@ -19,35 +19,49 @@ contains
     integer, intent(in) :: iBlock
     integer::i,j,k
     !--------------------------------------------------------------------------
-    if(.not. UseNonConservative) then
-       ! All cells are conservative
-       call calc_pressure_cell(iBlock)
+    if(.not. UseNonConservative)then
+       if(DoConserveNeutrals) then
+          ! All cells are conservative
+          call calc_pressure_cell(iBlock)
+       else
+          ! Ions are conservative, neutrals are non-conservative
+          call calc_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1         , IonLast_)
+          call calc_energy(  1, nI, 1, nJ, 1, nK, iBlock, IonLast_+1, nFluid)
+       end if
        RETURN
     end if
-       
-    if(nConservCrit <= 0)then
+
+    if(UseNonConservative .and. nConservCrit <= 0)then
        ! All cells are non-conservative
        call calc_energy_cell(iBlock)
        RETURN
     end if
 
-    do iFluid = 1, nFluid
+    ! A mix of conservative and non-conservative scheme (at least for the ions)
+    FLUIDLOOP: do iFluid = 1, nFluid
+
+       if(iFluid > IonLast_ .and. .not. DoConserveNeutrals) then
+          ! Do all neutrals non-conservative and exit from the loop
+          call calc_energy(1, nI, 1, nJ, 1, nK, iBlock, iFluid, nFluid)
+          EXIT FLUIDLOOP
+       end if
+
        call select_fluid
        do k=1, nK; do j=1, nJ; do i=1, nI
           if(IsConserv_CB(i,j,k,iBlock)) then
-             State_VGB(iP, i, j, k,iBlock) = &
-                  gm1*(Energy_GBI(i, j, k, iBlock, iFluid) - 0.5*   &
-                  sum(State_VGB(iRhoUx:iRhoUz,i, j, k, iBlock)**2)  &
-                  /State_VGB(iRho,i, j, k, iBlock) )
+             State_VGB(iP,i,j,k,iBlock) =                             &
+                  gm1*( Energy_GBI(i,j,k,iBlock,iFluid)               &
+                  - 0.5*sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
+                  /State_VGB(iRho,i,j,k,iBlock) )
           else
-             Energy_GBI(i, j, k, iBlock, iFluid) = &
-                  inv_gm1*State_VGB(iP,i,j,k,iBlock) &
-                  +0.5*(sum(State_VGB(iRhoUx:iRhoUz, i, j, k, iBlock)**2)/&
-                  State_VGB(iRho, i, j, k, iBlock))
+             Energy_GBI(i,j,k,iBlock,iFluid) =                        &
+                  inv_gm1*State_VGB(iP,i,j,k,iBlock)                  &
+                  + 0.5*sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
+                  /State_VGB(iRho,i,j,k,iBlock)
           end if
        end do; end do; end do
 
-       if(iFluid > 1 .or. .not. IsMhd) CYCLE
+       if(iFluid > 1 .or. .not. IsMhd) CYCLE FLUIDLOOP
        
        do k=1, nK; do j=1, nJ; do i=1, nI
           if(IsConserv_CB(i,j,k,iBlock)) then
@@ -59,7 +73,7 @@ contains
                   0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
           end if
        end do; end do; end do
-    end do
+    end do FLUIDLOOP
 
   end subroutine calc_energy_or_pressure
 
