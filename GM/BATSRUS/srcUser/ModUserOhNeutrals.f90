@@ -147,11 +147,16 @@ module ModUser
        UyNeutralsISW_t ,  &
        UzNeutralsISW_t
 
+  ! Number of cells at the edge of regions in which the neutral production 
+  ! is artificially switched off 
+  integer :: nCellRegionGap = 1
+
   ! Velocity [km/s] and temperature [K] limits and widths for Pop I and II
   ! The width is for the masking function that goes from 0 to 1
   real :: TempPop1LimitDim = 1e5, dTempPop1LimitDim=-1.0
   real :: uPop1LimitDim    = 100.0, duPop1LimitDim=-1.0
-  real :: MachPop2Limit    = 1.5, dMachPop2Limit=-1.0
+  real :: MachPop2Limit    = 0.6, dMachPop2Limit=-1.0
+  real :: MachPop3Limit    = 1.5, dMachPop3Limit=-1.0
 
   ! Various factors in initial and boundary conditions
   real :: RhoNeuFactor = 1.0,   uNeuFactor = 1.0
@@ -220,12 +225,18 @@ contains
           call read_var('UseNe2Source', UseSource_I(Ne2_))
           call read_var('UseNe3Source', UseSource_I(Ne3_))
        case("#REGIONS")
-          call read_var('TempPop1LimitDim',  TempPop1LimitDim)
-          call read_var('dTempPop1LimitDim', dTempPop1LimitDim)
-          call read_var('uPop1LimitDim',  uPop1LimitDim)
-          call read_var('duPop1LimitDim', duPop1LimitDim)
-          call read_var('MachPop2Limit',     MachPop2Limit)
-          call read_var('dMachPop2Limit',    dMachPop2Limit)
+          call read_var('nCellRegionGap' ,  nCellRegionGap)
+          call read_var('TempPop1LimitDim', TempPop1LimitDim)
+          call read_var('uPop1LimitDim',    uPop1LimitDim)
+          call read_var('MachPop2Limit',    MachPop2Limit)
+          call read_var('MachPop3Limit',    MachPop3Limit)
+
+          ! We need two ghost cells and edges also filled in for the gap 
+          ! algorithm to work. The gap cannot be more than 2 
+          ! because there are two layers of ghost cells. 
+          nCellRegionGap = max(0, min(2, nCellRegionGap))
+          if(nCellRegionGap == 2) optimize_message_pass = 'all'
+
        case("#FACTORS")
           call read_var('RhoNeuFactor', RhoNeuFactor)
           call read_var('uNeuFactor'  , uNeuFactor)
@@ -351,13 +362,16 @@ contains
 
     ! NeuRho is PopI; NeuIIRho is PopII and NeuIIIRho is PopIII
     !
-    ! Pop I is going through the inner BCs
+    ! Pop I is going through the inner BCs    
 
     VarsGhostFace_V(NeuRho_) = RhoNeutralsISW * RhoNeuFactor
     VarsGhostFace_V(NeuUx_)  = UxNeutralsISW  * uNeuFactor
     VarsGhostFace_V(NeuUy_)  = UyNeutralsISW  * uNeuFactor
     VarsGhostFace_V(NeuUz_)  = UzNeutralsISW  * uNeuFactor
     VarsGhostFace_V(NeuP_)   = pNeutralsISW   * RhoNeuFactor
+
+    !!! Merav's BC
+    !!! VarsGhostFace_V(NeuRho_:NeuP_) = VarsTrueFace_V(NeuRho_:NeuP_)
 
     ! PopII leaves the domain at a supersonic velocity 
     ! (50km/s while for their temperature 1.E5K their C_s=30km/s)
@@ -946,6 +960,10 @@ contains
 
        ! Extract conservative variables
        State_V = State_VGB(:, i, j, k, iBlock)
+       
+       !!! Experiment: zero temperature Neu
+       !!!if(DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest) &
+       !!!     State_V(NeuP_) = 1e-30 !!!
 
        Ux_I  = State_V(iRhoUx_I)/State_V(iRho_I)
        Uy_I  = State_V(iRhoUy_I)/State_V(iRho_I)
@@ -1167,7 +1185,7 @@ contains
 
     integer, intent(in):: iBlock
 
-    integer :: i, j, k, iFluidProduced
+    integer :: i, j, k, iFluidProduced, iGap
     real    :: InvRho, U2, p, Mach2, TempDim, U2Dim, Mask
     !------------------------------------------------------------------------
 
@@ -1196,22 +1214,26 @@ contains
        if( TempPop1LimitDim > TempDim .and. uPop1LimitDim**2 > U2Dim)then
           ! Outside the heliopause
           iFluidProduced = Neu_
-!          if(dTempPop1LimitDim > 0.0) Mask = min( Mask, &
-!               (TempPop1LimitDim - TempDim)/dTempPop1LimitDim )
        elseif( MachPop2Limit**2 > Mach2 )then
-!       elseif( MachPop2Limit**2 > U2Dim )then
           ! Heliosheath
           iFluidProduced = Ne2_
-!          if(dTempPop1LimitDim > 0.0) Mask = min( Mask, &
-!               (TempDim - TempPop1LimitDim)/dTempPop1LimitDim )
-!          if(dMachPop2Limit > 0.0) Mask = min( Mask, &
-!               (MachPop2Limit - sqrt(Mach2))/DMachPop2Limit )
-       else
+       elseif( Mach2 > MachPop3Limit**2 )then
           ! Inside termination shock
           iFluidProduced = Ne3_
-!          if(dMachPop2Limit > 0.0) Mask = min( Mask, &
-!               (sqrt(Mach2) - MachPop2Limit)/DMachPop2Limit )
+       else
+          ! No neutrals are produced in this region
+          iFluidProduced = 0
        end if
+
+       ! This was an attempt smoothing the region edges. Did not help.
+       !if(dTempPop1LimitDim > 0.0) Mask = min( Mask, &
+       !     (TempPop1LimitDim - TempDim)/dTempPop1LimitDim )
+       !if(dTempPop1LimitDim > 0.0) Mask = min( Mask, &
+       !     (TempDim - TempPop1LimitDim)/dTempPop1LimitDim )
+       !if(dMachPop2Limit > 0.0) Mask = min( Mask, &
+       !     (MachPop2Limit - sqrt(Mach2))/DMachPop2Limit )
+       !if(dMachPop2Limit > 0.0) Mask = min( Mask, &
+       !     (sqrt(Mach2) - MachPop2Limit)/DMachPop2Limit )
 
        ! Store results
        iFluidProduced_GB(i,j,k,iBlock) = iFluidProduced
@@ -1221,19 +1243,23 @@ contains
     ! By default apply full source
     Mask_C = 1.0
 
+    if(nCellRegionGap == 0) RETURN
+
     ! Check if cells next to this one are the same region or not
-    ! This procedure could be repeated multiple times to increase the
-    ! width of the separation zone
-    do k=1, nK; do j=1, nJ; do i=1, nI
-       iFluidProduced = iFluidProduced_GB(i,j,k,iBlock)
-       if(  iFluidProduced /= iFluidProduced_GB(i-1,j,k,iBlock) .or. &
-            iFluidProduced /= iFluidProduced_GB(i+1,j,k,iBlock) .or. &
-            iFluidProduced /= iFluidProduced_GB(i,j-1,k,iBlock) .or. &
-            iFluidProduced /= iFluidProduced_GB(i,j+1,k,iBlock) .or. &
-            iFluidProduced /= iFluidProduced_GB(i,j,k-1,iBlock) .or. &
-            iFluidProduced /= iFluidProduced_GB(i,j,k+1,iBlock) ) &
-            Mask_C(i,j,k) = 0.0
-    end do; end do; end do
+    ! If not, set Mask to zero so a gap is created between the regions.
+    ! This may be repeated twice at most because of the number of ghost cells
+    do iGap = 1, nCellRegionGap
+       do k=1, nK; do j=1, nJ; do i=1, nI
+          iFluidProduced = iFluidProduced_GB(i,j,k,iBlock)
+          if(  iFluidProduced /= iFluidProduced_GB(i-1,j,k,iBlock) .or. &
+               iFluidProduced /= iFluidProduced_GB(i+1,j,k,iBlock) .or. &
+               iFluidProduced /= iFluidProduced_GB(i,j-1,k,iBlock) .or. &
+               iFluidProduced /= iFluidProduced_GB(i,j+1,k,iBlock) .or. &
+               iFluidProduced /= iFluidProduced_GB(i,j,k-1,iBlock) .or. &
+               iFluidProduced /= iFluidProduced_GB(i,j,k+1,iBlock) ) &
+               Mask_C(i,j,k) = 0.0
+       end do; end do; end do
+    end do
 
   end subroutine select_region
 
