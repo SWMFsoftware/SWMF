@@ -49,7 +49,7 @@ subroutine MH_set_parameters(TypeAction)
        ySizeBoxHall, DySizeBoxHall, &
        zSizeBoxHall, DzSizeBoxHall
   use ModResistivity                              !^CFG IF DISSFLUX
-  use ModMultiFluid, ONLY: MassIon_I
+  use ModMultiFluid, ONLY: MassIon_I, DoConserveNeutrals, UseRusanovForNeutrals
   use ModMultiIon, ONLY: multi_ion_set_parameters
   use ModSolarwind, ONLY: UseSolarwindFile, NameSolarwindFile, &
        read_solar_wind_file, normalize_solar_wind_data
@@ -1639,7 +1639,9 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('SpeciesPercentCheck',SpeciesPercentCheck)
 
      case("#MULTIFLUID")
-        call read_var('UseTotalSpeed',UseTotalSpeed)
+        call read_var('UseTotalSpeed', UseTotalSpeed)
+        call read_var('DoConserveNeutrals', DoConserveNeutrals)
+        call read_var('UseRusanovForNeutrals', UseRusanovForNeutrals)
 
      case("#MULTIION", "#COLLISION")
         call multi_ion_set_parameters(NameCommand)
