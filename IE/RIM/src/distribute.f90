@@ -36,6 +36,8 @@ subroutine distribute
      call rearrange(OuterMagInvBAll, OuterMagInvB)
      call rearrange(OuterMagRhoAll, OuterMagRho)
      call rearrange(OuterMagPAll, OuterMagP)
+     OuterMagT = -1.0
+     where (OuterMagP > 0.0) OuterMagT = OuterMagP/OuterMagRho
   endif
 
 contains

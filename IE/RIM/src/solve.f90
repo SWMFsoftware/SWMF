@@ -23,7 +23,6 @@ subroutine solve
 
   if (.not. DoSolve) return
 
-
 !  DoIdealTest = .true.
 
   if (DoIdealTest) then
@@ -272,6 +271,7 @@ subroutine solve
 
   call gmres(matvec_RIM,b,x,UseInitialGuess,nTotalSolve,&
        MaxIteration,Residual,'abs',nIteration,iError,DoTest,iComm)
+  write(*,*) "nIter : ", nIteration, Residual
   if (iError /= 0 .and. iError /=3)then
      write(*,*)'IE_ERROR in iono_solve: gmres failed !!!'
      write(*,*)'iono_solve: iter, resid, iError=',&
@@ -352,10 +352,10 @@ subroutine solve
   ! If we include poles, then the pole solution is the average of all
   ! the cells around the pole:
 
-!  if (DoTouchNorthPole) &
-!       Potential(1:nLons,nLats) = sum(Potential(1:nLons,nLats-1))/nLons
-!  if (DoTouchSouthPole) &
-!       Potential(1:nLons,    1) = sum(Potential(1:nLons,      2))/nLons
+  if (DoTouchNorthPole) &
+       Potential(1:nLons,nLats) = sum(Potential(1:nLons,nLats-1))/nLons
+  if (DoTouchSouthPole) &
+       Potential(1:nLons,    1) = sum(Potential(1:nLons,      2))/nLons
 
   ! Need to do message passing here......
 
@@ -432,9 +432,6 @@ subroutine matvec_RIM(x_I, y_I, n)
 
   iI = 0
 
-!  if (DoTouchNorthPole) Potential(:,nLats/2:nLats) = 0.0
-!  if (DoTouchSouthPole) Potential(:,1:nLats/2) = 0.0
-
   x_G = Potential
 
   select case(SolveType)
@@ -508,7 +505,7 @@ subroutine matvec_RIM(x_I, y_I, n)
         endif
   end select
 
-  ! This is not really correct.
+  ! This is not really correct, since it only works on a single processor...
 
   if (DoTouchNorthPole) NorthPolePotential = sum(x_G(1:nLons,nLats-1))/nLons
   if (DoTouchSouthPole) SouthPolePotential = sum(x_G(1:nLons,2))/nLons
@@ -574,13 +571,13 @@ subroutine matvec_RIM(x_I, y_I, n)
                  endif
               endif
               do iLon = 1, nLons
-                 if (DoTouchNorthPole .and. DoTouchSouthPole .and. &
-                      iLon == 1 .and. iLat == nLats/2) then
-                    iI = iI + 1
-                    y_I(iI) = 0.0
-                 else
+!                 if (DoTouchNorthPole .and. DoTouchSouthPole .and. &
+!                      iLon == 1 .and. iLat == nLats/2) then
+!                    iI = iI + 1
+!                    y_I(iI) = 0.0
+!                 else
                     call fill
-                 endif
+!                 endif
               enddo
               IsLowLat = .false.
            endif
@@ -599,6 +596,10 @@ subroutine matvec_RIM(x_I, y_I, n)
               endif
               do iLon = 1, nLons
                  call fill
+                 if (abs(Latitude(iLon,iLat)-LowLatBoundary) <= OCFLBBuffer) then
+                    y_i(iI) = y_i(iI) * &
+                         (abs(Latitude(iLon,iLat)-LowLatBoundary)/OCFLBBuffer)**2
+                 endif
               enddo
               IsLowLat = .false.
            endif
@@ -730,6 +731,7 @@ contains
 
   subroutine fill
 
+    real :: factor1, factor2
     iI = iI + 1
     
     if (iLat /= 1 .and. iLat /= nLats) then
@@ -750,6 +752,30 @@ contains
                SolverC(iLon, iLat)*x_G(iLon,  iLat+1) + &
                SolverD(iLon, iLat)*x_G(iLon-1,iLat  ) + &
                SolverE(iLon, iLat)*x_G(iLon+1,iLat  )
+
+          if (abs(Latitude(iLon,iLat))-LowLatBoundary <= OCFLBBuffer) then
+
+             factor1 = sin(((abs(Latitude(iLon,iLat+1))-LowLatBoundary)/OCFLBBuffer)*3.141592/2)
+             factor2 = sin(((abs(Latitude(iLon,iLat-1))-LowLatBoundary)/OCFLBBuffer)*3.141592/2)
+
+             y_I(iI) = &
+                  SolverA(iLon, iLat)*x_G(iLon,  iLat  ) + &
+                  factor2*SolverB(iLon, iLat)*x_G(iLon,  iLat-1) + &
+                  factor1*SolverC(iLon, iLat)*x_G(iLon,  iLat+1) + &
+                  SolverD(iLon, iLat)*x_G(iLon-1,iLat  ) + &
+                  SolverE(iLon, iLat)*x_G(iLon+1,iLat  )
+
+          else
+
+             y_I(iI) = &
+                  SolverA(iLon, iLat)*x_G(iLon,  iLat  ) + &
+                  SolverB(iLon, iLat)*x_G(iLon,  iLat-1) + &
+                  SolverC(iLon, iLat)*x_G(iLon,  iLat+1) + &
+                  SolverD(iLon, iLat)*x_G(iLon-1,iLat  ) + &
+                  SolverE(iLon, iLat)*x_G(iLon+1,iLat  )
+
+          endif
+
        endif
     else
        if (iLat == 1) then
@@ -775,6 +801,11 @@ contains
     endif
     if (IsLowLat .and. iLat > 1 .and. .not. DoFold) &
          y_I(iI) = y_I(iI) - SolverB(iLon, iLat)*x_G(iLon,  iLat-1)
+
+    ! Enforce 0 potential at the equator at midnight
+    if (iLat == nLats/2 .and. iLon == 1) &
+         y_I(iI) = y_I(iI) - SolverA(iLon, iLat)*x_G(iLon,  iLat)
+
 
   end subroutine fill
 

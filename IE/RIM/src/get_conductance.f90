@@ -86,6 +86,7 @@ subroutine get_conductance
      else
 
         ! Need to get current-based aurora
+        call calc_aurora
 
      endif
 
@@ -96,6 +97,8 @@ subroutine get_conductance
 
   SigmaAurP = SQRT(EFlux) * 40. * AveE / (16. + AveE**2)
   SigmaAurH = 0.45*(AveE**0.85)*SigmaAurP
+
+  write(*,*) "SigmaAurP : ", minval(SigmaAurP), maxval(SigmaAurP)
 
   SigmaH = sqrt( SigmaEUVH**2 + SigmaScatH**2 + SigmaStarH**2 + SigmaAurH**2)
   SigmaP = sqrt( SigmaEUVP**2 + SigmaScatP**2 + SigmaStarP**2 + SigmaAurP**2)

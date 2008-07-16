@@ -26,6 +26,12 @@ module ModParamRIM
   real    :: StarlightPedConductance=1.
   real    :: PolarCapPedConductance=0.25
 
+  real    :: MinAuroralWidth = 5.0*cDegToRad
+  real    :: MaxAuroralLat   = 80.0*cDegToRad
+  real    :: OCFLBSmoothLon  = 10.0*cDegToRad
+  real    :: PolarRainAveE   =  0.5
+  real    :: PolarRainEFlux  =  1.0
+
   character (len=7) :: TypeImCouple = 'north'
 
   !\
@@ -33,8 +39,8 @@ module ModParamRIM
   !/
   logical :: UsePreconditioner = .true.! Use preconditioner
   logical :: UseInitialGuess = .true.  ! Use previous solution as initial guess
-  real    :: Tolerance = 1.e-2        ! Solution accuracy: 2nd norm of residual
-  integer :: MaxIteration = 500       ! Maximum number of Krylov iterations
+  real    :: Tolerance = 1.e-3        ! Solution accuracy: 2nd norm of residual
+  integer :: MaxIteration = 250       ! Maximum number of Krylov iterations
 
   integer :: iDebugLevel=0
 

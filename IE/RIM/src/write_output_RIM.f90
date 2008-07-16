@@ -98,13 +98,13 @@ subroutine write_output_RIM(iFile)
      write(iUnit,*) "NUMERICAL VALUES"
      select case(plot_vars(ifile))
      case('min')
-        write(iUnit,"(I7,A)") 8, " nVars"
+        write(iUnit,"(I7,A)") 12, " nVars"
      case('max')
-        write(iUnit,"(I7,A)") 8, " nVars"
+        write(iUnit,"(I7,A)") 12, " nVars"
      case('uam')
-        write(iUnit,"(I7,A)") 8, " nVars"
+        write(iUnit,"(I7,A)") 12, " nVars"
      case('aur')
-        write(iUnit,"(I7,A)") 8, " nVars"
+        write(iUnit,"(I7,A)") 12, " nVars"
      end select
      write(iUnit,"(I7,A)")       1, " nAltitudes"
      write(iUnit,"(I7,A)") nLats  , " nLatitude"
@@ -126,6 +126,10 @@ subroutine write_output_RIM(iFile)
      write(iUnit,"(I7,A1,a)")  6, " ", "EFlux (ergs/cm2/s)"
      write(iUnit,"(I7,A1,a)")  7, " ", "SigmaH (mhos)"
      write(iUnit,"(I7,A1,a)")  8, " ", "SigmaP (mhos)"
+     write(iUnit,"(I7,A1,a)")  9, " ", "MHD-Rho (unknown)"
+     write(iUnit,"(I7,A1,a)") 10, " ", "MHD-P (Pa)"
+     write(iUnit,"(I7,A1,a)") 11, " ", "MHD-InvB (unknown)"
+     write(iUnit,"(I7,A1,a)") 12, " ", "MHD-T (unknown)"
 
      write(iUnit,*) ""
 
@@ -141,7 +145,9 @@ subroutine write_output_RIM(iFile)
         write(iUnit) Longitude(iLon,iLat),Latitude(iLon,iLat),&
              Potential(iLon,iLat), Jr(iLon,iLat), &
              AveE(iLon,iLat), EFlux(iLon,iLat), &
-             SigmaH(iLon,iLat), SigmaP(iLon,iLat)
+             SigmaH(iLon,iLat), SigmaP(iLon,iLat), &
+             OuterMagRho(iLon,iLat), OuterMagP(iLon,iLat), &
+             OuterMagInvB(iLon,iLat), OuterMagT(iLon,iLat)
      end do
   end do
 

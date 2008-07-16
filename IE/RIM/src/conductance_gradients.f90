@@ -17,7 +17,7 @@ subroutine conductance_gradients
   real, dimension(0:nLons+1,nLats) :: &
        dLongitude2, dTheta, dTheta2
 
-  real :: r, s0point, sppoint, shpoint, cpoint
+  real :: r, s0point, sppoint, shpoint, cpoint, OCFLB_NS
   integer :: iLon, iLat, iLh
 
   Theta = cPi/2 - Latitude
@@ -37,8 +37,11 @@ subroutine conductance_gradients
 
      do iLon = 1, nLons
         do iLat = 1, nLats
-           if (Latitude(iLon,iLat) < -OCFLB(iLon)-OCFLBBuffer .or. &
-                Latitude(iLon,iLat) > OCFLB(iLon)+OCFLBBuffer) then
+           ! Define the mean open/closed field-line boundary between the
+           ! two hemispheres
+           OCFLB_NS = (abs(OCFLB(1,iLon))+OCFLB(2,iLon))/2.0
+           if (Latitude(iLon,iLat) < -OCFLB_NS-OCFLBBuffer .or. &
+                Latitude(iLon,iLat) > OCFLB_NS+OCFLBBuffer) then
               s0point = Sigma0(iLon,iLat)
               shpoint = SigmaH(iLon,iLat)
               sppoint = SigmaP(iLon,iLat)
@@ -46,11 +49,11 @@ subroutine conductance_gradients
            else
 
               ! linearly change from the OCFLB through the buffer region
-              if (Latitude(iLon,iLat) > -OCFLB(iLon) .and. &
-                   Latitude(iLon,iLat) < OCFLB(iLon)) then
+              if (Latitude(iLon,iLat) > -OCFLB_NS .and. &
+                   Latitude(iLon,iLat) < OCFLB_NS) then
                  r = 1.0/2.0
               else
-                 r = (1.0-(abs(Latitude(iLon,iLat))-OCFLB(iLon))/OCFLBBuffer)/2
+                 r = (1.0-(abs(Latitude(iLon,iLat))-OCFLB_NS)/OCFLBBuffer)/2
               endif
 
               ! iLh = latitude of other hemisphere

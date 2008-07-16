@@ -45,6 +45,7 @@ OBJECTS = \
 	gather.o\
 	distribute.o\
 	write_output_RIM.o\
+	calc_aurora.o\
 	IE_couplers.o
 
 #
