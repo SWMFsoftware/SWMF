@@ -1,4 +1,5 @@
 module ModFaceFlux
+  
 
   use ModProcMH, ONLY: iProc
   use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK,UseB
@@ -981,18 +982,27 @@ contains
 
       call get_speed_max(StateRight_V, B0x, B0y, B0z, &
            Cright_I=CrightStateRight_I)
+
       call get_speed_max(State_V, B0x, B0y, B0z, &
            Cmax_I = Cmax_I, &
            Cleft_I = CleftStateHat_I, Cright_I = CrightStateHat_I)
+
 
       if(UseTotalSpeed)then
          Cmax   = maxval(Cmax_I)
          Cleft  =min(0.0, minval(CleftStateLeft_I), minval(CleftStateHat_I))
          Cright =max(0.0, maxval(CrightStateRight_I), maxval(CrightStateHat_I))
 
-         WeightLeft  = Cright/(Cright - Cleft)
-         WeightRight = 1.0 - WeightLeft
-         Diffusion   = Cright*WeightRight
+         if(nFluid > 1 .and. iFluid > IonLast_ .and. UseRusanovForNeutrals)then
+            ! Switch to Rusanov flux by taking the maximum of left and right
+            WeightLeft  = 0.5
+            WeightRight = 0.5
+            Diffusion   = 0.5*max(Cright, -Cleft)
+         else
+            WeightLeft  = Cright/(Cright - Cleft)
+            WeightRight = 1.0 - WeightLeft
+            Diffusion   = Cright*WeightRight
+         end if
 
          Flux_V = &
               (WeightRight*FluxRight_V + WeightLeft*FluxLeft_V &
@@ -1007,9 +1017,16 @@ contains
             Cleft =min(0.0, CleftStateLeft_I(iFluid), CleftStateHat_I(iFluid))
             Cright=max(0.0,CrightStateRight_I(iFluid),CrightStateHat_I(iFluid))
 
-            WeightLeft  = Cright/(Cright - Cleft)
-            WeightRight = 1.0 - WeightLeft
-            Diffusion   = Cright*WeightRight
+            if(iFluid > IonLast_ .and. UseRusanovForNeutrals)then
+               ! Switch to Rusanov flux: take max of left and right speeds
+               WeightLeft  = 0.5
+               WeightRight = 0.5
+               Diffusion   = 0.5*max(Cright, -Cleft)
+            else
+               WeightLeft  = Cright/(Cright - Cleft)
+               WeightRight = 1.0 - WeightLeft
+               Diffusion   = Cright*WeightRight
+            end if
 
             do iVar = iRho_I(iFluid), iP_I(iFluid)
                Flux_V(iVar) = &
@@ -1888,7 +1905,7 @@ contains
           call get_hd_speed
        end do
 
-       ! For ion fluids the maximum speed is takent to be 
+       ! For ion fluids the maximum speed is taken to be 
        ! the maximum of the individual HD speed and the total MHD speed
        do iFluid = 2, IonLast_
           if(present(Cmax_I))   CmaxDt_I(iFluid) = &
@@ -2147,6 +2164,11 @@ contains
       InvRho = 1.0/State_V(iRho)
       Sound2 = g*State_V(iP)*InvRho
       Un = State_V(iUx)*AreaX + State_V(iUy)*AreaY + State_V(iUz)*AreaZ
+
+      if(Sound2 < 0.0)then
+         write(*,*)NameSub,' sound speed < 0 at i,j,kFace, iBlock, iProc=', &
+              iFace, jFace, kFace, iBlockFace, iProc
+      end if
 
       Sound = sqrt(Sound2)
 
