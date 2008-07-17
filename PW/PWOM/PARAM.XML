@@ -40,6 +40,71 @@ IsPointImplicitAll is true if all terms are point implicit.
 The default values are shown.
 </command>
 
+<command name="LIMITER">
+	<parameter name="LimiterBeta" type="real" min="0" default="1.5" />
+
+#LIMITER
+1.5			LimiterBeta
+
+Sets the beta parameter in the Rusanov scheme.
+</command>
+
+<command name="DIFFUSION">
+	<parameter name="TypeDiffusion" type="string" length="100" />
+
+#DIFFUSION
+LaxFriedrichs			TypeDiffusion
+
+Sets the type of diffusion for use in the Rusanov scheme. The other option 
+is LocalLaxFriedrichs. The default is shown.
+
+</command>
+
+<command name="VERTICALGRID">
+	<parameter name="nPoints" type="integer" min="0" default="390" />
+	<parameter name="DeltaR" type="real" min="0" default="2e6" />
+
+#VERTICALGRID
+390			nPoints
+2e6			DeltaR
+
+Sets the number of grid points in the vertical direction and the grid spacing. 
+</command>
+
+
+<command name="STARTTIME">
+	<parameter name="iYear" type="integer" min="0" default="0" />
+	<parameter name="iMonth" type="integer" min="0" default="0" />
+	<parameter name="iDay" type="integer" min="0" default="0" />
+	<parameter name="iHour" type="integer" min="0" default="0" />
+	<parameter name="iMinute" type="integer" min="0" default="0" />
+	<parameter name="iSecond" type="integer" min="0" default="0" />
+
+#STARTTIME
+2006			iYear
+7			iMonth
+19			iDay
+0			iHour
+0			iMinute
+0			iSecond
+
+The STARTTIME command sets the integer year, month, day, hour, minute and 
+second at which the simulation begins. This command is only used in standalone 
+mode.
+</command>
+
+
+<command name="TIMEACCURATE">
+	<parameter name="DoTimeAccurate" type="logical" default="T" />
+
+#TIMEACCURATE
+T		DoTimeAccurate
+
+DoTimAccurate determines if the field lines are solved in time accurate mode or 
+in steady state mode.
+</command>
+
+
 <command name="TIMESTEP">
 	<parameter name="DtHorizontal" type="real" min="0" default="50" />
 
@@ -49,6 +114,17 @@ The default values are shown.
 DtHorizontal is the timestep for horizontal motion of the field line.
 Default value is shown.
 </command>
+
+<command name="VARIABLEDT">
+	<parameter name="IsVariableDt" type="logical" default="F" />
+
+#VARIABLEDT
+F			IsVariableDt
+
+When IsVariableDt=T then the vertical timestep is variable based on the change 
+in pressure. 
+</command>
+
 
 <command name="MOTION">
 	<parameter name="DoMoveLine" type="logical" default="T"/>
@@ -135,6 +211,118 @@ As is whether or not to save a plot on the first call. The
 default values are given.
 </command>
 
+<command name="SAVEPLOTELECTRODYNAMICS">
+	<parameter name="DoPlotElectrodynamics" type="logical" default="F" />
+	<parameter name="DtPlotElectrodynamics" type="real" min="-1" default="10.0" />
+	
+#SAVEPLOTELECTRODYNAMICS
+F			DoPlotElectrodynamics
+10			DtPlotElectrodynamics
+
+DoPlotElectrodynamics determines whether the electrodynmics plot information is 
+saved. For instance the field aligned currents, and the polar cap potental can 
+be saved with this command. The frequency of output is determined by the 
+DtPlotElectrodynamics parameter.
+</command>
+
+<command name="STATICATMOSPHERE">
+	<parameter name="UseStaticAtmosphere" type="logical" default="F" />
+
+#STATICATMOSPHERE
+T			UseStaticAtmosphere
+
+To keep the MSIS atmosphere constant set UseStaticAtmosphere to True.
+</command>
+
+<command name="MSISPARAM">
+	<parameter name="F107"  type="real" min="0" default="0" />
+	<parameter name="F107A" type="real" min="0" default="0" />
+	<parameter name="AP(1)" type="real" min="0" default="0" />
+	<parameter name="AP(2)" type="real" min="0" default="0" />
+	<parameter name="AP(3)" type="real" min="0" default="0" />
+	<parameter name="AP(4)" type="real" min="0" default="0" />
+	<parameter name="AP(5)" type="real" min="0" default="0" />
+	<parameter name="AP(6)" type="real" min="0" default="0" />
+	<parameter name="AP(7)" type="real" min="0" default="0" />
+
+#MSISPARAM
+60			F107
+60			F107A
+4			AP(1)
+4			AP(2)
+4			AP(3)
+4			AP(4)
+4			AP(5)
+4			AP(6)
+4			AP(7)
+
+This command sets the MSIS parameters for the the neutral atmosphere. The 
+defaults are shown.
+</command>
+
+<command name="NGDC_INDICES">
+	<parameter name="NameNgdcFile" type="string" length="100" />
+
+#NGDC_INDICES
+ApFile.dat			NameNgdcFile
+
+Read the Ap Index from a file and calculate the appropriate array of AP 
+indices to feed to MSIS.
+</command>
+
+<command name="NOAAHPI_INDICES">
+	<parameter name="NameHpiFile" type="string" length="100" />
+
+#NGDCHPI_INDICES
+HpiFile.dat			NameHpiFile
+
+Read the HPI from a file. Used to get the Auroral ionization and heating
+</command>
+
+<command name="HPI">
+	<parameter name="HemisphericPower" type="real" min="0" default="0" />
+
+#HPI
+0			HemisphericPower
+
+Set the HPI to a constant value. Used to get the Auroral ionization and heating
+</command>
+
+<command name="AURORA">
+	<parameter name="UseAurora" type="logical" default="F" />
+
+#AURORA
+F			UseAurora
+
+Set whether or not to include auroral ionization and bulk heating.
+</command>
+
+<command name="SOLARWIND">
+	<parameter name="bx"  type="real" min="0" default="0" />
+	<parameter name="by" type="real" min="0" default="0" />
+	<parameter name="bz" type="real" min="0" default="0" />
+	<parameter name="vx" type="real" min="0" default="0" />
+
+#SOLARWIND
+0			bx
+0			by
+0			bz
+400			vx
+
+This command sets the solar wind parameters for the Weimer model. The solar 
+wind parameters are constant if this command is used
+</command>
+
+<command name="MHD_INDICES">
+	<parameter name="UpstreamFile" type="string" length="100" />
+
+#MHD_INDICES
+IMF.dat				UpstreamFile
+
+Read the IMF from a file. Unlike the SOLARWIND command, the imf can be time 
+dependant in this case.
+</command>
+
 <command name="END">
 
 #END
@@ -145,6 +333,21 @@ ignored. It is not required to use the #END command. The end
 of the included file or PARAM.in file is equivalent with an 
 #END command in the last line.
 </command>
+
+<command name="STOP">
+	<parameter name="Tmax" type="real" min="-1" default="10" />
+	<parameter name="MaxStep" type="integer" min="-1" default="-1" />
+
+#STOP
+10			Tmax
+-1			MaxStep
+
+The #STOP command sets the stopping condition for the PWOM during standalone 
+execution. Tmax sets the stop time in timeaccurate mode. and MaxStep sets the 
+maximum number of iterations for non-timeaccurate mode.
+</command>
+
+
 
 </commandgroup>
 
