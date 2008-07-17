@@ -2165,12 +2165,8 @@ contains
       Sound2 = g*State_V(iP)*InvRho
       Un = State_V(iUx)*AreaX + State_V(iUy)*AreaY + State_V(iUz)*AreaZ
 
-      if(Sound2 < 0.0)then
-         write(*,*)NameSub,' sound speed < 0 at i,j,kFace, iBlock, iProc=', &
-              iFace, jFace, kFace, iBlockFace, iProc
-      end if
-
-      Sound = sqrt(Sound2)
+      ! We calculate velocity*area !
+      Sound = Area*sqrt(Sound2)
 
       if(DoAw)then                                   !^CFG IF AWFLUX BEGIN
          Cleft_I(iFluid)  = min(UnLeft, UnRight) - Sound
@@ -2188,7 +2184,7 @@ contains
 
       if(DoTestCell)then
          write(*,*)NameSub,' Un     =',Un
-         write(*,*)NameSub,' Csound =',Sound
+         write(*,*)NameSub,' Csound =',Sound/Area
          if(present(Cmax_I)) write(*,*)NameSub,' Cmax/Area=',Cmax_I(iFluid)/Area
       end if
 
