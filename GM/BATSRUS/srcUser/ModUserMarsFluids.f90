@@ -317,8 +317,19 @@ contains
        kTi=State_VGB(P_,i,j,k,iBlock)/NumDens/2.0
        kTe=kTi
 
+       if(kTi <= 0.0)then
+          write(*,*)'i,j,k,iBlock=',i,j,k,iBlock
+          write(*,*)'xyz=',x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock), &
+               z_BLK(i,j,k,iBlock)
+          write(*,*)'NumDens_I=',NumDens_I
+          write(*,*)'NumDens=',NumDens
+          write(*,*)'kTi,p=',kTi,State_VGB(P_,i,j,k,iBlock)
+          call stop_mpi('DEBUG')
+       end if
+
        ReactionRate_I(O2p_em__O_O_)=Rate_I(O2p_em__O_O_)       
        Recb_I(O2p_) = ReactionRate_I(O2p_em__O_O_)*(TNu_body/kTi)**0.56
+
 !            ReactionRate_I(O2p_em__O_O_)*exp(log(TNu_body/Temp_I(2))*0.56)
 
        ReactionRate_I(CO2p_em__CO_O_)=Rate_I(CO2p_em__CO_O_)       
@@ -729,7 +740,8 @@ contains
     real:: xLat, xLong,xAlt
     integer :: i,j,k,n, m
     integer:: iAlt, jLong, kLat, ip1,jp1,kp1
-    logical:: oktest, oktestme=.true.
+    logical:: oktest=.false., oktestme=.false.
+    !-----------------------------------------------------------------------
     !------ Interpolation/Expolation for Tn,nCO2,nO,PCO2p,POp ----- 
 
     dR=dx_BLK(globalBLK)
@@ -903,7 +915,7 @@ contains
     use ModPhysics
 
     real :: Productrate
-    logical::oktest=.true., oktestme=.false.
+    logical::oktest=.false., oktestme=.false.
     !---------------------------------------------------------------
     if(oktestme)then
        write(*,*)'in set_multisp_ICs, No2Io_V(UnitN_),t=',&
@@ -1093,42 +1105,7 @@ contains
 
   end subroutine set_multiSp_ICs
 
-  !===========================================================================
-!!$  subroutine user_set_ICs
-!!$    use ModProcMH, ONLY : iProc
-!!$    use ModMain
-!!$    use ModAdvance
-!!$    use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,R_BLK,true_cell
-!!$    use ModIO, ONLY : restart
-!!$    use ModPhysics
-!!$    use ModNumConst
-!!$
-!!$    real :: CosSZA
-!!$    !real::O2pRho_dim,OpRho_dim,CO2pRho_dim,HpRho_dim
-!!$    integer :: i,j,k
-!!$    integer :: iBoundary
-!!$
-!!$    !--------------------------------------------------------------------------
-!!$   
-!!$    do k=1,nK; do j=1,nJ; do i=1,nI
-!!$       if (true_cell(i,j,k,globalBLK) .and. &
-!!$            R_BLK(i,j,k,globalBLK)<1.5*Rbody) then
-!!$
-!!$          State_VGB(iRho_I,i,j,k,globalBLK) = BodyRho_I
-!!$          State_VGB(iP_I  ,i,j,k,globalBLK) = BodyP_I
-!!$          State_VGB(iRhoUx_I,i,j,k,globalBLK) = 0.0
-!!$          State_VGB(iRhoUy_I,i,j,k,globalBLK) = 0.0
-!!$          State_VGB(iRhoUz_I,i,j,k,globalBLK) = 0.0
-!!$       end if
-!!$
-!!$       if (R_BLK(i,j,k,globalBLK)< 2.0*Rbody)&
-!!$            State_VGB(Bx_:Bz_,i,j,k,globalBLK)=0.0
-!!$
-!!$    end do; end do; end do
-!!$
-!!$  end subroutine user_set_ICs
-
-  !=============================================================================
+  !============================================================================
 
   ! This subroutine allows the user to apply initial conditions to the domain
   ! which are problem specific and cannot be created using the predefined
@@ -1136,6 +1113,7 @@ contains
   ! The variables specific to the problem are loaded from ModUser
 
   subroutine user_set_ICs
+
     use ModProcMH, ONLY : iProc
     use ModMain
     use ModAdvance
@@ -1150,26 +1128,17 @@ contains
     real :: temp1,temp2,temp3
     integer :: i,j,k,q
     integer:: iBoundary
-     character (len=*), parameter :: NameSub = 'set_ics'
-    logical::DoTest, DoTestMe,DoTestCell,okTestMe,okTest
+    character (len=*), parameter :: NameSub = 'user_set_ics'
+    logical:: DoTest, DoTestMe, DoTestCell
     !-------------------------------------------------------------------------
-!!$    if(globalBLK==BLKtest .and. iProc==PROCtest)then
-!!$       call set_oktest('user_set_ics',oktest,oktestme)
-!!$    else
-!!$       oktest=.false.; oktestme=.false.
-!!$    endif
 
-    !write(*,*)'globalBLK=',globalBLK
-
-     if(iProc==PROCtest .and. globalBLK==BLKtest)then
-       call set_oktest(NameSub,DoTest,DoTestMe)
+    if(iProc==PROCtest .and. globalBLK==BLKtest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
     else
        DoTest=.false.; DoTestMe=.false.
     end if
 
-    oktest=.false.; oktestme=.false.
-
-    if(okTestMe)then
+    if(DoTestMe)then
        write(*,*)'in set_ics'
        write(*,*)'BodynDenNuSpecies_I(:)=',&
             BodynDenNuSpecies_I(:)
@@ -1202,7 +1171,7 @@ contains
 !!$      write(*,*)'nDenNuSpecies_CBI(i,j,k,globalBLK,1:MaxNuSpecies)=',nDenNuSpecies_CBI(i,j,k,globalBLK,1:MaxNuSpecies) 
     end do; end do; end do
 
-!!$    if(okTestMe)then
+!!$    if(DoTestMe)then
 !!$       write(*,*)'nDenNuSpecies_CBI(itest,jtest,ktest,BLKtest,1:nNuSPecies)=',&
 !!$            nDenNuSpecies_CBI(itest,jtest,ktest,BLKtest,1:nNuSPecies) 
 !!$       WRITE(*,*)''
@@ -1316,7 +1285,7 @@ contains
     end if
     nu1_BLK(:,:,:,globalBLK)=nu_BLK(:,:,:,globalBLK)
 
-!!$    if(okTestMe)then
+!!$    if(DoTestMe)then
 !!$       write(*,*)'usehoto=',UseHotO
 !!$       write(*,*)'nDenNuSpecies_CBI(itest,jtest,ktest,BLKtest,:)=',&
 !!$            nDenNuSpecies_CBI(itest,jtest,ktest,BLKtest,:) 
@@ -1360,7 +1329,7 @@ contains
        end if
     end do;end do; end do;
 
-!!$    if(OkTestMe)&
+!!$    if(DoTestMe)&
 !!$         write(*,*)'state_VGB(body1_)=',&
 !!$         CellState_VI(:,body1_),'cell_state_VI(:,1)=',CellState_VI(:,1)
 
@@ -1475,10 +1444,7 @@ contains
 
 
     time_BLK(:,:,:,globalBLK) = 0.00
- if(globalBLK==73)then
-write(*,*)'State_VGB(HpRho_,iTest,jTest,kTest,BLKtest)=',&
-            State_VGB(HpRho_,1,1,3,73)
-end if
+
 !!$    DoTestCell=.true.
 !!$    if(DoTestCell)then
 !!$       write(*,*)'initial set up'
@@ -1499,7 +1465,7 @@ end if
 
   end subroutine user_set_ICs
 
-  !=============================================================================
+  !============================================================================
   subroutine user_face_bcs(VarsGhostFace_V)
 
     use ModSize,       ONLY: nDim,West_,North_,Top_	
@@ -1564,7 +1530,6 @@ end if
 
   end subroutine user_face_bcs
 
-  !=============================================================================
-
+  !============================================================================
 
 end module ModUser
