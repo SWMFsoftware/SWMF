@@ -147,24 +147,19 @@ module ModUser
        UyNeutralsISW_t ,  &
        UzNeutralsISW_t
 
-  ! Number of cells at the edge of regions in which the neutral production 
-  ! is artificially switched off 
-  integer :: nCellRegionGap = 1
-
-  ! Velocity [km/s] and temperature [K] limits and widths for Pop I and II
-  ! The width is for the masking function that goes from 0 to 1
-  real :: TempPop1LimitDim = 1e5, dTempPop1LimitDim=-1.0
-  real :: uPop1LimitDim    = 100.0, duPop1LimitDim=-1.0
-  real :: MachPop2Limit    = 0.6, dMachPop2Limit=-1.0
-  real :: MachPop3Limit    = 1.5, dMachPop3Limit=-1.0
+  ! Velocity, temperature, Mach number and radius limits for the populations
+  real :: TempPop1LimitDim = 1e5    ! [K]
+  real :: uPop1LimitDim    = 100.0  ! [km/s]
+  real :: MachPop2Limit    = 0.9
+  real :: MachPop3Limit    = 1.5
+  real :: rPop3Limit       = 50.0   ! [AU] it is all Pop3 out to rPop3Limit
 
   ! Various factors in initial and boundary conditions
   real :: RhoNeuFactor = 1.0,   uNeuFactor = 1.0
   real :: RhoNe2Factor = 1.e-3, uNe2Factor = 1.0
   real :: RhoNe3Factor = 0.01,  uNe3Factor = 1.0
 
-  integer :: iFluidProduced_GB(-1:nI+2, -1:nJ+2, -1:nK+2, MaxBlock)
-  real    :: Mask_C(nI, nJ, nK)
+  integer :: iFluidProduced_C(nI, nJ, nK)
 
 contains
 
@@ -225,18 +220,11 @@ contains
           call read_var('UseNe2Source', UseSource_I(Ne2_))
           call read_var('UseNe3Source', UseSource_I(Ne3_))
        case("#REGIONS")
-          call read_var('nCellRegionGap' ,  nCellRegionGap)
           call read_var('TempPop1LimitDim', TempPop1LimitDim)
           call read_var('uPop1LimitDim',    uPop1LimitDim)
           call read_var('MachPop2Limit',    MachPop2Limit)
           call read_var('MachPop3Limit',    MachPop3Limit)
-
-          ! We need two ghost cells and edges also filled in for the gap 
-          ! algorithm to work. The gap cannot be more than 2 
-          ! because there are two layers of ghost cells. 
-          nCellRegionGap = max(0, min(2, nCellRegionGap))
-          if(nCellRegionGap == 2) optimize_message_pass = 'all'
-
+          call read_var('rPop3Limit',       rPop3Limit)
        case("#FACTORS")
           call read_var('RhoNeuFactor', RhoNeuFactor)
           call read_var('uNeuFactor'  , uNeuFactor)
@@ -289,6 +277,9 @@ contains
     else
        DoTest = .false.; DoTestMe = .false.
     end if
+
+    ! Make sure that OmegaSun and ParkerTilt are set
+    if(OmegaSun == 0.0) call set_omega_parker_tilt
 
     XyzSph_DD = rot_xyz_sph(FaceCoords_D)
     
@@ -520,19 +511,8 @@ contains
        DoTest = .false.; DoTestMe = .false.
     end if
 
-    if(OmegaSun == 0.0)then
-       ! Calculate angular velocity in normalized units
-       ! Note: the rotation period is 25.38 days in ModConst.f90:
-       ! OmegaSun = cTwoPi/(RotationPeriodSun*Si2No_V(UnitT_))
-
-       OmegaSun   = cTwoPi/(26.0*24.0*3600.00*Si2No_V(UnitT_))
-       ParkerTilt = OmegaSun*rBody/SWH_Ux
-
-       if(DoTestMe)then
-          write(*,*)NameSub,' OmegaSun         =',OmegaSun
-          write(*,*)NameSub,' ParkerTilt       =',ParkerTilt
-       end if
-    end if
+    ! Make sure that OmegaSun and ParkerTilt are set
+    if(OmegaSun == 0.0)call set_omega_parker_tilt
 
     do i=1-gcn,nI+gcn; do j=1-gcn,nJ+gcn; do k=1-gcn,nK+gcn
 
@@ -853,10 +833,7 @@ contains
        PlotVar_G(1:nI,1:nJ,1:nK) = Source_VC(NeuRho_,:,:,:)
     case('fluid')
        call select_region(iBlock)
-       PlotVar_G = iFluidProduced_GB(:,:,:,iBlock)
-    case('mask')
-       call select_region(iBlock)
-       PlotVar_G(1:nI,1:nJ,1:nK) = Mask_C
+       PlotVar_G(1:nI,1:nJ,1:nK) = iFluidProduced_C
     case('mach')
        PlotVar_G = &
             sqrt( sum(State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock)**2, DIM=1)      &
@@ -1110,7 +1087,7 @@ contains
       do iFluid = NeU_, Ne3_
          if(.not.UseSource_I(iFluid)) CYCLE
          call select_fluid
-         if (iFluid == iFluidProduced_GB(i,j,k,iBlock)) then
+         if (iFluid == iFluidProduced_C(i,j,k)) then
             Source_V(iRho)    = sum(I0xp_I(Neu_:Ne3_))  - I0xp_I(iFluid)
             Source_V(iRhoUx)  = sum(JxpUx_I(Neu_:Ne3_)) - JpxUx_I(iFluid)
             Source_V(iRhoUy)  = sum(JxpUy_I(Neu_:Ne3_)) - JpxUy_I(iFluid)
@@ -1142,14 +1119,13 @@ contains
               - Uz_I(Ion_)*Source_V(RhoUz_) ) 
       end if
 
-      Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Mask_C(i,j,k)*Source_V
+      Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Source_V
 
       if(DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest)then
 
          Source_V = Source_VC(:,i,j,k)
 
-         write(*,*) NameSub, ' iFluidProduced, Mask=', &
-              iFluidProduced_GB(i,j,k,iBlock), Mask_C(i,j,k)
+         write(*,*) NameSub, ' iFluidProduced=', iFluidProduced_C(i,j,k)
          do iVar = 1, nVar + nFLuid
             write(*,*) ' Source(',NameVar_V(iVar),')=',Source_V(iVar)
          end do
@@ -1177,24 +1153,36 @@ contains
 
   !============================================================================
 
+  subroutine set_omega_parker_tilt
+
+    ! Calculate angular velocity in normalized units
+    ! Note: the rotation period is 25.38 days in ModConst.f90:
+    ! OmegaSun = cTwoPi/(RotationPeriodSun*Si2No_V(UnitT_))
+
+    OmegaSun   = cTwoPi/(26.0*24.0*3600.00*Si2No_V(UnitT_))
+    ParkerTilt = OmegaSun*rBody/SWH_Ux
+
+  end subroutine set_omega_parker_tilt
+
+  !============================================================================
+
   subroutine select_region(iBlock)
 
-    ! set the global variables iFluidProduced_GB and Mask_C
+    ! set the global variabls iFluidProduced_C
     ! to select which neutral fluid is produced in each cell of the block
-    ! and apply some mask function near the edges of the regions if desired
 
     integer, intent(in):: iBlock
 
-    integer :: i, j, k, iFluidProduced, iGap
-    real    :: InvRho, U2, p, Mach2, TempDim, U2Dim, Mask
+    integer :: i, j, k
+    real    :: InvRho, U2, p, Mach2, TempDim, U2Dim
     !------------------------------------------------------------------------
 
     ! Produce fluid3 at the inner boundary
 
-    do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
-       if(r_BLK(i,j,k,iBlock) < 50.0) then
-          iFluidProduced_GB(i,j,k,iBlock) = Ne3_
+       if(r_BLK(i,j,k,iBlock) < rPop3Limit) then
+          iFluidProduced_C(i,j,k) = Ne3_
           CYCLE
        end if
 
@@ -1210,56 +1198,21 @@ contains
        TempDim = InvRho*p*No2Si_V(UnitTemperature_)
 
        ! Apply full source except near the boundaries between regions
-       Mask = 1.0
        if( TempPop1LimitDim > TempDim .and. uPop1LimitDim**2 > U2Dim)then
           ! Outside the heliopause
-          iFluidProduced = Neu_
+          iFluidProduced_C(i,j,k) = Neu_
        elseif( MachPop2Limit**2 > Mach2 )then
           ! Heliosheath
-          iFluidProduced = Ne2_
+          iFluidProduced_C(i,j,k) = Ne2_
        elseif( Mach2 > MachPop3Limit**2 )then
           ! Inside termination shock
-          iFluidProduced = Ne3_
+          iFluidProduced_C(i,j,k) = Ne3_
        else
-          ! No neutrals are produced in this region
-          iFluidProduced = 0
+          ! No neutrals are produced in this region (but they are destroyed)
+          iFluidProduced_C(i,j,k) = 0
        end if
 
-       ! This was an attempt smoothing the region edges. Did not help.
-       !if(dTempPop1LimitDim > 0.0) Mask = min( Mask, &
-       !     (TempPop1LimitDim - TempDim)/dTempPop1LimitDim )
-       !if(dTempPop1LimitDim > 0.0) Mask = min( Mask, &
-       !     (TempDim - TempPop1LimitDim)/dTempPop1LimitDim )
-       !if(dMachPop2Limit > 0.0) Mask = min( Mask, &
-       !     (MachPop2Limit - sqrt(Mach2))/DMachPop2Limit )
-       !if(dMachPop2Limit > 0.0) Mask = min( Mask, &
-       !     (sqrt(Mach2) - MachPop2Limit)/DMachPop2Limit )
-
-       ! Store results
-       iFluidProduced_GB(i,j,k,iBlock) = iFluidProduced
-
     end do; end do; end do
-
-    ! By default apply full source
-    Mask_C = 1.0
-
-    if(nCellRegionGap == 0) RETURN
-
-    ! Check if cells next to this one are the same region or not
-    ! If not, set Mask to zero so a gap is created between the regions.
-    ! This may be repeated twice at most because of the number of ghost cells
-    do iGap = 1, nCellRegionGap
-       do k=1, nK; do j=1, nJ; do i=1, nI
-          iFluidProduced = iFluidProduced_GB(i,j,k,iBlock)
-          if(  iFluidProduced /= iFluidProduced_GB(i-1,j,k,iBlock) .or. &
-               iFluidProduced /= iFluidProduced_GB(i+1,j,k,iBlock) .or. &
-               iFluidProduced /= iFluidProduced_GB(i,j-1,k,iBlock) .or. &
-               iFluidProduced /= iFluidProduced_GB(i,j+1,k,iBlock) .or. &
-               iFluidProduced /= iFluidProduced_GB(i,j,k-1,iBlock) .or. &
-               iFluidProduced /= iFluidProduced_GB(i,j,k+1,iBlock) ) &
-               Mask_C(i,j,k) = 0.0
-       end do; end do; end do
-    end do
 
   end subroutine select_region
 
