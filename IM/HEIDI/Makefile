@@ -22,6 +22,15 @@ HEIDI:  install
 	@cd ${EMPIRICALIEDIR};	make LIB
 	@cd ${EMPIRICALGMDIR};	make LIB
 	@cd src;	        make HEIDI
+
+LIB:  install
+	@cd ${NOMPIDIR};	make LIB
+	@cd ${SHAREDIR};  	make LIB
+	@cd ${TIMINGDIR}; 	make LIB 
+	@cd ${EMPIRICALIEDIR};	make LIB
+	@cd ${EMPIRICALGMDIR};	make LIB
+	@cd src;	        make LIB
+
 OUTDIR =output
 TESTDIR = run_test
 
