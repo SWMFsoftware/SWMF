@@ -49,7 +49,7 @@ subroutine MH_set_parameters(TypeAction)
        ySizeBoxHall, DySizeBoxHall, &
        zSizeBoxHall, DzSizeBoxHall
   use ModResistivity                              !^CFG IF DISSFLUX
-  use ModMultiFluid, ONLY: MassIon_I, DoConserveNeutrals, UseRusanovForNeutrals
+  use ModMultiFluid, ONLY: MassIon_I, DoConserveNeutrals
   use ModMultiIon, ONLY: multi_ion_set_parameters
   use ModSolarwind, ONLY: UseSolarwindFile, NameSolarwindFile, &
        read_solar_wind_file, normalize_solar_wind_data
@@ -1641,7 +1641,6 @@ subroutine MH_set_parameters(TypeAction)
      case("#MULTIFLUID")
         call read_var('UseTotalSpeed', UseTotalSpeed)
         call read_var('DoConserveNeutrals', DoConserveNeutrals)
-        call read_var('UseRusanovForNeutrals', UseRusanovForNeutrals)
 
      case("#MULTIION", "#COLLISION")
         call multi_ion_set_parameters(NameCommand)
@@ -2674,7 +2673,7 @@ contains
        ! Make sure that plotting range is placed at an integer multiple of dx
 
        do iDim = 1, 3
-          iMin = 2*iDim - 1; iMax = i+1
+          iMin = 2*iDim - 1; iMax = iMin+1
 
           ! Skip ignored dimensions of 2D and 1D cuts
           if(plot_range(iMax, iFile) - plot_range(iMin, iFile) &
