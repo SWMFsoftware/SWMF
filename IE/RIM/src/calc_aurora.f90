@@ -77,12 +77,14 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, OCFLBH, eFluxH, AveEH)
   real, dimension(0:nLons+1,nLats/2), intent(out) :: eFluxH, AveEH
   real, dimension(0:nLons+1), intent(out) :: OCFLBH
 
+  real, dimension(0:nLons+1,nLats/2) :: pNorm
+
   real, dimension(0:nLons+1,nLats/2) :: PolarRain_eFlux, PolarRain_AveE
   real, dimension(0:nLons+1,nLats/2) :: Discrete_eFlux, Discrete_AveE
   real, dimension(0:nLons+1,nLats/2) :: Diffuse_eFlux, Diffuse_AveE
   real, dimension(0:nLons+1) :: Width, smooth, Center
 
-  integer :: iLon, iLat, nSmooth, iSubLon
+  integer :: iLon, iLat, nSmooth, iSubLon, l
   logical :: IsDone, IsPeakFound
   real :: MaxP
   real :: Discrete_FacAE, Discrete_FacEF
@@ -90,14 +92,25 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, OCFLBH, eFluxH, AveEH)
 
   Discrete_FacAE = 2.5e22
   Discrete_FacEF = 0.2e20
-  Diffuse_FacAE = 4.0e-12
-  Diffuse_FacEF = 0.3e6
+  Diffuse_FacAE = 4.0e-11
+  Diffuse_FacEF = 0.3e9
 
   nSmooth = OCFLBSmoothLon/(Longitude(1,1) - Longitude(0,1))
 
   eFluxH = 0.0001
   AveEH  = 0.5
   OCFLBH = 1.0e32
+
+  ! One of the problems with the damn MHD code is that the pressure can
+  ! be miserably low.  So, let's set a minimum value for the maximum pressure,
+  ! bringing the maximum upto this value, but keeping the shape.
+
+  pNorm = pH
+
+  write(*,*) "min pressure : ",maxval(pNorm), MinPressure
+
+  if (maxval(pNorm) < MinPressure) &
+       pNorm = pNorm/maxval(pNorm)*MinPressure
 
   ! First, find open closed field-line boundary
 
@@ -106,7 +119,7 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, OCFLBH, eFluxH, AveEH)
 
      IsDone = .false.
      IsPeakFound = .false.
-     MaxP = maxval(pH(iLon,:))
+     MaxP = maxval(pNorm(iLon,:))
 
      iLat = 1
 
@@ -119,7 +132,7 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, OCFLBH, eFluxH, AveEH)
 
            ! Find the peak location of the pressure - this may be the location
            ! of the inner edge of the plasma sheet.
-           if (pH(iLon,iLat) == MaxP) IsPeakFound = .true.
+           if (pNorm(iLon,iLat) == MaxP) IsPeakFound = .true.
 
            ! Determine the width of the oval.  We want it to be greater
            ! than some minimum width
@@ -196,10 +209,7 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, OCFLBH, eFluxH, AveEH)
      ! location of the maximum pressure), is due to the electrons wanting
      ! to drift one way and the ions wanting to drift westward.
 
-
-     MaxP = maxval(pH(nLons+1-iLon,:))
-
-     write(*,*) "lon: ",iLon, nLons+1-iLon, MaxP, center(iLon), Width(iLon)
+     MaxP = maxval(pNorm(nLons+1-iLon,:))
 
      Diffuse_EFlux(iLon,:) = &
           MaxP * Diffuse_FacEF * &
@@ -208,6 +218,23 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, OCFLBH, eFluxH, AveEH)
 
      where(tH(nLons+1-iLon,:) > 0) &
           Diffuse_AveE(iLon,:) = tH(nLons+1-iLon,:) * Diffuse_FacAE
+
+     ! The average energy can sometimes be quite concentrated near
+     ! the open/closed field-line boundary, which is a problem, since
+     ! the eflux is spread out over significant distances. (i.e., we have
+     ! the situation in which there is massive amounts of low energy
+     ! electrons precipitating...)
+
+     l = maxloc(Diffuse_AveE(iLon,:),dim=1)
+     ! loop goes from location of max to equator
+     do iLat=l,nLats/2
+        if (abs(Latitude(iLon,iLat)) > Center(iLon)) then
+           Diffuse_AveE(iLon,iLat) = Diffuse_AveE(iLon, l)
+        else
+           Diffuse_AveE(iLon,iLat) = Diffuse_AveE(iLon, l) * &
+                exp(-abs(Center(iLon)-abs(Latitude(iLon,iLat)))/Width(iLon))
+        endif
+     enddo
 
   enddo
 

@@ -31,6 +31,7 @@ module ModParamRIM
   real    :: OCFLBSmoothLon  = 10.0*cDegToRad
   real    :: PolarRainAveE   =  0.5
   real    :: PolarRainEFlux  =  1.0
+  real    :: MinPressure     = 5.0e-9
 
   character (len=7) :: TypeImCouple = 'north'
 
