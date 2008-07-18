@@ -26,8 +26,7 @@ module ModMultiFluid
   ! The ion masses (adjustable)
   real :: MassIon_I(nIonFluid)
 
-  ! Allow using special schemes for the neutral fluids
-  logical :: UseRusanovForNeutrals = .false.
+  ! Allow using fully non-conservative scheme for the neutral fluids
   logical :: DoConserveNeutrals    = .true.
 
   ! Variables that are set for the selected fluid

@@ -993,16 +993,9 @@ contains
          Cleft  =min(0.0, minval(CleftStateLeft_I), minval(CleftStateHat_I))
          Cright =max(0.0, maxval(CrightStateRight_I), maxval(CrightStateHat_I))
 
-         if(nFluid > 1 .and. iFluid > IonLast_ .and. UseRusanovForNeutrals)then
-            ! Switch to Rusanov flux by taking the maximum of left and right
-            WeightLeft  = 0.5
-            WeightRight = 0.5
-            Diffusion   = 0.5*max(Cright, -Cleft)
-         else
-            WeightLeft  = Cright/(Cright - Cleft)
-            WeightRight = 1.0 - WeightLeft
-            Diffusion   = Cright*WeightRight
-         end if
+         WeightLeft  = Cright/(Cright - Cleft)
+         WeightRight = 1.0 - WeightLeft
+         Diffusion   = Cright*WeightRight
 
          Flux_V = &
               (WeightRight*FluxRight_V + WeightLeft*FluxLeft_V &
@@ -1017,16 +1010,9 @@ contains
             Cleft =min(0.0, CleftStateLeft_I(iFluid), CleftStateHat_I(iFluid))
             Cright=max(0.0,CrightStateRight_I(iFluid),CrightStateHat_I(iFluid))
 
-            if(iFluid > IonLast_ .and. UseRusanovForNeutrals)then
-               ! Switch to Rusanov flux: take max of left and right speeds
-               WeightLeft  = 0.5
-               WeightRight = 0.5
-               Diffusion   = 0.5*max(Cright, -Cleft)
-            else
-               WeightLeft  = Cright/(Cright - Cleft)
-               WeightRight = 1.0 - WeightLeft
-               Diffusion   = Cright*WeightRight
-            end if
+            WeightLeft  = Cright/(Cright - Cleft)
+            WeightRight = 1.0 - WeightLeft
+            Diffusion   = Cright*WeightRight
 
             do iVar = iRho_I(iFluid), iP_I(iFluid)
                Flux_V(iVar) = &
