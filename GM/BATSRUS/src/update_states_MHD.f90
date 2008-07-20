@@ -16,14 +16,17 @@ subroutine update_states_MHD(iStage,iBLK)
 
   implicit none
 
-  integer, intent(in) :: iStage,iBLK
+  integer, intent(in) :: iStage, iBLK
+
+
   integer :: i,j,k, iVar
 
-  real(Real8_) :: fullBx, fullBy, fullBz, fullBB, rhoc2, UdotBc2, gA2_Boris,&
-       FullBxOld,FullByOld,FullBzOld,Ux,Uy,Uz,UxOld,UyOld,UzOld,&
-       Bx,By,Bz,BxOld,ByOld,BzOld,B0x,B0y,B0z,RhoUx,RhoUy,RhoUz,&
-       MBorisMinusRhoUxOld, MBorisMinusRhoUyOld, MBorisMinusRhoUzOld,&
-       Rho,RhoInv,ECorr,p
+  ! These variables have to be double precision for accurate Boris scheme
+  real(Real8_) :: FullBx, FullBy, FullBz, fullBB, rhoc2, UdotBc2, gA2_Boris,&
+       FullBxOld, FullByOld, FullBzOld, Ux, Uy, Uz, UxOld, UyOld, UzOld,&
+       Bx, By, Bz, BxOld, ByOld, BzOld, B0x, B0y, B0z, RhoUx, RhoUy, RhoUz,&
+       mBorisMinusRhoUxOld, mBorisMinusRhoUyOld, mBorisMinusRhoUzOld,&
+       Rho, RhoInv, eCorr, p
   real:: DtFactor
   real:: DtLocal
   logical :: IsMultiIon
@@ -69,6 +72,9 @@ subroutine update_states_MHD(iStage,iBLK)
 
   if(DoTestMe)write(*,*) NameSub, ' after explicit state=', &
        State_VGB(VarTest, iTest, jTest, kTest, iBlk)
+
+  ! The point implicit updae and other stuff below are only done in last stage
+  if(iStage < nStage) RETURN
 
   ! Add point implicit user or multi-ion source terms
   if (UsePointImplicit .and. UsePointImplicit_B(iBLK))then
@@ -152,12 +158,11 @@ subroutine update_states_MHD(iStage,iBLK)
 
   end if
 
-
-  if(UseHyperbolicDivb .and. HypDecay > 0 .and. iStage == nStage) &
+  if(UseHyperbolicDivb .and. HypDecay > 0) &
        State_VGB(Hyp_,1:nI,1:nJ,1:nK,iBlk) = &
        State_VGB(Hyp_,1:nI,1:nJ,1:nK,iBlk)*(1 - HypDecay)
 
-  if(DoTestMe)write(*,*) NameSub, ' after final state=', &
+  if(DoTestMe)write(*,*) NameSub, ' final state=', &
        State_VGB(VarTest,iTest,jTest,kTest,iBlk)
 
 contains
