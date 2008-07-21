@@ -1,6 +1,6 @@
 program Interface
 
-  use ModIE_Interface
+  use ModEIE_Interface
 
   implicit none
 

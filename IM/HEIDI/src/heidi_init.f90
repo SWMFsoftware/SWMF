@@ -9,7 +9,6 @@ subroutine heidi_init
   use ModInit
   implicit none
    
-  
   if (me_world.eq.0) then
      call ionosphere_fine_grid
      call ionosphere_init(year,day,ut)

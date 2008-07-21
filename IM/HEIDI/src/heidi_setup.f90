@@ -542,341 +542,341 @@ end SUBROUTINE ARRAYS
            !	IKP=3  Read from file
            !	IKP=4  Read from MBI file (also read kp file for other inputs)
            ! **********************************************************************
-           SUBROUTINE GETKPA(i3,nst,i2,nkp)
+SUBROUTINE GETKPA(i3,nst,i2,nkp)
 
-             use ModHeidiSize
-             use ModHeidiIO
-             use ModHeidiMain
+  use ModHeidiSize
+  use ModHeidiIO
+  use ModHeidiMain
 
-             implicit none
+  implicit none
 
-             integer :: i3,nst,i4,i2,nkp,JKP,ii
-             real :: KPN,KPO,lambdae,KPtab(48),tol,RSUN,KPP,XKP
-             real :: cosd
-             external :: cosd
-             save tol,i4,XKP,KPP,KPN,KPO
+  integer :: i3,nst,i4,i2,nkp,JKP,ii
+  real :: KPN,KPO,lambdae,KPtab(48),tol,RSUN,KPP,XKP
+  real :: cosd
+  external :: cosd
+  save tol,i4,XKP,KPP,KPN,KPO
 
-             !	Data for simulation of the CRRES observations in 1/1991
-             DATA KPtab/1.667,2.000,2.000,2.333,1.777,3.333,4.667,3.000, &
-                  2.667,3.667,2.333,2.000,2.000,1.667,1.000,3.333, &
-                  0.333,1.333,1.000,1.667,2.000,1.333,2.333,3.000, &
-                  1.000,1.667,1.333,1.333,0.667,1.667,1.000,2.000, &
-                  2.000,0.667,1.333,1.667,0.667,0.333,0.333,1.667, &
-                  0.333,0.333,0.333,0.667,1.333,2.000,2.000,1.000/
-             !	DATA KPtab/1.667,2.000,2.000,2.333,1.777,3.333,4.667,3.000, &
-             !                  2.667,3.667,2.333,2.000,2.000,1.667,1.000,3.333, &
-             !     		   0.333,1.000,1.000,1.000,1.000,1.000,1.000,1.000, &
-             !     		   1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000, &
-             !     		   1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000, &
-             !     		   1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000/
+  !	Data for simulation of the CRRES observations in 1/1991
+  DATA KPtab/1.667,2.000,2.000,2.333,1.777,3.333,4.667,3.000, &
+       2.667,3.667,2.333,2.000,2.000,1.667,1.000,3.333, &
+       0.333,1.333,1.000,1.667,2.000,1.333,2.333,3.000, &
+       1.000,1.667,1.333,1.333,0.667,1.667,1.000,2.000, &
+       2.000,0.667,1.333,1.667,0.667,0.333,0.333,1.667, &
+       0.333,0.333,0.333,0.667,1.333,2.000,2.000,1.000/
+  !	DATA KPtab/1.667,2.000,2.000,2.333,1.777,3.333,4.667,3.000, &
+       !                  2.667,3.667,2.333,2.000,2.000,1.667,1.000,3.333, &
+  !     		   0.333,1.000,1.000,1.000,1.000,1.000,1.000,1.000, &
+       !     		   1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000, &
+  !     		   1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000, &
+       !     		   1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000/
 
-             !  IKP=0, keep Kp constant, otherwise...
-             IF (IKP.EQ.1) THEN	! IKP=1, Degrades until Kp<=1
-                IF(KP.GT.1.) KP=KP+DKP
-             ELSE IF (IKP.EQ.2) THEN	! IKP=2, read from table
-                JKP=MIN(48,INT(T/10800.)+1)
-                KP=KPtab(JKP) 
-             ELSE IF (IKP.GE.3) THEN	! IKP=3 Read from file
-                IF (MOD(I3-1,NKP).EQ.0 .OR. I3.EQ.NST) THEN
-                   KPP=RKPH(MAX0(1,I2-1))
-                   KPO=RKPH(I2)
-                   KPN=RKPH(MIN0(NSTEP/NKP+2,I2+1))
-                   XKP=.125*(10.*KPO-KPP-KPN)
-                   TOL=T
-                   DAY=DAYR(I2)
-                   AP=APR(I2)
-                   F107=F107R(I2)
-                   RSUN=RSUNR(I2)
-                   I2=I2+1
-                   KPN=RKPH(I2)	
-                END IF
-                IF (T-TOL.LT.3600.) THEN
-                   KP=.5*(KPP+KPO)+(XKP-.5*(KPP+KPO))*(T-TOL)/3600.
-                ELSE IF (T-TOL.LT.7200.) THEN
-                   KP=XKP
-                ELSE
-                   KP=XKP+(.5*(KPO+KPN)-XKP)*(T-TOL-7200.)/3600.
-                END IF
-                !            KP=KPO+(KPN-KPO)*(T-TOL)/10800.
-             END IF
-             IF (IKP.EQ.4 .OR. IA.EQ.2) THEN   ! Midnight Boundary Index
-                IF (I3.EQ.NST) THEN
-                   I4=0
-                   ii=2
-                   DO WHILE (I4.eq.0)
-                      IF (TLAME(ii).GE.T) THEN
-                         I4=ii-1
-                      ELSE IF (ii.EQ.ILAMBE-1) THEN
-                         I4=ILAMBE-1
-                      ELSE
-                         ii=ii+1
-                      END IF
-                   END DO
-                ELSE IF (T+2.*DT.GE.TLAME(ILAMBE)) THEN
-                   I4=ILAMBE-1
-                ELSE IF (T.GE.TLAME(I4+1)) THEN
-                   I4=I4+1
-                END IF
-                IF (T.LE.TLAME(1)) THEN
-                   LAMBDAE=LAMBE(1)
-                ELSE IF (T.GE.TLAME(ILAMBE)) THEN
-                   LAMBDAE=LAMBE(ILAMBE)
-                ELSE
-                   LAMBDAE=LAMBE(I4)+(LAMBE(I4+1)-LAMBE(I4))*(T-TLAME(I4)) &
-                        /AMAX1(.1*DT,TLAME(I4+1)-TLAME(I4))
-                END IF
-                IF (IKP.EQ.4) KP=LAMBDAE
-             END IF
-             A=7.05E-6/(1.-0.159*KP+0.0093*KP**2)**3
-             IF (IA.EQ.2) THEN  ! A from MBI transformation
-                A=1.44E-2/LAMGAM*COSD(LAMBDAE)**(2.*(LAMGAM+1.))
-             END IF
-             !RETURN
-           END SUBROUTINE GETKPA
+  !  IKP=0, keep Kp constant, otherwise...
+  IF (IKP.EQ.1) THEN	! IKP=1, Degrades until Kp<=1
+     IF(KP.GT.1.) KP=KP+DKP
+  ELSE IF (IKP.EQ.2) THEN	! IKP=2, read from table
+     JKP=MIN(48,INT(T/10800.)+1)
+     KP=KPtab(JKP) 
+  ELSE IF (IKP.GE.3) THEN	! IKP=3 Read from file
+     IF (MOD(I3-1,NKP).EQ.0 .OR. I3.EQ.NST) THEN
+        KPP=RKPH(MAX0(1,I2-1))
+        KPO=RKPH(I2)
+        KPN=RKPH(MIN0(NSTEP/NKP+2,I2+1))
+        XKP=.125*(10.*KPO-KPP-KPN)
+        TOL=T
+        DAY=DAYR(I2)
+        AP=APR(I2)
+        F107=F107R(I2)
+        RSUN=RSUNR(I2)
+        I2=I2+1
+        KPN=RKPH(I2)	
+     END IF
+     IF (T-TOL.LT.3600.) THEN
+        KP=.5*(KPP+KPO)+(XKP-.5*(KPP+KPO))*(T-TOL)/3600.
+     ELSE IF (T-TOL.LT.7200.) THEN
+        KP=XKP
+     ELSE
+        KP=XKP+(.5*(KPO+KPN)-XKP)*(T-TOL-7200.)/3600.
+     END IF
+     !            KP=KPO+(KPN-KPO)*(T-TOL)/10800.
+  END IF
+  IF (IKP.EQ.4 .OR. IA.EQ.2) THEN   ! Midnight Boundary Index
+     IF (I3.EQ.NST) THEN
+        I4=0
+        ii=2
+        DO WHILE (I4.eq.0)
+           IF (TLAME(ii).GE.T) THEN
+              I4=ii-1
+           ELSE IF (ii.EQ.ILAMBE-1) THEN
+              I4=ILAMBE-1
+           ELSE
+              ii=ii+1
+           END IF
+        END DO
+     ELSE IF (T+2.*DT.GE.TLAME(ILAMBE)) THEN
+        I4=ILAMBE-1
+     ELSE IF (T.GE.TLAME(I4+1)) THEN
+        I4=I4+1
+     END IF
+     IF (T.LE.TLAME(1)) THEN
+        LAMBDAE=LAMBE(1)
+     ELSE IF (T.GE.TLAME(ILAMBE)) THEN
+        LAMBDAE=LAMBE(ILAMBE)
+     ELSE
+        LAMBDAE=LAMBE(I4)+(LAMBE(I4+1)-LAMBE(I4))*(T-TLAME(I4)) &
+             /AMAX1(.1*DT,TLAME(I4+1)-TLAME(I4))
+     END IF
+     IF (IKP.EQ.4) KP=LAMBDAE
+  END IF
+  A=7.05E-6/(1.-0.159*KP+0.0093*KP**2)**3
+  IF (IA.EQ.2) THEN  ! A from MBI transformation
+     A=1.44E-2/LAMGAM*COSD(LAMBDAE)**(2.*(LAMGAM+1.))
+  END IF
+  !RETURN
+END SUBROUTINE GETKPA
 
-           !
-           ! End of subroutine GETKPA
-           !
+!
+! End of subroutine GETKPA
+!
 
-           ! **********************************************************************
-           !                             GETSWIND
-           !	Reads swind.dat each time step for solar wind parameters
-           ! **********************************************************************
-           SUBROUTINE GETSWIND
+! **********************************************************************
+!                             GETSWIND
+!	Reads swind.dat each time step for solar wind parameters
+! **********************************************************************
+SUBROUTINE GETSWIND
 
-             use ModHeidiSize
-             use ModHeidiIO
-             use ModHeidiMain
+  use ModHeidiSize
+  use ModHeidiIO
+  use ModHeidiMain
 
-             implicit none
+  implicit none
 
-             real :: T1,T2,BZ1,BZ2,MD1,MD2,U1,U2,FAC,FLO,LMPO,AMPO,BY1,BY2,BZ,BT
-             character header*8
-             INTEGER ::I,J,K,L
-             SAVE T1,T2,BZ1,BZ2,MD1,MD2,U1,U2,BY1,BY2
+  real :: T1,T2,BZ1,BZ2,MD1,MD2,U1,U2,FAC,FLO,LMPO,AMPO,BY1,BY2,BZ,BT
+  character header*8
+  INTEGER ::I,J,K,L
+  SAVE T1,T2,BZ1,BZ2,MD1,MD2,U1,U2,BY1,BY2
 
-             real :: bx
+  real :: bx
 
-             ILold(1:JO)=ILMP(1:JO)
-             IF (T.EQ.TIME) THEN
-                T2=TIME-1.
-                T1=T2
-                OPEN(UNIT=13,FILE=NAME//'_sw1.in',status='old')
-                DO I=1,6			! 6 lines of header material
-                   READ (13,*) HEADER
-                END DO
-             END IF
-             IF (T2.LT.T) THEN
-                DO WHILE (T2.LE.T)	! Best if final T2 > final T
-                   T1=T2
-                   BY1=BY2
-                   BZ1=BZ2
-                   MD1=MD2
-                   U1=U2
-                   READ (13,*,IOSTAT=I) T2,BT,BX,BY2,BZ2,MD2,U2
-                   IF (I.LT.0) T2=TIME+2*DT*(NSTEP+1)
-                   IF (T.EQ.TIME) THEN			! In case T2>T already
-                      T1=TIME
-                      BY1=BY2
-                      BZ1=BZ2
-                      MD1=MD2
-                      U1=U2
-                   END IF
-                END DO
-             END IF
-             FAC=(T-T1)/(T2-T1)			! Linearly interpolate
-             BYSW=FAC*BY2+(1.-FAC)*BY1               ! in nT
-             BZSW=FAC*BZ2+(1.-FAC)*BZ1		! in nT
-             MDSW=(FAC*MD2+(1.-FAC)*MD1)*MP*1.E6	! in kg/m3
-             USW=(FAC*U2+(1.-FAC)*U1)*1.E3		! in m/s
-             DPSW=(FAC*MD2*U2*U2+(1.-FAC)*MD1*U1*U1)*(MP*1.E21)  ! in nPa
+  ILold(1:JO)=ILMP(1:JO)
+  IF (T.EQ.TIME) THEN
+     T2=TIME-1.
+     T1=T2
+     OPEN(UNIT=13,FILE=NAME//'_sw1.in',status='old')
+     DO I=1,6			! 6 lines of header material
+        READ (13,*) HEADER
+     END DO
+  END IF
+  IF (T2.LT.T) THEN
+     DO WHILE (T2.LE.T)	! Best if final T2 > final T
+        T1=T2
+        BY1=BY2
+        BZ1=BZ2
+        MD1=MD2
+        U1=U2
+        READ (13,*,IOSTAT=I) T2,BT,BX,BY2,BZ2,MD2,U2
+        IF (I.LT.0) T2=TIME+2*DT*(NSTEP+1)
+        IF (T.EQ.TIME) THEN			! In case T2>T already
+           T1=TIME
+           BY1=BY2
+           BZ1=BZ2
+           MD1=MD2
+           U1=U2
+        END IF
+     END DO
+  END IF
+  FAC=(T-T1)/(T2-T1)			! Linearly interpolate
+  BYSW=FAC*BY2+(1.-FAC)*BY1               ! in nT
+  BZSW=FAC*BZ2+(1.-FAC)*BZ1		! in nT
+  MDSW=(FAC*MD2+(1.-FAC)*MD1)*MP*1.E6	! in kg/m3
+  USW=(FAC*U2+(1.-FAC)*U1)*1.E3		! in m/s
+  DPSW=(FAC*MD2*U2*U2+(1.-FAC)*MD1*U1*U1)*(MP*1.E21)  ! in nPa
 
-             !...Set up for source/loss calculation, magnetopause location vs MLT
-             LMPO=(10.22+1.29*TANH(0.184*(BZSW+8.14)))*DPSW**(-0.15152)
-             AMPO=(0.58-0.007*BZSW)*(1.+0.024*ALOG(DPSW))
-             LMP(2:JO)=LMPO*(2./(1.-COS(PHI(2:JO))))**AMPO
-             LMP(1)=LMP(2)
-             DO J=1,JO
-                IF (LMP(J).LT.LZ(IO)) THEN
-                   ILMP(J)=0		! ILMP=last closed I at this J
-                   I=1
-                   DO WHILE (ILMP(J).EQ.0)
-                      I=I+1
-                      IF (LMP(J).LT.LZ(I)) ILMP(J)=I-1
-                   END DO
-                ELSE
-                   ILMP(J)=IO
-                END IF
-             END DO
+  !...Set up for source/loss calculation, magnetopause location vs MLT
+  LMPO=(10.22+1.29*TANH(0.184*(BZSW+8.14)))*DPSW**(-0.15152)
+  AMPO=(0.58-0.007*BZSW)*(1.+0.024*ALOG(DPSW))
+  LMP(2:JO)=LMPO*(2./(1.-COS(PHI(2:JO))))**AMPO
+  LMP(1)=LMP(2)
+  DO J=1,JO
+     IF (LMP(J).LT.LZ(IO)) THEN
+        ILMP(J)=0		! ILMP=last closed I at this J
+        I=1
+        DO WHILE (ILMP(J).EQ.0)
+           I=I+1
+           IF (LMP(J).LT.LZ(I)) ILMP(J)=I-1
+        END DO
+     ELSE
+        ILMP(J)=IO
+     END IF
+  END DO
 
-             RETURN
-           END SUBROUTINE GETSWIND
-           !
-           ! End of subroutine GETSWIND
-           !
+  RETURN
+END SUBROUTINE GETSWIND
+!
+! End of subroutine GETSWIND
+!
 
-           ! **********************************************************************
-           !				THERMAL
-           !	Converts thermal plasma densities from Craig's grid to ours
-           !	Rewritten for mram04.f to use Dan Ober's plasmasphere code:
-           !	  the Dynamic Global Core Plasma Model (DGCPM)
-           !	  including passage of our electric potentials to the DGCPM
-           ! **********************************************************************
-           SUBROUTINE THERMAL
+! **********************************************************************
+!				THERMAL
+!	Converts thermal plasma densities from Craig's grid to ours
+!	Rewritten for mram04.f to use Dan Ober's plasmasphere code:
+!	  the Dynamic Global Core Plasma Model (DGCPM)
+!	  including passage of our electric potentials to the DGCPM
+! **********************************************************************
+SUBROUTINE THERMAL
 
-             use ModHeidiSize
-             use ModHeidiMain
-             use ModHeidiDGCPM
-             use ModHeidiIO
-             use ModProcIM
+  use ModHeidiSize
+  use ModHeidiMain
+  use ModHeidiDGCPM
+  use ModHeidiIO
+  use ModProcIM
 
-             implicit none
+  implicit none
 
-             integer :: i,j,i1,j1,l,jj,jjj,j2,i2,ier,ntimestep,n
-             real :: EO,FAC,FACI,sind
-             real :: delt, par(2)
-             real ::chi1, kpinit, dtimestep
-             character*80 filename
-             external :: sind
+  integer :: i,j,i1,j1,l,jj,jjj,j2,i2,ier,ntimestep,n
+  real :: EO,FAC,FACI,sind
+  real :: delt, par(2)
+  real ::chi1, kpinit, dtimestep
+  character*80 filename
+  external :: sind
 
 
-             par(1)=-1.0
-             par(2)=-1.0
-             ntimestep=10
-             dtimestep=1./ntimestep
+  par(1)=-1.0
+  par(2)=-1.0
+  ntimestep=10
+  dtimestep=1./ntimestep
 
-             !  If ITHERMFIRST=1, then do initial setup for the plasmasphere code and return
-             IF (ithermfirst.eq.1) then
-                if (me_world.eq.0) then
-                   call initmain()
-                   call getgrid(vthetacells,nthetacells,vphicells,nphicells)
-                   call getxydipole(nthetacells,nphicells,vthetacells,vphicells, &
-                        gridx,gridy,gridoc)
-                   do i=1,nthetacells
-                      vlzcells(i)=1./sind(vthetacells(i))**2
-                   enddo
-                   do j=1,nphicells
-                      vmltcells(j)=vphicells(j)/15.
-                   enddo
-                endif
+  !  If ITHERMFIRST=1, then do initial setup for the plasmasphere code and return
+  IF (ithermfirst.eq.1) then
+     if (me_world.eq.0) then
+        call initmain()
+        call getgrid(vthetacells,nthetacells,vphicells,nphicells)
+        call getxydipole(nthetacells,nphicells,vthetacells,vphicells, &
+             gridx,gridy,gridoc)
+        do i=1,nthetacells
+           vlzcells(i)=1./sind(vthetacells(i))**2
+        enddo
+        do j=1,nphicells
+           vmltcells(j)=vphicells(j)/15.
+        enddo
+     endif
 
-                call MPI_BARRIER(iComm,iError)
-                call MPI_Bcast(vthetacells,nthetacells,MPI_Real,0,iComm,iError)
-                call MPI_Bcast(vlzcells,nthetacells,MPI_Real,0,iComm,iError)
-                call MPI_Bcast(vphicells,nphicells,MPI_Real,0,iComm,iError)
-                call MPI_Bcast(vmltcells,nphicells,MPI_Real,0,iComm,iError)
-                call MPI_Bcast(gridx,nthetacells*nphicells,MPI_Real,0,iComm,iError)
-                call MPI_Bcast(gridy,nthetacells*nphicells,MPI_Real,0,iComm,iError)
-                call MPI_Bcast(gridoc,nthetacells*nphicells,MPI_Real,0,iComm,iError)
-                ithermfirst=2
-                RETURN
+     call MPI_BARRIER(iComm,iError)
+     call MPI_Bcast(vthetacells,nthetacells,MPI_Real,0,iComm,iError)
+     call MPI_Bcast(vlzcells,nthetacells,MPI_Real,0,iComm,iError)
+     call MPI_Bcast(vphicells,nphicells,MPI_Real,0,iComm,iError)
+     call MPI_Bcast(vmltcells,nphicells,MPI_Real,0,iComm,iError)
+     call MPI_Bcast(gridx,nthetacells*nphicells,MPI_Real,0,iComm,iError)
+     call MPI_Bcast(gridy,nthetacells*nphicells,MPI_Real,0,iComm,iError)
+     call MPI_Bcast(gridoc,nthetacells*nphicells,MPI_Real,0,iComm,iError)
+     ithermfirst=2
+     RETURN
 
-             END IF
+  END IF
 
-             !  Call the plasmasphere code and interpolate onto our spatial grid
-             if (me_world.eq.0) then
-                delt=2*DT*dtimestep
-                If (ithermfirst.eq.2) then
-                   If (itherminit.eq.1) then  ! Read initial plasmasphere from file
-                      filename=name//'_dgcpm.in'
-                      print *, 'Reading in plasmasphere file: ',filename
-                      call loadplasmasphere(filename)
-                      call getdensity(vthetacells,nthetacells,vphicells,nphicells, &
-                           dendgcpm)
-                      delt=0.
-                   else	 ! initialize plasmasphere with 48 h of low activity
-                      kpinit = 1.0 
-                      chi1 = 7350.0 / (9.0 - kpinit)
-                      delt=48.0*60.0*60.0
-                      do i = 1, nthetacells
-                         do j = 1, nphicells
-                            fac = vlzcells(i) * sind(vphicells(j))
-                            potdgcpm(i,j) = chi1 * fac
-                         enddo
-                      enddo
-                   endif  ! itherminit
-                endif    ! ithermfirst
-                If (delt.gt.0.) then
-                   call setpot(vthetacells,nthetacells,vphicells,nphicells,potdgcpm)
-                   print *, 'Calling plasmasphere:',potdgcpm(nthetacells,nphicells/4), &
-                        potdgcpm(nthetacells,3*nphicells/4)
-                   do n=1,ntimestep
-                      call plasmasphere(delt,par)
-                   end do
-                   call getdensity(vthetacells,nthetacells,vphicells,nphicells,dendgcpm)
-                endif
-                do j=1,JO
-                   do i=1,IO
-                      CALL LINTP2(vlzcells,vmltcells,dendgcpm,nthetacells,nphicells, &
-                           LZ(I),MLT(J),XNE(I,J),IER)
-                      XNE(I,J)=1.E-6*XNE(i,J)
-                   end do	! I loop
-                end do	! J loop
-             endif		! me_world=0
+  !  Call the plasmasphere code and interpolate onto our spatial grid
+  if (me_world.eq.0) then
+     delt=2*DT*dtimestep
+     If (ithermfirst.eq.2) then
+        If (itherminit.eq.1) then  ! Read initial plasmasphere from file
+           filename=name//'_dgcpm.in'
+           print *, 'Reading in plasmasphere file: ',filename
+           call loadplasmasphere(filename)
+           call getdensity(vthetacells,nthetacells,vphicells,nphicells, &
+                dendgcpm)
+           delt=0.
+        else	 ! initialize plasmasphere with 48 h of low activity
+           kpinit = 1.0 
+           chi1 = 7350.0 / (9.0 - kpinit)
+           delt=48.0*60.0*60.0
+           do i = 1, nthetacells
+              do j = 1, nphicells
+                 fac = vlzcells(i) * sind(vphicells(j))
+                 potdgcpm(i,j) = chi1 * fac
+              enddo
+           enddo
+        endif  ! itherminit
+     endif    ! ithermfirst
+     If (delt.gt.0.) then
+        call setpot(vthetacells,nthetacells,vphicells,nphicells,potdgcpm)
+        print *, 'Calling plasmasphere:',potdgcpm(nthetacells,nphicells/4), &
+             potdgcpm(nthetacells,3*nphicells/4)
+        do n=1,ntimestep
+           call plasmasphere(delt,par)
+        end do
+        call getdensity(vthetacells,nthetacells,vphicells,nphicells,dendgcpm)
+     endif
+     do j=1,JO
+        do i=1,IO
+           CALL LINTP2(vlzcells,vmltcells,dendgcpm,nthetacells,nphicells, &
+                LZ(I),MLT(J),XNE(I,J),IER)
+           XNE(I,J)=1.E-6*XNE(i,J)
+        end do	! I loop
+     end do	! J loop
+  endif		! me_world=0
 
-             call MPI_BARRIER(iComm,iError)
-             call MPI_Bcast(XNE,NR*NT,MPI_Real,0,iComm,iError)
+  call MPI_BARRIER(iComm,iError)
+  call MPI_Bcast(XNE,NR*NT,MPI_Real,0,iComm,iError)
 
-             !.......Set F2(K=1) to the thermal plasma flux level (PE runs)
-             IF (IST.EQ.1 .AND. SCALC(1).EQ.1) THEN
-                EO=0.001	! Te=1 eV
-                do l=1,LO
-                   do j=1,JO
-                      do i=1,io
-                         F2(I,J,1,L,1)=SQRT(5.*Q/MAS(1)*(PI*EO)**3)*XNE(I,J)*EKEV(1)* &
-                              EXP(-EKEV(1)/EO)*FFACTOR(I,1,L)
-                      end do
-                   end do
-                end do
-             END IF
+  !.......Set F2(K=1) to the thermal plasma flux level (PE runs)
+  IF (IST.EQ.1 .AND. SCALC(1).EQ.1) THEN
+     EO=0.001	! Te=1 eV
+     do l=1,LO
+        do j=1,JO
+           do i=1,io
+              F2(I,J,1,L,1)=SQRT(5.*Q/MAS(1)*(PI*EO)**3)*XNE(I,J)*EKEV(1)* &
+                   EXP(-EKEV(1)/EO)*FFACTOR(I,1,L)
+           end do
+        end do
+     end do
+  END IF
 
-             ithermfirst = 0
+  ithermfirst = 0
 
-             RETURN
-           END SUBROUTINE THERMAL
-           !
-           ! End of subroutine THERMAL
-           !
+  RETURN
+END SUBROUTINE THERMAL
+!
+! End of subroutine THERMAL
+!
 
-           !*********************** Function G(X) *********************************
-           Real Function G(X)
+!*********************** Function G(X) *********************************
+Real Function G(X)
 
-             use ModHeidiSize
-             use ModHeidiMain
+  use ModHeidiSize
+  use ModHeidiMain
 
-             G1=ERF(X,IER)-2.*X/SQRT(PI)*EXP(-X*X)
-             G=G1/2./X/X
+  G1=ERF(X,IER)-2.*X/SQRT(PI)*EXP(-X*X)
+  G=G1/2./X/X
 
-             RETURN
-           END FUNCTION G
-           !
-           ! End of function G
-           !
+  RETURN
+END FUNCTION G
+!
+! End of function G
+!
 
-           !*********************** Function T(X) *********************************
-           !	function f(y) taken from Ejiri, JGR,1978
+!*********************** Function T(X) *********************************
+!	function f(y) taken from Ejiri, JGR,1978
 
-           Real Function FUNT(X)		! X is cos of equat pa = MU
+Real Function FUNT(X)		! X is cos of equat pa = MU
 
-             use ModHeidiSize
-             use ModHeidiMain
+  use ModHeidiSize
+  use ModHeidiMain
 
-             implicit none
+  implicit none
 
-             real :: Y,X,ALPHA,BETA,A1,A2,A3,A4!,FUNT
+  real :: Y,X,ALPHA,BETA,A1,A2,A3,A4!,FUNT
 
-             Y=SQRT(1-X*X)
-             ALPHA=1.+ALOG(2.+SQRT(3.))/2./SQRT(3.)
-             BETA=ALPHA/2.-PI*SQRT(2.)/12.
-             A1=0.055
-             A2=-0.037
-             A3=-0.074
-             A4=0.056
-             FUNT=ALPHA-BETA*(Y+SQRT(Y))+A1*Y**(1./3.)+A2*Y**(2./3.)+  &
-                  A3*Y+A4*Y**(4./3.)
+  Y=SQRT(1-X*X)
+  ALPHA=1.+ALOG(2.+SQRT(3.))/2./SQRT(3.)
+  BETA=ALPHA/2.-PI*SQRT(2.)/12.
+  A1=0.055
+  A2=-0.037
+  A3=-0.074
+  A4=0.056
+  FUNT=ALPHA-BETA*(Y+SQRT(Y))+A1*Y**(1./3.)+A2*Y**(2./3.)+  &
+       A3*Y+A4*Y**(4./3.)
 
-             RETURN
-           END FUNCTION FUNT
+  RETURN
+END FUNCTION FUNT
            !
            ! End of function FUNT
            !
@@ -884,28 +884,28 @@ end SUBROUTINE ARRAYS
            !*********************** Function I(X) *********************************
            !	function I(y) taken from Ejiri, JGR,1978
 
-           Real Function FUNI(X)		! X is cos of equat pa = MU
+Real Function FUNI(X)		! X is cos of equat pa = MU
 
-             use ModHeidiSize
-             use ModHeidiMain
+  use ModHeidiSize
+  use ModHeidiMain
 
-             implicit none
+  implicit none
 
-             real :: Y,X,ALPHA,BETA,A1,A2,A3,A4!,FUNI
+  real :: Y,X,ALPHA,BETA,A1,A2,A3,A4!,FUNI
 
-             Y=SQRT(1.-X*X)
-             ALPHA=1.+ALOG(2.+SQRT(3.))/2./SQRT(3.)
-             BETA=ALPHA/2.-PI*SQRT(2.)/12.
-             A1=0.055
-             A2=-0.037
-             A3=-0.074
-             A4=0.056
-             FUNI=2.*ALPHA*(1.-Y)+2.*BETA*Y*ALOG(Y)+4.*BETA*(Y-SQRT(Y))+  &
-                  3.*A1*(Y**(1./3.)-Y)+6.*A2*(Y**(2./3.)-Y)+6.*A4*(Y-Y**(4./3.))  &
-                  -2.*A3*Y*ALOG(Y)
+  Y=SQRT(1.-X*X)
+  ALPHA=1.+ALOG(2.+SQRT(3.))/2./SQRT(3.)
+  BETA=ALPHA/2.-PI*SQRT(2.)/12.
+  A1=0.055
+  A2=-0.037
+  A3=-0.074
+  A4=0.056
+  FUNI=2.*ALPHA*(1.-Y)+2.*BETA*Y*ALOG(Y)+4.*BETA*(Y-SQRT(Y))+  &
+       3.*A1*(Y**(1./3.)-Y)+6.*A2*(Y**(2./3.)-Y)+6.*A4*(Y-Y**(4./3.))  &
+       -2.*A3*Y*ALOG(Y)
 
-             RETURN
-           END FUNCTION FUNI
+  RETURN
+END FUNCTION FUNI
            !	
            ! End of function FUNI
            !
@@ -914,21 +914,21 @@ end SUBROUTINE ARRAYS
            !	Couldn't we just ROUND() it?
 
            !****************************
-           Real Function APPX(T)
+Real Function APPX(T)
 
-             real :: EPSLN
+  real :: EPSLN
 
-             EPSLN=0.00000001
-             IF (T.LT.0.) THEN
-                APPX=T-EPSLN
-             ELSE
-                APPX=T+EPSLN
-             END if
-             IF(INT(APPX).NE.INT(T)) RETURN
-             APPX=T
+  EPSLN=0.00000001
+  IF (T.LT.0.) THEN
+     APPX=T-EPSLN
+  ELSE
+     APPX=T+EPSLN
+  END if
+  IF(INT(APPX).NE.INT(T)) RETURN
+  APPX=T
 
-             RETURN
-           END FUNCTION APPX
+  RETURN
+END FUNCTION APPX
            !
            ! End of function APPX
            !
@@ -937,15 +937,15 @@ end SUBROUTINE ARRAYS
            !        new code for missing functions on cray ========begin====ab==
 
            !****************************
-           Real Function ACOSD(X)
+Real Function ACOSD(X)
 
-             use ModHeidiSize
-             use ModHeidiMain
+  use ModHeidiSize
+  use ModHeidiMain
 
-             ACOSD=180.0/PI*ACOS(X)
+  ACOSD=180.0/PI*ACOS(X)
 
-             RETURN
-           END FUNCTION ACOSD
+  RETURN
+END FUNCTION ACOSD
            ! 
            ! End of function ACOSD
            !

@@ -38,6 +38,35 @@ MODULES = \
         ilu.o \
 	ModProcIM.o 
 
+#MODULES = \
+#	ModHeidiSize.o\
+#	ModHeidiMain.o\
+#	ModHeidiCurrents.o\
+#	ModHeidiDGCPM.o\
+#	ModHeidiDrifts.o\
+#	ModHeidiIO.o\
+#	ModHeidiWaves.o\
+#	ModInit.o\
+#	ModSize.o\
+#	ModMain.o\
+#	ModIonosphere.o\
+#	ModConductance.o\
+#	ModPhysics.o\
+#	ModProcIM.o\
+#	ModIO.o\
+#	precision.o \
+#	io.o \
+#        CSR.o \
+#        MSR.o \
+#        LUCSRMSR.o \
+#        BandLU.o \
+#        matrix-arithmetic.o \
+#        flop_module.o \
+#        iteration-defaults.o \
+#        GMRES.o \
+#        ilu.o \
+#	ModProcIM.o 
+
 OBJ_IONO = \
         iono_conductances.o\
         iono_solver.o\
@@ -64,35 +93,48 @@ OBJECTS_010 = \
 	ModProcIM.o \
 	heidi_check.o \
 	heidi_init.o \
-	heidi_run.o 
+	heidi_run.o \
+	IM_wrapper.o
 
 MODULES_IE = \
-	ModConductance.o\
-	ModKind.o\
-	ModAMIE_Interface.o\
-	ModErrors.o\
-	ModIE_Interface.o\
-	ModExtras.o\
-	ModFiles.o
+	ModConductance.o
+
+
+#OBJECTS_IE = \
+#	AMIE_Library.o\
+#	GM_Library.o\
+#	IE_End.o\
+#	IE_Initialize.o\
+#	IE_Library.o\
+#	IO_Library.o\
+#	IE_set_inputs.o\
+#	readAMIEoutput.o\
+#	wei01.o\
+#	wei96.o\
+#	weicom.o\
+#	mh86.o\
+#	hmr89.o\
+#	iz94.o\
+#	merge_str.o\
+#	time_routines.o\
+#	ihp.o
 
 OBJECTS_IE = \
-	AMIE_Library.o\
-	GM_Library.o\
-	IE_End.o\
-	IE_Initialize.o\
-	IE_Library.o\
-	IO_Library.o\
-	IE_set_inputs.o\
-	readAMIEoutput.o\
 	wei01.o\
 	wei96.o\
 	weicom.o\
-	mh86.o\
-	hmr89.o\
-	iz94.o\
-	merge_str.o\
-	time_routines.o\
-	ihp.o
+	time_routines.o
+
+#OBJECTS_IE = \
+#	GM_Library.o\
+#	IE_End.o\
+#	IE_Initialize.o\
+#	IE_Library.o\
+#	IE_set_inputs.o\
+#	wei01.o\
+#	wei96.o\
+#	weicom.o\
+#	time_routines.o
 
 OBJECTS = ${OBJ_IONO} ${OBJECTS_IE} ${OBJECTS_010} ${MODULES_IE} ${MODULES}
 

@@ -572,6 +572,10 @@ subroutine ionosphere_write_output(ifile,time,IO_prefix,IO_suffix)
 !  endif
 
 !!! For use with mram-given output suffix:
+
+  write(*,*) "file : ",iono_dir_path//IO_prefix//iono_dir//"it_"//&
+       IO_suffix//IO_ext
+
   open(unit=Iunit,file=iono_dir_path//IO_prefix//iono_dir//"it_"//&
        IO_suffix//IO_ext, &
        status="unknown")
