@@ -127,13 +127,14 @@ contains
     if(.not.allocated(iVarPointImpl_I))then
 
        ! Set default perturbation parameters
-       if(nByteReal == 8)then
-          EpsPointImpl = 1.e-6
-       else
-          EpsPointImpl = 1.e-3
-       end if
        allocate(EpsPointImpl_V(nVar))
-       EpsPointImpl_V = 1.e-6
+       if(nByteReal == 8)then
+          EpsPointImpl   = 1.e-6
+          EpsPointImpl_V = 1.e-12
+       else
+          EpsPointImpl   = 1.e-3
+          EpsPointImpl_V = 1.e-6
+       end if
 
        ! This call should allocate and set the iVarPointImpl_I index array,
        ! set IsPointImplMatrixSet=.true. if the dS/dU matrix is analytic,
