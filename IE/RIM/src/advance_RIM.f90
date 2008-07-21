@@ -27,7 +27,7 @@ subroutine advance_RIM
   endif
 
   do iLon=0,nLons+1 
-     nEmpiricalLats = 0
+     nEmpiricalLats = 1
      do iLat=1,nLats
         if (abs(Latitude(iLon,iLat)) > HighLatBoundary) then
            potential(iLon,iLat) = EmpiricalPotential(iLon,nEmpiricalLats)

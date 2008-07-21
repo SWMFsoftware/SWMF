@@ -492,16 +492,97 @@ subroutine IE_get_for_pw(Buffer_IIV, iSize, jSize, nVar, Name_V, NameHem,&
   call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
 end subroutine IE_get_for_pw
+
+
 !==============================================================================
 
 subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
 
-  ! Some of the arguments are complicated derived type
-  ! For sake of simplicity the arguments are not declared
+  ! Provide potential and current for IM
+  ! The value should be interpolated from nPoints with
+  ! indexes stored in Index and weights stored in Weight
+  ! The variables should be put into Buff_V
 
-  character (len=*),parameter :: NameSub='IE_get_for_im'
+  use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
+  use ModRIM, ONLY: nLats, nLons, &
+       Potential, Jr, SigmaH, SigmaP, &
+       cpcpn, cpcps
+  use ModParamRIM,    ONLY: TypeImCouple
 
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+  implicit none
+  character(len=*), parameter :: NameSub='IE_get_for_im'
+
+  integer,intent(in)            :: nPoint, iPointStart, nVar
+  real,intent(out)              :: Buff_V(nVar)
+  type(IndexPtrType),intent(in) :: Index
+  type(WeightPtrType),intent(in):: Weight
+
+  integer :: iBlock, iLat, iLon, iLatSouth, iPoint
+  real    :: w
+  !---------------------------------------------------------------------------
+  Buff_V = 0.0
+
+  do iPoint = iPointStart, iPointStart + nPoint - 1
+
+     iLat   = Index % iCB_II(1,iPoint)
+     iLon   = Index % iCB_II(2,iPoint)
+     iBlock = Index % iCB_II(3,iPoint)
+     w      = Weight % Weight_I(iPoint)
+
+     if(iBlock/=1)then
+        write(*,*)NameSub,': iPoint,Index % iCB_II=',&
+             iPoint,Index%iCB_II(:,iPoint)
+        call CON_stop(NameSub//&
+             ' SWMF_ERROR iBlock should be 1=North in IE-IM coupling')
+     end if
+
+     if(iLat<1 .or. iLat>nLats .or. iLon<1 .or. iLon>nLons+1)then
+        write(*,*)'iLat,iLon=',iLat,iLon
+        call CON_stop(NameSub//' SWMF_ERROR index out of range')
+     end if
+
+     ! Index for the same latitude on the southern hemisphere
+     iLatSouth = nLats + 1 - iLat
+
+     select case(TypeImCouple)
+     case('north')
+        Buff_V(1) = Buff_V(1) + w * Potential(iLon,iLat)
+        Buff_V(2) = Buff_V(2) + w * Jr(iLon,iLat)
+        Buff_V(3) = Buff_V(3) + w * SigmaH(iLon,iLat)
+        Buff_V(4) = Buff_V(4) + w * SigmaP(iLon,iLat)
+     case('south')
+        Buff_V(1) = Buff_V(1) + w * Potential(iLon,iLatSouth)
+        Buff_V(2) = Buff_V(2) + w * Jr(iLon,iLatSouth)
+        Buff_V(3) = Buff_V(3) + w * SigmaH(iLon,iLatSouth)
+        Buff_V(4) = Buff_V(4) + w * SigmaP(iLon,iLatSouth)
+     case('cpcpmin')
+        if(cpcpn < cpcps)then
+           Buff_V(1) = Buff_V(1) + w * Potential(iLon,iLat)
+           Buff_V(2) = Buff_V(2) + w * Jr(iLon,iLat)
+           Buff_V(3) = Buff_V(3) + w * SigmaH(iLon,iLat)
+           Buff_V(4) = Buff_V(4) + w * SigmaP(iLon,iLat)
+        else
+           Buff_V(1) = Buff_V(1) + w * Potential(iLon,iLatSouth)
+           Buff_V(2) = Buff_V(2) + w * Jr(iLon,iLatSouth)
+           Buff_V(3) = Buff_V(3) + w * SigmaH(iLon,iLatSouth)
+           Buff_V(4) = Buff_V(4) + w * SigmaP(iLon,iLatSouth)
+        end if
+     case('average')
+        Buff_V(1) = Buff_V(1) + w * &
+             0.5*(Potential(iLon,iLat)+Potential(iLon,iLatSouth))
+        Buff_V(2) = Buff_V(2) + w * &
+             0.5*(Jr(iLon,iLat)+Jr(iLon,iLatSouth))
+        Buff_V(3) = Buff_V(3) + w * 0.5*( &
+             SigmaH(iLon,iLat)  + &
+             SigmaH(iLon,iLatSouth))
+        Buff_V(4) = Buff_V(4) + w * 0.5*( &
+             SigmaP(iLon,iLat)  + &
+             SigmaP(iLon,iLatSouth))
+     case default
+        call CON_stop(NameSub//' ERROR: Unknown value for TypeImCouple='// &
+             TypeImCouple)
+     end select
+  end do
 
 end subroutine IE_get_for_im
 
