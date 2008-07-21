@@ -158,15 +158,15 @@ subroutine write_ring_current
 	potfacn=potfacn+kfac*(1.-lfac)*IONO_NORTH_PHI(kk,l)
 	potfacn=potfacn+(1.-kfac)*lfac*IONO_NORTH_PHI(k,l1)
 	potfacn=potfacn+kfac*lfac*IONO_NORTH_PHI(kk,l1)
-	potfacs=(1.-kfac)*(1.-lfac)*IONO_SOUTH_PHI(IONO_nTheta-k,l)
-	potfacs=potfacs+kfac*(1.-lfac)*IONO_SOUTH_PHI(IONO_nTheta-kk,l)
-	potfacs=potfacs+(1.-kfac)*lfac*IONO_SOUTH_PHI(IONO_nTheta-k,l1)
-	potfacs=potfacs+kfac*lfac*IONO_SOUTH_PHI(IONO_nTheta-kk,l1)
-	If (abs(potfacn).le.abs(potfacs)) then
+!	potfacs=(1.-kfac)*(1.-lfac)*IONO_SOUTH_PHI(IONO_nTheta-k,l)
+!	potfacs=potfacs+kfac*(1.-lfac)*IONO_SOUTH_PHI(IONO_nTheta-kk,l)
+!	potfacs=potfacs+(1.-kfac)*lfac*IONO_SOUTH_PHI(IONO_nTheta-k,l1)
+!	potfacs=potfacs+kfac*lfac*IONO_SOUTH_PHI(IONO_nTheta-kk,l1)
+!	If (abs(potfacn).le.abs(potfacs)) then
            potfac = potfacn
-	else
-           potfac = potfacs
-	endif
+!	else
+!           potfac = potfacs
+!	endif
         
 	potdgcpm(i,j) = potdgcpm(i,j) + potfac
         
