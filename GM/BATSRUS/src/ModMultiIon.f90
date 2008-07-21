@@ -43,11 +43,11 @@ contains
     !------------------------------------------------------------------------
     select case(NameCommand)
     case("#MULTIION")
+       call read_var('LowDensityRatio',       LowDensityRatio)
        call read_var('DoRestrictMultiIon', DoRestrictMultiIon)
        if(DoRestrictMultiIon)then
           call read_var('MachNumberMultiIon',    MachNumberMultiIon)
           call read_var('ParabolaWidthMultiIon', ParabolaWidthMultiIon)
-          call read_var('LowDensityRatio',       LowDensityRatio)
        end if
     case("#COLLISION")
        call read_var('CollisionCoefDim', CollisionCoefDim)
