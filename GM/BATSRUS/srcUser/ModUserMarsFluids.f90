@@ -159,7 +159,7 @@ contains
   !============================================================================
   subroutine user_calc_sources
     use ModPointImplicit, ONLY: UsePointImplicit_B,UsePointImplicit,&
-         iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
+         IsPointImplSource, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
     use ModMain,    ONLY: GlobalBlk, nI, nJ, nK,&
          PROCTEST,GLOBALBLK,BLKTEST, iTest,jTest,kTest
     use ModPhysics, ONLY: inv_gm1,Rbody,gm1,UnitTemperature_,Si2No_V
@@ -193,13 +193,10 @@ contains
     !--------------------------------------------------------------------
 
     iBlock = GlobalBlk
-    !if(iBlock==73)then
-    !write(*,*)'user_calc_sources had been called'
-    !write(*,*)'iBlock=',iBlock
-    !end if
 
-    ! There are no explicit source terms here
-    if(.not.UsePointImplicit) RETURN
+    ! Do not provide explicit source term when point-implicit scheme is used
+    ! IsPointImplSource is true only when called from ModPointImplicit
+    if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
 
     ! Check if inside rPointImplicit. 
     ! Set UsePointImplicit_B=F so the point implicit
