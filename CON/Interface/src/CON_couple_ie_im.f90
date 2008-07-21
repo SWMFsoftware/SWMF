@@ -66,9 +66,9 @@ contains
     call init_coupler(                          &
          iCompSource=IE_,                       &
          nGhostPointSource=1,                   &      
-         StandardSource_=Nodes_,                &! from IE nodes
+         StandardSource_=Nodes_,                & ! from IE nodes
          iCompTarget=IM_,                       &
-         nIndexTarget=2,   & ! number of indexes for IM: iColat,iLon 
+         nIndexTarget=2,                        & ! number of indexes for IM: iColat,iLon 
          GridDescriptorSource=IE_Grid,          &
          GridDescriptorTarget=IM_Grid,          &
          Router=RouterIeIm)
