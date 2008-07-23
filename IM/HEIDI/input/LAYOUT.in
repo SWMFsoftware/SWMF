@@ -1,0 +1,8 @@
+This is the layout for running GM and IE in serial mode.
+
+Name First Last Stride
+======================
+#COMPONENTMAP
+IM       0    0    1   ! IM - HEIDI
+IE       0    0    1   ! IE - RIM
+#END

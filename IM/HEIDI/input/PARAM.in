@@ -1,0 +1,101 @@
+
+#VERBOSE
+100
+
+#ECHO
+T
+
+#PROGRESS
+1			DnShowProgressShort
+100			DnShowProgressLong
+
+#DESCRIPTION
+Test of IM-HEIDI
+
+#PLANET
+EARTH
+
+#SAVERESTART
+F
+
+#TIMEACCURATE
+T			DoTimeAccurate
+
+#STARTTIME
+2002			iYear
+4			iMonth
+17			iDay
+00			iHour
+00			iMinute
+00			iSecond
+0.0			FracSecond
+
+#IDEALAXES
+! align rotation and magnetic axes with z axis
+
+#COUPLE2
+IM			NameComp1
+IE			NameComp2
+-1                      DnCouple
+40.0                    DtCouple
+
+COUPLE2
+IE			NameComp1
+IM			NameComp2
+-1                      DnCouple
+40.0                    DtCouple
+
+#COUPLETIME
+IM			NameComp
+F			DoCoupleOnTime
+
+#COUPLETIME
+IE			NameComp
+F			DoCoupleOnTime
+
+#BEGIN_COMP IM #############################################################
+
+blerg
+
+#END_COMP IM ###############################################################
+
+#BEGIN_COMP IE ---------------------------------------------------------------
+
+#SOLARWIND
+0.0
+0.0
+-10.0
+400.0
+
+#HPI
+20.0
+
+#SOLVE
+T
+70.0
+0.0
+F
+
+#IONOSPHERE
+5                       iConductanceModel
+150.0                   F10.7 Flux
+5.0                     StarLightPedConductance
+0.25                    PolarCapPedConductance
+
+#SAVEPLOT
+1			nPlotFile
+aur idl                 StringPlot
+1                       DnSavePlot
+-1.0			DtSavePlot
+
+#DEBUG
+10
+0
+
+#END_COMP IE -----------------------------------------------------------------
+
+#STOP
+-1			MaxIteration
+1800.0			tSimulationMax
+
+#END
