@@ -224,6 +224,28 @@ subroutine IM_print_variables(NameSource)
   close(UNITTMP_)
 
 end subroutine IM_print_variables
+
+!==============================================================================
+subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
+
+  ! Provide current for IE
+  ! The value should be interpolated from nPoints with
+  ! indexes stored in Index and weights stored in Weight
+  ! The variables should be put into Buff_V
+
+  implicit none
+  character(len=*), parameter :: NameSub='IM_get_for_ie'
+
+  integer,intent(in)            :: nPoint, iPointStart, nVar
+  real,intent(out)              :: Buff_V(nVar)
+  type(IndexPtrType),intent(in) :: Index
+  type(WeightPtrType),intent(in):: Weight
+
+  Buff_V = 0.0
+
+end subroutine IM_get_for_ie
+
+
 !==============================================================================
 subroutine IM_put_from_ie(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
 
