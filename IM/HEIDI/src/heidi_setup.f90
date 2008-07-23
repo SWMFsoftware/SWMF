@@ -953,49 +953,46 @@ END FUNCTION ACOSD
            !
 
            !****************************
-           !	 FUNCTION ASIND(X)
-           !
-           !	 use ModHeidiSize
-           !	 use ModHeidiMain
-           !
-           !	 ASIND=180.0/PI*ASIN(X)
-           !
-           !	 RETURN
-           !	 END
-           ! 
-           ! End of function ASIND
-           !
+FUNCTION ASIND(X)
+                   
+  use ModHeidiSize
+  use ModHeidiMain
+           
+  ASIND=180.0/PI*ASIN(X)
+           
+  RETURN
+END FUNCTION ASIND
 
-           !****************************
-           !	 FUNCTION COSD(X)
-           !
-           !	 use ModHeidiSize
-           !	 use ModHeidiMain
-           !
-           !	 COSD=COS(PI/180.0*X)
-           !
-           !	 RETURN
-           !	 END
-           ! 
-           ! End of function COSD
-           !
+! End of function ASIND
+!
 
-           !****************************
-           !	 FUNCTION SIND(X)
-           !
-           !	 use ModHeidiSize
-           !	 use ModHeidiMain
-           !
-           !	 SIND=SIN(PI/180.0*X)
-           !
-           !	 RETURN
-           !	 END
-           ! 
-           ! End of function SIND
-           !
+!****************************
+FUNCTION COSD(X)
+           
+  use ModHeidiSize
+  use ModHeidiMain
+           
+  COSD=COS(PI/180.0*X)
+           
+  RETURN
+END FUNCTION COSD
 
-           !        new code for missing functions on cray ========end  ====ab==
+! End of function COSD
+!
 
+!****************************
+FUNCTION SIND(X)
+           
+  use ModHeidiSize
+  use ModHeidiMain
+           
+  SIND=SIN(PI/180.0*X)
+           
+  RETURN
+END FUNCTION SIND
+! 
+! End of function SIND
+!
 
 
 

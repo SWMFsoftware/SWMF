@@ -1,10 +1,11 @@
 subroutine write_ring_current
   
-  use ModIonosphere
+  use ModIonoHeidi
   use ModHeidiSize
   use ModHeidiCurrents
   use ModHeidiDGCPM
-  
+  use ModNumConst,only: cPi
+
   implicit none
   
   real, dimension(1:100,1:100) :: FAC, FAC_tmp
@@ -21,9 +22,9 @@ subroutine write_ring_current
   nlats = IrFac
   
   do i=1,nmlts
-     mlts(i) = LonFac(i) * IONO_PI / 12.0 
+     mlts(i) = LonFac(i) * cPi / 12.0 
   enddo
-  mlts(nmlts+1) = mlts(1) + 2.0 * IONO_PI
+  mlts(nmlts+1) = mlts(1) + 2.0 * cPi
   
   do i=1,nlats
      lat(i) = Latfac(i) * 3.141592 / 180.0 
@@ -40,8 +41,8 @@ subroutine write_ring_current
      
      do j = 1, nmlts
         
-        T = IONO_PI/2.0 - lat(i)
-        P = mod(mlts(j) + IONO_PI, IONO_PI*2)
+        T = cPi/2.0 - lat(i)
+        P = mod(mlts(j) + cPi, cPi*2)
         
         k = 1
         do while (T > IONO_NORTH_THETA(k,1))
@@ -104,8 +105,8 @@ subroutine write_ring_current
      
   enddo
   
-  print *, 'FPOT max: ',potmax,kkmax,lmax,1./cos(lat(kkmax))**2,mlts(lmax)*12./IONO_PI
-  print *, 'FPOT min: ',potmin,kmin,lmin,1./cos(lat(kmin))**2,mlts(lmin)*12./IONO_PI
+  print *, 'FPOT max: ',potmax,kkmax,lmax,1./cos(lat(kkmax))**2,mlts(lmax)*12./cPi
+  print *, 'FPOT min: ',potmin,kmin,lmin,1./cos(lat(kmin))**2,mlts(lmin)*12./cPi
   
 !!!...Now fill in the potentials on the DGCPM grid
 
@@ -120,8 +121,8 @@ subroutine write_ring_current
      
      do j = 1, nphicells
         
-        T = vthetacells(i)*IONO_PI/180.  !vthetacells is colatitude
-        P = mod(vphicells(j)*IONO_PI/180. + IONO_PI, IONO_PI*2)
+        T = vthetacells(i)*cPi/180.  !vthetacells is colatitude
+        P = mod(vphicells(j)*cPi/180. + cPi, cPi*2)
         
         k = 1
         do while (T > IONO_NORTH_THETA(k,1))

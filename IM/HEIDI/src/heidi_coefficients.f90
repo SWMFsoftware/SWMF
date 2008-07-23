@@ -722,7 +722,7 @@ SUBROUTINE MAGCONV(I3,NST)
      
      !       Aaron: insert your call here, using the "e" variables
      
-     call get_potential(nechoice,eby,ebz,evsw,eyear,eday,ehour,   &
+     call get_potential_heidi(nechoice,eby,ebz,evsw,eyear,eday,ehour,   &
           eminute,esecond,elats1,emlts1,epots1,elats2,emlts2,epots2)
      
      !         Use epots1 to update the advection coefficients:

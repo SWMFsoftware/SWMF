@@ -18,25 +18,8 @@ MODULES = \
 	ModHeidiIO.o\
 	ModHeidiWaves.o\
 	ModInit.o\
-	ModSize.o\
-	ModMain.o\
-	ModIonosphere.o\
-	ModConductance.o\
-	ModPhysics.o\
-	ModProcIM.o\
-	ModIO.o\
-	precision.o \
-	io.o \
-        CSR.o \
-        MSR.o \
-        LUCSRMSR.o \
-        BandLU.o \
-        matrix-arithmetic.o \
-        flop_module.o \
-        iteration-defaults.o \
-        GMRES.o \
-        ilu.o \
-	ModProcIM.o 
+	ModIonoHeidi.o\
+	ModProcIM.o
 
 #MODULES = \
 #	ModHeidiSize.o\
@@ -66,17 +49,23 @@ MODULES = \
 #        GMRES.o \
 #        ilu.o \
 #	ModProcIM.o 
+#
+#OBJ_IONO = \
+#        iono_conductances.o\
+#        iono_solver.o\
+#        iono_coupling.o\
+#	read_ring_current.o\
+#	write_ring_current.o\
+#	read_amie.o\
+#	epencalc.o\
+#	convert_time_routines.o\
+#	iono_init.o \
 
 OBJ_IONO = \
-        iono_conductances.o\
-        iono_solver.o\
-        iono_coupling.o\
 	read_ring_current.o\
 	write_ring_current.o\
-	read_amie.o\
 	epencalc.o\
-	convert_time_routines.o\
-	iono_init.o \
+	iono_init.o
 
 OBJECTS_010 = \
 	heidi_setup.o\
@@ -96,8 +85,9 @@ OBJECTS_010 = \
 	heidi_run.o \
 	IM_wrapper.o
 
-MODULES_IE = \
-	ModConductance.o
+MODULES_IE = 
+#\
+#	ModConductance.o
 
 
 #OBJECTS_IE = \
@@ -119,11 +109,7 @@ MODULES_IE = \
 #	time_routines.o\
 #	ihp.o
 
-OBJECTS_IE = \
-	wei01.o\
-	wei96.o\
-	weicom.o\
-	time_routines.o
+OBJECTS_IE = 
 
 #OBJECTS_IE = \
 #	GM_Library.o\

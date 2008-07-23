@@ -1,10 +1,10 @@
-subroutine get_potential(iModel, imf_by, imf_bz, sw_v, &
+subroutine get_potential_heidi(iModel, imf_by, imf_bz, sw_v, &
      Year, Day, Hour, Minute, Second, &
      Lats1, MLTs1, OutPotential1, &
      Lats2, MLTs2, OutPotential2)
 
   use ModKind
-  use ModErrors
+!  use ModErrors
   use ModHeidiSize
 
   implicit none
@@ -83,7 +83,7 @@ subroutine get_potential(iModel, imf_by, imf_bz, sw_v, &
   call IO_GetPotential(OutPotential1, iError)
 
   if (iError /= 0) then
-     write(*,*) "Error : ",cErrorCodes(iError)
+     write(*,*) "Error : ",iError
      iOutputError = iError
      return
   endif
@@ -96,9 +96,9 @@ subroutine get_potential(iModel, imf_by, imf_bz, sw_v, &
   call IO_GetPotential(OutPotential2, iError)
 
   if (iError /= 0) then
-     write(*,*) "Error : ",cErrorCodes(iError)
+     write(*,*) "Error : ",iError
      iOutputError = iError
      return
   endif
 
-end subroutine get_potential
+end subroutine get_potential_heidi

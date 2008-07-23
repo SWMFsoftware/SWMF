@@ -1,8 +1,10 @@
 subroutine epencalc(utime,f107,bc_choice,IMF_By, IMF_Bz, SW_V)
 
-  use ModIonosphere
-  use ModMain
-  use ModIO
+  use ModIonoHeidi
+
+!  use ModIonosphere
+!  use ModMain
+!  use ModIO
   implicit none
 
   real, intent(in)    :: utime,f107
@@ -27,14 +29,12 @@ subroutine epencalc(utime,f107,bc_choice,IMF_By, IMF_Bz, SW_V)
   
   plot_vars(1) = 'minimum'
   plot_form(1) = 'idl'
-  time_accurate = .true.
 
   IONO_NORTH_JR = 0.0
   IONO_SOUTH_JR = 0.0
 
-  if (debug) write(*,*) "increment_real_world_time"
-
-  call increment_real_world_time(utime)
+!  if (debug) write(*,*) "increment_real_world_time"
+!  call increment_real_world_time(utime)
 
 !
 ! Get FAC Data

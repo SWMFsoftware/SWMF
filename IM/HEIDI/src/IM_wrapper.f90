@@ -55,7 +55,7 @@ end subroutine IM_set_param
 
 !============================================================================
 subroutine IM_set_grid
-  use ModIonosphere
+  use ModIonoHeidi
   use ModHeidiSize
   use ModHeidiMain
   use ModProcIM
@@ -75,7 +75,7 @@ subroutine IM_set_grid
   if(IsInitialized) return
   IsInitialized=.true.
 
-  Radius_I(1) = 110*1000.0 ! radial size of the ionosphere in meters
+  Radius_I(1) = IONO_Radius ! radial size of the ionosphere in meters
 
   ! Total hack, because I don't actually know the real grid we will use in the 
   ! actual code.
@@ -187,7 +187,7 @@ subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
   ! The variables should be put into Buff_V(??)
 
   use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
-  use ModIonosphere, ONLY: IONO_NORTH_RCM_JR,IONO_SOUTH_RCM_JR, IONO_nTheta, IONO_nPsi
+  use ModIonoHeidi, ONLY: IONO_NORTH_RCM_JR,IONO_SOUTH_RCM_JR, IONO_nTheta, IONO_nPsi
 
   implicit none
   character(len=*), parameter :: NameSub='IM_get_for_ie'
@@ -237,7 +237,7 @@ end subroutine IM_get_for_ie
 subroutine IM_put_from_ie(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
 
   use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
-  use ModIonosphere, ONLY: IONO_NORTH_PHI, IONO_SOUTH_PHI, IONO_nTheta, IONO_nPsi
+  use ModIonoHeidi, ONLY: IONO_NORTH_PHI, IONO_SOUTH_PHI, IONO_nTheta, IONO_nPsi
 
   implicit none
   character(len=*), parameter   :: NameSub='IM_put_from_ie'

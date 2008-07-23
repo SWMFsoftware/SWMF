@@ -1,9 +1,10 @@
 
 subroutine read_ring_current
 
-  use ModIonosphere
+  use ModIonoHeidi
   use ModHeidiSize
   use ModHeidiCurrents
+  use ModNumConst, only:cPi
 
   implicit none
 
@@ -23,9 +24,9 @@ subroutine read_ring_current
 !!  write(*,*) "nmlts : ",nmlts, nlats
 
   do i=1,nmlts
-     mlts(i) = LonFac(i) * IONO_PI / 12.0 
+     mlts(i) = LonFac(i) * cPi / 12.0 
   enddo
-  mlts(nmlts+1) = mlts(1) + 2.0 * IONO_PI
+  mlts(nmlts+1) = mlts(1) + 2.0 * cPi
 
 !!  write(*,*) "Lon : ",LonFac
 
@@ -90,9 +91,9 @@ subroutine read_ring_current
 
      do j = 1, IONO_nPsi
 
-        T = IONO_PI/2.0 - IONO_NORTH_Theta(i,j)
+        T = cPi/2.0 - IONO_NORTH_Theta(i,j)
 
-        P = mod(IONO_NORTH_Psi(i,j) + IONO_PI, IONO_PI*2)
+        P = mod(IONO_NORTH_Psi(i,j) + cPi, cPi*2)
 
         if ((T < lat(1)).or.(T > lat(nlats))) then
            IONO_NORTH_RCM_JR(i,j) = 0.0
@@ -129,9 +130,9 @@ subroutine read_ring_current
 
      do j = 1, IONO_nPsi
 
-        T = IONO_SOUTH_Theta(i,j) - IONO_PI/2
+        T = IONO_SOUTH_Theta(i,j) - cPi/2
 
-        P = mod(IONO_SOUTH_Psi(i,j) + IONO_PI, IONO_PI*2)
+        P = mod(IONO_SOUTH_Psi(i,j) + cPi, cPi*2)
 
         if ((T < lat(1)).or.(T > lat(nlats))) then
            IONO_SOUTH_RCM_JR(i,j) = 0.0
