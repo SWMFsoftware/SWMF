@@ -48,6 +48,7 @@ module CON_couple_all
   ! 27Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
   ! 14Jan05 - G. Toth commented out _swmf version of GM-IE couplers.
   ! 03Jun08 - R. Oran <oran@umich.edu> added ih_oh coupling
+  ! 23Jul08 - A. Ridley added IM->IE coupling
   !EOP
   character(len=*), parameter :: NameMod='CON_couple_all'
 
@@ -195,6 +196,8 @@ contains
        end select                             !^CMP END IE
     case(IM_)                                 !^CMP IF IM BEGIN
        select case(iCompTarget)
+       case(IE_)                                   !^CMP IF IE
+          call couple_im_ie(TimeSimulation)        !^CMP IF IE
        case(GM_)                                   !^CMP IF GM
           call couple_im_gm(TimeSimulation)        !^CMP IF GM
        case default
