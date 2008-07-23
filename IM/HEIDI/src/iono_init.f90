@@ -699,7 +699,7 @@ subroutine ionosphere_write_output(ifile,time,IO_prefix,IO_suffix)
                 (360.00/(2.00*IONO_PI))*IONO_NORTH_Theta(i,j), &
                 (360.00/(2.00*IONO_PI))*IONO_NORTH_Psi(i,j), &
                 IONO_NORTH_SigmaH(i,j),IONO_NORTH_SigmaP(i,j), &
-                1.0e06*IONO_NORTH_JR(i,j),   &
+                1.0e06*IONO_NORTH_RCM_JR(i,j),   &
                 1.0e-03*IONO_NORTH_PHI(i,j)
         end do
      end do
@@ -749,7 +749,7 @@ subroutine ionosphere_write_output(ifile,time,IO_prefix,IO_suffix)
                 (360.00/(2.00*IONO_PI))*IONO_SOUTH_Theta(i,j), &
                 (360.00/(2.00*IONO_PI))*IONO_SOUTH_Psi(i,j), &
                 IONO_SOUTH_SigmaH(i,j),IONO_SOUTH_SigmaP(i,j), &
-                1.0e06*IONO_SOUTH_JR(i,j),   &
+                1.0e06*IONO_SOUTH_RCM_JR(i,j),   &
                 1.0e-03*IONO_SOUTH_PHI(i,j)
         end do
      end do

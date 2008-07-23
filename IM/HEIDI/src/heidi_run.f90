@@ -55,6 +55,10 @@ subroutine heidi_run
      IF (iwpi.GT.0) CALL ANISCH
   END IF
   !	Update boundary condition
+
+  write(*,*) "kp(heidi_run) : ",kp
   IF (MOD(iStep,nFrequencyBC).EQ.0) CALL GEOSB
   
+  iStep = iStep + 1
+
 end subroutine heidi_run

@@ -65,6 +65,7 @@ subroutine IM_set_grid
   implicit none
   character (len=*), parameter :: NameSub='IM_set_grid'
   real :: Radius_I(1)
+  real :: Colat_I(2*IONO_nTheta-1)
   logical :: IsInitialized=.false.
   logical :: DoTest, DoTestMe
   !-------------------------------------------------------------------------
@@ -79,16 +80,20 @@ subroutine IM_set_grid
   ! Total hack, because I don't actually know the real grid we will use in the 
   ! actual code.
 
+  ! The colatitudes for both hemispheres
+  Colat_I(            1:  IONO_nTheta) = IONO_NORTH_Theta(:,1)
+  Colat_I(IONO_nTheta:2*IONO_nTheta-1) = IONO_SOUTH_Theta(:,1)
+
   call set_grid_descriptor(                        &
        IM_,                          &! component index
        nDim=2,                       &! dimensionality
        nRootBlock_D=(/1,1/),         &! north+south hemispheres
-       nCell_D =(/IONO_nTheta - 1,IONO_nPsi - 1/), &! size of node based grid
+       nCell_D =(/2*IONO_nTheta-1,IONO_nPsi/), &! size of node based grid
        XyzMin_D=(/cOne, cOne/),      &! min colat and longitude indexes
-       XyzMax_D=(/real(IONO_nTheta-1),&
+       XyzMax_D=(/real(2*IONO_nTheta-1),&
        real(IONO_nPsi)/),            &! max colat and longitude indexes
        TypeCoord='SMG',                            &! solar magnetic coord.
-       Coord1_I=IONO_NORTH_Theta(:,1),             &! colatitudes
+       Coord1_I=Colat_I,             &! colatitudes
        Coord2_I=IONO_NORTH_Psi(1,:),               &! longitudes
        Coord3_I=(/Radius_I/),                          &! radial size in meters
        IsPeriodic_D=(/.false.,.true./))
@@ -174,9 +179,57 @@ end subroutine IM_print_variables
 !!!end subroutine IM_print_variables
 
 !==============================================================================
-subroutine IM_get_for_ie(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
+subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
 
-  write(*,*) 'This is not working'  
+  ! Provide current for IE
+  ! The value should be interpolated from nPoints with
+  ! indexes stored in Index and weights stored in Weight
+  ! The variables should be put into Buff_V(??)
+
+  use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
+  use ModIonosphere, ONLY: IONO_NORTH_RCM_JR,IONO_SOUTH_RCM_JR, IONO_nTheta, IONO_nPsi
+
+  implicit none
+  character(len=*), parameter :: NameSub='IM_get_for_ie'
+
+  integer,intent(in)            :: nPoint, iPointStart, nVar
+  real,intent(out)              :: Buff_V(nVar)
+  type(IndexPtrType),intent(in) :: Index
+  type(WeightPtrType),intent(in):: Weight
+
+  integer :: iLat, iLon, iBlock, iPoint
+  real    :: w
+
+  !---------------------------------------------------------------------------
+  Buff_V = 0.0
+
+  do iPoint = iPointStart, iPointStart + nPoint - 1
+
+     iLat   = Index % iCB_II(1,iPoint)
+     iLon   = Index % iCB_II(2,iPoint)
+     iBlock = Index % iCB_II(3,iPoint)
+     w      = Weight % Weight_I(iPoint)
+
+     if(iBlock/=1)then
+        write(*,*)NameSub,': iPoint,Index % iCB_II=',&
+             iPoint,Index%iCB_II(:,iPoint)
+        call CON_stop(NameSub//&
+             ' SWMF_ERROR iBlock should be 1=North in IM-IE coupling')
+     end if
+
+     if(iLat<1 .or. iLat>IONO_nTheta*2 .or. iLon<1 .or. iLon>IONO_nPsi+1)then
+        write(*,*)'iLat,iLon=',iLat, IONO_nTheta*2, iLon, IONO_nPsi
+        call CON_stop(NameSub//' SWMF_ERROR index out of range')
+     end if
+
+     ! Only worry about the northern hemisphere....  IE can fix the southern hemisphere.
+     if (iLat <= IONO_nTheta .and. iLon <= IONO_nPsi) &
+          Buff_V(1) = Buff_V(1) + w * IONO_NORTH_RCM_JR(iLat,iLon)
+
+     if (iLat > IONO_nTheta .and. iLon <= IONO_nPsi) &
+          Buff_V(1) = Buff_V(1) + w * IONO_SOUTH_RCM_JR(2*IONO_nTheta-iLat+1,iLon)
+
+  end do
 
 end subroutine IM_get_for_ie
 
@@ -184,7 +237,7 @@ end subroutine IM_get_for_ie
 subroutine IM_put_from_ie(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
 
   use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
-  use ModIonosphere, ONLY: IONO_NORTH_PHI, IONO_nTheta, IONO_nPsi
+  use ModIonosphere, ONLY: IONO_NORTH_PHI, IONO_SOUTH_PHI, IONO_nTheta, IONO_nPsi
 
   implicit none
   character(len=*), parameter   :: NameSub='IM_put_from_ie'
@@ -209,16 +262,32 @@ subroutine IM_put_from_ie(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
   i = Index % iCB_II(1,iPointStart)
   j = Index % iCB_II(2,iPointStart)
 
-  if(i<1.or.i>IONO_nTheta.or.j<1.or.j>IONO_nPsi)then
-     write(*,*)'i,j,DoAdd=',i,j,DoAdd
-     call CON_stop('IM_put_from_ie: index out of range')
+  ! Since IM is only in one hemisphere, we have to assume that it is the Northern
+  ! hemisphere, so when we get a pattern from the ionosphere, it wants to put it
+  ! in both hemispheres (I think?).  So, let's ignore the Southern hemisphere,
+  ! and also the ghost cell....
+
+  if(i<1.or.i>2*IONO_nTheta-1.or.j<1.or.j>IONO_nPsi+1)then
+     write(*,*)'i,j,DoAdd=',i,2*IONO_nTheta-1,j,IONO_nPsi+1,DoAdd
+     call CON_stop('IM_put_from_ie (in IM_wrapper): index out of range')
   end if
 
-  if(DoAdd)then
-     IONO_NORTH_PHI(i,j)        = IONO_NORTH_PHI(i,j)        + Buff_V(1)
-  else
-     IONO_NORTH_PHI(i,j)        = Buff_V(1)
-  end if
+  if (i <= IONO_nTheta .and. j <= IONO_nPsi) then
+     if(DoAdd)then
+        IONO_NORTH_PHI(i,j)        = IONO_NORTH_PHI(i,j)        + Buff_V(1)
+     else
+        IONO_NORTH_PHI(i,j)        = Buff_V(1)
+     end if
+  endif
+
+  if (i > IONO_nTheta .and. j <= IONO_nPsi) then
+     if(DoAdd)then
+        IONO_SOUTH_PHI(2*IONO_nTheta-i+1,j) = &
+             IONO_SOUTH_PHI(2*IONO_nTheta-i+1,j) + Buff_V(1)
+     else
+        IONO_SOUTH_PHI(2*IONO_nTheta-i+1,j) = Buff_V(1)
+     end if
+  endif
 
 end subroutine IM_put_from_ie
 !==============================================================================
@@ -253,68 +322,75 @@ end subroutine IM_get_for_gm
 
 !==============================================================================
 
- subroutine IM_init_session(iSession, TimeSimulation)
-    implicit none
-    !INPUT PARAMETERS:
-    integer,  intent(in) :: iSession       ! session number (starting from 1)
-    real,     intent(in) :: TimeSimulation   ! seconds from start time
-    logical :: IsUninitialized = .true.
-    if(IsUninitialized)then
-       call heidi_init
+subroutine IM_init_session(iSession, TimeSimulation)
+  implicit none
+  !INPUT PARAMETERS:
+  integer,  intent(in) :: iSession       ! session number (starting from 1)
+  real,     intent(in) :: TimeSimulation   ! seconds from start time
+  logical :: IsUninitialized = .true.
+  if(IsUninitialized)then
+     call heidi_init
 
-       IsUninitialized = .false.
-    end if
-  end subroutine IM_init_session
+     IsUninitialized = .false.
+  end if
+end subroutine IM_init_session
 
 !==============================================================================
- subroutine IM_finalize(TimeSimulation)
-    use ModProcIM
-    use ModInit,ONLY:nS
-  
-    implicit none
+subroutine IM_finalize(TimeSimulation)
+  use ModProcIM
+  use ModInit,ONLY:nS
 
-    !INPUT PARAMETERS:
-    real,     intent(in) :: TimeSimulation   ! seconds from start time
-    integer:: iSpecies
-    !!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    do iSpecies=1,NS
-       CLOSE(15+iSpecies)          ! Closes continuous output file
-    end do
+  implicit none
 
-    CLOSE(13)	            ! Closes sw1 input file
-    CLOSE(15)		    ! Closes sw2 input file
-    CLOSE(14)               ! Closes MPA input file
-    CLOSE(16)               ! Closes SOPA input file
-    CLOSE(18)               ! Closes FPOT input file
-    !!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  !INPUT PARAMETERS:
+  real,     intent(in) :: TimeSimulation   ! seconds from start time
+  integer:: iSpecies
+  !!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  do iSpecies=1,NS
+     CLOSE(15+iSpecies)          ! Closes continuous output file
+  end do
 
-    call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------  
-    call MPI_finalize(iError)
-  end subroutine IM_finalize
+  CLOSE(13)	            ! Closes sw1 input file
+  CLOSE(15)		    ! Closes sw2 input file
+  CLOSE(14)               ! Closes MPA input file
+  CLOSE(16)               ! Closes SOPA input file
+  CLOSE(18)               ! Closes FPOT input file
+  !!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+!  call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------  
+!  call MPI_finalize(iError)
+end subroutine IM_finalize
 
 ! =============================================================================
- subroutine IM_run(TimeSimulation,TimeSimulationLimit)
-    implicit none
+subroutine IM_run(SWMFTime,SWMFTimeLimit)
 
-    !INPUT/OUTPUT ARGUMENTS:
-    real, intent(inout) :: TimeSimulation   ! current time of component
+  use ModHeidiSize, only: dt
 
-    !INPUT ARGUMENTS:
-    real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
-    call heidi_run 
-  end subroutine IM_run
+  implicit none
+
+  !INPUT/OUTPUT ARGUMENTS:
+  real, intent(inout) :: SWMFTime   ! current time of component
+
+  !INPUT ARGUMENTS:
+  real, intent(in) :: SWMFTimeLimit ! simulation time not to be exceeded
+
+  call heidi_run 
+
+  SWMFTime = SWMFTime + dt*2
+
+end subroutine IM_run
 
 !===========================================================================
 
-  subroutine IM_save_restart(TimeSimulation)
-    implicit none
+subroutine IM_save_restart(TimeSimulation)
+  implicit none
 
-    !INPUT PARAMETERS:
-    real,     intent(in) :: TimeSimulation   ! seconds from start time
+  !INPUT PARAMETERS:
+  real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-    character(len=*), parameter :: NameSub='IM_save_restart'
+  character(len=*), parameter :: NameSub='IM_save_restart'
 
-  end subroutine IM_save_restart
+end subroutine IM_save_restart
 
 
 !===========================================================================

@@ -8,7 +8,6 @@
 
 	DO I3=NST,NSTEP			! Begin time loop
 	  CALL GETKPA(i3,nst,i2,nkp)
-	   print *, 'I3:',I3,T,KP
 	  IF (ISW.GT.0) CALL GETSWIND
           print *, 'Calling MAGCONV'
 	  CALL MAGCONV(i3,nst)

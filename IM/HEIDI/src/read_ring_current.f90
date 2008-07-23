@@ -162,7 +162,10 @@ subroutine read_ring_current
 
   enddo
 
-!!  write(*,*) "Done"
+  write(*,*) "Done with read_ring_current", &
+       minval(IONO_NORTH_RCM_JR), maxval(IONO_NORTH_RCM_JR)
+
+  write(*,*) "slice : ", IONO_NORTH_RCM_JR(:,97)
 
   return
 

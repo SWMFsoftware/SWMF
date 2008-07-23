@@ -702,7 +702,6 @@ SUBROUTINE GEOSB
      TEC=(FAC*TEC2+(1.-FAC)*TEC1)*1.E-3	! in keV
      NY(2)=0.34*EXP(0.054*KP)	! From Young et al 1982
      NY(3)=5.1E-3*EXP(6.6E-3*F107)
-     write(*,*) "kp : ",kp, f107
      NY(4)=0.011*EXP(0.24*KP+0.011*F107)
      FAC=0.
      DO I=2,4 			! Weights corrects MPA moments
