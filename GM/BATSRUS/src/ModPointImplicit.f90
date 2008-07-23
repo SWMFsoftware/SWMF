@@ -182,12 +182,14 @@ contains
        State_VGB(iVar,i,j,k,iBlock) = StateOld_VCB(iVar,i,j,k,iBlock)
     end do; end do; end do; end do
 
-    ! Tell the user_calc_sources to return the implicit source terms
+    ! Calculate unperturbed source for right hand side 
+    ! and possibly also set analytic Jacobean matrix elements.
+    ! Multi-ion may set its elements while the user uses numerical Jacobean.
     Source_VC = 0.0
-
     DsDu_VVC  = 0.0
     call calc_point_impl_source
 
+    ! Calculate (part of) Jacobean numerically if necessary
     if(.not.IsPointImplMatrixSet)then
        ! Let the source subroutine know that the state is perturbed
        IsPointImplPerturbed = .true.
@@ -234,7 +236,7 @@ contains
 
           ! Calculate dS/dU matrix elements
           do iJVar = 1,nVarPointImpl; jVar = iVarPointImpl_I(iJVar)
-             DsDu_VVC(jVar,iVar,:,:,:) = &
+             DsDu_VVC(jVar,iVar,:,:,:) = DsDu_VVC(jVar,iVar,:,:,:) + &
                   (Source_VC(jVar,:,:,:) - Source0_VC(jVar,:,:,:))/Epsilon
           end do
        end do
