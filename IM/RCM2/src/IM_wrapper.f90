@@ -233,6 +233,7 @@ subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
   ! indexes stored in Index and weights stored in Weight
   ! The variables should be put into Buff_V
 
+  use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
   implicit none
   character(len=*), parameter :: NameSub='IM_get_for_ie'
 

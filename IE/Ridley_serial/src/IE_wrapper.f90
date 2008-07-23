@@ -962,14 +962,9 @@ subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
 
   integer :: iBlock, i, j, iSouth, iPoint
   real    :: w
+
   !---------------------------------------------------------------------------
   Buff_V = 0.0
-
-  write(*,*) "------------------------- ie_get_for_im ------------"
-
-  ! Make sure that the most recent result is provided
-  tSimulationTmp = tSimulation
-  call IE_run(tSimulationTmp,tSimulation)
 
   do iPoint = iPointStart, iPointStart + nPoint - 1
 
@@ -1041,6 +1036,16 @@ contains
   end function minmod
 
 end subroutine IE_get_for_im
+
+!==============================================================================
+
+subroutine IE_put_from_im_complete
+
+  write(*,*)"Don't know what IE_put_from_im_complete is really supposed to do."
+  write(*,*)"I think that it is"
+  write(*,*)"Supposed to be applying periodic boundaries...?"
+
+end subroutine IE_put_from_im_complete
 
 !==============================================================================
 
