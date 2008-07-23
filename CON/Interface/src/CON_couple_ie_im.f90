@@ -23,6 +23,7 @@ module CON_couple_ie_im
 
   public :: couple_ie_im_init ! initialize coupling
   public :: couple_ie_im      ! couple IE to IM
+  public :: couple_im_ie      ! couple IE to IM
 
   !REVISION HISTORY:
   ! 06/26/2003 G.Toth <gtoth@umich.edu> - initial version as external
@@ -36,7 +37,7 @@ module CON_couple_ie_im
 
   type(GridDescriptorType)::IE_Grid           !Source!!
   type(GridDescriptorType)::IM_Grid           !Target!!
-  type(RouterType),save:: RouterIeIm
+  type(RouterType),save:: RouterIeIm, RouterImIe
   logical :: IsInitialized = .false.
  
   logical :: DoTest, DoTestMe
@@ -84,7 +85,59 @@ contains
          mapping=map_im_to_ie,    & ! mapping between IM and IE coords
          interpolate=bilinear_interpolation) ! from IE nodes
 
+    call init_coupler(                          &
+         iCompSource=IM_,                       &
+         nGhostPointSource=1,                   &      
+         StandardSource_=Nodes_,                & ! from IM nodes
+         iCompTarget=IE_,                       &
+         nIndexTarget=2,                        & ! number of indexes for IM: iColat,iLon 
+         GridDescriptorSource=IM_Grid,          &
+         GridDescriptorTarget=IE_Grid,          &
+         Router=RouterImIe)
+
+    ! Both grids are static, it is sufficient to set the router once
+    call set_router(&
+         IM_Grid,                     &
+         IE_Grid,                     &
+         RouterImIe,& ! all blocks (just 1)and all cells on IM 
+         mapping=map_ie_to_im,    & ! mapping between IM and IE coords
+         interpolate=bilinear_interpolation) ! from IE nodes
+
   end subroutine couple_ie_im_init
+
+  !BOP =======================================================================
+  !IROUTINE: couple_im_ie - couple IM to IE component
+  !INTERFACE:
+  subroutine couple_im_ie(tSimulation)
+
+    !INPUT ARGUMENTS:
+    real, intent(in) :: tSimulation     ! simulation time at coupling
+
+    !DESCRIPTION:
+    ! Couple between two components:\\
+    !    Inner Magnetosphere (IM)        Source
+    !    Ionosphere Electrodynamics (IE) Target\\
+    !
+    ! Send field-align current from IM to IE.
+    !EOP
+
+    external IM_get_for_ie,IE_put_from_im
+    integer, parameter :: nVarImIe=1
+    real :: tSimulationTmp
+    !-------------------------------------------------------------------------
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+    
+    ! After everything is initialized exclude PEs which are not involved
+    if(.not.RouterImIe%IsProc) RETURN
+
+    call couple_comp(& 
+         RouterImIe, nVarImIe,&
+         fill_buffer =IM_get_for_ie,&
+         apply_buffer=IE_put_from_im)
+
+    if(is_proc(IM_)) call IE_put_from_im_complete
+
+  end subroutine couple_im_ie
 
   !BOP =======================================================================
   !IROUTINE: couple_ie_im - couple IE to IM component
@@ -131,6 +184,53 @@ contains
 
   !============================================================================
 
+  subroutine map_ie_to_im(&
+       IEi_nDim,  &
+       IEr1_Xyz_D,&
+       IMi_nDim,&
+       IMr1_Xyz_D,&
+       IsInterfacePoint)
+    
+    ! Map IE generalized coordinates into IM generalized coordinates
+    integer, intent(in) :: IEi_nDim,IMi_nDim
+    real, intent(in)    :: IEr1_Xyz_D(IEi_nDim)
+    real, intent(out)   :: IMr1_Xyz_D(IMi_nDim)
+    logical,intent(out) :: IsInterfacePoint
+ 
+    real :: ColetLon_D(2)
+    integer :: iColat, iLon
+    !------------------------------------------------------------------------
+    IsInterfacePoint=.true.
+
+    iCoLat = nint(IEr1_Xyz_D(1))
+    iLon   = nint(IEr1_Xyz_D(2))
+    
+    if ( iLon<1 .or. iLon>Grid_C(IE_)% nCoord_D(2) .or. &
+         iCoLat<1 .or. iCoLat>Grid_C(IE_)% nCoord_D(1)) then
+       write(*,*)'map_ie_to_im: iColat,Grid_C(IE_)% nCoord_D(1)=',&
+            iColat, Grid_C(IE_)% nCoord_D(1)
+       write(*,*)'map_ie_to_im: iLon,Grid_C(IE_)% nCoord_D(2)=',&
+            iLon,Grid_C(IE_)% nCoord_D(2)
+       call CON_stop('map_ie_to_im (in CON_couple_ie_im) SWMF_ERROR: index out of range!')
+    end if
+    
+    !For structured but non-uniform IM grid:
+    call gen_to_stretched(IEr1_Xyz_D, &!in:generalized IE coords(indexes) 
+                          ColetLon_D, &!out:stretched coords (radians) 
+                          2,          &!IE_grid dimension
+                          IE_)         !IE_grid ID
+
+    !For structured but non-uniform ionosphere grid
+                     
+    call stretched_to_gen(ColetLon_D,&!in:stretched coords (radians)
+                          IMr1_Xyz_D,&!out:generalized IM cords(indexes)
+                          2,         &!IM_grid dimension
+                          IM_)        !IM_grid ID
+                            
+  end subroutine map_ie_to_im
+
+  !============================================================================
+
   subroutine map_im_to_ie(&
        IMi_nDim,  &
        IMr1_Xyz_D,&
@@ -150,7 +250,7 @@ contains
     IsInterfacePoint=.true.
 
     iColat = nint(IMr1_Xyz_D(1))
-    iLon = nint(IMr1_Xyz_D(2))
+    iLon   = nint(IMr1_Xyz_D(2))
     
     if(  iColat<1 .or. iColat>Grid_C(IM_)% nCoord_D(1) .or. &
          iLon<1 .or. iLon>Grid_C(IM_)% nCoord_D(2)       )then
