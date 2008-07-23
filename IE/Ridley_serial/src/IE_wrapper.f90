@@ -890,6 +890,51 @@ end subroutine IE_put_from_ua
 
 !==============================================================================
 
+subroutine IE_put_from_im(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
+
+  use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
+
+  implicit none
+  character(len=*), parameter   :: NameSub='IE_put_from_im'
+  integer,intent(in)            :: nPoint, iPointStart, nVar
+  real, intent(in)              :: Buff_V(nVar)
+  type(IndexPtrType),intent(in) :: Index
+  type(WeightPtrType),intent(in):: Weight
+  logical,intent(in)            :: DoAdd
+  integer :: iBlock,iLat,iLon
+  !---------------------------------------------------------------------------
+  if(nPoint>1)then
+     write(*,*)NameSub,': nPoint,iPointStart,Weight=',&
+          nPoint,iPointStart,Weight % Weight_I
+     call CON_stop(NameSub//': should be called with 1 point')
+  end if
+  if(DoAdd)then
+     write(*,*)NameSub,': nPoint,iPointStart,Weight=',&
+          nPoint,iPointStart,Weight % Weight_I
+     write(*,*)NameSub,': WARNING DoAdd is true'
+  end if
+
+!  iLat = Index % iCB_II(1,iPointStart)
+!  iLon = Index % iCB_II(2,iPointStart)
+!
+!!  if(iLat<1.or.iLat>nLats+2.or.iLon<0.or.iLon>nLonsAll+1)then
+!!     write(*,*)'iLat,iLon,DoAdd=',iLat,nLats,iLon,nLonsAll+1,DoAdd
+!!     call CON_stop('IE_put_from_im: index out of range')
+!!  end if
+!
+!  if ( iLat >= 1 .and. iLat <= nLats+2 .and. &
+!       iLon >= 0 .and. iLon <=nLonsAll+1) then
+!     if(DoAdd)then
+!        InnerMagJrAll(iLat,iLon) = InnerMagJrAll(iLat,iLon) + Buff_V(1)
+!     else
+!        InnerMagJrAll(iLat,iLon) = Buff_V(1)
+!     end if
+!  endif
+!
+!  IsNewInput = .true.
+
+end subroutine IE_put_from_im
+
 !==============================================================================
 
 subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
@@ -919,6 +964,12 @@ subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
   real    :: w
   !---------------------------------------------------------------------------
   Buff_V = 0.0
+
+  write(*,*) "------------------------- ie_get_for_im ------------"
+
+  ! Make sure that the most recent result is provided
+  tSimulationTmp = tSimulation
+  call IE_run(tSimulationTmp,tSimulation)
 
   do iPoint = iPointStart, iPointStart + nPoint - 1
 
