@@ -7,7 +7,8 @@ module ModMultiIon
 
   use ModMultiFluid
   use ModProcMH, ONLY: iProc
-  use ModMain, ONLY: UseUserSource, iTest, jTest, kTest, VarTest, BlkTest, ProcTest
+  use ModMain, ONLY: UseUserSource, &
+       iTest, jTest, kTest, VarTest, BlkTest, ProcTest
   use ModUser, ONLY: user_calc_sources, user_init_point_implicit
 
   implicit none
@@ -20,8 +21,8 @@ module ModMultiIon
   public:: multi_ion_sources
   public:: multi_ion_init_point_impl
 
-  logical, public :: DoRestrictMultiIon = .false.
-  logical, public, allocatable:: IsMultiIon_CB(:,:,:,:)
+  logical, public              :: DoRestrictMultiIon = .false.
+  logical, public, allocatable :: IsMultiIon_CB(:,:,:,:)
 
   ! Local variables
   real :: CollisionCoefDim = -1.0
@@ -30,6 +31,7 @@ module ModMultiIon
   integer :: nPowerCutOff = 0
   real :: MachNumberMultiIon = 0.0
   real :: ParabolaWidthMultiIon = 0.0
+  logical:: IsAnalyticJacobean = .false. !!! should be always true eventually
 
 contains
 
@@ -38,17 +40,21 @@ contains
     use ModSize, ONLY: nI, nJ, nK, MaxBlock
     use ModPhysics, ONLY: LowDensityRatio
     use ModReadParam, ONLY: read_var
+    use ModPointImplicit, ONLY: IsPointImplMatrixSet
 
     character(len=*), intent(in):: NameCommand
     !------------------------------------------------------------------------
     select case(NameCommand)
     case("#MULTIION")
-       call read_var('LowDensityRatio',       LowDensityRatio)
+       call read_var('LowDensityRatio',    LowDensityRatio)
        call read_var('DoRestrictMultiIon', DoRestrictMultiIon)
        if(DoRestrictMultiIon)then
           call read_var('MachNumberMultiIon',    MachNumberMultiIon)
           call read_var('ParabolaWidthMultiIon', ParabolaWidthMultiIon)
        end if
+!!! Temporary. Should be done analytically all the time eventually
+       call read_var('IsAnalyticJacobean', IsAnalyticJacobean)
+       IsPointImplMatrixSet = IsAnalyticJacobean
     case("#COLLISION")
        call read_var('CollisionCoefDim', CollisionCoefDim)
        call read_var('TauCutOff', TauCutOffDim)
@@ -118,7 +124,7 @@ contains
     ! and the corresponding calls can be removed.
 
     use ModPointImplicit, ONLY:  UsePointImplicit, IsPointImplSource, &
-         IsPointImplMatrixSet
+         IsPointImplPerturbed, IsPointImplMatrixSet, DsDu_VVC
     use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, UseBoris => boris_correction
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModAdvance, ONLY: B0XCell_BLK, B0YCell_BLK, B0ZCell_BLK
@@ -130,6 +136,8 @@ contains
          
     use ModMain,    ONLY: x_, y_, z_
     use ModCoordTransform, ONLY: cross_product
+    use ModNumConst,       ONLY: iLeviCivita_III
+    use ModSize,           ONLY: nDim
 
     ! Variables for multi-ion MHD
     real    :: InvCharge, NumDens, InvNumDens, pAverage, State_V(nVar)
@@ -150,6 +158,11 @@ contains
 
     character (len=*), parameter :: NameSub = 'multi_ion_sources'
     logical :: DoTest, DoTestMe, DoTestCell
+
+    ! Variables for analytic Jacobean
+    integer :: iDim, jDim, kDim, iUi, iUk
+    real    :: SignedB, ForceCoeff, Coeff, CoefJacobean, Du2
+    real    :: Du_D(3)
     !-----------------------------------------------------------------------
     if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
 
@@ -165,6 +178,10 @@ contains
     ! Add user defined point implicit source terms here
     ! Explicit user sources are added in calc_sources
     if(UsePointImplicit .and. UseUserSource) call user_calc_sources
+
+    ! Do not evaluate multi-ion sources in the numerical Jacobean calculation
+    ! (needed for the user source terms) 
+    if(IsPointImplPerturbed .and. IsAnalyticJacobean) RETURN
 
     ! Add source term n_s*(- u_+ - w_H + u_s )xB for multi-ions
     ! where u_+ is the number density weighted average ion velocity,
@@ -273,9 +290,8 @@ contains
           ! call select_fluid
           uIon_D = (/ Ux_I(iIon),  Uy_I(iIon), Uz_I(iIon) /)
           u_D    = uIon_D - uPlusHallU_D
-
-          Force_D = Ga2 * &
-               ElectronCharge*NumDens_I(iIon)*cross_product(u_D, FullB_D) 
+          ForceCoeff = Ga2 * ElectronCharge*NumDens_I(iIon)
+          Force_D    = ForceCoeff * cross_product(u_D, FullB_D) 
 
           if(DoTestCell)then
              write(*,*) NameSub,' iIon =', iIon
@@ -284,6 +300,30 @@ contains
              write(*,*) NameSub,' Force_D  =', Force_D
           end if
 
+          ! Set corresponding matrix element
+          if (IsAnalyticJacobean) then
+             do kDim = 1,nDim
+                iUk = iUxIon_I(iIon) + kDim - 1
+                do iDim = 1,nDim
+                   if(kDim == iDim) CYCLE
+                   jDim = 6 - kDim - iDim
+                   SignedB = iLeviCivita_III(iDim, jDim, kDim)*FullB_D(jDim)
+
+                   ! This Jacobean term occurs with respect with the same fluid
+                   iUi = iUxIon_I(iIon) + iDim - 1
+                   DsDu_VVC(iUk, iUi, i, j, k) = DsDu_VVC(iUk, iUi, i, j, k) & 
+                        + ForceCoeff*SignedB*InvRho_I(iIon)
+
+                   Coeff = ForceCoeff*SignedB*InvNumDens
+                   ! This term is with respect to any fluid
+                   do jIon = 1, nIonFluid
+                      iUi = iUxIon_I(jIon) + iDim - 1
+                      DsDu_VVC(iUk,iUi,i,j,k) = &
+                           DsDu_VVC(iUk,iUi,i,j,k) - Coeff/MassIon_I(jIon)
+                   end do
+                end do
+             end do
+          end if
           Heating = 0.0
 
           if(CollisionCoefDim > 0.0 .or. TauCutOffDim > 0.0)then
@@ -303,18 +343,76 @@ contains
                 end if
 
                 ! Artificial friction to keep the velocity difference in check
+                ! We take the smaller of the two densities so that the 
+                ! acceleration is independent of the density of 
+                ! the minor species and the restriction works in all regions.
+                ! The min function is symmetric, so momentum is conserved.
+                ! u_0 is the cut-off velocity, Tau gives the time rate, and
+                ! the power determines how sharp the cut-off is.
                 if(TauCutOffDim > 0.0)then
+                   ! CollisionRate = 
+                   !  1/tau * min(rho^iIon, rho^jIon) * (du2/u_0^2)^n
+
+                   Du2 = sum( (uIon2_D - uIon_D)**2 )
                    CollisionRate = CollisionRate + &
                         InvTauCutOff * min(Rho_I(iIon), Rho_I(jIon)) &
-                        * ( InvUCutOff2 * sum( (uIon2_D - uIon_D)**2 ) &
-                        ) ** nPowerCutOff
+                        * ( InvUCutOff2 * Du2 ) ** nPowerCutOff
                 end if
 
                 Force_D = Force_D + CollisionRate * (uIon2_D - uIon_D)
 
-                Heating = Heating + CollisionRate* &
-                     ( 2*(Temp_I(jIon) - Temp_I(iIon)) &
-                     + gm1*sum((uIon2_D - uIon_D)**2) )
+!!! No heating for now
+                !Heating = Heating + CollisionRate* &
+                !     ( 2*(Temp_I(jIon) - Temp_I(iIon)) &
+                !     + gm1*sum((uIon2_D - uIon_D)**2) )
+             
+                ! Calculate corresponding matrix elements
+                if (TauCutOffDim > 0.0 .and. IsAnalyticJacobean) then
+
+                   ! du = u^iIon - u^jIon
+                   Du_D = uIon_D - uIon2_D
+
+                   ! Common coefficient: CoefJacobean = 
+                   !  1/tau * min(rho^iIon, rho^jIon) * (1/u_0)^2n * (du^2)^n-1
+                   CoefJacobean = InvTauCutOff &
+                        * min(Rho_I(iIon), Rho_I(jIon)) &
+                        * InvUCutOff2 ** nPowerCutOff &
+                        * Du2 ** (nPowerCutOff - 1)
+
+                   ! Add dFriction/d(RhoU) elements to the Jacobean
+                   do kDim = 1,nDim
+                      ! k component of RhoU^iIon
+                      iUk = iUxIon_I(iIon) + kDim - 1
+                      do iDim = 1,nDim
+
+                         ! dFriction^iIon_k/d(RhoU^iIon_i) = -CoefJacobean
+                         !  *(2*n*du_i*du_k/rho^iIon + delta_ik*du^2/rho^iIon)
+
+                         iUi = iUxIon_I(iIon) + iDim - 1
+                         DsDu_VVC(iUk, iUi, i, j, k) = &
+                              DsDu_VVC(iUk, iUi, i, j, k) &
+                              - 2.0 * nPowerCutOff * InvRho_I(iIon) &
+                              * Du_D(iDim) * Du_D(kDim) & 
+                              *  CoefJacobean
+                         if (iDim == kDim) DsDu_VVC(iUk, iUi, i, j, k) = &
+                              DsDu_VVC(iUk, iUi, i, j, k) & 
+                              - CoefJacobean * Du2 *InvRho_I(iIon)
+
+                         ! dFriction^iIon_k/d(RhoU^jIon_i) = +CoefJacobean
+                         !  *(2*n*du_i*du_k/rho^jIon + delta_ik*du^2/rho^jIon)
+
+                         iUi = iUxIon_I(jIon) + iDim - 1
+                         DsDu_VVC(iUk, iUi, i, j, k) = &
+                              DsDu_VVC(iUk, iUi, i, j, k) &
+                              + 2.0 * nPowerCutOff *InvRho_I(jIon) &
+                              * Du_D(iDim) * Du_D(kDim) &
+                              * CoefJacobean
+                         if (iDim == kDim)DsDu_VVC(iUk, iUi, i, j, k)  = &
+                              DsDu_VVC(iUk, iUi, i, j, k) & 
+                              + CoefJacobean * Du2 *InvRho_I(jIon)
+                      end do
+                   end do
+                end if
              end do
 
              iP = iPIon_I(iIon)
@@ -356,6 +454,7 @@ contains
     !------------------------------------------------------------------------
 
     IsPointImpl_V = .false.
+    IsPointImplMatrixSet = IsAnalyticJacobean
 
     if(UseUserSource)then
        call user_init_point_implicit
@@ -365,13 +464,11 @@ contains
        end if
     end if
 
-    IsPointImplMatrixSet = .false.
-
     ! All ion momenta and pressures are implicit
     IsPointImpl_V(iRhoUxIon_I) = .true.
     IsPointImpl_V(iRhoUyIon_I) = .true.
     IsPointImpl_V(iRhoUzIon_I) = .true.
-    IsPointImpl_V(iPIon_I)     = .true.
+    ! IsPointImpl_V(iPIon_I)   = .true. !!! No heating in artificial friction
 
     nPointImplVar = count(IsPointImpl_V)
 
