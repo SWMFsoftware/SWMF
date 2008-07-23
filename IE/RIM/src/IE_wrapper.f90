@@ -313,10 +313,10 @@ subroutine IE_set_grid
        IE_,                                  &! component index
        nDim=2,                               &! dimensionality
        nRootBlock_D=(/1,nProc/),             &! north+south hemispheres
-       nCell_D =(/nLons*nProc+1,nLats+2/),   &! size of node based grid
+       nCell_D =(/nLats+2,nLons*nProc+1/),   &! size of node based grid
        XyzMin_D=(/cOne, cOne/),              &! min colat and longitude indexes
-       XyzMax_D=(/real(nLons*nProc+1),       &
-                  real(nLats+2)/),           &! max colat and longitude indexes
+       XyzMax_D=(/real(nLats+2),             &! max colat and longitude indexes
+                  real(nLons*nProc+1)/),     &
        TypeCoord='SMG',                      &! solar magnetic coord.
        Coord1_I=LatitudeAll(:,1),           &! colatitudes
        Coord2_I=LongitudeAll(1,:),            &! longitudes
@@ -352,7 +352,9 @@ subroutine IE_get_for_gm(Buffer_II,iSize,jSize,tSimulation)
 
   ! Make sure that the most recent result is provided
   tSimulationTmp = tSimulation
+  call timing_start('IE_run')
   call IE_run(tSimulationTmp,tSimulation)
+  call timing_stop('IE_run')
 
   Buffer_II = PotentialAll
 
@@ -493,7 +495,6 @@ subroutine IE_get_for_pw(Buffer_IIV, iSize, jSize, nVar, Name_V, NameHem,&
 
 end subroutine IE_get_for_pw
 
-
 !==============================================================================
 
 subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
@@ -504,8 +505,8 @@ subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
   ! The variables should be put into Buff_V
 
   use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
-  use ModRIM, ONLY: nLats, nLons, &
-       Potential, Jr, SigmaH, SigmaP, &
+  use ModRIM, ONLY: nLats, nLonsAll, &
+       PotentialAll, OuterMagJrAll, SigmaHAll, SigmaPAll, &
        cpcpn, cpcps
   use ModParamRIM,    ONLY: TypeImCouple
 
@@ -518,7 +519,7 @@ subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
   type(WeightPtrType),intent(in):: Weight
 
   integer :: iBlock, iLat, iLon, iLatSouth, iPoint
-  real    :: w
+  real    :: w, tSimulationTmp
   !---------------------------------------------------------------------------
   Buff_V = 0.0
 
@@ -536,48 +537,49 @@ subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
              ' SWMF_ERROR iBlock should be 1=North in IE-IM coupling')
      end if
 
-     if(iLat<1 .or. iLat>nLats .or. iLon<1 .or. iLon>nLons+1)then
-        write(*,*)'iLat,iLon=',iLat,iLon
+     if(iLat<1 .or. iLat>nLats+2 .or. iLon<1 .or. iLon>nLonsAll+1)then
+        write(*,*)'iLat,iLon=',iLat,nLats+2,iLon,nLonsAll+1
         call CON_stop(NameSub//' SWMF_ERROR index out of range')
      end if
 
      ! Index for the same latitude on the southern hemisphere
-     iLatSouth = nLats + 1 - iLat
+!     iLatSouth = nLats + 1 - iLat
+     iLatSouth = iLat
 
      select case(TypeImCouple)
      case('north')
-        Buff_V(1) = Buff_V(1) + w * Potential(iLon,iLat)
-        Buff_V(2) = Buff_V(2) + w * Jr(iLon,iLat)
-        Buff_V(3) = Buff_V(3) + w * SigmaH(iLon,iLat)
-        Buff_V(4) = Buff_V(4) + w * SigmaP(iLon,iLat)
+        Buff_V(1) = Buff_V(1) + w * PotentialAll(iLat,iLon)
+        Buff_V(2) = Buff_V(2) + w * OuterMagJrAll(iLat,iLon)
+        Buff_V(3) = Buff_V(3) + w * SigmaHAll(iLat,iLon)
+        Buff_V(4) = Buff_V(4) + w * SigmaPAll(iLat,iLon)
      case('south')
-        Buff_V(1) = Buff_V(1) + w * Potential(iLon,iLatSouth)
-        Buff_V(2) = Buff_V(2) + w * Jr(iLon,iLatSouth)
-        Buff_V(3) = Buff_V(3) + w * SigmaH(iLon,iLatSouth)
-        Buff_V(4) = Buff_V(4) + w * SigmaP(iLon,iLatSouth)
+        Buff_V(1) = Buff_V(1) + w * PotentialAll(iLatSouth,iLon)
+        Buff_V(2) = Buff_V(2) + w * OuterMagJrAll(iLatSouth,iLon)
+        Buff_V(3) = Buff_V(3) + w * SigmaHAll(iLatSouth,iLon)
+        Buff_V(4) = Buff_V(4) + w * SigmaPAll(iLatSouth,iLon)
      case('cpcpmin')
         if(cpcpn < cpcps)then
-           Buff_V(1) = Buff_V(1) + w * Potential(iLon,iLat)
-           Buff_V(2) = Buff_V(2) + w * Jr(iLon,iLat)
-           Buff_V(3) = Buff_V(3) + w * SigmaH(iLon,iLat)
-           Buff_V(4) = Buff_V(4) + w * SigmaP(iLon,iLat)
+           Buff_V(1) = Buff_V(1) + w * PotentialAll(iLat,iLon)
+           Buff_V(2) = Buff_V(2) + w * OuterMagJrAll(iLat,iLon)
+           Buff_V(3) = Buff_V(3) + w * SigmaHAll(iLat,iLon)
+           Buff_V(4) = Buff_V(4) + w * SigmaPAll(iLat,iLon)
         else
-           Buff_V(1) = Buff_V(1) + w * Potential(iLon,iLatSouth)
-           Buff_V(2) = Buff_V(2) + w * Jr(iLon,iLatSouth)
-           Buff_V(3) = Buff_V(3) + w * SigmaH(iLon,iLatSouth)
-           Buff_V(4) = Buff_V(4) + w * SigmaP(iLon,iLatSouth)
+           Buff_V(1) = Buff_V(1) + w * PotentialAll(iLatSouth,iLon)
+           Buff_V(2) = Buff_V(2) + w * OuterMagJrAll(iLatSouth,iLon)
+           Buff_V(3) = Buff_V(3) + w * SigmaHAll(iLatSouth,iLon)
+           Buff_V(4) = Buff_V(4) + w * SigmaPAll(iLatSouth,iLon)
         end if
      case('average')
         Buff_V(1) = Buff_V(1) + w * &
-             0.5*(Potential(iLon,iLat)+Potential(iLon,iLatSouth))
+             0.5*(PotentialAll(iLat,iLon)+PotentialAll(iLatSouth,iLon))
         Buff_V(2) = Buff_V(2) + w * &
-             0.5*(Jr(iLon,iLat)+Jr(iLon,iLatSouth))
+             0.5*(OuterMagJrAll(iLat,iLon)+OuterMagJrAll(iLatSouth,iLon))
         Buff_V(3) = Buff_V(3) + w * 0.5*( &
-             SigmaH(iLon,iLat)  + &
-             SigmaH(iLon,iLatSouth))
+             SigmaHAll(iLat,iLon)  + &
+             SigmaHAll(iLatSouth,iLon))
         Buff_V(4) = Buff_V(4) + w * 0.5*( &
-             SigmaP(iLon,iLat)  + &
-             SigmaP(iLon,iLatSouth))
+             SigmaPAll(iLat,iLon)  + &
+             SigmaPAll(iLatSouth,iLon))
      case default
         call CON_stop(NameSub//' ERROR: Unknown value for TypeImCouple='// &
              TypeImCouple)
@@ -585,6 +587,63 @@ subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
   end do
 
 end subroutine IE_get_for_im
+
+!==============================================================================
+subroutine IE_put_from_im(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
+
+  use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
+  use ModRIM, ONLY: nLats, nLonsAll, InnerMagJrAll, IsNewInput
+
+  implicit none
+  character(len=*), parameter   :: NameSub='IE_put_from_im'
+  integer,intent(in)            :: nPoint, iPointStart, nVar
+  real, intent(in)              :: Buff_V(nVar)
+  type(IndexPtrType),intent(in) :: Index
+  type(WeightPtrType),intent(in):: Weight
+  logical,intent(in)            :: DoAdd
+  integer :: iBlock,iLat,iLon
+  !---------------------------------------------------------------------------
+  if(nPoint>1)then
+     write(*,*)NameSub,': nPoint,iPointStart,Weight=',&
+          nPoint,iPointStart,Weight % Weight_I
+     call CON_stop(NameSub//': should be called with 1 point')
+  end if
+  if(DoAdd)then
+     write(*,*)NameSub,': nPoint,iPointStart,Weight=',&
+          nPoint,iPointStart,Weight % Weight_I
+     write(*,*)NameSub,': WARNING DoAdd is true'
+  end if
+
+  iLat = Index % iCB_II(1,iPointStart)
+  iLon = Index % iCB_II(2,iPointStart)
+
+!  if(iLat<1.or.iLat>nLats+2.or.iLon<0.or.iLon>nLonsAll+1)then
+!     write(*,*)'iLat,iLon,DoAdd=',iLat,nLats,iLon,nLonsAll+1,DoAdd
+!     call CON_stop('IE_put_from_im: index out of range')
+!  end if
+
+  if ( iLat >= 1 .and. iLat <= nLats+2 .and. &
+       iLon >= 0 .and. iLon <=nLonsAll+1) then
+     if(DoAdd)then
+        InnerMagJrAll(iLat,iLon) = InnerMagJrAll(iLat,iLon) + Buff_V(1)
+     else
+        InnerMagJrAll(iLat,iLon) = Buff_V(1)
+     end if
+  endif
+
+  IsNewInput = .true.
+
+end subroutine IE_put_from_im
+!==============================================================================
+subroutine IE_put_from_im_complete
+
+  write(*,*)"Don't know what IE_put_from_im_complete is really supposed to do."
+  write(*,*)"I think that it is"
+  write(*,*)"Supposed to be applying periodic boundaries...?"
+
+end subroutine IE_put_from_im_complete
+
+
 
 !==============================================================================
 
@@ -768,7 +827,7 @@ subroutine IE_run(tSimulation,tSimulationLimit)
 
   use ModProcIE
   use ModRIM
-  use ModParamRIM, only: iDebugLevel
+  use ModParamRIM, only: iDebugLevel, DoSolve
   use CON_physics, ONLY: get_time, get_axes, time_real_to_int
   use ModKind
   implicit none
@@ -794,8 +853,10 @@ subroutine IE_run(tSimulation,tSimulationLimit)
 
   if(DoTest)write(*,*)NameSub,': iProc,IsNewInput=',iProc,IsNewInput
 
+  tSimulation = tSimulationLimit
+
   ! Do not solve if there is no new input from GM or UA
-  if(.not.IsNewInput) RETURN
+  if(DoSolve .and. .not.IsNewInput) RETURN
 
   CurrentTime = StartTime + tSimulation
   call time_real_to_int(CurrentTime, TimeArray)

@@ -11,6 +11,7 @@ subroutine distribute
   integer :: iError, iSize
 
   write(*,*) "mm(OuterMagJrAll) : ", minval(OuterMagJrAll), maxval(OuterMagJrAll)
+  write(*,*) "mm(InnerMagJrAll) : ", minval(InnerMagJrAll), maxval(InnerMagJrAll)
 
   if (maxval(OuterMagJrAll) > -1.0e31) then
      call rearrange(OuterMagJrAll, OuterMagJr)
