@@ -61,6 +61,26 @@ contains
     if(IsInitialized) RETURN
     IsInitialized = .true.
     
+    call init_ie_im_couple
+    call init_im_ie_couple
+
+  end subroutine couple_ie_im_init
+
+  !BOP =======================================================================
+  !IROUTINE: init_ie_im_couple - initialize IE-IM coupling
+  !INTERFACE:
+  subroutine init_ie_im_couple
+
+    !DESCRIPTION:
+    ! This subroutine should be called from all PE-s so that
+    ! a union group can be formed. Since both IE and IM grids are
+    ! static, the router is formed here for the whole run.
+    !EOP
+    !------------------------------------------------------------------------
+
+    if(IsInitialized) RETURN
+    IsInitialized = .true.
+    
     ! Initialize the coupler including communicator for this router
     ! This must be called by ALL processors due to MPI restrictions!
 
@@ -85,6 +105,26 @@ contains
          mapping=map_im_to_ie,    & ! mapping between IM and IE coords
          interpolate=bilinear_interpolation) ! from IE nodes
 
+  end subroutine init_ie_im_couple
+
+  !BOP =======================================================================
+  !IROUTINE: init_ie_im_couple - initialize IM-IE coupling
+  !INTERFACE:
+  subroutine init_im_ie_couple
+
+    !DESCRIPTION:
+    ! This subroutine should be called from all PE-s so that
+    ! a union group can be formed. Since both IE and IM grids are
+    ! static, the router is formed here for the whole run.
+    !EOP
+    !------------------------------------------------------------------------
+
+    if(IsInitialized) RETURN
+    IsInitialized = .true.
+    
+    ! Initialize the coupler including communicator for this router
+    ! This must be called by ALL processors due to MPI restrictions!
+
     call init_coupler(                          &
          iCompSource=IM_,                       &
          nGhostPointSource=1,                   &      
@@ -95,6 +135,9 @@ contains
          GridDescriptorTarget=IE_Grid,          &
          Router=RouterImIe)
 
+    ! It is time to leave for non-involved PEs
+    if(.not.RouterImIe%IsProc) RETURN
+    
     ! Both grids are static, it is sufficient to set the router once
     call set_router(&
          IM_Grid,                     &
@@ -103,7 +146,7 @@ contains
          mapping=map_ie_to_im,    & ! mapping between IM and IE coords
          interpolate=bilinear_interpolation) ! from IE nodes
 
-  end subroutine couple_ie_im_init
+  end subroutine init_im_ie_couple
 
   !BOP =======================================================================
   !IROUTINE: couple_im_ie - couple IM to IE component
@@ -205,12 +248,12 @@ contains
     iCoLat = nint(IEr1_Xyz_D(1))
     iLon   = nint(IEr1_Xyz_D(2))
     
-    if ( iLon<1 .or. iLon>Grid_C(IE_)% nCoord_D(2) .or. &
-         iCoLat<1 .or. iCoLat>Grid_C(IE_)% nCoord_D(1)) then
+    if ( iLon<1 .or. iLon>Grid_C(IM_)% nCoord_D(2) .or. &
+         iCoLat<1 .or. iCoLat>Grid_C(IM_)% nCoord_D(1)) then
        write(*,*)'map_ie_to_im: iColat,Grid_C(IE_)% nCoord_D(1)=',&
-            iColat, Grid_C(IE_)% nCoord_D(1)
+            iColat, Grid_C(IM_)% nCoord_D(1)
        write(*,*)'map_ie_to_im: iLon,Grid_C(IE_)% nCoord_D(2)=',&
-            iLon,Grid_C(IE_)% nCoord_D(2)
+            iLon,Grid_C(IM_)% nCoord_D(2)
        call CON_stop('map_ie_to_im (in CON_couple_ie_im) SWMF_ERROR: index out of range!')
     end if
     
