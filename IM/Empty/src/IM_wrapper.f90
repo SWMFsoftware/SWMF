@@ -174,3 +174,12 @@ subroutine IM_put_sat_from_gm(nSats, Buffer_I, Buffer_III)
 end subroutine IM_put_sat_from_gm
 
 !==============================================================================
+
+subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
+  character(len=*), parameter :: NameSub='IM_get_for_ie'
+  
+  call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
+
+end subroutine IM_get_for_ie
+
+!==============================================================================
