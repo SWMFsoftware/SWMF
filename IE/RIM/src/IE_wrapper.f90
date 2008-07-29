@@ -31,7 +31,6 @@ subroutine IE_set_param(CompInfo, TypeAction)
           Version=0.1)
   case('MPI')
      call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc)
-
      if( NameOutputDir(1:3) /= 'IE/' ) NameOutputDir = 'IE/'//NameOutputDir
   case('READ','CHECK')
      call read_param
@@ -281,6 +280,7 @@ subroutine IE_set_grid
   use ModRIM
   use CON_coupler
   use ModPlanetConst
+  use ModNumConst, only:cPi
 
   implicit none
   character (len=*), parameter :: NameSub='IE_set_grid'
@@ -301,6 +301,14 @@ subroutine IE_set_grid
      iProc_A(i)=i-1
   end do
 
+  if (nLonsAll <= 0) then 
+     allocate( &
+          LatitudeAll(nLats+2,nLons+1), &
+          LongitudeAll(nLats+2,nLons+1))
+     LatitudeAll = 0.0
+     LongitudeAll = 0.0
+  endif
+
   !\
   ! When coupling, all models expect the ionosphere solution to go from
   ! the north pole to the south pole, and the "longitudes" to start from
@@ -313,10 +321,10 @@ subroutine IE_set_grid
        IE_,                                  &! component index
        nDim=2,                               &! dimensionality
        nRootBlock_D=(/1,nProc/),             &! north+south hemispheres
-       nCell_D =(/nLats+2,nLons*nProc+1/),   &! size of node based grid
+       nCell_D =(/nLats+2,nLons+1/),   &! size of node based grid
        XyzMin_D=(/cOne, cOne/),              &! min colat and longitude indexes
        XyzMax_D=(/real(nLats+2),             &! max colat and longitude indexes
-                  real(nLons*nProc+1)/),     &
+                  real(nLons+1)/),     &
        TypeCoord='SMG',                      &! solar magnetic coord.
        Coord1_I=LatitudeAll(:,1),           &! colatitudes
        Coord2_I=LongitudeAll(1,:),            &! longitudes
@@ -634,7 +642,9 @@ subroutine IE_put_from_im(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
   IsNewInput = .true.
 
 end subroutine IE_put_from_im
+
 !==============================================================================
+
 subroutine IE_put_from_im_complete
 
   write(*,*)"Don't know what IE_put_from_im_complete is really supposed to do."
@@ -642,8 +652,6 @@ subroutine IE_put_from_im_complete
   write(*,*)"Supposed to be applying periodic boundaries...?"
 
 end subroutine IE_put_from_im_complete
-
-
 
 !==============================================================================
 
@@ -658,7 +666,6 @@ subroutine IE_get_for_ps(Buffer_IIV, iSize, jSize, nVar)
   !NOTE: The Buffer variables must be collected to i_proc0(IE_) before return.
 
   write(*,*) NameSub,' -- called but not yet implemented.'
-
 
 end subroutine IE_get_for_ps
 !==============================================================================
@@ -859,6 +866,7 @@ subroutine IE_run(tSimulation,tSimulationLimit)
   if(DoSolve .and. .not.IsNewInput) RETURN
 
   CurrentTime = StartTime + tSimulation
+  if (tSimulation == 0) OldTime = CurrentTime
   call time_real_to_int(CurrentTime, TimeArray)
 
   if (iDebugLevel >= 0) write(*,*) "Current Time : ",TimeArray
@@ -873,6 +881,8 @@ subroutine IE_run(tSimulation,tSimulationLimit)
   call advance_RIM
 
   IsNewInput = .false.
+
+  OldTime = CurrentTime
 
 !   ! Solve for the ionosphere potential
 !   call IE_solve
