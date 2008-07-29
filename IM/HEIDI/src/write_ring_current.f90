@@ -30,10 +30,10 @@ subroutine write_ring_current
      lat(i) = Latfac(i) * 3.141592 / 180.0 
   enddo
   
-  kkmax=0
-  lmax=0
-  kmin=0
-  lmin=0
+  kkmax=1
+  lmax=1
+  kmin=1
+  lmin=1
   potmax=0.
   potmin=0.
   
@@ -110,10 +110,10 @@ subroutine write_ring_current
   
 !!!...Now fill in the potentials on the DGCPM grid
 
-  kkmax=0
-  lmax=0
-  kmin=0
-  lmin=0
+  kkmax=1
+  lmax=1
+  kmin=1
+  lmin=1
   potmax=0.
   potmin=0.
   

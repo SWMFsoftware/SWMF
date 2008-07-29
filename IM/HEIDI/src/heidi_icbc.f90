@@ -52,6 +52,8 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
        2,11,21,31,41,51,61,70,75,79,82,83,84,85,86,87,88,89,90/
   external :: GAMMLN
 
+  integer :: iUnit=18
+
   !.......Start the loop over RC species
   DO S=1,NS
 
@@ -92,12 +94,12 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
                  end do	! L loop
               end do	! I loop
            ELSE			! Read in from input file: 'cone.bcf'
-              OPEN(unit=20,FILE='cone.bcf',STATUS='OLD')
-              READ (20,101) HEADER
+              OPEN(unit=iUnit,FILE='cone.bcf',STATUS='OLD')
+              READ (iUnit,101) HEADER
               do K=2,KO
-                 READ (20,*) DUMMY,FINI(K)
+                 READ (iUnit,*) DUMMY,FINI(K)
               end do	! K loop
-              CLOSE(20)
+              CLOSE(iUnit)
               !	  CHI0=1./CHI0	! Only do 1 divide, then multiply
               !	  CALL ZENITH(J6,J18)
               do J=J6,J18
@@ -122,22 +124,22 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
         ELSE IF ((INI(S).EQ.2).OR.(INI(S).EQ.3)) THEN
            !.......Read in FI and NI from files
            ST3='.in '
-           OPEN(UNIT=20,file=ST1//ST2//ST3,STATUS='OLD')
-           READ(20,*) YEAR,DAY,R,AP,KP,ETOTAL,EFRACTN  !Replaces input.glo
-           READ(20,101) HEADER
-           READ(20,101) HEADER
+           OPEN(UNIT=iUnit,file=ST1//ST2//ST3,STATUS='OLD')
+           READ(iUnit,*) YEAR,DAY,R,AP,KP,ETOTAL,EFRACTN  !Replaces input.glo
+           READ(iUnit,101) HEADER
+           READ(iUnit,101) HEADER
            do  Kin=1,11
-              READ(20,*) (FI(Iin,Kin),Iin=1,6)
+              READ(iUnit,*) (FI(Iin,Kin),Iin=1,6)
            end do
-           CLOSE(20)
+           CLOSE(iUnit)
            ST1='testn'
-           OPEN(UNIT=22,file=ST1//ST2//ST3,STATUS='OLD')
-           READ(22,101) HEADER
-           READ(22,101) HEADER
+           OPEN(UNIT=iUnit,file=ST1//ST2//ST3,STATUS='OLD')
+           READ(iUnit,101) HEADER
+           READ(iUnit,101) HEADER
            do KK=1,5	
-              READ(22,*) (NI(II,KK),II=1,3)
+              READ(iUnit,*) (NI(II,KK),II=1,3)
            end do
-           CLOSE(22)
+           CLOSE(iUnit)
            !.......Determine parameters for specific initial condition
            IF (INI(S).EQ.2) THEN
               ig1=4			! Gausian centered at L=LZ(ig1)
@@ -287,22 +289,22 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
 
            !.......Read in F from a file: 'restart.bcf' (INI=5)
         ELSE IF (INI(S).EQ.5) THEN
-           OPEN(unit=20,FILE='restart.bcf',STATUS='OLD')
+           OPEN(unit=iUnit,FILE='restart.bcf',STATUS='OLD')
            IFN=0
            IF (IPA.EQ.0) IFN=L1
            do L=1,L1
               MU0(L)=MU(IFM(L+IFN))
            end do
-           READ (20,101) HEADER
-           READ (20,101) HEADER
+           READ (iUnit,101) HEADER
+           READ (iUnit,101) HEADER
            do I=1,I1		! Read in and perform first 2D interp.
               II=I*4-2
               do J=1,J1-1
                  JJ=J*3-2
-                 READ (20,102) R0(I),MLT0(J)
-                 READ (20,101) HEADER
+                 READ (iUnit,102) R0(I),MLT0(J)
+                 READ (iUnit,101) HEADER
                  do K=1,K1
-                    READ (20,*) E0(K),(F0(K,L),L=1,L1)
+                    READ (iUnit,*) E0(K),(F0(K,L),L=1,L1)
                  end do
                  !	  IF (I+J.EQ.2) THEN
                  !	   PRINT 50,'Inputs :',1,2,2,18,E0(1),E0(2),MU0(2),MU0(18)
@@ -338,7 +340,7 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
                  !	  END IF
               end do	! J loop
            end do		! I Loop
-           CLOSE(20)
+           CLOSE(iUnit)
            !	STOP			!TEST RUNS ONLY
            MLT0(J1)=MLT(1)
            do K=2,KO		! Perform second 2D interpolation
@@ -416,13 +418,13 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
 
            !  Read in from a unformatted file (INI=7)
         ELSE IF (INI(S).EQ.7) THEN
-           OPEN(UNIT=1,FILE=NAME//ST2//'.unff',status='old',   &
+           OPEN(UNIT=iUnit,FILE=NAME//ST2//'.unff',status='old',   &
                 form='unformatted')
            DO L=1,NPA
               !	  DO K=8,NE  ! Changed the Egrid for runs "e" and "f" !1,NE
               DO K=1,NE  ! Change back to this for restarts
                  DO J=1,NT 
-                    read(1) (f2(I,J,K,L,S),I=1,NR)
+                    read(iUnit) (f2(I,J,K,L,S),I=1,NR)
                     !	    f2(1:NR,J,K,L,S)=0.5*f2(1:NR,J,K,L,S)  ! Special restart line
                  END DO
               END DO
@@ -432,19 +434,19 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
               !	   END DO
               !	  END DO        ! to here
            END DO
-           close(1)
+           close(iUnit)
 
         END IF
         !.......Done with initial particle distribution set up
 
         IF (IBC(S).EQ.1) THEN	! This is to redo INI=1 above
            Ib=1
-           OPEN(unit=20,FILE='cone.bcf',STATUS='OLD')
-           READ (20,101) HEADER
+           OPEN(unit=iUnit,FILE='cone.bcf',STATUS='OLD')
+           READ (iUnit,101) HEADER
            do K=2,KO
-              READ (20,*) DUMMY,FINI(K)
+              READ (iUnit,*) DUMMY,FINI(K)
            end do
-           CLOSE(20)
+           CLOSE(iUnit)
            do J=J6,J18
               do I=2,IO
                  CHI(I,J)=1.		! Same BC flux over entire dayside
@@ -586,6 +588,9 @@ SUBROUTINE GEOSB
   SAVE KES,TM1,TM2,NM1,NM2,TFM1,TFM2,TCM1,TCM2,TS1,TS2,FS1,FS2,  &
        I2,I6,I7,I9,IG7,NE1,NE2,TEF1,TEF2,TEC1,TEC2
 
+  integer :: iUnitSopa=43
+  integer :: iUnitMpa=44
+
   print *, 'Resetting the outer boundary condition'
   !CCC Create a few flags and open a few files
   IF (T.EQ.TIME) THEN
@@ -620,9 +625,9 @@ SUBROUTINE GEOSB
            TS2=TIME-1.		! Prepare SOPA input file
            TS1=TS2
            FS2(1:7)=0.
-           OPEN(UNIT=14,FILE=NAME//'_sopa.in',status='old')
+           OPEN(UNIT=iUnitSopa,FILE=NAME//'_sopa.in',status='old')
            DO I=1,3
-              READ(14,*) HEADER
+              READ(iUnitSopa,*) HEADER
            END DO
         END IF
         TM2=TIME-1.		! Prepare MPA input file
@@ -633,9 +638,9 @@ SUBROUTINE GEOSB
         NE2=0.
         TEC2=0.
         TEF2=0.
-        OPEN(UNIT=16,FILE=NAME//'_mpa.in',status='old')
+        OPEN(UNIT=iUnitMpa,FILE=NAME//'_mpa.in',status='old')
         DO I=1,3			! 3 lines of header material
-           READ(16,*) HEADER
+           READ(iUnitMpa,*) HEADER
         END DO
         I2=0
         IF (S.EQ.1) I2=3
@@ -673,7 +678,7 @@ SUBROUTINE GEOSB
            NM1=NM2
            TFM1=TFM2
            TCM1=TCM2
-           READ (16,*,IOSTAT=L) (DATA(I),I=1,9)
+           READ (iUnitMpa,*,IOSTAT=L) (DATA(I),I=1,9)
            TM2=DATA(2)
            NM2=DATA(4)
            TFM2=DATA(6)
@@ -718,7 +723,7 @@ SUBROUTINE GEOSB
            DO WHILE (TS2.LE.T)	! Best if final TS2 > final T
               TS1=TS2
               FS1(2:7)=FS2(2:7)
-              READ (14,*,IOSTAT=I) (DATA(I),I=1,8)
+              READ (iUnitSopa,*,IOSTAT=I) (DATA(I),I=1,8)
               TS2=DATA(1)
               FS2(2:7)=DATA(3:8)
               IF (I.LT.0) TS2=TIME+2*DT*(NSTEP+1)
@@ -853,14 +858,16 @@ SUBROUTINE FINJ(F)
   SAVE T1,T2,BZ1,BZ2,MD1,MD2,U1,U2
   external :: GAMMLN,ERF
 
+  integer :: iUnitSw = 45 
+
   TLAG=4.*3600.			! From Borovsky et al, Aug 98
   IF (ISWB.EQ.1) THEN
      IF (T.EQ.TIME) THEN
         T2=TIME-1.
         T1=T2
-        OPEN(UNIT=15,FILE=NAME//'_sw2.in',status='old')
+        OPEN(UNIT=iUnitSw,FILE=NAME//'_sw2.in',status='old')
         DO I=1,6                      ! 6 lines of header material
-           READ(15,*) HEADER
+           READ(iUnitSw,*) HEADER
         END DO
      END IF
      IF (T2.LT.T) THEN
@@ -869,7 +876,7 @@ SUBROUTINE FINJ(F)
            BZ1=BZ2
            MD1=MD2
            U1=U2
-           READ (15,*,IOSTAT=I) T2,BZ2,MD2,U2
+           READ (iUnitSw,*,IOSTAT=I) T2,BZ2,MD2,U2
            T2=T2+TLAG
            IF (I.LT.0) T2=TIME+2*DT*(NSTEP+1)+TLAG
            IF (T.EQ.TIME) THEN                 ! In case T2>T already

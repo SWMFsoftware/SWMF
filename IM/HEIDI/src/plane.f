@@ -197,10 +197,11 @@ C    &     ,a,F10p7,sqroot,flux10p7,flux,fluxN,fluxS,gLong,gLat,mLat,mLong
 	integer year, month, day
 	common /DateTime/ year, month, day, sec
 
-        open(unit=13, file='tau0.dat', status='old', err=10
+        integer iUnitIn = 32
+        open(unit=iUnitIn, file='tau0.dat', status='old', err=10
      &		, form='unformatted')
-	read(13) tau0
-        close(13)
+	read(iUnitIn) tau0
+        close(iUnitIn)
         return
 
  10     stop ' error on open to tau0.dat'

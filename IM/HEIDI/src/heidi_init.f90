@@ -10,8 +10,7 @@ subroutine heidi_init
   implicit none
    
   if (me_world.eq.0) then
-     call ionosphere_fine_grid
-     call ionosphere_init(year,day,ut)
+     call IonoHeidiInit(year,day,ut)
   endif
 
   T=TIME

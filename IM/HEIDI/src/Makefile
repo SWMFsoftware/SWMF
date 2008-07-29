@@ -19,6 +19,7 @@ MODULES = \
 	ModHeidiWaves.o\
 	ModInit.o\
 	ModIonoHeidi.o\
+	ModHeidiSatellites.o\
 	ModProcIM.o
 
 #MODULES = \

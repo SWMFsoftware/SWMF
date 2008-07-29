@@ -16,7 +16,7 @@ subroutine epencalc(utime,f107,bc_choice,IMF_By, IMF_Bz, SW_V)
 
   logical :: debug
 
-  real, dimension(1:IONO_nTheta,1:IONO_nPsi) ::  t, m
+  real, dimension(1:IONO_nTheta, 1:IONO_nPsi) ::  t, m
 
   real*8 :: TimeOfDay
 

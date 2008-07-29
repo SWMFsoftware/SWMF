@@ -282,10 +282,13 @@ subroutine IM_put_from_ie(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
 
   if (i > IONO_nTheta .and. j <= IONO_nPsi) then
      if(DoAdd)then
-        IONO_SOUTH_PHI(2*IONO_nTheta-i+1,j) = &
-             IONO_SOUTH_PHI(2*IONO_nTheta-i+1,j) + Buff_V(1)
+!        IONO_SOUTH_PHI(2*IONO_nTheta-i+1,j) = &
+!             IONO_SOUTH_PHI(2*IONO_nTheta-i+1,j) + Buff_V(1)
+        IONO_SOUTH_PHI(i-IONO_nTheta,j) = &
+             IONO_SOUTH_PHI(i-IONO_nTheta,j) + Buff_V(1)
      else
-        IONO_SOUTH_PHI(2*IONO_nTheta-i+1,j) = Buff_V(1)
+!        IONO_SOUTH_PHI(2*IONO_nTheta-i+1,j) = Buff_V(1)
+        IONO_SOUTH_PHI(i-IONO_nTheta,j) = Buff_V(1)
      end if
   endif
 
@@ -297,10 +300,47 @@ subroutine IM_put_from_ie_complete
   write(*,*) "Supposed to be applying periodic boundaries...?"
 
 end subroutine IM_put_from_ie_complete
+
 !==============================================================================
+
 subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
 
-write(*,*) 'This is not working' 
+  use ModIonoHeidi
+  use ModConst
+
+  implicit none
+
+  character (len=*),parameter :: NameSub='IM_put_from_gm'
+
+  integer, intent(in) :: iSizeIn,jSizeIn,nVarIn
+  real, dimension(iSizeIn,jSizeIn,nVarIn), intent(in) :: Buffer_IIV
+  character (len=*),intent(in)       :: NameVar
+
+  integer, parameter :: vol_=1, z0x_=2, z0y_=3, bmin_=4, rho_=5, p_=6
+  logical :: DoTest, DoTestMe
+  !---------------------------------------------------------------------------
+  call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+  if(DoTest)write(*,*)NameSub,' starting with NameVar=',NameVar
+
+  IonoGmVolume   = Buffer_IIV(:,:,vol_)
+  IonoGmXPoint   = Buffer_IIV(:,:,z0x_)
+  IonoGmYPoint   = Buffer_IIV(:,:,z0y_)
+  IonoGmBField   = Buffer_IIV(:,:,bmin_)
+  ! I think that this is mass density in SI units.  Change to number density
+  ! in #/cc.  Then get rid of -1 values.
+  IonoGmDensity  = Buffer_IIV(:,:,rho_)/cProtonMass/1.0e6
+  where (IonoGmDensity < 0.0) IonoGmDensity = 0.0
+
+  ! This is in Pascals
+  IonoGmPressure = Buffer_IIV(:,:,p_)
+  where (IonoGmPressure < 0.0) IonoGmPressure = 0.0
+
+  IonoGmTemperature = 0.0
+  where (IonoGmDensity > 0) &
+       IonoGmTemperature = IonoGmPressure/(IonoGmDensity*1.0e6*cBoltzmann)
+
+!  write(*,*) 'This is not working'
 
 end subroutine IM_put_from_gm
 
@@ -309,14 +349,77 @@ subroutine IM_put_sat_from_gm(nSats, Buffer_I, Buffer_III)
   ! Puts satellite locations and names from GM into IM variables.
   !!!DTW 2007
 
-write(*,*) 'This is not working' 
+  use ModHeidiSatellites
+  use ModNumConst,   ONLY: cDegToRad
+  
+  implicit none
+  character (len=*),parameter :: NameSub='IM_put_sat_from_gm'
+
+  ! Arguments
+  integer, intent(in)            :: nSats
+  real, intent(in)               :: Buffer_III(3,2,nSats)
+  character(len=100), intent(in) :: Buffer_I(nSats)
+
+  ! Internal variables
+  integer :: iError, iSat, l1, l2
+
+  DoWriteSats = .true.
+  nImSats = nSats
+
+  if (nImSats > nMaxSatellites) then
+     write(*,*) "nImSats > nMaxSatellites"
+     call CON_stop("Stoping in routine " // NameSub)
+  endif
+
+  ! Assign incoming values, remove path and extension from name.
+  SatLoc_3I = Buffer_III
+  do iSat=1, nSats
+     l1 = index(Buffer_I(iSat), '/', back=.true.) + 1
+     l2 = index(Buffer_I(iSat), '.') - 1
+     if (l1-1<=0) l1=1
+     if (l2+1<=0) l2=len_trim(Buffer_I(iSat))
+     NameSat_I(iSat) = Buffer_I(iSat)(l1:l2)
+  end do
+
+  ! Change to correct units (degrees to radians)
+  SatLoc_3I(1,2,:) = (90. - SatLoc_3I(1,2,:)) * cDegToRad
+  SatLoc_3I(2,2,:) =        SatLoc_3I(2,2,:)  * cDegToRad
 
 end subroutine IM_put_sat_from_gm
 
 !==============================================================================
 subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
-write(*,*) 'This is not working'  
+  use CON_time, ONLY : get_time
+  use ModNumConst, ONLY: cRadToDeg
+  use ModIonoHeidi
+  implicit none
+  character (len=*),parameter :: NameSub='IM_get_for_gm'
+
+  integer, intent(in)                                :: iSizeIn,jSizeIn,nVar
+  real, dimension(iSizeIn,jSizeIn,nVar), intent(out) :: Buffer_IIV
+  character (len=*),intent(in)                       :: NameVar
+
+  integer, parameter :: pres_=1, dens_=2
+
+  logical :: DoTest, DoTestMe
+  !--------------------------------------------------------------------------
+  call CON_set_do_test(NameSub, DoTest, DoTestMe)
+  if (DoTestMe) &
+       write(*,*)NameSub,' starting with iSizeIn,jSizeIn,nVar,NameVar=',&
+       iSizeIn,jSizeIn,nVar,NameVar
+
+  if(NameVar /= 'p:rho') &
+       call CON_stop(NameSub//' invalid NameVar='//NameVar)
+
+  if(iSizeIn /= IONO_nTheta*2-1 .or. jSizeIn /= IONO_nPsi)then
+     write(*,*)NameSub//' incorrect buffer size=',iSizeIn,jSizeIn
+     call CON_stop(NameSub//' SWMF_ERROR')
+  end if
+
+  Buffer_IIV = -1.0
+
+  write(*,*) 'This is not working'  
 
 end subroutine IM_get_for_gm
 
@@ -376,7 +479,8 @@ subroutine IM_run(SWMFTime,SWMFTimeLimit)
 
   call heidi_run 
 
-  SWMFTime = SWMFTime + dt*2
+!  SWMFTime = SWMFTime + dt*2
+  SWMFTime = SWMFTime + 2.5
 
 end subroutine IM_run
 

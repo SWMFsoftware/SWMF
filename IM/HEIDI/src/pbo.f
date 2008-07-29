@@ -453,18 +453,20 @@ c mgridoc, open(0) or closed(1) table
 c mgridpot in volts
       real mgridpot(nthetacells,nphicells)
 
-      open(unit = 10, file=filename, status = 'unknown',
+      integer iUnitOut = 32
+
+      open(unit = iUnitOut, file=filename, status = 'unknown',
      *   form = 'formatted')
 	print *, 'Saving the DGCPM output'
-      write(10,*) nthetacells, nphicells
-      write(10,*) vthetacells
-      write(10,*) vphicells
-      write(10,*) mgridden
-      write(10,*) mgridx
-      write(10,*) mgridy
-      write(10,*) mgridoc
-      write(10,*) mgridpot
-      close(unit = 10)
+      write(iUnitOut,*) nthetacells, nphicells
+      write(iUnitOut,*) vthetacells
+      write(iUnitOut,*) vphicells
+      write(iUnitOut,*) mgridden
+      write(iUnitOut,*) mgridx
+      write(iUnitOut,*) mgridy
+      write(iUnitOut,*) mgridoc
+      write(iUnitOut,*) mgridpot
+      close(unit = iUnitOut)
 
       return
       end
@@ -507,22 +509,24 @@ c Internal: mgridx1, mgridy1, in Re
 c Internal: mgridoc1, open(0) or closed(1) table
       real mgridoc1(nthetacells2,nphicells2)
 
+      integer iUnitIn = 33
+
       open(unit = 10, file=filename, status = 'old',
      *   form = 'formatted')
-      read(10,*) nthetacells1, nphicells1
+      read(iUnitIn,*) nthetacells1, nphicells1
 
       if (nthetacells1.ne.nthetacells2.or.nphicells1.ne.nphicells2) then
        print*,'File size mismatch in subroutine Loadit'
        stop
       endif
 
-      read(10,*) vthetacells1
-      read(10,*) vphicells1
-      read(10,*) mgridden1
-      read(10,*) mgridx1
-      read(10,*) mgridy1
-      read(10,*) mgridoc1
-      close(unit = 10)
+      read(iUnitIn,*) vthetacells1
+      read(iUnitIn,*) vphicells1
+      read(iUnitIn,*) mgridden1
+      read(iUnitIn,*) mgridx1
+      read(iUnitIn,*) mgridy1
+      read(iUnitIn,*) mgridoc1
+      close(unit = iUnitIn)
 
       call interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
      *   nphicells1,mgridden1,vthetacells,nthetacells,vphicells,
@@ -2225,17 +2229,19 @@ c mgridoc, open(0) or closed(1) table
       real mgridoc(nthetacells,nphicells)
       real parmod(10)
 
-      open(unit = 10, file='t96_2.dato', status = 'new',
+      integer iUnitOut = 32
+
+      open(unit = iUnitOut, file='t96_2.dato', status = 'new',
      *   form = 'formatted')
-      write(10,*) parmod
-      write(10,*) nthetacells, nphicells
-      write(10,*) vthetacells
-      write(10,*) vphicells
-      write(10,*) mgridx
-      write(10,*) mgridy
-      write(10,*) mgridvol
-      write(10,*) mgridoc
-      close(unit = 10)
+      write(iUnitOut,*) parmod
+      write(iUnitOut,*) nthetacells, nphicells
+      write(iUnitOut,*) vthetacells
+      write(iUnitOut,*) vphicells
+      write(iUnitOut,*) mgridx
+      write(iUnitOut,*) mgridy
+      write(iUnitOut,*) mgridvol
+      write(iUnitOut,*) mgridoc
+      close(unit = iUnitOut)
 
       return
       end
@@ -2260,17 +2266,19 @@ c mgridoc, open(0) or closed(1) table
       real mgridoc(nthetacells,nphicells)
       real parmod(10)
 
-      open(unit = 10, file='t96_2.dato', status = 'old',
+      integer iUnitIn = 33
+
+      open(unit = iUnitIn, file='t96_2.dato', status = 'old',
      *   form = 'formatted')
-      read(10,*) parmod
-      read(10,*) nthetacells, nphicells
-      read(10,*) vthetacells
-      read(10,*) vphicells
-      read(10,*) mgridx
-      read(10,*) mgridy
-      read(10,*) mgridvol
-      read(10,*) mgridoc
-      close(unit = 10)
+      read(iUnitIn,*) parmod
+      read(iUnitIn,*) nthetacells, nphicells
+      read(iUnitIn,*) vthetacells
+      read(iUnitIn,*) vphicells
+      read(iUnitIn,*) mgridx
+      read(iUnitIn,*) mgridy
+      read(iUnitIn,*) mgridvol
+      read(iUnitIn,*) mgridoc
+      close(unit = iUnitIn)
 
       return
       end

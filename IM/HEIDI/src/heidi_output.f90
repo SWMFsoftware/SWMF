@@ -31,6 +31,8 @@
 	CHARACTER*1 SUF1
 	SAVE NTC
 
+        integer :: iUnitOut = 46
+
 !.......Define parts of the output file names
 	IF (T.EQ.0) THEN
 	  NTC=0
@@ -59,12 +61,12 @@
 	IF (S.EQ.2) ST2='_h'
 	IF (S.EQ.3) ST2='he'
 	IF (S.EQ.4) ST2='_o'
-	OPEN(1,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
-	WRITE (1,*) 'Filename: '//ST1//ST2//ST3//SUF
-	WRITE (1,*) 'T,KP,A:',T,KP,A
-	WRITE (1,38) 'L-shell','MLT(hr)','E(keV)','PA(deg)','n(cm-3)',   &
+	OPEN(iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
+	WRITE (iUnitOut,*) 'T,KP,A:',T,KP,A
+	WRITE (iUnitOut,38) 'L-shell','MLT(hr)','E(keV)','PA(deg)','n(cm-3)',   &
           'ABS CFL'
-	WRITE (1,*) 'Energy advection |CFL| > 1 (entire grid)'
+	WRITE (iUnitOut,*) 'Energy advection |CFL| > 1 (entire grid)'
 	Ibad=0
 	CMAX=0.
 	Im=0
@@ -77,7 +79,7 @@
 	   do L=1,LO	     ! UPA(I)-1 , changed to include the l.c.
 	    CFL=ABS(EDOT(I,J,K,L)*VR(I,J)+(COULI(I,K,L,S)+COULE(I,K,L,S))*XNE(I,J))
 	    IF (CFL.GT.1.) THEN
-	      WRITE (1,39) LZ(I),MLT(J),EKEV(K),ACOSD(MU(L)),XNE(I,J),CFL
+	      WRITE (iUnitOut,39) LZ(I),MLT(J),EKEV(K),ACOSD(MU(L)),XNE(I,J),CFL
 	     Ibad=Ibad +1
 	    END IF
 	    IF (CFL.GT.CMAX) THEN
@@ -93,17 +95,17 @@
 	 end do	! J loop
 	end do	! I loop
 50	continue
-	WRITE (1,*) 'Bad CFLs: ',Ibad
-	WRITE (1,*) 'Max CFL: ',CMAX,Im,Jm,Km,Lm
+	WRITE (iUnitOut,*) 'Bad CFLs: ',Ibad
+	WRITE (iUnitOut,*) 'Max CFL: ',CMAX,Im,Jm,Km,Lm
 
-	WRITE (1,*) 'Radial advection |CFL| > 1 (entire grid)'
+	WRITE (iUnitOut,*) 'Radial advection |CFL| > 1 (entire grid)'
 	Ibad=0
 	CMAX=0.
 	do I=1,IO
 	 do J=1,JO
 	    CFL=ABS(VR(I,J))
 	    IF (CFL.GT.1.) THEN
-	      WRITE (1,39) LZ(I),MLT(J),A,VR(I,J),CFL
+	      WRITE (iUnitOut,39) LZ(I),MLT(J),A,VR(I,J),CFL
 	     Ibad=Ibad +1
 	    END IF
 	    IF (CFL.GT.CMAX) THEN
@@ -115,19 +117,19 @@
 	 end do	! J loop
 	end do	! I loop
 51	continue
-	WRITE (1,*) 'Bad CFLs: ',Ibad
-	WRITE (1,*) 'Max CFL: ',CMAX,Im,Jm
+	WRITE (iUnitOut,*) 'Bad CFLs: ',Ibad
+	WRITE (iUnitOut,*) 'Max CFL: ',CMAX,Im,Jm
 
 	Ibad=0
 	CMAX=0.
-	WRITE (1,*) 'Azimuthal advection |CFL| > 1 (entire grid)'
+	WRITE (iUnitOut,*) 'Azimuthal advection |CFL| > 1 (entire grid)'
 	do I=1,IO
 	 do J=1,JO
 	  do K=1,KO
 	   do L=1,LO	     
 	    CFL=ABS(P1(I,J)+P2(I,K,L))
 	    IF (CFL.GT.1.) THEN
-	      WRITE (1,39) LZ(I),MLT(J),EKEV(K),ACOSD(MU(L)),A,P1(I,J),P2(I,K,L),CFL
+	      WRITE (iUnitOut,39) LZ(I),MLT(J),EKEV(K),ACOSD(MU(L)),A,P1(I,J),P2(I,K,L),CFL
 	     Ibad=Ibad +1
 	    END IF
 	    IF (CFL.GT.CMAX) THEN
@@ -143,10 +145,10 @@
 	 end do	! J loop
 	end do	! I loop
 52	continue
-	WRITE (1,*) 'Bad CFLs: ',Ibad
-	WRITE (1,*) 'Max CFL: ',CMAX,Im,Jm,Km,Lm
+	WRITE (iUnitOut,*) 'Bad CFLs: ',Ibad
+	WRITE (iUnitOut,*) 'Max CFL: ',CMAX,Im,Jm,Km,Lm
 
-	WRITE (1,*) 'Mu advection |CFL| > 1 (entire grid)'
+	WRITE (iUnitOut,*) 'Mu advection |CFL| > 1 (entire grid)'
 	Ibad=0
 	CMAX=0.
 	do I=1,IO
@@ -154,7 +156,7 @@
 	   do L=1,LO	     
 	    CFL=ABS(MUDOT(I,J,L)*VR(I,J))
 	    IF (CFL.GT.1.) THEN
-	      WRITE (1,39) LZ(I),MLT(J),ACOSD(MU(L)),A,CFL
+	      WRITE (iUnitOut,39) LZ(I),MLT(J),ACOSD(MU(L)),A,CFL
 	     Ibad=Ibad +1
 	    END IF
 	    IF (CFL.GT.CMAX) THEN
@@ -168,10 +170,10 @@
 	 end do	! J loop
 	end do	! I loop
 53	continue
-	WRITE (1,*) 'Bad CFLs: ',Ibad
-	WRITE (1,*) 'Max CFL: ',CMAX,Im,Jm,Lm
+	WRITE (iUnitOut,*) 'Bad CFLs: ',Ibad
+	WRITE (iUnitOut,*) 'Max CFL: ',CMAX,Im,Jm,Lm
 
-	CLOSE(1)
+	CLOSE(iUnitOut)
 
 	END IF		! SCALC Check
 	END DO		! S LOOP
@@ -233,6 +235,8 @@
  	CHARACTER*80 filename
 	SAVE NTC
 
+        integer :: iUnitOut = 46
+
 	DATA IPF/'_lpf.','_mpf.','_hpf.'/
 	DATA IFM/2,7,13,20,28,35,42,47,50,52,54,56,58,60,62,64,66,68,70,   &
                 2,11,21,31,41,51,61,70,75,79,82,83,84,85,86,87,88,89,90/
@@ -287,22 +291,22 @@
 	call saveplasmasphere(filename)
 !	  Next create an output like we have made before
 	  ST3='_pla.'
-        OPEN(UNIT=1,file=ST1//ST3//SUF,STATUS='UNKNOWN')
-	  WRITE (1,*) 'Filename: '//ST1//ST3//SUF
-	  WRITE (1,*) 'Plasmaspheric thermal densities from the DGCPM'
-        WRITE (1,16) T,KP
-	  WRITE (1,31) (MLT(J),J=1,JO)
+        OPEN(UNIT=iUnitOut,file=ST1//ST3//SUF,STATUS='UNKNOWN')
+	  WRITE (iUnitOut,*) 'Filename: '//ST1//ST3//SUF
+	  WRITE (iUnitOut,*) 'Plasmaspheric thermal densities from the DGCPM'
+        WRITE (iUnitOut,16) T,KP
+	  WRITE (iUnitOut,31) (MLT(J),J=1,JO)
 	  do I=2,IO
-	    WRITE(1,29) LZ(I),(XNE(I,J),J=1,JO)
+	    WRITE(iUnitOut,29) LZ(I),(XNE(I,J),J=1,JO)
 	  end do
-	  CLOSE (1)
+	  CLOSE (iUnitOut)
 	END IF
 
 !CC Output from Aaron's ionosphere code
 !CC Didn't work...we need Aaron to diagnose the problem
 !	print *, 'Saving Aaron''s ionosphere model output'
 	if ((IA.ge.8 .and. IA.le.11) .or. IA.ge.13) then
-	 if (me_world.eq.0) call ionosphere_write_output(1,t,ST1,SUF)
+	 if (me_world.eq.0) call IonoHeidiWriteOutput(1,t,ST1,SUF)
 	end if
 
 !CC Start the main loop over species we're calculating
@@ -342,46 +346,46 @@
 !	IF (MOD(T,21600.).LT.2*DT) THEN	! Only every 6 hours
 	IF (IRES(1).EQ.1) THEN
 	  ST3='_psd.'
-        OPEN(UNIT=1,file=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
-	  WRITE (1,*) 'Filename: '//ST1//ST2//ST3//SUF
+        OPEN(UNIT=iUnitOut,file=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	  WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	  IF (IFAC.EQ.1) THEN
-	    WRITE (1,*) 'Phase space flux function, PHI = 2EF/m^2'
+	    WRITE (iUnitOut,*) 'Phase space flux function, PHI = 2EF/m^2'
 	  ELSE
-	    WRITE (1,*) 'Phase space distribution function, F'
+	    WRITE (iUnitOut,*) 'Phase space distribution function, F'
 	  END IF
         do I=2,IO,2  ! ,4
 	    do J=1,JO  ! ,3
-		WRITE(1,45) T,LZ(I),MLT(J),KP,XNE(I,J)
-		WRITE(1,44) (ACOSD(MU(IFM(L))),L=1+IFN,19+IFN)
+		WRITE(iUnitOut,45) T,LZ(I),MLT(J),KP,XNE(I,J)
+		WRITE(iUnitOut,44) (ACOSD(MU(IFM(L))),L=1+IFN,19+IFN)
 		do K=2,KO,NEC
-		  WRITE(1,43) EKEV(K),(F2(I,J,K,IFM(L),S)/   &
+		  WRITE(iUnitOut,43) EKEV(K),(F2(I,J,K,IFM(L),S)/   &
      		    FFACTOR(I,K,IFM(L)),L=1+IFN,19+IFN)
 		end do	! K loop
 	    end do		! J loop
 	  end do		! I loop
-	  CLOSE(1)
+	  CLOSE(iUnitOut)
 	END IF
 !	END IF					! 6 hour check
 
 !.......Write equatorially trapped distribution (IRES(2), 'etf')
 	IF (IRES(2).EQ.1) THEN
         ST3='_etf.'
-        OPEN(UNIT=1,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
-	  WRITE (1,*) 'Filename: '//ST1//ST2//ST3//SUF
-	  WRITE (1,*) 'Equatorially trapped distribution function, F'
+        OPEN(UNIT=iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	  WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
+	  WRITE (iUnitOut,*) 'Equatorially trapped distribution function, F'
 	  NIC(1)=2
 	  NIC(2)=IO/2
 	  NIC(3)=IO
 	  do II=1,3
 	    I=NIC(II)
-	    WRITE(1,33) T,LZ(I),KP,ACOSD(MU(2))
-	    WRITE(1,31) (MLT(J),J=1,JO,3)
+	    WRITE(iUnitOut,33) T,LZ(I),KP,ACOSD(MU(2))
+	    WRITE(iUnitOut,31) (MLT(J),J=1,JO,3)
 	    do K=1,KO,NEC
-		WRITE(1,29) EKEV(K),(F2(I,J,K,2,S)/FFACTOR(I,K,L),   &
+		WRITE(iUnitOut,29) EKEV(K),(F2(I,J,K,2,S)/FFACTOR(I,K,L),   &
      		  J=1,JO,3)
 	    end do
 	  end do
-	  CLOSE(1)
+	  CLOSE(iUnitOut)
 	END IF
 
 !.......Write the plasmaspheric heating (IRES(3), 'dep')
@@ -389,8 +393,8 @@
 	 XR2=IO/2.
 	 IR2=IO/2
 	 ST3='_dep.'
-	 OPEN(UNIT=1,file=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
-	 WRITE (1,*) 'Filename: '//ST1//ST2//ST3//SUF
+	 OPEN(UNIT=iUnitOut,file=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	 do I=2,IO			! Electron heating
 	  do J=1,JO
 	    EDR=0.
@@ -411,12 +415,12 @@
 	    DEP(I,J)=EDR*XNE(I,J)*LZ(I)
 	  end do
 	 end do
-	 WRITE (1,*) 'Energy deposition rates of thermal electrons'
-	 WRITE (1,*) 'through Coulomb collisions [eV/cm2/s]'
-         WRITE (1,15) T,KP
-	 WRITE (1,31) (LZ(I),I=2,IO)
+	 WRITE (iUnitOut,*) 'Energy deposition rates of thermal electrons'
+	 WRITE (iUnitOut,*) 'through Coulomb collisions [eV/cm2/s]'
+         WRITE (iUnitOut,15) T,KP
+	 WRITE (iUnitOut,31) (LZ(I),I=2,IO)
 	 do J=1,JO
-	   WRITE (1,29) MLT(J),(DEP(I,J),I=2,IO)
+	   WRITE (iUnitOut,29) MLT(J),(DEP(I,J),I=2,IO)
 	 end do
 	 do I=2,IO			! Ion heating
 	  do J=1,JO
@@ -438,14 +442,14 @@
 	    DEP(I,J)=EDR*XNE(I,J)*LZ(I)
 	  end do
 	 end do
-	 WRITE (1,*) 'Heating rates of thermal ions'
-	 WRITE (1,*) 'through Coulomb collisions [eV/cm2/s]'
-         WRITE (1,15) T,KP
-	 WRITE (1,31) (LZ(I),I=2,IO)
+	 WRITE (iUnitOut,*) 'Heating rates of thermal ions'
+	 WRITE (iUnitOut,*) 'through Coulomb collisions [eV/cm2/s]'
+         WRITE (iUnitOut,15) T,KP
+	 WRITE (iUnitOut,31) (LZ(I),I=2,IO)
 	 do J=1,JO
-	   WRITE (1,30) MLT(J),(DEP(I,J),I=2,IO)
+	   WRITE (iUnitOut,30) MLT(J),(DEP(I,J),I=2,IO)
 	 end do
-	 CLOSE(1)
+	 CLOSE(iUnitOut)
 	END IF
 
 !.......Write the precipitation flux (IRES(4), '*pf')
@@ -454,14 +458,14 @@
 	  ST3=IPF(II)
 	  NEC1=(II-1)*KO/3+1
 	  NEC2=II*KO/3
-          OPEN(UNIT=1,file=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
-	  WRITE (1,*) 'Filename: '//ST1//ST2//ST3//SUF
-	  WRITE (1,*) 'Total precipitation flux [1/cm2/s]'
-	  WRITE (1,*) 'Integrated over the energy range:'
-	  WRITE (1,*) 'Lower edge (keV): ',EKEV(NEC1)
-	  WRITE (1,*) 'Upper edge (keV): ',EKEV(NEC2)
-	  WRITE(1,71) T,KP
-	  WRITE(1,72)
+          OPEN(UNIT=iUnitOut,file=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	  WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
+	  WRITE (iUnitOut,*) 'Total precipitation flux [1/cm2/s]'
+	  WRITE (iUnitOut,*) 'Integrated over the energy range:'
+	  WRITE (iUnitOut,*) 'Lower edge (keV): ',EKEV(NEC1)
+	  WRITE (iUnitOut,*) 'Upper edge (keV): ',EKEV(NEC2)
+	  WRITE(iUnitOut,71) T,KP
+	  WRITE(iUnitOut,72)
 	  do I=2,IO
 	    do J=1,JO
 	      FLUX=0.
@@ -475,36 +479,36 @@
                 IF (IFAC.EQ.2) AVEFL(I,J,K)=AVEFL(I,J,K)*FLUXFACT(S)*EKEV(K)
 		FLUX=FLUX+AVEFL(I,J,K)*PI*WE(K)
 	      end do ! K loop
-	      WRITE(1,70) LZ(I),PHI(J),FLUX
+	      WRITE(iUnitOut,70) LZ(I),PHI(J),FLUX
 	    end do	! J loop
 	  end do	! I loop
-	  CLOSE (1)
+	  CLOSE (iUnitOut)
 	 end do
 	endif
 
 !.......Write the differential precip flux (IRES(5), 'flx')
 	IF (IRES(5).EQ.1) THEN	
 	  ST3='_flx.'
-          OPEN(UNIT=1,file=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
-	  WRITE (1,*) 'Filename: '//ST1//ST2//ST3//SUF
-	  WRITE (1,*) 'Differential precipitation fluxes'
+          OPEN(UNIT=iUnitOut,file=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	  WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
+	  WRITE (iUnitOut,*) 'Differential precipitation fluxes'
           DO I=4,IO,2
 !	   IF(I.EQ.4.OR.I.EQ.6.OR.I.EQ.10.OR.I.EQ.16) THEN
 	    IL=2
 !	    IF(I.EQ.16) IL=1
 	    DO J=1,JO,3
 !	     IF(J.EQ.1.OR.J.EQ.10.OR.J.EQ.16) THEN
-	      WRITE(1,34) T,LZ(I),MLT(J)
-	      WRITE(1,40) (ACOSD(MU(L)),L=UPA(I),LO-1,IL)
-	      WRITE(1,*)'     EKEV  \ FLUX[1/cm2/s/ster/keV]  AVEFL'
+	      WRITE(iUnitOut,34) T,LZ(I),MLT(J)
+	      WRITE(iUnitOut,40) (ACOSD(MU(L)),L=UPA(I),LO-1,IL)
+	      WRITE(iUnitOut,*)'     EKEV  \ FLUX[1/cm2/s/ster/keV]  AVEFL'
 	      IF (IFAC.EQ.1) THEN
  	        DO K=2,KO,NEC
-		  WRITE(1,30) EKEV(K),(F2(I,J,K,L,S)/FFACTOR(I,K,L),   &
+		  WRITE(iUnitOut,30) EKEV(K),(F2(I,J,K,L,S)/FFACTOR(I,K,L),   &
                      L=UPA(I),LO-1,IL),AVEFL(I,J,K)
 	        END DO
 	      ELSE
  	        DO K=2,KO,NEC
-		  WRITE(1,30) EKEV(K),(F2(I,J,K,L,S)*FLUXFACT(S)*EKEV(K)   &
+		  WRITE(iUnitOut,30) EKEV(K),(F2(I,J,K,L,S)*FLUXFACT(S)*EKEV(K)   &
      		    /FFACTOR(I,K,L),L=UPA(I),LO-1,IL),AVEFL(I,J,K)
 	        END DO
 	      END IF
@@ -512,22 +516,22 @@
             END DO
 !	   END IF
           END DO
-	  CLOSE (1)
+	  CLOSE (iUnitOut)
         END IF
 
 !..Write the particle & energy losses (IRES(6), 'los')
 	IF (IRES(6).EQ.1) THEN
 	  ST3='_los.'
-	  OPEN(UNIT=1,file=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
-	  WRITE (1,*) 'Filename: '//ST1//ST2//ST3//SUF
-	  WRITE (1,*) 'Particle and energy losses since last output'
-	  WRITE(1,71) T,KP
+	  OPEN(UNIT=iUnitOut,file=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	  WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
+	  WRITE (iUnitOut,*) 'Particle and energy losses since last output'
+	  WRITE(iUnitOut,71) T,KP
 	  ESUM=0
 	  NSUM=0
 	  CSUM=0
 	  PSUM=0
 	  ERATE=0
-        WRITE(1,35)
+        WRITE(iUnitOut,35)
         do I=2,IO
           XE=ENER(I,S)*FACTOR(S)
           XN1=XN(I,S)*FACTOR(S)
@@ -537,7 +541,7 @@
           NSUM=NSUM+XN1
 	    CSUM=CSUM+XLEC
 	    PSUM=PSUM+XLNC
-	    WRITE(1,30) LZ(I),XE,XN1,XLEC,XLNC
+	    WRITE(iUnitOut,30) LZ(I),XE,XN1,XLEC,XLNC
 	    do J=1,JO
 	      do K=2,KO
 	        ERATE=ERATE+EKEV(K)*AVEFL(I,J,K)*WE(K)
@@ -545,84 +549,84 @@
 	    end do
 	    ERATE=ERATE*2*PI*Q*ECOF(I)*1e7	!to convert in cm and J
 	  end do
-	  WRITE(1,60) ESUM,NSUM,CSUM,PSUM
-	  WRITE(1,61) ERATE
-	  CLOSE (1)
+	  WRITE(iUnitOut,60) ESUM,NSUM,CSUM,PSUM
+	  WRITE(iUnitOut,61) ERATE
+	  CLOSE (iUnitOut)
 	END IF
 
 !.......Print out the CFLs for the advection operators (IRES(8), 'cfl')
 	IF (IRES(8).EQ.1) THEN
 	 ST3='_cfl.'
-	 OPEN (1,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
-	 WRITE (1,*) 'Filename: '//ST1//ST2//ST3//SUF
-	 WRITE (1,*) 'CFL numbers for the advection operators'
-	 WRITE (1,71) T,KP
-	 WRITE (1,*)
-	 WRITE (1,*) 'Coulomb collsion Courant numbers (with e-)'
+	 OPEN (iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
+	 WRITE (iUnitOut,*) 'CFL numbers for the advection operators'
+	 WRITE (iUnitOut,71) T,KP
+	 WRITE (iUnitOut,*)
+	 WRITE (iUnitOut,*) 'Coulomb collsion Courant numbers (with e-)'
 	 do I=2,IO,IO-2
 	  do J=1,JO,3
-	    WRITE (1,37) LZ(I),MLT(J),XNE(I,J)
-	    WRITE (1,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
+	    WRITE (iUnitOut,37) LZ(I),MLT(J),XNE(I,J)
+	    WRITE (iUnitOut,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
 	    do K=2,KO,KO-2
-	      WRITE (1,30) EKEV(K),(COULE(I,K,L,S)*XNE(I,J),L=2,LO,NLC),   &
+	      WRITE (iUnitOut,30) EKEV(K),(COULE(I,K,L,S)*XNE(I,J),L=2,LO,NLC),   &
      		COULE(I,K,LO-1,S)*XNE(I,J)
 	    end do
 	  end do
 	 end do
-	 WRITE (1,*)
-	 WRITE (1,*) 'Coulomb collsion Courant numbers (with ions)'
+	 WRITE (iUnitOut,*)
+	 WRITE (iUnitOut,*) 'Coulomb collsion Courant numbers (with ions)'
 	 do I=2,IO,IO-2
 	  do J=1,JO,3
-	    WRITE (1,37) LZ(I),MLT(J),XNE(I,J)
-	    WRITE (1,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
+	    WRITE (iUnitOut,37) LZ(I),MLT(J),XNE(I,J)
+	    WRITE (iUnitOut,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
 	    do K=2,KO,KO-2
-	      WRITE (1,30) EKEV(K),(COULI(I,K,L,S)*XNE(I,J),L=2,LO,NLC),   &
+	      WRITE (iUnitOut,30) EKEV(K),(COULI(I,K,L,S)*XNE(I,J),L=2,LO,NLC),   &
      		COULI(I,K,LO-1,S)*XNE(I,J)
 	    end do
 	  end do
 	 end do
-	 WRITE (1,*)
-	 WRITE (1,*) 'Radial drift Courant numbers'
-	 WRITE (1,41) ' L \ MLT =',(MLT(J),J=1,JO,3)
+	 WRITE (iUnitOut,*)
+	 WRITE (iUnitOut,*) 'Radial drift Courant numbers'
+	 WRITE (iUnitOut,41) ' L \ MLT =',(MLT(J),J=1,JO,3)
 	 do I=2,IO,4
-	  WRITE (1,42) LZ(I),(VR(I,J),J=1,JO,3)
+	  WRITE (iUnitOut,42) LZ(I),(VR(I,J),J=1,JO,3)
 	 end do
-	 WRITE (1,*)
-	 WRITE (1,*) 'Azimuthal drift Courant numbers'
+	 WRITE (iUnitOut,*)
+	 WRITE (iUnitOut,*) 'Azimuthal drift Courant numbers'
 	 do I=2,IO,IO-2
 	  do J=1,JO,3
-	    WRITE (1,36) LZ(I),MLT(J)
-	    WRITE (1,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
+	    WRITE (iUnitOut,36) LZ(I),MLT(J)
+	    WRITE (iUnitOut,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
 	    do K=2,KO,KO-2
-	      WRITE (1,30) EKEV(K),(P1(I,J)+P2(I,K,L),L=2,LO,NLC),   &
+	      WRITE (iUnitOut,30) EKEV(K),(P1(I,J)+P2(I,K,L),L=2,LO,NLC),   &
                P1(I,J)+P2(I,K,LO-1)
 	    end do
 	  end do
 	 end do
-	 WRITE (1,*)
-	 WRITE (1,*) 'Energy drift Courant numbers'
+	 WRITE (iUnitOut,*)
+	 WRITE (iUnitOut,*) 'Energy drift Courant numbers'
 	 do I=2,IO,IO-2
 	  do J=1,JO,3
-	    WRITE (1,36) LZ(I),MLT(J)
-	    WRITE (1,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
+	    WRITE (iUnitOut,36) LZ(I),MLT(J)
+	    WRITE (iUnitOut,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
 	    do K=2,KO,KO-2
-	      WRITE (1,30) EKEV(K),(VR(I,J)*EDOT(I,J,K,L),L=2,LO,NLC),   &
+	      WRITE (iUnitOut,30) EKEV(K),(VR(I,J)*EDOT(I,J,K,L),L=2,LO,NLC),   &
              VR(I,J)*EDOT(I,J,K,LO-1)
 	    end do
 	  end do
 	 end do
-	 WRITE (1,*)
-	 WRITE (1,*) 'Mu drift Courant numbers'
+	 WRITE (iUnitOut,*)
+	 WRITE (iUnitOut,*) 'Mu drift Courant numbers'
 	 do I=2,IO,IO-2
-	  WRITE (1,*) ' L =',LZ(I)
-	  WRITE (1,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
+	  WRITE (iUnitOut,*) ' L =',LZ(I)
+	  WRITE (iUnitOut,40) (ACOSD(MU(L)),L=2,LO,NLC),ACOSD(MU(LO-1))
 	  do J=1,JO,3
-	   WRITE (1,30) MLT(J),(VR(I,J)*MUDOT(I,J,L),L=2,LO,NLC),   &
+	   WRITE (iUnitOut,30) MLT(J),(VR(I,J)*MUDOT(I,J,L),L=2,LO,NLC),   &
            VR(I,J)*MUDOT(I,J,LO-1)
 	  end do
 	 end do
-	 WRITE (1,*) 'Energy advection |CFL| > 1 (entire grid)'
-	 WRITE (1,38) 'L-shell','MLT(hr)','E(keV)','PA(deg)','n(cm-3)',   &
+	 WRITE (iUnitOut,*) 'Energy advection |CFL| > 1 (entire grid)'
+	 WRITE (iUnitOut,38) 'L-shell','MLT(hr)','E(keV)','PA(deg)','n(cm-3)',   &
          'ABS CFL'
 	 Ibad=0
 	 do I=1,IO
@@ -632,207 +636,207 @@
 	     CFL=ABS(EDOT(I,J,K,L)*VR(I,J)+   &
      		(COULI(I,K,L,S)+COULE(I,K,L,S))*XNE(I,J))
 	     if (CFL.GT.1.) then
-	      WRITE (1,39)LZ(I),MLT(J),EKEV(K),ACOSD(MU(L)),XNE(I,J),CFL
+	      WRITE (iUnitOut,39)LZ(I),MLT(J),EKEV(K),ACOSD(MU(L)),XNE(I,J),CFL
 	      Ibad=Ibad +1
 	     end if
 	    end do	! L loop
 	   end do	! K loop
 	  end do	! J loop
 	 end do	! I loop
-	 WRITE (1,*) 'Bad CFLs: ',Ibad
-	 CLOSE(1)
+	 WRITE (iUnitOut,*) 'Bad CFLs: ',Ibad
+	 CLOSE(iUnitOut)
 	END IF
 
 !.......Print out the drift velocities (IRES(9), 'drf')
 	IF (IRES(9).EQ.1) THEN
 	 ST3='_drf.'
-	 OPEN (1,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
-	 WRITE (1,*) 'Filename: '//ST1//ST2//ST3//SUF
-	 WRITE (1,*) 'Spatial coordinate drift velocities'
-	 WRITE (1,71) T,KP
-	 WRITE (1,*)
-	 WRITE (1,*) 'Radial drift component'
-	 WRITE (1,41) ' L \ MLT =',(MLT(J),J=1,JO,2)
+	 OPEN (iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
+	 WRITE (iUnitOut,*) 'Spatial coordinate drift velocities'
+	 WRITE (iUnitOut,71) T,KP
+	 WRITE (iUnitOut,*)
+	 WRITE (iUnitOut,*) 'Radial drift component'
+	 WRITE (iUnitOut,41) ' L \ MLT =',(MLT(J),J=1,JO,2)
 	 do I=2,IO,2
-	  WRITE (1,42) LZ(I),(VR(I,J),J=1,JO,2)
+	  WRITE (iUnitOut,42) LZ(I),(VR(I,J),J=1,JO,2)
 	 end do
-	 WRITE (1,*)
-	 WRITE (1,*) 'Azimuthal drift component at various E,mu'
+	 WRITE (iUnitOut,*)
+	 WRITE (iUnitOut,*) 'Azimuthal drift component at various E,mu'
 	 do L=1,3
 	  do K=1,3
-	    WRITE (1,36) EKEV(EV(K)),ACOSD(MU(PAV(L)))
-	    WRITE (1,41) ' L \ MLT =',(MLT(J),J=1,JO,2)
+	    WRITE (iUnitOut,36) EKEV(EV(K)),ACOSD(MU(PAV(L)))
+	    WRITE (iUnitOut,41) ' L \ MLT =',(MLT(J),J=1,JO,2)
 	    do I=2,IO,2
-	     WRITE (1,42) LZ(I),(P1(I,J)+P2(I,EV(K),PAV(L)),J=1,JO,2)
+	     WRITE (iUnitOut,42) LZ(I),(P1(I,J)+P2(I,EV(K),PAV(L)),J=1,JO,2)
 	    end do
 	  end do
 	 end do
-	 CLOSE(1)
+	 CLOSE(iUnitOut)
 	END IF
 
 !.......Print out midnight energy vs. L distributions (IRES(10), 'evl')
 !.......Also noon distributions, at PA=90 deg and at UPA(I) boundary
 	IF (IRES(10).EQ.1) THEN
 	 ST3='_evl.'
-	 OPEN (1,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
-	 WRITE (1,*) 'Filename: '//ST1//ST2//ST3//SUF
-	 WRITE (1,*) 'Energy-Lshell spectra at MLT=0 and PA=90'
-	 WRITE (1,71) T,KP
-	 WRITE(1,41) '   Ne =',(XNE(I,1),I=2,IO)
-	 WRITE (1,41) ' E \ L =',(LZ(I),I=2,IO)
+	 OPEN (iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
+	 WRITE (iUnitOut,*) 'Energy-Lshell spectra at MLT=0 and PA=90'
+	 WRITE (iUnitOut,71) T,KP
+	 WRITE(iUnitOut,41) '   Ne =',(XNE(I,1),I=2,IO)
+	 WRITE (iUnitOut,41) ' E \ L =',(LZ(I),I=2,IO)
 	 do K=2,KO
-	   WRITE(1,43) EKEV(K),(F2(I,1,K,2,S)/FFACTOR(I,K,2),I=2,IO)
+	   WRITE(iUnitOut,43) EKEV(K),(F2(I,1,K,2,S)/FFACTOR(I,K,2),I=2,IO)
 	 end do		! K loop
-	 WRITE (1,*) 'Energy-Lshell spectra at MLT=12 and PA=90'
-	 WRITE (1,71) T,KP
-	 WRITE(1,41) '   Ne =',(XNE(I,13),I=2,IO)
-	 WRITE (1,41) ' E \ L =',(LZ(I),I=2,IO)
+	 WRITE (iUnitOut,*) 'Energy-Lshell spectra at MLT=12 and PA=90'
+	 WRITE (iUnitOut,71) T,KP
+	 WRITE(iUnitOut,41) '   Ne =',(XNE(I,13),I=2,IO)
+	 WRITE (iUnitOut,41) ' E \ L =',(LZ(I),I=2,IO)
 	 do K=2,KO
-	   WRITE(1,43) EKEV(K),(F2(I,13,K,2,S)/FFACTOR(I,K,2),I=2,IO)
+	   WRITE(iUnitOut,43) EKEV(K),(F2(I,13,K,2,S)/FFACTOR(I,K,2),I=2,IO)
 	 end do		! K loop
-	 WRITE (1,*) 'Energy-Lshell spectra at MLT=0 and PA=UPA'
-	 WRITE (1,71) T,KP
-	 WRITE(1,41) '   Ne =',(XNE(I,1),I=2,IO)
-	 WRITE (1,41) ' E \ L =',(LZ(I),I=2,IO)
+	 WRITE (iUnitOut,*) 'Energy-Lshell spectra at MLT=0 and PA=UPA'
+	 WRITE (iUnitOut,71) T,KP
+	 WRITE(iUnitOut,41) '   Ne =',(XNE(I,1),I=2,IO)
+	 WRITE (iUnitOut,41) ' E \ L =',(LZ(I),I=2,IO)
 	 do K=2,KO
-	   WRITE(1,43) EKEV(K),(F2(I,1,K,UPA(I)-1,S)/   &
+	   WRITE(iUnitOut,43) EKEV(K),(F2(I,1,K,UPA(I)-1,S)/   &
      	     FFACTOR(I,K,UPA(I)-1),I=2,IO)
 	 end do		! K loop
-	 WRITE (1,*) 'Energy-Lshell spectra at MLT=12 and PA=UPA'
-	 WRITE (1,71) T,KP
-	 WRITE(1,41) '   Ne =',(XNE(I,13),I=2,IO)
-	 WRITE (1,41) ' E \ L =',(LZ(I),I=2,IO)
+	 WRITE (iUnitOut,*) 'Energy-Lshell spectra at MLT=12 and PA=UPA'
+	 WRITE (iUnitOut,71) T,KP
+	 WRITE(iUnitOut,41) '   Ne =',(XNE(I,13),I=2,IO)
+	 WRITE (iUnitOut,41) ' E \ L =',(LZ(I),I=2,IO)
 	 do K=2,KO
-	   WRITE(1,43) EKEV(K),(F2(I,13,K,UPA(I)-1,S)/   &
+	   WRITE(iUnitOut,43) EKEV(K),(F2(I,13,K,UPA(I)-1,S)/   &
              FFACTOR(I,K,UPA(I)-1),I=2,IO)
 	 end do		! K loop
-	 CLOSE(1)
+	 CLOSE(iUnitOut)
 	END IF
 
 !.......Print lifetimes [hr] and Coulomb diff coeff (IRES(11), 'lft')
 	IF (IRES(11).EQ.1) THEN
 	 ST3='_lft.'
-	 OPEN(UNIT=1,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
-	 WRITE (1,*) 'Filename: '//ST1//ST2//ST3//SUF
-	 WRITE (1,71) T,KP
+	 OPEN(UNIT=iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
+	 WRITE (iUnitOut,71) T,KP
 	DO  I=4,IO,6
          L=UPA(I)-1
 	 DO  J=1,1
-          WRITE(1,*)' Lifetimes for ',ST2,' rc ion; PA=',   &
+          WRITE(iUnitOut,*)' Lifetimes for ',ST2,' rc ion; PA=',   &
             ACOSD(MU(L))
-          WRITE(1,*)' L   E[KEV]  TAUBO[HR] TAUCHE[HR] TAUD[HR]'
+          WRITE(iUnitOut,*)' L   E[KEV]  TAUBO[HR] TAUCHE[HR] TAUD[HR]'
 	  DO K=2,KO
 	   TAUD=2*pi*ME/ABS(1.44E-2*RE-3*EKEV(K)*1000*LZ(I))/RE/   &
       		(1-FUNI(MU(L))/6/FUNT(MU(L)))/3600.
            TAUBO=4*LZ(I)*RE/V(K,S)*FUNT(MU(L))/3600.
 	   TAUCHE=-DT/ALOG(ACHAR(I,K,L,S))/3600.
-	   WRITE(1,80) LZ(I),EBND(K),TAUBO,TAUCHE,TAUD
+	   WRITE(iUnitOut,80) LZ(I),EBND(K),TAUBO,TAUCHE,TAUD
 	  ENDDO
 	 ENDDO
 	ENDDO
-	CLOSE (1)
+	CLOSE (iUnitOut)
 	END IF
 
 !.......Print out pressures, densities, and Dst (IRES(12), 'prs')
 	IF (IRES(12).EQ.1) THEN
 	 ST3='_prs.'
-	 OPEN (1,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
-	 WRITE (1,*) 'Filename: '//ST1//ST2//ST3//SUF
-	 WRITE (1,*) 'Pressures, densities, etc. for RC species ',ST2
-	 WRITE (1,71) T,KP
-	 WRITE (1,*) 'Total Energy [keV]   Total Particles   Dst [nT]'
-	 WRITE (1,73) ETOT(S),NTOT(S),Dst(S)
+	 OPEN (iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
+	 WRITE (iUnitOut,*) 'Pressures, densities, etc. for RC species ',ST2
+	 WRITE (iUnitOut,71) T,KP
+	 WRITE (iUnitOut,*) 'Total Energy [keV]   Total Particles   Dst [nT]'
+	 WRITE (iUnitOut,73) ETOT(S),NTOT(S),Dst(S)
 	print *, 'WRESULT Dst: ',S,Dst(S)
-	 WRITE (1,*) 'Equatorial density [cm-3]'
-	 WRITE (1,31) (LZ(I),I=2,IO)
+	 WRITE (iUnitOut,*) 'Equatorial density [cm-3]'
+	 WRITE (iUnitOut,31) (LZ(I),I=2,IO)
 	 do J=1,JO
-	   WRITE (1,29) MLT(J),(RNHT(I,J,S),I=2,IO)
+	   WRITE (iUnitOut,29) MLT(J),(RNHT(I,J,S),I=2,IO)
 	 end do
-	 WRITE (1,*) 'Equatorial perpendicular pressure [keV cm-3]'
-	 WRITE (1,31) (LZ(I),I=2,IO)
+	 WRITE (iUnitOut,*) 'Equatorial perpendicular pressure [keV cm-3]'
+	 WRITE (iUnitOut,31) (LZ(I),I=2,IO)
 	 do J=1,JO
-	   WRITE (1,29) MLT(J),(PPER(I,J,S),I=2,IO)
+	   WRITE (iUnitOut,29) MLT(J),(PPER(I,J,S),I=2,IO)
 	 end do
-	 WRITE (1,*) 'Equatorial parallel pressure [keV cm-3]'
-	 WRITE (1,31) (LZ(I),I=2,IO)
+	 WRITE (iUnitOut,*) 'Equatorial parallel pressure [keV cm-3]'
+	 WRITE (iUnitOut,31) (LZ(I),I=2,IO)
 	 do J=1,JO
-	   WRITE (1,29) MLT(J),(PPAR(I,J,S),I=2,IO)
+	   WRITE (iUnitOut,29) MLT(J),(PPAR(I,J,S),I=2,IO)
 	 end do
-	 WRITE (1,*) 'Equatorial anisotropy [Tper/Tpar - 1]'
-	 WRITE (1,31) (LZ(I),I=2,IO)
+	 WRITE (iUnitOut,*) 'Equatorial anisotropy [Tper/Tpar - 1]'
+	 WRITE (iUnitOut,31) (LZ(I),I=2,IO)
 	 do J=1,JO
-	   WRITE (1,29) MLT(J),(ANIS(I,J,S),I=2,IO)
+	   WRITE (iUnitOut,29) MLT(J),(ANIS(I,J,S),I=2,IO)
 	 end do
-	 WRITE (1,*) 'Equatorial energy density [keV cm-3]'
-	 WRITE (1,31) (LZ(I),I=2,IO)
+	 WRITE (iUnitOut,*) 'Equatorial energy density [keV cm-3]'
+	 WRITE (iUnitOut,31) (LZ(I),I=2,IO)
 	 do J=1,JO
-	   WRITE (1,29) MLT(J),(EDEN(I,J,S),I=2,IO)
+	   WRITE (iUnitOut,29) MLT(J),(EDEN(I,J,S),I=2,IO)
 	 end do
-	 WRITE (1,*) 'Equatorial azimuthal current [A m-2]'
-	 WRITE (1,31) (LZ(I),I=2,IO)
+	 WRITE (iUnitOut,*) 'Equatorial azimuthal current [A m-2]'
+	 WRITE (iUnitOut,31) (LZ(I),I=2,IO)
 	 do J=1,JO
-	   WRITE (1,29) MLT(J),(JPER(I,J,S),I=2,IO)
+	   WRITE (iUnitOut,29) MLT(J),(JPER(I,J,S),I=2,IO)
 	 end do
-	 WRITE (1,*) 'Total particle count in the spatial volume [ions]'
-	 WRITE (1,31) (LZ(I),I=2,IO)
+	 WRITE (iUnitOut,*) 'Total particle count in the spatial volume [ions]'
+	 WRITE (iUnitOut,31) (LZ(I),I=2,IO)
 	 do J=1,JO
-	   WRITE (1,29) MLT(J),(Nspace(I,J,S),I=2,IO)
+	   WRITE (iUnitOut,29) MLT(J),(Nspace(I,J,S),I=2,IO)
 	 end do
-	 WRITE (1,*) 'Total energy in the spatial volume [keV]'
-	 WRITE (1,31) (LZ(I),I=2,IO)
+	 WRITE (iUnitOut,*) 'Total energy in the spatial volume [keV]'
+	 WRITE (iUnitOut,31) (LZ(I),I=2,IO)
 	 do J=1,JO
-	   WRITE (1,29) MLT(J),(Espace(I,J,S),I=2,IO)
+	   WRITE (iUnitOut,29) MLT(J),(Espace(I,J,S),I=2,IO)
 	 end do
-	 WRITE (1,*) 'Base convection potentials [kV]'
-	 WRITE (1,31) (Lsh(I),I=1,Ir)
+	 WRITE (iUnitOut,*) 'Base convection potentials [kV]'
+	 WRITE (iUnitOut,31) (Lsh(I),I=1,Ir)
 	 do J=1,JO
-	   WRITE (1,29) MLT(J),(BASEPOT(I,J)*1.E-3,I=1,Ir)
+	   WRITE (iUnitOut,29) MLT(J),(BASEPOT(I,J)*1.E-3,I=1,Ir)
 	 end do
 !	 IF (IA.GE.8) THEN
-	   WRITE (1,*) 'Total azimuthal current [A]'
-	   WRITE (1,31) (Lsh(I),I=1,Ir)
+	   WRITE (iUnitOut,*) 'Total azimuthal current [A]'
+	   WRITE (iUnitOut,31) (Lsh(I),I=1,Ir)
 	   do J=1,JO
-	     WRITE (1,29) MLT(J),(Iphi(I,J,S),I=1,Ir)
+	     WRITE (iUnitOut,29) MLT(J),(Iphi(I,J,S),I=1,Ir)
 	   end do
-	   WRITE (1,*) 'Total radial current [A]'
-	   WRITE (1,31) (Lsh(I),I=1,Ir)
+	   WRITE (iUnitOut,*) 'Total radial current [A]'
+	   WRITE (iUnitOut,31) (Lsh(I),I=1,Ir)
 	   do J=1,JO
-	     WRITE (1,29) MLT(J),(Irad(I,J,S),I=1,Ir)
+	     WRITE (iUnitOut,29) MLT(J),(Irad(I,J,S),I=1,Ir)
 	   end do
-	   WRITE (1,*) 'Field-aligned current density into one ',   &
+	   WRITE (iUnitOut,*) 'Field-aligned current density into one ',   &
              'hemisphere [A m-2]'
-	   WRITE (1,31) (Lsh(I),I=1,Ir)
+	   WRITE (iUnitOut,31) (Lsh(I),I=1,Ir)
 	   do J=1,JO
-	     WRITE (1,29) MLT(J),(Jion1(I,J,S),I=1,Ir)
+	     WRITE (iUnitOut,29) MLT(J),(Jion1(I,J,S),I=1,Ir)
 	   end do
-	   WRITE (1,*) 'Potentials from RC FACs [kV]'
-	   WRITE (1,31) (Lsh(I),I=1,Ir)
+	   WRITE (iUnitOut,*) 'Potentials from RC FACs [kV]'
+	   WRITE (iUnitOut,31) (Lsh(I),I=1,Ir)
 	   do J=1,JO
-	     WRITE (1,29) MLT(J),(FPOT(I,J)*1.E-3,I=1,Ir)
+	     WRITE (iUnitOut,29) MLT(J),(FPOT(I,J)*1.E-3,I=1,Ir)
 	   end do
-	   WRITE (1,*) 'FAC density from all species into one ',   &
+	   WRITE (iUnitOut,*) 'FAC density from all species into one ',   &
              'hemisphere [A m-2]'
-	   WRITE (1,31) (Lsh(I),I=1,Ir)
+	   WRITE (iUnitOut,31) (Lsh(I),I=1,Ir)
 	   do J=1,JO
-	     WRITE (1,29) MLT(J),(Jfac(I,J),I=1,Ir)
+	     WRITE (iUnitOut,29) MLT(J),(Jfac(I,J),I=1,Ir)
 	   end do
 !	 END IF
-	 CLOSE (1)
+	 CLOSE (iUnitOut)
 	END IF
 
 !.......Write out F2 to an unformatted file (IRES(13), 'unff')
 	IF (IRES(13).EQ.1) THEN
 	 ST3='.unff'
-	 OPEN(UNIT=1,FILE=ST1//ST2//ST3,status='unknown',   &
+	 OPEN(UNIT=iUnitOut,FILE=ST1//ST2//ST3,status='unknown',   &
            form='unformatted')
 	 DO L=1,NPA
 	  DO K=1,NE
 	   DO J=1,NT
-	    write(1) (f2(I,J,K,L,S),I=1,NR)
+	    write(iUnitOut) (f2(I,J,K,L,S),I=1,NR)
 	   END DO
 	  END DO
 	 END DO
-	 close(1)
+	 close(iUnitOut)
 	END IF
 
 !.......Open file for source/loss continual output (IRES(14), 'sal')
@@ -861,32 +865,32 @@
 	  END DO
 	 END DO
 	 ST3='_fbc.'
-	 OPEN (1,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
-	 WRITE (1,*) 'Filename: '//ST1//ST2//ST3//SUF
-	 WRITE (1,*) 'Nightside boundary conditions'
-	 WRITE (1,38) 'Ninj','Einj','Kinj','NSWB','USWB'
-	 WRITE (1,39) Ninj,Einj,Kinj,NSWB,USWB
-	 WRITE (1,*) 'Boundary densities'
-	 WRITE (1,38) 'MLT','N,cm-3'
+	 OPEN (iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
+	 WRITE (iUnitOut,*) 'Nightside boundary conditions'
+	 WRITE (iUnitOut,38) 'Ninj','Einj','Kinj','NSWB','USWB'
+	 WRITE (iUnitOut,39) Ninj,Einj,Kinj,NSWB,USWB
+	 WRITE (iUnitOut,*) 'Boundary densities'
+	 WRITE (iUnitOut,38) 'MLT','N,cm-3'
 	 DO J=1,JO
-	  WRITE (1,30) MLT(J),NBC(J)
+	  WRITE (iUnitOut,30) MLT(J),NBC(J)
 	 END DO
 	 IF (IFAC.EQ.1) THEN
-	   WRITE (1,*) 'Phase space flux function, PHI = 2EF/m^2'
+	   WRITE (iUnitOut,*) 'Phase space flux function, PHI = 2EF/m^2'
 	 ELSE
-	   WRITE (1,*) 'Phase space distribution function, F'
+	   WRITE (iUnitOut,*) 'Phase space distribution function, F'
 	 END IF
 	 do J=-3,5,2
 	   II=J
 	   IF (II.LT.0) II=II+JO
-	   WRITE(1,45) T,LZ(IO)+DL1,MLT(II),KP,0.
-	   WRITE(1,44) (ACOSD(MU(IFM(L))),L=1+IFN,19+IFN)
+	   WRITE(iUnitOut,45) T,LZ(IO)+DL1,MLT(II),KP,0.
+	   WRITE(iUnitOut,44) (ACOSD(MU(IFM(L))),L=1+IFN,19+IFN)
 	   do K=2,KO,NEC
-	     WRITE(1,43) EKEV(K),(FGEOS(II,K,IFM(L),S)/   &
+	     WRITE(iUnitOut,43) EKEV(K),(FGEOS(II,K,IFM(L),S)/   &
        	       FFACTOR(IO,K,IFM(L)),L=1+IFN,19+IFN)
 	   end do	! K loop
 	 end do		! J loop
-	 CLOSE (1)
+	 CLOSE (iUnitOut)
 	END IF
 
 	END IF		! SCALC check

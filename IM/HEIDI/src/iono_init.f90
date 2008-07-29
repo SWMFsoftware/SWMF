@@ -12,7 +12,7 @@
 !
 !-------------------------------------------------------------------------
 
-subroutine ionosphere_fine_grid
+subroutine IonoHeidiInit(year, day, ut)
   !\
   ! This routine sets the fine grid meshes for the
   ! northern and southern hemispheres.
@@ -20,6 +20,9 @@ subroutine ionosphere_fine_grid
   use ModIonoHeidi
   use ModNumConst, only: cPi
   implicit none
+
+  integer, intent(in) :: year, day
+  real, intent(in) :: ut
 
   integer :: i,j
   real :: dTheta_l, dPsi_l
@@ -52,27 +55,6 @@ subroutine ionosphere_fine_grid
      IONO_SOUTH_Psi(IONO_nTheta,j) = IONO_SOUTH_Psi(1,j)
   end do
 
-end subroutine ionosphere_fine_grid
-
-!-------------------------------------------------------------------------
-! ionosphere_init
-!
-!
-!
-!-------------------------------------------------------------------------
-
-subroutine ionosphere_init(year, day, ut)
-  !\
-  ! This routine initializes the fine grid 
-  ! ionospheric solutions for the
-  ! northern and southern hemispheres.
-  !/
-  use ModIonoHeidi
-  implicit none
-
-  integer, intent(in) :: year, day
-  real, intent(in) :: ut
-
   IONO_NORTH_PHI = 0.00
   IONO_NORTH_JR = 0.00 
   IONO_NORTH_RCM_JR = 0.00 
@@ -80,7 +62,7 @@ subroutine ionosphere_init(year, day, ut)
   IONO_SOUTH_PHI = 0.00
   IONO_SOUTH_RCM_JR = 0.00
 
-end subroutine ionosphere_init
+end subroutine IonoHeidiInit
 
 !*************************************************************************
 !
@@ -95,7 +77,7 @@ end subroutine ionosphere_init
 !
 !-------------------------------------------------------------------------
 
-subroutine ionosphere_write_output(ifile,time,IO_prefix,IO_suffix)
+subroutine IonoHeidiWriteOutput(ifile,time,IO_prefix,IO_suffix)
   !\
   ! This routine writes out the fine grid 
   ! ionospheric solutions for the
@@ -214,7 +196,7 @@ subroutine ionosphere_write_output(ifile,time,IO_prefix,IO_suffix)
 
      write(Iunit, '(a)')  'NUMERICAL VALUES'
      if (variables == min_vars) then
-        write(Iunit, '(I5,a)')           4, ' nvars'
+        write(Iunit, '(I5,a)')           7, ' nvars'
      endif
      write(Iunit, '(I5,a)') IONO_nTheta, ' nTheta'
      write(Iunit, '(I5,a)')   IONO_nPsi, ' nPhi'
@@ -229,6 +211,9 @@ subroutine ionosphere_write_output(ifile,time,IO_prefix,IO_suffix)
         write(Iunit, '(I5,a)')  2, ' Psi [deg]'
         write(Iunit, '(I5,a)')  3, ' Jr [mA/m^2]'
         write(Iunit, '(I5,a)')  4, ' Phi [kV]'
+        write(Iunit, '(I5,a)')  5, ' Density [#/cc]'
+        write(Iunit, '(I5,a)')  6, ' Pressure [Pa]'
+        write(Iunit, '(I5,a)')  6, ' Temperature [K]'
 
      endif
 
@@ -253,7 +238,8 @@ subroutine ionosphere_write_output(ifile,time,IO_prefix,IO_suffix)
      if (variables == min_vars) then
 
         write(Iunit, *)  'VARIABLES= "Theta [deg]","Psi [deg]"'
-        write(Iunit, *)  ' "JR [`mA/m^2]","PHI [kV]"'
+        write(Iunit, *)  ' "JR [`mA/m^2]","PHI [kV]",'
+        write(Iunit, *)  ' "Density [#/cc]","Pressure [Pa]","Temperature [K]"'
 
      endif
 
@@ -269,7 +255,10 @@ subroutine ionosphere_write_output(ifile,time,IO_prefix,IO_suffix)
                 (360.00/(2.00*cPi))*IONO_NORTH_Theta(i,j), &
                 (360.00/(2.00*cPi))*IONO_NORTH_Psi(i,j), &
                 1.0e06*IONO_NORTH_RCM_JR(i,j),   &
-                1.0e-03*IONO_NORTH_PHI(i,j)
+                1.0e-03*IONO_NORTH_PHI(i,j), &
+                IonoGmDensity(i,j), &
+                IonoGmPressure(i,j), &
+                IonoGmTemperature(i,j)
         end do
      end do
   endif
@@ -290,13 +279,16 @@ subroutine ionosphere_write_output(ifile,time,IO_prefix,IO_suffix)
                 (360.00/(2.00*cPi))*IONO_SOUTH_Theta(i,j), &
                 (360.00/(2.00*cPi))*IONO_SOUTH_Psi(i,j), &
                 1.0e06*IONO_SOUTH_RCM_JR(i,j),   &
-                1.0e-03*IONO_SOUTH_PHI(i,j)
+                1.0e-03*IONO_SOUTH_PHI(i,j), &
+                IonoGmDensity(Iono_nTheta+i-1,j), &
+                IonoGmPressure(Iono_nTheta+i-1,j), &
+                IonoGmTemperature(Iono_nTheta+i-1,j)
         end do
      end do
   endif
 
   close(UNIT=Iunit)
 
-end subroutine ionosphere_write_output
+end subroutine IonoHeidiWriteOutput
 
  

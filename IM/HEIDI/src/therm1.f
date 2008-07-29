@@ -87,10 +87,11 @@ C  Comented out the print because we only need the final output
       INCLUDE 'numv.h'
       REAL NECR(NL,0:NLT)
       CHARACTER HEADER*80
-      OPEN (9,FILE='ne.dat',STATUS='OLD')
-      READ (9,101) HEADER
-      READ (9,*) ((NECR(I,J),I=1,NL),J=0,NLT)
-      CLOSE (9)
+      integer iUnitIn = 33
+      OPEN (iUnitIn,FILE='ne.dat',STATUS='OLD')
+      READ (iUnitIn,101) HEADER
+      READ (iUnitIn,*) ((NECR(I,J),I=1,NL),J=0,NLT)
+      CLOSE (iUnitIn)
 101   FORMAT (A80)
       RETURN
       END
@@ -103,6 +104,9 @@ C  Comented out the print because we only need the final output
       REAL T,NECR(NL,0:NLT),DT,KP
       INTEGER NTC
       CHARACTER name*7,SUF*2,SUF1*1
+
+      integer iUnitOut = 32
+
       SAVE NTC
 
 c.....Define the output name
@@ -123,27 +127,27 @@ c.....Define the output name
 
 c.....Write out results
       IF (DT.GT.0.) THEN
-       OPEN (9,FILE=name//SUF,STATUS='UNKNOWN')
-       WRITE (9,*) 'Filename: '//name//SUF
-       WRITE (9,*) 'Thermal densities in the plasmasphere from plane.f'
-       WRITE (9,50) T,DT,KP
-       WRITE (9,51) (REAL(I)*.25+1.25,I=1,NL-1,2)
+       OPEN (iUnitOut,FILE=name//SUF,STATUS='UNKNOWN')
+       WRITE (iUnitOut,*) 'Filename: '//name//SUF
+       WRITE (iUnitOut,*) 'Thermal densities in the plasmasphere from plane.f'
+       WRITE (iUnitOut,50) T,DT,KP
+       WRITE (iUnitOut,51) (REAL(I)*.25+1.25,I=1,NL-1,2)
        DO 100 J=0,NLT
-100 	 WRITE (9,52) REAL(J)*.5,(NECR(I,J),I=1,NL-1,2)
-       CLOSE (9)
+100 	 WRITE (iUnitOut,52) REAL(J)*.5,(NECR(I,J),I=1,NL-1,2)
+       CLOSE (iUnitOut)
       ELSE
-       OPEN (9,FILE='ne_new.dat',STATUS='UNKNOWN')
-       WRITE (9,53) KP
+       OPEN (iUnitOut,FILE='ne_new.dat',STATUS='UNKNOWN')
+       WRITE (iUnitOut,53) KP
        DO 110 J=0,NLT
-	 WRITE (9,54) (NECR(I,J),I=1,5)
-	 WRITE (9,54) (NECR(I,J),I=6,10)
-	 WRITE (9,54) (NECR(I,J),I=11,15)
-	 WRITE (9,54) (NECR(I,J),I=16,20)
-	 WRITE (9,54) (NECR(I,J),I=21,25)
-	 WRITE (9,54) (NECR(I,J),I=26,30)
-	 WRITE (9,54) (NECR(I,J),I=31,35)
+	 WRITE (iUnitOut,54) (NECR(I,J),I=1,5)
+	 WRITE (iUnitOut,54) (NECR(I,J),I=6,10)
+	 WRITE (iUnitOut,54) (NECR(I,J),I=11,15)
+	 WRITE (iUnitOut,54) (NECR(I,J),I=16,20)
+	 WRITE (iUnitOut,54) (NECR(I,J),I=21,25)
+	 WRITE (iUnitOut,54) (NECR(I,J),I=26,30)
+	 WRITE (iUnitOut,54) (NECR(I,J),I=31,35)
 110    CONTINUE
-       CLOSE (9)
+       CLOSE (iUnitOut)
       END IF
 
 50    FORMAT ('T =',F10.1,'  DT =',F5.1,'  Kp =',F6.3)

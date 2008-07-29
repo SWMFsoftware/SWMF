@@ -27,6 +27,8 @@ SUBROUTINE CEPARA
   real :: RLAMBDA(71),PA(71),HDNS(NR,NPA),LH(20),HDNSIN(20,71)
   character*80 TITLE
   external :: cosd,acosd
+
+  integer :: iUnit = 48
   
   !.......Open a file with the bounce-averaged H dens [m-3] in geocorona
   !	obtained through bounce-averaging the Chamberlain model
@@ -41,24 +43,24 @@ SUBROUTINE CEPARA
      !	    LH(I)=1.5+.25*REAL(I)
      !	  END DO
      !cc	  IF(LO.EQ.31) THEN
-     !cc	    OPEN(UNIT=8,FILE='hgeo.in',STATUS='OLD')
+     !cc	    OPEN(UNIT=iUnit,FILE='hgeo.in',STATUS='OLD')
      !cc	    LUP=LO-1
      !cc	  ELSE
-     !cc	    IF(LO.EQ.50) OPEN(UNIT=8,FILE='hgeo50.in',STATUS='OLD')
-     !cc	    IF(LO.EQ.60) OPEN(UNIT=8,file='hgeo64.in',STATUS='OLD')
-     !cc	    IF(LO.EQ.71) OPEN(UNIT=8,file='hgeo71.in',STATUS='OLD')
-     OPEN(UNIT=8,file='hgeo71.in',STATUS='OLD')
-     !cc	    IF(LO.EQ.91) OPEN(UNIT=8,file='hgeo91.in',STATUS='OLD')
+     !cc	    IF(LO.EQ.50) OPEN(UNIT=iUnit,FILE='hgeo50.in',STATUS='OLD')
+     !cc	    IF(LO.EQ.60) OPEN(UNIT=iUnit,file='hgeo64.in',STATUS='OLD')
+     !cc	    IF(LO.EQ.71) OPEN(UNIT=iUnit,file='hgeo71.in',STATUS='OLD')
+     OPEN(UNIT=iUnit,file='hgeo71.in',STATUS='OLD')
+     !cc	    IF(LO.EQ.91) OPEN(UNIT=iUnit,file='hgeo91.in',STATUS='OLD')
      LUP=71
      !cc	  ENDIF
      do I=1,20
-        READ(8,3) TITLE,LH(i)
+        READ(iUnit,3) TITLE,LH(i)
         do L=1,LUP
-           READ(8,4) PA(L),RLAMBDA(L),HDNSIN(I,L)
+           READ(iUnit,4) PA(L),RLAMBDA(L),HDNSIN(I,L)
         end do	! L loop
         !cc	    if (LO.EQ.31) HDNSIN(I,LUP+1)=HDNSIN(I,LUP)
      end do	! I loop
-     CLOSE(8)
+     CLOSE(iUnit)
      !cc	  If (LO.EQ.31) LUP=LUP+1
      do L=1,LUP
         PA(L)=COSD(PA(L))
@@ -422,6 +424,8 @@ SUBROUTINE MAGCONV(I3,NST)
   
   integer :: edayplus
   real :: univ_time
+
+  integer :: iUnit = 18
   
   PHIPOFF=0.
   DP1=.4*PI
@@ -596,15 +600,15 @@ SUBROUTINE MAGCONV(I3,NST)
      if (T.EQ.TIME) then
         TP2=TIME-1.
         TP1=TP2
-        OPEN(UNIT=18,FILE=name//'_pot.in',status='old')
+        OPEN(UNIT=iUnit,FILE=name//'_pot.in',status='old')
         do i=1,5                   ! lines of header material
-           read (18,*) HEADER
+           read (iUnit,*) HEADER
         end do
-        read (18,*) JOpot
-        read (18,*) (MLTpot(j),j=1,JOpot)
-        read (18,*) header
-        read (18,*) IOpot
-        read (18,*) (LZpot(I),i=1,IOpot)
+        read (iUnit,*) JOpot
+        read (iUnit,*) (MLTpot(j),j=1,JOpot)
+        read (iUnit,*) header
+        read (iUnit,*) IOpot
+        read (iUnit,*) (LZpot(I),i=1,IOpot)
         do j=JOpot+1,NT
            MLTpot(j)=MLTpot(j-1)+(MLTpot(JOpot)-MLTpot(JOpot-1))
         enddo
@@ -616,9 +620,9 @@ SUBROUTINE MAGCONV(I3,NST)
      if (TP2.LT.T) then			! Read in potentials
         do while (TP2.LE.T)		! Best if final TP2 > final T
            FPOT1(1:IOpot,1:JOpot)=FPOT2(1:IOpot,1:JOpot)
-           READ (18,*,IOSTAT=L) TP2
+           READ (iUnit,*,IOSTAT=L) TP2
            do j=1,JOpot
-              READ (18,*,IOSTAT=L) (DATA(I),I=1,IOpot)
+              READ (iUnit,*,IOSTAT=L) (DATA(I),I=1,IOpot)
               FPOT2(1:IOpot,J)=DATA(1:IOpot)  ! Potential in Volts
            end do
            FPOT2(1:IOpot,JOpot+1)=FPOT2(1:IOpot,1)
@@ -629,6 +633,7 @@ SUBROUTINE MAGCONV(I3,NST)
            END IF
         END DO
      END IF
+     close(iUnit)
      FAC=(T-TP1)/(TP2-TP1)			! Linearly interpolate
      Fmax=0.
      Fmin=0.

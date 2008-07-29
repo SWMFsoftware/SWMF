@@ -38,19 +38,21 @@ SUBROUTINE heidi_read
   integer :: k,i
   character*1 header
 
-  OPEN (UNIT=1,FILE='input.glo',STATUS='OLD')
-  READ (1,*) DT,TMAX,TINT,TIME
-  READ (1,*) IO,JO,KO,LO,ISO
-  READ (1,*) ELB,SWE,RW,HMIN
-  READ (1,*) ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT
-  READ (1,*) (SCALC(k),k=1,NS)
-  READ (1,*) YEAR,DAY,UT,R,AP,KP
-  READ (1,*) (INI(k),k=1,NS)
-  READ (1,*) (IBC(k),k=1,NS)
-  READ (1,*) TINJ,Ab,Eob
-  READ (1,*) (IRES(k),k=1,15)
-  READ (1,*) NAME
-  CLOSE(1)
+  integer :: iUnitOut = 18
+
+  OPEN (UNIT=iUnitOut,FILE='input.glo',STATUS='OLD')
+  READ (iUnitOut,*) DT,TMAX,TINT,TIME
+  READ (iUnitOut,*) IO,JO,KO,LO,ISO
+  READ (iUnitOut,*) ELB,SWE,RW,HMIN
+  READ (iUnitOut,*) ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT
+  READ (iUnitOut,*) (SCALC(k),k=1,NS)
+  READ (iUnitOut,*) YEAR,DAY,UT,R,AP,KP
+  READ (iUnitOut,*) (INI(k),k=1,NS)
+  READ (iUnitOut,*) (IBC(k),k=1,NS)
+  READ (iUnitOut,*) TINJ,Ab,Eob
+  READ (iUnitOut,*) (IRES(k),k=1,15)
+  READ (iUnitOut,*) NAME
+  CLOSE(iUnitOut)
 
   ISWB=ISW
   NSTEP=NINT(TMAX/DT/2.)                 ! time splitting
@@ -62,17 +64,17 @@ SUBROUTINE heidi_read
   ithermfirst=1		! So we do the setup routines in THERMAL
 
   IF (IKP.EQ.4 .OR. IA.EQ.2) THEN  ! Read in MBI file
-     OPEN(1,FILE=NAME//'_Le.dat',status='old')
+     OPEN(iUnitOut,FILE=NAME//'_Le.dat',status='old')
      DO I=1,3
-        READ (1,*) header
+        READ (iUnitOut,*) header
      END DO
-     READ (1,*) ILAMBE,LAMGAM
-     READ (1,*) header
-     READ (1,*) header
+     READ (iUnitOut,*) ILAMBE,LAMGAM
+     READ (iUnitOut,*) header
+     READ (iUnitOut,*) header
      DO I=1,ilambe
-        READ (1,*) TLAME(I),LAMBE(I)
+        READ (iUnitOut,*) TLAME(I),LAMBE(I)
      END DO
-     CLOSE(1)
+     CLOSE(iUnitOut)
      TLAME(1:ILAMBE)=TLAME(1:ILAMBE)*86400.
      TLAME(1:ILAMBE)=TLAME(1:ILAMBE)-3600.  ! Forward shift 1 h
   ELSE
@@ -80,17 +82,17 @@ SUBROUTINE heidi_read
   END IF
 
   IF (IA.EQ.4 .or. IA.EQ.7 .or. IA.GE.10) THEN ! Read in PC Potential File
-     OPEN(1,FILE=NAME//'_ppc.dat',status='old')
+     OPEN(iUnitOut,FILE=NAME//'_ppc.dat',status='old')
      DO I=1,3
-        READ (1,*) header
+        READ (iUnitOut,*) header
      END DO
-     READ (1,*) IPPC
-     READ (1,*) header
-     READ (1,*) header
+     READ (iUnitOut,*) IPPC
+     READ (iUnitOut,*) header
+     READ (iUnitOut,*) header
      DO I=1,ippc
-        READ (1,*) TPPC(I),PPC(I)
+        READ (iUnitOut,*) TPPC(I),PPC(I)
      END DO
-     CLOSE(1)
+     CLOSE(iUnitOut)
      TPPC(1:IPPC)=TPPC(1:IPPC)*86400. ! Convert to seconds
      PPC(1:IPPC)=PPC(1:IPPC)*1.E3       ! Convert to Volts
      print *, 'PPC:',IPPC,TPPC(1),TPPC(IPPC),PPC(1),PPC(IPPC)
@@ -118,15 +120,17 @@ SUBROUTINE CONSTANT(NKP)
   integer ::I,NKP
   character*80 header
 
+  integer :: iUnitOut = 18
+
   !.......Read Kp history of the modeled storm
   IF (IKP.GE.3) THEN
-     OPEN(1,FILE=NAME//'_kp.in',STATUS='OLD') 
-     READ(1,10) HEADER
+     OPEN(iUnitOut,FILE=NAME//'_kp.in',STATUS='OLD') 
+     READ(iUnitOut,10) HEADER
 10   FORMAT(A80)
      DO I=1,NSTEP/NKP+2
-        READ(1,*) DAYR(I),DUT,RKPH(I),F107R(I),APR(I),RSUNR(I)
+        READ(iUnitOut,*) DAYR(I),DUT,RKPH(I),F107R(I),APR(I),RSUNR(I)
      ENDDO
-     CLOSE(1)
+     CLOSE(iUnitOut)
   END IF
 
   KPT=-1./3./3600.   ! model rate of decay of Kp in s-1
@@ -659,13 +663,15 @@ SUBROUTINE GETSWIND
 
   real :: bx
 
+  integer :: iUnit = 13
+
   ILold(1:JO)=ILMP(1:JO)
   IF (T.EQ.TIME) THEN
      T2=TIME-1.
      T1=T2
-     OPEN(UNIT=13,FILE=NAME//'_sw1.in',status='old')
+     OPEN(UNIT=iUnit,FILE=NAME//'_sw1.in',status='old')
      DO I=1,6			! 6 lines of header material
-        READ (13,*) HEADER
+        READ (iUnit,*) HEADER
      END DO
   END IF
   IF (T2.LT.T) THEN

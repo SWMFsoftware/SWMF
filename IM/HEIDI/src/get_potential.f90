@@ -4,6 +4,7 @@ subroutine get_potential_heidi(iModel, imf_by, imf_bz, sw_v, &
      Lats2, MLTs2, OutPotential2)
 
   use ModKind
+  use ModTimeConvert
 !  use ModErrors
   use ModHeidiSize
 
