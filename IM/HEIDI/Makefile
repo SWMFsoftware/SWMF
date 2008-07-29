@@ -102,7 +102,7 @@ distclean: install
 rundir:
 	mkdir -p ${RUNDIR}/IM
 	cd ${RUNDIR}/IM; \
-		mkdir restartOUT restartIN plots
+		mkdir restartOUT restartIN plots Output
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR} ; \
 		ln -s ${BINDIR}/HEIDI.exe .;\
