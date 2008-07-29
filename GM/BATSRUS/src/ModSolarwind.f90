@@ -380,6 +380,10 @@ contains
 
        endif
 
+       ! add up species densities
+       if (UseMultiSpecies) & 
+            Solarwind_v(Rho_) = sum(Solarwind_V(SpeciesFirst_:SpeciesLast_))
+       
        ! These scalars should be removed eventually
        SW_Bx_dim  = Solarwind_V(Bx_)
        SW_By_dim  = Solarwind_V(By_)
@@ -399,7 +403,7 @@ contains
 
     use ModPhysics, ONLY: &
          Io2No_V, UnitTemperature_, UnitN_, UnitRho_, UnitP_, UnitU_, UnitB_, &
-         AverageIonCharge, ElectronTemperatureRatio
+         AverageIonCharge, ElectronTemperatureRatio,LowDensityRatio
     use ModMultiFluid
     use ModConst
 
@@ -431,7 +435,8 @@ contains
                   Solarwind_V(SpeciesFirst_:SpeciesLast_)*Io2No_V(UnitN_)
           elsewhere
              ! Use very small value for densities not given
-             Solarwind_V(SpeciesFirst_:SpeciesLast_) = cTiny8
+             Solarwind_V(SpeciesFirst_:SpeciesLast_) = &
+                  LowDensityRatio * Solarwind_V(SpeciesFirst_)
           end where
 
           if(UseTemperature)then
@@ -446,10 +451,8 @@ contains
           ! calculate mass density of each ion species 
           Solarwind_V(SpeciesFirst_:SpeciesLast_) = &
                Solarwind_V(SpeciesFirst_:SpeciesLast_)*MassSpecies_V
-
           ! add up species densities
-          Solarwind_V(Rho_) = sum(Solarwind_V(SpeciesFirst_:SpeciesLast_))
-
+          SolarwinD_v(Rho_) = sum(Solarwind_V(SpeciesFirst_:SpeciesLast_))
        else
           ! Single species
           if(UseNumberDensity) then
