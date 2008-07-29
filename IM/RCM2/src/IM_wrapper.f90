@@ -26,6 +26,7 @@ subroutine IM_set_param(CompInfo, TypeAction)
   integer :: iFile
   real :: FractionH,FractionO, SunspotNumber,F107MonthlyMean,DayOfYear
   !-------------------------------------------------------------------------
+
   select case(TypeAction)
   case('VERSION')
      call put(CompInfo,                         &
@@ -321,6 +322,7 @@ subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
   logical :: DoTest, DoTestMe
   !---------------------------------------------------------------------------
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
   if(DoTest)write(*,*)NameSub,' starting with NameVar=',NameVar
   if(DoTest) call write_data
 
@@ -453,7 +455,8 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
-  if(DoTestMe)write(*,*)NameSub,' starting with iSizeIn,jSizeIn,nVar,NameVar=',&
+  if (DoTestMe) &
+       write(*,*)NameSub,' starting with iSizeIn,jSizeIn,nVar,NameVar=',&
        iSizeIn,jSizeIn,nVar,NameVar
 
   if(NameVar /= 'p:rho') &
@@ -491,20 +494,24 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
         end do
      end if
      ! Only a not-a-number can be less than zero and larger than one
-     if(.not. Buffer_IIV(i,j,pres_) > 0 .and. .not. Buffer_IIV(i,j,pres_) < 1)then
+     if(  .not. Buffer_IIV(i,j,pres_) > 0 .and. &
+          .not. Buffer_IIV(i,j,pres_) < 1) then
         write(*,*)NameSub,': ERROR IN PRESSURE'
         write(*,*)NameSub,': i,j,Buffer =',i,j,Buffer_IIV(i,j,pres_)
-        write(*,*)NameSub,': Lon,Lat[dg]=',aloct(i,j)*cRadToDeg,90.0-colat(i,j)*cRadToDeg
+        write(*,*)NameSub,': Lon,Lat[dg]=', &
+             aloct(i,j)*cRadToDeg,90.0-colat(i,j)*cRadToDeg
         write(*,*)NameSub,': imin_j(j)  =',imin_j(j)
         write(*,*)NameSub,': vm(i,j)    =',vm(i,j)
         write(*,*)NameSub,': eeta(i,j,:)=',eeta(i,j,:)
         write(*,*)NameSub,': alamc      =',alamc
         call CON_stop(NameSub // ' ERROR: Not a number found in IM pressure !')
      end if
-     if(.not. Buffer_IIV(i,j,dens_) > 0 .and. .not. Buffer_IIV(i,j,dens_) < 1)then
+     if(  .not. Buffer_IIV(i,j,dens_) > 0 .and. &
+          .not. Buffer_IIV(i,j,dens_) < 1) then
         write(*,*)NameSub,': ERROR IN DENSITY'
         write(*,*)NameSub,': i,j,Buffer =',i,j,Buffer_IIV(i,j,dens_)
-        write(*,*)NameSub,': Lon,Lat[dg]=',aloct(i,j)*cRadToDeg,90.0-colat(i,j)*cRadToDeg
+        write(*,*)NameSub,': Lon,Lat[dg]=', &
+             aloct(i,j)*cRadToDeg,90.0-colat(i,j)*cRadToDeg
         write(*,*)NameSub,': imin_j(j)  =',imin_j(j)
         write(*,*)NameSub,': vm(i,j)    =',vm(i,j)
         write(*,*)NameSub,': eeta(i,j,:)=',eeta(i,j,:)
