@@ -249,6 +249,8 @@ contains
   !===========================================================================
   subroutine process_integrated_data
 
+    integer :: iLoc
+
     if(dbg0)then
        if(iProc==0)write(*,*)' -D-'
     end if
@@ -278,15 +280,19 @@ contains
        s6    = s2**3
        s8    = s6*s2
 
-       Ci=cos(colat)
+       Ci=abs(cos(colat))
 
        if( s2 < Ri/Rbody )then
           !Fieldline goes beyond Rbody, add piece of fieldline volume
           Cs=sqrt(1.-(Rbody/Ri)*s2)
           FCiCs = (Ci-Cs) - (Ci**3-Cs**3) + (3./5.)*(Ci**5-Cs**5) &
                - (1./7.)*(Ci**7-Cs**7)
-          Vol   = Factor*FCiCs/s8
-
+          !!!CHANGE!!!
+          if (s8 /= 0.0) then
+             Vol = Factor*FCiCs/s8
+          else
+             Vol = 0.0
+          endif
           where(MHD_SUM_vol(i,:)>1.1E-8)
              MHD_SUM_vol(i,:)=MHD_SUM_vol(i,:) + Vol
           end where
@@ -297,7 +303,12 @@ contains
 
           !Compute the full analytic volume
           FCiCs = Ci - Ci**3 + (3./5.)*Ci**5 - (1./7.)*Ci**7
-          Vol   = factor*FCiCs/s8
+          !!!CHANGE!!!
+          if (s8 /= 0.0) then
+             Vol = factor*FCiCs/s8
+          else
+             Vol = 0.0
+          endif
 
           !Compute equatorial B value for dipole at this latitude
           eqB = abs(Bdp)*s6/Ri**3
@@ -343,18 +354,21 @@ contains
        ! the highest latitude (index 1) in the RCM grid
        i0 = 1
 
-       ! Ascend from the lowest latitude until the first open field line
-       do i=isize,1,-1
-          if(MHD_SUM_vol(i,j)<1.1E-8 .OR. &
-               MHD_Xeq(i,j)<=noValue .OR. &
-               MHD_Yeq(i,j)<=noValue ) then
-             i0=i+1
+       do i=1,isize
+!       do i=iLoc,1,-1
+
+          if(MHD_SUM_vol(i,j) > 1.1E-8 .and. &
+               abs(MHD_Xeq(i,j)) < 200.0 .and. &
+               abs(MHD_Yeq(i,j)) < 200.0 ) then
+!             i0=i+1
+             i0=i
              exit
           end if
        end do
 
        ! Save the index of the "last" closed field line into MHD_lat_boundary
        MHD_lat_boundary(j)=i0
+!       write(*,*) "finding closed field-line ",j,i0,MHD_lat_boundary(j)
 
     end do
 
