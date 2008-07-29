@@ -368,6 +368,8 @@ subroutine solve
 
   OldPotential = Potential
 
+  call gather
+
 contains
 
   subroutine fill
