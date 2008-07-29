@@ -61,8 +61,8 @@ contains
     if(IsInitialized) RETURN
     IsInitialized = .true.
     
-    call init_ie_im_couple
     call init_im_ie_couple
+    call init_ie_im_couple
 
   end subroutine couple_ie_im_init
 
@@ -78,9 +78,6 @@ contains
     !EOP
     !------------------------------------------------------------------------
 
-    if(IsInitialized) RETURN
-    IsInitialized = .true.
-    
     ! Initialize the coupler including communicator for this router
     ! This must be called by ALL processors due to MPI restrictions!
 
@@ -119,9 +116,6 @@ contains
     !EOP
     !------------------------------------------------------------------------
 
-    if(IsInitialized) RETURN
-    IsInitialized = .true.
-    
     ! Initialize the coupler including communicator for this router
     ! This must be called by ALL processors due to MPI restrictions!
 
@@ -247,13 +241,13 @@ contains
 
     iCoLat = nint(IEr1_Xyz_D(1))
     iLon   = nint(IEr1_Xyz_D(2))
-    
-    if ( iLon<1 .or. iLon>Grid_C(IM_)% nCoord_D(2) .or. &
-         iCoLat<1 .or. iCoLat>Grid_C(IM_)% nCoord_D(1)) then
+
+    if ( iLon<1 .or. iLon>Grid_C(IE_)% nCoord_D(2) .or. &
+         iCoLat<1 .or. iCoLat>Grid_C(IE_)% nCoord_D(1)) then
        write(*,*)'map_ie_to_im: iColat,Grid_C(IE_)% nCoord_D(1)=',&
-            iColat, Grid_C(IM_)% nCoord_D(1)
+            iColat, Grid_C(IE_)% nCoord_D(1)
        write(*,*)'map_ie_to_im: iLon,Grid_C(IE_)% nCoord_D(2)=',&
-            iLon,Grid_C(IM_)% nCoord_D(2)
+            iLon,Grid_C(IE_)% nCoord_D(2)
        call CON_stop('map_ie_to_im (in CON_couple_ie_im) SWMF_ERROR: index out of range!')
     end if
     
