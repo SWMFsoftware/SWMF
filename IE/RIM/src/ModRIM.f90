@@ -44,7 +44,7 @@ module ModRIM
   integer, dimension(7) :: TimeArray
   integer :: nSolve=0
 
-  real (Real8_) :: StartTime, CurrentTime
+  real (Real8_) :: StartTime, CurrentTime, OldTime
 
   real, dimension(:,:), allocatable :: &
        LatitudeAll, LongitudeAll, PotentialAll, SigmaHAll, SigmaPAll, &
