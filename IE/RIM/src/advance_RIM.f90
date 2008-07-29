@@ -7,7 +7,7 @@ subroutine advance_RIM
 
   implicit none
 
-  integer :: iLon, iLat, iError, iFile
+  integer :: iLon, iLat, iError, iFile, iT1, iT2
 
   iError = 0
 
@@ -27,11 +27,11 @@ subroutine advance_RIM
   endif
 
   do iLon=0,nLons+1 
-     nEmpiricalLats = 1
+     nEmpiricalLats = 0
      do iLat=1,nLats
         if (abs(Latitude(iLon,iLat)) > HighLatBoundary) then
-           potential(iLon,iLat) = EmpiricalPotential(iLon,nEmpiricalLats)
            nEmpiricalLats = nEmpiricalLats + 1
+           potential(iLon,iLat) = EmpiricalPotential(iLon,nEmpiricalLats)
         endif
      enddo
   enddo
@@ -43,7 +43,15 @@ subroutine advance_RIM
 
   if(nSolve>0)then
      do iFile=1,nFile
-        if (dn_output(iFile).gt.0.and.mod(nSolve,dn_output(iFile)).eq.0) then
+        if (dt_output(iFile) > 0) then
+           iT1 = floor((CurrentTime-StartTime)/dt_output(iFile))
+           iT2 = floor((OldTime-StartTime)/dt_output(iFile))
+        else
+           iT1 = 0
+           iT2 = 0
+        endif
+        if ((dn_output(iFile).gt.0.and.mod(nSolve,dn_output(iFile)).eq.0).or.&
+             (iT1 > iT2)) then
            call write_output_RIM(iFile)
         endif
      end do
