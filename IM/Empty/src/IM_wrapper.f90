@@ -176,10 +176,18 @@ end subroutine IM_put_sat_from_gm
 !==============================================================================
 
 subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
+
+  use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
+
+  implicit none
   character(len=*), parameter :: NameSub='IM_get_for_ie'
-  
+
+  integer,intent(in)            :: nPoint, iPointStart, nVar
+  real,intent(out)              :: Buff_V(nVar)
+  type(IndexPtrType),intent(in) :: Index
+  type(WeightPtrType),intent(in):: Weight
+
   call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
 
 end subroutine IM_get_for_ie
 
-!==============================================================================

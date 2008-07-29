@@ -292,3 +292,26 @@ subroutine IE_setgrid(iComponent, MLTsIn, LatsIn, iError)
 end subroutine IE_setgrid
 
 !==============================================================================
+
+subroutine IE_put_from_im(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
+
+  use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
+
+  implicit none
+  character(len=*), parameter   :: NameSub='IE_put_from_im'
+  integer,intent(in)            :: nPoint, iPointStart, nVar
+  real, intent(in)              :: Buff_V(nVar)
+  type(IndexPtrType),intent(in) :: Index
+  type(WeightPtrType),intent(in):: Weight
+  logical,intent(in)            :: DoAdd
+
+  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+
+end subroutine IE_put_from_im
+!==============================================================================
+subroutine IE_put_from_im_complete
+
+  write(*,*)"Don't know what IE_put_from_im_complete is really supposed to do."
+
+end subroutine IE_put_from_im_complete
+
