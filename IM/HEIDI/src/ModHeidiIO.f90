@@ -15,6 +15,7 @@ Module ModHeidiIO
 ! Formerly: Common block PARAM3
 	real TINJ
 	character*5 name
+        character*10 :: cOutputDir="IM/Output/"
 	integer INI(NS),IRES(15),ISTORM,IST,IBC(NS),IA
 
 ! Define solar wind input variables

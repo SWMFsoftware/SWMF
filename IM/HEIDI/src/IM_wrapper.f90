@@ -338,7 +338,8 @@ subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
 
   IonoGmTemperature = 0.0
   where (IonoGmDensity > 0) &
-       IonoGmTemperature = IonoGmPressure/(IonoGmDensity*1.0e6*cBoltzmann)
+       IonoGmTemperature = IonoGmPressure/(IonoGmDensity*1.0e6*cBoltzmann)/&
+       11604.0 ! k -> eV
 
 !  write(*,*) 'This is not working'
 
@@ -418,6 +419,12 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   end if
 
   Buffer_IIV = -1.0
+
+  ! species = e, H, he, o
+
+  !!! RNHT(colat,mlt,species) = density in #/cc
+  !!! EDEN("                ) = equatorial pressure (keV/cc) (*0.1602 = nPa)
+
 
   write(*,*) 'This is not working'  
 

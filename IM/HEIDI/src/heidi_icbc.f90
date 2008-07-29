@@ -571,6 +571,8 @@ SUBROUTINE GEOSB
   use ModHeidiIO
   use ModHeidiMain
   use ModHeidiDrifts
+  use ModIonoHeidi
+  use ModNumConst, only: cDegToRad
 
   IMPLICIT NONE
 
@@ -590,6 +592,8 @@ SUBROUTINE GEOSB
 
   integer :: iUnitSopa=43
   integer :: iUnitMpa=44
+
+  integer :: iLatBoundary=-1, iLonBoundary=-1
 
   print *, 'Resetting the outer boundary condition'
   !CCC Create a few flags and open a few files
@@ -698,6 +702,9 @@ SUBROUTINE GEOSB
            END IF
         END DO
      END IF
+
+     ! inputs are in /cc and eV
+
      FAC=(T-TM1)/(TM2-TM1)			! Linearly interpolate
      NM=FAC*NM2+(1.-FAC)*NM1		! in cm-3
      TFM=(FAC*TFM2+(1.-FAC)*TFM1)*1.E-3	! in keV
@@ -705,6 +712,41 @@ SUBROUTINE GEOSB
      NEL=FAC*NE2+(1.-FAC)*NE1		! in cm-3
      TEF=(FAC*TEF2+(1.-FAC)*TEF1)*1.E-3	! in keV
      TEC=(FAC*TEC2+(1.-FAC)*TEC1)*1.E-3	! in keV
+
+     !-------------------
+     ! DONE reading in data
+
+     ! This is a total hack - we need to figure out how to NOT read in the
+     ! data above.
+
+     if (maxval(IonoGmDensity) > 0.0) then
+
+        write(*,*) "---------------------------------------------------"
+        write(*,*) "Ignoring LANL data, and overwriting with GM Data!!!"
+
+        ! Find location to take boundary condition from : 70 degrees
+        if (iLatBoundary < 0) then
+           iLatBoundary = 1
+           do while (IONO_NORTH_Theta(iLatBoundary,1) < (90.0-70.0)*cDegToRad)
+              iLatBoundary = iLatBoundary + 1
+           enddo
+        endif
+        iLonBoundary = IONO_nPsi/2.0
+
+        write(*,*) "Taking boundary condition from location : ", &
+             iLatBoundary, iLonBoundary
+
+        NM = IonoGmDensity(iLatBoundary, iLonBoundary)
+        TCM = IonoGmTemperature(iLatBoundary, iLonBoundary)
+        TFM = TCM
+
+        write(*,*) "Density : ", NM, " /cc"
+        write(*,*) "Temperature : ", TCM, " eV"
+
+        write(*,*) "---------------------------------------------------"
+
+     endif
+
      NY(2)=0.34*EXP(0.054*KP)	! From Young et al 1982
      NY(3)=5.1E-3*EXP(6.6E-3*F107)
      NY(4)=0.011*EXP(0.24*KP+0.011*F107)
@@ -765,6 +807,10 @@ SUBROUTINE GEOSB
            ELSE  ! Maxwellian everywhere, SOPA (if designated)
               DO L=1,LO
                  DO K=2,KES(S)			! MPA moments
+                    ! Converts Density & Temperature Moments to Fluxes
+                    ! TCM = Temperature (par or perp)
+                    ! TFM = Temperature (perp or par) - can have same
+                    ! NM  = density
                     Flanl(K,L,S)=NM*NMFAC(S)*(MAS(S)*1.E13/Q/2./PI)**1.5/  &
                          SQRT(TFM)/TCM*EXP(-EKEV(K)*((1.-MU(L)*MU(L))/TCM    &
                          +MU(L)*MU(L)/TFM))
@@ -784,6 +830,13 @@ SUBROUTINE GEOSB
   END IF
 
   !...Find injection boundary and fill in (Note: IBC=9, inject everywhere)
+
+  ! FGEOS is outer boundary condition on plasma
+  ! j - azimuth (mlt)
+  ! k - energy
+  ! l - pitch angle
+  ! s - species (1=electrons, 2=H+, 3=He+, 4=O+)
+
   DO S=1,NS
      IF (SCALC(S).EQ.1) THEN
         IF (IBC(S).EQ.6) THEN

@@ -16,6 +16,7 @@ subroutine heidi_init
   T=TIME
 
   iStepStart=NINT(TIME/DT/2.) + 1
+  iStep = iStepStart
   nFrequencyKp=NINT(10800./DT/2.)
   nFrequencyBC = NINT(TINJ/DT/2.)
 

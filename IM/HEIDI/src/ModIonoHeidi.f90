@@ -27,6 +27,9 @@ module ModIonoHeidi
 
   real, dimension(1:IONO_nTheta*2-1,1:IONO_nPsi) ::  &
        IonoGmVolume, IonoGmXPoint, IonoGmYPoint, &
-       IonoGmBField, IonoGmDensity, IonoGmPressure, IonoGmTemperature
+       IonoGmBField, &
+       IonoGmDensity=-1.0, &
+       IonoGmPressure=-1.0, &
+       IonoGmTemperature=-1.0
 
 end module ModIonoHeidi

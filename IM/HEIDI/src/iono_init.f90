@@ -85,6 +85,7 @@ subroutine IonoHeidiWriteOutput(ifile,time,IO_prefix,IO_suffix)
   ! a data file.
   !/
   use ModIonoHeidi
+  use ModHeidiIO, only: cOutputDir
   use ModNumConst, only: cPi
   implicit none
 
@@ -180,10 +181,10 @@ subroutine IonoHeidiWriteOutput(ifile,time,IO_prefix,IO_suffix)
 
 !!! For use with mram-given output suffix:
 
-  write(*,*) "file : ",iono_dir_path//IO_prefix//iono_dir//"it_"//&
+  write(*,*) "file : ",cOutputDir//IO_prefix//iono_dir//"it_"//&
        IO_suffix//IO_ext
 
-  open(unit=Iunit,file=iono_dir_path//IO_prefix//iono_dir//"it_"//&
+  open(unit=Iunit,file=cOutputDir//IO_prefix//iono_dir//"it_"//&
        IO_suffix//IO_ext, &
        status="unknown")
 
@@ -213,7 +214,7 @@ subroutine IonoHeidiWriteOutput(ifile,time,IO_prefix,IO_suffix)
         write(Iunit, '(I5,a)')  4, ' Phi [kV]'
         write(Iunit, '(I5,a)')  5, ' Density [#/cc]'
         write(Iunit, '(I5,a)')  6, ' Pressure [Pa]'
-        write(Iunit, '(I5,a)')  6, ' Temperature [K]'
+        write(Iunit, '(I5,a)')  6, ' Temperature [eV]'
 
      endif
 
@@ -239,7 +240,7 @@ subroutine IonoHeidiWriteOutput(ifile,time,IO_prefix,IO_suffix)
 
         write(Iunit, *)  'VARIABLES= "Theta [deg]","Psi [deg]"'
         write(Iunit, *)  ' "JR [`mA/m^2]","PHI [kV]",'
-        write(Iunit, *)  ' "Density [#/cc]","Pressure [Pa]","Temperature [K]"'
+        write(Iunit, *)  ' "Density [#/cc]","Pressure [Pa]","Temperature [eV]"'
 
      endif
 
