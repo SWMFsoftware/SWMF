@@ -486,8 +486,7 @@ subroutine IM_run(SWMFTime,SWMFTimeLimit)
 
   call heidi_run 
 
-!  SWMFTime = SWMFTime + dt*2
-  SWMFTime = SWMFTime + 2.5
+  SWMFTime = SWMFTime + dt*2
 
 end subroutine IM_run
 
