@@ -1,0 +1,19 @@
+
+To Do
+-------------------------------------
+1. Swmf to set HEIDI time
+2. Swmf to limit HEIDI dt
+3. Swmf to set HEIDI end time
+4. Swmf to "suggest" when to write restart files
+5. Heidi file units set by swmf and not just created
+6. Implement a DebugLevel type of variable for stdout
+7. Get field-line volumes as a function of pitch angle
+	a. Get total field-line volume
+	b. use empirical relationship to break it apart
+	c. get BATSRUS to do true partial tracing for us
+8. Get Heidi results back to GM
+	a. figure out the units the GM wants
+	b. should be able to just fill in the values?
+9. Transition from IONO grids to heidi grids
+	a. what to do about DGCPM?
+
