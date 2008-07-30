@@ -68,6 +68,8 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   if (DipoleStrength == 0) return
 
+  if (.not. UseDynamo .or. Is1D) return
+
   call report("UA_calc_electrodynamics",1)
   call start_timing("calc_electrodyn")
 
