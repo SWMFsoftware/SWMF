@@ -70,9 +70,8 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   endif
 
   ! Let the winds blow !!!!
-  Vel_GD(-1:0,iEast_)  = Vel_GD(1,iEast_)
-  Vel_GD(-1:0,iNorth_) = Vel_GD(1,iNorth_)
-
+  Vel_GD(-1:0,iEast_)  = 0.0
+  Vel_GD(-1:0,iNorth_) = 0.0
 
   Vel_GD(-1:0,iUp_)    = 0.0
   VertVel(-1:0,:)      = 0.0
