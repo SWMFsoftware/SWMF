@@ -61,7 +61,7 @@ subroutine IM_set_grid
   use ModProcIM
   use ModNumConst
   use CON_coupler, ONLY: set_grid_descriptor, is_proc, IM_
-!  use heidi_read
+
   implicit none
   character (len=*), parameter :: NameSub='IM_set_grid'
   real :: Radius_I(1)
@@ -262,11 +262,6 @@ subroutine IM_put_from_ie(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
   i = Index % iCB_II(1,iPointStart)
   j = Index % iCB_II(2,iPointStart)
 
-  ! Since IM is only in one hemisphere, we have to assume that it is the Northern
-  ! hemisphere, so when we get a pattern from the ionosphere, it wants to put it
-  ! in both hemispheres (I think?).  So, let's ignore the Southern hemisphere,
-  ! and also the ghost cell....
-
   if(i<1.or.i>2*IONO_nTheta-1.or.j<1.or.j>IONO_nPsi+1)then
      write(*,*)'i,j,DoAdd=',i,2*IONO_nTheta-1,j,IONO_nPsi+1,DoAdd
      call CON_stop('IM_put_from_ie (in IM_wrapper): index out of range')
@@ -282,12 +277,9 @@ subroutine IM_put_from_ie(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
 
   if (i > IONO_nTheta .and. j <= IONO_nPsi) then
      if(DoAdd)then
-!        IONO_SOUTH_PHI(2*IONO_nTheta-i+1,j) = &
-!             IONO_SOUTH_PHI(2*IONO_nTheta-i+1,j) + Buff_V(1)
         IONO_SOUTH_PHI(i-IONO_nTheta,j) = &
              IONO_SOUTH_PHI(i-IONO_nTheta,j) + Buff_V(1)
      else
-!        IONO_SOUTH_PHI(2*IONO_nTheta-i+1,j) = Buff_V(1)
         IONO_SOUTH_PHI(i-IONO_nTheta,j) = Buff_V(1)
      end if
   endif
@@ -474,7 +466,7 @@ end subroutine IM_finalize
 ! =============================================================================
 subroutine IM_run(SWMFTime,SWMFTimeLimit)
 
-  use ModHeidiSize, only: dt
+  use ModHeidiSize, only: dt, dtMax
 
   implicit none
 
@@ -483,6 +475,15 @@ subroutine IM_run(SWMFTime,SWMFTimeLimit)
 
   !INPUT ARGUMENTS:
   real, intent(in) :: SWMFTimeLimit ! simulation time not to be exceeded
+
+  real :: dtSWMF
+
+  dtSWMF = SWMFTimeLimit - SWMFTime
+  if (dtSWMF < dtMax*2) then
+     dt = dtSWMF/2.0
+  else
+     dt = dtMax
+  endif
 
   call heidi_run 
 

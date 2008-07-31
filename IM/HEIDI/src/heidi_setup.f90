@@ -41,7 +41,8 @@ SUBROUTINE heidi_read
   integer :: iUnitOut = 18
 
   OPEN (UNIT=iUnitOut,FILE='input.glo',STATUS='OLD')
-  READ (iUnitOut,*) DT,TMAX,TINT,TIME
+  READ (iUnitOut,*) DTMax,TMAX,TINT,TIME
+  Dt = DtMax
   READ (iUnitOut,*) IO,JO,KO,LO,ISO
   READ (iUnitOut,*) ELB,SWE,RW,HMIN
   READ (iUnitOut,*) ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT
