@@ -55,8 +55,9 @@ module CON_io
   ! Saving restart information
   character(len=lNameFile)    :: NameRestartFile='RESTART.out'
 
-  ! How often shall we save restart files. Default: not saved
-  type(FreqType), public :: SaveRestart = FreqType(.false.,-1,-1.0,-1,-1.0)
+  ! How often shall we save restart files?
+  ! Default: every 100000 time steps or 1e30 seconds (ie at the end of the run)
+  type(FreqType), public :: SaveRestart = FreqType(.true.,100000,1E30,-1,-1.0)
 
   ! Showing progress
   integer, public :: DnShowProgressShort = 10
