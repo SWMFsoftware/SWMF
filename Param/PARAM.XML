@@ -864,9 +864,15 @@ while for time accurate run, the DtSaveRestart variable determines
 the frequency in terms of the simulation time tSimulation in seconds.
 The code stops with an error message if DoSaveRestart is true but 
 DnSaveRestart is negative in steady state mode or DtSaveRestart is negative
-in time accurate mode.
+in time accurate mode. 
 
-The default is DoSaveRestart = .false.
+Irrespective of the frequencies, final restart files are always saved if
+DoSaveRestart is true.
+
+Defaults are DoSaveRestart=true, DnSaveRestart=100000 and DtSaveRestart=1e30.
+For typical runs this means that only a final restart file is saved.
+It is a good idea, however, to save restart files multiple times during
+long runs.
 </command>
 
 <command name="RESTARTFILE">
