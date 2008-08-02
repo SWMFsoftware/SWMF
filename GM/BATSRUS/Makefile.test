@@ -284,12 +284,11 @@ test_titan_restart_save:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf TitanTest/RestartSave RESTART_titan
 	cd ${TESTDIR}; ./PostProc.pl -M -o TitanTest/RestartSave
-	cd ${TESTDIR}; ./Restart.pl -o RESTART_titan; 
 
 test_titan_restart_read:
 	cd ${TESTDIR}; cp Param/TITAN/PARAM.in.restartread PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ./Restart.pl -i RESTART_titan
+	cd ${TESTDIR}; ./Restart.pl -i TitanTest/RestartSave/RESTART
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf TitanTest/RestartRead
 	cd ${TESTDIR}; ./PostProc.pl -M -o TitanTest/RestartRead
@@ -389,12 +388,11 @@ test_venus_restart_save:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf VenusTest/RestartSave RESTART_venus
 	cd ${TESTDIR}; ./PostProc.pl -M -o VenusTest/RestartSave
-	cd ${TESTDIR}; ./Restart.pl -o RESTART_venus; 
 
 test_venus_restart_read:
 	cd ${TESTDIR}; cp Param/VENUS/PARAM.in.restartread PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ./Restart.pl -i RESTART_venus
+	cd ${TESTDIR}; ./Restart.pl -i VenusTest/RestartSave/RESTART
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf VenusTest/RestartRead
 	cd ${TESTDIR}; ./PostProc.pl -M -o VenusTest/RestartRead
