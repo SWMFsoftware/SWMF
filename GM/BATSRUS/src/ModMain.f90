@@ -45,6 +45,10 @@ Module ModMain
        UseBorisSimple      = .false.,  &
        time_loop           = .false.
 
+  ! Limiting speed in the numerical diffusive flux (for implicit scheme only)
+  real :: Climit
+
+  ! Fixed time step (for implicit scheme mostly)
   logical :: UseDtFixed
 
   !\

@@ -373,7 +373,7 @@ contains
     !-------------------------------------------------------------------------!
     subroutine set_eigenvalues(Value_V,Cs,Ca,Cf)
       real,dimension(nVar-1),intent(inout)::Value_V
-      real,intent(in)::Cs,Ca,Cf
+      real,intent(in):: Cs, Ca, Cf
       !\
       ! Eigenvalues
       !/
@@ -387,29 +387,32 @@ contains
     !-------------------------------------------------------------------------!
     subroutine get_characteristic_speeds(A,         &
          RhoInv,    &
-         RhoSqrt,&
+         RhoSqrt,   &
          Bn,        &
          BTang_D,   &
          Cs,        &
          Ca,        &
          Cf)
+
       real,intent(inout)::A !In: speed of sound squared, out speed of sound
       real,intent(in)   ::RhoInv,RhoSqrt,Bn,BTang_D(3)
       real,intent(out)  ::Cs,Ca,Cf
-
+      !-----------------------------------------------------------------------
       A = sqrt(A) !Speed of sound
 
       !BTang2 is reused while constructing the coordinate system
       BTang2 = sum(BTang_D**2) 
       Tmp=BTang2*RhoInv
 
-      Ca=abs(Bn)/RhoSqrt  !Alfven speed
-      Cf=cHalf*(sqrt((A-Ca)**2+Tmp)+sqrt((A+Ca)**2+Tmp)) !Fast sound speed
-      Cs=Ca * A/Cf                                       !Slow sound speed
+      Ca=abs(Bn)/RhoSqrt                                 !Alfven speed
+      Cf=cHalf*(sqrt((A-Ca)**2+Tmp)+sqrt((A+Ca)**2+Tmp)) !Fast magnetossonic
+      Cs=Ca * A/Cf                                       !Slow magnetosonic
+
     end subroutine get_characteristic_speeds
+
   end subroutine decompose_state
 
-  !===========================================================================!
+  !===========================================================================
 
   subroutine get_fixed_abs_eigenvalue(&
        Eigenvalue_V,&
@@ -417,6 +420,9 @@ contains
        EigenvalueR_V,&
        LambdaB0, &
        EigenvalueFixed_V,CMax,IsBoundary)
+
+    use ModMain, ONLY: Climit
+
     real,intent(in) ,dimension(nVar-1)::Eigenvalue_V
     real,intent(in) ,dimension(nVar-1)  ::EigenvalueL_V,EigenvalueR_V
     real,intent(in) ::LambdaB0
@@ -425,7 +431,7 @@ contains
     logical,intent(in)::IsBoundary
     integer::iWave
     real::Eps_V(nVar-1),Lambda
-
+    !-------------------------------------------------------------------------
     Eps_V=max(LambdaB0,abs(Eigenvalue_V(FastRW_)-Eigenvalue_V(FastLW_))*0.05)
     do iWave=1,nVar-1
        Lambda=Eigenvalue_V(iWave)
@@ -435,7 +441,9 @@ contains
        !cHalf*min(Lambda**2/Eps_V(iWave)-Eps_V(iWave),cZero)
     end do
 
-    cMax=max(EigenvalueFixed_V(FastRW_),EigenvalueFixed_V(FastLW_))
+    cMax = max(EigenvalueFixed_V(FastRW_),EigenvalueFixed_V(FastLW_))
+
+    if(Climit > 0.0) EigenvalueFixed_V = min(Climit, EigenvalueFixed_V)
 
   end subroutine get_fixed_abs_eigenvalue
 

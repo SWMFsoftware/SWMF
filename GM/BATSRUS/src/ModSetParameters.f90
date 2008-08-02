@@ -54,6 +54,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModSolarwind, ONLY: UseSolarwindFile, NameSolarwindFile, &
        read_solar_wind_file, normalize_solar_wind_data
 
+  use ModFaceFlux, ONLY: face_flux_set_parameters
+
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
@@ -1194,6 +1196,9 @@ subroutine MH_set_parameters(TypeAction)
      case('#TVDRESCHANGE')
         call read_var('UseTvdResChange',UseTvdResChange)
         if(UseTvdResChange) UseAccurateResChange=.false.
+
+     case('#CLIMIT')
+        call face_flux_set_parameters(NameCommand)
 
      case("#BORIS")                                  !^CFG IF BORISCORR BEGIN
         if(.not.UseB)CYCLE READPARAM

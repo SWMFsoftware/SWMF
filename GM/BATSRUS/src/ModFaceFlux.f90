@@ -1,5 +1,4 @@
 module ModFaceFlux
-  
 
   use ModProcMH, ONLY: iProc
   use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK,UseB
@@ -101,8 +100,29 @@ module ModFaceFlux
   real :: UnL, Ut1L, Ut2L, B1nL, B1t1L, B1t2L
   real :: UnR, Ut1R, Ut2R, B1nR, B1t1R, B1t2R
 
+  ! Limit propagation speeds to reduce numerical diffusion
+  logical    :: UseClimit = .false.
+  real       :: ClimitDim = -1.0, rClimit = -1.0
+
   character(len=*), private, parameter :: NameMod="ModFaceFlux"
+
 contains
+
+  !=========================================================================
+  subroutine face_flux_set_parameters(NameCommand)
+    use ModReadParam, ONLY: read_var
+    
+    character(len=*), intent(in):: NameCommand
+    !------------------------------------------------------------------------
+    select case(NameCommand)
+    case('#CLIMIT')
+       call read_var('UseClimit', UseClimit)
+       call read_var('ClimitDim', ClimitDim)
+       call read_var('rClimit',   rClimit)
+    end select
+
+  end subroutine face_flux_set_parameters
+
   !=========================================================================
   subroutine rotate_state_vectors
 
@@ -691,6 +711,13 @@ contains
 
   subroutine set_cell_values_common
 
+    use ModPhysics, ONLY: Io2No_V, UnitU_
+    use ModGeometry, ONLY: r_BLK
+    use ModMain, ONLY: cLimit
+
+    real :: r
+    !--------------------------------------------------------------------
+
     iRight= iFace; jRight = jFace; kRight = kFace
 
     IsBoundary = true_cell(iLeft, jLeft, kLeft, iBlockFace) &
@@ -715,7 +742,20 @@ contains
          - y_BLK(iLeft, jLeft  ,kLeft, iBlockFace))**2 +    &
          ( z_BLK(iRight,jRight,kRight, iBlockFace)          &
          - z_BLK(iLeft, jLeft  ,kLeft, iBlockFace))**2 )
-    
+
+    if(UseClimit)then
+       r = 0.5*(r_BLK(iLeft,  jLeft,  kLeft,  iBlockFace) &
+            +   r_BLK(iRight, jRight, kRight, iBlockFace))
+       if(r < rClimit)then
+          Climit = Io2No_V(UnitU_)*ClimitDim
+          if(.not.DoRoe)Climit = Climit*Area
+       else
+          Climit = -1.0
+       end if
+
+       if(DoTestCell)write(*,*)'set_cell_values_common: Climit=',Climit
+       
+    end if
 
   end subroutine set_cell_values_common
 
@@ -928,7 +968,7 @@ contains
     !==========================================================================
     subroutine roe_solver_new
 
-      Flux_V = 0.5*(FluxLeft_V  + FluxRight_V) + DissipationFlux_V*Area
+      Flux_V = 0.5*(FluxLeft_V + FluxRight_V) + DissipationFlux_V*Area
 
       Unormal_I = Unormal_I*Area
       cMax      = cMax*Area
@@ -1857,6 +1897,7 @@ contains
   subroutine get_speed_max(State_V, B0x, B0y, B0z, cMax_I, cLeft_I, cRight_I)
 
     use ModMultiFluid, ONLY: select_fluid, iFluid, iRho, iUx, iUy, iUz, iP
+    use ModMain, ONLY: Climit
 
     real,    intent(in) :: State_V(nVar)
     real,    intent(in) :: B0x, B0y, B0z
@@ -1908,6 +1949,13 @@ contains
 
     ! Take maximum time step limit for all the fluids
     if (present(Cmax_I)) CmaxDt=maxval(CmaxDt_I)
+
+    ! Limit propagation speeds if required
+    if (Climit > 0.0) then
+       if(present(Cmax_I))   Cmax_I   = min( Climit, Cmax_I)
+       if(present(Cleft_I))  Cleft_I  = max(-Climit, Cleft_I)
+       if(present(Cright_I)) Cright_I = min( Climit, Cright_I)
+    end if
 
   contains
 
@@ -2171,7 +2219,7 @@ contains
       if(DoTestCell)then
          write(*,*)NameSub,' Un     =',Un
          write(*,*)NameSub,' Csound =',Sound/Area
-         if(present(Cmax_I)) write(*,*)NameSub,' Cmax/Area=',Cmax_I(iFluid)/Area
+         if(present(Cmax_I))write(*,*)NameSub,' Cmax/Area=',Cmax_I(iFluid)/Area
       end if
 
     end subroutine get_hd_speed
