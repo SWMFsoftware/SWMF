@@ -5,6 +5,7 @@ module ModCharacteristicMhd
   use ModVarIndexes
   use ModPhysics,ONLY:g,inv_gm1
   use ModNumConst
+  use ModMain, ONLY: Climit
 
   implicit none
 
@@ -421,8 +422,6 @@ contains
        LambdaB0, &
        EigenvalueFixed_V,CMax,IsBoundary)
 
-    use ModMain, ONLY: Climit
-
     real,intent(in) ,dimension(nVar-1)::Eigenvalue_V
     real,intent(in) ,dimension(nVar-1)  ::EigenvalueL_V,EigenvalueR_V
     real,intent(in) ::LambdaB0
@@ -487,9 +486,15 @@ contains
          CMax,IsBoundary)
 
     UnL= sum(uL_D*Dir_D); UnR=sum(uR_D*Dir_D)
-    EigenvalueFixed_V(DivBW_)=max(abs(UnL),abs(UnR))
-    cMax=max(cMax,EigenvalueFixed_V(DivBW_))
-    if(IsBoundary)EigenvalueFixed_V=cMax
+    if(Climit > 0.0)then
+       EigenvalueFixed_V(DivBW_) = min(cLimit, max(abs(UnL), abs(UnR)))
+       cMax = max(cMax, abs(UnL), abs(UnR))
+       if(IsBoundary)EigenvalueFixed_V = min(cLimit, cMax)
+    else
+       EigenvalueFixed_V(DivBW_) = max(abs(UnL), abs(UnR))
+       cMax = max(cMax, EigenvalueFixed_V(DivBW_))
+       if(IsBoundary)EigenvalueFixed_V = cMax
+    end if
     FluxPseudoChar_V=cZero
 
     do iWave=1,nVar-1
