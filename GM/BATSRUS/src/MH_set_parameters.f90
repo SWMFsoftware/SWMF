@@ -54,7 +54,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModSolarwind, ONLY: UseSolarwindFile, NameSolarwindFile, &
        read_solar_wind_file, normalize_solar_wind_data
 
-  use ModFaceFlux, ONLY: face_flux_set_parameters
+  use ModFaceFlux, ONLY: face_flux_set_parameters, UseClimit
 
   implicit none
 
@@ -615,14 +615,14 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoSaveInitial',DoSaveInitial)
 
      case("#SAVEPLOT")
-        call read_var('nPlotFile',nplotfile)
+        call read_var('nPlotFile', nPlotFile)
 
         if(nPlotFile>0 .and. iProc==0)call check_dir(NamePlotDir)
 
-        nfile=max(nfile,plot_+nplotfile)
-        if (nfile > maxfile .or. nplotfile > maxplotfile)call stop_mpi(&
+        nfile = max(nfile, plot_ + nPlotFile)
+        if (nFile > MaxFile .or. nPlotFile > MaxPlotFile) call stop_mpi(&
              'The number of ouput files is too large in #SAVEPLOT:'&
-             //' nplotfile>maxplotfile .or. nfile>maxfile')
+             //' nPlotFile > MaxPlotFile .or. nFile > MaxFile')
 
         do iFile = Plot_ + 1, Plot_ + nPlotFile
 
@@ -684,7 +684,7 @@ subroutine MH_set_parameters(TypeAction)
                  end if
                  nLine_I(iPlotFile) = MaxLine
               end if
-              do i=1,nLine_I(iPlotFile)
+              do i = 1, nLine_I(iPlotFile)
                  call read_var('xStartLine',XyzStartLine_DII(1,i,iPlotFile))
                  call read_var('yStartLine',XyzStartLine_DII(2,i,iPlotFile))
                  call read_var('zStartLine',XyzStartLine_DII(3,i,iPlotFile))
@@ -822,7 +822,7 @@ subroutine MH_set_parameters(TypeAction)
                    //plot_string)
            end if
 
-           plot_type(ifile)=plot_area//'_'//plot_var
+           plot_type(iFile) = plot_area//'_'//plot_var
         end do
 
      case("#SAVEPLOTSAMR")
@@ -2084,6 +2084,23 @@ contains
     ! This depends on the grid geometry set above
     call correct_plot_range
 
+    ! Select TypeMessagePass='all' if there are any spherical plots
+    if(optimize_message_pass /= 'all')then
+       do iFile = Plot_ + 1, Plot_ + nPlotFile
+          if(index(plot_type(iFile),'sph') /= 1) CYCLE
+          
+          if(iProc==0 .and. optimize_message_pass /= 'allopt') then
+             write(*,'(a)')NameSub//&
+                  ' WARNING: sph plottype does not work with'// &
+                  ' TypeMessagePass='//trim(optimize_message_pass)//' !!!'
+             if(UseStrict)call stop_mpi('Correct PARAM.in!')
+             write(*,*) NameSub//' setting TypeMessagePass = all'
+          end if
+          optimize_message_pass = 'all'
+          EXIT
+       end do
+    end if
+
     ! Fix resolutions (this depends on domain size set above)
     if(InitialResolution > 0.0) initial_refine_levels = nint( &
          alog(((XyzMax_D(x_)-XyzMin_D(x_)) / (proc_dims(x_) * nI))  &
@@ -2331,6 +2348,13 @@ contains
     ! Finish checks for boris                       !^CFG END BORISCORR
 
     ! Check parameters for implicit                 !^CFG IF IMPLICIT BEGIN
+
+    if(UseClimit .and. .not. UseImplicit)then
+       if(iProc==0)then
+          write(*,'(a)')'UseClimit=T requires (part) implicit scheme'
+          call stop_mpi('Correct PARAM.in')
+       end if
+    end if
 
     if(UsePartImplicit .and. ImplCritType=='dt' .and.&
          (.not.time_accurate .or. .not.UseDtFixed))then
