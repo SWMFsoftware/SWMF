@@ -46,7 +46,7 @@ Module ModMain
        time_loop           = .false.
 
   ! Limiting speed in the numerical diffusive flux (for implicit scheme only)
-  real :: Climit
+  real :: Climit = -1.0
 
   ! Fixed time step (for implicit scheme mostly)
   logical :: UseDtFixed
