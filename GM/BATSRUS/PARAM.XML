@@ -3578,6 +3578,38 @@ Default value is false, which results in first order
 prolongation and restriction operators at the resolution changes.
 </command>
 
+<command name="CLIMIT">
+	<parameter name="UseClimit" type="logical" default="F"/>
+	<if expr="$UseClimit">
+		<parameter name="ClimitDim" type="real" min="0" 
+							default="3000"/>
+		<parameter name="rClimit" type="real" default="6"/>
+	</if>
+#CLIMIT
+T			UseClimit (rest of parameters are read if true)
+3000.0			ClimitDim [km/s]
+6.0			rClimit
+
+If UseClimit is true, the wave speeds used in the numerical diffusive fluxes
+are limited by the value of ClimitDim (in I/O units, typically km/s) 
+within the sphere of radius rClimit (typically in units of planetery radii). 
+This scheme cannot be used with a fully explicit time integration, because
+it will not be stable! One should use the fully or part implicit scheme
+(see the #IMPLICIT command). In contrast with the Boris correction (see
+the #BORIS command), this scheme is fully consistent with the governing 
+equations in time accurate mode as well. It can be combined with 
+the Roe scheme too unlike the Boris correction. The limiting scheme
+cannot be combined with the HLLD scheme (neither can be the Boris correction
+at this point).
+
+A reasonable set of values are shown above. Much smaller velocity limit
+will result in slow convergence for the implicit solver. The radial limit is 
+not very crucial, but it should be set large enough to cover the whole region
+where the wave speed may exceed it and the reduced diffusion is important.
+
+Default is UseClimit false.
+</command>
+
 <!-- ^CFG IF BORISCORR BEGIN -->
 <command name="BORIS">
 	<parameter name="UseBorisCorrection" type="logical" default="F"/>
