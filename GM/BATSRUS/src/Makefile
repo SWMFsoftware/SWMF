@@ -21,6 +21,7 @@ MOD4 = ModProject.o  #^CFG IF PROJECTION
 MODULES = \
 	ModAdvance.o\
 	ModAMR.o\
+	ModB0.o\
 	ModBlockData.o\
 	ModBoundaryCells.o\
 	ModConserveFlux.o\
@@ -36,7 +37,6 @@ MODULES = \
 	ModFaceValue.o\
 	ModGeometry.o\
 	ModHallResist.o\
-	ModHEDPlasma.o\
 	ModIO.o\
 	ModMain.o\
 	ModMessagePass.o\

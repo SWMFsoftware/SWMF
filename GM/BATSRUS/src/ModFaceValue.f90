@@ -354,10 +354,7 @@ contains
     use ModGeometry, ONLY : true_cell,body_BLK
     use ModNumConst
     use ModPhysics, ONLY: c2LIGHT,inv_c2LIGHT  !^CFG IF BORISCORR BEGIN
-    use ModAdvance, ONLY: B0xCell_BLK, B0yCell_BLK, B0zCell_BLK, &
-         B0xFace_x_BLK, B0yFace_x_BLK, B0zFace_x_BLK,&
-         B0xFace_y_BLK, B0yFace_y_BLK, B0zFace_y_BLK,&
-         B0xFace_z_BLK, B0yFace_z_BLK, B0zFace_z_BLK    !^CFG END BORISCORR
+    use ModB0                                  !^CFG END BORISCORR
     use ModAdvance, ONLY: State_VGB,&
          LeftState_VX,      &  ! Face Left  X
          RightState_VX,     &  ! Face Right X
@@ -673,9 +670,9 @@ contains
       !            = rhoU*(1+BB/(rho*c2)) - B UdotB/c^2
       Primitive_VG(:,i,j,k) = &
            State_VGB(1:nVar,i,j,k,iBlock)
-      BxFull = B0xCell_BLK(i,j,k,iBlock) + Primitive_VG(Bx_,i,j,k)
-      ByFull = B0yCell_BLK(i,j,k,iBlock) + Primitive_VG(By_,i,j,k)
-      BzFull = B0zCell_BLK(i,j,k,iBlock) + Primitive_VG(Bz_,i,j,k)
+      BxFull = B0_DGB(x_,i,j,k,iBlock) + Primitive_VG(Bx_,i,j,k)
+      ByFull = B0_DGB(y_,i,j,k,iBlock) + Primitive_VG(By_,i,j,k)
+      BzFull = B0_DGB(z_,i,j,k,iBlock) + Primitive_VG(Bz_,i,j,k)
       B2Full = BxFull**2 + ByFull**2 + BzFull**2
       RhoC2Inv  =cOne/(Primitive_VG(rho_,i,j,k)*c2LIGHT)
       uBC2Inv= (Primitive_VG(rhoUx_,i,j,k)*BxFull + &
@@ -740,9 +737,9 @@ contains
 
          ! Left face values
          RhoInv=cOne/LeftState_VX(rho_,i,j,k)
-         BxFull = B0xFace_x_BLK(i,j,k,iBlock) + LeftState_VX(Bx_,i,j,k)
-         ByFull = B0yFace_x_BLK(i,j,k,iBlock) + LeftState_VX(By_,i,j,k)
-         BzFull = B0zFace_x_BLK(i,j,k,iBlock) + LeftState_VX(Bz_,i,j,k)
+         BxFull = B0_DX(x_,i,j,k) + LeftState_VX(Bx_,i,j,k)
+         ByFull = B0_DX(y_,i,j,k) + LeftState_VX(By_,i,j,k)
+         BzFull = B0_DX(z_,i,j,k) + LeftState_VX(Bz_,i,j,k)
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
          RhoC2Inv  = inv_c2LIGHT*RhoInv
          LeftState_VX(Ux_,i,j,k)=LeftState_VX(Ux_,i,j,k)*RhoInv
@@ -764,17 +761,17 @@ contains
 
          ! Right face values
          RhoInv=cOne/RightState_VX(rho_,i,j,k)
-         BxFull = B0xFace_x_BLK(i,j,k,iBlock) + RightState_VX(Bx_,i,j,k)
-         ByFull = B0yFace_x_BLK(i,j,k,iBlock) + RightState_VX(By_,i,j,k)
-         BzFull = B0zFace_x_BLK(i,j,k,iBlock) + RightState_VX(Bz_,i,j,k)
+         BxFull = B0_DX(x_,i,j,k) + RightState_VX(Bx_,i,j,k)
+         ByFull = B0_DX(y_,i,j,k) + RightState_VX(By_,i,j,k)
+         BzFull = B0_DX(z_,i,j,k) + RightState_VX(Bz_,i,j,k)
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
          RhoC2Inv  =inv_c2LIGHT*RhoInv
          RightState_VX(Ux_,i,j,k)=RightState_VX(Ux_,i,j,k)*RhoInv
          RightState_VX(Uy_,i,j,k)=RightState_VX(Uy_,i,j,k)*RhoInv
          RightState_VX(Uz_,i,j,k)=RightState_VX(Uz_,i,j,k)*RhoInv
          uBC2Inv= (RightState_VX(Ux_,i,j,k)*BxFull + &
-              RightState_VX(Uy_,i,j,k)*ByFull + &
-              RightState_VX(Uz_,i,j,k)*BzFull)*RhoC2Inv
+                   RightState_VX(Uy_,i,j,k)*ByFull + &
+                   RightState_VX(Uz_,i,j,k)*BzFull)*RhoC2Inv
 
          ! gammaA^2 = 1/[1+BB/(rho c^2)]
          Ga2Boris=cOne/(cOne+B2Full*RhoC2Inv)
@@ -799,9 +796,9 @@ contains
 
          ! Left face values
          RhoInv=cOne/LeftState_VY(rho_,i,j,k)
-         BxFull = B0xFace_y_BLK(i,j,k,iBlock) + LeftState_VY(Bx_,i,j,k)
-         ByFull = B0yFace_y_BLK(i,j,k,iBlock) + LeftState_VY(By_,i,j,k)
-         BzFull = B0zFace_y_BLK(i,j,k,iBlock) + LeftState_VY(Bz_,i,j,k)
+         BxFull = B0_DY(x_,i,j,k) + LeftState_VY(Bx_,i,j,k)
+         ByFull = B0_DY(y_,i,j,k) + LeftState_VY(By_,i,j,k)
+         BzFull = B0_DY(z_,i,j,k) + LeftState_VY(Bz_,i,j,k)
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
          RhoC2Inv  =inv_c2LIGHT*RhoInv
          LeftState_VY(Ux_,i,j,k)=LeftState_VY(Ux_,i,j,k)*RhoInv
@@ -823,9 +820,9 @@ contains
 
          ! Right face values
          RhoInv=cOne/RightState_VY(rho_,i,j,k) 
-         BxFull = B0xFace_y_BLK(i,j,k,iBlock) + RightState_VY(Bx_,i,j,k)
-         ByFull = B0yFace_y_BLK(i,j,k,iBlock) + RightState_VY(By_,i,j,k)
-         BzFull = B0zFace_y_BLK(i,j,k,iBlock) + RightState_VY(Bz_,i,j,k)
+         BxFull = B0_DY(x_,i,j,k) + RightState_VY(Bx_,i,j,k)
+         ByFull = B0_DY(y_,i,j,k) + RightState_VY(By_,i,j,k)
+         BzFull = B0_DY(z_,i,j,k) + RightState_VY(Bz_,i,j,k)
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
          RhoC2Inv=inv_c2LIGHT*RhoInv
          RightState_VY(Ux_,i,j,k)=RightState_VY(Ux_,i,j,k)*RhoInv
@@ -860,9 +857,9 @@ contains
 
          ! Left face values
          RhoInv=cOne/LeftState_VZ(rho_,i,j,k)
-         BxFull = B0xFace_z_BLK(i,j,k,iBlock) + LeftState_VZ(Bx_,i,j,k)
-         ByFull = B0yFace_z_BLK(i,j,k,iBlock) + LeftState_VZ(By_,i,j,k)
-         BzFull = B0zFace_z_BLK(i,j,k,iBlock) + LeftState_VZ(Bz_,i,j,k)
+         BxFull = B0_DZ(x_,i,j,k) + LeftState_VZ(Bx_,i,j,k)
+         ByFull = B0_DZ(y_,i,j,k) + LeftState_VZ(By_,i,j,k)
+         BzFull = B0_DZ(z_,i,j,k) + LeftState_VZ(Bz_,i,j,k)
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
          RhoC2Inv  =inv_c2LIGHT*RhoInv
          LeftState_VZ(Ux_,i,j,k)=LeftState_VZ(Ux_,i,j,k)*RhoInv
@@ -884,9 +881,9 @@ contains
 
          ! Right face values
          RhoInv=cOne/RightState_VZ(rho_,i,j,k)
-         BxFull = B0xFace_z_BLK(i,j,k,iBlock) + RightState_VZ(Bx_,i,j,k)
-         ByFull = B0yFace_z_BLK(i,j,k,iBlock) + RightState_VZ(By_,i,j,k)
-         BzFull = B0zFace_z_BLK(i,j,k,iBlock) + RightState_VZ(Bz_,i,j,k)
+         BxFull = B0_DZ(x_,i,j,k) + RightState_VZ(Bx_,i,j,k)
+         ByFull = B0_DZ(y_,i,j,k) + RightState_VZ(By_,i,j,k)
+         BzFull = B0_DZ(z_,i,j,k) + RightState_VZ(Bz_,i,j,k)
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
          RhoC2Inv  =inv_c2LIGHT*RhoInv
          RightState_VZ(Ux_,i,j,k)=RightState_VZ(Ux_,i,j,k)*RhoInv

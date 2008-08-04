@@ -7,7 +7,7 @@ subroutine specify_refinement(DoRefine_B)
 
   use ModProcMH,   ONLY: iProc
   use ModMain,     ONLY: MaxBlock, nBlock, nBlockMax, nI, nJ, nK, UnusedBlk, &
-       BlkTest, Test_String, r_, Phi_, Theta_
+       BlkTest, Test_String, r_, Phi_, Theta_, x_, y_, z_
   use ModAMR,      ONLY: nArea, AreaType, Area_I, lNameArea
   use ModGeometry, ONLY: dx_BLK, UseCovariant, x_BLK, y_BLK, z_BLK, &
        TypeGeometry
@@ -15,8 +15,7 @@ subroutine specify_refinement(DoRefine_B)
   use ModUser,     ONLY: user_specify_refinement
 
   ! Needed for the 'currentsheet' area type only
-  use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_, &
-       B0xCell_Blk, B0yCell_Blk, B0zCell_Blk
+  use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_, B0_DGB
   use ModGeometry, ONLY: far_field_BCs_BLK
   use ModNumConst, ONLY: cTiny, cRadToDeg
 
@@ -100,11 +99,11 @@ subroutine specify_refinement(DoRefine_B)
            ! Calculate BdotR including ghost cells in all directions
            do k=0, nK+1; do j=1, nJ; do i=1, nI
               rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
-                * (B0xCell_BLK(i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)) &
+                * (B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)) &
                 +              y_BLK(i,j,k,iBlock)   &
-                * (B0yCell_BLK(i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)) &
+                * (B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)) &
                 +              z_BLK(i,j,k,iBlock)   &
-                * (B0zCell_BLK(i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock))
+                * (B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock))
            end do; end do; end do;
            DoRefine_B(iBlock) = &
                 maxval(rDotB_G) > cTiny .and. minval(rDotB_G) < -cTiny

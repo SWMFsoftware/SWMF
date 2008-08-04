@@ -8,7 +8,7 @@ module ModUser
   use ModMain
   use ModPhysics
   use ModSetOuterBC
-  use ModAdvance,  ONLY : State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
+  use ModAdvance,  ONLY : State_VGB, B0_DGB
   use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, far_field_BCs_BLK, MaxBoundary
   use ModVarIndexes
   use ModConst, ONLY: cLightSpeed, cElectronCharge, cElectronMass
@@ -429,7 +429,7 @@ contains
     use ModPhysics,   ONLY : CellState_VI
     use ModSetOuterBC
     use ModProcMH
-    use ModAdvance, ONLY : State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
+    use ModAdvance, ONLY : State_VGB, B0_DGB
     use ModMultiFluid
 
     integer,intent(in)::iBlock, iSide

@@ -15,7 +15,7 @@ subroutine ray_trace_accurate
   use CON_ray_trace, ONLY: ray_init
   use ModMain
   use ModAdvance,    ONLY: State_VGB, Bx_, Bz_, &
-       B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
+       B0_DGB
   use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,r_BLK,true_cell,XyzMax_D,XyzMin_D
 
   use ModMpi
@@ -53,12 +53,9 @@ subroutine ray_trace_accurate
   call message_pass_cells8(.false.,.false.,.false.,3,Bxyz_DGB)
 
   ! Add B0
-  Bxyz_DGB(1,:,:,:,1:nBlock) = Bxyz_DGB(1,:,:,:,1:nBlock) &
-       + B0xCell_BLK(:,:,:,1:nBlock)
-  Bxyz_DGB(2,:,:,:,1:nBlock) = Bxyz_DGB(2,:,:,:,1:nBlock) &
-       + B0yCell_BLK(:,:,:,1:nBlock)
-  Bxyz_DGB(3,:,:,:,1:nBlock) = Bxyz_DGB(3,:,:,:,1:nBlock) &
-       + B0zCell_BLK(:,:,:,1:nBlock)
+  Bxyz_DGB(1:3,:,:,:,1:nBlock) = Bxyz_DGB(1:3,:,:,:,1:nBlock) &
+       + B0_DGB(:,:,:,:,1:nBlock)
+ 
 
   ! Initial values
   ray=NORAY
@@ -1227,7 +1224,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   use ModMain,    ONLY: nBlock, Time_Simulation, TypeCoordSystem
   use ModPhysics, ONLY: rBody
   use ModAdvance, ONLY: nVar, State_VGB, Rho_, p_, Bx_, Bz_, &
-       B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
+       B0_DGB
   use ModProcMH
   use ModMpi
   use ModNumConst,       ONLY: cDegToRad, cTiny
@@ -1307,12 +1304,8 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   call message_pass_cells8(.false.,.false.,.false.,3,Bxyz_DGB)
 
   ! Add B0 for faster interpolation
-  Bxyz_DGB(1,:,:,:,1:nBlock) = Bxyz_DGB(1,:,:,:,1:nBlock) &
-       + B0xCell_BLK(:,:,:,1:nBlock)
-  Bxyz_DGB(2,:,:,:,1:nBlock) = Bxyz_DGB(2,:,:,:,1:nBlock) &
-       + B0yCell_BLK(:,:,:,1:nBlock)
-  Bxyz_DGB(3,:,:,:,1:nBlock) = Bxyz_DGB(3,:,:,:,1:nBlock) &
-       + B0zCell_BLK(:,:,:,1:nBlock)
+  Bxyz_DGB(1:3,:,:,:,1:nBlock) = Bxyz_DGB(1:3,:,:,:,1:nBlock) &
+       + B0_DGB(:,:,:,:,1:nBlock)
 
   if(DoIntegrateRay)then
      ! Copy density and pressure into Extra_VGB
@@ -1505,7 +1498,7 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
        nRay_D, NameVectorField, R_Raytrace, R2_Raytrace, RayLengthMax, Bxyz_DGB
   use CON_ray_trace, ONLY: ray_init
   use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, &
-       B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
+       B0_DGB
   use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBLK
   use ModPhysics,  ONLY: rBody
   use ModGeometry, ONLY: XyzMax_D, XyzMin_D, Dx_BLK, Dy_BLK, Dz_BLK
@@ -1546,12 +1539,8 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
   select case(NameVectorField)
   case('B')
      ! Store B1+B0 for faster interpolation
-     Bxyz_DGB(1,:,:,:,1:nBlock) = State_VGB(Bx_,:,:,:,1:nBlock) &
-          + B0xCell_BLK(:,:,:,1:nBlock)
-     Bxyz_DGB(2,:,:,:,1:nBlock) = State_VGB(By_,:,:,:,1:nBlock) &
-          + B0yCell_BLK(:,:,:,1:nBlock)
-     Bxyz_DGB(3,:,:,:,1:nBlock) = State_VGB(Bz_,:,:,:,1:nBlock) &
-          + B0zCell_BLK(:,:,:,1:nBlock)
+     Bxyz_DGB(1:3,:,:,:,1:nBlock) = State_VGB(Bx_:Bz_,:,:,:,1:nBlock) &
+          + B0_DGB(:,:,:,:,1:nBlock)
   case('U')
      ! Store momentum field (same as velocity field after normalization)
      Bxyz_DGB(1,:,:,:,1:nBlock) = State_VGB(RhoUx_,:,:,:,1:nBlock)

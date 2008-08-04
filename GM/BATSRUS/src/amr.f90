@@ -76,7 +76,7 @@ subroutine amr(idepth)
      ! Correct B0 face at newly created and removed resolution changes
      do iBlock=1,nBlock
         if (unusedBLK(iBlock)) CYCLE
-        call set_b0_face(iBlock)
+        call set_b0_source(iBlock)
      end do
   end if
   ! Reset divb (it is undefined in newly created/moved blocks)

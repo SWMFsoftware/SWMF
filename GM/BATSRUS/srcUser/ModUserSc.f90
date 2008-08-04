@@ -419,7 +419,7 @@ contains
   subroutine user_update_states(iStage,iBlock)
     use ModVarIndexes
     use ModSize
-    use ModAdvance, ONLY: State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
+    use ModAdvance, ONLY: State_VGB, B0_DGB
     use ModMain,    ONLY: nStage
     use ModPhysics, ONLY: inv_gm1
     use ModGeometry,ONLY: R_BLK
@@ -440,10 +440,8 @@ contains
        if(R_BLK(i,j,k,iBlock)>2.5)&
             GammaCell=GammaCell-(GammaCell-gammaSS)*max(0.0, &
             -1.0 + 2*State_VGB(P_,i,j,k,iBlock)/&
-            (State_VGB(P_   ,i,j,k,iBlock)+(&
-            (State_VGB(Bx_   ,i,j,k,iBlock)+B0xCell_BLK(i,j,k,iBlock))**2+&
-            (State_VGB(By_   ,i,j,k,iBlock)+B0yCell_BLK(i,j,k,iBlock))**2+&
-            (State_VGB(Bz_   ,i,j,k,iBlock)+B0zCell_BLK(i,j,k,iBlock))**2)&
+            (State_VGB(P_   ,i,j,k,iBlock)+sum(&
+            (State_VGB(Bx_:Bz_ ,i,j,k,iBlock)+B0_DGB(:,i,j,k,iBlock))**2)&
             *0.25*(R_BLK(i,j,k,iBlock)/2.5)**1.50))
        State_VGB(P_   ,i,j,k,iBlock)=(GammaCell-1.0)*      &
             (inv_gm1*State_VGB(P_,i,j,k,iBlock) + State_VGB(Ew_,i,j,k,iBlock))
@@ -460,11 +458,10 @@ contains
   subroutine user_get_log_var(VarValue,TypeVar,Radius)
 
     use ModIO,         ONLY: write_myname
-    use ModMain,       ONLY: unusedBLK,nBLK
+    use ModMain,       ONLY: unusedBLK,nBLK,x_,y_,z_
     use ModVarIndexes, ONLY: Ew_,Bx_,By_,Bz_,rho_,rhoUx_,rhoUy_,rhoUz_,P_ 
     use ModGeometry,   ONLY: R_BLK
-    use ModAdvance,    ONLY: State_VGB,tmp1_BLK,B0xCell_BLK,    &
-         B0yCell_BLK,B0zCell_BLK
+    use ModAdvance,    ONLY: State_VGB,tmp1_BLK,B0_DGB
     use ModPhysics,    ONLY: inv_gm1,&
          No2Si_V,UnitEnergydens_,UnitX_,UnitU_,UnitRho_
 
@@ -485,10 +482,10 @@ contains
     case('em_t','Em_t','em_r','Em_r')
        do iBLK=1,nBLK
           if (unusedBLK(iBLK)) CYCLE
-          tmp1_BLK(:,:,:,iBLK) = &
-               (B0xcell_BLK(:,:,:,iBLK)+State_VGB(Bx_,:,:,:,iBLK))**2+&
-               (B0ycell_BLK(:,:,:,iBLK)+State_VGB(By_,:,:,:,iBLK))**2+&
-               (B0zcell_BLK(:,:,:,iBLK)+State_VGB(Bz_,:,:,:,iBLK))**2
+          tmp1_BLK(:,:,:,iBLK) = & 
+               (B0_DGB(x_,:,:,:,iBLK)+State_VGB(Bx_,:,:,:,iBLK))**2+&
+               (B0_DGB(y_,:,:,:,iBLK)+State_VGB(By_,:,:,:,iBLK))**2+&
+               (B0_DGB(z_,:,:,:,iBLK)+State_VGB(Bz_,:,:,:,iBLK))**2
        end do
        VarValue = unit_energy*0.5*integrate_BLK(1,tmp1_BLK)
     case('ek_t','Ek_t','ek_r','Ek_r')
@@ -535,10 +532,10 @@ contains
   subroutine user_specify_refinement(iBlock, iArea, DoRefine)
 
     use ModSize,     ONLY: nI, nJ, nK
-    use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_, &
-         B0xCell_Blk, B0yCell_Blk, B0zCell_Blk
+    use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_, B0_DGB
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, far_field_BCs_BLK
     use ModNumConst, ONLY: cTiny
+    use ModMain,     ONLY: x_, y_, z_
 
     integer, intent(in) :: iBlock, iArea
     logical,intent(out) :: DoRefine
@@ -558,11 +555,11 @@ contains
     ! passing between blocks
     do k=0, nK+1; do j=1, nJ; do i=1, nI
        rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
-            * (B0xCell_BLK(i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)) &
+            * (B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)) &
             +              y_BLK(i,j,k,iBlock)   &
-            * (B0yCell_BLK(i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)) &
+            * (B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)) &
             +              z_BLK(i,j,k,iBlock)   &
-            * (B0zCell_BLK(i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock))
+            * (B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock))
     end do; end do; end do;
 
     DoRefine = maxval(rDotB_G) > cTiny .and. minval(rDotB_G) < -cTiny

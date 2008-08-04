@@ -101,7 +101,7 @@ subroutine set_global_timestep(TimeSimulationLimit)
   use ModMain
   use ModAdvance,  ONLY: time_BLK,State_VGB,rho_,Bx_,By_,Bz_,P_,&
        iTypeAdvance_B, ExplBlock_
-  use ModAdvance,  ONLY: B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
+  use ModAdvance,  ONLY: B0_DGB
   use ModGeometry, ONLY: true_cell,true_BLK,dx_BLK,XyzStart_BLK
   use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK
   use ModImplicit, ONLY: UsePartImplicit                 !^CFG IF IMPLICIT
@@ -149,12 +149,8 @@ subroutine set_global_timestep(TimeSimulationLimit)
                    XyzStart_BLK(:,iBlock)
               write(*,*)'Cell size Dx in normalized and SI units:',&
                    Dx_BLK(iBlock), ', ', Dx_BLK(iBlock)*No2Si_V(UnitX_),' m'
-              Cmax_C = ((State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock) + &
-                     B0xCell_BLK(1:nI,1:nJ,1:nK,iBlock))**2+&
-                    (State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)+&
-                     B0yCell_BLK(1:nI,1:nJ,1:nK,iBlock))**2+&
-                    (State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)+&
-                     B0zCell_BLK(1:nI,1:nJ,1:nK,iBlock))**2+&
+              Cmax_C = (sum((State_VGB(Bx_:Bz_,1:nI,1:nJ,1:nK,iBlock) + &
+                     B0_DGB(:,1:nI,1:nJ,1:nK,iBlock))**2)+&
                      g*State_VGB(P_,1:nI,1:nJ,1:nK,iBlock))/&
                      State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
               Ijk_D = maxloc(Cmax_C, MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
@@ -166,9 +162,7 @@ subroutine set_global_timestep(TimeSimulationLimit)
                      y_BLK(i,j,k,iBlock), &
                      z_BLK(i,j,k,iBlock)
               write(*,*)'State variables at this point: B0:',&
-                     B0xCell_BLK(i,j,k,iBlock)*No2Si_V(UnitB_),&
-                     B0yCell_BLK(i,j,k,iBlock)*No2Si_V(UnitB_),&
-                     B0zCell_BLK(i,j,k,iBlock)*No2Si_V(UnitB_),&
+                     B0_DGB(:,i,j,k,iBlock)*No2Si_V(UnitB_),&
                      ' T,  B1:',&
                      State_VGB(Bx_:Bz_,i,j,k,iBlock)*No2Si_V(UnitB_),&
                      ' T,  Density=',&

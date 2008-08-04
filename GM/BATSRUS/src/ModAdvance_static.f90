@@ -4,6 +4,7 @@ Module ModAdvance
   use ModVarIndexes
   use ModIO,         ONLY: iUnitOut, write_prefix
   use ModProcMH,     ONLY: iProc, nProc
+  use ModB0
 
   implicit none
   save
@@ -78,7 +79,6 @@ Module ModAdvance
   ! Block cell-centered intrinsic magnetic field, time, and temporary storage
   !/
   real,  dimension(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn, MaxBlock) :: &
-       B0xCell_BLK, B0yCell_BLK, B0zCell_BLK, &
        tmp1_BLK, tmp2_BLK
 
   real :: time_BLK(nI, nJ, nK, MaxBlock)
@@ -106,18 +106,6 @@ Module ModAdvance
        gradX_Ux, gradX_Uy, gradX_Uz, gradX_Bx, gradX_By, gradX_Bz, gradX_VAR,&
        gradY_Ux, gradY_Uy, gradY_Uz, gradY_Bx, gradY_By, gradY_Bz, gradY_VAR,&
        gradZ_Ux, gradZ_Uy, gradZ_Uz, gradZ_Bx, gradZ_By, gradZ_Bz, gradZ_VAR
-
-  !\
-  ! Block face-centered intrinsic magnetic field array definitions.
-  !/
-  real, dimension(2-gcn:nI+gcn, 0:nJ+1, 0:nK+1, MaxBlock) :: &
-       B0xFace_x_BLK, B0yFace_x_BLK, B0zFace_x_BLK 
-
-  real, dimension(0:nI+1, 2-gcn:nJ+gcn, 0:nK+1, MaxBlock) :: &
-       B0xFace_y_BLK, B0yFace_y_BLK, B0zFace_y_BLK
-
-  real, dimension(0:nI+1, 0:nJ+1, 2-gcn:nK+gcn, MaxBlock) :: &
-       B0xFace_z_BLK, B0yFace_z_BLK, B0zFace_z_BLK
 
   real :: CurlB0_DCB(3, nI, nJ, nK, MaxBlock)
   real :: DivB0_CB(nI, nJ, nK, MaxBlock)

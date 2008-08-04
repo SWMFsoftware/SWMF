@@ -30,18 +30,12 @@ subroutine set_ics
      DoTest = .false.; DoTestMe = .false.
   end if
 
-  B0xCell_BLK(:,:,:,iBlock) = 0.00
-  B0yCell_BLK(:,:,:,iBlock) = 0.00
-  B0zCell_BLK(:,:,:,iBlock) = 0.00
-  B0xFace_x_BLK(:,:,:,iBlock) = 0.00
-  B0yFace_x_BLK(:,:,:,iBlock) = 0.00
-  B0zFace_x_BLK(:,:,:,iBlock) = 0.00
-  B0xFace_y_BLK(:,:,:,iBlock) = 0.00
-  B0yFace_y_BLK(:,:,:,iBlock) = 0.00
-  B0zFace_y_BLK(:,:,:,iBlock) = 0.00
-  B0xFace_z_BLK(:,:,:,iBlock) = 0.00
-  B0yFace_z_BLK(:,:,:,iBlock) = 0.00
-  B0zFace_z_BLK(:,:,:,iBlock) = 0.00
+  if(UseB0)then
+     B0_DGB(:,:,:,:,iBlock) = 0.00
+     B0ResChange_DXSB(:,:,:,:,iBlock) = 0.00
+     B0ResChange_DYSB(:,:,:,:,iBlock) = 0.00
+     B0ResChange_DZSB(:,:,:,:,iBlock) = 0.00
+  end if
 
   time_BLK(:,:,:,iBlock) = 0.00
 
@@ -129,12 +123,8 @@ subroutine set_ics
               end do
               if(.not.UseB0)CYCLE
               ! Remove B0 from B (if any)
-              State_VGB(Bx_,i,j,k,iBlock)=State_VGB(Bx_,i,j,k,iBlock) - &
-                   B0xCell_BLK(i,j,k,iBlock)
-              State_VGB(By_,i,j,k,iBlock)=State_VGB(By_,i,j,k,iBlock) - &
-                   B0yCell_BLK(i,j,k,iBlock)
-              State_VGB(Bz_,i,j,k,iBlock)=State_VGB(Bz_,i,j,k,iBlock) - &
-                   B0zCell_BLK(i,j,k,iBlock)
+              State_VGB(Bx_:Bz_,i,j,k,iBlock)=State_VGB(Bx_:Bz_,i,j,k,iBlock) - &
+                   B0_DGB(:,i,j,k,iBlock)
            end if
 
         end do; end do; end do

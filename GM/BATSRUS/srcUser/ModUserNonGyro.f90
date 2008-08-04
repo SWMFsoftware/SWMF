@@ -286,9 +286,9 @@ contains
 
              do i=nI,1,-1
                 ! Find reversal in Bz
-                if ( B0zCell_BLK(i+1,j1,1,iBLK) + &
+                if ( B0_DGB(z_,i+1,j1,1,iBLK) + &
                      State_VGB(Bz_,i+1,j1,1,iBLK) > 0. .and. &
-                     B0zCell_BLK(i-1,j1,1,iBLK) + &
+                     B0_DGB(z_,i-1,j1,1,iBLK) + &
                      State_VGB(Bz_,i-1,j1,1,iBLK) <=0.) then
                    
                    XX0max  = x_BLK(i,j1,1,iBLK)
@@ -401,9 +401,9 @@ contains
 
              do i=nI,1,-1
                 !
-                if ( B0zCell_BLK(i+1,j1,1,iBLK) + &
+                if ( B0_DGB(z_,i+1,j1,1,iBLK) + &
                      State_VGB(Bz_,i+1,j1,1,iBLK) > 0 .and. &
-                     B0zCell_BLK(i-1,j1,1,iBLK) + &
+                     B0_DGB(z_,i-1,j1,1,iBLK) + &
                      State_VGB(Bz_,i-1,j1,1,iBLK) <=0) then
 
                    XX0max  = x_BLK(i,j1,1,iBLK)
@@ -451,8 +451,8 @@ contains
   subroutine set_rec_parameters(i, j, k, iBlock)
 
     use ModAdvance, ONLY: State_VGB, Bx_, Bz_, Rho_, RhoUx_, RhoUz_, p_, &
-         B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
-
+         B0_DGB
+    use ModMain,ONLY:x_,y_,z_
     use ModGeometry, ONLY: Dx_Blk, Dy_Blk, Dz_Blk
 
     integer, intent(in) :: i, j, k, iBlock
@@ -461,15 +461,15 @@ contains
     !-----------------------------------------------------------------------
     ! dBz/dx
     dBzDx = ((State_VGB(Bz_,i+1,j,k,iBlock) &
-         +      B0zCell_BLK(i+1,j,k,iBlock))  &
+         +      B0_DGB(z_,i+1,j,k,iBlock))  &
          -   (State_VGB(Bz_,i-1,j,k,iBlock) &
-         +      B0zCell_BLK(i-1,j,k,iBlock))) / (2*Dx_BLK(iBlock))
+         +      B0_DGB(z_,i-1,j,k,iBlock))) / (2*Dx_BLK(iBlock))
 
     ! dBx/dz
     dBxDz = ((State_VGB(Bx_,i,j,k+1,iBlock) &
-         +      B0xCell_BLK(i,j,k+1,iBlock))  &
+         +      B0_DGB(x_,i,j,k+1,iBlock))  &
          -   (State_VGB(Bx_,i,j,k-1,iBlock) &
-         +      B0xCell_BLK(i,j,k-1,iBlock))) / (2*Dz_BLK(iBlock))
+         +      B0_DGB(x_,i,j,k-1,iBlock))) / (2*Dz_BLK(iBlock))
 
     ! d(Vx)/dx
     dVxDx = (State_VGB(RhoUx_,i+1,j,1,iBlock) &

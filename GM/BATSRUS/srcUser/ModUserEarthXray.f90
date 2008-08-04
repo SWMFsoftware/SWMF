@@ -252,7 +252,7 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModPhysics
-    use ModMain, ONLY: Body1_, time_simulation
+    use ModMain, ONLY: Body1_, time_simulation,x_,y_,z_
     use ModAdvance
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, r_BLK, IsBoundaryBlock_IB
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, GLOBALBLK
@@ -322,21 +322,21 @@ contains
           ! Note: here we add B0x to the summed B1.  We have to multiply by the time because the
           ! summed variables have been multiplied by dt in the summation.
           PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(Bx_,:,:,:)+ &
-               B0xCell_BLK(1:nI,1:nJ,1:nK,iBlock)*(tSumEnd-tSumStart)
+               B0_DGB(x_,1:nI,1:nJ,1:nK,iBlock)*(tSumEnd-tSumStart)
        case('byave') 
           NameTecVar = '<B_y>'
           iUnitVar   = UnitB_
           ! Note: here we add B0y to the summed B1.  We have to multiply by the time because the
           ! summed variables have been multiplied by dt in the summation.
           PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(By_,:,:,:)+ &
-               B0yCell_BLK(1:nI,1:nJ,1:nK,iBlock)*(tSumEnd-tSumStart)
+               B0_DGB(y_,1:nI,1:nJ,1:nK,iBlock)*(tSumEnd-tSumStart)
        case('bzave') 
           NameTecVar = '<B_z>'
           iUnitVar   = UnitB_
           ! Note: here we add B0z to the summed B1.  We have to multiply by the time because the
           ! summed variables have been multiplied by dt in the summation.
           PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(Bz_,:,:,:)+ &
-               B0zCell_BLK(1:nI,1:nJ,1:nK,iBlock)*(tSumEnd-tSumStart)
+               B0_DGB(z_,1:nI,1:nJ,1:nK,iBlock)*(tSumEnd-tSumStart)
        case('uxave') 
           NameTecVar = '<U_x>'
           iUnitVar   = UnitU_

@@ -6,7 +6,7 @@ subroutine add_heat_flux(DoResChangeOnly)
        iMinFaceY,iMaxFaceY,iMinFaceZ,iMaxFaceZ, &
        jMinFaceX,jMaxFaceX,jMinFaceZ,jMaxFaceZ, &
        kMinFaceX,kMaxFaceX,kMinFaceY,kMaxFaceY, &
-       globalBLK,UseSpitzerForm
+       globalBLK,UseSpitzerForm,x_,y_,z_
   use ModVarIndexes,ONLY:rho_,P_,Energy_,&
        Bx_,By_,Bz_
   use ModGeometry, ONLY: dx_BLK, &
@@ -14,7 +14,7 @@ subroutine add_heat_flux(DoResChangeOnly)
   use ModParallel, ONLY:neiLeast,neiLwest,neiLsouth, &
        neiLnorth,neiLtop,neiLbot
   use ModAdvance,  ONLY:State_VGB, &
-       B0xCell_BLK,B0yCell_BLK,B0zCell_BLK, & 
+       B0_DGB, & 
        VdtFace_x,VdtFace_y,VdtFace_z, &
        Flux_VX,Flux_VY,Flux_VZ
   use ModConst,    ONLY:cBoltzmann,cProtonMass, &
@@ -51,11 +51,11 @@ subroutine add_heat_flux(DoResChangeOnly)
   CU_energydens     = No2Si_V(UnitEnergydens_)    ! in [J/m^3]
   !
   BX2(:,:,:) = (State_VGB(Bx_,:,:,:,globalBLK)+&
-       B0xCell_BLK(:,:,:,globalBLK))**2
+       B0_DGB(x_,:,:,:,globalBLK))**2
   BY2(:,:,:) = (State_VGB(By_,:,:,:,globalBLK)+&
-       B0yCell_BLK(:,:,:,globalBLK))**2
+       B0_DGB(y_,:,:,:,globalBLK))**2
   BZ2(:,:,:) = (State_VGB(Bz_,:,:,:,globalBLK)+&
-       B0zCell_BLK(:,:,:,globalBLK))**2
+       B0_DGB(z_,:,:,:,globalBLK))**2
   B2Inverted = cOne/max(BX2+BY2+BZ2,cTiny**2)
   !\
   ! Compute and add the x_heat_flux to the x-face fluxes 

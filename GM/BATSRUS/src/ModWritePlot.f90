@@ -580,7 +580,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModProcMH
   use ModMain
   use ModVarIndexes
-  use ModAdvance, ONLY : time_BLK,B0xCell_BLK,B0yCell_BLK,B0zCell_BLK, &
+  use ModAdvance, ONLY : time_BLK,B0_DGB, &
        State_VGB, Energy_GBI, DivB1_GB, IsConserv_CB, UseNonconservative, &
        Ex_CB, Ey_CB, Ez_CB, iTypeAdvance_B
   use ModGeometry
@@ -683,13 +683,13 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         PlotVar(:,:,:,iVar)=State_VGB(iRhoUz,:,:,:,iBLK)
      case('bx')
         plotvar_useBody(iVar) = NameThisComp/='SC'
-        PlotVar(:,:,:,iVar)=State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK)
+        PlotVar(:,:,:,iVar)=State_VGB(Bx_,:,:,:,iBLK)+B0_DGB(x_,:,:,:,iBLK)
      case('by')
         plotvar_useBody(iVar) = NameThisComp/='SC'
-        PlotVar(:,:,:,iVar)=State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK)
+        PlotVar(:,:,:,iVar)=State_VGB(By_,:,:,:,iBLK)+B0_DGB(y_,:,:,:,iBLK)
      case('bz')
         plotvar_useBody(iVar) = NameThisComp/='SC'
-        PlotVar(:,:,:,iVar)=State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK)
+        PlotVar(:,:,:,iVar)=State_VGB(Bz_,:,:,:,iBLK)+B0_DGB(z_,:,:,:,iBLK)
 
      case('bxl')                                 !^CFG IF CONSTRAINB BEGIN
         PlotVar(1:nI,1:nJ,1:nK,iVar)=BxFace_BLK(1:nI,1:nJ,1:nK,iBLK)
@@ -709,9 +709,9 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         ! Add (B0+B1)^2 - B1^2 so the energy contains B0
         if(iFluid == 1 .and. IsMhd) &
              PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)+0.5*(&
-             (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))**2+&
-             (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))**2+&
-             (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))**2 &
+             (State_VGB(Bx_,:,:,:,iBLK)+B0_DGB(x_,:,:,:,iBLK))**2+&
+             (State_VGB(By_,:,:,:,iBLK)+B0_DGB(y_,:,:,:,iBLK))**2+&
+             (State_VGB(Bz_,:,:,:,iBLK)+B0_DGB(z_,:,:,:,iBLK))**2 &
              -State_VGB(Bx_,:,:,:,iBLK)**2 &
              -State_VGB(By_,:,:,:,iBLK)**2 &
              -State_VGB(Bz_,:,:,:,iBLK)**2)
@@ -923,63 +923,63 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case('ex')
         PlotVar(:,:,:,iVar)= &
              ( State_VGB(iRhoUz,:,:,:,iBLK) &
-             * ( State_VGB(By_,:,:,:,iBLK) + B0yCell_BLK(:,:,:,iBLK)) &
+             * ( State_VGB(By_,:,:,:,iBLK) + B0_DGB(y_,:,:,:,iBLK)) &
              - State_VGB(iRhoUy,:,:,:,iBLK) &
-             * ( State_VGB(Bz_,:,:,:,iBLK) + B0zCell_BLK(:,:,:,iBLK)) &
+             * ( State_VGB(Bz_,:,:,:,iBLK) + B0_DGB(z_,:,:,:,iBLK)) &
              ) / State_VGB(iRho,:,:,:,iBLK) 
      case('ey')
         PlotVar(:,:,:,iVar)= ( State_VGB(iRhoUx,:,:,:,iBLK)* &
-             (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK)) &
+             (State_VGB(Bz_,:,:,:,iBLK)+B0_DGB(z_,:,:,:,iBLK)) &
              -State_VGB(iRhoUz,:,:,:,iBLK)* &
-             (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK)))/ &
+             (State_VGB(Bx_,:,:,:,iBLK)+B0_DGB(x_,:,:,:,iBLK)))/ &
              State_VGB(iRho,:,:,:,iBLK) 
      case('ez')
         PlotVar(:,:,:,iVar)= ( State_VGB(iRhoUy,:,:,:,iBLK)* &
-             (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK)) &
+             (State_VGB(Bx_,:,:,:,iBLK)+B0_DGB(x_,:,:,:,iBLK)) &
              -State_VGB(iRhoUx,:,:,:,iBLK)* &
-             (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK)))/ &
+             (State_VGB(By_,:,:,:,iBLK)+B0_DGB(y_,:,:,:,iBLK)))/ &
              State_VGB(iRho,:,:,:,iBLK) 
      case('pvecx')
         PlotVar(:,:,:,iVar) = ( &
-             ( (State_VGB(Bx_,:,:,:,iBLK)+ B0xCell_BLK(:,:,:,iBLK))**2  &
-             + (State_VGB(By_,:,:,:,iBLK)+ B0yCell_BLK(:,:,:,iBLK))**2  &
-             + (State_VGB(Bz_,:,:,:,iBLK)+ B0zCell_BLK(:,:,:,iBLK))**2) * &
+             ( (State_VGB(Bx_,:,:,:,iBLK)+ B0_DGB(x_,:,:,:,iBLK))**2  &
+             + (State_VGB(By_,:,:,:,iBLK)+ B0_DGB(y_,:,:,:,iBLK))**2  &
+             + (State_VGB(Bz_,:,:,:,iBLK)+ B0_DGB(z_,:,:,:,iBLK))**2) * &
              State_VGB(iRhoUx,:,:,:,iBLK) &
-             -((State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))* &
+             -((State_VGB(Bx_,:,:,:,iBLK)+B0_DGB(x_,:,:,:,iBLK))* &
              State_VGB(iRhoUx,:,:,:,iBLK) + &
-             (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))* &
+             (State_VGB(By_,:,:,:,iBLK)+B0_DGB(y_,:,:,:,iBLK))* &
              State_VGB(iRhoUy,:,:,:,iBLK) + &
-             (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))* &
+             (State_VGB(Bz_,:,:,:,iBLK)+B0_DGB(z_,:,:,:,iBLK))* &
              State_VGB(iRhoUz,:,:,:,iBLK)) * &
-             (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK) ) ) &
+             (State_VGB(Bx_,:,:,:,iBLK)+B0_DGB(x_,:,:,:,iBLK) ) ) &
              / State_VGB(iRho,:,:,:,iBLK)
      case('pvecy')
         PlotVar(:,:,:,iVar) = ( &
-             ((State_VGB(Bx_,:,:,:,iBLK)+ B0xCell_BLK(:,:,:,iBLK))**2 + &
-             (State_VGB(By_,:,:,:,iBLK)+ B0yCell_BLK(:,:,:,iBLK))**2 + &
-             (State_VGB(Bz_,:,:,:,iBLK)+ B0zCell_BLK(:,:,:,iBLK))**2) * &
+             ((State_VGB(Bx_,:,:,:,iBLK)+ B0_DGB(x_,:,:,:,iBLK))**2 + &
+             (State_VGB(By_,:,:,:,iBLK)+ B0_DGB(y_,:,:,:,iBLK))**2 + &
+             (State_VGB(Bz_,:,:,:,iBLK)+ B0_DGB(z_,:,:,:,iBLK))**2) * &
              State_VGB(iRhoUy,:,:,:,iBLK) &
-             -((State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))* &
+             -((State_VGB(Bx_,:,:,:,iBLK)+B0_DGB(x_,:,:,:,iBLK))* &
              State_VGB(iRhoUx,:,:,:,iBLK) + &
-             (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))* &
+             (State_VGB(By_,:,:,:,iBLK)+B0_DGB(y_,:,:,:,iBLK))* &
              State_VGB(iRhoUy,:,:,:,iBLK) + &
-             (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))* &
+             (State_VGB(Bz_,:,:,:,iBLK)+B0_DGB(z_,:,:,:,iBLK))* &
              State_VGB(iRhoUz,:,:,:,iBLK)) * &
-             (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK) ) ) &
+             (State_VGB(By_,:,:,:,iBLK)+B0_DGB(y_,:,:,:,iBLK) ) ) &
              / State_VGB(iRho,:,:,:,iBLK)
      case('pvecz')
         PlotVar(:,:,:,iVar) = ( &
-             ((State_VGB(Bx_,:,:,:,iBLK)+ B0xCell_BLK(:,:,:,iBLK))**2 + &
-             (State_VGB(By_,:,:,:,iBLK)+ B0yCell_BLK(:,:,:,iBLK))**2 + &
-             (State_VGB(Bz_,:,:,:,iBLK)+ B0zCell_BLK(:,:,:,iBLK))**2) * &
+             ((State_VGB(Bx_,:,:,:,iBLK)+ B0_DGB(x_,:,:,:,iBLK))**2 + &
+             (State_VGB(By_,:,:,:,iBLK)+ B0_DGB(y_,:,:,:,iBLK))**2 + &
+             (State_VGB(Bz_,:,:,:,iBLK)+ B0_DGB(z_,:,:,:,iBLK))**2) * &
              State_VGB(iRhoUz,:,:,:,iBLK) &
-             -((State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))* &
+             -((State_VGB(Bx_,:,:,:,iBLK)+B0_DGB(x_,:,:,:,iBLK))* &
              State_VGB(iRhoUx,:,:,:,iBLK) + &
-             (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))* &
+             (State_VGB(By_,:,:,:,iBLK)+B0_DGB(y_,:,:,:,iBLK))* &
              State_VGB(iRhoUy,:,:,:,iBLK) + &
-             (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))* &
+             (State_VGB(Bz_,:,:,:,iBLK)+B0_DGB(z_,:,:,:,iBLK))* &
              State_VGB(iRhoUz,:,:,:,iBLK)) * &
-             (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK) ) ) &
+             (State_VGB(Bz_,:,:,:,iBLK)+B0_DGB(z_,:,:,:,iBLK) ) ) &
              / State_VGB(iRho,:,:,:,iBLK)
 
         ! Radial component variables
@@ -999,11 +999,11 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case('br')
         plotvar_useBody(iVar) = .true.
         PlotVar(:,:,:,iVar)=( &
-             ( State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK)) &
+             ( State_VGB(Bx_,:,:,:,iBLK)+B0_DGB(x_,:,:,:,iBLK)) &
              *X_BLK(:,:,:,iBLK)                         &  
-             +(State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK)) &
+             +(State_VGB(By_,:,:,:,iBLK)+B0_DGB(y_,:,:,:,iBLK)) &
              *Y_BLK(:,:,:,iBLK)                         &
-             +(State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK)) &
+             +(State_VGB(Bz_,:,:,:,iBLK)+B0_DGB(z_,:,:,:,iBLK)) &
              *Z_BLK(:,:,:,iBLK) ) / R_BLK(:,:,:,iBLK) 
      case('b1r')
         PlotVar(:,:,:,iVar)= &
@@ -1039,47 +1039,47 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         end if                                             
      case('er')
         PlotVar(:,:,:,iVar)=( ( State_VGB(iRhoUz,:,:,:,iBLK)* &
-             (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK)) &
+             (State_VGB(By_,:,:,:,iBLK)+B0_DGB(y_,:,:,:,iBLK)) &
              -State_VGB(iRhoUy,:,:,:,iBLK)* &
-             (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))) &
+             (State_VGB(Bz_,:,:,:,iBLK)+B0_DGB(z_,:,:,:,iBLK))) &
              *x_BLK(:,:,:,iBLK) &
              +( State_VGB(iRhoUx,:,:,:,iBLK)* &
-             (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK)) &
+             (State_VGB(Bz_,:,:,:,iBLK)+B0_DGB(z_,:,:,:,iBLK)) &
              -State_VGB(iRhoUz,:,:,:,iBLK)* &
-             (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))) &
+             (State_VGB(Bx_,:,:,:,iBLK)+B0_DGB(x_,:,:,:,iBLK))) &
              *y_BLK(:,:,:,iBLK) &
              +( State_VGB(iRhoUy,:,:,:,iBLK)* &
-             (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK)) &
+             (State_VGB(Bx_,:,:,:,iBLK)+B0_DGB(x_,:,:,:,iBLK)) &
              -State_VGB(iRhoUx,:,:,:,iBLK)* &
-             (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))) &
+             (State_VGB(By_,:,:,:,iBLK)+B0_DGB(y_,:,:,:,iBLK))) &
              *z_BLK(:,:,:,iBLK) )/State_VGB(iRho,:,:,:,iBLK) 
      case('pvecr')
         tmp1Var = &
-             (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))**2 + &
-             (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))**2 + &
-             (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))**2 
+             (State_VGB(Bx_,:,:,:,iBLK)+B0_DGB(x_,:,:,:,iBLK))**2 + &
+             (State_VGB(By_,:,:,:,iBLK)+B0_DGB(y_,:,:,:,iBLK))**2 + &
+             (State_VGB(Bz_,:,:,:,iBLK)+B0_DGB(z_,:,:,:,iBLK))**2 
         tmp2Var = &
-             (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))* &
+             (State_VGB(Bx_,:,:,:,iBLK)+B0_DGB(x_,:,:,:,iBLK))* &
              State_VGB(iRhoUx,:,:,:,iBLK) + &
-             (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))* &
+             (State_VGB(By_,:,:,:,iBLK)+B0_DGB(y_,:,:,:,iBLK))* &
              State_VGB(iRhoUy,:,:,:,iBLK) + &
-             (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))* &
+             (State_VGB(Bz_,:,:,:,iBLK)+B0_DGB(z_,:,:,:,iBLK))* &
              State_VGB(iRhoUz,:,:,:,iBLK) 
         PlotVar(:,:,:,iVar)=( ( tmp1Var*State_VGB(iRhoUx,:,:,:,iBLK) &
              -tmp2Var*(State_VGB(Bx_,:,:,:,iBLK)+ &
-             B0xCell_BLK(:,:,:,iBLK)))*X_BLK(:,:,:,iBLK) &
+             B0_DGB(x_,:,:,:,iBLK)))*X_BLK(:,:,:,iBLK) &
              +( tmp1Var*State_VGB(iRhoUy,:,:,:,iBLK) &
              -  tmp2Var*(State_VGB(By_,:,:,:,iBLK)+ &
-             B0yCell_BLK(:,:,:,iBLK)))*Y_BLK(:,:,:,iBLK) &  
+             B0_DGB(y_,:,:,:,iBLK)))*Y_BLK(:,:,:,iBLK) &  
              +( tmp1Var*State_VGB(iRhoUz,:,:,:,iBLK) &
              -  tmp2Var*(State_VGB(Bz_,:,:,:,iBLK)+ &
-             B0zCell_BLK(:,:,:,iBLK)))*Z_BLK(:,:,:,iBLK) )&   
+             B0_DGB(z_,:,:,:,iBLK)))*Z_BLK(:,:,:,iBLK) )&   
              /(State_VGB(iRho,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
      case('b2ur')
         tmp1Var = &
-             (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))**2 + &
-             (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))**2 + &
-             (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))**2  
+             (State_VGB(Bx_,:,:,:,iBLK)+B0_DGB(x_,:,:,:,iBLK))**2 + &
+             (State_VGB(By_,:,:,:,iBLK)+B0_DGB(y_,:,:,:,iBLK))**2 + &
+             (State_VGB(Bz_,:,:,:,iBLK)+B0_DGB(z_,:,:,:,iBLK))**2  
         PlotVar(:,:,:,iVar)=0.5* &
              ( tmp1Var*State_VGB(iRhoUx,:,:,:,iBLK)*X_BLK(:,:,:,iBLK) &
              + tmp1Var*State_VGB(iRhoUy,:,:,:,iBLK)*Y_BLK(:,:,:,iBLK) &  

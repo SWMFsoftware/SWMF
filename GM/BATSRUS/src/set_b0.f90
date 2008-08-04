@@ -16,17 +16,14 @@ subroutine set_b0(iBlock)
   integer, intent(in) :: iBlock
 
   call set_b0_cell(iBlock)
-  call set_b0_face(iBlock)
+  call set_b0_source(iBlock)
 
 end subroutine set_b0
 !============================================================================
 subroutine set_b0_cell(iBlock)
   use ModProcMH
   use ModMain
-  use ModAdvance, ONLY : B0xCell_BLK,B0yCell_BLK,B0zCell_BLK,&
-       B0xFace_x_BLK,B0yFace_x_BLK,B0zFace_x_BLK, &
-       B0xFace_y_BLK,B0yFace_y_BLK,B0zFace_y_BLK, &
-       B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK
+  use ModB0
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK
   use ModNumConst
   implicit none
@@ -38,13 +35,7 @@ subroutine set_b0_cell(iBlock)
   real :: x,y,z
 
   logical :: oktest, oktest_me
-  logical:: UseCellAveragesAsFaceField
-  !--------------------------------------------------------------------------
-  !
-  !UseCellAveragesAsFaceField=.false. !in versions 6.7 and earlier
-  !\
-  UseCellAveragesAsFaceField=.true. !in versions 6.10-7_0_2
-  !  UseCellAveragesAsFaceField = UseB0Source  
+  
 
   !--------------------------------------------------------------------------
   if(iProc==PROCtest.and.iBlock==BLKtest)then
@@ -62,80 +53,18 @@ subroutine set_b0_cell(iBlock)
      call get_b0(x_BLK(i,j,k,iBlock),&
           y_BLK(i,j,k,iBlock),&
           z_BLK(i,j,k,iBlock),&
-          B0_D)
-     B0xCell_BLK(i,j,k,iBlock) = B0_D(x_)
-     B0yCell_BLK(i,j,k,iBlock) = B0_D(y_)
-     B0zCell_BLK(i,j,k,iBlock) = B0_D(z_)
+          B0_DGB(:,i,j,k,iBlock))
   end do; end do; end do
 
   if(oktest_me)write(*,*)'B0*Cell_BLK=',&
-       B0xCell_BLK(Itest,Jtest,Ktest,BLKtest),&
-       B0yCell_BLK(Itest,Jtest,Ktest,BLKtest),&
-       B0zCell_BLK(Itest,Jtest,Ktest,BLKtest)
-
-  if(.not. UseCellAveragesAsFaceField) then
-     !The face B0 field is the field in the center of face
-     !\
-     ! Face fields (X)
-     !/
-     do k=0,nK+1
-        do j=0,nJ+1
-           do i=2-gcn,nI+gcn
-              x=cHalf*(x_BLK(i,j,k,iBlock)+x_BLK(i-1,j,k,iBlock))
-              y=cHalf*(y_BLK(i,j,k,iBlock)+y_BLK(i-1,j,k,iBlock))
-              z=cHalf*(z_BLK(i,j,k,iBlock)+z_BLK(i-1,j,k,iBlock))
-              call get_b0(x,y,z,B0_D)
-              B0xFace_x_BLK(i,j,k,iBlock)= B0_D(x_)
-              B0yFace_x_BLK(i,j,k,iBlock)= B0_D(y_)
-              B0zFace_x_BLK(i,j,k,iBlock)= B0_D(z_)
-           end do
-        end do
-     end do
-
-     !\
-     ! Face fields (Y)
-     !/
-     do k=0,nK+1
-        do j=2-gcn,nJ+gcn
-           do i=0,nI+1
-              x=cHalf*(x_BLK(i,j,k,iBlock)+x_BLK(i,j-1,k,iBlock))
-              y=cHalf*(y_BLK(i,j,k,iBlock)+y_BLK(i,j-1,k,iBlock))
-              z=cHalf*(z_BLK(i,j,k,iBlock)+z_BLK(i,j-1,k,iBlock))
-              call get_b0(x,y,z,B0_D)
-              B0xFace_y_BLK(i,j,k,iBlock) = B0_D(x_)
-              B0yFace_y_BLK(i,j,k,iBlock) = B0_D(y_)
-              B0zFace_y_BLK(i,j,k,iBlock) = B0_D(z_)
-           end do
-        end do
-     end do
-
-     !\
-     ! Face averages (Z)
-     !/
-     do k=2-gcn,nK+gcn
-        do j=0,nJ+1
-           do i=0,nI+1
-              x=cHalf*(x_BLK(i,j,k,iBlock)+x_BLK(i,j,k-1,iBlock))
-              y=cHalf*(y_BLK(i,j,k,iBlock)+y_BLK(i,j,k-1,iBlock))
-              z=cHalf*(z_BLK(i,j,k,iBlock)+z_BLK(i,j,k-1,iBlock))
-              call get_b0(x,y,z,B0_D)
-              B0xFace_z_BLK(i,j,k,iBlock) = B0_D(x_)
-              B0yFace_z_BLK(i,j,k,iBlock) = B0_D(y_)
-              B0zFace_z_BLK(i,j,k,iBlock) = B0_D(z_)
-           end do
-        end do
-     end do
-  end if
+       B0_DGB(:,Itest,Jtest,Ktest,BLKtest)
 end subroutine set_b0_cell
 
 !============================================================================
-subroutine set_b0_face(iBlock)
+subroutine set_b0_source(iBlock)
   use ModProcMH
   use ModMain
-  use ModAdvance, ONLY : B0xCell_BLK,B0yCell_BLK,B0zCell_BLK,&
-       B0xFace_x_BLK,B0yFace_x_BLK,B0zFace_x_BLK, &
-       B0xFace_y_BLK,B0yFace_y_BLK,B0zFace_y_BLK, &
-       B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK
+  use ModB0
   use ModGeometry, ONLY : &       
        dx_BLK,dy_BLK,dz_BLK,XyzStart_BLK
   use ModGeometry, ONLY : UseCovariant                
@@ -156,75 +85,19 @@ subroutine set_b0_face(iBlock)
   logical :: oktest, oktest_me
 
   !--------------------------------------------------------------------------
-  logical:: UseB0FaceRestriction
-  logical:: UseCellAveragesAsFaceField
-  !--------------------------------------------------------------------------
-  !
-  !UseCellAveragesAsFaceField=.false. !in versions 6.7 and earlier
-  !\
-  UseCellAveragesAsFaceField=.true. !in versions 6.10-7_0_2
-  !  UseCellAveragesAsFaceField = UseB0Source  
-  !--------------------------------------------------------------------------
-  !
-  !UseB0FaceRestriction=.false. in versions 6.7 and earlier
-  !\
-  UseB0FaceRestriction=.true. !in versions 6.10-7_0_2
-  ! UseB0FaceRestriction  = UseB0Source  
-  !--------------------------------------------------------------------------
-
+ 
   if(iProc==PROCtest.and.iBlock==BLKtest)then
      call set_oktest('set_b0_face',oktest,oktest_me)
   else
      oktest=.false.; oktest_me=.false.
   endif
 
-  if(UseCellAveragesAsFaceField)then
-     !\
-     ! Face averages (X)
-     !/
-     B0xFace_x_BLK(2-gcn:nI+gcn,0:nJ+1,0:nK+1,iBlock)=cHalf*(&
-          B0xCell_BLK( 2-gcn:nI+gcn,0:nJ+1,0:nK+1,iBlock)+&
-          B0xCell_BLK(1-gcn:nI+gcn-1,0:nJ+1,0:nK+1,iBlock))
-     B0yFace_x_BLK(2-gcn:nI+gcn,0:nJ+1,0:nK+1,iBlock)=cHalf*(&
-          B0yCell_BLK(2-gcn:nI+gcn,0:nJ+1,0:nK+1,iBlock)+&
-          B0yCell_BLK(1-gcn:nI+gcn-1,0:nJ+1,0:nK+1,iBlock))
-     B0zFace_x_BLK(2-gcn:nI+gcn,0:nJ+1,0:nK+1,iBlock)=cHalf*(&
-          B0zCell_BLK(2-gcn:nI+gcn,0:nJ+1,0:nK+1,iBlock)+&
-          B0zCell_BLK(1-gcn:nI+gcn-1,0:nJ+1,0:nK+1,iBlock))
 
-     !\
-     ! Face averages (Y)
-     !/
-     B0xFace_y_BLK(0:nI+1,2-gcn:nJ+gcn,0:nK+1,iBlock) = cHalf*(&
-          B0xCell_BLK(0:nI+1, 2-gcn:nJ+gcn,0:nK+1,iBlock)+&
-          B0xCell_BLK(0:nI+1,1-gcn:nJ+gcn-1,0:nK+1,iBlock))
-     B0yFace_y_BLK(0:nI+1,2-gcn:nJ+gcn,0:nK+1,iBlock) = cHalf*(&
-          B0yCell_BLK(0:nI+1,2-gcn:nJ+gcn,0:nK+1,iBlock)+&
-          B0yCell_BLK(0:nI+1,1-gcn:nJ+gcn-1,0:nK+1,iBlock))
-     B0zFace_y_BLK(0:nI+1,2-gcn:nJ+gcn,0:nK+1,iBlock) = cHalf*(&
-          B0zCell_BLK(0:nI+1, 2-gcn:nJ+gcn,0:nK+1,iBlock)+&
-          B0zCell_BLK(0:nI+1,1-gcn:nJ+gcn-1,0:nK+1,iBlock))
-
-     !\
-     ! Face averages (Z)
-     !/
-     B0xFace_z_BLK(0:nI+1,0:nJ+1,2-gcn:nK+gcn,iBlock) = cHalf*(&
-          B0xCell_BLK(0:nI+1,0:nJ+1,2-gcn:nK+gcn,iBlock)+&
-          B0xCell_BLK(0:nI+1,0:nJ+1,1-gcn:nK+gcn-1,iBlock))
-     B0yFace_z_BLK(0:nI+1,0:nJ+1,2-gcn:nK+gcn,iBlock) = cHalf*(&
-          B0yCell_BLK(0:nI+1,0:nJ+1,2-gcn:nK+gcn,iBlock)+&
-          B0yCell_BLK(0:nI+1,0:nJ+1,1-gcn:nK+gcn-1,iBlock))
-     B0zFace_z_BLK(0:nI+1,0:nJ+1,2-gcn:nK+gcn,iBlock) = cHalf*(&
-          B0zCell_BLK(0:nI+1,0:nJ+1,2-gcn:nK+gcn,iBlock)+&
-          B0zCell_BLK(0:nI+1,0:nJ+1,1-gcn:nK+gcn-1,iBlock))
-
-  end if
   if(UseCovariant)then                   
      call calc_b0source_covar(iBlock)         
      return
   end if                                 
 
-  if(.not. UseB0FaceRestriction)return
 
   RefDXyz_D(x_)=cHalf*dx_BLK(iBlock)
   RefDXyz_D(y_)=cHalf*dy_BLK(iBlock)
@@ -232,72 +105,66 @@ subroutine set_b0_face(iBlock)
   RefXyzStart_D(:)=XyzStart_BLK(:,iBlock)-cHalf*RefDXyz_D(:)
  
   if (neiLeast(iBlock)==-1) then
-     if(oktest_me .and. Itest==1)&
+     if(oktest_me .and. Itest==1)then
+        call set_b0_face(iBlock)
           write(*,*)'Before correcting east refinement: B0*Face_x_BLK=',&
-          B0xFace_x_BLK(Itest,Jtest,Ktest,BLKtest),&
-          B0yFace_x_BLK(Itest,Jtest,Ktest,BLKtest),&
-          B0zFace_x_BLK(Itest,Jtest,Ktest,BLKtest)
+          B0_DX(:,Itest,Jtest,Ktest)
+     end if
      call correct_b0_face(East_)
   end if
 
   if(neiLwest(iBlock)==-1) then
-     if(oktest_me .and. Itest==nIFace)&
+     if(oktest_me .and. Itest==nIFace)then
+        call set_b0_face(iBlock)
           write(*,*)'Before correcting west refinement: B0*Face_x_BLK=',&
-          B0xFace_x_BLK(Itest,Jtest,Ktest,BLKtest),&
-          B0yFace_x_BLK(Itest,Jtest,Ktest,BLKtest),&
-          B0zFace_x_BLK(Itest,Jtest,Ktest,BLKtest)
+          B0_DX(:,Itest,Jtest,Ktest)
+     end if
      call correct_b0_face(West_)
   end if
   if (neiLsouth(iBlock)==-1) then
-     if(oktest_me .and. jTest==1)&
+     if(oktest_me .and. jTest==1)then
+        call set_b0_face(iBlock)
           write(*,*)'Before correcting south refinement: B0*Face_y_BLK=',&
-          B0xFace_y_BLK(Itest,Jtest,Ktest,BLKtest),&
-          B0yFace_y_BLK(Itest,Jtest,Ktest,BLKtest),&
-          B0zFace_y_BLK(Itest,Jtest,Ktest,BLKtest)
+          B0_DY(:,Itest,Jtest,Ktest)
+     end if
      call correct_b0_face(South_)
   end if
 
   if(neiLnorth(iBlock)==-1) then
-     if(oktest_me .and. jTest==nJFace)&
+     if(oktest_me .and. jTest==nJFace)then
+        call set_b0_face(iBlock)
           write(*,*)'Before correcting north refinement: B0*Face_y_BLK=',&
-          B0xFace_y_BLK(Itest,Jtest,Ktest,BLKtest),&
-          B0yFace_y_BLK(Itest,Jtest,Ktest,BLKtest),&
-          B0zFace_y_BLK(Itest,Jtest,Ktest,BLKtest)
+          B0_DY(:,Itest,Jtest,Ktest)
+     end if
      call correct_b0_face(North_)
   end if
 
   if (neiLbot(iBlock)==-1) then
-     if(oktest_me .and. kTest==1)&
+     if(oktest_me .and. kTest==1)then
+        call set_b0_face(iBlock)
           write(*,*)'Before correcting bot refinement: B0*Face_z_BLK=',&
-          B0xFace_z_BLK(Itest,Jtest,Ktest,BLKtest),&
-          B0yFace_z_BLK(Itest,Jtest,Ktest,BLKtest),&
-          B0zFace_z_BLK(Itest,Jtest,Ktest,BLKtest)
+          B0_DZ(:,Itest,Jtest,Ktest)
+     end if
      call correct_b0_face(Bot_)
   end if
 
   if(neiLtop(iBlock)==-1) then 
 
-     if(oktest_me .and. kTest==nKFace)&
+     if(oktest_me .and. kTest==nKFace)then
+        call set_b0_face(iBlock)
           write(*,*)'Before correcting top refinement: B0*Face_z_BLK=',&
-          B0xFace_z_BLK(Itest,Jtest,Ktest,BLKtest),&
-          B0yFace_z_BLK(Itest,Jtest,Ktest,BLKtest),&
-          B0zFace_z_BLK(Itest,Jtest,Ktest,BLKtest)
+          B0_DZ(:,Itest,Jtest,Ktest)
+     end if
      call correct_b0_face(Top_)
   end if
 
   if(oktest_me)then
      write(*,*)'B0*Face_x_BLK=',&
-          B0xFace_x_BLK(Itest,Jtest,Ktest,BLKtest),&
-          B0yFace_x_BLK(Itest,Jtest,Ktest,BLKtest),&
-          B0zFace_x_BLK(Itest,Jtest,Ktest,BLKtest)
+          B0_DX(:,Itest,Jtest,Ktest)
      write(*,*)'B0*Face_y_BLK=',&
-          B0xFace_y_BLK(Itest,Jtest,Ktest,BLKtest),&
-          B0yFace_y_BLK(Itest,Jtest,Ktest,BLKtest),&
-          B0zFace_y_BLK(Itest,Jtest,Ktest,BLKtest)
+          B0_DY(:,Itest,Jtest,Ktest)
      write(*,*)'B0*Face_z_BLK=',&
-          B0xFace_z_BLK(Itest,Jtest,Ktest,BLKtest),&
-          B0yFace_z_BLK(Itest,Jtest,Ktest,BLKtest),&
-          B0zFace_z_BLK(Itest,Jtest,Ktest,BLKtest)
+          B0_DZ(:,Itest,Jtest,Ktest)
   end if
 
   call set_b0_matrix(iBlock)
@@ -308,32 +175,35 @@ contains
   subroutine correct_b0_face(iSide)
     implicit none
     integer,intent(in)::iSide
-    integer::iFace,jFace,kFace
+    integer::iFace,jFace,kFace,iDim
     !-------------------------------------------------------------------------
     select case(iSide)
     case(East_,West_)
        iFace=1+nI*(iSide-East_)
        do k=1,nK; do j=1,nJ
           call get_refined_b0(2*iFace-3,2*j-2,2*k-2)
-          B0xFace_x_BLK(iFace,j,k,iBlock) = 0.125*sum(RefB0_DIII(x_,:,:,:))
-          B0yFace_x_BLK(iFace,j,k,iBlock) = 0.125*sum(RefB0_DIII(y_,:,:,:))
-          B0zFace_x_BLK(iFace,j,k,iBlock) = 0.125*sum(RefB0_DIII(z_,:,:,:))
+          do iDim=1,nDim
+             B0ResChange_DXSB(iDim,j,k,iSide,iBlock) = 0.125 * &
+                  sum(RefB0_DIII(iDim,:,:,:))
+          end do
        end do; end do
     case(South_,North_)
        jFace=1+nJ*(iSide-South_)
        do k=1,nK; do i=1,nI
           call get_refined_b0(2*i-2,2*jFace-3,2*k-2)
-          B0xFace_y_BLK(i,jFace,k,iBlock) = 0.125*sum(RefB0_DIII(x_,:,:,:))
-          B0yFace_y_BLK(i,jFace,k,iBlock) = 0.125*sum(RefB0_DIII(y_,:,:,:))
-          B0zFace_y_BLK(i,jFace,k,iBlock) = 0.125*sum(RefB0_DIII(z_,:,:,:))
+          do iDim=1,nDim
+             B0ResChange_DYSB(iDim,i,k,iSide,iBlock) = 0.125 * &
+                  sum(RefB0_DIII(iDim,:,:,:))
+          end do
        end do; end do
     case(Bot_,Top_)
        kFace=1+nK*(iSide-Bot_)
        do j=1,nJ; do i=1,nI
           call get_refined_b0(2*i-2,2*j-2,2*kFace-3)
-          B0xFace_z_BLK(i,j,kFace,iBlock) = 0.125*sum(RefB0_DIII(x_,:,:,:))
-          B0yFace_z_BLK(i,j,kFace,iBlock) = 0.125*sum(RefB0_DIII(y_,:,:,:))
-          B0zFace_z_BLK(i,j,kFace,iBlock) = 0.125*sum(RefB0_DIII(z_,:,:,:))
+          do iDim=1,nDim
+             B0ResChange_DZSB(iDim,i,j,iSide,iBlock) = 0.125 * &
+                  sum(RefB0_DIII(iDim,:,:,:))
+          end do
        end do; end do
     end select
   end subroutine correct_b0_face
@@ -349,7 +219,7 @@ contains
        call get_b0(x,y,z,RefB0_DIII(:,i2,j2,k2))
     end do; end do; end do	
   end subroutine get_refined_b0
-end subroutine set_b0_face
+end subroutine set_b0_source
 
 !============================================================================
 subroutine calc_db0_dt(dTime)
@@ -357,7 +227,7 @@ subroutine calc_db0_dt(dTime)
   ! Calculate dB0/dt for true cells in used blocks
 
   use ModMain
-  use ModAdvance, ONLY: B0xCell_BLK, B0yCell_BLK, B0zCell_BLK, Db0Dt_CDB
+  use ModAdvance, ONLY: B0_DGB, Db0Dt_CDB
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK
   use ModPhysics, ONLY: No2Si_V, UnitT_
   implicit none
@@ -390,9 +260,9 @@ subroutine calc_db0_dt(dTime)
      do k=1,nK; do j=1,nJ; do i=1,nI
         call get_b0(&
              x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock),z_BLK(i,j,k,iBlock),B0_D)
-        Db0Dt_CDB(i,j,k,x_,iBlock)=(B0_D(x_)-B0xCell_BLK(i,j,k,iBlock))/dTime
-        Db0Dt_CDB(i,j,k,y_,iBlock)=(B0_D(y_)-B0yCell_BLK(i,j,k,iBlock))/dTime
-        Db0Dt_CDB(i,j,k,z_,iBlock)=(B0_D(z_)-B0zCell_BLK(i,j,k,iBlock))/dTime
+        Db0Dt_CDB(i,j,k,x_,iBlock)=(B0_D(x_)-B0_DGB(x_,i,j,k,iBlock))/dTime
+        Db0Dt_CDB(i,j,k,y_,iBlock)=(B0_D(y_)-B0_DGB(y_,i,j,k,iBlock))/dTime
+        Db0Dt_CDB(i,j,k,z_,iBlock)=(B0_D(z_)-B0_DGB(z_,i,j,k,iBlock))/dTime
      end do; end do; end do
   end do
   ! Reset time, date and dipole tilt
@@ -407,10 +277,8 @@ subroutine set_b0_matrix(iBlock)
   use ModProcMH
   use ModMain
   use ModNumConst
+  use ModB0
   use ModAdvance, ONLY  : &
-       B0xFace_x_BLK,B0yFace_x_BLK,B0zFace_x_BLK, &
-       B0xFace_y_BLK,B0yFace_y_BLK,B0zFace_y_BLK, &
-       B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK, &
        CurlB0_DCB,DivB0_CB, NormB0_CB                      
   use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,true_cell
   use ModNumConst
@@ -441,37 +309,28 @@ subroutine set_b0_matrix(iBlock)
 !  if(UseCurlB0)allocate(NormB0_CB(nI,nJ,nK,MaxBlock)!^CFG UNCOMMENT IF DYNAMIC
 !  end if                                            !^CFG UNCOMMENT IF DYNAMIC
 
-
+  
   DxInv = cOne/dx_BLK(iBlock)
   DyInv = cOne/dy_BLK(iBlock)
   DzInv = cOne/dz_BLK(iBlock)
-
+  call set_b0_face(iBlock)
   ! face areas
   do k=1,nK; do j=1,nJ; do i=1,nI
      DivB0_CB(i,j,k,iBlock)= &
-          DxInv*(B0xFace_x_BLK(i+1,j,k,iBlock)-&
-          B0xFace_x_BLK(i,j,k,iBlock))+&
-          DyInv*(B0yFace_y_BLK(i,j+1,k,iBlock)-&
-          B0yFace_y_BLK(i,j,k,iBlock))+&
-          DzInv*(B0zFace_z_BLK(i,j,k+1,iBlock)-&
-          B0zFace_z_BLK(i,j,k,iBlock))   
+          DxInv*(B0_DX(x_,i+1,j,k)-B0_DX(x_,i,j,k))+&
+          DyInv*(B0_DY(y_,i,j+1,k)-B0_DY(y_,i,j,k))+&
+          DzInv*(B0_DZ(z_,i,j,k+1)-B0_DZ(z_,i,j,k))   
   
      CurlB0_DCB(z_,i,j,k,iBlock) = &
-          DxInv*(B0yFace_x_BLK(i+1,j,k,iBlock)-&
-          B0yFace_x_BLK(i,j,k,iBlock))-&
-          DyInv*(B0xFace_y_BLK(i,j+1,k,iBlock)-&
-          B0xFace_y_BLK(i,j,k,iBlock))
+          DxInv*(B0_DX(y_,i+1,j,k)-B0_DX(y_,i,j,k))-&
+          DyInv*(B0_DY(x_,i,j+1,k)-B0_DY(x_,i,j,k))
 
      CurlB0_DCB(y_,i,j,k,iBlock) = &
-          -DxInv*(B0zFace_x_BLK(i+1,j,k,iBlock)-&
-          B0zFace_x_BLK(i,j,k,iBlock))+&
-          DzInv*(B0xFace_z_BLK(i,j,k+1,iBlock)-&
-          B0xFace_z_BLK(i,j,k,iBlock))
+          -DxInv*(B0_DX(z_,i+1,j,k)-B0_DX(z_,i,j,k))+&
+           DzInv*(B0_DZ(x_,i,j,k+1)-B0_DZ(x_,i,j,k))
      CurlB0_DCB(x_,i,j,k,iBlock) = & 
-          DyInv*(B0zFace_y_BLK(i,j+1,k,iBlock)-&
-          B0zFace_y_BLK(i,j,k,iBlock))-&
-          DzInv*(B0yFace_z_BLK(i,j,k+1,iBlock)-&
-          B0yFace_z_BLK(i,j,k,iBlock))
+          DyInv*(B0_DY(z_,i,j+1,k)-B0_DY(z_,i,j,k))-&
+          DzInv*(B0_DZ(y_,i,j,k+1)-B0_DZ(y_,i,j,k))
      if(.not.UseCurlB0)CYCLE
      CurlB02=sum(CurlB0_DCB(:,i,j,k,iBlock)**2)
      if(CurlB02==cZero.or..not.true_cell(i,j,k,iBlock))then
@@ -485,24 +344,9 @@ subroutine set_b0_matrix(iBlock)
                    CurlB0_DCB(jDir,i,j,k,iBlock)
            end do
         end do
-        B0Nabla_DD(x_,:)=DxInv*(/B0xFace_x_BLK(i+1,j,k,iBlock)-&
-                                 B0xFace_x_BLK(i,j,k,iBlock),  &
-                                 B0yFace_x_BLK(i+1,j,k,iBlock)-&
-                                 B0yFace_x_BLK(i,j,k,iBlock),  &
-                                 B0zFace_x_BLK(i+1,j,k,iBlock)-&
-                                 B0zFace_x_BLK(i,j,k,iBlock)/)
-        B0Nabla_DD(y_,:)=DyInv*(/B0xFace_y_BLK(i,j+1,k,iBlock)-&
-                                 B0xFace_y_BLK(i,j,k,iBlock),  &
-                                 B0yFace_y_BLK(i,j+1,k,iBlock)-&
-                                 B0yFace_y_BLK(i,j,k,iBlock),  &
-                                 B0zFace_y_BLK(i,j+1,k,iBlock)-&
-                                 B0zFace_y_BLK(i,j,k,iBlock)/)
-        B0Nabla_DD(z_,:)=DzInv*(/B0xFace_z_BLK(i,j,k+1,iBlock)-&
-                                 B0xFace_z_BLK(i,j,k,iBlock),  &
-                                 B0yFace_z_BLK(i,j,k+1,iBlock)-&
-                                 B0yFace_z_BLK(i,j,k,iBlock),  &
-                                 B0zFace_z_BLK(i,j,k+1,iBlock)-&
-                                 B0zFace_z_BLK(i,j,k,iBlock)/)
+        B0Nabla_DD(x_,:)=DxInv*(B0_DX(:,i+1,j,k)-B0_DX(:,i,j,k))
+        B0Nabla_DD(y_,:)=DyInv*(B0_DY(:,i,j+1,k)-B0_DY(:,i,j,k))
+        B0Nabla_DD(z_,:)=DzInv*(B0_DZ(:,i,j,k+1)-B0_DZ(:,i,j,k))
         B0Nabla_DD=B0Nabla_DD-DivB0_CB(i,j,k,iBlock)*cUnit_DD
         NormB0_CB(i,j,k,iBlock)= sqrt(sqrt(eigenvalue_max(&
              matmul(transpose(B0Nabla_DD),matmul(&
@@ -780,8 +624,7 @@ subroutine update_b0
   use ModMain,          ONLY: DoSplitDb0Dt, nBlock, unusedBLK, &
        time_simulation, NameThisComp
   use ModPhysics,       ONLY: ThetaTilt
-  use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB, &
-       B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
+  use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB, B0_DGB
   use ModGeometry,      ONLY: true_cell, body_BLK
   use CON_axes,         ONLY: get_axes
   use ModNumConst,      ONLY: cRadToDeg
@@ -818,25 +661,17 @@ subroutine update_b0
 
      if(DoSplitDb0Dt)then
         ! Save total magnetic field into Bx_BLK,By_BLK,Bz_BLK
-        State_VGB(Bx_,:,:,:,iBlock) = State_VGB(Bx_,:,:,:,iBlock) &
-             + B0xCell_BLK(:,:,:,iBlock)
-        State_VGB(By_,:,:,:,iBlock) = State_VGB(By_,:,:,:,iBlock) &
-             + B0yCell_BLK(:,:,:,iBlock)
-        State_VGB(Bz_,:,:,:,iBlock) = State_VGB(Bz_,:,:,:,iBlock) &
-             + B0zCell_BLK(:,:,:,iBlock)
+        State_VGB(Bx_:Bz_,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock) &
+             + B0_DGB(:,:,:,:,iBlock)
      end if
 
      call set_b0(iBlock)
 
      if(DoSplitDb0Dt)then
         ! Split total B again using new B0
-        State_VGB(Bx_,:,:,:,iBlock) = State_VGB(Bx_,:,:,:,iBlock) &
-             - B0xCell_BLK(:,:,:,iBlock)
-        State_VGB(By_,:,:,:,iBlock) = State_VGB(By_,:,:,:,iBlock) &
-             - B0yCell_BLK(:,:,:,iBlock)
-        State_VGB(Bz_,:,:,:,iBlock) = State_VGB(Bz_,:,:,:,iBlock) &
-             - B0zCell_BLK(:,:,:,iBlock)
-
+        State_VGB(Bx_:Bz_,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock) &
+             - B0_DGB(:,:,:,:,iBlock)
+       
         ! Set B1 to 0 inside bodies
         if(Body_BLK(iBlock))then
            where(.not.true_cell(:,:,:,iBlock))

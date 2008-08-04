@@ -12,12 +12,12 @@ module ModFaceFlux
   use ModGeometry,   ONLY: UseCovariant, &                
        FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB, &     
        FaceArea2MinI_B, FaceArea2MinK_B  
-
+  
+  use ModB0,      ONLY:B0_DX, & ! input: face X B0
+                       B0_DY, & ! input: face Y B0
+                       B0_DZ, & ! input: face Z B0
+                       B0_DGB    ! input: cell B0
   use ModAdvance, ONLY:&
-       B0xFace_x_BLK, B0yFace_x_BLK, B0zFace_x_BLK, & ! input: face X B0
-       B0xFace_y_BLK, B0yFace_y_BLK, B0zFace_y_BLK, & ! input: face Y B0
-       B0xFace_z_BLK, B0yFace_z_BLK, B0zFace_z_BLK, & ! input: face Z B0
-       B0xCell_BLK,   B0yCell_BLK,   B0zCell_BLK  , & ! input: cell B0
        LeftState_VX,  LeftState_VY,  LeftState_VZ,  & ! input: left  face state
        RightState_VX, RightState_VY, RightState_VZ, & ! input: right face state
        Flux_VX, Flux_VY, Flux_VZ,        & ! output: face flux
@@ -374,14 +374,14 @@ contains
          end do
          if(UseB0)then
             write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
-                 B0xFace_x_BLK(iTest,jTest,kTest,BlkTest),' ',&
-                 B0xFace_x_BLK(iTest+1,jTest,kTest,BlkTest)
+                 B0_DX(x_,iTest,jTest,kTest),' ',&
+                 B0_DX(x_,iTest+1,jTest,kTest)
             write(*,'(a,1pe13.5,a13,1pe13.5)')'B0y:',&
-                 B0yFace_x_BLK(iTest,jTest,kTest,BlkTest),' ',&
-                 B0yFace_x_BLK(iTest+1,jTest,kTest,BlkTest)
+                 B0_DX(y_,iTest,jTest,kTest),' ',&
+                 B0_DX(y_,iTest+1,jTest,kTest)
             write(*,'(a,1pe13.5,a13,1pe13.5)')'B0z:',&
-                 B0zFace_x_BLK(iTest,jTest,kTest,BlkTest),' ',&
-                 B0zFace_x_BLK(iTest+1,jTest,kTest,BlkTest)
+                 B0_DX(z_,iTest,jTest,kTest),' ',&
+                 B0_DX(z_,iTest+1,jTest,kTest)
          end if
       end if
 
@@ -398,14 +398,14 @@ contains
          end do
          if(UseB0)then
             write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
-                 B0xFace_y_BLK(iTest,jTest,kTest,BlkTest),' ',&
-                 B0xFace_y_BLK(iTest,jTest+1,kTest,BlkTest)
+                 B0_DY(x_,iTest,jTest,kTest),' ',&
+                 B0_DY(x_,iTest,jTest+1,kTest)
             write(*,'(a,1pe13.5,a13,1pe13.5)')'B0y:',&
-                 B0yFace_y_BLK(iTest,jTest,kTest,BlkTest),' ',&
-                 B0yFace_y_BLK(iTest,jTest+1,kTest,BlkTest)
+                 B0_DY(y_,iTest,jTest,kTest),' ',&
+                 B0_DY(y_,iTest,jTest+1,kTest)
             write(*,'(a,1pe13.5,a13,1pe13.5)')'B0z:',&
-                 B0zFace_y_BLK(iTest,jTest,kTest,BlkTest),' ',&
-                 B0zFace_y_BLK(iTest,jTest+1,kTest,BlkTest)
+                 B0_DY(z_,iTest,jTest,kTest),' ',&
+                 B0_DY(z_,iTest,jTest+1,kTest)
          end if
       end if
 
@@ -421,14 +421,14 @@ contains
          end do
          if(UseB0)then
             write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
-                 B0xFace_z_BLK(iTest,jTest,kTest,BlkTest),' ',&
-                 B0xFace_z_BLK(iTest,jTest,kTest+1,BlkTest)
+                 B0_DZ(x_,iTest,jTest,kTest),' ',&
+                 B0_DZ(x_,iTest,jTest,kTest+1)
             write(*,'(a,1pe13.5,a13,1pe13.5)')'B0y:',&
-                 B0yFace_z_BLK(iTest,jTest,kTest,BlkTest),' ',&
-                 B0yFace_z_BLK(iTest,jTest,kTest+1,BlkTest)
+                 B0_DZ(y_,iTest,jTest,kTest),' ',&
+                 B0_DZ(y_,iTest,jTest,kTest+1)
             write(*,'(a,1pe13.5,a13,1pe13.5)')'B0z:',&
-                 B0zFace_z_BLK(iTest,jTest,kTest,BlkTest),' ',&
-                 B0zFace_z_BLK(iTest,jTest,kTest+1,BlkTest)
+                 B0_DZ(z_,iTest,jTest,kTest),' ',&
+                 B0_DZ(z_,iTest,jTest,kTest+1)
          end if
       end if
 
@@ -450,9 +450,9 @@ contains
               .and. (iFace == iTest .or. iFace == iTest+1) &
               .and. jFace == jTest .and. kFace == kTest
          if(UseB0)then
-            B0x = B0xFace_x_BLK(iFace, jFace, kFace, iBlockFace)
-            B0y = B0yFace_x_BLK(iFace, jFace, kFace, iBlockFace)
-            B0z = B0zFace_x_BLK(iFace, jFace, kFace, iBlockFace)
+            B0x = B0_DX(x_,iFace, jFace, kFace)
+            B0y = B0_DX(y_,iFace, jFace, kFace)
+            B0z = B0_DX(z_,iFace, jFace, kFace)
          end if
          if(UseRS7.and..not.IsBoundary)then
             DeltaBnR=sum((RightState_VX(Bx_:Bz_, iFace, jFace, kFace)-&
@@ -498,9 +498,9 @@ contains
          DoTestCell = DoTestMe .and. iFace == iTest .and. &
               (jFace == jTest .or. jFace == jTest+1) .and. kFace == kTest
          if(UseB0)then
-            B0x = B0xFace_y_BLK(iFace, jFace, kFace, iBlockFace)
-            B0y = B0yFace_y_BLK(iFace, jFace, kFace, iBlockFace)
-            B0z = B0zFace_y_BLK(iFace, jFace, kFace, iBlockFace)
+            B0x = B0_DY(x_,iFace, jFace, kFace)
+            B0y = B0_DY(y_,iFace, jFace, kFace)
+            B0z = B0_DY(z_,iFace, jFace, kFace)
          end if
          if(UseRS7.and..not.IsBoundary)then
             DeltaBnR=sum((RightState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
@@ -549,9 +549,9 @@ contains
          DoTestCell = DoTestMe .and. iFace == iTest .and. &
               jFace == jTest .and. (kFace == kTest .or. kFace == kTest+1)
          if(UseB0)then
-            B0x = B0xFace_z_BLK(iFace, jFace, kFace,iBlockFace)
-            B0y = B0yFace_z_BLK(iFace, jFace, kFace,iBlockFace)
-            B0z = B0zFace_z_BLK(iFace, jFace, kFace,iBlockFace)
+            B0x = B0_DZ(x_,iFace, jFace, kFace)
+            B0y = B0_DZ(y_,iFace, jFace, kFace)
+            B0z = B0_DZ(z_,iFace, jFace, kFace)
          end if
          if(UseRS7.and..not.IsBoundary)then
             DeltaBnR=sum((RightState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
@@ -819,14 +819,8 @@ contains
                   State_VGB(Rho_, iRight,jRight,kRight,iBlockFace)
           end if
 
-          dB0_D = (/ &
-               B0xCell_BLK(iLeft,  jLeft,  kLeft,  iBlockFace)    &
-               - B0xCell_BLK(iRight, jRight, kRight, iBlockFace), &
-               B0yCell_BLK(iLeft,  jLeft,  kLeft,  iBlockFace)    &
-               - B0yCell_BLK(iRight, jRight, kRight, iBlockFace), &
-               B0zCell_BLK(iLeft,  jLeft,  kLeft,  iBlockFace)    &
-               - B0zCell_BLK(iRight, jRight, kRight, iBlockFace)  &
-               /)
+          dB0_D = B0_DGB(:,iLeft,  jLeft,  kLeft,  iBlockFace)    &
+               - B0_DGB(:,iRight, jRight, kRight, iBlockFace)
 
           call get_dissipation_flux_mhd(Normal_D,         &
                StateLeft_V, StateRight_V,                 &

@@ -83,19 +83,35 @@ subroutine amr_criteria(ref_criteria)
                 gradZ_VAR(1:nI,1:nJ,1:nK)**2))
         case('gradE')
            ! Electric field gradient.
-           outVAR = sqrt( &
-                ( -((RhoUy_G/Rho_G)* &
-                   (Bz_G+B0zCell_BLK(:,:,:,iBLK)) - &
-                   (RhoUz_G/Rho_G)* &
-                   (By_G+B0yCell_BLK(:,:,:,iBLK))) )**2 + &
-                ( -((RhoUz_G/Rho_G)* &
-                   (Bx_G+B0xCell_BLK(:,:,:,iBLK)) - &
-                   (RhoUx_G/Rho_G)* &
-                   (Bz_G+B0zCell_BLK(:,:,:,iBLK))) )**2 + &
-                ( -((RhoUx_G/Rho_G)* &
-                   (By_G+B0yCell_BLK(:,:,:,iBLK)) - &
-                   (RhoUy_G/Rho_G)* &
-                   (Bx_G+B0xCell_BLK(:,:,:,iBLK))) )**2 )
+           if(UseB0)then
+              outVAR = sqrt( &
+                   ( -((RhoUy_G/Rho_G)* &
+                      (Bz_G+B0_DGB(z_,:,:,:,iBLK)) - &
+                      (RhoUz_G/Rho_G)* &
+                      (By_G+B0_DGB(y_,:,:,:,iBLK))) )**2 + &
+                   ( -((RhoUz_G/Rho_G)* &
+                      (Bx_G+B0_DGB(x_,:,:,:,iBLK)) - &
+                      (RhoUx_G/Rho_G)* &
+                      (Bz_G+B0_DGB(z_,:,:,:,iBLK))) )**2 + &
+                   ( -((RhoUx_G/Rho_G)* &
+                      (By_G+B0_DGB(y_,:,:,:,iBLK)) - &
+                      (RhoUy_G/Rho_G)* &
+                      (Bx_G+B0_DGB(x_,:,:,:,iBLK))) )**2 )
+           else
+              outVAR = sqrt( &
+                   ( -((RhoUy_G/Rho_G)* &
+                      Bz_G - &
+                      (RhoUz_G/Rho_G)* &
+                      By_G) )**2 + &
+                   ( -((RhoUz_G/Rho_G)* &
+                      Bx_G - &
+                      (RhoUx_G/Rho_G)* &
+                      Bz_G) )**2 + &
+                   ( -((RhoUx_G/Rho_G)* &
+                      By_G - &
+                      (RhoUy_G/Rho_G)* &
+                      Bx_G) )**2 )
+           end if
            call grad1D(1, iBLK, outVAR, gradX_VAR,gradY_VAR,gradZ_VAR, "none",0)
            ref_criteria(iCrit,iBLK) = maxval(ds2*sqrt( &
                 gradX_VAR(1:nI,1:nJ,1:nK)**2 + &

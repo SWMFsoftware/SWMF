@@ -1671,8 +1671,9 @@ contains
     use ModVarIndexes, ONLY: Bx_,By_,Bz_,P_
     use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK
     use ModNumConst,   ONLY: cZero,cHalf,cOne,cTwo,cThree,cFour,cTiny
-    use ModAdvance,    ONLY: B0xCell_BLK,B0yCell_BLK,B0zCell_BLK,  &
+    use ModAdvance,    ONLY: B0_DGB,  &
          State_VGB
+    use ModMain,       ONLY:x_,y_,z_
     use ModPhysics,    ONLY: g,inv_g,No2Io_V(UnitB_)
     implicit none
     !--------------------------------------------------------------------------
@@ -1702,14 +1703,11 @@ contains
        ! Get the absolute value of the radial component of the magnetic filed::
        !/
        BrCell = abs(&
-            (XCell*B0xCell_BLK(iCell,jCell,kCell,iBlock) +&
-            YCell*B0yCell_BLK(iCell,jCell,kCell,iBlock) +&
-            ZCell*B0zCell_BLK(iCell,jCell,kCell,iBlock))/&
+            (XCell*B0_DGB(x_,iCell,jCell,kCell,iBlock) +&
+            YCell*B0_DGB(y_,iCell,jCell,kCell,iBlock) +&
+            ZCell*B0_DGB(z_,iCell,jCell,kCell,iBlock))/&
             RCell)
-       B2Cell = sqrt(&
-            B0xCell_BLK(iCell,jCell,kCell,iBlock)**2+&
-            B0yCell_BLK(iCell,jCell,kCell,iBlock)**2+&
-            B0zCell_BLK(iCell,jCell,kCell,iBlock)**2)
+       B2Cell = sqrt(sum(B0_DGB(:,iCell,jCell,kCell,iBlock)**2))
        !\
        ! Modulate the degrees of freedom so that in the CS (slow wind) the
        ! number of degrees of freedom is LARGER (~27) than in the open field
@@ -1767,13 +1765,9 @@ contains
     !/
     BetaCell = cTwo*&
          State_VGB(P_ ,iCell,jCell,kCell,iBlock)/    &
-         max(cTiny, &
-         ((B0xCell_BLK(iCell,jCell,kCell,iBlock)+    &
-         State_VGB(Bx_,iCell,jCell,kCell,iBlock))**2+&
-         (B0yCell_BLK(iCell,jCell,kCell,iBlock)+    &
-         State_VGB(By_,iCell,jCell,kCell,iBlock))**2+&
-         (B0zCell_BLK(iCell,jCell,kCell,iBlock)+    &
-         State_VGB(Bz_,iCell,jCell,kCell,iBlock))**2))
+         max(cTiny, sum((State_VGB(Bx_:Bz_,iCell,jCell,kCell,iBlock)+    &
+                            B0_DGB(:       ,iCell,jCell,kCell,iBlock))**2))
+         
     !\
     ! Compute a Beta-multiplier, which will be used to
     ! diminish the turbulent heating in the current sheet::
@@ -1805,8 +1799,7 @@ contains
     use ModIO,        ONLY: restart
     use ModVarIndexes,ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_, &
          Ew_ => ScalarFirst_ 
-    use ModAdvance,   ONLY: State_VGB,B0xCell_BLK,B0yCell_BLK,       &
-         B0zCell_BLK,tmp1_BLK,tmp2_BLK
+    use ModAdvance,   ONLY: State_VGB,B0_DGB,tmp1_BLK,tmp2_BLK
     use ModProcMH,    ONLY: iProc,nProc,iComm
     use ModNumConst,  ONLY: cZero,cQuarter,cHalf,cOne,cTwo,cE1,cE9,  &
          cTolerance,cThree
@@ -2783,8 +2776,7 @@ contains
        maxx,maxy,maxz,maxR,IsFound)
     use ModSize,       ONLY: nI,nJ,nK,gcn
     use ModVarIndexes, ONLY: Bx_,By_,Bz_,P_
-    use ModAdvance,    ONLY: B0xCell_BLK,B0yCell_BLK,       &
-         B0zCell_BLK,State_VGB
+    use ModAdvance,    ONLY: B0_DGB,State_VGB
     use ModAMR,        ONLY: InitialRefineType
     use ModMain,       ONLY: x_,y_,z_,iteration_number,     &
          time_loop
@@ -2892,9 +2884,9 @@ contains
                    YCell = y_BLK(i,j,k,iBLK)
                    ZCell = z_BLK(i,j,k,iBLK)
                    RCell = sqrt(XCell**2+YCell**2+ZCell**2)
-                   B0xCell = B0xCell_BLK(i,j,k,iBLK)
-                   B0yCell = B0yCell_BLK(i,j,k,iBLK)
-                   B0zCell = B0zCell_BLK(i,j,k,iBLK)
+                   B0xCell = B0_DGB(x_,i,j,k,iBLK)
+                   B0yCell = B0_DGB(y_,i,j,k,iBLK)
+                   B0zCell = B0_DGB(z_,i,j,k,iBLK)
                    Br_D(i,j,k) = abs(   &
                         (XCell*B0xCell+ &
                         YCell*B0yCell+ &
@@ -2939,9 +2931,9 @@ contains
                       YCell = y_BLK(i,j,k,iBLK)
                       ZCell = z_BLK(i,j,k,iBLK)
                       RCell = sqrt(XCell**2+YCell**2+ZCell**2)
-                      B0xCell = B0xCell_BLK(i,j,k,iBLK)
-                      B0yCell = B0yCell_BLK(i,j,k,iBLK)
-                      B0zCell = B0zCell_BLK(i,j,k,iBLK)
+                      B0xCell = B0_DGB(x_,i,j,k,iBLK)
+                      B0yCell = B0_DGB(y_,i,j,k,iBLK)
+                      B0zCell = B0_DGB(z_,i,j,k,iBLK)
                       BIxCell = State_VGB(Bx_,i,j,k,iBLK)
                       BIyCell = State_VGB(By_,i,j,k,iBLK)
                       BIzCell = State_VGB(Bz_,i,j,k,iBLK)
@@ -2978,9 +2970,9 @@ contains
                          Beta_D(i,j,k) = cZero
                          CYCLE
                       end if
-                      B0xCell  = B0xCell_BLK(i,j,k,iBLK)
-                      B0yCell  = B0yCell_BLK(i,j,k,iBLK)
-                      B0zCell  = B0zCell_BLK(i,j,k,iBLK)
+                      B0xCell  = B0_DGB(x_,i,j,k,iBLK)
+                      B0yCell  = B0_DGB(y_,i,j,k,iBLK)
+                      B0zCell  = B0_DGB(z_,i,j,k,iBLK)
                       BIxCell  = State_VGB(Bx_   ,i,j,k,iBLK)
                       BIyCell  = State_VGB(By_   ,i,j,k,iBLK)
                       BIzCell  = State_VGB(Bz_   ,i,j,k,iBLK)
@@ -3120,9 +3112,9 @@ contains
                 YCell   = y_BLK(i,j,k,iBLK)
                 ZCell   = z_BLK(i,j,k,iBLK)
                 RCell   = R_BLK(i,j,k,iBLK)
-                B0xCell = B0xCell_BLK(i,j,k,iBLK)
-                B0yCell = B0yCell_BLK(i,j,k,iBLK)
-                B0zCell = B0zCell_BLK(i,j,k,iBLK)
+                B0xCell = B0_DGB(x_,i,j,k,iBLK)
+                B0yCell = B0_DGB(y_,i,j,k,iBLK)
+                B0zCell = B0_DGB(z_,i,j,k,iBLK)
                 BIxCell = State_VGB(Bx_,i,j,k,iBLK)
                 BIyCell = State_VGB(By_,i,j,k,iBLK)
                 BIzCell = State_VGB(Bz_,i,j,k,iBLK)
@@ -3207,8 +3199,7 @@ contains
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, rho_, rhoUx_, rhoUy_, rhoUz_, P_, &
          Ew_ => ScalarFirst_
     use ModGeometry,   ONLY: R_BLK
-    use ModAdvance,    ONLY: State_VGB,tmp1_BLK,B0xCell_BLK,    &
-         B0yCell_BLK,B0zCell_BLK
+    use ModAdvance,    ONLY: State_VGB,tmp1_BLK,B0_DGB
     use ModPhysics,    ONLY: inv_gm1,No2Si_V(UnitEnergydens_),No2Si_V(UnitX_),&
          No2Si_V(UnitU_),No2Si_V(UnitRho_)
     use ModNumConst,   ONLY: cOne,cHalf,cE1,cE3,cE6
@@ -3230,9 +3221,9 @@ contains
        do iBLK=1,nBLK
           if (unusedBLK(iBLK)) cycle
           tmp1_BLK(:,:,:,iBLK) = &
-               (B0xcell_BLK(:,:,:,iBLK)+State_VGB(Bx_,:,:,:,iBLK))**2+&
-               (B0ycell_BLK(:,:,:,iBLK)+State_VGB(By_,:,:,:,iBLK))**2+&
-               (B0zcell_BLK(:,:,:,iBLK)+State_VGB(Bz_,:,:,:,iBLK))**2
+               (B0_DGB(x_,:,:,:,iBLK)+State_VGB(Bx_,:,:,:,iBLK))**2+&
+               (B0_DGB(y_,:,:,:,iBLK)+State_VGB(By_,:,:,:,iBLK))**2+&
+               (B0_DGB(z_,:,:,:,iBLK)+State_VGB(Bz_,:,:,:,iBLK))**2
        end do
        VarValue = unit_energy*cHalf*integrate_BLK(1,tmp1_BLK)
     case('ek_t','Ek_t','ek_r','Ek_r')

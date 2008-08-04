@@ -443,7 +443,7 @@ subroutine getdt_courant(qdt)
 
   use ModProcMH
   use ModMain
-  use ModAdvance, ONLY : B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
+  use ModAdvance, ONLY : B0_DGB
   use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,dxyz,true_cell,true_BLK,vInv_CB
   use ModImplicit
   use ModMpi
@@ -464,9 +464,9 @@ subroutine getdt_courant(qdt)
      iBLK=impl2iBLK(implBLK); 
      dxyz(x_)=dx_BLK(iBLK); dxyz(y_)=dy_BLK(iBLK); dxyz(z_)=dz_BLK(iBLK)
 
-     B0cell(:,:,:,x_)=B0xCell_BLK(1:nI,1:nJ,1:nK,iBLK)
-     B0cell(:,:,:,y_)=B0yCell_BLK(1:nI,1:nJ,1:nK,iBLK)
-     B0cell(:,:,:,z_)=B0zCell_BLK(1:nI,1:nJ,1:nK,iBLK)
+     B0cell(:,:,:,x_)=B0_DGB(x_,1:nI,1:nJ,1:nK,iBLK)
+     B0cell(:,:,:,y_)=B0_DGB(y_,1:nI,1:nJ,1:nK,iBLK)
+     B0cell(:,:,:,z_)=B0_DGB(z_,1:nI,1:nJ,1:nK,iBLK)
 
      do idim=1,ndim
 

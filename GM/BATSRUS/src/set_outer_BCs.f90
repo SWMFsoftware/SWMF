@@ -359,27 +359,16 @@ end subroutine BC_fixed
 subroutine BC_fixed_B
   use ModSetOuterBC
   use ModVarIndexes
-  use ModAdvance, ONLY : State_VGB,B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
+  use ModAdvance, ONLY : State_VGB,B0_DGB
   ! Set q_B=q-q_B0 in ghost cells
 
-  State_VGB(Bx_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)= &
-       State_VGB(Bx_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)&
-       - B0xCell_BLK(imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)
-  State_VGB(By_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)= &
-       State_VGB(By_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)&
-       - B0yCell_BLK(imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)
-  State_VGB(Bz_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)= &
-       State_VGB(Bz_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)&
-       - B0zCell_BLK(imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)
-  State_VGB(Bx_,imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)= &
-       State_VGB(Bx_,imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)&
-       - B0xCell_BLK(imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)
-  State_VGB(By_,imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)= &
-       State_VGB(By_,imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)&
-       - B0yCell_BLK(imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)
-  State_VGB(Bz_,imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)= &
-       State_VGB(Bz_,imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)&
-       - B0zCell_BLK(imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)
+  State_VGB(Bx_:Bz_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)= &
+       State_VGB(Bx_:Bz_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)&
+       - B0_DGB(:,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)
+ 
+  State_VGB(Bx_:Bz_,imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)= &
+       State_VGB(Bx_:Bz_,imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)&
+       - B0_DGB(:,imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)
 
 end subroutine BC_fixed_B
 
@@ -389,7 +378,7 @@ subroutine BC_solar_wind(time_now)
 
   use ModGeometry,ONLY:x_BLK, z_BLK,y_BLK, x2
   use ModVarIndexes
-  use ModAdvance, ONLY : State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
+  use ModAdvance, ONLY : State_VGB, B0_DGB
   use ModSetOuterBC
   use ModMultiFluid, ONLY: &
        iRho_I, iUx_I, iUy_I, iUz_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
@@ -429,13 +418,8 @@ subroutine BC_solar_wind(time_now)
                 State_VGB(iUz_I, i,j,k,iBLK)*State_VGB(iRho_I,i,j,k,iBLK)
 
            ! Subtract B0:   B1 = B - B0
-           State_VGB(Bx_,i,j,k,iBLK)    = &
-                State_VGB(Bx_,i,j,k,iBLK) - B0xCell_BLK(i,j,k,iBLK)
-           State_VGB(By_,i,j,k,iBLK)    = &
-                State_VGB(By_,i,j,k,iBLK) - B0yCell_BLK(i,j,k,iBLK)
-           State_VGB(Bz_,i,j,k,iBLK)    = &
-                State_VGB(Bz_,i,j,k,iBLK) - B0zCell_BLK(i,j,k,iBLK)
-
+           State_VGB(Bx_:Bz_,i,j,k,iBLK)    = &
+                State_VGB(Bx_:Bz_,i,j,k,iBLK) - B0_DGB(:,i,j,k,iBLK)
         end do
      end do
   end do
@@ -448,7 +432,7 @@ subroutine BC_solar_wind_buffer
 
   use ModGeometry, ONLY: z_BLK, y_BLK
   use ModVarIndexes, ONLY: Bx_, By_, Bz_
-  use ModAdvance, ONLY : State_VGB, B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
+  use ModAdvance, ONLY : State_VGB, B0_DGB
   use ModSetOuterBC
 
   implicit none
@@ -464,12 +448,8 @@ subroutine BC_solar_wind_buffer
         do i=imin1g,imax2g,sign(1,imax2g-imin1g)
            call read_ih_buffer(y,z,State_VGB(:,i,j,k,iBlk))
            ! Subtract B0
-           State_VGB(Bx_,i,j,k,iBLK) = State_VGB(Bx_,i,j,k,iBLK) &
-                - B0xCell_BLK(i,j,k,iBLK)
-           State_VGB(By_,i,j,k,iBLK) = State_VGB(By_,i,j,k,iBLK) &
-                - B0yCell_BLK(i,j,k,iBLK)
-           State_VGB(Bz_,i,j,k,iBLK) = State_VGB(Bz_,i,j,k,iBLK) &
-                - B0zCell_BLK(i,j,k,iBLK)
+           State_VGB(Bx_:Bz_,i,j,k,iBLK) = State_VGB(Bx_:Bz_,i,j,k,iBLK) &
+                - B0_DGB(:,i,j,k,iBLK)
         end do
      end do
   end do

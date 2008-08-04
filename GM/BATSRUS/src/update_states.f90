@@ -588,11 +588,11 @@ contains
     if(boris_correction .and. nFluid==1) then                  !^CFG IF BORISCORR BEGIN
 
        ! Convert old state
-       fullBx = B0xCell_BLK(i,j,k,iBlock) + &
+       fullBx = B0_DGB(x_,i,j,k,iBlock) + &
             StateOld_VCB(Bx_,i,j,k,iBlock)
-       fullBy = B0yCell_BLK(i,j,k,iBlock) + &
+       fullBy = B0_DGB(y_,i,j,k,iBlock) + &
             StateOld_VCB(By_,i,j,k,iBlock)
-       fullBz = B0zCell_BLK(i,j,k,iBlock) + &
+       fullBz = B0_DGB(z_,i,j,k,iBlock) + &
             StateOld_VCB(Bz_,i,j,k,iBlock)
        fullBB = fullBx**2 + fullBy**2 + fullBz**2
        rhoc2  = &
@@ -626,9 +626,9 @@ contains
        end if
 
        ! Convert current state
-       fullBx = B0xCell_BLK(i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)
-       fullBy = B0yCell_BLK(i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)
-       fullBz = B0zCell_BLK(i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock)
+       fullBx = B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)
+       fullBy = B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)
+       fullBz = B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock)
        fullBB = fullBx**2 + fullBy**2 + fullBz**2
        rhoc2  = State_VGB(rho_,i,j,k,iBlock)*c2LIGHT
        UdotBc2= (State_VGB(rhoUx_,i,j,k,iBlock)*fullBx + &
@@ -684,9 +684,9 @@ contains
             (cOne-time_fraction) * StateOld_VCB(Bz_,i,j,k,iBlock)
 
        ! Convert Back
-       fullBx = B0xCell_BLK(i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)
-       fullBy = B0yCell_BLK(i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)
-       fullBz = B0zCell_BLK(i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock)
+       fullBx = B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)
+       fullBy = B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)
+       fullBz = B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock)
        fullBB = fullBx**2 + fullBy**2 + fullBz**2
        rhoc2  = State_VGB(rho_,i,j,k,iBlock)*c2LIGHT
        UdotBc2= (rhoUx_Boris*fullBx + rhoUy_Boris*fullBy + rhoUz_Boris*fullBz)&
@@ -833,11 +833,11 @@ subroutine select_conservative
                    State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) > pCoeffConserv * &
                    (Energy_GBI(1:nI,1:nJ,1:nK,iBlock,1) + 0.5 * &
                    ((State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock) &
-                   + B0xCell_BLK(1:nI,1:nJ,1:nK,iBlock))**2 &
+                   + B0_DGB(x_,1:nI,1:nJ,1:nK,iBlock))**2 &
                    +(State_VGB(By_,1:nI,1:nJ,1:nK,iBlock) &
-                   + B0yCell_BLK(1:nI,1:nJ,1:nK,iBlock))**2 &
+                   + B0_DGB(y_,1:nI,1:nJ,1:nK,iBlock))**2 &
                    +(State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock) &
-                   + B0zCell_BLK(1:nI,1:nJ,1:nK,iBlock))**2 &
+                   + B0_DGB(z_,1:nI,1:nJ,1:nK,iBlock))**2 &
                    -State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)**2 &
                    -State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)**2 &
                    -State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)**2 &

@@ -361,10 +361,7 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
   use ModVarIndexes
   use ModAdvance, ONLY : State_VGB, &
        fbody_x_BLK, fbody_y_BLK, fbody_z_BLK, &
-       B0xCell_BLK, B0yCell_BLK, B0zCell_BLK, &
-       B0xFace_x_BLK, B0yFace_x_BLK, B0zFace_x_BLK, &
-       B0xFace_y_BLK, B0yFace_y_BLK, B0zFace_y_BLK, &
-       B0xFace_z_BLK, B0yFace_z_BLK, B0zFace_z_BLK, &
+       B0_DGB, B0ResChange_DXSB,B0ResChange_DYSB,B0ResChange_DZSB, &
        iTypeAdvance_B, iTypeAdvance_BP, SkippedBlock_
   use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,xyzStart_BLK
   use ModParallel
@@ -388,9 +385,9 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
        nCellGhostBLK=(nI+4)*(nJ+4)*(nK+4)
   integer, parameter :: nExtraData = &
        3*nCellGhostBLK +                 & ! B0*Cell
-       3*((nI+3)*(nJ+2)*(nK+2)           & ! B0*Face_x
-       +  (nI+2)*(nJ+3)*(nK+2)           & ! B0*Face_y
-       +  (nI+2)*(nJ+2)*(nK+3)) +        & ! B0*Face_x
+       6*(nJ*nK                          & ! B0*Face_x
+       +  nI*nK                          & ! B0*Face_y
+       +  nI*nJ)                +        & ! B0*Face_z
        3*nIJK                              ! fbody_
        
   integer, parameter :: nDataBLK= &
@@ -404,7 +401,7 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
   ! Buffer for send and recieve
   real, dimension(nDataBLK) :: BlockData_I
 
-  integer :: iData, itag, i, j, k, i1,i2, iVar, iw, iSize
+  integer :: iData, itag, i, j, k, i1,i2, iVar, iw, iSize,iDim
   integer :: iError
   integer :: Status_I(MPI_STATUS_SIZE)
 
@@ -505,42 +502,29 @@ contains
           if(UseB0)then
              ! B0*Cell
              do k=1-gcn,nK+gcn;do j=1-gcn,nJ+gcn;do i=1-gcn,nI+gcn
-                iData = iData+1
-                BlockData_I(iData) = B0xCell_BLK(i,j,k,iBlockFrom)
-                iData = iData+1
-                BlockData_I(iData) = B0yCell_BLK(i,j,k,iBlockFrom)
-                iData = iData+1
-                BlockData_I(iData) = B0zCell_BLK(i,j,k,iBlockFrom)
+                BlockData_I(iData+1:iData+3) = B0_DGB(:,i,j,k,iBlockFrom)
+                iData = iData+3
              end do; end do; end do
              
              ! B0*Face_x
-             do k=0,nK+1; do j=0,nJ+1; do i=0,nI+2
-                iData = iData+1
-                BlockData_I(iData) = B0xFace_x_BLK(i,j,k,iBlockFrom)
-                iData = iData+1
-                BlockData_I(iData) = B0yFace_x_BLK(i,j,k,iBlockFrom)
-                iData = iData+1
-                BlockData_I(iData) = B0zFace_x_BLK(i,j,k,iBlockFrom)
+             do i=1,2; do k=1,nK; do j=1,nJ 
+                BlockData_I(iData+1:iData+3) = &
+                     B0ResChange_DXSB(:,j,k,i,iBlockFrom)
+                iData = iData+3
              end do; end do; end do
              
              ! B0*Face_y
-             do k=0,nK+1; do j=0,nJ+2; do i=0,nI+1
-                iData = iData+1
-                BlockData_I(iData) = B0xFace_y_BLK(i,j,k,iBlockFrom)
-                iData = iData+1
-                BlockData_I(iData) = B0yFace_y_BLK(i,j,k,iBlockFrom)
-                iData = iData+1
-                BlockData_I(iData) = B0zFace_y_BLK(i,j,k,iBlockFrom)
+             do j=3,4; do k=1,nK; do i=1,nI
+                BlockData_I(iData+1:iData+3) = &
+                     B0ResChange_DYSB(:,i,k,j,iBlockFrom)
+                iData = iData+3
              end do; end do; end do
 
              ! B0*Face_z
-             do k=0,nK+2; do j=0,nJ+1; do i=0,nI+1
-                iData = iData+1
-                BlockData_I(iData) = B0xFace_z_BLK(i,j,k,iBlockFrom)
-                iData = iData+1
-                BlockData_I(iData) = B0yFace_z_BLK(i,j,k,iBlockFrom)
-                iData = iData+1
-                BlockData_I(iData) = B0zFace_z_BLK(i,j,k,iBlockFrom)
+             do k=5,6; do j=1,nJ; do i=1,nI
+                BlockData_I(iData+1:iData+3) = &
+                     B0ResChange_DZSB(:,i,j,k,iBlockFrom)
+                iData = iData+3
              end do; end do; end do
           end if
           ! fbody*
@@ -684,42 +668,29 @@ contains
        if(UseB0)then
           ! B0*Cell
           do k=1-gcn,nK+gcn;do j=1-gcn,nJ+gcn;do i=1-gcn,nI+gcn
-             iData = iData+1
-             B0xCell_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-             iData = iData+1
-             B0yCell_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-             iData = iData+1
-             B0zCell_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-          end do; end do; end do
-          
-          ! B0*Face_x
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+2
-             iData = iData+1
-             B0xFace_x_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-             iData = iData+1
-             B0yFace_x_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-             iData = iData+1
-             B0zFace_x_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-          end do; end do; end do
-       
-          ! B0*Face_y
-          do k=0,nK+1; do j=0,nJ+2; do i=0,nI+1
-             iData = iData+1
-             B0xFace_y_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-             iData = iData+1
-             B0yFace_y_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-             iData = iData+1
-             B0zFace_y_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+             B0_DGB(:,i,j,k,iBlockTo) = BlockData_I(iData+1:iData+3)
+             iData = iData+3
           end do; end do; end do
 
+          ! B0*Face_x
+          do i=1,2; do k=1,nK; do j=1,nJ 
+             B0ResChange_DXSB(:,j,k,i,iBlockTo) = &
+                  BlockData_I(iData+1:iData+3)
+             iData = iData+3
+          end do; end do; end do
+          
+          ! B0*Face_y
+          do j=3,4; do k=1,nK; do i=1,nI
+             B0ResChange_DYSB(:,i,k,j,iBlockTo) = &
+                  BlockData_I(iData+1:iData+3)
+             iData = iData+3
+          end do; end do; end do
+          
           ! B0*Face_z
-          do k=0,nK+2; do j=0,nJ+1; do i=0,nI+1
-             iData = iData+1
-             B0xFace_z_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-             iData = iData+1
-             B0yFace_z_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-             iData = iData+1
-             B0zFace_z_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+          do k=5,6; do j=1,nJ; do i=1,nI
+             B0ResChange_DZSB(:,i,j,k,iBlockTo) = &
+                  BlockData_I(iData+1:iData+3)
+             iData = iData+3
           end do; end do; end do
        end if
        ! fbody*

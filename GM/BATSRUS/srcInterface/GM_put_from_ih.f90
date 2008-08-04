@@ -12,7 +12,7 @@ subroutine GM_put_from_ih(nPartial,&
   !USES:
   use CON_coupler, ONLY: IndexPtrType, WeightPtrType
   use ModAdvance, ONLY: State_VGB,rho_,rhoUx_,rhoUy_,rhoUz_,Bx_,By_,Bz_,P_,&
-       B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
+       B0_DGB
   use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitRhoU_, UnitP_, UnitB_
 
   implicit none
@@ -80,9 +80,8 @@ subroutine GM_put_from_ih(nPartial,&
   else
      State_VGB(rho_,i,j,k,iBlock)= State_V(BuffRho_)
      State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) =  State_V(BuffRhoUx_:BuffRhoUz_)
-     State_VGB(Bx_,i,j,k,iBlock) = State_V(BuffBx_) - B0xCell_BLK(i,j,k,iBlock)
-     State_VGB(By_,i,j,k,iBlock) = State_V(BuffBy_) - B0yCell_BLK(i,j,k,iBlock)
-     State_VGB(Bz_,i,j,k,iBlock) = State_V(BuffBz_) - B0zCell_BLK(i,j,k,iBlock)
+     State_VGB(Bx_:Bz_,i,j,k,iBlock) = State_V(BuffBx_:BuffBz_) - &
+          B0_DGB(:,i,j,k,iBlock)
      State_VGB(P_,i,j,k,iBlock)  = State_V(BuffP_)
   end if
 end subroutine GM_put_from_ih

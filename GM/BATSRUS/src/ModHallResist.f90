@@ -1150,8 +1150,8 @@ contains
   
   !===========================================================================
   subroutine calc_hyper_resistivity(iBlock)
-    use ModMain, ONLY: x_, y_, z_
-    use ModAdvance, ONLY: State_VGB, B0xCell_Blk, B0yCell_Blk, B0zCell_Blk, &
+    use ModMain, ONLY: x_, y_, z_,UseB0
+    use ModAdvance, ONLY: State_VGB, B0_DGB, &
          Rho_, Bx_, Bz_, Energy_, Source_VC
     use ModGeometry,  ONLY: Dx_BLK, Dy_BLK, Dz_BLK
 
@@ -1175,9 +1175,8 @@ contains
     InvDy4 = InvDy**4
     InvDz4 = InvDz**4
 
-    FullB_DG(x_,:,:,:) = b_DG(x_,:,:,:) + B0xCell_Blk(:,:,:,iBlock)
-    FullB_DG(y_,:,:,:) = b_DG(y_,:,:,:) + B0yCell_Blk(:,:,:,iBlock)
-    FullB_DG(z_,:,:,:) = b_DG(z_,:,:,:) + B0zCell_Blk(:,:,:,iBlock)
+    FullB_DG(:,:,:,:) = b_DG(:,:,:,:)
+    if(UseB0)FullB_DG(:,:,:,:) = FullB_DG(:,:,:,:) + B0_DGB(:,:,:,:,iBlock)
 
     do k=1,nK; do j=1,nJ; do i=1,nI
 

@@ -35,7 +35,7 @@ subroutine calc_sources
   real,dimension(3)::CurlB0CrossB_D
 
   ! Variables needed for Boris source terms also used for div(u)
-  real :: FullBx, FullBy, FullBz, Ux, Uy, Uz, RhoInv
+  real :: FullB_DC(nDim,nI,nJ,nK),FullBx, FullBy, FullBz, Ux, Uy, Uz, RhoInv
   real :: E_D(3), DivE
 
   ! Variables needed for Joule heating
@@ -147,10 +147,8 @@ subroutine calc_sources
         if(R_BLK(i,j,k,iBlock)<rCurrentFreeB0)CYCLE
         CurlB0CrossB_D = cross_product(&
              CurlB0_DCB(:,i,j,k,iBlock),&
-             State_VGB(Bx_:Bz_,i,j,k,iBlock)+(/&
-             B0xCell_BLK(i,j,k,iBlock),&
-             B0yCell_BLK(i,j,k,iBlock),&
-             B0zCell_BLK(i,j,k,iBlock)/))
+             State_VGB(Bx_:Bz_,i,j,k,iBlock)+&
+             B0_DGB(:,i,j,k,iBlock))
         Source_VC(rhoUx_:rhoUz_,i,j,k)= Source_VC(rhoUx_:rhoUz_,i,j,k) +&
              CurlB0CrossB_D
         Source_VC(Energy_,i,j,k)     = Source_VC(Energy_,i,j,k)        +&
@@ -168,17 +166,21 @@ subroutine calc_sources
        .and. index(test_string,'nodivE')<1) then
 
      coef= (boris_cLIGHT_factor**2 - 1.0)*inv_c2LIGHT
+     FullB_DC = State_VGB(Bx_:Bz_,1:nI,1:nJ,1:nK,iBlock)
+     if(UseB0)FullB_DC = FullB_DC + B0_DGB(:,1:nI,1:nJ,1:nK,iBlock) 
      do k=1,nK; do j=1,nJ; do i=1,nI
-        FullBx = B0xCell_BLK(i,j,k,iBlock)+State_VGB(Bx_,i,j,k,iBlock)
-        FullBy = B0yCell_BLK(i,j,k,iBlock)+State_VGB(By_,i,j,k,iBlock)
-        FullBz = B0zCell_BLK(i,j,k,iBlock)+State_VGB(Bz_,i,j,k,iBlock)
-        Ux = State_VGB(rhoUx_,i,j,k,iBlock)/State_VGB(rho_,i,j,k,iBlock)
-        Uy = State_VGB(rhoUy_,i,j,k,iBlock)/State_VGB(rho_,i,j,k,iBlock)
-        Uz = State_VGB(rhoUz_,i,j,k,iBlock)/State_VGB(rho_,i,j,k,iBlock)
-        E_D(x_) = FullBy*Uz - FullBz*Uy
-        E_D(y_) = FullBz*Ux - FullBx*Uz
-        E_D(z_) = FullBx*Uy - FullBy*Ux
-
+!        FullBx = B0_DGB(x_,i,j,k)
+!        FullBy = B0_DGB(y_,i,j,k)
+!        FullBz = B0_DGB(z_,i,j,k)
+!        Ux = State_VGB(rhoUx_,i,j,k,iBlock)/State_VGB(rho_,i,j,k,iBlock)
+!        Uy = State_VGB(rhoUy_,i,j,k,iBlock)/State_VGB(rho_,i,j,k,iBlock)
+!        Uz = State_VGB(rhoUz_,i,j,k,iBlock)/State_VGB(rho_,i,j,k,iBlock)
+!        E_D(x_) = FullBy*Uz - FullBz*Uy
+!        E_D(y_) = FullBz*Ux - FullBx*Uz
+!        E_D(z_) = FullBx*Uy - FullBy*Ux
+        E_D = cross_product(FullB_DC(:,i,j,k),&
+               State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock))/&
+               State_VGB(rho_,i,j,k,iBlock)
         ! Calculate divergence of electric field 
         DivE = vInv_CB(i,j,k,iBlock)*&
              (EDotFA_X(i+1,j,k)-EDotFA_X(i,j,k)+&
@@ -303,53 +305,49 @@ contains
        if(.not.IsMhd) CYCLE
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k) &
-            -B0xFace_x_BLK(i,j,k,iBlock)*dB1nEast
+            -B0_DX(x_,i,j,k)*dB1nEast
        Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k) &
-            -B0yFace_x_BLK(i,j,k,iBlock)*dB1nEast
+            -B0_DX(y_,i,j,k)*dB1nEast
        Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k) &
-            -B0zFace_x_BLK(i,j,k,iBlock)*dB1nEast
+            -B0_DX(z_,i,j,k)*dB1nEast
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
-            -B0xFace_x_BLK(i+1,j,k,iBlock)*dB1nWest
+            -B0_DX(x_,i+1,j,k)*dB1nWest
        Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
-            -B0yFace_x_BLK(i+1,j,k,iBlock)*dB1nWest
+            -B0_DX(y_,i+1,j,k)*dB1nWest
        Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
-            -B0zFace_x_BLK(i+1,j,k,iBlock)*dB1nWest
+            -B0_DX(z_,i+1,j,k)*dB1nWest
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
-            -B0xFace_y_BLK(i,j,k,iBlock)*dB1nSouth
+            -B0_DY(x_,i,j,k)*dB1nSouth
        Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
-            -B0yFace_y_BLK(i,j,k,iBlock)*dB1nSouth
+            -B0_DY(y_,i,j,k)*dB1nSouth
        Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
-            -B0zFace_y_BLK(i,j,k,iBlock)*dB1nSouth
+            -B0_DY(z_,i,j,k)*dB1nSouth
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
-            -B0xFace_y_BLK(i,j+1,k,iBlock)*dB1nNorth
+            -B0_DY(x_,i,j+1,k)*dB1nNorth
        Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
-            -B0yFace_y_BLK(i,j+1,k,iBlock)*dB1nNorth
+            -B0_DY(y_,i,j+1,k)*dB1nNorth
        Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
-            -B0zFace_y_BLK(i,j+1,k,iBlock)*dB1nNorth
+            -B0_DY(z_,i,j+1,k)*dB1nNorth
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
-            -B0xFace_z_BLK(i,j,k,iBlock)*dB1nBot
+            -B0_DZ(x_,i,j,k)*dB1nBot
        Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
-            -B0yFace_z_BLK(i,j,k,iBlock)*dB1nBot
+            -B0_DZ(y_,i,j,k)*dB1nBot
        Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
-            -B0zFace_z_BLK(i,j,k,iBlock)*dB1nBot
+            -B0_DZ(z_,i,j,k)*dB1nBot
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
-            -B0xFace_z_BLK(i,j,k+1,iBlock)*dB1nTop
+            -B0_DZ(x_,i,j,k+1)*dB1nTop
        Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
-            -B0yFace_z_BLK(i,j,k+1,iBlock)*dB1nTop
+            -B0_DZ(y_,i,j,k+1)*dB1nTop
        Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
-            -B0zFace_z_BLK(i,j,k+1,iBlock)*dB1nTop
+            -B0_DZ(z_,i,j,k+1)*dB1nTop
 
-       Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)-DivBInternal*&
-            B0xCell_BLK(i,j,k,iBlock)
-       Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)-DivBInternal*&
-            B0yCell_BLK(i,j,k,iBlock)
-       Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)-DivBInternal*&
-            B0zCell_BLK(i,j,k,iBlock)               
+       Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) - &
+            DivBInternal*B0_DGB(:,i,j,k,iBlock)               
 
     end do; end do; end do
 
@@ -389,18 +387,18 @@ contains
        if(.not.IsMhd) CYCLE
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k) &
-            -B0xFace_x_BLK(i,j,k,iBlock)*B1nJumpL
+            -B0_DX(x_,i,j,k)*B1nJumpL
        Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k) &
-            -B0yFace_x_BLK(i,j,k,iBlock)*B1nJumpL
+            -B0_DX(y_,i,j,k)*B1nJumpL
        Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k) &
-            -B0zFace_x_BLK(i,j,k,iBlock)*B1nJumpL
+            -B0_DX(z_,i,j,k)*B1nJumpL
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
-            -B0xFace_x_BLK(i+1,j,k,iBlock)*B1nJumpR
+            -B0_DX(x_,i+1,j,k)*B1nJumpR
        Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
-            -B0yFace_x_BLK(i+1,j,k,iBlock)*B1nJumpR
+            -B0_DX(y_,i+1,j,k)*B1nJumpR
        Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
-            -B0zFace_x_BLK(i+1,j,k,iBlock)*B1nJumpR
+            -B0_DX(z_,i+1,j,k)*B1nJumpR
     end do; end do; end do
 
     do k=1,nK; do j=1,nJ; do i=1,nI 
@@ -431,18 +429,18 @@ contains
        if(.not.IsMhd) CYCLE
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
-            -B0xFace_y_BLK(i,j,k,iBlock)*B1nJumpL
+            -B0_DY(x_,i,j,k)*B1nJumpL
        Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
-            -B0yFace_y_BLK(i,j,k,iBlock)*B1nJumpL
+            -B0_DY(y_,i,j,k)*B1nJumpL
        Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
-            -B0zFace_y_BLK(i,j,k,iBlock)*B1nJumpL
+            -B0_DY(z_,i,j,k)*B1nJumpL
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
-            -B0xFace_y_BLK(i,j+1,k,iBlock)*B1nJumpR
+            -B0_DY(x_,i,j+1,k)*B1nJumpR
        Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
-            -B0yFace_y_BLK(i,j+1,k,iBlock)*B1nJumpR
+            -B0_DY(y_,i,j+1,k)*B1nJumpR
        Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
-            -B0zFace_y_BLK(i,j+1,k,iBlock)*B1nJumpR
+            -B0_DY(z_,i,j+1,k)*B1nJumpR
 
     end do; end do; end do
 
@@ -475,18 +473,18 @@ contains
        if(.not.IsMhd) CYCLE
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
-            -B0xFace_z_BLK(i,j,k,iBlock)*B1nJumpL
+            -B0_DZ(x_,i,j,k)*B1nJumpL
        Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
-            -B0yFace_z_BLK(i,j,k,iBlock)*B1nJumpL
+            -B0_DZ(y_,i,j,k)*B1nJumpL
        Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
-            -B0zFace_z_BLK(i,j,k,iBlock)*B1nJumpL
+            -B0_DZ(z_,i,j,k)*B1nJumpL
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
-            -B0xFace_z_BLK(i,j,k+1,iBlock)*B1nJumpR
+            -B0_DZ(x_,i,j,k+1)*B1nJumpR
        Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
-            -B0yFace_z_BLK(i,j,k+1,iBlock)*B1nJumpR
+            -B0_DZ(y_,i,j,k+1)*B1nJumpR
        Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
-            -B0zFace_z_BLK(i,j,k+1,iBlock)*B1nJumpR
+            -B0_DZ(z_,i,j,k+1)*B1nJumpR
     end do; end do; end do
 
     do k=1,nK; do j=1,nJ; do i=1,nI 
@@ -495,12 +493,8 @@ contains
 
        if(.not.IsMhd) CYCLE
 
-       Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k) &
-            -DivBInternal_C(i,j,k)*B0xCell_BLK(i,j,k,iBlock)
-       Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k) &
-            -DivBInternal_C(i,j,k)*B0yCell_BLK(i,j,k,iBlock)
-       Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k) &
-            -DivBInternal_C(i,j,k)*B0zCell_BLK(i,j,k,iBlock)               
+       Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) &
+            -DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)            
     end do; end do; end do
 
   end subroutine calc_divb_source_covar

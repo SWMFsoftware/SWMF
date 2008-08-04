@@ -251,7 +251,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   use ModPhysics,    ONLY: rCurrents, inv_gm1, OMEGABody
   use ModVarIndexes
   use ModAdvance,    ONLY: tmp1_BLK, tmp2_BLK, &
-       B0xCell_BLK, B0yCell_BLK, B0zCell_BLK, State_VGB, Energy_GBI, DivB1_GB
+       B0_DGB, State_VGB, Energy_GBI, DivB1_GB
   use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,x1,x2,y1,y2,z1,z2
   use ModRaytrace,   ONLY: ray  !^CFG  IF RAYTRACE
   use ModIO
@@ -577,17 +577,17 @@ contains
        if(iProc == ProcTest) &
             LogVar_I(iVarTot) = State_VGB(Bz_,iTest,jTest,kTest,BlkTest)
     case('bxpnt')                      
-       tmp1_BLK = B0xcell_BLK + State_VGB(Bx_,:,:,:,:) 
+       tmp1_BLK = B0_DGB(x_,:,:,:,:) + State_VGB(Bx_,:,:,:,:) 
        if(iProc == ProcTest) LogVar_I(iVarTot) = &
-            B0xcell_BLK(iTest,jTest,kTest,BlkTest) + &
+            B0_DGB(x_,iTest,jTest,kTest,BlkTest) + &
             State_VGB(Bx_,iTest,jTest,kTest,BlkTest)
     case('bypnt')                      
        if(iProc == ProcTest) LogVar_I(iVarTot) = &
-            B0ycell_BLK(iTest,jTest,kTest,BlkTest) + &
+            B0_DGB(y_,iTest,jTest,kTest,BlkTest) + &
             State_VGB(By_,iTest,jTest,kTest,BlkTest)
     case('bzpnt')                      
        if(iProc == ProcTest) LogVar_I(iVarTot) = &
-            B0zcell_BLK(iTest,jTest,kTest,BlkTest) + &
+            B0_DGB(z_,iTest,jTest,kTest,BlkTest) + &
             State_VGB(Bz_,iTest,jTest,kTest,BlkTest)
     case('ppnt')
        if(iProc == ProcTest) &
@@ -685,11 +685,11 @@ contains
              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
                 tmp1_BLK(i,j,k,iBLK) = ( &
                      (State_VGB(Bx_,i,j,k,iBLK) &
-                     +B0xCell_BLK(i,j,k,iBLK))*x_BLK(i,j,k,iBLK) + &
+                     +B0_DGB(x_,i,j,k,iBLK))*x_BLK(i,j,k,iBLK) + &
                      (State_VGB(By_,i,j,k,iBLK) &
-                     +B0yCell_BLK(i,j,k,iBLK))*y_BLK(i,j,k,iBLK) + &
+                     +B0_DGB(y_,i,j,k,iBLK))*y_BLK(i,j,k,iBLK) + &
                      (State_VGB(Bz_,i,j,k,iBLK) &
-                     +B0zCell_BLK(i,j,k,iBLK))*z_BLK(i,j,k,iBLK) &
+                     +B0_DGB(z_,i,j,k,iBLK))*z_BLK(i,j,k,iBLK) &
                      ) / R_BLK(i,j,k,iBLK)
              end do; end do; end do
           end do
@@ -706,9 +706,7 @@ contains
              if(unusedBLK(iBLK))cycle           
              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              tmp1_BLK(i,j,k,iBLK) = &
-                  (State_VGB(Bx_,i,j,k,iBLK) + B0xCell_BLK(i,j,k,iBLK))**2 + &
-                  (State_VGB(By_,i,j,k,iBLK) + B0yCell_BLK(i,j,k,iBLK))**2 + &
-                  (State_VGB(Bz_,i,j,k,iBLK) + B0zCell_BLK(i,j,k,iBLK))**2 
+                  sum((State_VGB(Bx_:Bz_,i,j,k,iBLK) + B0_DGB(:,i,j,k,iBLK))**2)
              tmp1_BLK(i,j,k,iBLK) = 0.5*tmp1_BLK(i,j,k,iBLK)* &
                   ( State_VGB(iRhoUx,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
                   + State_VGB(iRhoUy,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
@@ -726,9 +724,9 @@ contains
           do iBLK=1,nBlock
              if(unusedBLK(iBLK))CYCLE
              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-                Bx = State_VGB(Bx_,i,j,k,iBLk)+B0xCell_BLK(i,j,k,iBLk)
-                By = State_VGB(By_,i,j,k,iBLk)+B0yCell_BLK(i,j,k,iBLk)
-                Bz = State_VGB(Bz_,i,j,k,iBLk)+B0zCell_BLK(i,j,k,iBLk)
+                Bx = State_VGB(Bx_,i,j,k,iBLk)+B0_DGB(x_,i,j,k,iBLk)
+                By = State_VGB(By_,i,j,k,iBLk)+B0_DGB(y_,i,j,k,iBLk)
+                Bz = State_VGB(Bz_,i,j,k,iBLk)+B0_DGB(z_,i,j,k,iBLk)
                 RhoUx = State_VGB(iRhoUx,i,j,k,iBLk)
                 RhoUy = State_VGB(iRhoUy,i,j,k,iBLk)
                 RhoUz = State_VGB(iRhoUz,i,j,k,iBLk)
@@ -757,9 +755,9 @@ contains
           do iBLK = 1,nBlock
              if(unusedBLK(iBLK))CYCLE
              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-                Bx = State_VGB(Bx_,i,j,k,iBLk)+B0xCell_BLK(i,j,k,iBLk)
-                By = State_VGB(By_,i,j,k,iBLk)+B0yCell_BLK(i,j,k,iBLk)
-                Bz = State_VGB(Bz_,i,j,k,iBLk)+B0zCell_BLK(i,j,k,iBLk)
+                Bx = State_VGB(Bx_,i,j,k,iBLk)+B0_DGB(x_,i,j,k,iBLk)
+                By = State_VGB(By_,i,j,k,iBLk)+B0_DGB(y_,i,j,k,iBLk)
+                Bz = State_VGB(Bz_,i,j,k,iBLk)+B0_DGB(z_,i,j,k,iBLk)
                 RhoUx = State_VGB(iRhoUx,i,j,k,iBLk)
                 RhoUy = State_VGB(iRhoUy,i,j,k,iBLk)
                 RhoUz = State_VGB(iRhoUz,i,j,k,iBLk)

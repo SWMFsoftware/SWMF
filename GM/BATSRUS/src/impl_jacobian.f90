@@ -55,10 +55,7 @@ subroutine impl_jacobian(implBLK,JAC)
   use ModProcMH
   use ModMain
   use ModvarIndexes
-  use ModAdvance, ONLY : &
-       B0xFace_x_BLK,B0yFace_x_BLK,B0zFace_x_BLK, &
-       B0xFace_y_BLK,B0yFace_y_BLK,B0zFace_y_BLK, &
-       B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK, &
+  use ModAdvance, ONLY : B0_DX, B0_DY,B0_DZ,set_b0_face,&
        time_BLK
   use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,dxyz,true_cell, &
        FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
@@ -106,16 +103,12 @@ subroutine impl_jacobian(implBLK,JAC)
   qwk = w_k(1:nI,1:nJ,1:nK,1:nw,implBLK)
   iBLK = impl2iBLK(implBLK)
   dxyz(1)=dx_BLK(iBLK); dxyz(2)=dy_BLK(iBLK); dxyz(3)=dz_BLK(iBLK)
-
-  B0face(1:nI+1,1:nJ  ,1:nK  ,x_,x_)=B0xFace_x_BLK(1:nI+1,1:nJ,1:nK,iBLK)
-  B0face(1:nI+1,1:nJ  ,1:nK  ,y_,x_)=B0yFace_x_BLK(1:nI+1,1:nJ,1:nK,iBLK)
-  B0face(1:nI+1,1:nJ  ,1:nK  ,z_,x_)=B0zFace_x_BLK(1:nI+1,1:nJ,1:nK,iBLK)
-  B0face(1:nI  ,1:nJ+1,1:nK  ,x_,y_)=B0xFace_y_BLK(1:nI,1:nJ+1,1:nK,iBLK)
-  B0face(1:nI  ,1:nJ+1,1:nK  ,y_,y_)=B0yFace_y_BLK(1:nI,1:nJ+1,1:nK,iBLK)
-  B0face(1:nI  ,1:nJ+1,1:nK  ,z_,y_)=B0zFace_y_BLK(1:nI,1:nJ+1,1:nK,iBLK)
-  B0face(1:nI  ,1:nJ  ,1:nK+1,x_,z_)=B0xFace_z_BLK(1:nI,1:nJ,1:nK+1,iBLK)
-  B0face(1:nI  ,1:nJ  ,1:nK+1,y_,z_)=B0yFace_z_BLK(1:nI,1:nJ,1:nK+1,iBLK)
-  B0face(1:nI  ,1:nJ  ,1:nK+1,z_,z_)=B0zFace_z_BLK(1:nI,1:nJ,1:nK+1,iBLK)
+  call set_b0_face(iBLK)
+  do iDim=1,3
+     B0face(1:nI+1,1:nJ  ,1:nK  ,iDim,x_)=B0_DX(iDim,1:nI+1,1:nJ,1:nK)
+     B0face(1:nI  ,1:nJ+1,1:nK  ,iDim,y_)=B0_DY(iDim,1:nI,1:nJ+1,1:nK)
+     B0face(1:nI  ,1:nJ  ,1:nK+1,iDim,z_)=B0_DZ(iDim,1:nI,1:nJ,1:nK+1)
+  end do
 
   if(UseHallResist)call impl_init_hall
 
@@ -504,7 +497,7 @@ contains
     use ModHallResist, ONLY: HallJ_CD, IonMassPerCharge_G, &
          BxPerN_G, ByPerN_G, BzPerN_G, set_ion_mass_per_charge
 
-    use ModAdvance, ONLY: B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
+    use ModAdvance, ONLY: B0_DGB
     
     use ModHallResist, ONLY: &                 
          DgenDxyz_DDC, set_block_jacobian_cell 
@@ -588,11 +581,11 @@ contains
     InvN_G = HallFactor_G * IonMassPerCharge_G / &
          w_k(0:nI+1,0:nJ+1,0:nK+1,Rho_,implBLK)
 
-    BxPerN_G = (B0xCell_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
+    BxPerN_G = (B0_DGB(x_,0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
          w_k(0:nI+1,0:nJ+1,0:nK+1,Bx_,implBLK))*InvN_G
-    ByPerN_G = (B0yCell_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
+    ByPerN_G = (B0_DGB(y_,0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
          w_k(0:nI+1,0:nJ+1,0:nK+1,By_,implBLK))*InvN_G
-    BzPerN_G = (B0zCell_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
+    BzPerN_G = (B0_DGB(z_,0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
          w_k(0:nI+1,0:nJ+1,0:nK+1,Bz_,implBLK))*InvN_G
 
   end subroutine impl_init_hall

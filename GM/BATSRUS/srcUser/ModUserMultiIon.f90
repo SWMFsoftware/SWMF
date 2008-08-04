@@ -103,7 +103,7 @@ contains
          IsPointImplMatrixSet, DsDu_VVC
     use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, Test_String, BlkTest, ProcTest
     use ModAdvance, ONLY: State_VGB, Source_VC
-    use ModAdvance, ONLY: B0XCell_BLK, B0YCell_BLK, B0ZCell_BLK
+    use ModAdvance, ONLY: B0_DGB
     use ModAdvance, ONLY: bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
     use ModGeometry,ONLY: vInv_CB
     use ModPhysics, ONLY: ElectronCharge, gm1, inv_gm1, &
@@ -176,11 +176,7 @@ contains
        end if
 
        ! Total magnetic field
-       FullB_D = State_V(Bx_:Bz_) + (/ &
-            B0xCell_BLK(i,j,k,globalBLK),&
-            B0yCell_BLK(i,j,k,globalBLK),&
-            B0zCell_BLK(i,j,k,globalBLK) /)
-
+       FullB_D = State_V(Bx_:Bz_) + B0_DGB(:,i,j,k,globalBLK)
        ! calculate number densities
        NumDens_I  = State_V(iRhoIon_I) / MassFluid_I(1:nIonFluid)
        NumDens    = sum(NumDens_I)

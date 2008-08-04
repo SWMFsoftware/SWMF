@@ -764,32 +764,21 @@ end subroutine fix_soln_block
 subroutine calc_other_soln_vars(iBLK)
   use ModMain
   use ModAdvance, ONLY : fbody_x_BLK,fbody_y_BLK,fbody_z_BLK, &
-       B0xCell_BLK,B0yCell_BLK,B0zCell_BLK, &
-       B0xFace_x_BLK,B0yFace_x_BLK,B0zFace_x_BLK, &
-       B0xFace_y_BLK,B0yFace_y_BLK,B0zFace_y_BLK, &
-       B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK
+       B0_DGB, B0ResChange_DXSB, B0ResChange_DYSB, B0ResChange_DZSB
   use ModConserveFlux, ONLY: init_cons_flux
   use ModImplicit, ONLY: UsePartImplicit             !^CFG IF IMPLICIT
   implicit none
 
   integer, intent(in) :: iBLK
 
-  B0xCell_BLK(:,:,:,iBLK) = 0.00
-  B0yCell_BLK(:,:,:,iBLK) = 0.00
-  B0zCell_BLK(:,:,:,iBLK) = 0.00
-
-  B0xFace_x_BLK(:,:,:,iBLK) = 0.00
-  B0yFace_x_BLK(:,:,:,iBLK) = 0.00
-  B0zFace_x_BLK(:,:,:,iBLK) = 0.00
-  B0xFace_y_BLK(:,:,:,iBLK) = 0.00
-  B0yFace_y_BLK(:,:,:,iBLK) = 0.00
-  B0zFace_y_BLK(:,:,:,iBLK) = 0.00
-  B0xFace_z_BLK(:,:,:,iBLK) = 0.00
-  B0yFace_z_BLK(:,:,:,iBLK) = 0.00
-  B0zFace_z_BLK(:,:,:,iBLK) = 0.00
-
-
-  if(UseB0)call set_b0(iBLK)
+  if(UseB0)then
+     B0_DGB(:,:,:,:,iBLK) = 0.00
+     B0ResChange_DXSB(:,:,:,:,iBLK) = 0.00
+     B0ResChange_DYSB(:,:,:,:,iBLK) = 0.00
+     B0ResChange_DZSB(:,:,:,:,iBLK) = 0.00
+ 
+     call set_b0(iBLK)
+  end if
 
   fbody_x_BLK(:,:,:,iBLK) = 0.00
   fbody_y_BLK(:,:,:,iBLK) = 0.00

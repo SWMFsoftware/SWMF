@@ -1003,9 +1003,8 @@ subroutine calc_b0source_covar(iBlock)
        neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
   use ModCovariant
   use ModAdvance, ONLY : &
-       B0xFace_x_BLK,B0yFace_x_BLK,B0zFace_x_BLK, &
-       B0xFace_y_BLK,B0yFace_y_BLK,B0zFace_y_BLK, &
-       B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK, &
+       B0_DX, B0_DY, B0_DZ, set_b0_face,&
+       B0ResChange_DXSB, B0ResChange_DYSB, B0ResChange_DZSB, &
        CurlB0_DCB,DivB0_CB, NormB0_CB  
   use ModGeometry,ONLY: dx_BLK,dy_BLK,dz_BLK,XyzStart_BLK,&!TypeGeometry,&
        vInv_CB
@@ -1014,7 +1013,7 @@ subroutine calc_b0source_covar(iBlock)
 
   integer, intent(in) :: iBlock
   integer::i,j,k,iFace,jFace,kFace,iDirB0,iDirFA,iSide
-  integer::i2,j2
+  integer::i2,j2,iDim
   !real::divB0!,x,y,z,R,Phi,Theta
   real,dimension(3)::GenCoord111_D,dGenFine_D
   real,dimension(ndim,0:1,0:1,East_:Top_)::FaceArea_DIIS, B0_DIIS
@@ -1030,7 +1029,7 @@ subroutine calc_b0source_covar(iBlock)
   dGenFine_D(1)=cHalf*dx_BLK(iBlock)
   dGenFine_D(2)=cHalf*dy_BLK(iBlock)
   dGenFine_D(3)=cHalf*dz_BLK(iBlock)
-
+  call set_b0_face(iBlock)
   do k=1,nK
      do j=1,nJ
         do i=1,nI
@@ -1039,86 +1038,68 @@ subroutine calc_b0source_covar(iBlock)
 
            if(i==nI.and.neiLWest(iBlock)==-1)then
               call correct_b0_face(West_)
-              B0xFace_x_BLK(i+1,j,k,iBlock)=&
-                   sum(B0_DIIS(x_,:,:,West_))*0.25
-              B0yFace_x_BLK(i+1,j,k,iBlock)=&
-                   sum(B0_DIIS(y_,:,:,West_))*0.25
-              B0zFace_x_BLK(i+1,j,k,iBlock)=&
-                   sum(B0_DIIS(z_,:,:,West_))*0.25
+              do iDim=1,3
+                 B0ResChange_DXSB(iDim,j,k,West_,iBlock)= &
+                      sum(B0_DIIS(iDim,:,:,West_))*0.25
+              end do
            else
               FaceArea_DIIS(:,0,0,West_)=FaceAreaI_DFB(:,i+1,j,k,iBlock)
-              B0_DIIS(x_,0,0,West_)= B0xFace_x_BLK(i+1,j,k,iBlock)
-              B0_DIIS(y_,0,0,West_)= B0yFace_x_BLK(i+1,j,k,iBlock)
-              B0_DIIS(z_,0,0,West_)= B0zFace_x_BLK(i+1,j,k,iBlock)
+              B0_DIIS(:,0,0,West_)= B0_DX(:,i+1,j,k)
            end if
 
            if(i==1.and.neiLEast(iBlock)==-1)then
               call correct_b0_face(East_)
-              B0xFace_x_BLK(i,j,k,iBlock)=sum(B0_DIIS(x_,:,:,East_))*0.25
-              B0yFace_x_BLK(i,j,k,iBlock)=sum(B0_DIIS(y_,:,:,East_))*0.25
-              B0zFace_x_BLK(i,j,k,iBlock)=sum(B0_DIIS(z_,:,:,East_))*0.25
+              do iDim=1,3
+                 B0ResChange_DXSB(iDim,j,k,East_,iBlock)= &
+                      sum(B0_DIIS(iDim,:,:,East_))*0.25
+              end do
            else
               FaceArea_DIIS(:,0,0,East_)=FaceAreaI_DFB(:,i,j,k,iBlock)
-              B0_DIIS(x_,0,0,East_)= B0xFace_x_BLK(i,j,k,iBlock)
-              B0_DIIS(y_,0,0,East_)= B0yFace_x_BLK(i,j,k,iBlock)
-              B0_DIIS(z_,0,0,East_)= B0zFace_x_BLK(i,j,k,iBlock)
+              B0_DIIS(:,0,0,East_)= B0_DX(:,i,j,k)
            end if
 
            If(j==nJ.and.neiLNorth(iBlock)==-1)then
               call correct_b0_face(North_)
-              B0xFace_y_BLK(i,j+1,k,iBlock)=&
-                   sum(B0_DIIS(x_,:,:,North_))*0.25
-              B0yFace_y_BLK(i,j+1,k,iBlock)=&
-                   sum(B0_DIIS(y_,:,:,North_))*0.25
-              B0zFace_y_BLK(i,j+1,k,iBlock)=&
-                   sum(B0_DIIS(z_,:,:,North_))*0.25
+              do iDim=1,3
+                 B0ResChange_DYSB(iDim,j,k,North_,iBlock)= &
+                      sum(B0_DIIS(iDim,:,:,North_))*0.25
+              end do
            else
               FaceArea_DIIS(:,0,0,North_)=FaceAreaJ_DFB(:,i,j+1,k,iBlock) 
-              B0_DIIS(x_,0,0,North_)= B0xFace_y_BLK(i,j+1,k,iBlock)
-              B0_DIIS(y_,0,0,North_)= B0yFace_y_BLK(i,j+1,k,iBlock)
-              B0_DIIS(z_,0,0,North_)= B0zFace_y_BLK(i,j+1,k,iBlock)
+              B0_DIIS(:,0,0,North_)= B0_DY(:,i,j+1,k)
            end If
 
            if(j==1.and.neiLsouth(iBlock)==-1)then
               call correct_b0_face(South_)
-              B0xFace_y_BLK(i,j,k,iBlock)=sum(B0_DIIS(x_,:,:,South_))*0.25
-              B0yFace_y_BLK(i,j,k,iBlock)=sum(B0_DIIS(y_,:,:,South_))*0.25
-              B0zFace_y_BLK(i,j,k,iBlock)=sum(B0_DIIS(z_,:,:,South_))*0.25
+              do iDim=1,3
+                 B0ResChange_DYSB(iDim,j,k,South_,iBlock)= &
+                      sum(B0_DIIS(iDim,:,:,South_))*0.25
+              end do
            else
-              FaceArea_DIIS(:,0,0,South_)=FaceAreaJ_DFB(:,i,j,k,iBlock)   
-              B0_DIIS(x_,0,0,South_)= B0xFace_y_BLK(i,j,k,iBlock)
-              B0_DIIS(y_,0,0,South_)= B0yFace_y_BLK(i,j,k,iBlock)
-              B0_DIIS(z_,0,0,South_)= B0zFace_y_BLK(i,j,k,iBlock)
+              FaceArea_DIIS(:,0,0,South_)=FaceAreaJ_DFB(:,i,j,k,iBlock)  
+              B0_DIIS(:,0,0,South_)= B0_DY(:,i,j,k)
            end if
 
            if(k==nK.and.neiLTop(iBlock)==-1)then
               call correct_b0_face(Top_)
-              B0xFace_z_BLK(i,j,k+1,iBlock)=&
-                   sum(B0_DIIS(x_,:,:,Top_))*0.25
-              B0yFace_z_BLK(i,j,k+1,iBlock)=&
-                   sum(B0_DIIS(y_,:,:,Top_))*0.25
-              B0zFace_z_BLK(i,j,k+1,iBlock)=&
-                   sum(B0_DIIS(z_,:,:,Top_))*0.25
+              do iDim=1,3
+                 B0ResChange_DZSB(iDim,j,k,Top_,iBlock)= &
+                      sum(B0_DIIS(iDim,:,:,Top_))*0.25
+              end do
            else
               FaceArea_DIIS(:,0,0,Top_)=FaceAreaK_DFB(:,i,j,k+1,iBlock)   
-              B0_DIIS(x_,0,0,Top_)= B0xFace_z_BLK(i,j,k+1,iBlock)
-              B0_DIIS(y_,0,0,Top_)= B0yFace_z_BLK(i,j,k+1,iBlock)
-              B0_DIIS(z_,0,0,Top_)= B0zFace_z_BLK(i,j,k+1,iBlock)
+              B0_DIIS(:,0,0,Top_)= B0_DZ(:,i,j,k+1)
            end if
 
            if(k==1.and.neiLBot(iBlock)==-1)then
               call correct_b0_face(Bot_)
-              B0xFace_z_BLK(i,j,k,iBlock)=&
-                   sum(B0_DIIS(x_,:,:,Bot_))*0.25
-              B0yFace_z_BLK(i,j,k,iBlock)=&
-                   sum(B0_DIIS(y_,:,:,Bot_))*0.25
-              B0zFace_z_BLK(i,j,k,iBlock)=&
-                   sum(B0_DIIS(z_,:,:,Bot_))*0.25
+              do iDim=1,3
+                 B0ResChange_DZSB(iDim,j,k,Bot_,iBlock)= &
+                      sum(B0_DIIS(iDim,:,:,Bot_))*0.25
+              end do
            else
               FaceArea_DIIS(:,0,0,Bot_)=FaceAreaK_DFB(:,i,j,k,iBlock)  
-              B0_DIIS(x_,0,0,Bot_)= B0xFace_z_BLK(i,j,k,iBlock)
-              B0_DIIS(y_,0,0,Bot_)= B0yFace_z_BLK(i,j,k,iBlock)
-              B0_DIIS(z_,0,0,Bot_)= B0zFace_z_BLK(i,j,k,iBlock)
+              B0_DIIS(:,0,0,Top_)= B0_DZ(:,i,j,k+1)
            end if
 
            if(UseB0Source.or.UseCurlB0)then

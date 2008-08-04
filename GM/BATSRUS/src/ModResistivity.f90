@@ -62,7 +62,7 @@ contains
     use ModConst,   ONLY: cProtonMass, cElectronCharge
     use ModPhysics, ONLY: No2Si_V, UnitB_, UnitRho_, UnitTemperature_
     use ModAdvance, ONLY: State_VGB, Rho_, P_, Bx_, By_, Bz_, &
-         B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
+         B0_DGB
 
     ! Compute Spitzer-type, classical resistivity 
 
@@ -84,10 +84,8 @@ contains
 
        ! Take into account the dependence on the B field:
        !    Eta' = Eta*(1 + [B*mp/(rho*e*Eta)]^2)
-       EtaSi = EtaSi * (1.0 + Coef*( &
-          (State_VGB(Bx_,i,j,k,iBlock)+B0xCell_BLK(i,j,k,iBlock))**2+&
-          (State_VGB(By_,i,j,k,iBlock)+B0yCell_BLK(i,j,k,iBlock))**2+&
-          (State_VGB(Bz_,i,j,k,iBlock)+B0zCell_BLK(i,j,k,iBlock))**2) &
+       EtaSi = EtaSi * (1.0 + Coef*sum( &
+          (State_VGB(Bx_:Bz_,i,j,k,iBlock)+B0_DGB(:,i,j,k,iBlock))**2) &
           / (State_VGB(Rho_,i,j,k,iBlock)*EtaSi)**2)
 
        ! Normalize Eta_G

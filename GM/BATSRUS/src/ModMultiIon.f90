@@ -125,9 +125,9 @@ contains
 
     use ModPointImplicit, ONLY:  UsePointImplicit, IsPointImplSource, &
          IsPointImplPerturbed, IsPointImplMatrixSet, DsDu_VVC
-    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, UseBoris => boris_correction
-    use ModAdvance, ONLY: State_VGB, Source_VC
-    use ModAdvance, ONLY: B0XCell_BLK, B0YCell_BLK, B0ZCell_BLK
+    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, UseB0,&
+                          UseBoris => boris_correction
+    use ModAdvance, ONLY: State_VGB, Source_VC, B0_DGB
     use ModAdvance, ONLY: bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
     use ModGeometry,ONLY: vInv_CB, x_BLK, y_BLK, z_BLK
     use ModPhysics, ONLY: ElectronCharge, gm1, inv_gm1, &
@@ -215,10 +215,8 @@ contains
        State_V = State_VGB(:,i,j,k,iBlock)
 
        ! Total magnetic field
-       FullB_D = State_V(Bx_:Bz_) + (/ &
-            B0xCell_BLK(i,j,k,iBlock),&
-            B0yCell_BLK(i,j,k,iBlock),&
-            B0zCell_BLK(i,j,k,iBlock) /)
+       FullB_D = State_V(Bx_:Bz_) 
+       if(UseB0) FullB_D =  FullB_D + B0_DGB(:,i,j,k,iBlock)
 
        ! calculate number densities
        NumDens_I  = State_V(iRhoIon_I) / MassIon_I

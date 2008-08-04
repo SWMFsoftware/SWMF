@@ -228,9 +228,9 @@ contains
     if(boris_correction) then                 !^CFG IF BORISCORR BEGIN
 
        do k=1,nK; do j=1,nJ; do i=1,nI
-          B0x= B0xCell_BLK(i,j,k,iBLK)
-          B0y= B0yCell_BLK(i,j,k,iBLK)
-          B0z= B0zCell_BLK(i,j,k,iBLK)
+          B0x= B0_DGB(x_,i,j,k,iBLK)
+          B0y= B0_DGB(y_,i,j,k,iBLK)
+          B0z= B0_DGB(z_,i,j,k,iBLK)
 
           BxOld= StateOld_VCB(Bx_,i,j,k,iBLK)
           ByOld= StateOld_VCB(By_,i,j,k,iBLK)
@@ -333,9 +333,9 @@ contains
        ! Convert simple Boris variables back to MHD variables
 
        do k=1,nK; do j=1,nJ; do i=1,nI
-          fullBx = B0xCell_BLK(i,j,k,iBLK) + StateOld_VCB(Bx_,i,j,k,iBLK)
-          fullBy = B0yCell_BLK(i,j,k,iBLK) + StateOld_VCB(By_,i,j,k,iBLK)
-          fullBz = B0zCell_BLK(i,j,k,iBLK) + StateOld_VCB(Bz_,i,j,k,iBLK)
+          fullBx = B0_DGB(x_,i,j,k,iBLK) + StateOld_VCB(Bx_,i,j,k,iBLK)
+          fullBy = B0_DGB(y_,i,j,k,iBLK) + StateOld_VCB(By_,i,j,k,iBLK)
+          fullBz = B0_DGB(z_,i,j,k,iBLK) + StateOld_VCB(Bz_,i,j,k,iBLK)
           fullBB = fullBx**2 + fullBy**2 + fullBz**2
           rhoc2  = StateOld_VCB(rho_,i,j,k,iBLK)*c2LIGHT
           gA2_Boris=fullBB/rhoc2
@@ -346,9 +346,9 @@ contains
                StateOld_VCB(rhoUx_:rhoU_+nDim,i,j,k,iBLK)*ga2_Boris
 
 
-          fullBx = B0xCell_BLK(i,j,k,iBLK) + State_VGB(Bx_,i,j,k,iBLK)
-          fullBy = B0yCell_BLK(i,j,k,iBLK) + State_VGB(By_,i,j,k,iBLK)
-          fullBz = B0zCell_BLK(i,j,k,iBLK) + State_VGB(Bz_,i,j,k,iBLK)
+          fullBx = B0_DGB(x_,i,j,k,iBLK) + State_VGB(Bx_,i,j,k,iBLK)
+          fullBy = B0_DGB(y_,i,j,k,iBLK) + State_VGB(By_,i,j,k,iBLK)
+          fullBz = B0_DGB(z_,i,j,k,iBLK) + State_VGB(Bz_,i,j,k,iBLK)
           fullBB = fullBx**2 + fullBy**2 + fullBz**2
           rhoc2  = State_VGB(rho_,i,j,k,iBLK)*c2LIGHT
           gA2_Boris=rhoc2/(fullBB+rhoc2)
