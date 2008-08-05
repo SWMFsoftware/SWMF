@@ -1175,8 +1175,8 @@ contains
     InvDy4 = InvDy**4
     InvDz4 = InvDz**4
 
-    FullB_DG(:,:,:,:) = b_DG(:,:,:,:)
-    if(UseB0)FullB_DG(:,:,:,:) = FullB_DG(:,:,:,:) + B0_DGB(:,:,:,:,iBlock)
+    FullB_DG = b_DG
+    if(UseB0)FullB_DG = FullB_DG + B0_DGB(:,:,:,:,iBlock)
 
     do k=1,nK; do j=1,nJ; do i=1,nI
 
