@@ -27,6 +27,9 @@ INSTALL_FILES = \
 
 install: Library/src/mpif.h
 	touch ${INSTALL_FILES}
+	-@(if [ "$OS" != "Darwin" ]; then \
+		rm -f Library/src/ModUtilities.f90; \
+	fi);
 
 clean:
 	cd Library/src; make clean
