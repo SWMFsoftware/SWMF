@@ -185,6 +185,7 @@ subroutine MH_set_parameters(TypeAction)
      call correct_parameters
 
      ! initialize module variables
+     if(UseB0) call init_mod_b0
      call init_mod_advance
      DivB1_GB = 0.0
      call init_mod_geometry
