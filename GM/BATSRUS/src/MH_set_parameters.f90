@@ -107,7 +107,7 @@ subroutine MH_set_parameters(TypeAction)
   ! Variables for checking the user module
   character (len=lStringLine) :: NameUserModuleRead='?'
   real                        :: VersionUserModuleRead=0.0
-  integer :: iSession, iPlotFile, iVar, iFluid
+  integer :: iSession, iPlotFile, iVar
 
   character(len=10) :: NamePrimitive_V(nVar)
   !-------------------------------------------------------------------------
