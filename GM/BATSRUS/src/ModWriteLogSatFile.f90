@@ -247,7 +247,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   use ModMPI
   use ModMain, ONLY: n_step,dt,unusedBLK,nI,nJ,nK,nBlock,UseUserLogFiles,&
        iTest,jTest,kTest,ProcTest,BlkTest,optimize_message_pass,x_,y_,&
-       UseRotatingFrame
+       UseRotatingFrame,UseB0
   use ModPhysics,    ONLY: rCurrents, inv_gm1, OMEGABody
   use ModVarIndexes
   use ModAdvance,    ONLY: tmp1_BLK, tmp2_BLK, &
@@ -301,8 +301,12 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   ! Obtain data to calculate log variables
   if(iSat>=1)then
      ! Satellites need B0 and the state at the satellite position
-     call get_b0(xSatellite(iSat,1),xSatellite(iSat,2),xSatellite(iSat,3),&
-          B0Sat_D)
+     if(UseB0)then
+        call get_b0(xSatellite(iSat,1),xSatellite(iSat,2),xSatellite(iSat,3),&
+             B0Sat_D)
+     else
+        B0Sat_D=0.00
+     end if
      call get_point_data(0.0,xSatellite(iSat,:),1,nBlock,1,nVar+3,StateSat_V)
      call collect_satellite_data(xSatellite(iSat,:),StateSat_V)
      if (UseRotatingFrame) then
@@ -365,6 +369,7 @@ contains
     ! Local variables
     real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, qval, qval_all
     real :: Current_D(3)
+    real :: FullB_DG(3,0:nI+1,0:nJ+1,0:nK+1)
 
     integer :: jVar
     character(len=10) :: NameVar, String
@@ -576,19 +581,39 @@ contains
     case('b1zpnt')
        if(iProc == ProcTest) &
             LogVar_I(iVarTot) = State_VGB(Bz_,iTest,jTest,kTest,BlkTest)
-    case('bxpnt')                      
-       tmp1_BLK = B0_DGB(x_,:,:,:,:) + State_VGB(Bx_,:,:,:,:) 
-       if(iProc == ProcTest) LogVar_I(iVarTot) = &
-            B0_DGB(x_,iTest,jTest,kTest,BlkTest) + &
-            State_VGB(Bx_,iTest,jTest,kTest,BlkTest)
+    case('bxpnt')
+       if(iProc == ProcTest)then 
+          if(UseB0)then
+             LogVar_I(iVarTot) = &
+                  B0_DGB(x_,iTest,jTest,kTest,BlkTest) + &
+                  State_VGB(Bx_,iTest,jTest,kTest,BlkTest)
+          else
+             LogVar_I(iVarTot) = &
+                  State_VGB(Bx_,iTest,jTest,kTest,BlkTest)
+          end if
+       end if
     case('bypnt')                      
-       if(iProc == ProcTest) LogVar_I(iVarTot) = &
-            B0_DGB(y_,iTest,jTest,kTest,BlkTest) + &
-            State_VGB(By_,iTest,jTest,kTest,BlkTest)
+       if(iProc == ProcTest) then
+          if(UseB0)then
+             LogVar_I(iVarTot) = &
+                  B0_DGB(y_,iTest,jTest,kTest,BlkTest) + &
+                  State_VGB(By_,iTest,jTest,kTest,BlkTest)
+          else
+             LogVar_I(iVarTot) = &
+                  State_VGB(By_,iTest,jTest,kTest,BlkTest)
+          end if
+       end if
     case('bzpnt')                      
-       if(iProc == ProcTest) LogVar_I(iVarTot) = &
-            B0_DGB(z_,iTest,jTest,kTest,BlkTest) + &
-            State_VGB(Bz_,iTest,jTest,kTest,BlkTest)
+       if(iProc == ProcTest) then
+          if(UseB0)then
+             LogVar_I(iVarTot) = &
+                  B0_DGB(z_,iTest,jTest,kTest,BlkTest) + &
+                  State_VGB(Bz_,iTest,jTest,kTest,BlkTest)
+          else
+             LogVar_I(iVarTot) = &
+                  State_VGB(Bz_,iTest,jTest,kTest,BlkTest)
+          end if
+       end if
     case('ppnt')
        if(iProc == ProcTest) &
             LogVar_I(iVarTot) = State_VGB(iP,iTest,jTest,kTest,BlkTest)
@@ -682,14 +707,14 @@ contains
           R_log = LogR_I(iR)
           do iBLK=1,nBlock
              if(unusedBLK(iBLK)) CYCLE
+             FullB_DG=State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBLK)
+             if(UseB0)FullB_DG = FullB_DG &
+                  +B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBLK)
              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
                 tmp1_BLK(i,j,k,iBLK) = ( &
-                     (State_VGB(Bx_,i,j,k,iBLK) &
-                     +B0_DGB(x_,i,j,k,iBLK))*x_BLK(i,j,k,iBLK) + &
-                     (State_VGB(By_,i,j,k,iBLK) &
-                     +B0_DGB(y_,i,j,k,iBLK))*y_BLK(i,j,k,iBLK) + &
-                     (State_VGB(Bz_,i,j,k,iBLK) &
-                     +B0_DGB(z_,i,j,k,iBLK))*z_BLK(i,j,k,iBLK) &
+                     FullB_DG(x_,i,j,k)*x_BLK(i,j,k,iBLK) + &
+                     FullB_DG(y_,i,j,k)*y_BLK(i,j,k,iBLK) + &
+                     FullB_DG(z_,i,j,k)*z_BLK(i,j,k,iBLK) &
                      ) / R_BLK(i,j,k,iBLK)
              end do; end do; end do
           end do
@@ -703,15 +728,18 @@ contains
           iVarTot = iVarTot + 1
           R_log = LogR_I(iR)           
           do iBLK=1,nBlock
-             if(unusedBLK(iBLK))cycle           
+             if(unusedBLK(iBLK))cycle
+             FullB_DG = State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBLK)
+             if(UseB0)FullB_DG = FullB_DG &
+                  +B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBLK)           
              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             tmp1_BLK(i,j,k,iBLK) = &
-                  sum((State_VGB(Bx_:Bz_,i,j,k,iBLK) + B0_DGB(:,i,j,k,iBLK))**2)
-             tmp1_BLK(i,j,k,iBLK) = 0.5*tmp1_BLK(i,j,k,iBLK)* &
-                  ( State_VGB(iRhoUx,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  + State_VGB(iRhoUy,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  + State_VGB(iRhoUz,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
-                  ) / (State_VGB(iRho,i,j,k,iBLK)*R_BLK(i,j,k,iBLK))
+                tmp1_BLK(i,j,k,iBLK) = &
+                     sum(FullB_DG(:,i,j,k)**2)
+                tmp1_BLK(i,j,k,iBLK) = 0.5*tmp1_BLK(i,j,k,iBLK)* &
+                     ( State_VGB(iRhoUx,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
+                     + State_VGB(iRhoUy,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
+                     + State_VGB(iRhoUz,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                     ) / (State_VGB(iRho,i,j,k,iBLK)*R_BLK(i,j,k,iBLK))
              end do; end do; end do
           end do
           LogVar_I(iVarTot) = calc_sphere('integrate',360, R_log,tmp1_BLK)
@@ -723,19 +751,20 @@ contains
           R_log = LogR_I(iR)
           do iBLK=1,nBlock
              if(unusedBLK(iBLK))CYCLE
+             FullB_DG=State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBLK)
+             if(UseB0)FullB_DG = FullB_DG &
+                  +B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBLK)
              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-                Bx = State_VGB(Bx_,i,j,k,iBLk)+B0_DGB(x_,i,j,k,iBLk)
-                By = State_VGB(By_,i,j,k,iBLk)+B0_DGB(y_,i,j,k,iBLk)
-                Bz = State_VGB(Bz_,i,j,k,iBLk)+B0_DGB(z_,i,j,k,iBLk)
                 RhoUx = State_VGB(iRhoUx,i,j,k,iBLk)
                 RhoUy = State_VGB(iRhoUy,i,j,k,iBLk)
                 RhoUz = State_VGB(iRhoUz,i,j,k,iBLk)
-                bDotb = Bx**2 + By**2 + Bz**2
-                bDotU = Bx*RhoUx + By*RhoUy + Bz*RhoUz
+                bDotb = sum(FullB_DG(:,i,j,k)**2)
+                bDotU = FullB_DG(x_,i,j,k)*RhoUx +&
+                     FullB_DG(y_,i,j,k)*RhoUy + FullB_DG(z_,i,j,k)*RhoUz
                 tmp1_BLK(i,j,k,iBLk) = ( &
-                  ( bDotb*rhoUx - bDotU*Bx )*X_BLK(i,j,k,iBLk) + &
-                  ( bDotb*rhoUy - bDotU*By )*Y_BLK(i,j,k,iBLk) + &  
-                  ( bDotb*rhoUz - bDotU*Bz )*Z_BLK(i,j,k,iBLk)   &  
+                  ( bDotb*rhoUx - bDotU*FullB_DG(x_,i,j,k))*X_BLK(i,j,k,iBLk)+&
+                  ( bDotb*rhoUy - bDotU*FullB_DG(y_,i,j,k))*Y_BLK(i,j,k,iBLk)+&  
+                  ( bDotb*rhoUz - bDotU*FullB_DG(z_,i,j,k))*Z_BLK(i,j,k,iBLk)   &  
                   ) / (State_VGB(iRho,i,j,k,iBLk)*R_BLK(i,j,k,iBLk))
              end do; end do; end do
           end do
@@ -754,10 +783,13 @@ contains
           R_log = LogR_I(iR)
           do iBLK = 1,nBlock
              if(unusedBLK(iBLK))CYCLE
+             FullB_DG=State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBLK)
+             if(UseB0)FullB_DG = FullB_DG &
+                  +B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBLK)
              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-                Bx = State_VGB(Bx_,i,j,k,iBLk)+B0_DGB(x_,i,j,k,iBLk)
-                By = State_VGB(By_,i,j,k,iBLk)+B0_DGB(y_,i,j,k,iBLk)
-                Bz = State_VGB(Bz_,i,j,k,iBLk)+B0_DGB(z_,i,j,k,iBLk)
+                Bx = FullB_DG(x_,i,j,k)
+                By = FullB_DG(y_,i,j,k)
+                Bz = FullB_DG(z_,i,j,k)
                 RhoUx = State_VGB(iRhoUx,i,j,k,iBLk)
                 RhoUy = State_VGB(iRhoUy,i,j,k,iBLk)
                 RhoUz = State_VGB(iRhoUz,i,j,k,iBLk)

@@ -776,7 +776,7 @@ subroutine calc_other_soln_vars(iBLK)
      B0ResChange_DXSB(:,:,:,:,iBLK) = 0.00
      B0ResChange_DYSB(:,:,:,:,iBLK) = 0.00
      B0ResChange_DZSB(:,:,:,:,iBLK) = 0.00
- 
+
      call set_b0(iBLK)
   end if
 

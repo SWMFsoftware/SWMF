@@ -29,6 +29,7 @@ subroutine update_states_MHD(iStage,iBLK)
        Rho, RhoInv, eCorr, p
   real:: DtFactor
   real:: DtLocal
+  real:: B0_DC(3,nI,nJ,nK)
   logical :: IsMultiIon
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'update_states_mhd'
@@ -226,11 +227,15 @@ contains
     end if
 
     if(boris_correction) then                 !^CFG IF BORISCORR BEGIN
-
+       if(UseB0)then
+          B0_DC=B0_DGB(:,1:nI,1:nJ,1:nK,iBLK)
+       else
+          B0_DC=0.00
+       end if
        do k=1,nK; do j=1,nJ; do i=1,nI
-          B0x= B0_DGB(x_,i,j,k,iBLK)
-          B0y= B0_DGB(y_,i,j,k,iBLK)
-          B0z= B0_DGB(z_,i,j,k,iBLK)
+          B0x= B0_DC(x_,i,j,k)
+          B0y= B0_DC(y_,i,j,k)
+          B0z= B0_DC(z_,i,j,k)
 
           BxOld= StateOld_VCB(Bx_,i,j,k,iBLK)
           ByOld= StateOld_VCB(By_,i,j,k,iBLK)
@@ -330,12 +335,17 @@ contains
        end do; end do; end do
     endif                                    !^CFG END BORISCORR
     if(UseBorisSimple) then                  !^CFG IF SIMPLEBORIS BEGIN
+       if(UseB0)then
+          B0_DC=B0_DGB(:,1:nI,1:nJ,1:nK,iBLK)
+       else
+          B0_DC=0.00
+       end if
        ! Convert simple Boris variables back to MHD variables
 
        do k=1,nK; do j=1,nJ; do i=1,nI
-          fullBx = B0_DGB(x_,i,j,k,iBLK) + StateOld_VCB(Bx_,i,j,k,iBLK)
-          fullBy = B0_DGB(y_,i,j,k,iBLK) + StateOld_VCB(By_,i,j,k,iBLK)
-          fullBz = B0_DGB(z_,i,j,k,iBLK) + StateOld_VCB(Bz_,i,j,k,iBLK)
+          fullBx = B0_DC(x_,i,j,k) + StateOld_VCB(Bx_,i,j,k,iBLK)
+          fullBy = B0_DC(y_,i,j,k) + StateOld_VCB(By_,i,j,k,iBLK)
+          fullBz = B0_DC(z_,i,j,k) + StateOld_VCB(Bz_,i,j,k,iBLK)
           fullBB = fullBx**2 + fullBy**2 + fullBz**2
           rhoc2  = StateOld_VCB(rho_,i,j,k,iBLK)*c2LIGHT
           gA2_Boris=fullBB/rhoc2

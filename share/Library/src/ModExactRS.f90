@@ -268,16 +268,18 @@ contains
                  nVar,LeftState_V,RightState_V,&!Input states
                  Flux_V, CMax, &  !Output flux and max perturbation speed
                  GammaL,GammaR,&  !Optional Gamma, if needed
+                 Energy0L,Energy0R, & !Optional Energy0, if needed
                  DoTest)
     integer,intent(in)::nDim,nVar
     real,intent(in),dimension(nDim)::Normal_D !Unity vector normal to the face
     real,intent(in),dimension(nVar)::LeftState_V,RightState_V
     real,intent(out),dimension(nVar)::Flux_V
     real,intent(out)::CMax
-    real,intent(in),optional::GammaL,GammaR
+    real,intent(in),optional::GammaL,GammaR !Effective gamma, left and right
+    real,intent(in),optional::Energy0L,Energy0R
     logical,optional::DoTest
     real::Rho, Un, P, StateStar_V(nVar)
-    real::RhoSide,UnSide,GammaSideM1Inv
+    real::RhoSide,UnSide,GammaSideM1Inv,E0=0.0
     integer::iVar
     !----------------------------------------
     !Take scalars
@@ -301,6 +303,11 @@ contains
        else
           GammaSideM1Inv=1.0/(GammaHere-1.0)
        end if
+       if(present(Energy0L))then
+          E0=Energy0L
+       else
+          E0=0.0
+       end if
     else
        !The CD is to the left from the face
        !The Right gas passes through the face
@@ -310,6 +317,11 @@ contains
           GammaSideM1Inv=1.0/(GammaR-1.0)
        else
           GammaSideM1Inv=1.0/(GammaHere-1.0)
+       end if
+       if(present(Energy0R))then
+          E0=Energy0R
+       else
+          E0=0.0
        end if
     end if
 
@@ -326,7 +338,7 @@ contains
     !Calculate flux (1) take conservative variable
 
     StateStar_V(nVar) = (1.0 +  GammaSideM1Inv) *  StateStar_V(nVar) &
-         + 0.5 * Rho *sum(StateStar_V(2:1+nDim)**2)
+         + 0.5 * Rho *sum(StateStar_V(2:1+nDim)**2) + Rho*E0
     StateStar_V(2:1+nDim) = StateStar_V(2:1+nDim) * Rho
 
     ! (2) take advective part of the flux

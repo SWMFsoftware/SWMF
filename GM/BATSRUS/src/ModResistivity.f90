@@ -63,18 +63,23 @@ contains
     use ModPhysics, ONLY: No2Si_V, UnitB_, UnitRho_, UnitTemperature_
     use ModAdvance, ONLY: State_VGB, Rho_, P_, Bx_, By_, Bz_, &
          B0_DGB
+    use ModMain, ONLY: UseB0
 
     ! Compute Spitzer-type, classical resistivity 
 
     integer, intent(in) :: iBlock
     real,    intent(out):: Eta_G(-1:nI+2, -1:nJ+2, -1:nK+2)
 
-    real :: EtaSi, Coef
+    real :: EtaSi, Coef, B0_DG(3,-1:nI+2, -1:nJ+2, -1:nK+2)
     integer :: i, j, k
     !-------------------------------------------------------------------------
     
     Coef =((cProtonMass/cElectronCharge)*No2Si_V(UnitB_)/No2Si_V(UnitRho_))**2
-
+    if(UseB0)then
+       B0_DG=B0_DGB(:,:,:,:,iBlock)
+    else
+       B0_DG=0.00
+    end if
     do k=-1,nK+2; do j=-2, nJ+2; do i=-2, nI+2
 
        ! EtaSi = EtaPerpSpitzer/Te^1.5 in SI units
@@ -85,7 +90,7 @@ contains
        ! Take into account the dependence on the B field:
        !    Eta' = Eta*(1 + [B*mp/(rho*e*Eta)]^2)
        EtaSi = EtaSi * (1.0 + Coef*sum( &
-          (State_VGB(Bx_:Bz_,i,j,k,iBlock)+B0_DGB(:,i,j,k,iBlock))**2) &
+          (State_VGB(Bx_:Bz_,i,j,k,iBlock)+B0_DG(:,i,j,k))**2) &
           / (State_VGB(Rho_,i,j,k,iBlock)*EtaSi)**2)
 
        ! Normalize Eta_G

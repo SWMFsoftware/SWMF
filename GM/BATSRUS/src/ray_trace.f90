@@ -990,8 +990,11 @@ contains
     xx(1)=x_BLK(1,1,1,iBLK)+dx_BLK(iBLK)*(qx(1)-1.)
     xx(2)=y_BLK(1,1,1,iBLK)+dy_BLK(iBLK)*(qx(2)-1.)
     xx(3)=z_BLK(1,1,1,iBLK)+dz_BLK(iBLK)*(qx(3)-1.)
-
-    call get_b0(xx(1),xx(2),xx(3),qb)
+    if(UseB0)then
+       call get_b0(xx(1),xx(2),xx(3),qb)
+    else
+       qb=0.00
+    end if
 
     ! Make sure that the interpolation uses inside indexes only
 

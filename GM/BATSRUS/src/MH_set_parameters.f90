@@ -185,7 +185,6 @@ subroutine MH_set_parameters(TypeAction)
      call correct_parameters
 
      ! initialize module variables
-     if(UseB0) call init_mod_b0
      call init_mod_advance
      DivB1_GB = 0.0
      call init_mod_geometry
@@ -1280,8 +1279,12 @@ subroutine MH_set_parameters(TypeAction)
            end if
         endif
 
+     case("#USEB0")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('UseB0'   ,UseB0)
+
      case("#DIVBSOURCE")
-        if(.not.UseB)CYCLE READPARAM
+        if(.not.UseB0)CYCLE READPARAM
 	call read_var('UseB0Source'   ,UseB0Source)
 
      case("#USECURLB0")
@@ -1894,6 +1897,13 @@ contains
        UseRotatingFrame  = .false.
        UseRotatingBc     = .true.;  TypeCoordSystem   = 'GSM'
     end select
+    
+    !Do not set B0 field in IH and OH
+    if(NameThisComp/='IH'.and.NameThisComp/='OH')then
+       UseB0=UseB
+    else
+       UseB0=.false.
+    end if
 
     ! Do not update B0 for SC or IH by default
     if(NameThisComp /= 'GM')then
@@ -1956,7 +1966,7 @@ contains
     UseProjection   = .false.         !^CFG IF PROJECTION
     UseConstrainB   = .false.         !^CFG IF CONSTRAINB
 
-    UseB0Source     = .true.
+    UseB0Source     = UseB0
     UseHyperbolicDivB = NameVar_V(Hyp_) == 'Hyp'
 
     UseUpdateCheck  = .true.
@@ -2296,6 +2306,10 @@ contains
           SaveBoundaryCells=.false.
        end if
     end if
+
+    if(UseB0)call allocate_b0_arrays
+    if(UseB0Source.or.UseCurlB0)call allocate_b0_source_arrays
+    if(UseCurlB0)call allocate_b0_norm
 
     if(UseHyperbolicDivb)then
        if(.false.&

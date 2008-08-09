@@ -1,7 +1,7 @@
 module ModFaceFlux
 
   use ModProcMH, ONLY: iProc
-  use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK,UseB
+  use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK,UseB,UseB0
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
   use ModVarIndexes, ONLY: nVar, NameVar_V, UseMultiSpecies, nFluid
@@ -449,11 +449,11 @@ contains
          DoTestCell = DoTestMe &
               .and. (iFace == iTest .or. iFace == iTest+1) &
               .and. jFace == jTest .and. kFace == kTest
-         if(UseB0)then
-            B0x = B0_DX(x_,iFace, jFace, kFace)
-            B0y = B0_DX(y_,iFace, jFace, kFace)
-            B0z = B0_DX(z_,iFace, jFace, kFace)
-         end if
+         
+         B0x = B0_DX(x_,iFace, jFace, kFace)
+         B0y = B0_DX(y_,iFace, jFace, kFace)
+         B0z = B0_DX(z_,iFace, jFace, kFace)
+        
          if(UseRS7.and..not.IsBoundary)then
             DeltaBnR=sum((RightState_VX(Bx_:Bz_, iFace, jFace, kFace)-&
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
@@ -497,11 +497,11 @@ contains
 
          DoTestCell = DoTestMe .and. iFace == iTest .and. &
               (jFace == jTest .or. jFace == jTest+1) .and. kFace == kTest
-         if(UseB0)then
-            B0x = B0_DY(x_,iFace, jFace, kFace)
-            B0y = B0_DY(y_,iFace, jFace, kFace)
-            B0z = B0_DY(z_,iFace, jFace, kFace)
-         end if
+         
+         B0x = B0_DY(x_,iFace, jFace, kFace)
+         B0y = B0_DY(y_,iFace, jFace, kFace)
+         B0z = B0_DY(z_,iFace, jFace, kFace)
+        
          if(UseRS7.and..not.IsBoundary)then
             DeltaBnR=sum((RightState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
@@ -548,11 +548,11 @@ contains
 
          DoTestCell = DoTestMe .and. iFace == iTest .and. &
               jFace == jTest .and. (kFace == kTest .or. kFace == kTest+1)
-         if(UseB0)then
-            B0x = B0_DZ(x_,iFace, jFace, kFace)
-            B0y = B0_DZ(y_,iFace, jFace, kFace)
-            B0z = B0_DZ(z_,iFace, jFace, kFace)
-         end if
+         
+         B0x = B0_DZ(x_,iFace, jFace, kFace)
+         B0y = B0_DZ(y_,iFace, jFace, kFace)
+         B0z = B0_DZ(z_,iFace, jFace, kFace)
+         
          if(UseRS7.and..not.IsBoundary)then
             DeltaBnR=sum((RightState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
@@ -818,10 +818,12 @@ contains
                   State_VGB(RhoUx_:RhoUz_, iRight,jRight,kRight,iBlockFace)/&
                   State_VGB(Rho_, iRight,jRight,kRight,iBlockFace)
           end if
-
-          dB0_D = B0_DGB(:,iLeft,  jLeft,  kLeft,  iBlockFace)    &
-               - B0_DGB(:,iRight, jRight, kRight, iBlockFace)
-
+          if(UseB0)then
+             dB0_D = B0_DGB(:,iLeft,  jLeft,  kLeft,  iBlockFace)    &
+                  - B0_DGB(:,iRight, jRight, kRight, iBlockFace)
+          else
+             dB0_D=0.00
+          end if
           call get_dissipation_flux_mhd(Normal_D,         &
                StateLeft_V, StateRight_V,                 &
                (/B0x,B0y,B0z/), dB0_D,                    &

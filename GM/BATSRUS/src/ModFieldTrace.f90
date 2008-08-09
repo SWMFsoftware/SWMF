@@ -53,7 +53,7 @@ subroutine ray_trace_accurate
   call message_pass_cells8(.false.,.false.,.false.,3,Bxyz_DGB)
 
   ! Add B0
-  Bxyz_DGB(1:3,:,:,:,1:nBlock) = Bxyz_DGB(1:3,:,:,:,1:nBlock) &
+  if(UseB0)Bxyz_DGB(1:3,:,:,:,1:nBlock) = Bxyz_DGB(1:3,:,:,:,1:nBlock) &
        + B0_DGB(:,:,:,:,1:nBlock)
  
 
@@ -1029,6 +1029,7 @@ contains
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitRho_, UnitU_, UnitP_, UnitB_
     use ModAdvance, ONLY: State_VGB, nVar, &
          Rho_, RhoUx_, RhoUz_, Ux_, Uz_, p_, Bx_, Bz_
+    use ModMain,ONLY: UseB0
     real, intent(in) :: x_D(3)
 
     real    :: Xyz_D(3), State_V(nVar), B0_D(3), PlotVar_V(50)
@@ -1070,8 +1071,10 @@ contains
        State_V(Ux_:Uz_) = State_V(RhoUx_:RhoUz_)/State_V(Rho_)
 
        ! Add B0 to the magnetic field
-       call get_b0(Xyz_D(1),Xyz_D(2),Xyz_D(3),B0_D)
-       State_V(Bx_:Bz_) = State_V(Bx_:Bz_) + B0_D
+       if(UseB0)then
+          call get_b0(Xyz_D(1),Xyz_D(2),Xyz_D(3),B0_D)
+          State_V(Bx_:Bz_) = State_V(Bx_:Bz_) + B0_D
+       end if
 
        ! Convert to SI units if required
        if(DoExtractUnitSi)then
@@ -1221,7 +1224,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   use CON_planet_field, ONLY: map_planet_field
   use CON_axes, ONLY: transform_matrix
   use ModRaytrace
-  use ModMain,    ONLY: nBlock, Time_Simulation, TypeCoordSystem
+  use ModMain,    ONLY: nBlock, Time_Simulation, TypeCoordSystem,UseB0
   use ModPhysics, ONLY: rBody
   use ModAdvance, ONLY: nVar, State_VGB, Rho_, p_, Bx_, Bz_, &
        B0_DGB
@@ -1304,8 +1307,10 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   call message_pass_cells8(.false.,.false.,.false.,3,Bxyz_DGB)
 
   ! Add B0 for faster interpolation
-  Bxyz_DGB(1:3,:,:,:,1:nBlock) = Bxyz_DGB(1:3,:,:,:,1:nBlock) &
-       + B0_DGB(:,:,:,:,1:nBlock)
+  if(UseB0)then
+     Bxyz_DGB(1:3,:,:,:,1:nBlock) = Bxyz_DGB(1:3,:,:,:,1:nBlock) &
+          + B0_DGB(:,:,:,:,1:nBlock)
+  end if
 
   if(DoIntegrateRay)then
      ! Copy density and pressure into Extra_VGB
@@ -1499,7 +1504,7 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
   use CON_ray_trace, ONLY: ray_init
   use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, &
        B0_DGB
-  use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBLK
+  use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBLK,UseB0
   use ModPhysics,  ONLY: rBody
   use ModGeometry, ONLY: XyzMax_D, XyzMin_D, Dx_BLK, Dy_BLK, Dz_BLK
   use ModMpi,      ONLY: MPI_WTIME
@@ -1539,8 +1544,12 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
   select case(NameVectorField)
   case('B')
      ! Store B1+B0 for faster interpolation
-     Bxyz_DGB(1:3,:,:,:,1:nBlock) = State_VGB(Bx_:Bz_,:,:,:,1:nBlock) &
-          + B0_DGB(:,:,:,:,1:nBlock)
+     if(UseB0)then
+        Bxyz_DGB(1:3,:,:,:,1:nBlock) = State_VGB(Bx_:Bz_,:,:,:,1:nBlock) &
+             + B0_DGB(:,:,:,:,1:nBlock)
+     else
+        Bxyz_DGB(1:3,:,:,:,1:nBlock) = State_VGB(Bx_:Bz_,:,:,:,1:nBlock)
+     end if
   case('U')
      ! Store momentum field (same as velocity field after normalization)
      Bxyz_DGB(1,:,:,:,1:nBlock) = State_VGB(RhoUx_,:,:,:,1:nBlock)

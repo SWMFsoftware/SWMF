@@ -363,7 +363,7 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
        fbody_x_BLK, fbody_y_BLK, fbody_z_BLK, &
        B0_DGB, B0ResChange_DXSB,B0ResChange_DYSB,B0ResChange_DZSB, &
        iTypeAdvance_B, iTypeAdvance_BP, SkippedBlock_
-  use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,xyzStart_BLK
+  use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,xyzStart_BLK,UseCovariant
   use ModParallel
   use ModBlockData, ONLY: get_block_data, put_block_data, &
        n_block_data, use_block_data, set_block_data, clean_block_data
@@ -505,27 +505,28 @@ contains
                 BlockData_I(iData+1:iData+3) = B0_DGB(:,i,j,k,iBlockFrom)
                 iData = iData+3
              end do; end do; end do
-             
-             ! B0*Face_x
-             do i=1,2; do k=1,nK; do j=1,nJ 
-                BlockData_I(iData+1:iData+3) = &
-                     B0ResChange_DXSB(:,j,k,i,iBlockFrom)
-                iData = iData+3
-             end do; end do; end do
-             
-             ! B0*Face_y
-             do j=3,4; do k=1,nK; do i=1,nI
-                BlockData_I(iData+1:iData+3) = &
-                     B0ResChange_DYSB(:,i,k,j,iBlockFrom)
-                iData = iData+3
-             end do; end do; end do
-
-             ! B0*Face_z
-             do k=5,6; do j=1,nJ; do i=1,nI
-                BlockData_I(iData+1:iData+3) = &
-                     B0ResChange_DZSB(:,i,j,k,iBlockFrom)
-                iData = iData+3
-             end do; end do; end do
+             if(.not.UseCovariant)then
+                ! B0*Face_x
+                do i=1,2; do k=1,nK; do j=1,nJ 
+                   BlockData_I(iData+1:iData+3) = &
+                        B0ResChange_DXSB(:,j,k,i,iBlockFrom)
+                   iData = iData+3
+                end do; end do; end do
+                
+                ! B0*Face_y
+                do j=3,4; do k=1,nK; do i=1,nI
+                   BlockData_I(iData+1:iData+3) = &
+                        B0ResChange_DYSB(:,i,k,j,iBlockFrom)
+                   iData = iData+3
+                end do; end do; end do
+                
+                ! B0*Face_z
+                do k=5,6; do j=1,nJ; do i=1,nI
+                   BlockData_I(iData+1:iData+3) = &
+                        B0ResChange_DZSB(:,i,j,k,iBlockFrom)
+                   iData = iData+3
+                end do; end do; end do
+             end if
           end if
           ! fbody*
           if(UseGravity.or.UseRotatingFrame)then
@@ -671,27 +672,28 @@ contains
              B0_DGB(:,i,j,k,iBlockTo) = BlockData_I(iData+1:iData+3)
              iData = iData+3
           end do; end do; end do
-
-          ! B0*Face_x
-          do i=1,2; do k=1,nK; do j=1,nJ 
-             B0ResChange_DXSB(:,j,k,i,iBlockTo) = &
-                  BlockData_I(iData+1:iData+3)
-             iData = iData+3
-          end do; end do; end do
-          
-          ! B0*Face_y
-          do j=3,4; do k=1,nK; do i=1,nI
-             B0ResChange_DYSB(:,i,k,j,iBlockTo) = &
-                  BlockData_I(iData+1:iData+3)
-             iData = iData+3
-          end do; end do; end do
-          
-          ! B0*Face_z
-          do k=5,6; do j=1,nJ; do i=1,nI
-             B0ResChange_DZSB(:,i,j,k,iBlockTo) = &
-                  BlockData_I(iData+1:iData+3)
-             iData = iData+3
-          end do; end do; end do
+          if(.not.UseCovariant)then
+             ! B0*Face_x
+             do i=1,2; do k=1,nK; do j=1,nJ 
+                B0ResChange_DXSB(:,j,k,i,iBlockTo) = &
+                     BlockData_I(iData+1:iData+3)
+                iData = iData+3
+             end do; end do; end do
+             
+             ! B0*Face_y
+             do j=3,4; do k=1,nK; do i=1,nI
+                B0ResChange_DYSB(:,i,k,j,iBlockTo) = &
+                     BlockData_I(iData+1:iData+3)
+                iData = iData+3
+             end do; end do; end do
+             
+             ! B0*Face_z
+             do k=5,6; do j=1,nJ; do i=1,nI
+                B0ResChange_DZSB(:,i,j,k,iBlockTo) = &
+                     BlockData_I(iData+1:iData+3)
+                iData = iData+3
+             end do; end do; end do
+          end if
        end if
        ! fbody*
        if(UseGravity.or.UseRotatingFrame)then
@@ -753,6 +755,7 @@ subroutine select_stepping(DoPartSelect)
   use ModImplicit, ONLY : UseImplicit, UseFullImplicit, UsePartImplicit, &
        ImplCritType, ExplCFL, rImplicit
   use ModIO,       ONLY : write_prefix, iUnitOut
+  use ModB0,ONLY:set_b0_face
   use ModMpi
   implicit none
 
@@ -824,6 +827,7 @@ subroutine select_stepping(DoPartSelect)
            if(n_step==0 .and. time_loop)then
               ! For first iteration in the time loop
               ! calculate stable time step
+              call set_b0_face(globalBLK)
               call calc_face_value(.false., GlobalBlk)
               call calc_face_flux(.false., GlobalBlk)
               call calc_timestep

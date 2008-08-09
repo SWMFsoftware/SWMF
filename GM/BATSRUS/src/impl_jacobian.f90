@@ -580,14 +580,18 @@ contains
 
     InvN_G = HallFactor_G * IonMassPerCharge_G / &
          w_k(0:nI+1,0:nJ+1,0:nK+1,Rho_,implBLK)
-
-    BxPerN_G = (B0_DGB(x_,0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
-         w_k(0:nI+1,0:nJ+1,0:nK+1,Bx_,implBLK))*InvN_G
-    ByPerN_G = (B0_DGB(y_,0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
-         w_k(0:nI+1,0:nJ+1,0:nK+1,By_,implBLK))*InvN_G
-    BzPerN_G = (B0_DGB(z_,0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
-         w_k(0:nI+1,0:nJ+1,0:nK+1,Bz_,implBLK))*InvN_G
-
+    if(UseB0)then
+       BxPerN_G = (B0_DGB(x_,0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
+            w_k(0:nI+1,0:nJ+1,0:nK+1,Bx_,implBLK))*InvN_G
+       ByPerN_G = (B0_DGB(y_,0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
+            w_k(0:nI+1,0:nJ+1,0:nK+1,By_,implBLK))*InvN_G
+       BzPerN_G = (B0_DGB(z_,0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
+            w_k(0:nI+1,0:nJ+1,0:nK+1,Bz_,implBLK))*InvN_G
+    else
+       BxPerN_G = w_k(0:nI+1,0:nJ+1,0:nK+1,Bx_,implBLK)*InvN_G
+       ByPerN_G = w_k(0:nI+1,0:nJ+1,0:nK+1,By_,implBLK)*InvN_G
+       BzPerN_G = w_k(0:nI+1,0:nJ+1,0:nK+1,Bz_,implBLK)*InvN_G
+    end if
   end subroutine impl_init_hall
   !===========================================================================
   subroutine impl_hall_resist

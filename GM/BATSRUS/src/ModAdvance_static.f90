@@ -107,10 +107,6 @@ Module ModAdvance
        gradY_Ux, gradY_Uy, gradY_Uz, gradY_Bx, gradY_By, gradY_Bz, gradY_VAR,&
        gradZ_Ux, gradZ_Uy, gradZ_Uz, gradZ_Bx, gradZ_By, gradZ_Bz, gradZ_VAR
 
-  real :: CurlB0_DCB(3, nI, nJ, nK, MaxBlock)
-  real :: DivB0_CB(nI, nJ, nK, MaxBlock)
-  real :: NormB0_CB(nI,nJ,nK,MaxBlock)
-
   !\
   ! X Face local MHD solution array definitions.
   !/

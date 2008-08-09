@@ -23,11 +23,11 @@ contains
                  iMaterial,    & !Input: sort of material
                  TeOut,        & !Output, OPTIONAL, temperature SI[K]
                  PTotalOut,    & !Output, OPTIONAL, pressure, SI [Pa]
-                 GammaOut )      !Output, OPTIONAL, polytropic index
-    
+                 GammaOut,     & !Output, OPTIONAL, polytropic index
+                 Energy0Out)     !Output   (E-P/(\gamma-1))/\rho
     real,intent(in)::UDensityTotal,Rho
     integer,intent(in)::iMaterial
-    real,optional,intent(out)::TeOut,PTotalOut,GammaOut
+    real,optional,intent(out)::TeOut,PTotalOut,GammaOut,Energy0Out
     real::NAtomic, UPerAtom
     logical::IsDegenerated
     !----------------------------------------------------------------------!
@@ -38,11 +38,18 @@ contains
 
     !Get an energy per the atomic cell, express in eV
     UPerAtom = UDensityTotal / (cEV * NAtomic)
+    
+    !Find temperature from dentity and internal energy
     call set_temperature(UPerAtom,NAtomic,IsDegenerated)
+
     if(IsDegenerated)call CON_stop(&
          'No EOS for Fermi=degenerated state')
     if(present(TeOut))TeOut = Te*cEVToK
     if(present(PTotalOut))PTotalOut = pressure()
-    if(present(GammaOut))GammaOut = 1.0 + (pressure()/UDensityTotal)
+    if(present(GammaOut))then
+       call get_termodyn_derivatives(GammaOut=GammaOut)
+       if(present(Energy0Out))&
+          Energy0Out = (UDensityTotal - pressure()/(GammaOut-1.0))/Rho
+    end if
   end subroutine eos
 end module ModEos

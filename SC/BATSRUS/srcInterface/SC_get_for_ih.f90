@@ -5,7 +5,7 @@ subroutine SC_get_for_ih(&
   !USES:
   use SC_ModAdvance, ONLY: State_VGB, B0_DGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_,P_
   use SC_ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, inv_g
-  use SC_ModMain,    ONLY: x_, y_, z_, nDim
+  use SC_ModMain,    ONLY: x_, y_, z_, nDim,UseB0
   use SC_ModGeometry,ONLY: x_BLK,y_BLK,z_BLK
   use ModMagnetogram,ONLY: get_magnetogram_field
   use ModConst,      ONLY: cMu 
@@ -48,8 +48,13 @@ subroutine SC_get_for_ih(&
           State_VGB(rho_,         i,j,k,iBlock) *Weight
      State_V(BuffRhoUx_:BuffRhoUz_) = &
           State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) *Weight
-     State_V(BuffBx_:BuffBz_) = &
-          (State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock))*Weight
+     if(UseB0)then
+        State_V(BuffBx_:BuffBz_) = &
+             (State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock))*Weight
+     else
+        State_V(BuffBx_:BuffBz_) = &
+             State_VGB(Bx_:Bz_,i,j,k,iBlock)*Weight
+     end if
      State_V(BuffP_)            = &
           State_VGB(P_,       i,j,k,iBlock) *Weight
 
@@ -63,8 +68,14 @@ subroutine SC_get_for_ih(&
              State_VGB(rho_,        i,j,k,iBlock) *Weight 
         State_V(BuffRhoUx_:BuffRhoUz_)=State_V(BuffRhoUx_:BuffRhoUz_)+&
              State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) *Weight
-        State_V(BuffBx_:BuffBz_) = State_V(BuffBx_:BuffBz_)          +&
-             (State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock))*Weight
+        if(UseB0)then
+           State_V(BuffBx_:BuffBz_) = State_V(BuffBx_:BuffBz_)          +&
+                (State_VGB(Bx_:Bz_,i,j,k,iBlock) + &
+                B0_DGB(:,i,j,k,iBlock))*Weight
+        else
+           State_V(BuffBx_:BuffBz_) = State_V(BuffBx_:BuffBz_)          +&
+                State_VGB(Bx_:Bz_,i,j,k,iBlock)*Weight
+        end if
         State_V(BuffP_)               =State_V(BuffP_)               +&
              State_VGB(P_,      i,j,k,iBlock) *Weight
      end do

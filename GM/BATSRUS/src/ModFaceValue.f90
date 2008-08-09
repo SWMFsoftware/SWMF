@@ -376,8 +376,8 @@ contains
     real:: RhoInv
 
     real:: RhoC2Inv, BxFull, ByFull, BzFull, B2Full,& !^CFG IF BORISCORR
-         uBC2Inv,Ga2Boris                           !^CFG IF BORISCORR
-
+           uBC2Inv,Ga2Boris                           !^CFG IF BORISCORR
+    real:: B0_DG(3,1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn)
     !primitive variables
     real, dimension(nVar,-1:nI+2,-1:nJ+2,-1:nK+2):: Primitive_VG
 
@@ -415,7 +415,12 @@ contains
     ! for non-boris corrections they are: density, velocity, pressure
     ! for boris correction momentum is used instead of the velocity
     !
-    if(DoLimitMomentum)then                     !^CFG IF BORISCORR BEGIN 
+    if(DoLimitMomentum)then                     !^CFG IF BORISCORR BEGIN
+       if(UseB0)then
+          B0_DG=B0_DGB(:,:,:,:,iBlock)
+       else
+          B0_DG=0.00
+       end if
        do k=kMinFaceX,kMaxFaceX
           do j=jMinFaceX,jMaxFaceX
              do i=1-nOrder,nI+nOrder
@@ -670,9 +675,9 @@ contains
       !            = rhoU*(1+BB/(rho*c2)) - B UdotB/c^2
       Primitive_VG(:,i,j,k) = &
            State_VGB(1:nVar,i,j,k,iBlock)
-      BxFull = B0_DGB(x_,i,j,k,iBlock) + Primitive_VG(Bx_,i,j,k)
-      ByFull = B0_DGB(y_,i,j,k,iBlock) + Primitive_VG(By_,i,j,k)
-      BzFull = B0_DGB(z_,i,j,k,iBlock) + Primitive_VG(Bz_,i,j,k)
+      BxFull = B0_DG(x_,i,j,k) + Primitive_VG(Bx_,i,j,k)
+      ByFull = B0_DG(y_,i,j,k) + Primitive_VG(By_,i,j,k)
+      BzFull = B0_DG(z_,i,j,k) + Primitive_VG(Bz_,i,j,k)
       B2Full = BxFull**2 + ByFull**2 + BzFull**2
       RhoC2Inv  =cOne/(Primitive_VG(rho_,i,j,k)*c2LIGHT)
       uBC2Inv= (Primitive_VG(rhoUx_,i,j,k)*BxFull + &

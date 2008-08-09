@@ -997,7 +997,7 @@ end subroutine test_block_geometry
 !========================================================================
 subroutine calc_b0source_covar(iBlock)  
   use ModProcMH  
-  use ModMain,ONLY:UseB0Source,UseCurlB0,x_,y_,z_!,R_,Theta_,Phi_
+  use ModMain,ONLY:UseB0Source,UseCurlB0,x_,y_,z_,UseB0!,R_,Theta_,Phi_
   use ModSize
   use ModParallel, ONLY :&
        neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
@@ -1025,7 +1025,7 @@ subroutine calc_b0source_covar(iBlock)
   real::CurlB02,CurlB02_DD(3,3),B0Nabla_DD(3,3)
   real:: eigenvalue_max
   external eigenvalue_max
-
+  if(.not.UseB0)call stop_mpi('Illegal call for calc_B0source_covar')
   dGenFine_D(1)=cHalf*dx_BLK(iBlock)
   dGenFine_D(2)=cHalf*dy_BLK(iBlock)
   dGenFine_D(3)=cHalf*dz_BLK(iBlock)

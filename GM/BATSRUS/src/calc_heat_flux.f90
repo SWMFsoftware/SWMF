@@ -6,7 +6,7 @@ subroutine add_heat_flux(DoResChangeOnly)
        iMinFaceY,iMaxFaceY,iMinFaceZ,iMaxFaceZ, &
        jMinFaceX,jMaxFaceX,jMinFaceZ,jMaxFaceZ, &
        kMinFaceX,kMaxFaceX,kMinFaceY,kMaxFaceY, &
-       globalBLK,UseSpitzerForm,x_,y_,z_
+       globalBLK,UseSpitzerForm,x_,y_,z_,UseB0
   use ModVarIndexes,ONLY:rho_,P_,Energy_,&
        Bx_,By_,Bz_
   use ModGeometry, ONLY: dx_BLK, &
@@ -50,12 +50,18 @@ subroutine add_heat_flux(DoResChangeOnly)
   end if
   CU_energydens     = No2Si_V(UnitEnergydens_)    ! in [J/m^3]
   !
-  BX2(:,:,:) = (State_VGB(Bx_,:,:,:,globalBLK)+&
-       B0_DGB(x_,:,:,:,globalBLK))**2
-  BY2(:,:,:) = (State_VGB(By_,:,:,:,globalBLK)+&
-       B0_DGB(y_,:,:,:,globalBLK))**2
-  BZ2(:,:,:) = (State_VGB(Bz_,:,:,:,globalBLK)+&
-       B0_DGB(z_,:,:,:,globalBLK))**2
+  if(UseB0)then
+     BX2(:,:,:) = (State_VGB(Bx_,:,:,:,globalBLK)+&
+          B0_DGB(x_,:,:,:,globalBLK))**2
+     BY2(:,:,:) = (State_VGB(By_,:,:,:,globalBLK)+&
+          B0_DGB(y_,:,:,:,globalBLK))**2
+     BZ2(:,:,:) = (State_VGB(Bz_,:,:,:,globalBLK)+&
+          B0_DGB(z_,:,:,:,globalBLK))**2
+  else
+     BX2(:,:,:) = State_VGB(Bx_,:,:,:,globalBLK)**2
+     BY2(:,:,:) = State_VGB(By_,:,:,:,globalBLK)**2
+     BZ2(:,:,:) = State_VGB(Bz_,:,:,:,globalBLK)**2
+  end if
   B2Inverted = cOne/max(BX2+BY2+BZ2,cTiny**2)
   !\
   ! Compute and add the x_heat_flux to the x-face fluxes 

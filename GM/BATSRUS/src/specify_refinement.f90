@@ -7,7 +7,7 @@ subroutine specify_refinement(DoRefine_B)
 
   use ModProcMH,   ONLY: iProc
   use ModMain,     ONLY: MaxBlock, nBlock, nBlockMax, nI, nJ, nK, UnusedBlk, &
-       BlkTest, Test_String, r_, Phi_, Theta_, x_, y_, z_
+       BlkTest, Test_String, r_, Phi_, Theta_, x_, y_, z_,UseB0
   use ModAMR,      ONLY: nArea, AreaType, Area_I, lNameArea
   use ModGeometry, ONLY: dx_BLK, UseCovariant, x_BLK, y_BLK, z_BLK, &
        TypeGeometry
@@ -97,14 +97,25 @@ subroutine specify_refinement(DoRefine_B)
         case('currentsheet')
 
            ! Calculate BdotR including ghost cells in all directions
-           do k=0, nK+1; do j=1, nJ; do i=1, nI
-              rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
-                * (B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)) &
-                +              y_BLK(i,j,k,iBlock)   &
-                * (B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)) &
-                +              z_BLK(i,j,k,iBlock)   &
-                * (B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock))
-           end do; end do; end do;
+           if(UseB0)then
+              do k=0, nK+1; do j=1, nJ; do i=1, nI
+                 rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
+                      * (B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)) &
+                      +              y_BLK(i,j,k,iBlock)   &
+                      * (B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)) &
+                      +              z_BLK(i,j,k,iBlock)   &
+                      * (B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock))
+              end do; end do; end do
+           else
+              do k=0, nK+1; do j=1, nJ; do i=1, nI
+                 rDotB_G(i,j,k) = x_BLK(i,j,k,iBlock)   &
+                      * State_VGB(Bx_,i,j,k,iBlock) &
+                      +           y_BLK(i,j,k,iBlock)   &
+                      * State_VGB(By_,i,j,k,iBlock) &
+                      +           z_BLK(i,j,k,iBlock)   &
+                      * State_VGB(Bz_,i,j,k,iBlock)
+              end do; end do; end do
+           end if
            DoRefine_B(iBlock) = &
                 maxval(rDotB_G) > cTiny .and. minval(rDotB_G) < -cTiny
 

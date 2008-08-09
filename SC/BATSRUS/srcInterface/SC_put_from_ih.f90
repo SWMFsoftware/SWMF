@@ -14,7 +14,7 @@ subroutine SC_put_from_ih(nPartial,&
   use SC_ModAdvance, ONLY: State_VGB, B0_DGB, Rho_, RhoUx_, RhoUz_, &
        Bx_, Bz_, P_
   use SC_ModPhysics, ONLY: Si2No_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_
-
+  use SC_ModMain,ONLY:UseB0
   implicit none
 
   !INPUT ARGUMENTS:
@@ -72,8 +72,12 @@ subroutine SC_put_from_ih(nPartial,&
   else
      State_VGB(rho_,i,j,k,iBlock)= State_V(BuffRho_)
      State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) =  State_V(BuffRhoUx_:BuffRhoUz_)
-     State_VGB(Bx_:Bz_,i,j,k,iBlock) = State_V(BuffBx_:BuffBz_) &
-          - B0_DGB(:,i,j,k,iBlock)
+     if(UseB0)then
+        State_VGB(Bx_:Bz_,i,j,k,iBlock) = State_V(BuffBx_:BuffBz_) - &
+             B0_DGB(:,i,j,k,iBlock)
+     else
+        State_VGB(Bx_:Bz_,i,j,k,iBlock) = State_V(BuffBx_:BuffBz_)
+     end if
      State_VGB(P_,i,j,k,iBlock)  = State_V(BuffP_)
   end if
 end subroutine SC_put_from_ih

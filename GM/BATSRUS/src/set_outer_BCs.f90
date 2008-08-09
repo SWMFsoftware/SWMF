@@ -161,7 +161,7 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
            call BC_solar_wind_buffer
         else
            call BC_fixed(1,nVar,CellState_VI(:,iSide))
-           call BC_fixed_B
+           if(UseB0)call BC_fixed_B
         end if
      case('fixedB1','fixedb1')
         call BC_fixed(1,nVar,CellState_VI(:,iSide))

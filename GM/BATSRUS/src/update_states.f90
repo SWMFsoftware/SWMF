@@ -132,7 +132,7 @@ subroutine update_check(iStage)
   real, dimension(2) :: percent_chg_p
   real, dimension(4) :: PercentChangePE, PercentChangeMax
 
-  real :: Value
+  real :: Value,B0_DC(3,nI,nJ,nK)
   integer :: i_D(3)
   logical :: update_check_done, IsNegative, DoStop
   logical :: oktest,  oktest_me
@@ -166,7 +166,6 @@ subroutine update_check(iStage)
         percent_chg_p   = 0.1
         do iBlock = 1, nBlockMax
            if (unusedBLK(iBlock)) CYCLE
-
            if (num_checks == 1) then
               do k=1,nK; do j=1,nJ; do i=1,nI
                  do iVar = 1, nVar
@@ -311,6 +310,11 @@ subroutine update_check(iStage)
         report_tf = report_tf*time_fraction
         do iBlock = 1, nBlockMax
            if (unusedBLK(iBlock)) CYCLE
+           if(UseB0)then
+              B0_DC=B0_DGB(:,1:nI,1:nJ,1:nK,iBlock)
+           else
+              B0_DC=0.00
+           end if
            ! Fix the update in the cells
            do k=1,nK; do j=1,nJ; do i=1,nI
               call fix_update
@@ -341,7 +345,11 @@ subroutine update_check(iStage)
      PercentChangePE = cZero
      do iBlock = 1, nBlockMax
         if (unusedBLK(iBlock)) CYCLE
-
+        if(UseB0)then
+           B0_DC=B0_DGB(:,1:nI,1:nJ,1:nK,iBlock)
+        else
+           B0_DC=0.00
+        end if
         do k=1,nK; do j=1,nJ; do i=1,nI
            cell_time_fraction = 1.
            do num_checks = 1, max_checks
@@ -588,11 +596,11 @@ contains
     if(boris_correction .and. nFluid==1) then                  !^CFG IF BORISCORR BEGIN
 
        ! Convert old state
-       fullBx = B0_DGB(x_,i,j,k,iBlock) + &
+       fullBx = B0_DC(x_,i,j,k) + &
             StateOld_VCB(Bx_,i,j,k,iBlock)
-       fullBy = B0_DGB(y_,i,j,k,iBlock) + &
+       fullBy = B0_DC(y_,i,j,k) + &
             StateOld_VCB(By_,i,j,k,iBlock)
-       fullBz = B0_DGB(z_,i,j,k,iBlock) + &
+       fullBz = B0_DC(z_,i,j,k) + &
             StateOld_VCB(Bz_,i,j,k,iBlock)
        fullBB = fullBx**2 + fullBy**2 + fullBz**2
        rhoc2  = &
@@ -626,9 +634,9 @@ contains
        end if
 
        ! Convert current state
-       fullBx = B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)
-       fullBy = B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)
-       fullBz = B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock)
+       fullBx = B0_DC(x_,i,j,k) + State_VGB(Bx_,i,j,k,iBlock)
+       fullBy = B0_DC(y_,i,j,k) + State_VGB(By_,i,j,k,iBlock)
+       fullBz = B0_DC(z_,i,j,k) + State_VGB(Bz_,i,j,k,iBlock)
        fullBB = fullBx**2 + fullBy**2 + fullBz**2
        rhoc2  = State_VGB(rho_,i,j,k,iBlock)*c2LIGHT
        UdotBc2= (State_VGB(rhoUx_,i,j,k,iBlock)*fullBx + &
@@ -829,19 +837,25 @@ subroutine select_conservative
         do iCrit = 1, nConservCrit
            select case(TypeConservCrit_I(iCrit))
            case('p')
-              IsConserv_CB(:,:,:,iBlock) = IsConserv_CB(:,:,:,iBlock) .or. &
-                   State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) > pCoeffConserv * &
-                   (Energy_GBI(1:nI,1:nJ,1:nK,iBlock,1) + 0.5 * &
-                   ((State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock) &
-                   + B0_DGB(x_,1:nI,1:nJ,1:nK,iBlock))**2 &
-                   +(State_VGB(By_,1:nI,1:nJ,1:nK,iBlock) &
-                   + B0_DGB(y_,1:nI,1:nJ,1:nK,iBlock))**2 &
-                   +(State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock) &
-                   + B0_DGB(z_,1:nI,1:nJ,1:nK,iBlock))**2 &
-                   -State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)**2 &
-                   -State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)**2 &
-                   -State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)**2 &
-                   ))
+              if(UseB0)then
+                 IsConserv_CB(:,:,:,iBlock) = IsConserv_CB(:,:,:,iBlock) .or. &
+                      State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) > pCoeffConserv * &
+                      (Energy_GBI(1:nI,1:nJ,1:nK,iBlock,1) + 0.5 * &
+                      ((State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock) &
+                      + B0_DGB(x_,1:nI,1:nJ,1:nK,iBlock))**2 &
+                      +(State_VGB(By_,1:nI,1:nJ,1:nK,iBlock) &
+                      + B0_DGB(y_,1:nI,1:nJ,1:nK,iBlock))**2 &
+                      +(State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock) &
+                      + B0_DGB(z_,1:nI,1:nJ,1:nK,iBlock))**2 &
+                      -State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)**2 &
+                      -State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)**2 &
+                      -State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)**2 &
+                      ))
+              else
+                 IsConserv_CB(:,:,:,iBlock) = IsConserv_CB(:,:,:,iBlock) .or. &
+                      State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) > pCoeffConserv * &
+                      Energy_GBI(1:nI,1:nJ,1:nK,iBlock,1) 
+              end if
            case('gradp')
               ! Switch to conservative if gradient of pressure is large
               do k=1,nK; do j=1,nJ; do i=1,nI

@@ -463,11 +463,13 @@ subroutine getdt_courant(qdt)
   do implBLK=1,nImplBLK; 
      iBLK=impl2iBLK(implBLK); 
      dxyz(x_)=dx_BLK(iBLK); dxyz(y_)=dy_BLK(iBLK); dxyz(z_)=dz_BLK(iBLK)
-
-     B0cell(:,:,:,x_)=B0_DGB(x_,1:nI,1:nJ,1:nK,iBLK)
-     B0cell(:,:,:,y_)=B0_DGB(y_,1:nI,1:nJ,1:nK,iBLK)
-     B0cell(:,:,:,z_)=B0_DGB(z_,1:nI,1:nJ,1:nK,iBLK)
-
+     if(UseB0)then
+        B0cell(:,:,:,x_)=B0_DGB(x_,1:nI,1:nJ,1:nK,iBLK)
+        B0cell(:,:,:,y_)=B0_DGB(y_,1:nI,1:nJ,1:nK,iBLK)
+        B0cell(:,:,:,z_)=B0_DGB(z_,1:nI,1:nJ,1:nK,iBLK)
+     else
+        B0cell=0.00
+     end if
      do idim=1,ndim
 
         call get_cmax_face(w_k(1:nI,1:nJ,1:nK,1:nw,implBLK),B0cell,&

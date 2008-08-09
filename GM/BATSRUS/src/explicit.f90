@@ -43,7 +43,7 @@ subroutine advance_expl(DoCalcTimestep)
         ! Calculate interface values for L/R states of each 
         ! fine grid cell face at block edges with resolution changes
         !   and apply BCs for interface states as needed.
-        if(UseB0)call set_b0_face(globalBLK)
+        call set_b0_face(globalBLK)
         call timing_start('calc_face_bfo')
         call calc_face_value(.true.,GlobalBlk)
         call timing_stop('calc_face_bfo')
@@ -83,7 +83,7 @@ subroutine advance_expl(DoCalcTimestep)
 
         ! Calculate interface values for L/R states of each face
         !   and apply BCs for interface states as needed.
-        if(UseB0)call set_b0_face(globalBLK)
+        call set_b0_face(globalBLK)
         call timing_start('calc_facevalues')
         call calc_face_value(.false., GlobalBlk)
         call timing_stop('calc_facevalues')
