@@ -2685,6 +2685,10 @@ contains
           plot_range(5, iFile) = -SmallSize_D(z_)
           plot_range(6, iFile) = +SmallSize_D(z_)
 
+       case('3d_')
+          plot_range(1:5:2, iFile) = XyzMin_D
+          plot_range(2:6:2, iFile) = XyzMax_D
+
        end select
 
        if(DoTestMe)write(*,*)'For file ',ifile-plot_,&
