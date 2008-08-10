@@ -692,9 +692,9 @@ contains
             (cOne-time_fraction) * StateOld_VCB(Bz_,i,j,k,iBlock)
 
        ! Convert Back
-       fullBx = B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)
-       fullBy = B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)
-       fullBz = B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock)
+       fullBx = B0_DC(x_,i,j,k) + State_VGB(Bx_,i,j,k,iBlock)
+       fullBy = B0_DC(y_,i,j,k) + State_VGB(By_,i,j,k,iBlock)
+       fullBz = B0_DC(z_,i,j,k) + State_VGB(Bz_,i,j,k,iBlock)
        fullBB = fullBx**2 + fullBy**2 + fullBz**2
        rhoc2  = State_VGB(rho_,i,j,k,iBlock)*c2LIGHT
        UdotBc2= (rhoUx_Boris*fullBx + rhoUy_Boris*fullBy + rhoUz_Boris*fullBz)&
