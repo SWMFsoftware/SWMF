@@ -308,8 +308,8 @@ subroutine set_b0_matrix(iBlock)
 !                DivB0_CB(nI,nJ,nK,MaxBlock))        !^CFG UNCOMMENT IF DYNAMIC
 !  if(UseCurlB0)allocate(NormB0_CB(nI,nJ,nK,MaxBlock)!^CFG UNCOMMENT IF DYNAMIC
 !  end if                                            !^CFG UNCOMMENT IF DYNAMIC
-
-  
+  if(.not.UseB0)call stop_mpi('Illegal call for calc_B0_matrix')
+  if((.not.UseB0Source).and.(.not.UseCurlB0))return
   DxInv = cOne/dx_BLK(iBlock)
   DyInv = cOne/dy_BLK(iBlock)
   DzInv = cOne/dz_BLK(iBlock)

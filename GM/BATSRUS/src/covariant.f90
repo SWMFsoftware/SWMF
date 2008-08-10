@@ -1026,6 +1026,7 @@ subroutine calc_b0source_covar(iBlock)
   real:: eigenvalue_max
   external eigenvalue_max
   if(.not.UseB0)call stop_mpi('Illegal call for calc_B0source_covar')
+  if((.not.UseB0Source).and.(.not.UseCurlB0))return
   dGenFine_D(1)=cHalf*dx_BLK(iBlock)
   dGenFine_D(2)=cHalf*dy_BLK(iBlock)
   dGenFine_D(3)=cHalf*dz_BLK(iBlock)
@@ -1099,7 +1100,7 @@ subroutine calc_b0source_covar(iBlock)
               end do
            else
               FaceArea_DIIS(:,0,0,Bot_)=FaceAreaK_DFB(:,i,j,k,iBlock)  
-              B0_DIIS(:,0,0,Top_)= B0_DZ(:,i,j,k+1)
+              B0_DIIS(:,0,0,Bot_)= B0_DZ(:,i,j,k)
            end if
 
            if(UseB0Source.or.UseCurlB0)then
@@ -1143,6 +1144,7 @@ subroutine calc_b0source_covar(iBlock)
                    B0SourceMatrix_DDC(3,2,i,j,k)*&
                    vInv_CB(i,j,k,iBlock)
               CurlB02=sum(CurlB0_DCB(:,i,j,k,iBlock)**2)
+              if(.not.UseCurlB0)CYCLE
               if(CurlB02==cZero)then
                  NormB0_CB(i,j,k,iBlock)=cZero
               else
