@@ -288,7 +288,7 @@ subroutine update_check(iStage)
                  end do
               end do; end do; end do
            end do
-        end if
+        end if !oktest
         time_fraction_rho = 1.0 / maxval(percent_chg_rho/percent_max_rho)
         call MPI_allreduce(time_fraction_rho, min_time_fraction_rho, 1, &
              MPI_REAL, MPI_MIN, iComm, iError)
@@ -838,23 +838,27 @@ subroutine select_conservative
            select case(TypeConservCrit_I(iCrit))
            case('p')
               if(UseB0)then
-                 IsConserv_CB(:,:,:,iBlock) = IsConserv_CB(:,:,:,iBlock) .or. &
-                      State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) > pCoeffConserv * &
-                      (Energy_GBI(1:nI,1:nJ,1:nK,iBlock,1) + 0.5 * &
-                      ((State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock) &
-                      + B0_DGB(x_,1:nI,1:nJ,1:nK,iBlock))**2 &
-                      +(State_VGB(By_,1:nI,1:nJ,1:nK,iBlock) &
-                      + B0_DGB(y_,1:nI,1:nJ,1:nK,iBlock))**2 &
-                      +(State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock) &
-                      + B0_DGB(z_,1:nI,1:nJ,1:nK,iBlock))**2 &
-                      -State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)**2 &
-                      -State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)**2 &
-                      -State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)**2 &
-                      ))
+                 do k=1,nK; do j=1,nJ; do i=1,nI
+                    IsConserv_CB(i,j,k,iBlock) = IsConserv_CB(i,j,k,iBlock) .or. &
+                         State_VGB(P_,i,j,k,iBlock) > pCoeffConserv * &
+                         (Energy_GBI(i,j,k,iBlock,1) + 0.5 * &
+                         ((State_VGB(Bx_,i,j,k,iBlock) &
+                         + B0_DGB(x_,i,j,k,iBlock))**2 &
+                         +(State_VGB(By_,i,j,k,iBlock) &
+                         + B0_DGB(y_,i,j,k,iBlock))**2 &
+                         +(State_VGB(Bz_,i,j,k,iBlock) &
+                         + B0_DGB(z_,i,j,k,iBlock))**2 &
+                         -State_VGB(Bx_,i,j,k,iBlock)**2 &
+                         -State_VGB(By_,i,j,k,iBlock)**2 &
+                         -State_VGB(Bz_,i,j,k,iBlock)**2 &
+                         ))
+                 end do;end do;end do
               else
-                 IsConserv_CB(:,:,:,iBlock) = IsConserv_CB(:,:,:,iBlock) .or. &
-                      State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) > pCoeffConserv * &
-                      Energy_GBI(1:nI,1:nJ,1:nK,iBlock,1) 
+                 do k=1,nK; do j=1,nJ; do i=1,nI
+                    IsConserv_CB(i,j,k,iBlock) = IsConserv_CB(i,j,k,iBlock) .or. &
+                         State_VGB(P_,i,j,k,iBlock) > pCoeffConserv * &
+                         Energy_GBI(i,j,k,iBlock,1) 
+                 end do;end do;end do
               end if
            case('gradp')
               ! Switch to conservative if gradient of pressure is large
