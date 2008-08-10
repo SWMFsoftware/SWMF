@@ -1026,7 +1026,6 @@ subroutine calc_b0source_covar(iBlock)
   real:: eigenvalue_max
   external eigenvalue_max
   if(.not.UseB0)call stop_mpi('Illegal call for calc_B0source_covar')
-  if((.not.UseB0Source).and.(.not.UseCurlB0))return
   dGenFine_D(1)=cHalf*dx_BLK(iBlock)
   dGenFine_D(2)=cHalf*dy_BLK(iBlock)
   dGenFine_D(3)=cHalf*dz_BLK(iBlock)
@@ -1062,7 +1061,7 @@ subroutine calc_b0source_covar(iBlock)
            If(j==nJ.and.neiLNorth(iBlock)==-1)then
               call correct_b0_face(North_)
               do iDim=1,3
-                 B0ResChange_DYSB(iDim,j,k,North_,iBlock)= &
+                 B0ResChange_DYSB(iDim,i,k,North_,iBlock)= &
                       sum(B0_DIIS(iDim,:,:,North_))*0.25
               end do
            else
@@ -1073,7 +1072,7 @@ subroutine calc_b0source_covar(iBlock)
            if(j==1.and.neiLsouth(iBlock)==-1)then
               call correct_b0_face(South_)
               do iDim=1,3
-                 B0ResChange_DYSB(iDim,j,k,South_,iBlock)= &
+                 B0ResChange_DYSB(iDim,i,k,South_,iBlock)= &
                       sum(B0_DIIS(iDim,:,:,South_))*0.25
               end do
            else
@@ -1084,7 +1083,7 @@ subroutine calc_b0source_covar(iBlock)
            if(k==nK.and.neiLTop(iBlock)==-1)then
               call correct_b0_face(Top_)
               do iDim=1,3
-                 B0ResChange_DZSB(iDim,j,k,Top_,iBlock)= &
+                 B0ResChange_DZSB(iDim,i,j,Top_,iBlock)= &
                       sum(B0_DIIS(iDim,:,:,Top_))*0.25
               end do
            else
@@ -1095,7 +1094,7 @@ subroutine calc_b0source_covar(iBlock)
            if(k==1.and.neiLBot(iBlock)==-1)then
               call correct_b0_face(Bot_)
               do iDim=1,3
-                 B0ResChange_DZSB(iDim,j,k,Bot_,iBlock)= &
+                 B0ResChange_DZSB(iDim,i,j,Bot_,iBlock)= &
                       sum(B0_DIIS(iDim,:,:,Bot_))*0.25
               end do
            else
@@ -1103,68 +1102,67 @@ subroutine calc_b0source_covar(iBlock)
               B0_DIIS(:,0,0,Bot_)= B0_DZ(:,i,j,k)
            end if
 
-           if(UseB0Source.or.UseCurlB0)then
-              DivB0_CB(i,j,k,iBlock) = cZero
-              B0SourceMatrix_DDC(:,:,i,j,k)=cZero
+           if((.not.UseB0Source).and.(.not.UseCurlB0))CYCLE
+           DivB0_CB(i,j,k,iBlock) = cZero
+           B0SourceMatrix_DDC(:,:,i,j,k)=cZero
 
-              do iSide=East_,Bot_,2
-                 FaceArea_DIIS(:,:,:,iSide)=-FaceArea_DIIS(:,:,:,iSide)
-              end do
+           do iSide=East_,Bot_,2
+              FaceArea_DIIS(:,:,:,iSide)=-FaceArea_DIIS(:,:,:,iSide)
+           end do
 
-              do iSide=East_,Top_
-                 do j2=0,1
-                    do i2=0,1
-                       DivB0_CB(i,j,k,iBlock)= DivB0_CB(i,j,k,iBlock)+&
-                            dot_product(B0_DIIS(:,i2,j2,iSide),&
-                            FaceArea_DIIS(:,i2,j2,iSide))    
-                       do iDirB0=x_,z_
-                          do iDirFA=x_,z_
-                             B0SourceMatrix_DDC(iDirFA,iDirB0,i,j,k)= & 
-                                  B0SourceMatrix_DDC(iDirFA,iDirB0,i,j,k)&
-                                  +FaceArea_DIIS(iDirB0,i2,j2,iSide)*&
-                                  B0_DIIS(iDirFA,i2,j2,iSide)&  
-                                  -FaceArea_DIIS(iDirFA,i2,j2,iSide)*&
-                                  B0_DIIS(iDirB0,i2,j2,iSide)
-                          end do
+           do iSide=East_,Top_
+              do j2=0,1
+                 do i2=0,1
+                    DivB0_CB(i,j,k,iBlock)= DivB0_CB(i,j,k,iBlock)+&
+                         dot_product(B0_DIIS(:,i2,j2,iSide),&
+                         FaceArea_DIIS(:,i2,j2,iSide))    
+                    do iDirB0=x_,z_
+                       do iDirFA=x_,z_
+                          B0SourceMatrix_DDC(iDirFA,iDirB0,i,j,k)= & 
+                               B0SourceMatrix_DDC(iDirFA,iDirB0,i,j,k)&
+                               +FaceArea_DIIS(iDirB0,i2,j2,iSide)*&
+                               B0_DIIS(iDirFA,i2,j2,iSide)&  
+                               -FaceArea_DIIS(iDirFA,i2,j2,iSide)*&
+                               B0_DIIS(iDirB0,i2,j2,iSide)
                        end do
                     end do
                  end do
               end do
+           end do
 
-              DivB0_CB(i,j,k,iBlock)=DivB0_CB(i,j,k,iBlock)*vInv_CB(i,j,k,iBlock)        
-
-
-              CurlB0_DCB(z_,i,j,k,iBlock) = &
-                   B0SourceMatrix_DDC(2,1,i,j,k)*&
-                   vInv_CB(i,j,k,iBlock)
-              CurlB0_DCB(y_,i,j,k,iBlock) = -&
-                   B0SourceMatrix_DDC(3,1,i,j,k)*&
-                   vInv_CB(i,j,k,iBlock)
-              CurlB0_DCB(x_,i,j,k,iBlock) = &
-                   B0SourceMatrix_DDC(3,2,i,j,k)*&
-                   vInv_CB(i,j,k,iBlock)
-              CurlB02=sum(CurlB0_DCB(:,i,j,k,iBlock)**2)
-              if(.not.UseCurlB0)CYCLE
-              if(CurlB02==cZero)then
-                 NormB0_CB(i,j,k,iBlock)=cZero
-              else
-                 CurlB02_DD=CurlB02*cUnit_DD
-                 do j2=1,3
-                    do i2=1,3
-                       CurlB02_DD(i2,j2)=CurlB02_DD(i2,j2)-&
-                            CurlB0_DCB(i2,i,j,k,iBlock)*&
-                            CurlB0_DCB(j2,i,j,k,iBlock)
-                    end do
+           DivB0_CB(i,j,k,iBlock)=DivB0_CB(i,j,k,iBlock)*vInv_CB(i,j,k,iBlock)        
+           
+           
+           CurlB0_DCB(z_,i,j,k,iBlock) = &
+                B0SourceMatrix_DDC(2,1,i,j,k)*&
+                vInv_CB(i,j,k,iBlock)
+           CurlB0_DCB(y_,i,j,k,iBlock) = -&
+                B0SourceMatrix_DDC(3,1,i,j,k)*&
+                vInv_CB(i,j,k,iBlock)
+           CurlB0_DCB(x_,i,j,k,iBlock) = &
+                B0SourceMatrix_DDC(3,2,i,j,k)*&
+                vInv_CB(i,j,k,iBlock)
+           CurlB02=sum(CurlB0_DCB(:,i,j,k,iBlock)**2)
+           if(.not.UseCurlB0)CYCLE
+           if(CurlB02==cZero)then
+              NormB0_CB(i,j,k,iBlock)=cZero
+           else
+              CurlB02_DD=CurlB02*cUnit_DD
+              do j2=1,3
+                 do i2=1,3
+                    CurlB02_DD(i2,j2)=CurlB02_DD(i2,j2)-&
+                         CurlB0_DCB(i2,i,j,k,iBlock)*&
+                         CurlB0_DCB(j2,i,j,k,iBlock)
                  end do
-                 B0Nabla_DD=B0SourceMatrix_DDC(:,:,i,j,k)*&
-                      vInv_CB(i,j,k,iBlock)&
-                      -DivB0_CB(i,j,k,iBlock)*cUnit_DD
-                 NormB0_CB(i,j,k,iBlock)= sqrt(sqrt(eigenvalue_max(&
-                      matmul(transpose(B0Nabla_DD),matmul(&
-                      CurlB02_DD,&
-                      B0Nabla_DD))               )&
-                      )    )
-              end if
+              end do
+              B0Nabla_DD=B0SourceMatrix_DDC(:,:,i,j,k)*&
+                   vInv_CB(i,j,k,iBlock)&
+                   -DivB0_CB(i,j,k,iBlock)*cUnit_DD
+              NormB0_CB(i,j,k,iBlock)= sqrt(sqrt(eigenvalue_max(&
+                   matmul(transpose(B0Nabla_DD),matmul(&
+                   CurlB02_DD,&
+                   B0Nabla_DD))               )&
+                   )    )
            end if
         end do
      end do
