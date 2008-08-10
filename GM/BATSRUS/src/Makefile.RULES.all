@@ -3,6 +3,9 @@
 # Compilation rules preceeded with a single TAB character.
 # Empty line before next conditional.
 
+$OS eq "AIX" and $Compiler eq "xlf90"
+	${COMPILE.f90} ${Cflag0} create_soln_blocks.f90
+
 $OS eq "Darwin" and $Compiler eq "xlf90"
 	${COMPILE.f90} ${Cflag2} ${SuffixMapf90} project_B.f90
 	${COMPILE.f90} ${Cflag2} ${SuffixMapf90} ModNodes.f90
