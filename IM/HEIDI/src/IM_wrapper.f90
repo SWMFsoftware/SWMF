@@ -186,7 +186,7 @@ subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
   ! indexes stored in Index and weights stored in Weight
   ! The variables should be put into Buff_V(??)
 
-  use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
+  use CON_router,   ONLY: IndexPtrType, WeightPtrType
   use ModIonoHeidi, ONLY: IONO_NORTH_RCM_JR,IONO_SOUTH_RCM_JR, IONO_nTheta, IONO_nPsi
 
   implicit none
@@ -236,7 +236,7 @@ end subroutine IM_get_for_ie
 !==============================================================================
 subroutine IM_put_from_ie(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
 
-  use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
+  use CON_router,   ONLY: IndexPtrType, WeightPtrType
   use ModIonoHeidi, ONLY: IONO_NORTH_PHI, IONO_SOUTH_PHI, IONO_nTheta, IONO_nPsi
 
   implicit none

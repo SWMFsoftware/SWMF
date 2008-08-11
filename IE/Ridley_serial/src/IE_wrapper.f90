@@ -892,7 +892,7 @@ end subroutine IE_put_from_ua
 
 subroutine IE_put_from_im(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
 
-  use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
+  use CON_router,   ONLY: IndexPtrType, WeightPtrType
 
   implicit none
   character(len=*), parameter   :: NameSub='IE_put_from_im'
@@ -944,7 +944,7 @@ subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
   ! indexes stored in Index and weights stored in Weight
   ! The variables should be put into Buff_V
 
-  use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
+  use CON_router,   ONLY: IndexPtrType, WeightPtrType
   use ModIonosphere, ONLY: IONO_nTheta, IONO_nPsi, &
        IONO_NORTH_PHI, IONO_NORTH_JR, IONO_SOUTH_PHI, IONO_SOUTH_JR, &
        IONO_NORTH_SigmaH, IONO_NORTH_SigmaP, &

@@ -295,7 +295,7 @@ end subroutine IE_setgrid
 
 subroutine IE_put_from_im(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
 
-  use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
+  use CON_router,   ONLY: IndexPtrType, WeightPtrType
 
   implicit none
   character(len=*), parameter   :: NameSub='IE_put_from_im'

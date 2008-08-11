@@ -234,7 +234,7 @@ subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
   ! indexes stored in Index and weights stored in Weight
   ! The variables should be put into Buff_V
 
-  use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
+  use CON_router,   ONLY: IndexPtrType, WeightPtrType
   implicit none
   character(len=*), parameter :: NameSub='IM_get_for_ie'
 
@@ -251,7 +251,7 @@ end subroutine IM_get_for_ie
 !==============================================================================
 subroutine IM_put_from_ie(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
 
-  use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
+  use CON_router,   ONLY: IndexPtrType, WeightPtrType
   use RCM_variables, ONLY: v, birk_mhd, iSize, jSize, sigmaH_mhd,sigmaP_mhd
 
   implicit none

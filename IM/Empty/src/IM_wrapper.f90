@@ -177,7 +177,7 @@ end subroutine IM_put_sat_from_gm
 
 subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
 
-  use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
+  use CON_router,   ONLY: IndexPtrType, WeightPtrType
 
   implicit none
   character(len=*), parameter :: NameSub='IM_get_for_ie'
