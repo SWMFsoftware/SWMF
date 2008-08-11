@@ -739,17 +739,11 @@ contains
     elseif(ifile>plot_ .and. ifile<=plot_+nplotfile) then
        ! Case for plot files
        IsFound=.false.
-       if(index(plot_type(ifile),'ion')>0)then
-          if (iProc == 0) then
-             call write_myname
-             write(*,*)NameSub//' WARNING: only IE can write ion files!'
-          end if
-          RETURN
-       end if
 
        if(.not.DoExchangeAgain .and. ( &
             index(plot_type(iFile),'lin')==1 .or. &    !^CFG IF RAYTRACE
             index(plot_type(iFile),'los')==1 .or. &
+            index(plot_type(iFile),'sph')==1 .or. &
             plot_form(iFile) == 'tec')) then
 
           if(iProc==0.and.lVerbose>0)then

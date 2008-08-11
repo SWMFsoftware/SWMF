@@ -2095,23 +2095,6 @@ contains
     ! This depends on the grid geometry set above
     call correct_plot_range
 
-    ! Select TypeMessagePass='all' if there are any spherical plots
-    if(optimize_message_pass /= 'all')then
-       do iFile = Plot_ + 1, Plot_ + nPlotFile
-          if(index(plot_type(iFile),'sph') /= 1) CYCLE
-          
-          if(iProc==0 .and. optimize_message_pass /= 'allopt') then
-             write(*,'(a)')NameSub//&
-                  ' WARNING: sph plottype does not work with'// &
-                  ' TypeMessagePass='//trim(optimize_message_pass)//' !!!'
-             if(UseStrict)call stop_mpi('Correct PARAM.in!')
-             write(*,*) NameSub//' setting TypeMessagePass = all'
-          end if
-          optimize_message_pass = 'all'
-          EXIT
-       end do
-    end if
-
     ! Fix resolutions (this depends on domain size set above)
     if(InitialResolution > 0.0) initial_refine_levels = nint( &
          alog(((XyzMax_D(x_)-XyzMin_D(x_)) / (proc_dims(x_) * nI))  &
