@@ -131,7 +131,7 @@ end subroutine SC_get_for_ih
 !===================================================================!
 subroutine SC_get_for_sp(&
      nPartial,iGetStart,Get,W,State_V,nVar)
-  use CON_coupler, ONLY: IndexPtrType, WeightPtrType
+  use CON_router, ONLY: IndexPtrType, WeightPtrType
   implicit none
 
   !INPUT ARGUMENTS:
@@ -147,7 +147,7 @@ end subroutine SC_get_for_sp
 !===================================================================!
 subroutine SC_get_a_line_point(&
      nPartial,iGetStart,Get,W,State_V,nVar)
-  use CON_coupler, ONLY: IndexPtrType, WeightPtrType
+  use CON_router, ONLY: IndexPtrType, WeightPtrType
   implicit none
   
   !INPUT ARGUMENTS:

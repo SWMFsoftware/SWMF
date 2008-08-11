@@ -119,7 +119,7 @@ end subroutine OH_set_buffer_grid
 !===================================================================!
 subroutine OH_get_a_line_point(&
      nPartial,iGetStart,Get,W,State_V,nVar)
-  use CON_coupler, ONLY: IndexPtrType, WeightPtrType
+  use CON_router, ONLY: IndexPtrType, WeightPtrType
   implicit none
   
   !INPUT ARGUMENTS:

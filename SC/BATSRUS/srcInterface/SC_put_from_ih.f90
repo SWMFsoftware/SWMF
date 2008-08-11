@@ -10,7 +10,7 @@ subroutine SC_put_from_ih(nPartial,&
      StateSI_V,&
      nVar)
   !USES:
-  use CON_coupler, ONLY: IndexPtrType, WeightPtrType
+  use CON_router, ONLY: IndexPtrType, WeightPtrType
   use SC_ModAdvance, ONLY: State_VGB, B0_DGB, Rho_, RhoUx_, RhoUz_, &
        Bx_, Bz_, P_
   use SC_ModPhysics, ONLY: Si2No_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_

@@ -50,7 +50,7 @@ subroutine SP_put_input_time(TimeIn)
 end subroutine SP_put_input_time
 !===================================================================
 subroutine SP_put_from_mh(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
-  use CON_coupler, ONLY: IndexPtrType, WeightPtrType
+  use CON_router, ONLY: IndexPtrType, WeightPtrType
   implicit none
   integer,intent(in)::nPartial,iPutStart,nVar
   type(IndexPtrType),intent(in)::Put
