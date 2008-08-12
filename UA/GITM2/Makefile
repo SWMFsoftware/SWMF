@@ -116,7 +116,7 @@ test_earth_run:
 	cd ${TESTDIR}; ${MPIRUN} ./GITM.exe > runlog
 
 test_earth_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/UA/data/log00000002.dat \
 		srcData/log00000002.dat.noAPEX >& test_earth.diff)
 	ls -l test_earth.diff
@@ -144,7 +144,7 @@ test_mars_run:
 	cd ${TESTDIR}; ${MPIRUN} ./GITM.exe > runlog
 
 test_mars_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/UA/data/log00000002.dat \
 		srcData/log00000002.dat.Mars >& test_mars.diff)
 	ls -l test_mars.diff
