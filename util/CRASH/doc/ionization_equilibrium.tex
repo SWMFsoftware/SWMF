@@ -191,12 +191,17 @@
 
 \begin{document}
 
-\title{{\Large Calculating the Ionization Equilibrium in an Ideal Plasma}}
+\title{{\Large Calculation of Elementary Parameters for Dense High-Temperaure Plasma}}
 
 \maketitle
 
-\section{Ionization Equilibrium at a Given Temperature\label{sec:Ionization-Equilibrium}}
+\section{Introduction and Background}
 
+Understanding the processes that go on in high-density and high-temperature plasmas, as well as the response of such plasmas to various external disturbances has become increasingly important in the modern world. Such plasmas play the key role in many important emerging or possible future applications, such as thermonuclear fusion chain reaction, laser particle acceleration, and the x-ray laser pumped by nuclear reactions. However, experiments with such plasmas are extremely difficult to cary out in a controlled lab environment, since the temperatures and densities reached are comparable to those of the sun, or of a nuclear explosion, the tests with which have been banned around a decade ago. This significantly hinders the progress that can be made in understanding such plasmas and in the development of the related technologies. Hence, computer modeling of the processes that occur in these extremely dense and hot plasmas becomes irreplaceable. This is true not only due to the complexity of the real world experiments, which are still necessary to conduct, but also due to the measurement limitations of such experiments -- not all important parameters of such plasmas can be measured experimentally, and hence some calculations and modeling are still necessary. 
+
+This work presents a way of calculating the temperature, as well as several other more basic plasma parameters, from the average internal energy per atomic unit in the plasma. This calculation, which is very simple for ideal gases, becomes more complex when dealing with plasmas. Furthermore, this calculation is described for multi-element, as well as for single component plasmas. 
+
+Although this calculation is described for the general case, this work was done based on a specific experiment, in which a Xenon foil is accelerated via laser radiation along a thin plastic tube ($C_{22} H_{10} N_2$) filled with Beryllium. In the process, all these elements are heated to such temperatures that they form a mixture plasma, which then carries shock waves formed by the acceleration process, the dynamics of which are then examined.
 
 \subsection{The Basics }
 
@@ -342,6 +347,7 @@ remaining part of the array, and normalize them as before so that
 their sum equals one. This method can then be used instead of Eq.(6)
 any time the population values are needed.
 
+\section{Ionization Equilibrium at a Given Temperature\label{sec:Ionization-Equilibrium}}
 
 \subsection{The System of Equations}
 
@@ -833,9 +839,9 @@ a single component plasma.
 As with most other characteristics of a mixture plasma, to find the
 average internal energy per atomic cell, we need to use Eq. \ref{eq:26}
 to find this energy for each individual element, and then find the
-statistical average of these values across all elements. Also, note that from here on, for any expression $a, \ll a\gg =\sum_{j}[C_{j}\sum_{i}(P_{i}a_{ij})]$, which is the statistical average first, across the populations and then, across the elements. 
+statistical average of these values across all elements. Also, note that from here on, for any expression $a, \ll a\gg =\sum_{j}[C_{j}\sum_{i}(P_{ij}a_{ij})]$, which is the statistical average first, across the populations and then, across the elements. 
 \begin{equation}
-U=\sum_{j}C_{j}\left(\frac{3}{2}k_{B}T(1+<i>_{j})+<E_{i}>_{j}\right)=\frac{3}{2}k_{B}T(1+Z)+<E_{ij}>.\label{eq:Umix}
+U=\sum_{j}C_{j}\left(\frac{3}{2}k_{B}T(1+<i>_{j})+<E_{i}>_{j}\right)=\frac{3}{2}k_{B}T(1+Z)+\ll E_{ij}\gg .\label{eq:Umix}
 \end{equation}
 Hence, the equation remains essentially the same, except here all
 averages are taken along 2 dimensions -- first across the populations
@@ -863,4 +869,9 @@ Finally, same way as before, we can use these two equations for $U$
 and $C_{V}$ to iteratively find the temperature from a given average
 internal energy using the Newton-Rapson iterations (first part of
 Eq. \ref{eq:CalcT}). 
+
+\section {Conclusion}
+
+In this work, a method was presented for calculating such parameters of the plasma as its temperature ($T$), pressure ($P$), average ionization state ($Z$), and populations of various level ions ($P_i$) from a given average internal energy per atomic unit in that plasma. This method was also somewhat optimized for faster performance in a computer program, since such calculation may need to be performed millions of times within a cell-based plasma modeling program, which this calculation was meant for. However, the calculation still requires a two-layer iterative approach (iterations within each iteration), with around 3-6 iterations for each step, which still requires a relatively significant computing time.
+
 \end{document}
