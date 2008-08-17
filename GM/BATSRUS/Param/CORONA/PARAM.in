@@ -47,7 +47,7 @@ T			UseUserB0
 Param/CORONA/CR1935_WSO.dat    File_PFSSM
 12			iHead_PFSSM
 -1.0			PhiShift
-1.0			UnitB
+0.01			UnitB
 -1.0			dt_UpdateB0
 
 #EMPIRICALSW
