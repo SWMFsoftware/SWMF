@@ -1,0 +1,410 @@
+%^CFG COPYRIGHT UM
+\chapter{The Synoptic Solar Wind Model \label{chapter:synopticSW}}
+
+\section{General Description of the Model \label{section:SWmodel}}
+The synoptic solar wind model is designed to provide the the ambient physical 
+conditions for the Solar Corona (SC), the Inner Heliosphere (IH), and the 
+Solar Wind (SW). 
+The model is called ``synoptic'' due to the fact that it is driven by synoptic 
+maps of the observed surface radial magnetic field of the Sun throughout a 
+whole Carrington Rotation (one rotation period of the Sun in approximately 27 
+days). These maps are used to provide the inner boundary conditions for the 
+steady-state MHD solution in the domain between the Sun and the Earth.
+
+There are two main issues when one tries to create numerical model for the 
+solar corona. First, one needs to specify the initial condition for the 
+three-dimensional configuration of the magnetic field. Since the only 
+constrain on the magnetic field is the observed radial field on the surface, 
+we use the common ``Potential Field'' approximation to specify the initial 
+field in the whole domain (see Section \ref{section:potentialfield}). The 
+other issue is the solar wind heating and accelerating mechanism. This issue 
+is discussed in Section \ref{section:semiempirical}.      
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% The potential field approximation                                           %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{The potential field approximation \label{section:potentialfield}}
+
+The solar corona is dominated by its magnetic field. Therefore, it is 
+important to know what is the three dimensional structure of the magnetic 
+field in order to study the physical processes in the corona. Since the solar 
+magnetic field can be routinely measured only at the photosphere, where the 
+plasma density is high enough for measuring the Zeeman Splitting, one needs 
+to find a way to approximate the global structure of the coronal magnetic 
+field. The most commonly used method to approximate the coronal magnetic 
+field is the so-called 'potential field' approximation (Altschuler and 
+Newkirk, Solar Physics, 9:131-149, 1969). In this approximation, it is 
+assumed that the Alfv\'en speed is much larger than the speed of convective 
+motions in the low corona, so the field line relaxation time is much shorter 
+than the typical advection time scale. In other words, the field line will 
+respond quickly to any motion we apply on it (this motion can be seen as 
+electric current) so in practice the magnetic field is static. Under the 
+assumption that there are no currents in a physical system, we can write 
+Ampere's law as follows:
+\begin{equation}
+\label{eq:Amper1}
+\nabla \times \mathbf{B}=0,
+\end{equation}
+and we can write $\mathbf{B}$ as a gradient of some scalar potential $\psi$:
+\begin{equation}
+\label{eq:grad}
+\mathbf{B}=-\nabla \psi.
+\end{equation}
+Since we also know that 
+\begin{equation}
+\label{eq:DivB}
+\nabla \cdot \mathbf{B}=0,
+\end{equation}
+combining eq. \ref{eq:grad} with eq. \ref{eq:DivB} results in the Laplace equation 
+for the scalar potential:
+\begin{equation}
+\label{eq:Laplace}
+\nabla^2\psi=0.
+\end{equation}
+The general solution for this equation in spherical coordinates for \\
+$R_0 < r < R_s$ is:
+\begin{eqnarray}
+\label{eq:GaneralSol}
+\psi(r,\theta,\phi)=\mathop{\sum}_{n=1}^{\infty}\mathop{\sum}_{m=0}^{n}
+\left[ R_0\left( \frac{R_0}{r}\right)^{n+1}+R_s \cdot c_n \left( \frac{r}{R_s}
+\right)^{n} 
+\right] \nonumber \\
+\times \left(g_n^m \cos{m\phi} + h_n^m \sin{m\phi} \right)P_{nm}(\theta),
+\end{eqnarray}
+which gives $\psi=0$ at $r=R_s$ for the choice of $c_n=-\left( \frac{R_0}{R_s} 
+\right)^{n+2}$, 
+particularly as 
+$R_s \rightarrow \infty$. 
+$P_{nm}$ are the associated Legendre Polynomials, which are a function of 
+$\cos{\theta}$. 
+The coefficients 
+$g_n^m$ and $h_n^m$ can be determined from the photospheric magnetic field 
+data and have magnetic field dimension.
+
+Following the above solution, we can obtain the solution for the magnetic 
+field components (Altschuler et al. 1969, eqs. 8-10):
+
+\begin{eqnarray}
+\label{eq:Br2}
+B_r=-\frac{\partial \psi}{\partial r}=\mathop{\sum}_{n=1}^{\infty} 
+\mathop{\sum}_{m=0}^{n} 
+\left[ (n+1)\left( \frac{R_0}{r} \right)^{n+2}-n\left( \frac{r}{R_s} \right)
+^{n-1}c_n \right] 
+\nonumber \\
+\times \left(g_n^m \cos{m\phi} + h_n^m \sin{m\phi} \right)P_n^m(\theta),
+\end{eqnarray}
+
+\begin{eqnarray}
+\label{eq:Btheta2}
+B_\theta=-\frac{1}{r}\frac{\partial \psi}{\partial \theta}=-\mathop{\sum}_{n=1}
+^{\infty} 
+\mathop{\sum}_{m=0}^{n} 
+\left[ \left( \frac{R_0}{r} \right)^{n+2}+c_n \left( \frac{r}{R_s} \right)
+^{n-1} \right] 
+\nonumber \\
+\times \left(g_n^m \cos{m\phi} + h_n^m \sin{m\phi} \right)\frac{\partial 
+P_n^m(\theta)}{\partial \theta},
+\end{eqnarray}
+
+\begin{eqnarray}
+\label{eq:Bphi2}
+B_\phi=-\frac{1}{r\sin{\theta}}\frac{\partial \psi}{\partial \phi}=
+\mathop{\sum}_{n=1}^{\infty} \mathop{\sum}_{m=0}^{n} 
+\left[\left( \frac{R_0}{r} \right)^{n+2}+c_n \left( \frac{r}{R_s} \right)
+^{n-1} \right]\nonumber \\
+\times \frac{m}{\sin{\theta}} \left(g_n^m \sin{m\phi} - h_n^m \cos{m\phi} 
+\right)P_n^m(\theta).
+\end{eqnarray}
+
+We can determine the harmonic coefficients from the observed photospheric 
+values of $B_r$ as follows. The orthogonality relation over a sphere with 
+$r=1$ for the general Legendre functions is:
+\begin{eqnarray}
+\label{eq:SphNorm}
+\frac{1}{4\pi}\mathop{\int}_{\theta=0}^{\pi}\mathop{\int}_{\phi=0}^{2\pi}
+P_{nm}(\theta)  \left\{ \begin{array}{l l}  \cos{m\phi}\\  \sin{m\phi}\\ 
+\end{array} 
+\right\}
+P_{n'm'}(\theta) \left\{ \begin{array}{l l}  \cos{m'\phi}\\  \sin{m'\phi}\\ 
+\end{array} 
+\right\}
+\sin{\theta} d\theta d\phi= \nonumber \\
+W\delta_{nn'}\delta_{mm'},
+\end{eqnarray}
+where $W$ is the normalization factor.
+For the general Legendre functions,
+\begin{equation}
+\label{eq:GenNorm}
+W=\frac{2}{2n+1}\frac{(n+m)!}{(n-m)!},
+\end{equation}
+and
+\begin{equation}
+\label{eq:SchmidtNorm}
+W=\frac{1}{2n+1}
+\end{equation}
+for the Schmidt normalization, so the relation between the Schmidt ($P_n^m$) 
+and the general Legendre functions ($P_{nm}$) is:
+\begin{equation}
+\label{eq:NormRel}
+P_n^m(\theta)=\left\{ 2 \frac{(n-m)!}{(n+m)!} \right\} ^{1/2}P_{nm}(\theta).
+\end{equation}
+In \BATSRUS, the polynomials are calculated with 
+the Schmidt normalization.  
+For $r=R_0=1$, the radial magnetic field becomes:
+\begin{equation}
+\label{eq:BrSum}
+B_r(\theta,\phi)= \mathop{\sum}_{n=1}^{\infty}\mathop{\sum}_{m=0}^{n}
+R_n\left\{ \begin{array}{l l}  g_n^m\\  h_n^m\\ \end{array} \right\}P_n^m
+(\theta)\left\{ \begin{array}{l l}  \cos{m\phi}\\  \sin{m\phi}\\ \end{array} 
+\right\},
+\end{equation}
+where $R_n=\left[ (n+1)+n\left( \frac{1}{R_s} \right)^{2n+1}  \right]$.\\
+Following eq. \ref{eq:SphNorm}, we can obtain the harmonic coefficients from the 
+photospheric magnetic data, assuming the Schmidt normalization of the Legendre 
+functions (Altschuler et al. 1969):
+\begin{equation}
+\label{eq:Coeff}
+\left\{ \begin{array}{l l}  g_n^m\\  h_n^m\\ \end{array} \right\}=
+\frac{2n+1}{4\pi R_n}\mathop{\int}_{\theta=0}^{\pi}\mathop{\int}_{\phi=0}
+^{2\pi}B_r(r=R_\odot,\theta,\phi) P_n^m(\theta) 
+\left\{ \begin{array}{l l}  \cos{m\phi}\\  \sin{m\phi}\\ \end{array} \right\} 
+\sin{\theta} d\theta d\phi,
+\end{equation}
+where
+\[B_r = \left\{ 
+\begin{array}{l l}
+B_{magnetogram} & \quad \mbox{for radial magnetogram,}\\
+\frac{B_{magnetogram}}{\sin{\theta}} & \quad \mbox{for Line-of-Sight 
+magnetogram.}\\
+\end{array} \right\}. \]
+The discretized version of eq. 14 is (Altschuler et al. 1969, eq. 15):
+\begin{equation}
+\label{eq:CoeffDisc}
+\left\{ \begin{array}{l l}  g_n^m\\  h_n^m\\ \end{array} \right\}=
+\frac{1}{A}\frac{2n+1}{R_n}\mathop{\sum}_{i=0}^{N_\theta-1} \mathop{\sum}_{j=0}
+^{N_\phi-1}
+B_r(i,j)\cdot da_{i,j}\cdot P_n^m(\theta_i)
+\left\{ \begin{array}{l l}  \cos{m\phi_j}\\  \sin{m\phi_j},\\ \end{array} 
+\right\}
+\end{equation}
+where $da_{i,j}=\sin{\theta}_i d\theta d\phi$ and 
+$A=\mathop{\sum}_{i=0}^{N_\theta-1} \mathop{\sum}_{j=0}^{N_\phi-1}da_{i,j}=
+4\pi$ for $r=R_\odot$. \\
+
+In SWMF, there is a utility tool to calculate the spherical harmonic 
+coefficients from raw magnetogram. The tool is located at: 
+\begin{verbatim}
+SWMF_DIR/util/DATAREAD/srcMagnetogram
+\end{verbatim}
+This directory contains the following README file with instructions how 
+to create the input harmonics file needed for the SC model:
+\begin{verbatim}
+##########################################################################
+# How to create a magnetogram input file for SWMF from a raw magnetogram #
+# fits file:                						 #
+##########################################################################
+
+These are the steps for creating a magnetogram file for SWMF from 
+any raw magnetogram fits file.
+
+1. Install SWMF (Config.pl -install).
+2. Compile the HARMONICS executable by typing:
+	make HARMONICS
+in the directory SWMF_path/util/DATAREAD/srcMagnetogram. This will 
+create the HARMONICS.exe executable in the directory SWMF_path/bin
+
+3. For convenient, you can create a link to this executable from the path
+SWMF_path/util/DATAREAD/srcMagnetogram by typing:
+	ln -s ../../../bin/HARMONICS.exe HARMONICS.exe
+4. Type:
+	cp your_magnetoram_file.fits fitsfile.fits
+5. Convert the fits file to ASCII format by running the idl program 
+fits_to_ascii.pro. You will be asked to insert the maximum order of 
+harmonics and the Carrington Rotation number. It is recommended (but not 
+required ) to use not more than 90 harmonics, since the computation time 
+can be very long. 
+   The idl routine generates three files:
+	*fitsfile.dat - ASCII file to be used by HARMONICS.exe to calculate 
+	 the harmonic coefficients.
+	*fitsfile.H - the header of the original fits file with information 
+	 about the magnetogram source.
+	*fitsfile_tec.dat - a Tecplot file to display the original magnetogram.
+6. Run HARMONICS.exe. This executable can be run in parallel mode for faster 
+computation. This run will generate a file called harmonics.dat that 
+can be used in SWMF. For convenient, it is recommended to rename the file with 
+the following naming format:
+	cp harmonics.dat CRxxxx_OBS.dat
+where xxxx is the Carrington Rotation number and OBS is the observatory name 
+(MDI,WSO,MWO,GONG etc.)
+7. Move the magnetogram harmonics file to the path defined in the PFSSM flag 
+in PARAM.in file (usually run/SC).
+\end{verbatim}
+
+\begin{bf}\begin{Large}Note: this routine does not interpolate missing data 
+or the polar flux. You have to make sure that the raw magnetogram is properly 
+processed!!!!\end{Large}\end{bf}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Semi-empirical model for the solar wind                                     %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Semi-empirical Model for the Solar Wind \label{section:semiempirical}}
+
+Numerical reproduction of the solar corona steady-state conditions has been 
+extensively 
+investigated since the famous work by (Pneuman and Kopp, Solar Physics, 18:258, 
+1971).Traditionally, the deposition of energy and/or momentum into the solar 
+wind has been described by means of some empirical source terms (Usmanov 93, 
+McKenzie 97, Mikic 99, Suess 99, Wu 99, Groth 00). In these models, 
+the sources of plasma heating and solar wind acceleration are typically 
+modeled in a qualitative sense, and the spatial profiles for the deposition 
+of the energy or momentum are usually modeled by exponentials in radial 
+distance. In more realistic models, the solar wind is heated and accelerated 
+by the energy and momentum interchange between the solar plasma and 
+large-scale Alfv\'en turbulence (Jacques 77, Dewar 70, Barnes 92, 
+Usmanov 00 and 03).
+ 
+Due to the small number of observations at 1~AU, it is reasonable to adopt 
+semi-empirical models. Assimilating a long history of solar wind observations, 
+these models are very efficient and quite accurate. A particular example is 
+the Wang-Sheeley-Arge model (WSA, Arge and Pizzo 00,Arge et. al 04). 
+This model uses the observed photospheric magnetic field to determine the 
+coronal field configuration, which is then used to estimate the distribution 
+of the final speed of the solar wind, $u_{sw}$. The common disadvantage of 
+semi-empirical models is that they are physically incomplete. 
+
+We use the model by Cohen et. al (07) to obtain the steady-state SC and IH 
+solution. The SC and IH modules of SWMF are versions of the BASTRUS global 
+MHD code, which is fully parallel and has adaptive mesh refinement 
+capabilities (see Powell 99). Our SC model is driven by high-resolution 
+SOHO MDI magnetograms. We use the magnetogram data to calculate the potential 
+magnetic field, assuming the source surface is at $R_{ss}=2.5R_\odot$, where 
+$R_\odot$ is the solar radius, and use this distribution of the magnetic field 
+as an initial condition. 
+
+The heating and acceleration of the solar wind plasma are achieved by using a 
+non-uniform spatial distribution of $\gamma$. In order to obtain a more 
+realistic distribution, we use the empirical Wang-Sheeley-Arge (WSA) model as 
+an input to our model. The WSA model uses the potential field distribution to 
+obtain the magnetic flux tube expansion factor defined as 
+(Wang and Sheeley 90):
+
+\begin{equation}
+\label{expansionfactor}
+f_s=\frac{|B(R_{s})|R^2_{s}}{|B(R_0)| R^2_0}.
+\end{equation}
+
+The WSA model provides an empirical relation for the spherical distribution 
+of the solar wind speed at 1AU as a function of $f_s$ and the angular distance 
+of a magnetic field footpoint from the coronal hole boundary, $\theta_b$. 
+In our model, we use the following formula (Arge et. al 2004):
+
+\begin{equation} 
+\label{eq:WSA1}
+u_{sw}  = 265 + \frac{1.5}{(1+f_s)^{1/3}} \left \{ 5.9 - 1.5 e^{\left[1 -
+\left(\theta_b / 7 \right)^{5/2} \right]} \right \}^{7/2}~\mbox{km s}^{-1}.
+\end{equation}
+
+A more up-to-date formula (after personal communication with N. Arge 2006) is:
+\begin{equation}
+\label{eq:WSA1}
+u_{sw}=240+\frac{675}{(1+f_s)^{1/4.5}}
+\{ 1-0.8\frac{e^{[1-(\theta_b/2.8)^{5/4}]}}{e^1}  \}^3\;km\;s^{-1} 
+\end{equation}
+
+We should note two important issues about the WSA model. First, one should be 
+aware of the fact that the WSA solution depends on the magnetogram resolution 
+and the is not the same for different observatories. This is due to the 
+different mapping of the potential field and the expansion factor. Second, 
+the WSA fitting is done for 1AU, while we use it in the model at the source 
+surface. This is the main reason for deviations of the MHD solution from the 
+WSA solution. 
+
+In order to relate the surface value of $\gamma$ to the WSA solar wind speeds, 
+we assume that far from the Sun the total energy is dominated by the energy of 
+the bulk motion and that the thermal and gravitational energy are negligible. 
+We also assume that at the coronal base the bulk kinetic energy is zero. 
+Due to energy conservation, we can use the Bernoulli equation to relate the 
+two ends of a streamline (or magnetic field line):
+
+\begin{equation}
+\label{eq:Bernoulli2}
+\frac{u_{sw}^2(\theta,\phi)}{2}=\frac{\gamma_0(\theta_0,\phi_0) }
+{[\gamma_0(\theta_0,\phi_0)-1]}
+\frac{p_0(\theta_0,\phi_0)}{\rho_0(\theta_0,\phi_0)}-\frac{GM_\odot}{R_\odot}.
+\end{equation}
+
+Here $u_{sw}$ is the input solar wind speed from the WSA model, $G$ is the 
+gravitational constant, and $M_\odot$ is the solar mass. $\gamma_0$, $p_0$, 
+and $\rho_0$ are the photospheric values for the polytropic index, pressure, 
+and  mass density. The coordinates $\theta_0,\phi_0$ represent the location 
+of the field line footpoint, $u_{sw}(\theta,\phi)$ originated from. We 
+interpolate $\gamma$ from its photospheric value to a spherically uniform 
+value of $1.1$ on the source surface at $r=2.5R_\odot$. $\gamma$ is linearly 
+varied from $1.1$ to $1.5$ for $2.5R_\odot < r < 12.5R_\odot$, and 
+$\gamma=1.5$ above $12.5R_\odot$.Once the spatial distribution of $\gamma$ 
+is obtained, we solve the MHD equations self-consistently using this location 
+dependent polytropic index in the energy equation to obtain the steady state 
+solution for the SC and solar wind.
+
+The above distribution of $\gamma$ enables us to reproduce the bi-modal 
+structure of the solar wind speed. However, the distributions of the coronal 
+density and temperature are still not determined. It is known that the faster 
+wind originates from coronal holes, where the density is lower than the 
+density in the closed field regions. In order to obtain this observed 
+property, we scale the base density, $\rho_0$, and the base temperature, 
+$T_0$, at each point on the solar surface with the inverse of the input 
+speed from the WSA model. We would like our model to be driven only by the 
+magnetogram data without any particular parameterization for each Carrington 
+Rotation (CR). Therefore, we parameterize the model for the general cases of 
+solar minimum and solar maximum conditions.
+
+The general method to obtain steady-state solution from the Sun to 1AU is to 
+run the SC component to steady-state, then turn on IH and couple the two 
+components for some time (1 iteration or more). the coupling will drive IH 
+through the inner boundary conditions (provided by SC) and the since the 
+solar wind is supersonic at this point, a steady-state is obtained quickly 
+in IH as well. In principle, it is enough to couple SC-IH for only one 
+iteration. It is possible to do the coupling for longer period in order to 
+obtain slightly higher magnetic field close to the equator due to the 
+different boundary conditions with and without the coupling. Our experience 
+however showed that the difference is minimal. 
+
+The SC-IH runs can be done in the HGR coordinate system (the frame rotating 
+with the Sun) or in the HGI frame (inertial frame). The HGR run can be done 
+in a local time stepping mode, while the HGI run must be done in a 
+time-accurate mode. There are sample PARAM.in files to obtain SC-IH 
+steady-state solution in either frame:
+\begin{verbatim}SWMF_DIR/Param/PARAM.in.test.start.SCIH.HGR\end{verbatim}
+\begin{verbatim}SWMF_DIR/Param/PARAM.in.test.start.SCIH.HGI\end{verbatim}
+In principle, you only need to change the parameters related to the particular 
+CR such as magnetogram file name, \#STARTTIME and satellite files. However, 
+from our experience the free parameters of the model should be changed as well.
+
+\section{Model Parameterization \label{section:SCparameterization}}
+
+The SC model was originally planned to have fixed parameters so the only 
+change from one CR to another is the input magnetogram. Our experience has 
+shown however, that a better solution can be obtained for a particular 
+CR by modifying the base density (BodyNDim in the \#BODY command) and the 
+magnetogram scaling factor (UnitB in the \#PFSSM command). The value 
+range for BodyNDim should be $1\times10^8 - 5\times10^8$ (in $cm^{-3}$) 
+and for UnitB should be $1-4$. The recommended scaling factor for MDI 
+magnetograms is 1.8 and our experience showed that a value of 2.5 is 
+better for solar minimum rotations of 1997. For solar maximum, we recommend 
+to use higher value of 4. 
+
+We should note that the fine tuning is important for obtaining good agreement 
+with 1AU data, which is very hard when using global model. The 
+parameterization should be easier in the case of simulations of the solar 
+corona only. A more detailed validation of the model can be found in:
+\begin{verbatim}Cohen, O.; Sokolov, I. V.; Roussev, I. I.; Gombosi, T. I., 
+Validation of a synoptic solar wind model, 
+Journal of Geophysical Research, VOL. 113, A03104, doi:10.1029/2007JA012797, 2008\end{verbatim}
+
+All parameterization above was done using MDI magnetograms. For other data 
+sources one should use different values. WSO, MWO, and GONG data seems to have 
+weaker field than MDI and SOLIS data. Therefore, a larger scaling factor 
+should be used. 
