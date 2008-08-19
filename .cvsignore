@@ -5,3 +5,4 @@ Makefile.conf
 run*
 *.protex
 *.log
+test*
