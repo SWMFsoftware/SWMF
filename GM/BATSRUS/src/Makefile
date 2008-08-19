@@ -4,7 +4,7 @@ SHELL =/bin/sh
 
 include ../Makefile.def
 
-SEARCH_EXTRA = -I${MAGNETOGRAMDIR} -I${EMPIRICALEEDIR}
+SEARCH_EXTRA = -I${MAGNETOGRAMDIR} -I${EMPIRICALEEDIR} -I${CRASHDIR}
 
 include ../Makefile.conf
 include Makefile.DEPEND
@@ -225,6 +225,8 @@ OBJECTS_EXE = main.o
 LIBSHARE  = ${LIBDIR}/libSHARE.a
 LIBTIMING = ${LIBDIR}/libTIMING.a
 
+LIBCRASH  = ${LIBDIR}/libCRASH.a
+
 # Libraries should be compiled first, because modules are used in main.
 ${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
 
@@ -256,6 +258,47 @@ BATSRUS_for_Darwin:
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} Tmp_/*.o \
 		${LBLAS} ${Lflag1}
 	rm -rf Tmp_
+
+# Object files not included into the library
+
+# Other requireed libraries
+
+LIBCRASH  = ${LIBDIR}/libCRASH.a
+
+# Libraries should be compiled first, because modules are used in main.
+${CRASH_OBJECT_EXE}: ${LIBSHARE} ${LIBTIMING} ${LIBCRASH} ${MY_LIB}
+
+CARSH.EXE = ${BINDIR}/CRASH.exe
+
+CRASH:
+	make ${CRASH.EXE}
+	@echo ' '
+	@echo Program BATSRUS has been brought up to date.
+	@echo ' '	
+
+${CARSH.EXE}: ${OBJECTS_EXE} ${LIBCRASH}
+	@(if [ ${OS} = "Darwin" ];         then make CRASH_for_Darwin; \
+	else                                    make CRASH_general; fi)
+
+CRASH_general:
+	${LINK.f90} -o ${CRASH.EXE} ${OBJECTS_EXE} \
+		-L. -lBATSRUS -L${LIBDIR} -lMAGNETOGRAM -lEMPIRICALEE -lTIMING -lSHARE -lCRASH \
+		${LBLAS} ${Lflag1} 
+
+CRASH_for_Darwin:
+	rm -rf Tmp_; mkdir Tmp_
+	cd Tmp_; \
+		ar -x ../${MY_LIB}; \
+		ar -x ${LIBDIR}/libMAGNETOGRAM.a; \
+		ar -x ${LIBDIR}/libEMPIRICALEE.a; \
+		ar -x ${LIBTIMING}; \
+		ar -x ${LIBCRASH}; \
+		ar -x ${LIBSHARE}
+	${LINK.f90} -o ${CRASH.EXE} ${OBJECTS_EXE} Tmp_/*.o \
+		${LBLAS} ${Lflag1}
+	rm -rf Tmp_
+
+
 #
 #	cleaning
 #

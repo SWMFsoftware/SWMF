@@ -80,6 +80,16 @@ BATSRUS:
 	cd src; make LIB
 	cd src; make BATSRUS
 
+CRASH:
+	./Config.pl -u=Rh -e=Hd
+	cd ${SHAREDIR}; make LIB
+	cd ${TIMINGDIR}; make LIB
+	cd ${MAGNETOGRAMDIR}; make LIB
+	cd ${EMPIRICALEEDIR}; make LIB
+	cd ${CRASHDIR}; make LIB
+	cd src; make LIB
+	cd src; make CRASH
+
 NOMPI:
 	cd util/NOMPI/src; make LIB
 
@@ -134,6 +144,9 @@ rundir:
 		cd ${RUNDIR}; ln -s ${BINDIR}/BATSRUS.exe .; \
 		ln -s ${COMPONENT}/* .;                          \
 	fi);
+
+rundir_rh:
+	make rundir COMPONENT=RH
 
 #
 #       Run the default code on NP processors
