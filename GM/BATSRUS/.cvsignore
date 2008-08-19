@@ -5,4 +5,4 @@ Makefile.conf
 Makefile.def
 *.protex
 *.xmltex
-*.diff
+test_*
