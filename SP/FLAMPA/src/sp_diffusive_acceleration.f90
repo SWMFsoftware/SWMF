@@ -8,7 +8,6 @@
 ! From: Numerical Recipes, Chapter 2.6, p.40.                                !
 !============================================================================!
 subroutine tridag(n,L_I,M_I,U_I,R_I,W_I)
-  use ModNumConst, ONLY: cZero
   use SP_ModMain,ONLY:iStdOut,prefix
   implicit none
   !--------------------------------------------------------------------------!
@@ -19,7 +18,7 @@ subroutine tridag(n,L_I,M_I,U_I,R_I,W_I)
   integer:: j
   real:: Aux,Aux_I(2:n)
   !--------------------------------------------------------------------------!
-  if (M_I(1).eq.cZero) then
+  if (M_I(1).eq.0.0) then
        write(iStdOut,*)'Error in tridag: M_I(1)=0'
        stop
     end if
@@ -28,7 +27,7 @@ subroutine tridag(n,L_I,M_I,U_I,R_I,W_I)
   do j=2,n
      Aux_I(j) = U_I(j-1)/Aux
      Aux = M_I(j)-L_I(j)*Aux_I(j)
-     if (Aux.eq.cZero) then
+     if (Aux.eq.0.0) then
         write(iStdout,*)prefix,'M_I(j), L_I(j), Aux_I(j) = ',M_I(j),L_I(j),Aux_I(j)
         write(iStdOut,*)'Tridag failed: for j=',j
         stop
@@ -144,14 +143,14 @@ subroutine advance_advection(CFLFermi,n,F_I)
   !--------------------------------------------------------------------------!
   
   !Check for positivity
-  if(any(F_I<=cZero))then
+  if(any(F_I<=0.0))then
      write(iStdout,*)'Before advection F_I <=0'
      write(*,*)F_I
      stop
   end if
 
   !One stage second order upwind scheme
-  if (CFLFermi>cZero) then
+  if (CFLFermi>0.0) then
      do i=1,n
         ! f_(i-1/2):
         if (i==1) then
@@ -167,7 +166,7 @@ subroutine advance_advection(CFLFermi,n,F_I)
      ! Update the solution from f^(n) to f^(n+1):
      !/
      F_I(1:n) = F_I(1:n)+CFLFermi*(FSemiintDown_I-FSemiintUp_I)
-  else if (CFLFermi<cZero) then
+  else if (CFLFermi<0.0) then
      do i=n,1,-1
         ! f_(i+1/2):
         if (i==n) then
@@ -184,7 +183,7 @@ subroutine advance_advection(CFLFermi,n,F_I)
      !/
      F_I(1:n) = F_I(1:n)+CFLFermi*(FSemiintDown_I-FSemiintUp_I)
   end if
-  if(any(F_I<=cZero))then
+  if(any(F_I<=0.0))then
      write(iStdOut,*)'After advection F_I <=0, for CFLFermi= ',CFLFermi
      write(*,*)F_I
      stop
@@ -201,10 +200,10 @@ Contains
      dF1 = F_I(i+1)-F_I(i)
      dF2 = F_I(i)-F_I(i-1)
     !df_lim=0 if dF1*dF2<0, sign(dF1) otherwise:
-    df_lim = sign(cHalf,dF1)+sign(cHalf,dF2)
+    df_lim = sign(0.50,dF1)+sign(0.50,dF2)
     dF1 = abs(dF1)
     dF2 = abs(dF2)
-    df_lim = df_lim*min(max(dF1,dF2),cTwo*dF1,cTwo*dF2)
+    df_lim = df_lim*min(max(dF1,dF2),2.0*dF1,2.0*dF2)
     !---------------------------------- DONE --------------------------------!
   end function df_lim
 end subroutine advance_advection

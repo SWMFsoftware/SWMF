@@ -35,8 +35,8 @@ subroutine write_plotfile_SP(DoPlot,TypeOutput)
   !\
   ! Set units for spatial and energy coordinates.
   !/
-  SP_Unit_X = cOne!/Rsun
-  SP_Unit_E = cOne/energy_in('KeV')
+  SP_Unit_X = 1.0 !/Rsun
+  SP_Unit_E = 1.0/energy_in('KeV')
   !\
   ! Set strings of units for Tecplot & IDL variables.
   !/
@@ -196,7 +196,7 @@ Contains
           PlotVar_III(iLnP,iX,iVar) = &
                log(F_II(iLnP  ,iX)/   &
                    F_II(iLnP-1,iX))/  &
-                   DeltaLnP+cTwo
+                   DeltaLnP+2.0
        case default
           write(iStdOut,*)prefix//' unknown plot var '//SP_NamePlotVar
           stop

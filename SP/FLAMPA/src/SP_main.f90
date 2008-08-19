@@ -27,7 +27,7 @@ module SP_ModMain
   logical:: UseRealDiffusionUpstream=.false.
                         !Default valuse is .false. With this logical set to  !
                         !.true., the non-turbulent diffusion is used upstream!
-  real:: DsResolution=cHalf/cE1
+  real:: DsResolution=cHalf/10.0
   real,allocatable,save,dimension(:):: DInner_I,DOuter_I,DInnerInj_I
                         !Diffusion coefficient at momentum p, Laplacian      !
                         !multiplier, and diffusion coefficient at PInjection.!
@@ -50,7 +50,7 @@ module SP_ModMain
                         !Value of the distribution function at PInjection,   !
                         !for test simulation, or constant value of f_0 in    !
                         !the distribution for suprathermal particles.        !
-  real:: SuprathIndex=cFour+cOne
+  real:: SuprathIndex=4.0+cOne
                         !Spectral index of the suprathermal particles        !
   real,parameter:: CInjection=0.0280
                         !Injection efficiency                                !
@@ -142,7 +142,7 @@ Contains
        F_II(1:nP+1,:) = FTolerance
     else
        do iLnP=1,nP+1
-          F_II(iLnP,:) = cTiny/cTen/kinetic_energy_to_momentum(&
+          F_II(iLnP,:) = cTiny/10.0/kinetic_energy_to_momentum(&
                EnergyMax*energy_in(NameEnergyUnit),NameParticle)/&
                (PInjection*exp(iLnP*DeltaLnP))**2
        end do
@@ -277,7 +277,7 @@ subroutine SP_diffusive_shock(&
         ! Obtain the Fermi acceleration rate divided by
         ! the time step, and then divided by DeltaLnP: 
         !/
-        FermiA_I(1:nX) = log(Rho_I(1:nX)/RhoOld_I(1:nX))*(cThird/DeltaLnP)
+        FermiA_I(1:nX) = log(Rho_I(1:nX)/RhoOld_I(1:nX))*((1.0/3)/DeltaLnP)
         RhoOld_I = Rho_I
 
         !\
@@ -327,7 +327,7 @@ subroutine SP_diffusive_shock(&
                    6.6667e-2*&
                    (PInjection*cLightSpeed**2)/&
                    (B_I(1:nX)*Energy)*&
-                   (PInjection*cLightSpeed/energy_in('GeV'))**cThird
+                   (PInjection*cLightSpeed/energy_in('GeV'))**(1.0/3)
               elsewhere
                  DInnerInj_I(1:nX)=DInnerInj_I(1:nX)/min(cOne,&
                       sqrt((X_DI(1,1:nX)**2+&
@@ -336,7 +336,7 @@ subroutine SP_diffusive_shock(&
                            (X_DI(1,iShock)**2+&
                             X_DI(2,iShock)**2+&
                             X_DI(3,iShock)**2))/0.9)/&
-                           (BOverDeltaB2*cE1*CInjection*AlfvenMach)
+                           (BOverDeltaB2*10.0*CInjection*AlfvenMach)
               end where
            end if
         end if
@@ -354,7 +354,7 @@ subroutine SP_diffusive_shock(&
               ! for suprathermal particles is SuprathIndex=5.
               !/
               if (.not.DoTest) F_II(0,iX)=FInjection*CInjection*&
-                   cQuarter/cPi/(SuprathIndex-cThree)*Rho_I(iX)/&
+                   0.250/cPi/(SuprathIndex-3.0)*Rho_I(iX)/&
                    kinetic_energy_to_momentum(&
                    T_I(iX)*energy_in(NameEnergyUnit),NameParticle)**3*&
                    (kinetic_energy_to_momentum(&
@@ -389,7 +389,7 @@ subroutine SP_diffusive_shock(&
                     X_DI(2,iShock)**2+&
                     X_DI(3,iShock)**2)*1.2)&
                     DInner_I(iShock+1:nX)=&
-                    DInner_I(iShock+1:nX)*Momentum**(cThird-cOne)
+                    DInner_I(iShock+1:nX)*Momentum**((1.0/3)-cOne)
               !\
               ! For a given spatial and temporal resolution, the value of
               ! the diffusion coefficient should be artificially enhanced

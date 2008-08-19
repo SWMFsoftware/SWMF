@@ -5,12 +5,11 @@ module SP_ModProc
 end module SP_ModProc
 !=============================================================!
 module SP_ModIhData
-  use ModNumConst
   use ModUtilities,ONLY:check_allocate
   use SP_ModMain
   implicit none
   save
-  real::XyzLine_D(3)=(/cZero,cZero,cZero/)
+  real::XyzLine_D(3)=(/0.0,0.0,0.0/)
   real::RBoundSC=1.2      !^CMP IF SC
   real::RBoundIH=21.0     !^CMP IF IH
   logical::DoRun=.true.,SaveMhData=.false.,DoReadMhData=.false.
@@ -211,20 +210,20 @@ subroutine sp_smooth_data
   do iVar=1,8
      SMOOTH:do i=1,nSmooth
         if(.not.any(&
-             cTwo*&
+             2.0*&
              abs(State_VI(iVar,1:nX-2)-State_VI(iVar,2:nX-1))<&
              abs(State_VI(iVar,3:nX  )-State_VI(iVar,2:nX-1)).or.&
              abs(State_VI(iVar,1:nX-2)-State_VI(iVar,2:nX-1))>&
-             cTwo*&
+             2.0*&
              abs(State_VI(iVar,3:nX  )-State_VI(iVar,2:nX-1))))&
              EXIT SMOOTH
-        where(cTwo*&
+        where(2.0*&
              abs(State_VI(iVar,1:nX-2)-State_VI(iVar,2:nX-1))<&
              abs(State_VI(iVar,3:nX  )-State_VI(iVar,2:nX-1)).or.&
              abs(State_VI(iVar,1:nX-2)-State_VI(iVar,2:nX-1))>&
-             cTwo*&
+             2.0*&
              abs(State_VI(iVar,3:nX  )-State_VI(iVar,2:nX-1)))&
-             State_VI(iVar,2:nX-1)=cHalf*(State_VI(iVar,1:nX-2)+&
+             State_VI(iVar,2:nX-1)=0.50*(State_VI(iVar,1:nX-2)+&
              State_VI(iVar,3:nX))
      end do SMOOTH
   end do

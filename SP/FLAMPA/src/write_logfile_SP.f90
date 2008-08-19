@@ -35,12 +35,12 @@ subroutine write_logfile_SP(TypeActionLogFile)
           '   Flux(E>50MeV),   Flux(E>60MeV),'//&
           '   Flux(E>100MeV)'   
      !-----------------------------------------------------------------------!
-     EnergyLowLimit_I(1) = cHalf*cE1     !5   In units of [MeV].
-     EnergyLowLimit_I(2) = cE1           !10  In units of [MeV].
-     EnergyLowLimit_I(3) = cThree*cE1    !30  In units of [MeV].
-     EnergyLowLimit_I(4) = cHalf*cE2     !50  In units of [MeV].
-     EnergyLowLimit_I(5) = cHalf*cE2+cE1 !60  In units of [MeV].
-     EnergyLowLimit_I(6) = cE2           !100 In units of [MeV].
+     EnergyLowLimit_I(1) =   5.0           !5   In units of [MeV].
+     EnergyLowLimit_I(2) =  10.0           !10  In units of [MeV].
+     EnergyLowLimit_I(3) =  30.0           !30  In units of [MeV].
+     EnergyLowLimit_I(4) =  50.0           !50  In units of [MeV].
+     EnergyLowLimit_I(5) =  60.0           !60  In units of [MeV].
+     EnergyLowLimit_I(6) = 100.0           !100 In units of [MeV].
      do iEChannel=1,nEChannel
         EnergyLowLimit_I(iEChannel) = &
              EnergyLowLimit_I(iEChannel)*&
@@ -88,15 +88,15 @@ subroutine integrate_diff_energy_flux(P_I,E_I,ELow,TotalDEFlux)
      if ((E_I(iLnP)>ELow).and.(.not.IsFound)) then
         IsFound = .true.
         TotalDEFlux =(&
-             (cHalf*(E_I(iLnP+1)+ELow)-E_I(iLnP))*&
+             (0.50*(E_I(iLnP+1)+ELow)-E_I(iLnP))*&
                      F_II(iLnP+1,nX)*P_I(iLnP+1)**2+ &
-              cHalf*(E_I(iLnP+1)-ELow)*&
+              0.50*(E_I(iLnP+1)-ELow)*&
                      F_II(iLnP  ,nX)*P_I(iLnP  )**2)*&
                     (E_I(iLnP+1)-ELow)/(E_I(iLnP+1)-E_I(iLnP))
      end if
      if (IsFound) then
         TotalDEFlux = TotalDEFlux+&
-             cHalf*(E_I (iLnP+1) -  E_I(iLnP  ))*  &
+             0.50*(E_I (iLnP+1) -  E_I(iLnP  ))*  &
                    (F_II(iLnP  ,nX)*P_I(iLnP  )**2+&
                     F_II(iLnP+1,nX)*P_I(iLnP+1)**2)
      end if
