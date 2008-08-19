@@ -2,7 +2,7 @@ Module ModTurbulence
   use ModConst
   implicit none
   SAVE
-  logical::DoInit=.true.
+  logical::DoInitSpectrum=.true.
   logical::UseTurbulentSpectrum=.true.
   logical::UseAdvectionWithAlfvenSpeed=.false.
   real,allocatable::IPlus_IX(:,:),IMinus_IX(:,:),IC(:)
@@ -118,7 +118,7 @@ contains
        end if
     end do
     
-    DoInit=.false.
+    DoInitSpectrum = .false.
    
   end subroutine initSpectrum
 
