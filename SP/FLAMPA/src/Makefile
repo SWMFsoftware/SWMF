@@ -41,7 +41,7 @@ ${MY_LIB}: ${MODULES} ${OBJECTS} \
 	${AR} ${MY_LIB} ${OBJECTS}
 
 
-${SEPEXE}: ${OBJECTS} SP_stand_alone.o ${LIBDIR}/libSHARE.a
+${SEPEXE}: ${MY_LIB} SP_stand_alone.o ${LIBDIR}/libSHARE.a
 	@(if [ ${OS} = "Darwin" ];         then make SEP_for_Darwin; \
 	else                                    make SEP_general; fi)
 
