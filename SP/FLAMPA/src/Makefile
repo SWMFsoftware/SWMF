@@ -21,10 +21,6 @@ SEP: ${SEPEXE}
 
 SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
 
-${SEPEXE}: ${OBJECTS} SP_stand_alone.o
-	${LINK.f90} ${SEARCH} ${SEARCH_EXTRA} -o ${SEPEXE} \
-	${LIBDIR}/libSHARE.a ${OBJECTS} SP_stand_alone.o
-
 
 
 MY_LIB = libFLAMPA.a
@@ -43,6 +39,27 @@ ${MY_LIB}: ${MODULES} ${OBJECTS} \
 	${MAKEFILE_COMP_SELECT}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
+
+
+${SEPEXE}: ${OBJECTS} SP_stand_alone.o ${LIBDIR}/libSHARE.a
+	@(if [ ${OS} = "Darwin" ];         then make SEP_for_Darwin; \
+	else                                    make SEP_general; fi)
+
+SEP_general:
+	${LINK.f90} -o ${SEPEXE} ${OBJECTS_EXE} \
+		-L. -lFLAMPA -L${LIBDIR} -lSHARE ${Lflag1}
+
+SEP_for_Darwin:
+	rm -rf Tmp_; mkdir Tmp_
+	cd Tmp_; \
+		ar -x ../${MY_LIB}; \
+		ar -x ${LIBDIR}/libSHARE.a
+	${LINK.f90} -o ${SEPEXE} SP_stand_alone.o Tmp_/*.o \
+		${Lflag1}
+	rm -rf Tmp_
+
+
+
 
 distclean: clean
 	rm -f Makefile.DEPEND

@@ -8,17 +8,6 @@ program CON_stand_alone
   use SP_ModMain
   implicit none
   !--------------------------------------------------------------------------!
-  interface
-     subroutine SP_diffusive_shock(&                  
-          TypeAction,              &                 
-          TimeToFinish,            &               
-          nToFinish)                    
-       character(LEN=*),intent(in):: TypeAction
-       real,intent(in),optional   :: TimeToFinish
-       integer,intent(in),optional:: nToFinish
-     end subroutine SP_diffusive_shock
-  end interface
-  !--------------------------------------------------------------------------!
   integer:: iIter,iX
   !--------------------------------------------------------------------------!
   prefix='SP: ';iStdOut=6      !Set the string to be printed on screen.   !
@@ -35,27 +24,27 @@ program CON_stand_alone
      !-----------------------------------------------------------------------!
      do iIter=1,nX/2
         write(iStdOut,*)prefix,"iIter = ",iIter
-        Rho_I(iIter) = cTwo+cHalf
+        Rho_I(iIter) = 2.50
         if (iIter>1) then
-           Rho_I(iIter-1) = cFour
+           Rho_I(iIter-1) = 4.0
            do iX=1,iIter-1
-              X_DI(1,iX) = cQuarter*real(iX+3*iIter)
+              X_DI(1,iX) = 0.250*real(iX+3*iIter)
            end do
         end if
         call SP_diffusive_shock("RUN",real(iIter))
      end do
   else
      !------------------------------- INIT ----------------------------------!
-     EInjection=cOne
+     EInjection=1.0
      !     BOverDeltaB2=cThree
      call SP_diffusive_shock("INIT")
      iDataSet=114
      call read_ihdata_for_sp(1,5)
      RhoOld_I=RhoSmooth_I
-     RhoOld_I(iShock+1-nint(cOne/DsResolution):iShock)=&
-          maxval(RhoOld_I(iShock+1-nint(cOne/DsResolution):iShock))
-     RhoOld_I(iShock+1:iShock+nint(cOne/DsResolution))=&
-          minval(RhoOld_I(iShock+1:iShock+nint(cOne/DsResolution)))
+     RhoOld_I(iShock+1-nint(1.0/DsResolution):iShock)=&
+          maxval(RhoOld_I(iShock+1-nint(1.0/DsResolution):iShock))
+     RhoOld_I(iShock+1:iShock+nint(1.0/DsResolution))=&
+          minval(RhoOld_I(iShock+1:iShock+nint(1.0/DsResolution)))
      SP_Time=DataInputTime
      DiffCoeffMin=1.0e+05*Rsun*DsResolution !m^2/s
      !-------------------------------- RUN ----------------------------------!
@@ -77,3 +66,11 @@ subroutine CON_stop(String)
   write(iStdOut,'(a)')String
   stop
 end subroutine CON_stop
+!============================================================================!
+subroutine CON_set_do_test(String)
+  use SP_ModMain
+  implicit none
+  character(LEN=*),intent(in)::String
+  write(iStdOut,'(a)')String//' can not be tested'
+  stop
+end subroutine CON_set_do_test
