@@ -6,7 +6,10 @@ include ../Makefile.conf
 include Makefile.DEPEND
 
 
-OBJECTS = SP_main.o \
+OBJECTS = ModLogAdvection.o \
+	ModLinAdvection.o \
+	SP_ModTurbulence.o \
+	SP_main.o \
 	read_ihdata_for_sp.o \
 	sp_diffusive_acceleration.o \
 	write_logfile_SP.o \
