@@ -70,7 +70,7 @@ module SP_ModMain
   integer:: SP_iPlot=0  !Initialize plot index for SP data.                  !
   character(LEN=50):: SP_TypePlot='cdf def ind tec '
                         !Type of output SP data to be saved in a file.       !
-  character(LEN=10):: SP_DirOut='./SP/IO2/'
+  character(LEN=9):: SP_DirOut='./SP/IO2/'
                         !Output directory for SP plot and log files.         !
   real:: SP_TimePlot=6.0e+01
                         !Time interval to save plot file.                    ! 
@@ -528,7 +528,7 @@ Contains
       real::R
 
       iFile=io_unit_new()
-      write(NameFile,'(a,i4.4,a)')SP_DirOut//'Spectrum_iShock_',nfile,'.dat'
+      write(NameFile,'(a,i4.4,a)')trim(SP_DirOut)//'Spectrum_iShock_',nfile,'.dat'
       open(iFile,file=NameFile,status='replace',iostat=iError)
 
       R=sqrt(sum(X_DI(:,iShock)**2 ))/cAU
