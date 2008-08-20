@@ -38,18 +38,23 @@ program CON_stand_alone
      EInjection=1.0
      !     BOverDeltaB2=cThree
      call SP_diffusive_shock("INIT")
-     iDataSet=114
+     iDataSet=4
      call read_ihdata_for_sp(1,5)
      RhoOld_I=RhoSmooth_I
+     BOld_I=BSmooth_I
      RhoOld_I(iShock+1-nint(1.0/DsResolution):iShock)=&
           maxval(RhoOld_I(iShock+1-nint(1.0/DsResolution):iShock))
      RhoOld_I(iShock+1:iShock+nint(1.0/DsResolution))=&
           minval(RhoOld_I(iShock+1:iShock+nint(1.0/DsResolution)))
+     BOld_I(iShock+1-nint(cOne/DsResolution):iShock)=&
+          maxval(BOld_I(iShock+1-nint(cOne/DsResolution):iShock))
+     BOld_I(iShock+1:iShock+nint(cOne/DsResolution))=&
+          minval(BOld_I(iShock+1:iShock+nint(cOne/DsResolution)))
      SP_Time=DataInputTime
      DiffCoeffMin=1.0e+05*Rsun*DsResolution !m^2/s
      !-------------------------------- RUN ----------------------------------!
-     do iDataSet=115,493
-        write(iStdOut,*)prefix,"iIter = ",iDataSet-114
+     do iDataSet=4,179
+        write(iStdOut,*)prefix,"iIter = ",iDataSet-4
         call read_ihdata_for_sp(1,5)
         call SP_diffusive_shock("RUN",DataInputTime)
      end do
