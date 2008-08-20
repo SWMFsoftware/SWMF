@@ -53,7 +53,7 @@ program CON_stand_alone
      SP_Time=DataInputTime
      DiffCoeffMin=1.0e+05*Rsun*DsResolution !m^2/s
      !-------------------------------- RUN ----------------------------------!
-     do iDataSet=4,179
+     do iDataSet=5,179
         write(iStdOut,*)prefix,"iIter = ",iDataSet-4
         call read_ihdata_for_sp(1,5)
         call SP_diffusive_shock("RUN",DataInputTime)
