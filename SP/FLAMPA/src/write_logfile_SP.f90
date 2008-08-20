@@ -28,7 +28,7 @@ subroutine write_logfile_SP(TypeActionLogFile)
      write(NameLogFile,'(a)')trim(SP_DirOut)//&
           'SP_logfile.dat'
      write(iStdOut,*)prefix//'Open '//trim(NameLogFile)
-     open(iFile,file=trim(NameLogFile),status='unknown',&
+     open(iFile,file=trim(NameLogFile),status='replace',&
           form='formatted')
      write(iFile,'(a)')'  SP_Time,   Flux(E>5MeV),'//&
           '   Flux(E>10MeV),   Flux(E>30MeV),'//&
