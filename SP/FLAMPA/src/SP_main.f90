@@ -370,10 +370,6 @@ subroutine SP_diffusive_shock(&
               DInnerInj_I(1:nX) = BOverDeltaB2*& !Physically meaningful value.
                    cGyroRadius*(PInjection*cLightSpeed)**2/&
                    (B_I(1:nX)**2*Energy)
-              !           write(iStdOut,*)prefix//&
-              !                'Min and Max value for diffusuon coefficient at injection energy = ',&
-              !                minval(DInnerInj_I(1:nX)*DOuter_I(1:nX)),&
-              !                maxval(DInnerInj_I(1:nX)*DOuter_I(1:nX))
               if(UseRealDiffusionUpstream)then
                  ! reset the diffusion coefficient upstream to be equal to
                  !(1/6)(0.4AU)*(R/1AU)*v*(pc/1GeV)^(1/3) 
@@ -435,10 +431,7 @@ subroutine SP_diffusive_shock(&
               !/
               call advance_log_advection(FermiA_I(iX),nP,1,1,F_II(:,iX),.false.)
            end do
-           !           write(iStdOut,*)prefix,' '
-           !           write(iStdOut,*)prefix,'Min/Max of F_II at PInjection = ',&
-           !           minval(F_II(0,1:nX)),maxval(F_II(0,1:nX)), 's^3 kg^-^3 m^-^6'
-           !           write(iStdOut,*)prefix,' '
+         
            
            do iLnP=1,nP
               Momentum = exp(real(iLnP)*DeltaLnP) !This gives P/PInjection.

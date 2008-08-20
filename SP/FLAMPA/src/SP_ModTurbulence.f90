@@ -479,11 +479,7 @@ contains
        !Calculate the wave increment and update the wave spectra
        ExpRhoCompression=exp(RhoCompression_I(iX))
    
-       IPlus_IX(    0,iX) = IPlus_IX(    0,iX)*ExpRhoCompression
-       IPlus_IX( nP+1,iX) = IPlus_IX( nP+1,iX)*ExpRhoCompression
-       IMinus_IX(   0,iX) = IMinus_IX(   0,iX)*ExpRhoCompression
-       IMinus_IX(nP+1,iX) = IMinus_IX(nP+1,iX)*ExpRhoCompression
-
+     
        do iK=1,nP 
 
 
@@ -507,11 +503,6 @@ contains
 
           iP=nP+1-iK
 
-
-          !Previous version
-
-          !iP=nint(log(PRes/PInjection)/DeltaLnP)      !The counter concerning momentum
-          !WHERE    Kmin=cElectronCharge/(PInjection*exp(real(nP)*DeltaLnP)) 
           
           ! here is the dynamic \gamma evaluated
 
@@ -585,6 +576,11 @@ contains
           end if
 
        end do             !cycling iK
+       IPlus_IX(    0,iX) = IPlus_IX(  1,iX)
+       IPlus_IX( nP+1,iX) = IPlus_IX( nP,iX)
+       IMinus_IX(   0,iX) = IMinus_IX( 1,iX)
+       IMinus_IX(nP+1,iX) = IMinus_IX(nP,iX)
+
     end do            !cycling iX
 
     if(UseAdvectionWithAlfvenSpeed)then

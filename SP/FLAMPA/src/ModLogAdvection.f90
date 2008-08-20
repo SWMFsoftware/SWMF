@@ -79,13 +79,13 @@ contains
     ! A*Delta t=CFLIn*Delta (LnP)                                              !
     ! and                                                                      !
     ! CFL=A*Delta t/(2 tanh(Delta (ln p)/2)                                    !
-    ! f^(n+1)_i=CFL*(f^n_(i-1/2)-f^n_(i+1/2)+  (1/2)(f^n_(i-1/2)+f^n_(i+1/2))* !
+    ! f^(n+1)_i=CFL*(f^n_(i-1/2)-f^n_(i+1/2))-  (1/2)(f^n_(i-1/2)+f^n_(i+1/2))* !
     !                                   *A*Delta t+f^n_i,                      !
     !where                                                                     !
     ! For CFL>0:                                                               !
-    ! f^n_(i-1/2)=f^n_(i-1)*(1+(1/2)*A*Delta t)+cHalf*(cOne-CFL)*df_lim^n_(i-1)!
+    ! f^n_(i-1/2)=f^n_(i-1)*(1-(1/2)*A*Delta t)+cHalf*(cOne-CFL)*df_lim^n_(i-1)!
     ! For CFL<0:                                                               !
-    ! f^n_(i-1/2)=f^n_(i  )*(1+(1/2)*A*Delta t)-cHalf*(cOne+CFL)*df_lim^n_(i  )!
+    ! f^n_(i-1/2)=f^n_(i  )*(1-(1/2)*A*Delta t)-cHalf*(cOne+CFL)*df_lim^n_(i  )!
     !--------------------------------------------------------------------------!
 
     
@@ -93,6 +93,7 @@ contains
     if(IsConservative)then
        HalfADtIfNeeded=0.50*CFLIn*DeltaLnP
        CFL=HalfADtIfneeded/tanh(0.50 * DeltaLnP)
+       HalfADtIfNeeded=-HalfADtIfNeeded
     else
        HalfADtIfNeeded=0.0; CFL=CFLIn
     end if
@@ -114,7 +115,7 @@ contains
     if (CFL>0.0) then
        do iStep=1,nStep
 
-          !Boundary condition at the leftt boundary
+          !Boundary condition at the left boundary
           if(nGCLeft<2)F_I(            -1:0-nGCLeft) = F_I( 1-nGCLeft )
           !Boundary condition at the right boundary
           if(nGCRight<2)F_I(nP+1-nGCRight:nP+2     ) = F_I(nP+nGCRight)
@@ -136,7 +137,7 @@ contains
        end do
     else 
        do iStep=1,nStep
-          !Boundary condition at the leftt boundary
+          !Boundary condition at the left boundary
           if(nGCLeft<2)F_I(            -1:0-nGCLeft) = F_I( 1-nGCLeft)
           !Boundary condition at the right boundary
           if(nGCRight<2)F_I(nP+1-nGCRight:nP+2     ) = F_I(nP+nGCRight)

@@ -49,7 +49,7 @@ contains
 
        do iStep=1,nStep
 
-          !Boundary condition at the leftt boundary
+          !Boundary condition at the left boundary
           if(nGCLeft<2)F_I(            -1:0-nGCLeft) = F_I( 1-nGCLeft )
           !Boundary condition at the right boundary
           if(nGCRight<2)F_I(nX+1-nGCRight:nX+2     ) = F_I(nX+nGCRight)
@@ -123,7 +123,7 @@ contains
     !One stage second order upwind scheme
 
        do iStep=1,nStep
-          !Boundary condition at the leftt boundary
+          !Boundary condition at the left boundary
           if(nGCLeft<2)F_I(            -1:0-nGCLeft) = F_I( 1-nGCLeft)
           !Boundary condition at the right boundary
           if(nGCRight<2)F_I(nX+1-nGCRight:nX+2     ) = F_I(nX+nGCRight)
