@@ -46,7 +46,7 @@ ${SEPEXE}: ${MY_LIB} SP_stand_alone.o ${LIBDIR}/libSHARE.a
 	else                                    make SEP_general; fi)
 
 SEP_general:
-	${LINK.f90} -o ${SEPEXE} ${OBJECTS_EXE} \
+	${LINK.f90} -o ${SEPEXE} SP_stand_alone.o \
 		-L. -lFLAMPA -L${LIBDIR} -lSHARE ${Lflag1}
 
 SEP_for_Darwin:

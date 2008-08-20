@@ -147,7 +147,10 @@ rundir:
 
 rundir_rh:
 	make rundir COMPONENT=RH
-
+	cd ${RUNDIR}; ln -s ${BINDIR}/CRASH.exe .
+	@(if [ "$(STANDALONE)" != "NO" ]; then \
+		ln -s ${COMPONENT}/* .;                          \
+	fi);
 #
 #       Run the default code on NP processors
 #
