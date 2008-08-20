@@ -535,7 +535,7 @@ Contains
       real::R
 
       iFile=io_unit_new()
-      write(NameFile,'(a,i4.4,a)')'IO_SP/Spectrum_iShock_',nfile,'.dat'
+      write(NameFile,'(a,i4.4,a)')SP_DirOut//'Spectrum_iShock_',nfile,'.dat'
       open(iFile,file=NameFile,status='replace',iostat=iError)
 
       R=sqrt(sum(X_DI(:,iShock)**2 ))/cAU

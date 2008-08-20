@@ -66,6 +66,7 @@ subroutine mh_transform_for_flampa
   integer::iPoint
 
   RhoSmoothOld_I(1:nX)= RhoSmooth_I(1:nX)
+  BSmoothOld_I(1:nX)= BSmooth_I(1:nX)
   iShockOld=iShock
 
   do iPoint=1,nX
@@ -73,7 +74,7 @@ subroutine mh_transform_for_flampa
      RhoSmooth_I(iPoint) =State_VI(1,iPoint)/cProtonMass      ! in [m^-3]
      T_I(iPoint)   =State_VI(8,iPoint)/RhoSmooth_I(iPoint)/&    ! in NameEnergyUnit [KeV]
           energy_in(NameEnergyUnit)
-     B_I(iPoint)   =sqrt(sum(State_VI(5:7,iPoint)**2)) ! in [Tesla]
+     BSmooth_I(iPoint)   =sqrt(sum(State_VI(5:7,iPoint)**2)) ! in [Tesla]
      U_I(iPoint)   =sqrt(sum(State_VI(2:4,iPoint)**2))  ! in [m/s]
   end do
   !\
@@ -88,7 +89,7 @@ subroutine mh_transform_for_flampa
        sqrt(minval(X_DI(1,:)**2+X_DI(2,:)**2+X_DI(3,:)**2))/Rsun,&
        sqrt(maxval(X_DI(1,:)**2+X_DI(2,:)**2+X_DI(3,:)**2))/Rsun
   write(iStdout,*)prefix,'min/max value of field strength in [Tesla]   = ',&
-       minval(B_I),maxval(B_I)
+       minval(BSmooth_I),maxval(BSmooth_I)
   iShock=i_shock(RhoSmooth_I(1:nX))
 end subroutine mh_transform_for_flampa
 !=============================================================================
