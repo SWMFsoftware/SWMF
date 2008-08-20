@@ -62,7 +62,7 @@ subroutine write_logfile_SP(TypeActionLogFile)
              TotalDEFlux_I(iEChannel))
      end do
      !-----------------------------------------------------------------------!
-     write(iFile,'(e10.2,30(1X,e13.5))')SP_Time,&
+     write(iFile,'(e11.4,30(1X,e13.5))')SP_Time,&
           TotalDEFlux_I(1:nEChannel)
      !-----------------------------------------------------------------------!
   case('CLOSE','close')
