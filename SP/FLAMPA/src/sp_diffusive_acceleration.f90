@@ -66,10 +66,10 @@ subroutine advance_diffusion(Dt,n,X_DI,F_I,DOuter_I,DInner_I)
   real:: Aux1,Aux2
   !--------------------------------------------------------------------------!
   do i=2,n
-     DsMesh_I(i) = sqrt(sum((X_DI(:,  i)-X_DI(:,i-1))**2))
+     DsMesh_I(i) = max(sqrt(sum((X_DI(:,  i)-X_DI(:,i-1))**2)),cTiny)
   end do
   do i=2,n-1
-     DsFace_I(i) = sqrt(sum((X_DI(:,i+1)-X_DI(:,i-1))**2))*cHalf
+     DsFace_I(i) = max(sqrt(sum((X_DI(:,i+1)-X_DI(:,i-1))**2))*cHalf,cTiny)
   end do
   !--------------------------------------------------------------------------!
   ! f^(n+1)_i-Dt*DOuter_I/DsFace_I*(&                                        !
