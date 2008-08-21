@@ -14,7 +14,7 @@ subroutine write_plotfile_SP(DoPlot,TypeOutput)
   integer,parameter:: nPSkip=2,nXSkip=2
   integer:: iX,iLnP,iVar,nVar,iError,iLength
   character(LEN=3)  :: TypePlot
-  character(LEN=26) :: NameFile
+  character(LEN=36) :: NameFile
   character(len=50) :: SP_NameAllVars
   character(LEN=3)  :: SP_NamePlotVar
   character(len=10) :: SP_NamePlotVar_I(nVarMax)
@@ -100,7 +100,7 @@ subroutine write_plotfile_SP(DoPlot,TypeOutput)
   write(NameFile,'(a,i4.4,a)')trim(SP_DirOut)//'SP_data_n',SP_iPlot,&
        SP_NameExtension
   write(iStdout,*)prefix,' '
-  write(iStdout,*)prefix,'Opening File '//NameFile//' to Save SP Data'//&
+  write(iStdout,*)prefix,'Opening File '//trim(NameFile)//' to Save SP Data'//&
        ' at SP_Time =',SP_Time
   write(iStdout,*)prefix,' '
   !\
@@ -184,7 +184,7 @@ subroutine write_plotfile_SP(DoPlot,TypeOutput)
      write(NameFile,'(a,i4.4,a,i4.4,a)')trim(SP_DirOut)//'Wave_ix',&
           iXOutputGamma,'_n',SP_iPlot,SP_NameExtension
      write(iStdout,*)prefix,' '
-     write(iStdout,*)prefix,'Opening File '//NameFile//' to Save wave spectra'//&
+     write(iStdout,*)prefix,'Opening File '//trim(NameFile)//' to Save wave spectra'//&
        ' at SP_Time =',SP_Time
      write(iStdout,*)prefix,' '
      !\
