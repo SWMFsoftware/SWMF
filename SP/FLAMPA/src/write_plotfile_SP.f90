@@ -2,6 +2,7 @@
 subroutine write_plotfile_SP(DoPlot,TypeOutput)
   use ModIOUnit
   use SP_ModMain
+  use SP_ModTurbulence
   implicit none
   !--------------------------------------------------------------------------!
   integer:: iFile
@@ -28,6 +29,7 @@ subroutine write_plotfile_SP(DoPlot,TypeOutput)
   real:: Location,Momentum,Energy
   real:: SP_Unit_X,SP_Unit_E
   real,allocatable:: PlotVar_III(:,:,:)
+  integer::iLnK
   !--------------------------------------------------------------------------!
   if (.not.DoPlot) return
   iFile=io_unit_new()
@@ -104,7 +106,7 @@ subroutine write_plotfile_SP(DoPlot,TypeOutput)
   !\
   ! Open file unit and write plot file.
   !/
-  open(iFile,file=trim(NameFile),status='unknown',form='formatted')
+  open(iFile,file=trim(NameFile),status='replace',form='formatted')
   select case(TypePlot)
   case('TEC','tec')
      write(iFile,*)'TITLE = "BATSRUS: Solar Particle Data at SP_Time = ',&
@@ -174,7 +176,31 @@ subroutine write_plotfile_SP(DoPlot,TypeOutput)
   ! Deallocate array for plot variables.
   !/
   deallocate(PlotVar_III)
-  
+  if(DoOutputGamma)then
+     iFile=io_unit_new()
+     !\
+     ! Construct the name of output file.
+     !/
+     write(NameFile,'(a,i4.4,a,i4.4,a)')trim(SP_DirOut)//'Wave_ix',&
+          iXOutputGamma,'_n',SP_iPlot,SP_NameExtension
+     write(iStdout,*)prefix,' '
+     write(iStdout,*)prefix,'Opening File '//NameFile//' to Save wave spectra'//&
+       ' at SP_Time =',SP_Time
+     write(iStdout,*)prefix,' '
+     !\
+     ! Open file unit and write plot file.
+     !/
+     open(iFile,file=trim(NameFile),status='replace',form='formatted')
+     write(iFile,*) 'VARIABLES = "k", "I+", "I-", "gamma"'
+
+      do iLnK=1,nP
+         write(iFile,*) B_I(iXOutputGamma)*Kmin*exp(real(iLnK-1)*DeltaLnK),&
+              IPlus_IX(iLnK,iXOutputGamma),IMinus_IX(iLnK,iXOutptGamma),&
+              Gamma_I(iLnK)
+      end do
+      close(iFile)
+   end if
+        
 Contains
   !============================================================================!
   subroutine sp_set_plotvar

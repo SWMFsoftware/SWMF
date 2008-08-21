@@ -5,6 +5,10 @@ Module ModTurbulence
   logical::DoInitSpectrum=.true.
   logical::UseTurbulentSpectrum=.true.
   logical::UseAdvectionWithAlfvenSpeed=.false.
+  logical::DoOutputGamma=.true.
+  integer::iXOutputGamma=600
+  real::DispersionOutput
+  real,allocatable::Gamma_I(:)
   real,allocatable::IPlus_IX(:,:),IMinus_IX(:,:),IC(:)
   real,allocatable::VA_I(:)           !Alfven speed
 
@@ -31,6 +35,7 @@ Module ModTurbulence
   real::Kmin     !cElectronCharge/(PInjection*exp(real(nP)*DeltaLnP)) 
   real::KMax     !cElectronCharge/(PInjection*exp(DeltaLnP))
   real::DeltaLnK !DeltaLnP
+  real::cInjectionHere
   real,external,private:: momentum_to_energy,momentum_to_kinetic_energy
   real,external,private:: energy_to_momentum,kinetic_energy_to_momentum
   real,external,private:: energy_in
@@ -41,9 +46,36 @@ Module ModTurbulence
   real,allocatable,private::CFL_I(:)
 
   integer,allocatable::CorrectionMode(:)
+
+  !the intensity of the back travelling wave in the initial condition
+  real,parameter::Alpha=cOne/10.0
+  real,parameter::Lambda0=4.0/10.0  ![AU]
  
 contains
-
+  subroutine assign_kolmogorov_spectrum(iXStart,iXLast,iKStart,iKLast,X_DI,B_I)
+    integer,intent(in)::iXStart,iXLast,iPStart,iPLast
+    real,intent(in)::X_DI(1:3,iXStart:iXLast),B_I(iXStart:iZLast)
+    integer::iX,iK
+    real::K,KR0
+    !--------------------
+    do iX=iXStart,iXLast
+       !We use the formulae:
+       !I_{+}(k)=(1-\Alpha)*IC/K^{5/3} and I_{-}=\Alpha*I_{+}/(1-\Alpha),
+       !where IC=54*B^2/(7*\pi* \Lambda_0* K0^{1/3}*(r/1 [AU])) and \Lambda_0=0.4 [AU], and K0=|e|B/1[GeV],
+       !in CGS units
+       
+       !SI units
+       KR0=cElectronCharge*B_I(iX)*cLightSpeed/energy_in('GeV')
+       IC(iX)=(216./7.)*(B_I(iX)**2)/(Lambda0*cMu)*&  ! /1 AU
+            (KR0**(-(1.0/3)))/&                        ! *1 AU
+            sqrt(sum(X_DI(:,iX)**2))
+       do iK=iKStart,iKLast
+          K=B_I(iX)*Kmin*exp(real(iK-1)*DeltaLnK)
+          IPlus_IX( iK,iX)=(cOne-Alpha)*IC(iX)/(K**(5.0/3))
+          Iminus_IX(iK,iX)=Alpha/(cOne-Alpha)*IPlus_IX(iK,iX) 
+       end do
+    end do
+  end subroutine assign_kolmogorov_spectrum
   !=======================Initial spectrum of turbulence=========================================!
   !We recover the initial spectrum of turbulence from the spatial distribution of
   !the diffusion coefficient and its dependence on the particle energy.
@@ -56,12 +88,9 @@ contains
     integer, intent(in):: iShock
 
     integer::iX,iK
-    real::K,KR0
+    real::K
     real::ICOld
     real::R,RSh
-    !the intensity of the back travelling wave in the initial condition
-    real,parameter::Alpha=cOne/10.0
-    real,parameter::Lambda0=4.0/10.0  ![AU]
 
     !-----------------------------------------------------------------------------------!
     allocate(IPlus_IX(0:nP+1,1:nX),IMinus_IX(0:nP+1,1:nX),IC(1:nX),CorrectionMode(1:nX)) 
@@ -74,6 +103,7 @@ contains
        allocate(CFL_I(1:nX));CFL_I=cOne
     end if
     allocate(RhoCompression_I(1:nX));RhoCompression_I=cZero
+    if(DoOutputGamma)allocate(Gamma_I(nP))
     !-----------------------------------------------------------------------------------!
 
     !-----------------------------------------------------------------------------------!
@@ -90,29 +120,14 @@ contains
     KMin=cElectronCharge/(PInjection*exp(real(nP)*DeltaLnP))   
     KMax=cElectronCharge/(PInjection*exp(DeltaLnP))
     DeltaLnK=DeltaLnP
+    cInjectionHere=cInjection
+    call assign_kolmogorov_spectrum(0,nP+1,1,nX,X_DI,B_I)
+    CorrectionMode=1.0
    
-    do iX=1,nX
-       !We use the formulae:
-       !I_{+}(k)=(1-\Alpha)*IC/K^{5/3} and I_{-}=\Alpha*I_{+}/(1-\Alpha),
-       !where IC=54*B^2/(7*\pi* \Lambda_0* K0^{1/3}*(r/1 [AU])) and \Lambda_0=0.4 [AU], and K0=|e|B/1[GeV],
-       !in CGS units
-
-       !SI units
-       KR0=cElectronCharge*B_I(iX)*cLightSpeed/energy_in('GeV')
-       IC(iX)=(216./7.)*(B_I(iX)**2)/(Lambda0*cMu)*&  ! /1 AU
-            (KR0**(-(1.0/3)))/&                        ! *1 AU
-            sqrt(sum(X_DI(:,iX)**2))
-       do iK=0,nP+1
-          K=B_I(iX)*Kmin*exp(real(iK-1)*DeltaLnK)
-          IPlus_IX( iK,iX)=(cOne-Alpha)*IC(iX)/(K**(cOne+2.0*(1.0/3)))
-          Iminus_IX(iK,iX)=Alpha/(cOne-Alpha)*IPlus_IX(iK,iX) 
-       end do
-       CorrectionMode(iX)=1
-    end do
     RSh=sqrt(sum(X_DI(:,iShock)**2))
     do iX=1,nX
        R=sqrt(sum(X_DI(:,iX)**2))
-       if (R<(cOne+cOne/10.0)*RSh) then
+       if (R<(cOne+cOne/10.0)*RSh.and.AlfvenMach>1.0) then
           ! In this part of the spectrum another equation governs the diffusion
           ICOld=IC(iX)
           IC(iX)=B_I(iX)**2*10.0*CInjection*AlfvenMach*&
@@ -492,8 +507,9 @@ contains
        !Calculate the wave increment and update the wave spectra
        ExpRhoCompression=exp(RhoCompression_I(iX))
    
-       IPlus_IX(    0,iX) = IPlus_IX(  0,iX)*ExpRhoCompression
-       IMinus_IX(   0,iX) = IMinus_IX( 0,iX)*ExpRhoCompression
+       call assing_kolmogorov_spectrum(iX,iX,0,0,X_DI(:,iX:iX),B_I(iX:iX))
+       !IPlus_IX(    0,iX) = IPlus_IX(  0,iX)*ExpRhoCompression
+       !IMinus_IX(   0,iX) = IMinus_IX( 0,iX)*ExpRhoCompression
        do iK=1,nP 
 
 
@@ -523,6 +539,7 @@ contains
           Gamma=-4.0*2.0*(cPi**2)*VA_I(iX)/K*&
                (PRes*A(iP)-(PRes**3)*B(iP))/    &
                cProtonMass 
+          if(DoOutputGamma.and.iX==iXOutputGamma)Gamma_I(iK)=Gamma
 
           !We need to integrate the two coupled equations:
           !
