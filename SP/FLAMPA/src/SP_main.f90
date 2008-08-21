@@ -426,10 +426,16 @@ subroutine SP_diffusive_shock(&
                    (kinetic_energy_to_momentum(&
                    T_I(iX)*energy_in(NameEnergyUnit),NameParticle)    &
                    /PInjection)**SuprathIndex
+              if(F_II(0,iX)<=0.0)then
+                 write(*,*)'Negative distribution function', iX, F_II(0,iX)
+              end if
               !\
               ! Advance the advection part of the DKE:
               !/
               call advance_log_advection(FermiA_I(iX),nP,1,1,F_II(:,iX),.false.)
+              if(F_II(0,iX)<=0.0)then
+                 write(*,*)'Negative distribution function', iX, F_II(0,iX)
+              end if
            end do
          
            
@@ -483,6 +489,9 @@ subroutine SP_diffusive_shock(&
            !/
            SP_Time = SP_Time+SP_Dt
            if (DoLogFile) call write_logfile_SP('WRITE')
+           if(any(F_II(0,:)<=0.0)then
+                 write(*,*)'Negative distribution function', F_II(0,:)
+              end if
            call write_plotfile_SP(&
                 int(SP_Time/SP_TimePlot)/=SP_iPlot,SP_TypePlot)
         end do  !iStep
