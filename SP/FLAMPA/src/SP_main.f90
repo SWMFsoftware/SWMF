@@ -427,14 +427,14 @@ subroutine SP_diffusive_shock(&
                    T_I(iX)*energy_in(NameEnergyUnit),NameParticle)    &
                    /PInjection)**SuprathIndex
               if(F_II(0,iX)<=0.0)then
-                 write(*,*)'Negative distribution function', iX, F_II(0,iX)
+                 write(*,*)'Negative distribution function after BC', iX, F_II(0,iX)
               end if
               !\
               ! Advance the advection part of the DKE:
               !/
               call advance_log_advection(FermiA_I(iX),nP,1,1,F_II(:,iX),.false.)
               if(F_II(0,iX)<=0.0)then
-                 write(*,*)'Negative distribution function', iX, F_II(0,iX)
+                 write(*,*)'Negative distribution function after advection', iX, F_II(0,iX)
               end if
            end do
          

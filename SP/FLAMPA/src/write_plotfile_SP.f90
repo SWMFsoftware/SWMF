@@ -193,6 +193,11 @@ Contains
           PlotVar_III(iLnP,iX,iVar) = (F_II(iLnP,iX)*&
                Momentum)*(Momentum*energy_in(NameEnergyUnit))
        case('IND','ind')
+          if(F_II(iLnP-1,iX)<=0.0)then
+             write(*,*)'In plot writing: negative value ',F_II(iLnP-1,iX),&
+                  ' at iLnP-1=',iLnP-1,' ix=', iX
+             stop
+          end if
           PlotVar_III(iLnP,iX,iVar) = &
                log(F_II(iLnP  ,iX)/   &
                    F_II(iLnP-1,iX))/  &
