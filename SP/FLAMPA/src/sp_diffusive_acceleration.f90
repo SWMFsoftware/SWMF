@@ -82,7 +82,7 @@ subroutine advance_diffusion(Dt,n,X_DI,F_I,DOuter_I,DInner_I)
   !/
   Aux1 = Dt*DOuter_I(1)*cHalf*(DInner_I(1)+DInner_I(2))/&
        DsMesh_I(2)**2
-  Main_I(1) = Main_I(1)+Aux1
+  Main_I(1) = Main_I(1)+Aux1*2.0
   Upper_I(1) = -Aux1
   !\
   ! For i=2,n-1:
@@ -101,7 +101,7 @@ subroutine advance_diffusion(Dt,n,X_DI,F_I,DOuter_I,DInner_I)
   !/
   Aux2 = Dt*DOuter_I(n)*cHalf*(DInner_I(n-1)+DInner_I(n))/&
        DsMesh_I(n)**2
-  Main_I(n) = Main_I(n)+Aux2
+  Main_I(n) = Main_I(n)+Aux2*2.0
   Lower_I(n) = -Aux2
   !\
   ! Update the solution from f^(n) to f^(n+1):
