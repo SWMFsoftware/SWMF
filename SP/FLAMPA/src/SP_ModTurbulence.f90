@@ -482,7 +482,7 @@ contains
           else
              DfDs1=cHalf*((F_II(iP,iX+1)-F_II(iP,iX  ))/DsPlus+&
                           (F_II(iP,iX  )-F_II(iP,iX-1))/DsMinus)
-             if(DoOutputGamma.and.iX==iXOutput)DfDs_I(nP+1-iP)=DfDs1
+             if(DoOutputGamma.and.iX==iXOutputGamma)DfDs_I(nP+1-iP)=DfDs1
           end if
 
           ! here are the parts for \gamma being integrated 
