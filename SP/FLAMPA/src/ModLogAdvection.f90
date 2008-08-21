@@ -103,7 +103,7 @@ contains
     F_I(1-nGCLeft:nP+nGCRight)=FInOut_I(1-nGCLeft:nP+nGCRight)
 
     !Check for positivity
-    if(any(F_I(1:nP)<=0.0))then
+    if(any(F_I(1-nGCLeft:nP+nGCRight)<=0.0))then
        write(*,*)'Before advection F_I <=0'
        write(*,*)IsConservative
        write(*,*)F_I

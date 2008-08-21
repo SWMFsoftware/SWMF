@@ -17,7 +17,20 @@ Module ModTurbulence
   real,allocatable:: RhoCompression_I(:) ! This is the ratio of densities powered 3/2 
 
 
-  real::Kmin,KMax,DeltaLnK
+    !-----------------------------------------------------------------------------------!
+    !          Grid in the momentum space                                               !
+    !iP     0     1                         nP   nP+1                                   !
+    !       |     |    ....                 |     |                                     !
+    !P      P_inj P_inj*exp(\Delta (Ln P))  P_Max P_Max*exp(\Delta (Ln P))              !
+    !             |    Grid in k-space      |     |                                     !
+    !K/B         KMax                      KMin                                         !
+    !ik    nP+1   nP                        1     0                                     !
+    !-----------------------------------------------------------------------------------!
+
+
+  real::Kmin     !cElectronCharge/(PInjection*exp(real(nP)*DeltaLnP)) 
+  real::KMax     !cElectronCharge/(PInjection*exp(DeltaLnP))
+  real::DeltaLnK !DeltaLnP
   real,external,private:: momentum_to_energy,momentum_to_kinetic_energy
   real,external,private:: energy_to_momentum,kinetic_energy_to_momentum
   real,external,private:: energy_in
@@ -240,6 +253,7 @@ contains
 
     !The integer representative for the wave number to take the partial sums 
     iK=1+nint(log(KR/(B*Kmin)) / DeltaLnK)  
+    !Remember that  Kmin=cElectronCharge/(PInjection*exp(real(nP)*DeltaLnP)) 
 
     !Calculate D_{xx}: KRes-dependent part
     Dxx = (4.0*B**2*P*cLightSpeed**2)/&
@@ -308,7 +322,6 @@ contains
           !the wave number intervals.
 
           !The lower value of the wave number
-          ! Otkud se ovo stvorilo?
           K1=K0/expdLogK 
           
           !The integrands at the lower value of the wave number
@@ -479,8 +492,8 @@ contains
        !Calculate the wave increment and update the wave spectra
        ExpRhoCompression=exp(RhoCompression_I(iX))
    
-       IPlus_IX(    0,iX) = IPlus_IX(  1,iX)*ExpRhoCompression
-       IMinus_IX(   0,iX) = IMinus_IX( 1,iX)*ExpRhoCompression
+       IPlus_IX(    0,iX) = IPlus_IX(  0,iX)*ExpRhoCompression
+       IMinus_IX(   0,iX) = IMinus_IX( 0,iX)*ExpRhoCompression
        do iK=1,nP 
 
 
