@@ -121,7 +121,7 @@ contains
     KMax=cElectronCharge/(PInjection*exp(DeltaLnP))
     DeltaLnK=DeltaLnP
     cInjectionHere=cInjection
-    call assign_kolmogorov_spectrum(0,nP+1,1,nX,X_DI,B_I)
+    call assign_kolmogorov_spectrum(1,nX,0,nP+1,X_DI,B_I)
     CorrectionMode=1.0
    
     RSh=sqrt(sum(X_DI(:,iShock)**2))
