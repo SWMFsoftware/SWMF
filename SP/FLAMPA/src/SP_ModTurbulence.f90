@@ -409,22 +409,22 @@ contains
 
        if (iX==1) then
 
-          DsPlus=sqrt(sum( (X_DI(:,iX+1)-X_DI(:,iX))**2 ))
+          DsPlus=max(sqrt(sum( (X_DI(:,iX+1)-X_DI(:,iX))**2 )),cTiny)
           !Use the forward spatial derivative
 
           DfDs0=(F_II(nP,iX+1)-F_II(nP,iX))/DsPlus
 
        else if (iX==nX) then
 
-          DsMinus=sqrt(sum( (X_DI(:,iX)-X_DI(:,iX-1))**2 ))
+          DsMinus=max(sqrt(sum( (X_DI(:,iX)-X_DI(:,iX-1))**2 )),cTiny)
           !Use the backward spatial derivative
 
           DfDs0=(F_II(nP,iX)-F_II(nP,iX-1))/DsMinus
 
        else
 
-          DsPlus =sqrt(sum( (X_DI(:,iX+1)-X_DI(:,iX  ))**2 ))
-          DsMinus=sqrt(sum( (X_DI(:,iX  )-X_DI(:,iX-1))**2 ))
+          DsPlus =max(sqrt(sum( (X_DI(:,iX+1)-X_DI(:,iX  ))**2 )),cTiny)
+          DsMinus=max(sqrt(sum( (X_DI(:,iX  )-X_DI(:,iX-1))**2 )),cTiny)
           !Use the average between the forward and backward spatial derivatives
 
           DfDs0=cHalf*((F_II(nP,iX+1)-F_II(nP,iX  ))/DsPlus+&
@@ -479,7 +479,8 @@ contains
        !Calculate the wave increment and update the wave spectra
        ExpRhoCompression=exp(RhoCompression_I(iX))
    
-     
+       IPlus_IX(    0,iX) = IPlus_IX(  1,iX)*ExpRhoCompression
+       IMinus_IX(   0,iX) = IMinus_IX( 1,iX)*ExpRhoCompression
        do iK=1,nP 
 
 
@@ -576,9 +577,7 @@ contains
           end if
 
        end do             !cycling iK
-       IPlus_IX(    0,iX) = IPlus_IX(  1,iX)
        IPlus_IX( nP+1,iX) = IPlus_IX( nP,iX)
-       IMinus_IX(   0,iX) = IMinus_IX( 1,iX)
        IMinus_IX(nP+1,iX) = IMinus_IX(nP,iX)
 
     end do            !cycling iX
