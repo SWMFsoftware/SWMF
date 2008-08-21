@@ -2,7 +2,7 @@
 subroutine write_plotfile_SP(DoPlot,TypeOutput)
   use ModIOUnit
   use SP_ModMain
-  use SP_ModTurbulence
+  use ModTurbulence
   implicit none
   !--------------------------------------------------------------------------!
   integer:: iFile
