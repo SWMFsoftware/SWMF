@@ -157,7 +157,7 @@ contains
     end if
 
     FInOut_I(1:nP)=F_I(1:nP)
-    if(any(FInOut_I(1:nP)<=0.0))then
+    if(any(FInOut_I(1-nGCLeft:nP+nGCRight)<=0.0))then
        write(*,*)'After advection F_I <=0, for CFLFermi= ',CFL
        write(*,*)F_I
        stop
