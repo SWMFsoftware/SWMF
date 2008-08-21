@@ -507,7 +507,7 @@ contains
        !Calculate the wave increment and update the wave spectra
        ExpRhoCompression=exp(RhoCompression_I(iX))
    
-       call assing_kolmogorov_spectrum(iX,iX,0,0,X_DI(:,iX:iX),B_I(iX:iX))
+       call assign_kolmogorov_spectrum(iX,iX,0,0,X_DI(:,iX:iX),B_I(iX:iX))
        !IPlus_IX(    0,iX) = IPlus_IX(  0,iX)*ExpRhoCompression
        !IMinus_IX(   0,iX) = IMinus_IX( 0,iX)*ExpRhoCompression
        do iK=1,nP 
