@@ -195,7 +195,7 @@ subroutine write_plotfile_SP(DoPlot,TypeOutput)
 
       do iLnK=1,nP
          write(iFile,*) B_I(iXOutputGamma)*Kmin*exp(real(iLnK-1)*DeltaLnK),&
-              IPlus_IX(iLnK,iXOutputGamma),IMinus_IX(iLnK,iXOutptGamma),&
+              IPlus_IX(iLnK,iXOutputGamma),IMinus_IX(iLnK,iXOutputGamma),&
               Gamma_I(iLnK)
       end do
       close(iFile)
