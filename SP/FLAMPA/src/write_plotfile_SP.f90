@@ -191,12 +191,12 @@ subroutine write_plotfile_SP(DoPlot,TypeOutput)
      ! Open file unit and write plot file.
      !/
      open(iFile,file=trim(NameFile),status='replace',form='formatted')
-     write(iFile,*) 'VARIABLES = "k", "I+", "I-", "gamma"'
+     write(iFile,*) 'VARIABLES = "k", "I+", "I-", "gamma", "df/ds(p_res)"'
 
       do iLnK=1,nP
          write(iFile,*) B_I(iXOutputGamma)*Kmin*exp(real(iLnK-1)*DeltaLnK),&
               IPlus_IX(iLnK,iXOutputGamma),IMinus_IX(iLnK,iXOutputGamma),&
-              Gamma_I(iLnK)
+              Gamma_I(iLnK),DfDs_I(iLnK)
       end do
       close(iFile)
    end if
