@@ -489,9 +489,9 @@ subroutine SP_diffusive_shock(&
            !/
            SP_Time = SP_Time+SP_Dt
            if (DoLogFile) call write_logfile_SP('WRITE')
-           if(any(F_II(0,:)<=0.0)then
-                 write(*,*)'Negative distribution function', F_II(0,:)
-              end if
+           if(any(F_II(0,:)<=0.0))then
+              write(*,*)'Negative distribution function', F_II(0,:)
+           end if
            call write_plotfile_SP(&
                 int(SP_Time/SP_TimePlot)/=SP_iPlot,SP_TypePlot)
         end do  !iStep
