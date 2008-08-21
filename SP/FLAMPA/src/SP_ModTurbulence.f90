@@ -53,8 +53,8 @@ Module ModTurbulence
  
 contains
   subroutine assign_kolmogorov_spectrum(iXStart,iXLast,iKStart,iKLast,X_DI,B_I)
-    integer,intent(in)::iXStart,iXLast,iPStart,iPLast
-    real,intent(in)::X_DI(1:3,iXStart:iXLast),B_I(iXStart:iZLast)
+    integer,intent(in)::iXStart,iXLast,iKStart,iKLast
+    real,intent(in)::X_DI(1:3,iXStart:iXLast),B_I(iXStart:iXLast)
     integer::iX,iK
     real::K,KR0
     !--------------------
