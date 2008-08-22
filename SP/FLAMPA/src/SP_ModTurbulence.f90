@@ -6,9 +6,11 @@ Module ModTurbulence
   logical::UseTurbulentSpectrum=.true.
   logical::UseAdvectionWithAlfvenSpeed=.false.
   logical::DoOutputGamma=.true.
-  integer::iXOutputGamma=700
+  integer::iXOutputStart=600
+  integer::iXOutputStride=50
+  integer::iXOutputLast=900
   real::DispersionOutput
-  real,allocatable::Gamma_I(:),DfDs_I(:),F_I(:),FUpstream_I(:)
+  real,allocatable::Gamma_I(:,:)
   real,allocatable::IPlus_IX(:,:),IMinus_IX(:,:),IC(:)
   real,allocatable::VA_I(:)           !Alfven speed
 
@@ -52,6 +54,15 @@ Module ModTurbulence
   real,parameter::Lambda0=4.0/10.0  ![AU]
  
 contains
+  integer function i_output(iX)
+    integer,intent(in)::iX
+    !---------------------!
+    i_output=0
+    if(.not.DoOutputGamma.or.iX>iXOutputLast.or.iX<iXOutputStart)return
+    if(( (iX-iXOutputStart)/iXOutputStride )*iXOutputStride/=(iX-iXOutputStart))return
+    i_output=(iX-iXOutputStart)/iXOutputStride+1
+  end function i_output
+  !---------------------------------!
   subroutine assign_kolmogorov_spectrum(iXStart,iXLast,iKStart,iKLast,X_DI,B_I)
     integer,intent(in)::iXStart,iXLast,iKStart,iKLast
     real,intent(in)::X_DI(1:3,iXStart:iXLast),B_I(iXStart:iXLast)
@@ -103,7 +114,8 @@ contains
        allocate(CFL_I(1:nX));CFL_I=cOne
     end if
     allocate(RhoCompression_I(1:nX));RhoCompression_I=cZero
-    if(DoOutputGamma)allocate(Gamma_I(nP),DfDs_I(nP),F_I(nP),FUpstream_I(nP))
+    if(DoOutputGamma)&
+         allocate(Gamma_I(nP,(iXOutputLast-iXOutputStart)/iXOutputStride+1))
     !-----------------------------------------------------------------------------------!
 
     !-----------------------------------------------------------------------------------!
@@ -482,11 +494,6 @@ contains
           else
              DfDs1=cHalf*((F_II(iP,iX+1)-F_II(iP,iX  ))/DsPlus+&
                           (F_II(iP,iX  )-F_II(iP,iX-1))/DsMinus)
-             if(DoOutputGamma.and.iX==iXOutputGamma)then
-                DfDs_I(nP+1-iP)=DfDs1
-                F_I(nP+1-iP)=F_II(iP,iX)
-                FUpstream_I(nP+1-iP)=F_II(iP,iX+1)
-             end if
           end if
 
           ! here are the parts for \gamma being integrated 
@@ -544,7 +551,7 @@ contains
           Gamma=-4.0*2.0*(cPi**2)*VA_I(iX)/K*&
                (PRes*A(iP)-(PRes**3)*B(iP))/    &
                cProtonMass 
-          if(DoOutputGamma.and.iX==iXOutputGamma)Gamma_I(iK)=Gamma
+          if(i_output(iX)/=0)Gamma_I(iK,i_output(iX))=Gamma
 
           !We need to integrate the two coupled equations:
           !
