@@ -8,7 +8,7 @@ Module ModTurbulence
   logical::DoOutputGamma=.true.
   integer::iXOutputGamma=800
   real::DispersionOutput
-  real,allocatable::Gamma_I(:),DfDs_I(:)
+  real,allocatable::Gamma_I(:),DfDs_I(:),F_I(:),FUpstream_I(:)
   real,allocatable::IPlus_IX(:,:),IMinus_IX(:,:),IC(:)
   real,allocatable::VA_I(:)           !Alfven speed
 
@@ -103,7 +103,7 @@ contains
        allocate(CFL_I(1:nX));CFL_I=cOne
     end if
     allocate(RhoCompression_I(1:nX));RhoCompression_I=cZero
-    if(DoOutputGamma)allocate(Gamma_I(nP),DfDs_I(nP))
+    if(DoOutputGamma)allocate(Gamma_I(nP),DfDs_I(nP),FI(nP),FUpstream_I(nP))
     !-----------------------------------------------------------------------------------!
 
     !-----------------------------------------------------------------------------------!
@@ -482,7 +482,10 @@ contains
           else
              DfDs1=cHalf*((F_II(iP,iX+1)-F_II(iP,iX  ))/DsPlus+&
                           (F_II(iP,iX  )-F_II(iP,iX-1))/DsMinus)
-             if(DoOutputGamma.and.iX==iXOutputGamma)DfDs_I(nP+1-iP)=DfDs1
+             if(DoOutputGamma.and.iX==iXOutputGamma)then
+                F_I(nP+1-iP)=FII(iP,iX)
+                FUpstream_I(nP+1-iP)=FII(iP,iX+1)
+             end if
           end if
 
           ! here are the parts for \gamma being integrated 
