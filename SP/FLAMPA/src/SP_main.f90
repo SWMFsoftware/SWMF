@@ -523,7 +523,7 @@ Contains
       open(iFile,file=NameFile,status='replace',iostat=iError)
 
       R=sqrt(sum(X_DI(:,iShock)**2 ))/cAU
-      write(iFile,'(a,f5.3,a)')  'TITLE="Rshock=', R, ' AU, SP_time=',SP_time,'s, iX=',iShock+5,'"'
+      write(iFile,'(a,f5.3,a,F5.0,a,i5,a)')  'TITLE="Rshock=', R, ' AU, SP_time=',SP_time,'s, iX=',iShock+5,'"'
       write(iFile,*) 'VARIABLES = "k", "I+", "I-"'
 
       do iK=1,nP
