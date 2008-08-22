@@ -53,7 +53,7 @@ module SP_ModMain
                         !Value of the distribution function at PInjection,   !
                         !for test simulation, or constant value of f_0 in    !
                         !the distribution for suprathermal particles.        !
-  real:: SuprathIndex=5.0
+  real:: SuprathIndex=4.0
                         !Spectral index of the suprathermal particles        !
   real,parameter:: CInjection=1.00  !0.0280     -> old diff. coef.
                         !Injection efficiency                                !
@@ -342,6 +342,7 @@ subroutine SP_diffusive_shock(&
         end if
 
         RhoOld_I(1:nX)=Rho_I(1:nX)
+        BOld_I(1:nX) = B_I(1:nX)
 
         SP_Dt = DtProgress/real(nStep)
         write(iStdOut,*)prefix,' Time step is set to ',SP_Dt,' s'
@@ -401,12 +402,10 @@ subroutine SP_diffusive_shock(&
            end if
         end if
 
-
-        if(UseTurbulentSpectrum)then
-              call set_dxx(nX,nP,B_I(1:nX))
-        end if
-
         do iStep=1,nStep
+           if(UseTurbulentSpectrum)then
+              call set_dxx(nX,nP,B_I(1:nX))
+           end if
            do iX=1,nX
               !\
               ! Apply the boundary condition for F_II at injection momentum::
@@ -484,9 +483,15 @@ subroutine SP_diffusive_shock(&
               call advance_diffusion(SP_Dt,nX,X_DI(:,1:nX),F_II(iLnP,1:nX),&
                    DOuter_I(1:nX),DInner_I(1:nX))
            end do  !iLnP
+           
            !\
-           ! Update simulated time for SP:
+           ! Update turbulence spectrum:
            !/
+           if(UseTurbulentSpectrum)then
+              call UpdateSpectrum(nX,nP,pInjection,DeltaLnP,X_DI,&
+                   F_II,B_I,Rho_I,SP_Dt)
+              call outputSpectrum_ishock(iShock)
+           end if
            SP_Time = SP_Time+SP_Dt
            if (DoLogFile) call write_logfile_SP('WRITE')
            if(any(F_II(0,:)<=0.0))then
@@ -495,29 +500,6 @@ subroutine SP_diffusive_shock(&
            call write_plotfile_SP(&
                 int(SP_Time/SP_TimePlot)/=SP_iPlot,SP_TypePlot)
         end do  !iStep
-        !\
-        ! Update turbulence spectrum:
-        !/
-
-        if(UseTurbulentSpectrum)then
-           !Variable to update is B*F. So multiply F by BOld in the beginning 
-           !of the advance procedure. Then divide by B at the end
-           do iX=1,nX
-              IPlus_IX( :,iX) = IPlus_IX( :,iX)*BOld_I(iX)
-              IMinus_IX(:,iX) = IMinus_IX(:,iX)*BOld_I(iX)
-              BOld_I(iX)   = B_I(iX)
-           end do  !iX
-           do iStep=1,nStep
-              call UpdateSpectrum(nX,nP,pInjection,DeltaLnP,X_DI,&
-                   F_II,B_I,Rho_I,SP_Dt)
-           end do !iStep loop
-           
-           do iX=1,nX
-              IPlus_IX( :,iX) = IPlus_IX( :,iX)/B_I(iX)
-              IMinus_IX(:,iX) = IMinus_IX(:,iX)/B_I(iX)
-           end do
-           call outputSpectrum_ishock(iShock)
-        end if
      end do     !iProgress loop
   !--------------------------------- FINALIZE -------------------------------!
   case("FINALIZE")

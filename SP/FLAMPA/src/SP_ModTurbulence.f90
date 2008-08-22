@@ -167,7 +167,7 @@ contains
     VA_I(1:nX)=B_I(1:nX)/sqrt(cMu*cProtonMass*Rho_I(1:nX))
     
     !Calculate the wave increment and update the wave spectra
-    RhoCompression_I(1:nX)=(3.0*cHalf)*log(Rho_I(1:nX)/RhoOld_I(1:nX))
+    RhoCompression_I(1:nX)=1.50*log(Rho_I(1:nX)/RhoOld_I(1:nX))-log(B_I(1:nX)/BOld_I(1:nX))
 
     !Contribution to the advection in k_space from the Lagrangian derivatives:
     ! Dispersion = Dt * [ (D ln {\rho})/(Dt) - 2 (D ln { B })/(D t) ] + ...
