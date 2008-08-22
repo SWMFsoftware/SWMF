@@ -103,7 +103,7 @@ contains
        allocate(CFL_I(1:nX));CFL_I=cOne
     end if
     allocate(RhoCompression_I(1:nX));RhoCompression_I=cZero
-    if(DoOutputGamma)allocate(Gamma_I(nP),DfDs_I(nP),FI(nP),FUpstream_I(nP))
+    if(DoOutputGamma)allocate(Gamma_I(nP),DfDs_I(nP),F_I(nP),FUpstream_I(nP))
     !-----------------------------------------------------------------------------------!
 
     !-----------------------------------------------------------------------------------!
@@ -483,8 +483,8 @@ contains
              DfDs1=cHalf*((F_II(iP,iX+1)-F_II(iP,iX  ))/DsPlus+&
                           (F_II(iP,iX  )-F_II(iP,iX-1))/DsMinus)
              if(DoOutputGamma.and.iX==iXOutputGamma)then
-                F_I(nP+1-iP)=FII(iP,iX)
-                FUpstream_I(nP+1-iP)=FII(iP,iX+1)
+                F_I(nP+1-iP)=F_II(iP,iX)
+                FUpstream_I(nP+1-iP)=F_II(iP,iX+1)
              end if
           end if
 
