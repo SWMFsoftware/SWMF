@@ -191,7 +191,7 @@ subroutine write_plotfile_SP(DoPlot,TypeOutput)
      ! Open file unit and write plot file.
      !/
      open(iFile,file=trim(NameFile),status='replace',form='formatted')
-     write(iFile,*)'Waves at SP_Time = ',&
+     write(iFile,*)'TITLE = "Waves at SP_Time = ',&
           SP_Time,'" '
      write(iFile,*) 'VARIABLES = "k", "I+", "I-", "gamma" '
 
