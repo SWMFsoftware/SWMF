@@ -6,9 +6,9 @@ Module ModTurbulence
   logical::UseTurbulentSpectrum=.true.
   logical::UseAdvectionWithAlfvenSpeed=.false.
   logical::DoOutputGamma=.true.
-  integer::iXOutputStart=600
+  integer::iXOutputStart=350
   integer::iXOutputStride=50
-  integer::iXOutputLast=900
+  integer::iXOutputLast=1000
   real::DispersionOutput
   real,allocatable::Gamma_I(:,:)
   real,allocatable::IPlus_IX(:,:),IMinus_IX(:,:),IC(:)
