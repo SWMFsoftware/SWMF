@@ -196,7 +196,7 @@ subroutine write_plotfile_SP(DoPlot,TypeOutput)
                 SP_Time,' in the lagrangian mesh iX=',iX,'" '
            write(iFile,*) 'VARIABLES = "k", "I+", "I-", "gamma" '
 
-           do iLnK=1,nP
+           do iLnK=nKOutput,nP
               write(iFile,*) B_I(iX)*Kmin*exp(real(iLnK-1)*DeltaLnK),&
                    IPlus_IX(iLnK,iX),IMinus_IX(iLnK,iX),&
                    Gamma_I(iLnK,i_output(iX))
