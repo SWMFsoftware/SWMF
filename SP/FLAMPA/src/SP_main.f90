@@ -3,7 +3,7 @@ module SP_ModMain
   use ModTurbulence
   use ModUtilities,ONLY:check_allocate
   implicit none
-  integer:: nP=200      !Number of grids along the (ln p)-coordinate.        !
+  integer:: nP=400      !Number of grids along the (ln p)-coordinate.        !
   integer:: nX=100      !Number of points along the spatial coordinate.      !
   real:: CFL=0.9        !Maximum allowed time step.                          !
   real:: PInjection,EInjection= 1.0e+00,EnergyMax=1.0e+07,&
