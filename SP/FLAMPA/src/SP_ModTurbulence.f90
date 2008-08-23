@@ -143,7 +143,7 @@ contains
        if (R<(cOne+cOne/10.0)*RSh) then
           ! In this part of the spectrum another equation governs the diffusion
           ICOld=IC(iX)
-          IC(iX)=B_I(iX)**2*10.0*CInjection*(max(AlfvenMach,2.0)*&
+          IC(iX)=B_I(iX)**2*10.0*CInjection*max(AlfvenMach,2.0)*&
                min(cOne,R/Rsh/(cOne-cOne/10.0))/(cMu*3.0)
           if(IC(iX)>ICOld)then
              do iK=0,nP+1
