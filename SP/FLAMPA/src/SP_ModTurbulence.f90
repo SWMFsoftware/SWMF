@@ -140,10 +140,10 @@ contains
     RSh=sqrt(sum(X_DI(:,iShock)**2))
     do iX=1,nX
        R=sqrt(sum(X_DI(:,iX)**2))
-       if (R<(cOne+cOne/10.0)*RSh.and.AlfvenMach>1.0) then
+       if (R<(cOne+cOne/10.0)*RSh) then
           ! In this part of the spectrum another equation governs the diffusion
           ICOld=IC(iX)
-          IC(iX)=B_I(iX)**2*10.0*CInjection*AlfvenMach*&
+          IC(iX)=B_I(iX)**2*10.0*CInjection*(max(AlfvenMach,1.0)*&
                min(cOne,R/Rsh/(cOne-cOne/10.0))/(cMu*3.0)
           if(IC(iX)>ICOld)then
              do iK=0,nP+1
