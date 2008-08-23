@@ -6,7 +6,7 @@ module SP_ModMain
   integer:: nP=200      !Number of grids along the (ln p)-coordinate.        !
   integer:: nX=100      !Number of points along the spatial coordinate.      !
   real:: CFL=0.9        !Maximum allowed time step.                          !
-  real:: PInjection,EInjection= 1.0e+01,EnergyMax=1.0e+07,&
+  real:: PInjection,EInjection= 1.0e+00,EnergyMax=1.0e+07,&
        PMaxLog,DeltaLnP !Injection momentum, injection energy, maximum range !
                         !with respect to (ln p)-coordinate, and step size    !
                         !with respect to (ln p)-coordinate.                  !
