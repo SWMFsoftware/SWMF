@@ -6,7 +6,7 @@ module SP_ModMain
   integer:: nP=200      !Number of grids along the (ln p)-coordinate.        !
   integer:: nX=100      !Number of points along the spatial coordinate.      !
   real:: CFL=0.9        !Maximum allowed time step.                          !
-  real:: PInjection,EInjection= 1.0e+00,EnergyMax=1.0e+07,&
+  real:: PInjection,EInjection= 1.0e+01,EnergyMax=1.0e+07,&
        PMaxLog,DeltaLnP !Injection momentum, injection energy, maximum range !
                         !with respect to (ln p)-coordinate, and step size    !
                         !with respect to (ln p)-coordinate.                  !
@@ -490,7 +490,6 @@ subroutine SP_diffusive_shock(&
            if(UseTurbulentSpectrum)then
               call UpdateSpectrum(nX,nP,pInjection,DeltaLnP,X_DI,&
                    F_II,B_I,Rho_I,SP_Dt)
-              call outputSpectrum_ishock(iShock)
            end if
            SP_Time = SP_Time+SP_Dt
            if (DoLogFile) call write_logfile_SP('WRITE')
@@ -500,6 +499,7 @@ subroutine SP_diffusive_shock(&
            call write_plotfile_SP(&
                 int(SP_Time/SP_TimePlot)/=SP_iPlot,SP_TypePlot)
         end do  !iStep
+        call outputSpectrum_ishock(iShock)
      end do     !iProgress loop
   !--------------------------------- FINALIZE -------------------------------!
   case("FINALIZE")

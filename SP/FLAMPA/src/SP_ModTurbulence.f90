@@ -549,9 +549,12 @@ contains
           
           ! here is the dynamic \gamma evaluated
 
+
           Gamma=-4.0*2.0*(cPi**2)*VA_I(iX)/K*&
                (PRes*A(iP)-(PRes**3)*B(iP))/    &
                cProtonMass 
+
+
           if(i_output(iX)/=0)Gamma_I(iK,i_output(iX))=Gamma
 
           !We need to integrate the two coupled equations:
@@ -561,7 +564,7 @@ contains
           !DI_-/Dt =(3/2)* (D ln rho/Dt)) *I_-  -  \gamma/(I_+ + I_-) * I_-
           !see Eq.(\ref{eq:Lagrangian})
           !
-          !Make a sibstitution 
+          !Make a substitution 
           !I_+ = I_+(new) * rho^{3/2},    I_- = I_-(new) * rho^{3/2}
           !
           !The modified equations do not involve the density derivative on the right 
