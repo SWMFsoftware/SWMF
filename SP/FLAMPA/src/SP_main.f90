@@ -3,7 +3,7 @@ module SP_ModMain
   use ModTurbulence
   use ModUtilities,ONLY:check_allocate
   implicit none
-  integer:: nP=400      !Number of grids along the (ln p)-coordinate.        !
+  integer:: nP=200      !Number of grids along the (ln p)-coordinate.        !
   integer:: nX=100      !Number of points along the spatial coordinate.      !
   real:: CFL=0.9        !Maximum allowed time step.                          !
   real:: PInjection,EInjection= 1.0e+00,EnergyMax=1.0e+07,&
@@ -49,11 +49,11 @@ module SP_ModMain
   real:: DataInputTime  !Time of simulation from IH_ data                    !
   real:: SP_Time=0.0,SP_Dt
                         !Starting time of simulation and size of time step.  !
-  real:: FInjection=0.24
+  real:: FInjection=0.012
                         !Value of the distribution function at PInjection,   !
                         !for test simulation, or constant value of f_0 in    !
                         !the distribution for suprathermal particles.        !
-  real:: SuprathIndex=4.0
+  real:: SuprathIndex=5.0
                         !Spectral index of the suprathermal particles        !
   real,parameter:: CInjection=1.00  !0.0280     -> old diff. coef.
                         !Injection efficiency                                !
