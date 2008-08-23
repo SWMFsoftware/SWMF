@@ -51,7 +51,7 @@ program CON_stand_alone
      BOld_I(iShock+1:iShock+nint(cOne/DsResolution))=&
           minval(BOld_I(iShock+1:iShock+nint(cOne/DsResolution)))
      SP_Time=DataInputTime
-     DiffCoeffMin=1.0e+04*Rsun*DsResolution !m^2/s
+     DiffCoeffMin=3.0e+05*Rsun*DsResolution !m^2/s
      !-------------------------------- RUN ----------------------------------!
      do iDataSet=5,179
         write(iStdOut,*)prefix,"iIter = ",iDataSet-4
