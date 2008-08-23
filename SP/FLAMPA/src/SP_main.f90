@@ -185,13 +185,13 @@ Contains
     ! than the old position, iShockOld(>=1)!!!
     !/
     i_shock=iShockOld-1+maxloc(&
-         (RhoIn_I(iShockOld:nX-1)*(&
-         X_DI(1,iShockOld:nX-1)**2+X_DI(2,iShockOld:nX-1)**2+&
-         X_DI(3,iShockOld:nX-1)**2)-&
-         RhoIn_I(iShockOld+1:nX)*(&
-         X_DI(1,iShockOld+1:nX)**2+X_DI(2,iShockOld+1:nX)**2+&
-         X_DI(3,iShockOld+1:nX)**2))/&
-!         log(RhoIn_I(iShockOld:nX-1)/RhoIn_I(iShockOld+1:nX))/      &
+!         (RhoIn_I(iShockOld:nX-1)*(&
+!         X_DI(1,iShockOld:nX-1)**2+X_DI(2,iShockOld:nX-1)**2+&
+!         X_DI(3,iShockOld:nX-1)**2)-&
+!         RhoIn_I(iShockOld+1:nX)*(&
+!         X_DI(1,iShockOld+1:nX)**2+X_DI(2,iShockOld+1:nX)**2+&
+!         X_DI(3,iShockOld+1:nX)**2))/&
+         log(RhoIn_I(iShockOld:nX-1)/RhoIn_I(iShockOld+1:nX))/      &
          sqrt((X_DI(1,iShockOld+1:nX)-X_DI(1,iShockOld:nX-1))**2+   &
               (X_DI(2,iShockOld+1:nX)-X_DI(2,iShockOld:nX-1))**2+   &
               (X_DI(3,iShockOld+1:nX)-X_DI(3,iShockOld:nX-1))**2),1,&
