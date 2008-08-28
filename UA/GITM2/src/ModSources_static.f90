@@ -21,8 +21,9 @@ module ModSources
   ! i.e. in2p_e -->  n2+ + e
   !      ino_n  -->  no + n
   !/
-  real :: ChemicalHeatingSpecies(nLons, nLats, nAlts,nReactions)
+
   integer, parameter :: nReactions = 26
+  real :: ChemicalHeatingSpecies(nLons, nLats, nAlts,nReactions)
   integer, parameter ::    in2p_e = 1
   integer, parameter ::    io2p_e = 2
   integer, parameter ::    in2p_o = 3
