@@ -1482,10 +1482,11 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
   !Check if we are within the domain:
   if(  any(Xyz_D(1:3) < XyzMin_D(1:3)-cTiny) .or. &
        any(Xyz_D(1:3) > XyzMax_D(1:3)+cTiny) )then
+     write(*,*)NameSub,' Xyz_D   =',Xyz_D
      write(*,*)NameSub,' XyzMin_D=',XyzMin_D
      write(*,*)NameSub,' XyzMax_D=',XyzMax_D
      write(*,*)NameSub,' x,y,z   =',x,y,z
-     if(UseCovariant)write(*,*)NameSub,' Xyz_D   =',Xyz_D
+     if(UseCovariant)write(*,*)NameSub,' UseCovariant is TRUE'
      call stop_mpi(NameSub//': the point is out of the domain')
   end if
 
