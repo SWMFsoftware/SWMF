@@ -69,7 +69,6 @@ OBJECTS = \
 	calc_physics.o\
 	calc_avesza.o\
 	calc_euv.o\
-	calc_neutral_density.o\
 	calc_chemistry.o\
 	calc_ion_v.o\
 	chapman_new.o\
