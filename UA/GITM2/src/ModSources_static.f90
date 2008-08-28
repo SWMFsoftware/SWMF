@@ -24,6 +24,7 @@ module ModSources
 
   integer, parameter :: nReactions = 26
   real :: ChemicalHeatingSpecies(nLons, nLats, nAlts,nReactions)
+  real :: ChemicalHeatingS(nReactions)
   integer, parameter ::    in2p_e = 1
   integer, parameter ::    io2p_e = 2
   integer, parameter ::    in2p_o = 3
