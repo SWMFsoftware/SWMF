@@ -46,7 +46,7 @@ subroutine calc_GITM_sources(iBlock)
   if (iDebugLevel > 4) write(*,*) "=====> going into calc_rates", iproc
 
   ChemicalHeatingRate = 0.0
-
+  ChemicalHeatingSpecies = 0.0
   call calc_rates(iBlock)
 
   RhoI = IDensityS(1:nLons,1:nLats,1:nAlts,ie_,iBlock) * &
@@ -345,4 +345,5 @@ subroutine calc_GITM_sources(iBlock)
        TempUnit(1:nLons,1:nLats,1:nAlts) / cp(1:nLons,1:nLats,1:nAlts,iBlock)/&
        rho(1:nLons,1:nLats,1:nAlts,iBlock)
 
+  ChemicalHeatingSpecies = ChemicalHeatingSpecies * Element_Charge
 end subroutine calc_GITM_sources

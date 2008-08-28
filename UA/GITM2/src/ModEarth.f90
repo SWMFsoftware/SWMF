@@ -6,7 +6,7 @@ module ModPlanet
   implicit none
 
   integer, parameter :: nSpecies = 4
-  integer, parameter :: iO_  = 1
+  integer, parameter :: iO_3P_  = 1
   integer, parameter :: iO2_ = 2
   integer, parameter :: iN2_ = 3
   integer, parameter :: iN_4S_ =  4
@@ -45,6 +45,9 @@ module ModPlanet
   integer, parameter :: iE3726_ = 3
   integer, parameter :: iE5200_ = 4
   integer, parameter :: iE10400_ = 5
+  integer, parameter :: iE6300_ = 6
+  integer, parameter :: iE6364_ = 7
+  
   integer, parameter :: nEmissions = 10
 
   real, parameter :: GC_Earth               = 9.8                    ! m/s^2
@@ -114,22 +117,22 @@ contains
     Mass(iH_)    = 1.0 * AMU
     Mass(iHe_)   = 4.0 * AMU
     Mass(iN_4S_) = 14.0 * AMU
-    Mass(iO_)    = 16.0 * AMU
+    Mass(iO_3P_)    = 16.0 * AMU
     Mass(iN_2D_) = Mass(iN_4S_)
     Mass(iN_2P_) = Mass(iN_4S_)
     Mass(iN2_)   = 2*Mass(iN_4S_)
-    Mass(iO2_)   = 2*Mass(iO_)
+    Mass(iO2_)   = 2*Mass(iO_3P_)
 
     cSpecies(iH_)    = "H"
     cSpecies(iHe_)   = "He"
-    cSpecies(iO_)    = "O"
+    cSpecies(iO_3P_) = "O(!U3!NP)"
     cSpecies(iO2_)   = "O!D2!N"
     cSpecies(iN2_)   = "N!D2!N"
     cSpecies(iN_4S_) = "N(!U4!NS)"
     cSpecies(iN_2D_) = "N(!U2!ND)"
     cSpecies(iN_2P_) = "N(!U2!NP)"
     cSpecies(iNO_)   = "NO"
-    cSpecies(iO_1D_) = "N(!U1!ND)"
+    cSpecies(iO_1D_) = "O(!U1!ND)"
     cSpecies(iAr_)   = "Ar"
 
     cIons(iO_4SP_) = "O_4SP_!U+!N"
@@ -143,21 +146,21 @@ contains
     cIons(iHeP_)   = "He!U+!N"
     cIons(ie_)     = "e-"
 
-    Vibration(iO_)    = 5.0
+    Vibration(iO_3P_)    = 5.0
     Vibration(iO2_)   = 7.0
     Vibration(iN2_)   = 7.0
     if (nSpecies > 3) Vibration(iN_4S_) = 5.0
     if (nSpecies > 4) Vibration(iNO_)   = 7.0
 
-    MassI(iO_4SP_) = Mass(iO_)
-    MassI(iO_2DP_) = Mass(iO_)
-    MassI(iO_2PP_) = Mass(iO_)
+    MassI(iO_4SP_) = Mass(iO_3P_)
+    MassI(iO_2DP_) = Mass(iO_3P_)
+    MassI(iO_2PP_) = Mass(iO_3P_)
     MassI(iO2P_) = Mass(iO2_)
     MassI(iNP_) = Mass(iN_2D_)
     MassI(iN2P_) = Mass(iN2_)
     MassI(iHP_) = Mass(iH_)
     MassI(iHeP_) = Mass(iHe_)
-    MassI(iNOP_) = Mass(iN_4S_) + Mass(iO_)
+    MassI(iNOP_) = Mass(iN_4S_) + Mass(iO_3P_)
     MassI(ie_) = Mass_Electron
 
     itime = 0

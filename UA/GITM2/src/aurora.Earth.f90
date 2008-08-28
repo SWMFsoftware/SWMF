@@ -125,13 +125,13 @@ subroutine aurora(iBlock)
 
   temp = 0.92 * NDensityS(1:nLons,1:nLats,1:nAlts,iN2_,iBlock) + &
          1.00 * NDensityS(1:nLons,1:nLats,1:nAlts,iO2_,iBlock) + &
-         0.56 * NDensityS(1:nLons,1:nLats,1:nAlts,iO_,iBlock)
+         0.56 * NDensityS(1:nLons,1:nLats,1:nAlts,iO_3P_,iBlock)
 
   if (UseIonPrecipitation) then
 
-     IonPrecipIonRateS(:,:,:,iO_,iBlock)  = &
+     IonPrecipIonRateS(:,:,:,iO_3P_,iBlock)  = &
           0.56*IonPrecipitationBulkIonRate*&
-          NDensityS(1:nLons,1:nLats,1:nAlts,iO_,iBlock)/temp
+          NDensityS(1:nLons,1:nLats,1:nAlts,iO_3P_,iBlock)/temp
      IonPrecipIonRateS(:,:,:,iO2_,iBlock) = &
           1.00*IonPrecipitationBulkIonRate*&
           NDensityS(1:nLons,1:nLats,1:nAlts,iO2_,iBlock)/temp
@@ -148,9 +148,9 @@ subroutine aurora(iBlock)
 
   endif
 
-  AuroralIonRateS(:,:,:,iO_,iBlock)  = &
+  AuroralIonRateS(:,:,:,iO_3P_,iBlock)  = &
        0.56*AuroralBulkIonRate*&
-       NDensityS(1:nLons,1:nLats,1:nAlts,iO_,iBlock)/temp
+       NDensityS(1:nLons,1:nLats,1:nAlts,iO_3P_,iBlock)/temp
   AuroralIonRateS(:,:,:,iO2_,iBlock) = &
        1.00*AuroralBulkIonRate*&
        NDensityS(1:nLons,1:nLats,1:nAlts,iO2_,iBlock)/temp

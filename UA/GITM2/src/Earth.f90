@@ -16,7 +16,7 @@ subroutine fill_photo(photoion, photoabs, photodis)
   PhotoIon = 0.0
   PhotoDis = 0.0
 
-  photoabs(:,iO_)     = PhotoAbs_O
+  photoabs(:,iO_3P_)     = PhotoAbs_O
   photoabs(:,iO2_)    = PhotoAbs_O2
 
   if (nSpecies > 2) then
@@ -85,8 +85,8 @@ subroutine calc_planet_sources(iBlock)
      !  [NO] cooling 
      ! [Reference: Kockarts,G., G.R.L.,VOL.7, PP.137-140,Feberary 1980 ]
  
-     Omega = 6.5e-17 * NDensityS(1:nLons,1:nLats,1:nAlts,iO_,iBlock) /      &
-          (6.5e-17 * NDensityS(1:nLons,1:nLats,1:nAlts,iO_,iBlock) + 13.3)
+     Omega = 6.5e-17 * NDensityS(1:nLons,1:nLats,1:nAlts,iO_3P_,iBlock) /      &
+          (6.5e-17 * NDensityS(1:nLons,1:nLats,1:nAlts,iO_3P_,iBlock) + 13.3)
 
      ! We need to check this out. I don't like the first / sign....
 
@@ -125,7 +125,7 @@ subroutine calc_planet_sources(iBlock)
 
      ! In erg/cm3/s
      OCooling = (1.69e-18*tmp2 + 4.59e-20*tmp3) * &
-          (NDensityS(1:nLons,1:nLats,1:nAlts,iO_,iBlock)/1.0e6) / &
+          (NDensityS(1:nLons,1:nLats,1:nAlts,iO_3P_,iBlock)/1.0e6) / &
           (1.0 + 0.6*tmp2 + 0.2*tmp3)
      ! In w/m3/3
      OCooling = OCooling/10.0
@@ -156,9 +156,10 @@ subroutine init_heating_efficiency
 
   integer :: iLon, iLat, iAlt
   !------------------------------------------------------------------
-  HeatingEfficiency_CB(:,:,:,1:nBlocks) = max(0.1, &
-       0.40 - &
-       5.56e-5*(Altitude_GB(1:nLons,1:nLats,1:nAlts,1:nBlocks)/1000 - 165)**2)
+  HeatingEfficiency_CB(:,:,:,1:nBlocks) = 0.05
+!  max(0.1, &
+!       0.40 - &
+!       5.56e-5*(Altitude_GB(1:nLons,1:nLats,1:nAlts,1:nBlocks)/1000 - 165)**2)
 
   where(Altitude_GB(1:nLons,1:nLats,1:nAlts,1:nBlocks)/1000. > 150.)
      eHeatingEfficiency_CB(:,:,:,1:nBlocks) = 0.04

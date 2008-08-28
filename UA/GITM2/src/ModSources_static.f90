@@ -16,6 +16,40 @@ module ModSources
        EuvHeating,eEuvHeating, &
        RadCooling, RadCoolingRate, RadCoolingErgs, EuvHeatingErgs, &
        LowAtmosRadRate
+  !\
+  ! Reactions used in chemistry output
+  ! i.e. in2p_e -->  n2+ + e
+  !      ino_n  -->  no + n
+  !/
+
+  integer, parameter :: nReactions = 26
+  integer, parameter ::    in2p_e = 1
+  integer, parameter ::    io2p_e = 2
+  integer, parameter ::    in2p_o = 3
+  integer, parameter ::    inop_e = 4
+  integer, parameter ::    inp_o2 = 5
+  integer, parameter ::    ino_n  = 6
+  integer, parameter ::    iop_o2 = 7
+  integer, parameter ::    in_o2  = 8
+  integer, parameter ::    io2p_n = 9
+  integer, parameter ::    io2p_no= 10
+  integer, parameter ::    io2p_n2= 11
+  integer, parameter ::    in2p_o2= 12
+  integer, parameter ::    inp_o  = 13
+  integer, parameter ::    iop_n2 = 14
+  integer, parameter ::    io1d_n2 = 15
+  integer, parameter ::    io1d_o2 = 16
+  integer, parameter ::    io1d_o  = 17
+  integer, parameter ::    io1d_e  = 18
+  integer, parameter ::    in2d_o2 = 19
+  integer, parameter ::    iop2d_e = 20
+  integer, parameter ::    in2d_o = 21
+  integer, parameter ::    in2d_e = 22
+  integer, parameter ::    iop2d_n2 =23
+  integer, parameter ::    iop2p_e = 24
+  integer, parameter ::    iop2p_o = 25
+  integer, parameter ::    iop2p_n2 = 26
+
 
   !\
   ! Stuff for auroral energy deposition and ionization

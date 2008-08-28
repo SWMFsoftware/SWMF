@@ -8,12 +8,14 @@ integer function bad_outputtype()
   logical :: IsFound
 
   do iOutputType = 1, nOutputTypes
-
+     write(*,*) OutputType(iOutputType)
      IsFound = .false.
 
      if (OutputType(iOutputType) == '3DALL')     IsFound = .true.
      if (OutputType(iOutputType) == '3DNEU')     IsFound = .true.
      if (OutputType(iOutputType) == '3DION')     IsFound = .true.
+     if (OutputType(iOutputType) == '3DTHM')     IsFound = .true.
+     if (OutputType(iOutputType) == '3DCHM')     IsFound = .true.
      if (OutputType(iOutputType) == '3DUSR')     IsFound = .true.
 
      if (OutputType(iOutputType) == '2DGEL')     IsFound = .true.
@@ -183,6 +185,16 @@ subroutine output(dir, iBlock, iOutputType)
      nvars_to_write = 8+nIons
      call output_3dion(iBlock)
 
+  case ('3DTHM')
+
+     nvars_to_write = 16
+     call output_3dthm(iBlock)
+
+  case ('3DCHM')
+
+     nvars_to_write = 30
+     call output_3dchm(iBlock)
+
   case ('3DUSR')
 
      if (iBlock == 1) call set_nVarsUser3d
@@ -300,8 +312,58 @@ contains
        write(iOutputUnit_,"(I7,A1,a)") 13, " ", "FL Length"
 
     endif
+    
+    if (cType(3:5) == "THM") then
 
-    if (cType(3:5) == "MEL") then
+       write(iOutputUnit_,"(I7,A1,a)")  4, " ", "EUV Heating"
+       write(iOutputUnit_,"(I7,A1,a)")  5, " ", "Conduction"
+       write(iOutputUnit_,"(I7,A1,a)")  6, " ", "Chemical Heating"
+       write(iOutputUnit_,"(I7,A1,a)")  7, " ", "Auroral Heating"
+       write(iOutputUnit_,"(I7,A1,a)")  8, " ", "Joule Heating"
+       write(iOutputUnit_,"(I7,A1,a)")  9, " ", "NO Cooling"
+       write(iOutputUnit_,"(I7,A1,a)") 10, " ", "O Cooling"
+       write(iOutputUnit_,"(I7,A1,a)") 11, " ", "Total Abs EUV"
+       write(iOutputUnit_,"(I7,A1,a)") 12, " ", "EUV Heating Rate"
+       write(iOutputUnit_,"(I7,A1,a)") 13, " ", "Conduction Rate"
+       write(iOutputUnit_,"(I7,A1,a)") 14, " ", "Chemical Heating Rate"
+       write(iOutputUnit_,"(I7,A1,a)") 15, " ", "NO Cooling Rate"
+       write(iOutputUnit_,"(I7,A1,a)") 16, " ", "O Cooling Rate"
+       
+    endif
+
+    if (cType(3:5) == "CHM") then
+
+       write(iOutputUnit_,"(I7,A1,a)") 4, " ", "N!D2!U+!N + e"
+       write(iOutputUnit_,"(I7,A1,a)") 5, " ", "O!D2!U+!N + e"
+       write(iOutputUnit_,"(I7,A1,a)") 6, " ", "N!D2!U+!N + O"
+       write(iOutputUnit_,"(I7,A1,a)") 7, " ", "NO!U+!N + e"
+       write(iOutputUnit_,"(I7,A1,a)") 8, " ", "N!U+!N + O!D2!N"
+       write(iOutputUnit_,"(I7,A1,a)") 9, " ", "NO + N"
+       write(iOutputUnit_,"(I7,A1,a)") 10, " ","O!U+!N + O!D2!N" 
+       write(iOutputUnit_,"(I7,A1,a)") 11, " ", "N + O!D2!N"
+       write(iOutputUnit_,"(I7,A1,a)") 12, " ", "O!D2!U+!N + N"
+       write(iOutputUnit_,"(I7,A1,a)") 13, " ", "O!D2!U+!N + NO"
+       write(iOutputUnit_,"(I7,A1,a)") 14, " ", "O!D2!U+!N + N2"
+       write(iOutputUnit_,"(I7,A1,a)") 15, " ", "N!D2!U+!N + O!D2!N"
+       write(iOutputUnit_,"(I7,A1,a)") 16, " ", "N!U+!N + O"
+       write(iOutputUnit_,"(I7,A1,a)") 17, " ", "O!+!N + N!D2!N"
+       write(iOutputUnit_,"(I7,A1,a)") 18, " ", "O(1D) + N!D2!N"
+       write(iOutputUnit_,"(I7,A1,a)") 19, " ", "O(1D) + O!D2!N"
+       write(iOutputUnit_,"(I7,A1,a)") 20, " ", "O(1D) + O"
+       write(iOutputUnit_,"(I7,A1,a)") 21, " ", "O(1D) + e"
+       write(iOutputUnit_,"(I7,A1,a)") 22, " ", "N(2D) + O!D2!N"
+       write(iOutputUnit_,"(I7,A1,a)") 23, " ", "O!U+!N(2D)+e"
+       write(iOutputUnit_,"(I7,A1,a)") 24, " ", "N(2D) + O"
+       write(iOutputUnit_,"(I7,A1,a)") 25, " ", "N(2D) + e"
+       write(iOutputUnit_,"(I7,A1,a)") 26, " ", "O!U+!N(2D + N!D2!N"
+       write(iOutputUnit_,"(I7,A1,a)") 27, " ", "O!U+!N(2P) + e"
+       write(iOutputUnit_,"(I7,A1,a)") 28, " ", "O!U+!N(2P) + O"
+       write(iOutputUnit_,"(I7,A1,a)") 29, " ", "O!U+!N(2P) + N!D2!N"
+       write(iOutputUnit_,"(I7,A1,a)") 30, " ", "Chemical Heating Rate"
+       
+       
+    endif
+if (cType(3:5) == "MEL") then
 
        write(iOutputUnit_,"(I7,A1,a)")  4, " ", "MLT"
        write(iOutputUnit_,"(I7,A1,a)")  5, " ", "GeoLat"
@@ -647,7 +709,101 @@ end subroutine output_3dion
 !----------------------------------------------------------------
 !
 !----------------------------------------------------------------
+subroutine output_3dthm(iBlock)
 
+  use ModGITM
+  use ModInputs
+  use ModSources
+  use ModEuv, only : EuvTotal
+  implicit none
+
+  integer, intent(in) :: iBlock
+  integer :: iAlt, iLat, iLon, iiAlt, iiLat, iiLon
+
+
+  do iAlt=-1,nAlts+2
+     iiAlt = max(min(iAlt,nAlts),1)
+     do iLat=-1,nLats+2
+        iiLat = min(max(iLat,1),nLats)
+        do iLon=-1,nLons+2
+           iiLon = min(max(iLon,1),nLons)
+
+           write(iOutputUnit_)          &
+                Longitude(iLon,iBlock),               &
+                Latitude(iLat,iBlock),                &
+                Altitude_GB(iLon,iLat,iAlt,iBlock),   &
+                EuvHeating(iiLon,iLat,iiAlt,iBlock)*dt*TempUnit(iiLon,iLat,iiAlt),    &
+                Conduction(iiLon,iLat,iiAlt)*TempUnit(iiLon,iLat,iiAlt),              &
+                ChemicalHeatingRate(iiLon,iLat,iiAlt)*TempUnit(iiLon,iLat,iiAlt),     &
+                AuroralHeating(iiLon,iLat,iiAlt)*dt*TempUnit(iiLon,iLat,iiAlt),       &
+                JouleHeating(iiLon,iLat,iiAlt)*dt*TempUnit(iiLon,iLat,iiAlt),         &
+                -NOCooling(iiLon,iLat,iiAlt)*dt*TempUnit(iiLon,iLat,iiAlt),           &
+                -OCooling(iiLon,iLat,iiAlt)*dt*TempUnit(iiLon,iLat,iiAlt),            &
+                EuvTotal(iiLon,iLat,iiAlt,iBlock) * dt,                              &
+                EUVHeating(iiLon,iLat,iiAlt,iBlock)*cp(iiLon,iLat,iiAlt,iBlock) *     &
+                Rho(iiLon,iLat,iiAlt,iBlock)*TempUnit(iiLon,iLat,iiAlt),            &
+                Conduction(iiLon,iLat,iiAlt)*cp(iiLon,iLat,iiAlt,iBlock) *            &
+                Rho(iiLon,iLat,iiAlt,iBlock)*TempUnit(iiLon,iLat,iiAlt),            &
+                ChemicalHeatingRate(iiLon,iLat,iiAlt)*cp(iiLon,iLat,iiAlt,iBlock) *   &
+                Rho(iiLon,iLat,iiAlt,iBlock)*TempUnit(iiLon,iLat,iiAlt),            &
+                NOCooling(iiLon,iLat,iiAlt)*cp(iiLon,iLat,iiAlt,iBlock) *            &
+                Rho(iiLon,iLat,iiAlt,iBlock)*TempUnit(iiLon,iLat,iiAlt),            &
+                OCooling(iiLon,iLat,iiAlt)*cp(iiLon,iLat,iiAlt,iBlock) *             &
+                Rho(iiLon,iLat,iiAlt,iBlock)*TempUnit(iiLon,iLat,iiAlt)
+           
+        enddo
+     enddo
+  enddo
+     
+end subroutine output_3dthm
+
+
+!----------------------------------------------------------------
+!
+!----------------------------------------------------------------
+subroutine output_3dchm(iBlock)
+
+  use ModGITM
+  use ModInputs
+  use ModSources
+  use ModConstants
+  implicit none
+
+  integer, intent(in) :: iBlock
+  integer :: iAlt, iLat, iLon, iiAlt, iiLat, iiLon, iReact
+  real :: vars(nReactions)
+
+  do iAlt=-1,nAlts+2
+     iiAlt = max(min(iAlt,nAlts),1)
+     do iLat=-1,nLats+2
+        iiLat = min(max(iLat,1),nLats)
+        do iLon=-1,nLons+2
+           iiLon = min(max(iLon,1),nLons)
+           do iReact = 1, nReactions
+              
+              vars(iReact) = ChemicalHeatingSpecies(iiLon,iiLat,iiAlt,iReact) / &
+                   Element_Charge
+              
+              enddo
+              
+              write(iOutputUnit_) &
+                   Longitude(iLon,iBlock),               &
+                   Latitude(iLat,iBlock),                &
+                   Altitude_GB(iLon,iLat,iAlt,iBlock),   &
+                   Vars, &
+                   ChemicalHeatingRate(iiLon,iiLat,iiAlt) * &
+                   cp(iilon,iiLat,iiAlt,iBlock) *   &
+                   Rho(iilon,iiLat,iiAlt,iBlock)*TempUnit(iilon,iiLat,iiAlt) / &
+                   Element_Charge
+        enddo
+     enddo
+  enddo
+
+end subroutine output_3dchm
+
+!----------------------------------------------------------------
+!
+!----------------------------------------------------------------
 subroutine output_2dgel(iBlock)
 
   use ModElectrodynamics

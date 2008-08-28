@@ -164,12 +164,12 @@ do i=1,nLons
 
 
   Lf_e_O(i,j,k) = -8.629e-6 * Temp_IDensity(i,j,k,ie_) *           &
-                             Temp_NDensity(i,j,k,iO_) *            &
+                             Temp_NDensity(i,j,k,iO_3P_) *            &
                              ABT(i,j,k)/ZZ(i,j,k)
 
   Lf_e_O(i,j,k) = 3.4e-12*(1-7e-5*eTemperature(i,j,k,iBlock))*    &
                   Temp_IDensity(i,j,k,ie_) *           &
-                  Temp_NDensity(i,j,k,iO_) *            &
+                  Temp_NDensity(i,j,k,iO_3P_) *            &
                   (150./eTemperature(i,j,k,iBlock)+0.4)* &
                   (eTemperature(i,j,k,iBlock)- &
                    Temperature(i,j,k,iBlock)*TempUnit(i,j,k))/ &
@@ -184,7 +184,7 @@ do i=1,nLons
                         (eTemperature(i,j,k,iBlock)-4000.)
 
   L_e_O1D(i,j,k) = -1.57e-12 *Temp_IDensity(i,j,k,ie_) *              &
-                               Temp_NDensity(i,j,k,iO_) *                     &
+                               Temp_NDensity(i,j,k,iO_3P_) *                     &
                     exp(d(i,j,k)*(eTemperature(i,j,k,iBlock) -3000)/    & 
                                (3000.*eTemperature(i,j,k,iBlock)))*     &
                           (exp(-22713*(eTemperature(i,j,k,iBlock)-      &

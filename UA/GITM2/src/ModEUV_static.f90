@@ -9,7 +9,7 @@ module ModEUV
        xSolar, ySolar
 
   real, dimension(nLons, nLats, nAlts, nBlocksMax) :: &
-       HeatingEfficiency_CB, eHeatingEfficiency_CB, EuvIonRate
+       HeatingEfficiency_CB, eHeatingEfficiency_CB, EuvIonRate,EuvTotal
 
   real, dimension(nLons, nLats, nAlts, nIons,nBlocksMax) :: &
        EuvIonRateS, EuvDissRateS

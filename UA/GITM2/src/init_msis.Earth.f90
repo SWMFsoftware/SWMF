@@ -38,7 +38,7 @@ subroutine get_msis_temperature(lon, lat, alt, t, h)
   nN2 = msis_dens(3)
   nO2 = msis_dens(4)
 
-  m = (nO * mass(iO_) + nO2 * mass(iO2_) + nN2 * mass(iN2_)) / (nO + nO2 + nN2)
+  m = (nO * mass(iO_3P_) + nO2 * mass(iO2_) + nN2 * mass(iN2_)) / (nO + nO2 + nN2)
 
   r = RBody + alt
 !  g = Gravitational_Constant * (RBody/r) ** 2
@@ -150,7 +150,7 @@ subroutine init_msis
               NDensityS(iLon,iLat,iAlt,:,iBlock) = 0.0
 
               NDensityS(iLon,iLat,iAlt,iH_,iBlock)          = msis_dens(1)
-              NDensityS(iLon,iLat,iAlt,iO_,iBlock)          = msis_dens(2)
+              NDensityS(iLon,iLat,iAlt,iO_3P_,iBlock)          = msis_dens(2)
               NDensityS(iLon,iLat,iAlt,iN2_,iBlock)         = msis_dens(3)
               NDensityS(iLon,iLat,iAlt,iO2_,iBlock)         = msis_dens(4)
               NDensityS(iLon,iLat,iAlt,iAr_,iBlock)         = msis_dens(5)
@@ -158,6 +158,8 @@ subroutine init_msis
               NDensityS(iLon,iLat,iAlt,iN_4S_,iBlock)       = msis_dens(8)
               NDensityS(iLon,iLat,iAlt,iN_2D_,iBlock)       = &
                    NDensityS(iLon,iLat,iAlt,iN_4S_,iBlock)/100.0
+              NDensityS(iLon,iLat,iAlt,iO_1D_,iBlock)       = &
+                   NDensityS(iLon,iLat,iAlt,iO_3P_,iBlock)/1000000.0 *0.0 + 1
 
               MeanMajorMass(iLon,iLat,iAlt)=0
 
@@ -239,7 +241,7 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
   CALL GTD6(iJulianDay,uTime,Alt,Lat,Lon,LST, &
        F107A,F107,AP_I,48,msis_dens,msis_temp)
 
-  LogNS(iO_)  = alog(msis_dens(2))
+  LogNS(iO_3P_)  = alog(msis_dens(2))
   LogNS(iO2_) = alog(msis_dens(4))
   LogNS(iN2_) = alog(msis_dens(3))
   if (nSpecies >= iN_4S_) LogNS(min(nSpecies,iN_4S_)) = alog(msis_dens(8))

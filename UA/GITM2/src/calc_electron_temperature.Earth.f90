@@ -198,7 +198,7 @@ subroutine calc_electron_temperature(iBlock)
 
            temp_B = (6.6e-14*NDensityS(iLon,iLat,iAlt,iN2_,iBlock) + &
                 5.8e-14*NDensityS(iLon,iLat,iAlt,iO2_,iBlock) + &
-                0.21e-14*NDensityS(iLon,iLat,iAlt,iO_,iBlock)*  &
+                0.21e-14*NDensityS(iLon,iLat,iAlt,iO_3P_,iBlock)*  &
                 sqrt(2*Temperature(iLon,iLat,iAlt,iBlock)*&
                 TempUnit(iLon,iLat,iAlt))) *  &
                 IDensityS(iLon,iLat,iAlt,iO_4SP_,iBlock)
@@ -206,7 +206,7 @@ subroutine calc_electron_temperature(iBlock)
            temp_B = temp_B + &
                 (5.9e-14*NDensityS(iLon,iLat,iAlt,iN2_,iBlock) + &
                 5.45e-14*NDensityS(iLon,iLat,iAlt,iO2_,iBlock) + &
-                4.5e-14*NDensityS(iLon,iLat,iAlt,iO_,iBlock)) *  &
+                4.5e-14*NDensityS(iLon,iLat,iAlt,iO_3P_,iBlock)) *  &
                 IDensityS(iLon,iLat,iAlt,iNOP_,iBlock)
 
 
@@ -215,7 +215,7 @@ subroutine calc_electron_temperature(iBlock)
                 0.14e-14*NDensityS(iLon,iLat,iAlt,iO2_,iBlock)*  &
                 sqrt(Temperature(iLon,iLat,iAlt,iBlock)* &
                 TempUnit(iLon,iLat,iAlt)) + &
-                4.4e-14*NDensityS(iLon,iLat,iAlt,iO_,iBlock)) *  &
+                4.4e-14*NDensityS(iLon,iLat,iAlt,iO_3P_,iBlock)) *  &
                 IDensityS(iLon,iLat,iAlt,iO2P_,iBlock)
 
 
@@ -479,7 +479,7 @@ contains
              qD_Total(i,j,k)= &
                   !              Temp_NDensity(i,j,k,iN2_)*qD_N2(i,j,k)+            &
                   Temp_NDensity(i,j,k,iO2_)*qD_O2(i,j,k)+            &
-                  Temp_NDensity(i,j,k,iO_)*qD_O(i,j,k)
+                  Temp_NDensity(i,j,k,iO_3P_)*qD_O(i,j,k)
 
 !!$         Ke(i,j,k,iBlock) = (7.7e5 * eTemperature(i,j,k,iBlock)**2.5) / &
 !!$              (1 + 3.22e4 * eTemperature(i,j,k,iBlock)**2 *           &
@@ -673,12 +673,12 @@ subroutine calc_etemp_sources(Heating,Cooling,iBlock)
 
 
            Lf_e_O(i,j,k) = -8.629e-6 * Temp_IDensity(i,j,k,ie_) *           &
-                Temp_NDensity(i,j,k,iO_) *            &
+                Temp_NDensity(i,j,k,iO_3P_) *            &
                 ABT(i,j,k)/ZZ(i,j,k)
 
            Lf_e_O(i,j,k) = 3.4e-12*(1-7e-5*eTemperature(i,j,k,iBlock))*    &
                 Temp_IDensity(i,j,k,ie_) *           &
-                Temp_NDensity(i,j,k,iO_) *            &
+                Temp_NDensity(i,j,k,iO_3P_) *            &
                 (150./eTemperature(i,j,k,iBlock)+0.4)* &
                 (eTemperature(i,j,k,iBlock)- &
                 Temperature(i,j,k,iBlock)*TempUnit(i,j,k))/ &
@@ -693,7 +693,7 @@ subroutine calc_etemp_sources(Heating,Cooling,iBlock)
                 (eTemperature(i,j,k,iBlock)-4000.)
 
            L_e_O1D(i,j,k) = -1.57e-12 *Temp_IDensity(i,j,k,ie_) *              &
-                Temp_NDensity(i,j,k,iO_) *                     &
+                Temp_NDensity(i,j,k,iO_3P_) *                     &
                 exp(d(i,j,k)*(eTemperature(i,j,k,iBlock) -3000)/    & 
                 (3000.*eTemperature(i,j,k,iBlock)))*     &
                 (exp(-22713*(eTemperature(i,j,k,iBlock)-      &

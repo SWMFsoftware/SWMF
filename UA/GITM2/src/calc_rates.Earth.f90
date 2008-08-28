@@ -98,9 +98,18 @@ subroutine calc_rates(iBlock)
              TempUnit(1:nLons,1:nLats,iAlt) / &
              Kappa1DCorrectionFactor)**Kappa1dCorrectionPower
      else
-        KappaTemp(:,:,iAlt,iBlock) = KappaTemp0 * &
+         KappaTemp(:,:,iAlt,iBlock) = &
+             (NDensityS(:,:,iAlt,iBlock,iO2_)/NDensity(:,:,iAlt,iBlock) + &
+             NDensityS(:,:,iAlt,iBlock,iN2_)/NDensity(:,:,iAlt,iBlock)) * 5.6e-4 * &
+             (Temperature(1:nLons,1:nLats,ialt,iBlock)*TempUnit(1:nLons,1:nLats,iAlt)) &
+             **0.75 + &
+             (NDensityS(:,:,iAlt,iBlock,iO_3P_)/NDensity(:,:,iAlt,iBlock)*7.59e-4) * &
              (Temperature(1:nLons,1:nLats,iAlt,iBlock) * &
              TempUnit(1:nLons,1:nLats,iAlt))**0.75
+        
+!        KappaTemp(:,:,iAlt,iBlock) = KappaTemp0 * &
+!             (Temperature(1:nLons,1:nLats,iAlt,iBlock) * &
+!             TempUnit(1:nLons,1:nLats,iAlt))**0.75
      endif
 
      iiAlt = iAlt
