@@ -188,7 +188,7 @@ subroutine specify_refinement(DoRefine_B)
         end do
 
         ! This occurs multiple times
-        Radius1Sqr = Area % Radius1
+        Radius1Sqr = (Area % Radius1)**2
 
         if(DoTestBlock)then
            write(*,*)NameSub,' DistMin_D=',DistMin_D
