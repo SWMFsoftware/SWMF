@@ -84,47 +84,6 @@ subroutine set_physics_constants
      end do
   end if
 
-  ! This part is commented out, because it works for a single session only
-  ! and it may not be complete. This means that the distances have to be given
-  ! in normalized units in the PARAM.in file.
-  !\
-  ! Normalize all the distance variables
-  !/
-  !x1 = x1*Io2No_V(UnitX_)
-  !x2 = x2*Io2No_V(UnitX_)
-  !y1 = y1*Io2No_V(UnitX_)
-  !y2 = y2*Io2No_V(UnitX_)
-  !z1 = z1*Io2No_V(UnitX_)
-  !z2 = z2*Io2No_V(UnitX_)
-  !
-  !call set_xyzminmax
-  !
-  !do iFile = plot_+1, plot_+nplotfile
-  !   if(is_axial_geometry())then     
-  !      plot_range(1:2,iFile) = plot_range(1:2,iFile)*Io2No_V(UnitX_)
-  !   else                            
-  !      plot_range(1:6,iFile) = plot_range(1:6,iFile)*Io2No_V(UnitX_)
-  !   end if                          
-  !   where(plot_dx(:,iFile) > 0.) &
-  !        plot_dx(:,iFile) = plot_dx(:,iFile)*Io2No_V(UnitX_)
-  !end do
-  !
-  !do iArea = 1, nArea
-  !   Area_I(iArea)%Resolution = Area_I(iArea)%Resolution * Io2No_V(UnitX_)
-  !   Area_I(iArea)%Center_D   = Area_I(iArea)%Center_D   * Io2No_V(UnitX_)
-  !   Area_I(iArea)%Size_D     = Area_I(iArea)%Size_D     * Io2No_V(UnitX_)
-  !   Area_I(iArea)%Radius1    = Area_I(iArea)%Radius1    * Io2No_V(UnitX_)
-  !   Area_I(iArea)%Radius2    = Area_I(iArea)%Radius2    * Io2No_V(UnitX_)
-  !end do
-  !
-  !rBody     = rBody     * Io2No_V(UnitX_)
-  !rCurrents = rCurrents * Io2No_V(UnitX_)
-  !
-  !write(*,*)'!!! nArea = ',nArea
-  !write(*,*)'!!! Area_I(1)%Resolution = ',Area_I(1)%Resolution
-  !write(*,*)'!!! XyzMin_D=',XyzMin_D
-  !write(*,*)'!!! XyzMax_D=',XyzMax_D
-
   !\
   ! set the electric charge in normalized units for Hall and muli-ion MHD
   ! use the fact that J/(n e) has the same units as velocity:
