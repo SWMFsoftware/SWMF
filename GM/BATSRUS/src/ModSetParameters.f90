@@ -874,9 +874,12 @@ subroutine MH_set_parameters(TypeAction)
         Area_I(nArea) % Resolution = AreaResolution
 
         ! Set the default center to be the origin, 
-        ! the size to be 1 and no rotatoin
+        ! the size and radii to be 1, and no rotation
         Area_I(nArea)%Center_D  = 0.0
-        Area_I(nArea)%Size_D    = 1.
+        Area_I(nArea)%Size_D    = 1.0
+        Area_I(nArea)%Radius1   = 1.0
+        Area_I(nArea)%DoRotate  = .false.
+        Area_I(nArea)%Rotate_DD = cUnit_DD
 
         ! Remove leading spaces
         NameArea = adjustl(NameArea)
