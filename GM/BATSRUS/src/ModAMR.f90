@@ -76,7 +76,7 @@ module ModAMR
      character(len=lNameArea) :: Name
      real                     :: Resolution
      real, dimension(3)       :: Center_D,  Size_D
-     real                     :: Radius1, Radius2
+     real                     :: Radius1
      logical                  :: DoRotate
      real, dimension(3,3)     :: Rotate_DD
   end type AreaType
