@@ -1495,8 +1495,10 @@ contains
       ! (4) energy flux
       Flux_V(Energy_) = ((1.0 +  inv_gm1) * P &
          + 0.50 * sum(StateStar_V(RhoUx_:RhoUz_)**2)/Rho)*Un
-      CMax = max( WR, -WL)
+      CMax = max( WR, -WL)*Area
+      CMaxDt=CMax
       Flux_V=Flux_V*Area
+      UNormal_I=Un*Area
     end subroutine godunov_flux
     subroutine write_test_info
       use ModVarIndexes
