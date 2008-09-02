@@ -268,7 +268,7 @@ LIBCRASH  = ${LIBDIR}/libCRASH.a
 # Libraries should be compiled first, because modules are used in main.
 ${CRASH_OBJECT_EXE}: ${LIBSHARE} ${LIBTIMING} ${LIBCRASH} ${MY_LIB}
 
-CARSH.EXE = ${BINDIR}/CRASH.exe
+CRASH.EXE = ${BINDIR}/CRASH.exe
 
 CRASH:
 	make ${CRASH.EXE}
@@ -276,7 +276,7 @@ CRASH:
 	@echo Program BATSRUS has been brought up to date.
 	@echo ' '	
 
-${CARSH.EXE}: ${OBJECTS_EXE} ${LIBCRASH}
+${CRASH.EXE}: ${OBJECTS_EXE} ${LIBCRASH}
 	@(if [ ${OS} = "Darwin" ];         then make CRASH_for_Darwin; \
 	else                                    make CRASH_general; fi)
 
