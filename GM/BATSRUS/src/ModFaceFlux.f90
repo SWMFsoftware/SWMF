@@ -867,8 +867,10 @@ contains
 
     end if
 
-    if(.not.DoHlld)then                                !^CFG IF HLLDFLUX
-       ! All solvers, except HLLD, use left and right fluxes and avarage state
+    if((.not.DoGodunov)&
+         .and.(.not.DoHlld)&                                !^CFG IF HLLDFLUX
+         )then
+       ! All solvers, except HLLD and Godunov, use left and right fluxes and avarage state
        call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
             StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft)
        
@@ -903,7 +905,7 @@ contains
     if(DoAw)     call artificial_wind           !^CFG IF AWFLUX
     if(DoRoeOld) call roe_solver(Flux_V)        !^CFG IF ROEFLUX
     if(DoRoe)    call roe_solver_new            !^CFG IF ROEFLUX
-
+    if(DoGodunov)call godunov_flux
     if(UseRS7 .and. .not.DoRoe &
          .and. .not.DoHlld &                    !^CFG IF HLLDFLUX
          )then
@@ -1433,6 +1435,69 @@ contains
     !^CFG END HLLDFLUX
     !=======================================================================
 
+    subroutine godunov_flux
+      use ModExactRS
+      use ModPhysics, ONLY: inv_gm1
+      use ModVarIndexes
+      real::Rho, Un, P, StateStar_V(nVar)
+      real::RhoSide,UnSide
+      integer::iVar
+      !----------------------------------------
+      !Take scalars
+
+      ! Scalar variables
+      RhoL = StateLeft_V(Rho_)
+      pL   = StateLeft_V(p_)
+      RhoR = StateRight_V(Rho_)
+      pR   = StateRight_V(p_)
+
+      UnL =sum(StateLeft_V(Ux_:Uz_) * Normal_D)
+      UnR =sum(StateRight_V(Ux_:Uz_) * Normal_D)
+
+      !Take the parameters at the Contact Discontinuity (CD)
+
+      call pu_star
+
+      if(UnStar>0.0)then
+         !The CD is to the right from the face
+         !The Left gas passes through the face
+         RhoSide = RhoL ; UnSide = UnL
+         StateStar_V=StateLeft_V
+      else
+         !The CD is to the left from the face
+         !The Right gas passes through the face
+         RhoSide = RhoR ; UnSide = UnR
+         StateStar_V=StateRight_V
+      end if
+
+      !Take the parameters at the face
+
+      call sample(0.0,Rho, Un, P)
+      StateStar_V(Rho_)=Rho
+      StateStar_V(Ux_:Uz_) = StateStar_V(Ux_:Uz_)+(Un-UnSide)*Normal_D
+      StateStar_V(P_) = P
+      do iVar=ScalarFirst_,ScalarLast_
+         StateStar_V(iVar) = StateStar_V(iVar)*(Rho/RhoSide)
+      end do
+
+      !Calculate flux (1) take conservative variable
+    
+      StateStar_V(RhoUx_:RhoUz_) = StateStar_V(Ux_:Uz_) * Rho
+
+      ! (2) take advective part of the flux
+
+      Flux_V(1:nVar) = StateStar_V * Un 
+
+      ! (3) add the pressure tensor
+
+      Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + P * Normal_D
+
+      ! (4) energy flux
+      Flux_V(Energy_) = ((1.0 +  inv_gm1) * P &
+         + 0.50 * sum(StateStar_V(RhoUx_:RhoUz_)**2)/Rho)*Un
+      CMax = max( WR, -WL)
+      Flux_V=Flux_V*Area
+    end subroutine godunov_flux
     subroutine write_test_info
       use ModVarIndexes
       integer :: iVar
@@ -1832,20 +1897,15 @@ contains
     end subroutine get_magnetic_flux
 
     !==========================================================================
-    subroutine get_hd_flux(Gamma,EPerRhoExtra)
+    subroutine get_hd_flux
 
       use ModPhysics, ONLY: inv_gm1
       use ModVarIndexes
-      real,optional::Gamma,EPerRhoExtra
       ! Variables for conservative state and flux calculation
-      real :: Rho, Ux, Uy, Uz, p, e, RhoUn,GM1Inv
+      real :: Rho, Ux, Uy, Uz, p, e, RhoUn
       integer :: iVar
       !-----------------------------------------------------------------------
-      if(present(Gamma))then
-         GM1Inv=1.0/(Gamma-1.0)
-      else
-         GM1Inv=inv_gm1
-      end if
+      
       ! Extract primitive variables
       Rho     = State_V(iRho)
       Ux      = State_V(iUx)
@@ -1854,8 +1914,7 @@ contains
       p       = State_V(iP)
 
       ! Calculate energy
-      e = GM1Inv*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2)
-      if(present(EPerRhoExtra))e=e+EPerRhoExtra*Rho
+      e = inv_gm1*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2)
       ! Calculate conservative state
       StateCons_V(iRhoUx)  = Rho*Ux
       StateCons_V(iRhoUy)  = Rho*Uy
