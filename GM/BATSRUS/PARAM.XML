@@ -3578,6 +3578,22 @@ Default value is false, which results in first order
 prolongation and restriction operators at the resolution changes.
 </command>
 
+<command name="LIMITSCALARTORHORATIO">
+	<parameter name="UseScalarToRhoRatioLtd" type="logical" default="F" />
+#LIMITSCALARTORHORATIO
+T		UseSlalarToRhoRatioLtd
+
+For UseSlalarToRhoRatioLtd=T the passive scalar variables are limited 
+in the following way: (1) the cell centered values or the passive scalars are
+related to the cell-centered value of the mass density; (2) the scalar-to-rho
+ratios are prololnged to the face usnig the limited reconstruction precedure;
+(3) the reconstructed values of the slalar-to-rho ratio(s) are multiplied by 
+the face values of the mass density . 
+
+Default value is false, which results in the limited reconstruction procedure
+directly applied to the passive scalar variable.
+</command>
+
 <command name="CLIMIT">
 	<parameter name="UseClimit" type="logical" default="F"/>
 	<if expr="$UseClimit">

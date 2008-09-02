@@ -12,6 +12,7 @@ module ModFaceValue
   logical, public :: UseAccurateResChange = .false.
   logical, public :: UseTvdResChange      = .true.
   logical, public :: DoLimitMomentum      = .false.
+  logical, public :: UseScalarToRhoRatioLtd = .false.
 
   real,             public :: BetaLimiter = 1.0
   character(len=6), public :: TypeLimiter = 'minmod'
@@ -596,7 +597,29 @@ contains
                   jMinFaceZ,jMaxFaceZ,1,nKFace)
           end if
        end if
-
+       if(UseScalarToRhoRatioLtd)then
+          if(DoResChangeOnly)then
+             if(neiLeast(iBlock)==+1) &
+                  call ratio_to_scalar_faceX(1,1,1,nJ,1,nK)
+             if(neiLwest(iBlock)==+1) &
+                  call ratio_to_scalar_faceX(nIFace,nIFace,1,nJ,1,nK)
+             if(neiLsouth(iBlock)==+1) &
+                  call ratio_to_scalar_faceY(1,nI,1,1,1,nK)
+             if(neiLnorth(iBlock)==+1) &
+                  call ratio_to_scalar_faceY(1,nI,nJFace,nJFace,1,nK)
+             if(neiLbot(iBlock)==+1) &
+                  call ratio_to_scalar_faceZ(1,nI,1,nJ,1,1)
+             if(neiLtop(iBlock)==+1) &
+                  call ratio_to_scalar_faceZ(1,nI,1,nJ,nKFace,nKFace)
+          else
+             call ratio_to_scalar_faceX(1,nIFace,jMinFaceX,jMaxFaceX, &
+                  kMinFaceX,kMaxFaceX)
+             call ratio_to_scalar_faceY(iMinFaceY,iMaxFaceY,1,nJFace, &
+                  kMinFaceY,kMaxFaceY)
+             call ratio_to_scalar_faceZ(iMinFaceZ,iMaxFaceZ, &
+                  jMinFaceZ,jMaxFaceZ,1,nKFace)
+          end if
+       end if
     end select  !end second order
 
   contains
@@ -646,6 +669,53 @@ contains
       end do
 
     end subroutine logfaceZ_to_faceZ
+ !==========================================================================
+    subroutine ratio_to_scalar_faceX(iMin,iMax,jMin,jMax,kMin,kMax)
+
+      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      !------------------------------------------------------------------------
+      do iVar=ScalarFirst_,ScalarLast_
+
+         LeftState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              LeftState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax)*&
+              LeftState_VX(Rho_,iMin:iMax,jMin:jMax,kMin:kMax)
+         RightState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              RightState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax)*&
+              RightState_VX(Rho_,iMin:iMax,jMin:jMax,kMin:kMax)
+      end do
+
+    end subroutine ratio_to_scalar_faceX
+    !==========================================================================
+    subroutine ratio_to_scalar_faceY(iMin,iMax,jMin,jMax,kMin,kMax)
+
+      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      !------------------------------------------------------------------------
+      do iVar=ScalarFirst_,ScalarLast_
+         LeftState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              LeftState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax)*&
+              LeftState_VY(Rho_,iMin:iMax,jMin:jMax,kMin:kMax)
+         RightState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              RightState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax)*&
+              RightState_VY(Rho_,iMin:iMax,jMin:jMax,kMin:kMax)
+      end do
+
+    end subroutine ratio_to_scalar_faceY
+    !==========================================================================
+    subroutine ratio_to_scalar_faceZ(iMin,iMax,jMin,jMax,kMin,kMax)
+
+      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      !------------------------------------------------------------------------
+      do iVar=ScalarFirst_,ScalarLast_
+
+         LeftState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              LeftState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax)*&
+              LeftState_VZ(Rho_,iMin:iMax,jMin:jMax,kMin:kMax)
+         RightState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
+              RightState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax)*&
+              RightState_VZ(Rho_,iMin:iMax,jMin:jMax,kMin:kMax)
+      end do
+
+    end subroutine ratio_to_scalar_faceZ
     !==========================================================================
     subroutine calc_primitives_MHD
       use ModMultiFluid
@@ -657,6 +727,11 @@ contains
          RhoInv=cOne/Primitive_VG(iRho,i,j,k)
          Primitive_VG(iUx:iUz,i,j,k)=RhoInv*Primitive_VG(iRhoUx:iRhoUz,i,j,k)
       end do
+      if(UseScalarToRhoRatioLtd)then
+         do iVar=ScalarFirst_,ScalarLast_
+            Primitive_VG(iVar,i,j,k)=Primitive_VG(iVar,i,j,k)*RhoInv
+         end do
+      end if
       if(UseLogLimiter)then
          do iVar=1,nVar
             if(UseLogLimiter_V(iVar)) &
@@ -691,6 +766,11 @@ contains
            Ga2Boris - ByFull*uBC2Inv
       Primitive_VG(Uz_,i,j,k)= Primitive_VG(rhoUz_,i,j,k)*&
            Ga2Boris - BzFull*uBC2Inv
+      if(UseScalarToRhoRatioLtd)then
+         do iVar=ScalarFirst_,ScalarLast_
+            Primitive_VG(iVar,i,j,k)=Primitive_VG(iVar,i,j,k)*RhoInv
+         end do
+      end if
     end subroutine calc_primitives_boris
     !=========================================================================
     !^CFG END BORISCORR
@@ -703,7 +783,8 @@ contains
       !^CFG IF BORISCORR BEGIN
       if(DoLimitMomentum)call BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
       !^CFG END BORISCORR
-
+      if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceX(&
+           iMin,iMax,jMin,jMax,kMin,kMax)
     end subroutine get_faceX_first
     !========================================================================
     subroutine get_faceY_first(iMin,iMax,jMin,jMax,kMin,kMax)
@@ -715,6 +796,8 @@ contains
       !^CFG IF BORISCORR BEGIN
       if(DoLimitMomentum) call BorisFaceYtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
       !^CFG END BORISCORR
+      if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceY(&
+           iMin,iMax,jMin,jMax,kMin,kMax)
     end subroutine get_faceY_first
     !========================================================================
     subroutine get_faceZ_first(iMin,iMax,jMin,jMax,kMin,kMax)
@@ -726,6 +809,8 @@ contains
       !^CFG IF BORISCORR BEGIN
       if(DoLimitMomentum)call BorisFaceZtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
       !^CFG END BORISCORR
+      if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceZ(&
+           iMin,iMax,jMin,jMax,kMin,kMax)
     end subroutine get_faceZ_first
     !==========================================================================
     !^CFG IF BORISCORR BEGIN

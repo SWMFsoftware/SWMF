@@ -32,7 +32,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModMPCells,       ONLY: iCFExchangeType,DoOneCoarserLayer
   use ModFaceValue,     ONLY: &
        UseTvdResChange, UseAccurateResChange, DoLimitMomentum, BetaLimiter, &
-       TypeLimiter, UseLogRhoLimiter, UseLogPLimiter
+       TypeLimiter, UseLogRhoLimiter, UseLogPLimiter, UseScalarToRhoRatioLtd
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
   use ModUser,          ONLY: user_read_inputs, user_init_session, &
@@ -1199,6 +1199,12 @@ subroutine MH_set_parameters(TypeAction)
      case('#TVDRESCHANGE')
         call read_var('UseTvdResChange',UseTvdResChange)
         if(UseTvdResChange) UseAccurateResChange=.false.
+
+     case('#LIMITSCALARTORHORATIO')
+        call read_var('UseSlalarToRhoRatioLtd',UseScalarToRhoRatioLtd)
+        if(UseScalarToRhoRatioLtd.and.nFluid>1)&
+             call stop_mpi(NameSub//&
+             ': scalar to rho ratio cannot be limited for multifluid') 
 
      case('#CLIMIT')
         call face_flux_set_parameters(NameCommand)
