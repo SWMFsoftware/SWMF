@@ -229,6 +229,7 @@ PRO VECTOR,U,V,XX,YY,NVECS=nvecs,MAXVAL=maxval,LENGTH=length,HEAD=head,$
 ;                 G. Toth added support for irregular grids stored as
 ;                 a big linear array (ny=1).
 ;       05/16/07- G. Toth added /WHITE keyword
+;       09/02/08- G. Toth use !x.range and !y.range info to limit grid
 ;-
 
 ;Return to caller if an error occurs
@@ -288,8 +289,15 @@ if n_elements(DYNAMIC)  eq 0 then dynamic = 0
 
 ; Derived parameters and derived defaults
 ;
-xmin=min(XX)   &   ymin=min(YY)   &   xmax=max(XX)   &   ymax=max(YY)
-xdel=xmax-xmin &   ydel=ymax-ymin
+xmin=min(XX) & xmax=max(XX)
+if !x.range(0) ne !x.range(1) then begin
+   xmin = max([xmin, min(!x.range)]) & xmax = min([xmax, max(!x.range)])
+endif
+ymin=min(YY) & ymax=max(YY)
+if !y.range(0) ne !y.range(1) then begin
+   ymin = max([ymin, min(!y.range)]) & ymax = min([ymax, max(!y.range)])
+endif
+xdel=xmax-xmin & ydel=ymax-ymin
 
 if dynamic lt 0      then dynamic=0
 if dynamic gt nsteps then dynamic=nsteps
@@ -297,7 +305,7 @@ if dynamic gt nsteps then dynamic=nsteps
 ; Check if X0 is provided
 random = n_elements(X0) ne 2*nvecs
 
-if random and keyword_set(X0) then print,$
+if random and keyword_set(X0) then print, $
   'VECTOR: Initial position array X0 has incorrect size.',$
   ' Using random positions.'
 
@@ -350,8 +358,8 @@ endif else begin
    dy     = ydel/(ny-1.00001d0)
 
    ; Interpolate
-   ureg=trigrid(xx,yy,u,triangles,[dx,dy])
-   vreg=trigrid(xx,yy,v,triangles,[dx,dy])
+   ureg=trigrid(xx,yy,u,triangles,[dx,dy],[xmin,ymin,xmax,ymax])
+   vreg=trigrid(xx,yy,v,triangles,[dx,dy],[xmin,ymin,xmax,ymax])
 endelse
 
 minval=maxval*1e-4
