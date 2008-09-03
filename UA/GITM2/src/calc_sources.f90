@@ -4,7 +4,6 @@ subroutine calc_GITM_sources(iBlock)
   use ModInputs
   use ModSources
   use ModGITM
-  use ModVertical, only: Temp, NDensityS_1D
 
   implicit none
 
@@ -37,6 +36,12 @@ subroutine calc_GITM_sources(iBlock)
   real :: diffusion_velocity(nLons, nLats, 0:nAlts+1,nspecies)
 
   real :: nVel(1:nAlts, nSpecies)
+  real :: NF_Eddy(1:nAlts), NF_NDen(1:nAlts), NF_Temp(1:nAlts)
+  real :: NF_NDenS(1:nAlts,1:nSpecies), NF_EddyRatio(1:nAlts,1:nSpecies)
+  real :: NF_Gravity(1:nAlts)
+
+! Temporary
+  real :: EddyCoefRatio(nLons, nLats, 1:nAlts,nSpecies)
 
   call report("calc_GITM_sources",1)
 
@@ -255,23 +260,40 @@ subroutine calc_GITM_sources(iBlock)
 
   if (UseNeutralFriction .and. .not.UseNeutralFrictionInSolver) then
 
+!     write(*,*) '==========> Now Entering Neutral Friction Calculation!!'
      do iLat = 1, nLats
         do iLon = 1, nLons
 
-           Temp = Temperature(iLon, iLat, :, iBlock)*TempUnit(iLon, iLat, :)
-           nVel = VerticalVelocity(iLon,iLat,1:nAlts,:,iBlock)
+           do iAlt = 1, nAlts
+                  NF_NDen(iAlt) = NDensity(iLon,iLat,iAlt,iBlock)
+                  NF_Temp(iAlt) = Temperature(iLon,iLat,iAlt,iBlock)*TempUnit(iLon,iLat,iAlt)
+                  NF_Eddy(iAlt) = KappaEddyDiffusion(iLon,iLat,iAlt,iBlock)
+                  NF_Gravity(iAlt) = Gravity_GB(iLon,iLat,iAlt,iBlock)
 
-           !Loop is needed to make the NAG f95 v5.0 compiler happy for Mac OSX
-           do iSpecies = 1, nSpecies; do iAlt = 1, nAlts
-              NDensityS_1D(iAlt, iSpecies) = &
-                   NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)
-           end do; end do
+             do iSpecies = 1, nSpecies
+                  nVel(iAlt,iSpecies) = VerticalVelocity(iLon,iLat,iAlt,iSpecies,iBlock)
+                  NF_NDenS(iAlt,iSpecies) = NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)
+                  NF_EddyRatio(iAlt,iSpecies) = 0.0
+             enddo !iSpecies = 1, nSpecies
 
-           call calc_neutral_friction(nVel)
+           enddo !iAlt = 1, nAlts
+
+           call calc_neutral_friction(nVel(1:nAlts,1:nSpecies), &
+                                      NF_Eddy(1:nAlts), &
+                                      NF_NDen(1:nAlts), &
+                                      NF_NDenS(1:nAlts,1:nSpecies), &
+                                      NF_EddyRatio(1:nAlts,1:nSpecies), &
+                                      NF_Temp(1:nAlts), NF_Gravity(iAlt) )
 
            do iAlt = 1, nAlts
-              NeutralFriction(iLon, iLat, iAlt, :) = &
-                   nVel(iAlt,:) - VerticalVelocity(iLon,iLat,iAlt,:,iBlock)
+              NeutralFriction(iLon, iLat, iAlt, 1:nSpecies) = &
+                   nVel(iAlt,1:nSpecies) - VerticalVelocity(iLon,iLat,iAlt,1:nSpecies,iBlock)
+!              
+!              EddyCoefRatio(iLon, iLat, iAlt, 1:nSpecies,iBlock) = &
+!                    NF_EddyRatio(iAlt,1:nSpecies)
+!
+!              EddyCoefRatio(iLon, iLat, iAlt, 1:nSpecies) = &
+!                    NF_EddyRatio(iAlt,1:nSpecies)
            enddo
 
         enddo
@@ -282,6 +304,7 @@ subroutine calc_GITM_sources(iBlock)
      NeutralFriction = 0.0
 
   endif
+!     write(*,*) '==========> Now Exiting Neutral Friction Calculation!!'
 
   !\
   ! Viscosity ----------------------------------------------------
