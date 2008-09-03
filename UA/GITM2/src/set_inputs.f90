@@ -700,6 +700,10 @@ subroutine set_inputs
               write(*,*) 'cEUVFile              (string)'
            endif
 
+        case ("#GLOW")
+           call read_in_logical(UseGlow, iError) 
+           call read_in_real(dTGlow, iError)
+
         case ("#MHD_INDICES")
 
            cTempLines(1) = cLine

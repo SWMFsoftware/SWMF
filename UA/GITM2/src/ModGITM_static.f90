@@ -101,6 +101,15 @@ module ModGITM
 
   real :: Emissions(nLons, nLats, nAlts, nEmissions, nBlocksMax)
 
+  real, dimension(nLons,nLats,nAlts,nEmissionWavelengths,nBlocksMax) :: &
+       vEmissionRate
+  
+  real, dimension(nLons,nLats,nAlts,nPhotoBins,nBlocksMax) :: &
+       PhotoElectronDensity,PhotoElectronRate,PhotoEFluxU,PhotoEFluxD
+  
+  real, dimension(nLons,nLats,nAlts,nBlocksMax,2) :: PhotoEFluxTotal
+
+  real, dimension(nPhotoBins)                 :: PhotoEBins
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2) :: TempUnit
 
   real :: LocalTime(-1:nLons+2)
@@ -110,7 +119,6 @@ module ModGITM
 
 
   integer, parameter :: iEast_ = 1, iNorth_ = 2, iUp_ = 3, iMag_ = 4
-
   integer, parameter :: iVIN_ = 1, iVEN_ = 2, iVEI_ = 3
 
 contains

@@ -17,13 +17,14 @@ integer function bad_outputtype()
      if (OutputType(iOutputType) == '3DTHM')     IsFound = .true.
      if (OutputType(iOutputType) == '3DCHM')     IsFound = .true.
      if (OutputType(iOutputType) == '3DUSR')     IsFound = .true.
+     if (OutputType(iOutputType) == '3DGLO')     IsFound = .true.
 
      if (OutputType(iOutputType) == '2DGEL')     IsFound = .true.
      if (OutputType(iOutputType) == '2DMEL')     IsFound = .true.
      if (OutputType(iOutputType) == '2DUSR')     IsFound = .true.
 
      if (OutputType(iOutputType) == '1DALL')     IsFound = .true.
-
+     if (OutputType(iOutputType) == '1DGLO')     IsFound = .true.
      if (.not. IsFound) then
         bad_outputtype = iOutputType
         return
@@ -71,17 +72,20 @@ subroutine output(dir, iBlock, iOutputType)
 
   !! construct naming strings
 
-  if (iOutputType == -1) then
+    if (iOutputType == -1) then
      cType = "1DALL"
   else
      cType = OutputType(iOutputType)
      if (cType(1:2) == "3D" .and. Is1D) then 
         cType(1:2) = "1D"
-        iiLat = 1
-        iiLon = 1
-        rLon = 1.0
-        rLat = 1.0
      endif
+  endif
+
+  if (Is1D) then
+     iiLat = 1
+     iiLon = 1
+     rLon = 1.0
+     rLat = 1.0
   endif
 
   if (iOutputType == -1) then
@@ -195,6 +199,11 @@ subroutine output(dir, iBlock, iOutputType)
      nvars_to_write = 30
      call output_3dchm(iBlock)
 
+  case ('3DGLO')
+
+     nvars_to_write = 3 + 3
+     call output_3dglo(iBlock)
+
   case ('3DUSR')
 
      if (iBlock == 1) call set_nVarsUser3d
@@ -221,7 +230,14 @@ subroutine output(dir, iBlock, iOutputType)
 
      nGCs = 0
      nvars_to_write = 13+nSpeciesTotal+nSpecies+nIons
+
      call output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iOutputUnit_)
+
+  case ('1DGLO')
+
+     nGCs = 0
+     nvars_to_write = 6
+     call output_1dglo
 
   end select
 
@@ -266,6 +282,7 @@ contains
     integer :: iOff, iSpecies, iIon
 
     write(iOutputUnit_,*) "NUMERICAL VALUES"
+
     write(iOutputUnit_,"(I7,6A)") nvars_to_write, " nvars"
     if (cType(1:2) /= "2D") then 
        write(iOutputUnit_,"(I7,7A)") nAlts+4, " nAltitudes"
@@ -363,7 +380,16 @@ contains
        
        
     endif
-if (cType(3:5) == "MEL") then
+
+    if (cType(3:5) == "GLO") then
+
+       write(iOutputUnit_,"(I7,A1,a)")  4, " ", "6300 A Emission"
+       write(iOutputUnit_,"(I7,A1,a)")  5, " ", "PhotoElectronUp"
+       write(iOutputUnit_,"(I7,A1,a)")  6, " ", "PhotoElectronDown"
+
+    endif
+       
+    if (cType(3:5) == "MEL") then
 
        write(iOutputUnit_,"(I7,A1,a)")  4, " ", "MLT"
        write(iOutputUnit_,"(I7,A1,a)")  5, " ", "GeoLat"
@@ -804,6 +830,69 @@ end subroutine output_3dchm
 !----------------------------------------------------------------
 !
 !----------------------------------------------------------------
+
+subroutine output_3dglo(iBlock)
+
+  use ModGITM
+  use ModInputs
+
+  implicit none
+
+  integer, intent(in) :: iBlock
+  integer :: iAlt, iLat, iLon, iiAlt, iiLat, iiLon
+
+  do iAlt=-1,nAlts+2
+     iiAlt = max(min(iAlt,nAlts),1)
+     do iLat=-1,nLats+2
+        iiLat = min(max(iLat,1),nLats)
+        do iLon=-1,nLons+2
+           iiLon = min(max(iLon,1),nLons)
+              
+              write(iOutputUnit_) &
+                   Longitude(iLon,iBlock),               &
+                   Latitude(iLat,iBlock),                &
+                   Altitude_GB(iLon,iLat,iAlt,iBlock),   &
+                   vEmissionRate(iiLon,iiLat,iiAlt,i6300_,iBlock), &
+                   PhotoEFluxTotal(iiLon,iiLat,iiAlt,iBlock,1),    &
+                   PhotoEFluxTotal(iiLon,iiLat,iiAlt,iBlock,2)
+                   
+        enddo
+     enddo
+  enddo
+
+end subroutine output_3dglo
+
+!----------------------------------------------------------------
+!
+!----------------------------------------------------------------
+subroutine output_1dglo
+
+  use ModGITM
+  use ModInputs
+
+  implicit none
+
+  integer :: iAlt, iLat, iLon, iiAlt
+
+  do iAlt=-1,nAlts+2
+     iiAlt = max(min(iAlt,nAlts),1)
+ 
+     write(iOutputUnit_) &
+          Longitude(1,1),               &
+          Latitude(1,1),                &
+          Altitude_GB(1,1,iAlt,1),   &
+          vEmissionRate(1,1,iiAlt,i6300_,1), &
+          PhotoEFluxTotal(1,1,iiAlt,1,1),    &
+          PhotoEFluxTotal(1,1,iiAlt,1,2)
+                   
+  enddo
+
+end subroutine output_1dglo
+
+!----------------------------------------------------------------
+!
+!----------------------------------------------------------------
+
 subroutine output_2dgel(iBlock)
 
   use ModElectrodynamics
@@ -911,10 +1000,12 @@ subroutine output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
 
      iiAlt = max(min(iAlt,nAlts),1)
 
+
      Vars(1) = &
           rLon*Longitude(iiLon,iBlock)+(1-rLon)*Longitude(iiLon+1,iBlock)
      Vars(2) = &
           rLat*Latitude(iiLat,iBlock)+(1-rLat)*Latitude(iiLat+1,iBlock)
+
      Vars(3) = Altitude_GB(iiLon, iiLat, iAlt, iBlock)
 
      Tmp = Rho(0:nLons+1,0:nLats+1,iAlt,iBlock)
@@ -984,4 +1075,6 @@ contains
   end function inter
 
 end subroutine output_1dall
+
+
 

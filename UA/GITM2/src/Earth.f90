@@ -60,7 +60,8 @@ subroutine calc_planet_sources(iBlock)
   use ModInputs
   use ModSources
   use ModGITM
-
+  use ModTime
+  
   implicit none
 
   integer, intent(in) :: iBlock
@@ -140,6 +141,37 @@ subroutine calc_planet_sources(iBlock)
   endif
 
   RadCooling(1:nLons,1:nLats,1:nAlts,iBlock) = OCooling + NOCooling
+
+
+!--------------------------------------------------------------------
+! GLOW
+!--------------------------------------------------------------------
+
+if (UseGlow) then
+     if (dt < 10000.) then
+        if  (floor((tSimulation-dt)/DtGlow) /= &
+             floor(tsimulation/DtGlow)) then   
+
+           call start_timing("glow")
+           isInitialGlow = .True.
+
+           if (iDebugLevel > 4) write(*,*) "=====> going into get_glow", iproc
+
+           do iLat = 1, nLats
+              do iLon = 1, nLons
+
+                 call get_glow(iLon,iLat,iBlock)
+                 
+              enddo
+           enddo
+
+           call end_timing("glow")
+
+        endif
+     endif
+     PhotoElectronDensity(:,:,:,:,iBlock) = PhotoElectronRate(:,:,:,:,iBlock) * dt
+  endif
+
 
 end subroutine calc_planet_sources
 

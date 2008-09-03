@@ -1,5 +1,6 @@
 ABDIR   = ../srcSphereAB
 IODIR   = ${DATAREADINDICESDIR}
+GLDIR   = ../srcGlow
 
 SEARCH_EXTRA = -I${ABDIR} -I${IODIR} -I${EMPIRICALUADIR} -I${EMPIRICALIEDIR}
 
@@ -35,6 +36,7 @@ OBJECTS = \
 	calc_efield.o\
 	set_inputs.o\
 	init_energy_deposition.o\
+	get_glow.o\
 	init_grid.o\
 	time_routines.o\
 	vertical_solver.o\
@@ -101,7 +103,7 @@ GITM_general:
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} \
 		-L${ABDIR} -lSphere \
 		-L${LIBDIR} -lEMPIRICALIE -lEMPIRICALUA -lINDICES -lSHARE \
-		${LBLAS} ${Lflag1}
+		-L${GLDIR} -lGLOW ${LBLAS} ${Lflag1}
 
 GITM_for_Darwin:
 	rm -rf Tmp_; mkdir Tmp_
@@ -110,7 +112,8 @@ GITM_for_Darwin:
 		ar -x ${LIBDIR}/libEMPIRICALIE.a; \
 		ar -x ${LIBDIR}/libEMPIRICALUA.a; \
 		ar -x ${LIBDIR}/libINDICES.a; \
-		ar -x ${LIBDIR}/libSHARE.a
+		ar -x ${LIBDIR}/libSHARE.a; \
+		ar -x ../${GLDIR}/libGLOW.a
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} Tmp_/*.o ${LBLAS} ${Lflag1}
 	rm -rf Tmp_
 

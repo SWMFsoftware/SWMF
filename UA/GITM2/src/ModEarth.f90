@@ -5,6 +5,8 @@ module ModPlanet
 
   implicit none
 
+  logical            :: isFirstGlow = .True.  
+  logical            :: isInitialGlow 
   integer, parameter :: nSpecies = 4
   integer, parameter :: iO_3P_  = 1
   integer, parameter :: iO2_ = 2
@@ -32,7 +34,7 @@ module ModPlanet
   integer, parameter  :: ie_     = 10
   integer, parameter  :: nIons   = ie_
   integer, parameter  :: nIonsAdvect = 1
-
+  
   character (len=20) :: cSpecies(nSpeciesTotal)
   character (len=20) :: cIons(nIons)
 
@@ -49,6 +51,20 @@ module ModPlanet
   integer, parameter :: iE6364_ = 7
   
   integer, parameter :: nEmissions = 10
+  
+  integer, parameter :: i3371_ = 1
+  integer, parameter :: i4278_ = 2
+  integer, parameter :: i5200_ = 3
+  integer, parameter :: i5577_ = 4
+  integer, parameter :: i6300_ = 5
+  integer, parameter :: i7320_ = 6
+  integer, parameter :: i10400_ = 7
+  integer, parameter :: i3466_ = 8
+  integer, parameter :: i7774_ = 9
+  integer, parameter :: i8446_ = 10
+  integer, parameter :: i3726_ = 11
+  integer, parameter :: nEmissionWavelengths = 20
+  integer, parameter :: nPhotoBins = 190
 
   real, parameter :: GC_Earth               = 9.8                    ! m/s^2
   real, parameter :: RP_Earth               = 24.0*3600.0            ! seconds

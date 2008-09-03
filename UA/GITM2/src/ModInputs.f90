@@ -54,6 +54,7 @@ module ModInputs
   real :: DtReport    =  1.0*60.0
   real :: DtAurora    = 60.0*1.0
   real :: DtPotential = 60.0*1.0
+  real :: DtGlow      = 60.0
 
   real :: f107  = 150.0
   real :: f107a = 150.0
@@ -83,6 +84,8 @@ module ModInputs
 
   logical :: Is1D = .false.
   logical :: IsFullSphere = .false.
+  logical :: UseGlow = .false.
+
   real    :: LonStart = 0.0
   real    :: LatStart = -pi/4.0
   real    :: LatEnd   =  pi/4.0
@@ -125,7 +128,7 @@ module ModInputs
   logical :: UseNeutralDrag         = .true.
   logical :: UseExB                 = .true.
 
-  logical :: UseDynamo              = .true.
+  logical :: UseDynamo              = .false.
 
   logical :: UseSolarHeating   = .true.
   logical :: UseJouleHeating   = .true.
@@ -142,7 +145,7 @@ module ModInputs
   real :: EddyDiffusionPressure1 = 0.0
   real :: Kappa1DCorrectionFactor = 45.0
   real :: Kappa1DCorrectionPower  = 1.75
-  logical :: UseKappa1DCorrection = .true.
+  logical :: UseKappa1DCorrection = .false.
 
   logical :: UseIonChemistry     = .true.
   logical :: UseNeutralChemistry = .true.
