@@ -128,7 +128,7 @@ iAlt = 10
 
      do iSpecies = 1, nSpecies
         NDensityS(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock) =  &
-             NDensityS(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock)+ &
+             NDensityS(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock)- &
              Diffusion(1:nLons, 1:nLats, 1:nAlts, iSpecies)*Dt
      enddo
 
