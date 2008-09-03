@@ -80,13 +80,13 @@ subroutine advance_vertical_1stage( &
   ! With fluxes and sources based on LogRho..Temp, update NewLogRho..NewTemp
 
   use ModGITM, only: &
-       Dt, iO_3P_, iEast_, iNorth_, iUp_, TempUnit
+       Dt, iO_, iEast_, iNorth_, iUp_, TempUnit
   use ModPlanet
   use ModSizeGitm
   use ModVertical, only : &
        Heating, KappaNS, KappaTemp, Centrifugal, Coriolis, &
-       MeanMajorMass_1d, gamma_1d, EddyCoef_1d, InvRadialDistance_C, &
-       Gravity_G
+       MeanMajorMass_1d, Gamma_1d, InvRadialDistance_C, &
+       Gravity_G, Altitude_G
   use ModTime
   use ModInputs
   use ModConstants
@@ -124,12 +124,23 @@ subroutine advance_vertical_1stage( &
   integer :: iAlt, iSpecies, jSpecies, iDim
 
   real, dimension(-1:nAlts+2)    :: NT
-  real, dimension(-1:nAlts+2,nSpecies) :: LogCon
-  real, dimension(1:nAlts,nSpecies)    :: GradLogCon, DiffLogCon
-  real, dimension(-1:nAlts+2,nSpecies) :: EddyVel
-  real, dimension(1:nAlts,nSpecies)    :: GradEddyVel, DivEddyVel, DiffEddyVel
+  real, dimension(-1:nAlts+2)    :: Press, LogPress
+  real, dimension(1:nAlts)    :: DiffLogPress, GradLogPress
+  real, dimension(1:nAlts,nSpecies)    :: EddyDiffusionVel
 
   real :: nVel(1:nAlts,1:nSpecies)
+  integer :: nFilter, iFilter
+  real :: LowFilter
+
+!\
+! Parameters Used for the Sponge
+! This Sponge is useful to dampen out spurious modes
+! oscillating between the bottom and top of the model.
+
+  integer :: nAltsSponge = 12
+  real :: kSP, NuSP, AmpSP
+
+
 
   !--------------------------------------------------------------------------
 
@@ -139,14 +150,15 @@ subroutine advance_vertical_1stage( &
   AveMass = Rho/sum(NS,dim=2)
   TempKoM = Temp
   Pressure1D = sum(NS,dim=2) * Temp * Boltzmanns_Constant
+  nFilter = 10
 
-  if (UseEddyInSolver) then
      NT(-1:nAlts+2) = exp(LogNum(-1:nAlts+2))
-     do iAlt = -1, nAlts+2
-        LogCon(iAlt,:) = alog( abs(NS(iAlt,:)/NT(iAlt)) )
-     enddo
-  endif
+  do iAlt = -1, nAlts + 2
+    Press(iAlt) = NT(iAlt)*Boltzmanns_Constant*Temp(iAlt)
+    LogPress(iAlt) = alog(Press(iAlt))
+  enddo
 
+  call calc_rusanov_alts(LogPress ,GradLogPress,  DiffLogPress)
   call calc_rusanov_alts(LogRho ,GradLogRho,  DiffLogRho)
   call calc_rusanov_alts(LogNum ,GradLogNum,  DiffLogNum)
   call calc_rusanov_alts(Temp   ,GradTemp,    DiffTemp)
@@ -170,31 +182,6 @@ subroutine advance_vertical_1stage( &
      DivVertVel(:,iSpecies) = GradVertVel(:,iSpecies) + &
           2*VertVel(1:nAlts,iSpecies)*InvRadialDistance_C
 
-     if (UseEddyInSolver) then
-
-        call calc_rusanov_alts( LogCon(:,iSpecies), GradTmp, DiffTmp)
-        GradLogCon(:,iSpecies) = GradTmp
-        DiffLogCon(:,iSpecies) = DiffTmp
-
-        EddyVel(1:nAlts,iSpecies) = -EddyCoef_1d(1:nAlts) * &
-             GradLogCon(1:nAlts,iSpecies)
-
-        EddyVel(-1:0,iSpecies) = EddyVel(1,iSpecies)
-        EddyVel(nAlts+1:nAlts+2,iSpecies) = EddyVel(nAlts,iSpecies)
-
-        call calc_rusanov_alts(EddyVel(:,iSpecies),GradTmp, DiffTmp)
-        GradEddyVel(:,iSpecies) = GradTmp
-        DiffEddyVel(:,iSpecies) = DiffTmp
-        DivEddyVel(1:nAlts,iSpecies) = GradEddyVel(1:nAlts,iSpecies) + &
-             2*EddyVel(1:nAlts,iSpecies)*InvRadialDistance_C
-
-     else
-
-        EddyVel(:,iSpecies) = 0.0
-        DivEddyVel(:,iSpecies) = 0.0
-
-     endif
-
   enddo
 
   do iSpecies=1,nIonsAdvect
@@ -202,6 +189,10 @@ subroutine advance_vertical_1stage( &
      GradLogINS(:,iSpecies) = GradTmp
      DiffLogINS(:,iSpecies) = DiffTmp
   enddo
+
+
+  AmpSP = (1.0/(10.0*Dt))
+  kSP = nAltsSponge + 1
 
   do iAlt = 1,nAlts
 
@@ -212,10 +203,8 @@ subroutine advance_vertical_1stage( &
      do iSpecies=1,nSpecies
         NewLogNS(iAlt,iSpecies) = LogNS(iAlt,iSpecies) - Dt * &
              (DivVertVel(iAlt,iSpecies) + &
-             VertVel(iAlt,iSpecies) * GradLogNS(iAlt,iSpecies) + &
-             DivEddyVel(iAlt,iSpecies) + &
-             EddyVel(iAlt,iSpecies) * GradLogNS(iAlt,iSpecies)) &
-             + Dt * DiffLogNS(iAlt,iSpecies)
+             VertVel(iAlt,iSpecies) * GradLogNS(iAlt,iSpecies) ) + &
+              Dt * DiffLogNS(iAlt,iSpecies)
      enddo
 
      do iSpecies=1,nIonsAdvect
@@ -236,18 +225,30 @@ subroutine advance_vertical_1stage( &
 
      NewVel_GD(iAlt,iUp_) = 0.0
 
+
+     if (iAlt >= (nAlts - nAltsSponge)) then
+ 
+      NuSP = AmpSP*(1.0 - cos( pi*(kSP - (nAlts - iAlt))/kSP) )
+
+     else
+
+       NuSP = 0.0
+
+     endif
+
      do iSpecies=1,nSpecies
 
         ! Version of vertical velocity with grad(p) and g here :
+
         NewVertVel(iAlt, iSpecies) = VertVel(iAlt, iSpecies) - Dt * &
              (VertVel(iAlt,iSpecies)*GradVertVel(iAlt,iSpecies) &
              - (Vel_GD(iAlt,iNorth_)**2 + Vel_GD(iAlt,iEast_)**2) &
              * InvRadialDistance_C(iAlt) + &
-             Temp(iAlt)*gradLogNS(iAlt,iSpecies) * Boltzmanns_Constant / &
+             Temp(iAlt)*GradLogNS(iAlt,iSpecies) * Boltzmanns_Constant / &
              Mass(iSpecies) + &
-             gradtemp(iAlt) * Boltzmanns_Constant / Mass(iSpecies) &
+             GradTemp(iAlt) * Boltzmanns_Constant / Mass(iSpecies) &
              - Gravity_G(iAlt)) &
-             + Dt * DiffVertVel(iAlt,iSpecies)
+             + Dt * DiffVertVel(iAlt,iSpecies) 
 
         if (UseCoriolis) then
            NewVertVel(iAlt,ispecies) = NewVertVel(iAlt,ispecies) + Dt * ( &
@@ -258,20 +259,6 @@ subroutine advance_vertical_1stage( &
      enddo
 
   enddo
-
-  if (UseNeutralFriction .and. UseNeutralFrictionInSolver) then
-
-     do iAlt = 1, nAlts
-        nVel(iAlt,:) = NewVertVel(iAlt,:)
-     enddo
-
-     call calc_neutral_friction(nVel)
-
-     do iAlt = 1,nAlts
-        NewVertVel(iAlt,:) = nVel(iAlt,:) 
-     enddo
-
-  endif
 
   do iAlt = 1, nAlts
 
@@ -303,20 +290,20 @@ subroutine advance_vertical_1stage( &
      ! dT/dt = -(V.grad T + (gamma - 1) T div V +  &
      !        (gamma - 1) * g  * grad (KeH^2  * rho) /rho 
 
-     if (Pressure1D(ialt) > EddyDiffusionPressure0) then
-        ed = EddyDiffusionCoef * 0.8
-        NewTemp(iAlt)   = NewTemp(iAlt) - Dt * &
-             (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
-             (Gamma_1d(iAlt) - 1.0) * Temp(iAlt)*DivVel(iAlt))&
-             + Dt * (Gamma_1d(iAlt) - 1.0) * (- Gravity_G(iAlt)) * &
-             ed * GradLogRho(iAlt) &
-             + Dt * DiffTemp(iAlt)
-     else
         NewTemp(iAlt)   = NewTemp(iAlt) - Dt * &
              (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
              (Gamma_1d(iAlt) - 1.0) * Temp(iAlt)*DivVel(iAlt))&
              + Dt * DiffTemp(iAlt)
-     endif
+
+        NewTemp(iAlt)   = NewTemp(iAlt) + &
+             Dt*Vel_GD(iAlt,iUp_)* &
+             ( (Gamma_1d(iAlt) - 1.0)/Gamma_1d(iAlt) )*&
+               Temp(iAlt)*GradLogPress(iAlt)
+
+!       if( NewTemp(iAlt) <= 140.0) then
+!          NewTemp(iAlt) = 140.0
+!       endif
+
 
   end do
 
