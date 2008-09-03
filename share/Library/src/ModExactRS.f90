@@ -6,7 +6,7 @@ module ModExactRS
   real        ::PStar,UnStar !pressure and velocity in the Star Region
   real        ::RhoL, UnL, PL, RhoR, UnR, PR !Rho,Un,P: (L)eft and (R)ight
   real,private::CL,CR       !Sound speeds
-  real,private::WL,WR       !Total perturbation speed 
+  real::WL,WR       !Total perturbation speed 
                             !(advection+speed of sound for weak wave)
                             !Shock wave speed for a shock.
 contains
