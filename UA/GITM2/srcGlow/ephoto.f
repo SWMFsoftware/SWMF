@@ -106,7 +106,7 @@ C calculate energy losses:
 C
       IF (EPFIRST .EQ. 1) THEN
       
-      open(unit=1,file='../srcGlow/ephoto_xn2.dat',status='old')
+      open(unit=1,file='UA/DataIn/ephoto_xn2.dat',status='old')
       read(1,*)
       read(1,*)
       read(1,*)
@@ -117,7 +117,7 @@ C
  3       continue
       close(1)
 C
-      open(unit=1,file='../srcGlow/ephoto_xo2.dat',status='old')
+      open(unit=1,file='UA/DataIn/ephoto_xo2.dat',status='old')
       read(1,*)
       read(1,*)
       read(1,*)
@@ -127,7 +127,7 @@ C
  4    continue
       close(1)
 C 
-      open(unit=1,file='../srcGlow/ephoto_xo.dat',status='old')
+      open(unit=1,file='UA/DataIn/ephoto_xo.dat',status='old')
       read(1,*)
       read(1,*)
       read(1,*)
