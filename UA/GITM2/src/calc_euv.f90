@@ -113,12 +113,23 @@ subroutine euv_ionization_heat(iBlock)
   ! Zero out EuvHeating if specified not to use it.
   !/
 
+
   if (UseSolarHeating) then
      do iAlt = 1, nAlts
+        
+
         EuvHeating(:,:,iAlt,iBlock) = EuvHeating(:,:,iAlt,iBlock) / &
            Rho(1:nLons,1:nLats,iAlt,iBlock) / &
            cp(1:nLons,1:nLats,iAlt,iBlock) / &
            TempUnit(1:nLons,1:nLats,iAlt)
+
+        EuvTotal(:,:,iAlt,iBlock) = EuvHeating(:,:,iAlt,iBlock) * &
+             TempUnit(1:nLons,1:nLats,iAlt) / &
+             HeatingEfficiency_CB(:,:,iAlt,iBlock)
+
+        
+
+
      enddo
   else
      EuvHeating = 0.0
