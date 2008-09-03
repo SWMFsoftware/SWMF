@@ -8,6 +8,7 @@ EIEDIR  = ${EMPIRICALIEDIR}
 EUADIR  = ${EMPIRICALUADIR}
 IODIR   = ${DATAREADINDICESDIR}
 MAINDIR = src
+GLDIR   = srcGlow
 
 PLANET=earth
 
@@ -31,6 +32,7 @@ GITM:
 	@cd $(EIEDIR);   make LIB
 	@cd ${EUADIR};   make LIB
 	@cd $(IODIR);    make LIB
+	@cd $(GLDIR);	 make LIB
 	@cd $(MAINDIR);  make GITM
 
 POST:
@@ -39,9 +41,10 @@ POST:
 GITM2 = ${DIR}/UA/GITM2
 
 LIB:
-	cd $(ABDIR)     ; make                                       LIB
-	cd $(MAINDIR)   ; make LIBPREV=${GITM2}/${ABDIR}/libSphere.a LIB
-	cd srcInterface ; make LIBPREV=${GITM2}/${MAINDIR}/libUA.a   LIB
+	cd $(ABDIR)     ; make                                         LIB
+	cd $(GLDIR)     ; make LIBPREV=${GITM2}/${IODIR}/libABIEEDIO.a LIBADD
+	cd $(MAINDIR)   ; make LIBPREV=${GITM2}/${ABDIR}/libSphere.a   LIBADD
+	cd srcInterface ; make LIBPREV=${GITM2}/${MAINDIR}/libUA.a     LIB
 
 nompirun:
 	make GITM
@@ -51,6 +54,7 @@ clean:
 	@touch ${INSTALLFILES}
 	@cd $(ABDIR);    make clean
 	@cd $(MAINDIR);  make clean
+	@cd $(GLDIR);    make clean
 	@cd srcInterface;make clean
 	@(if [ -d share ]; then cd share; make clean; fi);
 	@(if [ -d util ];  then cd util;  make clean; fi);
