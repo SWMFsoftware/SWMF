@@ -191,7 +191,7 @@ subroutine output(dir, iBlock, iOutputType)
 
   case ('3DTHM')
 
-     nvars_to_write = 16
+     nvars_to_write = 11
      call output_3dthm(iBlock)
 
   case ('3DCHM')
@@ -340,11 +340,11 @@ contains
        write(iOutputUnit_,"(I7,A1,a)")  9, " ", "NO Cooling"
        write(iOutputUnit_,"(I7,A1,a)") 10, " ", "O Cooling"
        write(iOutputUnit_,"(I7,A1,a)") 11, " ", "Total Abs EUV"
-       write(iOutputUnit_,"(I7,A1,a)") 12, " ", "EUV Heating Rate"
-       write(iOutputUnit_,"(I7,A1,a)") 13, " ", "Conduction Rate"
-       write(iOutputUnit_,"(I7,A1,a)") 14, " ", "Chemical Heating Rate"
-       write(iOutputUnit_,"(I7,A1,a)") 15, " ", "NO Cooling Rate"
-       write(iOutputUnit_,"(I7,A1,a)") 16, " ", "O Cooling Rate"
+!      write(iOutputUnit_,"(I7,A1,a)") 12, " ", "EUV Heating Rate"
+!       write(iOutputUnit_,"(I7,A1,a)") 13, " ", "Conduction Rate"
+!       write(iOutputUnit_,"(I7,A1,a)") 14, " ", "Chemical Heating Rate"
+!       write(iOutputUnit_,"(I7,A1,a)") 15, " ", "NO Cooling Rate"
+!       write(iOutputUnit_,"(I7,A1,a)") 16, " ", "O Cooling Rate"
        
     endif
 
@@ -765,17 +765,17 @@ subroutine output_3dthm(iBlock)
                 JouleHeating(iiLon,iLat,iiAlt)*dt*TempUnit(iiLon,iLat,iiAlt),         &
                 -NOCooling(iiLon,iLat,iiAlt)*dt*TempUnit(iiLon,iLat,iiAlt),           &
                 -OCooling(iiLon,iLat,iiAlt)*dt*TempUnit(iiLon,iLat,iiAlt),            &
-                EuvTotal(iiLon,iLat,iiAlt,iBlock) * dt,                              &
-                EUVHeating(iiLon,iLat,iiAlt,iBlock)*cp(iiLon,iLat,iiAlt,iBlock) *     &
-                Rho(iiLon,iLat,iiAlt,iBlock)*TempUnit(iiLon,iLat,iiAlt),            &
-                Conduction(iiLon,iLat,iiAlt)*cp(iiLon,iLat,iiAlt,iBlock) *            &
-                Rho(iiLon,iLat,iiAlt,iBlock)*TempUnit(iiLon,iLat,iiAlt),            &
-                ChemicalHeatingRate(iiLon,iLat,iiAlt)*cp(iiLon,iLat,iiAlt,iBlock) *   &
-                Rho(iiLon,iLat,iiAlt,iBlock)*TempUnit(iiLon,iLat,iiAlt),            &
-                NOCooling(iiLon,iLat,iiAlt)*cp(iiLon,iLat,iiAlt,iBlock) *            &
-                Rho(iiLon,iLat,iiAlt,iBlock)*TempUnit(iiLon,iLat,iiAlt),            &
-                OCooling(iiLon,iLat,iiAlt)*cp(iiLon,iLat,iiAlt,iBlock) *             &
-                Rho(iiLon,iLat,iiAlt,iBlock)*TempUnit(iiLon,iLat,iiAlt)
+                EuvTotal(iiLon,iLat,iiAlt,iBlock) * dt
+!                EUVHeating(iiLon,iLat,iiAlt,iBlock)*cp(iiLon,iLat,iiAlt,iBlock) *     &
+!                Rho(iiLon,iLat,iiAlt,iBlock)*TempUnit(iiLon,iLat,iiAlt),            &
+!                Conduction(iiLon,iLat,iiAlt)*cp(iiLon,iLat,iiAlt,iBlock) *            &
+!                Rho(iiLon,iLat,iiAlt,iBlock)*TempUnit(iiLon,iLat,iiAlt),            &
+!                ChemicalHeatingRate(iiLon,iLat,iiAlt)*cp(iiLon,iLat,iiAlt,iBlock) *   &
+!                Rho(iiLon,iLat,iiAlt,iBlock)*TempUnit(iiLon,iLat,iiAlt),            &
+!                NOCooling(iiLon,iLat,iiAlt)*cp(iiLon,iLat,iiAlt,iBlock) *            &
+!                Rho(iiLon,iLat,iiAlt,iBlock)*TempUnit(iiLon,iLat,iiAlt),            &
+!                OCooling(iiLon,iLat,iiAlt)*cp(iiLon,iLat,iiAlt,iBlock) *             &
+!                Rho(iiLon,iLat,iiAlt,iBlock)*TempUnit(iiLon,iLat,iiAlt)
            
         enddo
      enddo
