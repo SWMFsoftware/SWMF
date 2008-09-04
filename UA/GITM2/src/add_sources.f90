@@ -132,7 +132,6 @@ iAlt = 10
 !             Diffusion(1:nLons, 1:nLats, 1:nAlts, iSpecies)*Dt
 !     enddo
 
-
      do iLon = 1, nLons
         do iLat = 1, nLats
            do iAlt = 1, nAlts

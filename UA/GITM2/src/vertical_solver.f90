@@ -80,7 +80,7 @@ subroutine advance_vertical_1stage( &
   ! With fluxes and sources based on LogRho..Temp, update NewLogRho..NewTemp
 
   use ModGITM, only: &
-       Dt, iO_3P_, iEast_, iNorth_, iUp_, TempUnit
+       Dt, iO_, iEast_, iNorth_, iUp_, TempUnit
   use ModPlanet
   use ModSizeGitm
   use ModVertical, only : &
