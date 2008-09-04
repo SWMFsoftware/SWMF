@@ -31,7 +31,7 @@ module ModMultiIon
   integer :: nPowerCutOff = 0
   real :: MachNumberMultiIon = 0.0
   real :: ParabolaWidthMultiIon = 0.0
-  logical:: IsAnalyticJacobean = .false. !!! should be always true eventually
+  logical:: IsAnalyticJacobian = .false. !!! should be always true eventually
 
 contains
 
@@ -53,13 +53,13 @@ contains
           call read_var('ParabolaWidthMultiIon', ParabolaWidthMultiIon)
        end if
 !!! Temporary. Should be done analytically all the time eventually
-       call read_var('IsAnalyticJacobean', IsAnalyticJacobean)
-       IsPointImplMatrixSet = IsAnalyticJacobean
+       call read_var('IsAnalyticJacobian', IsAnalyticJacobian)
+       IsPointImplMatrixSet = IsAnalyticJacobian
     case("#COLLISION")
        call read_var('CollisionCoefDim', CollisionCoefDim)
        call read_var('TauCutOff', TauCutOffDim)
        if(TauCutOffDim > 0.0)then
-          call read_var('uCutOff', uCutOffDim)
+          call read_var('uCutOffDim', uCutOffDim)
           call read_var('nPowerCutOff', nPowerCutOff)
        end if
     end select
@@ -99,7 +99,7 @@ contains
        RhoUx = State_VGB(RhoUx_,i,j,k,iBlock)
           
        IsMultiIon_CB(i,j,k,iBlock) = .not. &
-            (RhoUx < 0.0 .and. RhoUx**2 > MachNumberMultiIon*g*p*Rho &
+            (RhoUx < 0.0 .and. RhoUx**2 > MachNumberMultiIon**2*g*p*Rho &
             .and. y_BLK(i,j,k,iBlock)**2 + z_BLK(i,j,k,iBlock)**2 > &
             -ParabolaWidthMultiIon * x_BLK(i,j,k,iBlock))
 
@@ -159,9 +159,9 @@ contains
     character (len=*), parameter :: NameSub = 'multi_ion_sources'
     logical :: DoTest, DoTestMe, DoTestCell
 
-    ! Variables for analytic Jacobean
+    ! Variables for analytic Jacobian
     integer :: iDim, jDim, kDim, iUi, iUk
-    real    :: SignedB, ForceCoeff, Coeff, CoefJacobean, Du2
+    real    :: SignedB, ForceCoeff, Coeff, CoefJacobian, Du2
     real    :: Du_D(3)
     !-----------------------------------------------------------------------
     if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
@@ -179,9 +179,9 @@ contains
     ! Explicit user sources are added in calc_sources
     if(UsePointImplicit .and. UseUserSource) call user_calc_sources
 
-    ! Do not evaluate multi-ion sources in the numerical Jacobean calculation
+    ! Do not evaluate multi-ion sources in the numerical Jacobian calculation
     ! (needed for the user source terms) 
-    if(IsPointImplPerturbed .and. IsAnalyticJacobean) RETURN
+    if(IsPointImplPerturbed .and. IsAnalyticJacobian) RETURN
 
     ! Add source term n_s*(- u_+ - w_H + u_s )xB for multi-ions
     ! where u_+ is the number density weighted average ion velocity,
@@ -299,7 +299,7 @@ contains
           end if
 
           ! Set corresponding matrix element
-          if (IsAnalyticJacobean) then
+          if (IsAnalyticJacobian) then
              do kDim = 1,nDim
                 iUk = iUxIon_I(iIon) + kDim - 1
                 do iDim = 1,nDim
@@ -307,7 +307,7 @@ contains
                    jDim = 6 - kDim - iDim
                    SignedB = iLeviCivita_III(iDim, jDim, kDim)*FullB_D(jDim)
 
-                   ! This Jacobean term occurs with respect with the same fluid
+                   ! This Jacobian term occurs with respect with the same fluid
                    iUi = iUxIon_I(iIon) + iDim - 1
                    DsDu_VVC(iUk, iUi, i, j, k) = DsDu_VVC(iUk, iUi, i, j, k) & 
                         + ForceCoeff*SignedB*InvRho_I(iIon)
@@ -365,25 +365,25 @@ contains
                 !     + gm1*sum((uIon2_D - uIon_D)**2) )
              
                 ! Calculate corresponding matrix elements
-                if (TauCutOffDim > 0.0 .and. IsAnalyticJacobean) then
+                if (TauCutOffDim > 0.0 .and. IsAnalyticJacobian) then
 
                    ! du = u^iIon - u^jIon
                    Du_D = uIon_D - uIon2_D
 
-                   ! Common coefficient: CoefJacobean = 
+                   ! Common coefficient: CoefJacobian = 
                    !  1/tau * min(rho^iIon, rho^jIon) * (1/u_0)^2n * (du^2)^n-1
-                   CoefJacobean = InvTauCutOff &
+                   CoefJacobian = InvTauCutOff &
                         * min(Rho_I(iIon), Rho_I(jIon)) &
                         * InvUCutOff2 ** nPowerCutOff &
                         * Du2 ** (nPowerCutOff - 1)
 
-                   ! Add dFriction/d(RhoU) elements to the Jacobean
+                   ! Add dFriction/d(RhoU) elements to the Jacobian
                    do kDim = 1,nDim
                       ! k component of RhoU^iIon
                       iUk = iUxIon_I(iIon) + kDim - 1
                       do iDim = 1,nDim
 
-                         ! dFriction^iIon_k/d(RhoU^iIon_i) = -CoefJacobean
+                         ! dFriction^iIon_k/d(RhoU^iIon_i) = -CoefJacobian
                          !  *(2*n*du_i*du_k/rho^iIon + delta_ik*du^2/rho^iIon)
 
                          iUi = iUxIon_I(iIon) + iDim - 1
@@ -391,12 +391,12 @@ contains
                               DsDu_VVC(iUk, iUi, i, j, k) &
                               - 2.0 * nPowerCutOff * InvRho_I(iIon) &
                               * Du_D(iDim) * Du_D(kDim) & 
-                              *  CoefJacobean
+                              *  CoefJacobian
                          if (iDim == kDim) DsDu_VVC(iUk, iUi, i, j, k) = &
                               DsDu_VVC(iUk, iUi, i, j, k) & 
-                              - CoefJacobean * Du2 *InvRho_I(iIon)
+                              - CoefJacobian * Du2 *InvRho_I(iIon)
 
-                         ! dFriction^iIon_k/d(RhoU^jIon_i) = +CoefJacobean
+                         ! dFriction^iIon_k/d(RhoU^jIon_i) = +CoefJacobian
                          !  *(2*n*du_i*du_k/rho^jIon + delta_ik*du^2/rho^jIon)
 
                          iUi = iUxIon_I(jIon) + iDim - 1
@@ -404,10 +404,10 @@ contains
                               DsDu_VVC(iUk, iUi, i, j, k) &
                               + 2.0 * nPowerCutOff *InvRho_I(jIon) &
                               * Du_D(iDim) * Du_D(kDim) &
-                              * CoefJacobean
+                              * CoefJacobian
                          if (iDim == kDim)DsDu_VVC(iUk, iUi, i, j, k)  = &
                               DsDu_VVC(iUk, iUi, i, j, k) & 
-                              + CoefJacobean * Du2 *InvRho_I(jIon)
+                              + CoefJacobian * Du2 *InvRho_I(jIon)
                       end do
                    end do
                 end if
@@ -452,7 +452,7 @@ contains
     !------------------------------------------------------------------------
 
     IsPointImpl_V = .false.
-    IsPointImplMatrixSet = IsAnalyticJacobean
+    IsPointImplMatrixSet = IsAnalyticJacobian
 
     if(UseUserSource)then
        call user_init_point_implicit
