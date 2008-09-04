@@ -3450,17 +3450,6 @@ density and pressure cannot change by more than the given percentages
 in a single timestep.
 </command>
 
-<command name="MULTIFLUID">
-	<parameter name="UseTotalSpeed" type="logical" default="T"/>
-#MULTIFLUID
-F		UseTotalSpeed
-
-Allows using individual maximum speeds for the numerical diffusion for 
-each fluid. This is useful for weakly coupled fluids, e.g. 
-low densitiy ions and neutrals. Default is to use the same maximum speed
-for the diffusion of all the fluids.
-</command>
-
 <command name="MULTISPECIES">
 	<parameter name="DoReplaceDensity" type="logical" default="T"/>
 	<parameter name="SpeciesPercentCheck" type="real" min="0" max="100"
@@ -3479,6 +3468,114 @@ or exceeding 1 per cent are checked for large changes (see the
 #UPDATECHECK command).
 
 Default values are shown.
+</command>
+
+<command name="MULTIFLUID">
+	<parameter name="UseTotalSpeed" type="logical" default="T"/>
+#MULTIFLUID
+F		UseTotalSpeed
+
+Allows using individual maximum speeds for the numerical diffusion for 
+each fluid. This is useful for weakly coupled fluids, e.g. 
+low densitiy ions and neutrals. Default is to use the same maximum speed
+for the diffusion of all the fluids.
+</command>
+
+<command name="MULTIION">
+	<parameter name="LowDensityRatio" type="real" min="0" max="1"
+		default="0.0001" />
+	<parameter name="DoRestrictMultiIon" type="logical" default="F" />
+	<if expr="$DoRestrictMultiIon">
+		<parameter name="MachNumberMultiIon" type="real" min="1"
+			default="9" />
+		<parameter name="ParabolaWidthMultiIon" type="real" min="0"
+			default="30" />
+	</if>
+	<parameter name="IsAnalyticJacobian" type="logical" default="F" />
+#MULTIION
+0.0001			LowDensityRatio
+T			DoRestrictMultiIon
+3.0			MachNumberMultiIon (read if DoRestrictMultiIon)
+30.0			ParabolaWidthMultiIon (read if DoRestrictMultiIon)
+T			IsAnalyticJacobian
+
+This command is useful for multiion simulations. Since the numerical schemes
+cannot handle zero densities or temperatures, it is necessary to have all the
+ions present in the whole computational domain. The parameters of this
+command determine how the code behaves in regions where one of the ions
+is dominant.
+
+The LowDensityRatio parameter determines the relative density of the minor 
+ion fluids in regions where essentially only one ion fluid is present. 
+
+If DoRestrictMultiIon is true, the first ion fluid is set to be dominant
+in the region determined by the MachNumberMultiIon and ParabolaWidthMultiIon
+parameters. The current parametrization tries to find the region occupied
+by the solar wind outside the bow shock. The region is identified as
+the velocity being negative and the hydrodynamic Mach number in the X 
+direction is being larger than MachNumberMultiIon and the point being
+outside the paraboloid determined by the 
+$y^2 + z^2 + x*ParabolaWidthMultiIon = 0$ equation.
+
+The IsAnalyticJacobian parameter is temporary. It will be removed soon.
+It determines whether the Jacobian matrix used in the point implicit 
+evaluation of the multi-ion source is calculated analytically or numerically.
+Currently the default is a numerical evaluation, but it will be changed
+to analytic, since that is faster.
+
+The defaults are LowDensityRatio=0.0001, DoRestrictMultiIon false and
+IsAnalyticJacobian false.
+</command>
+
+<command name="COLLISION">
+	<parameter name="CollisionCoefDim" type="real" min="-1" />
+	<parameter name="TauCutOffDim" type="real" min="-1" default="1000"/>
+	<if expr="$TauCutOffDim&gt;0">
+		<parameter name="uCutOffDim" type="real" min="0" 
+			default="100"/>
+		<parameter name="nPowerCutOff" type="integer" min="1" max="3"
+			default="2" />
+	</if>
+#COLLISION
+-1.0                            CollisionCoefDim
+1.0e3                           TauCutOffDim [s]
+100.0                           uCutOffDim [km/s] read if TauCutOffDim positive
+2                               nPowerCutOff read if TauCutOffDim positive
+
+This command is only useful for multiion simulations. It determines the
+parameters for physical collisions and artificial friction. 
+
+If the CollisionCoefDim parameter is negative the ion-ion collisions are
+neglected. This is typically a very good approximation in the low density
+plasma of space physics. The collisions may be important in the ionosphere
+of unmagnetized planets. For positive value the collision rate is taken
+to be CollisionCoefDim$*n/T^{1.5}$ where $T$ is the temperature measured in 
+Kelvin, $n$ is the number density measured in $/cm^{-3}$ and the 
+resulting rate is in units of $1/s$.
+Note that this feature is implemented but it has not been tested yet.
+
+If the TauCutOffDim parameter is negative the relative velocity of the
+ion fluids (especially parallel to the magnetic field) can become very
+large. In reality the streaming instability limits the relative speed. 
+Instead of trying to model the effect of the streaming instability,
+in the current implementation we apply a simple friction term.
+If TauCutOffDim is positive, it gives the time rate of the friction,
+the uCutOffDim determines the speed difference where the friction
+term becomes large, and the nPowerCutOff is the exponent applied
+to the square of the velocity difference. The friction force is
+applied between all pairs of ion fluids, and it is
+
+$(1/TauCutOffDim)\min(\rho_i, \rho_j)(u_j-u_i)
+     [(u_i-u_j)^2/uCutOffDim^2]^{nPowerCutOff}$.
+
+where i and j are the indexes of two different ion fluids and u is
+the velocity vector.
+Note that the friction force is proportional to the smaller of the 
+two densities so that the acceleration of the minor ion fluid is independent
+of the density of the major ion fluid.
+
+The default values are CollisionCoefDim=-1 and TauCutOffDim=-1, ie. 
+neither collision, nor friction are applied.
 </command>
 
 <command name="PROLONGATION">
@@ -3578,20 +3675,36 @@ Default value is false, which results in first order
 prolongation and restriction operators at the resolution changes.
 </command>
 
-<command name="LIMITSCALARTORHORATIO">
-	<parameter name="UseScalarToRhoRatioLtd" type="logical" default="F" />
-#LIMITSCALARTORHORATIO
-T		UseSlalarToRhoRatioLtd
+<command name="LIMITER">
+	<parameter name="UseLogRhoLimiter" type="logical" default="F" />
+	<parameter name="UseLogPLimiter" type="logical" default="F" />
+	<parameter name="UseScalarPerRhoLimiter" type="logical" default="F" />
 
-For UseSlalarToRhoRatioLtd=T the passive scalar variables are limited 
-in the following way: (1) the cell centered values or the passive scalars are
-related to the cell-centered value of the mass density; (2) the scalar-to-rho
-ratios are prololnged to the face usnig the limited reconstruction precedure;
-(3) the reconstructed values of the slalar-to-rho ratio(s) are multiplied by 
-the face values of the mass density . 
+#LIMITER
+F		UseLogRhoLimiter
+F		UseLogPLimiter
+T		UseScalarPerRhoLimiter
 
-Default value is false, which results in the limited reconstruction procedure
-directly applied to the passive scalar variable.
+The spatially second order scheme uses a limited reconstruction to obtain
+face values from the cell center values. The order of the scheme and the
+type of the limiter can be set in the #SCHEME command. This command 
+provides additional options to the limiting procedure.
+
+If UseLogRhoLimiter is true, the logarithm of the density is limited instead
+of the density itself. This can reduce numerical diffusion in regions where
+the density changes exponentially with distance (e.g. in the solar corona).
+
+If UseLogPLimiter is true, the logarithm of pressure is limited instead of
+the pressure itself. 
+
+If UseScalarPerRhoLimiter is true, the passive scalar variables are divided by
+the total density before the limiter is applied (and then multiplied back
+by the density at the face after the limiting is completed). This modification
+is useful for the high energy density simulations of the CRASH project,
+where the passive scalar is the internal energy associated with ionization. 
+
+Default values are false for all variables, which results in the limited 
+reconstruction procedure directly applied to the original variables.
 </command>
 
 <command name="CLIMIT">
