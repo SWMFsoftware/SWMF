@@ -3,35 +3,43 @@ use strict;
 
 # Default compiler per machine or OS
 my %Compiler = (
-		"Linux"   => "f95",
-		"Darwin"  => "f95",
-		"OSF1"    => "f90",
-		"IRIX64"  => "f90",
-		"AIX"     => "xlf90",
-		"palm"    => "ifort",
-		"cfe1"    => "ifort",
-		"cfe2"    => "ifort",
-		"cfe3"    => "ifort",
-		"cfe4"    => "ifort",
-		"sysx1"   => "xlf90",
-		"sysx2"   => "xlf90",
-		"sysx3"   => "xlf90",
-		"sysx4"   => "xlf90"
+		"Linux"     => "f95",
+		"Darwin"    => "f95",
+		"OSF1"      => "f90",
+		"IRIX64"    => "f90",
+		"AIX"       => "xlf90",
+		"palm"      => "ifort",
+		"cfe1"      => "ifort",
+		"cfe2"      => "ifort",
+		"cfe3"      => "ifort",
+		"cfe4"      => "ifort",
+		"columbia1" => "ifort",
+		"columbia2" => "ifort",
+		"columbia3" => "ifort",
+		"columbia4" => "ifort",
+		"sysx1"     => "xlf90",
+		"sysx2"     => "xlf90",
+		"sysx3"     => "xlf90",
+		"sysx4"     => "xlf90"
 		);
 
 # Default MPI library per machine or OS
 my %MpiVersion = (
-		  "Linux"   => "mpich",
-		  "Darwin"  => "mpich",
-		  "OSF1"    => "mpich",
-		  "AIX"     => "IBM",
-		  "IRIX64"  => "SGI",
-		  "palm"    => "Altix",
-		  "cfe1"    => "Altix",
-		  "cfe2"    => "Altix",
-		  "cfe3"    => "Altix",
-		  "cfe4"    => "Altix",
-		  "grendel" => "openmpi",
+		  "Linux"     => "mpich",
+		  "Darwin"    => "mpich",
+		  "OSF1"      => "mpich",
+		  "AIX"       => "IBM",
+		  "IRIX64"    => "SGI",
+		  "palm"      => "Altix",
+		  "cfe1"      => "Altix",
+		  "cfe2"      => "Altix",
+		  "cfe3"      => "Altix",
+		  "cfe4"      => "Altix",
+		  "columbia1" => "Altix",
+		  "columbia2" => "Altix",
+		  "columbia3" => "Altix",
+		  "columbia4" => "Altix",
+		  "grendel"   => "openmpi",
 		  );
 
 my $WARNING_='share/Scripts/Config.pl WARNING:';
