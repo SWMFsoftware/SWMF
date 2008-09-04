@@ -13,10 +13,6 @@ my %Compiler = (
 		"cfe2"      => "ifort",
 		"cfe3"      => "ifort",
 		"cfe4"      => "ifort",
-		"columbia1" => "ifort",
-		"columbia2" => "ifort",
-		"columbia3" => "ifort",
-		"columbia4" => "ifort",
 		"sysx1"     => "xlf90",
 		"sysx2"     => "xlf90",
 		"sysx3"     => "xlf90",
@@ -35,10 +31,6 @@ my %MpiVersion = (
 		  "cfe2"      => "Altix",
 		  "cfe3"      => "Altix",
 		  "cfe4"      => "Altix",
-		  "columbia1" => "Altix",
-		  "columbia2" => "Altix",
-		  "columbia3" => "Altix",
-		  "columbia4" => "Altix",
 		  "grendel"   => "openmpi",
 		  );
 
