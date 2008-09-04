@@ -1096,9 +1096,10 @@ subroutine MH_set_parameters(TypeAction)
      case('#LIMITER')
         call read_var('UseLogRhoLimiter', UseLogRhoLimiter)
         call read_var('UseLogPLimiter',   UseLogPLimiter)
+        call read_var('UseScalarPerRhoLimiter', UseScalarToRhoRatioLtd)
 
-     case('#USERS7')
-        call read_var('UseRS7',UseRS7)
+        if(UseScalarToRhoRatioLtd .and. nFluid > 1)call stop_mpi(NameSub//&
+             ': scalar to rho ratio cannot be limited for multifluid') 
 
      case("#NONCONSERVATIVE")
         call read_var('UseNonConservative',UseNonConservative)
@@ -1199,12 +1200,6 @@ subroutine MH_set_parameters(TypeAction)
      case('#TVDRESCHANGE')
         call read_var('UseTvdResChange',UseTvdResChange)
         if(UseTvdResChange) UseAccurateResChange=.false.
-
-     case('#LIMITSCALARTORHORATIO')
-        call read_var('UseSlalarToRhoRatioLtd',UseScalarToRhoRatioLtd)
-        if(UseScalarToRhoRatioLtd.and.nFluid>1)&
-             call stop_mpi(NameSub//&
-             ': scalar to rho ratio cannot be limited for multifluid') 
 
      case('#CLIMIT')
         call face_flux_set_parameters(NameCommand)
