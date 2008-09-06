@@ -883,7 +883,7 @@ contains
           call modify_flux(FluxLeft_V,UnLeft_I(1))
           call modify_flux(FluxRight_V,UnRight_I(1))
        end if
-    end if                                             !^CFG IF HLLDFLUX
+    end if
 
     if(UseMultiIon .or. .not. IsMhd)then
        ! Calculate bCrossArea_D to be used for J in the J x B source term
