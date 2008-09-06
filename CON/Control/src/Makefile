@@ -28,7 +28,7 @@ LIBEMPIRICALEE = ${LIBDIR}/libEMPIRICALEE.a
 LIBEMPIRICALGM = ${LIBDIR}/libEMPIRICALGM.a
 LIBEMPIRICALIE = ${LIBDIR}/libEMPIRICALIE.a
 LIBEMPIRICALUA = ${LIBDIR}/libEMPIRICALUA.a
-LIBCRASH       = ${LIBDIR}/libCRASH.a
+#LIBCRASH       = ${LIBDIR}/libCRASH.a
 #######################
 # CON infrastructure: #
 #######################
@@ -157,7 +157,6 @@ LIB:
 	@cd ${EMPIRICALGMDIR};       make LIB
 	@cd ${EMPIRICALIEDIR};       make LIB
 	@cd ${EMPIRICALUADIR};       make LIB
-	@cd ${CRASHDIR};             make LIB
 	@cd ${LIBRARYDIR};           make LIB
 	@cd ${COUPLERDIR};           make LIB
 	@cd ${GMDIR};                make LIB	#^CMP IF GM
@@ -201,7 +200,6 @@ TMP_DIRS: LIB
 	mkdir Tmp_EMPIRICALGM; cd Tmp_EMPIRICALGM; ${AR_X} ${LIBEMPIRICALGM} 
 	mkdir Tmp_EMPIRICALIE; cd Tmp_EMPIRICALIE; ${AR_X} ${LIBEMPIRICALIE} 
 	mkdir Tmp_EMPIRICALUA; cd Tmp_EMPIRICALUA; ${AR_X} ${LIBEMPIRICALUA} 
-	mkdir Tmp_CRASH;       cd Tmp_CRASH;       ${AR_X} ${LIBCRASH}
 	mkdir Tmp_LIBRARY;     cd Tmp_LIBRARY;   ${AR_X} ${LIBLIBRARY}
 	mkdir Tmp_COUPLER;     cd Tmp_COUPLER;   ${AR_X} ${LIBCOUPLER}
 	mkdir Tmp_INTERFACE;   cd Tmp_INTERFACE; ${AR_X} ${LIBINTERFACE}
