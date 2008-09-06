@@ -2,10 +2,10 @@
 module ModConserveFlux
 
   use ModSize, ONLY: nDim, nI, nJ, nK, MaxBlock
-  use ModVarIndexes, ONLY: nFluid, nVar, Bx_, By_, Bz_
+  use ModVarIndexes, ONLY: nFluid, nVar, Bx_, By_, Bz_,B_,U_
 
   use ModProcMH, ONLY: iProc
-  use ModMain, ONLY: BlkTest, ProcTest, iTest, jTest, kTest
+  use ModMain, ONLY: BlkTest, ProcTest, iTest, jTest, kTest,UseB
   use ModAdvance, ONLY: &
        Flux_VX, Flux_VY, Flux_VZ, &
        VdtFace_X, VdtFace_Y, VdtFace_Z, &
@@ -37,8 +37,12 @@ module ModConserveFlux
   integer, parameter :: &
        FluxLast_ = nVar + nFluid, &
        UnFirst_=FluxLast_+1, UnLast_ = UnFirst_ + nFluid, &
-       Vdt_ = UnLast_ + 1, BnL_ = Vdt_+1, BnR_ = BnL_ + 1, &
-       nCorrectedFaceValues = BnR_
+       Vdt_ = UnLast_ + 1
+  !The normal components of the magnetic field is exchaned only for
+  !B_>U_ (UseB_ is true)
+  integer,parameter :: BnL_ = Vdt_ + min(1, B_-U_) 
+  integer,parameter :: BnR_ = BnL_ + min(1, B_-U_)
+  integer,parameter :: nCorrectedFaceValues = BnR_
 
   ! Face conservative or corrected flux.
   real, allocatable, dimension(:,:,:,:,:) :: &
@@ -133,6 +137,7 @@ contains
               = VdtFace_x(lFaceFrom,j,k)
 
       end do;end do
+      if(.not.UseB)return
       if(UseCovariant)then
          do k=1,nK; do j=1,nJ
             CorrectedFlux_VXB(BnL_, j, k, lFaceTo, iBlock) = &
@@ -180,6 +185,7 @@ contains
          CorrectedFlux_VYB(Vdt_, i, k, lFaceTo, iBlock)         &
               = VdtFace_y(i, lFaceFrom, k)
       end do; end do
+      if(.not.UseB)return
       if(UseCovariant)then
          do k=1,nK; do i=1,nI
             CorrectedFlux_VYB(BnL_, i, k, lFaceTo, iBlock) = &
@@ -214,6 +220,7 @@ contains
          CorrectedFlux_VZB(Vdt_,  i,j,lFaceTo,iBlock)           &
               = VdtFace_z(i,j,lFaceFrom)
       end do; end do
+      if(.not.UseB)return
       if(UseCovariant)then
          do j=1,nJ; do i=1,nI
             CorrectedFlux_VZB(BnL_, i, j, lFaceTo, iBlock) = &
@@ -336,13 +343,13 @@ contains
               CorrectedFlux_VXB(UnFirst_:UnLast_,j,k,lFaceFrom,iBlock)
          VdtFace_x(lFaceTo,j,k) = &
               CorrectedFlux_VXB(Vdt_,j,k,lFaceFrom,iBlock)
-         if(UseCovariant)CYCLE       
+         if(UseCovariant.or.(.not.UseB))CYCLE       
          LeftState_VX(Bx_,lFaceTo,j,k) = &
               CorrectedFlux_VXB(BnL_,j,k,lFaceFrom,iBlock)
          RightState_VX(Bx_,lFaceTo,j,k) = &
               CorrectedFlux_VXB(BnR_,j,k,lFaceFrom,iBlock)
       end do; end do 
-      if(UseCovariant)call apply_bn_face_i(lFaceFrom, lFaceTo, iBlock)          
+      if(UseCovariant.and.UseB)call apply_bn_face_i(lFaceFrom, lFaceTo, iBlock)          
     end subroutine apply_corrected_flux_x
 
     !==========================================================================
@@ -358,13 +365,13 @@ contains
               CorrectedFlux_VYB(UnFirst_:UnLast_,i,k,lFaceFrom,iBlock)
          VdtFace_y(i,lFaceTo,k)= &
               CorrectedFlux_VYB(Vdt_,i,k,lFaceFrom,iBlock)
-         if(UseCovariant)CYCLE          
+         if(UseCovariant.or.(.not.UseB))CYCLE          
          LeftState_VY(By_,i,lFaceTo,k) = &
               CorrectedFlux_VYB(BnL_,i,k,lFaceFrom,iBlock)
          RightState_VY(By_,i,lFaceTo,k) = &
               CorrectedFlux_VYB(BnR_,i,k,lFaceFrom,iBlock)
       end do; end do 
-      if(UseCovariant)call apply_bn_face_j(lFaceFrom, lFaceTo, iBlock)          
+      if(UseCovariant.and.UseB)call apply_bn_face_j(lFaceFrom, lFaceTo, iBlock)          
     end subroutine apply_corrected_flux_y
 
     !==========================================================================
@@ -381,13 +388,13 @@ contains
               CorrectedFlux_VZB(UnFirst_:UnLast_,i,j,lFaceFrom,iBlock)
          VdtFace_z(i,j,lFaceTo) = &
               CorrectedFlux_VZB(Vdt_,i,j,lFaceFrom,iBlock)
-         if(UseCovariant)CYCLE
+         if(UseCovariant.or.(.not.UseB))CYCLE
          LeftState_VZ(Bz_,i,j,lFaceTo) = &
               CorrectedFlux_VZB(BnL_,i,j,lFaceFrom,iBlock)
          RightState_VZ(Bz_,i,j,lFaceTo) = &
               CorrectedFlux_VZB(BnR_,i,j,lFaceFrom,iBlock)
       end do; end do 
-      if(UseCovariant)call apply_bn_face_k(lFaceFrom, lFaceTo, iBlock)           
+      if(UseCovariant.and.UseB)call apply_bn_face_k(lFaceFrom, lFaceTo, iBlock)           
 
     end subroutine apply_corrected_flux_z
 
