@@ -6,8 +6,7 @@ module ModVarIndexes
 
   ! This equation module contains the standard HD equations with
   ! an additional radiation energy variable.
-  character (len=*), parameter :: NameEquation= &
-       'radiation HD'
+  character (len=*), parameter :: NameEquation='radiation HD'
 
   logical, parameter :: IsMhd     = .false.
 
