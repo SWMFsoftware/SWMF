@@ -7,24 +7,25 @@ module ModVarIndexes
   ! This equation module contains the standard HD equations with
   ! an additional radiation energy variable.
   character (len=*), parameter :: NameEquation= &
-       'Radiation HD with grey diffusion approximation'
+       'radiation HD'
 
   logical, parameter :: IsMhd     = .false.
 
-  integer, parameter :: nVar = 6
+  integer, parameter :: nVar = 7
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+1.
   ! The energy is handled as an extra variable, so that we can use
   ! both conservative and non-conservative scheme and switch between them.
   integer, parameter :: &
-       Rho_    = 1,          &
-       RhoUx_  = 2, Ux_ = 2, &
-       RhoUy_  = 3, Uy_ = 3, &
-       RhoUz_  = 4, Uz_ = 4, &
-       ERad_   = 5,          &
-       p_      = nVar,       &
-       Energy_ = nVar+1
+       Rho_       = 1,          &
+       RhoUx_     = 2, Ux_ = 2, &
+       RhoUy_     = 3, Uy_ = 3, &
+       RhoUz_     = 4, Uz_ = 4, &
+       ExtraEInt_ = 5,          &
+       ERad_      = 6,          &
+       p_         = nVar,       &
+       Energy_    = nVar+1
 
   ! This allows to calculate RhoUx_ as RhoU_+x_ and so on.
   integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1
@@ -44,6 +45,7 @@ module ModVarIndexes
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
        0.0, & ! RhoUz_
+       0.0, & ! ExtraEInt_
        1.0, & ! ERad_
        1.0, & ! p_
        1.0 /) ! Energy_
@@ -54,21 +56,22 @@ module ModVarIndexes
        'Mx   ', & ! RhoUx_
        'My   ', & ! RhoUy_
        'Mz   ', & ! RhoUz_
+       'EInt ', & ! ExtraEInt_
        'ERad ', & ! ERad_
        'P    ', & ! p_
        'E    '/)  ! Energy_
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
-       'Rho Mx My Mz ERad E'
+       'Rho Mx My Mz EInt ERad E'
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
-       'Rho Ux Uy Uz ERad P'
+       'Rho Ux Uy Uz EInt ERad P'
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"`r", "U_x", "U_y", "U_z", "ERad" "p"'
+       '"`r", "U_x", "U_y", "U_z", "EInt", "ERad", "p"'
 
   ! Names of the user units for IDL and TECPlot output
   character(len=20) :: &
@@ -82,7 +85,7 @@ module ModVarIndexes
   integer, parameter :: Bx_ = Ux_, By_ = Uy_, Bz_ = Uz_, B_ = U_
 
   ! The only scalar to be advected is the radiation energy density
-  integer, parameter :: ScalarFirst_ = ERad_, ScalarLast_ = ERad_
+  integer, parameter :: ScalarFirst_ = ExtraEInt_, ScalarLast_ = ERad_
 
   ! There are no multi-species
   logical, parameter :: UseMultiSpecies = .false.
@@ -96,7 +99,11 @@ contains
   subroutine init_mod_equation
 
     call init_mhd_variables
+
     ! Set the unit and unit name for the wave energy variable
+    UnitUser_V(ExtraEInt_)        = UnitUser_V(Energy_)
+    NameUnitUserTec_V(ExtraEInt_) = NameUnitUserTec_V(Energy_)
+    NameUnitUserIdl_V(ExtraEInt_) = NameUnitUserIdl_V(Energy_)
     UnitUser_V(ERad_)        = UnitUser_V(Energy_)
     NameUnitUserTec_V(ERad_) = NameUnitUserTec_V(Energy_)
     NameUnitUserIdl_V(ERad_) = NameUnitUserIdl_V(Energy_)
