@@ -156,13 +156,13 @@ subroutine get_potential(iBlock)
 
      if (iDebugLevel > 1) write(*,*) "==> Solar Wind Velocity : ",temp
 
-     call get_kp(CurrentTime, temp, iError)
-     call IO_Setkp(temp)
-
-     if (iError /= 0) then
-        write(*,*) "Code Error in get_kp called from get_potential.f90"
-        call stop_gitm("Stopping in get_potential")
-     endif
+!!!     call get_kp(CurrentTime, temp, iError)
+!!!     call IO_Setkp(temp)
+!!!
+!!!     if (iError /= 0) then
+!!!        write(*,*) "Code Error in get_kp called from get_potential.f90"
+!!!        call stop_gitm("Stopping in get_potential")
+!!!     endif
 
   endif
 
