@@ -788,6 +788,12 @@ subroutine MH_set_parameters(TypeAction)
               plot_dimensional(ifile) = index(plot_string,'MHD')>0
               plot_vars(ifile) = NamePrimitiveVar//' jx jy jz'
               plot_pars(ifile)='g rbody'
+           elseif(index(plot_string,'HD')>0.or.index(plot_string,'hd')>0)then
+              plot_var='hd'
+              plot_dimensional(ifile) = index(plot_string,'HD')>0
+              plot_vars(ifile) = NamePrimitiveVar
+              plot_pars(ifile)='g'
+              if(rBody>0.0)plot_pars(ifile)='g rbody'
            elseif(index(plot_string,'FUL')>0.or.index(plot_string,'ful')>0)then
               plot_var='ful'
               plot_dimensional(ifile) = index(plot_string,'FUL')>0
