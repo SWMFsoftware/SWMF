@@ -4,6 +4,7 @@ my $Help    = ($h or $H or $help);
 my $Verbose = ($v or $verbose);
 my $Gzip    = ($g or $gzip);
 my $Repeat  = ($r or $repeat);
+my $Concat  = ($c or $cat and not $Repeat);
 my $MakeMovie = ($m or $movie or $M or $MOVIE);
 my $KeepMovieOnly = ($M or $MOVIE);
 my $Rsync   = ($rsync or $sync);
@@ -42,11 +43,11 @@ die "$ERROR: option -rsync requires a target directory: rsync=TARGETDIR\n"
 my $Pwd = `pwd`; chop $Pwd;
 
 # Set the movie option for pIDL
-my $Movie;
+my $MovieFlag;
 if($KeepMovieOnly){
-    $Movie = '-M';
+    $MovieFlag = '-M';
 }elsif($MakeMovie){
-    $Movie = '-m';
+    $MovieFlag = '-m';
 }
 
 # Name of the plot directories for various components
@@ -63,8 +64,7 @@ my %PlotDir = (
 	    );
 
 REPEAT:{
-    my $Dir;
-    foreach $Dir (sort keys %PlotDir){
+    foreach my $Dir (sort keys %PlotDir){
 	next unless -d $Dir;
 
 	my $PlotDir = $PlotDir{$Dir};
@@ -98,12 +98,13 @@ REPEAT:{
 		&shell("./pION");
 	    }
 	}elsif( $Dir =~ /^SC|IH|GM$/ ){
-	    &shell("./pIDL $Movie");
+	    &shell("./pIDL $MovieFlag");
 	    if($Gzip){
 		&shell("./pTEC A g");
 	    }else{
 		&shell("./pTEC A p r");
 	    }
+            &concat_sat_log if $Concat;
 	}elsif( $Dir =~ /^IM/ ){
 	    my @files=glob("plots/*.dat");
 	    if($Gzip){
@@ -112,9 +113,11 @@ REPEAT:{
 		&shell("./Preplot.pl",@files) if @files;
 	    }
 	}elsif( $Dir =~ /^PW/ ){
-	    if($Gzip){
+	    # PWOM output files cannot be gzipped while code is running
+	    # because it is appending to the files.
+	    if($Gzip and not $Repeat){
 		my @files=glob("plots/*.out");
-		&shell("gzip",@files) if @files;
+		&shell("gzip", @files) if @files;
 	    }
 	}elsif( $Dir =~ /^RB/ ){
 	    if($Gzip){
@@ -151,8 +154,7 @@ exit 0 unless $NameOutput;
 
 # Collect plot directories into $NameOutput 
 # and make empty plot directories if requested
-my $Dir;
-foreach $Dir (sort keys %PlotDir){
+foreach my $Dir (sort keys %PlotDir){
     next unless -d $Dir;
     my $PlotDir = $PlotDir{$Dir};
     next unless -d $PlotDir;
@@ -213,6 +215,49 @@ sub shell{
     print $result if $Verbose;
 }
 
+#############################################################
+
+sub concat_sat_log{
+
+    chdir "IO2" or return;
+    opendir(DIR,'.');
+    my @LogSatFiles = sort(grep /\.(log|sat)$/, readdir(DIR));
+    closedir(DIR);
+
+    # Concatenate the .log/.sat files with same name
+    my %FirstFile;
+    my $File;
+    for $File (@LogSatFiles){
+	my $BaseName = $File;
+
+	# Remove extension
+	$BaseName =~ s/_n\d+\.(log|sat)$// or
+	    die "$ERROR: file name $File does not match "
+	    .   "_nSTEPNUMBER.(log|sat) format\n";
+
+	# Check if there was another file with the same base name.
+	my $FirstFile = $FirstFile{$BaseName};
+	if(not $FirstFile){
+	    $FirstFile{$BaseName} = $File;
+	    next;
+	}
+
+	# Append this file's content (without the header) to the first file
+	open (FIRST, ">>$FirstFile") or 
+	    die "$ERROR: could not open first file $FirstFile for append\n";
+	open (FILE, "$File") or 
+	    die "$ERROR: could not file $FirstFile for read\n";
+	while(<FILE>){
+            # skip lines that contain other things than numbers
+	    next unless /^[\s\d\.eEdD\+\-]+$/; 
+	    print FIRST $_;
+	}
+	close(FIRST);
+	close(FILE);
+	unlink $File;
+    }
+}
+
 ##############################################################################
 #!QUOTE: \clearpage
 #BOP
@@ -222,13 +267,16 @@ sub shell{
 # This script is copied into the run directory and it should be executed there.
 # The script post processes the plot files created by the components.
 # The script can run in the background and post process periodically.
-# It can also collect the plot files, the standard output, the run log and 
-# the PARAM.in file into an 'output directory tree'.
+# It can also collect the plot files, the restart files, the standard output, 
+# the runlog files and the PARAM.in file into a single 'output directory tree'.
+# The output can also be rsync-ed to a remote machine.
 #
 #!REVISION HISTORY:
 # 02/12/2005 G. Toth - initial version
 # 05/08/2005           added -o option to collect output into a directory tree
-# 09/08/2005           for -o option copy PARAM.in and move runlog inot tree.
+# 09/08/2005           for -o option copy PARAM.in and move runlog into tree.
+# 2008                 move last restart files into the tree.
+# 2008                 for -c option concatenate log and satellite files.
 #EOP
 
 sub print_help{
@@ -242,20 +290,23 @@ sub print_help{
 
 Usage:
 
-   PostProc.pl [-h] [-v] [-g] [-m | -M] [-r=REPEAT | DIR]
+   PostProc.pl [-h] [-v] [-c] [-g] [-m | -M] [-r=REPEAT | DIR]
 
    -h -help    Print help message and exit.
 
    -v -verbose Print verbose information.
 
-   -g -gzip    Gzip the ASCII files.
+   -c -cat     Concatenate series of satellite and logfiles into one file.
+               Cannot be used with the -r(epeat) option
+
+   -g -gzip    Gzip the big ASCII files.
 
    -m -movie   Create movies from series of IDL files and keep IDL files.
 
    -M -MOVIE   Create movies from series of IDL files and remove IDL files.
 
    -r=REPEAT   Repeat post processing every REPEAT seconds.
-               Cannot be used with the -o option.
+               Cannot be used with the DIR argument.
 
    -rsync=TARGET Copy processed plot files into an other directory 
                (possibly on another machine) using rsync. The TARGET
@@ -277,9 +328,10 @@ Examples:
 
 PostProc.pl
 
-   Post-process the plot files and create movies from IDL output:
+   Post-process the plot files, create movies from IDL output (remove original
+   files), and concatenate satellite and log files:
 
-PostProc.pl -M
+PostProc.pl -M -cat
 
    Post-process the plot files, compress them, rsync to another machine
    and print verbose info:
@@ -301,3 +353,4 @@ PostProc.pl -rsync=ME@OTHERMACHINE:run/OUTPUT/New OUTPUT/New'
     exit;
 }
 ##############################################################################
+
