@@ -166,7 +166,7 @@ test_crash_rundir: test_rundir
 	ln -s ${BINDIR}/CRASH.exe . 
 
 test_crash_run:
-	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
+	#cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
 
 ### STANDALONE SOLAR CORONA TESTS ###
 
