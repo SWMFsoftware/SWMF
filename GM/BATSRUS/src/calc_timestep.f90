@@ -149,23 +149,30 @@ subroutine set_global_timestep(TimeSimulationLimit)
                    XyzStart_BLK(:,iBlock)
               write(*,*)'Cell size Dx in normalized and SI units:',&
                    Dx_BLK(iBlock), ', ', Dx_BLK(iBlock)*No2Si_V(UnitX_),' m'
-              Cmax_C = (sum((State_VGB(Bx_:Bz_,1:nI,1:nJ,1:nK,iBlock) + &
-                     B0_DGB(:,1:nI,1:nJ,1:nK,iBlock))**2)+&
-                     g*State_VGB(P_,1:nI,1:nJ,1:nK,iBlock))/&
-                     State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+              do k=1,nK; do j=1,nJ; do i=1,nI
+                 Cmax_C(i,j,k) = g*State_VGB(P_,i,j,k,iBlock)
+                 if(UseB)CMax_C(i,j,k)=CMax_C(i,j,k)+&
+                      sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2) 
+                 if(UseB0)CMax_C(i,j,k)=CMax_C(i,j,k)+&
+                      sum(B0_DGB(Bx_:Bz_,i,j,k,iBlock)**2) 
+                 CMax_C(i,j,k)=CMax_C(i,j,k)/&
+                     State_VGB(rho_,i,j,k,iBlock)
+              end do; end do; end do
               Ijk_D = maxloc(Cmax_C, MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
               i=Ijk_D(1); j=Ijk_D(2); k=Ijk_D(3)
               Cmax = sqrt(Cmax_C(i,j,k))
-              write(*,*)'Maximum magnetosonic speed =',Cmax*No2Si_V(UnitU_),&
+              write(*,*)'Maximum perturbation speed =',Cmax*No2Si_V(UnitU_),&
                      ' m/s is reached at X,Y,Z=',&
                      x_BLK(i,j,k,iBlock), &
                      y_BLK(i,j,k,iBlock), &
                      z_BLK(i,j,k,iBlock)
-              write(*,*)'State variables at this point: B0:',&
+              if(UseB0)write(*,*)'State variables at this point: B0:',&
                      B0_DGB(:,i,j,k,iBlock)*No2Si_V(UnitB_),&
-                     ' T,  B1:',&
+                     ' T'
+              if(UseB)write(*,*)'State variables at this point: B1:',&
                      State_VGB(Bx_:Bz_,i,j,k,iBlock)*No2Si_V(UnitB_),&
-                     ' T,  Density=',&
+                     ' T'
+              write(*,*)'State variables at this point: Density=',&
                      State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_),&
                      ' kg/m3'
               EXIT
