@@ -1335,23 +1335,31 @@ the Voronoy cells only.
 </command>
 
 <command name="FIXAXIS">
+	<parameter name="UsePoleDiffusion" type="logical" default="F"/>
 	<parameter name="DoFixAxis" type="logical" default="F"/>
 	<parameter name="rFixAxis"  type="real" min="0" default="0"/>
 	<parameter name="r2FixAxis" type="real" min="0" 
 				max="$rFixAxis" default="0"/>
 #FIXAXIS
+F			UsePoleDiffusion
 T			DoFixAxis
 5.0			rFixAxis
 1.5			r2FixAxis
 
 The computational cells become very small near the symmetry axis 
-of a spherical or cylindrical grid. When DoFixAxis is true, the
-cells around the pole are merged into one 'supercell' for the blocks
-that are (partially) inside radius rFixAxis. 
+of a spherical or cylindrical grid. When UsePoleDiffusion is true,
+some numerical diffusion applied between the cells on the opposite
+side of the axis. This diffusion may smooth out some artifacts that 
+show up when a discontinuity crosses the axis.
+
+When DoFixAxis is true, the cells around the pole are merged into one 
+'supercell' for the blocks that are (partially) inside radius rFixAxis. 
 For blocks within r2FixAxis, the radius of the supercell is 2 normal
 cells. Merging the small cells allows larger time steps in time accurate runs:
 about a factor of 2 if only rFixAxis is used, and around factor of 3 
 if r2FixAxis is also used.
+
+Default is false for both UsePoleDiffusion and DoFixAxis.
 </command>
 
 </commandgroup>
