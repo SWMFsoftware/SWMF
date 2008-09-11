@@ -16,6 +16,20 @@ T
 4                               nK
 1                               MinBlockALL
 
+#GRID
+1
+1
+1
+0.0
+3.0e-3
+-2.0e-5
+ 2.0e-5
+-2.0e-5
+ 2.0e-5
+
+
+
+
 #SHOCKTUBE
 100.0		rho !hundred time the normal density
 -3.0e+4		Ux  !Piston speed
@@ -62,7 +76,7 @@ F		UseBinary
 
 #SAVEPLOT
 1		nPlotfile
-cut hd idl	PlotString
+cut HD idl	PlotString
 -1              DnSavePlot
 5.0e-7          DtSavePlot
 0.0		xMinCut
