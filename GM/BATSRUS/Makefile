@@ -146,8 +146,8 @@ rundir:
 	fi);
 
 rundir_rh:
-	make rundir COMPONENT=RH RUNDIR=run
-	cd run; ln -s ${BINDIR}/CRASH.exe .;ln -s RH/* .; \
+	make rundir RUNDIR=run STANDALONE=YES GMDIR=`pwd`
+	cd run; ln -s ${BINDIR}/CRASH.exe .; \
 	cp -f Param/CRASH/PARAM.in .                          
 #
 #       Run the default code on NP processors
