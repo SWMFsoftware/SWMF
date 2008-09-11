@@ -135,19 +135,19 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
            do iFluid = 1, nFluid
               call BC_asymm(iRhoUx_I(iFluid), iRhoUx_I(iFluid))
            end do
-           call BC_asymm(Bx_,Bx_)
+           if(UseB)call BC_asymm(Bx_,Bx_)
         endif
         if(iSide==south_.or.iSide==north_)then
            do iFluid = 1, nFluid
               call BC_asymm(iRhoUy_I(iFluid), iRhoUy_I(iFluid))
            end do
-           call BC_asymm(By_,By_)
+           if(UseB)call BC_asymm(By_,By_)
         endif
         if(iSide==bot_.or.iSide==top_)then
            do iFluid = 1, nFluid
               call BC_asymm(iRhoUz_I(iFluid), iRhoUz_I(iFluid))
            end do
-           call BC_asymm(Bz_,Bz_)
+           if(UseB)call BC_asymm(Bz_,Bz_)
         endif
      case('linetied')
         call BC_symm(rho_,rho_)
