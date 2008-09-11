@@ -225,8 +225,6 @@ OBJECTS_EXE = main.o
 LIBSHARE  = ${LIBDIR}/libSHARE.a
 LIBTIMING = ${LIBDIR}/libTIMING.a
 
-LIBCRASH  = ${LIBDIR}/libCRASH.a
-
 # Libraries should be compiled first, because modules are used in main.
 ${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
 
@@ -259,29 +257,28 @@ BATSRUS_for_Darwin:
 		${LBLAS} ${Lflag1}
 	rm -rf Tmp_
 
-# Object files not included into the library
+# Compilation of CRASH ############
 
-# Other requireed libraries
-
+# Other required libraries
 LIBCRASH  = ${LIBDIR}/libCRASH.a
 
 # Libraries should be compiled first, because modules are used in main.
 ${CRASH_OBJECT_EXE}: ${LIBSHARE} ${LIBTIMING} ${LIBCRASH} ${MY_LIB}
 
-CRASH.EXE = ${BINDIR}/CRASH.exe
+CRASHEXE = ${BINDIR}/CRASH.exe
 
 CRASH:
-	make ${CRASH.EXE}
+	make ${CRASHEXE}
 	@echo ' '
-	@echo Program BATSRUS has been brought up to date.
+	@echo Program CRASH has been brought up to date.
 	@echo ' '	
 
-${CRASH.EXE}: ${OBJECTS_EXE} ${LIBCRASH}
+${CRASHEXE}: ${OBJECTS_EXE} ${LIBCRASH}
 	@(if [ ${OS} = "Darwin" ];         then make CRASH_for_Darwin; \
 	else                                    make CRASH_general; fi)
 
 CRASH_general:
-	${LINK.f90} -o ${CRASH.EXE} ${OBJECTS_EXE} \
+	${LINK.f90} -o ${CRASHEXE} ${OBJECTS_EXE} \
 		-L. -lBATSRUS -L${LIBDIR} -lMAGNETOGRAM -lEMPIRICALEE -lTIMING -lSHARE -lCRASH \
 		${LBLAS} ${Lflag1} 
 
@@ -294,7 +291,7 @@ CRASH_for_Darwin:
 		ar -x ${LIBTIMING}; \
 		ar -x ${LIBCRASH}; \
 		ar -x ${LIBSHARE}
-	${LINK.f90} -o ${CRASH.EXE} ${OBJECTS_EXE} Tmp_/*.o \
+	${LINK.f90} -o ${CRASHEXE} ${OBJECTS_EXE} Tmp_/*.o \
 		${LBLAS} ${Lflag1}
 	rm -rf Tmp_
 
