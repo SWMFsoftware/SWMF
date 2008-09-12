@@ -14,7 +14,7 @@ Module ModMain
   !\
   ! Version of BATSRUS
   !/
-  real, parameter :: CodeVersion = 8.02
+  real, parameter :: CodeVersion = 8.03
   real            :: CodeVersionRead = -1.0
 
   !\
