@@ -157,7 +157,7 @@ test_crash:
 	make test_crash_run
 
 test_crash_compile:
-	./Config.pl -g=1000,4,4,10,1
+	./Config.pl -g=200,4,4,10,1
 	make CRASH
 	make PIDL
 
@@ -166,7 +166,7 @@ test_crash_rundir: test_rundir
 	ln -s ${BINDIR}/CRASH.exe . 
 
 test_crash_run:
-	#cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
 
 ### STANDALONE SOLAR CORONA TESTS ###
 
