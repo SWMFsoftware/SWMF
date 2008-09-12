@@ -33,9 +33,9 @@ T			UseUserUpdateStates
 T
 
 #CHECKGRIDSIZE
-200                            nI
-4                               nJ
-4                               nK
+400                             nI
+2                               nJ
+2                               nK
 1                               MinBlockALL
 
 #GRID
@@ -44,10 +44,10 @@ T
 1
 0.0
 5.0e+3
--5.0e+1
- 5.0e+1
--5.0e+1
- 5.0e+1
+-26.2e+1
+ 26.2e+1
+-26.2e+1
+ 26.2e+1
 
 #UPDATECHECK
 F
@@ -86,12 +86,19 @@ float		zMaxBc
 
 
 #TIMESTEPPING
-1		nStage
+2		nStage
 0.8		CflExpl
 
 #SCHEME
-1		nOrder
+2		nOrder
 Godunov		TypeFlux
+beta
+1.2
+
+#LIMITER
+F
+F
+T
 
 #SAVERESTART
 F		DoSaverestart
