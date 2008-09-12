@@ -157,7 +157,7 @@ test_crash:
 	make test_crash_run
 
 test_crash_compile:
-	./Config.pl -g=200,4,4,10,1
+	./Config.pl -g=400,2,2,10,1
 	make CRASH
 	make PIDL
 
