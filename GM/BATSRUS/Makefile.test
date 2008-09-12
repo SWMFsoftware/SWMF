@@ -174,9 +174,9 @@ test_crash_run:
 test_crash_check:
 	cat ${TESTDIR}/GM/IO2/cut_hd_1_t00000000_n0001604_pe*.idl \
 		> ${TESTDIR}/IO2/cut_500_ns.idl
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
-		Param/CRASH/TestOutput/cut_500_ns.idl \
-		${TESTDIR}/IO2/cut_500_ns.idl > test_crash.diff
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=3e-7 \
+	  Param/CRASH/TestOutput/cut_500_ns.idl \
+	  ${TESTDIR}/IO2/cut_500_ns.idl > test_crash.diff
 	ls -l test_crash.diff	
 
 ### STANDALONE SOLAR CORONA TESTS ###
