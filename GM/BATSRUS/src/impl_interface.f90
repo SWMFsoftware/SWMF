@@ -283,7 +283,7 @@ subroutine get_face_flux(StateCons_CV,B0_CD,nI,nJ,nK,iDim,iBlock,Flux_CV)
   use ModProcMH,   ONLY: iProc
   use ModMain,     ONLY: nDim, x_, y_, z_, &
        ProcTest, BlkTest,iTest,jTest,kTest
-  use ModFaceFlux, ONLY: nFlux, iFace, jFace, kFace, Area, &
+  use ModFaceFlux, ONLY: nFlux, iFace, jFace, kFace, &
        set_block_values, set_cell_values, get_physical_flux, &
        HallJx, HallJy, HallJz, DoTestCell
   use ModHallResist, ONLY: UseHallResist, HallJ_CD
@@ -342,12 +342,12 @@ subroutine get_face_flux(StateCons_CV,B0_CD,nI,nJ,nK,iDim,iBlock,Flux_CV)
           B0_CD(i, j, k, z_), &
           Conservative_V, Flux_V, Un_I, En)
 
-     Flux_CV(i, j, k, 1:nVar)= Flux_V(1:nVar)*Area
+     Flux_CV(i, j, k, 1:nVar)= Flux_V(1:nVar)
 
      ! Replace pressure flux with energy flux
      do iFluid = 1, nFluid
         iP = iP_I(iFluid)
-        Flux_CV(i, j, k, iP) = Flux_V(nVar+iFluid)*Area
+        Flux_CV(i, j, k, iP) = Flux_V(nVar+iFluid)
      end do
 
   end do; end do; end do
@@ -360,9 +360,9 @@ subroutine get_cmax_face(w,B0,qnI,qnJ,qnK,iDim,iBlock,Cmax)
   use ModProcMH,   ONLY: iProc
   use ModMain,     ONLY: nDim, x_, y_, z_, ProcTest, BlkTest,iTest,jTest,kTest
   use ModImplicit, ONLY: nw
-  use ModFaceFlux, ONLY: DoTestCell, iFace, jFace, kFace, Area, &
+  use ModFaceFlux, ONLY: DoTestCell, iFace, jFace, kFace, &
        set_block_values, set_cell_values, get_speed_max, nFluid, &
-       DoLf, DoAw, DoRoe, DoHll, DoHlld, UnLeft_I, UnRight_I
+       DoLf, DoAw, DoRoe, DoHll, UnLeft_I, UnRight_I
   use ModAdvance,  ONLY: eFluid_
 
   implicit none
@@ -374,7 +374,6 @@ subroutine get_cmax_face(w,B0,qnI,qnJ,qnK,iDim,iBlock,Cmax)
 
   real :: Primitive_V(nw), Cmax_I(nFluid)
 
-  character(len=*), parameter:: NameSub = 'get_cmax_face'
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
 
@@ -388,7 +387,6 @@ subroutine get_cmax_face(w,B0,qnI,qnJ,qnK,iDim,iBlock,Cmax)
   DoAw  = .false.
   DoRoe = .false.
   DoHll = .false.
-  DoHlld= .false.
 
   ! The electron speed is set to zero (I can't remember why)
   UnLeft_I(eFluid_)  = 0.0
@@ -411,13 +409,8 @@ subroutine get_cmax_face(w,B0,qnI,qnJ,qnK,iDim,iBlock,Cmax)
           B0(iFace, jFace, kFace, y_), &
           B0(iFace, jFace, kFace, z_), &
           cmax_I = Cmax_I)
-
-     cmax(iFace, jFace, kFace) = maxval(Cmax_I)*Area
-
+     cmax(iFace, jFace, kFace) = maxval(Cmax_I)
   end do; end do; end do
-
-  if(DoTestMe)write(*,*) NameSub,': Area, cmax=', &
-       Area, cmax(iTest, jTest, kTest)
 
 end subroutine get_cmax_face
 

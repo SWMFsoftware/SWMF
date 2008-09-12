@@ -54,7 +54,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModSolarwind, ONLY: UseSolarwindFile, NameSolarwindFile, &
        read_solar_wind_file, normalize_solar_wind_data
 
-  use ModFaceFlux, ONLY: face_flux_set_parameters, UseClimit, UsePoleDiffusion
+  use ModFaceFlux, ONLY: face_flux_set_parameters, UseClimit
 
   implicit none
 
@@ -1579,7 +1579,6 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('Coord1Max', Coord1Max)
 
      case("#FIXAXIS")
-        call read_var('UsePoleDiffusion', UsePoleDiffusion)
         call read_var('DoFixAxis',DoFixAxis)
         call read_var('rFixAxis',rFixAxis)
         call read_var('r2FixAxis',r2FixAxis)
