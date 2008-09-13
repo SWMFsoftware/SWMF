@@ -78,7 +78,7 @@ module ModFaceFlux
 
   ! Normal velocities for all fluids plus electrons
   real :: Unormal_I(nFluid+1), UnLeft_I(nFluid+1), UnRight_I(nFluid+1)
-  real :: bCrossArea_D(3)
+  real :: bCrossArea_D(3) = (/ 0.0, 0.0, 0.0 /)
   real :: Enormal = 0.0
 
   ! Variables for normal resistivity
@@ -881,6 +881,9 @@ contains
        DiffBb = sum(DiffBn_D**2)
     end if
 
+    ! Calculate average state (used by most solvers and also by bCrossArea_D)
+    State_V = 0.5*(StateLeft_V + StateRight_V)
+
     if(.not.DoGodunov &
          .and. .not.DoHlld &                                !^CFG IF HLLDFLUX
          )then
@@ -891,15 +894,13 @@ contains
        call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
             StateRightCons_V, FluxRight_V, UnRight_I, EnRight)
 
-       State_V = 0.5*(StateLeft_V + StateRight_V)
-
        if(UseRS7)then
           call modify_flux(FluxLeft_V,UnLeft_I(1))
           call modify_flux(FluxRight_V,UnRight_I(1))
        end if
     end if
 
-    if(UseMultiIon .or. .not. IsMhd)then
+    if(UseB .and. (UseMultiIon .or. .not. IsMhd))then
        ! Calculate bCrossArea_D to be used for J in the J x B source term
        ! for the individual ion fluids in calc_sources.f90.
        ! The upwinded discretization of the current is J = sum(A x B) / V
