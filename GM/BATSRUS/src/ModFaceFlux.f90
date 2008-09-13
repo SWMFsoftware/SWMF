@@ -899,7 +899,7 @@ contains
        end if
     end if
 
-    if(UseMultiIon .or. .not. IsMhd)then
+    if(UseB .and. (UseMultiIon .or. .not. IsMhd))then
        ! Calculate bCrossArea_D to be used for J in the J x B source term
        ! for the individual ion fluids in calc_sources.f90.
        ! The upwinded discretization of the current is J = sum(A x B) / V
