@@ -899,7 +899,7 @@ contains
        end if
     end if
 
-    if(UseB .and. (UseMultiIon .or. .not. IsMhd))then
+    if(UseMultiIon .or. .not. IsMhd)then
        ! Calculate bCrossArea_D to be used for J in the J x B source term
        ! for the individual ion fluids in calc_sources.f90.
        ! The upwinded discretization of the current is J = sum(A x B) / V
@@ -1443,9 +1443,12 @@ contains
 
     end subroutine hlld_flux
     !^CFG END HLLDFLUX
+
     !==========================================================================
+
     subroutine godunov_flux
-      use ModExactRS, ONLY: wR, wL, sample, pu_star, RhoL, RhoR, pL, pR, UnStar
+      use ModExactRS, ONLY: wR, wL, sample, pu_star, RhoL, RhoR, &
+           pL, pR, UnL, UnR, UnStar
       use ModPhysics, ONLY: inv_gm1
       use ModVarIndexes
 
