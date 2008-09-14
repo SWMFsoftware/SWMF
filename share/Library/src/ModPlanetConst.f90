@@ -268,12 +268,11 @@ contains
      !/
      NamePlanet_I(Halley_) = 'HALLEY'
 
-     rPlanet_I(Halley_)                   = 1.0E9                         ! [ m] for distance units
-     mPlanet_I(Halley_)                   = 1.0                           ! [kg]
-     rOrbitPlanet_I(Halley_)              = cAU                           ! [ m]
-     OrbitalPeriodPlanet_I(Halley_)       = 1.0                           ! [ s]
-     RotationPeriodPlanet_I(Halley_)      = 1.0                           ! [ s]
-
+     rPlanet_I(Halley_)                   = 1.0E9    ! [ m] for distance units
+     mPlanet_I(Halley_)                   = 1.0      ! [kg]
+     rOrbitPlanet_I(Halley_)              = cAU      ! [ m]
+     OrbitalPeriodPlanet_I(Halley_)       = 1.0      ! [ s]
+     RotationPeriodPlanet_I(Halley_)      = 1.0      ! [ s]
 
      !\
      ! No Planet (0)
