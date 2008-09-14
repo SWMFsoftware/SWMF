@@ -61,23 +61,25 @@ module ModFaceFlux
   integer :: iLeft,  jLeft, kLeft
   integer :: iRight, jRight, kRight
 
-  real :: StateLeft_V(nVar), StateRight_V(nVar)
-  real :: FluxLeft_V(nFlux), FluxRight_V(nFlux)
-  real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
-  real :: DissipationFlux_V(nFlux)
+  real :: StateLeft_V(nVar) = 0.0, StateRight_V(nVar) = 0.0
+  real :: FluxLeft_V(nFlux) = 0.0, FluxRight_V(nFlux) = 0.0
+  real :: StateLeftCons_V(nFlux) = 0.0, StateRightCons_V(nFlux) = 0.0
+  real :: DissipationFlux_V(nFlux) = 0.0
   real :: B0x = 0.0, B0y = 0.0, B0z = 0.0
-  real :: DiffBb  !     (1/4)(BnL-BnR)^2
-  real :: DeltaBnL, DeltaBnR
-  real :: Area, Area2, AreaX, AreaY, AreaZ, Area2Min
+  real :: DiffBb = 0.0 !     (1/4)(BnL-BnR)^2
+  real :: DeltaBnL = 0.0, DeltaBnR = 0.0
+  real :: Area = 0.0, Area2 = 0.0, AreaX, AreaY, AreaZ, Area2Min = 0.0
 
   ! Allow diffusion across the pole
   logical:: UsePoleDiffusion = .false.
 
   ! Maximum speed for the Courant condition
-  real :: CmaxDt
+  real :: CmaxDt = 0.0
 
   ! Normal velocities for all fluids plus electrons
-  real :: Unormal_I(nFluid+1), UnLeft_I(nFluid+1), UnRight_I(nFluid+1)
+  real :: Unormal_I(nFluid+1) = 0.0
+  real :: UnLeft_I(nFluid+1)  = 0.0
+  real :: UnRight_I(nFluid+1) = 0.0
   real :: bCrossArea_D(3) = (/ 0.0, 0.0, 0.0 /)
   real :: Enormal = 0.0
 
@@ -890,7 +892,7 @@ contains
        ! All solvers, except HLLD, use left and right fluxes and avarage state
        call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
             StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft)
-       
+
        call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
             StateRightCons_V, FluxRight_V, UnRight_I, EnRight)
 
@@ -1589,6 +1591,9 @@ contains
     B0n     = B0x*NormalX + B0y*NormalY + B0z*NormalZ
     FullBn  = B0n + Bn
 
+    ! Make sure this is initialized
+    HallUn = 0.0
+
     iFluid = 1
     if(IsMhd)then
        ! single ion fluid MHD (possibly with extra neutrals)
@@ -1922,9 +1927,10 @@ contains
 
       use ModPhysics, ONLY: inv_gm1
       use ModVarIndexes
-      real,optional::Gamma,EPerRhoExtra
+      real, optional::Gamma,EPerRhoExtra
+
       ! Variables for conservative state and flux calculation
-      real :: Rho, Ux, Uy, Uz, p, e, RhoUn,GM1Inv
+      real :: Rho, Ux, Uy, Uz, p, e, RhoUn, GM1Inv
       integer :: iVar
       !-----------------------------------------------------------------------
       if(present(Gamma))then
@@ -1942,6 +1948,7 @@ contains
       ! Calculate energy
       e = GM1Inv*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2)
       if(present(EPerRhoExtra))e=e+EPerRhoExtra*Rho
+
       ! Calculate conservative state
       StateCons_V(iRhoUx)  = Rho*Ux
       StateCons_V(iRhoUy)  = Rho*Uy
@@ -1997,11 +2004,16 @@ contains
        UnLeft = minval(UnLeft_I(1:nIonFluid))
        UnRight= maxval(UnRight_I(1:nIonFluid))
     end if                                       !^CFG END AWFLUX
-    if(UseBoris)then                             !^CFG IF BORISCORR BEGIN
-       call get_boris_speed
-    else                                         !^CFG END BORISCORR
-       call get_mhd_speed
-    endif                                        !^CFG IF BORISCORR    
+    if(UseB)then
+       if(UseBoris)then                             !^CFG IF BORISCORR BEGIN
+          call get_boris_speed
+       else                                         !^CFG END BORISCORR
+          call get_mhd_speed
+       endif                                        !^CFG IF BORISCORR    
+    else
+       iFluid = 1
+       call get_hd_speed
+    end if
 
     if(nFluid > 1)then
 
