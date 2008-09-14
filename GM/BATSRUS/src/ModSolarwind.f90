@@ -49,7 +49,7 @@ module ModSolarwind
   ! Coordinate system of input file
   character(len=3) :: NameInputCoord = 'GSM'
 
-  ! Normal direction to the (titled) plane of input data
+  ! Normal direction to the (tilted) plane of input data
   real :: Normal_D(3) = (/ 1.0, 0.0, 0.0 /)
 
   ! Position of the satellite
@@ -346,7 +346,7 @@ contains
             ' read ',nData,' points from ',trim(NameSolarwindFile)
     end if
 
-        ! This part is only needed for solar wind normalization based on
+    ! This part is only needed for solar wind normalization based on
     ! the input file. This should be eliminated.
     if (SW_T_dim <= 0.0) then
 
@@ -382,8 +382,8 @@ contains
 
        ! add up species densities
        if (UseMultiSpecies) & 
-            Solarwind_v(Rho_) = sum(Solarwind_V(SpeciesFirst_:SpeciesLast_))
-       
+            Solarwind_V(Rho_) = sum(Solarwind_V(SpeciesFirst_:SpeciesLast_))
+
        ! These scalars should be removed eventually
        SW_Bx_dim  = Solarwind_V(Bx_)
        SW_By_dim  = Solarwind_V(By_)
@@ -452,7 +452,7 @@ contains
           Solarwind_V(SpeciesFirst_:SpeciesLast_) = &
                Solarwind_V(SpeciesFirst_:SpeciesLast_)*MassSpecies_V
           ! add up species densities
-          SolarwinD_v(Rho_) = sum(Solarwind_V(SpeciesFirst_:SpeciesLast_))
+          Solarwind_V(Rho_) = sum(Solarwind_V(SpeciesFirst_:SpeciesLast_))
        else
           ! Single species
           if(UseNumberDensity) then
@@ -579,7 +579,7 @@ contains
        SolarWind_V = Solarwind_VI(:,1)
        RETURN
     end if
-    
+
     ! DoTestCell = maxval(abs(Xyz_D - (/ xTest, yTest, zTest /))) < 0.1
     if(DoTestCell) write(*,*) NameSub, 'TimeSim, Xyz_D=',TimeSimulation, Xyz_D
 
@@ -647,7 +647,7 @@ contains
 
           if(DoTestCell) write(*,*)NameSub,&
                ' corrected Time, Time_I(iData), iData=',&
-                  Time, Time_I(iData), iData
+               Time, Time_I(iData), iData
 
        end if
 
@@ -671,7 +671,7 @@ contains
     endif
 
     if(DoTestCell)write(*,*)NameSub,' SolarWind_V =',SolarWind_V
-    
+
 
   end subroutine get_solar_wind_point
 
