@@ -588,8 +588,10 @@ contains
        if(fileheadout(ll:ll)=='_')fileheadout(ll:ll)='-'
     enddo
     ! Add _xxx13, _xxx23 or _xxx33 to fileheadout based on ndim
-    ! The _xxx comes from filenamehead (e.g. y=0_var_... --> _var)
-    write(fileheadout,'(a,i1,i1)') fileheadout(1:l)//filenamehead(4:7),ndim,3
+    ! The _xxx comes from filenamehead (e.g. y=0_var_... --> _var 
+    ! where var is 2 or 3 character-long)
+    ll = 7; if(filenamehead(7:7) == '_') ll = 6
+    write(fileheadout,'(a,i1,i1)') fileheadout(1:l)//filenamehead(4:ll),ndim,3
 
     ! Produce coordinate names 
     !         ('x y z', 'x y', 'x z', 'y z' or 'r theta', 'r phi' ...)
