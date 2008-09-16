@@ -24,7 +24,7 @@ program test_Godunov
   real,parameter::cLength=5.0e-3    !5 mm
   real::Dt,Time
   real,parameter::DX=cLength/nX
-  integer::iX
+  integer::iX,iStep
   real,parameter::RhoInit=100.0 !Approximately 30 times the normal density
   real,parameter::UInit = 1.50*RhoInit*(8.31e+3/122.2)*3.0e3 !3000 K 
   real,parameter::UPiston = 3.0e+4 !30 km/s
@@ -52,11 +52,11 @@ program test_Godunov
      Cons_VC(2,iX)=-UPiston*RhoInit
      Cons_VC(3,iX)= UInit +0.50*RhoInit*UPiston**2
   end do
-     
+  iStep=0   
   open(24,file='Godunov_scheme_for_Xe',status='replace')
   write(24,'(a)') 'X [mm] Rho [100 kg/m^3]   u [10,000 m/s]  P [MBar]  Gamma'
   do 
-     write(*,*)'iStep,StartTime=',Time
+     write(*,*)'iStep,StartTime=',iStep,Time
      !Get primitives:
      do iX=1,nX
         Prime_VG(1,iX)=Cons_VC(1,iX)
@@ -99,9 +99,10 @@ program test_Godunov
      end do
      Cons_VC(:,1:nX)=Cons_VC(:,1:nX)+&
           (Dt/DX)*(Flux_VF(:,1:nX)-Flux_VF(:,2:nX+1))
-     Dt=min(CFL*DX/maxval(CMax_F(1:nX+1)),1.001*(TimeOut-Time))
+     Dt=min(CFL*DX/maxval(CMax_F(1:nX+1)),1.000001*(TimeOut-Time))
 
      Time = Time + Dt
+     iStep=iStep+1
   end do
   close(24)
 end program test_Godunov
