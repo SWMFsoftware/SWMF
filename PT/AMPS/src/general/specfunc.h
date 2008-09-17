@@ -175,7 +175,7 @@ public:
 
   void PrintChecksum(char* message=NULL) {
     unsigned long int *buffer=new unsigned long int[TotalThreadsNumber];
-    long int i,thread;
+    long int thread;
 
     buffer[0]=checksum();
 
