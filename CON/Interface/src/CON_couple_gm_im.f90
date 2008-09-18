@@ -51,6 +51,13 @@ contains
     ! Store IM grid size.
     !EOP
     !------------------------------------------------------------------------
+
+    ! MPI status variable
+    integer :: iStatus_I(MPI_STATUS_SIZE)
+
+    ! General error code
+    integer :: iError
+
     if(IsInitialized) RETURN
     IsInitialized = .true.
 
@@ -63,6 +70,16 @@ contains
 
     ! Set number of satellites shared between GM and IM for tracing.
     call GM_satinit_for_im(nShareSats)       !!!!DTW 2007
+
+
+    if(i_proc0(IM_) /= i_proc0(GM_))then
+       if(is_proc0(GM_)) &
+            call MPI_send(nShareSats,1,MPI_INTEGER,i_proc0(IM_),&
+            1,i_comm(),iError)
+       if(is_proc0(IM_)) &
+            call MPI_recv(nShareSats,1,MPI_INTEGER,i_proc0(GM_),&
+            1,i_comm(),iStatus_I,iError)
+    end if
 
   end subroutine couple_gm_im_init
 
@@ -126,7 +143,6 @@ contains
       ! MPI related variables
       integer :: iProc0Im, iComm
 
-
       ! MPI status variable
       integer :: iStatus_I(MPI_STATUS_SIZE)
 
@@ -148,6 +164,7 @@ contains
       !\
       ! Allocate buffers both in GM and IM
       !/
+
       allocate(Buffer_IIV(iSize,jSize,nVarGmIm), stat=iError)
       call check_allocate(iError,NameSubSub//": Buffer_IIV")
       !!! DTW 2007
@@ -183,35 +200,42 @@ contains
       !/
       if(i_proc0(IM_) /= i_proc0(GM_))then
          nSize = iSize*jSize*nVarGmIm
-         if(is_proc0(GM_)) &
-              call MPI_send(Buffer_IIV,nSize,MPI_REAL,i_proc0(IM_),&
-              1,i_comm(),iError)
-         if(is_proc0(IM_)) &
-              call MPI_recv(Buffer_IIV,nSize,MPI_REAL,i_proc0(GM_),&
-              1,i_comm(),iStatus_I,iError)
+         if(is_proc0(GM_)) then 
+            call MPI_send(Buffer_IIV,nSize,MPI_REAL,i_proc0(IM_),&
+                 1,i_comm(),iError)
+         endif
+         if(is_proc0(IM_)) then
+            call MPI_recv(Buffer_IIV,nSize,MPI_REAL,i_proc0(GM_),&
+                 1,i_comm(),iStatus_I,iError)
+         endif
       end if
 
       !\
       ! Transfer satellite names from GM to IM   !!!DTW 2007
       !/   
+
       if(nShareSats > 0 .and. i_proc0(IM_) /= i_proc0(GM_))then
-         nSize = nShareSats
-         if(is_proc0(GM_)) &
-              call MPI_send(NameSat_I,nSize,MPI_REAL,iProc0Im,&
-              1,iComm,iError)
-         if(is_proc0(IM_)) &
-              call MPI_recv(NameSat_I,nSize,MPI_REAL,i_proc0(GM_),&
-              1,i_comm(),iStatus_I,iError)
+         nSize = nShareSats*100
+         if(is_proc0(GM_)) then
+            call MPI_send(NameSat_I,nSize,MPI_BYTE,iProc0Im,&
+                 1,iComm,iError)
+         endif
+         if(is_proc0(IM_)) then
+            call MPI_recv(NameSat_I,nSize,MPI_BYTE,i_proc0(GM_),&
+                 1,iComm,iStatus_I,iError)
+         endif
 
          ! Transfer satellite locations from GM to IM   !!!DTW 2007
 
          nSize = 3*2*nShareSats
-         if(is_proc0(GM_)) &
-              call MPI_send(SatPos_DII,nSize,MPI_REAL,i_proc0(IM_),&
-              1,i_comm(),iError)
-         if(is_proc0(IM_)) &
-              call MPI_recv(SatPos_DII,nSize,MPI_REAL,i_proc0(GM_),&
-              1,i_comm(),iStatus_I,iError)
+         if(is_proc0(GM_)) then
+            call MPI_send(SatPos_DII,nSize,MPI_REAL,iProc0Im,&
+                 1,iComm,iError)
+         endif
+         if(is_proc0(IM_)) then
+            call MPI_recv(SatPos_DII,nSize,MPI_REAL,i_proc0(GM_),&
+                 1,iComm,iStatus_I,iError)
+         endif
       end if
 
       if(DoTest)write(*,*)NameSubSub,', variables transferred',&
@@ -222,7 +246,8 @@ contains
       !/
       if(is_proc0(IM_))then
          call IM_put_from_gm(Buffer_IIV,iSize,jSize,nVarGmIm,NameVar)
-         if(nShareSats > 0) call IM_put_sat_from_gm(nShareSats, NameSat_I, SatPos_DII)
+         if(nShareSats > 0) &
+              call IM_put_sat_from_gm(nShareSats, NameSat_I, SatPos_DII)
          if(DoTest) &
               write(*,*)'get_fieldline_volume: IM iProc, Buffer(1,1)=',&
               iProcWorld,Buffer_IIV(1,1,:)
