@@ -4,7 +4,7 @@
 #
 # MDI.pl -r=nnnn (-t=mmmm)(-mpi='mpirun -np 2')
 ###########################################################
-#  IDL path and program
+#  IDL program
 #
 system("make HARMONICS");
 my $CR = ($r);
@@ -12,12 +12,10 @@ my $Till = ($t or $CR);
 my $MpiRun = ($mpi);
 print " Carrington rotation: first CR= $CR\n";
 print " Carrington rotation: last  $Till\n";
-#die;
-#our @Arguments = @ARGV;
-#
-#my  $IDL_DIR="/usr/local/bin/";
-  $IDL_PRO="fits_to_asciiCR";
+
+$IDL_PRO="fits_to_asciicr";
 my $Executable="../../../bin/HARMONICS.exe";
+print ("$MpiRun"."$Executable\n");
 ############################################################
 # The carringon rotation cycle will start with this number +1
 #
@@ -47,8 +45,7 @@ print " CR= $CR\n";
 #
       if (-e $ftpname)
       {
-        print("The Magnetogram for CR=$CR already exists in the directory \n");
-#      die "exiting $@\n";   
+        print("The Magnetogram for CR=$CR already exists in the directory \n");   
           
       }  
 #
@@ -61,9 +58,10 @@ print " CR= $CR\n";
 #
          system("wget http://".$ftpsite."/".$ftpdir.$ftpname);
          system("cp *".$CR.".fits fitsfile.fits");
-#         system("echo $IDL_PRO, \"CR=\"$CR | ${IDL_DIR}/idl");
          system("echo $IDL_PRO, \"CR=\"$CR | idl");
-	 system($MpiRun.$Executable);
+
+	 system("$MpiRun"."$Executable");
+
          system("mv fitsfile.dat fitsfile_".$CR.".dat ");
          system("mv fitsfile.H fitsfile_".$CR.".H ");
          system("mv fitsfile_tec.dat fitsfile_tec".$CR.".dat ");
