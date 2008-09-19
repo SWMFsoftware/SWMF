@@ -8,6 +8,7 @@ test:
 	-@(make test_multifluid)
 	-@(make test_multiion)
 	-@(make test_crash)
+	-@(make test_levelset)
 	-@(make test_corona)
 	-@(make test_coronasph)
 	-@(make test_titan)
@@ -36,6 +37,7 @@ test_help:
 	@echo "    test_multifluid            (run multi-fluid test only)"
 	@echo "    test_multiion              (run multi-ion test only)"
 	@echo "    test_crash		      (run CRASH test only)"
+	@echo "    test_levelset	      (run Level set test only)"
 	@echo "    test_corona                (run Solar Corona test only)"
 	@echo "    test_coronasph             (run spherical Solar Corona test)"
 	@echo "    test_mars                  (run Mars test only)"
@@ -160,7 +162,7 @@ test_crash:
 	make test_crash_check
 
 test_crash_compile:
-	./Config.pl -g=400,2,2,10,1
+	./Config.pl -e=HdEos -u=Rh -g=400,2,2,10,1
 	make CRASH
 	make PIDL
 
@@ -178,6 +180,39 @@ test_crash_check:
 	  Param/CRASH/TestOutput/cut_500_ns.idl \
 	  ${TESTDIR}/IO2/cut_500_ns.idl > test_crash.diff
 	ls -l test_crash.diff	
+
+### LEVELSET TEST ###
+
+test_levelset:
+	@echo "test_levelset_compile..." > test_levelset.diff
+	make test_levelset_compile
+	@echo "test_levelset_rundir..." >> test_levelset.diff
+	make test_levelset_rundir
+	@echo "test_levelset_run..." >> test_levelset.diff
+	make test_levelset_run
+	@echo "test_levelset_check..." >> test_levelset.diff
+	make test_levelset_check
+
+test_levelset_compile:
+	./Config.pl -e=HdCrash -u=Crash -g=400,40,2,10,1
+	make CRASH
+	make PIDL
+
+test_levelset_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.levelset PARAM.in; \
+	ln -s ${BINDIR}/CRASH.exe . 
+
+test_levelset_run:
+	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
+	cat ${TESTDIR}/GM/IO2/cut_hd_1_*_n0000792_pe*.idl \
+		> ${TESTDIR}/IO2/cut_400_ns.idl
+	#cd ${TESTDIR}; ./PostProc.pl -M
+
+test_levelset_check:
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=3e-7 \
+		Param/CRASH/TestOutput/cut_levelset.idl \
+		${TESTDIR}/IO2/cut_400_ns.idl > test_levelset.diff
+	ls -l test_levelset.diff
 
 ### STANDALONE SOLAR CORONA TESTS ###
 

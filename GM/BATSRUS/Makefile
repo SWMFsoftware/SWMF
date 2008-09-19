@@ -81,7 +81,6 @@ BATSRUS:
 	cd src; make BATSRUS
 
 CRASH:
-	./Config.pl -u=Rh -e=HdEos
 	cd ${SHAREDIR}; make LIB
 	cd ${TIMINGDIR}; make LIB
 	cd ${MAGNETOGRAMDIR}; make LIB
