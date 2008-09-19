@@ -24,7 +24,7 @@ $Executable=$MpiRun." ".$Executable if $MpiRun;
 
 $ftpsite = "soi.stanford.edu";
 
-print ("$Executable \n") if $DoExec;
+print ("$Executable\n") if $DoExec;
 ############################################################
 # The carringon rotation cycle will start with this number +1
 #

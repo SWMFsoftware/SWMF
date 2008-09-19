@@ -15,14 +15,17 @@ my $MpiRun = ($mpi);
 print " Carrington rotation: first CR= $CR\n";
 print " Carrington rotation: last  $Till\n";
 print " The converted file is harmonics.dat\n" if $DoExec;
+
 system("make HARMONICS") if $DoExec;
 
 $IDL_PRO="fits_to_asciicr";
 my $Executable="../../../bin/HARMONICS.exe";
+$Executable=$MpiRun." ".$Executable if $MpiRun;
+
 my $ftpsite = "gong2.nso.edu";
 my $ftpdir = "QR/mqs/";
 
-print ("$MpiRun "."$Executable\n") if $MpiRun;
+print ("$Executable\n") if $DoExec;
 ############################################################
 # The carringon rotation cycle will start with this number +1
 #
