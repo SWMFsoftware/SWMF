@@ -282,8 +282,6 @@ distclean: ENV_CHECK rmdir
 		do (echo Uninstalling $$i; cd $$i; ./Config.pl -uninstall); done
 	-(cd ESMF/ESMF_SWMF;	make distclean)
 	cd CON;			make distclean
-	cd share;		make distclean
-	cd util;		make distclean
 	@#^CMP IF DOC BEGIN
 	@#^CMP IF NOT REMOVEDOCTEX BEGIN
 	cd doc/Tex;             make clean ${CLEAN1} ${CLEAN2}
