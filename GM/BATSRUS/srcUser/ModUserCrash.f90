@@ -134,7 +134,7 @@ contains
 
   subroutine user_initial_perturbation
 
-    use ModMain,    ONLY: nI, nJ, nK, nBlock, UnusedBlk
+    use ModMain,    ONLY: nI, nJ, nK, nBlock, UnusedBlk, UseUserSource
     use ModPhysics, ONLY: ShockPosition, ShockSlope, ShockRightState_V, &
          Io2No_V, UnitRho_, UnitP_
     use ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, p_, &
@@ -178,6 +178,11 @@ contains
 
           ! Xenon is inside plastic wall and right to xBe
           State_VGB(LevelXe_,i,j,k,iBlock) = min(x - xBeSlope, yBe - abs(y))
+
+          if(.not.UseUserSource) &
+               State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) = &
+               State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) &
+               *State_VGB(Rho_,i,j,k,iBlock)
 
        end do; end do; end do
 
