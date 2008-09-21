@@ -306,7 +306,7 @@ contains
        write ( iUnit, * )
        write ( iUnit, * )
        write ( iUnit, * )
-       write ( iUnit, '(a19,I3,a26)' ) 'Max Harmonic Order:',nHarmonics,' Units: microTesla (0.01G)'
+       write ( iUnit, '(a19,I3,a26)' ) 'Max Harmonic Order:',nHarmonics,' Units: Gauss'
        write ( iUnit, '(a)' ) ' '
        write ( iUnit, '(a)' ) '  l   m      g(uT)      h(uT)'
        write ( iUnit, '(a)' ) ' '
