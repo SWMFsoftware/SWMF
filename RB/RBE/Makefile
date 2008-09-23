@@ -15,8 +15,8 @@ install:
 #
 
 RBE:
-	@cd ${NOMPIDIR};	make LIB
 	@cd ${SHAREDIR};  	make LIB
+	@cd ${NOMPIDIR};	make LIB
 	@cd ${TIMINGDIR}; 	make LIB 
 	@cd ${EMPIRICALIEDIR};	make LIB
 	@cd ${EMPIRICALGMDIR};	make LIB
@@ -66,7 +66,7 @@ clean:
 	@(if [ -d util ];  then cd util;  make clean; fi);
 	@(if [ -d share ]; then cd share; make clean; fi);
 
-distclean: clean
+distclean:
 	@touch ${INSTALLFILES}
 	@cd src; make distclean
 	cd srcInterface; make distclean
