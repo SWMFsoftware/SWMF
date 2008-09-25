@@ -142,7 +142,10 @@ following steps:
                 could not be compiled with the generic rules;
 \item {\tt LIB}: builds the component library;
 \item {\tt clean}: cleans the source subdirectories;
-\item {\tt distclean}: discards all the files created since installation;
+\item {\tt distclean}: runs ./Config.pl -uninstall to 
+                      discard all the files created since installation;
+\item {\tt allclean}: used by ./Config.pl -uninstall to remove files created after
+               installation;
 \item {\tt rundir}: copies files and directories that are needed to run the 
                component into the directory {\tt run}.
 \end{itemize}
