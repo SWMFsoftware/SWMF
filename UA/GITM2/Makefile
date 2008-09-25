@@ -59,12 +59,15 @@ clean:
 	@(if [ -d share ]; then cd share; make clean; fi);
 	@(if [ -d util ];  then cd util;  make clean; fi);
 
-distclean:
+distclean: 
+	./Config.pl -uninstall
+
+allclean:
 	@touch ${INSTALLFILES}
 	@cd $(ABDIR);    make clean
 	@cd $(MAINDIR);  make distclean
 	@cd srcInterface;make distclean
-	rm -f *~
+	rm -f *~ srcData/UAM.in
 #
 #       Create run directories
 #
