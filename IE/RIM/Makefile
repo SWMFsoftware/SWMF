@@ -17,12 +17,18 @@ clean:
 	@touch src/Makefile.DEPEND src/Makefile.RULES
 	cd src; make clean
 
-distclean:
+distclean: 
+	./Config.pl -uninstall
+
+allclean:
 	@touch src/Makefile.DEPEND src/Makefile.RULES
 	cd src; make distclean
 	rm -f *~
 
 test:
+	echo "There is no test for IE/RIM" > notest.diff
+
+test_tmp:
 	cd ${RUNDIR}; cp ${DIR}/Param/LAYOUT.in.test.RIM.Weimer LAYOUT.in; cd ${DIR}
 	cd ${RUNDIR}; cp ${DIR}/Param/PARAM.in.test.RIM.Weimer PARAM.in; cd ${DIR}
 	cd ${RUNDIR}; ./SWMF.exe
