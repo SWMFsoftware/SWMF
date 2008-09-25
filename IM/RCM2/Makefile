@@ -31,6 +31,9 @@ clean:	install
 	cd src; make clean
 	cd src/claw; make clean
 
-distclean: install
+distclean: 
+	./Config.pl -uninstall
+
+allclean: install
 	cd src; make distclean
 	cd src/claw; make distclean

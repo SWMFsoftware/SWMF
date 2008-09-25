@@ -84,7 +84,7 @@ help:
 	@echo '    nompirun    (make SWMF and run it without MPI)'
 	@echo ' '
 	@echo '    clean       (remove files: *~ *.o *.kmo *.mod *.T *.lst core)'
-	@echo '    distclean   (used by Config.pl -uninstall)'
+	@echo '    distclean   (equivalent to: Config.pl -uninstall)'
 	@echo '    dist        (create source distribution tar file)'
 	@echo ' '
 	@echo '    tags        (create etags for emacs for easy look up in source code)'
@@ -273,7 +273,10 @@ clean: ENV_CHECK
 	@echo Clean succeeded
 	@echo
 
-distclean: ENV_CHECK rmdir
+distclean: 
+	./Config.pl -uninstall
+
+allclean: ENV_CHECK rmdir
 	@echo
 	rm -rf *~ doc/*~ Param/*~ TAGS
 	for i in `ls -d [A-Z][A-Z]/Empty/`; \

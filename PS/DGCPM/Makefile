@@ -14,7 +14,10 @@ clean:
 	@touch src/Makefile.DEPEND src/Makefile.RULES
 	cd src; make clean
 
-distclean:
+distclean: 
+	./Config.pl -uninstall
+
+allclean:
 	@touch src/Makefile.DEPEND src/Makefile.RULES
 	cd src; make distclean
 	rm -f *~

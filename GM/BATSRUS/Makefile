@@ -51,8 +51,8 @@ help:
 	@echo "    mpirun NP=7 RUNDIR=run_test (run on 7 PEs in run_test)"
 	@echo "    mprun NP=5  (make BATSRUS and mprun BATSRUS.exe on 5 PEs)"
 	@echo ' '	
-	@echo '    clean     (rm -f *~ *.o *.kmo *.mod *.T *.lst core)'
-	@echo '    distclean (make clean; rm -f *exe Makefile Makefile.DEPEND)'
+	@echo '    clean     (remove temp files like: *~ *.o *.kmo *.mod *.T *.lst core)'
+	@echo '    distclean (equivalent to ./Config.pl -uninstall)'
 	@echo '    dist      (create source distribution tar file)'
 
 INSTALLFILES =	src/Makefile.DEPEND \
@@ -192,7 +192,10 @@ clean:
 	@(if [ -d util  ]; then cd util;  make clean; fi);
 	@(if [ -d share ]; then cd share; make clean; fi);
 
-distclean:
+distclean: 
+	./Config.pl -uninstall
+
+allclean:
 	@touch ${INSTALLFILES}
 	cd src; make distclean
 	cd srcInterface; make distclean

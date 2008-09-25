@@ -66,7 +66,10 @@ clean:
 	@(if [ -d util ];  then cd util;  make clean; fi);
 	@(if [ -d share ]; then cd share; make clean; fi);
 
-distclean:
+distclean: 
+	./Config.pl -uninstall
+
+allclean:
 	@touch ${INSTALLFILES}
 	@cd src; make distclean
 	cd srcInterface; make distclean

@@ -22,7 +22,10 @@ clean:  install
 		cd ../srcInterface; make clean; \
 	fi)
 
-distclean: install
+distclean: 
+	./Config.pl -uninstall
+
+allclean: install
 	@(if [ -r "Makefile.conf" ]; then \
 		cd src; make distclean; \
 		cd ../srcInterface; make distclean; \
