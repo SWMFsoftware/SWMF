@@ -4,9 +4,7 @@ include Makefile.def
 
 INSTALLFILES =  src/Makefile.DEPEND \
 		src/Makefile.RULES \
-		srcInterface/Makefile.DEPEND \
-		srcInterface/srcIONO/Makefile.DEPEND \
-		srcInterface/srcIE/Makefile.DEPEND
+		srcInterface/Makefile.DEPEND
 
 install: 
 	touch ${INSTALLFILES}
@@ -16,16 +14,16 @@ install:
 #
 
 HEIDI:  install
-	@cd ${NOMPIDIR};	make LIB
 	@cd ${SHAREDIR};  	make LIB
+	@cd ${NOMPIDIR};	make LIB
 	@cd ${TIMINGDIR}; 	make LIB 
 	@cd ${EMPIRICALIEDIR};	make LIB
 	@cd ${EMPIRICALGMDIR};	make LIB
 	@cd src;	        make HEIDI
 
 LIB:  install
-	@cd ${NOMPIDIR};	make LIB
 	@cd ${SHAREDIR};  	make LIB
+	@cd ${NOMPIDIR};	make LIB
 	@cd ${TIMINGDIR}; 	make LIB 
 	@cd ${EMPIRICALIEDIR};	make LIB
 	@cd ${EMPIRICALGMDIR};	make LIB
@@ -84,16 +82,15 @@ clean: install
 	@(if [ -r "Makefile.conf" ]; then  \
 	cd src;                      make clean;\
 	cd ../srcInterface;             make clean;\
-	cd srcIONO;     make clean;\
-	cd ../srcIE;       make clean;\
 	fi)
 
-distclean: install
+distclean: 
+	./Config.pl -uninstall
+
+allclean: install
 	@(if [ -r "Makefile.conf" ]; then \
 		cd src;                      make distclean;\
-		cd ../srcInterface;             make distclean;\
-		cd srcIONO;     make distclean;\
-		cd ../srcIE;       make distclean;\
+		cd ../srcInterface;          make distclean;\
 	fi)
 	rm -f *~
 #
