@@ -178,6 +178,50 @@ open(24,file='../doc/Table2.tex')
   write(25,'(a)')'\end{tabular}'
   close(25)
 
+!_____________________________________
+
+  open(25,file='../doc/Table4.tex')
+  write(25,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
+  write(25,'(a)')'\hline'
+  write(25,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
+  write(25,'(a)')'\hline'
+  write(25,'(a)')'P/Na[eV] & Te (Iterations) &  Te (Iterations) &  Te (Iterations) & '//&
+        ' Te (Iterations) &  Te (Iterations) &  Te (Iterations) \tabularnewline'
+  write(25,'(a)')'\hline' 
+  write(25,'(a)')'\hline'
+  
+  do iU  = 1,nU
+     if (((iU-1)/50)*50==(iU-1).and.iU>50) then
+        write(25,'(a)')'\end{tabular}', char(10)
+        !------------
+        write(25,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
+        write(25,'(a)')'\hline'
+        write(25,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
+        write(25,'(a)')'\hline'
+        write(25,'(a)')'U[eV] & Te (Iterations) &  Te (Iterations) &  Te (Iterations) & '//&
+             ' Te (Iterations) &  Te (Iterations) &  Te (Iterations) \tabularnewline'
+        write(25,'(a)')'\hline' 
+        write(25,'(a)')'\hline'
+     end if
+     vU = dU * iU 
+     do iN = 0,nN
+        NaTrial = Nao*exp(iN*dLogN)
+        call pressure_to_temperature(vU,NaTrial*1000000.0,IsDegenerated)
+        Te_I(iN) = Te 
+        iIter_I(iN) = iIterTe
+        if(IsDegenerated)Te_I(iN)=-1.0
+     end do
+
+     write(25,'(f6.0,6(a,f7.1,a,i7,a),a)') vU,&
+               (' & ', Te_I(iN), ' (', iIter_I(iN),')', iN=0,nN ),'\tabularnewline'
+     write(25,'(a)')'\hline'
+
+  end do
+
+
+  write(25,'(a)')'\end{tabular}'
+  close(25)
+
 
 
 contains
