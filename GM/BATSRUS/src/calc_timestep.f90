@@ -38,7 +38,7 @@ subroutine calc_timestep
           SourceSpectralRadius_C(i,j,k))
   end do; end do; end do
 
-  if(DoFixAxis)then
+  if(DoFixAxis .and. time_accurate)then
      if(TypeGeometry == 'cylindrical' .and. NeiLEast(iBlock) == NOBLK)then
         Di = 1; if(r2FixAxis > 0.1) Di = 2
         time_BLK(1:Di, 1:nJ, 1:nK, iBlock) = &
