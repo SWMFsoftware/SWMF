@@ -41,6 +41,9 @@ clean:
 	fi)
 
 distclean: 
+	./Config.pl -uninstall
+
+allclean:
 	@(if([ -f Makefile.def ]); then \
 		touch srcInterface/Makefile.DEPEND; \
 		cd srcInterface; make distclean; \

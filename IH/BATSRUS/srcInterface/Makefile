@@ -48,6 +48,7 @@ ${MY_LIB}: ${BATSRUS_LIB} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
 distclean: clean
 	rm -f IH_*.f90 ModGridDescriptor.f90 ModBuffer.f90 \
 		update_lagrangian_grid.f90
-	rm -f Makefile.DEPEND
+	rm -f Makefile.DEPEND ModDensityAndGradient.f90 \
+		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90
 
 # keep this line
