@@ -50,6 +50,7 @@ module ModStatSum
   integer :: iIterTe !Temperature iterations counter
 
   real,parameter::c0=0.0
+  logical,parameter::UsePreviousTe=.true.
 
   private::mod_init
 Contains
@@ -108,7 +109,9 @@ Contains
 
     !At too low temperature the ionization degree is set to 0
     if(Te<=0.02*IonizPotential_I(1))then
-       ZAv=c0; EAv=c0; DeltaZ2Av=c0; return
+       ZAv=c0; EAv=c0; DeltaZ2Av=c0 
+       if(present(IsDegenerated))IsDegenerated=.false.
+       return
     end if	
 
     TeInv = cOne / TeIn        ! 1/kT; units: [1/eV]
@@ -224,8 +227,11 @@ Contains
             ToleranceUeV ! The required accuracy of U in eV
     !-------------------------
     Na = NaIn
+    if(.not.UsePreviousTe) Te = UIn/1.5
     if(UIn<=0.03*IonizPotential_I(1))then
-       Te=UIn/1.50; ZAv=c0; EAv=c0; DeltaZ2Av=c0; return
+       Te=UIn/1.50; ZAv=c0; EAv=c0; DeltaZ2Av=c0 
+       if(present(IsDegenerated))IsDegenerated=.false.
+       return
     end if
     ToleranceUeV = ToleranceU * Uin
     iIterTe = 0
@@ -243,7 +249,48 @@ Contains
        iIterTe = iIterTe+1  !Global variable, which is accessible from outside
     end do iterations
   end subroutine set_temperature
-  
+  !============================================
+  subroutine pressure_to_temperature(PToNaRatio,NaIn,IsDegenerated)
+        real,intent(in) :: PToNaRatio,& !Presure diveded by Na [eV]
+	               NaIn !Density of heavy particles [# of particles/m^3]
+    logical,intent(out),optional::IsDegenerated
+
+    !accuracy of internal energy needed [(% deviation)/100]
+    real,parameter :: ToleranceP = 0.001 
+
+    ! The difference between the given pressure and the calculated one
+    real :: PDeviation,& 
+            TolerancePeV ! The required accuracy of P in eV*Na
+
+    !Thermodinamical derivative (\partial P/\partial T)
+    !at constant Na, divided by Na
+    real :: NaInvDPOvDTAtCNa  
+    !------------------------------------
+    Na = NaIn
+    if(.not.UsePreviousTe) Te = PToNaRatio
+    if(PToNaRatio<=0.03*IonizPotential_I(1))then
+       Te = PToNaRatio; ZAv=c0; EAv=c0; DeltaZ2Av=c0 
+       if(present(IsDegenerated))IsDegenerated=.false.
+       return
+    end if
+    TolerancePeV = ToleranceP * PToNaRatio
+    iIterTe = 0
+    !Use Newton-Rapson iterations to get a better approximation of Te:
+    PDeviation = 2.*TolerancePeV
+    iterations: do while(abs(PDeviation) >TolerancePeV .and. iIterTe<=20)
+       !Find the populations for the trial Te
+       call set_ionization_equilibrium(Te, Na, IsDegenerated) 
+       PDeviation = pressure()/(Na*cEV) - PToNaRatio
+
+       call get_thermodyn_derivatives(NaInvDPOvDTAtCNaOut=NaInvDPOvDTAtCNa)
+
+       !Calculate the improved value of Te, limiting the iterations so 
+       !they can't jump too far out, if the initial guess for Te is bad.
+       Te = min(2.0*Te, max(0.5*Te, Te - PDeviation/NaInvDPOvDTAtCNa))  
+
+       iIterTe = iIterTe+1  !Global variable, which is accessible from outside
+    end do iterations
+  end subroutine pressure_to_temperature
   !============================================
   ! Calculate the pressure in the plasma [Pa]
   ! Can only be called after set_ionization_equilibrium has executed
@@ -294,12 +341,12 @@ Contains
 
   end function heat_capacity 
   !=======================================!
-  subroutine get_termodyn_derivatives(GammaOut,GammaSOut,GammaMaxOut,CvOut)
+  subroutine get_thermodyn_derivatives(GammaOut,GammaSOut,GammaMaxOut,CvOut,NaInvDPOvDTAtCNaOut)
     real,optional,intent(out)::GammaOut    !1+P/UInternal
     real,optional,intent(out)::GammaSOut   !The speed of sound squared*Rho/P
     real,optional,intent(out)::GammaMaxOut !max(Gamma,GammaS)
     real,optional,intent(out)::CvOut       !The same as heat_capacity()
-    
+    real,optional,intent(out)::NaInvDPOvDTAtCNaOut
     real::Gamma,GammaS,Cv
     !Thermodynamic derivatives: use abbreviations:
     !Ov means over 
@@ -311,7 +358,7 @@ Contains
 
     !Derivatives of pressure:
     real::RhoOvPDPOvDRhoAtCT !(\rho/P)*(\partial P/\Partial \rho)_{T=const}
-    real::NaInvDPOvDTAtCNa   !(1/Na)*(\partial P/\partial T)
+    real::NaInvDPOvDTAtCNa   !(1/Na)*(\partial P/\partial T)_{\rho=const}
 
     !Misc:
     real :: TeInv,   & !The inverse of the electron temperature [1/eV]
@@ -328,6 +375,7 @@ Contains
        if(present(GammaSOut))  GammaSOut=Gamma0
        if(present(GammaMaxOut))GammaMaxOut=Gamma0
        if(present(CvOut))CvOut=1.50
+       if(present(NaInvDPOvDTAtCNaOut))NaInvDPOvDTAtCNaOut = 1.0 
        return
     end if
     if(present(GammaOut))GammaOut = 1.0 + Te * (1.0 + ZAv)/&
@@ -350,6 +398,8 @@ Contains
     !Calculate derivatives at const Na:
     TDZOvDTAtCNa =(ETeInvDeltaZAv + 1.50 * DeltaZ2Av)/(1.0 + DeltaZ2Av / ZAv)   
     NaInvDPOvDTAtCNa = 1.0 + ZAv + TDZOvDTAtCNa
+    if(present(NaInvDPOvDTAtCNaOut)) NaInvDPOvDTAtCNaOut = NaInvDPOvDTAtCNa
+    
 
     !Calculate another missing deviator
     DeltaETeInv2Av        = &
@@ -359,11 +409,15 @@ Contains
     Cv=1.50 * NaInvDPOvDTAtCNa + DeltaETeInv2Av +  ETeInvDeltaZAv *&
                                                  (1.50 -  TDZOvDTAtCNa/ZAv)
     if(present(CvOut))CvOut=Cv
+    !Define GammaS in terms the speed of sound: GammaS*P/\rho=(\partial P/\partial \rho)_{s=const}
+    !Use a formula 3.72 from R.P.Drake,{\it High-Energy Density Physics}, Springer, Berlin-Heidelberg-NY, 2006
+    ! and apply the thermodinamic entity: 
+    !(\partial \epsilon/\partial \rho)_{T=const}-P/\rho^2)=T(\partial P/\partial T)_{\rho=const)/\rho^2
     GammaS =  RhoOvPDPOvDRhoAtCT +  NaInvDPOvDTAtCNa **2 /(Cv * (1.0 + ZAv))
     if(present(GammaSOut))GammaSOut=GammaS
     if(present(GammaMaxOut))GammaMaxOut=max(GammaS,1.0 + Te * (1.0 + ZAv)/&
          (1.50 * (1.0 + ZAv) * Te + EAv))
-  end subroutine get_termodyn_derivatives
+  end subroutine get_thermodyn_derivatives
 
   !=======================================!
   ! Calculating the Z average values from populations
