@@ -29,7 +29,7 @@ LIB:    DEPEND
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}: DEPEND ${OBJECTS}
+${MY_LIB}: ${OBJECTS}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
 
@@ -37,9 +37,12 @@ LIBSHARE  = ${LIBDIR}/libSHARE.a
 LIBTIMING = ${LIBDIR}/libTIMING.a
 
 
-${OBJECTS_EXE} : DEPEND ${MY_LIB} ${LIBSHARE} ${LIBTIMING}
+test_ionization.o : ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
 
-IONIZ : ${OBJECTS_EXE}
+IONIZ:  DEPEND 
+	make IONIZ.exe
+	
+IONIZ.exe: test_ionization.o
 	@(if [ ${OS} = "Darwin" ];         then make IONIZ_for_Darwin; \
 	else                                    make IONIZ_general; fi)
 
@@ -55,7 +58,12 @@ IONIZ_for_Darwin:
 		${Lflag1}    ; 
 	rm -rf Tmp_ ;
 
-GODUNOV: ${OBJECTS_EXE}
+test_godunov.o : ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
+
+GODUNOV: DEPEND 
+	 make GODUNOV.exe
+
+GODUNOV.exe: test_godunov.o
 	@(if [ ${OS} = "Darwin" ];         then make GODUNOV_for_Darwin; \
 	else                                    make GODUNOV_general; fi)
 
