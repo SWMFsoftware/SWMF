@@ -65,8 +65,11 @@ contains
 
     call update_states_MHD(iStage,iBlock)
 
-    ! update of pressure and relaxation energy::
+    ! Do not use previous solution in Newton iteration to avoid dependency
+    ! on number and order of blocks on a processor
+    UsePreviousTe = .false.
 
+    ! update of pressure and relaxation energy::
     do k=1,nK; do j=1,nJ; do i=1,nI
        ! Total internal energy ExtraEInt + P/(\gamma -1) transformed to SI
        EInternalSI = No2Si_V(UnitEnergyDens_)*&
