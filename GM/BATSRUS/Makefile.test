@@ -194,7 +194,7 @@ test_levelset:
 	make test_levelset_check
 
 test_levelset_compile:
-	./Config.pl -e=HdCrash -u=Crash -g=400,40,2,10,1
+	./Config.pl -e=HdCrash -u=Crash -g=4,4,2,2000,1
 	make CRASH
 	make PIDL
 
