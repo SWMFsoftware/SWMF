@@ -32,14 +32,14 @@ T			UseUserUpdateStates
 T			IsTimeAccurate
 
 #CHECKGRIDSIZE
-400			nI
-40			nJ
+4			nI
+4			nJ
 2			nK
-1			MinBlockALL
+250			MinBlockALL
 
 #GRID
-1			nRootBlockX
-1			nRootBlockY
+100			nRootBlockX
+10			nRootBlockY
 1			nRootBlockZ
 0.0			xMin
 5000.			xMax
