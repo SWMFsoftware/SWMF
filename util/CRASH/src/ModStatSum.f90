@@ -9,17 +9,17 @@ module ModStatSum
   integer::iIter     !To provide the output, if needed
 
   integer :: nZ=-1                      !Atomic number of element in question
-  
+
   integer :: iZMin  ! Numbers of the ionization states, such that the population
   integer :: iZMax  ! of ion states with iZ<iZMin or iZ>iZMax is negligible.
-  
+
   ! Array of ionization potentials - energy needed to create 
   ! i-level ion from (i-1)-level ion
   real,dimension(1:nZMax) :: IonizPotential_I
 
   ! Array of energies needed to create i-level ion from a neutral atom
   real,dimension(0:nZMax) :: IonizEnergyNeutral_I 
-  
+
   ! Array of the populations of ions
   real,dimension(0:nZMax) :: Population_I
 
@@ -28,7 +28,7 @@ module ModStatSum
 
   ! array of natural logarithms of consecutive integers
   real,dimension(nZMax) :: LogN_I 
-  
+
   !The combination of fundamental constants, used to calculate the electron
   !statistical weight: electron statistical weight at the temperature of 1eV
   !and the conscentration of 1 particle per m^3
@@ -42,15 +42,15 @@ module ModStatSum
 
   !Averages:
   real :: ZAv,& ! the average charge per ion - <Z> (elementary charge units)
-          EAv   ! The average ionization energy level of ions
+       EAv   ! The average ionization energy level of ions
 
   !Deviator <(\delta i)^2>:
   real,private :: DeltaZ2Av ! The value of <(delta i)^2>=<i^2>-<i>^2
 
   integer :: iIterTe !Temperature iterations counter
 
-  real,parameter::c0=0.0
-  logical,parameter::UsePreviousTe=.true.
+  real, parameter::c0=0.0
+  logical:: UsePreviousTe = .true.
 
   private::mod_init
 Contains
@@ -60,7 +60,7 @@ Contains
   subroutine mod_init
     integer:: iZ  !Used for loops
     real   :: DeBroglieInv
-	!-----------------
+    !-----------------
     LogN_I = (/(log(real(iZ)), iZ = 1,nZMax)/)
     N_I    = (/(real(iZ), iZ = 0,nZMax)/)
 
@@ -70,7 +70,7 @@ Contains
     eWight1eV1m3 = 2*DeBroglieInv**3 ! 2/(Lambda^3)
     DoInit=.false.
   end subroutine mod_init
- 
+
   !==========================================================================
   !Set the element and its Ionization Potentials
   subroutine set_element( nZIn)
@@ -82,13 +82,13 @@ Contains
     nZ = nZIn
     call get_ioniz_potential(nZ,IonizPotential_I(1:nZ))
 
-	IonizEnergyNeutral_I(0) = 0.0
-	do iZ = 1,nZ
-	   IonizEnergyNeutral_I(iZ) = IonizEnergyNeutral_I(iZ-1) +&
-                IonizPotential_I(iZ)
-	end do
+    IonizEnergyNeutral_I(0) = 0.0
+    do iZ = 1,nZ
+       IonizEnergyNeutral_I(iZ) = IonizEnergyNeutral_I(iZ-1) +&
+            IonizPotential_I(iZ)
+    end do
   end subroutine set_element
-  
+
   !=========================================================================
   ! Find the final values of ZAv and the ion populations, from temperature 
   ! and heavy particle density
@@ -96,14 +96,14 @@ Contains
     ! Concentration of heavy particles (atoms+ions) in the plasma 
     ! (# of particles per m^3):
     real, intent(in)             ::  NaIn,& ![1/m^3]
-	                             TeIn !electron temperature [eV] 
+         TeIn !electron temperature [eV] 
     logical,optional,intent(out) :: IsDegenerated
     real :: lnC1,&  ! natural log C1 
-	    TeInv   ! The inverse of the electron temperature
+         TeInv   ! The inverse of the electron temperature
 
     real,parameter :: ToleranceZ = 0.001 !Accuracy of Z needed
     !---------------------------------------------------------
-    
+
     Te = TeIn
     Na = NaIn
 
@@ -112,7 +112,7 @@ Contains
        ZAv=c0; EAv=c0; DeltaZ2Av=c0 
        if(present(IsDegenerated))IsDegenerated=.false.
        return
-    end if	
+    end if
 
     TeInv = cOne / TeIn        ! 1/kT; units: [1/eV]
     lnC1  = log(eWight1eV1m3 * sqrt(TeIn)*TeIn / Na)
@@ -127,11 +127,11 @@ Contains
       real    :: Z1, Z2  !<z> and <z^2> 
       integer,dimension(1) :: InitZ ! The initial approximation of Z
       !-----------------------------
-      
+
       ! First approximate the value of Z by finding for what i=Z 
       ! the derivative of the populations sequence~0 (population is maximum):
       InitZ = minloc( abs(lnC1 - LogN_I(1:nZ) - IonizPotential_I(1:nZ)*TeInv) )
-                           
+
       if(InitZ(1)==1)then
          !Find ZAv in the case when Z~0
          ZAv  = min( real(InitZ(1) ), &
@@ -159,14 +159,14 @@ Contains
     ! Finding the populations of the ion states
     subroutine set_population(GeLog)
       real, intent(in) :: GeLog   ! Natural logarithm of the electron stat weight:
-                                  !  log(1/(Ne*lambda^3)) !<*>yv:calc.it.ind
+      !  log(1/(Ne*lambda^3)) !<*>yv:calc.it.ind
       real :: StatSumTermMax,StatSumTermMin
       real,dimension(0:nZMax) :: StatSumTermLog_I
       integer,dimension(1) :: iZDominant    !Most populated ion state
       ! ln(1.0e-2), to truncate terms of the statistical sum, which a factor of 
       ! 1e-2 less than the maximal one:
       real, parameter :: StatSumToleranceLog = 7.0 
-      
+
       integer :: iZ
       real    :: PITotal
       !--------------------------------------!
@@ -176,39 +176,39 @@ Contains
       do iZ = 1, nZ               
          !Fill up the sequence using the following equation:
          StatSumTermLog_I(iZ)  =  StatSumTermLog_I(iZ-1)   &
-                                - IonizPotential_I(iZ  )*TeInv + GeLog
+              - IonizPotential_I(iZ  )*TeInv + GeLog
       end do
 
       ! Find the location of that maximum value
       iZDominant = maxloc(StatSumTermLog_I(0:nZ))-1 
-      
+
       StatSumTermMax = StatSumTermLog_I(iZDominant(1))
-      
+
       StatSumTermMin = StatSumTermMax -StatSumToleranceLog 
-      
-      
+
+
       ! Find the lower boundary of the array 
       ! below which the values of Pi can be neglected
-      
+
       iZMin = count( StatSumTermLog_I(0:iZDominant(1)) < StatSumTermMin ) 
-      
-      
+
+
       !Find the similar upper boundary
       iZMax = max(nZ - count(StatSumTermLog_I(iZDominant(1):nZ) < StatSumTermMin),1)
-      
+
       !Initialize the population array to zeros
       Population_I(0:nZ) = c0
-      
-      
+
+
       !Convert the array into the Pi values from ln(Pi)
       Population_I(iZMin:iZMax) = exp(StatSumTermLog_I(iZMin:iZMax)-StatSumTermMax)
-      
+
       !Add up all the values of Pi found so far
       PITotal = sum(Population_I(iZMin:iZMax))	
 
       !Normalize the Pi-s so that their sum =1
       Population_I(iZMin:iZMax) = Population_I(iZMin:iZMax)/PITotal 
-      
+
     end subroutine set_population
 
   end subroutine set_ionization_equilibrium
@@ -216,7 +216,7 @@ Contains
   !=======================================  
   subroutine set_temperature(Uin, NaIn,IsDegenerated)
     real,intent(in) :: Uin,& !Average internal energy per atomic unit [eV]
-	               NaIn !Density of heavy particles [# of particles/m^3]
+         NaIn !Density of heavy particles [# of particles/m^3]
     logical,intent(out),optional::IsDegenerated
 
     !accuracy of internal energy needed [(% deviation)/100]
@@ -224,7 +224,7 @@ Contains
 
     ! The difference between the given internal energy and the calculated one
     real :: UDeviation,& 
-            ToleranceUeV ! The required accuracy of U in eV
+         ToleranceUeV ! The required accuracy of U in eV
     !-------------------------
     Na = NaIn
     if(.not.UsePreviousTe) Te = UIn/1.5
@@ -251,8 +251,8 @@ Contains
   end subroutine set_temperature
   !============================================
   subroutine pressure_to_temperature(PToNaRatio,NaIn,IsDegenerated)
-        real,intent(in) :: PToNaRatio,& !Presure diveded by Na [eV]
-	               NaIn !Density of heavy particles [# of particles/m^3]
+    real,intent(in) :: PToNaRatio,& !Presure diveded by Na [eV]
+         NaIn !Density of heavy particles [# of particles/m^3]
     logical,intent(out),optional::IsDegenerated
 
     !accuracy of internal energy needed [(% deviation)/100]
@@ -260,7 +260,7 @@ Contains
 
     ! The difference between the given pressure and the calculated one
     real :: PDeviation,& 
-            TolerancePeV ! The required accuracy of P in eV*Na
+         TolerancePeV ! The required accuracy of P in eV*Na
 
     !Thermodinamical derivative (\partial P/\partial T)
     !at constant Na, divided by Na
@@ -302,7 +302,7 @@ Contains
   ! calculate the average internal energy per atomic unit [eV]
   ! Can only be called after set_ionization_equilibrium has executed 
   real function internal_energy()
-	 internal_energy = 1.50* Te *(1+ZAv) + EAv
+    internal_energy = 1.50* Te *(1+ZAv) + EAv
   end function internal_energy
 
   !==================================
@@ -311,9 +311,9 @@ Contains
   !Can only be called after set_ionization_equilibrium has executed
   real function heat_capacity()
     real :: TeInv,   & !The inverse of the electron temperature [1/eV]
-            ETeInvAv,& ! < Ei/Te> (Ei - energy levels, Te - electron temperature [eV])
-            DeltaETeInv2Av,&	! <(delta Ei/Te)^2>
-   	    ETeInvDeltaZAv ! <delta i * Ei/Te>
+         ETeInvAv,& ! < Ei/Te> (Ei - energy levels, Te - electron temperature [eV])
+         DeltaETeInv2Av,&	! <(delta Ei/Te)^2>
+         ETeInvDeltaZAv ! <delta i * Ei/Te>
 
     ! Array of ionization energy levels of ions divided by the temperature in eV
     real,dimension(0:nZMax) :: ETeInv_I 
@@ -321,25 +321,25 @@ Contains
     if(ZAv==c0)then
        heat_capacity=1.50;return
     end if
-    
+
     !calculate the values of the variables defined above:
     TeInv = cOne/Te
     ETeInv_I(iZMin:iZMax) = IonizEnergyNeutral_I( iZMin:iZMax )*TeInv
     ETeInvAv              = EAv*TeInv
-    
+
     !Calculate the missing deviators
     DeltaETeInv2Av        = &
          sum( Population_I(iZMin:iZmax) * (ETeInv_I(iZMin:iZmax)-ETeInvAv)**2 )
     ETeInvDeltaZAv        = &
          sum( Population_I(iZMin:iZMax) * ETeInv_I(iZMin:iZmax) * &
-                           (N_I(iZMin:iZMax)-ZAv) )
+         (N_I(iZMin:iZMax)-ZAv) )
 
     ! calculate the heat capacity:
     heat_capacity = 1.50*(cOne +ZAv) + DeltaETeInv2Av &
-	           +( 3.0*ZAv*(0.750*DeltaZ2Av + ETeInvDeltaZAv) &
-                   - ETeInvDeltaZAv**2 ) / (ZAv + DeltaZ2Av)
+         +( 3.0*ZAv*(0.750*DeltaZ2Av + ETeInvDeltaZAv) &
+         - ETeInvDeltaZAv**2 ) / (ZAv + DeltaZ2Av)
 
-  end function heat_capacity 
+  end function heat_capacity
   !=======================================!
   subroutine get_thermodyn_derivatives(GammaOut,GammaSOut,GammaMaxOut,CvOut,NaInvDPOvDTAtCNaOut)
     real,optional,intent(out)::GammaOut    !1+P/UInternal
@@ -362,9 +362,9 @@ Contains
 
     !Misc:
     real :: TeInv,   & !The inverse of the electron temperature [1/eV]
-            ETeInvAv,& ! < Ei/Te> (Ei - energy levels, Te - electron temperature [eV])
-            DeltaETeInv2Av,&	! <(delta Ei/Te)^2>
-   	    ETeInvDeltaZAv ! <delta i * Ei/Te>
+         ETeInvAv,& ! < Ei/Te> (Ei - energy levels, Te - electron temperature [eV])
+         DeltaETeInv2Av,&	! <(delta Ei/Te)^2>
+         ETeInvDeltaZAv ! <delta i * Ei/Te>
 
     ! Array of ionization energy levels of ions divided by the temperature in eV
     real,dimension(0:nZMax) :: ETeInv_I
@@ -380,7 +380,7 @@ Contains
     end if
     if(present(GammaOut))GammaOut = 1.0 + Te * (1.0 + ZAv)/&
          (1.50 * (1.0 + ZAv) * Te + EAv)
-    
+
     !Derivatives at constant T:
     NaDZOvDNaAtCT = - DeltaZ2Av/(1.0 + DeltaZ2Av/ZAv)   
     RhoOvPDPOvDRhoAtCT  = 1.0 + NaDZOvDNaAtCT/(1.0 + Zav) 
@@ -389,25 +389,25 @@ Contains
     TeInv = cOne/Te
     ETeInv_I(iZMin:iZMax) = IonizEnergyNeutral_I( iZMin:iZMax )*TeInv
     ETeInvAv              = EAv*TeInv
-    
+
     !Calculate the missing deviator
     ETeInvDeltaZAv        = &
          sum( Population_I(iZMin:iZMax) * ETeInv_I(iZMin:iZmax) * &
-                           (N_I(iZMin:iZMax)-ZAv) )
+         (N_I(iZMin:iZMax)-ZAv) )
 
     !Calculate derivatives at const Na:
     TDZOvDTAtCNa =(ETeInvDeltaZAv + 1.50 * DeltaZ2Av)/(1.0 + DeltaZ2Av / ZAv)   
     NaInvDPOvDTAtCNa = 1.0 + ZAv + TDZOvDTAtCNa
     if(present(NaInvDPOvDTAtCNaOut)) NaInvDPOvDTAtCNaOut = NaInvDPOvDTAtCNa
-    
+
 
     !Calculate another missing deviator
     DeltaETeInv2Av        = &
          sum( Population_I(iZMin:iZmax) * (ETeInv_I(iZMin:iZmax)-ETeInvAv)**2 )
-    
+
     !Calculate Cv: it may be among the output variables and also is used to find Cs
     Cv=1.50 * NaInvDPOvDTAtCNa + DeltaETeInv2Av +  ETeInvDeltaZAv *&
-                                                 (1.50 -  TDZOvDTAtCNa/ZAv)
+         (1.50 -  TDZOvDTAtCNa/ZAv)
     if(present(CvOut))CvOut=Cv
     !Define GammaS in terms the speed of sound: GammaS*P/\rho=(\partial P/\partial \rho)_{s=const}
     !Use a formula 3.72 from R.P.Drake,{\it High-Energy Density Physics}, Springer, Berlin-Heidelberg-NY, 2006
@@ -435,7 +435,7 @@ Contains
   !==================================
   !Calculate the average ionization energy from neutral atoms of the ions
   real function E_averaged()
-     E_averaged = EAv
-          
-  end function E_averaged				  
+    E_averaged = EAv
+
+  end function E_averaged
 end module ModStatSum
