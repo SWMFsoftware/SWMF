@@ -9,6 +9,7 @@ MY_LIB = ${LIBDIR}/libCRASH.a
 OBJECTS=\
 	heat_capacity.o \
 	ModStatSum.o\
+	ModStatSumMix.o\
 	ModAtomicMass.o\
 	ModEos.o\
         ModIonizPotential.o 
