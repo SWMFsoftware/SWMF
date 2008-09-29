@@ -49,8 +49,10 @@ module ModStatSum
 
   integer :: iIterTe !Temperature iterations counter
 
+
   real, parameter::c0=0.0
   logical:: UsePreviousTe = .true.
+
 
   private::mod_init
 Contains
@@ -144,11 +146,16 @@ Contains
       iIter  =  0
       ZTrial = -ToleranceZ
       iterations: do while (abs(ZAv-ZTrial) >= ToleranceZ .and. iIter<10)
+  
          ZTrial = ZAv
          call set_population(lnC1 - log(ZTrial))
+         
          Z1  = sum(Population_I(iZMin:iZMax)*N_I(iZMin:iZMax))
+         
          DeltaZ2Av  = sum( Population_I(iZMin:iZmax) * (N_I(iZMin:iZMax)-Z1)**2 ) 
+         
          ZAv = ZTrial - (ZTrial - Z1)/(cOne + DeltaZ2Av/ZTrial)
+         
          iIter = iIter+1
       end do iterations
 
@@ -157,19 +164,29 @@ Contains
 
     !==============================================
     ! Finding the populations of the ion states
-    subroutine set_population(GeLog)
-      real, intent(in) :: GeLog   ! Natural logarithm of the electron stat weight:
-      !  log(1/(Ne*lambda^3)) !<*>yv:calc.it.ind
+
+    subroutine set_population(GeLogIn)
+      real, intent(in) :: GeLogIn ! Natural logarithm of the electron stat weight:
+                                  !  log(1/(Ne*lambda^3)) 
       real :: StatSumTermMax,StatSumTermMin
       real,dimension(0:nZMax) :: StatSumTermLog_I
       integer,dimension(1) :: iZDominant    !Most populated ion state
       ! ln(1.0e-2), to truncate terms of the statistical sum, which a factor of 
       ! 1e-2 less than the maximal one:
       real, parameter :: StatSumToleranceLog = 7.0 
+      
+      real :: GeLog
 
       integer :: iZ
       real    :: PITotal
       !--------------------------------------!
+
+      ! The present version does not stop simulation
+      ! when the Fermi degeneracy occurs (the electron 
+      ! statictical weight is not large), but it sets the
+      ! low bound for the weight to be e^2\approx 8
+      
+      GeLog = max( 2.0, GeLogIn )
 
       ! First, make the sequence of ln(StatSumTerm) values; let ln(P0)=0 )
       StatSumTermLog_I(0) = c0	
@@ -227,7 +244,10 @@ Contains
          ToleranceUeV ! The required accuracy of U in eV
     !-------------------------
     Na = NaIn
-    if(.not.UsePreviousTe) Te = UIn/1.5
+    
+    !It is difficult to make an initial guess about temperature
+    !The suggested estimate optimizes the number of idle iterations:
+    if(.not.UsePreviousTe) Te = max(UIn,IonizPotential_I(1)) * 0.1
     if(UIn<=0.03*IonizPotential_I(1))then
        Te=UIn/1.50; ZAv=c0; EAv=c0; DeltaZ2Av=c0 
        if(present(IsDegenerated))IsDegenerated=.false.
@@ -249,6 +269,7 @@ Contains
        iIterTe = iIterTe+1  !Global variable, which is accessible from outside
     end do iterations
   end subroutine set_temperature
+
   !============================================
   subroutine pressure_to_temperature(PToNaRatio,NaIn,IsDegenerated)
     real,intent(in) :: PToNaRatio,& !Presure diveded by Na [eV]
@@ -266,18 +287,27 @@ Contains
     !at constant Na, divided by Na
     real :: NaInvDPOvDTAtCNa  
     !------------------------------------
+
     Na = NaIn
-    if(.not.UsePreviousTe) Te = PToNaRatio
+
+    !It is difficult to make an initial guess about temperature
+    !The suggested estimate optimizes the number of idle iterations:
+    if(.not.UsePreviousTe) Te = max(1.50* PToNaRatio, IonizPotential_I(1) ) * 0.1
+
     if(PToNaRatio<=0.03*IonizPotential_I(1))then
        Te = PToNaRatio; ZAv=c0; EAv=c0; DeltaZ2Av=c0 
        if(present(IsDegenerated))IsDegenerated=.false.
        return
     end if
+
     TolerancePeV = ToleranceP * PToNaRatio
     iIterTe = 0
-    !Use Newton-Rapson iterations to get a better approximation of Te:
     PDeviation = 2.*TolerancePeV
+
+    !Use Newton-Rapson iterations to get a better approximation of Te:
+
     iterations: do while(abs(PDeviation) >TolerancePeV .and. iIterTe<=20)
+
        !Find the populations for the trial Te
        call set_ionization_equilibrium(Te, Na, IsDegenerated) 
        PDeviation = pressure()/(Na*cEV) - PToNaRatio
@@ -289,6 +319,7 @@ Contains
        Te = min(2.0*Te, max(0.5*Te, Te - PDeviation/NaInvDPOvDTAtCNa))  
 
        iIterTe = iIterTe+1  !Global variable, which is accessible from outside
+
     end do iterations
   end subroutine pressure_to_temperature
   !============================================
@@ -309,6 +340,7 @@ Contains
   !Calculate the specific heat capacity at constant volume 
   !(derivative of internal energy wrt Te) from temperature:
   !Can only be called after set_ionization_equilibrium has executed
+  
   real function heat_capacity()
     real :: TeInv,   & !The inverse of the electron temperature [1/eV]
          ETeInvAv,& ! < Ei/Te> (Ei - energy levels, Te - electron temperature [eV])
@@ -318,7 +350,8 @@ Contains
     ! Array of ionization energy levels of ions divided by the temperature in eV
     real,dimension(0:nZMax) :: ETeInv_I 
     !------------------
-    if(ZAv==c0)then
+  
+    if( ZAv<=cTiny )then
        heat_capacity=1.50;return
     end if
 
@@ -341,6 +374,7 @@ Contains
 
   end function heat_capacity
   !=======================================!
+
   subroutine get_thermodyn_derivatives(GammaOut,GammaSOut,GammaMaxOut,CvOut,NaInvDPOvDTAtCNaOut)
     real,optional,intent(out)::GammaOut    !1+P/UInternal
     real,optional,intent(out)::GammaSOut   !The speed of sound squared*Rho/P
@@ -370,6 +404,7 @@ Contains
     real,dimension(0:nZMax) :: ETeInv_I
     real,parameter::Gamma0=5.0/3.0
     !--------------------------------------!
+
     if(ZAv==c0)then
        if(present(GammaOut))   GammaOut=Gamma0
        if(present(GammaSOut))  GammaSOut=Gamma0
@@ -408,15 +443,21 @@ Contains
     !Calculate Cv: it may be among the output variables and also is used to find Cs
     Cv=1.50 * NaInvDPOvDTAtCNa + DeltaETeInv2Av +  ETeInvDeltaZAv *&
          (1.50 -  TDZOvDTAtCNa/ZAv)
-    if(present(CvOut))CvOut=Cv
+    
+    if(present(CvOut)) CvOut = Cv
+    
     !Define GammaS in terms the speed of sound: GammaS*P/\rho=(\partial P/\partial \rho)_{s=const}
     !Use a formula 3.72 from R.P.Drake,{\it High-Energy Density Physics}, Springer, Berlin-Heidelberg-NY, 2006
     ! and apply the thermodinamic entity: 
     !(\partial \epsilon/\partial \rho)_{T=const}-P/\rho^2)=T(\partial P/\partial T)_{\rho=const)/\rho^2
+    
     GammaS =  RhoOvPDPOvDRhoAtCT +  NaInvDPOvDTAtCNa **2 /(Cv * (1.0 + ZAv))
-    if(present(GammaSOut))GammaSOut=GammaS
-    if(present(GammaMaxOut))GammaMaxOut=max(GammaS,1.0 + Te * (1.0 + ZAv)/&
+    
+    if(present(GammaSOut))GammaSOut = GammaS
+
+    if(present(GammaMaxOut))GammaMaxOut = max( GammaS, 1.0 + Te * (1.0 + ZAv)/&
          (1.50 * (1.0 + ZAv) * Te + EAv))
+
   end subroutine get_thermodyn_derivatives
 
   !=======================================!
@@ -438,4 +479,5 @@ Contains
     E_averaged = EAv
 
   end function E_averaged
+
 end module ModStatSum
