@@ -7,51 +7,64 @@
 !***********************************************************************
 program saha
   use ModStatSum
+  use ModStatSumMix
+  use ModAtomicMass
   implicit NONE
   real :: &
        Nao = 1.00e18,  &  ! cm-3
        vTe=5., NaTrial, vU 
 
-  integer,parameter :: nN=5 , nT=10, nU=10
+  integer,parameter :: nN=5 , nT=25, nU=40
   real    :: dTe, dLogN, dU
   integer :: iT, nT1=1000000, iN, iU, iLoop
-  
+
   real    :: z_I(0:nN),z2_I(0:nN),Uav_I(0:nN),Cv_I(0:nN), Te_I(0:nN) 
   integer :: iIter_I(0:nN)
   !character(LEN=*),parameter,dimension(0:nN) :: Separator_I='|'
   !character(LEN=*),parameter,dimension(0:nN) :: Separator1_I='/'
   logical :: IsDegenerated
+
+
+  integer,parameter :: nPolyimide = 4
+  real,dimension(nPolyimide),parameter :: CPolyimide_I = &
+       (/22.0, 10.0, 2.0, 5.0/)/(22.0 + 10.0 + 2.0 +5.0)
+  integer,dimension(nPolyimide),parameter :: nZPolyimide_I = &
+       (/6, 1, 7, 8/)
+  real,parameter :: cAtomicPolymide = &
+       (cAtomicMass_I(6) * 22.0 + &
+       cAtomicMass_I(1) * 10.0 + &
+       cAtomicMass_I(7) *  2.0 + &
+       cAtomicMass_I(8) *  5.0) / &
+       (22.0 + 10.0 + 2.0 +5.0)
   !-------------------------------------------
 
-  dTe = 50.0; dLogN=log(10.0); dU=1000.0
+  dTe = 5.0; dLogN=log(10.0); dU=100.0
 
-  
+
   call set_element( 54 )
 
-!  tm_1 = diff_sec()!
-!  nT1 =  (nN +1)*nT/1000000 
-!  write(*,*)"Start,", nT1 , " million iterations"
+ 
 
 
 
   open(24,file='../doc/Table1.tex')
-        write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
-        write(24,'(a)')'\hline'
-        write(24,'(a)')'Te[eV]\textbackslash \textbackslash Na[$1/cm^3$] & $10^{18}$'//&
-                      ' & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
-        write(24,'(a)')'\hline' 
-        write(24,'(a)')'\hline'
-  
+  write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
+  write(24,'(a)')'\hline'
+  write(24,'(a)')'Te[eV]\textbackslash \textbackslash Na[$1/cm^3$] & $10^{18}$'//&
+       ' & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
+  write(24,'(a)')'\hline' 
+  write(24,'(a)')'\hline'
+
 
   do iT  = 1,nT
      if (((iT-1)/25)*25==(iT-1).and.iT>25) then
-        
+
         write(24,'(a)')'\end{tabular}', char(10)
         !--------------
         write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
         write(24,'(a)')'\hline'
         write(24,'(a)')'Te[eV]\textbackslash \textbackslash Na[$1/cm^3$] & $10^{18}$ & $10^{19}$'//&
-                       ' & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
+             ' & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
         write(24,'(a)')'\hline' 
         write(24,'(a)')'\hline'
      end if
@@ -65,48 +78,48 @@ program saha
         Uav_I(iN)=internal_energy()
         Cv_I(iN)=heat_capacity()
         if(IsDegenerated)then
-           Z_I(iN) = -1.0
-           Z2_I(iN)= -1.0
-           Uav_I(iN)= -1.0
-           Cv_I(iN)= -1.0
+           Z_I(iN) = -  Z_I(iN)
+           Z2_I(iN)= - Z2_I(iN)
+           Uav_I(iN)= -Uav_I(iN)
+           Cv_I(iN)= - Cv_I(iN)
         end if
      end do
      write(24,'(f5.0,6(a,f7.1),a)') vTe,&
-               (' & ', Z_I(iN), iN=0,nN ),'\tabularnewline'
+          (' & ', Z_I(iN), iN=0,nN ),'\tabularnewline'
      write(24,'(a)')'\hline'
 
 
   end do
-  
+
   write(24,'(a)')'\end{tabular}'
 
   close(24)
-!_______________________________________________
-open(24,file='../doc/Table2.tex')
+  !_______________________________________________
+  open(24,file='../doc/Table2.tex')
   write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
   write(24,'(a)')'\hline'
   write(24,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
   write(24,'(a)')'\hline'
   write(24,'(a)')'Te[eV] & $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ '//&
-                 '& $U_{av} | C_v$ & $U_{av} | C_v$\tabularnewline'
+       '& $U_{av} | C_v$ & $U_{av} | C_v$\tabularnewline'
   write(24,'(a)')'\hline' 
   write(24,'(a)')'\hline'
-  
+
 
   do iT  = 1,nT
      if (((iT-1)/25)*25==(iT-1).and.iT>25) then
-        
+
         write(24,'(a)')'\end{tabular}', char(10)
         !--------------
-		write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
-		write(24,'(a)')'\hline'
-		write(24,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
-		write(24,'(a)')'\hline'
-		write(24,'(a)')'Te[eV] & $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ '//&
-					'& $U_{av} | C_v$ & $U_{av} | C_v$\tabularnewline'
-		write(24,'(a)')'\hline' 
+        write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
+        write(24,'(a)')'\hline'
+        write(24,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
+        write(24,'(a)')'\hline'
+        write(24,'(a)')'Te[eV] & $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ '//&
+             '& $U_{av} | C_v$ & $U_{av} | C_v$\tabularnewline'
+        write(24,'(a)')'\hline' 
 	write(24,'(a)')'\hline' 
-      end if
+     end if
      vTe = dTe * iT
 
      do iN = 0,nN
@@ -117,24 +130,24 @@ open(24,file='../doc/Table2.tex')
         Uav_I(iN)=internal_energy()
         Cv_I(iN)=heat_capacity()
         if(IsDegenerated)then
-           Z_I(iN) = -1.0
-           Z2_I(iN)= -1.0
-           Uav_I(iN)= -1.0
-           Cv_I(iN)= -1.0
+           Z_I(iN) = -  Z_I(iN)
+           Z2_I(iN)= - Z2_I(iN)
+           Uav_I(iN)= -Uav_I(iN)
+           Cv_I(iN)= - Cv_I(iN)
         end if
      end do
      write(24,'(f5.0,6(a,f8.1,a,f7.1),a)') vTe,&
-               (' & ', Uav_I(iN), ' | ', Cv_I(iN), iN=0,nN ),'\tabularnewline'
+          (' & ', Uav_I(iN), ' | ', Cv_I(iN), iN=0,nN ),'\tabularnewline'
      write(24,'(a)')'\hline'
 
 
   end do
-  
+
   write(24,'(a)')'\end{tabular}'
 
   close(24)
 
-!_____________________________________
+  !_____________________________________
 
   open(25,file='../doc/Table3.tex')
   write(25,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
@@ -142,10 +155,10 @@ open(24,file='../doc/Table2.tex')
   write(25,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
   write(25,'(a)')'\hline'
   write(25,'(a)')'U[eV] & Te (Iterations) &  Te (Iterations) &  Te (Iterations) & '//&
-        ' Te (Iterations) &  Te (Iterations) &  Te (Iterations) \tabularnewline'
+       ' Te (Iterations) &  Te (Iterations) &  Te (Iterations) \tabularnewline'
   write(25,'(a)')'\hline' 
   write(25,'(a)')'\hline'
-  
+
   do iU  = 1,nU
      if (((iU-1)/50)*50==(iU-1).and.iU>50) then
         write(25,'(a)')'\end{tabular}', char(10)
@@ -165,11 +178,11 @@ open(24,file='../doc/Table2.tex')
         call set_temperature(vU,NaTrial*1000000.0,IsDegenerated)
         Te_I(iN) = Te 
         iIter_I(iN) = iIterTe
-        if(IsDegenerated)Te_I(iN)=-1.0
+        if(IsDegenerated)Te_I(iN)=-Te_I(iN)
      end do
 
      write(25,'(f6.0,6(a,f7.1,a,i7,a),a)') vU,&
-               (' & ', Te_I(iN), ' (', iIter_I(iN),')', iN=0,nN ),'\tabularnewline'
+          (' & ', Te_I(iN), ' (', iIter_I(iN),')', iN=0,nN ),'\tabularnewline'
      write(25,'(a)')'\hline'
 
   end do
@@ -178,7 +191,7 @@ open(24,file='../doc/Table2.tex')
   write(25,'(a)')'\end{tabular}'
   close(25)
 
-!_____________________________________
+  !_____________________________________
 
   open(25,file='../doc/Table4.tex')
   write(25,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
@@ -186,10 +199,11 @@ open(24,file='../doc/Table2.tex')
   write(25,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
   write(25,'(a)')'\hline'
   write(25,'(a)')'P/Na[eV] & Te (Iterations) &  Te (Iterations) &  Te (Iterations) & '//&
-        ' Te (Iterations) &  Te (Iterations) &  Te (Iterations) \tabularnewline'
+       ' Te (Iterations) &  Te (Iterations) &  Te (Iterations) \tabularnewline'
   write(25,'(a)')'\hline' 
   write(25,'(a)')'\hline'
-  
+
+  dU = 50.0
   do iU  = 1,nU
      if (((iU-1)/50)*50==(iU-1).and.iU>50) then
         write(25,'(a)')'\end{tabular}', char(10)
@@ -209,11 +223,11 @@ open(24,file='../doc/Table2.tex')
         call pressure_to_temperature(vU,NaTrial*1000000.0,IsDegenerated)
         Te_I(iN) = Te 
         iIter_I(iN) = iIterTe
-        if(IsDegenerated)Te_I(iN)=-1.0
+        if(IsDegenerated)Te_I(iN)=-Te_I(iN)
      end do
 
      write(25,'(f6.0,6(a,f7.1,a,i7,a),a)') vU,&
-               (' & ', Te_I(iN), ' (', iIter_I(iN),')', iN=0,nN ),'\tabularnewline'
+          (' & ', Te_I(iN), ' (', iIter_I(iN),')', iN=0,nN ),'\tabularnewline'
      write(25,'(a)')'\hline'
 
   end do
@@ -221,18 +235,58 @@ open(24,file='../doc/Table2.tex')
 
   write(25,'(a)')'\end{tabular}'
   close(25)
+  !_______________________________________________
+  open(24,file='../doc/Table5.tex')
+  write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
+  write(24,'(a)')'\hline'
+  write(24,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
+  write(24,'(a)')'\hline'
+  write(24,'(a)')'Te[eV] & $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ '//&
+       '& $U_{av} | C_v$ & $U_{av} | C_v$\tabularnewline'
+  write(24,'(a)')'\hline' 
+  write(24,'(a)')'\hline'
+
+  call set_mixture(nPolyimide, nZPolyimide_I, CPolyimide_I)
+  do iT  = 1,nT
+     if (((iT-1)/25)*25==(iT-1).and.iT>25) then
+
+        write(24,'(a)')'\end{tabular}', char(10)
+        !--------------
+        write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
+        write(24,'(a)')'\hline'
+        write(24,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
+        write(24,'(a)')'\hline'
+        write(24,'(a)')'Te[eV] & $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ & $U_{av} | C_v$ '//&
+             '& $U_{av} | C_v$ & $U_{av} | C_v$\tabularnewline'
+        write(24,'(a)')'\hline' 
+	write(24,'(a)')'\hline' 
+     end if
+     vTe = dTe * iT
+
+     do iN = 0,nN
+        NaTrial = Nao*exp(iN*dLogN)
+        call set_ionization_equilibrium_in_mix(vTe,NaTrial*1000000.0,IsDegenerated)
+        Uav_I(iN)=internal_energy_mix()
+        Cv_I(iN)=heat_capacity_mix()
+        if(IsDegenerated)then
+           Z_I(iN) = -  Z_I(iN)
+           Z2_I(iN)= - Z2_I(iN)
+           Uav_I(iN)= -Uav_I(iN)
+           Cv_I(iN)= - Cv_I(iN)
+        end if
+     end do
+     write(24,'(f5.0,6(a,f8.1,a,f7.1),a)') vTe,&
+          (' & ', Uav_I(iN), ' | ', Cv_I(iN), iN=0,nN ),'\tabularnewline'
+     write(24,'(a)')'\hline'
 
 
+  end do
 
-contains
-  !================================== current time, in SECONDs 
-  function  diff_sec  ( ) result (sec) 
-    integer,dimension (8) :: val
-    integer               :: sec
-    call date_and_time(VALUES=val)    
-    write (*,'("time ",i2.2,":",i2.2,":",i2.2))') val(5:7)
-    sec = val(7) +(val(6) +val(5)*60)*60                
-  end function diff_sec 
+  write(24,'(a)')'\end{tabular}'
+
+  close(24)
+
+  !_____________________________________
 
 end program saha
 
