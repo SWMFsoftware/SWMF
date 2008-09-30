@@ -114,7 +114,7 @@ Module ModIO
   real, dimension(6,MaxFile) :: plot_range 
 
   ! x, y, z point for arbitrary slice plotting
-  real, dimension(3,MaxFile) :: plot_point
+  real, dimension(3,MaxFile) :: plot_point=-99999.
 
   ! x, y, z normal vector for arbitrary slice plotting
   real, dimension(3,MaxFile) :: plot_normal
