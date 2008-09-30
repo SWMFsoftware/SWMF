@@ -1,5 +1,5 @@
 !*****************************************************************************
-subroutine tsy_trace(iLat,re,rc,xlati1,phi1,t,ps,parmod,imod,np, &
+subroutine tsy_trace(iLat,rlim,re,rc,xlati1,phi1,t,ps,parmod,imod,np, &
      npf1,dssa,bba,volume1,ro1,xmlt1,bo1,ra)
 !*****************************************************************************
 ! Routine does field line tracing in Tsyganenko field. For a given xlati1 and
@@ -12,6 +12,7 @@ subroutine tsy_trace(iLat,re,rc,xlati1,phi1,t,ps,parmod,imod,np, &
 ! Output: npf1,dssa,bba,volume1,ro1,xmlt1,bo1    ! bba, bo1 in Tesla 
 
   use ModSort, ONLY: sort_quick
+  use ModNumConst, ONLY: cPi
   use rbe_grid
   implicit none
   external tsyndipoleSM
@@ -21,13 +22,13 @@ subroutine tsy_trace(iLat,re,rc,xlati1,phi1,t,ps,parmod,imod,np, &
   integer, intent(in) :: iLat  
   real, intent(out)   :: ra(np)
   integer:: ieq
-  real re,rc,xlati1,phi1,t,ps,parmod(10),dssa(np),bba(np),volume1,ro1,xmlt1,bo1
-  real xa(np),ya(np),za(np),pi,x0(3),xend(3),f(3),t0,tend,h,h1,aza(np)
-  real dir,pas,xwrk(4,nd),rlim,b_mid,dss(np),ss,yint(np)
+  real rlim,re,rc,xlati1,phi1,t,ps,parmod(10),dssa(np),bba(np),volume1,ro1,&
+       xmlt1,bo1
+  real xa(np),ya(np),za(np),x0(3),xend(3),f(3),t0,tend,h,h1,aza(np)
+  real dir,pas,xwrk(4,nd),b_mid,dss(np),ss,yint(np)
 
-  pi=acos(-1.)
   iopt=1               ! dummy variable for tsy models
-  rlim=30.
+!  rlim=20.
   dir=-1.              ! start fieldline tracing from Northern hemisphere
   pas=0.1              ! fieldline tracing step in RE
   h=pas*dir
@@ -60,7 +61,9 @@ subroutine tsy_trace(iLat,re,rc,xlati1,phi1,t,ps,parmod,imod,np, &
 
      if (ra(npf1).gt.rlim.or.npf1.gt.np) then
         npf1=0              ! open field line
-        exit trace                                                       
+!        write(*,*) 'iLat,Lat,mlt',iLat,xlati1*180/3.14, xmlt1
+!        exit trace                                                       
+        return
      endif
 
      if (ra(npf1).le.rc) then               ! at south hemisphere
@@ -82,7 +85,7 @@ subroutine tsy_trace(iLat,re,rc,xlati1,phi1,t,ps,parmod,imod,np, &
            dss(ii)=dssa(ii+1)-dssa(ii)
            yint(ii)=1./b_mid
         enddo
-        call closed(1,n,yint,dss,ss)  ! use closed form
+        call closed(n,yint,dss,ss)  ! use closed form
         if (iLat.ge.1.and.iLat.le.ir) volume1=ss*re   ! volume / flux
         exit trace      ! finish tracing this field line
      endif
@@ -95,10 +98,9 @@ subroutine tsy_trace(iLat,re,rc,xlati1,phi1,t,ps,parmod,imod,np, &
   aza(1:npf1)=abs(za(1:npf1))
 
   call sort_quick(npf1,aza,ind)    ! find the equatorial crossing point
-
   ieq=ind(1)
   ro1=ra(ieq)
-  xmlt1=atan2(-ya(ieq),-xa(ieq))*12./pi   ! mlt in hr
+  xmlt1=atan2(-ya(ieq),-xa(ieq))*12./cPi   ! mlt in hr
   if (xmlt1.lt.0.) xmlt1=xmlt1+24.
   bo1=bba(ieq)
 
@@ -209,7 +211,7 @@ subroutine mhd_trace (Lat,Lon,re,iLat,iLon,np, &
      dss(ii)=FieldLength_I(ii+1)-FieldLength_I(ii)
      yint(ii)=1./Bmid
   enddo
-  call closed(1,n,yint,dss,ss)  ! use closed form
+  call closed(n,yint,dss,ss)  ! use closed form
   if (iLat >= 1 .and. iLat <= ir) volume1=ss*re   ! volume / flux
   
 end subroutine mhd_trace
