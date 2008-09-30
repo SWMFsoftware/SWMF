@@ -35,7 +35,7 @@ subroutine write_plot_common(ifile)
   logical :: PlotVar_useBody(nplotvarmax)
   real, allocatable :: PlotVarNodes_NBI(:,:,:,:,:)
 
-  character (len=10) :: plotvarnames(nplotvarmax)
+  character (len=10) :: plotvarnames(nplotvarmax)=''
   integer :: nplotvar
 
   ! Equation parameters
@@ -95,7 +95,7 @@ subroutine write_plot_common(ifile)
 
   if(oktest_me) then
      write(*,*) plot_vars1
-     write(*,*) nplotvar,plotvarnames
+     write(*,*) nplotvar,plotvarnames(1:nplotvar)
      write(*,*) plot_dx(:,ifile)
      write(*,*) plot_range(:,ifile)
      write(*,*) plot_type1
@@ -241,13 +241,15 @@ subroutine write_plot_common(ifile)
         select case(plot_form(ifile))
         case('tec')
            call plotvar_to_plotvarnodes
-           if ( plot_point(1,ifile)> NodeX_NB(1   ,1   ,1   ,iBLK) .and. &
-                plot_point(1,ifile)<=NodeX_NB(1+nI,1+nJ,1+nK,iBLK) .and. &
-                plot_point(2,ifile)> NodeY_NB(1   ,1   ,1   ,iBLK) .and. &
-                plot_point(2,ifile)<=NodeY_NB(1+nI,1+nJ,1+nK,iBLK) .and. &
-                plot_point(3,ifile)> NodeZ_NB(1   ,1   ,1   ,iBLK) .and. &
-                plot_point(3,ifile)<=NodeZ_NB(1+nI,1+nJ,1+nK,iBLK) )then
-              PlotVarBlk=PlotVar
+           if(plot_type1(1:3)=='blk')then
+              if ( plot_point(1,ifile)> NodeX_NB(1   ,1   ,1   ,iBLK) .and. &
+                   plot_point(1,ifile)<=NodeX_NB(1+nI,1+nJ,1+nK,iBLK) .and. &
+                   plot_point(2,ifile)> NodeY_NB(1   ,1   ,1   ,iBLK) .and. &
+                   plot_point(2,ifile)<=NodeY_NB(1+nI,1+nJ,1+nK,iBLK) .and. &
+                   plot_point(3,ifile)> NodeZ_NB(1   ,1   ,1   ,iBLK) .and. &
+                   plot_point(3,ifile)<=NodeZ_NB(1+nI,1+nJ,1+nK,iBLK) )then
+                 PlotVarBlk=PlotVar
+              end if
            end if
         case('idl')
            call write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
