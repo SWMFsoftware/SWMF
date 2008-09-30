@@ -25,7 +25,7 @@ nmlt=ip                  ; number of local-time grid
 energy=fltarr(je)    &   sina=fltarr(ig)   &   lat=fltarr(ir)   &   sinao=sina
 Ebound=fltarr(je+1)
 readf,2,energy
-readf,2,Ebound
+;readf,2,Ebound
 readf,2,sina
 readf,2,lat
 read,'plot flux at  1 = equator,  2 = ionosphere => ',iplt
