@@ -53,9 +53,9 @@ test_run:
 
 
 test_check:
-	gunzip -c output/2000f223_e.fls.standalone.gz > ${TESTDIR}/RB/2000f223_e.fls.ref
+	gunzip -c output/2002f296_e.fls.standalone.gz > ${TESTDIR}/RB/2002f296_e.fls.ref
 	${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
-		${TESTDIR}/RB/plots/2000f223_e.fls ${TESTDIR}/RB/2000f223_e.fls.ref \
+		${TESTDIR}/RB/plots/2002f296_e.fls ${TESTDIR}/RB/2002f296_e.fls.ref \
 		> test.diff
 	ls -l test.diff
 
@@ -88,7 +88,11 @@ rundir:
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR} ; \
 		ln -s ${BINDIR}/rbe.exe .   ; \
-		cp ../input/2000_223.* RB/ ; \
+		cp ../input/2002_296.* RB/  ; \
 		cp ../input/PARAM.in . ; \
+		cp ../input/B_wave_eq.dat RB/   ; \
+		cp ../input/Horne_chorus.tgz RB/ ; \
 		touch core ; chmod 444 core;\
+		cd RB ; \
+		tar xvfz Horne_chorus.tgz ; \
 	fi);
