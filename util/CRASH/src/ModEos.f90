@@ -84,7 +84,7 @@ contains
   !=======================================================================!
 
   subroutine pressure_to_eint(pTotal, Rho, iMaterial, &
-       TeOut, GammaOut, IsError)
+       TeOut, GammaOut, UDensityTotalOut, IsError)
 
     ! Calculate internal energy from pressure
 
