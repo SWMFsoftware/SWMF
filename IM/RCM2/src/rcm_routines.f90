@@ -3082,7 +3082,7 @@ SUBROUTINE Move_plasma_grid_NEW (n_gc,isize, jsize, kcsize, iesize, i1, i2, j1, 
                                  alamc, etac, eeta, vm, xmass, fudgec, ikflavc, sini,&
                                  alpha, beta, bir, dlam, dpsi, signbe, Ri, ie_ask )
   USE Rcm_variables, ONLY : rprec, sunspot_number, doy, rmin, L_dktime, xmin, ymin, &
-                            irdk,inrgdk,isodk,iondk, dktime
+                            irdk,inrgdk,isodk,iondk, dktime, iTimeT1
   IMPLICIT NONE
   INTEGER, INTENT (IN) :: isize, jsize, kcsize, i1, i2, j1, j2, iesize,n_gc
   INTEGER, INTENT (IN) :: imin_j(1-n_gc:jsize+n_gc), ikflavc (kcsize)
@@ -3121,11 +3121,12 @@ SUBROUTINE Move_plasma_grid_NEW (n_gc,isize, jsize, kcsize, iesize, i1, i2, j1, 
 ! 
 ! 
 ! 
-  IF (FirstTime) THEN
-     T1=0.
-  ELSE
-     T1=T2
-  END IF
+  T1=iTimeT1
+!   IF (FirstTime) THEN
+!      T1=0.
+!   ELSE
+!      T1=T2
+!   END IF
   T2=T1+dt
 !
 !
@@ -3286,6 +3287,7 @@ end do
 !       eeta (1:imin_j(j)-1, j, kc) = etac (kc)
 !    END DO
 !
+
 do i = 1, isize
 do j = 1, jsize
   if (eeta(i,j,kc) < 0.) then

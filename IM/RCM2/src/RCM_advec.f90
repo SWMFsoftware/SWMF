@@ -418,6 +418,8 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
      fac = 1.0E-3_rprec * bir * alpha * beta * dlam * dpsi * ri**2 * signbe
      !
      DO i_time = itimei, itimef-idt, idt
+        iTimeT1 = i_time
+
         !IF(iProc==0)THEN
         !   call IM_write_prefix; write(iUnitOut,*)'i_time=',i_time
         !END IF

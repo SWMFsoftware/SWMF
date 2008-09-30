@@ -134,7 +134,7 @@ MODULE Rcm_variables
     REAL (rprec), DIMENSION (1-n_gc:isize+n_gc,1-n_gc:jsize+n_gc) :: &
                     xmin, ymin, &
                     bmin, vm=0.0, &
-                    rmin, pmin,&
+                    rmin=0.0, pmin,&
                     xmin_1, xmin_2, &
                     ymin_1, ymin_2, &
                     bmin_1, bmin_2, &
@@ -179,6 +179,7 @@ MODULE Rcm_variables
     INTEGER (iprec), PARAMETER :: iter_max_bicgstab = 10000, &
                                   iter_max_gmres   = 300
     INTEGER (iprec) :: iter_bicgstab, iter_gmresm
+    INTEGER (iprec) :: iTimeT1=0
 !------------------------------------------------------------------------------
 !
 !
