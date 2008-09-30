@@ -13,8 +13,9 @@ subroutine RB_set_parameters(NameAction)
   character (len=100)           :: NameCommand
   character (len=*), intent(in) :: NameAction
   character (len=*), parameter  :: NameSub = 'RB_set_parameters'
-  logical :: IsRestart,UseFixedB,UsePlasmaSphere
-  character (len=100) :: NameSpecies,NameModel
+  logical :: IsRestart, UseFixedB, UsePlasmaSphere, UseSmooth
+  logical :: DoDiffusePA, DoDiffuseE
+  character (len=100) :: NameSpecies, NameModel
   !\
   ! Description:
   ! This subroutine gets the inputs for RBE
@@ -110,6 +111,26 @@ subroutine RB_set_parameters(NameAction)
         else
            iplsp=0
         endif
+     case('#SMOOTH')
+        call read_var('UseSmooth',UseSmooth)
+        if(UseSmooth)then
+           ismo=1
+        else
+           ismo=0
+        end if
+     case('#WAVES')
+        call read_var('DoDiffusePA',DoDiffusePa)
+        if(DoDiffusePA)then
+           idfa=1
+        else
+           idfa=0
+        end if
+        call read_var('DoDiffuseE',DoDiffuseE)
+        if(DoDiffuseE)then
+           idfe=1
+        else
+           idfe=0
+        end if
 
      end select
 
