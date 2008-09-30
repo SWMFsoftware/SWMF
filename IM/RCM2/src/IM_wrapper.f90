@@ -161,6 +161,10 @@ subroutine IM_set_grid
 
   if(is_proc(IM_))call read_grid()
 
+  if (nProc<0)then
+     colat=0.; aloct=0.; Ri=1.
+  end if
+
   Radius_I(1) = Ri*1000.0 ! radial size of the ionosphere in meters
 
   ! IM grid size in generalized coordinates
