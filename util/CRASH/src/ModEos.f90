@@ -93,6 +93,7 @@ contains
     integer,           intent(in) :: iMaterial        ! sort of material
     real,    optional, intent(out):: TeOut            ! electron temp. [K]
     real,    optional, intent(out):: GammaOut         ! polytropic index
+    real,    optional, intent(out):: UDensityTotalOut ! internal energy density
     logical, optional, intent(out):: IsError          ! true if error occured
 
     real    :: Natomic, pToNaRatio
@@ -123,9 +124,9 @@ contains
 
     if(present(GammaOut)) call get_thermodyn_derivatives(GammaOut=GammaOut)
 
-    ! ???
-    !if(present(UDensityTotalOut)) &
-    !    UDensityTotalOut = NAtomic*cEV*internal_energy()
+    
+    if(present(UDensityTotalOut)) &
+        UDensityTotalOut = NAtomic*cEV*internal_energy()
 
   end subroutine pressure_to_eint
 
