@@ -1,9 +1,9 @@
 #STOP
-60.0		Tmax
+100.0		Tmax
 
 #SAVEPLOT
-60.0		DtSavePlot
-2000f223	OutName
+10.0		DtSavePlot
+2002f296	OutName
 
 #RESTART
 F		IsRestart
@@ -21,14 +21,21 @@ e		NameSpecies
 0.0		trans
 
 #BMODEL
-t96		NameModel
+t04		NameModel
 F		UseFixedB
 
 #IEMODEL
 1		iConvect
 
 #INPUTDATA
-2000_223
+2002_296
 
 #PLASMASPHERE
 F		UsePlasmaSphere
+
+#SMOOTH
+T		UseSmooth
+
+#WAVES
+F		DoDiffusePA
+F		DoDiffuseE
