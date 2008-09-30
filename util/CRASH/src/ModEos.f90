@@ -40,7 +40,6 @@ contains
     logical, optional, intent(out) :: IsError
 
     real   :: NAtomic, UPerAtom
-    logical:: IsDegenerated
 
     character (len=*), parameter:: NameSub='ModEos::eos'
     !----------------------------------------------------------------------!
@@ -66,23 +65,18 @@ contains
     UPerAtom = UDensityTotal / (cEV * NAtomic)
 
     ! Find temperature from dentity and internal energy
-    call set_temperature(uPerAtom, Natomic, IsDegenerated)
+    call set_temperature(uPerAtom, Natomic, IsError)
 
-    if(present(IsError)) IsError = IsDegenerated
-    if(IsDegenerated)then
-       if(present(IsError))RETURN
-       write(*,*) NameSub,' iMaterial =', iMaterial
-       write(*,*) NameSub,' UDensityTotal, UPerAtom=', UPerAtom, UDensityTotal
-       write(*,*) NameSub,' Rho, NAtomic =', Rho, NAtomic 
-       call CON_stop(NameSub//': no EOS for Fermi degenerated state')
-    end if
+    
 
     if(present(TeOut))     TeOut     = Te*cEVToK
     if(present(PTotalOut)) pTotalOut = pressure()
     if(present(GammaOut))then
+ 
        call get_thermodyn_derivatives(GammaOut=GammaOut)
        if(present(Energy0Out))&
             Energy0Out = (UDensityTotal - pressure()/(GammaOut-1.0))/Rho
+
     end if
 
   end subroutine eos
@@ -143,7 +137,8 @@ contains
     ! Equation of state for polyimide
 
     use ModStatSumMix
-
+    use ModPolyimide
+    
     real, intent(in):: UDensityTotal ! total energy density [J/m^3]
     real, intent(in):: Rho           ! mass density [kg/m^3] 
 
@@ -153,24 +148,12 @@ contains
     real,    optional, intent(out) :: Energy0Out    ! (E-P/(\gamma-1))/\rho
     logical, optional, intent(out) :: IsError
 
-    integer,parameter :: nPolyimide = 4
-
-    real, parameter :: cPolyimide_I(nPolyimide) = &
-         (/22.0, 10.0, 2.0, 5.0/)/(22.0 + 10.0 + 2.0 +5.0)
-
-    integer, parameter :: nZPolyimide_I(nPolyimide) = (/6, 1, 7, 8/)
-
-    real, parameter :: cAPolyimide = &
-         (cAtomicMass_I(6) * 22.0 + &
-         cAtomicMass_I(1) * 10.0 + &
-         cAtomicMass_I(7) *  2.0 + &
-         cAtomicMass_I(8) *  5.0) / &
-         (22.0 + 10.0 + 2.0 +5.0)
-
+    
     real   :: NAtomic, UPerAtom
     logical:: IsDegenerated
 
     character(len=*), parameter:: NameSub = "ModEos::eos_polyimide"
+
     !----------------------------------------------------------------------!
     call set_mixture(nPolyimide, nZPolyimide_I, CPolyimide_I)
 
@@ -183,17 +166,63 @@ contains
     !Find temperature from dentity and internal energy
     call set_temperature_in_mix( UPerAtom, NAtomic, IsDegenerated )
 
-    if(present(IsError)) IsError = IsDegenerated
-    if(IsDegenerated)then
-       if(present(IsError))RETURN
-       write(*,*) NameSub,' UDensityTotal, UPerAtom=', UPerAtom, UDensityTotal
-       write(*,*) NameSub,' Rho, NAtomic =', Rho, NAtomic 
-       call CON_stop(NameSub//': no EOS for Fermi degenerated state')
-    end if
 
     if(present(TeOut))TeOut = TeMix*cEVToK
     if(present(PTotalOut))PTotalOut = pressure_mix()
 
   end subroutine eos_polyimide
+  !==========================================================!
+  subroutine eos_mixed_cell(UDensityTotal,&
+       RhoToARatio_I, TeOut, PTotalOut, IsError)
+    use ModStatSumMix
+    use ModPolyimide, ONLY: nPolyimide, CPolyimide_I
 
+   
+    real,intent(in) :: UDensityTotal         !Input total energy density SI,[J/m^3]
+    real,intent(in) :: RhoToARatio_I( 0:2 )  !Input mass density, SI [kg/m^3] divided by A
+
+    real,optional,intent(out) :: TeOut       !Output, OPTIONAL, temperature SI[K]
+    real,optional,intent(out) :: PTotalOut   !Output, OPTIONAL, pressure, SI [Pa]
+  
+    logical, optional,intent(out) :: IsError
+
+    real :: RhoToATotal, NAtomic, UPerAtom
+    logical::IsDegenerated
+    
+    integer, parameter :: nAll = 1 + 1 + nPolyimide   
+ 
+    integer, parameter :: nZAll_I(nAll) = (/54 , &  !Xe
+                                             4 , &  !Be
+                                             6 , &  !C
+                                             1 , &  !H
+                                             7 , &  !N
+                                             8 /)   !O
+    real :: ConcentrationAll_I(nAll)
+    !-------------------------------!
+    RhoToATotal = sum( RhoToARatio_I ) 
+    
+    !Relative atomic concentrations of Xe, Be and polyimide:
+    ConcentrationAll_I( 1:3 ) = RhoToARatio_I / RhoToATotal
+    
+    !Specify concentrations for C, H, N, O
+
+    ConcentrationAll_I( 3:6 ) = ConcentrationAll_I( 3 ) * CPolyimide_I
+
+    call set_mixture(nAll, nZAll_I, ConcentrationAll_I)
+
+    !Get the atomic concentration
+    NAtomic = RhoToATotal / cAtomicMass 
+
+    !Get an energy per the atomic cell, express in eV
+    UPerAtom = UDensityTotal / ( cEV * NAtomic )
+    
+    !Find temperature from dentity and internal energy
+    call set_temperature_in_mix( UPerAtom, NAtomic, IsDegenerated )
+
+    if(present(IsError)) IsError = IsDegenerated
+    
+    if(present(TeOut))TeOut = TeMix*cEVToK
+    if(present(PTotalOut))PTotalOut = pressure_mix()
+
+  end subroutine eos_mixed_cell
 end module ModEos

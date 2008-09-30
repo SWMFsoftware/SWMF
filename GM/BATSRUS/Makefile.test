@@ -214,6 +214,39 @@ test_levelset_check:
 		${TESTDIR}/IO2/cut_400_ns.idl > test_levelset.diff
 	ls -l test_levelset.diff
 
+### LEVELSET TEST ###
+
+test_mixedcell:
+	@echo "test_mixedcell_compile..." > test_mixedcell.diff
+	make test_mixedcell_compile
+	@echo "test_mixedcell_rundir..." >> test_mixedcell.diff
+	make test_mixedcell_rundir
+	@echo "test_mixedcell_run..." >> test_mixedcell.diff
+	make test_mixedcell_run
+	@echo "test_mixedcell_check..." >> test_mixedcell.diff
+	make test_mixedcell_check
+
+test_mixedcell_compile:
+	./Config.pl -e=HdCrash -u=Crash -g=4,4,2,2000,1
+	make CRASH
+	make PIDL
+
+test_mixedcell_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.mixedcell PARAM.in; \
+	ln -s ${BINDIR}/CRASH.exe . 
+
+test_mixedcell_run:
+	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
+	cat ${TESTDIR}/GM/IO2/cut_hd_1_*_n0000796_pe*.idl \
+		> ${TESTDIR}/IO2/cut_400_ns.idl
+	#cd ${TESTDIR}; ./PostProc.pl -M
+
+test_mixedcell_check:
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=3e-7 \
+		Param/CRASH/TestOutput/cut_mixedcell.idl \
+		${TESTDIR}/IO2/cut_400_ns.idl > test_mixedcell.diff
+	ls -l test_mixedcell.diff
+
 ### STANDALONE SOLAR CORONA TESTS ###
 
 test_corona:

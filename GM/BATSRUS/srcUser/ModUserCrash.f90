@@ -9,7 +9,8 @@ module ModUser
        IMPLEMENTED2 => user_calc_sources,               &
        IMPLEMENTED3 => user_initial_perturbation,       &
        IMPLEMENTED4 => user_read_inputs,                &
-       IMPLEMENTED5 => user_set_plot_var
+       IMPLEMENTED5 => user_set_plot_var,               &
+       IMPLEMENTED6 => user_init_session
 
   include 'user_module.h' !list of public methods
 
@@ -19,6 +20,8 @@ module ModUser
 
   ! Some default values
   real :: xBe = 1000.0, yBe = 200., RhoWallDim = 50.0
+
+  logical :: UseMixedCell = .false.
 
 contains
 
@@ -35,6 +38,8 @@ contains
           call read_var('xBe', xBe)
           call read_var('yBe', yBe)
           call read_var('RhoWallDim', RhoWallDim)
+       case('#USEMIXEDCELL')
+          call read_var('UseMixedCell', UseMixedCell)
        case('#USERINPUTEND')
           EXIT
        case default
@@ -60,7 +65,7 @@ contains
     integer, intent(in):: iStage,iBlock
 
     integer:: i, j, k, iMaterial, Loc_I(1)
-    real   :: PressureSI, EInternal, EInternalSI, RhoSI
+    real   :: PressureSI, EInternal, EInternalSI, RhoSI, RhoToARatioSI_I( 0:2 )
     !------------------------------------------------------------------------
 
     call update_states_MHD(iStage,iBlock)
@@ -84,13 +89,24 @@ contains
        Loc_I = maxloc(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock))
        iMaterial = Loc_I(1) - 1
 
-       ! Apply the EOS, get pressure in SI
-       call eos(&
-            UDensityTotal=EInternalSI,& !Input total energy density SI,[J/m^3]
-            Rho=RhoSI,                & !Input mass density, SI [kg/m^3] 
-            iMaterial=iMaterial,      & !Input: sort of material
-            PTotalOut=PressureSI      ) !Output, OPTIONAL, pressure, SI [Pa]
+       if( UseMixedCell .and. &
+            maxval(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock)) < &
+            0.97 * sum(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock)) ) then
+            !The cell is mixed if none of the material is dominant 
 
+          RhoToARatioSI_I( 0:2 ) = State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) * No2Si_V(UnitRho_)
+          call eos_mixed_cell(&
+               UDensityTotal=EInternalSI,&     !Input total energy density SI,[J/m^3]
+               RhoToARatio_I=RhoToARatioSI_I,& !Input mass densities related to A, SI [kg/m^3] 
+               PTotalOut=PressureSI      )     !Output, OPTIONAL, pressure, SI [Pa]
+       else
+          ! Apply the EOS, get pressure in SI
+          call eos(&
+               UDensityTotal=EInternalSI,& !Input total energy density SI,[J/m^3]
+               Rho=RhoSI,                & !Input mass density, SI [kg/m^3] 
+               iMaterial=iMaterial,      & !Input: sort of material
+               PTotalOut=PressureSI      ) !Output, OPTIONAL, pressure, SI [Pa]
+       end if
        ! Set pressure and ExtraEInt = Total internal energy - P/(gamma -1)
        State_VGB(P_,i,j,k,iBlock) = PressureSI*Si2No_V(UnitP_)
        State_VGB(ExtraEInt_,i,j,k,iBlock) = Si2No_V(UnitEnergyDens_)*&
@@ -144,6 +160,7 @@ contains
          LevelBe_, LevelXe_, LevelPl_
     use ModGeometry,ONLY: x_BLK, y_BLK, y2
     use ModEnergy,  ONLY: calc_energy_ghost
+    use ModPolyimide, ONLY: cAtomicMass_I, cAPolyimide
 
     integer :: i, j, k, iBlock
     real    :: x, y, xBeSlope
@@ -164,23 +181,48 @@ contains
           xBeSlope = xBe - ShockSlope*y
 
           ! Set plastic wall state
-          if(abs(y) > yBe)then
-             ! Use the density given by the #MATERIAL command
-             State_VGB(Rho_,i,j,k,iBlock) = RhoWallDim*Io2No_V(UnitRho_)
-             ! Assume pressure equilibrium with Xenon
-             State_VGB(p_,i,j,k,iBlock) = ShockRightState_V(p_)*Io2No_V(UnitP_)
-             ! Assume that plastic wall is at rest
-             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
+          if( UseMixedCell ) then
+             State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) = 0.0
+             
+             ! Plastic is present outside of yBe
+             if( abs(y) > yBe ) then
+
+                ! Use the density given by the #MATERIAL command
+                State_VGB(Rho_,i,j,k,iBlock) = RhoWallDim*Io2No_V(UnitRho_)
+                ! Assume pressure equilibrium with Xenon
+                State_VGB(p_,i,j,k,iBlock) = ShockRightState_V(p_)*Io2No_V(UnitP_)
+                ! Assume that plastic wall is at rest
+                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
+                
+                State_VGB(LevelPl_,i,j,k,iBlock) = 1.0 / cAPolyimide
+
+                ! Berilium is inside plastic wall and left to xBe
+             elseif( x < xBeSlope )then
+                State_VGB(LevelBe_,i,j,k,iBlock) = 1.0 / cAtomicMass_I(4)
+
+                ! Xenon is inside plastic wall and right to xBe
+             else
+                State_VGB(LevelXe_,i,j,k,iBlock) = 1.0 / cAtomicMass_I(54)
+             end if
+          else
+             if(abs(y) > yBe)then
+                ! Use the density given by the #MATERIAL command
+                State_VGB(Rho_,i,j,k,iBlock) = RhoWallDim*Io2No_V(UnitRho_)
+                ! Assume pressure equilibrium with Xenon
+                State_VGB(p_,i,j,k,iBlock) = ShockRightState_V(p_)*Io2No_V(UnitP_)
+                ! Assume that plastic wall is at rest
+                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
+             end if
+
+             ! Plastic is present outside of yBe
+             State_VGB(LevelPl_,i,j,k,iBlock) = abs(y) - yBe
+
+             ! Berilium is inside plastic wall and left to xBe
+             State_VGB(LevelBe_,i,j,k,iBlock) = min(xBeSlope - x, yBe - abs(y))
+
+             ! Xenon is inside plastic wall and right to xBe
+             State_VGB(LevelXe_,i,j,k,iBlock) = min(x - xBeSlope, yBe - abs(y))
           end if
-
-          ! Plastic is present outside of yBe
-          State_VGB(LevelPl_,i,j,k,iBlock) = abs(y) - yBe
-
-          ! Berilium is inside plastic wall and left to xBe
-          State_VGB(LevelBe_,i,j,k,iBlock) = min(xBeSlope - x, yBe - abs(y))
-
-          ! Xenon is inside plastic wall and right to xBe
-          State_VGB(LevelXe_,i,j,k,iBlock) = min(x - xBeSlope, yBe - abs(y))
 
           if(.not.UseUserSource) &
                State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) = &
@@ -231,5 +273,14 @@ contains
     end do; end do; end do
 
   end subroutine user_set_plot_var
-
+  !===============================
+  subroutine user_init_session
+    use ModVarIndexes
+    use ModMain, ONLY: UseUserSource
+    character (len=*), parameter :: NameSub = 'user_init_session'
+    !-------------------------------------------------------------------
+    if(.not.UseUserSource)then
+       if( UseMixedCell ) UnitUser_V(LevelXe_:LevelPl_) = UnitUser_V(Rho_)
+    end if
+  end subroutine user_init_session
 end module ModUser

@@ -8,7 +8,7 @@
 program saha
   use ModStatSum
   use ModStatSumMix
-  use ModAtomicMass
+  use ModPolyimide
   implicit NONE
   real :: &
        Nao = 1.00e18,  &  ! cm-3
@@ -25,17 +25,6 @@ program saha
   logical :: IsDegenerated
 
 
-  integer,parameter :: nPolyimide = 4
-  real,dimension(nPolyimide),parameter :: CPolyimide_I = &
-       (/22.0, 10.0, 2.0, 5.0/)/(22.0 + 10.0 + 2.0 +5.0)
-  integer,dimension(nPolyimide),parameter :: nZPolyimide_I = &
-       (/6, 1, 7, 8/)
-  real,parameter :: cAtomicPolymide = &
-       (cAtomicMass_I(6) * 22.0 + &
-       cAtomicMass_I(1) * 10.0 + &
-       cAtomicMass_I(7) *  2.0 + &
-       cAtomicMass_I(8) *  5.0) / &
-       (22.0 + 10.0 + 2.0 +5.0)
   !-------------------------------------------
 
   dTe = 5.0; dLogN=log(10.0); dU=100.0

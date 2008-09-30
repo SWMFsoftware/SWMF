@@ -7,12 +7,13 @@ include Makefile.DEPEND
 MY_LIB = ${LIBDIR}/libCRASH.a
 
 OBJECTS=\
-	heat_capacity.o \
-	ModStatSum.o\
-	ModStatSumMix.o\
 	ModAtomicMass.o\
 	ModEos.o\
-        ModIonizPotential.o 
+        ModIonizPotential.o \
+	ModPolyimide.o \
+	ModStatSum.o\
+	ModStatSumMix.o\
+	heat_capacity.o 
 
 
 OBJECTS_EXE= test_ionization.o test_godunov.o
