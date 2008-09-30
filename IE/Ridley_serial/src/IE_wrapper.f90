@@ -298,6 +298,14 @@ subroutine IE_set_grid
   iProc_A(1)=0
   iProc_A(2)=nProc-1
 
+  if (nProc<0)then
+     IONO_NORTH_Theta=0.
+     IONO_SOUTH_Theta=0.
+     IONO_NORTH_Psi=0.
+     IONO_Radius=1.
+     IONO_Height=1.
+  end if
+
   ! The colatitudes for both hemispheres
   Colat_I(            1:  IONO_nTheta) = IONO_NORTH_Theta(:,1)
   Colat_I(IONO_nTheta:2*IONO_nTheta-1) = IONO_SOUTH_Theta(:,1)
