@@ -26,7 +26,6 @@ subroutine RB_set_param(CompInfo, TypeAction)
   integer :: iProc, nProc, iComm
 
   !------------------------------------------------------------------------
-
   UseGm = Couple_CC(GM_, RB_) % DoThis
   UseIE = Couple_CC(IE_, RB_) % DoThis
   
@@ -95,11 +94,11 @@ subroutine RB_set_grid
   call set_grid_descriptor( RB_,                 & ! component index
        nDim=2,                                   & ! dimensionality
        nRootBlock_D=(/1,1/),                     & ! single block
-       nCell_D=(/ir+2, ip/),                     & ! size of cell based grid
+       nCell_D=(/ir, ip/),                     & ! size of cell based grid
        XyzMin_D=(/cHalf, cHalf/),                & ! min gen.coords for cells
-       XyzMax_D=(/ir+2.5,ip-0.5/),               & ! max gen.coords for cells
+       XyzMax_D=(/ir-0.5,ip-0.5/),               & ! max gen.coords for cells
        TypeCoord='SMG',                          & ! solar magnetic coord
-       Coord1_I=cRadToDeg*xlati(0:ir+1),         & ! latitude in degrees
+       Coord1_I=cRadToDeg*xlati(1:ir),         & ! latitude in degrees
        Coord2_I=mod(cRadToDeg*phi+180.0,360.0),  & ! longitude in degrees
        Coord3_I=Radius_I,                        & ! radial size in meters
        IsPeriodic_D=(/.false.,.true./))            ! periodic in longitude
@@ -243,7 +242,7 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   
   if (.not.allocated(StateLine_VI)) then
      allocate(StateLine_VI(nVarLine,nPointLine),&
-          StateIntegral_IIV(0:iSizeIn-1,jSizeIn,nIntegralIn))
+          StateIntegral_IIV(iSizeIn,jSizeIn,nIntegralIn))
   endif
   
   StateLine_VI      = BufferLine_VI
@@ -272,7 +271,7 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   if (IsFirstCall) then
      n = 0
      do iLon = 1, nLon
-        do iLat = 0, nLat+1
+        do iLat = 1, nLat
            n = n+1
            iLineIndex_II(iLon,iLat) = n
         end do
@@ -330,7 +329,7 @@ subroutine RB_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
      case('Pot')
         IsPotFound = .true.
         do iLon=1,nLon
-           do iLat=0,nLat+1
+           do iLat=1,nLat
               !Interpolate IE potential onto RB grid
               ! Note that the RB grid is 180 degrees rotated relative to 
               ! the usual SM coordinates used by IE
