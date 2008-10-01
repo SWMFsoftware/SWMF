@@ -31,12 +31,23 @@ T			DoTimeAccurate
 #ROTATION
 F			UseRotation
 
+#COUPLE1
+GM			NameComp1
+RB			NameComp2
+-1                      DnCouple
+3.0                     Dtcouple
+
+! Allow GM to step through coupling time
+#COUPLETIME
+GM			NameComp
+F			DoCoupleOnTime
+
 ! This is needed so that RBE reads its input file
 #BEGIN_COMP RB #############################################################
 
 #SAVEPLOT
-60.0		DtSavePlot
-2000f223	OutName
+3.0		DtSavePlot
+2002f296	OutName
 
 #RESTART
 F		IsRestart
@@ -61,7 +72,7 @@ F		UseFixedB
 1		iConvect
 
 #INPUTDATA
-2000_223
+2002_296
 
 #PLASMASPHERE
 F		UsePlasmaSphere
@@ -144,17 +155,6 @@ z=0 FUL idl             StringPlot
 -1.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
 
 #END_COMP GM ###############################################################
-
-#COUPLE1
-GM			NameComp1
-RB			NameComp2
--1                      DnCouple
-3.0                     Dtcouple
-
-! Allow GM to step through coupling time
-#COUPLETIME
-GM			NameComp
-F			DoCoupleOnTime
 
 #STOP
 -1			MaxIteration
