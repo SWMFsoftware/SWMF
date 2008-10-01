@@ -53,7 +53,7 @@ module ModSolarwind
   real :: Normal_D(3) = (/ 1.0, 0.0, 0.0 /)
 
   ! Position of the satellite
-  real :: SatelliteXyz_D(3)
+  real :: SatelliteXyz_D(3)=0.
 
   ! Shall we reread the file
   logical :: DoReadAgain = .false.
