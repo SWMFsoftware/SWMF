@@ -617,6 +617,6 @@ test_sphericalearth_check:
 	${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/SphericalearthTest/GM/z=0_ray_1_t00000001_n0000070.dat \
 		${TESTDIR}/SphericalearthTest/GM/SPHz=0_ray_1_t00000001_n0000070.dat \
-		| grep -v SAVEDATE > test_sphericalearth.diff
+		| grep -v SAVEDATE >> test_sphericalearth.diff
 	ls -l test_sphericalearth.diff
 
