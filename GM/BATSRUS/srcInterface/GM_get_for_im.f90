@@ -138,7 +138,7 @@ subroutine GM_get_sat_for_im(Buffer_III, Buffer_I, nSats)
   !Internal variables
   character (len=*), parameter :: NameSub='GM_get_sat_for_im'
 
-  real :: sat_RayVars(6), sat_RayVarsSum(6)
+  real :: sat_RayVars(5), sat_RayVarsSum(5)
   
   integer :: iSat, iError
   !--------------------------------------------------------------------------
@@ -153,7 +153,7 @@ subroutine GM_get_sat_for_im(Buffer_III, Buffer_I, nSats)
      call sat_get_ray(iSat, sat_RayVars)
 
      ! Reduce values from all 
-     call MPI_reduce(sat_RayVars, sat_RayVarsSum, 6, MPI_REAL, MPI_SUM, &
+     call MPI_reduce(sat_RayVars, sat_RayVarsSum, 5, MPI_REAL, MPI_SUM, &
           0, iComm, iError)
      
      ! Store results in Buffer_III
