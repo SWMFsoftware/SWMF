@@ -1,0 +1,225 @@
+#ECHO
+T
+
+#DESCRIPTION
+May 4, 1998 Run
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#STARTTIME
+1998		year
+05		month
+04		day
+02		hour
+00		minute
+00		second
+0.0 		FracSecond
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#RAYTRACE
+T			
+T			
+10.			
+100 			
+
+#COVARIANTGEOMETRY
+spherical_lnr
+
+#GRID
+2			nRootBlock_D(x_)
+2			nRootBlock_D(y_)
+2			nRootBlock_D(z_)
+-224.			x1
+ 32.			x2
+-64.			y1
+ 64.			y2
+-64.			z1
+ 64.			z2
+
+#LIMITGENCOORD1
+0.916291                rMin = (2.5)
+5.55490		        rMax = (sqrt(224^2+128^2+128^2))
+
+GRIDLEVEL
+1
+all
+
+#GRIDLEVEL
+2
+initial
+
+!refine the magnetosphere
+#GRIDLEVEL
+2                       Resolution
+box                     NameArea
+-224.0                  xMinBox
+ -64.0                  yMinBox
+ -64.0                  zMinBox
+  32.0                  xMaxBox
+  64.0                  yMaxBox
+  64.0                  zMaxBox
+
+!refine inner magnetosphere
+#GRIDLEVEL
+3                       Resolution
+sphere0                 NameArea
+25.0                    rSphere
+
+!refine inner magnetosphere
+#GRIDLEVEL
+3                       Resolution
+sphere0                 NameArea
+12.0                    rSphere
+
+!refine the magnetosphere
+#GRIDLEVEL
+3                       Resolution
+box                     NameArea
+-100.0                  xMinBox
+ -10.0                  yMinBox
+  -4.0                  zMinBox
+ -12.0                  xMaxBox
+  16.0                  yMaxBox
+   4.0                  zMaxBox
+
+#MAGNETOSPHERE
+T                       body1
+2.5                     Rbody
+3.0                     Rcurrents
+28.0                   Magneto_rho_dim (/ccm) density for fixed BC for rho_BLK
+25000.0                 Magneto_T_dim (K) temperature for fixed BC for P_BLK
+
+NONCONSERVATIVE
+T                       UseNonConservative
+
+CONSERVATIVECRITERIA
+1			nConservCrit
+parabola		TypeConservCrit_I
+ 5.0			xParabolaConserv
+15.0			yParabolaConserv
+
+#TVDRESCHANGE
+T
+
+#TIMESTEPPING
+1			nStage
+0.80			CflExlp
+
+#OUTERBOUNDARY
+outflow			TypeBC_I(east_)
+vary			TypeBC_I(west_)
+float			TypeBC_I(south_)
+float			TypeBC_I(north_)
+float			TypeBC_I(bot_)
+float			TypeBC_I(top_)
+
+#SCHEME
+1			nOrder
+Rusanov			TypeFlux
+
+#SAVELOGFILE
+T			DoSaveLogfile
+VAR			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+dt rho mx my mz p bx by bz pmin pmax dst dstdivb dstflx
+3.0 3.5 5.0		StringRFlux
+
+#SAVEPLOT
+1                       nPlotFiles
+z=0 RAY tec             StringPlot
+100                      DnSavePlot
+-1.			DtSavePlot
+
+#UPSTREAM_INPUT_FILE
+T                       UseUpstreamInputFile
+imf19980504.dat         UpstreamFileName
+0.0                     Satellite_Y_Pos
+0.0                     Satellite_Z_Pos
+
+#END_COMP GM -----------------------------------------------------------------
+
+#STOP
+20                      MaxIter
+-1.			TimeMax
+
+#RUN	######################################################################
+
+
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#SCHEME
+2			nORDER
+Rusanov			TypeFlux
+mc3                     TypeLimiter
+1.2
+
+#TIMESTEPPING
+2			nStage
+0.60			CflExlp
+
+#BORIS
+T
+0.02
+
+#END_COMP GM -----------------------------------------------------------------
+
+#STOP
+50                      MaxIter
+-1.			TimeMax
+
+#RUN	######################################################################
+
+
+
+#TIMEACCURATE
+T			DoTimeAccurate
+
+#SAVERESTART                                                     
+F                       DoSaveRestart
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+NONCONSERVATIVE
+T                       UseNonConservative
+
+CONSERVATIVECRITERIA
+1			nConservCrit
+parabola		TypeConservCrit_I
+ 5.0			xParabolaConserv
+15.0			yParabolaConserv
+
+#SCHEME
+2			nORDER
+Rusanov			TypeFlux
+mc3                     TypeLimiter
+1.2			BetaLimiter
+
+#BORIS
+T
+0.02
+
+#TIMESTEPPING
+2			nSTAGE
+0.85			cfl
+
+#FIXEDTIMESTEP
+T			UseDtFixed
+5.0	 		DtFixedDim [sec] (read if UseDtFixed is true)
+
+#IMPLICIT
+F			UsePointImplicit
+T			UsePartImplicit
+F			UseFullImplicit
+100.0			ImplCFL
+
+#END_COMP GM -----------------------------------------------------------------
+
+#STOP
+70 			MaxIter
+20. 			TimeMax
+
+#END
