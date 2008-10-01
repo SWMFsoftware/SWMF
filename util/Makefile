@@ -21,7 +21,7 @@ clean:
 	cd EMPIRICAL/srcGM;           make clean
 	cd EMPIRICAL/srcUA;           make clean
 	cd CRASH/src;                 make clean
-	cd CRASH/doc;		      make clean
+	cd CRASH/doc/Tex;	      make clean
 
 distclean:
 	touch ${INSTALLFILE}
@@ -36,7 +36,7 @@ distclean:
 	cd EMPIRICAL/srcGM;           make distclean
 	cd EMPIRICAL/srcUA;           make distclean
 	cd CRASH/src;                 make distclean
-	cd CRASH/doc;                 make distclean
+	cd CRASH/doc/Tex;             make distclean
 	rm -f *~
 
 dist: distclean
