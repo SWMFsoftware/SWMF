@@ -11,6 +11,7 @@ test:
 	-@(make test_levelset)
 	-@(make test_corona)
 	-@(make test_coronasph)
+	-@(make test_sphericalearth)
 	-@(make test_titan)
 	-@(make test_mars)
 	-@(make test_venus)
@@ -40,6 +41,7 @@ test_help:
 	@echo "    test_levelset	      (run Level set test only)"
 	@echo "    test_corona                (run Solar Corona test only)"
 	@echo "    test_coronasph             (run spherical Solar Corona test)"
+	@echo "    test_sphericalearth        (run Spherical Earth test only)"
 	@echo "    test_mars                  (run Mars test only)"
 	@echo "    test_venus                 (run Venus test only)"
 	@echo "    test_saturn                (run Saturn test only)"
@@ -574,4 +576,49 @@ test_comet_check:
 		Param/COMET/TestOutput/log_n000001.log \
 		${TESTDIR}/CometTest/GM/log_n000001.log > test_comet.diff
 	ls -l test_comet.diff
+
+### TESTS FOR MODELING SPHERICAL GRID EARTH ###
+
+test_sphericalearth:
+	-@(make test_sphericalearth_start)
+
+test_sphericalearth_start:
+	@echo "test_sphericalearth_compile..." > test_sphericalearth.diff
+	make test_sphericalearth_compile
+	@echo "test_sphericalearth_rundir..." >> test_sphericalearth.diff
+	make test_sphericalearth_rundir
+	@echo "test_sphericalearth_run..." >> test_sphericalearth.diff
+	make test_sphericalearth_run
+	@echo "test_sphericalearth_check..." >> test_sphericalearth.diff
+	make test_sphericalearth_check
+
+test_sphericalearth_compile:
+	./Config.pl -e=Mhd -g=8,8,8,600,300
+	make
+
+test_sphericalearth_rundir: test_rundir
+	cd ${TESTDIR}; \
+		cp Param/EARTH/PARAM.in.spherical PARAM.in; \
+		cp Param/EARTH/imf19980504.dat .
+	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+
+test_sphericalearth_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}/GM; ./pTEC g
+	cd ${TESTDIR}; rm -rf SphericalEarthTest; ./PostProc.pl -M -o SphericalEarthTest
+
+test_sphericalearth_check:
+	${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		Param/EARTH/TestOutput/log_n000001.log-spherical \
+		${TESTDIR}/SphericalearthTest/GM/log_n000001.log > test_sphericalearth.diff
+	cd ${TESTDIR}; \
+		cp Param/EARTH/SPH*gz SphericalearthTest/GM/; \
+		gunzip SphericalearthTest/GM/*gz
+	${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/SphericalearthTest/GM/z=0_ray_1_n0000050.dat \
+		${TESTDIR}/SphericalearthTest/GM/SPHz=0_ray_1_n0000050.dat > test_sphericalearth.diff
+	${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/SphericalearthTest/GM/z=0_ray_1_t00000002_n0000100.dat \
+		${TESTDIR}/SphericalearthTest/GM/SPHz=0_ray_1_t00000002_n0000100.dat > test_sphericalearth.diff
+	ls -l test_sphericalearth.diff
 
