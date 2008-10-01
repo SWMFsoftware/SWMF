@@ -14,9 +14,8 @@ subroutine ray_trace_accurate
   use ModRaytrace
   use CON_ray_trace, ONLY: ray_init
   use ModMain
-  use ModAdvance,    ONLY: State_VGB, Bx_, Bz_, &
-       B0_DGB
-  use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,r_BLK,true_cell,XyzMax_D,XyzMin_D
+  use ModAdvance,    ONLY: State_VGB, Bx_, Bz_, B0_DGB
+  use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,r_BLK,true_cell, x1,x2,y1,y2,z1,z2
 
   use ModMpi
   implicit none
@@ -25,14 +24,14 @@ subroutine ray_trace_accurate
   integer :: i, j, k, iBlock, iRay
 
   ! Testing and timing
-  logical :: oktest, oktest_me, oktime, oktime_me
+  logical :: okTest, okTestMe, okTime, okTimeMe
 
   !----------------------------------------------------------------------------
 
-  call set_oktest('ray_trace',oktest,oktest_me)
+  call set_oktest('ray_trace',okTest,okTestMe)
 
   ! Initialize constants
-  RayLengthMax = 4*sum(XyzMax_D - XyzMin_D)
+  RayLengthMax = 4.*(abs(x2-x1) + abs(y2-y1) + abs(z2-z1))
 
   DoTraceRay     = .true.
   DoIntegrateRay = .false.
@@ -43,25 +42,24 @@ subroutine ray_trace_accurate
   ! (Re)initialize CON_ray_trace
   call ray_init(iComm)
 
-  call set_oktest('time_ray_trace',oktime,oktime_me)
-  if(oktime)call timing_reset('ray_pass',2)
+  call set_oktest('time_ray_trace',okTime,okTimeMe)
+  if(okTime)call timing_reset('ray_pass',2)
+
+  ! Fill in all ghost cells (faces+edges+corners) without monotone restrict
+  call message_pass_cells_8state(.false.,.false.,.false.)
 
   ! Copy magnetic field into Bxyz_DGB
   Bxyz_DGB(:,:,:,:,1:nBlock) = State_VGB(Bx_:Bz_,:,:,:,1:nBlock)
 
-  ! Fill in all ghost cells (faces+edges+corners) without monotone restrict
-  call message_pass_cells8(.false.,.false.,.false.,3,Bxyz_DGB)
-
   ! Add B0
-  if(UseB0)Bxyz_DGB(1:3,:,:,:,1:nBlock) = Bxyz_DGB(1:3,:,:,:,1:nBlock) &
-       + B0_DGB(:,:,:,:,1:nBlock)
- 
+  if(UseB0) Bxyz_DGB(1:3,:,:,:,1:nBlock) = &
+       Bxyz_DGB(1:3,:,:,:,1:nBlock) + B0_DGB(:,:,:,:,1:nBlock)
 
   ! Initial values
   ray=NORAY
 
-  if(oktest_me)write(*,*)'rayface normalized B'
-  if(oktime.and.iProc==0)then
+  if(okTestMe)write(*,*)'rayface normalized B'
+  if(okTime.and.iProc==0)then
      write(*,'(a)',ADVANCE='NO') 'setup and normalization:'
      call timing_show('ray_trace',1)
   end if
@@ -72,7 +70,7 @@ subroutine ray_trace_accurate
      do iBlock = 1, nBlock
         if(unusedBLK(iBlock))CYCLE
 
-        oktest_ray = oktest .and. &
+        oktest_ray = okTest .and. &
              x_BLK(i,j,k,iBlock)==xTest .and. &
              y_BLK(i,j,k,iBlock)==yTest .and. &
              z_BLK(i,j,k,iBlock)==zTest
@@ -83,18 +81,15 @@ subroutine ray_trace_accurate
            if(R_BLK(i,j,k,iBlock) < rIonosphere .or. &
                 .not.true_cell(i,j,k,iBlock))then
               ray(:,:,i,j,k,iBlock)=BODYRAY
-              if(oktest_ray)write(*,*)'Shortcut BODYRAY iProc,iRay=',&
-                   iProc,iRay
+              if(oktest_ray)write(*,*)'Shortcut BODYRAY iProc,iRay=',iProc,iRay
               CYCLE
            end if
 
-           if(oktest_ray)write(*,*)'calling follow_ray iProc,iRay=',&
-                iProc,iRay
+           if(oktest_ray)write(*,*)'calling follow_ray iProc,iRay=',iProc,iRay
 
            ! Follow ray in direction iRay
-           call follow_ray(iRay, (/i,j,k,iBlock/), &
-                (/ x_BLK(i,j,k,iBlock), y_BLK(i,j,k,iBlock), &
-                z_BLK(i,j,k,iBlock) /) )
+           call follow_ray(iRay, (/i,j,k,iBlock/), (/ x_BLK(i,j,k,iBlock), &
+                y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock) /) )
 
         end do             ! iRay
      end do          ! iBlock
@@ -120,15 +115,17 @@ subroutine ray_trace_accurate
      end do; end do; end do
   end do
 
-  if(oktest_me)write(*,*)'ray lat, lon, status=',&
+  if(okTestMe)write(*,*)'ray lat, lon, status=',&
        ray(:,:,iTest,jTest,kTest,BlkTest)
 
-  if(oktime.and.iProc==0)then
+  if(okTime.and.iProc==0)then
      write(*,'(a)',ADVANCE='NO') 'Total ray tracing time:'
      call timing_show('ray_trace',1)
   end if
-  call barrier_mpi
-  if(oktest_me)write(*,*)'ray_trace completed.'
+
+  call exchange_messages
+  ! call barrier_mpi
+  if(okTestMe)write(*,*)'ray_trace completed.'
 
 end subroutine ray_trace_accurate
 
@@ -393,7 +390,7 @@ contains
              CYCLE BLOCK
           else
              write(*,*)'ERROR for follow_this_ray, iProc=',iProc
-             write(*,*)'ERROR iBlockRay=jBlock=',jBlock
+             write(*,*)'ERROR iBlockRay=jBlock=',iBlockRay,jBlock
              write(*,*)'ERROR for iStart_D    =',iStart_D
              write(*,*)'ERROR for XyzRay_D    =',XyzRay_D
              write(*,*)'XyzStart_BLK, Dx_BLK  =',XyzStart_BLK(:,jBlock),&
@@ -528,11 +525,12 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
 
   use ModRayTrace
   use ModProcMH
-  use ModNumConst, ONLY: cTiny, cOne
+  use ModNumConst, ONLY: cTiny
   use ModMain, ONLY: TypeCoordSystem, nI, nJ, nK
-  use ModGeometry, ONLY: XyzStart_BLK, XyzMax_D, XyzMin_D, &
-       Dx_BLK, Dy_BLK, Dz_BLK, rMin_BLK
+  use ModGeometry, ONLY: XyzStart_BLK, XyzMax_D, XyzMin_D,  UseCovariant, &
+       Dx_BLK, Dy_BLK, Dz_BLK, rMin_BLK,  x_BLK,y_BLK,z_BLK, x1,x2,y1,y2,z1,z2
   use CON_planet, ONLY: DipoleStrength
+  use ModNumConst, ONLY: cPI
 
   implicit none
 
@@ -550,30 +548,34 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
   ! Block size
   real :: Dxyz_D(3)
 
-  ! Initial and mid point normalized coordinates and direction of B field
-  real, dimension(3) :: x_ini, x_mid, b_ini, b_mid
+  ! Current, initial and mid points of: IJK and XYZ coordinates, direction of B field
+  real, dimension(3) :: IjkIni_D, IjkMid_D, IjkCur_D, XyzIni_D, XyzMid_D, XyzCur_D, &
+       bNormIni_D, bNormMid_D, Gen_D, Ijk_D
 
-  ! True interpolated magnetic field, and true location
-  real, dimension(3) :: b_D, xx_ini
+  ! SM coordinates
+  real, dimension(3) :: XyzSMIni_D, XyzSMCur_D
+
+  ! True interpolated magnetic field
+  real, dimension(3) :: b_D
 
   ! Radial distance from origin
-  real :: r, r_ini
+  real :: r, rIni
 
   ! dx is the difference between 1st and 2nd order RK to estimate accuracy
-  ! dx_opt is the required accuracy, dx_rel=dx/dx_opt
-  real :: dx_rel, dx_opt
+  ! dxOpt is the required accuracy, dxRel=dx/dxOpt
+  real :: dxRel, dxOpt
 
-  ! Ray length, maximum length in block, step size, next step size 
-  real :: l, lmax, dl, dLength, dl_next
+  ! Ray step size, step length, next step size 
+  real :: dl, dlp, dLength, dlNext
 
   ! Fraction of the last step inside the ionosphere
   real :: Fraction
 
   ! Step size limits
-  real, parameter :: dl_max=1.0, dl_min=0.05, dl_tiny=1.e-6
+  real :: dlMax, dlMin, dlTiny
 
   ! counter for ray integration
-  integer :: nsegment 
+  integer :: nSegment, nSegmentMax=10*(nI+nJ+nK)
 
   ! True if Rmin_BLK < R_raytrace
   logical :: DoCheckInnerBc
@@ -582,21 +584,18 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
   logical :: DoCheckOpen
 
   ! Counter for entering follow_ray_iono
-  integer :: n_iono
+  integer :: nIono
 
   ! Control volume limits in local coordinates
-  real, dimension(3) :: xmin, xmax
+  real, dimension(3) :: xmin, xmax, xminE, xmaxE
 
-  ! Current position of ray in normalized and physical coordinates
-  real, dimension(3) :: x, xx
-
-  ! Radial distance and square of it: r2=sum(xx**2)
+  ! Radial distance and square of it: r2=sum(XyzCur_D**2)
   real :: r2
 
-  ! Cell indices corresponding to current or final x position
+  ! Cell indices corresponding to current or final Ijk position
   integer :: i1,j1,k1,i2,j2,k2
 
-  ! Distance between x and i1,j1,k1, and i2,j2,k2
+  ! Distance between Ijk and i1,j1,k1, and i2,j2,k2
   real :: dx1, dy1, dz1, dx2, dy2, dz2
 
   ! dl/B in physical units
@@ -604,18 +603,24 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
 
   ! Debugging
   logical :: okdebug=.false.
+
+  logical :: IsWall
   !--------------------------------------------------------------------------
 
   if(oktest_ray)write(*,'(a,3i4,3es12.4)')&
        'Starting follow_ray_block: me,iBlock,iRay,Xyz_D=',&
        iProc,iBlock,iRay,Xyz_D
 
+  ! Store local block deltas
+  Dxyz_D  = (/Dx_BLK(iBlock), Dy_BLK(iBlock), Dz_BLK(iBlock)/)
+
   ! Convert initial position to block coordinates
-  Dxyz_D = (/Dx_BLK(iBlock), Dy_BLK(iBlock), Dz_BLK(iBlock)/)
-  x      = (Xyz_D - XyzStart_BLK(:,iBlock))/Dxyz_D + 1.0
+  XyzCur_D = Xyz_D
+  call xyz_to_ijk(XyzCur_D,IjkCur_D,iBlock, &
+       XyzCur_D,XyzStart_BLK(:,iBlock),Dxyz_D)
 
   ! Set flag if checking on the ionosphere is necessary
-  DoCheckInnerBc = Rmin_BLK(iBlock) < R_raytrace + sum(Dxyz_D)
+  DoCheckInnerBc = Rmin_BLK(iBlock) < 1.2*R_raytrace
 
   ! Set flag if checking for open rays is useful
   DoCheckOpen = .false.
@@ -627,94 +632,192 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
   xmin=(/   0.0,   0.0,   0.0/)
   xmax=(/nI+1.0,nJ+1.0,nK+1.0/)
 
+  ! Extended limits to check if the tracing stepped 
+  ! too far through the block boundary
+  xminE=(/  -0.5,  -0.5,  -0.5/)
+  xmaxE=(/nI+1.5,nJ+1.5,nK+1.5/)
+
   ! Go out to the block interface at the edges of the computational domain
   where(XyzStart_BLK(:,iBlock)+Dxyz_D*(xmax-1.0) > XyzMax_D)xmax = xmax - 0.5
   where(XyzStart_BLK(:,iBlock)+Dxyz_D*(xmin-1.0) < XyzMin_D)xmin = xmin + 0.5
+  if(UseCovariant)then
+     xmin(2)=0.0;  xmax(2)=nJ+1.0
+     xmin(3)=0.0;  xmax(3)=nK+1.0
+  end if
+
+  ! Step size limits
+  dlMax =( abs(x_BLK(nI,nJ,nK,iBlock)-x_BLK(1,1,1,iBlock)) &
+       +   abs(y_BLK(nI,nJ,nK,iBlock)-y_BLK(1,1,1,iBlock)) &
+       +   abs(z_BLK(nI,nJ,nK,iBlock)-z_BLK(1,1,1,iBlock)) ) &
+       /(nI + nJ + nK - 3)
+  dlMin = dlMax/20.0
+!!!  dlTiny= dlMax/1000.0
+  dlTiny= dlMax/1e6
 
   ! Initial value
-  dl_next=sign(dl_max,1.5-iRay)
+  dlNext=sign(dlMax,1.5-iRay)
 
-  ! Accuracy in terms of x in normalized coordinates
-  dx_opt   = 0.01
+  ! Accuracy in terms of a kind of normalized coordinates
+  dxOpt   = 0.01*dlMax
+
+  ! Reference Ijk
+  Ijk_D = (/ nI/2, nJ/2, nK/2 /)
 
   ! Length and maximum length of ray within control volume
-  l        = 0
-  lmax     = 10*maxval(xmax-xmin)
-  nsegment = 0
-  n_iono   = 0
+  nSegment = 0
+  nIono    = 0
+
+  IsWall=.false.
 
   ! Integration loop
   FOLLOW: do
 
      ! Integrate with 2nd order scheme
-     dl    = dl_next
-     x_ini = x
+     dl    = dlNext
+     IjkIni_D = IjkCur_D;  XyzIni_D = XyzCur_D
 
-     ! Half step
-     call interpolate_b(x_ini, b_D, b_ini)
-     x_mid = x_ini + 0.5*dl*b_ini
+     call interpolate_b(IjkIni_D, b_D, bNormIni_D)
+     HALF: do
+        ! Half step in XYZ space
+        XyzMid_D = XyzIni_D + 0.5*dl*bNormIni_D
 
-     ! Extract ray values using around x_ini
-     if(DoExtractRay)call ray_extract(x_ini)
+        ! Get corresponding Ijk coordinates IjkMid_D
+        call xyz_to_ijk(XyzMid_D, IjkMid_D, iBlock, &
+             XyzIni_D, XyzStart_BLK(:,iBlock), Dxyz_D)
+
+        ! Check if it stepped too far, cut step if needed
+        if(any(IjkMid_D<xminE) .or. any(IjkMid_D>xmaxE))then
+           !!! call CON_stop('DEBUG: ray_trace_new: HALF step too far')
+           ! Reduce step size
+           dl = 0.5*dl
+
+           if(abs(dl) < dlMin)then
+              ! Cannot reduce dl further
+              dl = 0.0
+              ! Obtain a point outside the block by mirroring the block
+              ! center Ijk_D to the starting location of this step IjkIni_D
+              IjkMid_D = 2*IjkIni_D - Ijk_D
+              ! Reduce length of Ijk_D --> IjkMid_D vector to end 
+              ! something like a 10th of a cell outside the block
+              dlp = 1.1*(1.-maxval(max(xmin-IjkMid_D,IjkMid_D-xmax) &
+                   /(abs(IjkMid_D-IjkIni_D)+dlTiny)))
+              IjkMid_D=IjkIni_D+dlp*(IjkMid_D-IjkIni_D)
+
+              ! Make sure that IjkMid_D is just outside the control volume
+              IjkMid_D=max(xmin-.1,IjkMid_D)
+              IjkMid_D=min(xmax+.1,IjkMid_D)
+              call interpolate_xyz(IjkMid_D,XyzMid_D)
+              call interpolate_b(IjkMid_D, b_D, bNormMid_D)
+              IjkCur_D=IjkMid_D; XyzCur_D=XyzMid_D
+
+              ! We exited from the block and now have a good location to be
+              ! continued from
+              IsWall=.true.
+              EXIT HALF
+           end if
+        else
+           EXIT HALF
+        end if
+     end do HALF
+
+     ! Extract ray values using around IjkIni_D
+     if(DoExtractRay)call ray_extract(IjkIni_D,XyzIni_D)
 
      STEP: do
+        if(IsWall)EXIT STEP
+
         ! Full step
-        b_mid = b_ini ! In case interpolation would give zero vector
-        call interpolate_b(x_mid, b_D, b_mid)
+        bNormMid_D = bNormIni_D ! In case interpolation would give zero vector
+        call interpolate_b(IjkMid_D, b_D, bNormMid_D)
 
         ! Calculate the difference between 1st and 2nd order integration
-        ! and take ratio relative to dx_opt
-        dx_rel = abs(dl) * maxval(abs(b_mid-b_ini)) / dx_opt
+        ! and take ratio relative to dxOpt
+        dxRel = abs(dl) * maxval(abs(bNormMid_D-bNormIni_D)) / dxOpt
 
         if(oktest_ray.and.okdebug)&
-             write(*,*)'me,iBlock,x_mid,b_mid,dx_rel=', &
-             iProc,iBlock,x_mid,b_mid,dx_rel
+             write(*,*)'me,iBlock,IjkMid_D,bNormMid_D,dxRel=', &
+             iProc,iBlock,IjkMid_D,bNormMid_D,dxRel
 
         ! Make sure that dl does not change more than a factor of 2 or 0.5
-        dx_rel = max(0.5, min(2., dx_rel))
+        dxRel = max(0.5, min(2., dxRel))
 
-        if(dx_rel > 1.)then
+        if(dxRel > 1.)then
            ! Not accurate enough, decrease dl if possible
 
-           if(abs(dl) <= dl_min + dl_tiny)then
+           if(abs(dl) <= dlMin + dlTiny)then
               ! Cannot reduce dl further
-              dl_next=dl
+              dlNext=dl
               EXIT STEP
            end if
 
-           dl = sign(max(dl_min,abs(dl)/(dx_rel+0.001)),dl)
+           dl = sign(max(dlMin,abs(dl)/(dxRel+0.001)),dl)
 
            ! New mid point using the reduced dl
-           x_mid = x_ini + 0.5*dl*b_ini
+           HALF2: do
 
-           if(oktest_ray.and.okdebug)&
-                write(*,*)'new decreased dl: me,iBlock,dl=', &
-                iProc,iBlock,dl
+              XyzMid_D = XyzIni_D + 0.5*dl*bNormIni_D
+              call xyz_to_ijk(XyzMid_D,IjkMid_D,iBlock, &
+                   XyzIni_D,XyzStart_BLK(:,iBlock),Dxyz_D)
+
+              ! Check if it stepped too far, cut step if needed
+              if(any(IjkMid_D<xminE) .or. any(IjkMid_D>xmaxE))then
+                 !!! call CON_stop('DEBUG: ray_trace_new: HALF2 step too far')
+                 dl=0.5*dl
+                 if(abs(dl)<dlMin)then
+                    ! Cannot reduce dl further
+                    dl=0.
+                    IjkMid_D=2.*IjkIni_D-Ijk_D
+                    dlp = 1.1*(1.-maxval(max(xmin-IjkMid_D,IjkMid_D-xmax) &
+                         /(abs(IjkMid_D-IjkIni_D)+dlTiny)))
+                    IjkMid_D=IjkIni_D+dlp*(IjkMid_D-IjkIni_D)
+
+                    ! Make sure that IjkMid_D is just outside the control volume
+                    IjkMid_D=max(xmin-.1,IjkMid_D)
+                    IjkMid_D=min(xmax+.1,IjkMid_D)
+                    call interpolate_xyz(IjkMid_D,XyzMid_D)
+                    call interpolate_b(IjkMid_D, b_D, bNormMid_D)
+                    IjkCur_D=IjkMid_D; XyzCur_D=XyzMid_D
+                    IsWall=.true.
+                    EXIT HALF2
+                 end if
+              else
+                 EXIT HALF2
+              end if
+           end do HALF2
+
+           if(oktest_ray.and.okdebug) write(*,*) &
+                'new decreased dl: me,iBlock,dl=',iProc,iBlock,dl
         else
            ! Too accurate, increase dl if possible
-           if(abs(dl) < dl_max - dl_tiny)then
+           if(abs(dl) < dlMax - dlTiny)then
+              dlNext = sign(min(dlMax,abs(dl)/sqrt(dxRel)),dl)
 
-              dl_next = sign(min(dl_max,abs(dl)/sqrt(dx_rel)),dl)
-
-              if(oktest_ray.and.okdebug)&
-                   write(*,*)'new increased dl_next: me,iBlock,dl_next=', &
-                   iProc,iBlock,dl_next
-
+              if(oktest_ray.and.okdebug) write(*,*) &
+                   'new increased dlNext: me,iBlock,dlNext=',iProc,iBlock,dlNext
            end if
-
            EXIT STEP
         end if
      end do STEP
 
      ! Update position after the full step
-     x = x_ini + b_mid*dl
+     if(.not.IsWall)then
+        XyzCur_D = XyzIni_D + dl*bNormMid_D
+        call xyz_to_ijk(XyzCur_D,IjkCur_D,iBlock, &
+             XyzIni_D,XyzStart_BLK(:,iBlock),Dxyz_D)
 
-     ! Update number of segments and the length in block coordinates
-     nsegment = nsegment + 1
-     l        = l + abs(dl)
+        ! Check if it stepped too far, use midpoint if it did
+        if(any(IjkCur_D<xminE) .or. any(IjkCur_D>xmaxE))then
+           IjkCur_D=IjkMid_D; XyzCur_D=XyzMid_D
+        end if
+     end if  !! .not.IsWall
 
-     ! Step size in MH units  !!! Use simpler formula for cubic cells ???
-     dLength = abs(dl)*sqrt( sum((b_mid*Dxyz_D)**2) )
+     ! Update number of segments
+     nSegment = nSegment + 1
+
+     ! Step length
+     dLength = sqrt( (abs(XyzCur_D(1)-XyzIni_D(1)))**2 &
+          +          (abs(XyzCur_D(2)-XyzIni_D(2)))**2 &
+          +          (abs(XyzCur_D(3)-XyzIni_D(3)))**2 )
 
      ! Update ray length
      Length  = Length + dLength
@@ -723,14 +826,15 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
 
         ! Interpolate density and pressure
         ! Use the last indexes and distances already set in interpolate_b
-        RhoP_V = dx1*(   dy1*(   dz1*Extra_VGB(:,i2,j2,k2,iBlock)   &
-             +                   dz2*Extra_VGB(:,i2,j2,k1,iBlock))  &
-             +           dy2*(   dz1*Extra_VGB(:,i2,j1,k2,iBlock)   &
-             +                   dz2*Extra_VGB(:,i2,j1,k1,iBlock))) &
-             +   dx2*(   dy1*(   dz1*Extra_VGB(:,i1,j2,k2,iBlock)   &
-             +                   dz2*Extra_VGB(:,i1,j2,k1,iBlock))  &
-             +           dy2*(   dz1*Extra_VGB(:,i1,j1,k2,iBlock)   &
-             +                   dz2*Extra_VGB(:,i1,j1,k1,iBlock)))
+        RhoP_V = &
+             +dx1*(dy1*(dz1*Extra_VGB(:,i2,j2,k2,iBlock)   &
+             +          dz2*Extra_VGB(:,i2,j2,k1,iBlock))  &
+             +     dy2*(dz1*Extra_VGB(:,i2,j1,k2,iBlock)   &
+             +          dz2*Extra_VGB(:,i2,j1,k1,iBlock))) &
+             +dx2*(dy1*(dz1*Extra_VGB(:,i1,j2,k2,iBlock)   &
+             +          dz2*Extra_VGB(:,i1,j2,k1,iBlock))  &
+             +     dy2*(dz1*Extra_VGB(:,i1,j1,k2,iBlock)   &
+             +          dz2*Extra_VGB(:,i1,j1,k1,iBlock)))
 
         ! Calculate physical step size divided by physical field strength
         InvBDl = dLength / sqrt( sum(b_D**2) )
@@ -743,32 +847,28 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
              InvBDl * RhoP_V
 
         ! Check if we crossed the Z=0 plane in the SM coord system
-        ! Convert previous and current normalized positions into real coords
-        xx_ini = XyzStart_BLK(:,iBlock) + Dxyz_D*(x_ini - 1.)
-        xx     = XyzStart_BLK(:,iBlock) + Dxyz_D*(x     - 1.)
-
         ! Convert GM position into SM frame using the transposed GmSm_DD
-        xx_ini = matmul(xx_ini, GmSm_DD)
-        xx     = matmul(xx    , GmSm_DD)
+        XyzSMIni_D = matmul(XyzIni_D, GmSm_DD)
+        XyzSMCur_D = matmul(XyzCur_D, GmSm_DD)
 
         ! Check if we have crossed the magnetic equator in the SM frame
-        if(xx(3)*xx_ini(3)<=0)then
+        if(XyzSMCur_D(3)*XyzSMIni_D(3)<=0)then
 
            ! Crossing the magnetic equator in opposite direction 
            ! is not accepted !!!
 
            if(DipoleStrength*(iRay-1.5)<0)then
-              if(xx_ini(3) <= 0 .and. xx(3) >= 0)then
+              if(XyzSMIni_D(3) <= 0 .and. XyzSMCur_D(3) >= 0)then
                  
                  ! This write is necessary to avoid incorrect 
                  ! optimization by the ifort 8.070 compiler
                  write(*,'(a)',ADVANCE='NO') ''
-      
+
                  iFace = ray_loop_
                  EXIT FOLLOW
               end if
            else
-              if(xx_ini(3) >= 0 .and. xx(3) <= 0)then
+              if(XyzSMIni_D(3) >= 0 .and. XyzSMCur_D(3) <= 0)then
       
                  ! This write is necessary to avoid incorrect
                  ! optimization by the ifort 8.070 compiler
@@ -780,19 +880,20 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
            end if
 
            ! Interpolate x and y
-           dz1 = abs(xx_ini(3))/(abs(xx(3))+abs(xx_ini(3))); dz2 = 1.0 - dz1
+           dz1 = abs(XyzSMIni_D(3))/(abs(XyzSMCur_D(3))+abs(XyzSMIni_D(3)))
+           dz2 = 1.0 - dz1
 
-           RayIntegral_V(Z0x_:Z0y_) = dz2*xx_ini(1:2) + dz1*xx(1:2)
+           RayIntegral_V(Z0x_:Z0y_) = dz2*XyzSMIni_D(1:2) + dz1*XyzSMCur_D(1:2)
 
            ! Assign Z0b_ as the middle point value of the magnetic field
            RayIntegral_V(Z0b_) = sqrt(sum(b_D**2))
            if(oktest_ray)then
               write(*,'(a,3es12.4)') &
-                   'Found z=0 crossing at xx_ini=',xx_ini
+                   'Found z=0 crossing at XyzSMIni_D=',XyzSMIni_D
               write(*,'(a,3es12.4)') &
-                   'Found z=0 crossing at xx    =',xx
+                   'Found z=0 crossing at XyzSMCur_D=',XyzSMCur_D
               write(*,'(a,3es12.4)')&
-                   'RayIntegral_V(Z0x_:Z0b_)    =',RayIntegral_V(Z0x_:Z0b_)
+                   'RayIntegral_V(Z0x_:Z0b_)=',RayIntegral_V(Z0x_:Z0b_)
 
               !write(*,'(a,2es12.4)')'Weights =',dz1,dz2
               !write(*,'(a,3es12.4)')'b_D = ',b_D
@@ -801,8 +902,8 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
      end if
 
      if(oktest_ray.and.okdebug)&
-          write(*,*)'me,iBlock,nsegment,l,x=', &
-          iProc,iBlock,nsegment,l,x
+          write(*,*)'me,iBlock,nSegment,IjkCur_D=', &
+          iProc,iBlock,nSegment,IjkCur_D
 
      if(DoCheckOpen)then
         if(all(ray(1,iRay,i1:i2,j1:j2,k1:k2,iBlock)==OPENRAY))then
@@ -814,42 +915,39 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
 
      ! Check if we got inside the ionosphere
      if(DoCheckInnerBc)then
-        ! Convert x to real coordinates xx
-        xx = XyzStart_BLK(:,iBlock) + Dxyz_D * (x-1.)
-        r2 = sum(xx**2)
+        r2 = sum(XyzCur_D**2)
 
         if(r2<=R2_raytrace)then
 
            if(NameVectorField /= 'B')then
-              Xyz_D = xx
+              Xyz_D = XyzCur_D
               iFace=ray_iono_
               EXIT FOLLOW
            end if
 
            ! Try mapping down to rIonosphere if we haven't tried yet
-           if(n_iono<1)then
+           if(nIono<1)then
               if(.not.follow_ray_iono())then
                  ! We did not hit the surface of the ionosphere
                  ! continue the integration
-                 n_iono=n_iono+1
+                 nIono=nIono+1
               else
                  if(oktest_ray)write(*,'(a,3i4,6es12.4)')&
-                      'Inside R_raytrace at me,iBlock,nsegment,x,xx=',&
-                      iProc,iBlock,nsegment,x,xx
+                      'Inside R_raytrace at me,iBlock,nSegment,IjkCur_D,XyzCur_D=',&
+                      iProc,iBlock,nSegment,IjkCur_D,XyzCur_D
 
                  r=sqrt(r2)
-                 xx_ini = XyzStart_BLK(:,iBlock) + Dxyz_D*(x_ini-1.0)
-                 r_ini=sqrt(sum(xx_ini**2))
+                 rIni=sqrt(sum(XyzIni_D**2))
 
                  ! The fraction of the last step inside body is estimated from 
                  ! the radii.
-                 Fraction = (R_raytrace - r) / (r_ini - r)
+                 Fraction = (R_raytrace - r) / (rIni - r)
 
                  ! Reduce ray length
                  Length = Length - Fraction * dLength
 
                  ! Recalculate position
-                 x = x - Fraction*(x-x_ini)
+                 IjkCur_D = IjkCur_D - Fraction*(IjkCur_D-IjkIni_D)
                  
                  if(DoIntegrateRay)then
                     ! Reduce integrals with the fraction of the last step 
@@ -873,14 +971,14 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
                             RayIntegral_V(InvB_),RayIntegral_V(RhoInvB_:pInvB_)
 
                        write(*,*)'Reduction at InvBDl,RhoP_V   =',InvBDl,RhoP_V
-                       write(*,*)'Reduction r_ini,r,R_raytrace =',&
-                            r_ini,r,R_raytrace
+                       write(*,*)'Reduction rIni,r,R_raytrace =',&
+                            rIni,r,R_raytrace
                     end if
                     
                  end if
 
-                 ! Exit integration loop (xx was set by follow_ray_iono)
-                 Xyz_D=xx
+                 ! Exit integration loop (XyzCur_D was set by follow_ray_iono)
+                 Xyz_D=XyzCur_D
                  iFace=ray_iono_
                  EXIT FOLLOW
               end if
@@ -889,26 +987,36 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
      end if
 
      ! Check if the ray hit the wall of the control volume
-     if(any(x<xmin) .or. any(x>xmax))then
+     if(any(IjkCur_D<xmin) .or. any(IjkCur_D>xmax))then
+        ! Compute generalized coords without pole or edge wrapping
+        call xyz_to_gen(XyzCur_D,Gen_D)
 
-        ! Convert back to real coordinates
-        Xyz_D = XyzStart_BLK(:,iBlock) + Dxyz_D*(x-1)
-
-        if(any(Xyz_D < XyzMin_D) .or. any(Xyz_D > XyzMax_D))then
+        if(any(Gen_D < XyzMin_D) .or. any(Gen_D > XyzMax_D))then
            iFace = ray_open_
         else
            iFace = ray_block_
         end if
 
+        Xyz_D = XyzCur_D
         EXIT FOLLOW
      end if
 
+     ! Can also hit wall if spherical before reaching xmin,xmax
+     if(UseCovariant)then
+        if(  XyzCur_D(1)<x1 .or. XyzCur_D(2)<y1 .or. XyzCur_D(3)<z1 .or. &
+             XyzCur_D(1)>x2 .or. XyzCur_D(2)>y2 .or. XyzCur_D(3)>z2 )then
+
+           iFace = ray_open_
+           Xyz_D = XyzCur_D
+           EXIT FOLLOW
+        end if
+     end if
+
      ! Check if we have integrated for too long
-     if( l > lmax .or. Length > RayLengthMax )then
+     if( nSegment > nSegmentMax .or. Length > RayLengthMax )then
         ! Seems to be a closed loop within a block
-        if(oktest_ray) &
-             write(*,*)'CLOSED LOOP at me,iBlock,x,xx=',&
-             iProc,iBlock,x,XyzStart_BLK(:,iBlock)+Dxyz_D*(x-1.0)
+        if(oktest_ray) write(*,*)'CLOSED LOOP at me,iBlock,IjkCur_D,XyzCur_D=', &
+             iProc,iBlock,IjkCur_D,XyzCur_D
 
         iFace=ray_loop_
         EXIT FOLLOW
@@ -918,78 +1026,106 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
 
   ! Extract last point if ray is done. 
   ! The interpolation coefficients are not known.
-  if(iFace /= ray_block_ .and. DoExtractRay)call ray_extract(x)
+  if(iFace /= ray_block_ .and. DoExtractRay)call ray_extract(IjkCur_D,XyzCur_D)
 
   if(oktest_ray) then
      write(*,'(a,4i4)')&
-          'Finished follow_ray_block at me,iBlock,nsegment,iFace=',&
-          iProc,iBlock,nsegment,iFace
+          'Finished follow_ray_block at me,iBlock,nSegment,iFace=',&
+          iProc,iBlock,nSegment,iFace
      write(*,'(a,i4,6es12.4)')&
-          'Finished follow_ray_block at me,x,xx=',&
-          iProc,x,XyzStart_BLK(:,iBlock)+Dxyz_D*(x-1.)
+          'Finished follow_ray_block at me,IjkCur_D,XyzCur_D=',iProc,IjkCur_D,XyzCur_D
   end if
 
 contains
   !========================================================================
 
-  subroutine interpolate_b(x_D,b_D,Dir_D)
+  subroutine interpolate_b(IjkIn_D,b_D,bNorm_D)
 
-    ! Interpolate the magnetic field at normalized location x_D 
+    ! Interpolate the magnetic field at normalized location IjkIn_D 
     ! and return the result in b_D. 
     ! The direction of b_D (normalized to a unit vector) is returned 
-    ! in Dir_D if the magnitude of b_D is not (almost) zero.
+    ! in bNorm_D if the magnitude of b_D is not (almost) zero.
 
-    real, intent(in)   :: x_D(3)      ! location
+    real, intent(in)   :: IjkIn_D(3)  ! location
     real, intent(out)  :: b_D(3)      ! interpolated magnetic field
-    real, intent(inout):: Dir_D(3)    ! direction vector
+    real, intent(inout):: bNorm_D(3)  ! unit magnetic field vector
 
     !LOCAL VARIABLES:
-    real :: AbsB, Dir0_D(3)
-
-    character (len=*), parameter :: NameSub='interpolate_b'
+    real :: AbsB
 
     !-------------------------------------------------------------------------
 
-    ! Determine cell indices corresponding to location x_D
-    i1=floor(x_D(1)); i2=i1+1
-    j1=floor(x_D(2)); j2=j1+1
-    k1=floor(x_D(3)); k2=k1+1
+    ! Determine cell indices corresponding to location IjkIn_D
+    i1=floor(IjkIn_D(1)); i2=i1+1
+    j1=floor(IjkIn_D(2)); j2=j1+1
+    k1=floor(IjkIn_D(3)); k2=k1+1
 
     ! Distance relative to the cell centers
-
-    dx1 = x_D(1) - i1; dx2 = cOne - dx1
-    dy1 = x_D(2) - j1; dy2 = cOne - dy1
-    dz1 = x_D(3) - k1; dz2 = cOne - dz1
+    dx1 = IjkIn_D(1) - i1; dx2 = 1.0 - dx1
+    dy1 = IjkIn_D(2) - j1; dy2 = 1.0 - dy1
+    dz1 = IjkIn_D(3) - k1; dz2 = 1.0 - dz1
 
     ! Interpolate the magnetic field
-    b_D = dx1*(   dy1*(   dz1*Bxyz_DGB(:,i2,j2,k2,iBlock)   &
-         +                dz2*Bxyz_DGB(:,i2,j2,k1,iBlock))  &
-         +        dy2*(   dz1*Bxyz_DGB(:,i2,j1,k2,iBlock)   &
-         +                dz2*Bxyz_DGB(:,i2,j1,k1,iBlock))) &
-         +dx2*(   dy1*(   dz1*Bxyz_DGB(:,i1,j2,k2,iBlock)   &
-         +                dz2*Bxyz_DGB(:,i1,j2,k1,iBlock))  &
-         +        dy2*(   dz1*Bxyz_DGB(:,i1,j1,k2,iBlock)   &
-         +                dz2*Bxyz_DGB(:,i1,j1,k1,iBlock)))
+    b_D = dx1*(dy1*(dz1*Bxyz_DGB(:,i2,j2,k2,iBlock)+dz2*Bxyz_DGB(:,i2,j2,k1,iBlock)) &
+         +     dy2*(dz1*Bxyz_DGB(:,i2,j1,k2,iBlock)+dz2*Bxyz_DGB(:,i2,j1,k1,iBlock))) &
+         +dx2*(dy1*(dz1*Bxyz_DGB(:,i1,j2,k2,iBlock)+dz2*Bxyz_DGB(:,i1,j2,k1,iBlock))  &
+         +     dy2*(dz1*Bxyz_DGB(:,i1,j1,k2,iBlock)+dz2*Bxyz_DGB(:,i1,j1,k1,iBlock)))
 
-    ! Stretch according to normalized coordinates
-    Dir0_D = b_D/Dxyz_D
-
-    ! Normalize to unity
-    AbsB = sqrt(sum(Dir0_D**2))
-
-    ! Set Dir_D only if the magnetic field is not very small. 
+    ! Set bNorm_D only if the magnetic field is not very small. 
     ! Otherwise continue in the previous direction.
-    if(AbsB > cTiny)Dir_D = Dir0_D/AbsB
+    AbsB = sqrt(sum(b_D**2))
+    if(AbsB > cTiny) bNorm_D = b_D/AbsB
 
   end subroutine interpolate_b
+
+  !========================================================================
+
+  subroutine interpolate_xyz(IjkIn_D,XyzOut_D)
+
+    ! Interpolate X/Y/Z at normalized location IjkIn_D 
+    ! and return the result in XyzOut_D.
+
+    real, intent(in)   :: IjkIn_D(3)  ! Ijk location
+    real, intent(out)  :: XyzOut_D(3) ! Xyz location
+
+    !-------------------------------------------------------------------------
+
+    ! Determine cell indices corresponding to location IjkIn_D
+    i1=floor(IjkIn_D(1)); i2=i1+1
+    j1=floor(IjkIn_D(2)); j2=j1+1
+    k1=floor(IjkIn_D(3)); k2=k1+1
+
+    ! Distance relative to the cell centers
+    dx1 = IjkIn_D(1) - i1; dx2 = 1.0 - dx1
+    dy1 = IjkIn_D(2) - j1; dy2 = 1.0 - dy1
+    dz1 = IjkIn_D(3) - k1; dz2 = 1.0 - dz1
+
+    ! Interpolate the magnetic field
+    XyzOut_D(1) = &
+         +dx1*(dy1*(dz1*x_BLK(i2,j2,k2,iBlock)+dz2*x_BLK(i2,j2,k1,iBlock))  &
+         +     dy2*(dz1*x_BLK(i2,j1,k2,iBlock)+dz2*x_BLK(i2,j1,k1,iBlock))) &
+         +dx2*(dy1*(dz1*x_BLK(i1,j2,k2,iBlock)+dz2*x_BLK(i1,j2,k1,iBlock))  &
+         +     dy2*(dz1*x_BLK(i1,j1,k2,iBlock)+dz2*x_BLK(i1,j1,k1,iBlock)))
+    XyzOut_D(2) = &
+         +dx1*(dy1*(dz1*y_BLK(i2,j2,k2,iBlock)+dz2*y_BLK(i2,j2,k1,iBlock))  &
+         +     dy2*(dz1*y_BLK(i2,j1,k2,iBlock)+dz2*y_BLK(i2,j1,k1,iBlock))) &
+         +dx2*(dy1*(dz1*y_BLK(i1,j2,k2,iBlock)+dz2*y_BLK(i1,j2,k1,iBlock))  &
+         +     dy2*(dz1*y_BLK(i1,j1,k2,iBlock)+dz2*y_BLK(i1,j1,k1,iBlock)))
+    XyzOut_D(3) = &
+         +dx1*(dy1*(dz1*z_BLK(i2,j2,k2,iBlock)+dz2*z_BLK(i2,j2,k1,iBlock))  &
+         +     dy2*(dz1*z_BLK(i2,j1,k2,iBlock)+dz2*z_BLK(i2,j1,k1,iBlock))) &
+         +dx2*(dy1*(dz1*z_BLK(i1,j2,k2,iBlock)+dz2*z_BLK(i1,j2,k1,iBlock))  &
+         +     dy2*(dz1*z_BLK(i1,j1,k2,iBlock)+dz2*z_BLK(i1,j1,k1,iBlock)))
+
+  end subroutine interpolate_xyz
 
   !===========================================================================
 
   logical function follow_ray_iono()
 
-    ! Follow ray inside ionosphere starting from xx which is given in
+    ! Follow ray inside ionosphere starting from XyzCur_D which is given in
     ! real coordinates and use analytic mapping.
-    ! On return xx contains the final coordinates.
+    ! On return XyzCur_D contains the final coordinates.
     ! Return true if it was successfully integrated down to rIonosphere,
     ! return false if the ray exited R_raytrace or too many integration 
     ! steps were done
@@ -1003,17 +1139,17 @@ contains
     !---------------------------------------------------------------------
     if(DipoleStrength==0)call get_planet(DipoleStrengthOut=DipoleStrength)
 
-    call map_planet_field(Time_Simulation, xx, TypeCoordSystem//' NORM', &
+    call map_planet_field(Time_Simulation, XyzCur_D, TypeCoordSystem//' NORM', &
          rIonosphere, x_D, iHemisphere)
 
     if(iHemisphere==0)then
-       write(*,*)'iHemisphere==0 for xx=',xx
+       write(*,*)'iHemisphere==0 for XyzCur_D=',XyzCur_D
        write(*,*)'iBlock, iRay=',iBlock,iRay
        call stop_mpi('ERROR in follow_ray_iono')
     end if
 
     if(iHemisphere*DipoleStrength*sign(1.0,1.5-iRay) < 0.0)then
-       xx = x_D
+       XyzCur_D = x_D
        follow_ray_iono = .true.
     else
        follow_ray_iono = .false.
@@ -1023,22 +1159,18 @@ contains
 
   !=========================================================================
 
-  subroutine ray_extract(x_D)
+  subroutine ray_extract(x_D,Xyz_D)
 
     use CON_line_extract, ONLY: line_put
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitRho_, UnitU_, UnitP_, UnitB_
     use ModAdvance, ONLY: State_VGB, nVar, &
          Rho_, RhoUx_, RhoUz_, Ux_, Uz_, p_, Bx_, Bz_
-    use ModMain,ONLY: UseB0
-    real, intent(in) :: x_D(3)
+    use ModMain, ONLY: UseB0
+    real, intent(in) :: x_D(3),Xyz_D(3)
 
-    real    :: Xyz_D(3), State_V(nVar), B0_D(3), PlotVar_V(50)
+    real    :: State_V(nVar), B0_D(3), PlotVar_V(50)
     integer :: n, iLine
-    character(len=*), parameter :: NameSub='ray_extract'
     !----------------------------------------------------------------------
-
-    ! Convert x_D to real coordinates
-    Xyz_D = XyzStart_BLK(:,iBlock) + Dxyz_D*(x_D - 1.)
 
     PlotVar_V(1)   = Length
     PlotVar_V(2:4) = Xyz_D
@@ -1053,19 +1185,20 @@ contains
        k1=floor(x_D(3)); k2=k1+1
 
        ! Distance relative to the cell centers
-       dx1 = x_D(1) - i1; dx2 = cOne - dx1
-       dy1 = x_D(2) - j1; dy2 = cOne - dy1
-       dz1 = x_D(3) - k1; dz2 = cOne - dz1
+       dx1 = x_D(1) - i1; dx2 = 1.0 - dx1
+       dy1 = x_D(2) - j1; dy2 = 1.0 - dy1
+       dz1 = x_D(3) - k1; dz2 = 1.0 - dz1
 
        ! Interpolate state to x_D
-       State_V = dx1*(   dy1*(   dz1*State_VGB(:,i2,j2,k2,iBlock)   &
-            +                    dz2*State_VGB(:,i2,j2,k1,iBlock))  &
-            +            dy2*(   dz1*State_VGB(:,i2,j1,k2,iBlock)   &
-            +                    dz2*State_VGB(:,i2,j1,k1,iBlock))) &
-            +    dx2*(   dy1*(   dz1*State_VGB(:,i1,j2,k2,iBlock)   &
-            +                    dz2*State_VGB(:,i1,j2,k1,iBlock))  &
-            +            dy2*(   dz1*State_VGB(:,i1,j1,k2,iBlock)   &
-            +                    dz2*State_VGB(:,i1,j1,k1,iBlock)))
+       State_V = &
+            +dx1*(dy1*(dz1*State_VGB(:,i2,j2,k2,iBlock)   &
+            +          dz2*State_VGB(:,i2,j2,k1,iBlock))  &
+            +     dy2*(dz1*State_VGB(:,i2,j1,k2,iBlock)   &
+            +          dz2*State_VGB(:,i2,j1,k1,iBlock))) &
+            +dx2*(dy1*(dz1*State_VGB(:,i1,j2,k2,iBlock)   &
+            +          dz2*State_VGB(:,i1,j2,k1,iBlock))  &
+            +     dy2*(dz1*State_VGB(:,i1,j1,k2,iBlock)   &
+            +          dz2*State_VGB(:,i1,j1,k1,iBlock)))
 
        ! Convert momentum to velocity
        State_V(Ux_:Uz_) = State_V(RhoUx_:RhoUz_)/State_V(Rho_)
@@ -1224,16 +1357,15 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   use CON_planet_field, ONLY: map_planet_field
   use CON_axes, ONLY: transform_matrix
   use ModRaytrace
-  use ModMain,    ONLY: nBlock, Time_Simulation, TypeCoordSystem,UseB0
+  use ModMain,    ONLY: nBlock, Time_Simulation, TypeCoordSystem, UseB0
   use ModPhysics, ONLY: rBody
-  use ModAdvance, ONLY: nVar, State_VGB, Rho_, p_, Bx_, Bz_, &
-       B0_DGB
+  use ModAdvance, ONLY: nVar, State_VGB, Rho_, p_, Bx_, Bz_, B0_DGB
   use ModProcMH
   use ModMpi
   use ModNumConst,       ONLY: cDegToRad, cTiny
   use ModCoordTransform, ONLY: sph_to_xyz
   use ModUtilities,      ONLY: check_allocate
-  use ModGeometry,       ONLY: XyzMax_D, XyzMin_D
+  use ModGeometry,       ONLY: x1,x2,y1,y2,z1,z2
   use CON_line_extract,  ONLY: line_init, line_collect
   use CON_planet,        ONLY: DipoleStrength
   implicit none
@@ -1278,7 +1410,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   ! Initialize some basic variables
   R_raytrace      = rBody
   R2_raytrace     = R_raytrace**2
-  RayLengthMax    = 2*sum(XyzMax_D - XyzMin_D)
+  RayLengthMax = 4.*(abs(x2-x1) + abs(y2-y1) + abs(z2-z1))
 
   DoIntegrateRay = index(NameVar, 'InvB') > 0 .or. index(NameVar, 'Z0') > 0
   DoExtractRay   = index(NameVar, '_I') > 0
@@ -1307,10 +1439,8 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   call message_pass_cells8(.false.,.false.,.false.,3,Bxyz_DGB)
 
   ! Add B0 for faster interpolation
-  if(UseB0)then
-     Bxyz_DGB(1:3,:,:,:,1:nBlock) = Bxyz_DGB(1:3,:,:,:,1:nBlock) &
-          + B0_DGB(:,:,:,:,1:nBlock)
-  end if
+  if(UseB0) Bxyz_DGB(1:3,:,:,:,1:nBlock) = &
+       Bxyz_DGB(1:3,:,:,:,1:nBlock) + B0_DGB(:,:,:,:,1:nBlock)
 
   if(DoIntegrateRay)then
      ! Copy density and pressure into Extra_VGB
@@ -1502,9 +1632,8 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
        CpuTimeStartRay, oktest_ray, DoTraceRay, DoIntegrateRay, DoExtractRay, &
        nRay_D, NameVectorField, R_Raytrace, R2_Raytrace, RayLengthMax, Bxyz_DGB
   use CON_ray_trace, ONLY: ray_init
-  use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, &
-       B0_DGB
-  use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBLK,UseB0
+  use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, B0_DGB
+  use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBLK, UseB0
   use ModPhysics,  ONLY: rBody
   use ModGeometry, ONLY: XyzMax_D, XyzMin_D, Dx_BLK, Dy_BLK, Dz_BLK
   use ModMpi,      ONLY: MPI_WTIME
@@ -1834,3 +1963,52 @@ subroutine write_plot_line(iFile)
 
 end subroutine write_plot_line
 
+!-------------------------------------------------------------!
+
+subroutine xyz_to_ijk(XyzIn_D,IjkOut_D,iBlock,XyzRef_D,GenRef_D,dGen_D)
+  use ModNumConst,  ONLY: cPi, cHalfPi, cTwoPi
+  use ModCovariant, ONLY: TypeGeometry
+  use ModMain,      ONLY: R_,Phi_,Theta_,x_,y_,z_, nJ
+  implicit none
+
+  integer          ,intent(in)  :: iBlock
+  real,dimension(3),intent(in)  :: XyzIn_D,XyzRef_D,GenRef_D,dGen_D
+  real,dimension(3),intent(out) :: IjkOut_D
+  real,dimension(3)             :: Gen_D
+
+  select case(TypeGeometry)
+  case('cartesian')
+     Gen_D=XyzIn_D
+
+  case('spherical','spherical_lnr')   
+     call xyz_to_gen(XyzIn_D,Gen_D)
+
+     ! Did I cross the pole?
+     if( (XyzIn_D(x_)*XyzRef_D(x_) + XyzIn_D(y_)*XyzRef_D(y_)) < 0.)then
+        Gen_D(Phi_)=Gen_D(Phi_) + GenRef_D(Phi_) - modulo((cPi+GenRef_D(Phi_)),cTwoPi)
+        if(XyzIn_D(z_)>0.)then
+           Gen_D(Theta_)=Gen_D(Theta_)+2.*(+cHalfPi-Gen_D(Theta_))
+        else
+           Gen_D(Theta_)=Gen_D(Theta_)+2.*(-cHalfPi-Gen_D(Theta_))
+        end if
+     end if
+
+     ! Did I cross periodic boundary?
+     if    ((+Gen_D(Phi_)-GenRef_D(Phi_))/dGen_D(Phi_) > 2*nJ)then
+        Gen_D(Phi_)=Gen_D(Phi_)-cTwoPi
+     elseif((-Gen_D(Phi_)+GenRef_D(Phi_))/dGen_D(Phi_) > 1*nJ)then 
+        Gen_D(Phi_)=Gen_D(Phi_)+cTwoPi
+     end if
+
+  case('axial_torus')
+     call stop_mpi('xyz_to_gen_ray2: cannot handle TypeGeometry='//TypeGeometry)
+
+  case default
+     call stop_mpi('xyz_to_gen_ray2: unknown TypeGeometry='//TypeGeometry)
+
+  end select
+
+  ! Gen_D is set, now compute Ijk
+  IjkOut_D = (Gen_D - GenRef_D)/dGen_D + 1.
+
+end subroutine xyz_to_ijk
