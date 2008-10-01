@@ -333,7 +333,7 @@ C     THE INTERPOLATION REGION
             FINT=0.5*(1.-(SIGMA-S0)/DSIG)
             FEXT=0.5*(1.+(SIGMA-S0)/DSIG)
 C     
-            CALL DIPOLE(PS,X,Y,Z,QX,QY,QZ)
+            CALL DIPOLE_T96(PS,X,Y,Z,QX,QY,QZ)
             BX=(FX+QX)*FINT+OIMFX*FEXT -QX
             BY=(FY+QY)*FINT+OIMFY*FEXT -QY
             BZ=(FZ+QZ)*FINT+OIMFZ*FEXT -QZ
@@ -341,7 +341,7 @@ c
          ENDIF                  !   THE CASES (1) AND (2) ARE EXHAUSTED; THE ONLY REMAINING
 C     POSSIBILITY IS NOW THE CASE (3):
       ELSE
-         CALL DIPOLE(PS,X,Y,Z,QX,QY,QZ)
+         CALL DIPOLE_T96(PS,X,Y,Z,QX,QY,QZ)
          BX=OIMFX-QX
          BY=OIMFY-QY
          BZ=OIMFZ-QZ
@@ -2700,7 +2700,7 @@ C
 C
 C~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 c
-       SUBROUTINE DIPOLE(PS,X,Y,Z,BX,BY,BZ)
+       SUBROUTINE DIPOLE_T96(PS,X,Y,Z,BX,BY,BZ)
 C
 C  CALCULATES GSM COMPONENTS OF GEODIPOLE FIELD WITH THE DIPOLE MOMENT
 C  CORRESPONDING TO THE EPOCH OF 1980.
@@ -2737,7 +2737,7 @@ C
       BY=-3.*Y*Q*(X*SPS+Z*CPS)
       BZ=Q*((P+T-2.*U)*CPS-V*SPS)
       RETURN
-      END SUBROUTINE DIPOLE
+      END SUBROUTINE DIPOLE_T96
 c
 c                                 t04_s.f
 c
@@ -5249,6 +5249,35 @@ C                                         TO TAKE INTO ACCOUNT THE SCALE FACTOR 
       RETURN
       END SUBROUTINE RC_SHIELD
 
+c===========================================================================
+c
+       SUBROUTINE DIPOLE (PS,X,Y,Z,BX,BY,BZ)
+C
+C      A DOUBLE PRECISION ROUTINE
+C
+C  CALCULATES GSM COMPONENTS OF A GEODIPOLE FIELD WITH THE DIPOLE MOMENT
+C  CORRESPONDING TO THE EPOCH OF 2000. This routine is from T04
+C
+C----INPUT PARAMETERS:
+C     PS - GEODIPOLE TILT ANGLE IN RADIANS,
+C     X,Y,Z - GSM COORDINATES IN RE (1 RE = 6371.2 km)
+C
+C----OUTPUT PARAMETERS:
+C     BX,BY,BZ - FIELD COMPONENTS IN GSM SYSTEM, IN NANOTESLA.
+C
+      IMPLICIT REAL*8 (A-H,O-Z)
+      SPS=DSIN(PS)
+      CPS=DCOS(PS)
+      P=X**2
+      U=Z**2
+      V=3.D0*Z*X
+      T=Y**2
+      Q=30115.D0/DSQRT(P+T+U)**5
+      BX=Q*((T+U-2.D0*P)*SPS-V*CPS)
+      BY=-3.D0*Y*Q*(X*SPS+Z*CPS)
+      BZ=Q*((P+T-2.D0*U)*CPS-V*SPS)
+      RETURN
+      END SUBROUTINE DIPOLE
       end module EGM_ModTsyganenko
 
 
