@@ -208,7 +208,7 @@ end module rbe_time
 Module ModGmRb
   use rbe_grid,ONLY: nLat => ir, nLon => ip
   real, allocatable :: StateLine_VI(:,:),StateIntegral_IIV(:,:,:)
-  integer :: iLineIndex_II(nLon,0:nLat+1),nPoint
+  integer :: iLineIndex_II(nLon,1:nLat),nPoint
   
 end Module ModGmRb
 !=============================================================================
