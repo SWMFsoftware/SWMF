@@ -609,16 +609,14 @@ test_sphericalearth_run:
 
 test_sphericalearth_check:
 	${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		Param/EARTH/TestOutput/log_n000001.log-spherical \
+		Param/EARTH/TestOutput/SPHlog_n000001.log \
 		${TESTDIR}/SphericalearthTest/GM/log_n000001.log > test_sphericalearth.diff
 	cd ${TESTDIR}; \
-		cp Param/EARTH/SPH*gz SphericalearthTest/GM/; \
+		cp Param/EARTH/TestOutput/SPH*gz SphericalearthTest/GM/; \
 		gunzip SphericalearthTest/GM/*gz
 	${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/SphericalearthTest/GM/z=0_ray_1_n0000050.dat \
-		${TESTDIR}/SphericalearthTest/GM/SPHz=0_ray_1_n0000050.dat > test_sphericalearth.diff
-	${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/SphericalearthTest/GM/z=0_ray_1_t00000002_n0000100.dat \
-		${TESTDIR}/SphericalearthTest/GM/SPHz=0_ray_1_t00000002_n0000100.dat > test_sphericalearth.diff
+		${TESTDIR}/SphericalearthTest/GM/z=0_ray_1_t00000001_n0000070.dat \
+		${TESTDIR}/SphericalearthTest/GM/SPHz=0_ray_1_t00000001_n0000070.dat \
+		| grep -v SAVEDATE > test_sphericalearth.diff
 	ls -l test_sphericalearth.diff
 
