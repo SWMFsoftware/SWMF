@@ -118,7 +118,7 @@ contains
     call MPI_reduce(bCurrentLocal_VII, bCurrent_VII, nThetaIono*nPhiIono*7,&
          MPI_REAL, MPI_SUM, 0, iComm,iError)
 
-    if(iProc /= 0) return
+    if(iProc /= 0) RETURN
 
     ! Calculate the field aligned current
     do j = 1, nPhiIono
@@ -176,6 +176,7 @@ end module ModFieldAlignedCurrent
 
 subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar)
 
+  use ModProcMH, ONLY: iProc
   use ModIeGrid
   use ModFieldAlignedCurrent,ONLY: FieldAlignedCurrent_II, &
        init_mod_field_aligned_current, calc_field_aligned_current
@@ -205,11 +206,12 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar)
   if(.not.allocated(IE_lat)) &
        allocate(IE_lat(iSize), IE_lon(jSize))
 
-  ! Initialize to zero
-  Buffer_IIV = 0.
+  ! initialize all elements to zero on proc 0, others should not use it
+  if(iProc == 0) Buffer_IIV = 0.0
 
+  ! Put field aligned currents into the first "slice" of the buffer
   call calc_field_aligned_current
-  Buffer_IIV(:,:,1) = FieldAlignedCurrent_II(:,:)
+  if(iProc == 0)Buffer_IIV(:,:,1) = FieldAlignedCurrent_II(:,:)
 
   if(DoTraceIE) then
      ! Load grid and convert to lat-lon in degrees
@@ -218,6 +220,10 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar)
      Radius = (6378.+100.)/6378.
      call integrate_ray_accurate(iSize, jSize, IE_lat, IE_lon, Radius, &
           'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b')
+
+     ! Only processor 0 has the integrals, the others do not participate in the coupling
+     if(iProc /= 0) RETURN
+
      where(RayResult_VII(InvB_,:,:)>0.)
         RayResult_VII(RhoInvB_,:,:)=RayResult_VII(RhoInvB_,:,:)/RayResult_VII(InvB_,:,:)
         RayResult_VII(pInvB_,:,:)=RayResult_VII(pInvB_,:,:)/RayResult_VII(InvB_,:,:)
