@@ -4,11 +4,11 @@ ray_trace time_ray_trace
 #SAVEPLOT
 2                       nplotfiles
 y=0 ray idl             plot_string
-#INCLUDE
-Plots
+10			DnSavePlot
+-1.0			DtSavePlot
 0.                      dx (resolution, 0. maximum, -1. unstructured)
 y=0 ray tec             plot_string
-#INCLUDE
-Plots
+10			DnSavePlot
+-1.0			DtSavePlot
 
 #END
