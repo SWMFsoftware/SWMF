@@ -221,21 +221,22 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar)
      call integrate_ray_accurate(iSize, jSize, IE_lat, IE_lon, Radius, &
           'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b')
 
-     ! Only processor 0 has the integrals, the others do not participate in the coupling
-     if(iProc /= 0) RETURN
-
-     where(RayResult_VII(InvB_,:,:)>0.)
-        RayResult_VII(RhoInvB_,:,:)=RayResult_VII(RhoInvB_,:,:)/RayResult_VII(InvB_,:,:)
-        RayResult_VII(pInvB_,:,:)=RayResult_VII(pInvB_,:,:)/RayResult_VII(InvB_,:,:)
-     end where
-     where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
-        RayResult_VII(   InvB_,:,:) = -1.*No2Si_V(UnitB_)
-        RayResult_VII(rhoInvB_,:,:) = 0.
-        RayResult_VII(  pInvB_,:,:) = 0.
-     end where
-     Buffer_IIV(:,:,2) = RayResult_VII(   InvB_,:,:) / No2Si_V(UnitB_)
-     Buffer_IIV(:,:,3) = RayResult_VII(rhoInvB_,:,:) * No2Si_V(UnitRho_)
-     Buffer_IIV(:,:,4) = RayResult_VII(  pInvB_,:,:) * No2Si_V(UnitP_)
+     ! Only processor 0 has the resulting integrals,
+     !   the others do not participate in the coupling
+     if(iProc == 0)then
+        where(RayResult_VII(InvB_,:,:)>0.)
+           RayResult_VII(RhoInvB_,:,:)=RayResult_VII(RhoInvB_,:,:)/RayResult_VII(InvB_,:,:)
+           RayResult_VII(pInvB_,:,:)=RayResult_VII(pInvB_,:,:)/RayResult_VII(InvB_,:,:)
+        end where
+        where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
+           RayResult_VII(   InvB_,:,:) = -1.*No2Si_V(UnitB_)
+           RayResult_VII(rhoInvB_,:,:) = 0.
+           RayResult_VII(  pInvB_,:,:) = 0.
+        end where
+        Buffer_IIV(:,:,2) = RayResult_VII(   InvB_,:,:) / No2Si_V(UnitB_)
+        Buffer_IIV(:,:,3) = RayResult_VII(rhoInvB_,:,:) * No2Si_V(UnitRho_)
+        Buffer_IIV(:,:,4) = RayResult_VII(  pInvB_,:,:) * No2Si_V(UnitP_)
+     end if
      deallocate(RayIntegral_VII, RayResult_VII)
   end if
 
