@@ -1,0 +1,9 @@
+
+#SAVELOGFILE
+T			DoSaveLogfile
+VAR			StringLogfile
+#INCLUDE
+Logs
+rho mx my mz p bx by bz theta1 theta2 phi1 phi2 status
+
+#END
