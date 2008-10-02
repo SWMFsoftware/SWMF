@@ -633,12 +633,30 @@ contains
             State_VGB(iRhoUz,iTest,jTest,kTest,BlkTest) / &
             State_VGB(iRho,  iTest,jTest,kTest,BlkTest)
 !!$!RAYTRACE variables                                ^CFG  IF RAYTRACE BEGIN
+       ! RAYTRACE variables averaged over volume
+    case('theta1', 'theta2', 'phi1', 'phi2','status')
+       select case(NameLogvar)
+       case('theta1')
+          i = 1; j = 1
+       case('theta2')
+          i = 1; j = 2
+       case('phi1')
+          i = 2; j = 1
+       case('phi2')
+          i = 2; j = 2
+       case('status')
+          i = 3; j = 1
+       end select
+       do iBlk = 1, nBlock
+          if(unusedBLK(iBLK)) CYCLE
+          tmp1_BLK(1:nI,1:nJ,1:nK,iBlk) = ray(i,j,1:nI,1:nJ,1:nK,iBlk)
+       end do
+       LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/volume
        ! RAYTRACE variables at Itest, Jtest, Ktest, BLKtest, PROCtest
     case('theta1pnt')
        if(iProc == ProcTest) &
             LogVar_I(iVarTot) = ray(1,1,iTest,jTest,kTest,BlkTest)
     case('theta2pnt')
-       tmp1_BLK(1:nI,1:nJ,1:nK,:)=ray(1,2,1:nI,1:nJ,1:nK,:)
        if(iProc == ProcTest) &
             LogVar_I(iVarTot) = ray(1,2,iTest,jTest,kTest,BlkTest)
     case('phi1pnt')
