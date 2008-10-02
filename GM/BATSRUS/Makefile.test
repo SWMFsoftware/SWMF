@@ -593,7 +593,7 @@ test_earthsph_start:
 	make test_earthsph_check
 
 test_earthsph_compile:
-	./Config.pl -e=Mhd -g=8,8,8,600,300
+	./Config.pl -e=Mhd -u=Default -g=8,8,8,600,300
 	make
 
 test_earthsph_rundir: test_rundir
