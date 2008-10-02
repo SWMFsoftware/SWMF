@@ -10,12 +10,12 @@ T			UseAccurateTrace
 #SAVEPLOT
 8                       nPlotFiles
 y=0 ray idl             StringPlot
-#INCLUDE
-Plots
+10			DnSavePlot
+-1.0			DtSavePlot
 0.                      DxPlot
 y=0 ray tec             StringPlot
-#INCLUDE
-Plots
+10			DnSavePlot
+-1.0			DtSavePlot
 y=0 mhd idl		StringPlot
 #INCLUDE
 Plots
