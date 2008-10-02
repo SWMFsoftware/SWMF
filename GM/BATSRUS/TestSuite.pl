@@ -99,7 +99,7 @@ if($Table =~ /test/i){
 
     &execute($testbatsrus,"-ta -Corotation=ideal,updateb0");
 
-    &execute($testbatsrus,"-Plottype=ray");               #^CFG IF RAYTRACE
+    &execute($testbatsrus,"-Plottype=ray -Logtype=ray");  #^CFG IF RAYTRACE
 
     &execute($testbatsrus,"-Plottype=sph -Logtype=logpntflx");
 
@@ -107,7 +107,7 @@ if($Table =~ /test/i){
 
     &execute($testbatsrus, $Empty);
 
-    &execute($testbatsrus,"-Plottype=raynew");
+    &execute($testbatsrus,"-Plottype=raynew -Logtype=ray"); #^CFG IF RAYTRACE
 
 ###########################################################################
 }elsif($Table =~ /robust/i){
