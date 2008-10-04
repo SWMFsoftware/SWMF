@@ -78,18 +78,19 @@ F			DoUpdateCheck
 #NONCONSERVATIVE
 F			UseNonConservative
 
-#USERINPUTBEGIN
+#USERINPUTBEGIN ------------------------------------------------
 
-#USEMIXEDCELL
+#MIXEDCELL
 T                       UseMixedCell
+0.97			MixLimit
 
+#TUBE
+T			IsFullTube
+200.0			rInnerTube
+590.0			rOuterTube
+1400.0			RhoDimTube
 
-#MATERIAL
-1000.0
-200.0
-1400.0
-
-#USERINPUTEND
+#USERINPUTEND -------------------------------------------------
 
 Sheared boundary condition is used for non-zero shock slope
 

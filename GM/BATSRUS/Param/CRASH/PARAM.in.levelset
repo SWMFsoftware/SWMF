@@ -28,6 +28,16 @@ F			UseUserB0
 F			UseUserInitSession
 T			UseUserUpdateStates
 
+#USERINPUTBEGIN ------------------------------------------------
+
+#TUBE
+T                       IsFullTube
+200.0                   rInnerTube
+590.0                   rOuterTube
+50.0                    RhoDimTube
+
+#USERINPUTEND -------------------------------------------------
+
 #TIMEACCURATE
 T			IsTimeAccurate
 
