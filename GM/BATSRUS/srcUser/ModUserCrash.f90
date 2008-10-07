@@ -309,10 +309,11 @@ contains
                *State_VGB(Rho_,i,j,k,iBlock)
 
           ! Calculate internal energy from pressure and density
-          !!!
-          if(.false. .and. State_VGB(LevelBe_,i,j,k,iBlock) > 0.0)then !!!
+          if(State_VGB(LevelBe_,i,j,k,iBlock) > 0.0)then 
+
              RhoSi = State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_)
              pSi   = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
+
              call pressure_to_eint(pSi, RhoSi, Be_, &
                   uDensityTotalOut=EinternalSi, IsError=IsError)
 
