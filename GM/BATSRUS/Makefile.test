@@ -206,7 +206,7 @@ test_levelset_rundir: test_rundir
 
 test_levelset_run:
 	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
-	cat ${TESTDIR}/GM/IO2/cut_hd_1_*_n0000792_pe*.idl \
+	cat ${TESTDIR}/GM/IO2/cut_hd_1_*_n0000872_pe*.idl \
 		> ${TESTDIR}/IO2/cut_400_ns.idl
 	#cd ${TESTDIR}; ./PostProc.pl -M
 
