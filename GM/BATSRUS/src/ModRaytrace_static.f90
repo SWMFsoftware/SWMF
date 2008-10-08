@@ -22,6 +22,9 @@ module ModRaytrace
   logical :: DoExtractRay   = .false.
   logical :: DoIntegrateRay = .false.
 
+  ! Use old IJK based logic for Cartesian tracing
+  logical :: UseOldMethodOfRayTrace = .true.
+
   ! Number of rays per dimension on the starting grid
   ! This is needed for DoExtractRay = .true. only
   integer :: nRay_D(4) = (/0, 0, 0, 0/)
@@ -219,8 +222,6 @@ contains
 
   subroutine init_mod_raytrace
 
-    ! Initialize ray array (write_logfile may use it before ray tracing)
-    ray = 0.0
     if(IsDynamicRaytrace .and. iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'init_mod_raytrace allocated arrays'
