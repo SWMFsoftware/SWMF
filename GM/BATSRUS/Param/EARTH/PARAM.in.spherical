@@ -51,7 +51,7 @@ all
 initial
 
 !refine the magnetosphere
-#GRIDLEVEL
+GRIDLEVEL
 2                       Resolution
 box                     NameArea
 -224.0                  xMinBox
