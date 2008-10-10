@@ -9,23 +9,25 @@ C                                                                      C
 C----------------------------------------------------------------------C  
 
         IMPLICIT DOUBLE PRECISION (A-H,O-Z)
-	PARAMETER (MDX=3300)
-	DIMENSION D(-1:MDX+2),U(-1:MDX+2),P(-1:MDX+2)
-	DIMENSION Z(-1:MDX+2),G(-1:MDX+2),PINF(-1:MDX+2),X(1:MDX)
-	DIMENSION W(4,-1:MDX+2),DWL(4,-1:MDX+2),DWR(4,-1:MDX+2)
+        PARAMETER (MDX=3300)
+        DIMENSION D(-1:MDX+2),U(-1:MDX+2),P(-1:MDX+2)
+        DIMENSION Z(-1:MDX+2),G(-1:MDX+2),PINF(-1:MDX+2),X(1:MDX)
+        DIMENSION W(4,-1:MDX+2),DWL(4,-1:MDX+2),DWR(4,-1:MDX+2)
         dimension sum0(3)
 
-	COMMON /GAMMAS/GL,GR,PINFL,PINFR
-	COMMON /GRISIZ/M,MM1,MP1,MP2	
+        COMMON /GAMMAS/GL,GR,PINFL,PINFR
+        COMMON /GRISIZ/M,MM1,MP1,MP2        
 
-	READ(90,*)NOTIST,CFLCOE,MX
+        OPEN(90,FILE="LEVELSET.in",STATUS="OLD")
+        READ(90,*)NOTIST,CFLCOE,MX
+        CLOSE(90)
 
-	CALL INDATA(MX,D,U,P,Z,G,PINF,X,DX,sum0)
+        CALL INDATA(MX,D,U,P,Z,G,PINF,X,DX,sum0)
 
-	N=0
-	TIME=0.0
+        N=0
+        TIME=0.0
 
-	DO 0001 N=1,NOTIST
+        DO 0001 N=1,NOTIST
 
 C       Locate the interface between cell i and cell i+1.
 
@@ -33,9 +35,9 @@ C       Locate the interface between cell i and cell i+1.
           IF (Z(I)*Z(I+1).LT.0.0) INT=I
  0009   CONTINUE
 
- 	   CALL CFLTIME(MX,D,U,P,Z,G,PINF,DX,DTMIN)
- 	   DT=CFLCOE*DTMIN
- 	   DTDX=DT/DX
+            CALL CFLTIME(MX,D,U,P,Z,G,PINF,DX,DTMIN)
+            DT=CFLCOE*DTMIN
+            DTDX=DT/DX
            DT=DTDX*DX
 
            DO 0011 I=1,MX
@@ -49,13 +51,13 @@ C       Locate the interface between cell i and cell i+1.
 
 c          WRITE(6,*)N,TIME,DTDX,DT
 
-	      M  =MX
-	      MM1=MX-1
-	      MP1=MX+1
-	      MP2=MX+2
+              M  =MX
+              MM1=MX-1
+              MP1=MX+1
+              MP2=MX+2
 
-       	      CALL ROE(D,U,P,Z,GL,PINFL,DWL,DTDX)
-       	      CALL ROE(D,U,P,Z,GR,PINFR,DWR,DTDX)
+                     CALL ROE(D,U,P,Z,GL,PINFL,DWL,DTDX)
+                     CALL ROE(D,U,P,Z,GR,PINFR,DWR,DTDX)
 
               DO 0004 I=1,M
                  IF (I.LT.INT+1) THEN
@@ -86,30 +88,30 @@ C  COMPUTE PHYSICAL VARIABLES
                  ENDIF
  0005         CONTINUE
  
-	   TIME=TIME+DT
+           TIME=TIME+DT
 
         
 
- 0001	CONTINUE
+ 0001        CONTINUE
 
          CALL OUTDATA(MX,X,D,U,P,Z)
-		 
+                 
            write(40,*) time
 
 c          call conserve(mx,d,u,p,g,pinf,w,time+dt,n,dtdx,dx,int,sum0)
 
-	END
+        END
 C----------------------------------------------------------------------C
 
         SUBROUTINE INDATA(MX,D,U,P,Z,G,PINF,X,DX,sum0)
 
         IMPLICIT DOUBLE PRECISION (A-H,O-Z)
-	PARAMETER (MDX=3300)
-	DIMENSION D(-1:MDX+2),U(-1:MDX+2),P(-1:MDX+2)
-	DIMENSION Z(-1:MDX+2),G(-1:MDX+2),PINF(-1:MDX+2),X(1:MDX)
+        PARAMETER (MDX=3300)
+        DIMENSION D(-1:MDX+2),U(-1:MDX+2),P(-1:MDX+2)
+        DIMENSION Z(-1:MDX+2),G(-1:MDX+2),PINF(-1:MDX+2),X(1:MDX)
         dimension sum0(3)
 
-	COMMON /GAMMAS/GL,GR,PINFL,PINFR
+        COMMON /GAMMAS/GL,GR,PINFL,PINFR
 
 c        DATA dl,ul,pl,gl,pinfl/1.000,0.0,1.000,1.4,0.0/
 c        DATA dr,ur,pr,gr,pinfr/0.125,0.0,0.100,1.2,0.0/
@@ -120,7 +122,7 @@ c       DATA dr,ur,pr,gr,pinfr/1.000,1.0,1.000,1.2,0.0/
 c       DATA dl,ul,pl,gl,pinfl/1000.0,0.0,1.0d9,4.4,6.0d8/
 c       DATA dr,ur,pr,gr,pinfr/50.00 ,0.0,1.0d5,1.4,0.0/
 
-	DX=1.0d0/float(MX)
+        DX=1.0d0/float(MX)
 
         DO I=1,MX
            X(I)=(I-0.5)*DX
@@ -157,9 +159,9 @@ c        gl= 1.4d0
 c        pinfl= 0.0d0
 
 c        dl = 5.66981    
-c		ul = 9.02990   
-c		pl = 100.0000
-		
+c                ul = 9.02990   
+c                pl = 100.0000
+                
 c        dm= 1.0d0
 c        um= 0.0d0
 c        pm= 1.0d0
@@ -173,7 +175,7 @@ c        ur= 0.0d0
 c        pr= 1.0d0
 c        pinfr= 0.0d0
 
-c	    do i=1,mx
+c            do i=1,mx
 c           x(i)=(float(i)-0.5)*dx
 c           d(i)=dl
 c           u(i)=ul
@@ -194,13 +196,13 @@ c        end do
 
 c stiff eos shock tube problem
         gl=4.4
-		pinfl=6.0d8
-		
-		gr=1.4
-		pinfr=0.0
-		
-		xint=0.7
-		
+                pinfl=6.0d8
+                
+                gr=1.4
+                pinfr=0.0
+                
+                xint=0.7
+                
         do i=1,mx
           D(I)=1000.0
           U(I)=0.0
@@ -214,33 +216,33 @@ c stiff eos shock tube problem
              G(I)=gr
              PINF(I)=pinfr
           END IF
-		end do
-		 
+                end do
+                 
 c Initializing level-set function - interface at x=xint
-		
+                
         DO I=1,MX
            Z(I)=X(I)-xint
            if (z(i).gt. 0.5) z(i)= 0.5
            if (z(i).lt.-0.5) z(i)=-0.5
         end do
 
-	RETURN
-	END
+        RETURN
+        END
 
 C----------------------------------------------------------------------C
 
-	SUBROUTINE ROE(RHO,U,P,Z,GAMMA,PINFTY,DW,DTDX)
+        SUBROUTINE ROE(RHO,U,P,Z,GAMMA,PINFTY,DW,DTDX)
         IMPLICIT DOUBLE PRECISION (A-H,O-Z)
-	PARAMETER (MD=3300)
-	DIMENSION S(4),EIG(4,4),ALF(4)
-	DIMENSION RHO(-1:MD+2),U(-1:MD+2),P(-1:MD+2)
-	DIMENSION Z(-1:MD+2),H(-1:MD+2)
-	DIMENSION DW(4,-1:MD+2),
+        PARAMETER (MD=3300)
+        DIMENSION S(4),EIG(4,4),ALF(4)
+        DIMENSION RHO(-1:MD+2),U(-1:MD+2),P(-1:MD+2)
+        DIMENSION Z(-1:MD+2),H(-1:MD+2)
+        DIMENSION DW(4,-1:MD+2),
      1  CN(4,-1:MD+2),DWNP(4,4,-1:MD+2),NC(4,-1:MD+2),BLIM(4,-1:MD+2)
-	COMMON /BEEFUN/B,B1,B2
-	COMMON /GRISIZ/M,MM1,MP1,MP2
+        COMMON /BEEFUN/B,B1,B2
+        COMMON /GRISIZ/M,MM1,MP1,MP2
 
-C	COMPUTE ENTHALPY H
+C        COMPUTE ENTHALPY H
         do 0001 I=1,M
               RHOI=RHO(I)
               UI  =U(I)
@@ -248,35 +250,35 @@ C	COMPUTE ENTHALPY H
               AI2 = GAMMA*(PI+PINFTY)/RHOI
               H(I)= 0.5*UI*UI+AI2/(GAMMA-1.0)
  0001   continue
-C	BOUNDARY CONDITIONS
-	RHO(-1)=RHO(2)
-	RHO(0) =RHO(1)
-	U(-1)  =U(2)
-	U(0)   =U(1)
-	P(-1)  =P(2)
-	P(0)   =P(1)
-	H(-1)  =H(2)
-	H(0)   =H(1)
-	Z(-1)  =Z(2)
-	Z(0)   =Z(1)
-	RHO(MP1)=RHO(M)
-	RHO(MP2)=RHO(MM1)
-	U(MP1)  =U(M)
-	U(MP2)  =U(MM1)
-	P(MP1)  =P(M)
-	P(MP2)  =P(MM1)
-	H(MP1)  =H(M)
-	H(MP2)  =H(MM1)
-	Z(MP1)  =Z(M)
-	Z(MP2)  =Z(MM1)
+C        BOUNDARY CONDITIONS
+        RHO(-1)=RHO(2)
+        RHO(0) =RHO(1)
+        U(-1)  =U(2)
+        U(0)   =U(1)
+        P(-1)  =P(2)
+        P(0)   =P(1)
+        H(-1)  =H(2)
+        H(0)   =H(1)
+        Z(-1)  =Z(2)
+        Z(0)   =Z(1)
+        RHO(MP1)=RHO(M)
+        RHO(MP2)=RHO(MM1)
+        U(MP1)  =U(M)
+        U(MP2)  =U(MM1)
+        P(MP1)  =P(M)
+        P(MP2)  =P(MM1)
+        H(MP1)  =H(M)
+        H(MP2)  =H(MM1)
+        Z(MP1)  =Z(M)
+        Z(MP2)  =Z(MM1)
 
         DO 0002 I=-1,MP2
         DO 0002 IU=1,4
              DW(IU,I)=0.0
  0002   CONTINUE
 
-	DO 3003 I=-1,MP1
-C	   SOLVE RIGHT RIEMANN PROBLEM RP(I,I+1)
+        DO 3003 I=-1,MP1
+C           SOLVE RIGHT RIEMANN PROBLEM RP(I,I+1)
            RL=RHO(I)
            UL=U(I)
            PL=P(I)
@@ -292,50 +294,50 @@ C  FIND GRADIENTS AND MEAN VALUES
            DR=RR-RL
            DP=PR-PL
            DZ=ZR-ZL
-	   WT=SQRT(RR/RL)
-	   WTP1=WT+1.0
-	   RC=WT*RL
-	   UC=(UL+WT*UR)/WTP1
+           WT=SQRT(RR/RL)
+           WTP1=WT+1.0
+           RC=WT*RL
+           UC=(UL+WT*UR)/WTP1
            HC=(HL+WT*HR)/WTP1
            ZC=(ZL+WT*ZR)/WTP1
            QQ=0.5*UC*UC
            AA=(GAMMA-1.0)*(HC-QQ)
            AC=SQRT(AA)
 C  FIND WAVESPEEDS AND WAVESTRENGTHS
-	   S(1)	=UC-AC
-	   S(2)	=UC
-	   S(3)	=UC
-	   S(4)	=UC+AC
-	   ALF(1)=(DP-RC*AC*DU)/(2.0*AA)
-	   ALF(2)=(AA*DR-DP)/AA
-	   ALF(3)= RC*DZ
-	   ALF(4)=(DP+RC*AC*DU)/(2.0*AA)
+           S(1)        =UC-AC
+           S(2)        =UC
+           S(3)        =UC
+           S(4)        =UC+AC
+           ALF(1)=(DP-RC*AC*DU)/(2.0*AA)
+           ALF(2)=(AA*DR-DP)/AA
+           ALF(3)= RC*DZ
+           ALF(4)=(DP+RC*AC*DU)/(2.0*AA)
 C  FIND COMPONENTS OF EIGENVECTORS
-	   EIG(1,1)=1.0
-	   EIG(2,1)=UC-AC
-	   EIG(3,1)=HC-UC*AC
-	   EIG(4,1)=ZC
+           EIG(1,1)=1.0
+           EIG(2,1)=UC-AC
+           EIG(3,1)=HC-UC*AC
+           EIG(4,1)=ZC
 
-	   EIG(1,2)=1.0
-	   EIG(2,2)=UC
-	   EIG(3,2)=0.5*UC*UC
-	   EIG(4,2)=ZC
+           EIG(1,2)=1.0
+           EIG(2,2)=UC
+           EIG(3,2)=0.5*UC*UC
+           EIG(4,2)=ZC
 
-	   EIG(1,3)=0.0
-	   EIG(2,3)=0.0
-	   EIG(3,3)=0.0
-	   EIG(4,3)=1.0
+           EIG(1,3)=0.0
+           EIG(2,3)=0.0
+           EIG(3,3)=0.0
+           EIG(4,3)=1.0
 
-	   EIG(1,4)=1.0
-	   EIG(2,4)=UC+AC
-	   EIG(3,4)=HC+UC*AC
-	   EIG(4,4)=ZC
+           EIG(1,4)=1.0
+           EIG(2,4)=UC+AC
+           EIG(3,4)=HC+UC*AC
+           EIG(4,4)=ZC
 
 C          COMPUTE FIRST-ORDER FLUX Contributions     
 
            DO 3002 IW=1,4
                  CN(IW,I)=S(IW)*DTDX
-                 NC(IW,I)=SIGN(1.0,CN(IW,I))
+                 NC(IW,I)=SIGN(1.0D0,CN(IW,I))
                  ITARG   =I+(1+NC(IW,I))/2
                  DO 3001 IU=1,4
                     WINC        =CN(IW,I)*EIG(IU,IW)*ALF(IW)
@@ -344,7 +346,7 @@ C          COMPUTE FIRST-ORDER FLUX Contributions
                     BLIM(IW,I)   =ALF(IW)*CN(IW,I)*(NC(IW,I)-CN(IW,I))
  3001           CONTINUE
  3002      CONTINUE
- 3003	CONTINUE
+ 3003        CONTINUE
 
 C       HIGHER ORDER EFECTS BETWEEN 2 AND M-1
 
@@ -363,27 +365,27 @@ c            B=0.0
  4002   CONTINUE
  4003   CONTINUE
 
-	RETURN
-	END
+        RETURN
+        END
 
 C----------------------------------------------------------------------C
 
-	SUBROUTINE CFLTIME(MX,D,U,P,Z,G,PINF,DX,DTMIN)
+        SUBROUTINE CFLTIME(MX,D,U,P,Z,G,PINF,DX,DTMIN)
         IMPLICIT DOUBLE PRECISION (A-H,O-Z)
-	PARAMETER (MDX=3300)
-	DIMENSION D(-1:MDX+2),U(-1:MDX+2),P(-1:MDX+2)
-	DIMENSION Z(-1:MDX+2),G(-1:MDX+2),PINF(-1:MDX+2)
-	COMMON /GAMMAS/GL,GR,PINFL,PINFR
-	SMAX=-1.0E+06
-	DO 0002 I=1,MX
-	   A=SQRT(G(I)*(P(I)+PINF(I))/D(I))
-	   SMUA=ABS(U(I))+A
-	   IF(SMUA.GT.SMAX)SMAX=SMUA
- 0002	CONTINUE
- 0001	CONTINUE
-	DTMIN=DX/SMAX
-	RETURN
-	END
+        PARAMETER (MDX=3300)
+        DIMENSION D(-1:MDX+2),U(-1:MDX+2),P(-1:MDX+2)
+        DIMENSION Z(-1:MDX+2),G(-1:MDX+2),PINF(-1:MDX+2)
+        COMMON /GAMMAS/GL,GR,PINFL,PINFR
+        SMAX=-1.0E+06
+        DO 0002 I=1,MX
+           A=SQRT(G(I)*(P(I)+PINF(I))/D(I))
+           SMUA=ABS(U(I))+A
+           IF(SMUA.GT.SMAX)SMAX=SMUA
+ 0002        CONTINUE
+ 0001        CONTINUE
+        DTMIN=DX/SMAX
+        RETURN
+        END
 C----------------------------------------------------------------------C
 
 
