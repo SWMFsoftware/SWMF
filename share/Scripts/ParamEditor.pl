@@ -58,7 +58,7 @@ $Help = ($h or $H or $help);
 #           %FORM and @FORM has the latest submitted form variables
 #
 # - all variables and function names starting with _ are reserved
-#          $_agent is either netscape or mosaic
+#          $_agent is either netscape, mozilla or firefox
 #
 # - all other variables are controlled by the user
 #
@@ -157,7 +157,8 @@ sub _start_browser
 	$_browser = 'open';
     }else{
 	# On other platforms find the browser
-	@_bro=("netscape","mozilla"); unshift(@_bro,$_BROWSER) if $_BROWSER;
+	@_bro=("netscape","mozilla","firefox");
+	unshift(@_bro,$_BROWSER) if $_BROWSER;
       TRY: 
 	foreach $_bro (@_bro){
 	    foreach $_dir (split(/:/, $ENV{"PATH"}.
