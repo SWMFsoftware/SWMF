@@ -2328,6 +2328,7 @@ example), the start and end times should be set for all of them.
 				<option name="sphere" value="sph" />
 				<option name="los" />
 				<option name="line" value="lin" />
+				<option name="eq.rays" value="eqr" />
 				<option name="cut" />
 				<option name="slice" value="slc" 
 					if="$plotform =~ /\btec\b/"/>
@@ -2357,6 +2358,8 @@ example), the start and end times should be set for all of them.
 						     if="$plotarea eq 'lin'" />
 				<option name="Position vars. scaled"
 					value="pos"  if="$plotarea eq 'lin'"/>
+				<option name="Equatorial rays"
+					value="eqr"  if="$plotarea eq 'eqr'"/>
 				<option name="Basic block variables"
 					value="BBK" />
 				<option name="Basic block vars. scaled"
@@ -2430,9 +2433,15 @@ example), the start and end times should be set for all of them.
 				<parameter name="IsParallel" type="logical"/>
 			</for>
 		</if>
+		<if expr="$plotarea =~ /\beqr\b/">
+			<parameter name="nRadius" type="real" min="1" default="20"/>
+			<parameter name="nLon"    type="real" min="1" default="25"/>
+			<parameter name="RadiusMin" type="real" min="1" default="3"/>
+			<parameter name="RadiusMax" type="real" min="1" default="10"/>
+		</if>
 		<parameter name="DxSavePlot" type="real" min="-1.0" 
 							default="-1.0"
-	if="($plotform=~/\bidl\b/ and $plotarea!~/\b(sph|los|lin)\b/)" />
+	if="($plotform=~/\bidl\b/ and $plotarea!~/\b(sph|los|lin|eqr)\b/)" />
 		<if expr="$plotvar =~ /\bvar\b/i">
 			<parameter name="NameVars" type="string" length="100"/>
 			<parameter name="NamePars" type="string" length="100"/>
@@ -2534,6 +2543,13 @@ rfr rwi tec             StringPlot
 20.0                    Y_Size_Image
 200                     n_Pix_X
 200                     n_Pix_Y
+eqr eqr idl		StringPlot
+1000                    DnSavePlot
+-1.                     DtSavePlot
+20			nRadius
+25			nLon
+3.0			RadiusMin
+10.0			RadiusMax
 
 Default is nPlotFile=0. \\
 
@@ -2543,7 +2559,7 @@ StringPlot must contain the following 3 parts in the following order
 plotform plotarea plotvar
 
 plotform = 'tec', 'idl'
-plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin', 'blk', '1d' 'rfr'
+plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin', 'blk', '1d' 'rfr', 'eqr'
 plotvar  = 'mhd', 'ful', 'raw', 'ray', 'flx', 'sol', 'pos', 'var', 'bbk' 'rwi' - normalized
 plotvar  = 'MHD', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'pos', 'VAR', 'BBK' 'RWI' - dimensional
 \end{verbatim}
@@ -2568,6 +2584,7 @@ los   - line of sight integrated plot
 lin   - one dimensional plot along a field or stream or current line
 blk   - 3D single block cell centered data, block specified point location
 rfr   - radiotelescope pixel image plot
+eqr   - field lines traced from the magnetic equatorial plane
 \end{verbatim}
 The plotvar string defines the plot variables and the equation parameters.
 It also controls whether or not the variables will be plotted in dimensional
