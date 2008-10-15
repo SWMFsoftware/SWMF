@@ -33,7 +33,7 @@ subroutine ray_trace_accurate
 
   ! Initialize constants
   if(UseOldMethodOfRayTrace .and. .not.UseCovariant)then
-     RayLengthMax = 4*sum(XyzMax_D - XyzMin_D)
+     RayLengthMax = 4.*sum(XyzMax_D - XyzMin_D)
   else
      RayLengthMax = 4.*(abs(x2-x1) + abs(y2-y1) + abs(z2-z1))
   end if
@@ -609,7 +609,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
   ! Debugging
   logical :: okdebug=.false.
 
-  logical :: IsWall=.false.
+  logical :: IsWall
   !--------------------------------------------------------------------------
 
   if(oktest_ray)write(*,'(a,3i4,3es12.4)')&
@@ -675,6 +675,8 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
   ! Length and maximum length of ray within control volume
   nSegment = 0
   nIono    = 0
+
+  IsWall=.false.
 
   ! Integration loop
   FOLLOW: do
@@ -897,7 +899,6 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
                  ! optimization by the ifort 8.070 compiler
                  write(*,'(a)',ADVANCE='NO') ''
 
-                 XyzInOut_D = XyzCur_D
                  iFace = ray_loop_
                  EXIT FOLLOW
               end if
@@ -908,7 +909,6 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
                  ! optimization by the ifort 8.070 compiler
                  write(*,'(a)',ADVANCE='NO') ''
 
-                 XyzInOut_D = XyzCur_D
                  iFace = ray_loop_
                  EXIT FOLLOW
               end if
@@ -943,7 +943,6 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
      if(DoCheckOpen)then
         if(all(ray(1,iRay,i1:i2,j1:j2,k1:k2,iBlock)==OPENRAY))then
            nOpen=nOpen+1
-           XyzInOut_D = XyzCur_D
            iFace = ray_open_
            EXIT FOLLOW
         end if
@@ -1054,7 +1053,6 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
         if(oktest_ray) write(*,*)'CLOSED LOOP at me,iBlock,IjkCur_D,XyzCur_D=', &
              iProc,iBlock,IjkCur_D,XyzCur_D
 
-        XyzInOut_D = XyzCur_D
         iFace=ray_loop_
         EXIT FOLLOW
      end if
@@ -1197,7 +1195,6 @@ contains
        XyzInOut_D = x_D
        follow_ray_iono = .true.
     else
-       XyzInOut_D = XyzCur_D
        follow_ray_iono = .false.
     end if
 
@@ -1457,9 +1454,9 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   R_raytrace      = rBody
   R2_raytrace     = R_raytrace**2
   if(UseOldMethodOfRayTrace .and. .not.UseCovariant)then
-     RayLengthMax    = 2*sum(XyzMax_D - XyzMin_D)
+     RayLengthMax = 4.*sum(XyzMax_D - XyzMin_D)
   else
-     RayLengthMax = 2.*(abs(x2-x1) + abs(y2-y1) + abs(z2-z1))
+     RayLengthMax = 4.*(abs(x2-x1) + abs(y2-y1) + abs(z2-z1))
   end if
 
   DoIntegrateRay = index(NameVar, 'InvB') > 0 .or. index(NameVar, 'Z0') > 0
