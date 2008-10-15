@@ -690,6 +690,12 @@ subroutine MH_set_parameters(TypeAction)
                  call read_var('zStartLine',XyzStartLine_DII(3,i,iPlotFile))
                  call read_var('IsParallel',IsParallelLine_II(i,iPlotFile))
               end do                                  !^CFG END RAYTRACE
+           elseif (index(plot_string,'eqr')>0)then
+              plot_area='eqr'
+              call read_var('nRadius',   plot_range(1,ifile))
+              call read_var('nLon',      plot_range(2,ifile))
+              call read_var('RadiusMin', plot_range(3,ifile))
+              call read_var('RadiusMax', plot_range(4,ifile))
            elseif (index(plot_string,'sph')>0)then
    	      plot_area='sph'
 	      call read_var('Radius',plot_range(1,ifile))
@@ -754,6 +760,7 @@ subroutine MH_set_parameters(TypeAction)
                    .and. plot_area /= 'sph' &
                    .and. plot_area /= 'los' &
                    .and. plot_area /= 'lin' &        !^CFG IF RAYTRACE
+                   .and. plot_area /= 'eqr' &        !^CFG IF RAYTRACE
                    ) call read_var('DxSavePlot',plot_dx(1,ifile))
               if(is_axial_geometry())plot_dx(1,ifile)=-1.0  
 
@@ -819,6 +826,9 @@ subroutine MH_set_parameters(TypeAction)
               plot_dimensional(ifile) = index(plot_string,'POS')>0
               if(plot_area /= 'lin')call stop_mpi(&
                    'Variable "pos" can only be used with area "lin" !')
+           elseif (index(plot_string,'eqr')>0)then
+              plot_var ='eqr'
+              plot_dimensional(ifile) = .true.
            elseif(index(plot_string,'BBK')>0.or.index(plot_string,'bbk')>0)then
               plot_var='blk'
               plot_dimensional(ifile) = index(plot_string,'BBK')>0

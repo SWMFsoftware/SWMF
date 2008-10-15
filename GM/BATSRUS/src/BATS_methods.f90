@@ -742,6 +742,7 @@ contains
 
        if(.not.DoExchangeAgain .and. ( &
             index(plot_type(iFile),'lin')==1 .or. &    !^CFG IF RAYTRACE
+            index(plot_type(iFile),'eqr')==1 .or. &    !^CFG IF RAYTRACE
             index(plot_type(iFile),'los')==1 .or. &
             index(plot_type(iFile),'sph')==1 .or. &
             plot_form(iFile) == 'tec')) then
@@ -771,6 +772,12 @@ contains
           IsFound = .true.
           call write_plot_line(iFile)
        end if
+
+       if(index(plot_type(iFile),'eqr')>0) then
+          IsFound = .true.
+          call equatorial_ray(iFile)
+       end if
+
        !^CFG END RAYTRACE
 
        if(plot_type(ifile)/='nul' .and. .not.IsFound ) then

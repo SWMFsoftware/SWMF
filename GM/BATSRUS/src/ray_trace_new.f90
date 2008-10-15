@@ -1268,8 +1268,9 @@ contains
     end if
 
     ! get a unique line index based on starting indexes
+    ! ignore index 4 if nRay_D(4) is zero
     iLine = &
-         ((max(0,iStart_D(4)-1)  *nRay_D(3) &
+         ((max(0, min(nRay_D(4), iStart_D(4)-1))*nRay_D(3) &
          + max(0,iStart_D(3)-1) )*nRay_D(2) &
          + max(0,iStart_D(2)-1) )*nRay_D(1) &
          + iStart_D(1)
@@ -1585,6 +1586,173 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   call timing_stop('integrate_ray')
 
 end subroutine integrate_ray_accurate
+
+!============================================================================
+
+subroutine equatorial_ray(iFile)
+
+  use ModMain, ONLY: x_, y_, z_, n_step, time_accurate
+  use ModIo,   ONLY: StringDateOrTime, NamePlotDir, plot_range
+  use CON_ray_trace, ONLY: ray_init
+  use CON_axes, ONLY: transform_matrix
+  use ModRaytrace, ONLY: oktest_ray, R_raytrace, R2_raytrace, RayLengthMax, &
+       DoIntegrateRay, DoExtractRay, DoTraceRay, &
+       DoExtractState, DoExtractUnitSi, &
+       NameVectorField, Bxyz_DGB, nRay_D, CpuTimeStartRay, GmSm_DD
+  use ModMain,    ONLY: nBlock, Time_Simulation, TypeCoordSystem, UseB0
+  use ModPhysics, ONLY: rBody
+  use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_, B0_DGB
+  use ModProcMH,  ONLY: iProc, iComm
+  use ModMpi
+  use ModNumConst,       ONLY: cDegToRad, cTwoPi
+  use ModGeometry,       ONLY: x1, x2, y1, y2, z1, z2
+  use ModIoUnit,         ONLY: UnitTmp_
+  use CON_line_extract,  ONLY: line_init, line_collect, line_get, line_clean
+  implicit none
+
+  !INPUT ARGUMENTS:
+  integer, intent(in):: iFile
+
+  !DESCRIPTION:
+  ! Follow field lines starting from a 2D polar grid on the 
+  ! magnetic equatorial plane in the SM(G) coordinate system.
+  ! The grid parameters are given by plot_rang(1:4, iFile)
+  ! The subroutine extracts coordinates and state variables
+  ! along the field lines going in both directions 
+  ! starting from the 2D polar grid.
+
+  integer :: nRadius, nLon
+  real    :: rMin, rMax
+  integer :: iR, iLon
+  integer :: iProcFound, iBlockFound, i, j, k
+  integer :: iPoint, nPoint, nVarOut
+  real    :: r, Phi, XyzSm_D(3), Xyz_D(3)
+  real, allocatable :: PlotVar_VI(:,:)
+  character(len=100) :: NameFile
+
+  integer :: nStateVar
+
+  integer :: iError
+  logical :: DoTest, DoTestMe
+  character(len=*), parameter :: NameSub = 'equatorial_ray'
+  !-------------------------------------------------------------------------
+
+  call set_oktest(NameSub, DoTest, DoTestMe)
+
+  ! Extract grid info from plot_range (see MH_set_parameters for plot_type eqr)
+  nRadius = plot_range(1, iFile)
+  nLon    = plot_range(2, iFile)
+  rMin    = plot_range(3, iFile)
+  rMax    = plot_range(4, iFile)
+
+  if(DoTest)write(*,*)NameSub,' starting on iProc=',iProc,&
+       ' with nRadius, nLon=', nRadius, nLon
+
+  call timing_start(NameSub)
+
+  oktest_ray = .false.
+
+  ! Initialize some basic variables
+  R_raytrace   = rBody
+  R2_raytrace  = R_raytrace**2
+  RayLengthMax = 2.*(abs(x2-x1) + abs(y2-y1) + abs(z2-z1))
+
+  DoIntegrateRay = .false.
+  DoExtractRay   = .true.
+  DoTraceRay     = .false.
+
+  nRay_D  = (/ nRadius, nLon, 2, 0 /)
+  DoExtractState = .true.
+  DoExtractUnitSi= .true.
+  nStateVar = 4 + nVar
+  call line_init(nStateVar)
+
+  NameVectorField = 'B'
+
+  ! (Re)initialize CON_ray_trace
+  call ray_init(iComm)
+
+  ! Fill in all ghost cells (faces+edges+corners) without monotone restrict
+  !!! call message_pass_cells_8state(.false.,.false.,.false.)
+
+  ! Copy magnetic field into Bxyz_DGB
+  Bxyz_DGB(:,:,:,:,1:nBlock) = State_VGB(Bx_:Bz_,:,:,:,1:nBlock)
+
+  ! Add B0 for faster interpolation
+  if(UseB0) Bxyz_DGB(1:3,:,:,:,1:nBlock) = &
+       Bxyz_DGB(1:3,:,:,:,1:nBlock) + B0_DGB(:,:,:,:,1:nBlock)
+
+  ! Transformation matrix between the SM and GM coordinates
+  GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
+
+  ! Integrate rays starting from the latitude-longitude pairs defined
+  ! by the arrays Lat_I, Lon_I
+  CpuTimeStartRay = MPI_WTIME()
+  do iR = 1, nRadius
+
+     r = rMin + (iR-1)*(rMax - rMin)/(nRadius - 1)
+
+     do iLon = 1, nLon
+
+        ! Go from zero (noon) anti-clockwise around
+        Phi = ((iLon - 1)*cTwoPi) / nLon
+
+        ! Convert polar coordinates to Cartesian coordinates in SM
+        XyzSm_D(x_) = r*cos(Phi)
+        XyzSm_D(y_) = r*sin(Phi)
+        XyzSm_D(z_) = 0.0
+        
+        ! Convert SM position to GM (Note: these are identical for ideal axes)
+        Xyz_D = matmul(GmSm_DD,XyzSm_D)
+
+        ! Find processor and block for the location
+        call xyz_to_peblk(Xyz_D(1), Xyz_D(2), Xyz_D(3), &
+             iProcFound, iBlockFound, .true., i, j, k)
+
+        ! If location is on this PE, follow and integrate ray
+        if(iProc == iProcFound)then
+
+           call follow_ray(1, (/iR, iLon, 1, iBlockFound/), Xyz_D)
+           call follow_ray(2, (/iR, iLon, 2, iBlockFound/), Xyz_D)
+
+        end if
+     end do
+  end do
+
+  ! Do remaining rays obtained from other PE-s
+  call finish_ray
+
+  if(DoExtractRay) call line_collect(iComm,0)
+
+  if(iProc==0)then
+     ! Set the file name
+
+     call line_get(nVarOut, nPoint)
+     if(nVarOut /= nStateVar)call stop_mpi(NameSub//': nVarOut error')
+     allocate(PlotVar_VI(0:nVarOut, nPoint))
+     call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
+
+     NameFile = trim(NamePlotDir)//"eqr"
+     if(time_accurate) NameFile = trim(NameFile)// "_t"//StringDateOrTime
+     write(NameFile,'(a,i7.7,a)') trim(NameFile) // '_n',n_step, '.out'
+
+     open(UnitTmp_, FILE=NameFile, STATUS="replace")
+     write(UnitTmp_, *) 'nRadius, nLon, nPoint=',nRadius, nLon, nPoint
+     write(UnitTmp_, *) 'iLine l x y z rho ux uy uz bx by bz p'
+     do iPoint = 1, nPoint
+        write(UnitTmp_, *) PlotVar_VI(:, iPoint)
+     end do
+     close(UnitTmp_)
+     deallocate(PlotVar_VI)
+  end if
+
+  call line_clean
+
+!!!  call exchange_messages
+
+  call timing_stop(NameSub)
+
+end subroutine equatorial_ray
 
 !============================================================================
 
