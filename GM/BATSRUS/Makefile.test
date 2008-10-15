@@ -202,18 +202,17 @@ test_levelset_compile:
 
 test_levelset_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.levelset PARAM.in; \
-	ln -s ${BINDIR}/CRASH.exe . 
+		ln -s ${BINDIR}/CRASH.exe . 
+	cp ${DIR}/util/CRASH/input/hyades_1.1ns.out ${TESTDIR}
 
 test_levelset_run:
 	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
-	cat ${TESTDIR}/GM/IO2/cut_hd_1_*_n0000872_pe*.idl \
-		> ${TESTDIR}/IO2/cut_400_ns.idl
-	#cd ${TESTDIR}; ./PostProc.pl -M
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_levelset_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=3e-7 \
-		Param/CRASH/TestOutput/cut_levelset.idl \
-		${TESTDIR}/IO2/cut_400_ns.idl > test_levelset.diff
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-9 \
+		Param/CRASH/TestOutput/log_levelset.log \
+		${TESTDIR}/RESULTS/GM/log_n000000.log > test_levelset.diff
 	ls -l test_levelset.diff
 
 ### LEVELSET TEST ###
