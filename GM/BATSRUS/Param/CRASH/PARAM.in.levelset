@@ -13,30 +13,28 @@ READ
 1.0e+3			km/s
 1000.0			g/cm^3
 
-#USERFLAGS
-F			UseUserInnerBcs
-T			UseUserSource
-T			UseUserPerturbation
-F			UseUserOuterBcs
-F			UseUserICs
-F			UseUserSpecifyRefinement
-F			UseUserLogFiles
-F			UseUserWritePlot
-F			UseUserAMR
-F			UseUserEchoInput
-F			UseUserB0
-F			UseUserInitSession
-T			UseUserUpdateStates
-
-#USERINPUTBEGIN ------------------------------------------------
+#USERINPUTBEGIN  ----------------------
 
 #TUBE
-T                       IsFullTube
-200.0                   rInnerTube
-590.0                   rOuterTube
-50.0                    RhoDimTube
+T			IsFullTube
+287.5			rInnerTube
+400.0			rOuterTube
+1400.0			RhoDimTube
+6.5			RhoDimOutside
+1.1e5			pDimOutside
 
-#USERINPUTEND -------------------------------------------------
+#MIXEDCELL
+T			UseMixedCell
+0.97			MixLimit
+
+#CYLINDRICAL
+T			UseCylindrical
+
+#HYADES
+T			UseHyadesFile
+hyades_1.1ns.out	NameHyadesFile
+
+#USERINPUTEND    ----------------------
 
 #TIMEACCURATE
 T			IsTimeAccurate
@@ -45,45 +43,23 @@ T			IsTimeAccurate
 4			nI
 4			nJ
 2			nK
-250			MinBlockALL
+2000			MinBlockALL
+
+tube is 5mm = 500um long, 625 um wide
 
 #GRID
-100			nRootBlockX
-10			nRootBlockY
+70			nRootBlockX
+7			nRootBlockY
 1			nRootBlockZ
 0.0			xMin
-5000.			xMax
--250.			yMin
- 250.			yMax
--12.5			zMin
- 12.5			zMax
+3500.0			xMax
+-750.0			yMin
+ 750.0			yMax
+ -12.5			zMin
+  12.5			zMax
 
 #UPDATECHECK
 F			DoUpdateCheck
-
-#SHOCKPOSITION
-1000.0			ShockPosition
-0.0			ShockSlope
-
-#SHOCKTUBE
-100.			Rho (left state)
-0.0			Ux 
-0.0			Uy
-0.0			Uz
-1.0			Be
-0.0			Xe
-0.0			Pl
-0.0			EInt
-2.0e+9			p
-1.0			Rho (right state)
-0.0			Ux
-0.0			Uy
-0.0			Uz
-0.0			Be
-1.0			Xe
-0.0			Pl
-0.0			EInt
-2.0e+4			p
 
 #NONCONSERVATIVE
 F			UseNonConservative
@@ -105,21 +81,17 @@ shear			zMaxBc
 
 #SCHEME
 2			nOrder
-Rusanov			TypeFlux
-mc			TypeLimiter
+Godunov			TypeFlux
+minmod			TypeLimiter
 1.2			LimiterBeta
 
 #LIMITER
-F
-F
-T
+F			UseLogRhoLimiter
+F       	        UseLogPLimiter
+T               	UseScalarPerRhoLimiter
 
 #SAVERESTART
 F			DoSaverestart
-
-This is set only for sake of the test_shocktube test
-#SAVEBINARY
-F			UseBinary
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -127,11 +99,14 @@ RAW			StringLogfile
 1			DnSaveLogfile
 -1.0			DtSaveLogfile
 
+#SAVEINITIAL
+T			DoSaveInitial
+
 #SAVEPLOT
 2			nPlotfile
 cut HD idl		PlotString
--1              	DnSavePlot
-4.0e-7          	DtSavePlot
+-1	              	DnSavePlot
+4.0e-8          	DtSavePlot
 0.0			xMinCut
 5.0e4			xMaxCut
 0.1			yMinCut
@@ -141,13 +116,13 @@ cut HD idl		PlotString
 0.0             	DxSavePlot
 z=0 VAR idl		PlotString
 -1                      DnSavePlot
-5.0e-8                  DtSavePlot
+1.0e-9                  DtSavePlot
 0.0			DxSavePlot
 rho ux uy uz Eint p Xe Be Pl level
 gamma
 
 #STOP
--1			
-4.0e-7
+-1			MaxIteration
+2.0e-8			tSimulationMax
 
 #END
