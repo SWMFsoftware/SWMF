@@ -152,12 +152,13 @@ sub _start_server
 
 sub _start_browser
 {
-    if($ENV{"OSTYPE"} eq "darwin"){
-	# On the MAC use the generic open statement
+    if($ENV{"OSTYPE"} eq "darwin" and not $ENV{"REMOTEHOST"} 
+       and not $_BROWSER){
+	# On the MAC on a local terminal use the generic open statement
 	$_browser = 'open';
     }else{
 	# On other platforms find the browser
-	@_bro=("netscape","mozilla","firefox");
+	@_bro=("firefox","mozilla","netscape");
 	unshift(@_bro,$_BROWSER) if $_BROWSER;
       TRY: 
 	foreach $_bro (@_bro){
