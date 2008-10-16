@@ -52,6 +52,7 @@ subroutine calc_GITM_sources(iBlock)
 
   ChemicalHeatingRate = 0.0
   ChemicalHeatingSpecies = 0.0
+  call calc_eddy_diffusion_coefficient(iBlock)  
   call calc_rates(iBlock)
 
   RhoI = IDensityS(1:nLons,1:nLats,1:nAlts,ie_,iBlock) * &
@@ -153,63 +154,6 @@ subroutine calc_GITM_sources(iBlock)
      Conduction = 0.0
   end if
 
-  !\
-  ! Diffusion ----------------------------------------------------
-  !/
-
-  if (iDebugLevel > 4) write(*,*) "=====> diffusion ", iproc
-
-  !!---------------------------------------------
-  !! Yue's method
-  !!---------------------------------------------
-
-  if (UseDiffusion)then
-
-     call calc_eddy_diffusion_coefficient(iBlock)
-
-     if (.not.UseEddyInSolver) then
-
-        LogNum(:,:,:) = log(NDensity(:,:,:,iblock))
-        do iSpecies = 1, nSpecies
-           do iAlt = 0, nAlts+1
-              do iLat = 1, nLats
-                 do iLon = 1, nLons
-                    Diffusion_velocity(iLon,iLat,iAlt,iSpecies) =      &
-                         -KappaEddyDiffusion(iLon,iLat,iAlt,iBlock)* &
-                         (logNS(iLon,iLat,iAlt+1,iSpecies,iBlock)- &
-                         logNS(iLon,iLat,iAlt-1,iSpecies,iBlock)- &
-                         logNum(iLon,iLat,iAlt+1)+ &
-                         logNum(iLon,iLat,iAlt-1)) &
-                         /(2*dAlt_GB(iLon,iLat,iAlt,iBlock))
-                 enddo
-              enddo
-           enddo
-        enddo
-
-        do iSpecies = 1, nSpecies
-           do iAlt = 1, nAlts
-              do iLat = 1, nLats
-                 do iLon = 1, nLons
-
-                    diffusion(ilon,ilat,iAlt,ispecies) =      &
-                         (NdensityS(ilon,ilat,iAlt+1,ispecies,iBlock)  *&
-                         diffusion_velocity(ilon,ilat,iAlt+1,ispecies)  -&
-                         NdensityS(ilon,ilat,iAlt-1,ispecies,iBlock)*&
-                         diffusion_velocity(ilon,ilat,iAlt-1,ispecies))/&
-                         (2*dAlt_GB(iLon,iLat,iAlt,iBlock))
-
-                 enddo
-              enddo
-           enddo
-        enddo
-
-     else 
-        Diffusion = 0.0
-     end if
-
-  else
-     Diffusion = 0.0
-  endif
 
 
   !\
