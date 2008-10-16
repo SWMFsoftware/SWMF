@@ -45,6 +45,8 @@ subroutine init_b0
               ymag = 0.0
               zmag = 0.0
 
+              write(*,*) iAlt,GeoLat,GeoLon,GeoAlt
+
               call get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon, &
                    xmag,ymag,zmag,d1,d2,d3,e1,e2,e3,cD)
 
@@ -125,7 +127,7 @@ subroutine get_magfield(GeoLat,GeoLon,GeoAlt,xmag,ymag,zmag)
 
   else
 
-     r3 = (RBody / (RBody + GeoAlt)) ** 3
+     r3 = (RBody / (RBody + GeoAlt*1000.0)) ** 3
 
      ymag = 0.0
      xmag =     - DipoleStrength * cos(GeoLat*pi/180.0) * r3
@@ -250,8 +252,8 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
         londiff = londiff + 90.0
      enddo
      
-     d1(iUp_) = (RBody+GeoAlt)*(londiff)/(2000.0)
-     d2(iUp_) = (RBody+GeoAlt)*(alatp - alatm)/(2000.0)
+     d1(iUp_) = (RBody+GeoAlt*1000.0)*(londiff)/(2000.0)
+     d2(iUp_) = (RBody+GeoAlt*1000.0)*(alatp - alatm)/(2000.0)
 
      ! Redo the initial calculation to get everything right before
      ! leaving the subroutine....
@@ -266,9 +268,8 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
 
      if (DipoleStrength /= 0) then
 
-        r3 = (RBody / (RBody + GeoAlt)) ** 3
-        
-        LShell =  (RBody + GeoAlt) / RBody / (sin(pi/2 - GeoLat*pi/180.0))**2.0
+        r3 = (RBody / (RBody + GeoAlt*1000.0)) ** 3
+        LShell =  (RBody + GeoAlt*1000.0) / RBody / (sin(pi/2 - GeoLat*pi/180.0))**2.0
         alat = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,GeoLat)
         alon = GeoLon
         ymag = 0.0
@@ -282,9 +283,9 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
 
         LShell0 = LShell
 
-        LShell =  (RBody + GeoAlt) / RBody / (sin(pi/2-(GeoLat+1)*pi/180.0))**2.0
+        LShell =  (RBody + GeoAlt*1000.0) / RBody / (sin(pi/2-(GeoLat+1)*pi/180.0))**2.0
         alatp = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,(GeoLat+1))
-        LShell =  (RBody + GeoAlt) / RBody / (sin(pi/2-(GeoLat-1)*pi/180.0))**2.0
+        LShell =  (RBody + GeoAlt*1000.0) / RBody / (sin(pi/2-(GeoLat-1)*pi/180.0))**2.0
         alatm = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,(GeoLat-1))
 
         d1(iNorth_) = 0.0
@@ -293,13 +294,13 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
         d1(iEast_) = (2.0)/(twodegrees * cos(GeoLat*pi/180.0))
         d2(iEast_) = 0.0
 
-        LShell =  (RBody + GeoAlt+1000) / RBody / (sin(pi/2-GeoLat*pi/180.0))**2.0
+        LShell =  (RBody + GeoAlt*1000.0+1000.0) / RBody / (sin(pi/2-GeoLat*pi/180.0))**2.0
         alatp = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,GeoLat)
-        LShell =  (RBody + GeoAlt-1000) / RBody / (sin(pi/2-GeoLat*pi/180.0))**2.0
+        LShell =  (RBody + GeoAlt*1000.0-1000.0) / RBody / (sin(pi/2-GeoLat*pi/180.0))**2.0
         alatm = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,GeoLat)
 
         d1(iUp_) = 0.0
-        d2(iUp_) = (RBody+GeoAlt)*(alatp - alatm)/(2000.0)
+        d2(iUp_) = (RBody+GeoAlt*1000.0)*(alatp - alatm)/(2000.0)
 
      else
 
