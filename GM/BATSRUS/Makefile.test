@@ -610,14 +610,5 @@ test_earthsph_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		Param/EARTH/TestOutput/SPHlog_n000001.log \
 		${TESTDIR}/RESULTS/GM/log_n000001.log > test_earthsph.diff)
-	cd ${TESTDIR}; \
-		cp Param/EARTH/TestOutput/SPH*gz RESULTS/GM/; \
-		gunzip -f RESULTS/GM/*gz
-	cd ${TESTDIR}/RESULTS/GM; perl -pi -e 's/AUXDATA SAVEDATE=.*//' \
-		z=0_ray_1_t00000001_n0000070.dat SPHz=0_ray_1_t00000001_n0000070.dat
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/GM/z=0_ray_1_t00000001_n0000070.dat \
-		${TESTDIR}/RESULTS/GM/SPHz=0_ray_1_t00000001_n0000070.dat \
-		>> test_earthsph.diff)
 	ls -l test_earthsph.diff
 
