@@ -9,6 +9,7 @@ test:
 	-@(make test_multiion)
 	-@(make test_crash)
 	-@(make test_levelset)
+	-@(make test_graydiffusion)
 	-@(make test_corona)
 	-@(make test_coronasph)
 	-@(make test_earthsph)
@@ -39,9 +40,10 @@ test_help:
 	@echo "    test_multiion              (run multi-ion test only)"
 	@echo "    test_crash		      (run CRASH test only)"
 	@echo "    test_levelset	      (run Level set test only)"
+	@echo "    test_graydiffusion	      (run gray-diffusion set test only)"
 	@echo "    test_corona                (run Solar Corona test only)"
 	@echo "    test_coronasph             (run spherical Solar Corona test)"
-	@echo "    test_earthsph        (run Spherical Earth test only)"
+	@echo "    test_earthsph	      (run Spherical Earth test only)"
 	@echo "    test_mars                  (run Mars test only)"
 	@echo "    test_venus                 (run Venus test only)"
 	@echo "    test_saturn                (run Saturn test only)"
@@ -247,6 +249,37 @@ test_mixedcell_check:
 		Param/CRASH/TestOutput/cut_mixedcell.idl \
 		${TESTDIR}/IO2/cut_400_ns.idl > test_mixedcell.diff
 	ls -l test_mixedcell.diff
+
+### GRAY-DIFFUSION TEST ###
+
+test_graydiffusion:
+	@echo "test_graydiffusion_compile..." > test_graydiffusion.diff
+	make test_graydiffusion_compile
+	@echo "test_graydiffusion_rundir..." >> test_graydiffusion.diff
+	make test_graydiffusion_rundir
+	@echo "test_graydiffusion_run..." >> test_graydiffusion.diff
+	make test_graydiffusion_run
+	@echo "test_graydiffusion_check..." >> test_graydiffusion.diff
+	make test_graydiffusion_check
+
+test_graydiffusion_compile:
+	./Config.pl -e=HdEosRad -u=GrayDiffusion -g=4,4,4,100,100
+	make BATSRUS
+	make PIDL
+
+test_graydiffusion_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.graydiffusion PARAM.in
+	cd ${TESTDIR}; cp Param/CRASH/initial_lowrie1.dat .
+
+test_graydiffusion_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+
+test_graydiffusion_check:
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-9 \
+		Param/CRASH/TestOutput/log_graydiffusion.log \
+		${TESTDIR}/RESULTS/GM/log_n000000.log > test_graydiffusion.diff
+	ls -l test_graydiffusion.diff
 
 ### STANDALONE SOLAR CORONA TESTS ###
 

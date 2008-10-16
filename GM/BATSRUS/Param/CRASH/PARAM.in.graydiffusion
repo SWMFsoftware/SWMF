@@ -1,0 +1,157 @@
+#ECHO
+T
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#CHECKGRIDSIZE
+4			nI
+4			nJ
+4			nK
+32			MinBlockALL
+
+#GRID
+6			nRootBlockX
+3			nRootBlockY
+1			nRootBlockZ
+-0.12			xMin
+ 0.12			xMax
+-0.06			yMin
+ 0.06			yMax
+-0.02			zMin
+ 0.02			zMax
+
+#GRIDLEVEL
+1			nLevelArea
+box			NameArea
+-0.04			xMinBox
+-0.02			yMinBox
+-0.02			zMinBox
+ 0.04			xMaxBox
+ 0.02			yMaxBox
+ 0.02			zMaxBox
+
+#GRIDLEVEL
+1			nLevelArea
+initial			NameArea
+
+#USER_FLAGS
+F			UseUserInnerBcs
+F			UseUserSource
+F			UseUserPerturbation
+F			UseUserOuterBcs
+T			UseUserICs
+F			UseUserSpecifyRefinement
+F			UseUserLogFiles
+F			UseUserWritePlot
+F			UseUserAMR
+F			UseUserEchoInput
+F			UseUserB0
+T			UseUserInitSession
+F			UseUserUpdateStates
+
+#USERINPUTBEGIN ------------------------
+
+#LOWRIETEST
+1			iLowrieTest
+initial_lowrie1.dat	NameLowrieFile
+
+#USERINPUTEND ----------------------------
+
+#RADIATION
+T			UseGrayDiffusion
+F			UseRadFluxLimiter
+
+#SHOCKPOSITION
+0.0			ShockPosition
+0.5			ShockSlope
+
+#OUTERBOUNDARY
+shear			TypeBcEast
+shear			TypeBcWest
+shear			TypeBcSouth
+shear			TypeBcNorth
+float			TypeBcBottom
+float			TypeBcTop
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SCHEME
+2			nOrder
+Godunov			TypeFlux
+mc			TypeLimiter
+1.5			LimiterBeta
+
+#FIXEDTIMESTEP
+T			UseDtFixed
+1.2E-3			DtFixedDim
+
+#KRYLOV
+gmres			TypeKrylov
+nul			TypeInitKrylov
+0.001			ErrorMaxKrylov
+1000			MaxMatvecKrylov
+
+#UPDATECHECK
+F			UseUpdateCheck
+
+#IMPLICIT
+F			UsePointImplicit
+F			UsePartImplicit
+T			UseFullImplicit
+1.0			ImplCFL
+
+#RESCHANGE
+T			UseAccurateResChange
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVERESTART
+F			DoSaveRestart
+
+#SAVEBINARY
+F			UseBinary
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+2			nPlotFile
+z=0 VAR idl		StringPlot
+-1  			DnSavePlot
+0.01			DtSavePlot
+-1.0			DxSavePlot
+Rho Ux Uy Tgas Trad rho0 Ux0 Uy0 Tgas0 Trad0
+g
+cut VAR idl		StringPlot
+-1  			DnSavePlot
+0.01			DtSavePlot
+-0.5			xMinCut
+0.5			xMaxCut
+0.000001		yMinCut
+0.000002		yMaxCut
+0.000001		zMinCut
+0.000002		zMaxCut
+-1.0			DxSavePlot
+Rho Ux Uy Tgas Trad rho0 Ux0 Uy0 Tgas0 Trad0
+g
+
+#STOP
+-1			MaxIteration
+0.07			tSimulationMax
+
