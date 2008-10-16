@@ -283,7 +283,7 @@ subroutine calc_GITM_sources(iBlock)
                                       NF_NDen(1:nAlts), &
                                       NF_NDenS(1:nAlts,1:nSpecies), &
                                       NF_EddyRatio(1:nAlts,1:nSpecies), &
-                                      NF_Temp(1:nAlts), NF_Gravity(iAlt) )
+                                      NF_Temp(1:nAlts), NF_Gravity(1:nAlts) )
 
            do iAlt = 1, nAlts
               NeutralFriction(iLon, iLat, iAlt, 1:nSpecies) = &
