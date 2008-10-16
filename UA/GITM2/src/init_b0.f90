@@ -45,8 +45,6 @@ subroutine init_b0
               ymag = 0.0
               zmag = 0.0
 
-              write(*,*) iAlt,GeoLat,GeoLon,GeoAlt
-
               call get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon, &
                    xmag,ymag,zmag,d1,d2,d3,e1,e2,e3,cD)
 
