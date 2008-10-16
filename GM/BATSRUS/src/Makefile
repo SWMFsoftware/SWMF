@@ -33,9 +33,11 @@ MODULES = \
 	ModEquation.o\
 	ModCharacteristic.o\
 	ModCovariant.o\
+	ModExpansionFactors.o \
 	ModFaceFlux.o\
 	ModFaceValue.o\
 	ModGeometry.o\
+	ModGrayDiffusion.o \
 	ModHallResist.o\
 	ModIO.o\
 	ModMain.o\
@@ -53,7 +55,6 @@ MODULES = \
 	ModSolarwind.o \
 	ModUserEmpty.o \
 	ModUser.o \
-	ModExpansionFactors.o \
 	${MOD1}	${MOD2}	${MOD3} ${MOD4} 
 
 # OBJECT FILES FOR MAIN EXECUTABLE

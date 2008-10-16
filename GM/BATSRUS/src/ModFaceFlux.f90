@@ -1,6 +1,6 @@
 module ModFaceFlux
 
-  use ModProcMH, ONLY: iProc
+  use ModProcMH,     ONLY: iProc
   use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK, UseB, UseB0, cLimit
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
@@ -28,6 +28,10 @@ module ModFaceFlux
 
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        IsNewBlockHall, hall_factor, get_face_current, set_ion_mass_per_charge
+
+  use ModGrayDiffusion, ONLY: Eradiation_, &
+       UseGrayDiffusion, IsNewBlockGrayDiffusion, DiffusionRad_G, &
+       set_gray_diffusion, get_radiation_energy_flux
 
   use ModResistivity, ONLY: UseResistivity, Eta_GB  !^CFG IF DISSFLUX
   use ModMultiFluid
@@ -88,6 +92,9 @@ module ModFaceFlux
 
   ! Variables needed for Hall resistivity
   real :: InvDxyz, HallCoeff, HallJx, HallJy, HallJz
+
+  ! Variables for Gray-Diffusion
+  real :: DiffusionRad, EradFlux_D(3)
 
   ! These are variables for pure MHD solvers (Roe and HLLD)
   ! Number of MHD fluxes including the pressure and energy fluxes
@@ -341,11 +348,15 @@ contains
     ! Make sure that Hall MHD recalculates the magnetic field 
     ! in the current block that will be used for the Hall term
     IsNewBlockHall = .true.
+    ! same for Gray-Diffusion
+    IsNewBlockGrayDiffusion = .true.
 
     if(UseResistivity) call set_resistivity(iBlock)      !^CFG IF DISSFLUX
 
     if(UseHallResist .and. UseMultiSpecies) &
          call set_ion_mass_per_charge(iBlock)
+
+    if(UseGrayDiffusion) call set_gray_diffusion(iBlock)
 
     if (DoResChangeOnly) then
        if(neiLeast(iBlock) == 1)call get_flux_x(1,1,1,nJ,1,nK)
@@ -754,6 +765,10 @@ contains
          ( IonMassPerCharge_G(iLeft, jLeft  ,kLeft)            &
          + IonMassPerCharge_G(iRight,jRight,kRight) )
 
+    if(UseGrayDiffusion) DiffusionRad = &
+         0.5*( DiffusionRad_G(iLeft,jLeft,kLeft) &
+         +     DiffusionRad_G(iRight,jRight,kRight) )
+
     Eta       = -1.0                                !^CFG IF DISSFLUX BEGIN
     if(UseResistivity) Eta = 0.5* &
          ( Eta_GB(iLeft, jLeft  ,kLeft,iBlockFace) &
@@ -763,7 +778,8 @@ contains
        NormalX = Normal_D(x_); NormalY = Normal_D(y_); NormalZ = Normal_D(z_)
        AreaX = Area*NormalX; AreaY = Area*NormalY; AreaZ = Area*NormalZ
 
-       if(HallCoeff > 0.0 .or. Eta > 0.0) InvDxyz = 1.0/sqrt(  &
+       if(HallCoeff > 0.0 .or. Eta > 0.0 .or. UseGrayDiffusion) &
+            InvDxyz = 1.0/sqrt(  &
             ( x_BLK(iRight,jRight,kRight, iBlockFace)          &
             - x_BLK(iLeft, jLeft  ,kLeft, iBlockFace))**2 +    &
             ( y_BLK(iRight,jRight,kRight, iBlockFace)          &
@@ -828,6 +844,11 @@ contains
        HallJx = HallCoeff*Jx
        HallJy = HallCoeff*Jy
        HallJz = HallCoeff*Jz
+    end if
+
+    if(UseGrayDiffusion)then
+       call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
+            iBlockFace, DiffusionRad, EradFlux_D)
     end if
 
     if(DoRoe)then
@@ -1517,6 +1538,13 @@ contains
       CMaxDt    = CMax
       UNormal_I = Un
 
+      if(UseGrayDiffusion)then
+         Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) &
+              + StateStar_V(Eradiation_)/3.0*Normal_D
+         Flux_V(Eradiation_) = Flux_V(Eradiation_) + sum(EradFlux_D*Normal_D)
+         Flux_V(Energy_) = Flux_V(Energy_) + Un*StateStar_V(Eradiation_)/3.0
+      end if
+
     end subroutine godunov_flux
 
     !==========================================================================
@@ -1581,15 +1609,17 @@ contains
     En = 0.0
 
     ! Set magnetic variables
-    Bx = State_V(Bx_)
-    By = State_V(By_)
-    Bz = State_V(Bz_)
-    FullBx  = Bx + B0x
-    FullBy  = By + B0y
-    FullBz  = Bz + B0z
-    Bn      = Bx*NormalX  + By*NormalY  + Bz*NormalZ
-    B0n     = B0x*NormalX + B0y*NormalY + B0z*NormalZ
-    FullBn  = B0n + Bn
+    if(UseB)then
+       Bx = State_V(Bx_)
+       By = State_V(By_)
+       Bz = State_V(Bz_)
+       FullBx  = Bx + B0x
+       FullBy  = By + B0y
+       FullBz  = Bz + B0z
+       Bn      = Bx*NormalX  + By*NormalY  + Bz*NormalZ
+       B0n     = B0x*NormalX + B0y*NormalY + B0z*NormalZ
+       FullBn  = B0n + Bn
+    end if
 
     ! Make sure this is initialized
     HallUn = 0.0
@@ -1635,6 +1665,13 @@ contains
        if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) &
             + Bx*FluxBx + By*FluxBy + Bz*FluxBz
     end if                                     !^CFG END DISSFLUX
+
+    if(UseGrayDiffusion)then
+       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) &
+            + State_V(Eradiation_)/3.0*Normal_D
+       Flux_V(Eradiation_) = Flux_V(Eradiation_) + sum(EradFlux_D*Normal_D)
+       Flux_V(Energy_) = Flux_V(Energy_) + Un*State_V(Eradiation_)/3.0
+    end if
 
     if(UseHyperbolicDivb)then
        Hyp  = State_V(Hyp_)

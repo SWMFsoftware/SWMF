@@ -63,6 +63,10 @@ Module ModConst
   ! Gravitation constant (NRL 1994)
   real, parameter :: cGravitation = 6.6726E-11
 
+  ! Stefan-Boltzmann constant 5.6704E-8[J/s/m^2/K^4]
+  real, parameter :: cStefan = 2.0*cPi**5*cBoltzmann**4 &
+       /(15.0*cLightSpeed**2*cPlanckH**3)
+
   !\
   ! Units for energy.
   !/

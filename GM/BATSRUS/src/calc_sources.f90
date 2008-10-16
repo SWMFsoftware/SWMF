@@ -17,6 +17,7 @@ subroutine calc_sources
   use ModCoordTransform
   use ModHallResist, ONLY: &
        UseHallResist, HallHyperFactor, calc_hyper_resistivity 
+  use ModGrayDiffusion, ONLY: UseGrayDiffusion, calc_source_gray_diffusion
   use ModMultiFluid
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
   use ModMultiIon, ONLY: multi_ion_sources
@@ -246,6 +247,8 @@ subroutine calc_sources
      call calc_hyper_resistivity(iBlock)
      if(DoTestMe) call write_source('After HyperResist')
   end if
+
+  if(UseGrayDiffusion) call calc_source_gray_diffusion(iBlock)
 
   if(UseUserSource)then
      call user_calc_sources

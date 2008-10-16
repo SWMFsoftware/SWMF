@@ -454,6 +454,7 @@ subroutine getdt_courant(qdt)
   use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,dxyz,true_cell,true_BLK,vInv_CB
   use ModImplicit
   use ModMpi
+  use ModGrayDiffusion, ONLY: UseGrayDiffusion, set_gray_diffusion
   implicit none
 
   real, intent(out) :: qdt
@@ -477,6 +478,9 @@ subroutine getdt_courant(qdt)
      else
         B0cell=0.00
      end if
+
+     if(UseGrayDiffusion) call set_gray_diffusion(iBlk)
+
      do idim=1,ndim
 
         call get_cmax_face(w_k(1:nI,1:nJ,1:nK,1:nw,implBLK),B0cell,&

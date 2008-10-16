@@ -48,6 +48,7 @@ subroutine MH_set_parameters(TypeAction)
        xSizeBoxHall, DxSizeBoxHall, &
        ySizeBoxHall, DySizeBoxHall, &
        zSizeBoxHall, DzSizeBoxHall
+  use ModGrayDiffusion, ONLY: UseGrayDiffusion, UseRadFluxLimiter, TypeRadFluxLimiter
   use ModResistivity                              !^CFG IF DISSFLUX
   use ModMultiFluid, ONLY: MassIon_I, DoConserveNeutrals,iFluid
   use ModMultiIon, ONLY: multi_ion_set_parameters
@@ -555,6 +556,15 @@ subroutine MH_set_parameters(TypeAction)
      case("#HALLINNERREGION")
         call read_var("rInnerHall ", rInnerHall)
         call read_var("DrInnerHall", DrInnerHall)
+
+     case("#RADIATION")
+        call read_var('UseGrayDiffusion',UseGrayDiffusion)
+        if(UseGrayDiffusion)then
+           call read_var('UseRadFluxLimiter',UseRadFluxLimiter)
+           if(UseRadFluxLimiter)then
+              call read_var('TypeRadFluxLimiter',TypeRadFluxLimiter,IsLowerCase=.true.)
+           end if
+        end if
 
      case("#SAVELOGFILE")
         call read_var('DoSaveLogfile',save_logfile)
@@ -2245,6 +2255,18 @@ contains
        if(iProc==0 .and. optimize_message_pass /= 'allopt') then
           write(*,'(a)')NameSub//&
                ' WARNING: Normal or Hall resistivity does not work for'// &
+               ' optimize_message_pass='//trim(optimize_message_pass)//' !!!'
+          if(UseStrict)call stop_mpi('Correct PARAM.in!')
+          write(*,*)NameSub//' setting optimize_message_pass = all'
+       end if
+       optimize_message_pass = 'all'
+    endif
+
+    if ( UseGrayDiffusion .and. UseRadFluxLimiter &
+         .and. index(optimize_message_pass,'opt') > 0) then
+       if(iProc==0 .and. optimize_message_pass /= 'allopt') then
+          write(*,'(a)')NameSub//&
+               ' WARNING: Radiation Flux Limiter does not work for'// &
                ' optimize_message_pass='//trim(optimize_message_pass)//' !!!'
           if(UseStrict)call stop_mpi('Correct PARAM.in!')
           write(*,*)NameSub//' setting optimize_message_pass = all'

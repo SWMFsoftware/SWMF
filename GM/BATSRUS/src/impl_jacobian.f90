@@ -61,6 +61,7 @@ subroutine impl_jacobian(implBLK,JAC)
        FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
   use ModImplicit
   use ModHallResist, ONLY: UseHallResist, hall_factor
+  use ModGrayDiffusion, ONLY: UseGrayDiffusion
   use ModGeometry, ONLY: vInv_CB, UseCovariant
   implicit none
 
@@ -103,14 +104,17 @@ subroutine impl_jacobian(implBLK,JAC)
   qwk = w_k(1:nI,1:nJ,1:nK,1:nw,implBLK)
   iBLK = impl2iBLK(implBLK)
   dxyz(1)=dx_BLK(iBLK); dxyz(2)=dy_BLK(iBLK); dxyz(3)=dz_BLK(iBLK)
-  call set_b0_face(iBLK)
-  do iDim=1,3
-     B0face(1:nI+1,1:nJ  ,1:nK  ,iDim,x_)=B0_DX(iDim,1:nI+1,1:nJ,1:nK)
-     B0face(1:nI  ,1:nJ+1,1:nK  ,iDim,y_)=B0_DY(iDim,1:nI,1:nJ+1,1:nK)
-     B0face(1:nI  ,1:nJ  ,1:nK+1,iDim,z_)=B0_DZ(iDim,1:nI,1:nJ,1:nK+1)
-  end do
+  if(UseB0)then
+     call set_b0_face(iBLK)
+     do iDim=1,3
+        B0face(1:nI+1,1:nJ  ,1:nK  ,iDim,x_)=B0_DX(iDim,1:nI+1,1:nJ,1:nK)
+        B0face(1:nI  ,1:nJ+1,1:nK  ,iDim,y_)=B0_DY(iDim,1:nI,1:nJ+1,1:nK)
+        B0face(1:nI  ,1:nJ  ,1:nK+1,iDim,z_)=B0_DZ(iDim,1:nI,1:nJ,1:nK+1)
+     end do
+  end if
 
   if(UseHallResist)call impl_init_hall
+  if(UseGrayDiffusion)call impl_init_gray_diffusion
 
   ! Initialize matrix to zero (to be safe)
   JAC=0.0
@@ -143,7 +147,7 @@ subroutine impl_jacobian(implBLK,JAC)
   enddo
 
   ! Initialize divB and Qpowell arrays 
-  if(divbsrc)call impl_divbsrc_init
+  if(UseB .and. divbsrc)call impl_divbsrc_init
 
   ! Set qS=S(qwk)
   if(implsource)call getsource(iBLK,qwk,qS)
@@ -246,10 +250,11 @@ subroutine impl_jacobian(implBLK,JAC)
            ! Add Q*dB/dw to dfdwL and dfdwR for upper and lower diagonals
            ! These diagonals are non-zero for the inside interfaces only
            ! which corresponds to the range i1:nI,j1:nJ,k1:nK.
-           if(divbsrc .and. &
-                (iw>=RhoUx_.and.iw<=RhoUz_) .or. &
-                (iW>=Bx_.and.iW<=Bz_) .or. &
-                iw==E_)then
+           if(UseB    .and. divbsrc .and. &
+                (     (iw >= RhoUx_ .and. iw <= RhoUz_) &
+                .or.  (iW >= Bx_    .and. iW <= Bz_   ) &
+                .or.   iw == E_                         &
+                ) )then
               if(UseCovariant .and. jw>=Bx_ .and. jw<=Bz_)then
                  ! The source terms are always multiplied by coeff
                  coeff=-ImplCoeff*0.5*wnrm(jw)/wnrm(iw)
@@ -322,7 +327,7 @@ subroutine impl_jacobian(implBLK,JAC)
        JAC(1:nw,1:nw,Itest,Jtest,Ktest,1)
 
   ! Contribution of middle to Powell's source terms
-  if(divbsrc)then
+  if(UseB .and. divbsrc)then
      ! JAC(...1) += d(Q/divB)/dW*divB
      call impl_divbsrc_middle
 
@@ -379,7 +384,7 @@ subroutine impl_jacobian(implBLK,JAC)
   end if
 
   ! Restore UseDivbSource
-  if(divbsrc)UseDivbSource=UseDivbSource0
+  if(UseB .and. divbsrc)UseDivbSource=UseDivbSource0
 
 contains
 
@@ -837,5 +842,18 @@ contains
     end do; end do
 
   end subroutine impl_hall_resist_general
+
+  !===========================================================================
+  subroutine impl_init_gray_diffusion
+    use ModGrayDiffusion, ONLY: set_gray_diffusion
+    implicit none
+
+    !-------------------------------------------------------------------------
+
+    call set_gray_diffusion(iBlk)
+
+  end subroutine impl_init_gray_diffusion
+
+  !===========================================================================
 
 end subroutine impl_jacobian
