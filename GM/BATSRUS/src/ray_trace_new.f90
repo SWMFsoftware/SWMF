@@ -54,11 +54,13 @@ subroutine ray_trace_accurate
   call message_pass_cells_8state(.false.,.false.,.false.)
 
   ! Copy magnetic field into Bxyz_DGB
-  Bxyz_DGB(:,:,:,:,1:nBlock) = State_VGB(Bx_:Bz_,:,:,:,1:nBlock)
-
-  ! Add B0
-  if(UseB0) Bxyz_DGB(1:3,:,:,:,1:nBlock) = &
-       Bxyz_DGB(1:3,:,:,:,1:nBlock) + B0_DGB(:,:,:,:,1:nBlock)
+  do iBlock = 1, nBlock
+     if(unusedBLK(iBlock))CYCLE
+     Bxyz_DGB(:,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock)
+     ! Add B0
+     if(UseB0) Bxyz_DGB(:,:,:,:,iBlock) = &
+          Bxyz_DGB(:,:,:,:,iBlock) + B0_DGB(:,:,:,:,iBlock)
+  end do
 
   ! Initial values
   ray=NORAY
