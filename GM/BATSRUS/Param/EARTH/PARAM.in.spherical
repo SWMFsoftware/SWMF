@@ -19,10 +19,10 @@ F			DoTimeAccurate
 #BEGIN_COMP GM ---------------------------------------------------------------
 
 #RAYTRACE
-T			
-T			
-10.			
-100 			
+T			UseAccurateIntegral
+T			UseAccurateTrace
+0.1			DtExchangeRay
+1			DnRaytrace
 
 #COVARIANTGEOMETRY
 spherical_lnr
@@ -124,14 +124,22 @@ T			DoSaveLogfile
 VAR			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
-dt rho mx my mz p bx by bz pmin pmax dst dstdivb dstflx
-3.0 3.5 5.0		StringRFlux
+dt rho mx my mz p bx by bz pmin pmax dst phi1 theta1 phi2 theta2 status
 
 #SAVEPLOT
-1                       nPlotFiles
-z=0 RAY tec             StringPlot
-100                      DnSavePlot
+3                       nPlotFiles
+x=0 RAY idl             StringPlot
+20                      DnSavePlot
 -1.			DtSavePlot
+-1.			DxSavePlot
+y=0 RAY idl             StringPlot
+20                      DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+z=0 RAY idl             StringPlot
+20                      DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
 
 #UPSTREAM_INPUT_FILE
 T                       UseUpstreamInputFile
@@ -146,8 +154,6 @@ imf19980504.dat         UpstreamFileName
 -1.			TimeMax
 
 #RUN	######################################################################
-
-
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
@@ -173,8 +179,6 @@ T
 
 #RUN	######################################################################
 
-
-
 #TIMEACCURATE
 T			DoTimeAccurate
 
@@ -192,23 +196,13 @@ parabola		TypeConservCrit_I
  5.0			xParabolaConserv
 15.0			yParabolaConserv
 
-#SCHEME
-2			nORDER
-Rusanov			TypeFlux
-mc3                     TypeLimiter
-1.2			BetaLimiter
-
-#BORIS
-T
-0.02
-
 #TIMESTEPPING
 2			nSTAGE
-0.85			cfl
+0.8			CflExpl
 
 #FIXEDTIMESTEP
 T			UseDtFixed
-5.0	 		DtFixedDim [sec] (read if UseDtFixed is true)
+0.1	 		DtFixedDim
 
 #IMPLICIT
 F			UsePointImplicit
@@ -219,7 +213,7 @@ F			UseFullImplicit
 #END_COMP GM -----------------------------------------------------------------
 
 #STOP
-70 			MaxIter
-20. 			TimeMax
+60 			MaxIter
+-1.0 			TimeMax
 
 #END

@@ -1,0 +1,377 @@
+
+ BATSRUS: Block Adaptive Tree Solar-Wind Roe Upwind Scheme
+          for 3D Heliospheric Flows
+ University of Michigan, 1995-2007
+
+ BATSRUS version 8.03 is running as GM on    2 PE(s)
+
+ EQUATIONS:   MHD
+ USER MODULE: DEFAULT EMPTY ROUTINES 1.00
+
+ModReadParam::read_file: read and broadcast nLine= 218 lines of text
+ ----- Starting Session  1  ------
+ init_mod_restart_file: setting TypeRestartOutFile = one
+ GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 218
+
+#DESCRIPTION
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#STARTTIME
+1998		year		iYear
+05		month		iMonth
+04		day		iDay
+02		hour		iHour
+00		minute		iMinute
+00		second		iSecond
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#RAYTRACE
+T			UseAccurateIntegral
+T			UseAccurateTrace
+0.1			DtExchangeRay
+1			DnRaytrace
+
+#COVARIANTGEOMETRY
+spherical_lnr		TypeGeometry
+
+#GRID
+2			nRootBlock_D(x_)		nRootBlockX
+2			nRootBlock_D(y_)		nRootBlockY
+2			nRootBlock_D(z_)		nRootBlockZ
+-224.			x1		xMin
+ 32.			x2		xMax
+-64.			y1		yMin
+ 64.			y2		yMax
+-64.			z1		zMin
+ 64.			z2		zMax
+
+#LIMITGENCOORD1
+0.916291                rMin = (2.5)		Coord1Min
+5.55490		        rMax = (sqrt(224^2+128^2+128^2))		Coord1Max
+
+#GRIDLEVEL
+2		nLevelArea
+initial		NameArea
+
+#GRIDLEVEL
+3                       Resolution		nLevelArea
+sphere0                 NameArea
+25.0                    rSphere		Radius
+
+#GRIDLEVEL
+3                       Resolution		nLevelArea
+sphere0                 NameArea
+12.0                    rSphere		Radius
+
+#GRIDLEVEL
+3                       Resolution		nLevelArea
+box                     NameArea
+-100.0                  xMinBox
+ -10.0                  yMinBox
+  -4.0                  zMinBox
+ -12.0                  xMaxBox
+  16.0                  yMaxBox
+   4.0                  zMaxBox
+
+#MAGNETOSPHERE
+T                       body1		UseBody
+2.5                     Rbody		rBody
+3.0                     Rcurrents		rCurrents
+28.0                   Magneto_rho_dim (/ccm) density for fixed BC for rho_BLK		BodyNDim
+25000.0                 Magneto_T_dim (K) temperature for fixed BC for P_BLK		BodyTDim
+
+#TVDRESCHANGE
+T		UseTvdResChange
+
+#TIMESTEPPING
+1			nStage
+0.80			CflExlp		CflExpl
+
+#OUTERBOUNDARY
+outflow			TypeBC_I(east_)		TypeBcEast
+vary			TypeBC_I(west_)		TypeBcWest
+float			TypeBC_I(south_)		TypeBcSouth
+float			TypeBC_I(north_)		TypeBcNorth
+float			TypeBC_I(bot_)		TypeBcBottom
+float			TypeBC_I(top_)		TypeBcTop
+
+#SCHEME
+1			nOrder
+Rusanov			TypeFlux
+
+#SAVELOGFILE
+T			DoSaveLogfile
+VAR			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+dt rho mx my mz p bx by bz pmin pmax dst phi1 theta1 phi2 theta2 status		log_vars
+
+#SAVEPLOT
+3                       nPlotFiles
+x=0 RAY idl             StringPlot
+20                      DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+y=0 RAY idl             StringPlot
+20                      DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+z=0 RAY idl             StringPlot
+20                      DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+
+#UPSTREAM_INPUT_FILE
+T                       UseUpstreamInputFile		UseSolarWindFile
+imf19980504.dat         UpstreamFileName		NameSolarWindFile
+
+#END_COMP GM -----------------------------------------------------------------
+
+#STOP
+20                      MaxIter		MaxIteration
+-1.			TimeMax		tSimulationMax
+
+#RUN	######################################################################
+ GM_set_parameters: CHECK iSession = 1
+  
+init_mod_advance allocated arrays
+init_mod_geometry allocated arrays
+init_mod_nodes allocated arrays
+init_mod_raytrace allocated arrays
+ read_solar_wind_file reading imf19980504.dat
+ read_solar_wind_file read  4919  points from imf19980504.dat
+ BATS_setup starting initial refinement level  1
+ parallel_refine starting to refine  8  block(s) on PE 0
+ BATS_setup starting initial refinement level  2
+ parallel_refine starting to refine  40  block(s) on PE 0
+ renumber_octree: finished renumbering 344  blocks.
+     total blocks =  344
+
+    Begin Numerical Simulation
+    --------------------------
+
+
+    Planetary Parameters
+    --------------------
+
+          Name:            EARTH                                     
+          Radius:           6.37800E+06
+          Mass:             5.97600E+24
+          Rotation Tilt:    4.10152E-01
+          Rotation Period:  8.61641E+04
+          Orbit Period:     3.15569E+07
+          Iono Height:      1.10000E+05
+
+    Physical Parameters
+    -------------------
+
+          I/O Unit type: PLANETARY            Normalization: PLANETARY
+
+          gamma:         1.66666667
+
+          rBody:         2.50000E+00, rPlanet:     6.37800E+06
+          BodyNDim:      2.80000E+01, BodyTDim:    2.50000E+04
+          Bdp:          -1.06359E+02, Tilt:       -1.26647E-01
+          Corotation is used
+
+          body2: .false.
+
+          cLIGHTfactor:  1.00000E+00, cLIGHT:      4.70038E+01
+
+
+          SW_n_dim   [/cc  ]:        9.910000,  SW_n:         9.910000
+          SW_Rho_dim [Mp/cc]:        9.910000,  SW_Rho:       9.910000
+          SW_Ux_dim  [km/s ]:     -500.860363,  SW_Ux:       -0.078529
+          SW_Uy_dim  [km/s ]:      -31.918349,  SW_Uy:       -0.005004
+          SW_Uz_dim  [km/s ]:       14.669836,  SW_Uz:        0.002300
+          SW_p_dim   [nPa  ]:        0.017599,  SW_p:         0.000259
+          SW_Bx_dim  [nT   ]:       -6.586792,  SW_Bx:       -0.022526
+          SW_By_dim  [nT   ]:       -3.183759,  SW_By:       -0.010888
+          SW_Bz_dim  [nT   ]:       -2.819356,  SW_Bz:       -0.009642
+          SW_T_dim   [K    ]:   128620.417754
+
+    MHD Numerical Solution Parameters
+    ---------------------------------
+
+          1st-Order Scheme
+          Steady state calculation
+          Rusanov Flux Function
+          Explicit Time Stepping
+
+    Other Runtime Parameters
+    ------------------------
+
+ Available processors: nProc =  2
+
+ After initial grid setup:
+   nBlockMax =  218  nBLK =  600
+   Total number of blocks used =  344
+   Total number of cells =  176128
+   Smallest cell dx:    7.2478265624999996E-02   Largest cell dx:    0.1449565312500000
+
+ root blocks:        2       2       2
+ nCells:             8       8       8
+ x:              -224.00000000     32.00000000
+ y:               -64.00000000     64.00000000
+ z:               -64.00000000     64.00000000
+ multistage:         1
+ cfl:               0.80000000
+
+-------------------------------------------------------------------------------
+SORTED TIMING at step       0    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                   5.67    100.00         1         1
+-------------------------------------------------------------------------------
+setup                     5.67    100.00         1         1
+load_balance              0.74     13.03         1         1
+exch_msgs                 0.26      4.59         1         1
+-------------------------------------------------------------------------------
+ Resetting timing counters after setup.
+Speed is  34227.3 c/s/p after     29.9 s at N =      10
+ Error in set_eqpar: unknown eqparname=r_ray      for iPlotFile= 1
+saved ifile= 3 type=x=0_ray    at n_step=     20
+ Error in set_eqpar: unknown eqparname=r_ray      for iPlotFile= 2
+saved ifile= 4 type=y=0_ray    at n_step=     20
+ Error in set_eqpar: unknown eqparname=r_ray      for iPlotFile= 3
+saved ifile= 5 type=z=0_ray    at n_step=     20
+Speed is  34341.0 c/s/p after    128.9 s at N =      20
+ ----- End of Session    1  ------
+ ----- Starting Session  2  ------
+ GM_set_parameters: READ iSession = 1  iLine= 156  nLine = 218
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#SCHEME
+2			nORDER		nOrder
+Rusanov			TypeFlux
+mc3                     TypeLimiter
+1.2		LimiterBeta
+
+#TIMESTEPPING
+2			nStage
+0.60			CflExlp		CflExpl
+
+#BORIS
+T		UseBorisCorrection
+0.02		BorisClightFactor
+
+#END_COMP GM -----------------------------------------------------------------
+
+#STOP
+50                      MaxIter		MaxIteration
+-1.			TimeMax		tSimulationMax
+
+#RUN	######################################################################
+ GM_set_parameters: CHECK iSession = 1
+  
+Speed is  14009.4 c/s/p after    196.4 s at N =      30
+ Error in set_eqpar: unknown eqparname=r_ray      for iPlotFile= 1
+saved ifile= 3 type=x=0_ray    at n_step=     40
+ Error in set_eqpar: unknown eqparname=r_ray      for iPlotFile= 2
+saved ifile= 4 type=y=0_ray    at n_step=     40
+ Error in set_eqpar: unknown eqparname=r_ray      for iPlotFile= 3
+saved ifile= 5 type=z=0_ray    at n_step=     40
+Speed is  13963.6 c/s/p after    337.0 s at N =      40
+Speed is  14018.8 c/s/p after    404.2 s at N =      50
+ ----- End of Session    2  ------
+ ----- Starting Session  3  ------
+ GM_set_parameters: READ iSession = 1  iLine= 180  nLine = 218
+
+#TIMEACCURATE
+T			DoTimeAccurate
+
+#SAVERESTART
+F                       DoSaveRestart
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#TIMESTEPPING
+2			nSTAGE		nStage
+0.8			CflExpl
+
+#FIXEDTIMESTEP
+T			UseDtFixed
+0.1	 		DtFixedDim
+
+#IMPLICIT
+F			UsePointImplicit
+T			UsePartImplicit
+F			UseFullImplicit
+100.0			ImplCFL
+
+#END_COMP GM -----------------------------------------------------------------
+
+#STOP
+60 			MaxIter		MaxIteration
+-1.0 			TimeMax		tSimulationMax
+ GM_set_parameters: CHECK iSession = 1
+  
+init_mod_implicit allocated arrays
+ select_stepping: nBlockExplALL, nBlockImplALL= 248 96
+ select_stepping: nBlockExplALL, nBlockImplALL= 248 96
+ select_stepping: nBlockExplALL, nBlockImplALL= 248 96
+ select_stepping: nBlockExplALL, nBlockImplALL= 248 96
+ select_stepping: nBlockExplALL, nBlockImplALL= 248 96
+ select_stepping: nBlockExplALL, nBlockImplALL= 248 96
+ select_stepping: nBlockExplALL, nBlockImplALL= 283 61
+ load_balance finished: nBlockMoved= 4
+ select_stepping: nBlockExplALL, nBlockImplALL= 280 64
+ load_balance finished: nBlockMoved= 4
+ select_stepping: nBlockExplALL, nBlockImplALL= 276 68
+ load_balance finished: nBlockMoved= 4
+ select_stepping: nBlockExplALL, nBlockImplALL= 264 80
+ load_balance finished: nBlockMoved= 4
+ Error in set_eqpar: unknown eqparname=r_ray      for iPlotFile= 1
+saved ifile= 3 type=x=0_ray    at n_step=     60 time=   0:00:00 h:m:s
+ Error in set_eqpar: unknown eqparname=r_ray      for iPlotFile= 2
+saved ifile= 4 type=y=0_ray    at n_step=     60 time=   0:00:00 h:m:s
+ Error in set_eqpar: unknown eqparname=r_ray      for iPlotFile= 3
+saved ifile= 5 type=z=0_ray    at n_step=     60 time=   0:00:00 h:m:s
+Speed is   3001.3 c/s/p after    945.6 s at N =      60 (6.8973E-01 s)
+
+    Finished Numerical Simulation
+    -----------------------------
+   Simulated Time T =   0.68973E+00 (    0.011496 min,     0.000192 hrs)
+
+    Finished Saving Output Files
+    ----------------------------
+-------------------------------------------------------------------------------
+SORTED TIMING from step       0 to      60    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                 945.64    100.00         1         1
+-------------------------------------------------------------------------------
+advance                 617.04     65.25        60        60
+ray_trace               258.28     27.31         3         3
+calc_fluxes             178.42     18.87        80     23559
+krylov solver           174.05     18.41        10        10
+advance_expl            145.14     15.35        30       175
+impl_matvec             141.08     14.92        10       145
+get_residual            111.36     11.78        20       165
+matvec_free             101.21     10.70        10       145
+calc_facevalues          70.17      7.42        80     23559
+impl_jacobian            58.28      6.16        10        10
+calc_sources             48.18      5.10        80     23559
+update_states            34.70      3.67        80     23559
+exch_msgs                33.71      3.56        95       290
+update_b0                25.44      2.69        10        10
+save_logfile             25.07      2.65        60        60
+set_bcs                  10.06      1.06        80     12979
+update_check              9.00      0.95        50        80
+barrier-expl2             4.36      0.46        80       265
+calc_face_bfo             3.28      0.35        60      4798
+impl2expl                 2.36      0.25        30      7634
+update_B0                 1.90      0.20        10        10
+calc_fluxes_bfo           1.82      0.19        60      4798
+expl2impl                 1.51      0.16        30       175
+save_plot                 1.25      0.13         3         9
+send_cons_flux            0.86      0.09        80       265
+load_balance              0.58      0.06        10        10
+barrier-expl1             0.49      0.05        80       265
+nonconservative           0.44      0.05        60        60
+-------------------------------------------------------------------------------
+ error report: no errors...
