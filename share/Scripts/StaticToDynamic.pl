@@ -34,15 +34,10 @@ while(<>){
 	    $allocate=1;
 	    my $variable;
 	    print "\n";
-	    print "    use ModUtilities, ONLY: check_allocate\n";
-	    print "    integer :: iError\n";
-	    print "    !","-" x 70,"\n";
 	    print "    if(allocated($allocated[0])) return\n";
 	    foreach $variable (@allocated){
 		print "    allocate($variable".
-		    "$dimension{$variable},stat=iError)\n";
-		print "    call check_allocate(iError,'$module","::".
-		    "$variable')\n";
+		    "$dimension{$variable})\n";
 	    }
 	}
 
