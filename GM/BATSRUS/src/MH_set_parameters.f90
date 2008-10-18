@@ -793,7 +793,7 @@ subroutine MH_set_parameters(TypeAction)
               plot_var='ray'
               plot_dimensional(ifile) = index(plot_string,'RAY')>0
               plot_vars(ifile)='bx by bz theta1 phi1 theta2 phi2 status blk'
-              plot_pars(ifile)='R_ray'
+              plot_pars(ifile)='rbody'
               !                                         ^CFG END RAYTRACE
            elseif(index(plot_string,'RAW')>0.or.index(plot_string,'raw')>0)then
               plot_var='raw'
