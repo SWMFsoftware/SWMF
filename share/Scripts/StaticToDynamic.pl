@@ -31,6 +31,11 @@ while(<>){
 
 	# Add allocate statements into subroutine allocate_* or init_*
 	if(/^\s*subroutine\s+(allocate|init)_/i){
+	    while(<>){
+		# Skip empty lines, comments, use statements and declarations
+		last unless /^\s*$|\s*!|^\s*use\s|::/;
+		print;
+	    }
 	    $allocate=1;
 	    my $variable;
 	    print "\n";
@@ -39,6 +44,7 @@ while(<>){
 		print "    allocate($variable".
 		    "$dimension{$variable})\n";
 	    }
+	    print;
 	}
 
 	# Add deallocate statements into subroutine deallocate_* or clean_*
