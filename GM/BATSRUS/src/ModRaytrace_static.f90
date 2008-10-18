@@ -13,6 +13,9 @@ module ModRaytrace
   ! Logical parameter indicating static vs. dynamic allocation
   logical, parameter :: IsDynamicRaytrace = .false.
 
+  ! True if ray array is still to be initialized
+  logical :: DoInitRay = .true.
+
   ! Select between fast less accurate and slower but more accurate algorithms
   logical :: UseAccurateTrace    = .false. 
   logical :: UseAccurateIntegral = .true.
@@ -222,8 +225,11 @@ contains
 
   subroutine init_mod_raytrace
 
-    ! Initialize ray array (write_logfile may use it before ray tracing)
-    ray = 0.0
+    ! Initialize ray array (write_logfile may use it before first ray tracing)
+    if(DoInitRay)then
+       ray       = 0.0
+       DoInitRay = .false.
+    end if
 
     if(IsDynamicRaytrace .and. iProc==0)then
        call write_prefix
