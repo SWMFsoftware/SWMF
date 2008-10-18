@@ -117,15 +117,16 @@ T			UseAccurateResChange
 
 #SAVELOGFILE
 T			DoSaveLogfile
-raw			StringLogfile
+VAR			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
+rho mx my Erad E pmin pmax
 
 #SAVERESTART
 F			DoSaveRestart
 
 #SAVEBINARY
-F			UseBinary
+F			DoSaveBinary
 
 #SAVEINITIAL
 T			DoSaveInitial

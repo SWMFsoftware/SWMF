@@ -8,10 +8,10 @@
  EQUATIONS:   radiation HD
  USER MODULE: Hd with Gray-Diffusion 1.00
 
-ModReadParam::read_file: read and broadcast nLine= 157 lines of text
+ModReadParam::read_file: read and broadcast nLine= 158 lines of text
  ----- Starting Session  1  ------
  init_mod_restart_file: setting TypeRestartOutFile = one
- GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 157
+ GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 158
 
 #PLANET
 NONE			NamePlanet
@@ -131,15 +131,16 @@ T			UseAccurateResChange
 
 #SAVELOGFILE
 T			DoSaveLogfile
-raw			StringLogfile
+VAR			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
+rho mx my Erad E pmin pmax		log_vars
 
 #SAVERESTART
 F			DoSaveRestart
 
 #SAVEBINARY
-F			UseBinary		DoSaveBinary
+F			DoSaveBinary
 
 #SAVEINITIAL
 T			DoSaveInitial
@@ -239,30 +240,30 @@ saved ifile= 4 type=cut_var    at n_step=      0 time=   0:00:00 h:m:s
 SORTED TIMING at step       0    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                   0.24    100.00         1         1
+BATSRUS                   0.90    100.00         1         1
 -------------------------------------------------------------------------------
-setup                     0.24    100.00         1         1
-save_plot                 0.22     90.38         1         2
-exch_msgs                 0.00      1.32         1         1
-load_balance              0.00      1.21         1         1
-save_logfile              0.00      0.78         1         1
+setup                     0.90     99.99         1         1
+save_plot                 0.78     86.34         1         2
+load_balance              0.01      1.09         1         1
+exch_msgs                 0.01      0.86         1         1
+save_logfile              0.00      0.53         1         1
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
 saved ifile= 3 type=z=0_var    at n_step=      9 time=   0:00:00 h:m:s
 saved ifile= 4 type=cut_var    at n_step=      9 time=   0:00:00 h:m:s
-Speed is   3501.0 c/s/p after      3.2 s at N =      10 (1.2000E-02 s)
+Speed is   1968.6 c/s/p after      6.3 s at N =      10 (1.2000E-02 s)
 saved ifile= 3 type=z=0_var    at n_step=     17 time=   0:00:00 h:m:s
 saved ifile= 4 type=cut_var    at n_step=     17 time=   0:00:00 h:m:s
-Speed is   3493.4 c/s/p after      6.5 s at N =      20 (2.4000E-02 s)
+Speed is   1981.3 c/s/p after     12.9 s at N =      20 (2.4000E-02 s)
 saved ifile= 3 type=z=0_var    at n_step=     26 time=   0:00:00 h:m:s
 saved ifile= 4 type=cut_var    at n_step=     26 time=   0:00:00 h:m:s
-Speed is   3527.3 c/s/p after      9.9 s at N =      30 (3.6000E-02 s)
+Speed is   1986.3 c/s/p after     19.7 s at N =      30 (3.6000E-02 s)
 saved ifile= 3 type=z=0_var    at n_step=     34 time=   0:00:00 h:m:s
 saved ifile= 4 type=cut_var    at n_step=     34 time=   0:00:00 h:m:s
-Speed is   3542.3 c/s/p after     13.2 s at N =      40 (4.8000E-02 s)
+Speed is   1993.5 c/s/p after     26.8 s at N =      40 (4.8000E-02 s)
 saved ifile= 3 type=z=0_var    at n_step=     42 time=   0:00:00 h:m:s
 saved ifile= 4 type=cut_var    at n_step=     42 time=   0:00:00 h:m:s
-Speed is   3534.9 c/s/p after     16.7 s at N =      50 (6.0000E-02 s)
+Speed is   1910.5 c/s/p after     34.2 s at N =      50 (6.0000E-02 s)
 saved ifile= 3 type=z=0_var    at n_step=     51 time=   0:00:00 h:m:s
 saved ifile= 4 type=cut_var    at n_step=     51 time=   0:00:00 h:m:s
 saved ifile= 3 type=z=0_var    at n_step=     59 time=   0:00:00 h:m:s
@@ -278,28 +279,28 @@ saved ifile= 4 type=cut_var    at n_step=     59 time=   0:00:00 h:m:s
 SORTED TIMING from step       0 to      59    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                  20.09    100.00         1         1
+BATSRUS                  42.34    100.00         1         1
 -------------------------------------------------------------------------------
-advance                  16.89     84.05        59        59
-krylov solver            12.98     64.63        59        59
-impl_matvec              12.00     59.72        59      1031
-get_residual             10.64     52.94       118      1149
-matvec_free               9.83     48.92        59      1031
-calc_fluxes               6.41     31.88       118     18384
-save_plot                 3.16     15.74         7        14
-impl_jacobian             1.63      8.10        59        59
-calc_facevalues           1.34      6.66       118     18384
-exch_msgs                 0.98      4.89       177      1267
-calc_face_bfo             0.60      3.00       118      9192
-calc_fluxes_bfo           0.43      2.13       118      9192
-update_states             0.35      1.73       118     18384
-impl2expl                 0.11      0.56       177     19328
-barrier-expl2             0.07      0.34       118      1149
-send_cons_flux            0.07      0.34       118      1149
-calc_sources              0.07      0.33       118     18384
-barrier-expl1             0.05      0.23       118      1149
-expl2impl                 0.04      0.22       177      1208
-save_logfile              0.04      0.18        59        59
+advance                  30.43     71.88        59        59
+krylov solver            21.72     51.30        59        59
+impl_matvec              20.08     47.42        59      1034
+get_residual             17.43     41.16       118      1152
+matvec_free              16.10     38.03        59      1034
+save_plot                11.85     27.99         7        14
+calc_fluxes               8.97     21.19       118     18432
+impl_jacobian             3.63      8.58        59        59
+calc_facevalues           2.68      6.33       118     18432
+exch_msgs                 2.30      5.43       177      1270
+calc_face_bfo             1.08      2.54       118      9216
+update_states             0.68      1.61       118     18432
+calc_fluxes_bfo           0.62      1.45       118      9216
+impl2expl                 0.21      0.51       177     19376
+calc_sources              0.14      0.33       118     18432
+barrier-expl2             0.14      0.32       118      1152
+send_cons_flux            0.13      0.31       118      1152
+expl2impl                 0.11      0.25       177      1211
+barrier-expl1             0.07      0.16       118      1152
+save_logfile              0.04      0.09        59        59
 int_domain                0.00      0.01        59        59
 -------------------------------------------------------------------------------
  error report: no errors...

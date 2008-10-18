@@ -30,11 +30,11 @@ module ModUser
 contains
 !============================================================================
   subroutine user_read_inputs
+
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut
     use ModMain,        ONLY: lVerbose
     use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: read_line, read_command, read_var
-    implicit none
 
     character (len=100) :: NameCommand
     !------------------------------------------------------------------------
@@ -76,10 +76,10 @@ contains
   !============================================================================
 
   subroutine user_init_session
+
     use ModGrayDiffusion, ONLY: RadiationConstantSi
     use ModIoUnit,  ONLY: UnitTmp_
     use ModPhysics, ONLY: g, No2Si_V, Si2No_V, UnitEnergyDens_, UnitTemperature_
-    implicit none
 
     integer :: iError, iCell
     real :: Mach, Entropy
@@ -90,17 +90,17 @@ contains
     select case(iLowrieTest)
     case(1)
        ! Mach 1.05 test
-       nCellLowrie = 6190
+       nCellLowrie = 6188
        U0 = -1.05               ! veloxity added to lowrie's solution
        X0 = 0.105*7.0/20.0      ! shift in x-direction 
     case(2)
        ! Mach 2 test
-       nCellLowrie = 4842
+       nCellLowrie = 4840
        U0 = -2.0
        X0 = 0.2/16.0
     case(3)
        ! Mach 5 test with variable cross-sections
-       nCellLowrie = 8906
+       nCellLowrie = 8904
        U0 = -5.0
        X0 = 0.5*3.0/64.0
     case default
@@ -134,13 +134,15 @@ contains
   !==========================================================================
 
   subroutine user_set_ics
+
     use ModAdvance,       ONLY: State_VGB
     use ModGeometry,      ONLY: x_Blk, y_Blk
     use ModGrayDiffusion, ONLY: RadiationConstantSi
     use ModMain,          ONLY: GlobalBlk, nI, nJ, nK, x_, y_
-    use ModPhysics,       ONLY: ShockSlope, No2Si_V, UnitTemperature_
-    use ModVarIndexes
-    implicit none
+    use ModPhysics,       ONLY: ShockSlope, No2Si_V, Si2No_V, &
+         UnitTemperature_, UnitEnergyDens_
+    use ModVarIndexes,    ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Erad_, &
+         ExtraEint_, p_
 
     integer :: iBlock, i, j, k, iCell
     real :: x, Weight1, Weight2
@@ -191,7 +193,8 @@ contains
             +   Weight2*StateLowrie_VC(iTradLowrie, iCell) )
 
        p = Rho*Tgas
-       Erad = RadiationConstantSi*(Trad*No2Si_V(UnitTemperature_))**4
+       Erad = RadiationConstantSi*(Trad*No2Si_V(UnitTemperature_))**4 &
+            *Si2No_V(UnitEnergyDens_)
        RhoU_D(1) = Rho*(Ux+U0)
        RhoU_D(2) = 0.0
        RhoU_D(3) = 0.0
@@ -200,9 +203,9 @@ contains
           State_VGB(Rho_,i,j,k,iBlock) = Rho
           State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock) = matmul(Rot_II,RhoU_D(x_:y_))
           State_VGB(RhoUz_,i,j,k,iBlock) = 0.0
-          State_VGB(p_,i,j,k,iBlock) = p
           State_VGB(Erad_,i,j,k,iBlock) = Erad
           State_VGB(ExtraEint_,i,j,k,iBlock) = 0.0
+          State_VGB(p_,i,j,k,iBlock) = p
        end do
 
     end do; end do
@@ -214,15 +217,15 @@ contains
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
+
     use ModAdvance,       ONLY: State_VGB
     use ModGeometry,      ONLY: x_Blk, y_Blk
     use ModGrayDiffusion, ONLY: RadiationConstantSi
     use ModMain,          ONLY: Time_Simulation
-    use ModPhysics,       ONLY: g, Si2No_V, UnitT_, UnitTemperature_, &
-         ShockSlope
+    use ModPhysics,       ONLY: g, Si2No_V, No2Si_V, UnitT_, &
+         UnitTemperature_, UnitEnergyDens_, ShockSlope
     use ModSize,          ONLY: nI, nJ, nK
     use ModVarIndexes,    ONLY: p_, Rho_, Erad_
-    implicit none
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -252,8 +255,8 @@ contains
        PlotVar_G = g*State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock)
 
     case('trad')
-       PlotVar_G = g*(State_VGB(Erad_,:,:,:,iBlock)/RadiationConstantSi)**0.25 &
-            *Si2No_V(UnitTemperature_)
+       PlotVar_G = g*(State_VGB(Erad_,:,:,:,iBlock)*No2Si_V(UnitEnergyDens_) &
+            /RadiationConstantSi)**0.25 *Si2No_V(UnitTemperature_)
 
     case('rho0','ux0','uy0','tgas0','trad0')
 
@@ -264,7 +267,7 @@ contains
        do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
 
           x = x_Blk(i,j,k,iBlock)*CosSlope + y_Blk(i,j,k,iBlock)*SinSlope
-          x = x - U0*Time_Simulation*Si2NO_V(UnitT_) - X0
+          x = x - U0*Time_Simulation*Si2No_V(UnitT_) - X0
 
           do iCell = 1, nCellLowrie
              if(xLowrie_C(iCell) >= x) EXIT
