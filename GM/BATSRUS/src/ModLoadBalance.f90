@@ -370,6 +370,7 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
   use ModImplicit                                         !^CFG IF IMPLICIT
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK      !^CFG IF CONSTRAINB
   use ModRaytrace, ONLY : ray                             !^CFG IF RCM
+  use ModIo,       ONLY : log_vars                        !^CFG IF RCM
   use ModMpi
   implicit none
 
@@ -408,7 +409,7 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
   ! Number of data values stored in ModBlockData
   integer :: nDynamicData
   
-  logical :: DoTest, DoTestMe
+  logical :: DoTest, DoTestMe, DoSendRay
   !----------------------------------------------------------------------------
 
   if((iProcFrom==PROCtest .and. iBlockFrom==BLKtest).or. &
@@ -419,6 +420,8 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
   end if
   if(DoTestMe)write(*,*)'iBlockALL,iBlockFrom,iProcFrom, iBlockTo,iProcTo=',&
        iBlockALL,iBlockFrom,iProcFrom, iBlockTo,iProcTo
+
+  DoSendRay = UseIM .or. index(log_vars, 'status') > 0     !^CFG IF RCM
 
   if (iProc == iProcFrom) then
      if (DoMoveCoord) call send_block_data
@@ -548,7 +551,7 @@ contains
           end do; end do; end do; end do
        end if                                       !^CFG END IMPLICIT
 
-       if(UseIM)then                                !^CFG IF RCM BEGIN
+       if(DoSendRay)then                            !^CFG IF RCM BEGIN
           do k=1,nK; do j=1,nJ; do i=1,nI; do i2=1,2; do i1=1,3
              iData = iData+1
              BlockData_I(iData) = ray(i1,i2,i,j,k,iBlockFrom)
@@ -597,7 +600,7 @@ contains
             iSize = iSize - nExtraData
        if(.not.(UseBDF2 .and. n_prev > 0)) &    !^CFG IF IMPLICIT
             iSize = iSize - nWIJK               !^CFG IF IMPLICIT
-       if(.not.(UseIM)) &                       !^CFG IF RCM
+       if(.not.(DoSendRay)) &                   !^CFG IF RCM
             iSize = iSize - 3*2*nIJK            !^CFG IF RCM
     else
        iSize= nScalarBLK
@@ -720,7 +723,7 @@ contains
        end do; end do; end do; end do
     end if                                      !^CFG END IMPLICIT
 
-    if(UseIM)then                               !^CFG IF RCM BEGIN
+    if(DoSendRay)then                           !^CFG IF RCM BEGIN
        do k=1,nK; do j=1,nJ; do i=1,nI; do i2=1,2; do i1=1,3
           iData = iData+1
           ray(i1,i2,i,j,k,iBlockTo) = BlockData_I(iData)
