@@ -28,7 +28,7 @@ module ModGrayDiffusion
 
   ! Parameters for radiation flux limiter
   logical,           public :: UseRadFluxLimiter  = .false.
-  character(len=20), public :: TypeRadFluxLimiter = 'none'
+  character(len=20), public :: TypeRadFluxLimiter = 'larsen'
 
   ! Parameter that relates the radiation energy to the
   real, public :: RadiationConstantSi = 4.0*cStefan/cLightSpeed

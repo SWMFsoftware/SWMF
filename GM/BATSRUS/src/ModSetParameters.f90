@@ -563,6 +563,13 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('UseRadFluxLimiter',UseRadFluxLimiter)
            if(UseRadFluxLimiter)then
               call read_var('TypeRadFluxLimiter',TypeRadFluxLimiter,IsLowerCase=.true.)
+
+              select case(TypeRadFluxLimiter)
+              case("larsen","sum","max")
+              case default
+                 call stop_mpi(NameSub//': unknown TypeRadFluxLimiter='&
+                      //TypeRadFluxLimiter)
+              end select
            end if
         end if
 
@@ -2261,6 +2268,13 @@ contains
        end if
        optimize_message_pass = 'all'
     endif
+
+    if (UseGrayDiffusion .and. .not.UseFullImplicit) then
+       if(iProc==0) write(*,'(a)')NameSub// &
+            ' ERROR: The radiation model in gray nonequilibrium diffusion'// &
+            ' only works together with the fully implicit scheme'
+       call stop_mpi('Correct PARAM.in!')
+    end if
 
     if ( UseGrayDiffusion .and. UseRadFluxLimiter &
          .and. index(optimize_message_pass,'opt') > 0) then

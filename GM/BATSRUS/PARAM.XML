@@ -1706,6 +1706,7 @@ the code switches back to the two-level scheme for one time step.
 	    <option name="Linde"   value="LINDE/3"/>   <!--^CFG IF LINDEFLUX-->
 	    <option name="Sokolov" value="SOKOLOV/4"/> <!--^CFG IF AWFLUX-->
 	    <option name="HLLD"                     /> <!--^CFG IF HLLDFLUX-->
+	    <option name="Godunov" value="GODUNOV"/>
 	</parameter>
 #IMPLSCHEME
 1               nOrderImpl
@@ -3329,6 +3330,7 @@ Example for InvD2Ray =
 	    <option name="Linde"   value="LINDE/3"/>   <!--^CFG IF LINDEFLUX-->
 	    <option name="Sokolov" value="SOKOLOV/4"/> <!--^CFG IF AWFLUX-->
 	    <option name="HLLD"/>                      <!--^CFG IF HLLDFLUX-->
+	    <option name="Godunov" value="GODUNOV"/>
 	</parameter>
 	<if expr="$nOrder == 2">
 		<parameter name="TypeLimiter" type="string" input="select">
@@ -3360,6 +3362,7 @@ Possible values for TypeFlux:
  'Roe'         - Roe's approximate Riemann flux (new) <!--^CFG IF ROEFLUX  -->
  'RoeOld'      - Roe's approximate Riemann flux (old) <!--^CFG IF ROEFLUX  -->
  'HLLD'        - Miyoshi and Kusano's HLLD flux       <!--^CFG IF HLLDFLUX -->
+ 'Godunov'     - Godunov flux
 \end{verbatim}
 The new and old Roe schemes differ in some details of the algorithm.
 Possible values for TypeLimiter for spatially second order schemes:
@@ -4523,6 +4526,35 @@ are read as shown in the example.
 The default value is "all", ie. the Hall effect is applied everywhere
 if the Hall effect is switched on in the #HALLRESISTIVITY command.
 </command>
+
+
+<command name="RADIATION">
+	 <parameter name="UseGrayDiffusion" type="logical" default="F"/>
+	 <if expr="$UseGrayDiffusion">
+	     <parameter name="UseRadFluxLimiter" type="logical" default="F"/>
+	     <if expr="$UseRadFluxLimiter">
+	     	 <parameter name="TypeRadFluxLimiter" type="string" case="lower"
+		 	    input="select">
+		 	    <option name="larsen"  default="T"	    />
+			    <option name="sum"	   		    />
+			    <option name="max"			    />
+		 </parameter>
+	     </if>
+	 </if>
+
+#RADIATION
+T		UseGrayDiffusion  (rest of parameters read only if true)
+T		UseRadFluxLimiter (rest of parameters read only if true)
+larsen		TypeRadFluxLimiter
+
+If UseGrayDiffusion is true the radiation hydrodynamics with
+gray nonequilibrium diffusion approximation is used.
+
+Currently, the gray-diffusion only works together with the fully implicit solver.
+
+Default is UseGrayDiffusion false.
+</command>
+
 
 <command name="MASSLOADING">
 	<parameter name="UseMassLoading" type="logical" default="F"/>	
