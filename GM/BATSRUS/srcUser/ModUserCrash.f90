@@ -482,7 +482,8 @@ contains
                *State_VGB(Rho_,i,j,k,iBlock)
 
           ! Calculate internal energy for Xe/Be from pressure and density
-          if(State_VGB(LevelPl_,i,j,k,iBlock) < 0.0)then 
+          if(State_VGB(LevelBe_,i,j,k,iBlock) > 0.0 .or. &
+             State_VGB(LevelXe_,i,j,k,iBlock) > 0.0 ) then 
 
              RhoSi = State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_)
              pSi   = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
