@@ -2,7 +2,6 @@
 !============================================================================
 module ModGrayDiffusion
 
-  use ModConst,      ONLY: cLightSpeed, cStefan
   use ModSize,       ONLY: nI, nJ, nK
   use ModVarIndexes, ONLY: p_
 
@@ -30,16 +29,13 @@ module ModGrayDiffusion
   logical,           public :: UseRadFluxLimiter  = .false.
   character(len=20), public :: TypeRadFluxLimiter = 'larsen'
 
-  ! Parameter that relates the radiation energy to the
-  real, public :: RadiationConstantSi = 4.0*cStefan/cLightSpeed
-
   ! Scalar diffusion coefficient
   real, public :: DiffusionRad_G(0:nI+1,0:nJ+1,0:nK+1)
 
   ! Local variables
   real :: Erad_G(-1:nI+2,-1:nJ+2,-1:nK+2)
   real :: TeSi_G(0:nI+1,0:nJ+1,0:nK+1)
-  real :: AbsorptionCrossSection_C(1:nI,1:nJ,1:nK)
+  real :: AbsorptionOpacity_C(1:nI,1:nJ,1:nK)
 
   real, parameter :: GammaRel = 4.0/3.0
 
@@ -50,31 +46,69 @@ contains
   subroutine set_gray_diffusion(iBlock)
 
     use ModAdvance,    ONLY: State_VGB
-    use ModPhysics,    ONLY: g, No2Si_V, UnitTemperature_
-    use ModVarIndexes, ONLY: Rho_, p_
+    use ModConst,      ONLY: cLightSpeed
+    use ModPhysics,    ONLY: Si2No_V, UnitX_, UnitU_, UnitT_
+    use ModUser,       ONLY: user_material_properties
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
+    real :: TeSi, AbsorptionOpacitySi, RosselandMeanOpacitySi
     !------------------------------------------------------------------------
 
-    do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-       TeSi_G(i,j,k) = State_VGB(p_,i,j,k,iBlock) &
-            /State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       call user_material_properties(State_VGB(1,i,j,k,iBlock), &
+            TeSi = TeSi, &
+            AbsorptionOpacitySi = AbsorptionOpacitySi, &
+            RosselandMeanOpacitySi = RosselandMeanOpacitySi)
+
+       TeSi_G(i,j,k) = TeSi
+       AbsorptionOpacity_C(i,j,k) = AbsorptionOpacitySi*cLightSpeed &
+            /Si2No_V(UnitT_)
+       DiffusionRad_G(i,j,k) = cLightSpeed/(3.0*RosselandMeanOpacitySi) &
+            *Si2No_V(UnitU_)*Si2No_V(UnitX_)
     end do; end do; end do
 
-    DiffusionRad_G = 1.0
-!    do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-!       DiffusionRad_G(i,j,k) = &
-!            0.00175*(g*TeSi_G(i,j,k)*Si2No_V(UnitTemperature_))**3.5 &
-!            /State_VGB(Rho_,i,j,k,iBlock)
-!    end do; end do; end do
+    i=0
+    do k=1,nK; do j=1,nJ
+       call material_properties_ghostcell
+    end do; end do
 
-    AbsorptionCrossSection_C = 1.0E+6
+    i=nI+1
+    do k=1,nK; do j=1,nJ
+       call material_properties_ghostcell
+    end do; end do
 
-!    do k=1,nK; do j=1,nJ; do i=1,nI
-!       AbsorptionCrossSection_C(i,j,k) = 1.0E+6/DiffusionRad_G(i,j,k)
-!    end do; end do; end do
+    j=0
+    do k=1,nK; do i=1,nI
+       call material_properties_ghostcell
+    end do; end do
+
+    j=nJ+1
+    do k=1,nK; do i=1,nI
+       call material_properties_ghostcell
+    end do; end do
+
+    k=0
+    do j=1,nJ; do i=1,nI
+       call material_properties_ghostcell
+    end do; end do
+
+    k=nK+1
+    do j=1,nJ; do i=1,nI
+       call material_properties_ghostcell
+    end do; end do
+
+    contains
+
+      subroutine material_properties_ghostcell
+
+        call user_material_properties(State_VGB(1,i,j,k,iBlock), &
+             RosselandMeanOpacitySi = RosselandMeanOpacitySi)
+
+        DiffusionRad_G(i,j,k) = cLightSpeed/(3.0*RosselandMeanOpacitySi) &
+             *Si2No_V(UnitU_)*Si2No_V(UnitX_)
+      end subroutine material_properties_ghostcell
 
   end subroutine set_gray_diffusion
 
@@ -507,6 +541,7 @@ contains
 
     use ModAdvance,    ONLY: State_VGB, Source_VC, &
          uDotArea_XI, uDotArea_YI, uDotArea_ZI
+    use ModConst,      ONLY: cRadiation
     use ModGeometry,   ONLY: vInv_CB
     use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_
     use ModVarIndexes, ONLY: Energy_, NameVar_V
@@ -533,9 +568,9 @@ contains
              +uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1))
 
        ! Source term due to absorption and emission
-       ! Sigma_a*(RadiationConstant*Te**4-Erad)
-       AbsorptionEmission = AbsorptionCrossSection_C(i,j,k) &
-            *(RadiationConstantSi*TeSi_G(i,j,k)**4*Si2No_V(UnitEnergyDens_) &
+       ! Sigma_a*(cRadiation*Te**4-Erad)
+       AbsorptionEmission = AbsorptionOpacity_C(i,j,k) &
+            *(cRadiation*TeSi_G(i,j,k)**4*Si2No_V(UnitEnergyDens_) &
             - State_VGB(Eradiation_,i,j,k,iBlock))
 
        ! dErad/dt = - adiabatic compression + AbsorptionEmission

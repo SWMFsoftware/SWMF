@@ -4,8 +4,10 @@ module ModUser
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
-       IMPLEMENTED3 => user_set_ics,                    &
-       IMPLEMENTED4 => user_set_plot_var
+       IMPLEMENTED3 => user_normalization,              &
+       IMPLEMENTED4 => user_set_ics,                    &
+       IMPLEMENTED5 => user_set_plot_var,               &
+       IMPLEMENTED6 => user_material_properties
 
   include 'user_module.h' !list of public methods
 
@@ -77,9 +79,8 @@ contains
 
   subroutine user_init_session
 
-    use ModGrayDiffusion, ONLY: RadiationConstantSi
     use ModIoUnit,  ONLY: UnitTmp_
-    use ModPhysics, ONLY: g, No2Si_V, Si2No_V, UnitEnergyDens_, UnitTemperature_
+    use ModPhysics, ONLY: g
 
     integer :: iError, iCell
     real :: Mach, Entropy
@@ -92,7 +93,7 @@ contains
        ! Mach 1.05 test
        nCellLowrie = 6188
        U0 = -1.05               ! veloxity added to lowrie's solution
-       X0 = 0.105*7.0/20.0      ! shift in x-direction 
+       X0 = 0.03675             ! shift in x-direction 
     case(2)
        ! Mach 2 test
        nCellLowrie = 4840
@@ -125,23 +126,38 @@ contains
     StateLowrie_VC(iTgasLowrie,:) = StateLowrie_VC(iTgasLowrie,:)/g
     StateLowrie_VC(iTradLowrie,:) = StateLowrie_VC(iTradLowrie,:)/g
 
-    ! The radiation constant is reset
-    RadiationConstantSi = 1.0E-4*Si2No_V(UnitTemperature_)**4 *g**4 &
-         *No2Si_V(UnitEnergyDens_)
-
   end subroutine user_init_session
+
+  !==========================================================================
+
+  subroutine user_normalization
+
+    use ModConst,   ONLY: cRadiation, cProtonMass, cBoltzmann
+    use ModPhysics, ONLY: g, No2Si_V, UnitRho_, UnitU_
+    
+    character (len=*), parameter :: NameSub = 'user_normalization'
+    !------------------------------------------------------------------------
+
+    No2Si_V = 1.0
+    ! The following density unit is needed to get a normalized radiation
+    ! constant  with value 1.0e-4. The gamma dependence is needed since
+    ! the reference solution uses p=rho*T/gamma
+    No2Si_V(UnitRho_) = 1.0e+4*cRadiation*(cProtonMass/cBoltzmann)**4 &
+         *No2Si_V(UnitU_)**6/g**4
+
+  end subroutine user_normalization
 
   !==========================================================================
 
   subroutine user_set_ics
 
-    use ModAdvance,       ONLY: State_VGB
-    use ModGeometry,      ONLY: x_Blk, y_Blk
-    use ModGrayDiffusion, ONLY: RadiationConstantSi
-    use ModMain,          ONLY: GlobalBlk, nI, nJ, nK, x_, y_
-    use ModPhysics,       ONLY: ShockSlope, No2Si_V, Si2No_V, &
+    use ModAdvance,    ONLY: State_VGB
+    use ModConst,      ONLY: cRadiation
+    use ModGeometry,   ONLY: x_Blk, y_Blk
+    use ModMain,       ONLY: GlobalBlk, nI, nJ, nK, x_, y_
+    use ModPhysics,    ONLY: ShockSlope, No2Si_V, Si2No_V, &
          UnitTemperature_, UnitEnergyDens_
-    use ModVarIndexes,    ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Erad_, &
+    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Erad_, &
          ExtraEint_, p_
 
     integer :: iBlock, i, j, k, iCell
@@ -193,7 +209,7 @@ contains
             +   Weight2*StateLowrie_VC(iTradLowrie, iCell) )
 
        p = Rho*Tgas
-       Erad = RadiationConstantSi*(Trad*No2Si_V(UnitTemperature_))**4 &
+       Erad = cRadiation*(Trad*No2Si_V(UnitTemperature_))**4 &
             *Si2No_V(UnitEnergyDens_)
        RhoU_D(1) = Rho*(Ux+U0)
        RhoU_D(2) = 0.0
@@ -218,14 +234,14 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModAdvance,       ONLY: State_VGB
-    use ModGeometry,      ONLY: x_Blk, y_Blk
-    use ModGrayDiffusion, ONLY: RadiationConstantSi
-    use ModMain,          ONLY: Time_Simulation
-    use ModPhysics,       ONLY: g, Si2No_V, No2Si_V, UnitT_, &
+    use ModAdvance,    ONLY: State_VGB
+    use ModConst,      ONLY: cRadiation
+    use ModGeometry,   ONLY: x_Blk, y_Blk
+    use ModMain,       ONLY: Time_Simulation
+    use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitT_, &
          UnitTemperature_, UnitEnergyDens_, ShockSlope
-    use ModSize,          ONLY: nI, nJ, nK
-    use ModVarIndexes,    ONLY: p_, Rho_, Erad_
+    use ModSize,       ONLY: nI, nJ, nK
+    use ModVarIndexes, ONLY: p_, Rho_, Erad_
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -252,11 +268,11 @@ contains
     IsFound = .true.
     select case(NameVar)
     case('tgas')
-       PlotVar_G = g*State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock)
+       PlotVar_G = State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock)
 
     case('trad')
-       PlotVar_G = g*(State_VGB(Erad_,:,:,:,iBlock)*No2Si_V(UnitEnergyDens_) &
-            /RadiationConstantSi)**0.25 *Si2No_V(UnitTemperature_)
+       PlotVar_G = (State_VGB(Erad_,:,:,:,iBlock)*No2Si_V(UnitEnergyDens_) &
+            /cRadiation)**0.25 *Si2No_V(UnitTemperature_)
 
     case('rho0','ux0','uy0','tgas0','trad0')
 
@@ -281,7 +297,8 @@ contains
              Weight1 = 0.0
              Weight2 = 1.0
           else
-             ! Assign weights for linear interpolation between iCell-1 and iCell
+             ! Assign weights for linear interpolation between
+             ! iCell-1 and iCell
              Weight1 = (xLowrie_C(iCell) - x) &
                   /    (xLowrie_C(iCell) - xLowrie_C(iCell-1))
              Weight2 = 1.0 - Weight1
@@ -311,14 +328,14 @@ contains
              Tgas = ( Weight1*StateLowrie_VC(iTgasLowrie, iCell-1) &
                   +   Weight2*StateLowrie_VC(iTgasLowrie, iCell) )
 
-             PlotVar_G(i,j,k) = g*Tgas
+             PlotVar_G(i,j,k) = Tgas
 
           case('trad0')
 
              Trad = ( Weight1*StateLowrie_VC(iTradLowrie, iCell-1) &
                   +   Weight2*StateLowrie_VC(iTradLowrie, iCell) )
 
-             PlotVar_G(i,j,k) = g*Trad
+             PlotVar_G(i,j,k) = Trad
 
           end select
        end do; end do; end do
@@ -328,5 +345,46 @@ contains
     end select
 
   end subroutine user_set_plot_var
+
+  !==========================================================================
+
+  subroutine user_material_properties(State_V, &
+       TeSi, AbsorptionOpacitySi, RosselandMeanOpacitySi)
+
+    use ModConst,      ONLY: cLightSpeed
+    use ModPhysics,    ONLY: g, No2Si_V, UnitTemperature_, &
+         UnitT_, UnitU_, UnitX_
+    use ModVarIndexes, ONLY: nVar, Rho_, p_
+
+    real, intent(in) :: State_V(1:nVar)
+    real, optional, intent(out) :: TeSi                   ! [K]
+    real, optional, intent(out) :: AbsorptionOpacitySi    ! [1/m]
+    real, optional, intent(out) :: RosselandMeanOpacitySi ! [1/m]
+
+    real :: Temperature, AbsorptionOpacity, DiffusionRad
+
+    character (len=*), parameter :: NameSub = 'user_material_properties'
+    !-------------------------------------------------------------------
+
+    Temperature = State_V(p_)/State_V(Rho_)
+
+    select case(iLowrieTest)
+    case(1,2)
+       DiffusionRad = 1.0
+       AbsorptionOpacity = 1.0E6
+    case(3)
+       DiffusionRad = 0.00175*(g*Temperature)**3.5/State_V(Rho_)
+       AbsorptionOpacity = 1.0E6/DiffusionRad
+    end select
+
+    if(present(TeSi)) TeSi = Temperature*No2Si_V(UnitTemperature_)
+
+    if(present(AbsorptionOpacitySi)) AbsorptionOpacitySi = &
+         AbsorptionOpacity/No2Si_V(UnitT_)/cLightSpeed
+
+    if(present(RosselandMeanOpacitySi)) RosselandMeanOpacitySi = &
+         cLightSpeed/(3.0*DiffusionRad*No2Si_V(UnitU_)*No2Si_V(UnitX_))
+
+  end subroutine user_material_properties
 
 end module ModUser

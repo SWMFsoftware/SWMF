@@ -64,8 +64,12 @@ Module ModConst
   real, parameter :: cGravitation = 6.6726E-11
 
   ! Stefan-Boltzmann constant 5.6704E-8[J/s/m^2/K^4]
-  real, parameter :: cStefan = 2.0*cPi**5*cBoltzmann**4 &
-       /(15.0*cLightSpeed**2*cPlanckH**3)
+  real, parameter :: cStefan = 2.0*cPi**5/15.0 &
+       *(cBoltzmann/cLightSpeed/cPlanckH)**3 &
+       *cBoltzmann*cLightSpeed
+
+  ! Radiation constant 7.5657E-16 [J/m^3/K^4]
+  real, parameter :: cRadiation = 4.0*cStefan/cLightSpeed
 
   !\
   ! Units for energy.

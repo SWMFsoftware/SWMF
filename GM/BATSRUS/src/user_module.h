@@ -24,3 +24,4 @@
   public :: user_io_units
   public :: user_normalization
   public :: user_set_resistivity
+  public :: user_material_properties

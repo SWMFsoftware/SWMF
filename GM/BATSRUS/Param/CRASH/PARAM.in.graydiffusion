@@ -8,7 +8,7 @@ NONE			NamePlanet
 NONE			TypeIoUnit
 
 #NORMALIZATION
-NONE			TypeNormalization
+USER			TypeNormalization
 
 #NONCONSERVATIVE
 F			UseNonConservative

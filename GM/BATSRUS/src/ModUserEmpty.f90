@@ -222,6 +222,23 @@ contains
   end subroutine user_set_resistivity
 
   !=====================================================================
+  subroutine user_material_properties(State_V, &
+       TeSi, AbsorptionOpacitySi, RosselandMeanOpacitySi)
+
+    use ModVarIndexes, ONLY: nVar
+
+    real, intent(in) :: State_V(nVar)
+    real, optional, intent(out) :: TeSi                   ! [K]
+    real, optional, intent(out) :: AbsorptionOpacitySi    ! [1/m]
+    real, optional, intent(out) :: RosselandMeanOpacitySi ! [1/m]
+
+    character (len=*), parameter :: NameSub = 'user_material_properties'
+    !-------------------------------------------------------------------
+    call stop_mpi(NameSub)
+
+  end subroutine user_material_properties
+
+  !=====================================================================
   subroutine stop_user(NameSub)
     ! Note that this routine is not a user routine but just a routine
     ! which warns the user if they try to use an unimplemented user routine.
