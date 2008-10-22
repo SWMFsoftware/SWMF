@@ -321,54 +321,6 @@ subroutine satellite_trajectory_formula(iSat)
 
 end subroutine satellite_trajectory_formula
 
-!=============================================================================
-
-subroutine open_satellite_output_files(iSat)
-
-  use ModMain,   ONLY: n_step
-  use ModIoUnit, ONLY: io_unit_new
-  use ModIO,     ONLY: nSatellite, Satellite_name, filename,&
-       NamePlotDir, iUnitSat_I
-  implicit none
-  integer, intent(in) :: iSat
-  integer :: l1, l2
-  logical :: oktest, oktest_me
-
-  !---------------------------------------------------------------------------
-  call set_oktest('open_satellite_output_files', oktest, oktest_me)
-
-  l1 = index(Satellite_name(iSat), '/', back=.true.) + 1
-  l2 = index(Satellite_name(iSat), '.') - 1
-  if (l1-1<=0) l1=1
-  if (l2+1<=0) l2=len_trim(Satellite_name(iSat))
-
-  write(filename,'(a,i6.6,a)')trim(NamePlotDir)//&
-       'sat_'//Satellite_Name(iSat)(l1:l2)//'_n',n_step,'.sat'
-
-  if(oktest) then
-     write(*,*) 'open_satellite_output_files: satellitename:', &
-          Satellite_name(iSat)
-     write(*,*) 'iSat,l1,l2: ',iSat,l1,l2
-     write(*,*) 'open_satellite_output_files: filename:', filename
-  end if
-
-  iUnitSat_I(iSat)=io_unit_new()
-  open(iUnitSat_I(iSat), file=filename, status="replace")
-
-end subroutine open_satellite_output_files
-
-!=============================================================================
-
-subroutine close_satellite_output_files(iSat)
-
-  use ModIO, ONLY : nSatellite,iUnitSat_I
-  implicit none
-
-  integer, intent(in) :: iSat
-
-  close(iUnitSat_I(iSat))
-
-end subroutine close_satellite_output_files
 
 !=============================================================================
 !^CFG IF RAYTRACE BEGIN

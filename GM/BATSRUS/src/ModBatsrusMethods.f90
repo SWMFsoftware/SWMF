@@ -204,7 +204,7 @@ contains
   !============================================================================
 
   subroutine initialize_files
-
+    use ModSatelliteFile
     ! Local variables
     character(len=*), parameter :: NameSubSub = NameSub//'::initialize_files'
     logical :: delete_file
@@ -212,7 +212,8 @@ contains
 
     if (save_satellite_data .and. iProc == 0) then
        do iSat = 1, nSatellite
-          call open_satellite_output_files(iSat)
+          call set_satellite_file_status(iSat,'open')
+          call set_satellite_file_status(iSat,'close')
        end do
     end if
 
@@ -708,6 +709,7 @@ contains
   subroutine save_file
     use ModRestartFile, ONLY: write_restart_files
     use ModParallel, ONLY : UsePlotMessageOptions
+    use ModSatelliteFile
     integer :: iFileLoop, iSat
 
     !
@@ -801,23 +803,24 @@ contains
        if(.not.save_satellite_data)return
        iSat=ifile-satellite_
        call timing_start('save_satellite')
+       if(iProc==0)call set_satellite_file_status(iSat,'append')
        !
        ! Distinguish between time_accurate and .not. time_accurate:
        !
+       
        if (time_accurate) then
           call set_satellite_flags(iSat)
           call write_logfile(iSat,ifile)! write one line for a single trajectory point
        else
           tSimulationBackup = Time_Simulation    ! Save ...
           Time_Simulation = TimeSatStart_I(iSat)
-!          if (iProc == 0) call close_satellite_output_files(iSat)
-!          if (iProc == 0) call open_satellite_output_files(iSat)
           do while (Time_Simulation .le. TimeSatEnd_I(iSat))
              call set_satellite_flags(iSat)
              call write_logfile(iSat,ifile)           ! write for ALL the points of trajectory cut
              Time_Simulation = Time_Simulation + dt_output(iSat+Satellite_)
           end do
           Time_Simulation = tSimulationBackup    ! ... Restore
+          if(iProc==0)call set_satellite_file_status(iSat,'close')
        end if
        call timing_stop('save_satellite')
     end if
@@ -848,6 +851,7 @@ contains
   !===========================================================================
 
   subroutine save_files_final
+    use ModSatelliteFile
 
     implicit none
 
@@ -862,7 +866,7 @@ contains
     !/
     if (save_satellite_data .and. iProc==0) then
        do iSat = 1, nSatellite
-          call close_satellite_output_files(iSat)
+          call set_satellite_file_status(iSat,'close')
        end do
     end if
 

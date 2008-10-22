@@ -51,6 +51,7 @@ MODULES = \
 	ModPolarNeighbor.o\
 	ModProcMH.o\
 	ModRestartFile.o\
+	ModSatelliteFile.o\
 	ModSize.o\
 	ModSolarwind.o \
 	ModUserEmpty.o \
