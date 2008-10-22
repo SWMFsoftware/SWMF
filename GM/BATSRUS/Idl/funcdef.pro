@@ -65,9 +65,9 @@ if siz(0) eq ndim then nw=1 else nw=siz(ndim+1)
 nEqpar = n_elements(eqpar)
 
 ; Extract equation parameters
-amu        = 1.6726e-24; [g]
-kboltzmann = 1.3807e-23; [SI]
-tunit      = 1.0/kboltzmann*1e-15; [using amu/cc and nPa]
+amu        = 1.6726e-24         ; [g]
+kboltzmann = 1.3807e-23         ; [SI]
+tunit      = 1.0/kboltzmann*1e-15 ; [using amu/cc and nPa]
 
 gamma  =  5./3.
 clight =  1.0
@@ -92,11 +92,11 @@ wnames = strlowcase(variables(ndim:ndim+nw-1))
 
 ; Check for a negative sign in func
 if strmid(func,0,1) eq '-' then begin 
-   f=strmid(func,1,strlen(func)-1)
-   sign=-1
+    f=strmid(func,1,strlen(func)-1)
+    sign=-1
 endif else begin
-   f=func
-   sign=1
+    f=func
+    sign=1
 endelse
 
 ; Check if f is among the variable names listed in wnames or if it is a number
@@ -112,15 +112,15 @@ if n_elements(result) gt 0 and rcut le 0 then return, sign*result
 
 ; Extract coordinate variables from xx:
 case ndim of
-   1:begin
-      x=xx & y=0 & z=0
-   end
-   2:begin
-      x=xx(*,*,0) & y=xx(*,*,1) & z=0
-   end
-   3:begin
-      x=xx(*,*,*,0) & y=xx(*,*,*,1) & z=xx(*,*,*,2)
-   end
+    1:begin
+        x=xx & y=0 & z=0
+    end
+    2:begin
+        x=xx(*,*,0) & y=xx(*,*,1) & z=0
+    end
+    3:begin
+        x=xx(*,*,*,0) & y=xx(*,*,*,1) & z=xx(*,*,*,2)
+    end
 endcase
 r = sqrt(x^2+y^2+z^2)
 
@@ -131,287 +131,257 @@ if n_elements(result) gt 0 then begin
     return, sign*result
 endif
 
-; Extract variables from w based on name
-if not keyword_set(physics) then begin
-   print,'Error in funcdef: physics=',physics,' is missing'
-   retall
-endif
-
-; Extract phys (physics without the numbers) and ndir from physics
-l=strlen(physics)
-phys=strmid(physics,0,l-2)
-ndir=long(strmid(physics,l-1,1))
-if ndim ne long(strmid(physics,l-2,1)) then begin
-   print,'Error in funcdef: physics=',physics,$
-         ' is inconsistent with ndim=',ndim
-   retall
-endif
-
 ; Extract primitive variables for calculating MHD type functions
-if phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var' then begin
-   ux=0 & uy=0 & uz=0 & bx=0 & by=0 & bz=0
-   for iw=0,nw-1 do case ndim of
-   1: case wnames(iw) of
-      'rho': rho=w(*,iw)
-      'ux' : ux=w(*,iw)
-      'uy' : uy=w(*,iw)
-      'uz' : uz=w(*,iw)
-      'bx' : bx=w(*,iw)
-      'by' : by=w(*,iw)
-      'bz' : bz=w(*,iw)
-      'b1' : bx=w(*,iw)
-      'b2' : by=w(*,iw)
-      'b3' : bz=w(*,iw)
-      'p'  : p=w(*,iw)
-      'pth': p=w(*,iw)
-      'mx' : ux=w(*,iw)/rho
-      'my' : uy=w(*,iw)/rho
-      'mz' : uz=w(*,iw)/rho
-      'm1' : ux=w(*,iw)/rho
-      'm2' : uy=w(*,iw)/rho
-      'm3' : uz=w(*,iw)/rho
-      'e'  : e=w(*,iw)
-      else :
-      endcase
-   2: case wnames(iw) of
-      'rho': rho=w(*,*,iw)
-      'ux' : ux=w(*,*,iw)
-      'uy' : uy=w(*,*,iw)
-      'uz' : uz=w(*,*,iw)
-      'bx' : bx=w(*,*,iw)
-      'by' : by=w(*,*,iw)
-      'bz' : bz=w(*,*,iw)
-      'b1' : bx=w(*,*,iw)
-      'b2' : by=w(*,*,iw)
-      'b3' : bz=w(*,*,iw)
-      'p'  : p=w(*,*,iw)
-      'pth': p=w(*,*,iw)
-      'mx' : ux=w(*,*,iw)/rho
-      'my' : uy=w(*,*,iw)/rho
-      'mz' : uz=w(*,*,iw)/rho
-      'm1' : ux=w(*,*,iw)/rho
-      'm2' : uy=w(*,*,iw)/rho
-      'm3' : uz=w(*,*,iw)/rho
-      'e'  : e=w(*,*,iw)
-      else :
-      endcase
-   3: case wnames(iw) of
-      'rho': rho=w(*,*,*,iw)
-      'ux' : ux=w(*,*,*,iw)
-      'uy' : uy=w(*,*,*,iw)
-      'uz' : uz=w(*,*,*,iw)
-      'bx' : bx=w(*,*,*,iw)
-      'by' : by=w(*,*,*,iw)
-      'bz' : bz=w(*,*,*,iw)
-      'b1' : bx=w(*,*,*,iw)
-      'b2' : by=w(*,*,*,iw)
-      'b3' : bz=w(*,*,*,iw)
-      'p'  : p=w(*,*,*,iw)
-      'pth': p=w(*,*,*,iw)
-      'mx' : ux=w(*,*,*,iw)/rho
-      'my' : uy=w(*,*,*,iw)/rho
-      'mz' : uz=w(*,*,*,iw)/rho
-      'm1' : ux=w(*,*,*,iw)/rho
-      'm2' : uy=w(*,*,*,iw)/rho
-      'm3' : uz=w(*,*,*,iw)/rho
-      'e'  : e=w(*,*,*,iw)
-      else :
-      endcase
-   endcase
-   ; Some extra variables
-   uu=ux^2+uy^2+uz^2
-   bb=bx^2+by^2+bz^2
-   u =sqrt(uu)
-   b =sqrt(bb)
 
-   ; Change energy into pressure
-   if n_elements(p) eq 0 and n_elements(e) gt 0 then $
-      p=(gamma-1)*(e-0.5*(rho*uu+bb))
+; initialize all the variables as scalars 
+rho=0 & ux=0 & uy=0 & uz=0 & bx=0 & by=0 & bz=0 & p=0 & e=0
 
-   ; Calculate gamma*p+bb if that is needed for the function
-   if strmid(f,1,4) eq 'fast' or strmid(f,1,4) eq 'slow' then cc=gamma*p+bb
-endif
+; set the variables from the w
+for iw=0,nw-1 do case ndim of
+    1: case wnames(iw) of
+        'rho': rho=w(*,iw)
+        'ux' : ux=w(*,iw)
+        'uy' : uy=w(*,iw)
+        'uz' : uz=w(*,iw)
+        'bx' : bx=w(*,iw)
+        'by' : by=w(*,iw)
+        'bz' : bz=w(*,iw)
+        'b1' : bx=w(*,iw)
+        'b2' : by=w(*,iw)
+        'b3' : bz=w(*,iw)
+        'p'  : p=w(*,iw)
+        'pth': p=w(*,iw)
+        'mx' : ux=w(*,iw)/rho
+        'my' : uy=w(*,iw)/rho
+        'mz' : uz=w(*,iw)/rho
+        'm1' : ux=w(*,iw)/rho
+        'm2' : uy=w(*,iw)/rho
+        'm3' : uz=w(*,iw)/rho
+        'e'  : e=w(*,iw)
+        else :
+    endcase
+    2: case wnames(iw) of
+        'rho': rho=w(*,*,iw)
+        'ux' : ux=w(*,*,iw)
+        'uy' : uy=w(*,*,iw)
+        'uz' : uz=w(*,*,iw)
+        'bx' : bx=w(*,*,iw)
+        'by' : by=w(*,*,iw)
+        'bz' : bz=w(*,*,iw)
+        'b1' : bx=w(*,*,iw)
+        'b2' : by=w(*,*,iw)
+        'b3' : bz=w(*,*,iw)
+        'p'  : p=w(*,*,iw)
+        'pth': p=w(*,*,iw)
+        'mx' : ux=w(*,*,iw)/rho
+        'my' : uy=w(*,*,iw)/rho
+        'mz' : uz=w(*,*,iw)/rho
+        'm1' : ux=w(*,*,iw)/rho
+        'm2' : uy=w(*,*,iw)/rho
+        'm3' : uz=w(*,*,iw)/rho
+        'e'  : e=w(*,*,iw)
+        else :
+    endcase
+    3: case wnames(iw) of
+        'rho': rho=w(*,*,*,iw)
+        'ux' : ux=w(*,*,*,iw)
+        'uy' : uy=w(*,*,*,iw)
+        'uz' : uz=w(*,*,*,iw)
+        'bx' : bx=w(*,*,*,iw)
+        'by' : by=w(*,*,*,iw)
+        'bz' : bz=w(*,*,*,iw)
+        'b1' : bx=w(*,*,*,iw)
+        'b2' : by=w(*,*,*,iw)
+        'b3' : bz=w(*,*,*,iw)
+        'p'  : p=w(*,*,*,iw)
+        'pth': p=w(*,*,*,iw)
+        'mx' : ux=w(*,*,*,iw)/rho
+        'my' : uy=w(*,*,*,iw)/rho
+        'mz' : uz=w(*,*,*,iw)/rho
+        'm1' : ux=w(*,*,*,iw)/rho
+        'm2' : uy=w(*,*,*,iw)/rho
+        'm3' : uz=w(*,*,*,iw)/rho
+        'e'  : e=w(*,*,*,iw)
+        else :
+    endcase
+endcase
+                                ; Some extra variables
+uu=ux^2+uy^2+uz^2
+bb=bx^2+by^2+bz^2
+u =sqrt(uu)
+b =sqrt(bb)
+
+                                ; Change energy into pressure
+if n_elements(p) le 1 and n_elements(e) gt 1 then $
+  p=(gamma-1)*(e-0.5*(rho*uu+bb))
+
+                                ; Calculate gamma*p+bb if needed
+if strmid(f,1,4) eq 'fast' or strmid(f,1,4) eq 'slow' then $
+  cc=gamma*p+bb
+
 
 ;==== Put your function definition(s) below using the variables and eq. params
 ;     extracted from x, w and eqpar, and select cases by the function name "f"
-;     and the "phys, ndim, ndir" variables extracted from "physics".
 
 case f of
-  'Btheta'   : result=atan(by,sqrt(bx^2+bz^2))
-  ; momenta
-  'mx'       : result=rho*ux
-  'my'       : result=rho*uy
-  'mz'       : result=rho*uz
-  ; Boris momenta
-  'mBx'      : result=rho*ux + (bb*ux - (ux*bx+uy*by+uz*bz)*bx)/clight^2
-  'mBy'      : result=rho*uy + (bb*uy - (ux*bx+uy*by+uz*bz)*by)/clight^2
-  'mBz'      : result=rho*uz + (bb*uz - (ux*bx+uy*by+uz*bz)*bz)/clight^2
-  ; Electric field
-  'Ex'       : result=(by*uz-uy*bz)
-  'Ey'       : result=(bz*ux-uz*bx)
-  'Ez'       : result=(bx*uy-ux*by)
-  ; Total energy
-  'e'        : result=p/(gamma-1)+0.5*(rho*uu + bb)
-  ; Alfven speed and Mach number
-  'calfvenx' : result=bx/sqrt(rho)
-  'calfveny' : result=by/sqrt(rho)
-  'calfvenz' : result=bz/sqrt(rho)
-  'calfven'  : result=b /sqrt(rho)
-  'Malfvenx' : result=ux/bx*sqrt(rho)
-  'Malfveny' : result=uy/by*sqrt(rho)
-  'Malfvenz' : result=uz/bz*sqrt(rho)
-  'Malfven'  : result=u /b *sqrt(rho)
-  ; pressure, plasma beta, temperature, entropy
-  'pbeta'    : result=2*p/bb
-  's'        : result=p/rho^gamma
-  'T'        : result=p/rho
-  'T_SC'     : result=1.211E-8*p/rho       ; [K] amu/kB*(dyne/cm^2) / (g/cm^3)
-  'T_IH'     : result=1.211E-8*p/rho       ; [K] amu/kB*(dyne/cm^2) / (g/cm^3)
-  'T_GM'     : result=7.243E+7*p/rho       ; [K] amu/kB*nPa / (amu/cm^3)
-  'n_IH'     : result=rho/amu              ; [/cc] n = rho/amu in CGS
-  'n_SC'     : result=rho/amu              ; [/cc] n = rho/amu in CGS
-  ; sound speed, Mach number
-  'csound'   :result=sqrt(gamma*p/rho)
-  'mach'  :result=u /sqrt(gamma*p/rho)
-  'machx' :result=ux/sqrt(gamma*p/rho)
-  'machy' :result=uy/sqrt(gamma*p/rho)
-  'machz' :result=uz/sqrt(gamma*p/rho)
-  ; fast and slow speeds and Mach numbers
-  'cfast' :result=sqrt(cc/rho)
-  'cfastx':result=sqrt((cc+sqrt(cc^2-4*gamma*p*bx^2))/2/rho)
-  'cfasty':result=sqrt((cc+sqrt(cc^2-4*gamma*p*by^2))/2/rho)
-  'cfastz':result=sqrt((cc+sqrt(cc^2-4*gamma*p*bz^2))/2/rho)
-  'cslowx':result=sqrt((cc-sqrt(cc^2-4*gamma*p*bx^2))/2/rho)
-  'cslowy':result=sqrt((cc-sqrt(cc^2-4*gamma*p*by^2))/2/rho)
-  'cslowz':result=sqrt((cc-sqrt(cc^2-4*gamma*p*bz^2))/2/rho)
-  'Mfast' :result=sqrt(rho*uu/cc)
-  'Mfastx':result=ux/sqrt((cc+sqrt(cc^2-4*gamma*p*bx^2))/2/rho)
-  'Mfasty':result=uy/sqrt((cc+sqrt(cc^2-4*gamma*p*by^2))/2/rho)
-  'Mfastz':result=uz/sqrt((cc+sqrt(cc^2-4*gamma*p*bz^2))/2/rho)
-  'Mslowx':result=ux/sqrt((cc-sqrt(cc^2-4*gamma*p*bx^2))/2/rho)
-  'Mslowy':result=uy/sqrt((cc-sqrt(cc^2-4*gamma*p*by^2))/2/rho)
-  'Mslowz':result=uz/sqrt((cc-sqrt(cc^2-4*gamma*p*bz^2))/2/rho)
-  'divbxy':result=div(bx,by,x,y)
-  'absdivbxy':result=abs(div(bx,by,x,y))
-  'jz': case ndim of
-     1: result=deriv(x,by)
-     2: result=curl(bx,by,x,y)
-     3: begin
-          print,'Error in funcdef: jz is not implemented for 3D yet'
-          retall
+    'Btheta'   : result=atan(by,sqrt(bx^2+bz^2))
+                                ; momenta
+    'mx'       : result=rho*ux
+    'my'       : result=rho*uy
+    'mz'       : result=rho*uz
+                                ; Boris momenta
+    'mBx'      : result=rho*ux + (bb*ux - (ux*bx+uy*by+uz*bz)*bx)/clight^2
+    'mBy'      : result=rho*uy + (bb*uy - (ux*bx+uy*by+uz*bz)*by)/clight^2
+    'mBz'      : result=rho*uz + (bb*uz - (ux*bx+uy*by+uz*bz)*bz)/clight^2
+                                ; Electric field
+    'Ex'       : result=(by*uz-uy*bz)
+    'Ey'       : result=(bz*ux-uz*bx)
+    'Ez'       : result=(bx*uy-ux*by)
+                                ; Total energy
+    'e'        : result=p/(gamma-1)+0.5*(rho*uu + bb)
+                                ; Alfven speed and Mach number
+    'calfvenx' : result=bx/sqrt(rho)
+    'calfveny' : result=by/sqrt(rho)
+    'calfvenz' : result=bz/sqrt(rho)
+    'calfven'  : result=b /sqrt(rho)
+    'Malfvenx' : result=ux/bx*sqrt(rho)
+    'Malfveny' : result=uy/by*sqrt(rho)
+    'Malfvenz' : result=uz/bz*sqrt(rho)
+    'Malfven'  : result=u /b *sqrt(rho)
+                                ; pressure, plasma beta, temperature, entropy
+    'pbeta'    : result=2*p/bb
+    's'        : result=p/rho^gamma
+    'T'        : result=p/rho
+    'T_SC'     : result=1.211E-8*p/rho ; [K] amu/kB*(dyne/cm^2) / (g/cm^3)
+    'T_IH'     : result=1.211E-8*p/rho ; [K] amu/kB*(dyne/cm^2) / (g/cm^3)
+    'T_GM'     : result=7.243E+7*p/rho ; [K] amu/kB*nPa / (amu/cm^3)
+    'n_IH'     : result=rho/amu ; [/cc] n = rho/amu in CGS
+    'n_SC'     : result=rho/amu ; [/cc] n = rho/amu in CGS
+                                ; sound speed, Mach number
+    'csound'   :result=sqrt(gamma*p/rho)
+    'mach'  :result=u /sqrt(gamma*p/rho)
+    'machx' :result=ux/sqrt(gamma*p/rho)
+    'machy' :result=uy/sqrt(gamma*p/rho)
+    'machz' :result=uz/sqrt(gamma*p/rho)
+                                ; fast and slow speeds and Mach numbers
+    'cfast' :result=sqrt(cc/rho)
+    'cfastx':result=sqrt((cc+sqrt(cc^2-4*gamma*p*bx^2))/2/rho)
+    'cfasty':result=sqrt((cc+sqrt(cc^2-4*gamma*p*by^2))/2/rho)
+    'cfastz':result=sqrt((cc+sqrt(cc^2-4*gamma*p*bz^2))/2/rho)
+    'cslowx':result=sqrt((cc-sqrt(cc^2-4*gamma*p*bx^2))/2/rho)
+    'cslowy':result=sqrt((cc-sqrt(cc^2-4*gamma*p*by^2))/2/rho)
+    'cslowz':result=sqrt((cc-sqrt(cc^2-4*gamma*p*bz^2))/2/rho)
+    'Mfast' :result=sqrt(rho*uu/cc)
+    'Mfastx':result=ux/sqrt((cc+sqrt(cc^2-4*gamma*p*bx^2))/2/rho)
+    'Mfasty':result=uy/sqrt((cc+sqrt(cc^2-4*gamma*p*by^2))/2/rho)
+    'Mfastz':result=uz/sqrt((cc+sqrt(cc^2-4*gamma*p*bz^2))/2/rho)
+    'Mslowx':result=ux/sqrt((cc-sqrt(cc^2-4*gamma*p*bx^2))/2/rho)
+    'Mslowy':result=uy/sqrt((cc-sqrt(cc^2-4*gamma*p*by^2))/2/rho)
+    'Mslowz':result=uz/sqrt((cc-sqrt(cc^2-4*gamma*p*bz^2))/2/rho)
+    'divbxy':result=div(bx,by,x,y)
+    'absdivbxy':result=abs(div(bx,by,x,y))
+    'jz': case ndim of
+        1: result=deriv(x,by)
+        2: result=curl(bx,by,x,y)
+        3: begin
+            print,'Error in funcdef: jz is not implemented for 3D yet'
+            retall
         end
-  endcase
+    endcase
 
-  ; Magnetic vector potential A in slab symmetry
-  ; The density of contourlines is proportional to B
-  'Ax': begin
-     result=dblarr(n1,n2)
-     ; Integrate along the first row
-     for i1=1,n1-1 do result(i1,0)=result(i1-1,0) $
-               +(bz(i1,0)+bz(i1-1,0))*(x(i1,0)-x(i1-1,0))*0.5 $
-               -(by(i1,0)+by(i1-1,0))*(y(i1,0)-y(i1-1,0))*0.5
-     ; Integrate all columns vertically
-     for i2=1,n2-1 do result(*,i2)=result(*,i2-1) $
-               +(bz(*,i2)+bz(*,i2-1))*(x(*,i2)-x(*,i2-1))*0.5 $
-               -(by(*,i2)+by(*,i2-1))*(y(*,i2)-y(*,i2-1))*0.5
-  end
-  'Ay': begin
-     result=dblarr(n1,n2)
-     ; Integrate along the first row
-     for i1=1,n1-1 do result(i1,0)=result(i1-1,0) $
-               -(bz(i1,0)+bz(i1-1,0))*(x(i1,0)-x(i1-1,0))*0.5 $
-               +(bx(i1,0)+bx(i1-1,0))*(y(i1,0)-y(i1-1,0))*0.5
-     ; Integrate all columns vertically
-     for i2=1,n2-1 do result(*,i2)=result(*,i2-1) $
-               -(bz(*,i2)+bz(*,i2-1))*(x(*,i2)-x(*,i2-1))*0.5 $
-               +(bx(*,i2)+bx(*,i2-1))*(y(*,i2)-y(*,i2-1))*0.5
-  end
-  'Az': begin
-     result=dblarr(n1,n2)
-     ; Integrate along the first row
-     for i1=1,n1-1 do result(i1,0)=result(i1-1,0) $
-               +(by(i1,0)+by(i1-1,0))*(x(i1,0)-x(i1-1,0))*0.5 $
-               -(bx(i1,0)+bx(i1-1,0))*(y(i1,0)-y(i1-1,0))*0.5
-     ; Integrate all columns vertically
-     for i2=1,n2-1 do result(*,i2)=result(*,i2-1) $
-               +(by(*,i2)+by(*,i2-1))*(x(*,i2)-x(*,i2-1))*0.5 $
-               -(bx(*,i2)+bx(*,i2-1))*(y(*,i2)-y(*,i2-1))*0.5
-  end
+                                ; Magnetic vector potential A in slab symmetry
+                                ; Density of contourlines is proportional to B
+    'Ax': begin
+        result=dblarr(n1,n2)
+                                ; Integrate along the first row
+        for i1=1,n1-1 do result(i1,0)=result(i1-1,0) $
+          +(bz(i1,0)+bz(i1-1,0))*(x(i1,0)-x(i1-1,0))*0.5 $
+          -(by(i1,0)+by(i1-1,0))*(y(i1,0)-y(i1-1,0))*0.5
+                                ; Integrate all columns vertically
+        for i2=1,n2-1 do result(*,i2)=result(*,i2-1) $
+          +(bz(*,i2)+bz(*,i2-1))*(x(*,i2)-x(*,i2-1))*0.5 $
+          -(by(*,i2)+by(*,i2-1))*(y(*,i2)-y(*,i2-1))*0.5
+    end
+    'Ay': begin
+        result=dblarr(n1,n2)
+                                ; Integrate along the first row
+        for i1=1,n1-1 do result(i1,0)=result(i1-1,0) $
+          -(bz(i1,0)+bz(i1-1,0))*(x(i1,0)-x(i1-1,0))*0.5 $
+          +(bx(i1,0)+bx(i1-1,0))*(y(i1,0)-y(i1-1,0))*0.5
+                                ; Integrate all columns vertically
+        for i2=1,n2-1 do result(*,i2)=result(*,i2-1) $
+          -(bz(*,i2)+bz(*,i2-1))*(x(*,i2)-x(*,i2-1))*0.5 $
+          +(bx(*,i2)+bx(*,i2-1))*(y(*,i2)-y(*,i2-1))*0.5
+    end
+    'Az': begin
+        result=dblarr(n1,n2)
+                                ; Integrate along the first row
+        for i1=1,n1-1 do result(i1,0)=result(i1-1,0) $
+          +(by(i1,0)+by(i1-1,0))*(x(i1,0)-x(i1-1,0))*0.5 $
+          -(bx(i1,0)+bx(i1-1,0))*(y(i1,0)-y(i1-1,0))*0.5
+                                ; Integrate all columns vertically
+        for i2=1,n2-1 do result(*,i2)=result(*,i2-1) $
+          +(by(*,i2)+by(*,i2-1))*(x(*,i2)-x(*,i2-1))*0.5 $
+          -(bx(*,i2)+bx(*,i2-1))*(y(*,i2)-y(*,i2-1))*0.5
+    end
 
-  ; Some functions used in specific problems
+                                ; If "f" has not matched any function,
+                                ; try evaluating it as an expression
+    else:begin
+        if sign eq -1 then begin
+            f='-'+f
+            sign=1
+        endif
 
-  'e1':result=p/(gamma-1)+0.5*(rho*uu+$
-       w(*,*,*,10)^2+w(*,*,*,11)^2+w(*,*,*,12)^2)
+                                ; Create * or *,* or *,*,* for 
+                                ; {var} --> w(*,*,iVar) replacements
+        case nDim of
+            1: Stars = '*,'
+            2: Stars = '*,*,'
+            3: Stars = '*,*,*,'
+        endcase
 
-  'e1B':result=p/(gamma-1)+0.5*(rho*uu + $
-       w(*,*,*,10)^2+w(*,*,*,11)^2+w(*,*,*,12)^2 + $
-       ((by*uz-uy*bz)^2+(bz*ux-uz*bx)^2+(bx*uy-ux*by)^2)/clight^2)
+                                ; replace {name} with appropriate variable
+        while strpos(f,'{') ge 0 do begin
+            iStart = strpos(f,'{')
+            iEnd   = strpos(f,'}')
+            Name   = strmid(f,iStart+1,iEnd-iStart-1)
+            iVar   = where(variables eq Name)
+            iVar   = iVar(0)
+            if iVar lt 0 then begin
+                print,'Error in funcdef: cannot find variable "{',Name, $
+                  '}" among variables'
+                print,variables
+                retall
+            endif
+            fStart = strmid(f,0,iStart)
+            fEnd   = strmid(f,iEnd+1,strlen(f)-iEnd-1)
+            if iVar lt ndim then $
+              f = fStart + 'xx(' + Stars + strtrim(iVar,2) + ')' + fEnd $
+            else if iVar lt ndim+nw then $
+              f = fStart + 'w(' + Stars + strtrim(iVar-nDim,2) + ')' + fEnd $
+            else $
+              f = fStart + 'eqpar(' + strtrim(iVar-nDim-nW,2) + ')' + fEnd
 
-  'bb1':result=w(*,*,*,10)^2+w(*,*,*,11)^2+w(*,*,*,12)^2
-
-  'Jy_cut': begin
-      result=diff2(2,w(*,*,9),z)-diff2(1,w(*,*,11),x)
-      loc=where(x^2+z^2 lt 16.,count)
-      if count gt 0 then result(loc)=0.0
-  end
-
-  'logrho':result=alog10(rho)
-
-  ;If "f" has not matched any function yet, try evaluating it as an expression
-  else:begin
-      if sign eq -1 then begin
-          f='-'+f
-          sign=1
-      endif
-
-      ; Create * or *,* or *,*,* for {var} --> w(*,*,iVar) replacements
-      case nDim of
-          1: Stars = '*,'
-          2: Stars = '*,*,'
-          3: Stars = '*,*,*,'
-      endcase
-
-      ; replace {name} with appropriate variable
-      while strpos(f,'{') ge 0 do begin
-          iStart = strpos(f,'{')
-          iEnd   = strpos(f,'}')
-          Name   = strmid(f,iStart+1,iEnd-iStart-1)
-          iVar   = where(variables eq Name)
-          iVar   = iVar(0)
-          if iVar lt 0 then begin
-              print,'Error in funcdef: cannot find variable "{',Name, $
-                '}" among variables'
-              print,variables
-              retall
-          endif
-          fStart = strmid(f,0,iStart)
-          fEnd   = strmid(f,iEnd+1,strlen(f)-iEnd-1)
-          if iVar lt ndim then $
-            f = fStart + 'xx(' + Stars + strtrim(iVar,2) + ')' + fEnd $
-          else if iVar lt ndim+nw then $
-            f = fStart + 'w(' + Stars + strtrim(iVar-nDim,2) + ')' + fEnd $
-          else $
-            f = fStart + 'eqpar(' + strtrim(iVar-nDim-nW,2) + ')' + fEnd
-
-      endwhile
+        endwhile
 
 
-      if not execute('result='+f) then begin
-          print,'Error in funcdef: cannot evaluate function=',func
-          retall
-      endif
-  end
+        if not execute('result='+f) then begin
+            print,'Error in funcdef: cannot evaluate function=',func
+            retall
+        endif
+    end
 endcase
 
 if n_elements(result) gt 0 then begin
-    ; exclude r < rcut
+                                ; exclude r < rcut
     loc=where(r le rcut, count) 
     if count gt 0 then result(loc)=min(result)
 
     return,sign*result
 endif else begin
-   print,'Error in funcdef: function=',func,' was not calculated ?!'
-   retall
+    print,'Error in funcdef: function=',func,' was not calculated ?!'
+    retall
 endelse
 
 end
