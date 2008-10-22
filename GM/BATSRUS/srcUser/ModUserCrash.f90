@@ -7,15 +7,13 @@ module ModUser
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_update_states,              &
        IMPLEMENTED2 => user_calc_sources,               &
-       IMPLEMENTED3 => user_initial_perturbation,       &
        IMPLEMENTED4 => user_read_inputs,                &
        IMPLEMENTED5 => user_set_plot_var,               &
        IMPLEMENTED6 => user_init_session,               &
        IMPLEMENTED7 => user_set_ics
 
   use ModMain, ONLY: iTest, jTest, kTest, BlkTest, ProcTest, VarTest, &
-       UseUserInitSession, UseUserIcs, UseUserPerturbation, &
-       UseUserSource, UseUserUpdateStates
+       UseUserInitSession, UseUserIcs, UseUserSource, UseUserUpdateStates
 
   include 'user_module.h' !list of public methods
 
@@ -24,11 +22,16 @@ module ModUser
        NameUserModule = 'HYDRO + IONIZATION EQUILIBRIUM + LEVEL SETS'
 
   ! Wall parameters
-  real :: rInnerTube =  287.5    ! inner radius
-  real :: rOuterTube =  312.5    ! outer radius
-  real :: RhoDimTube = 1430.0    ! density
-  real :: RhoDimOutside = 6.5    ! density of Xe outside tube
-  real :: pDimOutside   = 1.1e5  ! pressure of Xe outside tube
+  real :: rInnerTube =  287.5    ! inner radius [micron]
+  real :: rOuterTube =  312.5    ! outer radius [micron]
+  real :: RhoDimTube = 1430.0    ! density      [kg/m3]
+  real :: RhoDimOutside = 6.5    ! density  of Xe outside tube [kg/m3]
+  real :: pDimOutside   = 1.1e5  ! pressure of Xe outside tube [Pa]
+
+  ! Description of gold washer around the tube
+  logical :: UseGold = .false.
+  real :: WidthGold  = 50.0      ! width   [micron]
+  real :: RhoDimGold = 20000.0   ! density [kg/m3]
 
   ! True if the plastic tube extends all the way to X=0, and Be is inside it
   logical :: IsFullTube = .false.
@@ -66,7 +69,8 @@ contains
 
     UseUserUpdateStates = .true. ! for internal energy and cylindrical symm.
     UseUserInitSession  = .true. ! to set units for level set variables
-    UseUserPerturbation = .true. ! to initialize the level set variables
+    UseUserIcs          = .true. ! to read in Hyades file
+    !                              and initialize the level set variables
 
     do
        if(.not.read_line() ) EXIT
@@ -75,7 +79,6 @@ contains
        case("#HYADES")
           call read_var('UseHyadesFile', UseHyadesFile)
           call read_var('NameHyadesFile',NameHyadesFile)
-          UseUserIcs = .true. ! to read in the Hyades file
        case("#TUBE")
           call read_var('IsFullTube', IsFullTube)
           call read_var('rInnerTube', rInnerTube)
@@ -83,7 +86,11 @@ contains
           call read_var('RhoDimTube', RhoDimTube)
           call read_var('RhoDimOutside', RhoDimOutside)
           call read_var('pDimOutside',   pDimOutside)
-       case('#MIXEDCELL')
+       case("#GOLD")
+          call read_var('UseGold',    UseGold)
+          call read_var('WidthGold',  WidthGold)
+          call read_var('RhoDimGold', RhoDimGold)
+       case("#MIXEDCELL")
           call read_var('UseMixedCell', UseMixedCell)
           if(UseMixedCell)call read_var('MixLimit', MixLimit)
        case("#CYLINDRICAL")
@@ -100,63 +107,214 @@ contains
   !============================================================================
   subroutine user_set_ics
 
-    use ModAdvance,  ONLY: State_VGB
-    use ModGeometry, ONLY: x_Blk
-    use ModMain,     ONLY: GlobalBlk, nI, nJ, nK
-    use ModVarIndexes
+    use ModProcMH,  ONLY: iProc
+    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, nBlock, UnusedBlk
+    use ModPhysics, ONLY: ShockPosition, ShockSlope, &
+         Io2No_V, No2Si_V, Si2No_V, UnitRho_, UnitP_, UnitEnergyDens_, &
+         inv_gm1
+    use ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
+         ExtraEint_, LevelBe_, LevelXe_, LevelPl_
+    use ModGeometry,ONLY: x_BLK, y_BLK, z_BLK, y2
+    use ModEnergy,  ONLY: calc_energy_ghost
+    use ModEos,     ONLY: pressure_to_eint, Be_, Xe_
+    use ModPolyimide, ONLY: cAtomicMass_I, cAPolyimide
 
-    integer :: iBlock, i, j, k, iCell
-    real    :: x, Weight1, Weight2
+    real    :: x, y, xBe, DxBe, xTube, DyPl, pSi, RhoSi, EinternalSi
+    real    :: DxyGold = -1.0
+    logical :: IsError
+
+    integer :: iBlock, i, j, k, iCell, iMaterial
+    real    :: Weight1, Weight2
 
     character(len=*), parameter :: NameSub = "user_set_ics"
     !------------------------------------------------------------------------
 
-    if(.not.UseHyadesFile)call stop_mpi(NameSub // &
-         " UseHyadesFile should be set to true with #HYADES commad")
-
-    if(.not.allocated(StateHyades_VC)) call read_hyades_file
-
     iBlock = GlobalBlk
 
-    do i=-1,nI+2
-       ! Find the Hyades points around this position
-       x = x_Blk(i,1,1,iBlock)
+    if(UseHyadesFile)then
+       ! Read in and interpolate Hyades output
+       if(.not.allocated(StateHyades_VC)) call read_hyades_file
 
-       do iCell=1, nCellHyades
-          if(xHyades_C(iCell) >= x) EXIT
+       do i=-1,nI+2
+          ! Find the Hyades points around this position
+          x = x_Blk(i,1,1,iBlock)
+
+          do iCell=1, nCellHyades
+             if(xHyades_C(iCell) >= x) EXIT
+          end do
+          if (iCell == 1) call stop_mpi(NameSub // &
+               " Hyades solution does not cover the left boundary")
+
+          if(iCell > nCellHyades)then
+             ! Cell is beyond the last point of Hyades output: use last cell
+             iCell   = nCellHyades
+             Weight1 = 0.0
+             Weight2 = 1.0
+          else
+             ! Assign weights for linear interpolation between iCell-1, iCell
+             Weight1 = (xHyades_C(iCell) - x) &
+                  /    (xHyades_C(iCell) - xHyades_C(iCell-1))
+             Weight2 = 1.0 - Weight1
+          end if
+
+          do k=-1,nk+2; do j=-1,nJ+2
+             ! Interpolate density, momentum and pressure
+
+             State_VGB(Rho_,i,j,k,iBlock) = &
+                  ( Weight1*StateHyades_VC(iRhoHyades, iCell-1) &
+                  + Weight2*StateHyades_VC(iRhoHyades, iCell) )
+
+             State_VGB(RhoUx_,i,j,k,iBlock) =  State_VGB(Rho_,i,j,k,iBlock) * &
+                  ( Weight1*StateHyades_VC(iUxHyades, iCell-1) &
+                  + Weight2*StateHyades_VC(iUxHyades, iCell) )
+
+             State_VGB(p_,i,j,k,iBlock) = &
+                  ( Weight1*StateHyades_VC(iPHyades, iCell-1) &
+                  + Weight2*StateHyades_VC(iPHyades, iCell) )
+
+             ! Set transverse momentum to zero
+             State_VGB(RhoUy_:RhoUz_,i,j,k,iBlock) = 0.0
+
+          end do; end do
        end do
-       if (iCell == 1) call stop_mpi(NameSub // &
-            " Hyades solution does not cover the left boundary")
+    end if
 
-       if(iCell > nCellHyades)then
-          ! Cell is beyond the last point of Hyades output: use last cell
-          iCell   = nCellHyades
-          Weight1 = 0.0
-          Weight2 = 1.0
+    ! Set level set functions, internal energy, and other values
+    do k=-1, nK+2; do j=-1, nJ+2; do i=-1, nI+2 
+
+       x = x_BLK(i,j,k,iBlock)
+       y = y_BLK(i,j,k,iBlock)
+
+       if(UseHyadesFile)then
+          ! Be - Xe interface is given by Hyades file
+          xBe = xBeHyades
        else
-          ! Assign weights for linear interpolation between iCell-1 and iCell
-          Weight1 = (xHyades_C(iCell) - x) &
-               /    (xHyades_C(iCell) - xHyades_C(iCell-1))
-          Weight2 = 1.0 - Weight1
+          ! Be - Xe interface is at the shock defined by #SHOCKPOSITION
+          xBe = ShockPosition - ShockSlope*y
        end if
 
-       do k=-1,nk+2; do j=-1,nJ+2
-          ! Interpolate density, velocity and pressure
+       ! Set the x coordinate for the left edge of the plastic tube
+       if(IsFullTube)then
+          xTube = 0.0
+       else
+          xTube = xBe
+       end if
 
-          State_VGB(Rho_,i,j,k,iBlock) = &
-               ( Weight1*StateHyades_VC(iRhoHyades, iCell-1) &
-               + Weight2*StateHyades_VC(iRhoHyades, iCell) )
+       ! Distance from Be disk: positive for x < xBe
+       DxBe = xBe - x
 
-          State_VGB(RhoUx_,i,j,k,iBlock) =  State_VGB(Rho_,i,j,k,iBlock) * &
-               ( Weight1*StateHyades_VC(iUxHyades, iCell-1) &
-               + Weight2*StateHyades_VC(iUxHyades, iCell) )
+       ! Distance from plastic wall: 
+       !     positive for rInnerTube < |y| < rOuterTube only
+       DyPl = min(abs(y) - rInnerTube, rOuterTube - abs(y))
 
-          State_VGB(p_,i,j,k,iBlock) = &
-               ( Weight1*StateHyades_VC(iPHyades, iCell-1) &
-               + Weight2*StateHyades_VC(iPHyades, iCell) )
+       ! Distance from gold washer: positive for xTube < x < xTube + WidthGold
 
-       end do; end do
-    end do
+       if(UseGold) DxyGold = &
+            min( x - xTube, xTube + WidthGold - x, abs(y) - rOuterTube )
+
+       ! Set plastic tube state
+       if(x >= xTube .and. DyPl > 0.0)then
+          ! Use the density and pressure given by the #TUBE command
+          State_VGB(Rho_,i,j,k,iBlock) = RhoDimTube*Io2No_V(UnitRho_)
+          State_VGB(p_  ,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
+          ! Assume that plastic wall is at rest
+          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
+       end if
+
+       ! Set pressure and speed outside the tube
+       if(abs(y) > rOuterTube) then
+          State_VGB(p_,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
+          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
+       end if
+
+       ! Set density outside the tube
+       if(x >= xTube .and. abs(y) > rOuterTube) &
+            State_VGB(Rho_,i,j,k,iBlock) = RhoDimOutside*Io2No_V(UnitRho_)
+       
+       ! Set density of gold washer (if present)
+       if(DxyGold > 0.0) &
+            State_VGB(Rho_,i,j,k,iBlock) = RhoDimGold*Io2No_V(UnitRho_)
+
+       if(IsFullTube)then
+          ! Plastic is between rInnerTube and rOuterTube
+          State_VGB(LevelPl_,i,j,k,iBlock) = DyPl
+          ! Berylium is inside plastic tube and left of Be/Xe interface
+          State_VGB(LevelBe_,i,j,k,iBlock) = min(DxBe, rInnerTube - abs(y))
+          ! Xenon is right of xBe, inside rInnerTube and outside rOuterTube
+          State_VGB(LevelXe_,i,j,k,iBlock) = &
+               max(abs(y) - rOuterTube, min( -DxBe, rInnerTube - abs(y)))
+       else
+          ! Berylium is everywhere left to the end of the plastic tube
+          State_VGB(LevelBe_,i,j,k,iBlock) = DxBe
+          ! Plastic is right of xBe and between rInnerTube and rOuterTube
+          State_VGB(LevelPl_,i,j,k,iBlock) = min( -DxBe, DyPl)
+          ! Xenon is right of xBe, inside rInnerTube and outside rOuterTube
+          State_VGB(LevelXe_,i,j,k,iBlock) = min( -DxBe, -DyPl)
+       end if
+
+       ! Use plastic to represent gold
+       !if(UseGold) then
+       !   State_VGB(LevelPl_,i,j,k,iBlock) = &
+       !        max(State_VGB(LevelPl_,i,j,k,iBlock), DxyGold)
+       !   State_VGB(LevelXe_,i,k,k,iBlock) = &
+       !        min(State_VGB(LevelXe_,i,j,k,iBlock), -DxyGold)
+       !end if
+
+       if(UseMixedCell)then
+          ! Use atomic concentrations instead of smooth level set functions
+
+          State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) = &
+               max(0.0, State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock))
+
+          if( State_VGB(LevelXe_,i,j,k,iBlock) > 0.0) &
+               State_VGB(LevelXe_,i,j,k,iBlock) = 1.0 / cAtomicMass_I(54)
+
+          if( State_VGB(LevelBe_,i,j,k,iBlock) > 0.0) &
+               State_VGB(LevelBe_,i,j,k,iBlock) = 1.0 / cAtomicMass_I(4)
+
+          if( State_VGB(LevelPl_,i,j,k,iBlock) > 0.0) &
+               State_VGB(LevelPl_,i,j,k,iBlock) = 1.0 / cAPolyimide
+       end if
+
+       ! Multiply level set functions with density unless the 
+       ! non-conservative approach is used
+       if(.not.UseUserSource) &
+            State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) = &
+            State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) &
+            *State_VGB(Rho_,i,j,k,iBlock)
+
+       ! Calculate internal energy for Xe/Be from pressure and density
+       if(  State_VGB(Rho_,i,j,k,iBlock) < 1500.0*Io2No_V(UnitRho_) .and. &
+           (State_VGB(LevelXe_,i,j,k,iBlock) > 0.0 .or. &
+            State_VGB(LevelBe_,i,j,k,iBlock) > 0.0)) then 
+
+          RhoSi = State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_)
+          pSi   = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
+          if(State_VGB(LevelBe_,i,j,k,iBlock) > 0.0)then
+             iMaterial = Be_
+          else
+             iMaterial = Xe_
+          end if
+
+          call pressure_to_eint(pSi, RhoSi, iMaterial, &
+               uDensityTotalOut=EinternalSi, IsError=IsError)
+
+          if(IsError)then
+             write(*,*) NameSub,' i,j,k,iBlock,iProc=',i,j,k,iBlock,iProc
+             write(*,*) NameSub,' x,y,z=',x_BLK(i,j,k,iBlock), &
+                  y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock)
+             write(*,*) NameSub,' pSI, RhoSi, Material=', pSi, RhoSi, Be_
+             call CON_stop(NameSub//': returned error from eos function')
+          end if
+
+          State_VGB(ExtraEInt_,i,j,k,iBlock) = &
+               EInternalSi*Si2No_V(UnitEnergyDens_) &
+               - inv_gm1*State_VGB(P_,i,j,k,iBlock)
+       else
+          State_VGB(ExtraEInt_,i,j,k,iBlock) = 0.0
+       end if
+
+    end do; end do; end do
 
   end subroutine user_set_ics
 
@@ -374,152 +532,6 @@ contains
   end subroutine user_calc_sources
 
   !===========================================================================
-
-  subroutine user_initial_perturbation
-
-    use ModProcMH,  ONLY: iProc
-    use ModMain,    ONLY: nI, nJ, nK, nBlock, UnusedBlk
-    use ModPhysics, ONLY: ShockPosition, ShockSlope, &
-         Io2No_V, No2Si_V, Si2No_V, UnitRho_, UnitP_, UnitEnergyDens_, &
-         inv_gm1
-    use ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, p_, ExtraEint_, &
-         LevelBe_, LevelXe_, LevelPl_
-    use ModGeometry,ONLY: x_BLK, y_BLK, z_BLK, y2
-    use ModEnergy,  ONLY: calc_energy_ghost
-    use ModEos,     ONLY: pressure_to_eint, Be_, Xe_
-    use ModPolyimide, ONLY: cAtomicMass_I, cAPolyimide
-
-    integer :: i, j, k, iBlock, iMaterial
-    real    :: x, y, xBe, DxBe, DyPl, pSi, RhoSi, EinternalSi
-    logical :: IsError
-
-    character (len=*), parameter :: NameSub = 'user_initial_perturbation'
-    !-------------------------------------------------------------------
-  
-    do iBlock = 1, nBlock
-
-       if (unusedBLK(iBlock)) CYCLE
-
-       do k=-1, nK+2; do j=-1, nJ+2; do i=-1, nI+2 
-
-          x = x_BLK(i,j,k,iBlock)
-          y = y_BLK(i,j,k,iBlock)
-
-          if(UseHyadesFile)then
-             ! Be - Xe interface is given by Hyades file
-             xBe = xBeHyades
-          else
-             ! Be - Xe interface is at the shock defined by #SHOCKPOSITION
-             xBe = ShockPosition - ShockSlope*y
-          end if
-
-          ! Distance from Be disk: positive for x < xBe
-          DxBe = xBe - x
-
-          ! Distance from plastic wall: 
-          !     positive for rInnerTube < |y| < rOuterTube only
-          DyPl = min(abs(y) - rInnerTube, rOuterTube - abs(y))
-
-          ! Set plastic wall state
-          if((IsFullTube .or. DxBe < 0.0) .and. DyPl > 0.0)then
-             ! Use the density and pressure given by the #TUBE command
-             State_VGB(Rho_,i,j,k,iBlock) = RhoDimTube*Io2No_V(UnitRho_)
-             State_VGB(p_  ,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
-             ! Assume that plastic wall is at rest
-             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
-          end if
-
-          ! Set Xe/Be pressure and speed outside the tube
-          if(abs(y) > rOuterTube) then
-             State_VGB(p_,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
-             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
-          end if
-
-          ! Set Xe density outside the tube
-          if((IsFullTube .or. DxBe < 0.0) .and. abs(y) > rOuterTube) &
-               State_VGB(Rho_,i,j,k,iBlock) = &
-               RhoDimOutside*Io2No_V(UnitRho_)
-
-          if(IsFullTube)then
-             ! Plastic is between rInnerTube and rOuterTube
-             State_VGB(LevelPl_,i,j,k,iBlock) = DyPl
-             ! Berylium is inside plastic tube and left of Be/Xe interface
-             State_VGB(LevelBe_,i,j,k,iBlock) = min(DxBe, rInnerTube - abs(y))
-             ! Xenon is right of xBe, inside rInnerTube and outside rOuterTube
-             State_VGB(LevelXe_,i,j,k,iBlock) = &
-                  max(abs(y) - rOuterTube, min( -DxBe, rInnerTube - abs(y)))
-          else
-             ! Berylium is everywhere left to the end of the plastic tube
-             State_VGB(LevelBe_,i,j,k,iBlock) = DxBe
-             ! Plastic is right of xBe and between rInnerTube and rOuterTube
-             State_VGB(LevelPl_,i,j,k,iBlock) = min( -DxBe, DyPl)
-             ! Xenon is right of xBe, inside rInnerTube and outside rOuterTube
-             State_VGB(LevelXe_,i,j,k,iBlock) = min( -DxBe, -DyPl)
-          end if
-
-
-          if(UseMixedCell)then
-             ! Use atomic concentrations instead of level set functions
-
-             State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) = &
-                  max(0.0, State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock))
-
-             if( State_VGB(LevelXe_,i,j,k,iBlock) > 0.0) &
-                  State_VGB(LevelXe_,i,j,k,iBlock) = 1.0 / cAtomicMass_I(54)
-             
-             if( State_VGB(LevelBe_,i,j,k,iBlock) > 0.0) &
-                  State_VGB(LevelBe_,i,j,k,iBlock) = 1.0 / cAtomicMass_I(4)
-             
-             if( State_VGB(LevelPl_,i,j,k,iBlock) > 0.0) &
-                  State_VGB(LevelPl_,i,j,k,iBlock) = 1.0 / cAPolyimide
-          end if
-
-          ! Multiply level set functions with density unless the 
-          ! non-conservative approach is used
-          if(.not.UseUserSource) &
-               State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) = &
-               State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) &
-               *State_VGB(Rho_,i,j,k,iBlock)
-
-          ! Calculate internal energy for Xe/Be from pressure and density
-          if(State_VGB(LevelBe_,i,j,k,iBlock) > 0.0 .or. &
-             State_VGB(LevelXe_,i,j,k,iBlock) > 0.0 ) then 
-
-             RhoSi = State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_)
-             pSi   = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
-             if(State_VGB(LevelBe_,i,j,k,iBlock) > 0.0)then
-                iMaterial = Be_
-             else
-                iMaterial = Xe_
-             end if
-
-             call pressure_to_eint(pSi, RhoSi, iMaterial, &
-                  uDensityTotalOut=EinternalSi, IsError=IsError)
-
-             if(IsError)then
-                write(*,*) NameSub,' i,j,k,iBlock,iProc=',i,j,k,iBlock,iProc
-                write(*,*) NameSub,' x,y,z=',x_BLK(i,j,k,iBlock), &
-                     y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock)
-                write(*,*) NameSub,' pSI, RhoSi, Material=', pSi, RhoSi, Be_
-                call CON_stop(NameSub//': returned error from eos function')
-             end if
-
-             State_VGB(ExtraEInt_,i,j,k,iBlock) = &
-                  EInternalSi*Si2No_V(UnitEnergyDens_) &
-                  - inv_gm1*State_VGB(P_,i,j,k,iBlock)
-          else
-             State_VGB(ExtraEInt_,i,j,k,iBlock) = 0.0
-          end if
-
-       end do; end do; end do
-
-       call calc_energy_ghost(iBlock)
-
-    end do
-
-  end subroutine user_initial_perturbation
-
-  !====================================================================
 
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
