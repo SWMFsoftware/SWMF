@@ -88,8 +88,8 @@ SNAPSHOT:{
 	print "Save into plot_snapshot${iPlot}_iAlt${iAlt}.dat\n" if $Verbose;
 	
 	# write Header into file
-	$variables=~s/r/X/;
-	$variables=~s/Lat/Y/;
+	$variables=~s/Lat/X/;
+	$variables=~s/r/Y/;
 	$variables=~s/Lon/Z/;
 	
 	my $header = "$variables";
@@ -117,7 +117,7 @@ SNAPSHOT:{
 	    my $theta = ( 90.0 - $linesplit[2] ) * $pi/180.0;
 	    my $phi = $linesplit[3] * $pi/180.0;
 	    my $x = $r*sin($theta)*cos($phi);
-	    my $y = $r*sin($theta)*sin($phi);
+	    my $y = -1.0*$r*sin($theta)*sin($phi); #mult y by -1 for later rotation
 	    my $z = $r*cos($theta);
 	    
 	    $x=sprintf("%.10f",$x);
@@ -129,8 +129,10 @@ SNAPSHOT:{
 	    $z=$z.'E+00';
 
 	    my $nLineElements=scalar@linesplit;
-	    $linesplit[1]=$x;
-	    $linesplit[2]=$y;
+	    #Interchange x and y so as to rotate resulting idl plot to have 
+	    #noon point up.
+	    $linesplit[2]=$x;
+	    $linesplit[1]=$y;
 	    $linesplit[3]=$z;
 	    if ($linesplit[1]>=0){
 		$line="  ";
