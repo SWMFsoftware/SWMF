@@ -84,7 +84,7 @@ subroutine advance_vertical_1stage( &
   use ModPlanet
   use ModSizeGitm
   use ModVertical, only : &
-       Heating, KappaNS, KappaTemp, Centrifugal, Coriolis, &
+       Heating, KappaNS, Centrifugal, Coriolis, &
        MeanMajorMass_1d, Gamma_1d, InvRadialDistance_C, &
        Gravity_G, Altitude_G
   use ModTime
