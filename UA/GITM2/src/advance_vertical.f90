@@ -8,7 +8,6 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   use ModVertical, ONLY: &
        LogRho, &
        cMax1      => cMax,&
-       KappaTemp1 => KappaTemp, &
        LogNS1     => LogNS, &
        Heating, &
        Vel_GD,  &
@@ -27,8 +26,9 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   integer, intent(in) :: iLon, iLat, iBlock
 
   integer :: iIon, iSpecies, iAlt, iDim
+  real    :: KappaTemp1(0:nAlts+1)
 
-!  KappaTemp1 = KappaTemp(iLon,iLat,:,iBlock)
+  KappaTemp1 = KappaTemp(iLon,iLat,:,iBlock)
 
   EddyCoef_1d(1:nAlts) = KappaEddyDiffusion(iLon,iLat,1:nAlts,iBlock)
 
