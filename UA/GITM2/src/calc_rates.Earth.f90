@@ -92,12 +92,12 @@ subroutine calc_rates(iBlock)
           gamma(1:nLons,1:nLats,iAlt,iBlock) *2.0/ &   
           NDensity(1:nLons,1:nLats,iAlt,iBlock) + 1 
 
-     if (Is1D .and. UseKappa1DCorrection) then
-        KappaTemp(:,:,iAlt,iBlock) = KappaTemp0 * &
-             (Temperature(1:nLons,1:nLats,iAlt,iBlock) * &
-             TempUnit(1:nLons,1:nLats,iAlt) / &
-             Kappa1DCorrectionFactor)**Kappa1dCorrectionPower
-     else
+!     if (Is1D .and. UseKappa1DCorrection) then
+!        KappaTemp(:,:,iAlt,iBlock) = KappaTemp0 * &
+!             (Temperature(1:nLons,1:nLats,iAlt,iBlock) * &
+!             TempUnit(1:nLons,1:nLats,iAlt) / &
+!             Kappa1DCorrectionFactor)**Kappa1dCorrectionPower
+!     else
          KappaTemp(:,:,iAlt,iBlock) = &
              (NDensityS(1:nLons,1:nLats,iAlt,iO2_,iBlock) / &
              NDensity(1:nLons,1:nLats,iAlt,iBlock) + &
@@ -128,20 +128,12 @@ subroutine calc_rates(iBlock)
 
      do iLat = 1, nLats
         do iLon = 1, nLons
-           if (pressure(iLon,iLat,iAlt,iBlock) > EddyDiffusionPressure0) then
+
               KappaTemp(iLon,iLat,iAlt,iBlock) = &
                    KappaTemp(iLon,iLat,iAlt,iBlock) + &
-                   EddyDiffusionCoef * cp(iLon,iLat,iAlt,iBlock) * &
+                   KappaEddyDiffusion(iLon,iLat,iAlt,iBlock) * cp(iLon,iLat,iAlt,iBlock) * &
                    Rho(iLon,iLat,iAlt,iBlock)
-           else if (pressure(iLon,iLat,iAlt,iBlock) > &
-                    EddyDiffusionPressure1) then
-              KappaTemp(iLon,iLat,iAlt,iBlock) = &
-                   KappaTemp(iLon,iLat,iAlt,iBlock) + &
-                   EddyDiffusionCoef * cp(iLon,iLat,iAlt,iBlock) * &
-                   Rho(iLon,iLat,iAlt,iBlock) * &
-                   (pressure(iLon,iLat,iAlt,iBlock)-EddyDiffusionPressure1)/ &
-                   (EddyDiffusionPressure0 - EddyDiffusionPressure1)
-           endif
+
         enddo
      enddo
 
