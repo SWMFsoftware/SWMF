@@ -8,6 +8,7 @@ my $Concat  = ($c or $cat and not $Repeat);
 my $MakeMovie = ($m or $movie or $M or $MOVIE);
 my $KeepMovieOnly = ($M or $MOVIE);
 my $Rsync   = ($rsync or $sync);
+my $AllParam = ($param or $allparam);
 
 use strict;
 
@@ -137,9 +138,11 @@ REPEAT:{
 	    $command .= $exclude if $Dir =~ /GM|SC|IH/;
 	    &shell("$command $PlotDir/ $Rsync/$Dir") if -d $PlotDir;
 	}
-	&shell("$rsync $ParamIn $Rsync/")      if -f $ParamIn;
-	&shell("$rsync runlog $Rsync/")        if -f "runlog";
-	&shell("$rsync runlog_[0-9]* $Rsync/") if glob("runlog_[0-9]*");
+	&shell("$rsync $ParamIn $Rsync/")          if -f $ParamIn;
+	&shell("$rsync PARAM.* LAYOUT.* $Rsync/")  if $AllParam;
+	&shell("$rsync runlog $Rsync/")            if -f "runlog";
+	&shell("$rsync runlog_[0-9]* $Rsync/")     if glob("runlog_[0-9]*");
+	&shell("$rsync log.[0-9]* $Rsync/")        if glob("log.[0-9]*");
     }
 
     if($Repeat){
@@ -307,6 +310,8 @@ Usage:
 
    -r=REPEAT   Repeat post processing every REPEAT seconds.
                Cannot be used with the DIR argument.
+
+   -param      Will rsync PARAM.* and LAYOUT.* to rsync directory
 
    -rsync=TARGET Copy processed plot files into an other directory 
                (possibly on another machine) using rsync. The TARGET
