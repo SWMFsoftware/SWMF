@@ -44,103 +44,99 @@ contains
 
   subroutine find_triangle(&
        nPoint, nTriangle, CoordIn_D, XyNode_DI, iNodeTriangle_II,&
-       iNode1, iNode2,iNode3,IsTriangleFound)
+       iNode1, iNode2, iNode3, Weight1, Weight2, Weight3, IsTriangleFound)
 
-    ! Determine the triangle containing a given point. 
-    ! If point is not contained in any triangle, then return triangle 
-    ! closest to point.
+    ! Determine the triangle containing a given point. Calculate the
+    ! weights for the 3 nodes if the weights are present.
+    ! If the point is not contained in any triangle, then either
+    ! return IsTriangleFound false if the argument is present,
+    ! or the closest node as iNode1 (and Weight1 = 1.0 if present)
 
     ! created by Alex Glocer, 01/2007
-
-    integer, parameter:: x_=1, y_=2
+    ! extended with weights by G. Toth, 10/2008
 
     integer,intent(in)   :: nPoint,nTriangle
     real,   intent(in)   :: CoordIN_D(2)
     real,   intent(in)   :: XyNode_DI(2,nPoint)
     integer,intent(in)   :: iNodeTriangle_II(3,nTriangle)
-    integer,intent(out)  :: iNode1,iNode2,iNode3
-    logical,intent(out)  :: IsTriangleFound
 
-    real             :: x1,x2,x3, y1,y2,y3
-    real             :: FAB, FCA, FBC
-    real             :: Distance, DistanceMin
-    integer          :: iTriangle, iTriangleMin
+    integer,intent(out)  :: iNode1, iNode2, iNode3
+
+    real,    optional, intent(out):: Weight1, Weight2, Weight3
+    logical, optional, intent(out):: IsTriangleFound
+
+    integer, parameter:: x_=1, y_=2
+
+    real    :: x1, x2, x3, y1, y2, y3
+    real    :: Area1, Area2, Area3, AreaSum
+    integer :: iTriangle, iLoc_I(1)
     !--------------------------------------------------------------------------
 
-    IsTriangleFound=.false.
+    do iTriangle = 1, nTriangle 
 
-    do iTriangle=1,nTriangle 
+       iNode1 = iNodeTriangle_II(1,iTriangle)
+       iNode2 = iNodeTriangle_II(2,iTriangle)
+       iNode3 = iNodeTriangle_II(3,iTriangle)
 
-       iNode1=iNodeTriangle_II(1,iTriangle)
-       iNode2=iNodeTriangle_II(2,iTriangle)
-       iNode3=iNodeTriangle_II(3,iTriangle)
+       ! fill in x,y pairs for current triangle nodes
+       x1 = XyNode_DI(1,iNode1)
+       y1 = XyNode_DI(2,iNode1)
 
-       !fill in x,y pairs for current triangle nodes
-       x1=XyNode_DI(1,iNode1)
-       y1=XyNode_DI(2,iNode1)
+       x2 = XyNode_DI(1,iNode2)
+       y2 = XyNode_DI(2,iNode2)
 
-       x2=XyNode_DI(1,iNode2)
-       y2=XyNode_DI(2,iNode2)
+       x3 = XyNode_DI(1,iNode3)
+       y3 = XyNode_DI(2,iNode3)
 
-       x3=XyNode_DI(1,iNode3)
-       y3=XyNode_DI(2,iNode3)
+       ! Check if triangle contains point or if point lies on edge.
+       ! Area1 is twice the area of the triangle formed by Node2, Node3 
+       ! and the point. Area1 is zero if the point lies on the Node2-Node3
+       ! edge and positive if point lies to the left of the Node2-Node3 vector.
 
-       !check if triangle contains point or if point lies on edge
-       !Basically FAB is the signed area of the triangle formed from
-       !point AB and input point. FAB = zero if point lies on edge.
-       !and FAB positive if point lies to left of AB.
+       Area1 = (CoordIn_D(y_)-y2)*(x3-x2) - (CoordIn_D(x_)-x2)*(y3-y2)
+       Area2 = (CoordIn_D(y_)-y3)*(x1-x3) - (CoordIn_D(x_)-x3)*(y1-y3)
+       Area3 = (CoordIn_D(y_)-y1)*(x2-x1) - (CoordIn_D(x_)-x1)*(y2-y1)
 
-       FAB = (CoordIn_D(y_)-y1)*(x2-x1) - (CoordIn_D(x_)-x1)*(y2-y1)
-       FCA = (CoordIn_D(y_)-y3)*(x1-x3) - (CoordIn_D(x_)-x3)*(y1-y3)
-       FBC = (CoordIn_D(y_)-y2)*(x3-x2) - (CoordIn_D(x_)-x2)*(y3-y2)
-       
-       if (FAB >= 0.0 .and. FBC >= 0.0 .and. FCA >=0.0) then
-          IsTriangleFound=.true.
-          exit
-       endif
+       ! The point is inside the triangle if all areas are positive
+       if (Area1 >= 0.0 .and. Area2 >= 0.0 .and. Area3 >=0.0) then
+          if(present(IsTriangleFound)) IsTriangleFound = .true.
+          if(present(Weight1)) then
+             ! The node weights are proportional to the area of 
+             ! the opposite triangle.
+             AreaSum = max(Area1 + Area2 + Area3, tiny(1.0))
+             Weight1 = Area1/AreaSum
+             Weight2 = Area2/AreaSum
+             Weight3 = Area3/AreaSum
+          end if
+          RETURN
+       end if
        
     enddo
-    
-    !If no triangle is found to contain CoordIN_D(1) and CoordIn_D(2) 
-    !then find closest triangle
 
-    if (.not.IsTriangleFound) then
+    ! If no triangle contains the CoordIn_D point and IsTriangleFound is
+    ! present then return a false value
+    if(present(IsTriangleFound))then
+       IsTriangleFound = .false.
+       RETURN
+    end if
 
-       do iTriangle=1,nTriangle 
+    ! If IsTriangleFound is not present then set iNode1 to the closest node
+    iLoc_I = minloc( (XyNode_DI(x_,:)-CoordIn_D(x_))**2 &
+         +           (XyNode_DI(y_,:)-CoordIn_D(y_))**2 )
 
-          iNode1=iNodeTriangle_II(1,iTriangle)
-          iNode2=iNodeTriangle_II(2,iTriangle)
-          iNode3=iNodeTriangle_II(3,iTriangle)
+    iNode1 = iLoc_I(1)
 
+    ! Set iNode2 and iNode3 to valid values so that general interpolation
+    ! formulas can work but assign same index to signal that there is no
+    ! triangle containing the point
+    iNode2 = 1
+    iNode3 = 1
 
-          !fill in x,y pairs for current triangle nodes
-          x1=(XyNode_DI(1,iNode1)+XyNode_DI(1,iNode2)+XyNode_DI(1,iNode3))/3
-          y1=(XyNode_DI(2,iNode1)+XyNode_DI(2,iNode2)+XyNode_DI(2,iNode3))/3
-
-          Distance = (CoordIn_D(x_)-x1)**2.0 + (CoordIn_D(y_)-y1)**2.0
-
-          if ( iTriangle == 1 ) then
-             DistanceMin = Distance
-             iTriangleMin=iTriangle
-          elseif (Distance < DistanceMin) then
-             DistanceMin =Distance
-             iTriangleMin=iTriangle
-          end if
-
-       end do
-       iNode1=iNodeTriangle_II(1,iTriangleMin)
-       iNode2=iNodeTriangle_II(2,iTriangleMin)
-       iNode3=iNodeTriangle_II(3,iTriangleMin)
-
-       x1=XyNode_DI(1,iNode1)
-       y1=XyNode_DI(2,iNode1)
-
-       x2=XyNode_DI(1,iNode2)
-       y2=XyNode_DI(2,iNode2)
-
-       x3=XyNode_DI(1,iNode3)
-       y3=XyNode_DI(2,iNode3)
-
+    if(present(Weight1))then
+       ! Assign full weight to the closest node and zero to the others
+       Weight1 = 1.0
+       Weight2 = 0.0
+       Weight3 = 0.0
     end if
 
   end subroutine find_triangle
