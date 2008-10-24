@@ -606,7 +606,7 @@ subroutine Set_Euv(iError)
      
      TimeArray(1:6) = temp(1:6)
      TimeArray(7) = 0
-     call time_int_to_real(TimeArray,TimeSee(nLine))
+     call time_int_to_real(TimeArray,TimeSee(iLine))
      SeeFlux(:,iline) = temp(7:6+Num_WaveLengths_High)
      iline = iline + 1
 
@@ -614,7 +614,7 @@ subroutine Set_Euv(iError)
   enddo
 
   close(iInputUnit_)
-  nSeeTimes = iline 
+  nSeeTimes = iline - 1
     
 end subroutine Set_Euv
 
