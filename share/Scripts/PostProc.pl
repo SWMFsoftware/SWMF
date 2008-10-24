@@ -287,9 +287,10 @@ sub print_help{
 #BOC
 'Purpose:
 
-   Post-process the plot files and/or collect them into an output tree.
-   The PARAM.in and runlog files (if present) are also copied/moved into 
-   the output tree.
+   Post-process the output files and/or collect them into an output tree.
+   The PARAM.in, runlog and restart files (if present) 
+   are also copied/moved into the output tree. 
+   The processed files or the output tree can be rsync-ed to another machine.
 
 Usage:
 
@@ -316,9 +317,10 @@ Usage:
    -rsync=TARGET Copy processed plot files into an other directory 
                (possibly on another machine) using rsync. The TARGET
                is the name of the target directory (with host machine). 
-               When -rsync is used without the -o option, the original
-               plot directories are synchronized. When -rsync is used with the
-               -o option, the output directory is synchronized.
+               When -rsync is used without the output direcectory DIR, 
+               the original plot directories are synchronized. 
+               When -rsync is used with the output directory DIR,
+               then the output directory is synchronized.
                rsync must be installed on the local and target machines,
                and no password should be required to execute rsync.
 
