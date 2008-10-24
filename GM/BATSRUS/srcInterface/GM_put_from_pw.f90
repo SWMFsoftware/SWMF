@@ -4,7 +4,6 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
   use ModMain, ONLY: x_, y_, TypeCoordSystem, Time_Simulation
   use ModVarIndexes, ONLY: UseMultiSpecies, SpeciesFirst_, SpeciesLast_
   use ModMultiFluid, ONLY: UseMultiIon, nIonFluid
-  use ModUtilities, ONLY: lower_case
   use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitU_, rCurrents
   use ModPwGrid
   use ModPhysics, ONLY: rBody
@@ -23,12 +22,11 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
   real, intent(in)              :: Buffer_VI(nVar, nFieldLine)
   character (len=*), intent(in) :: Name_V(nVar)
 
-
   logical, save :: DoInitialize = .true.
 
-  integer :: iVar, i, iLine, iHemisphere
+  integer :: i, iLine, iHemisphere
   real    :: SinThetaOuter, GmPw_DD(3,3), Theta, Phi, XyzPw_D(3), Factor
-  character (len=40):: NameVar
+
   logical :: DoTest, DoTestMe
   !----------------------------------------------------------------------------
 
@@ -191,7 +189,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
        iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I
       
   use ModPwGrid
-  use ModTriangulate, ONLY: find_triangle, triangle_area
+  use ModTriangulate, ONLY: find_triangle
   use ModPhysics, ONLY: No2Io_V, UnitU_, UnitRho_
   use CON_planet_field,  ONLY: map_planet_field
 
@@ -201,11 +199,9 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   integer, intent(in) :: nVarIn
   real, intent(inout) :: State_V(nVarIn)
 
-  real       :: Node_DI(2,3)
-  real       :: Triangle1_DI(2,3), Triangle2_DI(2,3), Triangle3_DI(2,3)
   logical    :: IsTriangleFound
   integer    :: iNode1, iNode2, iNode3, iIon, iUGm
-  real       :: Area1, Area2, Area3, Area
+  real       :: Area1, Area2, Area3
 
   ! A short time relative to the rotation period of Earth
   real, parameter :: dTimeMax = 600.0 ! [s]
@@ -218,7 +214,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
   character (len=*), parameter :: NameSub = 'read_pw_buffer'
   
-  logical :: DoTest = .false., DoTestMe = .false.
+  logical, parameter :: DoTestMe = .false.
   !--------------------------------------------------------
 
   if(DoInitialize)then
@@ -265,40 +261,10 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   call find_triangle(&
        nPoint, nTriangle, Xy_D, CoordXyPw_DI, &
        iNodeTriangle_II(:,1:nTriangle), &
-       iNode1, iNode2, iNode3, IsTriangleFound)
-
-  if(DoTestMe)write(*,*)'x, y, iNode1,2,3, IsFound=',&
-       Xy_D, iNode1, iNode2, iNode3, IsTriangleFound
+       iNode1, iNode2, iNode3, Area1, Area2, Area3, IsTriangleFound)
 
   ! Point is not covered: leave the input state variables alone
   if (.not.IsTriangleFound) RETURN
-
-!!!  call CON_set_do_test(NameSub, DoTest, DoTestMe)
-
-  ! interpolate values
-
-  Node_DI(:,1)=CoordXyPw_DI(:,iNode1)
-  Node_DI(:,2)=CoordXyPw_DI(:,iNode2)
-  Node_DI(:,3)=CoordXyPw_DI(:,iNode3)
-
-  Triangle1_DI(:,1)     = Xy_D(:)
-  Triangle1_DI(:,2:3)   = Node_DI(:,2:3)
-
-  Triangle2_DI(:,1)     = Xy_D(:)
-  Triangle2_DI(:,2:3)   = Node_DI(:,1:3:2)
-
-  Triangle3_DI(:,1)     = Xy_D(:)
-  Triangle3_DI(:,2:3)   = Node_DI(:,1:2)
-
-  Area1 = triangle_area(Triangle1_DI)
-  Area2 = triangle_area(Triangle2_DI)
-  Area3 = triangle_area(Triangle3_DI)
-
-  ! Normalize areas to weights
-  Area  = Area1+Area2+Area3
-  Area1 = Area1 / Area
-  Area2 = Area2 / Area
-  Area3 = Area3 / Area
 
   ! Calculate field aligned momentum vector
   call get_b0(CoordIn_D(x_), CoordIn_D(y_), CoordIn_D(z_), B0_D)
@@ -307,6 +273,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   ! Make sure unit vector is pointing outward
   if(sum(B0_D*CoordIn_D) < 0.)B0_D = -B0_D
 
+  ! interpolate values
   if(UseMultiIon)then
      State_V(iRhoIon_I) = &
           Area1*StateGm_VI(iRhoGmFirst:iRhoGmLast,iNode1) + &
@@ -352,16 +319,13 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   end if
   if(DoTestMe)then
      write(*,*)NameSub,' finished with'
-     write(*,*)'CoordIn_D   =',CoordIn_D
-     write(*,*)'XyzPw_D     =',XyzPw_D
-     write(*,*)'Xy_D        =',Xy_D
-     write(*,*)'Node_DI(:,1)=',Node_DI(:,1)
-     write(*,*)'Node_DI(:,2)=',Node_DI(:,2)
-     write(*,*)'Node_DI(:,3)=',Node_DI(:,3)
-     write(*,*)'Area1,2,3=',Area1,Area2,Area3
-     write(*,*)'State_V(Rho_)   =',State_V(Rho_)*No2Io_V(UnitRho_)
-     write(*,*)'B0_D            =',B0_D
-     write(*,*)'State_V(Ux_:Uz_)=',State_V(Ux_:Uz_)*No2Io_V(UnitU_)
+     write(*,*)'CoordIn_D     =', CoordIn_D
+     write(*,*)'XyzPw_D       =', XyzPw_D
+     write(*,*)'Xy_D          =', Xy_D
+     write(*,*)'Area1,2,3     =', Area1, Area2, Area3
+     write(*,*)'State_V(Rho_) =', State_V(Rho_)*No2Io_V(UnitRho_)
+     write(*,*)'B0_D          =', B0_D
+     write(*,*)'State_V(Ux:Uz)=', State_V(Ux_:Uz_)*No2Io_V(UnitU_)
   end if
 
 end subroutine read_pw_buffer
