@@ -418,9 +418,7 @@ contains
     !  FOR WHICH THE IGRF COEFFICIENTS ARE KNOWN; IF IYR IS OUTSIDE THIS INTERVAL
     !  THE SUBROUTINE PRINTS A WARNING (BUT DOES NOT REPEAT IT AT NEXT INVOCATIONS)
     !
-    IF(IY.NE.IYear.AND.IPR.EQ.0)&
-         WRITE (*,*) 'No Igrf Coefficients are availble for the year ',&
-         IYear,'We use date for year ',IY
+    
     IF(IY.NE.IYear) IPR=1
     IYE=IY   
     !
