@@ -198,7 +198,7 @@ end subroutine GM_print_variables
 subroutine GM_init_session(iSession, TimeSimulation)
 
   use ModProcMH,   ONLY: iProc
-  use ModMain,     ONLY: Time_Simulation, UseIe, UsePw, TypeBC_I, west_
+  use ModMain,     ONLY: Time_Simulation, UseIe, UsePw, TypeBC_I, west_, body1_
   use ModMain,     ONLY: UseIM                            !^CFG IF RCM
   use CON_physics, ONLY: get_time
   use CON_coupler, ONLY: Couple_CC, IE_, IM_, GM_, IH_, PW_
@@ -220,6 +220,8 @@ subroutine GM_init_session(iSession, TimeSimulation)
   UseIe = Couple_CC(IE_,GM_) % DoThis
 
   ! Check if the boundary condition is properly set
+  if(UsePw) TypeBC_I(body1_) = 'polarwind'
+
   if(Couple_CC(IH_,GM_) % DoThis .neqv. (TypeBc_I(west_)=='coupled'))then
      if(Couple_CC(IH_,GM_) % DoThis) then
         TypeBc_I(west_)='coupled'
