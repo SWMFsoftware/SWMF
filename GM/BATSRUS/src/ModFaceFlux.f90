@@ -29,9 +29,8 @@ module ModFaceFlux
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        IsNewBlockHall, hall_factor, get_face_current, set_ion_mass_per_charge
 
-  use ModGrayDiffusion, ONLY: Eradiation_, &
-       UseGrayDiffusion, IsNewBlockGrayDiffusion, DiffusionRad_G, &
-       set_gray_diffusion, get_radiation_energy_flux
+  use ModGrayDiffusion, ONLY: Eradiation_, UseGrayDiffusion, &
+       IsNewBlockGrayDiffusion, get_radiation_energy_flux
 
   use ModResistivity, ONLY: UseResistivity, Eta_GB  !^CFG IF DISSFLUX
   use ModMultiFluid
@@ -355,8 +354,6 @@ contains
 
     if(UseHallResist .and. UseMultiSpecies) &
          call set_ion_mass_per_charge(iBlock)
-
-    if(UseGrayDiffusion) call set_gray_diffusion(iBlock)
 
     if (DoResChangeOnly) then
        if(neiLeast(iBlock) == 1)call get_flux_x(1,1,1,nJ,1,nK)
@@ -765,10 +762,6 @@ contains
          ( IonMassPerCharge_G(iLeft, jLeft  ,kLeft)            &
          + IonMassPerCharge_G(iRight,jRight,kRight) )
 
-    if(UseGrayDiffusion) DiffusionRad = &
-         0.5*( DiffusionRad_G(iLeft,jLeft,kLeft) &
-         +     DiffusionRad_G(iRight,jRight,kRight) )
-
     Eta       = -1.0                                !^CFG IF DISSFLUX BEGIN
     if(UseResistivity) Eta = 0.5* &
          ( Eta_GB(iLeft, jLeft  ,kLeft,iBlockFace) &
@@ -778,7 +771,7 @@ contains
        NormalX = Normal_D(x_); NormalY = Normal_D(y_); NormalZ = Normal_D(z_)
        AreaX = Area*NormalX; AreaY = Area*NormalY; AreaZ = Area*NormalZ
 
-       if(HallCoeff > 0.0 .or. Eta > 0.0 .or. UseGrayDiffusion) &
+       if(HallCoeff > 0.0 .or. Eta > 0.0) &
             InvDxyz = 1.0/sqrt(  &
             ( x_BLK(iRight,jRight,kRight, iBlockFace)          &
             - x_BLK(iLeft, jLeft  ,kLeft, iBlockFace))**2 +    &
@@ -844,11 +837,6 @@ contains
        HallJx = HallCoeff*Jx
        HallJy = HallCoeff*Jy
        HallJz = HallCoeff*Jz
-    end if
-
-    if(UseGrayDiffusion)then
-       call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
-            iBlockFace, DiffusionRad, EradFlux_D)
     end if
 
     if(DoRoe)then
@@ -1539,6 +1527,9 @@ contains
       UNormal_I = Un
 
       if(UseGrayDiffusion)then
+         call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
+              iBlockFace, StateStar_V, DiffusionRad, EradFlux_D)
+
          Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) &
               + StateStar_V(Eradiation_)/3.0*Normal_D
          Flux_V(Eradiation_) = Flux_V(Eradiation_) + sum(EradFlux_D*Normal_D)
@@ -1667,6 +1658,9 @@ contains
     end if                                     !^CFG END DISSFLUX
 
     if(UseGrayDiffusion)then
+       call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
+            iBlockFace, State_V, DiffusionRad, EradFlux_D)
+
        Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) &
             + State_V(Eradiation_)/3.0*Normal_D
        Flux_V(Eradiation_) = Flux_V(Eradiation_) + sum(EradFlux_D*Normal_D)

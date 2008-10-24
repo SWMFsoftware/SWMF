@@ -61,7 +61,6 @@ subroutine impl_jacobian(implBLK,JAC)
        FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
   use ModImplicit
   use ModHallResist, ONLY: UseHallResist, hall_factor
-  use ModGrayDiffusion, ONLY: UseGrayDiffusion
   use ModGeometry, ONLY: vInv_CB, UseCovariant
   implicit none
 
@@ -114,7 +113,6 @@ subroutine impl_jacobian(implBLK,JAC)
   end if
 
   if(UseHallResist)call impl_init_hall
-  if(UseGrayDiffusion)call impl_init_gray_diffusion
 
   ! Initialize matrix to zero (to be safe)
   JAC=0.0
@@ -842,18 +840,5 @@ contains
     end do; end do
 
   end subroutine impl_hall_resist_general
-
-  !===========================================================================
-  subroutine impl_init_gray_diffusion
-    use ModGrayDiffusion, ONLY: set_gray_diffusion
-    implicit none
-
-    !-------------------------------------------------------------------------
-
-    call set_gray_diffusion(iBlk)
-
-  end subroutine impl_init_gray_diffusion
-
-  !===========================================================================
 
 end subroutine impl_jacobian
