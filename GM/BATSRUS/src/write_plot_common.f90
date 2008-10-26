@@ -9,7 +9,7 @@ subroutine write_plot_common(ifile)
   use ModMain
   use ModGeometry, ONLY : XyzMin_D,XyzMax_D,true_cell
   use ModGeometry, ONLY : TypeGeometry,UseCovariant
-  use ModPhysics, ONLY : No2Io_V, UnitX_, rBody, ThetaTilt, DipoleStrengthSi
+  use ModPhysics, ONLY : No2Io_V, UnitX_, rBody, ThetaTilt
   use ModIO
   use ModIoUnit, ONLY : io_unit_new
   use ModNodes
@@ -440,14 +440,6 @@ subroutine write_plot_common(ifile)
            write(unit_tmp,'(l8,a)')save_binary,' save_binary'
            if(save_binary)write(unit_tmp,'(i8,a)')nByteReal,' nByteReal'
            write(unit_tmp,'(a)')TypeGeometry
-           if(plot_type1(1:3) == '3d_')then
-              ! This information is written out for CCMC runs
-              write(unit_tmp,'(3i6,a)')    nI,nJ,nK,' nCellXyz'
-              write(unit_tmp,'(3i6,a)')    proc_dims,' nRootBlockXyz'
-              write(unit_tmp,'(f10.5,a)')  ThetaTilt*cRadToDeg,' DipoleTiltDeg'
-              write(unit_tmp,'(f10.5,a)')  rBody,' rBody/rPlanet'
-              write(unit_tmp,'(es13.5,a)') DipoleStrengthSi,' DipoleStrengthSi'
-           end if
         end select
         close(unit_tmp)
      end do
@@ -523,6 +515,7 @@ end subroutine write_plot_common
 subroutine set_eqpar(iPlotFile,nEqPar,NameEqPar_I,EqPar_I)
 
   use ModProcMH
+  use ModParallel, ONLY: proc_dims
   use ModPhysics, ONLY : g, cLight, rBody, ThetaTilt, &
        No2Io_V, UnitU_, UnitX_, UnitRho_
   use ModRaytrace, ONLY : R_raytrace                !^CFG  IF RAYTRACE
@@ -550,7 +543,7 @@ subroutine set_eqpar(iPlotFile,nEqPar,NameEqPar_I,EqPar_I)
         EqPar_I(iPar)=rBody
         if(plot_dimensional(plot_+iPlotFile))&
              EqPar_I(iPar)=EqPar_I(iPar)*No2Io_V(UnitX_)
-     case('t','tilt')
+     case('t','th','tilt')
         EqPar_I(iPar)=ThetaTilt*cRadToDeg
      case('eta')
         EqPar_I(iPar)=0.
@@ -562,6 +555,18 @@ subroutine set_eqpar(iPlotFile,nEqPar,NameEqPar_I,EqPar_I)
         EqPar_I(iPar)=No2Io_V(UnitU_)
      case('mu')
         EqPar_I(iPar)=mu_los
+     case('p1')
+        EqPar_I(iPar)=proc_dims(1)
+     case('p2')
+        EqPar_I(iPar)=proc_dims(2)
+     case('p3')
+        EqPar_I(iPar)=proc_dims(3)
+     case('nx')
+        EqPar_I(iPar)=nI
+     case('ny')
+        EqPar_I(iPar)=nJ
+     case('nz')
+        EqPar_I(iPar)=nK
 !!$!^CFG  IF RAYTRACE BEGIN
      case('R_ray')
         EqPar_I(iPar)=R_raytrace

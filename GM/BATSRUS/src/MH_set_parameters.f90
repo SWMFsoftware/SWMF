@@ -855,6 +855,12 @@ subroutine MH_set_parameters(TypeAction)
                    //plot_string)
            end if
 
+           ! Set equation parameters for 3D unstructured IDL files to describe
+           ! block structure and the dipole. Needed by CCMC.
+           if(plot_area == '3d_' .and. plot_form(iFile) == 'idl' &
+                .and. plot_dx(1, iFile) < 0.0) &
+                plot_pars(iFile) = 'g c th p1 p2 p3 NX NY NZ R'
+
            plot_type(iFile) = plot_area//'_'//plot_var
         end do
 
