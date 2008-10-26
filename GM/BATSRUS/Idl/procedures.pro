@@ -223,7 +223,7 @@ for ifile=0,n_elements(filenames)-1 do begin
             point_lun,1,pointer
             gethead,1,ftype,pictsize=pictsize
             npict=npict+1
-            pointer=pointer+pictsize
+            pointer=long64(pointer) + pictsize
         endwhile
         close,1
 
@@ -396,7 +396,7 @@ pro get_pict,unit,filetype,npict,x,w,$
    while ipict lt npict-1 and not eof(unit) do begin
       ipict=ipict+1
       gethead,unit,filetype,pictsize=pictsize
-      pointer=pointer+pictsize
+      pointer=long64(pointer) + pictsize
       point_lun,unit,pointer
    endwhile
 
