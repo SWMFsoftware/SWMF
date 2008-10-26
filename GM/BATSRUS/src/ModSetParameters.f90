@@ -2282,8 +2282,7 @@ contains
        call stop_mpi('Correct PARAM.in!')
     end if                                                !^CFG END IMPLICIT
 
-    if ( UseGrayDiffusion .and. UseRadFluxLimiter &
-         .and. index(optimize_message_pass,'opt') > 0) then
+    if ( UseGrayDiffusion .and. index(optimize_message_pass,'opt') > 0) then
        if(iProc==0 .and. optimize_message_pass /= 'allopt') then
           write(*,'(a)')NameSub//&
                ' WARNING: Radiation Flux Limiter does not work for'// &
