@@ -91,7 +91,7 @@ subroutine write_plot_common(ifile)
   call split_str(plot_pars1,neqparmax,eqparnames,neqpar)
   call set_eqpar(ifile-plot_,neqpar,eqparnames,eqpar)
 
-  allnames=trim(plot_vars1)//' '//plot_pars1
+  allnames=trim(plot_vars1)//' '//trim(plot_pars(iFile))
 
   if(oktest_me) then
      write(*,*) plot_vars1
