@@ -102,15 +102,13 @@ contains
     integer, intent(in) :: iBlock
     real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2), intent(inout) :: Scalar_G
 
-    real, parameter :: C1 = 8./15., F1 = 2./3., F2 = -1./5.
-    real, parameter :: p0 = 5./32., m0 = -3./32., c0 = 15./16.
+    real, parameter :: c0 = 0.5, p0 = 1./6., F1 = 1./3.
 
     integer :: i1, j1, k1, i2, j2, k2, iC, jC, kC, iSide, jSide, kSide
     integer :: iL, iR, jL, jR, kL, kR
-    integer :: ip, im, jp, jm, kp, km
+    integer :: ip, jp, kp
 
     real :: Scalar1_G(-1:nI+2,-1:nJ+2,-1:nK+2) ! temporary array
-    real :: Scalarc ! interpolated coarse cell Scalar
     !------------------------------------------------------------------------
     IsNewBlockGrayDiffusion = .false.
 
@@ -122,8 +120,7 @@ contains
        ! then average out the 8 fine cells so that the
        ! general interpolation formulas remain 2nd order
        ! accurate
-       if(  BlkNeighborLev(iSide,jSide,kSide,iBlock) /= 1 .and. &
-            BlkNeighborLev(iSide,jSide,kSide,iBlock) /= NOBLK .and. ( &
+       if(  BlkNeighborLev(iSide,jSide,kSide,iBlock) == 0 .and. ( &
             BlkNeighborLev(iSide,0,0,iBlock) == 1 .or. &
             BlkNeighborLev(0,jSide,0,iBlock) == 1 .or. &
             BlkNeighborLev(0,0,kSide,iBlock) == 1)) then
@@ -161,73 +158,55 @@ contains
     ! Do six faces
     if(NeiLeast(iBlock) == 1)then
        do k1=1, nK, 2; do j1=1, nJ, 2; do k2 = k1,k1+1; do j2 = j1,j1+1
-          jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
-          kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
-          Scalarc = c0*Scalar1_G(0,j2,k2) &
-               +    p0*Scalar1_G(0,jp,kp) &
-               +    m0*Scalar1_G(0,jm,km)
-          Scalar_G(0,j2,k2) = &
-               C1*Scalarc + F1*Scalar_G(1,j2,k2) + F2*Scalar_G(2,j2,k2)
+          jp = 3*j2 - 2*j1 -1
+          kp = 3*k2 - 2*k1 -1
+          Scalar_G(0,j2,k2) = c0*Scalar1_G(0,j2,k2) &
+               + p0*Scalar1_G(0,jp,kp) + F1*Scalar_G(1,j2,k2)
        end do; end do; end do; end do
     end if
 
     if(NeiLwest(iBlock) == 1)then
        do k1=1, nK, 2; do j1=1, nJ, 2; do k2 = k1,k1+1; do j2 = j1,j1+1
-          jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
-          kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
-          Scalarc = c0*Scalar1_G(nI+1,j2,k2) &
-               +    p0*Scalar1_G(nI+1,jp,kp) &
-               +    m0*Scalar1_G(nI+1,jm,km)
-          Scalar_G(nI+1,j2,k2)= &
-               C1*Scalarc + F1*Scalar_G(nI,j2,k2) + F2*Scalar_G(nI-1,j2,k2)
+          jp = 3*j2 - 2*j1 -1
+          kp = 3*k2 - 2*k1 -1
+          Scalar_G(nI+1,j2,k2) = c0*Scalar1_G(nI+1,j2,k2) &
+               + p0*Scalar1_G(nI+1,jp,kp) + F1*Scalar_G(nI,j2,k2)
        end do; end do; end do; end do
     end if
 
     if(NeiLsouth(iBlock) == 1)then
        do k1=1, nK, 2; do i1=1, nI, 2; do k2 = k1,k1+1; do i2 = i1,i1+1
-          ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
-          kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
-          Scalarc = c0*Scalar1_G(i2,0,k2) &
-               +    p0*Scalar1_G(ip,0,kp) &
-               +    m0*Scalar1_G(im,0,km)
-          Scalar_G(i2,0,k2) = &
-               C1*Scalarc + F1*Scalar_G(i2,1,k2) + F2*Scalar_G(i2,2,k2)
+          ip = 3*i2 - 2*i1 -1
+          kp = 3*k2 - 2*k1 -1
+          Scalar_G(i2,0,k2) = c0*Scalar1_G(i2,0,k2) &
+               + p0*Scalar1_G(ip,0,kp) + F1*Scalar_G(i2,1,k2)
        end do; end do; end do; end do
     end if
 
     if(NeiLnorth(iBlock) == 1)then
        do k1=1, nK, 2; do i1=1, nI, 2; do k2 = k1,k1+1; do i2 = i1,i1+1
-          ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
-          kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
-          Scalarc = c0*Scalar1_G(i2,nJ+1,k2) &
-               +    p0*Scalar1_G(ip,nJ+1,kp) &
-               +    m0*Scalar1_G(im,nJ+1,km)
-          Scalar_G(i2,nJ+1,k2) = &
-               C1*Scalarc + F1*Scalar_G(i2,nJ,k2) + F2*Scalar_G(i2,nJ-1,k2)
+          ip = 3*i2 - 2*i1 -1
+          kp = 3*k2 - 2*k1 -1
+          Scalar_G(i2,nJ+1,k2) = c0*Scalar1_G(i2,nJ+1,k2) &
+               + p0*Scalar1_G(ip,nJ+1,kp) + F1*Scalar_G(i2,nJ,k2)
        end do; end do; end do; end do
     end if
 
     if(NeiLbot(iBlock) == 1)then
        do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
-          ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
-          jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
-          Scalarc = c0*Scalar1_G(i2,j2,0) &
-               +    p0*Scalar1_G(ip,jp,0) &
-               +    m0*Scalar1_G(im,jm,0)
-          Scalar_G(i2,j2,0) = &
-               C1*Scalarc + F1*Scalar_G(i2,j2,1) + F2*Scalar_G(i2,j2,2)
+          ip = 3*i2 - 2*i1 -1
+          jp = 3*j2 - 2*j1 -1
+          Scalar_G(i2,j2,0) = c0*Scalar1_G(i2,j2,0) &
+               + p0*Scalar1_G(ip,jp,0) + F1*Scalar_G(i2,j2,1)
        end do; end do; end do; end do
     end if
 
     if(NeiLtop(iBlock) == 1)then
        do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
-          ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
-          jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
-          Scalarc = c0*Scalar1_G(i2,j2,nK+1) &
-               +    p0*Scalar1_G(ip,jp,nK+1) &
-               +    m0*Scalar1_G(im,jm,nK+1)
-          Scalar_G(i2,j2,nK+1) = &
-               C1*Scalarc + F1*Scalar_G(i2,j2,nK) + F2*Scalar_G(i2,j2,nK-1)
+          ip = 3*i2 - 2*i1 -1
+          jp = 3*j2 - 2*j1 -1
+          Scalar_G(i2,j2,nK+1) = c0*Scalar1_G(i2,j2,nK+1) &
+               + p0*Scalar1_G(ip,jp,nK+1) + F1*Scalar_G(i2,j2,nK)
        end do; end do; end do; end do
     end if
 
@@ -242,12 +221,9 @@ contains
        j1=1; if(jSide==1) j1=nJ; j2 = j1-jSide; jC = j1+jSide
        k1=1; if(kSide==1) k1=nK; k2 = k1-kSide; kC = k1+kSide
        do i1 = 1,nI,2; do i2 = i1, i1+1
-          ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
-          Scalarc = c0*Scalar1_G(i2,jC,kC) &
-               +    p0*Scalar1_G(ip,jC,kC) &
-               +    m0*Scalar1_G(im,jC,kC)
-          Scalar_G(i2,jC,kC) = &
-               C1*Scalarc + F1*Scalar_G(i2,j1,k1) + F2*Scalar_G(i2,j2,k2)
+          ip = 3*i2 - 2*i1 -1
+          Scalar_G(i2,jC,kC) = c0*Scalar1_G(i2,jC,kC) &
+               + p0*Scalar1_G(ip,jC,kC) + F1*Scalar_G(i2,j1,k1)
        end do; end do
     end do; end do
     ! 4 Y edges
@@ -260,12 +236,9 @@ contains
        i1=1; if(iSide==1) i1=nI; i2 = i1-iSide; iC = i1+iSide
        k1=1; if(kSide==1) k1=nK; k2 = k1-kSide; kC = k1+kSide
        do j1 = 1, nJ, 2; do j2 = j1, j1+1
-          jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
-          Scalarc = c0*Scalar1_G(iC,j2,kC) &
-               +    p0*Scalar1_G(iC,jp,kC) &
-               +    m0*Scalar1_G(iC,jm,kC)
-          Scalar_G(iC,j2,kC) = &
-               C1*Scalarc + F1*Scalar_G(i1,j2,k1) + F2*Scalar_G(i2,j2,k2)
+          jp = 3*j2 - 2*j1 -1
+          Scalar_G(iC,j2,kC) = c0*Scalar1_G(iC,j2,kC) &
+               + p0*Scalar1_G(iC,jp,kC) + F1*Scalar_G(i1,j2,k1)
        end do; end do
     end do; end do
     ! 4 Z edges
@@ -278,12 +251,9 @@ contains
        i1=1; if(iSide==1) i1=nI; i2 = i1-iSide; iC = i1+iSide
        j1=1; if(jSide==1) j1=nJ; j2 = j1-jSide; jC = j1+jSide
        do k1 = 1, nK, 2 ; do k2 = k1, k1 + 1
-          kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
-          Scalarc = c0*Scalar1_G(iC,jC,k2) &
-               +    p0*Scalar1_G(iC,jC,kp) &
-               +    m0*Scalar1_G(iC,jC,km)
-          Scalar_G(iC,jC,k2) = &
-               C1*Scalarc + F1*Scalar_G(i1,j1,k2) + F2*Scalar_G(i2,j2,k2)
+          kp = 3*k2 - 2*k1 -1
+          Scalar_G(iC,jC,k2) = c0*Scalar1_G(iC,jC,k2) &
+               + p0*Scalar1_G(iC,jC,kp) + F1*Scalar_G(i1,j1,k2)
        end do; end do         
     end do; end do
 
