@@ -2546,7 +2546,7 @@ contains
        end if
     end if
 
-    if(product(proc_dims) > nBLK .and. iProc==0)then
+    if(product(proc_dims) > nBLK*nProc .and. iProc==0)then
        write(*,*)'Root blocks will not fit on 1 processor, check nBLK'
        call stop_mpi('product(proc_dims) > nBLK!')
     end if

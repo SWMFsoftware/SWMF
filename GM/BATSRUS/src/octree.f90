@@ -36,14 +36,18 @@ subroutine build_octree_roots
 
   ! All octree roots go to processor 0
   iBLK = 0
+  iPE  = 0
+  iLEV = 0
+  iLEVmin = 0
+  iLEVmax = 999
   do k = 1, proc_dims(3)
      do j = 1, proc_dims(2)
         do i = 1, proc_dims(1)
            iBLK = iBLK+1
-           iPE  = 0
-           iLEV = 0
-           iLEVmin = 0
-           iLEVmax = 999
+           if(iBLK>nBLK)then
+              iBLK=1
+              iPE=iPE+1
+           end if
            nullify(octree % ptr)
            call initialize_octree_block(octree, iPE, iBLK, iLEV, iLEVmin, iLEVmax)
            octree_roots(i, j, k) % ptr => octree  % ptr
