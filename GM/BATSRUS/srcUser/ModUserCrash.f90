@@ -411,7 +411,7 @@ contains
     character(len=*), parameter :: NameSub = 'user_update_states'
     !------------------------------------------------------------------------
 
-    UsePreviousTe = .false.
+   
 
     if(IsCylindrical)then
        ! Multiply fluxes with radius = abs(Y) at the X,Y and Z faces
@@ -575,7 +575,7 @@ contains
     use ModVarIndexes, ONLY: LevelXe_, LevelPl_, Rho_, UnitUser_V
     character (len=*), parameter :: NameSub = 'user_init_session'
     !-------------------------------------------------------------------
-
+    UsePreviousTe = .false.
     if(UseUserSource)then
        UnitUser_V(LevelXe_:LevelPl_) = 1.e-6 ! = No2Io_V(UnitX_) = micron
     else if(UseMixedCell) then
