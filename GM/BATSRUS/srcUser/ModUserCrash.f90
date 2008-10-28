@@ -397,7 +397,7 @@ contains
     use ModMain,    ONLY: nStage, Cfl
     use ModPhysics
     use ModEnergy,  ONLY: calc_energy_cell
-    use ModEos,     ONLY: eos, eos_mixed_cell, UsePreviousTe
+    use ModEos,     ONLY: eos, eos_mixed_cell
 
     implicit none
 
@@ -571,7 +571,7 @@ contains
   !===========================================================================
 
   subroutine user_init_session
-
+    use ModEos,     ONLY: UsePreviousTe
     use ModVarIndexes, ONLY: LevelXe_, LevelPl_, Rho_, UnitUser_V
     character (len=*), parameter :: NameSub = 'user_init_session'
     !-------------------------------------------------------------------
