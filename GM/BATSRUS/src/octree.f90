@@ -55,7 +55,7 @@ subroutine build_octree_roots
         end do
      end do
   end do
-  nBlockAll=iBLK
+  nBlockAll = iBLK + nBLK*iPE
 end subroutine build_octree_roots
 
 subroutine initialize_octree_block(octree, iPE, iBLK, iLEV, iLEVmin, iLEVmax)
