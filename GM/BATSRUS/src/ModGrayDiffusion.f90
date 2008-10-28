@@ -111,7 +111,7 @@ contains
     integer :: ip, jp, kp
 
     real    :: Scalar1_G(0:nI+1,0:nJ+1,0:nK+1) ! temporary array
-    logical :: IsEqualLevel(0:nI+1,0:nJ+1,0:nK+1)
+    logical :: IsEqualLevel_G(0:nI+1,0:nJ+1,0:nK+1)
     !------------------------------------------------------------------------
     IsNewBlockGrayDiffusion = .false.
 
@@ -140,9 +140,9 @@ contains
           kL = 0; kR = kL
        end if
        if( BlkNeighborLev(iSide, jSide, kSide, iBlock) == 0 )then
-          IsEqualLevel(iL:iR,jL:jR,kL:kR) = .true.
+          IsEqualLevel_G(iL:iR,jL:jR,kL:kR) = .true.
        else
-          IsEqualLevel(iL:iR,jL:jR,kL:kR) = .false.
+          IsEqualLevel_G(iL:iR,jL:jR,kL:kR) = .false.
        end if
     end do; end do; end do
 
@@ -151,7 +151,7 @@ contains
        do k1=1, nK, 2; do j1=1, nJ, 2; do k2 = k1,k1+1; do j2 = j1,j1+1
           jp = 3*j2 - 2*j1 -1
           kp = 3*k2 - 2*k1 -1
-          if(IsEqualLevel(0,jp,kp))then
+          if(IsEqualLevel_G(0,jp,kp))then
              Scalar_G(0,j2,k2) = c0*Scalar1_G(0,j2,k2) &
                + 0.25*Scalar1_G(0,jp,kp) + 0.25*Scalar_G(1,j2,k2)
           else
@@ -165,7 +165,7 @@ contains
        do k1=1, nK, 2; do j1=1, nJ, 2; do k2 = k1,k1+1; do j2 = j1,j1+1
           jp = 3*j2 - 2*j1 -1
           kp = 3*k2 - 2*k1 -1
-          if(IsEqualLevel(nI+1,jp,kp))then
+          if(IsEqualLevel_G(nI+1,jp,kp))then
              Scalar_G(nI+1,j2,k2) = c0*Scalar1_G(nI+1,j2,k2) &
                   + 0.25*Scalar1_G(nI+1,jp,kp) + 0.25*Scalar_G(nI,j2,k2)
           else
@@ -179,7 +179,7 @@ contains
        do k1=1, nK, 2; do i1=1, nI, 2; do k2 = k1,k1+1; do i2 = i1,i1+1
           ip = 3*i2 - 2*i1 -1
           kp = 3*k2 - 2*k1 -1
-          if(IsEqualLevel(ip,0,kp))then
+          if(IsEqualLevel_G(ip,0,kp))then
              Scalar_G(i2,0,k2) = c0*Scalar1_G(i2,0,k2) &
                   + 0.25*Scalar1_G(ip,0,kp) + 0.25*Scalar_G(i2,1,k2)
           else
@@ -193,7 +193,7 @@ contains
        do k1=1, nK, 2; do i1=1, nI, 2; do k2 = k1,k1+1; do i2 = i1,i1+1
           ip = 3*i2 - 2*i1 -1
           kp = 3*k2 - 2*k1 -1
-          if(IsEqualLevel(ip,nJ+1,kp))then
+          if(IsEqualLevel_G(ip,nJ+1,kp))then
              Scalar_G(i2,nJ+1,k2) = c0*Scalar1_G(i2,nJ+1,k2) &
                   + 0.25*Scalar1_G(ip,nJ+1,kp) + 0.25*Scalar_G(i2,nJ,k2)
           else
@@ -207,7 +207,7 @@ contains
        do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
           ip = 3*i2 - 2*i1 -1
           jp = 3*j2 - 2*j1 -1
-          if(IsEqualLevel(ip,jp,0))then
+          if(IsEqualLevel_G(ip,jp,0))then
              Scalar_G(i2,j2,0) = c0*Scalar1_G(i2,j2,0) &
                   + 0.25*Scalar1_G(ip,jp,0) + 0.25*Scalar_G(i2,j2,1)
           else
@@ -221,7 +221,7 @@ contains
        do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
           ip = 3*i2 - 2*i1 -1
           jp = 3*j2 - 2*j1 -1
-          if(IsEqualLevel(ip,jp,nK+1))then
+          if(IsEqualLevel_G(ip,jp,nK+1))then
              Scalar_G(i2,j2,nK+1) = c0*Scalar1_G(i2,j2,nK+1) &
                   + 0.25*Scalar1_G(ip,jp,nK+1) + 0.25*Scalar_G(i2,j2,nK)
           else
@@ -243,7 +243,7 @@ contains
        k1=1; if(kSide==1) k1=nK; k2 = k1-kSide; kC = k1+kSide
        do i1 = 1,nI,2; do i2 = i1, i1+1
           ip = 3*i2 - 2*i1 -1
-          if(IsEqualLevel(ip,jC,kC))then
+          if(IsEqualLevel_G(ip,jC,kC))then
              Scalar_G(i2,jC,kC) = c0*Scalar1_G(i2,jC,kC) &
                   + 0.25*Scalar1_G(ip,jC,kC) + 0.25*Scalar_G(i2,j1,k1)
           else
@@ -263,7 +263,7 @@ contains
        k1=1; if(kSide==1) k1=nK; k2 = k1-kSide; kC = k1+kSide
        do j1 = 1, nJ, 2; do j2 = j1, j1+1
           jp = 3*j2 - 2*j1 -1
-          if(IsEqualLevel(iC,jp,kC))then
+          if(IsEqualLevel_G(iC,jp,kC))then
              Scalar_G(iC,j2,kC) = c0*Scalar1_G(iC,j2,kC) &
                   + 0.25*Scalar1_G(iC,jp,kC) + 0.25*Scalar_G(i1,j2,k1)
           else
@@ -283,7 +283,7 @@ contains
        j1=1; if(jSide==1) j1=nJ; j2 = j1-jSide; jC = j1+jSide
        do k1 = 1, nK, 2 ; do k2 = k1, k1 + 1
           kp = 3*k2 - 2*k1 -1
-          if(IsEqualLevel(iC,jC,kp))then
+          if(IsEqualLevel_G(iC,jC,kp))then
              Scalar_G(iC,jC,k2) = c0*Scalar1_G(iC,jC,k2) &
                   + 0.25*Scalar1_G(iC,jC,kp) + 0.25*Scalar_G(i1,j1,k2)
           else
