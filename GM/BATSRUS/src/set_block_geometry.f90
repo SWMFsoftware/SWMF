@@ -14,7 +14,7 @@ subroutine set_root_block_geometry
   use ModMpi
   implicit none
 
-  integer :: i, j, k, iBLK
+  integer :: i, j, k, iBLK, iPE
   real :: dx, dy, dz                         
 
   ! set the array periodic3D for the periodic boundary
@@ -30,8 +30,8 @@ subroutine set_root_block_geometry
      periodic3D(1)=any(TypeBc_I(east_:west_)=='periodic')
      periodic3D(2)=any(TypeBc_I(south_:north_)=='periodic')
      periodic3D(3)=any(TypeBc_I(bot_:top_)=='periodic')
-  end if                                                
- 
+  end if
+
   xyzStart_BLK = -777777.
   dx_BLK = -777777.
   dy_BLK = -777777.
@@ -43,15 +43,20 @@ subroutine set_root_block_geometry
   R2_BLK = -777777.           !^CFG IF SECONDBODY
 
   ! Set the block geometry for all root blocks
-  if (iProc == 0) then
-     iBLK = 0
-     Dxyz(:)=(XyzMax_D(:)-XyzMin_D(:))/(nCells(:)*proc_dims(:))
 
-     do k = 1, proc_dims(3)
-        do j = 1, proc_dims(2)
-           do i = 1, proc_dims(1)
-              iBLK = iBLK+1
-
+  iBLK = 0
+  Dxyz(:)=(XyzMax_D(:)-XyzMin_D(:))/(nCells(:)*proc_dims(:))
+  iPE = 0
+  do k = 1, proc_dims(3)
+     do j = 1, proc_dims(2)
+        do i = 1, proc_dims(1)
+           iBLK = iBLK+1
+           if(iBLK > nBLK)then
+              iBLK = 1
+              iPE  = iPE+1
+           end if
+           availableBLKs(0,iPE) = availableBLKs(0,iPE) +1
+           if (iProc == iPE) then
               unusedBLK(iBLK) = .false.
 
               dx_BLK(iBLK) = Dxyz(1)  
@@ -61,15 +66,16 @@ subroutine set_root_block_geometry
               xyzStart_BLK(2,iBLK) = Dxyz(2) * (cHalf + nJ*(j-1))+XyzMin_D(2)
               xyzStart_BLK(3,iBLK) = Dxyz(3) * (cHalf + nK*(k-1))+XyzMin_D(3)
               call fix_block_geometry(iBLK)
-           end do
+           end if
         end do
      end do
-  end if
+  end do
+
 
   ! Let every PE know the available blocks on PE 0
-  nBlock    = product(proc_dims)
+  nBlock    = min(product(proc_dims), nBLK)
   nBlockMax = nBlock
-  availableBLKs(0,0)=nBlockMax+1
+
 
 end subroutine set_root_block_geometry
 !==============================================================================
