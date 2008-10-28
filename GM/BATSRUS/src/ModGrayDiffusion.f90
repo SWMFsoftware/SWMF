@@ -96,6 +96,8 @@ contains
 
   subroutine set_block_scalar(Scalar_G, iBlock)
 
+    ! correct the ghostcells of the given scalar field on iBlock
+
     use ModParallel, ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot, BlkNeighborLev, NOBLK
 
@@ -108,50 +110,39 @@ contains
     integer :: iL, iR, jL, jR, kL, kR
     integer :: ip, jp, kp
 
-    real :: Scalar1_G(-1:nI+2,-1:nJ+2,-1:nK+2) ! temporary array
+    real    :: Scalar1_G(0:nI+1,0:nJ+1,0:nK+1) ! temporary array
+    logical :: IsEqualLevel(0:nI+1,0:nJ+1,0:nK+1)
     !------------------------------------------------------------------------
     IsNewBlockGrayDiffusion = .false.
 
-    Scalar1_G = Scalar_G
+    Scalar1_G = Scalar_G(0:nI+1,0:nJ+1,0:nK+1)
 
-    ! Fix ghost edge and corner ghost cells
     do kSide = -1,1; do jSide = -1,1; do iSide = -1,1
-       ! If the corner or edge is not coarser but the face is
-       ! then average out the 8 fine cells so that the
-       ! general interpolation formulas remain 2nd order
-       ! accurate
-       if(  BlkNeighborLev(iSide,jSide,kSide,iBlock) == 0 .and. ( &
-            BlkNeighborLev(iSide,0,0,iBlock) == 1 .or. &
-            BlkNeighborLev(0,jSide,0,iBlock) == 1 .or. &
-            BlkNeighborLev(0,0,kSide,iBlock) == 1)) then
-
-          if(iSide==0)then
-             iL = 1; iR = nI
-          elseif(iSide==1)then
-             iL = nI+1; iR=nI+2
-          else
-             iL = -1; iR = 0
-          end if
-          if(jSide==0)then
-             jL = 1; jR = nJ
-          elseif(jSide==1)then
-             jL = nJ+1; jR=nJ+2
-          else
-             jL = -1; jR = 0
-          end if
-          if(kSide==0)then
-             kL = 1; kR = nK
-          elseif(kSide==1)then
-             kL = nK+1; kR=nK+2
-          else
-             kL = -1; kR = 0
-          end if
-
-          do k1=kL,kR,2; do j1=jL,jR,2; do i1=iL,iR,2
-             Scalar1_G(i1:i1+1,j1:j1+1,k1:k1+1)= &
-                  0.125*sum(Scalar_G(i1:i1+1,j1:j1+1,k1:k1+1))
-          end do; end do; end do
-
+       if(iSide==0)then
+          iL = 1; iR = nI
+       elseif(iSide==1)then
+          iL = nI+1; iR = iL
+       else
+          iL = 0; iR = iL
+       end if
+       if(jSide==0)then
+          jL = 1; jR = nJ
+       elseif(jSide==1)then
+          jL = nJ+1; jR = jL
+       else
+          jL = 0; jR = jL
+       end if
+       if(kSide==0)then
+          kL = 1; kR = nK
+       elseif(kSide==1)then
+          kL = nK+1; kR = kL
+       else
+          kL = 0; kR = kL
+       end if
+       if( BlkNeighborLev(iSide, jSide, kSide, iBlock) == 0 )then
+          IsEqualLevel(iL:iR,jL:jR,kL:kR) = .true.
+       else
+          IsEqualLevel(iL:iR,jL:jR,kL:kR) = .false.
        end if
     end do; end do; end do
 
@@ -160,8 +151,13 @@ contains
        do k1=1, nK, 2; do j1=1, nJ, 2; do k2 = k1,k1+1; do j2 = j1,j1+1
           jp = 3*j2 - 2*j1 -1
           kp = 3*k2 - 2*k1 -1
-          Scalar_G(0,j2,k2) = c0*Scalar1_G(0,j2,k2) &
-               + p0*Scalar1_G(0,jp,kp) + F1*Scalar_G(1,j2,k2)
+          if(IsEqualLevel(0,jp,kp))then
+             Scalar_G(0,j2,k2) = c0*Scalar1_G(0,j2,k2) &
+               + 0.25*Scalar1_G(0,jp,kp) + 0.25*Scalar_G(1,j2,k2)
+          else
+             Scalar_G(0,j2,k2) = c0*Scalar1_G(0,j2,k2) &
+                  + p0*Scalar1_G(0,jp,kp) + F1*Scalar_G(1,j2,k2)
+          end if
        end do; end do; end do; end do
     end if
 
@@ -169,8 +165,13 @@ contains
        do k1=1, nK, 2; do j1=1, nJ, 2; do k2 = k1,k1+1; do j2 = j1,j1+1
           jp = 3*j2 - 2*j1 -1
           kp = 3*k2 - 2*k1 -1
-          Scalar_G(nI+1,j2,k2) = c0*Scalar1_G(nI+1,j2,k2) &
-               + p0*Scalar1_G(nI+1,jp,kp) + F1*Scalar_G(nI,j2,k2)
+          if(IsEqualLevel(nI+1,jp,kp))then
+             Scalar_G(nI+1,j2,k2) = c0*Scalar1_G(nI+1,j2,k2) &
+                  + 0.25*Scalar1_G(nI+1,jp,kp) + 0.25*Scalar_G(nI,j2,k2)
+          else
+             Scalar_G(nI+1,j2,k2) = c0*Scalar1_G(nI+1,j2,k2) &
+                  + p0*Scalar1_G(nI+1,jp,kp) + F1*Scalar_G(nI,j2,k2)
+          end if
        end do; end do; end do; end do
     end if
 
@@ -178,8 +179,13 @@ contains
        do k1=1, nK, 2; do i1=1, nI, 2; do k2 = k1,k1+1; do i2 = i1,i1+1
           ip = 3*i2 - 2*i1 -1
           kp = 3*k2 - 2*k1 -1
-          Scalar_G(i2,0,k2) = c0*Scalar1_G(i2,0,k2) &
-               + p0*Scalar1_G(ip,0,kp) + F1*Scalar_G(i2,1,k2)
+          if(IsEqualLevel(ip,0,kp))then
+             Scalar_G(i2,0,k2) = c0*Scalar1_G(i2,0,k2) &
+                  + 0.25*Scalar1_G(ip,0,kp) + 0.25*Scalar_G(i2,1,k2)
+          else
+             Scalar_G(i2,0,k2) = c0*Scalar1_G(i2,0,k2) &
+                  + p0*Scalar1_G(ip,0,kp) + F1*Scalar_G(i2,1,k2)
+          end if
        end do; end do; end do; end do
     end if
 
@@ -187,8 +193,13 @@ contains
        do k1=1, nK, 2; do i1=1, nI, 2; do k2 = k1,k1+1; do i2 = i1,i1+1
           ip = 3*i2 - 2*i1 -1
           kp = 3*k2 - 2*k1 -1
-          Scalar_G(i2,nJ+1,k2) = c0*Scalar1_G(i2,nJ+1,k2) &
-               + p0*Scalar1_G(ip,nJ+1,kp) + F1*Scalar_G(i2,nJ,k2)
+          if(IsEqualLevel(ip,nJ+1,kp))then
+             Scalar_G(i2,nJ+1,k2) = c0*Scalar1_G(i2,nJ+1,k2) &
+                  + 0.25*Scalar1_G(ip,nJ+1,kp) + 0.25*Scalar_G(i2,nJ,k2)
+          else
+             Scalar_G(i2,nJ+1,k2) = c0*Scalar1_G(i2,nJ+1,k2) &
+                  + p0*Scalar1_G(ip,nJ+1,kp) + F1*Scalar_G(i2,nJ,k2)
+          end if
        end do; end do; end do; end do
     end if
 
@@ -196,8 +207,13 @@ contains
        do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
           ip = 3*i2 - 2*i1 -1
           jp = 3*j2 - 2*j1 -1
-          Scalar_G(i2,j2,0) = c0*Scalar1_G(i2,j2,0) &
-               + p0*Scalar1_G(ip,jp,0) + F1*Scalar_G(i2,j2,1)
+          if(IsEqualLevel(ip,jp,0))then
+             Scalar_G(i2,j2,0) = c0*Scalar1_G(i2,j2,0) &
+                  + 0.25*Scalar1_G(ip,jp,0) + 0.25*Scalar_G(i2,j2,1)
+          else
+             Scalar_G(i2,j2,0) = c0*Scalar1_G(i2,j2,0) &
+                  + p0*Scalar1_G(ip,jp,0) + F1*Scalar_G(i2,j2,1)
+          end if
        end do; end do; end do; end do
     end if
 
@@ -205,8 +221,13 @@ contains
        do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
           ip = 3*i2 - 2*i1 -1
           jp = 3*j2 - 2*j1 -1
-          Scalar_G(i2,j2,nK+1) = c0*Scalar1_G(i2,j2,nK+1) &
-               + p0*Scalar1_G(ip,jp,nK+1) + F1*Scalar_G(i2,j2,nK)
+          if(IsEqualLevel(ip,jp,nK+1))then
+             Scalar_G(i2,j2,nK+1) = c0*Scalar1_G(i2,j2,nK+1) &
+                  + 0.25*Scalar1_G(ip,jp,nK+1) + 0.25*Scalar_G(i2,j2,nK)
+          else
+             Scalar_G(i2,j2,nK+1) = c0*Scalar1_G(i2,j2,nK+1) &
+                  + p0*Scalar1_G(ip,jp,nK+1) + F1*Scalar_G(i2,j2,nK)
+          end if
        end do; end do; end do; end do
     end if
 
@@ -222,8 +243,13 @@ contains
        k1=1; if(kSide==1) k1=nK; k2 = k1-kSide; kC = k1+kSide
        do i1 = 1,nI,2; do i2 = i1, i1+1
           ip = 3*i2 - 2*i1 -1
-          Scalar_G(i2,jC,kC) = c0*Scalar1_G(i2,jC,kC) &
-               + p0*Scalar1_G(ip,jC,kC) + F1*Scalar_G(i2,j1,k1)
+          if(IsEqualLevel(ip,jC,kC))then
+             Scalar_G(i2,jC,kC) = c0*Scalar1_G(i2,jC,kC) &
+                  + 0.25*Scalar1_G(ip,jC,kC) + 0.25*Scalar_G(i2,j1,k1)
+          else
+             Scalar_G(i2,jC,kC) = c0*Scalar1_G(i2,jC,kC) &
+                  + p0*Scalar1_G(ip,jC,kC) + F1*Scalar_G(i2,j1,k1)
+          end if
        end do; end do
     end do; end do
     ! 4 Y edges
@@ -237,8 +263,13 @@ contains
        k1=1; if(kSide==1) k1=nK; k2 = k1-kSide; kC = k1+kSide
        do j1 = 1, nJ, 2; do j2 = j1, j1+1
           jp = 3*j2 - 2*j1 -1
-          Scalar_G(iC,j2,kC) = c0*Scalar1_G(iC,j2,kC) &
-               + p0*Scalar1_G(iC,jp,kC) + F1*Scalar_G(i1,j2,k1)
+          if(IsEqualLevel(iC,jp,kC))then
+             Scalar_G(iC,j2,kC) = c0*Scalar1_G(iC,j2,kC) &
+                  + 0.25*Scalar1_G(iC,jp,kC) + 0.25*Scalar_G(i1,j2,k1)
+          else
+             Scalar_G(iC,j2,kC) = c0*Scalar1_G(iC,j2,kC) &
+                  + p0*Scalar1_G(iC,jp,kC) + F1*Scalar_G(i1,j2,k1)
+          end if
        end do; end do
     end do; end do
     ! 4 Z edges
@@ -252,8 +283,13 @@ contains
        j1=1; if(jSide==1) j1=nJ; j2 = j1-jSide; jC = j1+jSide
        do k1 = 1, nK, 2 ; do k2 = k1, k1 + 1
           kp = 3*k2 - 2*k1 -1
-          Scalar_G(iC,jC,k2) = c0*Scalar1_G(iC,jC,k2) &
-               + p0*Scalar1_G(iC,jC,kp) + F1*Scalar_G(i1,j1,k2)
+          if(IsEqualLevel(iC,jC,kp))then
+             Scalar_G(iC,jC,k2) = c0*Scalar1_G(iC,jC,k2) &
+                  + 0.25*Scalar1_G(iC,jC,kp) + 0.25*Scalar_G(i1,j1,k2)
+          else
+             Scalar_G(iC,jC,k2) = c0*Scalar1_G(iC,jC,k2) &
+                  + p0*Scalar1_G(iC,jC,kp) + F1*Scalar_G(i1,j1,k2)
+          end if
        end do; end do         
     end do; end do
 
