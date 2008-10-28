@@ -114,9 +114,9 @@ contains
 
     if(present(IsError)) IsError = IsDegenerated
     if(IsDegenerated)then
-       if(present(IsError))RETURN
        write(*,*) NameSub,' pTotal, Rho, iMaterial =', pTotal, Rho, iMaterial
-       write(*,*) NameSub,' pToNaRatio, Natomic =', pToNaRatio, Natomic
+       write(*,*) NameSub,' pToNaRatio, Natomic, Te =', pToNaRatio, Natomic,Te
+       if(present(IsError))RETURN
        call CON_stop(NameSub//': no EOS for Fermi degenerated state')
     end if
 
