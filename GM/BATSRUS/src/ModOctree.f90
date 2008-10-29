@@ -13,7 +13,8 @@ module ModOctree
      logical :: &
           IsExtraBoundaryOrPole,IsOuterBoundary,&         
           used, refine, coarsen, body
-     integer :: number, child_number, PE, BLK, LEV, LEVmin,LEVmax
+     integer :: number, child_number, PE, BLK, LEV, LEVmin,LEVmax, &
+          iRoot,jRoot, kRoot
      type (adaptive_block_ptr) :: parent
      type (adaptive_block_ptr) :: child(1:2**nDim)
   end type adaptive_block

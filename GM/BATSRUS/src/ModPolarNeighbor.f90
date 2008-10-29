@@ -125,24 +125,23 @@ contains
        InBlkPtr%ptr=>InBlkPtr%ptr%parent%ptr
     end do
     !Found root cell, find neighbor root cell
-    do i=1,proc_dims(1)
-       do j=1,proc_dims(2)
-          do k=1,proc_dims(3)
-             if (associated(InBlkPtr%ptr,octree_roots(i,j,k)%ptr)) then
-                iRoot=i
-                jRoot=j
-                kRoot=k
-             end if
-          end do
-       end do
-    end do
+
+    !Found root cell, find neighbor root cell
+    iRoot = InBlkPtr%ptr%iRoot 
+    jRoot = InBlkPtr%ptr%jRoot
+    kRoot = InBlkPtr%ptr%kRoot
+    !Check
+    if (.not.associated(InBlkPtr%ptr,&
+       octree_roots(iRoot,jRoot,kRoot)%ptr))&
+       call stop_mpi('Failure in the algorithm for finding octree root')
+    
     jRoot=1+mod(jRoot-1+proc_dims(2)/2,proc_dims(2))
 
     nullify (OutBlkPtr%ptr)
-
+    
     OutBlkPtr%ptr=>octree_roots(iRoot,jRoot,kRoot)%ptr
     do iLevel=1,iLevelIn
-    
+       
        OutBlkPtr%ptr => OutBlkPtr%ptr%child(iChild_I(iLevel))%ptr
        if (.not.associated(OutBlkPtr%ptr))&
             call stop_mpi('Wrong Axial Neighbor is found') ! ensure block is allocated

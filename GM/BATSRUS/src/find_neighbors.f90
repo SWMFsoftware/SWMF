@@ -236,15 +236,14 @@ subroutine find_tree_neighbor(TreeNodeIn,TreeNodeOut,iX,iY,iZ,IsNoNeighbor)
   end do
   
   !Found root cell, find neighbor root cell
-  do i=1,proc_dims(1)
-     do j=1,proc_dims(2)
-        do k=1,proc_dims(3)
-           if (associated(TreeNodeOut%ptr,octree_roots(i,j,k)%ptr)) then
-              iRoot_D=(/i,j,k/)
-           end if
-        end do
-     end do
-  end do
+  iRoot_D(1) = TreeNodeOut%ptr%iRoot 
+  iRoot_D(2) = TreeNodeOut%ptr%jRoot
+  iRoot_D(3) = TreeNodeOut%ptr%kRoot
+  !Check
+  if (.not.associated(TreeNodeOut%ptr,&
+       octree_roots(iRoot_D(1),iRoot_D(2),iRoot_D(3))%ptr))&
+       call stop_mpi('Failure in the algorithm for finding octree root')
+         
   !Pass to the neighboring tree, modify iXyzFromCorner_D accordingly
   where(iXyzFromCorner_D<0)
      iXyzFromCorner_D = iXyzFromCorner_D + iDXyz

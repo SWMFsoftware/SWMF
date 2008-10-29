@@ -49,7 +49,7 @@ subroutine build_octree_roots
               iPE=iPE+1
            end if
            nullify(octree % ptr)
-           call initialize_octree_block(octree, iPE, iBLK, iLEV, iLEVmin, iLEVmax)
+           call initialize_octree_block(octree, iPE, iBLK, iLEV, iLEVmin, iLEVmax,i,j,k)
            octree_roots(i, j, k) % ptr => octree  % ptr
            global_block_ptrs(iBLK, iPE+1) % ptr => octree % ptr
         end do
@@ -58,12 +58,13 @@ subroutine build_octree_roots
   nBlockAll = iBLK + nBLK*iPE
 end subroutine build_octree_roots
 
-subroutine initialize_octree_block(octree, iPE, iBLK, iLEV, iLEVmin, iLEVmax)
+subroutine initialize_octree_block(octree, &
+     iPE, iBLK, iLEV, iLEVmin, iLEVmax,iRoot,jRoot, kRoot)
   use ModOctree
   implicit none
 
   type (adaptive_block_ptr) :: octree
-  integer, intent(in) :: iPE, iBLK, iLEV, iLEVmin, iLEVmax
+  integer, intent(in) :: iPE, iBLK, iLEV, iLEVmin, iLEVmax,iRoot,jRoot, kRoot
 
   integer :: ierror,iChild
 
@@ -83,6 +84,9 @@ subroutine initialize_octree_block(octree, iPE, iBLK, iLEV, iLEVmin, iLEVmax)
   octree % ptr % LEV     = iLEV
   octree % ptr % LEVmin  = iLEVmin
   octree % ptr % LEVmax  = iLEVmax
+  octree % ptr % iRoot   = iRoot
+  octree % ptr % jRoot   = jRoot
+  octree % ptr % kRoot   = kRoot
   octree % ptr % used    = .true.
   octree % ptr % refine  = .false.
   octree % ptr % coarsen = .false.
@@ -101,17 +105,21 @@ subroutine refine_octree_block(octree, iPEs, iBLKs, fromPE, fromBLK)
   integer, intent(in) :: fromPE, fromBLK
   integer, intent(in), dimension(8) :: iPEs, iBLKs
 
-  integer :: iLEV, iLEVmin, iLEVmax,iChild
+  integer :: iLEV, iLEVmin, iLEVmax,iChild, iRoot, jRoot, kRoot
   type (adaptive_block_ptr) :: child
 
   if (associated(octree % ptr)) then
      iLEV = octree % ptr % LEV + 1
      iLEVmin = octree % ptr % LEVmin
      iLEVmax = octree % ptr % LEVmax
+     iRoot   = octree % ptr % iRoot
+     jRoot   = octree % ptr % jRoot
+     kRoot   = octree % ptr % kRoot
      do iChild=1,8
         nullify(child % ptr)
         call initialize_octree_block(child, &
-             iPEs(iChild), iBLKs(iChild), iLEV, iLEVmin, iLEVmax)
+             iPEs(iChild), iBLKs(iChild), iLEV, iLEVmin, iLEVmax,&
+             iRoot, jRoot, kRoot)
         octree % ptr % child(iChild)%ptr =>  child % ptr
         child % ptr % child_number = iChild
         
