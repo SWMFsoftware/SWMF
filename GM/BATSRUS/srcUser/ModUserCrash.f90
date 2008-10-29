@@ -89,7 +89,7 @@ contains
           call read_var('RhoDimTube', RhoDimTube)
           call read_var('RhoDimOutside', RhoDimOutside)
           call read_var('pDimOutside',   pDimOutside)
-       case("XEATREST")
+       case("#XEATREST")
           call read_var('UseXeAtRest',UseXeAtRest)
           if(UseXeAtRest)then
              call read_var('xXeAtRest', xXeAtRest)
