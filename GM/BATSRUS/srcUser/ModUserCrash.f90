@@ -58,6 +58,9 @@ module ModUser
   integer           :: iPHyades = 3            ! index of pressure
   integer           :: iZHyades = 6            ! index of ionization level
 
+  logical :: UseXeAtRest = .false.
+  real :: xXeAtRest = 115.0, RhoDimXeAtRest = 6.50, pDimXeAtRest = 1.10e5
+
 contains
 
   !============================================================================
@@ -86,6 +89,13 @@ contains
           call read_var('RhoDimTube', RhoDimTube)
           call read_var('RhoDimOutside', RhoDimOutside)
           call read_var('pDimOutside',   pDimOutside)
+       case("XEATREST")
+          call read_var('UseXeAtRest',UseXeAtRest)
+          if(UseXeAtRest)then
+             call read_var('xXeAtRest', xXeAtRest)
+             call read_var('RhoDimXeAtRest',RhoDimXeAtRest)
+             call read_var('pDimXeAtRest',pDimXeAtRest)
+          end if
        case("#GOLD")
           call read_var('UseGold',    UseGold)
           call read_var('WidthGold',  WidthGold)
@@ -138,6 +148,21 @@ contains
        do i=-1,nI+2
           ! Find the Hyades points around this position
           x = x_Blk(i,1,1,iBlock)
+          if(UseXeAtRest .and. x > xXeAtRest)then
+             do k=-1,nk+2; do j=-1,nJ+2
+             ! Unperturbed Xe:
+
+                State_VGB(Rho_,i,j,k,iBlock) =  RhoDimXeAtRest*Io2No_V(UnitRho_)
+         
+
+                State_VGB(p_,i,j,k,iBlock)   =  pDimXeAtRest  *Io2No_V(UnitP_)
+
+                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
+
+             end do; end do
+             CYCLE
+          end if
+             
 
           do iCell=1, nCellHyades
              if(xHyades_C(iCell) >= x) EXIT
@@ -381,7 +406,7 @@ contains
 
     if(xBeHyades < 0.0)call stop_mpi(NameSub // &
          ' could not find Be-Xe interface based on ionization levels')
-
+    if(UseXeAtRest .and. xXeAtRest < xBeHyades) xBeHyades = xXeAtRest
   end subroutine read_hyades_file
 
   !============================================================================
