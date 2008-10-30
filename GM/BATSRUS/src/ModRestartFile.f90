@@ -812,6 +812,9 @@ contains
           do i = 1, proc_dims(1)
              isRoot = .true.
              octree % ptr => octree_roots(i, j, k) % ptr
+             octree % ptr % iRoot = i
+             octree % ptr % jRoot = j
+             octree % ptr % kRoot = k
              call read_octree_soln_block(octree, BlksPerPE, isRoot)
           end do
        end do

@@ -241,9 +241,17 @@ subroutine find_tree_neighbor(TreeNodeIn,TreeNodeOut,iX,iY,iZ,IsNoNeighbor)
   iRoot_D(3) = TreeNodeOut%ptr%kRoot
   !Check
   if (.not.associated(TreeNodeOut%ptr,&
-       octree_roots(iRoot_D(1),iRoot_D(2),iRoot_D(3))%ptr))&
-       call stop_mpi('Failure in the algorithm for finding octree root')
-         
+       octree_roots(iRoot_D(1),iRoot_D(2),iRoot_D(3))%ptr))then
+     write(*,*)'iRoot_D=', iRoot_D
+     if(associated(octree_roots(iRoot_D(1),iRoot_D(2),iRoot_D(3))%ptr))then
+        write(*,*)octree_roots(iRoot_D(1),iRoot_D(2),iRoot_D(3))%ptr%iRoot
+        write(*,*)octree_roots(iRoot_D(1),iRoot_D(2),iRoot_D(3))%ptr%jRoot
+        write(*,*)octree_roots(iRoot_D(1),iRoot_D(2),iRoot_D(3))%ptr%kRoot
+     else
+        write(*,*)'Octree with these root numbers is not associated'
+     end if
+     call stop_mpi('Failure in the algorithm for finding octree root')
+  end if
   !Pass to the neighboring tree, modify iXyzFromCorner_D accordingly
   where(iXyzFromCorner_D<0)
      iXyzFromCorner_D = iXyzFromCorner_D + iDXyz
