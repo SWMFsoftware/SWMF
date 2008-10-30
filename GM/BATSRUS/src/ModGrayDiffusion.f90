@@ -29,7 +29,7 @@ module ModGrayDiffusion
   character(len=20), public :: TypeRadFluxLimiter = 'larsen'
 
   ! Local variables
-  real :: Erad_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+  real :: Erad_G(0:nI+1,0:nJ+1,0:nK+1)
 
   real, parameter :: GammaRel = 4.0/3.0
 
@@ -102,7 +102,7 @@ contains
          neiLnorth, neiLtop, neiLbot, BlkNeighborLev, NOBLK
 
     integer, intent(in) :: iBlock
-    real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2), intent(inout) :: Scalar_G
+    real, dimension(0:nI+1,0:nJ+1,0:nK+1), intent(inout) :: Scalar_G
 
     real, parameter :: c0 = 0.5, p0 = 1./6., F1 = 1./3.
 
@@ -115,7 +115,7 @@ contains
     !------------------------------------------------------------------------
     IsNewBlockGrayDiffusion = .false.
 
-    Scalar1_G = Scalar_G(0:nI+1,0:nJ+1,0:nK+1)
+    Scalar1_G = Scalar_G
 
     do kSide = -1,1; do jSide = -1,1; do iSide = -1,1
        if(iSide==0)then
@@ -153,7 +153,7 @@ contains
           kp = 3*k2 - 2*k1 -1
           if(IsEqualLevel_G(0,jp,kp))then
              Scalar_G(0,j2,k2) = c0*Scalar1_G(0,j2,k2) &
-               + 0.25*Scalar1_G(0,jp,kp) + 0.25*Scalar_G(1,j2,k2)
+                  + 0.25*Scalar1_G(0,jp,kp) + 0.25*Scalar_G(1,j2,k2)
           else
              Scalar_G(0,j2,k2) = c0*Scalar1_G(0,j2,k2) &
                   + p0*Scalar1_G(0,jp,kp) + F1*Scalar_G(1,j2,k2)
@@ -239,8 +239,8 @@ contains
             BlkNeighborLev(0, jSide, 0, iBlock) == 1 .or. &
             BlkNeighborLev(0, 0, kSide, iBlock) == 1))) CYCLE
 
-       j1=1; if(jSide==1) j1=nJ; j2 = j1-jSide; jC = j1+jSide
-       k1=1; if(kSide==1) k1=nK; k2 = k1-kSide; kC = k1+kSide
+       j1=1; if(jSide==1) j1=nJ; jC = j1+jSide
+       k1=1; if(kSide==1) k1=nK; kC = k1+kSide
        do i1 = 1,nI,2; do i2 = i1, i1+1
           ip = 3*i2 - 2*i1 -1
           if(IsEqualLevel_G(ip,jC,kC))then
@@ -259,8 +259,8 @@ contains
             BlkNeighborLev(iSide, 0, 0, iBlock) == 1 .or. &
             BlkNeighborLev(0, 0, kSide, iBlock) == 1))) CYCLE
 
-       i1=1; if(iSide==1) i1=nI; i2 = i1-iSide; iC = i1+iSide
-       k1=1; if(kSide==1) k1=nK; k2 = k1-kSide; kC = k1+kSide
+       i1=1; if(iSide==1) i1=nI; iC = i1+iSide
+       k1=1; if(kSide==1) k1=nK; kC = k1+kSide
        do j1 = 1, nJ, 2; do j2 = j1, j1+1
           jp = 3*j2 - 2*j1 -1
           if(IsEqualLevel_G(iC,jp,kC))then
@@ -279,8 +279,8 @@ contains
             BlkNeighborLev(iSide, 0, 0, iBlock) == 1 .or. &
             BlkNeighborLev(0, jSide, 0, iBlock) == 1))) CYCLE
 
-       i1=1; if(iSide==1) i1=nI; i2 = i1-iSide; iC = i1+iSide
-       j1=1; if(jSide==1) j1=nJ; j2 = j1-jSide; jC = j1+jSide
+       i1=1; if(iSide==1) i1=nI; iC = i1+iSide
+       j1=1; if(jSide==1) j1=nJ; jC = j1+jSide
        do k1 = 1, nK, 2 ; do k2 = k1, k1 + 1
           kp = 3*k2 - 2*k1 -1
           if(IsEqualLevel_G(iC,jC,kp))then
@@ -319,7 +319,7 @@ contains
     InvDz = 1.0/Dz_Blk(iBlock)
 
     if(IsNewBlockGrayDiffusion)then
-       Erad_G = State_VGB(Eradiation_,:,:,:,iBlock)
+       Erad_G = State_VGB(Eradiation_,0:nI+1,0:nJ+1,0:nK+1,iBlock)
        call set_block_scalar(Erad_G, iBlock)
        if(UseCovariant)then
           ! call ...

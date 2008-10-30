@@ -98,12 +98,12 @@ contains
        ! Mach 2 test
        nCellLowrie = 4840
        U0 = -2.0
-       X0 = 0.2/16.0
+       X0 = 0.0125
     case(3)
        ! Mach 5 test with variable cross-sections
        nCellLowrie = 8904
        U0 = -5.0
-       X0 = 0.5*3.0/64.0
+       X0 = 0.02
     case default
        call stop_mpi(NameSub // " wrong iLowrieTest")
     end select
