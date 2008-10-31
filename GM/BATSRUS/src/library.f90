@@ -1639,40 +1639,41 @@ subroutine get_time_string
   type(TimeType):: Time
   !---------------------------------------------------------------------------
 
-  StringDateOrTime = '';
+  ! This is the value if the time is too large
+  StringDateOrTime = '99999999'
   select case(NameMaxTimeUnit)
   case('hour')
-     if(Time_Simulation < 10000.0*3600)then
-        write(StringDateOrTime,'(i4.4,i2.2,i2.2)') &
-             int(                            Time_Simulation/3600.), &
-             int((Time_Simulation-(3600.*int(Time_Simulation/3600.)))/60.), &
-             int( Time_Simulation-(  60.*int(Time_Simulation/  60.)))
-     else
-        StringDateOrTime = '99999999'
-     end if
+     if(Time_Simulation < 10000.0*3600) &
+          write(StringDateOrTime,'(i4.4,i2.2,i2.2)') &
+          int(                            Time_Simulation/3600.), &
+          int((Time_Simulation-(3600.*int(Time_Simulation/3600.)))/60.), &
+          int( Time_Simulation-(  60.*int(Time_Simulation/  60.)))
   case('hr')
-     if(Time_Simulation < 100.0*3600)then
-        write(StringDateOrTime,'(i2.2,i2.2,f4.1)') &
-             int(                            Time_Simulation/3600.), &
-             int((Time_Simulation-(3600.*int(Time_Simulation/3600.)))/60.), &
-             Time_Simulation-(  60.*int(Time_Simulation/  60.))
-     else
-        StringDateOrTime = '99999999'
-     end if
+     if(Time_Simulation < 100.0*3600) &
+          write(StringDateOrTime,'(i2.2,i2.2,f4.1)') &
+          int(                            Time_Simulation/3600.), &
+          int((Time_Simulation-(3600.*int(Time_Simulation/3600.)))/60.), &
+          Time_Simulation-(  60.*int(Time_Simulation/  60.))
   case('minute')
-     if(Time_Simulation < 100.0*60)then
-        write(StringDateOrTime,'(i2.2,f6.3)') &
-             int(Time_Simulation/60.), &
-             Time_Simulation-(60.*int(Time_Simulation/60.))
-     else
-        StringDateOrTime = '99999999'
-     end if
+     if(Time_Simulation < 100.0*60) &
+          write(StringDateOrTime,'(i2.2,f6.3)') &
+          int(Time_Simulation/60.), &
+          Time_Simulation-(60.*int(Time_Simulation/60.))
   case('second')
-     if(Time_Simulation < 100.0)then
-        write(StringDateOrTime,'(f8.5)') Time_Simulation
-     else
-        StringDateOrTime = '99999999'
-     end if
+     if(Time_Simulation < 100.0) &
+          write(StringDateOrTime,'(f8.5)') Time_Simulation
+  case('millisecond')
+     if(Time_Simulation < 1.0) &
+          write(StringDateOrTime,'(f8.4)') Time_Simulation*1e3
+  case('microsecond')
+     if(Time_Simulation < 1e-3) &
+          write(StringDateOrTime,'(f8.4)') Time_Simulation*1e6
+  case('nanosecond')
+     if(Time_Simulation < 1e-6) &
+          write(StringDateOrTime,'(f8.4)') Time_Simulation*1e9
+  case default
+     ! Could not find unit
+     StringDateOrTime = ''
   end select
 
   if(StringDateOrTime /= '')then

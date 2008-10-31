@@ -2805,6 +2805,9 @@ compiled in double precision to make results more accurate.
 		<option name="hr"/>
 		<option name="minute"/>
 		<option name="second"/>
+		<option name="millisecond"/>
+		<option name="microsecond"/>
+		<option name="nanosecond"/>
 	</parameter>
 #PLOTFILENAME
 hour			NameMaxTimeUnit
@@ -2823,8 +2826,11 @@ For NameMaxTimeUnit='hr' the string contains the simulation time
 described by a 2-character strings for hours, minutes, and seconds
 with a decimal point and one decimal digit. For NameMaxTimeUnit='minute'
 the first 2 characters describe the minutes, and the rest is seconds
-including 3 decimal digits. Finally NameMaxTimeUnit='second' gives
+including 3 decimal digits. NameMaxTimeUnit='second' gives
 the simulation time up to 100 seconds with 5 decimal digits.
+NameMaxTimeUnit='millisecond' ('microsecond', 'nanosecond') give
+the simulation time up to 1000 milliseconds (microseconds, nanoseconds)
+with 4 decimal digits.
 
 For time units 'day', 'month', 'yr' and 'year' an 8-character-long substring 
 of the 14-character date-time string (YYYYMMDDHHMMSS) is used. 
