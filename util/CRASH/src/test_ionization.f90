@@ -236,6 +236,7 @@ program saha
   write(24,'(a)')'\hline'
 
   call set_mixture(nPolyimide, nZPolyimide_I, CPolyimide_I)
+  UsePreviousTe = .false.
   do iT  = 1,nT
      if (((iT-1)/25)*25==(iT-1).and.iT>25) then
 

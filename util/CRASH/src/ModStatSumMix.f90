@@ -6,15 +6,16 @@ module ModStatSumMix
   implicit none
   SAVE
 
+  logical :: DoInit = .true.             !Set to false after the initialization
 
-  logical :: DoInit = .true.
+  integer :: nMix = -1
+  integer, parameter :: nMixMax = 6
 
-  integer :: iIterMix     !To provide the output for the convergence efficiency, if needed
-
-  integer,parameter :: nMixMax = 6
-  integer :: nMix= -1  
-
-  integer,dimension(nMixMax) :: nZ_I=-1  !Atomic numbers of elements in the mizture 
+  integer,private,dimension(nMixMax) :: nZ_I = -1  !Atomic numbers of elements in the mizture 
+  
+  !\
+  !For each component in the mixture:
+  !/
   
   integer,dimension(nMixMax) :: iZMin_I  ! Numbers of the ionization states, such that the population
   integer,dimension(nMixMax) :: iZMax_I  ! of ion states with iZ<iZMin or iZ>iZMax is negligible.
@@ -28,11 +29,11 @@ module ModStatSumMix
   ! Array of energies needed to create i-level ion from a neutral atom
   real,dimension(0:nZMax,nMixMax) :: IonizEnergyNeutral_II 
   
+  !\
+  !The distribution over the ion states, for each of the elements:
+  !/
   real,dimension(0:nZMax,nMixMax) :: Population_II ! Array of the populations of ions
 
-  !Auxiliary arrys of numerical constants:
-  real,dimension(0:nZMax) :: N_I ! array of consecutive integers (with type real)
-  real,dimension(nZMax) :: LogN_I ! array of natural logarithms of consecutive integers
   
   !The combination of fundamental constants, used to calculate the electron
   !statistical weight: electron statistical weight at the temperature of 1eV
@@ -44,22 +45,29 @@ module ModStatSumMix
   !directly assigned and should be found from the internal energy 
   !or pressure in this case):
   real :: TeMix=1.0 ! the electron temperature [eV] = ([cKToeV] * [Te in K])
-  real,private::Na  ! The density of heavy particles in the plasma [#/m^3]
+  real ::Na  ! The density of heavy particles in the plasma [#/m^3]
 
 
   !Averages:
-  real :: ZAvMix,&  ! the average charge per ion - <Z> (elementary charge units)
-          EAvMix    ! The average ionization energy level of ions
+  integer,parameter :: DeltaI_ = 1, DeltaE_=2
+  real :: ZAvMix,&  ! 1 the average charge per ion - <Z> (elementary charge units)
+          EAvMix          ! 2 The average ionization energy level of ions
 
-  !Deviator <(\delta i)^2>:
-  real,private :: DeltaZ2Av ! The value of <(delta i)^2>=<i^2>-<i>^2
+  !Deviators <(\delta i)^2>, <delta i delta E> and <(delta e)^2:
+  real :: DeltaZ2Av ! The value of <(delta i)^2>=<i^2>-<i>^2
 
+
+  integer :: iIterMix     !To provide the output for the convergence efficiency, if needed
   integer :: iIterTeMix !Temperature iterations counter
 
-  real,private,parameter::c0=0.0
-  logical,private,parameter::UsePreviousTe=.false.
 
-  private::mod_init
+  !Auxiliary arrys of numerical constants:
+  real,dimension(0:nZMax) :: N_I ! array of consecutive integers (with type real)
+  real,dimension(nZMax)   :: LogN_I ! array of natural logarithms of consecutive integers
+ 
+  logical :: UsePreviousTe = .true.
+
+  private :: mod_init
 
 Contains
   !=========================================================================
@@ -80,7 +88,7 @@ Contains
 
     DoInit=.false.
   
-end subroutine mod_init
+  end subroutine mod_init
   !Set the element and its Ionization Potentials
   !==========================================================================
   subroutine set_mixture(nMixIn, nZIn_I, ConcentrationIn_I)
@@ -143,7 +151,7 @@ end subroutine mod_init
 
     if( TeMix <= 0.02 * minval( IonizPotential_II( 1,1:nMix) ) )then
        
-       ZAvMix=c0; EAvMix=c0; DeltaZ2Av=c0
+       ZAvMix=0.0; EAvMix=0.0; DeltaZ2Av=0.0
        
        if(present(IsDegenerated))IsDegenerated=.false.
        return
@@ -164,10 +172,10 @@ end subroutine mod_init
     ! Calculating Z averaged iteratively
     subroutine set_Z
       !Internal variables
-      real    :: ZTrial, Z1           ! The trial values of Z for iterations
+      real    :: ZTrial, Z1              ! The trial values of Z for iterations
       real,dimension(nMixMax) :: InitZ_I ! The initial approximation of Z
-      real :: ZJ                      ! Average Z for each component
-      integer :: iMix,iZ(1)           ! Misc
+      real :: ZJ                         ! Average Z for each component
+      integer :: iMix,iZ(1)              ! Misc
       !----------------------------------------------------------
       ! First approximate the value of Z by finding for what i=Z 
       ! the derivative of the populations sequence~0 (population is maximum):
@@ -255,7 +263,7 @@ end subroutine mod_init
       mixture: do iMix=1,nMix
 
          ! First, make the sequence of ln(StatSumTerm) values; let ln(P0)=0 )
-         StatSumTermLog_I(0) = 0.	
+         StatSumTermLog_I(0) = 0.0
 
          do iZ = 1, nZ_I(iMix)       !Fill up the sequence using the following equation:
 
@@ -281,7 +289,7 @@ end subroutine mod_init
          iZMax_I(iMix) = max(nZ_I(iMix) - count(StatSumTermLog_I( iZDominant(1):nZ_I(iMix) ) < StatSumTermMin),1)
       
          !Initialize the population array to zeros
-         Population_II(0:nZ_I(iMix), iMix) = c0
+         Population_II(0:nZ_I(iMix), iMix) = 0.0
       
       
          !Convert the array into the Pi values from ln(Pi)
@@ -312,10 +320,17 @@ end subroutine mod_init
     !-------------------------
     Na = NaIn
 
-    if( .not.UsePreviousTe ) TeMix = UIn / 1.5
+    if( .not.UsePreviousTe ) then
+       if(nMix>1) then 
+          !To keep the backward compatibility, because the choice for mixture was different
+          TeMix = UIn / 1.5
+       else
+          TeMix = max(UIn,IonizPotential_II(1,1)) * 0.1
+       end if
+    end if
     if( UIn <= 0.03 * minval(IonizPotential_II(1,1:nMix))) then
 
-       TeMix=UIn/1.50 ;  ZAvMix=c0 ;  EAvMix=c0; DeltaZ2Av=c0
+       TeMix=UIn/1.50 ;  ZAvMix=0.0 ;  EAvMix=0.0; DeltaZ2Av=0.0
        
        if(present(IsDegenerated))IsDegenerated=.false.
        return
