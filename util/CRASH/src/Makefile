@@ -12,7 +12,6 @@ OBJECTS=\
         ModIonizPotential.o \
 	ModPolyimide.o \
 	ModStatSum.o\
-	ModStatSumMix.o\
 	heat_capacity.o 
 
 
@@ -43,7 +42,7 @@ test_ionization.o : ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
 
 IONIZ:  DEPEND 
 	make IONIZ.exe
-	
+
 IONIZ.exe: test_ionization.o
 	@(if [ ${OS} = "Darwin" ];         then make IONIZ_for_Darwin; \
 	else                                    make IONIZ_general; fi)

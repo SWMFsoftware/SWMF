@@ -165,11 +165,11 @@ contains
     UPerAtom = UDensityTotal / ( cEV * NAtomic )
 
     !Find temperature from dentity and internal energy
-    call set_temperature_in_mix( UPerAtom, NAtomic, IsDegenerated )
+    call set_temperature( UPerAtom, NAtomic, IsDegenerated )
 
 
-    if(present(TeOut))TeOut = TeMix*cEVToK
-    if(present(PTotalOut))PTotalOut = pressure_mix()
+    if(present(TeOut))TeOut = Te*cEVToK
+    if(present(PTotalOut))PTotalOut = pressure()
 
   end subroutine eos_polyimide
   !==========================================================!
@@ -218,12 +218,12 @@ contains
     UPerAtom = UDensityTotal / ( cEV * NAtomic )
     
     !Find temperature from dentity and internal energy
-    call set_temperature_in_mix( UPerAtom, NAtomic, IsDegenerated )
+    call set_temperature( UPerAtom, NAtomic, IsDegenerated )
 
     if(present(IsError)) IsError = IsDegenerated
     
-    if(present(TeOut))TeOut = TeMix*cEVToK
-    if(present(PTotalOut))PTotalOut = pressure_mix()
+    if(present(TeOut))TeOut = Te*cEVToK
+    if(present(PTotalOut))PTotalOut = pressure()
 
   end subroutine eos_mixed_cell
 end module ModEos

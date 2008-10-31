@@ -255,9 +255,9 @@ program saha
 
      do iN = 0,nN
         NaTrial = Nao*exp(iN*dLogN)
-        call set_ionization_equilibrium_in_mix(vTe,NaTrial*1000000.0,IsDegenerated)
-        Uav_I(iN)=internal_energy_mix()
-        Cv_I(iN)=heat_capacity_mix()
+        call set_ionization_equilibrium(vTe,NaTrial*1000000.0,IsDegenerated)
+        Uav_I(iN)= internal_energy()
+        Cv_I(iN) = heat_capacity()
         if(IsDegenerated)then
            Z_I(iN) = -  Z_I(iN)
            Z2_I(iN)= - Z2_I(iN)
