@@ -543,18 +543,7 @@ subroutine set_eqpar(iPlotFile,nEqPar,NameEqPar_I,EqPar_I)
         EqPar_I(iPar)=rBody
         if(plot_dimensional(plot_+iPlotFile))&
              EqPar_I(iPar)=EqPar_I(iPar)*No2Io_V(UnitX_)
-     case('t','th','tilt')
-        EqPar_I(iPar)=ThetaTilt*cRadToDeg
-     case('eta')
-        EqPar_I(iPar)=0.
-     case('unitx')
-        EqPar_I(iPar)=No2Io_V(UnitX_)
-     case('unitrho')
-        EqPar_I(iPar)=No2Io_V(UnitRho_)
-     case('unitv')
-        EqPar_I(iPar)=No2Io_V(UnitU_)
-     case('mu')
-        EqPar_I(iPar)=mu_los
+        ! BEGIN CCMC REQUESTED PARAMETERS to describe block structure
      case('p1')
         EqPar_I(iPar)=proc_dims(1)
      case('p2')
@@ -567,6 +556,22 @@ subroutine set_eqpar(iPlotFile,nEqPar,NameEqPar_I,EqPar_I)
         EqPar_I(iPar)=nJ
      case('nz')
         EqPar_I(iPar)=nK
+     case('th')
+        ! CCMC needs the dipole tilt in radians
+        EqPar_I(iPar)=ThetaTilt
+        ! END OF CCMC requested parameters
+     case('tilt')
+        EqPar_I(iPar)=ThetaTilt*cRadToDeg
+     case('eta')
+        EqPar_I(iPar)=0.
+     case('unitx')
+        EqPar_I(iPar)=No2Io_V(UnitX_)
+     case('unitrho')
+        EqPar_I(iPar)=No2Io_V(UnitRho_)
+     case('unitv')
+        EqPar_I(iPar)=No2Io_V(UnitU_)
+     case('mu')
+        EqPar_I(iPar)=mu_los
 !!$!^CFG  IF RAYTRACE BEGIN
      case('R_ray')
         EqPar_I(iPar)=R_raytrace
