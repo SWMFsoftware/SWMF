@@ -497,7 +497,7 @@ Contains
        if(present(GammaMaxOut))GammaMaxOut=Gamma0
        return
     end if
-    Gamma = 1.0 + pressure()/( Na * internal_energy())
+    Gamma = 1.0 + pressure()/( Na * cEv * internal_energy())
    
     if(present(GammaOut))GammaOut = Gamma
 
