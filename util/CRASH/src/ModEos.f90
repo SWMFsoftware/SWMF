@@ -44,12 +44,6 @@ contains
     character (len=*), parameter:: NameSub='ModEos::eos'
     !----------------------------------------------------------------------!
     if(iMaterial == 2) then
-
-       if( present(GammaOut) .or. present(Energy0Out) ) &
-            call CON_stop(NameSub// &
-            ': thermodynamic derivatives for polyimide '// &
-            'have not been implemented yet')
-
        call eos_polyimide(UDensityTotal, Rho, TeOut, PTotalOut, &
             IsError=IsError)
 
@@ -73,7 +67,7 @@ contains
     if(present(PTotalOut)) pTotalOut = pressure()
     if(present(GammaOut))then
  
-       call get_thermodyn_derivatives(GammaOut=GammaOut)
+       call get_gamma(GammaOut=GammaOut)
        if(present(Energy0Out))&
             Energy0Out = (UDensityTotal - pressure()/(GammaOut-1.0))/Rho
 
@@ -122,7 +116,7 @@ contains
 
     if(present(TeOut))    TeOut = Te*cEvToK
 
-    if(present(GammaOut)) call get_thermodyn_derivatives(GammaOut=GammaOut)
+    if(present(GammaOut)) call get_gamma(GammaOut=GammaOut)
 
     
     if(present(UDensityTotalOut)) &
@@ -133,7 +127,7 @@ contains
   !====================================================================
 
   subroutine eos_polyimide(UDensityTotal, Rho, &
-       TeOut, PTotalOut, GammaOut, Energy0Out, IsError)
+       TeOut, PTotalOut, GammaOut, IsError)
 
     ! Equation of state for polyimide
 
@@ -146,7 +140,7 @@ contains
     real,    optional, intent(out) :: TeOut         ! temperature SI[K]
     real,    optional, intent(out) :: PTotalOut     ! pressure, SI [Pa]
     real,    optional, intent(out) :: GammaOut      ! polytropic index
-    real,    optional, intent(out) :: Energy0Out    ! (E-P/(\gamma-1))/\rho
+   
     logical, optional, intent(out) :: IsError
 
     

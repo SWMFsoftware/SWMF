@@ -6,7 +6,7 @@ module ModStatSumMix
   use ModConst
   implicit none
   SAVE
-
+  PRIVATE !Except
   logical :: DoInit = .true.             !Set to false after the initialization
 
   integer :: nMix = -1
@@ -39,37 +39,55 @@ module ModStatSumMix
   !The combination of fundamental constants, used to calculate the electron
   !statistical weight: electron statistical weight at the temperature of 1eV
   !and the conscentration of 1 particle per m^3
-  real,private :: eWight1eV1m3           ! 2/(Lambda^3)
+  real :: eWight1eV1m3           ! 2/(Lambda^3)
 
 
   !Input parameters (note though that the temperature may be not
   !directly assigned and should be found from the internal energy 
   !or pressure in this case):
-  real :: Te=1.0 ! the electron temperature [eV] = ([cKToeV] * [Te in K])
-  real :: Na     ! The density of heavy particles in the plasma [#/m^3]
-
+  real :: Te=1.0        ! the electron temperature [eV] = ([cKToeV] * [Te in K])
+  real :: Na            ! The density of heavy particles in the plasma [#/m^3]
+ 
 
   !Averages:
-  integer,parameter :: DeltaI_ = 1, DeltaE_=2
+ 
   real :: ZAv,&  ! 1 the average charge per ion - <Z> (elementary charge units)
           EAv          ! 2 The average ionization energy level of ions
 
   !Deviators <(\delta i)^2>, <delta i delta E> and <(delta e)^2:
-  real :: DeltaZ2Av ! The value of <(delta i)^2>=<i^2>-<i>^2
+  real :: DeltaZ2Av      ! The value of <(delta i)^2>=<i^2>-<i>^2
+  real :: DeltaETeInv2Av ! The value of <(delta E/Te)^2> 
+  real :: ETeInvDeltaZAv ! The value of <Delta E/Te Delta i> 
 
 
   integer :: iIter   !To provide the output for the convergence efficiency, if needed
-  integer :: iIterTe !Temperature iterations counter
+ 
 
 
   !Auxiliary arrys of numerical constants:
   real,dimension(0:nZMax) :: N_I ! array of consecutive integers (with type real)
   real,dimension(nZMax)   :: LogN_I ! array of natural logarithms of consecutive integers
  
-  logical :: UsePreviousTe = .true.
+  public:: Te,&             ! The electron temperature [eV] = ([cKToeV] * [Te in K])
+           Na,&             ! The density of heavy particles in the plasma [#/m^3]
+           ZAv,&            ! The average charge per ion - <Z> (elementary charge units)
+           EAv,&            ! The average ionization energy level of ions
+           DeltaZ2Av,&      ! The value of <(delta i)^2>=<i^2>-<i>^2
+           DeltaETeInv2Av,& ! The value of <(delta E/Te)^2>
+           ETeInvDeltaZAv,& ! The value of <Delta E/Te Delta i>
+           iIter,&          ! To provide the output for the convergence efficiency, if needed
+           nMix, IonizPotential_II
 
-  private :: mod_init
+!Public methods:
 
+  !Set the elements and their Ionization Potentials
+  public:: set_mixture      
+
+  ! Find the final values of ZAv and the ion populations from Temperature and heavy particle density  
+  public:: set_ionization_equilibrium
+
+  public:: set_zero_ionization
+           
 Contains
   !=========================================================================
   !Severl initialazations of constants, such as
@@ -90,7 +108,7 @@ Contains
     DoInit=.false.
   
   end subroutine mod_init
-  !Set the element and its Ionization Potentials
+  !Set the elements and their Ionization Potentials
   !==========================================================================
   subroutine set_mixture(nMixIn, nZIn_I, ConcentrationIn_I)
     integer,intent(in)::nMixIn
@@ -101,10 +119,14 @@ Contains
     !--------------------------!
     
     if(DoInit)call mod_init
-    
+    Concentration_I( 1:nMixIn ) =  ConcentrationIn_I( 1:nMixIn )
+    if(abs (sum(Concentration_I( 1:nMixIn ) ) - 1.0 ) > cTiny)then
+       write(*,*)'Wrong input - the total of relative concentrations differs from 1.0: ', Concentration_I( 1:nMixIn ) 
+       call CON_stop('Stop')
+    end if    
+
     if(nMixIn==nMix)then
-       if( all( nZIn_I( 1:nMix ) == nZ_I( 1:nMix ) ).and. &
-            all( ConcentrationIn_I( 1:nMix ) == Concentration_I( 1:nMix ) ) )return
+       if( all( nZIn_I( 1:nMix ) == nZ_I( 1:nMix ) ) )return
     end if
     
     nMix = nMixIn
@@ -120,16 +142,18 @@ Contains
        end do
     end do
     
-    Concentration_I( 1:nMix ) =  ConcentrationIn_I( 1:nMix )
-    if(abs (sum(Concentration_I( 1:nMix ) ) - 1.0 ) > cTiny)then
-       write(*,*)'Wrong input - the total of relative concentrations differs from 1.0: ', Concentration_I( 1:nMix ) 
-       call CON_stop('Stop')
-    end if
-  end subroutine set_mixture
-  
-  !=========================================================================
-		  
-  
+    call set_zero_ionization
+  end subroutine set_mixture 
+
+  !=========================================================================!
+  subroutine set_zero_ionization
+    Population_II=0.0; Population_II(0,1:nMix) = 1.0
+
+    ZAv=0.0; EAv=0.0; DeltaZ2Av=0.0; DeltaETeInv2Av = 0.0; ETeInvDeltaZAv = 0.0
+  end subroutine set_zero_ionization
+
+ 
+  !========================================================================!  
    ! Find the final values of ZAv and the ion populations from Temperature and heavy particle density
   
   subroutine set_ionization_equilibrium(TeIn, NaIn, IsDegenerated )
@@ -141,8 +165,9 @@ Contains
 
 
     !Internal variables
-    real :: lnC1,&  ! natural log C1 
-	    TeInv   ! The inverse of the electron temperature	[1/eV]
+    real :: lnC1  ! natural log C1 
+    real :: TeInv
+	   
 												 
     real,parameter :: ToleranceZ = 0.001 !Accuracy of Z needed
     !---------------------------------------------------------
@@ -151,9 +176,7 @@ Contains
     Na = NaIn
 
     if( Te <= 0.02 * minval( IonizPotential_II( 1,1:nMix) ) )then
-       
-       ZAv=0.0; EAv=0.0; DeltaZ2Av=0.0
-       
+       call set_zero_ionization
        if(present(IsDegenerated))IsDegenerated=.false.
        return
     end if
@@ -163,8 +186,7 @@ Contains
     lnC1  = log( eWight1eV1m3  * sqrt(TeIn)*TeIn / Na)
 
     call set_Z
-
-    EAv = E_averaged()	
+    call set_averages_and_deviators(DoZOnly=.false.)	
 
     if( present(IsDegenerated) ) IsDegenerated = lnC1 -log(ZAv) < 2.0
 
@@ -173,7 +195,7 @@ Contains
     ! Calculating Z averaged iteratively
     subroutine set_Z
       !Internal variables
-      real    :: ZTrial, Z1              ! The trial values of Z for iterations
+      real    :: ZTrial, ZNew            ! The trial values of Z for iterations
       real,dimension(nMixMax) :: InitZ_I ! The initial approximation of Z
       real :: ZJ                         ! Average Z for each component
       integer :: iMix,iZ(1)              ! Misc
@@ -198,39 +220,29 @@ Contains
       end do initial
       
       !Average the initial approximation across the mixture compenents:
-      ZAv = sum(Concentration_I(1:nMix) * InitZ_I(1:nMix))
+      ZNew = sum(Concentration_I(1:nMix) * InitZ_I(1:nMix))
       
       ! Use Newton's method to iteratively get a better approximation of Z:
       ! Organize the iteration loop:
       iIter  =  0
       ZTrial = -ToleranceZ
-      iterations: do while (abs(ZAv-ZTrial) >= ToleranceZ .and. iIter<10)
+      iterations: do while (abs(ZNew - ZTrial) >= ToleranceZ .and. iIter < 10)
          
          !Set a trial value for Z
-         ZTrial = ZAv
+         ZTrial = ZNew
 
          !Set the ion population with the electron stqtistical weight being expressed
          !in terms of ZTrial:
          call set_populations(lnC1 - log(ZTrial))
-         
+         call set_averages_and_deviators(DoZOnly = .true.)
          !Take an average over the ion populations:
-         Z1  = z_averaged()
-		
-         DeltaZ2Av = 0.0
-         do iMix=1,nMix
-            !Calculate averaged Z for a given component of the mixture
-            ZJ = sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) * N_I(iZMin_I(iMix):iZMax_I(iMix)))
-            
-            !Calculate a << (\delta i)^2 >>
-            DeltaZ2Av = DeltaZ2Av + Concentration_I(iMix) * &
-                 sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) * (N_I(iZMin_I(iMix):iZMax_I(iMix))-ZJ)**2 ) 
-         end do
+      	
          
-         ZAv = ZTrial - (ZTrial - Z1)/(cOne + DeltaZ2Av/ZTrial)
+         ZNew = ZTrial - (ZTrial - ZAv)/(cOne + DeltaZ2Av/ZTrial)
          
          iIter = iIter+1
       end do iterations
-      ZAv=Z1
+  
     end subroutine set_Z
 
     !==============================================
@@ -303,12 +315,222 @@ Contains
  
       end do mixture
     end subroutine set_populations
+    !-----------------------------
+    !=========================================================================!  
+    !For known ion polulations find average Z, E, and bi-linear deviators
+    subroutine set_averages_and_deviators(DoZOnly)
+      logical,intent(in)::DoZOnly
+      real::  ETeInvAvJ,&         ! < Ei/Te>_J (Ei - energy levels, Te - electron temperature [eV])
+           ZJ                  ! Z_J, averaged Z for J component
 
+      ! Array of ionization energy levels of ions divided by the temperature in eV
+      real,dimension(0:nZMax) :: ETeInv_I
+      integer :: iMix
+
+
+      ZAv = 0.0
+      EAv = 0.0
+      DeltaZ2Av      = 0.0   
+      DeltaETeInv2Av = 0.0
+      ETeInvDeltaZAv = 0.0
+
+      do iMix = 1, nMix
+         !Calculate average vaues of Z, for this component:
+         ZJ      = sum(Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix )* N_I(iZMin_I(iMix):iZMax_I(iMix)))
+         ZAv     = ZAv + Concentration_I(iMix) * ZJ
+
+         !Calculate a << (\delta i)^2 >>
+         DeltaZ2Av = DeltaZ2Av + Concentration_I(iMix) * &
+              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) * (N_I(iZMin_I(iMix):iZMax_I(iMix))-ZJ)**2 ) 
+
+
+         if(DoZOnly) CYCLE
+
+
+         ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) = IonizEnergyNeutral_II( iZMin_I(iMix):iZMax_I(iMix),iMix )*TeInv
+
+         !Calculate average vaues of E, for this component:
+
+         ETeInvAvJ   = sum(Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix )* ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)))
+
+         EAv = EAv + Concentration_I(iMix) * ETeInvAvJ
+
+         !Calculate contributions to bi-linear deviators
+         DeltaETeInv2Av   = DeltaETeInv2Av + Concentration_I(iMix)*&
+              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) * (ETeInv_I(iZMin_I(iMix):iZMax_I(iMix))-ETeInvAvJ)**2 )
+         ETeInvDeltaZAv   = ETeInvDeltaZAv + Concentration_I(iMix)*&
+              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) * ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) * &
+              (N_I(iZMin_I(iMix):iZMax_I(iMix))-ZJ) )
+      end do
+      EAv = EAv * Te
+
+
+    end subroutine set_averages_and_deviators
   end subroutine set_ionization_equilibrium
-
+end module ModStatSumMix
+!=======================
+module ModTDFunctions
+  use ModStatSumMix
+  use ModConst
+contains
   !=======================================  
   !Find a temperature from the internal energy per atom:
   
+
+  ! Calculate the pressure in the plasma [Pa]
+  ! Can only be called after set_ionization_equilibrium has executed
+  
+  real function pressure()
+    
+    pressure = (1.0 + ZAv) * Na * Te * cEV
+
+  end function pressure
+
+  !============================================
+  ! calculate the average internal energy per atomic unit [eV]
+  ! Can only be called after set_ionization_equilibrium has executed 
+  
+  real function internal_energy()
+    
+    internal_energy = 1.50 * Te *( 1.0 + ZAv) + EAv
+ 
+  end function internal_energy
+
+  !=======================================!
+  ! Calculating the Z average values from populations
+
+   real function z_averaged()
+    z_averaged = ZAv
+  end function z_averaged
+  !======================
+  ! Calculating the Z^2 average values from populations
+  real function z2_averaged()
+    !The average of square is the averaged squared plus dispersion squared
+    z2_averaged = DeltaZ2Av + ZAv*ZAv 
+  end function z2_averaged
+end module ModTDFunctions
+!=======================!
+module ModTDDerivatives
+  use ModStatSumMix
+  use ModTDFunctions
+  implicit none
+  SAVE
+Contains
+  !==================================
+  !Calculate the specific heat capacity at constant volume 
+  !(derivative of internal energy wrt Te) from temperature:
+  !Can only be called after set_ionization_equilibrium has executed
+  real function heat_capacity()
+    !------------------
+    
+    if( ZAv <= cTiny )then
+       heat_capacity = 1.50; return
+    end if
+    
+    ! calculate the heat capacity:
+    heat_capacity = 1.50 * (1.0 +ZAv) + DeltaETeInv2Av &
+         +( 3.0 * ZAv * (0.750 * DeltaZ2Av + ETeInvDeltaZAv) &
+         - ETeInvDeltaZAv**2 ) / (ZAv + DeltaZ2Av)
+
+  end function heat_capacity !
+  !==========================================================================!
+  !Thermodynamic derivatives for pressure
+  !Thermodynamic derivatives: use abbreviations:
+  !Ov means over 
+  !AtCrho means at constant  rho
+  !=========================================================================!
+
+  ! Calculate (1/Na)*(\partial P/\partial T)_{\rho=const}
+  ! i.e the temperuture derivative of the specific pressure (P/Na) 
+  real function d_pressure_over_d_te()
+     !Derivatives of Z:
+    real::TDZOvDTAtCNa  !Te*(\partial Z/\partial Te)_{Na=const}
+    !----------------------------------------------------------
+    if(ZAv==0)then
+       d_pressure_over_d_te = 0.0
+       return
+    end if
+    !\
+    !Calculate derivatives at const Na:
+    !/
+    !For Z:
+    TDZOvDTAtCNa =(ETeInvDeltaZAv + 1.50 * DeltaZ2Av)/(1.0 + DeltaZ2Av / ZAv)  
+
+    !For specific pressure: 
+    d_pressure_over_d_te = 1.0 + ZAv + TDZOvDTAtCNa
+  end function d_pressure_over_d_te
+
+  !========================================================================!
+  !Calculate !(\rho/P)*(\partial P/\Partial \rho)_{T=const},
+  !i.e the compressibility at constant temperature
+  real function compressibility_at_const_te()
+    real::NaDZOvDNaAtCT !Na*(\partial Z/\partial Na)_{Te=const}
+    !-------------------
+    if(ZAv==0)then
+       compressibility_at_const_te = 1.0
+       return
+    end if
+    !\
+    !Derivatives at constant T:
+    !/
+    !For Z:
+    !Na \left(\partial Z / \partial Na \right)_{T=const}
+    NaDZOvDNaAtCT = - DeltaZ2Av/(1.0 + DeltaZ2Av/ZAv)   
+
+    !For specific pressure:
+    !(Na /P) \left(\partial P / \partial Na \right)_{T=const}
+    compressibility_at_const_te  = 1.0 + NaDZOvDNaAtCT/(1.0 + Zav) 
+  end function compressibility_at_const_te
+  !===================================================================
+  subroutine get_gamma(GammaOut,GammaSOut,GammaMaxOut)
+    real,optional,intent(out)::GammaOut    !1+P/UInternal
+    real,optional,intent(out)::GammaSOut   !The speed of sound squared*Rho/P
+    real,optional,intent(out)::GammaMaxOut !max(Gamma,GammaS)
+    real::Gamma,GammaS
+
+    real,parameter::Gamma0=5.0/3.0
+    !--------------------------------------!
+
+    if(ZAv==0.0)then
+       if(present(GammaOut))   GammaOut=Gamma0
+       if(present(GammaSOut))  GammaSOut=Gamma0
+       if(present(GammaMaxOut))GammaMaxOut=Gamma0
+       return
+    end if
+    Gamma = 1.0 + pressure()/( Na * internal_energy())
+   
+    if(present(GammaOut))GammaOut = Gamma
+
+    !Define GammaS in terms the speed of sound: GammaS*P/\rho=(\partial P/\partial \rho)_{s=const}
+    !Use a formula 3.72 from R.P.Drake,{\it High-Energy Density Physics}, Springer, Berlin-Heidelberg-NY, 2006
+    ! and apply the thermodinamic entity: 
+    !(\partial \epsilon/\partial \rho)_{T=const}-P/\rho^2)=T(\partial P/\partial T)_{\rho=const)/\rho^2
+    
+    GammaS =  compressibility_at_const_te() + d_pressure_over_d_te()**2 /(heat_capacity() * (1.0 + ZAv))
+    
+    if(present(GammaSOut))GammaSOut = GammaS
+
+    if(present(GammaMaxOut))GammaMaxOut = max( GammaS,  Gamma)
+
+  end subroutine get_gamma
+end module ModTDDerivatives
+!=======================!
+module ModStatSum
+  use ModStatSumMix
+  use ModTDDerivatives
+  implicit none
+  SAVE
+  integer :: iIterTe !Temperature iterations counter
+  logical :: UsePreviousTe = .true.
+Contains
+  !==========================================================================
+  !Set the element and its Ionization Potentials
+  subroutine set_element( nZIn)
+    integer,intent(in) :: nZIn
+    !--------------------------!
+    call set_mixture(nMixIn=1, nZIn_I=(/nZIn/), ConcentrationIn_I=(/1.0/))
+  end subroutine set_element
+  !==========================================================================
   subroutine set_temperature(Uin, NaIn,IsDegenerated)
     
     real,intent(in) :: Uin,& !Average internal energy per atomic unit [eV]
@@ -331,7 +553,7 @@ Contains
     end if
     if( UIn <= 0.03 * minval(IonizPotential_II(1,1:nMix))) then
 
-       Te=UIn/1.50 ;  ZAv=0.0 ;  EAv=0.0; DeltaZ2Av=0.0
+       Te=UIn/1.50 ;  call set_zero_ionization
        
        if(present(IsDegenerated))IsDegenerated=.false.
        return
@@ -358,118 +580,6 @@ Contains
     end do iterations
 
   end subroutine set_temperature
-  
-  !============================================
-  ! Calculate the pressure in the plasma [Pa]
-  ! Can only be called after set_ionization_equilibrium has executed
-  
-  real function pressure()
-    
-    pressure = (1+ZAv)*Na*Te*cEV
-
-  end function pressure
-
-  !============================================
-  ! calculate the average internal energy per atomic unit [eV]
-  ! Can only be called after set_ionization_equilibrium has executed 
-  
-  real function internal_energy()
-    
-    internal_energy = 1.50*Te*(1+ZAv) + EAv
- 
-  end function internal_energy
-
-  !==================================
-  !Calculate the specific heat capacity at constant volume 
-  !(derivative of internal energy wrt Te) from temperature:
-  !Can only be called after set_ionization_equilibrium has executed
-  real function heat_capacity()
-    real :: TeInv,    &         ! The inverse of the electron temperature [1/eV]
-            ETeInvAvJ,&         ! < Ei/Te>_J (Ei - energy levels, Te - electron temperature [eV])
-            ZJ,       &         ! Z_J, averaged Z for J component
-            DeltaETeInv2Av,&	! <(delta Ei/Te)^2>
-   	    ETeInvDeltaZAv      ! <delta i * Ei/Te>
-
-    ! Array of ionization energy levels of ions divided by the temperature in eV
-    real,dimension(0:nZMax) :: ETeInv_I
-    integer :: iMix
-    !------------------
-
-    if( ZAv <= cTiny )then
-       heat_capacity = 1.50; return
-    end if
-
-    !calculate the values of the variables defined above:
- 
-    TeInv = cOne/Te
-    DeltaETeInv2Av = 0.0
-    ETeInvDeltaZAv = 0.0
-    
-    do iMix = 1, nMix
-
-       ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) = IonizEnergyNeutral_II( iZMin_I(iMix):iZMax_I(iMix),iMix )*TeInv
-
-       !Calculate average vaues of E/T and Z, for this component:
-
-       ETeInvAvJ   = sum(Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix )* ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)))
-       ZJ          = sum(Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix )* N_I(iZMin_I(iMix):iZMax_I(iMix)))
-
-       !Calculate contributions to bi-linear deviators
-       DeltaETeInv2Av   = DeltaETeInv2Av + Concentration_I(iMix)*&
-            sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) * (ETeInv_I(iZMin_I(iMix):iZMax_I(iMix))-ETeInvAvJ)**2 )
-       ETeInvDeltaZAv   = ETeInvDeltaZAv + Concentration_I(iMix)*&
-            sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) * ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) * &
-                           (N_I(iZMin_I(iMix):iZMax_I(iMix))-ZJ) )
-    end do
-    
-    ! calculate the heat capacity:
-    heat_capacity = 1.50*(cOne +ZAv) + DeltaETeInv2Av &
-	           +( 3.0*ZAv*(0.750*DeltaZ2Av + ETeInvDeltaZAv) &
-                   - ETeInvDeltaZAv**2 ) / (ZAv + DeltaZ2Av)
-
-  end function heat_capacity !
-
-
-  !=======================================!
-  ! Calculating the Z average values from populations
-
-   real function z_averaged()
-    integer :: iMix
-    z_averaged = 0.0
-    do iMix = 1,nMix
-       z_averaged = z_averaged + &
-            Concentration_I(iMix) * sum( Population_II(iZMin_I(iMix):iZMax_I(iMix) , iMix ) * N_I(iZMin_I(iMix):iZMax_I(iMix) ))
-    end do
-  end function z_averaged
-
-  !==================================
-  !Calculate the average ionization energy from neutral atoms of the ions
-  
-  real function E_averaged()
-    integer :: iMix
-    E_averaged = 0.0
-    do iMix = 1,nMix
-       E_averaged = E_averaged + Concentration_I(iMix) * sum(Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) * &
-            IonizEnergyNeutral_II(iZMin_I(iMix):iZMax_I(iMix),iMix))
-    end do
-  end function E_averaged
-
-end module ModStatSumMix
-!=======================!
-!=======================!
-module ModStatSum
-  use ModStatSumMix
-  implicit none
-  SAVE
-Contains
-  !==========================================================================
-  !Set the element and its Ionization Potentials
-  subroutine set_element( nZIn)
-    integer,intent(in) :: nZIn
-    !--------------------------!
-    call set_mixture(nMixIn=1, nZIn_I=(/nZIn/), ConcentrationIn_I=(/1.0/))
-  end subroutine set_element
-
   !==========================================================================
   subroutine pressure_to_temperature(PToNaRatio,NaIn,IsDegenerated)
     real,intent(in) :: PToNaRatio,& !Presure divided by Na [eV]
@@ -495,7 +605,7 @@ Contains
     if(.not.UsePreviousTe) Te = max(1.50* PToNaRatio, IonizPotential_II(1,1) ) * 0.1
 
     if(PToNaRatio<=0.03*IonizPotential_II(1,1))then
-       Te = PToNaRatio; ZAv=0.0; EAv=0.0; DeltaZ2Av=0.0 
+       Te = PToNaRatio; call set_zero_ionization
        if(present(IsDegenerated))IsDegenerated=.false.
        return
     end if
@@ -512,108 +622,13 @@ Contains
        call set_ionization_equilibrium(Te, Na, IsDegenerated) 
        PDeviation = pressure()/(Na*cEV) - PToNaRatio
 
-       call get_thermodyn_derivatives(NaInvDPOvDTAtCNaOut=NaInvDPOvDTAtCNa)
-
        !Calculate the improved value of Te, limiting the iterations so 
        !they can't jump too far out, if the initial guess for Te is bad.
-       Te = min(2.0*Te, max(0.5*Te, Te - PDeviation/NaInvDPOvDTAtCNa))  
+       Te = min(2.0*Te, max(0.5*Te, Te - PDeviation/d_pressure_over_d_te() ) )  
 
        iIterTe = iIterTe+1  !Global variable, which is accessible from outside
 
     end do iterations
   end subroutine pressure_to_temperature
-  
-  !==========================================================================!
-  subroutine get_thermodyn_derivatives(GammaOut,GammaSOut,GammaMaxOut,CvOut,NaInvDPOvDTAtCNaOut)
-    real,optional,intent(out)::GammaOut    !1+P/UInternal
-    real,optional,intent(out)::GammaSOut   !The speed of sound squared*Rho/P
-    real,optional,intent(out)::GammaMaxOut !max(Gamma,GammaS)
-    real,optional,intent(out)::CvOut       !The same as heat_capacity()
-    real,optional,intent(out)::NaInvDPOvDTAtCNaOut
-    real::Gamma,GammaS,Cv
-    !Thermodynamic derivatives: use abbreviations:
-    !Ov means over 
-    !AtCrho means at constant  rho
-
-    !Derivatives of Z:
-    real::TDZOvDTAtCNa  !Te*(\partial Z/\partial Te)_{Na=const}
-    real::NaDZOvDNaAtCT !Na*(\partial Z/\partial Na)_{Te=const}
-
-    !Derivatives of pressure:
-    real::RhoOvPDPOvDRhoAtCT !(\rho/P)*(\partial P/\Partial \rho)_{T=const}
-    real::NaInvDPOvDTAtCNa   !(1/Na)*(\partial P/\partial T)_{\rho=const}
-
-    !Misc:
-    real :: TeInv,   & !The inverse of the electron temperature [1/eV]
-         ETeInvAv,& ! < Ei/Te> (Ei - energy levels, Te - electron temperature [eV])
-         DeltaETeInv2Av,&	! <(delta Ei/Te)^2>
-         ETeInvDeltaZAv ! <delta i * Ei/Te>
-
-    ! Array of ionization energy levels of ions divided by the temperature in eV
-    real,dimension(0:nZMax) :: ETeInv_I
-    real,parameter::Gamma0=5.0/3.0
-    !--------------------------------------!
-
-    if(ZAv==0.0)then
-       if(present(GammaOut))   GammaOut=Gamma0
-       if(present(GammaSOut))  GammaSOut=Gamma0
-       if(present(GammaMaxOut))GammaMaxOut=Gamma0
-       if(present(CvOut))CvOut=1.50
-       if(present(NaInvDPOvDTAtCNaOut))NaInvDPOvDTAtCNaOut = 1.0 
-       return
-    end if
-    if(present(GammaOut))GammaOut = 1.0 + Te * (1.0 + ZAv)/&
-         (1.50 * (1.0 + ZAv) * Te + EAv)
-
-    !Derivatives at constant T:
-    NaDZOvDNaAtCT = - DeltaZ2Av/(1.0 + DeltaZ2Av/ZAv)   
-    RhoOvPDPOvDRhoAtCT  = 1.0 + NaDZOvDNaAtCT/(1.0 + Zav) 
-
-    !calculate the values of the variables defined above:
-    TeInv = cOne/Te
-    ETeInv_I(iZMin_I(1):iZMax_I(1)) = IonizEnergyNeutral_II( iZMin_I(1):iZMax_I(1),1 )*TeInv
-    ETeInvAv              = EAv*TeInv
-
-    !Calculate the missing deviator
-    ETeInvDeltaZAv        = &
-         sum( Population_II(iZMin_I(1):iZMax_I(1),1) * ETeInv_I(iZMin_I(1):iZMax_I(1)) * &
-         (N_I(iZMin_I(1):iZMax_I(1))-ZAv) )
-
-    !Calculate derivatives at const Na:
-    TDZOvDTAtCNa =(ETeInvDeltaZAv + 1.50 * DeltaZ2Av)/(1.0 + DeltaZ2Av / ZAv)   
-    NaInvDPOvDTAtCNa = 1.0 + ZAv + TDZOvDTAtCNa
-    if(present(NaInvDPOvDTAtCNaOut)) NaInvDPOvDTAtCNaOut = NaInvDPOvDTAtCNa
-
-
-    !Calculate another missing deviator
-    DeltaETeInv2Av        = &
-         sum( Population_II(iZMin_I(1):iZMax_I(1),1) * (ETeInv_I(iZMin_I(1):iZMax_I(1))-ETeInvAv)**2 )
-
-    !Calculate Cv: it may be among the output variables and also is used to find Cs
-    Cv=1.50 * NaInvDPOvDTAtCNa + DeltaETeInv2Av +  ETeInvDeltaZAv *&
-         (1.50 -  TDZOvDTAtCNa/ZAv)
-    
-    if(present(CvOut)) CvOut = Cv
-    
-    !Define GammaS in terms the speed of sound: GammaS*P/\rho=(\partial P/\partial \rho)_{s=const}
-    !Use a formula 3.72 from R.P.Drake,{\it High-Energy Density Physics}, Springer, Berlin-Heidelberg-NY, 2006
-    ! and apply the thermodinamic entity: 
-    !(\partial \epsilon/\partial \rho)_{T=const}-P/\rho^2)=T(\partial P/\partial T)_{\rho=const)/\rho^2
-    
-    GammaS =  RhoOvPDPOvDRhoAtCT +  NaInvDPOvDTAtCNa **2 /(Cv * (1.0 + ZAv))
-    
-    if(present(GammaSOut))GammaSOut = GammaS
-
-    if(present(GammaMaxOut))GammaMaxOut = max( GammaS, 1.0 + Te * (1.0 + ZAv)/&
-         (1.50 * (1.0 + ZAv) * Te + EAv))
-
-  end subroutine get_thermodyn_derivatives
-
-  !====================================================
-  ! Calculating the Z^2 average values from populations
-  real function z2_averaged()
-    !The average of square is the averaged squared plus dispersion squared
-    z2_averaged = DeltaZ2Av + ZAv*ZAv 
-  end function z2_averaged
   
 end module ModStatSum
