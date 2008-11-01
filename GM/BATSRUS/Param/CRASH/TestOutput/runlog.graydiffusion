@@ -8,10 +8,10 @@
  EQUATIONS:   radiation HD
  USER MODULE: Hd with Gray-Diffusion 1.00
 
-ModReadParam::read_file: read and broadcast nLine= 158 lines of text
+ModReadParam::read_file: read and broadcast nLine= 159 lines of text
  ----- Starting Session  1  ------
  init_mod_restart_file: setting TypeRestartOutFile = one
- GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 158
+ GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 159
 
 #PLANET
 NONE			NamePlanet
@@ -20,37 +20,37 @@ NONE			NamePlanet
 NONE			TypeIoUnit
 
 #NORMALIZATION
-NONE			TypeNormalization
+USER			TypeNormalization
 
 #NONCONSERVATIVE
 F			UseNonConservative
 
 #CHECKGRIDSIZE
-4			nI
+32			nI
 4			nJ
 4			nK
-32			MinBlockALL
+16			MinBlockALL
 
 #GRID
-6			nRootBlockX
+3			nRootBlockX
 3			nRootBlockY
 1			nRootBlockZ
--0.12			xMin
- 0.12			xMax
--0.06			yMin
- 0.06			yMax
--0.02			zMin
- 0.02			zMax
+-0.0384			xMin
+ 0.0384			xMax
+-0.0048			yMin
+ 0.0048			yMax
+-0.0016			zMin
+ 0.0016			zMax
 
 #GRIDLEVEL
 1			nLevelArea
 box			NameArea
--0.04			xMinBox
--0.02			yMinBox
--0.02			zMinBox
- 0.04			xMaxBox
- 0.02			yMaxBox
- 0.02			zMaxBox
+-0.0128			xMinBox
+-0.0016			yMinBox
+-0.0016			zMinBox
+ 0.0128			xMaxBox
+ 0.0016			yMaxBox
+ 0.0016			zMaxBox
 
 #GRIDLEVEL
 1			nLevelArea
@@ -75,8 +75,8 @@ F			UseUserUpdateStates
  User read_input starts
 
 #LOWRIETEST
-1			iLowrieTest
-initial_lowrie1.dat	NameLowrieFile
+3			iRadiationTest		iLowrieTest
+initial_lowrie3.dat	NameInputFile		NameLowrieFile
 
 #USERINPUTEND ----------------------------
  User read_input ends
@@ -105,11 +105,14 @@ float			TypeBcTop
 2			nOrder
 Godunov			TypeFlux
 mc			TypeLimiter
-1.5			LimiterBeta
+1.2			LimiterBeta
+
+#MESSAGEPASS
+all			TypeMessagePass
 
 #FIXEDTIMESTEP
-T			UseDtFixed
-1.2E-3			DtFixedDim
+T			UseFixedTimeStep		UseDtFixed
+2.3e-05			DtFixedDim
 
 #KRYLOV
 gmres			TypeKrylov
@@ -126,15 +129,11 @@ F			UsePartImplicit
 T			UseFullImplicit
 1.0			ImplCFL
 
-#RESCHANGE
-T			UseAccurateResChange
-
 #SAVELOGFILE
 T			DoSaveLogfile
-VAR			StringLogfile
+raw			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
-rho mx my Erad E pmin pmax		log_vars
 
 #SAVERESTART
 F			DoSaveRestart
@@ -146,16 +145,16 @@ F			DoSaveBinary
 T			DoSaveInitial
 
 #SAVEPLOT
-2			nPlotFile
+2			nPlotfile		nPlotFile
 z=0 VAR idl		StringPlot
 -1  			DnSavePlot
-0.01			DtSavePlot
+0.00025			DtSavePlot
 -1.0			DxSavePlot
 Rho Ux Uy Tgas Trad rho0 Ux0 Uy0 Tgas0 Trad0		NameVars
 g		NamePars
 cut VAR idl		StringPlot
 -1  			DnSavePlot
-0.01			DtSavePlot
+0.00025			DtSavePlot
 -0.5			xMinCut
 0.5			xMaxCut
 0.000001		yMinCut
@@ -167,14 +166,14 @@ Rho Ux Uy Tgas Trad rho0 Ux0 Uy0 Tgas0 Trad0		NameVars
 g		NamePars
 
 #STOP
--1			MaxIteration
-0.07			tSimulationMax
+4			MaxIteration
+-0.0025			tSimulationMax
  GM_set_parameters: CHECK iSession = 1
   
  BATS_setup starting initial refinement level  1
- parallel_refine starting to refine  2  block(s) on PE 0
- renumber_octree: finished renumbering 32  blocks.
-     total blocks =  32
+ parallel_refine starting to refine  1  block(s) on PE 0
+ renumber_octree: finished renumbering 16  blocks.
+     total blocks =  16
 
     Begin Numerical Simulation
     --------------------------
@@ -183,7 +182,7 @@ g		NamePars
     Physical Parameters
     -------------------
 
-          I/O Unit type: NONE            Normalization: NONE
+          I/O Unit type: NONE            Normalization: USER
 
           gamma:         1.66666667
 
@@ -210,7 +209,7 @@ g		NamePars
 
           2nd-Order Scheme
           with limiter mc    
-          beta= 1.50
+          beta= 1.20
           Time accurate calculation
           Godunov Flux Function
           Implicit Time Stepping
@@ -221,16 +220,16 @@ g		NamePars
  Available processors: nProc =  2
 
  After initial grid setup:
-   nBlockMax =  25  nBLK =  100
-   Total number of blocks used =  32
-   Total number of cells =  2048
-   Smallest cell dx:    5.0000000000000001E-03   Largest cell dx:    1.0000000000000000E-02
+   nBlockMax =  12  nBLK =  16
+   Total number of blocks used =  16
+   Total number of cells =  8192
+   Smallest cell dx:    3.9999999999999996E-04   Largest cell dx:    7.9999999999999993E-04
 
- root blocks:        6       3       1
- nCells:             4       4       4
- x:                -0.12000000      0.12000000
- y:                -0.06000000      0.06000000
- z:                -0.02000000      0.02000000
+ root blocks:        3       3       1
+ nCells:            32       4       4
+ x:                -0.03840000      0.03840000
+ y:                -0.00480000      0.00480000
+ z:                -0.00160000      0.00160000
  multistage:         2
  cfl:               1.00000000
 
@@ -240,67 +239,49 @@ saved ifile= 4 type=cut_var    at n_step=      0 time=   0:00:00 h:m:s
 SORTED TIMING at step       0    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                   0.90    100.00         1         1
+BATSRUS                   1.54    100.00         1         1
 -------------------------------------------------------------------------------
-setup                     0.90     99.99         1         1
-save_plot                 0.78     86.34         1         2
-load_balance              0.01      1.09         1         1
-exch_msgs                 0.01      0.86         1         1
-save_logfile              0.00      0.53         1         1
+setup                     1.54    100.00         1         1
+save_plot                 1.50     97.48         1         2
+exch_msgs                 0.00      0.20         1         1
+load_balance              0.00      0.15         1         1
+save_logfile              0.00      0.10         1         1
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
-saved ifile= 3 type=z=0_var    at n_step=      9 time=   0:00:00 h:m:s
-saved ifile= 4 type=cut_var    at n_step=      9 time=   0:00:00 h:m:s
-Speed is   1968.6 c/s/p after      6.3 s at N =      10 (1.2000E-02 s)
-saved ifile= 3 type=z=0_var    at n_step=     17 time=   0:00:00 h:m:s
-saved ifile= 4 type=cut_var    at n_step=     17 time=   0:00:00 h:m:s
-Speed is   1981.3 c/s/p after     12.9 s at N =      20 (2.4000E-02 s)
-saved ifile= 3 type=z=0_var    at n_step=     26 time=   0:00:00 h:m:s
-saved ifile= 4 type=cut_var    at n_step=     26 time=   0:00:00 h:m:s
-Speed is   1986.3 c/s/p after     19.7 s at N =      30 (3.6000E-02 s)
-saved ifile= 3 type=z=0_var    at n_step=     34 time=   0:00:00 h:m:s
-saved ifile= 4 type=cut_var    at n_step=     34 time=   0:00:00 h:m:s
-Speed is   1993.5 c/s/p after     26.8 s at N =      40 (4.8000E-02 s)
-saved ifile= 3 type=z=0_var    at n_step=     42 time=   0:00:00 h:m:s
-saved ifile= 4 type=cut_var    at n_step=     42 time=   0:00:00 h:m:s
-Speed is   1910.5 c/s/p after     34.2 s at N =      50 (6.0000E-02 s)
-saved ifile= 3 type=z=0_var    at n_step=     51 time=   0:00:00 h:m:s
-saved ifile= 4 type=cut_var    at n_step=     51 time=   0:00:00 h:m:s
-saved ifile= 3 type=z=0_var    at n_step=     59 time=   0:00:00 h:m:s
-saved ifile= 4 type=cut_var    at n_step=     59 time=   0:00:00 h:m:s
 
     Finished Numerical Simulation
     -----------------------------
-   Simulated Time T =   0.70000E-01 (    0.001167 min,     0.000019 hrs)
+   Simulated Time T =   0.92000E-04 (    0.000002 min,     0.000000 hrs)
+saved ifile= 3 type=z=0_var    at n_step=      4 time=   0:00:00 h:m:s
+saved ifile= 4 type=cut_var    at n_step=      4 time=   0:00:00 h:m:s
 
     Finished Saving Output Files
     ----------------------------
 -------------------------------------------------------------------------------
-SORTED TIMING from step       0 to      59    on PE    0
+SORTED TIMING from step       0 to       4    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                  42.34    100.00         1         1
+BATSRUS                 105.76    100.00         1         1
 -------------------------------------------------------------------------------
-advance                  30.43     71.88        59        59
-krylov solver            21.72     51.30        59        59
-impl_matvec              20.08     47.42        59      1034
-get_residual             17.43     41.16       118      1152
-matvec_free              16.10     38.03        59      1034
-save_plot                11.85     27.99         7        14
-calc_fluxes               8.97     21.19       118     18432
-impl_jacobian             3.63      8.58        59        59
-calc_facevalues           2.68      6.33       118     18432
-exch_msgs                 2.30      5.43       177      1270
-calc_face_bfo             1.08      2.54       118      9216
-update_states             0.68      1.61       118     18432
-calc_fluxes_bfo           0.62      1.45       118      9216
-impl2expl                 0.21      0.51       177     19376
-calc_sources              0.14      0.33       118     18432
-barrier-expl2             0.14      0.32       118      1152
-send_cons_flux            0.13      0.31       118      1152
-expl2impl                 0.11      0.25       177      1211
-barrier-expl1             0.07      0.16       118      1152
-save_logfile              0.04      0.09        59        59
-int_domain                0.00      0.01        59        59
+advance                 104.19     98.51         4         4
+krylov solver           102.84     97.24         4         4
+impl_matvec              56.97     53.86         4      1337
+matvec_free              45.93     43.43         4      1337
+get_residual             44.72     42.29         8      1345
+calc_fluxes              33.41     31.59         8     10760
+calc_facevalues           2.16      2.04         8     10760
+exch_msgs                 2.02      1.91        12      1353
+calc_sources              1.87      1.77         8     10760
+save_plot                 1.57      1.48         1         2
+calc_fluxes_bfo           1.56      1.48         8      5380
+update_states             1.25      1.18         8     10760
+calc_face_bfo             0.81      0.76         8      5380
+impl_jacobian             0.81      0.76         4         4
+impl2expl                 0.43      0.41        12     10792
+expl2impl                 0.30      0.29        12      1349
+send_cons_flux            0.18      0.17         8      1345
+barrier-expl2             0.16      0.15         8      1345
+barrier-expl1             0.07      0.07         8      1345
+save_logfile              0.00      0.00         4         4
 -------------------------------------------------------------------------------
  error report: no errors...

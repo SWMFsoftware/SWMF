@@ -14,31 +14,31 @@ USER			TypeNormalization
 F			UseNonConservative
 
 #CHECKGRIDSIZE
-4			nI
+32			nI
 4			nJ
 4			nK
-32			MinBlockALL
+16			MinBlockALL
 
 #GRID
-6			nRootBlockX
+3			nRootBlockX
 3			nRootBlockY
 1			nRootBlockZ
--0.12			xMin
- 0.12			xMax
--0.06			yMin
- 0.06			yMax
--0.02			zMin
- 0.02			zMax
+-0.0384			xMin
+ 0.0384			xMax
+-0.0048			yMin
+ 0.0048			yMax
+-0.0016			zMin
+ 0.0016			zMax
 
 #GRIDLEVEL
 1			nLevelArea
 box			NameArea
--0.04			xMinBox
--0.02			yMinBox
--0.02			zMinBox
- 0.04			xMaxBox
- 0.02			yMaxBox
- 0.02			zMaxBox
+-0.0128			xMinBox
+-0.0016			yMinBox
+-0.0016			zMinBox
+ 0.0128			xMaxBox
+ 0.0016			yMaxBox
+ 0.0016			zMaxBox
 
 #GRIDLEVEL
 1			nLevelArea
@@ -62,8 +62,8 @@ F			UseUserUpdateStates
 #USERINPUTBEGIN ------------------------
 
 #LOWRIETEST
-1			iLowrieTest
-initial_lowrie1.dat	NameLowrieFile
+3			iRadiationTest
+initial_lowrie3.dat	NameInputFile
 
 #USERINPUTEND ----------------------------
 
@@ -91,11 +91,17 @@ float			TypeBcTop
 2			nOrder
 Godunov			TypeFlux
 mc			TypeLimiter
-1.5			LimiterBeta
+1.2			LimiterBeta
+
+#MESSAGEPASS
+all			TypeMessagePass
+
+RESCHANGE
+T			UseAccurateResChange
 
 #FIXEDTIMESTEP
-T			UseDtFixed
-1.2E-3			DtFixedDim
+T			UseFixedTimeStep
+2.3e-05			DtFixedDim
 
 #KRYLOV
 gmres			TypeKrylov
@@ -112,15 +118,11 @@ F			UsePartImplicit
 T			UseFullImplicit
 1.0			ImplCFL
 
-#RESCHANGE
-T			UseAccurateResChange
-
 #SAVELOGFILE
 T			DoSaveLogfile
-VAR			StringLogfile
+raw			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
-rho mx my Erad E pmin pmax
 
 #SAVERESTART
 F			DoSaveRestart
@@ -132,16 +134,16 @@ F			DoSaveBinary
 T			DoSaveInitial
 
 #SAVEPLOT
-2			nPlotFile
+2			nPlotfile
 z=0 VAR idl		StringPlot
 -1  			DnSavePlot
-0.01			DtSavePlot
+0.00025			DtSavePlot
 -1.0			DxSavePlot
 Rho Ux Uy Tgas Trad rho0 Ux0 Uy0 Tgas0 Trad0
 g
 cut VAR idl		StringPlot
 -1  			DnSavePlot
-0.01			DtSavePlot
+0.00025			DtSavePlot
 -0.5			xMinCut
 0.5			xMaxCut
 0.000001		yMinCut
@@ -153,6 +155,5 @@ Rho Ux Uy Tgas Trad rho0 Ux0 Uy0 Tgas0 Trad0
 g
 
 #STOP
--1			MaxIteration
-0.07			tSimulationMax
-
+4			MaxIteration
+-0.0025			tSimulationMax

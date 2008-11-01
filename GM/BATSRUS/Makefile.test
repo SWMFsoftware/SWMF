@@ -263,20 +263,20 @@ test_graydiffusion:
 	make test_graydiffusion_check
 
 test_graydiffusion_compile:
-	./Config.pl -e=HdEosRad -u=GrayDiffusion -g=4,4,4,100,100
+	./Config.pl -e=HdEosRad -u=GrayDiffusion -g=32,4,4,16,16
 	make BATSRUS
 	make PIDL
 
 test_graydiffusion_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.graydiffusion PARAM.in
-	cd ${TESTDIR}; cp Param/CRASH/initial_lowrie1.dat .
+	cd ${TESTDIR}; cp Param/CRASH/initial_lowrie3.dat .
 
 test_graydiffusion_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_graydiffusion_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-4 \
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-8 \
 		Param/CRASH/TestOutput/log_graydiffusion.log \
 		${TESTDIR}/RESULTS/GM/log_n000000.log > test_graydiffusion.diff
 	ls -l test_graydiffusion.diff
