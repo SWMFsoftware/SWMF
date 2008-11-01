@@ -117,7 +117,7 @@ T			UseFixedTimeStep		UseDtFixed
 #KRYLOV
 gmres			TypeKrylov
 nul			TypeInitKrylov
-0.001			ErrorMaxKrylov
+0.0001			ErrorMaxKrylov
 1000			MaxMatvecKrylov
 
 #UPDATECHECK
@@ -166,7 +166,7 @@ Rho Ux Uy Tgas Trad rho0 Ux0 Uy0 Tgas0 Trad0		NameVars
 g		NamePars
 
 #STOP
-4			MaxIteration
+3			MaxIteration
 -0.0025			tSimulationMax
  GM_set_parameters: CHECK iSession = 1
   
@@ -239,49 +239,49 @@ saved ifile= 4 type=cut_var    at n_step=      0 time=   0:00:00 h:m:s
 SORTED TIMING at step       0    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                   1.54    100.00         1         1
+BATSRUS                  17.27    100.00         1         1
 -------------------------------------------------------------------------------
-setup                     1.54    100.00         1         1
-save_plot                 1.50     97.48         1         2
-exch_msgs                 0.00      0.20         1         1
-load_balance              0.00      0.15         1         1
-save_logfile              0.00      0.10         1         1
+setup                    17.27    100.00         1         1
+save_plot                16.99     98.38         1         2
+load_balance              0.01      0.08         1         1
+exch_msgs                 0.01      0.05         1         1
+save_logfile              0.00      0.02         1         1
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
 
     Finished Numerical Simulation
     -----------------------------
-   Simulated Time T =   0.92000E-04 (    0.000002 min,     0.000000 hrs)
-saved ifile= 3 type=z=0_var    at n_step=      4 time=   0:00:00 h:m:s
-saved ifile= 4 type=cut_var    at n_step=      4 time=   0:00:00 h:m:s
+   Simulated Time T =   0.69000E-04 (    0.000001 min,     0.000000 hrs)
+saved ifile= 3 type=z=0_var    at n_step=      3 time=   0:00:00 h:m:s
+saved ifile= 4 type=cut_var    at n_step=      3 time=   0:00:00 h:m:s
 
     Finished Saving Output Files
     ----------------------------
 -------------------------------------------------------------------------------
-SORTED TIMING from step       0 to       4    on PE    0
+SORTED TIMING from step       0 to       3    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                 105.76    100.00         1         1
+BATSRUS                 268.81    100.00         1         1
 -------------------------------------------------------------------------------
-advance                 104.19     98.51         4         4
-krylov solver           102.84     97.24         4         4
-impl_matvec              56.97     53.86         4      1337
-matvec_free              45.93     43.43         4      1337
-get_residual             44.72     42.29         8      1345
-calc_fluxes              33.41     31.59         8     10760
-calc_facevalues           2.16      2.04         8     10760
-exch_msgs                 2.02      1.91        12      1353
-calc_sources              1.87      1.77         8     10760
-save_plot                 1.57      1.48         1         2
-calc_fluxes_bfo           1.56      1.48         8      5380
-update_states             1.25      1.18         8     10760
-calc_face_bfo             0.81      0.76         8      5380
-impl_jacobian             0.81      0.76         4         4
-impl2expl                 0.43      0.41        12     10792
-expl2impl                 0.30      0.29        12      1349
-send_cons_flux            0.18      0.17         8      1345
-barrier-expl2             0.16      0.15         8      1345
-barrier-expl1             0.07      0.07         8      1345
-save_logfile              0.00      0.00         4         4
+advance                 250.89     93.33         3         3
+krylov solver           244.77     91.06         3         3
+impl_matvec             158.68     59.03         3      1053
+matvec_free             137.57     51.18         3      1053
+get_residual            134.42     50.01         6      1059
+calc_fluxes             104.84     39.00         6      8472
+save_plot                17.92      6.67         1         2
+calc_facevalues           6.65      2.47         6      8472
+exch_msgs                 5.50      2.05         9      1065
+calc_fluxes_bfo           4.58      1.70         6      4236
+update_states             3.99      1.49         6      8472
+impl_jacobian             3.39      1.26         3         3
+calc_sources              3.02      1.12         6      8472
+calc_face_bfo             2.29      0.85         6      4236
+impl2expl                 0.82      0.30         9      8496
+send_cons_flux            0.46      0.17         6      1059
+barrier-expl2             0.37      0.14         6      1059
+expl2impl                 0.33      0.12         9      1062
+barrier-expl1             0.05      0.02         6      1059
+save_logfile              0.00      0.00         3         3
 -------------------------------------------------------------------------------
  error report: no errors...

@@ -106,7 +106,7 @@ T			UseFixedTimeStep
 #KRYLOV
 gmres			TypeKrylov
 nul			TypeInitKrylov
-0.001			ErrorMaxKrylov
+0.0001			ErrorMaxKrylov
 1000			MaxMatvecKrylov
 
 #UPDATECHECK
@@ -155,5 +155,5 @@ Rho Ux Uy Tgas Trad rho0 Ux0 Uy0 Tgas0 Trad0
 g
 
 #STOP
-4			MaxIteration
+3			MaxIteration
 -0.0025			tSimulationMax
