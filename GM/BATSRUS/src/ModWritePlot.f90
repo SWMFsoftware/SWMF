@@ -421,7 +421,7 @@ subroutine write_plot_common(ifile)
            if(plot_dimensional(ifile)) then
               write(unit_tmp,'(6(1pe18.10),a)') &
                    plot_range(:,ifile)*No2Io_V(UnitX_),' plot_range'
-              write(unit_tmp,'(6(1pe18.10),i8,a)') &
+              write(unit_tmp,'(6(1pe18.10),i10,a)') &
                    plot_dx(:,ifile)*No2Io_V(UnitX_), &
                    dxGLOBALmin*No2Io_V(UnitX_), nGLOBALcells,&
                    ' plot_dx, dxmin, ncell'
