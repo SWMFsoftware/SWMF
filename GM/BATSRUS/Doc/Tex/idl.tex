@@ -227,7 +227,7 @@ dotransform='y'
 \subsection{Comparison of data \label{s-compare}}
 
    You can read snapshots from 2 or at most 3 files for purposes of
-   comparison. Simply give the filenames separated by spaces.
+   comparison. Simply give the filenames separated by spaces:
 \begin{verbatim}
 .r defaults
 .r getpict
@@ -237,7 +237,21 @@ npictinfile(s)=      21     10
 npict?  2
 \end{verbatim}
    This will read the second snapshots from 'example1.out' and
-   'example2.out'. The coordinates and the conservative variables 
+   'example2.out'. You may also use wild card characters 
+\begin{verbatim}
+  *  ?  [ ]
+\end{verbatim}
+    that are recognized by the Unix 'ls' command, e.g.
+\begin{verbatim}
+IDL> filename='example[12].out'
+IDL> filename='example?.out'
+IDL> filename='exampl*.out'
+\end{verbatim}
+   Note that if any wild card is used then the order of the files will 
+   be alphabetical.
+
+   After reading the files with getpict, 
+   the coordinates and the conservative variables 
    will be put into {\bf x0, x1} and {\bf w0, w1} respectively, however, 
    the header information, which is printed for each file onto the screen, 
    will be overwritten by the last file read, in this case it will belong to
@@ -288,17 +302,17 @@ compare,wreg(0:20,2,*),wreg(0:20,3,*)}
 \begin{verbatim}
 compare,x0,x1
 \end{verbatim}
-   If the two files have different resolutions, the {\bf coarse} 
+   If the two files have different resolutions, the {\bf coarsen} 
    function can be used. For example, if two solutions were obtained on 
    100 x 50 and 300 x 150 grids, then 
 \begin{verbatim}
 rholow =w0(*,*,0)
-rhohigh=coarse(w1(*,*,0),3)
+rhohigh=coarsen(w1(*,*,0), 3)
 print,total(abs(rholow-rhohigh))/100/50
 \end{verbatim}
    will give the average deviation in density. The coarsening is done in
    finite volume sense, i.e. the fine cells within the coarsened cell are
-   averaged out. The {\bf coarse} function works properly for
+   averaged out. The {\bf coarsen} function works properly for
    uniform Cartesian grids only. Pointwise values can be compared
    with the use of the {\bf triplet} function (see section \ref{s-plot-part}).
 
@@ -477,6 +491,7 @@ ovelovect             arrows at every grid point (for overplot)
 \begin{verbatim}
 Option  Description
 -----------------------------------------------------------------
+log     show the 10 based logarithm of the function
 grid    show grid points with plus signs
 mesh    show the mesh (lines connecting grid points) 
            only for structured grid
@@ -494,10 +509,10 @@ white   draw vectors or stream lines with white color even
 
    Here is an example for some more complex plotmodes:
 \begin{verbatim}
-plotmode='contbargrid streamwhiteoverbody'
+plotmode='contbargridlog streamwhiteoverbody'
 \end{verbatim} 
-   will show the first scalar quantity with a color bar and a mesh,
-   and overplot the second vector quantity with white streamlines
+   will show the 10 based logarithm of the first scalar quantity with a color bar 
+   and a mesh, and overplot the second vector quantity with white streamlines
    and a black body at the origin.
 
    For any of the colored plotmodes ('shade', 'contfill', 'contbar', 
@@ -786,7 +801,7 @@ dpict    =[1,2]
    Probably it is a good idea to compare 1D slices rather than full 2D plots,
    e.g. 
 \begin{verbatim}
-filename='example1.out example2.out'
+filename='example[12].out'
 func='rho ux'
 cut=grid(*,25)
 multiplot=2
@@ -948,8 +963,8 @@ One or more (at most three) logfiles can be read by
 .r getlog
 \end{verbatim}
    which reads data from the file(s) determined by the {\bf logfilename} 
-   parameter. An initial guess for the name is made if the 
-   {\bf filename} parameter has already been given. The data in the
+   parameter. This can be space separated list of file names and/or it
+   may include wild card characters. The data in the
    logfile(s) is put into the {\bf wlog} ({\bf wlog1, wlog2}) real arrays,
    while the name of the variables is put into the {\bf wlognames} 
    ({\bf wlognames1, wlognames2}) string arrays. Based on the
