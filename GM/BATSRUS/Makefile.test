@@ -276,7 +276,7 @@ test_graydiffusion_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_graydiffusion_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-8 \
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-4 \
 		Param/CRASH/TestOutput/log_graydiffusion.log \
 		${TESTDIR}/RESULTS/GM/log_n000000.log > test_graydiffusion.diff
 	ls -l test_graydiffusion.diff
