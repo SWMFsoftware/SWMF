@@ -47,7 +47,13 @@ if filename eq '' and logfilename ne '' then begin
    askstr,'filename(s)   ',filename,1
 endif else $
    askstr,'filename(s)   ',filename,doask
-str2arr,filename,filenames,nfile
+
+if stregex(filename, '[?*[]', /boolean) then begin
+    spawn,'ls '+filename, filenames
+    nfile = n_elements(filenames)
+endif else $
+  str2arr,filename,filenames,nfile
+
 if nfile gt 3 then begin
    print,'Error in getpict: cannot handle more than 3 files.'
    retall

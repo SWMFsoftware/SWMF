@@ -10,7 +10,12 @@
 askstr,'logfilename(s) ',logfilename,doask
 
 nlogfile=0
-str2arr,logfilename,logfilenames,nlogfile
+if stregex(logfilename, '[?*[]', /boolean) then begin
+    spawn,'ls '+logfilename, logfilenames
+    nlogfile = n_elements(logfilenames)
+endif else $
+  str2arr,logfilename,logfilenames,nlogfile
+
 if nlogfile gt 3 then begin
    print,'Error in getlog: cannot handle more than 3 files.'
    retall

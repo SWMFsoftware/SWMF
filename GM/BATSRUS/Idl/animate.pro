@@ -55,7 +55,11 @@
    endif else $
       askstr,'filename(s)   ',filename,doask
 
-   str2arr,filename,filenames,nfile
+   if stregex(filename, '[?*[]', /boolean) then begin
+       spawn,'ls '+filename, filenames
+       nfile = n_elements(filenames)
+   endif else $
+     str2arr,filename,filenames,nfile
    gettype,filenames,filetypes,npictinfiles
    print,'filetype(s)   =',filetypes
    print,'npictinfile(s)=',npictinfiles
