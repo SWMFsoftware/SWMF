@@ -144,7 +144,8 @@ contains
        end if
 
        do iVar=1,nVar
-          where(abs(x_BLK(:,:,:,iBlock)) < Width_V(iVar))   &
+          where(abs( x_BLK(:,:,:,iBlock) + ShockSlope*y_BLK(:,:,:,iBlock) ) &
+               < Width_V(iVar) )   &
                State_VGB(iVar,:,:,:,iBlock)=              &
                State_VGB(iVar,:,:,:,iBlock)               &
                + Ampl_V(iVar)*cos(Phase_V(iVar)           &
