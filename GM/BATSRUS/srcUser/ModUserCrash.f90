@@ -417,7 +417,7 @@ contains
     use ModSize
     use ModAdvance, ONLY: State_VGB, Rho_, RhoUy_, p_, ExtraEInt_, &
          LevelXe_, LevelPl_, Flux_VX, Flux_VY, Flux_VZ, Source_VC, &
-         VdtFace_Y
+         VdtFace_Y, VdtFace_Z
     use ModGeometry,ONLY: x_BLK, y_BLK, z_BLK, vInv_CB
     use ModNodes,   ONLY: NodeY_NB
     use ModMain,    ONLY: nStage, Cfl
@@ -450,7 +450,8 @@ contains
                   min(abs(y_BLK(i,j,k,iBlock)),abs(y_BLK(i,j-1,k,iBlock)))
        end do; end do; end do
        do k=1,nK+1; do j=1, nJ; do i=1, nI
-          Flux_VZ(:,i,j,k)=Flux_VZ(:,i,j,k)*abs(y_BLK(i,j,k,iBlock))
+          Flux_VZ(:,i,j,k) = 0.0
+          VdtFace_Z(i,j,k) = 0.0
        end do; end do; end do
 
        ! Add "geometrical source term" p/r to the radial momentum equation
