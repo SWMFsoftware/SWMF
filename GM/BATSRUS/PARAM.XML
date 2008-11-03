@@ -4555,10 +4555,20 @@ larsen		TypeRadFluxLimiter
 
 If UseGrayDiffusion is true the radiation hydrodynamics with
 gray nonequilibrium diffusion approximation is used.
-
 Currently, the gray-diffusion only works together with the fully implicit solver.
-
 Default is UseGrayDiffusion false.
+
+If the UseGrayDiffusion is set to true, then optionally a non-linear flux limiter
+can be invoked via UseRadFluxLimiter set to true. This will then limit the
+radiation diffusion flux so that it does not exceed the optically thin streaming
+limit. The type of flux limiter can be selected by setting TypeRadFluxLimiter.
+
+If TypeRadFluxLimiter="sum", then Wilson's sum flux limiter is used.
+If TypeRadFluxLimiter="max", then Wilson's max flux limiter is used.
+For TypeRadFluxLimiter="larsen" the square-root flux limiter of Larsen is used.
+The default is TypeRadFluxLimiter="larsen".
+
+The default for UseRadFluxLimiter is false.
 </command>
 
 
