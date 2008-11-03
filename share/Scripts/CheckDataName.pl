@@ -144,6 +144,12 @@ sub check_file{
     while(<FILE>){
 	$nLine++;                 # count lines
 	next if /^$/;             # skip empty lines
+
+	$Here = "at line $nLine in file $File"; # current location
+
+	my $Length = length($_);
+	warn "Line is $Length characters long $Here\n" if $Length > 80;
+
 	next if /^\s*\!/;         # skip pure comment lines
 	s/\s*[\n\r]+//;           # cut off trailing space and \n\r
 	s/^\s+//;                 # remove leading spaces
@@ -156,8 +162,6 @@ sub check_file{
 	$Line .= $_;              # collect continuation lines
 	next if 
 	    $Line =~ s/\s*\&$/ /; # remove & and read continuation line
-
-	$Here = "at line $nLine in file $File"; # current location
 
 	if($Line =~ /^(program|subroutine|module|function|$AnyType\s+function)\s/i){
 	    &check_methods unless $NoMethodCheck;
