@@ -416,7 +416,8 @@ contains
     use ModVarIndexes
     use ModSize
     use ModAdvance, ONLY: State_VGB, Rho_, RhoUy_, p_, ExtraEInt_, &
-         LevelXe_, LevelPl_, Flux_VX, Flux_VY, Flux_VZ, Source_VC
+         LevelXe_, LevelPl_, Flux_VX, Flux_VY, Flux_VZ, Source_VC, &
+         VdtFace_Y
     use ModGeometry,ONLY: x_BLK, y_BLK, z_BLK, vInv_CB
     use ModNodes,   ONLY: NodeY_NB
     use ModMain,    ONLY: nStage, Cfl
@@ -445,6 +446,8 @@ contains
        end do; end do; end do
        do k=1,nK; do j=1, nJ+1; do i=1, nI
           Flux_VY(:,i,j,k)=Flux_VY(:,i,j,k)*abs(NodeY_NB(i,j,k,iBlock))
+          VdtFace_Y(i,j,k) = VdtFace_Y(i,j,k)* abs(NodeY_NB(i,j,k,iBlock))/&
+                  min(abs(y_BLK(i,j,k,iBlock)),abs(y_BLK(i,j-1,k,iBlock)))
        end do; end do; end do
        do k=1,nK+1; do j=1, nJ; do i=1, nI
           Flux_VZ(:,i,j,k)=Flux_VZ(:,i,j,k)*abs(y_BLK(i,j,k,iBlock))
