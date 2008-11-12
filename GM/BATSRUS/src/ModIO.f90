@@ -14,9 +14,9 @@ Module ModIO
   ! note that:
   !     maxfile > MaxPlotFile + MaxSatelliteFile + extras
   ! is required
-  integer, parameter :: MaxPlotFile=15
-  integer, parameter :: MaxSatelliteFile=10
-  integer, parameter :: MaxFile = 30
+  integer, parameter :: MaxPlotFile=25
+  integer, parameter :: MaxSatelliteFile=300
+  integer, parameter :: MaxFile = 350
   integer, parameter :: Max_Satellite_Npts = 50000
   integer, parameter :: nPlotvarLosMax=10
   integer, parameter :: nPlotRfrFreqMax=20
