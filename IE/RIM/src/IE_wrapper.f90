@@ -866,8 +866,9 @@ subroutine IE_run(tSimulation,tSimulationLimit)
   if (tSimulation == 0) OldTime = CurrentTime
   call time_real_to_int(CurrentTime, TimeArray)
 
-  if (iDebugLevel >= 0) write(*,*) "IE Current Time (nSolve): ",&
-       TimeArray, " (",nSolve,")"
+  if (iDebugLevel >= 0) &
+       write(*,"(a,i4,5i3,i4,a,i8,a)") &
+       "IE Current Time (nSolve): ",TimeArray, " (",nSolve,")"
 
   ! Since IE is not a time dependent component, it may advance to the 
   ! next coupling time in a time accurate run
