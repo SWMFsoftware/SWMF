@@ -24,11 +24,11 @@ subroutine gather
              minval(PotentialAll(nLats/2+1:nLats+2,:))
   endif
 
-  if (iDebugLevel > 1) then 
+  if (iDebugLevel > 1) &
      write(*,*) "CPCP of total solution : ", &
           (maxval(PotentialAll) - minval(PotentialAll))/1000.0, " kV"
+  if (iDebugLevel > 0) &
      write(*,*) "CPCP South/North : ", cpcps/1000.0, cpcpn/1000.0, " kV"
-  endif
 
 contains
 

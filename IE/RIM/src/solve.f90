@@ -271,13 +271,14 @@ subroutine solve
 
   call gmres(matvec_RIM,b,x,UseInitialGuess,nTotalSolve,&
        MaxIteration,Residual,'abs',nIteration,iError,DoTest,iComm)
-  write(*,*) "nIter : ", nIteration, Residual
-  if (iError /= 0 .and. iError /=3)then
+  if (iError /= 0 .and. iError /=3 .and. iDebugLevel > -1)then
      write(*,*)'IE_ERROR in iono_solve: gmres failed !!!'
      write(*,*)'iono_solve: iter, resid, iError=',&
           nIteration, Residual, iError
      if(iError < 0) &
           call CON_stop('IE_ERROR in iono_solve: residual did not decrease')
+  else
+     if (iDebugLevel > 2) write(*,*) "nIter : ", nIteration, Residual
   end if
 
   iI = 0
@@ -367,8 +368,6 @@ subroutine solve
   if(allocated(b)) deallocate(x, y, b, rhs, d_I, e_I, f_I, e1_I, f1_I)
 
   OldPotential = Potential
-
-  call gather
 
 contains
 

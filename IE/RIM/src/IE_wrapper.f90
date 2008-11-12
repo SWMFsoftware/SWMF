@@ -285,7 +285,7 @@ subroutine IE_set_grid
   implicit none
   character (len=*), parameter :: NameSub='IE_set_grid'
   logical :: IsInitialized=.false.
-  integer, allocatable :: iProc_A(:)
+  integer :: iProc_A(1)
   integer :: i
 
   logical :: DoTest, DoTestMe
@@ -296,10 +296,7 @@ subroutine IE_set_grid
   if(IsInitialized) return
   IsInitialized=.true.
 
-  allocate(iProc_A(nProc))
-  do i=1,nProc
-     iProc_A(i)=i-1
-  end do
+  iProc_A(1)=0
 
   if (nLonsAll <= 0) then 
      allocate( &
@@ -307,6 +304,7 @@ subroutine IE_set_grid
           LongitudeAll(nLats+2,nLons+1))
      LatitudeAll = 0.0
      LongitudeAll = 0.0
+     nLonsAll = nLons
   endif
 
   !\
@@ -320,11 +318,11 @@ subroutine IE_set_grid
   call set_grid_descriptor(                  &
        IE_,                                  &! component index
        nDim=2,                               &! dimensionality
-       nRootBlock_D=(/1,nProc/),             &! north+south hemispheres
-       nCell_D =(/nLats+2,nLons+1/),   &! size of node based grid
+       nRootBlock_D=(/1,1/),             &! north+south hemispheres
+       nCell_D =(/nLats+2,nLonsAll+1/),   &! size of node based grid
        XyzMin_D=(/cOne, cOne/),              &! min colat and longitude indexes
        XyzMax_D=(/real(nLats+2),             &! max colat and longitude indexes
-                  real(nLons+1)/),     &
+                  real(nLonsAll+1)/),     &
        TypeCoord='SMG',                      &! solar magnetic coord.
        Coord1_I=LatitudeAll(:,1),           &! colatitudes
        Coord2_I=LongitudeAll(1,:),            &! longitudes
@@ -360,10 +358,7 @@ subroutine IE_get_for_gm(Buffer_II,iSize,jSize,tSimulation)
 
   ! Make sure that the most recent result is provided
   tSimulationTmp = tSimulation
-  call timing_start('IE_run')
   call IE_run(tSimulationTmp,tSimulation)
-  call timing_stop('IE_run')
-
   Buffer_II = PotentialAll
 
 end subroutine IE_get_for_gm
@@ -865,11 +860,14 @@ subroutine IE_run(tSimulation,tSimulationLimit)
   ! Do not solve if there is no new input from GM or UA
   if(DoSolve .and. .not.IsNewInput) RETURN
 
+  call timing_start('IE_run')
+
   CurrentTime = StartTime + tSimulation
   if (tSimulation == 0) OldTime = CurrentTime
   call time_real_to_int(CurrentTime, TimeArray)
 
-  if (iDebugLevel >= 0) write(*,*) "Current Time : ",TimeArray
+  if (iDebugLevel >= 0) write(*,*) "IE Current Time (nSolve): ",&
+       TimeArray, " (",nSolve,")"
 
   ! Since IE is not a time dependent component, it may advance to the 
   ! next coupling time in a time accurate run
@@ -883,6 +881,8 @@ subroutine IE_run(tSimulation,tSimulationLimit)
   IsNewInput = .false.
 
   OldTime = CurrentTime
+
+  call timing_stop('IE_run')
 
 !   ! Solve for the ionosphere potential
 !   call IE_solve

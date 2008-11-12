@@ -33,7 +33,8 @@ subroutine conductance_gradients
 
   if (DoFold) then 
 
-     write(*,*) "Folding conductances!"
+     if (iDebugLevel > 2) &
+          write(*,*) "Folding conductances!"
 
      do iLon = 1, nLons
         do iLat = 1, nLats

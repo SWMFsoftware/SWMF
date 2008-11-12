@@ -10,8 +10,14 @@ subroutine distribute
 
   integer :: iError, iSize
 
-  write(*,*) "mm(OuterMagJrAll) : ", minval(OuterMagJrAll), maxval(OuterMagJrAll)
-  write(*,*) "mm(InnerMagJrAll) : ", minval(InnerMagJrAll), maxval(InnerMagJrAll)
+  if (iDebugLevel > 1) then 
+     write(*,*) "mm(OuterMagJrAll):", &
+          minval(OuterMagJrAll), maxval(OuterMagJrAll)
+     write(*,*) "mm(InnerMagJrAll):", &
+          minval(InnerMagJrAll), maxval(InnerMagJrAll)
+     write(*,*) "mm(IonoJrAll):", &
+          minval(IonoJrAll), maxval(IonoJrAll)
+  endif
 
   if (maxval(OuterMagJrAll) > -1.0e31) then
      call rearrange(OuterMagJrAll, OuterMagJr)
