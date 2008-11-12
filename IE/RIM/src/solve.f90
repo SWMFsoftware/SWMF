@@ -273,12 +273,13 @@ subroutine solve
        MaxIteration,Residual,'abs',nIteration,iError,DoTest,iComm)
   if (iError /= 0 .and. iError /=3 .and. iDebugLevel > -1)then
      write(*,*)'IE_ERROR in iono_solve: gmres failed !!!'
-     write(*,'(a,i4,e9.3,i2)')'iono_solve: iter, resid, iError=',&
-          nIteration, Residual, iError
+     write(*,'(a,i5,1p,e12.3,i4)')'iono_solve: iter, resid (kV), iError=',&
+          nIteration, Residual/1000.0, iError
      if(iError < 0) &
           call CON_stop('IE_ERROR in iono_solve: residual did not decrease')
   else
-     if (iDebugLevel > 2) write(*,*) "nIter : ", nIteration, Residual
+     if (iDebugLevel > 2) &
+          write(*,"(a,i5,1p,e12.3)") "nIter : ", nIteration, Residual
   end if
 
   iI = 0

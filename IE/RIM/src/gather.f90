@@ -28,7 +28,8 @@ subroutine gather
      write(*,*) "CPCP of total solution : ", &
           (maxval(PotentialAll) - minval(PotentialAll))/1000.0, " kV"
   if (iDebugLevel > 0) &
-     write(*,*) "CPCP South/North : ", cpcps/1000.0, cpcpn/1000.0, " kV"
+     write(*,"(a,1p,2e12.3,a)") "CPCP South/North : ", &
+     cpcps/1000.0, cpcpn/1000.0, " kV"
 
 contains
 
