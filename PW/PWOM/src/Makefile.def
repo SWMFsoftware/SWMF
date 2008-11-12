@@ -2,6 +2,7 @@
 
 localdefault: help # default target
 
+DIR       = ${PWDIR}
 SCRIPTDIR = ${PWDIR}/share/Scripts
 LIBDIR    = ${PWDIR}/src
 RUNDIR    = ${PWDIR}/run
