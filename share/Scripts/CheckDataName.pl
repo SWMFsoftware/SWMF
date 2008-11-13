@@ -45,8 +45,8 @@ my $part = "[a-z][a-z0-9]*";
 # Valid name part with upper case: Calc B0
 my $Part = "[A-Z][a-z0-9]*";
 
-# Valid first name part: i Var B0
-my $FirstPart = '([a-z]|[A-Z][a-z0-9]+)';
+# Valid first name part: i, i1, I1, Var, Var2
+my $FirstPart = '([a-z][0-9]*|[A-Z][a-z0-9]+)';
 
 # Valid method name: calc_b0
 my $method = "$part(_$part)*";
@@ -74,9 +74,9 @@ my $ValidArrayName = "${ValidScalarName}_[A-Z]+";
 my $ValidNamedIndex = "$FirstPart($Part)*_|[A-Z][A-Z]_";
 
 # Valid first name parts depending on variable/function type:
-my %ValidPart1 = ('integer'   => 'D?[i-n]|Max|Min',
-		  'logical'   => 'Is|Use|Do|Done',
-		  'character' => 'Name|Type|String'
+my %ValidPart1 = ('integer'   => '(D?[i-nI-N]|Max|Min)\d*',
+		  'logical'   => '(Is|Use|Do|Done)\d*',
+		  'character' => '(Name|Type|String)\d*'
 		  );
 
 # Valid array index characters representing 1 index

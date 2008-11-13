@@ -884,14 +884,17 @@ these in future development.
       about 78 characters
 \item Blanks are used to make the source code more readable. In particular
       commas, single or double colons, semi-colons should be followed
-      by a single space. The $=$ sign, the $+$ and $-$ and the logical 
+      by a single space. Exception: indexes of multi-dimensional arrays
+      may be separated by commas without a blank so that the array
+      element remains more compact.
+\item The $=$ sign, the $+$ and $-$ and the logical 
       $==$, $/=$, $>$, $<$, $>=$, $<=$ operators should be surrounded
       by spaces on both sides. For unary $+$ or $-$ (as in $-2.0$) use 
       space before, but not after the sign.
 \item Blank lines are used to separate logically coherent parts of the 
       source code.
 \end{itemize}
-      
+
 \begin{figure}
 \begin{verbatim}
 Module ModUser
@@ -932,7 +935,7 @@ Note the use of obsolete Fortran 77 language elements:
 declarations without {\tt ::}, {\tt .gt.} instead of $>$, 
 {goto} and {continue} statements instead of loops with 
 {\tt EXIT} and {\tt CYCLE}, 
-numeric labels, plain {end} statements, 
+numeric labels, plain {\tt end} statements, 
 {\tt return} statement at the end of a subroutine and
 function, {\tt ERR=} or {\tt END=} specifiers instead of {\tt IOSTAT=}, etc.
 In addition there are many formatting problems:
@@ -1420,13 +1423,19 @@ Each variable name may consist of one or more {\it name parts}.
 All the parts must start with a capital letter and continue
 with lower case letters and numbers. There is only exception
 to this rule: if the first name part consists of a single 
-character, it should be lower case. In Fortran capitalization is ignored
-by the compiler, so mistakes in the capitalization
+character, it should be lower case. We also allow the first name
+part to use lower case if it consists of a single letter followed
+by numbers.
+
+In Fortran capitalization is ignored by the compiler, 
+so mistakes in the capitalization
 have no effect on the correctness of the code. On the other hand
 consistent capitalization is essential to improve readability of the code.
 Examples of correct capitalizations:
 \begin{verbatim}
-  i
+  b
+  b0
+  B0
   iMax
   rMin
   R2Min
@@ -1511,7 +1520,9 @@ All logical variable names must start with one of
   Unused           followed by a noun
 \end{verbatim}
 Finally all real type and derived type variable names must start with a 
-name part which was not listed in any of the above lists.
+name part which was not listed in any of the above lists. If the name
+part ends with some numbers, it does not modify the meaning. For example,
+``i1'' is an integer, ``Name12'' is string, and ``Done2'' is a logical.
 
 These rules should also help to make the order of the name parts
 less arbitrary. For example the minimum of the pressure should
@@ -1530,7 +1541,7 @@ integer::             iBlock              ! index of block
 integer::             nBlock              ! number of blocks
 integer::             MaxBlock            ! maximum number of blocks
 integer::             MinBoundary         ! minimum value of boundary index
-real::                x, r, R2            ! local variables
+real::                x, r, r2            ! local variables
 real::                RhoSolarWind        ! Density of solar wind
 real(Real8_)::        TimeCpu             ! CPU time 
 character(len=20)::   TypeFlux            ! type of the numerical flux
@@ -1633,8 +1644,8 @@ module. Some examples
 \begin{verbatim}
 real, parameter :: cPi              = 3.1415926535897932
 real, parameter :: cTwoPi           = 2*cPi
-real, parameter :: cRadToDeg        =  180/cPi
-real, parameter :: cDegToRad        =  cPi/180
+real, parameter :: cRadToDeg        = 180/cPi
+real, parameter :: cDegToRad        = cPi/180
 real, parameter :: cElectronCharge  = 1.6022E-19
 real, parameter :: cProtonMass      = 1.6726E-27
 \end{verbatim}
@@ -1647,7 +1658,7 @@ it is pointing to. In addition the name should end with the name part
 \begin{verbatim}
 integer, pointer:: iGridPtr
 logical, pointer:: UsedGridPtr_I(:)
-reeal,   pointer:: SizeGridPtr_D(:)
+real,    pointer:: SizeGridPtr_D(:)
 \end{verbatim}
 
 
