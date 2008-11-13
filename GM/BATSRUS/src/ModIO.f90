@@ -13,11 +13,9 @@ Module ModIO
   ! Maximum number of output files and output variables
   ! note that:
   !     maxfile > MaxPlotFile + MaxSatelliteFile + extras
-  ! is required
+  ! is required. MaxSatelliteFile is defined in ModSatelliteFile.f90
   integer, parameter :: MaxPlotFile=25
-  integer, parameter :: MaxSatelliteFile=30
-  integer, parameter :: MaxFile = 60
-  integer, parameter :: Max_Satellite_Npts = 50000
+  integer, parameter :: MaxFile = 350
   integer, parameter :: nPlotvarLosMax=10
   integer, parameter :: nPlotRfrFreqMax=20
   integer, parameter :: nPlotvarMax = max(30,nVar+10) ! Max number of plot vars
@@ -46,11 +44,8 @@ Module ModIO
 
   logical :: DoSaveInitial = .false.
 
-  logical :: save_restart_file=.true., save_satellite_data=.false., &
+  logical :: save_restart_file=.true., &
        save_plots_amr=.false.,save_logfile=.false.,save_binary=.true.
-
-  ! Unit numbers for satellite files
-  integer :: iUnitSat_I(MaxSatelliteFile) = -1
 
   ! Unit numbers for the log file and the second SPH plot file
   integer :: unit_log = -1, unit_tmp2 = -1
@@ -83,25 +78,12 @@ Module ModIO
   ! note that nfile is not the number of output files but rather the 
   ! index of the maximum file number.  The array FileUsed contains a 
   ! value that tells whether or not each file is used or not.
-  integer :: nFile=0, nPlotFile=0, nSatellite=0
+  integer :: nFile=0, nPlotFile=0
 
   ! Saving frequencies and the last saved time step and snapshot number
   real,    dimension(maxfile) :: dt_output=-1.
   integer, dimension(maxfile) :: dn_output=-1, &
        n_output_last=-1, t_output_last=-1
-
-  !
-  ! Time limits (in seconds) for satellite trajectory cut 
-  ! for .not. time_accurate session.
-  ! If a steady-state simulation is run for a specific moment of time
-  ! (set in  StartTime), the TimeSatStart_I determines the starting point of 
-  ! the satellite trajectory, while TimeSatEnd_I determines the trajectory 
-  ! ending point.
-  ! Both determine the considered trajectory cut.
-  ! Unlike in time_accurate sessions, after each dn_output simulation 
-  ! steps the satellite variables for ALL the trajectory cut are 
-  ! saved in file.
-  real, dimension(MaxSatelliteFile) :: TimeSatStart_I = 0., TimeSatEnd_I = 0.
 
   ! Frequency of writing progress reports in terms of time steps
   integer :: dn_progress1=10, dn_progress2=100
@@ -130,31 +112,10 @@ Module ModIO
   character (len=500) :: log_vars, log_R_str
 
   ! variables to control time output format 
-  character (len=100) :: log_time, sat_time(MaxFile)
+  character (len=100) :: log_time
 
-  ! variables to write to the satellite files
-  character (len=100) :: satellite_vars(MaxFile)
-  
   ! dimensionalize the output
   logical :: plot_dimensional(MaxFile)    
-
-  !\
-  ! Variables for the satellites
-  !/
-  logical:: SatelliteInBLK(MaxSatelliteFile,nBLK)= .false.
-  logical:: DoTrackSatellite_I(MaxSatelliteFile) = .false.
-  logical:: UseSatelliteFile(MaxSatelliteFile)   = .true.
-  logical:: Satellite_first_write(MaxSatelliteFile) = .true.
-  integer:: Satellite_Npts(MaxSatelliteFile)
-  integer:: iCurrent_satellite_position(MaxSatelliteFile)=1
-  integer:: iPEsatellite(MaxSatelliteFile)
-  integer:: iBLKsatellite(MaxSatelliteFile)
-  real   :: XSatellite_traj(MaxSatelliteFile, Max_Satellite_Npts, 3)
-  real   :: XSatellite(MaxSatelliteFile, 3)
-  real   :: Satellite_Time(MaxSatelliteFile, Max_Satellite_Npts)
-
-  character (len=50):: Satellite_name(MaxSatelliteFile)
-  character(len=3)  :: TypeSatCoord_I(MaxSatelliteFile)
 
   ! Plot variable names and units defined in the user module
   character(len=10), dimension(nPlotVarMax) :: &

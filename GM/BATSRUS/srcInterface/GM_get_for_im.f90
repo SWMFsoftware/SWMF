@@ -98,7 +98,7 @@ subroutine GM_satinit_for_im(nSats)
 
   !Module variables to use:
   use ModMain,   ONLY: DoImSatTrace
-  use ModIO,     ONLY: nSatellite
+  use ModSatelliteFile, ONLY: nSatellite
   use ModProcMH, ONLY: iProc
 
   implicit none
@@ -125,7 +125,8 @@ subroutine GM_get_sat_for_im(Buffer_III, Buffer_I, nSats)
   
   !Modules
   use ModProcMH, ONLY: iProc, iComm
-  use ModIO,     ONLY: Satellite_name, Xsatellite
+  use ModSatelliteFile, ONLY: Satellite_name, Xsatellite, &
+       get_satellite_ray, set_satellite_flags
   use ModMPI
   
   implicit none
@@ -150,7 +151,7 @@ subroutine GM_get_sat_for_im(Buffer_III, Buffer_I, nSats)
   do iSat=1, nSats
      ! Update satellite position.
      call set_satellite_flags(iSat)
-     call sat_get_ray(iSat, sat_RayVars)
+     call get_satellite_ray(iSat, sat_RayVars)
 
      ! Reduce values from all 
      call MPI_reduce(sat_RayVars, sat_RayVarsSum, 5, MPI_REAL, MPI_SUM, &

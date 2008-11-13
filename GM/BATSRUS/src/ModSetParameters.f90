@@ -48,12 +48,15 @@ subroutine MH_set_parameters(TypeAction)
        xSizeBoxHall, DxSizeBoxHall, &
        ySizeBoxHall, DySizeBoxHall, &
        zSizeBoxHall, DzSizeBoxHall
-  use ModGrayDiffusion, ONLY: UseGrayDiffusion, UseRadFluxLimiter, TypeRadFluxLimiter
+  use ModGrayDiffusion, ONLY: UseGrayDiffusion, UseRadFluxLimiter, &
+       TypeRadFluxLimiter
   use ModResistivity                              !^CFG IF DISSFLUX
   use ModMultiFluid, ONLY: MassIon_I, DoConserveNeutrals,iFluid
   use ModMultiIon, ONLY: multi_ion_set_parameters
   use ModSolarwind, ONLY: UseSolarwindFile, NameSolarwindFile, &
        read_solar_wind_file, normalize_solar_wind_data
+  use ModSatelliteFile, ONLY: nSatellite, &
+       read_satellite_parameters, read_satellite_input_files
 
   use ModFaceFlux, ONLY: face_flux_set_parameters, UseClimit, UsePoleDiffusion
 
@@ -82,8 +85,8 @@ subroutine MH_set_parameters(TypeAction)
   integer :: nVarRead=0
   character (len=lStringLine) :: NameEquationRead="?"
 
-  character (len=50) :: plot_string,log_string,satellite_string
-  character (len=3)  :: plot_area, plot_var, satellite_var, satellite_form
+  character (len=50) :: plot_string,log_string
+  character (len=3)  :: plot_area, plot_var
   character (len=2)  :: NameCompRead="??"
   integer :: qtotal, nIJKRead_D(3)
 
@@ -1494,104 +1497,11 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#SATELLITE")
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('nSatellite',nsatellite)
-        if(nSatellite <= 0) CYCLE READPARAM
-        save_satellite_data=.true.
-        DoReadSatelliteFiles=.true.
-        if(iProc==0) call check_dir(NamePlotDir)
-        nFile = max(nFile, satellite_ + nSatellite)
-        if (nFile > MaxFile .or. nSatellite > MaxSatelliteFile)&
-             call stop_mpi(&
-             'The number of output files is too large in #SATELLITE:'&
-             //' nFile > MaxFile .or. nSatellite > MaxSatelliteFile')
-
-        do iFile = satellite_+1, satellite_ + nSatellite
-           call read_var('StringSatellite',satellite_string)
-           ! Satellite output frequency
-           ! Note that we broke with tradition here so that the
-           ! dt_output will always we read!  This may be changed
-           ! in later distributions
-           call read_var('DnOutput',dn_output(ifile))
-           call read_var('DtOutput',dt_output(ifile))
-
-
-           ! Satellite inputfile name or the satellite name
-           call read_var('NameTrajectoryFile',&
-                Satellite_name(ifile-satellite_))
-           if(index(satellite_string,'eqn')>0 &
-                .or. index(satellite_string,'Eqn')>0 .or. &
-                index(satellite_string,'EQN')>0 ) then
-              UseSatelliteFile(ifile-satellite_) = .false.
-           else
-              UseSatelliteFile(ifile-satellite_) = .true.
-           end if
-
-           ! Satellite variables
-           if(index(satellite_string,'VAR')>0 .or. &
-                index(satellite_string,'var')>0 )then
-              satellite_var='var'
-              plot_dimensional(ifile)= index(satellite_string,'VAR')>0
-              sat_time(ifile) = 'step date'
-              call read_var('NameSatelliteVars',satellite_vars(ifile))
-           elseif(index(satellite_string,'MHD')>0 .or. &
-                index(satellite_string,'mhd')>0)then
-              satellite_var='mhd'
-              plot_dimensional(ifile)= index(satellite_string,'MHD')>0
-              sat_time(ifile) = 'step date'
-              satellite_vars(ifile)=NamePrimitiveVar//' jx jy jz'
-           elseif(index(satellite_string,'FUL')>0 .or. &
-                index(satellite_string,'ful')>0)then
-              satellite_var='ful'
-              plot_dimensional(ifile)= index(satellite_string,'FUL')>0
-              sat_time(ifile) = 'step date'
-              satellite_vars(ifile)=&
-                   NamePrimitiveVar//' b1x b1y b1z e jx jy jz'
-           else
-              call stop_mpi(&
-                   'Variable definition (mhd,ful,var) missing' &
-                   //' from satellite_string='//satellite_string)
-           end if
-
-           !Change by DTW, July 2007
-           !Add ray-tracing variables if 'ray' is present.
-           if (index(satellite_string,'ray')>0 .or. &
-                index(satellite_string,'RAY')>0) then
-              satellite_vars(ifile) = trim(satellite_vars(ifile)) // &
-                   ' theta1 phi1 status theta2 phi2'
-           endif
-
-           plot_type(ifile) = "satellite"
-
-           ! Determine the time output format to use in the 
-           ! satellite files.  This is loaded by default above, 
-           ! but can be input in the log_string line.
-           if(index(satellite_string,'none')>0) then
-              sat_time(ifile) = 'none'
-           elseif((index(satellite_string,'step')>0) .or. &
-                (index(satellite_string,'date')>0) .or. &
-                (index(satellite_string,'time')>0)) then
-              sat_time(ifile) = ''
-              if(index(satellite_string,'step')>0) &
-                   sat_time(ifile) = 'step'
-              if(index(satellite_string,'date')>0) &
-                   write(sat_time(ifile),'(a)') &
-                   sat_time(ifile)(1:len_trim(sat_time(ifile)))&
-                   //' date'
-              if(index(satellite_string,'time')>0) &
-                   write(sat_time(ifile),'(a)') &
-                   sat_time(ifile)(1:len_trim(sat_time(ifile)))&
-                   //' time'
-           end if
-
-        end do
+        call read_satellite_parameters(NameCommand)
+        DoReadSatelliteFiles = nSatellite > 0
 
      case('#STEADYSTATESATELLITE')
-        do iFile = 1, nSatellite
-           if (.not. time_accurate) then
-              call read_var('SatelliteTimeStart', TimeSatStart_I(ifile))
-              call read_var('SatelliteTimeEnd',   TimeSatEnd_I(ifile))
-           end if
-        end do
+        call read_satellite_parameters(NameCommand)
 
      case('#RESCHANGEBOUNDARY')
         if(.not.is_first_session())CYCLE READPARAM
@@ -2027,7 +1937,6 @@ contains
     optimize_message_pass = 'allopt'
 
     plot_dimensional      = .true.
-    save_satellite_data   = .false.
 
     restart           = .false.
 

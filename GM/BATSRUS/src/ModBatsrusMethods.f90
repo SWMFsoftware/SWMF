@@ -204,13 +204,13 @@ contains
   !============================================================================
 
   subroutine initialize_files
-    use ModSatelliteFile
+    use ModSatelliteFile, ONLY: set_satellite_file_status, nSatellite
     ! Local variables
     character(len=*), parameter :: NameSubSub = NameSub//'::initialize_files'
     logical :: delete_file
     integer :: iSat
 
-    if (save_satellite_data .and. iProc == 0) then
+    if (iProc == 0) then
        do iSat = 1, nSatellite
           call set_satellite_file_status(iSat,'open')
           call set_satellite_file_status(iSat,'close')
@@ -709,10 +709,12 @@ contains
   subroutine save_file
     use ModRestartFile, ONLY: write_restart_files
     use ModParallel, ONLY : UsePlotMessageOptions
-    use ModSatelliteFile
+    use ModSatelliteFile, ONLY: &
+         nSatellite, set_satellite_file_status, set_satellite_flags, &
+         TimeSatStart_I, TimeSatEnd_I
+
     integer :: iFileLoop, iSat
 
-    !
     ! Backup location for the Time_Simulation variable.
     ! Time_Simulation is used in steady-state runs as a loop parameter
     ! in the save_files subroutine, where set_satellite_flags and 
@@ -721,7 +723,7 @@ contains
     ! is saved here before and it is restored after the loop.
     !
     real :: tSimulationBackup = 0.0
-
+    !---------------------------------------------------------------------
 
     if(n_step<=n_output_last(ifile) .and. dn_output(ifile)/=0) return
 
@@ -797,11 +799,10 @@ contains
           call write_plot_common(ifile)
           call timing_stop('save_plot')
        end if
-    elseif(ifile>satellite_ .and. ifile<=satellite_+nsatellite) then
+    elseif(iFile > Satellite_ .and. iFile <= Satellite_ + nSatellite) then
 
        ! Case for satellite files
-       if(.not.save_satellite_data)return
-       iSat=ifile-satellite_
+       iSat = iFile - Satellite_
        call timing_start('save_satellite')
        if(iProc==0)call set_satellite_file_status(iSat,'append')
        !
@@ -810,13 +811,15 @@ contains
        
        if (time_accurate) then
           call set_satellite_flags(iSat)
-          call write_logfile(iSat,ifile)! write one line for a single trajectory point
+          ! write one line for a single trajectory point
+          call write_logfile(iSat,ifile)
        else
           tSimulationBackup = Time_Simulation    ! Save ...
           Time_Simulation = TimeSatStart_I(iSat)
-          do while (Time_Simulation .le. TimeSatEnd_I(iSat))
+          do while (Time_Simulation <= TimeSatEnd_I(iSat))
              call set_satellite_flags(iSat)
-             call write_logfile(iSat,ifile)           ! write for ALL the points of trajectory cut
+             ! write for ALL the points of trajectory cut
+             call write_logfile(iSat,ifile)  
              Time_Simulation = Time_Simulation + dt_output(iSat+Satellite_)
           end do
           Time_Simulation = tSimulationBackup    ! ... Restore
@@ -828,8 +831,8 @@ contains
     n_output_last(ifile)=n_step
 
     if(iProc==0 .and. lVerbose>0 .and. (ifile /= logfile_ .and. &
-         (.not. (ifile > satellite_ .and. &
-         ifile<=satellite_+maxsatellitefile))))then
+         (.not. (iFile > satellite_ .and. &
+         iFile <= Satellite_ + nSatellite))))then
        if(time_accurate)then
           call write_prefix; 
           write(iUnitOut,'(a,i2,a,a,a,i7,a,i4,a,i2.2,a,i2.2,a)') &
@@ -851,20 +854,20 @@ contains
   !===========================================================================
 
   subroutine save_files_final
-    use ModSatelliteFile
+    use ModSatelliteFile, ONLY: set_satellite_file_status, nSatellite
 
     implicit none
 
     integer :: iSat
 
-    do ifile=1,plot_+nplotfile
+    do iFile = 1, plot_ + nPlotFile
        call save_file
     end do
 
     !\
     ! Close files
     !/
-    if (save_satellite_data .and. iProc==0) then
+    if (iProc==0) then
        do iSat = 1, nSatellite
           call set_satellite_file_status(iSat,'close')
        end do

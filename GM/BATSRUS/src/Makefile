@@ -108,7 +108,6 @@ OBJECTS = \
 	potential_force_averages.o\
 	refine_grid.o\
 	rotate.o\
-	satellites.o\
 	set_b0.o\
 	set_BCs.o\
 	set_block_geometry.o\

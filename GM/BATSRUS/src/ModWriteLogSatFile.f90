@@ -10,6 +10,8 @@ subroutine write_logfile(iSatIn,iFile)
   use ModIO
   use ModIoUnit, ONLY   : io_unit_new
   use ModUtilities, ONLY: flush_unit
+  use ModSatelliteFile, ONLY: Satellite_Name, Satellite_First_Write, &
+       iUnitSat_I, Sat_Time, Satellite_Vars, DoTrackSatellite_I, xSatellite
   use ModMpi
   implicit none
 
@@ -254,6 +256,8 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
        B0_DGB, State_VGB, Energy_GBI, DivB1_GB
   use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,x1,x2,y1,y2,z1,z2
   use ModRaytrace,   ONLY: ray  !^CFG  IF RAYTRACE
+  use ModSatelliteFile, ONLY: get_satellite_ray !^CFG  IF RAYTRACE
+  use ModSatelliteFile, ONLY: xSatellite
   use ModIO
   use ModMultiFluid, ONLY: iRho, iRhoUx, iRhoUy, iRhoUz, iP, iFluid
 
@@ -321,7 +325,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
      do iVar=1, nLogVar
         select case(NameLogVar_I(iVar))
         case('theta1','theta2','phi1','phi2','status')
-           call sat_get_ray(iSat, SatRayVar_I)
+           call get_satellite_ray(iSat, SatRayVar_I)
            call MPI_reduce(SatRayVar_I, SatRayVarSum_I, 6, MPI_REAL, MPI_SUM, &
                 0, iComm, iError)
            EXIT

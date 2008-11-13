@@ -4,21 +4,21 @@
 
 test: 
 	@rm -f *.diff
-	-@(make test_shocktube)
-	-@(make test_multifluid)
-	-@(make test_multiion)
-	-@(make test_crash)
-	-@(make test_levelset)
-	-@(make test_graydiffusion)
-	-@(make test_corona)
-	-@(make test_coronasph)
-	-@(make test_earthsph)
+	#-@(make test_shocktube)
+	#-@(make test_multifluid)
+	#-@(make test_multiion)
+	#-@(make test_crash)
+	#-@(make test_levelset)
+	#-@(make test_graydiffusion)
+	#-@(make test_corona)
+	#-@(make test_coronasph)
+	#-@(make test_earthsph)
 	-@(make test_titan)
 	-@(make test_mars)
 	-@(make test_venus)
-	-@(make test_saturn)
+	#-@(make test_saturn)
 	-@(make test_comet)
-	-@(make test_func)
+	#-@(make test_func)
 	@ls -l *.diff
 
 # All tests are done in this directory:
