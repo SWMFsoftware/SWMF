@@ -179,7 +179,7 @@ subroutine set_physics_constants
 
   if (UseMultiSpecies) then
      FaceState_VI(SpeciesFirst_, Body1_) = &
-          BodyRho_I(1) - LowDensityRatio * (SpeciesLast_-SpeciesFirst_)
+          BodyRho_I(1)*(1.0 - LowDensityRatio * (SpeciesLast_-SpeciesFirst_))
      FaceState_VI(SpeciesFirst_+1:SpeciesLast_, Body1_) = &
           LowDensityRatio*BodyRho_I(1)
   endif
@@ -204,9 +204,9 @@ subroutine set_physics_constants
   
   if (UseMultiSpecies) then
      FaceState_VI(SpeciesFirst_, East_:Top_) = &
-          SW_rho - LowDensityRatio * (SpeciesLast_-SpeciesFirst_)
+          SW_rho*(1 - LowDensityRatio * (SpeciesLast_-SpeciesFirst_))
      FaceState_VI(SpeciesFirst_+1:SpeciesLast_, East_:Top_) = &
-          LowDensityRatio*sw_rho
+          LowDensityRatio*Sw_rho
   endif
 
   if(nFluid > 1)then
