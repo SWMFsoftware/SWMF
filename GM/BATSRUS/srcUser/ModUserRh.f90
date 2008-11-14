@@ -26,6 +26,8 @@ contains
     integer,intent(in):: iStage,iBlock
     integer:: i,j,k
     real:: PressureSI,EInternal,EInternalSI,RhoSI
+    !------------------------------------------------------------------------
+    UsePreviousTe = .true.
     call update_states_MHD(iStage,iBlock)
     !\
     ! Begin update of pressure and relaxation energy::
