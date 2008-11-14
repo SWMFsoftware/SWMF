@@ -521,7 +521,7 @@ module ModStatSum
   implicit none
   SAVE
   integer :: iIterTe !Temperature iterations counter
-  logical :: UsePreviousTe = .true.
+  logical :: UsePreviousTe = .false.
 Contains
   !==========================================================================
   !Set the element and its Ionization Potentials
