@@ -106,21 +106,23 @@ contains
     !Find temperature from dentity and internal energy
     call pressure_to_temperature(pToNaRatio, Natomic, IsDegenerated)
 
-    if(present(IsError)) IsError = IsDegenerated
-    if(IsDegenerated)then
-       write(*,*) NameSub,' pTotal, Rho, iMaterial =', pTotal, Rho, iMaterial
-       write(*,*) NameSub,' pToNaRatio, Natomic, Te =', pToNaRatio, Natomic,Te
-       if(present(IsError))RETURN
-       call CON_stop(NameSub//': no EOS for Fermi degenerated state')
-    end if
-
     if(present(TeOut))    TeOut = Te*cEvToK
 
     if(present(GammaOut)) call get_gamma(GammaOut=GammaOut)
 
-    
     if(present(UDensityTotalOut)) &
-        UDensityTotalOut = NAtomic*cEV*internal_energy()
+         UDensityTotalOut = NAtomic*cEV*internal_energy()
+
+    if(present(IsError))then
+       IsError = IsDegenerated
+       RETURN
+    end if
+
+    if(IsDegenerated)then
+       write(*,*) NameSub,' pTotal, Rho, iMaterial =', pTotal, Rho, iMaterial
+       write(*,*) NameSub,' pToNaRatio, Natomic, Te =', pToNaRatio, Natomic,Te 
+       call CON_stop(NameSub//': no EOS for Fermi degenerated state')
+    end if
 
   end subroutine pressure_to_eint
 
