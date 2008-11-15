@@ -45,6 +45,8 @@ program test_Godunov
   !        iMaterial=0 - xenon
   !        iMaterial=1 - beryllium         
 
+  UsePreviousTe = .true.
+
   Dt=0.0; Time =0.0 
   !Initial condition, in the frame of reference comoving with a piston
   do iX=1,nX

@@ -28,8 +28,9 @@ program saha
   !-------------------------------------------
 
   dTe = 5.0; dLogN=log(10.0); dU=100.0
-
-
+  
+  UsePreviousTe = .true.
+  
   call set_element( 54 )
 
  
