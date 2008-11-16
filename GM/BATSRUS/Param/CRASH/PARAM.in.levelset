@@ -16,12 +16,13 @@ READ
 #USERINPUTBEGIN  ----------------------
 
 #TUBE
-T			IsFullTube
+0.0			xEndTube
 287.5			rInnerTube
 400.0			rOuterTube
 1400.0			RhoDimTube
 6.5			RhoDimOutside
 1.1e5			pDimOutside
+-1.0			xUniformXe
 
 #MIXEDCELL
 T			UseMixedCell
