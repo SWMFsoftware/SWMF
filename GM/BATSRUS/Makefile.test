@@ -9,6 +9,7 @@ test:
 	-@(make test_multiion)
 	-@(make test_crash)
 	-@(make test_levelset)
+	-@(make test_hyades2d)
 	-@(make test_graydiffusion)
 	-@(make test_corona)
 	-@(make test_coronasph)
@@ -39,7 +40,8 @@ test_help:
 	@echo "    test_multifluid            (run multi-fluid test only)"
 	@echo "    test_multiion              (run multi-ion test only)"
 	@echo "    test_crash		      (run CRASH test only)"
-	@echo "    test_levelset	      (run Level set test only)"
+	@echo "    test_levelset	      (run Levelset test only)"
+	@echo "    test_hyades2d	      (run Hyades2D test only)"
 	@echo "    test_graydiffusion	      (run gray-diffusion set test only)"
 	@echo "    test_corona                (run Solar Corona test only)"
 	@echo "    test_coronasph             (run spherical Solar Corona test)"
@@ -217,7 +219,40 @@ test_levelset_check:
 		${TESTDIR}/RESULTS/GM/log_n000000.log > test_levelset.diff
 	ls -l test_levelset.diff
 
-### LEVELSET TEST ###
+### HYADES2D TEST ###
+
+test_hyades2d:
+	@echo "test_hyades2d_compile..." > test_hyades2d.diff
+	make test_hyades2d_compile
+	@echo "test_hyades2d_rundir..." >> test_hyades2d.diff
+	make test_hyades2d_rundir
+	@echo "test_hyades2d_run..." >> test_hyades2d.diff
+	make test_hyades2d_run
+	@echo "test_hyades2d_check..." >> test_hyades2d.diff
+	make test_hyades2d_check
+
+test_hyades2d_compile:
+	./Config.pl -e=HdCrash -u=Crash -g=4,4,2,2000,1
+	make CRASH
+	make PIDL
+
+test_hyades2d_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.hyades2d PARAM.in; \
+		ln -s ${BINDIR}/CRASH.exe . 
+	gunzip -c ${DIR}/util/CRASH/input/hyades2d_1.1ns.out.gz \
+		> ${TESTDIR}/hyades2d_1.1ns.out
+
+test_hyades2d_run:
+	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+
+test_hyades2d_check:
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-8 \
+		Param/CRASH/TestOutput/log_hyades2d.log \
+		${TESTDIR}/RESULTS/GM/log_n000000.log > test_hyades2d.diff
+	ls -l test_hyades2d.diff
+
+### MIXED CELL TEST ###
 
 test_mixedcell:
 	@echo "test_mixedcell_compile..." > test_mixedcell.diff

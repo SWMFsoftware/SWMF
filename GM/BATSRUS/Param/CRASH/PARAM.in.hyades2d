@@ -1,0 +1,127 @@
+#ECHO
+T
+
+#PLANET
+NONE
+
+#IOUNITS
+SI
+
+#NORMALIZATION
+READ
+1.0e-6			Micron
+1.0e+3			km/s
+1000.0			g/cm^3
+
+#USERINPUTBEGIN  ----------------------
+
+#TUBE
+100.0			xEndTube
+400.0			rInnerTube
+550.0			rOuterTube
+1400.0			RhoDimTube
+6.5			RhoDimOutside
+1.1e5			pDimOutside
+-1.0			xUniformXe
+
+#GOLD
+T			UseGold
+150.0			WidthGold
+20000.0			RhoDimGold
+
+#MIXEDCELL
+T			UseMixedCell
+0.97			MixLimit
+
+#CYLINDRICAL
+T			UseCylindrical
+
+#HYADES
+T			UseHyadesFile
+hyades2d_1.1ns.out	NameHyadesFile
+
+#USERINPUTEND    ----------------------
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+#CHECKGRIDSIZE
+4			nI
+4			nJ
+2			nK
+2000			MinBlockALL
+
+tube is 5mm = 500um long, 625 um wide
+
+#GRID
+70			nRootBlockX
+7			nRootBlockY
+1			nRootBlockZ
+-500.0			xMin
+3000.0			xMax
+   0.0			yMin
+ 750.0			yMax
+ -12.5			zMin
+  12.5			zMax
+
+#UPDATECHECK
+F			DoUpdateCheck
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+Sheared boundary condition is used for non-zero shock slope
+
+#OUTERBOUNDARY
+float			xMinBc
+float			xMaxBc
+reflect			yMinBc
+float			yMaxBc
+float			zMinBc
+float			zMaxBc
+
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc3			TypeLimiter
+2.0			LimiterBeta
+
+#LIMITER
+F			UseLogRhoLimiter
+F       	        UseLogPLimiter
+T               	UseScalarPerRhoLimiter
+
+#SAVERESTART
+F			DoSaverestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.0			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#PLOTFILENAME
+nanosecond		NameMaxTimeUnit
+
+#SAVEPLOT
+1			nPlotfile
+z=0 VAR idl		PlotString
+-1                      DnSavePlot
+1.0e-9                  DtSavePlot
+0.0			DxSavePlot
+rho ux uy uz Eint p Xe Be Pl level TeKev
+gamma
+
+#STOP
+-1			MaxIteration
+2.0e-8			tSimulationMax
+
+#END
