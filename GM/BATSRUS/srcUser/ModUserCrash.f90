@@ -130,7 +130,7 @@ contains
     real    :: DxyGold = -1.0
     logical :: IsError
 
-    integer :: iBlock, i, j, k, iMaterial
+    integer :: iBlock, i, j, k, iMaterial, iMaterial_I(1)
 
     character(len=*), parameter :: NameSub = "user_set_ics"
     !------------------------------------------------------------------------
@@ -260,30 +260,20 @@ contains
             State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) &
             *State_VGB(Rho_,i,j,k,iBlock)
 
-       ! Calculate internal energy for Xe/Be from pressure and density
-       ! For plastic assume that it is very cold and neutral
-       State_VGB(ExtraEInt_,i,j,k,iBlock) = 0.0
-       if(  State_VGB(Rho_,i,j,k,iBlock) < 5000.0*Io2No_V(UnitRho_) .and. &
-           (State_VGB(LevelXe_,i,j,k,iBlock) > 0.0 .or. &
-            State_VGB(LevelBe_,i,j,k,iBlock) > 0.0)) then 
-       
-          RhoSi = State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_)
-          pSi   = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
-          if(State_VGB(LevelBe_,i,j,k,iBlock) > 0.0)then
-             iMaterial = Be_
-          else
-             iMaterial = Xe_
-          end if
+       ! Calculate internal energy from pressure and density
+       iMaterial_I = maxloc(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock))
+       iMaterial = iMaterial_I(1) - 1
 
-          ! The IsError flag avoids stopping for Fermi degenerated state
-          call eos(iMaterial,RhoSi,pTotalIn=pSi, &
+       RhoSi = State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_)
+       pSi   = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
+
+       ! The IsError flag avoids stopping for Fermi degenerated state
+       call eos(iMaterial,RhoSi,pTotalIn=pSi, &
                ETotalOut=EinternalSi, IsError=IsError)
 
-          State_VGB(ExtraEInt_,i,j,k,iBlock) = &
-               EInternalSi*Si2No_V(UnitEnergyDens_) &
-               - inv_gm1*State_VGB(P_,i,j,k,iBlock)
-
-       end if
+       State_VGB(ExtraEInt_,i,j,k,iBlock) = &
+            EInternalSi*Si2No_V(UnitEnergyDens_) &
+            - inv_gm1*State_VGB(P_,i,j,k,iBlock)
 
     end do; end do; end do
 
@@ -812,10 +802,7 @@ contains
           iMaterial_I = maxloc(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock))
           iMaterial   = iMaterial_I(1) - 1
 
-          if(iMaterial == Plastic_) CYCLE
-
           RhoSi = Rho*No2Si_V(UnitRho_)
-          if( RhoSi > 2000.0) CYCLE
           pSi   = p*No2Si_V(UnitP_)
           ! The IsError flag avoids stopping for Fermi degenerated state
           call eos(iMaterial, RhoSi, pTotalIn=pSi,TeOut=TeSi, &

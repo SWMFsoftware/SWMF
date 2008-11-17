@@ -24,7 +24,7 @@ READ
 1.1e5			pDimOutside
 -1.0			xUniformXe
 
-#MIXEDCELL
+MIXEDCELL
 T			UseMixedCell
 0.97			MixLimit
 
