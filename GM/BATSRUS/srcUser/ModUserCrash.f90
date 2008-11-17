@@ -123,7 +123,7 @@ contains
     use ModAdvance,   ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, p_, &
          ExtraEint_, LevelBe_, LevelXe_, LevelPl_
     use ModGeometry,  ONLY: x_BLK, y_BLK, z_BLK
-    use ModEos,       ONLY: pressure_to_eint, Be_, Xe_
+    use ModEos,       ONLY: eos, Be_, Xe_
     use ModPolyimide, ONLY: cAtomicMass_I, cAPolyimide
 
     real    :: x, y, xBe, DxBe, DxyPl, pSi, RhoSi, EinternalSi
@@ -276,8 +276,8 @@ contains
           end if
 
           ! The IsError flag avoids stopping for Fermi degenerated state
-          call pressure_to_eint(pSi, RhoSi, iMaterial, &
-               uDensityTotalOut=EinternalSi, IsError=IsError)
+          call eos(iMaterial,RhoSi,pTotalIn=pSi, &
+               ETotalOut=EinternalSi, IsError=IsError)
 
           State_VGB(ExtraEInt_,i,j,k,iBlock) = &
                EInternalSi*Si2No_V(UnitEnergyDens_) &
@@ -642,7 +642,7 @@ contains
     use ModNodes,   ONLY: NodeY_NB
     use ModPhysics
     use ModEnergy,  ONLY: calc_energy_cell
-    use ModEos,     ONLY: eos, eos_mixed_cell
+    use ModEos,     ONLY: eos
 
     implicit none
 
@@ -717,12 +717,12 @@ contains
           ! The cell is mixed if none of the material is dominant
           RhoToARatioSI_I = &
                State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) * No2Si_V(UnitRho_)
-          call eos_mixed_cell(&
-               UDensityTotal=EInternalSI, RhoToARatio_I=RhoToARatioSI_I,& 
+          call eos(&
+               RhoToARatioSI_I,ETotalIn=EInternalSI,& 
                PTotalOut=PressureSI) 
        else
           ! Get pressure from EOS
-          call eos(UDensityTotal=EInternalSI, Rho=RhoSI, iMaterial=iMaterial, &
+          call eos(iMaterial, Rho=RhoSI,ETotalIn=EInternalSI, &
                pTotalOut=PressureSI)
        end if
 
@@ -778,7 +778,7 @@ contains
     use ModSize,    ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Rho_, p_, LevelXe_, LevelPl_
     use ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitTemperature_
-    use ModEos,     ONLY: pressure_to_eint, Plastic_
+    use ModEos,     ONLY: eos, Plastic_
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -818,7 +818,7 @@ contains
           if( RhoSi > 2000.0) CYCLE
           pSi   = p*No2Si_V(UnitP_)
           ! The IsError flag avoids stopping for Fermi degenerated state
-          call pressure_to_eint(pSi, RhoSi, iMaterial, TeOut=TeSi, &
+          call eos(iMaterial, RhoSi, pTotalIn=pSi,TeOut=TeSi, &
                IsError=IsError)
           PlotVar_G(i,j,k) = TeSi * cKToKev
        end do; end do; end do

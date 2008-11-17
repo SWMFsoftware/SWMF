@@ -19,7 +19,7 @@ program test_Godunov
   implicit none
   integer,parameter::nX=1000,nDim=1,nVar=3,iMaterial=0
   real::Cons_VC(nVar,1:nX),Prime_VG(nVar,0:nX+1),Flux_VF(nVar,1:nX+1)
-  real::CMax_F(1:nX+1),Gamma_G(0:nX+1),Energy0_G(0:nX+1),InternalEnergy_G(0:nX+1)
+  real::CMax_F(1:nX+1),Gamma_G(0:nX+1),InternalEnergy_G(0:nX+1)
   real::GammaMax
   real,parameter::cLength=5.0e-3    !5 mm
   real::Dt,Time
@@ -64,12 +64,11 @@ program test_Godunov
         Prime_VG(1,iX)=Cons_VC(1,iX)
         Prime_VG(2,iX)=Cons_VC(2,iX)/Prime_VG(1,iX)
         InternalEnergy_G(iX)=Cons_VC(3,iX)-0.50*Prime_VG(1,iX)*Prime_VG(2,iX)**2
-        call eos(UDensityTotal=InternalEnergy_G(iX),& !Input energy density[J/m^3]
-             Rho=Prime_VG(1,iX),            & !Input mass density,[kg/m^3] 
-             iMaterial=iMaterial,           & !Input: sort of material
+        call eos(iMaterial  ,               & !Input: sort of material
+             Prime_VG(1,iX),                & !Input mass density,[kg/m^3] 
+             ETotalIn=InternalEnergy_G(iX), & !Input energy density[J/m^3]
              PTotalOut=Prime_VG(3,iX),      & !Output,pressure [Pa]
-             GammaOut=Gamma_G(iX),          & !Output,polytropic index
-             Energy0Out=Energy0_G(iX))     !Output   (E-P/(\gamma-1))/\rho
+             GammaOut=Gamma_G(iX)           ) !Output,polytropic index  
      end do
      if(Time>TimeOut)then
         do iX=1,nX
@@ -84,7 +83,7 @@ program test_Godunov
      !Fix ends
      Prime_VG(:,0)   =Prime_VG(:, 1); Gamma_G(0)   =Gamma_G(1)
      Prime_VG(:,nX+1)=Prime_VG(:,nX); Gamma_G(nX+1)=Gamma_G(nX)
-     Energy0_G(0)   =Energy0_G(1); Energy0_G( nX+1)   =Energy0_G(nX) 
+
      InternalEnergy_G(0)   =InternalEnergy_G(1)
      InternalEnergy_G( nX+1)   =InternalEnergy_G(nX) 
      !Reflection at the left end

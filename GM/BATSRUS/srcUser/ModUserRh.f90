@@ -46,9 +46,9 @@ contains
        
        !Apply the EOS, get pressure in SI
        call eos(&
-            UDensityTotal=EInternalSI,& !Input total energy density SI,[J/m^3]
-            Rho=RhoSI,                & !Input mass density, SI [kg/m^3] 
-            iMaterial=0,              & !Input: sort of material
+            0,                        & !Input: sort of material
+            RhoSI,                    & !Input mass density, SI [kg/m^3] 
+            ETotalIn=EInternalSI,     & !Input total energy density SI,[J/m^3]
             PTotalOut=PressureSI      ) !Output, OPTIONAL, pressure, SI [Pa]
   
        !Put pressure and ExtraEInt = Total internal energy - P/(\gamma -1)
