@@ -7,7 +7,7 @@ module ModPlanet
 
   logical            :: isFirstGlow = .True.  
   logical            :: isInitialGlow 
-  integer, parameter :: nSpecies = 4
+  integer, parameter :: nSpecies = 5
   integer, parameter :: iO_3P_  = 1
   integer, parameter :: iO2_ = 2
   integer, parameter :: iN2_ = 3
@@ -103,22 +103,44 @@ module ModPlanet
   ! These are for the neutral friction routine...
 
   ! These are the numerical coefficients in Table 1 in m^2 instead of cm^2
-  real, parameter, dimension(4, 4) :: Diff0 = 1.0e4 * reshape( (/ &
+
+ real, parameter, dimension(5, 5) :: Diff0 = 1.0e4 * reshape( (/ &
        ! 0      02     N2      N     NO
        !---------------------------------+
-       0.00,  0.260, 0.260, 0.300, &            ! O
-       0.26,  0.000, 0.181, 0.220, &            ! O2
-       0.26,  0.181, 0.000, 0.220, &            ! N2
-       0.30,  0.220, 0.220, 0.000 /), (/4,4/) )  ! N
+       0.00,  0.260, 0.260, 0.300, 0.181/2.0,&            ! O
+       0.26,  0.000, 0.181, 0.220, 0.181/2.,&            ! O2
+       0.26,  0.181, 0.000, 0.220, 0.181/2.,&            ! N2
+       0.30,  0.220, 0.220, 0.000, .181/2., &
+       0.181/2.,  0.181/2., 0.181/2., 0.181/2., 0.00 /), (/5,5/) )  ! N
 
   ! These are the exponents
-  real, parameter, dimension(4, 4) :: DiffExp = reshape( (/ &
+  real, parameter, dimension(5, 5) :: DiffExp = reshape( (/ &
        ! 0      02     N2
        !---------------------------------+
-       0.00,  0.75,  0.75, 0.75, &             ! O
-       0.75,  0.00,  0.75, 0.75, &             ! O2
-       0.75,  0.75,  0.00, 0.75, &             ! N2
-       0.75,  0.75,  0.75, 0.00 /), (/4,4/) )  ! N
+       0.00,  0.75,  0.75, 0.75,  0.75, &             ! O
+       0.75,  0.00,  0.75, 0.75, 0.75, &             ! O2
+       0.75,  0.75,  0.00, 0.75, 0.75, &             ! N2
+       0.75,  0.75,  0.75, 0.00,  0.75, &            !N
+        0.75,  0.75,  0.75, 0.75,0.0  /), (/5,5/) )  ! NO
+
+
+
+!  real, parameter, dimension(4, 4) :: Diff0 = 1.0e4 * reshape( (/ &
+!       ! 0      02     N2      N     NO
+!       !---------------------------------+
+!       0.00,  0.260, 0.260, 0.300, &            ! O
+!       0.26,  0.000, 0.181, 0.220, &            ! O2
+!       0.26,  0.181, 0.000, 0.220, &            ! N2
+!       0.30,  0.220, 0.220, 0.000 /), (/4,4/) )  ! N
+!
+!  ! These are the exponents
+!  real, parameter, dimension(4, 4) :: DiffExp = reshape( (/ &
+!       ! 0      02     N2
+!       !---------------------------------+
+!       0.00,  0.75,  0.75, 0.75, &             ! O
+!       0.75,  0.00,  0.75, 0.75, &             ! O2
+!       0.75,  0.75,  0.00, 0.75, &             ! N2
+!       0.75,  0.75,  0.75, 0.00 /), (/4,4/) )  ! N
 
   real, parameter:: AltMinIono=100.0 ! in km
 
@@ -138,6 +160,7 @@ contains
     Mass(iN_2P_) = Mass(iN_4S_)
     Mass(iN2_)   = 2*Mass(iN_4S_)
     Mass(iO2_)   = 2*Mass(iO_3P_)
+    Mass(iNO_)   = Mass(iN_4S_)+Mass(iO_3P_)
 
     cSpecies(iH_)    = "H"
     cSpecies(iHe_)   = "He"
