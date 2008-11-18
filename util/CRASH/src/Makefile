@@ -9,10 +9,10 @@ MY_LIB = ${LIBDIR}/libCRASH.a
 OBJECTS=\
 	ModAtomicMass.o\
 	ModEos.o\
+	ModESimT4.o\
         ModIonizPotential.o \
 	ModPolyimide.o \
-	ModStatSum.o\
-	heat_capacity.o 
+	ModStatSum.o
 
 
 OBJECTS_EXE= test_ionization.o test_godunov.o
