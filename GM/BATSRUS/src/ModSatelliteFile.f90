@@ -12,8 +12,8 @@ module ModSatelliteFile
   public:: set_satellite_file_status  ! open, open to append or close the file
   public:: read_satellite_input_files ! read satellite trajectories
   public:: set_satellite_flags        ! find the processor/block for satellite
-  public:: get_satellite_ray          ! find field line going through satellite
-
+  public:: get_satellite_ray ! map field line from satellite ^CFG IF RAYTRACE
+  
   logical, public :: DoSaveSatelliteData = .false. ! save satellite data?
   integer, public :: nSatellite = 0                ! number of satellites
 
