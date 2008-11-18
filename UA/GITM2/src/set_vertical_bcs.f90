@@ -9,7 +9,7 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   ! Fill in ghost cells at the top and bottom
 
   use ModSizeGitm, only: nAlts
-  use ModPlanet, only: nSpecies, nIonsAdvect, Mass, nIons, IsEarth,iN2_
+  use ModPlanet, only: nSpecies, nIonsAdvect, Mass, nIons, IsEarth,iN2_,iNO_
   use ModGITM, only: TempUnit, iEast_, iNorth_, iUp_
   use ModInputs
   use ModConstants
@@ -77,6 +77,25 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   VertVel(-1:0,:)      = 0.0
   IVel(-1:0,iUp_)      = 0.0
 
+  do iSpecies=1,nIonsAdvect
+     dn = (LogINS(2,iSpecies) - LogINS(1,iSpecies))
+     
+     LogINS(0,iSpecies) = LogINS(1,iSpecies) - dn
+     LogINS(-1,iSpecies) = LogINS(0,iSpecies) - dn
+  enddo
+
+  dn = (LogNS(2,iNO_) - LogNS(1,iNO_))
+  if (dn >= 0) then
+     LogNS(0,iNO_) = LogNS(1,iNO_) - dn
+     LogNS(-1,iNO_) = LogNS(0,iNO_) - dn
+  else
+     LogNS(0,iNO_) = LogNS(1,iNO_) + dn
+     LogNS(-1,iNO_) = LogNS(0,iNO_) + dn
+  endif
+!  dn = (LogNS(2,iN_4S_) - LogNS(1,iN_4S_))
+!  LogNS(0,iN_4S_) = LogNS(1,iN_4S_) - dn
+!  LogNS(-1,iN_4S_) = LogNS(0,iN_4S_) - dn
+
   ! If you want to slip:
   !  Vel_GD(-1:0,iEast_)  = Vel_GD(1,iEast_)
   !  Vel_GD(-1:0,iNorth_) = Vel_GD(1,iNorth_)
@@ -118,11 +137,17 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   Temp(nAlts+1) = Temp(nAlts) + dt
   Temp(nAlts+2) = Temp(nAlts+1) + dt
 
-  do iAlt = nAlts+1, nAlts+2
-     InvScaleHgt  =  &
-          -(Gravity_G(iAlt-1)+Gravity_G(iAlt)) / 2 / Temp(iAlt)
-     LogRho(iAlt) = LogRho(iAlt-1) - dAlt_F(iAlt)*InvScaleHgt
-  enddo
+!  do iAlt = nAlts+1, nAlts+2
+!     InvScaleHgt  =  &
+!          -(Gravity_G(iAlt-1)+Gravity_G(iAlt)) / 2 / Temp(iAlt)
+!     LogRho(iAlt) = LogRho(iAlt-1) - dAlt_F(iAlt)*InvScaleHgt
+!     write(*,*) "rho in vbc : ",iAlt,LogRho(iAlt-1),dAlt_F(iAlt),InvScaleHgt,LogRho(iAlt), &
+!          Gravity_G(iAlt-1),Gravity_G(iAlt),Temp(iAlt-1),Temp(iAlt)
+     dn = (LogRho(nAlts) - LogRho(nAlts-1))
+     LogRho(nAlts+1) = LogRho(nAlts) + dn
+     LogRho(nAlts+2) = LogRho(nAlts+1) + dn
+
+!  enddo
 
   ! Limit the slope of the ion density
 
