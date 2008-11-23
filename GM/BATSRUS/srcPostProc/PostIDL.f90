@@ -368,9 +368,12 @@ program PostIDL
 
   if(structured)then
      volume=product(real(nxyz))
-     if(abs(total/volume-2.0)<0.0001)then
+     if(ndim==1 .and. abs(total/volume-4.0)<0.0001)then
+        w=0.25*w
+        write(*,*)'Averaged 1D structured file everywhere'
+     elseif(abs(total/volume-2.0)<0.0001)then
         w=0.5*w
-        write(*,*)'Averaged 2D structured file everywhere'
+        write(*,*)'Averaged structured file everywhere'
      elseif(abs(total/volume-1.0)>0.0001)then
         write(*,*)'!!! Discrepancy in structured file:',&
              'filled total=',total,' volume=',volume,' !!!'
