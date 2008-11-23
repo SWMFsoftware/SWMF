@@ -226,7 +226,7 @@ subroutine write_plot_radiowave(iFile)
         call get_time_string
         write(filename,file_format) &
              trim(plot_type1)//"_",&
-             ifile-plot_,"_t"//StringDateOrTime//"_n",n_step,&
+             ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",n_step,&
              file_extension
      else
         write(filename,file_format) &

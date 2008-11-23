@@ -36,7 +36,7 @@ Module ModIO
   ! The largest time unit used in the plot file names in time-accurate runs
   character (len=20) :: NameMaxTimeUnit = 'hour'
   ! Simulation time or physical date and time used in file names
-  character (len=8) :: StringDateOrTime
+  character (len=14) :: StringDateOrTime
 
 
   logical :: restart=.false.        ! read restart file

@@ -123,12 +123,12 @@ subroutine write_plot_common(ifile)
         ! do the northern hemisphere
         write(filename_n,file_format) &
              plot_type1(1:2)//"N"//plot_type1(4:len_trim(plot_type1))//"_",&
-             ifile-plot_,"_t"//StringDateOrTime//"_n",n_step,"_pe",iProc,&
+             ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",n_step,"_pe",iProc,&
              file_extension
         ! do the southern hemisphere
         write(filename_s,file_format) &
              plot_type1(1:2)//"S"//plot_type1(4:len_trim(plot_type1))//"_",&
-             ifile-plot_,"_t"//StringDateOrTime//"_n",n_step,"_pe",iProc,&
+             ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",n_step,"_pe",iProc,&
              file_extension
      else
         ! do the northern hemisphere
@@ -155,11 +155,11 @@ subroutine write_plot_common(ifile)
      if(time_accurate)then
         write(filename_n,file_format) &
              trim(plot_type1)//"_",&
-             ifile-plot_,"_t"//StringDateOrTime//"_n",n_step,"_1_pe",iProc,&
+             ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",n_step,"_1_pe",iProc,&
              file_extension
         write(filename_s,file_format) &
              trim(plot_type1)//"_",&
-             ifile-plot_,"_t"//StringDateOrTime//"_n",n_step,"_2_pe",iProc,&
+             ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",n_step,"_2_pe",iProc,&
              file_extension
      else
         write(filename_n,file_format) &
@@ -177,7 +177,7 @@ subroutine write_plot_common(ifile)
      if(time_accurate)then
         write(filename,file_format) &
              trim(plot_type1)//"_",&
-             ifile-plot_,"_t"//StringDateOrTime//"_n",n_step,"_pe",iProc,&
+             ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",n_step,"_pe",iProc,&
              file_extension
      else
         write(filename,file_format) &
@@ -364,7 +364,7 @@ subroutine write_plot_common(ifile)
               write(filename,file_format) &
                    plot_type1(1:2)//NorthOrSouth// &
                    plot_type1(4:len_trim(plot_type1))//"_",&
-                   ifile-plot_,"_t"//StringDateOrTime//"_n",&
+                   ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",&
                    n_step,file_extension
            else
               write(filename,file_format) &
@@ -377,7 +377,7 @@ subroutine write_plot_common(ifile)
               call get_time_string
               write(filename,file_format) &
                    trim(plot_type1)//"_",&
-                   ifile-plot_,"_t"//StringDateOrTime//"_n",&
+                   ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",&
                    n_step,file_extension
            else
               write(filename,file_format) &
@@ -389,7 +389,7 @@ subroutine write_plot_common(ifile)
               call get_time_string
               write(filename,file_format) &
                    trim(plot_type1)//"_",&
-                   ifile-plot_,"_t"//StringDateOrTime//"_n",&
+                   ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",&
                    n_step,file_extension
            else
               write(filename,file_format) &

@@ -1689,6 +1689,8 @@ subroutine get_time_string
 
   ! Select part of the string
   select case(NameMaxTimeUnit)
+  case('date')
+     StringDateOrTime = Time % String(1:14)
   case('year')
      StringDateOrTime = Time % String(1:8)
   case('yr')
