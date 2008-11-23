@@ -2345,6 +2345,8 @@ example), the start and end times should be set for all of them.
 				<option name="MHD variables"	  value="MHD" 
 								  default="T"/>
 				<option name="MHD vars. scaled"   value="mhd"/>
+				<option name="HD variables"	  value="HD"/>
+				<option name="HD vars. scaled"	  value="hd"/>
 				<option name="All variables"      value="FUL"/>
 				<option name="All vars. scaled"   value="ful"/>
 				<option name="Raw variables"      value="RAW"/>
@@ -2561,8 +2563,8 @@ plotform plotarea plotvar
 
 plotform = 'tec', 'idl'
 plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin', 'blk', '1d' 'rfr', 'eqr'
-plotvar  = 'mhd', 'ful', 'raw', 'ray', 'flx', 'sol', 'pos', 'var', 'bbk' 'rwi' - normalized
-plotvar  = 'MHD', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'pos', 'VAR', 'BBK' 'RWI' - dimensional
+plotvar  = 'mhd', 'hd', 'ful', 'raw', 'ray', 'flx', 'sol', 'pos', 'var', 'bbk' 'rwi' - normalized
+plotvar  = 'MHD', 'hd', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'pos', 'VAR', 'BBK' 'RWI' - dimensional
 \end{verbatim}
 NOTES: The plotvar option 'sol' is only valid for plotarea 'los';
        the plotvar option 'pos' is only valid for plotarea 'lin'.
@@ -2595,6 +2597,8 @@ values or as non-dimensional values:
  all lower - dimensionless
 
  'mhd' - vars: rho Ux Uy Uz E Bx By Bz P Jx Jy Jz
+         pars: g rbody
+ 'hd'  - vars: rho Ux Uy Uz E P
          pars: g rbody
  'ful' - vars: rho Ux Uy Uz E Bx By Bz B1x B1y B1z P Jx Jy Jz
          pars: g rbody
@@ -2797,6 +2801,7 @@ compiled in double precision to make results more accurate.
 
 <command name="PLOTFILENAME" multiple="T">
 	<parameter name="NameMaxTimeUnit" type="string" input="select">
+		<option name="date"/>
 		<option name="year"/>
 		<option name="yr"/>
 		<option name="month"/>
@@ -2832,14 +2837,17 @@ NameMaxTimeUnit='millisecond' ('microsecond', 'nanosecond') give
 the simulation time up to 1000 milliseconds (microseconds, nanoseconds)
 with 4 decimal digits.
 
+For time unit 'date' the full 14-character date-time string 
+(YYYYMMDDHHMMSS) is used.
 For time units 'day', 'month', 'yr' and 'year' an 8-character-long substring 
-of the 14-character date-time string (YYYYMMDDHHMMSS) is used. 
+of the date-time string is used.
 For NameMaxTimeUnit='year' the time stamp will contain the four digit year,
 and the two-digit month and day.
 For NameMaxTimeUnit='yr' the last two digits of the year, 
 and the month, day and hour are used. 
 For NameMaxTimeUnit='month' the month, day, hour, and minute are used.
 For NameMaxTimeUnit='day' the day, hour, minute and seconds are used.
+
 
 The #PLOTFILENAME command and the NameMaxTimeUnit parameter are 
 saved into the restart header file so that the #PLOTFILENAME command does
