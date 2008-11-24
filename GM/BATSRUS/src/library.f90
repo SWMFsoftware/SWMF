@@ -1677,7 +1677,9 @@ subroutine get_time_string
   end select
 
   if(StringDateOrTime /= '')then
-     do i=1,len(StringDateOrTime)
+     ! The time tag is 8-character long for the above cases
+     ! Replaces spaces with 0-s up to 8 characters
+     do i=1,8
         if(StringDateOrTime(i:i)==' ') StringDateOrTime(i:i)='0'
      end do
      RETURN
