@@ -72,7 +72,7 @@ subroutine init_msis
   integer, dimension(25) :: sw
 
   integer :: iBlock, iAlt, iLat, iLon, iSpecies
-  real :: geo_lat, geo_lon, geo_alt, geo_lst
+  real :: geo_lat, geo_lon, geo_alt, geo_lst,m,k
   real, dimension(7)  :: ap = 10.0
 
   call report("init_msis",1)
@@ -182,10 +182,14 @@ subroutine init_msis
 
               if (geo_alt < 120.) then
                  NDensityS(iLon,iLat,iAlt,iNO_,iBlock)=  &
-                      10**(-0.003*(geo_alt-105.)**2 +14+LOG10(3.))
+                      1e14-1e10*abs((geo_alt-110.0))**3.5
+                      !10**(-0.003*(geo_alt-105.)**2 +14+LOG10(3.))
               else 
+                 m = (1e10-3.9e13)/(200)
+                 k = 1e10+(-m*300.) 
                  NDensityS(iLon,iLat,iAlt,iNO_,iBlock)=  &
-                      MAX(10**(13.-LOG10(3.)*(geo_alt-165.)/35.),1.0)
+                      MAX(k+(m*geo_alt)-(geo_alt - 120.0)**2,1.0)
+                   !   MAX(10**(13.-LOG10(3.)*(geo_alt-165.)/35.),1.0)
               endif
 
               LogNS(iLon,iLat,iAlt,:,iBlock) = &
