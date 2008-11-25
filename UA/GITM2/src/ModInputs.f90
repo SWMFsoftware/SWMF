@@ -96,6 +96,7 @@ module ModInputs
   logical :: UseMSIS = .true.
   logical :: UseIRI  = .true.
   logical :: UseStatisticalModelsOnly = .false.
+  logical :: UseTurbulentEddy = .false.
   real    :: DtStatisticalModels = 3600.0
 
   !\
