@@ -127,19 +127,6 @@ subroutine calc_rates(iBlock)
           Gravity_GB(1:nLons,1:nLats,iAlt,iBlock) &
           * MeanMajorMass(1:nLons,1:nLats,iiAlt))
 
-     if (UseTurbulentEddy) then
-        do iLat = 1, nLats
-           do iLon = 1, nLons
-              
-              KappaTemp(iLon,iLat,iAlt,iBlock) = &
-                   KappaTemp(iLon,iLat,iAlt,iBlock) + &
-                   KappaEddyDiffusion(iLon,iLat,iAlt,iBlock) * cp(iLon,iLat,iAlt,iBlock) * &
-                   Rho(iLon,iLat,iAlt,iBlock)
-              
-           enddo
-        enddo
-     endif
-
      ViscCoef(:,:,iAlt) = 4.5e-5 * &
           (Temperature(1:nLons,1:nLats,iAlt,iBlock)*&
           TempUnit(1:nLons,1:nLats,iAlt)/ 1000.)**(-0.71)
