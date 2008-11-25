@@ -7,6 +7,7 @@ subroutine calc_rates(iBlock)
   use ModPlanet
   use ModInputs
   use ModEUV, only : SunOrbitEccentricity
+  use ModSources, only : KappaEddyDiffusion
 
   implicit none
 
@@ -113,7 +114,7 @@ subroutine calc_rates(iBlock)
 !        KappaTemp(:,:,iAlt,iBlock) = KappaTemp0 * &
 !             (Temperature(1:nLons,1:nLats,iAlt,iBlock) * &
 !             TempUnit(1:nLons,1:nLats,iAlt))**0.75
-     endif
+!     endif
 
      iiAlt = iAlt
      if (iAlt == 0) iiAlt = 1
@@ -126,16 +127,18 @@ subroutine calc_rates(iBlock)
           Gravity_GB(1:nLons,1:nLats,iAlt,iBlock) &
           * MeanMajorMass(1:nLons,1:nLats,iiAlt))
 
-     do iLat = 1, nLats
-        do iLon = 1, nLons
-
+     if (UseTurbulentEddy) then
+        do iLat = 1, nLats
+           do iLon = 1, nLons
+              
               KappaTemp(iLon,iLat,iAlt,iBlock) = &
                    KappaTemp(iLon,iLat,iAlt,iBlock) + &
                    KappaEddyDiffusion(iLon,iLat,iAlt,iBlock) * cp(iLon,iLat,iAlt,iBlock) * &
                    Rho(iLon,iLat,iAlt,iBlock)
-
+              
+           enddo
         enddo
-     enddo
+     endif
 
      ViscCoef(:,:,iAlt) = 4.5e-5 * &
           (Temperature(1:nLons,1:nLats,iAlt,iBlock)*&
