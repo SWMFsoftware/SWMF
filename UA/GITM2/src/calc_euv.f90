@@ -134,7 +134,7 @@ subroutine calc_euv
 
   use ModEUV
   use ModInputs
-  use ModIndicesInterfaces
+ 
 
   implicit none
 
@@ -161,21 +161,7 @@ subroutine calc_euv
   !----- The scaling factors are restricted to be greater than 0.8
   !
 
-  iError = 0
-  call get_f107(CurrentTime, f107, iError)
-  if (iError /= 0) then
-     write(*,*) "Error in getting F107 value.  Is this set?"
-     write(*,*) "Code : ",iError
-     call stop_gitm("Stopping in euv_ionization_heat")
-  endif
-
-  call get_f107a(CurrentTime, f107a, iError)
-  if (iError /= 0) then
-     write(*,*) "Error in getting F107a value.  Is this set?"
-     write(*,*) "Code : ",iError
-     call stop_gitm("Stopping in euv_ionization_heat")
-  endif
-
+ 
   do i = 1, Num_waveLengths_Low
 
      FLXFAC=(1.0 + AFAC(I) * (0.5*(F107+F107A) - 80.0))
@@ -195,6 +181,7 @@ subroutine calc_scaled_euv
   use ModEUV
   use ModInputs
   use ModTime
+  use ModIndicesInterfaces
   use ModGITM, only : dt
   implicit none
 
@@ -204,7 +191,7 @@ subroutine calc_scaled_euv
   integer, parameter :: WoodsAndRottman_10Nov88     = 3
   integer, parameter :: WoodsAndRottman_20Jun89     = 4
 
-  integer :: N, NN, iMin(1)=0
+  integer :: N, NN, iMin(1)=0,iError
   real    :: f107_Ratio, r1, r2, hlybr, fexvir, hlya, heiew
   real    :: xuvfac, hlymod, heimod, xuvf, wavelength_ave
   real (Real8_) :: rtime
@@ -227,6 +214,21 @@ subroutine calc_scaled_euv
 
   ! 'best fit' regression coefficients, commented out, for reference:
   !     DATA B1/1.31, 0.01106, 0.00492/, B2/-6.618, 0.66159, 0.38319/
+
+  iError = 0
+  call get_f107(CurrentTime, f107, iError)
+  if (iError /= 0) then
+     write(*,*) "Error in getting F107 value.  Is this set?"
+     write(*,*) "Code : ",iError
+     call stop_gitm("Stopping in euv_ionization_heat")
+  endif
+
+  call get_f107a(CurrentTime, f107a, iError)
+  if (iError /= 0) then
+     write(*,*) "Error in getting F107a value.  Is this set?"
+     write(*,*) "Code : ",iError
+     call stop_gitm("Stopping in euv_ionization_heat")
+  endif
 
   call calc_euv
 
