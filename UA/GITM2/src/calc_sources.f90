@@ -39,6 +39,7 @@ subroutine calc_GITM_sources(iBlock)
   real :: NF_Eddy(1:nAlts), NF_NDen(1:nAlts), NF_Temp(1:nAlts)
   real :: NF_NDenS(1:nAlts,1:nSpecies), NF_EddyRatio(1:nAlts,1:nSpecies)
   real :: NF_Gravity(1:nAlts)
+  real :: EddyCond(nLons,nLats,nAlts), EddyCondAdia(nLons,nLats,nAlts)
   real :: Prandtl(nLons,nLats,0:nalts+1)
 
 ! Temporary
