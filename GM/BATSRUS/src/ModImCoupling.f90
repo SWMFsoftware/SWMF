@@ -60,33 +60,47 @@ subroutine get_im_pressure(iBlock, pIm_C, dIm_C)
   ! Check to see if cell centers are on closed fieldline
   !/
   do k=1,nK; do j=1,nJ; do i=1,nI
-     if(nint(ray(3,1,i,j,k,iBlock)) == 3) then
-        rLat=ray(1,1,i,j,k,iBlock)
-        rLon=ray(2,1,i,j,k,iBlock)
 
-        !NOTE: RCM_lat in decending order
+     ! Default is negative, which means that do not nudge GM values
+     pIm_C(i,j,k) = -1.0
+     dIm_C(i,j,k) = -1.0
+
+     ! For closed field lines nudge towards RCM pressure/density
+     if(nint(ray(3,1,i,j,k,iBlock)) == 3) then
+
+        ! Map the point down to the RCM grid 
+        ! Note: ray values are in SM coordinates!)
+        rLat = ray(1,1,i,j,k,iBlock)
+        rLon = ray(2,1,i,j,k,iBlock)
+
+        ! NOTE: RCM_lat in decending order
         i1=1
         do n=2,isize
            if(rLat < 0.5*(RCM_lat(n-1)+RCM_lat(n))) i1 = n
         end do
 
-        !NOTE: RCM_lon in accending order
+        ! NOTE: RCM_lon in accending order
         i2=1
         do n=2,jsize
            if(rLon > 0.5*(RCM_lon(n-1)+RCM_lon(n))) i2 = n
         end do
         if(rLon > 0.5*(RCM_lon(jsize)+RCM_lon(1)+360.)) i2=1
 
+        !!! This is first order accurate only !!!
         pIm_C(i,j,k) = RCM_p(i1,i2)*Si2No_V(UnitP_)
         dIm_C(i,j,k) = RCM_dens(i1,i2)*Si2No_V(UnitRho_)
-     else if(DoFixPolarRegion .and. R_BLK(i,j,k,iBlock) < rFixPolarRegion &
+     end if
+
+     ! If the pressure is not set by RCM, and DoFixPolarRegion is true
+     ! and the cell is within radius rFixPolarRegion and flow points outward
+     ! then nudge the pressure (and density) towards the "polarregion" values
+     if(pIM_C(i,j,k) < 0.0 .and. DoFixPolarRegion .and. &
+	R_BLK(i,j,k,iBlock) < rFixPolarRegion &
         .and. z_BLK(i,j,k,iBlock)*State_VGB(RhoUz_,i,j,k,iBlock) > 0.0)then
         pIm_C(i,j,k) = PolarP_I(1)
         dIm_C(i,j,k) = PolarRho_I(1)
-     else
-        pIm_C(i,j,k) = -1.0
-        dIm_C(i,j,k) = -1.0
      end if
+
   end do; end do; end do
 
 end subroutine get_im_pressure
