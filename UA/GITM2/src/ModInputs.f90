@@ -96,7 +96,6 @@ module ModInputs
   logical :: UseMSIS = .true.
   logical :: UseIRI  = .true.
   logical :: UseStatisticalModelsOnly = .false.
-  logical :: UseTurbulentEddy = .false.
   real    :: DtStatisticalModels = 3600.0
 
   !\
@@ -137,6 +136,7 @@ module ModInputs
   logical :: UseNOCooling      = .true.
   logical :: UseOCooling       = .true.
   logical :: UseConduction     = .true.
+  logical :: UseTurbulentCond = .false.
   logical :: UseDiffusion      = .false.
   logical :: UseVerAdvectionT  = .true.
 

@@ -156,7 +156,7 @@ subroutine calc_GITM_sources(iBlock)
 ! On Earth, they cause eddy conduction to have
 ! no effect.  The Earth eddy conduction term is in vertical solver.
 !!!
-     if(UseTurbulentEddy) then
+     if(UseTurbulentCond) then
         
         Prandtl = &
              KappaEddyDiffusion(1:nLons,1:nLats,0:nAlts+1, iBlock)* &
