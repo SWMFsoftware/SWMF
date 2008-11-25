@@ -84,12 +84,13 @@ subroutine advance_vertical_1stage( &
   use ModPlanet
   use ModSizeGitm
   use ModVertical, only : &
-       Heating, KappaNS, Centrifugal, Coriolis, &
+       Heating, EddyCoef_1D, Centrifugal, Coriolis, &
        MeanMajorMass_1d, Gamma_1d, InvRadialDistance_C, &
        Gravity_G, Altitude_G
   use ModTime
   use ModInputs
   use ModConstants
+
   implicit none
 
   real, intent(in) :: LogRho(-1:nAlts+2)
@@ -290,10 +291,19 @@ subroutine advance_vertical_1stage( &
      ! dT/dt = -(V.grad T + (gamma - 1) T div V +  &
      !        (gamma - 1) * g  * grad (KeH^2  * rho) /rho 
 
+     if (UseTurbulentEddy) then
         NewTemp(iAlt)   = NewTemp(iAlt) - Dt * &
              (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
              (Gamma_1d(iAlt) - 1.0) * Temp(iAlt)*DivVel(iAlt))&
              + Dt * DiffTemp(iAlt)
+     else
+        NewTemp(iAlt)   = NewTemp(iAlt) - Dt * &
+             (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
+             (Gamma_1d(iAlt) - 1.0) * Temp(iAlt)*DivVel(iAlt))&
+             + Dt * DiffTemp(iAlt) &
+             + Dt * (Gamma_1d(iAlt) - 1.0) * (- Gravity_G(iAlt)) * &
+             EddyCoef_1D(iAlt) * GradLogRho(iAlt) 
+     endif
 
         NewTemp(iAlt)   = NewTemp(iAlt) + &
              Dt*Vel_GD(iAlt,iUp_)* &
