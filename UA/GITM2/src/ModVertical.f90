@@ -29,9 +29,9 @@ module ModVertical
   real, dimension(0:nAlts+1) :: cMax
 
   real :: Heating(nAlts)
-!  real :: KappaTemp(1:nAlts+1)
+!  real :: Kappa1D(1:nAlts+1)
 !  real :: Kappa0(nAlts), KappaNS(nSpecies,nSpecies)
-  real :: KappaNS(nAlts,nSpecies,nSpecies)
+!  real :: KappaNS(nAlts,nSpecies,nSpecies)
 
   real :: Centrifugal, Coriolis, Lat, Lon
 
