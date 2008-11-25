@@ -36,21 +36,7 @@ subroutine euv_ionization_heat(iBlock)
   call report("euv_ionization_heat",2)
   call start_timing("euv_ionization_heat")
 
-  iError = 0
-  call get_f107(CurrentTime, f107, iError)
-  if (iError /= 0) then
-     write(*,*) "Error in getting F107 value.  Is this set?"
-     write(*,*) "Code : ",iError
-     call stop_gitm("Stopping in euv_ionization_heat")
-  endif
-
-  call get_f107a(CurrentTime, f107a, iError)
-  if (iError /= 0) then
-     write(*,*) "Error in getting F107a value.  Is this set?"
-     write(*,*) "Code : ",iError
-     call stop_gitm("Stopping in euv_ionization_heat")
-  endif
-
+  
   call chapman_integrals(iBlock)
 
   EuvIonRate = 0.0
@@ -148,6 +134,7 @@ subroutine calc_euv
 
   use ModEUV
   use ModInputs
+  use ModIndicesInterfaces
 
   implicit none
 
@@ -173,6 +160,21 @@ subroutine calc_euv
   !----- the resulting solar flux.
   !----- The scaling factors are restricted to be greater than 0.8
   !
+
+  iError = 0
+  call get_f107(CurrentTime, f107, iError)
+  if (iError /= 0) then
+     write(*,*) "Error in getting F107 value.  Is this set?"
+     write(*,*) "Code : ",iError
+     call stop_gitm("Stopping in euv_ionization_heat")
+  endif
+
+  call get_f107a(CurrentTime, f107a, iError)
+  if (iError /= 0) then
+     write(*,*) "Error in getting F107a value.  Is this set?"
+     write(*,*) "Code : ",iError
+     call stop_gitm("Stopping in euv_ionization_heat")
+  endif
 
   do i = 1, Num_waveLengths_Low
 
