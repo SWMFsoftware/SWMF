@@ -68,7 +68,9 @@ Module ModConst
        *(cBoltzmann/cLightSpeed/cPlanckH)**3 &
        *cBoltzmann*cLightSpeed
 
-  ! Radiation constant 7.5657E-16 [J/m^3/K^4]
+  ! Radiation constant 7.5657E-16 [J/m^3/K^4],
+  ! such that the energy density for the black radiation
+  ! equals cRadiation * ( T[K] )^4
   real, parameter :: cRadiation = 4.0*cStefan/cLightSpeed
 
   !\
