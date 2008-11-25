@@ -28,6 +28,8 @@ module ModGrayDiffusion
   logical,           public :: UseRadFluxLimiter  = .false.
   character(len=20), public :: TypeRadFluxLimiter = 'larsen'
 
+  real, public :: DiffusionRad_G(0:nI+1,0:nJ+1,0:nK+1)
+
   ! Local variables
   real :: Erad_G(0:nI+1,0:nJ+1,0:nK+1)
 

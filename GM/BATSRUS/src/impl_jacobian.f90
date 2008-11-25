@@ -61,6 +61,7 @@ subroutine impl_jacobian(implBLK,JAC)
        FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
   use ModImplicit
   use ModHallResist, ONLY: UseHallResist, hall_factor
+  use ModGrayDiffusion, ONLY: UseGrayDiffusion
   use ModGeometry, ONLY: vInv_CB, UseCovariant
   implicit none
 
@@ -113,6 +114,7 @@ subroutine impl_jacobian(implBLK,JAC)
   end if
 
   if(UseHallResist)call impl_init_hall
+  if(UseGrayDiffusion) call impl_init_gray
 
   ! Initialize matrix to zero (to be safe)
   JAC=0.0
@@ -341,6 +343,8 @@ subroutine impl_jacobian(implBLK,JAC)
   ! Add extra terms for Hall resistivity
   if(UseHallResist .and. .not. UseCovariant)call impl_hall_resist
   if(UseHallResist .and.       UseCovariant)call impl_hall_resist_general
+
+  if(UseGrayDiffusion) call impl_gray_diffusion
 
   ! Multiply JAC by the implicit timestep dt
   if(time_accurate)then
@@ -840,5 +844,59 @@ contains
     end do; end do
 
   end subroutine impl_hall_resist_general
+  !===========================================================================
+  subroutine impl_init_gray
+
+    use ModAdvance,       ONLY: State_VGB
+    use ModConst,         ONLY: cLightSpeed
+    use ModGrayDiffusion, ONLY: DiffusionRad_G
+    use ModPhysics,       ONLY: Si2No_V, UnitX_, UnitU_
+    use ModUser,          ONLY: user_material_properties
+
+    integer :: i, j, k
+    real :: RosselandMeanOpacitySi, DiffFactor
+    !----------------------------------------------------------------------
+
+    DiffFactor = cLightSpeed*Si2No_V(UnitU_)*Si2No_V(UnitX_)/3.0
+    do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       call user_material_properties(State_VGB(:,i,j,k,iBLK), &
+            RosselandMeanOpacitySi = RosselandMeanOpacitySi)
+       DiffusionRad_G(i,j,k) = DiffFactor/RosselandMeanOpacitySi
+    end do; end do; end do
+
+  end subroutine impl_init_gray
+  !===========================================================================
+  subroutine impl_gray_diffusion
+
+    ! Add partial derivatives of the gray diffusion term to the Jacobian that 
+    ! are not calculated by the general algorithm
+
+    use ModGrayDiffusion, ONLY: Eradiation_, DiffusionRad_G
+
+    integer :: iVar, i, j, k, iDim, Di, Dj, Dk
+    real :: Coeff, DiffLeft, DiffRight
+    !-----------------------------------------------------------------------
+    iVar = Eradiation_
+
+    do iDim = 1, nDim
+       Coeff = -ImplCoeff/Dxyz(iDim)**2
+       Di = kr(iDim,1)
+       Dj = kr(iDim,2)
+       Dk = kr(iDim,3)
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          DiffLeft  = 0.5*(DiffusionRad_G(i-Di,j-Dj,k-Dk) &
+               +           DiffusionRad_G(i,j,k))
+          DiffRight = 0.5*(DiffusionRad_G(i+Di,j+Dj,k+Dk) &
+               +           DiffusionRad_G(i,j,k))
+          JAC(iVar,iVar,i,j,k,1) = JAC(iVar,iVar,i,j,k,1) &
+               - Coeff*(DiffLeft + DiffRight)
+          JAC(iVar,iVar,i,j,k,2*iDim)   = JAC(iVar,iVar,i,j,k,2*iDim) &
+               + Coeff*DiffLeft
+          JAC(iVar,iVar,i,j,k,2*iDim+1) = JAC(iVar,iVar,i,j,k,2*iDim+1) &
+               + Coeff*DiffRight
+       end do; end do; end do
+    end do
+
+  end subroutine impl_gray_diffusion
 
 end subroutine impl_jacobian
