@@ -2,7 +2,7 @@
 module ModSources
 
   use ModSizeGitm
-  use ModPlanet, only: nSpecies
+  use ModPlanet, only: nSpecies,nSpeciesTotal
 
   !\
   ! Sources for neutral temperature
@@ -25,6 +25,7 @@ module ModSources
   integer, parameter :: nReactions = 26
   real :: ChemicalHeatingSpecies(nLons, nLats, nAlts,nReactions)
   real :: ChemicalHeatingS(nReactions)
+  real :: NeutralSourcesTotal(nSpeciesTotal,nAlts),NeutralLossesTotal(nSpeciesTotal,nAlts)
   integer, parameter ::    in2p_e = 1
   integer, parameter ::    io2p_e = 2
   integer, parameter ::    in2p_o = 3
