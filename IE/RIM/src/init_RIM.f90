@@ -140,11 +140,17 @@ subroutine init_RIM()
        IonoJrAll(nLats+2,nLonsAll+1), &
        OuterMagInvBAll(nLats+2,nLonsAll+1), &
        OuterMagRhoAll(nLats+2,nLonsAll+1), &
-       OuterMagPAll(nLats+2,nLonsAll+1))
+       OuterMagPAll(nLats+2,nLonsAll+1), &
+       OuterMagInvBAllR(0:nLonsAll+1,nLats), &
+       OuterMagRhoAllR(0:nLonsAll+1,nLats), &
+       OuterMagTAllR(0:nLonsAll+1,nLats), &
+       OuterMagPAllR(0:nLonsAll+1,nLats), &
+       LatitudeAllR(0:nLonsAll+1,nLats))
 
   SigmaHAll       = -1.0e32
   SigmaPAll       = -1.0e32
   InnerMagJrAll   = -1.0e32
+  OuterMagJrAll   = -1.0e32
   IonoJrAll       = -1.0e32
   OuterMagInvBAll = -1.0e32
   OuterMagRhoAll  = -1.0e32
@@ -192,6 +198,8 @@ subroutine init_RIM()
   localVar = LatitudeAll
   call MPI_REDUCE(localVar, LatitudeAll, iSize, MPI_REAL, MPI_MAX, &
        0, iComm, iError)
+
+  call MPI_Bcast(LatitudeAll,iSize,MPI_Real,0,iComm,iError)
 
   localVar = LongitudeAll
   call MPI_REDUCE(localVar, LongitudeAll, iSize, MPI_REAL, MPI_MAX, &

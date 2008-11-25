@@ -13,8 +13,6 @@ subroutine gather
   ! Let's try message passing some of this stuff to Processor 0
 
   iSize = (nLats+2) * (nProc*nLons+1)
-
-  PotentialAll = -1.0e32
   call rearrange(Potential, PotentialAll)
 
   if (iProc == 0) then
@@ -25,10 +23,10 @@ subroutine gather
   endif
 
   if (iDebugLevel > 1) &
-     write(*,*) "CPCP of total solution : ", &
+     write(*,*) "RIM==> CPCP of total solution : ", &
           (maxval(PotentialAll) - minval(PotentialAll))/1000.0, " kV"
   if (iDebugLevel > 0) &
-     write(*,"(a,1p,2e12.3,a)") "CPCP South/North : ", &
+     write(*,"(a,1p,2e12.3,a)") " RIM=> CPCP South/North : ", &
      cpcps/1000.0, cpcpn/1000.0, " kV"
 
 contains
@@ -40,6 +38,8 @@ contains
 
     integer :: iLat, iLon, iLatFrom, iLonFrom, iError, iLatTo, iLonTo
 
+    iError = 0
+
     !\
     ! We need to reverse the latitude, shift the longitudes, and swap the
     ! index order....
@@ -48,8 +48,10 @@ contains
     ! Skip the North and South pole, since this needs to be done on a case by
     ! case basis
 
+    ValueAll = -1.0e32
+
     do iLat = 1, nLats
-       ! Need to reverst latitudes
+       ! Need to reverse latitudes
        iLatTo   = iLat+1
        iLatFrom = nLats-(iLat-1)
        do iLon = 1, nLons
@@ -62,6 +64,7 @@ contains
     enddo
 
     localVar = ValueAll
+
     call MPI_REDUCE(localVar, ValueAll, iSize, MPI_REAL, MPI_MAX, &
          0, iComm, iError)
 

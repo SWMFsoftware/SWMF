@@ -885,12 +885,6 @@ subroutine IE_run(tSimulation,tSimulationLimit)
 
   call timing_stop('IE_run')
 
-!   ! Solve for the ionosphere potential
-!   call IE_solve
-
-!   ! Save logfile if required
-!   call IE_save_logfile
-
 end subroutine IE_run
 
 !=================================================================

@@ -15,6 +15,11 @@ subroutine get_conductance
 
   ! Empirical Dayside Conductance
 
+  SigmaEUVH = 0.0
+  SigmaEUVP = 0.0
+  SigmaScatP = 0.0
+  SigmaScatH = 0.0
+
   if (iConductanceModel > 1) then
 
      cosSZA = (SMX * cos(ThetaTilt) - SMZ * sin(ThetaTilt)) &
@@ -33,14 +38,20 @@ subroutine get_conductance
         SigmaScatP = 0.5
      end where
 
-     where (cosSZA < cosLimit)
-        SigmaEUVH = &
-             ( SigmaEUVH + &
-             MeetingValueH * exp(-((cosSZA-cosLimit)**2.0)*15.0)) * 0.5
-        SigmaEUVP = &
-             ( SigmaEUVP + &
-             MeetingValueP * exp(-((cosSZA-cosLimit)**2.0)*15.0)) * 0.5
-     end where
+     do iLon = 0,nLons+1
+        do iLat = 1,nLats
+           if (cosSZA(iLon,iLat) < cosLimit) then
+              SigmaEUVH(iLon,iLat) = &
+                   ( SigmaEUVH(iLon,iLat) + &
+                   MeetingValueH * &
+                   exp(-((cosSZA(iLon,iLat)-cosLimit)**2.0)*15.0)) * 0.5
+              SigmaEUVP(iLon,iLat) = &
+                   ( SigmaEUVP(iLon,iLat) + &
+                   MeetingValueP * &
+                   exp(-((cosSZA(iLon,iLat)-cosLimit)**2.0)*15.0)) * 0.5
+           endif
+        enddo
+     enddo
 
      where (cosSZA <= 0)
         SigmaScatH = 1.00*(10.00**cosSZA)

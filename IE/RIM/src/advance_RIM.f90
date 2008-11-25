@@ -18,6 +18,12 @@ subroutine advance_RIM
 
   call distribute
 
+  if (nSolve == 0 .and. maxval(Jr) == 0.0) then
+     potential = 0.0
+     call gather
+     return
+  endif
+
   if (maxval(Latitude) > HighLatBoundary) &
        call IO_GetPotential(EmpiricalPotential, iError)
 

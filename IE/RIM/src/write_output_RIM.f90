@@ -2,6 +2,7 @@ subroutine write_output_RIM(iFile)
   use ModProcIE
   use ModRIM
   use ModIoRIM
+  use ModParamRIM
 
   implicit none
 
@@ -69,7 +70,12 @@ subroutine write_output_RIM(iFile)
   if (iProc == 0) then
 
      open(unit=iUnit,status="unknown", &
-          file = trim(NameOutputDir)//trim(cTime)//"_"//trim(plot_vars(ifile))//".header")
+          file = trim(NameOutputDir)//trim(cTime)//"_"//&
+          trim(plot_vars(ifile))//".header")
+
+     if (iDebugLevel > 0) &
+          write(*,*) "RIM=> Writing output file : ",&
+          trim(cTime)//"_"//trim(plot_vars(ifile))
 
      write(iUnit,*) "BLOCKS"
      write(iUnit,"(I7,A)") 1, " nBlocksAlt"
@@ -126,10 +132,10 @@ subroutine write_output_RIM(iFile)
      write(iUnit,"(I7,A1,a)")  6, " ", "EFlux (ergs/cm2/s)"
      write(iUnit,"(I7,A1,a)")  7, " ", "SigmaH (mhos)"
      write(iUnit,"(I7,A1,a)")  8, " ", "SigmaP (mhos)"
-     write(iUnit,"(I7,A1,a)")  9, " ", "MHD-Rho (unknown)"
+     write(iUnit,"(I7,A1,a)")  9, " ", "MHD-Rho (kg/m3)"
      write(iUnit,"(I7,A1,a)") 10, " ", "MHD-P (Pa)"
-     write(iUnit,"(I7,A1,a)") 11, " ", "MHD-InvB (unknown)"
-     write(iUnit,"(I7,A1,a)") 12, " ", "MHD-T (unknown)"
+     write(iUnit,"(I7,A1,a)") 11, " ", "MHD-InvB (1/nT)"
+     write(iUnit,"(I7,A1,a)") 12, " ", "MHD-T (K)"
 
      write(iUnit,*) ""
 
@@ -143,7 +149,7 @@ subroutine write_output_RIM(iFile)
   do iLat=1,nLats
      do iLon=0,nLons+1
         write(iUnit) Longitude(iLon,iLat),Latitude(iLon,iLat),&
-             Potential(iLon,iLat), Jr(iLon,iLat), &
+             Potential(iLon,iLat)/1000.0, Jr(iLon,iLat)*1.0e6, &
              AveE(iLon,iLat), EFlux(iLon,iLat), &
              SigmaH(iLon,iLat), SigmaP(iLon,iLat), &
              OuterMagRho(iLon,iLat), OuterMagP(iLon,iLat), &

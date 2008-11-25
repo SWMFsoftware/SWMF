@@ -10,8 +10,8 @@ module ModRIM
 
   real :: Radius
 
-  real, dimension(2,0:nLons+1) :: OCFLB = 70.0 * cDegToRad
-  real :: OCFLBBuffer = 0.0 * cDegToRad
+  real, dimension(2,0:nLons+1) :: OCFLB = 60.0 * cDegToRad
+  real :: OCFLBBuffer = 10.0 * cDegToRad
 
   real, dimension(0:nLons+1,nLats) :: &
        Latitude, Longitude, Potential, AveE, Eflux, SigmaH, SigmaP, &
@@ -49,7 +49,9 @@ module ModRIM
   real, dimension(:,:), allocatable :: &
        LatitudeAll, LongitudeAll, PotentialAll, SigmaHAll, SigmaPAll, &
        LocalVar, OuterMagJrAll, InnerMagJrAll, IonoJrAll, &
-       OuterMagInvBAll, OuterMagRhoAll, OuterMagPAll
+       OuterMagInvBAll, OuterMagRhoAll, OuterMagPAll, &
+       OuterMagInvBAllR, OuterMagRhoAllR, OuterMagPAllR, OuterMagTAllR, &
+       LatitudeAllR
 
   real :: cpcps = 0.0
   real :: cpcpn = 0.0

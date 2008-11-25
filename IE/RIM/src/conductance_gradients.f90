@@ -36,7 +36,7 @@ subroutine conductance_gradients
      if (iDebugLevel > 2) &
           write(*,*) "Folding conductances!"
 
-     do iLon = 1, nLons
+     do iLon = 0, nLons+1
         do iLat = 1, nLats
            ! Define the mean open/closed field-line boundary between the
            ! two hemispheres
