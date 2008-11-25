@@ -99,6 +99,9 @@ module ModGITM
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3, nBlocksMax) :: &
        Velocity, IVelocity
 
+  integer, parameter :: nEmissionWavelengths = 20
+  integer, parameter :: nPhotoBins = 190
+
   real :: Emissions(nLons, nLats, nAlts, nEmissions, nBlocksMax)
 
   real, dimension(nLons,nLats,nAlts,nEmissionWavelengths,nBlocksMax) :: &
@@ -108,7 +111,7 @@ module ModGITM
        PhotoElectronDensity,PhotoElectronRate,PhotoEFluxU,PhotoEFluxD
   
   real, dimension(nLons,nLats,nAlts,nBlocksMax,2) :: PhotoEFluxTotal
-
+  
   real, dimension(nPhotoBins)                 :: PhotoEBins
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2) :: TempUnit
 

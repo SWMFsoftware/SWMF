@@ -63,8 +63,6 @@ module ModPlanet
   integer, parameter :: i7774_ = 9
   integer, parameter :: i8446_ = 10
   integer, parameter :: i3726_ = 11
-  integer, parameter :: nEmissionWavelengths = 20
-  integer, parameter :: nPhotoBins = 190
 
   real, parameter :: GC_Earth               = 9.8                    ! m/s^2
   real, parameter :: RP_Earth               = 24.0*3600.0            ! seconds
@@ -99,7 +97,8 @@ module ModPlanet
 
   logical :: IsEarth = .true.
   character (len=10) :: cPlanet = "Earth"
-
+  
+  
   ! These are for the neutral friction routine...
 
   ! These are the numerical coefficients in Table 1 in m^2 instead of cm^2
