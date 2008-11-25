@@ -42,7 +42,7 @@ subroutine fill_photo(photoion, photoabs, photodis)
              photoabs(iWave,iO2_) - PhotoIon(iWave, iO2P_)
      endif
 
-     if (waves(iWave) >= 1200.0 .and. wavel(iWave) <= 1250.0) then
+     if (waves(iWave) >= 800.0 .and. wavel(iWave) <= 1250.0) then
         PhotoDis(iWave, iN2_) = &
              photoabs(iWave,iN2_) - PhotoIon(iWave, iN2P_)
      endif
