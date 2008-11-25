@@ -291,7 +291,7 @@ subroutine advance_vertical_1stage( &
      ! dT/dt = -(V.grad T + (gamma - 1) T div V +  &
      !        (gamma - 1) * g  * grad (KeH^2  * rho) /rho 
 
-     if (UseTurbulentEddy) then
+     if (UseTurbulentCond) then
         NewTemp(iAlt)   = NewTemp(iAlt) - Dt * &
              (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
              (Gamma_1d(iAlt) - 1.0) * Temp(iAlt)*DivVel(iAlt))&
