@@ -192,6 +192,7 @@ contains
           call read_var('UsePreconditioner',UsePreconditioner)
           call read_var('UseInitialGuess',UseInitialGuess)
           call read_var('Tolerance',Tolerance)
+          Tolerance = Tolerance*1000.0
           call read_var('MaxIteration',MaxIteration)
 
        case("#DEBUG")

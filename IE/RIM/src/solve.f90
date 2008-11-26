@@ -460,12 +460,15 @@ contains
 
     integer :: nIters
     real :: Old(0:nLons+1,nLats)
+    logical :: IsDone
 
     nIters = 0
 
     Potential = 0.0
 
-    do while (nIters < MaxIteration)
+    IsDone = .false.
+
+    do while (.not.IsDone)
 
        Old = Potential
 
@@ -619,12 +622,15 @@ contains
           Potential(nLons+1,:) = Potential(    1,:)
        endif
 
-       Residual = sum((Old-Potential)**2)
+       Residual = sqrt(sum((Old-Potential)**2))
 
        nIters = nIters + 1
 
        if (iDebugLevel > 3) &
             write(*,*) "RIM====> Residual : ", nIters, Residual
+
+       if (Residual < Tolerance) IsDone = .true.
+       if (nIters >= MaxIteration) IsDone = .true.
 
     enddo
 
