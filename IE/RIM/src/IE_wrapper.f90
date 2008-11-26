@@ -832,6 +832,9 @@ subroutine IE_run(tSimulation,tSimulationLimit)
   use ModParamRIM, only: iDebugLevel, DoSolve
   use CON_physics, ONLY: get_time, get_axes, time_real_to_int
   use ModKind
+  use ModMpi, only: mpi_wtime
+  use ModKind, ONLY: Real8_
+
   implicit none
 
   !INPUT/OUTPUT ARGUMENTS:
@@ -845,6 +848,9 @@ subroutine IE_run(tSimulation,tSimulationLimit)
   character(len=*), parameter :: NameSub='IE_run'
 
   logical :: DoTest,DoTestMe
+
+  real (Real8_) :: TimingStart, TimingEnd
+
   !----------------------------------------------------------------------------
 
   call CON_set_do_test(NameSub,DoTest,DoTestMe)
@@ -861,6 +867,7 @@ subroutine IE_run(tSimulation,tSimulationLimit)
   if(DoSolve .and. .not.IsNewInput) RETURN
 
   call timing_start('IE_run')
+  TimingStart = mpi_wtime()
 
   CurrentTime = StartTime + tSimulation
   if (tSimulation == 0) OldTime = CurrentTime
@@ -884,6 +891,9 @@ subroutine IE_run(tSimulation,tSimulationLimit)
   OldTime = CurrentTime
 
   call timing_stop('IE_run')
+  TimingEnd = mpi_wtime()
+
+  if (iDebugLevel > 1) write(*,*) "RIM==> Timing : ",TimingEnd-TimingStart
 
 end subroutine IE_run
 
