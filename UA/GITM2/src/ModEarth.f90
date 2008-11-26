@@ -5,8 +5,6 @@ module ModPlanet
 
   implicit none
 
-  logical            :: isFirstGlow = .True.  
-  logical            :: isInitialGlow 
   integer, parameter :: nSpecies = 5
   integer, parameter :: iO_3P_  = 1
   integer, parameter :: iO2_ = 2
