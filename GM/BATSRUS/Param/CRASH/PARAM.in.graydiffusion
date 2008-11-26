@@ -1,6 +1,9 @@
 #ECHO
 T
 
+TEST
+krylov
+
 #PLANET
 NONE			NamePlanet
 
@@ -118,6 +121,11 @@ F			UsePartImplicit
 T			UseFullImplicit
 1.0			ImplCFL
 
+#IMPLSTEP
+1.0                     ImplCoeff
+T                       UseBdf2
+T                       UseSourceImpl
+
 #SAVELOGFILE
 T			DoSaveLogfile
 raw			StringLogfile
@@ -155,5 +163,5 @@ Rho Ux Uy Tgas Trad rho0 Ux0 Uy0 Tgas0 Trad0
 g
 
 #STOP
-3			MaxIteration
+20			MaxIteration
 -0.0025			tSimulationMax
