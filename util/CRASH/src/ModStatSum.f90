@@ -90,10 +90,11 @@ module ModStatSumMix
            
 Contains
   !=========================================================================
-  !Severl initialazations of constants, such as
+  !Several initialazations of constants, such as
   !calculating the natural logarithms of the first nZMax integers
 
   subroutine mod_init
+    use ModFermiGas,ONLY: UseFermiGas, init_Fermi_function
     integer:: iZ  !Used for loops
     real   :: DeBroglieInv
 	!-----------------
@@ -104,6 +105,8 @@ Contains
     !*sqrt(cBoltzmann/cEV * T) - temperature in eV
 
     eWight1eV1m3 = 2*DeBroglieInv**3 ! 2/(Lambda^3)
+
+    if(UseFermiGas) call init_Fermi_function
 
     DoInit=.false.
   
@@ -121,7 +124,8 @@ Contains
     if(DoInit)call mod_init
     Concentration_I( 1:nMixIn ) =  ConcentrationIn_I( 1:nMixIn )
     if(abs (sum(Concentration_I( 1:nMixIn ) ) - 1.0 ) > cTiny)then
-       write(*,*)'Wrong input - the total of relative concentrations differs from 1.0: ', Concentration_I( 1:nMixIn ) 
+       write(*,*)&
+            'Wrong input - the total of relative concentrations differs from 1.0: ', Concentration_I( 1:nMixIn ) 
        call CON_stop('Stop')
     end if    
 
@@ -147,9 +151,11 @@ Contains
 
   !=========================================================================!
   subroutine set_zero_ionization
+    use ModFermiGas,ONLY: RMinus, RPlus
     Population_II=0.0; Population_II(0,1:nMix) = 1.0
 
     ZAv=0.0; EAv=0.0; DeltaZ2Av=0.0; DeltaETeInv2Av = 0.0; ETeInvDeltaZAv = 0.0
+    RMinus = 1.0; RPlus = 1.0
   end subroutine set_zero_ionization
 
  
@@ -157,6 +163,10 @@ Contains
    ! Find the final values of ZAv and the ion populations from Temperature and heavy particle density
   
   subroutine set_ionization_equilibrium(TeIn, NaIn, IsDegenerated )
+
+    use ModFermiGas,ONLY: UseFermiGas, LogGe, &
+         LogGeMinBoltzmann,LogGeMinFermi
+
     ! Concentration of heavy particles (atoms+ions) in the plasma 
     ! (# of particles per m^3):
     real, intent(in)             ::  NaIn,& ![1/m^3]
@@ -167,8 +177,9 @@ Contains
     !Internal variables
     real :: lnC1  ! natural log C1 
     real :: TeInv
-	   
-												 
+	
+    real :: DiffZ
+    
     real,parameter :: ToleranceZ = 0.001 !Accuracy of Z needed
     !---------------------------------------------------------
     
@@ -188,66 +199,102 @@ Contains
     call set_Z
     call set_averages_and_deviators(DoZOnly=.false.)	
 
-    if( present(IsDegenerated) ) IsDegenerated = lnC1 -log(ZAv) < 2.0
-
+    if( present(IsDegenerated) ) then 
+       if(UseFermiGas)then
+          IsDegenerated = LogGe < LogGeMinFermi
+       else
+          IsDegenerated = LogGe < LogGeMinBoltzmann
+       end if
+    end if
   contains
 
     ! Calculating Z averaged iteratively
     subroutine set_Z
+
+      use ModFermiGas,ONLY: iterate_ge, RMinus, RPlus
+
       !Internal variables
       real    :: ZTrial, ZNew            ! The trial values of Z for iterations
       real,dimension(nMixMax) :: InitZ_I ! The initial approximation of Z
       real :: ZJ                         ! Average Z for each component
       integer :: iMix,iZ(1)              ! Misc
       !----------------------------------------------------------
-      ! First approximate the value of Z by finding for what i=Z 
+      ! First approximate the value of Z by finding for which i=Z 
       ! the derivative of the populations sequence~0 (population is maximum):
       initial: do iMix = 1,nMix
 
          iZ = minloc( abs(lnC1 - LogN_I(1:nZ_I(iMix)) - &
               IonizPotential_II(1:nZ_I(iMix),iMix)*TeInv) )
-        
-        
+
+
          if(iZ(1)==1)then
             !Find ZAv in the case when Z<=1
             InitZ_I(iMix)  = min( 1.0, exp(cHalf*( lnC1 -IonizPotential_II(1,iMix)*TeInv) ) )
          else
             !Apply the above estimate
             InitZ_I(iMix)  = real(iZ( 1)) -cHalf
-        
+
          end if
-      
+
       end do initial
-      
+
       !Average the initial approximation across the mixture compenents:
       ZNew = sum(Concentration_I(1:nMix) * InitZ_I(1:nMix))
       
+
       ! Use Newton's method to iteratively get a better approximation of Z:
       ! Organize the iteration loop:
       iIter  =  0
-      ZTrial = -ToleranceZ
-      iterations: do while (abs(ZNew - ZTrial) >= ToleranceZ .and. iIter < 10)
-         
-         !Set a trial value for Z
-         ZTrial = ZNew
+      DiffZ = 2.0*ToleranceZ
+    
+      if(UseFermiGas)then
+         !Iterate LogGe
+         LogGe = lnC1 - log(ZNew)
+         do while (abs(DiffZ) >= ToleranceZ .and. iIter < 10)
 
-         !Set the ion population with the electron stqtistical weight being expressed
-         !in terms of ZTrial:
-         call set_populations(lnC1 - log(ZTrial))
-         call set_averages_and_deviators(DoZOnly = .true.)
-         !Take an average over the ion populations:
-      	
+            !Set the ion population with the electron stqtistical weight which may expressed
+            !in terms of ZTrial, for UseFermiGas==.false. , or iterated directly at UseFermiGas=.true.
+
+            call set_populations(LogGe)
+
+            !Take an average over the ion populations:
+            call set_averages_and_deviators(DoZOnly = .true.)
          
-         ZNew = ZTrial - (ZTrial - ZAv)/(cOne + DeltaZ2Av/ZTrial)
-         
-         iIter = iIter+1
-      end do iterations
-  
+            call iterate_ge(ZAv, DeltaZ2Av, lnC1, DiffZ)
+
+            iIter = iIter+1
+         end do
+      else
+         !Iterate Z
+         do while (abs(DiffZ) >= ToleranceZ .and. iIter < 10)
+            
+            ZTrial = ZNew
+            LogGe = lnC1 - log(ZNew)
+            
+
+            !Set the ion population with the electron stqtistical weight which may expressed
+            !in terms of ZTrial, for UseFermiGas==.false. , or iterated directly at UseFermiGas=.true.
+
+            call set_populations(LogGe)
+
+            !Take an average over the ion populations:
+            call set_averages_and_deviators(DoZOnly = .true.)
+
+
+            DiffZ = (ZTrial - ZAv)/(cOne + DeltaZ2Av/ZTrial)
+            ZNew = ZTrial - DiffZ
+        
+
+            iIter = iIter+1
+         end do
+      end if
+
     end subroutine set_Z
 
     !==============================================
     ! Finding the populations of the ion states
     subroutine set_populations(GeLogIn)
+
       real, intent(in) :: GeLogIn ! Natural logarithm of the electron stat weight:
                                   !  log(1/(Ne*lambda^3)) 
   
@@ -266,12 +313,17 @@ Contains
       real    :: GeLog
       !--------------------------------------!
 
-      ! The present version does not stop simulation
+      if(UseFermiGas)then
+         
+         GeLog = max(LogGeMinFermi, GeLogIn)
+      else
+      ! The previous version does not stop simulation
       ! when the Fermi degeneracy occurs (the electron 
       ! statictical weight is not large), but it sets the
       ! low bound for the weight to be e^2\approx 8
       
-      GeLog = max( 2.0, GeLogIn )
+         GeLog = max(LogGeMinBoltzmann, GeLogIn )
+      end if
 
       mixture: do iMix=1,nMix
 
@@ -299,19 +351,24 @@ Contains
       
       
          !Find the similar upper boundary
-         iZMax_I(iMix) = max(nZ_I(iMix) - count(StatSumTermLog_I( iZDominant(1):nZ_I(iMix) ) < StatSumTermMin),1)
+         iZMax_I(iMix) = max(nZ_I(iMix) - &
+              count(StatSumTermLog_I( iZDominant(1):nZ_I(iMix) ) < StatSumTermMin),1)
       
          !Initialize the population array to zeros
          Population_II(0:nZ_I(iMix), iMix) = 0.0
       
       
          !Convert the array into the Pi values from ln(Pi)
-         Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) = exp(StatSumTermLog_I(iZMin_I(iMix):iZMax_I(iMix))-StatSumTermMax)
+         Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) = &
+              exp(StatSumTermLog_I(iZMin_I(iMix):iZMax_I(iMix)) - StatSumTermMax)
       
          !Normalize the Pi-s so that their sum =1
 
-         PITotal = sum(Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix))	!Add up all the values of Pi found so far         
-         Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix) = Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix)/PITotal
+         !Add up all the values of Pi found so far         
+         PITotal = sum(Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix))
+	
+         Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix) = &
+              Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix)/PITotal
  
       end do mixture
     end subroutine set_populations
@@ -336,30 +393,37 @@ Contains
 
       do iMix = 1, nMix
          !Calculate average vaues of Z, for this component:
-         ZJ      = sum(Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix )* N_I(iZMin_I(iMix):iZMax_I(iMix)))
+         ZJ      = sum(Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix )* &
+              N_I(iZMin_I(iMix):iZMax_I(iMix)))
          ZAv     = ZAv + Concentration_I(iMix) * ZJ
 
          !Calculate a << (\delta i)^2 >>
          DeltaZ2Av = DeltaZ2Av + Concentration_I(iMix) * &
-              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) * (N_I(iZMin_I(iMix):iZMax_I(iMix))-ZJ)**2 ) 
+              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *  &
+              (N_I(iZMin_I(iMix):iZMax_I(iMix))-ZJ)**2 ) 
 
 
          if(DoZOnly) CYCLE
 
 
-         ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) = IonizEnergyNeutral_II( iZMin_I(iMix):iZMax_I(iMix),iMix )*TeInv
+         ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) = &
+              IonizEnergyNeutral_II( iZMin_I(iMix):iZMax_I(iMix),iMix )*TeInv
 
          !Calculate average vaues of E, for this component:
 
-         ETeInvAvJ   = sum(Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix )* ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)))
+         ETeInvAvJ   = sum(Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix )* &
+              ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)))
 
          EAv = EAv + Concentration_I(iMix) * ETeInvAvJ
 
          !Calculate contributions to bi-linear deviators
          DeltaETeInv2Av   = DeltaETeInv2Av + Concentration_I(iMix)*&
-              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) * (ETeInv_I(iZMin_I(iMix):iZMax_I(iMix))-ETeInvAvJ)**2 )
+              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) * &
+              (ETeInv_I(iZMin_I(iMix):iZMax_I(iMix))-ETeInvAvJ)**2 )
+
          ETeInvDeltaZAv   = ETeInvDeltaZAv + Concentration_I(iMix)*&
-              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) * ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) * &
+              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
+              ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) * &
               (N_I(iZMin_I(iMix):iZMax_I(iMix))-ZJ) )
       end do
       EAv = EAv * Te
@@ -381,8 +445,9 @@ contains
   ! Can only be called after set_ionization_equilibrium has executed
   
   real function pressure()
+    use ModFermiGas,ONLY:RPlus
     
-    pressure = (1.0 + ZAv) * Na * Te * cEV
+    pressure = (1.0 + ZAv*RPlus) * Na * Te * cEV
 
   end function pressure
 
@@ -391,8 +456,9 @@ contains
   ! Can only be called after set_ionization_equilibrium has executed 
   
   real function internal_energy()
+    use ModFermiGas,ONLY:RPlus
     
-    internal_energy = 1.50 * Te *( 1.0 + ZAv) + EAv
+    internal_energy = 1.50 * Te *( 1.0 + ZAv*RPlus) + EAv
  
   end function internal_energy
 
@@ -421,6 +487,7 @@ Contains
   !(derivative of internal energy wrt Te) from temperature:
   !Can only be called after set_ionization_equilibrium has executed
   real function heat_capacity()
+    use ModFermiGas
     !------------------
     
     if( ZAv <= cTiny )then
@@ -428,9 +495,8 @@ Contains
     end if
     
     ! calculate the heat capacity:
-    heat_capacity = 1.50 * (1.0 +ZAv) + DeltaETeInv2Av &
-         +( 3.0 * ZAv * (0.750 * DeltaZ2Av + ETeInvDeltaZAv) &
-         - ETeInvDeltaZAv**2 ) / (ZAv + DeltaZ2Av)
+    heat_capacity = 1.50 * (1.0 +2.5*RPlus*ZAv) + DeltaETeInv2Av &
+         -( 1.5 * ZAv - ETeInvDeltaZAv )**2 / (ZAv*RMinus + DeltaZ2Av)
 
   end function heat_capacity !
   !==========================================================================!
@@ -443,8 +509,7 @@ Contains
   ! Calculate (1/Na)*(\partial P/\partial T)_{\rho=const}
   ! i.e the temperuture derivative of the specific pressure (P/Na) 
   real function d_pressure_over_d_te()
-     !Derivatives of Z:
-    real::TDZOvDTAtCNa  !Te*(\partial Z/\partial Te)_{Na=const}
+    use ModFermiGas,ONLY:RPlus,RMinus
     !----------------------------------------------------------
     if(ZAv==0)then
        d_pressure_over_d_te = 0.0
@@ -453,18 +518,17 @@ Contains
     !\
     !Calculate derivatives at const Na:
     !/
-    !For Z:
-    TDZOvDTAtCNa =(ETeInvDeltaZAv + 1.50 * DeltaZ2Av)/(1.0 + DeltaZ2Av / ZAv)  
-
+   
     !For specific pressure: 
-    d_pressure_over_d_te = 1.0 + ZAv + TDZOvDTAtCNa
+    d_pressure_over_d_te = 1.0 + ZAv*(2.5*RPlus - &
+         ( 1.5 * ZAv - ETeInvDeltaZAv )/ (ZAv*RMinus + DeltaZ2Av))
   end function d_pressure_over_d_te
 
   !========================================================================!
   !Calculate !(\rho/P)*(\partial P/\Partial \rho)_{T=const},
   !i.e the compressibility at constant temperature
   real function compressibility_at_const_te()
-    real::NaDZOvDNaAtCT !Na*(\partial Z/\partial Na)_{Te=const}
+    use ModFermiGas,ONLY:RPlus, RMinus
     !-------------------
     if(ZAv==0)then
        compressibility_at_const_te = 1.0
@@ -473,13 +537,10 @@ Contains
     !\
     !Derivatives at constant T:
     !/
-    !For Z:
-    !Na \left(\partial Z / \partial Na \right)_{T=const}
-    NaDZOvDNaAtCT = - DeltaZ2Av/(1.0 + DeltaZ2Av/ZAv)   
-
+   
     !For specific pressure:
     !(Na /P) \left(\partial P / \partial Na \right)_{T=const}
-    compressibility_at_const_te  = 1.0 + NaDZOvDNaAtCT/(1.0 + Zav) 
+    compressibility_at_const_te  =(1.0 +ZAv**2 / (ZAv*RMinus + DeltaZ2Av))/(1.0 + Zav*RPlus) 
   end function compressibility_at_const_te
   !===================================================================
   subroutine get_gamma(GammaOut,GammaSOut,GammaMaxOut)

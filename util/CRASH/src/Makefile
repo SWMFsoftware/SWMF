@@ -10,6 +10,7 @@ OBJECTS=\
 	ModAtomicMass.o\
 	ModEos.o\
 	ModESimT4.o\
+	CRASH_ModFermiGas.o\
         ModIonizPotential.o \
 	ModPolyimide.o \
 	ModStatSum.o
