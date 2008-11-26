@@ -44,6 +44,14 @@ subroutine calc_aurora
 
   call solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, OCFLBH, eFluxH, AveEH)
 
+  do iLon = 0, nLons+1
+     ! Need to shift longitudes
+     iLonTo   = iLon
+     iLonFrom = mod(iLon + iProc*nLons, nLons*nProc)
+     if (iLonFrom == 0) iLonFrom = nLons*nProc
+     OCFLB(1,iLonTo) = OCFLBH(iLonFrom)
+  enddo
+
   ! Move results back into main variables
   do iLat = 1, nLats/2
      AveE(:,iLat)  = AveEH(:,iLat)
@@ -77,8 +85,8 @@ subroutine calc_aurora
      iLonTo   = iLon
      iLonFrom = mod(iLon + iProc*nLons, nLons*nProc)
      if (iLonFrom == 0) iLonFrom = nLons*nProc
-     OCFLB(1,iLonTo) = OCFLBH(iLonFrom)
-     OCFLB(2,iLonTo) = cPi - OCFLBH(iLonFrom)
+!     OCFLB(1,iLonTo) = OCFLBH(iLonFrom)
+     OCFLB(2,iLonTo) = OCFLBH(iLonFrom)
   enddo
 
 !  OCFLB(2,:) = cPi - OCFLBH
@@ -252,7 +260,7 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
      MaxP = maxval(pNorm(iLonM,:))
 
      Diffuse_EFlux(iLon,:) = &
-          MaxP * Diffuse_FacEF * &
+          (MaxP * Diffuse_FacEF)**0.8 * &
           exp(-abs(center(iLonG)-abs(LatH(iLonG,:)))/Width(iLonG))*&
           (0.375*cos(longitude(iLon,1:nLats/2))+0.625)
 

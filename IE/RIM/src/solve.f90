@@ -134,11 +134,14 @@ subroutine solve
 
   endif
 
-  if (SolveType == SolveWithFold_) then
+  if (DoFold) then
 
+     if (iDebugLevel > 1) write(*,*) "RIM==> Using Ridley Solver"
      call ridley_solve
 
   else
+
+     if (iDebugLevel > 1) write(*,*) "RIM==> Using Linear GMRES Solver"
 
      ! Don't need Ghostcells here (I think)
      nTotalSolve = nLatsSolve*nLons
@@ -470,7 +473,7 @@ contains
           do iLon = 1, nLons
 
              if ( Latitude(iLon,iLat) < -LowLatBoundary .or. &
-                  Latitude(iLon,iLat) > minval(OCFLB)) then
+                  Latitude(iLon,iLat) > OCFLB(2,iLon)) then
                 Potential(iLon,iLat) =  &
                      (Jr(iLon,iLat)*(Radius*sinTheta(iLon,iLat))**2 - &
                      (SolverB(iLon,iLat)*Potential(iLon,iLat+1) + &
@@ -541,7 +544,7 @@ contains
           do iLon = 1, nLons
 
              if ( Latitude(iLon,iLat) > LowLatBoundary .or. &
-                  Latitude(iLon,iLat) < -minval(OCFLB)) then
+                  Latitude(iLon,iLat) < -OCFLB(1,iLon)) then
                 Potential(iLon,iLat) =  &
                      (Jr(iLon,iLat)*(Radius*sinTheta(iLon,iLat))**2 - &
                      (SolverB(iLon,iLat)*Potential(iLon,iLat+1) + &
