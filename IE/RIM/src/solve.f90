@@ -459,12 +459,12 @@ contains
   subroutine ridley_solve
 
     integer :: nIters
-    real :: Old(0:nLons+1,nLats)
+    real :: Old(0:nLons+1,nLats), LocalVar, NorthPotential, SouthPotential
     logical :: IsDone
 
     nIters = 0
 
-    Potential = 0.0
+    if (.not.UseInitialGuess) Potential = 0.0
 
     IsDone = .false.
 
@@ -495,10 +495,27 @@ contains
        Potential(1,nLats/2) = 0.0
        Potential(1,nLats/2+1) = 0.0
 
-       if (DoTouchNorthPole) &
-            Potential(1:nLons,nLats) = sum(Potential(1:nLons,nLats-1))/nLons
-       if (DoTouchSouthPole) &
-            Potential(1:nLons,    1) = sum(Potential(1:nLons,      2))/nLons
+       if (DoTouchNorthPole) then
+          Potential(1:nLons,nLats) = sum(Potential(1:nLons,nLats-1))/nLons
+          LocalVar = Potential(1,nLats)
+          NorthPotential = 0.0
+          call MPI_REDUCE(LocalVar, NorthPotential, 1, MPI_REAL, &
+               MPI_SUM, 0, iComm, iError)
+          NorthPotential = NorthPotential/nProc
+          call MPI_Bcast(NorthPotential,1,MPI_Real,0,iComm,iError)
+          Potential(1:nLons,nLats) = NorthPotential
+       endif
+
+       if (DoTouchSouthPole) then
+          Potential(1:nLons,1) = sum(Potential(1:nLons,2))/nLons
+          LocalVar = Potential(1,1)
+          SouthPotential = 0.0
+          call MPI_REDUCE(LocalVar, SouthPotential, 1, MPI_REAL, &
+               MPI_SUM, 0, iComm, iError)
+          SouthPotential = SouthPotential/nProc
+          call MPI_Bcast(SouthPotential,1,MPI_Real,0,iComm,iError)
+          Potential(1:nLons,1) = SouthPotential
+       endif
 
        ! Periodic Boundary Conditions:
 
@@ -575,10 +592,27 @@ contains
        Potential(1,nLats/2) = 0.0
        Potential(1,nLats/2+1) = 0.0
 
-       if (DoTouchNorthPole) &
-            Potential(1:nLons,nLats) = sum(Potential(1:nLons,nLats-1))/nLons
-       if (DoTouchSouthPole) &
-            Potential(1:nLons,    1) = sum(Potential(1:nLons,      2))/nLons
+       if (DoTouchNorthPole) then
+          Potential(1:nLons,nLats) = sum(Potential(1:nLons,nLats-1))/nLons
+          LocalVar = Potential(1,nLats)
+          NorthPotential = 0.0
+          call MPI_REDUCE(LocalVar, NorthPotential, 1, MPI_REAL, &
+               MPI_SUM, 0, iComm, iError)
+          NorthPotential = NorthPotential/nProc
+          call MPI_Bcast(NorthPotential,1,MPI_Real,0,iComm,iError)
+          Potential(1:nLons,nLats) = NorthPotential
+       endif
+
+       if (DoTouchSouthPole) then
+          Potential(1:nLons,1) = sum(Potential(1:nLons,2))/nLons
+          LocalVar = Potential(1,1)
+          SouthPotential = 0.0
+          call MPI_REDUCE(LocalVar, SouthPotential, 1, MPI_REAL, &
+               MPI_SUM, 0, iComm, iError)
+          SouthPotential = SouthPotential/nProc
+          call MPI_Bcast(SouthPotential,1,MPI_Real,0,iComm,iError)
+          Potential(1:nLons,1) = SouthPotential
+       endif
 
        ! Periodic Boundary Conditions:
 
@@ -622,9 +656,15 @@ contains
           Potential(nLons+1,:) = Potential(    1,:)
        endif
 
-       Residual = sqrt(sum((Old-Potential)**2))
+       Residual = sum((Old-Potential)**2)
 
        nIters = nIters + 1
+
+       LocalVar = Residual
+       call MPI_REDUCE(localVar, Residual, 1, MPI_REAL, MPI_SUM, &
+            0, iComm, iError)
+       call MPI_Bcast(Residual,1,MPI_Real,0,iComm,iError)
+       Residual = sqrt(Residual)
 
        if (iDebugLevel > 3) &
             write(*,*) "RIM====> Residual : ", nIters, Residual
