@@ -39,6 +39,9 @@ module ModPlanet
 
   real :: Vibration(nSpeciesTotal)
 
+  integer, parameter :: nEmissionWavelengths = 1
+  integer, parameter :: nPhotoBins = 1
+
   !   CP      :  HEAT CAPACITY (OR SPECIFIC HEAT) OF CO2 GAS.
   real, parameter :: HeatCapacityCO2           = 735.94              ! J/(Kg*K)
 
@@ -81,6 +84,17 @@ module ModPlanet
   logical :: IsEarth = .false.
   character (len=10) :: cPlanet = "Mars"
 
+  integer, parameter :: i3371_ = 1
+  integer, parameter :: i4278_ = 2
+  integer, parameter :: i5200_ = 3
+  integer, parameter :: i5577_ = 4
+  integer, parameter :: i6300_ = 5
+  integer, parameter :: i7320_ = 6
+  integer, parameter :: i10400_ = 7
+  integer, parameter :: i3466_ = 8
+  integer, parameter :: i7774_ = 9
+  integer, parameter :: i8446_ = 10
+  integer, parameter :: i3726_ = 11
 !  real :: KappaTemp0 = 2.22e-4
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

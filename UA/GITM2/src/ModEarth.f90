@@ -98,6 +98,9 @@ module ModPlanet
   logical :: IsEarth = .true.
   character (len=10) :: cPlanet = "Earth"
   
+  integer, parameter :: nEmissionWavelengths = 20
+  integer, parameter :: nPhotoBins = 190
+
   
   ! These are for the neutral friction routine...
 

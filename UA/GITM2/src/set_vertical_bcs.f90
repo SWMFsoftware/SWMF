@@ -84,14 +84,18 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
      LogINS(-1,iSpecies) = LogINS(0,iSpecies) - dn
   enddo
 
-  dn = (LogNS(2,iNO_) - LogNS(1,iNO_))
-  if (dn >= 0) then
-     LogNS(0,iNO_) = LogNS(1,iNO_) - dn
-     LogNS(-1,iNO_) = LogNS(0,iNO_) - dn
-  else
-     LogNS(0,iNO_) = LogNS(1,iNO_) + dn
-     LogNS(-1,iNO_) = LogNS(0,iNO_) + dn
+  ! Lower boundary for NO on Earth
+  if (nSpecies == iNO_) then
+     dn = (LogNS(2,nSpecies) - LogNS(1,nSpecies))
+     if (dn >= 0) then
+        LogNS(0,nSpecies) = LogNS(1,nSpecies) - dn
+        LogNS(-1,nSpecies) = LogNS(0,nSpecies) - dn
+     else
+        LogNS(0,nSpecies) = LogNS(1,nSpecies) + dn
+        LogNS(-1,nSpecies) = LogNS(0,nSpecies) + dn
+     endif
   endif
+
 !  dn = (LogNS(2,iN_4S_) - LogNS(1,iN_4S_))
 !  LogNS(0,iN_4S_) = LogNS(1,iN_4S_) - dn
 !  LogNS(-1,iN_4S_) = LogNS(0,iN_4S_) - dn

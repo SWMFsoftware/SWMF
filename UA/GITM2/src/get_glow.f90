@@ -1,6 +1,6 @@
 subroutine get_glow(iLon,iLat,iBlock)
 
-  use ModPlanet
+  use ModPlanet, only : nEmissionWavelengths,nPhotoBins
   use ModTime
   use ModGITM
   use ModEUV, only    : WAVES,WAVEL,Num_WaveLengths_High,Flux_of_EUV
@@ -13,6 +13,20 @@ subroutine get_glow(iLon,iLat,iBlock)
   real, dimension(nEmissionWavelengths,nAlts) :: emissionrates
   real, dimension(nPhotoBins,nAlts) :: peup, pedown, pespec
   integer :: iAlt,iError,iBin
+ 
+  integer, parameter :: iO3P  = 1
+  integer, parameter :: iO2 = 2
+  integer, parameter :: iN2 = 3
+  integer, parameter :: iN4S =  4
+  integer, parameter :: iNO   =  5
+  integer, parameter :: iN2D =  6
+  integer, parameter  :: iO4SP = 1
+  integer, parameter  :: iO2P   = 2
+  integer, parameter  :: iN2P   = 3
+  integer, parameter  :: iNP    = 4
+  integer, parameter  :: iNOP   = 5
+  integer, parameter  :: iO2DP = 6
+  integer, parameter  :: ie    = 10
 
   call GL_settime(iTimeArray,utime)
   call GL_setloc(Altitude_GB(iLon,iLat,1:nAlts,iBlock),nAlts,Latitude(iLat,iBlock),&
@@ -33,12 +47,12 @@ subroutine get_glow(iLon,iLat,iBlock)
   endif
 
   ZRHO(1:nAlts)  = Rho(iLon,iLat,1:nAlts,iBlock)*0.000001*1000.0
-  ZO(1:nAlts)    = NDensityS(iLon,iLat,1:nAlts,iO_3P_,iBlock)*0.000001
-  ZN2(1:nAlts)   = NDensityS(iLon,iLat,1:nAlts,iN2_,iBlock)*0.000001
-  ZO2(1:nAlts)   = NDensityS(iLon,iLat,1:nAlts,iO2_,iBlock)*0.000001
-  ZNO(1:nAlts)   = NDensityS(iLon,iLat,1:nAlts,iNO_,iBlock)*0.000001
-  ZNS(1:nAlts)   = NDensityS(iLon,iLat,1:nAlts,iN_4S_,iBlock)*0.000001
-  ZND(1:nAlts)   = NDensityS(iLon,iLat,1:nAlts,iN_2D_,iBlock)*0.000001
+  ZO(1:nAlts)    = NDensityS(iLon,iLat,1:nAlts,iO3P,iBlock)*0.000001
+  ZN2(1:nAlts)   = NDensityS(iLon,iLat,1:nAlts,iN2,iBlock)*0.000001
+  ZO2(1:nAlts)   = NDensityS(iLon,iLat,1:nAlts,iO2,iBlock)*0.000001
+  ZNO(1:nAlts)   = NDensityS(iLon,iLat,1:nAlts,iNO,iBlock)*0.000001
+  ZNS(1:nAlts)   = NDensityS(iLon,iLat,1:nAlts,iN4S,iBlock)*0.000001
+  ZND(1:nAlts)   = NDensityS(iLon,iLat,1:nAlts,iN2D,iBlock)*0.000001
  
   call GL_setND(ZRHO,ZO,ZN2,ZO2,ZNO,ZNS,ZND)
 
@@ -49,12 +63,12 @@ subroutine get_glow(iLon,iLat,iBlock)
   
   call GL_settemp(ZTN,ZTI,ZTE)
 
-  Zo4sp = IDensityS(iLon,iLat,1:nAlts,iO_4SP_,iBlock)*0.000001
-  Zo2p =  IDensityS(iLon,iLat,1:nAlts,iO2P_,iBlock)*0.000001
-  Znop = IDensityS(iLon,iLat,1:nAlts,iNOP_,iBlock)*0.000001
-  ZE = IDensityS(iLon,iLat,1:nAlts,ie_,iBlock)*0.000001
-  Zn2p = IDensityS(iLon,iLat,1:nAlts,iN2P_,iBlock)*0.000001
-  Znp =  IDensityS(iLon,iLat,1:nAlts,iNP_,iBlock)*0.000001
+  Zo4sp = IDensityS(iLon,iLat,1:nAlts,iO4SP,iBlock)*0.000001
+  Zo2p =  IDensityS(iLon,iLat,1:nAlts,iO2P,iBlock)*0.000001
+  Znop = IDensityS(iLon,iLat,1:nAlts,iNOP,iBlock)*0.000001
+  ZE = IDensityS(iLon,iLat,1:nAlts,ie,iBlock)*0.000001
+  Zn2p = IDensityS(iLon,iLat,1:nAlts,iN2P,iBlock)*0.000001
+  Znp =  IDensityS(iLon,iLat,1:nAlts,iNP,iBlock)*0.000001
 
   call GL_setID(Zo4sp, Zo2p, Znop, Zn2p, Znp, ZE)
 

@@ -99,8 +99,8 @@ module ModGITM
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3, nBlocksMax) :: &
        Velocity, IVelocity
 
-  integer, parameter :: nEmissionWavelengths = 20
-  integer, parameter :: nPhotoBins = 190
+  logical            :: isFirstGlow = .True.  
+  logical            :: isInitialGlow 
 
   real :: Emissions(nLons, nLats, nAlts, nEmissions, nBlocksMax)
 
