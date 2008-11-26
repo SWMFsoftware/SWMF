@@ -200,6 +200,10 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
 
      enddo
 
+     if (OCFLBH(iLon) > MaxAuroralLat) OCFLBH(iLon) = MaxAuroralLat
+     if (OCFLBH(iLon)+Width(iLon) > MaxAuroralLat+MinAuroralWidth) &
+          Width(iLon) = MaxAuroralLat - OCFLBH(iLon)
+
   enddo
 
   do iLon = 0, nLonsAll+1
@@ -216,7 +220,7 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
         smooth(iLon) = smooth(iLon) + Width(mod(iSubLon+nLonsAll,nLonsAll))
      enddo
   enddo
-  Width = smooth/(2*nSmooth+1)
+  Width = smooth/(2*nSmooth+1) / 2.0
 
   ! We want to put the Center of the diffuse aurora about 1/2 way between
   ! the open/closed field-line boundary and the inner edge of the 

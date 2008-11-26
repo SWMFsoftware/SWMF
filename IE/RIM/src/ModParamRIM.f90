@@ -26,8 +26,8 @@ module ModParamRIM
   real    :: StarlightPedConductance=1.
   real    :: PolarCapPedConductance=0.25
 
-  real    :: MinAuroralWidth = 5.0*cDegToRad
-  real    :: MaxAuroralLat   = 80.0*cDegToRad
+  real    :: MinAuroralWidth = 2.5*cDegToRad
+  real    :: MaxAuroralLat   = 77.5*cDegToRad
   real    :: OCFLBSmoothLon  = 10.0*cDegToRad
   real    :: PolarRainAveE   =  0.5
   real    :: PolarRainEFlux  =  1.0
