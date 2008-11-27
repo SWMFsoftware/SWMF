@@ -26,7 +26,7 @@ if strpos(uname[0],'Darwin') ge 0 then device,decompose=0,true=24,retain=2
 ;device,decompose=0,direct=8,retain=2 ;;; does not work on grid
 
 loadct,39
-window
+;window
 
 ;Test device colors: should be blue
 ;window,xsize=400,ysize=400
