@@ -764,7 +764,10 @@ subroutine IE_init_session(iSession, tSimulation)
   call get_planet(DipoleStrengthOut = DipoleStrength)
   call get_axes(tSimulation, MagAxisTiltGsmOut = ThetaTilt)
 
+  ! Set the starttime, by getting the current time and subtracting off
+  ! the simulation time (the subtraction is needed for restarts).
   call get_time(tCurrentOut = StartTime)
+  StartTime = StartTime - tSimulation
 
   DipoleStrength = DipoleStrength*1.0e9 ! Tesla -> nT
 
