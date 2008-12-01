@@ -13,21 +13,6 @@ READ
 1.0e+3			km/s
 1000.0			g/cm^3
 
-#USERFLAGS
-F			UseUserInnerBcs
-F			UseUserSource
-T			UseUserPerturbation
-F			UseUserOuterBcs
-F			UseUserICs
-F			UseUserSpecifyRefinement
-F			UseUserLogFiles
-F			UseUserWritePlot
-F			UseUserAMR
-F			UseUserEchoInput
-F			UseUserB0
-T			UseUserInitSession
-T			UseUserUpdateStates
-
 #TIMEACCURATE
 T			IsTimeAccurate
 
@@ -85,10 +70,13 @@ T                       UseMixedCell
 0.97			MixLimit
 
 #TUBE
-T			IsFullTube
+0.0                     xEndTube
 200.0			rInnerTube
 590.0			rOuterTube
 1400.0			RhoDimTube
+6.5                     RhoDimOutside
+1.1e5                   pDimOutside
+-1.0                    xUniformXe
 
 #USERINPUTEND -------------------------------------------------
 
