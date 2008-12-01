@@ -17,8 +17,8 @@ subroutine write_plot_common(ifile)
   use ModParallel, ONLY: proc_dims
   use ModMpi
   use ModUtilities, ONLY: lower_case
-  implicit none
 
+  implicit none
 
   ! Arguments
 
@@ -46,13 +46,12 @@ subroutine write_plot_common(ifile)
 
   character (LEN=500) :: allnames
   character (LEN=500) :: unitstr_TEC, unitstr_IDL
-  character (LEN=4) :: file_extension
-  character (LEN=500) :: file_format
   character (len=80) :: filename_n, filename_s
-  character (len=1) :: NorthOrSouth
+  character (len=80) :: NameSnapshot, NameProc
+  character (len=20) :: TypeForm
 
   ! Indices and coordinates
-  integer :: iBLK,i,j,k,iVar
+  integer :: iBLK,i,j,k,l,iVar
   integer :: ntheta, nphi
   real :: xmin,xmax,ymin,ymax,zmin,zmax
   real :: rplot
@@ -65,11 +64,13 @@ subroutine write_plot_common(ifile)
 
   integer :: iTime_I(7)
 
+  character(len=*), parameter :: NameSub = 'write_plot_common'
+
   logical :: oktest,oktest_me
   !---------------------------------------------------------------------------
 
   ! Initialize stuff
-  call set_oktest('write_plot_common',oktest,oktest_me)
+  call set_oktest(NameSub, oktest, oktest_me)
 
   PlotVar = 0.0
   plotvar_inBody = 0.0
@@ -103,103 +104,67 @@ subroutine write_plot_common(ifile)
   end if
 
   ! Construct the file name
-  if (ifile-plot_ > 9) then
-     file_format='("' // trim(NamePlotDir) // '",a,i2,a,i7.7,a,i4.4,a)'
+  ! Plotfile names start with the plot directory and the type infor
+  NameSnapshot = trim(NamePlotDir) // trim(plot_type1) // "_"
+
+  ! add index of the plot file
+  if (iFile-Plot_ < 10) then
+     write(NameSnapshot, '(a,i1)') trim(NameSnapshot), iFile - Plot_
   else
-     file_format='("' // trim(NamePlotDir) // '",a,i1,a,i7.7,a,i4.4,a)'
+     write(NameSnapshot, '(a,i2)') trim(NameSnapshot), iFile - Plot_
   end if
 
   ! For time accurate runs the file name will contain the StringDateOrTime
-  if(time_accurate)call get_time_string
+  if(time_accurate)then
+     call get_time_string
+     NameSnapshot = trim(NameSnapshot) // "_t" // StringDateOrTime
+  end if
 
-  select case(plot_form(ifile))
-  case('tec')
-     file_extension='.tec'
-  case('idl')
-     file_extension='.idl'
-  end select
+  ! Add time step information
+  write(NameSnapshot,'(a,i7.7)') trim(NameSnapshot)//"_n", n_step
+
+  ! String containing the processor index and file extension
+  if(nProc < 10000) then
+     write(NameProc, '(a,i4.4,a)') "_pe", iProc, "."//plot_form(ifile)
+  else
+     write(NameProc, '(a,i5.5,a)') "_pe", iProc, "."//plot_form(ifile)
+  end if
+
+  ! Determine if file is formatted or unformatted
+  if(save_binary .and. plot_form(ifile)=='idl')then
+     TypeForm = "unformatted"
+  else
+     TypeForm = "formatted"
+  end if
+
   if(index(plot_type1,'sph')>0)then
-     if(time_accurate)then
-        ! do the northern hemisphere
-        write(filename_n,file_format) &
-             plot_type1(1:2)//"N"//plot_type1(4:len_trim(plot_type1))//"_",&
-             ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",n_step,"_pe",iProc,&
-             file_extension
-        ! do the southern hemisphere
-        write(filename_s,file_format) &
-             plot_type1(1:2)//"S"//plot_type1(4:len_trim(plot_type1))//"_",&
-             ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",n_step,"_pe",iProc,&
-             file_extension
-     else
-        ! do the northern hemisphere
-        write(filename_n,file_format) &
-             plot_type1(1:2)//"N"//plot_type1(4:len_trim(plot_type1))//"_",&
-             ifile-plot_,"_n",n_step,"_pe",iProc,file_extension
-        ! do the southern hemisphere
-        write(filename_s,file_format) &
-             plot_type1(1:2)//"S"//plot_type1(4:len_trim(plot_type1))//"_",&
-             ifile-plot_,"_n",n_step,"_pe",iProc,file_extension
-     end if
+     ! Put hemisphere info into the filename: the 3rd character of type
+     l = len_trim(NamePlotDir) + 3
+     ! two files for the northern and southern hemispheres
+     filename_n = trim(NameSnapshot)//trim(NameProc); filename_n(l:l) = "N"
+     filename_s = trim(NameSnapshot)//trim(NameProc); filename_s(l:l) = "S"
      ! open the files
      unit_tmp2 = io_unit_new()
-     if(save_binary .and. plot_form(ifile)=='idl') then
-        open(unit_tmp ,file=filename_n,status="replace",err=999,&
-             form="unformatted")
-        open(unit_tmp2,file=filename_s,status="replace",err=999,&
-             form="unformatted")
-     else
-        open(unit_tmp ,file=filename_n,status="replace",err=999)
-        open(unit_tmp2,file=filename_s,status="replace",err=999)
-     end if
+     open(unit_tmp , file=filename_n, status="replace", form=TypeForm, err=999)
+     open(unit_tmp2, file=filename_s, status="replace", form=TypeForm, err=999)
   elseif(plot_form(ifile)=='tec')then
-     if(time_accurate)then
-        write(filename_n,file_format) &
-             trim(plot_type1)//"_",&
-             ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",n_step,"_1_pe",iProc,&
-             file_extension
-        write(filename_s,file_format) &
-             trim(plot_type1)//"_",&
-             ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",n_step,"_2_pe",iProc,&
-             file_extension
-     else
-        write(filename_n,file_format) &
-             trim(plot_type1)//"_",&
-             ifile-plot_,"_n",n_step,"_1_pe",iProc,file_extension
-        write(filename_s,file_format) &
-             trim(plot_type1)//"_",&
-             ifile-plot_,"_n",n_step,"_2_pe",iProc,file_extension
-     end if
+     ! Open two files for connectivity and data
+     filename_n = trim(NameSnapshot)//"_1"//trim(NameProc)
+     filename_s = trim(NameSnapshot)//"_2"//trim(NameProc)
      unit_tmp2 = io_unit_new()
-     ! Open files
-     open(unit_tmp ,file=filename_n,status="replace",err=999)
-     open(unit_tmp2,file=filename_s,status="replace",err=999)
+     open(unit_tmp , file=filename_n, status="replace", err=999)
+     open(unit_tmp2, file=filename_s, status="replace", err=999)
   else
-     if(time_accurate)then
-        write(filename,file_format) &
-             trim(plot_type1)//"_",&
-             ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",n_step,"_pe",iProc,&
-             file_extension
-     else
-        write(filename,file_format) &
-             trim(plot_type1)//"_",&
-             ifile-plot_,"_n",n_step,"_pe",iProc,file_extension
-     end if
-     ! Open file
-     if(save_binary .and. plot_form(ifile)=='idl')then
-        open(unit_tmp,file=filename,status="replace",err=999,&
-             form="unformatted")
-     else
-        open(unit_tmp,file=filename,status="replace",err=999)
-     end if
+     ! For IDL just open one file
+     filename = trim(NameSnapshot)//trim(NameProc)
+     open(unit_tmp, file=filename, status="replace", form=TypeForm, err=999)
   end if
 
   if (index(plot_type1,'sph')>0) then
      ntheta = 1 + 180.0/plot_dx(2,ifile)
      nphi   = 360.0/plot_dx(3,ifile)
      rplot  = plot_range(1,ifile)
-     if(oktest_me) then
-        write(*,*) ntheta,nphi
-     end if
+     if(oktest_me) write(*,*) NameSub,': nTheta, nPhi=', ntheta, nphi
   end if
 
   !! START IDL
@@ -226,8 +191,8 @@ subroutine write_plot_common(ifile)
   do iBLK=1,nBlockMax
      if(unusedBLK(iBLK))CYCLE
 
-     call set_plotvar(iBLK, &
-          ifile-plot_,nplotvar,plotvarnames,plotvar,plotvar_inBody,plotvar_useBody)
+     call set_plotvar(iBLK, ifile-plot_, nPlotVar, plotvarnames, plotvar, &
+          plotvar_inBody, plotvar_useBody)
      if (plot_dimensional(ifile)) call dimensionalize_plotvar(iBLK, &
           ifile-plot_,nplotvar,plotvarnames,plotvar,plotvar_inBody)
 
@@ -292,34 +257,36 @@ subroutine write_plot_common(ifile)
         call pass_and_average_nodes(.true.,NodeValue_NB)
         PlotVarNodes_NBI(:,:,:,:,i)=NodeValue_NB
      end do
-     call write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC, &
-          xmin,xmax,ymin,ymax,zmin,zmax)
+     call write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI, &
+          unitstr_TEC, xmin,xmax,ymin,ymax,zmin,zmax)
      deallocate(PlotVarNodes_NBI)
   end if
 
   close(unit_tmp)
-  if( (index(plot_type1,'sph')>0) .or. plot_form(ifile)=='tec' )then
-     close(unit_tmp2)
-  end if
+  if( (index(plot_type1,'sph')>0) .or. plot_form(ifile)=='tec' ) &
+       close(unit_tmp2)
 
   !! START IDL
   if (plot_form(ifile)=='idl')then
      ! Find smallest cell size and total number of cells
      if (.not. (index(plot_type1,'sph')>0)) then
         call MPI_reduce(dxPEmin,dxGLOBALmin,3,MPI_REAL,MPI_MIN,0,iComm,iError)
-        call MPI_reduce(nPEcells,nGLOBALcells,1,MPI_INTEGER,MPI_SUM,0,iComm,iError)
+        call MPI_reduce(nPEcells,nGLOBALcells,1,MPI_INTEGER,MPI_SUM,0, &
+             iComm,iError)
      else
-        call MPI_reduce(nPEcellsN,nGLOBALcellsN,1,MPI_INTEGER,MPI_SUM,0,iComm,iError)
-        call MPI_reduce(nPEcellsS,nGLOBALcellsS,1,MPI_INTEGER,MPI_SUM,0,iComm,iError)
+        call MPI_reduce(nPEcellsN,nGLOBALcellsN,1,MPI_INTEGER,MPI_SUM,0, &
+             iComm,iError)
+        call MPI_reduce(nPEcellsS,nGLOBALcellsS,1,MPI_INTEGER,MPI_SUM,0, &
+             iComm,iError)
         dxGLOBALmin = dxPEmin
      end if
 
      if(oktest_me) then
         if (.not. (index(plot_type1,'sph')>0)) then
-           write(*,*)'dxPEmin,nPEcells=',dxPEmin,nPEcells
+           write(*,*)NameSub,' dxPEmin,nPEcells=',dxPEmin,nPEcells
         else
-           write(*,*)'North: nGLOBALcells=',nGLOBALcellsN
-           write(*,*)'South: nGLOBALcells=',nGLOBALcellsS
+           write(*,*)NameSub,' North: nGLOBALcells=',nGLOBALcellsN
+           write(*,*)NameSub,' South: nGLOBALcells=',nGLOBALcellsS
         end if
      end if
   end if
@@ -331,70 +298,29 @@ subroutine write_plot_common(ifile)
      select case(plot_form(ifile))
      case('tec')
         if (index(plot_type1,'sph')>0) then
-           file_extension='.S'
+           filename = trim(NameSnapshot) // ".S"
         else  
-           file_extension='.T'
+           filename = trim(NameSnapshot) // ".T"
         end if
      case('idl')
-        file_extension='.h'
+        filename = trim(NameSnapshot) // ".h"
      end select
 
-     if (ifile-plot_ > 9) then
-        file_format='("' // trim(NamePlotDir) // '",a,i2,a,i7.7,a)'
-     else
-        file_format='("' // trim(NamePlotDir) // '",a,i1,a,i7.7,a)'
-     end if
-
-     do i=1,2
+     ! For spherical plots there are two files for north and south hemispheres
+     ! For other cases, EXIT when i=2
+     do i = 1, 2
         
-        !For spherical plots there is a north and south files
-        !For other cases, cycle when i=2.  This saves a lot of 
-        !double coding.
-        if (.not.(index(plot_type1,'sph')>0) .and. i==2) CYCLE
+        if (.not.(index(plot_type1,'sph')>0) .and. i==2) EXIT
 
         if(index(plot_type1,'sph')>0)then
+           ! Put hemisphere info into the filename: the 3rd character of type
+           l = len_trim(NamePlotDir) + 3
            if (i==1) then
-              NorthOrSouth='N'   ! do the northern hemisphere
+              filename(l:l) = 'N'        ! do the notthern hemisphere
               nGLOBALcells = nGLOBALcellsN
            else
-              NorthOrSouth='S'   ! do the southern hemisphere
+              filename(l:l) = 'S'        ! do the southern hemisphere
               nGLOBALcells = nGLOBALcellsS
-           end if
-           if(time_accurate) then
-              write(filename,file_format) &
-                   plot_type1(1:2)//NorthOrSouth// &
-                   plot_type1(4:len_trim(plot_type1))//"_",&
-                   ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",&
-                   n_step,file_extension
-           else
-              write(filename,file_format) &
-                   plot_type1(1:2)//NorthOrSouth// &
-                   plot_type1(4:len_trim(plot_type1))//"_",&
-                   ifile-plot_,"_n",n_step,file_extension
-           end if
-        elseif(plot_form(ifile)=='tec')then
-           if(time_accurate)then
-              call get_time_string
-              write(filename,file_format) &
-                   trim(plot_type1)//"_",&
-                   ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",&
-                   n_step,file_extension
-           else
-              write(filename,file_format) &
-                   trim(plot_type1)//"_",&
-                   ifile-plot_,"_n",n_step,file_extension
-           end if
-        else
-           if(time_accurate)then
-              call get_time_string
-              write(filename,file_format) &
-                   trim(plot_type1)//"_",&
-                   ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",&
-                   n_step,file_extension
-           else
-              write(filename,file_format) &
-                   trim(plot_type1)//"_",&
-                   ifile-plot_,"_n",n_step,file_extension
            end if
         end if
         open(unit_tmp,file=filename,status="replace",err=999)
@@ -446,13 +372,13 @@ subroutine write_plot_common(ifile)
   end if
 
 
-  if(oktest_me)write(*,*)'write_plot_common finished'
+  if(oktest_me)write(*,*) NameSub,' finished'
 
   return
 
 999 continue
 
-  call stop_mpi("Error in opening or writing file in write_plot_common")
+  call stop_mpi(NameSub//": error in opening or writing file")
 
 contains
 
@@ -463,8 +389,7 @@ contains
     real :: rr
 
     if(.not.allocated(PlotVarNodes_NBI)) allocate(&
-         PlotVarNodes_NBI(1:1+nI,1:1+nJ,1:1+nK,nBLK,nplotvarmax),stat=iError)
-    call alloc_check(iError,'write_plot_common:PlotVarNodes_NBI')
+         PlotVarNodes_NBI(1:1+nI,1:1+nJ,1:1+nK,nBLK,nplotvarmax))
 
     ! Initialize values
     nodeCount = 0; nodeV = 0.00
@@ -474,9 +399,10 @@ contains
        do iVar=1,nplotvar
           if ( true_cell(i,j,k,iBLK) .or. plotvar_useBody(iVar) )then
              do kk=0,1; do jj=0,1; do ii=0,1
-                nodeCount(i+ii,j+jj,k+kk,iVar) = nodeCount(i+ii,j+jj,k+kk,iVar) +1
-                nodeV(i+ii,j+jj,k+kk,iVar) = nodeV(i+ii,j+jj,k+kk,iVar)+ &
-                     plotvar(i,j,k,iVar)
+                nodeCount(i+ii,j+jj,k+kk,iVar) = &
+                     nodeCount(i+ii,j+jj,k+kk,iVar) + 1
+                nodeV(i+ii,j+jj,k+kk,iVar) = &
+                     nodeV(i+ii,j+jj,k+kk,iVar)     + plotvar(i,j,k,iVar)
              end do; end do; end do
           end if
        end do
@@ -492,10 +418,10 @@ contains
              PlotVarNodes_NBI(i,j,k,iBLK,iVar) = &
                   nodeV(i,j,k,iVar)/real(nodeCount(i,j,k,iVar))
              ! This will zero out values otherwise true with plotvar_useBody
-             ! The intent of plotvar_useBody is to fill nodes inside of the body
-             !   with values for plotting.  However, when allowed to go all the
-             !   way to the origin, B traces will continuously loop through the
-             !   body and out.  Setting the values to zero inside of 0.51 fixes it.
+             ! The intent of plotvar_useBody is to fill nodes inside of the 
+             ! body with values for plotting. However, when allowed to go all 
+             ! the way to the origin, B traces will continuously loop through 
+             ! the body and out. Setting the values to 0 inside 0.51 fixes it.
              if(plotvar_useBody(iVar) .and. body1)then
                 if(rr < 0.51*Rbody .and. rr < 0.51) then
                    PlotVarNodes_NBI(i,j,k,iBLK,iVar) = 0.00
@@ -821,12 +747,11 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
                  
                  PlotVar(i,j,k,iVar)=0.5*(&
                       (State_VGB(Bz_,i  ,jp1,k  ,iBLK) &
-                      -State_VGB(Bz_,i  ,jm1,k  ,iBLK))*yfactor / dy_BLK(iBLK) - &
+                      -State_VGB(Bz_,i  ,jm1,k  ,iBLK))*yfactor/dy_BLK(iBLK) -&
                       (State_VGB(By_,i  ,j  ,kp1,iBLK) &
-                      -State_VGB(By_,i  ,j  ,km1,iBLK))*zfactor / dz_BLK(iBLK))
+                      -State_VGB(By_,i  ,j  ,km1,iBLK))*zfactor/dz_BLK(iBLK))
               end do; end do; end do
            end if                            
-           continue
         end if                               
      case('jy')
         if(UseCovariant)then                  
@@ -863,7 +788,6 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
                       -State_VGB(Bz_,im1,j  ,k  ,iBLK))*xfactor/dx_BLK(iBLK))
               end do; end do; end do
            endif                                   
-           continue
         end if                                     
 
      case('jz')
