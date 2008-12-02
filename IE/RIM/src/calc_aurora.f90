@@ -109,7 +109,7 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
 
   ! Variables that have an 'H' stuck on the end are only defined for a
   ! hemisphere
-  real, dimension(0:nLonsAll+1,nLats/2), intent(in)  :: &
+  real, dimension(0:nLonsAll+1,nLats/2) :: &
        rhoH, pH, TH, InvBH, LatH
   real, dimension(0:nLons+1,nLats/2), intent(in)  :: JrH
   real, dimension(0:nLons+1,nLats/2), intent(out) :: eFluxH, AveEH
@@ -121,6 +121,8 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
   real, dimension(0:nLons+1,nLats/2) :: Discrete_eFlux, Discrete_AveE, Discrete_K
   real, dimension(0:nLons+1,nLats/2) :: Diffuse_eFlux, Diffuse_AveE
   real, allocatable :: Width(:), smooth(:), Center(:)
+
+  real :: smoothlat(nLats/2)
 
   integer :: iLon, iLat, nSmooth, iSubLon, l, iLonOff, iLonG, iLonM
   logical :: IsDone, IsPeakFound
@@ -136,8 +138,8 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
 
   iLonOff = iProc*nLons
 
-  Discrete_FacAE = 1.0e22
-  Discrete_FacEF = 1.0e22
+  Discrete_FacAE = 1.5e22
+  Discrete_FacEF = 3.0e22
   Diffuse_FacAE = 5.0e-11
   Diffuse_FacEF = 1.0e9
   MinPressure = 5.0e-9
@@ -200,9 +202,9 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
 
      enddo
 
-     if (OCFLBH(iLon) > MaxAuroralLat) OCFLBH(iLon) = MaxAuroralLat
-     if (OCFLBH(iLon)+Width(iLon) > MaxAuroralLat+MinAuroralWidth) &
-          Width(iLon) = MaxAuroralLat - OCFLBH(iLon)
+!     if (OCFLBH(iLon) > MaxAuroralLat) OCFLBH(iLon) = MaxAuroralLat
+!     if (OCFLBH(iLon)+Width(iLon) > MaxAuroralLat+MinAuroralWidth) &
+!          Width(iLon) = MaxAuroralLat - OCFLBH(iLon)
 
   enddo
 
@@ -287,6 +289,50 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
 
   enddo
 
+  do iLon = 0, nLonsAll+1
+     iLat = 1
+     do while (rhoH(iLon,iLat) == 0.0)
+        iLat = iLat + 1
+     enddo
+     rhoH(iLon,1:iLat-1) = rhoH(iLon,iLat)
+     tH(iLon,1:iLat-1) = tH(iLon,iLat)
+     pNorm(iLon,1:iLat-1) = pNorm(iLon,iLat)
+  enddo
+
+  do iLat = 1, nLats/2
+     do iLon = 0, nLonsAll+1
+        smooth(iLon) = 0.0
+        do iSubLon = iLon-nSmooth, iLon+nSmooth
+           smooth(iLon) = smooth(iLon) + &
+                rhoH(mod(iSubLon+nLonsAll,nLonsAll),iLat)
+        enddo
+     enddo
+     rhoH(:,iLat) = smooth/(2*nSmooth+1)
+  enddo
+
+  do iLat = 1, nLats/2
+     do iLon = 0, nLonsAll+1
+        smooth(iLon) = 0.0
+        do iSubLon = iLon-nSmooth, iLon+nSmooth
+           smooth(iLon) = smooth(iLon) + &
+                pNorm(mod(iSubLon+nLonsAll,nLonsAll),iLat)
+        enddo
+     enddo
+     pNorm(:,iLat) = smooth/(2*nSmooth+1)
+  enddo
+
+  do iLat = 1, nLats/2
+     do iLon = 0, nLonsAll+1
+        smooth(iLon) = 0.0
+        do iSubLon = iLon-nSmooth, iLon+nSmooth
+           smooth(iLon) = smooth(iLon) + &
+                tH(mod(iSubLon+nLonsAll,nLonsAll),iLat)
+        enddo
+     enddo
+     tH(:,iLat) = smooth/(2*nSmooth+1)
+  enddo
+
+
   ! ---------------------------
   ! Discrete Aurora
 
@@ -312,6 +358,35 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
   Discrete_AveE = Discrete_EFlux*Discrete_FacAE
   Discrete_EFlux = (JrH*1e6)*Discrete_EFlux*Discrete_FacEF
 
+  ! We don't want any steep latitudinal gradients in the Hall conductance,
+  ! so let's smooth this over a little bit.  This has to be improved, though.
+
+  do iLon = 0, nLons+1
+     
+     smoothlat = 0.0
+     do iLat = 3,nLats/2-3
+        smoothlat(iLat) = ( &
+             Discrete_AveE(iLon, iLat-2) + &
+             Discrete_AveE(iLon, iLat-1) + &
+             Discrete_AveE(iLon, iLat-0) + &
+             Discrete_AveE(iLon, iLat+1) + &
+             Discrete_AveE(iLon, iLat+2))/5
+     enddo
+     Discrete_AveE(iLon,:) = smoothlat
+
+     smoothlat = 0.0
+     do iLat = 3,nLats/2-3
+        smoothlat(iLat) = ( &
+             Discrete_EFlux(iLon, iLat-2) + &
+             Discrete_EFlux(iLon, iLat-1) + &
+             Discrete_EFlux(iLon, iLat-0) + &
+             Discrete_EFlux(iLon, iLat+1) + &
+             Discrete_EFlux(iLon, iLat+2))/5
+     enddo
+     Discrete_EFlux(iLon,:) = smoothlat
+
+  enddo
+
 !  AveEH = Diffuse_AveE
 !  EFluxH = Diffuse_EFlux
 
@@ -320,6 +395,15 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
 
   where(Diffuse_EFlux < 0.1) Diffuse_EFlux = 0.1
   where(Discrete_EFlux < 0.1) Discrete_EFlux = 0.1
+
+  if (iDebugLevel > 2) then
+     write(*,*) "RIM===>diffuse  : ",&
+          maxval(Diffuse_AveE), maxval(Diffuse_EFlux)
+     write(*,*) "RIM===>discrete : ",&
+          maxval(Discrete_AveE), maxval(Discrete_EFlux)
+     write(*,*) "RIM===>polar    : ",&
+          maxval(PolarRain_AveE), maxval(PolarRain_EFlux)
+  endif
 
   ! Let's weight the average energy by the number flux, which is ef/av
   AveEH = &

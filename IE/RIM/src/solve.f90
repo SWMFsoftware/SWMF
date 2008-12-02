@@ -479,15 +479,15 @@ contains
                   Latitude(iLon,iLat) > OCFLB(2,iLon)) then
                 Potential(iLon,iLat) =  &
                      (Jr(iLon,iLat)*(Radius*sinTheta(iLon,iLat))**2 - &
-                     (SolverB(iLon,iLat)*Potential(iLon,iLat+1) + &
-                     SolverC(iLon,iLat)*Potential(iLon,iLat-1) + &
-                     SolverD(iLon,iLat)*Potential(iLon-1,iLat) + &
-                     SolverE(iLon,iLat)*Potential(iLon+1,iLat)) ) / &
-                     SolverA(iLon,iLat)
+                     (SolverB(iLon,iLat)*Old(iLon,iLat+1) + &
+                      SolverC(iLon,iLat)*Old(iLon,iLat-1) + &
+                      SolverD(iLon,iLat)*Old(iLon-1,iLat) + &
+                      SolverE(iLon,iLat)*Old(iLon+1,iLat)) ) / &
+                      SolverA(iLon,iLat)
              else
                 Potential(iLon,iLat) = &
                      (Potential(iLon,nLats-iLat+1) + &
-                      Potential(iLon,iLat))/2.0
+                      Old(iLon,iLat))/2.0
              endif 
           enddo
        enddo
@@ -559,6 +559,8 @@ contains
           Potential(nLons+1,:) = Potential(    1,:)
        endif
 
+       Old = Potential
+
        do iLat = nLats-1, 2
 
           do iLon = 1, nLons
@@ -567,15 +569,15 @@ contains
                   Latitude(iLon,iLat) < -OCFLB(1,iLon)) then
                 Potential(iLon,iLat) =  &
                      (Jr(iLon,iLat)*(Radius*sinTheta(iLon,iLat))**2 - &
-                     (SolverB(iLon,iLat)*Potential(iLon,iLat+1) + &
-                     SolverC(iLon,iLat)*Potential(iLon,iLat-1) + &
-                     SolverD(iLon,iLat)*Potential(iLon-1,iLat) + &
-                     SolverE(iLon,iLat)*Potential(iLon+1,iLat)) ) / &
-                     SolverA(iLon,iLat)
+                     (SolverB(iLon,iLat)*Old(iLon,iLat+1) + &
+                      SolverC(iLon,iLat)*Old(iLon,iLat-1) + &
+                      SolverD(iLon,iLat)*Old(iLon-1,iLat) + &
+                      SolverE(iLon,iLat)*Old(iLon+1,iLat)) ) / &
+                      SolverA(iLon,iLat)
              else
                 Potential(iLon,iLat) = &
                      (Potential(iLon,nLats-iLat+1) + &
-                      Potential(iLon,iLat))/2.0
+                      Old(iLon,iLat))/2.0
              endif 
           enddo
 
@@ -666,13 +668,13 @@ contains
        call MPI_Bcast(Residual,1,MPI_Real,0,iComm,iError)
        Residual = sqrt(Residual)
 
-       if (iDebugLevel > 3) &
-            write(*,*) "RIM====> Residual : ", nIters, Residual
-
        if (Residual < Tolerance) IsDone = .true.
        if (nIters >= MaxIteration) IsDone = .true.
 
     enddo
+
+    if (iDebugLevel > 1) &
+         write(*,*) "RIM==> Final Residual : ", nIters, Residual
 
   end subroutine ridley_solve
 

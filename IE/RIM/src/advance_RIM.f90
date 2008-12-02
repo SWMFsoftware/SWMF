@@ -63,6 +63,8 @@ subroutine advance_RIM
      end do
   end if
 
+  call logfileRIM(NameOutputDir)
+
   nSolve=nSolve+1
 
 end subroutine advance_RIM

@@ -46,7 +46,8 @@ OBJECTS = \
 	distribute.o\
 	write_output_RIM.o\
 	calc_aurora.o\
-	IE_couplers.o
+	IE_couplers.o\
+	logfileRIM.o
 
 #
 #	Libraries
