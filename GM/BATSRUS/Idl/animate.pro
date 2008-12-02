@@ -191,8 +191,11 @@
    if savemovie eq 'ps' then set_plot,'PS',/INTERPOLATE
 
    doanimate= npict gt npict1 and !d.name eq 'X'
+   if !d.name eq 'X' then begin
+       if !d.window lt 0 then window
+       wshow
+   endif
    if doanimate then xinteranimate,set=[!d.x_size,!d.y_size,(npict-1)/npict1+1]
-   if !d.name eq 'X' and !d.window ge 0 then wshow
 
    ipict=0
    ipict1=0
