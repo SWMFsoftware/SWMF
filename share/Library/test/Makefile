@@ -18,6 +18,7 @@ help:
 	@echo "   test_sort             - test ModSort"
 	@echo "   test_io_unit          - test ModIoUnit"
 	@echo "   test_interpolate      - test ModInterpolate"
+	@echo "   test_plot_file        - test ModPlotFile"
 	@echo "   test_ray_trace        - test CON_ray_trace"
 	@echo "   test_line_extract     - test CON_line_extract"
 	@echo "   test_geopack          - test CON_geopack"
@@ -46,7 +47,8 @@ test: \
 	test_line_extract \
 	test_geopack \
 	test_axes \
-	test_planet_field
+	test_planet_field \
+	test_plot_file
 
 #######################################################################
 OBJ_TIME_CONVERT = \
@@ -358,6 +360,30 @@ test_planet_field:
 	@echo test_planet_field done
 	@echo -----------------------------------------------------------------
 #######################################################################
+
+OBJ_PLOT_FILE = \
+	test_plot_file.o \
+	../src/ModIoUnit.o \
+	../src/ModUtilities.o \
+	../src/ModPlotFile.o
+
+test_plot_file_exe:
+	@(cd ../src; make ModPlotFile.o)
+	@make test_plot_file.o
+	${LINK.f90} -o test_plot_file.exe ${OBJ_PLOT_FILE} ${Lflag2}
+
+test_plot_file:
+	@echo -----------------------------------------------------------------
+	@echo test_plot_file starting
+	@echo
+	@make test_plot_file_exe
+	@echo
+	@echo './test_plot_file.exe'
+	-@(./test_plot_file.exe)
+	@echo
+	@echo test_plot_file done
+	@echo -----------------------------------------------------------------
+
 
 distclean: clean
 	rm -f *.tmp
