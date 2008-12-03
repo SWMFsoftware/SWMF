@@ -140,7 +140,7 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
   iLonOff = iProc*nLons
 
   Discrete_FacAE = 1.0e23
-  Discrete_FacEF = 1.0e24
+  Discrete_FacEF = 5.0e23
   Diffuse_FacAE = 5.0e-11
   Diffuse_FacEF = 1.0e9
   LonOffset = 0.0 ! -3*cPi/12.0
@@ -354,7 +354,7 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
         if (pNorm(iLonG,iLat) > 0) &
              Discrete_K(iLon,iLat) = &
              (rhoH(iLonG,iLat)**1.5) / pNorm(iLonG,iLat)
-        if (JrH(iLon,iLat) > 5.0e-8) &
+        if (JrH(iLon,iLat) > 7.5e-8) &
              Discrete_EFlux(iLon,iLat) = &
              (JrH(iLon,iLat)*1e6)*Discrete_K(iLon,iLat)
      enddo
