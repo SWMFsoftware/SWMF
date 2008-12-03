@@ -711,7 +711,7 @@ contains
     use ModParallel, ONLY : UsePlotMessageOptions
     use ModSatelliteFile, ONLY: &
          nSatellite, set_satellite_file_status, set_satellite_flags, &
-         TimeSatStart_I, TimeSatEnd_I
+         TimeSatStart_I, TimeSatEnd_I, iCurrent_satellite_position
 
     integer :: iFileLoop, iSat
 
@@ -823,6 +823,7 @@ contains
              Time_Simulation = Time_Simulation + dt_output(iSat+Satellite_)
           end do
           Time_Simulation = tSimulationBackup    ! ... Restore
+          icurrent_satellite_position(iSat) = 1
           if(iProc==0)call set_satellite_file_status(iSat,'close')
        end if
        call timing_stop('save_satellite')

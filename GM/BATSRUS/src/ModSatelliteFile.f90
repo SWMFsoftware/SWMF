@@ -45,7 +45,7 @@ module ModSatelliteFile
   logical:: SatelliteInBLK(MaxSatelliteFile, MaxBlock)= .false.
   logical:: UseSatelliteFile(MaxSatelliteFile)   = .true.
   integer:: Satellite_Npts(MaxSatelliteFile)
-  integer:: iCurrent_satellite_position(MaxSatelliteFile)=1
+  integer,public:: iCurrent_satellite_position(MaxSatelliteFile)=1
   integer:: iPEsatellite(MaxSatelliteFile)
   integer:: iBLKsatellite(MaxSatelliteFile)
   real, allocatable   :: XSatellite_traj(:, :, :)
