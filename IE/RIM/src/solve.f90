@@ -475,8 +475,13 @@ contains
        do iLat = 2, nLats-1
           do iLon = 1, nLons
 
+             ! Start at the Southern Pole and move northwards.
+             ! Skip over the solve for the north potential on the closed
+             ! field-lines and average between north and south with a 
+             ! weighting for the slush region.
+
              if ( Latitude(iLon,iLat) < -LowLatBoundary .or. &
-                  Latitude(iLon,iLat) > OCFLB(2,iLon)) then
+                  Latitude(iLon,iLat) > OCFLB(1,iLon)) then
                 Potential(iLon,iLat) =  &
                      (Jr(iLon,iLat)*(Radius*sinTheta(iLon,iLat))**2 - &
                      (SolverB(iLon,iLat)*Old(iLon,iLat+1) + &
@@ -485,9 +490,15 @@ contains
                       SolverE(iLon,iLat)*Old(iLon+1,iLat)) ) / &
                       SolverA(iLon,iLat)
              else
+                if (OCFLB(1,iLon)-abs(Latitude(iLon,iLat)) < OCFLBBuffer) then
+                   r = 1.0 - 0.5*&
+                        (OCFLB(1,iLon)-abs(Latitude(iLon,iLat)))/OCFLBBuffer
+                else
+                   r = 0.5
+                endif
                 Potential(iLon,iLat) = &
-                     (Potential(iLon,nLats-iLat+1) + &
-                      Old(iLon,iLat))/2.0
+                     (1.0 - r) * Potential(iLon,nLats-iLat+1) + &
+                     (      r) * Old(iLon,iLat)
              endif 
           enddo
        enddo
@@ -561,12 +572,12 @@ contains
 
        Old = Potential
 
-       do iLat = nLats-1, 2
+       do iLat = nLats-1, 2, -1
 
           do iLon = 1, nLons
 
              if ( Latitude(iLon,iLat) > LowLatBoundary .or. &
-                  Latitude(iLon,iLat) < -OCFLB(1,iLon)) then
+                  Latitude(iLon,iLat) < -OCFLB(2,iLon)) then
                 Potential(iLon,iLat) =  &
                      (Jr(iLon,iLat)*(Radius*sinTheta(iLon,iLat))**2 - &
                      (SolverB(iLon,iLat)*Old(iLon,iLat+1) + &
@@ -575,21 +586,27 @@ contains
                       SolverE(iLon,iLat)*Old(iLon+1,iLat)) ) / &
                       SolverA(iLon,iLat)
              else
+                if (OCFLB(2,iLon)-abs(Latitude(iLon,iLat)) < OCFLBBuffer) then
+                   r = 1.0 - 0.5* &
+                        (OCFLB(2,iLon)-abs(Latitude(iLon,iLat)))/OCFLBBuffer
+                else
+                   r = 0.5
+                endif
                 Potential(iLon,iLat) = &
-                     (Potential(iLon,nLats-iLat+1) + &
-                      Old(iLon,iLat))/2.0
+                     (1.0 - r) * Potential(iLon,nLats-iLat+1) + &
+                     (      r) * Old(iLon,iLat)
              endif 
           enddo
 
        enddo
 
-       do iLat = 2, nLats-1
-          do iLon = 1, nLons
-             if ( abs(Latitude(iLon,iLat)) < minval(OCFLB)) &
-                  Potential(iLon,iLat) = &
-                  Potential(iLon,nLats-iLat+1) 
-          enddo
-       enddo
+!       do iLat = 2, nLats-1
+!          do iLon = 1, nLons
+!             if ( abs(Latitude(iLon,iLat)) < minval(OCFLB)) &
+!                  Potential(iLon,iLat) = &
+!                  Potential(iLon,nLats-iLat+1) 
+!          enddo
+!       enddo
 
        Potential(1,nLats/2) = 0.0
        Potential(1,nLats/2+1) = 0.0

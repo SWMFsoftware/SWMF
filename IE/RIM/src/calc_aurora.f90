@@ -102,7 +102,7 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
 
   use ModRIM
   use ModParamRIM
-  use ModNumConst, only: cDegToRad
+  use ModNumConst, only: cDegToRad, cPi
   use ModProcIE
 
   implicit none
@@ -129,6 +129,7 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
   real :: MaxP
   real :: Discrete_FacAE, Discrete_FacEF
   real :: Diffuse_FacAE, Diffuse_FacEF
+  real :: LonOffset
 
   allocate( &
        pNorm(0:nLonsAll+1,nLats/2), &
@@ -138,10 +139,12 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
 
   iLonOff = iProc*nLons
 
-  Discrete_FacAE = 1.5e22
-  Discrete_FacEF = 3.0e22
+  Discrete_FacAE = 1.0e23
+  Discrete_FacEF = 1.0e24
   Diffuse_FacAE = 5.0e-11
   Diffuse_FacEF = 1.0e9
+  LonOffset = 0.0 ! -3*cPi/12.0
+
   MinPressure = 5.0e-9
   OCFLBSmoothLon = 15.0*cDegToRad
 
@@ -332,7 +335,6 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
      tH(:,iLat) = smooth/(2*nSmooth+1)
   enddo
 
-
   ! ---------------------------
   ! Discrete Aurora
 
@@ -346,10 +348,13 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
      iLonM = nLonsAll+1 - iLonG
 
      do iLat = 1,nLats/2
+        rhoh(iLonG,iLat) = rhoH(iLonG,iLat) * ( &
+             (cos(longitude(iLon,iLat)+LonOffset)+1.0)/2.0*0.5 + 0.5 - &
+             ((cos(longitude(iLon,iLat)+LonOffset+cPi/2)+1.0)/2.0)**3*0.5)
         if (pNorm(iLonG,iLat) > 0) &
              Discrete_K(iLon,iLat) = &
              (rhoH(iLonG,iLat)**1.5) / pNorm(iLonG,iLat)
-        if (JrH(iLon,iLat) > 0) &
+        if (JrH(iLon,iLat) > 5.0e-8) &
              Discrete_EFlux(iLon,iLat) = &
              (JrH(iLon,iLat)*1e6)*Discrete_K(iLon,iLat)
      enddo
@@ -386,9 +391,6 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
      Discrete_EFlux(iLon,:) = smoothlat
 
   enddo
-
-!  AveEH = Diffuse_AveE
-!  EFluxH = Diffuse_EFlux
 
   where(Diffuse_AveE < 0.25) Diffuse_AveE = 0.25
   where(Discrete_AveE < 0.25) Discrete_AveE = 0.25

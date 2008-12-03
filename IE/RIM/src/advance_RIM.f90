@@ -47,21 +47,19 @@ subroutine advance_RIM
   call solve
   call gather
 
-  if(nSolve>0)then
-     do iFile=1,nFile
-        if (dt_output(iFile) > 0) then
-           iT1 = floor((CurrentTime-StartTime)/dt_output(iFile))
-           iT2 = floor((OldTime-StartTime)/dt_output(iFile))
-        else
-           iT1 = 0
-           iT2 = 0
-        endif
-        if ((dn_output(iFile).gt.0.and.mod(nSolve,dn_output(iFile)).eq.0).or.&
-             (iT1 > iT2)) then
-           call write_output_RIM(iFile)
-        endif
-     end do
-  end if
+  do iFile=1,nFile
+     if (dt_output(iFile) > 0) then
+        iT1 = floor((CurrentTime-StartTime)/dt_output(iFile))
+        iT2 = floor((OldTime-StartTime)/dt_output(iFile))
+     else
+        iT1 = 0
+        iT2 = 0
+     endif
+     if ((dn_output(iFile).gt.0.and.mod(nSolve,dn_output(iFile)).eq.0).or.&
+          (iT1 > iT2)) then
+        call write_output_RIM(iFile)
+     endif
+  end do
 
   call logfileRIM(NameOutputDir)
 

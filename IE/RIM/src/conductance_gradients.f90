@@ -31,65 +31,65 @@ subroutine conductance_gradients
   cs4 = sqrt(cs3)
   C   = 4.00*Sigma0*cs2 + SigmaP*sn2
 
-  if (DoFold) then 
-
-     if (iDebugLevel > 2) &
-          write(*,*) "Folding conductances!"
-
-     do iLon = 0, nLons+1
-        do iLat = 1, nLats
-           ! Define the mean open/closed field-line boundary between the
-           ! two hemispheres
-           OCFLB_NS = (abs(OCFLB(1,iLon))+OCFLB(2,iLon))/2.0
-           if (Latitude(iLon,iLat) < -OCFLB_NS-OCFLBBuffer .or. &
-                Latitude(iLon,iLat) > OCFLB_NS+OCFLBBuffer) then
-              s0point = Sigma0(iLon,iLat)
-              shpoint = SigmaH(iLon,iLat)
-              sppoint = SigmaP(iLon,iLat)
-              cpoint  = C(iLon,iLat)
-           else
-
-              ! linearly change from the OCFLB through the buffer region
-              if (Latitude(iLon,iLat) > -OCFLB_NS .and. &
-                   Latitude(iLon,iLat) < OCFLB_NS) then
-                 r = 1.0/2.0
-              else
-                 r = (1.0-(abs(Latitude(iLon,iLat))-OCFLB_NS)/OCFLBBuffer)/2
-              endif
-
-              ! iLh = latitude of other hemisphere
-              iLh = nLats - iLat + 1
-
-              ! We add the conductance from one hemisphere to the other
-              ! hemisphere.  Here we simply average them, while you
-              ! could imagine having the magnetic field geometry incorporated
-              ! into this somehow....
-
-              s0point = (1-r)*Sigma0(iLon,iLat) + r*Sigma0(iLon,iLh)
-              sppoint = (1-r)*SigmaP(iLon,iLat) + r*SigmaP(iLon,iLh)
-              shpoint = (1-r)*SigmaH(iLon,iLat) + r*SigmaH(iLon,iLh)
-              cpoint  = (1-r)*C(iLon,iLat) + r*C(iLon,iLh)
-
-           endif
-
-           SigmaThTh(iLon,iLat) = &
-                s0point*sppoint*cs3(iLon,iLat)/cpoint
-           SigmaThPs(iLon,iLat) = &
-                2.00*s0point*shpoint*&
-                cs(iLon,iLat)*cs4(iLon,iLat)/cpoint
-           SigmaPsPs(iLon,iLat) = sppoint+ &
-                (shpoint**2)*sn2(iLon,iLat)/cpoint
-
-        enddo
-     enddo
-
-  else
+!  if (DoFold) then 
+!
+!     if (iDebugLevel > 2) &
+!          write(*,*) "Folding conductances!"
+!
+!     do iLon = 0, nLons+1
+!        do iLat = 1, nLats
+!           ! Define the mean open/closed field-line boundary between the
+!           ! two hemispheres
+!           OCFLB_NS = (abs(OCFLB(1,iLon))+OCFLB(2,iLon))/2.0
+!           if (Latitude(iLon,iLat) < -OCFLB_NS-OCFLBBuffer .or. &
+!                Latitude(iLon,iLat) > OCFLB_NS+OCFLBBuffer) then
+!              s0point = Sigma0(iLon,iLat)
+!              shpoint = SigmaH(iLon,iLat)
+!              sppoint = SigmaP(iLon,iLat)
+!              cpoint  = C(iLon,iLat)
+!           else
+!
+!              ! linearly change from the OCFLB through the buffer region
+!              if (Latitude(iLon,iLat) > -OCFLB_NS .and. &
+!                   Latitude(iLon,iLat) < OCFLB_NS) then
+!                 r = 1.0/2.0
+!              else
+!                 r = (1.0-(abs(Latitude(iLon,iLat))-OCFLB_NS)/OCFLBBuffer)/2
+!              endif
+!
+!              ! iLh = latitude of other hemisphere
+!              iLh = nLats - iLat + 1
+!
+!              ! We add the conductance from one hemisphere to the other
+!              ! hemisphere.  Here we simply average them, while you
+!              ! could imagine having the magnetic field geometry incorporated
+!              ! into this somehow....
+!
+!              s0point = (1-r)*Sigma0(iLon,iLat) + r*Sigma0(iLon,iLh)
+!              sppoint = (1-r)*SigmaP(iLon,iLat) + r*SigmaP(iLon,iLh)
+!              shpoint = (1-r)*SigmaH(iLon,iLat) + r*SigmaH(iLon,iLh)
+!              cpoint  = (1-r)*C(iLon,iLat) + r*C(iLon,iLh)
+!
+!           endif
+!
+!           SigmaThTh(iLon,iLat) = &
+!                s0point*sppoint*cs3(iLon,iLat)/cpoint
+!           SigmaThPs(iLon,iLat) = &
+!                2.00*s0point*shpoint*&
+!                cs(iLon,iLat)*cs4(iLon,iLat)/cpoint
+!           SigmaPsPs(iLon,iLat) = sppoint+ &
+!                (shpoint**2)*sn2(iLon,iLat)/cpoint
+!
+!        enddo
+!     enddo
+!
+!  else
 
      SigmaThTh = Sigma0*SigmaP*cs3/C
      SigmaThPs = 2.00*Sigma0*SigmaH*cs*cs4/C
      SigmaPsPs = SigmaP+SigmaH*SigmaH*sn2/C
 
-  endif
+!  endif
 
   ! Edge 1
 

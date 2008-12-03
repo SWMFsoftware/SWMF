@@ -16,7 +16,7 @@ subroutine logfileRIM(dir)
 
      if (IsFirstTime) then
 
-        call CON_io_unit_new(iLogFileUnit_)
+!        call CON_io_unit_new(iLogFileUnit_)
 
         if (nSolve == 0 .and. StartTime == CurrentTime) then
            open(unit=iLogFileUnit_, &
@@ -26,6 +26,8 @@ subroutine logfileRIM(dir)
            write(iLogFileUnit_,'(a)') &
                 'nsolve t yy mm dd hh mm ss ms ttilt ptilt cpcpn cpcps'
         endif
+
+        IsFirstTime = .false.
 
      else
 
