@@ -459,7 +459,8 @@ contains
   subroutine ridley_solve
 
     integer :: nIters
-    real :: Old(0:nLons+1,nLats), LocalVar, NorthPotential, SouthPotential
+    real    :: Old(0:nLons+1,nLats), ReallyOld(0:nLons+1,nLats)
+    real    :: LocalVar, NorthPotential, SouthPotential
     logical :: IsDone
 
     nIters = 0
@@ -471,6 +472,7 @@ contains
     do while (.not.IsDone)
 
        Old = Potential
+       ReallyOld = Potential
 
        do iLat = 2, nLats-1
           do iLon = 1, nLons
@@ -496,6 +498,7 @@ contains
                 else
                    r = 0.5
                 endif
+                if (abs(r) > 1.0 .or. r < 0.0) write(*,*) "r : ",r
                 Potential(iLon,iLat) = &
                      (1.0 - r) * Potential(iLon,nLats-iLat+1) + &
                      (      r) * Old(iLon,iLat)
@@ -600,14 +603,6 @@ contains
 
        enddo
 
-!       do iLat = 2, nLats-1
-!          do iLon = 1, nLons
-!             if ( abs(Latitude(iLon,iLat)) < minval(OCFLB)) &
-!                  Potential(iLon,iLat) = &
-!                  Potential(iLon,nLats-iLat+1) 
-!          enddo
-!       enddo
-
        Potential(1,nLats/2) = 0.0
        Potential(1,nLats/2+1) = 0.0
 
@@ -675,7 +670,7 @@ contains
           Potential(nLons+1,:) = Potential(    1,:)
        endif
 
-       Residual = sum((Old-Potential)**2)
+       Residual = sum((ReallyOld-Potential)**2)
 
        nIters = nIters + 1
 
@@ -687,6 +682,9 @@ contains
 
        if (Residual < Tolerance) IsDone = .true.
        if (nIters >= MaxIteration) IsDone = .true.
+
+       if (iDebugLevel > 3) &
+            write(*,*) "RIM====> Residual : ", nIters, Residual
 
     enddo
 
