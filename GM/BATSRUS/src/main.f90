@@ -84,9 +84,9 @@ program BATSRUS
   ! Read input parameter file. Provide the default restart file for #RESTART
   !/
   call read_file('PARAM.in',iComm,trim(NameRestartInDir)//'restart.H')
-  call read_init('  ',iSessionIn=1,iLineIn=0,nLineIn=n_line_read())
 
   SESSIONLOOP: do
+     call read_init('  ', iSessionIn=iSession)
 
      if(iProc==0.and.lVerbose>=0)&
           write(*,*)'----- Starting Session ',iSession,' ------'
