@@ -342,13 +342,13 @@ contains
     ! Initialize module variables
 
     character (len=2), intent(in) :: NameCompIn
-    integer,           intent(in) :: iSessionIn, iLineIn
-    integer, optional, intent(in) :: nLineIn, iIoUnitIn
+    integer,           intent(in) :: iSessionIn
+    integer, optional, intent(in) :: iLineIn, nLineIn, iIoUnitIn
     !------------------------------------------------------------------------
     if(iSessionIn > iSession) iCommand = 0
     NameComp     = NameCompIn
     iSession     = iSessionIn
-    iLine        = iLineIn
+    if(present(iLineIn)) iLine = iLineIn
     if(present(nLineIn))then
        nLine     = nLineIn
     else
