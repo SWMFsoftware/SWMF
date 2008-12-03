@@ -48,8 +48,7 @@ subroutine MH_set_parameters(TypeAction)
        xSizeBoxHall, DxSizeBoxHall, &
        ySizeBoxHall, DySizeBoxHall, &
        zSizeBoxHall, DzSizeBoxHall
-  use ModGrayDiffusion, ONLY: UseGrayDiffusion, UseRadFluxLimiter, &
-       TypeRadFluxLimiter
+  use ModGrayDiffusion, ONLY: UseRadFluxLimiter, TypeRadFluxLimiter
   use ModResistivity                              !^CFG IF DISSFLUX
   use ModMultiFluid, ONLY: MassIon_I, DoConserveNeutrals,iFluid
   use ModMultiIon, ONLY: multi_ion_set_parameters

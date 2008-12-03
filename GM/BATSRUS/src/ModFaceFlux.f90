@@ -1,7 +1,8 @@
 module ModFaceFlux
 
   use ModProcMH,     ONLY: iProc
-  use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK, UseB, UseB0, cLimit
+  use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK, UseB, UseB0, cLimit, &
+       UseGrayDiffusion
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
   use ModVarIndexes, ONLY: nVar, NameVar_V, UseMultiSpecies, nFluid
@@ -29,8 +30,8 @@ module ModFaceFlux
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        IsNewBlockHall, hall_factor, get_face_current, set_ion_mass_per_charge
 
-  use ModGrayDiffusion, ONLY: Eradiation_, UseGrayDiffusion, &
-       IsNewBlockGrayDiffusion, get_radiation_energy_flux
+  use ModGrayDiffusion, ONLY: IsNewBlockGrayDiffusion, &
+       get_radiation_energy_flux
 
   use ModResistivity, ONLY: UseResistivity, Eta_GB  !^CFG IF DISSFLUX
   use ModMultiFluid
@@ -1459,6 +1460,7 @@ contains
     !==========================================================================
 
     subroutine godunov_flux
+      use ModAdvance, ONLY: Eradiation_
       use ModExactRS, ONLY: wR, wL, sample, pu_star, RhoL, RhoR, &
            pL, pR, UnL, UnR, UnStar
       use ModPhysics, ONLY: inv_gm1
@@ -1580,7 +1582,7 @@ contains
 
     use ModMultiFluid
     use ModMain,    ONLY: UseHyperbolicDivb, SpeedHyp2
-    use ModAdvance, ONLY: Hyp_
+    use ModAdvance, ONLY: Hyp_, Eradiation_
 
     real,    intent(in) :: State_V(nVar)       ! input primitive state
     real,    intent(in) :: B0x, B0y, B0z       ! B0

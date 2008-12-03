@@ -61,7 +61,6 @@ subroutine impl_jacobian(implBLK,JAC)
        FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
   use ModImplicit
   use ModHallResist, ONLY: UseHallResist, hall_factor
-  use ModGrayDiffusion, ONLY: UseGrayDiffusion
   use ModGeometry, ONLY: vInv_CB, UseCovariant
   implicit none
 
@@ -871,7 +870,8 @@ contains
     ! Add partial derivatives of the gray diffusion term to the Jacobian that 
     ! are not calculated by the general algorithm
 
-    use ModGrayDiffusion, ONLY: Eradiation_, DiffusionRad_G
+    use ModAdvance,       ONLY: Eradiation_
+    use ModGrayDiffusion, ONLY: DiffusionRad_G
 
     integer :: iVar, i, j, k, iDim, Di, Dj, Dk
     real :: Coeff, DiffLeft, DiffRight

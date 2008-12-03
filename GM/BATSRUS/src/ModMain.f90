@@ -188,6 +188,9 @@ Module ModMain
   logical:: UseResistFlux=.false.
   logical:: UseAnomResist=.false.
 
+  ! Logical for adding Gray Diffusion
+  logical :: UseGrayDiffusion = .false.
+
   ! Logical and type for gravity
   logical :: UseGravity
   integer :: GravityDir

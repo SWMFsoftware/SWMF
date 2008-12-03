@@ -22,6 +22,9 @@ Module ModAdvance
   integer, parameter:: Pe_ = p_ - 1, eFluid_ = nFluid + 1
   logical, parameter:: UseElectronPressure = NameVar_V(Pe_) == 'Pe'
 
+  ! Named index for radiation energy
+  integer, parameter, public :: Eradiation_ = p_ - 2
+
   !\ One of the two possible ways to treat the MHD-like systems
   !  (oartially symmetrizable, following the Godunov definition).
   !  If the UseRS7=.true. then the 7 waves Riemann Solver (RS) with 

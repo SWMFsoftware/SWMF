@@ -17,7 +17,7 @@ subroutine calc_sources
   use ModCoordTransform
   use ModHallResist, ONLY: &
        UseHallResist, HallHyperFactor, calc_hyper_resistivity 
-  use ModGrayDiffusion, ONLY: UseGrayDiffusion, calc_source_gray_diffusion
+  use ModGrayDiffusion, ONLY: calc_source_gray_diffusion
   use ModMultiFluid
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
   use ModMultiIon, ONLY: multi_ion_sources

@@ -17,11 +17,7 @@ module ModGrayDiffusion
   public :: get_radiation_energy_flux
   public :: calc_source_gray_diffusion
 
-  ! Index for radiation energy
-  integer, parameter, public :: Eradiation_ = p_ - 2
-
   ! Logical for adding Gray Diffusion
-  logical, public :: UseGrayDiffusion        = .false.
   logical, public :: IsNewBlockGrayDiffusion = .true.
 
   ! Parameters for radiation flux limiter
@@ -45,7 +41,7 @@ contains
     !\
     ! Calculate the diffusion part of the radiation energy flux.
     !/
-    use ModAdvance,    ONLY: State_VGB
+    use ModAdvance,    ONLY: State_VGB, Eradiation_
     use ModConst,      ONLY: cLightSpeed
     use ModNumConst,   ONLY: cTolerance
     use ModPhysics,    ONLY: Si2No_V, UnitX_, UnitU_
@@ -301,7 +297,7 @@ contains
 
   subroutine calc_face_gradient(iDir, i, j, k, iBlock, FaceGrad_D) 
 
-    use ModAdvance,   ONLY: State_VGB
+    use ModAdvance,   ONLY: State_VGB, Eradiation_
     use ModCovariant, ONLY: UseCovariant
     use ModGeometry,  ONLY: Dx_Blk, Dy_Blk, Dz_Blk
     use ModMain,      ONLY: x_, y_, z_
@@ -474,7 +470,7 @@ contains
   subroutine calc_source_gray_diffusion(iBlock)
 
     use ModAdvance,    ONLY: State_VGB, Source_VC, &
-         uDotArea_XI, uDotArea_YI, uDotArea_ZI
+         uDotArea_XI, uDotArea_YI, uDotArea_ZI, Eradiation_
     use ModConst,      ONLY: cRadiation, cLightSpeed
     use ModGeometry,   ONLY: vInv_CB
     use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_, UnitT_
