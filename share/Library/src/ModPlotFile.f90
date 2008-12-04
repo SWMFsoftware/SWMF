@@ -272,29 +272,29 @@ contains
        VarOut_VI, VarOut_VII, VarOut_VIII)
 
     character(len=*),            intent(in) :: NameFile
-    character(len=*),  optional, intent(in) :: TypeFileIn
-    character(len=*),  optional, intent(out):: StringHeaderOut
-    character(len=*),  optional, intent(out):: NameVarOut
-    real,              optional, intent(out):: TimeOut
-    integer,           optional, intent(out):: nStepOut
-    integer,           optional, intent(out):: nDimOut   ! number of dimensions
-    integer,           optional, intent(out):: nParamOut ! number of parameters
-    integer,           optional, intent(out):: nVarOut   ! number of variables
-    integer,           optional, intent(out):: n1Out, n2Out, n3Out ! grid size
-    integer,allocatable,optional,intent(out):: nOut_D(:) ! grid size array
-    logical,           optional, intent(out):: IsCartesianOut ! Cartesian grid?
-    real, allocatable, optional, intent(out):: ParamOut_I(:)  ! parameters
-    real,              optional, intent(out):: CoordMinOut_D(:)
-    real,              optional, intent(out):: CoordMaxOut_D(:)
-    real, allocatable, optional, intent(out):: CoordOut_I(:)
-    real, allocatable, optional, intent(out):: Coord1Out_I(:)
-    real, allocatable, optional, intent(out):: Coord2Out_I(:)
-    real, allocatable, optional, intent(out):: Coord3Out_I(:)
-    real, allocatable, optional, intent(out):: CoordOut_DII(:,:,:)
-    real, allocatable, optional, intent(out):: CoordOut_DIII(:,:,:,:)
-    real, allocatable, optional, intent(out):: VarOut_VI(:,:)
-    real, allocatable, optional, intent(out):: VarOut_VII(:,:,:)
-    real, allocatable, optional, intent(out):: VarOut_VIII(:,:,:,:)
+    character(len=*), optional, intent(in) :: TypeFileIn
+    character(len=*), optional, intent(out):: StringHeaderOut
+    character(len=*), optional, intent(out):: NameVarOut
+    real,             optional, intent(out):: TimeOut
+    integer,          optional, intent(out):: nStepOut
+    integer,          optional, intent(out):: nDimOut   ! number of dimensions
+    integer,          optional, intent(out):: nParamOut ! number of parameters
+    integer,          optional, intent(out):: nVarOut   ! number of variables
+    integer,          optional, intent(out):: n1Out, n2Out, n3Out ! grid size
+    integer,          optional, intent(out):: nOut_D(:) ! grid size array
+    logical,          optional, intent(out):: IsCartesianOut ! Cartesian grid?
+    real,             optional, intent(out):: ParamOut_I(:)  ! parameters
+    real,             optional, intent(out):: CoordMinOut_D(:)
+    real,             optional, intent(out):: CoordMaxOut_D(:)
+    real,             optional, intent(out):: CoordOut_I(:)
+    real,             optional, intent(out):: Coord1Out_I(:)
+    real,             optional, intent(out):: Coord2Out_I(:)
+    real,             optional, intent(out):: Coord3Out_I(:)
+    real,             optional, intent(out):: CoordOut_DII(:,:,:)
+    real,             optional, intent(out):: CoordOut_DIII(:,:,:,:)
+    real,             optional, intent(out):: VarOut_VI(:,:)
+    real,             optional, intent(out):: VarOut_VII(:,:,:)
+    real,             optional, intent(out):: VarOut_VIII(:,:,:,:)
 
     character(len=20)  :: TypeFile
     character(len=500) :: StringHeader
@@ -375,47 +375,13 @@ contains
     if(present(n1Out))           n1Out           = n1
     if(present(n2Out))           n2Out           = n2
     if(present(n3Out))           n3Out           = n3
-    if(present(nOut_D))then
-       if(allocated(nOut_D))deallocate(nOut_D)
-       allocate(nOut_D(nDim))
-       nOut_D = n_D(1:nDim)
-    end if
+    if(present(nOut_D))          nOut_D(1:nDim)  = n_D(1:nDim)
     if(present(IsCartesianOut))  IsCartesianOut  = IsCartesian
-    if(present(ParamOut_I))then
-       if(allocated(ParamOut_I)) deallocate(ParamOut_I)
-       allocate(ParamOut_I(nParam))
-       ParamOut_I = Param_I
-    end if
-    if(present(CoordMinOut_D)) CoordMinOut_D = minval(Coord_ID, DIM=1)
-    if(present(CoordMaxOut_D)) CoordMaxOut_D = maxval(Coord_ID, DIM=1)
+    if(present(ParamOut_I))      ParamOut_I(1:nParam) = Param_I
+    if(present(CoordMinOut_D)) CoordMinOut_D(1:nDim) = minval(Coord_ID, DIM=1)
+    if(present(CoordMaxOut_D)) CoordMaxOut_D(1:nDim) = maxval(Coord_ID, DIM=1)
 
-    ! Allocate and fill in output coordinate arrays
-    if(present(Coord1Out_I))then
-       if(allocated(Coord1Out_I)) deallocate(Coord1Out_I)
-       allocate(Coord1Out_I(n1))
-    end if
-    if(present(Coord2Out_I))then
-       if(allocated(Coord2Out_I)) deallocate(Coord2Out_I)
-       allocate(Coord2Out_I(n2))
-    end if
-    if(present(Coord3Out_I))then
-       if(allocated(Coord3Out_I)) deallocate(Coord3Out_I)
-       allocate(Coord3Out_I(n3))
-    end if
-
-    if(present(CoordOut_I))then
-       if(allocated(CoordOut_I)) deallocate(CoordOut_I)
-       allocate(CoordOut_I(n1))
-    end if
-    if(present(CoordOut_DII))then
-       if(allocated(CoordOut_DII)) deallocate(CoordOut_DII)
-       allocate(CoordOut_DII(nDim,n1,n2))
-    end if
-    if(present(CoordOut_DIII))then
-       if(allocated(CoordOut_DIII)) deallocate(CoordOut_DIII)
-       allocate(CoordOut_DIII(nDim,n1,n2,n3))
-    end if
-
+    ! Fill in output coordinate arrays
     do iDim = 1, nDim
        n = 0
        do k = 1, n3; do j = 1, n2; do i = 1, n1
@@ -433,20 +399,7 @@ contains
        end do; end do; end do
     end do
 
-    ! Allocate and fill in output variable arrays
-    if(present(VarOut_VI))then
-       if(allocated(VarOut_VI)) deallocate(VarOut_VI)
-       allocate(VarOut_VI(nVar,n1))
-    end if
-    if(present(VarOut_VII))then
-       if(allocated(VarOut_VII)) deallocate(VarOut_VII)
-       allocate(VarOut_VII(nVar,n1,n2))
-    end if
-    if(present(VarOut_VIII))then
-       if(allocated(VarOut_VIII)) deallocate(VarOut_VIII)
-       allocate(VarOut_VIII(nVar,n1,n2,n3))
-    end if
-
+    ! Fill in output variable arrays
     do iVar = 1, nVar
        n = 0
        do k = 1, n3; do j = 1, n2; do i = 1, n1
@@ -493,13 +446,14 @@ contains
     real                 :: TimeOut
     integer              :: nStepOut, nDimOut, nParamOut, nVarOut
     integer              :: n1Out, n2Out
-    integer, allocatable :: nOut_D(:)
-    real, allocatable    :: ParamOut_I(:)
+    integer              :: nOut_D(3)
+    real                 :: ParamOut_I(100)
     character(len=100)   :: NameVarOut
     logical              :: IsCartesianIn, IsCartesianOut
     real                 :: CoordMinOut_D(nDimIn), CoordMaxOut_D(nDimIn)
-    real, allocatable    :: Coord1Out_I(:), Coord2Out_I(:)
-    real, allocatable    :: CoordOut_DII(:,:,:), VarOut_VII(:,:,:)
+    real                 :: Coord1Out_I(n1In), Coord2Out_I(n2In)
+    real                 :: CoordOut_DII(nDimIn, n1In, n2In)
+    real                 :: VarOut_VII(nVarIn, n1In, n2In)
 
     ! Indexes
     integer :: i, j, iTest
@@ -615,7 +569,7 @@ contains
           call CON_stop(NameSub)
        end if
 
-       if(any(ParamOut_I /= ParamIn_I))then
+       if(any(ParamOut_I(1:nParamIn) /= ParamIn_I))then
           write(*,*)'ParamIn=', ParamIn_I,' ParamOut=', ParamOut_I
           call CON_stop(NameSub)
        end if
@@ -691,14 +645,13 @@ contains
          nDimOut=nDimOut, nVarOut=nVarOut, nParamOut=nParamOut, &
          IsCartesianOut=IsCartesianOut, nOut_D=nOut_D)
 
-
     if( StringHeaderOut /= 'No header info')call CON_stop(NameSub // &
          ' incorrect value for default StringHeaderOut='//StringHeaderOut)
     if( NameVarOut /= 'x1 x2 v01 v02 v03 v04 p01') call CON_stop(NameSub // &
          ' incorrect value for default NameVarOut='//NameVarOut)
     if(.not.IsCartesianOut) call CON_stop(NameSub // &
          ' incorrect value for IsCartesianOut: should be true')
-    if( any(nOut_D /= (/ n1In, n2In /)) ) then
+    if( any(nOut_D(1:nDimOut) /= (/ n1In, n2In /)) ) then
        write(*,*) 'n1In, n2In=', n1In, n2In
        write(*,*) 'nOut_D    =',nOut_D
        call CON_stop(NameSub)
