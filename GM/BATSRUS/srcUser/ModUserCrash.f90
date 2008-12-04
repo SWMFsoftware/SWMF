@@ -10,7 +10,8 @@ module ModUser
        IMPLEMENTED4 => user_read_inputs,                &
        IMPLEMENTED5 => user_set_plot_var,               &
        IMPLEMENTED6 => user_init_session,               &
-       IMPLEMENTED7 => user_set_ics
+       IMPLEMENTED7 => user_set_ics,                    &
+       IMPLEMENTED8 => user_material_properties
 
   use ModMain, ONLY: iTest, jTest, kTest, BlkTest, ProcTest, VarTest, &
        UseUserInitSession, UseUserIcs, UseUserSource, UseUserUpdateStates
@@ -64,7 +65,13 @@ module ModUser
   integer           :: iUyHyades       = -1      ! index of y velocity
   integer           :: iPHyades        = -1      ! index of pressure
   integer           :: iZHyades        = -1      ! index of ionization level
+  integer           :: iTeHyades       = -1      ! index of electron temperature
   integer           :: iMaterialHyades = -1      ! index of material type
+
+  ! Variables related to radiation
+  character(len=20) :: TypeOpacity="constant"
+  real :: RosselandOpacity = 1.0
+  real :: PlanckOpacity = 10.0
 
 contains
 
@@ -73,6 +80,7 @@ contains
 
     use ModReadParam
     character (len=100) :: NameCommand
+    character(len=*), parameter :: NameSub = 'user_read_inputs'
     !------------------------------------------------------------------------
 
     UseUserUpdateStates = .true. ! for internal energy and cylindrical symm.
@@ -104,6 +112,15 @@ contains
           if(UseMixedCell)call read_var('MixLimit', MixLimit)
        case("#CYLINDRICAL")
           call read_var('IsCylindrical', IsCylindrical)
+       case("#OPACITY")
+          call read_var('TypeOpacity', TypeOpacity)
+          select case(TypeOpacity)
+          case("constant")
+             call read_var('PlanckOpacity', PlanckOpacity)
+             call read_var('RosselandOpacity', RosselandOpacity)
+          case default
+             call stop_mpi(NameSub//"Wrong TypeOpacity ="//trim(TypeOpacity))
+          end select
        case('#USERINPUTEND')
           EXIT
        case default
@@ -284,9 +301,11 @@ contains
   subroutine read_hyades_file
 
     use ModIoUnit,    ONLY: UnitTmp_
-    use ModPhysics,   ONLY: Si2No_V, Io2No_V, UnitX_, UnitRho_, UnitU_, UnitP_
+    use ModPhysics,   ONLY: Si2No_V, Io2No_V, UnitX_, UnitRho_, UnitU_, &
+         UnitP_, UnitTemperature_
     use ModUtilities, ONLY: split_string
     use ModEos,       ONLY: Xe_, Be_, Plastic_
+    use ModConst,     ONLY: cKevToK
 
     integer             :: nStepHyades, nEqparHyades
     integer, allocatable:: nCellHyades_D(:)
@@ -348,6 +367,8 @@ contains
           iUyHyades  = i
        case('p')
           iPHyades   = i
+       case('te')
+          iTeHyades  = i
        case('z')
           iZHyades   = i
        case('material')
@@ -385,6 +406,7 @@ contains
     Hyades2No_V(iRhoHyades) = 1000.0 * Si2No_V(UnitRho_) ! g/cm3 -> kg/m3
     Hyades2No_V(iUxHyades)  = 0.01   * Si2No_V(UnitU_)   ! cm/s  -> m/s
     Hyades2No_V(iPHyades)   = 0.1    * Si2No_V(UnitP_)   ! dyne  -> Pa
+    Hyades2No_V(iTeHyades)  = cKevToK* Si2No_V(UnitTemperature_) ! KeV   -> K
     if(nDimHyades > 1)then
        Hyades2No_V(iYHyades)  = 0.01 * Si2No_V(UnitX_)   ! cm    -> m
        Hyades2No_V(iUyHyades) = 0.01 * Si2No_V(UnitU_)   ! cm/s  -> m/s
@@ -475,15 +497,23 @@ contains
   subroutine interpolate_hyades1d(iBlock)
 
     use ModSize,     ONLY: nI, nJ, nK
-    use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_
+    use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
+         Eradiation_
     use ModGeometry, ONLY: x_BLK
+    use ModConst,    ONLY: cRadiation
+    use ModMain,     ONLY: UseGrayDiffusion
+    use ModPhysics,  ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k, iCell
     real :: x, Weight1, Weight2
+    real :: cRadiationNo, Te
     character(len=*), parameter :: NameSub='interpolate_hyades1d'
     !-------------------------------------------------------------------------
+    cRadiationNo = cRadiation &
+         * Si2No_V(UnitEnergyDens_) / Si2No_V(UnitTemperature_)**4
+
     do i = -1, nI+2
        ! Find the Hyades points around this position
        x = x_Blk(i,1,1,iBlock)
@@ -524,6 +554,13 @@ contains
 
           ! Set transverse momentum to zero
           State_VGB(RhoUy_:RhoUz_,i,j,k,iBlock) = 0.0
+
+          if(UseGrayDiffusion)then
+             Te = ( Weight1*DataHyades_VC(iTeHyades, iCell-1) &
+                  +   Weight2*DataHyades_VC(iTeHyades, iCell) )
+
+             State_VGB(Eradiation_,i,j,k,iBlock) = cRadiationNo*Te**4
+          end if
 
        end do; end do
     end do
@@ -835,5 +872,44 @@ contains
     end if
 
   end subroutine user_init_session
+
+  !===========================================================================
+
+  subroutine user_material_properties(State_V, &
+       TeSi, AbsorptionOpacitySi, RosselandMeanOpacitySi)
+
+    use ModEos,        ONLY: eos
+    use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_
+    use ModVarIndexes, ONLY: nVar, Rho_, LevelXe_, LevelPl_, p_
+
+    real, intent(in) :: State_V(1:nVar)
+    real, optional, intent(out) :: TeSi                   ! [K]
+    real, optional, intent(out) :: AbsorptionOpacitySi    ! [1/m]
+    real, optional, intent(out) :: RosselandMeanOpacitySi ! [1/m]
+
+    character (len=*), parameter :: NameSub = 'user_material_properties'
+
+    real    :: pSi, RhoSi, TemperatureSi
+    integer :: iMaterial, iMaterial_I(1)
+    logical :: IsError
+    !-------------------------------------------------------------------------
+    iMaterial_I = maxloc(State_V(LevelXe_:LevelPl_))
+    iMaterial   = iMaterial_I(1) - 1
+
+    RhoSi = State_V(Rho_)*No2Si_V(UnitRho_)
+    pSi   = State_V(p_)*No2Si_V(UnitP_)
+    ! The IsError flag avoids stopping for Fermi degenerated state
+    call eos(iMaterial, RhoSi, pTotalIn=pSi, TeOut=TemperatureSi, &
+         IsError=IsError)
+
+    if(present(TeSi)) TeSi = TemperatureSi
+
+    if(present(AbsorptionOpacitySi)) &
+         AbsorptionOpacitySi = PlanckOpacity*RhoSi
+
+    if(present(RosselandMeanOpacitySi)) &
+         RosselandMeanOpacitySi = RosselandOpacity*RhoSi
+
+  end subroutine user_material_properties
 
 end module ModUser
