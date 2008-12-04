@@ -66,6 +66,7 @@ module ModUser
   integer           :: iPHyades        = -1      ! index of pressure
   integer           :: iZHyades        = -1      ! index of ionization level
   integer           :: iTeHyades       = -1      ! index of electron temperature
+  integer           :: iTrHyades       = -1      ! index of rad. temperature
   integer           :: iMaterialHyades = -1      ! index of material type
 
   ! Variables related to radiation
@@ -369,6 +370,8 @@ contains
           iPHyades   = i
        case('te')
           iTeHyades  = i
+       case('tr')
+          iTrHyades  = i
        case('z')
           iZHyades   = i
        case('material')
@@ -508,7 +511,7 @@ contains
 
     integer :: i, j, k, iCell
     real :: x, Weight1, Weight2
-    real :: cRadiationNo, Te
+    real :: cRadiationNo, Tr
     character(len=*), parameter :: NameSub='interpolate_hyades1d'
     !-------------------------------------------------------------------------
     cRadiationNo = cRadiation &
@@ -556,10 +559,10 @@ contains
           State_VGB(RhoUy_:RhoUz_,i,j,k,iBlock) = 0.0
 
           if(UseGrayDiffusion)then
-             Te = ( Weight1*DataHyades_VC(iTeHyades, iCell-1) &
-                  +   Weight2*DataHyades_VC(iTeHyades, iCell) )
+             Tr = ( Weight1*DataHyades_VC(iTrHyades, iCell-1) &
+                  + Weight2*DataHyades_VC(iTrHyades, iCell) )
 
-             State_VGB(Eradiation_,i,j,k,iBlock) = cRadiationNo*Te**4
+             State_VGB(Eradiation_,i,j,k,iBlock) = cRadiationNo*Tr**4
           end if
 
        end do; end do
