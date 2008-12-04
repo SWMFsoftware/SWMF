@@ -139,8 +139,8 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
 
   iLonOff = iProc*nLons
 
-  Discrete_FacAE = 1.0e23
-  Discrete_FacEF = 5.0e23
+  Discrete_FacAE = 0.75e23
+  Discrete_FacEF = 2.0e23
   Diffuse_FacAE = 5.0e-11
   Diffuse_FacEF = 1.0e9
   LonOffset = 0.0 ! -3*cPi/12.0
