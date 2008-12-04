@@ -161,8 +161,11 @@
 
    ;==== ANIMATE THE SLICES
    doanimate= nslice gt nslice1 and !d.name eq 'X'
+   if !d.name eq 'X' then begin
+       if !d.window lt 0 then window
+       wshow
+   endif
    if doanimate then xinteranimate,set=[!d.x_size,!d.y_size,nslice]
-   if !d.name eq 'X' and !d.window ge 0 then wshow
 
    islice1=0 ; slice index in a multiplot frame
    iplot=0   ; plot index for animation
