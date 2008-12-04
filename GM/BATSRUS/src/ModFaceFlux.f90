@@ -2325,6 +2325,19 @@ contains
       ! Calculate sound speed and normal speed
       InvRho = 1.0/State_V(iRho)
       Sound2 = g*State_V(iP)*InvRho
+
+      if(Sound2 < 0.0)then
+         write(*,*)NameSub,' negative Sound2=',Sound2
+         write(*,*)NameSub,' iFluid, rho, p =',iFluid, State_V(iRho), State_V(iP)
+         write(*,*)NameSub,' idim,i,j,k,BlockFace,iProc=', &
+              iDimFace, iFace, jFace, kFace, iBlockFace, iProc
+         write(*,*)NameSub,' xyzLeft=', &
+              x_BLK(iFace,jFace,kFace,iBlockFace), &
+              y_BLK(iFace,jFace,kFace,iBlockFace), &
+              z_BLK(iFace,jFace,kFace,iBlockFace)
+         call stop_mpi(NameSub//' negative soundspeed squared')
+      end if
+
       Sound  = sqrt(Sound2)
       Un     = sum(State_V(iUx:iUz)*Normal_D)
 
