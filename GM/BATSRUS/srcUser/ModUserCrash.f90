@@ -71,8 +71,8 @@ module ModUser
 
   ! Variables related to radiation
   character(len=20) :: TypeOpacity="constant"
-  real :: RosselandOpacity = 1.0
-  real :: PlanckOpacity = 10.0
+  real :: RosselandOpacity(0:2) = 1.0
+  real :: PlanckOpacity(0:2) = 10.0
 
 contains
 
@@ -117,8 +117,12 @@ contains
           call read_var('TypeOpacity', TypeOpacity)
           select case(TypeOpacity)
           case("constant")
-             call read_var('PlanckOpacity', PlanckOpacity)
-             call read_var('RosselandOpacity', RosselandOpacity)
+             call read_var('PlanckOpacityXe', PlanckOpacity(0))
+             call read_var('PlanckOpacityBe', PlanckOpacity(1))
+             call read_var('PlanckOpacityPl', PlanckOpacity(2))
+             call read_var('RosselandOpacityXe', RosselandOpacity(0))
+             call read_var('RosselandOpacityBe', RosselandOpacity(1))
+             call read_var('RosselandOpacityPl', RosselandOpacity(2))
           case default
              call stop_mpi(NameSub//"Wrong TypeOpacity ="//trim(TypeOpacity))
           end select
@@ -135,16 +139,17 @@ contains
   subroutine user_set_ics
 
     use ModProcMH,    ONLY: iProc
-    use ModMain,      ONLY: GlobalBlk, nI, nJ, nK
+    use ModMain,      ONLY: GlobalBlk, nI, nJ, nK, UseGrayDiffusion
     use ModPhysics,   ONLY: inv_gm1, ShockPosition, ShockSlope, &
          Io2No_V, No2Si_V, Si2No_V, UnitRho_, UnitP_, UnitEnergyDens_
     use ModAdvance,   ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, p_, &
-         ExtraEint_, LevelBe_, LevelXe_, LevelPl_
+         ExtraEint_, LevelBe_, LevelXe_, LevelPl_, Eradiation_
     use ModGeometry,  ONLY: x_BLK, y_BLK, z_BLK
     use ModEos,       ONLY: eos, Be_, Xe_
     use ModPolyimide, ONLY: cAtomicMass_I, cAPolyimide
+    use ModConst,     ONLY: cRadiation
 
-    real    :: x, y, xBe, DxBe, DxyPl, pSi, RhoSi, EinternalSi
+    real    :: x, y, xBe, DxBe, DxyPl, pSi, RhoSi, EinternalSi, TeSi
     real    :: DxyGold = -1.0
     logical :: IsError
 
@@ -293,6 +298,14 @@ contains
             EInternalSi*Si2No_V(UnitEnergyDens_) &
             - inv_gm1*State_VGB(P_,i,j,k,iBlock)
 
+!!!       if(UseGrayDiffusion)then
+!!!          ! The IsError flag avoids stopping for Fermi degenerated state
+!!!          call eos(iMaterial, RhoSi, pTotalIn=pSi, TeOut=TeSi, IsError=IsError)
+!!!
+!!!          State_VGB(Eradiation_,i,j,k,iBlock) = cRadiation*TeSi**4 &
+!!!               *Si2No_V(UnitEnergyDens_)
+!!!       end if
+
     end do; end do; end do
 
   end subroutine user_set_ics
@@ -410,6 +423,7 @@ contains
     Hyades2No_V(iUxHyades)  = 0.01   * Si2No_V(UnitU_)   ! cm/s  -> m/s
     Hyades2No_V(iPHyades)   = 0.1    * Si2No_V(UnitP_)   ! dyne  -> Pa
     Hyades2No_V(iTeHyades)  = cKevToK* Si2No_V(UnitTemperature_) ! KeV   -> K
+    Hyades2No_V(iTrHyades)  = cKevToK* Si2No_V(UnitTemperature_) ! KeV   -> K
     if(nDimHyades > 1)then
        Hyades2No_V(iYHyades)  = 0.01 * Si2No_V(UnitX_)   ! cm    -> m
        Hyades2No_V(iUyHyades) = 0.01 * Si2No_V(UnitU_)   ! cm/s  -> m/s
@@ -503,20 +517,17 @@ contains
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
          Eradiation_
     use ModGeometry, ONLY: x_BLK
-    use ModConst,    ONLY: cRadiation
     use ModMain,     ONLY: UseGrayDiffusion
-    use ModPhysics,  ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_
+    use ModPhysics,  ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
+         cRadiationNo
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k, iCell
     real :: x, Weight1, Weight2
-    real :: cRadiationNo, Tr
+    real :: Tr
     character(len=*), parameter :: NameSub='interpolate_hyades1d'
     !-------------------------------------------------------------------------
-    cRadiationNo = cRadiation &
-         * Si2No_V(UnitEnergyDens_) / Si2No_V(UnitTemperature_)**4
-
     do i = -1, nI+2
        ! Find the Hyades points around this position
        x = x_Blk(i,1,1,iBlock)
@@ -806,8 +817,10 @@ contains
 
     use ModConst,   ONLY: cKtoKev
     use ModSize,    ONLY: nI, nJ, nK
-    use ModAdvance, ONLY: State_VGB, Rho_, p_, LevelXe_, LevelPl_
-    use ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitTemperature_
+    use ModAdvance, ONLY: State_VGB, Rho_, p_, LevelXe_, LevelPl_, &
+         Eradiation_
+    use ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitTemperature_, &
+         cRadiationNo
     use ModEos,     ONLY: eos, Plastic_
 
     integer,          intent(in)   :: iBlock
@@ -849,6 +862,11 @@ contains
                IsError=IsError)
           PlotVar_G(i,j,k) = TeSi * cKToKev
        end do; end do; end do
+    case('tradkev','trkev')
+       ! multiply by sign of Erad for debugging purpose
+       PlotVar_G = sign(1.0,State_VGB(Eradiation_,:,:,:,iBlock)) &
+            *sqrt(sqrt(abs(State_VGB(Eradiation_,:,:,:,iBlock))/cRadiationNo)) &
+            * No2Si_V(UnitTemperature_) * cKToKev
     case default
        IsFound = .false.
     end select
@@ -908,10 +926,10 @@ contains
     if(present(TeSi)) TeSi = TemperatureSi
 
     if(present(AbsorptionOpacitySi)) &
-         AbsorptionOpacitySi = PlanckOpacity*RhoSi
+         AbsorptionOpacitySi = PlanckOpacity(iMaterial)*RhoSi
 
     if(present(RosselandMeanOpacitySi)) &
-         RosselandMeanOpacitySi = RosselandOpacity*RhoSi
+         RosselandMeanOpacitySi = RosselandOpacity(iMaterial)*RhoSi
 
   end subroutine user_material_properties
 
