@@ -24,6 +24,7 @@ MODULES = \
 	ModIoUnit.o\
 	ModKind.o\
 	ModLinearSolver.o\
+	ModLookupTable.o\
 	ModMpiConstants.o\
 	ModMpiInterfaces.o\
 	ModMpi.o\

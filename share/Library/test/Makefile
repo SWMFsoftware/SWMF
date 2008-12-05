@@ -18,6 +18,7 @@ help:
 	@echo "   test_sort             - test ModSort"
 	@echo "   test_io_unit          - test ModIoUnit"
 	@echo "   test_interpolate      - test ModInterpolate"
+	@echo "   test_lookup_table     - test ModLookupTable"
 	@echo "   test_plot_file        - test ModPlotFile"
 	@echo "   test_ray_trace        - test CON_ray_trace"
 	@echo "   test_line_extract     - test CON_line_extract"
@@ -43,6 +44,7 @@ test: \
 	test_sort \
 	test_io_unit \
 	test_interpolate \
+	test_lookup_table \
 	test_ray_trace \
 	test_line_extract \
 	test_geopack \
@@ -382,6 +384,35 @@ test_plot_file:
 	-@(./test_plot_file.exe)
 	@echo
 	@echo test_plot_file done
+	@echo -----------------------------------------------------------------
+#######################################################################
+
+OBJ_LOOKUP_TABLE = \
+	test_lookup_table.o \
+	../src/ModIoUnit.o \
+	../src/ModMpi.o \
+	../src/ModMpiInterfaces.o \
+	../src/ModReadParam.o \
+	../src/ModInterpolate.o \
+	../src/ModUtilities.o \
+	../src/ModPlotFile.o \
+	../src/ModLookupTable.o
+
+test_lookup_table_exe:
+	@(cd ../src; make ModLookupTable.o)
+	@make test_lookup_table.o
+	${LINK.f90} -o test_lookup_table.exe ${OBJ_LOOKUP_TABLE} ${Lflag2}
+
+test_lookup_table:
+	@echo -----------------------------------------------------------------
+	@echo test_lookup_table starting
+	@echo
+	@make test_lookup_table_exe
+	@echo
+	@echo './test_lookup_table.exe'
+	-@(./test_lookup_table.exe)
+	@echo
+	@echo test_lookup_table done
 	@echo -----------------------------------------------------------------
 
 
