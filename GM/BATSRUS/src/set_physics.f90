@@ -99,6 +99,10 @@ subroutine set_physics_constants
   InvClight   = cOne/cLight
   Inv_C2light = cOne/c2LIGHT
 
+  ! normalize the radiation constant
+  cRadiationNo = cRadiation &
+       * Si2No_V(UnitEnergyDens_) / Si2No_V(UnitTemperature_)**4
+
   !\
   ! Convert rotation, and gravity to non-dimensional values
   !/

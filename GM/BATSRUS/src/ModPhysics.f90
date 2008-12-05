@@ -28,6 +28,9 @@ module ModPhysics
   real :: Clight, InvClight, C2light, Inv_C2light
   real :: Boris_Clight_Factor = 1.0
 
+  ! normalized radiation constant (Erad = cRadiationNo*Trad**4)
+  real :: cRadiationNo
+
   ! the dipole moment for body2
   real :: BdpBody2_D(3)=0.0, BdpDimBody2_D(3)=0.0
 
