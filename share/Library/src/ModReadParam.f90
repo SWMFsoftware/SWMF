@@ -344,7 +344,11 @@ contains
     character (len=2), intent(in) :: NameCompIn
     integer,           intent(in) :: iSessionIn
     integer, optional, intent(in) :: iLineIn, nLineIn, iIoUnitIn
+
+    character(len=*), parameter :: NameSub=NameMod//'::read_init'
     !------------------------------------------------------------------------
+    if(iSessionIn>MaxSession)call CON_stop(NameSub// &
+         " ERROR: too many sessions in input")
     if(iSessionIn > iSession) iCommand = 0
     NameComp     = NameCompIn
     iSession     = iSessionIn
