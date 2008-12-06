@@ -58,6 +58,7 @@ subroutine MH_set_parameters(TypeAction)
        read_satellite_parameters, read_satellite_input_files
 
   use ModFaceFlux, ONLY: face_flux_set_parameters, UseClimit, UsePoleDiffusion
+  use ModLookupTable, ONLY: read_lookup_table_param
 
   implicit none
 
@@ -1587,6 +1588,9 @@ subroutine MH_set_parameters(TypeAction)
         inv_g   = 1.0 / g
         inv_gm1 = 1.0 /gm1
         g_half  = 0.5*g
+
+     case("#LOOKUPTABLE")
+        call read_lookup_table_param
 
      case("#PLASMA")
         do iFluid = IonFirst_, nFluid
