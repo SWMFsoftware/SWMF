@@ -344,10 +344,15 @@ sub link_tree_check{
 		
 	my $Dirs = $RestartInDir{$Comp};
 	my $Dir;
-	foreach (split /,/,$Dirs){$Dir=$_; last if -d $Dir or -l $Dir};
-
-	die "$ERROR could not find input restart directory/link $Dirs!\n" 
-	    unless -d $Dir or -l $Dir;
+	if($Dirs =~ /,/){
+	    # Figure out which restart in directory should be used
+	    foreach (split /,/,$Dirs){$Dir=$_ if -d $_ or -l $_};
+	    die "$ERROR could not find input restart directory/link $Dirs!\n" 
+		unless $Dir;
+	}else{
+	    # There is only one possible directory name, use that one
+	    $Dir = $Dirs;
+	}
 
 	# Store the input directory for this component
 	$RestartInDirFound{$Comp} = $Dir;
