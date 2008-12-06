@@ -7,7 +7,7 @@ module ModLookupTable
 
   use ModReadParam, ONLY: read_var
   use ModPlotFile,  ONLY: read_plot_file, save_plot_file
-  use ModUtilities, ONLY: split_string
+  use ModUtilities, ONLY: split_string, lower_case
   use ModInterpolate, ONLY: bilinear
 
   implicit none
@@ -16,29 +16,30 @@ module ModLookupTable
   private ! except
 
   public:: read_lookup_table_param  ! read parameters of the lookup table(s)
+  public:: i_lookup_table           ! function returning the index of table
   public:: make_lookup_table        ! create table from calculations (and save)
-  public:: load_lookup_table        ! load lookup table from file
   public:: interpolate_lookup_table ! interpolate from lookup table
   public:: test_lookup_table        ! unit test
 
-  integer, public, parameter:: MaxTable = 2, TableRhoE_ = 1, TableRhoP_ = 2
-  character(len=8), public, parameter:: NameTable_I(MaxTable) = &
-       (/ "TableRhoE", "TableRhoP" /)
+  integer, public, parameter:: MaxTable = 20 ! maximum number of tables
+  integer, public :: nTable = 0     ! actual number of tables
 
   ! private variables
 
   type TableType
-     integer:: nValue                     ! number of values in each element
-     integer:: nIndex_I(2)                ! number of columns and rows
-     real   :: IndexMin_I(2)              ! minimum values for indexes
-     real   :: IndexMax_I(2)              ! maximum values for indexes
-     real   :: dIndex_I(2)                ! increment
-     logical:: IsLogIndex_I(2)            ! true if arguments are logarithmic
-     real, allocatable:: Value_VII(:,:,:) ! array of actual values
-     character(len=100):: NameTable       ! description of table
-     character(len=100):: NameVar         ! name of indexes and values
-     character(len=100):: NameFile        ! file name containing the table
-     character(len=100):: NameCommand     ! action for the table
+     character(len=100):: NameTable        ! unique name for identification
+     character(len=4)  :: NameCommand      ! command: load, make, save
+     character(len=100):: NameFile         ! file name containing the table
+     character(len=10) :: TypeFile         ! file type (ascii, binary)
+     character(len=100):: StringDescription! description of table
+     character(len=100):: NameVar          ! name of indexes and values
+     integer:: nValue                      ! number of values in each element
+     integer:: nIndex_I(2)                 ! number of columns and rows
+     real   :: IndexMin_I(2)               ! minimum values for indexes
+     real   :: IndexMax_I(2)               ! maximum values for indexes
+     real   :: dIndex_I(2)                 ! increment of indexes
+     logical:: IsLogIndex_I(2)             ! true if arguments are logarithmic
+     real, allocatable :: Value_VII(:,:,:) ! array of actual values
   end type
 
   ! The array of tables
@@ -51,57 +52,97 @@ module ModLookupTable
 contains
 
   !==========================================================================
-  subroutine read_lookup_table_param(NameCommand)
+  subroutine read_lookup_table_param
 
-    character(len=100), intent(in):: NameCommand
+    ! Read parameters for one table. The table is identified by a name string
 
+    character(len=100):: NameTable
     integer :: iTable, iIndex
     type(TableType), pointer:: Ptr
 
     character(len=*), parameter:: NameSub = 'read_lookup_table_param'
     !-----------------------------------------------------------------------
-    select case(NameCommand)
-    case("#TABLEMAKE", "#TABLESAVE")
-       call read_var('iTable', iTable)
-       Ptr => Table_I(iTable)
-       Ptr%NameCommand = NameCommand
-       if(NameCommand == "#TABLESAVE") &
-            call read_var('NameFile for '//NameTable_I(iTable), Ptr%NameFile)
-       call read_var('NameTable', Ptr%NameTable)
-       call read_var('NameVar',   Ptr%NameVar)
-       call split_string(Ptr%NameVar, MaxVar, NameVar_I, Ptr%nValue)
-       ! Do not count the names of the indexes
-       Ptr%nValue = Ptr%nValue - 2
-       ! Figure out which index is logarithmic
-       Ptr%IsLogIndex_I = index(NameVar_I(1:2), "log") == 1
-       
-       do iIndex = 1, 2
-          call read_var('nIndex',     Ptr%nIndex_I(iIndex))
-          call read_var('IndexMin',   Ptr%IndexMin_I(iIndex))
-          call read_var('IndexMax',   Ptr%IndexMax_I(iIndex))
-          
-          ! Take logarithm of the ranges if logarithmic
-          if(Ptr%IsLogIndex_I(iIndex)) then
-             Ptr%IndexMin_I(iIndex) = log(Ptr%IndexMin_I(iIndex))
-             Ptr%IndexMax_I(iIndex) = log(Ptr%IndexMax_I(iIndex))
-          end if
-       end do
-       ! Calculate increments
-       Ptr%dIndex_I = &
-            (Ptr%IndexMax_I - Ptr%IndexMin_I)/(Ptr % nIndex_I - 1)
+    call read_var('NameTable', NameTable)
 
-    case("#TABLELOAD")
-       call read_var('iTable', iTable)
-       Ptr => Table_I(iTable)
-       Ptr%NameCommand = NameCommand
-       call read_var('NameFile for '//NameTable_I(iTable), Ptr%NameFile)
-       call load_lookup_table(iTable)
+    ! Check if the table has been set already (say in a previous session)
+    iTable = i_lookup_table(NameTable)
+    if(iTable < 0)then
+       ! new table
+       nTable = nTable + 1
 
+       if(nTable > MaxTable)then
+          write(*,*)NameSub,' MaxTable =',MaxTable
+          call CON_stop(NameSub//': number of tables exceeded MaxTable')
+       end if
+
+       iTable = nTable
+    end if
+
+    ! For sake of more concise source code, use a pointer to the table
+    Ptr => Table_I(iTable)
+    Ptr%NameTable = NameTable
+
+    ! Read the parameters for this table
+    call read_var('NameCommand', Ptr%NameCommand)
+    call lower_case(Ptr%NameCommand)
+    select case(Ptr%NameCommand)
+    case("load","save")
+       call read_var('NameFile', Ptr%NameFile)
+       call read_var('TypeFile', Ptr%TypeFile)
+       if(Ptr%NameCommand == "load")then
+          call load_lookup_table(iTable)
+          RETURN
+       end if
+    case("make")
+       ! will be done below
     case default
-       call CON_stop(NameSub//': unknown command='//NameCommand)
+       call CON_stop(NameSub//': unknown command='//Ptr%NameCommand)
     end select
 
+    call read_var('StringDescription', Ptr%StringDescription)
+    call read_var('NameVar',           Ptr%NameVar)
+    call split_string(Ptr%NameVar, MaxVar, NameVar_I, Ptr%nValue)
+    ! Do not count the names of the indexes
+    Ptr%nValue = Ptr%nValue - 2
+    ! Figure out which index is logarithmic
+    Ptr%IsLogIndex_I = index(NameVar_I(1:2), "log") == 1
+       
+    do iIndex = 1, 2
+       call read_var('nIndex',     Ptr%nIndex_I(iIndex))
+       call read_var('IndexMin',   Ptr%IndexMin_I(iIndex))
+       call read_var('IndexMax',   Ptr%IndexMax_I(iIndex))
+          
+       ! Take logarithm of the ranges if logarithmic
+       if(Ptr%IsLogIndex_I(iIndex)) then
+          Ptr%IndexMin_I(iIndex) = log(Ptr%IndexMin_I(iIndex))
+          Ptr%IndexMax_I(iIndex) = log(Ptr%IndexMax_I(iIndex))
+       end if
+    end do
+    ! Calculate increments
+    Ptr%dIndex_I = (Ptr%IndexMax_I - Ptr%IndexMin_I)/(Ptr % nIndex_I - 1)
+
   end subroutine read_lookup_table_param
+
+  !===========================================================================
+
+  integer function i_lookup_table(Name)
+
+    ! return the index of the lookup table based on its name
+    ! return -1 if the table was not found
+
+    character(len=*), intent(in):: Name
+    integer :: iTable
+    !------------------------------------------------------------------------
+
+    do iTable = 1, nTable
+       if(Table_I(iTable)%NameTable == Name) then
+          i_lookup_table = iTable
+          RETURN
+       end if
+    end do
+    i_lookup_table = -1
+
+  end function i_lookup_table
 
   !===========================================================================
 
@@ -115,17 +156,16 @@ contains
     character(len=*), parameter:: NameSub = 'load_lookup_table'
     !------------------------------------------------------------------------
 
+    if(iTable > nTable) call CON_stop(NameSub//' iTable larger than nTable')
+
     Ptr => Table_I(iTable)
-    if(Ptr%NameCommand /= "#TABLELOAD") RETURN
 
-    ! Make sure it is not loaded again
-    Ptr%NameCommand = ""
-
-    call read_plot_file( Ptr%NameFile,      &
-         StringHeaderOut = Ptr%Nametable,   &
-         n1Out           = Ptr%nIndex_I(1), &
-         n2Out           = Ptr%nIndex_I(2), &
-         nVarOut         = Ptr%nValue,      &
+    call read_plot_file( Ptr%NameFile,            &
+         TypeFileIn      = Ptr%TypeFile,          &
+         StringHeaderOut = Ptr%StringDescription, &
+         n1Out           = Ptr%nIndex_I(1),       &
+         n2Out           = Ptr%nIndex_I(2),       &
+         nVarOut         = Ptr%nValue,            &
          NameVarOut      = Ptr%NameVar)
 
     ! Figure out which index is logarithmic
@@ -169,8 +209,8 @@ contains
 
     Ptr => Table_I(iTable)
 
-    if(  Ptr%NameCommand /= "#TABLEMAKE" .and. &
-         Ptr%NameCommand /= "#TABLESAVE") RETURN
+    if(  Ptr%NameCommand /= "make" .and. &
+         Ptr%NameCommand /= "save") RETURN
 
     ! Use simple scalars for sake of legibility
     n1     = Ptr%nIndex_I(1)
@@ -199,16 +239,17 @@ contains
        end do
     end do
 
-    if(Ptr%NameCommand == "#TABLESAVE") call save_plot_file( &
-         Ptr%NameFile,                    &
-         StringHeaderIn = Ptr%NameTable,  &
-         NameVarIn      = Ptr%NameVar,    &
-         CoordMinIn_D   = Ptr%IndexMin_I, &
-         CoordMaxIn_D   = Ptr%IndexMax_I, &
+    if(Ptr%NameCommand == "save") call save_plot_file( &
+         Ptr%NameFile,                                 &
+         TypeFileIn     = Ptr%TypeFile,                &
+         StringHeaderIn = Ptr%StringDescription,       &
+         NameVarIn      = Ptr%NameVar,                 &
+         CoordMinIn_D   = Ptr%IndexMin_I,              &
+         CoordMaxIn_D   = Ptr%IndexMax_I,              &
          VarIn_VII      = Ptr%Value_VII)
 
     ! Make sure it is not saved again
-    Ptr%NameCommand = ""
+    Ptr%NameCommand = "done"
 
   end subroutine make_lookup_table
 
@@ -245,15 +286,17 @@ contains
     ! testing the read_lookup_table_param is left for the functionality tests
 
     type(TableType), pointer :: Ptr, Ptr2
+    integer :: iTable
     real :: p_I(3), pGood_I(3)
 
     character(len=*), parameter:: NameSub = 'test_lookup_table'
     !------------------------------------------------------------------------
-    Ptr => Table_I(TableRhoE_)
-
-    Ptr%NameCommand = "#TABLESAVE"
+    nTable = 1
+    Ptr => Table_I(1)
+    Ptr%NameCommand = "save"
     Ptr%NameFile    = "test_lookup_table1.out"
-    Ptr%NameTable   = "eos: p_i(rho,e) for i=0,1,2 materials"
+    Ptr%TypeFile    = "ascii"
+    Ptr%NameTable   = "RhoE"
     Ptr%NameVar     = "logrho e pXe pBe pPl"
     Ptr%nValue      = 3
     Ptr%IsLogIndex_I= (/.true., .false./)
@@ -262,11 +305,23 @@ contains
     Ptr%IndexMax_I  = (/log(1000.0), 10.0/)
     Ptr%dIndex_I    = (Ptr%IndexMax_I - Ptr%IndexMin_I)/(Ptr%nIndex_I - 1)
 
+    write(*,*)'testing i_lookup_table'
+    iTable = i_lookup_table("xxx")
+    if(iTable /= -1)then
+       write(*,*)'iTable = ',iTable,' should be -1'
+       call CON_stop(NameSub)
+    end if
+    iTable = i_lookup_table("RhoE")
+    if(iTable /= 1)then
+       write(*,*)'iTable = ',iTable,' should be 1'
+       call CON_stop(NameSub)
+    end if
+
     write(*,*)'testing make_lookup_table'
-    call make_lookup_table(TableRhoE_, eos_rho_e)
+    call make_lookup_table(1, eos_rho_e)
 
     write(*,*)'testing interpolate_lookup_table'    
-    call interpolate_lookup_table(TableRhoE_, 1.0, 2.0, p_I)
+    call interpolate_lookup_table(1, 1.0, 2.0, p_I)
     ! rho=1.0 is exactly in the middle, e=2.0 is also an index, so exact result
 
     pGood_I = (/ 4./3., 4./5., 3. /)
@@ -278,15 +333,26 @@ contains
     write(*,*)'testing load_lookup_table'
 
     ! Load the saved file into the second table
-    Ptr2 => Table_I(TableRhoP_)
-    Ptr2%NameCommand = "#TABLELOAD"
+    nTable = 2
+    Ptr2 => Table_I(2)
+    Ptr2%NameTable   = "RhoE2"
+    Ptr2%NameCommand = "load"
     Ptr2%NameFile    = "test_lookup_table1.out"
+    Ptr2%TypeFile    = "ascii"
 
-    call load_lookup_table(TableRhoP_)
+    call load_lookup_table(2)
 
-    if(Ptr2%NameTable /= Ptr%NameTable) call CON_stop(NameSub // &
-         ' NameTable='//trim(Ptr2%NameTable)//' is different from '// &
-         trim(Ptr2%NameTable))
+    write(*,*)'testing i_lookup_table for table 2'
+    iTable = i_lookup_table("RhoE2")
+    if(iTable /= 2)then
+       write(*,*)'iTable = ',iTable,' should be 2'
+       call CON_stop(NameSub)
+    end if
+
+    if(Ptr2%StringDescription /= Ptr%StringDescription) &
+         call CON_stop(NameSub // &
+         ' Description='//trim(Ptr2%StringDescription)// &
+         ' is different from '// trim(Ptr%StringDescription))
 
     if(Ptr2%NameVar /= Ptr%NameVar) call CON_stop(NameSub // &
          ' NameVar='//trim(Ptr2%NameVar)//' is different from '// &
@@ -298,18 +364,18 @@ contains
     end if
 
     write(*,*)'testing interpolate_lookup_table for loaded table'
-    call interpolate_lookup_table(TableRhoE_, 1.0, 2.0, p_I)
+    call interpolate_lookup_table(2, 1.0, 2.0, p_I)
     if(any(abs(p_I - pGood_I) > 1e-5))then
        write(*,*)'p_I=',p_I,' is different from pGood_I=',pGood_I
        call CON_stop(NameSub)
     end if
-
 
   end subroutine test_lookup_table
 
   !===========================================================================
 
   subroutine eos_rho_e(rho, e, p_I)
+    ! This is an example for the subroutine passed to make_lookup_table
 
     real, intent(in):: rho, e
     real, intent(out):: p_I(:)
