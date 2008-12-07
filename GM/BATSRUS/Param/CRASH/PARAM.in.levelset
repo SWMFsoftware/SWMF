@@ -1,5 +1,35 @@
+Begin session: 1
+
 #ECHO
 T
+
+LOOKUPTABLE
+p(rho,e)		NameTable
+save			NameCommand
+TABLE/1000/table_rho_e.out	NameFile
+binary				TypeFile
+p(rho,e) for Xe, Be, Plastic	StringDescription
+logrho loge pXe pBe pPl		NameVar
+1000			nIndex1
+0.01			Index1Min
+1e6			Index1Max
+1000			nIndex2
+1.0			Index2Min
+1e14			Index2Max
+
+LOOKUPTABLE
+e(rho,p)		NameTable
+save			NameCommand
+TABLE/1000/table_rho_p.out	NameFile
+binary				TypeFile
+e(rho,p) for Xe, Be, Plastic	StringDescription
+logrho logp eXe eBe ePl		NameVar
+1000			nIndex1
+0.01			Index1Min
+1e6			Index1Max
+1000			nIndex2
+1.0			Index2Min
+1e14			Index2Max
 
 #PLANET
 NONE
@@ -13,7 +43,7 @@ READ
 1.0e+3			km/s
 1000.0			g/cm^3
 
-#USERINPUTBEGIN  ----------------------
+#USERINPUTBEGIN ----------------
 
 #TUBE
 0.0			xEndTube
@@ -35,7 +65,7 @@ T			UseCylindrical
 T			UseHyadesFile
 hyades_1.1ns.out	NameHyadesFile
 
-#USERINPUTEND    ----------------------
+#USERINPUTEND   ----------------
 
 #TIMEACCURATE
 T			IsTimeAccurate
@@ -44,7 +74,7 @@ T			IsTimeAccurate
 4			nI
 4			nJ
 2			nK
-2000			MinBlockALL
+500			MinBlockALL
 
 tube is 5mm = 500um long, 625 um wide
 
@@ -74,7 +104,6 @@ shear			yMinBc
 shear			yMaxBc
 shear			zMinBc
 shear			zMaxBc
-
 
 #TIMESTEPPING
 2			nStage
@@ -126,4 +155,4 @@ gamma
 -1			MaxIteration
 2.0e-8			tSimulationMax
 
-#END
+End session: 1
