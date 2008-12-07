@@ -65,7 +65,7 @@ module ModUser
   integer           :: iUyHyades       = -1      ! index of y velocity
   integer           :: iPHyades        = -1      ! index of pressure
   integer           :: iZHyades        = -1      ! index of ionization level
-  integer           :: iTeHyades       = -1      ! index of electron temperature
+  integer           :: iTeHyades       = -1      ! index of electron temper.
   integer           :: iTrHyades       = -1      ! index of rad. temperature
   integer           :: iMaterialHyades = -1      ! index of material type
 
@@ -73,6 +73,9 @@ module ModUser
   character(len=20) :: TypeOpacity="constant"
   real :: RosselandOpacity(0:2) = 1.0
   real :: PlanckOpacity(0:2) = 10.0
+
+  ! Indexes for lookup tables
+  integer:: iTableRhoE = -1, iTableRhoP = -1
 
 contains
 
@@ -145,11 +148,13 @@ contains
     use ModAdvance,   ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, p_, &
          ExtraEint_, LevelBe_, LevelXe_, LevelPl_, Eradiation_
     use ModGeometry,  ONLY: x_BLK, y_BLK, z_BLK
-    use ModEos,       ONLY: eos, Be_, Xe_
+    use ModEos,       ONLY: eos, Be_, Xe_, Plastic_
     use ModPolyimide, ONLY: cAtomicMass_I, cAPolyimide
     use ModConst,     ONLY: cRadiation
+    use ModLookupTable, ONLY: interpolate_lookup_table
 
     real    :: x, y, xBe, DxBe, DxyPl, pSi, RhoSi, EinternalSi, TeSi
+    real    :: e_I(Xe_:Plastic_)
     real    :: DxyGold = -1.0
     logical :: IsError
 
@@ -291,8 +296,13 @@ contains
        pSi   = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
 
        ! The IsError flag avoids stopping for Fermi degenerated state
-       call eos(iMaterial,RhoSi,pTotalIn=pSi, &
+       if(iTableRhoP > 0)then
+          call interpolate_lookup_table(iTableRhoP, RhoSi, pSi, E_I)
+          EinternalSi = e_I(iMaterial)
+       else
+          call eos(iMaterial,RhoSi,pTotalIn=pSi, &
                ETotalOut=EinternalSi, IsError=IsError)
+       end if
 
        State_VGB(ExtraEInt_,i,j,k,iBlock) = &
             EInternalSi*Si2No_V(UnitEnergyDens_) &
@@ -683,7 +693,8 @@ contains
     use ModNodes,   ONLY: NodeY_NB
     use ModPhysics
     use ModEnergy,  ONLY: calc_energy_cell
-    use ModEos,     ONLY: eos
+    use ModEos,     ONLY: eos, Xe_, Plastic_
+    use ModLookupTable, ONLY: interpolate_lookup_table
 
     implicit none
 
@@ -691,7 +702,8 @@ contains
 
     integer:: i, j, k, iMaterial, iMaterial_I(1)
     real   :: vInv_C(nI,nJ,nK)
-    real   :: PressureSi, EinternalSi, RhoSi, RhoToARatioSI_I(0:2)
+    real   :: PressureSi, EinternalSi, RhoSi
+    real   :: RhoToARatioSI_I(Xe_:Plastic_), p_I(Xe_:Plastic_)
 
     character(len=*), parameter :: NameSub = 'user_update_states'
     !------------------------------------------------------------------------
@@ -763,8 +775,13 @@ contains
                PTotalOut=PressureSI) 
        else
           ! Get pressure from EOS
-          call eos(iMaterial, Rho=RhoSI,ETotalIn=EInternalSI, &
-               pTotalOut=PressureSI)
+          if(iTableRhoE > 0)then
+             call interpolate_lookup_table(iTableRhoE, RhoSi, EinternalSi, p_I)
+             PressureSi = p_I(iMaterial)
+          else
+             call eos(iMaterial, Rho=RhoSI,ETotalIn=EInternalSI, &
+                  pTotalOut=PressureSI)
+          end if
        end if
 
        ! Set pressure and ExtraEInt = Total internal energy - P/(gamma -1)
@@ -865,7 +882,7 @@ contains
     case('tradkev','trkev')
        ! multiply by sign of Erad for debugging purpose
        PlotVar_G = sign(1.0,State_VGB(Eradiation_,:,:,:,iBlock)) &
-            *sqrt(sqrt(abs(State_VGB(Eradiation_,:,:,:,iBlock))/cRadiationNo)) &
+            *sqrt(sqrt(abs(State_VGB(Eradiation_,:,:,:,iBlock))/cRadiationNo))&
             * No2Si_V(UnitTemperature_) * cKToKev
     case default
        IsFound = .false.
@@ -880,7 +897,10 @@ contains
 
   subroutine user_init_session
 
-    use ModVarIndexes, ONLY: LevelXe_, LevelPl_, Rho_, UnitUser_V
+    use ModProcMH,      ONLY: iProc, iComm
+    use ModVarIndexes,  ONLY: LevelXe_, LevelPl_, Rho_, UnitUser_V
+    use ModLookupTable, ONLY: i_lookup_table, make_lookup_table
+
     character (len=*), parameter :: NameSub = 'user_init_session'
     !-------------------------------------------------------------------
 
@@ -892,8 +912,55 @@ contains
        UnitUser_V(LevelXe_:LevelPl_) = UnitUser_V(Rho_)*1.e-6
     end if
 
+    iTableRhoE = i_lookup_table('p(rho,e)')
+    iTableRhoP = i_lookup_table('e(rho,p)')
+
+    if(iProc==0) &
+         write(*,*)NameSub,' iTableRhoE, iTableRhoP = ', iTableRhoE, iTableRhoP
+
+    if(iTableRhoE > 0) &
+         call make_lookup_table(iTableRhoE, calc_table_rho_e, iComm)
+    if(iTableRhoP > 0) &
+         call make_lookup_table(iTableRhoP, calc_table_rho_p, iComm)
+
   end subroutine user_init_session
 
+  !===========================================================================
+  subroutine calc_table_rho_e(Rho, e, p_I)
+
+    use ModEos, ONLY: eos, Xe_, Plastic_
+
+    ! Calculate pressures for Xe_, Be_ and Plastic_ for given Rho and e
+
+    real, intent(in):: Rho, e
+    real, intent(out):: p_I(:)
+
+    integer:: iMaterial
+    !-----------------------------------------------------------------------
+    ! Material index starts from 0 :-( hence the +1
+    do iMaterial = Xe_, Plastic_
+       call eos(iMaterial, Rho, EtotalIn=e, pTotalOut=p_I(iMaterial+1))
+    end do
+    
+  end subroutine calc_table_rho_e
+  !===========================================================================
+  subroutine calc_table_rho_p(Rho, p, e_I)
+
+    use ModEos, ONLY: eos, Xe_, Plastic_
+
+    ! Calculate energies for Xe_, Be_ and Plastic_ for given Rho and p
+
+    real, intent(in):: Rho, p
+    real, intent(out):: e_I(:)
+
+    integer:: iMaterial
+    !-----------------------------------------------------------------------
+    ! Material index starts from 0 :-( hence the +1
+    do iMaterial = Xe_, Plastic_
+       call eos(iMaterial, Rho, PtotalIn=p, eTotalOut=e_I(iMaterial+1))
+    end do
+    
+  end subroutine calc_table_rho_p
   !===========================================================================
 
   subroutine user_material_properties(State_V, &
