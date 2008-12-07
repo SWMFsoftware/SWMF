@@ -15,7 +15,7 @@ help:
 	@echo ' '
 	@echo '  You can "make" the following:'
 	@echo ' '
-	@echo '    <default> BATSRUS in stand alone mode, help in SWMF'
+	@echo '    <default> ${DEFAULT_TARGET} in stand alone mode, help in SWMF'
 	@echo ' '
 	@echo '    help         (makefile option list)'
 	@echo '    install      (install BATSRUS)'
@@ -38,6 +38,7 @@ help:
 	@echo ' '
 	@echo '    LIB     (Component library libGM for SWMF)'
 	@echo '    BATSRUS (Block Adaptive Tree Solar-Wind Roe Upwind Scheme)'
+	@echo '    CRASH   (Code for Radiative Shock Hydrodynamics)'
 	@echo '    NOMPI   (NOMPI library for compilation without MPI)'
 	@echo '    PIDL    (PostIDL.exe creates 1 .out file from local .idl files)'
 	@echo '    PSPH    (PostSPH.exe creates spherical tec file from sph*.tec files)'
@@ -46,10 +47,10 @@ help:
 	@echo '    rundir      (create run directory for standalone or SWMF)'
 	@echo '    rundir RUNDIR=run_test (create run directory run_test)'
 	@echo ' '
-	@echo "    nompirun    (make BATSRUS and run BATSRUS.exe on 1 PE)"
-	@echo "    mpirun      (make BATSRUS and mpirun BATSRUS.exe on 8 PEs)"
+	@echo "    nompirun    (make and run ${DEFAULT_EXE} on 1 PE)"
+	@echo "    mpirun      (make and mpirun ${DEFAULT_EXE} on 8 PEs)"
 	@echo "    mpirun NP=7 RUNDIR=run_test (run on 7 PEs in run_test)"
-	@echo "    mprun NP=5  (make BATSRUS and mprun BATSRUS.exe on 5 PEs)"
+	@echo "    mprun NP=5  (make and mprun ${DEFAULT_EXE} on 5 PEs)"
 	@echo ' '	
 	@echo '    clean     (remove temp files like: *~ *.o *.kmo *.mod *.T *.lst core)'
 	@echo '    distclean (equivalent to ./Config.pl -uninstall)'
@@ -140,7 +141,7 @@ rundir:
 		rm -f Scripts/Run/${OS}/TMP_${MACHINE}; \
 		cp ${SCRIPTDIR}/PostProc.pl ${RUNDIR}/; \
 		cp ${SCRIPTDIR}/Restart.pl ${RUNDIR}/; \
-		cd ${RUNDIR}; ln -s ${BINDIR}/BATSRUS.exe .; \
+		cd ${RUNDIR}; ln -s ${BINDIR}/${DEFAULT_EXE} .; \
 		ln -s ${COMPONENT}/* .;                          \
 	fi);
 
