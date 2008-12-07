@@ -9,6 +9,7 @@ module ModLookupTable
   use ModPlotFile,  ONLY: read_plot_file, save_plot_file
   use ModUtilities, ONLY: split_string, lower_case
   use ModInterpolate, ONLY: bilinear
+  use ModMpi
 
   implicit none
   SAVE
@@ -176,6 +177,7 @@ contains
     allocate(Ptr%Value_VII(Ptr%nValue, Ptr%nIndex_I(1), Ptr%nIndex_I(2)))
     
     call read_plot_file( Ptr%NameFile,    &
+         TypeFileIn      = Ptr%TypeFile,  &
          CoordMinOut_D = Ptr%IndexMin_I,  &
          CoordMaxOut_D = Ptr%IndexMax_I,  &
          VarOut_VII    = Ptr%Value_VII)
@@ -187,21 +189,25 @@ contains
 
   !===========================================================================
 
-  subroutine make_lookup_table(iTable, calc_table_var)
+  subroutine make_lookup_table(iTable, calc_table_var, iComm)
 
-    ! Fill in tables using the subroutine calc_table_var
+    ! Fill in table iTable using the subroutine calc_table_var
+    ! The optional communicator allows for parallel execution
 
-    integer, intent(in):: iTable
+    integer, intent(in):: iTable  ! table index
     interface
        subroutine calc_table_var(Arg1, Arg2, Value_V)
          real,    intent(in) :: Arg1, Arg2
          real,    intent(out):: Value_V(:)
        end subroutine calc_table_var
     end interface
+    integer, optional, intent(in):: iComm
 
-    integer :: i1, i2, n1, n2, nValue
-    logical :: IsLog1, IsLog2
-    real :: Index1Min, Index2Min, dIndex1, dIndex2, Index1, Index2
+    integer:: iProc, nProc, iError
+    integer:: i1, i2, n1, n2, nValue
+    logical:: IsLog1, IsLog2
+    real   :: Index1Min, Index2Min, dIndex1, dIndex2, Index1, Index2
+    real, allocatable:: Value_VII(:,:,:)
     type(TableType), pointer:: Ptr
 
     character(len=*), parameter:: NameSub='make_lookup_table'
@@ -209,8 +215,8 @@ contains
 
     Ptr => Table_I(iTable)
 
-    if(  Ptr%NameCommand /= "make" .and. &
-         Ptr%NameCommand /= "save") RETURN
+    if(Ptr%NameCommand /= "make" .and. Ptr%NameCommand /= "save") &
+         RETURN
 
     ! Use simple scalars for sake of legibility
     n1     = Ptr%nIndex_I(1)
@@ -224,22 +230,42 @@ contains
     dIndex1   = Ptr%dIndex_I(1)
     dIndex2   = Ptr%dIndex_I(2)
 
+    ! Get processor index and total number of processors
+    if(present(iComm))then
+       call MPI_comm_rank(iComm,iProc,iError)
+       call MPI_comm_size(iComm,nProc,iError)
+    else
+       iProc = 0
+       nProc = 1
+    end if
+
     ! Allocate Value_VII array
     if(allocated(Ptr%Value_VII)) deallocate(Ptr%Value_VII)
-    allocate(Ptr%Value_VII(nValue, n1, n2))
+    allocate(Value_VII(nValue, n1, n2), Ptr%Value_VII(nValue, n1, n2))
+    Value_VII = 0.0
 
-    ! Fill up lookup table, This could be done in parallel !!!
-    do i2 = 1, n2
+    ! Fill up lookup table in parallel
+    do i2 = iProc+1, n2, nProc
        Index2 = Index2Min + (i2 - 1)*dIndex2
        if(IsLog2) Index2 = exp(Index2)
        do i1 = 1, n1
           Index1 = Index1Min + (i1 - 1)*dIndex1
           if(IsLog1) Index1 = exp(Index1)
-          call calc_table_var( Index1, Index2, Ptr%Value_VII(:,i1,i2))
+          call calc_table_var( Index1, Index2, Value_VII(:,i1,i2))
        end do
     end do
 
-    if(Ptr%NameCommand == "save") call save_plot_file( &
+    ! Collect (or copy) result into table
+    if(nProc > 1)then
+       call MPI_allreduce(Value_VII, Ptr%Value_VII, n1*n2*nValue, MPI_REAL, &
+            MPI_SUM, iComm, iError)
+    else
+       Ptr%Value_VII = Value_VII
+    end if
+
+    deallocate(Value_VII)
+
+    if(Ptr%NameCommand == "save" .and. iProc == 0) call save_plot_file( &
          Ptr%NameFile,                                 &
          TypeFileIn     = Ptr%TypeFile,                &
          StringHeaderIn = Ptr%StringDescription,       &
@@ -318,7 +344,7 @@ contains
     end if
 
     write(*,*)'testing make_lookup_table'
-    call make_lookup_table(1, eos_rho_e)
+    call make_lookup_table(1, eos_rho_e, MPI_COMM_WORLD)
 
     write(*,*)'testing interpolate_lookup_table'    
     call interpolate_lookup_table(1, 1.0, 2.0, p_I)

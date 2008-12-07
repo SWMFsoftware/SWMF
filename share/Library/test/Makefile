@@ -401,7 +401,7 @@ OBJ_LOOKUP_TABLE = \
 test_lookup_table_exe:
 	@(cd ../src; make ModLookupTable.o)
 	@make test_lookup_table.o
-	${LINK.f90} -o test_lookup_table.exe ${OBJ_LOOKUP_TABLE} ${Lflag2}
+	${LINK.f90} -o test_lookup_table.exe ${OBJ_LOOKUP_TABLE} ${Lflag1}
 
 test_lookup_table:
 	@echo -----------------------------------------------------------------
@@ -409,8 +409,8 @@ test_lookup_table:
 	@echo
 	@make test_lookup_table_exe
 	@echo
-	@echo './test_lookup_table.exe'
-	-@(./test_lookup_table.exe)
+	@echo '${MPIRUN} test_lookup_table.exe'
+	-@(${MPIRUN} test_lookup_table.exe)
 	@echo
 	@echo test_lookup_table done
 	@echo -----------------------------------------------------------------
