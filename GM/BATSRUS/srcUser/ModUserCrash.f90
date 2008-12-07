@@ -83,6 +83,7 @@ contains
   subroutine user_read_inputs
 
     use ModReadParam
+    use ModFermiGas,ONLY:read_fermi_gas_param
     character (len=100) :: NameCommand
     character(len=*), parameter :: NameSub = 'user_read_inputs'
     !------------------------------------------------------------------------
@@ -116,6 +117,8 @@ contains
           if(UseMixedCell)call read_var('MixLimit', MixLimit)
        case("#CYLINDRICAL")
           call read_var('IsCylindrical', IsCylindrical)
+       case("#FERMIGASEFFECT")
+          call read_fermi_gas_param
        case("#OPACITY")
           call read_var('TypeOpacity', TypeOpacity)
           select case(TypeOpacity)
