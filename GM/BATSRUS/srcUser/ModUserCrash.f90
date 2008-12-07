@@ -330,6 +330,7 @@ contains
     use ModUtilities, ONLY: split_string
     use ModEos,       ONLY: Xe_, Be_, Plastic_
     use ModConst,     ONLY: cKevToK
+    use ModMain,      ONLY: UseGrayDiffusion
 
     integer             :: nStepHyades, nEqparHyades
     integer, allocatable:: nCellHyades_D(:)
@@ -424,7 +425,7 @@ contains
        if(iMaterialHyades < 0) call stop_mpi(NameSub// &
             ' could not find material in '//trim(NameVarHyades))
     end if
-       
+
     ! Set conversion from Hyades units to normalized units
     allocate(Hyades2No_V(nDimHyades + nVarHyades))
     Hyades2No_V = 1.0
@@ -432,8 +433,16 @@ contains
     Hyades2No_V(iRhoHyades) = 1000.0 * Si2No_V(UnitRho_) ! g/cm3 -> kg/m3
     Hyades2No_V(iUxHyades)  = 0.01   * Si2No_V(UnitU_)   ! cm/s  -> m/s
     Hyades2No_V(iPHyades)   = 0.1    * Si2No_V(UnitP_)   ! dyne  -> Pa
-    Hyades2No_V(iTeHyades)  = cKevToK* Si2No_V(UnitTemperature_) ! KeV   -> K
-    Hyades2No_V(iTrHyades)  = cKevToK* Si2No_V(UnitTemperature_) ! KeV   -> K
+
+    if(UseGrayDiffusion)then
+       if(iTrHyades < 0) call stop_mpi(NameSub// &
+            ' could not find radiation temperature in '//trim(NameVarHyades))
+       if(iTeHyades < 0) call stop_mpi(NameSub// &
+            ' could not find electron temperature in '//trim(NameVarHyades))
+
+       Hyades2No_V(iTeHyades)= cKevToK* Si2No_V(UnitTemperature_) ! KeV   -> K
+       Hyades2No_V(iTrHyades)= cKevToK* Si2No_V(UnitTemperature_) ! KeV   -> K
+    end if
     if(nDimHyades > 1)then
        Hyades2No_V(iYHyades)  = 0.01 * Si2No_V(UnitX_)   ! cm    -> m
        Hyades2No_V(iUyHyades) = 0.01 * Si2No_V(UnitU_)   ! cm/s  -> m/s
@@ -527,9 +536,9 @@ contains
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
          Eradiation_
     use ModGeometry, ONLY: x_BLK
-    use ModMain,     ONLY: UseGrayDiffusion
     use ModPhysics,  ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
          cRadiationNo
+    use ModMain,     ONLY: UseGrayDiffusion
 
     integer, intent(in) :: iBlock
 
@@ -579,6 +588,7 @@ contains
           ! Set transverse momentum to zero
           State_VGB(RhoUy_:RhoUz_,i,j,k,iBlock) = 0.0
 
+          ! Radiation energy = cRadiation*Trad**4
           if(UseGrayDiffusion)then
              Tr = ( Weight1*DataHyades_VC(iTrHyades, iCell-1) &
                   + Weight2*DataHyades_VC(iTrHyades, iCell) )
@@ -599,9 +609,11 @@ contains
 
     use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
-         LevelXe_, LevelPl_
-    use ModGeometry, ONLY: x_BLK, y_BLK
+         LevelXe_, LevelPl_, Eradiation_
+    use ModGeometry,    ONLY: x_BLK, y_BLK
     use ModTriangulate, ONLY: calc_triangulation, find_triangle
+    use ModMain,        ONLY: UseGrayDiffusion
+    use ModPhysics,     ONLY: cRadiationNo
 
     integer, intent(in) :: iBlock
 
@@ -672,6 +684,11 @@ contains
                Weight1*LevelHyades_VC(:, iNode1) + &
                Weight2*LevelHyades_VC(:, iNode2) + &
                Weight3*LevelHyades_VC(:, iNode3)
+
+
+          ! Radiation energy = cRadiation*Trad**4
+          if(UseGrayDiffusion) State_VGB(Eradiation_,i,j,k,iBlock) = &
+               cRadiationNo * DataHyades_V(iTrHyades)**4
 
        end do
 
