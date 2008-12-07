@@ -15,7 +15,7 @@ module ModFermiGas
 
   ! At LogGe >= LogGeMinFermi the effects of Fermi statistics are  
   ! accounted for
-  real, public:: LogGeMinFermi = 0.0
+  real, public, parameter:: LogGeMinFermi = 0.0
 
   !The module does nothing if this logical is false  
   logical,public :: UseFermiGas = .false.
@@ -28,12 +28,27 @@ module ModFermiGas
   
   real :: FermiFunctionTable_II(0:nStep, NuEqMinus12_ : NuEq32_)
   
-  public:: init_fermi_function, iterate_ge
+  public:: init_fermi_function, iterate_ge 
+  public:: read_fermi_gas_param
   
   ! public :: test_fermi_function !Uncomment for testing
 
 contains
   !==============================
+  !The usage in the user_read_param:
+  !case('#FERMIGASEFFECT')
+  !call read_fermi_gas_param
+  !In PARAM.in:
+  !#FERMIGASEFFECT
+  !T
+  !4.0
+  subroutine read_fermi_gas_param
+    use ModReadParam
+    !----------------
+    call read_var('UseFermiGas',UseFermiGas)
+    call read_var('LogGeMinBoltzmann',LogGeMinBoltzmann)
+  end subroutine read_fermi_gas_param
+  !=====================================
   !The Fermi functions are defined to be
   !Fe_{\nu}(g_e)=(1/\Gamma(\nu+1))\int_0^\infty{x^\nu dx/(g_e \exp(x)+1)}
   !At abs(g_e)>=1 the integral can be taken by developing into a convergent 

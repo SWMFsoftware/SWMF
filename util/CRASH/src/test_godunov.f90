@@ -13,7 +13,6 @@
 !        iMaterial=0 - xenon
 !        iMaterial=1 - beryllium  
 program test_Godunov
-  use ModExactRS
   use ModAtomicMass
   use ModEos
   implicit none
@@ -122,6 +121,8 @@ contains
        GammaL,GammaR,&  !Optional Gamma, if needed
        Energy0L,Energy0R, & !Optional Energy0, if needed
        DoTest)
+    use ModExactRS
+    
     integer,intent(in)::nDim,nVar
     real,intent(in),dimension(nDim)::Normal_D !Unity vector normal to the face
     real,intent(in),dimension(nVar)::LeftState_V,RightState_V
