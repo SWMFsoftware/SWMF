@@ -40,6 +40,10 @@ T			UseCylindrical
 T			UseHyadesFile
 hyades2d_1.1ns.out	NameHyadesFile
 
+#FERMIGASEFFECT
+T
+4.0
+
 #USERINPUTEND    ----------------------
 
 #TIMEACCURATE
