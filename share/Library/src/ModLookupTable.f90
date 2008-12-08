@@ -281,11 +281,21 @@ contains
 
   !===========================================================================
 
-  subroutine interpolate_lookup_table(iTable, Arg1In, Arg2In, Value_V)
+  subroutine interpolate_lookup_table(iTable, Arg1In, Arg2In, Value_V, &
+       DoExtrapolate)
+
+    ! Return the array of values Value_V corresponding to arguments
+    ! Arg1In and Arg2In in iTable. Use a bilinear interpolation.
+    ! If DoExtrapolate is not present, stop with an error if the arguments
+    ! are out of range. If it is present and false, return the value of
+    ! the closest element in the table. If it is present and true, do a 
+    ! linear extrapolation.
 
     integer, intent(in) :: iTable            ! table
     real,    intent(in) :: Arg1In, Arg2In    ! input arguments
     real,    intent(out):: Value_V(:)        ! output values
+
+    logical, optional, intent(in):: DoExtrapolate ! optional extrapolation
 
     real :: Arg_I(2)
     type(TableType), pointer:: Ptr
@@ -299,9 +309,11 @@ contains
     where(Ptr%IsLogIndex_I) &
          Arg_I = log(Arg_I)
 
+    ! If value is outside table, use the last value (works well for constant)
     Value_V = bilinear(Ptr%Value_VII, Ptr%nValue, &
          1, Ptr%nIndex_I(1), 1, Ptr%nIndex_I(2), &
-         (Arg_I - Ptr%IndexMin_I)/Ptr%dIndex_I  + 1)
+         (Arg_I - Ptr%IndexMin_I)/Ptr%dIndex_I  + 1, &
+         DoExtrapolate = DoExtrapolate)
 
   end subroutine interpolate_lookup_table
 
