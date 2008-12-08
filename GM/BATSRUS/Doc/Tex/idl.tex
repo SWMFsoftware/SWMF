@@ -664,8 +664,12 @@ velpos(*,*)=x(triplet(0,49,2, 0,49,2, 0,1,1))
    {\bf multiplot} array. For example, setting 
    {\bf multiplot=[2,3,0]} gives 2 by 3 subplots filled in row-wise.
    If the third element is 1, the subplots are filled in column-wise.
-   Setting {\tt multiplot=3} is identical with {\bf multiplot=[3,1,1]},
-   while {\tt multiplot=0} gives the default behaviour.
+   Setting {\tt multiplot=3} is identical with {\bf multiplot=[3,1,1]}
+   (a single row of plots),
+   setting {\tt multiplot=-3} is identical with {\bf multiplot=[1,3,1]}
+   (a single column of plots),
+   while {\tt multiplot=0} gives the default behaviour
+   (the number of rows and columns is about the same).
 
    Functions can be plot on top of each other by setting the {\bf multiplot}
    array such that the number of subplots is smaller than the number of

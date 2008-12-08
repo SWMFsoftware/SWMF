@@ -29,7 +29,11 @@
      FORMAT='(a,i4,a,i3,a,i3,a,i4,a,i2)'
    if keyword_set(multiplot) then begin
         siz=size(multiplot)
-        if siz(0) eq 0 then multiplot=[multiplot,1,1]
+        ; scalar multiplot value is converted to a row (+) or a column (-)
+        if siz(0) eq 0 then begin
+            if multiplot gt 0 then multiplot=[multiplot,1,1] $
+            else                   multiplot=[1,-multiplot,1]
+        endif
         print,'multiplot= ',multiplot,', axistype (coord/cells)=',axistype,$
               ', fixaspect= ',fixaspect,$
               FORMAT='(a,"[",i2,",",i2,",",i2,"]",a,a,a,i1)'
