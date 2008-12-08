@@ -539,24 +539,6 @@ contains
           enddo
        enddo
 
-!       if (DoTouchNorthPole) then
-!          LocalVar = sum(Potential(1:nLons,nLats))/nLons
-!          NorthPolePotential = 0.0
-!          call MPI_REDUCE(LocalVar, NorthPolePotential, 1, MPI_REAL, &
-!               MPI_SUM, 0, iComm, iError)
-!          NorthPolePotential = NorthPolePotential/nProc
-!          call MPI_Bcast(NorthPolePotential,1,MPI_Real,0,iComm,iError)
-!       endif
-!       
-!       if (DoTouchSouthPole) then
-!          LocalVar = sum(Potential(1:nLons,1))/nLons
-!          SouthPolePotential = 0.0
-!          call MPI_REDUCE(LocalVar, SouthPolePotential, 1, MPI_REAL, &
-!               MPI_SUM, 0, iComm, iError)
-!          SouthPolePotential = SouthPolePotential/nProc
-!          call MPI_Bcast(SouthPolePotential,1,MPI_Real,0,iComm,iError)
-!       endif
-
        ! to ground the potential, we want to make sure that the average
        ! potential at the equator is zero.
 
@@ -566,11 +548,7 @@ contains
             MPI_SUM, 0, iComm, iError)
        GlobalPotential = GlobalPotential/nProc
        call MPI_Bcast(GlobalPotential,1,MPI_Real,0,iComm,iError)
-!       Potential(1:nLons,nLats/2) = Potential(1:nLons,nLats/2) - &
-!            GlobalPotential
        Potential = Potential - GlobalPotential
-
-       write(*,*) "Potential : ",GlobalPotential
 
        do iLat = 1, nLats/2
           do iLon = 1, nLons
