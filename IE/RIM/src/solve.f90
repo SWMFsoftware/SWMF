@@ -31,16 +31,6 @@ subroutine solve
 
 !  DoIdealTest = .true.
 
-  if (DoIdealTest) then
-     write(*,*) "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-     write(*,*) "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-     write(*,*) "               IDEAL TEST"
-     write(*,*) "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-     write(*,*) "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-     jr = -1.0e-6*exp(-abs((abs(Latitude)-75.0*cDegToRad))/(5.0*cDegToRad)) &
-          * sin(Longitude)
-  endif
-
   sinTheta = sin(cPi/2 - Latitude)
 
   nLatsSolve = 0
@@ -373,10 +363,10 @@ subroutine solve
   ! If we include poles, then the pole solution is the average of all
   ! the cells around the pole:
 
-  if (DoTouchNorthPole) &
-       Potential(1:nLons,nLats) = sum(Potential(1:nLons,nLats-1))/nLons
-  if (DoTouchSouthPole) &
-       Potential(1:nLons,    1) = sum(Potential(1:nLons,      2))/nLons
+!  if (DoTouchNorthPole) &
+!       Potential(1:nLons,nLats) = sum(Potential(1:nLons,nLats-1))/nLons
+!  if (DoTouchSouthPole) &
+!       Potential(1:nLons,    1) = sum(Potential(1:nLons,      2))/nLons
 
   ! Periodic Boundary Conditions:
 
@@ -462,6 +452,7 @@ contains
     real    :: Old(0:nLons+1,nLats), ReallyOld(0:nLons+1,nLats)
     real    :: LocalVar, NorthPotential, SouthPotential
     real    :: SouthPolePotential, NorthPolePotential, j, OCFLB_NS
+    real    :: GlobalPotential
     logical :: IsDone
 
     nIters = 0
@@ -470,28 +461,39 @@ contains
 
     IsDone = .false.
 
-    if (DoTouchNorthPole) then
-       LocalVar = sum(Potential(1:nLons,nLats))/nLons
-       NorthPolePotential = 0.0
-       call MPI_REDUCE(LocalVar, NorthPolePotential, 1, MPI_REAL, &
-            MPI_SUM, 0, iComm, iError)
-       NorthPolePotential = NorthPolePotential/nProc
-       call MPI_Bcast(NorthPolePotential,1,MPI_Real,0,iComm,iError)
-    endif
-       
-    if (DoTouchSouthPole) then
-       LocalVar = sum(Potential(1:nLons,1))/nLons
-       SouthPolePotential = 0.0
-       call MPI_REDUCE(LocalVar, SouthPolePotential, 1, MPI_REAL, &
-            MPI_SUM, 0, iComm, iError)
-       SouthPolePotential = SouthPolePotential/nProc
-       call MPI_Bcast(SouthPolePotential,1,MPI_Real,0,iComm,iError)
-    endif
-
     do while (.not.IsDone)
 
        Old = Potential
        ReallyOld = Potential
+
+       if (DoTouchNorthPole) then
+          LocalVar = sum(Potential(1:nLons,nLats))/nLons
+          NorthPolePotential = 0.0
+          call MPI_REDUCE(LocalVar, NorthPolePotential, 1, MPI_REAL, &
+               MPI_SUM, 0, iComm, iError)
+          NorthPolePotential = NorthPolePotential/nProc
+          call MPI_Bcast(NorthPolePotential,1,MPI_Real,0,iComm,iError)
+       endif
+       
+       if (DoTouchSouthPole) then
+          LocalVar = sum(Potential(1:nLons,1))/nLons
+          SouthPolePotential = 0.0
+          call MPI_REDUCE(LocalVar, SouthPolePotential, 1, MPI_REAL, &
+               MPI_SUM, 0, iComm, iError)
+          SouthPolePotential = SouthPolePotential/nProc
+          call MPI_Bcast(SouthPolePotential,1,MPI_Real,0,iComm,iError)
+       endif
+
+       ! to ground the potential, we want to make sure that the average
+       ! potential over the whole globe is zero.
+
+       LocalVar = sum(Old(1:nLons,:))/(nLons*nLats)
+       GlobalPotential = 0.0
+       call MPI_REDUCE(LocalVar, GlobalPotential, 1, MPI_REAL, &
+            MPI_SUM, 0, iComm, iError)
+       GlobalPotential = GlobalPotential/nProc
+       call MPI_Bcast(GlobalPotential,1,MPI_Real,0,iComm,iError)
+       Old = Old - GlobalPotential
 
        do iLat = 1, nLats
           do iLon = 1, nLons
@@ -503,8 +505,7 @@ contains
 
              OCFLB_NS = (abs(OCFLB(1,iLon))+OCFLB(2,iLon))/2.0
 
-!             if ( Latitude(iLon,iLat) < -LowLatBoundary .or. &
-!                  Latitude(iLon,iLat) > OCFLB_NS) then
+             if ( abs(Latitude(iLon,iLat)) > LowLatBoundary) then
                 if (iLat == 1) then
                    SouthPotential = SouthPolePotential
                 else
@@ -529,45 +530,58 @@ contains
 
                 Potential(iLon,iLat) =  &
                      (J*(Radius*sinTheta(iLon,iLat))**2 - &
-                     (SolverB(iLon,iLat)*NorthPotential + &
-                      SolverC(iLon,iLat)*SouthPotential + &
+                     (SolverB(iLon,iLat)*SouthPotential + &
+                      SolverC(iLon,iLat)*NorthPotential + &
                       SolverD(iLon,iLat)*Old(iLon-1,iLat) + &
                       SolverE(iLon,iLat)*Old(iLon+1,iLat)) ) / &
                       SolverA(iLon,iLat)
-!             else
-!                if (OCFLB_NS-abs(Latitude(iLon,iLat)) < OCFLBBuffer) then
-!                   r = 1.0 - 0.5*&
-!                        (OCFLB_NS-abs(Latitude(iLon,iLat)))/OCFLBBuffer
-!                else
-!                   r = 0.5
-!                endif
-!                Potential(iLon,iLat) = &
-!                     (1.0 - r) * Potential(iLon,nLats-iLat+1) + &
-!                     (      r) * Old(iLon,iLat)
-!             endif 
+             endif
           enddo
        enddo
 
-       Potential(1,nLats/2) = 0.0
-       Potential(1,nLats/2+1) = 0.0
+!       if (DoTouchNorthPole) then
+!          LocalVar = sum(Potential(1:nLons,nLats))/nLons
+!          NorthPolePotential = 0.0
+!          call MPI_REDUCE(LocalVar, NorthPolePotential, 1, MPI_REAL, &
+!               MPI_SUM, 0, iComm, iError)
+!          NorthPolePotential = NorthPolePotential/nProc
+!          call MPI_Bcast(NorthPolePotential,1,MPI_Real,0,iComm,iError)
+!       endif
+!       
+!       if (DoTouchSouthPole) then
+!          LocalVar = sum(Potential(1:nLons,1))/nLons
+!          SouthPolePotential = 0.0
+!          call MPI_REDUCE(LocalVar, SouthPolePotential, 1, MPI_REAL, &
+!               MPI_SUM, 0, iComm, iError)
+!          SouthPolePotential = SouthPolePotential/nProc
+!          call MPI_Bcast(SouthPolePotential,1,MPI_Real,0,iComm,iError)
+!       endif
 
-       if (DoTouchNorthPole) then
-          LocalVar = sum(Potential(1:nLons,nLats))/nLons
-          NorthPolePotential = 0.0
-          call MPI_REDUCE(LocalVar, NorthPolePotential, 1, MPI_REAL, &
-               MPI_SUM, 0, iComm, iError)
-          NorthPolePotential = NorthPolePotential/nProc
-          call MPI_Bcast(NorthPolePotential,1,MPI_Real,0,iComm,iError)
-       endif
-       
-       if (DoTouchSouthPole) then
-          LocalVar = sum(Potential(1:nLons,1))/nLons
-          SouthPolePotential = 0.0
-          call MPI_REDUCE(LocalVar, SouthPolePotential, 1, MPI_REAL, &
-               MPI_SUM, 0, iComm, iError)
-          SouthPolePotential = SouthPolePotential/nProc
-          call MPI_Bcast(SouthPolePotential,1,MPI_Real,0,iComm,iError)
-       endif
+       ! to ground the potential, we want to make sure that the average
+       ! potential at the equator is zero.
+
+       LocalVar = sum(Potential(1:nLons,:))/(nLons*nLats)
+       GlobalPotential = 0.0
+       call MPI_REDUCE(LocalVar, GlobalPotential, 1, MPI_REAL, &
+            MPI_SUM, 0, iComm, iError)
+       GlobalPotential = GlobalPotential/nProc
+       call MPI_Bcast(GlobalPotential,1,MPI_Real,0,iComm,iError)
+!       Potential(1:nLons,nLats/2) = Potential(1:nLons,nLats/2) - &
+!            GlobalPotential
+       Potential = Potential - GlobalPotential
+
+       write(*,*) "Potential : ",GlobalPotential
+
+       do iLat = 1, nLats/2
+          do iLon = 1, nLons
+             OCFLB_NS = (abs(OCFLB(1,iLon))+OCFLB(2,iLon))/2.0
+             if (abs(Latitude(iLon,iLat)) < OCFLB_NS-OCFLBBuffer) then
+                Potential(iLon,iLat) = &
+                     (Potential(iLon,iLat) + Potential(iLon,nLats-iLat+1))/2
+                Potential(iLon,nLats-iLat+1) = Potential(iLon,iLat)
+             endif
+          enddo
+       enddo
 
        ! Periodic Boundary Conditions:
 
@@ -610,133 +624,6 @@ contains
           Potential(      0,:) = Potential(nLons,:)
           Potential(nLons+1,:) = Potential(    1,:)
        endif
-
-       do iLat = 1, nLats/2
-          do iLon = 1, nLons
-             OCFLB_NS = (abs(OCFLB(1,iLon))+OCFLB(2,iLon))/2.0
-             if (abs(Latitude(iLon,iLat)) < OCFLB_NS) then
-                Potential(iLon,iLat) = &
-                     (Potential(iLon,iLat) + Potential(iLon,nLats-iLat+1))/2
-                Potential(iLon,nLats-iLat+1) = Potential(iLon,iLat)
-             endif
-          enddo
-       enddo
-
-!       do iLat = nLats-1, 2, -1
-!
-!          do iLon = 1, nLons
-!
-!             OCFLB_NS = (abs(OCFLB(1,iLon))+OCFLB(2,iLon))/2.0
-!
-!             if ( Latitude(iLon,iLat) > LowLatBoundary .or. &
-!                  Latitude(iLon,iLat) < -OCFLB_NS) then
-!                if (iLat == 1) then
-!                   SouthPotential = SouthPolePotential
-!                else
-!                   SouthPotential = Old(iLon,iLat-1)
-!                endif
-!                if (iLat == nLats) then
-!                   NorthPotential = NorthPolePotential
-!                else
-!                   NorthPotential = Old(iLon,iLat+1)
-!                endif
-!
-!                j = Jr(iLon,iLat)
-!                if (abs(Latitude(iLon,iLat)) < OCFLB_NS) then
-!                   if (OCFLB_NS-abs(Latitude(iLon,iLat)) < OCFLBBuffer) then
-!                      r = 1.0 - 0.5* &
-!                           (OCFLB_NS-abs(Latitude(iLon,iLat)))/OCFLBBuffer
-!                   else
-!                      r = 0.5
-!                   endif
-!                   j = (1-r)*jr(iLon,nLats-iLat+1) + r*j
-!                endif
-!
-!                Potential(iLon,iLat) =  &
-!!                     (Jr(iLon,iLat)*(Radius*sinTheta(iLon,iLat))**2 - &
-!                     (J*(Radius*sinTheta(iLon,iLat))**2 - &
-!                     (SolverB(iLon,iLat)*NorthPotential + &
-!                      SolverC(iLon,iLat)*SouthPotential + &
-!                      SolverD(iLon,iLat)*Old(iLon-1,iLat) + &
-!                      SolverE(iLon,iLat)*Old(iLon+1,iLat)) ) / &
-!                      SolverA(iLon,iLat)
-!             else
-!                if (OCFLB_NS-abs(Latitude(iLon,iLat)) < OCFLBBuffer) then
-!                   r = 1.0 - 0.5* &
-!                        (OCFLB_NS-abs(Latitude(iLon,iLat)))/OCFLBBuffer
-!                else
-!                   r = 0.5
-!                endif
-!                Potential(iLon,iLat) = &
-!                     (1.0 - r) * Potential(iLon,nLats-iLat+1) + &
-!                     (      r) * Old(iLon,iLat)
-!             endif 
-!          enddo
-!
-!       enddo
-!
-!       Potential(1,nLats/2) = 0.0
-!       Potential(1,nLats/2+1) = 0.0
-!
-!       if (DoTouchNorthPole) then
-!          LocalVar = sum(Potential(1:nLons,nLats))/nLons
-!          NorthPolePotential = 0.0
-!          call MPI_REDUCE(LocalVar, NorthPolePotential, 1, MPI_REAL, &
-!               MPI_SUM, 0, iComm, iError)
-!          NorthPolePotential = NorthPolePotential/nProc
-!          call MPI_Bcast(NorthPolePotential,1,MPI_Real,0,iComm,iError)
-!       endif
-!       
-!       if (DoTouchSouthPole) then
-!          LocalVar = sum(Potential(1:nLons,1))/nLons
-!          SouthPolePotential = 0.0
-!          call MPI_REDUCE(LocalVar, SouthPolePotential, 1, MPI_REAL, &
-!               MPI_SUM, 0, iComm, iError)
-!          SouthPolePotential = SouthPolePotential/nProc
-!          call MPI_Bcast(SouthPolePotential,1,MPI_Real,0,iComm,iError)
-!       endif
-!
-!       ! Periodic Boundary Conditions:
-!
-!       if (nProc > 1) then
-!
-!          Potential(      0,:) = 0.0
-!          Potential(nLons+1,:) = 0.0
-!
-!          ! Counterclockwise
-!          ! try isend and irecv
-!          do iProcFrom = 0, nProc-1
-!             iProcTo = mod(iProcFrom+1,nProc)
-!             if (iProc == iProcFrom) then
-!                BufferOut = Potential(nLons,:)
-!                call MPI_send(BufferOut,nLats,MPI_REAL,iProcTo,1,iComm,iError)
-!             endif
-!             if (iProc == IProcTo) then
-!                call MPI_recv(BufferIn ,nLats,MPI_REAL,iProcFrom,1,iComm, &
-!                     iStatus_I,iError)
-!                Potential(0,:) = BufferIn
-!             endif
-!          enddo
-!          
-!          ! Clockwise
-!          do iProcFrom = 0, nProc-1
-!             iProcTo = iProcFrom-1
-!             if (iProcTo == -1) iProcTo = nProc-1
-!             if (iProc == iProcFrom) then
-!                BufferOut = Potential(1,:)
-!                call MPI_send(BufferOut,nLats,MPI_REAL,iProcTo,1,iComm,iError)
-!             endif
-!             if (iProc == IProcTo) then
-!                call MPI_recv(BufferIn ,nLats,MPI_REAL,iProcFrom,1,iComm, &
-!                     iStatus_I,iError)
-!                Potential(nLons+1,:) = BufferIn
-!             endif
-!          enddo
-!
-!       else
-!          Potential(      0,:) = Potential(nLons,:)
-!          Potential(nLons+1,:) = Potential(    1,:)
-!       endif
 
        Residual = sum((ReallyOld-Potential)**2)
 
