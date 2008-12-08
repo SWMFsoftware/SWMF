@@ -57,6 +57,10 @@ Module ModConst
   ! Fundamental charge [Coulomb]
   real, parameter :: cElectronCharge  = 1.6022E-19
 
+  ! Bohr radius =5.29e-11 [m]
+  real,parameter :: cBohrRadius = &
+       (4.0*cPi*cEps/cElectronMass)* (cPlanckHBar/cElectronCharge)**2
+
   ! Number of particles per mole
   real, parameter :: cAvogadro = 6.022045E+23
 
@@ -92,6 +96,11 @@ Module ModConst
   real, parameter :: cKToEV  = 1.0 / cEVToK
   real, parameter :: cKToKEV = 1.0 / cKEVToK
   real, parameter :: cKToMEV = 1.0 / cMEVToK
+
+  !Rydberg =13.60 eV. Sometimes the twice larger constant is referred to as
+  !Rydberg 
+  real, parameter :: cRyToEV = (0.50/cElectronMass)*&
+       (cPlanckHBar/cBohrRadius)**2/cEV 
 
   !\
   ! Here RME stands for Rest Mass Energy.
