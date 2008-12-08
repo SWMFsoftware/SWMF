@@ -321,11 +321,11 @@ subroutine calc_chemistry(iBlock)
 
               ChemicalHeatingSub = &
                    ChemicalHeatingSub + &
-                   Reaction * 0.70 + &
+                   Reaction * 0.70 
                    
               ChemicalHeatingS(in2p_o) =  &
                    ChemicalHeatingS(in2p_o) + &
-                    Reaction * 0.70 + &
+                    Reaction * 0.70
                    
               ! N2+ + e -> 2 N(2D) + 1.04 eV
 
