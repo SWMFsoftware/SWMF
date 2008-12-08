@@ -147,14 +147,18 @@ contains
           call IO_set_sw_v_single(abs(SWvx))
           UseStaticIMF = .true.
 
-        case ("#HPI")
-           call read_var('HemisphericPower',HemisphericPower)
-           call IO_set_hpi_single(HemisphericPower)
+       case ("#TEST")
+          call read_var('UseTests',UseTests)
+          call read_var('TestName',TestName)
 
-        case ("#MHD_INDICES")
-           cTempLines(1) = NameCommand
-           if(read_line()) then
-              cTempLines(2) = NameCommand
+       case ("#HPI")
+          call read_var('HemisphericPower',HemisphericPower)
+          call IO_set_hpi_single(HemisphericPower)
+
+       case ("#MHD_INDICES")
+          cTempLines(1) = NameCommand
+          if(read_line()) then
+             cTempLines(2) = NameCommand
               cTempLines(3) = " "
               cTempLines(4) = "#END"
               call IO_set_inputs(cTempLines)
@@ -833,7 +837,7 @@ subroutine IE_run(tSimulation,tSimulationLimit)
 
   use ModProcIE
   use ModRIM
-  use ModParamRIM, only: iDebugLevel, DoSolve
+  use ModParamRIM, only: iDebugLevel, DoSolve, UseTests
   use CON_physics, ONLY: get_time, get_axes, time_real_to_int
   use ModKind
   use ModMpi, only: mpi_wtime
@@ -865,10 +869,12 @@ subroutine IE_run(tSimulation,tSimulationLimit)
 
   if(DoTest)write(*,*)NameSub,': iProc,IsNewInput=',iProc,IsNewInput
 
-  tSimulation = tSimulationLimit
+  if (tSimulationLimit < 1.0e30) then
+     tSimulation = tSimulationLimit
+  endif
 
   ! Do not solve if there is no new input from GM or UA
-  if(DoSolve .and. .not.IsNewInput) RETURN
+  if (DoSolve .and. (.not.IsNewInput .and. .not.UseTests)) RETURN
 
   call timing_start('IE_run')
   TimingStart = mpi_wtime()

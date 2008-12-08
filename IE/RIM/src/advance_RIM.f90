@@ -16,6 +16,8 @@ subroutine advance_RIM
 
   if (maxval(Latitude) > HighLatBoundary) call set_imf
 
+  if (UseTests) call set_test
+
   call distribute
 
   if (nSolve == 0 .and. maxval(Jr) == 0.0) then

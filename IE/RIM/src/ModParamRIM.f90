@@ -19,6 +19,9 @@ module ModParamRIM
   character (len=100) :: NameAuroralModel="ihp"
   character (len=100) :: NameSolarModel="mb"
 
+  logical :: UseTests = .false.
+  character (len=100) :: TestName="none"
+
   logical :: UseStaticIMF=.true.
 
   integer :: iConductanceModel=5
