@@ -20,16 +20,10 @@ subroutine advance
 
   if (.not. UseStatisticalModelsOnly) then
 
-     if (mod(iStep,2) == 0) then
-        if (.not. Is1D) call advance_horizontal_all
-        call advance_vertical_all
-        call add_sources
-     else
-        call add_sources
-        call advance_vertical_all
-        if (.not. Is1D) call advance_horizontal_all
-     endif
-     
+     call advance_vertical_all
+     call add_sources 
+     if (.not. Is1D) call advance_horizontal_all
+ 
   else
 
      Dt = DtStatisticalModels
