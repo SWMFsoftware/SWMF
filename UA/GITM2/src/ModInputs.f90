@@ -136,7 +136,7 @@ module ModInputs
   logical :: UseNOCooling      = .true.
   logical :: UseOCooling       = .true.
   logical :: UseConduction     = .true.
-  logical :: UseTurbulentCond = .false.
+  logical :: UseTurbulentCond = .true.
   logical :: UseDiffusion      = .false.
   logical :: UseVerAdvectionT  = .true.
 

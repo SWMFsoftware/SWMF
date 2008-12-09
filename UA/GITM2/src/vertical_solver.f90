@@ -86,11 +86,11 @@ subroutine advance_vertical_1stage( &
   use ModVertical, only : &
        Heating, EddyCoef_1D, Centrifugal, Coriolis, &
        MeanMajorMass_1d, Gamma_1d, InvRadialDistance_C, &
-       Gravity_G, Altitude_G
+       Gravity_G, Altitude_G,Cv_1D
   use ModTime
   use ModInputs
   use ModConstants
-
+  use ModSources, only : EddyCondAdia
   implicit none
 
   real, intent(in) :: LogRho(-1:nAlts+2)
@@ -291,29 +291,23 @@ subroutine advance_vertical_1stage( &
      ! dT/dt = -(V.grad T + (gamma - 1) T div V +  &
      !        (gamma - 1) * g  * grad (KeH^2  * rho) /rho 
 
-     if (UseTurbulentCond) then
+!     if (UseTurbulentCond) then
+!        NewTemp(iAlt)   = NewTemp(iAlt) - Dt * &
+!             (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
+!             (Gamma_1d(iAlt) - 1.0) * Temp(iAlt)*DivVel(iAlt))&
+!             + Dt * DiffTemp(iAlt)
+!     else
+
         NewTemp(iAlt)   = NewTemp(iAlt) - Dt * &
              (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
              (Gamma_1d(iAlt) - 1.0) * Temp(iAlt)*DivVel(iAlt))&
-             + Dt * DiffTemp(iAlt)
-     else
-        NewTemp(iAlt)   = NewTemp(iAlt) - Dt * &
-             (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
-             (Gamma_1d(iAlt) - 1.0) * Temp(iAlt)*DivVel(iAlt))&
-             + Dt * DiffTemp(iAlt) &
-             + Dt * (Gamma_1d(iAlt) - 1.0) * (- Gravity_G(iAlt)) * &
-             EddyCoef_1D(iAlt) * GradLogRho(iAlt) 
-     endif
+             + Dt * DiffTemp(iAlt) 
+
 
         NewTemp(iAlt)   = NewTemp(iAlt) + &
              Dt*Vel_GD(iAlt,iUp_)* &
              ( (Gamma_1d(iAlt) - 1.0)/Gamma_1d(iAlt) )*&
                Temp(iAlt)*GradLogPress(iAlt)
-
-!       if( NewTemp(iAlt) <= 140.0) then
-!          NewTemp(iAlt) = 140.0
-!       endif
-
 
   end do
 

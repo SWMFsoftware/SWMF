@@ -193,7 +193,7 @@ subroutine output(dir, iBlock, iOutputType)
 
   case ('3DTHM')
 
-     nvars_to_write = 11
+     nvars_to_write = 14
      call output_3dthm(iBlock)
 
   case ('3DCHM')
@@ -244,7 +244,7 @@ subroutine output(dir, iBlock, iOutputType)
  case ('1DTHM')
      
      nGCs = 0
-     nvars_to_write = 11 + (nspeciestotal*2)
+     nvars_to_write = 14 + (nspeciestotal*2)
      call output_1dthm
 
   end select
@@ -342,12 +342,15 @@ contains
 
        write(iOutputUnit_,"(I7,A1,a)")  4, " ", "EUV Heating"
        write(iOutputUnit_,"(I7,A1,a)")  5, " ", "Conduction"
-       write(iOutputUnit_,"(I7,A1,a)")  6, " ", "Chemical Heating"
-       write(iOutputUnit_,"(I7,A1,a)")  7, " ", "Auroral Heating"
-       write(iOutputUnit_,"(I7,A1,a)")  8, " ", "Joule Heating"
-       write(iOutputUnit_,"(I7,A1,a)")  9, " ", "NO Cooling"
-       write(iOutputUnit_,"(I7,A1,a)") 10, " ", "O Cooling"
-       write(iOutputUnit_,"(I7,A1,a)") 11, " ", "Total Abs EUV"
+       write(iOutputUnit_,"(I7,A1,a)")  6, " ", "Molecular Conduction"
+       write(iOutputUnit_,"(I7,A1,a)")  7, " ", "Eddy Conduction"
+       write(iOutputUnit_,"(I7,A1,a)")  8, " ", "Eddy Adiabatic Conduction"
+       write(iOutputUnit_,"(I7,A1,a)")  9, " ", "Chemical Heating"
+       write(iOutputUnit_,"(I7,A1,a)")  10, " ", "Auroral Heating"
+       write(iOutputUnit_,"(I7,A1,a)")  11, " ", "Joule Heating"
+       write(iOutputUnit_,"(I7,A1,a)")  12, " ", "NO Cooling"
+       write(iOutputUnit_,"(I7,A1,a)")  13, " ", "O Cooling"
+       write(iOutputUnit_,"(I7,A1,a)")  14, " ", "Total Abs EUV"
        if (cType(1:2) == "1D") then
           do iSpecies = 1, nSpeciesTotal
              write(iOutputUnit_,"(I7,A1,a,a)") 11 + iSpecies, " ", &
@@ -774,6 +777,9 @@ subroutine output_3dthm(iBlock)
                 Altitude_GB(iLon,iLat,iAlt,iBlock),   &
                 EuvHeating(iiLon,iiLat,iiAlt,iBlock)*dt*TempUnit(iiLon,iiLat,iiAlt),    &
                 Conduction(iiLon,iiLat,iiAlt)*TempUnit(iiLon,iiLat,iiAlt),              &
+                MoleConduction(iiLon,iiLat,iiAlt),                             &
+                EddyCond(iiLon,iiLat,iiAlt),                                   &
+                EddyCondAdia(iiLon,iiLat,iiAlt),                               &
                 ChemicalHeatingRate(iiLon,iiLat,iiAlt)*TempUnit(iiLon,iiLat,iiAlt),     &
                 AuroralHeating(iiLon,iiLat,iiAlt)*dt*TempUnit(iiLon,iiLat,iiAlt),       &
                 JouleHeating(iiLon,iiLat,iiAlt)*dt*TempUnit(iiLon,iiLat,iiAlt),         &
@@ -818,6 +824,9 @@ subroutine output_1dthm
           Altitude_GB(1,1,iAlt,1),   &
           EuvHeating(1,1,iiAlt,1)*dt*TempUnit(1,1,iiAlt),    &
           Conduction(1,1,iiAlt)*TempUnit(1,1,iiAlt),              &
+          MoleConduction(1,1,iiAlt),                             &
+          EddyCond(1,1,iiAlt),                                   &
+          EddyCondAdia(1,1,iiAlt),                               &
           ChemicalHeatingRate(1,1,iiAlt)*TempUnit(1,1,iiAlt),     &
           AuroralHeating(1,1,iiAlt)*dt*TempUnit(1,1,iiAlt),       &
           JouleHeating(1,1,iiAlt)*dt*TempUnit(1,1,iiAlt),         &

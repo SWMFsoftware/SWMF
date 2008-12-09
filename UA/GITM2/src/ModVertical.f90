@@ -10,7 +10,7 @@ module ModVertical
   implicit none
 
   real, dimension(-1:nAlts+2)   :: dAlt_F, InvDAlt_F, Altitude_G, Gravity_G
-  real, dimension(1:nAlts)      :: InvRadialDistance_C, dAlt_C
+  real, dimension(1:nAlts)      :: InvRadialDistance_C, dAlt_C,Cv_1D
   real, dimension(-1:nAlts+2)   :: LogRho, Temp,MeanMajorMass_1d,Gamma_1d
   real, dimension(-1:nAlts+2,3) :: Vel_GD
   real, dimension(-1:nAlts+2,3) :: IVel

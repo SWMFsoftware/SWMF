@@ -19,7 +19,8 @@ subroutine advance_vertical(iLon,iLat,iBlock)
        MeanMajorMass_1d, &
        gamma_1d, &
        EddyCoef_1d, &
-       Gravity_G, Altitude_G, dAlt_C, InvRadialDistance_C, dAlt_F, InvDAlt_F
+       Gravity_G, Altitude_G, dAlt_C, InvRadialDistance_C, dAlt_F, InvDAlt_F, Cv_1D
+  
 
   implicit none
 
@@ -31,7 +32,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   KappaTemp1 = KappaTemp(iLon,iLat,:,iBlock)
 
   EddyCoef_1d(1:nAlts) = KappaEddyDiffusion(iLon,iLat,1:nAlts,iBlock)
-
+  Cv_1D(1:nAlts) = cp(iLon,iLat,1:nAlts,iBlock)
   
   if (minval(NDensityS(iLon,iLat,:,1:nSpecies,iBlock)) <= 0.0) then
      write(*,*) "negative density found!"
@@ -90,7 +91,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
 
   call advance_vertical_1d
 
-  Rho(iLon,iLat,:,iBlock)                  = exp(LogRho)
+   Rho(iLon,iLat,:,iBlock)                  = exp(LogRho)
 
   do iDim = 1, 3 
      Velocity(iLon,iLat,:,iDim,iBlock)           = Vel_GD(:,iDim)

@@ -39,7 +39,6 @@ subroutine calc_GITM_sources(iBlock)
   real :: NF_Eddy(1:nAlts), NF_NDen(1:nAlts), NF_Temp(1:nAlts)
   real :: NF_NDenS(1:nAlts,1:nSpecies), NF_EddyRatio(1:nAlts,1:nSpecies)
   real :: NF_Gravity(1:nAlts)
-  real :: EddyCond(nLons,nLats,nAlts), EddyCondAdia(nLons,nLats,nAlts)
   real :: Prandtl(nLons,nLats,0:nalts+1)
 
 ! Temporary
@@ -141,45 +140,54 @@ subroutine calc_GITM_sources(iBlock)
   if (iDebugLevel > 4) write(*,*) "=====> conduction", iproc
 
   if(UseConduction)then
+
      tmp2 = Rho(1:nLons, 1:nLats,1:nAlts, iBlock) * &
           cp(1:nLons, 1:nLats,1:nAlts, iBlock)
+     
+     Prandtl = 0.0
+  
+     if (UseTurbulentCond) Prandtl = &
+          KappaEddyDiffusion(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
+          Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
+          Cp(1:nLons, 1:nLats,0:nAlts+1, iBlock)
+
      call calc_conduction(iBlock, &
           Temperature(1:nLons, 1:nLats,-1:nAlts+2, iBlock) * &
           TempUnit(1:nLons, 1:nLats,-1:nAlts+2), &
           KappaTemp(1:nLons, 1:nLats,0:nAlts+1, iBlock), &
           tmp2, &
-          Conduction)
+          MoleConduction)
+     
+      Conduction = MoleConduction/TempUnit(1:nLons, 1:nLats,1:nAlts) 
 
-     Conduction = Conduction/TempUnit(1:nLons, 1:nLats,1:nAlts)
+     call calc_conduction(iBlock, &
+          Temperature(1:nLons, 1:nLats,-1:nAlts+2, iBlock) * &
+          TempUnit(1:nLons, 1:nLats,-1:nAlts+2), &
+          Prandtl(1:nLons, 1:nLats,0:nAlts+1), &
+          tmp2, &
+          EddyCond)
 
+
+     Conduction = Conduction + EddyCond/TempUnit(1:nLons, 1:nLats,1:nAlts) 
 !!!
-! These two terms were added by Jared to replace Yue's eddy conduction term.  
-! On Earth, they cause eddy conduction to have
-! no effect.  The Earth eddy conduction term is in vertical solver.
+! This term was added by Jared to replace Yue's eddy conduction term in vertical solver.  
 !!!
-     if(UseTurbulentCond) then
+
+if (UseTurbulentCond) then
         
-        Prandtl = &
-             KappaEddyDiffusion(1:nLons,1:nLats,0:nAlts+1, iBlock)* &
-             Rho(1:nLons,1:nLats,0:nAlts+1,iBlock)*              &
-             cp(1:nLons,1:nLats,0:nAlts+1,iBlock)
-        
-        call calc_conduction(iBlock, &
-             Temperature(1:nLons, 1:nLats,-1:nAlts+2,iBlock)*&
-             TempUnit(1:nLons,1:nLats,-1:nAlts+2),         &
-             Prandtl, tmp2, EddyCond)
-        
-        call calc_conduction(iBlock, &
-             Pressure(1:nLons, 1:nLats,-1:nAlts+2,iBlock), &
-             KappaEddyDiffusion(1:nLons, 1:nLats, 0:nAlts+1,iBlock)/&
-             Gamma(1:nLons,1:nLats, 0:nAlts+1,iBlock),  &
-             tmp2, EddyCondAdia)
-        
-        Conduction = Conduction + &
-             EddyCond/TempUnit(1:nLons, 1:nLats,1:nAlts) - &
-             EddyCondAdia/TempUnit(1:nLons, 1:nLats,1:nAlts)
-    
+   call calc_conduction(iBlock, &
+        Pressure(1:nLons, 1:nLats,-1:nAlts+2,iBlock), &
+        Prandtl(1:nLons, 1:nLats,0:nAlts+1)/&
+        Gamma(1:nLons,1:nLats, 0:nAlts+1,iBlock)/Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock) / &
+          Cp(1:nLons, 1:nLats,0:nAlts+1, iBlock),  &
+        tmp2, EddyCondAdia)
+   
+   Conduction = Conduction - &
+        EddyCondAdia/TempUnit(1:nLons, 1:nLats,1:nAlts)
+   
      endif
+
+
   else
      Conduction = 0.0
   end if
