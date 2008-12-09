@@ -109,6 +109,15 @@ real, parameter, dimension(10,10) :: cPotential10_II = reshape(  (/   &
   !  Database supported by: ISTC (International Science And Technology Center);
   !  Leading Institution: Russian Federal Nuclear Center, Snezhinsk, Russia
   !  Website: http://spectr-w3.snz.ru/new/index.phtml
+  !  
+  ! 
+  !  The site addres is changed, (/new/ is gone). Numerous new capabilities are 
+  !  available - excitation levels, ground term (determining the statistical weight),
+  !  excitation and ionization rates. The most extensive database is developed under
+  !  the collaboration with US Labs.   
+  !  (Dr. Peter Loboda, the project manager and Igor V. Glazyrin, the chair of department,
+  !  VNIITF, Snezhinsk, private communication)
+  !
   !  Most of the data is based on theoretical calculations with accuracy estimated as shown
   real, parameter, dimension(54) :: cPotentialXe_I = (/&
    !    1   !    2    !    3    !   4  !   5  !    6   !    7   !   8  !   9  !   10   !
