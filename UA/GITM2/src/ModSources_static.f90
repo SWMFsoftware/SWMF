@@ -10,7 +10,8 @@ module ModSources
 
   real, dimension(nLons, nLats, nAlts) :: &
        Conduction, NOCooling, OCooling, &
-       AuroralHeating, JouleHeating, IonPrecipHeating
+       AuroralHeating, JouleHeating, IonPrecipHeating, &
+       EddyCond,EddyCondAdia,MoleConduction
 
   real, dimension(nLons, nLats, nAlts,nBlocksMax) :: &
        EuvHeating,eEuvHeating, &
