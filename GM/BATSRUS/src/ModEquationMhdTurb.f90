@@ -128,32 +128,32 @@ module ModVarIndexes
   
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
-       'rho mx my mz bx by bz Ew ' // &
-       ' I_01 I_02 I_03 I_04 I_05 I_06 I_07 I_08 I_09 I_10' // &
-       ' I_11 I_12 I_13 I_14 I_15 I_16 I_17 I_18 I_19 I_20' //& 
-       ' I_21 I_22 I_23 I_24 I_25 I_26 I_27 I_28 I_29 I_30' //& 
-       ' I_31 I_32 I_33 I_34 I_35 I_36 I_37 I_38 I_39 I_40' //& 
-       ' I_41 I_42 I_43 I_44 I_45 I_46 I_47 I_48 I_49 I_50' //&
+       'rho mx my mz bx by bz Ew' // &
+       ' I01 I02 I03 I04 I05 I06 I07 I08 I09 I10' // &
+       ' I11 I12 I13 I14 I15 I16 I17 I18 I19 I20' //& 
+       ' I21 I22 I23 I24 I25 I26 I27 I28 I29 I30' //& 
+       ' I31 I32 I33 I34 I35 I36 I37 I38 I39 I40' //& 
+       ' I41 I42 I43 I44 I45 I46 I47 I48 I49 I50' //&
        ' e'
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
        'rho ux uy uz bx by bz Ew' // &
-        ' I_01 I_02 I_03 I_04 I_05 I_06 I_07 I_08 I_09 I_10' //&
-        ' I_11 I_12 I_13 I_14 I_15 I_16 I_17 I_18 I_19 I_20' //&
-        ' I_21 I_22 I_23 I_24 I_25 I_26 I_27 I_28 I_29 I_30' //&
-        ' I_31 I_32 I_33 I_34 I_35 I_36 I_37 I_38 I_39 I_40' //& 
-        ' I_41 I_42 I_43 I_44 I_45 I_46 I_47 I_48 I_49 I_50' //&
+        ' I01 I02 I03 I04 I05 I06 I07 I08 I09 I10' //&
+        ' I11 I12 I13 I14 I15 I16 I17 I18 I19 I20' //&
+        ' I21 I22 I23 I24 I25 I26 I27 I28 I29 I30' //&
+        ' I31 I32 I33 I34 I35 I36 I37 I38 I39 I40' //& 
+        ' I41 I42 I43 I44 I45 I46 I47 I48 I49 I50' //&
         ' p'
   
 ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
        '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "E_w", ' //&
-       '"I_01", "I_02", "I_03", "I_04", "I_05", "I_06", "I_07", "I_08", "I_09", "I_10", '// & 
-       '"I_11", "I_12", "I_13", "I_14", "I_15", "I_16", "I_17", "I_18", "I_19", "I_20", '//&
-       '"I_21", "I_22", "I_23", "I_24", "I_25", "I_26", "I_27", "I_28", "I_29", "I_30", '//&
-       '"I_31", "I_32", "I_33", "I_34", "I_35", "I_36", "I_37", "I_38", "I_39", "I_40", '//&
-       '"I_41", "I_42", "I_43", "I_44", "I_45", "I_46", "I_47", "I_48", "I_49", "I_50"  '//&
+       '"I01", "I02", "I03", "I04", "I05", "I06", "I07", "I08", "I09", "I10", '// & 
+       '"I11", "I12", "I13", "I14", "I15", "I16", "I17", "I18", "I19", "I20", '//&
+       '"I21", "I22", "I23", "I24", "I25", "I26", "I27", "I28", "I29", "I30", '//&
+       '"I31", "I32", "I33", "I34", "I35", "I36", "I37", "I38", "I39", "I40", '//&
+       '"I41", "I42", "I43", "I44", "I45", "I46", "I47", "I48", "I49", "I50"  '//&
        '"p" '
 
   ! Names of the user units for IDL and TECPlot output
