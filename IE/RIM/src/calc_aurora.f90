@@ -205,9 +205,11 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
 
      enddo
 
-!     if (OCFLBH(iLon) > MaxAuroralLat) OCFLBH(iLon) = MaxAuroralLat
-!     if (OCFLBH(iLon)+Width(iLon) > MaxAuroralLat+MinAuroralWidth) &
-!          Width(iLon) = MaxAuroralLat - OCFLBH(iLon)
+     if (OCFLBH(iLon) > MaxAuroralLat) OCFLBH(iLon) = MaxAuroralLat
+     if (OCFLBH(iLon)+Width(iLon) > MaxAuroralLat+MinAuroralWidth) &
+          Width(iLon) = MaxAuroralLat + MinAuroralWidth - OCFLBH(iLon)
+
+     if (width(iLon) > 12.0*cDegToRad) width(iLon) = 12.0*cDegToRad
 
   enddo
 
@@ -230,7 +232,7 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
   ! We want to put the Center of the diffuse aurora about 1/2 way between
   ! the open/closed field-line boundary and the inner edge of the 
   ! plasma sheet.  I don't know why.  It just seems like a good idea.
-  Center = OCFLBH - Width/2
+  Center = OCFLBH - Width !/2
 
   ! ---------------------------
   ! Polar Rain
