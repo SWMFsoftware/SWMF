@@ -452,14 +452,16 @@ contains
     real    :: Old(0:nLons+1,nLats), ReallyOld(0:nLons+1,nLats)
     real    :: LocalVar, NorthPotential, SouthPotential
     real    :: SouthPolePotential, NorthPolePotential, j, OCFLB_NS
-    real    :: GlobalPotential
-    logical :: IsDone
+    real    :: GlobalPotential, OldResidual
+    logical :: IsDone, IsLastSolveBad = .false.
 
     nIters = 0
 
     if (.not.UseInitialGuess) Potential = 0.0
+    if (IsLastSolveBad) Potential = 0.0
 
     IsDone = .false.
+    IsLastSolveBad = .false.
 
     do while (.not.IsDone)
 
@@ -603,6 +605,7 @@ contains
           Potential(nLons+1,:) = Potential(    1,:)
        endif
 
+       OldResidual = Residual
        Residual = sum((ReallyOld-Potential)**2)
 
        nIters = nIters + 1
@@ -615,6 +618,15 @@ contains
 
        if (Residual < Tolerance) IsDone = .true.
        if (nIters >= MaxIteration) IsDone = .true.
+
+       if (nIters > 30 .and. Residual > OldResidual) then
+          if (iProc == 0) then
+             write(*,*) "RIM=> Looks like the potential is starting to diverge"
+             write(*,*) "Existing!  Residual : ", nIters, Residual
+          endif
+          IsDone = .true.
+          IsLastSolveBad = .true.
+       endif
 
        if (iDebugLevel > 3) &
             write(*,*) "RIM====> Residual : ", nIters, Residual

@@ -139,7 +139,7 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
 
   iLonOff = iProc*nLons
 
-  Discrete_FacAE = 0.75e23
+  Discrete_FacAE = 0.4e23
   Discrete_FacEF = 2.0e23
   Diffuse_FacAE = 5.0e-11
   Diffuse_FacEF = 1.0e9
@@ -299,7 +299,8 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
      do while (rhoH(iLon,iLat) == 0.0)
         iLat = iLat + 1
      enddo
-     rhoH(iLon,1:iLat-1) = rhoH(iLon,iLat)
+     rhoH(iLon,1:iLat-1) = rhoH(iLon,iLat)* &
+          exp(-abs(latH(iLon,1:iLat-1)-latH(iLon,iLat-1))/Width(iLon))
      tH(iLon,1:iLat-1) = tH(iLon,iLat)
      pNorm(iLon,1:iLat-1) = pNorm(iLon,iLat)
   enddo
@@ -371,24 +372,28 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
   do iLon = 0, nLons+1
      
      smoothlat = 0.0
-     do iLat = 3,nLats/2-3
+     do iLat = 4,nLats/2-4
         smoothlat(iLat) = ( &
+             Discrete_AveE(iLon, iLat-3) + &
              Discrete_AveE(iLon, iLat-2) + &
              Discrete_AveE(iLon, iLat-1) + &
              Discrete_AveE(iLon, iLat-0) + &
              Discrete_AveE(iLon, iLat+1) + &
-             Discrete_AveE(iLon, iLat+2))/5
+             Discrete_AveE(iLon, iLat+2) + &
+             Discrete_AveE(iLon, iLat+3))/7
      enddo
      Discrete_AveE(iLon,:) = smoothlat
 
      smoothlat = 0.0
-     do iLat = 3,nLats/2-3
+     do iLat = 4,nLats/2-4
         smoothlat(iLat) = ( &
+             Discrete_EFlux(iLon, iLat-3) + &
              Discrete_EFlux(iLon, iLat-2) + &
              Discrete_EFlux(iLon, iLat-1) + &
              Discrete_EFlux(iLon, iLat-0) + &
              Discrete_EFlux(iLon, iLat+1) + &
-             Discrete_EFlux(iLon, iLat+2))/5
+             Discrete_EFlux(iLon, iLat+2) + &
+             Discrete_EFlux(iLon, iLat+3))/7
      enddo
      Discrete_EFlux(iLon,:) = smoothlat
 
