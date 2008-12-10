@@ -196,7 +196,8 @@ contains
 
     integer, intent(in):: iTable  ! table index
     interface
-       subroutine calc_table_var(Arg1, Arg2, Value_V)
+       subroutine calc_table_var(iTable, Arg1, Arg2, Value_V)
+         integer, intent(in) :: iTable
          real,    intent(in) :: Arg1, Arg2
          real,    intent(out):: Value_V(:)
        end subroutine calc_table_var
@@ -251,7 +252,7 @@ contains
        do i1 = 1, n1
           Index1 = Index1Min + (i1 - 1)*dIndex1
           if(IsLog1) Index1 = exp(Index1)
-          call calc_table_var( Index1, Index2, Value_VII(:,i1,i2))
+          call calc_table_var(iTable, Index1, Index2, Value_VII(:,i1,i2))
        end do
     end do
 
@@ -412,12 +413,13 @@ contains
 
   !===========================================================================
 
-  subroutine eos_rho_e(rho, e, p_I)
+  subroutine eos_rho_e(iTable, rho, e, p_I)
     ! This is an example for the subroutine passed to make_lookup_table
 
-    real, intent(in):: rho, e
-    real, intent(out):: p_I(:)
-
+    integer, intent(in):: iTable
+    real, intent(in)   :: rho, e
+    real, intent(out)  :: p_I(:)
+    !-----------------------------------------------------------------------
     p_I(1) = (2./3.)*e
     p_I(2) = (2./5.)*e
     p_I(3) = e + rho
