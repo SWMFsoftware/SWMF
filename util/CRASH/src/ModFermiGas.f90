@@ -1,25 +1,23 @@
 !^CFG COPYRIGHT UM
 
-module ModFermiGas
+module CRASH_ModFermiGas
+
   implicit none
   SAVE
   PRIVATE !Except
 
-  ! Logarithm of the electron statistical  
-  ! weight=exp(-\mu/T)
-  real, public:: LogGe 
+  !The module does nothing if this logical is false  
+  logical,public :: UseFermiGas = .true.
+  
+  ! At LogGe >= LogGeMinBoltzmann the electrons are treated as a Boltzmann gas
+  real, public:: LogGeMinBoltzmann = 4.0
 
-  ! At LogGe >= LogGeMinBoltzmann the electrons are treated as the  
-  !Boltzmann gas
-  real, public:: LogGeMinBoltzmann = 2.0
-
-  ! At LogGe >= LogGeMinFermi the effects of Fermi statistics are  
-  ! accounted for
+  ! At LogGe >= LogGeMinFermi the effects of Fermi statistics are accounted for
   real, public, parameter:: LogGeMinFermi = 0.0
 
-  !The module does nothing if this logical is false  
-  logical,public :: UseFermiGas = .false.
-  
+  ! Logarithm of the electron statistical weight = exp(-\mu/T)
+  real, public:: LogGe 
+
   !Correcting coefficients in thermodynamic functions  
   real,public :: rMinus = 1.0, rPlus = 1.0  
 
@@ -29,25 +27,10 @@ module ModFermiGas
   real :: FermiFunctionTable_II(0:nStep, NuEqMinus12_ : NuEq32_)
   
   public:: init_fermi_function, iterate_ge 
-  public:: read_fermi_gas_param
   
   ! public :: test_fermi_function !Uncomment for testing
 
 contains
-  !==============================
-  !The usage in the user_read_param:
-  !case('#FERMIGASEFFECT')
-  !call read_fermi_gas_param
-  !In PARAM.in:
-  !#FERMIGASEFFECT
-  !T
-  !4.0
-  subroutine read_fermi_gas_param
-    use ModReadParam
-    !----------------
-    call read_var('UseFermiGas',UseFermiGas)
-    call read_var('LogGeMinBoltzmann',LogGeMinBoltzmann)
-  end subroutine read_fermi_gas_param
   !=====================================
   !The Fermi functions are defined to be
   !Fe_{\nu}(g_e)=(1/\Gamma(\nu+1))\int_0^\infty{x^\nu dx/(g_e \exp(x)+1)}
@@ -139,4 +122,4 @@ contains
     end do
   end subroutine test_fermi_function
   
-end module ModFermiGas
+end module CRASH_ModFermiGas

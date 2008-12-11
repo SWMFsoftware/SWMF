@@ -1,13 +1,23 @@
 !^CFG COPYRIGHT UM
 module ModEos
 
-  use ModPolyimide
-  use ModStatSum
-  use ModAtomicMass
-  use ModESimT4
-
-  implicit none
-  PRIVATE !Except
+  ! Equation Of State (EOS) for ionized plasma
+  !
+  ! Thermodynamic variables and other notations
+  !
+  !        Rho - the mass density
+  !        E - internal energy of the unit of mass
+  !        e, i - electron, ion
+  !        V, vol - volume or volumetric
+  !        \left(\frac{\partial...}{\partial...}\right)_V - thermodynamical
+  !             derivative at constant volume
+  !        Te, Ti - electron and ion temperature
+  !        iMaterial - integer index of the material:
+  !        iMaterial=0 - xenon
+  !        iMaterial=1 - beryllium   
+  !        iMaterial=2 - plastic
+  !        iMaterial=90 - plasma with eos E=aT^4/4; p=aT^4/12; C_V=aT^3 
+  !
   ! In the initial CRASH treatment of materials,
   !
   ! 1. We can treat any given material as having a single average Z.
@@ -25,15 +35,15 @@ module ModEos
   !
   ! 6. In our regime of interest, the electrons behave as an ideal gas in an 
   !    ion-sphere environment within which Coulomb interactions do affect the 
-  !    electron pressure and internal energy. The electron pressure and internal 
-  !    energy are best calculated using equations 3.47 through 3.50 in 
-  !    R. P. Drake, High Energy Density Physics
+  !    electron pressure and internal energy. The electron pressure and 
+  !    internal energy are best calculated using equations 3.47 through 3.50 
+  !    in R. P. Drake, High Energy Density Physics
   !
   ! 7. The ion pressure is the ideal gas pressure. The ion internal energy 
-  !    includes the particle energy of random motion and the energy of ionization. 
-  !    The model of eqs. 3.74 through 3.76 in the mentioned book is acceptable. 
-  !    Alternatively, a more complex model using actual ionization energies would 
-  !    be acceptable.
+  !    includes the particle energy of random motion and the energy of 
+  !    ionization. The model of eqs. 3.74 through 3.76 in the mentioned book 
+  !    is acceptable. Alternatively, a more complex model using actual 
+  !    ionization energies would be acceptable.
   !
   ! 8. The materials that matter are
   !    - Beryllium
@@ -41,116 +51,120 @@ module ModEos
   !    - Polyimide (C_22 H_10 N_2 O_5)
   !
 
-  ! Equation Of State (EOS)
-  !
-  ! Thermodynamical variables and other notations
-  !         \rho, Rho - the mass density
-  !         {\cal E}, E - internal energy of the unit of mass
-  !         e, i - electron, ion
-  !        V, vol - volume or volumetric
-  !        \left(\frac{\partial...}{\partial...}\right)_V - thermodynamical
-  !             derivative at constant volume
-  !        T_{e,i}, Te,Ti - electron and ion temperature
-  !        iMaterial - integer variable, a signature of the material:
-  !        iMaterial=0 - xenon
-  !        iMaterial=1 - beryllium   
-  !        iMaterial=2 - plastic
-  !        iMaterial=90 - plasma with eos E=aT^4/4; p=aT^4/12; C_V=aT^3 
+  use ModPolyimide
+  use ModStatSum
+  use ModAtomicMass
+  use ModESimT4
+  use CRASH_ModFermiGas, ONLY: UseFermiGas, LogGeMinBoltzmann
 
+  implicit none
 
+  private !Except
 
-  integer,parameter:: Xe_=0      !Xenon
-  integer,parameter:: Be_=1      !Beryllium
-  integer,parameter:: Plastic_=2 ! Chemical formula:C_22 H_10 N_2 O_5
-  integer,parameter:: C_=3, H_=4, N_=5, O_=6 !Composition elements
-  integer,parameter, dimension(0:2) :: nZ_I=(/54, 4, 6 /)
+  integer, public, parameter:: Xe_=0      ! Xenon
+  integer, public, parameter:: Be_=1      ! Beryllium
+  integer, public, parameter:: Plastic_=2 ! Polyimide (C_22 H_10 N_2 O_5)
 
-
-
-  public::eos, UsePreviousTe, Xe_,Be_,Plastic_
-
-  !Eos function for CRASH
-  !Usage : call eos(iMaterial,Rho,(TeIn=...| ETotalIn=...| PTotalIn=...),Parameter1Out=,Parameter2Out=...)
-  !Or:     call eos(RhoToARatio_I,(TeIn=...| ETotalIn=...| PTotalIn=...),Parameter1Out=,Parameter2Out=...)
-  !where the parameters iMaterial and Rho [kg/m^3] are the input parameters for CRASH material iMaterial
-  !of the density of Rho; 
-  !Or RhoToARatio_I is the array of atomic concentrations of the materials in their mixture
-  !
-  !Energetic input parameter is the (electron) temperature in K, or the internal energy density [J/m^3] 
-  !(the total of electron and ion energies, assuming their temperatures to be equal), or the total 
-  !presure [Pa]. In more than one input energetic parameter is given, the first one in the sequence of 
-  !(Te,ETotal,PTotal) is used. If none is provided, the code stops 
-  !
-  !Output parameters: TeOut,  PTotal,ETotal,Gamma( Gamma*PTotal/Rho being the adiabatic compressibility,
-  !or, the same, the speed of sound squared),CVTotalOut
-
+  public:: UsePreviousTe ! inherited from ModStatSum
+  public:: eos, read_eos_parameters
   interface eos
      module procedure eos_material
      module procedure eos_mixture
   end interface
+
+  ! Local variables
+
+  integer, parameter:: Test_=90 ! test material with powerlaw EOS function
+  integer, parameter :: nZ_I(Xe_:Plastic_)=(/54, 4, 6 /)
+
+  ! integer, parameter:: C_=3, H_=4, N_=5, O_=6 !Composition elements
+
 contains
+
+  !============================================================================
+  subroutine read_eos_parameters
+
+    ! The usage in the user_read_param:
+    ! #EOS
+    ! T                     UseFermiGas
+    ! 4.0                   LogGeMinBoltzmann)
+
+    use ModReadParam, ONLY: read_var
+    !-----------------------------------------------------------------------
+    ! For now. But it should/could read other things
+    call read_var('UseFermiGas',       UseFermiGas)
+    call read_var('LogGeMinBoltzmann', LogGeMinBoltzmann)
+
+  end subroutine read_eos_parameters
   !============================================================================
 
   subroutine eos_material(iMaterial,Rho,&
-       TeIn,ETotalIn,pTotalIn,&
-       TeOut,ETotalOut,pTotalOut,GammaOut,CVTotalOut,IsError)
+       TeIn,eTotalIn,pTotalIn,&
+       TeOut,eTotalOut,pTotalOut,GammaOut,CvTotalOut,IsError)
 
-    integer, intent(in):: iMaterial     ! sort of material
+    ! Eos function for single material
+
+    integer, intent(in):: iMaterial     ! index of material
     real,    intent(in):: Rho           ! mass density [kg/m^3]
 
-    real,    optional, intent(in)  :: TeIn          ! temperature SI[K]
-    real,    optional, intent(in)  :: ETotalIn      ! internal energy density [J/m^3]
-    real,    optional, intent(in)  :: pTotalIn      ! pressure, SI [Pa]
+    ! One of the following three energetic input parameters must be present
+    real,    optional, intent(in)  :: TeIn       ! temperature SI[K]
+    real,    optional, intent(in)  :: eTotalIn   ! internal energy density
+    real,    optional, intent(in)  :: pTotalIn   ! pressure
 
-    real,    optional, intent(out) :: TeOut         ! temperature SI[K]
-    real,    optional, intent(out) :: pTotalOut     ! pressure, SI [Pa]
-    real,    optional, intent(out) :: ETotalOut     ! internal energy density [J/m^3]
-    real,    optional, intent(out) :: GammaOut      ! polytropic index
-    real,    optional, intent(out) :: CVTotalOut    ! Specific heat per the unit of volume,[J/(K*m^3)]
+    ! One or more of the output parameters can be present
+    real,    optional, intent(out) :: TeOut      ! temperature
+    real,    optional, intent(out) :: pTotalOut  ! pressure
+    real,    optional, intent(out) :: eTotalOut  ! internal energy density
+    real,    optional, intent(out) :: GammaOut   ! polytropic index
+    real,    optional, intent(out) :: CvTotalOut ! specific heat / unit volume
     logical, optional, intent(out) :: IsError
 
-    real   :: NAtomic
-    !-------------------------------
-    if(iMaterial==90)then
-       call eos_esimt4( TeIn,ETotalIn,pTotalIn,&
-       TeOut,ETotalOut,pTotalOut,GammaOut,CVTotalOut)
-       return
-    elseif(iMaterial==2)then
+    real   :: Natomic
+    !-------------------------------------------------------------------------
+    if(iMaterial == Test_)then
+       call eos_esimt4(TeIn, eTotalIn, pTotalIn, &
+            TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut)
+       RETURN
+    elseif(iMaterial == Plastic_)then
        call set_mixture(nPolyimide, nZPolyimide_I, CPolyimide_I)
 
        !Get the atomic concentration
-       NAtomic = Rho / ( cAtomicMass * cAPolyimide )
+       Natomic = Rho / ( cAtomicMass * cAPolyimide )
     else
        call set_element(nZ_I(iMaterial))
 
        ! Get the atomic concentration
-       NAtomic=Rho/(cAtomicMass*cAtomicMass_I(nZ_I(iMaterial)))
+       Natomic=Rho/(cAtomicMass*cAtomicMass_I(nZ_I(iMaterial)))
     end if
-    call eos_generic(NAtomic,&
-         TeIn,ETotalIn,pTotalIn,TeOut,ETotalOut,pTotalOut,GammaOut,CVTotalOut,IsError)
+    call eos_generic(Natomic, TeIn, eTotalIn, pTotalIn, &
+         TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,IsError)
+
   end subroutine eos_material
+
   !============================================================================
 
-
   subroutine eos_mixture(RhoToARatio_I,&
-       TeIn,ETotalIn,pTotalIn,&
-       TeOut,ETotalOut,pTotalOut,GammaOut,CVTotalOut,IsError)
+       TeIn, eTotalIn, pTotalIn, &
+       TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut, IsError)
 
-    real,intent(in) :: RhoToARatio_I( 0:2 )  !Input mass density, SI [kg/m^3] divided by A
+    ! Eos function for mixed material
+    real, intent(in) :: RhoToARatio_I(Xe_:Plastic_) ! Mass densities/A
 
-    real,    optional, intent(in)  :: TeIn          ! temperature SI[K]
-    real,    optional, intent(in)  :: ETotalIn      ! internal energy density [J/m^3]
-    real,    optional, intent(in)  :: pTotalIn      ! pressure, SI [Pa]
+    ! One of the following three energetic input parameters must be present
+    real,    optional, intent(in)  :: TeIn          ! temperature
+    real,    optional, intent(in)  :: eTotalIn      ! internal energy density
+    real,    optional, intent(in)  :: pTotalIn      ! pressure
 
-    real,    optional, intent(out) :: TeOut         ! temperature SI[K]
-    real,    optional, intent(out) :: pTotalOut     ! pressure, SI [Pa]
-    real,    optional, intent(out) :: ETotalOut     ! internal energy density [J/m^3]
+    ! One or more of the output parameters can be present
+    real,    optional, intent(out) :: TeOut         ! temperature
+    real,    optional, intent(out) :: pTotalOut     ! pressure
+    real,    optional, intent(out) :: eTotalOut     ! internal energy density 
     real,    optional, intent(out) :: GammaOut      ! polytropic index
-    real,    optional, intent(out) :: CVTotalOut    ! Specific heat per the unit of volume,[J/(K*m^3)]
-    logical, optional, intent(out) :: IsError
+    real,    optional, intent(out) :: CvTotalOut    ! specific heat per volume
+    logical, optional, intent(out) :: IsError       ! error flag
 
-
-    real :: RhoToATotal, NAtomic
+    real :: RhoToATotal, Natomic
 
     integer, parameter :: nAll = 1 + 1 + nPolyimide   
 
@@ -161,8 +175,7 @@ contains
          7 , &  !N
          8 /)   !O
     real :: ConcentrationAll_I(nAll)
-    !-------------------------------!
-
+    !-------------------------------------------------------------------------
     RhoToATotal = sum( RhoToARatio_I ) 
 
     !Relative atomic concentrations of Xe, Be and polyimide:
@@ -175,47 +188,46 @@ contains
     call set_mixture(nAll, nZAll_I, ConcentrationAll_I)
 
     !Get the atomic concentration
-    NAtomic = RhoToATotal / cAtomicMass 
+    Natomic = RhoToATotal / cAtomicMass 
 
-    call eos_generic(NAtomic,&
-         TeIn,ETotalIn,pTotalIn,TeOut,ETotalOut,pTotalOut,GammaOut,CVTotalOut,IsError)
+    call eos_generic(Natomic, TeIn, eTotalIn, pTotalIn, &
+         TeOut, eTotalOut, PtotalOut, GammaOut, CvTotalOut, IsError)
+
   end subroutine eos_mixture
-  !=============================================================================
 
-  subroutine  eos_generic(NAtomic,&
-       TeIn,ETotalIn,pTotalIn,&
-       TeOut,ETotalOut,pTotalOut,GammaOut,CVTotalOut,IsError)
+  !============================================================================
 
+  subroutine eos_generic(Natomic, TeIn, eTotalIn, pTotalIn,&
+       TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut, IsError)
 
-    real,               intent(in) :: NAtomic       ! Atomic concentration,[1/m^3]
+    real,              intent(in)  :: Natomic    ! Atomic concentration
+    real,    optional, intent(in)  :: TeIn       ! temperature
+    real,    optional, intent(in)  :: eTotalIn   ! internal energy density
+    real,    optional, intent(in)  :: PtotalIn   ! pressure
 
-    real,    optional, intent(in)  :: TeIn          ! temperature SI[K]
-    real,    optional, intent(in)  :: ETotalIn      ! internal energy density [J/m^3]
-    real,    optional, intent(in)  :: pTotalIn      ! pressure, SI [Pa]
-
-    real,    optional, intent(out) :: TeOut         ! temperature SI[K]
-    real,    optional, intent(out) :: pTotalOut     ! pressure, SI [Pa]
-    real,    optional, intent(out) :: ETotalOut     ! internal energy density [J/m^3]
-    real,    optional, intent(out) :: GammaOut      ! polytropic index
-    real,    optional, intent(out) :: CVTotalOut    ! Specific heat per the unit of volume,[J/(K*m^3)]
+    real,    optional, intent(out) :: TeOut      ! temperature
+    real,    optional, intent(out) :: pTotalOut  ! pressure
+    real,    optional, intent(out) :: eTotalOut  ! internal energy density 
+    real,    optional, intent(out) :: GammaOut   ! polytropic index
+    real,    optional, intent(out) :: CvTotalOut ! Specific heat per volume
     logical, optional, intent(out) :: IsError
 
-    real :: EPerAtom, pPerAtom,TeInEV  !Both in eV
+    real :: ePerAtom, pPerAtom,TeInEV  !Both in eV
 
     character (len=*), parameter:: NameSub='ModEos::eos'
     !----------------------------------------------------------------------!
     if(present(TeIn))then
 
        TeInEV = TeIn * cKToEV
-       call set_ionization_equilibrium(TeInEV, NAtomic, IsError )
+       call set_ionization_equilibrium(TeInEV, Natomic, IsError )
 
-    elseif(present(ETotalIn))then
+    elseif(present(eTotalIn))then
 
        ! Get an energy per the atomic cell, express in eV
-       EPerAtom = ETotalIn/ (cEV * NAtomic)
+       ePerAtom = eTotalIn/ (cEV * Natomic)
 
        ! Find temperature from dentity and internal energy
-       call set_temperature(EPerAtom, Natomic, IsError)
+       call set_temperature(ePerAtom, Natomic, IsError)
 
     elseif(present(pTotalIn))then
        ! Divide pressure by Na , express in eV
@@ -224,16 +236,16 @@ contains
        !Find temperature from dentity and pressure
        call pressure_to_temperature(pPerAtom, Natomic, IsError)
     else
-       call CON_stop(NameSub//'None of Te|ETotal|pTotal is among input parameters')
+       call CON_stop(NameSub// &
+            'None of Te, eTotal, or pTotal is among the input parameters')
     end if
 
-
-
     if(present(TeOut))      TeOut     = Te*cEVToK
-    if(present(ETotalOut))  ETotalOut = NAtomic*cEV*internal_energy()
+    if(present(eTotalOut))  eTotalOut = Natomic*cEV*internal_energy()
     if(present(PTotalOut))  pTotalOut = pressure()
     if(present(GammaOut))   call get_gamma(GammaOut=GammaOut)
-    if(present(CVTotalOut)) CVTotalOut = (NAtomic*cBoltzmann)*heat_capacity()
+    if(present(CvTotalOut)) CvTotalOut = (Natomic*cBoltzmann)*heat_capacity()
 
   end subroutine eos_generic
+
 end module ModEos

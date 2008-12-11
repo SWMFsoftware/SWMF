@@ -94,7 +94,7 @@ Contains
   !calculating the natural logarithms of the first nZMax integers
 
   subroutine mod_init
-    use ModFermiGas,ONLY: UseFermiGas, init_Fermi_function
+    use CRASH_ModFermiGas,ONLY: UseFermiGas, init_Fermi_function
     integer:: iZ  !Used for loops
     real   :: DeBroglieInv
 	!-----------------
@@ -151,7 +151,7 @@ Contains
 
   !=========================================================================!
   subroutine set_zero_ionization
-    use ModFermiGas,ONLY: RMinus, RPlus
+    use CRASH_ModFermiGas,ONLY: RMinus, RPlus
     Population_II=0.0; Population_II(0,1:nMix) = 1.0
 
     ZAv=0.0; EAv=0.0; DeltaZ2Av=0.0; DeltaETeInv2Av = 0.0; ETeInvDeltaZAv = 0.0
@@ -164,7 +164,7 @@ Contains
   
   subroutine set_ionization_equilibrium(TeIn, NaIn, IsDegenerated )
 
-    use ModFermiGas,ONLY: UseFermiGas, LogGe, &
+    use CRASH_ModFermiGas,ONLY: UseFermiGas, LogGe, &
          LogGeMinBoltzmann,LogGeMinFermi
 
     ! Concentration of heavy particles (atoms+ions) in the plasma 
@@ -211,7 +211,7 @@ Contains
     ! Calculating Z averaged iteratively
     subroutine set_Z
 
-      use ModFermiGas,ONLY: iterate_ge, RMinus, RPlus
+      use CRASH_ModFermiGas,ONLY: iterate_ge, RMinus, RPlus
 
       !Internal variables
       real    :: ZTrial, ZNew            ! The trial values of Z for iterations
@@ -445,7 +445,7 @@ contains
   ! Can only be called after set_ionization_equilibrium has executed
   
   real function pressure()
-    use ModFermiGas,ONLY:RPlus
+    use CRASH_ModFermiGas,ONLY:RPlus
     
     pressure = (1.0 + ZAv*RPlus) * Na * Te * cEV
 
@@ -456,7 +456,7 @@ contains
   ! Can only be called after set_ionization_equilibrium has executed 
   
   real function internal_energy()
-    use ModFermiGas,ONLY:RPlus
+    use CRASH_ModFermiGas,ONLY:RPlus
     
     internal_energy = 1.50 * Te *( 1.0 + ZAv*RPlus) + EAv
  
@@ -487,7 +487,7 @@ Contains
   !(derivative of internal energy wrt Te) from temperature:
   !Can only be called after set_ionization_equilibrium has executed
   real function heat_capacity()
-    use ModFermiGas
+    use CRASH_ModFermiGas
     !------------------
     
     if( ZAv <= cTiny )then
@@ -509,7 +509,7 @@ Contains
   ! Calculate (1/Na)*(\partial P/\partial T)_{\rho=const}
   ! i.e the temperuture derivative of the specific pressure (P/Na) 
   real function d_pressure_over_d_te()
-    use ModFermiGas,ONLY:RPlus,RMinus
+    use CRASH_ModFermiGas,ONLY:RPlus,RMinus
     !----------------------------------------------------------
     if(ZAv==0)then
        d_pressure_over_d_te = 0.0
@@ -528,7 +528,7 @@ Contains
   !Calculate !(\rho/P)*(\partial P/\Partial \rho)_{T=const},
   !i.e the compressibility at constant temperature
   real function compressibility_at_const_te()
-    use ModFermiGas,ONLY:RPlus, RMinus
+    use CRASH_ModFermiGas,ONLY:RPlus, RMinus
     !-------------------
     if(ZAv==0)then
        compressibility_at_const_te = 1.0
