@@ -51,8 +51,10 @@ module ModStatSumMix
 
   !Averages:
  
-  real :: ZAv,&  ! 1 the average charge per ion - <Z> (elementary charge units)
-          EAv          ! 2 The average ionization energy level of ions
+  real :: ZAv,&  ! The average charge per ion - <Z> (elementary charge units)
+          EAv,&  ! The average ionization energy level of ions
+          IonizPotentialAv
+  
 
   !Deviators <(\delta i)^2>, <delta i delta E> and <(delta e)^2:
   real :: DeltaZ2Av      ! The value of <(delta i)^2>=<i^2>-<i>^2
@@ -77,8 +79,11 @@ module ModStatSumMix
            ETeInvDeltaZAv,& ! The value of <Delta E/Te Delta i>
            iIter,&          ! To provide the output for the convergence efficiency, if needed
            nMix, IonizPotential_II
+  real,parameter::StrangeTemperature = -777.0
 
-!Public methods:
+  real:: eMadelung, eUpshiftByCompression, rIonoSphereInv
+
+  !Public methods:
 
   !Set the elements and their Ionization Potentials
   public:: set_mixture      
@@ -87,6 +92,7 @@ module ModStatSumMix
   public:: set_ionization_equilibrium
 
   public:: set_zero_ionization
+  public:: check_applicability
            
 Contains
   !=========================================================================
@@ -111,6 +117,51 @@ Contains
     DoInit=.false.
   
   end subroutine mod_init
+  !==========================================================================
+  subroutine check_applicability(iError)
+    use CRASH_ModFermiGas,ONLY: UseFermiGas, LogGe, &
+         LogGeMinBoltzmann,LogGeMinFermi
+    integer,optional,intent(out) :: iError
+    !-------------------------------------
+    if(.not. present(iError))return
+    iError = 0
+    !Check a strong Fermi-degeneration
+    if(UseFermiGas)then
+       if(LogGe < LogGeMinFermi-0.7)then
+          Te=StrangeTemperature
+          call set_zero_ionization
+       end if
+       if(LogGe < LogGeMinFermi)iError = 1
+    else
+       if(LogGe < LogGeMinBoltzmann - 1.7)then
+          Te=StrangeTemperature
+          call set_zero_ionization
+       end if
+       if(LogGe < LogGeMinBoltzmann )iError = 1
+    end if
+    !Check relativistic temperature
+    if( Te>5.0e4 )iError = 2
+    if( Te>1.0e5 )then
+       Te = StrangeTemperature
+       call set_zero_ionization
+    end if
+    if(Te<0.0)then
+       eMadelung = 0.0
+       return
+    end if
+
+    !Calculate the ionosphere radius and 
+    !the dependent variables:
+    rIonoSphereInv = ( (4.0*cPi/3.0)*cBohrRadius**3 * Na)**(1.0/3)
+
+    eMadelung = 1.80 * (ZAv**2 + DeltaZ2Av)* &
+         cRyToEv*rIonoSphereInv
+
+    eUpshiftByCompression = eUpshiftByCompression *&
+         rIonoSphereInv**2
+    if(eUpshiftByCompression > IonizPotentialAv)iError = 3
+  end subroutine check_applicability
+  !==========================================================================
   !Set the elements and their Ionization Potentials
   !==========================================================================
   subroutine set_mixture(nMixIn, nZIn_I, ConcentrationIn_I)
@@ -151,18 +202,20 @@ Contains
 
   !=========================================================================!
   subroutine set_zero_ionization
-    use CRASH_ModFermiGas,ONLY: RMinus, RPlus
+    use CRASH_ModFermiGas,ONLY: RMinus, RPlus, LogGe
     Population_II=0.0; Population_II(0,1:nMix) = 1.0
-
+    LogGe = 99.0
     ZAv=0.0; EAv=0.0; DeltaZ2Av=0.0; DeltaETeInv2Av = 0.0; ETeInvDeltaZAv = 0.0
     RMinus = 1.0; RPlus = 1.0
+    IonizPotentialAv = sum(IonizPotential_II(1,1:nMix)*Concentration_I( 1:nMix))
+    eUpshiftByCompression = 1.0 
   end subroutine set_zero_ionization
 
  
   !========================================================================!  
    ! Find the final values of ZAv and the ion populations from Temperature and heavy particle density
   
-  subroutine set_ionization_equilibrium(TeIn, NaIn, IsDegenerated )
+  subroutine set_ionization_equilibrium(TeIn, NaIn, iError )
 
     use CRASH_ModFermiGas,ONLY: UseFermiGas, LogGe, &
          LogGeMinBoltzmann,LogGeMinFermi
@@ -171,7 +224,7 @@ Contains
     ! (# of particles per m^3):
     real, intent(in)             ::  NaIn,& ![1/m^3]
 	                             TeIn !electron temperature [eV]
-    logical,optional,intent(out) :: IsDegenerated
+    integer,optional,intent(out) :: iError
 
 
     !Internal variables
@@ -188,7 +241,7 @@ Contains
 
     if( Te <= 0.02 * minval( IonizPotential_II( 1,1:nMix) ) )then
        call set_zero_ionization
-       if(present(IsDegenerated))IsDegenerated=.false.
+       call check_applicability(iError)
        return
     end if
 
@@ -197,15 +250,8 @@ Contains
     lnC1  = log( eWight1eV1m3  * sqrt(TeIn)*TeIn / Na)
 
     call set_Z
-    call set_averages_and_deviators(DoZOnly=.false.)	
-
-    if( present(IsDegenerated) ) then 
-       if(UseFermiGas)then
-          IsDegenerated = LogGe < LogGeMinFermi
-       else
-          IsDegenerated = LogGe < LogGeMinBoltzmann
-       end if
-    end if
+    call set_averages_and_deviators(DoZOnly=.false.)
+    call check_applicability(iError)
   contains
 
     ! Calculating Z averaged iteratively
@@ -387,9 +433,11 @@ Contains
 
       ZAv = 0.0
       EAv = 0.0
-      DeltaZ2Av      = 0.0   
-      DeltaETeInv2Av = 0.0
-      ETeInvDeltaZAv = 0.0
+      DeltaZ2Av        = 0.0   
+      DeltaETeInv2Av   = 0.0
+      ETeInvDeltaZAv   = 0.0
+      IonizPotentialAv = 0.0
+      eUpshiftByCompression = 0.0
 
       do iMix = 1, nMix
          !Calculate average vaues of Z, for this component:
@@ -425,12 +473,24 @@ Contains
               sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
               ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) * &
               (N_I(iZMin_I(iMix):iZMax_I(iMix))-ZJ) )
+         IonizPotentialAv =  IonizPotentialAv + Concentration_I(iMix)*&
+              sum( &
+              Population_II(&
+              iZMin_I(iMix) : min(iZMax_I(iMix), nZ_I(iMix)-1), iMix)*&
+              IonizPotential_II(&
+              iZMin_I(iMix)+1 : min(iZMax_I(iMix), nZ_I(iMix)), iMix))
+         eUpshiftByCompression =  eUpshiftByCompression +Concentration_I(iMix)*&
+              sum(Population_II(&
+              iZMin_I(iMix) : min(iZMax_I(iMix), nZ_I(iMix)-1), iMix))
+         
       end do
       EAv = EAv * Te
 
 
     end subroutine set_averages_and_deviators
   end subroutine set_ionization_equilibrium
+  !========================================!
+    
 end module ModStatSumMix
 !=======================
 module ModTDFunctions
@@ -540,7 +600,8 @@ Contains
    
     !For specific pressure:
     !(Na /P) \left(\partial P / \partial Na \right)_{T=const}
-    compressibility_at_const_te  =(1.0 +ZAv**2 / (ZAv*RMinus + DeltaZ2Av))/(1.0 + Zav*RPlus) 
+    compressibility_at_const_te  =&
+         (1.0 +ZAv**2 / (ZAv*RMinus + DeltaZ2Av))/(1.0 + Zav*RPlus) 
   end function compressibility_at_const_te
   !===================================================================
   subroutine get_gamma(GammaOut,GammaSOut,GammaMaxOut)
@@ -592,11 +653,11 @@ Contains
     call set_mixture(nMixIn=1, nZIn_I=(/nZIn/), ConcentrationIn_I=(/1.0/))
   end subroutine set_element
   !==========================================================================
-  subroutine set_temperature(Uin, NaIn,IsDegenerated)
+  subroutine set_temperature(Uin, NaIn, iError)
     
     real,intent(in) :: Uin,& !Average internal energy per atomic unit [eV]
                        NaIn !Density of heavy particles [# of particles/m^3]
-    logical,intent(out),optional::IsDegenerated
+    integer,intent(out),optional::iError
     
     real,parameter :: ToleranceU = 0.001 !accuracy of internal energy needed [(% deviation)/100]
     real :: UDeviation,& ! The difference between the given internal energy and the calculated one
@@ -615,8 +676,7 @@ Contains
     if( UIn <= 0.03 * minval(IonizPotential_II(1,1:nMix))) then
 
        Te=UIn/1.50 ;  call set_zero_ionization
-       
-       if(present(IsDegenerated))IsDegenerated=.false.
+       call check_applicability(iError)
        return
     end if
 
@@ -629,7 +689,7 @@ Contains
        
        !Find the populations for the trial Te
        
-       call set_ionization_equilibrium(Te, Na, IsDegenerated) 
+       call set_ionization_equilibrium(Te, Na) 
        UDeviation = internal_energy()-Uin
 
        !Calculate the improved value of Te, limiting the iterations so 
@@ -639,13 +699,13 @@ Contains
     
        iIterTe = iIterTe+1
     end do iterations
-
+    call check_applicability(iError)
   end subroutine set_temperature
   !==========================================================================
-  subroutine pressure_to_temperature(PToNaRatio,NaIn,IsDegenerated)
+  subroutine pressure_to_temperature(PToNaRatio, NaIn, iError)
     real,intent(in) :: PToNaRatio,& !Presure divided by Na [eV]
          NaIn !Density of heavy particles [# of particles/m^3]
-    logical,intent(out),optional::IsDegenerated
+    integer,intent(out),optional::iError
 
     !accuracy of internal energy needed [(% deviation)/100]
     real,parameter :: ToleranceP = 0.001 
@@ -667,7 +727,7 @@ Contains
 
     if(PToNaRatio<=0.03*IonizPotential_II(1,1))then
        Te = PToNaRatio; call set_zero_ionization
-       if(present(IsDegenerated))IsDegenerated=.false.
+       call check_applicability(iError)
        return
     end if
 
@@ -680,7 +740,7 @@ Contains
     iterations: do while(abs(PDeviation) >TolerancePeV .and. iIterTe<=20)
 
        !Find the populations for the trial Te
-       call set_ionization_equilibrium(Te, Na, IsDegenerated) 
+       call set_ionization_equilibrium(Te, Na) 
        PDeviation = pressure()/(Na*cEV) - PToNaRatio
 
        !Calculate the improved value of Te, limiting the iterations so 
@@ -690,6 +750,7 @@ Contains
        iIterTe = iIterTe+1  !Global variable, which is accessible from outside
 
     end do iterations
+    call check_applicability(iError)
   end subroutine pressure_to_temperature
   
 end module ModStatSum

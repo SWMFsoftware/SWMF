@@ -1,4 +1,4 @@
-  !^CFG COPYRIGHT UM
+!^CFG COPYRIGHT UM
 
 !***********************************************************************
 !    calculation of ionization equilibrium, single material
@@ -22,7 +22,7 @@ program saha
   integer :: iIter_I(0:nN)
   !character(LEN=*),parameter,dimension(0:nN) :: Separator_I='|'
   !character(LEN=*),parameter,dimension(0:nN) :: Separator1_I='/'
-  logical :: IsDegenerated
+  integer::iError
 
 
   !-------------------------------------------
@@ -62,16 +62,17 @@ program saha
 
      do iN = 0,nN
         NaTrial = Nao*exp(iN*dLogN)
-        call set_ionization_equilibrium(vTe,NaTrial*1000000.0,IsDegenerated)
+        call set_ionization_equilibrium(vTe,NaTrial*1000000.0,iError)
         Z_I(iN) = z_averaged() 
         Z2_I(iN)= z2_averaged()/Z_I(iN)
         Uav_I(iN)=internal_energy()
         Cv_I(iN)=heat_capacity()
-        if(IsDegenerated)then
+        if(iError/=0)then
            Z_I(iN) = -  Z_I(iN)
            Z2_I(iN)= - Z2_I(iN)
            Uav_I(iN)= -Uav_I(iN)
            Cv_I(iN)= - Cv_I(iN)
+           write(*,*)'Error=',iError,vTe,NaTrial*1000000.0
         end if
      end do
      write(24,'(f5.0,6(a,f7.1),a)') vTe,&
@@ -114,16 +115,17 @@ program saha
 
      do iN = 0,nN
         NaTrial = Nao*exp(iN*dLogN)
-        call set_ionization_equilibrium(vTe,NaTrial*1000000.0,IsDegenerated)
+        call set_ionization_equilibrium(vTe,NaTrial*1000000.0,iError)
         Z_I(iN) = z_averaged() 
         Z2_I(iN)= z2_averaged()/Z_I(iN)
         Uav_I(iN)=internal_energy()
         Cv_I(iN)=heat_capacity()
-        if(IsDegenerated)then
+        if(iError/=0)then
            Z_I(iN) = -  Z_I(iN)
            Z2_I(iN)= - Z2_I(iN)
            Uav_I(iN)= -Uav_I(iN)
            Cv_I(iN)= - Cv_I(iN)
+           write(*,*)'Error=',iError,vTe,NaTrial*1000000.0
         end if
      end do
      write(24,'(f5.0,6(a,f8.1,a,f7.1),a)') vTe,&
@@ -165,10 +167,13 @@ program saha
      vU = dU * iU 
      do iN = 0,nN
         NaTrial = Nao*exp(iN*dLogN)
-        call set_temperature(vU,NaTrial*1000000.0,IsDegenerated)
+        call set_temperature(vU,NaTrial*1000000.0,iError)
         Te_I(iN) = Te 
         iIter_I(iN) = iIterTe
-        if(IsDegenerated)Te_I(iN)=-Te_I(iN)
+        if(iError/=0)then
+           write(*,*)'Error=',iError,Te_I(iN),NaTrial*1000000.0
+           Te_I(iN)=-Te_I(iN)
+        end if
      end do
 
      write(25,'(f6.0,6(a,f7.1,a,i7,a),a)') vU,&
@@ -210,10 +215,10 @@ program saha
      vU = dU * iU 
      do iN = 0,nN
         NaTrial = Nao*exp(iN*dLogN)
-        call pressure_to_temperature(vU,NaTrial*1000000.0,IsDegenerated)
+        call pressure_to_temperature(vU,NaTrial*1000000.0,iError)
         Te_I(iN) = Te 
         iIter_I(iN) = iIterTe
-        if(IsDegenerated)Te_I(iN)=-Te_I(iN)
+        if(iError/=0)Te_I(iN)=-Te_I(iN)
      end do
 
      write(25,'(f6.0,6(a,f7.1,a,i7,a),a)') vU,&
@@ -256,14 +261,15 @@ program saha
 
      do iN = 0,nN
         NaTrial = Nao*exp(iN*dLogN)
-        call set_ionization_equilibrium(vTe,NaTrial*1000000.0,IsDegenerated)
+        call set_ionization_equilibrium(vTe,NaTrial*1000000.0,iError)
         Uav_I(iN)= internal_energy()
         Cv_I(iN) = heat_capacity()
-        if(IsDegenerated)then
+        if(iError/=0)then
            Z_I(iN) = -  Z_I(iN)
            Z2_I(iN)= - Z2_I(iN)
            Uav_I(iN)= -Uav_I(iN)
            Cv_I(iN)= - Cv_I(iN)
+           write(*,*)'Error=',iError,vTe,NaTrial*1000000.0
         end if
      end do
      write(24,'(f5.0,6(a,f8.1,a,f7.1),a)') vTe,&
