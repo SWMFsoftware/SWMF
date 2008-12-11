@@ -193,7 +193,7 @@ test_levelset:
 	@echo "test_levelset_compile..." > test_levelset.diff
 	make test_levelset_compile
 	@echo "test_levelset_rundir..." >> test_levelset.diff
-	make test_levelset_rundir
+	make test_levelset_rundir DEFAULT_EXE=CRASH.exe
 	@echo "test_levelset_run..." >> test_levelset.diff
 	make test_levelset_run
 	@echo "test_levelset_check..." >> test_levelset.diff
@@ -205,8 +205,7 @@ test_levelset_compile:
 	make PIDL
 
 test_levelset_rundir: test_rundir
-	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.levelset PARAM.in; \
-		ln -s ${BINDIR}/CRASH.exe . 
+	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.levelset PARAM.in
 	cp ${DIR}/util/CRASH/input/hyades_1.1ns.out ${TESTDIR}
 
 test_levelset_run:
@@ -225,7 +224,7 @@ test_hyades2d:
 	@echo "test_hyades2d_compile..." > test_hyades2d.diff
 	make test_hyades2d_compile
 	@echo "test_hyades2d_rundir..." >> test_hyades2d.diff
-	make test_hyades2d_rundir
+	make test_hyades2d_rundir DEFAULT_EXE=CRASH.exe
 	@echo "test_hyades2d_run..." >> test_hyades2d.diff
 	make test_hyades2d_run
 	@echo "test_hyades2d_check..." >> test_hyades2d.diff
@@ -237,8 +236,7 @@ test_hyades2d_compile:
 	make PIDL
 
 test_hyades2d_rundir: test_rundir
-	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.hyades2d PARAM.in; \
-		ln -s ${BINDIR}/CRASH.exe . 
+	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.hyades2d PARAM.in
 	gunzip -c ${DIR}/util/CRASH/input/hyades2d_1.1ns.out.gz \
 		> ${TESTDIR}/hyades2d_1.1ns.out
 
@@ -258,7 +256,7 @@ test_mixedcell:
 	@echo "test_mixedcell_compile..." > test_mixedcell.diff
 	make test_mixedcell_compile
 	@echo "test_mixedcell_rundir..." >> test_mixedcell.diff
-	make test_mixedcell_rundir
+	make test_mixedcell_rundir DEFAULT_EXE=CRASH.exe
 	@echo "test_mixedcell_run..." >> test_mixedcell.diff
 	make test_mixedcell_run
 	@echo "test_mixedcell_check..." >> test_mixedcell.diff
@@ -270,8 +268,7 @@ test_mixedcell_compile:
 	make PIDL
 
 test_mixedcell_rundir: test_rundir
-	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.mixedcell PARAM.in; \
-	ln -s ${BINDIR}/CRASH.exe . 
+	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.mixedcell PARAM.in
 
 test_mixedcell_run:
 	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
