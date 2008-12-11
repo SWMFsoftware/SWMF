@@ -75,7 +75,7 @@ module ModUser
   real :: PlanckOpacity(0:2) = 10.0
 
   ! Indexes for lookup tables
-  integer:: iTableRhoE = -1, iTableRhoP = -1
+  integer:: iTableRhoE = -1, iTableRhoP = -1, iTableCvGammaTe = -1
 
 contains
 
@@ -84,6 +84,7 @@ contains
 
     use ModReadParam
     use ModFermiGas,ONLY:read_fermi_gas_param
+
     character (len=100) :: NameCommand
     character(len=*), parameter :: NameSub = 'user_read_inputs'
     !------------------------------------------------------------------------
@@ -157,7 +158,7 @@ contains
     use ModLookupTable, ONLY: interpolate_lookup_table
 
     real    :: x, y, xBe, DxBe, DxyPl, pSi, RhoSi, EinternalSi, TeSi
-    real    :: e_I(Xe_:Plastic_)
+    real    :: ePerP_I(Xe_:Plastic_)
     real    :: DxyGold = -1.0
     logical :: IsError
 
@@ -300,8 +301,9 @@ contains
 
        ! The IsError flag avoids stopping for Fermi degenerated state
        if(iTableRhoP > 0)then
-          call interpolate_lookup_table(iTableRhoP, RhoSi, pSi, E_I)
-          EinternalSi = e_I(iMaterial)
+          call interpolate_lookup_table(iTableRhoP, &
+               RhoSi, pSi/RhoSi, ePerP_I, DoExtrapolate = .false.)
+          EinternalSi = ePerP_I(iMaterial)*pSi
        else
           call eos(iMaterial,RhoSi,pTotalIn=pSi, &
                ETotalOut=EinternalSi, IsError=IsError)
@@ -723,7 +725,7 @@ contains
     integer:: i, j, k, iMaterial, iMaterial_I(1)
     real   :: vInv_C(nI,nJ,nK)
     real   :: PressureSi, EinternalSi, RhoSi
-    real   :: RhoToARatioSI_I(Xe_:Plastic_), p_I(Xe_:Plastic_)
+    real   :: RhoToARatioSI_I(Xe_:Plastic_), pPerE_I(Xe_:Plastic_)
 
     character(len=*), parameter :: NameSub = 'user_update_states'
     !------------------------------------------------------------------------
@@ -788,16 +790,26 @@ contains
             maxval(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock)) < &
             MixLimit * sum(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock)) ) then
           ! The cell is mixed if none of the material is dominant
-          RhoToARatioSI_I = &
-               State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) * No2Si_V(UnitRho_)
-          call eos(&
-               RhoToARatioSI_I,ETotalIn=EInternalSI,& 
-               PTotalOut=PressureSI) 
+          if(iTableRhoE > 0)then
+             call interpolate_lookup_table(iTableRhoE, RhoSi, &
+                  EinternalSi/RhoSi, pPerE_I, DoExtrapolate = .false.)
+             ! Use a number density weighted average
+             PressureSi = EinternalSi* &
+                  sum(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock)*pPerE_I)/ &
+                  sum(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock))
+          else
+             ! Use number densities and calculate EOS for the mixture
+             RhoToARatioSI_I = &
+                  State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) * No2Si_V(UnitRho_)
+             call eos(RhoToARatioSI_I, ETotalIn=EInternalSI, &
+                  PTotalOut=PressureSI) 
+          end if
        else
           ! Get pressure from EOS
           if(iTableRhoE > 0)then
-             call interpolate_lookup_table(iTableRhoE, RhoSi, EinternalSi, p_I)
-             PressureSi = p_I(iMaterial)
+             call interpolate_lookup_table(iTableRhoE, RhoSi, &
+                  EinternalSi/RhoSi, pPerE_I, DoExtrapolate = .false.)
+             PressureSi = pPerE_I(iMaterial)*EinternalSi
           else
              call eos(iMaterial, Rho=RhoSI,ETotalIn=EInternalSI, &
                   pTotalOut=PressureSI)
@@ -858,7 +870,8 @@ contains
          Eradiation_
     use ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitTemperature_, &
          cRadiationNo
-    use ModEos,     ONLY: eos, Plastic_
+    use ModEos,     ONLY: eos
+    use ModLookupTable, ONLY: interpolate_lookup_table
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -875,6 +888,7 @@ contains
 
     real    :: p, Rho, pSi, RhoSi, TeSi
     integer :: i, j, k, iMaterial, iMaterial_I(1)
+    real    :: Value_V(9) ! Cv, Gamma, Te for 3 materials
     logical :: IsError
     !------------------------------------------------------------------------  
     IsFound = .true.
@@ -885,6 +899,7 @@ contains
           PlotVar_G(i,j,k) = iMaterial_I(1)
        end do; end do; end do
     case('tekev', 'TeKev')
+       NameIdlUnit = 'KeV'
        do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
           Rho = State_VGB(Rho_,i,j,k,iBlock)
           p   = State_VGB(p_,i,j,k,iBlock)
@@ -895,12 +910,19 @@ contains
           RhoSi = Rho*No2Si_V(UnitRho_)
           pSi   = p*No2Si_V(UnitP_)
           ! The IsError flag avoids stopping for Fermi degenerated state
-          call eos(iMaterial, RhoSi, pTotalIn=pSi,TeOut=TeSi, &
-               IsError=IsError)
+          if(iTableCvGammaTe > 0)then
+             call interpolate_lookup_table(iTableCvGammaTe, RhoSi, pSi, &
+                  Value_V)
+             TeSi = Value_V(3*iMaterial+3)
+          else
+             call eos(iMaterial, RhoSi, pTotalIn=pSi, TeOut=TeSi, &
+                  IsError=IsError)
+          end if
           PlotVar_G(i,j,k) = TeSi * cKToKev
        end do; end do; end do
     case('tradkev','trkev')
        ! multiply by sign of Erad for debugging purpose
+       NameIdlUnit = 'KeV'
        PlotVar_G = sign(1.0,State_VGB(Eradiation_,:,:,:,iBlock)) &
             *sqrt(sqrt(abs(State_VGB(Eradiation_,:,:,:,iBlock))/cRadiationNo))&
             * No2Si_V(UnitTemperature_) * cKToKev
@@ -932,55 +954,76 @@ contains
        UnitUser_V(LevelXe_:LevelPl_) = UnitUser_V(Rho_)*1.e-6
     end if
 
-    iTableRhoE = i_lookup_table('p(rho,e)')
-    iTableRhoP = i_lookup_table('e(rho,p)')
+    iTableRhoE      = i_lookup_table('pPerE(rho,e/rho)')
+    iTableRhoP      = i_lookup_table('ePerP(rho,p/rho)')
+    iTableCvGammaTe = i_lookup_table('CvGammaTe(rho,p/rho)')
 
-    if(iProc==0) &
-         write(*,*)NameSub,' iTableRhoE, iTableRhoP = ', iTableRhoE, iTableRhoP
+    if(iProc==0) write(*,*) NameSub, &
+         ' iTableRhoE, iTableRhoP, iTableCvGammaTe = ', &
+         iTableRhoE, iTableRhoP, iTableCvGammaTe
 
     if(iTableRhoE > 0) &
-         call make_lookup_table(iTableRhoE, calc_table_rho_e, iComm)
+         call make_lookup_table(iTableRhoE, calc_table_value, iComm)
     if(iTableRhoP > 0) &
-         call make_lookup_table(iTableRhoP, calc_table_rho_p, iComm)
+         call make_lookup_table(iTableRhoP, calc_table_value, iComm)
+    if(iTableCvGammaTe > 0) &
+         call make_lookup_table(iTableCvGammaTe, calc_table_value, iComm)
 
   end subroutine user_init_session
 
   !===========================================================================
-  subroutine calc_table_rho_e(Rho, e, p_I)
+  subroutine calc_table_value(iTable, Arg1, Arg2, Value_V)
 
     use ModEos, ONLY: eos, Xe_, Plastic_
 
-    ! Calculate pressures for Xe_, Be_ and Plastic_ for given Rho and e
+    integer, intent(in):: iTable
+    real, intent(in)   :: Arg1, Arg2
+    real, intent(out)  :: Value_V(:)
 
-    real, intent(in):: Rho, e
-    real, intent(out):: p_I(:)
-
+    real:: Rho, p, e, Cv, Gamma, Te
     integer:: iMaterial
+    character(len=*), parameter:: NameSub = 'ModUser::calc_table_value'
     !-----------------------------------------------------------------------
-    ! Material index starts from 0 :-( hence the +1
-    do iMaterial = Xe_, Plastic_
-       call eos(iMaterial, Rho, EtotalIn=e, pTotalOut=p_I(iMaterial+1))
-    end do
-    
-  end subroutine calc_table_rho_e
-  !===========================================================================
-  subroutine calc_table_rho_p(Rho, p, e_I)
+    if(iTable == iTableRhoE)then
+       ! Calculate p/e for Xe_, Be_ and Plastic_ for given Rho and e/Rho
+       Rho = Arg1
+       e   = Arg2*Rho
+       do iMaterial = Xe_, Plastic_
+          call eos(iMaterial, Rho, EtotalIn=e, pTotalOut=p)
 
-    use ModEos, ONLY: eos, Xe_, Plastic_
+          ! Material index starts from 0 :-( hence the +1
+          Value_V(iMaterial+1) = p/e
+       end do
+    elseif(iTable == iTableRhoP)then
+       ! Calculate e/p for Xe_, Be_ and Plastic_ for given Rho and p/Rho
+       Rho = Arg1
+       p   = Arg2*Rho
+       do iMaterial = Xe_, Plastic_
+          call eos(iMaterial, Rho, PtotalIn=p, eTotalOut=e)
 
-    ! Calculate energies for Xe_, Be_ and Plastic_ for given Rho and p
+          ! Material index starts from 0 :-( hence the +1
+          Value_V(iMaterial+1) = e/p
+       end do
+    elseif(iTable == iTableCvGammaTe)then
+       ! Calculate Te, gamma, cV for Xe_, Be_ and Plastic_ 
+       ! for given Rho and p/Rho
+       Rho = Arg1
+       p   = Arg2*Rho
+       do iMaterial = Xe_, Plastic_
+          call eos(iMaterial, Rho, PtotalIn=p, &
+               CVTotalOut=Cv, GammaOut=Gamma, TeOut=Te)
+          ! Material index starts from 0 :-( hence the +1
+          Value_V(3*iMaterial+1) = Cv
+          Value_V(3*iMaterial+2) = Gamma
+          Value_V(3*iMaterial+3) = Te
+       end do
+    else
+       write(*,*)NameSub,' iTable, iTableRhoE, iTableRhoP=', &
+            iTable, iTableRhoE, iTableRhoP
+       call stop_mpi(NameSub//' invalid iTable')
+    endif
 
-    real, intent(in):: Rho, p
-    real, intent(out):: e_I(:)
-
-    integer:: iMaterial
-    !-----------------------------------------------------------------------
-    ! Material index starts from 0 :-( hence the +1
-    do iMaterial = Xe_, Plastic_
-       call eos(iMaterial, Rho, PtotalIn=p, eTotalOut=e_I(iMaterial+1))
-    end do
-    
-  end subroutine calc_table_rho_p
+  end subroutine calc_table_value
   !===========================================================================
 
   subroutine user_material_properties(State_V, &
