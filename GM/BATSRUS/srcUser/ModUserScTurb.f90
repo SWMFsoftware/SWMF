@@ -12,7 +12,8 @@ module ModUser
        IMPLEMENTED7 => user_get_b0,                     &
        IMPLEMENTED8 => user_update_states,              &
        IMPLEMENTED9 => user_specify_refinement,         &
-       IMPLEMENTED10=> user_set_boundary_cells
+       IMPLEMENTED10=> user_set_boundary_cells,         &
+       IMPLEMENTED11=> user_set_plot_var
 
   include 'user_module.h' !list of public methods
 
@@ -527,8 +528,8 @@ contains
     ! Start filling cells 
     do k=1,nK; do j=1,nJ; do i=1,nI
 
-       State_VGB(I01_: I50_,i,j,k,iBLK)= 0 ! No wave energy outside of R<1.01
-       if(R_BLK(i,j,k,iBLK)<1.01) then 
+       State_VGB(I01_: I10_,i,j,k,iBLK)= 1e-30 ! No wave energy outside of R<1.01
+       if(R_BLK(i,j,k,iBLK)<1.5) then 
 
                State_VGB(I01_,i,j,k,iBLK)=I_Spectrum(1)
                State_VGB(I02_,i,j,k,iBLK)=I_Spectrum(2)
@@ -663,8 +664,54 @@ contains
     end select
   end subroutine user_get_log_var
   
-  !===========================================================================
+ !===========================================================================
+  subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
+       PlotVar_G, PlotVarBody, UsePlotVarBody, &
+       NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
+    use ModSize, ONLY: nI, nJ, nK
+    use ModAdvance, ONLY: State_VGB
+    use ModVarIndexes
+    use ModPhysics, ONLY: No2Si_V,UnitEnergydens_,UnitX_
+
+    integer,          intent(in)   :: iBlock
+    character(len=*), intent(in)   :: NameVar
+    logical,          intent(in)   :: IsDimensional
+    real,             intent(out)  :: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out)  :: PlotVarBody
+    logical,          intent(out)  :: UsePlotVarBody
+    character(len=*), intent(inout):: NameTecVar
+    character(len=*), intent(inout):: NameTecUnit
+    character(len=*), intent(inout):: NameIdlUnit
+    logical,          intent(out)  :: IsFound
+
+    character (len=*), parameter :: NameSub = 'user_set_plot_var'
+    real :: unit_energy, IntIwCell
+    integer :: i,j,k
+    logical :: IsError
+    !-------------------------------------------------------------------    
+    !UsePlotVarBody = .true.
+    !PlotVarBody = 0.0
+    IsFound=.true.
+
+    unit_energy = 1.0e7*No2Si_V(UnitEnergydens_)*No2Si_V(UnitX_)**3
+    !\                                                                              
+    ! Define plot variable to be saved::
+    !/ 
+    ! IntIwCell is the integral of the wave energy over frequency
+    select case(NameVar)
+    case('IntIw')
+       do i=1,nI; do j=1,nJ; do k=1,nK 
+          IntIwCell= &
+               sum(State_VGB(I01_:I50_,i,j,k,iBlock))
+          PlotVar_G(i,j,k)=IntIwCell
+       end do; end do; end do
+    case default
+       IsFound= .false.
+    end select
+  end subroutine user_set_plot_var
+
+!=========================================================================== 
   subroutine user_specify_refinement(iBlock, iArea, DoRefine)
 
     use ModSize,     ONLY: nI, nJ, nK
@@ -719,7 +766,6 @@ contains
     call stop_mpi('Set SaveBoundaryCells=.true. in PARAM.in file')
 
   end subroutine user_set_boundary_cells
-
 
 end module ModUser
 
