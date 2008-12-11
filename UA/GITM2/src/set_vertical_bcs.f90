@@ -135,23 +135,14 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
      VertVel(nAlts+2,:) = -VertVel(nAlts-1,:)
   endif
 
-  ! Constant gradient in temperature
+  ! Constant temperature (zero gradient)
 
-  dt = Temp(nAlts) - Temp(nAlts-1)
-  Temp(nAlts+1) = Temp(nAlts) + dt
-  Temp(nAlts+2) = Temp(nAlts+1) + dt
+  Temp(nAlts+1) = Temp(nAlts)
+  Temp(nAlts+2) = Temp(nAlts)
 
-!  do iAlt = nAlts+1, nAlts+2
-!     InvScaleHgt  =  &
-!          -(Gravity_G(iAlt-1)+Gravity_G(iAlt)) / 2 / Temp(iAlt)
-!     LogRho(iAlt) = LogRho(iAlt-1) - dAlt_F(iAlt)*InvScaleHgt
-!     write(*,*) "rho in vbc : ",iAlt,LogRho(iAlt-1),dAlt_F(iAlt),InvScaleHgt,LogRho(iAlt), &
-!          Gravity_G(iAlt-1),Gravity_G(iAlt),Temp(iAlt-1),Temp(iAlt)
-     dn = (LogRho(nAlts) - LogRho(nAlts-1))
-     LogRho(nAlts+1) = LogRho(nAlts) + dn
-     LogRho(nAlts+2) = LogRho(nAlts+1) + dn
-
-!  enddo
+  dn = (LogRho(nAlts) - LogRho(nAlts-1))
+  LogRho(nAlts+1) = LogRho(nAlts) + dn
+  LogRho(nAlts+2) = LogRho(nAlts+1) + dn
 
   ! Limit the slope of the ion density
 
