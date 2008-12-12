@@ -1,6 +1,48 @@
 #ECHO
 T
 
+#LOOKUPTABLE
+pPerE(rho,e/rho)	NameTable
+save			NameCommand
+table_rho_ePerRho.out	NameFile
+binary			TypeFile
+pPerE(rho,e/rho) for Xe, Be, Plastic
+logrho logE/Rho pPerEXe pPerEBe pPerEPl
+200			nIndex1
+0.01			Index1Min
+1e6			Index1Max
+200			nIndex2
+1e5			Index2Min
+1e14			Index2Max
+
+#LOOKUPTABLE
+ePerP(rho,p/rho)	NameTable
+save			NameCommand
+table_rho_pPerRho.out	NameFile
+binary			TypeFile
+ePerP(rho,p/rho) for Xe, Be, Plastic
+logrho logpPerRho ePerPXe ePerPBe ePerPPl
+200			nIndex1
+0.01			Index1Min
+1e6			Index1Max
+200			nIndex2
+1e5			Index2Min
+1e13			Index2Max
+
+#LOOKUPTABLE
+CvGammaTe(rho,p/rho)	NameTable
+save			NameCommand
+table_CvGammaTe.out	NameFile
+binary			TypeFile
+CvGammaTe(rho,p/rho) for Xe, Be, Plastic
+logrho logpPerRho CvXe GammaXe TeXe CvBe GammaBe TeBe CvPl GammaPl TePl
+200			nIndex1
+0.01			Index1Min
+1e6			Index1Max
+200			nIndex2
+1e5			Index2Min
+1e13			Index2Max
+
 #PLANET
 NONE
 
