@@ -916,7 +916,7 @@ contains
           ! The IsError flag avoids stopping for Fermi degenerated state
           if(iTableCvGammaTe > 0)then
              call interpolate_lookup_table(iTableCvGammaTe, RhoSi, pSi/RhoSi, &
-                  Value_V)
+                  Value_V, DoExtrapolate = .false.)
              TeSi = Value_V(3*iMaterial+3)
           else
              call eos(iMaterial, RhoSi, pTotalIn=pSi, TeOut=TeSi, &
@@ -1058,7 +1058,7 @@ contains
     if(present(TeSi))then
        if(iTableCvGammaTe > 0)then
           call interpolate_lookup_table(iTableOpacity, RhoSi, pSi/RhoSi, &
-               Value_V)
+               Value_V, DoExtrapolate = .false.)
           TeSi = Value_V(3*iMaterial+3)
        else
           ! The IsError flag avoids stopping for Fermi degenerated state
@@ -1069,7 +1069,7 @@ contains
     if(present(AbsorptionOpacitySi) .or. present(RosselandMeanOpacitySi))then
        if(iTableOpacity > 0)then
           call interpolate_lookup_table(iTableOpacity, RhoSi, pSi/RhoSi, &
-               Opacity_V)
+               Opacity_V, DoExtrapolate = .false.)
           if(present(AbsorptionOpacitySi)) &
                AbsorptionOpacitySi = Opacity_V(2*iMaterial + 1) * RhoSi
           if(present(RosselandMeanOpacitySi)) &
