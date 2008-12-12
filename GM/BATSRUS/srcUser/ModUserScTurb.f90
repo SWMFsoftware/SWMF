@@ -483,114 +483,141 @@ contains
     use ModAdvance,   ONLY: State_VGB
     use ModGeometry,  ONLY: R_BLK
     use ModSize
+    use ModConst,     ONLY: cMu,cLightSpeed,cElectronCharge, cGEV,cAU
+    use ModNumConst,  ONLY: cPi
 
     implicit none
 
     integer :: i,j,k,iBLK
-    real :: I_mean, w_Min, w_Max, w_Mean, dLogw, alpha
-    real, dimension(nVar-9) :: I_Spectrum, w_LogSpectrum
+    real :: w_Min, w_Max, dLogw
+    real, dimension(I50_-I01_+1) :: I_Spectrum, w_LogSpectrum
     integer :: w_Index
+    !the intensity of the back travelling wave in the initial condition
+    real,parameter::Alpha=1.0/10.0
+    real,parameter::Lambda0=4.0/10.0  ![AU]
+    real,parameter::w_Power=5.0/3.0
+    real,parameter :: cI_coeff=(1-Alpha)*54/(4*cPi*Lambda0)
+    !cI_coeff is the constant part of initial spectrum
+    real :: bI_coeff ,rI_coeff ! B and r dependent part of initial spectrum
+    real :: Ctot, Ctot1,Ctot2, VAcell, Bcell 
 
     iBLK=globalBLK
 
-    ! Calculate Kolomogorov spectrum for frequency groups
-    ! Assign spectrum values to I_Spectrum array. The array will be used later to
-    ! initialize the state varaibles I01_ to I50_ defined in ModEquationMhdTurb.f90
-    
-    ! The wave energy spectrum is described by the power law:
-    ! Iw= Io(w/w_mean)^alpha where Io is the energy of the middle of the frequency range used.
-    ! For Kolomogorov type turbulent spectrum, alpha=-0.6
-    
-    ! Set spectrum frequency bounds, charactiristic energy
-    w_Min=6e-6 ! minimal frequency of Alfven waves spectrum                                                                                                              
-    !This is the frequancy of the variable I01_                                                                                                                          
-    w_Max=0.001 ! maximal frequency of Alfven waves spectrum                                                                                                             
+    ! Set spectrum frequency groups
+    ! =============================
+    w_Min=6e-6 ! minimal frequency of Alfven waves spectrum
+    !This is the frequancy of the variable I01_
+    w_Max=0.001 ! maximal frequency of Alfven waves spectrum
     !This is the frequency of the variable I50_
-    w_Mean=(w_Min+w_Max)/2
-    dLogw=(log(w_Max)-log(w_Min))/(nVar-10) 
-    ! frequency interval on a natural logarithmic scale
-    I_mean=1e11 ! wave energy of mean frequency. This variable determines the
-    ! charachteristic energy level of the spectrum. This value is given in units of erg cm-2 s-1 (CHECK UNITS!!!)
-    ! and it corresponds to estimated energy values based on observations by Pontieu et. al., 2007 at 1000km above the solar limb.
-    ! This value is also in accordence (by order of magnitue) with estimations by Periera et. al. 1994.
 
-    alpha= -0.6 ! Power law for kolmogorov type turbulent spectrum, inertial range 
+    ! frequency interval on a natural logarithmic scale 
+    dLogw=(log(w_Max)-log(w_Min))/(I50_-I01_) 
+  
+    ! Divide the spectrum into frequncy groups on a log scale
+    do w_Index=1,I50_-I01_+1
 
-    do w_Index=1,nVar-10
-       
-       w_LogSpectrum(w_Index)=log(w_Min)+(w_Index-1)*dLogw ! Divide the spectrum into frequncy groups on a log scale
+       w_LogSpectrum(w_Index)=log(w_Min)+(w_Index-1)*dLogw
 
-       ! We muxt convert the frequency back from logarithmic scale in order to calculate Iw  
-       I_Spectrum(w_Index)=I_mean*(exp(w_LogSpectrum(w_Index))/w_Mean)**alpha
-    
     end do
+    write(*,*) 'In set_wave_spectrum - finished devidind spectrum'
+
+    ! Calculate Kolomogorov spectrum for frequency groups
+    ! ===================================================
+    ! Assign spectrum values to I_Spectrum array. The array will be used
+    ! to initialize the state varaibles I01_ to I50_ defined in
+    ! ModEquationMhdTurb.f90
+    ! The wave energy spectrum is described by the power law:
+    ! I_{+}= cI_{coeff}*bI_{coeff}*rI_{coeff}(w/Va)^{-5/3}
+    ! where Va is the Alfven speed Va=B^2/sqrt{\mu_0\rho}
+    ! cI_coeff=(1-\Alpha)(54/4\pi\lambda0)
+    ! bI_coeff=B^2(eBc/1GeV)^{-1/3}
+    ! rI_coeff=(r/1AU)^{-1}                                                         
 
     ! Start filling cells 
     do k=1,nK; do j=1,nJ; do i=1,nI
+       
+       Bcell=((State_VGB(Bx_,i,j,k,iBLK))**2 + &
+            (State_VGB(By_,i,j,k,iBLK))**2 + &
+            (State_VGB(Bz_,i,j,k,iBLK))**2)**0.5
+       write(*,*) 'Finished calculating Bcell'
+       bI_coeff=Bcell**2*(cElectronCharge*Bcell*cLightSpeed/cGEV)&
+            **(-(1.0/3.0))
+       write(*,*) 'Finished calculatinf bI'
+       rI_coeff=cAU/R_BLK(i,j,k,iBLK)
+       write(*,*) 'Finished calculating rI'
+       VAcell=Bcell/(State_VGB(rho_,i,j,k,iBLK)*cMu)**0.5
+       write(*,*) 'Finished calculating VAcell'
+       Ctot1=cI_coeff*bI_coeff*rI_coeff
+       write(*,*) 'Finished claculating Ctot1'
+       Ctot2=(VAcell)**(5.0/3.0)
+       write(*,*) 'Finished Ctot2'
+       Ctot=Ctot1*Ctot2
+       write(*,*) 'Finished Ctot'
+       do w_Index=1,I50_-I01_+1
+                    
+          I_Spectrum(w_Index)=Ctot*exp(w_LogSpectrum(w_Index))**(-w_Power)
+          State_VGB(w_Index,i,j,k,iBLK)=I_Spectrum(w_Index)
+       end do
+       write(*,*) 'Finished spectrum init'
+       !State_VGB(I01_,i,j,k,iBLK)=I_Spectrum(1)
+       !State_VGB(I02_,i,j,k,iBLK)=I_Spectrum(2)
+       !State_VGB(I03_,i,j,k,iBLK)=I_Spectrum(3)
+       !State_VGB(I04_,i,j,k,iBLK)=I_Spectrum(4)
+       !State_VGB(I05_,i,j,k,iBLK)=I_Spectrum(5)
+       !State_VGB(I06_,i,j,k,iBLK)=I_Spectrum(6)
+       !State_VGB(I07_,i,j,k,iBLK)=I_Spectrum(7)
+       !State_VGB(I08_,i,j,k,iBLK)=I_Spectrum(8)
+       !State_VGB(I09_,i,j,k,iBLK)=I_Spectrum(9)
+       !State_VGB(I10_,i,j,k,iBLK)=I_Spectrum(10) ! Finished 10 frequencies
 
-       State_VGB(I01_: I10_,i,j,k,iBLK)= 1e-30 ! No wave energy outside of R<1.01
-       if(R_BLK(i,j,k,iBLK)<1.5) then 
+       !State_VGB(I11_,i,j,k,iBLK)=I_Spectrum(11)
+       !State_VGB(I12_,i,j,k,iBLK)=I_Spectrum(12)
+       !State_VGB(I13_,i,j,k,iBLK)=I_Spectrum(13)
+       !State_VGB(I14_,i,j,k,iBLK)=I_Spectrum(14)
+       !State_VGB(I15_,i,j,k,iBLK)=I_Spectrum(15)
+       !State_VGB(I16_,i,j,k,iBLK)=I_Spectrum(16)
+       !State_VGB(I17_,i,j,k,iBLK)=I_Spectrum(17)
+       !State_VGB(I18_,i,j,k,iBLK)=I_Spectrum(18)
+       !State_VGB(I19_,i,j,k,iBLK)=I_Spectrum(19)
+       !State_VGB(I20_,i,j,k,iBLK)=I_Spectrum(20) ! Finished 20 frequencies   
+       
+       !State_VGB(I21_,i,j,k,iBLK)=I_Spectrum(21)
+       !State_VGB(I22_,i,j,k,iBLK)=I_Spectrum(22)
+       !State_VGB(I23_,i,j,k,iBLK)=I_Spectrum(23)
+       !State_VGB(I24_,i,j,k,iBLK)=I_Spectrum(24)
+       !State_VGB(I25_,i,j,k,iBLK)=I_Spectrum(25)
+       !State_VGB(I26_,i,j,k,iBLK)=I_Spectrum(26)
+       !State_VGB(I27_,i,j,k,iBLK)=I_Spectrum(27)
+       !State_VGB(I28_,i,j,k,iBLK)=I_Spectrum(28)
+       !State_VGB(I29_,i,j,k,iBLK)=I_Spectrum(29)
+       !State_VGB(I30_,i,j,k,iBLK)=I_Spectrum(30) ! Finished 30 frequencies   
 
-               State_VGB(I01_,i,j,k,iBLK)=I_Spectrum(1)
-               State_VGB(I02_,i,j,k,iBLK)=I_Spectrum(2)
-               State_VGB(I03_,i,j,k,iBLK)=I_Spectrum(3)
-               State_VGB(I04_,i,j,k,iBLK)=I_Spectrum(4)
-               State_VGB(I05_,i,j,k,iBLK)=I_Spectrum(5)
-               State_VGB(I06_,i,j,k,iBLK)=I_Spectrum(6)
-               State_VGB(I07_,i,j,k,iBLK)=I_Spectrum(7)
-               State_VGB(I08_,i,j,k,iBLK)=I_Spectrum(8)
-               State_VGB(I09_,i,j,k,iBLK)=I_Spectrum(9)
-               State_VGB(I10_,i,j,k,iBLK)=I_Spectrum(10) ! Finished 10 frequencies
+       !State_VGB(I31_,i,j,k,iBLK)=I_Spectrum(31)
+       !State_VGB(I32_,i,j,k,iBLK)=I_Spectrum(32)
+       !State_VGB(I33_,i,j,k,iBLK)=I_Spectrum(33)
+       !State_VGB(I34_,i,j,k,iBLK)=I_Spectrum(34)
+       !State_VGB(I35_,i,j,k,iBLK)=I_Spectrum(35)
+       !State_VGB(I36_,i,j,k,iBLK)=I_Spectrum(36)
+       !State_VGB(I37_,i,j,k,iBLK)=I_Spectrum(37)
+       !State_VGB(I38_,i,j,k,iBLK)=I_Spectrum(38)
+       !State_VGB(I39_,i,j,k,iBLK)=I_Spectrum(39)
+       !State_VGB(I40_,i,j,k,iBLK)=I_Spectrum(40) ! Finished 40 frequencies   
 
-               State_VGB(I11_,i,j,k,iBLK)=I_Spectrum(11)
-               State_VGB(I12_,i,j,k,iBLK)=I_Spectrum(12)
-               State_VGB(I13_,i,j,k,iBLK)=I_Spectrum(13)
-               State_VGB(I14_,i,j,k,iBLK)=I_Spectrum(14)
-               State_VGB(I15_,i,j,k,iBLK)=I_Spectrum(15)
-               State_VGB(I16_,i,j,k,iBLK)=I_Spectrum(16)
-               State_VGB(I17_,i,j,k,iBLK)=I_Spectrum(17)
-               State_VGB(I18_,i,j,k,iBLK)=I_Spectrum(18)
-               State_VGB(I19_,i,j,k,iBLK)=I_Spectrum(19)
-               State_VGB(I20_,i,j,k,iBLK)=I_Spectrum(20) ! Finished 20 frequencies   
-
-               State_VGB(I21_,i,j,k,iBLK)=I_Spectrum(21)
-               State_VGB(I22_,i,j,k,iBLK)=I_Spectrum(22)
-               State_VGB(I23_,i,j,k,iBLK)=I_Spectrum(23)
-               State_VGB(I24_,i,j,k,iBLK)=I_Spectrum(24)
-               State_VGB(I25_,i,j,k,iBLK)=I_Spectrum(25)
-               State_VGB(I26_,i,j,k,iBLK)=I_Spectrum(26)
-               State_VGB(I27_,i,j,k,iBLK)=I_Spectrum(27)
-               State_VGB(I28_,i,j,k,iBLK)=I_Spectrum(28)
-               State_VGB(I29_,i,j,k,iBLK)=I_Spectrum(29)
-               State_VGB(I30_,i,j,k,iBLK)=I_Spectrum(30) ! Finished 30 frequencies   
-
-               State_VGB(I31_,i,j,k,iBLK)=I_Spectrum(31)
-               State_VGB(I32_,i,j,k,iBLK)=I_Spectrum(32)
-               State_VGB(I33_,i,j,k,iBLK)=I_Spectrum(33)
-               State_VGB(I34_,i,j,k,iBLK)=I_Spectrum(34)
-               State_VGB(I35_,i,j,k,iBLK)=I_Spectrum(35)
-               State_VGB(I36_,i,j,k,iBLK)=I_Spectrum(36)
-               State_VGB(I37_,i,j,k,iBLK)=I_Spectrum(37)
-               State_VGB(I38_,i,j,k,iBLK)=I_Spectrum(38)
-               State_VGB(I39_,i,j,k,iBLK)=I_Spectrum(39)
-               State_VGB(I40_,i,j,k,iBLK)=I_Spectrum(40) ! Finished 40 frequencies   
-
-               State_VGB(I41_,i,j,k,iBLK)=I_Spectrum(41)
-               State_VGB(I42_,i,j,k,iBLK)=I_Spectrum(42)
-               State_VGB(I43_,i,j,k,iBLK)=I_Spectrum(43)
-               State_VGB(I44_,i,j,k,iBLK)=I_Spectrum(44)
-               State_VGB(I45_,i,j,k,iBLK)=I_Spectrum(45)
-               State_VGB(I46_,i,j,k,iBLK)=I_Spectrum(46)
-               State_VGB(I47_,i,j,k,iBLK)=I_Spectrum(47)
-               State_VGB(I48_,i,j,k,iBLK)=I_Spectrum(48)
-               State_VGB(I49_,i,j,k,iBLK)=I_Spectrum(49)
-               State_VGB(I50_,i,j,k,iBLK)=I_Spectrum(50) ! Finished 50 frequencies   
-            end if
-
-         end do; end do; end do
+       !State_VGB(I41_,i,j,k,iBLK)=I_Spectrum(41)
+       !State_VGB(I42_,i,j,k,iBLK)=I_Spectrum(42)
+       !State_VGB(I43_,i,j,k,iBLK)=I_Spectrum(43)
+       !State_VGB(I44_,i,j,k,iBLK)=I_Spectrum(44)
+       !State_VGB(I45_,i,j,k,iBLK)=I_Spectrum(45)
+       !State_VGB(I46_,i,j,k,iBLK)=I_Spectrum(46)
+       !State_VGB(I47_,i,j,k,iBLK)=I_Spectrum(47)
+       !State_VGB(I48_,i,j,k,iBLK)=I_Spectrum(48)
+       !State_VGB(I49_,i,j,k,iBLK)=I_Spectrum(49)
+       !State_VGB(I50_,i,j,k,iBLK)=I_Spectrum(50) ! Finished 50 frequencies   
+    
+    end do; end do; end do
  
-       end subroutine set_wave_spectrum
-  !========================================================================
+  end subroutine set_wave_spectrum
+!========================================================================
 
   subroutine user_get_log_var(VarValue,TypeVar,Radius)
 
@@ -686,24 +713,27 @@ contains
     logical,          intent(out)  :: IsFound
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
-    real :: unit_energy, IntIwCell
-    integer :: i,j,k
+    real :: unit_energy, IntIwCell,dw
+    integer :: i,j,k, I_Index
     logical :: IsError
     !-------------------------------------------------------------------    
     !UsePlotVarBody = .true.
     !PlotVarBody = 0.0
     IsFound=.true.
 
-    unit_energy = 1.0e7*No2Si_V(UnitEnergydens_)*No2Si_V(UnitX_)**3
     !\                                                                              
     ! Define plot variable to be saved::
     !/ 
     ! IntIwCell is the integral of the wave energy over frequency
     select case(NameVar)
     case('IntIw')
-       do i=1,nI; do j=1,nJ; do k=1,nK 
-          IntIwCell= &
-               sum(State_VGB(I01_:I50_,i,j,k,iBlock))
+       do i=1,nI; do j=1,nJ; do k=1,nK
+          IntIwCell=0.5*(State_VGB(I01_,i,j,k,iBlock)*(exp(1.0)-1.0)+&
+               State_VGB(I50_,i,j,k,iBlock)*(exp(50.0)-exp(49.0)))
+          do I_Index=2,48
+             IntIwCell= IntIwCell + (exp((I_Index+1)*1.0)-exp(I_Index*1.0))&
+                  *State_VGB(I_Index,i,j,k,iBlock)
+          end do
           PlotVar_G(i,j,k)=IntIwCell
        end do; end do; end do
     case default
