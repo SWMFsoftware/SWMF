@@ -11,7 +11,7 @@
 ModReadParam::read_file: read and broadcast nLine= 167 lines of text
  ----- Starting Session  1  ------
  init_mod_restart_file: setting TypeRestartOutFile = one
- GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 167
+ GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 1000
 
 #PLANET
 NONE			NamePlanet
@@ -244,19 +244,19 @@ saved ifile= 4 type=cut_var    at n_step=      0 time=   0:00:00 h:m:s
 SORTED TIMING at step       0    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                   1.39    100.00         1         1
+BATSRUS                   1.60    100.00         1         1
 -------------------------------------------------------------------------------
-setup                     1.39    100.00         1         1
-save_plot                 1.36     97.35         1         2
-exch_msgs                 0.00      0.27         1         1
-load_balance              0.00      0.14         1         1
-save_logfile              0.00      0.09         1         1
+setup                     1.60    100.00         1         1
+save_plot                 1.53     95.41         1         2
+exch_msgs                 0.01      0.33         1         1
+load_balance              0.00      0.27         1         1
+save_logfile              0.00      0.25         1         1
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
-Speed is   2807.5 c/s/p after     14.5 s at N =      10 (2.3000E-04 s)
+Speed is   2977.3 c/s/p after     13.9 s at N =      10 (2.3000E-04 s)
 saved ifile= 3 type=z=0_var    at n_step=     11 time=   0:00:00 h:m:s
 saved ifile= 4 type=cut_var    at n_step=     11 time=   0:00:00 h:m:s
-Speed is   2711.0 c/s/p after     30.7 s at N =      20 (4.6000E-04 s)
+Speed is   2861.0 c/s/p after     29.5 s at N =      20 (4.6000E-04 s)
 
     Finished Numerical Simulation
     -----------------------------
@@ -270,29 +270,29 @@ saved ifile= 4 type=cut_var    at n_step=     20 time=   0:00:00 h:m:s
 SORTED TIMING from step       0 to      20    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                  32.16    100.00         1         1
+BATSRUS                  31.09    100.00         1         1
 -------------------------------------------------------------------------------
-advance                  29.34     91.23        20        20
-krylov solver            22.53     70.07        20        20
-impl_matvec              21.33     66.34        20       524
-get_residual             17.66     54.92        40       564
-matvec_free              16.89     52.52        20       524
-calc_fluxes              13.39     41.63        40      4512
-impl_jacobian             4.19     13.02        20        20
-save_plot                 2.81      8.73         2         4
-calc_facevalues           0.92      2.87        40      4512
-exch_msgs                 0.75      2.35        60       604
-calc_sources              0.72      2.23        40      4512
-calc_fluxes_bfo           0.62      1.92        40      2256
-update_states             0.39      1.21        40      4512
-calc_face_bfo             0.35      1.08        40      2256
-getsource                 0.26      0.79        20      1280
-impl2expl                 0.20      0.63        80      5952
-expl2impl                 0.12      0.37        60       584
-send_cons_flux            0.05      0.15        40       564
-barrier-expl2             0.04      0.13        40       564
-save_logfile              0.01      0.03        20        20
-barrier-expl1             0.01      0.02        40       564
+advance                  28.01     90.08        20        20
+krylov solver            22.02     70.84        20        20
+impl_matvec              20.43     65.71        20       526
+get_residual             16.89     54.34        40       566
+matvec_free              16.11     51.83        20       526
+calc_fluxes              12.07     38.84        40      4528
+impl_jacobian             3.26     10.48        20        20
+save_plot                 3.07      9.86         2         4
+calc_facevalues           0.97      3.12        40      4528
+exch_msgs                 0.93      2.98        60       606
+calc_sources              0.77      2.48        40      4528
+calc_fluxes_bfo           0.58      1.86        40      2264
+update_states             0.53      1.69        40      4528
+calc_face_bfo             0.36      1.17        40      2264
+getsource                 0.28      0.90        20      1280
+impl2expl                 0.23      0.74        80      5968
+expl2impl                 0.13      0.43        60       586
+send_cons_flux            0.12      0.38        40       566
+barrier-expl2             0.05      0.16        40       566
+barrier-expl1             0.04      0.12        40       566
+save_logfile              0.01      0.04        20        20
 int_domain                0.00      0.01        20        20
 -------------------------------------------------------------------------------
  error report: no errors...
