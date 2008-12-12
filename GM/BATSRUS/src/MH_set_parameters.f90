@@ -2191,7 +2191,7 @@ contains
        if(iProc==0) write(*,'(a)')NameSub// &
             ' ERROR: The radiation model in gray nonequilibrium diffusion'// &
             ' only works together with the fully implicit scheme'
-       call stop_mpi('Correct PARAM.in!')
+       if(UseStrict)call stop_mpi('Correct PARAM.in!')
     end if                                                !^CFG END IMPLICIT
 
     if ( UseGrayDiffusion .and. index(optimize_message_pass,'opt') > 0) then

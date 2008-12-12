@@ -5,10 +5,12 @@ subroutine impl_newton_init
   ! initialization for NR
 
   use ModProcMH
-  use ModMain, ONLY : Itest,Jtest,Ktest,VARtest,n_step,dt,nOrder
+  use ModMain, ONLY : Itest,Jtest,Ktest,VARtest,n_step,dt,nOrder, &
+       UseGrayDiffusion
   use ModAdvance, ONLY : FluxType
   use ModImplicit
   use ModMpi
+  use ModGrayDiffusion, ONLY: IsNewTimestepGrayDiffusion
   implicit none
 
   integer :: i,j,k,n,iw,implBLK,iBLK, iError
@@ -18,10 +20,14 @@ subroutine impl_newton_init
   !---------------------------------------------------------------------------
   call set_oktest('impl_newton',oktest,oktest_me)
 
+  if(UseGrayDiffusion) IsNewTimestepGrayDiffusion = .true.
+
   ! Calculate high and low order residuals
   ! RES_expl= dtexpl * R
   !                not low,  dt,  subtract
   call get_residual(.false.,.true.,.true.,w_k(1:nI,1:nJ,1:nK,:,:),RES_expl)
+
+  if(UseGrayDiffusion) IsNewTimestepGrayDiffusion = .false.
 
   if (nOrder==nOrder_Impl .and. FluxType==FluxTypeImpl) then
      ! If R_low=R then RES_impl = RES_expl

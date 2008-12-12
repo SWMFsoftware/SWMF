@@ -113,7 +113,6 @@ subroutine impl_jacobian(implBLK,JAC)
   end if
 
   if(UseHallResist)call impl_init_hall
-  if(UseGrayDiffusion) call impl_init_gray
 
   ! Initialize matrix to zero (to be safe)
   JAC=0.0
@@ -844,34 +843,13 @@ contains
 
   end subroutine impl_hall_resist_general
   !===========================================================================
-  subroutine impl_init_gray
-
-    use ModAdvance,       ONLY: State_VGB
-    use ModConst,         ONLY: cLightSpeed
-    use ModGrayDiffusion, ONLY: DiffusionRad_G
-    use ModPhysics,       ONLY: Si2No_V, UnitX_, UnitU_
-    use ModUser,          ONLY: user_material_properties
-
-    integer :: i, j, k
-    real :: RosselandMeanOpacitySi, DiffFactor
-    !----------------------------------------------------------------------
-
-    DiffFactor = cLightSpeed*Si2No_V(UnitU_)*Si2No_V(UnitX_)/3.0
-    do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-       call user_material_properties(State_VGB(:,i,j,k,iBLK), &
-            RosselandMeanOpacitySi = RosselandMeanOpacitySi)
-       DiffusionRad_G(i,j,k) = DiffFactor/RosselandMeanOpacitySi
-    end do; end do; end do
-
-  end subroutine impl_init_gray
-  !===========================================================================
   subroutine impl_gray_diffusion
 
     ! Add partial derivatives of the gray diffusion term to the Jacobian that 
     ! are not calculated by the general algorithm
 
     use ModAdvance,       ONLY: Eradiation_
-    use ModGrayDiffusion, ONLY: DiffusionRad_G
+    use ModGrayDiffusion, ONLY: DiffusionRad_FDB
 
     integer :: iVar, i, j, k, iDim, Di, Dj, Dk
     real :: Coeff, DiffLeft, DiffRight
@@ -884,10 +862,8 @@ contains
        Dj = kr(iDim,2)
        Dk = kr(iDim,3)
        do k=1,nK; do j=1,nJ; do i=1,nI
-          DiffLeft  = 0.5*(DiffusionRad_G(i-Di,j-Dj,k-Dk) &
-               +           DiffusionRad_G(i,j,k))
-          DiffRight = 0.5*(DiffusionRad_G(i+Di,j+Dj,k+Dk) &
-               +           DiffusionRad_G(i,j,k))
+          DiffLeft  = DiffusionRad_FDB(i,j,k,iDim,iBlk)
+          DiffRight = DiffusionRad_FDB(i+Di,j+Dj,k+Dk,iDim,iBlk)
           JAC(iVar,iVar,i,j,k,1) = JAC(iVar,iVar,i,j,k,1) &
                - Coeff*(DiffLeft + DiffRight)
           JAC(iVar,iVar,i,j,k,2*iDim)   = JAC(iVar,iVar,i,j,k,2*iDim) &
