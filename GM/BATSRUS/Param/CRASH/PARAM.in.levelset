@@ -3,33 +3,47 @@ Begin session: 1
 #ECHO
 T
 
-LOOKUPTABLE
-p(rho,e)		NameTable
+#LOOKUPTABLE
+pPerE(rho,e/rho)	NameTable
 save			NameCommand
-TABLE/1000/table_rho_e.out	NameFile
-binary				TypeFile
-p(rho,e) for Xe, Be, Plastic	StringDescription
-logrho loge pXe pBe pPl		NameVar
-1000			nIndex1
+table_rho_ePerRho.out	NameFile
+binary			TypeFile
+pPerE(rho,e/rho) for Xe, Be, Plastic
+logrho logE/Rho pPerEXe pPerEBe pPerEPl
+200			nIndex1
 0.01			Index1Min
 1e6			Index1Max
-1000			nIndex2
-1.0			Index2Min
+200			nIndex2
+1e5			Index2Min
 1e14			Index2Max
 
-LOOKUPTABLE
-e(rho,p)		NameTable
+#LOOKUPTABLE
+ePerP(rho,p/rho)	NameTable
 save			NameCommand
-TABLE/1000/table_rho_p.out	NameFile
-binary				TypeFile
-e(rho,p) for Xe, Be, Plastic	StringDescription
-logrho logp eXe eBe ePl		NameVar
-1000			nIndex1
+table_rho_pPerRho.out	NameFile
+binary			TypeFile
+ePerP(rho,p/rho) for Xe, Be, Plastic
+logrho logpPerRho ePerPXe ePerPBe ePerPPl
+200			nIndex1
 0.01			Index1Min
 1e6			Index1Max
-1000			nIndex2
-1.0			Index2Min
-1e14			Index2Max
+200			nIndex2
+1e5			Index2Min
+1e13			Index2Max
+
+#LOOKUPTABLE
+CvGammaTe(rho,p/rho)	NameTable
+save			NameCommand
+table_CvGammaTe.out	NameFile
+binary			TypeFile
+CvGammaTe(rho,p/rho) for Xe, Be, Plastic
+logrho logpPerRho CvXe GammaXe TeXe CvBe GammaBe TeBe CvPl GammaPl TePl
+200			nIndex1
+0.01			Index1Min
+1e6			Index1Max
+200			nIndex2
+1e5			Index2Min
+1e13			Index2Max
 
 #PLANET
 NONE
@@ -44,9 +58,6 @@ READ
 1000.0			g/cm^3
 
 #USERINPUTBEGIN ----------------
-#EOS
-F
-2.0
 
 #TUBE
 0.0			xEndTube
@@ -136,17 +147,7 @@ RAW			StringLogfile
 T			DoSaveInitial
 
 #SAVEPLOT
-2			nPlotfile
-cut HD idl		PlotString
--1	              	DnSavePlot
-4.0e-8          	DtSavePlot
-0.0			xMinCut
-5.0e4			xMaxCut
-0.1			yMinCut
-0.11			yMaxCut
-0.1 	   		zMinCut
-0.11			zMaxCut
-0.0             	DxSavePlot
+1			nPlotfile
 z=0 VAR idl		PlotString
 -1                      DnSavePlot
 1.0e-9                  DtSavePlot
@@ -159,3 +160,5 @@ gamma
 2.0e-8			tSimulationMax
 
 End session: 1
+
+
