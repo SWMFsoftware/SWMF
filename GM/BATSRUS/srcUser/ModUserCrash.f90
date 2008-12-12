@@ -78,7 +78,7 @@ module ModUser
   real :: PlanckOpacity(0:2) = 10.0
 
   ! Indexes for lookup tables
-  integer:: iTableRhoE = -1, iTableRhoP = -1, iTableCvGammaTe = -1
+  integer:: iTablePPerE = -1, iTableEPerP = -1, iTableCvGammaTe = -1
   integer:: iTableOpacity = -1
 
 contains
@@ -304,8 +304,8 @@ contains
        pSi   = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
 
        ! The IsError flag avoids stopping for Fermi degenerated state
-       if(iTableRhoP > 0)then
-          call interpolate_lookup_table(iTableRhoP, &
+       if(iTableEPerP > 0)then
+          call interpolate_lookup_table(iTableEPerP, &
                RhoSi, pSi/RhoSi, ePerP_I, DoExtrapolate = .false.)
           EinternalSi = ePerP_I(iMaterial)*pSi
        else
@@ -794,8 +794,8 @@ contains
             maxval(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock)) < &
             MixLimit * sum(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock)) ) then
           ! The cell is mixed if none of the material is dominant
-          if(iTableRhoE > 0)then
-             call interpolate_lookup_table(iTableRhoE, RhoSi, &
+          if(iTablePPerE > 0)then
+             call interpolate_lookup_table(iTablePPerE, RhoSi, &
                   EinternalSi/RhoSi, pPerE_I, DoExtrapolate = .false.)
              ! Use a number density weighted average
              PressureSi = EinternalSi* &
@@ -810,8 +810,8 @@ contains
           end if
        else
           ! Get pressure from EOS
-          if(iTableRhoE > 0)then
-             call interpolate_lookup_table(iTableRhoE, RhoSi, &
+          if(iTablePPerE > 0)then
+             call interpolate_lookup_table(iTablePPerE, RhoSi, &
                   EinternalSi/RhoSi, pPerE_I, DoExtrapolate = .false.)
              PressureSi = pPerE_I(iMaterial)*EinternalSi
           else
@@ -915,7 +915,7 @@ contains
           pSi   = p*No2Si_V(UnitP_)
           ! The IsError flag avoids stopping for Fermi degenerated state
           if(iTableCvGammaTe > 0)then
-             call interpolate_lookup_table(iTableCvGammaTe, RhoSi, pSi, &
+             call interpolate_lookup_table(iTableCvGammaTe, RhoSi, pSi/RhoSi, &
                   Value_V)
              TeSi = Value_V(3*iMaterial+3)
           else
@@ -958,19 +958,19 @@ contains
        UnitUser_V(LevelXe_:LevelPl_) = UnitUser_V(Rho_)*1.e-6
     end if
 
-    iTableRhoE      = i_lookup_table('pPerE(rho,e/rho)')
-    iTableRhoP      = i_lookup_table('ePerP(rho,p/rho)')
+    iTablePPerE      = i_lookup_table('pPerE(rho,e/rho)')
+    iTableEPerP      = i_lookup_table('ePerP(rho,p/rho)')
     iTableCvGammaTe = i_lookup_table('CvGammaTe(rho,p/rho)')
-    iTableOpacity   = i_lookup_table('kappa(rho,p)')
+    iTableOpacity   = i_lookup_table('Opacity(rho,p/rho)')
 
     if(iProc==0) write(*,*) NameSub, &
-         ' iTableRhoE, iTableRhoP, iTableCvGammaTe = ', &
-         iTableRhoE, iTableRhoP, iTableCvGammaTe
+         ' iTablePPerE, RhoP, CvGammaTe, Opacity = ', &
+         iTablePPerE, iTableEPerP, iTableCvGammaTe, iTableOpacity
 
-    if(iTableRhoE > 0) &
-         call make_lookup_table(iTableRhoE, calc_table_value, iComm)
-    if(iTableRhoP > 0) &
-         call make_lookup_table(iTableRhoP, calc_table_value, iComm)
+    if(iTablePPerE > 0) &
+         call make_lookup_table(iTablePPerE, calc_table_value, iComm)
+    if(iTableEPerP > 0) &
+         call make_lookup_table(iTableEPerP, calc_table_value, iComm)
     if(iTableCvGammaTe > 0) &
          call make_lookup_table(iTableCvGammaTe, calc_table_value, iComm)
 
@@ -989,7 +989,7 @@ contains
     integer:: iMaterial
     character(len=*), parameter:: NameSub = 'ModUser::calc_table_value'
     !-----------------------------------------------------------------------
-    if(iTable == iTableRhoE)then
+    if(iTable == iTablePPerE)then
        ! Calculate p/e for Xe_, Be_ and Plastic_ for given Rho and e/Rho
        Rho = Arg1
        e   = Arg2*Rho
@@ -999,7 +999,7 @@ contains
           ! Material index starts from 0 :-( hence the +1
           Value_V(iMaterial+1) = p/e
        end do
-    elseif(iTable == iTableRhoP)then
+    elseif(iTable == iTableEPerP)then
        ! Calculate e/p for Xe_, Be_ and Plastic_ for given Rho and p/Rho
        Rho = Arg1
        p   = Arg2*Rho
@@ -1023,9 +1023,8 @@ contains
           Value_V(3*iMaterial+3) = Te
        end do
     else
-       write(*,*)NameSub,' iTable, iTableRhoE, iTableRhoP=', &
-            iTable, iTableRhoE, iTableRhoP
-       call stop_mpi(NameSub//' invalid iTable')
+       write(*,*)NameSub,' iTable=', iTable
+       call stop_mpi(NameSub//' invalid value for iTable')
     endif
 
   end subroutine calc_table_value
@@ -1058,7 +1057,8 @@ contains
 
     if(present(TeSi))then
        if(iTableCvGammaTe > 0)then
-          call interpolate_lookup_table(iTableOpacity, RhoSi, pSi, Value_V)
+          call interpolate_lookup_table(iTableOpacity, RhoSi, pSi/RhoSi, &
+               Value_V)
           TeSi = Value_V(3*iMaterial+3)
        else
           ! The IsError flag avoids stopping for Fermi degenerated state
@@ -1068,7 +1068,8 @@ contains
 
     if(present(AbsorptionOpacitySi) .or. present(RosselandMeanOpacitySi))then
        if(iTableOpacity > 0)then
-          call interpolate_lookup_table(iTableOpacity, RhoSi, pSi, Opacity_V)
+          call interpolate_lookup_table(iTableOpacity, RhoSi, pSi/RhoSi, &
+               Opacity_V)
           if(present(AbsorptionOpacitySi)) &
                AbsorptionOpacitySi = Opacity_V(2*iMaterial + 1) * RhoSi
           if(present(RosselandMeanOpacitySi)) &
