@@ -478,7 +478,7 @@ Contains
               Population_II(&
               iZMin_I(iMix) : min(iZMax_I(iMix), nZ_I(iMix)-1), iMix)*&
               IonizPotential_II(&
-              iZMin_I(iMix)+1 : min(iZMax_I(iMix), nZ_I(iMix)), iMix))
+              iZMin_I(iMix)+1 : min(iZMax_I(iMix)+1, nZ_I(iMix)), iMix))
          eUpshiftByCompression =  eUpshiftByCompression +Concentration_I(iMix)*&
               sum(Population_II(&
               iZMin_I(iMix) : min(iZMax_I(iMix), nZ_I(iMix)-1), iMix))
