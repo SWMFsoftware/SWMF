@@ -150,6 +150,33 @@ test_linear_solver:
 	@echo -----------------------------------------------------------------
 
 #######################################################################
+OBJ_CG = \
+	test_cg.o \
+	../src/blas.o \
+	../src/lapack.o \
+	../src/ModMpi.o \
+	../src/ModMpiInterfaces.o \
+	../src/ModBlasLapack.o \
+	../src/ModLinearSolver.o
+
+test_cg_exe:
+	@(cd ../src; make blas.o lapack.o ModLinearSolver.o)
+	@make test_cg.o
+	${LINK.f90} -o test_cg.exe ${OBJ_CG} ${Lflag1}
+
+test_cg:
+	@echo -----------------------------------------------------------------
+	@echo test_cg starting
+	@echo
+	@make test_cg_exe
+	@echo
+	@echo './test_cg.exe'
+	-@(./test_cg.exe)
+	@echo
+	@echo test_cg done
+	@echo -----------------------------------------------------------------
+
+#######################################################################
 OBJ_SORT = \
 	test_sort.o \
 	../src/ModSort.o
