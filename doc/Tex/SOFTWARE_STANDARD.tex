@@ -506,7 +506,7 @@ module ModLinearSolver
   public :: test_linear_solver
 \end{verbatim}
 This particular module does not have any public variables, but it could.
-Next come the declaration of local (private) variables and then the 
+Next comes the declaration of local (private) variables and then the 
 contained subroutines and functions. There is no object associated with
 this module, it is simply a collection of methods. 
 
@@ -886,10 +886,13 @@ these in future development.
       commas, single or double colons, semi-colons should be followed
       by a single space. Exception: indexes of multi-dimensional arrays
       may be separated by commas without a blank so that the array
-      element remains more compact.
-\item The $=$ sign, the $+$ and $-$ and the logical 
-      $==$, $/=$, $>$, $<$, $>=$, $<=$ operators should be surrounded
-      by spaces on both sides. For unary $+$ or $-$ (as in $-2.0$) use 
+      element remains more compact, e.g. {\tt a_II(1,2) = 3.0}
+\item The $=$ sign, the $+$ and $-$ and the logical operators
+      $==$, $/=$, $>$, $<$, $>=$, $<=$ should be surrounded
+      by spaces on both sides. Exceptions: the named arguments of a function
+      or subroutine may be written without spaces around the $=$ sign, e.g.
+      {\tt open(iUnit, file=NameFile, iostat=iError)}.
+      For unary $+$ or $-$ (as in $a = -2.0$) use 
       space before, but not after the sign.
 \item Blank lines are used to separate logically coherent parts of the 
       source code.
@@ -955,7 +958,7 @@ module ModUser
 contains
   !=========================================================================
   subroutine read_parameters 
-    integer :: iError
+    integer:: iError
     !-----------------------------------------------------------------------
     do
        ! Shouldn't we limit reading input to processor zero?
@@ -990,9 +993,8 @@ a very deep indentation that is difficult to read, for example:
      do k = 1, nK
         do j = 1, nJ
            do i = 1, nI
-              if(IsTrueCell_GB(i, j, k, iBlock))then
-                 Plot_VGB(iPlotVar, i, j, k, iBlock) = &
-                      State_VGB(Rho_, i, j, k, iBlock)
+              if(IsTrueCell_GB(i,j,k,iBlock))then
+                 Plot_VGB(iPlotVar,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
               end if
            end do
         end do
@@ -1003,9 +1005,9 @@ An alternative way to write this code is
   select case(NamePlotVar)
   case('rho')
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
-        if(.not. IsTrueCell(i, j, k, iBlock)) CYCLE
+        if(.not. IsTrueCell(i,j,k,iBlock)) CYCLE
 
-        Plot_VGB(iPlotVar, i, j, k, iBlock) = State_VGB(Rho_, i, j, k, iBlock)
+        Plot_VGB(iPlotVar,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
 
      end do; end do; end do
 \end{verbatim}
