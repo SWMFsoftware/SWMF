@@ -64,6 +64,7 @@ module ModEos
   integer, public, parameter:: Xe_=0      ! Xenon
   integer, public, parameter:: Be_=1      ! Beryllium
   integer, public, parameter:: Plastic_=2 ! Polyimide (C_22 H_10 N_2 O_5)
+  integer, public, parameter:: Au_=3      ! Gold
 
   public:: UsePreviousTe ! inherited from ModStatSum
   public:: eos, read_eos_parameters
@@ -75,7 +76,7 @@ module ModEos
   ! Local variables
 
   integer, parameter:: Test_=90 ! test material with the EOS e\sim T^4, p\sim T^4
-  integer, parameter :: nZ_I(Xe_:Plastic_)=(/54, 4, 6 /)
+  integer, parameter :: nZ_I(Xe_:Au_)=(/54, 4, 6, 79 /)
 
   ! integer, parameter:: C_=3, H_=4, N_=5, O_=6 !Composition elements
 
@@ -223,7 +224,7 @@ contains
     real,    optional, intent(out) :: CvTotalOut ! Specific heat per volume
     integer,           intent(out) :: iError     ! iError =0 - OK, 1 - deep Fermi degeneration, 
                                                  ! 2 - relativistic temperature, 
-                                                 ! 3 - pressure ionization (ion states are crashed)
+                                                 ! 3 - pressure ionization (ion levels are crashed)
 
     real :: ePerAtom, pPerAtom,TeInEV  !Both in eV
 

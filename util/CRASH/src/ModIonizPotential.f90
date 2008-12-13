@@ -100,7 +100,7 @@ real, parameter, dimension(10,10) :: cPotential10_II = reshape(  (/   &
   274.   , 311.    , 412.  , 454.  , 490. , 542.  , 579.  , 619.  , 698.     , 738. ,& ! 10-s
   1856.  , 1970.   , 2088. , 2234. , 2363., 2495. , 2664.4, 2781.7, 11864.8  , 12389./), (/30,10/))! 20-s  
   !Cu: 29th potential is taken from: David R. Lide, CRC Handbook of Chemistry and Physics,(2004),p.10-187
-  !Zn: 27 - 30 potentials are taken from the database sited below
+  !Zn: 27 - 30 potentials are taken from the database cited below
  
 
   !  Xe (54) - full ionization
@@ -131,8 +131,18 @@ real, parameter, dimension(10,10) :: cPotential10_II = reshape(  (/   &
    !Old array: 12.1299, 21.21 , 32.10, 52.42, 65.31, 89.80, 103.41, 176.88, 204.09, 225.86,& ! Ionization levels 1-10
    !255.79/)	! 11
  
-
-
+  ! Cited database, ref #R461
+  real, parameter, dimension(79) :: cPotentialAu_I = (/&
+   !    1   !    2    !    3    !   4  !   5  !    6   !    7   !   8  !   9  !   10   !
+   7.937   , 20.56,   37.37,     54.18, 70.99, 87.81 , 104.6  , 123.2 , 140.9 , 158.6 ,& ! error: \pm 8 for 7-10
+   176.3   , 250.3,   274.7   , 299.1, 323.5, 365.1  , 391.8  , 432.9 , 487.4 , 516.8  ,& ! 10-s; error: 
+   545.7   , 599.7,   654.2   , 708.8, 763.3, 817.9  , 872.4  , 930.9 , 986.2 , 1042.   ,& ! 20-s; error: 
+   1097.    , 1152. , 1207.   , 1516., 1575., 1634.  , 1692.  , 1751. , 1810. , 1888.   ,& ! 30-s; error: 
+   1948.    , 2009. , 2069.   , 2325., 2387., 2448.  , 2510.  , 2671. , 2738. , 2924.   ,& ! 40-s; error: 
+   2991.    , 4516. , 4676.   , 4837., 4997., 5158.  , 5318.  , 5566.,  5731.,  5896.   ,& ! 50-s; error:
+   6061.    , 6500.,  6644.   , 6787., 6931., 7615.  , 7772.  , 8111.,  8259.,  17090.  ,& ! 60-s; error:
+   17500.   , 17910., 18320.  , 20570.,21040.,21870. , 22260. , 89680., 91290.          /) ! 70-s; error: 
+  
  public :: get_ioniz_potential
 
 contains
@@ -150,6 +160,8 @@ contains
              cPotential_I = cPotential30_II( 1:nZ, nZ)
           case (54)
              cPotential_I = cPotentialXe_I
+          case(79)
+             cPotential_I = cPotentialAu_I
            case default
              write(*,*) "No such element found in the database"
          end select
