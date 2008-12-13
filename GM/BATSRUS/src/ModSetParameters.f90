@@ -1135,7 +1135,7 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('LimiterBeta', BetaLimiter)
         end if
 
-     case('#LIMITER')
+     case('#LIMITER', '#RESCHANGE', '#RESOLUTIONCHANGE', '#TVDRESCHANGE')
         call read_face_value_param(NameCommand)
 
      case("#NONCONSERVATIVE")
@@ -1229,14 +1229,6 @@ subroutine MH_set_parameters(TypeAction)
                 ' is not available any longer, allopt is set !!!'
            optimize_message_pass='allopt'
         end if
-
-     case('#RESCHANGE','#RESOLUTIONCHANGE')
-        call read_var('UseAccurateResChange',UseAccurateResChange)
-        if(UseAccurateResChange) UseTvdResChange=.false.
-
-     case('#TVDRESCHANGE')
-        call read_var('UseTvdResChange',UseTvdResChange)
-        if(UseTvdResChange) UseAccurateResChange=.false.
 
      case('#CLIMIT')
         call face_flux_set_parameters(NameCommand)

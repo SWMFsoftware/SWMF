@@ -61,6 +61,14 @@ contains
     character(len=*), parameter :: NameSub = 'read_face_value_param'
     !--------------------------------------------------------------------------
     select case(NameCommand)
+    case('#RESCHANGE', '#RESOLUTIONCHANGE')
+       call read_var('UseAccurateResChange', UseAccurateResChange)
+       if(UseAccurateResChange) UseTvdResChange = .false.
+
+    case('#TVDRESCHANGE')
+       call read_var('UseTvdResChange', UseTvdResChange)
+       if(UseTvdResChange) UseAccurateResChange = .false.
+
     case("#LIMITER")
        call read_var('UseLogRhoLimiter', UseLogRhoLimiter)
        call read_var('UseLogPLimiter',   UseLogPLimiter)
