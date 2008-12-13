@@ -133,6 +133,7 @@ minmod			TypeLimiter
 F			UseLogRhoLimiter
 F       	        UseLogPLimiter
 T               	UseScalarPerRhoLimiter
+Xe Be Pl EInt
 
 #SAVERESTART
 F			DoSaverestart

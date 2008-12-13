@@ -32,7 +32,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModMPCells,       ONLY: iCFExchangeType,DoOneCoarserLayer
   use ModFaceValue,     ONLY: &
        UseTvdResChange, UseAccurateResChange, DoLimitMomentum, BetaLimiter, &
-       TypeLimiter, UseLogRhoLimiter, UseLogPLimiter, UseScalarToRhoRatioLtd
+       TypeLimiter, read_face_value_param
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
   use ModUser,          ONLY: user_read_inputs, user_init_session, &
@@ -1136,12 +1136,7 @@ subroutine MH_set_parameters(TypeAction)
         end if
 
      case('#LIMITER')
-        call read_var('UseLogRhoLimiter', UseLogRhoLimiter)
-        call read_var('UseLogPLimiter',   UseLogPLimiter)
-        call read_var('UseScalarPerRhoLimiter', UseScalarToRhoRatioLtd)
-
-        if(UseScalarToRhoRatioLtd .and. nFluid > 1)call stop_mpi(NameSub//&
-             ': scalar to rho ratio cannot be limited for multifluid') 
+        call read_face_value_param(NameCommand)
 
      case("#NONCONSERVATIVE")
         call read_var('UseNonConservative',UseNonConservative)

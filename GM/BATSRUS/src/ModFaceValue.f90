@@ -12,17 +12,21 @@ module ModFaceValue
   logical, public :: UseAccurateResChange = .false.
   logical, public :: UseTvdResChange      = .true.
   logical, public :: DoLimitMomentum      = .false.
-  logical, public :: UseScalarToRhoRatioLtd = .false.
 
   real,             public :: BetaLimiter = 1.0
   character(len=6), public :: TypeLimiter = 'minmod'
-  logical,          public :: UseLogRhoLimiter=.false.
-  logical,          public :: UseLogPLimiter=.false.
 
-  public :: calc_face_value, correct_monotone_restrict
+  public :: read_face_value_param, calc_face_value, correct_monotone_restrict
 
   ! Local variables:
+  logical :: UseLogRhoLimiter=.false.
+  logical :: UseLogPLimiter=.false.
+  logical :: UseScalarToRhoRatioLtd = .false.
+
   logical :: UseLogLimiter=.false., UseLogLimiter_V(nVar)=.false.
+  logical :: NameV
+  integer :: nVarLimitRatio
+  integer, allocatable :: iVarLimitRatio_I(:)
 
   ! Maximum length of the stencil in 1D
   integer,parameter:: MaxIJK= max(nI,nJ,nK)
@@ -42,6 +46,45 @@ module ModFaceValue
   integer :: iVar
 
 contains
+  !============================================================================
+  subroutine read_face_value_param(NameCommand)
+
+    use ModReadParam,  ONLY: read_var, lStringLine
+    use ModUtilities,  ONLY: split_string
+    use ModVarIndexes, ONLY: NameVar_V
+
+    character(len=*), intent(in) :: NameCommand
+
+    integer :: i, iVar
+    character(len=10) :: NameVar_I(nVar)
+    character(len=lStringLine) :: NameVarLimitRatio
+    character(len=*), parameter :: NameSub = 'read_face_value_param'
+    !--------------------------------------------------------------------------
+    select case(NameCommand)
+    case("#LIMITER")
+       call read_var('UseLogRhoLimiter', UseLogRhoLimiter)
+       call read_var('UseLogPLimiter',   UseLogPLimiter)
+       call read_var('UseScalarPerRhoLimiter', UseScalarToRhoRatioLtd)
+       if(.not. UseScalarToRhoRatioLtd)RETURN
+       call read_var('NameVarLimitRatio', NameVarLimitRatio)
+       call split_string(NameVarLimitRatio, nVar, NameVar_I, nVarLimitRatio)
+       if(allocated(iVarLimitRatio_I)) deallocate(iVarLimitRatio_I)
+       allocate(iVarLimitRatio_I(nVarLimitRatio))
+       do i = 1, nVarLimitRatio
+          do iVar = 1, nVar
+             if(NameVar_V(iVar) == NameVar_I(i))then
+                iVarLimitRatio_I(i) = iVar
+                EXIT
+             end if
+          end do
+          if(iVar > nVar) call CON_stop(NameSub// &
+               ' could not find NameVarLimitRatio='//NameVar_I(i))
+       end do
+    case default
+       call CON_stop(NameSub//' invalid command='//trim(NameCommand))
+    end select
+
+  end subroutine read_face_value_param
   !===========================================================================
   subroutine tvd_reschange_body(& 
        Coarse2_V         ,& !State in the coarser ghostcell, 2nd layer
@@ -669,51 +712,46 @@ contains
       end do
 
     end subroutine logfaceZ_to_faceZ
- !==========================================================================
+    !==========================================================================
     subroutine ratio_to_scalar_faceX(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      integer :: i, j, k
       !------------------------------------------------------------------------
-      do iVar=ScalarFirst_,ScalarLast_
-
-         LeftState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
-              LeftState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax)*&
-              LeftState_VX(Rho_,iMin:iMax,jMin:jMax,kMin:kMax)
-         RightState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
-              RightState_VX(iVar,iMin:iMax,jMin:jMax,kMin:kMax)*&
-              RightState_VX(Rho_,iMin:iMax,jMin:jMax,kMin:kMax)
-      end do
+      do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+         LeftState_VX(iVarLimitRatio_I,i,j,k) = &
+              LeftState_VX(iVarLimitRatio_I,i,j,k)*LeftState_VX(Rho_,i,j,k)
+         RightState_VX(iVarLimitRatio_I,i,j,k) = &
+              RightState_VX(iVarLimitRatio_I,i,j,k)*RightState_VX(Rho_,i,j,k)
+      end do; end do; end do
 
     end subroutine ratio_to_scalar_faceX
     !==========================================================================
     subroutine ratio_to_scalar_faceY(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      integer :: i, j, k
       !------------------------------------------------------------------------
-      do iVar=ScalarFirst_,ScalarLast_
-         LeftState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
-              LeftState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax)*&
-              LeftState_VY(Rho_,iMin:iMax,jMin:jMax,kMin:kMax)
-         RightState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
-              RightState_VY(iVar,iMin:iMax,jMin:jMax,kMin:kMax)*&
-              RightState_VY(Rho_,iMin:iMax,jMin:jMax,kMin:kMax)
-      end do
+      do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+         LeftState_VY(iVarLimitRatio_I,i,j,k) = &
+              LeftState_VY(iVarLimitRatio_I,i,j,k)*LeftState_VY(Rho_,i,j,k)
+         RightState_VY(iVarLimitRatio_I,i,j,k) = &
+              RightState_VY(iVarLimitRatio_I,i,j,k)*RightState_VY(Rho_,i,j,k)
+      end do; end do; end do
 
     end subroutine ratio_to_scalar_faceY
     !==========================================================================
     subroutine ratio_to_scalar_faceZ(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+      integer :: i, j, k
       !------------------------------------------------------------------------
-      do iVar=ScalarFirst_,ScalarLast_
-
-         LeftState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
-              LeftState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax)*&
-              LeftState_VZ(Rho_,iMin:iMax,jMin:jMax,kMin:kMax)
-         RightState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax) = &
-              RightState_VZ(iVar,iMin:iMax,jMin:jMax,kMin:kMax)*&
-              RightState_VZ(Rho_,iMin:iMax,jMin:jMax,kMin:kMax)
-      end do
+      do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+         LeftState_VZ(iVarLimitRatio_I,i,j,k) = &
+              LeftState_VZ(iVarLimitRatio_I,i,j,k)*LeftState_VZ(Rho_,i,j,k)
+         RightState_VZ(iVarLimitRatio_I,i,j,k) = &
+              RightState_VZ(iVarLimitRatio_I,i,j,k)*RightState_VZ(Rho_,i,j,k)
+      end do; end do; end do
 
     end subroutine ratio_to_scalar_faceZ
     !==========================================================================
@@ -727,11 +765,9 @@ contains
          RhoInv=cOne/Primitive_VG(iRho,i,j,k)
          Primitive_VG(iUx:iUz,i,j,k)=RhoInv*Primitive_VG(iRhoUx:iRhoUz,i,j,k)
       end do
-      if(UseScalarToRhoRatioLtd)then
-         do iVar=ScalarFirst_,ScalarLast_
-            Primitive_VG(iVar,i,j,k)=Primitive_VG(iVar,i,j,k)*RhoInv
-         end do
-      end if
+      if(UseScalarToRhoRatioLtd) Primitive_VG(iVarLimitRatio_I,i,j,k) = &
+           RhoInv*Primitive_VG(iVarLimitRatio_I,i,j,k)
+
       if(UseLogLimiter)then
          do iVar=1,nVar
             if(UseLogLimiter_V(iVar)) &
@@ -766,11 +802,10 @@ contains
            Ga2Boris - ByFull*uBC2Inv
       Primitive_VG(Uz_,i,j,k)= Primitive_VG(rhoUz_,i,j,k)*&
            Ga2Boris - BzFull*uBC2Inv
-      if(UseScalarToRhoRatioLtd)then
-         do iVar=ScalarFirst_,ScalarLast_
-            Primitive_VG(iVar,i,j,k)=Primitive_VG(iVar,i,j,k)*RhoInv
-         end do
-      end if
+
+      if(UseScalarToRhoRatioLtd) Primitive_VG(iVarLimitRatio_I,i,j,k) = &
+           Primitive_VG(iVarLimitRatio_I,i,j,k)/Primitive_VG(Rho_,i,j,k)
+
     end subroutine calc_primitives_boris
     !=========================================================================
     !^CFG END BORISCORR
