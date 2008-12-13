@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+^CFG COPYRIGHT UM
 !==============================================================================
 module ModUser
   use ModReadParam, ONLY: lStringLine
@@ -62,8 +62,8 @@ contains
 
        case("#EMPIRICALSW")
           call read_var('NameModel',NameModel)
-       case("#WAVESPECTRUM")
-          call read_var('NameModelS',NameModelSpectrum)
+       !case("#WAVESPECTRUM")
+       !   call read_var('NameModelS',NameModelSpectrum)
 
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -297,60 +297,32 @@ contains
   !============================================================================
 
   subroutine user_initial_perturbation
-    use EEE_ModMain,  ONLY: EEE_get_state_init
-    use ModMain, ONLY: nI,nJ,nK,nBLK,unusedBLK,x_,y_,z_,n_step,iteration_number
+    use ModMain, ONLY: nBLK,unusedBLK,x_,y_,z_,n_step,iteration_number
     use ModVarIndexes
     use ModAdvance,   ONLY: State_VGB 
-    use ModPhysics,   ONLY: Si2No_V,UnitU_,UnitRho_,UnitP_,UnitB_
+    use ModPhysics,   ONLY: Si2No_V,UnitB_
     use ModGeometry
-    use ModEnergy,    ONLY: calc_energy_cell
+    use ModMagnetogram, ONLY: get_magnetogram_field
+
     implicit none
 
-    integer :: i,j,k,iBLK
+    integer :: iBLK
     logical :: oktest,oktest_me
-    real :: x_D(nDim),Rho,B_D(nDim),p
 
-    real :: Mass=0.0
     !--------------------------------------------------------------------------
-    call set_oktest('user_initial_perturbation',oktest,oktest_me)
+     if (iteration_number<2) then
 
-    do iBLK=1,nBLK
-       if(unusedBLK(iBLK))CYCLE
-       do k=1,nK; do j=1,nJ; do i=1,nI
+        call set_oktest('user_initial_perturbation',oktest,oktest_me)
 
-          x_D(x_) = x_BLK(i,j,k,iBLK)
-          x_D(y_) = y_BLK(i,j,k,iBLK)
-          x_D(z_) = z_BLK(i,j,k,iBLK)
+        do iBLK=1,nBLK
+           if(unusedBLK(iBLK))CYCLE
+           call set_wave_spectrum(iBLK)
 
-          call EEE_get_state_init(x_D,Rho,B_D,p, &
-               n_step,iteration_number)
+        end do
+        
+     end if
 
-          Rho = Rho*Si2No_V(UnitRho_)
-          B_D = B_D*Si2No_V(UnitB_)
-          p = p*Si2No_V(UnitP_)
-
-          !\
-          ! Add the eruptive event state to the solar wind
-          !/
-          State_VGB(Rho_,i,j,k,iBLK) = State_VGB(Rho_,i,j,k,iBLK) + Rho
-          State_VGB(Bx_:Bz_,i,j,k,iBLK) = State_VGB(Bx_:Bz_,i,j,k,iBLK) + B_D
-          State_VGB(P_,i,j,k,iBLK) = State_VGB(P_,i,j,k,iBLK) + p
-
-          !\
-          ! Calculate the mass added to the eruptive event
-          !/
-          Mass = Mass + Rho/vInv_CB(i,j,k,iBLK)
-       end do; end do; end do
-
-       !\
-       ! Update the total energy::
-       !/
-       call calc_energy_cell(iBLK)
-
-    end do
-
-  end subroutine user_initial_perturbation
-
+     end subroutine user_initial_perturbation
   !============================================================================
 
   subroutine user_set_ics
@@ -400,7 +372,7 @@ contains
        State_VGB(Ew_,i,j,k,iBLK) = Pres_BLK &
             *(1.0/(Gamma_BLK-1.0)-inv_gm1) 
     end do; end do; end do
-    call set_wave_spectrum
+
   end subroutine user_set_ics
 
   !============================================================================
@@ -408,11 +380,12 @@ contains
     use EEE_ModMain,    ONLY: EEE_get_B0
     use ModPhysics,     ONLY: Io2No_V,Si2No_V,UnitB_
     use ModMagnetogram, ONLY: get_magnetogram_field
+
     implicit none
 
     real, intent(in):: xInput,yInput,zInput
     real, intent(out), dimension(3):: B0_D
-
+   
     real :: x_D(3),B_D(3)
     !--------------------------------------------------------------------------
 
@@ -428,6 +401,7 @@ contains
   !============================================================================
 
   subroutine user_update_states(iStage,iBlock)
+    use ModMain,    ONLY: iteration_number
     use ModVarIndexes
     use ModSize
     use ModAdvance, ONLY: State_VGB, B0_DGB
@@ -463,10 +437,19 @@ contains
     !\
     ! End update of pressure and relaxation energy::
     !/
+
+    !\
+    ! Set wave spectrum at iteration 1
+    !/
+    !if (iteration_number<2) then
+
+     !  call set_wave_spectrum(iBlock)
+
+    !end if
   end subroutine user_update_states
 
 !=======================================================================
- subroutine set_wave_spectrum
+ subroutine set_wave_spectrum(iBlock)
 
 ! This subroutine sets the Alfven wave spectrum at the surface of the sun, up to 1.01 Rs.
 ! The frequancy range of the spectrum is determined by Alfven waves frequencie observed at the chromosphere 
@@ -478,145 +461,152 @@ contains
 ! As explained in ModEquationMhdTurb.f90, the current version only allows advection of wave energy with the background fluid.
 ! Further development will include evolution of the wave spectrum (via dissipation/growth, plasma expansion/contraction etc)
   
-    use ModMain,      ONLY: globalBLK,nI,nJ,nK
-    use ModVarIndexes
-    use ModAdvance,   ONLY: State_VGB
-    use ModGeometry,  ONLY: R_BLK
-    use ModSize
-    use ModConst,     ONLY: cMu,cLightSpeed,cElectronCharge, cGEV,cAU
-    use ModNumConst,  ONLY: cPi
+   use ModMain,      ONLY: nI,nJ,nK,x_,y_,z_
+   use ModVarIndexes
+   use ModAdvance,   ONLY: State_VGB, B0_DGB
+   use ModGeometry
+   use ModSize
+   use ModConst,     ONLY: cMu,cLightSpeed,cElectronCharge, cGEV,cAU
+   use ModNumConst,  ONLY: cPi,cTiny
+   use ModPhysics,     ONLY: Io2No_V,Si2No_V,UnitB_
+   use ModMagnetogram, ONLY: get_magnetogram_field
+   
+   implicit none
 
-    implicit none
+   ! Spatial grid variables
+   !=======================
+   integer :: i,j,k,iBLK
+   integer,intent(in)::iBlock
+   real :: x,y,z,R,ROne,Rmax
+   
+   ! 1D Frequency grid variables
+   ! =========================
+   real :: w_Min, w_Max, dLogw
+   real, dimension(I50_-I01_+1) :: I_Spectrum, w_LogSpectrum
+   integer :: w_Index
 
-    integer :: i,j,k,iBLK
-    real :: w_Min, w_Max, dLogw
-    real, dimension(I50_-I01_+1) :: I_Spectrum, w_LogSpectrum
-    integer :: w_Index
-    !the intensity of the back travelling wave in the initial condition
-    real,parameter::Alpha=1.0/10.0
-    real,parameter::Lambda0=4.0/10.0  ![AU]
-    real,parameter::w_Power=5.0/3.0
-    real,parameter :: cI_coeff=(1-Alpha)*54/(4*cPi*Lambda0)
-    !cI_coeff is the constant part of initial spectrum
-    real :: bI_coeff ,rI_coeff ! B and r dependent part of initial spectrum
-    real :: Ctot, Ctot1,Ctot2, VAcell, Bcell 
+   ! Initial spectrum model parameters
+   !==================================
+   !the intensity of the back travelling wave in the initial condition
+   real,parameter::Alpha=1.0/10.0
+   real,parameter::Lambda0=4.0/10.0  ![AU]
+   real,parameter::w_Power=5.0/3.0
+   real,parameter :: cI_coeff=(1-Alpha)*54/(4*cPi*Lambda0)
+   !cI_coeff is a constant coeffiecient of initial spectrum
+   
+   ! Initial spectrum model variables
+   !=================================
+   real :: bI_coeff ,rI_coeff ! B and r dependence of initial spectrum
+   real :: Ctot, VA_cell, B_cell,rho_cell 
+   real, dimension(3):: B0_D, B_D
+   
+   ! Additional variables for testing only
+   !======================================
+   real :: Imean_BLK=0.0, Bmean_BLK=0.0
 
-    iBLK=globalBLK
-
-    ! Set spectrum frequency groups
-    ! =============================
-    w_Min=6e-6 ! minimal frequency of Alfven waves spectrum
-    !This is the frequancy of the variable I01_
-    w_Max=0.001 ! maximal frequency of Alfven waves spectrum
-    !This is the frequency of the variable I50_
-
-    ! frequency interval on a natural logarithmic scale 
-    dLogw=(log(w_Max)-log(w_Min))/(I50_-I01_) 
+   ! -----------------------------
+   ! Set spectrum frequency groups
+   ! -----------------------------
+   
+   w_Min=6e-6 ! minimal frequency of Alfven waves spectrum
+   !This is the frequancy of the variable I01_
+   w_Max=0.001 ! maximal frequency of Alfven waves spectrum
+   !This is the frequency of the variable I50_
+   
+   ! frequency interval on a natural logarithmic scale 
+   dLogw=(log(w_Max)-log(w_Min))/(I50_-I01_) 
   
-    ! Divide the spectrum into frequncy groups on a log scale
-    do w_Index=1,I50_-I01_+1
+   ! Divide the spectrum into frequncy groups on a log scale
+   do w_Index=1,I50_-I01_+1
 
-       w_LogSpectrum(w_Index)=log(w_Min)+(w_Index-1)*dLogw
+      w_LogSpectrum(w_Index)=log(w_Min)+(w_Index-1)*dLogw
 
-    end do
-    write(*,*) 'In set_wave_spectrum - finished devidind spectrum'
-
-    ! Calculate Kolomogorov spectrum for frequency groups
-    ! ===================================================
-    ! Assign spectrum values to I_Spectrum array. The array will be used
-    ! to initialize the state varaibles I01_ to I50_ defined in
-    ! ModEquationMhdTurb.f90
-    ! The wave energy spectrum is described by the power law:
-    ! I_{+}= cI_{coeff}*bI_{coeff}*rI_{coeff}(w/Va)^{-5/3}
-    ! where Va is the Alfven speed Va=B^2/sqrt{\mu_0\rho}
-    ! cI_coeff=(1-\Alpha)(54/4\pi\lambda0)
-    ! bI_coeff=B^2(eBc/1GeV)^{-1/3}
-    ! rI_coeff=(r/1AU)^{-1}                                                         
-
-    ! Start filling cells 
-    do k=1,nK; do j=1,nJ; do i=1,nI
-       
-       Bcell=((State_VGB(Bx_,i,j,k,iBLK))**2 + &
-            (State_VGB(By_,i,j,k,iBLK))**2 + &
-            (State_VGB(Bz_,i,j,k,iBLK))**2)**0.5
-       write(*,*) 'Finished calculating Bcell'
-       bI_coeff=Bcell**2*(cElectronCharge*Bcell*cLightSpeed/cGEV)&
-            **(-(1.0/3.0))
-       write(*,*) 'Finished calculatinf bI'
-       rI_coeff=cAU/R_BLK(i,j,k,iBLK)
-       write(*,*) 'Finished calculating rI'
-       VAcell=Bcell/(State_VGB(rho_,i,j,k,iBLK)*cMu)**0.5
-       write(*,*) 'Finished calculating VAcell'
-       Ctot1=cI_coeff*bI_coeff*rI_coeff
-       write(*,*) 'Finished claculating Ctot1'
-       Ctot2=(VAcell)**(5.0/3.0)
-       write(*,*) 'Finished Ctot2'
-       Ctot=Ctot1*Ctot2
-       write(*,*) 'Finished Ctot'
-       do w_Index=1,I50_-I01_+1
-                    
-          I_Spectrum(w_Index)=Ctot*exp(w_LogSpectrum(w_Index))**(-w_Power)
-          State_VGB(w_Index,i,j,k,iBLK)=I_Spectrum(w_Index)
-       end do
-       write(*,*) 'Finished spectrum init'
-       !State_VGB(I01_,i,j,k,iBLK)=I_Spectrum(1)
-       !State_VGB(I02_,i,j,k,iBLK)=I_Spectrum(2)
-       !State_VGB(I03_,i,j,k,iBLK)=I_Spectrum(3)
-       !State_VGB(I04_,i,j,k,iBLK)=I_Spectrum(4)
-       !State_VGB(I05_,i,j,k,iBLK)=I_Spectrum(5)
-       !State_VGB(I06_,i,j,k,iBLK)=I_Spectrum(6)
-       !State_VGB(I07_,i,j,k,iBLK)=I_Spectrum(7)
-       !State_VGB(I08_,i,j,k,iBLK)=I_Spectrum(8)
-       !State_VGB(I09_,i,j,k,iBLK)=I_Spectrum(9)
-       !State_VGB(I10_,i,j,k,iBLK)=I_Spectrum(10) ! Finished 10 frequencies
-
-       !State_VGB(I11_,i,j,k,iBLK)=I_Spectrum(11)
-       !State_VGB(I12_,i,j,k,iBLK)=I_Spectrum(12)
-       !State_VGB(I13_,i,j,k,iBLK)=I_Spectrum(13)
-       !State_VGB(I14_,i,j,k,iBLK)=I_Spectrum(14)
-       !State_VGB(I15_,i,j,k,iBLK)=I_Spectrum(15)
-       !State_VGB(I16_,i,j,k,iBLK)=I_Spectrum(16)
-       !State_VGB(I17_,i,j,k,iBLK)=I_Spectrum(17)
-       !State_VGB(I18_,i,j,k,iBLK)=I_Spectrum(18)
-       !State_VGB(I19_,i,j,k,iBLK)=I_Spectrum(19)
-       !State_VGB(I20_,i,j,k,iBLK)=I_Spectrum(20) ! Finished 20 frequencies   
-       
-       !State_VGB(I21_,i,j,k,iBLK)=I_Spectrum(21)
-       !State_VGB(I22_,i,j,k,iBLK)=I_Spectrum(22)
-       !State_VGB(I23_,i,j,k,iBLK)=I_Spectrum(23)
-       !State_VGB(I24_,i,j,k,iBLK)=I_Spectrum(24)
-       !State_VGB(I25_,i,j,k,iBLK)=I_Spectrum(25)
-       !State_VGB(I26_,i,j,k,iBLK)=I_Spectrum(26)
-       !State_VGB(I27_,i,j,k,iBLK)=I_Spectrum(27)
-       !State_VGB(I28_,i,j,k,iBLK)=I_Spectrum(28)
-       !State_VGB(I29_,i,j,k,iBLK)=I_Spectrum(29)
-       !State_VGB(I30_,i,j,k,iBLK)=I_Spectrum(30) ! Finished 30 frequencies   
-
-       !State_VGB(I31_,i,j,k,iBLK)=I_Spectrum(31)
-       !State_VGB(I32_,i,j,k,iBLK)=I_Spectrum(32)
-       !State_VGB(I33_,i,j,k,iBLK)=I_Spectrum(33)
-       !State_VGB(I34_,i,j,k,iBLK)=I_Spectrum(34)
-       !State_VGB(I35_,i,j,k,iBLK)=I_Spectrum(35)
-       !State_VGB(I36_,i,j,k,iBLK)=I_Spectrum(36)
-       !State_VGB(I37_,i,j,k,iBLK)=I_Spectrum(37)
-       !State_VGB(I38_,i,j,k,iBLK)=I_Spectrum(38)
-       !State_VGB(I39_,i,j,k,iBLK)=I_Spectrum(39)
-       !State_VGB(I40_,i,j,k,iBLK)=I_Spectrum(40) ! Finished 40 frequencies   
-
-       !State_VGB(I41_,i,j,k,iBLK)=I_Spectrum(41)
-       !State_VGB(I42_,i,j,k,iBLK)=I_Spectrum(42)
-       !State_VGB(I43_,i,j,k,iBLK)=I_Spectrum(43)
-       !State_VGB(I44_,i,j,k,iBLK)=I_Spectrum(44)
-       !State_VGB(I45_,i,j,k,iBLK)=I_Spectrum(45)
-       !State_VGB(I46_,i,j,k,iBLK)=I_Spectrum(46)
-       !State_VGB(I47_,i,j,k,iBLK)=I_Spectrum(47)
-       !State_VGB(I48_,i,j,k,iBLK)=I_Spectrum(48)
-       !State_VGB(I49_,i,j,k,iBLK)=I_Spectrum(49)
-       !State_VGB(I50_,i,j,k,iBLK)=I_Spectrum(50) ! Finished 50 frequencies   
+   end do
     
-    end do; end do; end do
- 
-  end subroutine set_wave_spectrum
+   ! --------------------------------
+   ! Start filling spatial grid cells 
+   ! --------------------------------
+   
+   iBLK=iBlock
+
+   do k=1,nK; do j=1,nJ; do i=1,nI
+      
+      !-----------------------------------------------------------
+      ! Calculate initial spectrum outside the sun only. Otherwise 
+      ! set Iw to cTiny for all frequencies
+      !-----------------------------------------------------------
+      select case(TypeGeometry)
+      case('cartesian')
+         Rmax = max(2.1E+01,sqrt(x2**2+y2**2+z2**2))
+      case('spherical_lnr')
+         Rmax = max(2.1E+01,exp(XyzMax_D(1)))
+      end select
+
+      R = max(R_BLK(i,j,k,iBLK),cTolerance)
+      ROne = max(1.0,R)
+
+      if (R_BLK(i,j,k,iBLK) > 1.0) then
+
+         !---------------------------
+         !Get B0 for initial spectrum
+         !---------------------------
+         x = x_BLK(i,j,k,iBLK)
+         y = y_BLK(i,j,k,iBLK)
+         z = z_BLK(i,j,k,iBLK)
+     
+         call get_magnetogram_field(x,y,z,B0_D)
+         B0_D(1) = B0_D(1)*Si2No_V(UnitB_)
+         B0_D(2)= B0_D(2)*Si2No_V(UnitB_)
+         B0_D(3)= B0_D(3)*Si2No_V(UnitB_)
+
+         B_D(1) = B0_DGB(x_,i,j,k,iBLK)*Si2No_V(UnitB_)
+         B_D(2)= B0_DGB(y_,i,j,k,iBLK)*Si2No_V(UnitB_)
+         B_D(3)= B0_DGB(z_,i,j,k,iBLK)*Si2No_V(UnitB_)
+         B_cell=((B0_D(1))**2+(B0_D(2))**2 + &
+              (B0_D(3))**2)**0.5
+         !write(*,*) B0_D(1), B0_D(2), B0_D(3)
+         Bmean_BLK=Bmean_BLK+B_cell ! for cecking only
+         
+         ! ---------------------------------------------------
+         ! Calculate Kolomogorov spectrum for frequency groups
+         ! ---------------------------------------------------
+         ! Assign spectrum values to I_Spectrum array. The array will be used
+         ! to initialize the state varaibles I01_ to I50_ defined in
+         ! ModEquationMhdTurb.f90
+         ! The wave energy spectrum is described by the power law:
+         ! I_{+}= cI_{coeff}*bI_{coeff}*rI_{coeff}(w/Va)^{-5/3}
+         ! where Va is the Alfven speed Va=B^2/sqrt{\mu_0\rho}
+         ! cI_coeff=(1-\Alpha)(54/4\pi\lambda0)
+         ! bI_coeff=B^2(eBc/1GeV)^{-1/3}
+         ! rI_coeff=(r/1AU)^{-1}   
+         
+         bI_coeff=B_cell**2*(cElectronCharge*B_cell*cLightSpeed/cGEV)&
+              **(-(1.0/3.0))
+         
+         rI_coeff=cAU/R_BLK(i,j,k,iBLK)
+         
+         rho_cell=State_VGB(rho_,i,j,k,iBLK)
+         VA_cell=B_cell/(rho_cell*cMu)**0.5
+         
+         Ctot=cI_coeff*bI_coeff*rI_coeff*(VA_cell)**(5.0/3.0)
+         
+         do w_Index=1,I50_-I01_+1
+            
+            I_Spectrum(w_Index)=Ctot*exp(w_LogSpectrum(w_Index))**(-w_Power)
+            State_VGB(w_Index,i,j,k,iBLK)=I_Spectrum(w_Index)
+         
+         end do
+         Imean_BLK=Imean_BLK+sum(State_VGB(I01_:I50_,:,:,:,iBLK))/50.0
+      else
+         State_VGB(I01_:I50_,i,j,k,iBLK)=cTiny
+      end if
+
+   end do; end do; end do
+   Bmean_BLK=Bmean_BLK/(nI*nJ*nK)
+   Imean_BLK=Imean_BLK/(nI*nJ*nK)
+   write(*,*) 'SC: set_wave_spectrum: Mean Iw, mean B,  Block' 
+   write(*,*) Imean_BLK, Bmean_BLK, iBLK
+ end subroutine set_wave_spectrum
 !========================================================================
 
   subroutine user_get_log_var(VarValue,TypeVar,Radius)
@@ -700,6 +690,8 @@ contains
     use ModAdvance, ONLY: State_VGB
     use ModVarIndexes
     use ModPhysics, ONLY: No2Si_V,UnitEnergydens_,UnitX_
+
+    implicit none
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
