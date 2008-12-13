@@ -58,7 +58,7 @@ IONIZ_for_Darwin:
 	cd Tmp_; ar -x ${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE};
 	${LINK.f90} -o IONIZ.exe test_ionization.o Tmp_/*.o \
 		${Lflag1}    ; 
-	rm -rf Tmp_ ;
+	rm -rf Tmp_ 
 
 test_godunov.o : ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
 
@@ -79,7 +79,15 @@ GODUNOV_for_Darwin:
 	cd Tmp_; ar -x ${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE};
 	${LINK.f90} -o GODUNOV.exe test_godunov.o Tmp_/*.o \
 		${Lflag1}    ; 
-	rm -rf Tmp_ ;
+	rm -rf Tmp_ 
+
+test_eos: IONIZ.exe
+	  IONIZ.exe;
+	  rm -f *.diff test_re*;
+	  cat ../doc/Table*.tex >test_result;
+	  cat ../doc/Tex/ionization_table*.tex>test_ref;
+	  diff test_result test_ref > test_eos.diff;
+	  ls -l *.diff; rm -f test_re*
 
 distclean: clean 
 	rm -f Makefile.DEPEND; \
