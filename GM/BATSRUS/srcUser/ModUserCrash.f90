@@ -997,7 +997,11 @@ contains
           call eos(iMaterial, Rho, EtotalIn=e, pTotalOut=p)
 
           ! Material index starts from 0 :-( hence the +1
-          Value_V(iMaterial+1) = p/e
+          if(p > 0.0)then
+             Value_V(iMaterial+1) = p/e
+          else
+             Value_V(iMaterial+1) = 2./3.
+          end if
        end do
     elseif(iTable == iTableEPerP)then
        ! Calculate e/p for Xe_, Be_ and Plastic_ for given Rho and p/Rho
@@ -1007,7 +1011,11 @@ contains
           call eos(iMaterial, Rho, PtotalIn=p, eTotalOut=e)
 
           ! Material index starts from 0 :-( hence the +1
-          Value_V(iMaterial+1) = e/p
+          if(e > 0.0)then
+             Value_V(iMaterial+1) = e/p
+          else
+             Value_V(iMaterial+1) = 1.5
+          end if
        end do
     elseif(iTable == iTableCvGammaTe)then
        ! Calculate Te, gamma, cV for Xe_, Be_ and Plastic_ 
