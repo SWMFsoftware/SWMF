@@ -98,6 +98,8 @@ contains
     Diff = (zAvr - exp(LogGe1-LogGe) * FermiFunction_I(NuEq12_))/&
          (Delta2I/zAvr + rMinus)
     LogGe = LogGe - Diff/zAvr
+    !To improve the convergence at low zAvr uncomment this line
+    ! Diff = Diff/min(zAvr,1.0)
 
   end subroutine iterate_ge
   !========================================================
