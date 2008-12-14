@@ -65,7 +65,7 @@ contains
     integer, intent(in) :: iDir, i, j, k, iBlock
     real,    intent(in) :: State_V(nVar)
     real,    intent(out):: DiffRad
-    real, optional, intent(out):: EradFlux_D(3)
+    real,    intent(out):: EradFlux_D(3)
 
     real :: RosselandMeanOpacitySi
     real :: FaceGrad_D(3), Erad, Grad2ByErad2
@@ -102,7 +102,8 @@ contains
        DiffRad = DiffusionRad_FDB(i,j,k,iDir,iBlock)
     end if
 
-    if(present(EradFlux_D)) EradFlux_D(iDir) = -DiffRad*FaceGrad_D(iDir)
+    EradFlux_D = 0.0
+    EradFlux_D(iDir) = -DiffRad*FaceGrad_D(iDir)
 
   end subroutine get_radiation_energy_flux
 
