@@ -28,13 +28,10 @@ program saha
   !-------------------------------------------
 
   dTe = 5.0; dLogN=log(10.0); dU=100.0
-  
+
   UsePreviousTe = .true.
-  
+
   call set_element( 54 )
-
- 
-
 
 
   open(24,file='../doc/Table1.tex')
@@ -275,6 +272,56 @@ program saha
      write(24,'(f5.0,6(a,f8.1,a,f7.1),a)') vTe,&
           (' & ', Uav_I(iN), ' | ', Cv_I(iN), iN=0,nN ),'\tabularnewline'
      write(24,'(a)')'\hline'
+  end do
+  write(24,'(a)')'\end{tabular}'
+
+  close(24)
+
+  open(24,file='../doc/Table6.tex')
+  write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
+  write(24,'(a)')'\hline'
+  write(24,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
+  write(24,'(a)')'\hline'
+
+  write(24,'(a)')'Te[eV] & $DH | Mad$ & $DH | Mad$ & $DH | Mad$ & $DH | Mad$ '//&
+       '& $DH | Mad$ & $DH | Mad$\tabularnewline'
+
+  write(24,'(a)')'\hline' 
+  write(24,'(a)')'\hline'
+
+  call set_element(54)
+  UsePreviousTe = .true.
+  do iT  = 1,nT
+     if (((iT-1)/25)*25==(iT-1).and.iT>25) then
+
+        write(24,'(a)')'\end{tabular}', char(10)
+        !--------------
+        write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
+        write(24,'(a)')'\hline'
+        write(24,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
+        write(24,'(a)')'\hline'
+        write(24,'(a)')'Te[eV] & $DH | Mad$ & $DH | Mad$ & $DH | Mad$ & $DH | Mad$ '//&
+             '& $DH | Mad$ & $DH | Mad$\tabularnewline'
+        write(24,'(a)')'\hline' 
+        write(24,'(a)')'\hline' 
+     end if
+     vTe = dTe * iT
+     do iN = 0,nN
+        NaTrial = Nao*exp(iN*dLogN)
+        call set_ionization_equilibrium(vTe,NaTrial*1000000.0,iError)
+        Uav_I(iN)= eDebyeHuekel 
+        Cv_I(iN) = eMadelung
+        if(iError/=0)then
+           Z_I(iN) = -  Z_I(iN)
+           Z2_I(iN)= - Z2_I(iN)
+           Uav_I(iN)= -Uav_I(iN)
+           Cv_I(iN)= - Cv_I(iN)
+           write(*,*)'Error=',iError,vTe,NaTrial*1000000.0
+        end if
+     end do
+     write(24,'(f5.0,6(a,f8.1,a,f7.1),a)') vTe,&
+          (' & ', Uav_I(iN), ' | ', Cv_I(iN), iN=0,nN ),'\tabularnewline'
+     write(24,'(a)')'\hline'
 
 
   end do
@@ -283,7 +330,7 @@ program saha
 
   close(24)
 
-  !_____________________________________
+
 
 end program saha
 
