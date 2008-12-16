@@ -3720,12 +3720,15 @@ prolongation and restriction operators at the resolution changes.
 <command name="LIMITER">
 	<parameter name="UseLogRhoLimiter" type="logical" default="F" />
 	<parameter name="UseLogPLimiter" type="logical" default="F" />
-	<parameter name="UseScalarPerRhoLimiter" type="logical" default="F" />
+	<parameter name="UseRhoRatioLimiter" type="logical" default="F" />
+	<parameter name="NameVarLimitRatio" type="string" length="100" 
+		if="$UseScalarRhoLimiter" />
 
 #LIMITER
 F		UseLogRhoLimiter
 F		UseLogPLimiter
-T		UseScalarPerRhoLimiter
+T		UseRhoRatioLimiter
+Xe Be Pl	NameVarLimitRatio (read if UseRhoRatioLimiter)
 
 The spatially second order scheme uses a limited reconstruction to obtain
 face values from the cell center values. The order of the scheme and the
@@ -3739,14 +3742,17 @@ the density changes exponentially with distance (e.g. in the solar corona).
 If UseLogPLimiter is true, the logarithm of pressure is limited instead of
 the pressure itself. 
 
-If UseScalarPerRhoLimiter is true, the passive scalar variables are divided by
-the total density before the limiter is applied (and then multiplied back
-by the density at the face after the limiting is completed). This modification
-is useful for the high energy density simulations of the CRASH project,
-where the passive scalar is the internal energy associated with ionization. 
+If UseRhoRatioLimiter is true, then parameter NameVarLimitRatio is 
+read and the variables listed in NameVarLimitRatio (the variable 
+names are defined in ModEquation) are divided by the total density before 
+the limiter is applied and then multiplied back by the density at the 
+face after the limiting is completed. This modification is useful for the 
+high energy density simulations of the CRASH project for the level set 
+functions or for the internal energy associated with ionization.
 
 Default values are false for all variables, which results in the limited 
-reconstruction procedure directly applied to the original variables.
+reconstruction procedure directly applied to the original primitive variables
+(velocity and pressure).
 </command>
 
 <command name="CLIMIT">
