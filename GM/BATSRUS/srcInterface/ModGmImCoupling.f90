@@ -249,8 +249,8 @@ contains
   !===========================================================================
   subroutine process_integrated_data
 
-    integer :: iLoc
-
+    integer :: iLoc_I(1), iEquator, iNorthPole
+    !-----------------------------------------------------------------------
     if(dbg0)then
        if(iProc==0)write(*,*)' -D-'
     end if
@@ -348,26 +348,34 @@ contains
        if(iProc==0)write(*,*)' -F-'
     end if
 
+    ! find index for latitude closest to equator
+    iLoc_I   = minloc(abs(RCM_lat))
+    iEquator = iLoc_I(1)
+
+    ! find index for latitude closest to north pole
+    iLoc_I = maxloc(RCM_lat)
+    iNorthPole = iLoc_I(1)
+
     !set open fieldline values
-    do j=1,jsize
+    do j = 1, jSize
+
        ! Initialize the index of the last closed field line to be at
-       ! the highest latitude (index 1) in the RCM grid
-       i0 = 1
+       ! the highest latitude in the RCM grid
+       i0 = iNorthPole
 
-       do i=1,isize
-!       do i=iLoc,1,-1
+       do i = iEquator, iNorthPole, sign(1, iNorthPole - iEquator)
 
-          if(MHD_SUM_vol(i,j) > 1.1E-8 .and. &
-               abs(MHD_Xeq(i,j)) < 200.0 .and. &
-               abs(MHD_Yeq(i,j)) < 200.0 ) then
-!             i0=i+1
-             i0=i
-             exit
+          ! Find first open or very stretched field line 
+          if(MHD_SUM_vol(i,j) < 1.1E-8 .or. &
+               abs(MHD_Xeq(i,j)) > 200.0 .or. &
+               abs(MHD_Yeq(i,j)) > 200.0 ) then
+             i0 = i-1
+             EXIT
           end if
        end do
 
        ! Save the index of the "last" closed field line into MHD_lat_boundary
-       MHD_lat_boundary(j)=i0
+       MHD_lat_boundary(j) = i0
 !       write(*,*) "finding closed field-line ",j,i0,MHD_lat_boundary(j)
 
     end do
