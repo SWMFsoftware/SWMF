@@ -157,6 +157,8 @@ subroutine MH_set_parameters(TypeAction)
         if(i_line_command("#CONSERVATIVECRITERIA") < 0)then
            nConservCrit = 0
            deallocate(TypeConservCrit_I)
+           if(i_line_command("#NONCONSERVATIVE") < 0) &
+                UseNonConservative = .false.
         end if
      end if
 
