@@ -714,7 +714,7 @@ contains
     use ModSize
     use ModAdvance, ONLY: State_VGB, Rho_, RhoUy_, p_, ExtraEInt_, &
          LevelXe_, LevelPl_, Flux_VX, Flux_VY, Flux_VZ, Source_VC, &
-         VdtFace_Y, VdtFace_Z
+         VdtFace_Y, VdtFace_Z, UseNonConservative
     use ModGeometry,ONLY: x_BLK, y_BLK, z_BLK, vInv_CB
     use ModNodes,   ONLY: NodeY_NB
     use ModPhysics
@@ -773,6 +773,9 @@ contains
     
     ! Undo change of volume (fluxes and sources are not used any more)
     if(IsCylindrical) vInv_CB(:,:,:,iBlock) = vInv_C
+
+    !!! temporary solution for the levelset test. 
+    if(UseNonConservative) RETURN
 
     ! update of pressure and relaxation energy::
 
