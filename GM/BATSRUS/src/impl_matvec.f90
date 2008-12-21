@@ -96,6 +96,24 @@ subroutine impl_matvec_free(qx,qy,nn)
 
   call timing_start('matvec_free')
 
+  !if(UseSemiImplicit)then
+  !   n=0
+  !   do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw
+  !      n=n+1
+  !      weps(i,j,k,iw,implBLK) = qx(n)*wnrm(iw)        
+  !   enddo; enddo; enddo; enddo; enddo
+  !   ! Advance weps:low order,  no dt, don't subtract
+  !   call get_semi_impl_residual(weps, weps) 
+  !   n=0
+  !   do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw
+  !      n=n+1
+  !      qy(n) = weps(i,j,k,iw,implBLK)/wnrm(iw)
+  !   enddo; enddo; enddo; enddo; enddo
+  !
+  !   call timing_stop('matvec_free')
+  !   RETURN
+  !end if
+
   qxnrm=sum(qx(1:nimpl)**2)
   call MPI_allreduce(qxnrm, qxnrm_total, 1, MPI_REAL, MPI_SUM,iComm,iError)
 
@@ -126,7 +144,11 @@ subroutine impl_matvec_free(qx,qy,nn)
   endif
 
   ! Advance weps:low order,  no dt, don't subtract
-  call get_residual(.true.,.false.,.false.,weps,weps) 
+  if(UseSemiImplicit)then
+     call get_semi_impl_residual(weps)
+  else
+     call get_residual(.true.,.false.,.false.,weps,weps) 
+  end if
 
   if(oktest)then
      call MPI_allreduce(sum(weps(:,:,:,:,1:nImplBLK)**2),q1,1,&

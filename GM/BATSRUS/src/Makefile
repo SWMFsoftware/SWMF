@@ -142,7 +142,6 @@ STATIC:
 	make -s STATIC1 NAME=Advance
 	make -s STATIC1 NAME=Nodes
 	make -s STATIC1 NAME=Geometry
-	make -s STATIC1 NAME=Implicit	#^CFG IF IMPLICIT
 	make -s STATIC1 NAME=Raytrace	#^CFG IF RAYTRACE
 	make -s STATIC1 NAME=CT		#^CFG IF CONSTRAINB
 
@@ -156,10 +155,6 @@ DYNAMIC:
 	make -s DYNAMIC1 NAME=Advance
 	make -s DYNAMIC1 NAME=Nodes
 	make -s DYNAMIC1 NAME=Geometry
-	@#^CFG IF IMPLICIT BEGIN
-	make -s DYNAMIC1 NAME=Implicit \
-		LARGE="-d=1 -l='MaxImplVar|,nBLK|,MaxImplBLK'" 
-	@#^CFG END IMPLICIT
 	make -s DYNAMIC1 NAME=Raytrace	#^CFG IF RAYTRACE
 	make -s DYNAMIC1 NAME=CT	#^CFG IF CONSTRAINB
 
@@ -188,11 +183,6 @@ ModRaytrace.f90: ModRaytrace_static.f90
 	make -s ${STATIC_OR_DYNAMIC} NAME=Raytrace
 #^CFG END RAYTRACE
 
-#^CFG IF IMPLICIT BEGIN
-ModImplicit.f90: ModImplicit_static.f90
-	make -s ${STATIC_OR_DYNAMIC} NAME=Implicit \
-		LARGE="-d=1 -l='MaxImplVar|,nBLK|,MaxImplBLK'"
-#^CFG END IMPLICIT
 ############################################################################
 
 DEPEND:
@@ -305,5 +295,5 @@ distclean: clean
 	rm -f ModUser.f90.safe
 	mv ModUser.f90 ModUser.f90.safe
 	rm -f ModSize.f90 ModEquation.f90
-	rm -f ModAdvance.f90 ModCT.f90 ModGeometry.f90 ModImplicit.f90 \
+	rm -f ModAdvance.f90 ModCT.f90 ModGeometry.f90 \
 		ModNodes.f90 ModRaytrace.f90

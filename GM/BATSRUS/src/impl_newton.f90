@@ -20,24 +20,30 @@ subroutine impl_newton_init
   !---------------------------------------------------------------------------
   call set_oktest('impl_newton',oktest,oktest_me)
 
-  if(UseGrayDiffusion) IsNewTimestepGrayDiffusion = .true.
-
   ! Calculate high and low order residuals
   ! RES_expl= dtexpl * R
-  !                not low,  dt,  subtract
-  call get_residual(.false.,.true.,.true.,w_k(1:nI,1:nJ,1:nK,:,:),RES_expl)
 
-  if(UseGrayDiffusion) IsNewTimestepGrayDiffusion = .false.
-
-  if (nOrder==nOrder_Impl .and. FluxType==FluxTypeImpl) then
-     ! If R_low=R then RES_impl = RES_expl
-     RES_impl(:,:,:,:,1:nImplBLK)=RES_expl(:,:,:,:,1:nImplBLK)
+  if(UseSemiImplicit)then
+     call get_semi_impl_rhs(w_k, RES_expl)
+     !!! We don't really need RES_impl, but it is easier if it is set
+     RES_impl = RES_expl
   else
-     ! RES_impl = dtexpl * R_low
-     !                  low,  no dt, subtract
-     call get_residual(.true.,.false.,.true.,w_k(1:nI,1:nJ,1:nK,:,:),RES_impl) 
-  endif
+     if(UseGrayDiffusion) IsNewTimestepGrayDiffusion = .true.
 
+     !                not low,  dt,  subtract
+     call get_residual(.false.,.true.,.true.,w_k(1:nI,1:nJ,1:nK,:,:),RES_expl)
+
+     if(UseGrayDiffusion) IsNewTimestepGrayDiffusion = .false.
+
+     if (nOrder==nOrder_Impl .and. FluxType==FluxTypeImpl) then
+        ! If R_low=R then RES_impl = RES_expl
+        RES_impl(:,:,:,:,1:nImplBLK)=RES_expl(:,:,:,:,1:nImplBLK)
+     else
+        ! RES_impl = dtexpl * R_low
+        !                  low,  no dt, subtract
+        call get_residual(.true.,.false.,.true.,w_k(1:nI,1:nJ,1:nK,:,:),RES_impl) 
+     endif
+  end if
   if(oktest_me.and.nImplBLK>0)write(*,*)'RES_expl,RES_impl(test)=',&
        RES_expl(Itest,Jtest,Ktest,VARtest,implBLKtest),&
        RES_impl(Itest,Jtest,Ktest,VARtest,implBLKtest)
@@ -219,10 +225,14 @@ subroutine impl_newton_update(dwnrm, converged)
      enddo; enddo; enddo; enddo; enddo
 
      if(UseConservativeImplicit .or. .not.Converged) then
-        !calculate low order residual RES_impl = dtexpl*RES_low_k+1
-        !                  low,   no dt, subtract
-        call get_residual(.true.,.false.,.true.,w_k(1:nI,1:nJ,1:nK,:,:),&
-             RES_impl)
+        if(UseSemiImplicit)then
+           call get_semi_impl_rhs(w_k, RES_impl)
+        else
+           !calculate low order residual RES_impl = dtexpl*RES_low_k+1
+           !                  low,   no dt, subtract
+           call get_residual(.true.,.false.,.true.,w_k(1:nI,1:nJ,1:nK,:,:),&
+                RES_impl)
+        end if
      end if
 
      ! Do not backtrack in a time accurate calculation or
@@ -230,7 +240,8 @@ subroutine impl_newton_update(dwnrm, converged)
      if (time_accurate .or. converged) EXIT
 
      ! calculate high order residual RES_expl = dt*R(w_k+1)
-     if (nOrder==nOrder_Impl .and. FluxType==FluxTypeImpl) then
+     if ( (nOrder==nOrder_Impl .and. FluxType==FluxTypeImpl) &
+          .or. UseSemiImplicit) then
         RES_expl(:,:,:,:,1:nImplBLK)=RES_impl(:,:,:,:,1:nImplBLK)
      else
         !                 not low, no dt, subtract

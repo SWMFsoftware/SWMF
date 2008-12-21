@@ -197,7 +197,8 @@ subroutine MH_set_parameters(TypeAction)
      call init_mod_nodes
      call init_mod_raytrace                    !^CFG IF RAYTRACE
      if(UseConstrainB) call init_mod_ct        !^CFG IF CONSTRAINB
-     if(UseImplicit)   call init_mod_implicit  !^CFG IF IMPLICIT
+     if(UseImplicit.or.UseSemiImplicit) &      !^CFG IF IMPLICIT
+          call init_mod_implicit               !^CFG IF IMPLICIT
 
      ! clean dynamic storage
      call clean_block_data
@@ -434,6 +435,9 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#PARTIMPL", "#PARTIMPLICIT")
         call read_var('UsePartImplicit2',UsePartImplicit2)
+
+     case("#SEMIIMPL", "#SEMIIMPLICIT")
+        call read_implicit_param(NameCommand)
 
      case("#IMPLSCHEME", "#IMPLICITSCHEME")
         call read_var('nOrderImpl',nOrder_Impl)
@@ -2125,7 +2129,11 @@ contains
        FluxTypeImpl=FluxType
     end select                               !^CFG END IMPLICIT
 
-    if (time_accurate .and. nStage==2) UseBDF2=.true. !^CFG IF IMPLICIT
+    if(UseSemiImplicit)then                  !^CFG IF IMPLICIT BEGIN
+       UseBDF2 = .false.
+    elseif (time_accurate .and. nStage==2)then
+       UseBDF2 = .true.
+    end if                                   !^CFG END IMPLICIT
 
     ! Make sure periodic boundary conditions are symmetric
     if(any(TypeBc_I(1:2)=='periodic')) TypeBc_I(1:2)='periodic'
@@ -2176,10 +2184,11 @@ contains
        optimize_message_pass = 'all'
     endif
 
-    if (UseGrayDiffusion .and. .not.UseFullImplicit) then !^CFG IF IMPLICIT BEGIN
+    if (UseGrayDiffusion .and. .not.UseFullImplicit  & !^CFG IF IMPLICIT BEGIN
+         .and. .not.UseSemiImplicit)then
        if(iProc==0) write(*,'(a)')NameSub// &
             ' ERROR: The radiation model in gray nonequilibrium diffusion'// &
-            ' only works together with the fully implicit scheme'
+            ' only works together with the full/semi implicit schemes'
        if(UseStrict)call stop_mpi('Correct PARAM.in!')
     end if                                                !^CFG END IMPLICIT
 

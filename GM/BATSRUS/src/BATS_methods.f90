@@ -294,7 +294,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModAdvance, ONLY: UseNonConservative, nConservCrit
   use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
        part_steady_select, part_steady_switch
-  use ModImplicit, ONLY: UseImplicit                   !^CFG IF IMPLICIT
+  use ModImplicit, ONLY: UseImplicit, UseSemiImplicit      !^CFG IF IMPLICIT
 
   implicit none
 
@@ -353,11 +353,13 @@ subroutine BATS_advance(TimeSimulationLimit)
   else                                    !^CFG END IMPLICIT
      call advance_expl(.true.)
   endif                                   !^CFG IF IMPLICIT  
-  
+
   if(UseIM)call apply_im_pressure         !^CFG IF RCM
 
   if(UseDivBDiffusion)call clean_divb     !^CFG IF DIVBDIFFUSE
   call exchange_messages
+
+  if(UseSemiImplicit) call advance_impl   !^CFG IF IMPLICIT
   
   if(UsePartSteady) then
      ! Select steady and unsteady blocks

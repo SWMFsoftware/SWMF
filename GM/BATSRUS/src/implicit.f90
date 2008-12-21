@@ -206,18 +206,25 @@ subroutine advance_impl
   UsePointImplicitOrig = UsePointImplicit
   UsePointImplicit = .false.
 
-  ! Use implicit time step
-  if(.not.UseDtFixed)Cfl = ImplCfl
-
-  if(UseDtFixed)then
-     if(DoTestMe)write(*,*)NameSub,': call getdt_courant'
-     call getdt_courant(dtexpl)
-     dtexpl=cHalf*dtexpl
-     dtcoeff=dt/dtexpl
+  if(UseSemiImplicit)then
+     ! time step is set by the explicit scheme
+     dtexpl = dt
+     dtcoeff = 1.0
+     ImplCfl = Cfl
   else
-     if(DoTestMe)write(*,*)NameSub,': no call of getdt_courant'
-     dtcoeff=implCFL/cHalf
-  endif
+     ! Use implicit time step
+     if(.not.UseDtFixed)Cfl = ImplCfl
+
+     if(UseDtFixed)then
+        if(DoTestMe)write(*,*)NameSub,': call getdt_courant'
+        call getdt_courant(dtexpl)
+        dtexpl=cHalf*dtexpl
+        dtcoeff=dt/dtexpl
+     else
+        if(DoTestMe)write(*,*)NameSub,': no call of getdt_courant'
+        dtcoeff=implCFL/cHalf
+     endif
+  end if
 
   if (UseBDF2.and.n_step==n_prev+1) then
      ! For 3 level BDF2 scheme set beta=ImplCoeff if previous state is known
@@ -229,7 +236,9 @@ subroutine advance_impl
   ! Advance time to level n+1 in case there is explicit time dependence:
   !   R(U^n+1,t^n+1) = R(U^n,t^n+1) + dR/dU(U^n,t^n+1).(U^n+1 - U^n)
   ! so the Jacobian should be evaliated at t^n+1
-  Time_Simulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
+  ! Semi-implicit scheme has already advanced time in advance_expl
+  if(.not.UseSemiImplicit) &
+       Time_Simulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
 
   if(DoTestMe.and.time_accurate)&
        write(*,*)NameSub,': dtcoeff,dtexpl,dt=',dtcoeff,dtexpl,dt
@@ -268,6 +277,7 @@ subroutine advance_impl
      ! Calculate Jacobian matrix if required
      if(JacobianType/='free'.and.(NewtonIter==1.or.NewMatrix))then
 
+        !!! need to be changed for semi-implicit
         if(NewtonIter>1)then
            ! Update ghost cells for w_k, because it is needed by impl_jacobian
            call implicit2explicit(w_k(1:nI,1:nJ,1:nK,:,:))
@@ -464,20 +474,22 @@ subroutine advance_impl
   if(UseNewton.and.DoTestMe)write(*,*)NameSub,': final NewtonIter, dwnrm=',&
        NewtonIter, dwnrm
 
-  ! Restore StateOld and E_o_BLK in the implicit blocks
-  do implBLK=1,nImplBlk
-     iBLK=impl2iBLK(implBLK)
-     do iVar=1,nVar
-        StateOld_VCB(iVar,:,:,:,iBLK)=w_prev(:,:,:,iVar,iBLK)
+  if(.not.UseSemiImplicit)then
+     ! Restore StateOld and E_o_BLK in the implicit blocks
+     do implBLK=1,nImplBlk
+        iBLK=impl2iBLK(implBLK)
+        do iVar=1,nVar
+           StateOld_VCB(iVar,:,:,:,iBLK)=w_prev(:,:,:,iVar,iBLK)
+        end do
+        do iFluid = 1, nFluid
+           call select_fluid
+           EnergyOld_CBI(:,:,:,iBLK,iFluid)=w_prev(:,:,:,iP,iBLK)
+        end do
+        call calc_old_pressure(iBlk) ! restore StateOld_VCB(P_...)
      end do
-     do iFluid = 1, nFluid
-        call select_fluid
-        EnergyOld_CBI(:,:,:,iBLK,iFluid)=w_prev(:,:,:,iP,iBLK)
-     end do
-     call calc_old_pressure(iBlk) ! restore StateOld_VCB(P_...)
-  end do
+  end if
 
-  Time_Simulation = Time_Simulation - Dt*No2Si_V(UnitT_)*2.0/3.0
+!!!  Time_Simulation = Time_Simulation - Dt*No2Si_V(UnitT_)*2.0/3.0
 
   if(UseUpdateCheckOrig .and. time_accurate .and. UseDtFixed)then
      
@@ -523,7 +535,8 @@ subroutine advance_impl
   endif
 
   ! Advance time by Dt
-  Time_Simulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
+  if(.not.UseSemiImplicit) &
+       Time_Simulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
 
   UseUpdateCheck = UseUpdateCheckOrig
   UsePointImplicit = UsePointImplicitOrig

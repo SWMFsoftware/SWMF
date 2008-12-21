@@ -29,7 +29,6 @@ subroutine implicit_init
 
   ! Number of implicit variables
   nImpl = nImplBLK*nwIJK
-
   ! Create conversion array and find the test block
   implBLKtest=1
   iBlockImpl=0
@@ -60,6 +59,7 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,w)
   use ModAdvance, ONLY : State_VGB, Energy_GBI, nVar
   use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
   use ModImplicit
+  use ModGrayDiffusion, ONLY: get_impl_gray_diff_state
   implicit none
 
   integer,intent(in) :: imin,imax,jmin,jmax,kmin,kmax
@@ -75,18 +75,25 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,w)
 
   call timing_start('expl2impl')
 
-  do implBLK=1,nImplBLK
-     iBLK = impl2iBLK(implBLK)
-     do iVar=1, nVar
-        w(:,:,:,iVar,implBLK) = &
-             State_VGB(iVar,imin:imax,jmin:jmax,kmin:kmax,iBLK)
+  if(UseSemiImplicit)then
+     select case(TypeSemiImplicit)
+     case("radiation_e")
+        call get_impl_gray_diff_state(w)
+     end select
+  else
+     do implBLK=1,nImplBLK
+        iBLK = impl2iBLK(implBLK)
+        do iVar=1, nVar
+           w(:,:,:,iVar,implBLK) = &
+                State_VGB(iVar,imin:imax,jmin:jmax,kmin:kmax,iBLK)
+        end do
+        do iFluid = 1, nFluid
+           call select_fluid
+           w(:,:,:,iP,implBLK) = &
+                Energy_GBI(imin:imax,jmin:jmax,kmin:kmax,iBLK,iFluid)
+        end do
      end do
-     do iFluid = 1, nFluid
-        call select_fluid
-        w(:,:,:,iP,implBLK) = &
-             Energy_GBI(imin:imax,jmin:jmax,kmin:kmax,iBLK,iFluid)
-     end do
-  end do
+  end if
 
   call timing_stop('expl2impl')
 
@@ -131,17 +138,27 @@ end subroutine impl2expl
 
 subroutine implicit2explicit(w)
 
-  use ModMain, ONLY : nI,nJ,nK,MaxImplBLK
-  use ModImplicit, ONLY : nw,nImplBLK,impl2iBLK
+  use ModMain, ONLY: nI,nJ,nK,MaxImplBLK
+  use ModImplicit, ONLY: nw, nImplBLK, impl2iBLK, &
+       UseSemiImplicit, TypeSemiImplicit
+  use ModGrayDiffusion, ONLY: update_impl_gray_diff
   implicit none
 
   real :: w(nI,nJ,nK,nw,MaxImplBLK)
   integer :: implBLK, iBLK
   !---------------------------------------------------------------------------
 
+
   do implBLK=1,nImplBLK
      iBLK=impl2iBLK(implBLK)
-     call impl2expl(w(:,:,:,:,implBLK),iBLK)
+     if(UseSemiImplicit)then
+        select case(TypeSemiImplicit)
+        case('radiation_e')
+           call update_impl_gray_diff(iBLK, w(:,:,:,:,implBLK))
+        end select
+     else
+        call impl2expl(w(:,:,:,:,implBLK),iBLK)
+     end if
   end do
 
 end subroutine implicit2explicit
@@ -228,7 +245,90 @@ subroutine get_residual(IsLowOrder, DoCalcTimestep, DoSubtract, w_CVB, Res_CVB)
   call timing_stop('get_residual')
 
 end subroutine get_residual
+!==============================================================================
+subroutine get_semi_impl_rhs(StateImpl_GVB, Residual_CVB)
 
+  use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs
+  use ModImplicit, ONLY: StateSemi_VGB, nw, nImplBlk, impl2iblk, &
+       TypeSemiImplicit
+  use ModMain, ONLY: dt
+  use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
+  implicit none
+
+  real, intent(in)  :: StateImpl_GVB(0:nI+1,0:nJ+1,0:nK+1,nw,MaxImplBlk)
+  real, intent(out) :: Residual_CVB(nI,nJ,nK,nw,MaxImplBlk)
+
+  integer :: iImplBlock, iBlock, i, j, k, iVar
+  !------------------------------------------------------------------------
+  ! Initialize all elements
+  StateSemi_VGB = 0.0
+  ! Fill in StateSemi so it can be message passed
+  do iImplBlock = 1, nImplBLK
+     iBlock = impl2iBLK(iImplBlock)
+     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nw
+        StateSemi_VGB(iVar,i,j,k,iBlock) = StateImpl_GVB(i,j,k,iVar,iImplBlock)
+     end do; end do; end do; end do
+  end do
+  !                       DoOneLayer DoFacesOnly No UseMonoteRestrict
+  call message_pass_cells8(.true.,    .true.,     .false., nw, StateSemi_VGB)
+
+  do iImplBlock = 1, nImplBLK
+     iBlock = impl2iBLK(iImplBlock)
+     select case(TypeSemiImplicit)
+     case('radiation_e')
+        Residual_CVB(:,:,:,:,iImplBlock) = 0.0
+        call get_gray_diffusion_rhs(iBlock, &
+             StateSemi_VGB(:,:,:,:,iBlock), Residual_CVB(:,:,:,:,iImplBlock))
+     end select
+
+     Residual_CVB(:,:,:,:,iImplBlock) = dt*Residual_CVB(:,:,:,:,iImplBlock)
+  end do
+
+end subroutine get_semi_impl_rhs
+!==============================================================================
+subroutine get_semi_impl_residual(StateImpl_CVB)
+
+  use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs
+  use ModImplicit, ONLY: StateSemi_VGB, nw, nImplBlk, impl2iblk, &
+       TypeSemiImplicit
+  use ModMain, ONLY: dt
+  use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
+  implicit none
+
+  real, intent(inout) :: StateImpl_CVB(nI,nJ,nK,nw,MaxImplBlk)
+
+  integer :: iImplBlock, iBlock, i, j, k, iVar
+  real, allocatable, save :: Rhs_CV(:,:,:,:)
+  !------------------------------------------------------------------------
+
+  if(.not.allocated(Rhs_CV)) allocate(Rhs_CV(nI,nJ,nK,nw))
+
+  ! Initialize all elements
+  StateSemi_VGB = 0.0
+  ! Fill in StateSemi so it can be message passed
+  do iImplBlock = 1, nImplBLK
+     iBlock = impl2iBLK(iImplBlock)
+     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nw
+        StateSemi_VGB(iVar,i,j,k,iBlock) = StateImpl_CVB(i,j,k,iVar,iImplBlock)
+     end do; end do; end do; end do
+  end do
+  !                       DoOneLayer DoFacesOnly No UseMonoteRestrict
+  call message_pass_cells8(.true.,    .true.,     .false., nw, StateSemi_VGB)
+
+  do iImplBlock = 1, nImplBLK
+     iBlock = impl2iBLK(iImplBlock)
+
+     select case(TypeSemiImplicit)
+     case('radiation_e')
+        call get_gray_diffusion_rhs(iBlock, &
+             StateSemi_VGB(:,:,:,:,iBlock), Rhs_CV)
+     end select
+
+     StateImpl_CVB(:,:,:,:,iImplBlock) = StateImpl_CVB(:,:,:,:,iImplBlock) &
+          + dt*Rhs_CV
+  end do
+
+end subroutine get_semi_impl_residual
 !==============================================================================
 subroutine getsource(iBLK,w,s)
 

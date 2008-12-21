@@ -17,6 +17,9 @@ module ModGrayDiffusion
   public :: init_gray_diffusion
   public :: get_radiation_energy_flux
   public :: calc_source_gray_diffusion
+  public :: get_impl_gray_diff_state
+  public :: get_gray_diffusion_rhs
+  public :: update_impl_gray_diff
 
   ! Logical for adding Gray Diffusion
   logical, public :: IsNewBlockGrayDiffusion = .true.
@@ -33,6 +36,10 @@ module ModGrayDiffusion
   real :: Erad_G(0:nI+1,0:nJ+1,0:nK+1)
 
   real, parameter :: GammaRel = 4.0/3.0
+
+  ! named indexes for semi-implicit scheme
+  integer, parameter :: EintImpl_ = 1, EradImpl_=2
+  integer, parameter :: TeImpl_ = 1, TradImpl_ = 2
 
 contains
 
@@ -493,6 +500,7 @@ contains
     use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_, UnitT_
     use ModUser,       ONLY: user_material_properties
     use ModVarIndexes, ONLY: Energy_, NameVar_V
+    use ModImplicit,   ONLY: UseSemiImplicit
 
     integer, intent(in) :: iBlock
 
@@ -515,7 +523,7 @@ contains
 
           RelaxationCoef_CB(i,j,k,iBlock) = &
                AbsorptionOpacitySi*cLightSpeed/Si2No_V(UnitT_)
-       else
+       elseif(.not.UseSemiImplicit)then
           call user_material_properties(State_VGB(:,i,j,k,iBlock),TeSi = TeSi)
        end if
 
@@ -527,6 +535,16 @@ contains
              +uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
              +uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1))
 
+       ! dErad/dt = - adiabatic compression + AbsorptionEmission
+       Source_VC(Eradiation_,i,j,k) = Source_VC(Eradiation_,i,j,k) &
+            - RadCompression
+
+       ! dE/dt    = + adiabatic compression - AbsorptionEmission
+       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + RadCompression
+
+       ! The absorption-emission term will be added by the implicit solver
+       if(UseSemiImplicit) CYCLE
+
        ! Source term due to absorption and emission
        ! Sigma_a*(cRadiation*Te**4-Erad)
        AbsorptionEmission =  RelaxationCoef_CB(i,j,k,iBlock)&
@@ -535,14 +553,160 @@ contains
 
        ! dErad/dt = - adiabatic compression + AbsorptionEmission
        Source_VC(Eradiation_,i,j,k) = Source_VC(Eradiation_,i,j,k) &
-            - RadCompression + AbsorptionEmission
+            + AbsorptionEmission
 
        ! dE/dt    = + adiabatic compression - AbsorptionEmission
        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-            + RadCompression - AbsorptionEmission
+            - AbsorptionEmission
 
     end do; end do; end do
 
   end subroutine calc_source_gray_diffusion
+
+  !==========================================================================
+  subroutine get_impl_gray_diff_state(ImplState_GVB)
+
+    use ModAdvance,  ONLY: Eradiation_, State_VGB
+    use ModImplicit, ONLY: nw, nImplBlk, impl2iBlk, TypeSemiImplicit
+    use ModPhysics,  ONLY: cRadiationNo, Si2No_V, UnitTemperature_, inv_gm1
+    use ModSize,     ONLY: MaxImplBlk
+    use ModUser,     ONLY: user_material_properties
+
+    real, intent(out) :: ImplState_GVB(0:nI+1,0:nJ+1,0:nK+1,nw,MaxImplBlk)
+
+    integer :: iImplBlock, iBlock, i, j, k
+    real :: TeSi
+    !------------------------------------------------------------------------
+
+    select case(TypeSemiImplicit)
+    case('radiation_e')
+       do iImplBlock = 1, nImplBLK
+          iBlock = impl2iBLK(iImplBlock)
+          do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
+             ImplState_GVB(i,j,k,EintImpl_,iImplBlock) = &
+                  inv_gm1*State_VGB(p_,i,j,k,iBlock)
+             !!!   +  State_VGB(Einternal_,i,j,k,iBlock)
+
+             ImplState_GVB(i,j,k,EradImpl_,iImplBlock) = &
+                  State_VGB(Eradiation_,i,j,k,iBlock)
+          end do; end do; end do
+       end do
+    case('radiation_t')       
+       do iImplBlock = 1, nImplBLK
+          iBlock = impl2iBLK(iImplBlock)
+          do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
+             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  TeSi = TeSi)
+             ImplState_GVB(i,j,k,TeImpl_,iImplBlock) = &
+                  TeSi*Si2No_V(UnitTemperature_)
+
+             ImplState_GVB(i,j,k,TradImpl_,iImplBlock) = &
+                  sqrt(sqrt(abs(State_VGB(Eradiation_,i,j,k,iBlock)) &
+                  /cRadiationNo))
+          end do; end do; end do
+       end do
+    end select
+
+  end subroutine get_impl_gray_diff_state
+
+  !==========================================================================
+
+  subroutine get_gray_diffusion_rhs(iBlock, State_VG, Rhs_CV)
+
+    use ModAdvance,  ONLY: Flux_VX, Flux_VY, Flux_VZ, State_VGB, Rho_
+    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK
+    use ModImplicit, ONLY: nw
+    use ModMain,     ONLY: x_, y_, z_
+    use ModPhysics,  ONLY: gm1, cRadiationNo
+    use ModParallel, ONLY: NOBLK, NeiLev
+
+    integer, intent(in) :: iBlock
+    real, intent(inout) :: State_VG(nw,-1:nI+2,-1:nJ+2,-1:nK+2)
+    real, intent(out)   :: Rhs_CV(nI,nJ,nK,nw)
+
+    real :: InvDx2, InvDy2, InvDz2
+    real :: AbsorptionEmission, Te
+    integer :: i, j, k
+    !------------------------------------------------------------------------
+
+!!! set floating outer boundary
+    if(NeiLev(1,iBlock) == NOBLK) State_VG(:,0   ,:,:) &
+         =                        State_VG(:,1   ,:,:)
+    if(NeiLev(2,iBlock) == NOBLK) State_VG(:,nI+1,:,:) &
+         =                        State_VG(:,nI  ,:,:)
+    if(NeiLev(3,iBlock) == NOBLK) State_VG(:,:,0   ,:) &
+         =                        State_VG(:,:,1   ,:)
+    if(NeiLev(4,iBlock) == NOBLK) State_VG(:,:,nJ+1,:) &
+         =                        State_VG(:,:,nJ  ,:)
+    if(NeiLev(5,iBlock) == NOBLK) State_VG(:,:,:,0   ) &
+         =                        State_VG(:,:,:,1   )
+    if(NeiLev(6,iBlock) == NOBLK) State_VG(:,:,:,nK+1) &
+         =                        State_VG(:,:,:,nK  )
+
+    ! Calculate radiative diffusion fluxes
+    InvDx2 = 1./dx_BLK(iBlock)**2
+    InvDy2 = 1./dy_BLK(iBlock)**2
+    InvDz2 = 1./dz_BLK(iBlock)**2
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+       Flux_VX(EradImpl_,i,j,k) = InvDx2*DiffusionRad_FDB(i,j,k,x_,iBlock) &
+            *(State_VG(EradImpl_,i,j,k) - State_VG(EradImpl_,i-1,j,k))
+    end do; end do; end do
+    do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
+       Flux_VY(EradImpl_,i,j,k) = InvDy2*DiffusionRad_FDB(i,j,k,y_,iBlock) &
+            *(State_VG(EradImpl_,i,j,k) - State_VG(EradImpl_,i,j-1,k))
+    end do; end do; end do
+    do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+       Flux_VZ(EradImpl_,i,j,k) = InvDz2*DiffusionRad_FDB(i,j,k,z_,iBlock) &
+            *(State_VG(EradImpl_,i,j,k) - State_VG(EradImpl_,i,j,k-1))
+    end do; end do; end do
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       Rhs_CV(i,j,k,EradImpl_) = &
+            + Flux_VX(EradImpl_,i+1,j,k) - Flux_VX(EradImpl_,i,j,k) &
+            + Flux_VY(EradImpl_,i,j+1,k) - Flux_VY(EradImpl_,i,j,k) &
+            + Flux_VZ(EradImpl_,i,j,k+1) - Flux_VZ(EradImpl_,i,j,k)
+    end do; end do; end do
+
+    ! Source term due to absorption and emission
+    ! Sigma_a*(cRadiation*Te**4-Erad)
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       !!! IDEAL GAS ONLY
+       Te = gm1*State_VG(EintImpl_,i,j,k)/State_VGB(Rho_,i,j,k,iBlock)
+
+       AbsorptionEmission = RelaxationCoef_CB(i,j,k,iBlock)&
+            *(cRadiationNo*Te**4 - State_VG(EradImpl_,i,j,k))
+
+       ! dErad/dt = + AbsorptionEmission
+       Rhs_CV(i,j,k,EradImpl_) = Rhs_CV(i,j,k,EradImpl_) + AbsorptionEmission
+
+       ! dE/dt    = - AbsorptionEmission
+       Rhs_CV(i,j,k,EintImpl_) =                         - AbsorptionEmission
+
+    end do; end do; end do
+
+  end subroutine get_gray_diffusion_rhs
+
+  !==========================================================================
+  subroutine update_impl_gray_diff(iBlock, StateImpl_GV)
+
+    use ModAdvance,  ONLY: State_VGB, p_, Eradiation_
+    use ModEnergy,   ONLY: calc_energy_cell
+    use ModImplicit, ONLY: nw
+    use ModPhysics,  ONLY: gm1
+
+    integer, intent(in) :: iBlock
+    real, intent(in) :: StateImpl_GV(nI,nJ,nK,nw)
+
+    integer :: i, j, k
+    !------------------------------------------------------------------------
+
+    do k = 1,nK; do j = 1,nJ; do i = 1,nI
+       State_VGB(Eradiation_,i,j,k,iBlock) = StateImpl_GV(i,j,k,EradImpl_)
+       State_VGB(p_,i,j,k,iBlock) = StateImpl_GV(i,j,k,EintImpl_)*gm1
+    end do; end do; end do
+
+    call calc_energy_cell(iBlock)
+
+  end subroutine update_impl_gray_diff
 
 end module ModGrayDiffusion

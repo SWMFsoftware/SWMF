@@ -1465,6 +1465,7 @@ contains
            pL, pR, UnL, UnR, UnStar
       use ModPhysics, ONLY: inv_gm1
       use ModVarIndexes
+      use ModImplicit, ONLY: UseSemiImplicit
 
       real::Rho, Un, P, StateStar_V(nVar)
       real::RhoSide,UnSide
@@ -1532,9 +1533,14 @@ contains
          call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
               iBlockFace, StateStar_V, DiffusionRad, EradFlux_D)
 
+         ! Diffusive radiation flux is added later for semi-implicit scheme
+         if(.not.UseSemiImplicit) Flux_V(Eradiation_) = &
+              Flux_V(Eradiation_) + sum(EradFlux_D*Normal_D)
+
+         ! radiation pressure gradient
          Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) &
               + StateStar_V(Eradiation_)/3.0*Normal_D
-         Flux_V(Eradiation_) = Flux_V(Eradiation_) + sum(EradFlux_D*Normal_D)
+         ! work by the radiation pressure gradient
          Flux_V(Energy_) = Flux_V(Energy_) + Un*StateStar_V(Eradiation_)/3.0
       end if
 
@@ -1583,6 +1589,7 @@ contains
     use ModMultiFluid
     use ModMain,    ONLY: UseHyperbolicDivb, SpeedHyp2
     use ModAdvance, ONLY: Hyp_, Eradiation_
+    use ModImplicit, ONLY: UseSemiImplicit
 
     real,    intent(in) :: State_V(nVar)       ! input primitive state
     real,    intent(in) :: B0x, B0y, B0z       ! B0
@@ -1663,9 +1670,14 @@ contains
        call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
             iBlockFace, State_V, DiffusionRad, EradFlux_D)
 
+       ! Diffusive radiation flux is added later for semi-implicit scheme
+       if(.not.UseSemiImplicit) Flux_V(Eradiation_) = &
+            Flux_V(Eradiation_) + sum(EradFlux_D*Normal_D)
+
+       ! radiation pressure gradient
        Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) &
             + State_V(Eradiation_)/3.0*Normal_D
-       Flux_V(Eradiation_) = Flux_V(Eradiation_) + sum(EradFlux_D*Normal_D)
+       ! work by the radiation pressure gradient
        Flux_V(Energy_) = Flux_V(Energy_) + Un*State_V(Eradiation_)/3.0
     end if
 

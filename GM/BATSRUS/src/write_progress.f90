@@ -63,7 +63,8 @@ subroutine write_runtime_values()
   use ModPhysics
   use ModMpi
   use CON_planet
-  use ModImplicit, ONLY: UseImplicit             !^CFG IF IMPLICIT
+  use ModImplicit, ONLY: &                            !^CFG IF IMPLICIT
+       UseImplicit, UseSemiImplicit, TypeSemiImplicit !^CFG IF IMPLICIT
   use ModUser, ONLY: user_write_progress
   use ModMultiFluid, ONLY: IonFirst_
   implicit none
@@ -229,6 +230,9 @@ subroutine write_runtime_values()
   call write_prefix
   if (UseImplicit) then                            !^CFG IF IMPLICIT BEGIN
      write(iUnitOut,'(10X,''Implicit Time Stepping'')')
+  elseif(UseSemiImplicit)then
+     write(iUnitOut,'(10X,''Semi-Implicit Time Stepping for'')')
+     write(iUnitOut,'(10X,a)') trim(TypeSemiImplicit)
   else                                             !^CFG END IMPLICIT
      write(iUnitOut,'(10X,''Explicit Time Stepping'')')
   end if                                           !^CFG IF IMPLICIT

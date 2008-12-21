@@ -392,7 +392,7 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
        3*nIJK                              ! fbody_
        
   integer, parameter :: nDataBLK= &
-       nwIJK +                           & !^CFG IF IMPLICIT
+       nVar*nIJK +                       & !^CFG IF IMPLICIT
        3*2*nIJK +                        & !^CFG IF RCM
        nScalarBLK +                      & ! scalars
        nVar*nCellGhostBLK +              & ! State_VGB
@@ -756,7 +756,7 @@ subroutine select_stepping(DoPartSelect)
        SkippedBlock_, ExplBlock_, ImplBlock_
   use ModGeometry, ONLY : Rmin_BLK
   use ModImplicit, ONLY : UseImplicit, UseFullImplicit, UsePartImplicit, &
-       ImplCritType, ExplCFL, rImplicit
+       UseSemiImplicit, ImplCritType, ExplCFL, rImplicit
   use ModIO,       ONLY : write_prefix, iUnitOut
   use ModB0,ONLY:set_b0_face
   use ModMpi
@@ -792,19 +792,20 @@ subroutine select_stepping(DoPartSelect)
           minval(iTypeAdvance_BP),maxval(iTypeAdvance_BP)
   end if
 
-  if((UsePartImplicit .and. .not. DoPartSelect) .or. .not. UseImplicit)then
+  if(UseFullImplicit .or. UseSemiImplicit)then
+     nBlockExplALL = 0
+     nBlockImplALL = nBlockALL
+     where(iTypeAdvance_BP(1:nBlockMax,:) /= SkippedBlock_) &
+          iTypeAdvance_BP(1:nBlockMax,:) = ImplBlock_
+     iTypeAdvance_B(1:nBlockMax) = iTypeAdvance_BP(1:nBlockMax,iProc)
+
+  elseif((UsePartImplicit .and. .not. DoPartSelect) .or. .not. UseImplicit)then
      nBlockExplALL    = nBlockALL
      nBlockImplALL    = 0
      where(iTypeAdvance_BP(1:nBlockMax,:) == ImplBlock_) &
           iTypeAdvance_BP(1:nBlockMax,:) = ExplBlock_
      iTypeAdvance_B(1:nBlockMax) = iTypeAdvance_BP(1:nBlockMax,iProc)
           
-  elseif(UseFullImplicit)then
-     nBlockExplALL = 0
-     nBlockImplALL = nBlockALL
-     where(iTypeAdvance_BP(1:nBlockMax,:) /= SkippedBlock_) &
-          iTypeAdvance_BP(1:nBlockMax,:) = ImplBlock_
-     iTypeAdvance_B(1:nBlockMax) = iTypeAdvance_BP(1:nBlockMax,iProc)
   else
      ! First set all blocks to be explicit
      where(iTypeAdvance_B(1:nBlockMax) /= SkippedBlock_) &
