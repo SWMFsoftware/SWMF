@@ -55,7 +55,7 @@ program PostIDL
   integer :: ix1,ix2,ixmin1,ixmax1,ixmin2,ixmax2,nx1,nx2,idim1,idim2,jcell=0
   integer :: idim0 ! the ignored dimension
   integer :: iError
-  real    :: xmin1, xmax1, xmin2, xmax2, dx1, dx2, dx1cell, dx2cell
+  real    :: xmin1, xmax1, xmin2, xmax2, dx1, dx2, dx1cell=0.0, dx2cell=0.0
   integer, dimension(:,:), allocatable :: lookup
 
   ! Variables for checking binary compatibility
