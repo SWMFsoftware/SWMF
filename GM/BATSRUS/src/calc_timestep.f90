@@ -22,30 +22,32 @@ subroutine calc_timestep
   endif
 
   if(UseCurlB0.and.FluxType=='Roe')then
+     ! Extra time step limitation for Roe scheme
      do k=1,nK; do j=1,nJ; do i=1,nI
-        SourceSpectralRadius_C(i,j,k)=NormB0_CB(i,j,k,iBlock)/&
-             sqrt(State_VGB(Rho_,i,j,k,iBlock))
+        SourceSpectralRadius_C(i,j,k) = &
+             NormB0_CB(i,j,k,iBlock)/sqrt(State_VGB(Rho_,i,j,k,iBlock))
      end do;end do;end do
   else
      SourceSpectralRadius_C = 0.0
   end if
-  do k=1,nK; 
-     do j=1,nJ; do i=1,nI
+
+  ! Calculate time step limit based on maximum speeds across 6 faces
+  do k=1,nK; do j=1,nJ; do i=1,nI
      time_BLK(i,j,k,iBlock) = 1.0 /(vInv_CB(i,j,k,iBlock)&
-          *(max(VdtFace_x(i,j,k),VdtFace_x(i+1,j,k))+ &
-          max(VdtFace_y(i,j,k),VdtFace_y(i,j+1,k))+ &
-          max(VdtFace_z(i,j,k),VdtFace_z(i,j,k+1)))+&
-          SourceSpectralRadius_C(i,j,k))
+          *(max(VdtFace_x(i,j,k),VdtFace_x(i+1,j,k)) &
+          + max(VdtFace_y(i,j,k),VdtFace_y(i,j+1,k)) &
+          + max(VdtFace_z(i,j,k),VdtFace_z(i,j,k+1)) &
+          ) + SourceSpectralRadius_C(i,j,k))
   end do; end do; end do
 
   if(DoFixAxis .and. time_accurate)then
+     ! Ignore time step constraints from supercell
      if(TypeGeometry == 'cylindrical' .and. NeiLEast(iBlock) == NOBLK)then
         Di = 1; if(r2FixAxis > 0.1) Di = 2
         time_BLK(1:Di, 1:nJ, 1:nK, iBlock) = &
              time_BLK(1:Di, 1:nJ, 1:nK, iBlock) * 10.0
      elseif(rMin_Blk(iBlock) < rFixAxis)then
         Dk = 1; if(rMin_Blk(iBlock) < r2FixAxis) Dk = 2
-        ! Ignore time step constraints from supercell
         if(NeiLTop(iBlock) == NOBLK) &
              time_BLK(1:nI, 1:nJ, nK+1-Dk:nK, iBlock) = &
              time_BLK(1:nI, 1:nJ, nK+1-Dk:nK, iBlock) * 10.0
