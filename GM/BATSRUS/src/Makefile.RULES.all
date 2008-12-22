@@ -30,7 +30,6 @@ $Compiler eq "f95" and $Debug eq "yes"
 $Compiler eq "f95" and $Debug eq "yes" and $IsDynamic eq "no"
 	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModAdvance.f90
 	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModGeometry.f90
-	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModImplicit.f90
 	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModCT.f90
 	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModRaytrace.f90
 	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModNodes.f90
