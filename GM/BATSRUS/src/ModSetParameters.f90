@@ -401,90 +401,16 @@ subroutine MH_set_parameters(TypeAction)
         if(UsePointImplicit) &
              call read_var('BetaPointImplicit',BetaPointImpl)
 
-     case("#IMPLICIT")                                 !^CFG IF IMPLICIT BEGIN
-        call read_var('UsePointImplicit', UsePointImplicit)
-        call read_var('UsePartImplicit', UsePartImplicit)
-        call read_var('UseFullImplicit', UseFullImplicit)
-
-        UseImplicit = UseFullImplicit .or. UsePartImplicit
-        UsePointImplicit_B = UsePointImplicit
-
-        ! For implicit scheme it is better to use unsplit dB0/dt evaluation
-        DoSplitDb0Dt = .not.UseImplicit
-
-        if(UsePartImplicit  .and. UseFullImplicit) call stop_mpi(&
-             'Only one of UsePartImplicit and UseFullImplicit can be true')
-
-        if(UseImplicit)call read_var('ImplCFL',ImplCFL)
-
-     case("#IMPLCRITERIA", "#IMPLICITCRITERIA", "#STEPPINGCRITERIA")
-        call read_var('TypeImplCrit',ImplCritType)
-        select case(ImplCritType)
-        case('R','r')
-           call read_var('rImplicit'   ,Rimplicit)
-        case('test','dt')
-        case default
-           if(iProc==0)then
-              write(*,'(a)')NameSub// &
-                   ' WARNING: invalid ImplCritType='//trim(ImplCritType)// &
-                   ' !!!'
-              if(UseStrict)call stop_mpi('Correct PARAM.in!')
-              write(*,*)NameSub//' Setting ImplCritType=R'
-           end if
-           ImplCritType='R'
-        end select
-
-     case("#PARTIMPL", "#PARTIMPLICIT")
-        call read_var('UsePartImplicit2',UsePartImplicit2)
-
-     case("#SEMIIMPL", "#SEMIIMPLICIT")
-        call read_implicit_param(NameCommand)
-
-     case("#IMPLSCHEME", "#IMPLICITSCHEME")
-        call read_var('nOrderImpl',nOrder_Impl)
-        call read_var('TypeFluxImpl',FluxTypeImpl,IsUpperCase=.true.)
-
-     case("#IMPLSTEP", "#IMPLICITSTEP")
-        call read_var('ImplCoeff ',ImplCoeff0)
-        call read_var('UseBDF2   ',UseBdf2)
-        call read_var('ImplSource',ImplSource)
-
-     case("#IMPLCHECK", "#IMPLICITCHECK")
-        call read_var('RejectStepLevel' ,   RejectStepLevel)
-        call read_var('RejectStepFactor',   RejectStepFactor)
-        call read_var('ReduceStepLevel' ,   ReduceStepLevel)
-        call read_var('ReduceStepFactor',   ReduceStepFactor)
-        call read_var('IncreaseStepLevel' , IncreaseStepLevel)
-        call read_var('IncreaseStepFactor', IncreaseStepFactor)
-
-     case("#NEWTON")
-        call read_var('UseConservativeImplicit',UseConservativeImplicit)
-        call read_var('UseNewton',UseNewton)
-        if(UseNewton)then
-           call read_var('UseNewMatrix ',NewMatrix)
-           call read_var('MaxIterNewton',NewtonIterMax)
-        endif
-
-     case("#JACOBIAN")
-        call read_var('TypeJacobian',JacobianType)
-        call read_var('JacobianEps', JacobianEps)
-
-     case("#PRECONDITIONER")
-        call read_var('TypePrecondSide',PrecondSide)
-        call read_var('TypePrecond'    ,PrecondType)
-        call read_var('GustafssonPar'  ,GustafssonPar)
-        if(GustafssonPar<=0.)GustafssonPar=0.
-        if(GustafssonPar>1.)GustafssonPar=1.
-
-     case("#KRYLOV")
-        call read_var('TypeKrylov'     ,KrylovType)
-        call read_var('TypeInitKrylov' ,KrylovInitType)
-        call read_var('ErrorMaxKrylov' ,KrylovErrorMax)
-        call read_var('MaxMatvecKrylov',KrylovMatvecMax)
-        nKrylovVector = KrylovMatvecMax
-
-     case("#KRYLOVSIZE")
-        call read_var('nKrylovVector',nKrylovVector)    !^CFG END IMPLICIT
+     case("#IMPLICIT", &                                !^CFG IF IMPLICIT BEGIN
+          "#IMPLCRITERIA", "#IMPLICITCRITERIA", "#STEPPINGCRITERIA", &
+          "#PARTIMPL", "#PARTIMPLICIT",     &
+          "#SEMIIMPL", "#SEMIIMPLICIT",     &
+          "#IMPLSCHEME", "#IMPLICITSCHEME", &
+          "#IMPLSTEP", "#IMPLICITSTEP",     &
+          "#IMPLCHECK", "#IMPLICITCHECK",   &
+          "#NEWTON", "#JACOBIAN", "#PRECONDITIONER", &
+          "#KRYLOV", "#KRYLOVSIZE")
+        call read_implicit_param(NameCommand)           !^CFG END IMPLICIT
 
      case("#HEATFLUX")                                  !^CFG IF DISSFLUX BEGIN
         call read_var('UseHeatFlux'   ,UseHeatFlux)
