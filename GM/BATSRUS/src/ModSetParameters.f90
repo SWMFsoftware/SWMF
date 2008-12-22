@@ -48,7 +48,8 @@ subroutine MH_set_parameters(TypeAction)
        xSizeBoxHall, DxSizeBoxHall, &
        ySizeBoxHall, DySizeBoxHall, &
        zSizeBoxHall, DzSizeBoxHall
-  use ModGrayDiffusion, ONLY: UseRadFluxLimiter, TypeRadFluxLimiter
+  use ModGrayDiffusion, ONLY: &                   !^CFG IF IMPLICIT
+       UseRadFluxLimiter, TypeRadFluxLimiter      !^CFG IF IMPLICIT
   use ModResistivity                              !^CFG IF DISSFLUX
   use ModMultiFluid, ONLY: MassIon_I, DoConserveNeutrals,iFluid
   use ModMultiIon, ONLY: multi_ion_set_parameters
@@ -566,7 +567,8 @@ subroutine MH_set_parameters(TypeAction)
         call read_var("rInnerHall ", rInnerHall)
         call read_var("DrInnerHall", DrInnerHall)
 
-     case("#RADIATION")
+
+     case("#RADIATION")          !^CFG IF IMPLICIT BEGIN
         call read_var('UseGrayDiffusion',UseGrayDiffusion)
         if(UseGrayDiffusion)then
            call read_var('UseRadFluxLimiter',UseRadFluxLimiter)
@@ -580,7 +582,7 @@ subroutine MH_set_parameters(TypeAction)
                       //TypeRadFluxLimiter)
               end select
            end if
-        end if
+        end if                 !^CFG END IMPLICIT
 
      case("#SAVELOGFILE")
         call read_var('DoSaveLogfile',save_logfile)
@@ -2190,7 +2192,7 @@ contains
             ' ERROR: The radiation model in gray nonequilibrium diffusion'// &
             ' only works together with the full/semi implicit schemes'
        if(UseStrict)call stop_mpi('Correct PARAM.in!')
-    end if                                                !^CFG END IMPLICIT
+    end if                                                
 
     if ( UseGrayDiffusion .and. index(optimize_message_pass,'opt') > 0) then
        if(iProc==0 .and. optimize_message_pass /= 'allopt') then
@@ -2201,7 +2203,7 @@ contains
           write(*,*)NameSub//' setting optimize_message_pass = all'
        end if
        optimize_message_pass = 'all'
-    endif
+    endif                                                !^CFG END IMPLICIT
 
     if(prolong_order/=1 .and. optimize_message_pass(1:3)=='all')&
          call stop_mpi(NameSub// &

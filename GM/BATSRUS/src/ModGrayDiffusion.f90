@@ -1,4 +1,5 @@
 !^CFG COPYRIGHT UM
+!^CFG FILE IMPLICIT
 !============================================================================
 module ModGrayDiffusion
 
@@ -523,8 +524,8 @@ contains
 
           RelaxationCoef_CB(i,j,k,iBlock) = &
                AbsorptionOpacitySi*cLightSpeed/Si2No_V(UnitT_)
-       elseif(.not.UseSemiImplicit)then
-          call user_material_properties(State_VGB(:,i,j,k,iBlock),TeSi = TeSi)
+       elseif(.not.UseSemiImplicit) then
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), TeSi = TeSi)
        end if
 
        ! Adiabatic compression of radiation energy by fluid velocity (fluid 1)
@@ -564,6 +565,7 @@ contains
   end subroutine calc_source_gray_diffusion
 
   !==========================================================================
+
   subroutine get_impl_gray_diff_state(ImplState_GVB)
 
     use ModAdvance,  ONLY: Eradiation_, State_VGB

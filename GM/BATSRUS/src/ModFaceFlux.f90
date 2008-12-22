@@ -1,8 +1,8 @@
 module ModFaceFlux
 
   use ModProcMH,     ONLY: iProc
-  use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK, UseB, UseB0, cLimit, &
-       UseGrayDiffusion
+  use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK, UseB, UseB0, cLimit
+  use ModMain,       ONLY: UseGrayDiffusion               !^CFG IF IMPLICIT
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
   use ModVarIndexes, ONLY: nVar, NameVar_V, UseMultiSpecies, nFluid
@@ -30,8 +30,8 @@ module ModFaceFlux
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        IsNewBlockHall, hall_factor, get_face_current, set_ion_mass_per_charge
 
-  use ModGrayDiffusion, ONLY: IsNewBlockGrayDiffusion, &
-       get_radiation_energy_flux
+  use ModGrayDiffusion, ONLY: IsNewBlockGrayDiffusion, & !^CFG IF IMPLICIT
+       get_radiation_energy_flux                         !^CFG IF IMPLICIT
 
   use ModResistivity, ONLY: UseResistivity, Eta_GB  !^CFG IF DISSFLUX
   use ModMultiFluid
@@ -348,8 +348,8 @@ contains
     ! Make sure that Hall MHD recalculates the magnetic field 
     ! in the current block that will be used for the Hall term
     IsNewBlockHall = .true.
-    ! same for Gray-Diffusion
-    IsNewBlockGrayDiffusion = .true.
+    ! same for Gray-Diffusion            !^CFG IF IMPLICIT
+    IsNewBlockGrayDiffusion = .true.     !^CFG IF IMPLICIT
 
     if(UseResistivity) call set_resistivity(iBlock)      !^CFG IF DISSFLUX
 
@@ -1465,7 +1465,7 @@ contains
            pL, pR, UnL, UnR, UnStar
       use ModPhysics, ONLY: inv_gm1
       use ModVarIndexes
-      use ModImplicit, ONLY: UseSemiImplicit
+      use ModImplicit, ONLY: UseSemiImplicit   !^CFG IF IMPLICIT
 
       real::Rho, Un, P, StateStar_V(nVar)
       real::RhoSide,UnSide
@@ -1529,6 +1529,7 @@ contains
       CMaxDt    = CMax
       UNormal_I = Un
 
+      !^CFG IF IMPLICIT BEGIN
       if(UseGrayDiffusion)then
          call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
               iBlockFace, StateStar_V, DiffusionRad, EradFlux_D)
@@ -1543,6 +1544,7 @@ contains
          ! work by the radiation pressure gradient
          Flux_V(Energy_) = Flux_V(Energy_) + Un*StateStar_V(Eradiation_)/3.0
       end if
+      !^CFG END IMPLICIT
 
     end subroutine godunov_flux
 
@@ -1589,7 +1591,7 @@ contains
     use ModMultiFluid
     use ModMain,    ONLY: UseHyperbolicDivb, SpeedHyp2
     use ModAdvance, ONLY: Hyp_, Eradiation_
-    use ModImplicit, ONLY: UseSemiImplicit
+    use ModImplicit, ONLY: UseSemiImplicit     !^CFG IF IMPLICIT
 
     real,    intent(in) :: State_V(nVar)       ! input primitive state
     real,    intent(in) :: B0x, B0y, B0z       ! B0
@@ -1666,6 +1668,7 @@ contains
             + Bx*FluxBx + By*FluxBy + Bz*FluxBz
     end if                                     !^CFG END DISSFLUX
 
+    !^CFG IF IMPLICIT BEGIN
     if(UseGrayDiffusion)then
        call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
             iBlockFace, State_V, DiffusionRad, EradFlux_D)
@@ -1680,6 +1683,7 @@ contains
        ! work by the radiation pressure gradient
        Flux_V(Energy_) = Flux_V(Energy_) + Un*State_V(Eradiation_)/3.0
     end if
+    !^CFG END IMPLICIT
 
     if(UseHyperbolicDivb)then
        Hyp  = State_V(Hyp_)

@@ -228,12 +228,13 @@ end subroutine BATS_setup
 
 subroutine BATS_init_session
 
-  use ModMain, ONLY: DoTransformToHgi, UseUserPerturbation, UseGrayDiffusion
+  use ModMain, ONLY: DoTransformToHgi, UseUserPerturbation
+  use ModMain, ONLY: UseGrayDiffusion              !^CFG IF IMPLICIT
   use ModMain, ONLY: UseProjection                 !^CFG IF PROJECTION
   use ModMain, ONLY: UseConstrainB                 !^CFG IF CONSTRAINB
   use ModCT,   ONLY: DoInitConstrainB              !^CFG IF CONSTRAINB
   use ModHallResist, ONLY: UseHallResist, init_hall_resist,test_face_current
-  use ModGrayDiffusion, ONLY: init_gray_diffusion
+  use ModGrayDiffusion, ONLY: init_gray_diffusion  !^CFG IF IMPLICIT
   use ModUser, ONLY: user_initial_perturbation
   implicit none
 
@@ -268,7 +269,7 @@ subroutine BATS_init_session
   if(UseHallResist)call init_hall_resist
   !call test_face_current
 
-  if(UseGrayDiffusion)call init_gray_diffusion
+  if(UseGrayDiffusion) call init_gray_diffusion !^CFG IF IMPLICIT
 
   ! Make sure that ghost cells are up to date
   call exchange_messages
