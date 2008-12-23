@@ -1041,8 +1041,10 @@ contains
   end subroutine calc_table_value
   !===========================================================================
 
-  subroutine user_material_properties(State_V, &
-       TeSi, AbsorptionOpacitySi, RosselandMeanOpacitySi)
+  subroutine user_material_properties(State_V, EinternalSiIn, TeSiOut, &
+       AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut, GammaOut)
+
+    ! The State_V vector is in normalized units
 
     use ModEos,        ONLY: eos
     use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_
@@ -1050,9 +1052,11 @@ contains
     use ModLookupTable,ONLY: interpolate_lookup_table
 
     real, intent(in) :: State_V(1:nVar)
-    real, optional, intent(out) :: TeSi                   ! [K]
-    real, optional, intent(out) :: AbsorptionOpacitySi    ! [1/m]
-    real, optional, intent(out) :: RosselandMeanOpacitySi ! [1/m]
+    real, optional, intent(in)  :: EinternalSiIn             ! [J/m^3]
+    real, optional, intent(out) :: TeSiOut                   ! [K]
+    real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
+    real, optional, intent(out) :: RosselandMeanOpacitySiOut ! [1/m]
+    real, optional, intent(out) :: GammaOut
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
 
@@ -1066,31 +1070,33 @@ contains
     RhoSi = State_V(Rho_)*No2Si_V(UnitRho_)
     pSi   = State_V(p_)*No2Si_V(UnitP_)
 
-    if(present(TeSi))then
+    if(present(TeSiOut))then
        if(iTableCvGammaTe > 0)then
           call interpolate_lookup_table(iTableOpacity, RhoSi, pSi/RhoSi, &
                Value_V, DoExtrapolate = .false.)
-          TeSi = Value_V(3*iMaterial+3)
+          TeSiOut = Value_V(3*iMaterial+3)
        else
           ! The IsError flag avoids stopping for Fermi degenerated state
-          call eos(iMaterial, RhoSi, pTotalIn=pSi, TeOut=TeSi, IsError=IsError)
+          call eos(iMaterial, RhoSi, pTotalIn=pSi, TeOut=TeSiOut, &
+               IsError=IsError)
        end if
     end if
 
-    if(present(AbsorptionOpacitySi) .or. present(RosselandMeanOpacitySi))then
+    if(present(AbsorptionOpacitySiOut) &
+         .or. present(RosselandMeanOpacitySiOut))then
        if(iTableOpacity > 0)then
           call interpolate_lookup_table(iTableOpacity, RhoSi, pSi/RhoSi, &
                Opacity_V, DoExtrapolate = .false.)
-          if(present(AbsorptionOpacitySi)) &
-               AbsorptionOpacitySi = Opacity_V(2*iMaterial + 1) * RhoSi
-          if(present(RosselandMeanOpacitySi)) &
-               RosselandMeanOpacitySi = Opacity_V(2*iMaterial + 2) * RhoSi
+          if(present(AbsorptionOpacitySiOut)) &
+               AbsorptionOpacitySiOut = Opacity_V(2*iMaterial + 1) * RhoSi
+          if(present(RosselandMeanOpacitySiOut)) &
+               RosselandMeanOpacitySiOut = Opacity_V(2*iMaterial + 2) * RhoSi
        else
-          if(present(AbsorptionOpacitySi)) &
-               AbsorptionOpacitySi = PlanckOpacity(iMaterial)*RhoSi
+          if(present(AbsorptionOpacitySiOut)) &
+               AbsorptionOpacitySiOut = PlanckOpacity(iMaterial)*RhoSi
 
-          if(present(RosselandMeanOpacitySi)) &
-               RosselandMeanOpacitySi = RosselandOpacity(iMaterial)*RhoSi
+          if(present(RosselandMeanOpacitySiOut)) &
+               RosselandMeanOpacitySiOut = RosselandOpacity(iMaterial)*RhoSi
        end if
     end if
 

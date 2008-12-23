@@ -222,15 +222,19 @@ contains
   end subroutine user_set_resistivity
 
   !=====================================================================
-  subroutine user_material_properties(State_V, &
-       TeSi, AbsorptionOpacitySi, RosselandMeanOpacitySi)
+  subroutine user_material_properties(State_V, EinternalSiIn, TeSiOut, &
+       AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut, GammaOut)
+
+    ! The State_V vector is in normalized units
 
     use ModVarIndexes, ONLY: nVar
 
     real, intent(in) :: State_V(nVar)
-    real, optional, intent(out) :: TeSi                   ! [K]
-    real, optional, intent(out) :: AbsorptionOpacitySi    ! [1/m]
-    real, optional, intent(out) :: RosselandMeanOpacitySi ! [1/m]
+    real, optional, intent(in)  :: EinternalSiIn             ! [J/m^3]
+    real, optional, intent(out) :: TeSiOut                   ! [K]
+    real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
+    real, optional, intent(out) :: RosselandMeanOpacitySiOut ! [1/m]
+    real, optional, intent(out) :: GammaOut
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
     !-------------------------------------------------------------------
