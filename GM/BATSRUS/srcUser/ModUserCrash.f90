@@ -26,6 +26,7 @@ module ModUser
   integer, parameter :: nMaterial = 3
 
   ! Wall parameters
+  logical:: UseTube = .false.
   real :: xEndTube   =   40.0    ! x coordinate of tube ending
   real :: rInnerTube =  287.5    ! inner radius [micron]
   real :: rOuterTube =  312.5    ! outer radius [micron]
@@ -106,6 +107,7 @@ contains
           call read_var('UseHyadesFile', UseHyadesFile)
           call read_var('NameHyadesFile',NameHyadesFile)
        case("#TUBE")
+          UseTube = .true.
           call read_var('xEndTube',   xEndTube)
           call read_var('rInnerTube', rInnerTube)
           call read_var('rOuterTube', rOuterTube)
@@ -150,7 +152,7 @@ contains
   subroutine user_set_ics
 
     use ModProcMH,    ONLY: iProc
-    use ModMain,      ONLY: GlobalBlk, nI, nJ, nK, UseGrayDiffusion
+    use ModMain,      ONLY: GlobalBlk, nI, nJ, nK
     use ModPhysics,   ONLY: inv_gm1, ShockPosition, ShockSlope, &
          Io2No_V, No2Si_V, Si2No_V, UnitRho_, UnitP_, UnitEnergyDens_
     use ModAdvance,   ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, p_, &
@@ -158,7 +160,6 @@ contains
     use ModGeometry,  ONLY: x_BLK, y_BLK, z_BLK
     use ModEos,       ONLY: eos, Be_, Xe_, Plastic_
     use ModPolyimide, ONLY: cAtomicMass_I, cAPolyimide
-    use ModConst,     ONLY: cRadiation
     use ModLookupTable, ONLY: interpolate_lookup_table
 
     real    :: x, y, xBe, DxBe, DxyPl, pSi, RhoSi, EinternalSi, TeSi
@@ -190,54 +191,54 @@ contains
        x = x_BLK(i,j,k,iBlock)
        y = y_BLK(i,j,k,iBlock)
 
-       ! Distance from plastic wall: 
-       !     positive for rInnerTube < |y| < rOuterTube and x > xEndTube only
-       DxyPl = min(abs(y) - rInnerTube, rOuterTube - abs(y), x - xEndTube)
+       if(nDimHyades == 1)then
+          if(UseTube)then
+             ! Distance from plastic wall: 
+             ! positive for rInnerTube < |y| < rOuterTube and x > xEndTube only
+             DxyPl = &
+                  min(abs(y) - rInnerTube, rOuterTube - abs(y), x - xEndTube)
 
-       ! Set plastic tube state
-       if(DxyPl > 0.0)then
-          ! Use the density and pressure given by the #TUBE command
-          State_VGB(Rho_,i,j,k,iBlock) = RhoDimTube*Io2No_V(UnitRho_)
-          State_VGB(p_  ,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
-          ! Assume that plastic wall is at rest
-          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
-       end if
+             ! Set plastic tube state
+             if(DxyPl > 0.0)then
+                ! Use the density and pressure given by the #TUBE command
+                State_VGB(Rho_,i,j,k,iBlock) = RhoDimTube*Io2No_V(UnitRho_)
+                State_VGB(p_  ,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
+                ! Assume that plastic wall is at rest
+                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
+             end if
 
-       ! Set pressure and speed outside the tube. 
-       ! For 2D Hyades input do not overwrite values left of xEndTube
-       if(abs(y) > rOuterTube &
-            .and. (nDimHyades == 1 .or. x > xEndTube) ) then
-          State_VGB(p_,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
-          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
-       end if
+             ! Set pressure and speed outside the tube. 
+             ! For 2D Hyades input do not overwrite values left of xEndTube
+             if(abs(y) > rOuterTube &
+                  .and. (nDimHyades == 1 .or. x > xEndTube) ) then
+                State_VGB(p_,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
+                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
+             end if
+             
+             ! Set the Xe state inside the tube for x > xUniformXe if it is set
+             if(xUniformXe > 0.0 .and. x > xUniformXe &
+                  .and. abs(y) < rInnerTube)then
+                State_VGB(Rho_,i,j,k,iBlock) = RhoDimOutside*Io2No_V(UnitP_)
+                State_VGB(p_,i,j,k,iBlock)   = pDimOutside*Io2No_V(UnitP_)
+                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
+             end if
+             
+             ! Set density outside the tube
+             if(x >= xEndTube .and. abs(y) > rOuterTube) &
+                  State_VGB(Rho_,i,j,k,iBlock) = &
+                  RhoDimOutside*Io2No_V(UnitRho_)
+          end if
 
-       ! Set the Xenon state inside the tube for x > xUniformXe if it is set
-       if(xUniformXe > 0.0 .and. x > xUniformXe .and. abs(y) < rInnerTube)then
-          State_VGB(Rho_,i,j,k,iBlock) = RhoDimOutside*Io2No_V(UnitP_)
-          State_VGB(p_,i,j,k,iBlock)   = pDimOutside*Io2No_V(UnitP_)
-          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
-       end if
+          ! Distance from gold washer xEndTube < x < xEndTube + WidthGold
+          if(UseGold) then
+             DxyGold = min(x - xEndTube, xEndTube + WidthGold - x, &
+                  abs(y) - rOuterTube)
 
-       ! Set density outside the tube
-       if(x >= xEndTube .and. abs(y) > rOuterTube) &
-            State_VGB(Rho_,i,j,k,iBlock) = RhoDimOutside*Io2No_V(UnitRho_)
-       
-       ! Distance from gold washer xEndTube < x < xEndTube + WidthGold
-       if(UseGold) DxyGold = &
-            min(x - xEndTube, xEndTube + WidthGold - x, abs(y) - rOuterTube)
+             ! Set density of gold washer (if present)
+             if(DxyGold > 0.0) &
+                  State_VGB(Rho_,i,j,k,iBlock) = RhoDimGold*Io2No_V(UnitRho_)
 
-       ! Set density of gold washer (if present)
-       if(DxyGold > 0.0) &
-            State_VGB(Rho_,i,j,k,iBlock) = RhoDimGold*Io2No_V(UnitRho_)
-
-       if(nDimHyades == 2)then
-          State_VGB(LevelPl_,i,j,k,iBlock) = &
-               min(-DxyGold, max(State_VGB(LevelPl_,i,j,k,iBlock), DxyPl))
-          State_VGB(LevelXe_,i,j,k,iBlock) = &
-               max(DxyGold, min(State_VGB(LevelXe_,i,j,k,iBlock), -DxyPl))
-          State_VGB(LevelBe_,i,j,k,iBlock) = &
-               min(-DxyGold, -DxyPl, State_VGB(LevelBe_,i,j,k,iBlock))
-       else
+          end if
 
           if(UseHyadesFile)then
              ! Be - Xe interface is given by Hyades file
@@ -264,7 +265,7 @@ contains
                min( x - xEndTube, abs(y) - rOuterTube), &
                min( -DxBe, rInnerTube - abs(y)) )
 
-       end if
+       end if ! nDim == 1
 
        if(UseMixedCell)then
           ! Use atomic concentrations instead of smooth level set functions
@@ -303,12 +304,13 @@ contains
        RhoSi = State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_)
        pSi   = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
 
-       ! The IsError flag avoids stopping for Fermi degenerated state
+       ! Set the internal energy
        if(iTableEPerP > 0)then
           call interpolate_lookup_table(iTableEPerP, &
                RhoSi, pSi/RhoSi, ePerP_I, DoExtrapolate = .false.)
           EinternalSi = ePerP_I(iMaterial)*pSi
        else
+          ! The IsError flag avoids stopping for Fermi degenerated state
           call eos(iMaterial,RhoSi,pTotalIn=pSi, &
                ETotalOut=EinternalSi, IsError=IsError)
        end if
@@ -316,14 +318,6 @@ contains
        State_VGB(ExtraEInt_,i,j,k,iBlock) = &
             EInternalSi*Si2No_V(UnitEnergyDens_) &
             - inv_gm1*State_VGB(P_,i,j,k,iBlock)
-
-!!!       if(UseGrayDiffusion)then
-!!!          ! The IsError flag avoids stopping for Fermi degenerated state
-!!!          call eos(iMaterial, RhoSi, pTotalIn=pSi, TeOut=TeSi, IsError=IsError)
-!!!
-!!!          State_VGB(Eradiation_,i,j,k,iBlock) = cRadiation*TeSi**4 &
-!!!               *Si2No_V(UnitEnergyDens_)
-!!!       end if
 
     end do; end do; end do
 
@@ -369,7 +363,7 @@ contains
     read(UnitTmp_, *) &
          nStepHyades, TimeHyades, nDimHyades, nEqparHyades, nVarHyades
 
-    ! Ignor negative value (signaling distorted grid)
+    ! Ignore negative value (signaling distorted grid)
     nDimHyades = abs(nDimHyades)
     
     ! Read grid size
@@ -466,6 +460,13 @@ contains
     end do
     close(UnitTmp_)
 
+    if(iMaterialHyades > 0)then
+       ! Convert material indexes to the 3 values used in CRASH
+       ! Gold (3), Acrylic (4), Vacuum (5) --> Polyimid
+       where(nint(DataHyades_VC(iMaterialHyades, :)) >= 3) &
+            DataHyades_VC(iMaterialHyades, :) = Plastic_
+    end if
+
     if(nDimHyades == 1)then
 
        ! Locate the Be-Xe interface in 1D 
@@ -489,10 +490,9 @@ contains
 
     else
 
-       ! Fix the pressure in the plastic cells
-       where(DataHyades_VC(iMaterialHyades, :) == Plastic_ &
-            .and. DataHyades_VC(iPHyades, :) < 1.0) &
-               DataHyades_VC(iPHyades, :) = pDimOutside*Io2No_V(UnitP_)
+       ! Fix the pressure where it is set to some very small value
+       where(DataHyades_VC(iPHyades, :) < 1e-10) &
+            DataHyades_VC(iPHyades, :) = pDimOutside*Io2No_V(UnitP_)
 
        ! Find cell with maximum X coordinate along the symmetry axis
        iCellLastHyades = nCellHyades_D(1)
