@@ -19,8 +19,6 @@ subroutine get_log_info(GlobalMinTemp, GlobalMaxTemp, &
   AverageTemp      = 0.0
   AverageVertVel   = 0.0
 
-
-
   do iBlock = 1, nBlocks
 
      call calc_rates(iBlock)
@@ -80,12 +78,10 @@ subroutine logfile(dir)
      open(unit=iLogFileUnit_, &
           file=dir//"/log"//cIter//".dat",status="replace")
 
-     !write(iLogFileUnit_,'(a)') &
-     !     "   iStep yyyy mm dd hh mm ss  ms      dt min(t) max(t)"// &
-     !     " min(VV) max(VV)"
-
      write(iLogFileUnit_,'(a)') "GITM2 log file"
-     write(iLogFileUnit_,'(a)') "iStep time dt Tmin Tmax Tave Wmin Wmax Wave"
+     write(iLogFileUnit_,'(a)') &
+          "   iStep yyyy mm dd hh mm ss  ms      dt"// &
+          "min(T) max(T) mean(T) min(VV) max(VV) mean(VV)"
 
   endif
 
@@ -118,15 +114,12 @@ subroutine logfile(dir)
 
   if (iProc == 0) then
 
-!     write(iLogFileUnit_,"(i8,i5,5i3,i4,f8.4,4f13.5)") &
-!          iStep, iTimeArray, dt, minTemp, maxTemp, minVertVel, maxVertVel
-
      AverageTemp = AverageTemp / nProcs
      AverageVertVel = AverageVertVel / nProcs
 
-     write(iLogFileUnit_,"(i8,8f13.5)") &
-          iStep, tSimulation, Dt, MinTemp, MaxTemp, AverageTemp, &
-          MinVertVel, MaxVertVel, AverageVertVel
+     write(iLogFileUnit_,"(i8,i5,5i3,i4,f8.4,6f13.5)") &
+          iStep, iTimeArray, dt, minTemp, maxTemp, AverageTemp, &
+          minVertVel, maxVertVel, AverageVertVel
 
      call flush_unit(iLogFileUnit_)
   endif
