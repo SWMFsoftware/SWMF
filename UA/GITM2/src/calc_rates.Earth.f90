@@ -93,32 +93,21 @@ subroutine calc_rates(iBlock)
           gamma(1:nLons,1:nLats,iAlt,iBlock) *2.0/ &   
           NDensity(1:nLons,1:nLats,iAlt,iBlock) + 1 
 
-!     if (Is1D .and. UseKappa1DCorrection) then
-!        KappaTemp(:,:,iAlt,iBlock) = KappaTemp0 * &
-!             (Temperature(1:nLons,1:nLats,iAlt,iBlock) * &
-!             TempUnit(1:nLons,1:nLats,iAlt) / &
-!             Kappa1DCorrectionFactor)**Kappa1dCorrectionPower
-!     else
-         KappaTemp(:,:,iAlt,iBlock) = &
-             (NDensityS(1:nLons,1:nLats,iAlt,iO2_,iBlock) / &
-             NDensity(1:nLons,1:nLats,iAlt,iBlock) + &
-             NDensityS(1:nLons,1:nLats,iAlt,iN2_,iBlock)/ &
-             NDensity(1:nLons,1:nLats,iAlt,iBlock)) * 5.6e-4 * &
-             (Temperature(1:nLons,1:nLats,ialt,iBlock)*TempUnit(1:nLons,1:nLats,iAlt)) &
-             **0.75 + &
-             (NDensityS(1:nLons,1:nLats,iAlt,iO_3P_,iBlock)/&
-             NDensity(1:nLons,1:nLats,iAlt,iBlock)*7.59e-4) * &
-             (Temperature(1:nLons,1:nLats,iAlt,iBlock) * &
-             TempUnit(1:nLons,1:nLats,iAlt))**0.75
+     KappaTemp(:,:,iAlt,iBlock) = &
+          (NDensityS(1:nLons,1:nLats,iAlt,iO2_,iBlock) / &
+          NDensity(1:nLons,1:nLats,iAlt,iBlock) + &
+          NDensityS(1:nLons,1:nLats,iAlt,iN2_,iBlock)/ &
+          NDensity(1:nLons,1:nLats,iAlt,iBlock)) * 3.6e-4 * &
+          (Temperature(1:nLons,1:nLats,ialt,iBlock)* &
+          TempUnit(1:nLons,1:nLats,iAlt))**0.69 + &
+          (NDensityS(1:nLons,1:nLats,iAlt,iO_3P_,iBlock)/&
+          NDensity(1:nLons,1:nLats,iAlt,iBlock)*5.6e-4) * &
+          (Temperature(1:nLons,1:nLats,iAlt,iBlock) * &
+          TempUnit(1:nLons,1:nLats,iAlt))**0.69
         
-!        KappaTemp(:,:,iAlt,iBlock) = KappaTemp0 * &
-!             (Temperature(1:nLons,1:nLats,iAlt,iBlock) * &
-!             TempUnit(1:nLons,1:nLats,iAlt))**0.75
-!     endif
-
-     iiAlt = iAlt
-     if (iAlt == 0) iiAlt = 1
-     if (iAlt == nAlts+1) iiAlt = nAlts
+     iiAlt = min(max(iAlt,1),nAlts)
+!     if (iAlt == 0) iiAlt = 1
+!     if (iAlt == nAlts+1) iiAlt = nAlts
 
      ScaleHeight = &
           -Temperature(1:nLons,1:nLats,iAlt,iBlock) * &
@@ -133,17 +122,12 @@ subroutine calc_rates(iBlock)
 
   enddo
 
-!  write(*,*) "mm cp:",minval(cp), maxval(cp), &
-!       minval(Rho(1:nLons,1:nLats,iAlt,iBlock)*AMU/ &
-!       NDensity(1:nLons,1:nLats,iAlt,iBlock)), &
-!       maxval(Rho(1:nLons,1:nLats,iAlt,iBlock)*AMU/ &
-!       NDensity(1:nLons,1:nLats,iAlt,iBlock))
-
   !\
   ! Need to get the neutral, ion, and electron temperature
   !/
 
-  Tn = Temperature(1:nLons,1:nLats,1:nAlts,iBlock)*TempUnit(1:nLons,1:nLats,1:nAlts)
+  Tn = Temperature(1:nLons,1:nLats,1:nAlts,iBlock)*&
+       TempUnit(1:nLons,1:nLats,1:nAlts)
   Ti = ITemperature(1:nLons,1:nLats,1:nAlts,iBlock)
 
   !\
