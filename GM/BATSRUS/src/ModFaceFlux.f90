@@ -314,7 +314,8 @@ contains
          iMinFaceZ,iMaxFaceZ, jMinFaceZ, jMaxFaceZ, &
          iTest, jTest, kTest, ProcTest, BlkTest, DimTest, &
          UseHyperbolicDivb
-
+    use ModGrayDiffusion, ONLY: DoUpdateFrozenCoefficients, & !^CFG IF IMPLICIT
+         set_frozen_coefficients                              !^CFG IF IMPLICIT
     implicit none
 
     logical, intent(in) :: DoResChangeOnly
@@ -355,6 +356,9 @@ contains
 
     if(UseHallResist .and. UseMultiSpecies) &
          call set_ion_mass_per_charge(iBlock)
+
+    if(UseGrayDiffusion.and.DoUpdateFrozenCoefficients) & !^CFG IF IMPLICIT
+         call set_frozen_coefficients(iBlock)             !^CFG IF IMPLICIT
 
     if (DoResChangeOnly) then
        if(neiLeast(iBlock) == 1)call get_flux_x(1,1,1,nJ,1,nK)
@@ -895,6 +899,13 @@ contains
 
     ! Calculate average state (used by most solvers and also by bCrossArea_D)
     State_V = 0.5*(StateLeft_V + StateRight_V)
+
+    !^CFG IF IMPLICIT BEGIN
+    if(UseGrayDiffusion)then
+       call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
+            iBlockFace, State_V, DiffusionRad, EradFlux_D)
+    end if
+    !^CFG END IMPLICIT
 
     if(.not.DoGodunov &
          .and. .not.DoHlld &                                !^CFG IF HLLDFLUX
@@ -1531,9 +1542,6 @@ contains
 
       !^CFG IF IMPLICIT BEGIN
       if(UseGrayDiffusion)then
-         call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
-              iBlockFace, StateStar_V, DiffusionRad, EradFlux_D)
-
          ! Diffusive radiation flux is added later for semi-implicit scheme
          if(.not.UseSemiImplicit) Flux_V(Eradiation_) = &
               Flux_V(Eradiation_) + sum(EradFlux_D*Normal_D)
@@ -1670,9 +1678,6 @@ contains
 
     !^CFG IF IMPLICIT BEGIN
     if(UseGrayDiffusion)then
-       call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
-            iBlockFace, State_V, DiffusionRad, EradFlux_D)
-
        ! Diffusive radiation flux is added later for semi-implicit scheme
        if(.not.UseSemiImplicit) Flux_V(Eradiation_) = &
             Flux_V(Eradiation_) + sum(EradFlux_D*Normal_D)

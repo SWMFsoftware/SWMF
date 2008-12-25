@@ -77,7 +77,7 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,w)
 
   if(UseSemiImplicit)then
      select case(TypeSemiImplicit)
-     case("radiation_e")
+     case("radiation")
         call get_impl_gray_diff_state(w)
      end select
   else
@@ -153,7 +153,7 @@ subroutine implicit2explicit(w)
      iBLK=impl2iBLK(implBLK)
      if(UseSemiImplicit)then
         select case(TypeSemiImplicit)
-        case('radiation_e')
+        case('radiation')
            call update_impl_gray_diff(iBLK, w(:,:,:,:,implBLK))
         end select
      else
@@ -275,7 +275,7 @@ subroutine get_semi_impl_rhs(StateImpl_GVB, Residual_CVB)
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
      select case(TypeSemiImplicit)
-     case('radiation_e')
+     case('radiation')
         Residual_CVB(:,:,:,:,iImplBlock) = 0.0
         call get_gray_diffusion_rhs(iBlock, &
              StateSemi_VGB(:,:,:,:,iBlock), Residual_CVB(:,:,:,:,iImplBlock))
@@ -319,7 +319,7 @@ subroutine get_semi_impl_residual(StateImpl_CVB)
      iBlock = impl2iBLK(iImplBlock)
 
      select case(TypeSemiImplicit)
-     case('radiation_e')
+     case('radiation')
         call get_gray_diffusion_rhs(iBlock, &
              StateSemi_VGB(:,:,:,:,iBlock), Rhs_CV)
      end select

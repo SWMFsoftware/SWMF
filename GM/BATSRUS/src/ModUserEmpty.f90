@@ -222,8 +222,10 @@ contains
   end subroutine user_set_resistivity
 
   !=====================================================================
-  subroutine user_material_properties(State_V, EinternalSiIn, TeSiOut, &
-       AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut, GammaOut)
+
+  subroutine user_material_properties(State_V, EinternalSiIn, &
+       TeSiOut, AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut, &
+       CvSiOut, GammaOut)
 
     ! The State_V vector is in normalized units
 
@@ -234,7 +236,8 @@ contains
     real, optional, intent(out) :: TeSiOut                   ! [K]
     real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
     real, optional, intent(out) :: RosselandMeanOpacitySiOut ! [1/m]
-    real, optional, intent(out) :: GammaOut
+    real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
+    real, optional, intent(out) :: GammaOut                  ! dimensionless
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
     !-------------------------------------------------------------------

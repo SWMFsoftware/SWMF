@@ -348,36 +348,41 @@ contains
 
   !==========================================================================
 
-  subroutine user_material_properties(State_V, EinternalSiIn, TeSiOut, &
-       AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut, GammaOut)
+  subroutine user_material_properties(State_V, EinternalSiIn, &
+       TeSiOut, AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut, &
+       CvSiOut, GammaOut)
 
     ! The State_V vector is in normalized units
 
     use ModConst,      ONLY: cLightSpeed
-    use ModPhysics,    ONLY: g, gm1, No2Si_V, Si2No_V, UnitTemperature_, &
-         UnitEnergyDens_, UnitT_, UnitU_, UnitX_
+    use ModPhysics,    ONLY: g, gm1, inv_gm1, No2Si_V, Si2No_V, &
+         UnitTemperature_, UnitEnergyDens_, UnitT_, UnitU_, UnitX_
     use ModVarIndexes, ONLY: nVar, Rho_, p_
 
-    real, intent(in) :: State_V(1:nVar)
+    real, intent(in) :: State_V(nVar)
     real, optional, intent(in)  :: EinternalSiIn             ! [J/m^3]
     real, optional, intent(out) :: TeSiOut                   ! [K]
     real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
     real, optional, intent(out) :: RosselandMeanOpacitySiOut ! [1/m]
-    real, optional, intent(out) :: GammaOut
+    real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
+    real, optional, intent(out) :: GammaOut                  ! dimensionless
 
     real :: Temperature, AbsorptionOpacity, DiffusionRad
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
     !-------------------------------------------------------------------
 
-    if(present(GammaOut)) GammaOut = g
-
     if(present(EinternalSiIn))then
-       Temperature = gm1*EinternalSiIn*Si2No_V(UnitEnergyDens_) &
-            /State_V(Rho_)
+       Temperature = EinternalSiIn*Si2No_V(UnitEnergyDens_) &
+            *gm1/State_V(Rho_)
     else
        Temperature = State_V(p_)/State_V(Rho_)
     end if
+
+    if(present(GammaOut)) GammaOut = g
+
+    if(present(CvSiOut)) CvSiOut = inv_gm1*State_V(Rho_) &
+         *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
 
     select case(iLowrieTest)
     case(1,2)

@@ -1042,7 +1042,8 @@ contains
   !===========================================================================
 
   subroutine user_material_properties(State_V, EinternalSiIn, &
-       TeSiOut, GammaOut, AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut)
+       TeSiOut, AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut, &
+       CvSiOut, GammaOut)
 
     ! The State_V vector is in normalized units, output is in SI units
 
@@ -1051,12 +1052,14 @@ contains
     use ModVarIndexes, ONLY: nVar, Rho_, LevelXe_, LevelPl_, p_
     use ModLookupTable,ONLY: interpolate_lookup_table
 
-    real, intent(in) :: State_V(1:nVar)
+    real, intent(in) :: State_V(nVar)
     real, optional, intent(in)  :: EinternalSiIn             ! [J/m^3]
     real, optional, intent(out) :: TeSiOut                   ! [K]
-    real, optional, intent(out) :: GammaOut                  ! dimensionless
     real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
     real, optional, intent(out) :: RosselandMeanOpacitySiOut ! [1/m]
+    real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
+    real, optional, intent(out) :: GammaOut                  ! dimensionless
+
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
 

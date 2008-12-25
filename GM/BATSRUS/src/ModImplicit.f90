@@ -37,7 +37,7 @@ module ModImplicit
 
   ! Use semi-implicit scheme
   logical :: UseSemiImplicit = .false.
-  character(len=40) :: TypeSemiImplicit = 'radiation_e'
+  character(len=40) :: TypeSemiImplicit = 'radiation'
 
   !\
   ! Parameters for selecting implicit blocks
@@ -264,7 +264,7 @@ contains
 
     if(UseSemiImplicit)then
        select case(TypeSemiImplicit)
-       case('radiation_e', 'radiation_t')
+       case('radiation')
           nw = 2
        end select
     else
