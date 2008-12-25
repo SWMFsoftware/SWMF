@@ -1041,10 +1041,10 @@ contains
   end subroutine calc_table_value
   !===========================================================================
 
-  subroutine user_material_properties(State_V, EinternalSiIn, TeSiOut, &
-       AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut, GammaOut)
+  subroutine user_material_properties(State_V, EinternalSiIn, &
+       TeSiOut, GammaOut, AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut)
 
-    ! The State_V vector is in normalized units
+    ! The State_V vector is in normalized units, output is in SI units
 
     use ModEos,        ONLY: eos
     use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_
@@ -1054,13 +1054,14 @@ contains
     real, intent(in) :: State_V(1:nVar)
     real, optional, intent(in)  :: EinternalSiIn             ! [J/m^3]
     real, optional, intent(out) :: TeSiOut                   ! [K]
+    real, optional, intent(out) :: GammaOut                  ! dimensionless
     real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
     real, optional, intent(out) :: RosselandMeanOpacitySiOut ! [1/m]
-    real, optional, intent(out) :: GammaOut
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
 
-    real    :: pSi, RhoSi, TemperatureSi, Value_V(3*nMaterial), Opacity_V(2*nMaterial)
+    real    :: pSi, RhoSi, TemperatureSi
+    real    :: Value_V(3*nMaterial), Opacity_V(2*nMaterial)
     integer :: iMaterial, iMaterial_I(1)
     logical :: IsError
     !-------------------------------------------------------------------------
@@ -1070,15 +1071,16 @@ contains
     RhoSi = State_V(Rho_)*No2Si_V(UnitRho_)
     pSi   = State_V(p_)*No2Si_V(UnitP_)
 
-    if(present(TeSiOut))then
+    if(present(TeSiOut) .or. present(GammaOut))then
        if(iTableCvGammaTe > 0)then
-          call interpolate_lookup_table(iTableOpacity, RhoSi, pSi/RhoSi, &
+          call interpolate_lookup_table(iTableCvGammaTe, RhoSi, pSi/RhoSi, &
                Value_V, DoExtrapolate = .false.)
-          TeSiOut = Value_V(3*iMaterial+3)
+          if(present(TeSiOut))  TeSiOut  = Value_V(3*iMaterial+3)
+          if(present(GammaOut)) GammaOut = Value_V(3*iMaterial+2)
        else
           ! The IsError flag avoids stopping for Fermi degenerated state
-          call eos(iMaterial, RhoSi, pTotalIn=pSi, TeOut=TeSiOut, &
-               IsError=IsError)
+          call eos(iMaterial, RhoSi, pTotalIn=pSi, &
+               TeOut=TeSiOut, GammaOut=GammaOut, IsError=IsError)
        end if
     end if
 
