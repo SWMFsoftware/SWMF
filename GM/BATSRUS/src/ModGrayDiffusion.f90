@@ -853,7 +853,7 @@ contains
   !==========================================================================
 
   subroutine cg(matvec, nVar, Residual_VCB, Solution_VGB, IsInit, &
-       Tolerance, TypeStop, Iter)
+       Tolerance, TypeStop, Iter, preconditioner)
 
     ! conjugated gradient for symmetric and positive definite matrix A
 
@@ -878,6 +878,20 @@ contains
        end subroutine matvec
     end interface
 
+    optional :: preconditioner
+    interface
+       subroutine preconditioner(nVar, VectorIn_VCB, VectorOut_VCB)
+         use ModSize
+
+         ! Calculate VectorOut = M^{-1} \cdot VectorInwhere the preconditioner
+         ! matrix, M^{-1}, should be symmetric positive definite
+         integer, intent(in) :: nVar
+         real, intent(inout) :: VectorIn_VCB(nVar,1:nI,1:nJ,1:nK,nBLK)
+         real, intent(out)   :: VectorOut_VCB(nVar,1:nI,1:nJ,1:nK,nBLK)
+       end subroutine preconditioner
+    end interface
+
+
     integer, intent(in) :: nVar
     real, intent(inout) :: &      ! right hand side vector
          Residual_VCB(nVar,1:nI,1:nJ,1:nK,nBLK)
@@ -896,7 +910,7 @@ contains
     real :: rDotR, pDotADotP, rDotR0
 
     real, dimension(:,:,:,:,:), allocatable :: &
-         P_VGB, ADotP_VCB
+         P_VGB, ADotP_VCB, MMinusOneDotR_VCB
 
     integer :: i, j , k, iBlock
     !--------------------------------------------------------------------------
@@ -907,6 +921,11 @@ contains
 
     P_VGB = 0.0
     ADotP_VCB = 0.0
+
+    if(present(preconditioner))then
+       allocate(MMinusOneDotR_VCB(nVar,1:nI,1:nJ,1:nK,nBLK))
+       MMinusOneDotR_VCB = 0.0
+    end if
 
     !-------------- compute initial right hand side vector --------------
 
@@ -928,7 +947,12 @@ contains
 
     LOOP: do
 
-       rDotR = dot_product_mpi(0, Residual_VCB, Residual_VCB)
+       if(present(preconditioner))then
+          call preconditioner(nVar, Residual_VCB, MMinusOneDotR_VCB)
+          rDotR = dot_product_mpi(0, Residual_VCB, MMinusOneDotR_VCB)
+       else
+          rDotR = dot_product_mpi(0, Residual_VCB, Residual_VCB)
+       end if
 
        if(Iter == 0)then
           rDotR0 = rDotR
@@ -940,9 +964,13 @@ contains
 
        do iBlock = 1, nBlk
           if(unusedBlk(iBlock))CYCLE
-          P_VGB(:,1:nI,1:nJ,1:nK,iBlock) = &
-               P_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
-               + Residual_VCB(:,:,:,:,iBlock)/rDotR
+          if(present(preconditioner))then
+             P_VGB(:,1:nI,1:nJ,1:nK,iBlock) = P_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
+                  + MMinusOneDotR_VCB(:,:,:,:,iBlock)/rDotR
+          else
+             P_VGB(:,1:nI,1:nJ,1:nK,iBlock) = P_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
+                  + Residual_VCB(:,:,:,:,iBlock)/rDotR
+          end if
        end do
 
        call matvec(nVar, P_VGB, aDotP_VCB)
@@ -961,6 +989,7 @@ contains
     end do LOOP
 
     deallocate(P_VGB, aDotP_VCB)
+    if(allocated(MMinusOneDotR_VCB)) deallocate(MMinusOneDotR_VCB)
 
   contains
 
@@ -986,7 +1015,7 @@ contains
          if(unusedBlk(iBlock))CYCLE
          if(body_blk(iBlock))then
             do k=1,nK; do j=1,nJ; do i=1,nI
-               if(.not.true_cell(i, j, k, iBlock))CYCLE
+               if(.not.true_cell(i,j,k,iBlock))CYCLE
                DotProduct = DotProduct &
                     + sum( A_VGB(:,i,j,k,iBlock)*B_VCB(:,i,j,k,iBlock) )
             end do; end do; end do
@@ -1004,5 +1033,75 @@ contains
     end function dot_product_mpi
 
   end subroutine cg
+
+  !============================================================================
+
+  subroutine jacobi_preconditioner(nVar, VectorIn_VCB, VectorOut_VCB)
+
+    use ModMain, ONLY: unusedBLK
+    use ModSize, ONLY: nI, nJ, nK, nBlk
+
+    ! Inverts the nTemperature * nTemperature sub-matrices at the
+    ! block diagonal of the operator of heat-conduction + relaxation
+
+    ! Calculate VectorOut = M^{-1} \cdot VectorIn where the preconditioner
+    ! matrix, M^{-1}, should be symmetric positive definite
+
+    integer, intent(in) :: nVar
+    real, intent(inout) :: VectorIn_VCB(nVar,1:nI,1:nJ,1:nK,nBLK)
+    real, intent(out)   :: VectorOut_VCB(nVar,1:nI,1:nJ,1:nK,nBLK)
+
+    integer :: iVar, i, j , k, iBlock
+
+    real, dimension(nVar) :: Diag_V
+    real, allocatable, dimension(:) :: OffDiag_V
+    integer :: nOff
+
+    real :: MatrixInv_VV(nVar,nVar)
+
+    character(len=*), parameter :: NameSub = 'jacobi_preconditioner'
+    !--------------------------------------------------------------------------
+
+    if(nVar>1)then
+       nOff = (nVar - 1)*nVar/2
+       allocate(OffDiag_V(1:nOff))
+    end if
+
+    select case(nVar)
+    case(2)
+       do iBlock = 1, nBlk
+          if(unusedBlk(iBlock))CYCLE
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+
+             call get_diagonal_subblock
+
+             MatrixInv_VV = reshape( (/ &
+                  Diag_V(2)    , -OffDiag_V(1), &
+                  -OffDiag_V(1), Diag_V(1)  /), (/2,2/) ) &
+                  /(Diag_V(1)*Diag_V(2) - OffDiag_V(1)**2)
+
+             do iVar = 1, nVar
+                VectorOut_VCB(iVar,i,j,k,iBlock) = &
+                     sum( VectorIn_VCB(:,i,j,k,iBlock)*MatrixInv_VV(:,iVar) )
+             end do
+
+          end do; end do; end do
+       end do
+    case default
+       call stop_mpi(NameSub//': Currently, only two temperatures allowed')
+    end select
+
+    if(allocated(OffDiag_V)) deallocate(OffDiag_V)
+
+  contains
+
+    subroutine get_diagonal_subblock
+
+      !------------------------------------------------------------------------
+
+
+    end subroutine get_diagonal_subblock
+
+  end subroutine jacobi_preconditioner
 
 end module ModGrayDiffusion
