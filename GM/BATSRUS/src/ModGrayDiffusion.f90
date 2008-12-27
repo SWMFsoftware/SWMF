@@ -935,8 +935,8 @@ contains
           if(rDotR0 == 0.0) EXIT
        end if
 
-       if(TypeStop == 'abs' .and. rDotR <= Tolerance       ) return
-       if(TypeStop == 'rel' .and. rDotR <= Tolerance*rDotR0) return
+       if(TypeStop == 'abs' .and. rDotR <= Tolerance       ) EXIT
+       if(TypeStop == 'rel' .and. rDotR <= Tolerance*rDotR0) EXIT
 
        do iBlock = 1, nBlk
           if(unusedBlk(iBlock))CYCLE
