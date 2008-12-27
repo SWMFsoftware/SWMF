@@ -2112,7 +2112,7 @@ contains
        optimize_message_pass = 'all'
     endif
 
-    if ( UseGrayDiffusion .and. index(optimize_message_pass,'opt') > 0) then
+    if ( UseGrayDiffusion .and. index(optimize_message_pass,'opt') > 0) then !^CFG IF IMPLICIT BEGIN
        if(iProc==0 .and. optimize_message_pass /= 'allopt') then
           write(*,'(a)')NameSub//&
                ' WARNING: Radiation Flux Limiter does not work for'// &
