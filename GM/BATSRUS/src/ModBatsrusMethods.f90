@@ -296,6 +296,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
        part_steady_select, part_steady_switch
   use ModImplicit, ONLY: UseImplicit, UseSemiImplicit      !^CFG IF IMPLICIT
+  use ModGrayDiffusion, ONLY: advance_temperature          !^CFG IF IMPLICIT
 
   implicit none
 
@@ -360,6 +361,8 @@ subroutine BATS_advance(TimeSimulationLimit)
   if(UseDivBDiffusion)call clean_divb     !^CFG IF DIVBDIFFUSE
   call exchange_messages
 
+  if(UseGrayDiffusion .and. .not.UseImplicit) & !^CFG IF IMPLICIT
+       call advance_temperature           !^CFG IF IMPLICIT
   if(UseSemiImplicit) call advance_impl   !^CFG IF IMPLICIT
   
   if(UsePartSteady) then

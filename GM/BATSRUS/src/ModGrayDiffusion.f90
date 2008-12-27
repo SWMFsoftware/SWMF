@@ -3,7 +3,6 @@
 !============================================================================
 module ModGrayDiffusion
 
-  use ModSize,       ONLY: nI, nJ, nK, nDim
   use ModVarIndexes, ONLY: p_
 
   implicit none
@@ -19,9 +18,7 @@ module ModGrayDiffusion
   public :: set_frozen_coefficients
   public :: get_radiation_energy_flux
   public :: calc_source_gray_diffusion
-  public :: get_impl_gray_diff_state
-  public :: get_gray_diffusion_rhs
-  public :: update_impl_gray_diff
+  public :: advance_temperature
 
   ! Logical for adding Gray Diffusion
   logical, public :: IsNewBlockGrayDiffusion = .true.
@@ -40,15 +37,24 @@ module ModGrayDiffusion
   ! Internal energy needed for energy update
   real, allocatable :: Eint_VCB(:,:,:,:,:)
 
-  ! Local variables
-  real :: Erad_G(0:nI+1,0:nJ+1,0:nK+1)
+  ! Initial guess for conjugate gradient
+  real, allocatable :: Source_VCB(:,:,:,:,:)
+
+  ! radiation energy used for calculating radiative energy flux
+  real, allocatable :: Erad_G(:,:,:)
 
   real, parameter :: GammaRel = 4.0/3.0
 
   ! local index for extra internal energy to keep the compiler happy
   integer, parameter :: EintExtra_ = p_ - 1
 
-  ! named indexes for semi-implicit scheme
+  ! the solution vector containing the independent temperature variables
+  real, allocatable :: Temperature_VGB(:,:,:,:,:)
+
+  ! number of independent temperature variables
+  integer, parameter :: nTemperature = 2
+
+  ! named indexes for temerature variables
   integer, parameter :: TeImpl_ = 1, TradImpl_ = 2
 
 contains
@@ -56,19 +62,22 @@ contains
   !==========================================================================
   subroutine init_gray_diffusion
 
-    use ModImplicit, ONLY: nw, UseSemiImplicit
-    use ModSize,     ONLY: nBlk
+    use ModImplicit, ONLY: UseFullImplicit
+    use ModSize,     ONLY: nI, nJ, nK, nBlk, nDim
 
     !------------------------------------------------------------------------
 
     if(.not.allocated(DiffusionRad_FDB)) allocate( &
          DiffusionRad_FDB(1:nI+1,1:nJ+1,1:nK+1,nDim,nBlk), &
-         RelaxationCoef_CB(1:nI,1:nJ,1:nK,nBlk) )
+         RelaxationCoef_CB(1:nI,1:nJ,1:nK,nBlk), &
+         Erad_G(0:nI+1,0:nJ+1,0:nK+1))
 
-    if(UseSemiImplicit)then
+    if(.not.UseFullImplicit)then
        if(.not.allocated(SpecificHeat_VCB)) allocate( &
-            SpecificHeat_VCB(1:nw,1:nI,1:nJ,1:nK,nBlk), &
-            Eint_VCB(1:nw,1:nI,1:nJ,1:nK,nBlk) )
+            SpecificHeat_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk), &
+            Temperature_VGB(1:nTemperature,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk), &
+            Eint_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk), &
+            Source_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk) )
     end if
 
   end subroutine init_gray_diffusion
@@ -76,18 +85,18 @@ contains
   !==========================================================================
   subroutine set_frozen_coefficients(iBlock)
 
-    use ModAdvance,    ONLY: State_VGB, Eradiation_
-    use ModConst,      ONLY: cLightSpeed
-    use ModImplicit,   ONLY: UseSemiImplicit
-    use ModPhysics,    ONLY: Si2No_V, UnitT_, UnitEnergyDens_, &
+    use ModAdvance,  ONLY: State_VGB, Eradiation_
+    use ModConst,    ONLY: cLightSpeed
+    use ModImplicit, ONLY: UseFullImplicit
+    use ModPhysics,  ONLY: Si2No_V, UnitT_, UnitEnergyDens_, &
          UnitTemperature_, cRadiationNo
-    use ModUser,       ONLY: user_material_properties
+    use ModSize,     ONLY: nI, nJ, nK
+    use ModUser,     ONLY: user_material_properties
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    real :: PlanckOpacitySi
-    real :: CvSi, TeSi, Te, Trad
+    real :: PlanckOpacitySi, CvSi, TeSi, Te, Trad
     !------------------------------------------------------------------------
 
     do k=1,nK; do j=1,nJ; do i=1,nI
@@ -98,7 +107,7 @@ contains
        RelaxationCoef_CB(i,j,k,iBlock) = &
             PlanckOpacitySi*cLightSpeed/Si2No_V(UnitT_)
 
-       if(.not.UseSemiImplicit) CYCLE
+       if(UseFullImplicit) CYCLE
 
        Te = TeSi*Si2No_V(UnitTemperature_)
        Trad = sqrt(sqrt(State_VGB(Eradiation_,i,j,k,iBlock)/cRadiationNo))
@@ -109,8 +118,7 @@ contains
        SpecificHeat_VCB(TeImpl_,i,j,k,iBlock) = CvSi &
             *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
 
-       SpecificHeat_VCB(TradImpl_,i,j,k,iBlock) = &
-            4.0*cRadiationNo*Trad**3
+       SpecificHeat_VCB(TradImpl_,i,j,k,iBlock) = 4.0*cRadiationNo*Trad**3
 
     end do; end do; end do
 
@@ -125,7 +133,7 @@ contains
     !/
     use ModAdvance,    ONLY: State_VGB, Eradiation_
     use ModConst,      ONLY: cLightSpeed
-    use ModImplicit,   ONLY: UseSemiImplicit
+    use ModImplicit,   ONLY: UseFullImplicit
     use ModPhysics,    ONLY: Si2No_V, UnitX_, UnitU_, cRadiationNo
     use ModUser,       ONLY: user_material_properties
     use ModVarIndexes, ONLY: nVar
@@ -165,7 +173,7 @@ contains
 
        end if
 
-       if(UseSemiImplicit)then
+       if(.not.UseFullImplicit)then
           Trad = sqrt(sqrt(State_V(Eradiation_)/cRadiationNo))
           DiffRad = DiffRad*4.0*cRadiationNo*Trad**3
        end if
@@ -187,6 +195,7 @@ contains
 
     use ModParallel, ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot, BlkNeighborLev, NOBLK
+    use ModSize,     ONLY: nI, nJ, nK
 
     integer, intent(in) :: iBlock
     real, dimension(0:nI+1,0:nJ+1,0:nK+1), intent(inout) :: Scalar_G
@@ -392,6 +401,7 @@ contains
     use ModMain,      ONLY: x_, y_, z_
     use ModParallel,  ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot, BlkNeighborLev
+    use ModSize,      ONLY: nI, nJ, nK
 
     integer, intent(in) :: iDir, i, j, k, iBlock
     real, intent(out) :: FaceGrad_D(3)
@@ -562,10 +572,11 @@ contains
          uDotArea_XI, uDotArea_YI, uDotArea_ZI, Eradiation_
     use ModConst,      ONLY: cRadiation
     use ModGeometry,   ONLY: vInv_CB
+    use ModImplicit,   ONLY: UseFullImplicit
     use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_
+    use ModSize,       ONLY: nI, nJ, nK
     use ModUser,       ONLY: user_material_properties
     use ModVarIndexes, ONLY: Energy_, NameVar_V
-    use ModImplicit,   ONLY: UseSemiImplicit
 
     integer, intent(in) :: iBlock
 
@@ -597,7 +608,7 @@ contains
        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + RadCompression
 
        ! The absorption-emission term will be added by the implicit solver
-       if(UseSemiImplicit) CYCLE
+       if(.not.UseFullImplicit) CYCLE
 
        call user_material_properties(State_VGB(:,i,j,k,iBlock), &
             TeSiOut = TeSi)
@@ -620,146 +631,95 @@ contains
 
   end subroutine calc_source_gray_diffusion
 
-  !==========================================================================
+  !============================================================================
+  subroutine advance_temperature
 
-  subroutine get_impl_gray_diff_state(ImplState_GVB)
+    use ModMain, ONLY: unusedBLK
+    use ModSize, ONLY: nI, nJ, nK, nBlk
 
-    use ModAdvance,  ONLY: Eradiation_, State_VGB
-    use ModImplicit, ONLY: nw, nImplBlk, impl2iBlk
+    integer :: i, j, k, iBlock
+    integer :: Iter
+    real, parameter :: Tolerance = 1e-4
+    logical :: DoTest, DoTestMe
+
+    character(len=19) :: NameSub = 'advance_temperature'
+    !--------------------------------------------------------------------------
+
+    call set_oktest('cg', DoTest, DoTestMe)
+
+    call get_temperature
+
+    call cg(heat_conduction, nTemperature, Source_VCB, Temperature_VGB, &
+         .true., Tolerance, 'abs', Iter)
+
+    if(DoTestMe)write(*,*)NameSub,': Number of iterations =',Iter
+
+    do iBlock = 1, nBlk
+       if(unusedBlk(iBlock)) CYCLE
+
+       call update_conservative_energy(iBlock)
+    end do
+
+  end subroutine advance_temperature
+  !============================================================================
+
+  subroutine get_temperature
+
+    use ModAdvance,  ONLY: Eradiation_, State_VGB, StateOld_VCB
+    use ModMain,     ONLY: unusedBLK
     use ModPhysics,  ONLY: inv_gm1, cRadiationNo, Si2No_V, UnitTemperature_
-    use ModSize,     ONLY: MaxImplBlk
+    use ModSize,     ONLY: nI, nJ, nK, nBlk
     use ModUser,     ONLY: user_material_properties
 
-    real, intent(out) :: ImplState_GVB(0:nI+1,0:nJ+1,0:nK+1,nw,MaxImplBlk)
-
-    integer :: iImplBlock, iBlock, i, j, k
+    integer :: i, j, k, iBlock
     real :: TeSi, Einternal
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
-    do iImplBlock = 1, nImplBLK
-       iBlock = impl2iBLK(iImplBlock)
-       do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
-          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               TeSiOut = TeSi)
-
-          ImplState_GVB(i,j,k,TeImpl_,iImplBlock) = &
-               TeSi*Si2No_V(UnitTemperature_)
-
-          ImplState_GVB(i,j,k,TradImpl_,iImplBlock) = &
-               sqrt(sqrt(State_VGB(Eradiation_,i,j,k,iBlock) &
-               /cRadiationNo))
-       end do; end do; end do
+    do iBlock = 1, nBlk
+       if(unusedBlk(iBlock)) CYCLE
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          call user_material_properties(StateOld_VCB(:,i,j,k,iBlock), &
+               TeSiOut = TeSi)
+
+          Temperature_VGB(TeImpl_,i,j,k,iBlock) = &
+               TeSi*Si2No_V(UnitTemperature_)
+
+          Temperature_VGB(TradImpl_,i,j,k,iBlock) = &
+               sqrt(sqrt(StateOld_VCB(Eradiation_,i,j,k,iBlock) &
+               /cRadiationNo))
+
+          Source_VCB(:,i,j,k,iBlock) = &
+               SpecificHeat_VCB(:,i,j,k,iBlock) &
+               *Temperature_VGB(:,i,j,k,iBlock)
+
           Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
                + State_VGB(EintExtra_,i,j,k,iBlock)
 
           Eint_VCB(TeImpl_,i,j,k,iBlock) = &
-               Einternal &
-               - SpecificHeat_VCB(TeImpl_,i,j,k,iBlock) &
-               *ImplState_GVB(i,j,k,TeImpl_,iImplBlock)
+               Einternal - Source_VCB(TeImpl_,i,j,k,iBlock)
 
           Eint_VCB(TradImpl_,i,j,k,iBlock) = &
                State_VGB(Eradiation_,i,j,k,iBlock) &
-               - SpecificHeat_VCB(TradImpl_,i,j,k,iBlock) &
-               *ImplState_GVB(i,j,k,TradImpl_,iImplBlock)
+               - Source_VCB(TradImpl_,i,j,k,iBlock)
 
        end do; end do; end do
 
     end do
 
-  end subroutine get_impl_gray_diff_state
+  end subroutine get_temperature
 
   !==========================================================================
 
-  subroutine get_gray_diffusion_rhs(iBlock, StateImpl_VG, Rhs_CV)
-
-    use ModAdvance,  ONLY: Flux_VX, Flux_VY, Flux_VZ
-    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK
-    use ModImplicit, ONLY: nw
-    use ModMain,     ONLY: x_, y_, z_
-    use ModParallel, ONLY: NOBLK, NeiLev
-
-    integer, intent(in) :: iBlock
-    real, intent(inout) :: StateImpl_VG(nw,-1:nI+2,-1:nJ+2,-1:nK+2)
-    real, intent(out)   :: Rhs_CV(nI,nJ,nK,nw)
-
-    real :: InvDx2, InvDy2, InvDz2
-    real :: AbsorptionEmission
-    integer :: i, j, k, iVar
-    !------------------------------------------------------------------------
-
-!!! set floating outer boundary
-    if(NeiLev(1,iBlock) == NOBLK) StateImpl_VG(:,0   ,:,:) &
-         =                        StateImpl_VG(:,1   ,:,:)
-    if(NeiLev(2,iBlock) == NOBLK) StateImpl_VG(:,nI+1,:,:) &
-         =                        StateImpl_VG(:,nI  ,:,:)
-    if(NeiLev(3,iBlock) == NOBLK) StateImpl_VG(:,:,0   ,:) &
-         =                        StateImpl_VG(:,:,1   ,:)
-    if(NeiLev(4,iBlock) == NOBLK) StateImpl_VG(:,:,nJ+1,:) &
-         =                        StateImpl_VG(:,:,nJ  ,:)
-    if(NeiLev(5,iBlock) == NOBLK) StateImpl_VG(:,:,:,0   ) &
-         =                        StateImpl_VG(:,:,:,1   )
-    if(NeiLev(6,iBlock) == NOBLK) StateImpl_VG(:,:,:,nK+1) &
-         =                        StateImpl_VG(:,:,:,nK  )
-
-    ! Calculate radiative diffusion fluxes
-    InvDx2 = 1./dx_BLK(iBlock)**2
-    InvDy2 = 1./dy_BLK(iBlock)**2
-    InvDz2 = 1./dz_BLK(iBlock)**2
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-       Flux_VX(TradImpl_,i,j,k) = InvDx2*DiffusionRad_FDB(i,j,k,x_,iBlock) &
-            *(StateImpl_VG(TradImpl_,i,j,k) - StateImpl_VG(TradImpl_,i-1,j,k))
-    end do; end do; end do
-    do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-       Flux_VY(TradImpl_,i,j,k) = InvDy2*DiffusionRad_FDB(i,j,k,y_,iBlock) &
-            *(StateImpl_VG(TradImpl_,i,j,k) - StateImpl_VG(TradImpl_,i,j-1,k))
-    end do; end do; end do
-    do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-       Flux_VZ(TradImpl_,i,j,k) = InvDz2*DiffusionRad_FDB(i,j,k,z_,iBlock) &
-            *(StateImpl_VG(TradImpl_,i,j,k) - StateImpl_VG(TradImpl_,i,j,k-1))
-    end do; end do; end do
-
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       Rhs_CV(i,j,k,TradImpl_) = &
-            + Flux_VX(TradImpl_,i+1,j,k) - Flux_VX(TradImpl_,i,j,k) &
-            + Flux_VY(TradImpl_,i,j+1,k) - Flux_VY(TradImpl_,i,j,k) &
-            + Flux_VZ(TradImpl_,i,j,k+1) - Flux_VZ(TradImpl_,i,j,k)
-    end do; end do; end do
-
-    ! Source term due to absorption and emission
-    ! Sigma_a*(cRadiation*Te**4-Erad)
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
-
-       AbsorptionEmission = RelaxationCoef_CB(i,j,k,iBlock)&
-            *(StateImpl_VG(TeImpl_,i,j,k) - StateImpl_VG(TradImpl_,i,j,k))
-
-       ! dErad/dt = + AbsorptionEmission
-       Rhs_CV(i,j,k,TradImpl_) = Rhs_CV(i,j,k,TradImpl_) + AbsorptionEmission
-
-       ! dE/dt    = - AbsorptionEmission
-       Rhs_CV(i,j,k,TeImpl_)   =                         - AbsorptionEmission
-
-    end do; end do; end do
-
-    do iVar = 1, nw; do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       Rhs_CV(i,j,k,iVar) = Rhs_CV(i,j,k,iVar) &
-            /SpecificHeat_VCB(iVar,i,j,k,iBlock)
-    end do; end do; end do; end do
-
-  end subroutine get_gray_diffusion_rhs
-
-  !==========================================================================
-  subroutine update_impl_gray_diff(iBlock, StateImpl_GV)
+  subroutine update_conservative_energy(iBlock)
 
     use ModAdvance,  ONLY: State_VGB, p_, Eradiation_
     use ModEnergy,   ONLY: calc_energy_cell
-    use ModImplicit, ONLY: nw
     use ModPhysics,  ONLY: inv_gm1, No2Si_V, UnitEnergyDens_
+    use ModSize,     ONLY: nI, nJ, nK
     use ModUser,     ONLY: user_material_properties
 
     integer, intent(in) :: iBlock
-    real, intent(in) :: StateImpl_GV(nI,nJ,nK,nw)
 
     integer :: i, j, k
     real :: TeSi, EinternalSi, Einternal, Gamma
@@ -768,7 +728,7 @@ contains
     do k = 1,nK; do j = 1,nJ; do i = 1,nI
 
        Eint_VCB(:,i,j,k,iBlock) = Eint_VCB(:,i,j,k,iBlock) &
-            + SpecificHeat_VCB(:,i,j,k,iBlock)*StateImpl_GV(i,j,k,:)
+            + SpecificHeat_VCB(:,i,j,k,iBlock)*Temperature_VGB(:,i,j,k,iBlock)
 
        State_VGB(Eradiation_,i,j,k,iBlock) = Eint_VCB(TradImpl_,i,j,k,iBlock)
 
@@ -781,12 +741,268 @@ contains
        State_VGB(p_,i,j,k,iBlock) = Einternal*(Gamma-1.0)
 
        State_VGB(EintExtra_,i,j,k,iBlock) = &
-            (1.0/(Gamma-1.0) - inv_gm1)*State_VGB(p_,i,j,k,iBlock)
+            Einternal - inv_gm1*State_VGB(p_,i,j,k,iBlock)
 
     end do; end do; end do
 
     call calc_energy_cell(iBlock)
 
-  end subroutine update_impl_gray_diff
+  end subroutine update_conservative_energy
+
+  !============================================================================
+
+  subroutine heat_conduction(nVar, TNPlusOne_VGB, ADotTN_VCB)
+
+    use ModMain, ONLY: unusedBLK
+    use ModSize, ONLY: nI, nJ, nK, gcn, nBlk
+
+    integer, intent(in) :: nVar
+    real, intent(inout) :: &
+         TNPlusOne_VGB(nVar,1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,nBLK)
+    real, intent(out)   :: ADotTN_VCB(nVar,1:nI,1:nJ,1:nK,nBLK)
+
+    integer :: iBlock
+    !--------------------------------------------------------------------------
+
+    ! DoOneLayer, DoFacesOnly, No UseMonoteRestrict
+    call message_pass_cells8(.true., .true., .false., nVar, TNPlusOne_VGB)
+
+    do iBlock = 1, nBlk
+       if(unusedBlk(iBlock))CYCLE
+
+       call get_heat_conduction(iBlock, nVar, &
+            TNPlusOne_VGB(:,:,:,:,iBlock), ADotTN_VCB(:,:,:,:,iBlock))
+    end do
+
+  end subroutine heat_conduction
+
+  !============================================================================
+
+  subroutine get_heat_conduction(iBlock, nVar, TNPlusOne_VG, ADotTN_VC)
+
+    use ModAdvance,  ONLY: Flux_VX, Flux_VY, Flux_VZ
+    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK
+    use ModMain,     ONLY: x_, y_, z_, Dt
+    use ModParallel, ONLY: NOBLK, NeiLev
+    use ModSize,     ONLY: nI, nJ, nK, gcn
+
+    integer, intent(in) :: iBlock, nVar
+    real, intent(inout) :: &
+         TNPlusOne_VG(nVar,1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn)
+    real, intent(out)   :: ADotTN_VC(nVar,nI,nJ,nK)
+
+    real :: InvDx2, InvDy2, InvDz2
+    real :: Relaxation
+    integer :: i, j, k
+    !------------------------------------------------------------------------
+
+!!! set floating outer boundary
+    if(NeiLev(1,iBlock) == NOBLK) TNPlusOne_VG(:,0   ,:,:) &
+         =                        TNPlusOne_VG(:,1   ,:,:)
+    if(NeiLev(2,iBlock) == NOBLK) TNPlusOne_VG(:,nI+1,:,:) &
+         =                        TNPlusOne_VG(:,nI  ,:,:)
+    if(NeiLev(3,iBlock) == NOBLK) TNPlusOne_VG(:,:,0   ,:) &
+         =                        TNPlusOne_VG(:,:,1   ,:)
+    if(NeiLev(4,iBlock) == NOBLK) TNPlusOne_VG(:,:,nJ+1,:) &
+         =                        TNPlusOne_VG(:,:,nJ  ,:)
+    if(NeiLev(5,iBlock) == NOBLK) TNPlusOne_VG(:,:,:,0   ) &
+         =                        TNPlusOne_VG(:,:,:,1   )
+    if(NeiLev(6,iBlock) == NOBLK) TNPlusOne_VG(:,:,:,nK+1) &
+         =                        TNPlusOne_VG(:,:,:,nK  )
+
+    ! Calculate radiative diffusion fluxes
+    !!! The current implementation assumes one amr level
+    InvDx2 = 1./dx_BLK(iBlock)**2
+    InvDy2 = 1./dy_BLK(iBlock)**2
+    InvDz2 = 1./dz_BLK(iBlock)**2
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+       Flux_VX(TradImpl_,i,j,k) = -Dt*InvDx2*DiffusionRad_FDB(i,j,k,x_,iBlock) &
+            *(TNPlusOne_VG(TradImpl_,i,j,k) - TNPlusOne_VG(TradImpl_,i-1,j,k))
+    end do; end do; end do
+    do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
+       Flux_VY(TradImpl_,i,j,k) = -Dt*InvDy2*DiffusionRad_FDB(i,j,k,y_,iBlock) &
+            *(TNPlusOne_VG(TradImpl_,i,j,k) - TNPlusOne_VG(TradImpl_,i,j-1,k))
+    end do; end do; end do
+    do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+       Flux_VZ(TradImpl_,i,j,k) = -Dt*InvDz2*DiffusionRad_FDB(i,j,k,z_,iBlock) &
+            *(TNPlusOne_VG(TradImpl_,i,j,k) - TNPlusOne_VG(TradImpl_,i,j,k-1))
+    end do; end do; end do
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+
+       ADotTN_VC(:,i,j,k) = SpecificHeat_VCB(:,i,j,k,iBlock) &
+            *TNPlusOne_VG(:,i,j,k)
+
+       ! Heat conduction
+       ADotTN_VC(TradImpl_,i,j,k) = ADotTN_VC(TradImpl_,i,j,k) &
+            + Flux_VX(TradImpl_,i+1,j,k) - Flux_VX(TradImpl_,i,j,k) &
+            + Flux_VY(TradImpl_,i,j+1,k) - Flux_VY(TradImpl_,i,j,k) &
+            + Flux_VZ(TradImpl_,i,j,k+1) - Flux_VZ(TradImpl_,i,j,k)
+
+       ! Temperature relaxation
+       Relaxation = Dt*RelaxationCoef_CB(i,j,k,iBlock) &
+            *(TNPlusOne_VG(TeImpl_,i,j,k) - TNPlusOne_VG(TradImpl_,i,j,k))
+
+       ADotTN_VC(TeImpl_,i,j,k)   = ADotTN_VC(TeImpl_,i,j,k)   + Relaxation
+       ADotTN_VC(TradImpl_,i,j,k) = ADotTN_VC(TradImpl_,i,j,k) - Relaxation
+
+    end do; end do; end do
+
+  end subroutine get_heat_conduction
+
+  !==========================================================================
+
+  subroutine cg(matvec, nVar, Residual_VCB, Solution_VGB, IsInit, &
+       Tolerance, TypeStop, Iter)
+
+    ! conjugated gradient for symmetric and positive definite matrix A
+
+    use ModMain,     ONLY: unusedBLK
+    use ModSize, ONLY: nI, nJ, nK, gcn, nBlk
+
+    ! subroutine for matrix vector multiplication 
+    interface
+       subroutine matvec(nVar, VectorIn_VGB, VectorOut_VCB)
+         use ModSize, ONLY: nI, nJ, nK, gcn, nBlk
+
+         ! Calculate VectorOut = M dot VectorIn,
+         ! where M is the symmetric positive definite matrix
+
+         ! To allow the usage of message_pass_cells,
+         ! the input vector should be declared with intent(inout)
+         ! and with ghost cells:
+         integer, intent(in) :: nVar
+         real, intent(inout) :: &
+              VectorIn_VGB(nVar,1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,nBLK)
+         real, intent(out)   :: VectorOut_VCB(nVar,1:nI,1:nJ,1:nK,nBLK)
+       end subroutine matvec
+    end interface
+
+    integer, intent(in) :: nVar
+    real, intent(inout) :: &      ! right hand side vector
+         Residual_VCB(nVar,1:nI,1:nJ,1:nK,nBLK)
+    real, intent(inout) :: &      ! initial guess / solution vector
+         Solution_VGB(nVar,1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,nBLK)
+    logical, intent(in) :: IsInit ! true if Solution_VGB contains initial guess
+    real, intent(in) :: Tolerance ! required / achieved residual
+
+    character (len=3), intent(in) :: TypeStop
+    !      Determine stopping criterion (||.|| denotes the 2-norm):
+    !      typestop='rel'  -- relative stopping crit.: ||res|| <= Tol*||res0||
+    !      typestop='abs'  -- absolute stopping crit.: ||res|| <= Tol
+ 
+    integer, intent(out) :: Iter ! actual number of iterations
+
+    real :: rDotR, pDotADotP, rDotR0
+
+    real, dimension(:,:,:,:,:), allocatable :: &
+         P_VGB, ADotP_VCB
+
+    integer :: i, j , k, iBlock
+    !--------------------------------------------------------------------------
+
+    allocate( &
+         P_VGB(nVar,1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,nBLK), &
+         ADotP_VCB(nVar,1:nI,1:nJ,1:nK,nBLK) )
+
+    P_VGB = 0.0
+    ADotP_VCB = 0.0
+
+    !-------------- compute initial right hand side vector --------------
+
+    if(IsInit)then
+       call matvec(nVar, Solution_VGB, ADotP_VCB)
+       do iBlock = 1, nBlk
+          if(unusedBlk(iBlock))CYCLE
+          Residual_VCB(:,:,:,:,iBlock) = Residual_VCB(:,:,:,:,iBlock) &
+               - ADotP_VCB(:,:,:,:,iBlock)
+       end do
+    else
+       do iBlock = 1, nBlk
+          if(unusedBlk(iBlock))CYCLE
+          Solution_VGB(:,:,:,:,iBlock) = 0.0
+       end do
+    end if
+
+    Iter = 0
+
+    LOOP: do
+
+       rDotR = dot_product_mpi(0, Residual_VCB, Residual_VCB)
+
+       if(Iter == 0)then
+          rDotR0 = rDotR
+          if(rDotR0 == 0.0) EXIT
+       end if
+
+       if(TypeStop == 'abs' .and. rDotR <= Tolerance       ) return
+       if(TypeStop == 'rel' .and. rDotR <= Tolerance*rDotR0) return
+
+       do iBlock = 1, nBlk
+          if(unusedBlk(iBlock))CYCLE
+          P_VGB(:,1:nI,1:nJ,1:nK,iBlock) = &
+               P_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
+               + Residual_VCB(:,:,:,:,iBlock)/rDotR
+       end do
+
+       call matvec(nVar, P_VGB, aDotP_VCB)
+
+       pDotADotP = dot_product_mpi(gcn, P_VGB(:,:,:,:,:), aDotP_VCB)
+       do iBlock = 1, nBlk
+          if(unusedBlk(iBlock))CYCLE
+          Residual_VCB(:,:,:,:,iBlock) = Residual_VCB(:,:,:,:,iBlock) &
+               - aDotP_VCB(:,:,:,:,iBlock)/pDotADotP
+          Solution_VGB(:,1:nI,1:nJ,1:nK,iBlock) = &
+               Solution_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
+               + P_VGB(:,1:nI,1:nJ,1:nK,iBlock)/pDotADotP
+       end do
+
+       Iter = Iter + 1
+    end do LOOP
+
+    deallocate(P_VGB, aDotP_VCB)
+
+  contains
+
+    real function dot_product_mpi(gcn, A_VGB, B_VCB)
+
+      use ModMain,     ONLY: unusedBLK
+      use ModGeometry, ONLY: true_cell, body_blk
+      use ModMpi
+      use ModProcMH,   ONLY: iComm
+
+      integer, intent(in) :: gcn
+      real, intent(in) :: &
+           A_VGB(nVar,1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,nBlk)
+      real, intent(in) :: B_VCB(nVar,1:nI,1:nJ,1:nK,nBlk)
+ 
+      real :: DotProduct, DotProductMpi
+      integer :: iError, i, j, k, iBlock
+      !------------------------------------------------------------------------
+
+      DotProduct = 0.0
+
+      do iBlock = 1, nBlk
+         if(unusedBlk(iBlock))CYCLE
+         if(body_blk(iBlock))then
+            do k=1,nK; do j=1,nJ; do i=1,nI
+               if(.not.true_cell(i, j, k, iBlock))CYCLE
+               DotProduct = DotProduct &
+                    + sum( A_VGB(:,i,j,k,iBlock)*B_VCB(:,i,j,k,iBlock) )
+            end do; end do; end do
+         else
+            DotProduct = DotProduct &
+                 + sum( A_VGB(:,1:nI,1:nJ,1:nK,iBlock)*B_VCB(:,:,:,:,iBlock) )
+         end if
+      end do
+
+      call MPI_allreduce(DotProduct, DotProductMpi, 1, MPI_REAL, MPI_SUM, &
+           iComm, iError)
+
+      dot_product_mpi = DotProductMpi
+
+    end function dot_product_mpi
+
+  end subroutine cg
 
 end module ModGrayDiffusion

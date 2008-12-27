@@ -1476,7 +1476,7 @@ contains
            pL, pR, UnL, UnR, UnStar
       use ModPhysics, ONLY: inv_gm1
       use ModVarIndexes
-      use ModImplicit, ONLY: UseSemiImplicit   !^CFG IF IMPLICIT
+      use ModImplicit, ONLY: UseFullImplicit   !^CFG IF IMPLICIT
 
       real::Rho, Un, P, StateStar_V(nVar)
       real::RhoSide,UnSide
@@ -1543,7 +1543,7 @@ contains
       !^CFG IF IMPLICIT BEGIN
       if(UseGrayDiffusion)then
          ! Diffusive radiation flux is added later for semi-implicit scheme
-         if(.not.UseSemiImplicit) Flux_V(Eradiation_) = &
+         if(UseFullImplicit) Flux_V(Eradiation_) = &
               Flux_V(Eradiation_) + sum(EradFlux_D*Normal_D)
 
          ! radiation pressure gradient
@@ -1599,7 +1599,7 @@ contains
     use ModMultiFluid
     use ModMain,    ONLY: UseHyperbolicDivb, SpeedHyp2
     use ModAdvance, ONLY: Hyp_, Eradiation_
-    use ModImplicit, ONLY: UseSemiImplicit     !^CFG IF IMPLICIT
+    use ModImplicit, ONLY: UseFullImplicit     !^CFG IF IMPLICIT
 
     real,    intent(in) :: State_V(nVar)       ! input primitive state
     real,    intent(in) :: B0x, B0y, B0z       ! B0
@@ -1679,7 +1679,7 @@ contains
     !^CFG IF IMPLICIT BEGIN
     if(UseGrayDiffusion)then
        ! Diffusive radiation flux is added later for semi-implicit scheme
-       if(.not.UseSemiImplicit) Flux_V(Eradiation_) = &
+       if(UseFullImplicit) Flux_V(Eradiation_) = &
             Flux_V(Eradiation_) + sum(EradFlux_D*Normal_D)
 
        ! radiation pressure gradient

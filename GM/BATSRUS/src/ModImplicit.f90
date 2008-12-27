@@ -37,7 +37,7 @@ module ModImplicit
 
   ! Use semi-implicit scheme
   logical :: UseSemiImplicit = .false.
-  character(len=40) :: TypeSemiImplicit = 'radiation'
+  character(len=40) :: TypeSemiImplicit = 'none'
 
   !\
   ! Parameters for selecting implicit blocks
@@ -259,13 +259,15 @@ contains
 
     use ModUtilities, ONLY: check_allocate
     integer :: iError
+
+    character(len=*), parameter:: NameSub = 'init_mod_implicit'
     !----------------------------------------------------------------------
     if(allocated(w_k)) return
 
     if(UseSemiImplicit)then
        select case(TypeSemiImplicit)
-       case('radiation')
-          nw = 2
+       case default
+          call stop_mpi(NameSub//': nw unknown for'//TypeSemiImplicit)
        end select
     else
        nw = nVar

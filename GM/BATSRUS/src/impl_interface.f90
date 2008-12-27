@@ -59,15 +59,17 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,w)
   use ModAdvance, ONLY : State_VGB, Energy_GBI, nVar
   use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
   use ModImplicit
-  use ModGrayDiffusion, ONLY: get_impl_gray_diff_state
   implicit none
 
   integer,intent(in) :: imin,imax,jmin,jmax,kmin,kmax
   real, intent(out)  :: w(imin:imax,jmin:jmax,kmin:kmax,nw,MaxImplBLK)
+
   integer :: implBLK, iBLK, iVar
   logical :: DoTest, DoTestMe
+
+  character(len=*), parameter:: NameSub = 'explicit2implicit'
   !---------------------------------------------------------------------------
-  call set_oktest('explicit2implicit',DoTest,DoTestMe)
+  call set_oktest(NameSub,DoTest,DoTestMe)
   if(DoTestMe)write(*,*)'Starting explicit2implicit: ',&
        'imin,imax,jmin,jmax,kmin,kmax=',imin,imax,jmin,jmax,kmin,kmax
 
@@ -77,8 +79,10 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,w)
 
   if(UseSemiImplicit)then
      select case(TypeSemiImplicit)
-     case("radiation")
-        call get_impl_gray_diff_state(w)
+     case default
+        call stop_mpi(NameSub//': no get_impl_state implemented for' &
+             //TypeSemiImplicit)
+!!!     call get_impl_state(w)
      end select
   else
      do implBLK=1,nImplBLK
@@ -141,20 +145,22 @@ subroutine implicit2explicit(w)
   use ModMain, ONLY: nI,nJ,nK,MaxImplBLK
   use ModImplicit, ONLY: nw, nImplBLK, impl2iBLK, &
        UseSemiImplicit, TypeSemiImplicit
-  use ModGrayDiffusion, ONLY: update_impl_gray_diff
   implicit none
 
   real :: w(nI,nJ,nK,nw,MaxImplBLK)
   integer :: implBLK, iBLK
-  !---------------------------------------------------------------------------
 
+  character(len=*), parameter:: NameSub = 'implicit2explicit'
+  !---------------------------------------------------------------------------
 
   do implBLK=1,nImplBLK
      iBLK=impl2iBLK(implBLK)
      if(UseSemiImplicit)then
         select case(TypeSemiImplicit)
-        case('radiation')
-           call update_impl_gray_diff(iBLK, w(:,:,:,:,implBLK))
+        case default
+           call stop_mpi(NameSub//': no update_impl implemented for' &
+                //TypeSemiImplicit)
+!!!        call update_impl(iBLK, w(:,:,:,:,implBLK))
         end select
      else
         call impl2expl(w(:,:,:,:,implBLK),iBLK)
@@ -248,7 +254,6 @@ end subroutine get_residual
 !==============================================================================
 subroutine get_semi_impl_rhs(StateImpl_GVB, Residual_CVB)
 
-  use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs
   use ModImplicit, ONLY: StateSemi_VGB, nw, nImplBlk, impl2iblk, &
        TypeSemiImplicit
   use ModMain, ONLY: dt
@@ -259,6 +264,8 @@ subroutine get_semi_impl_rhs(StateImpl_GVB, Residual_CVB)
   real, intent(out) :: Residual_CVB(nI,nJ,nK,nw,MaxImplBlk)
 
   integer :: iImplBlock, iBlock, i, j, k, iVar
+
+  character(len=*), parameter:: NameSub = 'get_semi_impl_rhs'
   !------------------------------------------------------------------------
   ! Initialize all elements
   StateSemi_VGB = 0.0
@@ -275,10 +282,12 @@ subroutine get_semi_impl_rhs(StateImpl_GVB, Residual_CVB)
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
      select case(TypeSemiImplicit)
-     case('radiation')
-        Residual_CVB(:,:,:,:,iImplBlock) = 0.0
-        call get_gray_diffusion_rhs(iBlock, &
-             StateSemi_VGB(:,:,:,:,iBlock), Residual_CVB(:,:,:,:,iImplBlock))
+     case default
+        call stop_mpi(NameSub//': no get_rhs implemented for' &
+             //TypeSemiImplicit)
+!!!        Residual_CVB(:,:,:,:,iImplBlock) = 0.0
+!!!        call get_rhs(iBlock, &
+!!!             StateSemi_VGB(:,:,:,:,iBlock), Residual_CVB(:,:,:,:,iImplBlock))
      end select
 
      Residual_CVB(:,:,:,:,iImplBlock) = dt*Residual_CVB(:,:,:,:,iImplBlock)
@@ -288,7 +297,6 @@ end subroutine get_semi_impl_rhs
 !==============================================================================
 subroutine get_semi_impl_residual(StateImpl_CVB)
 
-  use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs
   use ModImplicit, ONLY: StateSemi_VGB, nw, nImplBlk, impl2iblk, &
        TypeSemiImplicit
   use ModMain, ONLY: dt
@@ -299,6 +307,8 @@ subroutine get_semi_impl_residual(StateImpl_CVB)
 
   integer :: iImplBlock, iBlock, i, j, k, iVar
   real, allocatable, save :: Rhs_CV(:,:,:,:)
+
+  character(len=*), parameter:: NameSub = 'get_semi_impl_residual'
   !------------------------------------------------------------------------
 
   if(.not.allocated(Rhs_CV)) allocate(Rhs_CV(nI,nJ,nK,nw))
@@ -319,9 +329,11 @@ subroutine get_semi_impl_residual(StateImpl_CVB)
      iBlock = impl2iBLK(iImplBlock)
 
      select case(TypeSemiImplicit)
-     case('radiation')
-        call get_gray_diffusion_rhs(iBlock, &
-             StateSemi_VGB(:,:,:,:,iBlock), Rhs_CV)
+     case default
+        call stop_mpi(NameSub//': no get_rhs implemented for' &
+             //TypeSemiImplicit)
+!!!        call get_rhs(iBlock, &
+!!!             StateSemi_VGB(:,:,:,:,iBlock), Rhs_CV)
      end select
 
      StateImpl_CVB(:,:,:,:,iImplBlock) = StateImpl_CVB(:,:,:,:,iImplBlock) &

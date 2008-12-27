@@ -2112,14 +2112,6 @@ contains
        optimize_message_pass = 'all'
     endif
 
-    if (UseGrayDiffusion .and. .not.UseFullImplicit  & !^CFG IF IMPLICIT BEGIN
-         .and. .not.UseSemiImplicit)then
-       if(iProc==0) write(*,'(a)')NameSub// &
-            ' ERROR: The radiation model in gray nonequilibrium diffusion'// &
-            ' only works together with the full/semi implicit schemes'
-       if(UseStrict)call stop_mpi('Correct PARAM.in!')
-    end if                                                
-
     if ( UseGrayDiffusion .and. index(optimize_message_pass,'opt') > 0) then
        if(iProc==0 .and. optimize_message_pass /= 'allopt') then
           write(*,'(a)')NameSub//&
