@@ -191,7 +191,20 @@ contains
        x = x_BLK(i,j,k,iBlock)
        y = y_BLK(i,j,k,iBlock)
 
-       if(nDimHyades == 1)then
+       if(nDimHyades /= 2)then
+
+          if(UseHyadesFile)then
+             ! Be - Xe interface is given by Hyades file
+             xBe = xBeHyades
+          else
+             ! Be - Xe interface is at the shock defined by #SHOCKPOSITION
+             xBe = ShockPosition - ShockSlope*y
+          end if
+
+          ! Distance from Be disk: positive for x < xBe
+          DxBe = xBe - x
+
+          ! Add a plastic tube if required
           if(UseTube)then
              ! Distance from plastic wall: 
              ! positive for rInnerTube < |y| < rOuterTube and x > xEndTube only
@@ -227,6 +240,25 @@ contains
              if(x >= xEndTube .and. abs(y) > rOuterTube) &
                   State_VGB(Rho_,i,j,k,iBlock) = &
                   RhoDimOutside*Io2No_V(UnitRho_)
+
+             ! Berylium is left of xBe inside rInnerTube 
+             ! and it is left of xEndTube outside
+             State_VGB(LevelBe_,i,j,k,iBlock) = &
+                  max(xEndTube - x, min(DxBe, rInnerTube - abs(y)))
+
+             ! Xenon is right of xBe inside rInnerTube and 
+             ! right of xEndTube outside rOuterTube
+             State_VGB(LevelXe_,i,j,k,iBlock) = max( &
+                  min( x - xEndTube, abs(y) - rOuterTube), &
+                  min( -DxBe, rInnerTube - abs(y)) )
+
+             ! Plastic 
+             State_VGB(LevelPl_,i,j,k,iBlock) = DxyPl
+          else
+             ! If there is no plastic tube, things are easy
+             State_VGB(LevelBe_,i,j,k,iBlock) =  DxBe
+             State_VGB(LevelXe_,i,j,k,iBlock) = -DxBe
+             State_VGB(LevelPl_,i,j,k,iBlock) = -1e30
           end if
 
           ! Distance from gold washer xEndTube < x < xEndTube + WidthGold
@@ -240,32 +272,7 @@ contains
 
           end if
 
-          if(UseHyadesFile)then
-             ! Be - Xe interface is given by Hyades file
-             xBe = xBeHyades
-          else
-             ! Be - Xe interface is at the shock defined by #SHOCKPOSITION
-             xBe = ShockPosition - ShockSlope*y
-          end if
-
-          ! Distance from Be disk: positive for x < xBe
-          DxBe = xBe - x
-
-          ! Plastic is between rInnerTube and rOuterTube and right of xEndTube
-          State_VGB(LevelPl_,i,j,k,iBlock) = DxyPl
-
-          ! Berylium is left of xBe inside rInnerTube 
-          ! and it is left of xEndTube outside
-          State_VGB(LevelBe_,i,j,k,iBlock) = &
-               max(xEndTube - x, min(DxBe, rInnerTube - abs(y)))
-
-          ! Xenon is right of xBe inside rInnerTube and 
-          ! right of xEndTube outside rOuterTube
-          State_VGB(LevelXe_,i,j,k,iBlock) = max( &
-               min( x - xEndTube, abs(y) - rOuterTube), &
-               min( -DxBe, rInnerTube - abs(y)) )
-
-       end if ! nDim == 1
+       end if ! nDim /= 2
 
        if(UseMixedCell)then
           ! Use atomic concentrations instead of smooth level set functions
@@ -299,7 +306,7 @@ contains
 
        ! Calculate internal energy from pressure and density
        iMaterial_I = maxloc(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock))
-       iMaterial = iMaterial_I(1) - 1
+       iMaterial   = iMaterial_I(1) - 1
 
        RhoSi = State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_)
        pSi   = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
