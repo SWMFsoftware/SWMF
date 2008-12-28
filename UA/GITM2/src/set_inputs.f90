@@ -304,23 +304,23 @@ subroutine set_inputs
               IsDone = .true.
            endif
 
-           select case (TypeLimiter)
-           case("minmod")
-              UseMinMod = .true.
-              UseMC     = .false.
-           case("mc")
-              UseMinMod = .false.
-              UseMC     = .true.
-           case("beta")
-              UseMinMod = .false.
-              UseMC     = .true.
-           case default
-              write(*,*) "-------------------------------------------"
-              write(*,*) "!!! WARNING"
-              write(*,*) "Limited is wrong : ", TypeLimiter
-              write(*,*) "-------------------------------------------"
-              IsDone = .true.
-           end select
+           call read_in_real(BetaLimiter, iError)
+           if (iError /= 0) then
+              BetaLimiter = 1.6
+              if (TypeLimiter == "minmod") BetaLimiter = 1.0
+              if (iProc == 0) then
+                 write(*,*) "You can now set the limiter value yourself!"
+                 write(*,*) '#LIMITER'
+                 write(*,*) 'TypeLimiter  (string)'
+                 write(*,*) 'BetaLimiter  (real between 1.0-minmod and 2.0-mc)'
+              endif
+              iError = 0
+           else
+              if (BetaLimiter < 1.0) BetaLimiter = 1.0
+              if (BetaLimiter > 2.0) BetaLimiter = 2.0
+              if (iDebugLevel > 2) &
+                   write(*,*) "===>Beta Limiter set to ",BetaLimiter
+           endif
 
         case ("#DEBUG")
            call read_in_int(iDebugLevel, iError)

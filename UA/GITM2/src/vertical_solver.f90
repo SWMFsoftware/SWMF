@@ -360,7 +360,6 @@ subroutine calc_facevalues_alts(Var, VarLeft, VarRight)
 
   use ModVertical, only: dAlt_F, InvDAlt_F
   use ModSizeGITM, only: nAlts
-  use ModInputs, only: UseMinMod, UseMC
   use ModLimiterGitm
 
   implicit none
@@ -377,9 +376,7 @@ subroutine calc_facevalues_alts(Var, VarLeft, VarRight)
      dVarUp            = (Var(i+1) - Var(i))   * InvDAlt_F(i+1)
      dVarDown          = (Var(i)   - Var(i-1)) * InvDAlt_F(i)
 
-     if (UseMinMod) dVarLimited(i) = Limiter_minmod(dVarUp, dVarDown)
-
-     if (UseMC) dVarLimited(i) = Limiter_mc(dVarUp, dVarDown)
+     dVarLimited(i) = Limiter_mc(dVarUp, dVarDown)
 
   end do
 

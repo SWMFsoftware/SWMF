@@ -63,8 +63,7 @@ module ModInputs
   real :: AltMin =  95.0 * 1000.0
   real :: AltMax = 500.0 * 1000.0
 
-  logical :: UseMinMod = .false.
-  logical :: UseMC = .true.
+  real :: BetaLimiter = 2.0
 
   real :: ConcentrationLatitude = 45.0
   real :: StretchingPercentage = 0.0

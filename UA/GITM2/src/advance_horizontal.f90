@@ -502,7 +502,6 @@ subroutine calc_facevalues_lats(iLon, iAlt, iBlock, Var, VarLeft, VarRight)
 
   use ModSizeGITM, only: nLats
   use ModGITM, only: dLatDist_FB, InvDLatDist_FB
-  use ModInputs, only: TypeLimiter, UseMinMod, UseMC
   use ModLimiterGitm
 
   implicit none
@@ -516,21 +515,11 @@ subroutine calc_facevalues_lats(iLon, iAlt, iBlock, Var, VarLeft, VarRight)
   integer :: i
   !---------------------------------------------------------------------------
 
-  if (UseMinMod) then 
-     do i=0,nLats+1
-        dVarUp   = (Var(i+1) - Var(i))  *InvDLatDist_FB(iLon,i+1,iAlt,iBlock)
-        dVarDown = (Var(i)   - Var(i-1))*InvDLatDist_FB(iLon,i  ,iAlt,iBlock)
-        dVarLimited(i) = Limiter_minmod(dVarUp, dVarDown)
-     end do
-  endif
-
-  if (UseMC) then
-     do i=0,nLats+1
-        dVarUp   = (Var(i+1) - Var(i))   * InvDLatDist_FB(iLon,i+1,iAlt,iBlock)
-        dVarDown = (Var(i)   - Var(i-1)) * InvDLatDist_FB(iLon,i  ,iAlt,iBlock)
-        dVarLimited(i)= Limiter_mc(dVarUp, dVarDown)
-     end do
-  endif
+  do i=0,nLats+1
+     dVarUp   = (Var(i+1) - Var(i))   * InvDLatDist_FB(iLon,i+1,iAlt,iBlock)
+     dVarDown = (Var(i)   - Var(i-1)) * InvDLatDist_FB(iLon,i  ,iAlt,iBlock)
+     dVarLimited(i)= Limiter_mc(dVarUp, dVarDown)
+  end do
 
   do i=1,nLats+1
      VarLeft(i) =Var(i-1)+0.5*dVarLimited(i-1)*dLatDist_FB(iLon,i,iAlt,iBlock)
@@ -545,7 +534,6 @@ subroutine calc_facevalues_lons(iLat, iAlt, iBlock, Var, VarLeft, VarRight)
 
   use ModSizeGITM, only: nLons
   use ModGITM, only: dLonDist_FB, InvDLonDist_FB
-  use ModInputs, only: UseMinMod, UseMC
   use ModLimiterGitm
 
   implicit none
@@ -558,21 +546,11 @@ subroutine calc_facevalues_lons(iLat, iAlt, iBlock, Var, VarLeft, VarRight)
 
   integer :: i
 
-  if (UseMinMod) then 
-     do i=0,nLons+1
-        dVarUp   = (Var(i+1) - Var(i))  *InvDLonDist_FB(i+1,iLat,iAlt,iBlock)
-        dVarDown = (Var(i)   - Var(i-1))*InvDLonDist_FB(i  ,iLat,iAlt,iBlock)
-        dVarLimited(i) = Limiter_minmod(dVarUp, dVarDown)
-     end do
-  endif
-
-  if (UseMC) then
-     do i=0,nLons+1
-        dVarUp   = (Var(i+1) - Var(i))  *InvDLonDist_FB(i+1,iLat,iAlt,iBlock)
-        dVarDown = (Var(i)   - Var(i-1))*InvDLonDist_FB(i  ,iLat,iAlt,iBlock)
-        dVarLimited(i)= Limiter_mc(dVarUp, dVarDown)
-     end do
-  endif
+  do i=0,nLons+1
+     dVarUp   = (Var(i+1) - Var(i))  *InvDLonDist_FB(i+1,iLat,iAlt,iBlock)
+     dVarDown = (Var(i)   - Var(i-1))*InvDLonDist_FB(i  ,iLat,iAlt,iBlock)
+     dVarLimited(i)= Limiter_mc(dVarUp, dVarDown)
+  end do
 
   do i=1,nLons+1
      VarLeft(i) =Var(i-1)+0.5*dVarLimited(i-1)*dLonDist_FB(i,iLat,iAlt,iBlock)
