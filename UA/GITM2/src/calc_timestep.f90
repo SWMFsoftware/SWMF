@@ -27,8 +27,6 @@ subroutine calc_timestep_horizontal
 
   do iBlock = 1, nBlocks
 
-     call calc_rates(iBlock)
-
      do iAlt = 1,nAlts
 
         ! Calculate maximum propagation speeds for the horizontal directions
@@ -107,8 +105,6 @@ subroutine calc_timestep_vertical
   iLonSave = 0
 
   do iBlock = 1, nBlocks
-
-     call calc_rates(iBlock)
 
      do iLon = 1,nLons
         do iLat = 1,nLats

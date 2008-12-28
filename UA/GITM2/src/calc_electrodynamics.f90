@@ -269,6 +269,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
      call calc_physics(iBlock)
      call calc_rates(iBlock)
+     call calc_collisions(iBlock)
      call get_potential(iBlock)
      call calc_efield(iBlock)
 

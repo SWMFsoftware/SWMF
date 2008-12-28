@@ -282,43 +282,6 @@ trouble = .false.
   do iAlt = 0, nAlts+1
 
 ! -------------------------------------------------------------------------------
-!  B&K (1973) mixture method used for cp calculation
-!  GITM formulation for cp  seems to be identical to that of vtgcm2d
-!  cpmix = RGAS*AMU*(3.5*pco2/Mass(iCO2_) + &
-!          3.5*(pn2/Mass(iN2_)+pco/Mass(iCO_)  + &
-!          2.5*(po/Mass(iO_))
-! -------------------------------------------------------------------------------
-!    
-! The Vibration-2 is a convertion from cp to cv.  Cv should be
-! used when in an altitude coordinate system.  Cp is for a 
-! pressure based system.
-
-     cp(:,:,iAlt,iBlock) = 0.0
-     Gamma(:,:,iAlt,iBlock) = 0.0  
-
-     do iSpecies = 1, nSpecies
-        cp(:,:,iAlt,iBlock) = cp(:,:,iAlt,iBlock) + &
-             (Vibration(iSpecies)-2) * &
-             NDensityS(1:nLons,1:nLats,iAlt,iSpecies,iBlock) * &
-             (Boltzmanns_Constant / Mass(iSpecies))
-
-!!! Gamma -1 = sum(n_i * (gamma_i -1))/n_total
-!!! where gamma_i -1 = 2 / (Vibration -2) 
-
-        Gamma(1:nLons,1:nLats,iAlt,iBlock) = &
-             Gamma(1:nLons,1:nLats,iAlt,iBlock) + &
-             NDensityS(1:nLons,1:nLats,iAlt,iSpecies,iBlock) / & 
-             (Vibration(iSpecies)-2)    
-
-     enddo
-
-     cp(:,:,iAlt,iBlock) = cp(:,:,iAlt,iBlock) / &
-          (2.0 * NDensity(1:nLons,1:nLats,iAlt,iBlock))
-
-     Gamma(1:nLons,1:nLats,iAlt,iBlock) = &
-          Gamma(1:nLons,1:nLats,iAlt,iBlock) *2.0/ &   
-          NDensity(1:nLons,1:nLats,iAlt,iBlock) + 1 
-! -------------------------------------------------------------------------------
 !
 !    if (Is1D .and. UseKappa1DCorrection) then
 !       KappaTemp(:,:,iAlt,iBlock) = KappaTemp0 * &
@@ -332,21 +295,6 @@ trouble = .false.
 !    endif
 
         KappaTemp(:,:,iAlt,iBlock) =  ktmix(1:nLons,1:nLats,iAlt) 
-
-     iiAlt = iAlt
-     if (iAlt == 0) iiAlt = 1
-     if (iAlt == nAlts+1) iiAlt = nAlts
-
-! -------------------------------------------------------------------------------
-
-!    ScaleHeight: Gravity is negative
-
-     ScaleHeight = &
-          -Temperature(1:nLons,1:nLats,iAlt,iBlock) * &
-          TempUnit(1:nLons,1:nLats,iAlt) * &
-          Boltzmanns_Constant / ( &
-          Gravity_GB(1:nLons,1:nLats,iAlt,iBlock) &
-          * MeanMajorMass(1:nLons,1:nLats,iiAlt))
 
 ! -------------------------------------------------------------------------------
 ! This adds the eddy turbulent conduction Term (scaled by Prandtl number)
@@ -379,18 +327,42 @@ trouble = .false.
 ! -------------------------------------------------------------------------------
   enddo
 
-!  write(*,*) "mm cp:",minval(cp), maxval(cp), &
-!       minval(Rho(1:nLons,1:nLats,iAlt,iBlock)*AMU/ &
-!       NDensity(1:nLons,1:nLats,iAlt,iBlock)), &
-!       maxval(Rho(1:nLons,1:nLats,iAlt,iBlock)*AMU/ &
-!       NDensity(1:nLons,1:nLats,iAlt,iBlock))
+  call end_timing("calc_rates")
+
+  if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
+  if (iDebugLevel > 4) write(*,*) "=====> Done with calc_rates"
+
+end subroutine calc_rates
+
+subroutine calc_collisions(iBlock)
+
+  use ModGITM
+  use ModRates
+  use ModConstants
+  use ModPlanet
+  use ModInputs
+
+  implicit none
+
+  integer, intent(in) :: iBlock
+
+  real, dimension(nLons, nLats, nAlts) :: Tn, Ti, e2
+
+  integer :: iError
+
+  real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2) :: &
+       Ne, mnd, Te
 
   !\
   ! Need to get the neutral, ion, and electron temperature
   !/
 
-  Tn = Temperature(1:nLons,1:nLats,1:nAlts,iBlock)*TempUnit(1:nLons,1:nLats,1:nAlts)
+  Tn = Temperature(1:nLons,1:nLats,1:nAlts,iBlock)*&
+       TempUnit(1:nLons,1:nLats,1:nAlts)
   Ti = ITemperature(1:nLons,1:nLats,1:nAlts,iBlock)
+
+  mnd = NDensity(:,:,:,iBlock)+1.0
+  Ne  = IDensityS(:,:,:,ie_,iBlock)
 
   !\
   ! -----------------------------------------------------------
@@ -399,8 +371,7 @@ trouble = .false.
   !/
 
   e_gyro = &
-       Element_Charge * B0(:,:,:,iMag_,iBlock) /  &
-       Mass_Electron
+       Element_Charge * B0(:,:,:,iMag_,iBlock) / Mass_Electron
 
   e2 = Element_Charge * Element_Charge
 
@@ -424,27 +395,33 @@ trouble = .false.
   where(te == 0.0) te = 1000.0
   Collisions(:,:,:,iVEN_) = 5.4e-16 * (mnd)*sqrt(Te)
 
-
-!
-! Electron Ion Collision Frequency
-!
-
-  if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
-  if (iDebugLevel > 4) write(*,*) "=====> vei", iblock
-
-  tmp = (34.0 + 4.18*log((TE**3.0)/(Ne*1.0e-6)))
-  Collisions(:,:,:,iVEI_) = tmp*Ne*TE**(-3.0/2.0) * 1.0e-6
+!!!!
+!!!! Electron Ion Collision Frequency
+!!!!
+!!!
+!!!  if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
+!!!  if (iDebugLevel > 4) write(*,*) "=====> vei", iblock
+!!!
+!!!  tmp = (34.0 + 4.18*log((TE**3.0)/(Ne*1.0e-6)))
+!!!  Collisions(:,:,:,iVEI_) = tmp*Ne*TE**(-3.0/2.0) * 1.0e-6
 
 !!  Collisions(:,:,:,VEI) = (34.0 + 4.18*log((TE**3.0)/(Ne*1.0e-6))) &
 !!       * Ne * TE**(-3.0/2.0) * 1.0e-6
 !  
 
-  i_gyro = Element_Charge * B0(:,:,:,iMag_,iBlock) / &
-       MeanIonMass
+  i_gyro = Element_Charge * B0(:,:,:,iMag_,iBlock) / MeanIonMass
 
-  call end_timing("calc_rates")
 
-  if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
-  if (iDebugLevel > 4) write(*,*) "=====> Done with calc_rates"
+end subroutine calc_collisions
 
-end subroutine calc_rates
+subroutine calc_viscosity(iBlock)
+
+  use ModGITM
+
+  implicit none
+
+  integer, intent(in) :: iBlock
+
+  call calc_rate(iBlock)
+
+end subroutine calc_viscosity
