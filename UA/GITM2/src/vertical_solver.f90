@@ -369,16 +369,40 @@ subroutine calc_facevalues_alts(Var, VarLeft, VarRight)
 
   real :: dVarUp, dVarDown, dVarLimited(0:nAlts+1)
 
+  real, parameter :: Factor1=0.6250000 ! 15/24
+  real, parameter :: Factor2=0.0416667 !  1/24
+  real :: h
+
   integer :: i
 
-  do i=0,nAlts+1
+  do i=1,nAlts
 
-     dVarUp            = (Var(i+1) - Var(i))   * InvDAlt_F(i+1)
-     dVarDown          = (Var(i)   - Var(i-1)) * InvDAlt_F(i)
+     ! 4th order scheme for calculating face values
+
+     h  = InvDAlt_F(i+1)*2.0
+     dVarUp   = h*(Factor1*(Var(i+1)-Var(i)  ) - Factor2*(Var(i+2)-Var(i-1)))
+     h  = InvDAlt_F(i)*2.0
+     dVarDown = h*(Factor1*(Var(i)  -Var(i-1)) - Factor2*(Var(i+1)-Var(i-2)))
+
+!     ! This is Gabor's scheme
+!     dVarUp            = (Var(i+1) - Var(i))   * InvDAlt_F(i+1)
+!     dVarDown          = (Var(i)   - Var(i-1)) * InvDAlt_F(i)
 
      dVarLimited(i) = Limiter_mc(dVarUp, dVarDown)
 
+!     write(*,*) dVarUp, dVarDown, dVarLimited(i)
+
   end do
+
+  i = 0
+  dVarUp            = (Var(i+1) - Var(i))   * InvDAlt_F(i+1)
+  dVarDown          = (Var(i)   - Var(i-1)) * InvDAlt_F(i)
+  dVarLimited(i) = Limiter_mc(dVarUp, dVarDown)
+
+  i = nAlts+1
+  dVarUp            = (Var(i+1) - Var(i))   * InvDAlt_F(i+1)
+  dVarDown          = (Var(i)   - Var(i-1)) * InvDAlt_F(i)
+  dVarLimited(i) = Limiter_mc(dVarUp, dVarDown)
 
   do i=1,nAlts+1
      VarLeft(i)  = Var(i-1) + 0.5*dVarLimited(i-1) * dAlt_F(i)
