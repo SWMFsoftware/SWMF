@@ -83,9 +83,6 @@ subroutine calc_chemistry(iBlock)
   DtAve = 0.0
 
   nIters=0
-!  O_sources=0
-!  O2_sources=0
-!  N2_sources=0
 
 !  AuroralIonRateS = 0.0
 
@@ -1628,23 +1625,16 @@ subroutine calc_chemistry(iBlock)
 
               do iIon = 1, nIons-1
                  do while (tsi(iIon)-tli(iIon) < 0.0 .and. DtSub > 1.0e-2)
-                    DtSub = DtSub/2.0
-                    tli = DtSub * IonLosses
-                    tsi = DtSub * IonSources + Ions
+                    if (tsi(iIon)-tli(iIon) < 0.0 .and. Ions(iIon) < 1.0e7) then
+                       IonLosses(iIon) = &
+                            (IonSources(iIon) + Ions(iIon)/DtSub)*0.9
+                    else
+                       DtSub = DtSub/2.0
+                    endif
+                    tli(iIon) = DtSub * IonLosses(iIon)
+                    tsi(iIon) = DtSub * IonSources(iIon) + Ions(iIon)
                  enddo
-
-!                 if (tli(iIon) > tsi(iIon)) then
-!                    DtOld = max(-0.75*Ions(iIon)/(IonSources(iIon)-IonLosses(iIon)),1.0e-4)
-!                    if (DtOld < DtSub .and. DtOld > 1.0e-4) DtSub = DtOld
-!                 endif
               enddo
-
-!              do while (minval(tsi-tli) < 0.0 .and. DtSub > 1.0e-4)
-!                 DtSub = DtSub/10.0
-!                 tli = DtSub * IonLosses
-!                 tsi = DtSub * IonSources + Ions
-!              enddo
-
 
               !---- Neutrals
 
@@ -1666,11 +1656,11 @@ subroutine calc_chemistry(iBlock)
               endif
 
               tln = DtSub * NeutralLosses
-              tsn = 0.25 * (DtSub * NeutralSources + Neutrals)
+              tsn = DtSub * NeutralSources + 0.1*Neutrals
               do while (minval(tsn-tln) < 0.0)
-                 DtSub = DtSub/10.0
+                 DtSub = DtSub/2.0
                  tln = DtSub * NeutralLosses
-                 tsn = 0.25 * (DtSub * NeutralSources + Neutrals)
+                 tsn = DtSub * NeutralSources + 0.1*Neutrals
               enddo
 
               Ions(nIons) = 0.0
