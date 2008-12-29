@@ -296,7 +296,8 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
        part_steady_select, part_steady_switch
   use ModImplicit, ONLY: UseImplicit, UseSemiImplicit      !^CFG IF IMPLICIT
-  use ModGrayDiffusion, ONLY: advance_temperature          !^CFG IF IMPLICIT
+  use ModGrayDiffusion, ONLY: advance_temperature, &       !^CFG IF IMPLICIT
+       set_frozen_coefficients                             !^CFG IF IMPLICIT
 
   implicit none
 
@@ -334,6 +335,8 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   n_step = n_step + 1
   iteration_number = iteration_number+1
+
+  if(UseGrayDiffusion) call set_frozen_coefficients        !^CFG IF IMPLICIT
 
   ! Calculate time step dt
   if (time_accurate) call set_global_timestep(TimeSimulationLimit)

@@ -92,44 +92,47 @@ contains
   end subroutine init_gray_diffusion
 
   !==========================================================================
-  subroutine set_frozen_coefficients(iBlock)
+  subroutine set_frozen_coefficients
 
     use ModAdvance,  ONLY: State_VGB, Eradiation_
     use ModConst,    ONLY: cLightSpeed
     use ModImplicit, ONLY: UseFullImplicit
+    use ModMain,     ONLY: unusedBlk
     use ModPhysics,  ONLY: Si2No_V, UnitT_, UnitEnergyDens_, &
          UnitTemperature_, cRadiationNo
-    use ModSize,     ONLY: nI, nJ, nK
+    use ModSize,     ONLY: nI, nJ, nK, nBlk
     use ModUser,     ONLY: user_material_properties
 
-    integer, intent(in) :: iBlock
-
-    integer :: i, j, k
+    integer :: i, j, k, iBlock
     real :: PlanckOpacitySi, CvSi, TeSi, Te, Trad
     !------------------------------------------------------------------------
 
-    do k=1,nK; do j=1,nJ; do i=1,nI
-       call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-            AbsorptionOpacitySiOut = PlanckOpacitySi, &
-            TeSiOut = TeSi, CvSiOut = CvSi)
+    do iBlock = 1, nBlk
+       if(unusedBlk(iBlock)) CYCLE
 
-       RelaxationCoef_CB(i,j,k,iBlock) = &
-            PlanckOpacitySi*cLightSpeed/Si2No_V(UnitT_)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               AbsorptionOpacitySiOut = PlanckOpacitySi, &
+               TeSiOut = TeSi, CvSiOut = CvSi)
 
-       if(UseFullImplicit) CYCLE
+          RelaxationCoef_CB(i,j,k,iBlock) = &
+               PlanckOpacitySi*cLightSpeed/Si2No_V(UnitT_)
 
-       Te = TeSi*Si2No_V(UnitTemperature_)
-       Trad = sqrt(sqrt(State_VGB(Eradiation_,i,j,k,iBlock)/cRadiationNo))
+          if(UseFullImplicit) CYCLE
 
-       RelaxationCoef_CB(i,j,k,iBlock) = RelaxationCoef_CB(i,j,k,iBlock) &
-            *cRadiationNo*(Te+Trad)*(Te**2+Trad**2)
+          Te = TeSi*Si2No_V(UnitTemperature_)
+          Trad = sqrt(sqrt(State_VGB(Eradiation_,i,j,k,iBlock)/cRadiationNo))
 
-       SpecificHeat_VCB(TeImpl_,i,j,k,iBlock) = CvSi &
-            *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
+          RelaxationCoef_CB(i,j,k,iBlock) = RelaxationCoef_CB(i,j,k,iBlock) &
+               *cRadiationNo*(Te+Trad)*(Te**2+Trad**2)
 
-       SpecificHeat_VCB(TradImpl_,i,j,k,iBlock) = 4.0*cRadiationNo*Trad**3
+          SpecificHeat_VCB(TeImpl_,i,j,k,iBlock) = CvSi &
+               *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
 
-    end do; end do; end do
+          SpecificHeat_VCB(TradImpl_,i,j,k,iBlock) = 4.0*cRadiationNo*Trad**3
+
+       end do; end do; end do
+    end do
 
   end subroutine set_frozen_coefficients
   !==========================================================================
@@ -866,7 +869,7 @@ contains
 
     ! conjugated gradient for symmetric and positive definite matrix A
 
-    use ModMain,     ONLY: unusedBLK
+    use ModMain, ONLY: unusedBLK
     use ModSize, ONLY: nI, nJ, nK, gcn, nBlk
 
     ! subroutine for matrix vector multiplication 

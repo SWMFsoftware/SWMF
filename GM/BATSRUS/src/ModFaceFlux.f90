@@ -314,8 +314,6 @@ contains
          iMinFaceZ,iMaxFaceZ, jMinFaceZ, jMaxFaceZ, &
          iTest, jTest, kTest, ProcTest, BlkTest, DimTest, &
          UseHyperbolicDivb
-    use ModGrayDiffusion, ONLY: DoUpdateFrozenCoefficients, & !^CFG IF IMPLICIT
-         set_frozen_coefficients                              !^CFG IF IMPLICIT
     implicit none
 
     logical, intent(in) :: DoResChangeOnly
@@ -356,9 +354,6 @@ contains
 
     if(UseHallResist .and. UseMultiSpecies) &
          call set_ion_mass_per_charge(iBlock)
-
-    if(UseGrayDiffusion.and.DoUpdateFrozenCoefficients) & !^CFG IF IMPLICIT
-         call set_frozen_coefficients(iBlock)             !^CFG IF IMPLICIT
 
     if (DoResChangeOnly) then
        if(neiLeast(iBlock) == 1)call get_flux_x(1,1,1,nJ,1,nK)
