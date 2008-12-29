@@ -2359,11 +2359,11 @@ contains
          call stop_mpi(NameSub//' negative soundspeed squared')
       end if
 
-      if(UseGrayDiffusion)then
+      if(UseGrayDiffusion)then                      !^CFG IF IMPLICIT BEGIN
          Sound = sqrt(Sound2 + (4.0/9.0)*State_V(Eradiation_)*InvRho)
-      else
+      else                                          !^CFG END IMPLICIT
          Sound  = sqrt(Sound2)
-      end if
+      end if                                        !^CFG IF IMPLICIT
       Un     = sum(State_V(iUx:iUz)*Normal_D)
 
 
