@@ -63,6 +63,7 @@ contains
   subroutine init_gray_diffusion
 
     use ModImplicit, ONLY: UseFullImplicit
+    use ModProcMH,   ONLY: iProc
     use ModSize,     ONLY: nI, nJ, nK, nBlk, nDim
 
     !------------------------------------------------------------------------
@@ -73,6 +74,14 @@ contains
          Erad_G(0:nI+1,0:nJ+1,0:nK+1))
 
     if(.not.UseFullImplicit)then
+
+       if(iProc == 0)then
+          write(*,*) "==================================================="
+          write(*,*) "WARNING !!!"
+          write(*,*) "The semi-implicit gray-diffusion is not yet working"
+          write(*,*) "==================================================="
+       end if
+
        if(.not.allocated(SpecificHeat_VCB)) allocate( &
             SpecificHeat_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk), &
             Temperature_VGB(1:nTemperature,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk), &
@@ -650,7 +659,7 @@ contains
     call get_temperature
 
     call cg(heat_conduction, nTemperature, Source_VCB, Temperature_VGB, &
-         .true., Tolerance, 'abs', Iter)
+         .true., Tolerance, 'abs', Iter, jacobi_preconditioner)
 
     if(DoTestMe)write(*,*)NameSub,': Number of iterations =',Iter
 
@@ -791,7 +800,7 @@ contains
          TNPlusOne_VG(nVar,1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn)
     real, intent(out)   :: ADotTN_VC(nVar,nI,nJ,nK)
 
-    real :: InvDx2, InvDy2, InvDz2
+    real :: DtInvDx2, DtInvDy2, DtInvDz2
     real :: Relaxation
     integer :: i, j, k
     !------------------------------------------------------------------------
@@ -812,19 +821,19 @@ contains
 
     ! Calculate radiative diffusion fluxes
     !!! The current implementation assumes one amr level
-    InvDx2 = 1./dx_BLK(iBlock)**2
-    InvDy2 = 1./dy_BLK(iBlock)**2
-    InvDz2 = 1./dz_BLK(iBlock)**2
+    DtInvDx2 = Dt/dx_BLK(iBlock)**2
+    DtInvDy2 = Dt/dy_BLK(iBlock)**2
+    DtInvDz2 = Dt/dz_BLK(iBlock)**2
     do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-       Flux_VX(TradImpl_,i,j,k) = -Dt*InvDx2*DiffusionRad_FDB(i,j,k,x_,iBlock) &
+       Flux_VX(TradImpl_,i,j,k) = -DtInvDx2*DiffusionRad_FDB(i,j,k,x_,iBlock) &
             *(TNPlusOne_VG(TradImpl_,i,j,k) - TNPlusOne_VG(TradImpl_,i-1,j,k))
     end do; end do; end do
     do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-       Flux_VY(TradImpl_,i,j,k) = -Dt*InvDy2*DiffusionRad_FDB(i,j,k,y_,iBlock) &
+       Flux_VY(TradImpl_,i,j,k) = -DtInvDy2*DiffusionRad_FDB(i,j,k,y_,iBlock) &
             *(TNPlusOne_VG(TradImpl_,i,j,k) - TNPlusOne_VG(TradImpl_,i,j-1,k))
     end do; end do; end do
     do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-       Flux_VZ(TradImpl_,i,j,k) = -Dt*InvDz2*DiffusionRad_FDB(i,j,k,z_,iBlock) &
+       Flux_VZ(TradImpl_,i,j,k) = -DtInvDz2*DiffusionRad_FDB(i,j,k,z_,iBlock) &
             *(TNPlusOne_VG(TradImpl_,i,j,k) - TNPlusOne_VG(TradImpl_,i,j,k-1))
     end do; end do; end do
 
@@ -912,7 +921,7 @@ contains
     real, dimension(:,:,:,:,:), allocatable :: &
          P_VGB, ADotP_VCB, MMinusOneDotR_VCB
 
-    integer :: i, j , k, iBlock
+    integer :: i, j, k, iBlock
     !--------------------------------------------------------------------------
 
     allocate( &
@@ -1038,7 +1047,8 @@ contains
 
   subroutine jacobi_preconditioner(nVar, VectorIn_VCB, VectorOut_VCB)
 
-    use ModMain, ONLY: unusedBLK
+    use ModGeometry, ONLY: Dx_Blk, Dy_Blk, Dz_Blk
+    use ModMain, ONLY: unusedBLK, Dt
     use ModSize, ONLY: nI, nJ, nK, nBlk
 
     ! Inverts the nTemperature * nTemperature sub-matrices at the
@@ -1059,6 +1069,8 @@ contains
 
     real :: MatrixInv_VV(nVar,nVar)
 
+    real :: DtInvDx2, DtInvDy2, DtInvDz2
+
     character(len=*), parameter :: NameSub = 'jacobi_preconditioner'
     !--------------------------------------------------------------------------
 
@@ -1071,6 +1083,11 @@ contains
     case(2)
        do iBlock = 1, nBlk
           if(unusedBlk(iBlock))CYCLE
+
+          DtInvDx2 = Dt/dx_BLK(iBlock)**2
+          DtInvDy2 = Dt/dy_BLK(iBlock)**2
+          DtInvDz2 = Dt/dz_BLK(iBlock)**2
+
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
              call get_diagonal_subblock
@@ -1097,8 +1114,22 @@ contains
 
     subroutine get_diagonal_subblock
 
+      use ModMain, ONLY: x_, y_, z_
+
       !------------------------------------------------------------------------
 
+      Diag_V(:) = SpecificHeat_VCB(:,i,j,k,iBlock) &
+           + Dt*RelaxationCoef_CB(i,j,k,iBlock)
+
+      Diag_V(TradImpl_) = Diag_V(TradImpl_) &
+           + DtInvDx2*( DiffusionRad_FDB(i+1,j,k,x_,iBlock) &
+           +            DiffusionRad_FDB(i,j,k,x_,iBlock) ) &
+           + DtInvDy2*( DiffusionRad_FDB(i,j+1,k,y_,iBlock) &
+           +            DiffusionRad_FDB(i,j,k,y_,iBlock) ) &
+           + DtInvDz2*( DiffusionRad_FDB(i,j,k+1,z_,iBlock) &
+           +            DiffusionRad_FDB(i,j,k,z_,iBlock) )
+
+      OffDiag_V(1) = -Dt*RelaxationCoef_CB(i,j,k,iBlock)
 
     end subroutine get_diagonal_subblock
 
