@@ -1546,6 +1546,10 @@ contains
               + StateStar_V(Eradiation_)/3.0*Normal_D
          ! work by the radiation pressure gradient
          Flux_V(Energy_) = Flux_V(Energy_) + Un*StateStar_V(Eradiation_)/3.0
+
+         ! Increase maximum speed due to isotropic radiation pressure
+         ! Use linear proxi for c^2 = c_gas^2 + 4/3 * P_rad/Rho
+         CmaxDt = CmaxDt + (2.0/3.0)*sqrt(StateStar_V(Eradiation_)/Rho)
       end if
       !^CFG END IMPLICIT
 
@@ -2328,6 +2332,7 @@ contains
     !========================================================================
     subroutine get_hd_speed
 
+      use ModAdvance, ONLY: Eradiation_
       use ModVarIndexes
       use ModPhysics, ONLY: g
 
@@ -2354,7 +2359,11 @@ contains
          call stop_mpi(NameSub//' negative soundspeed squared')
       end if
 
-      Sound  = sqrt(Sound2)
+      if(UseGrayDiffusion)then
+         Sound = sqrt(Sound2 + (4.0/9.0)*State_V(Eradiation_)*InvRho)
+      else
+         Sound  = sqrt(Sound2)
+      end if
       Un     = sum(State_V(iUx:iUz)*Normal_D)
 
 
