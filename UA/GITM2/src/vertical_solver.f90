@@ -80,7 +80,7 @@ subroutine advance_vertical_1stage( &
   ! With fluxes and sources based on LogRho..Temp, update NewLogRho..NewTemp
 
   use ModGITM, only: &
-       Dt, iEast_, iNorth_, iUp_, TempUnit
+       Dt, iEast_, iNorth_, iUp_
   use ModPlanet
   use ModSizeGitm
   use ModVertical, only : &
@@ -111,7 +111,7 @@ subroutine advance_vertical_1stage( &
   real :: NS(-1:nAlts+2,nSpecies), Pressure1D(-1:nAlts+2)
   real :: Rho(-1:nAlts+2)
 
-  real :: TempKoM(-1:nAlts+2), AveMass(-1:nAlts+2), LogNum(-1:nAlts+2)
+  real :: LogNum(-1:nAlts+2)
 
   real, dimension(1:nAlts)    :: GradLogRho, DivVel, GradTemp, GradTempKoM, &
        DiffLogRho, DiffTemp, GradTmp, DiffTmp, DiffLogNum, GradLogNum
@@ -148,9 +148,6 @@ subroutine advance_vertical_1stage( &
   NS = exp(LogNS)
   Rho = exp(LogRho)
   LogNum = alog(sum(NS,dim=2))
-  AveMass = Rho/sum(NS,dim=2)
-  TempKoM = Temp
-  Pressure1D = sum(NS,dim=2) * Temp * Boltzmanns_Constant
   nFilter = 10
 
      NT(-1:nAlts+2) = exp(LogNum(-1:nAlts+2))
@@ -300,14 +297,14 @@ subroutine advance_vertical_1stage( &
 
         NewTemp(iAlt)   = NewTemp(iAlt) - Dt * &
              (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
-             (Gamma_1d(iAlt) - 1.0) * Temp(iAlt)*DivVel(iAlt))&
+             (Gamma_1d(iAlt) - 1.0) * ( &
+             Temp(iAlt)*DivVel(iAlt))) &
              + Dt * DiffTemp(iAlt) 
 
-
-        NewTemp(iAlt)   = NewTemp(iAlt) + &
-             Dt*Vel_GD(iAlt,iUp_)* &
-             ( (Gamma_1d(iAlt) - 1.0)/Gamma_1d(iAlt) )*&
-               Temp(iAlt)*GradLogPress(iAlt)
+!        NewTemp(iAlt)   = NewTemp(iAlt) + &
+!             Dt*Vel_GD(iAlt,iUp_)* &
+!             ( (Gamma_1d(iAlt) - 1.0)/Gamma_1d(iAlt) )*&
+!               Temp(iAlt)*GradLogPress(iAlt)
 
   end do
 
