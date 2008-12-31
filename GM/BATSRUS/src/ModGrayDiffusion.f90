@@ -23,7 +23,6 @@ module ModGrayDiffusion
   ! Logical for adding Gray Diffusion
   logical, public :: IsNewBlockGrayDiffusion = .true.
   logical, public :: IsNewTimestepGrayDiffusion = .true.
-  logical, public :: DoUpdateFrozenCoefficients = .false.
 
   ! Parameters for radiation flux limiter
   logical,           public :: UseRadFluxLimiter  = .false.
@@ -33,6 +32,7 @@ module ModGrayDiffusion
   real, allocatable, public :: DiffusionRad_FDB(:,:,:,:,:)
   real, allocatable         :: RelaxationCoef_CB(:,:,:,:)
   real, allocatable         :: SpecificHeat_VCB(:,:,:,:,:)
+  real, allocatable         :: HeatConductionCoef_GB(:,:,:,:)
 
   ! Internal energy needed for energy update
   real, allocatable :: Eint_VCB(:,:,:,:,:)
@@ -60,6 +60,7 @@ module ModGrayDiffusion
 contains
 
   !==========================================================================
+
   subroutine init_gray_diffusion
 
     use ModImplicit, ONLY: UseFullImplicit
@@ -68,12 +69,13 @@ contains
 
     !------------------------------------------------------------------------
 
-    if(.not.allocated(DiffusionRad_FDB)) allocate( &
-         DiffusionRad_FDB(1:nI+1,1:nJ+1,1:nK+1,nDim,nBlk), &
+    if(.not.allocated(Erad_G)) allocate( &
          RelaxationCoef_CB(1:nI,1:nJ,1:nK,nBlk), &
          Erad_G(0:nI+1,0:nJ+1,0:nK+1))
 
-    if(.not.UseFullImplicit)then
+    if(UseFullImplicit)then
+       allocate(DiffusionRad_FDB(1:nI+1,1:nJ+1,1:nK+1,nDim,nBlk))
+    else
 
        if(iProc == 0)then
           write(*,*) "==================================================="
@@ -84,6 +86,7 @@ contains
 
        if(.not.allocated(SpecificHeat_VCB)) allocate( &
             SpecificHeat_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk), &
+            HeatConductionCoef_GB(0:nI+1,0:nJ+1,0:nK+1,nBlk), &
             Temperature_VGB(1:nTemperature,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk), &
             Eint_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk), &
             Source_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk) )
@@ -92,20 +95,38 @@ contains
   end subroutine init_gray_diffusion
 
   !==========================================================================
+
   subroutine set_frozen_coefficients
 
     use ModAdvance,  ONLY: State_VGB, Eradiation_
     use ModConst,    ONLY: cLightSpeed
     use ModImplicit, ONLY: UseFullImplicit
     use ModMain,     ONLY: unusedBlk
-    use ModPhysics,  ONLY: Si2No_V, UnitT_, UnitEnergyDens_, &
-         UnitTemperature_, cRadiationNo
+    use ModPhysics,  ONLY: Si2No_V, UnitT_, UnitX_, UnitU_, &
+         UnitEnergyDens_, UnitTemperature_, cRadiationNo
     use ModSize,     ONLY: nI, nJ, nK, nBlk
     use ModUser,     ONLY: user_material_properties
 
     integer :: i, j, k, iBlock
-    real :: PlanckOpacitySi, CvSi, TeSi, Te, Trad
+    real :: PlanckOpacitySi, RosselandMeanOpacitySi
+    real :: CvSi, TeSi, Te, Trad, DiffRad
     !------------------------------------------------------------------------
+
+    if(UseFullImplicit)then
+       do iBlock = 1, nBlk
+          if(unusedBlk(iBlock)) CYCLE
+
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  AbsorptionOpacitySiOut = PlanckOpacitySi)
+
+             RelaxationCoef_CB(i,j,k,iBlock) = &
+                  PlanckOpacitySi*cLightSpeed/Si2No_V(UnitT_)
+          end do; end do; end do
+       end do
+
+       return
+    end if
 
     do iBlock = 1, nBlk
        if(unusedBlk(iBlock)) CYCLE
@@ -113,56 +134,92 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                AbsorptionOpacitySiOut = PlanckOpacitySi, &
+               RosselandMeanOpacitySiOut = RosselandMeanOpacitySi, &
                TeSiOut = TeSi, CvSiOut = CvSi)
-
-          RelaxationCoef_CB(i,j,k,iBlock) = &
-               PlanckOpacitySi*cLightSpeed/Si2No_V(UnitT_)
-
-          if(UseFullImplicit) CYCLE
 
           Te = TeSi*Si2No_V(UnitTemperature_)
           Trad = sqrt(sqrt(State_VGB(Eradiation_,i,j,k,iBlock)/cRadiationNo))
-
-          RelaxationCoef_CB(i,j,k,iBlock) = RelaxationCoef_CB(i,j,k,iBlock) &
-               *cRadiationNo*(Te+Trad)*(Te**2+Trad**2)
 
           SpecificHeat_VCB(TeImpl_,i,j,k,iBlock) = CvSi &
                *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
 
           SpecificHeat_VCB(TradImpl_,i,j,k,iBlock) = 4.0*cRadiationNo*Trad**3
 
+          RelaxationCoef_CB(i,j,k,iBlock) = &
+               PlanckOpacitySi*cLightSpeed/Si2No_V(UnitT_) &
+               *cRadiationNo*(Te+Trad)*(Te**2+Trad**2)
+
+          call get_heat_conduction_coef
        end do; end do; end do
+
+       !!! if AMR is in use, then one layer of ghost cells at the faces
+       !!! should be corrected !
+       do k = 1, nK; do j = 1, nJ; do i = 0, nI+1, nI+1
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               RosselandMeanOpacitySiOut = RosselandMeanOpacitySi)
+
+          call get_heat_conduction_coef
+       end do; end do; end do
+
+       do k = 1, nK; do j = 0, nJ+1, nJ+1; do i = 1, nI
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               RosselandMeanOpacitySiOut = RosselandMeanOpacitySi)
+
+          call get_heat_conduction_coef
+       end do; end do; end do
+
+       do k = 0, nK+1, nK+1; do j = 1, nJ; do i = 1, nI
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               RosselandMeanOpacitySiOut = RosselandMeanOpacitySi)
+
+          call get_heat_conduction_coef
+       end do; end do; end do
+
     end do
 
+  contains
+    subroutine get_heat_conduction_coef
+
+      DiffRad = cLightSpeed/(3.0*RosselandMeanOpacitySi) &
+           *Si2No_V(UnitU_)*Si2No_V(UnitX_)
+
+      !!! The radiation flux limiters should enter here
+
+      Trad = sqrt(sqrt(State_VGB(Eradiation_,i,j,k,iBlock)/cRadiationNo))
+
+      HeatConductionCoef_GB(i,j,k,iBlock) = DiffRad &
+           *4.0*cRadiationNo*Trad**3
+
+    end subroutine get_heat_conduction_coef
+
   end subroutine set_frozen_coefficients
+
   !==========================================================================
 
   subroutine get_radiation_energy_flux( &
-       iDir, i, j, k, iBlock, State_V, DiffRad, EradFlux_D)
+       iDir, i, j, k, iBlock, State_V, EradFlux_D)
 
     !\
     ! Calculate the diffusion part of the radiation energy flux.
     !/
     use ModAdvance,    ONLY: State_VGB, Eradiation_
     use ModConst,      ONLY: cLightSpeed
-    use ModImplicit,   ONLY: UseFullImplicit
     use ModPhysics,    ONLY: Si2No_V, UnitX_, UnitU_, cRadiationNo
     use ModUser,       ONLY: user_material_properties
     use ModVarIndexes, ONLY: nVar
 
     integer, intent(in) :: iDir, i, j, k, iBlock
     real,    intent(in) :: State_V(nVar)
-    real,    intent(out):: DiffRad
     real,    intent(out):: EradFlux_D(3)
 
-    real :: RosselandMeanOpacitySi
-    real :: FaceGrad_D(3), Erad, Grad2ByErad2, Trad
+    real :: RosselandMeanOpacitySi, DiffRad
+    real :: FaceGrad_D(3), Erad, Grad2ByErad2
     !------------------------------------------------------------------------
 
     call calc_face_gradient(iDir, i, j, k, iBlock, FaceGrad_D)
 
 
-    if(DoUpdateFrozenCoefficients)then
+    if(IsNewTimestepGrayDiffusion)then
 
        call user_material_properties(State_V, &
             RosselandMeanOpacitySiOut = RosselandMeanOpacitySi)
@@ -185,10 +242,6 @@ contains
 
        end if
 
-       if(.not.UseFullImplicit)then
-          Trad = sqrt(sqrt(State_V(Eradiation_)/cRadiationNo))
-          DiffRad = DiffRad*4.0*cRadiationNo*Trad**3
-       end if
        DiffusionRad_FDB(i,j,k,iDir,iBlock) = DiffRad
     else
        DiffRad = DiffusionRad_FDB(i,j,k,iDir,iBlock)
@@ -804,7 +857,7 @@ contains
     real, intent(out)   :: ADotTN_VC(nVar,nI,nJ,nK)
 
     real :: DtInvDx2, DtInvDy2, DtInvDz2
-    real :: Relaxation
+    real :: HeatConductionCoef, Relaxation
     integer :: i, j, k
     !------------------------------------------------------------------------
 
@@ -828,15 +881,21 @@ contains
     DtInvDy2 = Dt/dy_BLK(iBlock)**2
     DtInvDz2 = Dt/dz_BLK(iBlock)**2
     do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-       Flux_VX(TradImpl_,i,j,k) = -DtInvDx2*DiffusionRad_FDB(i,j,k,x_,iBlock) &
+       HeatConductionCoef = 0.5*( HeatConductionCoef_GB(i-1,j,k,iBlock) &
+            +                     HeatConductionCoef_GB(i,j,k,iBlock) )
+       Flux_VX(TradImpl_,i,j,k) = -DtInvDx2*HeatConductionCoef &
             *(TNPlusOne_VG(TradImpl_,i,j,k) - TNPlusOne_VG(TradImpl_,i-1,j,k))
     end do; end do; end do
     do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-       Flux_VY(TradImpl_,i,j,k) = -DtInvDy2*DiffusionRad_FDB(i,j,k,y_,iBlock) &
+       HeatConductionCoef = 0.5*( HeatConductionCoef_GB(i,j-1,k,iBlock) &
+            +                     HeatConductionCoef_GB(i,j,k,iBlock) )
+       Flux_VY(TradImpl_,i,j,k) = -DtInvDy2*HeatConductionCoef &
             *(TNPlusOne_VG(TradImpl_,i,j,k) - TNPlusOne_VG(TradImpl_,i,j-1,k))
     end do; end do; end do
     do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-       Flux_VZ(TradImpl_,i,j,k) = -DtInvDz2*DiffusionRad_FDB(i,j,k,z_,iBlock) &
+       HeatConductionCoef = 0.5*( HeatConductionCoef_GB(i,j,k-1,iBlock) &
+            +                     HeatConductionCoef_GB(i,j,k,iBlock) )
+       Flux_VZ(TradImpl_,i,j,k) = -DtInvDz2*HeatConductionCoef &
             *(TNPlusOne_VG(TradImpl_,i,j,k) - TNPlusOne_VG(TradImpl_,i,j,k-1))
     end do; end do; end do
 
@@ -1125,12 +1184,15 @@ contains
            + Dt*RelaxationCoef_CB(i,j,k,iBlock)
 
       Diag_V(TradImpl_) = Diag_V(TradImpl_) &
-           + DtInvDx2*( DiffusionRad_FDB(i+1,j,k,x_,iBlock) &
-           +            DiffusionRad_FDB(i,j,k,x_,iBlock) ) &
-           + DtInvDy2*( DiffusionRad_FDB(i,j+1,k,y_,iBlock) &
-           +            DiffusionRad_FDB(i,j,k,y_,iBlock) ) &
-           + DtInvDz2*( DiffusionRad_FDB(i,j,k+1,z_,iBlock) &
-           +            DiffusionRad_FDB(i,j,k,z_,iBlock) )
+           + DtInvDx2*(0.5*HeatConductionCoef_GB(i-1,j,  k,  iBlock) &
+           +               HeatConductionCoef_GB(i,  j,  k,  iBlock) &
+           +           0.5*HeatConductionCoef_GB(i+1,j,  k,  iBlock) ) &
+           + DtInvDy2*(0.5*HeatConductionCoef_GB(i,  j-1,k,  iBlock) &
+           +               HeatConductionCoef_GB(i,  j,  k,  iBlock) &
+           +           0.5*HeatConductionCoef_GB(i,  j+1,k,  iBlock) ) &
+           + DtInvDz2*(0.5*HeatConductionCoef_GB(i,  j,  k-1,iBlock) &
+           +               HeatConductionCoef_GB(i,  j,  k,  iBlock) &
+           +           0.5*HeatConductionCoef_GB(i,  j,  k+1,iBlock) )
 
       OffDiag_V(1) = -Dt*RelaxationCoef_CB(i,j,k,iBlock)
 

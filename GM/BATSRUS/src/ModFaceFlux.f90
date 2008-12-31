@@ -94,7 +94,7 @@ module ModFaceFlux
   real :: InvDxyz, HallCoeff, HallJx, HallJy, HallJz
 
   ! Variables for Gray-Diffusion
-  real :: DiffusionRad, EradFlux_D(3)
+  real :: EradFlux_D(3)
 
   ! These are variables for pure MHD solvers (Roe and HLLD)
   ! Number of MHD fluxes including the pressure and energy fluxes
@@ -806,6 +806,7 @@ contains
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp
+    use ModImplicit, ONLY: UseFullImplicit                  !^CFG IF IMPLICIT
 
     real,    intent(out):: Flux_V(nFlux)
 
@@ -896,9 +897,9 @@ contains
     State_V = 0.5*(StateLeft_V + StateRight_V)
 
     !^CFG IF IMPLICIT BEGIN
-    if(UseGrayDiffusion)then
+    if(UseGrayDiffusion.and.UseFullImplicit)then
        call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
-            iBlockFace, State_V, DiffusionRad, EradFlux_D)
+            iBlockFace, State_V, EradFlux_D)
     end if
     !^CFG END IMPLICIT
 

@@ -14,8 +14,6 @@ subroutine advance_expl(DoCalcTimestep)
   use ModImplicit,  ONLY: UsePartImplicit           !^CFG IF IMPLICIT
   use ModPhysics,   ONLY: No2Si_V, UnitT_
   use ModConserveFlux, ONLY: save_cons_flux, apply_cons_flux
-  use ModGrayDiffusion, ONLY: IsNewTimestepGrayDiffusion, & !^CFG IF IMPLICIT
-       DoUpdateFrozenCoefficients                           !^CFG IF IMPLICIT
   implicit none
 
   logical, intent(in) :: DoCalcTimestep
@@ -37,13 +35,6 @@ subroutine advance_expl(DoCalcTimestep)
      if(DoTestMe)write(*,*)NameSub,' starting stage=',iStage
 
      call barrier_mpi2('expl1')
-
-     !^CFG IF IMPLICIT BEGIN
-     if(UseGrayDiffusion)then
-        if(iStage==1 .and. IsNewTimestepGrayDiffusion) &
-             DoUpdateFrozenCoefficients = .true.
-     end if
-     !^CFG END IMPLICIT
 
      do globalBLK = 1, nBlockMax
         if (unusedBLK(globalBLK)) CYCLE
@@ -187,8 +178,6 @@ subroutine advance_expl(DoCalcTimestep)
      do iBlock = 1, nBlock
         if(.not.UnusedBlk(iBlock)) call set_block_data(iBlock)
      end do
-
-     DoUpdateFrozenCoefficients = .false.             !^CFG IF IMPLICIT
 
   end do STAGELOOP  ! Multi-stage solution update loop.
 
