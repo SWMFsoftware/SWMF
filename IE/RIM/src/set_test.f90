@@ -3,6 +3,7 @@ subroutine set_test
 
   use ModParamRIM
   use ModRIM
+  use ModNumConst
 
   implicit none
 
@@ -19,29 +20,38 @@ subroutine set_test
      write(*,*) "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
      write(*,*) "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
      OuterMagJrAll = &
-          1.0e-6*exp(-abs((abs(LatitudeAll)-15.0*cDegToRad)) / &
-          (5.0*cDegToRad)) * sin(LongitudeAll) &
-          +1.0e-6*exp(-abs((abs(LatitudeAll)-165.0*cDegToRad)) / &
-          (5.0*cDegToRad)) * sin(LongitudeAll) &
-          + &
-          3.0e-6*exp(-abs((abs(LatitudeAll)-0.0*cDegToRad)) / &
-          (5.0*cDegToRad)) &
-          -3.0e-6*exp(-abs((abs(LatitudeAll)-180.0*cDegToRad)) / &
-          (5.0*cDegToRad)) 
+          2.0e-6*exp(-abs((abs(LatitudeAll)-25.0*cDegToRad)) / &
+          (3.0*cDegToRad)) * sin(LongitudeAll) &
+          +2.0e-6*exp(-abs((abs(LatitudeAll)-155.0*cDegToRad)) / &
+          (3.0*cDegToRad)) * sin(LongitudeAll) ! &
+!          + &
+!          3.0e-6*exp(-abs((abs(LatitudeAll)-0.0*cDegToRad)) / &
+!          (5.0*cDegToRad)) &
+!          -3.0e-6*exp(-abs((abs(LatitudeAll)-180.0*cDegToRad)) / &
+!          (5.0*cDegToRad)) 
 
-     OuterMagRhoAll = sin(LatitudeAll) * 1.0e-20
+     OuterMagRhoAll = sin(LatitudeAll)**3 * 2.0e-19
 
      OuterMagPAll = &
-          5.0e-9*exp(-abs((abs(LatitudeAll)-20.0*cDegToRad)) / &
-          (5.0*cDegToRad)) * sin(LongitudeAll/2) &
-          +5.0e-9*exp(-abs((abs(LatitudeAll)-160.0*cDegToRad)) / &
-          (5.0*cDegToRad)) * sin(LongitudeAll/2)
+          1.7e-7*exp(-abs((abs(LatitudeAll)-35.0*cDegToRad)) / &
+          (2.0*cDegToRad)) * abs(sin(LongitudeAll/2 + cPi/4)) &
+          +1.7e-7*exp(-abs((abs(LatitudeAll)-155.0*cDegToRad)) / &
+          (2.0*cDegToRad)) * abs(sin(LongitudeAll/2 + cPi/4))
 
      OuterMagInvBAll = 1.0
      where(LatitudeAll <  10.0*cDegToRad) OuterMagInvBAll = -1.0
      where(LatitudeAll <  10.0*cDegToRad) OuterMagPAll = 0.0
+     where(LatitudeAll <  10.0*cDegToRad) OuterMagRhoAll = 0.0
      where(LatitudeAll > 170.0*cDegToRad) OuterMagInvBAll = -1.0
      where(LatitudeAll > 170.0*cDegToRad) OuterMagPAll = 0.0
+     where(LatitudeAll > 170.0*cDegToRad) OuterMagRhoAll = 0.0
+
+     where(LatitudeAll > 40.0*cDegToRad .and. &
+           LatitudeAll < 150.0*cDegToRad) OuterMagRhoAll = 0.0
+     where(LatitudeAll > 40.0*cDegToRad .and. &
+           LatitudeAll < 150.0*cDegToRad) OuterMagPAll = 0.0
+     where(LatitudeAll > 40.0*cDegToRad .and. &
+           LatitudeAll < 150.0*cDegToRad) OuterMagInvBAll = -1.0
 
   endif
 
