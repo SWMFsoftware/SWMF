@@ -32,7 +32,7 @@ module ModGrayDiffusion
   real, allocatable, public :: DiffusionRad_FDB(:,:,:,:,:)
   real, allocatable         :: RelaxationCoef_CB(:,:,:,:)
   real, allocatable         :: SpecificHeat_VCB(:,:,:,:,:)
-  real, allocatable         :: HeatConductionCoef_GB(:,:,:,:)
+  real, allocatable         :: HeatConductionCoef_VGB(:,:,:,:,:)
 
   ! Internal energy needed for energy update
   real, allocatable :: Eint_VCB(:,:,:,:,:)
@@ -86,10 +86,12 @@ contains
 
        if(.not.allocated(SpecificHeat_VCB)) allocate( &
             SpecificHeat_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk), &
-            HeatConductionCoef_GB(0:nI+1,0:nJ+1,0:nK+1,nBlk), &
+            HeatConductionCoef_VGB(1:nTemperature,0:nI+1,0:nJ+1,0:nK+1,nBlk), &
             Temperature_VGB(1:nTemperature,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk), &
             Eint_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk), &
             Source_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk) )
+
+       HeatConductionCoef_VGB = 0.0
     end if
 
   end subroutine init_gray_diffusion
@@ -140,6 +142,9 @@ contains
           Te = TeSi*Si2No_V(UnitTemperature_)
           Trad = sqrt(sqrt(State_VGB(Eradiation_,i,j,k,iBlock)/cRadiationNo))
 
+          Temperature_VGB(TeImpl_,i,j,k,iBlock) = Te
+          Temperature_VGB(TradImpl_,i,j,k,iBlock) = Trad
+
           SpecificHeat_VCB(TeImpl_,i,j,k,iBlock) = CvSi &
                *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
 
@@ -187,7 +192,7 @@ contains
 
       Trad = sqrt(sqrt(State_VGB(Eradiation_,i,j,k,iBlock)/cRadiationNo))
 
-      HeatConductionCoef_GB(i,j,k,iBlock) = DiffRad &
+      HeatConductionCoef_VGB(TradImpl_,i,j,k,iBlock) = DiffRad &
            *4.0*cRadiationNo*Trad**3
 
     end subroutine get_heat_conduction_coef
@@ -712,7 +717,7 @@ contains
 
     call set_oktest('cg', DoTest, DoTestMe)
 
-    call get_temperature
+    call get_internal_energy
 
     call cg(heat_conduction, nTemperature, Source_VCB, Temperature_VGB, &
          .true., Tolerance, 'abs', Iter, jacobi_preconditioner)
@@ -728,13 +733,12 @@ contains
   end subroutine advance_temperature
   !============================================================================
 
-  subroutine get_temperature
+  subroutine get_internal_energy
 
-    use ModAdvance,  ONLY: Eradiation_, State_VGB, StateOld_VCB
+    use ModAdvance,  ONLY: Eradiation_, State_VGB
     use ModMain,     ONLY: unusedBLK
-    use ModPhysics,  ONLY: inv_gm1, cRadiationNo, Si2No_V, UnitTemperature_
+    use ModPhysics,  ONLY: inv_gm1
     use ModSize,     ONLY: nI, nJ, nK, nBlk
-    use ModUser,     ONLY: user_material_properties
 
     integer :: i, j, k, iBlock
     real :: TeSi, Einternal
@@ -744,15 +748,6 @@ contains
        if(unusedBlk(iBlock)) CYCLE
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          call user_material_properties(StateOld_VCB(:,i,j,k,iBlock), &
-               TeSiOut = TeSi)
-
-          Temperature_VGB(TeImpl_,i,j,k,iBlock) = &
-               TeSi*Si2No_V(UnitTemperature_)
-
-          Temperature_VGB(TradImpl_,i,j,k,iBlock) = &
-               sqrt(sqrt(StateOld_VCB(Eradiation_,i,j,k,iBlock) &
-               /cRadiationNo))
 
           Source_VCB(:,i,j,k,iBlock) = &
                SpecificHeat_VCB(:,i,j,k,iBlock) &
@@ -772,7 +767,7 @@ contains
 
     end do
 
-  end subroutine get_temperature
+  end subroutine get_internal_energy
 
   !==========================================================================
 
@@ -857,7 +852,7 @@ contains
     real, intent(out)   :: ADotTN_VC(nVar,nI,nJ,nK)
 
     real :: DtInvDx2, DtInvDy2, DtInvDz2
-    real :: HeatConductionCoef, Relaxation
+    real :: Relaxation
     integer :: i, j, k
     !------------------------------------------------------------------------
 
@@ -881,36 +876,34 @@ contains
     DtInvDy2 = Dt/dy_BLK(iBlock)**2
     DtInvDz2 = Dt/dz_BLK(iBlock)**2
     do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-       HeatConductionCoef = 0.5*( HeatConductionCoef_GB(i-1,j,k,iBlock) &
-            +                     HeatConductionCoef_GB(i,j,k,iBlock) )
-       Flux_VX(TradImpl_,i,j,k) = -DtInvDx2*HeatConductionCoef &
-            *(TNPlusOne_VG(TradImpl_,i,j,k) - TNPlusOne_VG(TradImpl_,i-1,j,k))
+       Flux_VX(1:nVar,i,j,k) = -DtInvDx2 &
+            *0.5*( HeatConductionCoef_VGB(:,i-1,j,k,iBlock) &
+            +      HeatConductionCoef_VGB(:,i,  j,k,iBlock) ) &
+            *(TNPlusOne_VG(:,i,j,k) - TNPlusOne_VG(:,i-1,j,k))
     end do; end do; end do
     do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-       HeatConductionCoef = 0.5*( HeatConductionCoef_GB(i,j-1,k,iBlock) &
-            +                     HeatConductionCoef_GB(i,j,k,iBlock) )
-       Flux_VY(TradImpl_,i,j,k) = -DtInvDy2*HeatConductionCoef &
-            *(TNPlusOne_VG(TradImpl_,i,j,k) - TNPlusOne_VG(TradImpl_,i,j-1,k))
+       Flux_VY(1:nVar,i,j,k) = -DtInvDy2 &
+            *0.5*( HeatConductionCoef_VGB(:,i,j-1,k,iBlock) &
+            +      HeatConductionCoef_VGB(:,i,j,  k,iBlock) ) &
+            *(TNPlusOne_VG(:,i,j,k) - TNPlusOne_VG(:,i,j-1,k))
     end do; end do; end do
     do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-       HeatConductionCoef = 0.5*( HeatConductionCoef_GB(i,j,k-1,iBlock) &
-            +                     HeatConductionCoef_GB(i,j,k,iBlock) )
-       Flux_VZ(TradImpl_,i,j,k) = -DtInvDz2*HeatConductionCoef &
-            *(TNPlusOne_VG(TradImpl_,i,j,k) - TNPlusOne_VG(TradImpl_,i,j,k-1))
+       Flux_VZ(1:nVar,i,j,k) = -DtInvDz2 &
+            *0.5*( HeatConductionCoef_VGB(:,i,j,k-1,iBlock) &
+            +      HeatConductionCoef_VGB(:,i,j,k,  iBlock) ) &
+            *(TNPlusOne_VG(:,i,j,k) - TNPlusOne_VG(:,i,j,k-1))
     end do; end do; end do
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
-       ADotTN_VC(:,i,j,k) = SpecificHeat_VCB(:,i,j,k,iBlock) &
-            *TNPlusOne_VG(:,i,j,k)
-
        ! Heat conduction
-       ADotTN_VC(TradImpl_,i,j,k) = ADotTN_VC(TradImpl_,i,j,k) &
-            + Flux_VX(TradImpl_,i+1,j,k) - Flux_VX(TradImpl_,i,j,k) &
-            + Flux_VY(TradImpl_,i,j+1,k) - Flux_VY(TradImpl_,i,j,k) &
-            + Flux_VZ(TradImpl_,i,j,k+1) - Flux_VZ(TradImpl_,i,j,k)
+       ADotTN_VC(:,i,j,k) = SpecificHeat_VCB(:,i,j,k,iBlock) &
+            *TNPlusOne_VG(:,i,j,k) &
+            + Flux_VX(1:nVar,i+1,j,k) - Flux_VX(1:nVar,i,j,k) &
+            + Flux_VY(1:nVar,i,j+1,k) - Flux_VY(1:nVar,i,j,k) &
+            + Flux_VZ(1:nVar,i,j,k+1) - Flux_VZ(1:nVar,i,j,k)
 
-       ! Temperature relaxation
+       ! Energy exchange
        Relaxation = Dt*RelaxationCoef_CB(i,j,k,iBlock) &
             *(TNPlusOne_VG(TeImpl_,i,j,k) - TNPlusOne_VG(TradImpl_,i,j,k))
 
@@ -1109,7 +1102,7 @@ contains
 
   subroutine jacobi_preconditioner(nVar, VectorIn_VCB, VectorOut_VCB)
 
-    use ModGeometry, ONLY: Dx_Blk, Dy_Blk, Dz_Blk
+    use ModGeometry, ONLY: true_cell, body_blk, Dx_Blk, Dy_Blk, Dz_Blk
     use ModMain, ONLY: unusedBLK, Dt
     use ModSize, ONLY: nI, nJ, nK, nBlk
 
@@ -1142,6 +1135,26 @@ contains
     end if
 
     select case(nVar)
+    case(1)
+       do iBlock = 1, nBlk
+          if(unusedBlk(iBlock))CYCLE
+
+          DtInvDx2 = Dt/dx_BLK(iBlock)**2
+          DtInvDy2 = Dt/dy_BLK(iBlock)**2
+          DtInvDz2 = Dt/dz_BLK(iBlock)**2
+
+          if(body_blk(iBlock))then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                if(.not.true_cell(i,j,k,iBlock))CYCLE
+                call jacobi_preconditioner_1d
+             end do; end do; end do
+          else
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                call jacobi_preconditioner_1d
+             end do; end do; end do
+          end if
+       end do
+
     case(2)
        do iBlock = 1, nBlk
           if(unusedBlk(iBlock))CYCLE
@@ -1150,50 +1163,73 @@ contains
           DtInvDy2 = Dt/dy_BLK(iBlock)**2
           DtInvDz2 = Dt/dz_BLK(iBlock)**2
 
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-
-             call get_diagonal_subblock
-
-             MatrixInv_VV = reshape( (/ &
-                  Diag_V(2)    , -OffDiag_V(1), &
-                  -OffDiag_V(1), Diag_V(1)  /), (/2,2/) ) &
-                  /(Diag_V(1)*Diag_V(2) - OffDiag_V(1)**2)
-
-             do iVar = 1, nVar
-                VectorOut_VCB(iVar,i,j,k,iBlock) = &
-                     sum( VectorIn_VCB(:,i,j,k,iBlock)*MatrixInv_VV(:,iVar) )
-             end do
-
-          end do; end do; end do
+          if(body_blk(iBlock))then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                if(.not.true_cell(i,j,k,iBlock))CYCLE
+                call jacobi_preconditioner_2d
+             end do; end do; end do
+          else
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                call jacobi_preconditioner_2d
+             end do; end do; end do
+          end if
        end do
     case default
-       call stop_mpi(NameSub//': Currently, only two temperatures allowed')
+       call stop_mpi(NameSub// &
+            ': Currently, not more than two temperatures allowed')
     end select
 
     if(allocated(OffDiag_V)) deallocate(OffDiag_V)
 
   contains
 
-    subroutine get_diagonal_subblock
+    subroutine jacobi_preconditioner_1d
 
-      use ModMain, ONLY: x_, y_, z_
+      call get_diagonal_subblock
+
+      VectorOut_VCB(1,i,j,k,iBlock) = VectorIn_VCB(1,i,j,k,iBlock)/Diag_V(1)
+
+    end subroutine jacobi_preconditioner_1d
+
+    !==========================================================================
+
+    subroutine jacobi_preconditioner_2d
+
+      call get_diagonal_subblock
+
+      MatrixInv_VV = reshape( (/ &
+           Diag_V(2)    , -OffDiag_V(1), &
+           -OffDiag_V(1), Diag_V(1)  /), (/2,2/) ) &
+           /(Diag_V(1)*Diag_V(2) - OffDiag_V(1)**2)
+
+      do iVar = 1, nVar
+         VectorOut_VCB(iVar,i,j,k,iBlock) = &
+              sum(VectorIn_VCB(:,i,j,k,iBlock)*MatrixInv_VV(:,iVar))
+      end do
+    end subroutine jacobi_preconditioner_2d
+
+    !==========================================================================
+
+    subroutine get_diagonal_subblock
 
       !------------------------------------------------------------------------
 
+      ! Heat conduction
       Diag_V(:) = SpecificHeat_VCB(:,i,j,k,iBlock) &
-           + Dt*RelaxationCoef_CB(i,j,k,iBlock)
+           + DtInvDx2*(0.5*HeatConductionCoef_VGB(:,i-1,j,  k,  iBlock) &
+           +               HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
+           +           0.5*HeatConductionCoef_VGB(:,i+1,j,  k,  iBlock) ) &
+           + DtInvDy2*(0.5*HeatConductionCoef_VGB(:,i,  j-1,k,  iBlock) &
+           +               HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
+           +           0.5*HeatConductionCoef_VGB(:,i,  j+1,k,  iBlock) ) &
+           + DtInvDz2*(0.5*HeatConductionCoef_VGB(:,i,  j,  k-1,iBlock) &
+           +               HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
+           +           0.5*HeatConductionCoef_VGB(:,i,  j,  k+1,iBlock) )
 
-      Diag_V(TradImpl_) = Diag_V(TradImpl_) &
-           + DtInvDx2*(0.5*HeatConductionCoef_GB(i-1,j,  k,  iBlock) &
-           +               HeatConductionCoef_GB(i,  j,  k,  iBlock) &
-           +           0.5*HeatConductionCoef_GB(i+1,j,  k,  iBlock) ) &
-           + DtInvDy2*(0.5*HeatConductionCoef_GB(i,  j-1,k,  iBlock) &
-           +               HeatConductionCoef_GB(i,  j,  k,  iBlock) &
-           +           0.5*HeatConductionCoef_GB(i,  j+1,k,  iBlock) ) &
-           + DtInvDz2*(0.5*HeatConductionCoef_GB(i,  j,  k-1,iBlock) &
-           +               HeatConductionCoef_GB(i,  j,  k,  iBlock) &
-           +           0.5*HeatConductionCoef_GB(i,  j,  k+1,iBlock) )
+      if(nVar==1) return
 
+      ! Energy exchange
+      Diag_V(:) = Diag_V(:) + Dt*RelaxationCoef_CB(i,j,k,iBlock)
       OffDiag_V(1) = -Dt*RelaxationCoef_CB(i,j,k,iBlock)
 
     end subroutine get_diagonal_subblock
