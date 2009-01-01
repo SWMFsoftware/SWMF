@@ -30,7 +30,7 @@ module ModGrayDiffusion
 
   ! Coefficients for two-temperature electron-radiation model
   real, allocatable, public :: DiffusionRad_FDB(:,:,:,:,:)
-  real, allocatable         :: RelaxationCoef_CB(:,:,:,:)
+  real, allocatable         :: RelaxationCoef_VCB(:,:,:,:,:)
   real, allocatable         :: SpecificHeat_VCB(:,:,:,:,:)
   real, allocatable         :: HeatConductionCoef_VGB(:,:,:,:,:)
 
@@ -69,9 +69,12 @@ contains
 
     !------------------------------------------------------------------------
 
-    if(.not.allocated(Erad_G)) allocate( &
-         RelaxationCoef_CB(1:nI,1:nJ,1:nK,nBlk), &
-         Erad_G(0:nI+1,0:nJ+1,0:nK+1))
+    if(.not.allocated(Erad_G)) then
+       allocate(Erad_G(0:nI+1,0:nJ+1,0:nK+1))
+       if(nTemperature>1)then
+          allocate(RelaxationCoef_VCB(2:nTemperature,1:nI,1:nJ,1:nK,nBlk))
+       end if
+    end if
 
     if(UseFullImplicit)then
        allocate(DiffusionRad_FDB(1:nI+1,1:nJ+1,1:nK+1,nDim,nBlk))
@@ -122,7 +125,7 @@ contains
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   AbsorptionOpacitySiOut = PlanckOpacitySi)
 
-             RelaxationCoef_CB(i,j,k,iBlock) = &
+             RelaxationCoef_VCB(TradImpl_,i,j,k,iBlock) = &
                   PlanckOpacitySi*cLightSpeed/Si2No_V(UnitT_)
           end do; end do; end do
        end do
@@ -150,7 +153,7 @@ contains
 
           SpecificHeat_VCB(TradImpl_,i,j,k,iBlock) = 4.0*cRadiationNo*Trad**3
 
-          RelaxationCoef_CB(i,j,k,iBlock) = &
+          RelaxationCoef_VCB(TradImpl_,i,j,k,iBlock) = &
                PlanckOpacitySi*cLightSpeed/Si2No_V(UnitT_) &
                *cRadiationNo*(Te+Trad)*(Te**2+Trad**2)
 
@@ -685,7 +688,7 @@ contains
 
        ! Source term due to absorption and emission
        ! Sigma_a*(cRadiation*Te**4-Erad)
-       AbsorptionEmission =  RelaxationCoef_CB(i,j,k,iBlock)&
+       AbsorptionEmission =  RelaxationCoef_VCB(TradImpl_,i,j,k,iBlock) &
             *(cRadiation*TeSi**4*Si2No_V(UnitEnergyDens_) &
             - State_VGB(Eradiation_,i,j,k,iBlock))
 
@@ -903,12 +906,20 @@ contains
             + Flux_VY(1:nVar,i,j+1,k) - Flux_VY(1:nVar,i,j,k) &
             + Flux_VZ(1:nVar,i,j,k+1) - Flux_VZ(1:nVar,i,j,k)
 
-       ! Energy exchange
-       Relaxation = Dt*RelaxationCoef_CB(i,j,k,iBlock) &
-            *(TNPlusOne_VG(TeImpl_,i,j,k) - TNPlusOne_VG(TradImpl_,i,j,k))
+       if(nVar == 1)CYCLE
 
-       ADotTN_VC(TeImpl_,i,j,k)   = ADotTN_VC(TeImpl_,i,j,k)   + Relaxation
-       ADotTN_VC(TradImpl_,i,j,k) = ADotTN_VC(TradImpl_,i,j,k) - Relaxation
+       ! Energy exchange
+       ADotTN_VC(TeImpl_,i,j,k) = ADotTN_VC(TeImpl_,i,j,k) &
+            + Dt*sum(RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)) &
+            *TNPlusOne_VG(TeImpl_,i,j,k) &
+            - Dt*sum( RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
+            *         TNPlusOne_VG(2:nVar,i,j,k) )
+
+       ADotTN_VC(2:nVar,i,j,k) = ADotTN_VC(2:nVar,i,j,k) &
+            + Dt*RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
+            *TNPlusOne_VG(2:nVar,i,j,k) &
+            - Dt*RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
+            *TNPlusOne_VG(TeImpl_,i,j,k)
 
     end do; end do; end do
 
@@ -1120,7 +1131,6 @@ contains
 
     real, dimension(nVar) :: Diag_V
     real, allocatable, dimension(:) :: OffDiag_V
-    integer :: nOff
 
     real :: MatrixInv_VV(nVar,nVar)
 
@@ -1129,10 +1139,7 @@ contains
     character(len=*), parameter :: NameSub = 'jacobi_preconditioner'
     !--------------------------------------------------------------------------
 
-    if(nVar>1)then
-       nOff = (nVar - 1)*nVar/2
-       allocate(OffDiag_V(1:nOff))
-    end if
+    if(nVar>1) allocate(OffDiag_V(2:nVar))
 
     do iBlock = 1, nBlk
        if(unusedBlk(iBlock))CYCLE
@@ -1164,9 +1171,20 @@ contains
                 call block_jacobi_2t
              end do; end do; end do
           end if
+       case(3)
+          if(body_blk(iBlock))then
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                if(.not.true_cell(i,j,k,iBlock))CYCLE
+                call block_jacobi_3t
+             end do; end do; end do
+          else
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                call block_jacobi_3t
+             end do; end do; end do
+          end if
        case default
           call stop_mpi(NameSub// &
-               ': Currently, not more than two temperatures allowed')
+               ': More than three temperatures is not allowed')
        end select
     end do
 
@@ -1193,9 +1211,9 @@ contains
       call get_diagonal_subblock
 
       MatrixInv_VV = reshape( (/ &
-           Diag_V(2)    , -OffDiag_V(1), &
-           -OffDiag_V(1), Diag_V(1)  /), (/2,2/) ) &
-           /(Diag_V(1)*Diag_V(2) - OffDiag_V(1)**2)
+           Diag_V(2)    , -OffDiag_V(2), &
+           -OffDiag_V(2), Diag_V(1)  /), (/2,2/) ) &
+           /(Diag_V(1)*Diag_V(2) - OffDiag_V(2)**2)
 
       do iVar = 1, nVar
          VectorOut_VCB(iVar,i,j,k,iBlock) = &
@@ -1203,6 +1221,27 @@ contains
       end do
 
     end subroutine block_jacobi_2t
+
+    !==========================================================================
+
+    subroutine block_jacobi_3t
+
+      !------------------------------------------------------------------------
+
+      call get_diagonal_subblock
+
+      MatrixInv_VV = reshape( (/ &
+           Diag_V(2)*Diag_V(3), -Diag_V(3)*OffDiag_V(2), -Diag_V(2)*OffDiag_V(3), &
+           -Diag_V(3)*OffDiag_V(2), Diag_V(1)*Diag_V(3) - OffDiag_V(3)**2, OffDiag_V(2)*OffDiag_V(3), &
+           -Diag_V(2)*OffDiag_V(3), OffDiag_V(2)*OffDiag_V(3), Diag_V(1)*Diag_V(2) - OffDiag_V(2)**2 /), (/3,3/) ) &
+           /( Diag_V(3)*(Diag_V(1)*Diag_V(2) - OffDiag_V(2)**2) - Diag_V(2)*OffDiag_V(3)**2 )
+
+      do iVar = 1, nVar
+         VectorOut_VCB(iVar,i,j,k,iBlock) = &
+              sum(VectorIn_VCB(:,i,j,k,iBlock)*MatrixInv_VV(:,iVar))
+      end do
+
+    end subroutine block_jacobi_3t
 
     !==========================================================================
 
@@ -1225,8 +1264,10 @@ contains
       if(nVar==1) return
 
       ! Energy exchange
-      Diag_V(:) = Diag_V(:) + Dt*RelaxationCoef_CB(i,j,k,iBlock)
-      OffDiag_V(1) = -Dt*RelaxationCoef_CB(i,j,k,iBlock)
+      Diag_V(1) = Diag_V(1) + Dt*sum(RelaxationCoef_VCB(2:nVar,i,j,k,iBlock))
+      Diag_V(2:nVar) = Diag_V(2:nVar) &
+           + Dt*RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)
+      OffDiag_V(2:nVar) = - Dt*RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)
 
     end subroutine get_diagonal_subblock
 
