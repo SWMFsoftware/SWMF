@@ -1134,66 +1134,61 @@ contains
        allocate(OffDiag_V(1:nOff))
     end if
 
-    select case(nVar)
-    case(1)
-       do iBlock = 1, nBlk
-          if(unusedBlk(iBlock))CYCLE
+    do iBlock = 1, nBlk
+       if(unusedBlk(iBlock))CYCLE
 
-          DtInvDx2 = Dt/dx_BLK(iBlock)**2
-          DtInvDy2 = Dt/dy_BLK(iBlock)**2
-          DtInvDz2 = Dt/dz_BLK(iBlock)**2
+       DtInvDx2 = Dt/dx_BLK(iBlock)**2
+       DtInvDy2 = Dt/dy_BLK(iBlock)**2
+       DtInvDz2 = Dt/dz_BLK(iBlock)**2
 
+       select case(nVar)
+       case(1)
           if(body_blk(iBlock))then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.true_cell(i,j,k,iBlock))CYCLE
-                call jacobi_preconditioner_1d
+                call block_jacobi_1t
              end do; end do; end do
           else
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                call jacobi_preconditioner_1d
+                call block_jacobi_1t
              end do; end do; end do
           end if
-       end do
-
-    case(2)
-       do iBlock = 1, nBlk
-          if(unusedBlk(iBlock))CYCLE
-
-          DtInvDx2 = Dt/dx_BLK(iBlock)**2
-          DtInvDy2 = Dt/dy_BLK(iBlock)**2
-          DtInvDz2 = Dt/dz_BLK(iBlock)**2
-
+       case(2)
           if(body_blk(iBlock))then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.true_cell(i,j,k,iBlock))CYCLE
-                call jacobi_preconditioner_2d
+                call block_jacobi_2t
              end do; end do; end do
           else
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                call jacobi_preconditioner_2d
+                call block_jacobi_2t
              end do; end do; end do
           end if
-       end do
-    case default
-       call stop_mpi(NameSub// &
-            ': Currently, not more than two temperatures allowed')
-    end select
+       case default
+          call stop_mpi(NameSub// &
+               ': Currently, not more than two temperatures allowed')
+       end select
+    end do
 
     if(allocated(OffDiag_V)) deallocate(OffDiag_V)
 
   contains
 
-    subroutine jacobi_preconditioner_1d
+    subroutine block_jacobi_1t
+
+      !------------------------------------------------------------------------
 
       call get_diagonal_subblock
 
       VectorOut_VCB(1,i,j,k,iBlock) = VectorIn_VCB(1,i,j,k,iBlock)/Diag_V(1)
 
-    end subroutine jacobi_preconditioner_1d
+    end subroutine block_jacobi_1t
 
     !==========================================================================
 
-    subroutine jacobi_preconditioner_2d
+    subroutine block_jacobi_2t
+
+      !------------------------------------------------------------------------
 
       call get_diagonal_subblock
 
@@ -1206,7 +1201,8 @@ contains
          VectorOut_VCB(iVar,i,j,k,iBlock) = &
               sum(VectorIn_VCB(:,i,j,k,iBlock)*MatrixInv_VV(:,iVar))
       end do
-    end subroutine jacobi_preconditioner_2d
+
+    end subroutine block_jacobi_2t
 
     !==========================================================================
 
