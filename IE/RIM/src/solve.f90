@@ -489,7 +489,8 @@ contains
        ! to ground the potential, we want to make sure that the average
        ! potential over the whole globe is zero.
 
-       LocalVar = sum(Old(1:nLons,:))/(nLons*nLats)
+       LocalVar = sum(Old(1:nLons,:)*Area(1:nLons,:)) / &
+            sum(Area(1:nLons,:))
        GlobalPotential = 0.0
        call MPI_REDUCE(LocalVar, GlobalPotential, 1, MPI_REAL, &
             MPI_SUM, 0, iComm, iError)
@@ -541,17 +542,6 @@ contains
           enddo
        enddo
 
-       ! to ground the potential, we want to make sure that the average
-       ! potential at the equator is zero.
-
-       LocalVar = sum(Potential(1:nLons,:))/(nLons*nLats)
-       GlobalPotential = 0.0
-       call MPI_REDUCE(LocalVar, GlobalPotential, 1, MPI_REAL, &
-            MPI_SUM, 0, iComm, iError)
-       GlobalPotential = GlobalPotential/nProc
-       call MPI_Bcast(GlobalPotential,1,MPI_Real,0,iComm,iError)
-       Potential = Potential - GlobalPotential
-
        do iLat = 1, nLats/2
           do iLon = 1, nLons
              OCFLB_NS = (abs(OCFLB(1,iLon))+OCFLB(2,iLon))/2.0
@@ -562,6 +552,18 @@ contains
              endif
           enddo
        enddo
+
+       ! to ground the potential, we want to make sure that the average
+       ! potential at the equator is zero.
+
+       LocalVar = sum(Potential(1:nLons,:)*Area(1:nLons,:)) / &
+            sum(Area(1:nLons,:))
+       GlobalPotential = 0.0
+       call MPI_REDUCE(LocalVar, GlobalPotential, 1, MPI_REAL, &
+            MPI_SUM, 0, iComm, iError)
+       GlobalPotential = GlobalPotential/nProc
+       call MPI_Bcast(GlobalPotential,1,MPI_Real,0,iComm,iError)
+       Potential = Potential - GlobalPotential
 
        ! Periodic Boundary Conditions:
 

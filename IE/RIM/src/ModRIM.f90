@@ -19,7 +19,8 @@ module ModRIM
        SigmaEUVH, SigmaEUVP, SigmaScatH, SigmaScatP, SigmaStarH, SigmaStarP, &
        SigmaAurH, SigmaAurP, Sigma0, &
        OldPotential=0.0, Jr, OuterMagJr, InnerMagJr, IonoJr, &
-       OuterMagInvB, OuterMagRho, OuterMagP, OuterMagT
+       OuterMagInvB, OuterMagRho, OuterMagP, OuterMagT, &
+       Area
 
   real, dimension(0:nLons+1,nLats) :: &
        SigmaThTh, SigmaThPs, SigmaPsPs, &

@@ -45,6 +45,8 @@ subroutine init_RIM()
   SMY = rTmp * cos(Latitude) * sin(Longitude + cPi)
   SMZ = rTmp * sin(Latitude)
 
+  Area = dLatitude*(dLongitude*cos(Latitude))*Radius**2
+
   ! Initialize Empirical Models
 
   ! This assumes a grid which can be described by 2 1-D arrays:
