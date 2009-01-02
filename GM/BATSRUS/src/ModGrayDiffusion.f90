@@ -115,6 +115,7 @@ contains
     integer :: i, j, k, iBlock
     real :: PlanckOpacitySi, RosselandMeanOpacitySi
     real :: CvSi, TeSi, Te, Trad, DiffRad
+    real :: Grad_D(3), Grad2ByErad2
     !------------------------------------------------------------------------
 
     if(UseFullImplicit)then
@@ -186,12 +187,27 @@ contains
     end do
 
   contains
+
     subroutine get_heat_conduction_coef
+
+      !------------------------------------------------------------------------
 
       DiffRad = cLightSpeed/(3.0*RosselandMeanOpacitySi) &
            *Si2No_V(UnitU_)*Si2No_V(UnitX_)
 
-      !!! The radiation flux limiters should enter here
+      if(UseRadFluxLimiter)then
+         call calc_cell_gradient
+         Grad2ByErad2 = sum(Grad_D**2)/State_VGB(Eradiation_,i,j,k,iBlock)**2
+
+         select case(TypeRadFluxLimiter)
+         case("sum")
+            DiffRad = 1.0/(1.0/DiffRad+sqrt(Grad2ByErad2))
+         case("max")
+            DiffRad = 1.0/max(1.0/DiffRad,sqrt(Grad2ByErad2))
+         case("larsen")
+            DiffRad = 1.0/sqrt(1.0/DiffRad**2+Grad2ByErad2)
+         end select
+      end if
 
       Trad = sqrt(sqrt(State_VGB(Eradiation_,i,j,k,iBlock)/cRadiationNo))
 
@@ -200,9 +216,37 @@ contains
 
     end subroutine get_heat_conduction_coef
 
+    !==========================================================================
+
+    subroutine calc_cell_gradient
+
+      ! currently, only a cartesian version
+
+      use ModGeometry, ONLY: Dx_Blk, Dy_Blk, Dz_Blk
+      use ModMain,     ONLY: x_, y_, z_
+
+      real :: InvDx, InvDy, InvDz
+      !------------------------------------------------------------------------
+
+      InvDx = 1.0/Dx_Blk(iBlock)
+      InvDy = 1.0/Dy_Blk(iBlock)
+      InvDz = 1.0/Dz_Blk(iBlock)
+
+      Grad_D(x_) = &
+           ( State_VGB(Eradiation_,i+1,j,  k,  iBlock) &
+           - State_VGB(Eradiation_,i-1,j,  k,  iBlock) )*0.5*InvDx
+      Grad_D(y_) = &
+           ( State_VGB(Eradiation_,i,  j+1,k,  iBlock) &
+           - State_VGB(Eradiation_,i,  j-1,k,  iBlock) )*0.5*InvDy
+      Grad_D(z_) = &
+           ( State_VGB(Eradiation_,i,  j,  k+1,iBlock) &
+           - State_VGB(Eradiation_,i,  j,  k-1,iBlock) )*0.5*InvDz
+
+    end subroutine calc_cell_gradient
+
   end subroutine set_frozen_coefficients
 
-  !==========================================================================
+  !============================================================================
 
   subroutine get_radiation_energy_flux( &
        iDir, i, j, k, iBlock, State_V, EradFlux_D)
@@ -855,7 +899,6 @@ contains
     real, intent(out)   :: ADotTN_VC(nVar,nI,nJ,nK)
 
     real :: DtInvDx2, DtInvDy2, DtInvDz2
-    real :: Relaxation
     integer :: i, j, k
     !------------------------------------------------------------------------
 
@@ -875,6 +918,7 @@ contains
 
     ! Calculate radiative diffusion fluxes
     !!! The current implementation assumes one amr level
+    !!! make cylindrical correction
     DtInvDx2 = Dt/dx_BLK(iBlock)**2
     DtInvDy2 = Dt/dy_BLK(iBlock)**2
     DtInvDz2 = Dt/dz_BLK(iBlock)**2
