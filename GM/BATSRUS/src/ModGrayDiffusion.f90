@@ -34,8 +34,9 @@ module ModGrayDiffusion
   real, allocatable         :: SpecificHeat_VCB(:,:,:,:,:)
   real, allocatable         :: HeatConductionCoef_VGB(:,:,:,:,:)
 
-  ! Internal energy needed for energy update
-  real, allocatable :: Eint_VCB(:,:,:,:,:)
+  ! change in internal energy due to heat conduction/diffusion
+  ! and energy exchange
+  real, allocatable :: DelEint_VCB(:,:,:,:,:)
 
   ! Initial guess for conjugate gradient
   real, allocatable :: Source_VCB(:,:,:,:,:)
@@ -69,33 +70,45 @@ contains
 
     !------------------------------------------------------------------------
 
-    if(.not.allocated(Erad_G)) then
-       allocate(Erad_G(0:nI+1,0:nJ+1,0:nK+1))
+    if(UseFullImplicit)then
+
+       if(.not.allocated(Erad_G)) then
+          allocate( &
+               Erad_G(0:nI+1,0:nJ+1,0:nK+1), &
+               DiffusionRad_FDB(1:nI+1,1:nJ+1,1:nK+1,nDim,nBlk) )
+
+          if(nTemperature>1)then
+             allocate(RelaxationCoef_VCB(2:nTemperature,1:nI,1:nJ,1:nK,nBlk))
+          end if
+       end if
+
+       return
+    end if
+
+
+    ! Initializing the semi-implicit gray-diffusion
+
+    if(iProc == 0)then
+       write(*,*) "==================================================="
+       write(*,*) "WARNING !!!"
+       write(*,*) "The semi-implicit gray-diffusion is not yet working"
+       write(*,*) "==================================================="
+    end if
+
+    if(.not.allocated(SpecificHeat_VCB))then
+       allocate( &
+            SpecificHeat_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk), &
+            HeatConductionCoef_VGB(1:nTemperature,0:nI+1,0:nJ+1,0:nK+1,nBlk), &
+            Temperature_VGB(1:nTemperature,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk), &
+            DelEint_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk), &
+            Source_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk) )
+
        if(nTemperature>1)then
           allocate(RelaxationCoef_VCB(2:nTemperature,1:nI,1:nJ,1:nK,nBlk))
        end if
     end if
 
-    if(UseFullImplicit)then
-       allocate(DiffusionRad_FDB(1:nI+1,1:nJ+1,1:nK+1,nDim,nBlk))
-    else
-
-       if(iProc == 0)then
-          write(*,*) "==================================================="
-          write(*,*) "WARNING !!!"
-          write(*,*) "The semi-implicit gray-diffusion is not yet working"
-          write(*,*) "==================================================="
-       end if
-
-       if(.not.allocated(SpecificHeat_VCB)) allocate( &
-            SpecificHeat_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk), &
-            HeatConductionCoef_VGB(1:nTemperature,0:nI+1,0:nJ+1,0:nK+1,nBlk), &
-            Temperature_VGB(1:nTemperature,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk), &
-            Eint_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk), &
-            Source_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk) )
-
-       HeatConductionCoef_VGB = 0.0
-    end if
+    HeatConductionCoef_VGB = 0.0
 
   end subroutine init_gray_diffusion
 
@@ -700,7 +713,7 @@ contains
     integer :: i, j, k
     real :: TeSi
     real :: RadCompression, AbsorptionEmission
-    character(len=*), parameter:: NameSub = "calc_source_gray_diffusion"
+    character(len=19), parameter:: NameSub = "calc_source_gray_diffusion"
     !------------------------------------------------------------------------
 
     ! Make sure that Eradiation_ is correct
@@ -751,70 +764,49 @@ contains
   !============================================================================
   subroutine advance_temperature
 
-    use ModMain, ONLY: unusedBLK
-    use ModSize, ONLY: nI, nJ, nK, nBlk
+    use ModGeometry, ONLY: vInv_CB
+    use ModMain,     ONLY: unusedBLK
+    use ModSize,     ONLY: nI, nJ, nK, nBlk
 
     integer :: i, j, k, iBlock
     integer :: Iter
     real, parameter :: Tolerance = 1e-4
     logical :: DoTest, DoTestMe
 
-    character(len=19) :: NameSub = 'advance_temperature'
+    character(len=*), parameter :: NameSub = 'advance_temperature'
     !--------------------------------------------------------------------------
 
     call set_oktest('cg', DoTest, DoTestMe)
 
-    call get_internal_energy
+    do iBlock = 1, nBlk
+       if(unusedBlk(iBlock)) CYCLE
+
+       Source_VCB(:,:,:,:,iBlock) = SpecificHeat_VCB(:,:,:,:,iBlock) &
+            *Temperature_VGB(:,1:nI,1:nJ,1:nK,iBlock)
+       DelEint_VCB(:,:,:,:,iBlock) = -Source_VCB(:,:,:,:,iBlock)
+
+       do k = 1,nK; do j = 1,nJ; do i = 1,nI
+          Source_VCB(:,i,j,k,iBlock) = Source_VCB(:,i,j,k,iBlock) &
+               /vInv_CB(i,j,k,iBlock)
+       end do; end do; end do
+    end do
 
     call cg(heat_conduction, nTemperature, Source_VCB, Temperature_VGB, &
-         .true., Tolerance, 'abs', Iter, jacobi_preconditioner)
+         .true., Tolerance, 'rel', Iter, jacobi_preconditioner)
 
     if(DoTestMe)write(*,*)NameSub,': Number of iterations =',Iter
 
     do iBlock = 1, nBlk
        if(unusedBlk(iBlock)) CYCLE
 
+       DelEint_VCB(:,:,:,:,iBlock) = DelEint_VCB(:,:,:,:,iBlock) &
+            + SpecificHeat_VCB(:,:,:,:,iBlock) &
+            *Temperature_VGB(:,1:nI,1:nJ,1:nK,iBlock)
+
        call update_conservative_energy(iBlock)
     end do
 
   end subroutine advance_temperature
-  !============================================================================
-
-  subroutine get_internal_energy
-
-    use ModAdvance,  ONLY: Eradiation_, State_VGB
-    use ModMain,     ONLY: unusedBLK
-    use ModPhysics,  ONLY: inv_gm1
-    use ModSize,     ONLY: nI, nJ, nK, nBlk
-
-    integer :: i, j, k, iBlock
-    real :: TeSi, Einternal
-    !--------------------------------------------------------------------------
-
-    do iBlock = 1, nBlk
-       if(unusedBlk(iBlock)) CYCLE
-
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-
-          Source_VCB(:,i,j,k,iBlock) = &
-               SpecificHeat_VCB(:,i,j,k,iBlock) &
-               *Temperature_VGB(:,i,j,k,iBlock)
-
-          Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
-               + State_VGB(EintExtra_,i,j,k,iBlock)
-
-          Eint_VCB(TeImpl_,i,j,k,iBlock) = &
-               Einternal - Source_VCB(TeImpl_,i,j,k,iBlock)
-
-          Eint_VCB(TradImpl_,i,j,k,iBlock) = &
-               State_VGB(Eradiation_,i,j,k,iBlock) &
-               - Source_VCB(TradImpl_,i,j,k,iBlock)
-
-       end do; end do; end do
-
-    end do
-
-  end subroutine get_internal_energy
 
   !==========================================================================
 
@@ -829,17 +821,19 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    real :: TeSi, EinternalSi, Einternal, Gamma
+    real :: EinternalSi, Einternal, Gamma
     !------------------------------------------------------------------------
 
     do k = 1,nK; do j = 1,nJ; do i = 1,nI
 
-       Eint_VCB(:,i,j,k,iBlock) = Eint_VCB(:,i,j,k,iBlock) &
-            + SpecificHeat_VCB(:,i,j,k,iBlock)*Temperature_VGB(:,i,j,k,iBlock)
+       State_VGB(Eradiation_,i,j,k,iBlock) = &
+            State_VGB(Eradiation_,i,j,k,iBlock) &
+            + DelEint_VCB(TradImpl_,i,j,k,iBlock)
 
-       State_VGB(Eradiation_,i,j,k,iBlock) = Eint_VCB(TradImpl_,i,j,k,iBlock)
+       Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
+            + State_VGB(EintExtra_,i,j,k,iBlock) &
+            + DelEint_VCB(TeImpl_,i,j,k,iBlock)
 
-       Einternal = Eint_VCB(TeImpl_,i,j,k,iBlock)
        EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
 
        call user_material_properties(State_VGB(:,i,j,k,iBlock), &
@@ -888,7 +882,8 @@ contains
   subroutine get_heat_conduction(iBlock, nVar, TNPlusOne_VG, ADotTN_VC)
 
     use ModAdvance,  ONLY: Flux_VX, Flux_VY, Flux_VZ
-    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK
+    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, fAx_BLK, fAy_BLK, fAz_BLK, &
+         vInv_CB
     use ModMain,     ONLY: x_, y_, z_, Dt
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModSize,     ONLY: nI, nJ, nK, gcn
@@ -898,9 +893,9 @@ contains
          TNPlusOne_VG(nVar,1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn)
     real, intent(out)   :: ADotTN_VC(nVar,nI,nJ,nK)
 
-    real :: DtInvDx2, DtInvDy2, DtInvDz2
+    real :: AreaxInvDx, AreayInvDy, AreazInvDz
     integer :: i, j, k
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
 !!! set floating outer boundary
     if(NeiLev(1,iBlock) == NOBLK) TNPlusOne_VG(:,0   ,:,:) &
@@ -917,25 +912,25 @@ contains
          =                        TNPlusOne_VG(:,:,:,nK  )
 
     ! Calculate radiative diffusion fluxes
-    !!! The current implementation assumes one amr level
+    !!! cartesian version only
     !!! make cylindrical correction
-    DtInvDx2 = Dt/dx_BLK(iBlock)**2
-    DtInvDy2 = Dt/dy_BLK(iBlock)**2
-    DtInvDz2 = Dt/dz_BLK(iBlock)**2
+    AreaxInvDx = fAx_Blk(iBlock)/Dx_Blk(iBlock)
+    AreayInvDy = fAy_Blk(iBlock)/Dy_Blk(iBlock)
+    AreazInvDz = fAz_Blk(iBlock)/Dz_Blk(iBlock)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-       Flux_VX(1:nVar,i,j,k) = -DtInvDx2 &
+       Flux_VX(1:nVar,i,j,k) = -AreaxInvDx &
             *0.5*( HeatConductionCoef_VGB(:,i-1,j,k,iBlock) &
             +      HeatConductionCoef_VGB(:,i,  j,k,iBlock) ) &
             *(TNPlusOne_VG(:,i,j,k) - TNPlusOne_VG(:,i-1,j,k))
     end do; end do; end do
     do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-       Flux_VY(1:nVar,i,j,k) = -DtInvDy2 &
+       Flux_VY(1:nVar,i,j,k) = -AreayInvDy &
             *0.5*( HeatConductionCoef_VGB(:,i,j-1,k,iBlock) &
             +      HeatConductionCoef_VGB(:,i,j,  k,iBlock) ) &
             *(TNPlusOne_VG(:,i,j,k) - TNPlusOne_VG(:,i,j-1,k))
     end do; end do; end do
     do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-       Flux_VZ(1:nVar,i,j,k) = -DtInvDz2 &
+       Flux_VZ(1:nVar,i,j,k) = -AreazInvDz &
             *0.5*( HeatConductionCoef_VGB(:,i,j,k-1,iBlock) &
             +      HeatConductionCoef_VGB(:,i,j,k,  iBlock) ) &
             *(TNPlusOne_VG(:,i,j,k) - TNPlusOne_VG(:,i,j,k-1))
@@ -945,10 +940,10 @@ contains
 
        ! Heat conduction
        ADotTN_VC(:,i,j,k) = SpecificHeat_VCB(:,i,j,k,iBlock) &
-            *TNPlusOne_VG(:,i,j,k) &
+            *TNPlusOne_VG(:,i,j,k) + Dt*vInv_CB(i,j,k,iBlock)*( &
             + Flux_VX(1:nVar,i+1,j,k) - Flux_VX(1:nVar,i,j,k) &
             + Flux_VY(1:nVar,i,j+1,k) - Flux_VY(1:nVar,i,j,k) &
-            + Flux_VZ(1:nVar,i,j,k+1) - Flux_VZ(1:nVar,i,j,k)
+            + Flux_VZ(1:nVar,i,j,k+1) - Flux_VZ(1:nVar,i,j,k) )
 
        if(nVar == 1)CYCLE
 
@@ -965,7 +960,9 @@ contains
             - Dt*RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
             *TNPlusOne_VG(TeImpl_,i,j,k)
 
-    end do; end do; end do
+       ! multiply by control volume
+       ADotTN_VC(:,i,j,k) = ADotTN_VC(:,i,j,k)/vInv_CB(i,j,k,iBlock)
+     end do; end do; end do
 
   end subroutine get_heat_conduction
 
@@ -1157,7 +1154,8 @@ contains
 
   subroutine jacobi_preconditioner(nVar, VectorIn_VCB, VectorOut_VCB)
 
-    use ModGeometry, ONLY: true_cell, body_blk, Dx_Blk, Dy_Blk, Dz_Blk
+    use ModGeometry, ONLY: true_cell, body_blk, Dx_Blk, Dy_Blk, Dz_Blk, &
+         fAx_BLK, fAy_BLK, fAz_BLK, vInv_CB
     use ModMain, ONLY: unusedBLK, Dt
     use ModSize, ONLY: nI, nJ, nK, nBlk
 
@@ -1178,7 +1176,7 @@ contains
 
     real :: MatrixInv_VV(nVar,nVar)
 
-    real :: DtInvDx2, DtInvDy2, DtInvDz2
+    real :: AreaxInvDx, AreayInvDy, AreazInvDz
 
     character(len=*), parameter :: NameSub = 'jacobi_preconditioner'
     !--------------------------------------------------------------------------
@@ -1188,9 +1186,9 @@ contains
     do iBlock = 1, nBlk
        if(unusedBlk(iBlock))CYCLE
 
-       DtInvDx2 = Dt/dx_BLK(iBlock)**2
-       DtInvDy2 = Dt/dy_BLK(iBlock)**2
-       DtInvDz2 = Dt/dz_BLK(iBlock)**2
+       AreaxInvDx = fAx_Blk(iBlock)/Dx_Blk(iBlock)
+       AreayInvDy = fAy_Blk(iBlock)/Dy_Blk(iBlock)
+       AreazInvDz = fAz_Blk(iBlock)/Dz_Blk(iBlock)
 
        select case(nVar)
        case(1)
@@ -1291,27 +1289,31 @@ contains
 
     subroutine get_diagonal_subblock
 
+      real :: Volume
       !------------------------------------------------------------------------
 
+      Volume = 1.0/vInv_CB(i,j,k,iBlock)
+
       ! Heat conduction
-      Diag_V(:) = SpecificHeat_VCB(:,i,j,k,iBlock) &
-           + DtInvDx2*(0.5*HeatConductionCoef_VGB(:,i-1,j,  k,  iBlock) &
-           +               HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
-           +           0.5*HeatConductionCoef_VGB(:,i+1,j,  k,  iBlock) ) &
-           + DtInvDy2*(0.5*HeatConductionCoef_VGB(:,i,  j-1,k,  iBlock) &
-           +               HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
-           +           0.5*HeatConductionCoef_VGB(:,i,  j+1,k,  iBlock) ) &
-           + DtInvDz2*(0.5*HeatConductionCoef_VGB(:,i,  j,  k-1,iBlock) &
-           +               HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
-           +           0.5*HeatConductionCoef_VGB(:,i,  j,  k+1,iBlock) )
+      Diag_V(:) = SpecificHeat_VCB(:,i,j,k,iBlock)*Volume + Dt*( &
+           + AreaxInvDx*(0.5*HeatConductionCoef_VGB(:,i-1,j,  k,  iBlock) &
+           +                 HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
+           +             0.5*HeatConductionCoef_VGB(:,i+1,j,  k,  iBlock) ) &
+           + AreayInvDy*(0.5*HeatConductionCoef_VGB(:,i,  j-1,k,  iBlock) &
+           +                 HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
+           +             0.5*HeatConductionCoef_VGB(:,i,  j+1,k,  iBlock) ) &
+           + AreazInvDz*(0.5*HeatConductionCoef_VGB(:,i,  j,  k-1,iBlock) &
+           +                 HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
+           +             0.5*HeatConductionCoef_VGB(:,i,  j,  k+1,iBlock) ) )
 
       if(nVar==1) return
 
       ! Energy exchange
-      Diag_V(1) = Diag_V(1) + Dt*sum(RelaxationCoef_VCB(2:nVar,i,j,k,iBlock))
+      Diag_V(TeImpl_) = Diag_V(TeImpl_) &
+           + Dt*sum(RelaxationCoef_VCB(2:nVar,i,j,k,iBlock))*Volume
       Diag_V(2:nVar) = Diag_V(2:nVar) &
-           + Dt*RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)
-      OffDiag_V(2:nVar) = - Dt*RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)
+           + Dt*RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)*Volume
+      OffDiag_V(2:nVar) = - Dt*RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)*Volume
 
     end subroutine get_diagonal_subblock
 
