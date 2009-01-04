@@ -952,20 +952,20 @@ contains
             + Flux_VY(1:nVar,i,j+1,k) - Flux_VY(1:nVar,i,j,k) &
             + Flux_VZ(1:nVar,i,j,k+1) - Flux_VZ(1:nVar,i,j,k) )
 
-       if(nVar == 1)CYCLE
+       if(nVar > 1)then
+          ! Energy exchange
+          ADotTN_VC(TeImpl_,i,j,k) = ADotTN_VC(TeImpl_,i,j,k) &
+               + sum(RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)) &
+               *TNPlusOne_VG(TeImpl_,i,j,k) &
+               - sum( RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
+               *      TNPlusOne_VG(2:nVar,i,j,k) )
 
-       ! Energy exchange
-       ADotTN_VC(TeImpl_,i,j,k) = ADotTN_VC(TeImpl_,i,j,k) &
-            + sum(RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)) &
-            *TNPlusOne_VG(TeImpl_,i,j,k) &
-            - sum( RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
-            *      TNPlusOne_VG(2:nVar,i,j,k) )
-
-       ADotTN_VC(2:nVar,i,j,k) = ADotTN_VC(2:nVar,i,j,k) &
-            + RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
-            *TNPlusOne_VG(2:nVar,i,j,k) &
-            - RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
-            *TNPlusOne_VG(TeImpl_,i,j,k)
+          ADotTN_VC(2:nVar,i,j,k) = ADotTN_VC(2:nVar,i,j,k) &
+               + RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
+               *TNPlusOne_VG(2:nVar,i,j,k) &
+               - RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
+               *TNPlusOne_VG(TeImpl_,i,j,k)
+       end if
 
        ! multiply by control volume
        ADotTN_VC(:,i,j,k) = ADotTN_VC(:,i,j,k)/vInv_CB(i,j,k,iBlock)
@@ -1299,6 +1299,7 @@ contains
       real :: Volume
       !------------------------------------------------------------------------
 
+      !!! make area and volume correction for IsCylindrical
       Volume = 1.0/vInv_CB(i,j,k,iBlock)
 
       ! Heat conduction
