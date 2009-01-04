@@ -38,7 +38,7 @@ module ModGrayDiffusion
   ! and energy exchange
   real, allocatable :: DelEint_VCB(:,:,:,:,:)
 
-  ! Initial guess for conjugate gradient
+  ! Right-hand side of non-linear coupled system of temperature equations
   real, allocatable :: Source_VCB(:,:,:,:,:)
 
   ! radiation energy used for calculating radiative energy flux
@@ -64,11 +64,19 @@ contains
 
   subroutine init_gray_diffusion
 
-    use ModImplicit, ONLY: UseFullImplicit
-    use ModProcMH,   ONLY: iProc
-    use ModSize,     ONLY: nI, nJ, nK, nBlk, nDim
+    use ModAdvance,    ONLY: Eradiation_
+    use ModImplicit,   ONLY: UseFullImplicit
+    use ModProcMH,     ONLY: iProc
+    use ModSize,       ONLY: nI, nJ, nK, nBlk, nDim
+    use ModVarIndexes, ONLY: NameVar_V
 
+    character(len=*), parameter :: NameSub = "init_gray_diffusion"
     !------------------------------------------------------------------------
+
+    ! Make sure that Eradiation_ is correct
+    if(NameVar_V(Eradiation_) /= "Erad") call stop_mpi(NameSub// &
+         ": incorrect index for Erad variable in ModEquation")
+
 
     if(UseFullImplicit)then
 
@@ -700,25 +708,20 @@ contains
 
     use ModAdvance,    ONLY: State_VGB, Source_VC, &
          uDotArea_XI, uDotArea_YI, uDotArea_ZI, Eradiation_
-    use ModConst,      ONLY: cRadiation
     use ModGeometry,   ONLY: vInv_CB
     use ModImplicit,   ONLY: UseFullImplicit
-    use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_
+    use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_
     use ModSize,       ONLY: nI, nJ, nK
     use ModUser,       ONLY: user_material_properties
-    use ModVarIndexes, ONLY: Energy_, NameVar_V
+    use ModVarIndexes, ONLY: Energy_
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    real :: TeSi
+    real :: TeSi, Te
     real :: RadCompression, AbsorptionEmission
     character(len=19), parameter:: NameSub = "calc_source_gray_diffusion"
     !------------------------------------------------------------------------
-
-    ! Make sure that Eradiation_ is correct
-    if(NameVar_V(Eradiation_) /= "Erad") call stop_mpi(NameSub// &
-         ": incorrect index for Erad variable in ModEquation")
 
     do k=1,nK; do j=1,nJ; do i=1,nI
 
@@ -730,30 +733,31 @@ contains
              +uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
              +uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1))
 
-       ! dErad/dt = - adiabatic compression + AbsorptionEmission
+       ! dErad/dt = - adiabatic compression
        Source_VC(Eradiation_,i,j,k) = Source_VC(Eradiation_,i,j,k) &
             - RadCompression
 
-       ! dE/dt    = + adiabatic compression - AbsorptionEmission
+       ! dE/dt    = + adiabatic compression
        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + RadCompression
 
-       ! The absorption-emission term will be added by the implicit solver
+       ! In the semi-implicit solver, the energy exchange is already added
        if(.not.UseFullImplicit) CYCLE
 
        call user_material_properties(State_VGB(:,i,j,k,iBlock), &
             TeSiOut = TeSi)
 
+       Te = TeSi*Si2No_V(UnitTemperature_)
+
        ! Source term due to absorption and emission
        ! Sigma_a*(cRadiation*Te**4-Erad)
        AbsorptionEmission =  RelaxationCoef_VCB(TradImpl_,i,j,k,iBlock) &
-            *(cRadiation*TeSi**4*Si2No_V(UnitEnergyDens_) &
-            - State_VGB(Eradiation_,i,j,k,iBlock))
+            *(cRadiationNo*Te**4 - State_VGB(Eradiation_,i,j,k,iBlock))
 
-       ! dErad/dt = - adiabatic compression + AbsorptionEmission
+       ! dErad/dt = + AbsorptionEmission
        Source_VC(Eradiation_,i,j,k) = Source_VC(Eradiation_,i,j,k) &
             + AbsorptionEmission
 
-       ! dE/dt    = + adiabatic compression - AbsorptionEmission
+       ! dE/dt    = - AbsorptionEmission
        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
             - AbsorptionEmission
 
@@ -765,18 +769,21 @@ contains
   subroutine advance_temperature
 
     use ModGeometry, ONLY: vInv_CB
-    use ModMain,     ONLY: unusedBLK
+    use ModMain,     ONLY: unusedBLK, Dt
     use ModSize,     ONLY: nI, nJ, nK, nBlk
 
     integer :: i, j, k, iBlock
     integer :: Iter
-    real, parameter :: Tolerance = 1e-4
+    real, parameter :: Tolerance = 1e-5
     logical :: DoTest, DoTestMe
 
     character(len=*), parameter :: NameSub = 'advance_temperature'
     !--------------------------------------------------------------------------
 
     call set_oktest('cg', DoTest, DoTestMe)
+
+    ! prevent doing useless updates
+    if(Dt == 0.0)return
 
     do iBlock = 1, nBlk
        if(unusedBlk(iBlock)) CYCLE
@@ -787,7 +794,7 @@ contains
 
        do k = 1,nK; do j = 1,nJ; do i = 1,nI
           Source_VCB(:,i,j,k,iBlock) = Source_VCB(:,i,j,k,iBlock) &
-               /vInv_CB(i,j,k,iBlock)
+               /(vInv_CB(i,j,k,iBlock)*Dt)
        end do; end do; end do
     end do
 
@@ -911,7 +918,7 @@ contains
     if(NeiLev(6,iBlock) == NOBLK) TNPlusOne_VG(:,:,:,nK+1) &
          =                        TNPlusOne_VG(:,:,:,nK  )
 
-    ! Calculate radiative diffusion fluxes
+    ! Calculate heat conduction/diffusion fluxes
     !!! cartesian version only
     !!! make cylindrical correction
     AreaxInvDx = fAx_Blk(iBlock)/Dx_Blk(iBlock)
@@ -940,7 +947,7 @@ contains
 
        ! Heat conduction
        ADotTN_VC(:,i,j,k) = SpecificHeat_VCB(:,i,j,k,iBlock) &
-            *TNPlusOne_VG(:,i,j,k) + Dt*vInv_CB(i,j,k,iBlock)*( &
+            *TNPlusOne_VG(:,i,j,k)/Dt + vInv_CB(i,j,k,iBlock)*( &
             + Flux_VX(1:nVar,i+1,j,k) - Flux_VX(1:nVar,i,j,k) &
             + Flux_VY(1:nVar,i,j+1,k) - Flux_VY(1:nVar,i,j,k) &
             + Flux_VZ(1:nVar,i,j,k+1) - Flux_VZ(1:nVar,i,j,k) )
@@ -949,15 +956,15 @@ contains
 
        ! Energy exchange
        ADotTN_VC(TeImpl_,i,j,k) = ADotTN_VC(TeImpl_,i,j,k) &
-            + Dt*sum(RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)) &
+            + sum(RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)) &
             *TNPlusOne_VG(TeImpl_,i,j,k) &
-            - Dt*sum( RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
-            *         TNPlusOne_VG(2:nVar,i,j,k) )
+            - sum( RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
+            *      TNPlusOne_VG(2:nVar,i,j,k) )
 
        ADotTN_VC(2:nVar,i,j,k) = ADotTN_VC(2:nVar,i,j,k) &
-            + Dt*RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
+            + RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
             *TNPlusOne_VG(2:nVar,i,j,k) &
-            - Dt*RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
+            - RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
             *TNPlusOne_VG(TeImpl_,i,j,k)
 
        ! multiply by control volume
@@ -1295,7 +1302,7 @@ contains
       Volume = 1.0/vInv_CB(i,j,k,iBlock)
 
       ! Heat conduction
-      Diag_V(:) = SpecificHeat_VCB(:,i,j,k,iBlock)*Volume + Dt*( &
+      Diag_V(:) = SpecificHeat_VCB(:,i,j,k,iBlock)*Volume/Dt &
            + AreaxInvDx*(0.5*HeatConductionCoef_VGB(:,i-1,j,  k,  iBlock) &
            +                 HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
            +             0.5*HeatConductionCoef_VGB(:,i+1,j,  k,  iBlock) ) &
@@ -1304,16 +1311,16 @@ contains
            +             0.5*HeatConductionCoef_VGB(:,i,  j+1,k,  iBlock) ) &
            + AreazInvDz*(0.5*HeatConductionCoef_VGB(:,i,  j,  k-1,iBlock) &
            +                 HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
-           +             0.5*HeatConductionCoef_VGB(:,i,  j,  k+1,iBlock) ) )
+           +             0.5*HeatConductionCoef_VGB(:,i,  j,  k+1,iBlock) )
 
       if(nVar==1) return
 
       ! Energy exchange
       Diag_V(TeImpl_) = Diag_V(TeImpl_) &
-           + Dt*sum(RelaxationCoef_VCB(2:nVar,i,j,k,iBlock))*Volume
+           + Volume*sum(RelaxationCoef_VCB(2:nVar,i,j,k,iBlock))
       Diag_V(2:nVar) = Diag_V(2:nVar) &
-           + Dt*RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)*Volume
-      OffDiag_V(2:nVar) = - Dt*RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)*Volume
+           + Volume*RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)
+      OffDiag_V(2:nVar) = -Volume*RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)
 
     end subroutine get_diagonal_subblock
 
