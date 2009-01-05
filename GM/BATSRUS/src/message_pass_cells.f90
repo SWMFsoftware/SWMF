@@ -44,7 +44,7 @@ module ModMPCells
   logical, parameter :: DoBreakUpMessages=.false.
   logical, parameter :: DoImplicitUnusedBlock=.true.
 
-  ! For UseGhostsInProlongation=.false. no ghost cells are used in prologation for sending
+  ! For UseGhostsInProlongation=.false. no ghost cells are used in prolongation for sending
   !   values from coarse to fine blocks.  When there is a load balance, amr, or starting up,
   !   the ghost cells may have bad or unset values.  In this case, correct values for the
   !   prolongation need two message passes.  Even when the values are OK, they may be one
