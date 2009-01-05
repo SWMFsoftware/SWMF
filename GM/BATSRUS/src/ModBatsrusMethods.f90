@@ -296,8 +296,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
        part_steady_select, part_steady_switch
   use ModImplicit, ONLY: UseImplicit, UseSemiImplicit      !^CFG IF IMPLICIT
-  use ModGrayDiffusion, ONLY: advance_temperature, &       !^CFG IF IMPLICIT
-       set_frozen_coefficients                             !^CFG IF IMPLICIT
+  use ModGrayDiffusion, ONLY: advance_temperature          !^CFG IF IMPLICIT
 
   implicit none
 
@@ -351,15 +350,6 @@ subroutine BATS_advance(TimeSimulationLimit)
   if(UseNonConservative .and. nConservCrit > 0)&
        call select_conservative
 
-  ! Strang splitting of gray-diffusion    !^CFG IF IMPLICIT BEGIN
-  if(UseGrayDiffusion)then
-     call set_frozen_coefficients
-     if(.not.UseImplicit)then
-        call advance_temperature
-        call exchange_messages
-     end if
-  end if                                  !^CFG END IMPLICIT
-
   if(UseImplicit.and.nBlockImplALL>0)then !^CFG IF IMPLICIT BEGIN
      call advance_impl
   else                                    !^CFG END IMPLICIT
@@ -371,9 +361,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   if(UseDivBDiffusion)call clean_divb     !^CFG IF DIVBDIFFUSE
   call exchange_messages
 
-  ! Strang splitting of gray-diffusion    !^CFG IF IMPLICIT BEGIN
-  if(UseGrayDiffusion.and..not.UseImplicit)then
-     call set_frozen_coefficients
+  if(UseGrayDiffusion.and..not.UseImplicit)then !^CFG IF IMPLICIT BEGIN
      call advance_temperature
      call exchange_messages
   end if                                  !^CFG END IMPLICIT

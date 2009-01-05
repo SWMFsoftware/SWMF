@@ -15,7 +15,6 @@ module ModGrayDiffusion
 
   ! Public methods
   public :: init_gray_diffusion
-  public :: set_frozen_coefficients
   public :: get_radiation_energy_flux
   public :: calc_source_gray_diffusion
   public :: advance_temperature
@@ -57,9 +56,6 @@ module ModGrayDiffusion
 
   ! named indexes for temerature variables
   integer, parameter :: TeImpl_ = 1, TradImpl_ = 2
-
-  ! fraction of the time-step will be used in the Strang splitting
-  real :: DtLocal
 
 contains
 
@@ -788,7 +784,7 @@ contains
     ! prevent doing useless updates
     if(Dt == 0.0)return
 
-    DtLocal = 0.5*Dt
+    call set_frozen_coefficients
 
     do iBlock = 1, nBlk
        if(unusedBlk(iBlock)) CYCLE
@@ -799,7 +795,7 @@ contains
 
        do k = 1,nK; do j = 1,nJ; do i = 1,nI
           Source_VCB(:,i,j,k,iBlock) = Source_VCB(:,i,j,k,iBlock) &
-               /(vInv_CB(i,j,k,iBlock)*DtLocal)
+               /(vInv_CB(i,j,k,iBlock)*Dt)
        end do; end do; end do
     end do
 
@@ -896,7 +892,7 @@ contains
     use ModAdvance,  ONLY: Flux_VX, Flux_VY, Flux_VZ
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, fAx_BLK, fAy_BLK, fAz_BLK, &
          vInv_CB
-    use ModMain,     ONLY: x_, y_, z_
+    use ModMain,     ONLY: x_, y_, z_, Dt
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModSize,     ONLY: nI, nJ, nK, gcn
 
@@ -952,7 +948,7 @@ contains
 
        ! Heat conduction
        ADotTN_VC(:,i,j,k) = SpecificHeat_VCB(:,i,j,k,iBlock) &
-            *TNPlusOne_VG(:,i,j,k)/DtLocal + vInv_CB(i,j,k,iBlock)*( &
+            *TNPlusOne_VG(:,i,j,k)/Dt + vInv_CB(i,j,k,iBlock)*( &
             + Flux_VX(1:nVar,i+1,j,k) - Flux_VX(1:nVar,i,j,k) &
             + Flux_VY(1:nVar,i,j+1,k) - Flux_VY(1:nVar,i,j,k) &
             + Flux_VZ(1:nVar,i,j,k+1) - Flux_VZ(1:nVar,i,j,k) )
@@ -1301,6 +1297,8 @@ contains
 
     subroutine get_diagonal_subblock
 
+      use ModMain, ONLY: Dt
+
       real :: Volume
       !------------------------------------------------------------------------
 
@@ -1308,7 +1306,7 @@ contains
       Volume = 1.0/vInv_CB(i,j,k,iBlock)
 
       ! Heat conduction
-      Diag_V(:) = SpecificHeat_VCB(:,i,j,k,iBlock)*Volume/DtLocal &
+      Diag_V(:) = SpecificHeat_VCB(:,i,j,k,iBlock)*Volume/Dt &
            + AreaxInvDx*(0.5*HeatConductionCoef_VGB(:,i-1,j,  k,  iBlock) &
            +                 HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
            +             0.5*HeatConductionCoef_VGB(:,i+1,j,  k,  iBlock) ) &
