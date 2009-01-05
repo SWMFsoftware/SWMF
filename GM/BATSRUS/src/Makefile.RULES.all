@@ -13,6 +13,7 @@ $OS eq "Darwin" and $Compiler eq "xlf90"
 
 $OS eq "Linux" and $Compiler eq "ifort"
 	${COMPILE.f90} ${Cflag1} create_soln_blocks.f90
+	${COMPILE.f90} ${Cflag1} get_im_pressure.f90
 	${COMPILE.f90} ${Cflag1} set_ICs.f90
 	${COMPILE.f90} ${Cflag1} write_logfile.f90
 
