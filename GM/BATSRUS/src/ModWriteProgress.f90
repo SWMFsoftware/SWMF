@@ -150,7 +150,7 @@ subroutine write_runtime_values()
   if (UseBody2) then
      call write_prefix
      write(iUnitOut,'(10X,''body2: .true.'')')
-     call write_prefix; write(iUnitOut,'(10X,2(A13,3ES13.5))') &
+     call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
           'rBody2:      ',RBody2   ,', BdpDimBody2: ',&
           sqrt(sum(BdpDimBody2_D**2))
      call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
