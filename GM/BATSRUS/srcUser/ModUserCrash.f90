@@ -1050,7 +1050,7 @@ contains
 
   subroutine user_material_properties(State_V, EinternalSiIn, &
        TeSiOut, AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut, &
-       CvSiOut, GammaOut)
+       CvSiOut, PressureSiOut)
 
     ! The State_V vector is in normalized units, output is in SI units
 
@@ -1065,7 +1065,7 @@ contains
     real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
     real, optional, intent(out) :: RosselandMeanOpacitySiOut ! [1/m]
     real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
-    real, optional, intent(out) :: GammaOut                  ! dimensionless
+    real, optional, intent(out) :: PressureSiOut             ! [Pa]
 
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
@@ -1075,22 +1075,23 @@ contains
     integer :: iMaterial, iMaterial_I(1)
     logical :: IsError
     !-------------------------------------------------------------------------
+    !!! some additional calls to eos are needed for semi-implicit gray-diffusion
+
     iMaterial_I = maxloc(State_V(LevelXe_:LevelPl_))
     iMaterial   = iMaterial_I(1) - 1
 
     RhoSi = State_V(Rho_)*No2Si_V(UnitRho_)
     pSi   = State_V(p_)*No2Si_V(UnitP_)
 
-    if(present(TeSiOut) .or. present(GammaOut))then
+    if(present(TeSiOut))then
        if(iTableCvGammaTe > 0)then
           call interpolate_lookup_table(iTableCvGammaTe, RhoSi, pSi/RhoSi, &
                Value_V, DoExtrapolate = .false.)
           if(present(TeSiOut))  TeSiOut  = Value_V(3*iMaterial+3)
-          if(present(GammaOut)) GammaOut = Value_V(3*iMaterial+2)
        else
           ! The IsError flag avoids stopping for Fermi degenerated state
           call eos(iMaterial, RhoSi, pTotalIn=pSi, &
-               TeOut=TeSiOut, GammaOut=GammaOut, IsError=IsError)
+               TeOut=TeSiOut, IsError=IsError)
        end if
     end if
 

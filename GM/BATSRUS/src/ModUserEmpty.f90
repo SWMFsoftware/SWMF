@@ -225,7 +225,7 @@ contains
 
   subroutine user_material_properties(State_V, EinternalSiIn, &
        TeSiOut, AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut, &
-       CvSiOut, GammaOut)
+       CvSiOut, PressureSiOut)
 
     ! The State_V vector is in normalized units
 
@@ -237,7 +237,7 @@ contains
     real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
     real, optional, intent(out) :: RosselandMeanOpacitySiOut ! [1/m]
     real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
-    real, optional, intent(out) :: GammaOut                  ! dimensionless
+    real, optional, intent(out) :: PressureSiOut             ! [Pa]
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
     !-------------------------------------------------------------------

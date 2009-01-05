@@ -826,14 +826,14 @@ contains
 
     use ModAdvance,  ONLY: State_VGB, p_, Eradiation_
     use ModEnergy,   ONLY: calc_energy_cell
-    use ModPhysics,  ONLY: inv_gm1, No2Si_V, UnitEnergyDens_
+    use ModPhysics,  ONLY: inv_gm1, No2Si_V, Si2No_V, UnitEnergyDens_, UnitP_
     use ModSize,     ONLY: nI, nJ, nK
     use ModUser,     ONLY: user_material_properties
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    real :: EinternalSi, Einternal, Gamma
+    real :: EinternalSi, Einternal, Gamma, PressureSi
     !------------------------------------------------------------------------
 
     do k = 1,nK; do j = 1,nJ; do i = 1,nI
@@ -849,9 +849,9 @@ contains
        EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
 
        call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-            EinternalSiIn = EinternalSi, GammaOut = Gamma)
+            EinternalSiIn = EinternalSi, PressureSiOut = PressureSi)
 
-       State_VGB(p_,i,j,k,iBlock) = Einternal*(Gamma-1.0)
+       State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
 
        State_VGB(EintExtra_,i,j,k,iBlock) = &
             Einternal - inv_gm1*State_VGB(p_,i,j,k,iBlock)

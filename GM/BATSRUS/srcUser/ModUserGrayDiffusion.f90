@@ -350,7 +350,7 @@ contains
 
   subroutine user_material_properties(State_V, EinternalSiIn, &
        TeSiOut, AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut, &
-       CvSiOut, GammaOut)
+       CvSiOut, PressureSiOut)
 
     ! The State_V vector is in normalized units
 
@@ -365,7 +365,7 @@ contains
     real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
     real, optional, intent(out) :: RosselandMeanOpacitySiOut ! [1/m]
     real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
-    real, optional, intent(out) :: GammaOut                  ! dimensionless
+    real, optional, intent(out) :: PressureSiOut             ! [Pa]
 
     real :: Temperature, AbsorptionOpacity, DiffusionRad
 
@@ -379,7 +379,7 @@ contains
        Temperature = State_V(p_)/State_V(Rho_)
     end if
 
-    if(present(GammaOut)) GammaOut = g
+    if(present(PressureSiOut)) PressureSiOut = EinternalSiIn*(g - 1.0)
 
     if(present(CvSiOut)) CvSiOut = inv_gm1*State_V(Rho_) &
          *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
