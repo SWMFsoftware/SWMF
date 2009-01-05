@@ -336,8 +336,6 @@ subroutine BATS_advance(TimeSimulationLimit)
   n_step = n_step + 1
   iteration_number = iteration_number+1
 
-  if(UseGrayDiffusion) call set_frozen_coefficients        !^CFG IF IMPLICIT
-
   ! Calculate time step dt
   if (time_accurate) call set_global_timestep(TimeSimulationLimit)
 
@@ -353,6 +351,15 @@ subroutine BATS_advance(TimeSimulationLimit)
   if(UseNonConservative .and. nConservCrit > 0)&
        call select_conservative
 
+  ! Strang splitting of gray-diffusion    !^CFG IF IMPLICIT BEGIN
+  if(UseGrayDiffusion)then
+     call set_frozen_coefficients
+     if(.not.UseImplicit)then
+        call advance_temperature
+        call exchange_messages
+     end if
+  end if                                  !^CFG END IMPLICIT
+
   if(UseImplicit.and.nBlockImplALL>0)then !^CFG IF IMPLICIT BEGIN
      call advance_impl
   else                                    !^CFG END IMPLICIT
@@ -364,8 +371,13 @@ subroutine BATS_advance(TimeSimulationLimit)
   if(UseDivBDiffusion)call clean_divb     !^CFG IF DIVBDIFFUSE
   call exchange_messages
 
-  if(UseGrayDiffusion .and. .not.UseImplicit) & !^CFG IF IMPLICIT
-       call advance_temperature           !^CFG IF IMPLICIT
+  ! Strang splitting of gray-diffusion    !^CFG IF IMPLICIT BEGIN
+  if(UseGrayDiffusion.and..not.UseImplicit)then
+     call set_frozen_coefficients
+     call advance_temperature
+     call exchange_messages
+  end if                                  !^CFG END IMPLICIT
+
   if(UseSemiImplicit) call advance_impl   !^CFG IF IMPLICIT
   
   if(UsePartSteady) then
