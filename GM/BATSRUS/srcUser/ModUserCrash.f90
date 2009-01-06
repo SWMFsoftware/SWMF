@@ -1069,20 +1069,25 @@ contains
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
 
-    real    :: pSi, RhoSi, TemperatureSi
+    real    :: pSi, RhoSi, TeSi, CvSi
     real    :: Value_V(3*nMaterial), Opacity_V(2*nMaterial)
     integer :: iMaterial, iMaterial_I(1)
     logical :: IsError
     !-------------------------------------------------------------------------
-    !!! some additional calls to eos are needed for semi-implicit gray-diffusion
 
     iMaterial_I = maxloc(State_V(LevelXe_:LevelPl_))
     iMaterial   = iMaterial_I(1) - 1
 
     RhoSi = State_V(Rho_)*No2Si_V(UnitRho_)
-    pSi   = State_V(p_)*No2Si_V(UnitP_)
+    if(present(EinternalSiIn))then
+       call eos(iMaterial, RhoSi, ETotalIn=EinternalSiIn, PTotalOut=pSi)
+    else
+       pSi = State_V(p_)*No2Si_V(UnitP_)
+    end if
 
-    if(present(TeSiOut))then
+    if(present(PressureSiOut)) PressureSiOut = pSi
+
+    if(present(TeSiOut) .or. present(CvSiOut))then
        if(iTableCvGammaTe > 0)then
           call interpolate_lookup_table(iTableCvGammaTe, RhoSi, pSi/RhoSi, &
                Value_V, DoExtrapolate = .false.)
@@ -1090,7 +1095,10 @@ contains
        else
           ! The IsError flag avoids stopping for Fermi degenerated state
           call eos(iMaterial, RhoSi, pTotalIn=pSi, &
-               TeOut=TeSiOut, IsError=IsError)
+               TeOut=TeSi, CvTotalOut=CvSi, IsError=IsError)
+
+          if(present(TeSiOut)) TeSiOut = TeSi
+          if(present(CvSiOut)) CvSiOut = CvSi
        end if
     end if
 
