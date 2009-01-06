@@ -136,6 +136,7 @@ contains
     use ModAdvance,  ONLY: State_VGB, Eradiation_
     use ModConst,    ONLY: cLightSpeed
     use ModMain,     ONLY: unusedBlk
+    use ModParallel, ONLY: NOBLK, NeiLev
     use ModPhysics,  ONLY: Si2No_V, UnitT_, UnitX_, UnitU_, &
          UnitEnergyDens_, UnitTemperature_, cRadiationNo
     use ModSize,     ONLY: nI, nJ, nK, nBlk
@@ -174,6 +175,22 @@ contains
 
     do iBlock = 1, nBlk
        if(unusedBlk(iBlock)) CYCLE
+
+       if(UseRadFluxLimiter)then
+!!!       set floating outer boundary
+          if(NeiLev(1,iBlock) == NOBLK) Temperature_VGB(:,0   ,:,:,iBlock) &
+               =                        Temperature_VGB(:,1   ,:,:,iBlock)
+          if(NeiLev(2,iBlock) == NOBLK) Temperature_VGB(:,nI+1,:,:,iBlock) &
+               =                        Temperature_VGB(:,nI  ,:,:,iBlock)
+          if(NeiLev(3,iBlock) == NOBLK) Temperature_VGB(:,:,0   ,:,iBlock) &
+               =                        Temperature_VGB(:,:,1   ,:,iBlock)
+          if(NeiLev(4,iBlock) == NOBLK) Temperature_VGB(:,:,nJ+1,:,iBlock) &
+               =                        Temperature_VGB(:,:,nJ  ,:,iBlock)
+          if(NeiLev(5,iBlock) == NOBLK) Temperature_VGB(:,:,:,0   ,iBlock) &
+               =                        Temperature_VGB(:,:,:,1   ,iBlock)
+          if(NeiLev(6,iBlock) == NOBLK) Temperature_VGB(:,:,:,nK+1,iBlock) &
+               =                        Temperature_VGB(:,:,:,nK  ,iBlock)
+       end if
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
