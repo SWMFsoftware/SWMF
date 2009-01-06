@@ -359,12 +359,11 @@ subroutine BATS_advance(TimeSimulationLimit)
   if(UseIM)call apply_im_pressure         !^CFG IF RCM
 
   if(UseDivBDiffusion)call clean_divb     !^CFG IF DIVBDIFFUSE
-  call exchange_messages
 
-  if(UseGrayDiffusion.and..not.UseImplicit)then !^CFG IF IMPLICIT BEGIN
-     call advance_temperature
-     call exchange_messages
-  end if                                  !^CFG END IMPLICIT
+  if(UseGrayDiffusion.and..not.UseImplicit) &  !^CFG IF IMPLICIT
+     call advance_temperature                  !^CFG IF IMPLICIT
+
+  call exchange_messages
 
   if(UseSemiImplicit) call advance_impl   !^CFG IF IMPLICIT
   
