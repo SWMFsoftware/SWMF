@@ -33,6 +33,9 @@ module ModGrayDiffusion
   real, allocatable         :: SpecificHeat_VCB(:,:,:,:,:)
   real, allocatable         :: HeatConductionCoef_IGB(:,:,:,:,:)
 
+  ! Store block Jacobi preconditioner
+  real, allocatable :: JacPrec(:,:,:,:,:,:)
+
   ! For the purpose of message passing the heat conduction coefficients,
   ! they are compactly stored without gaps. A pointer is used to indicate
   ! which temperature variables involve heat conduction
@@ -117,6 +120,7 @@ contains
             HeatConductionCoef_IGB(1:nCond,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk), &
             iCond_I(1:nCond), &
             Temperature_VGB(1:nTemperature,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk), &
+            JacPrec(nTemperature,nTemperature,nI,nJ,nK,nBLK), &
             DelEint_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk), &
             Source_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk) )
 
@@ -820,6 +824,9 @@ contains
        end do; end do; end do
     end do
 
+    ! do a preconditioned conjugate gradient
+    call get_jacobi_preconditioner(nTemperature)
+
     call cg(heat_conduction, nTemperature, Source_VCB, Temperature_VGB, &
          .true., Tolerance, 'rel', Iter, jacobi_preconditioner)
 
@@ -1213,6 +1220,49 @@ contains
 
   subroutine jacobi_preconditioner(nVar, VectorIn_VCB, VectorOut_VCB)
 
+    ! Calculate VectorOut = M^{-1} \cdot VectorIn where the stored
+    ! preconditioner matrix, M^{-1}, should be symmetric positive definite
+
+    use ModGeometry, ONLY: true_cell, body_blk
+    use ModMain, ONLY: unusedBLK
+    use ModSize, ONLY: nI, nJ, nK, nBlk
+
+    integer, intent(in) :: nVar
+    real, intent(inout) :: VectorIn_VCB(nVar,1:nI,1:nJ,1:nK,nBLK)
+    real, intent(out)   :: VectorOut_VCB(nVar,1:nI,1:nJ,1:nK,nBLK)
+
+    integer :: iVar, i, j , k, iBlock
+
+    character(len=*), parameter :: NameSub = 'jacobi_preconditioner'
+    !--------------------------------------------------------------------------
+
+    do iBlock = 1, nBlk
+       if(unusedBlk(iBlock))CYCLE
+
+       if(body_blk(iBlock))then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             if(.not.true_cell(i,j,k,iBlock))CYCLE
+             do iVar = 1, nVar
+                VectorOut_VCB(iVar,i,j,k,iBlock) = sum( &
+                     VectorIn_VCB(:,i,j,k,iBlock)*JacPrec(:,iVar,i,j,k,iBlock))
+             end do
+          end do; end do; end do
+       else
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             do iVar = 1, nVar
+                VectorOut_VCB(iVar,i,j,k,iBlock) = sum( &
+                     VectorIn_VCB(:,i,j,k,iBlock)*JacPrec(:,iVar,i,j,k,iBlock))
+             end do
+          end do; end do; end do
+       end if
+    end do
+
+  end subroutine jacobi_preconditioner
+
+  !============================================================================
+
+  subroutine get_jacobi_preconditioner(nVar)
+
     use ModGeometry, ONLY: true_cell, body_blk, Dx_Blk, Dy_Blk, Dz_Blk, &
          fAx_BLK, fAy_BLK, fAz_BLK, vInv_CB
     use ModMain, ONLY: unusedBLK
@@ -1221,23 +1271,16 @@ contains
     ! Inverts the nTemperature * nTemperature sub-matrices at the
     ! block diagonal of the operator of heat-conduction + relaxation
 
-    ! Calculate VectorOut = M^{-1} \cdot VectorIn where the preconditioner
-    ! matrix, M^{-1}, should be symmetric positive definite
-
     integer, intent(in) :: nVar
-    real, intent(inout) :: VectorIn_VCB(nVar,1:nI,1:nJ,1:nK,nBLK)
-    real, intent(out)   :: VectorOut_VCB(nVar,1:nI,1:nJ,1:nK,nBLK)
 
     integer :: iVar, i, j , k, iBlock
 
     real, dimension(nVar) :: Diag_V
     real, allocatable, dimension(:) :: OffDiag_V
 
-    real :: MatrixInv_VV(nVar,nVar)
-
     real :: AreaxInvDx, AreayInvDy, AreazInvDz
 
-    character(len=*), parameter :: NameSub = 'jacobi_preconditioner'
+    character(len=*), parameter :: NameSub = 'get_jacobi_preconditioner'
     !--------------------------------------------------------------------------
 
     if(nVar>1) allocate(OffDiag_V(2:nVar))
@@ -1299,7 +1342,7 @@ contains
 
       call get_diagonal_subblock
 
-      VectorOut_VCB(1,i,j,k,iBlock) = VectorIn_VCB(1,i,j,k,iBlock)/Diag_V(1)
+      JacPrec(1,1,i,j,k,iBlock) = 1.0/Diag_V(1)
 
     end subroutine block_jacobi_1t
 
@@ -1311,15 +1354,10 @@ contains
 
       call get_diagonal_subblock
 
-      MatrixInv_VV = reshape( (/ &
+      JacPrec(:,:,i,j,k,iBlock) = reshape( (/ &
            Diag_V(2)    , -OffDiag_V(2), &
            -OffDiag_V(2), Diag_V(1)  /), (/2,2/) ) &
            /(Diag_V(1)*Diag_V(2) - OffDiag_V(2)**2)
-
-      do iVar = 1, nVar
-         VectorOut_VCB(iVar,i,j,k,iBlock) = &
-              sum(VectorIn_VCB(:,i,j,k,iBlock)*MatrixInv_VV(:,iVar))
-      end do
 
     end subroutine block_jacobi_2t
 
@@ -1331,16 +1369,11 @@ contains
 
       call get_diagonal_subblock
 
-      MatrixInv_VV = reshape( (/ &
+      JacPrec(:,:,i,j,k,iBlock) = reshape( (/ &
            Diag_V(2)*Diag_V(3), -Diag_V(3)*OffDiag_V(2), -Diag_V(2)*OffDiag_V(3), &
            -Diag_V(3)*OffDiag_V(2), Diag_V(1)*Diag_V(3) - OffDiag_V(3)**2, OffDiag_V(2)*OffDiag_V(3), &
            -Diag_V(2)*OffDiag_V(3), OffDiag_V(2)*OffDiag_V(3), Diag_V(1)*Diag_V(2) - OffDiag_V(2)**2 /), (/3,3/) ) &
            /( Diag_V(3)*(Diag_V(1)*Diag_V(2) - OffDiag_V(2)**2) - Diag_V(2)*OffDiag_V(3)**2 )
-
-      do iVar = 1, nVar
-         VectorOut_VCB(iVar,i,j,k,iBlock) = &
-              sum(VectorIn_VCB(:,i,j,k,iBlock)*MatrixInv_VV(:,iVar))
-      end do
 
     end subroutine block_jacobi_3t
 
@@ -1415,6 +1448,6 @@ contains
 
     end subroutine get_diagonal_subblock
 
-  end subroutine jacobi_preconditioner
+  end subroutine get_jacobi_preconditioner
 
 end module ModGrayDiffusion
