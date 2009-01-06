@@ -435,7 +435,8 @@ subroutine calc_scaled_euv
     
     !!need to convert from W/m^2 to photons/m^2/s
     do N=1,Num_WaveLengths_High 
-        Flux_of_EUV(N) = Timed_Flux(N)*wvavg(N)*1.0e-10/(6.626e-34*2.998e8)
+        Flux_of_EUV(N) = Timed_Flux(N)*wvavg(N)*1.0e-10/(6.626e-34*2.998e8) &
+             /(SunOrbitEccentricity**2)
      enddo
      call end_timing("new_euv")
 
