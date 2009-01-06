@@ -714,9 +714,9 @@ contains
     use ModAdvance,    ONLY: State_VGB, Source_VC, &
          uDotArea_XI, uDotArea_YI, uDotArea_ZI, Eradiation_
     use ModConst,      ONLY: cLightSpeed
-    use ModGeometry,   ONLY: vInv_CB, y_BLK
+    use ModGeometry,   ONLY: vInv_CB, y_BLK, IsCylindrical
     use ModImplicit,   ONLY: UseFullImplicit
-    use ModMain,       ONLY: IsCylindrical
+    use ModNodes,      ONLY: NodeY_NB
     use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_, UnitT_
     use ModSize,       ONLY: nI, nJ, nK
     use ModUser,       ONLY: user_material_properties
@@ -725,7 +725,7 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    real :: TeSi, Te, vInv
+    real :: TeSi, Te, vInv, DivU
     real :: RadCompression, AbsorptionEmission, PlanckOpacitySi
     character(len=19), parameter:: NameSub = "calc_source_gray_diffusion"
     !------------------------------------------------------------------------
@@ -736,17 +736,21 @@ contains
           ! Multiply volume with radius (=Y) at cell center
           ! -> divide inverse volume
           vInv = vInv_CB(i,j,k,iBlock)/abs(y_BLK(i,j,k,iBlock))
+          DivU = (uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)) &
+               *abs(y_BLK(i,j,k,iBlock)) &
+               + uDotArea_YI(i,j+1,k,1)*abs(NodeY_NB(i,j+1,k,iBlock)) &
+               - uDotArea_YI(i,j,k,1)*abs(NodeY_NB(i,j,k,iBlock))
        else
           vInv = vInv_CB(i,j,k,iBlock)
+          DivU = uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
+               + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
+               + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1) 
        end if
 
        ! Adiabatic compression of radiation energy by fluid velocity (fluid 1)
        ! (GammaRel-1)*Erad*Div(U)
        RadCompression = (GammaRel-1.0)*State_VGB(Eradiation_,i,j,k,iBlock) &
-            *vInv &
-            *(uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
-             +uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
-             +uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1))
+            *vInv*DivU
 
        ! dErad/dt = - adiabatic compression
        Source_VC(Eradiation_,i,j,k) = Source_VC(Eradiation_,i,j,k) &
@@ -791,8 +795,8 @@ contains
   !============================================================================
   subroutine advance_temperature
 
-    use ModGeometry, ONLY: vInv_CB, y_BLK
-    use ModMain,     ONLY: nBlock, unusedBLK, Dt, IsCylindrical
+    use ModGeometry, ONLY: vInv_CB, y_BLK, IsCylindrical
+    use ModMain,     ONLY: nBlock, unusedBLK, Dt
     use ModSize,     ONLY: nI, nJ, nK
 
     integer :: i, j, k, iBlock
@@ -928,8 +932,8 @@ contains
 
     use ModAdvance,  ONLY: Flux_VX, Flux_VY, Flux_VZ
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, fAx_BLK, fAy_BLK, fAz_BLK, &
-         vInv_CB, y_Blk
-    use ModMain,     ONLY: x_, y_, z_, Dt, IsCylindrical
+         vInv_CB, y_Blk, IsCylindrical
+    use ModMain,     ONLY: x_, y_, z_, Dt
     use ModNodes,    ONLY: NodeY_NB
     use ModSize,     ONLY: nI, nJ, nK, gcn
 
@@ -1375,8 +1379,8 @@ contains
 
     subroutine get_diagonal_subblock
 
-      use ModGeometry, ONLY: y_Blk
-      use ModMain,     ONLY: Dt, IsCylindrical
+      use ModGeometry, ONLY: y_Blk, IsCylindrical
+      use ModMain,     ONLY: Dt
       use ModNodes,    ONLY: NodeY_NB
 
       integer :: iCond, iT

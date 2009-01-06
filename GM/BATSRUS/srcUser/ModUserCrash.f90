@@ -85,8 +85,8 @@ contains
   subroutine user_read_inputs
 
     use ModReadParam
-    use ModEos,  ONLY: read_eos_parameters
-    Use ModMain, ONLY: IsCylindrical
+    use ModEos,      ONLY: read_eos_parameters
+    Use ModGeometry, ONLY: IsCylindrical
 
     character (len=100) :: NameCommand
     character(len=*), parameter :: NameSub = 'user_read_inputs'
@@ -720,13 +720,12 @@ contains
     use ModAdvance, ONLY: State_VGB, Rho_, RhoUy_, p_, ExtraEInt_, &
          LevelXe_, LevelPl_, Flux_VX, Flux_VY, Flux_VZ, Source_VC, &
          VdtFace_Y, VdtFace_Z, UseNonConservative
-    use ModGeometry,ONLY: x_BLK, y_BLK, z_BLK, vInv_CB
+    use ModGeometry,ONLY: x_BLK, y_BLK, z_BLK, vInv_CB, IsCylindrical
     use ModNodes,   ONLY: NodeY_NB
     use ModPhysics
     use ModEnergy,  ONLY: calc_energy_cell
     use ModEos,     ONLY: eos, Xe_, Plastic_
     use ModLookupTable, ONLY: interpolate_lookup_table
-    use ModMain,    ONLY: IsCylindrical
 
     implicit none
 
