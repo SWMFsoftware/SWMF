@@ -11,9 +11,6 @@ module ModGrayDiffusion
   ! This module is needed for the order(u/c) gray diffusion approximation for
   ! radiation-hydrodynamics.
 
-  !!! HeatConductionCoef_VGB should become
-  !!! HeatConductionCoefTe_GB and/or HeatConductionCoefTr_GB
-
   private !except
 
   ! Public methods
@@ -34,7 +31,16 @@ module ModGrayDiffusion
   real, allocatable, public :: DiffusionRad_FDB(:,:,:,:,:)
   real, allocatable         :: RelaxationCoef_VCB(:,:,:,:,:)
   real, allocatable         :: SpecificHeat_VCB(:,:,:,:,:)
-  real, allocatable         :: HeatConductionCoef_VGB(:,:,:,:,:)
+  real, allocatable         :: HeatConductionCoef_IGB(:,:,:,:,:)
+
+  ! For the purpose of message passing the heat conduction coefficients,
+  ! they are compactly stored without gaps. A pointer is used to indicate
+  ! which temperature variables involve heat conduction
+  integer, allocatable :: iCond_I(:)
+
+  ! number of variables that uses heat conduction
+  ! currently, only radiation needs "heat conduction"
+  integer, parameter :: nCond = 1
 
   ! change in internal energy due to heat conduction/diffusion
   ! and energy exchange
@@ -58,7 +64,7 @@ module ModGrayDiffusion
   integer, parameter :: nTemperature = 2
 
   ! named indexes for temerature variables
-  integer, parameter :: TeImpl_ = 1, TradImpl_ = 2
+  integer, parameter :: Te_ = 1, Trad_ = 2
 
 contains
 
@@ -108,7 +114,8 @@ contains
     if(.not.allocated(SpecificHeat_VCB))then
        allocate( &
             SpecificHeat_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk), &
-            HeatConductionCoef_VGB(1:nTemperature,0:nI+1,0:nJ+1,0:nK+1,nBlk), &
+            HeatConductionCoef_IGB(1:nCond,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk), &
+            iCond_I(1:nCond), &
             Temperature_VGB(1:nTemperature,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk), &
             DelEint_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk), &
             Source_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk) )
@@ -118,7 +125,7 @@ contains
        end if
     end if
 
-    HeatConductionCoef_VGB = 0.0
+    iCond_I(1) = Trad_
 
   end subroutine init_gray_diffusion
 
@@ -145,52 +152,56 @@ contains
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               AbsorptionOpacitySiOut = PlanckOpacitySi, &
-               RosselandMeanOpacitySiOut = RosselandMeanOpacitySi, &
-               TeSiOut = TeSi, CvSiOut = CvSi)
+               TeSiOut = TeSi)
 
           Te = TeSi*Si2No_V(UnitTemperature_)
           Trad = sqrt(sqrt(State_VGB(Eradiation_,i,j,k,iBlock)/cRadiationNo))
 
-          Temperature_VGB(TeImpl_,i,j,k,iBlock) = Te
-          Temperature_VGB(TradImpl_,i,j,k,iBlock) = Trad
+          Temperature_VGB(Te_,i,j,k,iBlock) = Te
+          Temperature_VGB(Trad_,i,j,k,iBlock) = Trad
+       end do; end do; end do
+    end do
 
-          SpecificHeat_VCB(TeImpl_,i,j,k,iBlock) = CvSi &
+    if(UseRadFluxLimiter)then
+       ! The radiation flux limiters use the gradient of the
+       ! radiation temperature and therefor one layer of ghost cells
+       ! needs to be correct. We massage pass all temperatures.
+
+       ! DoOneLayer, DoFacesOnly, No UseMonoteRestrict
+       call message_pass_cells8(.true., .true., .false., nTemperature, &
+            Temperature_VGB)
+    end if
+
+    do iBlock = 1, nBlk
+       if(unusedBlk(iBlock)) CYCLE
+
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               AbsorptionOpacitySiOut = PlanckOpacitySi, &
+               RosselandMeanOpacitySiOut = RosselandMeanOpacitySi, &
+               CvSiOut = CvSi)
+
+          Te = Temperature_VGB(Te_,i,j,k,iBlock)
+          Trad = Temperature_VGB(Trad_,i,j,k,iBlock)
+
+          SpecificHeat_VCB(Te_,i,j,k,iBlock) = CvSi &
                *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
 
-          SpecificHeat_VCB(TradImpl_,i,j,k,iBlock) = 4.0*cRadiationNo*Trad**3
+          SpecificHeat_VCB(Trad_,i,j,k,iBlock) = 4.0*cRadiationNo*Trad**3
 
-          RelaxationCoef_VCB(TradImpl_,i,j,k,iBlock) = &
+          RelaxationCoef_VCB(Trad_,i,j,k,iBlock) = &
                PlanckOpacitySi*cLightSpeed/Si2No_V(UnitT_) &
                *cRadiationNo*(Te+Trad)*(Te**2+Trad**2)
 
           call get_heat_conduction_coef
        end do; end do; end do
-
-       !!! if AMR is in use, then one layer of ghost cells at the faces
-       !!! should be corrected !
-       do k = 1, nK; do j = 1, nJ; do i = 0, nI+1, nI+1
-          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               RosselandMeanOpacitySiOut = RosselandMeanOpacitySi)
-
-          call get_heat_conduction_coef
-       end do; end do; end do
-
-       do k = 1, nK; do j = 0, nJ+1, nJ+1; do i = 1, nI
-          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               RosselandMeanOpacitySiOut = RosselandMeanOpacitySi)
-
-          call get_heat_conduction_coef
-       end do; end do; end do
-
-       do k = 0, nK+1, nK+1; do j = 1, nJ; do i = 1, nI
-          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               RosselandMeanOpacitySiOut = RosselandMeanOpacitySi)
-
-          call get_heat_conduction_coef
-       end do; end do; end do
-
     end do
+
+    ! message pass one ghost cell layer of heat conduction coefficients
+
+    ! DoOneLayer, DoFacesOnly, No UseMonoteRestrict
+    call message_pass_cells8(.true., .true., .false., nCond, &
+         HeatConductionCoef_IGB)
 
   contains
 
@@ -203,7 +214,7 @@ contains
 
       if(UseRadFluxLimiter)then
          call calc_cell_gradient
-         Grad2ByErad2 = sum(Grad_D**2)/State_VGB(Eradiation_,i,j,k,iBlock)**2
+         Grad2ByErad2 = 16.0*sum(Grad_D**2)/Trad**2
 
          select case(TypeRadFluxLimiter)
          case("sum")
@@ -215,9 +226,7 @@ contains
          end select
       end if
 
-      Trad = sqrt(sqrt(State_VGB(Eradiation_,i,j,k,iBlock)/cRadiationNo))
-
-      HeatConductionCoef_VGB(TradImpl_,i,j,k,iBlock) = DiffRad &
+      HeatConductionCoef_IGB(1,i,j,k,iBlock) = DiffRad &
            *4.0*cRadiationNo*Trad**3
 
     end subroutine get_heat_conduction_coef
@@ -239,14 +248,14 @@ contains
       InvDz = 1.0/Dz_Blk(iBlock)
 
       Grad_D(x_) = &
-           ( State_VGB(Eradiation_,i+1,j,  k,  iBlock) &
-           - State_VGB(Eradiation_,i-1,j,  k,  iBlock) )*0.5*InvDx
+           ( Temperature_VGB(Trad_,i+1,j,  k,  iBlock) &
+           - Temperature_VGB(Trad_,i-1,j,  k,  iBlock) )*0.5*InvDx
       Grad_D(y_) = &
-           ( State_VGB(Eradiation_,i,  j+1,k,  iBlock) &
-           - State_VGB(Eradiation_,i,  j-1,k,  iBlock) )*0.5*InvDy
+           ( Temperature_VGB(Trad_,i,  j+1,k,  iBlock) &
+           - Temperature_VGB(Trad_,i,  j-1,k,  iBlock) )*0.5*InvDy
       Grad_D(z_) = &
-           ( State_VGB(Eradiation_,i,  j,  k+1,iBlock) &
-           - State_VGB(Eradiation_,i,  j,  k-1,iBlock) )*0.5*InvDz
+           ( Temperature_VGB(Trad_,i,  j,  k+1,iBlock) &
+           - Temperature_VGB(Trad_,i,  j,  k-1,iBlock) )*0.5*InvDz
 
     end subroutine calc_cell_gradient
 
@@ -733,7 +742,7 @@ contains
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                AbsorptionOpacitySiOut = PlanckOpacitySi)
 
-          RelaxationCoef_VCB(TradImpl_,i,j,k,iBlock) = &
+          RelaxationCoef_VCB(Trad_,i,j,k,iBlock) = &
                PlanckOpacitySi*cLightSpeed/Si2No_V(UnitT_)
        end if
 
@@ -744,7 +753,7 @@ contains
 
        ! Source term due to absorption and emission
        ! Sigma_a*(cRadiation*Te**4-Erad)
-       AbsorptionEmission =  RelaxationCoef_VCB(TradImpl_,i,j,k,iBlock) &
+       AbsorptionEmission =  RelaxationCoef_VCB(Trad_,i,j,k,iBlock) &
             *(cRadiationNo*Te**4 - State_VGB(Eradiation_,i,j,k,iBlock))
 
        ! dErad/dt = + AbsorptionEmission
@@ -831,11 +840,11 @@ contains
 
        State_VGB(Eradiation_,i,j,k,iBlock) = &
             State_VGB(Eradiation_,i,j,k,iBlock) &
-            + DelEint_VCB(TradImpl_,i,j,k,iBlock)
+            + DelEint_VCB(Trad_,i,j,k,iBlock)
 
        Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
             + State_VGB(EintExtra_,i,j,k,iBlock) &
-            + DelEint_VCB(TeImpl_,i,j,k,iBlock)
+            + DelEint_VCB(Te_,i,j,k,iBlock)
 
        EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
 
@@ -898,7 +907,7 @@ contains
     real, intent(out)   :: ADotTN_VC(nVar,nI,nJ,nK)
 
     real :: AreaxInvDx, AreayInvDy, AreazInvDz, vInv
-    integer :: i, j, k
+    integer :: i, j, k, iT, iCond
     !--------------------------------------------------------------------------
 
 !!! set floating outer boundary
@@ -919,40 +928,44 @@ contains
     AreaxInvDx = fAx_Blk(iBlock)/Dx_Blk(iBlock)
     AreayInvDy = fAy_Blk(iBlock)/Dy_Blk(iBlock)
     AreazInvDz = fAz_Blk(iBlock)/Dz_Blk(iBlock)
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-       Flux_VX(1:nVar,i,j,k) = -AreaxInvDx &
-            *0.5*( HeatConductionCoef_VGB(:,i-1,j,k,iBlock) &
-            +      HeatConductionCoef_VGB(:,i,  j,k,iBlock) ) &
-            *(TNPlusOne_VG(:,i,j,k) - TNPlusOne_VG(:,i-1,j,k))
-    end do; end do; end do
-    do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-       Flux_VY(1:nVar,i,j,k) = -AreayInvDy &
-            *0.5*( HeatConductionCoef_VGB(:,i,j-1,k,iBlock) &
-            +      HeatConductionCoef_VGB(:,i,j,  k,iBlock) ) &
-            *(TNPlusOne_VG(:,i,j,k) - TNPlusOne_VG(:,i,j-1,k))
-    end do; end do; end do
-    if(IsCylindrical)then
-       ! Multiply fluxes with radius = abs(Y) at the X and Y faces
+    do iCond = 1, nCond
+       iT = iCond_I(iCond)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-          Flux_VX(1:nVar,i,j,k)=Flux_VX(1:nVar,i,j,k)*abs(y_BLK(i,j,k,iBlock))
+          Flux_VX(iT,i,j,k) = -AreaxInvDx &
+               *0.5*( HeatConductionCoef_IGB(iCond,i-1,j,k,iBlock) &
+               +      HeatConductionCoef_IGB(iCond,i,  j,k,iBlock) ) &
+               *(TNPlusOne_VG(iT,i,j,k) - TNPlusOne_VG(iT,i-1,j,k))
        end do; end do; end do
        do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-          Flux_VY(1:nVar,i,j,k) = Flux_VY(1:nVar,i,j,k) &
-               *abs(NodeY_NB(i,j,k,iBlock))
+          Flux_VY(iT,i,j,k) = -AreayInvDy &
+               *0.5*( HeatConductionCoef_IGB(iCond,i,j-1,k,iBlock) &
+               +      HeatConductionCoef_IGB(iCond,i,j,  k,iBlock) ) &
+               *(TNPlusOne_VG(iT,i,j,k) - TNPlusOne_VG(iT,i,j-1,k))
        end do; end do; end do
+       if(IsCylindrical)then
+          ! Multiply fluxes with radius = abs(Y) at the X and Y faces
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+             Flux_VX(iT,i,j,k) = Flux_VX(iT,i,j,k) &
+                  *abs(y_BLK(i,j,k,iBlock))
+          end do; end do; end do
+          do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
+             Flux_VY(iT,i,j,k) = Flux_VY(iT,i,j,k) &
+                  *abs(NodeY_NB(i,j,k,iBlock))
+          end do; end do; end do
 
-       ! There are no fluxes in the azimuthal direction
-       do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-          Flux_VZ(1:nVar,i,j,k) = 0.0
-       end do; end do; end do
-    else
-       do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-          Flux_VZ(1:nVar,i,j,k) = -AreazInvDz &
-               *0.5*( HeatConductionCoef_VGB(:,i,j,k-1,iBlock) &
-               +      HeatConductionCoef_VGB(:,i,j,k,  iBlock) ) &
-               *(TNPlusOne_VG(:,i,j,k) - TNPlusOne_VG(:,i,j,k-1))
-       end do; end do; end do
-    end if
+          ! There are no fluxes in the azimuthal direction
+          do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+             Flux_VZ(iT,i,j,k) = 0.0
+          end do; end do; end do
+       else
+          do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+             Flux_VZ(iT,i,j,k) = -AreazInvDz &
+                  *0.5*( HeatConductionCoef_IGB(iCond,i,j,k-1,iBlock) &
+                  +      HeatConductionCoef_IGB(iCond,i,j,k,  iBlock) ) &
+                  *(TNPlusOne_VG(iT,i,j,k) - TNPlusOne_VG(iT,i,j,k-1))
+          end do; end do; end do
+       end if
+    end do
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(IsCylindrical)then
@@ -965,16 +978,20 @@ contains
 
        ! Heat conduction
        ADotTN_VC(:,i,j,k) = SpecificHeat_VCB(:,i,j,k,iBlock) &
-            *TNPlusOne_VG(:,i,j,k)/Dt + vInv*( &
-            + Flux_VX(1:nVar,i+1,j,k) - Flux_VX(1:nVar,i,j,k) &
-            + Flux_VY(1:nVar,i,j+1,k) - Flux_VY(1:nVar,i,j,k) &
-            + Flux_VZ(1:nVar,i,j,k+1) - Flux_VZ(1:nVar,i,j,k) )
+            *TNPlusOne_VG(:,i,j,k)/Dt
+       do iCond = 1, nCond
+          iT = iCond_I(iCond)
+          ADotTN_VC(iT,i,j,k) = ADotTN_VC(iT,i,j,k) + vInv*( &
+               + Flux_VX(iT,i+1,j,k) - Flux_VX(iT,i,j,k) &
+               + Flux_VY(iT,i,j+1,k) - Flux_VY(iT,i,j,k) &
+               + Flux_VZ(iT,i,j,k+1) - Flux_VZ(iT,i,j,k) )
+       end do
 
        if(nVar > 1)then
           ! Energy exchange
-          ADotTN_VC(TeImpl_,i,j,k) = ADotTN_VC(TeImpl_,i,j,k) &
+          ADotTN_VC(Te_,i,j,k) = ADotTN_VC(Te_,i,j,k) &
                + sum(RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)) &
-               *TNPlusOne_VG(TeImpl_,i,j,k) &
+               *TNPlusOne_VG(Te_,i,j,k) &
                - sum( RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
                *      TNPlusOne_VG(2:nVar,i,j,k) )
 
@@ -982,12 +999,12 @@ contains
                + RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
                *TNPlusOne_VG(2:nVar,i,j,k) &
                - RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
-               *TNPlusOne_VG(TeImpl_,i,j,k)
+               *TNPlusOne_VG(Te_,i,j,k)
        end if
 
        ! multiply by control volume
        ADotTN_VC(:,i,j,k) = ADotTN_VC(:,i,j,k)/vInv
-     end do; end do; end do
+    end do; end do; end do
 
   end subroutine get_heat_conduction
 
@@ -1318,6 +1335,7 @@ contains
       use ModMain,     ONLY: Dt, IsCylindrical
       use ModNodes,    ONLY: NodeY_NB
 
+      integer :: iCond, iT
       real :: Volume
       !------------------------------------------------------------------------
 
@@ -1327,41 +1345,52 @@ contains
          Volume = abs(y_Blk(i,j,k,iBlock))/vInv_CB(i,j,k,iBlock)
 
          ! Heat conduction
-         Diag_V(:) = SpecificHeat_VCB(:,i,j,k,iBlock)*Volume/Dt &
-              + AreaxInvDx*abs(y_Blk(i,j,k,iBlock))*( &
-              +     0.5*HeatConductionCoef_VGB(:,i-1,j,  k,  iBlock) &
-              +         HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
-              +     0.5*HeatConductionCoef_VGB(:,i+1,j,  k,  iBlock) ) &
-              + AreayInvDy*0.5*( &
-              +     abs(NodeY_NB(i,j,k,iBlock))*( &
-              +         HeatConductionCoef_VGB(:,i,  j-1,k,  iBlock) &
-              +         HeatConductionCoef_VGB(:,i,  j,  k,  iBlock)) &
-              +     abs(NodeY_NB(i,j+1,k,iBlock))*( &
-              +         HeatConductionCoef_VGB(:,i,  j  ,k,  iBlock) &
-              +         HeatConductionCoef_VGB(:,i,  j+1,k,  iBlock)) )
+         Diag_V(:) = SpecificHeat_VCB(:,i,j,k,iBlock)*Volume/Dt
+         do iCond = 1, nCond
+            iT = iCond_I(iCond)
+            Diag_V(iT) = Diag_V(iT) &
+                 + AreaxInvDx*abs(y_Blk(i,j,k,iBlock))*( &
+                 +     0.5*HeatConductionCoef_IGB(iCond,i-1,j,  k,iBlock) &
+                 +         HeatConductionCoef_IGB(iCond,i,  j,  k,iBlock) &
+                 +     0.5*HeatConductionCoef_IGB(iCond,i+1,j,  k,iBlock) ) &
+                 + AreayInvDy*0.5*( &
+                 +     abs(NodeY_NB(i,j,k,iBlock))*( &
+                 +         HeatConductionCoef_IGB(iCond,i,  j-1,k,iBlock) &
+                 +         HeatConductionCoef_IGB(iCond,i,  j,  k,iBlock)) &
+                 +     abs(NodeY_NB(i,j+1,k,iBlock))*( &
+                 +         HeatConductionCoef_IGB(iCond,i,  j  ,k,iBlock) &
+                 +         HeatConductionCoef_IGB(iCond,i,  j+1,k,iBlock)) )
+         end do
 
       else
 
          Volume = 1.0/vInv_CB(i,j,k,iBlock)
 
          ! Heat conduction
-         Diag_V(:) = SpecificHeat_VCB(:,i,j,k,iBlock)*Volume/Dt &
-              + AreaxInvDx*(0.5*HeatConductionCoef_VGB(:,i-1,j,  k,  iBlock) &
-              +                 HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
-              +             0.5*HeatConductionCoef_VGB(:,i+1,j,  k,  iBlock) )&
-              + AreayInvDy*(0.5*HeatConductionCoef_VGB(:,i,  j-1,k,  iBlock) &
-              +                 HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
-              +             0.5*HeatConductionCoef_VGB(:,i,  j+1,k,  iBlock) )&
-              + AreazInvDz*(0.5*HeatConductionCoef_VGB(:,i,  j,  k-1,iBlock) &
-              +                 HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
-              +             0.5*HeatConductionCoef_VGB(:,i,  j,  k+1,iBlock) )
+         Diag_V(:) = SpecificHeat_VCB(:,i,j,k,iBlock)*Volume/Dt
+         do iCond = 1, nCond
+            iT = iCond_I(iCond)
+            Diag_V(iT) = Diag_V(iT) &
+              + AreaxInvDx*( &
+              +     0.5*HeatConductionCoef_IGB(iCond,i-1,j,  k,  iBlock) &
+              +         HeatConductionCoef_IGB(iCond,i,  j,  k,  iBlock) &
+              +     0.5*HeatConductionCoef_IGB(iCond,i+1,j,  k,  iBlock) )&
+              + AreayInvDy*( &
+              +     0.5*HeatConductionCoef_IGB(iCond,i,  j-1,k,  iBlock) &
+              +         HeatConductionCoef_IGB(iCond,i,  j,  k,  iBlock) &
+              +     0.5*HeatConductionCoef_IGB(iCond,i,  j+1,k,  iBlock) )&
+              + AreazInvDz*( &
+              +     0.5*HeatConductionCoef_IGB(iCond,i,  j,  k-1,iBlock) &
+              +         HeatConductionCoef_IGB(iCond,i,  j,  k,  iBlock) &
+              +     0.5*HeatConductionCoef_IGB(iCond,i,  j,  k+1,iBlock) )
+         end do
 
       end if
 
       if(nVar==1) return
 
       ! Energy exchange
-      Diag_V(TeImpl_) = Diag_V(TeImpl_) &
+      Diag_V(Te_) = Diag_V(Te_) &
            + Volume*sum(RelaxationCoef_VCB(2:nVar,i,j,k,iBlock))
       Diag_V(2:nVar) = Diag_V(2:nVar) &
            + Volume*RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)
