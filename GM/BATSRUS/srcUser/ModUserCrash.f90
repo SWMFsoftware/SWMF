@@ -42,9 +42,6 @@ module ModUser
   real :: WidthGold  = 50.0      ! width   [micron]
   real :: RhoDimGold = 20000.0   ! density [kg/m3]
 
-  ! Allow for 2D with cylindrical symmetry around the X axis
-  logical :: IsCylindrical = .false.
-
   ! Treat cells near material interface as a mixture
   logical :: UseMixedCell = .false.
   
@@ -88,7 +85,8 @@ contains
   subroutine user_read_inputs
 
     use ModReadParam
-    use ModEos, ONLY: read_eos_parameters
+    use ModEos,  ONLY: read_eos_parameters
+    Use ModMain, ONLY: IsCylindrical
 
     character (len=100) :: NameCommand
     character(len=*), parameter :: NameSub = 'user_read_inputs'
@@ -728,6 +726,7 @@ contains
     use ModEnergy,  ONLY: calc_energy_cell
     use ModEos,     ONLY: eos, Xe_, Plastic_
     use ModLookupTable, ONLY: interpolate_lookup_table
+    use ModMain,    ONLY: IsCylindrical
 
     implicit none
 

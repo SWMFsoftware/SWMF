@@ -11,6 +11,9 @@ module ModGrayDiffusion
   ! This module is needed for the order(u/c) gray diffusion approximation for
   ! radiation-hydrodynamics.
 
+  !!! HeatConductionCoef_VGB should become
+  !!! HeatConductionCoefTe_GB and/or HeatConductionCoefTr_GB
+
   private !except
 
   ! Public methods
@@ -125,7 +128,6 @@ contains
 
     use ModAdvance,  ONLY: State_VGB, Eradiation_
     use ModConst,    ONLY: cLightSpeed
-    use ModImplicit, ONLY: UseFullImplicit
     use ModMain,     ONLY: unusedBlk
     use ModPhysics,  ONLY: Si2No_V, UnitT_, UnitX_, UnitU_, &
          UnitEnergyDens_, UnitTemperature_, cRadiationNo
@@ -137,22 +139,6 @@ contains
     real :: CvSi, TeSi, Te, Trad, DiffRad
     real :: Grad_D(3), Grad2ByErad2
     !------------------------------------------------------------------------
-
-    if(UseFullImplicit)then
-       do iBlock = 1, nBlk
-          if(unusedBlk(iBlock)) CYCLE
-
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-                  AbsorptionOpacitySiOut = PlanckOpacitySi)
-
-             RelaxationCoef_VCB(TradImpl_,i,j,k,iBlock) = &
-                  PlanckOpacitySi*cLightSpeed/Si2No_V(UnitT_)
-          end do; end do; end do
-       end do
-
-       return
-    end if
 
     do iBlock = 1, nBlk
        if(unusedBlk(iBlock)) CYCLE
@@ -707,9 +693,10 @@ contains
 
     use ModAdvance,    ONLY: State_VGB, Source_VC, &
          uDotArea_XI, uDotArea_YI, uDotArea_ZI, Eradiation_
+    use ModConst,      ONLY: cLightSpeed
     use ModGeometry,   ONLY: vInv_CB
     use ModImplicit,   ONLY: UseFullImplicit
-    use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_
+    use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_, UnitT_
     use ModSize,       ONLY: nI, nJ, nK
     use ModUser,       ONLY: user_material_properties
     use ModVarIndexes, ONLY: Energy_
@@ -718,7 +705,7 @@ contains
 
     integer :: i, j, k
     real :: TeSi, Te
-    real :: RadCompression, AbsorptionEmission
+    real :: RadCompression, AbsorptionEmission, PlanckOpacitySi
     character(len=19), parameter:: NameSub = "calc_source_gray_diffusion"
     !------------------------------------------------------------------------
 
@@ -741,6 +728,14 @@ contains
 
        ! In the semi-implicit solver, the energy exchange is already added
        if(.not.UseFullImplicit) CYCLE
+
+       if(IsNewTimestepGrayDiffusion)then
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               AbsorptionOpacitySiOut = PlanckOpacitySi)
+
+          RelaxationCoef_VCB(TradImpl_,i,j,k,iBlock) = &
+               PlanckOpacitySi*cLightSpeed/Si2No_V(UnitT_)
+       end if
 
        call user_material_properties(State_VGB(:,i,j,k,iBlock), &
             TeSiOut = TeSi)
@@ -891,8 +886,9 @@ contains
 
     use ModAdvance,  ONLY: Flux_VX, Flux_VY, Flux_VZ
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, fAx_BLK, fAy_BLK, fAz_BLK, &
-         vInv_CB
-    use ModMain,     ONLY: x_, y_, z_, Dt
+         vInv_CB, y_Blk
+    use ModMain,     ONLY: x_, y_, z_, Dt, IsCylindrical
+    use ModNodes,    ONLY: NodeY_NB
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModSize,     ONLY: nI, nJ, nK, gcn
 
@@ -901,7 +897,7 @@ contains
          TNPlusOne_VG(nVar,1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn)
     real, intent(out)   :: ADotTN_VC(nVar,nI,nJ,nK)
 
-    real :: AreaxInvDx, AreayInvDy, AreazInvDz
+    real :: AreaxInvDx, AreayInvDy, AreazInvDz, vInv
     integer :: i, j, k
     !--------------------------------------------------------------------------
 
@@ -920,8 +916,6 @@ contains
          =                        TNPlusOne_VG(:,:,:,nK  )
 
     ! Calculate heat conduction/diffusion fluxes
-    !!! cartesian version only
-    !!! make cylindrical correction
     AreaxInvDx = fAx_Blk(iBlock)/Dx_Blk(iBlock)
     AreayInvDy = fAy_Blk(iBlock)/Dy_Blk(iBlock)
     AreazInvDz = fAz_Blk(iBlock)/Dz_Blk(iBlock)
@@ -937,18 +931,41 @@ contains
             +      HeatConductionCoef_VGB(:,i,j,  k,iBlock) ) &
             *(TNPlusOne_VG(:,i,j,k) - TNPlusOne_VG(:,i,j-1,k))
     end do; end do; end do
-    do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-       Flux_VZ(1:nVar,i,j,k) = -AreazInvDz &
-            *0.5*( HeatConductionCoef_VGB(:,i,j,k-1,iBlock) &
-            +      HeatConductionCoef_VGB(:,i,j,k,  iBlock) ) &
-            *(TNPlusOne_VG(:,i,j,k) - TNPlusOne_VG(:,i,j,k-1))
-    end do; end do; end do
+    if(IsCylindrical)then
+       ! Multiply fluxes with radius = abs(Y) at the X and Y faces
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+          Flux_VX(1:nVar,i,j,k)=Flux_VX(1:nVar,i,j,k)*abs(y_BLK(i,j,k,iBlock))
+       end do; end do; end do
+       do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
+          Flux_VY(1:nVar,i,j,k) = Flux_VY(1:nVar,i,j,k) &
+               *abs(NodeY_NB(i,j,k,iBlock))
+       end do; end do; end do
+
+       ! There are no fluxes in the azimuthal direction
+       do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+          Flux_VZ(1:nVar,i,j,k) = 0.0
+       end do; end do; end do
+    else
+       do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+          Flux_VZ(1:nVar,i,j,k) = -AreazInvDz &
+               *0.5*( HeatConductionCoef_VGB(:,i,j,k-1,iBlock) &
+               +      HeatConductionCoef_VGB(:,i,j,k,  iBlock) ) &
+               *(TNPlusOne_VG(:,i,j,k) - TNPlusOne_VG(:,i,j,k-1))
+       end do; end do; end do
+    end if
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(IsCylindrical)then
+          ! Multiply volume with radius (=Y) at cell center
+          ! -> divide inverse volume
+          vInv = vInv_CB(i,j,k,iBlock)/abs(y_BLK(i,j,k,iBlock))
+       else
+          vInv = vInv_CB(i,j,k,iBlock)
+       end if
 
        ! Heat conduction
        ADotTN_VC(:,i,j,k) = SpecificHeat_VCB(:,i,j,k,iBlock) &
-            *TNPlusOne_VG(:,i,j,k)/Dt + vInv_CB(i,j,k,iBlock)*( &
+            *TNPlusOne_VG(:,i,j,k)/Dt + vInv*( &
             + Flux_VX(1:nVar,i+1,j,k) - Flux_VX(1:nVar,i,j,k) &
             + Flux_VY(1:nVar,i,j+1,k) - Flux_VY(1:nVar,i,j,k) &
             + Flux_VZ(1:nVar,i,j,k+1) - Flux_VZ(1:nVar,i,j,k) )
@@ -969,7 +986,7 @@ contains
        end if
 
        ! multiply by control volume
-       ADotTN_VC(:,i,j,k) = ADotTN_VC(:,i,j,k)/vInv_CB(i,j,k,iBlock)
+       ADotTN_VC(:,i,j,k) = ADotTN_VC(:,i,j,k)/vInv
      end do; end do; end do
 
   end subroutine get_heat_conduction
@@ -1297,25 +1314,49 @@ contains
 
     subroutine get_diagonal_subblock
 
-      use ModMain, ONLY: Dt
+      use ModGeometry, ONLY: y_Blk
+      use ModMain,     ONLY: Dt, IsCylindrical
+      use ModNodes,    ONLY: NodeY_NB
 
       real :: Volume
       !------------------------------------------------------------------------
 
-      !!! make area and volume correction for IsCylindrical
-      Volume = 1.0/vInv_CB(i,j,k,iBlock)
+      if(IsCylindrical)then
 
-      ! Heat conduction
-      Diag_V(:) = SpecificHeat_VCB(:,i,j,k,iBlock)*Volume/Dt &
-           + AreaxInvDx*(0.5*HeatConductionCoef_VGB(:,i-1,j,  k,  iBlock) &
-           +                 HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
-           +             0.5*HeatConductionCoef_VGB(:,i+1,j,  k,  iBlock) ) &
-           + AreayInvDy*(0.5*HeatConductionCoef_VGB(:,i,  j-1,k,  iBlock) &
-           +                 HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
-           +             0.5*HeatConductionCoef_VGB(:,i,  j+1,k,  iBlock) ) &
-           + AreazInvDz*(0.5*HeatConductionCoef_VGB(:,i,  j,  k-1,iBlock) &
-           +                 HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
-           +             0.5*HeatConductionCoef_VGB(:,i,  j,  k+1,iBlock) )
+         ! Multiply volume with radius (=Y) at cell center
+         Volume = abs(y_Blk(i,j,k,iBlock))/vInv_CB(i,j,k,iBlock)
+
+         ! Heat conduction
+         Diag_V(:) = SpecificHeat_VCB(:,i,j,k,iBlock)*Volume/Dt &
+              + AreaxInvDx*abs(y_Blk(i,j,k,iBlock))*( &
+              +     0.5*HeatConductionCoef_VGB(:,i-1,j,  k,  iBlock) &
+              +         HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
+              +     0.5*HeatConductionCoef_VGB(:,i+1,j,  k,  iBlock) ) &
+              + AreayInvDy*0.5*( &
+              +     abs(NodeY_NB(i,j,k,iBlock))*( &
+              +         HeatConductionCoef_VGB(:,i,  j-1,k,  iBlock) &
+              +         HeatConductionCoef_VGB(:,i,  j,  k,  iBlock)) &
+              +     abs(NodeY_NB(i,j+1,k,iBlock))*( &
+              +         HeatConductionCoef_VGB(:,i,  j  ,k,  iBlock) &
+              +         HeatConductionCoef_VGB(:,i,  j+1,k,  iBlock)) )
+
+      else
+
+         Volume = 1.0/vInv_CB(i,j,k,iBlock)
+
+         ! Heat conduction
+         Diag_V(:) = SpecificHeat_VCB(:,i,j,k,iBlock)*Volume/Dt &
+              + AreaxInvDx*(0.5*HeatConductionCoef_VGB(:,i-1,j,  k,  iBlock) &
+              +                 HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
+              +             0.5*HeatConductionCoef_VGB(:,i+1,j,  k,  iBlock) )&
+              + AreayInvDy*(0.5*HeatConductionCoef_VGB(:,i,  j-1,k,  iBlock) &
+              +                 HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
+              +             0.5*HeatConductionCoef_VGB(:,i,  j+1,k,  iBlock) )&
+              + AreazInvDz*(0.5*HeatConductionCoef_VGB(:,i,  j,  k-1,iBlock) &
+              +                 HeatConductionCoef_VGB(:,i,  j,  k,  iBlock) &
+              +             0.5*HeatConductionCoef_VGB(:,i,  j,  k+1,iBlock) )
+
+      end if
 
       if(nVar==1) return
 
