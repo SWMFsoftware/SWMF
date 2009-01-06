@@ -37,7 +37,7 @@ subroutine calc_aurora
      PH(:,iLat)    = OuterMagPAllR(:,iLat)
      TH(:,iLat)    = OuterMagTAllR(:,iLat)
      InvBH(:,iLat) = OuterMagInvBAllR(:,iLat)
-     LatH(:,iLat)  = LatitudeAllR(:,iLat)
+     LatH(:,iLat)  = -LatitudeAllR(:,iLat)
      ! These variables we only need for local domain
      JrH(:,iLat)   = OuterMagJr(:,iLat)
   enddo
@@ -85,11 +85,8 @@ subroutine calc_aurora
      iLonTo   = iLon
      iLonFrom = mod(iLon + iProc*nLons, nLons*nProc)
      if (iLonFrom == 0) iLonFrom = nLons*nProc
-!     OCFLB(1,iLonTo) = OCFLBH(iLonFrom)
      OCFLB(2,iLonTo) = OCFLBH(iLonFrom)
   enddo
-
-!  OCFLB(2,:) = cPi - OCFLBH
 
   deallocate(rhoH,pH,TH,InvBH,LatH,OCFLBH)
 
@@ -199,6 +196,13 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
            if (IsPeakFound .and. Width(iLon) >= MinAuroralWidth) &
                 IsDone = .true.
 
+        else 
+
+           ! if we encounter an open "pocket" in a closed region, then
+           ! this will start the search over again.
+
+           OCFLBH(iLon) = 1.0e32
+
         endif
 
         iLat = iLat + 1
@@ -211,14 +215,11 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
 
      enddo
 
+     if (OCFLBH(iLon) > MaxAuroralLat) OCFLBH(iLon) = MaxAuroralLat
      if (width(iLon) > 12.0*cDegToRad) width(iLon) = 12.0*cDegToRad
+
      Center(iLon) = OCFLBH(iLon) - Width(iLon)
 
-!     if (OCFLBH(iLon) > MaxAuroralLat) OCFLBH(iLon) = MaxAuroralLat
-!     if (OCFLBH(iLon)+Width(iLon) > MaxAuroralLat+MinAuroralWidth) &
-!          Width(iLon) = MaxAuroralLat + MinAuroralWidth - OCFLBH(iLon)
-
-     if (Center(iLon) > MaxAuroralLat) Center(iLon) = MaxAuroralLat
      if (Center(iLon)+Width(iLon) > MaxAuroralLat+MinAuroralWidth) &
           Width(iLon) = MaxAuroralLat + MinAuroralWidth - Center(iLon)
 
@@ -227,11 +228,17 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
   do iLon = 0, nLonsAll+1
      smooth(iLon) = 0.0
      do iSubLon = iLon-nSmooth, iLon+nSmooth
-!        smooth(iLon) = smooth(iLon) + OCFLBH(mod(iSubLon+nLonsAll,nLonsAll))
+        smooth(iLon) = smooth(iLon) + OCFLBH(mod(iSubLon+nLonsAll,nLonsAll))
+     enddo
+  enddo
+  OCFLBH = smooth/(2*nSmooth+1)
+
+  do iLon = 0, nLonsAll+1
+     smooth(iLon) = 0.0
+     do iSubLon = iLon-nSmooth, iLon+nSmooth
         smooth(iLon) = smooth(iLon) + Center(mod(iSubLon+nLonsAll,nLonsAll))
      enddo
   enddo
-!  OCFLBH = smooth/(2*nSmooth+1)
   Center = smooth/(2*nSmooth+1)
 
   do iLon = 0, nLonsAll+1
