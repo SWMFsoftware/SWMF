@@ -988,6 +988,7 @@ contains
   subroutine calc_table_value(iTable, Arg1, Arg2, Value_V)
 
     use ModEos, ONLY: eos, Xe_, Plastic_
+    use ModConst,ONLY: cProtonMass, cBoltzmann
 
     integer, intent(in):: iTable
     real, intent(in)   :: Arg1, Arg2
@@ -1033,10 +1034,17 @@ contains
        do iMaterial = Xe_, Plastic_
           call eos(iMaterial, Rho, PtotalIn=p, &
                CVTotalOut=Cv, GammaOut=Gamma, TeOut=Te)
+
           ! Material index starts from 0 :-( hence the +1
-          Value_V(3*iMaterial+1) = Cv
-          Value_V(3*iMaterial+2) = Gamma
-          Value_V(3*iMaterial+3) = Te
+          if(Te > 0.0)then
+             Value_V(3*iMaterial+1) = Cv
+             Value_V(3*iMaterial+2) = Gamma
+             Value_V(3*iMaterial+3) = Te
+          else
+             Value_V(3*iMaterial+1) = 1.5*Rho
+             Value_V(3*iMaterial+2) = 5./3.
+             Value_V(3*iMaterial+3) = p/Rho*cProtonMass/cBoltzmann
+          end if
        end do
     else
        write(*,*)NameSub,' iTable=', iTable
@@ -1052,7 +1060,7 @@ contains
 
     ! The State_V vector is in normalized units, output is in SI units
 
-    use ModEos,        ONLY: eos
+    use ModEos,        ONLY: eos, Xe_, Plastic_
     use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_
     use ModVarIndexes, ONLY: nVar, Rho_, LevelXe_, LevelPl_, p_
     use ModLookupTable,ONLY: interpolate_lookup_table
@@ -1068,7 +1076,7 @@ contains
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
 
-    real    :: pSi, RhoSi, TeSi, CvSi
+    real    :: pSi, RhoSi, TeSi, CvSi, pPerE_I(Xe_:Plastic_)
     real    :: Value_V(3*nMaterial), Opacity_V(2*nMaterial)
     integer :: iMaterial, iMaterial_I(1)
     logical :: IsError
@@ -1079,7 +1087,13 @@ contains
 
     RhoSi = State_V(Rho_)*No2Si_V(UnitRho_)
     if(present(EinternalSiIn))then
-       call eos(iMaterial, RhoSi, ETotalIn=EinternalSiIn, PTotalOut=pSi)
+       if(iTablePPerE > 0)then
+          call interpolate_lookup_table(iTablePPerE, RhoSi, &
+               EinternalSiIn/RhoSi, pPerE_I, DoExtrapolate = .false.)
+          pSi = pPerE_I(iMaterial)*EinternalSiIn
+       else
+          call eos(iMaterial, RhoSi, ETotalIn=EinternalSiIn, PTotalOut=pSi)
+       end if
     else
        pSi = State_V(p_)*No2Si_V(UnitP_)
     end if
@@ -1090,7 +1104,9 @@ contains
        if(iTableCvGammaTe > 0)then
           call interpolate_lookup_table(iTableCvGammaTe, RhoSi, pSi/RhoSi, &
                Value_V, DoExtrapolate = .false.)
-          if(present(TeSiOut))  TeSiOut  = Value_V(3*iMaterial+3)
+
+          if(present(CvSiOut)) CvSiOut = Value_V(3*iMaterial+1)
+          if(present(TeSiOut)) TeSiOut = Value_V(3*iMaterial+3)
        else
           ! The IsError flag avoids stopping for Fermi degenerated state
           call eos(iMaterial, RhoSi, pTotalIn=pSi, &
