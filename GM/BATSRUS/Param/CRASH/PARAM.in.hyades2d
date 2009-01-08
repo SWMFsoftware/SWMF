@@ -68,7 +68,21 @@ T			UseCylindrical
 T			UseHyadesFile
 hyades2d_1.1ns.out	NameHyadesFile
 
+#OPACITY
+constant		TypeOpacity
+10.0			PlanckOpacityXe
+0.01			PlanckOpacityBe
+0.01			PlanckOpacityPl
+1.0e3			RosselandOpacityXe
+1.0e3			RosselandOpacityBe
+1.0e3			RosselandOpacityPl
+
 #USERINPUTEND    ----------------------
+
+#RADIATION
+T                       UseGrayDiffusion
+T                       UseRadFluxLimiter
+larsen                  TypeRadFluxLimiter
 
 #TIMEACCURATE
 T			IsTimeAccurate
@@ -143,7 +157,7 @@ z=0 VAR idl		PlotString
 -1                      DnSavePlot
 1.0e-9                  DtSavePlot
 0.0			DxSavePlot
-rho ux uy uz Eint p Xe Be Pl level TeKev
+rho ux uy uz Eint p Xe Be Pl level tekev trkev
 gamma
 
 #STOP
