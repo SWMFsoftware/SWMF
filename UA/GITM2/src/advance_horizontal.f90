@@ -512,14 +512,39 @@ subroutine calc_facevalues_lats(iLon, iAlt, iBlock, Var, VarLeft, VarRight)
 
   real :: dVarUp, dVarDown, dVarLimited(0:nLats+1)
 
+  real, parameter :: Factor1=0.6250000 ! 15/24
+  real, parameter :: Factor2=0.0416667 !  1/24
+  real :: h
+
   integer :: i
   !---------------------------------------------------------------------------
 
-  do i=0,nLats+1
-     dVarUp   = (Var(i+1) - Var(i))   * InvDLatDist_FB(iLon,i+1,iAlt,iBlock)
-     dVarDown = (Var(i)   - Var(i-1)) * InvDLatDist_FB(iLon,i  ,iAlt,iBlock)
+  i = 0
+
+  h = InvDLatDist_FB(iLon,i+1,iAlt,iBlock)*2
+  dVarUp   = h*(Factor1*(Var(i+1)-Var(i)  ) - Factor2*(Var(i+2)-Var(i-1)))
+  dVarDown = (Var(i)   - Var(i-1)) * InvDLatDist_FB(iLon,i  ,iAlt,iBlock)
+  dVarLimited(i)= Limiter_mc(dVarUp, dVarDown)
+
+  do i=1,nLats
+
+     h = InvDLatDist_FB(iLon,i+1,iAlt,iBlock)*2
+     dVarUp   = h*(Factor1*(Var(i+1)-Var(i)  ) - Factor2*(Var(i+2)-Var(i-1)))
+     h = InvDLatDist_FB(iLon,i  ,iAlt,iBlock)*2
+     dVarDown = h*(Factor1*(Var(i)  -Var(i-1)) - Factor2*(Var(i+1)-Var(i-2)))
+
+!     dVarUp   = (Var(i+1) - Var(i))   * InvDLatDist_FB(iLon,i+1,iAlt,iBlock)
+!     dVarDown = (Var(i)   - Var(i-1)) * InvDLatDist_FB(iLon,i  ,iAlt,iBlock)
+
      dVarLimited(i)= Limiter_mc(dVarUp, dVarDown)
   end do
+
+  i = nLats+1
+  dVarUp   = (Var(i+1) - Var(i))   * InvDLatDist_FB(iLon,i+1,iAlt,iBlock)
+  h = InvDLatDist_FB(iLon,i  ,iAlt,iBlock)*2
+  dVarDown = h*(Factor1*(Var(i)  -Var(i-1)) - Factor2*(Var(i+1)-Var(i-2)))
+
+  dVarLimited(i)= Limiter_mc(dVarUp, dVarDown)
 
   do i=1,nLats+1
      VarLeft(i) =Var(i-1)+0.5*dVarLimited(i-1)*dLatDist_FB(iLon,i,iAlt,iBlock)
@@ -543,14 +568,35 @@ subroutine calc_facevalues_lons(iLat, iAlt, iBlock, Var, VarLeft, VarRight)
   real, intent(out)   :: VarLeft(1:nLons+1), VarRight(1:nLons+1)
 
   real :: dVarUp, dVarDown, dVarLimited(0:nLons+1)
+  real, parameter :: Factor1=0.6250000 ! 15/24
+  real, parameter :: Factor2=0.0416667 !  1/24
+  real :: h
 
   integer :: i
 
-  do i=0,nLons+1
-     dVarUp   = (Var(i+1) - Var(i))  *InvDLonDist_FB(i+1,iLat,iAlt,iBlock)
-     dVarDown = (Var(i)   - Var(i-1))*InvDLonDist_FB(i  ,iLat,iAlt,iBlock)
+  i = 0
+
+  h  = InvDLonDist_FB(i+1,iLat,iAlt,iBlock)*2
+  dVarUp   = h*(Factor1*(Var(i+1)-Var(i)  ) - Factor2*(Var(i+2)-Var(i-1)))
+  dVarDown = (Var(i)   - Var(i-1))*InvDLonDist_FB(i  ,iLat,iAlt,iBlock)
+  dVarLimited(i)= Limiter_mc(dVarUp, dVarDown)
+
+  do i=1,nLons
+     h  = InvDLonDist_FB(i+1,iLat,iAlt,iBlock)*2
+     dVarUp   = h*(Factor1*(Var(i+1)-Var(i)  ) - Factor2*(Var(i+2)-Var(i-1)))
+     h  = InvDLonDist_FB(i  ,iLat,iAlt,iBlock)*2
+     dVarDown = h*(Factor1*(Var(i)  -Var(i-1)) - Factor2*(Var(i+1)-Var(i-2)))
+!     dVarUp   = (Var(i+1) - Var(i))  *InvDLonDist_FB(i+1,iLat,iAlt,iBlock)
+!     dVarDown = (Var(i)   - Var(i-1))*InvDLonDist_FB(i  ,iLat,iAlt,iBlock)
      dVarLimited(i)= Limiter_mc(dVarUp, dVarDown)
   end do
+
+  i = nLons+1
+
+  dVarUp   = (Var(i+1) - Var(i))  *InvDLonDist_FB(i+1,iLat,iAlt,iBlock)
+  h  = InvDLonDist_FB(i  ,iLat,iAlt,iBlock)*2
+  dVarDown = h*(Factor1*(Var(i)  -Var(i-1)) - Factor2*(Var(i+1)-Var(i-2)))
+  dVarLimited(i)= Limiter_mc(dVarUp, dVarDown)
 
   do i=1,nLons+1
      VarLeft(i) =Var(i-1)+0.5*dVarLimited(i-1)*dLonDist_FB(i,iLat,iAlt,iBlock)
