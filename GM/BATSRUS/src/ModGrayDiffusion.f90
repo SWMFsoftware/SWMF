@@ -139,6 +139,7 @@ contains
 
   subroutine set_frozen_coefficients
 
+    use ModProcMH,   ONLY: iProc
     use ModAdvance,  ONLY: State_VGB, Eradiation_
     use ModConst,    ONLY: cLightSpeed
     use ModMain,     ONLY: nBlock, unusedBlk
@@ -146,11 +147,14 @@ contains
          UnitEnergyDens_, UnitTemperature_, cRadiationNo
     use ModSize,     ONLY: nI, nJ, nK
     use ModUser,     ONLY: user_material_properties
+    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
 
     integer :: i, j, k, iBlock
     real :: PlanckOpacitySi, RosselandMeanOpacitySi
     real :: CvSi, TeSi, Te, Trad, DiffRad
     real :: Grad_D(3), Grad2ByErad2
+
+    character(len=*), parameter:: NameSub = 'set_frozen_coefficients'
     !------------------------------------------------------------------------
 
     do iBlock = 1, nBlock
@@ -161,6 +165,19 @@ contains
                TeSiOut = TeSi)
 
           Te = TeSi*Si2No_V(UnitTemperature_)
+
+          if(State_VGB(Eradiation_,i,j,k,iBlock) < 0.0)then
+             write(*,*)NameSub, 'ERROR: negative Erad=', &
+                  State_VGB(Eradiation_,i,j,k,iBlock)
+             write(*,*)NameSub, 'ERROR: i,j,k,iBlock,iProc=',&
+                  i,j,k,iBlock,iProc
+             write(*,*)NameSub, 'ERROR: x, y, z=', &
+                  x_BLK(i,j,k,iBlock), &
+                  y_BLK(i,j,k,iBlock), &
+                  z_BLK(i,j,k,iBlock)
+             call stop_mpi(NameSub//' negative radiation energy')
+          end if
+
           Trad = sqrt(sqrt(State_VGB(Eradiation_,i,j,k,iBlock)/cRadiationNo))
 
           Temperature_VGB(Te_,i,j,k,iBlock) = Te
@@ -176,10 +193,9 @@ contains
        ! DoOneLayer, DoFacesOnly, No UseMonoteRestrict
        call message_pass_cells8(.true., .true., .false., nTemperature, &
             Temperature_VGB)
-    end if
 
-    if(UseRadFluxLimiter) &
-         call set_gray_outer_bcs(nTemperature, Temperature_VGB)
+       call set_gray_outer_bcs(nTemperature, Temperature_VGB)
+    end if
 
     do iBlock = 1, nBlock
        if(unusedBlk(iBlock)) CYCLE
