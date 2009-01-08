@@ -422,6 +422,6 @@ subroutine calc_viscosity(iBlock)
 
   integer, intent(in) :: iBlock
 
-  call calc_rate(iBlock)
+  call calc_rates(iBlock)
 
 end subroutine calc_viscosity
