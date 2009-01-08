@@ -813,7 +813,9 @@ contains
 
     use ModGeometry, ONLY: vInv_CB, y_BLK, IsCylindrical
     use ModMain,     ONLY: nBlock, unusedBLK, Dt
+    use ModMain,     ONLY: iTest, jTest, kTest, BlkTest
     use ModSize,     ONLY: nI, nJ, nK
+    use ModAdvance,  ONLY: State_VGB, Eradiation_
 
     integer :: i, j, k, iBlock
     integer :: Iter
@@ -829,6 +831,10 @@ contains
     if(Dt == 0.0)return
 
     call set_frozen_coefficients
+
+    if(DoTestMe)write(*,*)NameSub,' starting with Erad, T(:)=',&
+         State_VGB(Eradiation_,iTest,jTest,kTest,BlkTest), &
+         Temperature_VGB(:,iTest,jTest,kTest,BlkTest)
 
     do iBlock = 1, nBlock
        if(unusedBlk(iBlock)) CYCLE
@@ -869,6 +875,10 @@ contains
        call update_conservative_energy(iBlock)
     end do
 
+    if(DoTestMe)write(*,*)NameSub,' finished with Erad, T(:)=',&
+         State_VGB(Eradiation_,iTest,jTest,kTest,BlkTest), &
+         Temperature_VGB(:,iTest,jTest,kTest,BlkTest)
+
   end subroutine advance_temperature
 
   !==========================================================================
@@ -876,8 +886,11 @@ contains
   subroutine update_conservative_energy(iBlock)
 
     use ModAdvance,  ONLY: State_VGB, p_, Eradiation_
+    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
     use ModEnergy,   ONLY: calc_energy_cell
-    use ModPhysics,  ONLY: inv_gm1, No2Si_V, Si2No_V, UnitEnergyDens_, UnitP_
+    use ModPhysics,  ONLY: inv_gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
+         UnitP_, cRadiationNo
+    use ModProcMH,   ONLY: iProc
     use ModSize,     ONLY: nI, nJ, nK
     use ModUser,     ONLY: user_material_properties
 
@@ -885,6 +898,8 @@ contains
 
     integer :: i, j, k
     real :: EinternalSi, Einternal, Gamma, PressureSi
+    logical :: DoReport = .true.
+    character(len=*), parameter:: NameSub = 'update_conservative_energy'
     !------------------------------------------------------------------------
 
     do k = 1,nK; do j = 1,nJ; do i = 1,nI
@@ -892,6 +907,32 @@ contains
        State_VGB(Eradiation_,i,j,k,iBlock) = &
             State_VGB(Eradiation_,i,j,k,iBlock) &
             + DelEint_VCB(Trad_,i,j,k,iBlock)
+
+       ! Fix energy if it goes negative
+       if(State_VGB(Eradiation_,i,j,k,iBlock) < 0.0) then
+
+          if(DoReport .or. Temperature_VGB(Trad_,i,j,k,iBlock) < 0.0)then
+
+             write(*,*)NameSub, ' WARNING: negative Erad=', &
+                  State_VGB(Eradiation_,i,j,k,iBlock)
+             write(*,*)NameSub, ' i,j,k,iBlock,iProc=', i, j, k, iBlock, iProc
+             write(*,*)NameSub, ' x, y, z=', x_BLK(i,j,k,iBlock), &
+                  y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock)
+             write(*,*)NameSub, ' fix energy using Trad^n+1 =', &
+                  Temperature_VGB(Trad_,i,j,k,iBlock)
+
+             ! There is no way to fix this
+             if(Temperature_VGB(Trad_,i,j,k,iBlock) < 0) &
+                  call stop_mpi(NameSub//' negative Trad!!!')
+
+             ! Report only once
+             DoReport = .false.
+          end if
+
+          State_VGB(Eradiation_,i,j,k,iBlock) = &
+               cRadiationNo*Temperature_VGB(Trad_,i,j,k,iBlock)**4
+
+       end if
 
        Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
             + State_VGB(EintExtra_,i,j,k,iBlock) &
