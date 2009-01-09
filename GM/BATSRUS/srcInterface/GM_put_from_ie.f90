@@ -111,7 +111,7 @@ end subroutine GM_put_from_ie
 !BOP
 !ROUTINE: calc_inner_bc_velocity - calculate velocity at the inner boundary
 !INTERFACE:
-subroutine calc_inner_bc_velocity(tSimulation,Xyz_D,B1_D,B0_D,u_D)
+subroutine calc_inner_bc_velocity(tSimulation, Xyz_D, b_D, u_D)
 
   !USES:
   use ModIonoPotential
@@ -125,11 +125,11 @@ subroutine calc_inner_bc_velocity(tSimulation,Xyz_D,B1_D,B0_D,u_D)
   !INPUT ARGUMENTS:
   real, intent(in)    :: tSimulation    ! Simulation time
   real, intent(in)    :: Xyz_D(nDim)    ! Position vector
-  real, intent(in)    :: B1_D(nDim)     ! Magnetic field perturbation
-  real, intent(in)    :: B0_D(nDim)     ! Magnetic field of planet
+  real, intent(in)    :: b_D(nDim)      ! Magnetic field 
 
   !OUTPUT ARGUMENTS:
   real, intent(out)   :: u_D(nDim)      ! Velocity vector
+
 
   !DESCRIPTION:
   ! This subroutine calculates the velocity vector derived from
@@ -154,7 +154,6 @@ subroutine calc_inner_bc_velocity(tSimulation,Xyz_D,B1_D,B0_D,u_D)
   real :: dPotential_D(2)      ! Gradient of potential at the mapped position
   real :: DdirDxyz_DD(2,3)     ! Jacobian matrix between Theta, Phi and Xyz_D
   real :: eField_D(nDim)       ! Electric field
-  real :: b_D(nDim)            ! Magnetic field
   real :: B2                   ! Magnetic field squared
 
   integer :: iTheta, iPhi, iHemisphere
@@ -203,7 +202,6 @@ subroutine calc_inner_bc_velocity(tSimulation,Xyz_D,B1_D,B0_D,u_D)
   eField_D = - matmul( dPotential_D, DdirDxyz_DD)
 
   ! Magnetic field
-  b_D = B1_D + B0_D
   B2  = sum(b_D**2)
 
   ! U = (E x B) / B^2
@@ -221,9 +219,6 @@ subroutine calc_inner_bc_velocity(tSimulation,Xyz_D,B1_D,B0_D,u_D)
      write(*,*)NameSub,' b_D=',b_D
      write(*,*)NameSub,' u_D=',u_D
   endif
-
-  ! Subtract the radial component of the velocity
-  u_D = u_D - Xyz_D * sum(Xyz_D * u_D) / sum(Xyz_D**2)
 
   if(DoTestMe)write(*,*)NameSub,' Final u_D=',u_D
 
