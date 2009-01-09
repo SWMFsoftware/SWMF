@@ -4047,6 +4047,49 @@ coupling with the IE module.  If not set, then only Jr is sent.  If set, then
 Jr as well as 1/B, average rho, and average p on closed fieldlines are passed.
 </command>
 
+<command name="IECOUPLING">
+	<parameter name="UseIonoVelocity" type="logical" default="F"/>
+	<if expr="$UseIonoVelocity">
+		<parameter name="rCoupleUiono" type="real" min="1" 
+							default="4"/>
+		<parameter name="TauCoupleUiono" type="real" min="0" 
+							default="10"/>
+	</if>
+
+#IECOUPLING
+T			UseIonoVelocity (rest of parameters read if true)
+4.0			rCoupleUiono
+10.0			TauCoupleUiono
+
+This command sets parameters for a new experimental coupling of
+the velocity from IE to GM. 
+
+The rCoupleUiono paramter determines the radius within which the GM
+velocity is effected.
+The TauCoupleUiono parameter determine how fast the GM velocity
+should be nudged towards the E x B drift plus corotation.
+
+The IE potential and the resulting velocity are updated every time IE->GM 
+coupling occurs, but the nudging towards the velocity is done in every GM 
+time step. When GM is not run in time accurate mode, the orthogonal (to B)
+velocity is set as
+
+uOrth' = uOrth + (uIonoOrth - uOrth)/(TauCoupleUiono+1)
+
+Therefore the larger TauCoupleUiono is the slower the adjustment will be.
+It takes approximately 2*TauCoupleUiono time steps to get the orthogonal
+velocity close to what the ionosphere would prescribe.
+In time accurate mode, the nudging is based on physical time:
+
+uOrth' = uOrth + min(1.0, dt/TauCoupleUiono)*(uIonoOrth - uOrth)
+
+where dt is the time step. It takes about 2*TauCoupleUiono seconds
+to get uOrth close to uIonoOrth. If the time step dt exceeds TauCoupleIm, 
+uOrth is set in a single step.
+
+By default the coupling is switched off.
+</command>
+
 <!-- ^CFG IF RCM BEGIN -->
 <command name="IM">
 	<parameter name="TauCoupleIm" type="real" min="1"/>
