@@ -60,6 +60,7 @@ subroutine MH_set_parameters(TypeAction)
 
   use ModFaceFlux, ONLY: face_flux_set_parameters, UseClimit, UsePoleDiffusion
   use ModLookupTable, ONLY: read_lookup_table_param
+  use ModIonoVelocity,ONLY: read_iono_velocity_param
 
   implicit none
 
@@ -1339,6 +1340,9 @@ subroutine MH_set_parameters(TypeAction)
      case("#IE")
         call read_var('DoTraceIE',DoTraceIE)
         !                                              ^CFG END RAYTRACE
+
+     case("#IECOUPLING")
+        call read_iono_velocity_param
 
      case("#IMCOUPLING","#IM")                        !^CFG IF RCM BEGIN
         call read_var('TauCoupleIm',TauCoupleIm)

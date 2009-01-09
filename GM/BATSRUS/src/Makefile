@@ -26,6 +26,7 @@ MODULES = \
 	ModBoundaryCells.o\
 	ModConserveFlux.o\
 	ModCube.o\
+	ModIonoVelocity.o\
 	ModSingleFluid.o\
 	ModMultiFluid.o\
 	ModMultiIon.o\

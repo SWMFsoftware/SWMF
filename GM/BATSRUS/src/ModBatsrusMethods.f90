@@ -297,6 +297,7 @@ subroutine BATS_advance(TimeSimulationLimit)
        part_steady_select, part_steady_switch
   use ModImplicit, ONLY: UseImplicit, UseSemiImplicit      !^CFG IF IMPLICIT
   use ModGrayDiffusion, ONLY: advance_temperature          !^CFG IF IMPLICIT
+  use ModIonoVelocity, ONLY: apply_iono_velocity
 
   implicit none
 
@@ -357,6 +358,8 @@ subroutine BATS_advance(TimeSimulationLimit)
   endif                                   !^CFG IF IMPLICIT  
 
   if(UseIM)call apply_im_pressure         !^CFG IF RCM
+
+  if(UseIE)call apply_iono_velocity
 
   if(UseDivBDiffusion)call clean_divb     !^CFG IF DIVBDIFFUSE
 
