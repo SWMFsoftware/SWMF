@@ -20,8 +20,10 @@ contains
     use ModReadParam, ONLY: read_var
 
     call read_var('UseIonoVelocity', UseIonoVelocity)
-    call read_var('rCoupleUiono'   , rCoupleUiono)
-    call read_var('TauCoupleUiono',  TauCoupleUiono)
+    if(UseIonoVelocity)then
+       call read_var('rCoupleUiono'   , rCoupleUiono)
+       call read_var('TauCoupleUiono',  TauCoupleUiono)
+    end if
 
   end subroutine read_iono_velocity_param
 
