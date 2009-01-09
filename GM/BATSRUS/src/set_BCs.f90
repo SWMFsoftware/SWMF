@@ -440,7 +440,7 @@ contains
              VarsGhostFace_V(iRho_I) = PolarRho_I
 
              ! Align flow with the magnetic field
-             bUnit_D = B0Face_D / sum(B0Face_D**2)
+             bUnit_D = B0Face_D / sqrt(sum(B0Face_D**2))
              ! Make sure it points outward
              if(sum(bUnit_D*FaceCoords_D) < 0.0) bUnit_D = -bUnit_D
              VarsGhostFace_V(iUx_I)  = PolarU_I*bUnit_D(x_)
@@ -491,9 +491,14 @@ contains
 
     !^CFG IF IONOSPHERE BEGIN
     if (UseIe .and. iBoundary == Body1_) then
+       ! Get the E x B / B^2 velocity
        call calc_inner_bc_velocity(TimeBc, FaceCoords_D, &
-            VarsTrueFace_V(Bx_:Bz_), B0Face_D, uIono_D)
-       
+            VarsTrueFace_V(Bx_:Bz_) + B0Face_D, uIono_D)
+
+       ! Subtract the radial component of the velocity (no outflow/inflow)
+       uIono_D = uIono_D &
+            - FaceCoords_D * sum(FaceCoords_D * uIono_D) / sum(FaceCoords_D**2)
+
        select case(TypeBc)
        case('reflect','linetied','polarwind','ionosphere','ionospherefloat')
           VarsGhostFace_V(iUx_I) = 2*uIono_D(x_) + VarsGhostFace_V(iUx_I)
