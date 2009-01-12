@@ -49,7 +49,8 @@ subroutine MH_set_parameters(TypeAction)
        ySizeBoxHall, DySizeBoxHall, &
        zSizeBoxHall, DzSizeBoxHall
   use ModGrayDiffusion, ONLY: &                   !^CFG IF IMPLICIT
-       UseRadFluxLimiter, TypeRadFluxLimiter      !^CFG IF IMPLICIT
+       UseRadFluxLimiter, TypeRadFluxLimiter, &   !^CFG IF IMPLICIT
+       read_temperature_param                     !^CFG IF IMPLICIT
   use ModResistivity                              !^CFG IF DISSFLUX
   use ModMultiFluid, ONLY: MassIon_I, DoConserveNeutrals,iFluid
   use ModMultiIon, ONLY: multi_ion_set_parameters
@@ -494,13 +495,13 @@ subroutine MH_set_parameters(TypeAction)
         call read_var("rInnerHall ", rInnerHall)
         call read_var("DrInnerHall", DrInnerHall)
 
-
      case("#RADIATION")          !^CFG IF IMPLICIT BEGIN
-        call read_var('UseGrayDiffusion',UseGrayDiffusion)
+        call read_var('UseGrayDiffusion', UseGrayDiffusion)
         if(UseGrayDiffusion)then
-           call read_var('UseRadFluxLimiter',UseRadFluxLimiter)
+           call read_var('UseRadFluxLimiter', UseRadFluxLimiter)
            if(UseRadFluxLimiter)then
-              call read_var('TypeRadFluxLimiter',TypeRadFluxLimiter,IsLowerCase=.true.)
+              call read_var('TypeRadFluxLimiter', TypeRadFluxLimiter, &
+                   IsLowerCase=.true.)
 
               select case(TypeRadFluxLimiter)
               case("larsen","sum","max")
@@ -509,7 +510,10 @@ subroutine MH_set_parameters(TypeAction)
                       //TypeRadFluxLimiter)
               end select
            end if
-        end if                 !^CFG END IMPLICIT
+        end if
+
+     case("#IMPLICITTEMPERATURE")
+        call read_temperature_param(NameCommand)  !^CFG END IMPLICIT
 
      case("#SAVELOGFILE")
         call read_var('DoSaveLogfile',save_logfile)

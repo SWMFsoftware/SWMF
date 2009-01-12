@@ -18,6 +18,7 @@ module ModGrayDiffusion
   public :: get_radiation_energy_flux
   public :: calc_source_gray_diffusion
   public :: advance_temperature
+  public :: read_temperature_param
 
   ! Logical for adding Gray Diffusion
   logical, public :: IsNewBlockGrayDiffusion = .true.
@@ -66,9 +67,34 @@ module ModGrayDiffusion
   ! named indexes for temerature variables
   integer, parameter :: Te_ = 1, Trad_ = 2
 
+  ! variables for the accuracy of the conjugate gradient
+  character(len=3) :: TypeStopCriterion = 'rel'
+  real :: MaxErrorResidual = 1e-5
+
 contains
 
-  !==========================================================================
+  !============================================================================
+
+  subroutine read_temperature_param(NameCommand)
+
+    use ModReadParam, ONLY: read_var
+
+    character(len=*), intent(in) :: NameCommand
+
+    character(len=*), parameter :: NameSub = 'read_temperature_param'
+    !--------------------------------------------------------------------------
+
+    select case(NameCommand)
+    case("#IMPLICITTEMPERATURE")
+       call read_var('TypeStopCriterion', TypeStopCriterion)
+       call read_var('MaxErrorResidual', MaxErrorResidual)
+    case default
+       call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
+    end select
+
+  end subroutine read_temperature_param
+
+  !============================================================================
 
   subroutine init_gray_diffusion
 
@@ -818,7 +844,6 @@ contains
 
     integer :: i, j, k, iBlock
     integer :: Iter
-    real, parameter :: Tolerance = 1e-5
     logical :: DoTest, DoTestMe
     logical :: DoTestKrylov, DoTestKrylovMe
 
@@ -858,7 +883,8 @@ contains
     call get_jacobi_preconditioner(nTemperature)
 
     call cg(heat_conduction, nTemperature, Source_VCB, Temperature_VGB, &
-         .true., Tolerance, 'rel', Iter, jacobi_preconditioner)
+         .true., MaxErrorResidual, TypeStopCriterion, &
+         Iter, jacobi_preconditioner)
 
     if(DoTestKrylovMe)write(*,*)NameSub,': Number of iterations =',Iter
 

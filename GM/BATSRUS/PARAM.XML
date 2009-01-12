@@ -4683,6 +4683,29 @@ The default for UseRadFluxLimiter is false.
 </command>
 
 
+<command name="IMPLICITTEMPERATURE">
+	 <parameter name="TypeStopCriterion" type="string" case="lower"
+	 	    input="select">
+		    <option name="rel"  default="T" />
+		    <option name="abs"              />
+	 </parameter>
+	 <parameter name="MaxErrorResidual" type="real" default="1.0e-5"/>
+
+#IMPLICITTEMPERATURE
+rel			TypeStopCriterion
+1.0e-5			MaxErrorResidual
+
+The radiation hydrodynamics with gray nonequilibrium diffusion approximation
+uses a preconditioned conjugate gradient method to solve for the electron
+and radiation temperature. The type of stopping criterion is either the
+relative ('rel') indicating that the required reduction of the relative
+residual norm (final to initial residual) should be smaller than MaxErrorResidual,
+or the absolute norm.
+
+The default values are shown.
+</command>
+
+
 <command name="MASSLOADING">
 	<parameter name="UseMassLoading" type="logical" default="F"/>	
 	<parameter name="DoAccelerateMassLoading" type="logical" default="F"/>
