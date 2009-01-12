@@ -45,10 +45,6 @@ module ModGrayDiffusion
   ! currently, only radiation needs "heat conduction"
   integer, parameter :: nCond = 1
 
-  ! change in internal energy due to heat conduction/diffusion
-  ! and energy exchange
-  real, allocatable :: DelEint_VCB(:,:,:,:,:)
-
   ! Right-hand side of non-linear coupled system of temperature equations
   real, allocatable :: Source_VCB(:,:,:,:,:)
 
@@ -61,7 +57,8 @@ module ModGrayDiffusion
   integer, parameter :: EintExtra_ = p_ - 1
 
   ! the solution vector containing the independent temperature variables
-  real, allocatable :: Temperature_VGB(:,:,:,:,:)
+  real, allocatable :: Temperature_VGB(:,:,:,:,:), &
+       TemperatureOld_VCB(:,:,:,:,:)
 
   ! number of independent temperature variables
   integer, parameter :: nTemperature = 2
@@ -119,9 +116,9 @@ contains
             SpecificHeat_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk), &
             HeatConductionCoef_IGB(1:nCond,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk), &
             iCond_I(1:nCond), &
+            TemperatureOld_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk), &
             Temperature_VGB(1:nTemperature,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk), &
             JacPrec_VVCB(nTemperature,nTemperature,nI,nJ,nK,nBLK), &
-            DelEint_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk), &
             Source_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk) )
 
        if(nTemperature>1) &
@@ -182,6 +179,8 @@ contains
 
           Temperature_VGB(Te_,i,j,k,iBlock) = Te
           Temperature_VGB(Trad_,i,j,k,iBlock) = Trad
+
+          TemperatureOld_VCB(:,i,j,k,iBlock) = Temperature_VGB(:,i,j,k,iBlock)
        end do; end do; end do
     end do
 
@@ -821,11 +820,13 @@ contains
     integer :: Iter
     real, parameter :: Tolerance = 1e-5
     logical :: DoTest, DoTestMe
+    logical :: DoTestKrylov, DoTestKrylovMe
 
     character(len=*), parameter :: NameSub = 'advance_temperature'
     !--------------------------------------------------------------------------
 
     call set_oktest(NameSub, DoTest, DoTestMe)
+    call set_oktest('krylov', DoTestKrylov, DoTestKrylovMe)
 
     ! prevent doing useless updates
     if(Dt == 0.0)return
@@ -839,13 +840,9 @@ contains
     do iBlock = 1, nBlock
        if(unusedBlk(iBlock)) CYCLE
 
-       Source_VCB(:,:,:,:,iBlock) = SpecificHeat_VCB(:,:,:,:,iBlock) &
-            *Temperature_VGB(:,1:nI,1:nJ,1:nK,iBlock)
-       DelEint_VCB(:,:,:,:,iBlock) = -Source_VCB(:,:,:,:,iBlock)
-
        do k = 1,nK; do j = 1,nJ; do i = 1,nI
-          Source_VCB(:,i,j,k,iBlock) = Source_VCB(:,i,j,k,iBlock) &
-               /(vInv_CB(i,j,k,iBlock)*Dt)
+          Source_VCB(:,i,j,k,iBlock) = SpecificHeat_VCB(:,i,j,k,iBlock) &
+               *Temperature_VGB(:,i,j,k,iBlock)/(vInv_CB(i,j,k,iBlock)*Dt)
        end do; end do; end do
 
        if(IsCylindrical)then
@@ -863,14 +860,10 @@ contains
     call cg(heat_conduction, nTemperature, Source_VCB, Temperature_VGB, &
          .true., Tolerance, 'rel', Iter, jacobi_preconditioner)
 
-    if(DoTestMe)write(*,*)NameSub,': Number of iterations =',Iter
+    if(DoTestKrylovMe)write(*,*)NameSub,': Number of iterations =',Iter
 
     do iBlock = 1, nBlock
        if(unusedBlk(iBlock)) CYCLE
-
-       DelEint_VCB(:,:,:,:,iBlock) = DelEint_VCB(:,:,:,:,iBlock) &
-            + SpecificHeat_VCB(:,:,:,:,iBlock) &
-            *Temperature_VGB(:,1:nI,1:nJ,1:nK,iBlock)
 
        call update_conservative_energy(iBlock)
     end do
@@ -906,7 +899,9 @@ contains
 
        State_VGB(Eradiation_,i,j,k,iBlock) = &
             State_VGB(Eradiation_,i,j,k,iBlock) &
-            + DelEint_VCB(Trad_,i,j,k,iBlock)
+            + SpecificHeat_VCB(Trad_,i,j,k,iBlock) &
+            *(Temperature_VGB(Trad_,i,j,k,iBlock) &
+            - TemperatureOld_VCB(Trad_,i,j,k,iBlock))
 
        ! Fix energy if it goes negative
        if(State_VGB(Eradiation_,i,j,k,iBlock) < 0.0) then
@@ -936,7 +931,9 @@ contains
 
        Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
             + State_VGB(EintExtra_,i,j,k,iBlock) &
-            + DelEint_VCB(Te_,i,j,k,iBlock)
+            + SpecificHeat_VCB(Te_,i,j,k,iBlock) &
+            *(Temperature_VGB(Te_,i,j,k,iBlock) &
+            - TemperatureOld_VCB(Te_,i,j,k,iBlock))
 
        EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
 
@@ -1156,12 +1153,22 @@ contains
          P_VGB(nVar,1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,nBLK), &
          ADotP_VCB(nVar,1:nI,1:nJ,1:nK,nBLK) )
 
-    P_VGB = 0.0
-    ADotP_VCB = 0.0
+    do iBlock = 1, nBlock
+       if(unusedBlk(iBlock))CYCLE
+       P_VGB(:,:,:,:,iBlock) = 0.0
+    end do
+    do iBlock = 1, nBlock
+       if(unusedBlk(iBlock))CYCLE
+       ADotP_VCB(:,:,:,:,iBlock) = 0.0
+    end do
 
     if(present(preconditioner))then
        allocate(MMinusOneDotR_VCB(nVar,1:nI,1:nJ,1:nK,nBLK))
-       MMinusOneDotR_VCB = 0.0
+
+       do iBlock = 1, nBlock
+          if(unusedBlk(iBlock))CYCLE
+          MMinusOneDotR_VCB(:,:,:,:,iBlock) = 0.0
+       end do
     end if
 
     !-------------- compute initial right hand side vector --------------
@@ -1217,6 +1224,9 @@ contains
           if(unusedBlk(iBlock))CYCLE
           Residual_VCB(:,:,:,:,iBlock) = Residual_VCB(:,:,:,:,iBlock) &
                - aDotP_VCB(:,:,:,:,iBlock)/pDotADotP
+       end do
+       do iBlock = 1, nBlock
+          if(unusedBlk(iBlock))CYCLE
           Solution_VGB(:,1:nI,1:nJ,1:nK,iBlock) = &
                Solution_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
                + P_VGB(:,1:nI,1:nJ,1:nK,iBlock)/pDotADotP
