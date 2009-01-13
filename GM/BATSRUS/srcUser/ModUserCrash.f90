@@ -25,6 +25,9 @@ module ModUser
   ! There are 3 materials: Xe, Be and Plastic
   integer, parameter :: nMaterial = 3
 
+  ! Dimensionality
+  logical :: IsThreeDim = .false.
+
   ! Wall parameters
   logical:: UseTube = .false.
   real :: xEndTube   =   40.0    ! x coordinate of tube ending
@@ -60,10 +63,10 @@ module ModUser
   real, allocatable :: DataHyades_VC(:,:)        ! cell centered Hyades data
   real, allocatable :: LevelHyades_VC(:,:)       ! level set functions
   integer           :: iXHyades        = -1      ! index of x coordinate
-  integer           :: iYHyades        = -1      ! index of y coordinate
+  integer           :: iRHyades        = -1      ! index of r coordinate
   integer           :: iRhoHyades      = -1      ! index of density
   integer           :: iUxHyades       = -1      ! index of x velocity
-  integer           :: iUyHyades       = -1      ! index of y velocity
+  integer           :: iUrHyades       = -1      ! index of r velocity
   integer           :: iPHyades        = -1      ! index of pressure
   integer           :: iZHyades        = -1      ! index of ionization level
   integer           :: iTeHyades       = -1      ! index of electron temper.
@@ -137,6 +140,8 @@ contains
           case default
              call stop_mpi(NameSub//"Wrong TypeOpacity ="//trim(TypeOpacity))
           end select
+       case("#THREEDIM")
+          call read_var('IsThreeDim', IsThreeDim)
        case('#USERINPUTEND')
           EXIT
        case default
@@ -156,12 +161,12 @@ contains
     use ModAdvance,   ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, p_, &
          ExtraEint_, LevelBe_, LevelXe_, LevelPl_, Eradiation_
     use ModGeometry,  ONLY: x_BLK, y_BLK, z_BLK
-    use ModEos,       ONLY: eos, Be_, Xe_, Plastic_
+    use ModEos,       ONLY: eos
     use ModPolyimide, ONLY: cAtomicMass_I, cAPolyimide
     use ModLookupTable, ONLY: interpolate_lookup_table
 
-    real    :: x, y, xBe, DxBe, DxyPl, pSi, RhoSi, EinternalSi, TeSi
-    real    :: ePerP_I(Xe_:Plastic_)
+    real    :: x, r, xBe, DxBe, DxyPl, pSi, RhoSi, EinternalSi, TeSi
+    real    :: ePerP_I(0:nMaterial-1)
     real    :: DxyGold = -1.0
     logical :: IsError
 
@@ -184,10 +189,14 @@ contains
     end if
 
     ! Set level set functions, internal energy, and other values
-    do k=-1, nK+2; do j=-1, nJ+2; do i=-1, nI+2 
+    do k=1, nK; do j=1, nJ; do i=1, nI 
 
        x = x_BLK(i,j,k,iBlock)
-       y = y_BLK(i,j,k,iBlock)
+       if(IsThreeDim)then
+          r = sqrt(y_BLK(i,j,k,iBlock)**2 + z_BLK(i,j,k,iBlock)**2)
+       else
+          r = abs(y_BLK(i,j,k,iBlock))
+       end if
 
        if(nDimHyades /= 2)then
 
@@ -196,7 +205,7 @@ contains
              xBe = xBeHyades
           else
              ! Be - Xe interface is at the shock defined by #SHOCKPOSITION
-             xBe = ShockPosition - ShockSlope*y
+             xBe = ShockPosition - ShockSlope*y_BLK(i,j,k,iBlock)
           end if
 
           ! Distance from Be disk: positive for x < xBe
@@ -207,7 +216,7 @@ contains
              ! Distance from plastic wall: 
              ! positive for rInnerTube < |y| < rOuterTube and x > xEndTube only
              DxyPl = &
-                  min(abs(y) - rInnerTube, rOuterTube - abs(y), x - xEndTube)
+                  min(r - rInnerTube, rOuterTube - r, x - xEndTube)
 
              ! Set plastic tube state
              if(DxyPl > 0.0)then
@@ -220,7 +229,7 @@ contains
 
              ! Set pressure and speed outside the tube. 
              ! For 2D Hyades input do not overwrite values left of xEndTube
-             if(abs(y) > rOuterTube &
+             if(r > rOuterTube &
                   .and. (nDimHyades == 1 .or. x > xEndTube) ) then
                 State_VGB(p_,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
                 State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
@@ -228,27 +237,27 @@ contains
              
              ! Set the Xe state inside the tube for x > xUniformXe if it is set
              if(xUniformXe > 0.0 .and. x > xUniformXe &
-                  .and. abs(y) < rInnerTube)then
+                  .and. r < rInnerTube)then
                 State_VGB(Rho_,i,j,k,iBlock) = RhoDimOutside*Io2No_V(UnitP_)
                 State_VGB(p_,i,j,k,iBlock)   = pDimOutside*Io2No_V(UnitP_)
                 State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
              end if
              
              ! Set density outside the tube
-             if(x >= xEndTube .and. abs(y) > rOuterTube) &
+             if(x >= xEndTube .and. r > rOuterTube) &
                   State_VGB(Rho_,i,j,k,iBlock) = &
                   RhoDimOutside*Io2No_V(UnitRho_)
 
              ! Berylium is left of xBe inside rInnerTube 
              ! and it is left of xEndTube outside
              State_VGB(LevelBe_,i,j,k,iBlock) = &
-                  max(xEndTube - x, min(DxBe, rInnerTube - abs(y)))
+                  max(xEndTube - x, min(DxBe, rInnerTube - r))
 
              ! Xenon is right of xBe inside rInnerTube and 
              ! right of xEndTube outside rOuterTube
              State_VGB(LevelXe_,i,j,k,iBlock) = max( &
-                  min( x - xEndTube, abs(y) - rOuterTube), &
-                  min( -DxBe, rInnerTube - abs(y)) )
+                  min( x - xEndTube, r - rOuterTube), &
+                  min( -DxBe, rInnerTube - r) )
 
              ! Plastic 
              State_VGB(LevelPl_,i,j,k,iBlock) = DxyPl
@@ -262,7 +271,7 @@ contains
           ! Distance from gold washer xEndTube < x < xEndTube + WidthGold
           if(UseGold) then
              DxyGold = min(x - xEndTube, xEndTube + WidthGold - x, &
-                  abs(y) - rOuterTube)
+                  r - rOuterTube)
 
              ! Set density of gold washer (if present)
              if(DxyGold > 0.0) &
@@ -270,7 +279,7 @@ contains
 
           end if
 
-       end if ! nDim /= 2
+       end if ! nDimHyades /= 2
 
        if(UseMixedCell)then
           ! Use atomic concentrations instead of smooth level set functions
@@ -353,7 +362,7 @@ contains
 
     ! Variables for setting level set functions
     integer :: iError, i, iCell, iMaterial, jMaterial
-    real    :: x, y
+    real    :: x, r
     integer, allocatable:: iMaterial_C(:)
     real,    allocatable:: Distance2_C(:)
 
@@ -370,7 +379,7 @@ contains
 
     ! Ignore negative value (signaling distorted grid)
     nDimHyades = abs(nDimHyades)
-    
+
     ! Read grid size
     allocate(nCellHyades_D(nDimHyades))
     read(UnitTmp_,*) nCellHyades_D
@@ -391,13 +400,13 @@ contains
        case('x')
           iXHyades   = i
        case('y', 'r')
-          iYHyades   = i
+          iRHyades   = i
        case('rho')
           iRhoHyades = i
        case('ux')
           iUxHyades  = i
        case('uy', 'ur')
-          iUyHyades  = i
+          iUrHyades  = i
        case('p')
           iPHyades   = i
        case('te')
@@ -417,7 +426,7 @@ contains
 
     if(iPHyades < 0)call stop_mpi(NameSub// &
          ' could not find p in '//trim(NameVarHyades))
-       
+
     if(iUxHyades < 0)call stop_mpi(NameSub// &
          ' could not find ux in '//trim(NameVarHyades))
 
@@ -426,10 +435,10 @@ contains
 
     if(nDimHyades > 1)then
        ! y, uy and material are needed in 2D
-       if(iYHyades < 0) call stop_mpi(NameSub// &
-            ' could not find y in '//trim(NameVarHyades))
-       if(iUyHyades < 0) call stop_mpi(NameSub// &
-            ' could not find uy in '//trim(NameVarHyades))
+       if(iRHyades < 0) call stop_mpi(NameSub// &
+            ' could not find y/r in '//trim(NameVarHyades))
+       if(iUrHyades < 0) call stop_mpi(NameSub// &
+            ' could not find uy/ur in '//trim(NameVarHyades))
        if(iMaterialHyades < 0) call stop_mpi(NameSub// &
             ' could not find material in '//trim(NameVarHyades))
     end if
@@ -452,8 +461,8 @@ contains
        Hyades2No_V(iTrHyades)= cKevToK* Si2No_V(UnitTemperature_) ! KeV   -> K
     end if
     if(nDimHyades > 1)then
-       Hyades2No_V(iYHyades)  = 0.01 * Si2No_V(UnitX_)   ! cm    -> m
-       Hyades2No_V(iUyHyades) = 0.01 * Si2No_V(UnitU_)   ! cm/s  -> m/s
+       Hyades2No_V(iRHyades)  = 0.01 * Si2No_V(UnitX_)   ! cm    -> m
+       Hyades2No_V(iUrHyades) = 0.01 * Si2No_V(UnitU_)   ! cm/s  -> m/s
     end if
 
     ! Read in the data
@@ -501,41 +510,48 @@ contains
 
        ! Find cell with maximum X coordinate along the symmetry axis
        iCellLastHyades = nCellHyades_D(1)
-       write(*,*) 'Coordinates of rightmost cell along axis:', &
-            DataHyades_VC(iXHyades,iCellLastHyades), &
-            DataHyades_VC(iYHyades,iCellLastHyades)
 
        ! Calculate level set functions on the Hyades grid using 
        ! the minimum distance between cells of different materials
-       allocate(LevelHyades_VC(Xe_:Plastic_, nCellHyades))
-       allocate(Distance2_C(nCellHyades), iMaterial_C(nCellHyades))
+       allocate(LevelHyades_VC(0:nMaterial-1, nCellHyades))
 
-       do iCell = 1, nCellHyades
-          x         = DataHyades_VC(iXHyades, iCell)
-          y         = DataHyades_VC(iYHyades, iCell)
-          iMaterial = DataHyades_VC(iMaterialHyades, iCell)
-
-          ! Distance squared from all other points
-          Distance2_C = (x - DataHyades_VC(iXHyades,:))**2       &
-               +        (y - DataHyades_VC(iYHyades,:))**2
-
-          ! Integer value of material in Hyades grid
-          iMaterial_C = DataHyades_VC(iMaterialHyades,:)
-
-          ! For each cell set 3 level set functions
-          do jMaterial = Xe_, Plastic_
-             if(iMaterial == jMaterial)then
-                ! Level is the smallest distance to a different material
-                LevelHyades_VC(jMaterial, iCell) =  sqrt(minval &
-                     ( Distance2_C, MASK=iMaterial_C /= jMaterial))
-             else
-                ! Level is -1 times the smallest distance to same material
-                LevelHyades_VC(jMaterial, iCell) = - sqrt(minval &
-                     ( Distance2_C, MASK=iMaterial_C == jMaterial))
-             end if
+       if(UseMixedCell)then
+          ! Simply set 1.0 the levelset function corresponding to the material
+          LevelHyades_VC = -1.0
+          do iCell = 1, nCellHyades
+             LevelHyades_VC(nint(DataHyades_VC(iMaterialHyades,iCell)),iCell) &
+                  = 1.0
           end do
-       end do
-       deallocate(Distance2_C, iMaterial_C)
+       else
+          ! Determine distance functions
+          allocate(Distance2_C(nCellHyades), iMaterial_C(nCellHyades))
+          do iCell = 1, nCellHyades
+             x         = DataHyades_VC(iXHyades, iCell)
+             r         = DataHyades_VC(iRHyades, iCell)
+             iMaterial = DataHyades_VC(iMaterialHyades, iCell)
+
+             ! Distance squared from all other points
+             Distance2_C = (x - DataHyades_VC(iXHyades,:))**2       &
+                  +        (r - DataHyades_VC(iRHyades,:))**2
+
+             ! Integer value of material in Hyades grid
+             iMaterial_C = DataHyades_VC(iMaterialHyades,:)
+
+             ! For each cell set 3 level set functions
+             do jMaterial = 0, nMaterial-1
+                if(iMaterial == jMaterial)then
+                   ! Level is the smallest distance to a different material
+                   LevelHyades_VC(jMaterial, iCell) =  sqrt(minval &
+                        ( Distance2_C, MASK=iMaterial_C /= jMaterial))
+                else
+                   ! Level is -1 times the smallest distance to same material
+                   LevelHyades_VC(jMaterial, iCell) = - sqrt(minval &
+                        ( Distance2_C, MASK=iMaterial_C == jMaterial))
+                end if
+             end do
+          end do
+          deallocate(Distance2_C, iMaterial_C)
+       end if
     end if
 
     deallocate(EqparHyades_I)
@@ -624,7 +640,7 @@ contains
     use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
          LevelXe_, LevelPl_, Eradiation_
-    use ModGeometry,    ONLY: x_BLK, y_BLK
+    use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, y2
     use ModTriangulate, ONLY: calc_triangulation, find_triangle
     use ModMain,        ONLY: UseGrayDiffusion
     use ModPhysics,     ONLY: cRadiationNo
@@ -634,9 +650,10 @@ contains
     integer, save              :: nTriangle
     integer, allocatable, save :: iNodeTriangle_II(:,:)
     real, allocatable,    save :: DataHyades_V(:)
+    real                       :: LevelHyades_V(0:nMaterial-1)
 
     integer :: i, j, k, iNode1, iNode2, iNode3
-    real    :: x, y, Xy_D(2), Weight1, Weight2, Weight3
+    real    :: x, y, z, r, Weight1, Weight2, Weight3
 
     character(len=*), parameter :: NameSub='interpolate_hyades2d'
     !-------------------------------------------------------------------------
@@ -645,68 +662,77 @@ contains
        allocate(iNodeTriangle_II(3,2*nCellHyades))
        allocate(DataHyades_V(nDimHyades + nVarHyades))
        call calc_triangulation( &
-            nCellHyades, DataHyades_VC( (/iXHyades, iYHyades/), :), &
+            nCellHyades, DataHyades_VC( (/iXHyades, iRHyades/), :), &
             iNodeTriangle_II, nTriangle)
     end if
 
     ! Interpolate points 
-    do j = -1, nJ+2; do i = -1, nI+2
+    do j = 1, nJ; do i = 1, nI; do k = 1, nk
 
-       x = x_Blk(i,j,1,iBlock)
-       y = y_Blk(i,j,1,iBlock)
+       if(k == 1 .or. IsThreeDim)then
+          x = x_Blk(i,j,k,iBlock)
+          y = y_Blk(i,j,k,iBlock)
+          if(IsThreeDim)then
+             z = z_Blk(i,j,k,iBlock)
+             r = sqrt(y**2 + z**2)
 
-       ! abs(y) = radial distance in Hyades
-       Xy_D = (/ x, abs(y) /)
+             ! Check if we are further away than the width of the box
+             if(r > y2)then
+                ! Shrink coordinates in the radial direction to y2
+                y = y*y2/r
+                z = z*y2/r
+                r = y2
+             end if
+          else
+             r = abs(y)
+             z = 0.0
+          end if
 
-       ! Check if we are at the end of the Hyades grid
-       if(x >= DataHyades_VC(iXHyades, iCellLastHyades))then
-          iNode1 = iCellLastHyades;  Weight1 = 1.0
-          iNode2 = 1;                Weight2 = 0.0
-          iNode3 = 1;                Weight3 = 0.0
-       else
-          ! Find the Hyades triangle around this position
-          call find_triangle(&
-               nCellHyades, nTriangle, &
-               Xy_D, DataHyades_VC( (/iXHyades, iYHyades/),:), &
-               iNodeTriangle_II(:,1:nTriangle), &
-               iNode1, iNode2, iNode3, Weight1, Weight2, Weight3)
-       end if
+          ! Check if we are at the end of the Hyades grid
+          if(x >= DataHyades_VC(iXHyades, iCellLastHyades))then
+             iNode1 = iCellLastHyades;  Weight1 = 1.0
+             iNode2 = 1;                Weight2 = 0.0
+             iNode3 = 1;                Weight3 = 0.0
+          else
+             ! Find the Hyades triangle around this position
+             call find_triangle(&
+                  nCellHyades, nTriangle, &
+                  (/x, r/), DataHyades_VC( (/iXHyades, iRHyades/),:), &
+                  iNodeTriangle_II(:,1:nTriangle), &
+                  iNode1, iNode2, iNode3, Weight1, Weight2, Weight3)
+          end if
 
-       DataHyades_V = &
-            Weight1*DataHyades_VC(:, iNode1) + &
-            Weight2*DataHyades_VC(:, iNode2) + &
-            Weight3*DataHyades_VC(:, iNode3)
+          DataHyades_V = &
+               Weight1*DataHyades_VC(:, iNode1) + &
+               Weight2*DataHyades_VC(:, iNode2) + &
+               Weight3*DataHyades_VC(:, iNode3)
 
-       do k = -1, nk+2
-          ! Interpolate density, momentum and pressure
-
-          State_VGB(Rho_,i,j,k,iBlock)  = DataHyades_V(iRhoHyades)
-
-          State_VGB(p_,i,j,k,iBlock)    = DataHyades_V(iPHyades)
-
-          State_VGB(RhoUx_,i,j,k,iBlock) = &
-               DataHyades_V(iRhoHyades) * DataHyades_V(iUxHyades)
-
-          State_VGB(RhoUy_,i,j,k,iBlock) = sign(1.0, y) * &
-               DataHyades_V(iRhoHyades) * DataHyades_V(iUyHyades)
-
-          ! Set azimuthal momentum to zero
-          State_VGB(RhoUz_,i,j,k,iBlock) = 0.0
-
-          ! Interpolate level set functions
-          State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) = &
+          LevelHyades_V = &
                Weight1*LevelHyades_VC(:, iNode1) + &
                Weight2*LevelHyades_VC(:, iNode2) + &
                Weight3*LevelHyades_VC(:, iNode3)
+       end if
 
+       ! Interpolate density, momentum and pressure
 
-          ! Radiation energy = cRadiation*Trad**4
-          if(UseGrayDiffusion) State_VGB(Eradiation_,i,j,k,iBlock) = &
-               cRadiationNo * DataHyades_V(iTrHyades)**4
+       State_VGB(Rho_,i,j,k,iBlock)  = DataHyades_V(iRhoHyades)
 
-       end do
+       State_VGB(p_,i,j,k,iBlock)    = DataHyades_V(iPHyades)
 
-    end do; end do
+       State_VGB(RhoUx_,i,j,k,iBlock) = &
+            DataHyades_V(iRhoHyades) * DataHyades_V(iUxHyades)
+
+       State_VGB(RhoUy_:RhoUz_,i,j,k,iBlock) = (/y, z/)/r * &
+            DataHyades_V(iRhoHyades) * DataHyades_V(iUrHyades)
+
+       ! Interpolate level set functions
+       State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) = LevelHyades_V
+
+       ! Radiation energy = cRadiation*Trad**4
+       if(UseGrayDiffusion) State_VGB(Eradiation_,i,j,k,iBlock) = &
+            cRadiationNo * DataHyades_V(iTrHyades)**4
+
+    end do; end do; end do
 
   end subroutine interpolate_hyades2d
 
@@ -724,7 +750,7 @@ contains
     use ModNodes,   ONLY: NodeY_NB
     use ModPhysics
     use ModEnergy,  ONLY: calc_energy_cell
-    use ModEos,     ONLY: eos, Xe_, Plastic_
+    use ModEos,     ONLY: eos
     use ModLookupTable, ONLY: interpolate_lookup_table
 
     implicit none
@@ -734,7 +760,7 @@ contains
     integer:: i, j, k, iMaterial, iMaterial_I(1)
     real   :: vInv_C(nI,nJ,nK)
     real   :: PressureSi, EinternalSi, RhoSi
-    real   :: RhoToARatioSI_I(Xe_:Plastic_), pPerE_I(Xe_:Plastic_)
+    real   :: RhoToARatioSi_I(0:nMaterial-1), pPerE_I(0:nMaterial-1)
 
     character(len=*), parameter :: NameSub = 'user_update_states'
     !------------------------------------------------------------------------
@@ -987,7 +1013,7 @@ contains
   !===========================================================================
   subroutine calc_table_value(iTable, Arg1, Arg2, Value_V)
 
-    use ModEos, ONLY: eos, Xe_, Plastic_
+    use ModEos, ONLY: eos
     use ModConst,ONLY: cProtonMass, cBoltzmann
 
     integer, intent(in):: iTable
@@ -1002,7 +1028,7 @@ contains
        ! Calculate p/e for Xe_, Be_ and Plastic_ for given Rho and e/Rho
        Rho = Arg1
        e   = Arg2*Rho
-       do iMaterial = Xe_, Plastic_
+       do iMaterial = 0, nMaterial-1
           call eos(iMaterial, Rho, EtotalIn=e, pTotalOut=p)
 
           ! Material index starts from 0 :-( hence the +1
@@ -1016,7 +1042,7 @@ contains
        ! Calculate e/p for Xe_, Be_ and Plastic_ for given Rho and p/Rho
        Rho = Arg1
        p   = Arg2*Rho
-       do iMaterial = Xe_, Plastic_
+       do iMaterial = 0, nMaterial-1
           call eos(iMaterial, Rho, PtotalIn=p, eTotalOut=e)
 
           ! Material index starts from 0 :-( hence the +1
@@ -1031,7 +1057,7 @@ contains
        ! for given Rho and p/Rho
        Rho = Arg1
        p   = Arg2*Rho
-       do iMaterial = Xe_, Plastic_
+       do iMaterial = 0, nMaterial-1
           call eos(iMaterial, Rho, PtotalIn=p, &
                CVTotalOut=Cv, GammaOut=Gamma, TeOut=Te)
 
@@ -1060,7 +1086,7 @@ contains
 
     ! The State_V vector is in normalized units, output is in SI units
 
-    use ModEos,        ONLY: eos, Xe_, Plastic_
+    use ModEos,        ONLY: eos
     use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_
     use ModVarIndexes, ONLY: nVar, Rho_, LevelXe_, LevelPl_, p_
     use ModLookupTable,ONLY: interpolate_lookup_table
@@ -1076,7 +1102,7 @@ contains
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
 
-    real    :: pSi, RhoSi, TeSi, CvSi, pPerE_I(Xe_:Plastic_)
+    real    :: pSi, RhoSi, TeSi, CvSi, pPerE_I(0:nMaterial-1)
     real    :: Value_V(3*nMaterial), Opacity_V(2*nMaterial)
     integer :: iMaterial, iMaterial_I(1)
     logical :: IsError
