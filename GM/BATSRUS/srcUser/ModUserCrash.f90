@@ -964,6 +964,16 @@ contains
        PlotVar_G = sign(1.0,State_VGB(Eradiation_,:,:,:,iBlock)) &
             *sqrt(sqrt(abs(State_VGB(Eradiation_,:,:,:,iBlock))/cRadiationNo))&
             * No2Si_V(UnitTemperature_) * cKToKev
+    case('planck')
+       do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               AbsorptionOpacitySiOut = PlotVar_G(i,j,k))
+       end do; end do; end do
+    case('ross')
+       do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               RosselandMeanOpacitySiOut = PlotVar_G(i,j,k))
+       end do; end do; end do
     case default
        IsFound = .false.
     end select
@@ -994,11 +1004,11 @@ contains
 
     iTablePPerE      = i_lookup_table('pPerE(rho,e/rho)')
     iTableEPerP      = i_lookup_table('ePerP(rho,p/rho)')
-    iTableCvGammaTe = i_lookup_table('CvGammaTe(rho,p/rho)')
-    iTableOpacity   = i_lookup_table('Opacity(rho,p/rho)')
+    iTableCvGammaTe  = i_lookup_table('CvGammaTe(rho,p/rho)')
+    iTableOpacity    = i_lookup_table('Opacity(rho,T)')
 
     if(iProc==0) write(*,*) NameSub, &
-         ' iTablePPerE, RhoP, CvGammaTe, Opacity = ', &
+         ' iTablePPerE, EPerP, CvGammaTe, Opacity = ', &
          iTablePPerE, iTableEPerP, iTableCvGammaTe, iTableOpacity
 
     if(iTablePPerE > 0) &
@@ -1126,27 +1136,28 @@ contains
 
     if(present(PressureSiOut)) PressureSiOut = pSi
 
-    if(present(TeSiOut) .or. present(CvSiOut))then
+    if(present(TeSiOut) .or. present(CvSiOut) .or. iTableOpacity>0 .and. &
+         (present(AbsorptionOpacitySiOut) &
+         .or. present(RosselandMeanOpacitySiOut)) )then
        if(iTableCvGammaTe > 0)then
           call interpolate_lookup_table(iTableCvGammaTe, RhoSi, pSi/RhoSi, &
                Value_V, DoExtrapolate = .false.)
-
-          if(present(CvSiOut)) CvSiOut = Value_V(3*iMaterial+1)
-          if(present(TeSiOut)) TeSiOut = Value_V(3*iMaterial+3)
+          
+          TeSi = Value_V(3*iMaterial+3)
+          CvSi = Value_V(3*iMaterial+1)
        else
           ! The IsError flag avoids stopping for Fermi degenerated state
           call eos(iMaterial, RhoSi, pTotalIn=pSi, &
                TeOut=TeSi, CvTotalOut=CvSi, IsError=IsError)
-
-          if(present(TeSiOut)) TeSiOut = TeSi
-          if(present(CvSiOut)) CvSiOut = CvSi
        end if
+       if(present(TeSiOut)) TeSiOut = TeSi
+       if(present(CvSiOut)) CvSiOut = CvSi
     end if
 
     if(present(AbsorptionOpacitySiOut) &
          .or. present(RosselandMeanOpacitySiOut))then
        if(iTableOpacity > 0)then
-          call interpolate_lookup_table(iTableOpacity, RhoSi, pSi/RhoSi, &
+          call interpolate_lookup_table(iTableOpacity, RhoSi, TeSi, &
                Opacity_V, DoExtrapolate = .false.)
           if(present(AbsorptionOpacitySiOut)) &
                AbsorptionOpacitySiOut = Opacity_V(2*iMaterial + 1) * RhoSi
