@@ -163,6 +163,28 @@ sub set_planet{
     chdir "..";
 
     &shell_command("cd srcData ; cp UAM.in.$Planet UAM.in");
+
+    if($Planet eq 'Earth'){
+          $nLon = 2;
+          $nLat = 2;
+          $nAlt = 50;
+          $MaxBlock = 4;
+    }elsif($Planet eq 'Mars'){
+          $nLon = 2;
+          $nLat = 2;
+          $nAlt = 60;
+          $MaxBlock = 4;
+    }
+
+    @ARGV = ($NameGridFile);
+    while(<>){
+	if(/^\s*!/){print; next} # Skip commented out lines
+	s/\b(nLons\s*=[^\d]*)(\d+)/$1$nLon/i;
+	s/\b(nLats\s*=[^\d]*)(\d+)/$1$nLat/i;
+	s/\b(nAlts\s*=[^\d]*)(\d+)/$1$nAlt/i;
+	s/\b(nBlocksMax\s*=[^\d]*)(\d+)/$1$MaxBlock/i;
+	print;
+    }
 }
 
 ############################################################################
