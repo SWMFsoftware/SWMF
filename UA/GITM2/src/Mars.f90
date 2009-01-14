@@ -452,19 +452,27 @@ subroutine interp1(escout,p,nlayer,escin,pin,nl)
   integer :: n,nm,np,n1
   real :: wm,wp
   !
+
   do n1=1,nlayer
-     if(p(n1) .gt. 800.0 .or. p(n1) .lt. 5.0e-9) then
+
+     if(p(n1) .gt. 16.0 .or. p(n1) .lt. 5.0e-6) then
         escout(n1) = 0.0
      else
+
         do n = 1,nl-1
+
            if (p(n1).le.pin(n).and.p(n1).ge.pin(n+1)) then
+
               nm=n
               np=n+1
               wm=abs(pin(np)-p(n1))/(pin(nm)-pin(np))
               wp=1.0 - wm
            endif
+
+
         enddo
-        !write(*,*) 'nm =',nm
+
+
         escout(n1) = escin(nm)*wm + escin(np)*wp
      endif
   enddo
