@@ -164,18 +164,17 @@ contains
 
     use ModProcMH,   ONLY: iProc
     use ModAdvance,  ONLY: State_VGB, Eradiation_
-    use ModConst,    ONLY: cLightSpeed
-    use ModMain,     ONLY: nBlock, unusedBlk
-    use ModPhysics,  ONLY: Si2No_V, UnitT_, UnitX_, UnitU_, &
-         UnitEnergyDens_, UnitTemperature_, cRadiationNo
-    use ModSize,     ONLY: nI, nJ, nK
+    use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBlk
+    use ModPhysics,  ONLY: Si2No_V, UnitX_, UnitEnergyDens_, &
+         UnitTemperature_, cRadiationNo, Clight
     use ModUser,     ONLY: user_material_properties
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
 
     integer :: i, j, k, iBlock
     real :: PlanckOpacitySi, RosselandMeanOpacitySi
-    real :: CvSi, TeSi, Te, Trad, DiffRad
-    real :: Grad_D(3), Grad2ByErad2
+    real :: PlanckOpacity, RosselandMeanOpacity
+    real :: CvSi, TeSi, Te, Trad
+    real :: GradT_D(3)
 
     character(len=*), parameter:: NameSub = 'set_frozen_coefficients'
     !------------------------------------------------------------------------
@@ -231,6 +230,9 @@ contains
                RosselandMeanOpacitySiOut = RosselandMeanOpacitySi, &
                CvSiOut = CvSi)
 
+          RosselandMeanOpacity = RosselandMeanOpacitySi/Si2No_V(UnitX_)
+          PlanckOpacity = PlanckOpacitySi/Si2No_V(UnitX_)
+
           Te = Temperature_VGB(Te_,i,j,k,iBlock)
           Trad = Temperature_VGB(Trad_,i,j,k,iBlock)
 
@@ -239,8 +241,7 @@ contains
 
           SpecificHeat_VCB(Trad_,i,j,k,iBlock) = 4.0*cRadiationNo*Trad**3
 
-          RelaxationCoef_VCB(Trad_,i,j,k,iBlock) = &
-               PlanckOpacitySi*cLightSpeed/Si2No_V(UnitT_) &
+          RelaxationCoef_VCB(Trad_,i,j,k,iBlock) = Clight*PlanckOpacity &
                *cRadiationNo*(Te+Trad)*(Te**2+Trad**2)
 
           call get_heat_conduction_coef
@@ -259,23 +260,23 @@ contains
 
     subroutine get_heat_conduction_coef
 
+      real :: Grad2ByErad2, DiffRad
       !------------------------------------------------------------------------
-
-      DiffRad = cLightSpeed/(3.0*RosselandMeanOpacitySi) &
-           *Si2No_V(UnitU_)*Si2No_V(UnitX_)
 
       if(UseRadFluxLimiter)then
          call calc_cell_gradient
-         Grad2ByErad2 = 16.0*sum(Grad_D**2)/Trad**2
+         Grad2ByErad2 = 16.0*sum(GradT_D**2)/Trad**2
 
          select case(TypeRadFluxLimiter)
          case("sum")
-            DiffRad = 1.0/(1.0/DiffRad+sqrt(Grad2ByErad2))
+            DiffRad = Clight/(3.0*RosselandMeanOpacity + sqrt(Grad2ByErad2))
          case("max")
-            DiffRad = 1.0/max(1.0/DiffRad,sqrt(Grad2ByErad2))
+            DiffRad = Clight/max(3.0*RosselandMeanOpacity,sqrt(Grad2ByErad2))
          case("larsen")
-            DiffRad = 1.0/sqrt(1.0/DiffRad**2+Grad2ByErad2)
+            DiffRad = Clight/sqrt((3.0*RosselandMeanOpacity)**2 + Grad2ByErad2)
          end select
+      else
+         DiffRad = Clight/(3.0*RosselandMeanOpacity)
       end if
 
       HeatConductionCoef_IGB(1,i,j,k,iBlock) = DiffRad &
@@ -299,13 +300,13 @@ contains
       InvDy2 = 0.5/Dy_Blk(iBlock)
       InvDz2 = 0.5/Dz_Blk(iBlock)
 
-      Grad_D(x_) = &
+      GradT_D(x_) = &
            ( Temperature_VGB(Trad_,i+1,j,  k,  iBlock) &
            - Temperature_VGB(Trad_,i-1,j,  k,  iBlock) )*InvDx2
-      Grad_D(y_) = &
+      GradT_D(y_) = &
            ( Temperature_VGB(Trad_,i,  j+1,k,  iBlock) &
            - Temperature_VGB(Trad_,i,  j-1,k,  iBlock) )*InvDy2
-      Grad_D(z_) = &
+      GradT_D(z_) = &
            ( Temperature_VGB(Trad_,i,  j,  k+1,iBlock) &
            - Temperature_VGB(Trad_,i,  j,  k-1,iBlock) )*InvDz2
 
@@ -322,8 +323,7 @@ contains
     ! Calculate the diffusion part of the radiation energy flux.
     !/
     use ModAdvance,    ONLY: State_VGB, Eradiation_
-    use ModConst,      ONLY: cLightSpeed
-    use ModPhysics,    ONLY: Si2No_V, UnitX_, UnitU_, cRadiationNo
+    use ModPhysics,    ONLY: Si2No_V, UnitX_, UnitU_, cRadiationNo, Clight
     use ModUser,       ONLY: user_material_properties
     use ModVarIndexes, ONLY: nVar
 
@@ -332,33 +332,35 @@ contains
     real,    intent(out):: EradFlux_D(3)
 
     real :: RosselandMeanOpacitySi, DiffRad
+    real :: RosselandMeanOpacity
     real :: FaceGrad_D(3), Erad, Grad2ByErad2
     !------------------------------------------------------------------------
 
     call calc_face_gradient(iDir, i, j, k, iBlock, FaceGrad_D)
-
 
     if(IsNewTimestepGrayDiffusion)then
 
        call user_material_properties(State_V, &
             RosselandMeanOpacitySiOut = RosselandMeanOpacitySi)
 
-       DiffRad = cLightSpeed/(3.0*RosselandMeanOpacitySi) &
-            *Si2No_V(UnitU_)*Si2No_V(UnitX_)
+       RosselandMeanOpacity = RosselandMeanOpacitySi/Si2No_V(UnitX_)
 
        if(UseRadFluxLimiter)then
-
           Grad2ByErad2 = sum(FaceGrad_D**2)/State_V(Eradiation_)**2
 
           select case(TypeRadFluxLimiter)
           case("sum")
-             DiffRad = 1.0/(1.0/DiffRad+sqrt(Grad2ByErad2))
+             DiffRad = Clight &
+                  /(3.0*RosselandMeanOpacity + sqrt(Grad2ByErad2))
           case("max")
-             DiffRad = 1.0/max(1.0/DiffRad,sqrt(Grad2ByErad2))
+             DiffRad = Clight &
+                  /max(3.0*RosselandMeanOpacity,sqrt(Grad2ByErad2))
           case("larsen")
-             DiffRad = 1.0/sqrt(1.0/DiffRad**2+Grad2ByErad2)
+             DiffRad = Clight &
+                  /sqrt((3.0*RosselandMeanOpacity)**2 + Grad2ByErad2)
           end select
-
+       else
+          DiffRad = Clight/(3.0*RosselandMeanOpacity)
        end if
 
        DiffusionRad_FDB(i,j,k,iDir,iBlock) = DiffRad
