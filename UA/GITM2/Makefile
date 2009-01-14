@@ -139,7 +139,7 @@ test_mars:
 	make test_mars_check
 
 test_mars_compile:
-	./Config.pl -Mars -g=9,9,40,4
+	./Config.pl -Mars -g=9,9,60,4
 	make GITM
 
 test_mars_rundir:
