@@ -172,7 +172,7 @@ sub set_planet{
     }elsif($Planet eq 'Mars'){
           $nLon = 2;
           $nLat = 2;
-          $nAlt = 60;
+          $nAlt = 120;
           $MaxBlock = 4;
     }
 
