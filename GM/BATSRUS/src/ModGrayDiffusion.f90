@@ -58,14 +58,18 @@ module ModGrayDiffusion
   integer, parameter :: EintExtra_ = p_ - 1
 
   ! the solution vector containing the independent temperature variables
-  real, allocatable :: Temperature_VGB(:,:,:,:,:), &
-       TemperatureOld_VCB(:,:,:,:,:)
+  real, allocatable :: ImplState_VGB(:,:,:,:,:), &
+       ImplStateOld_VCB(:,:,:,:,:)
 
   ! number of independent temperature variables
   integer, parameter :: nTemperature = 2
 
   ! named indexes for temerature variables
   integer, parameter :: Te_ = 1, Trad_ = 2
+  integer, parameter :: aTe4_ = Te_, aTrad4_ = Trad_
+
+  ! logical to select if temperature T (.true.) will be used or T^4 (.false.)
+  logical :: UseTemperatureVariable = .false.
 
   ! variables for the accuracy of the conjugate gradient
   character(len=3) :: TypeStopCriterion = 'rel'
@@ -86,6 +90,7 @@ contains
 
     select case(NameCommand)
     case("#IMPLICITTEMPERATURE")
+       call read_var('UseTemperatureVariable', UseTemperatureVariable)
        call read_var('TypeStopCriterion', TypeStopCriterion)
        call read_var('MaxErrorResidual', MaxErrorResidual)
     case default
@@ -129,21 +134,13 @@ contains
 
 
     ! Initializing the semi-implicit gray-diffusion
-
-    if(iProc == 0)then
-       write(*,*) "==================================================="
-       write(*,*) "WARNING !!!"
-       write(*,*) "The semi-implicit gray-diffusion is not yet working"
-       write(*,*) "==================================================="
-    end if
-
     if(.not.allocated(SpecificHeat_VCB))then
        allocate( &
             SpecificHeat_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk), &
             HeatConductionCoef_IGB(1:nCond,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk), &
             iCond_I(1:nCond), &
-            TemperatureOld_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk), &
-            Temperature_VGB(1:nTemperature,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk), &
+            ImplStateOld_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk), &
+            ImplState_VGB(1:nTemperature,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk), &
             JacPrec_VVCB(nTemperature,nTemperature,nI,nJ,nK,nBLK), &
             Source_VCB(1:nTemperature,1:nI,1:nJ,1:nK,nBlk) )
 
@@ -173,8 +170,7 @@ contains
     integer :: i, j, k, iBlock
     real :: PlanckOpacitySi, RosselandMeanOpacitySi
     real :: PlanckOpacity, RosselandMeanOpacity
-    real :: CvSi, TeSi, Te, Trad
-    real :: GradT_D(3)
+    real :: CvSi, Cv, TeSi, Te, Trad, DiffRad
 
     character(len=*), parameter:: NameSub = 'set_frozen_coefficients'
     !------------------------------------------------------------------------
@@ -188,24 +184,18 @@ contains
 
           Te = TeSi*Si2No_V(UnitTemperature_)
 
-          if(State_VGB(Eradiation_,i,j,k,iBlock) < 0.0)then
-             write(*,*)NameSub, 'ERROR: negative Erad=', &
+          if(UseTemperatureVariable)then
+             Trad = sqrt(sqrt(State_VGB(Eradiation_,i,j,k,iBlock) &
+                  /cRadiationNo))
+             ImplState_VGB(Te_,i,j,k,iBlock) = Te
+             ImplState_VGB(Trad_,i,j,k,iBlock) = Trad
+          else
+             ImplState_VGB(aTe4_,i,j,k,iBlock) = cRadiationNo*Te**4
+             ImplState_VGB(aTrad4_,i,j,k,iBlock) = &
                   State_VGB(Eradiation_,i,j,k,iBlock)
-             write(*,*)NameSub, 'ERROR: i,j,k,iBlock,iProc=',&
-                  i,j,k,iBlock,iProc
-             write(*,*)NameSub, 'ERROR: x, y, z=', &
-                  x_BLK(i,j,k,iBlock), &
-                  y_BLK(i,j,k,iBlock), &
-                  z_BLK(i,j,k,iBlock)
-             call stop_mpi(NameSub//' negative radiation energy')
           end if
 
-          Trad = sqrt(sqrt(State_VGB(Eradiation_,i,j,k,iBlock)/cRadiationNo))
-
-          Temperature_VGB(Te_,i,j,k,iBlock) = Te
-          Temperature_VGB(Trad_,i,j,k,iBlock) = Trad
-
-          TemperatureOld_VCB(:,i,j,k,iBlock) = Temperature_VGB(:,i,j,k,iBlock)
+          ImplStateOld_VCB(:,i,j,k,iBlock) = ImplState_VGB(:,i,j,k,iBlock)
        end do; end do; end do
     end do
 
@@ -216,9 +206,9 @@ contains
 
        ! DoOneLayer, DoFacesOnly, No UseMonoteRestrict
        call message_pass_cells8(.true., .true., .false., nTemperature, &
-            Temperature_VGB)
+            ImplState_VGB)
 
-       call set_gray_outer_bcs(nTemperature, Temperature_VGB)
+       call set_gray_outer_bcs(nTemperature, ImplState_VGB)
     end if
 
     do iBlock = 1, nBlock
@@ -228,23 +218,30 @@ contains
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                AbsorptionOpacitySiOut = PlanckOpacitySi, &
                RosselandMeanOpacitySiOut = RosselandMeanOpacitySi, &
-               CvSiOut = CvSi)
+               CvSiOut = CvSi, TeSiOut = TeSi)
 
           RosselandMeanOpacity = RosselandMeanOpacitySi/Si2No_V(UnitX_)
           PlanckOpacity = PlanckOpacitySi/Si2No_V(UnitX_)
-
-          Te = Temperature_VGB(Te_,i,j,k,iBlock)
-          Trad = Temperature_VGB(Trad_,i,j,k,iBlock)
-
-          SpecificHeat_VCB(Te_,i,j,k,iBlock) = CvSi &
-               *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
-
-          SpecificHeat_VCB(Trad_,i,j,k,iBlock) = 4.0*cRadiationNo*Trad**3
-
-          RelaxationCoef_VCB(Trad_,i,j,k,iBlock) = Clight*PlanckOpacity &
-               *cRadiationNo*(Te+Trad)*(Te**2+Trad**2)
-
+          Cv = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
+          Te = TeSi*Si2No_V(UnitTemperature_)
           call get_heat_conduction_coef
+
+          if(UseTemperatureVariable)then
+             Trad = ImplState_VGB(Trad_,i,j,k,iBlock)
+
+             SpecificHeat_VCB(Te_,i,j,k,iBlock) = Cv
+             SpecificHeat_VCB(Trad_,i,j,k,iBlock) = 4.0*cRadiationNo*Trad**3
+             RelaxationCoef_VCB(Trad_,i,j,k,iBlock) = Clight*PlanckOpacity &
+                  *cRadiationNo*(Te+Trad)*(Te**2+Trad**2)
+             HeatConductionCoef_IGB(1,i,j,k,iBlock) = &
+                  DiffRad*4.0*cRadiationNo*Trad**3
+          else
+             SpecificHeat_VCB(aTe4_,i,j,k,iBlock) = Cv/(4.0*cRadiationNo*Te**3)
+             SpecificHeat_VCB(aTrad4_,i,j,k,iBlock) = 1.0
+             RelaxationCoef_VCB(aTrad4_,i,j,k,iBlock) = Clight*PlanckOpacity
+             HeatConductionCoef_IGB(1,i,j,k,iBlock) = DiffRad
+          end if
+
        end do; end do; end do
     end do
 
@@ -260,12 +257,18 @@ contains
 
     subroutine get_heat_conduction_coef
 
-      real :: Grad2ByErad2, DiffRad
+      real :: Grad2ByErad2, Erad, Grad_D(3)
       !------------------------------------------------------------------------
 
       if(UseRadFluxLimiter)then
-         call calc_cell_gradient
-         Grad2ByErad2 = 16.0*sum(GradT_D**2)/Trad**2
+         if(UseTemperatureVariable)then
+            call calc_cell_gradient(Trad_, Grad_D)
+            Grad2ByErad2 = 16.0*sum(Grad_D**2)/Trad**2
+         else
+            call calc_cell_gradient(aTrad4_, Grad_D)
+            Erad = ImplState_VGB(aTrad4_,i,j,k,iBlock)
+            Grad2ByErad2 = sum(Grad_D**2)/Erad**2
+         end if
 
          select case(TypeRadFluxLimiter)
          case("sum")
@@ -279,19 +282,19 @@ contains
          DiffRad = Clight/(3.0*RosselandMeanOpacity)
       end if
 
-      HeatConductionCoef_IGB(1,i,j,k,iBlock) = DiffRad &
-           *4.0*cRadiationNo*Trad**3
-
     end subroutine get_heat_conduction_coef
 
     !==========================================================================
 
-    subroutine calc_cell_gradient
+    subroutine calc_cell_gradient(iVar, Grad_D)
 
       ! currently, only a cartesian version
 
       use ModGeometry, ONLY: Dx_Blk, Dy_Blk, Dz_Blk
       use ModMain,     ONLY: x_, y_, z_
+
+      integer, intent(in) :: iVar
+      real, intent(out) :: Grad_D(3)
 
       real :: InvDx2, InvDy2, InvDz2
       !------------------------------------------------------------------------
@@ -300,15 +303,15 @@ contains
       InvDy2 = 0.5/Dy_Blk(iBlock)
       InvDz2 = 0.5/Dz_Blk(iBlock)
 
-      GradT_D(x_) = &
-           ( Temperature_VGB(Trad_,i+1,j,  k,  iBlock) &
-           - Temperature_VGB(Trad_,i-1,j,  k,  iBlock) )*InvDx2
-      GradT_D(y_) = &
-           ( Temperature_VGB(Trad_,i,  j+1,k,  iBlock) &
-           - Temperature_VGB(Trad_,i,  j-1,k,  iBlock) )*InvDy2
-      GradT_D(z_) = &
-           ( Temperature_VGB(Trad_,i,  j,  k+1,iBlock) &
-           - Temperature_VGB(Trad_,i,  j,  k-1,iBlock) )*InvDz2
+      Grad_D(x_) = &
+           ( ImplState_VGB(iVar,i+1,j,  k,  iBlock) &
+           - ImplState_VGB(iVar,i-1,j,  k,  iBlock) )*InvDx2
+      Grad_D(y_) = &
+           ( ImplState_VGB(iVar,i,  j+1,k,  iBlock) &
+           - ImplState_VGB(iVar,i,  j-1,k,  iBlock) )*InvDy2
+      Grad_D(z_) = &
+           ( ImplState_VGB(iVar,i,  j,  k+1,iBlock) &
+           - ImplState_VGB(iVar,i,  j,  k-1,iBlock) )*InvDz2
 
     end subroutine calc_cell_gradient
 
@@ -840,19 +843,16 @@ contains
 
     use ModGeometry, ONLY: vInv_CB, y_BLK, IsCylindrical
     use ModMain,     ONLY: nBlock, unusedBLK, Dt
-    use ModMain,     ONLY: iTest, jTest, kTest, BlkTest
     use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, Eradiation_
 
     integer :: i, j, k, iBlock
     integer :: Iter
-    logical :: DoTest, DoTestMe
     logical :: DoTestKrylov, DoTestKrylovMe
 
     character(len=*), parameter :: NameSub = 'advance_temperature'
     !--------------------------------------------------------------------------
 
-    call set_oktest(NameSub, DoTest, DoTestMe)
     call set_oktest('krylov', DoTestKrylov, DoTestKrylovMe)
 
     ! prevent doing useless updates
@@ -860,16 +860,12 @@ contains
 
     call set_frozen_coefficients
 
-    if(DoTestMe)write(*,*)NameSub,' starting with Erad, T(:)=',&
-         State_VGB(Eradiation_,iTest,jTest,kTest,BlkTest), &
-         Temperature_VGB(:,iTest,jTest,kTest,BlkTest)
-
     do iBlock = 1, nBlock
        if(unusedBlk(iBlock)) CYCLE
 
        do k = 1,nK; do j = 1,nJ; do i = 1,nI
           Source_VCB(:,i,j,k,iBlock) = SpecificHeat_VCB(:,i,j,k,iBlock) &
-               *Temperature_VGB(:,i,j,k,iBlock)/(vInv_CB(i,j,k,iBlock)*Dt)
+               *ImplState_VGB(:,i,j,k,iBlock)/(vInv_CB(i,j,k,iBlock)*Dt)
        end do; end do; end do
 
        if(IsCylindrical)then
@@ -884,7 +880,7 @@ contains
     ! do a preconditioned conjugate gradient
     call get_jacobi_preconditioner(nTemperature)
 
-    call cg(heat_conduction, nTemperature, Source_VCB, Temperature_VGB, &
+    call cg(heat_conduction, nTemperature, Source_VCB, ImplState_VGB, &
          .true., MaxErrorResidual, TypeStopCriterion, &
          Iter, jacobi_preconditioner)
 
@@ -895,10 +891,6 @@ contains
 
        call update_conservative_energy(iBlock)
     end do
-
-    if(DoTestMe)write(*,*)NameSub,' finished with Erad, T(:)=',&
-         State_VGB(Eradiation_,iTest,jTest,kTest,BlkTest), &
-         Temperature_VGB(:,iTest,jTest,kTest,BlkTest)
 
   end subroutine advance_temperature
 
@@ -928,13 +920,13 @@ contains
        State_VGB(Eradiation_,i,j,k,iBlock) = &
             State_VGB(Eradiation_,i,j,k,iBlock) &
             + SpecificHeat_VCB(Trad_,i,j,k,iBlock) &
-            *(Temperature_VGB(Trad_,i,j,k,iBlock) &
-            - TemperatureOld_VCB(Trad_,i,j,k,iBlock))
+            *(ImplState_VGB(Trad_,i,j,k,iBlock) &
+            - ImplStateOld_VCB(Trad_,i,j,k,iBlock))
 
        ! Fix energy if it goes negative
        if(State_VGB(Eradiation_,i,j,k,iBlock) < 0.0) then
 
-          if(DoReport .or. Temperature_VGB(Trad_,i,j,k,iBlock) < 0.0)then
+          if(DoReport .or. ImplState_VGB(Trad_,i,j,k,iBlock) < 0.0)then
 
              write(*,*)NameSub, ' WARNING: negative Erad=', &
                   State_VGB(Eradiation_,i,j,k,iBlock)
@@ -942,10 +934,10 @@ contains
              write(*,*)NameSub, ' x, y, z=', x_BLK(i,j,k,iBlock), &
                   y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock)
              write(*,*)NameSub, ' fix energy using Trad^n+1 =', &
-                  Temperature_VGB(Trad_,i,j,k,iBlock)
+                  ImplState_VGB(Trad_,i,j,k,iBlock)
 
              ! There is no way to fix this
-             if(Temperature_VGB(Trad_,i,j,k,iBlock) < 0) &
+             if(ImplState_VGB(Trad_,i,j,k,iBlock) < 0) &
                   call stop_mpi(NameSub//' negative Trad!!!')
 
              ! Report only once
@@ -953,15 +945,15 @@ contains
           end if
 
           State_VGB(Eradiation_,i,j,k,iBlock) = &
-               cRadiationNo*Temperature_VGB(Trad_,i,j,k,iBlock)**4
+               cRadiationNo*ImplState_VGB(Trad_,i,j,k,iBlock)**4
 
        end if
 
        Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
             + State_VGB(EintExtra_,i,j,k,iBlock) &
             + SpecificHeat_VCB(Te_,i,j,k,iBlock) &
-            *(Temperature_VGB(Te_,i,j,k,iBlock) &
-            - TemperatureOld_VCB(Te_,i,j,k,iBlock))
+            *(ImplState_VGB(Te_,i,j,k,iBlock) &
+            - ImplStateOld_VCB(Te_,i,j,k,iBlock))
 
        EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
 
