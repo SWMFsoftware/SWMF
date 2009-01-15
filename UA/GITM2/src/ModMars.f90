@@ -466,7 +466,7 @@ contains
 
     write(*,*) 'Reading in the Mars_input.txt'
 
-    open(UNIT = UnitTmp_, FILE = 'UA/DataIn/UniformMarsAtmosphere.txt', &
+    open(UNIT = UnitTmp_, FILE = 'UA/DataIn/NewMarsAtm_2p5km.txt', &
          STATUS='OLD', ACTION = 'READ')
 
 111 FORMAT(F6.2,1X, F8.2,1X, F8.2,1X, F8.2,1X,   &  
