@@ -64,11 +64,11 @@ subroutine calc_rates(iBlock)
           NDensityS(1:nLons,1:nLats,iAlt,iN2_,iBlock)/ &
           NDensity(1:nLons,1:nLats,iAlt,iBlock)) * 3.6e-4 * &
           (Temperature(1:nLons,1:nLats,ialt,iBlock)* &
-          TempUnit(1:nLons,1:nLats,iAlt))**0.69 + &
+          TempUnit(1:nLons,1:nLats,iAlt))**0.75 + &
           (NDensityS(1:nLons,1:nLats,iAlt,iO_3P_,iBlock)/&
           NDensity(1:nLons,1:nLats,iAlt,iBlock)*5.6e-4) * &
           (Temperature(1:nLons,1:nLats,iAlt,iBlock) * &
-          TempUnit(1:nLons,1:nLats,iAlt))**0.69
+          TempUnit(1:nLons,1:nLats,iAlt))**0.75
         
      ViscCoef(:,:,iAlt) = 4.5e-5 * &
           (Temperature(1:nLons,1:nLats,iAlt,iBlock)*&
