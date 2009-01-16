@@ -136,6 +136,8 @@ module ModInputs
   logical :: UseOCooling       = .true.
   logical :: UseConduction     = .true.
   logical :: UseTurbulentCond = .true.
+  logical :: UseUpdatedTurbulentCond = .true.
+  real    :: EddyScaling = 1.0
   logical :: UseDiffusion      = .false.
   logical :: UseVerAdvectionT  = .true.
 
