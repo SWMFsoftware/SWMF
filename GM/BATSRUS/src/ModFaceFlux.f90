@@ -806,7 +806,7 @@ contains
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp
-    use ModImplicit, ONLY: UseFullImplicit                  !^CFG IF IMPLICIT
+    use ModImplicit, ONLY: UseFullImplicit, UseSemiImplicit  !^CFG IF IMPLICIT
 
     real,    intent(out):: Flux_V(nFlux)
 
@@ -897,7 +897,7 @@ contains
     State_V = 0.5*(StateLeft_V + StateRight_V)
 
     !^CFG IF IMPLICIT BEGIN
-    if(UseGrayDiffusion.and.UseFullImplicit)then
+    if(UseGrayDiffusion.and.(UseFullImplicit.or.UseSemiImplicit))then
        call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
             iBlockFace, State_V, EradFlux_D)
     end if

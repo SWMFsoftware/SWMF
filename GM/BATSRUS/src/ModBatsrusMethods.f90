@@ -295,7 +295,8 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModAdvance, ONLY: UseNonConservative, nConservCrit
   use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
        part_steady_select, part_steady_switch
-  use ModImplicit, ONLY: UseImplicit, UseSemiImplicit      !^CFG IF IMPLICIT
+  use ModImplicit, ONLY: UseImplicit, UseFullImplicit, &   !^CFG IF IMPLICIT
+       UseSemiImplicit                                     !^CFG IF IMPLICIT
   use ModGrayDiffusion, ONLY: advance_temperature          !^CFG IF IMPLICIT
   use ModIonoVelocity, ONLY: apply_iono_velocity
 
@@ -363,8 +364,9 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   if(UseDivBDiffusion)call clean_divb     !^CFG IF DIVBDIFFUSE
 
-  if(UseGrayDiffusion.and..not.UseImplicit) &  !^CFG IF IMPLICIT
-     call advance_temperature                  !^CFG IF IMPLICIT
+  if(UseGrayDiffusion.and. &                         !^CFG IF IMPLICIT
+       .not.(UseFullImplicit.or.UseSemiImplicit)) &  !^CFG IF IMPLICIT
+     call advance_temperature                        !^CFG IF IMPLICIT
 
   call exchange_messages
 
