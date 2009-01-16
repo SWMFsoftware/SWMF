@@ -3,8 +3,9 @@ subroutine OH_get_for_ih(&
      nPartial,iGetStart,Get,W,State_V,nVar)
 
   !USES:
-  use OH_ModAdvance,ONLY: State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK, &
-       rho_, rhoUx_, rhoUy_, rhoUz_, Bx_, By_, Bz_,P_
+  use OH_ModMain,ONLY: UseB0
+  use OH_ModAdvance,ONLY: State_VGB, B0_DGB, &
+       rho_, rhoUx_, rhoUy_, rhoUz_, Bx_, Bz_,P_
        
   use OH_ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, UnitX_
   use CON_router
@@ -30,7 +31,6 @@ subroutine OH_get_for_ih(&
        BuffRhoUx_=2, BuffUx_=BuffRhoUx_, &
        BuffRhoUz_=4, BuffUz_=BuffRhoUz_, &
        BuffBx_   =5,&
-       BuffBy_   =6,&
        BuffBz_   =7,&
        BuffP_    =8,&
        BuffX_    =9,BuffZ_=11
@@ -48,15 +48,14 @@ subroutine OH_get_for_ih(&
        State_VGB(rho_,         i,j,k,iBlock) *Weight
   State_V(BuffRhoUx_:BuffRhoUz_) = &
        State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) *Weight
-  State_V(BuffBx_)           = &
-       (State_VGB(Bx_,          i,j,k,iBlock) + &
-       B0xCell_BLK(i,j,k,iBlock))*Weight
-  State_V(BuffBy_)           = &
-       (State_VGB(By_,          i,j,k,iBlock) + &
-       B0yCell_BLK(i,j,k,iBlock))*Weight
-  State_V(BuffBz_)           = &
-       (State_VGB(Bz_,          i,j,k,iBlock) + &
-       B0zCell_BLK(i,j,k,iBlock))*Weight
+  if(UseB0)then
+     State_V(BuffBx_:BuffBz_)           = &
+          (State_VGB(Bx_:Bz_,          i,j,k,iBlock) + &
+          B0_DGB(:,i,j,k,iBlock))*Weight
+  else
+     State_V(BuffBx_:BuffBz_)           = &
+          State_VGB(Bx_:Bz_,          i,j,k,iBlock)*Weight
+  end if
   State_V(BuffP_)            = &
        State_VGB(P_,       i,j,k,iBlock) *Weight
   State_V(BuffX_:BuffZ_)     = &
@@ -73,15 +72,15 @@ subroutine OH_get_for_ih(&
           State_VGB(Rho_,i,j,k,iBlock) *Weight 
      State_V(BuffRhoUx_:BuffRhoUz_)=State_V(BuffRhoUx_:BuffRhoUz_)+&
           State_VGB(RhoUx_:rhoUz_,i,j,k,iBlock) *Weight
-     State_V(BuffBx_)              =State_V(BuffBx_)              +&
-          (State_VGB(Bx_,i,j,k,iBlock) + &
-          B0xCell_BLK(i,j,k,iBlock))*Weight
-     State_V(BuffBy_)              =State_V(BuffBy_)              +&
-          (State_VGB(By_,i,j,k,iBlock) + &
-          B0yCell_BLK(i,j,k,iBlock))*Weight
-     State_V(BuffBz_)              =State_V(BuffBz_)              +&
-          (State_VGB(Bz_,i,j,k,iBlock) + &
-          B0zCell_BLK(i,j,k,iBlock))*Weight
+     
+     if(UseB0)then
+        State_V(BuffBx_:BuffBz_)  =State_V(BuffBx_:BuffBz_)       +&
+             (State_VGB(Bx_:Bz_,i,j,k,iBlock) + &
+             B0_DGB(:,i,j,k,iBlock))*Weight
+     else
+        State_V(BuffBx_:BuffBz_)  =State_V(BuffBx_:BuffBz_)       +&
+             State_VGB(Bx_:Bz_,i,j,k,iBlock)*Weight
+     end if
      State_V(BuffP_)               =State_V(BuffP_)               +&
           State_VGB(P_,i,j,k,iBlock) *Weight
      State_V(BuffX_:BuffZ_)        = State_V(BuffX_:BuffZ_)       +&
