@@ -369,7 +369,7 @@ contains
           if(MHD_SUM_vol(i,j) < 1.1E-8 .or. &
                abs(MHD_Xeq(i,j)) > 200.0 .or. &
                abs(MHD_Yeq(i,j)) > 200.0 ) then
-             i0 = i-1
+             i0 = i+1
              EXIT
           end if
        end do
