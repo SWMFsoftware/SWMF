@@ -4,6 +4,7 @@ subroutine calc_GITM_sources(iBlock)
   use ModInputs
   use ModSources
   use ModGITM
+  use ModUserGITM
 
   implicit none
 
@@ -43,6 +44,14 @@ subroutine calc_GITM_sources(iBlock)
 
 ! Temporary
   real :: EddyCoefRatio(nLons, nLats, 1:nAlts,nSpecies)
+
+! Potential Temperature
+! Used in New Eddy Conduction Calculations:  Bell 1-15-2009
+  real :: Theta(nLons, nLats, -1:nAlts+2)
+  real :: GammaScale(nLons, nLats, -1:nAlts+2)
+  real :: P0(nLons, nLats, -1:nAlts+2)
+  real :: Ones(nLons, nLats, -1:nAlts+2)
+
 
   call report("calc_GITM_sources",1)
 
@@ -145,12 +154,6 @@ subroutine calc_GITM_sources(iBlock)
      tmp2 = Rho(1:nLons, 1:nLats,1:nAlts, iBlock) * &
           cp(1:nLons, 1:nLats,1:nAlts, iBlock)
      
-     Prandtl = 0.0
-  
-     if (UseTurbulentCond) Prandtl = &
-          KappaEddyDiffusion(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
-          Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
-          Cp(1:nLons, 1:nLats,0:nAlts+1, iBlock)
 
      call calc_conduction(iBlock, &
           Temperature(1:nLons, 1:nLats,-1:nAlts+2, iBlock) * &
@@ -161,37 +164,104 @@ subroutine calc_GITM_sources(iBlock)
      
       Conduction = MoleConduction/TempUnit(1:nLons, 1:nLats,1:nAlts) 
 
-     call calc_conduction(iBlock, &
-          Temperature(1:nLons, 1:nLats,-1:nAlts+2, iBlock) * &
-          TempUnit(1:nLons, 1:nLats,-1:nAlts+2), &
-          Prandtl(1:nLons, 1:nLats,0:nAlts+1), &
-          tmp2, &
-          EddyCond)
 
-
-     Conduction = Conduction + EddyCond/TempUnit(1:nLons, 1:nLats,1:nAlts) 
 !!!
 ! This term was added by Jared to replace Yue's eddy conduction term in vertical solver.  
 !!!
 
 if (UseTurbulentCond) then
+
+    if (UseUpdatedTurbulentCond) then
+
+         Ones(1:nLons,1:nLats,1:nAlts) = 1.0
+
+         do iAlt = -1,nAlts+2
+          P0(1:nLons,1:nLats,iAlt) = Pressure(1:nLons,1:nLats,0,iBlock)
+         enddo
+
+
+!! Set the Exponent for the Potential Temperature as (Gamma - 1/Gamma)
+!! Must span the range from -1 to nAlts + 2  (same as Theta)
+
+         do iAlt = 1,nAlts
+          GammaScale(1:nLons,1:nLats,iAlt) = &
+                 ( Gamma(1:nLons,1:nLats,iAlt,iBlock) - Ones(1:nLons,1:nLats,iAlt) )/Gamma(1:nLons,1:nLats,iAlt,iBlock)
+         enddo
+
+         do iAlt = -1,0
+            GammaScale(1:nLons,1:nLats,iAlt) = GammaScale(1:nLons,1:nLats,1) 
+         enddo
+
+         do iAlt = nAlts,nAlts+2
+            GammaScale(1:nLons,1:nLats,iAlt) = GammaScale(1:nLons,1:nLats,nAlts) 
+         enddo
         
-   call calc_conduction(iBlock, &
-        Pressure(1:nLons, 1:nLats,-1:nAlts+2,iBlock), &
-        Prandtl(1:nLons, 1:nLats,0:nAlts+1)/&
-        Gamma(1:nLons,1:nLats, 0:nAlts+1,iBlock)/Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock) / &
-          Cp(1:nLons, 1:nLats,0:nAlts+1, iBlock),  &
-        tmp2, EddyCondAdia)
+
+         Theta(1:nLons,1:nLats,-1:nAlts+2) = &
+            Temperature(1:nLons,1:nLats,-1:nAlts+2,iBlock)*TempUnit(1:nLons,1:nLats,-1:nAlts+2)*&
+            (P0(1:nLons,1:nLats,-1:nAlts+2)/ &
+       Pressure(1:nLons,1:nLats,-1:nAlts+2,iBlock))**GammaScale(1:nLons,1:nLats,-1:nAlts+2)
+ 
+!! Prandtl is the Eddy Heat Conduction Coefficient After Hickey et al [2000] 
+
+           Prandtl(1:nLons,1:nLats,0:nAlts+1) = &
+             KappaEddyDiffusion(1:nLons,1:nLats,0:nAlts+1,iBlock)*Rho(1:nLons,1:nLats,0:nAlts+1,iBlock)
+
+           tmp2(1:nLons,1:nLats,1:nAlts) = &
+              Rho(1:nLons,1:nLats,1:nAlts,iBlock)/Gamma(1:nLons,1:nLats,1:nAlts,iBlock)
+
+          call calc_conduction(iBlock, &
+               Theta(1:nLons, 1:nLats,-1:nAlts+2), &
+               Prandtl(1:nLons, 1:nLats,0:nAlts+1), &
+               tmp2,EddyCond)
+
+!! Eddy Scaling is Set in UAM.in.  Defaults to 1.0
+
+           EddyCondAdia(1:nLons,1:nLats,1:nAlts) = &
+               (1.0/EddyScaling)*(Temperature(1:nLons,1:nLats,1:nAlts,iBlock)/Theta(1:nLons,1:nLats,1:nAlts))*&
+                EddyCond(1:nLons,1:nLats,1:nAlts)
+
+           UserData3D(1:nLons,1:nLats,1:nAlts,1,iBlock) = EddyCondAdia(1:nLons,1:nLats,1:nAlts)
+
+           Conduction = Conduction + EddyCondAdia
+         
+
+    else  !! Use the Old Turbulent Conduction
+          Prandtl = 0.0
+  
+          Prandtl = &
+               KappaEddyDiffusion(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
+               Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
+               Cp(1:nLons, 1:nLats,0:nAlts+1, iBlock)
+
+          call calc_conduction(iBlock, &
+               Temperature(1:nLons, 1:nLats,-1:nAlts+2, iBlock) * &
+               TempUnit(1:nLons, 1:nLats,-1:nAlts+2), &
+               Prandtl(1:nLons, 1:nLats,0:nAlts+1), &
+               tmp2, &
+               EddyCond)
+
+          Conduction = Conduction + EddyCond/TempUnit(1:nLons, 1:nLats,1:nAlts) 
+
+        
+        call calc_conduction(iBlock, &
+             Pressure(1:nLons, 1:nLats,-1:nAlts+2,iBlock), &
+             Prandtl(1:nLons, 1:nLats,0:nAlts+1)/&
+             Gamma(1:nLons,1:nLats, 0:nAlts+1,iBlock)/Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock) / &
+               Cp(1:nLons, 1:nLats,0:nAlts+1, iBlock),  &
+             tmp2, EddyCondAdia)
    
-   Conduction = Conduction - &
-        EddyCondAdia/TempUnit(1:nLons, 1:nLats,1:nAlts)
+        Conduction = Conduction - &
+             EddyCondAdia/TempUnit(1:nLons, 1:nLats,1:nAlts)
+
+     endif ! New Updated Conduction Check
    
-     endif
+ endif
 
 
-  else
+ else
      Conduction = 0.0
-  end if
+ end if
 
 
 
