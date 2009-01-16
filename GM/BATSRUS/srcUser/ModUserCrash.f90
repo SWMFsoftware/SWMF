@@ -745,13 +745,14 @@ contains
     use ModSize
     use ModAdvance, ONLY: State_VGB, Rho_, RhoUy_, p_, ExtraEInt_, &
          LevelXe_, LevelPl_, Flux_VX, Flux_VY, Flux_VZ, Source_VC, &
-         VdtFace_Y, VdtFace_Z, UseNonConservative
+         VdtFace_Y, VdtFace_Z, UseNonConservative, Eradiation_
     use ModGeometry,ONLY: x_BLK, y_BLK, z_BLK, vInv_CB, IsCylindrical
     use ModNodes,   ONLY: NodeY_NB
     use ModPhysics
     use ModEnergy,  ONLY: calc_energy_cell
     use ModEos,     ONLY: eos
     use ModLookupTable, ONLY: interpolate_lookup_table
+    use ModMain, ONLY: UseGrayDiffusion
 
     implicit none
 
@@ -791,6 +792,14 @@ contains
           Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
                + State_VGB(P_,i,j,k,iBlock) / y_BLK(i,j,k,iBlock)
        end do; end do; end do
+
+       if(useGrayDiffusion)then
+          do k=1,nK; do j=1, nJ; do i=1, nI
+             Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
+                  + (1./3.)*State_VGB(Eradiation_,i,j,k,iBlock) &
+                  / y_BLK(i,j,k,iBlock)
+          end do; end do; end do
+       end if
 
        ! Multiply volume with radius (=Y) at cell center -> divide inverse vol
        vInv_C = vInv_CB(:,:,:,iBlock)
