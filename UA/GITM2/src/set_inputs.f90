@@ -344,6 +344,9 @@ subroutine set_inputs
            call read_in_logical(UseNOCooling, iError)
            call read_in_logical(UseOCooling, iError)
            call read_in_logical(UseConduction, iError)
+           call read_in_logical(UseTurbulentCond, iError)
+           call read_in_logical(UseUpdatedTurbulentCond, iError)
+           call read_in_real(EddyScaling, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #THERMO:'
               write(*,*) '#THERMO'
