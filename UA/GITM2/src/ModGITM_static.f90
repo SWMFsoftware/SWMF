@@ -82,10 +82,10 @@ module ModGITM
   real :: cMax_GDB(0:nLons+1, 0:nLats+1, 0:nAlts+1, 3, nBlocksMax)
 
   real, dimension(1:nLons, 1:nLats, 1:nAlts, 3) :: &
-       IonDrag, Viscosity
+       IonDrag, Viscosity, EddyViscosity
 
   real, dimension(1:nLons, 1:nLats, 1:nAlts, nSpecies) :: &
-       VerticalIonDrag
+       VerticalIonDrag, VerticalViscosity, VerticalEddyViscosity
 
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocksMax) :: &
        Potential
