@@ -423,6 +423,17 @@ subroutine set_inputs
               IsDone = .true.
            endif
 
+        case ("#WAVEDRAG")
+           call read_in_logical(UseEddyViscosity, iError)
+           call read_in_logical(UseVerticalViscosity, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #THERMO:'
+              write(*,*) '#FORCING'
+              write(*,*) "UseEddyViscosity      (logical)"
+              write(*,*) "UseVerticalViscosity (logical)"
+              IsDone = .true.
+           endif
+
         case ("#IONFORCING")
            call read_in_logical(UseExB, iError)
            call read_in_logical(UseIonPressureGradient, iError)
