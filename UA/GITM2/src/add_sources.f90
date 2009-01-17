@@ -122,6 +122,16 @@ iAlt = 10
              NeutralFriction(:,:,:,iSpecies) 
      enddo
 
+!! Turbulent Velocity Shear Terms (Hickey et al [2000] Icarus)
+
+     if(UseVerticalViscosity) then
+       do iSpecies = 1, nSpecies
+        VerticalVelocity(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock) = &
+             VerticalVelocity(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock) + &
+             VerticalViscosity(1:nLons, 1:nLats, 1:nAlts, iSpecies) 
+       enddo 
+     endif
+
      call calc_electron_temperature(iBlock)
 
      !! To turn off Diffusion, turn UseDiffusion=.false. in UAM.in
