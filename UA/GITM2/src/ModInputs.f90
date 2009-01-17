@@ -153,6 +153,9 @@ module ModInputs
   logical :: UseNeutralChemistry = .true.
   logical :: UseIonAdvection     = .true.
 
+  logical :: UseEddyViscosity     = .false.
+  logical :: UseVerticalViscosity     = .false.
+
   !\
   ! Methods for completing chemistry
   !/
