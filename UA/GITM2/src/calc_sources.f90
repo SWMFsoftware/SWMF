@@ -378,12 +378,77 @@ if (UseTurbulentCond) then
           Viscosity(1:nLons, 1:nLats,1:nAlts, iNorth_))
 
      call calc_conduction(iBlock, &
-          Velocity(1:nLons, 1:nLats,-1:nAlts+2, iEast_, iBlock), &
+          Velocity(1:nLons, 1:nLats,-1:nAlts+2, iNorth_, iBlock), &
           ViscCoef(1:nLons, 1:nLats,0:nAlts+1), &
           Rho(1:nLons, 1:nLats,1:nAlts, iBlock), &
           Viscosity(1:nLons, 1:nLats,1:nAlts, iEast_))
 
-     Viscosity(:,:,:,iUp_) = 0.0
+
+        if (UseEddyViscosity) then
+
+!! Formulation taken from Hickey et al [2000],
+!! Waves in Jupiter's Thermosphere
+
+            EddyViscosity = 0.0
+
+           call calc_conduction(iBlock, &
+                Velocity(1:nLons, 1:nLats,-1:nAlts+2, iEast_, iBlock), &
+                Rho(1:nLons, 1:nLats,0:nAlts+1,iBlock)*ViscCoef(1:nLons, 1:nLats,0:nAlts+1), &
+                Rho(1:nLons, 1:nLats,1:nAlts, iBlock), &
+                EddyViscosity(1:nLons, 1:nLats,1:nAlts, iEast_))
+
+           call calc_conduction(iBlock, &
+                Velocity(1:nLons, 1:nLats,-1:nAlts+2, iNorth_, iBlock), &
+                Rho(1:nLons, 1:nLats,0:nAlts+1,iBlock)*ViscCoef(1:nLons, 1:nLats,0:nAlts+1), &
+                Rho(1:nLons, 1:nLats,1:nAlts, iBlock), &
+                EddyViscosity(1:nLons, 1:nLats,1:nAlts, iNorth_))
+
+            Viscosity(1:nLons,1:nLats,1:nAlts,iEast_) =  &
+            Viscosity(1:nLons,1:nLats,1:nAlts,iEast_) - EddyViscosity(1:nLons,1:nLats,1:nAlts,iEast_)
+
+            Viscosity(1:nLons,1:nLats,1:nAlts,iNorth_) =  &
+            Viscosity(1:nLons,1:nLats,1:nAlts,iNorth_) - EddyViscosity(1:nLons,1:nLats,1:nAlts,iNorth_)
+
+        endif  ! Use Eddy Viscosity
+
+       Viscosity(:,:,:,iUp_) = 0.0
+
+!! Please Note that the Vertical Viscosity Terms should have Species-Dependent
+!! Viscosity Coefficients, the Below Formulation is meant as an approximation
+
+        if (UseVerticalViscosity) then 
+            VerticalViscosity = 0.0
+
+            do iSpecies = 1,nSpecies
+             call calc_conduction(iBlock, &
+                VerticalVelocity(1:nLons, 1:nLats,-1:nAlts+2, iSpecies,iBlock), &
+                (4.0/3.0)*ViscCoef(1:nLons, 1:nLats,0:nAlts+1), &
+                NDensityS(1:nLons, 1:nLats,1:nAlts, iSpecies,iBlock)*Mass(iSpecies), &
+                VerticalViscosity(1:nLons, 1:nLats,1:nAlts, iSpecies))
+            enddo
+
+            if (UseEddyViscosity) then
+            VerticalEddyViscosity = 0.0
+
+            do iSpecies = 1,nSpecies
+
+             call calc_conduction(iBlock, &
+                VerticalVelocity(1:nLons, 1:nLats,-1:nAlts+2, iSpecies,iBlock), &
+                NDensityS(1:nLons, 1:nLats,0:nAlts+1, iSpecies,iBlock)*Mass(iSpecies)*&
+                KappaEddyDiffusion(1:nLons, 1:nLats,0:nAlts+1,iBlock), &
+                NDensityS(1:nLons, 1:nLats,1:nAlts, iSpecies,iBlock)*Mass(iSpecies), &
+                VerticalEddyViscosity(1:nLons, 1:nLats,1:nAlts, iSpecies))
+
+             VerticalViscosity(1:nLons,1:nLats,1:nAlts,iSpecies) =  & 
+             VerticalViscosity(1:nLons,1:nLats,1:nAlts,iSpecies) -  &
+             VerticalEddyViscosity(1:nLons,1:nLats,1:nAlts,iSpecies) 
+
+            enddo
+
+            endif
+
+        endif  ! Test Vertical Viscosity
+
 
   else
      Viscosity = 0.0
