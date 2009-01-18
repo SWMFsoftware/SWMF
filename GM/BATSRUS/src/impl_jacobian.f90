@@ -864,6 +864,10 @@ contains
        do k=1,nK; do j=1,nJ; do i=1,nI
           DiffLeft  = DiffusionRad_FDB(i,j,k,iDim,iBlk)
           DiffRight = DiffusionRad_FDB(i+Di,j+Dj,k+Dk,iDim,iBlk)
+          if(iDim==1.and.i==1 .or. iDim==2.and.j==1 .or. iDim==3.and.k==1)&
+               DiffLeft = 0.0
+          if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ .or. iDim==3.and.k==nK)&
+               DiffRight = 0.0
           JAC(iVar,iVar,i,j,k,1) = JAC(iVar,iVar,i,j,k,1) &
                - Coeff*(DiffLeft + DiffRight)
           JAC(iVar,iVar,i,j,k,2*iDim)   = JAC(iVar,iVar,i,j,k,2*iDim) &
