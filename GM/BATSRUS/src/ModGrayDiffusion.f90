@@ -1613,9 +1613,10 @@ contains
   subroutine get_gray_diffusion_rhs(iBlock, StateImpl_VG, Rhs_CV)
 
     use ModAdvance,  ONLY: Flux_VX, Flux_VY, Flux_VZ, State_VGB, Rho_
-    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK
+    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, y_Blk, IsCylindrical
     use ModImplicit, ONLY: nw
     use ModMain,     ONLY: nI, nJ, nK, x_, y_, z_
+    use ModNodes,    ONLY: NodeY_NB
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModPhysics,  ONLY: gm1, cRadiationNo, No2Si_V, Si2No_V, &
          UnitEnergyDens_, UnitTemperature_
@@ -1656,18 +1657,30 @@ contains
        Flux_VY(EradImpl_,i,j,k) = InvDy2*DiffusionRad_FDB(i,j,k,y_,iBlock) &
             *(StateImpl_VG(EradImpl_,i,j,k) - StateImpl_VG(EradImpl_,i,j-1,k))
     end do; end do; end do
-    do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-       Flux_VZ(EradImpl_,i,j,k) = InvDz2*DiffusionRad_FDB(i,j,k,z_,iBlock) &
-            *(StateImpl_VG(EradImpl_,i,j,k) - StateImpl_VG(EradImpl_,i,j,k-1))
-    end do; end do; end do
+    if(.not.IsCylindrical)then
+       do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+          Flux_VZ(EradImpl_,i,j,k) = InvDz2*DiffusionRad_FDB(i,j,k,z_,iBlock) &
+               *(StateImpl_VG(EradImpl_,i,j,k) &
+               - StateImpl_VG(EradImpl_,i,j,k-1))
+       end do; end do; end do
+    end if
 
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       Rhs_CV(i,j,k,EradImpl_) = &
-            + Flux_VX(EradImpl_,i+1,j,k) - Flux_VX(EradImpl_,i,j,k) &
-            + Flux_VY(EradImpl_,i,j+1,k) - Flux_VY(EradImpl_,i,j,k) &
-            + Flux_VZ(EradImpl_,i,j,k+1) - Flux_VZ(EradImpl_,i,j,k)
-
-    end do; end do; end do
+    if(IsCylindrical)then
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          Rhs_CV(i,j,k,EradImpl_) = &
+               + Flux_VX(EradImpl_,i+1,j,k) - Flux_VX(EradImpl_,i,j,k) &
+               + ( Flux_VY(EradImpl_,i,j+1,k)*abs(NodeY_NB(i,j+1,k,iBlock)) &
+               -   Flux_VY(EradImpl_,i,j,k)*abs(NodeY_NB(i,j,k,iBlock)) ) &
+               /   abs(y_Blk(i,j,k,iBlock))
+       end do; end do; end do
+    else
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          Rhs_CV(i,j,k,EradImpl_) = &
+               + Flux_VX(EradImpl_,i+1,j,k) - Flux_VX(EradImpl_,i,j,k) &
+               + Flux_VY(EradImpl_,i,j+1,k) - Flux_VY(EradImpl_,i,j,k) &
+               + Flux_VZ(EradImpl_,i,j,k+1) - Flux_VZ(EradImpl_,i,j,k)
+       end do; end do; end do
+    end if
 
     ! Source term due to absorption and emission
     ! Sigma_a*(cRadiation*Te**4-Erad)
@@ -1763,6 +1776,32 @@ contains
        Di = kr(iDim,1)
        Dj = kr(iDim,2)
        Dk = kr(iDim,3)
+       if(IsCylindrical.and.iDim==2)then
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             if(j==1)then
+                DiffLeft = 0.0
+             else
+                DiffLeft  = DiffusionRad_FDB(i,j,k,iDim,iBlock) &
+                     *abs(NodeY_NB(i,j,k,iBlock))
+             end if
+             if(j==nJ)then
+                DiffRight = 0.0
+             else
+                DiffRight = DiffusionRad_FDB(i,j+1,k,iDim,iBlock) &
+                     *abs(NodeY_NB(i,j+1,k,iBlock))
+             end if
+             Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
+                  Jacobian_VVCI(iVar,iVar,i,j,k,1) &
+                  - Coeff*(DiffLeft + DiffRight)/abs(y_Blk(i,j,k,iBlock))
+             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim)   = &
+                  Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) &
+                  + Coeff*DiffLeft/abs(y_Blk(i,j-1,k,iBlock))
+             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) = &
+                  Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) &
+                  + Coeff*DiffRight/abs(y_Blk(i,j+1,k,iBlock))
+          end do; end do; end do
+          EXIT ! Done with cylindrical
+       end if
        do k=1,nK; do j=1,nJ; do i=1,nI
           DiffLeft  = DiffusionRad_FDB(i,j,k,iDim,iBlock)
           DiffRight = DiffusionRad_FDB(i+Di,j+Dj,k+Dk,iDim,iBlock)
