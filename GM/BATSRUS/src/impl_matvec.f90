@@ -17,7 +17,7 @@ subroutine impl_matvec(qx,qy,n)
   real, intent(out)  :: qy(n)
 
   logical :: oktest, oktest_me
-  !-----------------------------------------------------------------------------
+  !----------------------------------------------------------------------------
 
   call set_oktest('impl_matvec',oktest,oktest_me)
 
@@ -102,12 +102,14 @@ subroutine impl_matvec_free(qx,qy,nn)
   !      n=n+1
   !      weps(i,j,k,iw,implBLK) = qx(n)*wnrm(iw)        
   !   enddo; enddo; enddo; enddo; enddo
-  !   ! Advance weps:low order,  no dt, don't subtract
-  !   call get_semi_impl_residual(weps, weps) 
+  !   ! Advance weps
+  !   call get_semi_impl_residual(weps)
   !   n=0
+  !   q1=1.+ImplCoeff*dtcoeff
+  !   q2=ImplCoeff*dtcoeff
   !   do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw
   !      n=n+1
-  !      qy(n) = weps(i,j,k,iw,implBLK)/wnrm(iw)
+  !      qy(n) = q1*qx(n) - q2*weps(i,j,k,iw,implBLK)/wnrm(iw)
   !   enddo; enddo; enddo; enddo; enddo
   !
   !   call timing_stop('matvec_free')
@@ -159,6 +161,9 @@ subroutine impl_matvec_free(qx,qy,nn)
   end if
 
   ! Calculate qy = L.qx = (1 + beta*dtcoeff)*qx - beta*dtcoeff*(weps' - w')/eps
+  ! where weps = w + eps*qx, weps' = weps + dt*R(weps) and w' = w + dt*R(w)
+  ! qy = qx + beta*dtcoeff*qx - beta*dtcoeff*(w + eps*qx + R(weps) - w - R(w))/eps
+  !    = qx - beta*dtcoeff*(R(weps)-R(w))/eps = qx - beta*dt*dR/dU*qx
 
   q1=1.+ImplCoeff*dtcoeff
   q2=ImplCoeff*dtcoeff/qeps
