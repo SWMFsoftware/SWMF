@@ -21,6 +21,7 @@ module ModGrayDiffusion
   public :: read_temperature_param
   public :: get_impl_gray_diff_state
   public :: get_gray_diffusion_rhs
+  public :: get_gray_diff_jacobian
   public :: update_impl_gray_diff
 
   ! Logical for adding Gray Diffusion
@@ -137,7 +138,6 @@ contains
 
        RETURN
     end if
-
 
     ! Initializing the semi-implicit gray-diffusion
     if(.not.allocated(SpecificHeat_VCB))then
@@ -1666,6 +1666,7 @@ contains
             + Flux_VX(EradImpl_,i+1,j,k) - Flux_VX(EradImpl_,i,j,k) &
             + Flux_VY(EradImpl_,i,j+1,k) - Flux_VY(EradImpl_,i,j,k) &
             + Flux_VZ(EradImpl_,i,j,k+1) - Flux_VZ(EradImpl_,i,j,k)
+
     end do; end do; end do
 
     ! Source term due to absorption and emission
@@ -1690,6 +1691,100 @@ contains
   end subroutine get_gray_diffusion_rhs
 
   !============================================================================
+
+  subroutine get_gray_diff_jacobian(iBlock, nVar, Jacobian_VVCI)
+
+    use ModAdvance,  ONLY: State_VGB
+    use ModGeometry, ONLY: Dx_Blk, Dy_Blk, Dz_Blk, &
+         fAx_Blk, fAy_Blk, fAz_Blk, vInv_CB, y_Blk, IsCylindrical
+    use ModImplicit, ONLY: kr
+    use ModMain,     ONLY: nI, nJ, nK, nDim, Dt
+    use ModNodes,    ONLY: NodeY_NB
+    use ModImplicit, ONLY: ImplCoeff, wnrm
+    use ModPhysics,  ONLY: Clight, cRadiationNo, Si2No_V, UnitX_, &
+         UnitTemperature_, UnitEnergyDens_
+    use ModUser,     ONLY: user_material_properties
+
+    integer, parameter:: nStencil = 2*nDim + 1
+
+    integer, intent(in) :: iBlock, nVar
+    real, intent(out) :: Jacobian_VVCI(nVar,nVar,nI,nJ,nK,nStencil)
+
+    integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iCond
+    real :: DiffLeft, DiffRight, Dxyz_D(nDim), Coeff
+    
+    real :: PlanckOpacitySi, PlanckOpacity, CvSi, Cv, TeSi, Te
+    real :: dSdErad, dSdEint
+    !--------------------------------------------------------------------------
+
+    Jacobian_VVCI(:,:,:,:,:,:) = 0.0
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+
+       ! Identity matrix
+       do iVar = 1, nVar
+          Jacobian_VVCI(iVar,iVar,i,j,k,1) = 1.0
+       end do
+
+       ! energy exchange
+       call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+            AbsorptionOpacitySiOut = PlanckOpacitySi, &
+            CvSiOut = CvSi, TeSiOut = TeSi)
+
+       PlanckOpacity = PlanckOpacitySi/Si2No_V(UnitX_)
+       Cv = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
+       Te = TeSi*Si2No_V(UnitTemperature_)
+
+       dSdErad = ImplCoeff*dt*Clight*PlanckOpacity
+       dSdEint = dSdErad * 4.0*cRadiationNo*Te**3 / Cv
+
+       ! dSrad/dErad (diagonal)
+       Jacobian_VVCI(EradImpl_,EradImpl_,i,j,k,1) = &
+            Jacobian_VVCI(EradImpl_,EradImpl_,i,j,k,1) + dSdErad
+
+       ! dSint/dErad (off diagonal)
+       Jacobian_VVCI(EintImpl_,EradImpl_,i,j,k,1) = -dSdErad &
+            *wnrm(EradImpl_)/wnrm(EintImpl_)
+
+       ! dSint/dEint (diagonal)
+       Jacobian_VVCI(EintImpl_,EintImpl_,i,j,k,1) = &
+            Jacobian_VVCI(EintImpl_,EintImpl_,i,j,k,1) + dSdEint
+
+       ! dSrad/dEint (off diagonal)
+       Jacobian_VVCI(EradImpl_,EintImpl_,i,j,k,1) = - dSdEint &
+            *wnrm(EintImpl_)/wnrm(EradImpl_)
+
+    end do; end do; end do
+
+    Dxyz_D = (/dx_BLK(iBlock), dy_BLK(iBlock), dz_Blk(iBlock)/)
+    iVar = EradImpl_
+    do iDim = 1, nDim
+       Coeff = -ImplCoeff*dt/Dxyz_D(iDim)**2
+       Di = kr(iDim,1)
+       Dj = kr(iDim,2)
+       Dk = kr(iDim,3)
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          DiffLeft  = DiffusionRad_FDB(i,j,k,iDim,iBlock)
+          DiffRight = DiffusionRad_FDB(i+Di,j+Dj,k+Dk,iDim,iBlock)
+          if(iDim==1.and.i==1 .or. iDim==2.and.j==1 .or. iDim==3.and.k==1)&
+               DiffLeft = 0.0
+          if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ .or. iDim==3.and.k==nK)&
+               DiffRight = 0.0
+          Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
+               Jacobian_VVCI(iVar,iVar,i,j,k,1) &
+               - Coeff*(DiffLeft + DiffRight)
+          Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim)   = &
+               Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) &
+               + Coeff*DiffLeft
+          Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) = &
+               Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) &
+               + Coeff*DiffRight
+       end do; end do; end do
+    end do
+
+  end subroutine get_gray_diff_jacobian
+
+  !===========================================================================
 
   subroutine update_impl_gray_diff(iBlock, StateImpl_GV)
 

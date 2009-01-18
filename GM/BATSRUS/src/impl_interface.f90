@@ -350,6 +350,30 @@ subroutine get_semi_impl_residual(StateImpl_CVB)
 
 end subroutine get_semi_impl_residual
 !==============================================================================
+subroutine get_semi_impl_jacobian
+
+  use ModImplicit, ONLY: nw, nImplBlk, impl2iblk, TypeSemiImplicit, MAT
+  use ModGrayDiffusion, ONLY: get_gray_diff_jacobian
+
+  implicit none
+
+  integer :: iImplBlock, iBlock
+  character(len=*), parameter:: NameSub = 'get_semi_impl_jacobian'
+  !---------------------------------------------------------------------------
+  do iImplBlock = 1, nImplBLK
+     iBlock = impl2iBLK(iImplBlock)
+
+     select case(TypeSemiImplicit)
+     case('radiation')
+        call get_gray_diff_jacobian(iBlock, nw, MAT(:,:,:,:,:,:,iImplBlock))
+     case default
+        call stop_mpi(NameSub//': no get_rhs implemented for' &
+             //TypeSemiImplicit)
+     end select
+  end do
+
+end subroutine get_semi_impl_jacobian
+!==============================================================================
 subroutine getsource(iBLK,w,s)
 
   ! Get sources for block iBLK using implicit data w

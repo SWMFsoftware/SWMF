@@ -286,9 +286,13 @@ subroutine advance_impl
         end if
 
         call timing_start('impl_jacobian')
-        do implBLK=1,nImplBLK
-           call impl_jacobian(implBLK,MAT(1,1,1,1,1,1,implBLK))
-        end do
+        if(UseSemiImplicit)then
+           call get_semi_impl_jacobian
+        else
+           do implBLK=1,nImplBLK
+              call impl_jacobian(implBLK,MAT(1,1,1,1,1,1,implBLK))
+           end do
+        end if
         call timing_stop('impl_jacobian')
 
         if(DoTest)then
@@ -488,8 +492,6 @@ subroutine advance_impl
         call calc_old_pressure(iBlk) ! restore StateOld_VCB(P_...)
      end do
   end if
-
-!!!  Time_Simulation = Time_Simulation - Dt*No2Si_V(UnitT_)*2.0/3.0
 
   if(UseUpdateCheckOrig .and. time_accurate .and. UseDtFixed)then
      
