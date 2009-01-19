@@ -86,7 +86,7 @@ subroutine impl_matvec_free(qx,qy,nn)
   ! that's why the intent of qy cannot be set to out.
   real, intent(inout):: qy(nn)
 
-  real               :: weps(nI,nJ,nK,nw,MaxImplBLK)
+  real, allocatable, save:: weps(:,:,:,:,:)
   integer:: n,i,j,k,iw,implBLK, iError
   real:: qeps, qxnrm, qxnrm_total, q1, q2
 
@@ -95,6 +95,8 @@ subroutine impl_matvec_free(qx,qy,nn)
   call set_oktest('impl_matvec_free', oktest, oktest_me)
 
   call timing_start('matvec_free')
+
+  if(.not.allocated(weps))allocate(weps(nI,nJ,nK,nw,MaxImplBLK))
 
   !if(UseSemiImplicit)then
   !   n=0
