@@ -49,7 +49,7 @@ contains
 
   !=====================================================================
   subroutine user_initial_perturbation
-    use ModSize,ONLY: nBlockMax
+    use ModMain,ONLY: nBlockMax
     character (len=*), parameter :: NameSub = 'user_initial_perturbation'
     integer::iBlock
     !-------------------------------------------------------------------
