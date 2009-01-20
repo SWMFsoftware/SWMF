@@ -49,17 +49,33 @@ contains
 
   !=====================================================================
   subroutine user_initial_perturbation
-
+    use ModSize,ONLY: nBlockMax
     character (len=*), parameter :: NameSub = 'user_initial_perturbation'
+    integer::iBlock
     !-------------------------------------------------------------------
-    call stop_user(NameSub)
+    !The routine is called once and should be applied for all blocks, the 
+    !do-loop should be present. Another distinction from user_set_ics is that 
+    !user_initial_perturbation can be applied after restart, while
+    !user_set_ICs cannot.
+
+    do iBlock = 1, nBlockMax
+    
+       call stop_user(NameSub)
+    end do
   end subroutine user_initial_perturbation
 
   !=====================================================================
   subroutine user_set_ics
+    use ModMain,ONLY: globalBLK
 
     character (len=*), parameter :: NameSub = 'user_set_ics'
+    integer::iBlock
     !-------------------------------------------------------------------
+    !The routine is called for each block, the number of block should
+    !be passed to the routine using globalBLK
+
+    iBlock = globalBLK  
+
     call stop_user(NameSub)
   end subroutine user_set_ics
 
