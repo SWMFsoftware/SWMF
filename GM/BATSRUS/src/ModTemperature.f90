@@ -141,9 +141,9 @@ contains
     use ModMain,       ONLY: UseHeatConduction, UseGrayDiffusion
     use ModProcMH,     ONLY: iProc
     use ModSize,       ONLY: nI, nJ, nK, nBlk, nDim
-    use ModVarIndexes, ONLY: NameVar_V
+    use ModVarIndexes, ONLY: NameVar_V, nVar
 
-    integer :: iVar, nVar
+    integer :: iVar
 
     character(len=*), parameter :: NameSub = "init_temperature_diffusion"
     !--------------------------------------------------------------------------
