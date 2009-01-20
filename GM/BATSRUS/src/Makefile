@@ -54,6 +54,7 @@ MODULES = \
 	ModSatelliteFile.o\
 	ModSize.o\
 	ModSolarwind.o \
+	ModTemperature.o \
 	ModUserEmpty.o \
 	ModUser.o \
 	${MOD1}	${MOD2}	${MOD3} ${MOD4} 

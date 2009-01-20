@@ -48,9 +48,7 @@ subroutine MH_set_parameters(TypeAction)
        xSizeBoxHall, DxSizeBoxHall, &
        ySizeBoxHall, DySizeBoxHall, &
        zSizeBoxHall, DzSizeBoxHall
-  use ModGrayDiffusion, ONLY: &                   !^CFG IF IMPLICIT
-       UseRadFluxLimiter, TypeRadFluxLimiter, &   !^CFG IF IMPLICIT
-       read_temperature_param                     !^CFG IF IMPLICIT
+  use ModTemperature, ONLY: UseTemperatureDiffusion, read_temperature_param
   use ModResistivity                              !^CFG IF DISSFLUX
   use ModMultiFluid, ONLY: MassIon_I, DoConserveNeutrals,iFluid
   use ModMultiIon, ONLY: multi_ion_set_parameters
@@ -495,25 +493,10 @@ subroutine MH_set_parameters(TypeAction)
         call read_var("rInnerHall ", rInnerHall)
         call read_var("DrInnerHall", DrInnerHall)
 
-     case("#RADIATION")          !^CFG IF IMPLICIT BEGIN
-        call read_var('UseGrayDiffusion', UseGrayDiffusion)
-        if(UseGrayDiffusion)then
-           call read_var('UseRadFluxLimiter', UseRadFluxLimiter)
-           if(UseRadFluxLimiter)then
-              call read_var('TypeRadFluxLimiter', TypeRadFluxLimiter, &
-                   IsLowerCase=.true.)
-
-              select case(TypeRadFluxLimiter)
-              case("larsen","sum","max")
-              case default
-                 call stop_mpi(NameSub//': unknown TypeRadFluxLimiter='&
-                      //TypeRadFluxLimiter)
-              end select
-           end if
-        end if
-
-     case("#IMPLICITTEMPERATURE")
-        call read_temperature_param(NameCommand)  !^CFG END IMPLICIT
+     case("#RADIATION", &
+          "#HEATCONDUCTION", &
+          "#IMPLICITTEMPERATURE")
+        call read_temperature_param(NameCommand)
 
      case("#SAVELOGFILE")
         call read_var('DoSaveLogfile',save_logfile)
@@ -2120,7 +2103,8 @@ contains
        optimize_message_pass = 'all'
     endif
 
-    if ( UseGrayDiffusion .and. index(optimize_message_pass,'opt') > 0) then !^CFG IF IMPLICIT BEGIN
+    if ( UseGrayDiffusion .and. .not.UseTemperatureDiffusion &
+         .and. index(optimize_message_pass,'opt') > 0) then
        if(iProc==0 .and. optimize_message_pass /= 'allopt') then
           write(*,'(a)')NameSub//&
                ' WARNING: Radiation Flux Limiter does not work for'// &
@@ -2129,7 +2113,7 @@ contains
           write(*,*)NameSub//' setting optimize_message_pass = all'
        end if
        optimize_message_pass = 'all'
-    endif                                                !^CFG END IMPLICIT
+    endif
 
     if(prolong_order/=1 .and. optimize_message_pass(1:3)=='all')&
          call stop_mpi(NameSub// &

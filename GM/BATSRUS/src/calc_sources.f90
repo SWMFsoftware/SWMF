@@ -18,6 +18,7 @@ subroutine calc_sources
   use ModHallResist, ONLY: &
        UseHallResist, HallHyperFactor, calc_hyper_resistivity 
   use ModGrayDiffusion, ONLY: calc_source_gray_diffusion !^CFG IF IMPLICIT
+  use ModTemperature, ONLY: calc_source_compression, UseTemperatureDiffusion
   use ModMultiFluid
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
   use ModMultiIon, ONLY: multi_ion_sources
@@ -248,8 +249,10 @@ subroutine calc_sources
      if(DoTestMe) call write_source('After HyperResist')
   end if
 
-  if(UseGrayDiffusion) &                       !^CFG IF IMPLICIT
-       call calc_source_gray_diffusion(iBlock) !^CFG IF IMPLICIT
+  if(UseTemperatureDiffusion) call calc_source_compression(iBlock)
+  if(UseGrayDiffusion.and..not.UseTemperatureDiffusion) & !^CFG IF IMPLICIT
+       call calc_source_gray_diffusion(iBlock)            !^CFG IF IMPLICIT
+
 
   if(UseUserSource)then
      call user_calc_sources

@@ -2,7 +2,7 @@ module ModFaceFlux
 
   use ModProcMH,     ONLY: iProc
   use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK, UseB, UseB0, cLimit
-  use ModMain,       ONLY: UseGrayDiffusion               !^CFG IF IMPLICIT
+  use ModMain,       ONLY: UseGrayDiffusion
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
   use ModVarIndexes, ONLY: nVar, NameVar_V, UseMultiSpecies, nFluid
@@ -32,6 +32,7 @@ module ModFaceFlux
 
   use ModGrayDiffusion, ONLY: IsNewBlockGrayDiffusion, & !^CFG IF IMPLICIT
        get_radiation_energy_flux                         !^CFG IF IMPLICIT
+  use ModTemperature, ONLY: UseTemperatureDiffusion
 
   use ModResistivity, ONLY: UseResistivity, Eta_GB  !^CFG IF DISSFLUX
   use ModMultiFluid
@@ -897,7 +898,7 @@ contains
     State_V = 0.5*(StateLeft_V + StateRight_V)
 
     !^CFG IF IMPLICIT BEGIN
-    if(UseGrayDiffusion.and.(UseFullImplicit.or.UseSemiImplicit))then
+    if(UseGrayDiffusion.and..not.UseTemperatureDiffusion)then
        call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
             iBlockFace, State_V, EradFlux_D)
     end if
@@ -1536,11 +1537,10 @@ contains
       CMaxDt    = CMax
       UNormal_I = Un
 
-      !^CFG IF IMPLICIT BEGIN
       if(UseGrayDiffusion)then
          ! Diffusive radiation flux is added later for semi-implicit scheme
-         if(UseFullImplicit) Flux_V(Eradiation_) = &
-              Flux_V(Eradiation_) + sum(EradFlux_D*Normal_D)
+         if(UseFullImplicit) Flux_V(Eradiation_) = &         !^CFG IF IMPLICIT
+              Flux_V(Eradiation_) + sum(EradFlux_D*Normal_D) !^CFG IF IMPLICIT
 
          ! radiation pressure gradient
          Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) &
@@ -1552,7 +1552,6 @@ contains
          ! Use linear proxi for c^2 = c_gas^2 + 4/3 * P_rad/Rho
          CmaxDt = CmaxDt + (2.0/3.0)*sqrt(StateStar_V(Eradiation_)/Rho)
       end if
-      !^CFG END IMPLICIT
 
     end subroutine godunov_flux
 
@@ -1676,11 +1675,10 @@ contains
             + Bx*FluxBx + By*FluxBy + Bz*FluxBz
     end if                                     !^CFG END DISSFLUX
 
-    !^CFG IF IMPLICIT BEGIN
     if(UseGrayDiffusion)then
        ! Diffusive radiation flux is added later for semi-implicit scheme
-       if(UseFullImplicit) Flux_V(Eradiation_) = &
-            Flux_V(Eradiation_) + sum(EradFlux_D*Normal_D)
+       if(UseFullImplicit) Flux_V(Eradiation_) = &         !^CFG IF IMPLICIT
+            Flux_V(Eradiation_) + sum(EradFlux_D*Normal_D) !^CFG IF IMPLICIT
 
        ! radiation pressure gradient
        Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) &
@@ -1688,7 +1686,6 @@ contains
        ! work by the radiation pressure gradient
        Flux_V(Energy_) = Flux_V(Energy_) + Un*State_V(Eradiation_)/3.0
     end if
-    !^CFG END IMPLICIT
 
     if(UseHyperbolicDivb)then
        Hyp  = State_V(Hyp_)
@@ -2360,11 +2357,11 @@ contains
          call stop_mpi(NameSub//' negative soundspeed squared')
       end if
 
-      if(UseGrayDiffusion)then                      !^CFG IF IMPLICIT BEGIN
+      if(UseGrayDiffusion)then
          Sound = sqrt(Sound2 + (4.0/9.0)*State_V(Eradiation_)*InvRho)
-      else                                          !^CFG END IMPLICIT
+      else
          Sound  = sqrt(Sound2)
-      end if                                        !^CFG IF IMPLICIT
+      end if
       Un     = sum(State_V(iUx:iUz)*Normal_D)
 
 

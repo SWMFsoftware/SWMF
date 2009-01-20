@@ -228,13 +228,13 @@ end subroutine BATS_setup
 
 subroutine BATS_init_session
 
-  use ModMain, ONLY: DoTransformToHgi, UseUserPerturbation
-  use ModMain, ONLY: UseGrayDiffusion              !^CFG IF IMPLICIT
+  use ModMain, ONLY: DoTransformToHgi, UseUserPerturbation, UseGrayDiffusion
   use ModMain, ONLY: UseProjection                 !^CFG IF PROJECTION
   use ModMain, ONLY: UseConstrainB                 !^CFG IF CONSTRAINB
   use ModCT,   ONLY: DoInitConstrainB              !^CFG IF CONSTRAINB
   use ModHallResist, ONLY: UseHallResist, init_hall_resist,test_face_current
   use ModGrayDiffusion, ONLY: init_gray_diffusion  !^CFG IF IMPLICIT
+  use ModTemperature, ONLY: UseTemperatureDiffusion, init_temperature_diffusion
   use ModUser, ONLY: user_initial_perturbation
   implicit none
 
@@ -269,7 +269,9 @@ subroutine BATS_init_session
   if(UseHallResist)call init_hall_resist
   !call test_face_current
 
-  if(UseGrayDiffusion) call init_gray_diffusion !^CFG IF IMPLICIT
+  if(UseTemperatureDiffusion) call init_temperature_diffusion
+  if(UseGrayDiffusion.and..not.UseTemperatureDiffusion) &  !^CFG IF IMPLICIT
+       call init_gray_diffusion                            !^CFG IF IMPLICIT
 
   ! Make sure that ghost cells are up to date
   call exchange_messages
@@ -297,7 +299,7 @@ subroutine BATS_advance(TimeSimulationLimit)
        part_steady_select, part_steady_switch
   use ModImplicit, ONLY: UseImplicit, UseFullImplicit, &   !^CFG IF IMPLICIT
        UseSemiImplicit                                     !^CFG IF IMPLICIT
-  use ModGrayDiffusion, ONLY: advance_temperature          !^CFG IF IMPLICIT
+  use ModTemperature,  ONLY: advance_temperature, UseTemperatureDiffusion
   use ModIonoVelocity, ONLY: apply_iono_velocity
 
   implicit none
@@ -364,9 +366,7 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   if(UseDivBDiffusion)call clean_divb     !^CFG IF DIVBDIFFUSE
 
-  if(UseGrayDiffusion.and. &                         !^CFG IF IMPLICIT
-       .not.(UseFullImplicit.or.UseSemiImplicit)) &  !^CFG IF IMPLICIT
-     call advance_temperature                        !^CFG IF IMPLICIT
+  if(UseTemperatureDiffusion) call advance_temperature
 
   call exchange_messages
 

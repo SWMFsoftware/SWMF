@@ -188,8 +188,9 @@ Module ModMain
   logical:: UseResistFlux=.false.
   logical:: UseAnomResist=.false.
 
-  ! Logical for adding Gray Diffusion
+  ! Logicals for adding Gray Diffusion and isotropic heat conduction
   logical :: UseGrayDiffusion = .false.
+  logical :: UseHeatConduction = .false.
 
   ! Logical and type for gravity
   logical :: UseGravity
