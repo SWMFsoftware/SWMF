@@ -224,10 +224,10 @@ contains
       end if
 
       jet_width = jet_width*cPi/180.
-      Qprod_day = Qprod_day*cTwo
-      Qprod_nit = Qprod_nit*cTwo
-      if ( jpattern == 1 ) Qprod_jet = Qprod_jet*cFour*cPi
-      if ( jpattern == 2 ) Qprod_jeta = Qprod_jeta*cFour*cPi
+      Qprod_day = Qprod_day*2.0
+      Qprod_nit = Qprod_nit*2.0
+      if ( jpattern == 1 ) Qprod_jet = Qprod_jet*4.0*cPi
+      if ( jpattern == 2 ) Qprod_jeta = Qprod_jeta*4.0*cPi
       if ( Ajet < cTiny ) then
         Qprod_jet = cZero
       else
@@ -543,7 +543,7 @@ endif
 
     if (jpattern == 50 ) then
        sMass = cZero
-       lambda= 1.80000*cE6
+       lambda= 1.80000*1E6
        where(R_BLK(1:nI,1:nJ,1:nK,globalBLK)<6.) &
 	  sMass = Qprod*(R_BLK(1:nI,1:nJ,1:nK,globalBLK)*NO2SI_V(UnitX_)/lambda)**(-3.5)
 
@@ -563,7 +563,7 @@ endif
 
        sMass = Qprod * mbar * fi * &
           exp(-R_BLK(1:nI,1:nJ,1:nK,globalBLK)*NO2SI_V(UnitX_)/lambda) / &
-          (cFour*cPi*lambda*R_BLK(1:nI,1:nJ,1:nK,globalBLK)**2*NO2SI_V(UnitX_)**2)
+          (4.0*cPi*lambda*R_BLK(1:nI,1:nJ,1:nK,globalBLK)**2*NO2SI_V(UnitX_)**2)
 
     !yingdong 060705 neutral num density
        if(ReadNeutral) sMass = fi * ionization_rate * &
@@ -591,7 +591,7 @@ endif
      ! assuming Te=Ti
      ! for comet borrelly
 !    Te=State_VGB(p_,1:nI,1:nJ,1:nK,globalBLK) * NO2SI_V(UnitP_) * mbar * cProtonMass / &
-!          ( cTwo * unitSI_rho * cBoltzmann * State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK) )
+!          ( 2.0 * unitSI_rho * cBoltzmann * State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK) )
 
     ! Standard Profile
     where  (rkm <= 1584.893) 
@@ -615,7 +615,7 @@ endif
     if ( jet_width < cTiny ) then
 	jet_ln2 = cZero
     else
-	jet_ln2 = -dlog(cTwo)/jet_width/jet_width
+	jet_ln2 = -dlog(2.0)/jet_width/jet_width
     endif
 
 !     do k=1,nK ;   do j=1,nJ ;    do i=1,nI	!version with jet
@@ -645,7 +645,7 @@ endif
               sMass(i,j,k) = sMassdn+sMass(i,j,k)*Qprod_jet*(cOne+jtheta)
 	elseif ( jpattern == 4 ) then		!dayside liner jet
               jtheta = dacos(jtheta)
-	    sMass(i,j,k) = sMassdn+sMass(i,j,k)*Qprod_jet*(cOne-cTwo*jtheta/cPi)
+	    sMass(i,j,k) = sMassdn+sMass(i,j,k)*Qprod_jet*(cOne-2.0*jtheta/cPi)
 	elseif ( jpattern == 5 ) then		!dayside cos2 jet
               sMass(i,j,k) = sMassdn+sMass(i,j,k)*Qprod_jet*jtheta*jtheta
 	elseif ( jpattern == 2 ) then
@@ -671,7 +671,7 @@ endif
        end where
      !normalize alphaTe
      !alpha Te has units [cm^3/s]
-       alphaTe=alphaTe/cE6
+       alphaTe=alphaTe/1E6
 
      ! Compute source terms.
        Losse    = alphaTe*ne*NO2SI_V(UnitT_)	!added yingdong Jan 02 and Modified Mar.03.
@@ -748,7 +748,7 @@ endif
     Source_VC(rhoUz_,:,:,:) = Source_VC(rhoUz_,:,:,:) + &
 	( term1*Unz - term2*State_VGB(rhoUz_,1:nI,1:nJ,1:nK,globalBLK) )
     Source_VC(p_,:,:,:) = Source_VC(p_,:,:,:) + term1* &
-        cThird*( (Unx-ux)**2+(Uny-uy)**2+(Unz-uz)**2 ) - &
+        1.0/3.0*( (Unx-ux)**2+(Uny-uy)**2+(Unz-uz)**2 ) - &
         term2*State_VGB(p_,1:nI,1:nJ,1:nK,globalBLK)	!Pi->P
 !          term2*State_VGB(p_,1:nI,1:nJ,1:nK,globalBLK)*cHalf
 
@@ -767,9 +767,9 @@ endif
       DsDu_VVC(3,3,:,:,:) = - term2
       DsDu_VVC(4,1,:,:,:) = sMasseta*Unz
       DsDu_VVC(4,4,:,:,:) = - term2
-      DsDu_VVC(5,2,:,:,:) = -term1*(Unx-ux)*cTwo*cThird
-      DsDu_VVC(5,3,:,:,:) = -term1*(Uny-uy)*cTwo*cThird
-      DsDu_VVC(5,4,:,:,:) = -term1*(Unz-uz)*cTwo*cThird
+      DsDu_VVC(5,2,:,:,:) = -term1*(Unx-ux)*2.0*1.0/3.0
+      DsDu_VVC(5,3,:,:,:) = -term1*(Uny-uy)*2.0*1.0/3.0
+      DsDu_VVC(5,4,:,:,:) = -term1*(Unz-uz)*2.0*1.0/3.0
       DsDu_VVC(5,5,:,:,:) = - term2
 
       if(ReadNeutral) then       ! yingdong 060605 neutral profile
@@ -777,15 +777,15 @@ endif
           unr = Unx(i,j,k)*Unx(i,j,k) + Uny(i,j,k)*Uny(i,j,k) +  &
 		Unz(i,j,k)*Unz(i,j,k)
 !note: this unr is unr*unr*dimensionless
-          DsDu_VVC(5,1,i,j,k) = sMasseta(i,j,k)*cThird*(unr-usqr(i,j,k)) + &
-             sMass(i,j,k)*cTwo*cThird/State_VGB(rho_,i,j,k,globalBLK)* &
+          DsDu_VVC(5,1,i,j,k) = sMasseta(i,j,k)*1.0/3.0*(unr-usqr(i,j,k)) + &
+             sMass(i,j,k)*2.0*1.0/3.0/State_VGB(rho_,i,j,k,globalBLK)* &
              ( Unx(i,j,k)*ux(i,j,k) + Uny(i,j,k)*uy(i,j,k) + &
 	     Unz(i,j,k)*uz(i,j,k) - usqr(i,j,k) )
 	enddo; enddo; enddo
 
       else
-        DsDu_VVC(5,1,:,:,:) = sMasseta*cThird*(unr*unr/NO2SI_V(UnitU_)/NO2SI_V(UnitU_)-usqr) + &
-             sMass*cTwo*cThird/State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)*( &
+        DsDu_VVC(5,1,:,:,:) = sMasseta*1.0/3.0*(unr*unr/NO2SI_V(UnitU_)/NO2SI_V(UnitU_)-usqr) + &
+             sMass*2.0*1.0/3.0/State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)*( &
              Unx*ux+Uny*uy+Unz*uz-usqr)
 
       endif
