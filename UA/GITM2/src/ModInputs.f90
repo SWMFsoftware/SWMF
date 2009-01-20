@@ -155,6 +155,7 @@ module ModInputs
 
   logical :: UseEddyViscosity     = .false.
   logical :: UseVerticalViscosity     = .false.
+  logical :: UseStressHeating     = .false.
 
   !\
   ! Methods for completing chemistry
