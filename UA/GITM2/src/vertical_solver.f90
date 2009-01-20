@@ -130,6 +130,11 @@ subroutine advance_vertical_1stage( &
   real, dimension(1:nAlts,nSpecies)    :: EddyDiffusionVel
 
   real :: nVel(1:nAlts,1:nSpecies)
+
+!! Stress Tensor Heating Function given by Hickey et al [2000]
+!! Icarus, Heating and Cooling in Jovian Thermosphere
+  real :: StressHeating(1:nAlts)
+
   integer :: nFilter, iFilter
   real :: LowFilter
 
@@ -273,6 +278,23 @@ subroutine advance_vertical_1stage( &
 
   enddo
 
+!! Logical Setings for the Stress Heating Term (outside of nAlt loop to save time)
+
+  if (UseStressHeating) then
+      do iAlt = 1, nAlts
+         StressHeating(iAlt)  = &
+          (  &
+             (Gamma_1d(iAlt) - 1.0)/ NT(iAlt)*Boltzmanns_Constant)*&
+          ( (4.0/3.0)*(GradVel_CD(iAlt,iUp_)**2 + &
+                       GradVel_CD(iAlt,iNorth_)**2 + & 
+                       GradVel_CD(iAlt,iEast_)**2 ) &
+          )
+      enddo
+  else
+
+        StressHeating(1:nAlts) = 0.0
+  endif
+
   do iAlt = 1, nAlts
 
      ! dVphi/dt = - (V grad V)_phi
@@ -299,7 +321,8 @@ subroutine advance_vertical_1stage( &
              (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
              (Gamma_1d(iAlt) - 1.0) * ( &
              Temp(iAlt)*DivVel(iAlt))) &
-             + Dt * DiffTemp(iAlt) 
+             + Dt * DiffTemp(iAlt)  & 
+             + Dt * StressHeating(iAlt) 
 
 !        NewTemp(iAlt)   = NewTemp(iAlt) + &
 !             Dt*Vel_GD(iAlt,iUp_)* &
