@@ -1,11 +1,11 @@
 
 subroutine calc_neutral_friction(oVel, EddyCoef_1d, NDensity_1d, NDensityS_1d, &
-                                 EddyCoefRatio_1d, Temp, Gravity_1d )
+                                 GradLogCon, EddyCoefRatio_1d, Temp, Gravity_1d )
 
   use ModGITM
   use ModSources
   use ModPlanet, only: Diff0, DiffExp, IsEarth
-  use ModInputs, only: UseNeutralFriction
+  use ModInputs, only: UseNeutralFriction, UseBoquehoAndBlelly, UseEddyCorrection
 
   implicit none
 
@@ -13,6 +13,7 @@ subroutine calc_neutral_friction(oVel, EddyCoef_1d, NDensity_1d, NDensityS_1d, &
   real,intent(in) :: EddyCoef_1d(1:nAlts)
   real,intent(in) :: NDensity_1d(1:nAlts)
   real,intent(in) :: NDensityS_1d(1:nAlts,1:nSpecies)
+  real,intent(in) :: GradLogCon(1:nAlts,1:nSpecies)
   real,intent(inout) :: EddyCoefRatio_1d(1:nAlts,1:nSpecies)
   real,intent(in) :: Temp(1:nAlts)
   real,intent(in) :: Gravity_1d(1:nAlts)
@@ -29,8 +30,9 @@ subroutine calc_neutral_friction(oVel, EddyCoef_1d, NDensity_1d, NDensityS_1d, &
   real :: Dij(nSpecies)
   real :: denscale
   real :: mscale
-  real :: mms
   real :: mmwos(nSpecies)
+
+  real :: EddyDiffCorrection(nSpecies)
 
   integer :: iAlt
 
@@ -45,8 +47,6 @@ subroutine calc_neutral_friction(oVel, EddyCoef_1d, NDensity_1d, NDensityS_1d, &
     Vel = oVel(iAlt,1:nSpecies)
     CoefMatrix = 0.0
 
-    mms = 0.0
-    mmwos = 0.0
     InvDij = 0.0
 
 
@@ -57,39 +57,18 @@ subroutine calc_neutral_friction(oVel, EddyCoef_1d, NDensity_1d, NDensityS_1d, &
 ! In contrast, mmwos = Mean Molecular Weight
 ! excluding the species (iSpecies)
 
-    do iSpecies = 1, nSpecies
-         mms = mms + &
-           Mass(iSpecies)*NDensityS_1d(iAlt,iSpecies)/NDensity_1d(iAlt)
-
-         do jSpecies = 1, nSpecies
-
-          if(jSpecies == iSpecies) cycle
-
-         mmwos(iSpecies) = mmwos(iSpecies) +  & 
-          Mass(jSpecies)*NDensityS_1d(iAlt,jSpecies)/&
-       (NDensity_1d(iAlt) - NDensityS_1d(iAlt,iSpecies) )
-
-            
-         enddo ! jSpecies 
-
-    enddo ! iSpecies 
-
-
 
     do iSpecies = 1, nSpecies
 
 
+       EddyDiffCorrection(iSpecies) = 0.0
        InvDij(iSpecies) = 0.0
 
 
        kTOverM = Boltzmanns_Constant * Temp(iAlt) / Mass(iSpecies)
 
 
-       mscale = (1.0 - Mass(iSpecies)/mmwos(iSpecies)) * &
-        (NDensityS_1d(iAlt,iSpecies)/NDensity_1d(iAlt) )
-
-       denscale = 1.0/ &
-        (NDensity_1d(iAlt) - NDensityS_1d(iAlt,iSpecies))
+       denscale = 1.0/NDensity_1d(iAlt) 
 
 
        do jSpecies = 1, nSpecies
@@ -117,16 +96,22 @@ subroutine calc_neutral_friction(oVel, EddyCoef_1d, NDensity_1d, NDensityS_1d, &
              TempDij = Diff0(iSpecies, jSpecies)*&
                       (N0/NDensity_1d(iAlt))*&
                       (Temp(iAlt) / Temp(1))** DiffExp(iSpecies, jSpecies) 
-
+ 
+             if(UseBoquehoAndBlelly) then
              CoefMatrix(iSpecies, jSpecies) = &
-                  kTOverM * NDensityS_1d(iAlt, jSpecies) / &
-                   ( (TempDij/(1.0 - mscale)) * (NDensity_1d(iAlt) - NDensityS_1d(iAlt,iSpecies) ) + &
-                         NDensity_1d(iAlt)*EddyCoef_1d(iAlt)  )
+                  kTOverM * NDensityS_1d(iAlt, jSpecies) * denscale/ &
+                   ( TempDij + EddyCoef_1d(iAlt)  )
 
              InvDij(iSpecies) = InvDij(iSpecies) + &
-                               NDensityS_1d(iAlt, jSpecies) / &
-                              ( ( TempDij/(1.0 - mscale)) * (NDensity_1d(iAlt) - NDensityS_1d(iAlt,iSpecies) ) + &
-                                    NDensity_1d(iAlt)*EddyCoef_1d(iAlt)  )
+                               denscale * NDensityS_1d(iAlt, jSpecies) / &
+                              ( TempDij + EddyCoef_1d(iAlt)  )
+             else
+             CoefMatrix(iSpecies, jSpecies) = &
+                  kTOverM * NDensityS_1d(iAlt, jSpecies) * denscale/TempDij 
+
+             InvDij(iSpecies) = InvDij(iSpecies) + &
+                               denscale * NDensityS_1d(iAlt, jSpecies) /TempDij 
+             endif
 
 ! Now we add the turbulent collision frequencies
 ! to the molecular collision frequencies
@@ -156,28 +141,43 @@ subroutine calc_neutral_friction(oVel, EddyCoef_1d, NDensity_1d, NDensityS_1d, &
             !        NDensityS_1d(iAlt, jSpecies) / &
             !        TempDij
 
+             if(UseBoquehoAndBlelly) then
                CoefMatrix(iSpecies, jSpecies) = &
                     kTOverM * denscale * &
                     NDensityS_1d(iAlt, jSpecies) / &
-                    ( TempDij/(1.0 - mscale) + EddyCoef_1d(iAlt))
+                    ( TempDij + EddyCoef_1d(iAlt))
 
             !   InvDij(iSpecies) = InvDij(iSpecies) + &
             !      NDensityS_1d(iAlt, jSpecies)/TempDij
 
                InvDij(iSpecies) = InvDij(iSpecies) + &
                   denscale*NDensityS_1d(iAlt, jSpecies)/ &
-                 ( TempDij/(1.0 - mscale) + EddyCoef_1d(iAlt) )
+                 ( TempDij + EddyCoef_1d(iAlt) )
+              else
+               CoefMatrix(iSpecies, jSpecies) = &
+                    kTOverM * denscale * NDensityS_1d(iAlt, jSpecies) / TempDij 
+
+               InvDij(iSpecies) = InvDij(iSpecies) + &
+                  denscale*NDensityS_1d(iAlt, jSpecies)/TempDij 
+              endif
 
            endif
 
 
 
+           EddyDiffCorrection(iSpecies) =    &
+              EddyDiffCorrection(iSpecies) + &
+              CoefMatrix(iSpecies,jSpecies)*EddyCoef_1d(iAlt)*GradLogCon(iAlt,jSpecies)
 
        enddo
 
-         EddyCoefRatio_1d(iAlt,iSpecies) =  &
-             -1.0*Dt*( EddyCoef_1d(iAlt)*InvDij(iSpecies) )*(1.0 - mms/Mass(iSpecies))*Gravity_1d(iAlt)
+            EddyCoefRatio_1d(iAlt,iSpecies) =  &
+                Dt*( EddyCoef_1d(iAlt)*InvDij(iSpecies) )*GradLogCon(iAlt,iSpecies)
 
+           if (UseEddyCorrection) then
+            EddyCoefRatio_1d(iAlt,iSpecies) =  &
+              EddyCoefRatio_1d(iAlt,iSpecies) + EddyDiffCorrection(iSpecies)
+           endif
          
 
 
