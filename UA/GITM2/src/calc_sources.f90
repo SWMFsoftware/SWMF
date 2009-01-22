@@ -36,10 +36,15 @@ subroutine calc_GITM_sources(iBlock)
 
   real :: diffusion_velocity(nLons, nLats, 0:nAlts+1,nspecies)
 
+  real :: ConS(nLons,nLats,-1:nAlts+2,1:nSpecies)
+  real :: LogConS(nLons,nLats,-1:nAlts+2,1:nSpecies)
+  real :: GradLogConS(nLons,nLats,1:nAlts,1:nSpecies)
+
   real :: nVel(1:nAlts, nSpecies)
   real :: NF_Eddy(1:nAlts), NF_NDen(1:nAlts), NF_Temp(1:nAlts)
   real :: NF_NDenS(1:nAlts,1:nSpecies), NF_EddyRatio(1:nAlts,1:nSpecies)
   real :: NF_Gravity(1:nAlts)
+  real :: NF_GradLogCon(1:nAlts,1:nSpecies)
   real :: Prandtl(nLons,nLats,0:nalts+1)
 
 ! Temporary
@@ -315,6 +320,56 @@ if (UseTurbulentCond) then
 
   if (UseNeutralFriction .and. .not.UseNeutralFrictionInSolver) then
 
+     if (UseBoquehoAndBlelly) then
+
+         do iLat = 1, nLats
+           do iLon = 1, nLons
+             do iAlt = 1, nAlts
+               do iSpecies = 1, nSpecies
+
+               GradLogConS(iLon,iLat,iAlt,iSpecies) = &
+                  -1.0*Gravity_GB(iLon,iLat,iAlt,iBlock)*&
+                   (1.0 - MeanMajorMass(iLon,iLat,iAlt)/Mass(iSpecies))
+
+               enddo 
+             enddo 
+           enddo 
+         enddo 
+
+     else
+
+         do iLat = 1, nLats
+           do iLon = 1, nLons
+             do iAlt = -1, nAlts+2
+               do iSpecies = 1, nSpecies
+
+               ConS(iLon,iLat,iAlt,iSpecies) = &
+                  NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)/&
+                   NDensity(iLon,iLat,iAlt,iBlock)
+
+               enddo 
+             enddo 
+           enddo 
+         enddo 
+
+         LogConS(1:nLons,1:nLats,-1:nAlts+2,1:nSpecies) = &
+             alog(ConS(1:nLons,1:nLats,-1:nAlts+2,1:nSpecies) )
+
+         do iSpecies = 1, nSpecies
+           do iAlt = 1, nAlts
+                 GradLogConS(1:nLons,1:nLats,iAlt,  iSpecies) = &
+               (-1.0*LogConS(1:nLons,1:nLats,iAlt+2,iSpecies) + & 
+                 8.0*LogConS(1:nLons,1:nLats,iAlt+1,iSpecies) - &
+                 8.0*LogConS(1:nLons,1:nLats,iAlt-1,iSpecies) + &
+                 1.0*LogConS(1:nLons,1:nLats,iAlt-2,iSpecies) )/&
+                  (12.0*dAlt_GB(1:nLons,1:nLats,iAlt,iBlock))
+           enddo 
+         enddo 
+
+     endif
+
+
+
 !     write(*,*) '==========> Now Entering Neutral Friction Calculation!!'
      do iLat = 1, nLats
         do iLon = 1, nLons
@@ -329,6 +384,8 @@ if (UseTurbulentCond) then
                   nVel(iAlt,iSpecies) = VerticalVelocity(iLon,iLat,iAlt,iSpecies,iBlock)
                   NF_NDenS(iAlt,iSpecies) = NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)
                   NF_EddyRatio(iAlt,iSpecies) = 0.0
+                  NF_GradLogCon(iAlt,iSpecies) = GradLogConS(iLon,iLat,iAlt,iSpecies)
+
              enddo !iSpecies = 1, nSpecies
 
            enddo !iAlt = 1, nAlts
@@ -337,12 +394,13 @@ if (UseTurbulentCond) then
                                       NF_Eddy(1:nAlts), &
                                       NF_NDen(1:nAlts), &
                                       NF_NDenS(1:nAlts,1:nSpecies), &
+                                      NF_GradLogCon(1:nAlts,1:nSpecies), &
                                       NF_EddyRatio(1:nAlts,1:nSpecies), &
                                       NF_Temp(1:nAlts), NF_Gravity(1:nAlts) )
 
            do iAlt = 1, nAlts
               NeutralFriction(iLon, iLat, iAlt, 1:nSpecies) = &
-                   nVel(iAlt,1:nSpecies) - VerticalVelocity(iLon,iLat,iAlt,1:nSpecies,iBlock)
+                   nVel(iAlt,1:nSpecies) - VerticalVelocity(iLon,iLat,iAlt,1:nSpecies,iBlock) 
 !              
 !              EddyCoefRatio(iLon, iLat, iAlt, 1:nSpecies,iBlock) = &
 !                    NF_EddyRatio(iAlt,1:nSpecies)
