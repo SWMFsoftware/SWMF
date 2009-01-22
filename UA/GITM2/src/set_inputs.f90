@@ -368,14 +368,16 @@ subroutine set_inputs
            endif
 
         case ("#VERTICALSOURCES")
-           call read_in_logical(UseEddyInSolver, iError)
            call read_in_logical(UseNeutralFrictionInSolver, iError)
+           call read_in_logical(UseBoquehoAndBlelly, iError)
+           call read_in_logical(UseEddyCorrection, iError)
            call read_in_real(MaximumVerticalVelocity, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #VERTICALSOURCES:'
               write(*,*) '#VERTICALSOURCES'
-              write(*,*) "UseEddyInSolver              (logical)"
               write(*,*) "UseNeutralFrictionInSolver   (logical)"
+              write(*,*) "UseBoquehoAndBlelly   (logical)"
+              write(*,*) "UseEddyCorrection   (logical)"
               write(*,*) "MaximumVerticalVelocity      (real)"
            endif
 
