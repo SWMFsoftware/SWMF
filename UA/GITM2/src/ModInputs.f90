@@ -105,8 +105,10 @@ module ModInputs
   character (len=iCharLen_) :: IonIonizationFilename
   character (len=iCharLen_) :: IonHeatingRateFilename
 
-  logical :: UseEddyInSolver = .false.
   logical :: UseNeutralFrictionInSolver = .false.
+  logical :: UseBoquehoAndBlelly = .false.
+  logical :: UseEddyCorrection = .false.
+  logical :: UseEddyInSolver = .false.
   real    :: MaximumVerticalVelocity = 1000.0
 
   !\
