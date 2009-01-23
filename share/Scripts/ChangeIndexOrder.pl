@@ -1,4 +1,4 @@
-#!/usr/bin/perl -i -s
+#!/usr/bin/perl -i.bak -s
 
 my $Help =($h or $H or $Help or $help);
 my $From =($f or "State_VGB");
@@ -83,8 +83,8 @@ my $tail;
 
 while(<>){
     $_ .= <> while /\&\s*$/; # read continuation lines
-    while(/$From/im){
-	if(/$From[\s\&]*\(/im){
+    while(/\b$From\b/im){
+	if(/\b$From[\s\&]*\(/im){
 	    if(($var,$indexes) =
 	       /(\b$From[\s\&]*\()((([^\(\)]*\([^)]+\))?[^\(\)]*)+)\)/im){
 
@@ -114,7 +114,7 @@ while(<>){
 		print STDERR "Could not match indexes in $ARGV in line $_";
 	    }
 	}
-	s/$From/$To/i;
+	s/\b$From\b/$To/i;
     }
     print;
 }
