@@ -1293,7 +1293,6 @@ contains
 
     use ModGeometry, ONLY: Dx_Blk, Dy_Blk, Dz_Blk, &
          fAx_Blk, fAy_Blk, fAz_Blk, vInv_CB, y_Blk, IsCylindrical
-    use ModImplicit, ONLY: kr
     use ModMain,     ONLY: nI, nJ, nK, nDim, Dt
     use ModNodes,    ONLY: NodeY_NB
 
@@ -1303,6 +1302,8 @@ contains
     integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iCond
     real :: DiffLeft, DiffRight
     real :: Volume, AreaInvDxyz_FD(1:nI+1,1:nJ+1,1:nK+1,nDim)
+
+    integer, parameter :: kr(3,3) = reshape( (/1,0,0,0,1,0,0,0,1/), (/3,3/) )
     !--------------------------------------------------------------------------
 
     Jacobian_VVCI(:,:,:,:,:,:) = 0.0
