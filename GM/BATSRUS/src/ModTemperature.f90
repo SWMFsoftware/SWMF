@@ -77,10 +77,16 @@ module ModTemperature
 
   ! variables for the accuracy of the conjugate gradient
   character(len=3) :: TypeStopCriterion = 'rel'
-  real :: MaxErrorResidual = 1e-5
+  real :: MaxErrorResidual = 1e-8
 
   ! Right-hand side of non-linear coupled system of temperature equations
   real, allocatable :: Source_VCB(:,:,:,:,:)
+
+  character(len=20) :: TypePreconditioner = 'mbilu'
+
+  ! Heptadiagonal mbilu preconditioner
+  integer, parameter:: nStencil = 7
+  real, allocatable :: Prec_VVCIB(:,:,:,:,:,:,:)
 
   ! Store block Jacobi preconditioner
   real, allocatable :: JacPrec_VVCB(:,:,:,:,:,:)
@@ -104,6 +110,13 @@ contains
        call read_var('UseTemperatureDiffusion', UseTemperatureDiffusion)
        if(UseTemperatureDiffusion)then
           call read_var('UseTemperatureVariable', UseTemperatureVariable)
+          call read_var('TypePreconditioner', TypePreconditioner)
+          select case(TypePreconditioner)
+          case('blockjacobi','mbilu')
+          case default
+             call stop_mpi(NameSub//': unknown TypePreconditioner='&
+                  //TypePreconditioner)
+          end select
           call read_var('TypeStopCriterion', TypeStopCriterion)
           call read_var('MaxErrorResidual', MaxErrorResidual)
        end if
@@ -193,7 +206,6 @@ contains
             SpecificHeat_VCB(nTemperature,nI,nJ,nK,nBlk), &
             TemperatureOld_VCB(nTemperature,nI,nJ,nK,nBlk), &
             Temperature_VGB(nTemperature,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk), &
-            JacPrec_VVCB(nTemperature,nTemperature,nI,nJ,nK,nBLK), &
             Source_VCB(nTemperature,nI,nJ,nK,nBlk) )
 
        if(nCond > 0) &
@@ -203,6 +215,14 @@ contains
 
        if(nTemperature > 1) &
             allocate(RelaxationCoef_VCB(2:nTemperature,nI,nJ,nK,nBlk))
+
+       select case(TypePreconditioner)
+       case('blockjacobi')
+          allocate(JacPrec_VVCB(nTemperature,nTemperature,nI,nJ,nK,nBLK))
+       case('mbilu')
+          allocate(Prec_VVCIB(nTemperature,nTemperature,nI,nJ,nK,nStencil,nBlk))
+       end select
+
     end if
 
     ! Select which temperature variables involve "heat conduction"
@@ -213,22 +233,17 @@ contains
 
   !============================================================================
 
-  subroutine set_frozen_coefficients
+  subroutine set_temperature
 
-    use ModAdvance,  ONLY: State_VGB
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
-    use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBlk
-    use ModPhysics,  ONLY: Si2No_V, UnitX_, UnitEnergyDens_, &
-         UnitTemperature_, cRadiationNo, Clight
-    use ModProcMH,   ONLY: iProc
-    use ModUser,     ONLY: user_material_properties
+    use ModAdvance, ONLY: State_VGB
+    use ModMain,    ONLY: nI, nJ, nK, nBlock, unusedBlk
+    use ModPhysics, ONLY: cRadiationNo, Si2No_V, UnitTemperature_
+    use ModUser,    ONLY: user_material_properties
 
     integer :: i, j, k, iBlock
-    real :: PlanckOpacitySi, RosselandMeanOpacitySi
-    real :: PlanckOpacity, RosselandMeanOpacity
-    real :: CvSi, Cv, TeSi, Te, Trad, DiffRad
+    real :: Te, TeSi, Trad
 
-    character(len=*), parameter:: NameSub = 'set_frozen_coefficients'
+    character(len=*), parameter:: NameSub = 'set_temperature'
     !--------------------------------------------------------------------------
 
     ! set the temperature variables
@@ -260,6 +275,28 @@ contains
           TemperatureOld_VCB(:,i,j,k,iBlock) = Temperature_VGB(:,i,j,k,iBlock)
        end do; end do; end do
     end do
+
+  end subroutine set_temperature
+
+  !============================================================================
+
+  subroutine set_frozen_coefficients
+
+    use ModAdvance,  ONLY: State_VGB
+    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
+    use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBlk
+    use ModPhysics,  ONLY: Si2No_V, UnitX_, UnitEnergyDens_, &
+         UnitTemperature_, cRadiationNo, Clight
+    use ModProcMH,   ONLY: iProc
+    use ModUser,     ONLY: user_material_properties
+
+    integer :: i, j, k, iBlock
+    real :: PlanckOpacitySi, RosselandMeanOpacitySi
+    real :: PlanckOpacity, RosselandMeanOpacity
+    real :: CvSi, Cv, TeSi, Te, Trad, DiffRad
+
+    character(len=*), parameter:: NameSub = 'set_frozen_coefficients'
+    !--------------------------------------------------------------------------
 
     if(UseRadFluxLimiter)then
        ! The radiation flux limiters use the gradient of the
@@ -457,6 +494,8 @@ contains
     ! prevent doing useless updates
     if(Dt == 0.0)return
 
+    call set_temperature
+
     call set_frozen_coefficients
 
     do iBlock = 1, nBlock
@@ -477,11 +516,21 @@ contains
     end do
 
     ! do a preconditioned conjugate gradient
-    call get_jacobi_preconditioner(nTemperature)
 
-    call cg(heat_conduction, nTemperature, Source_VCB, Temperature_VGB, &
-         .true., MaxErrorResidual, TypeStopCriterion, &
-         Iter, jacobi_preconditioner)
+    select case(TypePreconditioner)
+    case('blockjacobi')
+       call get_jacobi_preconditioner(nTemperature)
+
+       call cg(heat_conduction, nTemperature, Source_VCB, Temperature_VGB, &
+            .true., MaxErrorResidual, TypeStopCriterion, &
+            Iter, jacobi_preconditioner)
+    case('mbilu')
+       call get_mbilu_preconditioner(nTemperature)
+
+       call cg(heat_conduction, nTemperature, Source_VCB, Temperature_VGB, &
+            .true., MaxErrorResidual, TypeStopCriterion, &
+            Iter, mbilu_preconditioner)
+    end select
 
     if(DoTestKrylovMe)write(*,*)NameSub,': Number of iterations =',Iter
 
@@ -743,7 +792,7 @@ contains
          ! Calculate VectorOut = M^{-1} \cdot VectorInwhere the preconditioner
          ! matrix, M^{-1}, should be symmetric positive definite
          integer, intent(in) :: nVar
-         real, intent(inout) :: VectorIn_VCB(nVar,1:nI,1:nJ,1:nK,nBLK)
+         real, intent(in)    :: VectorIn_VCB(nVar,1:nI,1:nJ,1:nK,nBLK)
          real, intent(out)   :: VectorOut_VCB(nVar,1:nI,1:nJ,1:nK,nBLK)
        end subroutine preconditioner
     end interface
@@ -916,7 +965,7 @@ contains
     use ModSize, ONLY: nI, nJ, nK, nBlk
 
     integer, intent(in) :: nVar
-    real, intent(inout) :: VectorIn_VCB(nVar,1:nI,1:nJ,1:nK,nBLK)
+    real, intent(in)    :: VectorIn_VCB(nVar,1:nI,1:nJ,1:nK,nBLK)
     real, intent(out)   :: VectorOut_VCB(nVar,1:nI,1:nJ,1:nK,nBLK)
 
     integer :: iVar, i, j , k, iBlock
@@ -1172,5 +1221,167 @@ contains
     end do
 
   end subroutine set_gray_outer_bcs
+
+  !============================================================================
+
+  subroutine mbilu_preconditioner(nVar, VectorIn_VCB, VectorOut_VCB)
+
+    use ModLinearSolver, ONLY: Uhepta, Lhepta
+    use ModMain, ONLY: nI, nJ, nK, nBlock, nBlk, unusedBlk, nIJK
+
+    integer, intent(in) :: nVar
+    real, intent(in)    :: VectorIn_VCB(nVar,nI,nJ,nK,nBlk)
+    real, intent(out)   :: VectorOut_VCB(nVar,nI,nJ,nK,nBlk)
+
+    integer :: iBlock
+    !--------------------------------------------------------------------------
+
+    do iBlock = 1, nBlock
+       if(unusedBlk(iBlock))CYCLE
+
+       VectorOut_VCB(:,:,:,:,iBlock) = VectorIn_VCB(:,:,:,:,iBlock)
+
+       ! Rhs --> P_L.Rhs, where P_L=U^{-1}.L^{-1}
+       call Lhepta(nIJK, nVar, nI, nI*nJ, &
+            VectorOut_VCB(1,1,1,1,iBlock), &
+            Prec_VVCIB(1,1,1,1,1,1,iBlock), &   ! Main diagonal
+            Prec_VVCIB(1,1,1,1,1,2,iBlock), &   ! -i diagonal
+            Prec_VVCIB(1,1,1,1,1,4,iBlock), &   ! -j
+            Prec_VVCIB(1,1,1,1,1,6,iBlock) )    ! -k
+       call Uhepta(.true., nIJK, nVar, nI, nI*nJ, &
+            VectorOut_VCB(1,1,1,1,iBlock), &
+            Prec_VVCIB(1,1,1,1,1,3,iBlock), &   ! +i diagonal
+            Prec_VVCIB(1,1,1,1,1,5,iBlock), &   ! +j
+            Prec_VVCIB(1,1,1,1,1,7,iBlock) )    ! +k
+    end do
+
+  end subroutine mbilu_preconditioner
+
+  !============================================================================
+
+  subroutine get_mbilu_preconditioner(nVar)
+
+    use ModLinearSolver, ONLY: prehepta
+    use ModMain, ONLY: nI, nJ, nK, nIJK, nBlock, unusedBlk
+
+    integer, intent(in) :: nVar
+
+    integer :: iBlock
+    !--------------------------------------------------------------------------
+    
+    do iBlock = 1, nBlock
+       if(unusedBlk(iBlock))CYCLE
+
+       call get_jacobian(iBlock, nVar, Prec_VVCIB(:,:,:,:,:,:,iBlock))
+
+       ! Preconditioning: Jacobian --> LU
+       call prehepta(nIJK, nVar, nI, nI*nJ, 0.0, &
+            Prec_VVCIB(1,1,1,1,1,1,iBlock), &
+            Prec_VVCIB(1,1,1,1,1,2,iBlock), &
+            Prec_VVCIB(1,1,1,1,1,3,iBlock), &
+            Prec_VVCIB(1,1,1,1,1,4,iBlock), &
+            Prec_VVCIB(1,1,1,1,1,5,iBlock), &
+            Prec_VVCIB(1,1,1,1,1,6,iBlock), &
+            Prec_VVCIB(1,1,1,1,1,7,iBlock) )
+    end do
+
+  end subroutine get_mbilu_preconditioner
+
+  !============================================================================
+
+  subroutine get_jacobian(iBlock, nVar, Jacobian_VVCI)
+
+    use ModGeometry, ONLY: Dx_Blk, Dy_Blk, Dz_Blk, &
+         fAx_Blk, fAy_Blk, fAz_Blk, vInv_CB, y_Blk, IsCylindrical
+    use ModImplicit, ONLY: kr
+    use ModMain,     ONLY: nI, nJ, nK, nDim, Dt
+    use ModNodes,    ONLY: NodeY_NB
+
+    integer, intent(in) :: iBlock, nVar
+    real, intent(out) :: Jacobian_VVCI(nVar,nVar,nI,nJ,nK,nstencil)
+
+    integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iCond
+    real :: DiffLeft, DiffRight
+    real :: Volume, AreaInvDxyz_FD(1:nI+1,1:nJ+1,1:nK+1,nDim)
+    !--------------------------------------------------------------------------
+
+    Jacobian_VVCI(:,:,:,:,:,:) = 0.0
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(IsCylindrical)then
+          ! Multiply volume with radius (=Y) at cell center
+          Volume = abs(y_Blk(i,j,k,iBlock))/vInv_CB(i,j,k,iBlock)
+       else
+          Volume = 1.0/vInv_CB(i,j,k,iBlock)
+       end if
+
+       ! specific heat
+       do iVar = 1, nVar
+          Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
+               SpecificHeat_VCB(iVar,i,j,k,iBlock)*Volume/Dt
+       end do
+
+       if(nVar == 1)CYCLE
+
+       ! energy exchange
+       Jacobian_VVCI(Te_,Te_,i,j,k,1) = Jacobian_VVCI(Te_,Te_,i,j,k,1) &
+            + Volume*sum(RelaxationCoef_VCB(2:nVar,i,j,k,iBlock))
+       do iVar = 2, nVar
+          Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
+               Jacobian_VVCI(iVar,iVar,i,j,k,1) &
+               + Volume*RelaxationCoef_VCB(iVar,i,j,k,iBlock)
+       end do
+       Jacobian_VVCI(Te_,2:nVar,i,j,k,1) = &
+            -Volume*RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)
+       Jacobian_VVCI(2:nVar,Te_,i,j,k,1) = Jacobian_VVCI(Te_,2:nVar,i,j,k,1)
+    end do; end do; end do
+
+    ! Heat conduction and diffusion contribution
+    if(IsCylindrical)then
+       AreaInvDxyz_FD(1:nI+1,1:nJ,1:nK,1) = fAx_Blk(iBlock)/Dx_Blk(iBlock) &
+            *abs(y_Blk(1:nI+1,1:nJ,1:nK,iBlock))
+       AreaInvDxyz_FD(1:nI,1:nJ+1,1:nK,2) = fAy_Blk(iBlock)/Dy_Blk(iBlock) &
+            *abs(NodeY_NB(1:nI,1:nJ+1,1:nK,iBlock))
+       AreaInvDxyz_FD(1:nI,1:nJ,1:nK+1,3) = 0.0
+    else
+       AreaInvDxyz_FD(1:nI+1,1:nJ,  1:nK,  1) = fAx_Blk(iBlock)/Dx_Blk(iBlock)
+       AreaInvDxyz_FD(1:nI,  1:nJ+1,1:nK,  2) = fAy_Blk(iBlock)/Dy_Blk(iBlock)
+       AreaInvDxyz_FD(1:nI,  1:nJ,  1:nK+1,3) = fAz_Blk(iBlock)/Dz_Blk(iBlock)
+    end if
+
+    do iDim = 1, nDim
+       Di = kr(iDim,1)
+       Dj = kr(iDim,2)
+       Dk = kr(iDim,3)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          do iCond = 1, nCond
+             iVar = iCond_I(iCond)
+             DiffLeft  = AreaInvDxyz_FD(i,j,k,iDim)*0.5*( &
+                  + HeatConductionCoef_IGB(iCond,i-Di,j-Dj,k-Dk,iBlock) &
+                  + HeatConductionCoef_IGB(iCond,i,j,k,iBlock) )
+             DiffRight = AreaInvDxyz_FD(i+Di,j+Dj,k+Dk,iDim)*0.5*( &
+                  + HeatConductionCoef_IGB(iCond,i,j,k,iBlock) &
+                  + HeatConductionCoef_IGB(iCond,i+Di,j+Dj,k+Dk,iBlock) )
+
+             ! ignore radiative flux at the boundaries of the AMR blocks
+             if(iDim==1.and.i==1 .or. iDim==2.and.j==1 &
+                  .or. iDim==3.and.k==1) DiffLeft = 0.0
+             if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ &
+                  .or. iDim==3.and.k==nK) DiffRight = 0.0 
+
+             Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
+                  Jacobian_VVCI(iVar,iVar,i,j,k,1) &
+                  + DiffLeft  + DiffRight
+             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) = &
+                  Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) &
+                  - DiffLeft
+             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) = &
+                  Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) &
+                  - DiffRight
+          end do
+       end do; end do; end do
+    end do
+
+  end subroutine get_jacobian
 
 end module ModTemperature
