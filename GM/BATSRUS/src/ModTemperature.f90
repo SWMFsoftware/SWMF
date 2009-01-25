@@ -327,7 +327,6 @@ contains
           PlanckOpacity = PlanckOpacitySi/Si2No_V(UnitX_)
           Cv = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
           Te = TeSi*Si2No_V(UnitTemperature_)
-          call get_radiation_diffusion_coef
 
           if(UseTemperatureVariable)then
              SpecificHeat_VCB(Te_,i,j,k,iBlock) = Cv
@@ -336,12 +335,18 @@ contains
              SpecificHeat_VCB(Trad_,i,j,k,iBlock) = 4.0*cRadiationNo*Trad**3
              RelaxationCoef_VCB(Trad_,i,j,k,iBlock) = Clight*PlanckOpacity &
                   *cRadiationNo*(Te+Trad)*(Te**2+Trad**2)
+
+             call get_radiation_diffusion_coef
+
              HeatConductionCoef_IGB(1,i,j,k,iBlock) = &
                   DiffRad*4.0*cRadiationNo*Trad**3
           else
              SpecificHeat_VCB(aTe4_,i,j,k,iBlock) = Cv/(4.0*cRadiationNo*Te**3)
              SpecificHeat_VCB(aTrad4_,i,j,k,iBlock) = 1.0
              RelaxationCoef_VCB(aTrad4_,i,j,k,iBlock) = Clight*PlanckOpacity
+
+             call get_radiation_diffusion_coef
+
              HeatConductionCoef_IGB(1,i,j,k,iBlock) = DiffRad
           end if
 
@@ -368,9 +373,6 @@ contains
       if(UseRadFluxLimiter)then
          if(UseTemperatureVariable)then
             call calc_cell_gradient(Trad_, Grad_D)
-            !\
-            ! This seems to be an evident bug: TRad is not calculated at the time
-            !/
             Grad2ByErad2 = 16.0*sum(Grad_D**2)/Trad**2
          else
             call calc_cell_gradient(aTrad4_, Grad_D)
