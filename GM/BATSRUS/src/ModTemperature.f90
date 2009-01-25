@@ -368,6 +368,9 @@ contains
       if(UseRadFluxLimiter)then
          if(UseTemperatureVariable)then
             call calc_cell_gradient(Trad_, Grad_D)
+            !\
+            ! This seems to be an evident bug: TRad is not calculated at the time
+            !/
             Grad2ByErad2 = 16.0*sum(Grad_D**2)/Trad**2
          else
             call calc_cell_gradient(aTrad4_, Grad_D)
@@ -902,6 +905,11 @@ contains
           Solution_VGB(:,1:nI,1:nJ,1:nK,iBlock) = &
                Solution_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
                + P_VGB(:,1:nI,1:nJ,1:nK,iBlock)/pDotADotP
+          if(any(Solution_VGB(:,1:nI,1:nJ,1:nK,iBlock)<0.0))then
+             write(*,*)Solution_VGB(:,1:nI,1:nJ,1:nK,iBlock)
+             write(*,*)'Block #=',iBlock
+             call stop_mpi('Negative Temperature')
+          end if
        end do
 
        Iter = Iter + 1
