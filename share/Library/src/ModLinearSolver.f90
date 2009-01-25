@@ -25,6 +25,7 @@ module ModLinearSolver
   !PUBLIC MEMBER FUNCTIONS:
   public :: gmres           ! GMRES iterative solver
   public :: bicgstab        ! BiCGSTAB iterative solver
+  public :: cg              ! CG iterative solver for symmetric positive matrix
   public :: prehepta        ! LU preconditioner for up to hepta block-diagonal 
   public :: Uhepta          ! multiply with upper block triangular matrix
   public :: Lhepta          ! multiply with lower block triangular matrix
@@ -160,6 +161,7 @@ contains
           endif
           Tol = ro
           Iter = its 
+          deallocate(Krylov_II, hh, c, s, rs)
           RETURN
        end if
 
@@ -174,7 +176,8 @@ contains
                 Tol  = ro
                 Iter = its
                 if(DoTest) print *,'GMRES: nothing to do. info = ',info
-                return
+                deallocate(Krylov_II, hh, c, s, rs)
+                RETURN
              end if
           else
              Tol1=Tol*ro
@@ -280,6 +283,7 @@ contains
 
     ! Deallocate arrays that used to be automatic
     deallocate(Krylov_II, hh, c, s, rs)
+
   end subroutine gmres
   !=========================================================================
   subroutine bicgstab(matvec,rhs,qx,nonzero,n,tol,typestop,iter,info,&
@@ -474,8 +478,8 @@ contains
        iter = nmv
        info = 3
        if(DoTest) print *,'BiCGSTAB: nothing to do. info = ',info
-       call deallocate_bicgstab
-       return
+       deallocate(bicg_r, bicg_u, bicg_r1, bicg_u1)
+       RETURN
     end if
 
     do while (GoOn)
@@ -490,8 +494,8 @@ contains
 
        if (abs(rho0)<assumedzero**2) then
           info = 1
-          call deallocate_bicgstab
-          return
+          deallocate(bicg_r, bicg_u, bicg_r1, bicg_u1)
+          RETURN
        endif
        beta = alpha*(rho1/rho0)
        rho0 = rho1
@@ -508,8 +512,8 @@ contains
 
        if (abs(sigma)<assumedzero**2) then
           info = 1
-          call deallocate_bicgstab
-          return
+          deallocate(bicg_r, bicg_u, bicg_r1, bicg_u1)
+          RETURN
        endif
 
        alpha = rho1/sigma
@@ -634,17 +638,134 @@ contains
          >rnrmMax0)) info=-info
 
     iter = nmv
-
-    call deallocate_bicgstab
-
-  contains
-    !==========================================================================
-    subroutine deallocate_bicgstab
-      ! Deallocate arrays that used to be automatic
-      deallocate(bicg_r, bicg_u, bicg_r1, bicg_u1)
-    end subroutine deallocate_bicgstab
+    deallocate(bicg_r, bicg_u, bicg_r1, bicg_u1)
 
   end subroutine bicgstab
+
+  !============================================================================
+
+  subroutine cg(matvec, Rhs_I, Sol_I, IsInit, n, Tol, TypeStop, &
+       nIter, iError, DoTest, iCommIn)
+
+    !Conjugated gradients, works if and only if the matrix A
+    !is definite positive
+
+    implicit none
+
+    ! subroutine for matrix vector multiplication 
+    interface
+       subroutine matvec(a,b,n)
+         ! Calculate b = M.a where M is the definite positive matrix
+         integer, intent(in) :: n
+         real, intent(in) ::  a(n)
+         real, intent(out) :: b(n)
+       end subroutine matvec
+    end interface
+
+    integer, intent(in) :: n         !  number of unknowns.
+    real, intent(inout) :: Rhs_I(n)    ! right hand side vector
+    real, intent(inout) :: Sol_I(n)  ! initial guess / solution vector
+    logical, intent(in) :: IsInit    ! true  if Sol contains initial guess
+    real,    intent(inout) :: Tol       ! required / achieved residual
+    integer, intent(out):: iError    ! info about convergence
+    logical, intent(in) :: DoTest
+
+    character (len=3), intent(in) :: TypeStop
+    !      Determine stopping criterion (||.|| denotes the 2-norm):
+    !      typestop='rel'    -- relative stopping crit.:||res|| <= Tol*||res0||
+    !      typestop='abs'    -- absolute stopping crit.: ||res|| <= Tol
+ 
+
+    integer, intent(inout) :: nIter  ! maximum/actual number of iterations
+
+    integer, intent(in), optional :: iCommIn   ! MPI communicator
+
+    ! Local variables
+    integer :: iComm                           ! MPI communicator
+    integer :: MaxIter
+    real :: cTolerance
+    real :: rDotR, pDotADotP , rDotR0, rDotRMax, Alpha, Beta
+
+    ! These arrays used to be automatic 
+    real, dimension(:), allocatable :: Vec_I, aDotVec_I
+    !-----------------------------------------------------------------------
+
+    ! Assign the MPI communicator
+    iComm = MPI_COMM_SELF
+    if(present(iCommIn)) iComm = iCommIn
+
+    ! Allocate the vectors needed for CG
+    allocate(Vec_I(n), aDotVec_I(n))
+
+    MaxIter = nIter
+   
+    ! compute initial residual vector 
+
+    if(IsInit)then
+       call matvec(Sol_I, ADotVec_I, n)
+       Rhs_I = Rhs_I - ADotVec_I
+    else
+       Sol_I = 0.0
+    end if
+
+    Vec_I = 0.0
+
+    rDotR0 = dot_product_mpi(Rhs_I, Rhs_I, iComm)
+
+    if(TypeStop=='abs')then
+       rDotRMax = Tol**2
+    else
+       rDotRMax = Tol**2 * rDotR0
+    end if
+
+    if(DoTest)write(*,*)'CG rDotR0, rDotRMax=', rDotR0, rDotRMax
+
+    rDotR = rDotR0
+
+    ! Solve the problem iteratively
+    do nIter = 1, MaxIter
+
+       if( rDotR <= rDotRMax ) EXIT
+
+       Alpha = 1.0/rDotR
+
+       Vec_I = Vec_I + Alpha * Rhs_I
+      
+       call matvec(Vec_I, aDotVec_I, n)
+      
+       Beta = 1.0/dot_product_mpi(Vec_I, aDotVec_I, iComm)
+
+       Rhs_I = Rhs_I - Beta * aDotVec_I
+       Sol_I = Sol_I + Beta * Vec_I
+
+       rDotR = dot_product_mpi(Rhs_I, Rhs_I, iComm)
+       if(DoTest)write(*,*)'CG nIter, rDotR=',nIter, rDotR
+
+    end do
+
+    ! Deallocate the temporary vectors
+    deallocate(Vec_I, aDotVec_I)
+
+    ! Calculate the achieved tolerance
+    if(TypeStop=='abs')then
+       Tol = sqrt(rDotR)
+    else
+       Tol = sqrt(rDotR/rDotR0)
+    end if
+
+    ! Set the error flag
+    if(rDotR0 < rDotRMax)then
+       nIter  = 0
+       iError = 3
+    elseif(nIter <= MaxIter)then
+       iError = 0 
+    elseif(rDotR < rDotR0)then
+       iError = 2
+    else
+       iError = -2
+    end if
+
+  end subroutine cg
   !============================================================================
   real function dot_product_mpi(a_I, b_I, iComm)
 
@@ -1418,3 +1539,5 @@ contains
   end subroutine update_bound_test
 
 end module ModLinearSolver
+
+
