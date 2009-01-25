@@ -759,10 +759,9 @@ contains
 
     integer, intent(in):: iStage,iBlock
 
-    integer:: i, j, k, iMaterial, iMaterial_I(1)
+    integer:: i, j, k
     real   :: vInv_C(nI,nJ,nK)
-    real   :: PressureSi, EinternalSi, RhoSi
-    real   :: RhoToARatioSi_I(0:nMaterial-1), pPerE_I(0:nMaterial-1)
+    real   :: PressureSi, EinternalSi
 
     character(len=*), parameter :: NameSub = 'user_update_states'
     !------------------------------------------------------------------------
@@ -825,45 +824,9 @@ contains
        EInternalSI = No2Si_V(UnitEnergyDens_)*&
             (inv_gm1*State_VGB(P_,i,j,k,iBlock) + &
             State_VGB(ExtraEInt_,i,j,k,iBlock))
-
-       ! Density, transformed to SI
-       RhoSI = No2Si_V(UnitRho_)*State_VGB(Rho_,i,j,k,iBlock)
-
-       ! Find maximum level set value. 
-       ! Note that for now plastic is now taken as carbon
-       iMaterial_I = maxloc(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock))
-       iMaterial = iMaterial_I(1) - 1
-
-       if( UseMixedCell .and. &
-            maxval(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock)) < &
-            MixLimit * sum(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock)) ) then
-          ! The cell is mixed if none of the material is dominant
-          if(iTablePPerE > 0)then
-             call interpolate_lookup_table(iTablePPerE, RhoSi, &
-                  EinternalSi/RhoSi, pPerE_I, DoExtrapolate = .false.)
-             ! Use a number density weighted average
-             PressureSi = EinternalSi* &
-                  sum(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock)*pPerE_I)/ &
-                  sum(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock))
-          else
-             ! Use number densities and calculate EOS for the mixture
-             RhoToARatioSI_I = &
-                  State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) * No2Si_V(UnitRho_)
-             call eos(RhoToARatioSI_I, ETotalIn=EInternalSI, &
-                  PTotalOut=PressureSI) 
-          end if
-       else
-          ! Get pressure from EOS
-          if(iTablePPerE > 0)then
-             call interpolate_lookup_table(iTablePPerE, RhoSi, &
-                  EinternalSi/RhoSi, pPerE_I, DoExtrapolate = .false.)
-             PressureSi = pPerE_I(iMaterial)*EinternalSi
-          else
-             call eos(iMaterial, Rho=RhoSI,ETotalIn=EInternalSI, &
-                  pTotalOut=PressureSI)
-          end if
-       end if
-
+       call user_material_properties(State_VGB(:,i,j,k,iBlock),&
+            EInternalSiIn=EInternalSI,PressureSiOut=PressureSI)
+      
        ! Set pressure and ExtraEInt = Total internal energy - P/(gamma -1)
        State_VGB(P_,i,j,k,iBlock) = PressureSI*Si2No_V(UnitP_)
        State_VGB(ExtraEInt_,i,j,k,iBlock) = Si2No_V(UnitEnergyDens_)*&
@@ -1101,8 +1064,8 @@ contains
   !===========================================================================
 
   subroutine user_material_properties(State_V, EinternalSiIn, &
-       TeSiOut, AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut, &
-       CvSiOut, PressureSiOut)
+       TeIn, EinternalSiOut, TeSiOut, PressureSiOut, CvSiOut, &
+       AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut)
 
     ! The State_V vector is in normalized units, output is in SI units
 
@@ -1113,6 +1076,8 @@ contains
 
     real, intent(in) :: State_V(nVar)
     real, optional, intent(in)  :: EinternalSiIn             ! [J/m^3]
+    real, optional, intent(in)  :: TeIn                      ! [K]
+    real, optional, intent(out) :: EinternalSiOut            ! [J/m^3]
     real, optional, intent(out) :: TeSiOut                   ! [K]
     real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
     real, optional, intent(out) :: RosselandMeanOpacitySiOut ! [1/m]
@@ -1125,20 +1090,46 @@ contains
     real    :: pSi, RhoSi, TeSi, CvSi, pPerE_I(0:nMaterial-1)
     real    :: Value_V(3*nMaterial), Opacity_V(2*nMaterial)
     integer :: iMaterial, iMaterial_I(1)
+    real   :: RhoToARatioSi_I(0:nMaterial-1)
     logical :: IsError
     !-------------------------------------------------------------------------
+    ! Density, transformed to SI
+    RhoSI = No2Si_V(UnitRho_)*State_V(Rho_)
 
+    ! Find maximum level set value. 
+    
     iMaterial_I = maxloc(State_V(LevelXe_:LevelPl_))
-    iMaterial   = iMaterial_I(1) - 1
+    iMaterial = iMaterial_I(1) - 1
 
-    RhoSi = State_V(Rho_)*No2Si_V(UnitRho_)
     if(present(EinternalSiIn))then
-       if(iTablePPerE > 0)then
-          call interpolate_lookup_table(iTablePPerE, RhoSi, &
-               EinternalSiIn/RhoSi, pPerE_I, DoExtrapolate = .false.)
-          pSi = pPerE_I(iMaterial)*EinternalSiIn
+       if( UseMixedCell .and. &
+            maxval(State_V(LevelXe_:LevelPl_)) < &
+            MixLimit * sum(State_V(LevelXe_:LevelPl_)) ) then
+          ! The cell is mixed if none of the material is dominant
+          if(iTablePPerE > 0)then
+             call interpolate_lookup_table(iTablePPerE, RhoSi, &
+                  EinternalSiIn/RhoSi, pPerE_I, DoExtrapolate = .false.)
+             ! Use a number density weighted average
+             pSi = EinternalSiIn* &
+                  sum(State_V(LevelXe_:LevelPl_)*pPerE_I)/ &
+                  sum(State_V(LevelXe_:LevelPl_))
+          else
+             ! Use number densities and calculate EOS for the mixture
+             RhoToARatioSI_I = &
+                  State_V(LevelXe_:LevelPl_) * No2Si_V(UnitRho_)
+             call eos(RhoToARatioSI_I, ETotalIn=EInternalSiIn, &
+                  PTotalOut=pSi,TeOut=TeSi, CvTotalOut=CvSiOut) 
+          end if
        else
-          call eos(iMaterial, RhoSi, ETotalIn=EinternalSiIn, PTotalOut=pSi)
+          ! Get pressure from EOS
+          if(iTablePPerE > 0)then
+             call interpolate_lookup_table(iTablePPerE, RhoSi, &
+                  EinternalSiIn/RhoSi, pPerE_I, DoExtrapolate = .false.)
+             pSi = pPerE_I(iMaterial)*EinternalSiIn
+          else
+             call eos(iMaterial, Rho=RhoSI,ETotalIn=EInternalSiIn, &
+                  pTotalOut=pSi,TeOut=TeSi, CvTotalOut=CvSiOut)
+          end if
        end if
     else
        pSi = State_V(p_)*No2Si_V(UnitP_)
