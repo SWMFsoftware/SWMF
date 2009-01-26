@@ -91,6 +91,8 @@ module ModTemperature
   ! Store block Jacobi preconditioner
   real, allocatable :: JacPrec_VVCB(:,:,:,:,:,:)
 
+  !To switch the boundary condition at the outer boundary:
+  logical :: IsFirstCgIteration
 contains
 
   !============================================================================
@@ -307,7 +309,7 @@ contains
        call message_pass_cells8(.true., .true., .false., nTemperature, &
             Temperature_VGB)
 
-       call set_gray_outer_bcs(nTemperature, Temperature_VGB)
+       call set_gray_outer_bcs(nTemperature, Temperature_VGB,'float')
     end if
 
     ! fix the specific heat, heat conduction/diffusion,
@@ -361,7 +363,7 @@ contains
 
     ! The ghost cell filling of the heat conduction coefficients
     ! is not really needed since the temperature boundary conditions are float
-    call set_gray_outer_bcs(nCond, HeatConductionCoef_IGB)
+    call set_gray_outer_bcs(nCond, HeatConductionCoef_IGB,'float')
 
   contains
 
@@ -522,6 +524,9 @@ contains
 
     ! do a preconditioned conjugate gradient
 
+    !To switch the boundary condition at zero iteration
+    IsFirstCgIteration = .true. 
+
     Error = MaxErrorResidual
 
     select case(TypePreconditioner)
@@ -544,10 +549,34 @@ contains
 
     do iBlock = 1, nBlock
        if(unusedBlk(iBlock)) CYCLE
-
+       if(nTemperature==2)call check_temperature
        call update_conservative_energy(iBlock)
     end do
+  contains
+    subroutine check_temperature
+      real::AveragedTemperature,SpecificHeatTotal,DiffT
+      real,parameter::TemperatureJumpAllowed = 0.9
+      do k = 1,nK; do j = 1,nJ; do i = 1,nI
+         SpecificHeatTotal = sum(SpecificHeat_VCB(:,i,j,k,iBlock))
+         AveragedTemperature = sum(Temperature_VGB(:,i,j,k,iBlock)*&
+                                   SpecificHeat_VCB(:,i,j,k,iBlock))&
+                                   /SpecificHeatTotal
+                      
+         if(AveragedTemperature<=0.0)call stop_mpi('NEGATIVE AVERAGED TEMPERATURE')
 
+         DiffT = Temperature_VGB(Te_,i,j,k,iBlock) - Temperature_VGB(TRad_,i,j,k,iBlock)
+         DiffT = min(max(DiffT,-AveragedTemperature*SpecificHeatTotal/&
+              SpecificHeat_VCB(TRad_,i,j,k,iBlock)*TemperatureJumpAllowed),&
+              AveragedTemperature*SpecificHeatTotal/&
+              SpecificHeat_VCB(Te_,i,j,k,iBlock)*TemperatureJumpAllowed)
+         Temperature_VGB(Te_,i,j,k,iBlock) = AveragedTemperature + &
+              DiffT*&
+              SpecificHeat_VCB(TRad_,i,j,k,iBlock)/SpecificHeatTotal
+         Temperature_VGB(TRad_,i,j,k,iBlock) = AveragedTemperature - &
+              DiffT*&
+              SpecificHeat_VCB(Te_,i,j,k,iBlock)/SpecificHeatTotal
+      end do; end do; end do
+    end subroutine check_temperature
   end subroutine advance_temperature
 
   !============================================================================
@@ -648,9 +677,12 @@ contains
 
     ! DoOneLayer, DoFacesOnly, No UseMonoteRestrict
     call message_pass_cells8(.true., .true., .false., nVar, Temp_VGB)
-
-    call set_gray_outer_bcs(nVar, Temp_VGB)
-
+    if(IsFirstCgIteration)then
+       call set_gray_outer_bcs(nVar, Temp_VGB,'float')
+       IsFirstCgIteration = .false.
+    else
+       call set_gray_outer_bcs(nVar, Temp_VGB,'zero')
+    end if
     do iBlock = 1, nBlock
        if(unusedBlk(iBlock))CYCLE
 
@@ -1207,39 +1239,49 @@ contains
 
   !============================================================================
 
-  subroutine set_gray_outer_bcs(nVar, Var_VGB)
+  subroutine set_gray_outer_bcs(nVar, Var_VGB,TypeBc)
 
     use ModMain, ONLY: nI, nJ, nK, nBlk, nBlock, UnusedBlk
     use ModParallel, ONLY: NOBLK, NeiLev
 
     integer, intent(in):: nVar
     real, intent(inout):: Var_VGB(nVar,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk)
-    
+    character(LEN=*),intent(in)::TypeBc
     integer :: iBlock
     !--------------------------------------------------------------------------
 
     do iBlock = 1, nBlock
        if(UnusedBlk(iBlock))CYCLE
-
+       select case(TypeBc)
+       case('float')
        ! set floating outer boundary !!! shear to be added !!!
-       if(NeiLev(1,iBlock) == NOBLK) Var_VGB(:,0   ,:,:,iBlock) &
-            =                        Var_VGB(:,1   ,:,:,iBlock)
-       if(NeiLev(2,iBlock) == NOBLK) Var_VGB(:,nI+1,:,:,iBlock) &
-            =                        Var_VGB(:,nI  ,:,:,iBlock)
-       if(NeiLev(3,iBlock) == NOBLK) Var_VGB(:,:,0   ,:,iBlock) &
-            =                        Var_VGB(:,:,1   ,:,iBlock)
-       if(NeiLev(4,iBlock) == NOBLK) Var_VGB(:,:,nJ+1,:,iBlock) &
-            =                        Var_VGB(:,:,nJ  ,:,iBlock)
-       if(NeiLev(5,iBlock) == NOBLK) Var_VGB(:,:,:,0   ,iBlock) &
-            =                        Var_VGB(:,:,:,1   ,iBlock)
-       if(NeiLev(6,iBlock) == NOBLK) Var_VGB(:,:,:,nK+1,iBlock) &
-            =                        Var_VGB(:,:,:,nK  ,iBlock)
+          if(NeiLev(1,iBlock) == NOBLK) Var_VGB(:,0   ,:,:,iBlock)= &
+                                        Var_VGB(:,1   ,:,:,iBlock)
+          if(NeiLev(2,iBlock) == NOBLK) Var_VGB(:,nI+1,:,:,iBlock)= &
+                                        Var_VGB(:,nI  ,:,:,iBlock)
+          if(NeiLev(3,iBlock) == NOBLK) Var_VGB(:,:,0   ,:,iBlock)= &
+                                        Var_VGB(:,:,1   ,:,iBlock)
+          if(NeiLev(4,iBlock) == NOBLK) Var_VGB(:,:,nJ+1,:,iBlock)= &
+                                        Var_VGB(:,:,nJ  ,:,iBlock)
+          if(NeiLev(5,iBlock) == NOBLK) Var_VGB(:,:,:,0   ,iBlock)= &
+                                        Var_VGB(:,:,:,1   ,iBlock)
+          if(NeiLev(6,iBlock) == NOBLK) Var_VGB(:,:,:,nK+1,iBlock)= &
+                                        Var_VGB(:,:,:,nK  ,iBlock)
+       case('zero')
+          if(NeiLev(1,iBlock) == NOBLK) Var_VGB(:,0   ,:,:,iBlock)= 0.0
+          if(NeiLev(2,iBlock) == NOBLK) Var_VGB(:,nI+1,:,:,iBlock)= 0.0
+          if(NeiLev(3,iBlock) == NOBLK) Var_VGB(:,:,0   ,:,iBlock)= 0.0
+          if(NeiLev(4,iBlock) == NOBLK) Var_VGB(:,:,nJ+1,:,iBlock)= 0.0
+          if(NeiLev(5,iBlock) == NOBLK) Var_VGB(:,:,:,0   ,iBlock)= 0.0
+          if(NeiLev(6,iBlock) == NOBLK) Var_VGB(:,:,:,nK+1,iBlock)= 0.0 
+                                
+       case default
+          call stop_mpi('Non-implemented BC')
+       end select
     end do
 
   end subroutine set_gray_outer_bcs
-
-  !============================================================================
-
+  !=====================================================================
   subroutine mbilu_preconditioner(nVar, VectorIn_VCB, VectorOut_VCB)
 
     use ModLinearSolver, ONLY: Uhepta, Lhepta
