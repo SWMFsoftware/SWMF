@@ -1165,8 +1165,20 @@ contains
           if(present(CvSiOut)) CvSiOut =  Value_V(3*iMaterial+1)
        else
           ! The IsError flag avoids stopping for Fermi degenerated state
-          if(TeSi < 0.0) call eos(iMaterial, RhoSi, pTotalIn=pSi, &
-               TeOut=TeSi, CvTotalOut=CvSiOut, ETotalOut = EinternalSiOut)
+          if(TeSi < 0.0) then
+             if( UseMixedCell .and. &
+                  maxval(State_V(LevelXe_:LevelPl_)) < &
+                  MixLimit * sum(State_V(LevelXe_:LevelPl_)) ) then
+                ! The cell is mixed if none of the material is dominant
+                RhoToARatioSI_I = &
+                     State_V(LevelXe_:LevelPl_) * No2Si_V(UnitRho_)
+                call eos(RhoToARatioSI_I, pTotalIn=pSi, &
+                     TeOut=TeSi, CvTotalOut=CvSiOut, ETotalOut = EinternalSiOut)
+             else
+                call eos(iMaterial, RhoSi, pTotalIn=pSi, &
+                     TeOut=TeSi, CvTotalOut=CvSiOut, ETotalOut = EinternalSiOut)
+             end if
+          end if
        end if
     end if
 
