@@ -37,6 +37,7 @@ module ModPlotFile
 
   use ModIoUnit,    ONLY: UnitTmp_
   use ModUtilities, ONLY: lower_case
+  use ModKind,  ONLY: Real4_
 
   implicit none
 
@@ -65,7 +66,7 @@ contains
     character(len=*), optional, intent(in):: TypeFileIn     ! =ascii or binary
     character(len=*), optional, intent(in):: StringHeaderIn ! header line
     integer,          optional, intent(in):: nStepIn        ! number of steps
-    real,             optional, intent(in):: TimeIn         ! simulation time
+    real,             optional, intent(in):: TimeIn         ! simulation time  
     real,             optional, intent(in):: ParamIn_I(:)   ! parameters
     character(len=*), optional, intent(in):: NameVarIn      ! list of names
     logical,          optional, intent(in):: IsCartesianIn  ! Cartesian grid?
@@ -87,7 +88,7 @@ contains
     integer            :: nStep, nDim, nParam, nVar, n1, n2, n3
     real               :: Time, Coord
     logical            :: IsCartesian
-    real, allocatable  :: Param_I(:), Coord_ID(:,:), Var_IV(:,:)
+    real,         allocatable :: Param_I(:), Coord_ID(:,:), Var_IV(:,:)
 
     integer :: n_D(0:MaxDim)
     integer :: i, j, k, i_D(3), iDim, iVar, n, nDimOut, iError
@@ -219,19 +220,19 @@ contains
     case('formatted', 'ascii')
        open(UnitTmp_, file=NameFile, iostat=iError)
        if(iError /= 0)call CON_stop(NameSub // &
-       ' could not open ascii file=' // trim(NameFile))
+            ' could not open ascii file=' // trim(NameFile))
 
        write(UnitTmp_, "(a)")             trim(StringHeader)
        write(UnitTmp_, "(i7,es13.5,3i3)") nStep, Time, nDimOut, nParam, nVar
        write(UnitTmp_, "(3i8)")           n_D(1:nDim)
-       write(UnitTmp_, "(100es13.5)")     Param_I
+       write(UnitTmp_, "(100es13.5)")     Param_I                               
        write(UnitTmp_, "(a)")             trim(NameVar)
 
        ! write out coordinates and variables line by line
        n = 0
        do k = 1, n3; do j = 1, n2; do i = 1, n1
           n = n + 1
-          write(UnitTmp_, "(100es18.10)") Coord_ID(n,:), Var_IV(n, :)
+          write(UnitTmp_, "(100es18.10)") Coord_ID(n,:), Var_IV(n, :) 
        end do; end do; end do
 
     case('unformatted', 'binary')
@@ -249,6 +250,22 @@ contains
        do iVar = 1, nVar
           write(UnitTmp_) Var_IV(:,iVar)
        end do
+    case('real4')
+       open(UnitTmp_, file=NameFile, form='unformatted', iostat=iError)
+       if(iError /= 0)call CON_stop(NameSub // &
+            ' could not open binary file=' // trim(NameFile))
+       write(UnitTmp_) StringHeader
+       write(UnitTmp_) nStep, real(Time, Real4_), nDimOut, nParam, nVar
+       write(UnitTmp_) n_D(1:nDim)
+       write(UnitTmp_) real(Param_I, Real4_)
+       write(UnitTmp_) NameVar
+       write(UnitTmp_) real(Coord_ID, Real4_)
+       ! write out variables 1 by 1 to avoid segmentation fault 
+       ! for very large Var_IV array
+       do iVar = 1, nVar
+          write(UnitTmp_) real(Var_IV(:,iVar), Real4_)
+       end do
+
     case default
        call CON_stop(NameSub // ' unknown TypeFile =' // trim(TypeFile))
     end select
@@ -275,7 +292,7 @@ contains
     character(len=*), optional, intent(in) :: TypeFileIn
     character(len=*), optional, intent(out):: StringHeaderOut
     character(len=*), optional, intent(out):: NameVarOut
-    real,             optional, intent(out):: TimeOut
+    real,             optional, intent(out):: TimeOut  
     integer,          optional, intent(out):: nStepOut
     integer,          optional, intent(out):: nDimOut   ! number of dimensions
     integer,          optional, intent(out):: nParamOut ! number of parameters
@@ -301,8 +318,10 @@ contains
     character(len=500) :: NameVar
     integer            :: nStep, nDim, nParam, nVar, n1, n2, n3, n_D(MaxDim)
     real               :: Time, Coord
+    real(Real4_)       :: Time4
     logical            :: IsCartesian
-    real, allocatable  :: Param_I(:), Coord_ID(:,:), Var_IV(:,:)
+    real(Real4_), allocatable:: Param4_I(:), Coord4_ID(:,:), Var4_IV(:,:)
+    real,         allocatable:: Param_I(:),  Coord_ID(:,:),  Var_IV(:,:)
 
     integer :: i, j, k, iDim, iVar, n, iError
 
@@ -339,7 +358,21 @@ contains
        allocate(Param_I(nParam))
        read(UnitTmp_) Param_I
        read(UnitTmp_) NameVar
+    case('real4')
+       open(UnitTmp_, file=NameFile, status='old', form='unformatted', &
+            iostat=iError)
+       if(iError /= 0) call CON_stop(NameSub // &
+            ' could not open ascii file=' // trim(NameFile))
 
+       read(UnitTmp_) StringHeader
+       read(UnitTmp_) nStep, Time4, nDim, nParam, nVar
+       Time = Time4
+       read(UnitTmp_) n_D(1:abs(nDim))
+       allocate(Param_I(nParam), Param4_I(nParam))
+       read(UnitTmp_) Param4_I
+       Param_I = Param4_I
+       deallocate(Param4_I)
+       read(UnitTmp_) NameVar
     case default
        call CON_stop(NameSub // ' unknown TypeFile =' // trim(TypeFile))
     end select
@@ -357,11 +390,22 @@ contains
           n = n + 1
           read(UnitTmp_, *) Coord_ID(n, :), Var_IV(n, :)
        end do; end do; end do
+
     case('binary', 'unformatted')
        read(UnitTmp_) Coord_ID
        do iVar = 1, nVar
           read(UnitTmp_) Var_IV(:, iVar)
        end do
+
+    case('real4')
+       allocate(Coord4_ID(n1*n2*n3, nDim), Var4_IV(n1*n2*n3, nVar))
+       read(UnitTmp_) Coord4_ID
+       Coord_ID = Coord4_ID
+       do iVar = 1, nVar
+          read(UnitTmp_) Var4_IV(:, iVar)
+       end do
+       Var_IV = Var4_IV
+       deallocate(Coord4_ID, Var4_IV)
     end select
     close(UnitTmp_)
 
@@ -432,12 +476,13 @@ contains
     character(len=*), parameter:: NameVarIn = "x y rho ux uy p gamma rbody"
     real    :: CoordIn_DII(nDimIn, n1In, n2In), VarIn_VII(nVarIn, n1In, n2In)
 
-    ! Do tests with ascii/binary file, Cartesian/non-Cartesian coordinates
-    integer, parameter:: nTest = 4
+    ! Do tests with ascii/binary/real4 files, 
+    ! Cartesian/non-Cartesian coordinates
+    integer, parameter:: nTest = 6
     character(len=6)  :: TypeFileIn_I(nTest) = &
-         (/ 'ascii ', 'binary', 'ascii ', 'binary' /)
+         (/ 'ascii ', 'binary', 'real4 ', 'ascii ', 'binary', 'real4 ' /)
     logical           :: IsCartesianIn_I(nTest) = &
-         (/ .true.,   .true.,   .false.,   .false. /)
+         (/ .true.,   .true., .true.,  .false.,   .false., .false. /)
 
     ! Input and output of tests
     character(len=80)    :: NameFile
@@ -455,6 +500,9 @@ contains
     real                 :: CoordOut_DII(nDimIn, n1In, n2In)
     real                 :: VarOut_VII(nVarIn, n1In, n2In)
 
+    ! Tolerance for errors
+    real :: Eps
+
     ! Indexes
     integer :: i, j, iTest
 
@@ -471,18 +519,25 @@ contains
        if(i <= n1In/2)then
           VarIn_VII(:,i,j) = (/ 1.0, 0.0, 0.0, 1.0 /)
        else
-          VarIn_VII(:,i,j) = (/ 0.1, 0.0, 0.0, 0.125 /)
+          VarIn_VII(:,i,j) = (/ 0.1, 0.0, 0.0, 0.125 /)  
        end if
     end do; end do
 
     ! Test both ascii and binary files
-    do iTest = 1, nTest
+    do iTest = 1, nTest  
 
        write(NameFile, '(a,i1,a)') 'test_plot_file',iTest,'.out'
        write(*,*) NameSub, ' writing file=', trim(NameFile)
 
        TypeFileIn    = TypeFileIn_I(iTest)
        IsCartesianIn = IsCartesianIn_I(iTest)
+
+
+       if(TypeFileIn == 'real4')then
+          Eps = 1e-5
+       else
+          Eps = 1e-12
+       end if
 
        ! Test saving it
        select case(iTest)
@@ -549,7 +604,7 @@ contains
           call CON_stop(NameSub)
        end if
 
-       if(TimeOut /= TimeIn)then
+       if(abs(TimeOut - TimeIn) > Eps)then
           write(*,*)'TimeIn=', TimeIn,' TimeOut=', TimeOut
           call CON_stop(NameSub)
        end if
@@ -569,8 +624,8 @@ contains
           call CON_stop(NameSub)
        end if
 
-       if(any(ParamOut_I(1:nParamIn) /= ParamIn_I))then
-          write(*,*)'ParamIn=', ParamIn_I,' ParamOut=', ParamOut_I
+       if(any(abs(ParamOut_I(1:nParamIn) - ParamIn_I) > Eps))then
+          write(*,*)'ParamIn=', ParamIn_I,' ParamOut=', ParamOut_I(1:nParamIn)
           call CON_stop(NameSub)
        end if
 
@@ -585,26 +640,26 @@ contains
        end if
 
        do j = 1, n2In; do i = 1, n1In
-          if(any(CoordIn_DII(:,i,j) /= CoordOut_DII(:,i,j)))then
+          if(any(abs(CoordIn_DII(:,i,j) - CoordOut_DII(:,i,j)) > Eps))then
              write(*,*)'i,j=', i, j
              write(*,*)'CoordIn =', CoordIn_DII(:,i,j)
              write(*,*)'CoordOut=', CoordOut_DII(:,i,j)
              call CON_stop(NameSub)
           end if
-          if(CoordIn_DII(1,i,j) /= Coord1Out_I(i))then
+          if(abs(CoordIn_DII(1,i,j) - Coord1Out_I(i)) > Eps)then
              write(*,*)'i,j=', i, j
              write(*,*)'CoordIn(1)=', CoordIn_DII(1,i,j)
              write(*,*)'Coord1Out =', Coord1Out_I(i)
              call CON_stop(NameSub)
           end if
-          if(CoordIn_DII(2,i,j) /= Coord2Out_I(j))then
+          if(abs(CoordIn_DII(2,i,j) - Coord2Out_I(j)) > Eps)then
              write(*,*)'i,j=', i, j
              write(*,*)'CoordIn(2)=', CoordIn_DII(2,i,j)
              write(*,*)'Coord2Out =', Coord2Out_I(j)
              call CON_stop(NameSub)
           end if
-             
-          if(any(VarIn_VII(:,i,j) /= VarOut_VII(:,i,j)))then
+
+          if(any(abs(VarIn_VII(:,i,j) - VarOut_VII(:,i,j)) > Eps))then
              write(*,*)'i,j=', i, j
              write(*,*)'VarIn =', VarIn_VII(:,i,j)
              write(*,*)'VarOut=', VarOut_VII(:,i,j)
@@ -612,31 +667,31 @@ contains
           end if
        end do; end do
 
-       if(CoordMinOut_D(1) /= minval(CoordIn_DII(1,:,:)))then
+       if(abs(CoordMinOut_D(1) -  minval(CoordIn_DII(1,:,:))) >Eps)then
           write(*,*)'CoordMinOut_D(1)     =',CoordMinOut_D(1)
           write(*,*)'minval(CoordIn_DII(1)=',minval(CoordIn_DII(1,:,:))
           call CON_stop(NameSub)
        end if
-       if(CoordMinOut_D(2) /= minval(CoordIn_DII(2,:,:)))then
+       if(abs(CoordMinOut_D(2) -  minval(CoordIn_DII(2,:,:))) > Eps)then
           write(*,*)'CoordMinOut_D(2)     =',CoordMinOut_D(2)
           write(*,*)'minval(CoordIn_DII(2)=',minval(CoordIn_DII(2,:,:))
           call CON_stop(NameSub)
        end if
-       if(CoordMaxOut_D(1) /= maxval(CoordIn_DII(1,:,:)))then
+       if(abs(CoordMaxOut_D(1) -  maxval(CoordIn_DII(1,:,:))) > Eps )then
           write(*,*)'CoordMaxOut_D(1)     =',CoordMaxOut_D(1)
           write(*,*)'maxval(CoordIn_DII(1)=',maxval(CoordIn_DII(1,:,:))
           call CON_stop(NameSub)
        end if
-       if(CoordMaxOut_D(2) /= maxval(CoordIn_DII(2,:,:)))then
+       if(abs(CoordMaxOut_D(2) - maxval(CoordIn_DII(2,:,:))) >Eps)then
           write(*,*)'CoordMaxOut_D(2)     =',CoordMaxOut_D(2)
           write(*,*)'maxval(CoordIn_DII(2)=',maxval(CoordIn_DII(2,:,:))
           call CON_stop(NameSub)
        end if
 
     end do
-    
+
     ! Test using defaults
-    NameFile = 'test_plot_file5.out'
+    NameFile = 'test_plot_file7.out'       
     call save_plot_file(NameFile, VarIn_VII=VarIn_VII, CoordIn_DII=CoordIn_DII)
 
     ! Read header info
@@ -656,7 +711,7 @@ contains
        write(*,*) 'nOut_D    =',nOut_D
        call CON_stop(NameSub)
     end if
-    
+
     ! Now that we have the dimensions, we could allocate coordinate and
     ! variable arrays and read them
 
