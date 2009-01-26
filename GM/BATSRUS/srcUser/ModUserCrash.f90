@@ -793,7 +793,7 @@ contains
                + State_VGB(P_,i,j,k,iBlock) / y_BLK(i,j,k,iBlock)
        end do; end do; end do
 
-       if(useGrayDiffusion)then
+       if(UseGrayDiffusion)then
           do k=1,nK; do j=1, nJ; do i=1, nI
              Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
                   + (1./3.)*State_VGB(Eradiation_,i,j,k,iBlock) &
@@ -808,12 +808,14 @@ contains
        end do; end do; end do
 
     end if
-    if(any(StateOld_VCB(ERadiation_,:,:,:,iBlock) < 0.0))&
+    if(UseGrayDiffusion &
+         .and. any(StateOld_VCB(ERadiation_,:,:,:,iBlock) < 0.0)) &
          call stop_mpi('Negative radiation energy before updating states')
 
     call update_states_MHD(iStage,iBlock)
 
-    if(any(State_VGB(ERadiation_,1:nI,1:nJ,1:nK,iBlock) < 0.0))&
+    if(UseGrayDiffusion &
+         .and. any(State_VGB(ERadiation_,1:nI,1:nJ,1:nK,iBlock) < 0.0)) &
          call stop_mpi('Negative radiation energy after updating states')
 
 
