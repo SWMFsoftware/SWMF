@@ -77,12 +77,12 @@ module ModTemperature
 
   ! variables for the accuracy of the conjugate gradient
   character(len=3) :: TypeStopCriterion = 'rel'
-  real :: MaxErrorResidual = 1e-8
+  real :: MaxErrorResidual = 1e-6
 
   ! Right-hand side of non-linear coupled system of temperature equations
   real, allocatable :: Source_VCB(:,:,:,:,:)
 
-  character(len=20) :: TypePreconditioner = 'mbilu'
+  character(len=20) :: TypePreconditioner = 'blockjacobi'
 
   ! Heptadiagonal mbilu preconditioner
   integer, parameter:: nStencil = 7
@@ -487,8 +487,8 @@ contains
     use ModGeometry, ONLY: vInv_CB, y_BLK, IsCylindrical
     use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBLK, Dt
 
-    integer :: i, j, k, iBlock
-    integer :: Iter
+    integer :: i, j, k, iBlock, Iter
+    real :: Error
     logical :: DoTestKrylov, DoTestKrylovMe
 
     character(len=*), parameter :: NameSub = 'advance_temperature'
@@ -522,22 +522,25 @@ contains
 
     ! do a preconditioned conjugate gradient
 
+    Error = MaxErrorResidual
+
     select case(TypePreconditioner)
     case('blockjacobi')
        call get_jacobi_preconditioner(nTemperature)
 
        call cg(heat_conduction, nTemperature, Source_VCB, Temperature_VGB, &
-            .true., MaxErrorResidual, TypeStopCriterion, &
-            Iter, jacobi_preconditioner)
+            .true., Error, TypeStopCriterion, &
+            Iter, DoTestKrylovMe, jacobi_preconditioner)
     case('mbilu')
        call get_mbilu_preconditioner(nTemperature)
 
        call cg(heat_conduction, nTemperature, Source_VCB, Temperature_VGB, &
-            .true., MaxErrorResidual, TypeStopCriterion, &
-            Iter, mbilu_preconditioner)
+            .true., Error, TypeStopCriterion, &
+            Iter, DoTestKrylovMe, mbilu_preconditioner)
     end select
 
-    if(DoTestKrylovMe)write(*,*)NameSub,': Number of iterations =',Iter
+    if(DoTestKrylovMe)write(*,*)NameSub,': Number of iterations, Error =', &
+         Iter, Error
 
     do iBlock = 1, nBlock
        if(unusedBlk(iBlock)) CYCLE
@@ -764,7 +767,7 @@ contains
   !==========================================================================
 
   subroutine cg(matvec, nVar, Residual_VCB, Solution_VGB, IsInit, &
-       Tolerance, TypeStop, Iter, preconditioner)
+       Tolerance, TypeStop, Iter, DoTest, preconditioner)
 
     ! conjugated gradient for symmetric and positive definite matrix A
 
@@ -809,7 +812,7 @@ contains
     real, intent(inout) :: &      ! initial guess / solution vector
          Solution_VGB(nVar,1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,nBLK)
     logical, intent(in) :: IsInit ! true if Solution_VGB contains initial guess
-    real, intent(in) :: Tolerance ! required / achieved residual
+    real, intent(inout) :: Tolerance ! required / achieved residual
 
     character (len=3), intent(in) :: TypeStop
     !      Determine stopping criterion (||.|| denotes the 2-norm):
@@ -817,8 +820,9 @@ contains
     !      typestop='abs'  -- absolute stopping crit.: ||res|| <= Tol
  
     integer, intent(out) :: Iter ! actual number of iterations
+    logical, intent(in) :: DoTest
 
-    real :: rDotR, pDotADotP, rDotR0
+    real :: rDotR, pDotADotP, rDotR0, rDotRMax
 
     real, dimension(:,:,:,:,:), allocatable :: &
          P_VGB, ADotP_VCB, MMinusOneDotR_VCB
@@ -834,19 +838,9 @@ contains
        if(unusedBlk(iBlock))CYCLE
        P_VGB(:,:,:,:,iBlock) = 0.0
     end do
-    do iBlock = 1, nBlock
-       if(unusedBlk(iBlock))CYCLE
-       ADotP_VCB(:,:,:,:,iBlock) = 0.0
-    end do
 
-    if(present(preconditioner))then
+    if(present(preconditioner)) &
        allocate(MMinusOneDotR_VCB(nVar,1:nI,1:nJ,1:nK,nBLK))
-
-       do iBlock = 1, nBlock
-          if(unusedBlk(iBlock))CYCLE
-          MMinusOneDotR_VCB(:,:,:,:,iBlock) = 0.0
-       end do
-    end if
 
     !-------------- compute initial right hand side vector --------------
 
@@ -877,11 +871,21 @@ contains
 
        if(Iter == 0)then
           rDotR0 = rDotR
+
+          if(TypeStop=='abs')then
+             rDotRMax = Tolerance**2
+          else
+             rDotRMax = Tolerance**2 * rDotR0
+          end if
+
+          if(DoTest)write(*,*)'CG rDotR0, rDotRMax=', rDotR0, rDotRMax
+
           if(rDotR0 == 0.0) EXIT
        end if
 
-       if(TypeStop == 'abs' .and. rDotR <= Tolerance       ) EXIT
-       if(TypeStop == 'rel' .and. rDotR <= Tolerance*rDotR0) EXIT
+       if(DoTest)write(*,*)'CG Iter, rDotR = ', Iter, rDotR
+
+       if(rDotR <= rDotRMax) EXIT
 
        do iBlock = 1, nBlock
           if(unusedBlk(iBlock))CYCLE
@@ -911,6 +915,13 @@ contains
 
        Iter = Iter + 1
     end do LOOP
+
+    ! Calculate the achieved tolerance
+    if(TypeStop=='abs')then
+       Tolerance = sqrt(rDotR)
+    else
+       Tolerance = sqrt(rDotR/rDotR0)
+    end if
 
     deallocate(P_VGB, aDotP_VCB)
     if(allocated(MMinusOneDotR_VCB)) deallocate(MMinusOneDotR_VCB)
