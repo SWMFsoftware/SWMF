@@ -746,7 +746,7 @@ contains
     use ModSize
     use ModAdvance, ONLY: State_VGB, Rho_, RhoUy_, p_, ExtraEInt_, &
          LevelXe_, LevelPl_, Flux_VX, Flux_VY, Flux_VZ, Source_VC, &
-         VdtFace_Y, VdtFace_Z, UseNonConservative, Eradiation_
+         VdtFace_Y, VdtFace_Z, UseNonConservative, Eradiation_,StateOld_VCB
     use ModGeometry,ONLY: x_BLK, y_BLK, z_BLK, vInv_CB, IsCylindrical
     use ModNodes,   ONLY: NodeY_NB
     use ModPhysics
@@ -808,9 +808,15 @@ contains
        end do; end do; end do
 
     end if
+    if(any(StateOld_VCB(ERadiation_,:,:,:,iBlock) < 0.0))&
+         call stop_mpi('Negative radiation energy before updating states')
 
     call update_states_MHD(iStage,iBlock)
-    
+
+    if(any(State_VGB(ERadiation_,1:nI,1:nJ,1:nK,iBlock) < 0.0))&
+         call stop_mpi('Negative radiation energy after updating states')
+
+
     ! Undo change of volume (fluxes and sources are not used any more)
     if(IsCylindrical) vInv_CB(:,:,:,iBlock) = vInv_C
 
