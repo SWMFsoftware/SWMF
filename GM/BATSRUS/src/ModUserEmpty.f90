@@ -240,7 +240,7 @@ contains
   !=====================================================================
 
   subroutine user_material_properties(State_V, EinternalSiIn, &
-       TeIn, EinternalSiOut, TeSiOut, PressureSiOut, CvSiOut, &
+       TeSiIn, EinternalSiOut, TeSiOut, PressureSiOut, CvSiOut, &
        AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut) 
 
 
@@ -250,7 +250,7 @@ contains
 
     real, intent(in) :: State_V(nVar)
     real, optional, intent(in)  :: EinternalSiIn             ! [J/m^3]
-    real, optional, intent(in)  :: TeIn                      ! [K]
+    real, optional, intent(in)  :: TeSiIn                      ! [K]
     real, optional, intent(out) :: EinternalSiOut            ! [J/m^3]
     real, optional, intent(out) :: TeSiOut                   ! [K]
     real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]

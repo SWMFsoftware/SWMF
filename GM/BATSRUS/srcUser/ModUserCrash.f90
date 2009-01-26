@@ -1064,7 +1064,7 @@ contains
   !===========================================================================
 
   subroutine user_material_properties(State_V, EinternalSiIn, &
-       TeIn, EinternalSiOut, TeSiOut, PressureSiOut, CvSiOut, &
+       TeSiIn, EinternalSiOut, TeSiOut, PressureSiOut, CvSiOut, &
        AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut)
 
     ! The State_V vector is in normalized units, output is in SI units
@@ -1076,7 +1076,7 @@ contains
 
     real, intent(in) :: State_V(nVar)
     real, optional, intent(in)  :: EinternalSiIn             ! [J/m^3]
-    real, optional, intent(in)  :: TeIn                      ! [K]
+    real, optional, intent(in)  :: TeSiIn                    ! [K]
     real, optional, intent(out) :: EinternalSiOut            ! [J/m^3]
     real, optional, intent(out) :: TeSiOut                   ! [K]
     real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
@@ -1087,7 +1087,7 @@ contains
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
 
-    real    :: pSi, RhoSi, TeSi, CvSi, pPerE_I(0:nMaterial-1)
+    real    :: pSi, RhoSi, TeSi, pPerE_I(0:nMaterial-1)
     real    :: Value_V(3*nMaterial), Opacity_V(2*nMaterial)
     integer :: iMaterial, iMaterial_I(1)
     real   :: RhoToARatioSi_I(0:nMaterial-1)
@@ -1100,6 +1100,8 @@ contains
     
     iMaterial_I = maxloc(State_V(LevelXe_:LevelPl_))
     iMaterial = iMaterial_I(1) - 1
+
+    TeSi = -7.70
 
     if(present(EinternalSiIn))then
        if( UseMixedCell .and. &
@@ -1131,7 +1133,22 @@ contains
                   pTotalOut=pSi,TeOut=TeSi, CvTotalOut=CvSiOut)
           end if
        end if
-    else
+    elseif(present(TeSiIn))then
+       TeSi = TeSiIn
+        if( UseMixedCell .and. &
+            maxval(State_V(LevelXe_:LevelPl_)) < &
+            MixLimit * sum(State_V(LevelXe_:LevelPl_)) ) then
+           ! The cell is mixed if none of the material is dominant
+           RhoToARatioSI_I = &
+                State_V(LevelXe_:LevelPl_) * No2Si_V(UnitRho_)
+           call eos(RhoToARatioSI_I, TeIn=TeSiIn, &
+                  PTotalOut=pSi,TeOut=TeSi, CvTotalOut=CvSiOut,&
+                  ETotalOut=EinternalSiOut) 
+        else
+            call eos(iMaterial, Rho=RhoSI, TeIn=TeSiIn, ETotalOut=EInternalSiOut, &
+                  pTotalOut=pSi, CvTotalOut=CvSiOut)
+        end if
+     else
        pSi = State_V(p_)*No2Si_V(UnitP_)
     end if
 
@@ -1145,15 +1162,15 @@ contains
                Value_V, DoExtrapolate = .false.)
           
           TeSi = Value_V(3*iMaterial+3)
-          CvSi = Value_V(3*iMaterial+1)
+          if(present(CvSiOut)) CvSiOut =  Value_V(3*iMaterial+1)
        else
           ! The IsError flag avoids stopping for Fermi degenerated state
-          call eos(iMaterial, RhoSi, pTotalIn=pSi, &
-               TeOut=TeSi, CvTotalOut=CvSi, IsError=IsError)
+          if(TeSi < 0.0) call eos(iMaterial, RhoSi, pTotalIn=pSi, &
+               TeOut=TeSi, CvTotalOut=CvSiOut, ETotalOut = EinternalSiOut)
        end if
-       if(present(TeSiOut)) TeSiOut = TeSi
-       if(present(CvSiOut)) CvSiOut = CvSi
     end if
+
+    if(present(TeSiOut)) TeSiOut = TeSi
 
     if(present(AbsorptionOpacitySiOut) &
          .or. present(RosselandMeanOpacitySiOut))then
