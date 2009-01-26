@@ -219,7 +219,8 @@
         nfunc,multix,multiy,fixaspect,$
         plotix,plotiy,funcs,funcs1,funcs2,fmin,fmax,f
 
-      xyouts,5+(plotix*!d.x_size)/multix,8+(plotiy*!d.y_size)/multiy,/DEV,info
+      xyouts,5+(plotix*!d.x_size)/multix, $
+             0.05*!d.y_size+0.95*(plotiy*!d.y_size)/multiy,/DEV,info
       putheader,1,1,0,0,headerline,headline,nx
 
       if doanimate then xinteranimate,frame=iplot,window=!d.window
