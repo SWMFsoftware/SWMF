@@ -1,47 +1,56 @@
 #ECHO
 T
 
+TEST
+krylov
+
 #LOOKUPTABLE
-pPerE(rho,e/rho)	NameTable
-save			NameCommand
-table_pPerE.out		NameFile
-binary			TypeFile
+pPerE(rho,e/rho)        NameTable
+save                    NameCommand
+table_pPerE.out         NameFile
+binary                  TypeFile
 pPerE(rho,e/rho) for Xe, Be, Plastic
 logrho logE/Rho pPerEXe pPerEBe pPerEPl
-200			nIndex1
-0.01			Index1Min
-1e6			Index1Max
-200			nIndex2
-1e5			Index2Min
-1e14			Index2Max
+200                     nIndex1
+0.01                    Index1Min
+1e6                     Index1Max
+200                     nIndex2
+1e5                     Index2Min
+1e14                    Index2Max
 
 #LOOKUPTABLE
-ePerP(rho,p/rho)	NameTable
-save			NameCommand
-table_ePerP.out		NameFile
-binary			TypeFile
+ePerP(rho,p/rho)        NameTable
+save                    NameCommand
+table_ePerP.out         NameFile
+binary                  TypeFile
 ePerP(rho,p/rho) for Xe, Be, Plastic
 logrho logpPerRho ePerPXe ePerPBe ePerPPl
-200			nIndex1
-0.01			Index1Min
-1e6			Index1Max
-200			nIndex2
-1e5			Index2Min
-1e13			Index2Max
+200                     nIndex1
+0.01                    Index1Min
+1e6                     Index1Max
+200                     nIndex2
+1e5                     Index2Min
+1e13                    Index2Max
 
 #LOOKUPTABLE
-CvGammaTe(rho,p/rho)	NameTable
-save			NameCommand
-table_CvGammaTe.out	NameFile
-binary			TypeFile
+CvGammaTe(rho,p/rho)    NameTable
+save                    NameCommand
+table_CvGammaTe.out     NameFile
+binary                  TypeFile
 CvGammaTe(rho,p/rho) for Xe, Be, Plastic
 logrho logpPerRho CvXe GammaXe TeXe CvBe GammaBe TeBe CvPl GammaPl TePl
-200			nIndex1
-0.01			Index1Min
-1e6			Index1Max
-200			nIndex2
-1e5			Index2Min
-1e13			Index2Max
+200                     nIndex1
+0.01                    Index1Min
+1e6                     Index1Max
+200                     nIndex2
+1e5                     Index2Min
+1e13                    Index2Max
+
+#LOOKUPTABLE
+Opacity(rho,T)          NameTable
+load                    NameCommand
+table_opacities.out     NameFile
+ascii                   TypeFile
 
 #PLANET
 NONE
@@ -57,27 +66,25 @@ READ
 
 #USERINPUTBEGIN  ----------------------
 
-#MIXEDCELL
+MIXEDCELL
 T			UseMixedCell
 0.97			MixLimit
 
-#CYLINDRICAL
+CYLINDRICAL
 T			UseCylindrical
 
 #HYADES
 T			UseHyadesFile
 hyades2d_1.1ns.out	NameHyadesFile
 
-#OPACITY
-constant		TypeOpacity
-10.0			PlanckOpacityXe
-0.01			PlanckOpacityBe
-0.01			PlanckOpacityPl
-1.0e3			RosselandOpacityXe
-1.0e3			RosselandOpacityBe
-1.0e3			RosselandOpacityPl
-
 #USERINPUTEND    ----------------------
+
+#IMPLICITTEMPERATURE
+T                       UseTemperatureDiffusion
+T                       UseTemperatureVariable
+blockjacobi             TypePreconditioner
+rel                     TypeStopCriterion
+1e-12                   MaxErrorResidual
 
 #RADIATION
 T                       UseGrayDiffusion
@@ -97,7 +104,7 @@ T			IsTimeAccurate
 70			nRootBlockX
 7			nRootBlockY
 1			nRootBlockZ
--500.0			xMin
+-50.0			xMin
 4000.0			xMax
    0.0			yMin
  450.0			yMax
@@ -120,15 +127,11 @@ float			yMaxBc
 float			zMinBc
 float			zMaxBc
 
-#TIMESTEPPING
-2			nStage
-0.8			CflExpl
-
 #SCHEME
 2			nOrder
-Linde			TypeFlux
-mc3			TypeLimiter
-2.0			LimiterBeta
+Godunov			TypeFlux
+mc			TypeLimiter
+1.2			LimiterBeta
 
 #LIMITER
 F			UseLogRhoLimiter
@@ -162,6 +165,8 @@ gamma
 
 #STOP
 -1			MaxIteration
+5.0e-9                  tSimulationMax
+
 2.0e-8			tSimulationMax
 
 #END

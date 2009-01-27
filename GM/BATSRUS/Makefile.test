@@ -239,6 +239,8 @@ test_hyades2d_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.hyades2d PARAM.in
 	gunzip -c ${DIR}/util/CRASH/input/hyades2d_1.1ns.out.gz \
 		> ${TESTDIR}/hyades2d_1.1ns.out
+	gunzip -c ${DIR}/util/CRASH/input/opacities.out.gz \
+	        > ${TESTDIR}/table_opacities.out
 
 test_hyades2d_run:
 	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
