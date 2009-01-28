@@ -21,32 +21,34 @@ subroutine impl_newton_init
   call set_oktest('impl_newton',oktest,oktest_me)
 
   ! Calculate high and low order residuals
-  ! RES_expl= dtexpl * R
+  ! ResExpl_VCB= dtexpl * R
 
   if(UseSemiImplicit)then
-     call get_semi_impl_rhs(w_k, RES_expl)
-     !!! We don't really need RES_impl, but it is easier if it is set
-     RES_impl = RES_expl
+     call get_semi_impl_rhs(Impl_VGB, ResExpl_VCB)
+     !!! We don't really need ResImpl_VCB, but it is easier if it is set
+     ResImpl_VCB(:,:,:,:,1:nImplBLK) = ResExpl_VCB(:,:,:,:,1:nImplBLK)
   else
      if(UseGrayDiffusion) IsNewTimestepGrayDiffusion = .true.
 
      !                not low,  dt,  subtract
-     call get_residual(.false.,.true.,.true.,w_k(1:nI,1:nJ,1:nK,:,:),RES_expl)
+     call get_residual(.false.,.true.,.true., &
+          Impl_VGB(:,1:nI,1:nJ,1:nK,:),ResExpl_VCB)
 
      if(UseGrayDiffusion) IsNewTimestepGrayDiffusion = .false.
 
      if (nOrder==nOrder_Impl .and. FluxType==FluxTypeImpl) then
-        ! If R_low=R then RES_impl = RES_expl
-        RES_impl(:,:,:,:,1:nImplBLK)=RES_expl(:,:,:,:,1:nImplBLK)
+        ! If R_low=R then ResImpl_VCB = ResExpl_VCB
+        ResImpl_VCB(:,:,:,:,1:nImplBLK) = ResExpl_VCB(:,:,:,:,1:nImplBLK)
      else
-        ! RES_impl = dtexpl * R_low
+        ! ResImpl_VCB = dtexpl * R_low
         !                  low,  no dt, subtract
-        call get_residual(.true.,.false.,.true.,w_k(1:nI,1:nJ,1:nK,:,:),RES_impl) 
+        call get_residual(.true.,.false.,.true., &
+             Impl_VGB(:,1:nI,1:nJ,1:nK,:), ResImpl_VCB) 
      endif
   end if
-  if(oktest_me.and.nImplBLK>0)write(*,*)'RES_expl,RES_impl(test)=',&
-       RES_expl(Itest,Jtest,Ktest,VARtest,implBLKtest),&
-       RES_impl(Itest,Jtest,Ktest,VARtest,implBLKtest)
+  if(oktest_me.and.nImplBLK>0)write(*,*)'ResExpl_VCB,ResImpl_VCB(test)=',&
+       ResExpl_VCB(VARtest,Itest,Jtest,Ktest,implBLKtest),&
+       ResImpl_VCB(VARtest,Itest,Jtest,Ktest,implBLKtest)
 
   ! Calculate rhs used for NewtonIter=1
   n=0
@@ -61,18 +63,19 @@ subroutine impl_newton_init
         n=n+1
         ! For 1st Newton iteration
         ! RHS = dt*(beta*R + alpha*(w_n-w_n-1)/dt_n-1)/wnrm 
-        rhs(n)=(coef1*RES_expl(i,j,k,iw,implBLK) &
-             +coef2*(w_k(i,j,k,iw,implBLK)-w_prev(i,j,k,iw,iBLK)))/wnrm(iw)
+        rhs(n)=(coef1*ResExpl_VCB(iw,i,j,k,implBLK) &
+             + coef2*(Impl_VGB(iw,i,j,k,implBLK) &
+             -        ImplOld_VCB(iw,i,j,k,iBLK)))/wnrm(iw)
      end do; end do; enddo; enddo; enddo
   else
-     do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw
+     do implBLK = 1, nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw
         n=n+1
         ! RHS = dt*R/wnrm for the first iteration
-        rhs(n)=RES_expl(i,j,k,iw,implBLK)*dtcoeff/wnrm(iw)
+        rhs(n)=ResExpl_VCB(iw,i,j,k,implBLK)*dtcoeff/wnrm(iw)
 
         !!!DEBUG
-        !if(i==Itest.and.j==Jtest.and.k==Ktest)write(*,*)'iw,RES_expl,rhs=',&
-        !     iw,RES_expl(i,j,k,iw),rhs(n)
+        !if(i==Itest.and.j==Jtest.and.k==Ktest) &
+        !  write(*,*)'iw,ResExpl_VCB,rhs=', iw, ResExpl_VCB(i,j,k,iw), rhs(n)
 
      end do; end do; enddo; enddo; enddo
   endif
@@ -84,20 +87,21 @@ subroutine impl_newton_init
         n=n+1
         !RHS0 = [dt*(R - beta*R_low) + w_n]/wnrm 
         !     = RHS + [-beta*dt*R_low + w_n]/wnrm
-        rhs0(n) = rhs(n) + (- ImplCoeff*dtcoeff*RES_impl(i,j,k,iw,implBLK) &
-             + w_k(i,j,k,iw,implBLK))/wnrm(iw)
+        rhs0(n) = rhs(n) + (- ImplCoeff*dtcoeff*ResImpl_VCB(iw,i,j,k,implBLK) &
+             + Impl_VGB(iw,i,j,k,implBLK))/wnrm(iw)
      end do; end do; enddo; enddo; enddo
   endif
 
   if(oktest)then
-     call MPI_allreduce(sum(RES_impl(:,:,:,:,1:nImplBLK)**2),q1,&
+     call MPI_allreduce(sum(ResImpl_VCB(:,:,:,:,1:nImplBLK)**2),q1,&
           1,MPI_REAL,MPI_SUM,iComm,iError)
-     call MPI_allreduce(sum(RES_expl(:,:,:,:,1:nImplBLK)**2),q2,&
+     call MPI_allreduce(sum(ResExpl_VCB(:,:,:,:,1:nImplBLK)**2),q2,&
           1,MPI_REAL,MPI_SUM,iComm,iError)
      call MPI_allreduce(sum(rhs(1:nimpl)**2),q3,&
           1,MPI_REAL,MPI_SUM,iComm,iError)
 
-     if(oktest_me)write(*,*)'Sum RES_expl**2,RES_impl**2,rhs**2:',q1,q2,q3
+     if(oktest_me)write(*,*)'Sum ResExpl_VCB**2,ResImpl_VCB**2,rhs**2:', &
+          q1, q2, q3
   end if
 
   ! Initial guess for dw = w_n+1 - w_n
@@ -140,10 +144,10 @@ subroutine impl_newton_loop
   n=0
   do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw
      n=n+1
-     ! RHS = (dt*R_n - beta*dt*R_n_low + w_n + beta*dt*R_k_low - w_k)/wnrm
-     ! use: RHS0 and RES_impl = dtexpl * R_k_low
-     rhs(n)= rhs0(n)+(ImplCoeff*dtcoeff*RES_impl(i,j,k,iw,implBLK) &
-          - w_k(i,j,k,iw,implBLK))/wnrm(iw)
+     ! RHS = (dt*R_n - beta*dt*R_n_low + w_n + beta*dt*R_k_low - Impl_VGB)/wnrm
+     ! use: RHS0 and ResImpl_VCB = dtexpl * R_k_low
+     rhs(n)= rhs0(n)+(ImplCoeff*dtcoeff*ResImpl_VCB(iw,i,j,k,implBLK) &
+          - Impl_VGB(iw,i,j,k,implBLK))/wnrm(iw)
   enddo; enddo; enddo; enddo; enddo
 
   if(oktest)then
@@ -151,10 +155,10 @@ subroutine impl_newton_loop
           iComm,iError)
      if(oktest_me)then
         write(*,*)'norm of rhs:',sqrt(q1/nimpl_total)
-        if(nImplBLK>0)write(*,*)'rhs,rhs0,RES_impl,w_k(test)=',&
+        if(nImplBLK>0)write(*,*)'rhs,rhs0,ResImpl_VCB,Impl_VGB(test)=',&
              rhs(implVARtest),rhs0(implVARtest),               &
-             RES_impl(Itest,Jtest,Ktest,VARtest,implBLKtest),  &
-             w_k(Itest,Jtest,Ktest,VARtest,implBLKtest)
+             ResImpl_VCB(Ktest,VARtest,Itest,Jtest,implBLKtest),  &
+             Impl_VGB(VARtest,Itest,Jtest,Ktest,implBLKtest)
      end if
   end if
 
@@ -167,8 +171,8 @@ end subroutine impl_newton_loop
 !=============================================================================
 subroutine impl_newton_update(dwnrm, converged)
 
-  ! Update w: w_k+1 = w_k + coeff*dw  with coeff from backtracking
-  ! such that F(w_k+1) <= F(w_k) if possible
+  ! Update Impl_VGB(k+1) = Impl_VGB(k) + coeff*dw  with coeff from backtracking
+  ! such that F(Impl_VGB+1) <= F(Impl_VGB) if possible
 
   use ModProcMH
   use ModMain, ONLY : nOrder,time_accurate
@@ -191,7 +195,7 @@ subroutine impl_newton_update(dwnrm, converged)
 
   if(UseNewton)then
      ! Calculate progress in NR scheme to set linear solver accuracy
-     ! dwnrm=||w_k+1 - w_k||/||w_n||
+     ! dwnrm = ||Impl_VGB(k+1) - Impl_VGB(k)||/||w_n||
      dwnrm_local=sum(dw(1:nimpl)**2)
      call MPI_allreduce(dwnrm_local,dwnrm,1,MPI_REAL,MPI_SUM,iComm,&
           iError)
@@ -221,17 +225,17 @@ subroutine impl_newton_update(dwnrm, converged)
      do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw
         n=n+1
         if(true_cell(i,j,k,impl2iBLK(implBLK)))&
-             w_k(i,j,k,iw,implBLK)=w_k(i,j,k,iw,implBLK)+coeff*dw(n)*wnrm(iw)
+             Impl_VGB(iw,i,j,k,implBLK)=Impl_VGB(iw,i,j,k,implBLK)+coeff*dw(n)*wnrm(iw)
      enddo; enddo; enddo; enddo; enddo
 
      if(UseConservativeImplicit .or. .not.Converged) then
         if(UseSemiImplicit)then
-           call get_semi_impl_rhs(w_k, RES_impl)
+           call get_semi_impl_rhs(Impl_VGB, ResImpl_VCB)
         else
-           !calculate low order residual RES_impl = dtexpl*RES_low_k+1
+           !calculate low order residual ResImpl_VCB = dtexpl*RES_low(k+1)
            !                  low,   no dt, subtract
-           call get_residual(.true.,.false.,.true.,w_k(1:nI,1:nJ,1:nK,:,:),&
-                RES_impl)
+           call get_residual(.true.,.false.,.true.,Impl_VGB(:,1:nI,1:nJ,1:nK,:),&
+                ResImpl_VCB)
         end if
      end if
 
@@ -239,22 +243,22 @@ subroutine impl_newton_update(dwnrm, converged)
      ! if Newton-Raphson converged or no Newton-Raphson is done
      if (time_accurate .or. converged) EXIT
 
-     ! calculate high order residual RES_expl = dt*R(w_k+1)
+     ! calculate high order residual ResExpl_VCB = dt*R(Impl_VGB(k+1))
      if ( (nOrder==nOrder_Impl .and. FluxType==FluxTypeImpl) &
           .or. UseSemiImplicit) then
-        RES_expl(:,:,:,:,1:nImplBLK)=RES_impl(:,:,:,:,1:nImplBLK)
+        ResExpl_VCB(:,:,:,:,1:nImplBLK)=ResImpl_VCB(:,:,:,:,1:nImplBLK)
      else
         !                 not low, no dt, subtract
-        call get_residual(.false.,.false.,.true.,w_k(1:nI,1:nJ,1:nK,:,:),&
-             RES_expl)
+        call get_residual(.false.,.false.,.true.,Impl_VGB(:,1:nI,1:nJ,1:nK,:),&
+             ResExpl_VCB)
      endif
 
      ! Calculate norm of high order residual
      residual=0.0
      do iw=1,nw
-        call MPI_allreduce(sum(w_k(1:nI,1:nJ,1:nK,iw,1:nImplBLK)**2),&
+        call MPI_allreduce(sum(Impl_VGB(iw,1:nI,1:nJ,1:nK,1:nImplBLK)**2),&
              wnrm2,   1,MPI_REAL,MPI_SUM,iComm,iError)
-        call MPI_allreduce(sum(RES_expl(1:nI,1:nJ,1:nK,iw,1:nImplBLK)**2),&
+        call MPI_allreduce(sum(ResExpl_VCB(iw,1:nI,1:nJ,1:nK,1:nImplBLK)**2),&
              resexpl2,1,MPI_REAL,MPI_SUM,iComm,iError)
 
         if(wnrm2<smalldouble)wnrm2=1.0
@@ -273,7 +277,7 @@ end subroutine impl_newton_update
 !==============================================================================
 subroutine impl_newton_conserve
 
-  ! Replace the final Newton iterate w_k with a flux based conservative update
+  ! Replace the final Newton iterate Impl_VGB with a flux based conservative update
 
   use ModImplicit
   use ModGeometry, ONLY : true_cell
@@ -298,8 +302,8 @@ subroutine impl_newton_conserve
   do ImplBlk=1,nImplBlk; do k=1,nK; do j=1,nJ; do i=1,nI; do iW=1,nW
      n=n+1
      if(true_cell(i,j,k,impl2iBLK(ImplBlk))) &
-          w_k(i,j,k,iW,ImplBlk) = &
-          Rhs0(n)*wNrm(iW) + ImplCoeff*DtCoeff*Res_Impl(i,j,k,iW,ImplBlk)
+          Impl_VGB(iW,i,j,k,ImplBlk) = &
+          Rhs0(n)*wNrm(iW) + ImplCoeff*DtCoeff*ResImpl_VCB(iW,i,j,k,ImplBlk)
   enddo; enddo; enddo; enddo; enddo
 
 end subroutine impl_newton_conserve

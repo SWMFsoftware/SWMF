@@ -51,9 +51,9 @@ subroutine implicit_init
 end subroutine implicit_init
 !==============================================================================
 
-subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,w)
+subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,Var_VGB)
 
-  ! Convert data structure w of the implicit code to the explicit code
+  ! Convert data structure Var_VGB of the implicit code to the explicit code
 
   use ModMain
   use ModAdvance, ONLY : State_VGB, Energy_GBI, nVar
@@ -63,7 +63,7 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,w)
   implicit none
 
   integer,intent(in) :: imin,imax,jmin,jmax,kmin,kmax
-  real, intent(out)  :: w(imin:imax,jmin:jmax,kmin:kmax,nw,MaxImplBLK)
+  real, intent(out)  :: Var_VGB(nw,imin:imax,jmin:jmax,kmin:kmax,MaxImplBLK)
 
   integer :: implBLK, iBLK, iVar
   logical :: DoTest, DoTestMe
@@ -81,7 +81,7 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,w)
   if(UseSemiImplicit)then
      select case(TypeSemiImplicit)
      case("radiation")
-        call get_impl_gray_diff_state(w)
+        call get_impl_gray_diff_state(Var_VGB)
      case default
         call stop_mpi(NameSub//': no get_impl_state implemented for' &
              //TypeSemiImplicit)
@@ -89,13 +89,11 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,w)
   else
      do implBLK=1,nImplBLK
         iBLK = impl2iBLK(implBLK)
-        do iVar=1, nVar
-           w(:,:,:,iVar,implBLK) = &
-                State_VGB(iVar,imin:imax,jmin:jmax,kmin:kmax,iBLK)
-        end do
+        Var_VGB(:,:,:,:,implBLK) = &
+             State_VGB(:,imin:imax,jmin:jmax,kmin:kmax,iBLK)
         do iFluid = 1, nFluid
            call select_fluid
-           w(:,:,:,iP,implBLK) = &
+           Var_VGB(iP,:,:,:,implBLK) = &
                 Energy_GBI(imin:imax,jmin:jmax,kmin:kmax,iBLK,iFluid)
         end do
      end do
@@ -103,16 +101,16 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,w)
 
   call timing_stop('expl2impl')
 
-  if(DoTestMe.and.nImplBLK>0)write(*,*)'Finished explicit2implicit: w=',&
-       w(Itest,Jtest,Ktest,:,implBLKtest)
+  if(DoTestMe.and.nImplBLK>0)write(*,*)'Finished explicit2implicit: Var_VGB=',&
+       Var_VGB(:,iTest,jTest,kTest,implBLKtest)
 
 end subroutine explicit2implicit
 
 !==============================================================================
 
-subroutine impl2expl(w,iBLK)
+subroutine impl2expl(Var_VC, iBLK)
 
-  ! Convert the implicit block w to block iBLK of the explicit code
+  ! Convert the implicit block Var_VC to block iBLK of the explicit code
 
   use ModSize,     ONLY : nI, nJ, nK
   use ModAdvance,  ONLY : nVar, State_VGB, Energy_GBI
@@ -120,19 +118,18 @@ subroutine impl2expl(w,iBLK)
   use ModMultiFluid, ONLY: iFluid, nFluid, iP_I, iP
   implicit none
 
-  real, intent(in)    :: w(nI,nJ,nK,nVar)
+  real, intent(in)    :: Var_VC(nVar,nI,nJ,nK)
   integer, intent(in) :: iBLK
   integer :: iVar
   !---------------------------------------------------------------------------
 
   call timing_start('impl2expl')
 
-  do iVar=1,nVar
-     State_VGB(iVar,1:nI,1:nJ,1:nK,iBLK) = w(:,:,:,iVar)
-  end do
+  State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBLK) = Var_VC
+
   do iFluid = 1, nFluid
      iP = iP_I(iFluid)
-     Energy_GBI(1:nI,1:nJ,1:nK,iBLK,iFluid) = w(:,:,:,iP)
+     Energy_GBI(1:nI,1:nJ,1:nK,iBLK,iFluid) = Var_VC(iP,:,:,:)
   end do
   call calc_pressure_cell(iBLK)
 
@@ -142,7 +139,7 @@ end subroutine impl2expl
 
 !==============================================================================
 
-subroutine implicit2explicit(w)
+subroutine implicit2explicit(Var_VCB)
 
   use ModMain, ONLY: nI,nJ,nK,MaxImplBLK
   use ModImplicit, ONLY: nw, nImplBLK, impl2iBLK, &
@@ -150,7 +147,7 @@ subroutine implicit2explicit(w)
   use ModGrayDiffusion, ONLY: update_impl_gray_diff
   implicit none
 
-  real :: w(nI,nJ,nK,nw,MaxImplBLK)
+  real :: Var_VCB(nw,nI,nJ,nK,MaxImplBLK)
   integer :: implBLK, iBLK
 
   character(len=*), parameter:: NameSub = 'implicit2explicit'
@@ -161,28 +158,29 @@ subroutine implicit2explicit(w)
      if(UseSemiImplicit)then
         select case(TypeSemiImplicit)
         case('radiation')
-           call update_impl_gray_diff(iBLK, w(:,:,:,:,implBLK))
+           call update_impl_gray_diff(iBLK, Var_VCB(:,:,:,:,implBLK))
         case default
            call stop_mpi(NameSub//': no update_impl implemented for' &
                 //TypeSemiImplicit)
         end select
      else
-        call impl2expl(w(:,:,:,:,implBLK),iBLK)
+        call impl2expl(Var_VCB(:,:,:,:,implBLK),iBLK)
      end if
   end do
 
 end subroutine implicit2explicit
 
 !=============================================================================
-subroutine get_residual(IsLowOrder, DoCalcTimestep, DoSubtract, w_CVB, Res_CVB)
+subroutine get_residual(IsLowOrder, DoCalcTimestep, DoSubtract, Var_VCB, &
+     Res_VCB)
 
   ! If IsLowOrder is true apply low  order scheme
-  ! otherwise            apply high order scheme
+  ! otherwise             apply high order scheme
   !
   ! If DoCalcTimestep is true calculate time step based on CFL condition
   !
-  ! If DoSubtract is true return  Res_CVB = w_CVB(t+dtexpl)-w_CVB(t) 
-  ! otherwise return              Res_CVB = w_CVB(t+dtexpl)
+  ! If DoSubtract is true return  Res_VCB = Var_VCB(t+dtexpl)-Var_VCB(t) 
+  ! otherwise return              Res_VCB = Var_VCB(t+dtexpl)
 
   use ModMain
   use ModAdvance, ONLY : FluxType,time_BLK
@@ -193,9 +191,10 @@ subroutine get_residual(IsLowOrder, DoCalcTimestep, DoSubtract, w_CVB, Res_CVB)
   implicit none
 
   logical, intent(in) :: IsLowOrder, DoCalcTimestep, DoSubtract
-  real, intent(in)    :: w_CVB(nI,nJ,nK,nVar,MaxImplBLK)
-  ! The actual w_CVB and Res_CVB arguments may be the same array: intent(inout)
-  real, intent(inout) :: Res_CVB(nI,nJ,nK,nVar,MaxImplBLK)
+  real, intent(in)    :: Var_VCB(nVar,nI,nJ,nK,MaxImplBLK)
+  ! The actual Var_VCB and Res_VCB arguments may be the same array: 
+  ! intent(inout)
+  real, intent(inout) :: Res_VCB(nVar,nI,nJ,nK,MaxImplBLK)
 
   real    :: CflTmp
   integer :: nOrderTmp, nStageTmp, implBLK, iBLK
@@ -209,8 +208,8 @@ subroutine get_residual(IsLowOrder, DoCalcTimestep, DoSubtract, w_CVB, Res_CVB)
   call timing_start('get_residual')
 
   if(DoTestMe.and.nImplBLK>0)&
-       write(*,*)'get_residual DoSubtract,IsLowOrder,w_CVB=',&
-       DoSubtract,IsLowOrder,w_CVB(Itest,Jtest,Ktest,VARtest,implBLKtest)
+       write(*,*)'get_residual DoSubtract,IsLowOrder,Var_VCB=',&
+       DoSubtract,IsLowOrder,Var_VCB(Ktest,VARtest,Itest,Jtest,implBLKtest)
 
   nStageTmp       = nStage
   nStage          = 1
@@ -232,17 +231,17 @@ subroutine get_residual(IsLowOrder, DoCalcTimestep, DoSubtract, w_CVB, Res_CVB)
      Cfl    = 0.5
   end if
 
-  ! Res_CVB = w_CVB(t+dt)
-  call implicit2explicit(w_CVB)
+  ! Res_VCB = Var_VCB(t+dt)
+  call implicit2explicit(Var_VCB)
   call exchange_messages
   call advance_expl(DoCalcTimestep)
-  call explicit2implicit(1,nI,1,nJ,1,nK,Res_CVB)
+  call explicit2implicit(1,nI,1,nJ,1,nK,Res_VCB)
 
-  if(DoSubtract) Res_CVB(:,:,:,:,1:nImplBLK) = Res_CVB(:,:,:,:,1:nImplBLK) &
-       - w_CVB(:,:,:,:,1:nImplBLK)
+  if(DoSubtract) Res_VCB(:,:,:,:,1:nImplBLK) = Res_VCB(:,:,:,:,1:nImplBLK) &
+       - Var_VCB(:,:,:,:,1:nImplBLK)
 
-  if(DoTestMe.and.nImplBLK>0)write(*,*)'get_residual Res_CVB:',&
-       Res_CVB(Itest,Jtest,Ktest,VARtest,implBLKtest)
+  if(DoTestMe.and.nImplBLK>0)write(*,*)'get_residual Res_VCB:',&
+       Res_VCB(VARtest,Itest,Jtest,Ktest,implBLKtest)
 
   ! Restore global variables
   nStage      = nStageTmp
@@ -256,7 +255,7 @@ subroutine get_residual(IsLowOrder, DoCalcTimestep, DoSubtract, w_CVB, Res_CVB)
 
 end subroutine get_residual
 !==============================================================================
-subroutine get_semi_impl_rhs(StateImpl_GVB, Residual_CVB)
+subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
 
   use ModImplicit, ONLY: StateSemi_VGB, nw, nImplBlk, impl2iblk, &
        TypeSemiImplicit
@@ -265,20 +264,18 @@ subroutine get_semi_impl_rhs(StateImpl_GVB, Residual_CVB)
   use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs
   implicit none
 
-  real, intent(in)  :: StateImpl_GVB(0:nI+1,0:nJ+1,0:nK+1,nw,MaxImplBlk)
-  real, intent(out) :: Residual_CVB(nI,nJ,nK,nw,MaxImplBlk)
+  real, intent(in)  :: StateImpl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBlk)
+  real, intent(out) :: Rhs_VCB(nw,nI,nJ,nK,MaxImplBlk)
 
   integer :: iImplBlock, iBlock, i, j, k, iVar
 
   character(len=*), parameter:: NameSub = 'get_semi_impl_rhs'
   !------------------------------------------------------------------------
-  ! Initialize all elements
-  StateSemi_VGB = 0.0
   ! Fill in StateSemi so it can be message passed
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
      do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nw
-        StateSemi_VGB(iVar,i,j,k,iBlock) = StateImpl_GVB(i,j,k,iVar,iImplBlock)
+        StateSemi_VGB(iVar,i,j,k,iBlock) = StateImpl_VGB(iVar,i,j,k,iImplBlock)
      end do; end do; end do; end do
   end do
   !                       DoOneLayer DoFacesOnly No UseMonoteRestrict
@@ -288,20 +285,20 @@ subroutine get_semi_impl_rhs(StateImpl_GVB, Residual_CVB)
      iBlock = impl2iBLK(iImplBlock)
      select case(TypeSemiImplicit)
      case('radiation')
-        Residual_CVB(:,:,:,:,iImplBlock) = 0.0
-        call get_gray_diffusion_rhs(iBlock, &
-             StateSemi_VGB(:,:,:,:,iBlock), Residual_CVB(:,:,:,:,iImplBlock))
+        Rhs_VCB(:,:,:,:,iImplBlock) = 0.0
+        call get_gray_diffusion_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
+             Rhs_VCB(:,:,:,:,iImplBlock), IsLinear=.false.)
      case default
         call stop_mpi(NameSub//': no get_rhs implemented for' &
              //TypeSemiImplicit)
      end select
 
-     Residual_CVB(:,:,:,:,iImplBlock) = dt*Residual_CVB(:,:,:,:,iImplBlock)
+     Rhs_VCB(:,:,:,:,iImplBlock) = dt*Rhs_VCB(:,:,:,:,iImplBlock)
   end do
 
 end subroutine get_semi_impl_rhs
 !==============================================================================
-subroutine get_semi_impl_residual(StateImpl_CVB)
+subroutine get_semi_impl_residual(StateImpl_VCB)
 
   use ModImplicit, ONLY: StateSemi_VGB, nw, nImplBlk, impl2iblk, &
        TypeSemiImplicit
@@ -310,23 +307,21 @@ subroutine get_semi_impl_residual(StateImpl_CVB)
   use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs
   implicit none
 
-  real, intent(inout) :: StateImpl_CVB(nI,nJ,nK,nw,MaxImplBlk)
+  real, intent(inout) :: StateImpl_VCB(nw,nI,nJ,nK,MaxImplBlk)
 
   integer :: iImplBlock, iBlock, i, j, k, iVar
-  real, allocatable, save :: Rhs_CV(:,:,:,:)
+  real, allocatable, save :: Rhs_VC(:,:,:,:)
 
   character(len=*), parameter:: NameSub = 'get_semi_impl_residual'
   !------------------------------------------------------------------------
 
-  if(.not.allocated(Rhs_CV)) allocate(Rhs_CV(nI,nJ,nK,nw))
+  if(.not.allocated(Rhs_VC)) allocate(Rhs_VC(nW,nI,nJ,nK))
 
-  ! Initialize all elements
-  StateSemi_VGB = 0.0
   ! Fill in StateSemi so it can be message passed
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
      do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nw
-        StateSemi_VGB(iVar,i,j,k,iBlock) = StateImpl_CVB(i,j,k,iVar,iImplBlock)
+        StateSemi_VGB(iVar,i,j,k,iBlock) = StateImpl_VCB(iVar,i,j,k,iImplBlock)
      end do; end do; end do; end do
   end do
   !                       DoOneLayer DoFacesOnly No UseMonoteRestrict
@@ -338,31 +333,34 @@ subroutine get_semi_impl_residual(StateImpl_CVB)
      select case(TypeSemiImplicit)
      case('radiation')
         call get_gray_diffusion_rhs(iBlock, &
-             StateSemi_VGB(:,:,:,:,iBlock), Rhs_CV)
+             StateSemi_VGB(:,:,:,:,iBlock), Rhs_VC, IsLinear = .true.)
      case default
         call stop_mpi(NameSub//': no get_rhs implemented for' &
              //TypeSemiImplicit)
      end select
 
-     StateImpl_CVB(:,:,:,:,iImplBlock) = StateImpl_CVB(:,:,:,:,iImplBlock) &
-          + dt*Rhs_CV
+     StateImpl_VCB(:,:,:,:,iImplBlock) = dt*Rhs_VC
+
   end do
 
 end subroutine get_semi_impl_residual
 !==============================================================================
 subroutine get_semi_impl_jacobian
 
-  use ModImplicit, ONLY: nw, nImplBlk, impl2iblk, TypeSemiImplicit, MAT
+  use ModImplicit, ONLY: nw, nImplBlk, impl2iblk, TypeSemiImplicit, &
+       nStencil, MAT, ImplCoeff, wnrm
   use ModGrayDiffusion, ONLY: get_gray_diff_jacobian
+  use ModMain, ONLY: nI, nJ, nK, nDim, Dt
 
   implicit none
 
-  integer :: iImplBlock, iBlock
+  integer :: iImplBlock, iBlock, i, j, k, iStencil, iVar, jVar
   character(len=*), parameter:: NameSub = 'get_semi_impl_jacobian'
   !---------------------------------------------------------------------------
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
 
+     ! Get dR/dU
      select case(TypeSemiImplicit)
      case('radiation')
         call get_gray_diff_jacobian(iBlock, nw, MAT(:,:,:,:,:,:,iImplBlock))
@@ -370,13 +368,27 @@ subroutine get_semi_impl_jacobian
         call stop_mpi(NameSub//': no get_rhs implemented for' &
              //TypeSemiImplicit)
      end select
+
+     ! Form A = 1 - ImplCoeff*Dt*dR/dU matrix with normalization
+     do iStencil = 1, nStencil; do k = 1, nK; do j = 1, nJ; do i = 1, nI
+        do jVar = 1, nw; do iVar = 1, nw
+           if(MAT(iVar, jVar, i, j, k, iStencil, iImplBlock) == 0.0) CYCLE 
+           MAT(iVar, jVar, i, j, k, iStencil, iImplBlock) = &
+                - MAT(iVar, jVar, i, j, k, iStencil, iImplBlock) &
+                * dt * ImplCoeff * wnrm(jVar) / wnrm(iVar)
+        end do; end do
+     end do; end do; end do; end do
+     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nw
+        MAT(iVar, iVar, i, j, k, 1, iImplBlock) = &
+             MAT(iVar, iVar, i, j, k, 1, iImplBlock) + 1.0
+     end do; end do; end do; end do
   end do
 
 end subroutine get_semi_impl_jacobian
 !==============================================================================
-subroutine getsource(iBLK,w,s)
+subroutine getsource(iBLK,Var_VCB,SourceImpl_VC)
 
-  ! Get sources for block iBLK using implicit data w
+  ! Get sources for block iBLK using implicit data Var_VCB
 
   use ModMain
   use ModVarIndexes
@@ -385,8 +397,8 @@ subroutine getsource(iBLK,w,s)
   implicit none
 
   integer, intent(in) :: iBLK
-  real, intent(in)    :: w(nI,nJ,nK,nw)
-  real, intent(out)   :: s(nI,nJ,nK,nw)
+  real, intent(in)    :: Var_VCB(nI,nJ,nK,nw)
+  real, intent(out)   :: SourceImpl_VC(nw,nI,nJ,nK)
 
   logical :: qUseDivbSource
   integer::iVar, iFluid
@@ -397,19 +409,16 @@ subroutine getsource(iBLK,w,s)
   qUseDivbSource   =UseDivbSource
   UseDivbSource    =.false.
   
-  call impl2expl(w,iBLK)
+  call impl2expl(Var_VCB,iBLK)
   globalBLK = iBLK
 
   !!! Explicit time dependence  t+ImplCoeff*dt !!!
   !call calc_point_sources(t+ImplCoeff*dt)
   call calc_sources
 
-  do iVar=1,nVar-1
-     s(:,:,:,iVar)  =Source_VC(iVar,1:nI,1:nJ,1:nK)
-  end do
-  do iFluid = 1, nFluid
-     s(:,:,:,iP_I(iFluid)) = Source_VC(Energy_-1+iFluid,1:nI,1:nJ,1:nK)
-  end do
+  SourceImpl_VC = Source_VC(1:nVar,:,:,:)
+  ! Overwrite pressure source terms with energy source term
+  SourceImpl_VC(iP_I,:,:,:) = Source_VC(Energy_:Energy_+nFluid-1,:,:,:)
 
   UseDivbSource   =qUseDivbSource
   call timing_stop('getsource')
@@ -417,13 +426,13 @@ subroutine getsource(iBLK,w,s)
 end subroutine getsource
 
 !==============================================================================
-subroutine get_face_flux(StateCons_CV,B0_CD,nI,nJ,nK,iDim,iBlock,Flux_CV)
+subroutine get_face_flux(StateCons_VC,B0_DC,nI,nJ,nK,iDim,iBlock,Flux_VC)
 
   ! We need the cell centered physical flux function, but to keep
   ! the implicit scheme general for all equations, we reuse
   ! subroutine get_physical_flux from ModFaceFlux.
 
-  use ModVarIndexes,ONLY: nFluid, nVar
+  use ModVarIndexes,ONLY: nFluid, nVar, Energy_
   use ModProcMH,   ONLY: iProc
   use ModMain,     ONLY: nDim, x_, y_, z_, &
        ProcTest, BlkTest,iTest,jTest,kTest
@@ -436,9 +445,9 @@ subroutine get_face_flux(StateCons_CV,B0_CD,nI,nJ,nK,iDim,iBlock,Flux_CV)
   implicit none
 
   integer, intent(in):: nI,nJ,nK,idim,iBlock
-  real, intent(in)   :: StateCons_CV(nI,nJ,nK,nVar)
-  real, intent(in)   :: B0_CD(nI,nJ,nK,nDim)
-  real, intent(out)  :: Flux_CV(nI,nJ,nK,nVar)
+  real, intent(in)   :: StateCons_VC(nVar,nI,nJ,nK)
+  real, intent(in)   :: B0_DC(nDim,nI,nJ,nK)
+  real, intent(out)  :: Flux_VC(nVar,nI,nJ,nK)
 
   real :: Primitive_V(nVar), Conservative_V(nFlux), Flux_V(nFlux)
 
@@ -463,14 +472,14 @@ subroutine get_face_flux(StateCons_CV,B0_CD,nI,nJ,nK,iDim,iBlock,Flux_CV)
      DoTestCell = DoTestMe .and. &
           i==iTest .and. j==jTest .and. k==kTest
 
-     Primitive_V = StateCons_CV(i, j, k, :)
+     Primitive_V = StateCons_VC( :,i, j, k)
      call conservative_to_primitive(Primitive_V)
 
-     Conservative_V(1:nVar) = StateCons_CV(i, j, k, :)
+     Conservative_V(1:nVar) = StateCons_VC( :,i, j, k)
      do iFluid=1, nFluid
         iP = iP_I(iFluid)
         Conservative_V(iP) = Primitive_V(iP)
-        Conservative_V(nVar+iFluid) = StateCons_CV(i, j, k, iP)
+        Conservative_V(nVar+iFluid) = StateCons_VC( iP,i, j, k)
      end do
 
      if(UseHallResist)then
@@ -481,25 +490,22 @@ subroutine get_face_flux(StateCons_CV,B0_CD,nI,nJ,nK,iDim,iBlock,Flux_CV)
 
      call set_cell_values
      call get_physical_flux(Primitive_V, &
-          B0_CD(i, j, k, x_), &
-          B0_CD(i, j, k, y_), &
-          B0_CD(i, j, k, z_), &
+          B0_DC(x_, i, j, k), &
+          B0_DC(y_, i, j, k), &
+          B0_DC(z_, i, j, k), &
           Conservative_V, Flux_V, Un_I, En)
 
-     Flux_CV(i, j, k, 1:nVar)= Flux_V(1:nVar)*Area
+     Flux_VC( 1:nVar,i, j, k)= Flux_V(1:nVar)*Area
 
      ! Replace pressure flux with energy flux
-     do iFluid = 1, nFluid
-        iP = iP_I(iFluid)
-        Flux_CV(i, j, k, iP) = Flux_V(nVar+iFluid)*Area
-     end do
+     Flux_VC(iP_I,i,j,k) = Flux_V(Energy_:Energy_+nFluid-1)*Area
 
   end do; end do; end do
 
 end subroutine get_face_flux
 
 !==============================================================================
-subroutine get_cmax_face(w,B0,qnI,qnJ,qnK,iDim,iBlock,Cmax)
+subroutine get_cmax_face(Var_VF,B0_DF,qnI,qnJ,qnK,iDim,iBlock,Cmax)
 
   use ModProcMH,   ONLY: iProc
   use ModMain,     ONLY: nDim, x_, y_, z_, ProcTest, BlkTest,iTest,jTest,kTest
@@ -512,8 +518,8 @@ subroutine get_cmax_face(w,B0,qnI,qnJ,qnK,iDim,iBlock,Cmax)
   implicit none
 
   integer, intent(in):: qnI,qnJ,qnK,idim,iBlock
-  real, intent(in)   :: w(qnI,qnJ,qnK,nw)
-  real, intent(in)   :: B0(qnI,qnJ,qnK,ndim)
+  real, intent(in)   :: Var_VF(nw,qnI,qnJ,qnK)
+  real, intent(in)   :: B0_DF(ndim,qnI,qnJ,qnK)
   real, intent(out)  :: Cmax(qnI,qnJ,qnK)
 
   real :: Primitive_V(nw), Cmax_I(nFluid)
@@ -544,16 +550,16 @@ subroutine get_cmax_face(w,B0,qnI,qnJ,qnK,iDim,iBlock,Cmax)
      DoTestCell = DoTestMe .and. &
           iFace==iTest .and. jFace==jTest .and. kFace==kTest
 
-     Primitive_V = w(iFace, jFace, kFace, :)
+     Primitive_V = Var_VF(:,iFace, jFace, kFace)
 
      call conservative_to_primitive(Primitive_V)
 
      call set_cell_values
 
      call get_speed_max(Primitive_V, &
-          B0(iFace, jFace, kFace, x_), &
-          B0(iFace, jFace, kFace, y_), &
-          B0(iFace, jFace, kFace, z_), &
+          B0_DF( x_,iFace, jFace, kFace), &
+          B0_DF( y_,iFace, jFace, kFace), &
+          B0_DF( z_,iFace, jFace, kFace), &
           cmax_I = Cmax_I)
 
      cmax(iFace, jFace, kFace) = maxval(Cmax_I)*Area
@@ -602,7 +608,7 @@ subroutine getdt_courant(qdt)
 
   real, intent(out) :: qdt
 
-  real :: cmax(nI,nJ,nK), B0cell(nI,nJ,nK,ndim), qdt_local
+  real :: cmax(nI,nJ,nK), B0_DC(nDim,nI,nJ,nK), qdt_local
   integer :: idim, implBLK, iBLK, iError
 
   logical :: DoTest, DoTestMe
@@ -615,16 +621,14 @@ subroutine getdt_courant(qdt)
      iBLK=impl2iBLK(implBLK); 
      dxyz(x_)=dx_BLK(iBLK); dxyz(y_)=dy_BLK(iBLK); dxyz(z_)=dz_BLK(iBLK)
      if(UseB0)then
-        B0cell(:,:,:,x_)=B0_DGB(x_,1:nI,1:nJ,1:nK,iBLK)
-        B0cell(:,:,:,y_)=B0_DGB(y_,1:nI,1:nJ,1:nK,iBLK)
-        B0cell(:,:,:,z_)=B0_DGB(z_,1:nI,1:nJ,1:nK,iBLK)
+        B0_DC = B0_DGB(:,1:nI,1:nJ,1:nK,iBLK)
      else
-        B0cell=0.00
+        B0_DC = 0.0
      end if
 
      do idim=1,ndim
 
-        call get_cmax_face(w_k(1:nI,1:nJ,1:nK,1:nw,implBLK),B0cell,&
+        call get_cmax_face(Impl_VGB(1:nw,1:nI,1:nJ,1:nK,implBLK),B0_DC,&
              nI, nJ, nK, iDim, iBlk, Cmax)
 
         if(.not.true_BLK(iBLK))then

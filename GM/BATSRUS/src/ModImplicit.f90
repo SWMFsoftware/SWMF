@@ -116,14 +116,14 @@ module ModImplicit
   real, allocatable:: wnrm(:)
 
   ! The k-th Newton iterate, one layer of ghost cells for the Jacobian
-  real, allocatable :: w_k(:,:,:,:,:)
+  real, allocatable :: Impl_VGB(:,:,:,:,:)
 
   ! Previous (n-1) state
-  real, allocatable :: w_prev(:,:,:,:,:)
+  real, allocatable :: ImplOld_VCB(:,:,:,:,:)
 
   ! low and high order residuals
-  real, allocatable :: RES_impl(:,:,:,:,:)
-  real, allocatable :: RES_expl(:,:,:,:,:)
+  real, allocatable :: ResImpl_VCB(:,:,:,:,:)
+  real, allocatable :: ResExpl_VCB(:,:,:,:,:)
 
   ! semi-implicit state
   real, allocatable :: StateSemi_VGB(:,:,:,:,:)
@@ -262,7 +262,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'init_mod_implicit'
     !----------------------------------------------------------------------
-    if(allocated(w_k)) return
+    if(allocated(Impl_VGB)) return
 
     if(UseSemiImplicit)then
        select case(TypeSemiImplicit)
@@ -277,10 +277,10 @@ contains
     nwIJK = nw*nIJK
     MaxImplVar=nwIJK*MaxImplBLK
 
-    allocate(w_k(0:nI+1,0:nJ+1,0:nK+1,nw,MaxImplBLK))
-    allocate(w_prev(nI,nJ,nK,nw,nBLK))
-    allocate(RES_impl(nI,nJ,nK,nw,MaxImplBLK))
-    allocate(RES_expl(nI,nJ,nK,nw,MaxImplBLK))
+    allocate(Impl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBLK))
+    allocate(ImplOld_VCB(nw,nI,nJ,nK,nBLK))
+    allocate(ResImpl_VCB(nw,nI,nJ,nK,MaxImplBLK))
+    allocate(ResExpl_VCB(nw,nI,nJ,nK,MaxImplBLK))
     allocate(StateSemi_VGB(nw,-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock))
     allocate(MAT(nw,nw,1:nI,1:nJ,1:nK,nstencil,MaxImplBLK))
     allocate(rhs0(MaxImplVar))
@@ -299,11 +299,11 @@ contains
   !============================================================================
   subroutine clean_mod_implicit
 
-    if(.not.allocated(w_k)) return
-    deallocate(w_k)
-    deallocate(w_prev)
-    deallocate(RES_impl)
-    deallocate(RES_expl)
+    if(.not.allocated(Impl_VGB)) return
+    deallocate(Impl_VGB)
+    deallocate(ImplOld_VCB)
+    deallocate(ResImpl_VCB)
+    deallocate(ResExpl_VCB)
     deallocate(MAT)
     deallocate(rhs0)
     deallocate(rhs)

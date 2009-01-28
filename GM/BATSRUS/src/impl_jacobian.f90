@@ -68,11 +68,11 @@ subroutine impl_jacobian(implBLK,JAC)
   real,    intent(out):: JAC(nw,nw,nI,nJ,nK,nstencil)
 
   integer :: iBLK
-  real, dimension(nI,nJ,nK,nw)                :: qwk      , weps
+  real, dimension(nw,nI,nJ,nK)                :: Impl_VC      , ImplEps_VC
   real, dimension(nI+1,nJ+1,nK+1)             :: dfdwLface, dfdwRface
-  real, dimension(nI,nJ,nK,nw)                :: qS, qSeps, Qpowell
+  real, dimension(nw,nI,nJ,nK)                :: s_VC, sEps_VC, sPowell_VC
   real :: DivB(nI,nJ,nK)
-  real :: B0face(nI+1,nJ+1,nK+1,nDim,nDim), cmaxFace(nI+1,nJ+1,nK+1,nDim)
+  real :: B0_DFD(nDim,nI+1,nJ+1,nK+1,nDim), Cmax_DF(nDim,nI+1,nJ+1,nK+1)
 
   real   :: qeps, coeff
   logical:: divbsrc, UseDivbSource0
@@ -80,10 +80,10 @@ subroutine impl_jacobian(implBLK,JAC)
 
   logical :: oktest, oktest_me
 
-  real :: FluxLeft_FVD(nI+1,nJ+1,nK+1,nW,nDim) ! Unperturbed left flux
-  real :: FluxRight_FVD(nI,nJ,nK,nW,nDim)      ! Unperturbed right flux
-  real :: FluxEpsLeft_FV(nI+1,nJ+1,nK+1,nW)    ! Perturbed left flux
-  real :: FluxEpsRight_FV(nI,nJ,nK,nW)         ! Perturbed right flux
+  real :: FluxLeft_VFD(nW,nI+1,nJ+1,nK+1,nDim) ! Unperturbed left flux
+  real :: FluxRight_VFD(nW,nI,nJ,nK,nDim)      ! Unperturbed right flux
+  real :: FluxEpsLeft_VF(nW,nI+1,nJ+1,nK+1)    ! Perturbed left flux
+  real :: FluxEpsRight_VF(nW,nI,nJ,nK)         ! Perturbed right flux
   real :: FaceArea_F(nI, nJ, nK)               ! Only the inner faces
 
   real :: HallFactor_G(0:nI+1,0:nJ+1,0:nK+1)
@@ -100,16 +100,14 @@ subroutine impl_jacobian(implBLK,JAC)
   divbsrc= UseDivbSource
 
   ! Extract state for this block
-  qwk = w_k(1:nI,1:nJ,1:nK,1:nw,implBLK)
+  Impl_VC = Impl_VGB(1:nw,1:nI,1:nJ,1:nK,implBLK)
   iBLK = impl2iBLK(implBLK)
   dxyz(1)=dx_BLK(iBLK); dxyz(2)=dy_BLK(iBLK); dxyz(3)=dz_BLK(iBLK)
   if(UseB0)then
      call set_b0_face(iBLK)
-     do iDim=1,3
-        B0face(1:nI+1,1:nJ  ,1:nK  ,iDim,x_)=B0_DX(iDim,1:nI+1,1:nJ,1:nK)
-        B0face(1:nI  ,1:nJ+1,1:nK  ,iDim,y_)=B0_DY(iDim,1:nI,1:nJ+1,1:nK)
-        B0face(1:nI  ,1:nJ  ,1:nK+1,iDim,z_)=B0_DZ(iDim,1:nI,1:nJ,1:nK+1)
-     end do
+     B0_DFD(:,1:nI+1,1:nJ  ,1:nK  ,x_)=B0_DX(:,1:nI+1,1:nJ,1:nK)
+     B0_DFD(:,1:nI  ,1:nJ+1,1:nK  ,y_)=B0_DY(:,1:nI,1:nJ+1,1:nK)
+     B0_DFD(:,1:nI  ,1:nJ  ,1:nK+1,z_)=B0_DZ(:,1:nI,1:nJ,1:nK+1)
   end if
 
   if(UseHallResist)call impl_init_hall
@@ -123,50 +121,50 @@ subroutine impl_jacobian(implBLK,JAC)
      i1 = 1+kr(1,idim); j1= 1+kr(2,idim); k1= 1+kr(3,idim)
      i2 =nI+kr(1,idim); j2=nJ+kr(2,idim); k2=nK+kr(3,idim);
 
-     call get_face_flux(qwk,B0face(i1:i2,j1:j2,k1:k2,:,idim),&
-          nI,nJ,nK,iDim,iBLK,FluxLeft_FVD(i1:i2,j1:j2,k1:k2,:,iDim))
+     call get_face_flux(Impl_VC,B0_DFD(:,i1:i2,j1:j2,k1:k2,idim),&
+          nI,nJ,nK,iDim,iBLK,FluxLeft_VFD(:,i1:i2,j1:j2,k1:k2,iDim))
 
-     call get_face_flux(qwk,B0face(1:nI,1:nJ,1:nK,:,iDim),&
-          nI,nJ,nK,iDim,iBLK,FluxRight_FVD(:,:,:,:,iDim))
+     call get_face_flux(Impl_VC,B0_DFD(:,1:nI,1:nJ,1:nK,iDim),&
+          nI,nJ,nK,iDim,iBLK,FluxRight_VFD(:,:,:,:,iDim))
 
-     ! Average w for each cell interface into weps
+     ! Average w for each cell interface into ImplEps_VC
      i1 = 1-kr(1,idim); j1= 1-kr(2,idim); k1= 1-kr(3,idim)
 
      ! Calculate orthogonal cmax for each interface in advance
      call get_cmax_face(                            &
-          0.5*(w_k( 1:i2, 1:j2, 1:k2,1:nw,implBLK)+ &
-          w_k(i1:nI,j1:nJ,k1:nK,1:nw,implBLK)),     &
-          B0face(1:i2,1:j2,1:k2,1:ndim,idim),       &
-          i2,j2,k2,idim,iBlk,cmaxFace(1:i2,1:j2,1:k2,idim))
+          0.5*(Impl_VGB(1:nw, 1:i2, 1:j2, 1:k2,implBLK)+ &
+          Impl_VGB(1:nw,i1:nI,j1:nJ,k1:nK,implBLK)),     &
+          B0_DFD(1:ndim,1:i2,1:j2,1:k2,idim),       &
+          i2,j2,k2,idim,iBlk,Cmax_DF(idim,1:i2,1:j2,1:k2))
 
      ! cmax always occurs as -ImplCoeff*0.5/dx*cmax
      coeff = -ImplCoeff*0.5 
-     cmaxFace(1:i2,1:j2,1:k2,idim)=coeff*cmaxFace(1:i2,1:j2,1:k2,idim)
+     Cmax_DF(idim,1:i2,1:j2,1:k2)=coeff*Cmax_DF(idim,1:i2,1:j2,1:k2)
   enddo
 
-  ! Initialize divB and Qpowell arrays 
+  ! Initialize divB and sPowell_VC arrays 
   if(UseB .and. divbsrc)call impl_divbsrc_init
 
-  ! Set qS=S(qwk)
-  if(implsource)call getsource(iBLK,qwk,qS)
+  ! Set s_VC=S(Impl_VC)
+  if(implsource)call getsource(iBLK,Impl_VC,s_VC)
 
   ! The w to be perturbed and jw is the index for the perturbed variable
-  weps=qwk
+  ImplEps_VC=Impl_VC
 
   !DEBUG
-  !write(*,*)'Initial weps=qwk'
-  !write(*,'(a,8(f10.6))')'qwk(nK)   =', qwk(Itest,Jtest,Ktest,:)
-  !write(*,'(a,8(f10.6))')'qwk(nK+1) =', qwk(Itest,Jtest,Ktest+1,:)
-  !write(*,'(a,8(f10.6))')'weps(nK)  =',weps(Itest,Jtest,Ktest,:)
-  !write(*,'(a,8(f10.6))')'weps(nK+1)=',weps(Itest,Jtest,Ktest+1,:)
+  !write(*,*)'Initial ImplEps_VC=Impl_VC'
+  !write(*,'(a,8(f10.6))')'Impl_VC(nK)   =', Impl_VC(:,Itest,Jtest,Ktest)
+  !write(*,'(a,8(f10.6))')'Impl_VC(nK+1) =', Impl_VC(:,Itest,Jtest,Ktest+1)
+  !write(*,'(a,8(f10.6))')'ImplEps_VC(nK)  =',ImplEps_VC(:,Itest,Jtest,Ktest)
+  !write(*,'(a,8(f10.6))')'ImplEps_VC(nK+1)=',ImplEps_VC(:,Itest,Jtest,Ktest+1)
 
   do jw=1,nw; 
      ! Remove perturbation from previous jw if there was a previous one
-     if(jw>1)weps(:,:,:,jw-1)=qwk(:,:,:,jw-1)
+     if(jw>1)ImplEps_VC(jw-1,:,:,:)=Impl_VC(jw-1,:,:,:)
 
      ! Perturb new jw variable
      coeff=qeps*wnrm(jw)
-     weps(:,:,:,jw)=qwk(:,:,:,jw) + coeff
+     ImplEps_VC(jw,:,:,:)=Impl_VC(jw,:,:,:) + coeff
 
      do idim=1,ndim
         ! Index limits for faces and shifted centers
@@ -174,20 +172,20 @@ subroutine impl_jacobian(implBLK,JAC)
         i2 =nI+kr(1,idim); j2=nJ+kr(2,idim); k2=nK+kr(3,idim);
         i3 =nI-kr(1,idim); j3=nJ-kr(2,idim); k3=nK-kr(3,idim);
 
-        call get_face_flux(weps,B0face(i1:i2,j1:j2,k1:k2,:,idim),&
-             nI,nJ,nK,iDim,iBLK,FluxEpsLeft_FV(i1:i2,j1:j2,k1:k2,:))
+        call get_face_flux(ImplEps_VC,B0_DFD(:,i1:i2,j1:j2,k1:k2,idim),&
+             nI,nJ,nK,iDim,iBLK,FluxEpsLeft_VF(:,i1:i2,j1:j2,k1:k2))
 
-        call get_face_flux(weps,B0face(1:nI,1:nJ,1:nK,:,iDim),&
-             nI,nJ,nK,iDim,iBLK,FluxEpsRight_FV)
+        call get_face_flux(ImplEps_VC,B0_DFD(:,1:nI,1:nJ,1:nK,iDim),&
+             nI,nJ,nK,iDim,iBLK,FluxEpsRight_VF)
 
         ! Calculate dfdw=(feps-f0)/eps for each iw variable and both
         ! left and right sides
         do iw=1,nw
 
-           !call getflux(weps,B0face(i1:i2,j1:j2,k1:k2,:,idim),&
+           !call getflux(ImplEps_VC,B0_DFD(:,i1:i2,j1:j2,k1:k2,idim),&
            !     nI,nJ,nK,iw,idim,implBLK,fepsLface(i1:i2,j1:j2,k1:k2))
 
-           !call getflux(weps,B0face(1:nI,1:nJ,1:nK,:,idim),&
+           !call getflux(ImplEps_VC,B0_DFD(:,1:nI,1:nJ,1:nK,idim),&
            !     nI,nJ,nK,iw,idim,implBLK,fepsRface(1:nI,1:nJ,1:nK))
 
            ! dfdw = F_iw(W + eps*W_jw) - F_iw(W)] / eps is multiplied by 
@@ -195,20 +193,20 @@ subroutine impl_jacobian(implBLK,JAC)
            coeff=-ImplCoeff*0.5/qeps/wnrm(iw) 
 
            dfdwLface(i1:i2,j1:j2,k1:k2)=coeff*&
-                (FluxEpsLeft_FV(i1:i2,j1:j2,k1:k2,iw) &
-                -FluxLeft_FVD(   i1:i2,j1:j2,k1:k2,iw,iDim)) 
+                (FluxEpsLeft_VF(iw,i1:i2,j1:j2,k1:k2) &
+                -FluxLeft_VFD(iw,   i1:i2,j1:j2,k1:k2,iDim)) 
            dfdwRface( 1:nI, 1:nJ, 1:nK)=coeff*&
-                (FluxEpsRight_FV( 1:nI, 1:nJ, 1:nK, iW) &
-                -FluxRight_FVD(   1:nI, 1:nJ, 1:nK, iW, iDim))
+                (FluxEpsRight_VF( iW, 1:nI, 1:nJ, 1:nK) &
+                -FluxRight_VFD( iW,   1:nI, 1:nJ, 1:nK, iDim))
 
            if(oktest_me)write(*,'(a,i1,i2,6(f15.8))') &
                 'iw,jw,f0L,fepsL,dfdwL,R:', &
                 iw,jw,&
-                FluxLeft_FVD(Itest,Jtest,Ktest,iw,idim),&
-                FluxEpsLeft_FV(Itest,Jtest,Ktest,iW),&
+                FluxLeft_VFD(iw,Itest,Jtest,Ktest,idim),&
+                FluxEpsLeft_VF(iW,Itest,Jtest,Ktest),&
                 dfdwLface(Itest,Jtest,Ktest),&
-                FluxRight_FVD(Itest,Jtest,Ktest,iw,idim),&
-                FluxEpsRight_FV(Itest,Jtest,Ktest,iW),&
+                FluxRight_VFD(iw,Itest,Jtest,Ktest,idim),&
+                FluxEpsRight_VF(iW,Itest,Jtest,Ktest),&
                 dfdwRface(Itest,Jtest,Ktest)
 
            !DEBUG
@@ -220,10 +218,10 @@ subroutine impl_jacobian(implBLK,JAC)
            if(iw==jw)then
               ! FxL_i-1/2 <-- (FxL + cmax)_i-1/2
               dfdwLface(i1:i2,j1:j2,k1:k2)=dfdwLface(i1:i2,j1:j2,k1:k2)&
-                   +cmaxFace(i1:i2,j1:j2,k1:k2,idim)
+                   +Cmax_DF(idim,i1:i2,j1:j2,k1:k2)
               ! FxR_i+1/2 <-- (FxR - cmax)_i+1/2
               dfdwRface( 1:nI, 1:nJ, 1:nK)=dfdwRface( 1:nI, 1:nJ, 1:nK)&
-                   -cmaxFace( 1:nI, 1:nJ, 1:nK,idim)
+                   -Cmax_DF(idim, 1:nI, 1:nJ, 1:nK)
            endif
 
            ! Divide flux*area by volume
@@ -271,12 +269,12 @@ subroutine impl_jacobian(implBLK,JAC)
 
                  ! Relative to the right face flux Q is shifted to the left
                  dfdwLface(i1:nI,j1:nJ,k1:nK)=dfdwLface(i1:nI,j1:nJ,k1:nK)+ &
-                      coeff*Qpowell(i1:nI,j1:nJ,k1:nK,iw) &
+                      coeff*sPowell_VC(iw,i1:nI,j1:nJ,k1:nK) &
                       *FaceArea_F(i1:nI,j1:nJ,k1:nK) &
                       *vInv_CB(i1:nI,j1:nJ,k1:nK,iBlk)
 
                  dfdwRface(i1:nI,j1:nJ,k1:nK)=dfdwRface(i1:nI,j1:nJ,k1:nK)+ &
-                      coeff*Qpowell( 1:i3, 1:j3, 1:k3,iw) &
+                      coeff*sPowell_VC(iw, 1:i3, 1:j3, 1:k3) &
                       *FaceArea_F(i1:nI,j1:nJ,k1:nK) &
                       *vInv_CB(1:i3,1:j3,1:k3,iBlk)
 
@@ -286,10 +284,10 @@ subroutine impl_jacobian(implBLK,JAC)
 
                  ! Relative to the right face flux Q is shifted to the left
                  dfdwLface(i1:nI,j1:nJ,k1:nK)=dfdwLface(i1:nI,j1:nJ,k1:nK)+ &
-                      coeff*Qpowell(i1:nI,j1:nJ,k1:nK,iw)
+                      coeff*sPowell_VC(iw,i1:nI,j1:nJ,k1:nK)
 
                  dfdwRface(i1:nI,j1:nJ,k1:nK)=dfdwRface(i1:nI,j1:nJ,k1:nK)+ &
-                      coeff*Qpowell( 1:i3, 1:j3, 1:k3,iw)
+                      coeff*sPowell_VC(iw, 1:i3, 1:j3, 1:k3)
               end if
            end if
            JAC(iw,jw,i1:nI,j1:nJ,k1:nK,2*idim  )=  dfdwLface(i1:nI,j1:nJ,k1:nK)
@@ -310,13 +308,13 @@ subroutine impl_jacobian(implBLK,JAC)
      if(implsource)then
         if(oktest_me)write(*,*)'Adding dS/dw'
 
-        ! w2=S(qwk+eps*W_jw)
-        call getsource(iBLK,weps,qSeps)
+        ! w2=S(Impl_VC+eps*W_jw)
+        call getsource(iBLK,ImplEps_VC,sEps_VC)
         do iw=1,nw
            ! JAC(..1) += dS/dW_jw
            coeff=-ImplCoeff/qeps/wnrm(iw)
            JAC(iw,jw,:,:,:,1)=JAC(iw,jw,:,:,:,1)&
-                +coeff*(qSeps(:,:,:,iw)-qS(:,:,:,iw))
+                +coeff*(sEps_VC(iw,:,:,:)-s_VC(iw,:,:,:))
         enddo
      endif
   enddo
@@ -399,100 +397,110 @@ contains
     if(UseCovariant)then
        do k=1,nK; do j=1,nJ; do i=1,nI
           divb(i,j,k) = 0.5*vInv_CB(i,j,k,iBlk)*( &
-               sum(w_k(i+1,j,k,Bx_:Bz_,implBLK)*FaceAreaI_DFB(:,i+1,j,k,iBlk))&
-               -sum(w_k(i-1,j,k,Bx_:Bz_,implBLK)*FaceAreaI_DFB(:,i,j,k,iBlk))+&
-               sum(w_k(i,j+1,k,Bx_:Bz_,implBLK)*FaceAreaJ_DFB(:,i,j+1,k,iBlk))&
-               -sum(w_k(i,j-1,k,Bx_:Bz_,implBLK)*FaceAreaJ_DFB(:,i,j,k,iBlk))+&
-               sum(w_k(i,j,k+1,Bx_:Bz_,implBLK)*FaceAreaK_DFB(:,i,j,k+1,iBlk))&
-               -sum(w_k(i,j,k-1,Bx_:Bz_,implBLK)*FaceAreaK_DFB(:,i,j,k,iBlk)))
+               sum(Impl_VGB(Bx_:Bz_,i+1,j,k,implBLK)*FaceAreaI_DFB(:,i+1,j,k,iBlk))&
+               -sum(Impl_VGB(Bx_:Bz_,i-1,j,k,implBLK)*FaceAreaI_DFB(:,i,j,k,iBlk))+&
+               sum(Impl_VGB(Bx_:Bz_,i,j+1,k,implBLK)*FaceAreaJ_DFB(:,i,j+1,k,iBlk))&
+               -sum(Impl_VGB(Bx_:Bz_,i,j-1,k,implBLK)*FaceAreaJ_DFB(:,i,j,k,iBlk))+&
+               sum(Impl_VGB(Bx_:Bz_,i,j,k+1,implBLK)*FaceAreaK_DFB(:,i,j,k+1,iBlk))&
+               -sum(Impl_VGB(Bx_:Bz_,i,j,k-1,implBLK)*FaceAreaK_DFB(:,i,j,k,iBlk))) 
        end do; end do; end do
-    else
+   else
        divb=0.5*&
-            ((w_k(2:nI+1,1:nJ,1:nK,Bx_,implBLK)           &
-            -w_k(0:nI-1,1:nJ,1:nK,Bx_,implBLK))/dxyz(x_) &
-            +(w_k(1:nI,2:nJ+1,1:nK,By_,implBLK)           &
-            -w_k(1:nI,0:nJ-1,1:nK,By_,implBLK))/dxyz(y_) &
-            +(w_k(1:nI,1:nJ,2:nK+1,Bz_,implBLK)           &
-            -w_k(1:nI,1:nJ,0:nK-1,Bz_,implBLK))/dxyz(z_))
+            ((Impl_VGB(Bx_,2:nI+1,1:nJ,1:nK,implBLK)           &
+            -Impl_VGB(Bx_,0:nI-1,1:nJ,1:nK,implBLK))/dxyz(x_) &
+            +(Impl_VGB(By_,1:nI,2:nJ+1,1:nK,implBLK)           &
+            -Impl_VGB(By_,1:nI,0:nJ-1,1:nK,implBLK))/dxyz(y_) &
+            +(Impl_VGB(Bz_,1:nI,1:nJ,2:nK+1,implBLK)           &
+            -Impl_VGB(Bz_,1:nI,1:nJ,0:nK-1,implBLK))/dxyz(z_))
     end if
 
-    ! Make sure that Qpowell is defined for all indexes
-    Qpowell = 0.0
+    ! Make sure that sPowell_VC is defined for all indexes
+    sPowell_VC = 0.0
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       ! Calculate coefficients Q that multiply div B in Powell source terms
+       ! Q(rhoU)= B
+       sPowell_VC(RhoUx_:RhoUz_,i,j,k)=Impl_VC(Bx_:Bz_,i,j,k)
 
-    ! Calculate the coefficients Q that multiply div B in Powell Source terms
-    ! Q(rhoU)= B
-    Qpowell(:,:,:,rhoUx_)=qwk(:,:,:,Bx_)
-    Qpowell(:,:,:,rhoUy_)=qwk(:,:,:,By_)
-    Qpowell(:,:,:,rhoUz_)=qwk(:,:,:,Bz_) 
+       ! Q(B)   = U
+       sPowell_VC(Bx_:Bz_,i,j,k) = Impl_VC(RhoUx_:RhoUz_,i,j,k) &
+            /Impl_VC(Rho_,i,j,k) 
 
-    ! Q(B)   = U
-    Qpowell(:,:,:,Bx_)=qwk(:,:,:,rhoUx_)/qwk(:,:,:,rho_) 
-    Qpowell(:,:,:,By_)=qwk(:,:,:,rhoUy_)/qwk(:,:,:,rho_) 
-    Qpowell(:,:,:,Bz_)=qwk(:,:,:,rhoUz_)/qwk(:,:,:,rho_) 
-
-    ! Q(E)   = U.B
-    Qpowell(:,:,:,E_)=(qwk(:,:,:,Bx_)*qwk(:,:,:,rhoUx_)&
-         +qwk(:,:,:,By_)*qwk(:,:,:,rhoUy_)&
-         +qwk(:,:,:,Bz_)*qwk(:,:,:,rhoUz_))&
-         /qwk(:,:,:,rho_)
+       ! Q(E)   = U.B
+       sPowell_VC(E_,i,j,k) = &
+            sum(Impl_VC(Bx_:Bz_,i,j,k)*Impl_VC(RhoUx_:RhoUz_,i,j,k)) &
+            /Impl_VC(Rho_,i,j,k)
+    end do; end do; end do
 
   end subroutine impl_divbsrc_init
 
   !===========================================================================
   subroutine impl_divbsrc_middle
 
+    integer:: i,j,k
+
     ! JAC(...1) += dQ/dW_i*divB
 
     ! Q(rhoU)= -divB*B
     ! dQ(rhoU)/dB = -divB
-    JAC(rhoUx_,Bx_,:,:,:,1)=JAC(rhoUx_,Bx_,:,:,:,1)&
-         +ImplCoeff*wnrm(Bx_)/wnrm(rhoUx_)*divb 
-    JAC(rhoUy_,By_,:,:,:,1)=JAC(rhoUy_,By_,:,:,:,1)&
-         +ImplCoeff*wnrm(By_)/wnrm(rhoUy_)*divb
-    JAC(rhoUz_,Bz_,:,:,:,1)=JAC(rhoUz_,Bz_,:,:,:,1)&
-         +ImplCoeff*wnrm(Bz_)/wnrm(rhoUz_)*divb
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       JAC(rhoUx_,Bx_,i,j,k,1)=JAC(rhoUx_,Bx_,i,j,k,1)&
+            +ImplCoeff*wnrm(Bx_)/wnrm(rhoUx_)*divb(i,j,k) 
+       JAC(rhoUy_,By_,i,j,k,1)=JAC(rhoUy_,By_,i,j,k,1)&
+            +ImplCoeff*wnrm(By_)/wnrm(rhoUy_)*divb(i,j,k) 
+       JAC(rhoUz_,Bz_,i,j,k,1)=JAC(rhoUz_,Bz_,i,j,k,1)&
+            +ImplCoeff*wnrm(Bz_)/wnrm(rhoUz_)*divb(i,j,k) 
 
-    ! Q(B)= -divB*rhoU/rho
-    ! dQ(B)/drho = +divB*rhoU/rho**2
-    JAC(Bx_,rho_,:,:,:,1)=JAC(Bx_,rho_,:,:,:,1) &
-         -ImplCoeff*wnrm(rho_)/wnrm(Bx_)*divb*qwk(:,:,:,rhoUx_)/qwk(:,:,:,rho_)**2
-    JAC(By_,rho_,:,:,:,1)=JAC(By_,rho_,:,:,:,1) &
-         -ImplCoeff*wnrm(rho_)/wnrm(By_)*divb*qwk(:,:,:,rhoUy_)/qwk(:,:,:,rho_)**2
-    JAC(Bz_,rho_,:,:,:,1)=JAC(Bz_,rho_,:,:,:,1) &
-         -ImplCoeff*wnrm(rho_)/wnrm(Bz_)*divb*qwk(:,:,:,rhoUz_)/qwk(:,:,:,rho_)**2
+       ! Q(B)= -divB*rhoU/rho
+       ! dQ(B)/drho = +divB*rhoU/rho**2
+       JAC(Bx_,rho_,i,j,k,1)=JAC(Bx_,rho_,i,j,k,1) &
+            -ImplCoeff*wnrm(rho_)/wnrm(Bx_)*divb(i,j,k) &
+            *Impl_VC(rhoUx_,i,j,k)/Impl_VC(rho_,i,j,k)**2
+       JAC(By_,rho_,i,j,k,1)=JAC(By_,rho_,i,j,k,1) &
+            -ImplCoeff*wnrm(rho_)/wnrm(By_)*divb(i,j,k) &
+            *Impl_VC(rhoUy_,i,j,k)/Impl_VC(rho_,i,j,k)**2
+       JAC(Bz_,rho_,i,j,k,1)=JAC(Bz_,rho_,i,j,k,1) &
+            -ImplCoeff*wnrm(rho_)/wnrm(Bz_)*divb(i,j,k) &
+            *Impl_VC(rhoUz_,i,j,k)/Impl_VC(rho_,i,j,k)**2
 
-    ! dQ(B)/drhoU= -divB/rho
-    JAC(Bx_,rhoUx_,:,:,:,1)=JAC(Bx_,rhoUx_,:,:,:,1)&
-         +ImplCoeff*wnrm(rhoUx_)/wnrm(Bx_)*divb/qwk(:,:,:,rho_) 
-    JAC(By_,rhoUy_,:,:,:,1)=JAC(By_,rhoUy_,:,:,:,1)&
-         +ImplCoeff*wnrm(rhoUy_)/wnrm(By_)*divb/qwk(:,:,:,rho_) 
-    JAC(Bz_,rhoUz_,:,:,:,1)=JAC(Bz_,rhoUz_,:,:,:,1)&
-         +ImplCoeff*wnrm(rhoUz_)/wnrm(Bz_)*divb/qwk(:,:,:,rho_) 
+       ! dQ(B)/drhoU= -divB/rho
+       JAC(Bx_,rhoUx_,i,j,k,1)=JAC(Bx_,rhoUx_,i,j,k,1)&
+            +ImplCoeff*wnrm(rhoUx_)/wnrm(Bx_)*divb(i,j,k)/Impl_VC(rho_,i,j,k) 
+       JAC(By_,rhoUy_,i,j,k,1)=JAC(By_,rhoUy_,i,j,k,1)&
+            +ImplCoeff*wnrm(rhoUy_)/wnrm(By_)*divb(i,j,k)/Impl_VC(rho_,i,j,k) 
+       JAC(Bz_,rhoUz_,i,j,k,1)=JAC(Bz_,rhoUz_,i,j,k,1)&
+            +ImplCoeff*wnrm(rhoUz_)/wnrm(Bz_)*divb(i,j,k)/Impl_VC(rho_,i,j,k) 
 
-    ! Q(E)= -divB*rhoU.B/rho
-    ! dQ(E)/drho = +divB*rhoU.B/rho**2
-    JAC(E_,rho_,:,:,:,1)=JAC(E_,rho_,:,:,:,1)&
-         -ImplCoeff*wnrm(rho_)/wnrm(E_)*divb*&
-         (qwk(:,:,:,rhoUx_)*qwk(:,:,:,Bx_)&
-         +qwk(:,:,:,rhoUy_)*qwk(:,:,:,By_)&
-         +qwk(:,:,:,rhoUz_)*qwk(:,:,:,Bz_))&
-         /qwk(:,:,:,rho_)**2
+       ! Q(E)= -divB*rhoU.B/rho
+       ! dQ(E)/drho = +divB*rhoU.B/rho**2
+       JAC(E_,rho_,i,j,k,1)=JAC(E_,rho_,i,j,k,1)&
+            -ImplCoeff*wnrm(rho_)/wnrm(E_)*divb(i,j,k)*&
+            (Impl_VC(rhoUx_,i,j,k)*Impl_VC(Bx_,i,j,k)&
+            +Impl_VC(rhoUy_,i,j,k)*Impl_VC(By_,i,j,k)&
+            +Impl_VC(rhoUz_,i,j,k)*Impl_VC(Bz_,i,j,k))&
+            /Impl_VC(rho_,i,j,k)**2
 
-    ! dQ(E)/drhoU = -divB*B/rho
-    JAC(E_,rhoUx_,:,:,:,1)=JAC(E_,rhoUx_,:,:,:,1) &
-         +ImplCoeff*wnrm(rhoUx_)/wnrm(E_)*divb*qwk(:,:,:,Bx_)/qwk(:,:,:,rho_) 
-    JAC(E_,rhoUy_,:,:,:,1)=JAC(E_,rhoUy_,:,:,:,1) &
-         +ImplCoeff*wnrm(rhoUy_)/wnrm(E_)*divb*qwk(:,:,:,By_)/qwk(:,:,:,rho_) 
-    JAC(E_,rhoUz_,:,:,:,1)=JAC(E_,rhoUz_,:,:,:,1) &
-         +ImplCoeff*wnrm(rhoUz_)/wnrm(E_)*divb*qwk(:,:,:,Bz_)/qwk(:,:,:,rho_) 
+       ! dQ(E)/drhoU = -divB*B/rho
+       JAC(E_,rhoUx_,i,j,k,1)=JAC(E_,rhoUx_,i,j,k,1) &
+            +ImplCoeff*wnrm(rhoUx_)/wnrm(E_)*divb(i,j,k) &
+            *Impl_VC(Bx_,i,j,k)/Impl_VC(rho_,i,j,k) 
+       JAC(E_,rhoUy_,i,j,k,1)=JAC(E_,rhoUy_,i,j,k,1) &
+            +ImplCoeff*wnrm(rhoUy_)/wnrm(E_)*divb(i,j,k) &
+            *Impl_VC(By_,i,j,k)/Impl_VC(rho_,i,j,k) 
+       JAC(E_,rhoUz_,i,j,k,1)=JAC(E_,rhoUz_,i,j,k,1) &
+            +ImplCoeff*wnrm(rhoUz_)/wnrm(E_)*divb(i,j,k) &
+            *Impl_VC(Bz_,i,j,k)/Impl_VC(rho_,i,j,k) 
 
-    ! dQ(E)/dB = -divB*rhoU/rho
-    JAC(E_,Bx_,:,:,:,1)=JAC(E_,Bx_,:,:,:,1) &
-         +ImplCoeff*wnrm(Bx_)/wnrm(E_)*divb*qwk(:,:,:,rhoUx_)/qwk(:,:,:,rho_) 
-    JAC(E_,By_,:,:,:,1)=JAC(E_,By_,:,:,:,1) &
-         +ImplCoeff*wnrm(By_)/wnrm(E_)*divb*qwk(:,:,:,rhoUy_)/qwk(:,:,:,rho_) 
-    JAC(E_,Bz_,:,:,:,1)=JAC(E_,Bz_,:,:,:,1) &
-         +ImplCoeff*wnrm(Bz_)/wnrm(E_)*divb*qwk(:,:,:,rhoUz_)/qwk(:,:,:,rho_) 
+       ! dQ(E)/dB = -divB*rhoU/rho
+       JAC(E_,Bx_,i,j,k,1)=JAC(E_,Bx_,i,j,k,1) &
+            +ImplCoeff*wnrm(Bx_)/wnrm(E_)*divb(i,j,k) &
+            *Impl_VC(rhoUx_,i,j,k)/Impl_VC(rho_,i,j,k) 
+       JAC(E_,By_,i,j,k,1)=JAC(E_,By_,i,j,k,1) &
+            +ImplCoeff*wnrm(By_)/wnrm(E_)*divb(i,j,k) &
+            *Impl_VC(rhoUy_,i,j,k)/Impl_VC(rho_,i,j,k) 
+       JAC(E_,Bz_,i,j,k,1)=JAC(E_,Bz_,i,j,k,1) &
+            +ImplCoeff*wnrm(Bz_)/wnrm(E_)*divb(i,j,k) &
+            *Impl_VC(rhoUz_,i,j,k)/Impl_VC(rho_,i,j,k) 
+    end do; end do; end do
 
   end subroutine impl_divbsrc_middle
 
@@ -523,11 +531,11 @@ contains
 
        do k=1,nK; do j=1,nJ; do i=1,nI
           DbDgen_DD(:,1) = InvDx2* &
-               (w_k(i+1,j,k,Bx_:Bz_,implBLK)-w_k(i-1,j,k,Bx_:Bz_,implBLK))
+               (Impl_VGB(Bx_:Bz_,i+1,j,k,implBLK)-Impl_VGB(Bx_:Bz_,i-1,j,k,implBLK))
           DbDgen_DD(:,2) = InvDy2* &
-               (w_k(i,j+1,k,Bx_:Bz_,implBLK)-w_k(i,j-1,k,Bx_:Bz_,implBLK))
+               (Impl_VGB(Bx_:Bz_,i,j+1,k,implBLK)-Impl_VGB(Bx_:Bz_,i,j-1,k,implBLK))
           DbDgen_DD(:,3) = InvDz2* &
-               (w_k(i,j,k+1,Bx_:Bz_,implBLK)-w_k(i,j,k-1,Bx_:Bz_,implBLK))
+               (Impl_VGB(Bx_:Bz_,i,j,k+1,implBLK)-Impl_VGB(Bx_:Bz_,i,j,k-1,implBLK))
 
           ! Jx = Dbz/Dy - Dby/Dz
           HallJ_CD(i,j,k,x_) = &
@@ -550,20 +558,20 @@ contains
 
        do k=1,nK; do j=1,nJ; do i=1,nI
           HallJ_CD(i,j,k,x_) = &
-               +InvDy2*(w_k(i,j+1,k,Bz_,implBLK)-w_k(i,j-1,k,Bz_,implBLK)) &
-               -InvDz2*(w_k(i,j,k+1,By_,implBLK)-w_k(i,j,k-1,By_,implBLK))
+               +InvDy2*(Impl_VGB(Bz_,i,j+1,k,implBLK)-Impl_VGB(Bz_,i,j-1,k,implBLK)) &
+               -InvDz2*(Impl_VGB(By_,i,j,k+1,implBLK)-Impl_VGB(By_,i,j,k-1,implBLK))
        end do; end do; end do
 
        do k=1,nK; do j=1,nJ; do i=1,nI
           HallJ_CD(i,j,k,y_) = &
-               +InvDz2*(w_k(i,j,k+1,Bx_,implBLK)-w_k(i,j,k-1,Bx_,implBLK)) &
-               -InvDx2*(w_k(i+1,j,k,Bz_,implBLK)-w_k(i-1,j,k,Bz_,implBLK))
+               +InvDz2*(Impl_VGB(Bx_,i,j,k+1,implBLK)-Impl_VGB(Bx_,i,j,k-1,implBLK)) &
+               -InvDx2*(Impl_VGB(Bz_,i+1,j,k,implBLK)-Impl_VGB(Bz_,i-1,j,k,implBLK))
        end do; end do; end do
 
        do k=1,nK; do j=1,nJ; do i=1,nI
           HallJ_CD(i,j,k,z_) = &
-               +InvDx2*(w_k(i+1,j,k,By_,implBLK)-w_k(i-1,j,k,By_,implBLK)) &
-               -InvDy2*(w_k(i,j+1,k,Bx_,implBLK)-w_k(i,j-1,k,Bx_,implBLK))
+               +InvDx2*(Impl_VGB(By_,i+1,j,k,implBLK)-Impl_VGB(By_,i-1,j,k,implBLK)) &
+               -InvDy2*(Impl_VGB(Bx_,i,j+1,k,implBLK)-Impl_VGB(Bx_,i,j-1,k,implBLK))
        end do; end do; end do
     end if                                    
 
@@ -584,18 +592,18 @@ contains
     !write(*,*)'iBlock, max(HallJ)=',implBlk,maxval(abs(HallJ_CD(:,:,:,:)))
 
     InvN_G = HallFactor_G * IonMassPerCharge_G / &
-         w_k(0:nI+1,0:nJ+1,0:nK+1,Rho_,implBLK)
+         Impl_VGB(Rho_,0:nI+1,0:nJ+1,0:nK+1,implBLK)
     if(UseB0)then
        BxPerN_G = (B0_DGB(x_,0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
-            w_k(0:nI+1,0:nJ+1,0:nK+1,Bx_,implBLK))*InvN_G
+            Impl_VGB(Bx_,0:nI+1,0:nJ+1,0:nK+1,implBLK))*InvN_G
        ByPerN_G = (B0_DGB(y_,0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
-            w_k(0:nI+1,0:nJ+1,0:nK+1,By_,implBLK))*InvN_G
+            Impl_VGB(By_,0:nI+1,0:nJ+1,0:nK+1,implBLK))*InvN_G
        BzPerN_G = (B0_DGB(z_,0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
-            w_k(0:nI+1,0:nJ+1,0:nK+1,Bz_,implBLK))*InvN_G
+            Impl_VGB(Bz_,0:nI+1,0:nJ+1,0:nK+1,implBLK))*InvN_G
     else
-       BxPerN_G = w_k(0:nI+1,0:nJ+1,0:nK+1,Bx_,implBLK)*InvN_G
-       ByPerN_G = w_k(0:nI+1,0:nJ+1,0:nK+1,By_,implBLK)*InvN_G
-       BzPerN_G = w_k(0:nI+1,0:nJ+1,0:nK+1,Bz_,implBLK)*InvN_G
+       BxPerN_G = Impl_VGB(Bx_,0:nI+1,0:nJ+1,0:nK+1,implBLK)*InvN_G
+       ByPerN_G = Impl_VGB(By_,0:nI+1,0:nJ+1,0:nK+1,implBLK)*InvN_G
+       BzPerN_G = Impl_VGB(Bz_,0:nI+1,0:nJ+1,0:nK+1,implBLK)*InvN_G
     end if
   end subroutine impl_init_hall
   !===========================================================================

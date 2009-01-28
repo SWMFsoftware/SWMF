@@ -60,19 +60,19 @@ subroutine impl_matvec_free(qx,qy,nn)
   !
   ! One sided derivative:
   !----------------------
-  ! weps = w + eps*qx            ! perturb w
+  ! ImplEps_VGB = Impl_VGB + eps*qx            ! perturbation
   !
-  ! weps'=weps + R(weps,dtexpl)  ! advance weps
+  ! ImplEps_VGB'=ImplEps_VGB + R(ImplEps_VGB,dtexpl)  ! advance ImplEps_VGB
   !
-  ! dR/dw.qx = (R(w+eps*qx)-R(w))/eps = [(weps'-weps) - (w'-w)]/eps/dtexpl
-  !
-  !                                   = (weps'-w')/eps/dtexpl - qx/dtexpl
+  ! dR/dw.qx = (R(w+eps*qx)-R(w))/eps 
+  !          = [(ImplEps_VGB'-ImplEps_VGB) - (Impl_VGB'-Impl_VGB)]/eps/dtexpl
+  !          = (ImplEps_VGB'-Impl_VGB')/eps/dtexpl - qx/dtexpl
   !
   ! L.qx = dx - beta*dt*dR/dw.qx 
-  !      = (1 + beta*dtcoeff)*qx - beta*dtcoeff*(weps' - w')/eps
+  !      = (1 + beta*dtcoeff)*qx - beta*dtcoeff*(ImplEps_VGB' - w')/eps
   !
-  ! where w=w_k, w'=w+R_low, beta=ImplCoeff, eps=sqrt(JacobianEps)/||qx||
-  ! instead of eps=(JacobianEps)^(1/2)*(w_k.qx)/(qx.qx) suggested by Keyes
+  ! where w=Impl_VGB, w'=w+R_low, beta=ImplCoeff, eps=sqrt(JacobianEps)/||qx||
+  ! instead of eps=(JacobianEps)^(1/2)*(Impl_VGB.qx)/(qx.qx) suggested by Keyes
 
   use ModProcMH
   use ModMain, ONLY : Itest,Jtest,Ktest,VARtest
@@ -86,7 +86,7 @@ subroutine impl_matvec_free(qx,qy,nn)
   ! that's why the intent of qy cannot be set to out.
   real, intent(inout):: qy(nn)
 
-  real, allocatable, save:: weps(:,:,:,:,:)
+  real, allocatable, save:: ImplEps_VCB(:,:,:,:,:)
   integer:: n,i,j,k,iw,implBLK, iError
   real:: qeps, qxnrm, qxnrm_total, q1, q2
 
@@ -96,27 +96,25 @@ subroutine impl_matvec_free(qx,qy,nn)
 
   call timing_start('matvec_free')
 
-  if(.not.allocated(weps))allocate(weps(nI,nJ,nK,nw,MaxImplBLK))
+  if(.not.allocated(ImplEps_VCB))allocate(ImplEps_VCB(nw,nI,nJ,nK,MaxImplBLK))
 
-  !if(UseSemiImplicit)then
-  !   n=0
-  !   do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw
-  !      n=n+1
-  !      weps(i,j,k,iw,implBLK) = qx(n)*wnrm(iw)        
-  !   enddo; enddo; enddo; enddo; enddo
-  !   ! Advance weps
-  !   call get_semi_impl_residual(weps)
-  !   n=0
-  !   q1=1.+ImplCoeff*dtcoeff
-  !   q2=ImplCoeff*dtcoeff
-  !   do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw
-  !      n=n+1
-  !      qy(n) = q1*qx(n) - q2*weps(i,j,k,iw,implBLK)/wnrm(iw)
-  !   enddo; enddo; enddo; enddo; enddo
-  !
-  !   call timing_stop('matvec_free')
-  !   RETURN
-  !end if
+  if(UseSemiImplicit)then
+     n=0
+     do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw
+        n=n+1
+        ImplEps_VCB(iw,i,j,k,implBLK) = qx(n)*wnrm(iw)        
+     enddo; enddo; enddo; enddo; enddo
+     ! Advance ImplEps_VCB
+     call get_semi_impl_residual(ImplEps_VCB)
+     n=0
+     do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw
+        n=n+1
+        qy(n) = qx(n) - ImplCoeff*ImplEps_VCB(iw,i,j,k,implBLK)/wnrm(iw)
+     enddo; enddo; enddo; enddo; enddo
+  
+     call timing_stop('matvec_free')
+     RETURN
+  end if
 
   qxnrm=sum(qx(1:nimpl)**2)
   call MPI_allreduce(qxnrm, qxnrm_total, 1, MPI_REAL, MPI_SUM,iComm,iError)
@@ -134,38 +132,40 @@ subroutine impl_matvec_free(qx,qy,nn)
   n=0
   do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw; 
      n=n+1
-     weps(i,j,k,iw,implBLK)=w_k(i,j,k,iw,implBLK)+qeps*qx(n)*wnrm(iw)
+     ImplEps_VCB(iw,i,j,k,implBLK) = Impl_VGB(iw,i,j,k,implBLK) &
+          + qeps*qx(n)*wnrm(iw)
      !DEBUG no perturbation
-     !weps(i,j,k,iw,implBLK)=w_k(i,j,k,iw,implBLK)
+     !ImplEps_VCB(iw,i,j,k,implBLK)=Impl_VGB(iw,i,j,k,implBLK)
   enddo; enddo; enddo; enddo; enddo
 
   if(oktest)then
-     call MPI_allreduce(sum(weps(:,:,:,:,1:nImplBLK)**2),q1,1,&
+     call MPI_allreduce(sum(ImplEps_VCB(:,:,:,:,1:nImplBLK)**2),q1,1,&
           MPI_REAL,MPI_SUM,iComm,iError)
-     if(oktest_me)write(*,*)'sum(weps**2)=',q1
-     if(oktest_me.and.nImplBLK>0)write(*,*)'weps(test)=',&
-          weps(Itest,Jtest,Ktest,VARtest,implBLKtest)
+     if(oktest_me)write(*,*)'sum(ImplEps_VCB**2)=',q1
+     if(oktest_me.and.nImplBLK>0)write(*,*)'ImplEps_VCB(test)=',&
+          ImplEps_VCB(VARtest,Itest,Jtest,Ktest,implBLKtest)
   endif
 
-  ! Advance weps:low order,  no dt, don't subtract
-  if(UseSemiImplicit)then
-     call get_semi_impl_residual(weps)
-  else
-     call get_residual(.true.,.false.,.false.,weps,weps) 
-  end if
+  ! Advance ImplEps_VCB:low order,  no dt, don't subtract
+  call get_residual(.true.,.false.,.false.,ImplEps_VCB,ImplEps_VCB) 
 
   if(oktest)then
-     call MPI_allreduce(sum(weps(:,:,:,:,1:nImplBLK)**2),q1,1,&
+     call MPI_allreduce(sum(ImplEps_VCB(:,:,:,:,1:nImplBLK)**2),q1,1,&
           MPI_REAL,MPI_SUM,iComm,iError)
-     if(oktest_me)write(*,*)'after advance,sum(weps**2)=',q1
-     if(oktest_me.and.nImplBLK>0)write(*,*)'after advance,weps(test)=',&
-          weps(Itest,Jtest,Ktest,VARtest,implBLKtest)
+     if(oktest_me)write(*,*)'after advance,sum(ImplEps_VCB**2)=',q1
+     if(oktest_me.and.nImplBLK>0)write(*,*)'after advance,ImplEps_VCB(test)=',&
+          ImplEps_VCB(VARtest,Itest,Jtest,Ktest,implBLKtest)
   end if
 
-  ! Calculate qy = L.qx = (1 + beta*dtcoeff)*qx - beta*dtcoeff*(weps' - w')/eps
-  ! where weps = w + eps*qx, weps' = weps + dt*R(weps) and w' = w + dt*R(w)
-  ! qy = qx + beta*dtcoeff*qx - beta*dtcoeff*(w + eps*qx + R(weps) - w - R(w))/eps
-  !    = qx - beta*dtcoeff*(R(weps)-R(w))/eps = qx - beta*dt*dR/dU*qx
+  ! Calculate qy = L.qx = (1 + beta*dtcoeff)*qx 
+  !                       - beta*dtcoeff*(ImplEps_VCB' - Impl_VGB')/eps
+  ! where ImplEps_VCB  = Impl_VGB + eps*qx, 
+  !       ImplEps_VCB' = ImplEps_VCB + dt*R(ImplEps_VCB) and 
+  !       Impl_VGB'    = Impl_VGB + dt*R(w)
+  ! qy = qx + beta*dtcoeff*qx - beta*dtcoeff*(Impl_VGB + eps*qx 
+  !         + R(ImplEps_VCB) - w - R(w))/eps
+  !    = qx - beta*dtcoeff*(R(ImplEps_VCB)-R(Impl_VGB))/eps 
+  !    = qx - beta*dt*dR/dU*qx
 
   q1=1.+ImplCoeff*dtcoeff
   q2=ImplCoeff*dtcoeff/qeps
@@ -175,8 +175,8 @@ subroutine impl_matvec_free(qx,qy,nn)
   n=0
   do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw
      n=n+1
-     qy(n)=q1*qx(n) - q2*(weps(i,j,k,iw,implBLK) &
-          -w_k(i,j,k,iw,implBLK)-RES_impl(i,j,k,iw,implBLK))/wnrm(iw)
+     qy(n)=q1*qx(n) - q2*(ImplEps_VCB(iw,i,j,k,implBLK) &
+          -Impl_VGB(iw,i,j,k,implBLK)-ResImpl_VCB(iw,i,j,k,implBLK))/wnrm(iw)
   enddo; enddo; enddo; enddo; enddo
 
   call timing_stop('matvec_free')
@@ -185,11 +185,11 @@ subroutine impl_matvec_free(qx,qy,nn)
      call MPI_allreduce(sum(qy(1:n)**2),q1,1,&
           MPI_REAL,MPI_SUM,iComm,iError)
      if(oktest_me.and.nImplBLK>0)&
-          write(*,*)'y,x,weps,w_k,RES_impl(test)=',         &
+          write(*,*)'y,x,ImplEps_VCB,Impl_VGB,ResImpl_VCB(test)=',         &
           qy(implVARtest),qx(implVARtest),             &
-          weps(Itest,Jtest,Ktest,VARtest,implBLKtest), &
-          w_k(Itest,Jtest,Ktest,VARtest,implBLKtest),  &
-          RES_impl(Itest,Jtest,Ktest,VARtest,implBLKtest)
+          ImplEps_VCB(Ktest,VARtest,Itest,Jtest,implBLKtest), &
+          Impl_VGB(Ktest,VARtest,Itest,Jtest,implBLKtest),  &
+          ResImpl_VCB(VARtest,Itest,Jtest,Ktest,implBLKtest)
      if(oktest_me)write(*,*)'impl_matvec_free final n,sum(qy**2)=',n,q1
   end if
 

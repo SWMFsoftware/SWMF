@@ -86,7 +86,7 @@ subroutine advance_impl
   use ModPointImplicit, ONLY: UsePointImplicit
   use ModAMR, ONLY : UnusedBlock_BP
   use ModNumConst
-  use ModLinearSolver, ONLY: gmres, bicgstab, prehepta, Uhepta, Lhepta
+  use ModLinearSolver, ONLY: gmres, bicgstab, cg, prehepta, Uhepta, Lhepta
   use ModMpi
   use ModEnergy, ONLY: calc_old_pressure
 
@@ -123,22 +123,25 @@ subroutine advance_impl
   call implicit_init
 
   ! Get initial iterate from current state
-  call explicit2implicit(0,nI+1,0,nJ+1,0,nK+1,w_k)
+  call explicit2implicit(0,nI+1,0,nJ+1,0,nK+1,Impl_VGB)
 
   if(DoTestMe)write(*,*)NameSub,': nImplBLK=',nImplBLK
-  if(DoTestMe.and.nImplBLK>0)write(*,*)NameSub,': w_k=',&
-       w_k(Itest,Jtest,Ktest,:,implBLKtest)
-
-  wnrm(1:nw)=-1.0
-  ! Global norm of current w_(k=0) = w_n
-  do iw=1,nw
-     local_wnrm(iw)=sum(w_k(1:nI,1:nJ,1:nK,iw,1:nImplBLK)**2)
-  end do
-  call MPI_allreduce(local_wnrm, wnrm, nw, MPI_REAL, MPI_SUM, iComm,iError)
+  if(DoTestMe.and.nImplBLK>0)write(*,*)NameSub,': Impl_VGB=',&
+       Impl_VGB(:,iTest,jTest,kTest,implBLKtest)
 
   call MPI_allreduce(nimpl,nimpl_total, 1,MPI_INTEGER,MPI_SUM,iComm,iError)
-  wnrm=sqrt(wnrm/(nimpl_total/nw))
-  where(wnrm < smalldouble) wnrm =1.0
+  if(UseSemiImplicit)then
+     wnrm = 1.0
+  else
+     wnrm(1:nw)=-1.0
+     ! Global norm of current w_(k=0) = w_n
+     do iw=1,nw
+        local_wnrm(iw)=sum(Impl_VGB(iw,1:nI,1:nJ,1:nK,1:nImplBLK)**2)
+     end do
+     call MPI_allreduce(local_wnrm, wnrm, nw, MPI_REAL, MPI_SUM, iComm,iError)
+     wnrm=sqrt(wnrm/(nimpl_total/nw))
+     where(wnrm < smalldouble) wnrm =1.0
+  end if
 
   if(DoTestMe)write(*,*)NameSub,': nimpltot, wnrm=',nimpl_total,wnrm
 
@@ -158,13 +161,12 @@ subroutine advance_impl
         ! implicit in the next time step...
         do iBLK=1,nBlock
            if(iTypeAdvance_B(iBLK) /= ExplBlock_)CYCLE
-           do iVar=1,nVar
-              w_prev(:,:,:,iVar,iBLK) = State_VGB(iVar,1:nI,1:nJ,1:nK,iBLK)
-           end do
+           ImplOld_VCB(:,:,:,:,iBLK) = State_VGB(:,1:nI,1:nJ,1:nK,iBLK)
            ! Overwrite pressure with energy
            do iFluid = 1, nFluid
               call select_fluid
-              w_prev(:,:,:,iP,iBLK) = Energy_GBI(1:nI,1:nJ,1:nK,iBLK,iFluid)
+              ImplOld_VCB(iP,:,:,:,iBLK) = &
+                   Energy_GBI(1:nI,1:nJ,1:nK,iBLK,iFluid)
            end do
         end do
      end if
@@ -254,11 +256,11 @@ subroutine advance_impl
      dt_prev = dt
   endif
 
-  ! Save the current state into w_prev so that StateOld_VCB can be restored
+  ! Save the current state into ImplOld_VCB so that StateOld_VCB can be restored
   ! The implicit blocks haven't been updated, so save current state
   do implBLK=1,nImplBlk
      iBLK=impl2iBLK(implBLK)
-     w_prev(:,:,:,1:nw,iBLK) = w_k(1:nI,1:nJ,1:nK,1:nw,implBLK)
+     ImplOld_VCB(:,:,:,:,iBLK) = Impl_VGB(:,1:nI,1:nJ,1:nK,implBLK)
   end do
 
   ! Newton-Raphson iteration and iterative linear solver
@@ -279,10 +281,11 @@ subroutine advance_impl
 
         !!! need to be changed for semi-implicit
         if(NewtonIter>1)then
-           ! Update ghost cells for w_k, because it is needed by impl_jacobian
-           call implicit2explicit(w_k(1:nI,1:nJ,1:nK,:,:))
+           ! Update ghost cells for Impl_VGB, 
+           ! because it is needed by impl_jacobian
+           call implicit2explicit(Impl_VGB(:,1:nI,1:nJ,1:nK,:))
            call exchange_messages
-           call explicit2implicit(0,nI+1,0,nJ+1,0,nK+1,w_k)
+           call explicit2implicit(0,nI+1,0,nJ+1,0,nK+1,Impl_VGB)
         end if
 
         call timing_start('impl_jacobian')
@@ -404,6 +407,9 @@ subroutine advance_impl
      case('GMRES','gmres')
         call gmres(impl_matvec,rhs,dw,non0dw,nimpl,nKrylovVector, &
              KrylovError,typestop,KrylovMatVec,info,DoTestKrylovMe,iComm)
+     case('CG','cg')
+        call cg(impl_matvec,rhs,dw,non0dw,nimpl,&
+             KrylovError,typestop,KrylovMatVec,info,DoTestKrylovMe,iComm)        
      case default
         call stop_mpi('ERROR: Unknown TypeKrylov='//KrylovType)
      end select
@@ -439,10 +445,11 @@ subroutine advance_impl
      if(DoTestMe.and.info/=0)write(*,*) NameSub, &
           ' warning: no convergence, info:',info
 
-     ! Update w: w_k+1 = w_k + coeff*dw  with coeff=1 or coeff<1 from
-     ! backtracking (for steady state only) based on reducing the residual 
-     ! ||RES_expl(w_k+1)||<=||RES_expl(w_k)||. 
-     ! Also calculates RES_impl=dtexpl*R_low_k+1 and logical converged.
+     ! Update w: Impl_VGB(k+1) = Impl_VGB(k) + coeff*dw  
+     ! with coeff=1 or coeff<1 from backtracking (for steady state only) 
+     ! based on reducing the residual 
+     ! ||ResExpl_VCB(Impl_VGB+1)|| <= ||ResExpl_VCB(Impl_VGB)||. 
+     ! Also calculates ResImpl_VCB=dtexpl*R_loImpl_VGB+1 and logical converged.
      call impl_newton_update(dwnrm, converged)
 
      if(DoTestMe.and.UseNewton) &
@@ -454,7 +461,7 @@ subroutine advance_impl
   if(UseConservativeImplicit)call impl_newton_conserve
 
   ! Put back implicit result into the explicit code
-  call implicit2explicit(w_k(1:nI,1:nJ,1:nK,:,:))
+  call implicit2explicit(Impl_VGB(:,1:nI,1:nJ,1:nK,:))
 
   ! Make explicit part available again for partially explicit scheme
   if(UsePartImplicit)then
@@ -474,7 +481,7 @@ subroutine advance_impl
 
   if(DoTestMe)write(*,*) NameSub,': nmatvec=',nmatvec
   if(DoTestMe.and.nImplBLK>0)write(*,*)NameSub,': new w=',&
-       w_k(Itest,Jtest,Ktest,VARtest,implBLKtest)
+       Impl_VGB(VARtest,Itest,Jtest,Ktest,implBLKtest)
   if(UseNewton.and.DoTestMe)write(*,*)NameSub,': final NewtonIter, dwnrm=',&
        NewtonIter, dwnrm
 
@@ -482,12 +489,10 @@ subroutine advance_impl
      ! Restore StateOld and E_o_BLK in the implicit blocks
      do implBLK=1,nImplBlk
         iBLK=impl2iBLK(implBLK)
-        do iVar=1,nVar
-           StateOld_VCB(iVar,:,:,:,iBLK)=w_prev(:,:,:,iVar,iBLK)
-        end do
+        StateOld_VCB(:,:,:,:,iBLK)=ImplOld_VCB(:,:,:,:,iBLK)
         do iFluid = 1, nFluid
            call select_fluid
-           EnergyOld_CBI(:,:,:,iBLK,iFluid)=w_prev(:,:,:,iP,iBLK)
+           EnergyOld_CBI(:,:,:,iBLK,iFluid) = ImplOld_VCB(iP,:,:,:,iBLK)
         end do
         call calc_old_pressure(iBlk) ! restore StateOld_VCB(P_...)
      end do
@@ -540,7 +545,7 @@ subroutine advance_impl
   if(.not.UseSemiImplicit) &
        Time_Simulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
 
-  UseUpdateCheck = UseUpdateCheckOrig
+  UseUpdateCheck   = UseUpdateCheckOrig
   UsePointImplicit = UsePointImplicitOrig
 
 end subroutine advance_impl

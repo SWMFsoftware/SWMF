@@ -546,8 +546,8 @@ contains
        end if ! DoMoveExtraData
 
        if(UseBDF2 .and. n_prev > 0)then             !^CFG IF IMPLICIT BEGIN
-          do iw=1,nw; do k=1,nK; do j=1,nJ; do i=1,nI; iData = iData+1
-             BlockData_I(iData) = w_prev(i,j,k,iw,iBlockFrom)
+          do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw; iData = iData+1
+             BlockData_I(iData) = ImplOld_VCB(iw,i,j,k,iBlockFrom)
           end do; end do; end do; end do
        end if                                       !^CFG END IMPLICIT
 
@@ -717,9 +717,9 @@ contains
     end if ! DoMoveExtraData
 
     if(UseBDF2 .and. n_prev > 0)then            !^CFG IF IMPLICIT BEGIN
-       do iw=1,nw; do k=1,nK; do j=1,nJ; do i=1,nI
+       do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw
           iData = iData+1
-          w_prev(i,j,k,iw,iBlockTo) = BlockData_I(iData)
+          ImplOld_VCB(iw,i,j,k,iBlockTo) = BlockData_I(iData)
        end do; end do; end do; end do
     end if                                      !^CFG END IMPLICIT
 

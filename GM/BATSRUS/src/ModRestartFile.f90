@@ -16,7 +16,7 @@ module ModRestartFile
   use ModIO,         ONLY: Restart_Bface                    !^CFG IF CONSTRAINB
   use ModCT,         ONLY: BxFace_BLK,ByFace_BLK,BzFace_BLK !^CFG IF CONSTRAINB
   use ModMain,       ONLY: UseConstrainB                    !^CFG IF CONSTRAINB
-  use ModImplicit,   ONLY: n_prev, w_prev, dt_prev          !^CFG IF IMPLICIT
+  use ModImplicit,   ONLY: n_prev, ImplOld_VCB, dt_prev          !^CFG IF IMPLICIT
   use ModKind,       ONLY: Real4_, Real8_
 
   implicit none
@@ -444,7 +444,9 @@ contains
        end if                                         !^CFG END CONSTRAINB
        if(n_prev==n_step) then                        !^CFG IF IMPLICIT BEGIN
           read(Unit_tmp, iostat = iError) State8_CV
-          w_prev(:,:,:,:,iBlock) = State8_CV
+          do iVar = 1, nVar
+             ImplOld_VCB(iVar,:,:,:,iBlock) = State8_CV(:,:,:,iVar)
+          end do
        end if                                         !^CFG END IMPLICIT
     else
        read(unit_tmp, iostat = iError) Dt4, Time4
@@ -470,7 +472,9 @@ contains
        end if                                         !^CFG END CONSTRAINB
        if(n_prev==n_step) then                        !^CFG IF IMPLICIT BEGIN
           read(Unit_tmp, iostat = iError) State4_CV
-          w_prev(:,:,:,:,iBlock) = State4_CV
+          do iVar = 1, nVar
+             ImplOld_VCB(iVar,:,:,:,iBlock) = State4_CV(:,:,:,iVar)
+          end do
        end if                                         !^CFG END IMPLICIT
     endif
 
@@ -539,8 +543,8 @@ contains
             ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock),&
             BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock)
     end if                                           !^CFG END CONSTRAINB
-    if(n_prev==n_step) write(Unit_tmp) &             !^CFG IF IMPLICIT
-         w_prev(:,:,:,:,iBlock)                   !^CFG IF IMPLICIT
+    if(n_prev==n_step) write(Unit_tmp) &                !^CFG IF IMPLICIT
+         (ImplOld_VCB(iVar,:,:,:,iBlock), iVar=1,nVar)  !^CFG IF IMPLICIT
     close(unit_tmp)
 
   end subroutine write_restart_file
@@ -574,7 +578,7 @@ contains
        lRecord = lRecord + l
     end if                                       !^CFG END CONSTRAINB
     if(n_prev==n_step)then                       !^CFG IF IMPLICIT BEGIN
-       inquire (IOLENGTH = l) w_prev(:,:,:,:,1)
+       inquire (IOLENGTH = l) ImplOld_VCB(:,:,:,:,1)
        lRecord = lRecord + l
     end if                                       !^CFG END IMPLICIT
 
@@ -616,7 +620,7 @@ contains
   subroutine read_one_restart_file
 
     character (len=*), parameter :: NameSub='read_one_restart_file'
-    integer :: i, j, k, iBlock, iRec
+    integer :: i, j, k, iBlock, iRec, iVar
     logical :: IsRead, DoTest, DoTestMe
     !-------------------------------------------------------------------------
 
@@ -655,7 +659,9 @@ contains
              ! Read with previous state for sake of implicit BDF2 scheme
              read(Unit_Tmp, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC, &
                   State4_CV
-             w_prev(:,:,:,:,iBlock) = State4_CV
+             do iVar = 1, nVar
+                ImplOld_VCB(iVar,:,:,:,iBlock) = State4_CV(:,:,:,iVar)
+             end do
              IsRead = .true.
           end if                                       !^CFG END IMPLICIT
           if(.not.IsRead) &
@@ -682,7 +688,9 @@ contains
              ! Read with previous state for sake of implicit BDF2 scheme
              read(Unit_Tmp, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC, &
                   State8_CV
-             w_prev(:,:,:,:,iBlock) = State8_CV
+             do iVar = 1, nVar
+                ImplOld_VCB(iVar,:,:,:,iBlock) = State8_CV(:,:,:,iVar)
+             end do
              IsRead = .true.
           end if                                       !^CFG END IMPLICIT
           if(.not.IsRead) &
@@ -717,7 +725,7 @@ contains
   subroutine write_one_restart_file
 
     character (len=*), parameter :: NameSub='write_one_restart_file'
-    integer :: iBlock, iRec
+    integer :: iBlock, iRec, iVar
     !--------------------------------------------------------------------
 
     call open_one_restart_file(DoRead = .false.)
@@ -746,7 +754,7 @@ contains
                Dx_BLK(iBlock), Dy_BLK(iBlock), Dz_BLK(iBlock), &
                XyzStart_BLK(:,iBlock), &
                State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock), &
-               w_prev(:,:,:,:,iBlock)
+               (ImplOld_VCB(iVar,:,:,:,iBlock), iVar = 1, nVar)
           CYCLE
        endif                                          !^CFG END IMPLICIT
 
