@@ -715,7 +715,7 @@ contains
     if(TypeStop=='abs')then
        rDotRMax = Tol**2
     else
-       rDotRMax = Tol**2 * rDotR0
+       rDotRMax = Tol**2 * max(rDotR0, 1e-99)
     end if
 
     if(DoTest)write(*,*)'CG rDotR0, rDotRMax=', rDotR0, rDotRMax
@@ -750,7 +750,7 @@ contains
     if(TypeStop=='abs')then
        Tol = sqrt(rDotR)
     else
-       Tol = sqrt(rDotR/rDotR0)
+       Tol = sqrt(rDotR/max(rDotR0, 1e-99))
     end if
 
     ! Set the error flag
