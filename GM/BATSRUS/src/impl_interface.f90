@@ -80,7 +80,7 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,Var_VGB)
 
   if(UseSemiImplicit)then
      select case(TypeSemiImplicit)
-     case("radiation")
+     case('radiation', 'radcond')
         call get_impl_gray_diff_state(Var_VGB)
      case default
         call stop_mpi(NameSub//': no get_impl_state implemented for' &
@@ -157,7 +157,7 @@ subroutine implicit2explicit(Var_VCB)
      iBLK=impl2iBLK(implBLK)
      if(UseSemiImplicit)then
         select case(TypeSemiImplicit)
-        case('radiation')
+        case('radiation', 'radcond')
            call update_impl_gray_diff(iBLK, Var_VCB(:,:,:,:,implBLK))
         case default
            call stop_mpi(NameSub//': no update_impl implemented for' &
@@ -284,8 +284,7 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
      select case(TypeSemiImplicit)
-     case('radiation')
-        Rhs_VCB(:,:,:,:,iImplBlock) = 0.0
+     case('radiation', 'radcond')
         call get_gray_diffusion_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
              Rhs_VCB(:,:,:,:,iImplBlock), IsLinear=.false.)
      case default
@@ -298,40 +297,50 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
 
 end subroutine get_semi_impl_rhs
 !==============================================================================
-subroutine get_semi_impl_residual(StateImpl_VCB)
+subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
+
+  ! Calculate y_I = A.x_I where A is the linearized sem-implicit operator
 
   use ModImplicit, ONLY: StateSemi_VGB, nw, nImplBlk, impl2iblk, &
-       TypeSemiImplicit
+       TypeSemiImplicit, ImplCoeff !!!, wnrm
   use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
   use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs
+
   implicit none
 
-  real, intent(inout) :: StateImpl_VCB(nw,nI,nJ,nK,MaxImplBlk)
+  integer, intent(in):: MaxN
+  real, intent(in)   :: x_I(MaxN)
+  ! Sometimes this subroutine is called with the same array in both arguments
+  ! that's why the intent of y_I cannot be set to out.
+  real, intent(inout):: y_I(MaxN)
 
-  integer :: iImplBlock, iBlock, i, j, k, iVar
+  integer :: iImplBlock, iBlock, i, j, k, iVar, n
   real, allocatable, save :: Rhs_VC(:,:,:,:)
 
-  character(len=*), parameter:: NameSub = 'get_semi_impl_residual'
+  character(len=*), parameter:: NameSub = 'get_semi_impl_matvec'
   !------------------------------------------------------------------------
 
   if(.not.allocated(Rhs_VC)) allocate(Rhs_VC(nW,nI,nJ,nK))
 
   ! Fill in StateSemi so it can be message passed
+  n = 0
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
      do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nw
-        StateSemi_VGB(iVar,i,j,k,iBlock) = StateImpl_VCB(iVar,i,j,k,iImplBlock)
+        n=n+1
+        StateSemi_VGB(iVar,i,j,k,iBlock) = x_I(n) !!! *wnrm(iVar)
      end do; end do; end do; end do
   end do
   !                       DoOneLayer DoFacesOnly No UseMonoteRestrict
   call message_pass_cells8(.true.,    .true.,     .false., nw, StateSemi_VGB)
 
+  n=0
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
 
      select case(TypeSemiImplicit)
-     case('radiation')
+     case('radiation', 'radcond')
         call get_gray_diffusion_rhs(iBlock, &
              StateSemi_VGB(:,:,:,:,iBlock), Rhs_VC, IsLinear = .true.)
      case default
@@ -339,16 +348,19 @@ subroutine get_semi_impl_residual(StateImpl_VCB)
              //TypeSemiImplicit)
      end select
 
-     StateImpl_VCB(:,:,:,:,iImplBlock) = dt*Rhs_VC
+     do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nw
+        n=n+1
+        y_I(n) = x_I(n) - ImplCoeff*dt*Rhs_VC(iVar,i,j,k) !!! /wnrm(iVar)
+     enddo; enddo; enddo; enddo
 
   end do
 
-end subroutine get_semi_impl_residual
+end subroutine get_semi_impl_matvec
 !==============================================================================
 subroutine get_semi_impl_jacobian
 
   use ModImplicit, ONLY: nw, nImplBlk, impl2iblk, TypeSemiImplicit, &
-       nStencil, MAT, ImplCoeff, wnrm
+       nStencil, MAT, ImplCoeff !!!, wnrm
   use ModGrayDiffusion, ONLY: get_gray_diff_jacobian
   use ModMain, ONLY: nI, nJ, nK, nDim, Dt
 
@@ -362,7 +374,7 @@ subroutine get_semi_impl_jacobian
 
      ! Get dR/dU
      select case(TypeSemiImplicit)
-     case('radiation')
+     case('radiation', 'radcond')
         call get_gray_diff_jacobian(iBlock, nw, MAT(:,:,:,:,:,:,iImplBlock))
      case default
         call stop_mpi(NameSub//': no get_rhs implemented for' &
@@ -375,7 +387,7 @@ subroutine get_semi_impl_jacobian
            if(MAT(iVar, jVar, i, j, k, iStencil, iImplBlock) == 0.0) CYCLE 
            MAT(iVar, jVar, i, j, k, iStencil, iImplBlock) = &
                 - MAT(iVar, jVar, i, j, k, iStencil, iImplBlock) &
-                * dt * ImplCoeff * wnrm(jVar) / wnrm(iVar)
+                * dt * ImplCoeff !!! * wnrm(jVar) / wnrm(iVar)
         end do; end do
      end do; end do; end do; end do
      do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nw

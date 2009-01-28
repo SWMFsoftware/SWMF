@@ -99,19 +99,7 @@ subroutine impl_matvec_free(qx,qy,nn)
   if(.not.allocated(ImplEps_VCB))allocate(ImplEps_VCB(nw,nI,nJ,nK,MaxImplBLK))
 
   if(UseSemiImplicit)then
-     n=0
-     do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw
-        n=n+1
-        ImplEps_VCB(iw,i,j,k,implBLK) = qx(n)*wnrm(iw)        
-     enddo; enddo; enddo; enddo; enddo
-     ! Advance ImplEps_VCB
-     call get_semi_impl_residual(ImplEps_VCB)
-     n=0
-     do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw
-        n=n+1
-        qy(n) = qx(n) - ImplCoeff*ImplEps_VCB(iw,i,j,k,implBLK)/wnrm(iw)
-     enddo; enddo; enddo; enddo; enddo
-  
+     call get_semi_impl_matvec(qx, qy, nn)
      call timing_stop('matvec_free')
      RETURN
   end if
@@ -215,7 +203,7 @@ subroutine impl_matvec_prec(qx,qy,n)
   integer :: implBLK
 
   logical :: oktest, oktest_me
-  !-----------------------------------------------------------------------------
+  !----------------------------------------------------------------------------
 
   call set_oktest('impl_matvec_prec',oktest,oktest_me)
 

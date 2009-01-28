@@ -267,6 +267,8 @@ contains
     if(UseSemiImplicit)then
        select case(TypeSemiImplicit)
        case('radiation')
+          nw = 1
+       case('radcond')
           nw = 2
        case default
           call stop_mpi(NameSub//': nw unknown for'//TypeSemiImplicit)
