@@ -549,7 +549,7 @@ contains
 
     do iBlock = 1, nBlock
        if(unusedBlk(iBlock)) CYCLE
-       if(nTemperature==2)call check_temperature
+       if(nTemperature==2 .and. UseTemperatureVariable)call check_temperature
        call update_conservative_energy(iBlock)
     end do
   contains
