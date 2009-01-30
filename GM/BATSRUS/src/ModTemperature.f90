@@ -93,6 +93,9 @@ module ModTemperature
 
   !To switch the boundary condition at the outer boundary:
   logical :: IsFirstCgIteration
+  
+  real,parameter::tRadMinDim = 0.0 !K Otherwise the dominant contribution 
+  !to the norm TRad^2/Cv(TRad)\sim (1/T)comes from infinitesimal temperatures
 contains
 
   !============================================================================
@@ -157,7 +160,6 @@ contains
     use ModProcMH,     ONLY: iProc
     use ModSize,       ONLY: nI, nJ, nK, nBlk, nDim
     use ModVarIndexes, ONLY: NameVar_V, nVar
-
     integer :: iVar
 
     character(len=*), parameter :: NameSub = "init_temperature_diffusion"
@@ -230,14 +232,13 @@ contains
     ! Select which temperature variables involve "heat conduction"
     if(UseHeatConduction) iCond_I(1) = Te_
     if(UseGrayDiffusion)  iCond_I(nCond) = Trad_
-
   end subroutine init_temperature_diffusion
 
   !============================================================================
 
   subroutine set_temperature
 
-    use ModAdvance, ONLY: State_VGB
+    use ModAdvance, ONLY: State_VGB,p_
     use ModMain,    ONLY: nI, nJ, nK, nBlock, unusedBlk
     use ModPhysics, ONLY: cRadiationNo, Si2No_V, UnitTemperature_
     use ModUser,    ONLY: user_material_properties
@@ -254,14 +255,17 @@ contains
        if(unusedBlk(iBlock)) CYCLE
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(State_VGB(p_,i,j,k,iBlock) <= 0.0)&
+               call stop_mpi('Negative pressure in set_temperature')
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                TeSiOut = TeSi)
 
           Te = TeSi*Si2No_V(UnitTemperature_)
-
+          if(Te <= 0.0)call stop_mpi('negatipe temperature in set_temperature')
           if(UseTemperatureVariable)then
              Temperature_VGB(Te_,i,j,k,iBlock) = Te
              if(UseTrad)then
+                if(State_VGB(iERad,i,j,k,iBlock)<0.0)call stop_mpi('negative radiation energy')
                 Trad = sqrt(sqrt(State_VGB(iErad,i,j,k,iBlock) &
                      /cRadiationNo))
                 Temperature_VGB(Trad_,i,j,k,iBlock) = Trad
@@ -308,7 +312,6 @@ contains
        ! DoOneLayer, DoFacesOnly, No UseMonoteRestrict
        call message_pass_cells8(.true., .true., .false., nTemperature, &
             Temperature_VGB)
-
        call set_gray_outer_bcs(nTemperature, Temperature_VGB,'float')
     end if
 
@@ -333,7 +336,8 @@ contains
           if(UseTemperatureVariable)then
              SpecificHeat_VCB(Te_,i,j,k,iBlock) = Cv
 
-             Trad = Temperature_VGB(Trad_,i,j,k,iBlock)
+             Trad = max(Temperature_VGB(Trad_,i,j,k,iBlock),&
+                  tRadMinDim * Si2No_V(UnitTemperature_))
              SpecificHeat_VCB(Trad_,i,j,k,iBlock) = 4.0*cRadiationNo*Trad**3
              RelaxationCoef_VCB(Trad_,i,j,k,iBlock) = Clight*PlanckOpacity &
                   *cRadiationNo*(Te+Trad)*(Te**2+Trad**2)
@@ -446,7 +450,7 @@ contains
     real :: vInv, DivU, RadCompression
     character(len=*), parameter :: NameSub = "calc_source_compression"
     !--------------------------------------------------------------------------
-
+    
     do k=1,nK; do j=1,nJ; do i=1,nI
 
        if(IsCylindrical)then
@@ -587,7 +591,7 @@ contains
     use ModEnergy,   ONLY: calc_energy_cell
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
     use ModPhysics,  ONLY: inv_gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
-         UnitP_, cRadiationNo
+         UnitP_, cRadiationNo,UnitTemperature_
     use ModProcMH,   ONLY: iProc
     use ModSize,     ONLY: nI, nJ, nK
     use ModUser,     ONLY: user_material_properties
@@ -595,7 +599,7 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    real :: EinternalSi, Einternal, Gamma, PressureSi
+    real :: EinternalSi, Einternal, Gamma, PressureSi, TeSi
     logical :: DoReport = .true.
     character(len=*), parameter:: NameSub = 'update_conservative_energy'
     !--------------------------------------------------------------------------
@@ -645,10 +649,18 @@ contains
             - TemperatureOld_VCB(Te_,i,j,k,iBlock))
 
        EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
+       if(EInternalSi <= 0.0)then
+          TeSi = Temperature_VGB(Te_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
+          if(TeSi <= 0.0)call stop_mpi('Negative temperature')
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               TeSiIn = TeSi, EinternalSiOut = EinternalSi, &
+               PressureSiOut = PressureSi)
+          Einternal = EInternalSi*Si2No_V(UnitEnergyDens_)
+       else
 
-       call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-            EinternalSiIn = EinternalSi, PressureSiOut = PressureSi)
-
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               EinternalSiIn = EinternalSi, PressureSiOut = PressureSi)
+       end if
        State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
 
        State_VGB(EintExtra_,i,j,k,iBlock) = &
@@ -678,7 +690,8 @@ contains
     ! DoOneLayer, DoFacesOnly, No UseMonoteRestrict
     call message_pass_cells8(.true., .true., .false., nVar, Temp_VGB)
     if(IsFirstCgIteration)then
-       call set_gray_outer_bcs(nVar, Temp_VGB,'float')
+       ! Recommended: call set_gray_outer_bcs(nVar, Temp_VGB,'clean')
+       call set_gray_outer_bcs(nVar,Temp_VGB,'float')
        IsFirstCgIteration = .false.
     else
        call set_gray_outer_bcs(nVar, Temp_VGB,'zero')
@@ -1241,40 +1254,70 @@ contains
 
   subroutine set_gray_outer_bcs(nVar, Var_VGB,TypeBc)
 
-    use ModMain, ONLY: nI, nJ, nK, nBlk, nBlock, UnusedBlk
+    use ModMain, ONLY: nI, nJ, nK, nBlk, nBlock, UnusedBlk,TypeBc_I
     use ModParallel, ONLY: NOBLK, NeiLev
 
     integer, intent(in):: nVar
     real, intent(inout):: Var_VGB(nVar,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk)
     character(LEN=*),intent(in)::TypeBc
     integer :: iBlock
+    logical :: IsOuterBoundary_S(1:6)
     !--------------------------------------------------------------------------
 
     do iBlock = 1, nBlock
        if(UnusedBlk(iBlock))CYCLE
-       select case(TypeBc)
-       case('float')
+
        ! set floating outer boundary !!! shear to be added !!!
-          if(NeiLev(1,iBlock) == NOBLK) Var_VGB(:,0   ,:,:,iBlock)= &
-                                        Var_VGB(:,1   ,:,:,iBlock)
-          if(NeiLev(2,iBlock) == NOBLK) Var_VGB(:,nI+1,:,:,iBlock)= &
-                                        Var_VGB(:,nI  ,:,:,iBlock)
-          if(NeiLev(3,iBlock) == NOBLK) Var_VGB(:,:,0   ,:,iBlock)= &
-                                        Var_VGB(:,:,1   ,:,iBlock)
-          if(NeiLev(4,iBlock) == NOBLK) Var_VGB(:,:,nJ+1,:,iBlock)= &
-                                        Var_VGB(:,:,nJ  ,:,iBlock)
-          if(NeiLev(5,iBlock) == NOBLK) Var_VGB(:,:,:,0   ,iBlock)= &
-                                        Var_VGB(:,:,:,1   ,iBlock)
-          if(NeiLev(6,iBlock) == NOBLK) Var_VGB(:,:,:,nK+1,iBlock)= &
-                                        Var_VGB(:,:,:,nK  ,iBlock)
+       if(NeiLev(1,iBlock) == NOBLK) Var_VGB(:,0   ,:,:,iBlock)= &
+                                     Var_VGB(:,1   ,:,:,iBlock)
+       if(NeiLev(2,iBlock) == NOBLK) Var_VGB(:,nI+1,:,:,iBlock)= &
+                                     Var_VGB(:,nI  ,:,:,iBlock)
+       if(NeiLev(3,iBlock) == NOBLK) Var_VGB(:,:,0   ,:,iBlock)= &
+                                     Var_VGB(:,:,1   ,:,iBlock)
+       if(NeiLev(4,iBlock) == NOBLK) Var_VGB(:,:,nJ+1,:,iBlock)= &
+                                     Var_VGB(:,:,nJ  ,:,iBlock)
+       if(NeiLev(5,iBlock) == NOBLK) Var_VGB(:,:,:,0   ,iBlock)= &
+                                     Var_VGB(:,:,:,1   ,iBlock)
+       if(NeiLev(6,iBlock) == NOBLK) Var_VGB(:,:,:,nK+1,iBlock)= &
+                                     Var_VGB(:,:,:,nK  ,iBlock)
+       !For our applications, 'reflect' denotes an axis or a plane of symmetry,
+       !where we should maintain the symmetry both for tempereture and its
+       !perturbations.
+       IsOuterBoundary_S = NeiLev(:,iBlock)==NOBLK .and. TypeBc_I(1:6).ne.'reflect'
+       if(.not.any(IsOuterBoundary_S).or.TypeBc=='float')CYCLE
+       select case(TypeBc)
        case('zero')
-          if(NeiLev(1,iBlock) == NOBLK) Var_VGB(:,0   ,:,:,iBlock)= 0.0
-          if(NeiLev(2,iBlock) == NOBLK) Var_VGB(:,nI+1,:,:,iBlock)= 0.0
-          if(NeiLev(3,iBlock) == NOBLK) Var_VGB(:,:,0   ,:,iBlock)= 0.0
-          if(NeiLev(4,iBlock) == NOBLK) Var_VGB(:,:,nJ+1,:,iBlock)= 0.0
-          if(NeiLev(5,iBlock) == NOBLK) Var_VGB(:,:,:,0   ,iBlock)= 0.0
-          if(NeiLev(6,iBlock) == NOBLK) Var_VGB(:,:,:,nK+1,iBlock)= 0.0 
-                                
+          if(IsOuterBoundary_S(1)) Var_VGB(:,0   ,:,:,iBlock)= 0.0
+          if(IsOuterBoundary_S(2)) Var_VGB(:,nI+1,:,:,iBlock)= 0.0
+          if(IsOuterBoundary_S(3)) Var_VGB(:,:,0   ,:,iBlock)= 0.0
+          if(IsOuterBoundary_S(4)) Var_VGB(:,:,nJ+1,:,iBlock)= 0.0
+          if(IsOuterBoundary_S(5)) Var_VGB(:,:,:,0   ,iBlock)= 0.0
+          if(IsOuterBoundary_S(6)) Var_VGB(:,:,:,nK+1,iBlock)= 0.0 
+       case('clean')
+          if(IsOuterBoundary_S(1)) Var_VGB(:,0   ,:,:,iBlock)= min(&
+                                     2* Var_VGB(:,1   ,:,:,iBlock)-     &
+                                        Var_VGB(:,2   ,:,:,iBlock),     &
+                                        Var_VGB(:,1   ,:,:,iBlock))
+          if(IsOuterBoundary_S(2)) Var_VGB(:,nI+1,:,:,iBlock)= min(&
+                                     2* Var_VGB(:,nI  ,:,:,iBlock)-     &
+                                        Var_VGB(:,nI-1,:,:,iBlock),     &
+                                        Var_VGB(:,nI  ,:,:,iBlock))
+          if(IsOuterBoundary_S(3)) Var_VGB(:,:,0   ,:,iBlock)= min(&
+                                     2* Var_VGB(:,:,1   ,:,iBlock)-     &
+                                        Var_VGB(:,:,2   ,:,iBlock),     &
+                                        Var_VGB(:,:,1   ,:,iBlock))
+          if(IsOuterBoundary_S(4)) Var_VGB(:,:,nJ+1,:,iBlock)= min(&
+                                     2* Var_VGB(:,:,nJ  ,:,iBlock)-     &
+                                        Var_VGB(:,:,nJ-1,:,iBlock),     &
+                                        Var_VGB(:,:,nJ  ,:,iBlock))
+          if(IsOuterBoundary_S(5)) Var_VGB(:,:,:,0   ,iBlock)= min(&
+                                     2* Var_VGB(:,:,:,1   ,iBlock)-     &
+                                        Var_VGB(:,:,:,2   ,iBlock),     &
+                                        Var_VGB(:,:,:,1   ,iBlock))
+          if(IsOuterBoundary_S(6)) Var_VGB(:,:,:,nK+1,iBlock)= min(&
+                                     2* Var_VGB(:,:,:,nK  ,iBlock)-     &
+                                        Var_VGB(:,:,:,nK-1,iBlock),     &
+                                        Var_VGB(:,:,:,nK  ,iBlock))
        case default
           call stop_mpi('Non-implemented BC')
        end select
