@@ -867,6 +867,8 @@ contains
     integer, intent(out) :: Iter ! actual number of iterations
     logical, intent(in) :: DoTest
 
+    integer, parameter :: MaxIter = 30000
+
     real :: rDotR, pDotADotP, rDotR0, rDotRMax
 
     real, dimension(:,:,:,:,:), allocatable :: &
@@ -903,9 +905,7 @@ contains
        end do
     end if
 
-    Iter = 0
-
-    LOOP: do
+    do Iter = 0, MaxIter
 
        if(present(preconditioner))then
           call preconditioner(nVar, Residual_VCB, MMinusOneDotR_VCB)
@@ -958,8 +958,9 @@ contains
                + P_VGB(:,1:nI,1:nJ,1:nK,iBlock)/pDotADotP
        end do
 
-       Iter = Iter + 1
-    end do LOOP
+    end do
+
+    if(iTer > MaxIter)call stop_mpi("ModTemperature::cg did not converge")
 
     ! Calculate the achieved tolerance
     if(TypeStop=='abs')then
