@@ -350,12 +350,15 @@ subroutine set_inputs
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #THERMO:'
               write(*,*) '#THERMO'
-              write(*,*) "UseSolarHeating   (logical)"
-              write(*,*) "UseJouleHeating   (logical)"
-              write(*,*) "UseAuroralHeating (logical)"
-              write(*,*) "UseNOCooling      (logical)"
-              write(*,*) "UseOCooling       (logical)"
-              write(*,*) "UseConduction     (logical)"
+              write(*,*) "UseSolarHeating         (logical)"
+              write(*,*) "UseJouleHeating         (logical)"
+              write(*,*) "UseAuroralHeating       (logical)"
+              write(*,*) "UseNOCooling            (logical)"
+              write(*,*) "UseOCooling             (logical)"
+              write(*,*) "UseConduction           (logical)"
+              write(*,*) "UseTurbulentCond        (logical)"
+              write(*,*) "UseUpdatedTurbulentCond (logical)"
+              write(*,*) "EddyScaling             (real)"
               IsDone = .true.
            endif
 
