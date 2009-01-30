@@ -124,8 +124,8 @@ float			xMinBc
 float			xMaxBc
 reflect			yMinBc
 float			yMaxBc
-float			zMinBc
-float			zMaxBc
+reflect			zMinBc
+reflect			zMaxBc
 
 #SCHEME
 2			nOrder
