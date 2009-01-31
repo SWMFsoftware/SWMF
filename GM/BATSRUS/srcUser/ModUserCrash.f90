@@ -808,13 +808,11 @@ contains
        end do; end do; end do
 
     end if
-    if(UseGrayDiffusion)then
-       if(any(StateOld_VCB(ERadiation_,:,:,:,iBlock) < 0.0)) &
-            call stop_mpi('Negative radiation energy before updating states')
-    end if
     call update_states_MHD(iStage,iBlock)
 
     if(UseGrayDiffusion)then
+       if(any(StateOld_VCB(ERadiation_,:,:,:,iBlock) < 0.0)) &
+            call stop_mpi('Negative radiation energy before updating states')
        if(any(State_VGB(ERadiation_,1:nI,1:nJ,1:nK,iBlock) < 0.0)) &
             call stop_mpi('Negative radiation energy after updating states')
     end if
