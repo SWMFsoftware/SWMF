@@ -645,7 +645,7 @@ contains
   !============================================================================
 
   subroutine cg(matvec, Rhs_I, Sol_I, IsInit, n, Tol, TypeStop, &
-       nIter, iError, DoTest, iCommIn)
+       nIter, iError, DoTest, iCommIn, JacobiPrec_I)
 
     !Conjugated gradients, works if and only if the matrix A
     !is definite positive
@@ -667,18 +667,18 @@ contains
     real, intent(inout) :: Sol_I(n)  ! initial guess / solution vector
     logical, intent(in) :: IsInit    ! true  if Sol contains initial guess
     real,    intent(inout) :: Tol       ! required / achieved residual
-    integer, intent(out):: iError    ! info about convergence
-    logical, intent(in) :: DoTest
 
     character (len=3), intent(in) :: TypeStop
     !      Determine stopping criterion (||.|| denotes the 2-norm):
     !      typestop='rel'    -- relative stopping crit.:||res|| <= Tol*||res0||
     !      typestop='abs'    -- absolute stopping crit.: ||res|| <= Tol
  
-
+    integer, intent(out):: iError    ! info about convergence
+    logical, intent(in) :: DoTest
     integer, intent(inout) :: nIter  ! maximum/actual number of iterations
 
     integer, intent(in), optional :: iCommIn   ! MPI communicator
+    real,    intent(in), optional :: JacobiPrec_I(n) ! Jacobi preconditioner
 
     ! Local variables
     integer :: iComm                           ! MPI communicator
@@ -687,7 +687,7 @@ contains
     real :: rDotR, pDotADotP , rDotR0, rDotRMax, Alpha, Beta
 
     ! These arrays used to be automatic 
-    real, dimension(:), allocatable :: Vec_I, aDotVec_I
+    real, allocatable :: Vec_I(:), aDotVec_I(:), PrecRhs_I(:)
     !-----------------------------------------------------------------------
 
     ! Assign the MPI communicator
@@ -696,6 +696,8 @@ contains
 
     ! Allocate the vectors needed for CG
     allocate(Vec_I(n), aDotVec_I(n))
+
+    if(present(JacobiPrec_I))allocate(PrecRhs_I(n))
 
     MaxIter = nIter
    
@@ -710,7 +712,12 @@ contains
 
     Vec_I = 0.0
 
-    rDotR0 = dot_product_mpi(Rhs_I, Rhs_I, iComm)
+    if(present(JacobiPrec_I))then
+       PrecRhs_I = JacobiPrec_I*Rhs_I
+       rDotR0 = dot_product_mpi(Rhs_I, PrecRhs_I, iComm)
+    else
+       rDotR0 = dot_product_mpi(Rhs_I, Rhs_I, iComm)
+    end if
 
     if(TypeStop=='abs')then
        rDotRMax = Tol**2
@@ -729,7 +736,11 @@ contains
 
        Alpha = 1.0/rDotR
 
-       Vec_I = Vec_I + Alpha * Rhs_I
+       if(present(JacobiPrec_I))then
+          Vec_I = Vec_I + Alpha * PrecRhs_I
+       else
+          Vec_I = Vec_I + Alpha * Rhs_I
+       end if
       
        call matvec(Vec_I, aDotVec_I, n)
       
@@ -738,13 +749,19 @@ contains
        Rhs_I = Rhs_I - Beta * aDotVec_I
        Sol_I = Sol_I + Beta * Vec_I
 
-       rDotR = dot_product_mpi(Rhs_I, Rhs_I, iComm)
+       if(present(JacobiPrec_I))then
+          PrecRhs_I = JacobiPrec_I*Rhs_I
+          rDotR = dot_product_mpi(Rhs_I, PrecRhs_I, iComm)
+       else
+          rDotR = dot_product_mpi(Rhs_I, Rhs_I, iComm)
+       end if
        if(DoTest)write(*,*)'CG nIter, rDotR=',nIter, rDotR
 
     end do
 
     ! Deallocate the temporary vectors
     deallocate(Vec_I, aDotVec_I)
+    if(allocated(PrecRhs_I))deallocate(PrecRhs_I)
 
     ! Calculate the achieved tolerance
     if(TypeStop=='abs')then
