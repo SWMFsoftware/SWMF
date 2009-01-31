@@ -370,7 +370,7 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   call exchange_messages
 
-  if(UseSemiImplicit) call advance_impl   !^CFG IF IMPLICIT
+  if(UseSemiImplicit .and. Dt>0) call advance_impl   !^CFG IF IMPLICIT
   
   if(UsePartSteady) then
      ! Select steady and unsteady blocks
