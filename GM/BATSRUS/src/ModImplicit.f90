@@ -134,6 +134,7 @@ module ModImplicit
   ! Heptadiagonal Jacobian matrix
   integer, parameter:: nstencil=2*ndim+1
   real, allocatable :: MAT(:,:,:,:,:,:,:)
+  real, allocatable :: JacobiPrec_I(:)
 
   ! Right hand side for UseNewton, right hand side, dw=w_n+1 - w_n
   real, allocatable :: rhs0(:)
@@ -284,11 +285,12 @@ contains
     allocate(ResImpl_VCB(nw,nI,nJ,nK,MaxImplBLK))
     allocate(ResExpl_VCB(nw,nI,nJ,nK,MaxImplBLK))
     allocate(StateSemi_VGB(nw,-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock))
-    allocate(MAT(nw,nw,1:nI,1:nJ,1:nK,nstencil,MaxImplBLK))
     allocate(rhs0(MaxImplVar))
     allocate(rhs(MaxImplVar))
     allocate(dw(MaxImplVar))
     allocate(wnrm(nw))
+    allocate(MAT(nw,nw,1:nI,1:nJ,1:nK,nstencil,MaxImplBLK))
+    if(PrecondType == 'jacobi') allocate(JacobiPrec_I(MaxImplVar))
 
     if(iProc==0)then
        call write_prefix

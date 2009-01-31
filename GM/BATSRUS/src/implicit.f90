@@ -111,8 +111,9 @@ subroutine advance_impl
 
   character(len=15) :: NameSub = 'MH_advance_impl'
 
-  external impl_matvec
+  external impl_matvec, impl_matvec_free
 
+  integer :: i, j, k, n
   !----------------------------------------------------------------------------
 
   NameSub(1:2) = NameThisComp
@@ -279,7 +280,7 @@ subroutine advance_impl
      ! Calculate Jacobian matrix if required
      if(JacobianType/='free'.and.(NewtonIter==1.or.NewMatrix))then
 
-        !!! need to be changed for semi-implicit
+!!! need to be changed for semi-implicit
         if(NewtonIter>1)then
            ! Update ghost cells for Impl_VGB, 
            ! because it is needed by impl_jacobian
@@ -314,45 +315,54 @@ subroutine advance_impl
 
      ! Precondition matrix if required
      if(JacobianType=='prec'.and.(NewtonIter==1.or.NewMatrix))then
-        do implBLK=1,nImplBLK
-           ! Preconditioning: MAT --> LU
-           call prehepta(nIJK,nw,nI,nI*nJ,-GustafssonPar,&
-                MAT(1,1,1,1,1,1,implBLK),&
-                MAT(1,1,1,1,1,2,implBLK),&
-                MAT(1,1,1,1,1,3,implBLK),&
-                MAT(1,1,1,1,1,4,implBLK),&
-                MAT(1,1,1,1,1,5,implBLK),&
-                MAT(1,1,1,1,1,6,implBLK),&
-                MAT(1,1,1,1,1,7,implBLK))
-
-           ! rhs --> P_L.rhs, where P_L=U^{-1}.L^{-1}, L^{-1}, or I
-           ! for left, symmetric, and right preconditioning, respectively
-           if(PrecondSide/='right')then
-              call Lhepta(nIJK,nw,nI,nI*nJ,&
-                   rhs(nwIJK*(implBLK-1)+1),&
+        if(PrecondType == 'jacobi') then
+           n = 0
+           do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw
+              n = n + 1
+              JacobiPrec_I(n) = 1.0 / MAT(iw,iw,i,j,k,1,implBlk)
+           end do; end do; enddo; enddo; enddo
+           if(KrylovType /= 'cg') &
+                rhs(1:nImpl) = JacobiPrec_I(1:nImpl)*rhs(1:nImpl)
+        else
+           do implBLK=1,nImplBLK
+              ! Preconditioning: MAT --> LU
+              call prehepta(nIJK,nw,nI,nI*nJ,-GustafssonPar,&
                    MAT(1,1,1,1,1,1,implBLK),&
                    MAT(1,1,1,1,1,2,implBLK),&
+                   MAT(1,1,1,1,1,3,implBLK),&
                    MAT(1,1,1,1,1,4,implBLK),&
-                   MAT(1,1,1,1,1,6,implBLK))
-              if(PrecondSide=='left') &
-                   call Uhepta(.true.,nIJK,nw,nI,nI*nJ,&
-                   rhs(nwIJK*(implBLK-1)+1),  &
+                   MAT(1,1,1,1,1,5,implBLK),&
+                   MAT(1,1,1,1,1,6,implBLK),&
+                   MAT(1,1,1,1,1,7,implBLK))
+
+              ! rhs --> P_L.rhs, where P_L=U^{-1}.L^{-1}, L^{-1}, or I
+              ! for left, symmetric, and right preconditioning, respectively
+              if(PrecondSide/='right')then
+                 call Lhepta(nIJK,nw,nI,nI*nJ,&
+                      rhs(nwIJK*(implBLK-1)+1),&
+                      MAT(1,1,1,1,1,1,implBLK),&
+                      MAT(1,1,1,1,1,2,implBLK),&
+                      MAT(1,1,1,1,1,4,implBLK),&
+                      MAT(1,1,1,1,1,6,implBLK))
+                 if(PrecondSide=='left') &
+                      call Uhepta(.true.,nIJK,nw,nI,nI*nJ,&
+                      rhs(nwIJK*(implBLK-1)+1),  &
+                      MAT(1,1,1,1,1,3,implBLK),  &   ! +i diagonal
+                      MAT(1,1,1,1,1,5,implBLK),  &   ! +j
+                      MAT(1,1,1,1,1,7,implBLK))      ! +k
+              end if
+
+              ! Initial guess x --> P_R^{-1}.x where P_R^{-1} = I, U, LU for
+              ! left, symmetric and right preconditioning, respectively
+              ! Multiplication with LU is NOT implemented
+              if(non0dw .and. PrecondSide=='symmetric') &
+                   call Uhepta(.false.,nIJK,nw,nI,nI*nJ,&
+                   dw(nwIJK*(implBLK-1)+1),   &
                    MAT(1,1,1,1,1,3,implBLK),  &   ! +i diagonal
                    MAT(1,1,1,1,1,5,implBLK),  &   ! +j
                    MAT(1,1,1,1,1,7,implBLK))      ! +k
-           end if
-
-           ! Initial guess x --> P_R^{-1}.x where P_R^{-1} = I, U, LU for
-           ! left, symmetric and right preconditioning, respectively
-           ! Multiplication with LU is NOT implemented
-           if(non0dw .and. PrecondSide=='symmetric') &
-                call Uhepta(.false.,nIJK,nw,nI,nI*nJ,&
-                dw(nwIJK*(implBLK-1)+1),   &
-                MAT(1,1,1,1,1,3,implBLK),  &   ! +i diagonal
-                MAT(1,1,1,1,1,5,implBLK),  &   ! +j
-                MAT(1,1,1,1,1,7,implBLK))      ! +k
-        end do
-
+           end do
+        end if
         if(DoTest)then
            call MPI_reduce(sum(MAT(:,:,:,:,:,:,1:nImplBLK)**2),coef1,1,&
                 MPI_REAL,MPI_SUM,procTEST,iComm,iError)
@@ -408,8 +418,15 @@ subroutine advance_impl
         call gmres(impl_matvec,rhs,dw,non0dw,nimpl,nKrylovVector, &
              KrylovError,typestop,KrylovMatVec,info,DoTestKrylovMe,iComm)
      case('CG','cg')
-        call cg(impl_matvec,rhs,dw,non0dw,nimpl,&
-             KrylovError,typestop,KrylovMatVec,info,DoTestKrylovMe,iComm)        
+        if(PrecondType == 'jacobi')then
+           call cg(impl_matvec_free, rhs, dw, non0dw, nimpl,&
+                KrylovError, typestop, KrylovMatVec, info, DoTestKrylovMe,&
+                iComm, JacobiPrec_I)
+        else
+           call cg(impl_matvec_free, rhs, dw, non0dw, nimpl,&
+                KrylovError, typestop, KrylovMatVec, info, DoTestKrylovMe, &
+                iComm)
+        end if
      case default
         call stop_mpi('ERROR: Unknown TypeKrylov='//KrylovType)
      end select
@@ -420,7 +437,8 @@ subroutine advance_impl
 
      ! Postprocessing: dw = P_R.dw' where P_R = I, U^{-1}, U^{-1}L^{-1} for 
      ! left, symmetric and right preconditioning, respectively
-     if(JacobianType=='prec' .and. PrecondSide/='left')then
+     if(JacobianType=='prec' .and. PrecondSide/='left' &
+          .and. PrecondType /= 'jacobi')then
         do implBLK=1,nImplBLK
            if(PrecondSide=='right') &
                 call Lhepta(nIJK,nw,nI,nI*nJ,&
@@ -499,7 +517,7 @@ subroutine advance_impl
   end if
 
   if(UseUpdateCheckOrig .and. time_accurate .and. UseDtFixed)then
-     
+
      ! Calculate the largest relative drop in density or pressure
      do iBLK=1,nBlock
         if(UnusedBlk(iBLK)) CYCLE

@@ -215,7 +215,7 @@ subroutine impl_matvec_prec(qx,qy,n)
   ! qy = P_R.qx, where P_R = I, U^{-1}, or U^{-1}L^{-1}
   ! for left, symmetric and right preconditioning, respectively
 
-  if(PrecondSide/='left')then
+  if(PrecondSide /= 'left' .and. PrecondType /= 'jacobi')then
      do implBLK=1,nImplBLK
         if(PrecondSide=='right') &
              call Lhepta(nIJK,nw,nI,nI*nJ,&
@@ -237,7 +237,9 @@ subroutine impl_matvec_prec(qx,qy,n)
   ! qy = P_L.qy, where P_L==U^{-1}.L^{-1}, L^{-1}, or I
   ! for left, symmetric, and right preconditioning, respectively
 
-  if(PrecondSide/='right')then
+  if(PrecondType == 'jacobi') qy = JacobiPrec_I(1:n)*qy
+
+  if(PrecondSide/='right' .and. PrecondType /= 'jacobi')then
      do implBLK=1,nImplBLK
         call Lhepta(nIJK,nw,nI,nI*nJ,&
              qy(nwIJK*(implBLK-1)+1) ,&
