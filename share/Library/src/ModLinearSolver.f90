@@ -29,6 +29,8 @@ module ModLinearSolver
   public :: prehepta        ! LU preconditioner for up to hepta block-diagonal 
   public :: Uhepta          ! multiply with upper block triangular matrix
   public :: Lhepta          ! multiply with lower block triangular matrix
+  public :: upper_hepta_scalar ! multiply with upper scalar triangular matrix
+  public :: lower_hepta_scalar ! multiply with lower scalar triangular matrix
   public :: implicit_solver ! implicit solver in 1D with 3 point stencil
   public :: test_linear_solver
 
@@ -1122,15 +1124,15 @@ contains
     !
     !           f1(j): j=1..nblock-M1 blocks in the upper-triangular part with
     !                                 distance M1 from the main diagonal. 
-    !                                 Use scalar for block tri-diagonal matrix!
+    !                                 Omit for block tri-diagonal matrix!
     !
     !           f2(j): j=1..nblock-M2 blocks in the upper-triangular part with 
     !                                 distance M2 from the main diagonal.
-    !                                 Use scalar for block tri- and penta-diagonal
-    !                                 matrix!
+    !                                 Omit for block tri/penta-diagonal matrix!
     !
-    ! It is assumed that the blocks are not very sparse, so the sparsity pattern
-    ! within the separate blocks is not exploited. For example, the (i,k)-element 
+    ! It is assumed that the blocks are not very sparse, 
+    ! so the sparsity pattern  within the separate blocks is not exploited. 
+    ! For example, the (i,k)-element 
     ! of the j-th block on the super diagonal is stored in f(i,k,j).
 
     INTEGER :: j
@@ -1143,29 +1145,11 @@ contains
     !-----------------------------------------------------------------------
     !call timing_start('Uhepta')
 
-    if(N>20)then
-       ! BLAS VERSION
-       IF(inverse)THEN
-          !  x' := U^{-1}.x = x - F.x'(j+1) - F1.x'(j+M1) - F2.x'(j+M2)
-          DO j=nblock-1,1,-1
-             CALL BLAS_GEMV('n',N,N,-one, f(:,:,j),N,x(:,j+1 ),1,one,x(:,j),1)
-             IF (j+M1<=nblock) &
-                  CALL BLAS_GEMV('n',N,N,-one,f1(:,:,j),N,x(:,j+M1),1,one,x(:,j),1)
-             IF (j+M2<=nblock) &
-                  CALL BLAS_GEMV('n',N,N,-one,f2(:,:,j),N,x(:,j+M2),1,one,x(:,j),1)
-          ENDDO
-       ELSE
-          !  x := U.x = x + F.x(j+1) + F1.x(j+M1) + F2.x(j+M2)
-          DO j=1,nblock-1
-             CALL BLAS_GEMV('n',N,N,one, f(:,:,j),N,x(:,j+1 ),1,one,x(:,j),1)
-             IF (j+M1<=nblock) &
-                  CALL BLAS_GEMV('n',N,N,one,f1(:,:,j),N,x(:,j+M1),1,one,x(:,j),1)
-             IF (j+M2<=nblock) &
-                  CALL BLAS_GEMV('n',N,N,one,f2(:,:,j),N,x(:,j+M2),1,one,x(:,j),1)
-          END DO
-       END IF
-    else
-
+    if(n == 1)then
+       call upper_hepta_scalar(inverse,nblock,M1,M2,x,f,f1,f2)
+       RETURN
+    end if
+    if(n <= 20)then
        ! F90 VERSION
        if(inverse)then
           !  x' := U^{-1}.x = x - F.x'(j+1) - F1.x'(j+M1) - F2.x'(j+M2)
@@ -1197,6 +1181,27 @@ contains
              end if
           end do
        end if
+    else
+       ! BLAS VERSION
+       IF(inverse)THEN
+          !  x' := U^{-1}.x = x - F.x'(j+1) - F1.x'(j+M1) - F2.x'(j+M2)
+          DO j=nblock-1,1,-1
+             CALL BLAS_GEMV('n',N,N,-one, f(:,:,j),N,x(:,j+1 ),1,one,x(:,j),1)
+             IF (j+M1<=nblock) CALL BLAS_GEMV( &
+                  'n',N,N,-one,f1(:,:,j),N,x(:,j+M1),1,one,x(:,j),1)
+             IF (j+M2<=nblock) CALL BLAS_GEMV( &
+                  'n',N,N,-one,f2(:,:,j),N,x(:,j+M2),1,one,x(:,j),1)
+          ENDDO
+       ELSE
+          !  x := U.x = x + F.x(j+1) + F1.x(j+M1) + F2.x(j+M2)
+          DO j=1,nblock-1
+             CALL BLAS_GEMV('n',N,N,one, f(:,:,j),N,x(:,j+1 ),1,one,x(:,j),1)
+             IF (j+M1<=nblock) CALL BLAS_GEMV( &
+                  'n',N,N,one,f1(:,:,j),N,x(:,j+M1),1,one,x(:,j),1)
+             IF (j+M2<=nblock) CALL BLAS_GEMV( &
+                  'n',N,N,one,f2(:,:,j),N,x(:,j+M2),1,one,x(:,j),1)
+          END DO
+       END IF
     end if
 
     !call timing_stop('Uhepta')
@@ -1241,13 +1246,14 @@ contains
     !           e(j): j=2..nblock     sub diagonal blocks.
     !           e1(j): j=M1+1..nblock Blocks in the lower-triangular part with 
     !                                 distance M1 from the main diagonal.
-    !                                 Use scalar for block tri-diagonal matrix!
+    !                                 Omit for block tri-diagonal matrix!
     !           e2(j): j=M2+1..nblock Blocks in the lower-triangular part with 
     !                                 distance M2 from the main diagonal.
-    !                                 Use scalar for block tri- and penta-diagonal
-    !                                 matrices!
+    !                                 Omit for block tri/penta-diagonal matrix!
     ! this used to be an automatic array
     real, dimension(:), allocatable :: work
+
+    real:: work1
 
     INTEGER :: j
     REAL, PARAMETER :: zero=0.0, one=1.0
@@ -1264,22 +1270,14 @@ contains
 
     !call timing_start('Lhepta')
 
-    ! Allocate arrays that used to be Automatic
+    if(n == 1)then
+       call lower_hepta_scalar(nblock,M1,M2,x,d,e,e1,e2)
+       RETURN
+    end if
+    ! Allocate arrays that used to be automatic
     allocate(work(N))
-
-    if(N>20)then
-       ! BLAS VERSION
-       DO j=1,nblock
-
-          CALL BLAS_GEMV('n', N, N, one, d(:,:,j) ,N, x(:,j), 1, zero, work, 1)
-          IF (j>1) CALL BLAS_GEMV('n',N,N,-one,e(:,:,j) ,N,x(:,j-1) ,1,one,work,1)
-          IF (j>M1)CALL BLAS_GEMV('n',N,N,-one,e1(:,:,j),N,x(:,j-M1),1,one,work,1)
-          IF (j>M2)CALL BLAS_GEMV('n',N,N,-one,e2(:,:,j),N,x(:,j-M2),1,one,work,1)
-          call BLAS_COPY(N,work,1,x(:,j),1)
-
-       ENDDO
-    else
-       ! F90 VERSION
+    if(n <= 20)then
+       ! F90 version
        do j=1,nblock
           work = x(:,j)
           if (j>M2) then
@@ -1297,9 +1295,21 @@ contains
           end if
           x(:,j) = matmul( d(:,:,j),work)
        end do
-    end if
+    else
+       ! BLAS VERSION
+       do j=1,nblock
 
-    ! Deallocate arrays that used to be automatic
+          call BLAS_GEMV('n', N, N, one, d(:,:,j) ,N, x(:,j), 1, zero, work, 1)
+          if(j > 1 ) call BLAS_GEMV( &
+               'n',N,N,-one,e(:,:,j) ,N,x(:,j-1) ,1,one,work,1)
+          if(j > M1) call BLAS_GEMV( &
+               'n',N,N,-one,e1(:,:,j),N,x(:,j-M1),1,one,work,1)
+          if(j > M2) call BLAS_GEMV( &
+               'n',N,N,-one,e2(:,:,j),N,x(:,j-M2),1,one,work,1)
+          call BLAS_COPY(N,work,1,x(:,j),1)
+
+       enddo
+    end if
     deallocate(work)
 
     !call timing_stop('Lhepta')
@@ -1555,6 +1565,89 @@ contains
 
   end subroutine update_bound_test
 
-end module ModLinearSolver
+  !============================================================================
 
+  subroutine upper_hepta_scalar(IsInverse, nBlock, m1, m2, x, f, f1, f2)
+
+    ! G. Toth, 2009
+
+    ! This routine multiplies x with the upper triagonal U or U^{-1}
+    ! which must have been constructed in subroutine prehepta.
+    !
+    ! For penta-diagonal matrix, set M2=nblock and f2 can be omitted.
+    ! For tri-diagonal matrix set M1=M2=nblock and f1,f2 can be omitted.
+
+    logical, intent(in) :: IsInverse
+    integer, intent(in) :: m1, m2, nBlock
+    real, intent(inout) :: x(nblock)
+    real, intent(in)    :: f(nblock)
+    real, intent(in), optional :: f1(nblock), f2(nblock)
+
+    integer :: j
+    !------------------------------------------------------------------------
+
+    if(IsInverse)then
+       !  x' := U^{-1}.x = x - F.x'(j+1) - F1.x'(j+M1) - F2.x'(j+M2)
+       do j=nblock-1,1,-1
+          !  x' := U^{-1}.x = x - F.x'(j+1) - F1.x'(j+M1) - F2.x'(j+M2)
+          if (j+M2<=nblock) then
+             x(j) = x(j) - f(j)*x(j+1) - f1(j)*x(j+M1) - f2(j)*x(j+M2)
+          else if(j+M1 <= nblock) then
+             x(j) = x(j) - f(j)*x(j+1) - f1(j)*x(j+M1)
+          else
+             x(j) = x(j) - f(j)*x(j+1)
+          end if
+       end do
+    else
+       !  x := U.x = x + F.x(j+1) + F1.x(j+M1) + F2.x(j+M2)
+       do j=1,nblock-1
+          if (j+M2<=nblock) then
+             x(j) = x(j) + f(j)*x(j+1) + f1(j)*x(j+M1) + f2(j)*x(j+M2)
+          else if (j+M1 <= nblock) then
+             x(j) = x(j) + f(j)*x(j+1) + f1(j)*x(j+M1)
+          else
+             x(j) = x(j) + f(j)*x(j+1)
+          end if
+       end do
+    end if
+
+  end subroutine upper_hepta_scalar
+
+  !============================================================================
+
+  subroutine lower_hepta_scalar(nBlock, M1, M2, x, d, e, e1, e2)
+
+    ! G. Toth, 2001
+    !
+    ! This routine multiplies x with the lower triangular matrix L^{-1},
+    ! which must have been constructed in subroutine prehepta.
+    !
+    ! For penta-diagonal matrix, set M2=nblock and e2 can be omitted.
+    ! For tri-diagonal matrix set M1=M2=nblock and e1,e2 can be omitted.
+
+    integer, intent(in) :: m1, m2, nBlock
+    real, intent(inout) :: x(nBlock)
+    real, intent(in), dimension(nBlock) :: d,e
+    real, intent(in), dimension(nBlock), optional :: e1,e2
+
+    real:: Work1
+
+    integer :: j
+    !--------------------------------------------------------------------------
+    ! x' = L^{-1}.x = D^{-1}.(x - E2.x'(j-M2) - E1.x'(j-M1) - E.x'(j-1))
+    do j=1, nblock
+       work1 = x(j)
+       if (j > M2) then
+          work1 = work1 - e(j)*x(j-1) - e1(j)*x(j-M1) - e2(j)*x(j-M2)
+       else if (j > M1) then
+          work1 = work1 - e(j)*x(j-1) - e1(j)*x(j-M1)
+       else if (j > 1) then
+          work1 = work1 - e(j)*x(j-1)
+       end if
+       x(j) = d(j)*work1
+    end do
+
+  end subroutine lower_hepta_scalar
+
+end module ModLinearSolver
 
