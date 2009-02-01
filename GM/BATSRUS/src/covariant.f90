@@ -28,7 +28,7 @@ subroutine gen_to_xyz_arr(&
   !----------------------------------------------------------
 
   select case(TypeGeometry)
-  case('cartesian')
+  case('cartesian','zr')
      !Gen1=x , Gen2=y, Gen3=z
      do k = kStart, kMax
         do j = jStart, jMax
@@ -136,7 +136,7 @@ subroutine xyz_to_gen(XyzIn_D,GenOut_D)
   real,external::wall_radius
 
   select case(TypeGeometry)           
-  case('cartesian')                   
+  case('cartesian','zr')                   
      GenOut_D=XyzIn_D
   case('spherical','spherical_lnr')   
      call xyz_to_spherical(XyzIn_D(x_),XyzIn_D(y_),XyzIn_D(z_),&
@@ -204,6 +204,7 @@ subroutine fix_pole(iBlock)
 
   !-------------------------------------------------------------!
   FaceArea2MinI_B(iBlock)=cZero
+  FaceArea2MinJ_B(iBlock)=cZero
   FaceArea2MinK_B(iBlock)=cZero
 
   if(.not.is_axial_geometry())return
@@ -964,6 +965,7 @@ subroutine fix_covariant_geometry(iBLK)
        RDotFaceAreaK_F(:,:,2:nK+1)-RDotFaceAreaK_F(:,:,1:nK) )
   call fix_pole(iBLK)
   call test_block_geometry(iBLK,NameSub)
+  if(trim(TypeGeometry)=='zr')call fix_zr_geometry(iBLK)
 end subroutine fix_covariant_geometry
 subroutine test_block_geometry(iBlock,NameSub)
   use ModCovariant
@@ -994,6 +996,46 @@ subroutine test_block_geometry(iBlock,NameSub)
      end if
   end do;end do;end do
 end subroutine test_block_geometry
+!========================================================================
+subroutine fix_zr_geometry(iBlock)
+
+  use ModCovariant
+  use ModNodes,ONLY:NodeY_NB
+  use ModGeometry,ONLY: vInv_CB, dz_BLK, y_BLK, dy_BLK, dx_BLK
+  use ModSize
+  implicit none
+  integer,intent(in)::iBlock
+  
+  integer :: i, j, k
+  real    :: DzInv
+  
+  character(LEN=*),parameter::NameSub='fix_zr_geometry'
+  !---------------------------------------------------!
+  
+  DzInv = 1/dz_BLK(iBlock)
+
+  FaceAreaK_DFB(:,:,:,:,iBlock) = 0; FaceArea2MinK_B(iBlock)= 1.0
+ 
+  do j=1,nJ
+     vInv_CB(:,j,:,iBlock) = vInv_CB(:,j,:,iBlock)/&
+          (abs(y_BLK(1,j,1,iBlock)) * DzInv)
+
+     FaceAreaI_DFB(:,:,j,:,iBlock) = FaceAreaI_DFB(:,:,j,:,iBlock) * DzInv *&
+           abs(y_BLK(1,j,1,iBlock))
+  end do
+
+  do j=1,nJ+1
+     FaceAreaJ_DFB(:,:,j,:,iBlock) = FaceAreaJ_DFB(:,:,j,:,iBlock) * DzInv *&
+           abs(NodeY_NB(1,j,1,iBlock))
+  end do
+
+  if(minval(y_BLK(1,1:nJ,1,iBlock)**2) < &
+       dy_BLK(iBlock)**2) FaceArea2MinJ_B(iBlock) = &
+       0.10 * (dy_BLK(iBlock) * dx_BLK(iBlock))**2
+
+
+end subroutine fix_zr_geometry
+
 !========================================================================
 subroutine calc_b0source_covar(iBlock)  
   use ModProcMH  
