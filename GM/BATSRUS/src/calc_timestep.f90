@@ -6,6 +6,7 @@ subroutine calc_timestep
        DoFixAxis, rFixAxis, r2FixAxis, State_VGB, Rho_, FluxType, NormB0_CB
   use ModNumConst
   use ModGeometry, ONLY: true_cell, true_BLK, vInv_CB, rMin_BLK, TypeGeometry
+  use ModGeometry, ONLY: y_BLK, TypeGeometry
   use ModParallel, ONLY: NeiLEast, NeiLBot, NeiLTop, NOBLK
   implicit none
 
@@ -39,6 +40,19 @@ subroutine calc_timestep
           + max(VdtFace_z(i,j,k),VdtFace_z(i,j,k+1)) &
           ) + SourceSpectralRadius_C(i,j,k))
   end do; end do; end do
+  
+  if(TypeGeometry=='zr')then
+     do k=1,nK; do j=1,nJ; do i=1,nI
+        time_BLK(i,j,k,iBlock) = 1.0 /(vInv_CB(i,j,k,iBlock)&
+             *(max(VdtFace_x(i,j,k),VdtFace_x(i+1,j,k)) &
+             + max(VdtFace_y(i,j,k)*max(1.0,abs(y_BLK(i,j,k,iBlock)/&
+             y_BLK(i,j-1,k,iBlock))),                   &
+                 VdtFace_y(i,j+1,k)*max(1.0,abs(y_BLK(i,j,k,iBlock)/&
+             y_BLK(i,j+1,k,iBlock)))) &
+             + max(VdtFace_z(i,j,k),VdtFace_z(i,j,k+1)) &
+             ) + SourceSpectralRadius_C(i,j,k))
+     end do; end do; end do
+  end if
 
   if(DoFixAxis .and. time_accurate)then
      ! Ignore time step constraints from supercell

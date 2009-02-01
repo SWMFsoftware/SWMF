@@ -997,6 +997,10 @@ subroutine test_block_geometry(iBlock,NameSub)
   end do;end do;end do
 end subroutine test_block_geometry
 !========================================================================
+! Formulae for face areas and control volumes are legitimate as the 
+! finite ratios Area/d\phi and Volume/d\phi, for the the azimuthal 
+! width of the control volume, angle, d\phi, tending to zero. 
+
 subroutine fix_zr_geometry(iBlock)
 
   use ModCovariant
@@ -1014,8 +1018,12 @@ subroutine fix_zr_geometry(iBlock)
   
   DzInv = 1/dz_BLK(iBlock)
 
+  !No fluxes along 'k' direction
   FaceAreaK_DFB(:,:,:,:,iBlock) = 0; FaceArea2MinK_B(iBlock)= 1.0
- 
+  
+  !To transform the face areas and volumes obtained for cartesian geometry
+  !we need (1) to eliminate the dependence on meaningless dZ and (2)
+  !to add the radius-dependent multipliers (radial coordinate is abs(y)
   do j=1,nJ
      vInv_CB(:,j,:,iBlock) = vInv_CB(:,j,:,iBlock)/&
           (abs(y_BLK(1,j,1,iBlock)) * DzInv)
@@ -1028,6 +1036,9 @@ subroutine fix_zr_geometry(iBlock)
      FaceAreaJ_DFB(:,:,j,:,iBlock) = FaceAreaJ_DFB(:,:,j,:,iBlock) * DzInv *&
            abs(NodeY_NB(1,j,1,iBlock))
   end do
+
+  !At the pole the face area along j direction is zero. Non-zero FaceArea2MinJ 
+  !should be set:
 
   if(minval(y_BLK(1,1:nJ,1,iBlock)**2) < &
        dy_BLK(iBlock)**2) FaceArea2MinJ_B(iBlock) = &

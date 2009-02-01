@@ -89,8 +89,10 @@ contains
 
     use ModReadParam
     use ModEos,      ONLY: read_eos_parameters
-    Use ModGeometry, ONLY: IsCylindrical
-
+    use ModGeometry, ONLY: TypeGeometry,UseCovariant
+!Temporal solution: the fisrt line below should be removed, the second one - uncommented
+    use ModGeometry, ONLY: IsCylindrical
+!    logical :: IsCylindrical
     character (len=100) :: NameCommand
     character(len=*), parameter :: NameSub = 'user_read_inputs'
     !------------------------------------------------------------------------
@@ -125,6 +127,11 @@ contains
           if(UseMixedCell)call read_var('MixLimit', MixLimit)
        case("#CYLINDRICAL")
           call read_var('IsCylindrical', IsCylindrical)
+          if(IsCylindrical)then
+             UseCovariant = .true.  ; TypeGeometry = 'zr'
+          else
+             UseCovariant = .false. ; TypeGeometry = 'cartesian'
+          end if
        case("#EOS")
           call read_eos_parameters
        case("#OPACITY")
@@ -747,7 +754,7 @@ contains
     use ModAdvance, ONLY: State_VGB, Rho_, RhoUy_, p_, ExtraEInt_, &
          LevelXe_, LevelPl_, Flux_VX, Flux_VY, Flux_VZ, Source_VC, &
          VdtFace_Y, VdtFace_Z, UseNonConservative, Eradiation_,StateOld_VCB
-    use ModGeometry,ONLY: x_BLK, y_BLK, z_BLK, vInv_CB, IsCylindrical
+    use ModGeometry,ONLY: x_BLK, y_BLK, z_BLK, vInv_CB, TypeGeometry
     use ModNodes,   ONLY: NodeY_NB
     use ModPhysics
     use ModEnergy,  ONLY: calc_energy_cell
@@ -766,23 +773,24 @@ contains
     character(len=*), parameter :: NameSub = 'user_update_states'
     !------------------------------------------------------------------------
 
-    if(IsCylindrical)then
-       ! Multiply fluxes with radius = abs(Y) at the X and Y faces
-       do k=1,nK; do j=1, nJ; do i=1, nI+1
-          Flux_VX(:,i,j,k)=Flux_VX(:,i,j,k)*abs(y_BLK(i,j,k,iBlock))
-       end do; end do; end do
-       do k=1,nK; do j=1, nJ+1; do i=1, nI
-          Flux_VY(:,i,j,k)=Flux_VY(:,i,j,k)*abs(NodeY_NB(i,j,k,iBlock))
-          ! Upper estimate on the time step restriction takes the smaller r
-          VdtFace_Y(i,j,k) = VdtFace_Y(i,j,k)* abs(NodeY_NB(i,j,k,iBlock))/&
-                  min(abs(y_BLK(i,j,k,iBlock)),abs(y_BLK(i,j-1,k,iBlock)))
-       end do; end do; end do
-       ! There are no fluxes and CFL restrictions in the azimuthal direction
-       do k=1,nK+1; do j=1, nJ; do i=1, nI
-          Flux_VZ(:,i,j,k) = 0.0
-          VdtFace_Z(i,j,k) = 0.0
-       end do; end do; end do
-
+    if(TypeGeometry == 'zr')then
+    
+!   ! Multiply fluxes with radius = abs(Y) at the X and Y faces
+    !   do k=1,nK; do j=1, nJ; do i=1, nI+1
+    !      Flux_VX(:,i,j,k)=Flux_VX(:,i,j,k)*abs(y_BLK(i,j,k,iBlock))
+    !   end do; end do; end do
+    !   do k=1,nK; do j=1, nJ+1; do i=1, nI
+    !      Flux_VY(:,i,j,k)=Flux_VY(:,i,j,k)*abs(NodeY_NB(i,j,k,iBlock))
+    !      ! Upper estimate on the time step restriction takes the smaller r
+    !      VdtFace_Y(i,j,k) = VdtFace_Y(i,j,k)* abs(NodeY_NB(i,j,k,iBlock))/&
+    !              min(abs(y_BLK(i,j,k,iBlock)),abs(y_BLK(i,j-1,k,iBlock)))
+    !   end do; end do; end do
+    !   ! There are no fluxes and CFL restrictions in the azimuthal direction
+    !   do k=1,nK+1; do j=1, nJ; do i=1, nI
+    !      Flux_VZ(:,i,j,k) = 0.0
+    !      VdtFace_Z(i,j,k) = 0.0
+    !   end do; end do; end do
+    !
        ! Add "geometrical source term" p/r to the radial momentum equation
        ! The "radial" direction is along the Y axis. There is no velocity
        ! in the azimuthal (=Z) direction, so there are no more terms.
@@ -802,23 +810,23 @@ contains
        end if
 
        ! Multiply volume with radius (=Y) at cell center -> divide inverse vol
-       vInv_C = vInv_CB(:,:,:,iBlock)
-       do k=1,nK; do j=1, nJ; do i=1, nI
-          vInv_CB(i,j,k,iBlock)=vInv_C(i,j,k)/abs(y_BLK(i,j,k,iBlock))
-       end do; end do; end do
+!       vInv_C = vInv_CB(:,:,:,iBlock)
+!       do k=1,nK; do j=1, nJ; do i=1, nI
+!          vInv_CB(i,j,k,iBlock)=vInv_C(i,j,k)/abs(y_BLK(i,j,k,iBlock))
+!       end do; end do; end do
 
     end if
     call update_states_MHD(iStage,iBlock)
 
-    if(UseGrayDiffusion)then
-       if(any(StateOld_VCB(ERadiation_,:,:,:,iBlock) < 0.0)) &
-            call stop_mpi('Negative radiation energy before updating states')
-       if(any(State_VGB(ERadiation_,1:nI,1:nJ,1:nK,iBlock) < 0.0)) &
-            call stop_mpi('Negative radiation energy after updating states')
-    end if
-
-    ! Undo change of volume (fluxes and sources are not used any more)
-    if(IsCylindrical) vInv_CB(:,:,:,iBlock) = vInv_C
+!    if(UseGrayDiffusion)then
+!       if(any(StateOld_VCB(ERadiation_,:,:,:,iBlock) < 0.0)) &
+!            call stop_mpi('Negative radiation energy before updating states')
+!       if(any(State_VGB(ERadiation_,1:nI,1:nJ,1:nK,iBlock) < 0.0)) &
+!            call stop_mpi('Negative radiation energy after updating states')
+!    end if
+!
+!    ! Undo change of volume (fluxes and sources are not used any more)
+!    if(IsCylindrical) vInv_CB(:,:,:,iBlock) = vInv_C
 
     !!! temporary solution for the levelset test. 
     if(UseNonConservative) RETURN
@@ -827,6 +835,7 @@ contains
 
     do k=1,nK; do j=1,nJ; do i=1,nI
        ! Total internal energy ExtraEInt + P/(\gamma -1) transformed to SI
+ 
        EInternalSI = No2Si_V(UnitEnergyDens_)*&
             (inv_gm1*State_VGB(P_,i,j,k,iBlock) + &
             State_VGB(ExtraEInt_,i,j,k,iBlock))
