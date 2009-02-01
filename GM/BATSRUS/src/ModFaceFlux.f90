@@ -12,7 +12,7 @@ module ModFaceFlux
 
   use ModGeometry,   ONLY: UseCovariant, &                
        FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB, &     
-       FaceArea2MinI_B, FaceArea2MinK_B  
+       FaceArea2MinI_B, FaceArea2MinJ_B, FaceArea2MinK_B  
 
   use ModB0, ONLY:B0_DX, B0_DY, B0_DZ, B0_DGB ! input: face/cell centered B0
 
@@ -699,9 +699,24 @@ contains
        AreaY = FaceAreaJ_DFB(y_, iFace, jFace, kFace, iBlockFace)
        AreaZ = FaceAreaJ_DFB(z_, iFace, jFace, kFace, iBlockFace)
        Area2 = AreaX**2 + AreaY**2 + AreaZ**2
-       
-       Area = sqrt(Area2)
-       Normal_D = (/AreaX, AreaY, AreaZ/)/Area
+       if(Area2 < 0.5*FaceArea2MinJ_B(iBlockFace))then
+          !The face is at the pole
+          Normal_D(x_)=x_BLK(iFace, jFace, kFace, iBlockFace)-&
+                       x_BLK(iLeft, jLeft, kLeft, iBlockFace)
+          Normal_D(y_)=y_BLK(iFace, jFace, kFace, iBlockFace)-&
+                       y_BLK(iLeft, jLeft, kLeft, iBlockFace)
+          Normal_D(z_)=z_BLK(iFace, jFace, kFace, iBlockFace)-&
+                       z_BLK(iLeft, jLeft, kLeft, iBlockFace)
+          Normal_D=Normal_D/&
+               sqrt(Normal_D(x_)**2+Normal_D(y_)**2+Normal_D(z_)**2)
+          Area = 0.0
+          Area2= 0.0
+          ! Store this in case pole diffusion is required
+          Area2Min = FaceArea2MinJ_B(iBlockFace)
+       else
+          Area = sqrt(Area2)
+          Normal_D = (/AreaX, AreaY, AreaZ/)/Area
+       end if
     end if                                
 
     call set_cell_values_common

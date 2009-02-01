@@ -10,7 +10,7 @@ module ModCovariant
   save
  
   real,dimension(nBLK) :: &
-       FaceArea2MinI_B, FaceArea2MinK_B
+       FaceArea2MinI_B, FaceArea2MinJ_B, FaceArea2MinK_B
   
   logical::UseCovariant=.false.
 
