@@ -5,6 +5,17 @@
 #ifndef IFILEOPR 
 #define IFILEOPR
 
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 class CiFileOperations {
 public:
   FILE* fd;
@@ -74,7 +85,7 @@ public:
       for (j=0;(str[i+j]!='\0')&&(str[i+j]!='\n');j++) str[j]=str[i+j];
       str[j]='\0';
 
-      for (i=0;str[i]!='\0';i++) if (str[i]=='!') str[i]='\0';
+      for (i=0;str[i]!='\0';i++) if ((str[i]=='!')||(str[i]=='\r')) str[i]='\0';
     } while ((str[0]=='\0')&&(!feof(fd)));
 
     if (feof(fd)!=0) {

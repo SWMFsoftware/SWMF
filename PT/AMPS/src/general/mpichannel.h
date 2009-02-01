@@ -145,7 +145,7 @@ public:
     }
 
     delete [] recvBuffer[thread];
-    recvBuffer[thread]=NULL,recvptr[thread]=0; 
+    recvBuffer[thread]=NULL,recvptr[thread]=0,RecvDataLength[thread]=0; 
   };
 
   void closeRecvAll() {
