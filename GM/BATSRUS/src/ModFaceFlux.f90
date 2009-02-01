@@ -913,7 +913,7 @@ contains
     State_V = 0.5*(StateLeft_V + StateRight_V)
 
     !^CFG IF IMPLICIT BEGIN
-    if(UseGrayDiffusion.and..not.UseTemperatureDiffusion)then
+    if(UseFullImplicit .and. UseGrayDiffusion)then
        call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
             iBlockFace, State_V, EradFlux_D)
     end if
