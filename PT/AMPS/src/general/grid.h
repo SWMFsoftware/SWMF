@@ -404,7 +404,7 @@ public:
       initflag=true;
 
       //init the Search Mask
-      long int nodeno,i,j,k,Xelements,Yelements,Zelements;
+      long int i,j,k,Xelements,Yelements,Zelements;
 
       Xelements=SearchMaskLength;
       Yelements=(DIM>=2) ? SearchMaskLength : 1; 
@@ -707,7 +707,7 @@ public:
     }  
 
     for (idim=0;idim<DIM;idim++) a[idim]=b[idim];
-  };
+  } 
 
 //==================================================
   void GetTMatrix1D() {

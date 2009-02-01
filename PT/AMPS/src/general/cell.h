@@ -193,7 +193,7 @@ public:
   }; 
 
   template <class T> void RandomPosition(T* x) {
-    double f1,f2,f3; 
+    register double f1,f2; 
 
     switch (DIM) {
     case 3 :
@@ -208,14 +208,13 @@ public:
         x[1]=(1.0-x[0])*rnd();
       }
       else if (SymmetryMode==cylindrical_symmetry) {
-        register double r0,J,ltot,p,pmax,f1,f2,nd0[2],nd1[2],nd2[2],e0[2],e1[2];
+        register double r0,ltot,p,pmax,nd0[2],nd1[2],nd2[2],e0[2],e1[2];
 
         node[0]->GetX(nd0);node[1]->GetX(nd1);node[2]->GetX(nd2); 
         e0[0]=nd1[0]-nd0[0],e0[1]=nd1[1]-nd0[1];
         e1[0]=nd2[0]-nd0[0],e1[1]=nd2[1]-nd0[1];
 
         r0=nd0[1];
-        J=fabs(e0[0]*e1[1]-e1[0]*e0[1]);
 
         //distribute the first coordinate
         ltot=sqrt(pow(e1[0],2)+pow(e1[1],2))+sqrt(pow(e0[0],2)+pow(e0[1],2));
@@ -252,7 +251,7 @@ public:
     default :
       exit(__LINE__,__FILE__,"wrong DIM value");
     }
-  }; 
+  }  
 
   friend bool CellsIntersection(Ccell<DataType,NodeType,FaceType>& cell1,Ccell<DataType,NodeType,FaceType>& cell2) {
     bool res; 
