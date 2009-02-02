@@ -231,7 +231,7 @@ test_hyades2d:
 	make test_hyades2d_check
 
 test_hyades2d_compile:
-	./Config.pl -e=HdRadCrash -u=Crash -g=4,4,2,2000,1
+	./Config.pl -e=HdRadCrash -u=Crash -g=10,10,2,200,200
 	make CRASH
 	make PIDL
 

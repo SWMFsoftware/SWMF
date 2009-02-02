@@ -70,7 +70,7 @@ MIXEDCELL
 T			UseMixedCell
 0.97			MixLimit
 
-CYLINDRICAL
+#CYLINDRICAL
 T			UseCylindrical
 
 #HYADES
@@ -79,12 +79,27 @@ hyades2d_1.1ns.out	NameHyadesFile
 
 #USERINPUTEND    ----------------------
 
-#IMPLICITTEMPERATURE
+#SEMIIMPLICIT
+T                       UseSemiImplicit
+radiation               TypeSemiImplicit
+
+#KRYLOV
+bicgstab                TypeKrylov
+nul                     TypeInitKrylov
+1.0e-8                  ErrorMaxKrylov
+900                     MaxMatvecKrylov
+
+#PRECONDITIONER
+symmetric               TypePrecondSide (left, symmetric, right)
+mbilu                   TypePrecond (MBILU)
+0.0                     GustafssonPar (0. no modification, 1. full modification
+
+IMPLICITTEMPERATURE
 T                       UseTemperatureDiffusion
-T                       UseTemperatureVariable
+F                       UseTemperatureVariable
 blockjacobi             TypePreconditioner
 rel                     TypeStopCriterion
-1e-12                   MaxErrorResidual
+1e-8                    MaxErrorResidual
 
 #RADIATION
 T                       UseGrayDiffusion
@@ -95,14 +110,14 @@ larsen                  TypeRadFluxLimiter
 T			IsTimeAccurate
 
 #CHECKGRIDSIZE
-4			nI
-4			nJ
+10			nI
+10			nJ
 2			nK
-500			MinBlockALL
+100			MinBlockALL
 
 #GRID
-70			nRootBlockX
-7			nRootBlockY
+30			nRootBlockX
+3			nRootBlockY
 1			nRootBlockZ
 -50.0			xMin
 4000.0			xMax
@@ -160,7 +175,7 @@ z=0 VAR idl		PlotString
 -1                      DnSavePlot
 1.0e-9                  DtSavePlot
 0.0			DxSavePlot
-rho ux uy uz Eint p Xe Be Pl level tekev trkev
+rho ux uy uz Eint p Xe Be Pl level tekev trkev plank ross
 gamma
 
 #STOP
