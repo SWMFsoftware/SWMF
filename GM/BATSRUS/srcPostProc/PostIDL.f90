@@ -140,6 +140,10 @@ program PostIDL
         read(unit_tmp,*)iPoint,TorusSurface_I(iPoint)
      end do
   end if
+  if(TypeGeometry == 'zr' .or. TypeGeometry == 'xr')then
+     TypeGeometry = 'cartesian'
+     coord = (/'x    ','r    ','phi  '/)
+  end if
   ! Unstructured grid has dx=-1.
   structured = dxyz(1) > -0.9
 
