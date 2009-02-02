@@ -991,24 +991,21 @@ contains
              if(j==1)then
                 DiffLeft = 0.0
              else
-                DiffLeft = sum(DiffSemiCoef_VGB(EradImpl_,i,j-1:j,k,iBlock)) &
-                     *abs(NodeY_NB(i,j,k,iBlock))
+                DiffLeft = Coeff &
+                     *sum(DiffSemiCoef_VGB(EradImpl_,i,j-1:j,k,iBlock)) &
+                     *abs(NodeY_NB(i,j,k,iBlock)/y_Blk(i,j,k,iBlock))
              end if
              if(j==nJ)then
                 DiffRight = 0.0
              else
-                DiffRight = sum(DiffSemiCoef_VGB(EradImpl_,i,j:j+1,k,iBlock)) &
-                     *abs(NodeY_NB(i,j+1,k,iBlock))
+                DiffRight = Coeff &
+                     *sum(DiffSemiCoef_VGB(EradImpl_,i,j:j+1,k,iBlock)) &
+                     *abs(NodeY_NB(i,j+1,k,iBlock)/y_Blk(i,j,k,iBlock))
              end if
              Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
-                  Jacobian_VVCI(iVar,iVar,i,j,k,1) &
-                  - Coeff*(DiffLeft + DiffRight)/abs(y_Blk(i,j,k,iBlock))
-             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim)   = &
-                  Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) &
-                  + Coeff*DiffLeft/abs(y_Blk(i,j-1,k,iBlock))
-             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) = &
-                  Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) &
-                  + Coeff*DiffRight/abs(y_Blk(i,j+1,k,iBlock))
+                  Jacobian_VVCI(iVar,iVar,i,j,k,1) - (DiffLeft + DiffRight)
+             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim)   = DiffLeft
+             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) = DiffRight
           end do; end do; end do
           EXIT ! Done with cylindrical
        end if
@@ -1016,22 +1013,20 @@ contains
           if(iDim==1.and.i==1 .or. iDim==2.and.j==1 .or. iDim==3.and.k==1)then
              DiffLeft = 0.0
           else
-             DiffLeft = sum(DiffSemiCoef_VGB(EradImpl_,i-Di:i,j-Dj:j,k-Dk:k,iBlock))
+             DiffLeft = Coeff &
+                  *sum(DiffSemiCoef_VGB(EradImpl_,i-Di:i,j-Dj:j,k-Dk:k,iBlock))
           end if
-          if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ .or. iDim==3.and.k==nK) then
+          if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ .or. &
+               iDim==3.and.k==nK) then
              DiffRight = 0.0
           else
-             DiffRight = sum(DiffSemiCoef_VGB(EradImpl_,i:i+Di,j:j+Dj,k:k+Dk,iBlock))
+             DiffRight = Coeff &
+                  *sum(DiffSemiCoef_VGB(EradImpl_,i:i+Di,j:j+Dj,k:k+Dk,iBlock))
           end if
           Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
-               Jacobian_VVCI(iVar,iVar,i,j,k,1) &
-               - Coeff*(DiffLeft + DiffRight)
-          Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim)   = &
-               Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) &
-               + Coeff*DiffLeft
-          Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) = &
-               Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) &
-               + Coeff*DiffRight
+               Jacobian_VVCI(iVar,iVar,i,j,k,1) - (DiffLeft + DiffRight)
+          Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim)   = DiffLeft
+          Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) = DiffRight
        end do; end do; end do
     end do
 
