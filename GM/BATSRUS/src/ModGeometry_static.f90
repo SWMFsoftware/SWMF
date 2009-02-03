@@ -13,12 +13,6 @@ Module ModGeometry
   logical, parameter :: IsDynamicGeometry = .false.
 
   !\
-  ! Allow for 2D with cylindrical symmetry around the X axis
-  ! It is currently only functional for the CRASH user file
-  !/
-  logical :: IsCylindrical = .false.
-
-  !\
   ! Geometry parameters.
   !/
   real  ::    x1, x2, y1, y2, z1, z2
