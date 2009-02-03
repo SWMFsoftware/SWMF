@@ -455,8 +455,10 @@ OH/BATSRUS/src/Makefile:
 	cp -f IH/BATSRUS_share/src/IH_set_buffer_grid.f90 \
 		OH/BATSRUS/srcInterface/OH_set_buffer_grid.f90
 	cd OH/BATSRUS/srcInterface/; perl -i -pe \
-	's/IH/OH/g;s/BATSRUS/OH_BATSRUS/;s/Inner/Outer/;'\
-		OH_wrapper.f90 OH_set_buffer_grid.f90
+	's/IH/OH/g;s/_sc/_ih/;s/BATSRUS/OH_BATSRUS/;s/Inner/Outer/;'\
+		OH_wrapper.f90 OH_set_buffer_grid.f90 
+	cd OH/BATSRUS/srcInterface/; perl -i -pe \
+	's/IH/OH/g;s/Ih/Oh/g;s/SC/IH/g;s/Sc/Ih/g' ModBuffer.f90
 	cd OH/BATSRUS/src; rm -f main.f90
 
 # rename OH source files to avoid name conflicts
