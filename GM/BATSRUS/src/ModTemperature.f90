@@ -32,6 +32,12 @@ module ModTemperature
   real, allocatable :: SpecificHeat_VCB(:,:,:,:,:)
   real, allocatable :: HeatConductionCoef_IGB(:,:,:,:,:)
 
+  ! Face centered values for the heat conduction coefficients
+  ! multiplied by face area divided by cell-to-cell
+  ! center distance across the given face  
+  real, allocatable, dimension(:,:,:,:) ::&
+       Cond_VFX, Cond_VFY, Cond_VFZ
+
   ! For the purpose of message passing the heat conduction coefficients
   ! are compactly stored without gaps. A pointer is used to indicate
   ! which temperature variables involve heat conduction
@@ -212,10 +218,15 @@ contains
             Temperature_VGB(nTemperature,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk), &
             Source_VCB(nTemperature,nI,nJ,nK,nBlk) )
 
-       if(nCond > 0) &
+       if(nCond > 0) then
             allocate( &
             HeatConductionCoef_IGB(nCond,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk), &
             iCond_I(nCond) )
+            
+            allocate(Cond_VFX(nCond, nI+1, nJ, nK), &
+                     Cond_VFY(nCond, nI, nJ+1, nK), &
+                     Cond_VFZ(nCond, nI, nJ, nK+1))
+         end if
 
        if(nTemperature > 1) &
             allocate(RelaxationCoef_VCB(2:nTemperature,nI,nJ,nK,nBlk))
@@ -226,6 +237,8 @@ contains
        case('mbilu')
           allocate(Prec_VVCIB(nTemperature,nTemperature,nI,nJ,nK,nStencil,nBlk))
        end select
+
+       
 
     end if
 
@@ -439,8 +452,7 @@ contains
 
     use ModAdvance,    ONLY: State_VGB, Source_VC, &
          uDotArea_XI, uDotArea_YI, uDotArea_ZI
-    use ModGeometry,   ONLY: vInv_CB, y_BLK, IsCylindrical
-    use ModNodes,      ONLY: NodeY_NB
+    use ModGeometry,   ONLY: vInv_CB
     use ModSize,       ONLY: nI, nJ, nK
     use ModVarIndexes, ONLY: Energy_
 
@@ -453,21 +465,11 @@ contains
     
     do k=1,nK; do j=1,nJ; do i=1,nI
 
-       if(IsCylindrical)then
-          ! Multiply volume with radius (=Y) at cell center
-          ! -> divide inverse volume
-          vInv = vInv_CB(i,j,k,iBlock)/abs(y_BLK(i,j,k,iBlock))
-          DivU = (uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)) &
-               *abs(y_BLK(i,j,k,iBlock)) &
-               + uDotArea_YI(i,j+1,k,1)*abs(NodeY_NB(i,j+1,k,iBlock)) &
-               - uDotArea_YI(i,j,k,1)*abs(NodeY_NB(i,j,k,iBlock))
-       else
-          vInv = vInv_CB(i,j,k,iBlock)
-          DivU = uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
-               + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
-               + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1) 
-       end if
-
+       vInv = vInv_CB(i,j,k,iBlock)
+       DivU = uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
+            + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
+            + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1) 
+ 
        ! Adiabatic compression of radiation by fluid velocity
        if(UseTrad)then
           ! (GammaRel-1)*Erad*Div(U)
@@ -490,7 +492,7 @@ contains
   subroutine advance_temperature
 
     use ModAdvance,  ONLY: State_VGB
-    use ModGeometry, ONLY: vInv_CB, y_BLK, IsCylindrical
+    use ModGeometry, ONLY: vInv_CB
     use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBLK, Dt
 
     integer :: i, j, k, iBlock, Iter
@@ -516,13 +518,6 @@ contains
           Source_VCB(:,i,j,k,iBlock) = SpecificHeat_VCB(:,i,j,k,iBlock) &
                *Temperature_VGB(:,i,j,k,iBlock)/(vInv_CB(i,j,k,iBlock)*Dt)
        end do; end do; end do
-
-       if(IsCylindrical)then
-          do k = 1,nK; do j = 1,nJ; do i = 1,nI
-             Source_VCB(:,i,j,k,iBlock) = Source_VCB(:,i,j,k,iBlock) &
-                  *abs(y_BLK(i,j,k,iBlock))
-          end do; end do; end do
-       end if
 
     end do
 
@@ -673,7 +668,79 @@ contains
   end subroutine update_conservative_energy
 
   !============================================================================
+  !Auxiliary routine, which calculates face centered values for the heat
+  !conduction coefficients multiplied by face area divided by cell-to-cell
+  !center distance across the given face
 
+  subroutine get_face_coef(iBlock)
+    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, fAx_BLK, fAy_BLK, fAz_BLK, &
+         vInv_CB, y_Blk, TypeGeometry, UseCovariant
+    use ModCovariant, ONLY: FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
+    use ModMain,     ONLY: x_, y_, z_
+    use ModSize,     ONLY: nI, nJ, nK
+
+    integer, intent(in) :: iBlock
+
+    real :: AreaxInvDx, AreayInvDy, AreazInvDz, Dxyz_D(3)
+    integer :: i, j, k, iT, iCond
+    !--------------------------------------------------------------------------
+
+    if(.not.UseCovariant)then
+
+       AreaxInvDx = fAx_Blk(iBlock)/Dx_Blk(iBlock)
+       AreayInvDy = fAy_Blk(iBlock)/Dy_Blk(iBlock)
+       AreazInvDz = fAz_Blk(iBlock)/Dz_Blk(iBlock)
+
+       Cond_VFX(1:nCond,1:nI+1,1:nJ,1:nK) = AreaxInvDx * 0.50 * &
+            (HeatConductionCoef_IGB(1:nCond,0:nI  ,1:nJ  ,1:nK  ,iBlock) &
+            +HeatConductionCoef_IGB(1:nCond,1:nI+1,1:nJ  ,1:nK  ,iBlock) )
+       Cond_VFY(1:nCond,1:nI,1:nJ+1,1:nK) = AreayInvDy * 0.50 * &
+            (HeatConductionCoef_IGB(1:nCond,1:nI  ,0:nJ  ,1:nK  ,iBlock) &
+            +HeatConductionCoef_IGB(1:nCond,1:nI  ,1:nJ+1,1:nK  ,iBlock) )
+       Cond_VFZ(1:nCond,1:nI,1:nJ,1:nK+1) = AreazInvDz * 0.50 * &
+            (HeatConductionCoef_IGB(1:nCond,1:nI  ,1:nJ  ,0:nK  ,iBlock) &
+            +HeatConductionCoef_IGB(1:nCond,1:nI  ,1:nJ  ,1:nK+1,iBlock) )
+
+    elseif(TypeGeometry=='cartesian')then
+
+       AreaxInvDx = FaceAreaI_DFB(x_,1,1,1,iBlock)/Dx_Blk(iBlock)
+       AreayInvDy = FaceAreaJ_DFB(y_,1,1,1,iBlock)/Dy_Blk(iBlock)
+       AreazInvDz = FaceAreaK_DFB(z_,1,1,1,iBlock)/Dz_Blk(iBlock)
+
+       Cond_VFX(1:nCond,1:nI+1,1:nJ,1:nK) = AreaxInvDx * 0.50 * &
+            (HeatConductionCoef_IGB(1:nCond,0:nI  ,1:nJ  ,1:nK  ,iBlock) &
+            +HeatConductionCoef_IGB(1:nCond,1:nI+1,1:nJ  ,1:nK  ,iBlock) )
+       Cond_VFY(1:nCond,1:nI,1:nJ+1,1:nK) = AreayInvDy * 0.50 * &
+            (HeatConductionCoef_IGB(1:nCond,1:nI  ,0:nJ  ,1:nK  ,iBlock) &
+            +HeatConductionCoef_IGB(1:nCond,1:nI  ,1:nJ+1,1:nK  ,iBlock) )
+       Cond_VFZ(1:nCond,1:nI,1:nJ,1:nK+1) = AreazInvDz * 0.50 * &
+            (HeatConductionCoef_IGB(1:nCond,1:nI  ,1:nJ  ,0:nK  ,iBlock) &
+            +HeatConductionCoef_IGB(1:nCond,1:nI  ,1:nJ  ,1:nK+1,iBlock) )
+    
+    elseif(TypeGeometry=='zr')then
+
+       AreaxInvDx = 1/Dx_Blk(iBlock)
+       AreayInvDy = 1/Dy_Blk(iBlock)
+     
+       do k=1,nK; do j=1,nJ; do i=1,nI+1
+          Cond_VFX(1:nCond,i,j,k) = AreaxInvDx * 0.50 *           &
+            (HeatConductionCoef_IGB(1:nCond,i-1,j  ,k,iBlock)     &
+            +HeatConductionCoef_IGB(1:nCond,i  ,j  ,k,iBlock) ) * &
+            FaceAreaI_DFB(x_,i,j,k,iBlock)
+       end do; end do; end do
+
+       do k=1,nK; do j=1,nJ+1; do i=1,nI
+          Cond_VFY(1:nCond,i,j,k) = AreayInvDy * 0.50 *           &
+            (HeatConductionCoef_IGB(1:nCond,i  ,j-1,k,iBlock)     &
+            +HeatConductionCoef_IGB(1:nCond,i  ,j  ,k,iBlock) ) * &
+            FaceAreaJ_DFB(y_,i,j,k,iBlock)
+       end do; end do; end do
+
+       Cond_VFZ(1:nCond,1:nI,1:nJ,1:nK+1) = 0.0
+    else
+       call stop_mpi('General covariant geometry is expected soon')
+    end if
+  end subroutine get_face_coef
   subroutine heat_conduction(nVar, Temp_VGB, Rhs_VCB)
 
     use ModMain, ONLY: nBlock, unusedBLK
@@ -708,74 +775,22 @@ contains
   !============================================================================
 
   subroutine get_heat_conduction(iBlock, nVar, Temp_VG, Rhs_VC)
-
-    use ModAdvance,  ONLY: Flux_VX, Flux_VY, Flux_VZ
-    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, fAx_BLK, fAy_BLK, fAz_BLK, &
-         vInv_CB, y_Blk, IsCylindrical
-    use ModMain,     ONLY: x_, y_, z_, Dt
-    use ModNodes,    ONLY: NodeY_NB
-    use ModSize,     ONLY: nI, nJ, nK, gcn
+    use ModSize, ONLY: nI, nJ, nK, gcn
+    use ModMain, ONLY: Dt
+    use ModGeometry, ONLY: vInv_CB
 
     integer, intent(in) :: iBlock, nVar
     real, intent(inout) :: &
          Temp_VG(nVar,1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn)
     real, intent(out)   :: Rhs_VC(nVar,nI,nJ,nK)
 
-    real :: AreaxInvDx, AreayInvDy, AreazInvDz, vInv
-    integer :: i, j, k, iT, iCond
+    integer :: i, j, k, iT, iCond, iVar
+    real    :: vInv
     !--------------------------------------------------------------------------
 
-    ! Calculate heat conduction/diffusion fluxes
-    AreaxInvDx = fAx_Blk(iBlock)/Dx_Blk(iBlock)
-    AreayInvDy = fAy_Blk(iBlock)/Dy_Blk(iBlock)
-    AreazInvDz = fAz_Blk(iBlock)/Dz_Blk(iBlock)
-    do iCond = 1, nCond
-       iT = iCond_I(iCond)
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-          Flux_VX(iT,i,j,k) = -AreaxInvDx &
-               *0.5*( HeatConductionCoef_IGB(iCond,i-1,j,k,iBlock) &
-               +      HeatConductionCoef_IGB(iCond,i,  j,k,iBlock) ) &
-               *(Temp_VG(iT,i,j,k) - Temp_VG(iT,i-1,j,k))
-       end do; end do; end do
-       do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-          Flux_VY(iT,i,j,k) = -AreayInvDy &
-               *0.5*( HeatConductionCoef_IGB(iCond,i,j-1,k,iBlock) &
-               +      HeatConductionCoef_IGB(iCond,i,j,  k,iBlock) ) &
-               *(Temp_VG(iT,i,j,k) - Temp_VG(iT,i,j-1,k))
-       end do; end do; end do
-       if(IsCylindrical)then
-          ! Multiply fluxes with radius = abs(Y) at the X and Y faces
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-             Flux_VX(iT,i,j,k) = Flux_VX(iT,i,j,k) &
-                  *abs(y_BLK(i,j,k,iBlock))
-          end do; end do; end do
-          do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-             Flux_VY(iT,i,j,k) = Flux_VY(iT,i,j,k) &
-                  *abs(NodeY_NB(i,j,k,iBlock))
-          end do; end do; end do
-
-          ! There are no fluxes in the azimuthal direction
-          do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-             Flux_VZ(iT,i,j,k) = 0.0
-          end do; end do; end do
-       else
-          do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-             Flux_VZ(iT,i,j,k) = -AreazInvDz &
-                  *0.5*( HeatConductionCoef_IGB(iCond,i,j,k-1,iBlock) &
-                  +      HeatConductionCoef_IGB(iCond,i,j,k,  iBlock) ) &
-                  *(Temp_VG(iT,i,j,k) - Temp_VG(iT,i,j,k-1))
-          end do; end do; end do
-       end if
-    end do
-
+    call get_face_coef(iBlock)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if(IsCylindrical)then
-          ! Multiply volume with radius (=Y) at cell center
-          ! -> divide inverse volume
-          vInv = vInv_CB(i,j,k,iBlock)/abs(y_BLK(i,j,k,iBlock))
-       else
-          vInv = vInv_CB(i,j,k,iBlock)
-       end if
+       vInv = vInv_CB(i,j,k,iBlock)
 
        ! Heat conduction
        Rhs_VC(:,i,j,k) = SpecificHeat_VCB(:,i,j,k,iBlock) &
@@ -783,25 +798,36 @@ contains
        do iCond = 1, nCond
           iT = iCond_I(iCond)
           Rhs_VC(iT,i,j,k) = Rhs_VC(iT,i,j,k) + vInv*( &
-               + Flux_VX(iT,i+1,j,k) - Flux_VX(iT,i,j,k) &
-               + Flux_VY(iT,i,j+1,k) - Flux_VY(iT,i,j,k) &
-               + Flux_VZ(iT,i,j,k+1) - Flux_VZ(iT,i,j,k) )
+               Cond_VFX(iCond,i+1,j  ,k  )*     &
+                  (Temp_VG(iT,i  ,j  ,k  ) -    &
+                   Temp_VG(iT,i+1,j  ,k  )) +   &
+               Cond_VFX(iCond,i  ,j  ,k  )*     &
+                  (Temp_VG(iT,i  ,j  ,k  ) -    &
+                   Temp_VG(iT,i-1,j  ,k  )) +   &
+               Cond_VFY(iCond,i  ,j+1,k  )*     &
+                  (Temp_VG(iT,i  ,j  ,k  ) -    &
+                   Temp_VG(iT,i  ,j+1,k  )) +   &
+               Cond_VFY(iCond,i  ,j  ,k  )*     &
+                  (Temp_VG(iT,i  ,j  ,k  ) -    &
+                   Temp_VG(iT,i  ,j-1,k  )) +   &
+               Cond_VFZ(iCond,i  ,j  ,k+1)*     &
+                  (Temp_VG(iT,i  ,j  ,k  ) -    &
+                   Temp_VG(iT,i  ,j  ,k+1)) +   &
+               Cond_VFZ(iCond,i  ,j  ,k  )*     &
+                  (Temp_VG(iT,i  ,j  ,k  ) -    &
+                   Temp_VG(iT,i  ,j  ,k-1))    )
        end do
 
-       if(nVar > 1)then
+       do iVar=2,nVar
           ! Energy exchange
-          Rhs_VC(Te_,i,j,k) = Rhs_VC(Te_,i,j,k) &
-               + sum(RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)) &
-               *Temp_VG(Te_,i,j,k) &
-               - sum( RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
-               *      Temp_VG(2:nVar,i,j,k) )
+          Rhs_VC(Te_,i,j,k)  = Rhs_VC(Te_,i,j,k) &
+               + RelaxationCoef_VCB(iVar,i,j,k,iBlock) &
+               * (Temp_VG(Te_,i,j,k) - Temp_VG(iVar,i,j,k) )
 
-          Rhs_VC(2:nVar,i,j,k) = Rhs_VC(2:nVar,i,j,k) &
-               + RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
-               *Temp_VG(2:nVar,i,j,k) &
-               - RelaxationCoef_VCB(2:nVar,i,j,k,iBlock) &
-               *Temp_VG(Te_,i,j,k)
-       end if
+          Rhs_VC(iVar,i,j,k) = Rhs_VC(iVar,i,j,k) &
+               + RelaxationCoef_VCB(iVar,i,j,k,iBlock) &
+               * (Temp_VG(iVar,i,j,k) - Temp_VG(Te_,i,j,k) )
+       end do
 
        ! multiply by control volume
        Rhs_VC(:,i,j,k) = Rhs_VC(:,i,j,k)/vInv
@@ -1088,11 +1114,7 @@ contains
 
     do iBlock = 1, nBlock
        if(unusedBlk(iBlock))CYCLE
-
-       AreaxInvDx = fAx_Blk(iBlock)/Dx_Blk(iBlock)
-       AreayInvDy = fAy_Blk(iBlock)/Dy_Blk(iBlock)
-       AreazInvDz = fAz_Blk(iBlock)/Dz_Blk(iBlock)
-
+       call get_face_coef(iBlock)
        select case(nVar)
        case(1)
           if(body_blk(iBlock))then
@@ -1182,61 +1204,28 @@ contains
 
     subroutine get_diagonal_subblock
 
-      use ModGeometry, ONLY: y_Blk, IsCylindrical
+      use ModGeometry, ONLY: vInv_CB
       use ModMain,     ONLY: Dt
-      use ModNodes,    ONLY: NodeY_NB
 
       integer :: iCond, iT
       real :: Volume
       !------------------------------------------------------------------------
 
-      if(IsCylindrical)then
 
-         ! Multiply volume with radius (=Y) at cell center
-         Volume = abs(y_Blk(i,j,k,iBlock))/vInv_CB(i,j,k,iBlock)
+      Volume = 1/vInv_CB(i,j,k,iBlock)
 
-         ! Heat conduction
-         Diag_V(:) = SpecificHeat_VCB(:,i,j,k,iBlock)*Volume/Dt
-         do iCond = 1, nCond
-            iT = iCond_I(iCond)
-            Diag_V(iT) = Diag_V(iT) &
-                 + AreaxInvDx*abs(y_Blk(i,j,k,iBlock))*( &
-                 +     0.5*HeatConductionCoef_IGB(iCond,i-1,j,  k,iBlock) &
-                 +         HeatConductionCoef_IGB(iCond,i,  j,  k,iBlock) &
-                 +     0.5*HeatConductionCoef_IGB(iCond,i+1,j,  k,iBlock) ) &
-                 + AreayInvDy*0.5*( &
-                 +     abs(NodeY_NB(i,j,k,iBlock))*( &
-                 +         HeatConductionCoef_IGB(iCond,i,  j-1,k,iBlock) &
-                 +         HeatConductionCoef_IGB(iCond,i,  j,  k,iBlock)) &
-                 +     abs(NodeY_NB(i,j+1,k,iBlock))*( &
-                 +         HeatConductionCoef_IGB(iCond,i,  j  ,k,iBlock) &
-                 +         HeatConductionCoef_IGB(iCond,i,  j+1,k,iBlock)) )
-         end do
-
-      else
-
-         Volume = 1.0/vInv_CB(i,j,k,iBlock)
-
-         ! Heat conduction
-         Diag_V(:) = SpecificHeat_VCB(:,i,j,k,iBlock)*Volume/Dt
-         do iCond = 1, nCond
-            iT = iCond_I(iCond)
-            Diag_V(iT) = Diag_V(iT) &
-              + AreaxInvDx*( &
-              +     0.5*HeatConductionCoef_IGB(iCond,i-1,j,  k,  iBlock) &
-              +         HeatConductionCoef_IGB(iCond,i,  j,  k,  iBlock) &
-              +     0.5*HeatConductionCoef_IGB(iCond,i+1,j,  k,  iBlock) )&
-              + AreayInvDy*( &
-              +     0.5*HeatConductionCoef_IGB(iCond,i,  j-1,k,  iBlock) &
-              +         HeatConductionCoef_IGB(iCond,i,  j,  k,  iBlock) &
-              +     0.5*HeatConductionCoef_IGB(iCond,i,  j+1,k,  iBlock) )&
-              + AreazInvDz*( &
-              +     0.5*HeatConductionCoef_IGB(iCond,i,  j,  k-1,iBlock) &
-              +         HeatConductionCoef_IGB(iCond,i,  j,  k,  iBlock) &
-              +     0.5*HeatConductionCoef_IGB(iCond,i,  j,  k+1,iBlock) )
-         end do
-
-      end if
+      ! Heat conduction
+      Diag_V(:) = SpecificHeat_VCB(:,i,j,k,iBlock)*Volume/Dt
+      do iCond = 1, nCond
+         iT = iCond_I(iCond)
+         Diag_V(iT) = Diag_V(iT) &
+              + Cond_VFX(iCond,i+1,j  ,k  )  &
+              + Cond_VFX(iCond,i  ,j  ,k  )  &
+              + Cond_VFY(iCond,i  ,j+1,k  )  &
+              + Cond_VFY(iCond,i  ,j  ,k  )  &
+              + Cond_VFZ(iCond,i  ,j  ,k+1)  &
+              + Cond_VFZ(iCond,i  ,j  ,k  )  
+      end do
 
       if(nVar==1) return
 
@@ -1393,10 +1382,8 @@ contains
 
   subroutine get_jacobian(iBlock, nVar, Jacobian_VVCI)
 
-    use ModGeometry, ONLY: Dx_Blk, Dy_Blk, Dz_Blk, &
-         fAx_Blk, fAy_Blk, fAz_Blk, vInv_CB, y_Blk, IsCylindrical
+    use ModGeometry, ONLY: vInv_CB
     use ModMain,     ONLY: nI, nJ, nK, nDim, Dt
-    use ModNodes,    ONLY: NodeY_NB
 
     integer, intent(in) :: iBlock, nVar
     real, intent(out) :: Jacobian_VVCI(nVar,nVar,nI,nJ,nK,nstencil)
@@ -1411,13 +1398,8 @@ contains
     Jacobian_VVCI(:,:,:,:,:,:) = 0.0
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if(IsCylindrical)then
-          ! Multiply volume with radius (=Y) at cell center
-          Volume = abs(y_Blk(i,j,k,iBlock))/vInv_CB(i,j,k,iBlock)
-       else
-          Volume = 1.0/vInv_CB(i,j,k,iBlock)
-       end if
-
+       Volume = 1.0/vInv_CB(i,j,k,iBlock)
+    
        ! specific heat
        do iVar = 1, nVar
           Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
@@ -1440,17 +1422,7 @@ contains
     end do; end do; end do
 
     ! Heat conduction and diffusion contribution
-    if(IsCylindrical)then
-       AreaInvDxyz_FD(1:nI+1,1:nJ,1:nK,1) = fAx_Blk(iBlock)/Dx_Blk(iBlock) &
-            *abs(y_Blk(1:nI+1,1:nJ,1:nK,iBlock))
-       AreaInvDxyz_FD(1:nI,1:nJ+1,1:nK,2) = fAy_Blk(iBlock)/Dy_Blk(iBlock) &
-            *abs(NodeY_NB(1:nI,1:nJ+1,1:nK,iBlock))
-       AreaInvDxyz_FD(1:nI,1:nJ,1:nK+1,3) = 0.0
-    else
-       AreaInvDxyz_FD(1:nI+1,1:nJ,  1:nK,  1) = fAx_Blk(iBlock)/Dx_Blk(iBlock)
-       AreaInvDxyz_FD(1:nI,  1:nJ+1,1:nK,  2) = fAy_Blk(iBlock)/Dy_Blk(iBlock)
-       AreaInvDxyz_FD(1:nI,  1:nJ,  1:nK+1,3) = fAz_Blk(iBlock)/Dz_Blk(iBlock)
-    end if
+    call get_face_coef(iBlock)
 
     do iDim = 1, nDim
        Di = kr(iDim,1)
@@ -1459,19 +1431,24 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           do iCond = 1, nCond
              iVar = iCond_I(iCond)
-             DiffLeft  = AreaInvDxyz_FD(i,j,k,iDim)*0.5*( &
-                  + HeatConductionCoef_IGB(iCond,i-Di,j-Dj,k-Dk,iBlock) &
-                  + HeatConductionCoef_IGB(iCond,i,j,k,iBlock) )
-             DiffRight = AreaInvDxyz_FD(i+Di,j+Dj,k+Dk,iDim)*0.5*( &
-                  + HeatConductionCoef_IGB(iCond,i,j,k,iBlock) &
-                  + HeatConductionCoef_IGB(iCond,i+Di,j+Dj,k+Dk,iBlock) )
-
-             ! ignore radiative flux at the boundaries of the AMR blocks
-             if(iDim==1.and.i==1 .or. iDim==2.and.j==1 &
-                  .or. iDim==3.and.k==1) DiffLeft = 0.0
-             if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ &
-                  .or. iDim==3.and.k==nK) DiffRight = 0.0 
-
+             select case(nDim)
+             case(1)
+                ! ignore radiative flux at the boundaries of the AMR blocks
+                DiffLeft  = Cond_VFX(iCond,i,j,k)
+                if(i==1)DiffLeft = 0.0
+                DiffRight = Cond_VFX(iCond,i+Di,j+Dj,k+Dk) 
+                if(i==nI)DiffRight = 0.0
+             case(2) 
+                DiffLeft  = Cond_VFY(iCond,i,j,k)
+                if(j==1) DiffLeft = 0.0
+                DiffRight = Cond_VFY(iCond,i+Di,j+Dj,k+Dk) 
+                if(j==nJ) DiffRight = 0.0
+             case(3)
+                DiffLeft  = Cond_VFZ(iCond,i,j,k)
+                if(k==1) DiffLeft = 0.0
+                DiffRight = Cond_VFZ(iCond,i+Di,j+Dj,k+Dk) 
+                if(k==nK) DiffRight = 0.0
+             end select
              Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
                   Jacobian_VVCI(iVar,iVar,i,j,k,1) &
                   + DiffLeft  + DiffRight
