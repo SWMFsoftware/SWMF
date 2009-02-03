@@ -533,7 +533,7 @@ contains
     use ModAdvance,    ONLY: State_VGB, Source_VC, &
          uDotArea_XI, uDotArea_YI, uDotArea_ZI, Eradiation_
     use ModConst,      ONLY: cLightSpeed
-    use ModGeometry,   ONLY: vInv_CB, y_BLK, IsCylindrical
+    use ModGeometry,   ONLY: vInv_CB, y_BLK
     use ModImplicit,   ONLY: UseFullImplicit
     use ModNodes,      ONLY: NodeY_NB
     use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_, UnitT_
@@ -551,20 +551,12 @@ contains
 
     do k=1,nK; do j=1,nJ; do i=1,nI
 
-       if(IsCylindrical)then
-          ! Multiply volume with radius (=Y) at cell center
-          ! -> divide inverse volume
-          vInv = vInv_CB(i,j,k,iBlock)/abs(y_BLK(i,j,k,iBlock))
-          DivU = (uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)) &
-               *abs(y_BLK(i,j,k,iBlock)) &
-               + uDotArea_YI(i,j+1,k,1)*abs(NodeY_NB(i,j+1,k,iBlock)) &
-               - uDotArea_YI(i,j,k,1)*abs(NodeY_NB(i,j,k,iBlock))
-       else
-          vInv = vInv_CB(i,j,k,iBlock)
-          DivU = uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
-               + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
-               + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1) 
-       end if
+      
+       vInv = vInv_CB(i,j,k,iBlock)
+       DivU = uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
+            + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
+            + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1) 
+       
 
        ! Adiabatic compression of radiation energy by fluid velocity (fluid 1)
        ! (GammaRel-1)*Erad*Div(U)
@@ -754,7 +746,7 @@ contains
 
     use ModAdvance,  ONLY: Flux_VX, Flux_VY, Flux_VZ, State_VGB, Rho_
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, y_Blk, &
-         IsCylindrical, vInv_CB
+         TypeGeometry, vInv_CB
     use ModImplicit, ONLY: nw
     use ModMain,     ONLY: nI, nJ, nK, x_, y_, z_, TypeBc_I, &
          iTest, jTest, kTest, BlkTest, Dt
@@ -831,7 +823,7 @@ contains
             *sum(DiffSemiCoef_VGB(EradImpl_,i,j-1:j,k,iBlock)) &
             *(StateImpl_VG(EradImpl_,i,j,k) - StateImpl_VG(EradImpl_,i,j-1,k))
     end do; end do; end do
-    if(.not.IsCylindrical)then
+    if(.not.TypeGeometry=='rz')then
        do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
           Flux_VZ(EradImpl_,i,j,k) = InvDz2 &
                *sum(DiffSemiCoef_VGB(EradImpl_,i,j,k-1:k,iBlock)) &
@@ -840,7 +832,7 @@ contains
        end do; end do; end do
     end if
 
-    if(IsCylindrical)then
+    if(TypeGeometry=='rz')then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           Rhs_VC(EradImpl_,i,j,k) = &
                + Flux_VX(EradImpl_,i+1,j,k) - Flux_VX(EradImpl_,i,j,k) &
@@ -937,7 +929,7 @@ contains
 
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: Dx_Blk, Dy_Blk, Dz_Blk, &
-         fAx_Blk, fAy_Blk, fAz_Blk, vInv_CB, y_Blk, IsCylindrical
+         vInv_CB, y_Blk, TypeGeometry
     use ModImplicit, ONLY: kr, nw
     use ModMain,     ONLY: nI, nJ, nK, nDim, iTest, jTest, kTest, BlkTest
     use ModNodes,    ONLY: NodeY_NB
@@ -986,7 +978,7 @@ contains
        Di = kr(iDim,1)
        Dj = kr(iDim,2)
        Dk = kr(iDim,3)
-       if(IsCylindrical.and.iDim==2)then
+       if(TypeGeometry=='rz'.and.iDim==2)then
           do k=1,nK; do j=1,nJ; do i=1,nI
              if(j==1)then
                 DiffLeft = 0.0

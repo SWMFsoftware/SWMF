@@ -717,7 +717,7 @@ contains
             (HeatConductionCoef_IGB(1:nCond,1:nI  ,1:nJ  ,0:nK  ,iBlock) &
             +HeatConductionCoef_IGB(1:nCond,1:nI  ,1:nJ  ,1:nK+1,iBlock) )
     
-    elseif(TypeGeometry=='zr')then
+    elseif(TypeGeometry=='rz')then
 
        AreaxInvDx = 1/Dx_Blk(iBlock)
        AreayInvDy = 1/Dy_Blk(iBlock)
