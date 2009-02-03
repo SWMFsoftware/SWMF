@@ -90,9 +90,8 @@ contains
     use ModReadParam
     use ModEos,      ONLY: read_eos_parameters
     use ModGeometry, ONLY: TypeGeometry,UseCovariant
-!Temporal solution: the fisrt line below should be removed, the second one - uncommented
-    use ModGeometry, ONLY: IsCylindrical
-!    logical :: IsCylindrical
+
+    logical :: IsCylindrical
     character (len=100) :: NameCommand
     character(len=*), parameter :: NameSub = 'user_read_inputs'
     !------------------------------------------------------------------------
@@ -128,7 +127,7 @@ contains
        case("#CYLINDRICAL")
           call read_var('IsCylindrical', IsCylindrical)
           if(IsCylindrical)then
-             UseCovariant = .true.  ; TypeGeometry = 'zr'
+             UseCovariant = .true.  ; TypeGeometry = 'rz'
           else
              UseCovariant = .false. ; TypeGeometry = 'cartesian'
           end if
@@ -178,6 +177,7 @@ contains
     logical :: IsError
 
     integer :: iBlock, i, j, k, iMaterial, iMaterial_I(1)
+    real :: StoredLevelset_V(LevelXe_:LevelPl_)
 
     character(len=*), parameter :: NameSub = "user_set_ics"
     !------------------------------------------------------------------------
@@ -206,6 +206,94 @@ contains
           r = abs(y_BLK(i,j,k,iBlock))
        end if
 
+       
+       if(UseTube)then
+          ! Distance from plastic wall: 
+          ! positive for rInnerTube < |y| < rOuterTube and x > xEndTube only
+          DxyPl = &
+               min(r - rInnerTube, rOuterTube - r, x - xEndTube)
+
+          ! Set plastic tube state
+          if(DxyPl > 0.0)then
+
+             if(nDimHyades==2)StoredLevelset_V(LevelXe_:LevelPl_)=&
+                  State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) 
+
+             State_VGB(:   ,i,j,k,iBlock) = 0.0
+             ! Use the density and pressure given by the #TUBE command
+
+             State_VGB(Rho_,i,j,k,iBlock) = RhoDimTube*Io2No_V(UnitRho_)
+             State_VGB(p_  ,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
+             call init_radiation
+             if(nDimHyades == 2)then
+                State_VGB(LevelPl_,i,j,k,iBlock) =  DxyPl
+                State_VGB(LevelXe_,i,j,k,iBlock) =  max(StoredLevelset_V(LevelBe_), &
+                                                        r - rOuterTube)
+                State_VGB(LevelBe_,i,j,k,iBlock) =  StoredLevelset_V(LevelBe_)
+             end if
+          end if
+
+          ! Set pressure and speed outside the tube. 
+          ! For 1D Hyades input do not overwrite values left of xEndTube
+          if(r > rOuterTube &
+               .and. (nDimHyades == 1 .or. x > xEndTube) ) then
+             
+              if(nDimHyades==2)StoredLevelset_V(LevelXe_:LevelPl_)=&
+               State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) 
+
+             State_VGB(:   ,i,j,k,iBlock) = 0.0
+             State_VGB(Rho_,i,j,k,iBlock) = RhoDimOutside*Io2No_V(UnitRho_)
+             State_VGB(p_  ,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
+             call init_radiation
+             if(nDimHyades == 2)then
+                State_VGB(LevelXe_,i,j,k,iBlock) =  min(r - rOuterTube,x - xEndTube) 
+                State_VGB(LevelPl_,i,j,k,iBlock) =  rOuterTube - r
+                State_VGB(LevelBe_,i,j,k,iBlock) =  StoredLevelset_V(LevelBe_)
+             end if
+          end if
+             
+          ! Set the Xe state inside the tube for x > xUniformXe if it is set
+          if(xUniformXe > 0.0 .and. x > xUniformXe &
+               .and. r < rInnerTube)then
+             if(nDimHyades==2)StoredLevelset_V(LevelXe_:LevelPl_)=&
+                  State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) 
+             
+             State_VGB(:   ,i,j,k,iBlock) = 0.0
+             State_VGB(Rho_,i,j,k,iBlock) = RhoDimOutside*Io2No_V(UnitRho_)
+             State_VGB(p_  ,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
+             call init_radiation
+             if(nDimHyades == 2) State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) = &
+                  StoredLevelset_V(LevelXe_:LevelPl_)
+             
+          end if
+       end if
+       ! Distance from gold washer xEndTube < x < xEndTube + WidthGold
+       if(UseGold) then
+
+          
+          DxyGold = min(x - xEndTube, xEndTube + WidthGold - x, &
+               r - rOuterTube)
+
+          ! Set density of gold washer (if present)
+          if(DxyGold > 0.0) then
+
+             if(nDimHyades==2)StoredLevelset_V(LevelXe_:LevelPl_)=&
+               State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) 
+
+             State_VGB(:   ,i,j,k,iBlock) = 0.0
+             State_VGB(Rho_,i,j,k,iBlock) = RhoDimGold*Io2No_V(UnitRho_)
+             State_VGB(p_  ,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
+             call init_radiation
+             DxyGold = min(x - xEndTube, &
+               r - rOuterTube)
+             if(nDimHyades == 2)then
+                State_VGB(LevelPl_,i,j,k,iBlock) = rOuterTube - r 
+                State_VGB(LevelXe_,i,j,k,iBlock) =  DxyGold
+                State_VGB(LevelBe_,i,j,k,iBlock) =  StoredLevelset_V(LevelBe_)
+             end if
+          end if
+
+       end if
        if(nDimHyades /= 2)then
 
           if(UseHyadesFile)then
@@ -225,37 +313,6 @@ contains
              ! positive for rInnerTube < |y| < rOuterTube and x > xEndTube only
              DxyPl = &
                   min(r - rInnerTube, rOuterTube - r, x - xEndTube)
-
-             ! Set plastic tube state
-             if(DxyPl > 0.0)then
-                ! Use the density and pressure given by the #TUBE command
-                State_VGB(Rho_,i,j,k,iBlock) = RhoDimTube*Io2No_V(UnitRho_)
-                State_VGB(p_  ,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
-                ! Assume that plastic wall is at rest
-                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
-             end if
-
-             ! Set pressure and speed outside the tube. 
-             ! For 2D Hyades input do not overwrite values left of xEndTube
-             if(r > rOuterTube &
-                  .and. (nDimHyades == 1 .or. x > xEndTube) ) then
-                State_VGB(p_,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
-                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
-             end if
-             
-             ! Set the Xe state inside the tube for x > xUniformXe if it is set
-             if(xUniformXe > 0.0 .and. x > xUniformXe &
-                  .and. r < rInnerTube)then
-                State_VGB(Rho_,i,j,k,iBlock) = RhoDimOutside*Io2No_V(UnitP_)
-                State_VGB(p_,i,j,k,iBlock)   = pDimOutside*Io2No_V(UnitP_)
-                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
-             end if
-             
-             ! Set density outside the tube
-             if(x >= xEndTube .and. r > rOuterTube) &
-                  State_VGB(Rho_,i,j,k,iBlock) = &
-                  RhoDimOutside*Io2No_V(UnitRho_)
-
              ! Berylium is left of xBe inside rInnerTube 
              ! and it is left of xEndTube outside
              State_VGB(LevelBe_,i,j,k,iBlock) = &
@@ -274,17 +331,6 @@ contains
              State_VGB(LevelBe_,i,j,k,iBlock) =  DxBe
              State_VGB(LevelXe_,i,j,k,iBlock) = -DxBe
              State_VGB(LevelPl_,i,j,k,iBlock) = -1e30
-          end if
-
-          ! Distance from gold washer xEndTube < x < xEndTube + WidthGold
-          if(UseGold) then
-             DxyGold = min(x - xEndTube, xEndTube + WidthGold - x, &
-                  r - rOuterTube)
-
-             ! Set density of gold washer (if present)
-             if(DxyGold > 0.0) &
-                  State_VGB(Rho_,i,j,k,iBlock) = RhoDimGold*Io2No_V(UnitRho_)
-
           end if
 
        end if ! nDimHyades /= 2
@@ -342,7 +388,15 @@ contains
             - inv_gm1*State_VGB(P_,i,j,k,iBlock)
 
     end do; end do; end do
-
+  contains
+    subroutine init_radiation
+      use ModMain,ONLY: UseGrayDiffusion
+      use ModPhysics,ONLY: cRadiationNo, Si2No_V, UnitTemperature_
+      use ModAdvance,ONLY: ERadiation_
+      if(.not.UseGrayDiffusion)return
+      State_VGB(ERadiation_,i,j,k,iBlock) = cRadiationNo * &
+           (500.0 * Si2No_V(UnitTemperature_))**4
+    end subroutine init_radiation
   end subroutine user_set_ics
 
   !============================================================================
@@ -773,60 +827,22 @@ contains
     character(len=*), parameter :: NameSub = 'user_update_states'
     !------------------------------------------------------------------------
 
-    if(TypeGeometry == 'zr')then
+    if(TypeGeometry == 'rz'.and. UseGrayDiffusion)then
     
-!   ! Multiply fluxes with radius = abs(Y) at the X and Y faces
-    !   do k=1,nK; do j=1, nJ; do i=1, nI+1
-    !      Flux_VX(:,i,j,k)=Flux_VX(:,i,j,k)*abs(y_BLK(i,j,k,iBlock))
-    !   end do; end do; end do
-    !   do k=1,nK; do j=1, nJ+1; do i=1, nI
-    !      Flux_VY(:,i,j,k)=Flux_VY(:,i,j,k)*abs(NodeY_NB(i,j,k,iBlock))
-    !      ! Upper estimate on the time step restriction takes the smaller r
-    !      VdtFace_Y(i,j,k) = VdtFace_Y(i,j,k)* abs(NodeY_NB(i,j,k,iBlock))/&
-    !              min(abs(y_BLK(i,j,k,iBlock)),abs(y_BLK(i,j-1,k,iBlock)))
-    !   end do; end do; end do
-    !   ! There are no fluxes and CFL restrictions in the azimuthal direction
-    !   do k=1,nK+1; do j=1, nJ; do i=1, nI
-    !      Flux_VZ(:,i,j,k) = 0.0
-    !      VdtFace_Z(i,j,k) = 0.0
-    !   end do; end do; end do
-    !
-       ! Add "geometrical source term" p/r to the radial momentum equation
-       ! The "radial" direction is along the Y axis. There is no velocity
-       ! in the azimuthal (=Z) direction, so there are no more terms.
-       ! NOTE: here we have to use signed radial distance!
 
+       ! Add "geometrical source term" p/r to the radial momentum equation
+       ! The "radial" direction is along the Y axis
+       ! NOTE: here we have to use signed radial distance!
        do k=1,nK; do j=1, nJ; do i=1, nI
           Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
-               + State_VGB(P_,i,j,k,iBlock) / y_BLK(i,j,k,iBlock)
+               + (1./3.)*State_VGB(Eradiation_,i,j,k,iBlock) &
+               / y_BLK(i,j,k,iBlock)
        end do; end do; end do
-
-       if(UseGrayDiffusion)then
-          do k=1,nK; do j=1, nJ; do i=1, nI
-             Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
-                  + (1./3.)*State_VGB(Eradiation_,i,j,k,iBlock) &
-                  / y_BLK(i,j,k,iBlock)
-          end do; end do; end do
-       end if
-
-       ! Multiply volume with radius (=Y) at cell center -> divide inverse vol
-!       vInv_C = vInv_CB(:,:,:,iBlock)
-!       do k=1,nK; do j=1, nJ; do i=1, nI
-!          vInv_CB(i,j,k,iBlock)=vInv_C(i,j,k)/abs(y_BLK(i,j,k,iBlock))
-!       end do; end do; end do
-
     end if
+
     call update_states_MHD(iStage,iBlock)
 
-!    if(UseGrayDiffusion)then
-!       if(any(StateOld_VCB(ERadiation_,:,:,:,iBlock) < 0.0)) &
-!            call stop_mpi('Negative radiation energy before updating states')
-!       if(any(State_VGB(ERadiation_,1:nI,1:nJ,1:nK,iBlock) < 0.0)) &
-!            call stop_mpi('Negative radiation energy after updating states')
-!    end if
-!
-!    ! Undo change of volume (fluxes and sources are not used any more)
-!    if(IsCylindrical) vInv_CB(:,:,:,iBlock) = vInv_C
+
 
     !!! temporary solution for the levelset test. 
     if(UseNonConservative) RETURN

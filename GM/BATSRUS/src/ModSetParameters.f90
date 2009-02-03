@@ -2145,7 +2145,7 @@ contains
        procTEST=0
     end if
 
-    if(TypeGeometry=='zr') UseVertexBasedGrid = .false.
+    if(TypeGeometry=='rz') UseVertexBasedGrid = .false.
 
     if(UseCovariant)then                               
        call allocate_face_area_vectors
@@ -2378,7 +2378,7 @@ contains
     ! Set XyzMin_D, XyzMax_D based on 
     ! #GRID, #GRIDGEOMETRY, and #LIMITGENCOORD/#LIMITRADIUS
     select case(TypeGeometry)
-    case('cartesian', 'zr')
+    case('cartesian', 'rz')
        !            X,  Y,  Z
        XyzMin_D = (/x1, y1, z1/)
        XyzMax_D = (/x2, y2, z2/)
@@ -2495,7 +2495,7 @@ contains
        select case(plot_area)
        case('sph')
           select case(TypeGeometry)
-          case('cartesian', 'zr')                        
+          case('cartesian', 'rz')                        
              plot_dx(1,ifile) = 1.0    ! set to match write_plot_sph
              plot_dx(2:3,ifile) = 1.0  ! angular resolution in degrees
              plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4 !so that R/=0

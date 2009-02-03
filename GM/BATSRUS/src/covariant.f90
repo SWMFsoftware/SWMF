@@ -28,7 +28,7 @@ subroutine gen_to_xyz_arr(&
   !----------------------------------------------------------
 
   select case(TypeGeometry)
-  case('cartesian','zr')
+  case('cartesian','rz')
      !Gen1=x , Gen2=y, Gen3=z
      do k = kStart, kMax
         do j = jStart, jMax
@@ -136,7 +136,7 @@ subroutine xyz_to_gen(XyzIn_D,GenOut_D)
   real,external::wall_radius
 
   select case(TypeGeometry)           
-  case('cartesian','zr')                   
+  case('cartesian','rz')                   
      GenOut_D=XyzIn_D
   case('spherical','spherical_lnr')   
      call xyz_to_spherical(XyzIn_D(x_),XyzIn_D(y_),XyzIn_D(z_),&
@@ -965,7 +965,7 @@ subroutine fix_covariant_geometry(iBLK)
        RDotFaceAreaK_F(:,:,2:nK+1)-RDotFaceAreaK_F(:,:,1:nK) )
   call fix_pole(iBLK)
   call test_block_geometry(iBLK,NameSub)
-  if(trim(TypeGeometry)=='zr')call fix_zr_geometry(iBLK)
+  if(trim(TypeGeometry)=='rz')call fix_rz_geometry(iBLK)
 end subroutine fix_covariant_geometry
 subroutine test_block_geometry(iBlock,NameSub)
   use ModCovariant
@@ -1001,7 +1001,7 @@ end subroutine test_block_geometry
 ! finite ratios Area/d\phi and Volume/d\phi, for the the azimuthal 
 ! width of the control volume, angle, d\phi, tending to zero. 
 
-subroutine fix_zr_geometry(iBlock)
+subroutine fix_rz_geometry(iBlock)
 
   use ModCovariant
   use ModNodes,ONLY:NodeY_NB
@@ -1013,7 +1013,7 @@ subroutine fix_zr_geometry(iBlock)
   integer :: i, j, k
   real    :: DzInv
   
-  character(LEN=*),parameter::NameSub='fix_zr_geometry'
+  character(LEN=*),parameter::NameSub='fix_rz_geometry'
   !---------------------------------------------------!
   
   DzInv = 1/dz_BLK(iBlock)
@@ -1045,7 +1045,7 @@ subroutine fix_zr_geometry(iBlock)
        0.10 * (dy_BLK(iBlock) * dx_BLK(iBlock))**2
 
 
-end subroutine fix_zr_geometry
+end subroutine fix_rz_geometry
 
 !========================================================================
 subroutine calc_b0source_covar(iBlock)  

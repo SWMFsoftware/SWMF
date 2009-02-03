@@ -5,7 +5,7 @@ subroutine calc_sources
   use ModMain
   use ModVarIndexes
   use ModGeometry, ONLY : dx_BLK, dy_BLK, dz_BLK, R_BLK,&
-       body_BLK, Rmin_BLK, vInv_CB
+       body_BLK, Rmin_BLK, vInv_CB, TypeGeometry, y_BLK
   use ModGeometry, ONLY : R2_BLK                        !^CFG IF SECONDBODY
   use ModAdvance
   use ModParallel, ONLY : NOBLK, neiLEV, &
@@ -101,6 +101,21 @@ subroutine calc_sources
 
   end if
 
+  if(TypeGeometry == 'zr')then
+     if(.not.UseB)then
+        
+        ! Add "geometrical source term" p/r to the radial momentum equation
+        ! The "radial" direction is along the Y axis
+        ! NOTE: here we have to use signed radial distance!
+
+        do k=1,nK; do j=1, nJ; do i=1, nI
+           Source_VC(iRhoUy,i,j,k) = Source_VC(iRhoUy,i,j,k) &
+                + State_VGB(iP,i,j,k,iBlock) / y_BLK(i,j,k,iBlock)
+        end do; end do; end do
+     else
+        call stop_mpi('RZ geometry is not implemented for MHD')
+     end if
+  end if
 
   if(UseDivbSource)then
      if(UseCovariant)then   

@@ -1245,7 +1245,7 @@ The default is component dependent:
 		<option name="cylindrical"		/>
 		<option name="spherical"		/>
 		<option name="spherical_lnr"		/>
-		<option name="zr"                       />
+		<option name="rz"                       />
 		<option name="axial_torus"		/>
 	</parameter>
 #GRIDGEOMETRY
@@ -1256,8 +1256,7 @@ are cartesian, cylindrical, spherical, spherical_lnr (spherical
 with a logarithmic radial coordinate, and axial (axially symmetric
 toroidal grid). The only example of 2D grid is r-z axially symmetric
 coordinates. By some reasons the coordinates in our implementation are
-flipped with recpect to the standard r-z geometry, so it is referred
-to as "zr" geometry. 
+flipped with recpect to the standard r-z geometry.
 
 
 BATSRUS uses a Cartesian geometry by default. Setting this command
