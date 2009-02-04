@@ -352,6 +352,12 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
      !
      !-->  Read initial locations of inner edges 
      !
+     bi = 10.0
+     bj = 25.0
+     etab=0.0
+     itrack = 1
+     mpoint = 1
+     npoint = 1
      IF (DoRestart) THEN
         call IM_write_prefix
         WRITE (iUnitOut,'(A)') '   Reading Restart File ...'
@@ -365,12 +371,6 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
         CALL Get_boundary (boundary, bndloc)
         CALL Rcm_plasma_bc (2, 1)
      ELSE
-        bi = 10.0
-        bj = 25.0
-        etab=0.0
-        itrack = 1
-        mpoint = 1
-        npoint = 1
         ! Replace initial condition on ETA from file with one from MHD:
         CALL Get_boundary (boundary, bndloc)
         CALL Rcm_plasma_bc (2, 2)
