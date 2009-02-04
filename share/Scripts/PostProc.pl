@@ -56,6 +56,7 @@ my %PlotDir = (
     "GM"     => "GM/IO2",
     "IE"     => "IE/ionosphere",
     "IH"     => "IH/IO2",
+    "OH"     => "OH/IO2",
     "IM"     => "IM/plots",
     "PW"     => "PW/plots",
     "RB"     => "RB/plots",
@@ -98,7 +99,7 @@ REPEAT:{
 	    }else{
 		&shell("./pION");
 	    }
-	}elsif( $Dir =~ /^SC|IH|GM$/ ){
+	}elsif( $Dir =~ /^SC|IH|OH|GM$/ ){
 	    &shell("./pIDL $MovieFlag");
 	    if($Gzip){
 		&shell("./pTEC A g");
@@ -135,7 +136,7 @@ REPEAT:{
 	    my $PlotDir = $PlotDir{$Dir};
 	    next unless -d $PlotDir;
 	    my $command = $rsync;
-	    $command .= $exclude if $Dir =~ /GM|SC|IH/;
+	    $command .= $exclude if $Dir =~ /GM|SC|IH|OH/;
 	    &shell("$command $PlotDir/ $Rsync/$Dir") if -d $PlotDir;
 	}
 	&shell("$rsync $ParamIn $Rsync/")          if -f $ParamIn;
@@ -280,6 +281,7 @@ sub concat_sat_log{
 # 09/08/2005           for -o option copy PARAM.in and move runlog into tree.
 # 2008                 move last restart files into the tree.
 # 2008                 for -c option concatenate log and satellite files.
+# 02/04/2009 R. Oran   added OH component, same as IH
 #EOP
 
 sub print_help{
