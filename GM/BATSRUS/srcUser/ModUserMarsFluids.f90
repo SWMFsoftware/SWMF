@@ -166,7 +166,7 @@ contains
          IsPointImplSource, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
     use ModMain,    ONLY: GlobalBlk, nI, nJ, nK,&
          PROCTEST,GLOBALBLK,BLKTEST, iTest,jTest,kTest
-    use ModPhysics, ONLY: inv_gm1,Rbody,gm1,UnitTemperature_,Si2No_V
+    use ModPhysics, ONLY: inv_gm1,Rbody,gm1,UnitTemperature_,Si2No_V,LowDensityRatio
     use ModAdvance, ONLY: State_VGB, Source_VC,VdtFace_x,&
          VdtFace_y,VdtFace_z
     use ModGeometry,ONLY: r_BLK,x_BLK,y_BLK,z_BLK,R_BLK,&
@@ -225,6 +225,13 @@ contains
     do k = 1, nK ;   do j = 1, nJ ;  do i = 1, nI
 
        DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest
+
+       ! enforce minimum density for minor fluids to avoid negative values
+       !    State_VGB(iRhoIon_I,i,j,k,iBlock) = max(State_VGB(iRhoIon_I,i,j,k,iBlock), &
+       !        LowDensityRatio*State_VGB(Rho_,i,j,k,iBlock))
+
+           ! Fix total
+       !    State_VGB(Rho_,i,j,k,iBlock) = sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
 
        NumDens_I  = State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I(:)
        NumDens    = sum(NumDens_I)
@@ -380,14 +387,17 @@ contains
 
 
        if(DoTestCell)then
+          write(*,*)'State_VGB(Rho_)=',State_VGB(Rho_,iTest,jTest,kTest,BLKTest)
           write(*,*)' State_VGB(iRhoIon_I(:))=', State_VGB(iRhoIon_I(:),iTest,jTest,kTest,BLKTest)
           write(*,*)'!!!!!Lispecies, component1 LossSpecies_I(:)=', LossSpecies_I(:)
           write(*,*)'Recb_I(:)*NumDens*State_VGB(iRhoIon_I(:), i,j,k, iBlock)=',&
                Recb_I(:)*NumDens*State_VGB(iRhoIon_I(:), iTest,jTest,kTest, iBlock)
+          write(*,*)'NumDens=',NumDens
           write(*,*)'!!!!SiSpecies'
           write(*,*)' PhoIon_I*MassIon_I=', PhoIon_I*MassIon_I
           write(*,*)'Last term in Sispecies='
           do iFluid=1, nIonFluid
+             write(*,*)'dSdRho_II(1:nIonFluid, iFluid)=',dSdRho_II(1:nIonFluid, iFluid)
              write(*,*)dSdRho_II(1:nIonFluid, iFluid) &
                   *State_VGB(iRhoIon_I(iFluid), i,j,k, iBlock)
           end do
@@ -747,24 +757,15 @@ contains
     !------------------------------------------------------------------------
 
     ! All ion momenta are implicit
-    if(IsMhd)then
-       allocate(iVarPointImpl_I(4*nIonFluid))
+    allocate(iVarPointImpl_I(5*nIonFluid))
 
-       do iFluid = 1, nIonFluid
-          iVarPointImpl_I(4*iFluid-3) = iRhoUx_I(iFluid)
-          iVarPointImpl_I(4*iFluid-2) = iRhoUy_I(iFluid)
-          iVarPointImpl_I(4*iFluid-1) = iRhoUz_I(iFluid)
-          iVarPointImpl_I(4*iFluid)   = iP_I(iFluid)
-       end do
-    else
-       allocate(iVarPointImpl_I(4*(nIonFluid-1)))
-       do iFluid = 1, nIonFluid-1
-          iVarPointImpl_I(4*iFluid-3) = iRhoUx_I(iFluid+1)
-          iVarPointImpl_I(4*iFluid-2) = iRhoUy_I(iFluid+1)
-          iVarPointImpl_I(4*iFluid-1) = iRhoUz_I(iFluid+1)
-          iVarPointImpl_I(4*iFluid)   = iP_I(iFluid+1)
-       end do
-    end if
+    do iFluid = 1, nIonFluid
+       iVarPointImpl_I(5*iFluid-4) = iRhoIon_I(iFluid)
+       iVarPointImpl_I(5*iFluid-3) = iRhoUxIon_I(iFluid)
+       iVarPointImpl_I(5*iFluid-2) = iRhoUyIon_I(iFluid)
+       iVarPointImpl_I(5*iFluid-1) = iRhoUzIon_I(iFluid)
+       iVarPointImpl_I(5*iFluid)   = iPIon_I(iFluid)
+    end do
 
     IsPointImplMatrixSet = .false.
 
