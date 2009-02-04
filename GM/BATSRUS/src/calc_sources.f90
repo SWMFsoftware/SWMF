@@ -101,7 +101,7 @@ subroutine calc_sources
 
   end if
 
-  if(TypeGeometry == 'zr')then
+  if(TypeGeometry == 'rz')then
      if(.not.UseB)then
         
         ! Add "geometrical source term" p/r to the radial momentum equation
