@@ -140,7 +140,7 @@ program PostIDL
         read(unit_tmp,*)iPoint,TorusSurface_I(iPoint)
      end do
   end if
-  if(TypeGeometry == 'zr' .or. TypeGeometry == 'xr')then
+  if(TypeGeometry == 'rz' .or. TypeGeometry == 'xr')then
      TypeGeometry = 'cartesian'
      coord = (/'x    ','r    ','phi  '/)
   end if
