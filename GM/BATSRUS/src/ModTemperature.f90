@@ -100,7 +100,7 @@ module ModTemperature
   !To switch the boundary condition at the outer boundary:
   logical :: IsFirstCgIteration
   
-  real,parameter::tRadMinDim = 0.0 !K Otherwise the dominant contribution 
+  real,parameter::tRadMinDim = 500.0 !K Otherwise the dominant contribution 
   !to the norm TRad^2/Cv(TRad)\sim (1/T)comes from infinitesimal temperatures
 contains
 
@@ -123,7 +123,7 @@ contains
           call read_var('UseTemperatureVariable', UseTemperatureVariable)
           call read_var('TypePreconditioner', TypePreconditioner)
           select case(TypePreconditioner)
-          case('blockjacobi','mbilu')
+          case('blockjacobi','gs','dilu','mbilu')
           case default
              call stop_mpi(NameSub//': unknown TypePreconditioner='&
                   //TypePreconditioner)
@@ -232,7 +232,7 @@ contains
             allocate(RelaxationCoef_VCB(2:nTemperature,nI,nJ,nK,nBlk))
 
        select case(TypePreconditioner)
-       case('blockjacobi')
+       case('blockjacobi','gs','dilu')
           allocate(JacPrec_VVCB(nTemperature,nTemperature,nI,nJ,nK,nBLK))
        case('mbilu')
           allocate(Prec_VVCIB(nTemperature,nTemperature,nI,nJ,nK,nStencil,nBlk))
@@ -535,6 +535,12 @@ contains
        call cg(heat_conduction, nTemperature, Source_VCB, Temperature_VGB, &
             .true., Error, TypeStopCriterion, &
             Iter, DoTestKrylovMe, jacobi_preconditioner)
+    case('gs')
+       call get_jacobi_preconditioner(nTemperature)
+
+       call cg(heat_conduction, nTemperature, Source_VCB, Temperature_VGB, &
+            .true., Error, TypeStopCriterion, &
+            Iter, DoTestKrylovMe, dilu_preconditioner)
     case('mbilu')
        call get_mbilu_preconditioner(nTemperature)
 
@@ -757,8 +763,9 @@ contains
     ! DoOneLayer, DoFacesOnly, No UseMonoteRestrict
     call message_pass_cells8(.true., .true., .false., nVar, Temp_VGB)
     if(IsFirstCgIteration)then
-       ! Recommended: call set_gray_outer_bcs(nVar, Temp_VGB,'clean')
-       call set_gray_outer_bcs(nVar,Temp_VGB,'float')
+       ! Recommended: 
+       call set_gray_outer_bcs(nVar, Temp_VGB,'clean')
+       !call set_gray_outer_bcs(nVar,Temp_VGB,'float')
        IsFirstCgIteration = .false.
     else
        call set_gray_outer_bcs(nVar, Temp_VGB,'zero')
@@ -895,7 +902,7 @@ contains
 
     integer, parameter :: MaxIter = 30000
 
-    real :: rDotR, pDotADotP, rDotR0, rDotRMax
+    real :: rDotR, pDotADotP, rDotR0, rDotRMax, rDotROld
 
     real, dimension(:,:,:,:,:), allocatable :: &
          P_VGB, ADotP_VCB, MMinusOneDotR_VCB
@@ -957,7 +964,6 @@ contains
        if(DoTest)write(*,*)'CG Iter, rDotR = ', Iter, rDotR
 
        if(rDotR <= rDotRMax) EXIT
-
        do iBlock = 1, nBlock
           if(unusedBlk(iBlock))CYCLE
           if(present(preconditioner))then
@@ -1091,7 +1097,7 @@ contains
   subroutine get_jacobi_preconditioner(nVar)
 
     use ModGeometry, ONLY: true_cell, body_blk, Dx_Blk, Dy_Blk, Dz_Blk, &
-         fAx_BLK, fAy_BLK, fAz_BLK, vInv_CB
+         vInv_CB
     use ModMain, ONLY: nBlock, unusedBLK
     use ModSize, ONLY: nI, nJ, nK
 
@@ -1239,6 +1245,77 @@ contains
     end subroutine get_diagonal_subblock
 
   end subroutine get_jacobi_preconditioner
+  !============================================================================
+  subroutine dilu_preconditioner(nVar, VectorIn_VCB, VectorOut_VCB)
+
+    ! Calculate VectorOut = M^{-1} \cdot VectorIn where the stored
+    ! preconditioner matrix, M^{-1}, should be symmetric positive
+    ! and is approximately decomposed as 
+    ! (D+U)^{-1}\cdot D \cdot (D+L)^{-1)
+    ! In symmetric Gauss-Seidel preconditioner the matrix D (in fact 
+    ! we need D^{-1} is the same as in the block Jacobi preconditioner
+    ! In D_ILU preconditioner the D^{-1} is somewhat modified 
+
+    use ModGeometry, ONLY: true_cell, body_blk
+    use ModMain, ONLY: nBlock, unusedBLK
+    use ModSize, ONLY: nI, nJ, nK, nBlk
+
+    integer, intent(in) :: nVar
+    real, intent(in)    :: VectorIn_VCB(nVar,1:nI,1:nJ,1:nK,nBLK)
+    real, intent(out)   :: VectorOut_VCB(nVar,1:nI,1:nJ,1:nK,nBLK)
+
+    integer :: iVar, i, j , k, iBlock
+    integer :: iT, iCond
+    real :: Loc_V(nVar)
+    real :: Sol_VG(nVar,0:nI+1,0:nJ+1,0:nK+1)
+
+    character(len=*), parameter :: NameSub = 'dilu_preconditioner'
+    !--------------------------------------------------------------------------
+    Sol_VG = 0.0 ! To set zero values in the ghostcell
+
+    do iBlock = 1, nBlock
+       if(unusedBlk(iBlock))CYCLE
+
+       if(body_blk(iBlock))then
+          call stop_mpi('DILU preconditioner does not work for body block')
+       else
+          call get_face_coef(iBlock)
+
+          !Stage "UP", fluxes from below are accounted for
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             Loc_V = VectorIn_VCB(:,i,j,k,iBlock)
+             do iCond=1,nCond
+                iT = iCond_I(iCond)
+                Loc_V(iT) = Loc_V(iT) + &
+                     Sol_VG(iT,i-1,j,k) * Cond_VFX(iCond,i,j,k) &
+                   + Sol_VG(iT,i,j-1,k) * Cond_VFY(iCond,i,j,k) &
+                   + Sol_VG(iT,i,j,k-1) * Cond_VFZ(iCond,i,j,k)
+             end do
+             do iVar = 1, nVar
+                Sol_VG(iVar,i,j,k) = sum( &
+                      Loc_V*JacPrec_VVCB(:,iVar,i,j,k,iBlock))
+             end do
+          end do; end do; end do
+          !Stage "DOWN", fluxes from above are accounted for
+          do k = nK,1,-1; do j = nJ,1,-1; do i = nI,1,-1
+             Loc_V = 0.0
+             do iCond=1,nCond
+                iT = iCond_I(iCond)
+                Loc_V(iT) = Loc_V(iT) + &
+                     Sol_VG(iT,i+1,j,k) * Cond_VFX(iCond,i+1,j,k) &
+                   + Sol_VG(iT,i,j+1,k) * Cond_VFY(iCond,i,j+1,k) &
+                   + Sol_VG(iT,i,j,k+1) * Cond_VFZ(iCond,i,j,k+1)
+             end do
+             do iVar = 1, nVar
+                Sol_VG(iVar,i,j,k) = &
+                     Sol_VG(iVar,i,j,k) + &
+                     sum(Loc_V*JacPrec_VVCB(:,iVar,i,j,k,iBlock))
+             end do
+          end do; end do; end do
+          VectorOut_VCB(:,:,:,:,iBlock) = Sol_VG(:,1:nI,1:nJ,1:nK)
+       end if
+    end do
+  end subroutine dilu_preconditioner
 
   !============================================================================
 
