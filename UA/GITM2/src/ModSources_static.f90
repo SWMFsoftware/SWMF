@@ -71,7 +71,6 @@ module ModSources
   real :: IonPrecipHeatingRate(nLons, nLats, nAlts, nBlocksMax)
   real :: ChemicalHeatingRate(nLons, nLats, nAlts)
 
-  real :: VerticalTempSource(nLons, nLats, nAlts)
   real :: HorizontalTempSource(nLons, nLats, nAlts)
 
   real :: Diffusion(nLons, nLats, nAlts, nSpecies)

@@ -22,6 +22,7 @@ module ModVertical
   real, dimension(-1:nAlts+2,nIonsAdvect) :: LogINS
 
   real, dimension(-1:nAlts+2) :: EddyCoef_1d
+  real, dimension(1:nAlts) :: ViscCoef_1d
 
   real, dimension(-1:nAlts+2, nSpecies) :: LogNS, VertVel
   real, dimension(nAlts, nSpecies) :: NDensityS_1D

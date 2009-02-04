@@ -4,7 +4,6 @@ subroutine calc_GITM_sources(iBlock)
   use ModInputs
   use ModSources
   use ModGITM
-  use ModUserGITM
 
   implicit none
 
@@ -36,19 +35,12 @@ subroutine calc_GITM_sources(iBlock)
 
   real :: diffusion_velocity(nLons, nLats, 0:nAlts+1,nspecies)
 
-  real :: ConS(nLons,nLats,-1:nAlts+2,1:nSpecies)
-  real :: LogConS(nLons,nLats,-1:nAlts+2,1:nSpecies)
-  real :: GradLogConS(nLons,nLats,1:nAlts,1:nSpecies)
-
   real :: nVel(1:nAlts, nSpecies)
   real :: NF_Eddy(1:nAlts), NF_NDen(1:nAlts), NF_Temp(1:nAlts)
   real :: NF_NDenS(1:nAlts,1:nSpecies), NF_EddyRatio(1:nAlts,1:nSpecies)
   real :: NF_Gravity(1:nAlts)
   real :: NF_GradLogCon(1:nAlts,1:nSpecies)
   real :: Prandtl(nLons,nLats,0:nalts+1)
-
-! Temporary
-  real :: EddyCoefRatio(nLons, nLats, 1:nAlts,nSpecies)
 
 ! Potential Temperature
 ! Used in New Eddy Conduction Calculations:  Bell 1-15-2009
@@ -57,6 +49,14 @@ subroutine calc_GITM_sources(iBlock)
   real :: P0(nLons, nLats, -1:nAlts+2)
   real :: Ones(nLons, nLats, -1:nAlts+2)
 
+!! Eddy Velocity Terms
+  real :: ConS(nLons,nLats,-1:nAlts+2,1:nSpecies)
+  real :: LogConS(nLons,nLats,-1:nAlts+2,1:nSpecies)
+  real :: GradLogConS(nLons,nLats,1:nAlts,1:nSpecies)
+
+
+! Temporary
+  real :: EddyCoefRatio(nLons, nLats, 1:nAlts,nSpecies)
 
   call report("calc_GITM_sources",1)
 
@@ -159,6 +159,8 @@ subroutine calc_GITM_sources(iBlock)
      tmp2 = Rho(1:nLons, 1:nLats,1:nAlts, iBlock) * &
           cp(1:nLons, 1:nLats,1:nAlts, iBlock)
      
+     Prandtl = 0.0
+  
 
      call calc_conduction(iBlock, &
           Temperature(1:nLons, 1:nLats,-1:nAlts+2, iBlock) * &
@@ -170,13 +172,9 @@ subroutine calc_GITM_sources(iBlock)
       Conduction = MoleConduction/TempUnit(1:nLons, 1:nLats,1:nAlts) 
 
 
-!!!
-! This term was added by Jared to replace Yue's eddy conduction term in vertical solver.  
-!!!
-
 if (UseTurbulentCond) then
 
-    if (UseUpdatedTurbulentCond) then
+        if (UseUpdatedTurbulentCond) then
 
          Ones(1:nLons,1:nLats,1:nAlts) = 1.0
 
@@ -226,47 +224,41 @@ if (UseTurbulentCond) then
                (1.0/EddyScaling)*(Temperature(1:nLons,1:nLats,1:nAlts,iBlock)/Theta(1:nLons,1:nLats,1:nAlts))*&
                 EddyCond(1:nLons,1:nLats,1:nAlts)
 
-           UserData3D(1:nLons,1:nLats,1:nAlts,1,iBlock) = EddyCondAdia(1:nLons,1:nLats,1:nAlts)
 
-           Conduction = Conduction + EddyCondAdia
-         
+        else  !! Use The Old Version
 
-    else  !! Use the Old Turbulent Conduction
-          Prandtl = 0.0
-  
-          Prandtl = &
-               KappaEddyDiffusion(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
-               Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
-               Cp(1:nLons, 1:nLats,0:nAlts+1, iBlock)
+            Prandtl = & 
+             KappaEddyDiffusion(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
+             Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
+             Cp(1:nLons, 1:nLats,0:nAlts+1, iBlock)
 
-          call calc_conduction(iBlock, &
-               Temperature(1:nLons, 1:nLats,-1:nAlts+2, iBlock) * &
-               TempUnit(1:nLons, 1:nLats,-1:nAlts+2), &
-               Prandtl(1:nLons, 1:nLats,0:nAlts+1), &
-               tmp2, &
-               EddyCond)
+           call calc_conduction(iBlock, &
+                Temperature(1:nLons, 1:nLats,-1:nAlts+2, iBlock) * &
+                TempUnit(1:nLons, 1:nLats,-1:nAlts+2), &
+                Prandtl(1:nLons, 1:nLats,0:nAlts+1), &
+                tmp2, &
+                EddyCond)
 
-          Conduction = Conduction + EddyCond/TempUnit(1:nLons, 1:nLats,1:nAlts) 
 
-        
-        call calc_conduction(iBlock, &
-             Pressure(1:nLons, 1:nLats,-1:nAlts+2,iBlock), &
-             Prandtl(1:nLons, 1:nLats,0:nAlts+1)/&
-             Gamma(1:nLons,1:nLats, 0:nAlts+1,iBlock)/Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock) / &
-               Cp(1:nLons, 1:nLats,0:nAlts+1, iBlock),  &
-             tmp2, EddyCondAdia)
+           Conduction = Conduction + EddyCond/TempUnit(1:nLons, 1:nLats,1:nAlts) 
+
+           call calc_conduction(iBlock, &
+                Pressure(1:nLons, 1:nLats,-1:nAlts+2,iBlock), &
+                Prandtl(1:nLons, 1:nLats,0:nAlts+1)/&
+                Gamma(1:nLons,1:nLats, 0:nAlts+1,iBlock)/Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock) / &
+                  Cp(1:nLons, 1:nLats,0:nAlts+1, iBlock),  &
+                tmp2, EddyCondAdia)
    
-        Conduction = Conduction - &
-             EddyCondAdia/TempUnit(1:nLons, 1:nLats,1:nAlts)
-
-     endif ! New Updated Conduction Check
+           Conduction = Conduction - &
+                EddyCondAdia/TempUnit(1:nLons, 1:nLats,1:nAlts)
    
- endif
+        endif  !! UseUpdatedTurbulentCond Check
+     endif  ! THE USETurbulentCond Check
 
 
- else
+  else
      Conduction = 0.0
- end if
+  end if
 
 
 
@@ -369,7 +361,6 @@ if (UseTurbulentCond) then
      endif
 
 
-
 !     write(*,*) '==========> Now Entering Neutral Friction Calculation!!'
      do iLat = 1, nLats
         do iLon = 1, nLons
@@ -385,7 +376,6 @@ if (UseTurbulentCond) then
                   NF_NDenS(iAlt,iSpecies) = NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)
                   NF_EddyRatio(iAlt,iSpecies) = 0.0
                   NF_GradLogCon(iAlt,iSpecies) = GradLogConS(iLon,iLat,iAlt,iSpecies)
-
              enddo !iSpecies = 1, nSpecies
 
            enddo !iAlt = 1, nAlts
@@ -400,7 +390,7 @@ if (UseTurbulentCond) then
 
            do iAlt = 1, nAlts
               NeutralFriction(iLon, iLat, iAlt, 1:nSpecies) = &
-                   nVel(iAlt,1:nSpecies) - VerticalVelocity(iLon,iLat,iAlt,1:nSpecies,iBlock) 
+                   nVel(iAlt,1:nSpecies) - VerticalVelocity(iLon,iLat,iAlt,1:nSpecies,iBlock)
 !              
 !              EddyCoefRatio(iLon, iLat, iAlt, 1:nSpecies,iBlock) = &
 !                    NF_EddyRatio(iAlt,1:nSpecies)
@@ -436,77 +426,12 @@ if (UseTurbulentCond) then
           Viscosity(1:nLons, 1:nLats,1:nAlts, iNorth_))
 
      call calc_conduction(iBlock, &
-          Velocity(1:nLons, 1:nLats,-1:nAlts+2, iNorth_, iBlock), &
+          Velocity(1:nLons, 1:nLats,-1:nAlts+2, iEast_, iBlock), &
           ViscCoef(1:nLons, 1:nLats,0:nAlts+1), &
           Rho(1:nLons, 1:nLats,1:nAlts, iBlock), &
           Viscosity(1:nLons, 1:nLats,1:nAlts, iEast_))
 
-
-        if (UseEddyViscosity) then
-
-!! Formulation taken from Hickey et al [2000],
-!! Waves in Jupiter's Thermosphere
-
-            EddyViscosity = 0.0
-
-           call calc_conduction(iBlock, &
-                Velocity(1:nLons, 1:nLats,-1:nAlts+2, iEast_, iBlock), &
-                Rho(1:nLons, 1:nLats,0:nAlts+1,iBlock)*ViscCoef(1:nLons, 1:nLats,0:nAlts+1), &
-                Rho(1:nLons, 1:nLats,1:nAlts, iBlock), &
-                EddyViscosity(1:nLons, 1:nLats,1:nAlts, iEast_))
-
-           call calc_conduction(iBlock, &
-                Velocity(1:nLons, 1:nLats,-1:nAlts+2, iNorth_, iBlock), &
-                Rho(1:nLons, 1:nLats,0:nAlts+1,iBlock)*ViscCoef(1:nLons, 1:nLats,0:nAlts+1), &
-                Rho(1:nLons, 1:nLats,1:nAlts, iBlock), &
-                EddyViscosity(1:nLons, 1:nLats,1:nAlts, iNorth_))
-
-            Viscosity(1:nLons,1:nLats,1:nAlts,iEast_) =  &
-            Viscosity(1:nLons,1:nLats,1:nAlts,iEast_) - EddyViscosity(1:nLons,1:nLats,1:nAlts,iEast_)
-
-            Viscosity(1:nLons,1:nLats,1:nAlts,iNorth_) =  &
-            Viscosity(1:nLons,1:nLats,1:nAlts,iNorth_) - EddyViscosity(1:nLons,1:nLats,1:nAlts,iNorth_)
-
-        endif  ! Use Eddy Viscosity
-
-       Viscosity(:,:,:,iUp_) = 0.0
-
-!! Please Note that the Vertical Viscosity Terms should have Species-Dependent
-!! Viscosity Coefficients, the Below Formulation is meant as an approximation
-
-        if (UseVerticalViscosity) then 
-            VerticalViscosity = 0.0
-
-            do iSpecies = 1,nSpecies
-             call calc_conduction(iBlock, &
-                VerticalVelocity(1:nLons, 1:nLats,-1:nAlts+2, iSpecies,iBlock), &
-                (4.0/3.0)*ViscCoef(1:nLons, 1:nLats,0:nAlts+1), &
-                NDensityS(1:nLons, 1:nLats,1:nAlts, iSpecies,iBlock)*Mass(iSpecies), &
-                VerticalViscosity(1:nLons, 1:nLats,1:nAlts, iSpecies))
-            enddo
-
-            if (UseEddyViscosity) then
-            VerticalEddyViscosity = 0.0
-
-            do iSpecies = 1,nSpecies
-
-             call calc_conduction(iBlock, &
-                VerticalVelocity(1:nLons, 1:nLats,-1:nAlts+2, iSpecies,iBlock), &
-                NDensityS(1:nLons, 1:nLats,0:nAlts+1, iSpecies,iBlock)*Mass(iSpecies)*&
-                KappaEddyDiffusion(1:nLons, 1:nLats,0:nAlts+1,iBlock), &
-                NDensityS(1:nLons, 1:nLats,1:nAlts, iSpecies,iBlock)*Mass(iSpecies), &
-                VerticalEddyViscosity(1:nLons, 1:nLats,1:nAlts, iSpecies))
-
-             VerticalViscosity(1:nLons,1:nLats,1:nAlts,iSpecies) =  & 
-             VerticalViscosity(1:nLons,1:nLats,1:nAlts,iSpecies) -  &
-             VerticalEddyViscosity(1:nLons,1:nLats,1:nAlts,iSpecies) 
-
-            enddo
-
-            endif
-
-        endif  ! Test Vertical Viscosity
-
+     Viscosity(:,:,:,iUp_) = 0.0
 
   else
      Viscosity = 0.0

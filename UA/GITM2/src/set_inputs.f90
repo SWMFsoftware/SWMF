@@ -350,15 +350,15 @@ subroutine set_inputs
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #THERMO:'
               write(*,*) '#THERMO'
-              write(*,*) "UseSolarHeating         (logical)"
-              write(*,*) "UseJouleHeating         (logical)"
-              write(*,*) "UseAuroralHeating       (logical)"
-              write(*,*) "UseNOCooling            (logical)"
-              write(*,*) "UseOCooling             (logical)"
-              write(*,*) "UseConduction           (logical)"
-              write(*,*) "UseTurbulentCond        (logical)"
-              write(*,*) "UseUpdatedTurbulentCond (logical)"
-              write(*,*) "EddyScaling             (real)"
+              write(*,*) "UseSolarHeating   (logical)"
+              write(*,*) "UseJouleHeating   (logical)"
+              write(*,*) "UseAuroralHeating (logical)"
+              write(*,*) "UseNOCooling      (logical)"
+              write(*,*) "UseOCooling       (logical)"
+              write(*,*) "UseConduction     (logical)"
+              write(*,*) "UseTurbulentCond  (logical)"
+              write(*,*) "UseUpdatedTurbulentCond  (logical)"
+              write(*,*) "EddyScaling  (real)"
               IsDone = .true.
            endif
 
@@ -371,17 +371,33 @@ subroutine set_inputs
            endif
 
         case ("#VERTICALSOURCES")
+           call read_in_logical(UseEddyInSolver, iError)
            call read_in_logical(UseNeutralFrictionInSolver, iError)
-           call read_in_logical(UseBoquehoAndBlelly, iError)
-           call read_in_logical(UseEddyCorrection, iError)
            call read_in_real(MaximumVerticalVelocity, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #VERTICALSOURCES:'
               write(*,*) '#VERTICALSOURCES'
+              write(*,*) "UseEddyInSolver              (logical)"
               write(*,*) "UseNeutralFrictionInSolver   (logical)"
-              write(*,*) "UseBoquehoAndBlelly   (logical)"
-              write(*,*) "UseEddyCorrection   (logical)"
               write(*,*) "MaximumVerticalVelocity      (real)"
+           endif
+
+        case ("#EDDYVELOCITY")
+           call read_in_logical(UseBoquehoAndBlelly, iError)
+           call read_in_logical(UseEddyCorrection, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #VERTICALSOURCES:'
+              write(*,*) '#EDDYVELOCITY'
+              write(*,*) "UseBoquehoAndBlelly              (logical)"
+              write(*,*) "UseEddyCorrection   (logical)"
+           endif
+
+        case ("#WAVEDRAG")
+           call read_in_logical(UseStressHeating, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #WAVEDRAG:'
+              write(*,*) '#WAVEDRAG'
+              write(*,*) "UseStressHeating              (logical)"
            endif
 
         case ("#DIFFUSION")
@@ -425,19 +441,6 @@ subroutine set_inputs
               write(*,*) "UseViscosity        (logical)"
               write(*,*) "UseCoriolis         (logical)"
               write(*,*) "UseGravity          (logical)"
-              IsDone = .true.
-           endif
-
-        case ("#WAVEDRAG")
-           call read_in_logical(UseEddyViscosity, iError)
-           call read_in_logical(UseVerticalViscosity, iError)
-           call read_in_logical(UseStressHeating, iError)
-           if (iError /= 0) then
-              write(*,*) 'Incorrect format for #THERMO:'
-              write(*,*) '#FORCING'
-              write(*,*) "UseEddyViscosity      (logical)"
-              write(*,*) "UseVerticalViscosity (logical)"
-              write(*,*) "UseStressHeating (logical)"
               IsDone = .true.
            endif
 

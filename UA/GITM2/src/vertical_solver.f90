@@ -84,7 +84,7 @@ subroutine advance_vertical_1stage( &
   use ModPlanet
   use ModSizeGitm
   use ModVertical, only : &
-       Heating, EddyCoef_1D, Centrifugal, Coriolis, &
+       Heating, EddyCoef_1D, ViscCoef_1d,Centrifugal, Coriolis, &
        MeanMajorMass_1d, Gamma_1d, InvRadialDistance_C, &
        Gravity_G, Altitude_G,Cv_1D
   use ModTime
@@ -129,17 +129,12 @@ subroutine advance_vertical_1stage( &
   real, dimension(1:nAlts)    :: DiffLogPress, GradLogPress
   real, dimension(1:nAlts,nSpecies)    :: EddyDiffusionVel
 
-  real, dimension(-1:nAlts+2,nSpecies)    :: Con, LogCon
-  real, dimension(1:nAlts,nSpecies)    :: GradLogCon, DiffLogCon
-
   real :: nVel(1:nAlts,1:nSpecies)
-
-!! Stress Tensor Heating Function given by Hickey et al [2000]
-!! Icarus, Heating and Cooling in Jovian Thermosphere
-  real :: StressHeating(1:nAlts)
-
   integer :: nFilter, iFilter
   real :: LowFilter
+
+!! WAVEDRAG Heating  Hickey et al [2000]
+  real, dimension(1:nAlts)    :: StressHeating
 
 !\
 ! Parameters Used for the Sponge
@@ -157,6 +152,7 @@ subroutine advance_vertical_1stage( &
   Rho = exp(LogRho)
   LogNum = alog(sum(NS,dim=2))
   nFilter = 10
+  
 
      NT(-1:nAlts+2) = exp(LogNum(-1:nAlts+2))
   do iAlt = -1, nAlts + 2
@@ -195,27 +191,6 @@ subroutine advance_vertical_1stage( &
      GradLogINS(:,iSpecies) = GradTmp
      DiffLogINS(:,iSpecies) = DiffTmp
   enddo
-
-  if (UseBoquehoAndBlelly) then
-     do iSpecies=1, nSpecies
-       do iAlt=1, nAlts
-         GradLogCon(iAlt,iSpecies) = &
-              -1.0*Gravity_G(iAlt)*(1.0 - MeanMajorMass_1d(iAlt)/Mass(iSpecies))
-       enddo
-     enddo
-  else
-
-    do iSpecies = 1, nSpecies
-
-         Con(-1:nAlts+2,iSpecies) = NS(-1:nAlts+2,iSpecies)/NT(-1:nAlts+2)
-         LogCon(-1:nAlts+2,iSpecies) = alog( Con(-1:nAlts+2,iSpecies) )
-
-         call calc_rusanov_alts(LogCon(-1:nAlts+2,iSpecies), GradTmp, DiffTmp)
-         GradLogCon(1:nAlts,iSpecies) = GradTmp(1:nAlts)
-
-    enddo
-
-  endif
 
 
   AmpSP = (1.0/(10.0*Dt))
@@ -287,24 +262,6 @@ subroutine advance_vertical_1stage( &
 
   enddo
 
-  !! Call Calc_Neutral_Friction
-
-  nVel(1:nAlts,1:nSpecies) = VertVel(1:nAlts,1:nSpecies)
-
-  if (UseNeutralFriction .and. UseNeutralFrictionInSolver) then
-
-   call calc_neutral_friction(nVel(1:nAlts,1:nSpecies), &
-                          EddyCoef_1d(1:nAlts), &
-                          NT(1:nAlts), NS(1:nAlts,1:nSpecies), &
-                          GradLogCon(1:nAlts,1:nSpecies), &
-                          EddyDiffusionVel(1:nAlts,1:nSpecies), &
-                          Temp(1:nAlts), Gravity_G(1:nAlts) )
-
-    NewVertVel(1:nAlts,1:nSpecies) = NewVertVel(1:nAlts,1:nSpecies) + &
-                                     nVel(1:nAlts,1:nSpecies) - VertVel(1:nAlts,1:nSpecies) 
-
-  endif
-
   do iAlt = 1, nAlts
 
      do iSpecies=1,nSpecies
@@ -320,21 +277,22 @@ subroutine advance_vertical_1stage( &
 
   enddo
 
-!! Logical Setings for the Stress Heating Term (outside of nAlt loop to save time)
+  StressHeating = 0.0
 
   if (UseStressHeating) then
-      do iAlt = 1, nAlts
-         StressHeating(iAlt)  = &
-          (  &
-             (Gamma_1d(iAlt) - 1.0)/ NT(iAlt)*Boltzmanns_Constant)*&
-          ( (4.0/3.0)*(GradVel_CD(iAlt,iUp_)**2 + &
-                       GradVel_CD(iAlt,iNorth_)**2 + & 
-                       GradVel_CD(iAlt,iEast_)**2 ) &
-          )
-      enddo
-  else
 
-        StressHeating(1:nAlts) = 0.0
+    do iAlt = 1, nAlts 
+
+      StressHeating(iAlt) = ViscCoef_1d(iAlt)* &
+       (  (  (Gamma_1d(iAlt) - 1.0)/ ( NT(iAlt)*Boltzmanns_Constant) ) * &
+           (  &
+              (4.0/3.0)*GradVel_CD(iAlt,iUp_)**2 +    &
+                        GradVel_CD(iAlt,iNorth_)**2 + &
+                        GradVel_CD(iAlt,iEast_)**2    &
+           )  )
+
+    enddo
+
   endif
 
   do iAlt = 1, nAlts
@@ -363,7 +321,7 @@ subroutine advance_vertical_1stage( &
              (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
              (Gamma_1d(iAlt) - 1.0) * ( &
              Temp(iAlt)*DivVel(iAlt))) &
-             + Dt * DiffTemp(iAlt)  & 
+             + Dt * DiffTemp(iAlt) & 
              + Dt * StressHeating(iAlt) 
 
 !        NewTemp(iAlt)   = NewTemp(iAlt) + &

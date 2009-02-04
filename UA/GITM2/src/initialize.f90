@@ -362,6 +362,11 @@ subroutine initialize_gitm(TimeIn)
   ! The iLon and iLat are dummy variables...
   call UA_calc_electrodynamics(iLon,iLat)
 
+  do iBlock = 1, nBlocks
+    call calc_eddy_diffusion_coefficient(iBlock)
+    call calc_viscosity(iBlock)
+  enddo
+
 !  do iBlock = 1, nBlocks
 !     call calc_rates(iBlock)
 !  enddo

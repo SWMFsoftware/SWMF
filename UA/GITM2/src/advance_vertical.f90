@@ -3,7 +3,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   use ModGITM
   use ModPlanet, only: nSpecies, OmegaBody, nIonsAdvect
   use ModConstants, only: pi
-  use ModSources, only: EUVHeating, VerticalTempSource, KappaEddyDiffusion
+  use ModSources, only: EUVHeating, KappaEddyDiffusion
   use ModInputs, only: UseIonAdvection, iDebugLevel
   use ModVertical, ONLY: &
        LogRho, &
@@ -19,6 +19,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
        MeanMajorMass_1d, &
        gamma_1d, &
        EddyCoef_1d, &
+       ViscCoef_1d, &
        Gravity_G, Altitude_G, dAlt_C, InvRadialDistance_C, dAlt_F, InvDAlt_F, Cv_1D
   
 
@@ -32,6 +33,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   KappaTemp1 = KappaTemp(iLon,iLat,:,iBlock)
 
   EddyCoef_1d(1:nAlts) = KappaEddyDiffusion(iLon,iLat,1:nAlts,iBlock)
+  ViscCoef_1d(1:nAlts) = ViscCoef(iLon,iLat,1:nAlts)
   Cv_1D(1:nAlts) = cp(iLon,iLat,1:nAlts,iBlock)
   
   if (minval(NDensityS(iLon,iLat,:,1:nSpecies,iBlock)) <= 0.0) then
@@ -48,9 +50,6 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   enddo
 
   !!!! CHANGE !!!!
-
-  VerticalTempSource(iLon,iLat,1:nAlts) = &
-       Temp(1:nAlts)/TempUnit(iLon,iLat,1:nAlts)-Temperature(iLon,iLat,1:nAlts,iBlock)
 
   Temp    = Temperature(iLon,iLat,:,iBlock)*TempUnit(iLon,iLat,:)
   do iSpecies = 1, nSpecies 

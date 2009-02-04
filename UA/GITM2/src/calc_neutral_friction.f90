@@ -30,6 +30,7 @@ subroutine calc_neutral_friction(oVel, EddyCoef_1d, NDensity_1d, NDensityS_1d, &
   real :: Dij(nSpecies)
   real :: denscale
   real :: mscale
+  real :: mms
   real :: mmwos(nSpecies)
 
   real :: EddyDiffCorrection(nSpecies)
@@ -47,26 +48,19 @@ subroutine calc_neutral_friction(oVel, EddyCoef_1d, NDensity_1d, NDensityS_1d, &
     Vel = oVel(iAlt,1:nSpecies)
     CoefMatrix = 0.0
 
+    mms = 0.0
+    mmwos = 0.0
     InvDij = 0.0
 
-
-! \
-! Below, mms = mean molecular weight
-! at the Altitude(iAlt)
-!
-! In contrast, mmwos = Mean Molecular Weight
-! excluding the species (iSpecies)
-
+    EddyDiffCorrection(1:nSpecies) = 0.0
 
     do iSpecies = 1, nSpecies
 
 
-       EddyDiffCorrection(iSpecies) = 0.0
        InvDij(iSpecies) = 0.0
 
 
        kTOverM = Boltzmanns_Constant * Temp(iAlt) / Mass(iSpecies)
-
 
        denscale = 1.0/NDensity_1d(iAlt) 
 
@@ -96,92 +90,101 @@ subroutine calc_neutral_friction(oVel, EddyCoef_1d, NDensity_1d, NDensityS_1d, &
              TempDij = Diff0(iSpecies, jSpecies)*&
                       (N0/NDensity_1d(iAlt))*&
                       (Temp(iAlt) / Temp(1))** DiffExp(iSpecies, jSpecies) 
- 
-             if(UseBoquehoAndBlelly) then
+
+             if (UseBoquehoAndBlelly) then
+
              CoefMatrix(iSpecies, jSpecies) = &
-                  kTOverM * NDensityS_1d(iAlt, jSpecies) * denscale/ &
+                  kTOverM * denscale * NDensityS_1d(iAlt, jSpecies) / &
                    ( TempDij + EddyCoef_1d(iAlt)  )
 
              InvDij(iSpecies) = InvDij(iSpecies) + &
-                               denscale * NDensityS_1d(iAlt, jSpecies) / &
-                              ( TempDij + EddyCoef_1d(iAlt)  )
+                   denscale * NDensityS_1d(iAlt, jSpecies) / &
+                   ( TempDij + EddyCoef_1d(iAlt)  )
              else
+
              CoefMatrix(iSpecies, jSpecies) = &
-                  kTOverM * NDensityS_1d(iAlt, jSpecies) * denscale/TempDij 
+                  kTOverM * denscale * NDensityS_1d(iAlt, jSpecies) / &
+                   ( TempDij )
 
              InvDij(iSpecies) = InvDij(iSpecies) + &
-                               denscale * NDensityS_1d(iAlt, jSpecies) /TempDij 
-             endif
+                   denscale * NDensityS_1d(iAlt, jSpecies) / &
+                   ( TempDij )
 
-! Now we add the turbulent collision frequencies
-! to the molecular collision frequencies
-!
-! V_{turb} = (kT/m)*[N_s/( N * Kzz) ]  From Boqueho and Blelly (2005)
+             endif   !! UseBoqueho And Blelly
 
+           else   !! Not Earth
 
-!             CoefMatrix(iSpecies, jSpecies) = &
-!                  kTOverM * (NDensityS_1d(iAlt, jSpecies) / NDensity_1d(iAlt)) *&
-!                   1.0/( TempDij  + EddyCoef_1d(iAlt)  )
-
-!             CoefMatrix(iSpecies, jSpecies) = &
-!                  kTOverM * (NDensityS_1d(iAlt, jSpecies) / (NDensity_1d(iAlt) - NDensityS_1d(iAlt,iSpecies) ) ) *&
-!                   1.0/( TempDij  + EddyCoef_1d(iAlt)  )
-
-
-! InvDij is the inverse of the total "diffusion coefficient" or the 
-! total collision frequency (whatever you prefer)
-
-           else
               TempDij = (1.0e-04)*&              ! Scales the Dij from cm^2/s -> m^2/s
                 (   Diff0(iSpecies,jSpecies)*( Temp(iAlt)**DiffExp(iSpecies,jSpecies) )   ) / &
                 (   NDensity_1d(iAlt)*(1.0e-06) )     ! Converts to #/cm^-3
 
-            !   CoefMatrix(iSpecies, jSpecies) = &
-            !        kTOverM *  &
-            !        NDensityS_1d(iAlt, jSpecies) / &
-            !        TempDij
+              if ( UseBoquehoAndBlelly) then
+                  CoefMatrix(iSpecies, jSpecies) = &
+                       kTOverM * denscale * &
+                       NDensityS_1d(iAlt, jSpecies) / &
+                       ( TempDij + EddyCoef_1d(iAlt))
 
-             if(UseBoquehoAndBlelly) then
-               CoefMatrix(iSpecies, jSpecies) = &
-                    kTOverM * denscale * &
-                    NDensityS_1d(iAlt, jSpecies) / &
-                    ( TempDij + EddyCoef_1d(iAlt))
-
-            !   InvDij(iSpecies) = InvDij(iSpecies) + &
-            !      NDensityS_1d(iAlt, jSpecies)/TempDij
-
-               InvDij(iSpecies) = InvDij(iSpecies) + &
-                  denscale*NDensityS_1d(iAlt, jSpecies)/ &
-                 ( TempDij + EddyCoef_1d(iAlt) )
+                  InvDij(iSpecies) = InvDij(iSpecies) + &
+                     denscale*NDensityS_1d(iAlt, jSpecies)/ &
+                    ( TempDij + EddyCoef_1d(iAlt) )
               else
-               CoefMatrix(iSpecies, jSpecies) = &
-                    kTOverM * denscale * NDensityS_1d(iAlt, jSpecies) / TempDij 
 
-               InvDij(iSpecies) = InvDij(iSpecies) + &
-                  denscale*NDensityS_1d(iAlt, jSpecies)/TempDij 
+                  CoefMatrix(iSpecies, jSpecies) = &
+                       kTOverM * denscale * &
+                       NDensityS_1d(iAlt, jSpecies) / &
+                       ( TempDij )
+
+                  InvDij(iSpecies) = InvDij(iSpecies) + &
+                     denscale*NDensityS_1d(iAlt, jSpecies)/ &
+                    ( TempDij )
+
               endif
 
-           endif
+
+              if (UseBoquehoAndBlelly) then
+                  EddyDiffCorrection(iSpecies) = EddyDiffCorrection(iSpecies) + &
+                      Dt*InvDij(jSpecies)*EddyCoef_1d(iAlt)*GradLogCon(iAlt,jSpecies)
+              else
+                  EddyDiffCorrection(iSpecies) = EddyDiffCorrection(iSpecies) + &
+                      Dt*CoefMatrix(iSpecies,jSpecies)*EddyCoef_1d(iAlt)*GradLogCon(iAlt,jSpecies)
+
+              endif
 
 
 
-           EddyDiffCorrection(iSpecies) =    &
-              EddyDiffCorrection(iSpecies) + &
-              CoefMatrix(iSpecies,jSpecies)*EddyCoef_1d(iAlt)*GradLogCon(iAlt,jSpecies)
+           endif   ! Check if IsEarth
 
-       enddo
+
+
+
+       enddo  ! End DO over jSpecies
+
+         if (UseBoquehoAndBlelly) then
 
             EddyCoefRatio_1d(iAlt,iSpecies) =  &
                 Dt*( EddyCoef_1d(iAlt)*InvDij(iSpecies) )*GradLogCon(iAlt,iSpecies)
 
-           if (UseEddyCorrection) then
+            if(UseEddyCorrection) then
+              EddyCoefRatio_1d(iAlt,iSpecies) =  &
+                  EddyCoefRatio_1d(iAlt,iSpecies) - EddyDiffCorrection(iSpecies)
+            endif
+
+         else
             EddyCoefRatio_1d(iAlt,iSpecies) =  &
-              EddyCoefRatio_1d(iAlt,iSpecies) + EddyDiffCorrection(iSpecies)
-           endif
+                -1.0*Dt*(Boltzmanns_Constant*Temp(iAlt)/Mass(iSpecies) ) * &
+                         EddyCoef_1d(iAlt)*InvDij(iSpecies)*GradLogCon(iAlt,iSpecies) 
+
+            if(UseEddyCorrection) then
+              EddyCoefRatio_1d(iAlt,iSpecies) =  &
+                  EddyCoefRatio_1d(iAlt,iSpecies) + EddyDiffCorrection(iSpecies)
+            endif
+
+         endif
+
          
 
 
-    enddo
+    enddo  !End DO Over iSpecies
 
 !    Vel(1:nSpecies) = Vel(1:nSpecies) + EddyCoefRatio_1d(iAlt,iSpecies)
 
