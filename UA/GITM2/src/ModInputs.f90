@@ -105,11 +105,13 @@ module ModInputs
   character (len=iCharLen_) :: IonIonizationFilename
   character (len=iCharLen_) :: IonHeatingRateFilename
 
+  logical :: UseEddyInSolver = .false.
   logical :: UseNeutralFrictionInSolver = .false.
+  real    :: MaximumVerticalVelocity = 1000.0
+
+!! EddyVelocity Terms
   logical :: UseBoquehoAndBlelly = .false.
   logical :: UseEddyCorrection = .false.
-  logical :: UseEddyInSolver = .false.
-  real    :: MaximumVerticalVelocity = 1000.0
 
   !\
   ! These are logicals to turn off and on forcing terms:
@@ -137,11 +139,16 @@ module ModInputs
   logical :: UseNOCooling      = .true.
   logical :: UseOCooling       = .true.
   logical :: UseConduction     = .true.
-  logical :: UseTurbulentCond = .true.
-  logical :: UseUpdatedTurbulentCond = .true.
-  real    :: EddyScaling = 1.0
   logical :: UseDiffusion      = .false.
   logical :: UseVerAdvectionT  = .true.
+
+!! New Turbulent (Eddy) Conduction Routines
+  logical :: UseTurbulentCond = .false.
+  logical :: UseUpdatedTurbulentCond = .false.
+  real :: EddyScaling = 1.0
+
+!! WAVE DRAG FORCINGS
+  logical :: UseStressHeating  = .false.
 
   real :: KappaTemp0 = 5.6e-4
   real :: EddyDiffusionCoef = 0.0
@@ -154,10 +161,6 @@ module ModInputs
   logical :: UseIonChemistry     = .true.
   logical :: UseNeutralChemistry = .true.
   logical :: UseIonAdvection     = .true.
-
-  logical :: UseEddyViscosity     = .false.
-  logical :: UseVerticalViscosity     = .false.
-  logical :: UseStressHeating     = .false.
 
   !\
   ! Methods for completing chemistry
