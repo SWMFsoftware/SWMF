@@ -1213,12 +1213,13 @@ subroutine set_satvar(headvar_I, distvar_II, iSatIn, nHeadVar, nDistVar)
      Volume = IM_bilinear(vm(iLoc:iLoc+1,jLoc:jLoc+1), &
           1, 2, 1, 2, (/xnorm,ynorm/))
 
-     if(Volume <= 0.0)then
-        !write(*,*)'!!! SatLoc=',SatLoc_3I(1:2,2,iSatIn)
-        !write(*,*)'!!! xnorm, ynorm=',xnorm, ynorm
-        !write(*,*)'!!! negative Volume =',Volume
-        Volume = 1e-20
-     end if
+     !if(Volume <= 0.0)then
+     !write(*,*)'!!! SatLoc=',SatLoc_3I(1:2,2,iSatIn)
+     !write(*,*)'!!! xnorm, ynorm=',xnorm, ynorm
+     !write(*,*)'!!! negative Volume =',Volume
+     !end if
+     Volume = max(Volume, 1e-20)
+
      HeadVar_I(11) = Volume**(-1.5)
      HeadVar_I(11) = HeadVar_I(11)
 
