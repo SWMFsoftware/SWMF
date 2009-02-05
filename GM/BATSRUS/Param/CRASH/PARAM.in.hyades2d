@@ -105,6 +105,7 @@ rel                     TypeStopCriterion
 T                       UseGrayDiffusion
 T                       UseRadFluxLimiter
 larsen                  TypeRadFluxLimiter
+300.0			TradMinSi
 
 #TIMEACCURATE
 T			IsTimeAccurate

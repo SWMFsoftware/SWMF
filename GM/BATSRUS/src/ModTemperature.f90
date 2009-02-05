@@ -100,7 +100,7 @@ module ModTemperature
   !To switch the boundary condition at the outer boundary:
   logical :: IsFirstCgIteration
   
-  real,parameter::tRadMinDim = 500.0 !K Otherwise the dominant contribution 
+  real :: TradMinSi = 500.0 !K Otherwise the dominant contribution 
   !to the norm TRad^2/Cv(TRad)\sim (1/T)comes from infinitesimal temperatures
 contains
 
@@ -151,6 +151,7 @@ contains
                      //TypeRadFluxLimiter)
              end select
           end if
+          call read_var('TradMinSi', TradMinSi)
        end if
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
@@ -350,7 +351,7 @@ contains
              SpecificHeat_VCB(Te_,i,j,k,iBlock) = Cv
 
              Trad = max(Temperature_VGB(Trad_,i,j,k,iBlock),&
-                  tRadMinDim * Si2No_V(UnitTemperature_))
+                  TradMinSi * Si2No_V(UnitTemperature_))
              SpecificHeat_VCB(Trad_,i,j,k,iBlock) = 4.0*cRadiationNo*Trad**3
              RelaxationCoef_VCB(Trad_,i,j,k,iBlock) = Clight*PlanckOpacity &
                   *cRadiationNo*(Te+Trad)*(Te**2+Trad**2)

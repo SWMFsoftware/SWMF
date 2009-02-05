@@ -73,6 +73,7 @@ initial_lowrie3.dat	NameInputFile
 #RADIATION
 T			UseGrayDiffusion
 F			UseRadFluxLimiter
+0.0			TradMinSi
 
 #SHOCKPOSITION
 0.0			ShockPosition
