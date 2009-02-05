@@ -1155,6 +1155,7 @@ subroutine set_satvar(headvar_I, distvar_II, iSatIn, nHeadVar, nDistVar)
   real               :: xnorm, ynorm, diff_colat(isize), diff_aloct(jsize)
   real               :: IM_bilinear
   character(len=100) :: StringTime
+  real               :: Volume
   !-------------------------------------------------------------------------
   HeadVar_I = -1.0
   DistVar_II= -1.0
@@ -1209,27 +1210,30 @@ subroutine set_satvar(headvar_I, distvar_II, iSatIn, nHeadVar, nDistVar)
      HeadVar_I(10)= IM_bilinear(ymin(iLoc:iLoc+1,jLoc:jLoc+1), &
           1, 2, 1, 2, (/xnorm,ynorm/))
      ! Flux tube volume:
-     HeadVar_I(11) = IM_bilinear(vm(iLoc:iLoc+1,jLoc:jLoc+1), &
-          1, 2, 1, 2, (/xnorm,ynorm/))**(-1.5)
-     HeadVar_I(11) = HeadVar_I(11) * 1.0E+9
+     Volume = IM_bilinear(vm(iLoc:iLoc+1,jLoc:jLoc+1), &
+          1, 2, 1, 2, (/xnorm,ynorm/))
+
+     if(Volume <= 0.0)then
+        !write(*,*)'!!! SatLoc=',SatLoc_3I(1:2,2,iSatIn)
+        !write(*,*)'!!! xnorm, ynorm=',xnorm, ynorm
+        !write(*,*)'!!! negative Volume =',Volume
+        Volume = 1e-20
+     end if
+     HeadVar_I(11) = Volume**(-1.5)
+     HeadVar_I(11) = HeadVar_I(11)
 
      ! Fill DistVar_II
      do k=1, kcsize 
         DistVar_II(k,1) = alamc(k) ! Energy invariant.
         DistVar_II(k,2) = IM_bilinear(eeta(iLoc:iLoc+1,jLoc:jLoc+1, k), &
              1, 2, 1, 2, (/xnorm,ynorm/)) ! Density invariant
-        DistVar_II(k,3) = abs(alamc(k)) * IM_bilinear(vm(iLoc:iLoc+1,   &
-             jLoc:jLoc+1),1, 2, 1, 2, (/xnorm,ynorm/)) ! Kinetic Energy
-        DistVar_II(k,4) = DistVar_II(k,2) * IM_bilinear( &
-             vm(iLoc:iLoc+1,jLoc:jLoc+1),1,2,1,2,(/xnorm,ynorm/))**1.5/6.37E21!density
+        DistVar_II(k,3) = abs(alamc(k)) * Volume ! Kinetic Energy
+        DistVar_II(k,4) = DistVar_II(k,2) * Volume**1.5/6.37E21!density
      end do
 
   endif
-  
-  
 
-     !anothertest = IM_bilinear(eff_test, 1, 2, 1, 2, (/1.5,1.5/))!**(-3/2) * 1.0E9
-     end subroutine set_satvar
+end subroutine set_satvar
 
 !=============================================================================
 real function IM_bilinear(A_II, iMin, iMax, jMin, jMax, Xy_D)
