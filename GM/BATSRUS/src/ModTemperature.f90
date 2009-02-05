@@ -18,7 +18,7 @@ module ModTemperature
   ! Public methods
   public :: read_temperature_param
   public :: init_temperature_diffusion
-  public :: calc_source_compression
+  public :: calc_source_temperature_diffusion
   public :: advance_temperature
 
   Logical, public :: UseTemperatureDiffusion = .false.
@@ -449,19 +449,19 @@ contains
 
   !============================================================================
 
-  subroutine calc_source_compression(iBlock)
+  subroutine calc_source_temperature_diffusion(iBlock)
 
     use ModAdvance,    ONLY: State_VGB, Source_VC, &
          uDotArea_XI, uDotArea_YI, uDotArea_ZI
-    use ModGeometry,   ONLY: vInv_CB
-    use ModSize,       ONLY: nI, nJ, nK
-    use ModVarIndexes, ONLY: Energy_
+    use ModGeometry,   ONLY: vInv_CB, TypeGeometry, y_BLK
+    use ModMain,       ONLY: nI, nJ, nK, UseGrayDiffusion
+    use ModVarIndexes, ONLY: Energy_, RhoUy_
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
     real :: vInv, DivU, RadCompression
-    character(len=*), parameter :: NameSub = "calc_source_compression"
+    character(len=*), parameter :: NameSub = "calc_source_temperature_diffusion"
     !--------------------------------------------------------------------------
     
     do k=1,nK; do j=1,nJ; do i=1,nI
@@ -486,7 +486,18 @@ contains
 
     end do; end do; end do
 
-  end subroutine calc_source_compression
+    if(TypeGeometry=='rz' .and. UseGrayDiffusion)then
+       ! Add "geometrical source term" p/r to the radial momentum equation
+       ! The "radial" direction is along the Y axis
+       ! NOTE: here we have to use signed radial distance!
+       do k=1,nK; do j=1, nJ; do i=1, nI
+          Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
+               + (1./3.)*State_VGB(iErad,i,j,k,iBlock) &
+               / y_BLK(i,j,k,iBlock)
+       end do; end do; end do
+    end if
+
+  end subroutine calc_source_temperature_diffusion
 
   !============================================================================
 

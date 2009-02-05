@@ -533,13 +533,13 @@ contains
     use ModAdvance,    ONLY: State_VGB, Source_VC, &
          uDotArea_XI, uDotArea_YI, uDotArea_ZI, Eradiation_
     use ModConst,      ONLY: cLightSpeed
-    use ModGeometry,   ONLY: vInv_CB, y_BLK
+    use ModGeometry,   ONLY: vInv_CB, y_BLK, TypeGeometry
     use ModImplicit,   ONLY: UseFullImplicit
     use ModNodes,      ONLY: NodeY_NB
     use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_, UnitT_
-    use ModSize,       ONLY: nI, nJ, nK
+    use ModMain,       ONLY: nI, nJ, nK, UseGrayDiffusion
     use ModUser,       ONLY: user_material_properties
-    use ModVarIndexes, ONLY: Energy_
+    use ModVarIndexes, ONLY: Energy_, RhoUy_
 
     integer, intent(in) :: iBlock
 
@@ -599,6 +599,17 @@ contains
             - AbsorptionEmission
 
     end do; end do; end do
+
+    if(TypeGeometry=='rz' .and. UseGrayDiffusion)then
+       ! Add "geometrical source term" p/r to the radial momentum equation
+       ! The "radial" direction is along the Y axis
+       ! NOTE: here we have to use signed radial distance!
+       do k=1,nK; do j=1, nJ; do i=1, nI
+          Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
+               + (1./3.)*State_VGB(Eradiation_,i,j,k,iBlock) &
+               / y_BLK(i,j,k,iBlock)
+       end do; end do; end do
+    end if
 
   end subroutine calc_source_gray_diffusion
 
