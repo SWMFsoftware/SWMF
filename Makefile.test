@@ -30,7 +30,7 @@ test:
 	-@(make test_check)
 
 test_check:
-	@ls -l ??/*/*.diff *.diff > test_swmf.res
+	@ls -ltr ??/*/*.diff *.diff > test_swmf.res
 	@cat test_swmf.res
 	@echo '=============================================================='\
 		>> test_swmf.res
@@ -47,7 +47,7 @@ test_check:
 test_comp:
 	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v /Empty/`; \
 		do ( cd $$i; make test; ); done
-	ls -l *.diff [A-Z][A-Z]/*/*.diff
+	ls -ltr [A-Z][A-Z]/*/*.diff
 
 ### SWMF tests ###
 
@@ -83,7 +83,7 @@ test_pw_check:
 		${TESTDIR}/PW/plots/plots_iline0001.out \
 		${PWDIR}/output/Earth/plots_iline0001.out \
 		> test_pw.diff)
-	ls -l test_pw*.diff
+	ls -ltr test_pw*.diff
 
 #### Radiation belt model test ###
 #
