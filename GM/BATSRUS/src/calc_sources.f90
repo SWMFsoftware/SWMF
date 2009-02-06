@@ -18,7 +18,7 @@ subroutine calc_sources
   use ModHallResist, ONLY: &
        UseHallResist, HallHyperFactor, calc_hyper_resistivity 
   use ModGrayDiffusion, ONLY: calc_source_gray_diffusion !^CFG IF IMPLICIT
-  use ModTemperature, ONLY: calc_source_temperature_diffusion, &
+  use ModTemperature, ONLY: calc_source_temperature_diff, &
        UseTemperatureDiffusion
   use ModMultiFluid
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
@@ -105,13 +105,14 @@ subroutine calc_sources
   if(TypeGeometry == 'rz')then
      if(.not.UseB)then
         
-        ! Add "geometrical source term" p/r to the radial momentum equation
-        ! The "radial" direction is along the Y axis
+        ! Add "geometrical source term" p/r to the radial momentum equation.
+        ! The azimuthal component of the velocity is assumed to be zero.
+        ! The axis is along X, the "radial" direction is along the Y axis
         ! NOTE: here we have to use signed radial distance!
 
         do k=1,nK; do j=1, nJ; do i=1, nI
-           Source_VC(iRhoUy,i,j,k) = Source_VC(iRhoUy,i,j,k) &
-                + State_VGB(iP,i,j,k,iBlock) / y_BLK(i,j,k,iBlock)
+           Source_VC(iRhoUy_I,i,j,k) = Source_VC(iRhoUy_I,i,j,k) &
+                + State_VGB(iP_I,i,j,k,iBlock) / y_BLK(i,j,k,iBlock)
         end do; end do; end do
      else
         call stop_mpi('RZ geometry is not implemented for MHD')
@@ -266,7 +267,7 @@ subroutine calc_sources
   end if
 
   if(UseTemperatureDiffusion) &
-       call calc_source_temperature_diffusion(iBlock)
+       call calc_source_temperature_diff(iBlock)
   if(UseGrayDiffusion.and..not.UseTemperatureDiffusion) & !^CFG IF IMPLICIT
        call calc_source_gray_diffusion(iBlock)            !^CFG IF IMPLICIT
 
