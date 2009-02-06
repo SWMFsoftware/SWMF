@@ -3,6 +3,7 @@ SHELL=/bin/sh
 
 include ../../../Makefile.def
 include ../../../Makefile.conf
+include Makefile.RULES
 
 help:
 	@echo make targets:

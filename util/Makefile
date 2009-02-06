@@ -3,6 +3,7 @@ INSTALLFILE = \
 	EMPIRICAL/srcEE/Makefile.DEPEND \
 	EMPIRICAL/srcIE/Makefile.DEPEND \
 	EMPIRICAL/srcUA/Makefile.RULES \
+	NOMPI/src/Makefile.RULES \
 	CRASH/src/Makefile.DEPEND
 
 install:
