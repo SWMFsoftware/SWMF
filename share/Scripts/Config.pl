@@ -98,8 +98,10 @@ my $IsComponent=0;         # True if code is installed as a component of SWMF
 my $NewPrecision;
 my $NewOptimize;
 my $NewDebug;
+my $NewMpi;
 my $IsCompilerSet;
 my $Debug;
+my $Mpi;
 my $Optimize;
 
 # Obtain current settings
@@ -126,6 +128,8 @@ foreach (@Arguments){
     if(/^-component$/i)       {$IsComponent=1;                  next};
     if(/^-debug$/i)           {$NewDebug="yes";                 next};
     if(/^-nodebug$/i)         {$NewDebug="no";                  next};
+    if(/^-mpi$/i)             {$NewMpi="yes";                   next};
+    if(/^-nompi$/i)           {$NewMpi="no";                    next};
     if(/^-O[0-4]$/i)          {$NewOptimize=$_;                 next};  
     if(/^-g(rid)?$/)          {$ShowGridSize=1;                 next};
     if(/^-g(rid)?=([\d,]+)$/) {$NewGridSize=$+;                 next};
@@ -179,6 +183,9 @@ if($NewPrecision and $NewPrecision ne $Precision){
 # Change debugging flags if required
 &set_debug_ if $NewDebug and $NewDebug ne $Debug;
 
+# Link with MPI vs. NOMPI library if required
+&set_mpi_ if $NewMpi and $NewMpi ne $Mpi;
+
 # Change optimization level if required
 &set_optimization_ if $NewOptimize and $NewOptimize ne $Optimize;
 
@@ -218,6 +225,7 @@ sub get_settings_{
   }
 
     $Debug = "no";
+    $Mpi   = "yes";
   TRY:{
       # Read information from $MakefileConf
       open(MAKEFILE, $MakefileConf)
@@ -233,6 +241,7 @@ sub get_settings_{
 
 	  $Precision = lc($1) if /^\s*PRECISION\s*=.*(SINGLE|DOUBLE)PREC/;
           $Debug = "yes" if /^\s*DEBUG\s*=\s*\$\{DEBUGFLAG\}/;
+	  $Mpi   = "no"  if /^\s*MPILIB\s*=.*\-lNOMPI/;
           $Optimize = $1 if /^\s*OPT[0-4]\s*=\s*(-O[0-4])/;
       }
   }
@@ -276,6 +285,7 @@ sub show_settings_{
     print "The default precision for reals is $Precision precision.\n";
     print "The maximum optimization level is $Optimize\n";
     print "Debugging flags: $Debug\n";
+    print "Linked with MPI: $Mpi\n";
 
     print "\n";
 
@@ -395,6 +405,37 @@ sub set_debug_{
 	    print;
 	}
     }
+}
+
+##############################################################################
+
+sub set_mpi_{
+
+    # Select the MPI or NOMPI library in $MakefileConf
+
+    # $Mpi will be $NewMpi after changes
+    $Mpi = $NewMpi;
+
+    print "Selecting MPI library in $MakefileConf\n" if $Mpi eq "yes";
+    print "Selecting NOMPI library in $MakefileConf\n" if $Mpi eq "no";
+    if(not $DryRun){
+	@ARGV = ($MakefileConf);
+	while(<>){
+	    # Comment/uncomment MPILIB definitions
+	    if(/MPILIB\s*=/){
+		s/^\s*M/\#M/ if /lNOMPI/ eq ($Mpi eq "yes");
+		s/^\#\s*M/M/ if /lNOMPI/ eq ($Mpi eq "no");
+	    }
+	    # Modify LINK.f90 definition
+	    if(/^\s*LINK.f90\s*=.*mpif90/){
+		s/\{CUSTOMPATH_MPI\}/\{COMPILE.f90\}\# \t/ if $Mpi eq "no";
+		s/\{COMPILE.f90\}\#\s*/\{CUSTOMPATH_MPI\}/ if $Mpi eq "yes";
+	    }
+	    print;
+	}
+    }
+    &shell_command("make NOMPI") if $Mpi eq "no";
+    print "Remove executable and make it to link with the (NO)MPI library!\n";
 }
 
 ##############################################################################
@@ -529,7 +570,8 @@ shell commands. The script can also show the current settings.
 
 Usage: Config.pl [-help] [-verbose] [-show] [-dryrun] 
                  [-install[=s|=c] [-compiler=COMP] [-mpi=VERSION]] [-uninstall]
-                 [-single|-double] [-debug|-nodebug] [-O0|-O1|-O2|-O3|-O4]
+                 [-single|-double] [-debug|-nodebug] [-mpi|-nompi]
+                 [-O0|-O1|-O2|-O3|-O4]
 
 If called without arguments, the current settings are shown.
 
@@ -564,6 +606,8 @@ Compilation:
 
 -debug         select debug options for the compiler in Makefile.conf
 -nodebug       do not use debug options for the compiler in Makefile.conf
+-nompi         compile and link with the NOMPI library for serial execution
+-mpi           compile and link with the MPI library for parallel execution
 -O0            set all optimization levels to -O0
 -O1            set optimization levels to at most -O1
 -O2            set optimization levels to at most -O2
@@ -584,13 +628,13 @@ Install code with the g95 compiler and Intel MPI and select single precision:
 
     Config.pl -install -compiler=g95 -mpi=Intel -single
 
-Set optimization level to -O0 and switch on debugging flags:
+Set optimization level to -O0, switch on debugging flags and link with NOMPI:
 
-    Config.pl -debug -O0
+    Config.pl -debug -O0 -nompi
 
-Set optimization level to -03 and switch off debugging flags:
+Set optimization level to -03, switch off debugging flags and link with MPI:
 
-    Config.pl -nodebug -O3
+    Config.pl -nodebug -O3 -mpi
 
 Uninstall code (if this fails, run Config.pl -install first):
 
