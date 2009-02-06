@@ -18,7 +18,7 @@ module ModTemperature
   ! Public methods
   public :: read_temperature_param
   public :: init_temperature_diffusion
-  public :: calc_source_temperature_diffusion
+  public :: calc_source_temperature_diff
   public :: advance_temperature
 
   Logical, public :: UseTemperatureDiffusion = .false.
@@ -121,14 +121,16 @@ contains
        call read_var('UseTemperatureDiffusion', UseTemperatureDiffusion)
        if(UseTemperatureDiffusion)then
           call read_var('UseTemperatureVariable', UseTemperatureVariable)
-          call read_var('TypePreconditioner', TypePreconditioner)
+          call read_var('TypePreconditioner', TypePreconditioner, &
+               IsLowerCase=.true.)
           select case(TypePreconditioner)
           case('blockjacobi','gs','dilu','mbilu')
           case default
              call stop_mpi(NameSub//': unknown TypePreconditioner='&
                   //TypePreconditioner)
           end select
-          call read_var('TypeStopCriterion', TypeStopCriterion)
+          call read_var('TypeStopCriterion', TypeStopCriterion, &
+               IsLowerCase=.true.)
           call read_var('MaxErrorResidual', MaxErrorResidual)
        end if
     case("#HEATCONDUCTION")
@@ -456,7 +458,7 @@ contains
 
   !============================================================================
 
-  subroutine calc_source_temperature_diffusion(iBlock)
+  subroutine calc_source_temperature_diff(iBlock)
 
     use ModAdvance,    ONLY: State_VGB, Source_VC, &
          uDotArea_XI, uDotArea_YI, uDotArea_ZI
@@ -468,7 +470,7 @@ contains
 
     integer :: i, j, k
     real :: vInv, DivU, RadCompression
-    character(len=*), parameter :: NameSub = "calc_source_temperature_diffusion"
+    character(len=*), parameter :: NameSub = "calc_source_temperature_diff"
     !--------------------------------------------------------------------------
     
     do k=1,nK; do j=1,nJ; do i=1,nI
@@ -504,7 +506,7 @@ contains
        end do; end do; end do
     end if
 
-  end subroutine calc_source_temperature_diffusion
+  end subroutine calc_source_temperature_diff
 
   !============================================================================
 
