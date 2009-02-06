@@ -134,8 +134,6 @@ contains
     case("#HEATCONDUCTION")
        call read_var('UseHeatConduction', UseHeatConduction)
 
-       call stop_mpi(NameSub// &
-            ': isotropic heat conduction can not yet be activated')
     case("#RADIATION")
        call read_var('UseGrayDiffusion', UseGrayDiffusion)
        if(UseGrayDiffusion)then
@@ -239,13 +237,12 @@ contains
           allocate(Prec_VVCIB(nTemperature,nTemperature,nI,nJ,nK,nStencil,nBlk))
        end select
 
-       
-
     end if
 
     ! Select which temperature variables involve "heat conduction"
     if(UseHeatConduction) iCond_I(1) = Te_
     if(UseGrayDiffusion)  iCond_I(nCond) = Trad_
+
   end subroutine init_temperature_diffusion
 
   !============================================================================
@@ -279,7 +276,8 @@ contains
           if(UseTemperatureVariable)then
              Temperature_VGB(Te_,i,j,k,iBlock) = Te
              if(UseTrad)then
-                if(State_VGB(iERad,i,j,k,iBlock)<0.0)call stop_mpi('negative radiation energy')
+                if(State_VGB(iERad,i,j,k,iBlock)<0.0) &
+                     call stop_mpi('negative radiation energy')
                 Trad = sqrt(sqrt(State_VGB(iErad,i,j,k,iBlock) &
                      /cRadiationNo))
                 Temperature_VGB(Trad_,i,j,k,iBlock) = Trad
@@ -304,15 +302,16 @@ contains
 
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
-    use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBlk
+    use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBlk, &
+         UseHeatConduction, UseGrayDiffusion
     use ModPhysics,  ONLY: Si2No_V, UnitX_, UnitEnergyDens_, &
-         UnitTemperature_, cRadiationNo, Clight
+         UnitTemperature_, cRadiationNo, Clight, UnitU_
     use ModProcMH,   ONLY: iProc
     use ModUser,     ONLY: user_material_properties
 
     integer :: i, j, k, iBlock
-    real :: PlanckOpacitySi, RosselandMeanOpacitySi
-    real :: PlanckOpacity, RosselandMeanOpacity
+    real :: PlanckOpacitySi, RosselandMeanOpacitySi, HeatConductionCoefSi
+    real :: PlanckOpacity, RosselandMeanOpacity, HeatConductionCoef
     real :: CvSi, Cv, TeSi, Te, Trad, DiffRad
 
     character(len=*), parameter:: NameSub = 'set_frozen_coefficients'
@@ -340,34 +339,42 @@ contains
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                AbsorptionOpacitySiOut = PlanckOpacitySi, &
                RosselandMeanOpacitySiOut = RosselandMeanOpacitySi, &
-               CvSiOut = CvSi, TeSiOut = TeSi)
+               CvSiOut = CvSi, TeSiOut = TeSi, &
+               HeatConductionCoefSiOut = HeatConductionCoefSi)
 
           RosselandMeanOpacity = RosselandMeanOpacitySi/Si2No_V(UnitX_)
           PlanckOpacity = PlanckOpacitySi/Si2No_V(UnitX_)
+          HeatConductionCoef = HeatConductionCoefSi &
+               *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
+               *Si2No_V(UnitU_)*Si2No_V(UnitX_)
           Cv = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
           Te = TeSi*Si2No_V(UnitTemperature_)
 
           if(UseTemperatureVariable)then
              SpecificHeat_VCB(Te_,i,j,k,iBlock) = Cv
 
-             Trad = max(Temperature_VGB(Trad_,i,j,k,iBlock),&
-                  TradMinSi * Si2No_V(UnitTemperature_))
-             SpecificHeat_VCB(Trad_,i,j,k,iBlock) = 4.0*cRadiationNo*Trad**3
-             RelaxationCoef_VCB(Trad_,i,j,k,iBlock) = Clight*PlanckOpacity &
-                  *cRadiationNo*(Te+Trad)*(Te**2+Trad**2)
+             if(UseGrayDiffusion)then
+                Trad = max(Temperature_VGB(Trad_,i,j,k,iBlock),&
+                     TradMinSi * Si2No_V(UnitTemperature_))
+                SpecificHeat_VCB(Trad_,i,j,k,iBlock) = 4.0*cRadiationNo*Trad**3
+                RelaxationCoef_VCB(Trad_,i,j,k,iBlock) = Clight*PlanckOpacity &
+                     *cRadiationNo*(Te+Trad)*(Te**2+Trad**2)
 
-             call get_radiation_diffusion_coef
+                call get_radiation_diffusion_coef
+                HeatConductionCoef_IGB(nCond,i,j,k,iBlock) = &
+                     DiffRad*4.0*cRadiationNo*Trad**3
+             end if
 
-             HeatConductionCoef_IGB(1,i,j,k,iBlock) = &
-                  DiffRad*4.0*cRadiationNo*Trad**3
+             if(UseHeatConduction) &
+                HeatConductionCoef_IGB(1,i,j,k,iBlock) = HeatConductionCoef
+
           else
              SpecificHeat_VCB(aTe4_,i,j,k,iBlock) = Cv/(4.0*cRadiationNo*Te**3)
              SpecificHeat_VCB(aTrad4_,i,j,k,iBlock) = 1.0
              RelaxationCoef_VCB(aTrad4_,i,j,k,iBlock) = Clight*PlanckOpacity
 
              call get_radiation_diffusion_coef
-
-             HeatConductionCoef_IGB(1,i,j,k,iBlock) = DiffRad
+             HeatConductionCoef_IGB(nCond,i,j,k,iBlock) = DiffRad
           end if
 
        end do; end do; end do

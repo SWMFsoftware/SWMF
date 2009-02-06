@@ -1072,7 +1072,8 @@ contains
 
   subroutine user_material_properties(State_V, EinternalSiIn, &
        TeSiIn, EinternalSiOut, TeSiOut, PressureSiOut, CvSiOut, &
-       AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut)
+       AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut, &
+       HeatConductionCoefSiOut)
 
     ! The State_V vector is in normalized units, output is in SI units
 
@@ -1090,7 +1091,7 @@ contains
     real, optional, intent(out) :: RosselandMeanOpacitySiOut ! [1/m]
     real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
     real, optional, intent(out) :: PressureSiOut             ! [Pa]
-
+    real, optional, intent(out) :: HeatConductionCoefSiOut   ! [Jm^2/(Ks)]
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
 
@@ -1208,6 +1209,8 @@ contains
                RosselandMeanOpacitySiOut = RosselandOpacity(iMaterial)*RhoSi
        end if
     end if
+
+    if(present(HeatConductionCoefSiOut)) HeatConductionCoefSiOut = 0.0
 
   end subroutine user_material_properties
 
