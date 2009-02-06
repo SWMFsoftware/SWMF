@@ -1254,10 +1254,13 @@ spherical_lnr			TypeGeometry
 This command determines the geometry of the grid. Possible values
 are cartesian, cylindrical, spherical, spherical_lnr (spherical
 with a logarithmic radial coordinate, and axial (axially symmetric
-toroidal grid). The only example of 2D grid is r-z axially symmetric
-coordinates. By some reasons the coordinates in our implementation are
-flipped with recpect to the standard r-z geometry.
+toroidal grid). 
 
+The only example of a 2D grid is the "rz" geometry which is axially symmetric.
+In our particular implementation the "X" axis is the axis of symmetry, 
+and the "Y" axis is used for the radial direction.
+The "rz" geometry is implemented for the hydro equations (no magnetic field) 
+only assuming zero azimuthal velocity.
 
 BATSRUS uses a Cartesian geometry by default. Setting this command
 allows using more complicated grids. Note that setting "cartesian"
@@ -1604,6 +1607,31 @@ Default is false for all logicals. Only one of them can be set to true!
 The CFL number is used in the implicit blocks of the fully or partially
 implicit schemes. Ignored if UseDtFixed is true.
 </command>
+
+<command name="SEMIIMPLICIT">
+	<parameter name="UseSemiImplicit" type="logical" default="F"/>
+	<parameter name="TypeSemiImplicit" type="string" input="select"
+							if="$UseSemiImplicit">
+		<option name="radiation" default="T"/>
+		<option name="radcond"/>
+	</parameter>
+#SEMIIMPLICIT
+T                       UseSemiImplicit
+radiation               TypeSemiImplicit (read if UseSemiImplicit is true)
+
+If UseSemiImplicit is true than most of the terms are evaluated explicitly,
+but some of them are evaluated implicitly. 
+
+The TypeSemiImplicit parameter determines which terms and corresponding 
+variables are done semi-implicitly. The "radiation" option solves for the 
+gray diffusion radiation energy density and it sets the the internal energy 
+and pressure in a point implicit manner. The "radcond" option solves 
+implicitly the gray diffusion and electron heat conduction together with
+the radiation and internal energy densities being the unknowns.
+The electron heat conduction is not yet implemented in ModGrayDiffusion.
+
+The default is UseSemiImplicit false.
+</command>
 <!-- ^CFG END IMPLICIT -->
 </commandgroup>
 
@@ -1812,6 +1840,7 @@ The default value is 1.E-12 for 8 byte reals and 1.E-6 for 4 byte reals.
 	</parameter>
 	<parameter name="TypePrecond" type="string" input="select">
 		<option name="MBILU" default="T" />
+		<option name="jacobi" />
 	</parameter>
 	<parameter name="GustafssonPar" type="real" min="0" max="1" 
 							default="0.5" />
@@ -1823,13 +1852,15 @@ MBILU           TypePrecond (MBILU)
 Default parameters are shown. Right preconditioning does not affect
 the normalization of the residual. The Gustafsson parameter determines
 how much the MBILU preconditioner is modified. The default 0.5 value
-means a relaxed modification.
+means a relaxed modification. The "jacobi" preconditioner is not affected
+by the Gustaffson parameter.
 </command>
 
 <command name="KRYLOV">
 	<parameter name="TypeKrylov" type="string" input="select">
 		<option name="gmres"	default="T"	/>
 		<option name="bicgstab" 		/>
+		<option name="cg" 			/>
 	</parameter>
 	<parameter name="TypeInitKrylov" type="string" input="select">
                 <option name="0" 	value="nul" default="T"	/>
@@ -1842,7 +1873,7 @@ means a relaxed modification.
 	<parameter name="MaxMatvecKrylov" type="integer" min="1"
 							default="100" />
 #KRYLOV
-gmres           TypeKrylov  (gmres, bicgstab)
+gmres           TypeKrylov  (gmres, bicgstab, cg)
 nul             TypeInitKrylov (nul, old, explicit, scaled)
 0.001           ErrorMaxKrylov
 100             MaxMatvecKrylov
@@ -4650,65 +4681,95 @@ if the Hall effect is switched on in the #HALLRESISTIVITY command.
 
 
 <command name="RADIATION">
-	 <parameter name="UseGrayDiffusion" type="logical" default="F"/>
-	 <if expr="$UseGrayDiffusion">
-	     <parameter name="UseRadFluxLimiter" type="logical" default="F"/>
-	     <if expr="$UseRadFluxLimiter">
-	     	 <parameter name="TypeRadFluxLimiter" type="string" case="lower"
-		 	    input="select">
-		 	    <option name="larsen"  default="T"	    />
-			    <option name="sum"	   		    />
-			    <option name="max"			    />
+	<parameter name="UseGrayDiffusion" type="logical" default="F"/>
+	<if expr="$UseGrayDiffusion">
+		<parameter name="UseRadFluxLimiter" type="logical" 
+								default="F"/>
+		<parameter name="TypeRadFluxLimiter" type="string" 
+			case="lower" input="select" if="$UseRadFluxLimiter">
+			<option name="larsen"  default="T" />
+			<option name="sum"	   	   />
+			<option name="max"		   />
 		 </parameter>
-	     </if>
+		<parameter name="TradMinSi" type="real" min="0" default="300"/>
 	 </if>
 
 #RADIATION
 T		UseGrayDiffusion  (rest of parameters read only if true)
-T		UseRadFluxLimiter (rest of parameters read only if true)
-larsen		TypeRadFluxLimiter
+T		UseRadFluxLimiter 
+larsen		TypeRadFluxLimiter (read only if UseRadFluxLimiter is true)
+300.0		TradMinSi
 
 If UseGrayDiffusion is true the radiation hydrodynamics with
 gray nonequilibrium diffusion approximation is used.
-Currently, the gray-diffusion only works together with the fully implicit solver.
-Default is UseGrayDiffusion false.
 
-If the UseGrayDiffusion is set to true, then optionally a non-linear flux limiter
-can be invoked via UseRadFluxLimiter set to true. This will then limit the
-radiation diffusion flux so that it does not exceed the optically thin streaming
-limit. The type of flux limiter can be selected by setting TypeRadFluxLimiter.
+If the UseGrayDiffusion is set to true, then optionally a non-linear 
+flux limiter can be invoked via UseRadFluxLimiter set to true. 
+This limits the radiation diffusion flux so that it does not 
+exceed the optically thin streaming limit, the speed of light. 
+The type of flux limiter can be selected by setting TypeRadFluxLimiter.
 
 If TypeRadFluxLimiter="sum", then Wilson's sum flux limiter is used.
 If TypeRadFluxLimiter="max", then Wilson's max flux limiter is used.
 For TypeRadFluxLimiter="larsen" the square-root flux limiter of Larsen is used.
-The default is TypeRadFluxLimiter="larsen".
+
+The TradMinSi parameter sets a minimum temperature in Kelvins 
+for the radiation. This helps avoiding negative radiation temperature due
+to numerical errors. A recommended value is 300K.
 
 The default for UseRadFluxLimiter is false.
 </command>
 
 
 <command name="IMPLICITTEMPERATURE">
-	 <parameter name="TypeStopCriterion" type="string" case="lower"
-	 	    input="select">
+	<parameter name="UseTemperatureDiffusion" type="logical" default="F"/>
+	<if expr="$UseTemperatureDiffusion">
+		<parameter name="UseTemperatureVariable" type="logical" 
+								default="F"/>
+		<parameter name="TypeStopCriterion" type="string" case="lower"
+								input="select">
+			<option name="blockjacobi" default="T" />
+			<option name="gs"   />
+			<option name="dilu" />
+			<option name="mbilu"/>
+		</parameter>
+		<parameter name="TypeStopCriterion" type="string" case="lower"
+						 	    input="select">
 		    <option name="rel"  default="T" />
 		    <option name="abs"              />
-	 </parameter>
-	 <parameter name="MaxErrorResidual" type="real" default="1.0e-5"/>
+		 </parameter>
+		 <parameter name="MaxErrorResidual" type="real" 
+			min="0" default="1.0e-5"/>
+	</if>
 
 #IMPLICITTEMPERATURE
-rel			TypeStopCriterion
-1.0e-5			MaxErrorResidual
+T                       UseTemperatureDiffusion
+T                       UseTemperatureVariable
+gs                      TypePreconditioner
+rel                     TypeStopCriterion
+1e-8                    MaxErrorResidual
 
-The radiation hydrodynamics with gray nonequilibrium diffusion approximation
-uses a preconditioned conjugate gradient method to solve for the electron
-and radiation temperature. The type of stopping criterion is either the
-relative ('rel') indicating that the required reduction of the relative
-residual norm (final to initial residual) should be smaller than MaxErrorResidual,
-or the absolute norm.
+If UseTemperatureDiffusion is set to true, the radiation hydrodynamics 
+with gray nonequilibrium diffusion approximation uses a semi-implicit
+scheme. The explicit hydro step is followed by an implicit radiation step
+using a preconditioned conjugate gradient method. 
 
-The default values are shown.
+If UseTemperatureVariable is true, the code solves for the electron
+and radiation temperatures, otherwise the radiation energy and the 
+Planck function a*Te^4 are the variables. 
+
+The TypePreconditioner determines which preconditioner is used. Current
+options are "blockjacobi", "gs" (Gauss-Seidel), dilu (diagonal incomplete 
+lower-upper decomposition) and "mbilu" (modified block ILU).
+
+The TypeStopCriterion is either "rel" indicating that the required reduction 
+of the residual norm is relative to the initial residual, or "abs" indicating
+that the absolute value of the norm is used.
+
+The MaxErrorResidual sets the limit for the relative or absolute residual.
+
+The default is false for UseTemperatureDiffusion.
 </command>
-
 
 <command name="MASSLOADING">
 	<parameter name="UseMassLoading" type="logical" default="F"/>	
