@@ -1486,11 +1486,9 @@ contains
     integer, intent(in) :: iBlock, nVar
     real, intent(out) :: Jacobian_VVCI(nVar,nVar,nI,nJ,nK,nstencil)
 
-    integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iCond
+    integer :: iVar, i, j, k, iDim, iCond
     real :: DiffLeft, DiffRight
     real :: Volume, AreaInvDxyz_FD(1:nI+1,1:nJ+1,1:nK+1,nDim)
-
-    integer, parameter :: kr(3,3) = reshape( (/1,0,0,0,1,0,0,0,1/), (/3,3/) )
     !--------------------------------------------------------------------------
 
     Jacobian_VVCI(:,:,:,:,:,:) = 0.0
@@ -1523,28 +1521,25 @@ contains
     call get_face_coef(iBlock)
 
     do iDim = 1, nDim
-       Di = kr(iDim,1)
-       Dj = kr(iDim,2)
-       Dk = kr(iDim,3)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           do iCond = 1, nCond
              iVar = iCond_I(iCond)
-             select case(nDim)
+             select case(iDim)
              case(1)
                 ! ignore radiative flux at the boundaries of the AMR blocks
                 DiffLeft  = Cond_VFX(iCond,i,j,k)
                 if(i==1)DiffLeft = 0.0
-                DiffRight = Cond_VFX(iCond,i+Di,j+Dj,k+Dk) 
+                DiffRight = Cond_VFX(iCond,i+1,j,k) 
                 if(i==nI)DiffRight = 0.0
              case(2) 
                 DiffLeft  = Cond_VFY(iCond,i,j,k)
                 if(j==1) DiffLeft = 0.0
-                DiffRight = Cond_VFY(iCond,i+Di,j+Dj,k+Dk) 
+                DiffRight = Cond_VFY(iCond,i,j+1,k) 
                 if(j==nJ) DiffRight = 0.0
              case(3)
                 DiffLeft  = Cond_VFZ(iCond,i,j,k)
                 if(k==1) DiffLeft = 0.0
-                DiffRight = Cond_VFZ(iCond,i+Di,j+Dj,k+Dk) 
+                DiffRight = Cond_VFZ(iCond,i,j,k+1) 
                 if(k==nK) DiffRight = 0.0
              end select
              Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
