@@ -274,7 +274,7 @@ contains
                TeSiOut = TeSi)
 
           Te = TeSi*Si2No_V(UnitTemperature_)
-          if(Te <= 0.0)call stop_mpi('negatipe temperature in set_temperature')
+          if(Te <= 0.0)call stop_mpi('negative temperature in set_temperature')
           if(UseTemperatureVariable)then
              Temperature_VGB(Te_,i,j,k,iBlock) = Te
              if(UseTrad)then
@@ -376,7 +376,7 @@ contains
              RelaxationCoef_VCB(aTrad4_,i,j,k,iBlock) = Clight*PlanckOpacity
 
              call get_radiation_diffusion_coef
-             HeatConductionCoef_IGB(nCond,i,j,k,iBlock) = DiffRad
+             HeatConductionCoef_IGB(1,i,j,k,iBlock) = DiffRad
           end if
 
        end do; end do; end do
@@ -578,19 +578,26 @@ contains
        if(nTemperature==2 .and. UseTemperatureVariable)call check_temperature
        call update_conservative_energy(iBlock)
     end do
+
   contains
+
     subroutine check_temperature
-      real::AveragedTemperature,SpecificHeatTotal,DiffT
-      real,parameter::TemperatureJumpAllowed = 0.9
+
+      real :: AveragedTemperature, SpecificHeatTotal, DiffT
+      real, parameter :: TemperatureJumpAllowed = 0.9
+      !------------------------------------------------------------------------
+
       do k = 1,nK; do j = 1,nJ; do i = 1,nI
          SpecificHeatTotal = sum(SpecificHeat_VCB(:,i,j,k,iBlock))
          AveragedTemperature = sum(Temperature_VGB(:,i,j,k,iBlock)*&
                                    SpecificHeat_VCB(:,i,j,k,iBlock))&
                                    /SpecificHeatTotal
                       
-         if(AveragedTemperature<=0.0)call stop_mpi('NEGATIVE AVERAGED TEMPERATURE')
+         if(AveragedTemperature<=0.0) &
+              call stop_mpi('NEGATIVE AVERAGED TEMPERATURE')
 
-         DiffT = Temperature_VGB(Te_,i,j,k,iBlock) - Temperature_VGB(TRad_,i,j,k,iBlock)
+         DiffT = Temperature_VGB(Te_,i,j,k,iBlock) &
+              - Temperature_VGB(TRad_,i,j,k,iBlock)
          DiffT = min(max(DiffT,-AveragedTemperature*SpecificHeatTotal/&
               SpecificHeat_VCB(TRad_,i,j,k,iBlock)*TemperatureJumpAllowed),&
               AveragedTemperature*SpecificHeatTotal/&
@@ -603,6 +610,7 @@ contains
               SpecificHeat_VCB(Te_,i,j,k,iBlock)/SpecificHeatTotal
       end do; end do; end do
     end subroutine check_temperature
+
   end subroutine advance_temperature
 
   !============================================================================
@@ -695,11 +703,13 @@ contains
   end subroutine update_conservative_energy
 
   !============================================================================
-  !Auxiliary routine, which calculates face centered values for the heat
-  !conduction coefficients multiplied by face area divided by cell-to-cell
-  !center distance across the given face
 
   subroutine get_face_coef(iBlock)
+
+    ! Auxiliary routine, which calculates face centered values for the heat
+    ! conduction coefficients multiplied by face area divided by cell-to-cell
+    ! center distance across the given face
+
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, fAx_BLK, fAy_BLK, fAz_BLK, &
          vInv_CB, y_Blk, TypeGeometry, UseCovariant
     use ModCovariant, ONLY: FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
@@ -768,6 +778,9 @@ contains
        call stop_mpi('General covariant geometry is expected soon')
     end if
   end subroutine get_face_coef
+
+  !============================================================================
+
   subroutine heat_conduction(nVar, Temp_VGB, Rhs_VCB)
 
     use ModMain, ONLY: nBlock, unusedBLK
@@ -784,9 +797,7 @@ contains
     ! DoOneLayer, DoFacesOnly, No UseMonoteRestrict
     call message_pass_cells8(.true., .true., .false., nVar, Temp_VGB)
     if(IsFirstCgIteration)then
-       ! Recommended: 
-       call set_gray_outer_bcs(nVar, Temp_VGB,'clean')
-       !call set_gray_outer_bcs(nVar,Temp_VGB,'float')
+       call set_gray_outer_bcs(nVar,Temp_VGB,'float')
        IsFirstCgIteration = .false.
     else
        call set_gray_outer_bcs(nVar, Temp_VGB,'zero')
@@ -812,39 +823,33 @@ contains
          Temp_VG(nVar,1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn)
     real, intent(out)   :: Rhs_VC(nVar,nI,nJ,nK)
 
-    integer :: i, j, k, iT, iCond, iVar
+    integer :: i, j, k, iVar
     real    :: vInv
     !--------------------------------------------------------------------------
 
     call get_face_coef(iBlock)
+
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        vInv = vInv_CB(i,j,k,iBlock)
 
-       ! Heat conduction
+       ! Specific heat
        Rhs_VC(:,i,j,k) = SpecificHeat_VCB(:,i,j,k,iBlock) &
             *Temp_VG(:,i,j,k)/Dt
-       do iCond = 1, nCond
-          iT = iCond_I(iCond)
-          Rhs_VC(iT,i,j,k) = Rhs_VC(iT,i,j,k) + vInv*( &
-               Cond_VFX(iCond,i+1,j  ,k  )*     &
-                  (Temp_VG(iT,i  ,j  ,k  ) -    &
-                   Temp_VG(iT,i+1,j  ,k  )) +   &
-               Cond_VFX(iCond,i  ,j  ,k  )*     &
-                  (Temp_VG(iT,i  ,j  ,k  ) -    &
-                   Temp_VG(iT,i-1,j  ,k  )) +   &
-               Cond_VFY(iCond,i  ,j+1,k  )*     &
-                  (Temp_VG(iT,i  ,j  ,k  ) -    &
-                   Temp_VG(iT,i  ,j+1,k  )) +   &
-               Cond_VFY(iCond,i  ,j  ,k  )*     &
-                  (Temp_VG(iT,i  ,j  ,k  ) -    &
-                   Temp_VG(iT,i  ,j-1,k  )) +   &
-               Cond_VFZ(iCond,i  ,j  ,k+1)*     &
-                  (Temp_VG(iT,i  ,j  ,k  ) -    &
-                   Temp_VG(iT,i  ,j  ,k+1)) +   &
-               Cond_VFZ(iCond,i  ,j  ,k  )*     &
-                  (Temp_VG(iT,i  ,j  ,k  ) -    &
-                   Temp_VG(iT,i  ,j  ,k-1))    )
-       end do
+
+       ! Heat conduction
+       Rhs_VC(iCond_I,i,j,k) = Rhs_VC(iCond_I,i,j,k) + vInv*( &
+            + Cond_VFX(:,i+1,j,k) &
+            *(Temp_VG(iCond_I,i,j,k) - Temp_VG(iCond_I,i+1,j,k)) &
+            + Cond_VFX(:,i,j,k) &
+            *(Temp_VG(iCond_I,i,j,k) - Temp_VG(iCond_I,i-1,j,k)) &
+            + Cond_VFY(:,i,j+1,k) &
+            *(Temp_VG(iCond_I,i,j,k) - Temp_VG(iCond_I,i,j+1,k)) &
+            + Cond_VFY(:,i,j,k) &
+            *(Temp_VG(iCond_I,i,j,k) - Temp_VG(iCond_I,i,j-1,k)) &
+            + Cond_VFZ(:,i,j,k+1) &
+            *(Temp_VG(iCond_I,i,j,k) - Temp_VG(iCond_I,i,j,k+1)) &
+            + Cond_VFZ(:,i,j,k) &
+            *(Temp_VG(iCond_I,i,j,k) - Temp_VG(iCond_I,i,j,k-1)) )
 
        do iVar=2,nVar
           ! Energy exchange
@@ -1234,25 +1239,23 @@ contains
       use ModGeometry, ONLY: vInv_CB
       use ModMain,     ONLY: Dt
 
-      integer :: iCond, iT
       real :: Volume
       !------------------------------------------------------------------------
 
 
       Volume = 1/vInv_CB(i,j,k,iBlock)
 
-      ! Heat conduction
+      ! Specific heat
       Diag_V(:) = SpecificHeat_VCB(:,i,j,k,iBlock)*Volume/Dt
-      do iCond = 1, nCond
-         iT = iCond_I(iCond)
-         Diag_V(iT) = Diag_V(iT) &
-              + Cond_VFX(iCond,i+1,j  ,k  )  &
-              + Cond_VFX(iCond,i  ,j  ,k  )  &
-              + Cond_VFY(iCond,i  ,j+1,k  )  &
-              + Cond_VFY(iCond,i  ,j  ,k  )  &
-              + Cond_VFZ(iCond,i  ,j  ,k+1)  &
-              + Cond_VFZ(iCond,i  ,j  ,k  )  
-      end do
+
+      ! Heat conduction
+      Diag_V(iCond_I) = Diag_V(iCond_I) &
+           + Cond_VFX(:,i+1,j  ,k  )  &
+           + Cond_VFX(:,i  ,j  ,k  )  &
+           + Cond_VFY(:,i  ,j+1,k  )  &
+           + Cond_VFY(:,i  ,j  ,k  )  &
+           + Cond_VFZ(:,i  ,j  ,k+1)  &
+           + Cond_VFZ(:,i  ,j  ,k  )  
 
       if(nVar==1) return
 
@@ -1266,7 +1269,9 @@ contains
     end subroutine get_diagonal_subblock
 
   end subroutine get_jacobi_preconditioner
+
   !============================================================================
+
   subroutine dilu_preconditioner(nVar, VectorIn_VCB, VectorOut_VCB)
 
     ! Calculate VectorOut = M^{-1} \cdot VectorIn where the stored
@@ -1286,7 +1291,6 @@ contains
     real, intent(out)   :: VectorOut_VCB(nVar,1:nI,1:nJ,1:nK,nBLK)
 
     integer :: iVar, i, j , k, iBlock
-    integer :: iT, iCond
     real :: Loc_V(nVar)
     real :: Sol_VG(nVar,0:nI+1,0:nJ+1,0:nK+1)
 
@@ -1305,34 +1309,29 @@ contains
           !Stage "UP", fluxes from below are accounted for
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Loc_V = VectorIn_VCB(:,i,j,k,iBlock)
-             do iCond=1,nCond
-                iT = iCond_I(iCond)
-                Loc_V(iT) = Loc_V(iT) + &
-                     Sol_VG(iT,i-1,j,k) * Cond_VFX(iCond,i,j,k) &
-                   + Sol_VG(iT,i,j-1,k) * Cond_VFY(iCond,i,j,k) &
-                   + Sol_VG(iT,i,j,k-1) * Cond_VFZ(iCond,i,j,k)
-             end do
+             Loc_V(iCond_I) = Loc_V(iCond_I) &
+                  + Sol_VG(iCond_I,i-1,j,k)*Cond_VFX(:,i,j,k) &
+                  + Sol_VG(iCond_I,i,j-1,k)*Cond_VFY(:,i,j,k) &
+                  + Sol_VG(iCond_I,i,j,k-1)*Cond_VFZ(:,i,j,k)
              do iVar = 1, nVar
                 Sol_VG(iVar,i,j,k) = sum( &
-                      Loc_V*JacPrec_VVCB(:,iVar,i,j,k,iBlock))
+                     Loc_V*JacPrec_VVCB(:,iVar,i,j,k,iBlock))
              end do
           end do; end do; end do
+
           !Stage "DOWN", fluxes from above are accounted for
           do k = nK,1,-1; do j = nJ,1,-1; do i = nI,1,-1
              Loc_V = 0.0
-             do iCond=1,nCond
-                iT = iCond_I(iCond)
-                Loc_V(iT) = Loc_V(iT) + &
-                     Sol_VG(iT,i+1,j,k) * Cond_VFX(iCond,i+1,j,k) &
-                   + Sol_VG(iT,i,j+1,k) * Cond_VFY(iCond,i,j+1,k) &
-                   + Sol_VG(iT,i,j,k+1) * Cond_VFZ(iCond,i,j,k+1)
-             end do
+             Loc_V(iCond_I) = Loc_V(iCond_I) &
+                  + Sol_VG(iCond_I,i+1,j,k)*Cond_VFX(:,i+1,j,k) &
+                  + Sol_VG(iCond_I,i,j+1,k)*Cond_VFY(:,i,j+1,k) &
+                  + Sol_VG(iCond_I,i,j,k+1)*Cond_VFZ(:,i,j,k+1)
              do iVar = 1, nVar
-                Sol_VG(iVar,i,j,k) = &
-                     Sol_VG(iVar,i,j,k) + &
-                     sum(Loc_V*JacPrec_VVCB(:,iVar,i,j,k,iBlock))
+                Sol_VG(iVar,i,j,k) = Sol_VG(iVar,i,j,k) &
+                     + sum(Loc_V*JacPrec_VVCB(:,iVar,i,j,k,iBlock))
              end do
           end do; end do; end do
+
           VectorOut_VCB(:,:,:,:,iBlock) = Sol_VG(:,1:nI,1:nJ,1:nK)
        end if
     end do
@@ -1345,74 +1344,67 @@ contains
     use ModMain, ONLY: nI, nJ, nK, nBlk, nBlock, UnusedBlk,TypeBc_I
     use ModParallel, ONLY: NOBLK, NeiLev
 
-    integer, intent(in):: nVar
-    real, intent(inout):: Var_VGB(nVar,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk)
-    character(LEN=*),intent(in)::TypeBc
+    integer, intent(in) :: nVar
+    real, intent(inout) :: Var_VGB(nVar,-1:nI+2,-1:nJ+2,-1:nK+2,nBlk)
+    character(LEN=*), intent(in) :: TypeBc
+
     integer :: iBlock
-    logical :: IsOuterBoundary_S(1:6)
+    logical :: IsZero_S(1:6)
     !--------------------------------------------------------------------------
+
+    IsZero_S = TypeBc=='zero' .and. TypeBc_I(1:6)/='reflect'
 
     do iBlock = 1, nBlock
        if(UnusedBlk(iBlock))CYCLE
 
-       ! set floating outer boundary !!! shear to be added !!!
-       if(NeiLev(1,iBlock) == NOBLK) Var_VGB(:,0   ,:,:,iBlock)= &
-                                     Var_VGB(:,1   ,:,:,iBlock)
-       if(NeiLev(2,iBlock) == NOBLK) Var_VGB(:,nI+1,:,:,iBlock)= &
-                                     Var_VGB(:,nI  ,:,:,iBlock)
-       if(NeiLev(3,iBlock) == NOBLK) Var_VGB(:,:,0   ,:,iBlock)= &
-                                     Var_VGB(:,:,1   ,:,iBlock)
-       if(NeiLev(4,iBlock) == NOBLK) Var_VGB(:,:,nJ+1,:,iBlock)= &
-                                     Var_VGB(:,:,nJ  ,:,iBlock)
-       if(NeiLev(5,iBlock) == NOBLK) Var_VGB(:,:,:,0   ,iBlock)= &
-                                     Var_VGB(:,:,:,1   ,iBlock)
-       if(NeiLev(6,iBlock) == NOBLK) Var_VGB(:,:,:,nK+1,iBlock)= &
-                                     Var_VGB(:,:,:,nK  ,iBlock)
-       !For our applications, 'reflect' denotes an axis or a plane of symmetry,
-       !where we should maintain the symmetry both for tempereture and its
-       !perturbations.
-       IsOuterBoundary_S = NeiLev(:,iBlock)==NOBLK .and. TypeBc_I(1:6).ne.'reflect'
-       if(.not.any(IsOuterBoundary_S).or.TypeBc=='float')CYCLE
-       select case(TypeBc)
-       case('zero')
-          if(IsOuterBoundary_S(1)) Var_VGB(:,0   ,:,:,iBlock)= 0.0
-          if(IsOuterBoundary_S(2)) Var_VGB(:,nI+1,:,:,iBlock)= 0.0
-          if(IsOuterBoundary_S(3)) Var_VGB(:,:,0   ,:,iBlock)= 0.0
-          if(IsOuterBoundary_S(4)) Var_VGB(:,:,nJ+1,:,iBlock)= 0.0
-          if(IsOuterBoundary_S(5)) Var_VGB(:,:,:,0   ,iBlock)= 0.0
-          if(IsOuterBoundary_S(6)) Var_VGB(:,:,:,nK+1,iBlock)= 0.0 
-       case('clean')
-          if(IsOuterBoundary_S(1)) Var_VGB(:,0   ,:,:,iBlock)= min(&
-                                     2* Var_VGB(:,1   ,:,:,iBlock)-     &
-                                        Var_VGB(:,2   ,:,:,iBlock),     &
-                                        Var_VGB(:,1   ,:,:,iBlock))
-          if(IsOuterBoundary_S(2)) Var_VGB(:,nI+1,:,:,iBlock)= min(&
-                                     2* Var_VGB(:,nI  ,:,:,iBlock)-     &
-                                        Var_VGB(:,nI-1,:,:,iBlock),     &
-                                        Var_VGB(:,nI  ,:,:,iBlock))
-          if(IsOuterBoundary_S(3)) Var_VGB(:,:,0   ,:,iBlock)= min(&
-                                     2* Var_VGB(:,:,1   ,:,iBlock)-     &
-                                        Var_VGB(:,:,2   ,:,iBlock),     &
-                                        Var_VGB(:,:,1   ,:,iBlock))
-          if(IsOuterBoundary_S(4)) Var_VGB(:,:,nJ+1,:,iBlock)= min(&
-                                     2* Var_VGB(:,:,nJ  ,:,iBlock)-     &
-                                        Var_VGB(:,:,nJ-1,:,iBlock),     &
-                                        Var_VGB(:,:,nJ  ,:,iBlock))
-          if(IsOuterBoundary_S(5)) Var_VGB(:,:,:,0   ,iBlock)= min(&
-                                     2* Var_VGB(:,:,:,1   ,iBlock)-     &
-                                        Var_VGB(:,:,:,2   ,iBlock),     &
-                                        Var_VGB(:,:,:,1   ,iBlock))
-          if(IsOuterBoundary_S(6)) Var_VGB(:,:,:,nK+1,iBlock)= min(&
-                                     2* Var_VGB(:,:,:,nK  ,iBlock)-     &
-                                        Var_VGB(:,:,:,nK-1,iBlock),     &
-                                        Var_VGB(:,:,:,nK  ,iBlock))
-       case default
-          call stop_mpi('Non-implemented BC')
-       end select
+       if(NeiLev(1,iBlock) == NOBLK)then
+          if(IsZero_S(1))then
+             Var_VGB(:,0,:,:,iBlock) = 0.0
+          else
+             Var_VGB(:,0,:,:,iBlock) = Var_VGB(:,1,:,:,iBlock)
+          end if
+       end if
+       if(NeiLev(2,iBlock) == NOBLK)then
+          if(IsZero_S(2))then
+             Var_VGB(:,nI+1,:,:,iBlock) = 0.0
+          else
+             Var_VGB(:,nI+1,:,:,iBlock) = Var_VGB(:,nI,:,:,iBlock)
+          end if
+       end if
+       if(NeiLev(3,iBlock) == NOBLK)then
+          if(IsZero_S(3))then
+             Var_VGB(:,:,0,:,iBlock) = 0.0
+          else
+             Var_VGB(:,:,0,:,iBlock) = Var_VGB(:,:,1,:,iBlock)
+          end if
+       end if
+       if(NeiLev(4,iBlock) == NOBLK)then
+          if(IsZero_S(4))then
+             Var_VGB(:,:,nJ+1,:,iBlock) = 0.0
+          else
+             Var_VGB(:,:,nJ+1,:,iBlock) = Var_VGB(:,:,nJ,:,iBlock)
+          end if
+       end if
+       if(NeiLev(5,iBlock) == NOBLK)then
+          if(IsZero_S(5))then
+             Var_VGB(:,:,:,0,iBlock) = 0.0
+          else
+             Var_VGB(:,:,:,0,iBlock) =  Var_VGB(:,:,:,1,iBlock)
+          end if
+       end if
+       if(NeiLev(6,iBlock) == NOBLK)then
+          if(IsZero_S(6))then
+             Var_VGB(:,:,:,nK+1,iBlock) = 0.0
+          else
+             Var_VGB(:,:,:,nK+1,iBlock) = Var_VGB(:,:,:,nK,iBlock)
+          end if
+       end if
     end do
 
   end subroutine set_gray_outer_bcs
-  !=====================================================================
+
+  !============================================================================
+
   subroutine mbilu_preconditioner(nVar, VectorIn_VCB, VectorOut_VCB)
 
     use ModLinearSolver, ONLY: Uhepta, Lhepta
@@ -1543,14 +1535,9 @@ contains
                 if(k==nK) DiffRight = 0.0
              end select
              Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
-                  Jacobian_VVCI(iVar,iVar,i,j,k,1) &
-                  + DiffLeft  + DiffRight
-             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) = &
-                  Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) &
-                  - DiffLeft
-             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) = &
-                  Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) &
-                  - DiffRight
+                  Jacobian_VVCI(iVar,iVar,i,j,k,1) + DiffLeft  + DiffRight
+             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) = -DiffLeft
+             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) = -DiffRight
           end do
        end do; end do; end do
     end do

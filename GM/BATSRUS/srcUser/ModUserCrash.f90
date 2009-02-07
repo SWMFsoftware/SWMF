@@ -812,7 +812,6 @@ contains
     integer, intent(in):: iStage,iBlock
 
     integer:: i, j, k
-    real   :: vInv_C(nI,nJ,nK)
     real   :: PressureSi, EinternalSi
 
     character(len=*), parameter :: NameSub = 'user_update_states'
