@@ -4,6 +4,7 @@
 module ModGrayDiffusion
 
   use ModVarIndexes, ONLY: p_
+  use ModProcMH, ONLY: iProc
   !use ModMain, ONLY: iTest, jTest, kTest, BlkTest
 
 
@@ -625,6 +626,7 @@ contains
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB, &
          UseCovariant, TypeGeometry, FaceAreaI_DFB, FaceAreaJ_DFB
     use ModParallel, ONLY: NOBLK, NeiLev
+    use ModMessagePass, ONLY: message_pass_dir
 
     real, intent(out) :: StateImpl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBlk)
 
@@ -725,9 +727,9 @@ contains
 
     end do
 
-    ! DoOneLayer, DoFacesOnly, No UseMonoteRestrict
-    call message_pass_cells8(.true., .true., .false., nDiffusion, &
-         DiffSemiCoef_VGB)
+    ! Message pass to fill in ghost cells 
+    call message_pass_dir(iDirMin=1,iDirMax=3,Width=1,SendCorners=.false.,&
+         ProlongOrder=1,nVar=nDiffusion,Sol_VGB=DiffSemiCoef_VGB)
 
     do iImplBlock = 1, nImplBLK
        iBlock = impl2iBLK(iImplBlock)

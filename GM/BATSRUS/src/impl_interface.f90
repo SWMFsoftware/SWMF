@@ -257,11 +257,14 @@ end subroutine get_residual
 !==============================================================================
 subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
 
+  use ModProcMH, ONLY: iProc
   use ModImplicit, ONLY: StateSemi_VGB, nw, nImplBlk, impl2iblk, &
        TypeSemiImplicit
   use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
   use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs
+  use ModMessagePass, ONLY: message_pass_dir
+
   implicit none
 
   real, intent(in)  :: StateImpl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBlk)
@@ -278,8 +281,10 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
         StateSemi_VGB(iVar,i,j,k,iBlock) = StateImpl_VGB(iVar,i,j,k,iImplBlock)
      end do; end do; end do; end do
   end do
-  !                       DoOneLayer DoFacesOnly No UseMonoteRestrict
-  call message_pass_cells8(.true.,    .true.,     .false., nw, StateSemi_VGB)
+
+  ! Message pass to fill in ghost cells 
+  call message_pass_dir(iDirMin=1,iDirMax=3,Width=1,SendCorners=.false.,&
+       ProlongOrder=1,nVar=nw,Sol_VGB=StateSemi_VGB)
 
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
@@ -306,6 +311,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
   use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs
+  use ModMessagePass, ONLY: message_pass_dir
 
   implicit none
 
@@ -332,8 +338,10 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
         StateSemi_VGB(iVar,i,j,k,iBlock) = x_I(n) !!! *wnrm(iVar)
      end do; end do; end do; end do
   end do
-  !                       DoOneLayer DoFacesOnly No UseMonoteRestrict
-  call message_pass_cells8(.true.,    .true.,     .false., nw, StateSemi_VGB)
+
+  ! Message pass to fill in ghost cells 
+  call message_pass_dir(iDirMin=1,iDirMax=3,Width=1,SendCorners=.false.,&
+       ProlongOrder=1,nVar=nw,Sol_VGB=StateSemi_VGB)
 
   n=0
   do iImplBlock = 1, nImplBLK
