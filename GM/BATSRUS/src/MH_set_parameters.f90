@@ -2103,7 +2103,7 @@ contains
        optimize_message_pass = 'all'
     endif
 
-    if ( UseGrayDiffusion .and. .not.UseTemperatureDiffusion &
+    if ( UseGrayDiffusion .and. UseFullImplicit &
          .and. index(optimize_message_pass,'opt') > 0) then
        if(iProc==0 .and. optimize_message_pass /= 'allopt') then
           write(*,'(a)')NameSub//&
