@@ -8,7 +8,7 @@
  EQUATIONS:   HD+Ionization+Levels+Radiation
  USER MODULE: HYDRO + IONIZATION EQUILIBRIUM + LEVEL SETS 1.20
 
-ModReadParam::read_file: read and broadcast nLine= 186 lines of text
+ModReadParam::read_file: read and broadcast nLine= 183 lines of text
  ----- Starting Session  1  ------
  init_mod_restart_file: setting TypeRestartOutFile = one
  GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 1000
@@ -84,12 +84,15 @@ hyades2d_1.1ns.out	NameHyadesFile
 
 #USERINPUTEND    ----------------------
 
+#MESSAGEPASS
+opt			TypeMessagePass
+
 #SEMIIMPLICIT
 T                       UseSemiImplicit
 radiation               TypeSemiImplicit
 
 #KRYLOV
-bicgstab                TypeKrylov
+gmres                   TypeKrylov
 nul                     TypeInitKrylov
 1.0e-8                  ErrorMaxKrylov
 900                     MaxMatvecKrylov
@@ -103,6 +106,7 @@ mbilu                   TypePrecond (MBILU)
 T                       UseGrayDiffusion
 T                       UseRadFluxLimiter
 larsen                  TypeRadFluxLimiter
+300.0			TradMinSi
 
 #TIMEACCURATE
 T			IsTimeAccurate		DoTimeAccurate
@@ -140,9 +144,9 @@ reflect			zMaxBc		TypeBcTop
 
 #SCHEME
 2			nOrder
-Godunov			TypeFlux
-mc			TypeLimiter
-1.2			LimiterBeta
+Linde			TypeFlux
+mc3			TypeLimiter
+2.0			LimiterBeta
 
 #LIMITER
 F			UseLogRhoLimiter
@@ -171,7 +175,7 @@ z=0 VAR idl		PlotString		StringPlot
 -1                      DnSavePlot
 1.0e-9                  DtSavePlot
 0.0			DxSavePlot
-rho ux uy uz Eint p Xe Be Pl level tekev trkev		NameVars
+rho ux uy uz Eint p Xe Be Pl level tekev trkev plank ross		NameVars
 gamma		NamePars
 
 #STOP
@@ -217,10 +221,10 @@ init_mod_implicit allocated arrays
     ---------------------------------
 
           2nd-Order Scheme
-          with limiter mc    
-          beta= 1.20
+          with limiter mc3   
+          beta= 2.00
           Time accurate calculation
-          Godunov Flux Function
+          Linde Flux Function
           Semi-Implicit Time Stepping for
           radiation
 
@@ -243,79 +247,84 @@ init_mod_implicit allocated arrays
  multistage:         2
  cfl:               0.80000000
 
+ Warning in set_plotvar: unknown plotvarname=plank      for iPlotFile= 1
 saved ifile= 3 type=z=0_var    at n_step=      0 time=   0:00:00 h:m:s
 -------------------------------------------------------------------------------
 SORTED TIMING at step       0    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                   8.81    100.00         1         1
+BATSRUS                  15.74    100.00         1         1
 -------------------------------------------------------------------------------
-setup                     8.81    100.00         1         1
-save_plot                 0.05      0.61         1         1
-load_balance              0.02      0.18         1         1
-exch_msgs                 0.01      0.11         1         1
-save_logfile              0.01      0.07         1         1
+setup                    15.74    100.00         1         1
+save_plot                 0.14      0.90         1         1
+load_balance              0.04      0.22         1         1
+save_logfile              0.02      0.10         1         1
+exch_msgs                 0.01      0.09         1         1
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
-Speed is  18543.1 c/s/p after      5.3 s at N =      10 (9.3168E-11 s)
-Speed is  18522.9 c/s/p after     10.1 s at N =      20 (2.0814E-10 s)
-Speed is  19468.7 c/s/p after     14.6 s at N =      30 (3.3700E-10 s)
-Speed is  18622.7 c/s/p after     19.3 s at N =      40 (4.7895E-10 s)
-Speed is  18660.2 c/s/p after     24.0 s at N =      50 (6.2361E-10 s)
-Speed is  20534.3 c/s/p after     28.8 s at N =      60 (7.6604E-10 s)
-Speed is  18247.7 c/s/p after     33.6 s at N =      70 (9.1411E-10 s)
-saved ifile= 3 type=z=0_var    at n_step=     76 time=   0:00:00 h:m:s
-Speed is  16882.0 c/s/p after     38.6 s at N =      80 (1.0703E-09 s)
-Speed is  18072.3 c/s/p after     43.4 s at N =      90 (1.2338E-09 s)
-Speed is  19184.0 c/s/p after     48.3 s at N =     100 (1.4128E-09 s)
+Speed is   7997.1 c/s/p after     10.0 s at N =      10 (9.4635E-11 s)
+Speed is   8428.1 c/s/p after     21.4 s at N =      20 (2.1134E-10 s)
+Speed is   8411.6 c/s/p after     31.8 s at N =      30 (3.4200E-10 s)
+Speed is   9984.8 c/s/p after     41.6 s at N =      40 (4.8651E-10 s)
+Speed is   8959.0 c/s/p after     51.4 s at N =      50 (6.3331E-10 s)
+Speed is   9144.8 c/s/p after     61.6 s at N =      60 (7.7895E-10 s)
+Speed is   8617.5 c/s/p after     72.1 s at N =      70 (9.3012E-10 s)
+ Warning in set_plotvar: unknown plotvarname=plank      for iPlotFile= 1
+saved ifile= 3 type=z=0_var    at n_step=     75 time=   0:00:00 h:m:s
+Speed is   8190.5 c/s/p after     83.0 s at N =      80 (1.0870E-09 s)
+Speed is   7906.4 c/s/p after     94.4 s at N =      90 (1.2470E-09 s)
+Speed is   6768.5 c/s/p after    106.4 s at N =     100 (1.4108E-09 s)
 -------------------------------------------------------------------------------
 TIMING TREE of depth 2 from step       0 to     100    on PE    0
 name                  #iter  #calls      sec   s/iter   s/call  percent
 -------------------------------------------------------------------------------
-BATSRUS                   1       1    48.27   48.271   48.271   100.00
+BATSRUS                   1       1   106.44  106.435  106.435   100.00
 -------------------------------------------------------------------------------
-advance                 100     100    47.90    0.479    0.479    99.23
-save_logfile            100     100     0.30    0.003    0.003     0.61
-save_plot                 1       1     0.06    0.058    0.058     0.12
-#others                                 0.02    0.020              0.04
+advance                 100     100   105.83    1.058    1.058    99.43
+save_logfile            100     100     0.42    0.004    0.004     0.40
+save_plot                 1       1     0.13    0.135    0.135     0.13
+#others                                 0.04    0.045              0.04
 -------------------------------------------------------------------------------
 
-   100 of    292 iterations completed.   Expected time to completion:     91.96
+   100 of    311 iterations completed.   Expected time to completion:    223.31
 
-Speed is  18580.0 c/s/p after     53.1 s at N =     110 (1.6085E-09 s)
-Speed is  19966.5 c/s/p after     57.9 s at N =     120 (1.8174E-09 s)
-saved ifile= 3 type=z=0_var    at n_step=    129 time=   0:00:00 h:m:s
-Speed is  17851.5 c/s/p after     62.9 s at N =     130 (2.0276E-09 s)
-Speed is  18791.7 c/s/p after     67.6 s at N =     140 (2.2291E-09 s)
-Speed is  17474.8 c/s/p after     72.6 s at N =     150 (2.4302E-09 s)
-Speed is  17959.0 c/s/p after     77.6 s at N =     160 (2.6321E-09 s)
-Speed is  15842.3 c/s/p after     83.1 s at N =     170 (2.8313E-09 s)
-saved ifile= 3 type=z=0_var    at n_step=    179 time=   0:00:00 h:m:s
-Speed is  12662.3 c/s/p after     89.7 s at N =     180 (3.0324E-09 s)
-Speed is  16073.8 c/s/p after     95.9 s at N =     190 (3.2396E-09 s)
-Speed is  16801.5 c/s/p after    101.4 s at N =     200 (3.4589E-09 s)
+Speed is   6879.3 c/s/p after    119.8 s at N =     110 (1.5889E-09 s)
+Speed is   7130.1 c/s/p after    133.1 s at N =     120 (1.7833E-09 s)
+Speed is   7471.8 c/s/p after    145.7 s at N =     130 (1.9927E-09 s)
+ Warning in set_plotvar: unknown plotvarname=plank      for iPlotFile= 1
+saved ifile= 3 type=z=0_var    at n_step=    131 time=   0:00:00 h:m:s
+Speed is   7338.6 c/s/p after    157.9 s at N =     140 (2.2238E-09 s)
+Speed is   6715.1 c/s/p after    170.4 s at N =     150 (2.4674E-09 s)
+Speed is   7409.0 c/s/p after    183.0 s at N =     160 (2.6937E-09 s)
+Speed is   7324.8 c/s/p after    195.1 s at N =     170 (2.8959E-09 s)
+ Warning in set_plotvar: unknown plotvarname=plank      for iPlotFile= 1
+saved ifile= 3 type=z=0_var    at n_step=    176 time=   0:00:00 h:m:s
+Speed is   6631.7 c/s/p after    208.3 s at N =     180 (3.0977E-09 s)
+Speed is   7509.4 c/s/p after    220.9 s at N =     190 (3.3122E-09 s)
+Speed is   7556.3 c/s/p after    233.2 s at N =     200 (3.5442E-09 s)
 -------------------------------------------------------------------------------
 TIMING TREE of depth 2 from step       0 to     200    on PE    0
 name                  #iter  #calls      sec   s/iter   s/call  percent
 -------------------------------------------------------------------------------
-BATSRUS                   1       1   101.40  101.398  101.398   100.00
+BATSRUS                   1       1   233.20  233.198  233.198   100.00
 -------------------------------------------------------------------------------
-advance                 200     200   100.61    0.503    0.503    99.22
-save_logfile            200     200     0.59    0.003    0.003     0.58
-save_plot                 3       3     0.16    0.054    0.054     0.16
-#others                                 0.04    0.040              0.04
+advance                 200     200   231.89    1.159    1.159    99.44
+save_logfile            200     200     0.85    0.004    0.004     0.36
+save_plot                 3       3     0.40    0.133    0.133     0.17
+#others                                 0.06    0.064              0.03
 -------------------------------------------------------------------------------
 
-   200 of    268 iterations completed.   Expected time to completion:     34.21
+   200 of    263 iterations completed.   Expected time to completion:     73.04
 
-Speed is  15190.4 c/s/p after    107.0 s at N =     210 (3.6894E-09 s)
-Speed is  17354.8 c/s/p after    112.6 s at N =     220 (3.9265E-09 s)
-saved ifile= 3 type=z=0_var    at n_step=    224 time=   0:00:00 h:m:s
-Speed is  16357.9 c/s/p after    118.4 s at N =     230 (4.1616E-09 s)
-Speed is  18279.6 c/s/p after    123.7 s at N =     240 (4.3979E-09 s)
-Speed is  17792.9 c/s/p after    128.7 s at N =     250 (4.6367E-09 s)
-Speed is  21459.7 c/s/p after    133.7 s at N =     260 (4.8800E-09 s)
-saved ifile= 3 type=z=0_var    at n_step=    265 time=   0:00:00 h:m:s
+Speed is   7501.9 c/s/p after    245.2 s at N =     210 (3.7756E-09 s)
+ Warning in set_plotvar: unknown plotvarname=plank      for iPlotFile= 1
+saved ifile= 3 type=z=0_var    at n_step=    220 time=   0:00:00 h:m:s
+Speed is   7742.4 c/s/p after    257.3 s at N =     220 (4.0174E-09 s)
+Speed is   7772.2 c/s/p after    269.1 s at N =     230 (4.2596E-09 s)
+Speed is   7318.0 c/s/p after    281.0 s at N =     240 (4.5212E-09 s)
+Speed is   8032.4 c/s/p after    293.0 s at N =     250 (4.8051E-09 s)
+ Warning in set_plotvar: unknown plotvarname=plank      for iPlotFile= 1
+saved ifile= 3 type=z=0_var    at n_step=    257 time=   0:00:00 h:m:s
 
     Finished Numerical Simulation
     -----------------------------
@@ -324,26 +333,27 @@ saved ifile= 3 type=z=0_var    at n_step=    265 time=   0:00:00 h:m:s
     Finished Saving Output Files
     ----------------------------
 -------------------------------------------------------------------------------
-SORTED TIMING from step       0 to     265    on PE    0
+SORTED TIMING from step       0 to     257    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                 136.01    100.00         1         1
+BATSRUS                 301.51    100.00         1         1
 -------------------------------------------------------------------------------
-advance                 134.90     99.19       265       265
-krylov solver            76.74     56.43       264       264
-impl_matvec              62.98     46.30       264     54098
-matvec_free              51.55     37.90       264     54098
-calc_fluxes              21.34     15.69       265     23850
-calc_facevalues          11.17      8.21       265     23850
-calc_sources              6.86      5.04       265     23850
-exch_msgs                 4.53      3.33       265       794
-update_states             4.47      3.29       265     23850
-expl2impl                 4.32      3.18       264       264
-save_logfile              0.78      0.57       265       265
-impl_jacobian             0.50      0.37       264       264
-barrier-expl2             0.46      0.34       265       530
-save_plot                 0.27      0.20         5         5
-barrier-expl1             0.03      0.03       265       530
-send_cons_flux            0.00      0.00       265       530
+advance                 299.67     99.39       257       257
+krylov solver           235.70     78.17       256       256
+impl_matvec              77.43     25.68       256     28364
+matvec_free              64.17     21.28       256     28364
+calc_fluxes              17.41      5.77       257     23130
+calc_facevalues          14.36      4.76       257     23130
+calc_sources              8.73      2.90       257     23130
+barrier                   7.15      2.37      1025     88938
+exch_msgs                 6.15      2.04       257       770
+expl2impl                 5.40      1.79       256       256
+update_states             5.34      1.77       257     23130
+save_logfile              1.09      0.36       257       257
+save_plot                 0.67      0.22         5         5
+impl_jacobian             0.61      0.20       256       256
+barrier-expl2             0.45      0.15       257       514
+barrier-expl1             0.08      0.03       257       514
+send_cons_flux            0.01      0.00       257       514
 -------------------------------------------------------------------------------
  error report: no errors...

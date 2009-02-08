@@ -79,12 +79,15 @@ hyades2d_1.1ns.out	NameHyadesFile
 
 #USERINPUTEND    ----------------------
 
+#MESSAGEPASS
+opt			TypeMessagePass
+
 #SEMIIMPLICIT
 T                       UseSemiImplicit
 radiation               TypeSemiImplicit
 
 #KRYLOV
-bicgstab                TypeKrylov
+gmres                   TypeKrylov
 nul                     TypeInitKrylov
 1.0e-8                  ErrorMaxKrylov
 900                     MaxMatvecKrylov
@@ -93,13 +96,6 @@ nul                     TypeInitKrylov
 symmetric               TypePrecondSide (left, symmetric, right)
 mbilu                   TypePrecond (MBILU)
 0.0                     GustafssonPar (0. no modification, 1. full modification
-
-IMPLICITTEMPERATURE
-T                       UseTemperatureDiffusion
-F                       UseTemperatureVariable
-blockjacobi             TypePreconditioner
-rel                     TypeStopCriterion
-1e-8                    MaxErrorResidual
 
 #RADIATION
 T                       UseGrayDiffusion
@@ -145,9 +141,9 @@ reflect			zMaxBc
 
 #SCHEME
 2			nOrder
-Godunov			TypeFlux
-mc			TypeLimiter
-1.2			LimiterBeta
+Linde			TypeFlux
+mc3			TypeLimiter
+2.0			LimiterBeta
 
 #LIMITER
 F			UseLogRhoLimiter
