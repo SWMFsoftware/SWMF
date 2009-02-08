@@ -2103,7 +2103,7 @@ contains
        optimize_message_pass = 'all'
     endif
 
-    if ( UseGrayDiffusion .and. UseFullImplicit &
+    if ( UseGrayDiffusion .and. UseFullImplicit &  !^CFG IF IMPLICIT BEGIN
          .and. index(optimize_message_pass,'opt') > 0) then
        if(iProc==0 .and. optimize_message_pass /= 'allopt') then
           write(*,'(a)')NameSub//&
@@ -2113,7 +2113,7 @@ contains
           write(*,*)NameSub//' setting optimize_message_pass = all'
        end if
        optimize_message_pass = 'all'
-    endif
+    endif                                          !^CFG END IMPLICIT
 
     if(prolong_order/=1 .and. optimize_message_pass(1:3)=='all')&
          call stop_mpi(NameSub// &
