@@ -251,6 +251,7 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
   use ModMPCells
   use ModNumConst
   use ModMpi
+  use ModVarIndexes,ONLY:nVarBuff=>nVar
   implicit none
 
   !Subroutine arguements
@@ -354,14 +355,14 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
            nRECVrequests = nRECVrequests + 1
            if(nRECVrequests>maxMessages) call stop_mpi("Too many RECVs in mp_SendValues")
            call MPI_irecv(VRecv8(1,nRecvStart(iPE)+1+((i-1)*MessageSize)), &
-                8*min(MessageSize,nRecv(iPE)-((i-1)*MessageSize)), &
+                nVarBuff * min(MessageSize,nRecv(iPE)-((i-1)*MessageSize)), &
                 MPI_REAL,iPE,itag,iComm,RECVrequests(nRECVrequests),iError)
         end do
      else
         itag = iPE
         nRECVrequests = nRECVrequests + 1
         if(nRECVrequests>maxMessages) call stop_mpi("Too many RECVs in mp_SendValues")
-        call MPI_irecv(VRecv8(1,nRecvStart(iPE)+1),8*nRecv(iPE), &
+        call MPI_irecv(VRecv8(1,nRecvStart(iPE)+1),nVarBuff * nRecv(iPE), &
              MPI_REAL,iPE,itag,iComm,RECVrequests(nRECVrequests),iError)
      end if
   end do
@@ -382,12 +383,12 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
            itag = nProc*(i-1)+iProc
            if(DoRSend)then
               call MPI_rsend(VSend8(1,nSendStart(iPE)+1+((i-1)*MessageSize)), &
-                   8*min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
+                   nVarBuff * min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
                    MPI_REAL,iPE,itag,iComm,iError)
            else
               nSENDrequests = nSENDrequests + 1
               call MPI_isend(VSend8(1,nSendStart(iPE)+1+((i-1)*MessageSize)), &
-                   8*min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
+                   nVarBuff * min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
                    MPI_REAL,iPE,itag,iComm,SENDrequests(nSENDrequests),iError)
            end if
         end do
@@ -395,12 +396,12 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
         itag = iProc
         if(DoRSend)then
            call MPI_rsend(VSend8(1,nSendStart(iPE)+1), &
-                8*nSend(iPE), &
+                nVarBuff * nSend(iPE), &
                 MPI_REAL,iPE,itag,iComm,iError)
         else
            nSENDrequests = nSENDrequests + 1
            call MPI_isend(VSend8(1,nSendStart(iPE)+1), &
-                8*nSend(iPE), &
+                nVarBuff * nSend(iPE), &
                 MPI_REAL,iPE,itag,iComm,SENDrequests(nSENDrequests),iError)
         end if
      end if
@@ -1027,13 +1028,13 @@ contains
     !    allocated the memory but may be enough for other message passing.
     if(.not.(DoLimitCornerMemory .and. .not.DoFacesOnly)) then
        if(.not.allocated(VSend8))then
-          allocate( VSend8(8,numSend), stat=iError )
+          allocate( VSend8(nVar,numSend), stat=iError )
           call alloc_check(iError,"VSend8")
           numSendMax8=numSend
        end if
        VSend8=0
        if(.not.allocated(VRecv8))then
-          allocate( VRecv8(8,numRecv), stat=iError )
+          allocate( VRecv8(nVar,numRecv), stat=iError )
           call alloc_check(iError,"VRecv8")
           numRecvMax8=numRecv
        end if
