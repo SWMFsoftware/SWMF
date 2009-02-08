@@ -247,7 +247,7 @@ test_hyades2d_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_hyades2d_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-8 \
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-4 -a=1e-8 \
 		Param/CRASH/TestOutput/log_hyades2d.log \
 		${TESTDIR}/RESULTS/GM/log_n000000.log > test_hyades2d.diff
 	ls -l test_hyades2d.diff
