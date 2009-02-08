@@ -73,6 +73,7 @@ subroutine ray_trace_fast
   use ModParallel, ONLY : NOBLK, neiLEV
   use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, R_BLK, Rmin_BLK, &
        dx_BLK, dy_BLK, dz_BLK, true_cell
+  use ModMessagePass, ONLY: message_pass_dir
   use ModRaytrace
   use ModMpi
   implicit none
@@ -140,7 +141,9 @@ subroutine ray_trace_fast
   oktest_ray = .false.
 
   Bxyz_DGB = State_VGB(Bx_:Bz_,:,:,:,:)
-  call message_pass_cells8(.false.,.false.,.false.,3,Bxyz_DGB)
+  ! Fill in ghost cells
+  call message_pass_dir(iDirMin=1, iDirMax=3, Width=2, SendCorners=.true., &
+       ProlongOrder=2, nVar=3, Sol_VGB=Bxyz_DGB)
 
   ! Initial values !!! Maybe LOOPRAY would be better??
 

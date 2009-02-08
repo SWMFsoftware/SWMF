@@ -12,13 +12,14 @@ subroutine ray_trace_accurate
 
   use ModProcMH
   use ModRaytrace
-  use CON_ray_trace, ONLY: ray_init
+  use CON_ray_trace,  ONLY: ray_init
   use ModMain
-  use ModAdvance,    ONLY: State_VGB, Bx_, Bz_, B0_DGB
-  use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,r_BLK,true_cell,XyzMax_D,XyzMin_D, &
-       x1,x2,y1,y2,z1,z2, UseCovariant
-
+  use ModAdvance,     ONLY: State_VGB, Bx_, Bz_, B0_DGB
+  use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, r_BLK, true_cell, &
+       XyzMax_D, XyzMin_D, x1, x2, y1, y2, z1, z2, UseCovariant
+  use ModMessagePass, ONLY: message_pass_dir
   use ModMpi
+
   implicit none
 
   ! Indices corresponding to the starting point and directon of the ray
@@ -50,8 +51,9 @@ subroutine ray_trace_accurate
   call set_oktest('time_ray_trace',okTime,okTimeMe)
   if(okTime)call timing_reset('ray_pass',2)
 
-  ! Fill in all ghost cells (faces+edges+corners) without monotone restrict
-  call message_pass_cells_8state(.false.,.false.,.false.)
+  ! Fill in all ghost cells
+  call message_pass_dir(iDirMin=1, iDirMax=3, Width=2, SendCorners=.true., &
+       ProlongOrder=1, nVar=nVar, Sol_VGB=State_VGB)
 
   ! Copy magnetic field into Bxyz_DGB
   do iBlock = 1, nBlock
@@ -1408,10 +1410,12 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   use ModAdvance, ONLY: nVar, State_VGB, Rho_, p_, Bx_, Bz_, B0_DGB
   use ModProcMH
   use ModMpi
+  use ModMessagePass,    ONLY: message_pass_dir
   use ModNumConst,       ONLY: cDegToRad, cTiny
   use ModCoordTransform, ONLY: sph_to_xyz
   use ModUtilities,      ONLY: check_allocate
-  use ModGeometry,       ONLY: XyzMax_D, XyzMin_D, x1,x2,y1,y2,z1,z2, UseCovariant
+  use ModGeometry,       ONLY: XyzMax_D, XyzMin_D, x1, x2, y1, y2, z1, z2, &
+       UseCovariant
   use CON_line_extract,  ONLY: line_init, line_collect
   use CON_planet,        ONLY: DipoleStrength
   implicit none
@@ -1485,8 +1489,9 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   ! Copy magnetic field into Bxyz_DGB
   Bxyz_DGB(:,:,:,:,1:nBlock) = State_VGB(Bx_:Bz_,:,:,:,1:nBlock)
 
-  ! Fill in all ghost cells (faces+edges+corners) without monotone restrict
-  call message_pass_cells8(.false.,.false.,.false.,3,Bxyz_DGB)
+  ! Fill in all ghost cells
+  call message_pass_dir(iDirMin=1, iDirMax=3, Width=2, SendCorners=.true., &
+       ProlongOrder=2, nVar=3, Sol_VGB=Bxyz_DGB)
 
   ! Add B0 for faster interpolation
   if(UseB0) Bxyz_DGB(1:3,:,:,:,1:nBlock) = &
@@ -1498,7 +1503,8 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
      Extra_VGB(2,:,:,:,1:nBlock) = State_VGB(p_  ,:,:,:,1:nBlock)
 
      ! Fill in all ghost cells (faces+edges+corners) without monotone restrict
-     call message_pass_cells8(.false.,.false.,.false.,2,Extra_VGB)
+     call message_pass_dir(iDirMin=1, iDirMax=3, Width=2, SendCorners=.true., &
+          ProlongOrder=2, nVar=2, Sol_VGB=Extra_VGB)
 
      ! Initialize storage for the integrals
      allocate(&
@@ -1673,9 +1679,6 @@ subroutine equatorial_ray(iFile)
 
   ! (Re)initialize CON_ray_trace
   call ray_init(iComm)
-
-  ! Fill in all ghost cells (faces+edges+corners) without monotone restrict
-  !!! call message_pass_cells_8state(.false.,.false.,.false.)
 
   ! Copy magnetic field into Bxyz_DGB
   Bxyz_DGB(:,:,:,:,1:nBlock) = State_VGB(Bx_:Bz_,:,:,:,1:nBlock)
