@@ -57,19 +57,21 @@ contains
        StringHeaderIn, nStepIn, TimeIn, &
        ParamIn_I, NameVarIn, &
        IsCartesianIn, &
+       nDimIn,&
        CoordMinIn_D, CoordMaxIn_D, &
        Coord1In_I, Coord2In_I, Coord3In_I, &
        CoordIn_I, CoordIn_DII, CoordIn_DIII, &
        VarIn_VI, VarIn_VII, VarIn_VIII)
 
     character(len=*),           intent(in):: NameFile       ! Name of plot file
-    character(len=*), optional, intent(in):: TypeFileIn     ! =ascii or binary
+    character(len=*), optional, intent(in):: TypeFileIn     ! =ascii or binary or real4
     character(len=*), optional, intent(in):: StringHeaderIn ! header line
     integer,          optional, intent(in):: nStepIn        ! number of steps
     real,             optional, intent(in):: TimeIn         ! simulation time  
     real,             optional, intent(in):: ParamIn_I(:)   ! parameters
     character(len=*), optional, intent(in):: NameVarIn      ! list of names
     logical,          optional, intent(in):: IsCartesianIn  ! Cartesian grid?
+    integer,          optional, intent(in):: nDimIn         ! grid dimensions
     real,             optional, intent(in):: CoordIn_I(:)   ! coords in 1D
     real,             optional, intent(in):: CoordIn_DII(:,:,:)       ! 2D
     real,             optional, intent(in):: CoordIn_DIII(:,:,:,:)    ! 3D
@@ -119,9 +121,6 @@ contains
        Param_I(1) = 0.0
     end if
 
-    IsCartesian = .true.
-    if(present(IsCartesianIn)) IsCartesian = IsCartesianIn
-
     ! Figure out grid dimensions and number of variables
     n_D = 1
     if(present(VarIn_VI))then
@@ -136,7 +135,7 @@ contains
     else
        call CON_stop(NameSub // &
             ' none of VarIn_VI, VarIn_VII, VarIn_VIII are present')
-    end if
+    endif
 
     ! Extract information
     nVar = n_D(0)
@@ -144,19 +143,24 @@ contains
     n2   = n_D(2)
     n3   = n_D(3)
 
-    if(present(IsCartesianIn))then
-       IsCartesian = IsCartesianIn
-    else
-       IsCartesian = .true.
+    ! The plot dimension may be different from the dimensionality of VarIn
+    if(present(nDimIn))then
+       nDim = nDimIn
+       if(n1 == 1 .and. n2 == 1)then
+          n_D(1:3) = (/ n3, 1, 1/)
+       elseif(n1 == 1)then
+          n_D(1:3) = (/ n2, n3, 1/)
+       elseif(n2 == 1)then
+          n_D(1:3) = (/ n1, n3, 1/)
+       end if
     end if
+
+    IsCartesian = .true.
+    if(present(IsCartesianIn)) IsCartesian = IsCartesianIn
 
     ! nDim is saved with a negative sign for non-Cartesian grid
-    if(IsCartesian)then
-       nDimOut = nDim
-    else
-       nDimOut = -nDim
-    end if
-
+    nDimOut = nDim
+    if(.not. IsCartesian) nDimOut = -nDim
     if(present(NameVarIn))then
        NameVar = NameVarIn
     else
@@ -178,7 +182,7 @@ contains
     ! Fill in the 2D coordinate array using the available information
     do iDim = 1, nDim
        n = 0
-       do k = 1, n3; do j = 1, n2; do i = 1,n1
+       do k = 1, n3; do j = 1, n2; do i = 1, n1
           n = n + 1
           Coord = huge(1.0)
           if(present(CoordIn_I))    Coord = CoordIn_I(i)
@@ -198,7 +202,7 @@ contains
 
     ! Check if all coordinates were set
     if(any(Coord_ID == huge(1.0))) call CON_stop(NameSub // & 
-         ' coordinates were not defined')
+        ' coordinates were not defined')
 
     ! Fill in the 2D variable array using the available information
     Var_IV = huge(1.0)
@@ -211,7 +215,7 @@ contains
           if(present(VarIn_VIII)) Var_IV(n,iVar) = VarIn_VIII(iVar,i,j,k)
        end do; end do; end do; 
     end do
-
+   
     ! Check if all variables were set
     if(any(Var_IV == huge(1.0))) call CON_stop(NameSub // & 
          ' variables were not defined')
@@ -225,7 +229,7 @@ contains
        write(UnitTmp_, "(a)")             trim(StringHeader)
        write(UnitTmp_, "(i7,es13.5,3i3)") nStep, Time, nDimOut, nParam, nVar
        write(UnitTmp_, "(3i8)")           n_D(1:nDim)
-       write(UnitTmp_, "(100es13.5)")     Param_I                               
+       write(UnitTmp_, "(100es13.5)")     Param_I
        write(UnitTmp_, "(a)")             trim(NameVar)
 
        ! write out coordinates and variables line by line
@@ -379,8 +383,8 @@ contains
 
     IsCartesian = nDim > 0
     nDim = abs(nDim)
-    n1 = n_D(1); n2 = n_D(2); n3 = n_D(3)
-
+    n1 = n_D(1); n2 = n_D(2); n3 = n_D(3) 
+   
     ! Read coordinates and variables into suitable 2D arrays
     allocate(Coord_ID(n1*n2*n3, nDim), Var_IV(n1*n2*n3, nVar))
     select case(TypeFile)
@@ -475,14 +479,18 @@ contains
     real,    parameter :: ParamIn_I(nParamIn) = (/ 1.667, 2.5 /)
     character(len=*), parameter:: NameVarIn = "x y rho ux uy p gamma rbody"
     real    :: CoordIn_DII(nDimIn, n1In, n2In), VarIn_VII(nVarIn, n1In, n2In)
+    real    :: CoordIn_DIII(nDimIn, n1In, 1, n2In), VarIn_VIII(nVarIn, n1In, 1, n2In)
 
     ! Do tests with ascii/binary/real4 files, 
     ! Cartesian/non-Cartesian coordinates
-    integer, parameter:: nTest = 6
+    ! 2D/3D input arrays
+    integer, parameter:: nTest = 12
     character(len=6)  :: TypeFileIn_I(nTest) = &
-         (/ 'ascii ', 'binary', 'real4 ', 'ascii ', 'binary', 'real4 ' /)
+         (/ 'ascii ', 'binary', 'real4 ', 'ascii ', 'binary', 'real4 ', &
+            'ascii ', 'binary', 'real4 ', 'ascii ', 'binary', 'real4 ' /)
     logical           :: IsCartesianIn_I(nTest) = &
-         (/ .true.,   .true., .true.,  .false.,   .false., .false. /)
+         (/ .true.,   .true., .true.,  .false.,   .false., .false.,&
+            .true.,   .true., .true.,  .false.,   .false., .false. /)
 
     ! Input and output of tests
     character(len=80)    :: NameFile
@@ -498,7 +506,9 @@ contains
     real                 :: CoordMinOut_D(nDimIn), CoordMaxOut_D(nDimIn)
     real                 :: Coord1Out_I(n1In), Coord2Out_I(n2In)
     real                 :: CoordOut_DII(nDimIn, n1In, n2In)
+    real                 :: CoordOut_DIII(nDimIn, n1In, n2In, 1)
     real                 :: VarOut_VII(nVarIn, n1In, n2In)
+    real                 :: VarOut_VIII(nVarIn, n1In, n2In, 1)
 
     ! Tolerance for errors
     real :: Eps
@@ -515,23 +525,25 @@ contains
             + (i-1)*((CoordMaxIn_D(1)-CoordMinIn_D(1))/(n1In - 1))
        CoordIn_DII(2, i, j) = CoordMinIn_D(2) &
             + (j-1)*((CoordMaxIn_D(2)-CoordMinIn_D(2))/(n2In - 1))
+       CoordIn_DIII(1, i, 1, j) = CoordIn_DII(1,i,j)
+       CoordIn_DIII(2, i, 1, j) = CoordIn_DII(2,i,j)
 
        if(i <= n1In/2)then
-          VarIn_VII(:,i,j) = (/ 1.0, 0.0, 0.0, 1.0 /)
+          VarIn_VII(:, i, j) = (/ 1.0, 0.0, 0.0, 1.0 /)
+          VarIn_VIII(:, i, 1, j) = (/ 1.0, 0.0, 0.0, 1.0 /)
        else
-          VarIn_VII(:,i,j) = (/ 0.1, 0.0, 0.0, 0.125 /)  
+          VarIn_VII(:,i,j) = (/ 0.1, 0.0, 0.0, 0.125 /)
+          VarIn_VIII(:, i, 1, j) = (/ 0.1, 0.0, 0.0, 0.125 /)  
        end if
     end do; end do
 
-    ! Test both ascii and binary files
-    do iTest = 1, nTest  
-
-       write(NameFile, '(a,i1,a)') 'test_plot_file',iTest,'.out'
+    ! Test ascii, binary and real4 files
+    do iTest = 1, nTest 
+       write(NameFile, '(a,i2.2,a)') 'test_plot_file',iTest,'.out'
        write(*,*) NameSub, ' writing file=', trim(NameFile)
 
        TypeFileIn    = TypeFileIn_I(iTest)
        IsCartesianIn = IsCartesianIn_I(iTest)
-
 
        if(TypeFileIn == 'real4')then
           Eps = 1e-5
@@ -567,7 +579,7 @@ contains
                Coord1In_I     = CoordIn_DII(1,:,1), &
                Coord2In_I     = CoordIn_DII(2,1,:), &
                VarIn_VII      = VarIn_VII)
-       case default
+       case(3:6)
           ! Use full coordinate array
           call save_plot_file(NameFile,      &
                TypeFileIn     = TypeFileIn,     &
@@ -579,9 +591,24 @@ contains
                IsCartesianIn  = IsCartesianIn,  &
                CoordIn_DII    = CoordIn_DII,    &
                VarIn_VII      = VarIn_VII)
+       case default
+          ! Test 3D input array
+          ! Use full coordinate array
+          call save_plot_file(NameFile,      &
+               TypeFileIn     = TypeFileIn,     &
+               StringHeaderIn = StringHeaderIn, &
+               nStepIn        = nStepIn,        &
+               TimeIn         = TimeIn,         &
+               ParamIn_I      = ParamIn_I,      &
+               NameVarIn      = NameVarIn,      &
+               IsCartesianIn  = IsCartesianIn,  &
+               nDimIn         = nDimIn,         &
+               CoordIn_DIII   = CoordIn_DIII,   &
+               VarIn_VIII     = VarIn_VIII)
+       
        end select
 
-       call read_plot_file(NameFile,           &
+          call read_plot_file(NameFile,        &
             TypeFileIn      = TypeFileIn,      &
             StringHeaderOut = StringHeaderOut, &
             nStepOut        = nStepOut,        &
@@ -598,6 +625,8 @@ contains
             CoordMinOut_D   = CoordMinOut_D,   &
             CoordMaxOut_D   = CoordMaxOut_D,   &
             VarOut_VII      = VarOut_VII)
+
+
 
        if(nStepOut /= nStepIn)then
           write(*,*)'nStepIn=', nStepIn,' nStepOut=', nStepOut
@@ -628,70 +657,75 @@ contains
           write(*,*)'ParamIn=', ParamIn_I,' ParamOut=', ParamOut_I(1:nParamIn)
           call CON_stop(NameSub)
        end if
-
-       if(NameVarOut /= NameVarIn)then
-          write(*,*)'NameVarIn=', NameVarIn,' NameVarOut=', NameVarOut
-          call CON_stop(NameSub)
-       end if
-
+       
        if(IsCartesianOut .neqv. IsCartesianIn)then
           write(*,*)'IsCartesianIn, Out=', IsCartesianIn, IsCartesianOut
           call CON_stop(NameSub)
        end if
-
+ 
+       if(NameVarOut /= NameVarIn)then
+             write(*,*)'NameVarIn=', NameVarIn,' NameVarOut=', NameVarOut
+             call CON_stop(NameSub)
+          end if
+       
+       !To simpify, replace the 3D input array with 2D 
+       if(iTest > 6)then
+          CoordIn_DII = CoordIn_DIII(:,:,1,:)
+          VarIn_VII = VarIn_VIII(:,:,1,:)
+       end if 
        do j = 1, n2In; do i = 1, n1In
           if(any(abs(CoordIn_DII(:,i,j) - CoordOut_DII(:,i,j)) > Eps))then
-             write(*,*)'i,j=', i, j
-             write(*,*)'CoordIn =', CoordIn_DII(:,i,j)
-             write(*,*)'CoordOut=', CoordOut_DII(:,i,j)
-             call CON_stop(NameSub)
-          end if
-          if(abs(CoordIn_DII(1,i,j) - Coord1Out_I(i)) > Eps)then
-             write(*,*)'i,j=', i, j
-             write(*,*)'CoordIn(1)=', CoordIn_DII(1,i,j)
-             write(*,*)'Coord1Out =', Coord1Out_I(i)
-             call CON_stop(NameSub)
-          end if
-          if(abs(CoordIn_DII(2,i,j) - Coord2Out_I(j)) > Eps)then
-             write(*,*)'i,j=', i, j
-             write(*,*)'CoordIn(2)=', CoordIn_DII(2,i,j)
-             write(*,*)'Coord2Out =', Coord2Out_I(j)
-             call CON_stop(NameSub)
-          end if
+              write(*,*)'i,j=', i, j
+              write(*,*)'CoordIn =', CoordIn_DII(:,i,j)
+              write(*,*)'CoordOut=', CoordOut_DII(:,i,j)
+              call CON_stop(NameSub)
+           end if
+           if(abs(CoordIn_DII(1,i,j) - Coord1Out_I(i)) > Eps )then
+              write(*,*)'i,j=', i, j
+              write(*,*)'CoordIn(1)=', CoordIn_DII(1,i,j)
+              write(*,*)'Coord1Out =', Coord1Out_I(i)
+              call CON_stop(NameSub)
+           end if
+           if(abs(CoordIn_DII(2,i,j) - Coord2Out_I(j)) > Eps )then
+              write(*,*)'i,j=', i, j
+              write(*,*)'CoordIn(2)=', CoordIn_DII(2,i,j)
+              write(*,*)'Coord2Out =', Coord2Out_I(j)
+              call CON_stop(NameSub)
+           end if
 
-          if(any(abs(VarIn_VII(:,i,j) - VarOut_VII(:,i,j)) > Eps))then
-             write(*,*)'i,j=', i, j
-             write(*,*)'VarIn =', VarIn_VII(:,i,j)
-             write(*,*)'VarOut=', VarOut_VII(:,i,j)
-             call CON_stop(NameSub)
-          end if
-       end do; end do
+           if(any(abs(VarIn_VII(:,i,j) - VarOut_VII(:,i,j)) > Eps))then
+              write(*,*)'i,j=', i, j
+              write(*,*)'VarIn =', VarIn_VII(:,i,j)
+              write(*,*)'VarOut=', VarOut_VII(:,i,j)
+              call CON_stop(NameSub)
+           end if
+        end do; end do
 
-       if(abs(CoordMinOut_D(1) -  minval(CoordIn_DII(1,:,:))) >Eps)then
-          write(*,*)'CoordMinOut_D(1)     =',CoordMinOut_D(1)
-          write(*,*)'minval(CoordIn_DII(1)=',minval(CoordIn_DII(1,:,:))
-          call CON_stop(NameSub)
-       end if
-       if(abs(CoordMinOut_D(2) -  minval(CoordIn_DII(2,:,:))) > Eps)then
-          write(*,*)'CoordMinOut_D(2)     =',CoordMinOut_D(2)
-          write(*,*)'minval(CoordIn_DII(2)=',minval(CoordIn_DII(2,:,:))
-          call CON_stop(NameSub)
-       end if
-       if(abs(CoordMaxOut_D(1) -  maxval(CoordIn_DII(1,:,:))) > Eps )then
-          write(*,*)'CoordMaxOut_D(1)     =',CoordMaxOut_D(1)
-          write(*,*)'maxval(CoordIn_DII(1)=',maxval(CoordIn_DII(1,:,:))
-          call CON_stop(NameSub)
-       end if
-       if(abs(CoordMaxOut_D(2) - maxval(CoordIn_DII(2,:,:))) >Eps)then
-          write(*,*)'CoordMaxOut_D(2)     =',CoordMaxOut_D(2)
-          write(*,*)'maxval(CoordIn_DII(2)=',maxval(CoordIn_DII(2,:,:))
-          call CON_stop(NameSub)
-       end if
-
+        if(abs(CoordMinOut_D(1) -  minval(CoordIn_DII(1,:,:))) >Eps)then
+           write(*,*)'CoordMinOut_D(1)     =',CoordMinOut_D(1)
+           write(*,*)'minval(CoordIn_DII(1)=',minval(CoordIn_DII(1,:,:))
+           call CON_stop(NameSub)
+        end if
+        if(abs(CoordMinOut_D(2) -  minval(CoordIn_DII(2,:,:))) > Eps)then
+           write(*,*)'CoordMinOut_D(2)     =',CoordMinOut_D(2)
+           write(*,*)'minval(CoordIn_DII(2)=',minval(CoordIn_DII(2,:,:))
+           call CON_stop(NameSub)
+        end if
+        if(abs(CoordMaxOut_D(1) -  maxval(CoordIn_DII(1,:,:))) > Eps )then
+           write(*,*)'CoordMaxOut_D(1)     =',CoordMaxOut_D(1)
+           write(*,*)'maxval(CoordIn_DII(1)=',maxval(CoordIn_DII(1,:,:))
+           call CON_stop(NameSub)
+        end if
+        if(abs(CoordMaxOut_D(2) - maxval(CoordIn_DII(2,:,:))) >Eps)then
+           write(*,*)'CoordMaxOut_D(2)     =',CoordMaxOut_D(2)
+           write(*,*)'maxval(CoordIn_DII(2)=',maxval(CoordIn_DII(2,:,:))
+           call CON_stop(NameSub)
+        end if
+      
     end do
 
-    ! Test using defaults
-    NameFile = 'test_plot_file7.out'       
+    ! Test using defaults for 2D input array
+    NameFile = 'test_plot_file13.out'       
     call save_plot_file(NameFile, VarIn_VII=VarIn_VII, CoordIn_DII=CoordIn_DII)
 
     ! Read header info
@@ -711,6 +745,30 @@ contains
        write(*,*) 'nOut_D    =',nOut_D
        call CON_stop(NameSub)
     end if
+
+    ! Test using defaults for 3D input array
+    NameFile = 'test_plot_file14.out'       
+    call save_plot_file(NameFile,nDimIn = nDimIn, VarIn_VIII = VarIn_VIII,&
+                        CoordIn_DIII = CoordIn_DIII)
+
+    ! Read header info
+    call read_plot_file(NameFile, &
+         StringHeaderOut = StringHeaderOut, NameVarOut = NameVarOut, &         
+         nDimOut = nDimOut, nVarOut = nVarOut, nParamOut = nParamOut, &
+         IsCartesianOut = IsCartesianOut, nOut_D = nOut_D)
+
+    if( StringHeaderOut /= 'No header info')call CON_stop(NameSub // &
+         ' incorrect value for default StringHeaderOut='//StringHeaderOut)
+    if( NameVarOut /= 'x1 x2 v01 v02 v03 v04 p01') call CON_stop(NameSub // &
+         ' incorrect value for default NameVarOut='//NameVarOut)
+    if(.not.IsCartesianOut) call CON_stop(NameSub // &
+         ' incorrect value for IsCartesianOut: should be true')
+    if( any(nOut_D(1:nDimOut) /= (/ n1In, n2In /)) ) then
+       write(*,*) 'n1In, n2In=', n1In, n2In
+       write(*,*) 'nOut_D    =',nOut_D
+       call CON_stop(NameSub)
+    end if
+    
 
     ! Now that we have the dimensions, we could allocate coordinate and
     ! variable arrays and read them
