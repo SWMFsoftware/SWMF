@@ -102,6 +102,7 @@ module ModTemperature
   
   real :: TradMinSi = 500.0 !K Otherwise the dominant contribution 
   !to the norm TRad^2/Cv(TRad)\sim (1/T)comes from infinitesimal temperatures
+  real :: rDotRPe, pDotADotPPe
 contains
 
   !============================================================================
@@ -562,6 +563,12 @@ contains
        call cg(heat_conduction, nTemperature, Source_VCB, Temperature_VGB, &
             .true., Error, TypeStopCriterion, &
             Iter, DoTestKrylovMe, dilu_preconditioner)
+    case('dilu')
+       call get_dilu_preconditioner(nTemperature)
+
+       call cg(heat_conduction, nTemperature, Source_VCB, Temperature_VGB, &
+            .true., Error, TypeStopCriterion, &
+            Iter, DoTestKrylovMe, dilu_preconditioner)
     case('mbilu')
        call get_mbilu_preconditioner(nTemperature)
 
@@ -802,6 +809,7 @@ contains
     else
        call set_gray_outer_bcs(nVar, Temp_VGB,'zero')
     end if
+    pDotADotPPe = 0.0
     do iBlock = 1, nBlock
        if(unusedBlk(iBlock))CYCLE
 
@@ -817,53 +825,91 @@ contains
     use ModSize, ONLY: nI, nJ, nK, gcn
     use ModMain, ONLY: Dt
     use ModGeometry, ONLY: vInv_CB
+    use ModParallel, ONLY: NOBLK, NeiLev
 
     integer, intent(in) :: iBlock, nVar
     real, intent(inout) :: &
          Temp_VG(nVar,1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn)
     real, intent(out)   :: Rhs_VC(nVar,nI,nJ,nK)
 
-    integer :: i, j, k, iVar
-    real    :: vInv
+    integer :: i, j, k, iVar, iCond, iT
+    real    :: Volume
+    real    :: Coef_FX(1:nI+1,1:nJ,1:nK)
+    real    :: Coef_FY(1:nI,1:nJ+1,1:nK)
+    real    :: Coef_FZ(1:nI,1:nJ,1:nK+1)
     !--------------------------------------------------------------------------
 
     call get_face_coef(iBlock)
 
+    Coef_FX = 0.50
+    if(NeiLev(1,iBlock)==NOBLK)Coef_FX(1   ,:,:) = 1.0
+    if(NeiLev(2,iBlock)==NOBLK)Coef_FX(nI+1,:,:) = 1.0
+
+    Coef_FY = 0.50
+    if(NeiLev(3,iBlock)==NOBLK)Coef_FY(:,1   ,:) = 1.0
+    if(NeiLev(4,iBlock)==NOBLK)Coef_FY(:,nJ+1,:) = 1.0
+
+    Coef_FZ = 0.50
+    if(NeiLev(5,iBlock)==NOBLK)Coef_FZ(:,:,1   ) = 1.0
+    if(NeiLev(6,iBlock)==NOBLK)Coef_FZ(:,:,nK+1) = 1.0
+
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       vInv = vInv_CB(i,j,k,iBlock)
+       Volume = 1/vInv_CB(i,j,k,iBlock)
 
        ! Specific heat
        Rhs_VC(:,i,j,k) = SpecificHeat_VCB(:,i,j,k,iBlock) &
-            *Temp_VG(:,i,j,k)/Dt
+            *Temp_VG(:,i,j,k)*Volume/Dt
+
+       pDotADotPPe = pDotADotPPe + sum(Rhs_VC(:,i,j,k)*Temp_VG(:,i,j,k))
 
        ! Heat conduction
-       Rhs_VC(iCond_I,i,j,k) = Rhs_VC(iCond_I,i,j,k) + vInv*( &
-            + Cond_VFX(:,i+1,j,k) &
-            *(Temp_VG(iCond_I,i,j,k) - Temp_VG(iCond_I,i+1,j,k)) &
-            + Cond_VFX(:,i,j,k) &
-            *(Temp_VG(iCond_I,i,j,k) - Temp_VG(iCond_I,i-1,j,k)) &
-            + Cond_VFY(:,i,j+1,k) &
-            *(Temp_VG(iCond_I,i,j,k) - Temp_VG(iCond_I,i,j+1,k)) &
-            + Cond_VFY(:,i,j,k) &
-            *(Temp_VG(iCond_I,i,j,k) - Temp_VG(iCond_I,i,j-1,k)) &
-            + Cond_VFZ(:,i,j,k+1) &
-            *(Temp_VG(iCond_I,i,j,k) - Temp_VG(iCond_I,i,j,k+1)) &
-            + Cond_VFZ(:,i,j,k) &
-            *(Temp_VG(iCond_I,i,j,k) - Temp_VG(iCond_I,i,j,k-1)) )
+       do iCond = 1, nCond
+          iT = iCond_I(iCond)
+          Rhs_VC(iT,i,j,k) = Rhs_VC(iT,i,j,k) + ( &
+               + Cond_VFX(iCond,i+1,j,k) &
+               *(Temp_VG(iT,i,j,k) - Temp_VG(iT,i+1,j,k)) &
+               + Cond_VFX(iCond,i,j,k) &
+               *(Temp_VG(iT,i,j,k) - Temp_VG(iT,i-1,j,k)) &
+               + Cond_VFY(iCond,i,j+1,k) &
+               *(Temp_VG(iT,i,j,k) - Temp_VG(iT,i,j+1,k)) &
+               + Cond_VFY(iCond,i,j,k) &
+               *(Temp_VG(iT,i,j,k) - Temp_VG(iT,i,j-1,k)) &
+               + Cond_VFZ(iCond,i,j,k+1) &
+               *(Temp_VG(iT,i,j,k) - Temp_VG(iT,i,j,k+1)) &
+               + Cond_VFZ(iCond,i,j,k) &
+               *(Temp_VG(iT,i,j,k) - Temp_VG(iT,i,j,k-1)) )
+
+          pDotADotPPe = pDotADotPPe + &
+                  Cond_VFX(iCond,i+1,j,k) * Coef_FX(i+1,j,k) *&
+                 (Temp_VG(iT,i,j,k) - Temp_VG(iT,i+1,j,k))**2 + &
+                  Cond_VFX(iCond,i  ,j,k) * Coef_FX(i  ,j,k) *&
+                 (Temp_VG(iT,i,j,k) - Temp_VG(iT,i-1,j,k))**2 + &
+                  Cond_VFY(iCond,i,j+1,k) * Coef_FY(i,j+1,k) *&
+                 (Temp_VG(iT,i,j,k) - Temp_VG(iT,i,j+1,k))**2 + &
+                  Cond_VFY(iCond,i,j  ,k) * Coef_FY(i,j  ,k) *&
+                 (Temp_VG(iT,i,j,k) - Temp_VG(iT,i,j-1,k))**2 + &
+                  Cond_VFZ(iCond,i,j,k+1) * Coef_FZ(i,j,k+1) *&
+                 (Temp_VG(iT,i,j,k) - Temp_VG(iT,i,j,k+1))**2 + &
+                  Cond_VFZ(iCond,i,j,k  ) * Coef_FZ(i,j,k  ) *&
+                 (Temp_VG(iT,i,j,k) - Temp_VG(iT,i,j,k-1))**2 
+
+       end do
 
        do iVar=2,nVar
           ! Energy exchange
           Rhs_VC(Te_,i,j,k)  = Rhs_VC(Te_,i,j,k) &
-               + RelaxationCoef_VCB(iVar,i,j,k,iBlock) &
+               + RelaxationCoef_VCB(iVar,i,j,k,iBlock) * Volume &
                * (Temp_VG(Te_,i,j,k) - Temp_VG(iVar,i,j,k) )
 
+          pDotADotPPe = pDotADotPPe + &
+                 RelaxationCoef_VCB(iVar,i,j,k,iBlock) * Volume &
+               * (Temp_VG(Te_,i,j,k) - Temp_VG(iVar,i,j,k) )**2
+
           Rhs_VC(iVar,i,j,k) = Rhs_VC(iVar,i,j,k) &
-               + RelaxationCoef_VCB(iVar,i,j,k,iBlock) &
+               + RelaxationCoef_VCB(iVar,i,j,k,iBlock) * Volume &
                * (Temp_VG(iVar,i,j,k) - Temp_VG(Te_,i,j,k) )
        end do
 
-       ! multiply by control volume
-       Rhs_VC(:,i,j,k) = Rhs_VC(:,i,j,k)/vInv
     end do; end do; end do
 
   end subroutine get_heat_conduction
@@ -877,6 +923,8 @@ contains
 
     use ModMain, ONLY: nBlock, unusedBLK
     use ModSize, ONLY: nI, nJ, nK, gcn, nBlk
+    use ModProcMH,ONLY: iComm
+    use ModMpi
 
     ! subroutine for matrix vector multiplication 
     interface
@@ -928,12 +976,12 @@ contains
 
     integer, parameter :: MaxIter = 30000
 
-    real :: rDotR, pDotADotP, rDotR0, rDotRMax, rDotROld
+    real :: rDotR, pDotADotP, rDotR0, rDotRMax, rDotRInv
 
     real, dimension(:,:,:,:,:), allocatable :: &
          P_VGB, ADotP_VCB, MMinusOneDotR_VCB
 
-    integer :: i, j, k, iBlock
+    integer :: i, j, k, iBlock,iError
     !--------------------------------------------------------------------------
 
     allocate( &
@@ -968,7 +1016,12 @@ contains
 
        if(present(preconditioner))then
           call preconditioner(nVar, Residual_VCB, MMinusOneDotR_VCB)
-          rDotR = dot_product_mpi(0, Residual_VCB, MMinusOneDotR_VCB)
+          select case(TypePreconditioner)
+          case('blockjacobi','gs','dilu')
+             call MPI_ALLREDUCE(rDotRPe, rDotR, 1, MPI_REAL, MPI_SUM, iComm, iError)
+          case default
+             rDotR = dot_product_mpi(0, Residual_VCB, MMinusOneDotR_VCB)
+          end select
        else
           rDotR = dot_product_mpi(0, Residual_VCB, Residual_VCB)
        end if
@@ -986,29 +1039,34 @@ contains
 
           if(rDotR0 == 0.0) EXIT
        end if
-
+  
        if(DoTest)write(*,*)'CG Iter, rDotR = ', Iter, rDotR
 
        if(rDotR <= rDotRMax) EXIT
+       rDotRInv = 1/rDotR
        do iBlock = 1, nBlock
           if(unusedBlk(iBlock))CYCLE
           if(present(preconditioner))then
              P_VGB(:,1:nI,1:nJ,1:nK,iBlock) = P_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
-                  + MMinusOneDotR_VCB(:,:,:,:,iBlock)/rDotR
+                  + MMinusOneDotR_VCB(:,:,:,:,iBlock) * rDotRInv
           else
              P_VGB(:,1:nI,1:nJ,1:nK,iBlock) = P_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
-                  + Residual_VCB(:,:,:,:,iBlock)/rDotR
+                  + Residual_VCB(:,:,:,:,iBlock) * rDotRInv
           end if
        end do
 
        call matvec(nVar, P_VGB, aDotP_VCB)
-
-       pDotADotP = dot_product_mpi(gcn, P_VGB(:,:,:,:,:), aDotP_VCB)
+       call MPI_ALLREDUCE(pDotADotPPe, pDotADotP, 1, MPI_REAL, MPI_SUM, iComm, iError)
+      ! write(*,*)pDotADotP , dot_product_mpi(gcn, P_VGB(:,:,:,:,:), aDotP_VCB)
+      ! pDotADotP = dot_product_mpi(gcn,P_VGB,aDotP_VCB)
        do iBlock = 1, nBlock
           if(unusedBlk(iBlock))CYCLE
           Residual_VCB(:,:,:,:,iBlock) = Residual_VCB(:,:,:,:,iBlock) &
                - aDotP_VCB(:,:,:,:,iBlock)/pDotADotP
        end do
+
+!!$       write(*,*)dot_product_mpi(gcn,P_VGB,Residual_VCB)
+
        do iBlock = 1, nBlock
           if(unusedBlk(iBlock))CYCLE
           Solution_VGB(:,1:nI,1:nJ,1:nK,iBlock) = &
@@ -1093,6 +1151,8 @@ contains
     character(len=*), parameter :: NameSub = 'jacobi_preconditioner'
     !--------------------------------------------------------------------------
 
+    rDotRPe = 0.0
+
     do iBlock = 1, nBlock
        if(unusedBlk(iBlock))CYCLE
 
@@ -1103,6 +1163,8 @@ contains
                 VectorOut_VCB(iVar,i,j,k,iBlock) = sum( &
                      VectorIn_VCB(:,i,j,k,iBlock) &
                      *JacPrec_VVCB(:,iVar,i,j,k,iBlock))
+                rDotRPe = rDotRPe + VectorOut_VCB(iVar,i,j,k,iBlock) * &
+                     VectorIn_VCB(iVar,i,j,k,iBlock)
              end do
           end do; end do; end do
        else
@@ -1111,6 +1173,8 @@ contains
                 VectorOut_VCB(iVar,i,j,k,iBlock) = sum( &
                      VectorIn_VCB(:,i,j,k,iBlock) &
                      *JacPrec_VVCB(:,iVar,i,j,k,iBlock))
+                rDotRPe = rDotRPe + VectorOut_VCB(iVar,i,j,k,iBlock) * &
+                     VectorIn_VCB(iVar,i,j,k,iBlock)
              end do
           end do; end do; end do
        end if
@@ -1272,6 +1336,187 @@ contains
 
   !============================================================================
 
+  subroutine get_dilu_preconditioner(nVar)
+
+    use ModGeometry, ONLY: body_blk,vInv_CB
+    use ModMain, ONLY: nBlock, unusedBLK, Dt
+    use ModSize, ONLY: nI, nJ, nK
+
+    ! Inverts the nTemperature * nTemperature sub-matrices at the
+    ! block diagonal of the operator of heat-conduction + relaxation
+
+    integer, intent(in) :: nVar
+
+    integer :: iVar, i, j , k, iBlock, iCond, iT
+
+    real, dimension(nVar) :: Diag_V
+    real, allocatable, dimension(:) :: OffDiag_V
+
+    real :: Volume
+
+    character(len=*), parameter :: NameSub = 'get_jacobi_preconditioner'
+    !--------------------------------------------------------------------------
+
+    if(nVar>1) allocate(OffDiag_V(2:nVar))
+  
+    do iBlock = 1, nBlock
+       if(unusedBlk(iBlock))CYCLE
+       if(body_blk(iBlock))call stop_mpi(&
+            'D_ILU preconditioner does not work for body block')
+       call get_face_coef(iBlock)
+       !Fluxes across the block boundary are not accounted for
+
+       !Save non-inverted diagonal matrices
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          Volume = 1/vInv_CB(i,j,k,iBlock)
+
+          ! Heat conduction
+          Diag_V(:) = SpecificHeat_VCB(:,i,j,k,iBlock)*Volume/Dt
+          do iCond = 1, nCond
+             iT = iCond_I(iCond)
+             Diag_V(iT) = Diag_V(iT) &
+                  + Cond_VFX(iCond,i+1,j  ,k  )  &
+                  + Cond_VFX(iCond,i  ,j  ,k  )  &
+                  + Cond_VFY(iCond,i  ,j+1,k  )  &
+                  + Cond_VFY(iCond,i  ,j  ,k  )  &
+                  + Cond_VFZ(iCond,i  ,j  ,k+1)  &
+                  + Cond_VFZ(iCond,i  ,j  ,k  )  
+          end do
+          JacPrec_VVCB(:,:,i,j,k,iBlock) = 0.0
+          if(nVar/=1) then
+
+             ! Energy exchange
+
+             Diag_V(Te_) = Diag_V(Te_) &
+                  + Volume*sum(RelaxationCoef_VCB(2:nVar,i,j,k,iBlock))
+             Diag_V(2:nVar) = Diag_V(2:nVar) &
+                  + Volume*RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)
+             JacPrec_VVCB(Te_,2:nVar,i,j,k,iBlock) = &
+                  -Volume*RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)
+             JacPrec_VVCB(2:nVar,Te_,i,j,k,iBlock) = &
+                  -Volume*RelaxationCoef_VCB(2:nVar,i,j,k,iBlock)
+          end if
+          do iVar=1,nVar
+             JacPrec_VVCB(iVar,iVar,i,j,k,iBlock) = Diag_V(iVar)
+          end do
+       end do;end do;end do
+      
+       select case(nVar)
+       case(1)
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             call block_jacobi_1t
+             call modify_upper_cell_jacobian
+          end do; end do; end do
+       case(2)
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             call block_jacobi_2t
+             call modify_upper_cell_jacobian
+          end do; end do; end do
+       case(3)
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             call block_jacobi_3t
+             call modify_upper_cell_jacobian
+          end do; end do; end do
+       case default
+          call stop_mpi(NameSub// &
+               ': More than three temperatures is not allowed')
+       end select
+    end do
+
+    if(allocated(OffDiag_V)) deallocate(OffDiag_V)
+
+  contains
+
+    subroutine block_jacobi_1t
+
+      !------------------------------------------------------------------------
+
+      call get_diagonal_subblock
+
+      JacPrec_VVCB(1,1,i,j,k,iBlock) = 1.0/Diag_V(1)
+
+    end subroutine block_jacobi_1t
+
+    !==========================================================================
+
+    subroutine block_jacobi_2t
+
+      !------------------------------------------------------------------------
+
+      call get_diagonal_subblock
+
+      JacPrec_VVCB(:,:,i,j,k,iBlock) = reshape( (/ &
+           Diag_V(2)    , -OffDiag_V(2), &
+           -OffDiag_V(2), Diag_V(1)  /), (/2,2/) ) &
+           /(Diag_V(1)*Diag_V(2) - OffDiag_V(2)**2)
+
+    end subroutine block_jacobi_2t
+
+    !==========================================================================
+
+    subroutine block_jacobi_3t
+
+      !------------------------------------------------------------------------
+
+      call get_diagonal_subblock
+
+      JacPrec_VVCB(:,:,i,j,k,iBlock) = reshape( (/ &
+           Diag_V(2)*Diag_V(3), -Diag_V(3)*OffDiag_V(2), -Diag_V(2)*OffDiag_V(3), &
+           -Diag_V(3)*OffDiag_V(2), Diag_V(1)*Diag_V(3) - OffDiag_V(3)**2, OffDiag_V(2)*OffDiag_V(3), &
+           -Diag_V(2)*OffDiag_V(3), OffDiag_V(2)*OffDiag_V(3), Diag_V(1)*Diag_V(2) - OffDiag_V(2)**2 /), (/3,3/) ) &
+           /( Diag_V(3)*(Diag_V(1)*Diag_V(2) - OffDiag_V(2)**2) - Diag_V(2)*OffDiag_V(3)**2 )
+
+    end subroutine block_jacobi_3t
+
+    !==========================================================================
+
+    subroutine get_diagonal_subblock
+      do iVar = 1,nVar
+         Diag_V(iVar) = JacPrec_VVCB(iVar,iVar,i,j,k,iBlock)
+      end do
+      if(nVar==1) return
+      OffDiag_V(2:nVar) = JacPrec_VVCB(Te_,2:nVar,i,j,k,iBlock)
+    end subroutine get_diagonal_subblock
+    !=========================================================================!
+    subroutine modify_upper_cell_jacobian
+       integer :: jVar
+       real :: LocI_V(nVar),LocJ_V(nVar),LocK_V(nVar)
+       !------------------------------------------------------------------
+       LocI_V = 0.0; LocJ_V = 0.0; LocK_V = 0.0
+       !return
+       do iCond = 1,nCond
+          iT = iCond_I(iCond)
+          LocI_V(iT) = Cond_VFX(iCond,i+1,j,k)
+          LocJ_V(iT) = Cond_VFY(iCond,i,j+1,k)
+          LocK_V(iT) = Cond_VFZ(iCond,i,j,k+1)
+       end do
+       if(i<nI)then
+          do jVar=1,nVar; do iVar = 1,nVar
+             JacPrec_VVCB(iVar,jVar,i+1,j,k,iBlock) = &
+                  JacPrec_VVCB(iVar,jVar,i+1,j,k,iBlock) - &
+                  JacPrec_VVCB(iVar,jVar,i,j,k,iBlock) &
+                  *LocI_V(iVar)*LocI_V(jVar)
+          end do;end do
+       end if
+       if(j<nJ)then
+          do jVar=1,nVar; do iVar = 1,nVar
+             JacPrec_VVCB(iVar,jVar,i,j+1,k,iBlock) = &
+                  JacPrec_VVCB(iVar,jVar,i,j+1,k,iBlock) - &
+                  JacPrec_VVCB(iVar,jVar,i,j,k,iBlock) &
+                  *LocJ_V(iVar)*LocJ_V(jVar)
+          end do;end do
+       end if
+       if(k<nK)then
+          do jVar=1,nVar; do iVar = 1,nVar
+             JacPrec_VVCB(iVar,jVar,i,j,k+1,iBlock) = &
+                  JacPrec_VVCB(iVar,jVar,i,j,k+1,iBlock) - &
+                  JacPrec_VVCB(iVar,jVar,i,j,k,iBlock) &
+                  *LocK_V(iVar)*LocK_V(jVar)
+          end do;end do
+       end if
+    end subroutine modify_upper_cell_jacobian
+  end subroutine get_dilu_preconditioner
+  !============================================================================
   subroutine dilu_preconditioner(nVar, VectorIn_VCB, VectorOut_VCB)
 
     ! Calculate VectorOut = M^{-1} \cdot VectorIn where the stored
@@ -1297,7 +1542,7 @@ contains
     character(len=*), parameter :: NameSub = 'dilu_preconditioner'
     !--------------------------------------------------------------------------
     Sol_VG = 0.0 ! To set zero values in the ghostcell
-
+    rDotRPe = 0.0
     do iBlock = 1, nBlock
        if(unusedBlk(iBlock))CYCLE
 
@@ -1315,7 +1560,8 @@ contains
                   + Sol_VG(iCond_I,i,j,k-1)*Cond_VFZ(:,i,j,k)
              do iVar = 1, nVar
                 Sol_VG(iVar,i,j,k) = sum( &
-                     Loc_V*JacPrec_VVCB(:,iVar,i,j,k,iBlock))
+                      Loc_V*JacPrec_VVCB(:,iVar,i,j,k,iBlock))
+                rDotRPe = rDotRPe + Loc_V(iVar) * Sol_VG(iVar,i,j,k)
              end do
           end do; end do; end do
 
