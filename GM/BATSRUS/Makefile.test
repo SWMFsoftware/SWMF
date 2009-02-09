@@ -213,7 +213,7 @@ test_levelset_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_levelset_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-8 \
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-7 \
 		Param/CRASH/TestOutput/log_levelset.log \
 		${TESTDIR}/RESULTS/GM/log_n000000.log > test_levelset.diff
 	ls -l test_levelset.diff
