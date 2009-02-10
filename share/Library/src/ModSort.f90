@@ -2,9 +2,15 @@ module ModSort
 
   implicit none
 
+  private ! except
+
+  public :: sort_quick ! the quick sort algoritm (Numerical Recipes)
+  public :: sort_sum   ! add up numbers but first sort them by magnitude
+  public :: sort_test  ! unit test
+
 contains
 
-  subroutine sort_quick(n,arr,indx)
+  subroutine sort_quick(n, arr, indx)
 
     ! Quick sort algorithm: sorts indx array according to 'arr'
     ! so that arr(indx(i)) <= arr(indx(i+1)) for i=1..n
@@ -12,12 +18,12 @@ contains
     ! Based on the F77 code indexx from Numerical Recipes
 
     integer, intent(in)  :: n
-    integer, intent(out) :: indx(n)
     real, intent(in)     :: arr(n)
+    integer, intent(out) :: indx(n)
 
-    integer, parameter   :: M=7, NSTACK=1000
+    integer, parameter   :: M=7, NSTACK=1000 ! should be > 2*log_2(n)
 
-    integer :: i,indxt,ir,itemp,j,jstack,k,l,istack(NSTACK)
+    integer :: i,indxt,ir,itemp,j,jstack,k,l, iStack(NSTACK)
     real    :: a
 
     !-------------------------------------------------------------------
@@ -80,8 +86,6 @@ contains
 5      indx(l)=indx(j)
        indx(j)=indxt
        jstack=jstack+2
-       if(jstack > NSTACK) &
-            call CON_stop('ERROR in ModSort::sort_quick: NSTACK too small')
        if(ir-i+1.ge.j-l)then
           istack(jstack)=ir
           istack(jstack-1)=i
@@ -96,14 +100,39 @@ contains
 
   end subroutine sort_quick
   
+  !============================================================================
+
+  real function sort_sum(a_I)
+
+    ! add up a_I but sort it first based on the magnitude of elements
+
+    real, intent(in):: a_I(:)
+
+    real :: SortSum
+    integer :: i, n
+    integer, allocatable:: i_I(:)
+    !-----------------------------------------------------------------------
+    n = size(a_I)
+    allocate(i_I(n))
+    call sort_quick(n, abs(a_I), i_I)
+    SortSum = 0.0
+    do i = n, 1, -1
+       SortSum = SortSum + a_I(i_I(i))
+    end do
+    sort_sum = SortSum
+    deallocate(i_I)
+
+  end function sort_sum
+
   !==========================================================================
+
   subroutine sort_test
 
     integer, parameter :: n=5
-    real    :: a_I(n), b_I(n)
+    real    :: a_I(n), b_I(n), SortSum
     integer :: i_I(n), i
     logical :: IsError
-
+    !------------------------------------------------------------------------
     a_I = (/0.0, 2.0, 1.0, 4.0, 0.0/)
 
     write(*,'(a)')'Testing sort_quick'
@@ -125,6 +154,13 @@ contains
        write(*,'(a,5i5)'  )'sorted index   =',i_I
        write(*,'(a,5f5.0)')'sorted array   =',b_I
     end if
+
+    write(*,'(a)')'Testing sort_sum'
+    a_I = (/1.e-6, 1.e-7, 1.e10, -3.e9, -7.e9/)
+
+    SortSum = sort_sum(a_I)
+    if(abs(SortSum - 1.1e-6) > 1.1e-12) &
+         write(*,*)'Error: SortSum should be 1.1e-6, but it is ',SortSum
 
   end subroutine sort_test
 
