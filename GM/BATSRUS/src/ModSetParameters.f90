@@ -64,7 +64,7 @@ subroutine MH_set_parameters(TypeAction)
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
-
+  
   ! Arguments
 
   ! TypeAction determines if we read or check parameters
@@ -696,7 +696,7 @@ subroutine MH_set_parameters(TypeAction)
            end if
 
            ! Plot file format
-           if(index(plot_string,'idl')>0)then
+           if(index(plot_string,'idl') >0 )then
               plot_form(ifile)='idl'
               if ((plot_area /= 'ion')&
                    .and. plot_area /= 'sph' &
@@ -704,8 +704,15 @@ subroutine MH_set_parameters(TypeAction)
                    .and. plot_area /= 'lin' &        !^CFG IF RAYTRACE
                    .and. plot_area /= 'eqr' &        !^CFG IF RAYTRACE
                    ) call read_var('DxSavePlot',plot_dx(1,ifile))
-              if(is_axial_geometry())plot_dx(1,ifile)=-1.0  
+              if(is_axial_geometry())plot_dx(1,ifile)=-1.0 
 
+              ! Extract the type of idl plot file: default is real4
+              TypeIdlFile_I(iFile) = 'real4' 
+              if(index(plot_string,'idl_real8') > 0) &
+                   TypeIdlFile_I(iFile) = 'real8'
+              if(index(plot_string,'idl_ascii') > 0) &
+                   TypeIdlFile_I(iFile) = 'ascii'
+              
            elseif(index(plot_string,'tec')>0)then 
               plot_form(ifile)='tec'
               plot_dx(1,ifile)=0.

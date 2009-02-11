@@ -91,6 +91,7 @@ Module ModIO
   character (LEN=10) :: plot_type(maxfile), plot_type1
   character (LEN=3)  :: plot_form(maxfile)
   character (LEN=3) :: log_form
+  character (LEN=10) :: TypeIdlFile_I(maxfile)
 
   ! x1, x2, y1, y2, z1, z2 limits for plotting
   real, dimension(6,MaxFile) :: plot_range 

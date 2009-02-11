@@ -3,7 +3,9 @@
 program PostIDL
 
   ! Read a .h file from STDIN, then read all the files based on the .h file
-  ! and put structured x and w together and save into a VAC file
+  ! and put structured Coord_DC and State_VC together and save into a VAC file
+
+  use ModPlotFile, ONLY: save_plot_file
 
   implicit none
 
@@ -13,17 +15,18 @@ program PostIDL
   integer, parameter :: Real8_=selected_real_kind(12,100)
   integer, parameter :: nByteReal = 4 + (1.00000000041 - 1.0)*10000000000.0
 
-
   ! Global variables
 
   integer, parameter :: unit_tmp=99
-  logical, parameter :: write_binary=.true.
+  character(len=20) :: TypeFile='real4',TypeFileRead
+  !TypeFile = 'ascii', 'real8', 'real4'
   real, parameter :: halfeps=0.6
 
   integer :: nxyz(3), icell, countcell, ncell, nw, neqpar, numprocs, it
   real :: t
-  real, dimension(:,:,:,:), allocatable :: xx, w
+  real, allocatable :: Coord_DC(:,:,:,:), State_VC(:,:,:,:)
   real, dimension(:), allocatable :: w1, eqpar, dxdoubled
+  real, allocatable :: Param_I(:)
 
   real(Real4_)              :: DxCell4, Xyz4_D(3)
   real(Real4_), allocatable :: State4_V(:)
@@ -144,6 +147,13 @@ program PostIDL
      TypeGeometry = 'cartesian'
      coord = (/'x    ','r    ','phi  '/)
   end if
+
+  ! Read TypeFile for idl plot, if possible
+  read(*,'(a)',err=4,end=4) TypeFileRead
+  TypeFile = TypeFileRead
+4 continue
+  write(*,*)'TypeFile=', TypeFile
+
   ! Unstructured grid has dx=-1.
   structured = dxyz(1) > -0.9
 
@@ -217,7 +227,7 @@ program PostIDL
      end if
   endif
 
-  ! For unstructured grid make the xx and w arrays linear
+  ! For unstructured grid make the Coord_DC and State_VC arrays linear
   if(.not.structured)then
      nxyz(1)=ncell
      nxyz(2:3)=1
@@ -231,36 +241,36 @@ program PostIDL
   ! Cell aspect ratios
   dyperdx=dxyzmin(2)/dxyzmin(1); dzperdx=dxyzmin(3)/dxyzmin(1)
 
-  ! Allocate w and xx, the arrays of variables and coordinates
-  allocate(w1(nw),w(nx,ny,nz,nw),xx(nx,ny,nz,ndim),STAT=iError)
+  ! Allocate State_VC and Coord_DC, the arrays of variables and coordinates
+  allocate(w1(nw),State_VC(nw,nx,ny,nz),Coord_DC(ndim,nx,ny,nz),STAT=iError)
   if(iError /= 0) stop 'PostIDL.exe ERROR: could not allocate arrays'
 
   if(read_binary.and.nByteRealRead==4) allocate(State4_V(nw))
   if(read_binary.and.nByteRealRead==8) allocate(State8_V(nw))
 
 
-  !Initialize w
-  w=0.0
+  !Initialize State_VC 
+  State_VC=0.0
 
-  !Calculate xx for structured grid
-  if(structured)then
-     do k=1,nz
-        xcut(3)=zmin+(k-0.5)*dz
-        do j=1,ny
-           xcut(2)=ymin+(j-0.5)*dy
-           do i=1,nx
-              xcut(1)=xmin+(i-0.5)*dx
-              do idim=1,ndim
-                 xx(i,j,k,idim)=xcut(icutdim(idim))
-              end do
-           end do
-        end do
-     end do
+  !Calculate Coord_DC for structured grid
+  if(structured)then 
+      do k=1,nz
+         xcut(3)=zmin+(k-0.5)*dz
+         do j=1,ny
+            xcut(2)=ymin+(j-0.5)*dy
+            do i=1,nx
+               xcut(1)=xmin+(i-0.5)*dx
+                 do idim=1,ndim
+                     Coord_DC(idim,i,j,k)=xcut(icutdim(idim))
+                 end do
+            end do 
+         end do
+      end do
   endif
 
   call set_strings
 
-  ! Collect info from all files and put it into w and xx
+  ! Collect info from all files and put it into State_VC and Coord_DC
   total=0.0
   icell=0
   countcell=0
@@ -338,7 +348,7 @@ program PostIDL
            else
               frac=1.0
            end if
-           w(i,j,k,:)=w(i,j,k,:)+frac*w1
+           State_VC(:,i,j,k) = State_VC(:,i,j,k) + frac*w1
            total=total+frac
         else
            ! Cell is coarser than required resolution
@@ -351,8 +361,8 @@ program PostIDL
 
            ! First order prolongation
            do iw=1,nw
-              w(imin:imax,jmin:jmax,kmin:kmax,iw)= &
-                   w(imin:imax,jmin:jmax,kmin:kmax,iw)+w1(iw)
+              State_VC(iw,imin:imax,jmin:jmax,kmin:kmax)= &
+                   State_VC(iw,imin:imax,jmin:jmax,kmin:kmax)+w1(iw)
            end do
 
            if(imax<imin.or.jmax<jmin.or.kmax<kmin)&
@@ -368,15 +378,15 @@ program PostIDL
   end do ! me
 
   if(countcell/=ncell)&
-       write(*,*)'!!! Discrepancy: countcell=',countcell,' ncell=',ncell,' !!!'
+     write(*,*)'!!! Discrepancy: countcell=',countcell,' ncell=',ncell,' !!!'
 
   if(structured)then
      volume=product(real(nxyz))
      if(ndim==1 .and. abs(total/volume-4.0)<0.0001)then
-        w=0.25*w
+        State_VC = 0.25*State_VC
         write(*,*)'Averaged 1D structured file everywhere'
      elseif(abs(total/volume-2.0)<0.0001)then
-        w=0.5*w
+        State_VC = 0.5*State_VC
         write(*,*)'Averaged structured file everywhere'
      elseif(abs(total/volume-1.0)>0.0001)then
         write(*,*)'!!! Discrepancy in structured file:',&
@@ -384,7 +394,7 @@ program PostIDL
      end if
   else
      if(UseLookup)then
-        volume=(xmax1-xmin1)*(xmax2-xmin2)
+         volume=(xmax1-xmin1)*(xmax2-xmin2)
         ! For axysimmetric cut planes with phi being the negligible coordinate
         ! we plot both phi=cut and phi=cut+pi, so the volume is doubled
         if(UseDoubleCut) volume = 2*volume
@@ -399,21 +409,39 @@ program PostIDL
         if(ndim/=2.and.icell /= ncell) &
              write(*,*)'!!! Error: ncell=',ncell,' /= icell=',icell,' !!!'
      end if
+
      nx=icell
      nxyz(1)=icell
   end if
 
+ 
   filename=filenamehead(1:l-2)//'.out'
   write(*,*)'writing file =',trim(filename)
-  if(write_binary)then
-     open(unit_tmp,file=filename,status='unknown',form='unformatted')
-     call save_vacfile_bin
-  else
-     open(unit_tmp,file=filename,status='unknown')
-     call save_vacfile_ascii
-  end if
+   
+  ! Param_I is the combination of eqpar and specialpar
+  allocate(Param_I(neqpar+nspecialpar))
+  do i=1,neqpar
+     Param_I(i)=eqpar(i)
+  end do
+  do i = 1, nSpecialPar
+     Param_I(i+nEqPar) = SpecialPar(i)
+  end do
 
-  deallocate(w1, w, xx, eqpar)
+  ! the sizes of Coord_DC and State_VC may be modified by cell averaging 
+  ! in unstructured grids. Only the first dimension (1:nx) needs to be set
+  call save_plot_file(filename,&
+        TypeFileIn = TypeFile, &
+        StringHeaderIn = fileheadout,&
+        nStepIn = it, TimeIn = t, &
+        ParamIn_I = Param_I, &
+        NameVarIn = varnames, &
+        IsCartesianIn = structured,&
+        nDimIn = ndim,&
+        CoordIn_DIII = Coord_DC(:,1:nx,:,:), & 
+        VarIn_VIII = State_VC(:,1:nx,:,:))
+ 
+  deallocate(Coord_DC,State_VC,Param_I)
+  deallocate(w1, eqpar)
   if(read_binary.and.nByteRealRead==4) deallocate(State4_V)
   if(read_binary.and.nByteRealRead==8) deallocate(State8_V)
   if(UseLookup) deallocate(lookup, dxdoubled)
@@ -439,7 +467,6 @@ contains
     endif
 
     jcell=lookup(ix1,ix2)
-
     if(jcell>0)then
        ! A cell has already been found for this projected location
 
@@ -477,8 +504,8 @@ contains
        case default
           write(*,*)''!!! Error: Impossible dx ratio !!!'
           write(*,*)'ix1,ix2,icell,dxcell,xyz=',ix1,ix2,icell,dxcell,XyzGen_D
-          write(*,*)'jcell,dxdoubled,xx=',jcell,dxdoubled(jcell),&
-               xx(jcell,1,1,:)
+          write(*,*)'jcell,dxdoubled,Coord_DC=',jcell,dxdoubled(jcell),&
+               Coord_DC(:,jcell,1,1)
           stop
        end select
 
@@ -526,7 +553,8 @@ contains
              if(nint(dxdoubled(jcell)/dxcell)/=1)then
                 write(*,*) '!!! Error: incorrect finer cell size !!!'
                 write(*,*)'ix1,ix2,icell,xyz=',ix1,ix2,icell,XyzGen_D
-                write(*,*)'i1,i2,jcell,xx(j)=',i1,i2,jcell,xx(jcell,1,1,:)
+                write(*,*)'i1,i2,jcell,Coord_DC(j)=',i1,i2,jcell, &
+                     Coord_DC(:,jcell,1,1)
                 write(*,*)'dxdoubled, dxcell=',dxdoubled(jcell),dxcell
                 stop
              end if
@@ -565,18 +593,20 @@ contains
     integer, intent(in) :: from_cell,to_cell
     !---------------------------------------------------------------
     if(from_cell<0)then
-       w(to_cell,1,1,:)=w1
+       State_VC(:,to_cell,1,1) = w1
        do idim=1,ndim
-          xx(to_cell,1,1,idim)=Xyz_D(icutdim(idim))
+          Coord_DC(idim,to_cell,1,1) = Xyz_D(icutdim(idim))
        end do
     else
-       w(to_cell,1,1,:)=new_weight*w1+from_weight*w(from_cell,1,1,:)
+       State_VC(:,to_cell,1,1) = &
+            new_weight*w1 + from_weight*State_VC(:,from_cell,1,1)
+
        do idim=1,ndim
-          xx(to_cell,1,1,idim)=new_weight*Xyz_D(icutdim(idim)) + &
-               from_weight*xx(from_cell,1,1,idim)
+          Coord_DC(idim,to_cell,1,1)=new_weight*Xyz_D(icutdim(idim)) + &
+               from_weight*Coord_DC(idim,from_cell,1,1)
        enddo
     end if
-    if(to_cell/=from_cell)total=total+dx1cell*dx2cell
+    if(to_cell/=from_cell)total = total + dx1cell*dx2cell
 
   end subroutine weighted_average
 
@@ -613,73 +643,8 @@ contains
 
   end subroutine set_strings
 
-  !==========================================================================
-
-  subroutine save_vacfile_ascii
-
-    write(unit_tmp,"(a)")trim(fileheadout)
-    if(structured)then
-       write(unit_tmp,"(i7,1pe13.5,3i3)")it,t,ndim,neqpar+nspecialpar,nw
-       write(unit_tmp,"(3i4)") (nxyz(icutdim(idim)),idim=1,ndim)
-    else
-       write(unit_tmp,"(i7,1pe13.5,3i3)")it,t,-ndim,neqpar+nspecialpar,nw
-       write(unit_tmp,"(i8,i2,i2)") nxyz(1:ndim)
-    endif
-    write(unit_tmp,"(100(1pe13.5))")eqpar,specialpar(1:nspecialpar)
-    write(unit_tmp,"(a)")trim(varnames)
-
-    do k= 1,nz
-       do j= 1,ny
-          do i= 1,nx
-             write(unit_tmp,"(100(1pe18.10))")xx(i,j,k,:),w(i,j,k,:)
-          enddo
-       enddo
-    enddo
-
-  end subroutine save_vacfile_ascii
-
-  !==========================================================================
-
-  subroutine save_vacfile_bin
-
-    integer :: iw, i, j, k, idim, n
-
-    real, allocatable :: Buffer_I(:)
-    !----------------------------------------------------------------------
-    write(unit_tmp)fileheadout
-
-    if(structured)then
-       write(unit_tmp)it,t,ndim,neqpar+nspecialpar,nw
-       write(unit_tmp)(nxyz(icutdim(idim)),idim=1,ndim)
-    else
-       write(unit_tmp)it,t,-ndim,neqpar+nspecialpar,nw
-       write(unit_tmp)nxyz(1:ndim)
-    endif
-    write(unit_tmp)eqpar,specialpar(1:nspecialpar)
-    write(unit_tmp)varnames
-
-    ! Use a 1D buffer, because some versions of the NAG compiler are
-    ! not able to write out a 4D array into an unformatted file correctly :-(
-    allocate(Buffer_I(nx*ny*nz*ndim))
-    n = 0
-    do idim=1,ndim; do k=1,nz; do j=1,ny; do i=1,nx; n = n + 1;
-       Buffer_I(n) = xx(i,j,k,idim)
-    end do; end do; end do; end do
-    write(unit_tmp) Buffer_I
-    deallocate(Buffer_I)
-    allocate(Buffer_I(nx*ny*nz))
-    do iw=1,nw
-       n = 0
-       do k=1,nz; do j=1,ny; do i=1,nx; n = n + 1;
-          Buffer_I(n) = w(i,j,k,iw)
-       end do; end do; end do
-       write(unit_tmp) Buffer_I
-    end do
-    deallocate(Buffer_I)
-
-  end subroutine save_vacfile_bin
-
   !===========================================================================
+ 
   subroutine set_gen_coord
 
     ! Calculate the generalized coordinates mostly for lookup
@@ -783,3 +748,18 @@ contains
   end subroutine set_gen_coord
 
 end program PostIDL
+
+!=============================================================================
+
+subroutine CON_stop(String)
+
+  ! This routine is needed for ModPlotFile
+
+  implicit none
+
+  character(len=*), intent(in):: String
+  write(*,*) 'ERROR in PostIDL: '//String
+  stop
+
+end subroutine CON_stop
+

@@ -18,6 +18,7 @@ subroutine write_plot_common(ifile)
   use ModMpi
   use ModUtilities, ONLY: lower_case
 
+
   implicit none
 
   ! Arguments
@@ -366,6 +367,7 @@ subroutine write_plot_common(ifile)
            write(unit_tmp,'(l8,a)')save_binary,' save_binary'
            if(save_binary)write(unit_tmp,'(i8,a)')nByteReal,' nByteReal'
            write(unit_tmp,'(a)')TypeGeometry
+           write(unit_tmp,'(a)')TypeIdlFile_I(ifile)
         end select
         close(unit_tmp)
      end do

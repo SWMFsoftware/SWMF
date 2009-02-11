@@ -94,6 +94,7 @@ NOMPI:
 	cd util/NOMPI/src; make LIB
 
 PIDL:
+	cd ${SHAREDIR}; make LIB
 	cd srcPostProc; make PIDL
 	@echo ' '
 	@echo Program PostIDL has been brought up to date.

@@ -2354,6 +2354,11 @@ example), the start and end times should be set for all of them.
 								required="T">
 				<option value="tec" name="TECPLOT"/>
 				<option value="idl" name="IDL" default="T"/>
+				<option value="idl_real4" 
+					name="IDL single prec"/>
+				<option value="idl_real8" 
+					name="IDL double prec"/>
+				<option value="idl_ascii" name="IDL ascii"/>
 			</part>
 			<part name="plotarea" type="string" input="select"
 								required="T">
@@ -2479,7 +2484,7 @@ example), the start and end times should be set for all of them.
 		</if>
 		<parameter name="DxSavePlot" type="real" min="-1.0" 
 							default="-1.0"
-	if="($plotform=~/\bidl\b/ and $plotarea!~/\b(sph|los|lin|eqr)\b/)" />
+	if="($plotform=~/\bidl/ and $plotarea!~/\b(sph|los|lin|eqr)\b/)" />
 		<if expr="$plotvar =~ /\bvar\b/i">
 			<parameter name="NameVars" type="string" length="100"/>
 			<parameter name="NamePars" type="string" length="100"/>
@@ -2496,7 +2501,7 @@ y=0 VAR idl		StringPlot ! y=0 plane plot with listed variables
 0.25			DxSavePlot ! resolution (for IDL plots)
 jx jy jz		NameVars
 g rbody			NamePars
-cut ray idl		StringPlot ! 3D cut IDL (ONLY!) plot with raytrace info
+cut ray idl_real8	StringPlot ! 3D cut IDL (ONLY!) plot with raytrace info
 1			DnSavePlot
 -1.			DtSavePlot
 -10.			xMinCut    
@@ -2506,11 +2511,11 @@ cut ray idl		StringPlot ! 3D cut IDL (ONLY!) plot with raytrace info
 -10.			zMinCut    
 10.			zMaxCut    
 -1.			DxSavePlot ! unstructured grid (for IDL plots)
-sph flx idl		StringPlot ! spherical plot
+sph flx idl_ascii	StringPlot ! spherical plot
 -1			DnSavePlot
 100.			DtSavePlot
 4.			Radius     ! of spherical surface
-los sol idl             StringPlot ! line of sight plot
+los sol idl_real4       StringPlot ! line of sight plot
 -1			DnSavePlot
 100.			DtSavePlot
 -215.			ObsPosX
@@ -2596,7 +2601,7 @@ StringPlot must contain the following 3 parts in the following order
 \begin{verbatim}
 plotform plotarea plotvar
 
-plotform = 'tec', 'idl'
+plotform = 'tec', 'idl', 'idl_real4', 'idl_real8', 'idl_ascii'
 plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin', 'blk', '1d' 'rfr', 'eqr'
 plotvar  = 'mhd', 'hd', 'ful', 'raw', 'ray', 'flx', 'sol', 'pos', 'var', 'bbk' 'rwi' - normalized
 plotvar  = 'MHD', 'hd', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'pos', 'VAR', 'BBK' 'RWI' - dimensional
@@ -2607,6 +2612,12 @@ NOTES: The plotvar option 'sol' is only valid for plotarea 'los';
 \\
 
 \noindent
+The plotform string selects the output to be usable for Tecplot or IDL 
+visualization software. The IDL output can be written as single
+precision binary (idl_real4), double precision binary (idl_real8) 
+or ASCII file (idl_ascii). The default is 'idl_real4' that can also 
+be written simply as 'idl'.
+
 The plotarea string defines the 1, 2, or 3D volume of the plotting area:
 \begin{verbatim}
 1d    - full 1D, one point per block for all blocks
