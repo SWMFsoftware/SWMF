@@ -4291,7 +4291,8 @@ backwards compatible with previous versions of the code.
 		<parameter name="NameFile" type="string" length="100"/>
 		<parameter name="TypeFile" type="string" input="select">
 			<option value="ascii" default="T"/>
-			<option value="binary"/>
+			<option value="real4"/>
+			<option value="real8"/>
 		</parameter>
 	</if>
 	<if expr="$NameCommand =~ /make|save/i">
@@ -4320,9 +4321,14 @@ logrho logp pXe pBe pPl		NameVar
 0.001				Index2Min
 100.0				Index2Max
 
-The NameCommand tells if we should "load", "make" or make and "save" the table.
-The file name and file type ("ascii" or "binary") is read for commands "load" 
-and "save". The rest of the paramters are read for commands "make" or "save".
+Tables are identified by the NameTable string that should be unique for 
+the table and must agree with the name used in the source code.
+The NameCommand tells if we should "load" the table from a file, 
+"make" the table using some algorithm defined in the ModUser module, 
+or make the table and then save it into a file.
+The file name and file type ("ascii", "real4" or "real8") are read for 
+commands "load" and "save". 
+The rest of the parameters are read for commands "make" or "save".
 The NameVar string contains the space separated list of the names of 
 the two indexes and the one or more returned value(s). If the index name starts
 with a "log", a logarithmic index is assumed (ie. the table will be uniform
