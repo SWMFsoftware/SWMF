@@ -1,7 +1,8 @@
 module ModPlotFile
 
   ! Save or read VAC/IDL type plotfiles from 1 up to 3 dimensions.
-  ! Both ASCII and binary file formats can be used.
+  ! ASCII, single (real4), or double (real8) precision binary file formats 
+  ! can be used.
   ! The plot file contains 5 header lines: 
   !
   !    Header
@@ -64,7 +65,7 @@ contains
        VarIn_VI, VarIn_VII, VarIn_VIII)
 
     character(len=*),           intent(in):: NameFile       ! Name of plot file
-    character(len=*), optional, intent(in):: TypeFileIn     ! =ascii or binary or real4
+    character(len=*), optional, intent(in):: TypeFileIn     ! ascii/real8/real4
     character(len=*), optional, intent(in):: StringHeaderIn ! header line
     integer,          optional, intent(in):: nStepIn        ! number of steps
     real,             optional, intent(in):: TimeIn         ! simulation time  
@@ -239,10 +240,10 @@ contains
           write(UnitTmp_, "(100es18.10)") Coord_ID(n,:), Var_IV(n, :) 
        end do; end do; end do
 
-    case('unformatted', 'binary')
+    case('real8')
        open(UnitTmp_, file=NameFile, form='unformatted', iostat=iError)
        if(iError /= 0)call CON_stop(NameSub // &
-            ' could not open binary file=' // trim(NameFile))
+            ' could not open real8 file=' // trim(NameFile))
        write(UnitTmp_) StringHeader
        write(UnitTmp_) nStep, Time, nDimOut, nParam, nVar
        write(UnitTmp_) n_D(1:nDim)
@@ -257,7 +258,7 @@ contains
     case('real4')
        open(UnitTmp_, file=NameFile, form='unformatted', iostat=iError)
        if(iError /= 0)call CON_stop(NameSub // &
-            ' could not open binary file=' // trim(NameFile))
+            ' could not open real4 file=' // trim(NameFile))
        write(UnitTmp_) StringHeader
        write(UnitTmp_) nStep, real(Time, Real4_), nDimOut, nParam, nVar
        write(UnitTmp_) n_D(1:nDim)
@@ -350,7 +351,7 @@ contains
        read(UnitTmp_, *) Param_I
        read(UnitTmp_, '(a)') NameVar
 
-    case('binary', 'unformatted')
+    case('real8')
        open(UnitTmp_, file=NameFile, status='old', form='unformatted', &
             iostat=iError)
        if(iError /= 0) call CON_stop(NameSub // &
@@ -395,7 +396,7 @@ contains
           read(UnitTmp_, *) Coord_ID(n, :), Var_IV(n, :)
        end do; end do; end do
 
-    case('binary', 'unformatted')
+    case('real8')
        read(UnitTmp_) Coord_ID
        do iVar = 1, nVar
           read(UnitTmp_) Var_IV(:, iVar)
@@ -481,13 +482,13 @@ contains
     real    :: CoordIn_DII(nDimIn, n1In, n2In), VarIn_VII(nVarIn, n1In, n2In)
     real    :: CoordIn_DIII(nDimIn, n1In, 1, n2In), VarIn_VIII(nVarIn, n1In, 1, n2In)
 
-    ! Do tests with ascii/binary/real4 files, 
+    ! Do tests with ascii/real8/real4 files, 
     ! Cartesian/non-Cartesian coordinates
     ! 2D/3D input arrays
     integer, parameter:: nTest = 12
-    character(len=6)  :: TypeFileIn_I(nTest) = &
-         (/ 'ascii ', 'binary', 'real4 ', 'ascii ', 'binary', 'real4 ', &
-            'ascii ', 'binary', 'real4 ', 'ascii ', 'binary', 'real4 ' /)
+    character(len=5)  :: TypeFileIn_I(nTest) = &
+         (/ 'ascii', 'real8', 'real4', 'ascii', 'real8', 'real4', &
+            'ascii', 'real8', 'real4', 'ascii', 'real8', 'real4' /)
     logical           :: IsCartesianIn_I(nTest) = &
          (/ .true.,   .true., .true.,  .false.,   .false., .false.,&
             .true.,   .true., .true.,  .false.,   .false., .false. /)
@@ -537,7 +538,7 @@ contains
        end if
     end do; end do
 
-    ! Test ascii, binary and real4 files
+    ! Test ascii, real8 and real4 files
     do iTest = 1, nTest 
        write(NameFile, '(a,i2.2,a)') 'test_plot_file',iTest,'.out'
        write(*,*) NameSub, ' writing file=', trim(NameFile)
