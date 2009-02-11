@@ -31,7 +31,7 @@ module ModLookupTable
      character(len=100):: NameTable        ! unique name for identification
      character(len=4)  :: NameCommand      ! command: load, make, save
      character(len=100):: NameFile         ! file name containing the table
-     character(len=10) :: TypeFile         ! file type (ascii, binary)
+     character(len=10) :: TypeFile         ! file type (ascii, real4, real8)
      character(len=100):: StringDescription! description of table
      character(len=100):: NameVar          ! name of indexes and values
      integer:: nValue                      ! number of values in each element
