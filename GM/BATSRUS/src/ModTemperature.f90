@@ -99,10 +99,13 @@ module ModTemperature
 
   !To switch the boundary condition at the outer boundary:
   logical :: IsFirstCgIteration
-  
-  real :: TradMinSi = 500.0 !K Otherwise the dominant contribution 
-  !to the norm TRad^2/Cv(TRad)\sim (1/T)comes from infinitesimal temperatures
+
+  ! To make sure that the dominant contribution to the norm
+  ! TRad^2/Cv(TRad)\sim (1/T) is not due to infinitesimal temperatures
+  real :: TradMin, EradMin
+
   real :: rDotRPe, pDotADotPPe
+
 contains
 
   !============================================================================
@@ -110,9 +113,12 @@ contains
   subroutine read_temperature_param(NameCommand)
 
     use ModMain, ONLY: UseGrayDiffusion, UseHeatConduction
+    use ModPhysics,   ONLY: cRadiationNo, Si2No_V, UnitTemperature_
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in) :: NameCommand
+
+    real :: TradMinSi
 
     character(len=*), parameter :: NameSub = 'read_temperature_param'
     !--------------------------------------------------------------------------
@@ -153,6 +159,8 @@ contains
              end select
           end if
           call read_var('TradMinSi', TradMinSi)
+          TradMin = TradMinSi*Si2No_V(UnitTemperature_)
+          EradMin = cRadiationNo*TradMin**4
        end if
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
@@ -357,8 +365,7 @@ contains
              SpecificHeat_VCB(Te_,i,j,k,iBlock) = Cv
 
              if(UseGrayDiffusion)then
-                Trad = max(Temperature_VGB(Trad_,i,j,k,iBlock),&
-                     TradMinSi * Si2No_V(UnitTemperature_))
+                Trad = max(Temperature_VGB(Trad_,i,j,k,iBlock),TradMin)
                 SpecificHeat_VCB(Trad_,i,j,k,iBlock) = 4.0*cRadiationNo*Trad**3
                 RelaxationCoef_VCB(Trad_,i,j,k,iBlock) = Clight*PlanckOpacity &
                      *cRadiationNo*(Te+Trad)*(Te**2+Trad**2)
@@ -651,30 +658,35 @@ contains
                *(Temperature_VGB(Trad_,i,j,k,iBlock) &
                - TemperatureOld_VCB(Trad_,i,j,k,iBlock))
 
-          ! Fix energy if it goes negative
-          if(State_VGB(iErad,i,j,k,iBlock) < 0.0) then
+          if(UseTemperatureVariable)then
+             ! Fix energy if it goes negative
+             if(State_VGB(iErad,i,j,k,iBlock) < 0.0) then
 
-             if(DoReport .or. Temperature_VGB(Trad_,i,j,k,iBlock) < 0.0 &
-                  .or. .not.UseTemperatureVariable)then
+                if(DoReport .or. &
+                     Temperature_VGB(Trad_,i,j,k,iBlock) < 0.0)then
 
-                write(*,*)NameSub, ' WARNING: negative Erad=', &
-                     State_VGB(iErad,i,j,k,iBlock)
-                write(*,*)NameSub, ' i,j,k,iBlock,iProc=', i, j, k,iBlock,iProc
-                write(*,*)NameSub, ' x, y, z=', x_BLK(i,j,k,iBlock), &
-                     y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock)
-                write(*,*)NameSub, ' fix energy using Trad^n+1 =', &
-                     Temperature_VGB(Trad_,i,j,k,iBlock)
+                   write(*,*)NameSub, ' WARNING: negative Erad=', &
+                        State_VGB(iErad,i,j,k,iBlock)
+                   write(*,*)NameSub, ' i,j,k,iBlock,iProc=',i,j,k,iBlock,iProc
+                   write(*,*)NameSub, ' x, y, z=', x_BLK(i,j,k,iBlock), &
+                        y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock)
+                   write(*,*)NameSub, ' fix energy using Trad^n+1 =', &
+                        Temperature_VGB(Trad_,i,j,k,iBlock)
 
-                ! There is no way to fix this
-                if(Temperature_VGB(Trad_,i,j,k,iBlock) < 0) &
-                     call stop_mpi(NameSub//' negative Trad!!!')
+                   ! There is no way to fix this
+                   if(Temperature_VGB(Trad_,i,j,k,iBlock) < 0) &
+                        call stop_mpi(NameSub//' negative Trad!!!')
 
-                ! Report only once
-                DoReport = .false.
+                   ! Report only once
+                   DoReport = .false.
+                end if
+
+                State_VGB(iErad,i,j,k,iBlock) = &
+                     cRadiationNo*Temperature_VGB(Trad_,i,j,k,iBlock)**4
              end if
-
-             State_VGB(iErad,i,j,k,iBlock) = &
-                  cRadiationNo*Temperature_VGB(Trad_,i,j,k,iBlock)**4
+          else
+             State_VGB(iErad,i,j,k,iBlock) &
+                  = max(State_VGB(iErad,i,j,k,iBlock),EradMin)
           end if
        end if
 
