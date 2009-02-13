@@ -102,7 +102,7 @@ module ModTemperature
 
   ! To make sure that the dominant contribution to the norm
   ! TRad^2/Cv(TRad)\sim (1/T) is not due to infinitesimal temperatures
-  real :: TradMin, EradMin
+  real :: TradMinSi, TradMin, EradMin
 
   real :: rDotRPe, pDotADotPPe
 
@@ -112,13 +112,10 @@ contains
 
   subroutine read_temperature_param(NameCommand)
 
-    use ModMain, ONLY: UseGrayDiffusion, UseHeatConduction
-    use ModPhysics,   ONLY: cRadiationNo, Si2No_V, UnitTemperature_
+    use ModMain,      ONLY: UseGrayDiffusion, UseHeatConduction
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in) :: NameCommand
-
-    real :: TradMinSi
 
     character(len=*), parameter :: NameSub = 'read_temperature_param'
     !--------------------------------------------------------------------------
@@ -159,8 +156,6 @@ contains
              end select
           end if
           call read_var('TradMinSi', TradMinSi)
-          TradMin = TradMinSi*Si2No_V(UnitTemperature_)
-          EradMin = cRadiationNo*TradMin**4
        end if
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
@@ -176,10 +171,15 @@ contains
     use ModProcMH,     ONLY: iProc
     use ModSize,       ONLY: nI, nJ, nK, nBlk, nDim
     use ModVarIndexes, ONLY: NameVar_V, nVar
+    use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_
+
     integer :: iVar
 
     character(len=*), parameter :: NameSub = "init_temperature_diffusion"
     !--------------------------------------------------------------------------
+
+    TradMin = TradMinSi*Si2No_V(UnitTemperature_)
+    EradMin = cRadiationNo*TradMin**4
 
     ! First default the additional temperatures and energies to not in use
     UseTrad = .false.
