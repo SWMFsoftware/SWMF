@@ -37,7 +37,6 @@ module ModPlotFile
   ! size are optionaal parameters.
 
   use ModIoUnit,    ONLY: UnitTmp_
-  use ModUtilities, ONLY: lower_case
   use ModKind,  ONLY: Real4_
 
   implicit none
@@ -101,7 +100,6 @@ contains
 
     TypeFile = 'ascii'
     if(present(TypeFileIn)) TypeFile = TypeFileIn
-    call lower_case(TypeFile)
 
     StringHeader = 'No header info'
     if(present(StringHeaderIn)) StringHeader = StringHeaderIn
@@ -335,7 +333,6 @@ contains
 
     TypeFile = 'ascii'
     if(present(TypeFileIn)) TypeFile = TypeFileIn
-    call lower_case(TypeFile)
 
     n_D = 1
     select case(TypeFile)
