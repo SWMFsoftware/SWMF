@@ -4773,7 +4773,7 @@ using a preconditioned conjugate gradient method.
 
 If UseTemperatureVariable is true, the code solves for the electron
 and radiation temperatures, otherwise the radiation energy and the 
-Planck function a*Te^4 are the variables. 
+Planck function $a*Te^4$ are the variables. 
 
 The TypePreconditioner determines which preconditioner is used. Current
 options are "blockjacobi", "gs" (Gauss-Seidel), dilu (diagonal incomplete 
