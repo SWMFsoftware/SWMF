@@ -128,7 +128,7 @@ contains
           call read_var('TypePreconditioner', TypePreconditioner, &
                IsLowerCase=.true.)
           select case(TypePreconditioner)
-          case('blockjacobi','gs','dilu','mbilu')
+          case('blockjacobi','gs','dilu','mbilu','none')
           case default
              call stop_mpi(NameSub//': unknown TypePreconditioner='&
                   //TypePreconditioner)
@@ -558,6 +558,10 @@ contains
     Error = MaxErrorResidual
 
     select case(TypePreconditioner)
+    case('none')
+       call cg(heat_conduction, nTemperature, Source_VCB, Temperature_VGB, &
+            .true., Error, TypeStopCriterion, &
+            Iter, DoTestKrylovMe)
     case('blockjacobi')
        call get_jacobi_preconditioner(nTemperature)
 
@@ -1050,9 +1054,9 @@ contains
           if(DoTest)write(*,*)'CG rDotR0, rDotRMax=', rDotR0, rDotRMax
 
           if(rDotR0 == 0.0) EXIT
+       elseif(DoTest)then
+          write(*,*)'CG nIter, rDotR=', Iter, rDotR
        end if
-  
-       if(DoTest)write(*,*)'CG Iter, rDotR = ', Iter, rDotR
 
        if(rDotR <= rDotRMax) EXIT
        rDotRInv = 1/rDotR
@@ -1068,8 +1072,9 @@ contains
        end do
 
        call matvec(nVar, P_VGB, aDotP_VCB)
-       call MPI_ALLREDUCE(pDotADotPPe, pDotADotP, 1, MPI_REAL, MPI_SUM, iComm, iError)
-      ! write(*,*)pDotADotP , dot_product_mpi(gcn, P_VGB(:,:,:,:,:), aDotP_VCB)
+       call MPI_ALLREDUCE(pDotADotPPe, pDotADotP, 1, MPI_REAL, MPI_SUM, &
+            iComm, iError)
+
       ! pDotADotP = dot_product_mpi(gcn,P_VGB,aDotP_VCB)
        do iBlock = 1, nBlock
           if(unusedBlk(iBlock))CYCLE
@@ -1555,6 +1560,7 @@ contains
     !--------------------------------------------------------------------------
     Sol_VG = 0.0 ! To set zero values in the ghostcell
     rDotRPe = 0.0
+
     do iBlock = 1, nBlock
        if(unusedBlk(iBlock))CYCLE
 
@@ -1565,6 +1571,7 @@ contains
 
           !Stage "UP", fluxes from below are accounted for
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
+
              Loc_V = VectorIn_VCB(:,i,j,k,iBlock)
              Loc_V(iCond_I) = Loc_V(iCond_I) &
                   + Sol_VG(iCond_I,i-1,j,k)*Cond_VFX(:,i,j,k) &
@@ -1575,6 +1582,7 @@ contains
                       Loc_V*JacPrec_VVCB(:,iVar,i,j,k,iBlock))
                 rDotRPe = rDotRPe + Loc_V(iVar) * Sol_VG(iVar,i,j,k)
              end do
+                          
           end do; end do; end do
 
           !Stage "DOWN", fluxes from above are accounted for
@@ -1593,6 +1601,7 @@ contains
           VectorOut_VCB(:,:,:,:,iBlock) = Sol_VG(:,1:nI,1:nJ,1:nK)
        end if
     end do
+
   end subroutine dilu_preconditioner
 
   !============================================================================
@@ -1778,22 +1787,22 @@ contains
              case(1)
                 ! ignore radiative flux at the boundaries of the AMR blocks
                 DiffLeft  = Cond_VFX(iCond,i,j,k)
-                if(i==1)DiffLeft = 0.0
                 DiffRight = Cond_VFX(iCond,i+1,j,k) 
-                if(i==nI)DiffRight = 0.0
              case(2) 
                 DiffLeft  = Cond_VFY(iCond,i,j,k)
-                if(j==1) DiffLeft = 0.0
                 DiffRight = Cond_VFY(iCond,i,j+1,k) 
-                if(j==nJ) DiffRight = 0.0
              case(3)
                 DiffLeft  = Cond_VFZ(iCond,i,j,k)
-                if(k==1) DiffLeft = 0.0
                 DiffRight = Cond_VFZ(iCond,i,j,k+1) 
-                if(k==nK) DiffRight = 0.0
              end select
              Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
                   Jacobian_VVCI(iVar,iVar,i,j,k,1) + DiffLeft  + DiffRight
+
+             if(iDim==1.and.i==1 .or. iDim==2.and.j==1 .or. iDim==3.and.k==1)&
+                  DiffLeft = 0.0
+             if(iDim==1.and.i==nI .or.iDim==2.and.j==nJ.or.iDim==3.and.k==nK) &
+                  DiffRight = 0.0
+
              Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) = -DiffLeft
              Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) = -DiffRight
           end do
