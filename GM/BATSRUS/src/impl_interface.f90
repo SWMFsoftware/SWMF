@@ -264,6 +264,7 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
   use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs
   use ModMessagePass, ONLY: message_pass_dir
+  use ModGeometry, ONLY: vInv_CB
 
   implicit none
 
@@ -296,8 +297,12 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
         call stop_mpi(NameSub//': no get_rhs implemented for' &
              //TypeSemiImplicit)
      end select
+    
+     do k = 1, nK; do j = 1, nJ; do i = 1, nI
+        Rhs_VCB(:,i,j,k,iImplBlock) = Rhs_VCB(:,i,j,k,iImplBlock) &
+             / vInv_CB(i,j,k,iImplBlock)
+     end do; end do; end do
 
-     Rhs_VCB(:,:,:,:,iImplBlock) = dt*Rhs_VCB(:,:,:,:,iImplBlock)
   end do
 
 end subroutine get_semi_impl_rhs
@@ -312,6 +317,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
   use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs
   use ModMessagePass, ONLY: message_pass_dir
+  use ModGeometry, ONLY: vInv_CB
 
   implicit none
 
@@ -323,6 +329,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
 
   integer :: iImplBlock, iBlock, i, j, k, iVar, n
   real, allocatable, save :: Rhs_VC(:,:,:,:)
+  real :: Volume
 
   character(len=*), parameter:: NameSub = 'get_semi_impl_matvec'
   !------------------------------------------------------------------------
@@ -356,10 +363,13 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
              //TypeSemiImplicit)
      end select
 
-     do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nw
-        n=n+1
-        y_I(n) = x_I(n) - ImplCoeff*dt*Rhs_VC(iVar,i,j,k) !!! /wnrm(iVar)
-     enddo; enddo; enddo; enddo
+     do k=1,nK; do j=1,nJ; do i=1,nI
+        Volume = 1.0/vInv_CB(i,j,k,iBlock)
+        do iVar = 1, nw
+           n = n + 1
+           y_I(n) = Volume*(x_I(n)/dt - ImplCoeff*Rhs_VC(iVar,i,j,k))
+        enddo
+     enddo; enddo; enddo
 
   end do
 
@@ -371,10 +381,13 @@ subroutine get_semi_impl_jacobian
        nStencil, MAT, ImplCoeff !!!, wnrm
   use ModGrayDiffusion, ONLY: get_gray_diff_jacobian
   use ModMain, ONLY: nI, nJ, nK, nDim, Dt
+  use ModGeometry, ONLY: vInv_CB
 
   implicit none
 
   integer :: iImplBlock, iBlock, i, j, k, iStencil, iVar, jVar
+  real    :: Coeff
+
   character(len=*), parameter:: NameSub = 'get_semi_impl_jacobian'
   !---------------------------------------------------------------------------
   do iImplBlock = 1, nImplBLK
@@ -389,19 +402,19 @@ subroutine get_semi_impl_jacobian
              //TypeSemiImplicit)
      end select
 
-     ! Form A = 1 - ImplCoeff*Dt*dR/dU matrix with normalization
+     ! Form A = Volume*(1/dt - ImplCoeff*dR/dU) (symmetrized for sake of CG)
      do iStencil = 1, nStencil; do k = 1, nK; do j = 1, nJ; do i = 1, nI
-        do jVar = 1, nw; do iVar = 1, nw
-           if(MAT(iVar, jVar, i, j, k, iStencil, iImplBlock) == 0.0) CYCLE 
-           MAT(iVar, jVar, i, j, k, iStencil, iImplBlock) = &
-                - MAT(iVar, jVar, i, j, k, iStencil, iImplBlock) &
-                * dt * ImplCoeff !!! * wnrm(jVar) / wnrm(iVar)
-        end do; end do
+        Coeff = - ImplCoeff / vInv_CB(i,j,k,iBlock)
+        MAT(:, :, i, j, k, iStencil, iImplBlock) = &
+             Coeff * MAT(:, :, i, j, k, iStencil, iImplBlock)
      end do; end do; end do; end do
-     do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nw
-        MAT(iVar, iVar, i, j, k, 1, iImplBlock) = &
-             MAT(iVar, iVar, i, j, k, 1, iImplBlock) + 1.0
-     end do; end do; end do; end do
+     do k = 1, nK; do j = 1, nJ; do i = 1, nI
+        Coeff = 1.0/(dt*vInv_CB(i,j,k,iBlock)) 
+        do iVar = 1, nw
+           MAT(iVar, iVar, i, j, k, 1, iImplBlock) = &             
+                Coeff + MAT(iVar, iVar, i, j, k, 1, iImplBlock) 
+        end do
+     end do; end do; end do
   end do
 
 end subroutine get_semi_impl_jacobian
