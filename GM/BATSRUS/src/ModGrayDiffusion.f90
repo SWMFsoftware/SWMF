@@ -875,6 +875,7 @@ contains
                (   StateImpl_VG(EradImpl_,i,j,k  )   &
                -   StateImpl_VG(EradImpl_,i,j,k-1)) )
        end do; end do; end do
+
     end if
 
     ! Source term due to absorption and emission
@@ -980,21 +981,18 @@ contains
     do iDim = 1, nDim
        Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
        do k=1,nK; do j=1,nJ; do i=1,nI
-          if(iDim==1.and.i==1 .or. iDim==2.and.j==1 .or. iDim==3.and.k==1)then
-             DiffLeft = 0.0
-          else
-             DiffLeft = vInv_CB(i,j,k,iBlock) &
-                  *DiffusionRad_FDB(i,j,k,iDim,iBlock)
-          end if
-          if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ .or. &
-               iDim==3.and.k==nK) then
-             DiffRight = 0.0
-          else
-             DiffRight = vInv_CB(i,j,k,iBlock) &
-                  *DiffusionRad_FDB(i+Di,j+Dj,k+Dk,iDim,iBlock)
-          end if
+          DiffLeft = vInv_CB(i,j,k,iBlock) &
+               *DiffusionRad_FDB(i,j,k,iDim,iBlock)
+          DiffRight = vInv_CB(i,j,k,iBlock) &
+               *DiffusionRad_FDB(i+Di,j+Dj,k+Dk,iDim,iBlock)
           Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
                Jacobian_VVCI(iVar,iVar,i,j,k,1) - (DiffLeft + DiffRight)
+
+          if(iDim==1.and.i==1 .or. iDim==2.and.j==1 .or. iDim==3.and.k==1)&
+               DiffLeft = 0.0
+          if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ .or. iDim==3.and.k==nK) &
+               DiffRight = 0.0
+
           Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim)   = DiffLeft
           Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) = DiffRight
        end do; end do; end do
@@ -1006,11 +1004,12 @@ contains
 
   subroutine update_impl_gray_diff(iBlock, StateImpl_VG)
 
-    use ModAdvance,  ONLY: State_VGB, p_, Eradiation_
+    use ModAdvance,  ONLY: State_VGB, Rho_, p_, Eradiation_
     use ModEnergy,   ONLY: calc_energy_cell
     use ModImplicit, ONLY: nw
     use ModMain,     ONLY: nI, nJ, nK, dt
-    use ModPhysics,  ONLY: inv_gm1, No2Si_V, Si2No_V, UnitEnergyDens_, UnitP_
+    use ModPhysics,  ONLY: inv_gm1, No2Si_V, Si2No_V, UnitEnergyDens_, UnitP_,&
+         UnitRho_, UnitTemperature_
     use ModUser,     ONLY: user_material_properties
 
     integer, intent(in) :: iBlock
@@ -1039,8 +1038,16 @@ contains
        EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
 
        if(State_VGB(Eradiation_,i,j,k,iBlock) < 0.0 .or. Einternal < 0.0)then
-          write(*,*)NameSub,': ERROR negative EradOrig, Erad, or Eint=', &
-               StateImpl_VG(EradImpl_,i,j,k), &
+          write(*,*)NameSub,': ERROR EradMin, EradOrig=', &
+               EradMin, StateImpl_VG(EradImpl_,i,j,k)
+
+          write(*,*)NameSub,': ERROR Rho, p, TOrigSi=', &
+               State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_), &
+               State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_), &
+               State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock) &
+               *No2Si_V(UnitTemperature_)
+
+          write(*,*)NameSub,': ERROR negative Erad, or Eint=', &
                State_VGB(Eradiation_,i,j,k,iBlock), Einternal
           write(*,*)NameSub,': ERROR at i,j,k,iBlock=', i, j, k, iBlock
           call stop_mpi(NameSub//' negative Erad')
