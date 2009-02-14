@@ -647,20 +647,23 @@ contains
   !============================================================================
 
   subroutine cg(matvec, Rhs_I, Sol_I, IsInit, n, Tol, TypeStop, &
-       nIter, iError, DoTest, iCommIn, JacobiPrec_I)
+       nIter, iError, DoTest, iCommIn, JacobiPrec_I, preconditioner)
 
-    !Conjugated gradients, works if and only if the matrix A
-    !is definite positive
+    ! Based on an implementation by I. Sokolov
+
+    ! Conjugated gradients, works if and only if the matrix A
+    ! is symmetric and positive definite
 
     implicit none
 
     ! subroutine for matrix vector multiplication 
     interface
-       subroutine matvec(a,b,n)
-         ! Calculate b = M.a where M is the definite positive matrix
+       subroutine matvec(Vec_I, MatVec_I, n)
+         ! Calculate MatVec_I = Mat_II.Vec_I where Mat_II is a symmetric
+         ! positive definite matrix
          integer, intent(in) :: n
-         real, intent(in) ::  a(n)
-         real, intent(out) :: b(n)
+         real,    intent(in) :: Vec_I(n)
+         real,    intent(out):: MatVec_I(n)
        end subroutine matvec
     end interface
 
@@ -669,6 +672,17 @@ contains
     real, intent(inout) :: Sol_I(n)  ! initial guess / solution vector
     logical, intent(in) :: IsInit    ! true  if Sol contains initial guess
     real,    intent(inout) :: Tol       ! required / achieved residual
+
+    optional :: preconditioner
+    interface
+       subroutine preconditioner(Vec_I, PrecVec_I, n)
+         ! Calculate PrecVec_I = Prec_II.Vec_I where Prec_II is the
+         ! preconditione matrix that should be symmetric and positive definite
+         integer, intent(in) :: n
+         real, intent(in)    :: Vec_I(n)
+         real, intent(out)   :: PrecVec_I(n)
+       end subroutine preconditioner
+    end interface
 
     character (len=3), intent(in) :: TypeStop
     !      Determine stopping criterion (||.|| denotes the 2-norm):
@@ -699,7 +713,8 @@ contains
     ! Allocate the vectors needed for CG
     allocate(Vec_I(n), aDotVec_I(n))
 
-    if(present(JacobiPrec_I))allocate(PrecRhs_I(n))
+    if(present(JacobiPrec_I) .or. present(preconditioner)) &
+         allocate(PrecRhs_I(n))
 
     MaxIter = nIter
    
@@ -716,6 +731,9 @@ contains
 
     if(present(JacobiPrec_I))then
        PrecRhs_I = JacobiPrec_I*Rhs_I
+       rDotR0 = dot_product_mpi(Rhs_I, PrecRhs_I, iComm)
+    elseif(present(preconditioner))then
+       call preconditioner(Rhs_I, PrecRhs_I, n)
        rDotR0 = dot_product_mpi(Rhs_I, PrecRhs_I, iComm)
     else
        rDotR0 = dot_product_mpi(Rhs_I, Rhs_I, iComm)
@@ -738,7 +756,7 @@ contains
 
        Alpha = 1.0/rDotR
 
-       if(present(JacobiPrec_I))then
+       if(present(JacobiPrec_I) .or. present(preconditioner))then
           Vec_I = Vec_I + Alpha * PrecRhs_I
        else
           Vec_I = Vec_I + Alpha * Rhs_I
@@ -753,6 +771,9 @@ contains
 
        if(present(JacobiPrec_I))then
           PrecRhs_I = JacobiPrec_I*Rhs_I
+          rDotR = dot_product_mpi(Rhs_I, PrecRhs_I, iComm)
+       elseif(present(preconditioner))then
+          call preconditioner(Rhs_I, PrecRhs_I, n)
           rDotR = dot_product_mpi(Rhs_I, PrecRhs_I, iComm)
        else
           rDotR = dot_product_mpi(Rhs_I, Rhs_I, iComm)
@@ -785,6 +806,73 @@ contains
     end if
 
   end subroutine cg
+
+  !============================================================================
+
+  real function accurate_sum(a_I, LimitIn, iComm)
+
+    ! Algorithm and implementation by G. Toth 2009
+
+    real,    intent(in)           :: a_I(:)   ! array to be added up
+    real,    intent(in), optional :: LimitIn  ! limit for splitting numbers
+    integer, intent(in), optional :: iComm    ! MPI communicator
+
+    ! This function returns the sum of the a_I array for 1 or more processors.
+    ! This is done more accurately than by simple sum(a_I) by splitting 
+    ! the values into two shorter parts in the binary representation. 
+    ! Eg. a=0.375353534 may be split into an upper part 0.375 (=3/8) 
+    ! and a lower part a - 3/8 = 0.000353534.
+    ! The lower and uppper parts are added up independenty before they are
+    ! added together, thus the round-off errors are somewhat mitigated.
+    ! If LimitIn is provided, it should be an integer power of 2, 
+    ! and it provides the splitting limit. In the example the limit was 1/8.
+    ! If LimitIn is missing the limit is based on maxval(abs(a_I)).
+    ! If the optional MPI communicator argument iComm is provided, 
+    ! then the sum (and maxval) are done for all processors belonging to iComm.
+
+    ! Number of parts the binary numbers are cut into
+    integer, parameter :: nPart = 2
+
+    ! Limit is set to this fraction of the largest argument
+    real, parameter :: Ratio = 1e-8
+
+    integer :: i, n, iError
+    real :: Limit, Maximum, MaximumAll, a 
+    real :: Part_I(nPart), SumPart_I(nPart), SumAllPart_I(nPart)
+    !---------------------------------------------------------------
+    n = size(a_I)
+
+    if(present(LimitIn))then
+       Limit = LimitIn
+    else
+       Maximum = maxval(abs(a_I))
+       if(present(iComm))then
+          call MPI_allreduce(Maximum, MaximumAll, 1, MPI_REAL, MPI_MAX, &
+               iComm, iError)
+          Maximum = MaximumAll
+       endif
+       ! we could use the intrinsic function "exponent" here !!!
+       Limit = 2.0**nint(alog(Ratio*Maximum)/alog(2.0))
+    end if
+
+    SumPart_I = 0.0
+    do i = 1, n
+       a = a_I(i)
+       Part_I(1) = modulo(a, Limit)
+       Part_I(2) = a - Part_I(1)
+       SumPart_I = SumPart_I + Part_I
+    end do
+
+    if(present(iComm))then
+       call MPI_allreduce(SumPart_I, SumAllPart_I, nPart, MPI_REAL, MPI_SUM, &
+            iComm, iError)
+       SumPart_I = SumAllPart_I
+    endif
+
+    accurate_sum = sum(SumPart_I)
+
+  end function accurate_sum
+
   !============================================================================
   real function dot_product_mpi(a_I, b_I, iComm)
 
@@ -794,6 +882,9 @@ contains
     real :: DotProduct, DotProductMpi
     integer :: iError
     !--------------------------------------------------------------------------
+
+    !dot_product_mpi = accurate_sum(a_I*b_I, iComm=iComm)
+    !RETURN
 
     DotProduct = dot_product(a_I, b_I)
 
@@ -871,7 +962,7 @@ contains
   !
   !============================================================================
 
-  subroutine prehepta(nblock,N,M1,M2,alf_in,d,e,f,e1,f1,e2,f2)
+  subroutine prehepta(nblock,N,M1,M2,alf,d,e,f,e1,f1,e2,f2)
 
     ! This routine constructs an incomplete block LU-decomposition 
     ! of a hepta- or penta-diagonal matrix in such a way that L+U has the 
@@ -895,7 +986,7 @@ contains
     ! for sparse ..... ' for an illustration of this phenomenon.
 
     INTEGER, INTENT(IN)                        :: N, M1, M2, nblock
-    REAL, INTENT(IN)                           :: alf_in
+    REAL, INTENT(IN)                           :: alf
     REAL, INTENT(INOUT), DIMENSION(N,N,nblock) :: d,e,f
     REAL, INTENT(INOUT), DIMENSION(N,N,nblock), optional :: e1,f1,e2,f2
 
@@ -919,8 +1010,10 @@ contains
     !           direction in which grid points are numbered
     !           last have distance M2 from the main diagonal blocks.
     !
-    ! alf_in:   The parameter for Gustafsson modification. alf>=0 means 
-    !           no modification, 0> alf_in >= -1 is the valid parameter range.
+    ! alf:      The parameter for Gustafsson modification. 
+    !           Alf = +1 invert the diagonal blocks as is: Gauss-Seidel prec.
+    !           Alf = 0  normal BILU preconditioning
+    !           Alf < 0  modified (MBILU) preconditioning. Alf >= -1.0
     !
     ! d, e, f, e1, f1, e2, f2:
     !          on entrance: matrix A
@@ -959,11 +1052,9 @@ contains
     real, dimension(:,:), allocatable :: dd
     integer, dimension(:), allocatable :: pivot
 
-    REAL    :: alf
     INTEGER :: i,j,INFO
     REAL, PARAMETER :: zero=0.0, one=1.0
 
-    ! ALF      : internal value for Gustafsson parameter
     ! INFO     : variable for LAPACK_GETRF
     ! zero, one: variables necessary for BLAS-routine dgemv. 
     !
@@ -994,32 +1085,17 @@ contains
     ! Allocate arrays that used to be automatic
     allocate(dd(N,N), pivot(N))
 
-    alf=alf_in
-    IF (alf < zero) THEN
-       ! (Relaxed form of) Gustafsson modification:
-
-       IF (alf < -one) THEN
-          PRINT *,'Parmeter alf replaced by -1.0'
-          alf=-one
-          PRINT *,' '
-       END IF
-    ELSE IF (alf > zero) THEN
-       alf=zero
-       PRINT *,' '
-       PRINT *,'No Gustafsson modification.'
-       PRINT *,' '
-    END IF
-
     DO j=1,nblock
        dd = d(:,:,j)
        ! D = D - E.F(j-1) - E1.F1(j-M1) - E2.F2(j-M2)
-       IF (j>1 )&
-            CALL BLAS_GEMM('n','n',N,N,N,-one, e(:,:,j),N, f(:,:,j- 1),N,one,dd,N)
-       IF (j>M1)&
-            CALL BLAS_GEMM('n','n',N,N,N,-one,e1(:,:,j),N,f1(:,:,j-M1),N,one,dd,N)
-       IF (j>M2)&
-            CALL BLAS_GEMM('n','n',N,N,N,-one,e2(:,:,j),N,f2(:,:,j-M2),N,one,dd,N)
-
+       if (alf < 0.5)then
+          IF (j>1 )call BLAS_GEMM('n','n',N,N,N,-one, &
+               e(:,:,j),  N, f(:,:,j- 1), N, one, dd, N)
+          IF (j>M1) call BLAS_GEMM('n','n',N,N,N,-one, &
+               e1(:,:,j), N, f1(:,:,j-M1), N, one, dd, N)
+          IF (j>M2) call BLAS_GEMM('n','n',N,N,N,-one, &
+               e2(:,:,j), N, f2(:,:,j-M2), N, one, dd, N)
+       end if
        IF (alf<zero) THEN
 
           ! Relaxed Gustafsson modification
@@ -1617,7 +1693,7 @@ contains
 
   subroutine lower_hepta_scalar(nBlock, M1, M2, x, d, e, e1, e2)
 
-    ! G. Toth, 2001
+    ! G. Toth, 2009
     !
     ! This routine multiplies x with the lower triangular matrix L^{-1},
     ! which must have been constructed in subroutine prehepta.
