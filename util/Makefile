@@ -39,7 +39,7 @@ distclean:
 	cd CRASH/src;                 make distclean
 	cd CRASH/doc/Tex;             make distclean
 	rm -f *~
+	rm -f ${INSTALLFILE}
 
 dist: distclean
-	rm -f ${INSTALLFILE}
 	/bin/tar -cf util.tar .
