@@ -1838,22 +1838,39 @@ The default value is 1.E-12 for 8 byte reals and 1.E-6 for 4 byte reals.
 		<option name="symmetric" default="T"	/>
 		<option name="right"			/>
 	</parameter>
-	<parameter name="TypePrecond" type="string" input="select">
+	<parameter name="TypePrecond" type="string" input="select"
+							case="upper">
 		<option name="MBILU" default="T" />
-		<option name="jacobi" />
+		<option name="JACOBI" value="Jacobi"/>
+		<option name="GS" value="Gauss-Seidel"/>
 	</parameter>
-	<parameter name="GustafssonPar" type="real" min="0" max="1" 
-							default="0.5" />
+	<parameter name="PrecondParam" type="real" min="-1" max="1" 
+		default="0.5" if="$TypePrecond eq 'MBILU'"/>
 #PRECONDITIONER
 symmetric       TypePrecondSide (left, symmetric, right)
-MBILU           TypePrecond (MBILU)
-0.5             GustafssonPar (0. no modification, 1. full modification)
+MBILU           TypePrecond (MBILU, GS, or JACOBI)
+0.5             GustafssonPar (0 to 1, read for MBILU preconditioner only)
 
-Default parameters are shown. Right preconditioning does not affect
-the normalization of the residual. The Gustafsson parameter determines
-how much the MBILU preconditioner is modified. The default 0.5 value
-means a relaxed modification. The "jacobi" preconditioner is not affected
-by the Gustaffson parameter.
+Default parameters are shown. 
+
+TypePrecondSide can be left, right or symmetric. There seems to be little
+difference between these in terms of performance. Right preconditioning 
+does not affect the normalization of the residual. The Jacobi preconditioner
+is implemented to always use left preconditioning. 
+
+The TypePrecond parameter can be set to JACOBI, GS or MBILU.
+The simplest JACOBI preconditioner is mainly useful for code development 
+purposes. The Gauss-Seidel (GS) preconditioner gives better performance
+than JACOBI, however, the MBILU preconditioner has the best performance 
+for most applications.
+
+The GustafssonPar parameter is only read for the MBILU preconditioner.
+If it is 0, the standard block (BILU) preconditioning is done.
+This seems to be optimal for diffusion+relaxation type problems.
+Setting a positive GustafssonPar up to 1 results in the modified (MBILU) 
+preconditioner. The maximum 1 corresponds to the full Gustafsson modification.
+The default 0.5 value seems to be optimal for matrices resulting from 
+hyperbolic (advection) type problems.
 </command>
 
 <command name="KRYLOV">
