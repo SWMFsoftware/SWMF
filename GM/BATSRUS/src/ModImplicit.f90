@@ -42,7 +42,7 @@ module ModImplicit
   !\
   ! Parameters for selecting implicit blocks
   !/
-  character (len=10) :: ImplCritType
+  character (len=10) :: ImplCritType = 'dt'
   real               :: Rimplicit
 
   !\
@@ -95,7 +95,7 @@ module ModImplicit
   character (len=10) :: PrecondType   = 'MBILU'
 
   ! Krylov scheme parameters
-  character (len=10) :: KrylovType     ='gmres'
+  character (len=10) :: KrylovType     ='GMRES'
   character (len=10) :: KrylovInitType ='nul'
   integer            :: KrylovMatvecMax=100
   real               :: KrylovErrorMax =0.001
