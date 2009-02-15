@@ -111,7 +111,7 @@ subroutine advance_impl
 
   character(len=15) :: NameSub = 'MH_advance_impl'
 
-  external impl_matvec, impl_matvec_free
+  external impl_matvec, impl_matvec_free, impl_preconditioner
 
   integer :: i, j, k, n
   !----------------------------------------------------------------------------
@@ -315,15 +315,16 @@ subroutine advance_impl
 
      ! Precondition matrix if required
      if(JacobianType=='prec'.and.(NewtonIter==1.or.NewMatrix))then
-        if(PrecondType == 'jacobi') then
+        if(PrecondType == 'JACOBI') then
            n = 0
            do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw
               n = n + 1
               JacobiPrec_I(n) = 1.0 / MAT(iw,iw,i,j,k,1,implBlk)
            end do; end do; enddo; enddo; enddo
-           if(KrylovType /= 'cg') &
+           if(KrylovType /= 'CG') &
                 rhs(1:nImpl) = JacobiPrec_I(1:nImpl)*rhs(1:nImpl)
         else
+
            do implBLK=1,nImplBLK
               ! Preconditioning: MAT --> LU
               call prehepta(nIJK,nw,nI,nI*nJ,-GustafssonPar,&
@@ -334,6 +335,8 @@ subroutine advance_impl
                    MAT(1,1,1,1,1,5,implBLK),&
                    MAT(1,1,1,1,1,6,implBLK),&
                    MAT(1,1,1,1,1,7,implBLK))
+
+              if(KrylovType == 'CG') CYCLE
 
               ! rhs --> P_L.rhs, where P_L=U^{-1}.L^{-1}, L^{-1}, or I
               ! for left, symmetric, and right preconditioning, respectively
@@ -362,6 +365,7 @@ subroutine advance_impl
                    MAT(1,1,1,1,1,5,implBLK),  &   ! +j
                    MAT(1,1,1,1,1,7,implBLK))      ! +k
            end do
+
         end if
         if(DoTest)then
            call MPI_reduce(sum(MAT(:,:,:,:,:,:,1:nImplBLK)**2),coef1,1,&
@@ -411,21 +415,25 @@ subroutine advance_impl
      call set_oktest('krylov',DoTestKrylov,DoTestKrylovMe)
      call timing_start('krylov solver')
      select case(KrylovType)
-     case('bicgstab','BiCGSTAB')
+     case('BICGSTAB')
         call bicgstab(impl_matvec,rhs,dw,non0dw,nimpl,&
              KrylovError,typestop,KrylovMatVec,info,DoTestKrylovMe,iComm)
-     case('GMRES','gmres')
+     case('GMRES')
         call gmres(impl_matvec,rhs,dw,non0dw,nimpl,nKrylovVector, &
              KrylovError,typestop,KrylovMatVec,info,DoTestKrylovMe,iComm)
-     case('CG','cg')
-        if(PrecondType == 'jacobi')then
+     case('CG')
+        if(JacobianType == 'free')then
+           call cg(impl_matvec_free, rhs, dw, non0dw, nimpl,&
+                KrylovError, typestop, KrylovMatVec, info, DoTestKrylovMe, &
+                iComm)
+        elseif(PrecondType == 'JACOBI')then
            call cg(impl_matvec_free, rhs, dw, non0dw, nimpl,&
                 KrylovError, typestop, KrylovMatVec, info, DoTestKrylovMe,&
                 iComm, JacobiPrec_I)
         else
            call cg(impl_matvec_free, rhs, dw, non0dw, nimpl,&
-                KrylovError, typestop, KrylovMatVec, info, DoTestKrylovMe, &
-                iComm)
+                KrylovError, typestop, KrylovMatVec, info, DoTestKrylovMe,&
+                iComm, preconditioner = impl_preconditioner)
         end if
      case default
         call stop_mpi('ERROR: Unknown TypeKrylov='//KrylovType)
@@ -438,7 +446,7 @@ subroutine advance_impl
      ! Postprocessing: dw = P_R.dw' where P_R = I, U^{-1}, U^{-1}L^{-1} for 
      ! left, symmetric and right preconditioning, respectively
      if(JacobianType=='prec' .and. PrecondSide/='left' &
-          .and. PrecondType /= 'jacobi')then
+          .and. PrecondType /= 'JACOBI' .and. KrylovType /= 'CG')then
         do implBLK=1,nImplBLK
            if(PrecondSide=='right') &
                 call Lhepta(nIJK,nw,nI,nI*nJ,&

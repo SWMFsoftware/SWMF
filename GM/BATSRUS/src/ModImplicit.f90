@@ -165,7 +165,7 @@ contains
     character(len=*), parameter:: NameSub = 'read_implicit_param'
     !--------------------------------------------------------------------------
     select case(NameCommand)
-    case("#IMPLICIT")                                 !^CFG IF IMPLICIT BEGIN
+    case('#IMPLICIT')                                 !^CFG IF IMPLICIT BEGIN
        call read_var('UsePointImplicit', UsePointImplicit)
        call read_var('UsePartImplicit',  UsePartImplicit)
        call read_var('UseFullImplicit',  UseFullImplicit)
@@ -181,10 +181,10 @@ contains
 
        if(UseImplicit)call read_var('ImplCFL',ImplCFL)
 
-    case("#IMPLCRITERIA", "#IMPLICITCRITERIA", "#STEPPINGCRITERIA")
-       call read_var('TypeImplCrit', ImplCritType)
+    case('#IMPLCRITERIA', '#IMPLICITCRITERIA', '#STEPPINGCRITERIA')
+       call read_var('TypeImplCrit', ImplCritType, IsLowerCase=.true.)
        select case(ImplCritType)
-       case('R','r')
+       case('r')
           call read_var('rImplicit', rImplicit)
        case('test','dt')
        case default
@@ -197,23 +197,23 @@ contains
           ImplCritType = 'dt'
        end select
 
-    case("#PARTIMPL", "#PARTIMPLICIT")
+    case('#PARTIMPL', '#PARTIMPLICIT')
        call read_var('UsePartImplicit2',UsePartImplicit2)
 
-    case("#SEMIIMPLICIT", "#SEMIIMPL")
+    case('#SEMIIMPLICIT', '#SEMIIMPL')
        call read_var('UseSemiImplicit', UseSemiImplicit)
        if(UseSemiImplicit)call read_var('TypeSemiImplicit', TypeSemiImplicit)
 
-    case("#IMPLSCHEME", "#IMPLICITSCHEME")
-       call read_var('nOrderImpl',nOrder_Impl)
-       call read_var('TypeFluxImpl',FluxTypeImpl,IsUpperCase=.true.)
+    case('#IMPLSCHEME', '#IMPLICITSCHEME')
+       call read_var('nOrderImpl', nOrder_Impl)
+       call read_var('TypeFluxImpl', FluxTypeImpl, IsUpperCase=.true.)
 
-    case("#IMPLSTEP", "#IMPLICITSTEP")
+    case('#IMPLSTEP', '#IMPLICITSTEP')
        call read_var('ImplCoeff ',ImplCoeff0)
        call read_var('UseBDF2   ',UseBdf2)
        call read_var('ImplSource',ImplSource)
 
-    case("#IMPLCHECK", "#IMPLICITCHECK")
+    case('#IMPLCHECK', '#IMPLICITCHECK')
        call read_var('RejectStepLevel' ,   RejectStepLevel)
        call read_var('RejectStepFactor',   RejectStepFactor)
        call read_var('ReduceStepLevel' ,   ReduceStepLevel)
@@ -221,33 +221,36 @@ contains
        call read_var('IncreaseStepLevel' , IncreaseStepLevel)
        call read_var('IncreaseStepFactor', IncreaseStepFactor)
 
-    case("#NEWTON")
+    case('#NEWTON')
        call read_var('UseConservativeImplicit',UseConservativeImplicit)
        call read_var('UseNewton',UseNewton)
        if(UseNewton)then
-          call read_var('UseNewMatrix ',NewMatrix)
-          call read_var('MaxIterNewton',NewtonIterMax)
+          call read_var('UseNewMatrix ', NewMatrix)
+          call read_var('MaxIterNewton', NewtonIterMax)
        endif
 
-    case("#JACOBIAN")
-       call read_var('TypeJacobian',JacobianType)
+    case('#JACOBIAN')
+       call read_var('TypeJacobian',JacobianType, IsLowerCase=.true.)
        call read_var('JacobianEps', JacobianEps)
 
-    case("#PRECONDITIONER")
-       call read_var('TypePrecondSide',PrecondSide)
-       call read_var('TypePrecond'    ,PrecondType)
-       call read_var('GustafssonPar'  ,GustafssonPar)
-       if(GustafssonPar<=0.)GustafssonPar=0.
-       if(GustafssonPar>1.)GustafssonPar=1.
+    case('#PRECONDITIONER')
+       call read_var('TypePrecondSide',PrecondSide, IsLowerCase=.true.)
+       call read_var('TypePrecond'    ,PrecondType, IsUpperCase=.true.)
+       select case(PrecondType)
+       case('JACOBI', 'GS')
+          GustafssonPar = -1.0
+       case default
+          call read_var('GustafssonPar', GustafssonPar)
+       end select
 
-    case("#KRYLOV")
-       call read_var('TypeKrylov'     ,KrylovType)
-       call read_var('TypeInitKrylov' ,KrylovInitType)
+    case('#KRYLOV')
+       call read_var('TypeKrylov'     ,KrylovType, IsUpperCase=.true.)
+       call read_var('TypeInitKrylov' ,KrylovInitType, IsLowerCase=.true.)
        call read_var('ErrorMaxKrylov' ,KrylovErrorMax)
        call read_var('MaxMatvecKrylov',KrylovMatvecMax)
        nKrylovVector = KrylovMatvecMax
 
-    case("#KRYLOVSIZE")
+    case('#KRYLOVSIZE')
        call read_var('nKrylovVector',nKrylovVector)
 
     case default
@@ -290,7 +293,7 @@ contains
     allocate(dw(MaxImplVar))
     allocate(wnrm(nw))
     allocate(MAT(nw,nw,1:nI,1:nJ,1:nK,nstencil,MaxImplBLK))
-    if(PrecondType == 'jacobi') allocate(JacobiPrec_I(MaxImplVar))
+    if(PrecondType == 'JACOBI') allocate(JacobiPrec_I(MaxImplVar))
 
     if(iProc==0)then
        call write_prefix

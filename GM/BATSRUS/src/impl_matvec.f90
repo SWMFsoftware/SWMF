@@ -4,7 +4,7 @@ subroutine impl_matvec(qx,qy,n)
 
   ! Calculate qy= L.qx = (I - beta*dt*dR/dw).qx
   ! Do it matrix-free or with the matrix or preconditioned depending 
-  ! on "JacobianType"
+  ! on JacobianType
   !
   ! N contains the number of elements in qx and qy.
 
@@ -184,6 +184,38 @@ subroutine impl_matvec_free(qx,qy,nn)
 end subroutine impl_matvec_free
 
 !=============================================================================
+subroutine impl_preconditioner(Vec_I, PrecVec_I, n)
+
+  use ModImplicit, ONLY: JacobiPrec_I, MAT, nw, nI, nJ, nwIJK, nIJK, nImplBlk
+  use ModLinearSolver, ONLY: Lhepta, Uhepta
+
+  implicit none
+
+  integer, intent(in) :: n
+  real,    intent(in) :: Vec_I(n)
+  real,    intent(out):: PrecVec_I(n)
+
+  integer :: iImplBlock
+  !-------------------------------------------------------------------------
+  PrecVec_I = Vec_I
+
+  do iImplBlock=1,nImplBLK
+     call Lhepta(nIJK,nw,nI,nI*nJ,&
+          PrecVec_I(nwIJK*(iImplBlock-1)+1),&
+          MAT(1,1,1,1,1,1,iImplBlock),&
+          MAT(1,1,1,1,1,2,iImplBlock),&
+          MAT(1,1,1,1,1,4,iImplBlock),&
+          MAT(1,1,1,1,1,6,iImplBlock))
+
+     call Uhepta(.true.,nIJK,nw,nI,nI*nJ,&
+          PrecVec_I(nwIJK*(iImplBlock-1)+1),&
+          MAT(1,1,1,1,1,3,iImplBlock),&
+          MAT(1,1,1,1,1,5,iImplBlock),&
+          MAT(1,1,1,1,1,7,iImplBlock))
+  end do
+
+end subroutine impl_preconditioner
+!=============================================================================
 subroutine impl_matvec_prec(qx,qy,n)
 
   ! Calculate qy=P_L.A.P_R.qx for the iterative solver, where 
@@ -215,7 +247,7 @@ subroutine impl_matvec_prec(qx,qy,n)
   ! qy = P_R.qx, where P_R = I, U^{-1}, or U^{-1}L^{-1}
   ! for left, symmetric and right preconditioning, respectively
 
-  if(PrecondSide /= 'left' .and. PrecondType /= 'jacobi')then
+  if(PrecondSide /= 'left' .and. PrecondType /= 'JACOBI')then
      do implBLK=1,nImplBLK
         if(PrecondSide=='right') &
              call Lhepta(nIJK,nw,nI,nI*nJ,&
@@ -237,9 +269,9 @@ subroutine impl_matvec_prec(qx,qy,n)
   ! qy = P_L.qy, where P_L==U^{-1}.L^{-1}, L^{-1}, or I
   ! for left, symmetric, and right preconditioning, respectively
 
-  if(PrecondType == 'jacobi') qy = JacobiPrec_I(1:n)*qy
+  if(PrecondType == 'JACOBI') qy = JacobiPrec_I(1:n)*qy
 
-  if(PrecondSide/='right' .and. PrecondType /= 'jacobi')then
+  if(PrecondSide/='right' .and. PrecondType /= 'JACOBI')then
      do implBLK=1,nImplBLK
         call Lhepta(nIJK,nw,nI,nI*nJ,&
              qy(nwIJK*(implBLK-1)+1) ,&
