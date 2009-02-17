@@ -195,48 +195,54 @@ subroutine set_physics_constants
   FaceState_VI(rho_,body2_)=RhoBody2                !^CFG IF SECONDBODY
   FaceState_VI(P_,body2_)=pBody2                    !^CFG IF SECONDBODY
 
-  !For Outer Boundaries
-  FaceState_VI(Rho_, East_:Top_) = SW_rho
-  FaceState_VI(Ux_,  East_:Top_) = SW_Ux
-  FaceState_VI(Uy_,  East_:Top_) = SW_Uy
-  FaceState_VI(Uz_,  East_:Top_) = SW_Uz
-  FaceState_VI(Bx_,  East_:Top_) = SW_Bx
-  FaceState_VI(By_,  East_:Top_) = SW_By
-  FaceState_VI(Bz_,  East_:Top_) = SW_Bz
-  FaceState_VI(P_,   East_:Top_) = SW_p
-  if(UseElectronPressure) FaceState_VI(Pe_, East_:Top_) = SW_p
+  !For Outer Boundaries (if SW_* are set)
+  if(SW_rho > 0.0)then
+
+     FaceState_VI(Rho_, East_:Top_) = SW_rho
+     FaceState_VI(Ux_,  East_:Top_) = SW_Ux
+     FaceState_VI(Uy_,  East_:Top_) = SW_Uy
+     FaceState_VI(Uz_,  East_:Top_) = SW_Uz
+     FaceState_VI(Bx_,  East_:Top_) = SW_Bx
+     FaceState_VI(By_,  East_:Top_) = SW_By
+     FaceState_VI(Bz_,  East_:Top_) = SW_Bz
+     FaceState_VI(P_,   East_:Top_) = SW_p
+
+     if(UseElectronPressure) FaceState_VI(Pe_, East_:Top_) = SW_p
   
-  if (UseMultiSpecies) then
-     FaceState_VI(SpeciesFirst_, East_:Top_) = &
-          SW_rho*(1 - LowDensityRatio * (SpeciesLast_-SpeciesFirst_))
-     FaceState_VI(SpeciesFirst_+1:SpeciesLast_, East_:Top_) = &
-          LowDensityRatio*Sw_rho
-  endif
+     if (UseMultiSpecies) then
+        FaceState_VI(SpeciesFirst_, East_:Top_) = &
+             SW_rho*(1 - LowDensityRatio * (SpeciesLast_-SpeciesFirst_))
+        FaceState_VI(SpeciesFirst_+1:SpeciesLast_, East_:Top_) = &
+             LowDensityRatio*Sw_rho
+     endif
 
-  if(nFluid > 1)then
-     iFluid=IonFirst_
-     call select_fluid
-     FaceState_VI(iRho, East_:Top_) = SW_Rho*(1-LowDensityRatio*(nFluid-IonFirst_))
-     FaceState_VI(iUx,  East_:Top_) = SW_Ux
-     FaceState_VI(iUy,  East_:Top_) = SW_Uy
-     FaceState_VI(iUz,  East_:Top_) = SW_Uz
-     ! Use solar wind temperature and reduced density to get pressure
-     FaceState_VI(iP,   East_:Top_) = SW_p*(1.0-LowDensityRatio*(nFluid-IonFirst_))
-
-     do iFluid = IonFirst_+1, nFluid
+     if(nFluid > 1)then
+        iFluid=IonFirst_
         call select_fluid
-        FaceState_VI(iRho, East_:Top_) = SW_Rho*LowDensityRatio
+        FaceState_VI(iRho, East_:Top_) = &
+             SW_Rho*(1-LowDensityRatio*(nFluid-IonFirst_))
         FaceState_VI(iUx,  East_:Top_) = SW_Ux
         FaceState_VI(iUy,  East_:Top_) = SW_Uy
         FaceState_VI(iUz,  East_:Top_) = SW_Uz
-        ! Use solar wind temperature and reduced density to get pressure 
-        FaceState_VI(iP,   East_:Top_) = SW_p*LowDensityRatio &
-             *MassIon_I(1)/MassFluid_I(iFluid)
-     end do
+        ! Use solar wind temperature and reduced density to get pressure
+        FaceState_VI(iP,   East_:Top_) = &
+             SW_p*(1.0-LowDensityRatio*(nFluid-IonFirst_))
 
-     ! Fix the total pressure if necessary (density and temperature are kept)
-     if(UseMultiIon .and. IsMhd .and. SW_rho > 0.0) &
-          FaceState_VI(P_,East_:Top_) = sum(FaceState_VI(iP_I(2:nFluid),1))
+        do iFluid = IonFirst_+1, nFluid
+           call select_fluid
+           FaceState_VI(iRho, East_:Top_) = SW_Rho*LowDensityRatio
+           FaceState_VI(iUx,  East_:Top_) = SW_Ux
+           FaceState_VI(iUy,  East_:Top_) = SW_Uy
+           FaceState_VI(iUz,  East_:Top_) = SW_Uz
+           ! Use solar wind temperature and reduced density to get pressure 
+           FaceState_VI(iP,   East_:Top_) = SW_p*LowDensityRatio &
+                *MassIon_I(1)/MassFluid_I(iFluid)
+        end do
+
+        ! Fix total pressure if necessary (density and temperature are kept)
+        if(UseMultiIon .and. IsMhd) &
+             FaceState_VI(P_,East_:Top_) = sum(FaceState_VI(iP_I(2:nFluid),1))
+     end if
   end if
 
   ! Cell State is used for filling the ghostcells
