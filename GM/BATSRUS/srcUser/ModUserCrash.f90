@@ -183,7 +183,6 @@ contains
     !------------------------------------------------------------------------
 
     iBlock = GlobalBlk
-    State_VGB(:,:,:,:,iBlock)=1.0
 
     if(UseHyadesFile)then
        ! Read in and interpolate Hyades output
