@@ -45,6 +45,7 @@ my $PlanetOrig;
 $Planet = "Earth" if $Install; # Default planet
 
 foreach (@Arguments){
+    if(/^-Titan$/i)           {$Planet="Titan";                next};
     if(/^-mars$/i)            {$Planet="Mars";                 next};
     if(/^-earth$/i)           {$Planet="Earth";                next};
     if(/^-s$/)                {$Show=1;                        next};
@@ -174,6 +175,11 @@ sub set_planet{
           $nLat = 2;
           $nAlt = 120;
           $MaxBlock = 4;
+    } elsif($Planet eq 'Titan'){
+          $nLon = 2;
+          $nLat = 2;
+          $nAlt = 100;
+          $MaxBlock = 4;
     }
 
     @ARGV = ($NameGridFile);
@@ -201,6 +207,8 @@ sub show_settings{
 sub print_help{
     print "Additional options for GITM2/Config.pl:
 
+-Titan      Configure GITM2 for Titan. This flag is case insensitive.
+
 -Mars       Configure GITM2 for Mars. This flag is case insensitive.
 
 -Earth      Configure GITM2 for Earth. This flag is case insensitive.
@@ -208,6 +216,10 @@ sub print_help{
 -s          Show current planet.
 
 Additional examples for GITM2/Config.pl:
+
+Install for Titan:
+
+    Config.pl -install -Titan
 
 Install for Mars:
 
