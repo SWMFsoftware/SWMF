@@ -21,7 +21,8 @@ subroutine euv_ionization_heat(iBlock)
 
   real :: photoion(Num_WaveLengths_High, nIons-1)
   real :: photoabs(Num_WaveLengths_High, nSpecies)
-  real :: photodis(Num_WaveLengths_High, nSpecies)
+  real :: photodis(Num_WaveLengths_High, nSpeciesTotal)
+
   real :: NeutralDensity(nLons, nLats, nSpecies)
   real :: ChapmanLittle(nLons, nLats, nSpecies)
   real :: EHeat(nLons, nLats)
@@ -45,14 +46,17 @@ subroutine euv_ionization_heat(iBlock)
   EuvIonRateS(:,:,:,:,iBlock) = 0.0 
   EuvDissRateS(:,:,:,:,iBlock) = 0.0
 
-  photoion = 0.0
-  photoabs = 0.0
-  photodis = 0.0
+  photoion(1:Num_Wavelengths_High,1:nIons-1) = 0.0
+  photoabs(1:Num_Wavelengths_High,1:nSpecies)= 0.0
+  photodis(1:Num_Wavelengths_High,1:nSpeciesTotal) = 0.0
 
   ! This transfers the specific photo absorption and ionization cross
   ! sections into general variables, so we can use loops...
 
-  call fill_photo(photoion, photoabs, photodis)
+!  call fill_photo(photoion, photoabs, photodis)
+  call fill_photo( photoion(1:Num_Wavelengths_High,1:nIons-1), &
+  photoabs(1:Num_Wavelengths_High,1:nSpecies), &
+  photodis(1:Num_Wavelengths_High,1:nSpeciesTotal) )
 
   do iAlt = 1, nAlts
 
@@ -76,7 +80,7 @@ subroutine euv_ionization_heat(iBlock)
                 Intensity*PhotoIon(iWave,iIon)
         enddo
 
-        do iSpecies = 1, nSpecies
+        do iSpecies = 1, nSpeciesTotal
            EuvDissRateS(:,:,iAlt,iSpecies,iBlock) = &
                 EuvDissRateS(:,:,iAlt,iSpecies,iBlock) + &
                 Intensity*PhotoDis(iWave,iSpecies)
@@ -528,6 +532,7 @@ subroutine init_euv
      PhotoAbs_O2(N)      = PhotoAbs_O2(N)  / 10000.0
      PhotoAbs_O(N)       = PhotoAbs_O(N)   / 10000.0
      PhotoAbs_N2(N)      = PhotoAbs_N2(N)  / 10000.0
+     PhotoAbs_CH4(N)     = PhotoAbs_CH4(N) / 10000.0
 
      PhotoIon_O2(N)      = PhotoIon_O2(N)        / 10000.0
      PhotoIon_OPlus4S(N) = PhotoIon_OPlus4S(N)   / 10000.0

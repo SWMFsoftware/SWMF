@@ -43,8 +43,10 @@ subroutine calc_neutral_friction(oVel, EddyCoef_1d, NDensity_1d, NDensityS_1d, &
 
     EddyCoefRatio_1d(1:nAlts,1:nSpecies) = 0.0
 
+!    write(*,*) 'Now in Calc_Neutral_Friction'
   do iAlt = 1, nAlts
 
+!    write(*,*) 'iAlt = ', iAlt
     Vel = oVel(iAlt,1:nSpecies)
     CoefMatrix = 0.0
 
@@ -55,6 +57,7 @@ subroutine calc_neutral_friction(oVel, EddyCoef_1d, NDensity_1d, NDensityS_1d, &
     EddyDiffCorrection(1:nSpecies) = 0.0
 
     do iSpecies = 1, nSpecies
+!    write(*,*) 'iSpecies = ', iSpecies
 
 
        InvDij(iSpecies) = 0.0
@@ -67,6 +70,7 @@ subroutine calc_neutral_friction(oVel, EddyCoef_1d, NDensity_1d, NDensityS_1d, &
 
        do jSpecies = 1, nSpecies
           if (jSpecies == iSpecies) cycle
+!    write(*,*) 'jSpecies = ', jSpecies
 
 
 ! \
@@ -118,6 +122,11 @@ subroutine calc_neutral_friction(oVel, EddyCoef_1d, NDensity_1d, NDensityS_1d, &
                 (   Diff0(iSpecies,jSpecies)*( Temp(iAlt)**DiffExp(iSpecies,jSpecies) )   ) / &
                 (   NDensity_1d(iAlt)*(1.0e-06) )     ! Converts to #/cm^-3
 
+!                 write(*,*) 'Diff0(iSpecies,jSpecies) = ', Diff0(iSpecies,jSpecies)
+!                 write(*,*) 'Temp(iAlt) = ', Temp(iAlt)
+!                 write(*,*) 'DiffExp(iSpecies,jSpecies) = ', DiffExp(iSpecies,jSpecies)
+!                 write(*,*) 'NDensity_1d(iAlt) = ', NDensity_1d(iAlt)
+
               if ( UseBoquehoAndBlelly) then
                   CoefMatrix(iSpecies, jSpecies) = &
                        kTOverM * denscale * &
@@ -129,10 +138,13 @@ subroutine calc_neutral_friction(oVel, EddyCoef_1d, NDensity_1d, NDensityS_1d, &
                     ( TempDij + EddyCoef_1d(iAlt) )
               else
 
+!                  write(*,*) 'KTOverM = ', kTOverM
+!                  write(*,*) 'denscale = ', denscale
+!                  write(*,*) 'NDensityS_1d(iSpecies) = ', NDensityS_1d(iAlt,jSpecies)
+!                  write(*,*) 'TempDij(iSpecies) = ', TempDij
+
                   CoefMatrix(iSpecies, jSpecies) = &
-                       kTOverM * denscale * &
-                       NDensityS_1d(iAlt, jSpecies) / &
-                       ( TempDij )
+                       kTOverM * denscale * NDensityS_1d(iAlt, jSpecies) / TempDij
 
                   InvDij(iSpecies) = InvDij(iSpecies) + &
                      denscale*NDensityS_1d(iAlt, jSpecies)/ &
@@ -186,7 +198,7 @@ subroutine calc_neutral_friction(oVel, EddyCoef_1d, NDensity_1d, NDensityS_1d, &
 
     enddo  !End DO Over iSpecies
 
-!    Vel(1:nSpecies) = Vel(1:nSpecies) + EddyCoefRatio_1d(iAlt,iSpecies)
+    Vel(1:nSpecies) = Vel(1:nSpecies) + EddyCoefRatio_1d(iAlt,1:nSpecies)
 
     Fraction = 1.4 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     CoefMatrix = Fraction * CoefMatrix
@@ -201,7 +213,7 @@ subroutine calc_neutral_friction(oVel, EddyCoef_1d, NDensity_1d, NDensityS_1d, &
     call ludcmp(Matrix, nSpecies, nSpecies, iPivot, Parity)
     call lubksb(Matrix, nSpecies, nSpecies, iPivot, Vel)
 
-    oVel(iAlt, 1:nSpecies) = Vel(1:nSpecies) + EddyCoefRatio_1d(iAlt,1:nSpecies) 
+    oVel(iAlt, 1:nSpecies) = Vel(1:nSpecies) !+ EddyCoefRatio_1d(iAlt,1:nSpecies) 
 
  enddo
 

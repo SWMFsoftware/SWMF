@@ -1,4 +1,4 @@
-subroutine fill_photo(photoion, photoabs)
+subroutine fill_photo(photoion, photoabs, photodis)
 
   use ModPlanet
   use ModEUV
@@ -7,6 +7,7 @@ subroutine fill_photo(photoion, photoabs)
 
   real, intent(out) :: photoion(Num_WaveLengths_High, nIons-1)
   real, intent(out) :: photoabs(Num_WaveLengths_High, nSpecies)
+  real, intent(out) :: photodis(Num_WaveLengths_High, nSpeciesTotal)
 
   photoabs           = 0.0
   photoabs(:,iCO2_)  = PhotoAbs_CO2
@@ -30,7 +31,7 @@ subroutine init_heating_efficiency
 
   implicit none
 
-  HeatingEfficiency_CB  = 0.22
+  HeatingEfficiency_CB  = 0.19
   eHeatingEfficiency_CB = 0.0
 
   call init_radcool
@@ -115,7 +116,8 @@ subroutine calc_planet_sources(iBlock)
 
   ! SunOrbitEccentricity = sqrt(2.64236)
   do NW=1,L_NSPECTV
-     SOL(nw) = SOLARF(NW)/(SunOrbitEccentricity**2)
+     !SOL(nw) = SOLARF(NW)/(SunOrbitEccentricity**2)
+     SOL(nw) = SOLARF(NW)/(2.64236)
   end do
   
   !##############################################################
@@ -610,8 +612,8 @@ subroutine calc_eddy_diffusion_coefficient(iBlock)
   real :: KMin
 
   KappaEddyDiffusion(:,:,:,iBlock) = 0.0
-  KMax = 2000.0
-  KMin = 600.0
+  KMax = 1000.0
+  KMin = 100.0
 
 ! \
 ! First, find the altitude level corresponding to the asymptotic
@@ -692,7 +694,7 @@ subroutine  calc_lowatmosrad(iblock,iLat,iLon,L_LAYERS,L_LEVELS,&
 !  Output: xLowAtmosRadRate(1:nLons,1:nLats,1:nAlts,iBlock)
 !  =======================================================================
 !
-      use ModInputs, only:  iDebugLevel,altmin
+      use ModInputs
       use ModSources, only: LowAtmosRadRate
       use ModPlanet
       use ModGITM
@@ -2322,6 +2324,8 @@ subroutine  calc_lowatmosrad(iblock,iLat,iLon,L_LAYERS,L_LEVELS,&
 !C  Determine the total gas opacity throughout the column, for each
 !C  spectral interval, NW, and each Gauss point, NG.
 
+      DTAUKI = 0.0
+
       DO NG=1,L_NGAUSS-1
         do NW=1,L_NSPECTI
           TAUGSURF(NW,NG) = 0.0D0
@@ -2864,3 +2868,7 @@ subroutine set_planet_defaults
   return
 
 end subroutine set_planet_defaults
+
+subroutine planet_limited_fluxes(iBlock)
+!! Do Nothing
+end subroutine planet_limited_fluxes

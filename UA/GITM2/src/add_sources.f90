@@ -122,6 +122,8 @@ iAlt = 10
              NeutralFriction(:,:,:,iSpecies) 
      enddo
 
+     call planet_limited_fluxes(iBlock)
+
      call calc_electron_temperature(iBlock)
 
      !! To turn off Diffusion, turn UseDiffusion=.false. in UAM.in

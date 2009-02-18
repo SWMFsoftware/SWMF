@@ -94,6 +94,10 @@ module ModPlanet
   real, parameter :: SunOrbit_E = 0.000077
 
   logical :: IsEarth = .true.
+  logical :: IsMars = .false.
+  logical :: IsTitan = .false.
+  logical :: NonMagnetic = .false.
+
   character (len=10) :: cPlanet = "Earth"
   
   integer, parameter :: nEmissionWavelengths = 20
@@ -212,5 +216,25 @@ contains
     call time_int_to_real(itime, VernalTime)
 
   end subroutine init_planet
+
+!! Placeholder subroutines (for Titan specific Phyisics)
+
+  subroutine init_radcooling
+  return
+  end subroutine init_radcooling
+
+  subroutine init_magheat
+  return
+  end subroutine init_magheat
+
+  subroutine init_isochem
+  return
+  end subroutine init_isochem
+
+  subroutine init_aerosol
+  return
+  end subroutine init_aerosol
+
+
 
 end module ModPlanet

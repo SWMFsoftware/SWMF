@@ -133,14 +133,6 @@ subroutine init_msis
 
      write(*,*) '============> init_msis.Mars.f90 Major Diagnostics:  Begin'
 
-     where(NDensityS < 1.0e+03)
-        NDensityS = 1.0e+03
-     end where
-
-     where(IDensityS < 1.0e+03)
-        IDensityS = 1.0e+03
-     end where
-
      !\
      ! Altitude Ghost Cells
 

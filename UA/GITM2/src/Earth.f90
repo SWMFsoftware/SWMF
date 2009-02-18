@@ -254,3 +254,7 @@ subroutine set_planet_defaults
   return
 
 end subroutine set_planet_defaults
+
+subroutine planet_limited_fluxes(iBlock)
+!! Do Nothing
+end subroutine planet_limited_fluxes

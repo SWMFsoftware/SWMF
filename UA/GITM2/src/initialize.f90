@@ -30,6 +30,14 @@ subroutine initialize_gitm(TimeIn)
   real :: DistM, DistP, Ratio2, InvDenom
   !----------------------------------------------------------------------------
 
+!! Sorry but this is a double-negative
+!! This checks to see if the planet is not, not Titan.
+!! That is to say, it checks to see if this is actually Titan.
+
+  if (   .not. (index(cPlanet,"Titan") == 0)  ) then 
+     call init_radcooling
+  endif
+
   if (.not.IsFirstTime) return
 
   IsFirstTime = .false.
@@ -240,6 +248,14 @@ subroutine initialize_gitm(TimeIn)
 
   call init_heating_efficiency
 
+!! Some Titan-Specific Startup Routines here (Regardless of Restart or Not)
+
+  if (   .not. (index(cPlanet,"Titan") == 0)  ) then 
+     call init_magheat
+     call init_isochem
+     call init_aerosol
+  endif
+
   if (.not. DoRestart) then
 
      Potential = 0.0
@@ -365,10 +381,11 @@ subroutine initialize_gitm(TimeIn)
   do iBlock = 1, nBlocks
     call calc_eddy_diffusion_coefficient(iBlock)
     call calc_viscosity(iBlock)
+    call calc_rates(iBlock)
   enddo
 
 !  do iBlock = 1, nBlocks
-!     call calc_rates(iBlock)
+!    call calc_rates(iBlock)
 !  enddo
 
   call end_timing("initialize")

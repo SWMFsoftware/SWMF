@@ -197,7 +197,7 @@ module ModInputs
   real, parameter :: TAUTOT  = 0.3 !do not set to 0.0 or less
 
 ! Top of the shortwave calculatin for lower atmosphere radiation code(mbars)
-  real, parameter :: PRAD  = 2.0E-4 !0.001
+  real, parameter :: PRAD  = 1.0E-5 !0.001
 
 ! Top of the longwave calculatin for lower atmosphere radiation code(PASCALS)
 ! and where radcool begins

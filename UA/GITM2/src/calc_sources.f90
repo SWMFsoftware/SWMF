@@ -301,6 +301,7 @@ if (UseTurbulentCond) then
   else
 
      IonDrag = 0.0
+     VerticalIonDrag = 0.0
 
   endif
 
@@ -321,7 +322,7 @@ if (UseTurbulentCond) then
 
                GradLogConS(iLon,iLat,iAlt,iSpecies) = &
                   -1.0*Gravity_GB(iLon,iLat,iAlt,iBlock)*&
-                   (1.0 - MeanMajorMass(iLon,iLat,iAlt)/Mass(iSpecies))
+                   (1.0 -  (MeanMajorMass(iLon,iLat,iAlt)/Mass(iSpecies)) )
 
                enddo 
              enddo 

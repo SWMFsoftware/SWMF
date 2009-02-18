@@ -82,6 +82,10 @@ module ModPlanet
   real, parameter :: SecondsPerYear = DaysPerYear * Rotation_Period
 
   logical :: IsEarth = .false.
+  logical :: IsMars = .true.
+  logical :: IsTitan = .false.
+  logical :: NonMagnetic = .true.
+
   character (len=10) :: cPlanet = "Mars"
 
   integer, parameter :: i3371_ = 1
@@ -156,7 +160,7 @@ module ModPlanet
 !atmosphere radiation code
 
 !     Number of atmospheric layers
-      integer, PARAMETER :: LL_LAYERS  = 40
+      integer, PARAMETER :: LL_LAYERS  = nAlts
 
 !     Number of atmospheric levels:   2 * LL_LAYERS + 3
       integer, PARAMETER :: LL_LEVELS  = 2*LL_LAYERS+3
@@ -1281,5 +1285,22 @@ contains
 
 
 !##########################################################
+
+  subroutine init_radcooling
+  return
+  end subroutine init_radcooling
+
+  subroutine init_magheat
+  return
+  end subroutine init_magheat
+
+  subroutine init_isochem
+  return
+  end subroutine init_isochem
+
+  subroutine init_aerosol
+  return
+  end subroutine init_aerosol
+
 
 end module ModPlanet

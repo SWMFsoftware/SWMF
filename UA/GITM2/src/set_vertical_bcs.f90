@@ -9,7 +9,7 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   ! Fill in ghost cells at the top and bottom
 
   use ModSizeGitm, only: nAlts
-  use ModPlanet, only: nSpecies, nIonsAdvect, Mass, nIons, IsEarth,iN2_,iNO_
+  use ModPlanet, only: nSpecies, nIonsAdvect, Mass, nIons, IsEarth,iN2_, iH2_, iCH4_
   use ModGITM, only: TempUnit, iEast_, iNorth_, iUp_
   use ModInputs
   use ModConstants
@@ -69,13 +69,21 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
 
   endif
 
+
   ! Let the winds blow !!!!
-  Vel_GD(-1:0,iEast_)  = 0.0
-  Vel_GD(-1:0,iNorth_) = 0.0
+!  Vel_GD(-1:0,iEast_)  = 0.0
+!  Vel_GD(-1:0,iNorth_) = 0.0
+
+!! Titan's Winds
+   Vel_GD(0,iNorth_) = 2.0*sqrt(cos(Lat*PI/180.0))
+   Vel_GD(-1,iNorth_) = 2.0*sqrt(cos(Lat*PI/180.0))
 
   Vel_GD(-1:0,iUp_)    = 0.0
   VertVel(-1:0,:)      = 0.0
   IVel(-1:0,iUp_)      = 0.0
+
+!  VertVel(0 ,1:nSpecies)     =  -1.0*VertVel(1,1:nSpecies)
+!  VertVel(-1,1:nSpecies)     =  -1.0*VertVel(2,1:nSpecies)
 
   do iSpecies=1,nIonsAdvect
      dn = (LogINS(2,iSpecies) - LogINS(1,iSpecies))
@@ -84,17 +92,17 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
      LogINS(-1,iSpecies) = LogINS(0,iSpecies) - dn
   enddo
 
-  ! Lower boundary for NO on Earth
-  if (nSpecies == iNO_) then
-     dn = (LogNS(2,nSpecies) - LogNS(1,nSpecies))
-     if (dn >= 0) then
-        LogNS(0,nSpecies) = LogNS(1,nSpecies) - dn
-        LogNS(-1,nSpecies) = LogNS(0,nSpecies) - dn
-     else
-        LogNS(0,nSpecies) = LogNS(1,nSpecies) + dn
-        LogNS(-1,nSpecies) = LogNS(0,nSpecies) + dn
-     endif
-  endif
+!  ! Lower boundary for NO on Earth
+!  if (nSpecies == iNO_) then
+!     dn = (LogNS(2,nSpecies) - LogNS(1,nSpecies))
+!     if (dn >= 0) then
+!        LogNS(0,nSpecies) = LogNS(1,nSpecies) - dn
+!        LogNS(-1,nSpecies) = LogNS(0,nSpecies) - dn
+!     else
+!        LogNS(0,nSpecies) = LogNS(1,nSpecies) + dn
+!        LogNS(-1,nSpecies) = LogNS(0,nSpecies) + dn
+!     endif
+!  endif
 
 !  dn = (LogNS(2,iN_4S_) - LogNS(1,iN_4S_))
 !  LogNS(0,iN_4S_) = LogNS(1,iN_4S_) - dn
@@ -128,12 +136,18 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
      VertVel(nAlts+1,:) = VertVel(nAlts,:)
      VertVel(nAlts+2,:) = VertVel(nAlts,:)
   else
-     ! Vel_GD(nAlts+1:nAlts+2,iUp_) = 0.0 ! -Vel(nAlts)
+    ! Vel_GD(nAlts+1:nAlts+2,iUp_) = 0.0 ! -Vel(nAlts)
      Vel_GD(nAlts+1,iUp_) = -Vel_GD(nAlts,iUp_)
      Vel_GD(nAlts+2,iUp_) = -Vel_GD(nAlts-1,iUp_)
      VertVel(nAlts+1,:) = -VertVel(nAlts,:)
      VertVel(nAlts+2,:) = -VertVel(nAlts-1,:)
   endif
+
+     VertVel(nAlts+1,iH2_) = 100.0
+     VertVel(nAlts+2,iH2_) = 100.0
+
+     VertVel(nAlts+1,iCH4_) = 9.0
+     VertVel(nAlts+2,iCH4_) = 9.0
 
   ! Constant temperature (zero gradient)
 

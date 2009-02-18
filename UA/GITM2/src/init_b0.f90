@@ -166,6 +166,12 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
 
   rBelow = (2*RadialDistance_GB(1,1,-1,1) - RadialDistance_GB(1,1,1,1)) / RBody
 
+  if (NonMagnetic) then
+      xmag = 0.0
+      ymag = 0.0
+      zmag = 0.0
+  endif
+
   if (UseApex .and. IsEarth) then
 
      call APEX(DATE,GeoLat,GeoLon,GeoAlt,LShell, &
