@@ -356,6 +356,7 @@ contains
     iLoc_I = maxloc(RCM_lat)
     iNorthPole = iLoc_I(1)
 
+    iEquator = iEquator + sign(1, iNorthPole - iEquator)
     !set open fieldline values
     do j = 1, jSize
 
