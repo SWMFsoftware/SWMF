@@ -538,6 +538,8 @@ subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
      iBlock = Index % iCB_II(3,iPoint)
      w      = Weight % Weight_I(iPoint)
 
+!     write(*,*) "ilat, ilon : ",iLat, iLon, w
+
      if(iBlock/=1)then
         write(*,*)NameSub,': iPoint,Index % iCB_II=',&
              iPoint,Index%iCB_II(:,iPoint)
@@ -546,8 +548,10 @@ subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
      end if
 
      if(iLat<1 .or. iLat>nLats+2 .or. iLon<1 .or. iLon>nLonsAll+1)then
-        write(*,*)'iLat,iLon=',iLat,nLats+2,iLon,nLonsAll+1
-        call CON_stop(NameSub//' SWMF_ERROR index out of range')
+        iLon = mod(iLon,nLonsAll+1)
+        if(iLat<1 .or. iLat>nLats+2 .or. iLon<1 .or. iLon>nLonsAll+1)then
+           call CON_stop(NameSub//' SWMF_ERROR index out of range')
+        endif
      end if
 
      ! Index for the same latitude on the southern hemisphere
