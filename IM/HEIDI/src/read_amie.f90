@@ -24,7 +24,7 @@ subroutine read_amie(iter)
   nmlts = 25
   nlats = 23
 
-  inunit = 23
+  inunit = 73
 
   filein = "b910604-07.mo"
 

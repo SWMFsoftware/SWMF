@@ -103,7 +103,7 @@ subroutine IonoHeidiWriteOutput(ifile,time,IO_prefix,IO_suffix)
   integer :: output_type, variables, year, iError
 
   integer :: Iunit, i, j
-  character (len=12), Parameter :: iono_dir="_ionosphere/"
+  character (len=11), Parameter :: iono_dir="ionosphere/"
   character (len=2), Parameter :: iono_dir_path="./"
   character (len=4) :: IO_ext=".dat"
   character (len=7) :: NUMiter
@@ -129,7 +129,7 @@ subroutine IonoHeidiWriteOutput(ifile,time,IO_prefix,IO_suffix)
      output_type = tec_type
   endif
 
-  Iunit = 23
+  Iunit = 74
 
   if (output_type == idl_type) then
      IO_ext = ".idl"
@@ -181,10 +181,10 @@ subroutine IonoHeidiWriteOutput(ifile,time,IO_prefix,IO_suffix)
 
 !!! For use with mram-given output suffix:
 
-  write(*,*) "file : ",cOutputDir//IO_prefix//iono_dir//"it_"//&
+  write(*,*) "file : ",cOutputDir//iono_dir//"it_"//&
        IO_suffix//IO_ext
 
-  open(unit=Iunit,file=cOutputDir//IO_prefix//iono_dir//"it_"//&
+  open(unit=Iunit,file=cOutputDir//iono_dir//"it_"//&
        IO_suffix//IO_ext, &
        status="unknown")
 

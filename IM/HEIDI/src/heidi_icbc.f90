@@ -726,16 +726,18 @@ SUBROUTINE GEOSB
 
         ! Find location to take boundary condition from : 67 degrees
         iLonBoundary = IONO_nPsi/2.0
+
 !        if (iLatBoundary < 0) then
            iLatBoundary = 1
            do while (IONO_NORTH_Theta(iLatBoundary,1) < (90.0-67.0)*cDegToRad .and. &
                 IonoGmDensity(iLatBoundary, iLonBoundary) == 0.0)
+!              write(*,*) iLatBoundary, IonoGmDensity(iLatBoundary, iLonBoundary)
               iLatBoundary = iLatBoundary + 1
            enddo
 !        endif
 
-        write(*,*) "Taking boundary condition from location : ", &
-             iLatBoundary, iLonBoundary
+!        write(*,*) "Taking boundary condition from location : ", &
+!             iLatBoundary, iLonBoundary
 
         NM = IonoGmDensity(iLatBoundary, iLonBoundary)
         TCM = IonoGmTemperature(iLatBoundary, iLonBoundary)
