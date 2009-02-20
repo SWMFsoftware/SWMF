@@ -2385,6 +2385,7 @@ example), the start and end times should be set for all of them.
 				<option name="z=0" />
 				<option name="sphere" value="sph" />
 				<option name="los" />
+				<option name="rfr" />
 				<option name="line" value="lin" />
 				<option name="eq.rays" value="eqr" />
 				<option name="cut" />
@@ -2414,6 +2415,7 @@ example), the start and end times should be set for all of them.
 				<option name="Flux vars. scaled"  value="flx"/>
 				<option name="Solar variables"    value="SOL"/>
 				<option name="Solar vars. scaled" value="sol"/>
+				<option name="Radio wave intensity" value="rwi"/>
 				<option name="Position variables" value="POS"
 						     if="$plotarea eq 'lin'" />
 				<option name="Position vars. scaled"
@@ -2501,7 +2503,7 @@ example), the start and end times should be set for all of them.
 		</if>
 		<parameter name="DxSavePlot" type="real" min="-1.0" 
 							default="-1.0"
-	if="($plotform=~/\bidl/ and $plotarea!~/\b(sph|los|lin|eqr)\b/)" />
+	if="($plotform=~/\bidl/ and $plotarea!~/\b(sph|los|rfr|lin|eqr)\b/)" />
 		<if expr="$plotvar =~ /\bvar\b/i">
 			<parameter name="NameVars" type="string" length="100"/>
 			<parameter name="NamePars" type="string" length="100"/>
@@ -2677,7 +2679,7 @@ values or as non-dimensional values:
          pars: mu
  'bbk' - vars: dx pe blk blkall
          pars: 
- 'rfr' - vars: Intensity
+ 'rwi' - vars: Intensity
          pars: 
 \end{verbatim}
 The plot_string is always followed by the plotting frequencies
