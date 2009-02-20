@@ -126,6 +126,7 @@ contains
     
     ! Figure out grid dimensions and number of variables       
     n_D = 1
+    ! For VI, VII, VIII types
     if(present(VarIn_VI))then
        nDim = 1
        n_D(0:1) = shape(VarIn_VI)
@@ -135,19 +136,19 @@ contains
     elseif(present(VarIn_VIII))then
        nDim = 3
        n_D(0:3) = shape(VarIn_VIII) 
-    ! For IV, IIV, IIIV types
+    ! For IV, IIV, IIIV types 
     elseif(present(VarIn_IV))then
        nDim = 1
        n_D(0:1) = shape(VarIn_IV)
-       n_D(0:1) = cshift(n_D(0:1), -1)   ! shift nVar to n_D(0)  
+       n_D(0:1) = cshift(n_D(0:1), -1)   ! shift nVar/n_D(1) to n_D(0)  
     elseif(present(VarIn_IIV))then
        nDim = 2
        n_D(0:2) = shape(VarIn_IIV)
-       n_D(0:2) = cshift(n_D(0:2), -1)   ! shift nVar to n_D(0)
+       n_D(0:2) = cshift(n_D(0:2), -1)   ! shift nVar/n_D(2) to n_D(0)
     elseif(present(VarIn_IIIV))then
        nDim = 3
        n_D(0:3) = shape(VarIn_IIIV)
-       n_D = cshift(n_D, -1)        ! shift nVar to n_D(0)
+       n_D = cshift(n_D, -1)        ! shift nVar/n_D(3) to n_D(0)
     else
        call CON_stop(NameSub // &
        'none of VarIn_VI/VarIn_IV,VarIn_VII/VarIn_IIV,VarIn_VIII/VarIn_IIIV are present')
