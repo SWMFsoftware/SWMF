@@ -61,7 +61,8 @@ contains
        CoordMinIn_D, CoordMaxIn_D, &
        Coord1In_I, Coord2In_I, Coord3In_I, &
        CoordIn_I, CoordIn_DII, CoordIn_DIII, &
-       VarIn_VI, VarIn_VII, VarIn_VIII)
+       VarIn_VI, VarIn_VII, VarIn_VIII, &
+       VarIn_IV, VarIn_IIV, VarIn_IIIV)
 
     character(len=*),           intent(in):: NameFile       ! Name of plot file
     character(len=*), optional, intent(in):: TypeFileIn     ! ascii/real8/real4
@@ -83,6 +84,9 @@ contains
     real,             optional, intent(in):: VarIn_VI(:,:)  ! variables in 1D
     real,             optional, intent(in):: VarIn_VII(:,:,:)            ! 2D
     real,             optional, intent(in):: VarIn_VIII(:,:,:,:)         ! 3D
+    real,             optional, intent(in):: VarIn_IV(:,:)  ! variables in 1D
+    real,             optional, intent(in):: VarIn_IIV(:,:,:)            ! 2D
+    real,             optional, intent(in):: VarIn_IIIV(:,:,:,:)         ! 3D
 
     character(len=20)  :: TypeFile
     character(len=500) :: StringHeader
@@ -119,8 +123,8 @@ contains
        allocate(Param_I(1))
        Param_I(1) = 0.0
     end if
-
-    ! Figure out grid dimensions and number of variables
+    
+    ! Figure out grid dimensions and number of variables       
     n_D = 1
     if(present(VarIn_VI))then
        nDim = 1
@@ -130,10 +134,23 @@ contains
        n_D(0:2) = shape(VarIn_VII)
     elseif(present(VarIn_VIII))then
        nDim = 3
-       n_D(0:3) = shape(VarIn_VIII)
+       n_D(0:3) = shape(VarIn_VIII) 
+    ! For IV, IIV, IIIV types
+    elseif(present(VarIn_IV))then
+       nDim = 1
+       n_D(0:1) = shape(VarIn_IV)
+       n_D(0:1) = cshift(n_D(0:1), -1)   ! shift nVar to n_D(0)  
+    elseif(present(VarIn_IIV))then
+       nDim = 2
+       n_D(0:2) = shape(VarIn_IIV)
+       n_D(0:2) = cshift(n_D(0:2), -1)   ! shift nVar to n_D(0)
+    elseif(present(VarIn_IIIV))then
+       nDim = 3
+       n_D(0:3) = shape(VarIn_IIIV)
+       n_D = cshift(n_D, -1)        ! shift nVar to n_D(0)
     else
        call CON_stop(NameSub // &
-            ' none of VarIn_VI, VarIn_VII, VarIn_VIII are present')
+       'none of VarIn_VI/VarIn_IV,VarIn_VII/VarIn_IIV,VarIn_VIII/VarIn_IIIV are present')
     endif
 
     ! Extract information
@@ -153,7 +170,7 @@ contains
           n_D(1:3) = (/ n1, n3, 1/)
        end if
     end if
-
+    
     IsCartesian = .true.
     if(present(IsCartesianIn)) IsCartesian = IsCartesianIn
 
@@ -212,6 +229,9 @@ contains
           if(present(VarIn_VI))   Var_IV(n,iVar) = VarIn_VI(iVar,i)
           if(present(VarIn_VII))  Var_IV(n,iVar) = VarIn_VII(iVar,i,j)
           if(present(VarIn_VIII)) Var_IV(n,iVar) = VarIn_VIII(iVar,i,j,k)
+          if(present(VarIn_IV))   Var_IV(n,iVar) = VarIn_IV(i,iVar)
+          if(present(VarIn_IIV))  Var_IV(n,iVar) = VarIn_IIV(i,j,iVar)
+          if(present(VarIn_IIIV)) Var_IV(n,iVar) = VarIn_IIIV(i,j,k,iVar)
        end do; end do; end do; 
     end do
    
@@ -478,6 +498,7 @@ contains
     character(len=*), parameter:: NameVarIn = "x y rho ux uy p gamma rbody"
     real    :: CoordIn_DII(nDimIn, n1In, n2In), VarIn_VII(nVarIn, n1In, n2In)
     real    :: CoordIn_DIII(nDimIn, n1In, 1, n2In), VarIn_VIII(nVarIn, n1In, 1, n2In)
+    real    :: VarIn_IIV(n1In, n2In, nVarIn)
 
     ! Do tests with ascii/real8/real4 files, 
     ! Cartesian/non-Cartesian coordinates
@@ -528,9 +549,11 @@ contains
 
        if(i <= n1In/2)then
           VarIn_VII(:, i, j) = (/ 1.0, 0.0, 0.0, 1.0 /)
+          VarIn_IIV(i, j, :) = (/ 1.0, 0.0, 0.0, 1.0 /)
           VarIn_VIII(:, i, 1, j) = (/ 1.0, 0.0, 0.0, 1.0 /)
        else
-          VarIn_VII(:,i,j) = (/ 0.1, 0.0, 0.0, 0.125 /)
+          VarIn_VII(:, i, j) = (/ 0.1, 0.0, 0.0, 0.125 /)
+          VarIn_IIV(i, j, :) = (/ 0.1, 0.0, 0.0, 0.125 /)
           VarIn_VIII(:, i, 1, j) = (/ 0.1, 0.0, 0.0, 0.125 /)  
        end if
     end do; end do
@@ -563,7 +586,7 @@ contains
                IsCartesianIn  = IsCartesianIn,  &
                CoordMinIn_D   = CoordMinIn_D,   &
                CoordMaxIn_D   = CoordMaxIn_D,   &
-               VarIn_VII      = VarIn_VII)
+               VarIn_IIV      = VarIn_IIV)
        case(2)
           ! Use 1D coordinate arrays
           call save_plot_file(NameFile,      &
@@ -666,7 +689,7 @@ contains
              call CON_stop(NameSub)
           end if
        
-       !To simpify, replace the 3D input array with 2D 
+       !To simplify, replace the 3D input array with 2D 
        if(iTest > 6)then
           CoordIn_DII = CoordIn_DIII(:,:,1,:)
           VarIn_VII = VarIn_VIII(:,:,1,:)
@@ -690,10 +713,15 @@ contains
               write(*,*)'Coord2Out =', Coord2Out_I(j)
               call CON_stop(NameSub)
            end if
-
            if(any(abs(VarIn_VII(:,i,j) - VarOut_VII(:,i,j)) > Eps))then
               write(*,*)'i,j=', i, j
               write(*,*)'VarIn =', VarIn_VII(:,i,j)
+              write(*,*)'VarOut=', VarOut_VII(:,i,j)
+              call CON_stop(NameSub)
+           end if
+           if(any(abs(VarIn_IIV(i,j,:) - VarOut_VII(:,i,j)) > Eps))then
+              write(*,*)'i,j=', i, j
+              write(*,*)'VarIn =', VarIn_IIV(i,j,:)
               write(*,*)'VarOut=', VarOut_VII(:,i,j)
               call CON_stop(NameSub)
            end if
