@@ -701,6 +701,7 @@ subroutine MH_set_parameters(TypeAction)
               if ((plot_area /= 'ion')&
                    .and. plot_area /= 'sph' &
                    .and. plot_area /= 'los' &
+                   .and. plot_area /= 'rfr' &
                    .and. plot_area /= 'lin' &        !^CFG IF RAYTRACE
                    .and. plot_area /= 'eqr' &        !^CFG IF RAYTRACE
                    ) call read_var('DxSavePlot',plot_dx(1,ifile))
