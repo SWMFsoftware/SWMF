@@ -46,6 +46,7 @@ subroutine write_plot_los(iFile)
   use CON_axes, ONLY : transform_matrix
   use ModCoordTransform, ONLY : rot_matrix_z
   use ModUtilities, ONLY: lower_case
+  use ModPlotFile, ONLY: save_plot_file
   implicit none
 
   ! Arguments
@@ -351,11 +352,11 @@ subroutine write_plot_los(iFile)
              trim(plot_type1)//"_",&
              ifile-plot_,"_n",n_step,file_extension
      end if
-     open(unit_tmp,file=filename,status="replace",err=999)
 
      ! write header file
      select case(plot_form(ifile))
      case('tec')
+        open(unit_tmp,file=filename,status="replace",err=999)
         write(unit_tmp,*) 'TITLE="BATSRUS: Synthetic Image"'
         write(unit_tmp,'(a)')trim(unitstr_TEC)
         write(unit_tmp,*) 'ZONE T="LOS Image"', &
@@ -376,45 +377,28 @@ subroutine write_plot_los(iFile)
 
            end do
         end do
-
+        close(unit_tmp)
      case('idl')
         ! description of file contains units, physics and dimension
         StringHeadLine = 'LOS integrals_var22'
-        write(unit_tmp,"(a)") StringHeadLine
-
-        ! 2 in the next line means 2 dimensional plot, 1 in the next line
-        !  is for a 2D cut, in other words one dimension is left out)
-        write(unit_tmp,"(i7,1pe13.5,3i3)") &
-             n_step,time_simulation,2,neqpar,nplotvar
-
-        ! Grid size
-        write(unit_tmp,"(2i4)") nPix, nPix
-
-        ! Equation parameters
-        write(unit_tmp,"(100es13.5)") eqpar(1:neqpar)
-
-        ! Coordinate, variable and equation parameter names
-        write(unit_tmp,"(a)")allnames
-
-        ! Data
-        do jPix=1,nPix
-           y_Pix = (jPix - 1) * SizePix - rSizeImage
-           do iPix=1,nPix
-              x_Pix = (iPix - 1) * SizePix - rSizeImage
-
-              if (plot_dimensional(ifile)) then
-                 x_Pix = x_Pix * No2Io_V(UnitX_)
-                 y_Pix = y_Pix * No2Io_V(UnitX_)
-              end if
-
-              write(unit_tmp,fmt="(30es18.10)") &
-                   x_Pix, y_Pix, los_image(iPix,jPix,1:nPlotVar)
-
-           end do
-        end do
-
+        ! set the size of plot image
+        x_Pix = rSizeImage 
+        if (plot_dimensional(ifile)) x_Pix = x_pix * No2Io_V(UnitX_)
+        ! Write
+        call save_plot_file(filename, &
+             TypeFileIn = TypeIdlFile_I(iFile), &
+             StringHeaderIn = StringHeadLine, &
+             nStepIn = n_step, &
+             TimeIn = time_simulation, &
+             ParamIn_I = eqpar(1:neqpar), &
+             NameVarIn = allnames, &
+             nDimIn = 2, & 
+             CoordMinIn_D = (/-x_Pix, -x_Pix/), &
+             CoordMaxIn_D = (/+x_Pix, +x_Pix/), &
+             VarIn_IIV = los_image)
+        
      end select
-     close(unit_tmp)
+     
   end if  !iProc ==0
   if(DoTiming)call timing_stop('los_save_plot')
 
