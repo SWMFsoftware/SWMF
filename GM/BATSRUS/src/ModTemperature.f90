@@ -179,8 +179,10 @@ contains
     character(len=*), parameter :: NameSub = "init_temperature_diffusion"
     !--------------------------------------------------------------------------
 
-    TradMin = TradMinSi*Si2No_V(UnitTemperature_)
-    EradMin = cRadiationNo*TradMin**4
+    if(UseGrayDiffusion)then
+       TradMin = TradMinSi*Si2No_V(UnitTemperature_)
+       EradMin = cRadiationNo*TradMin**4
+    end if
 
     ! First default the additional temperatures and energies to not in use
     UseTrad = .false.
@@ -384,11 +386,20 @@ contains
 
           else
              SpecificHeat_VCB(aTe4_,i,j,k,iBlock) = Cv/(4.0*cRadiationNo*Te**3)
-             SpecificHeat_VCB(aTrad4_,i,j,k,iBlock) = 1.0
-             RelaxationCoef_VCB(aTrad4_,i,j,k,iBlock) = Clight*PlanckOpacity
 
-             call get_radiation_diffusion_coef
-             HeatConductionCoef_IGB(1,i,j,k,iBlock) = DiffRad
+             if(UseGrayDiffusion)then
+                SpecificHeat_VCB(aTrad4_,i,j,k,iBlock) = 1.0
+                RelaxationCoef_VCB(aTrad4_,i,j,k,iBlock) = Clight*PlanckOpacity
+
+                call get_radiation_diffusion_coef
+                HeatConductionCoef_IGB(nCond,i,j,k,iBlock) = DiffRad
+             end if
+
+             if(UseHeatConduction)then
+                HeatConductionCoef_IGB(1,i,j,k,iBlock) = HeatConductionCoef &
+                     /(4.0*cRadiationNo*Te**3)
+             end if
+                  
           end if
 
        end do; end do; end do
