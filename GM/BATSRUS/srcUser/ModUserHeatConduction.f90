@@ -15,7 +15,7 @@ module ModUser
   character (len=*), parameter :: &
        NameUserModule = 'heat conduction'
 
-  integer :: iHeatConductionTest
+  character(len=20) :: TypeProblem
   real :: HeatConductionCoef, AmplitudeTemperature, T0
 
 contains
@@ -25,32 +25,30 @@ contains
   subroutine user_init_session
 
     use ModGeometry, ONLY: x1, x2, XyzMin_D, XyzMax_D
-    use ModMain,     ONLY: nI
+    use ModMain,     ONLY: nI, Time_Simulation
     use ModParallel, ONLY: proc_dims
+    use ModProcMH,   ONLY: iProc
 
     character(len=*), parameter :: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
 
-    if(x2 /= -x1) &
-       call stop_mpi(NameSub//' : xMin should be -xMax in the #GRID command')
+    if(Time_Simulation <= 0.0)then
+       if(iProc == 0) write(*,*) NameSub// &
+            ' : starting simulation time should be larger than 0'
+       call stop_mpi('reset time with #TIMESIMULATION')
+    end if
 
-    ! Shift grid to the right by half a grid cell size,
-    ! so that x=0 is at a cell center
-    x1 = x1 - x1/(2*nI*proc_dims(1))
-    x2 = x2 + x2/(2*nI*proc_dims(2))
-
-    XyzMin_D(1) = x1
-    XyzMax_D(1) = x2
-
-    select case(iHeatConductionTest)
-    case(1)
+    select case(TypeProblem)
+    case('gaussian')
        HeatConductionCoef = 0.1
        AmplitudeTemperature = 10.0
        T0 = 10.0
-    case(2)
+    case('rz')
        HeatConductionCoef = 0.1
        AmplitudeTemperature = 10.0
        T0 = 3.0
+    case default
+       call stop_mpi(NameSub//' : undefined problem type='//TypeProblem)
     end select
 
   end subroutine user_init_session
@@ -91,7 +89,7 @@ contains
 
        select case(NameCommand)
        case("#HEATCONDUCTIONTEST")
-          call read_var('iHeatConductionTest',iHeatConductionTest)
+          call read_var('TypeProblem',TypeProblem)
 
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -133,29 +131,19 @@ contains
     !--------------------------------------------------------------------------
     iBlock = GlobalBlk
 
-    select case(iHeatConductionTest)
-    case(1)
-       ! temperature spike at x=0, otherwise set the temperature to zero
+    select case(TypeProblem)
+    case('gaussian')
        do i = -1, nI+2
-          if(Time_Simulation == 0.0)then
-             if(x_Blk(i,1,1,iBlock) > -0.5*Dx_Blk(iBlock) .and. &
-                  x_Blk(i,1,1,iBlock) < 0.5*Dx_Blk(iBlock)) then
-                Temperature = T0 + AmplitudeTemperature/Dx_Blk(iBlock)
-             else
-                Temperature = T0
-             end if
-          else
-             Spread = 4.0*HeatConductionCoef*Time_Simulation
-             Temperature = T0 + AmplitudeTemperature/(sqrt(cPi*Spread)) &
-                  *exp(-x_Blk(i,1,1,iBlock)**2/Spread)
-          end if
+          Spread = 4.0*HeatConductionCoef*Time_Simulation
+          Temperature = T0 + AmplitudeTemperature/(sqrt(cPi*Spread)) &
+               *exp(-x_Blk(i,1,1,iBlock)**2/Spread)
           do k = -1, nK+2; do j = -1, nJ+2
              State_VGB(Rho_,i,j,k,iBlock) = 1.0
              State_VGB(RhoUx_:p_-1,i,j,k,iBlock) = 0.0
              State_VGB(p_,i,j,k,iBlock) = Temperature
           end do; end do
        end do
-    case(2)
+    case('rz')
        Lambda = -(3.831705970/y2)**2
        Spread = 4.0*HeatConductionCoef*Time_Simulation
        do j = -1, nJ+2; do i = -1, nI+2
@@ -170,6 +158,8 @@ contains
              State_VGB(p_,i,j,k,iBlock) = Temperature
           end do
        end do; end do
+    case default
+       call stop_mpi(NameSub//' : undefined problem type='//TypeProblem)
     end select
 
   end subroutine user_set_ics
@@ -208,20 +198,13 @@ contains
 
     IsFound = .true.
     select case(NameVar)
-    case('te')
-       PlotVar_G = State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock)
-    case('te0')
-       select case(iHeatConductionTest)
-       case(1)
-          if(Time_Simulation == 0.0)then
-             PlotVar_G = State_VGB(p_,:,:,:,iBlock) &
-                  /State_VGB(Rho_,:,:,:,iBlock)
-          else
-             Spread = 4.0*HeatConductionCoef*Time_Simulation
-             PlotVar_G = T0 + AmplitudeTemperature/(sqrt(cPi*Spread)) &
-                  *exp(-x_Blk(:,:,:,iBlock)**2/Spread)
-          end if
-       case(2)
+    case('t0','temp0')
+       select case(TypeProblem)
+       case('gaussian')
+          Spread = 4.0*HeatConductionCoef*Time_Simulation
+          PlotVar_G = T0 + AmplitudeTemperature/(sqrt(cPi*Spread)) &
+               *exp(-x_Blk(:,:,:,iBlock)**2/Spread)
+       case('rz')
           Lambda = -(3.831705970/y2)**2
           Spread = 4.0*HeatConductionCoef*Time_Simulation
           do j = -1, nJ+2; do i = -1, nI+2
