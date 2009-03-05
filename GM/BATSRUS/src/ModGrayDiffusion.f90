@@ -667,7 +667,6 @@ contains
                CvSiOut = CvSi, TeSiOut = TeSi)
 
           PlanckOpacity = PlanckOpacitySi/Si2No_V(UnitX_)
-          RosselandMeanOpacity = RosselandMeanOpacitySi/Si2No_V(UnitX_)
           Cv = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
           Te = TeSi*Si2No_V(UnitTemperature_)
 
@@ -684,46 +683,52 @@ contains
                   * 4.0*cRadiationNo*Te**3 / Cv
           end if
 
-          ! Calculate the cell centered diffusion coefficients
-          if(UseRadFluxLimiter)then
-             Grad2ByErad2 = &
-                  (((State_VGB(Eradiation_,i+1,j,k,iBlock) &
-                  -  State_VGB(Eradiation_,i-1,j,k,iBlock))*InvDx2)**2 &
-                  +((State_VGB(Eradiation_,i,j+1,k,iBlock) &
-                  -  State_VGB(Eradiation_,i,j-1,k,iBlock))*InvDy2)**2 &
-                  +((State_VGB(Eradiation_,i,j,k+1,iBlock) &
-                  -  State_VGB(Eradiation_,i,j,k-1,iBlock))*InvDz2)**2 &
-                  )/  State_VGB(Eradiation_,i,j,k,iBlock)**2
-             select case(TypeRadFluxLimiter)
-             case("sum")
-                DiffRad = Clight/(3*RosselandMeanOpacity + sqrt(Grad2ByErad2))
-             case("max")
-                DiffRad = Clight/max(3*RosselandMeanOpacity,sqrt(Grad2ByErad2))
-             case("larsen")
-                DiffRad = Clight/sqrt(9*RosselandMeanOpacity**2 + Grad2ByErad2)
-             end select
-          else
-             DiffRad = Clight/(3*RosselandMeanOpacity)
-          end if
-
-          ! Store it for message passing
-          DiffSemiCoef_VGB(EradImpl_,i,j,k,iBlock) = DiffRad
+          call get_diffusion_coef
 
        end do; end do; end do
 
-       ! set floating outer boundary
-       if(NeiLev(1,iBlock) == NOBLK) DiffSemiCoef_VGB(:,0   ,:,:,iBlock) &
-            =                        DiffSemiCoef_VGB(:,1   ,:,:,iBlock)
-       if(NeiLev(2,iBlock) == NOBLK) DiffSemiCoef_VGB(:,nI+1,:,:,iBlock) &
-            =                        DiffSemiCoef_VGB(:,nI  ,:,:,iBlock)
-       if(NeiLev(3,iBlock) == NOBLK) DiffSemiCoef_VGB(:,:,0   ,:,iBlock) &
-            =                        DiffSemiCoef_VGB(:,:,1   ,:,iBlock)
-       if(NeiLev(4,iBlock) == NOBLK) DiffSemiCoef_VGB(:,:,nJ+1,:,iBlock) &
-            =                        DiffSemiCoef_VGB(:,:,nJ  ,:,iBlock)
-       if(NeiLev(5,iBlock) == NOBLK) DiffSemiCoef_VGB(:,:,:,0   ,iBlock) &
-            =                        DiffSemiCoef_VGB(:,:,:,1   ,iBlock)
-       if(NeiLev(6,iBlock) == NOBLK) DiffSemiCoef_VGB(:,:,:,nK+1,iBlock) &
-            =                        DiffSemiCoef_VGB(:,:,:,nK  ,iBlock)
+       if(NeiLev(1,iBlock) == NOBLK)then
+          do k = 1, nK; do j = 1, nJ; do i = 0, 0
+             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  RosselandMeanOpacitySiOut = RosselandMeanOpacitySi)
+             call get_diffusion_coef
+          end do; end do; end do
+       end if
+       if(NeiLev(2,iBlock) == NOBLK)then
+          do k = 1, nK; do j = 1, nJ; do i = nI+1, nI+1
+             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  RosselandMeanOpacitySiOut = RosselandMeanOpacitySi)
+             call get_diffusion_coef
+          end do; end do; end do
+       end if
+       if(NeiLev(3,iBlock) == NOBLK)then
+          do k = 1, nK; do j = 0, 0; do i = 1, nI
+             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  RosselandMeanOpacitySiOut = RosselandMeanOpacitySi)
+             call get_diffusion_coef
+          end do; end do; end do
+       end if
+       if(NeiLev(4,iBlock) == NOBLK)then
+          do k = 1, nK; do j = nJ+1, nJ+1; do i = 1, nI
+             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  RosselandMeanOpacitySiOut = RosselandMeanOpacitySi)
+             call get_diffusion_coef
+          end do; end do; end do
+       end if
+       if(NeiLev(5,iBlock) == NOBLK)then
+          do k = 0, 0; do j = 1, nJ; do i = 1, nI
+             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  RosselandMeanOpacitySiOut = RosselandMeanOpacitySi)
+             call get_diffusion_coef
+          end do; end do; end do
+       end if
+       if(NeiLev(6,iBlock) == NOBLK)then
+          do k = nK+1, nK+1; do j = 1, nJ; do i = 1, nI
+             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  RosselandMeanOpacitySiOut = RosselandMeanOpacitySi)
+             call get_diffusion_coef
+          end do; end do; end do
+       end if
 
     end do
 
@@ -766,6 +771,41 @@ contains
           call stop_mpi(NameSub//': unimplemented TypeGeometry=//TypeGeometry')
        end if
     end do
+
+  contains
+
+    subroutine get_diffusion_coef
+
+      !------------------------------------------------------------------------
+
+      RosselandMeanOpacity = RosselandMeanOpacitySi/Si2No_V(UnitX_)
+
+      ! Calculate the cell centered diffusion coefficients
+      if(UseRadFluxLimiter)then
+         Grad2ByErad2 = &
+              (((State_VGB(Eradiation_,i+1,j,k,iBlock) &
+              -  State_VGB(Eradiation_,i-1,j,k,iBlock))*InvDx2)**2 &
+              +((State_VGB(Eradiation_,i,j+1,k,iBlock) &
+              -  State_VGB(Eradiation_,i,j-1,k,iBlock))*InvDy2)**2 &
+              +((State_VGB(Eradiation_,i,j,k+1,iBlock) &
+              -  State_VGB(Eradiation_,i,j,k-1,iBlock))*InvDz2)**2 &
+              )/  State_VGB(Eradiation_,i,j,k,iBlock)**2
+         select case(TypeRadFluxLimiter)
+         case("sum")
+            DiffRad = Clight/(3*RosselandMeanOpacity + sqrt(Grad2ByErad2))
+         case("max")
+            DiffRad = Clight/max(3*RosselandMeanOpacity,sqrt(Grad2ByErad2))
+         case("larsen")
+            DiffRad = Clight/sqrt(9*RosselandMeanOpacity**2 + Grad2ByErad2)
+         end select
+      else
+         DiffRad = Clight/(3*RosselandMeanOpacity)
+      end if
+
+      ! Store it for message passing
+      DiffSemiCoef_VGB(EradImpl_,i,j,k,iBlock) = DiffRad
+
+    end subroutine get_diffusion_coef
 
   end subroutine get_impl_gray_diff_state
 
