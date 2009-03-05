@@ -780,7 +780,7 @@ contains
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModPhysics,  ONLY: cRadiationNo, No2Si_V, Si2No_V, &
          UnitEnergyDens_, UnitTemperature_
-    use ModUser,     ONLY: user_material_properties
+    use ModUser,     ONLY: user_material_properties, user_set_outerbcs
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: StateImpl_VG(nw,-1:nI+2,-1:nJ+2,-1:nK+2)
@@ -789,11 +789,19 @@ contains
 
     real :: EinternalSi, TeSi, Te, AbsorptionEmission
     integer :: i, j, k
+    logical :: IsFound
+    character(len=20), parameter :: TypeUserBc='usersemi'
+    character(len=*), parameter :: NameSub='get_gray_diffusion_rhs'
     !--------------------------------------------------------------------------
 
     if(NeiLev(1,iBlock) == NOBLK)then 
        if(IsLinear .and. TypeBc_I(1) /= 'reflect')then
           StateImpl_VG(:,0,:,:) = 0.0
+       elseif(TypeBc_I(1) == 'user')then
+          IsFound = .false.
+          call user_set_outerbcs(iBlock,1,TypeUserBc,IsFound)
+          if(.not. IsFound) call stop_mpi( &
+               NameSub//': unknown TypeBc_I='//TypeBc_I(1))
        else
           StateImpl_VG(:,0,:,:) = StateImpl_VG(:,1,:,:)
        end if
@@ -801,6 +809,11 @@ contains
     if(NeiLev(2,iBlock) == NOBLK)then
        if(IsLinear .and. TypeBc_I(2) /= 'reflect')then
           StateImpl_VG(:,nI+1,:,:) = 0.0
+       elseif(TypeBc_I(2) == 'user')then
+          IsFound = .false.
+          call user_set_outerbcs(iBlock,2,TypeUserBc,IsFound)
+          if(.not. IsFound) call stop_mpi( &
+               NameSub//': unknown TypeBc_I='//TypeBc_I(2))
        else
           StateImpl_VG(:,nI+1,:,:) = StateImpl_VG(:,nI,:,:)
        end if
@@ -808,6 +821,11 @@ contains
     if(NeiLev(3,iBlock) == NOBLK)then
        if(IsLinear .and. TypeBc_I(3) /= 'reflect')then
           StateImpl_VG(:,:,0,:) = 0.0
+       elseif(TypeBc_I(3) == 'user')then
+          IsFound = .false.
+          call user_set_outerbcs(iBlock,3,TypeUserBc,IsFound)
+          if(.not. IsFound) call stop_mpi( &
+               NameSub//': unknown TypeBc_I='//TypeBc_I(3))
        else
           StateImpl_VG(:,:,0,:) = StateImpl_VG(:,:,1,:)
        end if
@@ -815,6 +833,11 @@ contains
     if(NeiLev(4,iBlock) == NOBLK) then
        if(IsLinear .and. TypeBc_I(4) /= 'reflect')then
           StateImpl_VG(:,:,nJ+1,:) = 0.0
+       elseif(TypeBc_I(4) == 'user')then
+          IsFound = .false.
+          call user_set_outerbcs(iBlock,4,TypeUserBc,IsFound)
+          if(.not. IsFound) call stop_mpi( &
+               NameSub//': unknown TypeBc_I='//TypeBc_I(4))
        else
           StateImpl_VG(:,:,nJ+1,:) = StateImpl_VG(:,:,nJ,:)
        end if
@@ -822,6 +845,11 @@ contains
     if(NeiLev(5,iBlock) == NOBLK) then
        if(IsLinear .and. TypeBc_I(5) /= 'reflect')then
           StateImpl_VG(:,:,:,0) = 0.0
+       elseif(TypeBc_I(5) == 'user')then
+          IsFound = .false.
+          call user_set_outerbcs(iBlock,5,TypeUserBc,IsFound)
+          if(.not. IsFound) call stop_mpi( &
+               NameSub//': unknown TypeBc_I='//TypeBc_I(5))
        else
           StateImpl_VG(:,:,:,0) = StateImpl_VG(:,:,:,1)
        end if
@@ -829,6 +857,11 @@ contains
     if(NeiLev(6,iBlock) == NOBLK)then
        if(IsLinear .and. TypeBc_I(6) /= 'reflect')then
           StateImpl_VG(:,:,:,nK+1) = 0.0
+       elseif(TypeBc_I(6) == 'user')then
+          IsFound = .false.
+          call user_set_outerbcs(iBlock,6,TypeUserBc,IsFound)
+          if(.not. IsFound) call stop_mpi( &
+               NameSub//': unknown TypeBc_I='//TypeBc_I(6))
        else
           StateImpl_VG(:,:,:,nK+1) = StateImpl_VG(:,:,:,nK)
        end if
