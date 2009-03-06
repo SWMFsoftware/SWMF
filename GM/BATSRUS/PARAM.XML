@@ -1841,28 +1841,36 @@ The default value is 1.E-12 for 8 byte reals and 1.E-6 for 4 byte reals.
 	<parameter name="TypePrecond" type="string" input="select"
 							case="upper">
 		<option name="MBILU" default="T" />
-		<option name="JACOBI" value="Jacobi"/>
+		<option name="BILU"  />
+		<option name="DILU"  />
 		<option name="GS" value="Gauss-Seidel"/>
+		<option name="JACOBI" value="Jacobi"/>
 	</parameter>
 	<parameter name="PrecondParam" type="real" min="-1" max="1" 
 		default="0.5" if="$TypePrecond eq 'MBILU'"/>
 #PRECONDITIONER
 symmetric       TypePrecondSide (left, symmetric, right)
-MBILU           TypePrecond (MBILU, GS, or JACOBI)
+MBILU           TypePrecond (MBILU, BILU, DILU, GS, or JACOBI)
 0.5             GustafssonPar (0 to 1, read for MBILU preconditioner only)
 
 Default parameters are shown. 
 
 TypePrecondSide can be left, right or symmetric. There seems to be little
 difference between these in terms of performance. Right preconditioning 
-does not affect the normalization of the residual. The Jacobi preconditioner
-is implemented to always use left preconditioning. 
+does not affect the normalization of the residual. The Jacobi and DILU
+preconditioners are implemented to always use left preconditioning. 
 
-The TypePrecond parameter can be set to JACOBI, GS or MBILU.
-The simplest JACOBI preconditioner is mainly useful for code development 
+The TypePrecond parameter can be set to JACOBI, GS, DILU, BILU or MBILU.
+The simplest Jacobi preconditioner is mainly useful for code development 
 purposes. The Gauss-Seidel (GS) preconditioner gives better performance
-than JACOBI, however, the MBILU preconditioner has the best performance 
-for most applications.
+than Jacobi, however, the other choices are usually more efficient.
+The Diagonal Incomplete Lower-Upper (DILU) preconditioner assumes that the 
+off-diagonal blocks are diagonal matrices, and it gives the same result 
+but faster performance than BILU or MBILU in that case. The Block ILU (BILU)
+preconditioner does not make this assumption. The Modified BILU (MBILU)
+preconditioner allows a Gustafsson modification relative to BILU. In some
+cases the modification improves the preconditioner, but sometimes it makes
+it worse.
 
 The GustafssonPar parameter is only read for the MBILU preconditioner.
 If it is 0, the standard block (BILU) preconditioning is done.
