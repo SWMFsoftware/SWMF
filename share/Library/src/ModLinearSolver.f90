@@ -31,8 +31,11 @@ module ModLinearSolver
   public :: Lhepta          ! multiply with lower block triangular matrix
   public :: upper_hepta_scalar ! multiply with upper scalar triangular matrix
   public :: lower_hepta_scalar ! multiply with lower scalar triangular matrix
+  public :: multiply_dilu   ! multiply with diagonal (LU)^-1 matrix
   public :: implicit_solver ! implicit solver in 1D with 3 point stencil
   public :: test_linear_solver
+
+  integer, public, parameter:: GaussSeidel_=3, Dilu_=2, Bilu_=1, Mbilu_=0
 
   !REVISION HISTORY:
   ! 05Dec06 - Gabor Toth - initial prototype/prolog/code based on BATSRUS code
@@ -44,11 +47,6 @@ module ModLinearSolver
   integer, parameter  :: UnitTmp_=9
   integer :: iStep
   real    :: Time
-
-  !Heat conduction, linear and non-linear
-  real, parameter :: cRelaxation = 10000.0
-  real    :: SpecificHeat_I(  101), HeatConductionCoef_I(  2:101)
-  real    :: SpecificHeat2T_I(202), HeatConductionCoef2T_I(3:202)
 
 contains
 
@@ -63,11 +61,10 @@ contains
     ! Moved into ModLinearSolver.f90 for SWMF by Gabor Toth (December 2006)
     !*************************************************************
 
-    implicit none
-
     ! subroutine for matrix vector multiplication 
     interface
        subroutine matvec(a,b,n)
+         implicit none
          ! Calculate b = M.a where M is the matrix
          integer, intent(in) :: n
          real, intent(in) ::  a(n)
@@ -323,6 +320,7 @@ contains
 
     interface
        subroutine matvec(a,b,n)
+         implicit none
          ! Calculate b = M.a where M is the matrix
          integer, intent(in) :: n
          real, intent(in) ::  a(n)
@@ -654,13 +652,12 @@ contains
     ! Conjugated gradients, works if and only if the matrix A
     ! is symmetric and positive definite
 
-    implicit none
-
     ! subroutine for matrix vector multiplication 
     interface
        subroutine matvec(Vec_I, MatVec_I, n)
          ! Calculate MatVec_I = Mat_II.Vec_I where Mat_II is a symmetric
          ! positive definite matrix
+         implicit none
          integer, intent(in) :: n
          real,    intent(in) :: Vec_I(n)
          real,    intent(out):: MatVec_I(n)
@@ -678,6 +675,7 @@ contains
        subroutine preconditioner(Vec_I, PrecVec_I, n)
          ! Calculate PrecVec_I = Prec_II.Vec_I where Prec_II is the
          ! preconditione matrix that should be symmetric and positive definite
+         implicit none
          integer, intent(in) :: n
          real, intent(in)    :: Vec_I(n)
          real, intent(out)   :: PrecVec_I(n)
@@ -990,7 +988,8 @@ contains
     REAL, INTENT(INOUT), DIMENSION(N,N,nblock) :: d,e,f
     REAL, INTENT(INOUT), DIMENSION(N,N,nblock), optional :: e1,f1,e2,f2
 
-    !=======================================================================
+
+    !======================================================================
     !     Description of arguments:
     !=======================================================================
     !
@@ -1011,9 +1010,13 @@ contains
     !           last have distance M2 from the main diagonal blocks.
     !
     ! alf:      The parameter for Gustafsson modification. 
-    !           Alf = +1 invert the diagonal blocks as is: Gauss-Seidel prec.
-    !           Alf = 0  normal BILU preconditioning
-    !           Alf < 0  modified (MBILU) preconditioning. Alf >= -1.0
+    !           Alf = +3 Gauss-Seidel prec: invert the original diagonal blocks
+    !           Alf = +2 DILU prec: LU for diagonal, keep off-diagonal blocks
+    !           Alf = +1 BILU prec: LU for diagonal, premultiply U with D^-1
+    !           Alf < 0  MBILU prec: Gustaffson modification of diagonal blocks
+    !                    using -1 <= alf < 0 parameter
+
+
     !
     ! d, e, f, e1, f1, e2, f2:
     !          on entrance: matrix A
@@ -1049,14 +1052,14 @@ contains
     !          by partial pivoting in subroutine 'Lapack_getrf'.
     !
     ! these used to be automatic arrays
-    real, dimension(:,:), allocatable :: dd
-    integer, dimension(:), allocatable :: pivot
+    real,    allocatable :: dd(:,:)
+    integer, allocatable :: pivot(:)
 
-    INTEGER :: i,j,INFO
-    REAL, PARAMETER :: zero=0.0, one=1.0
+    real, allocatable:: fOrig_VVI(:,:,:), f1Orig_VVI(:,:,:), f2Orig_VVI(:,:,:)
+
+    integer :: i, j, INFO
 
     ! INFO     : variable for LAPACK_GETRF
-    ! zero, one: variables necessary for BLAS-routine dgemv. 
     !
     ! External subroutines:
     !
@@ -1085,81 +1088,103 @@ contains
     ! Allocate arrays that used to be automatic
     allocate(dd(N,N), pivot(N))
 
-    DO j=1,nblock
-       dd = d(:,:,j)
-       ! D = D - E.F(j-1) - E1.F1(j-M1) - E2.F2(j-M2)
-       if (alf < 0.5)then
-          IF (j>1 )call BLAS_GEMM('n','n',N,N,N,-one, &
-               e(:,:,j),  N, f(:,:,j- 1), N, one, dd, N)
-          IF (j>M1) call BLAS_GEMM('n','n',N,N,N,-one, &
-               e1(:,:,j), N, f1(:,:,j-M1), N, one, dd, N)
-          IF (j>M2) call BLAS_GEMM('n','n',N,N,N,-one, &
-               e2(:,:,j), N, f2(:,:,j-M2), N, one, dd, N)
+    if(nint(alf) == Dilu_)then
+       allocate(fOrig_VVI(n,n,nBlock))
+       fOrig_VVI = f
+       if(present(f1))then
+          allocate(f1Orig_VVI(n,n,nBlock))
+          f1Orig_VVI = f1
+          if(present(f2))then
+             allocate(f2Orig_VVI(n,n,nBlock))
+             f2Orig_VVI = f2
+          end if
        end if
-       IF (alf<zero) THEN
+    end if
 
-          ! Relaxed Gustafsson modification
+    do j=1, nBlock
+       dd = d(:,:,j)
+
+       ! Modify D according to LU decomposition except for Gauss-Seidel
+       if (nint(alf) /= GaussSeidel_)then
+          ! D = D - E.F(j-1) - E1.F1(j-M1) - E2.F2(j-M2)
+          if (j>1 )call BLAS_GEMM('n','n',N,N,N,-1.0, &
+               e(:,:,j),  N, f(:,:,j- 1), N, 1.0, dd, N)
+          if (j>M1) call BLAS_GEMM('n','n',N,N,N,-1.0, &
+               e1(:,:,j), N, f1(:,:,j-M1), N, 1.0, dd, N)
+          if (j>M2) call BLAS_GEMM('n','n',N,N,N,-1.0, &
+               e2(:,:,j), N, f2(:,:,j-M2), N, 1.0, dd, N)
+       end if
+       if(nint(alf) <= Mbilu_)then
+          ! Relaxed Gustafsson modification for MBILU
 
           ! D = D + alf*( E2.F(j-M2) + E2.F1(j-M2) + E1.F(j-M1) + E1.F2(j-M1)
           !             + E.F1(j-1)  + E.F2(j-1) )
 
-          IF (j>M2) THEN
-             CALL BLAS_GEMM('n','n',N,N,N,alf,e2(:,:,j),N, f(:,:,j-M2),N,one,dd,N)
-             CALL BLAS_GEMM('n','n',N,N,N,alf,e2(:,:,j),N,f1(:,:,j-M2),N,one,dd,N)
-          END IF
-          IF (j>M1) THEN
-             CALL BLAS_GEMM('n','n',N,N,N,alf,e1(:,:,j),N, f(:,:,j-M1),N,one,dd,N)
-          END IF
-          IF (j>M1.and.j-M1<=nblock-M2) THEN
-             CALL BLAS_GEMM('n','n',N,N,N,alf,e1(:,:,j),N,f2(:,:,j-M1),N,one,dd,N)
-          END IF
-          IF (j>1.and.j-1<=nblock-M2) THEN
-             CALL BLAS_GEMM('n','n',N,N,N,alf, e(:,:,j),N,f2(:,:,j-1 ),N,one,dd,N)
-          END IF
-          IF (j>1.and.j-1<=nblock-M1) THEN
-             CALL BLAS_GEMM('n','n',N,N,N,alf, e(:,:,j),N,f1(:,:,j-1 ),N,one,dd,N)
-          END IF
-       END IF
+          if (j>M2) then
+             call BLAS_GEMM('n','n',N,N,N,alf, &
+                  e2(:,:,j),N, f(:,:,j-M2),N,1.0,dd,N)
+             call BLAS_GEMM('n','n',N,N,N,alf, &
+                  e2(:,:,j),N,f1(:,:,j-M2),N,1.0,dd,N)
+          end if
+          if (j>M1) call BLAS_GEMM('n','n',N,N,N,alf, &
+               e1(:,:,j),N, f(:,:,j-M1),N,1.0,dd,N)
+          if (j>M1.and.j-M1<=nblock-M2) call BLAS_GEMM('n','n',N,N,N,alf, &
+               e1(:,:,j),N,f2(:,:,j-M1),N,1.0,dd,N)
+          if (j>1.and.j-1<=nblock-M2) call BLAS_GEMM('n','n',N,N,N,alf, &
+               e(:,:,j),N,f2(:,:,j-1 ),N,1.0,dd,N)
+          if (j>1.and.j-1<=nblock-M1) call BLAS_GEMM('n','n',N,N,N,alf, &
+               e(:,:,j),N,f1(:,:,j-1 ),N,1.0,dd,N)
+       end if
 
-       ! Compute the LU-decomposition of d(j):
-       !
-       !   DD = LU
-       !   F2 = D^{-1}.F2, F1 = D^{-1}.F1, F = D^{-1}.F
-
-       ! Calculate and save D^{-1} into d
-       !
-       ! d=I, solve dd.d = I
-
-       CALL LAPACK_GETRF( N, N, dd, N, pivot, INFO )
-       d(:,:,j)=zero
+       ! Invert the diagonal block by first factorizing then solving D.D'=I
+       call LAPACK_GETRF( N, N, dd, N, pivot, INFO )
+       ! Set the right hand side as identity matrix
+       d(:,:,j)=0.0
        do i=1,N
-          d(i,i,j)=one
+          d(i,i,j)=1.0
        end do
-       CALL LAPACK_GETRS('n',N,N,dd,N,pivot,d(:,:,j),N,INFO)
+       ! Solve the problem, returns D^-1 into d(j)
+       call LAPACK_GETRS('n',N,N,dd,N,pivot,d(:,:,j),N,INFO)
 
-       IF (j   < nblock)then
+       ! Pre-multiply U with D^-1 to make Uhepta more efficient
+       ! F2 = D^{-1}.F2, F1 = D^{-1}.F1, F = D^{-1}.F
+       if (j   < nblock)then
           dd=f(:,:,j)
-          CALL BLAS_GEMM('n','n',N,N,N,one,d(:,:,j),N,dd,N,zero,f(:,:,j),N)
+          CALL BLAS_GEMM('n','n',N,N,N,1.0,d(:,:,j),N,dd,N,0.0,f(:,:,j),N)
        end IF
-       IF (j+M1<=nblock)then
+       if (j+M1<=nblock)then
           dd=f1(:,:,j)
-          CALL BLAS_GEMM('n','n',N,N,N,one,d(:,:,j),N,dd,N,zero,f1(:,:,j),N)
+          CALL BLAS_GEMM('n','n',N,N,N,1.0,d(:,:,j),N,dd,N,0.0,f1(:,:,j),N)
        end IF
-
-       IF (j+M2<=nblock)then
+       if (j+M2<=nblock)then
           dd=f2(:,:,j)
-          CALL BLAS_GEMM('n','n',N,N,N,one,d(:,:,j),N,dd,N,zero,f2(:,:,j),N)
+          CALL BLAS_GEMM('n','n',N,N,N,1.0,d(:,:,j),N,dd,N,0.0,f2(:,:,j),N)
        end IF
-    ENDDO
 
-    ! Deallocate arrays that used to be automatic
+    end do
+
+    if(nint(alf) == Dilu_)then
+       ! DILU prec requires original diagonal blocks in U
+       f = fOrig_VVI
+       deallocate(fOrig_VVI)
+       if(present(f1))then
+          f1 = f1Orig_VVI
+          deallocate(f1Orig_VVI)          
+          if(present(f2))then
+             f2 = f2Orig_VVI
+             deallocate(f2Orig_VVI)
+          end if
+       end if
+    end if
+
+    ! Deallocate arrays
     deallocate(dd, pivot)
 
     !call timing_stop('precond')
 
-  END SUBROUTINE prehepta
+  end subroutine prehepta
   !============================================================================
-  SUBROUTINE Uhepta(inverse,nblock,N,M1,M2,x,f,f1,f2)
+  subroutine Uhepta(inverse,nblock,N,M1,M2,x,f,f1,f2)
 
     ! G. Toth, 2001
 
@@ -1212,7 +1237,6 @@ contains
     ! of the j-th block on the super diagonal is stored in f(i,k,j).
 
     INTEGER :: j
-    REAL, PARAMETER :: one=1.0
 
     ! External function
     !
@@ -1262,20 +1286,20 @@ contains
        IF(inverse)THEN
           !  x' := U^{-1}.x = x - F.x'(j+1) - F1.x'(j+M1) - F2.x'(j+M2)
           DO j=nblock-1,1,-1
-             CALL BLAS_GEMV('n',N,N,-one, f(:,:,j),N,x(:,j+1 ),1,one,x(:,j),1)
+             CALL BLAS_GEMV('n',N,N,-1.0, f(:,:,j),N,x(:,j+1 ),1,1.0,x(:,j),1)
              IF (j+M1<=nblock) CALL BLAS_GEMV( &
-                  'n',N,N,-one,f1(:,:,j),N,x(:,j+M1),1,one,x(:,j),1)
+                  'n',N,N,-1.0,f1(:,:,j),N,x(:,j+M1),1,1.0,x(:,j),1)
              IF (j+M2<=nblock) CALL BLAS_GEMV( &
-                  'n',N,N,-one,f2(:,:,j),N,x(:,j+M2),1,one,x(:,j),1)
+                  'n',N,N,-1.0,f2(:,:,j),N,x(:,j+M2),1,1.0,x(:,j),1)
           ENDDO
        ELSE
           !  x := U.x = x + F.x(j+1) + F1.x(j+M1) + F2.x(j+M2)
           DO j=1,nblock-1
-             CALL BLAS_GEMV('n',N,N,one, f(:,:,j),N,x(:,j+1 ),1,one,x(:,j),1)
+             CALL BLAS_GEMV('n',N,N,1.0, f(:,:,j),N,x(:,j+1 ),1,1.0,x(:,j),1)
              IF (j+M1<=nblock) CALL BLAS_GEMV( &
-                  'n',N,N,one,f1(:,:,j),N,x(:,j+M1),1,one,x(:,j),1)
+                  'n',N,N,1.0,f1(:,:,j),N,x(:,j+M1),1,1.0,x(:,j),1)
              IF (j+M2<=nblock) CALL BLAS_GEMV( &
-                  'n',N,N,one,f2(:,:,j),N,x(:,j+M2),1,one,x(:,j),1)
+                  'n',N,N,1.0,f2(:,:,j),N,x(:,j+M2),1,1.0,x(:,j),1)
           END DO
        END IF
     end if
@@ -1332,7 +1356,6 @@ contains
     real:: work1
 
     INTEGER :: j
-    REAL, PARAMETER :: zero=0.0, one=1.0
 
     ! External subroutine
     !
@@ -1375,13 +1398,13 @@ contains
        ! BLAS VERSION
        do j=1,nblock
 
-          call BLAS_GEMV('n', N, N, one, d(:,:,j) ,N, x(:,j), 1, zero, work, 1)
+          call BLAS_GEMV('n', N, N, 1.0, d(:,:,j) ,N, x(:,j), 1, 0.0, work, 1)
           if(j > 1 ) call BLAS_GEMV( &
-               'n',N,N,-one,e(:,:,j) ,N,x(:,j-1) ,1,one,work,1)
+               'n',N,N,-1.0,e(:,:,j) ,N,x(:,j-1) ,1,1.0,work,1)
           if(j > M1) call BLAS_GEMV( &
-               'n',N,N,-one,e1(:,:,j),N,x(:,j-M1),1,one,work,1)
+               'n',N,N,-1.0,e1(:,:,j),N,x(:,j-M1),1,1.0,work,1)
           if(j > M2) call BLAS_GEMV( &
-               'n',N,N,-one,e2(:,:,j),N,x(:,j-M2),1,one,work,1)
+               'n',N,N,-1.0,e2(:,:,j),N,x(:,j-M2),1,1.0,work,1)
           call BLAS_COPY(N,work,1,x(:,j),1)
 
        enddo
@@ -1529,6 +1552,7 @@ contains
   end subroutine implicit_solver
 
   !=======================================================================
+
   subroutine test_linear_solver
 
     integer, parameter :: nStep=20
@@ -1724,6 +1748,73 @@ contains
     end do
 
   end subroutine lower_hepta_scalar
+
+  !============================================================================
+
+  subroutine multiply_dilu(nBlock, n, m1, m2, x, d, e, f, e1, f1, e2, f2)
+
+    ! G. Toth, 2009
+
+    ! This routine multiplies x with the upper triagonal U^{-1} L^{-1}
+    ! which must have been constructed in subroutine prehepta.
+    ! DILU makes the assumption that the off-diagonal blocks are diagonal!
+    !
+    ! For block penta-diagonal matrix, set M2=nBlock and omit e2, f2
+    ! For block tri-diagonal matrix set M1=M2=nBlock and omit e1, f1, e2, f2
+
+    integer, intent(in)                    :: nBlock, n, m1, m2
+    real, intent(inout)                    :: x(n,nBlock)
+    real, intent(in), dimension(n,n,nBlock):: d, e, f
+    real, intent(in), dimension(n,n,nBlock), optional :: e1, f1, e2, f2
+
+    real, allocatable :: x_V(:)
+    integer :: i, j
+    !------------------------------------------------------------------------
+
+    ! x' = L^{-1}.x = D^{-1}.(x - E2.x'(j-M2) - E1.x'(j-M1) - E.x'(j-1))
+    allocate(x_V(n))
+
+    do j=1, nBlock
+       x_V = x(:,j)
+       if (j > M2) then
+          do i = 1, n
+             x_V(i) = x_V(i) - e(i,i,j)*x(i,j-1) - e1(i,i,j)*x(i,j-M1) &
+                  - e2(i,i,j)*x(i,j-M2)
+          end do
+       else if (j > M1) then
+          do i = 1, n
+             x_V(i) = x_V(i) - e(i,i,j)*x(i,j-1) - e1(i,i,j)*x(i,j-M1)
+          end do
+       else if (j > 1) then
+          do i = 1, n
+             x_V(i) = x_V(i) - e(i,i,j)*x(i,j-1)
+          end do
+       end if
+       x(:,j) = matmul(d(:,:,j), x_V) 
+    end do
+
+    !  x' := U^{-1}.x = x - D^-1 [F.x'(j+1) - F1.x'(j+M1) - F2.x'(j+M2)]
+    do j = nBlock-1, 1, -1
+       if (j + M2 <= nBlock) then
+          do i = 1, n
+             x_V(i) = f(i,i,j)*x(i,j+1) + f1(i,i,j)*x(i,j+M1) &
+                  + f2(i,i,j)*x(i,j+M2)
+          end do
+       else if(j + M1 <= nBlock) then
+          do i = 1, n
+             x_V(i) = f(i,i,j)*x(i,j+1) + f1(i,i,j)*x(i,j+M1)
+          end do
+       else
+          do i = 1, n
+             x_V(i) = f(i,i,j)*x(i,j+1)
+          end do
+       end if
+       x(:,j) = x(:,j) - matmul(d(:,:,j), x_V)
+
+    end do
+    deallocate(x_V)
+
+  end subroutine multiply_dilu
 
 end module ModLinearSolver
 

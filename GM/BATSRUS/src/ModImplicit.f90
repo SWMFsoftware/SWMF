@@ -238,6 +238,10 @@ contains
        call read_var('TypePrecond'    ,PrecondType, IsUpperCase=.true.)
        select case(PrecondType)
        case('JACOBI', 'GS')
+          GustafssonPar = -3.0
+       case('DILU')
+          GustafssonPar = -2.0
+       case('BILU')
           GustafssonPar = -1.0
        case default
           call read_var('GustafssonPar', GustafssonPar)

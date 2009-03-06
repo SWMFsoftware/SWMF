@@ -186,8 +186,9 @@ end subroutine impl_matvec_free
 !=============================================================================
 subroutine impl_preconditioner(Vec_I, PrecVec_I, n)
 
-  use ModImplicit, ONLY: JacobiPrec_I, MAT, nw, nI, nJ, nwIJK, nIJK, nImplBlk
-  use ModLinearSolver, ONLY: Lhepta, Uhepta
+  use ModImplicit, ONLY: JacobiPrec_I, MAT, nw, nI, nJ, nwIJK, nIJK, nImplBlk,&
+       PrecondType
+  use ModLinearSolver, ONLY: Lhepta, Uhepta, multiply_dilu
 
   implicit none
 
@@ -200,18 +201,31 @@ subroutine impl_preconditioner(Vec_I, PrecVec_I, n)
   PrecVec_I = Vec_I
 
   do iImplBlock=1,nImplBLK
-     call Lhepta(nIJK,nw,nI,nI*nJ,&
-          PrecVec_I(nwIJK*(iImplBlock-1)+1),&
-          MAT(1,1,1,1,1,1,iImplBlock),&
-          MAT(1,1,1,1,1,2,iImplBlock),&
-          MAT(1,1,1,1,1,4,iImplBlock),&
-          MAT(1,1,1,1,1,6,iImplBlock))
 
-     call Uhepta(.true.,nIJK,nw,nI,nI*nJ,&
-          PrecVec_I(nwIJK*(iImplBlock-1)+1),&
-          MAT(1,1,1,1,1,3,iImplBlock),&
-          MAT(1,1,1,1,1,5,iImplBlock),&
-          MAT(1,1,1,1,1,7,iImplBlock))
+     if(PrecondType == 'DILU')then
+        call multiply_dilu(nIJK,nw,nI,nI*nJ,&
+             PrecVec_I(nwIJK*(iImplBlock-1)+1),&
+             MAT(1,1,1,1,1,1,iImplBlock),&
+             MAT(1,1,1,1,1,2,iImplBlock),&
+             MAT(1,1,1,1,1,3,iImplBlock),&
+             MAT(1,1,1,1,1,4,iImplBlock),&
+             MAT(1,1,1,1,1,5,iImplBlock),&
+             MAT(1,1,1,1,1,6,iImplBlock),&
+             MAT(1,1,1,1,1,7,iImplBlock))
+     else
+        call Lhepta(nIJK,nw,nI,nI*nJ,&
+             PrecVec_I(nwIJK*(iImplBlock-1)+1),&
+             MAT(1,1,1,1,1,1,iImplBlock),&
+             MAT(1,1,1,1,1,2,iImplBlock),&
+             MAT(1,1,1,1,1,4,iImplBlock),&
+             MAT(1,1,1,1,1,6,iImplBlock))
+
+        call Uhepta(.true.,nIJK,nw,nI,nI*nJ,&
+             PrecVec_I(nwIJK*(iImplBlock-1)+1),&
+             MAT(1,1,1,1,1,3,iImplBlock),&
+             MAT(1,1,1,1,1,5,iImplBlock),&
+             MAT(1,1,1,1,1,7,iImplBlock))
+     end if
   end do
 
 end subroutine impl_preconditioner
