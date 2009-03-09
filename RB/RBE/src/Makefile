@@ -7,6 +7,8 @@ include ../Makefile.conf
 include Makefile.RULES
 
 OBJECTS = \
+	ModRbe.o\
+	ModRbSat.o\
 	rbe_subs.o\
 	plot_potential.o\
 	trace_line.o\
