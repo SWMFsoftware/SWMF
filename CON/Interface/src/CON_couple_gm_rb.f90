@@ -35,12 +35,17 @@ module CON_couple_gm_rb
   ! Size of the 2D spherical structured (possibly non-uniform) RB grid
   integer, save :: iSize, jSize, nCells_D(2)
 
+  ! Number of satellites in GM that will also be traced in RB
+  integer, save :: nShareSats
 contains
 
   !BOP =======================================================================
   !IROUTINE: couple_gm_rb_init - initialize GM-RB coupling
   !INTERFACE:
   subroutine couple_gm_rb_init
+    integer :: iError
+    ! MPI status variable
+    integer :: iStatus_I(MPI_STATUS_SIZE)
     !DESCRIPTION:
     ! Store RB grid size.
     !EOP
@@ -53,6 +58,18 @@ contains
 
     nCells_D=ncells_decomposition_d(RB_)
     iSize=nCells_D(1); jSize=nCells_D(2)
+
+    ! Set number of satellites shared between GM and RB for tracing.
+    call GM_satinit_for_rb(nShareSats)
+
+    if(i_proc0(RB_) /= i_proc0(GM_))then
+       if(is_proc0(GM_)) &
+            call MPI_send(nShareSats,1,MPI_INTEGER,i_proc0(RB_),&
+            1,i_comm(),iError)
+       if(is_proc0(RB_)) &
+            call MPI_recv(nShareSats,1,MPI_INTEGER,i_proc0(GM_),&
+            1,i_comm(),iStatus_I,iError)
+    end if
 
   end subroutine couple_gm_rb_init
 
@@ -89,6 +106,12 @@ contains
     ! Buffer for the variables on the 2D RB grid and line data
     real, allocatable :: Integral_IIV(:,:,:), BufferLine_VI(:,:)
 
+    ! Buffer for satellite locations   
+    real, dimension(:,:,:), allocatable :: SatPos_DII
+    
+    ! Buffer for satellite names   
+    character (len=100), dimension(:), allocatable:: NameSat_I
+    
     ! MPI related variables
 
     ! MPI status variable
@@ -124,6 +147,13 @@ contains
     allocate(Integral_IIV(iSize,jSize,nIntegral), stat=iError)
     call check_allocate(iError,NameSub//": Integral_IIV")
 
+    if (nShareSats > 0) then
+       allocate(SatPos_DII(4,2,nShareSats), stat=iError)
+       call check_allocate(iError,NameSub//": SatPos_DII")
+       allocate(NameSat_I(nShareSats),       stat=iError)
+       call check_allocate(iError,NameSub//": NameSat_I")
+    end if
+
     if(DoTest)write(*,*)NameSub,', variables allocated',&
          ', iProc:',iProcWorld
 
@@ -136,6 +166,12 @@ contains
        call GM_get_for_rb(Integral_IIV, iSize, jSize, nIntegral, &
             BufferLine_VI, nVarLine, nPointLine, NameVar)
     end if
+    !\                                                                                                                                
+    ! If RB sat tracing is enabled, get sat locations from GM                                                                         
+    !/                                                                                                                                
+    if(is_proc(GM_).AND.(nShareSats > 0)) &
+         call GM_get_sat_for_rb(SatPos_DII, NameSat_I, nShareSats)
+
     !\
     ! Transfer variables from GM to RB
     !/
@@ -155,15 +191,45 @@ contains
        end if
     end if
 
+    !\
+    ! Transfer satellite names from GM to RB
+    !/   
+    
+    if(nShareSats > 0 .and. i_proc0(RB_) /= i_proc0(GM_))then
+       nSize = nShareSats*100
+       if(is_proc0(GM_)) then
+          call MPI_send(NameSat_I,nSize,MPI_BYTE,i_proc0(RB_),&
+               1,i_comm(),iError)
+       endif
+       if(is_proc0(RB_)) then
+          call MPI_recv(NameSat_I,nSize,MPI_BYTE,i_proc0(GM_),&
+               1,i_comm(),iStatus_I,iError)
+       endif
+    
+   ! Transfer satellite locations from GM to RB
+       
+       nSize = 3*2*nShareSats
+       if(is_proc0(GM_)) then
+          call MPI_send(SatPos_DII,nSize,MPI_REAL,i_proc0(RB_),&
+               1,i_comm(),iError)
+       endif
+       if(is_proc0(IM_)) then
+          call MPI_recv(SatPos_DII,nSize,MPI_REAL,i_proc0(GM_),&
+               1,i_comm(),iStatus_I,iError)
+       endif
+    end if
+    
     if(DoTest)write(*,*)NameSub,', variables transferred',&
          ', iProc:',iProcWorld
-
+       
     !\
     ! Put variables into RB
     !/
     if(is_proc0(RB_))then
        call RB_put_from_gm(Integral_IIV,iSize,jSize,nIntegral,&
             BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
+       if(nShareSats > 0) &
+            call RB_put_sat_from_gm(nShareSats, NameSat_I, SatPos_DII)
        if(DoTest) &
             write(*,*)'RB got from GM: RB iProc, Buffer(1,1)=',&
             iProcWorld,Integral_IIV(1,1,:)
@@ -173,6 +239,11 @@ contains
     ! Deallocate buffer to save memory
     !/
     deallocate(Integral_IIV, BufferLine_VI)
+
+    if (nShareSats > 0) then
+       deallocate(NameSat_I)
+       deallocate(SatPos_DII)
+    end if
 
     if(DoTest)write(*,*)NameSub,', variables deallocated',&
          ', iProc:',iProcWorld
