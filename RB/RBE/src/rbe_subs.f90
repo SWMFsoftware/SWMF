@@ -57,179 +57,6 @@
 !     expansion method.
 
 !=============================================================================
-module rbe_io_unit
-
-  integer :: iUnit1, iUnit2
-
-end module rbe_io_unit
-!=============================================================================
-module rbe_constant
-  implicit none
-
-  real, parameter ::  &
-       xme=7.9e15,    &	            ! magnetic dipole moment of the Earth
-       re=6.371e6,    &	            ! earth's radius (m)
-       xmp=1.673e-27, &             ! mass of H+ in kg
-       q=1.6e-19,     &	            ! electron charge
-       c=2.998e8                    ! speed of light (m/s)
-
-end module rbe_constant
-!=============================================================================
-module rbe_grid
-  implicit none
-
-  ! max no. of SW-IMF, dst, Kp data pts
-  integer, parameter :: nswmax=40000, ndstmax=45000, nKpmax=250  
-
-  ! ir=no. of grids in latitude in ionosphere, ip=no. of grids in
-  ! local time, iw = no. of grids in magnetic moment, ik = no. of
-  ! grids in invariant K, ns = no. of species, je = no. of 
-  ! pts. in the fixed E grid, ig = no. of pts. in the fixed y grid.
-  !integer, parameter :: ns=2, ir=51, ip=48, iw=29, ik=29, je=12, ig=12
-
-
-  ! full version:
-  integer, parameter :: ns=2, ir=51, ip=48, iw=29, ik=29, je=12, ig=12
-  
-  ! quick version:
-  ! integer, parameter :: ns=2, ir=51, ip=48, iw=15, ik=15, je=9,  ig=6     
-  
-  ! dimension of Meredith's data:
-  integer,parameter  :: irw=7, ipw=24
-  ! dimension of Horne's data:
-  integer,parameter  :: irc=5,  ipe=5, iwc=6, ipa=91
-
-end module rbe_grid
-!=============================================================================
-module rbe_cread1
-
-  implicit none
-
-  character(len=8):: outname
-  character(len=2):: st2
-
-end module rbe_cread1
-!=============================================================================
-module rbe_cread2
-
-  use rbe_grid
-
-  implicit none
-
-  real,parameter :: dtmax=3.0
-  real :: &
-       tstart,tmax,trans,tint,tf,hlosscone,dsth(ndstmax),&
-       tdst(ndstmax),timf(nswmax),bxw(nswmax),byw(nswmax),bzw(nswmax),&
-       tsw(nswmax),xnswa(nswmax),vswa(nswmax),rc,tKp(nKpmax),&
-       xKph(nKpmax)
-  integer :: &
-       nimf,nsw,iyear,iday,js,itype,nstep,nstept,ndst,nKp,&
-       ires,ismo,imod,iprint,ntime,iconvect,init,il,ie,idfa,idfe,iplsp
-
-  character (len=8)::  storm
-
-  logical :: IsStandAlone=.false.,UseGm=.false.,UseIE=.false., &
-       UseSplitting = .false.,DoSaveIe = .false.
-
-  logical :: UseMcLimiter = .false.,UseCentralDiff = .false.
-  real    :: BetaLimiter  = 2.0
-
-end module rbe_cread2
-!=============================================================================
-module rbe_cgrid
-  use rbe_grid
-  implicit none
-  real :: xlati(ir),dlati(ir),phi(ip),dphi,xmlt(ip),&
-       xmass(ns),si(0:ik+1),ds(ik),rsi,w(0:iw+1),dw(iw),rw,&
-       d4(ir,iw,ik),xjac(ir,iw),gride(je),gridp(je),gridy(ig),colat(ir),&
-       xmltd(ip)
-end module rbe_cgrid
-!=============================================================================
-module rbe_cfield
-  use rbe_grid
-  implicit none
-  real :: bo(ir,ip),ro(ir,ip),xmlto(ir,ip),y(ir,ip,0:ik+1),&
-       Hdens(ir,ip,ik),p(ir,ip,iw,ik),v(ir,ip,iw,ik),ekev(ir,ip,iw,ik),&
-       rmir(ir,ip,ik),tcone(ir,ip,iw,ik),tanA2(ir,ip,0:ik+1),&
-       volume(ir,ip),bm(ir,ip,ik),gamma(ir,ip,iw,ik),parmod(10),rb,&
-       xo(ir,ip),yo(ir,ip),tya(ir,ip,0:ik+1),gridoc(ir,ip)
-
-  integer :: irm(ip),irm0(ip),iba(ip)
-
-end module rbe_cfield
-!=============================================================================
-module rbe_ccepara
-  use rbe_grid
-  implicit none
-  ! Charge exchange loss rate
-  real :: achar(ir,ip,iw,ik)
-end module rbe_ccepara
-!=============================================================================
-module rbe_convect
-  use rbe_grid
-  implicit none
-  real :: potent(ir,ip),xnsw,vsw,Bx,By,Bz
-end module rbe_convect
-!=============================================================================
-module rbe_cVdrift
-  use rbe_grid
-  implicit none
-  ! Drift velocity (lon, poloidal)
-  real:: vl(ir,ip,iw,ik),vp(ir,ip,iw,ik)
-end module rbe_cVdrift
-!=============================================================================
-module rbe_cinitial
-  use rbe_grid
-  implicit none
-  real :: f2(ir,ip,iw,ik),xnsw0,vsw0,Bx0,By0,&
-       Bz0,vswb0,xnswb0,elb,eub,e_l(ir),ecbf(ir),ecdt(ir),&
-       eclc(ir),ecce(ir)
-  integer :: iw1(ik),iw2(ik)
-end module rbe_cinitial
-!=============================================================================
-module rbe_cboundary
-  use rbe_grid
-  implicit none
-  real :: fb(ip,iw,ik),vswb,xnswb
-end module rbe_cboundary
-!=============================================================================
-module rbe_plasmasphere
-  use rbe_grid
-  implicit none
-  ! plasmasphere density(m^-3) from pbo_2.f
-  real :: par(2),density(ir,ip) 
-end module rbe_plasmasphere
-!=============================================================================
-module rbe_time
-  real :: t, dt
-  integer :: istep
-end module rbe_time
-!=============================================================================
-Module ModGmRb
-  use rbe_grid,ONLY: nLat => ir, nLon => ip
-  real, allocatable :: StateLine_VI(:,:),StateIntegral_IIV(:,:,:)
-  integer :: iLineIndex_II(nLon,1:nLat),nPoint
-  
-end Module ModGmRb
-!=============================================================================
-Module ModChorusIntensity
-  use rbe_grid, ONLY: irw, ipw
-  real :: wLshell(irw),wmlt(ipw),chorusI(irw,ipw,3)
-end Module ModChorusIntensity
-!=============================================================================
-Module ModChorusDiffCoef
-  use rbe_grid, ONLY: irc, ipe, iwc, ipa
-  real :: cLshell(irc),ompea(ipe),ckeV(iwc),cPA(ipa),&
-          cDEE(irc,ipe,iwc,ipa),cDaa(irc,ipe,iwc,ipa)
-end Module ModChorusDiffCoef
-!=============================================================================
-Module ModWpower
-use rbe_grid, ONLY: ir,ip
-
-real :: CHpower(ir,ip),ompe(ir,ip)
-
-end Module ModWpower
-!=============================================================================
 
 subroutine rbe_init
   ! Initial setup for the rbe model
@@ -245,6 +72,29 @@ subroutine rbe_init
   use rbe_cboundary
   use rbe_plasmasphere
   use rbe_time
+  use ModRbTime
+  use ModTimeConvert, ONLY: time_int_to_real,time_real_to_int
+
+  !\
+  ! Set the Time parameters
+  !/ 
+  iYear = iStartTime_I(1)
+!  iDOY  = get_doy(iStartTime_I(1),iStartTime_I(2),iStartTime_I(3))
+!  IYD=mod(iYear,100)*1000+iDOY
+  call time_int_to_real(iStartTime_I,CurrentTime)
+  StartTime=CurrentTime
+
+  !\  
+  !set outname
+  !/
+  if (UseSeparatePlotFiles) then
+     CurrentTime = StartTime+t
+     call time_real_to_int(CurrentTime,iCurrentTime_I)
+     write(outname,"(i4,2i2,1x,2i2)") &
+          iCurrentTime_I(1),iCurrentTime_I(2),iCurrentTime_I(3),iCurrentTime_I(4), &
+          iCurrentTime_I(5),iCurrentTime_I(6)
+  endif
+
 
   if (dt > dtmax) dt=dtmax
   t=tstart-trans
@@ -332,6 +182,8 @@ subroutine rbe_run
   use ModChorusIntensity
   use ModWpower
   use ModIoUnit, ONLY: UnitTmp_
+  use ModRbTime
+  use ModTimeConvert, ONLY: time_real_to_int
 
   ! print initial fluxes
   if (t.eq.tstart .and. itype.eq.1) call rbe_save_restart
@@ -378,6 +230,15 @@ subroutine rbe_run
   endif
 
   t=t+dt
+  !update outname 
+  CurrentTime = StartTime+t
+  call time_real_to_int(CurrentTime,iCurrentTime_I)
+  if (UseSeparatePlotFiles) then
+     write(outname,"(i4,2i2,1x,2i2)") &
+          iCurrentTime_I(1),iCurrentTime_I(2),iCurrentTime_I(3),iCurrentTime_I(4), &
+          iCurrentTime_I(5),iCurrentTime_I(6)
+  endif
+
 
   if (ires.eq.1.and.mod(t,tf).eq.0.) then
      call fieldpara(t,dt,c,q,rc,re,xlati,&
@@ -421,7 +282,14 @@ subroutine rbe_run
   endif
 
   t=t+dt
-
+  !update outname 
+  CurrentTime = StartTime+t
+  call time_real_to_int(CurrentTime,iCurrentTime_I)
+  if (UseSeparatePlotFiles) then
+     write(outname,"(i4,2i2,1x,2i2)") &
+          iCurrentTime_I(1),iCurrentTime_I(2),iCurrentTime_I(3),iCurrentTime_I(4), &
+          iCurrentTime_I(5),iCurrentTime_I(6)
+  endif
   ! update the plasmasphere density
   if (iplsp.eq.1) then
      call setpot(colat,ir,xmltd,ip+1,potent)
@@ -1995,10 +1863,10 @@ subroutine boundary(t,tstart,f2,v,xjac,xmass,p,xktd,xnd,&
      vswb0,xnswb0,outname,st2,itype,ibset,irm,irm0,iba)
   
   use rbe_cboundary
-  use rbe_cread2, ONLY:js,tsw,xnswa,vswa,nsw,UseGm,tint 
-  use ModIoUnit, ONLY: UnitTmp_
+  use rbe_cread2,  ONLY:js,tsw,xnswa,vswa,nsw,UseGm,tint 
+  use ModIoUnit,   ONLY: UnitTmp_
   use ModNumConst, ONLY: pi => cPi
-  
+
   real v(ir,ip,iw,ik),xjac(ir,iw),p(ir,ip,iw,ik),&
        xmass(ns),f2(ir,ip,iw,ik)
   integer iba(ip),irm(ip),irm0(ip)
@@ -2117,16 +1985,17 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
      ntime,irm,iplsp,iw1,iw2,itype)
 
   use rbe_grid
+  use rbe_cread1,ONLY: UseSeparatePlotFiles
   use rbe_cread2,ONLY: js,storm,DoSaveIe
   use ModIoUnit, ONLY: UnitTmp_
   use ModNumConst, ONLY: pi => cPi
-
+  use ModRbSat,    ONLY: write_rb_sat, nRbSats, DoWriteSats
   real xlati(ir),ekev(ir,ip,iw,ik),y(ir,ip,0:ik+1),bo(ir,ip),&
        xjac(ir,iw),gride(je),gridp(je),gridy(ig),f2(ir,ip,iw,ik),ro(ir,ip),&
        xmlto(ir,ip),f(ir,ip,iw,ik),xlati1(ir),p(ir,ip,iw,ik),xmlt(ip),&
        flx(ir,ip,je,ig),ecbf(ir),ecdt(ir),eclc(ir),ecce(ir),&
        psd(ir,ip,iw,ik),ebound(je+1),density(ir,ip),parmod(10)
-  integer iw1(ik),iw2(ik),irm(ip)
+  integer iw1(ik),iw2(ik),irm(ip),iSat
   character outname*8 ,st2*2
 
   hour=t/3600.
@@ -2144,30 +2013,43 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
   ! Open the files to write fluxes and psd                  
   iwh=ifix(0.5*(iw+1))
   ikh=ifix(0.5*(ik+1))
-  if (t.eq.tstart) then
-     open(unit=UnitTmp_,file='RB/plots/'//outname//st2//'.fls',status='unknown')
-     !        open(unit=13,file=outname//st2//'.psd',status='unknown')
+  if (UseSeparatePlotFiles) then
+     open(unit=UnitTmp_,file='RB/plots/'//outname//st2//'.fls',status='new')
      write(UnitTmp_,'(f10.5,5i6,"         ! rc(Re),ir,ip,je,ig,ntime")')&
           rc,ir,ip,je,ig,ntime
      write(UnitTmp_,'(6f9.3)') (gride(k),k=1,je)
-!     write(UnitTmp_,'(7f9.3)') (Ebound(k),k=1,je+1)
+     !     write(UnitTmp_,'(7f9.3)') (Ebound(k),k=1,je+1)
      write(UnitTmp_,'(6f9.5)') (gridy(m),m=1,ig)
      write(UnitTmp_,'(10f8.3)') (xlati1(i),i=1,ir)
-     !        write(13,'(f10.5,5i6,"         ! rc(Re),iwh,ikh,ir,ip,ntime")')
-     !    *         rc,iwh,ikh,ir,ip,ntime
-     !        write(13,'(1p,7e11.3)') (w(k),k=1,iw,2)
-     !        write(13,'(1p,7e11.3)') (si(m),m=1,ik,2)
-     !        write(13,'(10f8.3)') (xlati1(i),i=1,ir)
      if (iprint.eq.1) then
         close(UnitTmp_)
-        !           close(13)
         return
      endif
-  else                                                  ! in pbo_2.f
-     open(unit=UnitTmp_,file='RB/plots/'//outname//st2//'.fls',status='old',position='append')
-      !        open(unit=13,file=outname//st2//'.psd',status='old',position='append')
+  else
+     if (t.eq.tstart) then
+        open(unit=UnitTmp_,file='RB/plots/'//outname//st2//'.fls',status='unknown')
+        !        open(unit=13,file=outname//st2//'.psd',status='unknown')
+        write(UnitTmp_,'(f10.5,5i6,"         ! rc(Re),ir,ip,je,ig,ntime")')&
+             rc,ir,ip,je,ig,ntime
+        write(UnitTmp_,'(6f9.3)') (gride(k),k=1,je)
+        !     write(UnitTmp_,'(7f9.3)') (Ebound(k),k=1,je+1)
+        write(UnitTmp_,'(6f9.5)') (gridy(m),m=1,ig)
+        write(UnitTmp_,'(10f8.3)') (xlati1(i),i=1,ir)
+        !        write(13,'(f10.5,5i6,"         ! rc(Re),iwh,ikh,ir,ip,ntime")')
+        !    *         rc,iwh,ikh,ir,ip,ntime
+        !        write(13,'(1p,7e11.3)') (w(k),k=1,iw,2)
+        !        write(13,'(1p,7e11.3)') (si(m),m=1,ik,2)
+        !        write(13,'(10f8.3)') (xlati1(i),i=1,ir)
+        if (iprint.eq.1) then
+           close(UnitTmp_)
+           !           close(13)
+           return
+        endif
+     else                                                  ! in pbo_2.f
+        open(unit=UnitTmp_,file='RB/plots/'//outname//st2//'.fls',status='old',position='append')
+        !        open(unit=13,file=outname//st2//'.psd',status='old',position='append')
+     endif
   endif
-
   ! Convert f2 to f (differential flux)
   do i=1,ir
      do j=1,ip
@@ -2219,6 +2101,12 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
         !           enddo
      enddo
   enddo
+  !Write out any sats that are being tracked
+  if(DoWriteSats) then
+     do iSat=1,nRbSats
+        call write_rb_sat(iSat,ir,ip,je,ig,flx)
+     enddo
+  endif
   close(UnitTmp_)
   !     close(13)
 
@@ -3979,3 +3867,34 @@ subroutine rk4(Bfield,imod,iopt,parmod,ps,t,t0,h,x0,xend,xwrk,nd,f,tend)
   tend=t0+h
 
 end subroutine rk4
+
+!!=============================================================================                                                                                             
+!integer function get_doy(year, mon, day) result(doy)
+!
+!  implicit none
+!
+!  integer :: i
+!  integer, dimension(1:12) :: dayofmon
+!  integer :: year, mon, day
+!
+!  dayofmon(1) = 31
+!  dayofmon(2) = 28
+!  dayofmon(3) = 31
+!  dayofmon(4) = 30
+!  dayofmon(5) = 31
+!  dayofmon(6) = 30
+!  dayofmon(7) = 31
+!  dayofmon(8) = 31
+!  dayofmon(9) = 30
+!  dayofmon(10) = 31
+!  dayofmon(11) = 30
+!  dayofmon(12) = 31
+!
+!  if (mod(year,4).eq.0) dayofmon(2) = dayofmon(1) + 1
+!  doy = 0
+!  do i = 1, mon-1
+!     doy = doy + dayofmon(i)
+!  enddo
+!  doy = doy + day
+!
+!end function get_doy
