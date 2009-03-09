@@ -7,7 +7,7 @@ subroutine RB_set_parameters(NameAction)
   use rbe_cread1
   use rbe_cread2
   use rbe_io_unit
-  
+  use ModRbTime
   implicit none
 
   character (len=100)           :: NameCommand
@@ -16,6 +16,7 @@ subroutine RB_set_parameters(NameAction)
   logical :: IsRestart, UseFixedB, UsePlasmaSphere, UseSmooth
   logical :: DoDiffusePA, DoDiffuseE
   character (len=100) :: NameSpecies, NameModel
+  integer :: iDate
   !\
   ! Description:
   ! This subroutine gets the inputs for RBE
@@ -34,11 +35,27 @@ subroutine RB_set_parameters(NameAction)
         else
            write(*,*)'RB WARNING: #STOP command is ignored in the framework'
         end if
+
+     case('#STARTTIME')
+        if(IsStandAlone)then
+           !read in iYear,iMonth,iDay,iHour,iMinute,iSecond into iStartTime
+           do iDate=1,6
+              call read_var('iStartTime',iStartTime_I(iDate))
+           enddo
+           
+        else
+           write(*,*)'RB WARNING:#STARTTIME command is ignored in the framework'
+        end if
      
      case('#SAVEPLOT')
         call read_var('DtSavePlot',tint)   ! output results every tint seconds
-        call read_var('OutName',OutName)
+        call read_var('UseSeparatePlotFiles',UseSeparatePlotFiles)
+        if (.not. UseSeparatePlotFiles) then
+           call read_var('OutName',OutName)
+        endif
         
+        
+
      case('#PLOTELECTRODYNAMICS')
         call read_var('DoSaveIe',DoSaveIe)
 
