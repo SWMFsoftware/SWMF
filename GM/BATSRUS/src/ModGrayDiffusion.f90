@@ -49,8 +49,7 @@ module ModGrayDiffusion
 
   integer :: nDiffusion = 1 ! for now
 
-  real, parameter :: TradMinSi = 300.0 ! K
-  real            :: EradMin
+  real :: EradMin
 
 contains
 
@@ -58,11 +57,12 @@ contains
 
   subroutine init_gray_diffusion
 
-    use ModAdvance,    ONLY: Eradiation_
-    use ModSize,       ONLY: nI, nJ, nK, MaxBlock, nDim
-    use ModVarIndexes, ONLY: NameVar_V
-    use ModImplicit,   ONLY: UseSemiImplicit
-    use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, cRadiationNo
+    use ModAdvance,     ONLY: Eradiation_
+    use ModSize,        ONLY: nI, nJ, nK, MaxBlock, nDim
+    use ModVarIndexes,  ONLY: NameVar_V
+    use ModImplicit,    ONLY: UseSemiImplicit
+    use ModPhysics,     ONLY: Si2No_V, UnitTemperature_, cRadiationNo
+    use ModTemperature, ONLY: TradMinSi
 
     character(len=*), parameter :: NameSub = "init_gray_diffusion"
     !------------------------------------------------------------------------
@@ -688,46 +688,52 @@ contains
        end do; end do; end do
 
        if(NeiLev(1,iBlock) == NOBLK)then
-          do k = 1, nK; do j = 1, nJ; do i = 0, 0
+          i = 0
+          do k = 1, nK; do j = 1, nJ
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   RosselandMeanOpacitySiOut = RosselandMeanOpacitySi)
              call get_diffusion_coef
-          end do; end do; end do
+          end do; end do
        end if
        if(NeiLev(2,iBlock) == NOBLK)then
-          do k = 1, nK; do j = 1, nJ; do i = nI+1, nI+1
+          i = nI + 1
+          do k = 1, nK; do j = 1, nJ
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   RosselandMeanOpacitySiOut = RosselandMeanOpacitySi)
              call get_diffusion_coef
-          end do; end do; end do
+          end do; end do
        end if
        if(NeiLev(3,iBlock) == NOBLK)then
-          do k = 1, nK; do j = 0, 0; do i = 1, nI
+          j = 0
+          do k = 1, nK; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   RosselandMeanOpacitySiOut = RosselandMeanOpacitySi)
              call get_diffusion_coef
-          end do; end do; end do
+          end do; end do
        end if
        if(NeiLev(4,iBlock) == NOBLK)then
-          do k = 1, nK; do j = nJ+1, nJ+1; do i = 1, nI
+          j = nJ + 1
+          do k = 1, nK; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   RosselandMeanOpacitySiOut = RosselandMeanOpacitySi)
              call get_diffusion_coef
-          end do; end do; end do
+          end do; end do
        end if
        if(NeiLev(5,iBlock) == NOBLK)then
-          do k = 0, 0; do j = 1, nJ; do i = 1, nI
+          k = 0
+          do j = 1, nJ; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   RosselandMeanOpacitySiOut = RosselandMeanOpacitySi)
              call get_diffusion_coef
-          end do; end do; end do
+          end do; end do
        end if
        if(NeiLev(6,iBlock) == NOBLK)then
-          do k = nK+1, nK+1; do j = 1, nJ; do i = 1, nI
+          k = nK + 1
+          do j = 1, nJ; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   RosselandMeanOpacitySiOut = RosselandMeanOpacitySi)
              call get_diffusion_coef
-          end do; end do; end do
+          end do; end do
        end if
 
     end do

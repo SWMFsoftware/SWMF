@@ -103,7 +103,8 @@ module ModTemperature
 
   ! To make sure that the dominant contribution to the norm
   ! TRad^2/Cv(TRad)\sim (1/T) is not due to infinitesimal temperatures
-  real :: TradMinSi, TradMin, EradMin
+  real :: TradMin, EradMin
+  real, public :: TradMinSi
 
   real :: rDotRPe, pDotADotPPe
 
