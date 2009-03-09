@@ -43,7 +43,7 @@ subroutine trace_dipole(Re,LatStart,nStep,nStepInside,&
 
   if (nStep > 2*nStepInside) then
      !Loop over part outside boundary
-     LatInner = acos(sqrt(RadialDist_I(nStepInside+1)/L))
+     LatInner = acos(sqrt(RadialDist_I(nStepInside)/L))
      Length1  = calc_dipole_length(L,LatStart,LatInner)
      do iStep = nStepInside+1, nStep-nStepInside
         LineLength_I(iStep) = LineLength_I(iStep) + Length1
