@@ -1356,7 +1356,9 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('DoFixPolarRegion',   DoFixPolarRegion)
            call read_var('rFixPolarRegion',    rFixPolarRegion)
         end if                                        !^CFG END RCM
-
+        
+     case("#RBSATCOUPLING")
+        call read_var('DoRbSatTrace',DoRbSatTrace)
      case("#USERFLAGS", "#USER_FLAGS")
         call read_var('UseUserInnerBcs'         ,UseUserInnerBcs)
         call read_var('UseUserSource'           ,UseUserSource)
