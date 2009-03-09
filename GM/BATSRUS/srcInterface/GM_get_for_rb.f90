@@ -137,7 +137,6 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
 
      ! exclude open field lines by setting impossible line index
      if(MHD_Xeq(iLat, iLon) == NoValue)then
-        !write(*,*)'!!!iPoint,iSizeIn,iLine,iLat,iLon=',iPoint,iSizeIn,iLine,iLat,iLon
         iLine = -1
      endif
 
@@ -147,15 +146,7 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
      BufferLine_VI(4,iPoint) = &
           sqrt(sum(Buffer_VI(4+Bx_:4+Bz_,iPoint)**2))       ! |B|
   end do
-
-!  write(*,*) 'iLat, iLon, RB_lat(iLat), RB_lon(iLon),MHD_Xeq(iLat,iLon),MHD_Yeq(iLat,iLon), RayResult_VII(Z0x_:Z0y_,iLat,iLon)'
-!  do iLon=1,jSizeIn
-!     do iLat=1,iSizeIn
-!        write(*,'(2i3,6f13.5)') iLat, iLon, RB_lat(iLat), RB_lon(iLon), &
-!             MHD_Xeq(iLat,iLon),MHD_Yeq(iLat,iLon), RayResult_VII(Z0x_:Z0y_,iLat,iLon)
-!     enddo
-!  enddo
-     
+  
   deallocate(RayIntegral_VII, RayResult_VII, Buffer_VI)
   call line_clean
 
@@ -168,14 +159,6 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
   Buffer_IIV(:,:,2)  = MHD_Yeq
   Buffer_IIV(:,:,3)  = MHD_Beq * No2Si_V(UnitB_)
   
-!  write(*,*) 'iLat, iLon, RB_lat(iLat), RB_lon(iLon),MHD_Xeq(iLat,iLon),MHD_Yeq(iLat,iLon), Buffer_IIV(:,:,1:2)'
-!  do iLon=1,jSizeIn
-!     do iLat=1,iSizeIn
-!        write(*,'(2i3,6f13.5)') iLat, iLon, RB_lat(iLat), RB_lon(iLon), &
-!             MHD_Xeq(iLat,iLon),MHD_Yeq(iLat,iLon), Buffer_IIV(iLat,iLon,1:2)
-!     enddo
-!  enddo
-
   ! Send solar wind values in the array of the extra integral
   ! This is a temporary solution. RB should use MHD_SUM_rho and MHD_SUM_p
 
@@ -192,3 +175,105 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
 
   !^CFG END RAYTRACE
 end subroutine GM_get_for_rb
+
+
+!==========================================================================
+subroutine GM_satinit_for_rb(nSats)
+
+  !This subroutine collects the number of satellite files for use in 
+  !SWMF GM and RB coupling.
+
+  !Module variables to use:
+  use ModMain,   ONLY: DoRbSatTrace
+  use ModSatelliteFile, ONLY: nSatellite
+  use ModProcMH, ONLY: iProc
+
+  implicit none
+
+  !Subroutine Arguments:
+  integer,           intent(out) :: nSats
+!--------------------------------------------------------------------------
+  
+  !If RB sat tracing is on, collect the number of satellites to trace.
+  !If RB sat tracing is off, set nSats to zero.
+  if (DoRbSatTrace) then
+     nSats = nSatellite
+  else 
+     nSats = 0
+  endif
+
+end subroutine GM_satinit_for_rb
+
+!==========================================================================
+subroutine GM_get_sat_for_rb(Buffer_III, Buffer_I, nSats)
+
+  ! Subroutine to update and collect satellite locations for RB tracing
+  
+  !Modules
+  use ModProcMH, ONLY: iProc, iComm
+  use ModSatelliteFile, ONLY: Satellite_name, Xsatellite, &
+       get_satellite_ray, set_satellite_flags, gm_trace_sat
+  use ModMain,   ONLY: UseB0, nBlock
+  use ModMPI
+  use ModPhysics, ONLY: No2Si_V, UnitB_
+  use ModVarIndexes, ONLY : nVar,Bx_,By_,Bz_
+  implicit none
+  
+  !Arguments
+  integer, intent(in)               :: nSats
+  real, intent(out)                 :: Buffer_III(4,2,nSats)
+  character (len=100), intent(out)  :: Buffer_I(nSats)
+  
+  !Internal variables
+  character (len=*), parameter :: NameSub='GM_get_sat_for_rb'
+
+  real :: sat_RayVars(5), sat_RayVarsSum(5),SatRay_D(3)
+
+  real :: StateSat_V(0:nVar+3), B0Sat_D(3)  
+  real :: Bx,By,Bz,B2
+  integer :: iSat, iError
+  !--------------------------------------------------------------------------
+  ! Store satellite names in Buffer_I
+  if (iProc == 0) then
+     Buffer_I = Satellite_name(1:nSats)
+  end if
+
+  do iSat=1, nSats
+     ! Update satellite position.
+     !call set_satellite_flags(iSat)
+     !call get_satellite_ray(iSat, sat_RayVars)
+     !
+     !! Reduce values from all 
+     !call MPI_reduce(sat_RayVars, sat_RayVarsSum, 5, MPI_REAL, MPI_SUM, &
+     !     0, iComm, iError)
+     !
+     !write(*,*) 'sat_RayVars',sat_RayVars
+     call GM_trace_sat(xSatellite(iSat,1:3),SatRay_D)
+     ! Determine magnetic field magnitude at satellite B=B0+B1
+     if(UseB0)then
+        call get_b0(xSatellite(iSat,1),xSatellite(iSat,2),xSatellite(iSat,3),&
+             B0Sat_D)
+     else
+        B0Sat_D=0.00
+     end if
+     call get_point_data(0.0,xSatellite(iSat,:),1,nBlock,1,nVar+3,StateSat_V)
+     call collect_satellite_data(xSatellite(iSat,:),StateSat_V)
+
+     Bx = StateSat_V(Bx_)+B0Sat_D(1)
+     By = StateSat_V(By_)+B0Sat_D(2)
+     Bz = StateSat_V(Bz_)+B0Sat_D(3)
+     
+     B2 = (Bx**2.0 + By**2.0 + Bz**2.0) * (No2Si_V(UnitB_))**2.0 
+     
+     ! Store results in Buffer_III
+     if (iProc == 0) then 
+        Buffer_III(1:3,1,iSat)   = Xsatellite(iSat,1:3)
+        !Buffer_III(1:3,2,iSat) = sat_RayVarsSum(1:3)
+        Buffer_III(1:3,2,iSat) = SatRay_D
+        Buffer_III(4,2,iSat)   = B2
+     end if
+  end do
+
+  !^CFG END RCM      
+end subroutine GM_get_sat_for_rb
+
