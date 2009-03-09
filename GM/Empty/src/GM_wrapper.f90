@@ -135,7 +135,19 @@ subroutine GM_get_for_rb(Buffer_IIV,iSize,jSize,nVar, &
 end subroutine GM_get_for_rb
 
 !==============================================================================
-
+subroutine GM_satinit_for_rb(nSats)
+  implicit none
+  integer :: nSats
+end subroutine GM_satinit_for_rb
+!==============================================================================
+subroutine GM_get_sat_for_rb(Buffer_III, Buffer_I, nSats)
+  implicit none
+  
+  integer, intent(in)               :: nSats
+  real, intent(out)                 :: Buffer_III(4,2,nSats)
+  character (len=100), intent(out)  :: Buffer_I(nSats)
+end subroutine GM_get_sat_for_rb
+!==============================================================================
 subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar,NameVar)
   implicit none
 
