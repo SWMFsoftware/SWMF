@@ -309,3 +309,11 @@ subroutine RB_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
   
   call CON_stop(NameSub//': RB_ERROR: empty version cannot be used!')
 end subroutine RB_put_from_ie
+!==============================================================================
+subroutine RB_put_sat_from_gm(nSats, Buffer_I, Buffer_III)
+  implicit none
+
+  integer, intent(in)            :: nSats
+  real, intent(in)               :: Buffer_III(4,2,nSats)
+  character(len=100), intent(in) :: Buffer_I(nSats)
+end subroutine RB_put_sat_from_gm
