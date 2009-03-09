@@ -3,6 +3,7 @@
 
 #SAVEPLOT
 10.0		DtSavePlot
+F		UseSeparatePlotFiles
 2002f296	OutName
 
 #RESTART
