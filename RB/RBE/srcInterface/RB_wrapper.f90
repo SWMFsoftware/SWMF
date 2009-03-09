@@ -350,3 +350,49 @@ subroutine RB_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
   
 end subroutine RB_put_from_ie
 !==============================================================================
+
+subroutine RB_put_sat_from_gm(nSats, Buffer_I, Buffer_III)
+  ! Puts satellite locations and names from GM into RB.
+  use ModRbSat, ONLY: nRbSats, DoWriteSats, NameSat_I, SatLoc_3I
+  use ModNumConst,   ONLY: cDegToRad
+  
+  implicit none
+  character (len=*),parameter :: NameSub='RB_put_sat_from_gm'
+
+  ! Arguments
+  integer, intent(in)            :: nSats
+  real, intent(in)               :: Buffer_III(4,2,nSats)
+  character(len=100), intent(in) :: Buffer_I(nSats)
+
+  ! Internal variables
+  integer :: iError, iSat, l1, l2
+  !--------------------------------------------------------------------------- 
+  ! Activate satellite writing in RCM
+  DoWriteSats = .true.
+  nRbSats = nSats
+
+  ! Check allocation of sat tracing variables
+  if(allocated(SatLoc_3I)) deallocate(SatLoc_3I)
+  if(allocated(NameSat_I)) deallocate(NameSat_I)
+
+  allocate(SatLoc_3I(4,2,nRbSats), stat=iError)
+  allocate(NameSat_I(nRbSats),     stat=iError)
+
+  ! Assign incoming values, remove path and extension from name.
+  SatLoc_3I = Buffer_III
+  SatLoc_3I(4,2,:)=SatLoc_3I(4,2,:)
+  do iSat=1, nSats
+     l1 = index(Buffer_I(iSat), '/', back=.true.) + 1
+     l2 = index(Buffer_I(iSat), '.') - 1
+     if (l1-1<=0) l1=1
+     if (l2+1<=0) l2=len_trim(Buffer_I(iSat))
+     NameSat_I(iSat) = Buffer_I(iSat)(l1:l2)
+  end do
+
+  ! Change to correct units (degrees to radians)
+!  SatLoc_3I(1,2,:) = (90. - SatLoc_3I(1,2,:)) * cDegToRad
+!  SatLoc_3I(2,2,:) =        SatLoc_3I(2,2,:)  * cDegToRad
+
+end subroutine RB_put_sat_from_gm
+
+!==============================================================================
