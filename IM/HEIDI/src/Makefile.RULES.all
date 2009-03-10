@@ -1,0 +1,2 @@
+$Debug eq "yes" and $Compiler eq "f95"
+	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline ${PRECISION} ModHeidiMain.f90
