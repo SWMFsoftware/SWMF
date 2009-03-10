@@ -274,6 +274,5 @@ subroutine GM_get_sat_for_rb(Buffer_III, Buffer_I, nSats)
      end if
   end do
 
-  !^CFG END RCM      
 end subroutine GM_get_sat_for_rb
 
