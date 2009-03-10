@@ -94,5 +94,5 @@ rundir:
 		cp ../input/Horne_chorus.tgz RB/ ; \
 		touch core ; chmod 444 core;\
 		cd RB ; \
-		tar xvfz Horne_chorus.tgz ; \
+			tar xfz Horne_chorus.tgz ; \
 	fi);
