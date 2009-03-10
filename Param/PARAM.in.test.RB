@@ -47,6 +47,7 @@ F			DoCoupleOnTime
 
 #SAVEPLOT
 3.0		DtSavePlot
+F		UseSeparatePlotFiles
 2002f296	OutName
 
 #RESTART

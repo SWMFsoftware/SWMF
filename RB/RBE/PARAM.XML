@@ -131,13 +131,16 @@ The name of the input data associated with the storm
 
 <command name="SAVEPLOT">
 	<parameter name="DtSavePlot" type="real" />
-	<parameter name="OutName" type="string" length="20" />
+	<parameter name="UseSeparatePlotFiles" type="logical" default="F"/>
+	<parameter name="OutName" type="string" length="20" 
+				if="not $UseSeparatePlotFiles" />
 
 #SAVEPLOT
 2		DtSavePlot
-2000f223	OutName
+F		UseSeparatePlotFiles
+2000f223	OutName (read if UseSeparatePlotFiles is false)
 
-Define frequency and output name of plots
+Define frequency and output name of plots. 
 </command>
 
 <command name="PLOTELECTRODYNAMICS">
