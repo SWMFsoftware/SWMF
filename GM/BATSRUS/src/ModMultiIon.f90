@@ -142,9 +142,10 @@ contains
 
   subroutine multi_ion_source_expl(iBlock)
 
-    use ModMain,    ONLY: nI, nJ, nK
+    use ModMain,    ONLY: nI, nJ, nK, x_, y_, z_
     use ModAdvance, ONLY: State_VGB, Source_VC
-    use ModGeometry,ONLY: UseCovariant, dx_BLK, dy_BLK, dz_BLK, vInv_CB
+    use ModGeometry,ONLY: UseCovariant, dx_BLK, dy_BLK, dz_BLK, vInv_CB, &
+         FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
 
     integer, intent(in) :: iBlock
     
@@ -152,7 +153,7 @@ contains
     ! all the individual ion momentum equations as -n_i/n_e * grad Pe
 
     real :: NumDens_I(nIonFluid), InvNumDens
-    real :: vInv, GradXPe, GradYPe, GradZPe
+    real :: vInv, GradXPe, GradYPe, GradZPe, GradPe_D(3)
     integer :: i, j, k
 
     character(len=*), parameter:: NameSub = 'multi_ion_source_expl'
@@ -165,7 +166,17 @@ contains
        if(UseCovariant)then
           call stop_mpi(NameSub//' covariant version is not implemented yet!')
           vInv = vInv_CB(i,j,k,iBlock)
-          
+
+          GradPe_D = vInv* &
+               ( Pe_X(i+1,j,k)*FaceAreaI_DFB(:,i+1,j,k,iBlock) &
+               - Pe_X(i  ,j,k)*FaceAreaI_DFB(:,i  ,j,k,iBlock) &
+               + Pe_Y(i,j+1,k)*FaceAreaJ_DFB(:,i,j+1,k,iBlock) &
+               - Pe_Y(i,j  ,k)*FaceAreaJ_DFB(:,i,j  ,k,iBlock) &
+               + Pe_Z(i,j,k+1)*FaceAreaK_DFB(:,i,j,k+1,iBlock) &
+               - Pe_Z(i,j,k  )*FaceAreaK_DFB(:,i,j,k  ,iBlock) )
+          GradXPe = GradPe_D(x_)
+          GradYPe = GradPe_D(y_)
+          GradZPe = GradPe_D(z_)
        else
           ! Simple implementation for Cartesian 
           GradXPe = (Pe_X(i+1,j,k) - Pe_X(i,j,k))/dx_BLK(iBlock)
