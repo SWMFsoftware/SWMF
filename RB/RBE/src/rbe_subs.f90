@@ -120,7 +120,7 @@ subroutine rbe_init
   if (js.eq.2) call cepara(dt,ekev,Hdens,v,irm,iw1,iw2)
 
   call timing_start('rbe_convection')
-  call convection(t,tstart,ps,xlati,phi,&
+  call convection(t,tstart,xlati,phi,&
        rc,xnsw0,vsw0,Bx0,By0,Bz0)
   call timing_stop('rbe_convection')
   call timing_start('rbe_vdrift')
@@ -202,7 +202,7 @@ subroutine rbe_run
   endif
 
   if (t.gt.(tstart-trans)) then
-     call convection(t,tstart,ps,xlati,phi,&
+     call convection(t,tstart,xlati,phi,&
           rc,xnsw0,vsw0,Bx0,By0,Bz0)
      call Vdrift(re,rc,xme,dphi,xlati,ekev,potent,js,irm,iw1,iw2)
      call boundary(t,tstart,f2,v,xjac,xmass,p,xktd,xnd,&
@@ -253,7 +253,7 @@ subroutine rbe_run
      if (js.eq.2) call cepara(dt,ekev,Hdens,v,irm,iw1,iw2)
   endif
 
-  call convection(t,tstart,ps,xlati,phi,&
+  call convection(t,tstart,xlati,phi,&
        rc,xnsw0,vsw0,Bx0,By0,Bz0)
   call Vdrift(re,rc,xme,dphi,xlati,ekev,potent,js,irm,iw1,iw2)
 
@@ -512,8 +512,8 @@ end subroutine readInputData
       
       nav=irw1/irw
       
-      do i=1,irw
-         wLshell(i)=(i-1)*0.1+1.05       ! L = 1.05 - 7.95
+      do i=1,irw1
+         wLshell1(i)=(i-1)*0.1+1.05       ! L = 1.05 - 7.95
       enddo
       do j=1,ipw
          wmlt(j)=(j-1)*1.+0.5            ! mlt = 0.5 - 23.5
@@ -1578,7 +1578,7 @@ end subroutine cepara
 !                                convection
 !  Routine calculates the velocities of convection
 !****************************************************************************
-subroutine convection(t,tstart,ps,xlati,phi,&
+subroutine convection(t,tstart,xlati,phi,&
      rc,xnsw0,vsw0,Bx0,By0,Bz0)
 
   use EIE_ModWeimer, ONLY: setmodel00, boundarylat00, epotval00
@@ -1590,12 +1590,16 @@ subroutine convection(t,tstart,ps,xlati,phi,&
   real xlati(ir),phi(ip)
   logical UseAL
 
+  COMMON /GEOPACK/ ST0,CT0,SL0,CL0,CTCL,STCL,CTSL,STSL,SFI,CFI,SPS,&
+       CPS,SHI,CHI,HI,PSI,XMUT,A11,A21,A31,A12,A22,A32,A13,A23,A33,DS3,&
+       K,IY,CGST,SGST,BA(6)
+
   UseAL=.false.
   ALindex=10.          ! arbitrary value 
 
   !  Setup for Weimer's electric field model if iconvect = 1
   if (iconvect.eq.1) then   
-     Tilt=ps*180./pi          ! dipole tilt angle in degree
+     Tilt=psi*180./pi          ! dipole tilt angle in degree
      if (t.eq.tstart.and.itype.eq.2) then
         xnsw=xnsw0
         vsw=vsw0
@@ -2051,6 +2055,7 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
      endif
   endif
   ! Convert f2 to f (differential flux)
+  f(:,:,:,:)=0.0
   do i=1,ir
      do j=1,ip
         do m=1,ik
@@ -2186,7 +2191,7 @@ subroutine fluxes(f,y,p,gridp,ekev,gride,gridy,irm,iw1,iw2,flx)
            do k=1,iw
               e1(k)=log10(ekev(i,j,k,m))
               x=f(i,j,k,m)        
-              if (x.le.1.e-50) then
+              if (x <= 1.e-50) then
                  h1(k)=-50.
               else
                  h1(k)=log10(x)
