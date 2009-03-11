@@ -41,6 +41,23 @@ public:
     fclose(fd);
   };
 
+  void moveLineBack() {
+    char c;
+
+    fseek(fd,-1,SEEK_CUR);
+
+    do {
+      fseek(fd,-1,SEEK_CUR);
+      c=getc(fd);
+      fseek(fd,-1,SEEK_CUR);
+    }
+    while ((c!='\0')&&(c!='\n')&&(c!='\r'));
+
+    c=getc(fd);
+    line--;
+  };
+
+
   void setfile(FILE* input_fd,long int input_line,char* InputFile) {
     fd=input_fd;
     line=input_line;
@@ -51,16 +68,18 @@ public:
     return line;
   }; 
 
-  //Separators:' ', ',', '=', ';', ':'
+  //Separators:' ', ',', '=', ';', ':', '(', ')', '[', ']' 
   void CutInputStr(char* dest, char* src) {
     int i,j;
 
     for (i=0;(src[i]!='\0')&&(src[i]!=' ')&&
-      (src[i]!=',')&&(src[i]!='=')&&(src[i]!=';')&&(src[i]!=':');i++) dest[i]=src[i];
+      (src[i]!=',')&&(src[i]!='=')&&(src[i]!=';')&&(src[i]!=':')&&
+      (src[i]!='(')&&(src[i]!=')')&&(src[i]!='[')&&(src[i]!=']');i++) dest[i]=src[i];
       dest[i]='\0';
 
     for (;(src[i]!='\0')&&((src[i]==' ')||
-      (src[i]==',')||(src[i]=='=')||(src[i]==';')||(src[i]==':'));i++);
+      (src[i]==',')||(src[i]=='=')||(src[i]==';')||(src[i]==':')||
+      (src[i]=='(')||(src[i]==')')||(src[i]=='[')||(src[i]==']'));i++);
 
     if (src[i]=='\0')
       src[0]='\0';
@@ -94,6 +113,8 @@ public:
     }
 
     for(i=0;str[i]!='\0';i++) {
+      if (str[i]=='"') str[i]=' ';
+
       init_str[i]=str[i];
       if ((str[i]>='a')&&(str[i]<='z')) str[i]=str[i]-32;
     }

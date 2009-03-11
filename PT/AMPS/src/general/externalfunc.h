@@ -47,15 +47,10 @@ public:
   };
 
   void SetFunc(int fnum,T newfunc) {
-    if ((func!=NULL)&&(nfuncs>fnum))
+    if ((func!=NULL)&&(nfuncs>fnum)) func[fnum]=newfunc;
+    else { 
+      reinit(fnum+1);
       func[fnum]=newfunc;
-    else if (func==NULL) {
-      printf("CExternalFunction::SetFunc: func=NULL\n");
-      exit(__LINE__,__FILE__);
-    }
-    else {
-      printf("CExternalFunction::SetFunc: func buffer overflow\n");
-      exit(__LINE__,__FILE__);
     }
   };
 
@@ -63,15 +58,10 @@ public:
   void SetFunc(T newfunc) {
     static int nattachedfuncs=0;
 
-    if ((func!=NULL)&&(nfuncs>nattachedfuncs))
-      func[nattachedfuncs++]=newfunc;
-    else if (func==NULL) {
-      printf("CExternalFunction::SetFunc: func=NULL\n");
-      exit(__LINE__,__FILE__);
-    }
+    if ((func!=NULL)&&(nfuncs>nattachedfuncs)) func[nattachedfuncs++]=newfunc;
     else {
-      printf("CExternalFunction::SetFunc: func buffer overflow\n");
-      exit(__LINE__,__FILE__);
+      reinit(nattachedfuncs+1);
+      func[nattachedfuncs++]=newfunc;
     }
   };
 
