@@ -21,11 +21,14 @@ module ModFaceFlux
        RightState_VX, RightState_VY, RightState_VZ, & ! input: right face state
        Flux_VX, Flux_VY, Flux_VZ,        & ! output: flux*Area
        VdtFace_x, VdtFace_y, VdtFace_z,  & ! output: cMax*Area for CFL
-       EDotFA_X, EDotFA_Y, EDotFA_Z,     & ! output: E.Area for Boris !^CFG IF BORISCORR
+       EDotFA_X, EDotFA_Y, EDotFA_Z,     & ! output: E.Area !^CFG IF BORISCORR
        uDotArea_XI, uDotArea_YI, uDotArea_ZI,& ! output: U.Area for P source
        bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,& ! output: B x Area for J
        UseRS7, UseTotalSpeed, &
        eFluid_                          ! index for electron fluid (nFluid+1)
+
+  use ModMultiIon, ONLY: &
+       Pe_X, Pe_Y, Pe_Z ! output: Pe for grad Pe in multi-ion MHD
 
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        IsNewBlockHall, hall_factor, get_face_current, set_ion_mass_per_charge
@@ -85,8 +88,10 @@ module ModFaceFlux
   real :: Unormal_I(nFluid+1) = 0.0
   real :: UnLeft_I(nFluid+1)  = 0.0
   real :: UnRight_I(nFluid+1) = 0.0
-  real :: bCrossArea_D(3) = (/ 0.0, 0.0, 0.0 /)
-  real :: Enormal = 0.0
+
+  real :: bCrossArea_D(3) = (/ 0.0, 0.0, 0.0 /) !B x Area for current -> BxJ
+  real :: Enormal = 0.0                         !normal electric field -> div E
+  real :: Pe      = 0.0                         !electron pressure -> grad Pe
 
   ! Variables for normal resistivity
   real :: EtaJx, EtaJy, EtaJz, Eta = -1.0
@@ -315,7 +320,6 @@ contains
          iMinFaceZ,iMaxFaceZ, jMinFaceZ, jMaxFaceZ, &
          iTest, jTest, kTest, ProcTest, BlkTest, DimTest, &
          UseHyperbolicDivb
-    implicit none
 
     logical, intent(in) :: DoResChangeOnly
     integer, intent(in) :: iBlock
@@ -495,10 +499,12 @@ contains
 
          call get_numerical_flux(Flux_VX(:,iFace, jFace, kFace))
 
-         VdtFace_x(iFace, jFace, kFace)        = CmaxDt*Area
-         uDotArea_XI(iFace, jFace, kFace,:)    = Unormal_I*Area
-         bCrossArea_DX(:, iFace, jFace, kFace) = bCrossArea_D
-         EDotFA_X(iFace, jFace, kFace)         = Enormal*Area !^CFG IF BORISCORR
+         VdtFace_x(iFace, jFace, kFace)       = CmaxDt*Area
+         uDotArea_XI(iFace, jFace, kFace,:)   = Unormal_I*Area
+         bCrossArea_DX(:, iFace, jFace, kFace)= bCrossArea_D
+         EDotFA_X(iFace, jFace, kFace)        = Enormal*Area !^CFG IF BORISCORR
+
+         if(UseMultiIon) Pe_X(iFace, jFace, kFace) = Pe
 
       end do; end do; end do
     end subroutine get_flux_x
@@ -546,10 +552,12 @@ contains
 
          call get_numerical_flux(Flux_VY(:, iFace, jFace, kFace))
 
-         VdtFace_y(iFace, jFace, kFace)        = CmaxDt*Area
-         uDotArea_YI(iFace, jFace, kFace, :)   = Unormal_I*Area
-         bCrossArea_DY(:, iFace, jFace, kFace) = bCrossArea_D
-         EDotFA_Y(iFace, jFace, kFace)         = Enormal*Area !^CFG IF BORISCORR
+         VdtFace_y(iFace, jFace, kFace)       = CmaxDt*Area
+         uDotArea_YI(iFace, jFace, kFace, :)  = Unormal_I*Area
+         bCrossArea_DY(:, iFace, jFace, kFace)= bCrossArea_D
+         EDotFA_Y(iFace, jFace, kFace)        = Enormal*Area !^CFG IF BORISCORR
+
+         if(UseMultiIon) Pe_Y(iFace, jFace, kFace) = Pe
 
       end do; end do; end do
 
@@ -597,10 +605,12 @@ contains
 
          call get_numerical_flux(Flux_VZ(:, iFace, jFace, kFace))
 
-         VdtFace_z(iFace, jFace, kFace)        = CmaxDt*Area
-         uDotArea_ZI(iFace, jFace, kFace, :)   = Unormal_I*Area
-         bCrossArea_DZ(:, iFace, jFace, kFace) = bCrossArea_D
-         EDotFA_Z(iFace, jFace, kFace)         = Enormal*Area !^CFG IF BORISCORR
+         VdtFace_z(iFace, jFace, kFace)       = CmaxDt*Area
+         uDotArea_ZI(iFace, jFace, kFace, :)  = Unormal_I*Area
+         bCrossArea_DZ(:, iFace, jFace, kFace)= bCrossArea_D
+         EDotFA_Z(iFace, jFace, kFace)        = Enormal*Area !^CFG IF BORISCORR
+
+         if(UseMultiIon) Pe_Z(iFace, jFace, kFace) = Pe
 
       end do; end do; end do
     end subroutine get_flux_z
@@ -830,8 +840,8 @@ contains
 
     real :: Cmax
     real :: DiffBn_D(3), DiffE
-    real :: EnLeft, EnRight, Jx, Jy, Jz
-    real :: uLeft_D(3),uRight_D(3) !,cDivBWave
+    real :: EnLeft, EnRight, PeLeft, PeRight, Jx, Jy, Jz
+    real :: uLeft_D(3), uRight_D(3) !,cDivBWave
     real :: dB0_D(3)
     !-----------------------------------------------------------------------
 
@@ -924,10 +934,10 @@ contains
          )then
        ! All solvers, except HLLD, use left and right fluxes and avarage state
        call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
-            StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft)
+            StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft)
 
        call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
-            StateRightCons_V, FluxRight_V, UnRight_I, EnRight)
+            StateRightCons_V, FluxRight_V, UnRight_I, EnRight, PeRight)
 
        if(UseRS7)then
           call modify_flux(FluxLeft_V,UnLeft_I(1))
@@ -1052,6 +1062,8 @@ contains
 
       Unormal_I = 0.5*(UnLeft_I + UnRight_I)
       Enormal   = 0.5*(EnLeft + EnRight)                !^CFG IF BORISCORR
+      if(UseMultiIon) &
+           Pe   = 0.5*(PeLeft + PeRight)
 
     end subroutine lax_friedrichs_flux
     !^CFG END RUSANOVFLUX
@@ -1123,6 +1135,8 @@ contains
       end if
 
       Enormal   = WeightRight*EnRight   + WeightLeft*EnLeft !^CFG IF BORISCORR
+      if(UseMultiIon) &
+           Pe   = WeightRight*PeRight   + WeightLeft*PeLeft
 
     end subroutine harten_lax_vanleer_flux
     !^CFG END LINDEFLUX
@@ -1153,6 +1167,8 @@ contains
       ! Weighted average of the normal speed and electric field
       Unormal_I = WeightRight*UnRight_I + WeightLeft*UnLeft_I
       Enormal   = WeightRight*EnRight   + WeightLeft*EnLeft !^CFG IF BORISCORR
+      if(UseMultiIon) &
+           Pe   = WeightRight*PeRight   + WeightLeft*PeLeft
 
     end subroutine artificial_wind
     !^CFG END AWFLUX
@@ -1222,14 +1238,14 @@ contains
 
       if(sL >= 0.) then
          call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
-              StateCons_V, Flux_V, Unormal_I, Enormal)
+              StateCons_V, Flux_V, Unormal_I, Enormal, Pe)
          if(UseRs7)call modify_flux(Flux_V, Unormal_I(1))
          RETURN
       end if
 
       if(sR <= 0.) then 
          call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
-              StateCons_V, Flux_V, Unormal_I, Enormal)
+              StateCons_V, Flux_V, Unormal_I, Enormal, Pe)
          if(UseRs7)call modify_flux(Flux_V, Unormal_I(1))
          RETURN
       end if
@@ -1608,12 +1624,13 @@ contains
   !===========================================================================
 
   subroutine get_physical_flux(State_V, B0x, B0y, B0z, &
-       StateCons_V, Flux_V, Un_I, En)
+       StateCons_V, Flux_V, Un_I, En, Pe)
 
     use ModMultiFluid
     use ModMain,    ONLY: UseHyperbolicDivb, SpeedHyp2
-    use ModAdvance, ONLY: Hyp_, Eradiation_
+    use ModAdvance, ONLY: Hyp_, Eradiation_, Pe_, UseElectronPressure
     use ModImplicit, ONLY: UseFullImplicit     !^CFG IF IMPLICIT
+    use ModPhysics, ONLY: AverageIonCharge, ElectronTemperatureRatio
 
     real,    intent(in) :: State_V(nVar)       ! input primitive state
     real,    intent(in) :: B0x, B0y, B0z       ! B0
@@ -1621,6 +1638,7 @@ contains
     real,    intent(out):: Flux_V(nFlux)       ! fluxes for all states
     real,    intent(out):: Un_I(nFluid+1)      ! normal velocities
     real,    intent(out):: En                  ! normal electric field
+    real,    intent(out):: Pe                  ! electron pressure
 
     real:: Hyp, Bx, By, Bz, FullBx, FullBy, FullBz, Bn, B0n, FullBn, Un, HallUn
     real:: FluxBx, FluxBy, FluxBz
@@ -1631,6 +1649,18 @@ contains
 
     ! Make sure normal electric field is initialized
     En = 0.0
+
+    if(UseMultiIon)then
+       if(UseElectronPressure)then
+          Pe = State_V(Pe_)
+       elseif(IsMhd)then
+          Pe = State_V(p_)*AverageIonCharge*ElectronTemperatureRatio
+       else
+          Pe = sum(State_V(iPIon_I))*ElectronTemperatureRatio
+       end if
+    else
+       Pe = 0.0
+    end if
 
     ! Set magnetic variables
     if(UseB)then
@@ -2189,9 +2219,9 @@ contains
 
       use ModMain,    ONLY: UseCurlB0
       use ModVarIndexes
-      use ModPhysics, ONLY: g, Inv_C2Light
+      use ModPhysics, ONLY: g, Inv_C2Light, ElectronTemperatureRatio
       use ModNumConst, ONLY: cPi
-      use ModAdvance, ONLY: State_VGB, eFluid_
+      use ModAdvance, ONLY: State_VGB, eFluid_, UseElectronPressure, Pe_
 
       real :: RhoU_D(3)
       real :: Rho, p, InvRho, Sound2, FullBx, FullBy, FullBz, FullBn
@@ -2216,6 +2246,11 @@ contains
             p   = p   + State_V(iPIon_I(iFluid))
             RhoU_D = RhoU_D + Rho1*State_V(iUxIon_I(iFluid): iUzIon_I(iFluid))
          end do
+         if(UseElectronPressure)then
+            p = p + State_V(Pe_)
+         else
+            p = p * (1 + ElectronTemperatureRatio)
+         end if
       end if
 
       InvRho = 1.0/Rho
