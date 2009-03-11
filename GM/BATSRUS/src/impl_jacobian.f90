@@ -857,7 +857,7 @@ contains
     ! are not calculated by the general algorithm
 
     use ModAdvance,       ONLY: Eradiation_
-    use ModGrayDiffusion, ONLY: DiffusionRad_FDB
+    use ModGrayDiffusion, ONLY: DiffCoef_VFDB
 
     integer :: iVar, i, j, k, iDim, Di, Dj, Dk
     real :: Coeff, DiffLeft, DiffRight
@@ -870,8 +870,8 @@ contains
        Dj = kr(iDim,2)
        Dk = kr(iDim,3)
        do k=1,nK; do j=1,nJ; do i=1,nI
-          DiffLeft  = DiffusionRad_FDB(i,j,k,iDim,iBlk)
-          DiffRight = DiffusionRad_FDB(i+Di,j+Dj,k+Dk,iDim,iBlk)
+          DiffLeft  = DiffCoef_VFDB(1,i,j,k,iDim,iBlk)
+          DiffRight = DiffCoef_VFDB(1,i+Di,j+Dj,k+Dk,iDim,iBlk)
           if(iDim==1.and.i==1 .or. iDim==2.and.j==1 .or. iDim==3.and.k==1)&
                DiffLeft = 0.0
           if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ .or. iDim==3.and.k==nK)&
