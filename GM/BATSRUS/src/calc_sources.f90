@@ -22,7 +22,7 @@ subroutine calc_sources
        UseTemperatureDiffusion
   use ModMultiFluid
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
-  use ModMultiIon, ONLY: multi_ion_sources
+  use ModMultiIon, ONLY: multi_ion_source_expl, multi_ion_source_impl
 
   use ModCovariant, ONLY: UseCovariant 
 
@@ -103,20 +103,17 @@ subroutine calc_sources
   end if
 
   if(TypeGeometry == 'rz')then
-     if(.not.UseB)then
+     if(UseB)call stop_mpi('RZ geometry is not implemented for MHD')
         
-        ! Add "geometrical source term" p/r to the radial momentum equation.
-        ! The azimuthal component of the velocity is assumed to be zero.
-        ! The axis is along X, the "radial" direction is along the Y axis
-        ! NOTE: here we have to use signed radial distance!
+     ! Add "geometrical source term" p/r to the radial momentum equation.
+     ! The azimuthal component of the velocity is assumed to be zero.
+     ! The axis is along X, the "radial" direction is along the Y axis
+     ! NOTE: here we have to use signed radial distance!
 
-        do k=1,nK; do j=1, nJ; do i=1, nI
-           Source_VC(iRhoUy_I,i,j,k) = Source_VC(iRhoUy_I,i,j,k) &
-                + State_VGB(iP_I,i,j,k,iBlock) / y_BLK(i,j,k,iBlock)
-        end do; end do; end do
-     else
-        call stop_mpi('RZ geometry is not implemented for MHD')
-     end if
+     do k=1,nK; do j=1, nJ; do i=1, nI
+        Source_VC(iRhoUy_I,i,j,k) = Source_VC(iRhoUy_I,i,j,k) &
+             + State_VGB(iP_I,i,j,k,iBlock) / y_BLK(i,j,k,iBlock)
+     end do; end do; end do
   end if
 
   if(UseDivbSource)then
@@ -254,10 +251,15 @@ subroutine calc_sources
      end if
   end do
 
-  ! Explicit evaluation of multi-ion source for development purposes only
-  if(UseMultiIon .and. &
-       .not. (UsePointImplicit .and. UsePointImplicit_B(iBlock)) ) then
-     call multi_ion_sources
+  if(UseMultiIon)then
+     ! Add momentum source terms containing the gradient of electron pressure
+     call multi_ion_source_expl(iBlock)
+
+     ! Add stiff momentum source terms (uPlus - Uion) and artificial friction
+     ! Explicit evaluation of these source terms is for development purposes only
+     if (.not. (UsePointImplicit .and. UsePointImplicit_B(iBlock)) ) &
+          call multi_ion_source_impl
+
      if(DoTestMe) call write_source('After MultiIon sources')
   end if
 

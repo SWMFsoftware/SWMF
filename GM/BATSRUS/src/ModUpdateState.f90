@@ -10,8 +10,8 @@ subroutine update_states_MHD(iStage,iBLK)
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B, &
        update_point_implicit
   use ModUser, ONLY: user_calc_sources, user_init_point_implicit
-  use ModMultiIon, ONLY: multi_ion_sources, multi_ion_init_point_impl, &
-       multi_ion_set_restrict, DoRestrictMultiIon, IsMultiIon_CB
+  use ModMultiIon, ONLY: multi_ion_source_impl, multi_ion_init_point_impl, &
+       multi_ion_set_restrict, multi_ion_update, DoRestrictMultiIon
   use ModEnergy
 
   implicit none
@@ -30,7 +30,6 @@ subroutine update_states_MHD(iStage,iBLK)
   real:: DtFactor
   real:: DtLocal
   real:: B0_DC(3,nI,nJ,nK)
-  logical :: IsMultiIon
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'update_states_mhd'
   !--------------------------------------------------------------------------
@@ -80,7 +79,7 @@ subroutine update_states_MHD(iStage,iBLK)
   ! Add point implicit user or multi-ion source terms
   if (UsePointImplicit .and. UsePointImplicit_B(iBLK))then
      if(UseMultiIon)then
-        call update_point_implicit(iStage, iBLK, multi_ion_sources, &
+        call update_point_implicit(iStage, iBLK, multi_ion_source_impl, &
              multi_ion_init_point_impl)
      elseif(UseUserSource) then
         call update_point_implicit(iStage, iBLK, user_calc_sources, &
@@ -93,70 +92,9 @@ subroutine update_states_MHD(iStage,iBLK)
   end if
 
   if(UseMultiIon .and. IsMhd)then
-     ! Distribute total conserative variables among the ion fluids
-     do k=1,nK; do j=1,nJ; do i=1,nI
-        ! Check if we are in a region with multiple ions or not
-        IsMultiIon = .true.
-        if(DoRestrictMultiIon)IsMultiIon = IsMultiIon_CB(i,j,k,iBlk)
-        if(.not. IsMultiIon)then
-           ! Put most of the stuff into the first ion fluid
-           Rho = State_VGB(Rho_, i, j, k, iBlk)
-           State_VGB(iRhoIon_I(1),i,j,k,iBlk) = &
-                Rho*(1.0 - LowDensityRatio*(IonLast_ - IonFirst_))
-           State_VGB(iRhoIon_I(2:nIonFluid),i,j,k,iBlk) = &
-                Rho*LowDensityRatio
-           State_VGB(iRhoUxIon_I,i,j,k,iBlk) = &
-                State_VGB(iRhoIon_I,i,j,k,iBlk) * &
-                State_VGB(RhoUx_,i,j,k,iBlk)/Rho
-           State_VGB(iRhoUyIon_I,i,j,k,iBlk) = &
-                State_VGB(iRhoIon_I,i,j,k,iBlk) * &
-                State_VGB(RhoUy_,i,j,k,iBlk)/Rho
-           State_VGB(iRhoUzIon_I,i,j,k,iBlk) = &
-                State_VGB(iRhoIon_I,i,j,k,iBlk) * &
-                State_VGB(RhoUz_,i,j,k,iBlk)/Rho
-           State_VGB(iPIon_I,i,j,k,iBlk) = State_VGB(p_,i,j,k,iBLK)/Rho * &
-                State_VGB(iRhoIon_I,i,j,k,iBlk) &
-                *MassIon_I(1)/MassIon_I
-           call calc_energy(i, i, j, j, k, k, iBlk, IonFirst_, IonLast_)
-        else
-           State_VGB(iRhoIon_I,i,j,k,iBLK) = State_VGB(iRhoIon_I,i,j,k,iBLK) * &
-                State_VGB(Rho_,i,j,k,iBLK)/sum(State_VGB(iRhoIon_I,i,j,k,iBLK))
-
-           Energy_GBI(i,j,k,iBlk,1) = Energy_GBI(i,j,k,iBlk,1) + &
-                0.5/State_VGB(Rho_,i,j,k,iBlk)* &
-                (sum(State_VGB(iRhoUxIon_I,i,j,k,iBLK))**2 &
-                -          State_VGB(RhoUx_,i,j,k,iBLK)**2)
-           State_VGB(RhoUx_,i,j,k,iBLK)= sum(State_VGB(iRhoUxIon_I,i,j,k,iBLK))
-
-           Energy_GBI(i,j,k,iBlk,1) = Energy_GBI(i,j,k,iBlk,1) + &
-                0.5/State_VGB(Rho_,i,j,k,iBlk)* &
-                (sum(State_VGB(iRhoUyIon_I,i,j,k,iBLK))**2 &
-                -          State_VGB(RhoUy_,i,j,k,iBLK)**2)
-           State_VGB(RhoUy_,i,j,k,iBLK)= sum(State_VGB(iRhoUyIon_I,i,j,k,iBLK))
-
-           Energy_GBI(i,j,k,iBlk,1) = Energy_GBI(i,j,k,iBlk,1) + &
-                0.5/State_VGB(Rho_,i,j,k,iBlk)* &
-                (sum(State_VGB(iRhoUzIon_I,i,j,k,iBLK))**2 &
-                -          State_VGB(RhoUz_,i,j,k,iBLK)**2)
-           State_VGB(RhoUz_,i,j,k,iBLK)= sum(State_VGB(iRhoUzIon_I,i,j,k,iBLK))
-
-           ! Redo pressure to eliminate errors from the pointimplicit solver
-           State_VGB(iPIon_I,i,j,k,iBLK) = State_VGB(iPIon_I,i,j,k,iBLK) * &
-                State_VGB(P_,i,j,k,iBLK)/sum(State_VGB(iPIon_I,i,j,k,iBLK))
-
-           ! Set hydro energy (don't worry about conserving energy per ion fluid)
-           Energy_GBI(i,j,k,iBLK,IonFirst_:IonLast_) = &
-                inv_gm1*State_VGB(iPIon_I,i,j,k,iBLK) + &
-                0.5*( State_VGB(iRhoUxIon_I,i,j,k,iBLK)**2 &
-                +     State_VGB(iRhoUyIon_I,i,j,k,iBLK)**2 &
-                +     State_VGB(iRhoUzIon_I,i,j,k,iBLK)**2 &
-                ) / State_VGB(iRhoIon_I,i,j,k,iBLK)
-        end if
-     end do; end do; end do
-
+     call multi_ion_update(iBlk, IsFinal = .true.)
      if(DoTestMe)write(*,*) NameSub,' after multiion state=', &
           State_VGB(VarTest,iTest,jTest,kTest,iBlk)
-
   end if
 
   if(UseHyperbolicDivb .and. HypDecay > 0) &
@@ -205,26 +143,7 @@ contains
 
     end if
 
-    if(UseMultiIon .and. IsMhd)then
-
-       ! Distribute total density and pressure among ion fluids
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          State_VGB(iRhoIon_I,i,j,k,iBLK) = &
-               State_VGB(iRhoIon_I,i,j,k,iBLK)*State_VGB(Rho_,i,j,k,iBLK) &
-               / sum(State_VGB(iRhoIon_I,i,j,k,iBLK))
-
-          State_VGB(iPIon_I,i,j,k,iBLK) = State_VGB(iPIon_I,i,j,k,iBLK) * &
-               State_VGB(P_,i,j,k,iBLK)/sum(State_VGB(iPIon_I,i,j,k,iBLK))
-
-          ! Set hydro energy (no attempt to conserve the energy per ion fluid)
-          Energy_GBI(i,j,k,iBLK,IonFirst_:IonLast_) = &
-               inv_gm1*State_VGB(iPIon_I,i,j,k,iBLK) + &
-               0.5*( State_VGB(iRhoUxIon_I,i,j,k,iBLK)**2 &
-               +     State_VGB(iRhoUyIon_I,i,j,k,iBLK)**2 &
-               +     State_VGB(iRhoUzIon_I,i,j,k,iBLK)**2 &
-               ) / State_VGB(iRhoIon_I,i,j,k,iBLK)
-       end do; end do; end do
-    end if
+    if(UseMultiIon .and. IsMhd)call multi_ion_update(iBlk, IsFinal = .false.)
 
     if(boris_correction) then                 !^CFG IF BORISCORR BEGIN
        if(UseB0)then
