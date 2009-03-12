@@ -164,7 +164,6 @@ contains
        InvNumDens = 1.0/sum(NumDens_I)
 
        if(UseCovariant)then
-          call stop_mpi(NameSub//' covariant version is not implemented yet!')
           vInv = vInv_CB(i,j,k,iBlock)
 
           GradPe_D = vInv* &
