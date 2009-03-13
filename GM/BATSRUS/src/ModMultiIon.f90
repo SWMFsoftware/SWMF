@@ -601,7 +601,7 @@ contains
                State_VGB(iRhoIon_I,i,j,k,iBlock)*Rho*InvSum
 
           ! Distribute total pressure among ions
-          IonSum = sum(State_VGB(iPIon_I,i,j,k,iBlock))
+          InvSum = 1/sum(State_VGB(iPIon_I,i,j,k,iBlock))
           State_VGB(iPIon_I,i,j,k,iBlock) = &
                State_VGB(iPIon_I,i,j,k,iBlock)*p*InvSum
 
