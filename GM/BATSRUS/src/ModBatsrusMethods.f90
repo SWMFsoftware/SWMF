@@ -228,12 +228,13 @@ end subroutine BATS_setup
 
 subroutine BATS_init_session
 
-  use ModMain, ONLY: DoTransformToHgi, UseUserPerturbation, UseGrayDiffusion
+  use ModMain, ONLY: DoTransformToHgi, UseUserPerturbation
   use ModMain, ONLY: UseProjection                 !^CFG IF PROJECTION
   use ModMain, ONLY: UseConstrainB                 !^CFG IF CONSTRAINB
   use ModCT,   ONLY: DoInitConstrainB              !^CFG IF CONSTRAINB
   use ModHallResist, ONLY: UseHallResist, init_hall_resist,test_face_current
-  use ModGrayDiffusion, ONLY: init_gray_diffusion  !^CFG IF IMPLICIT
+  use ModImplicit, ONLY: UseSemiImplicit, TypeSemiImplicit !^CFG IF IMPLICIT
+  use ModGrayDiffusion, ONLY: init_gray_diffusion          !^CFG IF IMPLICIT
   use ModTemperature, ONLY: UseTemperatureDiffusion, init_temperature_diffusion
   use ModUser, ONLY: user_initial_perturbation
   implicit none
@@ -270,8 +271,12 @@ subroutine BATS_init_session
   !call test_face_current
 
   if(UseTemperatureDiffusion) call init_temperature_diffusion
-  if(UseGrayDiffusion.and..not.UseTemperatureDiffusion) &  !^CFG IF IMPLICIT
-       call init_gray_diffusion                            !^CFG IF IMPLICIT
+  if(UseSemiImplicit)then                      !^CFG IF  IMPLICIT BEGIN
+     select case(TypeSemiImplicit)
+     case('radiation', 'radcond', 'cond')
+        call init_gray_diffusion
+     end select
+  end if                                       !^CFG END IMPLICIT
 
   ! Make sure that ghost cells are up to date
   call exchange_messages

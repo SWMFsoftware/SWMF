@@ -128,6 +128,8 @@ module ModImplicit
   ! semi-implicit state
   real, allocatable :: StateSemi_VGB(:,:,:,:,:)
 
+  real, allocatable :: DconsDprim_VCB(:,:,:,:,:)
+
   ! Time step when the previous state was stored
   integer :: n_prev=-100
 
@@ -274,7 +276,7 @@ contains
 
     if(UseSemiImplicit)then
        select case(TypeSemiImplicit)
-       case('radiation')
+       case('radiation', 'cond')
           nw = 1
        case('radcond')
           nw = 2
@@ -298,6 +300,7 @@ contains
     allocate(wnrm(nw))
     allocate(MAT(nw,nw,1:nI,1:nJ,1:nK,nstencil,MaxImplBLK))
     if(PrecondType == 'JACOBI') allocate(JacobiPrec_I(MaxImplVar))
+    if(UseSemiImplicit) allocate(DconsDprim_VCB(nw,nI,nJ,nK,MaxImplBLK))
 
     if(iProc==0)then
        call write_prefix
