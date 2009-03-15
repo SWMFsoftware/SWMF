@@ -86,7 +86,8 @@ subroutine advance_impl
   use ModPointImplicit, ONLY: UsePointImplicit
   use ModAMR, ONLY : UnusedBlock_BP
   use ModNumConst
-  use ModLinearSolver, ONLY: gmres, bicgstab, cg, prehepta, Uhepta, Lhepta
+  use ModLinearSolver, ONLY: gmres, bicgstab, cg, prehepta, &
+       Uhepta, Lhepta, multiply_dilu
   use ModMpi
   use ModEnergy, ONLY: calc_old_pressure
 
@@ -327,7 +328,7 @@ subroutine advance_impl
 
            do implBLK=1,nImplBLK
               ! Preconditioning: MAT --> LU
-              call prehepta(nIJK,nw,nI,nI*nJ,-GustafssonPar,&
+              call prehepta(nIJK, nw, nI, nI*nJ, PrecondParam, &
                    MAT(1,1,1,1,1,1,implBLK),&
                    MAT(1,1,1,1,1,2,implBLK),&
                    MAT(1,1,1,1,1,3,implBLK),&
@@ -340,7 +341,17 @@ subroutine advance_impl
 
               ! rhs --> P_L.rhs, where P_L=U^{-1}.L^{-1}, L^{-1}, or I
               ! for left, symmetric, and right preconditioning, respectively
-              if(PrecondSide/='right')then
+              if(PrecondType == 'DILU')then
+                 call multiply_dilu(nIJK,nw,nI,nI*nJ,&
+                      rhs(nwIJK*(implBLK-1)+1),&
+                      MAT(1,1,1,1,1,1,implBLK),&
+                      MAT(1,1,1,1,1,2,implBLK),&
+                      MAT(1,1,1,1,1,3,implBLK),&
+                      MAT(1,1,1,1,1,4,implBLK),&
+                      MAT(1,1,1,1,1,5,implBLK),&
+                      MAT(1,1,1,1,1,6,implBLK),&
+                      MAT(1,1,1,1,1,7,implBLK))
+              elseif(PrecondSide /= 'right')then
                  call Lhepta(nIJK,nw,nI,nI*nJ,&
                       rhs(nwIJK*(implBLK-1)+1),&
                       MAT(1,1,1,1,1,1,implBLK),&

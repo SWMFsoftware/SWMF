@@ -15,10 +15,30 @@ module ModLinearSolver
 
   !USES:
   use ModMpi
-  use ModBlasLapack
+  use ModBlasLapack, ONLY: BLAS_gemm, BLAS_copy, BLAS_gemv, &
+       LAPACK_getrf, LAPACK_getrs
+
+  ! BLAS_gemm, level 3 Matrix-Matrix Product.
+  !
+  ! BLAS_gemv, level 2 Matrix-Vector Product.
+  !
+  ! BLAS_copy, level 1 vector copy.
+  !
+  ! LAPACK_getrf, computes an LU factorization of a general 
+  !          M-by-N matrix A using partial pivoting with 
+  !          row interchanges. The factorization has the form
+  !              A = P * L * U
+  !          where P is a permutation matrix, L is lower triangular 
+  !          with unit diagonal elements (lower trapezoidal if m > n),
+  !          and U is upper triangular (upper trapezoidal if m < n).
+  !
+  ! LAPACK_getrs, solves a system of linear equations
+  !          A * X = B,  A**T * X = B,  or  A**H * X = B
+  !          with a general N-by-N matrix A using the LU factorization
+  !          computed by LAPACK_getrf
 
   implicit none
-  save
+  SAVE
 
   private ! except
 
@@ -31,11 +51,14 @@ module ModLinearSolver
   public :: Lhepta          ! multiply with lower block triangular matrix
   public :: upper_hepta_scalar ! multiply with upper scalar triangular matrix
   public :: lower_hepta_scalar ! multiply with lower scalar triangular matrix
-  public :: multiply_dilu   ! multiply with diagonal (LU)^-1 matrix
+  public :: multiply_dilu   ! multiply with (LU)^-1 with diagonal off-diags
+  public :: multiply_block_jacobi ! multiply with inverted diag blocks D^-1
   public :: implicit_solver ! implicit solver in 1D with 3 point stencil
   public :: test_linear_solver
 
-  integer, public, parameter:: GaussSeidel_=3, Dilu_=2, Bilu_=1, Mbilu_=0
+  ! Named indexes for various preconditioner options
+  integer, public, parameter:: &
+       Jacobi_=5, BlockJacobi_=4, GaussSeidel_=3, Dilu_=2, Bilu_=1, Mbilu_=0
 
   !REVISION HISTORY:
   ! 05Dec06 - Gabor Toth - initial prototype/prolog/code based on BATSRUS code
@@ -686,7 +709,7 @@ contains
     !      Determine stopping criterion (||.|| denotes the 2-norm):
     !      typestop='rel'    -- relative stopping crit.:||res|| <= Tol*||res0||
     !      typestop='abs'    -- absolute stopping crit.: ||res|| <= Tol
- 
+
     integer, intent(out):: iError    ! info about convergence
     logical, intent(in) :: DoTest
     integer, intent(inout) :: nIter  ! maximum/actual number of iterations
@@ -715,7 +738,7 @@ contains
          allocate(PrecRhs_I(n))
 
     MaxIter = nIter
-   
+
     ! compute initial residual vector 
 
     if(IsInit)then
@@ -759,9 +782,9 @@ contains
        else
           Vec_I = Vec_I + Alpha * Rhs_I
        end if
-      
+
        call matvec(Vec_I, aDotVec_I, n)
-      
+
        Beta = 1.0/dot_product_mpi(Vec_I, aDotVec_I, iComm)
 
        Rhs_I = Rhs_I - Beta * aDotVec_I
@@ -960,7 +983,7 @@ contains
   !
   !============================================================================
 
-  subroutine prehepta(nblock,N,M1,M2,alf,d,e,f,e1,f1,e2,f2)
+  subroutine prehepta(nBlock, n, m1, m2, PrecondParam, d, e, f, e1, f1, e2, f2)
 
     ! This routine constructs an incomplete block LU-decomposition 
     ! of a hepta- or penta-diagonal matrix in such a way that L+U has the 
@@ -984,10 +1007,10 @@ contains
     ! for sparse ..... ' for an illustration of this phenomenon.
 
     INTEGER, INTENT(IN)                        :: N, M1, M2, nblock
-    REAL, INTENT(IN)                           :: alf
-    REAL, INTENT(INOUT), DIMENSION(N,N,nblock) :: d,e,f
-    REAL, INTENT(INOUT), DIMENSION(N,N,nblock), optional :: e1,f1,e2,f2
-
+    REAL, INTENT(IN)                           :: PrecondParam
+    REAL, INTENT(INOUT), DIMENSION(N,N,nblock) :: d
+    REAL, INTENT(INOUT), DIMENSION(N,N,nblock), optional :: &
+         e, f, e1, f1, e2, f2
 
     !======================================================================
     !     Description of arguments:
@@ -1009,12 +1032,15 @@ contains
     !           direction in which grid points are numbered
     !           last have distance M2 from the main diagonal blocks.
     !
-    ! alf:      The parameter for Gustafsson modification. 
-    !           Alf = +3 Gauss-Seidel prec: invert the original diagonal blocks
-    !           Alf = +2 DILU prec: LU for diagonal, keep off-diagonal blocks
-    !           Alf = +1 BILU prec: LU for diagonal, premultiply U with D^-1
-    !           Alf < 0  MBILU prec: Gustaffson modification of diagonal blocks
-    !                    using -1 <= alf < 0 parameter
+    ! PrecondParam:      The parameter for Gustafsson modification:
+    !           +5 Gauss-Seidel prec: invert the original diagonal blocks
+    !           +4 Block-Jacobi prec: invert the original diagonal blocks
+    !           +3 Gauss-Seidel prec: invert the original diagonal blocks
+    !                               and premultiply upper diagonal blocks
+    !           +2 DILU  prec: LU for diagonal, keep off-diagonal blocks
+    !           +1 BILU  prec: LU for diagonal, premultiply U with D^-1
+    !           <0 MBILU prec: Gustaffson modification of diagonal blocks
+    !                          using -1 <= PrecondParam < 0 parameter
 
 
     !
@@ -1057,30 +1083,9 @@ contains
 
     real, allocatable:: fOrig_VVI(:,:,:), f1Orig_VVI(:,:,:), f2Orig_VVI(:,:,:)
 
-    integer :: i, j, INFO
+    ! info variable for lapack routines
+    integer :: i, j, info, iPrecond
 
-    ! INFO     : variable for LAPACK_GETRF
-    !
-    ! External subroutines:
-    !
-    ! DGEMM,   BLAS level three Matrix-Matrix Product.
-    !          See 'man DGEMM' for description.
-    !
-    ! Lapack_getrf,  LAPACK routine, computes an LU factorization of a general 
-    !          M-by-N matrix A using partial pivoting with 
-    !          row interchanges. The factorization has the form
-    !              A = P * L * U
-    !          where P is a permutation matrix, L is lower triangular 
-    !          with unit diagonal elements (lower trapezoidal if m > n),
-    !          and U is upper triangular (upper trapezoidal if m < n).
-    !          This is the right-looking Level 3 BLAS version of the
-    !          algorithm.
-    !
-    ! Lapack_getrs,  LAPACK routine, solves a system of linear equations
-    !          A * X = B,  A**T * X = B,  or  A**H * X = B
-    !          with a general N-by-N matrix A using the LU factorization
-    !          computed by LAPACK_GETRF.
-    !
     !--------------------------------------------------------------------------
 
     !call timing_start('precond')
@@ -1088,7 +1093,9 @@ contains
     ! Allocate arrays that used to be automatic
     allocate(dd(N,N), pivot(N))
 
-    if(nint(alf) == Dilu_)then
+    iPrecond = nint(PrecondParam)
+
+    if(iPrecond == Dilu_)then
        allocate(fOrig_VVI(n,n,nBlock))
        fOrig_VVI = f
        if(present(f1))then
@@ -1102,69 +1109,82 @@ contains
     end if
 
     do j=1, nBlock
+
        dd = d(:,:,j)
 
-       ! Modify D according to LU decomposition except for Gauss-Seidel
-       if (nint(alf) /= GaussSeidel_)then
+       ! Modify D according to LU decomposition except for Jacobi/Gauss-Seidel
+       if (iPrecond > GaussSeidel_)then
           ! D = D - E.F(j-1) - E1.F1(j-M1) - E2.F2(j-M2)
-          if (j>1 )call BLAS_GEMM('n','n',N,N,N,-1.0, &
-               e(:,:,j),  N, f(:,:,j- 1), N, 1.0, dd, N)
-          if (j>M1) call BLAS_GEMM('n','n',N,N,N,-1.0, &
-               e1(:,:,j), N, f1(:,:,j-M1), N, 1.0, dd, N)
-          if (j>M2) call BLAS_GEMM('n','n',N,N,N,-1.0, &
-               e2(:,:,j), N, f2(:,:,j-M2), N, 1.0, dd, N)
+          if (j > 1 )call BLAS_gemm('n', 'n', n, n, n, -1.0, &
+               e(:,:,j),  N, f(:,:,j- 1), n, 1.0, dd, n)
+          if (j > m1) call BLAS_gemm('n', 'n', n, n, n, -1.0, &
+               e1(:,:,j), N, f1(:,:,j-M1), n, 1.0, dd, n)
+          if (j > m2) call BLAS_gemm('n','n', n, n, n, -1.0, &
+               e2(:,:,j), N, f2(:,:,j-M2), n, 1.0, dd, n)
        end if
-       if(nint(alf) <= Mbilu_)then
+       if(iPrecond <= Mbilu_)then
           ! Relaxed Gustafsson modification for MBILU
 
-          ! D = D + alf*( E2.F(j-M2) + E2.F1(j-M2) + E1.F(j-M1) + E1.F2(j-M1)
-          !             + E.F1(j-1)  + E.F2(j-1) )
+          ! D = D + PrecondParam*
+          !    (  E2.F(j-M2) + E2.F1(j-M2) 
+          !     + E1.F(j-M1) + E1.F2(j-M1)
+          !     + E.F1(j-1)  + E .F2(j-1) )
 
-          if (j>M2) then
-             call BLAS_GEMM('n','n',N,N,N,alf, &
+          if (j > M2) then
+             call BLAS_GEMM('n','n',N,N,N,PrecondParam, &
                   e2(:,:,j),N, f(:,:,j-M2),N,1.0,dd,N)
-             call BLAS_GEMM('n','n',N,N,N,alf, &
+             call BLAS_GEMM('n','n',N,N,N,PrecondParam, &
                   e2(:,:,j),N,f1(:,:,j-M2),N,1.0,dd,N)
           end if
-          if (j>M1) call BLAS_GEMM('n','n',N,N,N,alf, &
+          if (j > M1) call BLAS_GEMM('n','n',N,N,N,PrecondParam, &
                e1(:,:,j),N, f(:,:,j-M1),N,1.0,dd,N)
-          if (j>M1.and.j-M1<=nblock-M2) call BLAS_GEMM('n','n',N,N,N,alf, &
+          if (j > M1 .and. j-M1 <= nBlock-M2) &
+               call BLAS_GEMM('n','n',N,N,N,PrecondParam, &
                e1(:,:,j),N,f2(:,:,j-M1),N,1.0,dd,N)
-          if (j>1.and.j-1<=nblock-M2) call BLAS_GEMM('n','n',N,N,N,alf, &
+          if (j > 1 .and. j-1 <= nBlock-M2) &
+               call BLAS_GEMM('n','n',N,N,N,PrecondParam, &
                e(:,:,j),N,f2(:,:,j-1 ),N,1.0,dd,N)
-          if (j>1.and.j-1<=nblock-M1) call BLAS_GEMM('n','n',N,N,N,alf, &
+          if (j>1 .and. j-1 <= nBlock-M1) &
+               call BLAS_GEMM('n','n',N,N,N,PrecondParam, &
                e(:,:,j),N,f1(:,:,j-1 ),N,1.0,dd,N)
        end if
 
        ! Invert the diagonal block by first factorizing then solving D.D'=I
-       call LAPACK_GETRF( N, N, dd, N, pivot, INFO )
+       call LAPACK_getrf( n, n, dd, n, pivot, info )
        ! Set the right hand side as identity matrix
        d(:,:,j)=0.0
        do i=1,N
           d(i,i,j)=1.0
        end do
        ! Solve the problem, returns D^-1 into d(j)
-       call LAPACK_GETRS('n',N,N,dd,N,pivot,d(:,:,j),N,INFO)
+       call LAPACK_getrs('n', n, n, dd, n, pivot, d(:,:,j), n, info)
 
-       ! Pre-multiply U with D^-1 to make Uhepta more efficient
+       ! For Jacobi prec no need to do anything with upper diagonal blocks
+       if (nint(PrecondParam) == BlockJacobi_) CYCLE
+
+       ! Pre-multiply U with D^-1 to make the decomposition 
+       ! as well as multiplication with U^{-1} more efficient
        ! F2 = D^{-1}.F2, F1 = D^{-1}.F1, F = D^{-1}.F
-       if (j   < nblock)then
+       if (j   < nBlock)then
           dd=f(:,:,j)
-          CALL BLAS_GEMM('n','n',N,N,N,1.0,d(:,:,j),N,dd,N,0.0,f(:,:,j),N)
-       end IF
-       if (j+M1<=nblock)then
+          call BLAS_gemm('n', 'n', n, n, n, 1.0, d(:,:,j), n, dd, n, 0.0, &
+               f(:,:,j), n)
+       end if
+       if (j+M1 <= nBlock)then
           dd=f1(:,:,j)
-          CALL BLAS_GEMM('n','n',N,N,N,1.0,d(:,:,j),N,dd,N,0.0,f1(:,:,j),N)
-       end IF
-       if (j+M2<=nblock)then
+          call BLAS_gemm('n', 'n', n, n, n, 1.0, d(:,:,j), n, dd, n, 0.0, &
+               f1(:,:,j), n)
+       end if
+       if (j+M2 <= nBlock)then
           dd=f2(:,:,j)
-          CALL BLAS_GEMM('n','n',N,N,N,1.0,d(:,:,j),N,dd,N,0.0,f2(:,:,j),N)
-       end IF
+          call BLAS_gemm('n', 'n', n, n, n, 1.0, d(:,:,j), n, dd, n, 0.0, &
+               f2(:,:,j), n)
+       end if
 
     end do
 
-    if(nint(alf) == Dilu_)then
-       ! DILU prec requires original diagonal blocks in U
+    if(iPrecond == Dilu_)then
+       ! DILU prec requires original diagonal blocks in U, so restore it
        f = fOrig_VVI
        deallocate(fOrig_VVI)
        if(present(f1))then
@@ -1207,7 +1227,7 @@ contains
     ! inverse: logical switch
     !          Multiply by U^{-1} if true, otherwise multiply by U
     !
-    ! nblock:  Number of diagonal blocks.
+    ! nBlock:  Number of diagonal blocks.
     ! N:       the size of the blocks.
     ! M1:      distance of blocks to the main diagonal blocks.
     !          set M1=nblock for block tri-diagonal matrices!
@@ -1236,12 +1256,7 @@ contains
     ! For example, the (i,k)-element 
     ! of the j-th block on the super diagonal is stored in f(i,k,j).
 
-    INTEGER :: j
-
-    ! External function
-    !
-    ! DGEMV,   BLAS level two Matrix-Vector Product.
-    !          See 'man DGEMV' for description.
+    integer :: j
     !-----------------------------------------------------------------------
     !call timing_start('Uhepta')
 
@@ -1283,25 +1298,27 @@ contains
        end if
     else
        ! BLAS VERSION
-       IF(inverse)THEN
+       if(inverse)then
           !  x' := U^{-1}.x = x - F.x'(j+1) - F1.x'(j+M1) - F2.x'(j+M2)
-          DO j=nblock-1,1,-1
-             CALL BLAS_GEMV('n',N,N,-1.0, f(:,:,j),N,x(:,j+1 ),1,1.0,x(:,j),1)
-             IF (j+M1<=nblock) CALL BLAS_GEMV( &
-                  'n',N,N,-1.0,f1(:,:,j),N,x(:,j+M1),1,1.0,x(:,j),1)
-             IF (j+M2<=nblock) CALL BLAS_GEMV( &
-                  'n',N,N,-1.0,f2(:,:,j),N,x(:,j+M2),1,1.0,x(:,j),1)
-          ENDDO
-       ELSE
+          do j=nblock-1,1,-1
+             call BLAS_gemv('n', n, n, -1.0, &
+                  f(:,:,j), n, x(:,j+1 ), 1, 1.0, x(:,j), 1)
+             if(j+M1<=nblock) call BLAS_gemv('n', n, n, -1.0, &
+                  f1(:,:,j), n, x(:,j+M1), 1, 1.0, x(:,j), 1)
+             if(j+M2<=nblock) CALL BLAS_gemv('n', n, n, -1.0, &
+                  f2(:,:,j), n, x(:,j+M2), 1, 1.0, x(:,j), 1)
+          enddo
+       else
           !  x := U.x = x + F.x(j+1) + F1.x(j+M1) + F2.x(j+M2)
-          DO j=1,nblock-1
-             CALL BLAS_GEMV('n',N,N,1.0, f(:,:,j),N,x(:,j+1 ),1,1.0,x(:,j),1)
-             IF (j+M1<=nblock) CALL BLAS_GEMV( &
-                  'n',N,N,1.0,f1(:,:,j),N,x(:,j+M1),1,1.0,x(:,j),1)
-             IF (j+M2<=nblock) CALL BLAS_GEMV( &
-                  'n',N,N,1.0,f2(:,:,j),N,x(:,j+M2),1,1.0,x(:,j),1)
-          END DO
-       END IF
+          do j=1,nblock-1
+             call BLAS_gemv( &
+                  'n', n, n, 1.0, f(:,:,j), n, x(:,j+1 ), 1, 1.0, x(:,j), 1)
+             if(j+M1<=nblock) call BLAS_gemv( &
+                  'n', n, n, 1.0, f1(:,:,j), n, x(:,j+M1), 1, 1.0, x(:,j), 1)
+             if(j+M2<=nblock) call BLAS_gemv( &
+                  'n', n, n, 1.0, f2(:,:,j),n, x(:,j+M2), 1, 1.0, x(:,j), 1)
+          end do
+       end if
     end if
 
     !call timing_stop('Uhepta')
@@ -1318,11 +1335,11 @@ contains
     ! For penta-diagonal matrix, set M2=nblock and e2 can be omitted.
     ! For tri-diagonal matrix set M1=M2=nblock and e1,e2 can be omitted.
 
-    INTEGER, INTENT(IN) :: N,M1,M2,nblock
-    REAL, INTENT(INOUT) :: x(N,nblock)
-    REAL, INTENT(IN), DIMENSION(N,N,nblock) :: d,e
-    REAL, INTENT(IN), DIMENSION(N,N,nblock), OPTIONAL :: e1,e2
-    !
+    integer, intent(in) :: N,M1,M2,nblock
+    real, intent(inout) :: x(N,nblock)
+    real, intent(in), dimension(n,n,nBlock) :: d,e
+    real, intent(in), dimension(n,n,nBlock), optional :: e1,e2
+
     !=======================================================================
     !     Description of arguments:
     !=======================================================================
@@ -1398,14 +1415,14 @@ contains
        ! BLAS VERSION
        do j=1,nblock
 
-          call BLAS_GEMV('n', N, N, 1.0, d(:,:,j) ,N, x(:,j), 1, 0.0, work, 1)
-          if(j > 1 ) call BLAS_GEMV( &
-               'n',N,N,-1.0,e(:,:,j) ,N,x(:,j-1) ,1,1.0,work,1)
-          if(j > M1) call BLAS_GEMV( &
-               'n',N,N,-1.0,e1(:,:,j),N,x(:,j-M1),1,1.0,work,1)
-          if(j > M2) call BLAS_GEMV( &
-               'n',N,N,-1.0,e2(:,:,j),N,x(:,j-M2),1,1.0,work,1)
-          call BLAS_COPY(N,work,1,x(:,j),1)
+          call BLAS_gemv('n', N, N, 1.0, d(:,:,j) ,N, x(:,j), 1, 0.0, work, 1)
+          if(j > 1 ) call BLAS_gemv( &
+               'n', n, n, -1.0, e(:,:,j) ,n, x(:,j-1), 1, 1.0, work, 1)
+          if(j > M1) call BLAS_gemv( &
+               'n', n, n, -1.0, e1(:,:,j), n, x(:,j-M1), 1, 1.0, work, 1)
+          if(j > M2) call BLAS_gemv( &
+               'n', n, n, -1.0, e2(:,:,j), n, x(:,j-M2), 1, 1.0, work, 1)
+          call BLAS_copy(n, work, 1, x(:,j), 1)
 
        enddo
     end if
@@ -1586,7 +1603,7 @@ contains
           ! implicit
           call implicit_solver(ImplPar, DtImpl, DtExpl, nCell, nVar, &
                State_GV, calc_resid_test, update_bound_test)
-          
+
           ! check
           call calc_resid_test(2, DtImpl, nCell, nVar, State_GV, Resid_CV)
           write(*,*)'iStep, Max error=',iStep, &
@@ -1816,5 +1833,24 @@ contains
 
   end subroutine multiply_dilu
 
-end module ModLinearSolver
+  !============================================================================
 
+  subroutine multiply_block_jacobi(nBlock, nVar, x_VB, d_VVB)
+
+    ! G. Toth, 2009
+
+    ! This routine multiplies x with the already inverted diagonal blocks.
+
+    integer, intent(in)   :: nBlock, nVar
+    real,    intent(inout):: x_VB(nVar, nBlock)
+    real,    intent(in)   :: d_VVB(nVar, nVar, nBlock)
+
+    integer :: iBlock
+    !------------------------------------------------------------------------
+    do iBlock = 1, nBlock
+       x_VB(:,iBlock) = matmul(d_VVB(:,:,iBlock), x_VB(:,iBlock))
+    end do
+
+  end subroutine multiply_block_jacobi
+
+end module ModLinearSolver

@@ -239,7 +239,7 @@ subroutine impl_matvec_prec(qx,qy,n)
   ! The multiplication by L is done in a matrix free fashion.
 
   use ModImplicit
-  use ModLinearSolver, ONLY: Lhepta, Uhepta
+  use ModLinearSolver, ONLY: Lhepta, Uhepta, multiply_dilu
   implicit none
 
   integer, intent(in):: n
@@ -283,23 +283,38 @@ subroutine impl_matvec_prec(qx,qy,n)
   ! qy = P_L.qy, where P_L==U^{-1}.L^{-1}, L^{-1}, or I
   ! for left, symmetric, and right preconditioning, respectively
 
-  if(PrecondType == 'JACOBI') qy = JacobiPrec_I(1:n)*qy
-
-  if(PrecondSide/='right' .and. PrecondType /= 'JACOBI')then
-     do implBLK=1,nImplBLK
+  if(PrecondType == 'JACOBI') then
+     qy = JacobiPrec_I(1:n)*qy
+  elseif(PrecondType == 'DILU') then
+     do implBLK = 1, nImplBLK
+        call multiply_dilu(nIJK,nw,nI,nI*nJ,&
+             qy(nwIJK*(implBLK-1)+1),&
+             MAT(1,1,1,1,1,1,implBLK),&
+             MAT(1,1,1,1,1,2,implBLK),&
+             MAT(1,1,1,1,1,3,implBLK),&
+             MAT(1,1,1,1,1,4,implBLK),&
+             MAT(1,1,1,1,1,5,implBLK),&
+             MAT(1,1,1,1,1,6,implBLK),&
+             MAT(1,1,1,1,1,7,implBLK))
+     end do
+  elseif(PrecondSide /= 'right')then
+     do implBLK = 1, nImplBLK
         call Lhepta(nIJK,nw,nI,nI*nJ,&
              qy(nwIJK*(implBLK-1)+1) ,&
              MAT(1,1,1,1,1,1,implBLK),&   ! Main diagonal
              MAT(1,1,1,1,1,2,implBLK),&   ! -i
              MAT(1,1,1,1,1,4,implBLK),&   ! -j
              MAT(1,1,1,1,1,6,implBLK))    ! -k
-        if(PrecondSide=='left') &
-             call Uhepta(.true.,nIJK,nw,nI,nI*nJ,&
-             qy(nwIJK*(implBLK-1)+1),   &
-             MAT(1,1,1,1,1,3,implBLK),  &   ! +i diagonal
-             MAT(1,1,1,1,1,5,implBLK),  &   ! +j
-             MAT(1,1,1,1,1,7,implBLK))      ! +k
      end do
+     if(PrecondSide == 'left') then
+        do implBLK = 1, nImplBLK
+           call Uhepta(.true.,nIJK,nw,nI,nI*nJ,&
+                qy(nwIJK*(implBLK-1)+1),   &
+                MAT(1,1,1,1,1,3,implBLK),  &   ! +i diagonal
+                MAT(1,1,1,1,1,5,implBLK),  &   ! +j
+                MAT(1,1,1,1,1,7,implBLK))      ! +k
+        end do
+     end if
   end if
 
   if(oktest_me)write(*,*)'impl_matvec_prec final n,sum(x**2),sum(y**2)=',&

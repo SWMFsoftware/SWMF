@@ -90,7 +90,7 @@ module ModImplicit
   real               :: JacobianEps  = 1.E-12
 
   ! Preconditioner parameters
-  real               :: GustafssonPar = 0.5
+  real               :: PrecondParam  = 0.5
   character (len=10) :: PrecondSide   = 'symmetric'
   character (len=10) :: PrecondType   = 'MBILU'
 
@@ -162,6 +162,8 @@ contains
     use ModReadParam,     ONLY: read_var
     use ModMain,          ONLY: DoSplitDb0Dt
     use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
+    use ModLinearSolver,  ONLY: &
+         Jacobi_, BlockJacobi_, GaussSeidel_, Dilu_, Bilu_
 
     character(len=*), intent(in) :: NameCommand
     character(len=*), parameter:: NameSub = 'read_implicit_param'
@@ -239,14 +241,23 @@ contains
        call read_var('TypePrecondSide',PrecondSide, IsLowerCase=.true.)
        call read_var('TypePrecond'    ,PrecondType, IsUpperCase=.true.)
        select case(PrecondType)
-       case('JACOBI', 'GS')
-          GustafssonPar = -3.0
+       case('JACOBI')
+          PrecondParam = Jacobi_
+          PrecondSide  = 'left'
+       case('BLOCKJACOBI')
+          PrecondParam = BlockJacobi_
+          PrecondSide  = 'left'
+       case('GS')
+          PrecondParam = GaussSeidel_
        case('DILU')
-          GustafssonPar = -2.0
+          PrecondParam = Dilu_
+          PrecondSide  = 'left'
        case('BILU')
-          GustafssonPar = -1.0
+          PrecondParam = Bilu_
        case default
-          call read_var('GustafssonPar', GustafssonPar)
+          ! MBILU preconditioner
+          call read_var('GustafssonPar', PrecondParam)
+          PrecondParam = -PrecondParam
        end select
 
     case('#KRYLOV')
