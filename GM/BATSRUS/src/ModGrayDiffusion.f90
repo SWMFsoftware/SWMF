@@ -725,7 +725,8 @@ contains
              RelaxSemiCoef_VCB(TeImpl_,i,j,k,iBlock) = Clight*PlanckOpacity &
                   * 4.0*cRadiationNo*Te**3
 
-             DconsDprim_VCB(TeImpl_,i,j,k,iImplBlock) = Cv
+             DconsDprim_VCB(TeImpl_,i,j,k,iImplBlock) = Cv &
+                  * 4.0*cRadiationNo*Te**3
           case('cond')
              DconsDprim_VCB(TeImpl_,i,j,k,iImplBlock) = Cv
           end select
@@ -1120,7 +1121,7 @@ contains
 
        end do; end do; end do
 
-    case('radcon')
+    case('radcond')
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
           ! energy exchange
