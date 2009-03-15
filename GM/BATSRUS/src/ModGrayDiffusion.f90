@@ -725,8 +725,7 @@ contains
              RelaxSemiCoef_VCB(TeImpl_,i,j,k,iBlock) = Clight*PlanckOpacity &
                   * 4.0*cRadiationNo*Te**3
 
-             DconsDprim_VCB(TeImpl_,i,j,k,iImplBlock) = Cv &
-                  * 4.0*cRadiationNo*Te**3
+             DconsDprim_VCB(TeImpl_,i,j,k,iImplBlock) = Cv
           case('cond')
              DconsDprim_VCB(TeImpl_,i,j,k,iImplBlock) = Cv
           end select
