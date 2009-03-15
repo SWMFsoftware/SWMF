@@ -371,7 +371,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
         Volume = 1.0/vInv_CB(i,j,k,iBlock)
         do iVar = 1, nw
            n = n + 1
-           y_I(n) = Volume*(x_I(n)*DconsDprim_VCB(iVar,i,j,k,iBlock)/dt &
+           y_I(n) = Volume*(x_I(n)*DconsDprim_VCB(iVar,i,j,k,iImplBlock)/dt &
                 - ImplCoeff*Rhs_VC(iVar,i,j,k))
         enddo
      enddo; enddo; enddo
@@ -417,7 +417,7 @@ subroutine get_semi_impl_jacobian
         Coeff = 1.0/(dt*vInv_CB(i,j,k,iBlock)) 
         do iVar = 1, nw
            MAT(iVar, iVar, i, j, k, 1, iImplBlock) = &             
-                Coeff*DconsDprim_VCB(iVar,i,j,k,iBlock) &
+                Coeff*DconsDprim_VCB(iVar,i,j,k,iImplBlock) &
                 + MAT(iVar, iVar, i, j, k, 1, iImplBlock) 
         end do
      end do; end do; end do
