@@ -1006,10 +1006,10 @@ contains
     ! iterative methods. See page 22 of Phd thesis 'Preconditioning 
     ! for sparse ..... ' for an illustration of this phenomenon.
 
-    INTEGER, INTENT(IN)                        :: N, M1, M2, nblock
-    REAL, INTENT(IN)                           :: PrecondParam
-    REAL, INTENT(INOUT), DIMENSION(N,N,nblock) :: d
-    REAL, INTENT(INOUT), DIMENSION(N,N,nblock), optional :: &
+    integer, intent(in)                        :: N, M1, M2, nblock
+    real, intent(in)                           :: PrecondParam
+    real, intent(inout), dimension(n,n,nBlock) :: d
+    real, intent(inout), dimension(n,n,nBlock), optional :: &
          e, f, e1, f1, e2, f2
 
     !======================================================================
@@ -1113,7 +1113,7 @@ contains
        dd = d(:,:,j)
 
        ! Modify D according to LU decomposition except for Jacobi/Gauss-Seidel
-       if (iPrecond > GaussSeidel_)then
+       if (iPrecond < GaussSeidel_)then
           ! D = D - E.F(j-1) - E1.F1(j-M1) - E2.F2(j-M2)
           if (j > 1 )call BLAS_gemm('n', 'n', n, n, n, -1.0, &
                e(:,:,j),  N, f(:,:,j- 1), n, 1.0, dd, n)
@@ -1214,11 +1214,11 @@ contains
     ! For penta-diagonal matrix, set M2=nblock and f2 can be omitted.
     ! For tri-diagonal matrix set M1=M2=nblock and f1,f2 can be omitted.
 
-    LOGICAL, INTENT(IN) :: inverse
-    INTEGER, INTENT(IN) :: N,M1,M2,nblock
-    REAL, INTENT(INOUT) :: x(N,nblock)
-    REAL, INTENT(IN)    :: f(N,N,nblock)
-    REAL, INTENT(IN), OPTIONAL :: f1(N,N,nblock), f2(N,N,nblock)
+    logical, intent(in) :: inverse
+    integer, intent(in) :: N,M1,M2,nblock
+    real, intent(inout) :: x(N,nblock)
+    real, intent(in)    :: f(N,N,nblock)
+    real, intent(in), optional :: f1(N,N,nblock), f2(N,N,nblock)
 
     !=======================================================================
     !     Description of arguments:
@@ -1372,7 +1372,7 @@ contains
 
     real:: work1
 
-    INTEGER :: j
+    integer :: j
 
     ! External subroutine
     !
