@@ -90,7 +90,7 @@ module ModImplicit
   real               :: JacobianEps  = 1.E-12
 
   ! Preconditioner parameters
-  real               :: PrecondParam  = 0.5
+  real               :: PrecondParam  = -0.5
   character (len=10) :: PrecondSide   = 'symmetric'
   character (len=10) :: PrecondType   = 'MBILU'
 
