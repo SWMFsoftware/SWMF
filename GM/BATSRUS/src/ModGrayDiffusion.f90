@@ -105,7 +105,7 @@ contains
           nDiff = 2
           allocate(iDiff_I(nDiff))
           iDiff_I = (/ TeImpl_, EradImpl_ /)
-          nRelax = 2
+          nRelax = 1
        case('cond')
           TeImpl_ = 1
           nDiff = 1
@@ -649,7 +649,7 @@ contains
   ! Semi-implicit interface for Erad and Eint
   !============================================================================
 
-  subroutine get_impl_gray_diff_state(StateImpl_VGB,DconsDprim_VCB)
+  subroutine get_impl_gray_diff_state(StateImpl_VGB,DconsDsemi_VCB)
 
     use ModAdvance,  ONLY: Eradiation_, State_VGB
     use ModImplicit, ONLY: nw, nImplBlk, impl2iBlk, kr, TypeSemiImplicit
@@ -664,7 +664,7 @@ contains
     use ModMessagePass, ONLY: message_pass_dir
 
     real, intent(out) :: StateImpl_VGB(nw,0:nI+1,0:nJ+1,0:nK+1,MaxImplBlk)
-    real, intent(inout) :: DconsDprim_VCB(nw,nI,nJ,nK,MaxImplBlk)
+    real, intent(inout) :: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
 
     integer :: iImplBlock, iBlock, i, j, k
     real :: PlanckOpacitySi, PlanckOpacity, CvSi, Cv, TeSi, Te
@@ -687,7 +687,14 @@ contains
                   State_VGB(Eradiation_,i,j,k,iBlock)
           end do; end do; end do
        end if
-       if(TypeSemiImplicit=='radcond' .or. TypeSemiImplicit=='cond')then
+       if(TypeSemiImplicit=='radcond')then
+          do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
+             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  TeSiOut = TeSi)
+             Te = TeSi*Si2No_V(UnitTemperature_)
+             StateImpl_VGB(TeImpl_,i,j,k,iImplBlock) = cRadiationNo*Te**4
+          end do; end do; end do
+       elseif(TypeSemiImplicit=='cond')then
           do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   TeSiOut = TeSi)
@@ -721,13 +728,12 @@ contains
              ! This is just the Planck function at time level * saved
              RelaxSemiCoef_VCB(Planck_,i,j,k,iBlock) = cRadiationNo*Te**4
           case('radcond')
-             RelaxSemiCoef_VCB(EradImpl_,i,j,k,iBlock) = Clight*PlanckOpacity
-             RelaxSemiCoef_VCB(TeImpl_,i,j,k,iBlock) = Clight*PlanckOpacity &
-                  * 4.0*cRadiationNo*Te**3
+             RelaxSemiCoef_VCB(1,i,j,k,iBlock) = Clight*PlanckOpacity
 
-             DconsDprim_VCB(TeImpl_,i,j,k,iImplBlock) = Cv
+             DconsDsemi_VCB(TeImpl_,i,j,k,iImplBlock) = &
+                  Cv/(4.0*cRadiationNo*Te**3)
           case('cond')
-             DconsDprim_VCB(TeImpl_,i,j,k,iImplBlock) = Cv
+             DconsDsemi_VCB(TeImpl_,i,j,k,iImplBlock) = Cv
           end select
 
           call get_diffusion_coef
@@ -739,7 +745,8 @@ contains
           do k = 1, nK; do j = 1, nJ
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   RosselandMeanOpacitySiOut = RosselandMeanOpacitySi, &
-                  HeatConductionCoefSiOut = HeatConductionCoefSi)
+                  HeatConductionCoefSiOut = HeatConductionCoefSi, &
+                  TeSiOut = TeSi)
              call get_diffusion_coef
           end do; end do
        end if
@@ -748,7 +755,8 @@ contains
           do k = 1, nK; do j = 1, nJ
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   RosselandMeanOpacitySiOut = RosselandMeanOpacitySi, &
-                  HeatConductionCoefSiOut = HeatConductionCoefSi)
+                  HeatConductionCoefSiOut = HeatConductionCoefSi, &
+                  TeSiOut = TeSi)
              call get_diffusion_coef
           end do; end do
        end if
@@ -757,7 +765,8 @@ contains
           do k = 1, nK; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   RosselandMeanOpacitySiOut = RosselandMeanOpacitySi, &
-                  HeatConductionCoefSiOut = HeatConductionCoefSi)
+                  HeatConductionCoefSiOut = HeatConductionCoefSi, &
+                  TeSiOut = TeSi)
              call get_diffusion_coef
           end do; end do
        end if
@@ -766,7 +775,8 @@ contains
           do k = 1, nK; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   RosselandMeanOpacitySiOut = RosselandMeanOpacitySi, &
-                  HeatConductionCoefSiOut = HeatConductionCoefSi)
+                  HeatConductionCoefSiOut = HeatConductionCoefSi, &
+                  TeSiOut = TeSi)
              call get_diffusion_coef
           end do; end do
        end if
@@ -775,7 +785,8 @@ contains
           do j = 1, nJ; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   RosselandMeanOpacitySiOut = RosselandMeanOpacitySi, &
-                  HeatConductionCoefSiOut = HeatConductionCoefSi)
+                  HeatConductionCoefSiOut = HeatConductionCoefSi, &
+                  TeSiOut = TeSi)
              call get_diffusion_coef
           end do; end do
        end if
@@ -784,7 +795,8 @@ contains
           do j = 1, nJ; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   RosselandMeanOpacitySiOut = RosselandMeanOpacitySi, &
-                  HeatConductionCoefSiOut = HeatConductionCoefSi)
+                  HeatConductionCoefSiOut = HeatConductionCoefSi, &
+                  TeSiOut = TeSi)
              call get_diffusion_coef
           end do; end do
        end if
@@ -872,12 +884,20 @@ contains
          DiffSemiCoef_VGB(EradImpl_,i,j,k,iBlock) = DiffRad
       end if
 
-      if(TypeSemiImplicit=='radcond' .or. TypeSemiImplicit=='cond')then
+      if(TypeSemiImplicit=='cond')then
          HeatConductionCoef = HeatConductionCoefSi &
               *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
               *Si2No_V(UnitU_)*Si2No_V(UnitX_)
 
          DiffSemiCoef_VGB(TeImpl_,i,j,k,iBlock) = HeatConductionCoef
+      elseif(TypeSemiImplicit=='radcond')then
+         HeatConductionCoef = HeatConductionCoefSi &
+              *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
+              *Si2No_V(UnitU_)*Si2No_V(UnitX_)
+         Te = TeSi*Si2No_V(UnitTemperature_)
+
+         DiffSemiCoef_VGB(TeImpl_,i,j,k,iBlock) = &
+              HeatConductionCoef/(4.0*cRadiationNo*Te**3)
       end if
 
     end subroutine get_diffusion_coef
@@ -1045,15 +1065,13 @@ contains
           end do; end do; end do
        case('radcond')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             AbsorptionEmission = &
-                  - RelaxSemiCoef_VCB(TeImpl_,i,j,k,iBlock) &
-                  *StateImpl_VG(TeImpl_,i,j,k) &
-                  + RelaxSemiCoef_VCB(EradImpl_,i,j,k,iBlock) &
-                  *StateImpl_VG(EradImpl_,i,j,k)
+             AbsorptionEmission = RelaxSemiCoef_VCB(1,i,j,k,iBlock) &
+                  *(StateImpl_VG(TeImpl_,i,j,k) &
+                  - StateImpl_VG(EradImpl_,i,j,k))
              Rhs_VC(TeImpl_,i,j,k) = Rhs_VC(TeImpl_,i,j,k) &
-                  + AbsorptionEmission
-             Rhs_VC(EradImpl_,i,j,k) = Rhs_VC(EradImpl_,i,j,k) &
                   - AbsorptionEmission
+             Rhs_VC(EradImpl_,i,j,k) = Rhs_VC(EradImpl_,i,j,k) &
+                  + AbsorptionEmission
           end do; end do; end do
        end select
     else
@@ -1069,10 +1087,9 @@ contains
           end do; end do; end do
        case('radcond')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             Te =  StateImpl_VG(TeImpl_,i,j,k)
-
-             AbsorptionEmission = RelaxSemiCoef_VCB(EradImpl_,i,j,k,iBlock)&
-                  *(cRadiationNo*Te**4 - StateImpl_VG(EradImpl_,i,j,k))
+             AbsorptionEmission = RelaxSemiCoef_VCB(1,i,j,k,iBlock) &
+                  *(StateImpl_VG(TeImpl_,i,j,k) &
+                  - StateImpl_VG(EradImpl_,i,j,k))
 
              ! dErad/dt = + AbsorptionEmission
              Rhs_VC(EradImpl_,i,j,k) = Rhs_VC(EradImpl_,i,j,k) &
@@ -1102,7 +1119,7 @@ contains
 
     integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iDiff
     real :: DiffLeft, DiffRight
-    real :: dSdErad, dSdTe
+    real :: dSdErad, PlanckOpacity
     !--------------------------------------------------------------------------
 
     ! All elements have to be set
@@ -1124,20 +1141,19 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
           ! energy exchange
-          dSdErad = RelaxSemiCoef_VCB(EradImpl_,i,j,k,iBlock)
-          dSdTe = RelaxSemiCoef_VCB(TeImpl_,i,j,k,iBlock)
+          PlanckOpacity = RelaxSemiCoef_VCB(1,i,j,k,iBlock)
 
           ! dSrad/dErad (diagonal)
-          Jacobian_VVCI(EradImpl_,EradImpl_,i,j,k,1) = -dSdErad
+          Jacobian_VVCI(EradImpl_,EradImpl_,i,j,k,1) = -PlanckOpacity
 
           ! dSe/dErad (off diagonal)
-          Jacobian_VVCI(TeImpl_,EradImpl_,i,j,k,1) = +dSdErad
+          Jacobian_VVCI(TeImpl_,EradImpl_,i,j,k,1) = +PlanckOpacity
 
-          ! dSe/dTe (diagonal)
-          Jacobian_VVCI(TeImpl_,TeImpl_,i,j,k,1) = -dSdTe
+          ! dSe/daTe^4 (diagonal)
+          Jacobian_VVCI(TeImpl_,TeImpl_,i,j,k,1) = -PlanckOpacity
 
-          ! dSrad/dTe (off diagonal)
-          Jacobian_VVCI(EradImpl_,TeImpl_,i,j,k,1) = +dSdTe
+          ! dSrad/daTe^4 (off diagonal)
+          Jacobian_VVCI(EradImpl_,TeImpl_,i,j,k,1) = +PlanckOpacity
 
        end do; end do; end do
     end select
@@ -1173,7 +1189,7 @@ contains
 
     use ModAdvance,  ONLY: State_VGB, Rho_, p_, Eradiation_
     use ModEnergy,   ONLY: calc_energy_cell
-    use ModImplicit, ONLY: nw, TypeSemiImplicit, DconsDprim_VCB, ImplOld_VCB
+    use ModImplicit, ONLY: nw, TypeSemiImplicit, DconsDsemi_VCB, ImplOld_VCB
     use ModMain,     ONLY: nI, nJ, nK, dt
     use ModPhysics,  ONLY: inv_gm1, No2Si_V, Si2No_V, UnitEnergyDens_, UnitP_,&
          UnitRho_, UnitTemperature_
@@ -1216,7 +1232,7 @@ contains
        else
           Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
                + State_VGB(EintExtra_,i,j,k,iBlock) &
-               + DconsDprim_VCB(TeImpl_,i,j,k,iImplBlock) &
+               + DconsDsemi_VCB(TeImpl_,i,j,k,iImplBlock) &
                *( StateImpl_VG(TeImpl_,i,j,k) &
                -  ImplOld_VCB(TeImpl_,i,j,k,iImplBlock) )
        end if

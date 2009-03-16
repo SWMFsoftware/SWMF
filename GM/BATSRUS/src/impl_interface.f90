@@ -79,11 +79,11 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,Var_VGB)
   call timing_start('expl2impl')
 
   if(UseSemiImplicit)then
-     DconsDprim_VCB(:,:,:,:,1:nImplBLK) = 1.0
+     DconsDsemi_VCB(:,:,:,:,1:nImplBLK) = 1.0
 
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
-        call get_impl_gray_diff_state(Var_VGB, DconsDprim_VCB)
+        call get_impl_gray_diff_state(Var_VGB, DconsDsemi_VCB)
      case default
         call stop_mpi(NameSub//': no get_impl_state implemented for' &
              //TypeSemiImplicit)
@@ -316,7 +316,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   ! Calculate y_I = A.x_I where A is the linearized sem-implicit operator
 
   use ModImplicit, ONLY: StateSemi_VGB, nw, nImplBlk, impl2iblk, &
-       TypeSemiImplicit, ImplCoeff, DconsDprim_VCB !!!, wnrm
+       TypeSemiImplicit, ImplCoeff, DconsDsemi_VCB !!!, wnrm
   use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
   use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs
@@ -371,7 +371,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
         Volume = 1.0/vInv_CB(i,j,k,iBlock)
         do iVar = 1, nw
            n = n + 1
-           y_I(n) = Volume*(x_I(n)*DconsDprim_VCB(iVar,i,j,k,iImplBlock)/dt &
+           y_I(n) = Volume*(x_I(n)*DconsDsemi_VCB(iVar,i,j,k,iImplBlock)/dt &
                 - ImplCoeff*Rhs_VC(iVar,i,j,k))
         enddo
      enddo; enddo; enddo
@@ -383,7 +383,7 @@ end subroutine get_semi_impl_matvec
 subroutine get_semi_impl_jacobian
 
   use ModImplicit, ONLY: nw, nImplBlk, impl2iblk, TypeSemiImplicit, &
-       nStencil, MAT, ImplCoeff, DconsDprim_VCB !!!, wnrm
+       nStencil, MAT, ImplCoeff, DconsDsemi_VCB !!!, wnrm
   use ModGrayDiffusion, ONLY: get_gray_diff_jacobian
   use ModMain, ONLY: nI, nJ, nK, nDim, Dt
   use ModGeometry, ONLY: vInv_CB
@@ -417,7 +417,7 @@ subroutine get_semi_impl_jacobian
         Coeff = 1.0/(dt*vInv_CB(i,j,k,iBlock)) 
         do iVar = 1, nw
            MAT(iVar, iVar, i, j, k, 1, iImplBlock) = &             
-                Coeff*DconsDprim_VCB(iVar,i,j,k,iImplBlock) &
+                Coeff*DconsDsemi_VCB(iVar,i,j,k,iImplBlock) &
                 + MAT(iVar, iVar, i, j, k, 1, iImplBlock) 
         end do
      end do; end do; end do
