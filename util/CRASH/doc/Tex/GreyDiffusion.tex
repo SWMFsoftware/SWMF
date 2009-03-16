@@ -1,4 +1,11 @@
 \documentclass[12pt]{article}
+
+\newcommand{\Eint}{E_{\rm I}}
+\newcommand{\Erad}{E_{\rm R}}
+\newcommand{\prad}{p_{\rm R}}
+\newcommand{\kappaP}{\kappa_{\rm P}}
+
+
 \begin{document}
 \section{Solution Method for the Radiation Hydrodynamcs with Grey-Diffusion approximation}  
 The governing equations of radiation hydrodynamics with grey-diffusion 
@@ -9,17 +16,17 @@ radiation energy:
 \nabla\cdot\left[ \rho {\bf u} \right] = 0, 
 \end{equation} 
 \begin{equation}   \frac{\partial}{\partial t}\left( \rho {\bf u} \right) +
- \nabla\cdot\left[ \rho{\bf u}{\bf u}     +(p+p_{\rm R}){\bf I} \right] = 0, 
+ \nabla\cdot\left[ \rho{\bf u}{\bf u}     +(p+\prad){\bf I} \right] = 0, 
 \end{equation} 
-\begin{equation}   \frac{\partial ({\cal E} + E_{\rm R})}{\partial t} + 
-\nabla\cdot   \left[ \left( {\cal E} + E_{\rm R}+ p+p_{\rm R} \right) {\bf u} 
-\right]   = \nabla\cdot\left[ \frac{c}{ 3 \overline{\chi} } \nabla E_{\rm R} 
+\begin{equation}   \frac{\partial ({\cal E} + \Erad)}{\partial t} + 
+\nabla\cdot   \left[ \left( {\cal E} + \Erad+ p+\prad \right) {\bf u} 
+\right]   = \nabla\cdot\left[ \frac{c}{ 3 \overline{\chi} } \nabla \Erad 
 \right], 
 \end{equation}\label{eq:energy} 
-\begin{equation}\label{eq:grey}   \frac{\partial E_{\rm R}}{\partial t} + 
-\nabla\cdot \left[ E_{\rm R} {\bf u} \right]   + p_{\rm R}\nabla\cdot{\bf u} 
-=    \nabla\cdot\left[ \frac{c}{ 3\overline{\chi} } \nabla E_{\rm R} \right]   
-- \kappa_{\rm P} c (E_{\rm R} - \frac{4\sigma}{c} T^4), 
+\begin{equation}\label{eq:grey}   \frac{\partial \Erad}{\partial t} + 
+\nabla\cdot \left[ \Erad {\bf u} \right]   + \prad\nabla\cdot{\bf u} 
+=    \nabla\cdot\left[ \frac{c}{ 3\overline{\chi} } \nabla \Erad \right]   
+-\kappaP c (\Erad - \frac{4\sigma}{c} T^4), 
 \end{equation} 
 where $\rho$, ${\bf u}$, $p$, $T$ are the density, plasma velocity, gas 
 kinetic pressure, and temperature, respectively. The total plasma energy 
@@ -28,9 +35,9 @@ density ${\cal E}$ is related to the internal plasma energy $e$:
 {\cal E} = \frac{1}{2}\rho u^2 + \rho e. 
 \end{equation} 
 The radiation field is assumed to be isotropic, so that the radiation 
-pressure can be obtained from the radiation energy density $E_{\rm R}$: 
+pressure can be obtained from the radiation energy density $\Erad$: 
 \begin{equation} 
-p_{\rm R} = \frac{1}{3}E_{\rm R}. 
+\prad = \frac{1}{3}\Erad. 
 \end{equation} 
 The radiation is treated as a fluid that carries momentum and energy. 
 In essence, equations (\ref{eq:density})--(\ref{eq:grey}) describe a two 
@@ -63,14 +70,14 @@ the BATSRUS code. The left hand side of equations
 hydro equations. We will fully exploit this feature, so that we can solve 
 this with the hydro solvers of BATSRUS. For the analogy with the hydro 
 equations with have to re-interpret in the hydro solver the pressure with 
-the total gas kinetic and radiation pressure $p+p_{\rm R}$. The internal 
+the total gas kinetic and radiation pressure $p+\prad$. The internal 
 energy is now given by the total gas and radiation energy 
 \begin{eqnarray} \rho e &=& \frac{p}{\gamma - 1} + \Delta (\rho e) + 
-E_{\rm R}, \nonumber \\        
-&=& \frac{p+p_{\rm R}}{\gamma - 1} + \Delta (\rho e) + \frac{3}{2}p_{\rm R}, 
+\Erad, \nonumber \\        
+&=& \frac{p+\prad}{\gamma - 1} + \Delta (\rho e) + \frac{3}{2}\prad, 
 \end{eqnarray} 
 where we have fixed $\gamma=5/3$. This indicates that we have to solve yet 
-another advection equation for $3p_{\rm R}/2=E_{\rm R}/2$. This is however 
+another advection equation for $3\prad/2=\Erad/2$. This is however 
 already accomplished by the left hand side of the radiation energy equation 
 (\ref{eq:grey}).  The solution of our radiation hydrodynamics equations with 
 grey diffusion approximation is obtained as follows: 
@@ -80,21 +87,21 @@ grey diffusion approximation is obtained as follows:
 \nabla\cdot\left[ \rho {\bf u} \right] = 0, \end{equation} 
 \begin{equation}\label{eq:hydro2}   \frac{\partial}{\partial t}\left( 
 \rho {\bf u} \right) + \nabla\cdot\left[ \rho{\bf u}{\bf u}     
-+(p+p_{\rm R}){\bf I} \right] = 0, 
++(p+\prad){\bf I} \right] = 0, 
 \end{equation} 
 \begin{equation}\label{eq:deficit1}   
 \frac{\partial}{\partial t} \Delta(\rho e) + \nabla\cdot\left[  
 \Delta(\rho e) {\bf u} \right] = 0, 
 \end{equation} 
 \begin{equation}\label{eq:deficit2}   
-\frac{\partial E_{\rm R}}{\partial t} + \nabla\cdot \left[ E_{\rm R} {\bf u} 
-\right]   + p_{\rm R}\nabla\cdot{\bf u} = 0, 
+\frac{\partial \Erad}{\partial t} + \nabla\cdot \left[ \Erad {\bf u} 
+\right]   + \prad\nabla\cdot{\bf u} = 0, 
 \end{equation} 
 \begin{equation}\label{eq:hydro3}   \frac{\partial}{\partial t} 
-(\frac{1}{2}\rho u^2 + \frac{p+p_{\rm R}}{\gamma - 1}) + \nabla\cdot   
-\left[ \left( \frac{1}{2}\rho u^2 + \frac{p+p_{\rm R}}{\gamma - 1} + 
-p+p_{\rm R} \right) {\bf u} \right]   - 
-\frac{1}{2}p_{\rm R}\nabla\cdot{\bf u} = 0, 
+(\frac{1}{2}\rho u^2 + \frac{p+\prad}{\gamma - 1}) + \nabla\cdot   
+\left[ \left( \frac{1}{2}\rho u^2 + \frac{p+\prad}{\gamma - 1} + 
+p+\prad \right) {\bf u} \right]   - 
+\frac{1}{2}\prad\nabla\cdot{\bf u} = 0, 
 \end{equation} 
 where equations (\ref{eq:hydro1}), (\ref{eq:hydro2}), and (\ref{eq:hydro3}) 
 are solved by the hydrodynamic numerical scheme and the energy equations 
@@ -103,12 +110,12 @@ equations. The overall system contains two sound waves that are modified by
 the radiation pressure. Since we have chosen to fix $\gamma$ on the maximum 
 allowable value of 5/3, we can easily find an upper bound for the sound speed: 
 \begin{equation}  
-c^2=\frac{\gamma (p+p_{\rm R})}{\rho}. 
+c^2=\frac{\gamma (p+\prad)}{\rho}. 
 \end{equation} 
 Using this wave speed for the numerical diffusion and determining the time 
 step of the hyperbolic part of the equations helps to stabilize the scheme.  
 \item The previous step provides an intermediate solution for the radiative 
-energy density, denoted as $E_{\rm R}^\prime$. Using the deficit in the 
+energy density, denoted as $\Erad^\prime$. Using the deficit in the 
 internal energy for the plasma and radiation energy density as found by 
 equation (\ref{eq:deficit1}) and (\ref{eq:deficit2}), we can recover the 
 true internal energy of the plasma (denoted as $e^\prime$). By applying the 
@@ -116,15 +123,104 @@ equation of state for our materials of choice we obtain the updated plasma
 pressure and temperature.   
 \item In the next stage we have to solve for the source terms in the energy 
 equations. This amounts to solving a coupled system for the plasmas 
-temperature and radiation temperature ($E_{\rm R} \propto T_{\rm R}^4$): 
-\begin{eqnarray}\label{radscheme} \rho \frac{\partial e(T)}{\partial t} = 
-\kappa_{\rm P} c (E_{\rm R} - \frac{4\sigma}{c} T^4), \\ 
-\frac{\partial E_{\rm R}}{\partial t} = \nabla\cdot\left[ 
-\frac{c}{ 3\overline{\chi} } \nabla E_{\rm R} \right]   - 
-\kappa_{\rm P} c (E_{\rm R} - \frac{4\sigma}{c} T^4) 
+temperature and radiation temperature ($\Erad \propto T_{\rm R}^4$): 
+\begin{eqnarray}
+\rho \frac{\partial e(T)}{\partial t} = 
+ \kappaP c (\Erad - \frac{4\sigma}{c} T^4), \label{eq:eint}\\ 
+\frac{\partial \Erad}{\partial t} = \nabla\cdot\left[ 
+  \frac{c}{ 3\overline{\chi} } \nabla \Erad \right]   - 
+ \kappaP c (\Erad - \frac{4\sigma}{c} T^4)  \label{eq:erad}
 \end{eqnarray} 
 and advance solution through time step with initial conditions 
-$e^\prime$ for the plasma internal energy and $E_{\rm R}^\prime$ for the 
+$e^\prime$ for the plasma internal energy and $\Erad^\prime$ for the 
 radiation energy.  
 \end{itemize}  
+
+\section{Semi-Implicit Scheme}
+
+We describe here the scheme to solve equations 
+(\ref{eq:eint}) and (\ref{eq:erad}) implicitly. 
+Discretizing in time leads to
+\begin{eqnarray}
+\Eint^{n+1} &=& \Eint^* + \Delta t K^*\left[\Erad^{n+1} - (aT^4)^{n+1}\right]  
+   \label{eq:Eint2}\\
+\Erad^{n+1} &=& \Erad^* - \Delta t K^*\left[\Erad^{n+1} - (aT^4)^{n+1}\right]
+                + \Delta t \nabla\cdot\left[ D^* \nabla \Erad^{n+1} \right]
+   \label{eq:Erad2}
+\end{eqnarray}
+where time level $*$ corresponds to the state after the hydro update,
+and we introduced the following notation for
+internal energy, energy coupling, radiation diffusion and radiation
+energy coefficients:
+$\Eint = \rho e$, $K = \kappaP c$, $D = \frac{c}{ 3\overline{\chi}}$,
+and $a = 4\sigma c$.
+Notice that the coupling and diffusion coefficients are taken at time
+level $*$ (frozen coefficients). This leads to a temporally first order
+scheme in general (unless the coefficients are constants in time).
+One can either 
+\begin{enumerate}
+\item solve the coupled system of equations (\ref{eq:Eint2})
+      and (\ref{eq:Erad2}) implicitly or 
+\item solve equation (\ref{eq:Eint2}) for $\Eint^{n+1}$,
+      substitute the solution back into (\ref{eq:Erad2}), 
+      and solve the resulting scalar equation (\ref{eq:Erad2})
+      implicitly.
+\end{enumerate}
+Both approaches involve the linearization of the $\Eint(T)$ function.
+
+Here we describe the second scheme, because it is more efficient. 
+Note that if we had heat conduction in (\ref{eq:Eint2}), 
+then we would have to solve the coupled system of equations.
+
+First we introduce the Planck function $B = a T^4$ as a new variable,
+and replace $\Eint$ with it using the chain rule
+\begin{equation}
+\frac{\partial \Eint}{\partial t} = 
+   \frac{\partial \Eint}{\partial T}
+   \frac{\partial T}{\partial B}
+   \frac{\partial B}{\partial t}
+   = \frac{c_V}{4 a T^3}\frac{\partial B}{\partial t}
+\end{equation}
+Now equation (\ref{eq:Eint2}) can be replaced with
+\begin{equation}
+B^{n+1} = B^* + \Delta t K'\left[\Erad^{n+1} - B^{n+1}\right]  
+   \label{eq:B}
+\end{equation}
+where
+\begin{equation}
+K' = K^* \frac{4 a T^3}{c_V}
+\end{equation}
+Equation (\ref{eq:B}) can be solved for
+\begin{equation}
+  B^{n+1} = \frac{B^* + \Delta t K' \Erad^{n+1}}{1 + \Delta t K'}
+   \label{eq:B2}
+\end{equation}
+This can be substituted into equation (\ref{eq:Erad2}) to obtain
+\begin{equation}
+\Erad^{n+1} = \Erad^* - \Delta t K^*\left[\Erad^{n+1} 
+              - \frac{B^* + \Delta t K' \Erad^{n+1}}{1 + \Delta t K'}\right]
+                + \Delta t \nabla\cdot\left[ D^* \nabla \Erad^{n+1} \right]
+\end{equation}
+and simplified to
+\begin{equation}
+\Erad^{n+1} = \Erad^* - \Delta t K''\left[\Erad^{n+1} - B^*\right]
+                + \Delta t \nabla\cdot\left[ D^* \nabla \Erad^{n+1} \right]
+\label{eq:Erad3}
+\end{equation}
+where
+\begin{equation}
+K'' = \frac{K}{1 + \Delta t K'} 
+\end{equation}
+Once we solve equation \ref{eq:Erad3} implicitly, we can obtain $B^{n+1}$
+from \ref{eq:B2}. One can either
+\begin{enumerate}
+\item obtain $T^{n+1}$ and $\Eint^{n+1}$ directly from $B^{n+1}$, or
+\item use a conservative update for the internal energy
+\end{enumerate}
+The second choice is
+\begin{equation}
+\Eint^{n+1} = \Eint^n + \Delta t K''\left[\Erad^{n+1} - B^*\right]
+\end{equation}
+which conserves the total energy to round-off error.
+
 \end{document}  
