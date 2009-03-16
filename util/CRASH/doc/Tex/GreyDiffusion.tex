@@ -211,10 +211,20 @@ where
 \begin{equation}
 K'' = \frac{K^*}{1 + \Delta t K'} 
 \end{equation}
-Once we solve equation \ref{eq:Erad3} implicitly, we can obtain $B^{n+1}$
-from \ref{eq:B2}. One can either
+It is convenient to introduce $\Delta \Erad = \Erad^{n+1} - \Erad^*$ and
+rearrange equation (\ref{eq:Erad3}) as
+\begin{equation}
+\left[\frac{1}{\Delta t} + K'' - \nabla\cdot D^* \nabla\right] \Delta \Erad 
+   = - K''\left[\Erad^* - B^*\right]
+                + \nabla\cdot\left[ D^* \nabla \Erad^* \right]
+\label{eq:DeltaErad}
+\end{equation}
+We solve equation (\ref{eq:DeltaErad}) for $\Delta \Erad$
+using a linear solver, update $\Erad^{n+1} = \Erad^* + \Delta \Erad$
+and then either
 \begin{enumerate}
-\item obtain $T^{n+1}$ and $\Eint^{n+1}$ directly from $B^{n+1}$, or
+\item obtain $B^{n+1}$ from (\ref{eq:B2}), and then get
+ $T^{n+1}$ and $\Eint^{n+1}$, or
 \item use a conservative update for the internal energy
 \end{enumerate}
 The second choice is
@@ -270,9 +280,21 @@ and can be simplified to
 \end{eqnarray}
 where
 \begin{equation}
-K'' = \frac{K^*}{1 + \beta \Delta t K'} 
+K'' = \frac{K^*}{1 + \beta \Delta t K'}  \label{eq:K5}
 \end{equation}
-Once equation (\ref{eq:Erad5}) is solved for $\Erad^{n+1}$, one can 
+Equation (\ref{eq:Erad5}) can be rearranged to
+\begin{equation}
+\left[\frac{1}{\Delta t} + \beta K'' - \beta \nabla\cdot D^* \nabla\right] 
+   \Delta \Erad 
+   = - K''\left[\Erad^* - B^*\right]
+                + \nabla\cdot\left[ D^* \nabla \Erad^* \right]
+\label{eq:DeltaErad2}
+\end{equation}
+Note that the only difference relative to the backward Euler scheme is
+the presence of $\beta$ in equations (\ref{eq:DeltaErad2}) and (\ref{eq:K5}). 
+
+Equation (\ref{eq:DeltaErad2}) is solved for $\Delta \Erad$,
+and we update $\Erad^{n+1} = \Erad^* + \Delta \Erad$, one can 
 either calculate $B^{n+1}$ from equation (\ref{eq:B5}), 
 or do a conservative update for the internal energy
 \begin{equation}
