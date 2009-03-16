@@ -209,7 +209,7 @@ and simplified to
 \end{equation}
 where
 \begin{equation}
-K'' = \frac{K}{1 + \Delta t K'} 
+K'' = \frac{K^*}{1 + \Delta t K'} 
 \end{equation}
 Once we solve equation \ref{eq:Erad3} implicitly, we can obtain $B^{n+1}$
 from \ref{eq:B2}. One can either
@@ -222,5 +222,62 @@ The second choice is
 \Eint^{n+1} = \Eint^n + \Delta t K''\left[\Erad^{n+1} - B^*\right]
 \end{equation}
 which conserves the total energy to round-off error.
+
+\newpage
+
+\subsection{Crank-Nicolson scheme}
+
+We can attempt to go second order in time with the assumption of
+(temporally) constant coefficients using the Crank-Nicolson scheme
+with $\beta=1/2$:
+\begin{eqnarray}
+B^{n+1} &=& B^* 
+   + \beta \Delta t K'\left[\Erad^{n+1} - B^{n+1}\right]  
+   + (1-\beta)\Delta t K'\left[\Erad^* - B^*\right]  
+   \label{eq:B4}\\
+\Erad^{n+1} &=& \Erad^* 
+   - \beta \Delta t K^*\left[\Erad^{n+1} - B^{n+1} \right]
+   - (1-\beta) \Delta t K^*\left[\Erad^* - B^*\right] \nonumber\\
+   && + \beta\Delta t \nabla\cdot\left[ D^* \nabla \Erad^{n+1} \right]
+      + (1-\beta)\Delta t \nabla\cdot\left[ D^* \nabla \Erad^* \right]
+   \label{eq:Erad4}
+\end{eqnarray}
+We can solve (\ref{eq:B4}) for 
+\begin{equation}
+  B^{n+1} = \frac{B^* + \beta \Delta t K' \Erad^{n+1}
+                  + (1-\beta)  \Delta t K' (\Erad^* - B^*)}
+                 {1 + \beta\Delta t K'}
+   \label{eq:B5}
+\end{equation}
+This can be substituted into equation (\ref{eq:Erad4}) to obtain
+\begin{eqnarray}
+\Erad^{n+1} &=& \Erad^* - \beta \Delta t K^*\left[\Erad^{n+1} 
+              - \frac{B^* + \beta \Delta t K' \Erad^{n+1}
+                      + (1-\beta)  \Delta t K' (\Erad^* - B^*)}
+                     {1 + \beta\Delta t K'}\right] \nonumber\\
+  && - (1-\beta) \Delta t K^*\left[\Erad^* - B^*\right] \nonumber\\
+  && +     \beta \Delta t \nabla\cdot\left[ D^* \nabla \Erad^{n+1} \right]
+      + (1-\beta)\Delta t \nabla\cdot\left[ D^* \nabla \Erad^* \right]
+\end{eqnarray}
+and can be simplified to
+\begin{eqnarray}
+\Erad^{n+1} &=& \Erad^* - \beta \Delta t K''\left[\Erad^{n+1} 
+              - B^*  \right] 
+    - (1-\beta) \Delta t K'' \left[\Erad^* - B^*\right] \nonumber\\
+  && +     \beta \Delta t \nabla\cdot\left[ D^* \nabla \Erad^{n+1} \right]
+      + (1-\beta)\Delta t \nabla\cdot\left[ D^* \nabla \Erad^* \right]
+  \label{eq:Erad5}
+\end{eqnarray}
+where
+\begin{equation}
+K'' = \frac{K^*}{1 + \beta \Delta t K'} 
+\end{equation}
+Once equation (\ref{eq:Erad5}) is solved for $\Erad^{n+1}$, one can 
+either calculate $B^{n+1}$ from equation (\ref{eq:B5}), 
+or do a conservative update for the internal energy
+\begin{equation}
+  \Eint^{n+1} = \Eint^n + \beta \Delta t K''\left[\Erad^{n+1} - B^*\right]
+                        + (1-\beta) \Delta t K''\left[\Erad^* - B^*\right]
+\end{equation}
 
 \end{document}  
