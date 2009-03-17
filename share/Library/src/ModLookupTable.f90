@@ -275,6 +275,9 @@ contains
          CoordMaxIn_D   = Ptr%IndexMax_I,              &
          VarIn_VII      = Ptr%Value_VII)
 
+    ! Make sure that all processors are done
+    call MPI_barrier(iComm, iError)
+
     ! Make sure it is not saved again
     Ptr%NameCommand = "done"
 
