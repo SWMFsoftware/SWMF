@@ -2,12 +2,13 @@
 !==============================================================================
 module ModUser
   use ModUserEmpty,                                     &
-       IMPLEMENTED1 => user_read_inputs,                &
-       IMPLEMENTED2 => user_set_ics,                    &
-       IMPLEMENTED3 => user_set_outerbcs,               &
-       IMPLEMENTED4 => user_update_states,              &
-       IMPLEMENTED5 => user_set_plot_var,               &
-       IMPLEMENTED6 => user_material_properties
+       IMPLEMENTED1 => user_init_session,               &
+       IMPLEMENTED2 => user_read_inputs,                &
+       IMPLEMENTED3 => user_set_ics,                    &
+       IMPLEMENTED4 => user_set_outerbcs,               &
+       IMPLEMENTED5 => user_update_states,              &
+       IMPLEMENTED6 => user_set_plot_var,               &
+       IMPLEMENTED7 => user_material_properties
 
   include 'user_module.h' !list of public methods
 
@@ -16,7 +17,26 @@ module ModUser
 
   character(len=20) :: TypeProblem
 
+  real :: TradBc, Density, SpecificOpacity, Epsilon
+
 contains
+
+  !============================================================================
+
+  subroutine user_init_session
+
+    use ModConst,   ONLY: cKevToK
+    use ModPhysics, ONLY: Si2No_V, UnitTemperature_, UnitRho_, UnitX_
+
+    character (len=*), parameter :: NameSub = 'user_init_session'
+    !--------------------------------------------------------------------------
+
+    TradBc = cKevToK*Si2No_V(UnitTemperature_)                ! 1 keV
+    Density = 1000.0*Si2No_V(UnitRho_)                        ! 1 g/cm^3
+    SpecificOpacity = 0.1/(Si2No_V(UnitRho_)*Si2No_V(UnitX_)) ! 1 cm^2/g
+    Epsilon = 1.0
+
+  end subroutine user_init_session
 
   !============================================================================
 
@@ -82,12 +102,13 @@ contains
   subroutine user_set_ics
 
     use ModAdvance,    ONLY: State_VGB
+    use ModConst,      ONLY: cKevToK
     use ModMain,       ONLY: GlobalBlk, nI, nJ, nK
-    use ModPhysics,    ONLY: inv_gm1, cRadiationNo
+    use ModPhysics,    ONLY: inv_gm1, cRadiationNo, Si2No_V, UnitTemperature_
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Erad_, ExtraEint_, p_
 
     integer :: i, j, k, iBlock
-    real :: Rho, Temperature, Pressure
+    real :: Temperature, Pressure
 
     character(len=*), parameter :: NameSub = "user_set_ics"
     !--------------------------------------------------------------------------
@@ -95,11 +116,10 @@ contains
 
     select case(TypeProblem)
     case('suolson')
-       Rho = 1.0
-       Temperature = 1.0e-6
-       Pressure = Rho*Temperature
+       Temperature = 1.0e-5*cKevToK*Si2No_V(UnitTemperature_)
+       Pressure = Density*Temperature
        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-          State_VGB(Rho_,i,j,k,iBlock) = Rho
+          State_VGB(Rho_,i,j,k,iBlock) = Density
           State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
           State_VGB(Erad_,i,j,k,iBlock) = cRadiationNo*Temperature**4
           State_VGB(ExtraEint_,i,j,k,iBlock) = &
@@ -119,15 +139,16 @@ contains
 
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: Dx_Blk
-    use ModImplicit, ONLY: StateSemi_VGB
+    use ModImplicit, ONLY: StateSemi_VGB, TypeSemiImplicit
     use ModMain,     ONLY: nJ, nK
+    use ModPhysics,  ONLY: cRadiationNo
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=20),intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
-    integer :: j, k
-    real :: Dx
+    integer :: j, k, iEradImpl
+    real :: Coef
 
     character (len=*), parameter :: NameSub = 'user_set_outerbcs'
     !--------------------------------------------------------------------------
@@ -148,12 +169,18 @@ contains
 
        ! Marshak boundary conditions
 
-       Dx = Dx_Blk(iBlock)
+       select case(TypeSemiImplicit)
+       case('radiation')
+          iEradImpl = 1
+       case('radcond')
+          iEradImpl = 2
+       end select
+
+       Coef = 2.0/(3.0*SpecificOpacity*Density*Dx_Blk(iBlock))
        do k = 1, nK; do j = 1, nJ
-          StateSemi_VGB(1,0,j,k,iBlock) = &
-               (1.0 - StateSemi_VGB(1,1,j,k,iBlock) &
-               *(0.5 - 2.0/(sqrt(3.0)*Dx))) &
-               /(0.5 + 2.0/(sqrt(3.0)*Dx))
+          StateSemi_VGB(iEradImpl,0,j,k,iBlock) = &
+               (cRadiationNo*TradBc**4 - StateSemi_VGB(iEradImpl,1,j,k,iBlock)&
+               *(0.5 - Coef) )/(0.5 + Coef)
        end do; end do
     end select
 
@@ -166,9 +193,10 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModAdvance,    ONLY: State_VGB
+    use ModConst,      ONLY: cKToEv
     use ModMain,       ONLY: nI, nJ, nK
-    use ModPhysics,    ONLY: cRadiationNo
-    use ModVarIndexes, ONLY: p_, Rho_
+    use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, cRadiationNo
+    use ModVarIndexes, ONLY: p_, Rho_, Erad_
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -189,9 +217,15 @@ contains
 
     IsFound = .true.
     select case(NameVar)
-    case('at4')
-       PlotVar_G = cRadiationNo &
-            *(State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock))**4
+    case('tmat')
+       NameIdlUnit = 'eV'
+       PlotVar_G = (State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock)) &
+            *No2Si_V(UnitTemperature_)*cKToEv
+    case('trad')
+       NameIdlUnit = 'eV'
+       PlotVar_G = &
+            sqrt(sqrt(abs(State_VGB(Erad_,:,:,:,iBlock))/cRadiationNo))&
+            *No2Si_V(UnitTemperature_)*cKToEv
     case default
        IsFound = .false.
     end select
@@ -256,13 +290,13 @@ contains
     if(present(TeSiOut)) TeSiOut = TemperatureSi
     if(present(PressureSiOut)) PressureSiOut = pSi
 
-    if(present(CvSiOut)) CvSiOut = 4.0*cRadiationNo*Temperature**3 &
+    if(present(CvSiOut)) CvSiOut = 4.0*cRadiationNo*Temperature**3/Epsilon &
          *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
 
     if(present(AbsorptionOpacitySiOut)) &
-         AbsorptionOpacitySiOut = 1.0/Clight/No2Si_V(UnitX_)
+         AbsorptionOpacitySiOut = SpecificOpacity*Rho/No2Si_V(UnitX_)
     if(present(RosselandMeanOpacitySiOut)) &
-         RosselandMeanOpacitySiOut = Clight/3.0/No2Si_V(UnitX_)
+         RosselandMeanOpacitySiOut = SpecificOpacity*Rho/No2Si_V(UnitX_)
 
     if(present(HeatConductionCoefSiOut)) HeatConductionCoefSiOut = 0.0
 
