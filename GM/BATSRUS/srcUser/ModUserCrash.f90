@@ -882,12 +882,14 @@ contains
 
     use ModConst,   ONLY: cKtoKev
     use ModSize,    ONLY: nI, nJ, nK
-    use ModAdvance, ONLY: State_VGB, Rho_, p_, LevelXe_, LevelPl_, &
+    use ModAdvance, ONLY: State_VGB, Rho_, p_, LevelXe_, LevelBe_, LevelPl_, &
          Eradiation_
     use ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitTemperature_, &
          cRadiationNo
-    use ModEos,     ONLY: eos
+    use ModEos,     ONLY: eos, Xe_, Be_, Plastic_
+    use ModPolyimide, ONLY: cAtomicMass_I, cAPolyimide
     use ModLookupTable, ONLY: interpolate_lookup_table
+    use ModGeometry, ONLY: r_BLK
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -902,8 +904,8 @@ contains
 
     character (len=*), parameter :: Name='user_set_plot_var'
 
-    real    :: p, Rho, pSi, RhoSi, TeSi
-    integer :: i, j, k, iMaterial, iMaterial_I(1)
+    real    :: p, Rho, pSi, RhoSi, TeSi, AtomMass
+    integer :: i, j, k, iMaterial, iMaterial_I(1), iLevel
     real    :: Value_V(9) ! Cv, Gamma, Te for 3 materials
     logical :: IsError
     !------------------------------------------------------------------------  
@@ -952,6 +954,29 @@ contains
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                RosselandMeanOpacitySiOut = PlotVar_G(i,j,k))
        end do; end do; end do
+    case('usersphere')
+       PlotVar_G = max(0.0, 100 - r_BLK(:,:,:,iBlock)**2)
+    case('rhoxe', 'rhobe', 'rhopl')
+       select case(NameVar)
+       case('rhoxe')
+          iLevel = LevelXe_; iMaterial = Xe_; AtomMass = cAtomicMass_I(54)
+       case('rhobe')
+          iLevel = LevelBe_; iMaterial = Be_; AtomMass = cAtomicMass_I(4)
+       case('rhopl')
+          iLevel = LevelPl_; iMaterial = Plastic_; AtomMass = cAPolyimide
+       end select
+       if(UseMixedCell)then
+          PlotVar_G = State_VGB(iLevel,:,:,:,iBlock)*AtomMass
+       else
+          do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
+             iMaterial_I = maxloc(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock))
+             if(iMaterial_I(1) - 1 == iMaterial) then
+                PlotVar_G(i,j,k) = State_VGB(Rho_,i,j,k,iBlock)
+             else
+                PlotVar_G(i,j,k) = 0.0
+             end if
+          end do; end do; end do
+       end if
     case default
        IsFound = .false.
     end select
