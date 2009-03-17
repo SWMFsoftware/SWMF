@@ -1,14 +1,22 @@
 !^CFG COPYRIGHT UM
 !=============================================================================
 subroutine write_plot_los(iFile)
-  ! Purpose:  creates a synthic coronagraph image of Thomson scattered 
-  !           white light by inegrating light scattered in the line of sight.
-  !           This is accomplished by looping over all blocks per processor 
-  !           and looping over lines of sight and then integrating on those
-  !           lines.
+
+  ! Purpose:  Integrate some quantities along several lines of sight and
+  !           create a 2D image of the integrated quantities.
+  !           The viewing point can be inifinitely far or at a finite distance.
+  !           Applications include integrating density, 
+  !           creating a synthetic coronagraph image of Thomson scattered 
+  !           white light by integrating light scattered in the line of sight.
+  !
+  !           The algorithm loops over all blocks per processor (in parallel)
+  !           and over lines of sight and then the results obtained on the
+  !           processors are added up.
+  !
   !           Written by Chip Manchester, KC Hansen
   !                   some improvements by Gabor Toth
   !                   some changes by Noe Lugaz
+  !
   !           July     2001
   !           January  2002 modified for improved image plane
   !           December 2003 fixed sign error in scattering coefficient b_los
@@ -33,6 +41,7 @@ subroutine write_plot_los(iFile)
   !                         offset_angle   
   !                         Cartesian grid and circular image centered
   !                         at the Sun (no offset angle)
+  !           March 2009    Allow integration of functions different from rho
 
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,n_step,time_simulation,unusedBLK, &
@@ -81,7 +90,7 @@ subroutine write_plot_los(iFile)
   real    :: a_mag, b_mag
   real    :: SizePix, r2Pix    
   real    :: BlockDistance, ObsDistance, Ratio
-  real    :: XyzBlockCenter_D(3), xLosBlock, yLosBlock
+  real    :: XyzBlockCenter_D(3), CellSize_D(3), xLosBlock, yLosBlock
 
   real, dimension(3,3) :: FromHgi_DD
   real, dimension(3) :: Los_D, ObsPos_D
@@ -101,14 +110,16 @@ subroutine write_plot_los(iFile)
   integer :: iBLK, iVar
 
   logical :: oktest,oktest_me,DoTiming,DoTimingMe, DoCheckBlock
-  logical :: UseScattering
+  logical :: UseScattering, UseRho
+
+  character(len=*), parameter :: NameSub = 'write_plot_los'
   !---------------------------------------------------------------------------
 
   ! Initialize stuff
-  call set_oktest('write_plot_los',oktest,oktest_me)
-  call set_oktest('los_timing',DoTiming,DoTimingMe)
+  call set_oktest(NameSub, oktest, oktest_me)
+  call set_oktest('los_timing', DoTiming, DoTimingMe)
 
-  call timing_start('write_plot_los')
+  call timing_start(NameSub)
 
   ! Set rInner and rOuter depending on component
   select case(NameThisComp)
@@ -120,7 +131,7 @@ subroutine write_plot_los(iFile)
      rOuter = 1000.0
   case('GM')
      rInner = 0.0 ! needed for comet applications
-     rOuter = 1000.0
+     rOuter = 1e30
   end select
   rInner2 = rInner**2
   rOuter2 = rOuter**2
@@ -144,7 +155,7 @@ subroutine write_plot_los(iFile)
   OffsetAngle= offset_angle(iFile)
 
   ! Rotate observation point from HGI system to the current coordinate system
-  ObsPos_D    = matmul(FromHgi_DD, ObsPos_DI(:,ifile))
+  ObsPos_D    = matmul(FromHgi_DD, ObsPos_DI(:,iFile))
   ObsDistance = sqrt(sum(ObsPos_D**2))
   ! Normalize line of sight vector pointing towards the origin
   Los_D       = -ObsPos_D/ObsDistance
@@ -156,6 +167,7 @@ subroutine write_plot_los(iFile)
   ! Make zero components slightly different from zero
   where(Los_D == 0.0) Los_D = cTiny
 
+  ! Pixel size for node based pixel grid
   SizePix = 2*rSizeImage/(nPix - 1)
 
   if(oktest .and. iProc==0) then
@@ -186,8 +198,9 @@ subroutine write_plot_los(iFile)
   allnames='x y '//trim(plot_vars1)//' '//plot_pars1
 
   if(oktest_me) then
-     write(*,*) plot_vars1
-     write(*,*) nplotvar,plotvarnames(1:nplotvar)
+     write(*,*) 'plot variables, UseRho=', plot_vars1, UseRho
+     write(*,*) 'nPlotVar, PlotVarNames_V=', &
+          nPlotVar,plotvarnames(1:nplotvar)
   end if
 
   ! Get the headers that contain variables names and units
@@ -199,17 +212,25 @@ subroutine write_plot_los(iFile)
      call get_IDL_los_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
      if(oktest .and. iProc==0) write(*,*)unitstr_IDL
   end select
+
+  !!! rename: a_Pix --> xPix_D and b_Pix --> yPix_D
+  !!! maybe: use cross_product
+  ! Create unit vectors a_D and b_D orthogonal to the (central) line of sight
+  ! this will be needed to setup the coordinate system in the viewing plane
+  ! xPix_D = cross_product(Los_D/sqrt(sum(Los_D**2)), (/0.,0.,1./))
+  ! yPix_D = cross_product(Los_D, xPix_D)
   a_mag = sqrt(Los_D(1)**2 + Los_D(2)**2)
   a_Pix(1) =  Los_D(2)/a_mag
   a_Pix(2) = -Los_D(1)/a_mag
   a_Pix(3) =  0.0
+
   b_mag = sqrt((Los_D(1)*Los_D(3))**2 + (Los_D(2)*Los_D(3))**2 &
        + (Los_D(1)**2 + Los_D(2)**2)**2)
   b_Pix(1) = -Los_D(1)*Los_D(3)/b_mag
   b_Pix(2) = -Los_D(2)*Los_D(3)/b_mag
   b_Pix(3) = (Los_D(1)**2 + Los_D(2)**2)/b_mag
 
-  ! 3D vector pointing from the Sun to the image center
+  ! 3D vector pointing from the origin to the image center
   ImageCenter_D = ObsPos_D + ObsDistance*Los_D + aOffset*a_Pix + bOffset*b_Pix
 
   ! Make offset to be relative to the Sun (and not the projected observer)
@@ -225,16 +246,21 @@ subroutine write_plot_los(iFile)
 
   PlotVar = 0.0
 
+  ! Do we need to apply scattering
   UseScattering = any(plotvarnames(1:nPlotVar) == 'wl') &
        .or.       any(plotvarnames(1:nPlotVar) == 'pb')
 
+  ! Do we need to calculate density (also for white light and polarization)
+  UseRho = UseScattering .or. any(plotvarnames(1:nPlotVar) == 'rho')
 
   if(DoTiming)call timing_start('los_block_loop')
 
   ! loop over blocks
-  do iBLK = 1,nBlock
+  do iBLK = 1, nBlock
 
      if (unusedBLK(iBLK)) CYCLE
+
+     CellSize_D = (/ dx_BLK(iBlk), dy_BLK(iBlk), dz_BLK(iBlk) /)
 
      rBlockSize = 0.5*sqrt(&
           ((nI+1)*dx_BLK(iBLK))**2 + &
@@ -247,9 +273,9 @@ subroutine write_plot_los(iFile)
      XyzBlockCenter_D(3) = 0.50*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(1,1,1,iBLK))
      rBlockCenter = sqrt(sum(XyzBlockCenter_D**2))
 
-     if(rBlockCenter < rInner-rBlockSize) CYCLE
+     if(rBlockCenter < rInner - rBlockSize) CYCLE
 
-     if(rBlockCenter > rOuter+rBlockSize) CYCLE
+     if(rBlockCenter > rOuter + rBlockSize) CYCLE
 
      ! calculate position of block center on the los image
      BlockDistance = dot_product(Los_D, XyzBlockCenter_D - ObsPos_D)
@@ -274,24 +300,24 @@ subroutine write_plot_los(iFile)
      PlotBLK = 0.0
 
      ! Loop over pixels
-     do jPix=1,nPix
+     do jPix = 1, nPix
 
         ! Y position of the pixel on the image plane
-        y_Pix = (jPix -1) * SizePix -rSizeImage
+        y_Pix = (jPix -1) * SizePix - rSizeImage
 
         ! Check if block can intersect this pixel
         if(DoCheckBlock)then
-           if(abs(y_Pix-yLosBlock)>rBlockSize)CYCLE
+           if(abs(y_Pix - yLosBlock) > rBlockSize)CYCLE
         end if
 
-        do iPix=1,nPix
+        do iPix = 1, nPix
 
            ! X position of the pixel on the image plane
            x_Pix = (iPix - 1) * SizePix - rSizeImage
 
            ! Check if block can intersect this pixel
            if(DoCheckBlock)then
-              if( (x_Pix-xLosBlock)**2 + (y_Pix-yLosBlock)**2 > &
+              if( (x_Pix - xLosBlock)**2 + (y_Pix-yLosBlock)**2 > &
                    rBlockSize**2 ) CYCLE 
            end if
 
@@ -319,8 +345,8 @@ subroutine write_plot_los(iFile)
 
   ! collect the pixels on one node and then write out the file 
   if(nProc>1)then
-     call MPI_REDUCE(PlotVar,los_image,nPix*nPix*nplotvar, &
-          MPI_REAL,MPI_SUM,0,iComm,iError)
+     call MPI_REDUCE(PlotVar, los_image, nPix*nPix*nPlotvar, &
+          MPI_REAL, MPI_SUM, 0, iComm, iError)
   else
      los_image=PlotVar
   end if
@@ -356,15 +382,17 @@ subroutine write_plot_los(iFile)
      ! write header file
      select case(plot_form(ifile))
      case('tec')
-        open(unit_tmp,file=filename,status="replace",err=999)
+        open(unit_tmp,file=filename,status="replace",IOSTAT = iError)
+        if(iError /= 0)call stop_mpi(NameSub//" ERROR opening "//filename)
+
         write(unit_tmp,*) 'TITLE="BATSRUS: Synthetic Image"'
         write(unit_tmp,'(a)')trim(unitstr_TEC)
         write(unit_tmp,*) 'ZONE T="LOS Image"', &
              ', I=',nPix,', J=',nPix,', K=1, F=POINT'
         ! Write point values
-        do iPix=1,nPix
+        do iPix = 1, nPix
            x_Pix = (iPix - 1) * SizePix - rSizeImage
-           do jPix=1,nPix
+           do jPix = 1, nPix
               y_Pix = (jPix - 1) * SizePix - rSizeImage
 
               if (plot_dimensional(ifile)) then
@@ -404,17 +432,12 @@ subroutine write_plot_los(iFile)
 
   deallocate(PlotVar, PlotBLK, los_image)
 
-  if(oktest_me)write(*,*)'write_plot_los finished'
+  if(oktest_me)write(*,*) NameSub,' finished'
 
-  call timing_stop('write_plot_los')
-
-  return
-
-999 continue
-
-  call stop_mpi("Error in opening or writing file in write_plot_los")
+  call timing_stop(NameSub)
 
 contains
+
   !===========================================================================
 
   subroutine set_plotvar_los
@@ -603,6 +626,10 @@ contains
 
   subroutine integrate_segment(Point_1, Point_2)
 
+    use ModGeometry,    ONLY: XyzStart_BLK
+    use ModInterpolate, ONLY: trilinear
+    use ModUser,        ONLY: user_set_plot_var
+
     real, intent(in) :: Point_1(3), Point_2(3)
     integer, parameter ::  nline_seg = nI + nJ + nK
 
@@ -612,8 +639,19 @@ contains
     real :: x_q, y_q, z_q, q_mag
     real :: a_los, b_los, c_los, d_los
     real :: sin_omega, cos_omega, cos_theta,Sin2Omega,Cos2Omega, Logarithm
-    real :: rho_los, ds_los
     real :: point_in(3), point_los(3)
+    
+    real :: CoordNorm_D(3) ! Normalized coordinates of current point
+    real :: ds_los         ! Length of line segment
+    real :: Rho            ! Density at the point
+    real :: Value          ! Value of the LOS variable at the point
+
+    ! Variables for user defined LOS variables
+    integer :: iBlockLast = -1, iVarLast = -1
+    logical :: IsFound, UseBody
+    character(len=1):: NameTecVar, NameTecUnit, NameIdlUnit
+    real    :: ValueBody
+    real, allocatable, save:: PlotVar_GV(:,:,:,:)
     !------------------------------------------------------------------------
 
     Direction  = dot_product((Point_1 - Point_2), LosPix_D)
@@ -627,7 +665,9 @@ contains
     ds_los = sqrt(s_los_sqrd) / nline_seg
 
     !if(DoTiming)call timing_start('los_integral')
-    do i_los=1,nline_seg
+    do i_los = 1, nline_seg
+       !!! point_los = point_in + (i_los-0.5)*ds_los*LosPix_D
+       
        x_los = point_in(1) + (i_los-0.5)*ds_los*LosPix_D(1)
        y_los = point_in(2) + (i_los-0.5)*ds_los*LosPix_D(2)
        z_los = point_in(3) + (i_los-0.5)*ds_los*LosPix_D(3)
@@ -663,94 +703,73 @@ contains
           cos_theta = q_mag/r_los       
        end if
 
-       ! interpolate density at this point with bilinear interpolation
-       rho_los = point_value_los(point_los, iBLK)
+       ! Calculate normalized position
+       ! XyzStart contains the coordinates of cell 1,1,1, hence add 1
+       CoordNorm_D = (point_los - XyzStart_BLK(:,iBlk))/CellSize_D + 1
+
+       ! interpolate density if it is needed by any of the plot variables
+       if(UseRho) Rho = trilinear(State_VGB(Rho_,:,:,:,iBlk), &
+            -1, nI+2, -1, nJ+2, -1, nK+2, CoordNorm_D)
 
        do iVar = 1, nPlotvar
+          Value = 0.0 ! initialize to 0 so that if statements below work right
           NameVar = plotvarnames(iVar)
           select case(NameVar)
           case ('len')
              ! Integrate the length of the integration lines
-             PlotBLK(iPix,jPix,iVar) = PlotBLK(iPix,jPix,iVar) + ds_los
-
-             !case('vlos','Vlos','ulos','Ulos')
-             !   ! Integrate the velocity
-             !   PlotBLK(iPix,jPix,iVar) = PlotBLK(iPix,jPix,iVar) + &
-             !        (rhoU_los/rho_los)*ds_los
+             Value = 1.0
 
           case('wl')
              ! White light with limb darkening
-             if(r_los > 1.0) &
-                  PlotBLK(iPix,jPix,iVar) = PlotBLK(iPix,jPix,iVar) + &
-                  rho_los*( &
-                  (1.0 - mu_los)*(2.0*c_los - a_los*cos_theta**2) &
-                  + mu_los*(2.0*d_los - b_los*cos_theta**2) )*ds_los
+             if(r_los > 1.0) Value = Rho*( &
+                  (1 - mu_los)*(2*c_los - a_los*cos_theta**2) &
+                  + mu_los*(2*d_los - b_los*cos_theta**2) )
 
           case('pb')
              ! Polarization brightness
-             if(r_los > 1.0) &
-                  PlotBLK(iPix,jPix,iVar) = PlotBLK(iPix,jPix,iVar) + &
-                  rho_los*( (1.0 - mu_los)*a_los + mu_los*b_los) &
-                  *cos_theta**2*ds_los
+             if(r_los > 1.0) Value = &
+                  Rho*( (1.0 - mu_los)*a_los + mu_los*b_los)*cos_theta**2
 
           case('rho')
              ! Simple density integral
-             PlotBLK(iPix,jPix,iVar) = PlotBLK(iPix,jPix,iVar) + &
-                  rho_los*ds_los
+             Value = Rho
+
+          case('sphere10')
+             Value = max(0.0, 100.0 - r_los**2)
+             
+          case('cube10')
+             Value = product( 0.5 + sign(0.5, 10.0 - abs(point_los)) )
 
           case default
-             PlotBLK(iPix,jPix,iVar)=-7777.
+             ! Obtain user defined plot function for the whole block
+             if(iBlk /= iBlockLast .or. iVar /= iVarLast)then
+                iBlockLast = iBlk
+                iVarLast   = iVar
+                if(.not.allocated(PlotVar_GV)) &
+                     allocate(PlotVar_GV(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVar))
+                call user_set_plot_var(iBlk, NameVar, &
+                     plot_dimensional(iFile), &
+                     PlotVar_GV(:,:,:,iVar), &
+                     ValueBody, UseBody, NameTecVar, NameTecUnit, NameIdlUnit,&
+                     IsFound)
+                if(.not. IsFound)then
+                   PlotVar_GV(:,:,:,iVar)=-7777.
+                   if(iProc==0.and.iBLK==1)write(*,*) &
+                        NameSub, ' WARNING: unknown plotvarname=', NameVar
+                end if
+             end if
+             ! Interpolate value
+             Value = trilinear(PlotVar_GV(:,:,:,iVar), &
+                  -1, nI+2, -1, nJ+2, -1, nK+2, CoordNorm_D)
           end select
+
+          PlotBLK(iPix,jPix,iVar) = PlotBLK(iPix,jPix,iVar) + Value*ds_los
+
        end do ! iVar
 
     end do !line segment interation loop 
 
   end subroutine integrate_segment
-
-  !============================================================================
-
-  function point_value_los(Xpnt,iBLK)
-    !Find the value at an arbitrary location X,Y,Z,iBLK
-
-    ! Arguments
-    integer, intent(in) :: iBLK
-    real, intent(in) :: Xpnt(3)
-
-    ! Local variables:
-    real    :: point_value_los
-    real    :: x(3)
-    real    :: dx1,dy1,dz1,dx2,dy2,dz2
-    integer :: i1,j1,k1,i2,j2,k2
-    !--------------------------------------------------------------------------
-    point_value_los = 0.0
-
-    ! Convert to normalized coordinates (index and position are the same)
-    x(1)=(Xpnt(1)-x_BLK(1,1,1,iBLK))/dx_BLK(iBLK)+1./2.
-    x(2)=(Xpnt(2)-y_BLK(1,1,1,iBLK))/dy_BLK(iBLK)+1./2.
-    x(3)=(Xpnt(3)-z_BLK(1,1,1,iBLK))/dz_BLK(iBLK)+1./2.
-
-    ! Determine cell indices corresponding to location qx
-    i1=floor(x(1)); i2=i1+1
-    j1=floor(x(2)); j2=j1+1
-    k1=floor(x(3)); k2=k1+1
-
-    ! Distance relative to the cell centers
-    dx1=x(1)-i1; dx2=1.-dx1
-    dy1=x(2)-j1; dy2=1.-dy1
-    dz1=x(3)-k1; dz2=1.-dz1
-
-    ! Trilinear interpolation of density
-    point_value_los = &
-         dx1*(   dy1*(   dz1*State_VGB(rho_,i2,j2,k2,iBLK)+&
-         dz2*State_VGB(rho_,i2,j2,k1,iBLK))+&
-         dy2*(   dz1*State_VGB(rho_,i2,j1,k2,iBLK)+&
-         dz2*State_VGB(rho_,i2,j1,k1,iBLK)))+&
-         dx2*(   dy1*(   dz1*State_VGB(rho_,i1,j2,k2,iBLK)+&
-         dz2*State_VGB(rho_,i1,j2,k1,iBLK))+&
-         dy2*(   dz1*State_VGB(rho_,i1,j1,k2,iBLK)+&
-         dz2*State_VGB(rho_,i1,j1,k1,iBLK)))
-
-  end function point_value_los
 
   !==========================================================================
 
