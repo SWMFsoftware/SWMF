@@ -652,7 +652,8 @@ contains
   subroutine get_impl_gray_diff_state(StateImpl_VGB,DconsDsemi_VCB)
 
     use ModAdvance,  ONLY: Eradiation_, State_VGB
-    use ModImplicit, ONLY: nw, nImplBlk, impl2iBlk, kr, TypeSemiImplicit
+    use ModImplicit, ONLY: nw, nImplBlk, impl2iBlk, kr, TypeSemiImplicit, &
+         ImplCoeff
     use ModMain,     ONLY: nDim, x_, y_, nI, nJ, nK, MaxImplBlk, Dt
     use ModPhysics,  ONLY: inv_gm1, Clight, cRadiationNo, &
          Si2No_V, UnitTemperature_, UnitEnergyDens_, UnitX_, UnitU_
@@ -723,7 +724,8 @@ contains
           case('radiation')
              ! This coefficient is cR'' = cR/(1+dt*cR*dPlanck/dEint)
              RelaxSemiCoef_VCB(1,i,j,k,iBlock) = Clight*PlanckOpacity  &
-                  /(1 + Dt*Clight*PlanckOpacity*4.0*cRadiationNo*Te**3 / Cv)
+                  /(1 + ImplCoeff*Dt*Clight*PlanckOpacity &
+                  *4.0*cRadiationNo*Te**3 / Cv)
 
              ! This is just the Planck function at time level * saved
              RelaxSemiCoef_VCB(Planck_,i,j,k,iBlock) = cRadiationNo*Te**4
@@ -1119,7 +1121,7 @@ contains
 
     integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iDiff
     real :: DiffLeft, DiffRight
-    real :: dSdErad, PlanckOpacity
+    real :: dSdErad, RelaxCoef
     !--------------------------------------------------------------------------
 
     ! All elements have to be set
@@ -1141,19 +1143,19 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
           ! energy exchange
-          PlanckOpacity = RelaxSemiCoef_VCB(1,i,j,k,iBlock)
+          RelaxCoef = RelaxSemiCoef_VCB(1,i,j,k,iBlock)
 
           ! dSrad/dErad (diagonal)
-          Jacobian_VVCI(EradImpl_,EradImpl_,i,j,k,1) = -PlanckOpacity
+          Jacobian_VVCI(EradImpl_,EradImpl_,i,j,k,1) = -RelaxCoef
 
           ! dSe/dErad (off diagonal)
-          Jacobian_VVCI(TeImpl_,EradImpl_,i,j,k,1) = +PlanckOpacity
+          Jacobian_VVCI(TeImpl_,EradImpl_,i,j,k,1) = +RelaxCoef
 
           ! dSe/daTe^4 (diagonal)
-          Jacobian_VVCI(TeImpl_,TeImpl_,i,j,k,1) = -PlanckOpacity
+          Jacobian_VVCI(TeImpl_,TeImpl_,i,j,k,1) = -RelaxCoef
 
           ! dSrad/daTe^4 (off diagonal)
-          Jacobian_VVCI(EradImpl_,TeImpl_,i,j,k,1) = +PlanckOpacity
+          Jacobian_VVCI(EradImpl_,TeImpl_,i,j,k,1) = +RelaxCoef
 
        end do; end do; end do
     end select
@@ -1189,7 +1191,8 @@ contains
 
     use ModAdvance,  ONLY: State_VGB, Rho_, p_, Eradiation_
     use ModEnergy,   ONLY: calc_energy_cell
-    use ModImplicit, ONLY: nw, TypeSemiImplicit, DconsDsemi_VCB, ImplOld_VCB
+    use ModImplicit, ONLY: nw, TypeSemiImplicit, DconsDsemi_VCB, ImplOld_VCB, &
+         ImplCoeff
     use ModMain,     ONLY: nI, nJ, nK, dt
     use ModPhysics,  ONLY: inv_gm1, No2Si_V, Si2No_V, UnitEnergyDens_, UnitP_,&
          UnitRho_, UnitTemperature_
@@ -1223,9 +1226,14 @@ contains
     
     do k = 1,nK; do j = 1,nJ; do i = 1,nI
        if(TypeSemiImplicit=='radiation')then
-          AbsorptionEmission = RelaxSemiCoef_VCB(EradImpl_,i,j,k,iBlock) &
+          AbsorptionEmission = ImplCoeff &
+               *RelaxSemiCoef_VCB(EradImpl_,i,j,k,iBlock) &
                * (RelaxSemiCoef_VCB(Planck_,i,j,k,iBlock) &
-               -  State_VGB(Eradiation_,i,j,k,iBlock))
+               -  State_VGB(Eradiation_,i,j,k,iBlock)) &
+               + (1.0-ImplCoeff)*RelaxSemiCoef_VCB(EradImpl_,i,j,k,iBlock) &
+               *(RelaxSemiCoef_VCB(Planck_,i,j,k,iBlock) &
+               - ImplOld_VCB(EradImpl_,i,j,k,iImplBlock))
+               
           Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
                + State_VGB(EintExtra_,i,j,k,iBlock) &
                - dt*AbsorptionEmission
