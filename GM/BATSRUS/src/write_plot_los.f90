@@ -742,7 +742,7 @@ contains
 
           case default
              ! Obtain user defined plot function for the whole block
-             if(iBlk /= iBlockLast .or. iVar /= iVarLast)then
+             if(iBlk /= iBlockLast .or. iVar > iVarLast)then
                 iBlockLast = iBlk
                 iVarLast   = iVar
                 if(.not.allocated(PlotVar_GV)) &
