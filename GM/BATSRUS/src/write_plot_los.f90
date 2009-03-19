@@ -769,8 +769,12 @@ contains
        case('rho')
           Image_VII(iVar,:,:) = Image_VII(iVar,:,:) &
                *No2Si_V(UnitRho_)*No2Si_V(UnitX_)
+       case('wl','pb')
+          ! do nothing for backwards compatibility
        case default
-          ! no normalization
+          ! User defined functions are already dimensional, but integral
+          ! requires a multiplication by length unit
+          Image_VII(iVar,:,:) = Image_VII(iVar,:,:)**No2Si_V(UnitX_)
        end select
 
     end do ! iVar

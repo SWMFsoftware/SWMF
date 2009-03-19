@@ -884,8 +884,8 @@ contains
     use ModSize,    ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Rho_, p_, LevelXe_, LevelBe_, LevelPl_, &
          Eradiation_
-    use ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitTemperature_, &
-         cRadiationNo
+    use ModPhysics, ONLY: No2Si_V, No2Io_V, UnitRho_, UnitP_, &
+         UnitTemperature_, cRadiationNo
     use ModEos,     ONLY: eos, Xe_, Be_, Plastic_
     use ModPolyimide, ONLY: cAtomicMass_I, cAPolyimide
     use ModLookupTable, ONLY: interpolate_lookup_table
@@ -977,6 +977,7 @@ contains
              end if
           end do; end do; end do
        end if
+       if(IsDimensional) PlotVar_G = No2Io_V(UnitRho_)*PlotVar_G
     case default
        IsFound = .false.
     end select
