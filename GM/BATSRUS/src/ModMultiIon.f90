@@ -629,7 +629,7 @@ contains
                *InvRho*State_VGB(RhoUy_,i,j,k,iBlock)
           State_VGB(iRhoUzIon_I,i,j,k,iBlock) = &
                State_VGB(iRhoIon_I,i,j,k,iBlock) &
-               *InvRho*State_VGB(RhoUz_,i,j,k,iBlock)/Rho
+               *InvRho*State_VGB(RhoUz_,i,j,k,iBlock)
 
           ! Set ion temperatures to be equal with the total
           State_VGB(iPIon_I,i,j,k,iBlock) = p*InvRho * &
