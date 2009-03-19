@@ -9,14 +9,9 @@ my %Compiler = (
 		"IRIX64"    => "f90",
 		"AIX"       => "xlf90",
 		"palm"      => "ifort",
-		"cfe1"      => "ifort",
-		"cfe2"      => "ifort",
-		"cfe3"      => "ifort",
-		"cfe4"      => "ifort",
-		"sysx1"     => "xlf90",
-		"sysx2"     => "xlf90",
-		"sysx3"     => "xlf90",
-		"sysx4"     => "xlf90"
+		"cfe"       => "ifort",
+		"sysx"      => "xlf90",
+		"hera"      => "mpiifort",
 		);
 
 # Default MPI library per machine or OS
@@ -27,11 +22,9 @@ my %MpiVersion = (
 		  "AIX"       => "IBM",
 		  "IRIX64"    => "SGI",
 		  "palm"      => "Altix",
-		  "cfe1"      => "Altix",
-		  "cfe2"      => "Altix",
-		  "cfe3"      => "Altix",
-		  "cfe4"      => "Altix",
+		  "cfe"       => "Altix",
 		  "grendel"   => "openmpi",
+		  "hera"      => "mvapich",
 		  );
 
 my $WARNING_='share/Scripts/Config.pl WARNING:';
@@ -40,7 +33,10 @@ my $ERROR_  ='share/Scripts/Config.pl ERROR:';
 # Obtain $OS, $DIR, and the machine name and provide it to caller script
 our $OS  = `uname`    or die "$ERROR_ could not obtain OS\n"; chop $OS;
 our $DIR = `/bin/pwd` or die "$ERROR_ could not obtain DIR\n"; chop $DIR;
-our $Machine = `hostname -s`; chop $Machine;
+our $Machine = `hostname -s`; chop $Machine; 
+
+# remove numbers from the machine name
+$Machine =~ s/\d+$//; 
 
 # These are either obtained from the calling script or set here
 our $Component;             # The SWMF component the code is representing
