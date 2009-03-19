@@ -214,6 +214,13 @@ subroutine write_plot_los(iFile)
 
   ! Create unit vectors aPix_D and bPix_D orthogonal to the 
   ! central line of sight to setup the coordinate system in the viewing plane
+  ! We use cross products of the LOS vector with one of the principal 
+  ! directions (0,0,1) or (0,1,0) to make sure that the viewing plane is 
+  ! aligned with the original Cartesian coordinates. In case the viewing
+  ! is roughly along the X or Y axis, we want bPix_D to point along +Z,
+  ! for viewing along the Z axis, we want bPix_D to point along +Y:
+  ! a = LOS x (0,0,1), b = a x LOS ensures that b is roughly aligned with +Z
+  ! a = LOS x (0,1,0), b = a x LOS ensures that b is roughly aligned with +Y
   if(abs(Los_D(3)) < maxval(abs(Los_D(1:2))))then
      aPix_D = cross_product(Los_D, (/0.,0.,1./))
   else
@@ -221,7 +228,7 @@ subroutine write_plot_los(iFile)
      aPix_D = cross_product(Los_D, (/0.,1.,0./))
   end if
   aPix_D = aPix_D/sqrt(sum(aPix_D**2))
-  bPix_D = cross_product(Los_D, aPix_D)
+  bPix_D = cross_product(aPix_D, Los_D)
   bPix_D = bPix_D/sqrt(sum(bPix_D**2))
 
   ! 3D vector pointing from the origin to the image center
@@ -720,7 +727,7 @@ contains
              Value = max(0.0, 100.0 - rLos**2)
              
           case('cube10')
-             Value = product( 0.5 + sign(0.5, 10.0 - abs(XyzLos_D)) )
+             Value = product( 0.5 + sign(0.5, 10.0 - abs(XyzLos_D-10.0)) )
 
           case default
              ! Obtain user defined plot function for the whole block
