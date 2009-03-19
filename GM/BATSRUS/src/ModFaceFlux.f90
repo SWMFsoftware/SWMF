@@ -1641,7 +1641,7 @@ contains
     real,    intent(out):: Pe                  ! electron pressure
 
     real:: Hyp, Bx, By, Bz, FullBx, FullBy, FullBz, Bn, B0n, FullBn, Un, HallUn
-    real:: FluxBx, FluxBy, FluxBz
+    real:: FluxBx, FluxBy, FluxBz, Coef
     !--------------------------------------------------------------------------
 
     ! Calculate conservative state
@@ -1654,7 +1654,8 @@ contains
        if(UseElectronPressure)then
           Pe = State_V(Pe_)
        elseif(IsMhd)then
-          Pe = State_V(p_)*AverageIonCharge*ElectronTemperatureRatio
+          Coef = AverageIonCharge*ElectronTemperatureRatio
+          Pe = State_V(p_)*Coef/(1 + Coef)
        else
           Pe = sum(State_V(iPIon_I))*ElectronTemperatureRatio
        end if
