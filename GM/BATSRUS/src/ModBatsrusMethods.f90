@@ -205,6 +205,7 @@ contains
 
   subroutine initialize_files
     use ModSatelliteFile, ONLY: set_satellite_file_status, nSatellite
+    use ModGroundMagPerturb,ONLY: save_magnetometer_data, open_magnetometer_output_file
     ! Local variables
     character(len=*), parameter :: NameSubSub = NameSub//'::initialize_files'
     logical :: delete_file
@@ -215,6 +216,10 @@ contains
           call set_satellite_file_status(iSat,'open')
           call set_satellite_file_status(iSat,'close')
        end do
+    end if
+    
+    if (save_magnetometer_data .and. iProc == 0) then
+       call open_magnetometer_output_file
     end if
 
     plot_type(restart_)='restart'
@@ -736,7 +741,7 @@ contains
     use ModSatelliteFile, ONLY: &
          nSatellite, set_satellite_file_status, set_satellite_flags, &
          TimeSatStart_I, TimeSatEnd_I, iCurrent_satellite_position
-
+    use ModGroundMagPerturb, ONLY: save_magnetometer_data, write_magnetometers
     integer :: iFileLoop, iSat
 
     ! Backup location for the Time_Simulation variable.
@@ -851,6 +856,17 @@ contains
           if(iProc==0)call set_satellite_file_status(iSat,'close')
        end if
        call timing_stop('save_satellite')
+
+    elseif(ifile == magfile_) then
+       !Cases for magnetometer files
+    
+       if(time_accurate) then  
+          if(.not.save_magnetometer_data)return 
+          call timing_start('save_magnetometer')
+          call write_magnetometers   
+          call timing_stop('save_magnetometer')  
+       end if
+       
     end if
 
     n_output_last(ifile)=n_step
@@ -880,7 +896,7 @@ contains
 
   subroutine save_files_final
     use ModSatelliteFile, ONLY: set_satellite_file_status, nSatellite
-
+    use ModGroundMagPerturb, ONLY:save_magnetometer_data, close_magnetometer_output_file
     implicit none
 
     integer :: iSat
@@ -897,6 +913,8 @@ contains
           call set_satellite_file_status(iSat,'close')
        end do
     end if
+    
+    if (save_magnetometer_data .and. iProc==0) call close_magnetometer_output_file   
 
     if (save_logfile.and.iProc==0.and.unit_log>0) close(unit_log)
 

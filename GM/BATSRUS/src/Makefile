@@ -4,7 +4,7 @@ SHELL =/bin/sh
 
 include ../Makefile.def
 
-SEARCH_EXTRA = -I${MAGNETOGRAMDIR} -I${EMPIRICALEEDIR} -I${CRASHDIR}
+SEARCH_EXTRA = -I${MAGNETOGRAMDIR} -I${EMPIRICALEEDIR} -I${CRASHDIR} 
 
 include ../Makefile.conf
 include Makefile.DEPEND
@@ -38,6 +38,7 @@ MODULES = \
 	ModFaceFlux.o\
 	ModFaceValue.o\
 	ModGeometry.o\
+	ModGroundMagPerturb.o\
 	ModHallResist.o\
 	ModIO.o\
 	ModMain.o\

@@ -358,6 +358,223 @@ end subroutine calc_inner_bc_velocity1
 
 !=============================================================================
 
+subroutine ground_mag_perturb_fac(Xyz_D, MagPerturb_D)
+
+  !\
+  ! Add the field aligned current effect in the Gap Region
+  ! Start from IE Jr, trace the field aligned current that is larger 
+  ! than 0.01 mmA/m^2? until to the rBody (inner boundary of GM).
+  ! The field line is divided into Ncuts segaments: dr = (rBody - rIon)/Ncuts, 
+  ! and the Biot-Savart law is done over all these small currents.
+  ! The calculation is in SMG coordinates
+  !/
+
+  use ModGroundMagPerturb
+  use ModProcMH
+  use ModMain,           ONLY: x_, y_, z_, Time_Simulation, n_step
+  use CON_planet_field
+  use ModNumConst,       ONLY: cPi, cTwoPi, cRadToDeg
+  use ModConst,          ONLY: cMu
+  use ModIeGrid,         ONLY: rIonosphere,ThetaIono_I, PhiIono_I, &
+       nThetaIono, nPhiIono
+  use ModFieldAlignedCurrent, ONLY: FieldAlignedCurrent_II
+  use ModMpi
+  use ModUtilities
+
+  implicit none
+
+  integer, parameter    :: Ncuts = 800
+  integer               :: nLoc, iHem,sig
+  integer               :: i,j,k, iHemisphere,iError, iLonStart,iLonStop
+  real                  :: dR_trace, Theta, Phi, JrIono, r_tmp, x,y,z
+  real                  :: dl, ds, rIon, rB, iTime_I(7), ilat
+  real                 :: bIono_D(3), bIono, B_D(3), b, Fac, Jx, Jy, Jz
+  real                  :: dThetaIono, dPhiIono  
+  real, dimension(3)    :: Xyz_D, XyzIono_D, MagPerturb_D, Xyz_tmp, Xyz_old
+  real, dimension(nThetaIono*nPhiIono,Ncuts-1) :: temp_x, temp_y, temp_z
+  real, dimension(nThetaIono*nPhiIono)         :: UseJr_Theta, UseJr_Phi, UseJr
+
+  !------------------------------------------------------------------------
+  ! in Normalized Unit !
+  !------------------------------------------------------------------------
+  nLoc = 0
+  MagPerturb_D= 0.0
+  UseJr_Theta = 0.0
+  UseJr_Phi   = 0.0
+  UseJr       = 0.0
+  temp_x      = 0.0
+  temp_y      = 0.0
+  temp_z      = 0.0
+  rIon = rIonosphere
+  rB   = rCurrents
+  iLonStart = 0
+  iLonStop  = 0
+
+  if (nProc > 0) &
+       call MPI_Bcast(FieldAlignedCurrent_II, nThetaIono*nPhiIono, &
+       MPI_REAL, 0, iComm,iError)
+  
+  dThetaIono = cPi    / (nThetaIono-1)
+  dPhiIono   = cTwoPi / (nPhiIono-1)
+  
+  x = Xyz_D(1)/rplanet_I(Earth_)
+  y = Xyz_D(2)/rPlanet_I(Earth_)
+  z = Xyz_D(3)/rPlanet_I(Earth_)
+
+  dR_trace = (rB - rIon) / Ncuts
+
+  ! Distribute the longitutdes into different processors
+  ! Caution the # of processor 
+  if (mod(180,nProc)==0) then
+     iLonStart = iProc*180/nProc+1
+     iLonStop  = (iProc+1)*180/nProc
+  else 
+     ! Do it in the first 6 processors
+     if(nProc<30)then
+        if(iProc<6) then
+           iLonStart = iProc*180/6+1
+           iLonStop  = (iProc+1)*180/6
+        end if
+     else
+        if(iProc<30)then
+           iLonStart = iProc*180/30+1
+           iLonStop  = (iProc+1)*180/30
+        end if
+     end if
+  end if
+ 
+  ! Pick out where Jr is larger than one threshold
+  if (z==0) then 
+     ! Take both hemispheres into account
+     iHem = 0
+     do i=1, nThetaIono; do j=iLonStart,iLonStop
+        if (abs(FieldAlignedCurrent_II(i,j)*Si2Io_V(UnitJ_)) > 0.01 &
+             .and. abs(FieldAlignedCurrent_II(i,j)*Si2Io_V(UnitJ_)) < 1.0e3) then
+           nLoc = nLoc + 1
+           UseJr_Theta(nLoc) = ThetaIono_I(i)
+           UseJr_Phi(nLoc)   = PhiIono_I(j)
+           UseJr(nLoc)       = FieldAlignedCurrent_II(i,j)*Si2No_V(UnitJ_)
+              
+        end if
+     end do; end do
+  else
+     ! Only one hemisphere needed
+     if (z<0) iHem = 2
+     if (z>0) iHem = 1
+     
+     do i= (iHem-1)*nThetaIono/2+1, nThetaIono*iHem/2; do j=iLonStart,iLonStop
+        ! Find out the places where Jr above certain value (e.g. 0.01 mmA/m^2)
+        ! FieldAligned currents in SI
+        if (abs(FieldAlignedCurrent_II(i,j)*Si2Io_V(UnitJ_)) > 0.01 .and. &
+             abs(FieldAlignedCurrent_II(i,j)*Si2Io_V(UnitJ_))<1.0e3) then
+           nLoc = nLoc + 1
+           UseJr_Theta(nLoc) = ThetaIono_I(i)
+           UseJr_Phi(nLoc)   = PhiIono_I(j)
+           UseJr(nLoc)       = FieldAlignedCurrent_II(i,j)*Si2No_V(UnitJ_)
+           ! In the calculation followed, the unit is normalized
+        end if
+     end do; end do
+  end if
+
+  if (nLoc > 1) then 
+     do i=1, nLoc
+        ! Trace these field lines to get the FAC on the field line                        
+        Theta = UseJr_Theta(i)
+        Phi   = UseJr_Phi(i)
+        JrIono  = UseJr(i) ! in the radial direction
+        
+        if ((iHem==1 .and. JrIono>0) .or.(iHem==2 .and. JrIono <0) &
+             .or. (iHem==0 .and. Theta>cPi/2. .and.JrIono<0)       &
+             .or. (iHem==0 .and. Theta<cPi/2.0 .and. JrIono>0)) then
+           sig = -1
+        else
+           sig = 1
+        end if
+        
+        call sph_to_xyz(rIon, Theta, Phi, XyzIono_D)
+
+        ! test if this line maps to the inner boundary of GM
+        ! if not, skip this field line and the FAC current on it.
+        call map_planet_field(Time_Simulation,XyzIono_D, 'SMG NORM', rB, &
+             Xyz_tmp, iHemisphere)
+        if (iHemisphere == 0) CYCLE
+
+        call get_planet_field(Time_Simulation, XyzIono_D, 'SMG NORM', bIono_D)
+        bIono   = sqrt(sum(bIono_D**2))
+        
+        ! convert to be aligned with B field line from radial direction
+        JrIono  = JrIono/abs(sum(bIono_D/bIono * (XyzIono_D/rIon)))
+ 
+        do k=1, Ncuts-1
+           
+           ! Get the B_D and J_D at one point on the field line                          
+           ! Save the previous cut position and magnetic field magnitude
+           if(k == 1) then 
+              Xyz_old = XyzIono_D 
+           else 
+              Xyz_old = Xyz_tmp
+           endif
+          
+           call get_planet_field(Time_Simulation, Xyz_old, 'SMG NORM', B_D)
+           b = sqrt(sum(B_D**2))
+           
+           ! Calculate the field aligned current  (only the magnitude)
+           ! the direction is determined by sig
+           Fac = abs(b / bIono * JrIono)
+           
+           ! upward/downward depends on 'sig'
+           Jx = Fac * B_D(x_) /b * sig
+           Jy = Fac * B_D(y_) /b * sig
+           Jz = Fac * B_D(z_) /b * sig
+           
+           ! Get the next position in SMG coordinates
+           r_tmp = rIon + dR_trace * k
+           call map_planet_field(Time_Simulation, XyzIono_D, 'SMG NORM', &
+                r_tmp, Xyz_tmp, iHemisphere)
+           
+           ! the length along the field line
+           ! dl/dr = sqrt(1+3*sin(latitude))/(2*sin(latitude))
+           ! z = r * sin(latitude)      
+           ilat = abs(asin(Xyz_old(3)/sqrt(sum(Xyz_old**2))))
+           dl = dR_trace * sqrt(1+3*(sin(ilat))**2)/(2*sin(ilat))
+ 
+          !dl = sqrt(sum((Xyz_old-Xyz_tmp)**2))
+           ds = bIono / b * rIon**2 * sin(Theta) * dThetaIono *dPhiIono 
+           
+
+           temp_x(i,k) = (- Jy * ( Xyz_old(z_)-z )&
+                + Jz * ( Xyz_old(y_)-y) ) * dl * ds   &
+                / (sqrt( &
+                (Xyz_old(x_)-x)**2 + &
+                (Xyz_old(y_)-y)**2 + &
+                (Xyz_old(z_)-z)**2)) **3
+           
+           
+           temp_y(i,k) = (- Jz * ( Xyz_old(x_)-x )&
+                + Jx * ( Xyz_old(z_)-z) ) *dl * ds   &
+                / (sqrt( &
+                (Xyz_old(x_)-x)**2 + &
+                (Xyz_old(y_)-y)**2 + &
+                (Xyz_old(z_)-z)**2)) **3
+           
+           temp_z(i,k) = (- Jx * ( Xyz_old(y_)-y )&
+                + Jy * ( Xyz_old(x_)-x) ) *dl * ds   &
+                / (sqrt( &
+                (Xyz_old(x_)-x)**2 + &
+                (Xyz_old(y_)-y)**2 + &
+                (Xyz_old(z_)-z)**2)) **3
+        end do
+     end do
+     
+     MagPerturb_D(x_) = sum(temp_x) / (4*cPi)
+     MagPerturb_D(y_) = sum(temp_y) / (4*cPi)
+     MagPerturb_D(z_) = sum(temp_z) / (4*cPi)
+
+end if
+ 
+end subroutine ground_mag_perturb_fac
+!================================================================
+
 real function logvar_ionosphere(NameLogvar)
   use ModProcMH,  ONLY: iProc
   use ModIO,      ONLY: write_myname

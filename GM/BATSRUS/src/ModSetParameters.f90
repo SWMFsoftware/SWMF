@@ -56,7 +56,7 @@ subroutine MH_set_parameters(TypeAction)
        read_solar_wind_file, normalize_solar_wind_data
   use ModSatelliteFile, ONLY: nSatellite, &
        read_satellite_parameters, read_satellite_input_files
-
+  use ModGroundMagPerturb
   use ModFaceFlux, ONLY: face_flux_set_parameters, UseClimit, UsePoleDiffusion
   use ModLookupTable, ONLY: read_lookup_table_param
   use ModIonoVelocity,ONLY: read_iono_velocity_param
@@ -77,6 +77,7 @@ subroutine MH_set_parameters(TypeAction)
   logical :: IsUninitialized      = .true.
   logical :: DoReadSolarwindFile  = .false.
   logical :: DoReadSatelliteFiles = .false.
+  logical :: DoReadMagnetometerFile=.false.
 
   ! The name of the command
   character (len=lStringLine) :: NameCommand, StringLine
@@ -134,6 +135,11 @@ subroutine MH_set_parameters(TypeAction)
      DoReadSatelliteFiles = .false.
   end if
 
+  if(DoReadMagnetometerFile)then
+     call read_mag_input_file
+     DoReadMagnetometerFile = .false.
+  end if
+  
   select case(TypeAction)
   case('CHECK')
      if(iProc==0)write(*,*) NameSub,': CHECK iSession =',iSession
@@ -1425,6 +1431,17 @@ subroutine MH_set_parameters(TypeAction)
      case('#STEADYSTATESATELLITE')
         call read_satellite_parameters(NameCommand)
 
+     case("#MAGNETOMETER")
+        DoReadMagnetometerFile = .true.
+        save_magnetometer_data =.true.
+        call read_var('MagInputFile', MagInputFile)
+        
+        if (iProc==0) call check_dir(NamePlotDir)
+        
+        call read_var('DnOutput', dn_output(magfile_))
+        call read_var('DtOutput', dt_output(magfile_)) 
+        nFile = max(nFile, magfile_ + 1) 
+        
      case('#RESCHANGEBOUNDARY')
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('SaveBoundaryCells',SaveBoundaryCells)
