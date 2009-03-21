@@ -89,7 +89,7 @@ contains
 
     use ModReadParam
     use ModEos,      ONLY: read_eos_parameters
-    use ModGeometry, ONLY: TypeGeometry,UseCovariant
+    use ModGeometry, ONLY: TypeGeometry, UseCovariant
 
     logical :: IsCylindrical
     character (len=100) :: NameCommand
@@ -889,7 +889,7 @@ contains
     use ModEos,     ONLY: eos, Xe_, Be_, Plastic_
     use ModPolyimide, ONLY: cAtomicMass_I, cAPolyimide
     use ModLookupTable, ONLY: interpolate_lookup_table
-    use ModGeometry, ONLY: r_BLK
+    use ModGeometry, ONLY: r_BLK, x_BLK, y_BLK, TypeGeometry
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -955,7 +955,16 @@ contains
                RosselandMeanOpacitySiOut = PlotVar_G(i,j,k))
        end do; end do; end do
     case('usersphere')
-       PlotVar_G = max(0.0, 100 - r_BLK(:,:,:,iBlock)**2)
+       ! Test function for LOS images: sphere with "density" 
+       !    100 - r^2 inside r=10, and 0 outside.
+       if(TypeGeometry == 'rz')then
+          ! In R-Z geometry the "sphere" is a circle in the X-Y plane
+          PlotVar_G = max(0.0, &
+               100 - x_BLK(:,:,:,iBlock)**2 - y_BLK(:,:,:,iBlock)**2)
+       else
+          ! In Cartesian geometry it is real sphere
+          PlotVar_G = max(0.0, 100 - r_BLK(:,:,:,iBlock)**2)
+       end if
     case('rhoxe', 'rhobe', 'rhopl')
        select case(NameVar)
        case('rhoxe')
