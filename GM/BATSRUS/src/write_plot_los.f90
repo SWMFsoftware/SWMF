@@ -44,9 +44,10 @@ subroutine write_plot_los(iFile)
   !           March 2009    Allow integration of functions different from rho
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,n_step,time_simulation,unusedBLK, &
-       time_accurate,nBlock, NameThisComp,rBuffMax,TypeCoordSystem
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK
+  use ModMain, ONLY : nI, nJ, nK, n_step, time_simulation, unusedBLK, &
+       time_accurate, nBlock, NameThisComp,rBuffMax,TypeCoordSystem
+  use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK, dz_BLK, &
+       TypeGeometry
   use ModPhysics, ONLY : No2Io_V, UnitX_
   use ModIO
   use ModAdvance, ONLY : rho_, State_VGB
@@ -63,6 +64,7 @@ subroutine write_plot_los(iFile)
   integer, intent(in) :: iFile
 
   ! Local variables
+  logical :: IsRzGeometry = .false.
 
   integer :: iError
 
@@ -83,13 +85,16 @@ subroutine write_plot_los(iFile)
 
 
   integer :: nEqpar, nPlotvar
-  integer :: iPix, jPix
-  real    ::  x_Pix, y_Pix 
-  real    :: ImageCenter_D(3), aPix_D(3), bPix_D(3), r_Pix(3),LosPix_D(3)
+  integer :: iPix, jPix             ! indexes of the pixel
+  real    :: aPix, bPix             ! coordinates of pixel in the image frae
+  real    :: ImageCenter_D(3)       ! 3D coordinates of the center of image
+  real    :: aUnit_D(3), bUnit_D(3) ! unit vectors for the image coordinates
+  real    :: LosPix_D(3)            ! unit vector from observer to pixel
+  real    :: XyzPix_D(3)            ! pixel location in 3D
   real    :: rBlockSize, rBlockCenter
   real    :: SizePix, r2Pix    
   real    :: BlockDistance, ObsDistance, Ratio
-  real    :: XyzBlockCenter_D(3), CellSize_D(3), xLosBlock, yLosBlock
+  real    :: XyzBlockCenter_D(3), CellSize_D(3), aBlockCenter, bBlockCenter
 
   real, dimension(3,3) :: FromHgi_DD
   real, dimension(3) :: Los_D, ObsPos_D
@@ -119,6 +124,16 @@ subroutine write_plot_los(iFile)
   call set_oktest('los_timing', DoTiming, DoTimingMe)
 
   call timing_start(NameSub)
+
+  select case(TypeGeometry)
+  case('cartesian')
+     IsRzGeometry = .false.
+  case('rz')
+     IsRzGeometry = .true.
+  case default
+     call stop_mpi(NameSub//' is not implemented for TypeGeometry=' &
+          //TypeGeometry)
+  end select
 
   ! Set rInner and rOuter depending on component
   select case(NameThisComp)
@@ -212,34 +227,34 @@ subroutine write_plot_los(iFile)
      if(oktest .and. iProc==0) write(*,*)unitstr_IDL
   end select
 
-  ! Create unit vectors aPix_D and bPix_D orthogonal to the 
+  ! Create unit vectors aUnit_D and bUnit_D orthogonal to the 
   ! central line of sight to setup the coordinate system in the viewing plane
   ! We use cross products of the LOS vector with one of the principal 
   ! directions (0,0,1) or (0,1,0) to make sure that the viewing plane is 
   ! aligned with the original Cartesian coordinates. In case the viewing
-  ! is roughly along the X or Y axis, we want bPix_D to point along +Z,
-  ! for viewing along the Z axis, we want bPix_D to point along +Y:
+  ! is roughly along the X or Y axis, we want bUnit_D to point along +Z,
+  ! for viewing along the Z axis, we want bUnit_D to point along +Y:
   ! a = LOS x (0,0,1), b = a x LOS ensures that b is roughly aligned with +Z
   ! a = LOS x (0,1,0), b = a x LOS ensures that b is roughly aligned with +Y
   if(abs(Los_D(3)) < maxval(abs(Los_D(1:2))))then
-     aPix_D = cross_product(Los_D, (/0.,0.,1./))
+     aUnit_D = cross_product(Los_D, (/0.,0.,1./))
   else
      ! Viewing along the Z axis more or less
-     aPix_D = cross_product(Los_D, (/0.,1.,0./))
+     aUnit_D = cross_product(Los_D, (/0.,1.,0./))
   end if
-  aPix_D = aPix_D/sqrt(sum(aPix_D**2))
-  bPix_D = cross_product(aPix_D, Los_D)
-  bPix_D = bPix_D/sqrt(sum(bPix_D**2))
+  aUnit_D = aUnit_D/sqrt(sum(aUnit_D**2))
+  bUnit_D = cross_product(aUnit_D, Los_D)
+  bUnit_D = bUnit_D/sqrt(sum(bUnit_D**2))
 
   ! 3D vector pointing from the origin to the image center
   ImageCenter_D = ObsPos_D + ObsDistance*Los_D &
-       + aOffset*aPix_D + bOffset*bPix_D
+       + aOffset*aUnit_D + bOffset*bUnit_D
 
   ! Make offset to be relative to the Sun (and not the projected observer)
-  aOffset = dot_product(ImageCenter_D, aPix_D)
-  bOffset = dot_product(ImageCenter_D, bPix_D)
+  aOffset = dot_product(ImageCenter_D, aUnit_D)
+  bOffset = dot_product(ImageCenter_D, bUnit_D)
 
-!!!aOffset = aOffset + dot_product(ObsPos_D, aPix_D)
+!!!aOffset = aOffset + dot_product(ObsPos_D, aUnit_D)
 
   allocate( &
        ImagePe_VII(nPlotVar,nPix,nPix), &
@@ -263,6 +278,13 @@ subroutine write_plot_los(iFile)
 
      CellSize_D = (/ dx_BLK(iBlk), dy_BLK(iBlk), dz_BLK(iBlk) /)
 
+     if(IsRzGeometry)then
+        ! Exclude blocks that do not intersect the Z=0 plane (from above)
+        if(.not. (z_BLK(1,1,0,iBLK)<0 .and. z_BLK(1,1,nK,iBLK)>0)) CYCLE
+        ! Exclude blocks below the Y=0 plane
+        if(y_BLK(1,nJ,1,iBLK)<0) CYCLE
+     end if
+
      rBlockSize = 0.5*sqrt(&
           ((nI+1)*dx_BLK(iBLK))**2 + &
           ((nJ+1)*dy_BLK(iBLK))**2 + &
@@ -278,62 +300,82 @@ subroutine write_plot_los(iFile)
 
      if(rBlockCenter > rOuter + rBlockSize) CYCLE
 
-     ! calculate position of block center on the los image
-     BlockDistance = dot_product(Los_D, XyzBlockCenter_D - ObsPos_D)
+     if(IsRzGeometry)then
+        ! There are no simple checks to exclude a block in R-Z geometry
+        DoCheckBlock = .false.
+     else
+        ! distance of block center from the observer along the LOS
+        BlockDistance = dot_product(Los_D, XyzBlockCenter_D - ObsPos_D)
 
-     DoCheckBlock = BlockDistance > 0
-
+        ! Only blocks towards the image can be checked for exclusion easily
+        DoCheckBlock = BlockDistance > 0
+     end if
      if(DoCheckBlock)then
         Ratio = ObsDistance/BlockDistance
         ! 3D vector from the image center to the projected block center
         XyzBlockCenter_D = Ratio*(XyzBlockCenter_D -  ObsPos_D) + ObsPos_D &
              - ImageCenter_D
-        xLosBlock = dot_product(XyzBlockCenter_D,aPix_D)
-        yLosBlock = dot_product(XyzBlockCenter_D,bPix_D)
+        aBlockCenter = dot_product(XyzBlockCenter_D, aUnit_D)
+        bBlockCenter = dot_product(XyzBlockCenter_D, bUnit_D)
 
         ! Project block size
         rBlockSize = rBlockSize*Ratio
 
         ! Check if block is inside the LOS image
-        if(rSizeImage < sqrt(xLosBlock**2+yLosBlock**2) - rBlockSize) CYCLE
+        if((rSizeImage + rBlockSize)**2 < aBlockCenter**2 + bBlockCenter**2)&
+             CYCLE
      end if
 
      ! Loop over pixels
      do jPix = 1, nPix
 
         ! Y position of the pixel on the image plane
-        y_Pix = (jPix -1) * SizePix - rSizeImage
+        bPix = (jPix - 1) * SizePix - rSizeImage
 
         ! Check if block can intersect this pixel
         if(DoCheckBlock)then
-           if(abs(y_Pix - yLosBlock) > rBlockSize)CYCLE
+           if(abs(bPix - bBlockCenter) > rBlockSize)CYCLE
         end if
 
         do iPix = 1, nPix
 
            ! X position of the pixel on the image plane
-           x_Pix = (iPix - 1) * SizePix - rSizeImage
+           aPix = (iPix - 1) * SizePix - rSizeImage
 
            ! Check if block can intersect this pixel
            if(DoCheckBlock)then
-              if( (x_Pix - xLosBlock)**2 + (y_Pix-yLosBlock)**2 > &
+              if( (aPix - aBlockCenter)**2 + (bPix - bBlockCenter)**2 > &
                    rBlockSize**2 ) CYCLE 
            end if
 
-           r2Pix = (x_Pix + aOffset)**2 + (y_Pix + bOffset)**2
+           r2Pix = (aPix + aOffset)**2 + (bPix + bOffset)**2
            ! Check if pixel is within occultation radius
            if( r2Pix  <= rOccult2 ) CYCLE
 
-           r2Pix = x_Pix**2 + y_Pix**2
+           r2Pix = aPix**2 + bPix**2
            ! Check if pixel is outside the circular region
            if( r2Pix > rSizeImage2 ) CYCLE 
 
+           ! Get the 3D location of the pixel
+           XyzPix_D = ImageCenter_D + aPix*aUnit_D + bPix*bUnit_D
+
+           ! Unit vector pointing from observer to pixel center
+           LosPix_D = ObsPos_D - XyzPix_D
+           LosPix_D = LosPix_D/sqrt(sum(LosPix_D**2))
+
+           ! Do not allow LOS direction to be perfectly aligned with major axes
+           where(LosPix_D ==0.0) LosPix_D = cTiny
+
            ! Calculate contribution of this block to this pixel
-           call set_plotvar_los
+           if(IsRzGeometry)then
+              call integrate_los_block_rz
+           else
+              call integrate_los_block
+           end if
 
         end do ! jPix loop
-     end do ! iPix loop
-  end do       !iBLK
+     end do    ! iPix loop
+  end do       ! iBLK loop
 
   if(DoTiming)call timing_stop('los_block_loop')
 
@@ -387,15 +429,15 @@ subroutine write_plot_los(iFile)
              ', I=',nPix,', J=',nPix,', K=1, F=POINT'
         ! Write point values
         do iPix = 1, nPix
-           x_Pix = (iPix - 1) * SizePix - rSizeImage
+           aPix = (iPix - 1) * SizePix - rSizeImage
            do jPix = 1, nPix
-              y_Pix = (jPix - 1) * SizePix - rSizeImage
+              bPix = (jPix - 1) * SizePix - rSizeImage
 
               if (plot_dimensional(ifile)) then
-                 write(unit_tmp,fmt="(30(E14.6))") x_Pix*No2Io_V(UnitX_), &
-                      y_Pix*No2Io_V(UnitX_), Image_VII(1:nPlotVar,iPix,jPix)
+                 write(unit_tmp,fmt="(30(E14.6))") aPix*No2Io_V(UnitX_), &
+                      bPix*No2Io_V(UnitX_), Image_VII(1:nPlotVar,iPix,jPix)
               else
-                 write(unit_tmp,fmt="(30(E14.6))") x_Pix, y_Pix, &
+                 write(unit_tmp,fmt="(30(E14.6))") aPix, bPix, &
                       Image_VII(1:nPlotVar,iPix,jPix)
               end if
 
@@ -406,8 +448,8 @@ subroutine write_plot_los(iFile)
         ! description of file contains units, physics and dimension
         StringHeadLine = 'LOS integrals_var22'
         ! set the size of plot image
-        x_Pix = rSizeImage 
-        if (plot_dimensional(ifile)) x_Pix = x_pix * No2Io_V(UnitX_)
+        aPix = rSizeImage 
+        if (plot_dimensional(ifile)) aPix = aPix * No2Io_V(UnitX_)
         ! Write
         call save_plot_file(filename, &
              TypeFileIn = TypeIdlFile_I(iFile), &
@@ -417,8 +459,8 @@ subroutine write_plot_los(iFile)
              ParamIn_I = eqpar(1:neqpar), &
              NameVarIn = allnames, &
              nDimIn = 2, & 
-             CoordMinIn_D = (/-x_Pix, -x_Pix/), &
-             CoordMaxIn_D = (/+x_Pix, +x_Pix/), &
+             CoordMinIn_D = (/-aPix, -aPix/), &
+             CoordMaxIn_D = (/+aPix, +aPix/), &
              VarIn_VII = Image_VII)
         
      end select
@@ -435,8 +477,147 @@ subroutine write_plot_los(iFile)
 contains
 
   !===========================================================================
+  subroutine integrate_los_block_rz
 
-  subroutine set_plotvar_los
+    ! 0. Set x_S to the left and right X faces,
+    !    and r_S to the inner and outer Y faces of the block.
+    !
+    ! 1. Calculate the Y and Z coordinates of the LOS intersecting x_S 
+    !    x1 = xMin and x2 = xMax and obtain the corresponding 
+    !    radial distances r1 = sqrt(y1^2+z1^2) and r2=sqrt(y^2 + z^2) 
+    !    and keep them if R1 or R2 is within the [rMin, rMax] interval.
+    ! 
+    ! 2. Calculate the intersection of the line with a circular ring of width 
+    !    yMax-yMin in the Y-Z plane and obtain the corresponding X values 
+    !    (up to 4) and keep the ones that are within [xMin, xMax]. 
+    !    This requires the solution of 2 second order equations.
+    !
+    ! 3. Integrate along the 1 or 2 line segments
+    !    (making sure that we integrate inside the ring!) to get the length 
+    !    of the line segment.
+
+    use ModGeometry,    ONLY: XyzStart_BLK, dx_BLK, dy_BLK, dz_BLK
+    use ModSort,        ONLY: sort_quick
+
+    ! maximum number of intersections between LOS and 
+    ! the ring formed by rotating the block around the X axis
+    ! There are six potential cross sections with the sides and inner and
+    ! outer rings, but only at most 4 of these are on the block
+    integer, parameter :: MaxIntersect = 6 
+
+    ! index and number of intersections
+    integer :: iIntersect, nIntersect 
+
+    ! indexes for sorting by distance
+    integer :: iSort, iSort_I(MaxIntersect) 
+    integer :: iSide, iSign
+
+    ! the axial (X) and squared radial (Y**2) coordinates of the block faces
+    real :: x_S(2), r2_S(2) 
+    real :: Ratio, UnitYZ_D(2), DistRmin, r2Min, r2, Dist2, Dist
+    ! coordinates of the intersections
+    real :: Intersect_D(3), Intersect2_D(3), Intersect_DI(3,MaxIntersect)
+    ! distances of intersections from the center of the pixel
+    real :: DistIntersect, DistIntersect_I(MaxIntersect) 
+    !------------------------------------------------------------------------
+
+    ! Calculate the closest approach to the origin in the Y-Z plane
+    ! Normalize the Y-Z components of the LOS vector to unity
+    Ratio     = 1/sqrt(sum(LosPix_D(2:3)**2))
+    UnitYZ_D  = Ratio*LosPix_D(2:3)
+    ! Distance to the closest approach is the projection of the pixel location
+    ! to the line pointing in the LOS direction
+    DistRMin = -sum(UnitYZ_D*XyzPix_D(2:3))
+    ! The minimum distance squared can be obtained from the Pythagorian theorem
+    r2Min        = sum(XyzPix_D(2:3)**2) - DistRmin**2
+
+    ! The radial distance of the outer face of the block
+    r2_S(2) = (0.5*(y_BLK(1,nJ,1,iBLK) + y_BLK(1,nJ+1,1,iBLK)))**2
+
+    ! Return if the outer radius is smaller than the closest approach
+    if(r2_s(2) < r2Min) RETURN
+
+    ! The radial distance of the inner face of the block
+    r2_S(1) = (0.5*(y_BLK(1, 0,1,iBLK) + y_BLK(1,   1,1,iBLK)))**2
+
+    ! The X positions of the left and right faces of the block
+    x_S(1) = 0.5*(x_BLK( 0,1,1,iBLK) + x_BLK(   1,1,1,iBLK))
+    x_S(2) = 0.5*(x_BLK(nI,1,1,iBLK) + x_BLK(nI+1,1,1,iBLK))
+
+    ! Initialize intersection arrays
+    nIntersect = 0
+
+    ! Calculate intersection positions for the R faces
+    ! There can be two intersections for both faces
+    do iSide = 1, 2
+       ! Distance from the closest approach to the intersection with the face
+       Dist2 = r2_S(iSide) - r2Min
+       if(Dist2 < 0) CYCLE ! no intersection
+       Dist = sqrt(Dist2)
+       ! Obtain the 3D coordinates for the two intersection points
+       do iSign = -1, 1, 2
+          DistIntersect = Ratio*(DistRmin + iSign*Dist)
+          Intersect_D = XyzPix_D + DistIntersect*LosPix_D
+          if(Intersect_D(1) > x_S(1) .and. Intersect_D(1) < x_S(2))then
+             nIntersect = nIntersect + 1
+             Intersect_DI(:,nIntersect)  = Intersect_D
+             DistIntersect_I(nIntersect) = DistIntersect
+          end if
+       end do
+    end do
+
+    ! Calculate intersection positions for the X faces
+    do iSide = 1, 2
+       ! Distance to the intersection
+       DistIntersect = (x_S(iSide) - XyzPix_D(1))/LosPix_D(1)
+       Intersect_D = XyzPix_D + DistIntersect*LosPix_D
+       r2 = sum(Intersect_D(2:3)**2)
+       if(r2 > r2_S(1) .and. r2 < r2_S(2))then
+          nIntersect = nIntersect + 1
+          Intersect_DI(:,nIntersect) = Intersect_D
+          DistIntersect_I(nIntersect) = DistIntersect
+       end if
+    end do
+
+    if(nIntersect < 2) RETURN
+
+    if(nIntersect > 2)then
+       ! Sort intersection points by distance from pixel
+       call sort_quick(nIntersect, DistIntersect_I(1:nIntersect), &
+            iSort_I(1:nIntersect))
+    else
+       ! No need to sort two points
+       iSort_I(1:2) = (/1,2/)
+    end if
+
+    ! Loop through segments connecting the consecutive intersection points
+    do iIntersect = 1, nIntersect-1
+       Intersect_D  = Intersect_DI(:,iSort_I(iIntersect))
+       Intersect2_D = Intersect_DI(:,iSort_I(iIntersect+1))
+
+       ! check if the radius of the midpoint is inside the block, if not return
+       r2 = sum((0.5*(Intersect_D(2:3)+Intersect2_D(2:3)))**2)
+       if(r2 < r2_S(1) .or. r2 > r2_S(2)) RETURN
+
+       call integrate_segment(Intersect_D, Intersect2_D)
+    end do
+
+     !  write(*,*)'x_S=',x_S
+     !  write(*,*)'r_S=',r_S
+     !  write(*,*)'XyzPix_D=',XyzPix_D
+     !  write(*,*)'LosPix_D=',LosPix_D
+     !  do iIntersect = 1, nIntersect
+     !     iSort = iSort_I(iIntersect)
+     !     write(*,*)'Intersect_D, r, dist=',Intersect_DI(:,iSort), &
+     !          sqrt(sum(Intersect_DI(2:3,iSort)**2)), &
+     !          DistIntersect_I(iSort)
+     !  end do
+     !  call stop_mpi("DEBUG")
+
+  end subroutine integrate_los_block_rz
+  !===========================================================================
+
+  subroutine integrate_los_block
 
     ! Local variables
     integer :: i, j, k, counter
@@ -451,9 +632,6 @@ contains
 
     !-------------------------------------------------------------------------
     !if(DoTiming)call timing_start('los_set_plotvar')
-
-    ! Get the 3D location of the pixel
-    r_Pix = ImageCenter_D + x_Pix*aPix_D + y_Pix*bPix_D
 
     !x_los, y_los, z_los, r_los give the position of the point on the los
     !mu_los parameter related to the limb darkening
@@ -474,9 +652,6 @@ contains
     face_location(2,1) = xx2
     face_location(2,2) = yy2
     face_location(2,3) = zz2
-    LosPix_D = ObsPos_D - r_Pix
-    LosPix_D = LosPix_D/sqrt(sum(LosPix_D**2))
-    where(LosPix_D ==0.0) LosPix_D = cTiny
 
     !Determine where the line of sight enters and exits the block
     !loop over the number of block face pairs, face directions and coordinates
@@ -488,8 +663,8 @@ contains
        do j=1,3     !direction loop
           do k=1,3   !coordinate loop
              if (j /= k) then  
-                intrsct(i,j,k) = r_Pix(k) + &
-                     (LosPix_D(k)/LosPix_D(j))*(face_location(i,j) - r_Pix(j))
+                intrsct(i,j,k) = XyzPix_D(k) + &
+                     (LosPix_D(k)/LosPix_D(j))*(face_location(i,j) - XyzPix_D(j))
              end if
           end do
        end do
@@ -527,7 +702,7 @@ contains
     if( R2Point1 <= rInner2 .and. R2Point2 <= rInner2) RETURN
 
     ! Check if the whole segment is outside rOuter
-    rLine_D = r_Pix - LosPix_D*dot_product(LosPix_D, r_Pix)
+    rLine_D = XyzPix_D - LosPix_D*dot_product(LosPix_D, XyzPix_D)
     rLine2  = sum(rLine_D**2)
     if( rLine2 > rOuter2 ) RETURN
 
@@ -616,7 +791,7 @@ contains
 
     call integrate_segment(Point1_D, Point2_D)
 
-  end subroutine set_plotvar_los
+  end subroutine integrate_los_block
 
   !===========================================================================
 
@@ -626,7 +801,7 @@ contains
     ! The line is split into nSegment segments of length Ds
 
     use ModGeometry,    ONLY: XyzStart_BLK
-    use ModInterpolate, ONLY: trilinear
+    use ModInterpolate, ONLY: bilinear, trilinear
     use ModUser,        ONLY: user_set_plot_var
 
     real, intent(in) :: XyzStart_D(3), XyzEnd_D(3)
@@ -694,11 +869,24 @@ contains
 
        ! Calculate normalized position
        ! XyzStart contains the coordinates of cell 1,1,1, hence add 1
-       CoordNorm_D = (XyzLos_D - XyzStart_BLK(:,iBlk))/CellSize_D + 1
-
+       if(IsRzGeometry)then
+          ! Radial distance is sqrt(yLos**2+zLos**2)
+          CoordNorm_D(1:2) = ( (/xLos, sqrt(yLos**2+zLos**2) /) &
+               - XyzStart_BLK(1:2,iBlk))/CellSize_D(1:2) + 1
+          CoordNorm_D(3) = 0.0
+       else
+          CoordNorm_D = (XyzLos_D - XyzStart_BLK(:,iBlk))/CellSize_D + 1
+       end if
        ! interpolate density if it is needed by any of the plot variables
-       if(UseRho) Rho = trilinear(State_VGB(Rho_,:,:,:,iBlk), &
-            -1, nI+2, -1, nJ+2, -1, nK+2, CoordNorm_D)
+       if(UseRho)then
+          if(IsRzGeometry)then
+             Rho = bilinear(State_VGB(Rho_,:,:,1,iBlk), &
+                  -1, nI+2, -1, nJ+2, CoordNorm_D(1:2))
+          else
+             Rho = trilinear(State_VGB(Rho_,:,:,:,iBlk), &
+                  -1, nI+2, -1, nJ+2, -1, nK+2, CoordNorm_D)
+          end if
+       end if
 
        do iVar = 1, nPlotvar
           Value = 0.0 ! initialize to 0 so that if statements below work right
@@ -724,9 +912,11 @@ contains
              Value = Rho
 
           case('sphere10')
+             ! Sphere of radius 10 with 100-r^2 density profile
              Value = max(0.0, 100.0 - rLos**2)
-             
+
           case('cube10')
+             ! 20x20x20 cube centered around X=Y=Z=10
              Value = product( 0.5 + sign(0.5, 10.0 - abs(XyzLos_D-10.0)) )
 
           case default
@@ -748,8 +938,13 @@ contains
                 end if
              end if
              ! Interpolate value
-             Value = trilinear(PlotVar_GV(:,:,:,iVar), &
-                  -1, nI+2, -1, nJ+2, -1, nK+2, CoordNorm_D)
+             if(IsRzGeometry)then
+                Value = bilinear(PlotVar_GV(:,:,1,iVar), &
+                     -1, nI+2, -1, nJ+2, CoordNorm_D(1:2))
+             else
+                Value = trilinear(PlotVar_GV(:,:,:,iVar), &
+                     -1, nI+2, -1, nJ+2, -1, nK+2, CoordNorm_D)
+             end if
           end select
 
           ImagePe_VII(iVar,iPix,jPix) = ImagePe_VII(iVar,iPix,jPix) + Value*Ds
