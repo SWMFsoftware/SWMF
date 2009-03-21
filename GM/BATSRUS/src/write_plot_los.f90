@@ -519,7 +519,11 @@ contains
     real :: Intersect_D(3), Intersect2_D(3), Intersect_DI(3,MaxIntersect)
     ! distances of intersections from the center of the pixel
     real :: DistIntersect, DistIntersect_I(MaxIntersect) 
+
+    logical, parameter :: DoTestPix = .false.
     !------------------------------------------------------------------------
+    
+    !!! DoTestPix = iPix == 26 .and. jPix == 26
 
     ! Calculate the closest approach to the origin in the Y-Z plane
     ! Normalize the Y-Z components of the LOS vector to unity
@@ -590,29 +594,33 @@ contains
        iSort_I(1:2) = (/1,2/)
     end if
 
+    if(DoTestPix)then
+       write(*,*)'iBLK, x_S, r2_S, nIntersect = ',iBLK, x_S, r2_S, nIntersect
+       do iIntersect=1,nIntersect
+          write(*,*)'Intersect_D, r2, d=',Intersect_DI(:,iIntersect), &
+               sum(Intersect_DI(2:3,iIntersect)**2), DistIntersect_I(iIntersect)
+       end do
+       write(*,*)'iSort_I=',iSort_I(1:nIntersect)
+    end if
+
     ! Loop through segments connecting the consecutive intersection points
     do iIntersect = 1, nIntersect-1
        Intersect_D  = Intersect_DI(:,iSort_I(iIntersect))
        Intersect2_D = Intersect_DI(:,iSort_I(iIntersect+1))
 
        ! check if the radius of the midpoint is inside the block, if not return
-       r2 = sum((0.5*(Intersect_D(2:3)+Intersect2_D(2:3)))**2)
-       if(r2 < r2_S(1) .or. r2 > r2_S(2)) RETURN
+       r2 = sum((0.5*(Intersect_D(2:3) + Intersect2_D(2:3)))**2)
+
+       if(DoTestPix)then
+          write(*,*)'Intersect_D  =',Intersect_D
+          write(*,*)'Intersect2_D =',Intersect2_D
+          write(*,*)'!!! midpoint r2=',r2, r2 < r2_S(1) .or. r2 > r2_S(2)
+       end if
+
+       if(r2 < r2_S(1) .or. r2 > r2_S(2)) CYCLE
 
        call integrate_segment(Intersect_D, Intersect2_D)
     end do
-
-     !  write(*,*)'x_S=',x_S
-     !  write(*,*)'r_S=',r_S
-     !  write(*,*)'XyzPix_D=',XyzPix_D
-     !  write(*,*)'LosPix_D=',LosPix_D
-     !  do iIntersect = 1, nIntersect
-     !     iSort = iSort_I(iIntersect)
-     !     write(*,*)'Intersect_D, r, dist=',Intersect_DI(:,iSort), &
-     !          sqrt(sum(Intersect_DI(2:3,iSort)**2)), &
-     !          DistIntersect_I(iSort)
-     !  end do
-     !  call stop_mpi("DEBUG")
 
   end subroutine integrate_los_block_rz
   !===========================================================================
