@@ -190,6 +190,16 @@ contains
        Source_VC(iRhoUzIon_I,i,j,k) = Source_VC(iRhoUzIon_I,i,j,k) &
             - NumDens_I*InvNumDens*GradZPe
 
+       ! Update energy for ion fluids
+       Source_VC(nVar+IonFirst_:nVar+IonLast_,i,j,k) = &
+            Source_VC(nVar+IonFirst_:nVar+IonLast_,i,j,k) &
+            - NumDens_I*InvNumDens*        &
+            ( State_VGB(iRhoUxIon_I,i,j,k,iBlock)*GradXPe &
+            + State_VGB(iRhoUyIon_I,i,j,k,iBlock)*GradYPe &
+            + State_VGB(iRhoUzIon_I,i,j,k,iBlock)*GradZPe &
+            ) / State_VGB(iRhoIon_I,i,j,k,iBlock)
+
+
      end do; end do; end do
 
   end subroutine multi_ion_source_expl
