@@ -11,7 +11,6 @@ module ModMPCells
        VSendI, VRecvI, VSendIlocal, VRecvIlocal
 
   real,    dimension(:),   allocatable, save :: VSend, VRecv
-  real,    dimension(:,:), allocatable, save :: VSend8, VRecv8
 
   integer :: iLastGrid = -1, iLastDecomposition = -1
   integer :: itag, lS(0:7), lR(0:7), nSends
@@ -249,7 +248,6 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
   use ModMain, ONLY : nI,nJ,nK, nBLK, iNewGrid, iNewDecomposition
   use ModMPCells
   use ModMpi
-  use ModVarIndexes,ONLY:nVarBuff=>nVar
   implicit none
 
   !Subroutine arguements
@@ -263,7 +261,8 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
   integer :: nSENDrequests, SENDrequests(maxMessages)
   integer :: nRECVrequests, RECVrequests(maxMessages)
   integer :: MESGstatus(MPI_STATUS_SIZE, maxMessages)
-
+  
+  integer :: iBuffStart,iBuffLast, nVar1
   !------------------------------------------
 
   ! If sending corners and you want to limit the amount of memory needed,
@@ -275,6 +274,8 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
      end do
      return
   end if
+
+  nVar1 = nVar - 1
 
   ! Check that indices are up to date and expected values of DoOneLayer,DoFacesOnly used
   if(iNewGrid/=iLastGrid .or. iNewDecomposition/=iLastDecomposition &
@@ -323,9 +324,15 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
      do iV=nSendStart(iPE)+1,nSendStart(iPE)+nSend(iPE)
         lS(:)=VSendI(:,iV)
         if(lS(0)==0 .or. lS(0)==1)then
-           VSend8(1:nVar,iV) =  State_VGB(:,lS(1),lS(3),lS(5),lS(7))
+
+           iBuffLast = iV * nVar; iBuffStart = iBuffLast - nVar1  
+
+           VSend(iBuffStart:iBuffLast) =  State_VGB(:,lS(1),lS(3),lS(5),lS(7))
         elseif(lS(0)==3)then
-           VSend8(1:nVar,iV) = Inv12*(9.0* &
+
+           iBuffLast = iV*nVar; iBuffStart = iBuffLast - nVar1 
+
+           VSend(iBuffStart:iBuffLast) = Inv12*(9.0* &
                 State_VGB(:,lS(1),lS(3),lS(5),lS(7))+ &
                 State_VGB(:,lS(2),lS(3),lS(5),lS(7))+ &
                 State_VGB(:,lS(1),lS(4),lS(5),lS(7))+ &
@@ -333,8 +340,9 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
         else
            if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
            Counter=1.0/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
+           iBuffStart = (iV-1) * nVar
            do iVar=1,nVar
-              VSend8(iVar,iV) = Counter*sum(&
+              VSend(iVar + iBuffStart) = Counter*sum(&
                    State_VGB(iVar,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
            end do
         end if
@@ -352,15 +360,18 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
            itag = nProc*(i-1)+iPE
            nRECVrequests = nRECVrequests + 1
            if(nRECVrequests>maxMessages) call stop_mpi("Too many RECVs in mp_SendValues")
-           call MPI_irecv(VRecv8(1,nRecvStart(iPE)+1+((i-1)*MessageSize)), &
-                nVarBuff * min(MessageSize,nRecv(iPE)-((i-1)*MessageSize)), &
+
+           call MPI_irecv(VRecv(&
+                (nRecvStart(iPE) + (i-1)*MessageSize) * nVar +1), &
+                nVar * min(MessageSize,nRecv(iPE)-((i-1)*MessageSize)), &
                 MPI_REAL,iPE,itag,iComm,RECVrequests(nRECVrequests),iError)
         end do
      else
         itag = iPE
         nRECVrequests = nRECVrequests + 1
         if(nRECVrequests>maxMessages) call stop_mpi("Too many RECVs in mp_SendValues")
-        call MPI_irecv(VRecv8(1,nRecvStart(iPE)+1),nVarBuff * nRecv(iPE), &
+        call MPI_irecv(VRecv(&
+             nRecvStart(iPE) * nVar + 1),nVar * nRecv(iPE), &
              MPI_REAL,iPE,itag,iComm,RECVrequests(nRECVrequests),iError)
      end if
   end do
@@ -380,26 +391,28 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
         do i=1,nSends
            itag = nProc*(i-1)+iProc
            if(DoRSend)then
-              call MPI_rsend(VSend8(1,nSendStart(iPE)+1+((i-1)*MessageSize)), &
-                   nVarBuff * min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
+              call MPI_rsend(VSend(&
+                   (nSendStart(iPE) + (i-1)*MessageSize) * nVar +1), &
+                   nVar * min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
                    MPI_REAL,iPE,itag,iComm,iError)
            else
               nSENDrequests = nSENDrequests + 1
-              call MPI_isend(VSend8(1,nSendStart(iPE)+1+((i-1)*MessageSize)), &
-                   nVarBuff * min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
+              call MPI_isend(VSend(&
+                   (nSendStart(iPE) + (i-1)*MessageSize) * nVar +1), &
+                   nVar * min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
                    MPI_REAL,iPE,itag,iComm,SENDrequests(nSENDrequests),iError)
            end if
         end do
      else
         itag = iProc
         if(DoRSend)then
-           call MPI_rsend(VSend8(1,nSendStart(iPE)+1), &
-                nVarBuff * nSend(iPE), &
+           call MPI_rsend(VSend( nSendStart(iPE) * nVar + 1), &
+                nVar * nSend(iPE), &
                 MPI_REAL,iPE,itag,iComm,iError)
         else
            nSENDrequests = nSENDrequests + 1
-           call MPI_isend(VSend8(1,nSendStart(iPE)+1), &
-                nVarBuff * nSend(iPE), &
+           call MPI_isend(VSend( nSendStart(iPE) * nVar + 1), &
+                nVar * nSend(iPE), &
                 MPI_REAL,iPE,itag,iComm,SENDrequests(nSENDrequests),iError)
         end if
      end if
@@ -413,13 +426,16 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
      if(iPE==iProc) CYCLE
      if(nRecv(iPE)==0) CYCLE
      do iV=nRecvStart(iPE)+1,nRecvStart(iPE)+nRecv(iPE)
+
         lR(:)=VRecvI(:,iV)
+        iBuffLast = iV * nVar; iBuffStart = iBuffLast - nVar1
+
         if(lR(0)==2)then
            do k=lR(5),lR(6); do j=lR(3),lR(4); do i=lR(1),lR(2)
-              State_VGB(:,i,j,k,lR(7)) = VRecv8(1:nVar,iV)
+              State_VGB(:,i,j,k,lR(7)) = VRecv(iBuffStart:iBuffLast)
            end do; end do; end do
         else
-           State_VGB(:,lR(1),lR(3),lR(5),lR(7)) = VRecv8(1:nVar,iV)
+           State_VGB(:,lR(1),lR(3),lR(5),lR(7)) = VRecv(iBuffStart:iBuffLast)
         end if
      end do
   end do
@@ -430,6 +446,8 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
   end if
 
 end subroutine message_pass_cells8
+
+
 !==========================================================================
 subroutine message_pass_boundary_cells(UseMonotoneRestrict)
   !
@@ -778,28 +796,32 @@ contains
        allocate( VRecvIlocal(0:7,numCopy), stat=iError )
        call alloc_check(iError,"VRecvIlocal")
 
-       if(allocated(VSend )) deallocate(VSend )
-       allocate( VSend(numSend), stat=iError )
-       call alloc_check(iError,"VSend")
-
-       if(allocated(VRecv )) deallocate(VRecv )
-       allocate( VRecv(numRecv), stat=iError )
-       call alloc_check(iError,"VRecv")
-
+      
        ! If sending corners and you want to limit the amount of memory needed,
        !    then send values one at a time to limit memory use
        !    and don't allocate this memory.
        if(.not.(DoLimitCornerMemory .and. .not.DoFacesOnly)) then
-          if(allocated(VSend8)) deallocate(VSend8)
-          allocate( VSend8(nVar,numSend), stat=iError )
-          call alloc_check(iError,"VSend8")
+          if(allocated(VSend)) deallocate(VSend)
+          allocate( VSend(nVar*numSend), stat=iError )
+          call alloc_check(iError,"VSend")
 
-          if(allocated(VRecv8)) deallocate(VRecv8)
-          allocate( VRecv8(nVar,numRecv), stat=iError )
+          if(allocated(VRecv)) deallocate(VRecv)
+          allocate( VRecv(nVar*numRecv), stat=iError )
           call alloc_check(iError,"VRecv8")
 
           numSendMax8=numSend
           numRecvMax8=numRecv
+       else
+          if(allocated(VSend)) deallocate(VSend)
+          allocate( VSend(numSend), stat=iError )
+          call alloc_check(iError,"VSend")
+
+          if(allocated(VRecv)) deallocate(VRecv)
+          allocate( VRecv(numRecv), stat=iError )
+          call alloc_check(iError,"VRecv")
+
+          numSendMax8=numSend/nVar
+          numRecvMax8=numRecv/nVar
        end if
 
        ! Update new max values
@@ -819,27 +841,6 @@ contains
     VRecvIlocal=-99
     VSend=0
     VRecv=0
-
-    ! If sending corners and you want to limit the amount of memory needed,
-    !    then send values one at a time to limit memory use
-    !    and don't allocate this memory.
-    ! We need to check if allocated because "previous use" test above may not have
-    !    allocated the memory but may be enough for other message passing.
-    if(.not.(DoLimitCornerMemory .and. .not.DoFacesOnly)) then
-       if(.not.allocated(VSend8))then
-          allocate( VSend8(nVar,numSend), stat=iError )
-          call alloc_check(iError,"VSend8")
-          numSendMax8=numSend
-       end if
-       VSend8=0
-       if(.not.allocated(VRecv8))then
-          allocate( VRecv8(nVar,numRecv), stat=iError )
-          call alloc_check(iError,"VRecv8")
-          numRecvMax8=numRecv
-       end if
-       VRecv8=0
-    end if
-
   end subroutine mp_allocate_cell_arrays2
 
 end subroutine mp_cells_set_indices
@@ -1570,6 +1571,7 @@ subroutine testmessage_pass_cells
 !!$  stop
 
 end subroutine testmessage_pass_cells
+
 !==========================================================================
 !==========================================================================
 !==========================================================================
@@ -1630,5 +1632,4 @@ subroutine timemessage_pass_cells
   end do
 
 end subroutine timemessage_pass_cells
-
 !^CFG END DEBUGGING
