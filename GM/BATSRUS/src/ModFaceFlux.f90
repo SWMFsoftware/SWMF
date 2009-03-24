@@ -1502,12 +1502,15 @@ contains
       use ModAdvance, ONLY: Eradiation_
       use ModExactRS, ONLY: wR, wL, sample, pu_star, RhoL, RhoR, &
            pL, pR, UnL, UnR, UnStar
-      use ModPhysics, ONLY: inv_gm1
+      use ModPhysics, ONLY: inv_gm1,g
       use ModVarIndexes
       use ModImplicit, ONLY: UseFullImplicit   !^CFG IF IMPLICIT
 
       real::Rho, Un, P, StateStar_V(nVar)
       real::RhoSide,UnSide
+
+      !The radiation pressure: in the left state, right state and at the wall
+      real::pRadL=0.0,pRadR=0.0, pRadStar=0.0, pRadSide=0.0
       integer::iVar
       !-----------------------------------------------------------------------
       !Take scalars
@@ -1521,6 +1524,20 @@ contains
       UnL  = sum( StateLeft_V(Ux_:Uz_) *Normal_D )
       UnR  = sum( StateRight_V(Ux_:Uz_)*Normal_D )
 
+      if(UseGrayDiffusion)then
+         ! Increase maximum speed due to isotropic radiation pressure
+         ! To achieve this the pressure is increased by the value of the
+         ! radiation pressure
+         pRadL = StateLeft_V(ERadiation_)/3.0
+         pL    = pL + pRadL
+         pRadR = StateRight_V(ERadiation_)/3.0
+         pR    = pR + pRadR
+      else
+         !It is easier to add zero insteadf of using if(UseGrayDiffusion)
+         !multiple times
+         pRadL = 0.0; pRadR = 0.0
+      end if
+
       !Take the parameters at the Contact Discontinuity (CD)
       call pu_star
 
@@ -1530,16 +1547,28 @@ contains
          RhoSide     = RhoL
          UnSide      = UnL
          StateStar_V = StateLeft_V
+         pRadSide    = pRadL
       else
          ! The CD is to the left from the face
          ! The Right gas passes through the face
          RhoSide     = RhoR
          UnSide      = UnR
          StateStar_V = StateRight_V
+         pRadSide    = pRadR
       end if
 
       !Take the parameters at the face
       call sample(0.0, Rho, Un, P)
+
+      !In order the Riemann problem solution to be governed by the
+      !total pressure, the radiation pressure should behave 
+      !adiabatically, with the same polytropic index as thet for the gas
+
+      pRadStar             = pRadSide * (Rho/RhoSide)**g
+
+      !Since the total pressure is not less than the adiabatic one
+      !the difference below is definite positive
+      p                    = p - pRadStar
 
       StateStar_V(Rho_)    = Rho
       StateStar_V(Ux_:Uz_) = StateStar_V(Ux_:Uz_) + (Un-UnSide)*Normal_D
@@ -1547,6 +1576,7 @@ contains
       do iVar=ScalarFirst_, ScalarLast_
          StateStar_V(iVar) = StateStar_V(iVar)*(Rho/RhoSide)
       end do
+     
 
       !Calculate flux (1) take conservative variable
     
@@ -1570,18 +1600,16 @@ contains
 
       if(UseGrayDiffusion)then
          ! Diffusive radiation flux is added later for semi-implicit scheme
+         Flux_V(ERadiation_) = (3.0 * pRadStar  +StateStar_V(ERadiation_))*0.50* Un
          if(UseFullImplicit) Flux_V(Eradiation_) = &         !^CFG IF IMPLICIT
               Flux_V(Eradiation_) + sum(EradFlux_D*Normal_D) !^CFG IF IMPLICIT
 
          ! radiation pressure gradient
          Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) &
-              + StateStar_V(Eradiation_)/3.0*Normal_D
+              + pRadStar*Normal_D
          ! work by the radiation pressure gradient
-         Flux_V(Energy_) = Flux_V(Energy_) + Un*StateStar_V(Eradiation_)/3.0
+         Flux_V(Energy_) = Flux_V(Energy_) + Un*pRadStar
 
-         ! Increase maximum speed due to isotropic radiation pressure
-         ! Use linear proxi for c^2 = c_gas^2 + 4/3 * P_rad/Rho
-         CmaxDt = CmaxDt + (2.0/3.0)*sqrt(StateStar_V(Eradiation_)/Rho)
       end if
 
     end subroutine godunov_flux
