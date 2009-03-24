@@ -955,7 +955,7 @@ contains
 
     use ModMain,     ONLY: nI, nJ, nK, nBlock, UnusedBlk, x_, y_, z_, &
          east_, west_, south_, north_, bot_, top_
-    use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
+    use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_, nVar
     use ModCovariant,ONLY: UseCovariant                
     use ModGeometry, ONLY: TypeGeometry                
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK, dz_BLK
@@ -1021,7 +1021,7 @@ contains
 
        end do
 
-       call message_pass_cells_8state(.false., .false., .true.)
+       call message_pass_cells8(.false., .false., .true.,nVar,State_VGB)
 
        do iBlock = 1, nBlock
           if(UnusedBlk(iBlock)) CYCLE

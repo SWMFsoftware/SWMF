@@ -14,7 +14,7 @@ subroutine clean_divb
   use ModNumConst
   use ModDivbCleanup
   use ModMain,ONLY: iNewGrid, iNewDecomposition, nBlock, unusedblk
-  use ModAdvance,ONLY:State_VGB, Bx_, By_, Bz_, P_,tmp1_BLK,tmp2_BLK,&
+  use ModAdvance,ONLY: nVar,State_VGB, Bx_, By_, Bz_, P_,tmp1_BLK,tmp2_BLK,&
        Residual_GB=>tmp1_blk,Dir_GB=>tmp2_blk
   use ModAdvance,ONLY:tmp3_blk=>divB1_GB
   use ModGeometry,ONLY:vInv_CB,true_blk,&
@@ -69,7 +69,7 @@ subroutine clean_divb
   Iteration=1                                
 
   do 
-     call message_pass_cells_8state(.true.,.true.,.true.)    
+     call message_pass_cells8(.true.,.true.,.true.,nVar,State_VGB)    
      !Get the ghostcell values for MF 
      DivBInt=cZero;DivBTemp=cZero
      do iBlock=1,nBlock

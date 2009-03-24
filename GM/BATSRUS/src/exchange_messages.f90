@@ -61,7 +61,7 @@ subroutine exchange_messages
      !                              Don't send just one layer
      !                                      Don't send faces only
      !                                               Don't monotone restrict
-     call message_pass_cells_8state(.false.,.false.,.false.)
+     call message_pass_cells8(.false.,.false.,.false.,nVar, State_VGB)
      call message_pass_cells(.false.,.false.,.false.,DivB1_GB)
   elseif (optimize_message_pass=='all') then
      if(oktest)write(*,*)'calling message_pass with corners: me,type=',&
@@ -70,7 +70,7 @@ subroutine exchange_messages
      ! two ghost cell layers to fill in the corner cells at the sheared BCs.
      DoOneLayer = nOrder == 1 .and. ShockSlope == 0.0
 
-     call message_pass_cells_8state(DoOneLayer, .false., DoRestrictFace)
+     call message_pass_cells8(DoOneLayer, .false., DoRestrictFace,nVar, State_VGB)
      if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
   else
      if(oktest)write(*,*)'calling message_pass: me,type=',&
@@ -94,7 +94,7 @@ subroutine exchange_messages
         ! Pass one layer if possible
         DoOneLayer = nOrder == 1
 
-        call message_pass_cells_8state(DoOneLayer,DoFaces,DoRestrictFace)
+        call message_pass_cells8(DoOneLayer,DoFaces,DoRestrictFace,nVar, State_VGB)
         if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
      case default
         call stop_mpi('Unknown optimize_message_pass='//optimize_message_pass)
@@ -217,22 +217,22 @@ subroutine time_message_passing
   call testmessage_pass_cells
 
 !!!
-  call message_pass_cells_8state(DoOneLayer, .false., DoRestrictFace)
+  call message_pass_cells8(DoOneLayer, .false., DoRestrictFace,nVar, State_VGB)
 
   call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
   time_this=MPI_WTIME()
-  call message_pass_cells_8state(DoOneLayer, .false., DoRestrictFace)
+  call message_pass_cells8(DoOneLayer, .false., DoRestrictFace,nVar, State_VGB)
 
   call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
   if(iProc==0) &
        write(*,'(a,f8.5,a)')' 8state-DoOneLayer,F,T  took',MPI_WTIME()-time_this,' sec'
 
 !!!
-  call message_pass_cells_8state(DoOneLayer, .true., DoRestrictFace)
+  call message_pass_cells8(DoOneLayer, .true., DoRestrictFace,nVar, State_VGB)
 
   call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------  
   time_this=MPI_WTIME()  
-  call message_pass_cells_8state(DoOneLayer, .true., DoRestrictFace)
+  call message_pass_cells8(DoOneLayer, .true., DoRestrictFace,nVar, State_VGB)
 
   call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
   if(iProc==0) &

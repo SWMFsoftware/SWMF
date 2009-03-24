@@ -69,7 +69,6 @@ subroutine message_pass_cells(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,V)
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK, nBLK, iNewGrid, iNewDecomposition
   use ModMPCells
-  use ModNumConst
   use ModMpi
   implicit none
 
@@ -117,7 +116,7 @@ subroutine message_pass_cells(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,V)
              V(lS(1),lS(3),lS(6),lS(7)))
      else
         if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
-        Counter=cOne/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
+        Counter=1.0/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
         V(lR(1),lR(3),lR(5),lR(7)) = Counter*sum(V(lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
      end if
   end do
@@ -138,7 +137,7 @@ subroutine message_pass_cells(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,V)
                 V(lS(1),lS(3),lS(6),lS(7)))
         else
            if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
-           Counter=cOne/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
+           Counter=1.0/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
            VSend(iV) = Counter*sum(V(lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
         end if
      end do
@@ -249,7 +248,6 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK, nBLK, iNewGrid, iNewDecomposition
   use ModMPCells
-  use ModNumConst
   use ModMpi
   use ModVarIndexes,ONLY:nVarBuff=>nVar
   implicit none
@@ -310,7 +308,7 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
              State_VGB(:,lS(1),lS(3),lS(6),lS(7)))
      else
         if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
-        Counter=cOne/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
+        Counter=1.0/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
         do iVar=1,nVar
            State_VGB(iVar,lR(1),lR(3),lR(5),lR(7)) =  Counter*sum(&
                State_VGB(iVar,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
@@ -334,7 +332,7 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
                 State_VGB(:,lS(1),lS(3),lS(6),lS(7)))
         else
            if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
-           Counter=cOne/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
+           Counter=1.0/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
            do iVar=1,nVar
               VSend8(iVar,iV) = Counter*sum(&
                    State_VGB(iVar,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
@@ -432,205 +430,6 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
   end if
 
 end subroutine message_pass_cells8
-
-!==========================================================================
-!==========================================================================
-!==========================================================================
-subroutine message_pass_cells_8state(DoOneLayer,DoFacesOnly,UseMonotoneRestrict)
-  !
-  ! This routine will complete a messagepass of state variables
-  !   rho, rhoUx, rhoUy, rhoUz, Bx, By, Bz, and p.
-  !   It will fill in all ghost cell values where a neighbor in that
-  !   direction exists.  This includes refinement level changes and
-  !   fills face values and optionally edge and corner values.
-  !
-  ! NOTE: restriction is the average of 8 finer values, prolongation gives
-  !       all 8 new values the same value as coarser cell.
-  !
-  use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK, nBLK, iNewGrid, iNewDecomposition
-  use ModAdvance, ONLY : State_VGB,nVar
-  use ModMPCells
-  use ModNumConst
-  use ModMpi
-  implicit none
-
-  !Subroutine arguements
-  logical, intent(in) :: DoOneLayer,DoFacesOnly, UseMonotoneRestrict
-
-  !Local variables
-  real :: Counter
-  integer :: iVar,i,j,k, iV,iBLK,iPE, iError
-  integer :: nSENDrequests, SENDrequests(maxMessages)
-  integer :: nRECVrequests, RECVrequests(maxMessages)
-  integer :: MESGstatus(MPI_STATUS_SIZE, maxMessages)
-
-  !------------------------------------------
-
-  ! If sending corners and you want to limit the amount of memory needed,
-  !    then send values one at a time to limit memory use
-  if(DoLimitCornerMemory .and. .not.DoFacesOnly) then
-     do iVar=1,nVar
-        call message_pass_cells(&
-             DoOneLayer,DoFacesOnly,UseMonotoneRestrict,State_VGB(iVar,:,:,:,:))
-     end do
-     return
-  end if
-
-  ! Check that indices are up to date and expected values of DoOneLayer,DoFacesOnly used
-  if(iNewGrid/=iLastGrid .or. iNewDecomposition/=iLastDecomposition &
-       .or. (DoOneLayer .neqv. DoOneLayerLast) &
-       .or. (DoFacesOnly .neqv. DoFacesOnlyLast)) &
-       call mp_cells_set_indices(DoOneLayer,DoFacesOnly)
-
-  ! When neighbor is on the same processor, Collect/Send/Assign are all
-  !    done in one step, without intermediate memory use.
-  iPE=iProc
-  do iV=1,nSend(iPE)
-     lS(:)=VSendIlocal(:,iV)
-     lR(:)=VRecvIlocal(:,iV)
-     if(lS(0)==0)then
-        do k=0,lR(6)-lR(5); do j=0,lR(4)-lR(3); do i=0,lR(2)-lR(1)
-           State_VGB(     :,lR(1)+i,lR(3)+j,lR(5)+k,lR(7)) = &
-                State_VGB(:,lS(1)+i,lS(3)+j,lS(5)+k,lS(7))
-        end do; end do; end do
-     elseif(lS(0)==1)then
-        State_VGB(     :,lR(1),lR(3),lR(5),lR(7)) = &
-             State_VGB(:,lS(1),lS(3),lS(5),lS(7))
-     elseif(lS(0)==2)then
-        do k=lR(5),lR(6); do j=lR(3),lR(4); do i=lR(1),lR(2)
-           State_VGB(:,i,j,k,lR(7)) = State_VGB(:,lS(1),lS(3),lS(5),lS(7))
-        end do; end do; end do
-     elseif(lS(0)==3)then
-        State_VGB(:,lR(1),lR(3),lR(5),lR(7)) = Inv12*(9.0* &
-             State_VGB(:,lS(1),lS(3),lS(5),lS(7))+ &
-             State_VGB(:,lS(2),lS(3),lS(5),lS(7))+ &
-             State_VGB(:,lS(1),lS(4),lS(5),lS(7))+ &
-             State_VGB(:,lS(1),lS(3),lS(6),lS(7)))
-     else
-        if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
-        Counter=cOne/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
-        do iVar=1,nVar
-           State_VGB(iVar,lR(1),lR(3),lR(5),lR(7)) = Counter*sum( &
-                State_VGB(iVar,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
-        end do
-     end if
-  end do
-
-  ! Collect values into VSend that need to be passed to other processors
-  do iPE=0,nProc-1
-     if(iPE==iProc) CYCLE
-     if(nSend(iPE)==0) CYCLE
-     do iV=nSendStart(iPE)+1,nSendStart(iPE)+nSend(iPE)
-        lS(:)=VSendI(:,iV)
-        if(lS(0)==0 .or. lS(0)==1)then
-           VSend8(:,iV) = State_VGB(1:nVar,lS(1),lS(3),lS(5),lS(7))
-        elseif(lS(0)==3)then
-           VSend8(1:nVar,iV) = Inv12*(9.0* &
-                State_VGB(:,lS(1),lS(3),lS(5),lS(7))+ &
-                State_VGB(:,lS(2),lS(3),lS(5),lS(7))+ &
-                State_VGB(:,lS(1),lS(4),lS(5),lS(7))+ &
-                State_VGB(:,lS(1),lS(3),lS(6),lS(7)))
-        else
-           if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
-           Counter=cOne/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
-           do iVar=1,nVar
-              VSend8(iVar,iV) = Counter*sum( &
-                   State_VGB(iVar,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
-           end do
-        end if
-     end do
-  end do
-
-  ! Post receives first so that they are ready
-  nRECVrequests = 0  
-  do iPE=0,nProc-1
-     if(iPE == iProc) CYCLE
-     if(nRecv(iPE)==0) CYCLE
-     if(DoBreakUpMessages)then
-        nSends=1+((nRecv(iPE)-1)/MessageSize)
-        do i=1,nSends
-           itag = nProc*(i-1)+iPE
-           nRECVrequests = nRECVrequests + 1
-           if(nRECVrequests>maxMessages) call stop_mpi("Too many RECVs in mp_SendValues")
-           call MPI_irecv(VRecv8(1,nRecvStart(iPE)+1+((i-1)*MessageSize)),&
-                nVar*min(MessageSize,nRecv(iPE)-((i-1)*MessageSize)), &
-                MPI_REAL,iPE,itag,iComm,RECVrequests(nRECVrequests),iError)
-        end do
-     else
-        itag = iPE
-        nRECVrequests = nRECVrequests + 1
-        if(nRECVrequests>maxMessages) call stop_mpi("Too many RECVs in mp_SendValues")
-        call MPI_irecv(VRecv8(1,nRecvStart(iPE)+1),nVar*nRecv(iPE), &
-             MPI_REAL,iPE,itag,iComm,RECVrequests(nRECVrequests),iError)
-     end if
-  end do
-
-  ! Make sure all recv's are posted before using an rsend
-  if(DoRSend)then
-     call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
-  end if
-
-  ! VSend array sent to VRecv array on other PEs
-  nSENDrequests = 0
-  do iPE=0,nProc-1
-     if(iPE == iProc) CYCLE
-     if(nSend(iPE)==0) CYCLE
-     if(DoBreakUpMessages)then
-        nSends=1+((nSend(iPE)-1)/MessageSize)
-        do i=1,nSends
-           itag = nProc*(i-1)+iProc
-           if(DoRSend)then
-              call MPI_rsend(VSend8(1,nSendStart(iPE)+1+((i-1)*MessageSize)),&
-                   nVar*min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
-                   MPI_REAL,iPE,itag,iComm,iError)
-           else
-              nSENDrequests = nSENDrequests + 1
-              call MPI_isend(VSend8(1,nSendStart(iPE)+1+((i-1)*MessageSize)),&
-                   nVar*min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
-                   MPI_REAL,iPE,itag,iComm,SENDrequests(nSENDrequests),iError)
-           end if
-        end do
-     else
-        itag = iProc
-        nSENDrequests = nSENDrequests + 1
-        if(DoRSend)then
-           call MPI_rsend(VSend8(1,nSendStart(iPE)+1),&
-                nVar*nSend(iPE), &
-                MPI_REAL,iPE,itag,iComm,iError)
-        else
-           call MPI_isend(VSend8(1,nSendStart(iPE)+1),&
-                nVar*nSend(iPE), &
-                MPI_REAL,iPE,itag,iComm,SENDrequests(nSENDrequests),iError)
-        end if
-     end if
-  end do
-
-  ! Wait for messages to be received before continuing.
-  call MPI_waitall(nRECVrequests, RECVrequests(1), MESGstatus(1,1), iError)
-
-  ! This loop copies the values from VRecv to their destination
-  do iPE=0,nProc-1
-     if(iPE==iProc) CYCLE
-     if(nRecv(iPE)==0) CYCLE
-     do iV=nRecvStart(iPE)+1,nRecvStart(iPE)+nRecv(iPE)
-        lR(:)=VRecvI(:,iV)
-        if(lR(0)==2)then
-           do k=lR(5),lR(6); do j=lR(3),lR(4); do i=lR(1),lR(2)
-              State_VGB(1:nVar,i,j,k,lR(7)) = VRecv8(:,iV)
-           end do; end do; end do
-        else
-           State_VGB(1:nVar,lR(1),lR(3),lR(5),lR(7)) = VRecv8(:,iV)
-        end if
-     end do
-  end do
-
-  ! Wait for sent messages to be received before exiting
-  if(.not.DoRSend)then
-     call MPI_waitall(nSENDrequests, SENDrequests(1), MESGstatus(1,1), iError)
-  end if
-
-end subroutine message_pass_cells_8state
 !==========================================================================
 subroutine message_pass_boundary_cells(UseMonotoneRestrict)
   !
@@ -1771,7 +1570,6 @@ subroutine testmessage_pass_cells
 !!$  stop
 
 end subroutine testmessage_pass_cells
-
 !==========================================================================
 !==========================================================================
 !==========================================================================
@@ -1779,6 +1577,7 @@ subroutine timemessage_pass_cells
   use ModProcMH
   use ModMPCells, ONLY : MessageSize
   use ModMpi
+  use ModAdvance, ONLY: nVar, State_VGB
   implicit none
 
   integer :: i,j, iError
@@ -1787,13 +1586,13 @@ subroutine timemessage_pass_cells
 
   !---------------------------------------------------------------------------
 
-  call message_pass_cells_8state(.false.,.true.,.true.)
+  call message_pass_cells8(.false.,.true.,.true.,nVar, State_VGB)
 
   timeSUM=0.
   do j=1,10
      call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------  
      time_this=MPI_WTIME()  
-     call message_pass_cells_8state(.false.,.true.,.true.)
+     call message_pass_cells8(.false.,.true.,.true.,nVar, State_VGB)
      call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
      timeSUM=timeSUM+(MPI_WTIME()-time_this)
   end do
@@ -1805,7 +1604,7 @@ subroutine timemessage_pass_cells
   do j=1,10
      call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------  
      time_this=MPI_WTIME()  
-     call message_pass_cells_8state(.false.,.true.,.true.)
+     call message_pass_cells8(.false.,.true.,.true.,nVar, State_VGB)
      call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
      timeSUM=timeSUM+(MPI_WTIME()-time_this)
   end do
@@ -1821,7 +1620,7 @@ subroutine timemessage_pass_cells
      do j=1,10
         call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------  
         time_this=MPI_WTIME()  
-        call message_pass_cells_8state(.false.,.true.,.true.)
+        call message_pass_cells8(.false.,.true.,.true.,nVar, State_VGB)
         call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
         timeSUM=timeSUM+(MPI_WTIME()-time_this)
      end do
@@ -1831,4 +1630,5 @@ subroutine timemessage_pass_cells
   end do
 
 end subroutine timemessage_pass_cells
+
 !^CFG END DEBUGGING
