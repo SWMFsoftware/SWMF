@@ -53,8 +53,8 @@ contains
 
   !=========================================================================
 
-  subroutine save_plot_file(NameFile, TypeFileIn, &
-       StringHeaderIn, nStepIn, TimeIn, &
+  subroutine save_plot_file(NameFile, TypePositionIn, &
+       TypeFileIn, StringHeaderIn, nStepIn, TimeIn, &
        ParamIn_I, NameVarIn, &
        IsCartesianIn, &
        nDimIn,&
@@ -65,6 +65,7 @@ contains
        VarIn_IV, VarIn_IIV, VarIn_IIIV)
 
     character(len=*),           intent(in):: NameFile       ! Name of plot file
+    character(len=*), optional, intent(in):: TypePositionIn ! asis/rewind/append
     character(len=*), optional, intent(in):: TypeFileIn     ! ascii/real8/real4
     character(len=*), optional, intent(in):: StringHeaderIn ! header line
     integer,          optional, intent(in):: nStepIn        ! number of steps
@@ -88,6 +89,8 @@ contains
     real,             optional, intent(in):: VarIn_IIV(:,:,:)            ! 2D
     real,             optional, intent(in):: VarIn_IIIV(:,:,:,:)         ! 3D
 
+    character(len=10)  :: TypePosition
+    character(len=10)  :: TypeStatus
     character(len=20)  :: TypeFile
     character(len=500) :: StringHeader
     character(len=500) :: NameVar
@@ -101,6 +104,13 @@ contains
 
     character(len=*), parameter:: NameSub = 'save_plot_file'
     !---------------------------------------------------------------------
+
+    ! either write a new file (remove old one if any)
+    ! or append to an existing file
+    TypePosition = 'rewind'
+    if(present(TypePositionIn))TypePosition = TypePositionIn
+    TypeStatus = 'replace'
+    if(TypePosition == 'append')TypeStatus = 'unknown'
 
     TypeFile = 'ascii'
     if(present(TypeFileIn)) TypeFile = TypeFileIn
@@ -242,7 +252,8 @@ contains
 
     select case(TypeFile)
     case('formatted', 'ascii')
-       open(UnitTmp_, file=NameFile, iostat=iError)
+       open(UnitTmp_, file=NameFile, &
+            position = TypePosition, status=TypeStatus, iostat=iError)
        if(iError /= 0)call CON_stop(NameSub // &
             ' could not open ascii file=' // trim(NameFile))
 
@@ -260,7 +271,8 @@ contains
        end do; end do; end do
 
     case('real8')
-       open(UnitTmp_, file=NameFile, form='unformatted', iostat=iError)
+       open(UnitTmp_, file=NameFile, form='unformatted', &
+            position = TypePosition, status=TypeStatus, iostat=iError)
        if(iError /= 0)call CON_stop(NameSub // &
             ' could not open real8 file=' // trim(NameFile))
        write(UnitTmp_) StringHeader
@@ -275,7 +287,8 @@ contains
           write(UnitTmp_) Var_IV(:,iVar)
        end do
     case('real4')
-       open(UnitTmp_, file=NameFile, form='unformatted', iostat=iError)
+       open(UnitTmp_, file=NameFile, form='unformatted', &
+            position = TypePosition, status=TypeStatus, iostat=iError)
        if(iError /= 0)call CON_stop(NameSub // &
             ' could not open real4 file=' // trim(NameFile))
        write(UnitTmp_) StringHeader
@@ -301,8 +314,8 @@ contains
 
   !=========================================================================
 
-  subroutine read_plot_file(NameFile, TypeFileIn, &
-       StringHeaderOut, &
+  subroutine read_plot_file(NameFile, iUnitIn, &
+       TypeFileIn, StringHeaderOut, &
        nStepOut, TimeOut, nDimOut, nParamOut, nVarOut, &
        IsCartesianOut, &
        n1Out, n2Out, n3Out, nOut_D, &
@@ -312,7 +325,8 @@ contains
        CoordOut_I, CoordOut_DII, CoordOut_DIII, &
        VarOut_VI, VarOut_VII, VarOut_VIII)
 
-    character(len=*),            intent(in) :: NameFile
+    character(len=*),           intent(in) :: NameFile
+    integer,          optional, intent(in) :: iUnitIn
     character(len=*), optional, intent(in) :: TypeFileIn
     character(len=*), optional, intent(out):: StringHeaderOut
     character(len=*), optional, intent(out):: NameVarOut
@@ -337,7 +351,9 @@ contains
     real,             optional, intent(out):: VarOut_VII(:,:,:)
     real,             optional, intent(out):: VarOut_VIII(:,:,:,:)
 
+    integer            :: iUnit
     character(len=20)  :: TypeFile
+    logical            :: DoReadHeader = .true.
     character(len=500) :: StringHeader
     character(len=500) :: NameVar
     integer            :: nStep, nDim, nParam, nVar, n1, n2, n3, n_D(MaxDim)
@@ -349,61 +365,27 @@ contains
 
     integer :: i, j, k, iDim, iVar, n, iError
 
+    ! Remember these values after reading header
+    save :: nDim, nVar, n1, n2, n3, TypeFile, iUnit
+
     character(len=*), parameter:: NameSub = 'read_plot_file'
     !---------------------------------------------------------------------
-
+    iUnit = UnitTmp_
+    if(present(iUnitIn)) iUnit = iUnitIn
+    
     TypeFile = 'ascii'
     if(present(TypeFileIn)) TypeFile = TypeFileIn
+    
+    if(DoReadHeader) call read_header
+    DoReadHeader = .false.
 
-    n_D = 1
-    select case(TypeFile)
-    case('ascii', 'formatted')
-       open(UnitTmp_, file=NameFile, status='old', iostat=iError)
-       if(iError /= 0) call CON_stop(NameSub // &
-            ' could not open ascii file=' // trim(NameFile))
+    ! No data is read. Leave file open !
+    if(.not. (present(VarOut_VI) .or. present(VarOut_VII) &
+         .or. present(VarOut_VIII))) RETURN
+    
+    ! If data is read, next header needs to be read
+    DoReadHeader = .true.
 
-       read(UnitTmp_, '(a)') StringHeader
-       read(UnitTmp_, *) nStep, Time, nDim, nParam, nVar
-       read(UnitTmp_, *) n_D(1:abs(nDim))
-       allocate(Param_I(nParam))
-       read(UnitTmp_, *) Param_I
-       read(UnitTmp_, '(a)') NameVar
-
-    case('real8')
-       open(UnitTmp_, file=NameFile, status='old', form='unformatted', &
-            iostat=iError)
-       if(iError /= 0) call CON_stop(NameSub // &
-            ' could not open ascii file=' // trim(NameFile))
-
-       read(UnitTmp_) StringHeader
-       read(UnitTmp_) nStep, Time, nDim, nParam, nVar
-       read(UnitTmp_) n_D(1:abs(nDim))
-       allocate(Param_I(nParam))
-       read(UnitTmp_) Param_I
-       read(UnitTmp_) NameVar
-    case('real4')
-       open(UnitTmp_, file=NameFile, status='old', form='unformatted', &
-            iostat=iError)
-       if(iError /= 0) call CON_stop(NameSub // &
-            ' could not open ascii file=' // trim(NameFile))
-
-       read(UnitTmp_) StringHeader
-       read(UnitTmp_) nStep, Time4, nDim, nParam, nVar
-       Time = Time4
-       read(UnitTmp_) n_D(1:abs(nDim))
-       allocate(Param_I(nParam), Param4_I(nParam))
-       read(UnitTmp_) Param4_I
-       Param_I = Param4_I
-       deallocate(Param4_I)
-       read(UnitTmp_) NameVar
-    case default
-       call CON_stop(NameSub // ' unknown TypeFile =' // trim(TypeFile))
-    end select
-
-    IsCartesian = nDim > 0
-    nDim = abs(nDim)
-    n1 = n_D(1); n2 = n_D(2); n3 = n_D(3) 
-   
     ! Read coordinates and variables into suitable 2D arrays
     allocate(Coord_ID(n1*n2*n3, nDim), Var_IV(n1*n2*n3, nVar))
     select case(TypeFile)
@@ -411,40 +393,28 @@ contains
        n = 0
        do k = 1, n3; do j = 1, n2; do i = 1, n1
           n = n + 1
-          read(UnitTmp_, *) Coord_ID(n, :), Var_IV(n, :)
+          read(iUnit, *) Coord_ID(n, :), Var_IV(n, :)
        end do; end do; end do
 
     case('real8')
-       read(UnitTmp_) Coord_ID
+       read(iUnit) Coord_ID
        do iVar = 1, nVar
-          read(UnitTmp_) Var_IV(:, iVar)
+          read(iUnit) Var_IV(:, iVar)
        end do
 
     case('real4')
        allocate(Coord4_ID(n1*n2*n3, nDim), Var4_IV(n1*n2*n3, nVar))
-       read(UnitTmp_) Coord4_ID
+       read(iUnit) Coord4_ID
        Coord_ID = Coord4_ID
        do iVar = 1, nVar
-          read(UnitTmp_) Var4_IV(:, iVar)
+          read(iUnit) Var4_IV(:, iVar)
        end do
        Var_IV = Var4_IV
        deallocate(Coord4_ID, Var4_IV)
     end select
-    close(UnitTmp_)
 
-    if(present(StringHeaderOut)) StringHeaderOut = trim(StringHeader)
-    if(present(NameVarOut))      NameVarOut      = trim(NameVar)
-    if(present(TimeOut))         TimeOut         = Time
-    if(present(nStepOut))        nStepOut        = nStep
-    if(present(nDimOut))         nDimOut         = nDim
-    if(present(nParamOut))       nParamOut       = nParam
-    if(present(nVarOut))         nVarOut         = nVar
-    if(present(n1Out))           n1Out           = n1
-    if(present(n2Out))           n2Out           = n2
-    if(present(n3Out))           n3Out           = n3
-    if(present(nOut_D))          nOut_D(1:nDim)  = n_D(1:nDim)
-    if(present(IsCartesianOut))  IsCartesianOut  = IsCartesian
-    if(present(ParamOut_I))      ParamOut_I(1:nParam) = Param_I
+    if(.not.present(iUnitIn)) close(iUnit) !if iUnitIn is passed, keep file connected
+
     if(present(CoordMinOut_D)) CoordMinOut_D(1:nDim) = minval(Coord_ID, DIM=1)
     if(present(CoordMaxOut_D)) CoordMaxOut_D(1:nDim) = maxval(Coord_ID, DIM=1)
 
@@ -477,7 +447,78 @@ contains
        end do; end do; end do
     end do
 
-    deallocate(Param_I, Coord_ID, Var_IV)
+    deallocate(Coord_ID, Var_IV)
+
+
+  contains
+
+    subroutine read_header
+
+      n_D = 1
+      select case(TypeFile)
+      case('ascii', 'formatted')
+         open(iUnit, file=NameFile, status='old', iostat=iError)
+         if(iError /= 0) call CON_stop(NameSub // &
+              ' could not open ascii file=' // trim(NameFile))
+
+         read(iUnit, '(a)') StringHeader        
+         read(iUnit, *) nStep, Time, nDim, nParam, nVar
+         read(iUnit, *) n_D(1:abs(nDim))
+         allocate(Param_I(nParam))
+         read(iUnit, *) Param_I
+         read(iUnit, '(a)') NameVar
+      case('real8')
+         open(iUnit, file=NameFile, status='old', form='unformatted', &
+              iostat=iError)
+         if(iError /= 0) call CON_stop(NameSub // &
+              ' could not open real8 file=' // trim(NameFile))
+
+         read(iUnit) StringHeader       
+         read(iUnit) nStep, Time, nDim, nParam, nVar
+         read(iUnit) n_D(1:abs(nDim))
+         allocate(Param_I(nParam))
+         read(iUnit) Param_I
+         read(iUnit) NameVar
+      case('real4')
+         open(iUnit, file=NameFile, status='old', form='unformatted', &
+              iostat=iError)
+         if(iError /= 0) call CON_stop(NameSub // &
+              ' could not open real4 file=' // trim(NameFile))
+
+         read(iUnit) StringHeader
+         read(iUnit) nStep, Time4, nDim, nParam, nVar
+         Time = Time4
+         read(iUnit) n_D(1:abs(nDim))
+         allocate(Param_I(nParam), Param4_I(nParam))
+         read(iUnit) Param4_I
+         Param_I = Param4_I
+         deallocate(Param4_I)
+         read(iUnit) NameVar
+      case default
+         call CON_stop(NameSub // ' unknown TypeFile =' // trim(TypeFile))
+      end select
+
+      IsCartesian = nDim > 0
+      nDim = abs(nDim)
+      n1 = n_D(1); n2 = n_D(2); n3 = n_D(3) 
+
+      if(present(StringHeaderOut)) StringHeaderOut = trim(StringHeader)
+      if(present(NameVarOut))      NameVarOut      = trim(NameVar)
+      if(present(TimeOut))         TimeOut         = Time
+      if(present(nStepOut))        nStepOut        = nStep
+      if(present(nDimOut))         nDimOut         = nDim
+      if(present(nParamOut))       nParamOut       = nParam
+      if(present(nVarOut))         nVarOut         = nVar
+      if(present(n1Out))           n1Out           = n1
+      if(present(n2Out))           n2Out           = n2
+      if(present(n3Out))           n3Out           = n3
+      if(present(nOut_D))          nOut_D(1:nDim)  = n_D(1:nDim)
+      if(present(IsCartesianOut))  IsCartesianOut  = IsCartesian
+      if(present(ParamOut_I))      ParamOut_I(1:nParam) = Param_I
+
+      deallocate(Param_I)
+
+    end subroutine read_header
 
   end subroutine read_plot_file
 
@@ -748,14 +789,13 @@ contains
            write(*,*)'maxval(CoordIn_DII(2)=',maxval(CoordIn_DII(2,:,:))
            call CON_stop(NameSub)
         end if
-      
-    end do
 
-    ! Test using defaults for 2D input array
+     end do
+
+ ! Test using defaults for 2D input array
     NameFile = 'test_plot_file13.out'       
     call save_plot_file(NameFile, VarIn_VII=VarIn_VII, CoordIn_DII=CoordIn_DII)
 
-    ! Read header info
     call read_plot_file(NameFile, &
          StringHeaderOut=StringHeaderOut, NameVarOut=NameVarOut, &         
          nDimOut=nDimOut, nVarOut=nVarOut, nParamOut=nParamOut, &
@@ -794,7 +834,7 @@ contains
        write(*,*) 'n1In, n2In=', n1In, n2In
        write(*,*) 'nOut_D    =',nOut_D
        call CON_stop(NameSub)
-    end if
+    end if    
     
 
     ! Now that we have the dimensions, we could allocate coordinate and
