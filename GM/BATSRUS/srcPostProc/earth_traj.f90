@@ -31,7 +31,7 @@ program earth_traj
   character(len=32) :: cDate
   character(len=32) :: cTimeLoop
   integer, dimension(7) :: iStartTime, iCT
-  integer :: i, j, k
+  integer :: i, j, k, iFile
   integer ::  ios, ic1, ic2
   integer iarg, errno, argc, oUnit
   R=cAU/Rsun
@@ -45,21 +45,33 @@ program earth_traj
   ! Parse the command line arguments
   !
   NameFile='EARTH_TRAJ.in'
-  open(10,file=NameFile,status='old')
+  iFile = 10
+  open(iFile,file=NameFile,status='old')
   READPARAM: do 
-     read(10,'(a)',end=9000,err=9000) NameCommand
+     read(iFile,'(a)',end=9000,err=9000) NameCommand
      if(index(NameCommand,'#').ne.1)NameCommand=''
      select case(NameCommand)
      case("#COOR")
-        read(10,*,end=9000,err=9000) CoordSys
-     case("#DATE")
-        do i = 1, 7
-           read(10,*,end=9000,err=9000) iStartTime(i)
+        read(iFile,*,end=9000,err=9000) CoordSys
+     case("#INCLUDE")
+        read(iFile,*,end=9000,err=9000) NameFile
+        iFile = iFile + 1
+        open(iFile,file=trim(NameFile),status='old')
+     case("#DATE","#STARTTIME")
+        do i = 1, 6
+           read(iFile,*,end=9000,err=9000) iStartTime(i)
         end do
+        read(iFile,*,end=9000,err=9000)R   !Auxiliary
+        iStartTime(7) = 0
      case("#TIMELOOP")
-        read(10,*,end=9000,err=9000) StartTimeRel, EndTimeRel, TimeStep
+        read(iFile,*,end=9000,err=9000) StartTimeRel, EndTimeRel, TimeStep
      case("#START","#END")
-        exit READPARAM
+        if(iFile>10) then
+           close(iFile)
+           iFile = iFile-1
+        else
+           exit READPARAM
+        end if
      case default
         if (len_trim(NameCommand) .ne. 0) then  ! i.e., just skip an empty line
            write(*,*) &
