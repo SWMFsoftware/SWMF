@@ -5,7 +5,8 @@ Module ModRbSat
   logical :: IsFirstWrite = .true.
   integer :: nRbSats = 0, iStartIter = 0
   real,               allocatable :: SatLoc_3I(:,:,:), SatFlux_II(:,:)
-  real,               allocatable :: BfieldEq2_C(:,:),SatVar_I(:)
+  real,               allocatable :: BfieldEq2_G(:,:),SatVar_I(:)
+  real,               allocatable :: LonGrid_G(:), Flux_G(:,:,:,:)
   character(len=100), allocatable :: NameSat_I(:)
   
 contains
@@ -44,14 +45,36 @@ contains
     character(len=8)  :: NameChannel
     !-------------------------------------------------------------------------
     
-    !Allocate array for satellite flux
+    ! Allocate array for satellite flux
     
     if(.not. allocated(SatFlux_II))  allocate(SatFlux_II(nEnergy,nAngle))
-    if(.not. allocated(BfieldEq2_C)) allocate(BfieldEq2_C(nLat,nLon))
+    if(.not. allocated(BfieldEq2_G)) allocate(BfieldEq2_G(nLat,0:nLon+1))
     if(.not. allocated(SatVar_I))    allocate(SatVar_I(2*nEnergy))
+
+    ! Allocate Lat, Lon and Flux grids with Ghost Cells
+    if(.not. allocated(LonGrid_G)) then
+       allocate(LonGrid_G(0:nLon+1))
+       LonGrid_G(1:nLon)=LonGrid_I(1:nLon)
+       LonGrid_G(nLon+1)=360.0
+       LonGrid_G(0)=LonGrid_I(nLon)-360.0
+    endif
     
-    !Set BfieldEq^2 on first sat call
-    if (iSatIn == 1) BfieldEq2_C = BfieldEq_C**2.0
+    if(.not. allocated(Flux_G)) allocate(Flux_G(nLat,0:nLon+1,nEnergy,nAngle))
+    if(iSatIn == 1) then
+       Flux_G(1:nLat,1:nLon,1:nEnergy,1:nAngle) = &
+            Flux_C(1:nLat,1:nLon,1:nEnergy,1:nAngle) 
+       Flux_G(1:nLat,nLon+1,1:nEnergy,1:nAngle) = &
+            Flux_C(1:nLat,1,1:nEnergy,1:nAngle) 
+       Flux_G(1:nLat,0,1:nEnergy,1:nAngle) = &
+            Flux_C(1:nLat,nLon,1:nEnergy,1:nAngle) 
+    endif
+
+    ! Set BfieldEq^2 on first sat call
+    if (iSatIn == 1) then 
+       BfieldEq2_G(:,1:nLon) = (BfieldEq_C(:,1:nLon))**2.0
+       BfieldEq2_G(:,nLon+1) =  BfieldEq2_G(:,1)
+       BfieldEq2_G(:,0)      =  BfieldEq2_G(:,nLon)
+    endif
 
     ! Build file name; 
     if (IsFirstWrite) iStartIter = int(t/tint)
@@ -69,12 +92,13 @@ contains
        open(unit=UnitTmp_, file=trim(NameSatFile), status='replace', iostat=iError)
        if(iError /= 0) call CON_stop &
             (NameSubSub//' Error opening file '//NameSatFile)
-       do iEnergy=1,nEnergy
-          write(NameChannel,"(a,i2.2,a,i2.2)") &
-               ' E',iEnergy,' A',iEnergy
-          HeadVar = trim(HeadVar) // NameChannel
-       enddo
-       
+       if (iSatIn == 1) then
+          do iEnergy=1,nEnergy
+             write(NameChannel,"(a,i2.2,a,i2.2)") &
+                  ' E',iEnergy,' A',iEnergy
+             HeadVar = trim(HeadVar) // NameChannel
+          enddo
+       endif
        ! Write header
        write(UnitTmp_, '(2a)')'RB results for SWMF trajectory file ', &
             trim(NameSat_I(iSatIn))
@@ -92,10 +116,9 @@ contains
     ! Get satellite location in generalized coordinates.
     ! and interpolate flux to satellite location
     write(*,*) 'RB:Lat Lon:', SatLoc_3I(1:2,2,iSatIn)
-    if (SatLoc_3I(3,2,iSatIn) == 3) then
-       SatLat=SatLoc_3I(1,2,iSatIn)*cDegToRad
-       SatLon=mod(SatLoc_3I(2,2,iSatIn)+180.0,360.0)
-
+    SatLat=SatLoc_3I(1,2,iSatIn)*cDegToRad
+    SatLon=mod(SatLoc_3I(2,2,iSatIn)+180.0,360.0)
+    if (SatLoc_3I(3,2,iSatIn) == 3 .and. SatLat <= maxval(LatGrid_I)) then
        !get generallized sat lat
        call locate1(LatGrid_I, nLat, SatLat, iSatLat)
        LatSatGen = iSatLat &
@@ -103,16 +126,16 @@ contains
             / (LatGrid_I(iSatLat+1)-LatGrid_I(iSatLat))
 
        !get generallized sat lon
-       call locate1(LonGrid_I, nLon, SatLon, iSatLon)
+       call locate1(LonGrid_G, nLon+2, SatLon, iSatLon)
        LonSatGen=SatLon/(360.0/nLon)+1
        iSatLon=floor(LonSatGen)
        LonSatGen = iSatLon &
-            + (LonGrid_I(iSatLon+1) - SatLon) &
-            / (LonGrid_I(iSatLon+1)-LonGrid_I(iSatLon))
+            + (LonGrid_G(iSatLon+1) - SatLon) &
+            / (LonGrid_G(iSatLon+1)-LonGrid_G(iSatLon))
 
        !get B^2 at sat
        SatB2 = SatLoc_3I(4,2,iSatIn)
-       RatioBeqBsat  = sqrt(bilinear(BfieldEq2_C,1,nLat,1,nLon,& 
+       RatioBeqBsat  = sqrt(bilinear(BfieldEq2_G,1,nLat,0,nLon+1,& 
             (/ LatSatGen, LonSatGen /) ) / SatB2)
        
        ! Beq must be minimum so ratio can not be larger than 1
@@ -135,16 +158,19 @@ contains
           endif
           do iEnergy=1,nEnergy
              SatFlux_II(iEnergy,iAngle) = &
-                  trilinear( Flux_C(:,:,iEnergy,:),1,nLat,1,nLon, &
+                  trilinear( Flux_G(:,:,iEnergy,:),1,nLat,0,nLon+1, &
                   1,nAngle,(/ LatSatGen, LonSatGen, AngSatGen/) )
           enddo
        enddo
     else
-       ! When satellite is on open field lines set flux to zero
+       ! When satellite is on open field lines or outside domain 
+       ! set flux to zero
        LatSatGen=-1.0
        LonSatGen=-1.0
        SatFlux_II(:,:) = 0.0
     endif
+    ! Deallocate Flux_G after last satellite to save memory
+    if(iSatIn == nRbSats) deallocate(Flux_G)
     
     ! Format output
     if (SatLoc_3I(3,2,iSatIn) == 3) then
