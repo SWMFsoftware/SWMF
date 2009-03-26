@@ -86,7 +86,7 @@
       print,         'headline                  =',strtrim(headline,2)
       print,FORMAT='("variables                 =",100(a," "),$)',variables
       print,FORMAT='(" (ndim=",i2,", nw=",i2,")")',ndim,nw
-      askstr,'physics (e.g. mhd12)      ',phys,doask
+      ;;; askstr,'physics (e.g. mhd12)      ',phys,doask
       physicss(ifile)=phys
       physics=physics + phys + ' '
    endfor

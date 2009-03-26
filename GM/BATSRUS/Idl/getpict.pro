@@ -89,7 +89,7 @@ for ifile=0,nfile-1 do begin
    print,FORMAT='("nx        = ",3(i8))',nx
    print,         'eqpar     =',eqpar
    print,         'variables =',variables
-   askstr,'physics (eg. mhd12)',phys,doask
+   ;;; askstr,'physics (eg. mhd12)',phys,doask
    physicss(ifile)=phys
    physics=physics + phys + ' '
 

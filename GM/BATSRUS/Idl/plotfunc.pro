@@ -47,7 +47,7 @@
       nfile=1
    endif
 
-   askstr,'physics (e.g. mhd12)      ',physics,doask
+   ;;;askstr,'physics (e.g. mhd12)      ',physics,doask
 
    physics=strtrim(physics,2)
 
