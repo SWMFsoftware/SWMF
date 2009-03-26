@@ -34,7 +34,7 @@ program earth_traj
   integer :: i, j, k, iFile
   integer ::  ios, ic1, ic2
   integer iarg, errno, argc, oUnit
-  R=cAU/Rsun
+ 
 
   !
   ! Command line argument processing
@@ -94,6 +94,7 @@ program earth_traj
   if (EndTimeRel > StartTimeRel + TimeStep*49999) &
        call CON_stop('+++ Output file cannot have more than 50000 lines +++')
 
+  R=cAU/Rsun
 
   oUnit=6
   write(oUnit,'(a)') '#COOR'
