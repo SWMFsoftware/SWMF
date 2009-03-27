@@ -5,9 +5,6 @@ T
 T			UsePointImplicit
 0.5			BetaPointImplicit
 
-UPDATECHECK
-F
-
 #PLANET
 NONE
 
@@ -23,22 +20,22 @@ F			UseNonConservative
 
 A single block 256x4x4 grid
 #CHECKGRIDSIZE
-256                             nI
-4                               nJ
-4                               nK
-1                               MinBlockALL
+64                              nI
+2                               nJ
+2                               nK
+4                               MinBlockALL
 
 Distance units are in km
 #GRID
-1
+4
 1
 1
 -128e3
  128e3
--2e3
- 2e3
--2e3
- 2e3
+-1e3
+ 1e3
+-1e3
+ 1e3
 
 ! 90 per cent H+ and 10 percent O+
 #SHOCKTUBE
@@ -49,17 +46,17 @@ Distance units are in km
 0.0		Bx
 0.0		By
 5.0		Bz
-0.01		pH
+0.01		p
 4.0		HpRho
 400.0		HpUx
 0.		HpUy
 0.		HpUz
-0.008		HpP
+0.0064		HpP
 1.0		OpRho
 400.0		OpUx
 0.		OpUy
 0.		OpUz
-0.002		OpP
+0.0016		OpP
 18.0		Rho (right state)
 100.0		Ux
 0.		Uy
@@ -72,18 +69,22 @@ Distance units are in km
 100.0		HpUx
 0.		HpUy
 0.		HpUz
-0.8		HpP
+0.64		HpP
 3.6		OpRho
 100.0		OpUx
 0.		OpUy
 0.		OpUz
-0.2		OpP
+0.16		OpP
 
 #PLASMA
 1.0		MassFluid H
 16.0		MassFluid O
 1.0		AverageIonization
-0.0		ElectronTemperatureRatio
+0.25		ElectronTemperatureRatio
+
+#MHDIONS
+F		DoAddRhoP
+F		DoAddRhoU
 
 Sheared boundary condition is used for non-zero shock slope
 #OUTERBOUNDARY
@@ -95,13 +96,13 @@ float			zMinBc
 float			zMaxBc
 
 #TIMESTEPPING
-1		nStage
+2		nStage
 0.8		CflExpl
 
 #SCHEME
-1		nOrder
+2		nOrder
 Rusanov		TypeFlux
-minmod		TypeLimiter
+mc		TypeLimiter
 1.5		LimiterBeta
 
 #SAVELOGFILE
@@ -117,18 +118,8 @@ F		DoSaverestart
 T		DoSaveInitial
 
 #SAVEPLOT
-2		nPlotfile
+1		nPlotfile
 cut MHD idl_ascii	PlotString
--1               DnSavePlot
-60.0             DtSavePlot
--128e3		xMinCut
-+128e3		xMaxCut
--0.1		yMinCut
-0.1		yMaxCut
--0.1		zMinCut
-0.1		zMaxCut
-0.0             DxSavePlot
-cut raw idl_ascii	PlotString
 -1               DnSavePlot
 60.0             DtSavePlot
 -128e3		xMinCut
@@ -142,4 +133,3 @@ cut raw idl_ascii	PlotString
 #STOP
 -1		MaxIteration
 600.0		tSimulationMax
-

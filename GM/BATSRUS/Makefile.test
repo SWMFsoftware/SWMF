@@ -170,7 +170,7 @@ test_mhdions:
 	make test_mhdions_check
 
 test_mhdions_compile:
-	./Config.pl -u=Default -e=MhdIons -g=256,4,4,10,1
+	./Config.pl -u=Default -e=MhdIons -g=64,2,2,40,1
 	make
 	make PIDL
 
