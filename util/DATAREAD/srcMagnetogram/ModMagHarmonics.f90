@@ -1,7 +1,12 @@
 module ModMagHarmonics
   use ModNumConst
   implicit none  
-    
+
+  !The logical is to be set. It is known that
+  !the grid is uniform with respect to sin(laditude) at WSO
+  !It looks like the grid is uniform for MDI
+  logical,parameter :: UseSinLatitudeGrid = .false.
+  
   ! Name of input file
   character (len=*), parameter:: NameFileIn='fitsfile.dat'
 
@@ -19,7 +24,7 @@ module ModMagHarmonics
   ! * SOLIS: ftp://solis.nso.edu/synoptic/level3/vsm/merged/carr-rot   *
   ! * MWO:   ftp://howard.astro.ucla.edu/pub/obs/synoptic_charts       *
   ! ********************************************************************
- 
+  
 
   real,allocatable,dimension(:,:)::g_nm,h_nm, Br_DD
   real::dR=1.0,dPhi=1.0,dTheta,dSinTheta=1.0
@@ -59,7 +64,11 @@ contains
   !=================================================================
   real function r_latitude(iTheta)
     integer,intent(in)::iTheta
-    r_latitude=asin(sin_latitude(iTheta))
+    if(UseSinLatitudeGrid)then
+       r_latitude=asin(sin_latitude(iTheta))
+    else
+       r_latitude = (iTheta + 0.50)*dTheta - cPi*0.50
+    end if
   end function r_latitude
   !=================================================================
   real function colatitude(iTheta)
@@ -68,12 +77,12 @@ contains
   end function colatitude
   !=================================================================
   subroutine read_raw_magnetogram
-
+    use ModPlotFile,ONLY: save_plot_file
     ! Read the raw magnetogram file into a 2d array
     
     integer :: iRM,jRM,iUnit,iError,nHarmonicsIn
     character (len=100) :: line
-    real, allocatable:: tempBr(:)
+    real, allocatable:: tempBr(:),Coord_DII(:,:,:),State_VII(:,:,:)
     !----------------------------------------------------------
     
     iUnit = 11
@@ -107,7 +116,7 @@ contains
     
     dPhi=cTwoPi/nPhi
     dTheta=cPi/nTheta
-    dSinTheta=2.0/(nTheta+1)
+    dSinTheta=2.0/nTheta
     
     ! Allocate the harmonic coefficients arrays
     allocate( &
@@ -126,6 +135,7 @@ contains
     
     tempBr = 0.0 
     Br_DD  = 0.0
+    allocate(Coord_DII(2,nPhi,nTheta),State_VII(1,nPhi,nTheta))
     
     iRM=0
     do
@@ -143,9 +153,15 @@ contains
           if (abs(tempBr(iRM*nPhi+jRM)) > 1900.0) &
                tempBr(iRM*nPhi+jRM)=1900.0*sign(1.,tempBr(iRM*nPhi+jRM))
           Br_DD(jRM,iRM) = tempBr(iRM*nPhi+jRM)
+          Coord_DII(1,jRM+1,iRM+1) = dPhi * cRadToDeg * jRM
+          Coord_DII(2,jRM+1,iRM+1) = r_latitude(iRM)*cRadToDeg
+          State_VII(1,jRM+1,iRM+1) = Br_DD(jRM,iRM)
        end do
     end do
-    
+    write(line,'(a,i4,a)')'CR',CarringtonRotation,'.out'
+    call save_plot_file(NameFile=trim(line),&
+         StringHeaderIn='Longitude[deg] Latitude[deg] Br[Gs]',&
+         NameVarIn='Longitude Latitude Br',nDimIn=2,CoordIn_DII=Coord_DII,VarIn_VII=State_VII)
     deallocate(tempBr)
   end subroutine read_raw_magnetogram
 
@@ -241,8 +257,12 @@ contains
        do iTheta=0,nTheta-1
 
           Theta=colatitude(iTheta) 
-          SinTheta=max(sin(Theta), 1E-9)
-          da=SinTheta*dTheta*dPhi
+          SinTheta=max(sin(Theta), 0.0)
+          if(UseSinLatitudeGrid)then
+             da = dSinTheta * dPhi
+          else
+             da=SinTheta*dTheta*dPhi
+          end if
           ! Calculate the set of Legandre polynoms (with Schmidt normalization), 
           ! for a given CosTheta,SinTheta
           ! For non-radial magnetogram (LOS), a division in SinTheta is needed.
