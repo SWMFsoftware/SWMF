@@ -166,14 +166,14 @@ contains
     use ModMain,    ONLY: nDim, nI, nJ, nK, x_, y_, z_, &
          UseB0, UseBoris => boris_correction
     use ModAdvance, ONLY: State_VGB, Source_VC, B0_DGB, &
-         bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
-    use ModPhysics, ONLY: InvClight2 => Inv_C2light
+         bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ, UseElectronPressure
+    use ModPhysics, ONLY: InvClight2 => Inv_C2light, ElectronTemperatureRatio
     use ModGeometry,ONLY: UseCovariant, dx_BLK, dy_BLK, dz_BLK, vInv_CB, &
          FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
     use ModCoordTransform, ONLY: cross_product
 
     integer, intent(in) :: iBlock
-    
+
     ! For multi-ion MHD the gradient of electron pressure appears in 
     ! all the individual ion momentum equations as -n_i/n_e * grad Pe
 
@@ -219,24 +219,29 @@ contains
        end if                                 !^CFG END BORISCORR
 
        ! Subtract electron pressure gradient force
-       if(UseCovariant)then
-          ! grad Pe = (1/Volume)*Integral P_e dAreaVector over cell surface
+       if(UseMultiIon .and. &
+            (UseElectronPressure .or. ElectronTemperatureRatio > 0.0))then
 
-          Force_D = Force_D - vInv* &
-               ( Pe_X(i+1,j,k)*FaceAreaI_DFB(:,i+1,j,k,iBlock) &
-               - Pe_X(i  ,j,k)*FaceAreaI_DFB(:,i  ,j,k,iBlock) &
-               + Pe_Y(i,j+1,k)*FaceAreaJ_DFB(:,i,j+1,k,iBlock) &
-               - Pe_Y(i,j  ,k)*FaceAreaJ_DFB(:,i,j  ,k,iBlock) &
-               + Pe_Z(i,j,k+1)*FaceAreaK_DFB(:,i,j,k+1,iBlock) &
-               - Pe_Z(i,j,k  )*FaceAreaK_DFB(:,i,j,k  ,iBlock) )
-       else
-          ! Gradient of Pe in Cartesian case
-          Force_D(x_) = Force_D(x_) &
-               - (Pe_X(i+1,j,k) - Pe_X(i,j,k))/dx_BLK(iBlock)
-          Force_D(y_) = Force_D(y_) &
-               - (Pe_Y(i,j+1,k) - Pe_Y(i,j,k))/dy_BLK(iBlock)
-          Force_D(z_) = Force_D(z_) &
-               - (Pe_Z(i,j,k+1) - Pe_Z(i,j,k))/dz_BLK(iBlock)
+          if(UseCovariant)then
+             ! grad Pe = (1/Volume)*Integral P_e dAreaVector over cell surface
+
+             Force_D = Force_D - vInv* &
+                  ( Pe_X(i+1,j,k)*FaceAreaI_DFB(:,i+1,j,k,iBlock) &
+                  - Pe_X(i  ,j,k)*FaceAreaI_DFB(:,i  ,j,k,iBlock) &
+                  + Pe_Y(i,j+1,k)*FaceAreaJ_DFB(:,i,j+1,k,iBlock) &
+                  - Pe_Y(i,j  ,k)*FaceAreaJ_DFB(:,i,j  ,k,iBlock) &
+                  + Pe_Z(i,j,k+1)*FaceAreaK_DFB(:,i,j,k+1,iBlock) &
+                  - Pe_Z(i,j,k  )*FaceAreaK_DFB(:,i,j,k  ,iBlock) )
+          else
+             ! Gradient of Pe in Cartesian case
+             Force_D(x_) = Force_D(x_) &
+                  - (Pe_X(i+1,j,k) - Pe_X(i,j,k))/dx_BLK(iBlock)
+             Force_D(y_) = Force_D(y_) &
+                  - (Pe_Y(i,j+1,k) - Pe_Y(i,j,k))/dy_BLK(iBlock)
+             Force_D(z_) = Force_D(z_) &
+                  - (Pe_Z(i,j,k+1) - Pe_Z(i,j,k))/dz_BLK(iBlock)
+          end if
+
        end if
 
        ! Multiply by n_s/n_e for all ion fluids
@@ -248,7 +253,7 @@ contains
        Source_VC(iRhoUxIon_I,i,j,k) = Source_VC(iRhoUxIon_I,i,j,k) + ForceX_I
        Source_VC(iRhoUyIon_I,i,j,k) = Source_VC(iRhoUyIon_I,i,j,k) + ForceY_I
        Source_VC(iRhoUzIon_I,i,j,k) = Source_VC(iRhoUzIon_I,i,j,k) + ForceZ_I
-       
+
        ! Calculate ion energy sources = u_s.Force_s
        Source_VC(nVar+IonFirst_:nVar+IonLast_,i,j,k) = &
             Source_VC(nVar+IonFirst_:nVar+IonLast_,i,j,k) + &
@@ -256,7 +261,7 @@ contains
             + State_V(iRhoUyIon_I)*ForceY_I &
             + State_V(iRhoUzIon_I)*ForceZ_I &
             ) / State_VGB(iRhoIon_I,i,j,k,iBlock)
-            
+
     end do; end do; end do
 
   end subroutine multi_ion_source_expl
