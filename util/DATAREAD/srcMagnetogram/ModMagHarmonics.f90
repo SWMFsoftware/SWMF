@@ -273,7 +273,7 @@ contains
                   CosMPhi_II(:,mArray(iNM)) )*da*PNMTheta_III(&
                   nArray(iNM)+1,mArray(iNM)+1,iTheta)!/SinTheta
           hArray(iNM) = hArray(iNM)+&
-               sum(Br_DD(iPhi,iTheta)*&
+               sum(Br_DD(:,iTheta)*&
                   SinMPhi_II(:,mArray(iNM)) )*da*PNMTheta_III(&
                   nArray(iNM)+1,mArray(iNM)+1,iTheta)!/SinTheta
           SumArea = SumArea+da*nPhi
