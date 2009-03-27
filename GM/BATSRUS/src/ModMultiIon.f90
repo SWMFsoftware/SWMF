@@ -51,7 +51,7 @@ module ModMultiIon
   integer :: nPowerCutOff = 0     ! cut-off exponent
 
   ! calculate analytic Jacobian for point-implicit scheme?
-  logical:: IsAnalyticJacobian = .false. !!! should be always true eventually
+  logical:: IsAnalyticJacobian = .true.
 
   ! how to reconcile ions with total fluid
   logical :: DoAddRhoP = .false.
