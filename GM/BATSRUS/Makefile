@@ -225,7 +225,8 @@ dist:
 	tar -rf tmp.tar  Idl
 	tar -rf tmp.tar  Param
 	tar -rf tmp.tar  Scripts
-	tar -rf tmp.tar  src srcInterface srcPostProc srcTest srcUser
+	tar -rf tmp.tar  src srcInterface srcUser srcEquation
+	tar -rf tmp.tar  srcPostProc srcTest 
 	@(if [ -d util  ]; then tar -rf tmp.tar util; fi);
 	@(if [ -d share ]; then tar -rf tmp.tar share; fi);
 	@echo ' '

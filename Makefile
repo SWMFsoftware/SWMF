@@ -393,8 +393,9 @@ tags:	ENV_CHECK
 #
 
 IH/BATSRUS/src/Makefile:
-	rm -rf IH/BATSRUS/src IH/BATSRUS/srcUser IH/BATSRUS/srcInterface/*.f90
-	mkdir -p IH/BATSRUS/src IH/BATSRUS/srcUser
+	rm -rf IH/BATSRUS/src IH/BATSRUS/srcUser IH/BATSRUS/srcEquation \
+		IH/BATSRUS/srcInterface/*.f90
+	mkdir -p IH/BATSRUS/src IH/BATSRUS/srcUser IH/BATSRUS/srcEquation
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../IH/BATSRUS/src
 	cd IH/BATSRUS/src; rm -f main.f90
 	cd GM/BATSRUS/srcInterface/; \
@@ -405,13 +406,14 @@ IH/BATSRUS/src/Makefile:
 		../../../IH/BATSRUS/srcInterface
 	cp IH/BATSRUS_share/src/IH_*.f90 IH/BATSRUS/srcInterface
 	cp GM/BATSRUS/srcUser/*.f90 IH/BATSRUS/srcUser/
+	cp GM/BATSRUS/srcEquation/*.f90 IH/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
 		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
 			../../IH/BATSRUS/
 	echo '*' > IH/BATSRUS/src/.cvsignore
 
 # rename IH source files to avoid name conflicts
-IH_SRC = src/*.f90 src/*.h srcInterface/*.f90 srcUser/*.f90
+IH_SRC = src/*.f90 src/*.h srcInterface/*.f90 srcUser/*.f90 srcEquation/*.f90
 
 IHBATSRUS: IH/BATSRUS/src/Makefile \
 		${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
@@ -434,10 +436,11 @@ IHBATSRUS: IH/BATSRUS/src/Makefile \
 #
 OH/BATSRUS/src/Makefile:
 	rm -rf \
-	OH/BATSRUS/src \
-	OH/BATSRUS/srcUser \
-	OH/BATSRUS/srcInterface/OH_wrapper.f90
-	mkdir -p OH/BATSRUS/src OH/BATSRUS/srcUser
+		OH/BATSRUS/src \
+		OH/BATSRUS/srcUser \
+		OH/BATSRUS/srcEquation \
+		OH/BATSRUS/srcInterface/OH_wrapper.f90
+	mkdir -p OH/BATSRUS/src OH/BATSRUS/srcUser OH/BATSRUS/srcEquation
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../OH/BATSRUS/src
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
@@ -446,6 +449,7 @@ OH/BATSRUS/src/Makefile:
 		ModDensityAndGradient.f90\
 		../../../OH/BATSRUS/srcInterface
 	cp GM/BATSRUS/srcUser/*.f90 OH/BATSRUS/srcUser/
+	cp GM/BATSRUS/srcEquation/*.f90 OH/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
 		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
 			../../OH/BATSRUS/
@@ -462,7 +466,7 @@ OH/BATSRUS/src/Makefile:
 	cd OH/BATSRUS/src; rm -f main.f90
 
 # rename OH source files to avoid name conflicts
-OH_SRC = src/*.f90 src/*.h srcInterface/*.f90 srcUser/*.f90
+OH_SRC = src/*.f90 src/*.h srcInterface/*.f90 srcUser/*.f90 srcEquation/*.f90
 
 OHBATSRUS: OH/BATSRUS/src/Makefile \
 		${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
@@ -483,15 +487,16 @@ OHBATSRUS: OH/BATSRUS/src/Makefile \
 #
 SC/BATSRUS/src/Makefile:
 	rm -rf \
-	SC/BATSRUS/src \
-	SC/BATSRUS/srcUser \
-	SC/BATSRUS/srcInterface/SC_wrapper.f90 \
-	SC/BATSRUS/srcInterface/SC_get_for_sp.f90
+		SC/BATSRUS/src \
+		SC/BATSRUS/srcUser \
+		SC/BATSRUS/srcEquation \
+		SC/BATSRUS/srcInterface/SC_wrapper.f90 \
+		SC/BATSRUS/srcInterface/SC_get_for_sp.f90
 	cd GM/BATSRUS; \
 		cp -f Makefile.conf ../../SC/BATSRUS; \
 		make COMP=SC DREL=TMP relax_src
 	cd GM/BATSRUS/TMP; \
-		mv Config.pl PARAM.XML src srcUser \
+		mv Config.pl PARAM.XML src srcUser srcEquation \
 			../../../SC/BATSRUS;\
 		mv srcInterface/*.f90 ../../../SC/BATSRUS/srcInterface
 	rm -rf GM/BATSRUS/TMP
@@ -505,7 +510,7 @@ SC/BATSRUS/src/Makefile:
 	cd SC/BATSRUS/src; rm -f main.f90
 
 # rename SC source files to avoid name conflicts
-SC_SRC = src/*.f90 src/*.h srcInterface/*.f90 srcUser/*.f90
+SC_SRC = src/*.f90 src/*.h srcInterface/*.f90 srcUser/*.f90 srcEquation/*.f90
 
 SCBATSRUS: SC/BATSRUS/src/Makefile \
 		${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
