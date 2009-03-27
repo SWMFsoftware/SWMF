@@ -1547,7 +1547,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseTotalSpeed', UseTotalSpeed)
         call read_var('DoConserveNeutrals', DoConserveNeutrals)
 
-     case("#MULTIION", "#COLLISION")
+     case("#MULTIION", "#MHDIONS", "#COLLISION")
         call multi_ion_set_parameters(NameCommand)
 
      case('#USERBOUNDARY', '#EXTRABOUNDARY')

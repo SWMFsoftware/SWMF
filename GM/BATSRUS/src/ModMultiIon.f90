@@ -53,6 +53,10 @@ module ModMultiIon
   ! calculate analytic Jacobian for point-implicit scheme?
   logical:: IsAnalyticJacobian = .false. !!! should be always true eventually
 
+  ! how to reconcile ions with total fluid
+  logical :: DoAddRhoP = .false.
+  logical :: DoAddRhoU = .true.
+
 contains
 
   !===========================================================================
@@ -66,6 +70,9 @@ contains
     character(len=*), intent(in):: NameCommand
     !------------------------------------------------------------------------
     select case(NameCommand)
+    case("#MHDIONS")
+       call read_var('DoAddRhoP', DoAddRhoP)
+       call read_var('DoAddRhoU', DoAddRhoU)
     case("#MULTIION")
        call read_var('LowDensityRatio',    LowDensityRatio)
        call read_var('DoRestrictMultiIon', DoRestrictMultiIon)
@@ -93,6 +100,8 @@ contains
   !===========================================================================
 
   subroutine multi_ion_set_restrict(iBlock)
+
+    ! Identify regions where only one ion fluid is present.
 
     use ModSize,     ONLY: nI, nJ, nK, MaxBlock
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, p_
@@ -142,65 +151,113 @@ contains
 
   subroutine multi_ion_source_expl(iBlock)
 
-    use ModMain,    ONLY: nI, nJ, nK, x_, y_, z_
-    use ModAdvance, ONLY: State_VGB, Source_VC
+    ! Add non-stiff source terms specific to multi-ion MHD
+    !
+    ! 1. d(rho u_s)/dt +=     (n_s/n_e)*grad p_e
+    !    d(e_s)/dt     += u_s.(n_s/n_e)*grad p_e
+    !
+    !    where s is the index of the ion fluid,
+    !    p_e is the electron pressure and
+    !    n_e is the electron number density.
+    !    The electron pressure may be solved for (UseElectronPressure is true)
+    !    or can be a fixed fraction (ElectronTemperatureRatio) of the total 
+    !    pressure.
+
+    use ModMain,    ONLY: nDim, nI, nJ, nK, x_, y_, z_, &
+         UseB0, UseBoris => boris_correction
+    use ModAdvance, ONLY: State_VGB, Source_VC, B0_DGB, &
+         bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
+    use ModPhysics, ONLY: InvClight2 => Inv_C2light
     use ModGeometry,ONLY: UseCovariant, dx_BLK, dy_BLK, dz_BLK, vInv_CB, &
          FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
+    use ModCoordTransform, ONLY: cross_product
 
     integer, intent(in) :: iBlock
     
     ! For multi-ion MHD the gradient of electron pressure appears in 
     ! all the individual ion momentum equations as -n_i/n_e * grad Pe
 
-    real :: NumDens_I(nIonFluid), InvNumDens
-    real :: vInv, GradXPe, GradYPe, GradZPe, GradPe_D(3)
+    real :: State_V(nVar)
+    real, dimension(nDim)     :: Current_D, FullB_D, Force_D
+    real, dimension(nIonFluid):: ForceX_I, ForceY_I, ForceZ_I, NumDens_I
+    real :: InvNumDens
+    real :: vInv, GradXPe, GradYPe, GradZPe
+
+    ! Alfven Lorentz factor for Boris correction
+    real :: Ga2
+
     integer :: i, j, k
 
     character(len=*), parameter:: NameSub = 'multi_ion_source_expl'
     !----------------------------------------------------------------------
     do k=1,nK; do j=1,nJ; do i=1,nI
 
-       NumDens_I  = State_VGB(iRhoIon_I,i,j,k,iBlock) / MassIon_I
+       vInv = vInv_CB(i,j,k,iBlock)
+
+       State_V = State_VGB(:,i,j,k,iBlock)
+
+       NumDens_I  = State_V(iRhoIon_I) / MassIon_I
        InvNumDens = 1.0/sum(NumDens_I)
 
-       if(UseCovariant)then
-          vInv = vInv_CB(i,j,k,iBlock)
+       ! Calculate Lorentz force = J x B
+       Current_D = vInv* &
+            ( bCrossArea_DX(:,i+1,j,k) - bCrossArea_DX(:,i,j,k) &
+            + bCrossArea_DY(:,i,j+1,k) - bCrossArea_DY(:,i,j,k) &
+            + bCrossArea_DZ(:,i,j,k+1) - bCrossArea_DZ(:,i,j,k))
 
-          GradPe_D = vInv* &
+       FullB_D = State_V(Bx_:Bz_)
+       if(UseB0) FullB_D =  FullB_D + B0_DGB(:,i,j,k,iBlock)
+
+       ! Lorentz force: J x B
+       Force_D = cross_product(Current_D, FullB_D)
+
+       if(UseBoris)then                       !^CFG IF BORISCORR BEGIN
+          ! Boris correction: reduce the Lorentz force by a factor of
+          ! Ga2 = 1/(1+v_A^2/c^2) = rho/(rho+B^2/c^2)
+          Ga2 = State_V(Rho_)/(State_V(Rho_) + InvClight2*sum(FullB_D**2))
+          Force_D = Ga2 * Force_D
+       end if                                 !^CFG END BORISCORR
+
+       ! Subtract electron pressure gradient force
+       if(UseCovariant)then
+          ! grad Pe = (1/Volume)*Integral P_e dAreaVector over cell surface
+
+          Force_D = Force_D - vInv* &
                ( Pe_X(i+1,j,k)*FaceAreaI_DFB(:,i+1,j,k,iBlock) &
                - Pe_X(i  ,j,k)*FaceAreaI_DFB(:,i  ,j,k,iBlock) &
                + Pe_Y(i,j+1,k)*FaceAreaJ_DFB(:,i,j+1,k,iBlock) &
                - Pe_Y(i,j  ,k)*FaceAreaJ_DFB(:,i,j  ,k,iBlock) &
                + Pe_Z(i,j,k+1)*FaceAreaK_DFB(:,i,j,k+1,iBlock) &
                - Pe_Z(i,j,k  )*FaceAreaK_DFB(:,i,j,k  ,iBlock) )
-          GradXPe = GradPe_D(x_)
-          GradYPe = GradPe_D(y_)
-          GradZPe = GradPe_D(z_)
        else
-          ! Simple implementation for Cartesian 
-          GradXPe = (Pe_X(i+1,j,k) - Pe_X(i,j,k))/dx_BLK(iBlock)
-          GradYPe = (Pe_Y(i,j+1,k) - Pe_Y(i,j,k))/dy_BLK(iBlock)
-          GradZPe = (Pe_Z(i,j,k+1) - Pe_Z(i,j,k))/dz_BLK(iBlock)
+          ! Gradient of Pe in Cartesian case
+          Force_D(x_) = Force_D(x_) &
+               - (Pe_X(i+1,j,k) - Pe_X(i,j,k))/dx_BLK(iBlock)
+          Force_D(y_) = Force_D(y_) &
+               - (Pe_Y(i,j+1,k) - Pe_Y(i,j,k))/dy_BLK(iBlock)
+          Force_D(z_) = Force_D(z_) &
+               - (Pe_Z(i,j,k+1) - Pe_Z(i,j,k))/dz_BLK(iBlock)
        end if
 
-       Source_VC(iRhoUxIon_I,i,j,k) = Source_VC(iRhoUxIon_I,i,j,k) &
-            - NumDens_I*InvNumDens*GradXPe
-       Source_VC(iRhoUyIon_I,i,j,k) = Source_VC(iRhoUyIon_I,i,j,k) &
-            - NumDens_I*InvNumDens*GradYPe
-       Source_VC(iRhoUzIon_I,i,j,k) = Source_VC(iRhoUzIon_I,i,j,k) &
-            - NumDens_I*InvNumDens*GradZPe
+       ! Multiply by n_s/n_e for all ion fluids
+       ForceX_I = NumDens_I*InvNumDens*Force_D(x_)
+       ForceY_I = NumDens_I*InvNumDens*Force_D(y_)
+       ForceZ_I = NumDens_I*InvNumDens*Force_D(z_)
 
-       ! Update energy for ion fluids
+       ! Store ion momentum sources
+       Source_VC(iRhoUxIon_I,i,j,k) = Source_VC(iRhoUxIon_I,i,j,k) + ForceX_I
+       Source_VC(iRhoUyIon_I,i,j,k) = Source_VC(iRhoUyIon_I,i,j,k) + ForceY_I
+       Source_VC(iRhoUzIon_I,i,j,k) = Source_VC(iRhoUzIon_I,i,j,k) + ForceZ_I
+       
+       ! Calculate ion energy sources = u_s.Force_s
        Source_VC(nVar+IonFirst_:nVar+IonLast_,i,j,k) = &
-            Source_VC(nVar+IonFirst_:nVar+IonLast_,i,j,k) &
-            - NumDens_I*InvNumDens*        &
-            ( State_VGB(iRhoUxIon_I,i,j,k,iBlock)*GradXPe &
-            + State_VGB(iRhoUyIon_I,i,j,k,iBlock)*GradYPe &
-            + State_VGB(iRhoUzIon_I,i,j,k,iBlock)*GradZPe &
+            Source_VC(nVar+IonFirst_:nVar+IonLast_,i,j,k) + &
+            ( State_V(iRhoUxIon_I)*ForceX_I &
+            + State_V(iRhoUyIon_I)*ForceY_I &
+            + State_V(iRhoUzIon_I)*ForceZ_I &
             ) / State_VGB(iRhoIon_I,i,j,k,iBlock)
-
-
-     end do; end do; end do
+            
+    end do; end do; end do
 
   end subroutine multi_ion_source_expl
 
@@ -208,9 +265,21 @@ contains
 
   subroutine multi_ion_source_impl
 
-    ! Evaluate the explicit or implicit or both source terms.
-    ! If there is no explicit source term, the subroutine user_expl_source 
-    ! and the corresponding calls can be removed.
+    ! Add 'stiff' source terms specific to multi-ion MHD:
+    !
+    ! 1. d(rho u_s)/dt +=      n_s*(- u_+ - w_H + u_s )xB 
+    !    d(e_s)/dt     += u_s.[n_s*(- u_+ - w_H + u_s )xB]
+    !    where s is the index for the ion fluid, 
+    !    u_+ is the charge density weighted average ion velocity,
+    !    w_H = -J/(e n_e) is the Hall velocity, 
+    !    n_e is the electron number density, and
+    !    e is the electron charge.
+    !
+    ! 2. ion-ion collisions if required.
+    !
+    ! 3. artificial friction term if required.
+    !
+    ! 4. user source terms if required.
 
     use ModPointImplicit, ONLY:  UsePointImplicit, IsPointImplSource, &
          IsPointImplPerturbed, IsPointImplMatrixSet, DsDu_VVC
@@ -229,9 +298,9 @@ contains
     use ModSize,           ONLY: nDim
 
     ! Variables for multi-ion MHD
-    real    :: InvCharge, NumDens, InvNumDens, pAverage, State_V(nVar)
-    real, dimension(3) :: FullB_D, uIon_D, uIon2_D, u_D, uPlus_D, uPlusHallU_D
-    real, dimension(3) :: Current_D, Force_D
+    real    :: NumDens, InvNumDens, pAverage, State_V(nVar)
+    real, dimension(3) :: FullB_D, uIon_D, uIon2_D, u_D, uPlus_D
+    real, dimension(3) :: Force_D
     real, dimension(nIonFluid) :: &
          NumDens_I, Rho_I, InvRho_I, Ux_I, Uy_I, Uz_I, Temp_I
 
@@ -271,13 +340,6 @@ contains
     ! Do not evaluate multi-ion sources in the numerical Jacobian calculation
     ! (needed for the user source terms) 
     if(IsPointImplPerturbed .and. IsAnalyticJacobian) RETURN
-
-    ! Add source term n_s*(- u_+ - w_H + u_s )xB for multi-ions
-    ! where u_+ is the number density weighted average ion velocity,
-    ! and w_H = -J/(e n_e) is the Hall velocity. Here
-    ! e is the electron charge and n_e is the electron number density.
-
-    InvCharge = 1.0/ElectronCharge
 
     if(CollisionCoefDim > 0.0)then
        ! Rate = n*CoefDim / T^1.5 with T [K], n [/cc] and Rate [1/s]
@@ -341,15 +403,6 @@ contains
        uPlus_D(y_) = InvNumDens* sum(NumDens_I*Uy_I)
        uPlus_D(z_) = InvNumDens* sum(NumDens_I*Uz_I)
 
-       ! Add the Hall velocity -J/(e n)
-       ! old version: call get_current(i,j,k,iBlock,Current_D)
-       Current_D = vInv_CB(i,j,k,iBlock)*&
-            ( bCrossArea_DX(:,i+1,j,k) - bCrossArea_DX(:,i,j,k) &
-            + bCrossArea_DY(:,i,j+1,k) - bCrossArea_DY(:,i,j,k) &
-            + bCrossArea_DZ(:,i,j,k+1) - bCrossArea_DZ(:,i,j,k))
-
-       uPlusHallU_D = uPlus_D - InvNumDens*InvCharge*Current_D
-
        TemperatureCoef = 1.0/(AverageTemp*sqrt(AverageTemp))
 
        Ga2 = 1.0
@@ -367,16 +420,13 @@ contains
        if(DoTestCell)then
           if(UseBoris)write(*,*) NameSub,'Ga2=',Ga2
           write(*,*) NameSub,' FullB_D  =', FullB_D
-          write(*,*) NameSub,' Current_D=', Current_D
           write(*,*) NameSub,' uPlus_D  =', uPlus_D
-          write(*,*) NameSub,' uPlusHall=', uPlusHallU_D
        end if
 
        ! Calculate the source term for all the ion fluids
        do iIon = 1, nIonFluid
-          ! call select_fluid
           uIon_D = (/ Ux_I(iIon),  Uy_I(iIon), Uz_I(iIon) /)
-          u_D    = uIon_D - uPlusHallU_D
+          u_D    = uIon_D - uPlus_D
           ForceCoeff = Ga2 * ElectronCharge*NumDens_I(iIon)
           Force_D    = ForceCoeff * cross_product(u_D, FullB_D) 
 
@@ -396,7 +446,7 @@ contains
                    jDim = 6 - kDim - iDim
                    SignedB = iLeviCivita_III(iDim, jDim, kDim)*FullB_D(jDim)
 
-                   ! This Jacobian term occurs with respect with the same fluid
+                   ! This Jacobian term occurs with respect to the same fluid
                    iUi = iUxIon_I(iIon) + iDim - 1
                    DsDu_VVC(iUk, iUi, i, j, k) = DsDu_VVC(iUk, iUi, i, j, k) & 
                         + ForceCoeff*SignedB*InvRho_I(iIon)
@@ -534,6 +584,10 @@ contains
   !===========================================================================
   subroutine multi_ion_init_point_impl
 
+    ! Select variables for point implicit evaluation. This is the union
+    ! of the ion momenta and the variables selected (if any) in 
+    ! ModUser::user_init_point_implicit
+
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
 
     logical :: IsPointImpl_V(nVar)
@@ -574,47 +628,90 @@ contains
 
   subroutine multi_ion_update(iBlock, IsFinal)
 
+    ! Resolve the update of total fluid vs. ion fluids:
+    !   - take care of minor fluids with very small densities 
+    !   - take care of conservation of total density and energy
+
     use ModEnergy, ONLY: calc_energy
     use ModAdvance, ONLY: State_VGB, Energy_GBI, &
          Rho_, p_, RhoUx_, RhoUy_, RhoUz_, UseElectronPressure, Pe_
     use ModPhysics, ONLY: ElectronTemperatureRatio, LowDensityRatio
 
-    ! Resolve the update of total fluid vs. ion fluids:
-    !   - take care of minor fluids with very small densities 
-    !   - take care of conservation of total density and energy
-
     integer, intent(in) :: iBlock
     logical, intent(in) :: IsFinal  ! true for the final update
 
     integer :: i, j, k
-    real    :: Rho, InvRho, p, IonSum, InvSum
+    real    :: State_V(nVar), Rho, InvRho, p, IonSum, InvSum
+    real    :: TeRatio1, InvTeRatio1
     logical :: IsMultiIon
     !-----------------------------------------------------------------------
 
+    TeRatio1    = 1 + ElectronTemperatureRatio
+    InvTeRatio1 = 1 / TeRatio1
+
     do k=1,nK; do j=1,nJ; do i=1,nI
 
-       ! Total density and pressure
-       Rho    = State_VGB(Rho_,i,j,k,iBlock)
-       InvRho = 1/Rho
-       p      = State_VGB(p_,i,j,k,iBlock)
+       State_V = State_VGB(:,i,j,k,iBlock)
 
-       ! Remove electron pressure from the total pressure
-       if(UseElectronPressure)then
-          p = p -  State_VGB(Pe_,i,j,k,iBlock)
-       else
-          p = p / (1 + ElectronTemperatureRatio)
-       end if
+       ! Total density 
+       Rho    = State_V(Rho_)
+       InvRho = 1/Rho
 
        if(.not.IsFinal)then
-          InvSum = 1/sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
-          State_VGB(iRhoIon_I,i,j,k,iBlock) = &
-               State_VGB(iRhoIon_I,i,j,k,iBlock)*Rho*InvSum
+          if(DoAddRhoP)then
+             State_VGB(Rho_,i,j,k,iBlock) = sum(State_V(iRhoIon_I))
+             p = sum(State_V(iPIon_I))
+             if(UseElectronPressure)then
+                State_VGB(p_,i,j,k,iBlock) = p + State_V(Pe_)
+             else
+                State_VGB(p_,i,j,k,iBlock) = p * TeRatio1
+             end if
+          else
+             InvSum = 1/sum(State_V(iRhoIon_I))
+             State_VGB(iRhoIon_I,i,j,k,iBlock) = State_V(iRhoIon_I)*Rho*InvSum
 
-          ! Distribute total pressure among ions
-          InvSum = 1/sum(State_VGB(iPIon_I,i,j,k,iBlock))
-          State_VGB(iPIon_I,i,j,k,iBlock) = &
-               State_VGB(iPIon_I,i,j,k,iBlock)*p*InvSum
+             ! Distribute total pressure among ions
+             InvSum = 1/sum(State_V(iPIon_I))
+             if(UseElectronPressure)then
+                p = State_V(p_) - State_V(Pe_)
+             else
+                p = State_V(p_) * InvTeRatio1
+             end if
+             State_VGB(iPIon_I,i,j,k,iBlock) = State_V(iPIon_I)*p*InvSum
+          end if
 
+          IonSum = sum(State_V(iRhoUxIon_I))
+          if(DoAddRhoU .or. &
+               maxval(State_V(iRhoUxIon_I))* &
+               minval(State_V(iRhoUxIon_I)) <= 0)then
+             State_VGB(RhoUx_,i,j,k,iBlock) = IonSum
+          else
+             State_VGB(iRhoUxIon_I,i,j,k,iBlock) = State_V(iRhoUxIon_I) &
+                  *State_V(RhoUx_)/IonSum
+          endif
+
+          IonSum = sum(State_V(iRhoUyIon_I))
+          if(DoAddRhoU .or. &
+               maxval(State_V(iRhoUyIon_I)) &
+               *minval(State_V(iRhoUyIon_I)) <= 0)then
+             State_VGB(RhoUy_,i,j,k,iBlock) = IonSum
+          else
+             State_VGB(iRhoUyIon_I,i,j,k,iBlock) = State_V(iRhoUyIon_I) &
+                  *State_V(RhoUy_)/IonSum
+          endif
+
+          IonSum = sum(State_V(iRhoUzIon_I))
+          if(DoAddRhoU .or. &
+               maxval(State_V(iRhoUzIon_I)) &
+               *minval(State_V(iRhoUzIon_I)) <= 0)then
+             State_VGB(RhoUz_,i,j,k,iBlock) = IonSum
+          else
+             InvSum = 1/IonSum
+             State_VGB(iRhoUzIon_I,i,j,k,iBlock) = State_V(iRhoUzIon_I) &
+                  *State_V(RhoUz_)/IonSum
+          endif
+
+          ! Nothing more to do if not final update
           CYCLE
        end if
 
@@ -642,42 +739,35 @@ contains
                *InvRho*State_VGB(RhoUz_,i,j,k,iBlock)
 
           ! Set ion temperatures to be equal with the total
+          if(UseElectronPressure)then
+             p = State_V(p_) - State_V(Pe_)
+          else
+             p = State_V(p_) * InvTeRatio1
+          end if
           State_VGB(iPIon_I,i,j,k,iBlock) = p*InvRho * &
-               State_VGB(iRhoIon_I,i,j,k,iBlock) &
-               *MassIon_I(1)/MassIon_I
+               State_VGB(iRhoIon_I,i,j,k,iBlock)*MassIon_I(1)/MassIon_I
        else
-          ! Distribute total density among ions
-          InvSum = 1/sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
-          State_VGB(iRhoIon_I,i,j,k,iBlock) = &
-               State_VGB(iRhoIon_I,i,j,k,iBlock)*Rho*InvSum
+          ! Add up ion fluids to total fluid
+          ! This is necessary when point-implicit source terms are evaluated
+          ! for the ion fluids only and their sum is not 0 due to user sources
 
-          ! Distribute total pressure among ions
-          InvSum = 1/sum(State_VGB(iPIon_I,i,j,k,iBlock))
-          State_VGB(iPIon_I,i,j,k,iBlock) = &
-               State_VGB(iPIon_I,i,j,k,iBlock)*p*InvSum
-
-          ! Overwrite total momentum and energy with sum of ions
-          IonSum = sum(State_VGB(iRhoUxIon_I,i,j,k,iBlock))
-          Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
-               + 0.5/Rho*(IonSum**2 - State_VGB(RhoUx_,i,j,k,iBlock)**2)
-          State_VGB(RhoUx_,i,j,k,iBlock) = IonSum
-
-          IonSum = sum(State_VGB(iRhoUyIon_I,i,j,k,iBlock))
-          Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) + &
-               0.5/Rho*(IonSum**2 - State_VGB(RhoUy_,i,j,k,iBlock)**2)
-          State_VGB(RhoUy_,i,j,k,iBlock) = IonSum
-
-          IonSum = sum(State_VGB(iRhoUzIon_I,i,j,k,iBlock))
-          Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) + &
-               0.5/Rho*(IonSum**2 - State_VGB(RhoUz_,i,j,k,iBlock)**2)
-          State_VGB(RhoUz_,i,j,k,iBlock) = IonSum
+          State_VGB(Rho_,  i,j,k,iBlock) = sum(State_V(iRhoIon_I))
+          State_VGB(RhoUx_,i,j,k,iBlock) = sum(State_V(iRhoUxIon_I))
+          State_VGB(RhoUy_,i,j,k,iBlock) = sum(State_V(iRhoUyIon_I))
+          State_VGB(RhoUz_,i,j,k,iBlock) = sum(State_V(iRhoUzIon_I))
+          p = sum(State_V(iPIon_I))
+          if(UseElectronPressure)then
+             State_VGB(p_,i,j,k,iBlock)  = p + State_V(Pe_)
+          else
+             State_VGB(p_,i,j,k,iBlock)  = p * TeRatio1
+          end if
 
        end if
 
     end do; end do; end do
 
-    ! Set ion energies: no attempt to conserve the energy per ion fluid
-    call calc_energy(1, nI, 1, nJ, 1, nK, iBlock, IonFirst_, IonLast_)
+    ! Reset total and ion energies
+    call calc_energy(1, nI, 1, nJ, 1, nK, iBlock, 1, IonLast_)
 
   end subroutine multi_ion_update
 

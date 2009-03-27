@@ -68,12 +68,22 @@ subroutine update_states_MHD(iStage,iBLK)
 
   if(UseMultiIon .and. DoRestrictMultiIon)call multi_ion_set_restrict(iBlk)
 
+  if(DoTestMe)write(*,*) NameSub, ' original testvar and energy=', &
+       State_VGB(VarTest, iTest, jTest, kTest, iBlk), &
+       Energy_GBI(iTest,jTest,kTest,iBlk,1)
+
   call update_explicit
 
-  if(DoTestMe)write(*,*) NameSub, ' after explicit state=', &
-       State_VGB(VarTest, iTest, jTest, kTest, iBlk)
+  if(UseMultiIon .and. IsMhd)then
+     call multi_ion_update(iBlk, IsFinal = .false.)
 
-  ! The point implicit updae and other stuff below are only done in last stage
+     if(DoTestMe)write(*,*) NameSub, ' after multiion update1=', &
+          State_VGB(VarTest,iTest,jTest,kTest,iBlk), &
+          Energy_GBI(iTest,jTest,kTest,iBlk,1)
+
+  end if
+
+  ! The point implicit update and other stuff below are only done in last stage
   if(iStage < nStage) RETURN
 
   ! Add point implicit user or multi-ion source terms
@@ -87,14 +97,15 @@ subroutine update_states_MHD(iStage,iBLK)
      end if
 
      if(DoTestMe)write(*,*) NameSub, ' after point impl state=', &
-          State_VGB(VarTest, iTest,jTest,kTest,iBlk)
-
+          State_VGB(VarTest, iTest,jTest,kTest,iBlk), &
+          Energy_GBI(iTest,jTest,kTest,iBlk,1)
   end if
 
   if(UseMultiIon .and. IsMhd)then
      call multi_ion_update(iBlk, IsFinal = .true.)
-     if(DoTestMe)write(*,*) NameSub,' after multiion state=', &
-          State_VGB(VarTest,iTest,jTest,kTest,iBlk)
+     if(DoTestMe)write(*,*) NameSub,' after multiion update2=', &
+          State_VGB(VarTest,iTest,jTest,kTest,iBlk), &
+          Energy_GBI(iTest,jTest,kTest,iBlk,1)
   end if
 
   if(UseHyperbolicDivb .and. HypDecay > 0) &
@@ -102,11 +113,13 @@ subroutine update_states_MHD(iStage,iBLK)
        State_VGB(Hyp_,1:nI,1:nJ,1:nK,iBlk)*(1 - HypDecay)
 
   if(DoTestMe)write(*,*) NameSub, ' final state=', &
-       State_VGB(VarTest,iTest,jTest,kTest,iBlk)
+       State_VGB(VarTest,iTest,jTest,kTest,iBlk), &
+       Energy_GBI(iTest,jTest,kTest,iBlk,1)
 
 contains
 
   subroutine update_explicit
+
     do k=1,nK; do j=1,nJ; do i=1,nI
        do iVar=1,nVar
           State_VGB(iVar,i,j,k,iBLK) = &
@@ -117,6 +130,10 @@ contains
        Energy_GBI(i,j,k,iBLK,:) = EnergyOld_CBI(i,j,k,iBLK,:) + &
             Source_VC(Energy_:Energy_-1+nFluid,i,j,k)
     end do; end do; end do
+
+    if(DoTestMe)write(*,*) NameSub, ' after flux/source=', &
+         State_VGB(VarTest,iTest,jTest,kTest,iBlk), &
+         Energy_GBI(iTest,jTest,kTest,iBlk,1)
 
     if(UseMultiSpecies)then
        ! Fix negative species densities
@@ -130,6 +147,10 @@ contains
                   sum(State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBLK))
           end do; end do; end do
        end if
+
+       if(DoTestMe)write(*,*) NameSub, ' after multispecies correct=', &
+            State_VGB(VarTest,iTest,jTest,kTest,iBlk)
+    
     end if
 
     if( IsMhd .and. &
@@ -141,9 +162,11 @@ contains
                Source_VC(Bz_,i,j,k)**2)
        end do; end do; end do
 
-    end if
+       if(DoTestMe)write(*,*) NameSub, ' after energy dB correct=', &
+            State_VGB(VarTest,iTest,jTest,kTest,iBlk), &
+            Energy_GBI(iTest,jTest,kTest,iBlk,1)
 
-    if(UseMultiIon .and. IsMhd)call multi_ion_update(iBlk, IsFinal = .false.)
+    end if
 
     if(boris_correction) then                 !^CFG IF BORISCORR BEGIN
        if(UseB0)then
@@ -252,6 +275,11 @@ contains
                + cHalf*inv_c2LIGHT*ECorr
 
        end do; end do; end do
+
+       if(DoTestMe)write(*,*) NameSub, ' after Boris update=', &
+            State_VGB(VarTest,iTest,jTest,kTest,iBlk), &
+            Energy_GBI(iTest,jTest,kTest,iBlk,1)
+
     endif                                    !^CFG END BORISCORR
     if(UseBorisSimple) then                  !^CFG IF SIMPLEBORIS BEGIN
        if(UseB0)then
@@ -287,10 +315,19 @@ contains
                State_VGB(rhoUx_:rhoU_+nDim,i,j,k,iBLK)
 
        end do; end do; end do
+
+       if(DoTestMe)write(*,*) NameSub, ' after BorisSimple update=', &
+            State_VGB(VarTest,iTest,jTest,kTest,iBlk), &
+            Energy_GBI(iTest,jTest,kTest,iBlk,1)
+
     end if                                   !^CFG END SIMPLEBORIS
 
     ! Update energy or pressure based on UseConservative and IsConserv_CB
     call calc_energy_or_pressure(iBlk)
+
+    if(DoTestMe)write(*,*) NameSub, ' after pressure/energy update=', &
+         State_VGB(VarTest,iTest,jTest,kTest,iBlk), &
+         Energy_GBI(iTest,jTest,kTest,iBlk,1)
 
   end subroutine update_explicit
 
