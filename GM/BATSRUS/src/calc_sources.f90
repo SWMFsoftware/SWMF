@@ -263,6 +263,14 @@ subroutine calc_sources
      if(DoTestMe) call write_source('After MultiIon sources')
   end if
 
+  ! Add JxB term for nonconservativ MHD scheme (like LFM)
+  if(UseB .and. .not.IsMhd .and. .not.UseMultiIon)then
+     call multi_ion_source_expl(iBlock)
+
+     if(DoTestMe) call write_source('After JxB term')
+  end if
+
+
   if(UseHallResist .and. HallHyperFactor > 0.0) then
      call calc_hyper_resistivity(iBlock)
      if(DoTestMe) call write_source('After HyperResist')
