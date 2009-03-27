@@ -49,7 +49,7 @@ test_harmonics:
 	ln -s ${BINDIR}/HARMONICS.exe HARMONICS.exe
 	cp test.in fitsfile.dat
 	@echo "test_harmonics_run..." >> test_harmonics.diff
-	mpirun -np 2 HARMONICS.exe > runlog
+	./HARMONICS.exe > runlog
 	@echo "test_harmonics_check..." >> test_harmonics.diff
 	make test_harmonics_check
 

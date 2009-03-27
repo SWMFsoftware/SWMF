@@ -1,10 +1,7 @@
 module ModMagHarmonics
+  use ModNumConst
   implicit none  
     
-  include 'mpif.h'
-
-  integer :: iProc, nProc, iComm
-
   ! Name of input file
   character (len=*), parameter:: NameFileIn='fitsfile.dat'
 
@@ -22,36 +19,30 @@ module ModMagHarmonics
   ! * SOLIS: ftp://solis.nso.edu/synoptic/level3/vsm/merged/carr-rot   *
   ! * MWO:   ftp://howard.astro.ucla.edu/pub/obs/synoptic_charts       *
   ! ********************************************************************
-  real, parameter:: &
-       cPi        =  3.1415926535897932384626433832795,       &
-       cTwoPi     =  2*cPi,                                   &
-       cHalfPi    =  0.5*cPi,                                 &
-       cRadToDeg  =  180./cPi,                                &
-       cDegToRad  =  cPi/180.
+ 
 
   real,allocatable,dimension(:,:)::g_nm,h_nm, Br_DD
   real::dR=1.0,dPhi=1.0,dTheta,dSinTheta=1.0
-  integer:: nThetaPerProc
   integer:: nPhi=72, nTheta=29
   integer:: nHarmonics=180
   !----------------------------------------------------------------
 
   integer:: i,n,m,iTheta,iPhi,iR,mm,nn,CarringtonRotation
-  real:: c_n
-  real:: SinPhi,CosPhi
   real:: CosTheta,SinTheta
   real:: stuff1,stuff2,stuff3
-  real:: Theta,Phi,R_PFSSM
+  real:: Theta,Phi
   !----------------------------------------------------------------
-  real :: SumArea,da
-  real :: NormalizationFactor!,R_n
-  integer :: iUnit2,NmPerProc,iBcast, iStart, nSize,iNM,ll
+ 
+ real :: SumArea,da
+  real :: NormalizationFactor
+  integer :: iUnit2, iNM
   real,allocatable,dimension(:) :: gArray, hArray
   integer,allocatable,dimension(:) :: nArray, mArray
   integer :: SizeOfnm, ArrPerProc,EndProc,SizeLastProc
-  real, allocatable, dimension(:,:) :: p_nm, dp_nm
+  real, allocatable, dimension(:,:)   :: p_nm, CosMPhi_II,SinMPhi_II
+  real, allocatable, dimension(:,:,:) :: PNMTheta_III
   !----------------------------------------------------------------
-  real :: Factorial1,Factorial2,delta
+ 
   real:: SinThetaM, SinThetaM1 
   integer:: delta_m0
   real, allocatable:: FactRatio1(:)
@@ -85,7 +76,7 @@ contains
     real, allocatable:: tempBr(:)
     !----------------------------------------------------------
     
-    iUnit = 1
+    iUnit = 11
     open(iUnit,file=NameFileIn,status='old',iostat=iError)
     
     do 
@@ -103,7 +94,7 @@ contains
        if(index(line,'#START')>0) EXIT
     end do
     
-    if(iProc==0) write(*,*)'Magnetogram size - Theta,Phi: ',nTheta,nPhi
+    write(*,*)'Magnetogram size - Theta,Phi: ',nTheta,nPhi
     
     ! Setting the order on harmonics to be equal to the 
     ! latitudinal resolution.
@@ -112,7 +103,7 @@ contains
     else
        nHarmonics=min(nTheta,180)
     endif
-    if(iProc==0) write(*,*)'Order of harmonics: ',nHarmonics
+    write(*,*)'Order of harmonics: ',nHarmonics
     
     dPhi=cTwoPi/nPhi
     dTheta=cPi/nTheta
@@ -120,7 +111,7 @@ contains
     
     ! Allocate the harmonic coefficients arrays
     allocate( &
-         p_nm(nHarmonics+1,nHarmonics+1), dp_nm(nHarmonics+1,nHarmonics+1),&
+         p_nm(nHarmonics+1,nHarmonics+1),&
          g_nm(nHarmonics+1,nHarmonics+1), h_nm(nHarmonics+1,nHarmonics+1), &
          FactRatio1(nHarmonics+1))
 
@@ -128,9 +119,10 @@ contains
     allocate( tempBr(0:nPhi*nTheta-1), Br_DD(0:nPhi-1,0:nTheta-1))
     
     p_nm = 0.0
-    dp_nm = 0.0
     g_nm = 0.0
     h_nm = 0.0
+
+    
     
     tempBr = 0.0 
     Br_DD  = 0.0
@@ -163,20 +155,52 @@ contains
     ! This suroutine calculates the spherical harmonics from the raw 
     ! magnetogram data
 
-    integer :: iUnit, iError, nError
-    real, parameter :: Rs_PFSSM=2.5
+    integer :: iUnit, iError, nError, m, n
     !-------------------------------------------------------------------------
 
-    if(iProc==0)write(*,*)'Calculating harmonic coefficients'
+    write(*,*)'Calculating harmonic coefficients'
 
+    ! Calculate sqrt(integer) from 1 to 10000::
+     
+    do m=1,MaxInt
+       Sqrt_I(m) = sqrt(real(m))
+    end do
+
+    ! Calculate the ratio sqrt(2m!)/(2^m*m!)::
+    
+    factRatio1(:) = 0.0; factRatio1(1) = 1.0
+    do m=1,nHarmonics
+       factRatio1(m+1) = factRatio1(m)*Sqrt_I(2*m-1)/Sqrt_I(2*m)
+    enddo
+
+    allocate(PNMTheta_III(nHarmonics+1,nHarmonics+1,0:nTheta-1))
+    PNMTheta_III = 0.0
+
+    !Save Legandre polynoms
+    do iTheta=0,nTheta-1
+
+       Theta=colatitude(iTheta) 
+       CosTheta=cos(Theta)
+       SinTheta=max(sin(Theta), 1E-9)
+       call calc_legandre_polynoms
+       PNMTheta_III(:,:,iTheta) = p_nm
+    end do
+    allocate(CosMPhi_II(0:nPhi-1,0:nHarmonics),&
+             SinMPhi_II(0:nPhi-1,0:nHarmonics) )
+    !Save sins-cosins
+    do iPhi=0,nPhi-1
+       Phi=(iPhi)*dPhi
+       do m=0,nHarmonics
+          CosMPhi_II(iPhi,m) = cos(m*Phi)
+          SinMPhi_II(iPhi,m) = sin(m*Phi)
+       end do
+    end do
     ! Creating an array with the size of SizeOfnm (the total g_nm and h_nm) for
     ! parallel calculation of the coefficients
     SizeOfnm=1
     do iNM=1,nHarmonics
        SizeOfnm=SizeOfnm+(iNM+1)
     enddo
-
-    ArrPerProc=int(SizeOfnm/nProc)
 
     ! Allocating and initializing arrays
     if(allocated(gArray))deallocate(gArray)
@@ -201,15 +225,9 @@ contains
        enddo
     end do
 
-    SizeLastProc = SizeOfnm-ArrPerProc*(nProc-1)
-    if(iProc==nProc-1)then 
-       EndProc=SizeOfnm-1
-    else
-       EndProc=(iProc+1)*ArrPerProc-1
-    end if
 
     ! Each processor gets part of the array 
-    do iNM=iProc*ArrPerProc,EndProc
+    do iNM = 0,SizeOfnm-1
 
        ! The proper normalization factor is (2n+1)/R_n, where R_n=n+1+n(1/Rs)**(2n+1).
        ! However, in this code the coefficients are normalized only with 2n+1 to reproduce 
@@ -223,24 +241,22 @@ contains
        do iTheta=0,nTheta-1
 
           Theta=colatitude(iTheta) 
-          CosTheta=cos(Theta)
           SinTheta=max(sin(Theta), 1E-9)
           da=SinTheta*dTheta*dPhi
           ! Calculate the set of Legandre polynoms (with Schmidt normalization), 
           ! for a given CosTheta,SinTheta
           ! For non-radial magnetogram (LOS), a division in SinTheta is needed.
-          call calc_Legandre_polynoms
 
-          do iPhi=0,nPhi-1
-             Phi=(iPhi)*dPhi
-             gArray(iNM) = gArray(iNM)+&
-                  Br_DD(iPhi,iTheta)*da*p_nm(nArray(iNM)+1,mArray(iNM)+1)*&
-                  cos((mArray(iNM))*Phi)!/SinTheta
-             hArray(iNM) = hArray(iNM)+&
-                  Br_DD(iPhi,iTheta)*da*p_nm(nArray(iNM)+1,mArray(iNM)+1)*&
-                  sin((mArray(iNM))*Phi)!/SinTheta
-             SumArea = SumArea+da
-          end do
+          
+          gArray(iNM) = gArray(iNM)+&
+               sum(Br_DD(:,iTheta)*&
+                  CosMPhi_II(:,mArray(iNM)) )*da*PNMTheta_III(&
+                  nArray(iNM)+1,mArray(iNM)+1,iTheta)!/SinTheta
+          hArray(iNM) = hArray(iNM)+&
+               sum(Br_DD(iPhi,iTheta)*&
+                  SinMPhi_II(:,mArray(iNM)) )*da**PNMTheta_III(&
+                  nArray(iNM)+1,mArray(iNM)+1,iTheta)!/SinTheta
+          SumArea = SumArea+da*nPhi
        end do
        gArray(iNM) = &
             NormalizationFactor*gArray(iNM)/SumArea
@@ -248,78 +264,61 @@ contains
             NormalizationFactor*hArray(iNM)/SumArea
     end do
 
-    ! Each processor broadcasts his part of the g_nm, h_nm arrays
-    if(nProc>1)then
-       do iBcast=0,nProc-1
-          iStart=iBcast*ArrPerProc
-          if(iStart>SizeOfnm)EXIT
-          if(iBcast==nProc-1)then
-             nSize = SizeLastProc
-          else
-             nSize =  ArrPerProc
-          end if
-          call MPI_bcast(gArray(iStart),nSize,MPI_REAL,iBcast,iComm,iError)
-          call MPI_bcast(hArray(iStart),nSize,MPI_REAL,iBcast,iComm,iError)
-       end do
+    iNM=0
+    do nn=0,nHarmonics
+       iNM=iNM+nn
+       do mm=0,nn
+          g_nm(nn+1,mm+1) = gArray(iNM+mm)
+          h_nm(nn+1,mm+1) = hArray(iNM+mm) 
+       enddo
+    end do
+    
+    !\
+    ! Leave out monopole (n=0) term::
+    !/
+    g_nm(1,1) = 0.0
+    
+    write(*,*)'Done Calculating harmonic coefficients' 
+    
+    !\
+    ! Writing spherical harmonics file
+    !/
+    
+    write(*,*)'Writing harmonic coefficients file, named ',NameFileOut
+    iUnit = 2
+    open ( unit = iUnit, &
+         file = NameFileOut, &
+         form = 'formatted', &
+         access = 'sequential', &
+         status = 'replace', iostat = iError )
+
+    if ( iError /= 0 ) then
+       write (*,*)' Could not output file ', NameFileOut
+       stop
     end if
 
-    if(iProc==0)then
+    write ( iUnit, '(a19,I3,a10,I4,a4)' ) 'Coefficients order=',nHarmonics,' center=CT',CarringtonRotation,':180'
+    write ( iUnit, '(a)' ) 'Observation time'
+    write ( iUnit, '(a45,I3)' ) 'B0 angle & Nmax:        0          ',nHarmonics
+    write ( iUnit, * )
+    write ( iUnit, * )
+    write ( iUnit, * )
+    write ( iUnit, * )
+    write ( iUnit, * )
+    write ( iUnit, '(a19,I3,a26)' ) 'Max Harmonic Order:',nHarmonics,' Units: Gauss'
+    write ( iUnit, '(a)' ) ' '
+    write ( iUnit, '(a)' ) '  l   m      g(uT)      h(uT)'
+    write ( iUnit, '(a)' ) ' '
+    
+    
+    do nn=0,nHarmonics
+       do mm=0,nn
+          write(iUnit, '(2I5,2f15.3)') nn,mm,g_nm(nn+1,mm+1),h_nm(nn+1,mm+1)
+       enddo
+    end do
+    
+    close(iUnit)
 
-       iNM=0
-       do nn=0,nHarmonics
-          iNM=iNM+nn
-          do mm=0,nn
-             g_nm(nn+1,mm+1) = gArray(iNM+mm)
-             h_nm(nn+1,mm+1) = hArray(iNM+mm) 
-          enddo
-       end do
-
-       !\
-       ! Leave out monopole (n=0) term::
-       !/
-       g_nm(1,1) = 0.0
-
-       write(*,*)'Done Calculating harmonic coefficients' 
-
-       !\
-       ! Writing spherical harmonics file
-       !/
-
-       write(*,*)'Writing harmonic coefficients file, named ',NameFileOut
-       iUnit = 2
-       open ( unit = iUnit, &
-            file = NameFileOut, &
-            form = 'formatted', &
-            access = 'sequential', &
-            status = 'replace', iostat = iError )
-
-       if ( iError /= 0 ) then
-          write (*,*)' Could not output file ', NameFileOut
-          call MPI_abort(iComm, nError, iError)
-       end if
-
-       write ( iUnit, '(a19,I3,a10,I4,a4)' ) 'Coefficients order=',nHarmonics,' center=CT',CarringtonRotation,':180'
-       write ( iUnit, '(a)' ) 'Observation time'
-       write ( iUnit, '(a45,I3)' ) 'B0 angle & Nmax:        0          ',nHarmonics
-       write ( iUnit, * )
-       write ( iUnit, * )
-       write ( iUnit, * )
-       write ( iUnit, * )
-       write ( iUnit, * )
-       write ( iUnit, '(a19,I3,a26)' ) 'Max Harmonic Order:',nHarmonics,' Units: Gauss'
-       write ( iUnit, '(a)' ) ' '
-       write ( iUnit, '(a)' ) '  l   m      g(uT)      h(uT)'
-       write ( iUnit, '(a)' ) ' '
-
-
-       do nn=0,nHarmonics
-          do mm=0,nn
-             write(iUnit, '(2I5,2f15.3)') nn,mm,g_nm(nn+1,mm+1),h_nm(nn+1,mm+1)
-          enddo
-       end do
-
-       close(iUnit)
-    end if
 
   end subroutine calc_harmonics
  
@@ -329,26 +328,14 @@ contains
   subroutine calc_Legandre_polynoms
 
     
-    ! Calculate sqrt(integer) from 1 to 10000::
-     
-    do m=1,MaxInt
-       Sqrt_I(m) = sqrt(real(m))
-    end do
-
-    ! Calculate the ratio sqrt(2m!)/(2^m*m!)::
-    
-    factRatio1(:) = 0.0; factRatio1(1) = 1.0
-    do m=1,nHarmonics
-       factRatio1(m+1) = factRatio1(m)*Sqrt_I(2*m-1)/Sqrt_I(2*m)
-    enddo
-
+   
     ! Calculate polynomials with appropriate normalization
     ! for Theta_PFSSMa::
 
     SinThetaM  = 1.0
     SinThetaM1 = 1.0
     p_nm(:,:)  = 0.0
-    dp_nm(:,:) = 0.0
+
     
     do m=0,nHarmonics
        if (m == 0) then
@@ -366,17 +353,6 @@ contains
        !/
        if (m < nHarmonics) p_nm(m+2,m+1) = p_nm(m+1,m+1)*Sqrt_I(2*m+3)* &
             CosTheta
-       !\
-       ! Eq.(30) from Altschuler et al. 1976::
-       !/
-       dp_nm(m+1,m+1) = factRatio1(m+1)*Sqrt_I((2-delta_m0)*(2*m+1))*&
-            m*CosTheta*SinThetaM1
-       !\
-       ! Eq.(31) from Altschuler et al. 1976::
-       !/
-       if (m < nHarmonics) &
-            dp_nm(m+2,m+1) = Sqrt_I(2*m+3)*(CosTheta*&
-            dp_nm(m+1,m+1)-SinTheta*p_nm(m+1,m+1))
        
        SinThetaM1 = SinThetaM
        SinThetaM  = SinThetaM*SinTheta
@@ -391,11 +367,7 @@ contains
        stuff3         = Sqrt_I((n-1)**2-m**2)/Sqrt_I(2*n-3)
        p_nm(n+1,m+1)  = stuff1*(stuff2*CosTheta*p_nm(n,m+1)-  &
             stuff3*p_nm(n-1,m+1))
-       !\
-       ! Eq.(32) from Altschuler et al. 1976::
-       !/
-       dp_nm(n+1,m+1) = stuff1*(stuff2*(CosTheta*dp_nm(n,m+1)-&
-            SinTheta*p_nm(n,m+1))-stuff3*dp_nm(n-1,m+1))
+      
     enddo; enddo
     !\
     ! Apply Schmidt normalization::
@@ -409,7 +381,6 @@ contains
        ! Eq.(34) from Altschuler et al. 1976::
        !/
        p_nm(n+1,m+1)  = p_nm(n+1,m+1)*stuff1
-       dp_nm(n+1,m+1) = dp_nm(n+1,m+1)*stuff1
     enddo; enddo
   end subroutine calc_Legandre_polynoms
      
