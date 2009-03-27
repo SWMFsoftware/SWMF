@@ -8,6 +8,7 @@ test:
 	-@(make test_multifluid)
 	-@(make test_multiion)
 	-@(make test_mhdions)
+	-@(make test_mhdnoncons)
 	-@(make test_eosgodunov)
 	-@(make test_levelset)
 	-@(make test_hyades2d)
@@ -41,6 +42,7 @@ test_help:
 	@echo "    test_multifluid            (run multi-fluid test only)"
 	@echo "    test_multiion              (run multi-ion test only)"
 	@echo "    test_mhdions               (run MHD with ions test only)"
+	@echo "    test_mhdnoncons            (run Non-conservative MHD test only)"
 	@echo "    test_eosgodunov	      (run EOS/Godunov test only)"
 	@echo "    test_levelset	      (run Levelset test only)"
 	@echo "    test_hyades2d	      (run Hyades2D test only)"
@@ -187,6 +189,37 @@ test_mhdions_check:
 		${TESTDIR}/RESULTS/GM/cut_mhd_1_t00001000*.out \
 		> test_mhdions.diff
 	ls -l test_mhdions.diff
+
+### NONCONSERVATIVE MHD TEST ###
+
+test_mhdnoncons:
+	@echo "test_mhdnoncons_compile..." > test_mhdnoncons.diff
+	make test_mhdnoncons_compile
+	@echo "test_mhdnoncons_rundir..." >> test_mhdnoncons.diff
+	make test_mhdnoncons_rundir
+	@echo "test_mhdnoncons_run..." >> test_mhdnoncons.diff
+	make test_mhdnoncons_run
+	@echo "test_mhdnoncons_check..." >> test_mhdnoncons.diff
+	make test_mhdnoncons_check
+
+test_mhdnoncons_compile:
+	./Config.pl -u=Default -e=MhdNonCons -g=64,2,2,40,1
+	make
+	make PIDL
+
+test_mhdnoncons_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/MHDNONCONS/PARAM.in .
+
+test_mhdnoncons_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULTS
+
+test_mhdnoncons_check:
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
+		Param/MHDNONCONS/TestOutput/cut_mhd_t10m.out \
+		${TESTDIR}/RESULTS/GM/cut_mhd_1_t00001000*.out \
+		> test_mhdnoncons.diff
+	ls -l test_mhdnoncons.diff
 
 ### CRASH TEST ###
 
