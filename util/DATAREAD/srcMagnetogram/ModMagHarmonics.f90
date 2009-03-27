@@ -274,7 +274,7 @@ contains
                   nArray(iNM)+1,mArray(iNM)+1,iTheta)!/SinTheta
           hArray(iNM) = hArray(iNM)+&
                sum(Br_DD(iPhi,iTheta)*&
-                  SinMPhi_II(:,mArray(iNM)) )*da**PNMTheta_III(&
+                  SinMPhi_II(:,mArray(iNM)) )*da*PNMTheta_III(&
                   nArray(iNM)+1,mArray(iNM)+1,iTheta)!/SinTheta
           SumArea = SumArea+da*nPhi
        end do
