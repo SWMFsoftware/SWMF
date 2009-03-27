@@ -30,6 +30,7 @@ my $Src         = 'src';
 my $SrcUser     = 'srcUser';
 my $UserMod     = "$Src/ModUser.f90";
 my $UserModSafe = "$Src/ModUser.f90.safe";
+my $SrcEquation = 'srcEquation';
 my $EquationMod = "$Src/ModEquation.f90";
 my $EquationModSafe = "$Src/ModEquation.f90.safe";
 my $Equation;
@@ -172,7 +173,7 @@ sub set_equation{
 
     if($Equation eq '1'){
 	my @EquationModules;
-	chdir $Src;
+	chdir $SrcEquation;
 	@EquationModules = sort(glob("ModEquation?*.f90"));
 	for (@EquationModules){s/^ModEquation//; s/\.f90$//;}
 	print "Available Equations:\n   ",join("\n   ",@EquationModules),"\n";
@@ -180,7 +181,7 @@ sub set_equation{
 	return;
     }
 
-    my $File = "$Src/ModEquation$Equation.f90";
+    my $File = "$SrcEquation/ModEquation$Equation.f90";
     die "$ERROR File $File does not exist!\n" unless -f $File;
     return if -f $EquationMod and not `diff $File $EquationMod`;
     `cp $EquationMod $EquationModSafe` if -f $EquationMod; # save previous eq.
