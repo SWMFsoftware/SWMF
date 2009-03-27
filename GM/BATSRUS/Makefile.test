@@ -182,7 +182,7 @@ test_mhdions_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS
 
 test_mhdions_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-8 -a=1e-11 \
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
 		Param/MHDIONS/TestOutput/cut_mhd_t10m.out \
 		${TESTDIR}/RESULTS/GM/cut_mhd_1_t00001000*.out \
 		> test_mhdions.diff
