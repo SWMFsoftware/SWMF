@@ -18,9 +18,22 @@ PLANETARY
 #NONCONSERVATIVE
 F			UseNonConservative
 
-A single block 256x4x4 grid
-#INCLUDE
-Param/SHOCKTUBE/grid256
+#CHECKGRIDSIZE
+64			nI
+2			nJ
+2			nK
+4			MinBlockALL
+
+#GRID
+4
+1
+1
+-128.
+ 128.
+-1.
+ 1.
+-1.
+ 1.
 
 ! 90 per cent H+ and 10 percent O+
 #SHOCKTUBE
@@ -79,23 +92,14 @@ raw		StringLogfile
 #SAVERESTART
 F		DoSaverestart
 
-! This is set so that we can compare the unprocessed .idl files
-#SAVEBINARY
-F		DoSaveBinary
+#PLOTFILENAME
+second			NameMaxTimeUnit
+
+Save ASCII IDL file for comparison with reference solution
 
 #SAVEPLOT
-2		nPlotfile
-cut MHD idl	PlotString
--1              DnSavePlot
-0.1             DtSavePlot
--128.0		xMinCut
-+128.0		xMaxCut
-0.1		yMinCut
-0.11		yMaxCut
-0.1		zMinCut
-0.11		zMaxCut
-0.0             DxSavePlot
-cut raw idl	PlotString
+1		nPlotfile
+idl_ascii cut MHD	PlotString
 -1              DnSavePlot
 0.1             DtSavePlot
 -128.0		xMinCut
