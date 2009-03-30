@@ -2,11 +2,18 @@ module ModMagHarmonics
   use ModNumConst
   implicit none  
 
-  !The logical is to be set. It is known that
-  !the grid is uniform with respect to sin(laditude) at WSO
-  !It looks like the grid is uniform for MDI
-  logical,parameter :: UseSinLatitudeGrid = .false.
+  !The logical is to be set. 
+
+  logical,parameter :: UseSinLatitudeGrid = .true.
   
+  ! **********************Choice of this parameter**********************
+  ! *Sin(Latitude): WSO : http://wso.stanford.edu                      *
+  ! *   MDI: see http://soi.stanford.edu/magnetic/index6.html          *         
+  ! *   SOLIS:http://solis.nso.edu/vsm/map_info.html                   *
+  ! *   GONG: http://gong.nso.edu/data/magmap/index.html               *         
+  ! ********************************************************************
+  !
+  !
   ! Name of input file
   character (len=*), parameter:: NameFileIn='fitsfile.dat'
 
@@ -24,8 +31,9 @@ module ModMagHarmonics
   ! * SOLIS: ftp://solis.nso.edu/synoptic/level3/vsm/merged/carr-rot   *
   ! * MWO:   ftp://howard.astro.ucla.edu/pub/obs/synoptic_charts       *
   ! ********************************************************************
-  
-
+  ! * Field in Gauss: MDI,GONG,SOLIS                                   *
+  ! * Field in microTesla(0.01Gs): WSO, MWO                            *
+  ! ********************************************************************
   real,allocatable,dimension(:,:)::g_nm,h_nm, Br_DD
   real::dR=1.0,dPhi=1.0,dTheta,dSinTheta=1.0
   integer:: nPhi=72, nTheta=29
