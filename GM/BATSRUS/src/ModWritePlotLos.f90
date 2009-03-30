@@ -984,7 +984,7 @@ contains
        case default
           ! User defined functions are already dimensional, but integral
           ! requires a multiplication by length unit
-          Image_VII(iVar,:,:) = Image_VII(iVar,:,:)**No2Si_V(UnitX_)
+          Image_VII(iVar,:,:) = Image_VII(iVar,:,:)*No2Si_V(UnitX_)
        end select
 
     end do ! iVar
