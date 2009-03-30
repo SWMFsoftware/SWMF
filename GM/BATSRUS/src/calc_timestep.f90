@@ -22,7 +22,9 @@ subroutine calc_timestep
      DoTest=.false.; DoTestMe=.false.
   endif
   
-  if(UseCurlB0.and.FluxType=='Roe')then
+  if(UseCurlB0.and.FluxType=='Roe'&
+       .and..false.&
+       )then
      ! Extra time step limitation for Roe scheme
      do k=1,nK; do j=1,nJ; do i=1,nI
         SourceSpectralRadius_C(i,j,k) = &
