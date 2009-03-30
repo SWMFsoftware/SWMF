@@ -211,7 +211,12 @@ contains
           ! positive for rInnerTube < |y| < rOuterTube and x > xEndTube only
           DxyPl = &
                min(r - rInnerTube, rOuterTube - r, x - xEndTube)
-
+          !\
+          ! The boundary between beryllium and xenon is set based on the 2d
+          ! hyades result. This assinment for the level set functions is also done for
+          ! the region occupied by plastic, in which both xenon and beryllium
+          ! are absent
+          !/
           ! Set plastic tube state
           if(DxyPl > 0.0)then
 
