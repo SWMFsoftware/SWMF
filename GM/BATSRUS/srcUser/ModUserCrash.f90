@@ -25,8 +25,16 @@ module ModUser
   ! There are 3 materials: Xe, Be and Plastic
   integer, parameter :: nMaterial = 3
 
-  ! Dimensionality
+  ! Fully 3D simulation?
   logical :: IsThreeDim = .false.
+
+  ! Nozzle that shrinks the circular cross section of the tube 
+  ! into an ellipse or smaller circle
+  logical :: UseNozzle = .false.
+  real    :: xStartNozzle = 0.0
+  real    :: xEndNozzle   = 0.0
+  real    :: yRatioNozzle = 0.0
+  real    :: zRatioNozzle = 0.0
 
   ! Wall parameters
   logical:: UseTube = .false.
@@ -148,6 +156,14 @@ contains
           end select
        case("#THREEDIM")
           call read_var('IsThreeDim', IsThreeDim)
+       case("#NOZZLE")
+          call read_var('UseNozzle', UseNozzle)
+          if(IsThreeDim)then
+             call read_var('xStartNozzle', xStartNozzle)
+             call read_var('xEndNozzle',   xEndNozzle)
+             call read_var('yRatioNozzle', yRatioNozzle)
+             call read_var('zRatioNozzle', zRatioNozzle)
+          end if
        case('#USERINPUTEND')
           EXIT
        case default
@@ -171,13 +187,12 @@ contains
     use ModPolyimide, ONLY: cAtomicMass_I, cAPolyimide
     use ModLookupTable, ONLY: interpolate_lookup_table
 
-    real    :: x, r, xBe, DxBe, DxyPl, pSi, RhoSi, EinternalSi, TeSi
+    real    :: x, y, z, r, xBe, DxBe, DxyPl, pSi, RhoSi, EinternalSi, TeSi
     real    :: ePerP_I(0:nMaterial-1)
     real    :: DxyGold = -1.0
     logical :: IsError
 
     integer :: iBlock, i, j, k, iMaterial, iMaterial_I(1)
-    real :: StoredLevelset_V(LevelXe_:LevelPl_)
 
     character(len=*), parameter :: NameSub = "user_set_ics"
     !------------------------------------------------------------------------
@@ -199,101 +214,78 @@ contains
     do k=1, nK; do j=1, nJ; do i=1, nI 
 
        x = x_BLK(i,j,k,iBlock)
-       if(IsThreeDim)then
-          r = sqrt(y_BLK(i,j,k,iBlock)**2 + z_BLK(i,j,k,iBlock)**2)
-       else
-          r = abs(y_BLK(i,j,k,iBlock))
-       end if
+       y = y_BLK(i,j,k,iBlock)
+       z = z_BLK(i,j,k,iBlock)
 
+       if(UseNozzle) call set_nozzle_yz(x,y,z)
+
+       if(IsThreeDim)then
+          r = sqrt(y**2 + z**2)
+       else
+          r = abs(y)
+       end if
        
        if(UseTube)then
           ! Distance from plastic wall: 
           ! positive for rInnerTube < |y| < rOuterTube and x > xEndTube only
           DxyPl = &
                min(r - rInnerTube, rOuterTube - r, x - xEndTube)
-          !\
-          ! The boundary between beryllium and xenon is set based on the 2d
-          ! hyades result. This assinment for the level set functions is also done for
-          ! the region occupied by plastic, in which both xenon and beryllium
-          ! are absent
-          !/
+
           ! Set plastic tube state
           if(DxyPl > 0.0)then
 
-             if(nDimHyades==2)StoredLevelset_V(LevelXe_:LevelPl_)=&
-                  State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) 
-
-             State_VGB(:   ,i,j,k,iBlock) = 0.0
              ! Use the density and pressure given by the #TUBE command
-
              State_VGB(Rho_,i,j,k,iBlock) = RhoDimTube*Io2No_V(UnitRho_)
              State_VGB(p_  ,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
-             call init_radiation
+             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
+
+             call set_small_radiation_energy
              if(nDimHyades == 2)then
                 State_VGB(LevelPl_,i,j,k,iBlock) =  DxyPl
-                State_VGB(LevelXe_,i,j,k,iBlock) =  max(StoredLevelset_V(LevelBe_), &
-                                                        r - rOuterTube)
-                State_VGB(LevelBe_,i,j,k,iBlock) =  StoredLevelset_V(LevelBe_)
+                State_VGB(LevelXe_,i,j,k,iBlock) =  &
+                     max(State_VGB(LevelBe_,i,j,k,iBlock), r - rOuterTube)
              end if
           end if
 
           ! Set pressure and speed outside the tube. 
           ! For 1D Hyades input do not overwrite values left of xEndTube
-          if(r > rOuterTube &
-               .and. (nDimHyades == 1 .or. x > xEndTube) ) then
-             
-              if(nDimHyades==2)StoredLevelset_V(LevelXe_:LevelPl_)=&
-               State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) 
-
-             State_VGB(:   ,i,j,k,iBlock) = 0.0
+          if(r > rOuterTube .and. (nDimHyades == 1 .or. x > xEndTube) ) then
              State_VGB(Rho_,i,j,k,iBlock) = RhoDimOutside*Io2No_V(UnitRho_)
              State_VGB(p_  ,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
-             call init_radiation
+             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
+             call set_small_radiation_energy
              if(nDimHyades == 2)then
-                State_VGB(LevelXe_,i,j,k,iBlock) =  min(r - rOuterTube,x - xEndTube) 
+                State_VGB(LevelXe_,i,j,k,iBlock) =  &
+                     min(r - rOuterTube,x - xEndTube) 
                 State_VGB(LevelPl_,i,j,k,iBlock) =  rOuterTube - r
-                State_VGB(LevelBe_,i,j,k,iBlock) =  StoredLevelset_V(LevelBe_)
              end if
           end if
              
           ! Set the Xe state inside the tube for x > xUniformXe if it is set
-          if(xUniformXe > 0.0 .and. x > xUniformXe &
-               .and. r < rInnerTube)then
-             if(nDimHyades==2)StoredLevelset_V(LevelXe_:LevelPl_)=&
-                  State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) 
-             
-             State_VGB(:   ,i,j,k,iBlock) = 0.0
+          if(xUniformXe > 0.0 .and. x > xUniformXe .and. r < rInnerTube)then
              State_VGB(Rho_,i,j,k,iBlock) = RhoDimOutside*Io2No_V(UnitRho_)
              State_VGB(p_  ,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
-             call init_radiation
-             if(nDimHyades == 2) State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) = &
-                  StoredLevelset_V(LevelXe_:LevelPl_)
-             
+             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
+             call set_small_radiation_energy
           end if
        end if
        ! Distance from gold washer xEndTube < x < xEndTube + WidthGold
        if(UseGold) then
 
-          
-          DxyGold = min(x - xEndTube, xEndTube + WidthGold - x, &
-               r - rOuterTube)
+          DxyGold = &
+               min(x - xEndTube, xEndTube + WidthGold - x, r - rOuterTube)
 
           ! Set density of gold washer (if present)
           if(DxyGold > 0.0) then
 
-             if(nDimHyades==2)StoredLevelset_V(LevelXe_:LevelPl_)=&
-               State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) 
-
-             State_VGB(:   ,i,j,k,iBlock) = 0.0
              State_VGB(Rho_,i,j,k,iBlock) = RhoDimGold*Io2No_V(UnitRho_)
              State_VGB(p_  ,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
-             call init_radiation
-             DxyGold = min(x - xEndTube, &
-               r - rOuterTube)
+             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
+             call set_small_radiation_energy
+             DxyGold = min(x - xEndTube, r - rOuterTube)
              if(nDimHyades == 2)then
                 State_VGB(LevelPl_,i,j,k,iBlock) = rOuterTube - r 
-                State_VGB(LevelXe_,i,j,k,iBlock) =  DxyGold
-                State_VGB(LevelBe_,i,j,k,iBlock) =  StoredLevelset_V(LevelBe_)
+                State_VGB(LevelXe_,i,j,k,iBlock) = DxyGold
              end if
           end if
 
@@ -315,8 +307,8 @@ contains
           if(UseTube)then
              ! Distance from plastic wall: 
              ! positive for rInnerTube < |y| < rOuterTube and x > xEndTube only
-             DxyPl = &
-                  min(r - rInnerTube, rOuterTube - r, x - xEndTube)
+             DxyPl = min(r - rInnerTube, rOuterTube - r, x - xEndTube)
+
              ! Berylium is left of xBe inside rInnerTube 
              ! and it is left of xEndTube outside
              State_VGB(LevelBe_,i,j,k,iBlock) = &
@@ -393,14 +385,20 @@ contains
 
     end do; end do; end do
   contains
-    subroutine init_radiation
+    !==========================================================================
+    subroutine set_small_radiation_energy
+
       use ModMain,ONLY: UseGrayDiffusion
       use ModPhysics,ONLY: cRadiationNo, Si2No_V, UnitTemperature_
       use ModAdvance,ONLY: ERadiation_
-      if(.not.UseGrayDiffusion)return
+      !----------------------------------------------------------------------
+      if(.not.UseGrayDiffusion)RETURN
+
       State_VGB(ERadiation_,i,j,k,iBlock) = cRadiationNo * &
            (500.0 * Si2No_V(UnitTemperature_))**4
-    end subroutine init_radiation
+
+    end subroutine set_small_radiation_energy
+
   end subroutine user_set_ics
 
   !============================================================================
@@ -738,8 +736,11 @@ contains
        if(k == 1 .or. IsThreeDim)then
           x = x_Blk(i,j,k,iBlock)
           y = y_Blk(i,j,k,iBlock)
+          z = z_Blk(i,j,k,iBlock)
+
+          if(UseNozzle) call set_nozzle_yz(x, y, z)
+
           if(IsThreeDim)then
-             z = z_Blk(i,j,k,iBlock)
              r = sqrt(y**2 + z**2)
 
              ! Check if we are further away than the width of the box
@@ -1251,5 +1252,26 @@ contains
     if(present(HeatConductionCoefSiOut)) HeatConductionCoefSiOut = 0.0
 
   end subroutine user_material_properties
+
+  subroutine set_nozzle_yz(x,y,z)
+    real, intent(in):: x
+    real, intent(inout):: y, z
+
+    ! Set the Y,Z coordinates for the nozzle geometry.
+    ! The Y and Z coordinates are divided by a factor
+    !
+    ! 1 (for x <= xStartNozzle)  and 
+    ! yRatioNozzle or zRatioNozzle (for x >= xEndNozzle), respectively.
+    !
+    ! The factor is linearly varying in the [xStartNozzle,xEndNozzle] interval.
+
+    real :: Factor
+    !-------------------------------------------------------------------------
+    Factor = max(0.0, min(1.0, &
+         (x - xStartNozzle)/(xEndNozzle - xStartNozzle)))
+    y = y/(1 + Factor*(yRatioNozzle-1))
+    z = z/(1 + Factor*(zRatioNozzle-1))
+
+  end subroutine set_nozzle_yz
 
 end module ModUser
