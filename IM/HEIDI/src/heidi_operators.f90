@@ -14,7 +14,7 @@
 !
 !***********************************************************************
 !				LLIMIT
-!	Sets very small F2 values to zero to avoid computer zero
+!	Sets very small  values to zero to avoid computer zero
 !***********************************************************************
 	SUBROUTINE LLIMIT
 
@@ -155,7 +155,11 @@
 	     UR=IO-1
 	   ELSE
 	     FBND(1)=F(2)         ! upwind for the side with no b.c
-	     C(1)=VR(1,J)
+	     !write(*,*)'J',J
+             !write(*,*)'VR(1,J)',VR(1,J)
+             !write(*,*) 'C(1)',C(1)
+            
+             C(1)=VR(1,J)
 	     UR=IO
 	     F(IO+1)=f01(j,k,l,s)
 	     F(IO+2)=f02(j,k,l,s)
@@ -171,7 +175,15 @@
 	     IF (ABS(X).LE.1.E-27) FBND(I)=FUP
 	     IF (ABS(X).GT.1.E-27) THEN
 	       N=I+1-ISIGN
-	       RR=(F(N)-F(N-1))/X
+	       
+!!$               write(*,*) 'I',I
+!!$               write(*,*)'ISIGN',ISIGN
+!!$               write(*,*)'N',N
+!!$               write(*,*)'F(N)',F(N)
+!!$               write(*,*)'F(N-1)',F(N-1)
+!!$               write(*,*)'X',X
+
+               RR=(F(N)-F(N-1))/X
 	       IF (RR.LE.0) FBND(I)=FUP
 	       IF (RR.GT.0) THEN
 	         LIMITER=AMAX1(AMIN1(2.*RR,1.),AMIN1(RR,2.))
@@ -184,7 +196,14 @@
 	   end do ! I loop
 
 !........update the solution for next time step
-	   do I=2,ILMP(J)
+	   !C(1) = -1.5951970E-05
+           do I=2,ILMP(J)
+!!$              write(*,*)'I=',I,J,K,L,S
+!!$              write(*,*)'F2=', F2(I,J,K,L,S)
+!!$              write(*,*)'C=',C(I)
+!!$              write(*,*)'FBND=',FBND(I)
+!!$              write(*,*)'C=',C(I-1)
+!!$              write(*,*)'FBND(I-1)=',FBND(I-1)
 	    F2(I,J,K,L,S)=F2(I,J,K,L,S)-C(I)*FBND(I)+C(I-1)*FBND(I-1)
 	   end do ! I loop 
 	   do I=ILMP(J)+1,IO

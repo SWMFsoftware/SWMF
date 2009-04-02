@@ -23,7 +23,8 @@
 !	NPA=no. of grids in equatorial pitch angle
 
 program heidi_main
-  use ModHeidiIO,ONLY:nStep
+   
+  use ModHeidiIO 
   use ModInit
   implicit none 
 
@@ -33,10 +34,12 @@ program heidi_main
   call IM_init_session(1, 0.0)
   
   
-  do iStep=iStepStart,nStep		! Begin time loop
+  do I3=NST,NSTEP
      call heidi_run
   end do			! End time loop
+  
   call IM_finalize(0.0)
+!=================================================
 contains
   !Proxies for IM_wrapper
   subroutine IM_set_param(TypeAction)
@@ -124,6 +127,42 @@ contains
   end subroutine IM_save_restart
   !==========================
 end program heidi_main
+
 ! ************************  END OF MAIN  *******************************
 
+subroutine CON_stop(StringError)
+  use ModProcIM, ONLY: iProc, iComm
+  use ModMpi
+  implicit none
+  character (len=*), intent(in) :: StringError
+
+  ! Local variables:
+  integer :: iError,nError
+  !----------------------------------------------------------------------------
+
+  write(*,*)'Stopping execution! iProc=',iProc,' with msg:'
+  write(*,*)StringError
+  call MPI_abort(iComm, nError, iError)
+  stop
+
+end subroutine CON_stop
+
+subroutine CON_set_do_test(String,DoTest,DoTestMe)
+  implicit none
+  character (len=*), intent(in)  :: String
+  logical          , intent(out) :: DoTest, DoTestMe
+
+  DoTest = .false.; DoTestMe = .false.
+
+end subroutine CON_set_do_test
+
+subroutine CON_io_unit_new(iUnit)
+
+  use ModIoUnit, ONLY: io_unit_new
+  implicit none
+  integer, intent(out) :: iUnit
+
+  iUnit = io_unit_new()
+
+end subroutine CON_io_unit_new
 

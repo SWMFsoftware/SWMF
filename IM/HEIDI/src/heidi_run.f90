@@ -3,23 +3,22 @@ subroutine heidi_run
   use ModHeidiSize
   use ModHeidiIO
   use ModHeidiMain
-  
+
   implicit none 
 
-  CALL GETKPA(iStep,iStepStart,nCounterForCurrents,nFrequencyKp)
-
-  print *, 'I3:',iStep,T,KP
+  !integer :: nst,npr,i3,nkp,NIBC,i2
+ ! real    :: XN(NR,NS),LNC(NR,NS)
+  
+  CALL GETKPA(i3,nst,i2,nkp)
+  print *, 'I3:',I3,T,KP
+  print*, 'ISW', ISW
   IF (ISW.GT.0) CALL GETSWIND
-
   print *, 'Calling MAGCONV'
-  CALL MAGCONV(iStep,iStepStart)
-
+  CALL MAGCONV(i3,nst)
   print *, 'Calling THERMAL'
   CALL THERMAL
-
   print *, 'Calling WRESULT'
-  IF (iStep.EQ.iStepStart ) CALL WRESULT(LNC,XN,1)
-
+  IF (I3.EQ.NST) CALL WRESULT(LNC,XN,1)
   DO S=1,NS
      IF (SCALC(S).EQ.1) THEN
         print *, '   S: ',S
@@ -49,16 +48,15 @@ subroutine heidi_run
   T=T+2.*DT
   !.......Print desired result files at every TINT sec 
   CALL FCHECK(11)
-  IF (MOD(iStep,nOutputFrequency).EQ.0 .OR. iStep.EQ.NSTEP) THEN
+  IF (MOD(I3,NPR).EQ.0 .OR. I3.EQ.NSTEP) THEN
      CALL FCHECK(10)	! Checks for negative results
      CALL WRESULT(LNC,XN,0)
      IF (iwpi.GT.0) CALL ANISCH
   END IF
   !	Update boundary condition
+  IF (MOD(I3,NIBC).EQ.0) CALL GEOSB
 
-  write(*,*) "kp(heidi_run) : ",kp
-  IF (MOD(iStep,nFrequencyBC).EQ.0) CALL GEOSB
-  
-  iStep = iStep + 1
-
+ 
+ ! iStep = iStep + 1
+ 
 end subroutine heidi_run

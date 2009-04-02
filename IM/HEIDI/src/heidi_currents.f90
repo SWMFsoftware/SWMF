@@ -375,6 +375,7 @@ SUBROUTINE CURRENTCALC
   Iphi(1:IO,1:JO,1:NS)=0.  ! Eastward current totals (A)
   Jion1(1:IO,1:JO,1:NS)=0.  ! Current into ionosphere (A/m2)
   
+
   !  Start main species loop
   DO S=1,NS
      IF (SCALC(S).EQ.1) THEN

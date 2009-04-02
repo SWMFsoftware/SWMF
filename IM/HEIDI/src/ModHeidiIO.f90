@@ -8,8 +8,9 @@ Module ModHeidiIO
 
 ! Define a few time and geophysical index input variables
 ! Formerly: Common block PARAM2
-	integer year,day,nstep,ikp,iwpi
-	real ut,r,ap,kp,f107,tint,time	
+	integer year,day,nstep,ikp,iwpi,month
+	real ut,r,ap,kp,f107,tint,time
+	integer, dimension(1:7)::TimeArray
 
 ! Define some variables set with the input file
 ! Formerly: Common block PARAM3

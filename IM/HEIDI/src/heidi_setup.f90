@@ -47,7 +47,7 @@ SUBROUTINE heidi_read
   READ (iUnitOut,*) ELB,SWE,RW,HMIN
   READ (iUnitOut,*) ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT
   READ (iUnitOut,*) (SCALC(k),k=1,NS)
-  READ (iUnitOut,*) YEAR,DAY,UT,R,AP,KP
+  READ (iUnitOut,*) YEAR,Month,day,UT,R,AP,KP
   READ (iUnitOut,*) (INI(k),k=1,NS)
   READ (iUnitOut,*) (IBC(k),k=1,NS)
   READ (iUnitOut,*) TINJ,Ab,Eob
@@ -55,6 +55,19 @@ SUBROUTINE heidi_read
   READ (iUnitOut,*) NAME
   CLOSE(iUnitOut)
 
+  
+print*,' year,month,day,UT',year,month,day,UT
+
+  TimeArray(1) = year
+  TimeArray(2) = month
+  TimeArray(3) = day
+  TimeArray(4) = UT
+  TimeArray(5) = 0.0
+  TimeArray(6) = 0.0
+  TimeArray(7) = 0.0
+
+print*,'TimeArray',TimeArray
+  
   ISWB=ISW
   NSTEP=NINT(TMAX/DT/2.)                 ! time splitting
   Ib=0
@@ -98,6 +111,35 @@ SUBROUTINE heidi_read
      PPC(1:IPPC)=PPC(1:IPPC)*1.E3       ! Convert to Volts
      print *, 'PPC:',IPPC,TPPC(1),TPPC(IPPC),PPC(1),PPC(IPPC)
   END IF
+
+ ! open (unit=67, file = '../Test_read_inputs_SWMF.dat')
+  write (*,*) 'Reading the inputs from input.glo'
+  write (*,*) 'TMAX,TINT,TIME'
+  write (*,*)  TMAX,TINT,TIME
+  write (*,*) 'IO,JO,KO,LO,ISO'
+  write (*,*) IO,JO,KO,LO,ISO
+  write (*,*) 'ELB,SWE,RW,HMIN'
+  write (*,*) ELB,SWE,RW,HMIN
+  write (*,*) 'ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT'
+  write (*,*) ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT
+  write (*,*) '(SCALC(k),k=1,NS)'
+  write (*,*) (SCALC(k),k=1,NS)
+  write (*,*) 'YEAR,month,DAY,UT,R,AP,KP'
+  write (*,*) YEAR,Month,DAY,UT,R,AP,KP
+  write (*,*) '(INI(k),k=1,NS)'
+  write (*,*) (INI(k),k=1,NS)
+  write (*,*) '(IBC(k),k=1,NS)'
+  write (*,*) (IBC(k),k=1,NS)
+  write (*,*) 'TINJ,Ab,Eob'
+  write (*,*) TINJ,Ab,Eob
+  write (*,*) '(IRES(k),k=1,15)'
+  write (*,*) (IRES(k),k=1,15)
+  write (*,*) 'NAME'
+  write (*,*) NAME
+  write (*,*) '============================'
+ ! CLOSE(67)
+
+
 
   RETURN
 END SUBROUTINE heidi_read
@@ -425,9 +467,11 @@ SUBROUTINE ARRAYS
      SUMW=SUMW+WMU(L)
      SUMD=SUMD+DMU(L)
   END DO
-  !	print *, 'SUMS:',SUMW,SUMD
-  !	print *, 'LO:',MU(LO-1),MU(LO),DMU(LO),WMU(LO),MU(LO-1)+.5*DMU(LO-1)
-  !	print *, '1:',MU(1),MU(2),DMU(1),WMU(1),MU(2)-.5*DMU(2)
+  
+
+  	print *, 'SUMS:',SUMW,SUMD
+  	print *, 'LO:',MU(LO-1),MU(LO),DMU(LO),WMU(LO),MU(LO-1)+.5*DMU(LO-1)
+  	print *, '1:',MU(1),MU(2),DMU(1),WMU(1),MU(2)-.5*DMU(2)
   !	stop
   !**  calculate pitch angles for mlat
   DO I=1,IO

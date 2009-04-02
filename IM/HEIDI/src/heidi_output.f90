@@ -61,7 +61,8 @@
 	IF (S.EQ.2) ST2='_h'
 	IF (S.EQ.3) ST2='he'
 	IF (S.EQ.4) ST2='_o'
-	OPEN(iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	!OPEN(iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+        OPEN(iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	WRITE (iUnitOut,*) 'T,KP,A:',T,KP,A
 	WRITE (iUnitOut,38) 'L-shell','MLT(hr)','E(keV)','PA(deg)','n(cm-3)',   &
@@ -216,6 +217,7 @@
 	use ModHeidiCurrents
 	use ModHeidiWaves
 	use ModHeidiDGCPM
+        
 
 	implicit none
 
@@ -273,7 +275,7 @@
         print *, 'Calling CURRENTCALC'
 !	IF (IA.GE.8) CALL CURRENTCALC
 	CALL CURRENTCALC  ! Do it all the time
-	print *, 'WRESULT DST VALUES: ',(DST(S),S=1,NS)
+!	print *, 'WRESULT DST VALUES: ',(DST(S),S=1,NS)
 
 !.......L counter offset in PAD outputs
 	IFN=0
@@ -291,7 +293,8 @@
 	call saveplasmasphere(filename)
 !	  Next create an output like we have made before
 	  ST3='_pla.'
-        OPEN(UNIT=iUnitOut,file=cOutputDir//ST1//ST3//SUF,STATUS='UNKNOWN')
+        !OPEN(UNIT=iUnitOut,file=cOutputDir//ST1//ST3//SUF,STATUS='UNKNOWN')
+          OPEN(UNIT=iUnitOut,file=ST1//ST3//SUF,STATUS='UNKNOWN')
 	  WRITE (iUnitOut,*) 'Filename: '//ST1//ST3//SUF
 	  WRITE (iUnitOut,*) 'Plasmaspheric thermal densities from the DGCPM'
         WRITE (iUnitOut,16) T,KP
@@ -336,9 +339,12 @@
 	      END DO
 	    end do	! K loop
 	  end do	! L loop
-	  LNC(I,S)=XNO(I)-XN(I,S)
+	  !write(*,*)'LNC' ,LNC(I,S)
+          
+          LNC(I,S)=XNO(I)-XN(I,S)
 	  LEC(I,S)=EO(I)-ENER(I,S)
-	end do
+	
+       end do
 
 !.......Start the output routines
 
@@ -346,7 +352,8 @@
 !	IF (MOD(T,21600.).LT.2*DT) THEN	! Only every 6 hours
 	IF (IRES(1).EQ.1) THEN
 	  ST3='_psd.'
-        OPEN(UNIT=iUnitOut,file=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+        !OPEN(UNIT=iUnitOut,file=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+          OPEN(UNIT=iUnitOut,file=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	  WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	  IF (IFAC.EQ.1) THEN
 	    WRITE (iUnitOut,*) 'Phase space flux function, PHI = 2EF/m^2'
@@ -370,7 +377,7 @@
 !.......Write equatorially trapped distribution (IRES(2), 'etf')
 	IF (IRES(2).EQ.1) THEN
         ST3='_etf.'
-        OPEN(UNIT=iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+        OPEN(UNIT=iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	  WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	  WRITE (iUnitOut,*) 'Equatorially trapped distribution function, F'
 	  NIC(1)=2
@@ -393,7 +400,8 @@
 	 XR2=IO/2.
 	 IR2=IO/2
 	 ST3='_dep.'
-	 OPEN(UNIT=iUnitOut,file=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	 !OPEN(UNIT=iUnitOut,file=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+         OPEN(UNIT=iUnitOut,file=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	 do I=2,IO			! Electron heating
 	  do J=1,JO
@@ -458,7 +466,8 @@
 	  ST3=IPF(II)
 	  NEC1=(II-1)*KO/3+1
 	  NEC2=II*KO/3
-          OPEN(UNIT=iUnitOut,file=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+          !OPEN(UNIT=iUnitOut,file=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+          OPEN(UNIT=iUnitOut,file=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	  WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	  WRITE (iUnitOut,*) 'Total precipitation flux [1/cm2/s]'
 	  WRITE (iUnitOut,*) 'Integrated over the energy range:'
@@ -489,7 +498,8 @@
 !.......Write the differential precip flux (IRES(5), 'flx')
 	IF (IRES(5).EQ.1) THEN	
 	  ST3='_flx.'
-          OPEN(UNIT=iUnitOut,file=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+          !OPEN(UNIT=iUnitOut,file=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+          OPEN(UNIT=iUnitOut,file=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	  WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	  WRITE (iUnitOut,*) 'Differential precipitation fluxes'
           DO I=4,IO,2
@@ -522,7 +532,8 @@
 !..Write the particle & energy losses (IRES(6), 'los')
 	IF (IRES(6).EQ.1) THEN
 	  ST3='_los.'
-	  OPEN(UNIT=iUnitOut,file=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	  !OPEN(UNIT=iUnitOut,file=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+          OPEN(UNIT=iUnitOut,file=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	  WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	  WRITE (iUnitOut,*) 'Particle and energy losses since last output'
 	  WRITE(iUnitOut,71) T,KP
@@ -557,7 +568,8 @@
 !.......Print out the CFLs for the advection operators (IRES(8), 'cfl')
 	IF (IRES(8).EQ.1) THEN
 	 ST3='_cfl.'
-	 OPEN (iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	 !OPEN (iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+         OPEN (iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	 WRITE (iUnitOut,*) 'CFL numbers for the advection operators'
 	 WRITE (iUnitOut,71) T,KP
@@ -650,7 +662,8 @@
 !.......Print out the drift velocities (IRES(9), 'drf')
 	IF (IRES(9).EQ.1) THEN
 	 ST3='_drf.'
-	 OPEN (iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	 !OPEN (iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+         OPEN (iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	 WRITE (iUnitOut,*) 'Spatial coordinate drift velocities'
 	 WRITE (iUnitOut,71) T,KP
@@ -678,7 +691,8 @@
 !.......Also noon distributions, at PA=90 deg and at UPA(I) boundary
 	IF (IRES(10).EQ.1) THEN
 	 ST3='_evl.'
-	 OPEN (iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	 !OPEN (iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+         OPEN (iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	 WRITE (iUnitOut,*) 'Energy-Lshell spectra at MLT=0 and PA=90'
 	 WRITE (iUnitOut,71) T,KP
@@ -716,7 +730,8 @@
 !.......Print lifetimes [hr] and Coulomb diff coeff (IRES(11), 'lft')
 	IF (IRES(11).EQ.1) THEN
 	 ST3='_lft.'
-	 OPEN(UNIT=iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	 !OPEN(UNIT=iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+         OPEN(UNIT=iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	 WRITE (iUnitOut,71) T,KP
 	DO  I=4,IO,6
@@ -740,7 +755,8 @@
 !.......Print out pressures, densities, and Dst (IRES(12), 'prs')
 	IF (IRES(12).EQ.1) THEN
 	 ST3='_prs.'
-	 OPEN (iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	 !OPEN (iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+         OPEN (iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	 WRITE (iUnitOut,*) 'Pressures, densities, etc. for RC species ',ST2
 	 WRITE (iUnitOut,71) T,KP
@@ -827,7 +843,9 @@
 !.......Write out F2 to an unformatted file (IRES(13), 'unff')
 	IF (IRES(13).EQ.1) THEN
 	 ST3='.unff'
-	 OPEN(UNIT=iUnitOut,FILE=cOutputDir//ST1//ST2//ST3,status='unknown',   &
+	 !OPEN(UNIT=iUnitOut,FILE=cOutputDir//ST1//ST2//ST3,status='unknown',   &
+          ! form='unformatted')
+         OPEN(UNIT=iUnitOut,FILE=ST1//ST2//ST3,status='unknown',   &
            form='unformatted')
 	 DO L=1,NPA
 	  DO K=1,NE
@@ -844,7 +862,8 @@
 !	print *, 'Continuous loss file:',15+S,ST1//ST2//ST3//SUF
 	  CLOSE (15+S)
 	  ST3='_sal.'
-	  OPEN (15+S,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	  !OPEN (15+S,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+          OPEN (15+S,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	  WRITE (15+S,*) 'Filename: '//ST1//ST2//ST3//SUF
 	  WRITE (15+S,*) 'Sources and losses: continuous output'
 	  WRITE (15+S,71) T,KP
@@ -865,7 +884,8 @@
 	  END DO
 	 END DO
 	 ST3='_fbc.'
-	 OPEN (iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	 !OPEN (iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+         OPEN (iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	 WRITE (iUnitOut,*) 'Nightside boundary conditions'
 	 WRITE (iUnitOut,38) 'Ninj','Einj','Kinj','NSWB','USWB'

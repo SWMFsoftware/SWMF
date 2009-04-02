@@ -3,20 +3,20 @@ module ModInit
   implicit none
   SAVE
 
-  integer :: iStep           !i3
+  integer :: i3
   
-  integer :: iStepStart      !nst
+  integer :: nst
 
 ! To be verified
-  integer :: nOutputFrequency !npr
+  integer :: npr
 
   !To count the currents              
-  integer :: nCounterForCurrents !i2
+  integer :: i2
 
   !How often the boundary conditions should b called
-  integer :: nFrequencyBC        !NIBC
+  integer :: NIBC
 
   real,dimension(nR,nS)::XN,LNC
   
-  integer:: nFrequencyKp  !Freqiency of output of the Kp index
+  integer:: nkp
 end module ModInit

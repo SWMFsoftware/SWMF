@@ -181,8 +181,8 @@ subroutine IonoHeidiWriteOutput(ifile,time,IO_prefix,IO_suffix)
 
 !!! For use with mram-given output suffix:
 
-  write(*,*) "file : ",cOutputDir//iono_dir//"it_"//&
-       IO_suffix//IO_ext
+  !write(*,*) "file : ",cOutputDir//iono_dir//"it_"//&
+   !    IO_suffix//IO_ext
 
   open(unit=Iunit,file=cOutputDir//iono_dir//"it_"//&
        IO_suffix//IO_ext, &

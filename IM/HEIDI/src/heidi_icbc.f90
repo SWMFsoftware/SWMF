@@ -53,6 +53,8 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
   external :: GAMMLN
 
   integer :: iUnit=18
+  integer :: iUnit_tst=22
+
 
   !.......Start the loop over RC species
   DO S=1,NS
@@ -133,13 +135,13 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
            end do
            CLOSE(iUnit)
            ST1='testn'
-           OPEN(UNIT=iUnit,file=ST1//ST2//ST3,STATUS='OLD')
-           READ(iUnit,101) HEADER
-           READ(iUnit,101) HEADER
+           OPEN(UNIT=iUnit_tst,file=ST1//ST2//ST3,STATUS='OLD')
+           READ(iUnit_tst,101) HEADER
+           READ(iUnit_tst,101) HEADER
            do KK=1,5	
-              READ(iUnit,*) (NI(II,KK),II=1,3)
+              READ(iUnit_tst,*) (NI(II,KK),II=1,3)
            end do
-           CLOSE(iUnit)
+           CLOSE(iUnit_tst)
            !.......Determine parameters for specific initial condition
            IF (INI(S).EQ.2) THEN
               ig1=4			! Gausian centered at L=LZ(ig1)
@@ -418,13 +420,13 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
 
            !  Read in from a unformatted file (INI=7)
         ELSE IF (INI(S).EQ.7) THEN
-           OPEN(UNIT=iUnit,FILE=NAME//ST2//'.unff',status='old',   &
+           OPEN(UNIT=1,FILE=NAME//ST2//'.unff',status='old',   &
                 form='unformatted')
            DO L=1,NPA
               !	  DO K=8,NE  ! Changed the Egrid for runs "e" and "f" !1,NE
               DO K=1,NE  ! Change back to this for restarts
                  DO J=1,NT 
-                    read(iUnit) (f2(I,J,K,L,S),I=1,NR)
+                    read(1) (f2(I,J,K,L,S),I=1,NR)
                     !	    f2(1:NR,J,K,L,S)=0.5*f2(1:NR,J,K,L,S)  ! Special restart line
                  END DO
               END DO
@@ -434,7 +436,7 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
               !	   END DO
               !	  END DO        ! to here
            END DO
-           close(iUnit)
+           close(1)
 
         END IF
         !.......Done with initial particle distribution set up
@@ -457,23 +459,26 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
         !.......Calculate the total # of particles and energy of this species
         N=0				! total # dens of RC specie "s"
         ESUM=0				! total E of RC for specie "s"
-        do I=1,IO
-           ENER(I,S)=0			! E of RC specie for some LZ
-        end do
-        do I=2,IO
-           do J=2,JO
-              do K=2,KO
-                 do L=2,UPA(I)-1
-                    WEIGHT=F2(I,J,K,L,S)*WE(K)*WMU(L) ! F2 - average in cell
-                    XN(I,S)=XN(I,S)+WEIGHT		 !      (i,j,k,l)
-                    ENER(I,S)=ENER(I,S)+EKEV(K)*WEIGHT  ! for some LZ
-                 end do	! L loop
-              end do		! K loop
-           end do 		! J loop
-           ESUM=ESUM+ENER(I,S)
-           N=N+XN(I,S)	
-        end do
+!comment out when crashes from here
 
+!!$        do I=1,IO
+!!$           ENER(I,S)=0			! E of RC specie for some LZ
+!!$        end do
+!!$        do I=2,IO
+!!$           do J=2,JO
+!!$              do K=2,KO
+!!$                 do L=2,UPA(I)-1
+!!$                    WEIGHT=F2(I,J,K,L,S)*WE(K)*WMU(L) ! F2 - average in cell
+!!$                    XN(I,S)=XN(I,S)+WEIGHT		 !      (i,j,k,l)
+!!$                    ENER(I,S)=ENER(I,S)+EKEV(K)*WEIGHT  ! for some LZ
+!!$                 end do	        ! L loop
+!!$              end do		! K loop
+!!$           end do 		! J loop
+!!$           ESUM=ESUM+ENER(I,S)
+!!$           N=N+XN(I,S)	
+!!$        end do
+
+! to here
         !.......FACTOR, a scaling for ESUM and N, depends on IFAC:
         IF (IFAC.EQ.1) FACTOR(S)=8.6474E13/M1(S)**1.5*DR*DPHI
         IF (IFAC.EQ.2) FACTOR(S)=4.3237E13/M1(S)**1.5*DR*DPHI
@@ -592,7 +597,7 @@ SUBROUTINE GEOSB
 
   integer :: iUnitSopa=43
   integer :: iUnitMpa=44
-
+  
   integer :: iLatBoundary=-1, iLonBoundary=-1
 
   print *, 'Resetting the outer boundary condition'
@@ -653,13 +658,14 @@ SUBROUTINE GEOSB
 
   DO S=1,NS
 
-     DO L=1,LO
-        DO K=1,KO
-           DO J=1,JO
+     do L=1,LO
+        do K=1,KO
+           do J=1,JO
               FGEOS(J,K,L,S)=0. 
            enddo
         enddo
      enddo
+     
      IF (SCALC(S).EQ.1) THEN
 
         IF (TINJ.GT.TIME+2.*DT*NSTEP) THEN ! No injection, use IC for BC
@@ -705,7 +711,7 @@ SUBROUTINE GEOSB
 
      ! inputs are in /cc and eV
 
-     FAC=(T-TM1)/(TM2-TM1)			! Linearly interpolate
+     FAC=(T-TM1)/(TM2-TM1)		! Linearly interpolate
      NM=FAC*NM2+(1.-FAC)*NM1		! in cm-3
      TFM=(FAC*TFM2+(1.-FAC)*TFM1)*1.E-3	! in keV
      TCM=(FAC*TCM2+(1.-FAC)*TCM1)*1.E-3	! in keV
@@ -726,18 +732,16 @@ SUBROUTINE GEOSB
 
         ! Find location to take boundary condition from : 67 degrees
         iLonBoundary = IONO_nPsi/2.0
-
 !        if (iLatBoundary < 0) then
            iLatBoundary = 1
            do while (IONO_NORTH_Theta(iLatBoundary,1) < (90.0-67.0)*cDegToRad .and. &
                 IonoGmDensity(iLatBoundary, iLonBoundary) == 0.0)
-!              write(*,*) iLatBoundary, IonoGmDensity(iLatBoundary, iLonBoundary)
               iLatBoundary = iLatBoundary + 1
            enddo
 !        endif
 
-!        write(*,*) "Taking boundary condition from location : ", &
-!             iLatBoundary, iLonBoundary
+	!write(*,*) "Taking boundary condition from location : ", &
+        !     iLatBoundary, iLonBoundary
 
         NM = IonoGmDensity(iLatBoundary, iLonBoundary)
         TCM = IonoGmTemperature(iLatBoundary, iLonBoundary)
@@ -801,12 +805,15 @@ SUBROUTINE GEOSB
                          (TFM/TCM)*(1.-MU(L)**2))/(Kappa*Ekap))**(-Kappa-1.)
                  end do
               END DO
+              IF (IG7.EQ.1) THEN	
               FS(1)=AMAX1(.5*FS(2),Flanl(KES(S),10,S)   &
                    *FLUXFACT(S)*EKEV(KES(S)))
               DO K=KES(S)+1,KO                        ! SOPA fluxes
                  CALL LINTP(ES,FS,7,EKEV(K),FAC,IER)
                  Flanl(K,1:LO,S)=FAC/FLUXFACT(S)/EKEV(K)
               END DO
+           endif
+            
            ELSE  ! Maxwellian everywhere, SOPA (if designated)
               DO L=1,LO
                  DO K=2,KES(S)			! MPA moments
@@ -819,13 +826,16 @@ SUBROUTINE GEOSB
                          +MU(L)*MU(L)/TFM))
                  END DO  ! K loop for MPA
               END DO   ! L loop for MPA
+              
+              IF (IG7.EQ.1) THEN
               FS(1)=AMAX1(.5*FS(2)*FSFAC(S),Flanl(KES(S),10,S)   &
                    *FLUXFACT(S)*EKEV(KES(S)))/FSFAC(S)
               DO K=KES(S)+1,KO			! SOPA fluxes
                  CALL LINTP(ES,FS,7,EKEV(K),FAC,IER)
                  Flanl(K,1:LO,S)=FSFAC(S)*FAC/FLUXFACT(S)/EKEV(K)
               END DO ! K loop for SOPA
-           END IF  ! Block for S=2 and all others
+           endif
+        END IF  ! Block for S=2 and all others
         END IF  ! SCALC check
      END DO   ! S loop
   ELSE 
@@ -907,11 +917,11 @@ SUBROUTINE FINJ(F)
 
   IMPLICIT NONE
 
-  INTEGER :: K,IER,I
-  REAL :: F(NE),Cst1,Cst2,GAMMLN,CONV
-  real :: T1,T2,BZ1,BZ2,MD1,MD2,U1,U2,FAC,ERF,NY(NS),TLAG
+  integer :: K,IER,I
+  real    :: F(NE),Cst1,Cst2,GAMMLN,CONV
+  real    :: T1,T2,BZ1,BZ2,MD1,MD2,U1,U2,FAC,ERF,NY(NS),TLAG
   character header*80
-  SAVE T1,T2,BZ1,BZ2,MD1,MD2,U1,U2
+  save T1,T2,BZ1,BZ2,MD1,MD2,U1,U2
   external :: GAMMLN,ERF
 
   integer :: iUnitSw = 45 

@@ -859,12 +859,14 @@ SUBROUTINE MAGCONV(I3,NST)
      CALL CURRENTCALC  ! Finds the perpendicular "ring current"
      !			    ! and the field-aligned closure currents
      print *, '...More setup'
+     
      Irfac=Ir
      Latfac(1:Ir)=Lats(1:Ir)
      
      Ilfac=JO
      Lonfac(1:JO)=MLT(1:JO)
-     
+       
+
      bc_choice=0       ! High-lat boundary has pot=0.
      if (ABASE(IA+1).eq.5) bc_choice=1  ! W-96 high-lat BC
      if (ABASE(IA+1).eq.6) bc_choice=2  ! W-96 high-lat BC
@@ -883,13 +885,13 @@ SUBROUTINE MAGCONV(I3,NST)
      !	  end do
      !CC Here the Jfac from the various species are summed together
 
-     if (numprocs.gt.1) then
+     if (nProc.gt.1) then
         
         call MPI_BARRIER(iComm,iError)
         
         Jfac = 0.0
         
-        do iProc=1,numprocs
+        do iProc=1,nProc
            
            if (iProc-1.eq.me_world) then
               jfac_temp(:,:) = Jion1(:,:,parallel_species(iProc))
@@ -905,10 +907,11 @@ SUBROUTINE MAGCONV(I3,NST)
         enddo
         
      else
-        
+        !initializa Jion1
+        Jion1(:,:,:) = 0. 
         DO J=1,JO
            Jfac(1:Ir,J)=0.
-           DO S=1,NS
+           DO S=1,NS   
               IF (SCALC(S).EQ.1) JFAC(1:Ir,J)=Jfac(1:Ir,j)+Jreducer*Jion1(1:Ir,j,s)
            END DO
         END DO

@@ -64,8 +64,8 @@ subroutine heidi_check
   endif
 
   write(*,*) "me_world : ", me_world
-  write(*,*) "scalc : ", scalc
-  write(*,*) "total_species : ", total_species
-  write(*,*) "parallel_species : ", parallel_species
+  write(*,*) "scalc (which species): ", scalc
+  write(*,*) "total species : ", total_species
+  write(*,*) "parallel species : ", parallel_species
 
 end subroutine heidi_check
