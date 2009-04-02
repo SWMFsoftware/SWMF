@@ -139,6 +139,8 @@ subroutine init_RIM()
        LocalVar(nLats+2,nLonsAll+1), &
        OuterMagJrAll(nLats+2,nLonsAll+1), &
        InnerMagJrAll(nLats+2,nLonsAll+1), &
+       InnerMagEFluxAll(nLats+2,nLonsAll+1), &
+       InnerMagAveEAll(nLats+2,nLonsAll+1), &
        IonoJrAll(nLats+2,nLonsAll+1), &
        OuterMagInvBAll(nLats+2,nLonsAll+1), &
        OuterMagRhoAll(nLats+2,nLonsAll+1), &
@@ -149,14 +151,16 @@ subroutine init_RIM()
        OuterMagPAllR(0:nLonsAll+1,nLats), &
        LatitudeAllR(0:nLonsAll+1,nLats))
 
-  SigmaHAll       = -1.0e32
-  SigmaPAll       = -1.0e32
-  InnerMagJrAll   = -1.0e32
-  OuterMagJrAll   = -1.0e32
-  IonoJrAll       = -1.0e32
-  OuterMagInvBAll = -1.0e32
-  OuterMagRhoAll  = -1.0e32
-  OuterMagPAll    = -1.0e32
+  SigmaHAll        = -1.0e32
+  SigmaPAll        = -1.0e32
+  InnerMagJrAll    = -1.0e32
+  InnerMagEFluxAll = -1.0e32
+  InnerMagAveEAll  = -1.0e32
+  OuterMagJrAll    = -1.0e32
+  IonoJrAll        = -1.0e32
+  OuterMagInvBAll  = -1.0e32
+  OuterMagRhoAll   = -1.0e32
+  OuterMagPAll     = -1.0e32
 
   ! This is ONLY for communication to other modules
 
