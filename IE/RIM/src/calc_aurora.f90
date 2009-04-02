@@ -53,9 +53,14 @@ subroutine calc_aurora
   enddo
 
   ! Move results back into main variables
+
   do iLat = 1, nLats/2
      AveE(:,iLat)  = AveEH(:,iLat)
      eFlux(:,iLat) = eFluxH(:,iLat)
+     if (maxval(InnerMagAveE) > 0.0) then
+        EFlux(:,iLat) = InnerMagEFlux(:,iLat)
+        AveE(:,iLat)  = InnerMagAveE(:,iLat)
+     endif
   enddo
 
   ! North
@@ -78,6 +83,12 @@ subroutine calc_aurora
      iLR = nLats-iLat+1
      AveE(:,iLR)  = AveEH(:,iLat)
      eFlux(:,iLR) = eFluxH(:,iLat)
+     if (maxval(InnerMagAveE) > 0.0) then
+        EFlux(:,iLR) = InnerMagEFlux(:,iLR)
+        AveE(:,iLR)  = InnerMagAveE(:,iLR) 
+        where(AveE < 0.25) AveE = 0.25
+        where(EFlux < 0.1) EFlux = 0.1
+     endif
   enddo
 
   do iLon = 0, nLons+1
