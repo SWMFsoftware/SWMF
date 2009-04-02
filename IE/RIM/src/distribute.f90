@@ -9,7 +9,7 @@ subroutine distribute
 
   implicit none
 
-  integer :: iError, iSize
+  integer :: iError, iSize, iLM, iLat
 
   if (iDebugLevel > 1) then 
      write(*,*) "RIM==> mm(OuterMagJrAll):", &
@@ -26,8 +26,26 @@ subroutine distribute
      OuterMagJr = 0.0
   endif
 
+  InnerMagEFlux = -1.0
+  InnerMagAveE  = -1.0
   if (maxval(InnerMagJrAll) > -1.0e31) then
+     ! If we are getting solution from the RCM, only the North values are
+     ! supplied.  Therefore, before we rearrage everything, we have to 
+     ! map the Northern hemisphere solution to the Southern hemisphere
+     if (maxval(InnerMagJrAll(nLats/2+1:nLats+1,:)) <= 0.0) then
+        do iLat = 1, nLats/2+1
+           iLM = nLats+2 - iLat + 1
+           InnerMagJrAll(iLM,:)    = InnerMagJrAll(iLat,:)
+           InnerMagEFluxAll(iLM,:) = InnerMagEFluxAll(iLat,:)
+           InnerMagAveEAll(iLM,:)  = InnerMagAveEAll(iLat,:)
+        enddo
+     endif
+
      call rearrange(InnerMagJrAll, InnerMagJr)
+     if (maxval(InnerMagEFluxAll) > 0.0) then
+        call rearrange(InnerMagEFluxAll, InnerMagEFlux)
+        call rearrange(InnerMagAveEAll,  InnerMagAveE)
+     endif
   else
      InnerMagJr = 0.0
   endif
