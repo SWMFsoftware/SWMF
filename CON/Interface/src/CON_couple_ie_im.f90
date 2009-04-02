@@ -159,7 +159,7 @@ contains
     !EOP
 
     external IM_get_for_ie,IE_put_from_im
-    integer, parameter :: nVarImIe=1
+    integer, parameter :: nVarImIe=3
     real :: tSimulationTmp
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
@@ -263,7 +263,7 @@ contains
                           IMr1_Xyz_D,&!out:generalized IM cords(indexes)
                           2,         &!IM_grid dimension
                           IM_)        !IM_grid ID
-                            
+
   end subroutine map_ie_to_im
 
   !============================================================================
