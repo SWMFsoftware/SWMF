@@ -238,6 +238,7 @@ subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
   ! indexes stored in Index and weights stored in Weight
   ! The variables should be put into Buff_V
 
+  use RCM_variables, ONLY: birk, eavg, eflux, iSize, jSize, colat, aloct
   use CON_router,   ONLY: IndexPtrType, WeightPtrType
   implicit none
   character(len=*), parameter :: NameSub='IM_get_for_ie'
@@ -247,7 +248,52 @@ subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
   type(IndexPtrType),intent(in) :: Index
   type(WeightPtrType),intent(in):: Weight
 
+  integer :: iLat, iLon, iBlock, iPoint
+  real    :: w
+
   Buff_V = 0.0
+
+  do iPoint = iPointStart, iPointStart + nPoint - 1
+
+     iLat   = Index % iCB_II(1,iPoint)
+     iLon   = Index % iCB_II(2,iPoint)
+     iBlock = Index % iCB_II(3,iPoint)
+     w      = Weight % Weight_I(iPoint)
+
+     if(iBlock/=1)then
+        write(*,*)NameSub,': iPoint,Index % iCB_II=',&
+             iPoint,Index%iCB_II(:,iPoint)
+        call CON_stop(NameSub//&
+             ' SWMF_ERROR iBlock should be 1=North in IM-IE coupling')
+     end if
+
+     if (iLon > jSize) iLon = mod(iLon,jSize)
+     if(iLat<1 .or. iLat>iSize*2 .or. iLon<0 .or. iLon>jSize)then
+        write(*,*)'iLat,iLon=',iLat, iSize, iLon, jSize
+        call CON_stop(NameSub//' SWMF_ERROR index out of range')
+     end if
+
+     ! Only worry about the northern hemisphere....  IE can fix the southern hemisphere.
+
+     if (iLat <= iSize .and. iLon <= jSize) then
+        Buff_V(1) = Buff_V(1) - w * birk(iLat,iLon)/2 / 1.0e6
+        Buff_V(2) = Buff_V(2) + w * eflux(iLat,iLon,1)
+        Buff_V(3) = Buff_V(3) + w * eavg(iLat,iLon,1) / 1000.0
+     endif
+
+!     if (iLat > iSize .and. iLon <= jSize) &
+!          Buff_V(1) = Buff_V(1) + w * birk(2*iSize-iLat+1,iLon)/2 / 1.0e6
+
+!     if (iLat > IONO_nTheta .and. iLon <= IONO_nPsi) &
+!          Buff_V(1) = Buff_V(1) + w * IONO_SOUTH_RCM_JR(2*IONO_nTheta-iLat+1,iLon)
+
+  end do
+
+!!! aloct = angle from noon on radians
+!!! colat 
+!!! birk - with ghost cells (positive down, summed over two hems microamps/m2)
+!!! eflux - lat, lon, species (1 - electrons) (total between 2 hems ergs/cm2/s)
+!!! eavg - lat, lon, species (1 - electrons) (keV)
 
 end subroutine IM_get_for_ie
 
