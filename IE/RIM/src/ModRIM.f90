@@ -20,7 +20,7 @@ module ModRIM
        SigmaAurH, SigmaAurP, Sigma0, &
        OldPotential=0.0, Jr, OuterMagJr, InnerMagJr, IonoJr, &
        OuterMagInvB, OuterMagRho, OuterMagP, OuterMagT, &
-       Area
+       Area, InnerMagEFlux, InnerMagAveE
 
   real, dimension(0:nLons+1,nLats) :: &
        SigmaThTh, SigmaThPs, SigmaPsPs, &
@@ -52,7 +52,8 @@ module ModRIM
        LocalVar, OuterMagJrAll, InnerMagJrAll, IonoJrAll, &
        OuterMagInvBAll, OuterMagRhoAll, OuterMagPAll, &
        OuterMagInvBAllR, OuterMagRhoAllR, OuterMagPAllR, OuterMagTAllR, &
-       LatitudeAllR
+       LatitudeAllR, &
+       InnerMagEFluxAll, InnerMagAveEAll
 
   real :: cpcps = 0.0
   real :: cpcpn = 0.0
