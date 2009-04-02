@@ -604,7 +604,7 @@ end subroutine IE_get_for_im
 subroutine IE_put_from_im(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
 
   use CON_router,   ONLY: IndexPtrType, WeightPtrType
-  use ModRIM, ONLY: nLats, nLonsAll, InnerMagJrAll, IsNewInput
+  use ModRIM
 
   implicit none
   character(len=*), parameter   :: NameSub='IE_put_from_im'
@@ -613,7 +613,7 @@ subroutine IE_put_from_im(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
   type(IndexPtrType),intent(in) :: Index
   type(WeightPtrType),intent(in):: Weight
   logical,intent(in)            :: DoAdd
-  integer :: iBlock,iLat,iLon
+  integer :: iBlock,iLat,iLon, iLM
   !---------------------------------------------------------------------------
   if(nPoint>1)then
      write(*,*)NameSub,': nPoint,iPointStart,Weight=',&
@@ -636,10 +636,25 @@ subroutine IE_put_from_im(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
 
   if ( iLat >= 1 .and. iLat <= nLats+2 .and. &
        iLon >= 0 .and. iLon <=nLonsAll+1) then
+     iLM = nLats+2 - iLat + 1
      if(DoAdd)then
-        InnerMagJrAll(iLat,iLon) = InnerMagJrAll(iLat,iLon) + Buff_V(1)
+        InnerMagJrAll(iLat,iLon)    = InnerMagJrAll(iLat,iLon)    + Buff_V(1)
+        InnerMagEFluxAll(iLat,iLon) = InnerMagEFluxAll(iLat,iLon) + Buff_V(2)
+        InnerMagAveEAll(iLat,iLon)  = InnerMagAveEAll(iLat,iLon)  + Buff_V(3)
+!        if (iLat < nLats/2) then
+!           InnerMagJrAll(iLM,iLon)    = InnerMagJrAll(iLM,iLon)    + Buff_V(1)
+!           InnerMagEFluxAll(iLM,iLon) = InnerMagEFluxAll(iLM,iLon) + Buff_V(2)
+!           InnerMagAveEAll(iLM,iLon)  = InnerMagAveEAll(iLM,iLon)  + Buff_V(3)
+!        endif
      else
-        InnerMagJrAll(iLat,iLon) = Buff_V(1)
+        InnerMagJrAll(iLat,iLon)    = Buff_V(1)
+        InnerMagEFluxAll(iLat,iLon) = Buff_V(2)
+        InnerMagAveEAll(iLat,iLon)  = Buff_V(3)
+!        if (iLat < nLats/2) then
+!           InnerMagJrAll(iLM,iLon)    = Buff_V(1)
+!           InnerMagEFluxAll(iLM,iLon) = Buff_V(2)
+!           InnerMagAveEAll(iLM,iLon)  = Buff_V(3)
+!        endif
      end if
   endif
 
