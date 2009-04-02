@@ -2844,7 +2844,7 @@ end
 
 ;=============================================================================
 
-pro plot_log, logfilename, func, $
+pro plot_log, logfilenames, func, $
               wlog0, wlognames0, wlog1, wlognames1, wlog2, wlognames2,$
               xrange=xrange, yranges=yranges, timeshifts=timeshifts, $
               smooths=smooths, $
@@ -2852,7 +2852,7 @@ pro plot_log, logfilename, func, $
               title=title, xtitle=xtitle, ytitles=ytitles, timeunit=timeunit
 
 ; Plot variables listed in the space separated func string from the
-; files listed in the space separated list of filenames in logfilename.
+; files listed in the string array logfilenames.
 ; Use wlog0...wlognames2 if all the needed arguments are present 
 ; otherwise read the arrays from the files.
 ; Use xrange to set the time range, shift times by timeshifts(nlog), 
@@ -2866,7 +2866,7 @@ pro plot_log, logfilename, func, $
 ; title, xtitle and ytitles(nfunc) arrays, respectively.
 ; Set the optional variables to zero to get the default behavior.
 
-str2arr,logfilename,logfilenames,nlog
+nlog = n_elements(logfilenames)
 str2arr,func,funcs,nfunc
 
 ; read in arrays if not present
@@ -2917,7 +2917,7 @@ if max(linestyles) eq 0 and max(symbols) eq 0 and min(colors) eq 255 then $
 
 ; Define default title
 if n_elements(title) eq 1 and size(title,/type) eq 7 then $
-  title0=title else title0=logfilename
+  title0=title else title0=strjoin(logfilenames,' ')
 
 ; Define default xtitle
 if n_elements(xtitle) eq 1 and size(xtitle,/type) eq 7 then xtitle0=xtitle $
