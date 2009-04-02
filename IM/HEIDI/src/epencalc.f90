@@ -1,4 +1,4 @@
-subroutine epencalc(utime,f107,bc_choice,IMF_By, IMF_Bz, SW_V)
+subroutine epencalc(SimulationTime,f107,bc_choice,IMF_By, IMF_Bz, SW_V)
 
   use ModKind, ONLY: Real8_
   use ModIonoHeidi
@@ -11,7 +11,7 @@ subroutine epencalc(utime,f107,bc_choice,IMF_By, IMF_Bz, SW_V)
   !use ModIO
   implicit none
 
-  real, intent(in)    :: utime,f107
+  real, intent(in)    :: SimulationTime,f107
   integer, intent(in) :: bc_choice
   real, intent(in)    :: IMF_By, IMF_Bz, SW_V
   integer :: iError
@@ -23,7 +23,7 @@ subroutine epencalc(utime,f107,bc_choice,IMF_By, IMF_Bz, SW_V)
   character (len=100) :: cAMIEFileSouth
   logical :: IsFirstTime = .true.
 
-  real(Real8_) :: Real_Time_of_Year
+  real(Real8_) :: RealTime
 !-----------------------------------------------------------
   debug = .false.
 
@@ -36,8 +36,8 @@ subroutine epencalc(utime,f107,bc_choice,IMF_By, IMF_Bz, SW_V)
 
   if (debug) write(*,*) "increment_real_world_time"
 
-  !call increment_real_world_time(utime)
-  call time_int_to_real(TimeArray,Real_Time_of_Year)
+  !call increment_real_world_time(SimulationTime)
+  call time_int_to_real(TimeArray,RealTime)
   
 !
 ! Get FAC Data
@@ -66,7 +66,7 @@ subroutine epencalc(utime,f107,bc_choice,IMF_By, IMF_Bz, SW_V)
         if (abs(bc_choice) == 1) then
 
            Lines(1) = "#BACKGROUND"
-           Lines(2) = "../src/"
+           Lines(2) = "../../../UA/GITM/srcData/"
            Lines(3) = "weimer96"
            Lines(4) = "ihp"
            Lines(5) = "idontknow"
@@ -113,15 +113,15 @@ subroutine epencalc(utime,f107,bc_choice,IMF_By, IMF_Bz, SW_V)
 
      endif
      
-      Real_Time_of_Year = Real_Time_of_Year + utime
+      RealTime = RealTime + SimulationTime
     
-     write(*,*) "time: Real_Time_of_Year, utime", Real_Time_of_Year, utime
+     write(*,*) "time: RealTime, SimulationTime", RealTime, SimulationTime
      
      
-     call IO_SetTime(Real_Time_of_Year)
+     call IO_SetTime(RealTime)
 
 
-     TimeOfDay = mod(utime,24.0*3600.0)
+     TimeOfDay = mod(SimulationTime,24.0*3600.0)
      write(*,*) "Time to AMIE : ",TimeOfDay
      if (abs(bc_choice) == 2) call get_AMIE_values(TimeOfDay)
 
