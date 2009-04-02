@@ -28,6 +28,7 @@ LIB:  install
 	@cd ${EMPIRICALIEDIR};	make LIB
 	@cd ${EMPIRICALGMDIR};	make LIB
 	@cd src;	        make LIB
+	@cd srcInterface;	make LIB
 
 OUTDIR =output
 TESTDIR = run_test
@@ -39,7 +40,7 @@ test:
 #	@echo "test_run..."    >> test.diff
 #	make   test_run
 
-test1:
+test:
 	@echo "test_compile..." > test.diff
 	make   test_compile
 	@echo "test_rundir..." >> test.diff
@@ -54,16 +55,16 @@ test_compile:
 
 test_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR}
+	make rundir RUNDIR=${TESTDIR} STANDALONE="YES" PWDIR=`pwd`
 	cp input/*.in ${TESTDIR}
 	cp input/*.dat ${TESTDIR}
 	cp input/*.glo ${TESTDIR}
 	cp input/*.initial ${TESTDIR}
 	cp input/*.unff ${TESTDIR}
 	cd ${TESTDIR} ;\
-	mkdir test1_ionosphere
+	mkdir ionosphere
 
-test_run:
+test_run: 
 	cd ${TESTDIR}; 
 	cp ../../bin/HEIDI.exe ${TESTDIR}/HEIDI.exe; \
 	pwd
@@ -96,6 +97,7 @@ allclean: install
 #
 #       Create run directories
 #
+
 rundir:
 	mkdir -p ${RUNDIR}/IM
 	cd ${RUNDIR}/IM; \
@@ -106,3 +108,4 @@ rundir:
 		cd ${RUNDIR} ; \
 		ln -s ${BINDIR}/HEIDI.exe .;\
 	fi);
+

@@ -6,10 +6,15 @@ SHELL =/bin/sh
 default : HEIDI.exe
 
 include ../Makefile.def
+
+SEARCH_EXTRA = -I${DATAREADINDICESDIR} -I${EMPIRICALIEDIR}
+
 include ../Makefile.conf
 include Makefile.DEPEND
 
-MODULES = \
+include Makefile.RULES
+
+OBJECTS = \
 	ModHeidiSize.o\
 	ModHeidiMain.o\
 	ModHeidiCurrents.o\
@@ -20,55 +25,7 @@ MODULES = \
 	ModInit.o\
 	ModIonoHeidi.o\
 	ModHeidiSatellites.o\
-	ModProcIM.o
-
-#MODULES = \
-#	ModHeidiSize.o\
-#	ModHeidiMain.o\
-#	ModHeidiCurrents.o\
-#	ModHeidiDGCPM.o\
-#	ModHeidiDrifts.o\
-#	ModHeidiIO.o\
-#	ModHeidiWaves.o\
-#	ModInit.o\
-#	ModSize.o\
-#	ModMain.o\
-#	ModIonosphere.o\
-#	ModConductance.o\
-#	ModPhysics.o\
-#	ModProcIM.o\
-#	ModIO.o\
-#	precision.o \
-#	io.o \
-#        CSR.o \
-#        MSR.o \
-#        LUCSRMSR.o \
-#        BandLU.o \
-#        matrix-arithmetic.o \
-#        flop_module.o \
-#        iteration-defaults.o \
-#        GMRES.o \
-#        ilu.o \
-#	ModProcIM.o 
-#
-#OBJ_IONO = \
-#        iono_conductances.o\
-#        iono_solver.o\
-#        iono_coupling.o\
-#	read_ring_current.o\
-#	write_ring_current.o\
-#	read_amie.o\
-#	epencalc.o\
-#	convert_time_routines.o\
-#	iono_init.o \
-
-OBJ_IONO = \
-	read_ring_current.o\
-	write_ring_current.o\
-	epencalc.o\
-	iono_init.o
-
-OBJECTS_010 = \
+	ModProcIM.o\
 	heidi_setup.o\
 	heidi_icbc.o\
 	heidi_coefficients.o\
@@ -84,106 +41,47 @@ OBJECTS_010 = \
 	heidi_check.o \
 	heidi_init.o \
 	heidi_run.o \
-	IM_wrapper.o
+	read_ring_current.o\
+	write_ring_current.o\
+	epencalc.o\
+	iono_init.o
 
-MODULES_IE = 
-#\
-#	ModConductance.o
 
-
-#OBJECTS_IE = \
-#	AMIE_Library.o\
-#	GM_Library.o\
-#	IE_End.o\
-#	IE_Initialize.o\
-#	IE_Library.o\
-#	IO_Library.o\
-#	IE_set_inputs.o\
-#	readAMIEoutput.o\
-#	wei01.o\
-#	wei96.o\
-#	weicom.o\
-#	mh86.o\
-#	hmr89.o\
-#	iz94.o\
-#	merge_str.o\
-#	time_routines.o\
-#	ihp.o
-
-OBJECTS_IE = 
-
-#OBJECTS_IE = \
-#	GM_Library.o\
-#	IE_End.o\
-#	IE_Initialize.o\
-#	IE_Library.o\
-#	IE_set_inputs.o\
-#	wei01.o\
-#	wei96.o\
-#	weicom.o\
-#	time_routines.o
-
-OBJECTS = ${OBJ_IONO} ${OBJECTS_IE} ${OBJECTS_010} ${MODULES_IE} ${MODULES}
-
+EXEOBJECTS = heidi_main.o ${OBJECTS}
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${EXEOBJECTS}
 
-IE_LIB = libIE.a
+MY_LIB = libHEIDI.a
 
-${IE_LIB}: DEPEND ${MODULES_IE} ${OBJECTS_IE}
-	cp -f ${LIBDIR}/libSHARE.a ${IE_LIB}
-	${AR} ${IE_LIB} ${MODULES_IE} ${OBJECTS_IE}
 
-# Object files not included into the library
-#Library should be compiled first, because modules are used in main.
-main.o : ${IE_LIB}
-
-standalone : main.o
-	${LINK.f90} -o test.exe main.o ${MODULES_IE}$  -L. -lIE ${Lflag1}
-
-#	${LINK.f90} -o test.exe ${MODULES} ${OBJECTS} main.o 
-
-interface: ${IE_LIB} Interface.o
-	${LINK.f90} -o Interface.exe Interface.o ${MODULES_IE} -L. -lIE ${Lflag1}
-
-IONO_LIB = libIONO.a
-
-${IONO_LIB}: DEPEND ${MODULES} ${OBJECTS_IONO} ${IE_LIB}
-	cp -f ${IE_LIB} ${IONO_LIB}
-	${AR} ${IONO_LIB} ${MODULES} ${OBJECTS_IONO}
-
-MY_LIB = ${LIBDIR}/libIM.a
-
-${MY_LIB}: DEPEND ${OBJECTS}
-	rm -f ${MY_LIB}
-	${AR} ${MY_LIB} ${OBJECTS} 
 
 LIB : DEPEND
 	make ${MY_LIB}
+	@echo
+	@echo ${MY_LIB} has been brought up to date.
+	@echo
 
-#IONOSPHERE
+${MY_LIB}: ${OBJECTS} ${MAKEFILE_COMP_SELECT}
+	rm -f ${MY_LIB}
+	${AR} ${MY_LIB} ${OBJECTS} 
 
-IONO:	IONO.exe
+# main.o: ${LIBSHARE}
 
-iono.o : ${IONO_LIB} 
-#main.o : ${IONO_LIB}
+EXE = ${BINDIR}/HEIDI.exe
 
-IONO.exe :	iono.o #main.o
-	${LINK.f90} -o IONO.exe iono.o ${MODULES} -L. -lIONO  -L${LIBDIR} -lSHARE ${Lflag1}
+HEIDI:  DEPEND
+	@make ${EXE}
+	@echo "${EXE} has been created"
 
-HEIDI:  LIB
-	make HEIDI.exe
-
-SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
-
-#HEIDI.exe: ${OBJECTS} heidi_main.o
-#	${LINK.f90} -o ${BINDIR}/HEIDI.exe heidi_main.o ${OBJECTS}
-
-HEIDI.exe: ${OBJECTS} heidi_main.o
-	${LINK.f90} -o ${BINDIR}/HEIDI.exe heidi_main.o ${OBJECTS} -L${LIBDIR} -lSHARE ${Lflag1}
-
-
+${EXE}: ${EXEOBJECTS}
+	rm -rf Tmp_; mkdir Tmp_
+	cd Tmp_; \
+		ar -x ${LIBDIR}/libEMPIRICALIE.a; \
+		ar -x ${LIBDIR}/libINDICES.a; \
+		ar -x ${LIBDIR}/libSHARE.a
+	${LINK.f90} -o  ${EXE} ${EXEOBJECTS} Tmp_/*.o ${LBLAS} ${Lflag1}
+	rm -rf Tmp_
 
 distclean: clean
 	rm -f Makefile.DEPEND Makefile.RULES
