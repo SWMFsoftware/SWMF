@@ -158,7 +158,7 @@ contains
           call read_var('IsThreeDim', IsThreeDim)
        case("#NOZZLE")
           call read_var('UseNozzle', UseNozzle)
-          if(IsThreeDim)then
+          if(UseNozzle)then
              call read_var('xStartNozzle', xStartNozzle)
              call read_var('xEndNozzle',   xEndNozzle)
              call read_var('yRatioNozzle', yRatioNozzle)
@@ -742,17 +742,17 @@ contains
 
           if(IsThreeDim)then
              r = sqrt(y**2 + z**2)
-
-             ! Check if we are further away than the width of the box
-             if(r > y2)then
-                ! Shrink coordinates in the radial direction to y2
-                y = y*y2/r
-                z = z*y2/r
-                r = y2
-             end if
           else
              r = abs(y)
              z = 0.0
+          end if
+
+          ! Check if we are further away than the width of the box
+          if(r > y2)then
+             ! Shrink coordinates in the radial direction to y2
+             y = y*y2/r
+             z = z*y2/r
+             r = y2
           end if
 
           ! Check if we are at the end of the Hyades grid
@@ -1252,6 +1252,8 @@ contains
     if(present(HeatConductionCoefSiOut)) HeatConductionCoefSiOut = 0.0
 
   end subroutine user_material_properties
+
+  !===========================================================================
 
   subroutine set_nozzle_yz(x,y,z)
     real, intent(in):: x
