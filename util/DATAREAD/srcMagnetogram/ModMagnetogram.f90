@@ -575,9 +575,10 @@ contains
       end do
     end subroutine calc_radial_functions
     subroutine write_Br_plot
-
+      use ModPlotFile, ONLY: save_plot_file
       integer :: iError,iPhi,iTheta,iUnit
-
+      real,dimension(2,0:nPhi,0:nTheta)::Coord_DII,State_VII
+      !-----------------------------------------------------
       write(*,*) prefix, 'Writing PFSSM_Br output file, named'
       iUnit = io_unit_new()
       write(*,*) prefix, 'SC/IO2/PFSSM_Br.dat'
@@ -604,14 +605,21 @@ contains
 
       do iTheta=0,nTheta
          do iPhi=0,nPhi
-            write ( iUnit, '(4f10.3)' )real(iPhi)*dPhi/cDegToRad,&
-                 r_latitude(iTheta)/cDegToRad,&
-                 UnitB*B_DN(R_,0,iPhi,iTheta),&
-                 UnitB*B_DN(R_,nR,iPhi,iTheta)
+            Coord_DII(1,iPhi,iTheta) = real(iPhi)*dPhi/cDegToRad
+            Coord_DII(2,iPhi,iTheta) = r_latitude(iTheta)/cDegToRad
+
+            State_VII(1,iPhi,iTheta) = UnitB*B_DN(R_,0,iPhi,iTheta)
+            State_VII(2,iPhi,iTheta) = UnitB*B_DN(R_,nR,iPhi,iTheta)
+
+            write ( iUnit, '(4f10.3)' )Coord_DII(:,iPhi,iTheta),&
+                 State_VII(:,iPhi,iTheta)
          end do
       end do
       close(iUnit)
-
+      call save_plot_file('SC/IO2/PFSSM_Br.out',TypeFileIn='ascii',&
+           StringHeaderIn=&
+           'Longitude [Deg], Latitude [Deg], Br_0 [G], Br_SS [G]',&
+           nDimIn=2, CoordIn_DII=Coord_DII,VarIn_VII=State_VII)
     end subroutine Write_Br_plot
   end subroutine set_magnetogram
   !==========================================================================
