@@ -72,7 +72,7 @@ test_run:
 
 
 test_check:
-	${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
+	${SCRIPTDIR}/DiffNum.pl -t -r=0.001 -a=1e-10 \
 		${TESTDIR}/test1_h_prs.002  ${OUTDIR}/test1_h_prs.002\
 			> test.diff
 	ls -l test.diff
