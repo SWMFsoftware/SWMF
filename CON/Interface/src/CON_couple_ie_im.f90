@@ -172,7 +172,7 @@ contains
          fill_buffer =IM_get_for_ie,&
          apply_buffer=IE_put_from_im)
 
-    if(is_proc(IM_)) call IE_put_from_im_complete
+    if(is_proc(IE_)) call IE_put_from_im_complete
 
   end subroutine couple_im_ie
 
