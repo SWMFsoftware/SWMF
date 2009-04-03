@@ -18,7 +18,7 @@ SUBROUTINE CEPARA
   use ModHeidiSize
   use ModHeidiMain
   use ModHeidiDrifts
-  use ModIoUnit, ONLY : io_unit_new
+  use ModIoUnit, ONLY : io_unit_new,UNITTMP_
     
   implicit none
   
@@ -52,18 +52,18 @@ SUBROUTINE CEPARA
      !cc	    IF(LO.EQ.71) OPEN(UNIT=iUnit,file='hgeo71.in',STATUS='OLD')
      
      iUnit = io_unit_new()
-     OPEN(UNIT=iUnit,file='hgeo71.in',STATUS='OLD')
+     OPEN(UNITTMP_,file='hgeo71.in',STATUS='OLD')
      !cc	    IF(LO.EQ.91) OPEN(UNIT=iUnit,file='hgeo91.in',STATUS='OLD')
      LUP=71
      !cc	  ENDIF
      do I=1,20
-        READ(iUnit,3) TITLE,LH(i)
+        READ(UNITTMP_,3) TITLE,LH(i)
         do L=1,LUP
-           READ(iUnit,4) PA(L),RLAMBDA(L),HDNSIN(I,L)
+           READ(UNITTMP_,4) PA(L),RLAMBDA(L),HDNSIN(I,L)
         end do	! L loop
         !cc	    if (LO.EQ.31) HDNSIN(I,LUP+1)=HDNSIN(I,LUP)
      end do	! I loop
-     CLOSE(iUnit)
+     CLOSE(UNITTMP_)
      !cc	  If (LO.EQ.31) LUP=LUP+1
      do L=1,LUP
         PA(L)=COSD(PA(L))

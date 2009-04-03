@@ -31,32 +31,28 @@ SUBROUTINE heidi_read
   use ModHeidiSize
   use ModHeidiIO
   use ModHeidiMain
-  use ModIoUnit, ONLY : io_unit_new
+  use ModIoUnit, ONLY : UNITTMP_
 
   implicit none
 
   real :: tmax
   integer :: k,i
   character*1 header
-
-  integer :: iUnitOut! = 18
-
-  iUnitOut = io_unit_new()
-  
-  OPEN (UNIT=iUnitOut,FILE='input.glo',STATUS='OLD')
-  READ (iUnitOut,*) DTMax,TMAX,TINT,TIME
+      
+  OPEN (UNITTMP_,FILE='input.glo',STATUS='OLD')
+  READ (UNITTMP_,*) DTMax,TMAX,TINT,TIME
   Dt = DtMax
-  READ (iUnitOut,*) IO,JO,KO,LO,ISO
-  READ (iUnitOut,*) ELB,SWE,RW,HMIN
-  READ (iUnitOut,*) ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT
-  READ (iUnitOut,*) (SCALC(k),k=1,NS)
-  READ (iUnitOut,*) YEAR,Month,day,UT,R,AP,KP
-  READ (iUnitOut,*) (INI(k),k=1,NS)
-  READ (iUnitOut,*) (IBC(k),k=1,NS)
-  READ (iUnitOut,*) TINJ,Ab,Eob
-  READ (iUnitOut,*) (IRES(k),k=1,15)
-  READ (iUnitOut,*) NAME
-  CLOSE(iUnitOut)
+  READ (UNITTMP_,*) IO,JO,KO,LO,ISO
+  READ (UNITTMP_,*) ELB,SWE,RW,HMIN
+  READ (UNITTMP_,*) ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT
+  READ (UNITTMP_,*) (SCALC(k),k=1,NS)
+  READ (UNITTMP_,*) YEAR,Month,day,UT,R,AP,KP
+  READ (UNITTMP_,*) (INI(k),k=1,NS)
+  READ (UNITTMP_,*) (IBC(k),k=1,NS)
+  READ (UNITTMP_,*) TINJ,Ab,Eob
+  READ (UNITTMP_,*) (IRES(k),k=1,15)
+  READ (UNITTMP_,*) NAME
+  CLOSE(UNITTMP_)
 
   
 print*,' year,month,day,UT',year,month,day,UT
@@ -69,7 +65,7 @@ print*,' year,month,day,UT',year,month,day,UT
   TimeArray(6) = 0.0
   TimeArray(7) = 0.0
 
-print*,'TimeArray',TimeArray
+!print*,'TimeArray',TimeArray
   
   ISWB=ISW
   NSTEP=NINT(TMAX/DT/2.)                 ! time splitting
@@ -82,19 +78,17 @@ print*,'TimeArray',TimeArray
 
   IF (IKP.EQ.4 .OR. IA.EQ.2) THEN  ! Read in MBI file
      
-     iUnitOut = io_unit_new()
-     
-     OPEN(iUnitOut,FILE=NAME//'_Le.dat',status='old')
+     OPEN(UNITTMP_,FILE=NAME//'_Le.dat',status='old')
      DO I=1,3
-        READ (iUnitOut,*) header
+        READ (UNITTMP_,*) header
      END DO
-     READ (iUnitOut,*) ILAMBE,LAMGAM
-     READ (iUnitOut,*) header
-     READ (iUnitOut,*) header
+     READ (UNITTMP_,*) ILAMBE,LAMGAM
+     READ (UNITTMP_,*) header
+     READ (UNITTMP_,*) header
      DO I=1,ilambe
-        READ (iUnitOut,*) TLAME(I),LAMBE(I)
+        READ (UNITTMP_,*) TLAME(I),LAMBE(I)
      END DO
-     CLOSE(iUnitOut)
+     CLOSE(UNITTMP_)
      TLAME(1:ILAMBE)=TLAME(1:ILAMBE)*86400.
      TLAME(1:ILAMBE)=TLAME(1:ILAMBE)-3600.  ! Forward shift 1 h
   ELSE
@@ -103,19 +97,17 @@ print*,'TimeArray',TimeArray
 
   IF (IA.EQ.4 .or. IA.EQ.7 .or. IA.GE.10) THEN ! Read in PC Potential File
      
-     iUnitOut = io_unit_new()
-     
-     OPEN(iUnitOut,FILE=NAME//'_ppc.dat',status='old')
+     OPEN(UNITTMP_,FILE=NAME//'_ppc.dat',status='old')
      DO I=1,3
-        READ (iUnitOut,*) header
+        READ (UNITTMP_,*) header
      END DO
-     READ (iUnitOut,*) IPPC
-     READ (iUnitOut,*) header
-     READ (iUnitOut,*) header
+     READ (UNITTMP_,*) IPPC
+     READ (UNITTMP_,*) header
+     READ (UNITTMP_,*) header
      DO I=1,ippc
-        READ (iUnitOut,*) TPPC(I),PPC(I)
+        READ (UNITTMP_,*) TPPC(I),PPC(I)
      END DO
-     CLOSE(iUnitOut)
+     CLOSE(UNITTMP_)
      TPPC(1:IPPC)=TPPC(1:IPPC)*86400. ! Convert to seconds
      PPC(1:IPPC)=PPC(1:IPPC)*1.E3       ! Convert to Volts
      print *, 'PPC:',IPPC,TPPC(1),TPPC(IPPC),PPC(1),PPC(IPPC)
@@ -136,7 +128,7 @@ SUBROUTINE CONSTANT(NKP)
   use ModHeidiSize
   use ModHeidiIO
   use ModHeidiMain
-  use ModIoUnit, ONLY : io_unit_new
+  use ModIoUnit, ONLY : UNITTMP_
 
   implicit none
 
@@ -144,18 +136,15 @@ SUBROUTINE CONSTANT(NKP)
   integer ::I,NKP
   character*80 header
 
-  integer :: iUnitOut != 18
-
   !.......Read Kp history of the modeled storm
   IF (IKP.GE.3) THEN
-     iUnitOut = io_unit_new() 
-     OPEN(iUnitOut,FILE=NAME//'_kp.in',STATUS='OLD') 
-     READ(iUnitOut,10) HEADER
+     OPEN(UNITTMP_,FILE=NAME//'_kp.in',STATUS='OLD') 
+     READ(UNITTMP_,10) HEADER
 10   FORMAT(A80)
      DO I=1,NSTEP/NKP+2
-        READ(iUnitOut,*) DAYR(I),DUT,RKPH(I),F107R(I),APR(I),RSUNR(I)
+        READ(UNITTMP_,*) DAYR(I),DUT,RKPH(I),F107R(I),APR(I),RSUNR(I)
      ENDDO
-     CLOSE(iUnitOut)
+     CLOSE(UNITTMP_)
   END IF
 
   KPT=-1./3./3600.   ! model rate of decay of Kp in s-1
@@ -680,6 +669,8 @@ SUBROUTINE GETSWIND
   use ModHeidiSize
   use ModHeidiIO
   use ModHeidiMain
+  use ModIoUnit, ONLY : io_unit_new 
+
 
   implicit none
 
@@ -690,8 +681,9 @@ SUBROUTINE GETSWIND
 
   real :: bx
 
-  integer :: iUnit = 13
+  integer :: iUnit != 13
 
+  iUnit = io_unit_new()
   ILold(1:JO)=ILMP(1:JO)
   IF (T.EQ.TIME) THEN
      T2=TIME-1.
@@ -708,7 +700,7 @@ SUBROUTINE GETSWIND
         BZ1=BZ2
         MD1=MD2
         U1=U2
-        READ (13,*,IOSTAT=I) T2,BT,BX,BY2,BZ2,MD2,U2
+        READ (iUnit,*,IOSTAT=I) T2,BT,BX,BY2,BZ2,MD2,U2
         IF (I.LT.0) T2=TIME+2*DT*(NSTEP+1)
         IF (T.EQ.TIME) THEN			! In case T2>T already
            T1=TIME

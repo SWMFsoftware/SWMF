@@ -93,18 +93,16 @@ C  Comented out the print because we only need the final output
 **  Reads in the initial densities
       SUBROUTINE GETDENS(NECR)
       
-      use ModIoUnit, ONLY : io_unit_new
+      use ModIoUnit, ONLY : UNITTMP_
 
       INCLUDE 'numv.h'
       REAL NECR(NL,0:NLT)
       CHARACTER HEADER*80
-      integer :: iUnitIn != 33
-
-      iUnitIn = io_unit_new()
-      OPEN (iUnitIn,FILE='ne.dat',STATUS='OLD')
-      READ (iUnitIn,101) HEADER
-      READ (iUnitIn,*) ((NECR(I,J),I=1,NL),J=0,NLT)
-      CLOSE (iUnitIn)
+      
+      OPEN (UNITTMP_,FILE='ne.dat',STATUS='OLD')
+      READ (UNITTMP_,101) HEADER
+      READ (UNITTMP_,*) ((NECR(I,J),I=1,NL),J=0,NLT)
+      CLOSE (UNITTMP_)
 101   FORMAT (A80)
       RETURN
       END

@@ -19,7 +19,7 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
   use ModHeidiSize
   use ModHeidiIO
   use ModHeidiMain
-  use ModIoUnit, ONLY : io_unit_new
+  use ModIoUnit, ONLY : io_unit_new, UNITTMP_
 
   implicit none
 
@@ -98,12 +98,13 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
                  end do	! L loop
               end do	! I loop
            ELSE			! Read in from input file: 'cone.bcf'
-              OPEN(unit=iUnit,FILE='cone.bcf',STATUS='OLD')
-              READ (iUnit,101) HEADER
+              
+              OPEN(UNITTMP_,FILE='cone.bcf',STATUS='OLD')
+              READ (UNITTMP_,101) HEADER
               do K=2,KO
-                 READ (iUnit,*) DUMMY,FINI(K)
+                 READ (UNITTMP_,*) DUMMY,FINI(K)
               end do	! K loop
-              CLOSE(iUnit)
+              CLOSE(UNITTMP_)
               !	  CHI0=1./CHI0	! Only do 1 divide, then multiply
               !	  CALL ZENITH(J6,J18)
               do J=J6,J18
@@ -128,24 +129,23 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
         ELSE IF ((INI(S).EQ.2).OR.(INI(S).EQ.3)) THEN
            !.......Read in FI and NI from files
            ST3='.in '
-           iUnit = io_unit_new()
-           OPEN(UNIT=iUnit,file=ST1//ST2//ST3,STATUS='OLD')
-           READ(iUnit,*) YEAR,DAY,R,AP,KP,ETOTAL,EFRACTN  !Replaces input.glo
-           READ(iUnit,101) HEADER
-           READ(iUnit,101) HEADER
+           OPEN(UNITTMP_,file=ST1//ST2//ST3,STATUS='OLD')
+           READ(UNITTMP_,*) YEAR,DAY,R,AP,KP,ETOTAL,EFRACTN  !Replaces input.glo
+           READ(UNITTMP_,101) HEADER
+           READ(UNITTMP_,101) HEADER
            do  Kin=1,11
-              READ(iUnit,*) (FI(Iin,Kin),Iin=1,6)
+              READ(UNITTMP_,*) (FI(Iin,Kin),Iin=1,6)
            end do
-           CLOSE(iUnit)
+           CLOSE(UNITTMP_)
            ST1='testn'
-           iUnit_tst = io_unit_new()
-           OPEN(UNIT=iUnit_tst,file=ST1//ST2//ST3,STATUS='OLD')
-           READ(iUnit_tst,101) HEADER
-           READ(iUnit_tst,101) HEADER
+           !iUnit_tst = io_unit_new()
+           OPEN(UNITTMP_,file=ST1//ST2//ST3,STATUS='OLD')
+           READ(UNITTMP_,101) HEADER
+           READ(UNITTMP_,101) HEADER
            do KK=1,5	
-              READ(iUnit_tst,*) (NI(II,KK),II=1,3)
+              READ(UNITTMP_,*) (NI(II,KK),II=1,3)
            end do
-           CLOSE(iUnit_tst)
+           CLOSE(UNITTMP_)
            !.......Determine parameters for specific initial condition
            IF (INI(S).EQ.2) THEN
               ig1=4			! Gausian centered at L=LZ(ig1)
@@ -295,6 +295,7 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
 
            !.......Read in F from a file: 'restart.bcf' (INI=5)
         ELSE IF (INI(S).EQ.5) THEN
+           iUnit = io_unit_new()
            OPEN(unit=iUnit,FILE='restart.bcf',STATUS='OLD')
            IFN=0
            IF (IPA.EQ.0) IFN=L1

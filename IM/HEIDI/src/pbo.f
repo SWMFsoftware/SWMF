@@ -437,7 +437,7 @@ ccccccccccccccccccccccccc
       subroutine saveit(vthetacells,nthetacells,vphicells,nphicells,
      *   mgridden,mgridx,mgridy,mgridoc,mgridpot,filename)
 
-      use ModIoUnit, ONLY : io_unit_new
+      use ModIoUnit, ONLY : UNITTMP_
       
 c Input: nthetacells, nphicells array index
       integer nthetacells, nphicells
@@ -455,22 +455,19 @@ c mgridoc, open(0) or closed(1) table
 c mgridpot in volts
       real mgridpot(nthetacells,nphicells)
 
-      integer :: iUnitOut != 32
-      
-      iUnitOut = io_unit_new()
-
-      open(unit = iUnitOut, file=filename, status = 'unknown',
+            
+      open(unit = UNITTMP_, file=filename, status = 'unknown',
      *   form = 'formatted')
 	print *, 'Saving the DGCPM output'
-      write(iUnitOut,*) nthetacells, nphicells
-      write(iUnitOut,*) vthetacells
-      write(iUnitOut,*) vphicells
-      write(iUnitOut,*) mgridden
-      write(iUnitOut,*) mgridx
-      write(iUnitOut,*) mgridy
-      write(iUnitOut,*) mgridoc
-      write(iUnitOut,*) mgridpot
-      close(unit = iUnitOut)
+      write(UNITTMP_,*) nthetacells, nphicells
+      write(UNITTMP_,*) vthetacells
+      write(UNITTMP_,*) vphicells
+      write(UNITTMP_,*) mgridden
+      write(UNITTMP_,*) mgridx
+      write(UNITTMP_,*) mgridy
+      write(UNITTMP_,*) mgridoc
+      write(UNITTMP_,*) mgridpot
+      close(unit = UNITTMP_)
 
       return
       end
@@ -517,13 +514,10 @@ c Internal: mgridoc1, open(0) or closed(1) table
       real mgridoc1(nthetacells2,nphicells2)
 
       integer :: iUnitIn != 33
-      integer :: iUnit10
-
-      iUnitIn = io_unit_new() 
-      iUnit10 = io_unit_new()
       
-
-      open(unit =iUnit10, file=filename, status = 'old',
+      iUnitIn = io_unit_new() 
+      
+      open(unit =iUnitIn, file=filename, status = 'old',
      *   form = 'formatted')
       read(iUnitIn,*) nthetacells1, nphicells1
 
@@ -2228,7 +2222,7 @@ cccccccccccccccccccccccccc
       subroutine savet96(vthetacells,nthetacells,vphicells,nphicells,
      *   mgridvol,mgridx,mgridy,mgridoc,parmod)
 
-      use ModIoUnit, ONLY : io_unit_new
+      use ModIoUnit, ONLY : UNITTMP_
       
 c Input: nthetacells, nphicells array index
       integer nthetacells, nphicells
@@ -2243,20 +2237,17 @@ c mgridoc, open(0) or closed(1) table
       real mgridoc(nthetacells,nphicells)
       real parmod(10)
 
-      integer iUnitOut != 32
-
-      iUnitOut = io_unit_new()
-      open(unit = iUnitOut, file='t96_2.dato', status = 'new',
+      open(unit = UNITTMP_, file='t96_2.dato', status = 'new',
      *   form = 'formatted')
-      write(iUnitOut,*) parmod
-      write(iUnitOut,*) nthetacells, nphicells
-      write(iUnitOut,*) vthetacells
-      write(iUnitOut,*) vphicells
-      write(iUnitOut,*) mgridx
-      write(iUnitOut,*) mgridy
-      write(iUnitOut,*) mgridvol
-      write(iUnitOut,*) mgridoc
-      close(unit = iUnitOut)
+      write(UNITTMP_,*) parmod
+      write(UNITTMP_,*) nthetacells, nphicells
+      write(UNITTMP_,*) vthetacells
+      write(UNITTMP_,*) vphicells
+      write(UNITTMP_,*) mgridx
+      write(UNITTMP_,*) mgridy
+      write(UNITTMP_,*) mgridvol
+      write(UNITTMP_,*) mgridoc
+      close(unit = UNITTMP_)
 
       return
       end
@@ -2268,7 +2259,7 @@ cccccccccccccccccccccccccc
       subroutine readt96(vthetacells,nthetacells,vphicells,nphicells,
      *   mgridvol,mgridx,mgridy,mgridoc,parmod)
 
-      use ModIoUnit, ONLY : io_unit_new
+      use ModIoUnit, ONLY : UNITTMP_
 
 c Input: nthetacells, nphicells array index
       integer nthetacells, nphicells
@@ -2283,20 +2274,17 @@ c mgridoc, open(0) or closed(1) table
       real mgridoc(nthetacells,nphicells)
       real parmod(10)
 
-      integer iUnitIn != 33
-
-      iUnitIn = io_unit_new()
-      open(unit = iUnitIn, file='t96_2.dato', status = 'old',
+      open(unit = UNITTMP_, file='t96_2.dato', status = 'old',
      *   form = 'formatted')
-      read(iUnitIn,*) parmod
-      read(iUnitIn,*) nthetacells, nphicells
-      read(iUnitIn,*) vthetacells
-      read(iUnitIn,*) vphicells
-      read(iUnitIn,*) mgridx
-      read(iUnitIn,*) mgridy
-      read(iUnitIn,*) mgridvol
-      read(iUnitIn,*) mgridoc
-      close(unit = iUnitIn)
+      read(UNITTMP_,*) parmod
+      read(UNITTMP_,*) nthetacells, nphicells
+      read(UNITTMP_,*) vthetacells
+      read(UNITTMP_,*) vphicells
+      read(UNITTMP_,*) mgridx
+      read(UNITTMP_,*) mgridy
+      read(UNITTMP_,*) mgridvol
+      read(UNITTMP_,*) mgridoc
+      close(unit = UNITTMP_)
 
       return
       end

@@ -187,7 +187,7 @@ c.        end if
 *
       subroutine TauFill(R, ap, mLong0, mlt, L, vol, n0, tau0)
 	
-        use ModIoUnit, ONLY : io_unit_new
+        use ModIoUnit, ONLY : UNITTMP_
 
         implicit none
 	include 'plane.h'
@@ -200,14 +200,11 @@ C    &     ,a,F10p7,sqroot,flux10p7,flux,fluxN,fluxS,gLong,gLat,mLat,mLong
 	integer year, month, day
 	common /DateTime/ year, month, day, sec
 
-        integer :: iUnitIn! = 32
-        
-        iUnitIn = io_unit_new()
-        
-        open(unit=iUnitIn, file='tau0.dat', status='old', err=10
+                        
+        open(unit=UNITTMP_, file='tau0.dat', status='old', err=10
      &		, form='unformatted')
-	read(iUnitIn) tau0
-        close(iUnitIn)
+	read(UNITTMP_) tau0
+        close(UNITTMP_)
         return
 
  10     stop ' error on open to tau0.dat'

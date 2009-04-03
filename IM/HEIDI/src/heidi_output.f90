@@ -221,7 +221,7 @@
 	use ModHeidiCurrents
 	use ModHeidiWaves
 	use ModHeidiDGCPM
-        use ModIoUnit, ONLY : io_unit_new
+        use ModIoUnit, ONLY : io_unit_new,UNITTMP_
 
 	implicit none
 
@@ -299,17 +299,16 @@
 	  ST3='_pla.'
         !OPEN(UNIT=iUnitOut,file=cOutputDir//ST1//ST3//SUF,STATUS='UNKNOWN')
           
-          iUnitOut = io_unit_new()
-          
-          OPEN(UNIT=iUnitOut,file=ST1//ST3//SUF,STATUS='UNKNOWN')
-	  WRITE (iUnitOut,*) 'Filename: '//ST1//ST3//SUF
-	  WRITE (iUnitOut,*) 'Plasmaspheric thermal densities from the DGCPM'
-        WRITE (iUnitOut,16) T,KP
-	  WRITE (iUnitOut,31) (MLT(J),J=1,JO)
+                    
+          OPEN(UNITTMP_,file=ST1//ST3//SUF,STATUS='UNKNOWN')
+	  WRITE (UNITTMP_,*) 'Filename: '//ST1//ST3//SUF
+	  WRITE (UNITTMP_,*) 'Plasmaspheric thermal densities from the DGCPM'
+        WRITE (UNITTMP_,16) T,KP
+	  WRITE (UNITTMP_,31) (MLT(J),J=1,JO)
 	  do I=2,IO
-	    WRITE(iUnitOut,29) LZ(I),(XNE(I,J),J=1,JO)
+	    WRITE(UNITTMP_,29) LZ(I),(XNE(I,J),J=1,JO)
 	  end do
-	  CLOSE (iUnitOut)
+	  CLOSE (UNITTMP_)
 	END IF
 
 !CC Output from Aaron's ionosphere code
@@ -691,31 +690,29 @@
 	IF (IRES(9).EQ.1) THEN
 	 ST3='_drf.'
 	 !OPEN (iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
-         
-         iUnitOut = io_unit_new()
-
-         OPEN (iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
-	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
-	 WRITE (iUnitOut,*) 'Spatial coordinate drift velocities'
-	 WRITE (iUnitOut,71) T,KP
-	 WRITE (iUnitOut,*)
-	 WRITE (iUnitOut,*) 'Radial drift component'
-	 WRITE (iUnitOut,41) ' L \ MLT =',(MLT(J),J=1,JO,2)
+        
+         OPEN (UNITTMP_,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	 WRITE (UNITTMP_,*) 'Filename: '//ST1//ST2//ST3//SUF
+	 WRITE (UNITTMP_,*) 'Spatial coordinate drift velocities'
+	 WRITE (UNITTMP_,71) T,KP
+	 WRITE (UNITTMP_,*)
+	 WRITE (UNITTMP_,*) 'Radial drift component'
+	 WRITE (UNITTMP_,41) ' L \ MLT =',(MLT(J),J=1,JO,2)
 	 do I=2,IO,2
-	  WRITE (iUnitOut,42) LZ(I),(VR(I,J),J=1,JO,2)
+	  WRITE (UNITTMP_,42) LZ(I),(VR(I,J),J=1,JO,2)
 	 end do
-	 WRITE (iUnitOut,*)
-	 WRITE (iUnitOut,*) 'Azimuthal drift component at various E,mu'
+	 WRITE (UNITTMP_,*)
+	 WRITE (UNITTMP_,*) 'Azimuthal drift component at various E,mu'
 	 do L=1,3
 	  do K=1,3
-	    WRITE (iUnitOut,36) EKEV(EV(K)),ACOSD(MU(PAV(L)))
-	    WRITE (iUnitOut,41) ' L \ MLT =',(MLT(J),J=1,JO,2)
+	    WRITE (UNITTMP_,36) EKEV(EV(K)),ACOSD(MU(PAV(L)))
+	    WRITE (UNITTMP_,41) ' L \ MLT =',(MLT(J),J=1,JO,2)
 	    do I=2,IO,2
-	     WRITE (iUnitOut,42) LZ(I),(P1(I,J)+P2(I,EV(K),PAV(L)),J=1,JO,2)
+	     WRITE (UNITTMP_,42) LZ(I),(P1(I,J)+P2(I,EV(K),PAV(L)),J=1,JO,2)
 	    end do
 	  end do
 	 end do
-	 CLOSE(iUnitOut)
+	 CLOSE(UNITTMP_)
 	END IF
 
 !.......Print out midnight energy vs. L distributions (IRES(10), 'evl')
@@ -723,42 +720,40 @@
 	IF (IRES(10).EQ.1) THEN
 	 ST3='_evl.'
 	 !OPEN (iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
-         
-         iUnitOut = io_unit_new()
-         
-         OPEN (iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
-	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
-	 WRITE (iUnitOut,*) 'Energy-Lshell spectra at MLT=0 and PA=90'
-	 WRITE (iUnitOut,71) T,KP
-	 WRITE(iUnitOut,41) '   Ne =',(XNE(I,1),I=2,IO)
-	 WRITE (iUnitOut,41) ' E \ L =',(LZ(I),I=2,IO)
+               
+         OPEN (UNITTMP_,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	 WRITE (UNITTMP_,*) 'Filename: '//ST1//ST2//ST3//SUF
+	 WRITE (UNITTMP_,*) 'Energy-Lshell spectra at MLT=0 and PA=90'
+	 WRITE (UNITTMP_,71) T,KP
+	 WRITE(UNITTMP_,41) '   Ne =',(XNE(I,1),I=2,IO)
+	 WRITE (UNITTMP_,41) ' E \ L =',(LZ(I),I=2,IO)
 	 do K=2,KO
-	   WRITE(iUnitOut,43) EKEV(K),(F2(I,1,K,2,S)/FFACTOR(I,K,2),I=2,IO)
+	   WRITE(UNITTMP_,43) EKEV(K),(F2(I,1,K,2,S)/FFACTOR(I,K,2),I=2,IO)
 	 end do		! K loop
-	 WRITE (iUnitOut,*) 'Energy-Lshell spectra at MLT=12 and PA=90'
-	 WRITE (iUnitOut,71) T,KP
-	 WRITE(iUnitOut,41) '   Ne =',(XNE(I,13),I=2,IO)
-	 WRITE (iUnitOut,41) ' E \ L =',(LZ(I),I=2,IO)
+	 WRITE (UNITTMP_,*) 'Energy-Lshell spectra at MLT=12 and PA=90'
+	 WRITE (UNITTMP_,71) T,KP
+	 WRITE(UNITTMP_,41) '   Ne =',(XNE(I,13),I=2,IO)
+	 WRITE (UNITTMP_,41) ' E \ L =',(LZ(I),I=2,IO)
 	 do K=2,KO
-	   WRITE(iUnitOut,43) EKEV(K),(F2(I,13,K,2,S)/FFACTOR(I,K,2),I=2,IO)
+	   WRITE(UNITTMP_,43) EKEV(K),(F2(I,13,K,2,S)/FFACTOR(I,K,2),I=2,IO)
 	 end do		! K loop
-	 WRITE (iUnitOut,*) 'Energy-Lshell spectra at MLT=0 and PA=UPA'
-	 WRITE (iUnitOut,71) T,KP
-	 WRITE(iUnitOut,41) '   Ne =',(XNE(I,1),I=2,IO)
-	 WRITE (iUnitOut,41) ' E \ L =',(LZ(I),I=2,IO)
+	 WRITE (UNITTMP_,*) 'Energy-Lshell spectra at MLT=0 and PA=UPA'
+	 WRITE (UNITTMP_,71) T,KP
+	 WRITE(UNITTMP_,41) '   Ne =',(XNE(I,1),I=2,IO)
+	 WRITE (UNITTMP_,41) ' E \ L =',(LZ(I),I=2,IO)
 	 do K=2,KO
-	   WRITE(iUnitOut,43) EKEV(K),(F2(I,1,K,UPA(I)-1,S)/   &
+	   WRITE(UNITTMP_,43) EKEV(K),(F2(I,1,K,UPA(I)-1,S)/   &
      	     FFACTOR(I,K,UPA(I)-1),I=2,IO)
 	 end do		! K loop
-	 WRITE (iUnitOut,*) 'Energy-Lshell spectra at MLT=12 and PA=UPA'
-	 WRITE (iUnitOut,71) T,KP
-	 WRITE(iUnitOut,41) '   Ne =',(XNE(I,13),I=2,IO)
-	 WRITE (iUnitOut,41) ' E \ L =',(LZ(I),I=2,IO)
+	 WRITE (UNITTMP_,*) 'Energy-Lshell spectra at MLT=12 and PA=UPA'
+	 WRITE (UNITTMP_,71) T,KP
+	 WRITE(UNITTMP_,41) '   Ne =',(XNE(I,13),I=2,IO)
+	 WRITE (UNITTMP_,41) ' E \ L =',(LZ(I),I=2,IO)
 	 do K=2,KO
-	   WRITE(iUnitOut,43) EKEV(K),(F2(I,13,K,UPA(I)-1,S)/   &
+	   WRITE(UNITTMP_,43) EKEV(K),(F2(I,13,K,UPA(I)-1,S)/   &
              FFACTOR(I,K,UPA(I)-1),I=2,IO)
 	 end do		! K loop
-	 CLOSE(iUnitOut)
+	 CLOSE(UNITTMP_)
 	END IF
 
 !.......Print lifetimes [hr] and Coulomb diff coeff (IRES(11), 'lft')
@@ -793,91 +788,89 @@
 	IF (IRES(12).EQ.1) THEN
 	 ST3='_prs.'
 	 !OPEN (iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
-         
-         iUnitOut = io_unit_new()
-         
-         OPEN (iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
-	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
-	 WRITE (iUnitOut,*) 'Pressures, densities, etc. for RC species ',ST2
-	 WRITE (iUnitOut,71) T,KP
-	 WRITE (iUnitOut,*) 'Total Energy [keV]   Total Particles   Dst [nT]'
-	 WRITE (iUnitOut,73) ETOT(S),NTOT(S),Dst(S)
+                 
+         OPEN (UNITTMP_,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+	 WRITE (UNITTMP_,*) 'Filename: '//ST1//ST2//ST3//SUF
+	 WRITE (UNITTMP_,*) 'Pressures, densities, etc. for RC species ',ST2
+	 WRITE (UNITTMP_,71) T,KP
+	 WRITE (UNITTMP_,*) 'Total Energy [keV]   Total Particles   Dst [nT]'
+	 WRITE (UNITTMP_,73) ETOT(S),NTOT(S),Dst(S)
 	print *, 'WRESULT Dst: ',S,Dst(S)
-	 WRITE (iUnitOut,*) 'Equatorial density [cm-3]'
-	 WRITE (iUnitOut,31) (LZ(I),I=2,IO)
+	 WRITE (UNITTMP_,*) 'Equatorial density [cm-3]'
+	 WRITE (UNITTMP_,31) (LZ(I),I=2,IO)
 	 do J=1,JO
-	   WRITE (iUnitOut,29) MLT(J),(RNHT(I,J,S),I=2,IO)
+	   WRITE (UNITTMP_,29) MLT(J),(RNHT(I,J,S),I=2,IO)
 	 end do
-	 WRITE (iUnitOut,*) 'Equatorial perpendicular pressure [keV cm-3]'
-	 WRITE (iUnitOut,31) (LZ(I),I=2,IO)
+	 WRITE (UNITTMP_,*) 'Equatorial perpendicular pressure [keV cm-3]'
+	 WRITE (UNITTMP_,31) (LZ(I),I=2,IO)
 	 do J=1,JO
-	   WRITE (iUnitOut,29) MLT(J),(PPER(I,J,S),I=2,IO)
+	   WRITE (UNITTMP_,29) MLT(J),(PPER(I,J,S),I=2,IO)
 	 end do
-	 WRITE (iUnitOut,*) 'Equatorial parallel pressure [keV cm-3]'
-	 WRITE (iUnitOut,31) (LZ(I),I=2,IO)
+	 WRITE (UNITTMP_,*) 'Equatorial parallel pressure [keV cm-3]'
+	 WRITE (UNITTMP_,31) (LZ(I),I=2,IO)
 	 do J=1,JO
-	   WRITE (iUnitOut,29) MLT(J),(PPAR(I,J,S),I=2,IO)
+	   WRITE (UNITTMP_,29) MLT(J),(PPAR(I,J,S),I=2,IO)
 	 end do
-	 WRITE (iUnitOut,*) 'Equatorial anisotropy [Tper/Tpar - 1]'
-	 WRITE (iUnitOut,31) (LZ(I),I=2,IO)
+	 WRITE (UNITTMP_,*) 'Equatorial anisotropy [Tper/Tpar - 1]'
+	 WRITE (UNITTMP_,31) (LZ(I),I=2,IO)
 	 do J=1,JO
-	   WRITE (iUnitOut,29) MLT(J),(ANIS(I,J,S),I=2,IO)
+	   WRITE (UNITTMP_,29) MLT(J),(ANIS(I,J,S),I=2,IO)
 	 end do
-	 WRITE (iUnitOut,*) 'Equatorial energy density [keV cm-3]'
-	 WRITE (iUnitOut,31) (LZ(I),I=2,IO)
+	 WRITE (UNITTMP_,*) 'Equatorial energy density [keV cm-3]'
+	 WRITE (UNITTMP_,31) (LZ(I),I=2,IO)
 	 do J=1,JO
-	   WRITE (iUnitOut,29) MLT(J),(EDEN(I,J,S),I=2,IO)
+	   WRITE (UNITTMP_,29) MLT(J),(EDEN(I,J,S),I=2,IO)
 	 end do
-	 WRITE (iUnitOut,*) 'Equatorial azimuthal current [A m-2]'
-	 WRITE (iUnitOut,31) (LZ(I),I=2,IO)
+	 WRITE (UNITTMP_,*) 'Equatorial azimuthal current [A m-2]'
+	 WRITE (UNITTMP_,31) (LZ(I),I=2,IO)
 	 do J=1,JO
-	   WRITE (iUnitOut,29) MLT(J),(JPER(I,J,S),I=2,IO)
+	   WRITE (UNITTMP_,29) MLT(J),(JPER(I,J,S),I=2,IO)
 	 end do
-	 WRITE (iUnitOut,*) 'Total particle count in the spatial volume [ions]'
-	 WRITE (iUnitOut,31) (LZ(I),I=2,IO)
+	 WRITE (UNITTMP_,*) 'Total particle count in the spatial volume [ions]'
+	 WRITE (UNITTMP_,31) (LZ(I),I=2,IO)
 	 do J=1,JO
-	   WRITE (iUnitOut,29) MLT(J),(Nspace(I,J,S),I=2,IO)
+	   WRITE (UNITTMP_,29) MLT(J),(Nspace(I,J,S),I=2,IO)
 	 end do
-	 WRITE (iUnitOut,*) 'Total energy in the spatial volume [keV]'
-	 WRITE (iUnitOut,31) (LZ(I),I=2,IO)
+	 WRITE (UNITTMP_,*) 'Total energy in the spatial volume [keV]'
+	 WRITE (UNITTMP_,31) (LZ(I),I=2,IO)
 	 do J=1,JO
-	   WRITE (iUnitOut,29) MLT(J),(Espace(I,J,S),I=2,IO)
+	   WRITE (UNITTMP_,29) MLT(J),(Espace(I,J,S),I=2,IO)
 	 end do
-	 WRITE (iUnitOut,*) 'Base convection potentials [kV]'
-	 WRITE (iUnitOut,31) (Lsh(I),I=1,Ir)
+	 WRITE (UNITTMP_,*) 'Base convection potentials [kV]'
+	 WRITE (UNITTMP_,31) (Lsh(I),I=1,Ir)
 	 do J=1,JO
-	   WRITE (iUnitOut,29) MLT(J),(BASEPOT(I,J)*1.E-3,I=1,Ir)
+	   WRITE (UNITTMP_,29) MLT(J),(BASEPOT(I,J)*1.E-3,I=1,Ir)
 	 end do
 !	 IF (IA.GE.8) THEN
-	   WRITE (iUnitOut,*) 'Total azimuthal current [A]'
-	   WRITE (iUnitOut,31) (Lsh(I),I=1,Ir)
+	   WRITE (UNITTMP_,*) 'Total azimuthal current [A]'
+	   WRITE (UNITTMP_,31) (Lsh(I),I=1,Ir)
 	   do J=1,JO
-	     WRITE (iUnitOut,29) MLT(J),(Iphi(I,J,S),I=1,Ir)
+	     WRITE (UNITTMP_,29) MLT(J),(Iphi(I,J,S),I=1,Ir)
 	   end do
-	   WRITE (iUnitOut,*) 'Total radial current [A]'
-	   WRITE (iUnitOut,31) (Lsh(I),I=1,Ir)
+	   WRITE (UNITTMP_,*) 'Total radial current [A]'
+	   WRITE (UNITTMP_,31) (Lsh(I),I=1,Ir)
 	   do J=1,JO
-	     WRITE (iUnitOut,29) MLT(J),(Irad(I,J,S),I=1,Ir)
+	     WRITE (UNITTMP_,29) MLT(J),(Irad(I,J,S),I=1,Ir)
 	   end do
-	   WRITE (iUnitOut,*) 'Field-aligned current density into one ',   &
+	   WRITE (UNITTMP_,*) 'Field-aligned current density into one ',   &
              'hemisphere [A m-2]'
-	   WRITE (iUnitOut,31) (Lsh(I),I=1,Ir)
+	   WRITE (UNITTMP_,31) (Lsh(I),I=1,Ir)
 	   do J=1,JO
-	     WRITE (iUnitOut,29) MLT(J),(Jion1(I,J,S),I=1,Ir)
+	     WRITE (UNITTMP_,29) MLT(J),(Jion1(I,J,S),I=1,Ir)
 	   end do
-	   WRITE (iUnitOut,*) 'Potentials from RC FACs [kV]'
-	   WRITE (iUnitOut,31) (Lsh(I),I=1,Ir)
+	   WRITE (UNITTMP_,*) 'Potentials from RC FACs [kV]'
+	   WRITE (UNITTMP_,31) (Lsh(I),I=1,Ir)
 	   do J=1,JO
-	     WRITE (iUnitOut,29) MLT(J),(FPOT(I,J)*1.E-3,I=1,Ir)
+	     WRITE (UNITTMP_,29) MLT(J),(FPOT(I,J)*1.E-3,I=1,Ir)
 	   end do
-	   WRITE (iUnitOut,*) 'FAC density from all species into one ',   &
+	   WRITE (UNITTMP_,*) 'FAC density from all species into one ',   &
              'hemisphere [A m-2]'
-	   WRITE (iUnitOut,31) (Lsh(I),I=1,Ir)
+	   WRITE (UNITTMP_,31) (Lsh(I),I=1,Ir)
 	   do J=1,JO
-	     WRITE (iUnitOut,29) MLT(J),(Jfac(I,J),I=1,Ir)
+	     WRITE (UNITTMP_,29) MLT(J),(Jfac(I,J),I=1,Ir)
 	   end do
 !	 END IF
-	 CLOSE (iUnitOut)
+	 CLOSE (UNITTMP_)
 	END IF
 
 !.......Write out F2 to an unformatted file (IRES(13), 'unff')
@@ -885,19 +878,17 @@
 	 ST3='.unff'
 	 !OPEN(UNIT=iUnitOut,FILE=cOutputDir//ST1//ST2//ST3,status='unknown',   &
           ! form='unformatted')
-         
-         iUnitOut = io_unit_new()
-
-         OPEN(UNIT=iUnitOut,FILE=ST1//ST2//ST3,status='unknown',   &
+                  
+         OPEN(UNIT=UNITTMP_,FILE=ST1//ST2//ST3,status='unknown',   &
            form='unformatted')
 	 DO L=1,NPA
 	  DO K=1,NE
 	   DO J=1,NT
-	    write(iUnitOut) (f2(I,J,K,L,S),I=1,NR)
+	    write(UNITTMP_) (f2(I,J,K,L,S),I=1,NR)
 	   END DO
 	  END DO
 	 END DO
-	 close(iUnitOut)
+	 close(UNITTMP_)
 	END IF
 
 !.......Open file for source/loss continual output (IRES(14), 'sal')
