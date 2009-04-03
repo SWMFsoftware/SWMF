@@ -813,9 +813,8 @@ contains
     use ModUser,        ONLY: user_set_plot_var
 
     real, intent(in) :: XyzStart_D(3), XyzEnd_D(3)
-    integer, parameter ::  nSegment = nI + nJ + nK
 
-    integer :: iSegment
+    integer :: iSegment, nSegment
     real :: x_q, y_q, z_q, q_mag
     real :: a_los, b_los, c_los, d_los
     real :: SinOmega, CosOmega, Cos2Theta, Sin2Omega, Cos2Omega, Logarithm
@@ -837,8 +836,12 @@ contains
 
     !if(DoTiming)call timing_start('los_integral')
 
+    ! Number of segments for an accurate integral
+    nSegment = 1 + sum(abs(XyzEnd_D - XyzStart_D)/CellSize_D)
+
     ! Length of a segment
     Ds = sqrt(sum((XyzEnd_D - XyzStart_D)**2)) / nSegment
+
 
     do iSegment = 1, nSegment
        XyzLos_D = XyzStart_D &
