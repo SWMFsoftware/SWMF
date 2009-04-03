@@ -34,6 +34,7 @@ MODULES = \
 	ModEquation.o\
 	ModCharacteristic.o\
 	ModCovariant.o\
+	ModCurrent.o\
 	ModExpansionFactors.o \
 	ModFaceFlux.o\
 	ModFaceValue.o\
