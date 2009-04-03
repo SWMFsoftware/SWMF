@@ -1,6 +1,6 @@
 ;^CFG COPYRIGHT UM
 pro set_device, psfile, land=land, port=port, eps=eps, psfont=psfont, $
-    percent=percent
+                percent=percent
 
   ; Parameter defaults and conversions
 
@@ -10,6 +10,9 @@ pro set_device, psfile, land=land, port=port, eps=eps, psfont=psfont, $
   else if percent gt 1.0 then percent = float(percent)/100.0
 
   if n_elements(psfont) eq 0  then psfont = 28
+
+  common SETDEVICE, NameFile
+  NameFile = psfile
 
   ; Set sizes and offsets
   if land then begin
