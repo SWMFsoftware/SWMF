@@ -107,9 +107,11 @@ subroutine ionosphere_solver(iBlock, Jr, &
   call timing_start('iono_solve')
   if(DoTest)write(*,*)'iono_solve starting'
 
-  if(DoTest)write(*,*)'North, LatBoundaryGm=',north,LatBoundaryGm
+  if(DoTest)write(*,*)'North, LatBoundaryGm=',north,LatBoundaryGm, LatBoundary
 
-  if (.not. DoCoupleUaCurrent) LatBoundary = LatBoundaryGm - 5.1 * cDegToRad
+  if (LatBoundary > LatBoundaryGm - 5.1 * cDegToRad) &
+       LatBoundary = LatBoundaryGm - 5.1 * cDegToRad
+!  if (.not. DoCoupleUaCurrent) LatBoundary = LatBoundaryGm - 5.1 * cDegToRad
 
   ! Count the points above the latitude boundary
   nThetaUsed = count(abs(cHalfPi-Theta(1:nTheta,1)) > LatBoundary)
