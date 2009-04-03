@@ -37,7 +37,6 @@ OBJECTS = \
 	pbo.o\
 	wgrdar.o\
 	get_potential.o \
-	ModProcIM.o \
 	heidi_check.o \
 	heidi_init.o \
 	heidi_run.o \
@@ -80,7 +79,7 @@ ${EXE}: ${EXEOBJECTS}
 		ar -x ${LIBDIR}/libEMPIRICALIE.a; \
 		ar -x ${LIBDIR}/libINDICES.a; \
 		ar -x ${LIBDIR}/libSHARE.a
-	${LINK.f90} -o  ${EXE} ${EXEOBJECTS} Tmp_/*.o ${LBLAS} ${Lflag1}
+	${LINK.f90}  -o  ${EXE} ${EXEOBJECTS} Tmp_/*.o ${LBLAS} ${Lflag1}
 	rm -rf Tmp_
 
 distclean: clean
