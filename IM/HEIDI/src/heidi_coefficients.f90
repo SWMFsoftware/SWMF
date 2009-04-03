@@ -18,6 +18,7 @@ SUBROUTINE CEPARA
   use ModHeidiSize
   use ModHeidiMain
   use ModHeidiDrifts
+  use ModIoUnit, ONLY : io_unit_new
     
   implicit none
   
@@ -28,7 +29,7 @@ SUBROUTINE CEPARA
   character*80 TITLE
   external :: cosd,acosd
 
-  integer :: iUnit = 48
+  integer :: iUnit != 48
   
   !.......Open a file with the bounce-averaged H dens [m-3] in geocorona
   !	obtained through bounce-averaging the Chamberlain model
@@ -49,6 +50,8 @@ SUBROUTINE CEPARA
      !cc	    IF(LO.EQ.50) OPEN(UNIT=iUnit,FILE='hgeo50.in',STATUS='OLD')
      !cc	    IF(LO.EQ.60) OPEN(UNIT=iUnit,file='hgeo64.in',STATUS='OLD')
      !cc	    IF(LO.EQ.71) OPEN(UNIT=iUnit,file='hgeo71.in',STATUS='OLD')
+     
+     iUnit = io_unit_new()
      OPEN(UNIT=iUnit,file='hgeo71.in',STATUS='OLD')
      !cc	    IF(LO.EQ.91) OPEN(UNIT=iUnit,file='hgeo91.in',STATUS='OLD')
      LUP=71

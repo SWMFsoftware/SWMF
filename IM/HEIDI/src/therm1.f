@@ -2,12 +2,18 @@ c      INCLUDE 'plane.f'		! Craig's thermal density model
 
       PROGRAM Global_thermal_densities
 **  Driver program for Craig's plane.f subroutine
+      
+      use ModIoUnit, ONLY : io_unit_new
+
+
       INCLUDE 'numv.h'
       REAL T,KP,AP,R,DT,NECR(NL,0:NLT),KPN,KPO
         DIMENSION DAYR(48),RKPH(48),F107R(48),APR(48),RSUNR(48)
       INTEGER YEAR,DAY,I,NSTEP,NPR
       CHARACTER*5 NAME
       CHARACTER*80 HEADER
+
+      integer :: iUnitKp
 
 	print *, 'Starting therm1.f'
       DT=20.
@@ -38,14 +44,16 @@ c      TMAX=172800.	! 172800 = 2 days of run time
 	print *, 'Done with setup'
       IF (IKP.NE.0) THEN
 c.......Read Kp history of the modeled storm
-         OPEN(1,FILE=NAME//'_kp.in',STATUS='OLD')
-         READ(1,10) HEADER
+         
+         iUnitKp = io_unit_new()
+         OPEN(iUnitKp,FILE=NAME//'_kp.in',STATUS='OLD')
+         READ(iUnitKp,10) HEADER
 10       FORMAT(A80)
 	PRINT *, NSTEP/NKP+2,INT(NSTEP/NKP)+2
          DO I=1,INT(NSTEP/NKP)+2
-          READ(1,*) DAYR(I),DUT,RKPH(I),F107R(I),APR(I),RSUNR(I)
+          READ(iUnitKp,*) DAYR(I),DUT,RKPH(I),F107R(I),APR(I),RSUNR(I)
          ENDDO
-         CLOSE(1)
+         CLOSE(iUnitKp)
 	KPN=KP
 	PRINT *, I-1,NKP,KPN,NSTEP
       END IF
@@ -84,10 +92,15 @@ C  Comented out the print because we only need the final output
 **  Subroutine GETDENS
 **  Reads in the initial densities
       SUBROUTINE GETDENS(NECR)
+      
+      use ModIoUnit, ONLY : io_unit_new
+
       INCLUDE 'numv.h'
       REAL NECR(NL,0:NLT)
       CHARACTER HEADER*80
-      integer iUnitIn = 33
+      integer :: iUnitIn != 33
+
+      iUnitIn = io_unit_new()
       OPEN (iUnitIn,FILE='ne.dat',STATUS='OLD')
       READ (iUnitIn,101) HEADER
       READ (iUnitIn,*) ((NECR(I,J),I=1,NL),J=0,NLT)
@@ -100,12 +113,15 @@ C  Comented out the print because we only need the final output
 **  Subroutine WRESULT
 **  Prints out the thermal densities to a file
       SUBROUTINE WRESULT(T,DT,KP,NECR)
+      
+      use ModIoUnit, ONLY : io_unit_new
+
       INCLUDE 'numv.h'
       REAL T,NECR(NL,0:NLT),DT,KP
       INTEGER NTC
       CHARACTER name*7,SUF*2,SUF1*1
 
-      integer iUnitOut = 32
+      integer ::iUnitOut != 32
 
       SAVE NTC
 
@@ -127,6 +143,7 @@ c.....Define the output name
 
 c.....Write out results
       IF (DT.GT.0.) THEN
+         iUnitOut = io_unit_new()
        OPEN (iUnitOut,FILE=name//SUF,STATUS='UNKNOWN')
        WRITE (iUnitOut,*) 'Filename: '//name//SUF
        WRITE (iUnitOut,*) 'Thermal densities in the plasmasphere from plane.f'

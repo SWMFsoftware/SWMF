@@ -16,7 +16,8 @@ SUBROUTINE WAPARA
   use ModHeidiSize
   use ModHeidiMain
   use ModHeidiWaves
-
+  use ModIoUnit, ONLY : io_unit_new
+  
   IMPLICIT NONE
 
   CHARACTER*80 HEADER
@@ -26,9 +27,9 @@ SUBROUTINE WAPARA
   INTEGER :: KN,L,KK
   DATA keVerg/1.602E-9/
 
-  integer :: iUnit16 = 22
-  integer :: iUnit18 = 23
-  integer :: iUnit20 = 24
+  integer :: iUnit16! = 22
+  integer :: iUnit18! = 23
+  integer :: iUnit20! = 24
 
   IF (T.EQ.0.0) 	   ST1='fc_12'	! initial
   IF (T.EQ.1800.)    ST1='fc_12'	! in 0.5 hour
@@ -42,10 +43,19 @@ SUBROUTINE WAPARA
 
   !	OPEN(UNIT=22,NAME='wmd'//ST1//ST2//'.in',STATUS='OLD') ! multiion
   !        WRITE(22,7) T/3600
+  
+  iUnit16 =io_unit_new()
+  
   OPEN(UNIT=iUnit16,FILE='wmdfc_16'//ST2//'.in',STATUS='OLD')
   READ(iUnit16,20) HEADER
+  
+  iUnit18 =io_unit_new()
+  
   OPEN(UNIT=iUnit18,FILE='wmdfc_18'//ST2//'.in',STATUS='OLD')
   READ(iUnit18,20) HEADER
+  
+  iUnit20 =io_unit_new()
+
   OPEN(UNIT=iUnit20,FILE='wmdfc_20'//ST2//'.in',STATUS='OLD')
   READ(iUnit20,20) HEADER
 7 FORMAT(2X,19HNormalized Daa, T =,F8.0)

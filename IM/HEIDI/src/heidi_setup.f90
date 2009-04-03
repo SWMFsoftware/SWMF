@@ -31,6 +31,7 @@ SUBROUTINE heidi_read
   use ModHeidiSize
   use ModHeidiIO
   use ModHeidiMain
+  use ModIoUnit, ONLY : io_unit_new
 
   implicit none
 
@@ -38,8 +39,10 @@ SUBROUTINE heidi_read
   integer :: k,i
   character*1 header
 
-  integer :: iUnitOut = 18
+  integer :: iUnitOut! = 18
 
+  iUnitOut = io_unit_new()
+  
   OPEN (UNIT=iUnitOut,FILE='input.glo',STATUS='OLD')
   READ (iUnitOut,*) DTMax,TMAX,TINT,TIME
   Dt = DtMax
@@ -78,6 +81,9 @@ print*,'TimeArray',TimeArray
   ithermfirst=1		! So we do the setup routines in THERMAL
 
   IF (IKP.EQ.4 .OR. IA.EQ.2) THEN  ! Read in MBI file
+     
+     iUnitOut = io_unit_new()
+     
      OPEN(iUnitOut,FILE=NAME//'_Le.dat',status='old')
      DO I=1,3
         READ (iUnitOut,*) header
@@ -96,6 +102,9 @@ print*,'TimeArray',TimeArray
   END IF
 
   IF (IA.EQ.4 .or. IA.EQ.7 .or. IA.GE.10) THEN ! Read in PC Potential File
+     
+     iUnitOut = io_unit_new()
+     
      OPEN(iUnitOut,FILE=NAME//'_ppc.dat',status='old')
      DO I=1,3
         READ (iUnitOut,*) header
@@ -112,35 +121,6 @@ print*,'TimeArray',TimeArray
      print *, 'PPC:',IPPC,TPPC(1),TPPC(IPPC),PPC(1),PPC(IPPC)
   END IF
 
- ! open (unit=67, file = '../Test_read_inputs_SWMF.dat')
-  write (*,*) 'Reading the inputs from input.glo'
-  write (*,*) 'TMAX,TINT,TIME'
-  write (*,*)  TMAX,TINT,TIME
-  write (*,*) 'IO,JO,KO,LO,ISO'
-  write (*,*) IO,JO,KO,LO,ISO
-  write (*,*) 'ELB,SWE,RW,HMIN'
-  write (*,*) ELB,SWE,RW,HMIN
-  write (*,*) 'ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT'
-  write (*,*) ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT
-  write (*,*) '(SCALC(k),k=1,NS)'
-  write (*,*) (SCALC(k),k=1,NS)
-  write (*,*) 'YEAR,month,DAY,UT,R,AP,KP'
-  write (*,*) YEAR,Month,DAY,UT,R,AP,KP
-  write (*,*) '(INI(k),k=1,NS)'
-  write (*,*) (INI(k),k=1,NS)
-  write (*,*) '(IBC(k),k=1,NS)'
-  write (*,*) (IBC(k),k=1,NS)
-  write (*,*) 'TINJ,Ab,Eob'
-  write (*,*) TINJ,Ab,Eob
-  write (*,*) '(IRES(k),k=1,15)'
-  write (*,*) (IRES(k),k=1,15)
-  write (*,*) 'NAME'
-  write (*,*) NAME
-  write (*,*) '============================'
- ! CLOSE(67)
-
-
-
   RETURN
 END SUBROUTINE heidi_read
 !
@@ -156,6 +136,7 @@ SUBROUTINE CONSTANT(NKP)
   use ModHeidiSize
   use ModHeidiIO
   use ModHeidiMain
+  use ModIoUnit, ONLY : io_unit_new
 
   implicit none
 
@@ -163,10 +144,11 @@ SUBROUTINE CONSTANT(NKP)
   integer ::I,NKP
   character*80 header
 
-  integer :: iUnitOut = 18
+  integer :: iUnitOut != 18
 
   !.......Read Kp history of the modeled storm
   IF (IKP.GE.3) THEN
+     iUnitOut = io_unit_new() 
      OPEN(iUnitOut,FILE=NAME//'_kp.in',STATUS='OLD') 
      READ(iUnitOut,10) HEADER
 10   FORMAT(A80)

@@ -437,6 +437,8 @@ ccccccccccccccccccccccccc
       subroutine saveit(vthetacells,nthetacells,vphicells,nphicells,
      *   mgridden,mgridx,mgridy,mgridoc,mgridpot,filename)
 
+      use ModIoUnit, ONLY : io_unit_new
+      
 c Input: nthetacells, nphicells array index
       integer nthetacells, nphicells
 c Input: vthetacells, vphicells in degrees 
@@ -453,7 +455,9 @@ c mgridoc, open(0) or closed(1) table
 c mgridpot in volts
       real mgridpot(nthetacells,nphicells)
 
-      integer iUnitOut = 32
+      integer :: iUnitOut != 32
+      
+      iUnitOut = io_unit_new()
 
       open(unit = iUnitOut, file=filename, status = 'unknown',
      *   form = 'formatted')
@@ -477,6 +481,9 @@ ccccccccccccccccccccccccc
 
       subroutine loadit(vthetacells,nthetacells,vphicells,nphicells,
      *   mgridden,mgridx,mgridy,mgridoc,filename)
+
+      use ModIoUnit, ONLY : io_unit_new
+
 
 c Input: filename
       character filename*80
@@ -509,9 +516,14 @@ c Internal: mgridx1, mgridy1, in Re
 c Internal: mgridoc1, open(0) or closed(1) table
       real mgridoc1(nthetacells2,nphicells2)
 
-      integer iUnitIn = 33
+      integer :: iUnitIn != 33
+      integer :: iUnit10
 
-      open(unit = 10, file=filename, status = 'old',
+      iUnitIn = io_unit_new() 
+      iUnit10 = io_unit_new()
+      
+
+      open(unit =iUnit10, file=filename, status = 'old',
      *   form = 'formatted')
       read(iUnitIn,*) nthetacells1, nphicells1
 
@@ -2216,6 +2228,8 @@ cccccccccccccccccccccccccc
       subroutine savet96(vthetacells,nthetacells,vphicells,nphicells,
      *   mgridvol,mgridx,mgridy,mgridoc,parmod)
 
+      use ModIoUnit, ONLY : io_unit_new
+      
 c Input: nthetacells, nphicells array index
       integer nthetacells, nphicells
 c Input: vthetacells, vphicells in degrees 
@@ -2229,8 +2243,9 @@ c mgridoc, open(0) or closed(1) table
       real mgridoc(nthetacells,nphicells)
       real parmod(10)
 
-      integer iUnitOut = 32
+      integer iUnitOut != 32
 
+      iUnitOut = io_unit_new()
       open(unit = iUnitOut, file='t96_2.dato', status = 'new',
      *   form = 'formatted')
       write(iUnitOut,*) parmod
@@ -2253,6 +2268,8 @@ cccccccccccccccccccccccccc
       subroutine readt96(vthetacells,nthetacells,vphicells,nphicells,
      *   mgridvol,mgridx,mgridy,mgridoc,parmod)
 
+      use ModIoUnit, ONLY : io_unit_new
+
 c Input: nthetacells, nphicells array index
       integer nthetacells, nphicells
 c Input: vthetacells, vphicells in degrees 
@@ -2266,8 +2283,9 @@ c mgridoc, open(0) or closed(1) table
       real mgridoc(nthetacells,nphicells)
       real parmod(10)
 
-      integer iUnitIn = 33
+      integer iUnitIn != 33
 
+      iUnitIn = io_unit_new()
       open(unit = iUnitIn, file='t96_2.dato', status = 'old',
      *   form = 'formatted')
       read(iUnitIn,*) parmod

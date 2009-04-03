@@ -186,7 +186,10 @@ c.        end if
 *  TauFill()  --  calculate refilling time constants (from ionospheric fluxes)
 *
       subroutine TauFill(R, ap, mLong0, mlt, L, vol, n0, tau0)
-	implicit none
+	
+        use ModIoUnit, ONLY : io_unit_new
+
+        implicit none
 	include 'plane.h'
 	real R, ap, mLong0, mlt(0:*), L(0:*), vol(*), n0(0:*),RE
      &     ,tau0(NL,0:NLT), n(NL,0:*), S(NL,0:*) 
@@ -197,7 +200,10 @@ C    &     ,a,F10p7,sqroot,flux10p7,flux,fluxN,fluxS,gLong,gLat,mLat,mLong
 	integer year, month, day
 	common /DateTime/ year, month, day, sec
 
-        integer iUnitIn = 32
+        integer :: iUnitIn! = 32
+        
+        iUnitIn = io_unit_new()
+        
         open(unit=iUnitIn, file='tau0.dat', status='old', err=10
      &		, form='unformatted')
 	read(iUnitIn) tau0

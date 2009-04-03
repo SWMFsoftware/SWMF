@@ -87,6 +87,7 @@ subroutine IonoHeidiWriteOutput(ifile,time,IO_prefix,IO_suffix)
   use ModIonoHeidi
   use ModHeidiIO, only: cOutputDir
   use ModNumConst, only: cPi
+  use ModIoUnit, ONLY : io_unit_new
   implicit none
 
   integer, intent(in) :: ifile
@@ -129,7 +130,8 @@ subroutine IonoHeidiWriteOutput(ifile,time,IO_prefix,IO_suffix)
      output_type = tec_type
   endif
 
-  Iunit = 74
+  !Iunit = 74
+  Iunit = io_unit_new()
 
   if (output_type == idl_type) then
      IO_ext = ".idl"

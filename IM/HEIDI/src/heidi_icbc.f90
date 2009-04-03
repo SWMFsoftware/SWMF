@@ -19,6 +19,7 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
   use ModHeidiSize
   use ModHeidiIO
   use ModHeidiMain
+  use ModIoUnit, ONLY : io_unit_new
 
   implicit none
 
@@ -52,8 +53,9 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
        2,11,21,31,41,51,61,70,75,79,82,83,84,85,86,87,88,89,90/
   external :: GAMMLN
 
-  integer :: iUnit=18
-  integer :: iUnit_tst=22
+  integer :: iUnit!=18
+  integer :: iUnit_tst!=22
+  integer :: iUnit_unff
 
 
   !.......Start the loop over RC species
@@ -126,6 +128,7 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
         ELSE IF ((INI(S).EQ.2).OR.(INI(S).EQ.3)) THEN
            !.......Read in FI and NI from files
            ST3='.in '
+           iUnit = io_unit_new()
            OPEN(UNIT=iUnit,file=ST1//ST2//ST3,STATUS='OLD')
            READ(iUnit,*) YEAR,DAY,R,AP,KP,ETOTAL,EFRACTN  !Replaces input.glo
            READ(iUnit,101) HEADER
@@ -135,6 +138,7 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
            end do
            CLOSE(iUnit)
            ST1='testn'
+           iUnit_tst = io_unit_new()
            OPEN(UNIT=iUnit_tst,file=ST1//ST2//ST3,STATUS='OLD')
            READ(iUnit_tst,101) HEADER
            READ(iUnit_tst,101) HEADER
@@ -420,13 +424,14 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
 
            !  Read in from a unformatted file (INI=7)
         ELSE IF (INI(S).EQ.7) THEN
-           OPEN(UNIT=1,FILE=NAME//ST2//'.unff',status='old',   &
+           iUnit_unff = io_unit_new()
+           OPEN(UNIT=iUnit_unff,FILE=NAME//ST2//'.unff',status='old',   &
                 form='unformatted')
            DO L=1,NPA
               !	  DO K=8,NE  ! Changed the Egrid for runs "e" and "f" !1,NE
               DO K=1,NE  ! Change back to this for restarts
                  DO J=1,NT 
-                    read(1) (f2(I,J,K,L,S),I=1,NR)
+                    read(iUnit_unff) (f2(I,J,K,L,S),I=1,NR)
                     !	    f2(1:NR,J,K,L,S)=0.5*f2(1:NR,J,K,L,S)  ! Special restart line
                  END DO
               END DO
@@ -436,7 +441,7 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
               !	   END DO
               !	  END DO        ! to here
            END DO
-           close(1)
+           close(iUnit_unff)
 
         END IF
         !.......Done with initial particle distribution set up
@@ -537,6 +542,7 @@ SUBROUTINE LMPLOSS
   use ModHeidiSize
   use ModHeidiIO
   use ModHeidiMain
+  use ModIoUnit, ONLY : io_unit_new
 
   IMPLICIT NONE
 
@@ -578,6 +584,7 @@ SUBROUTINE GEOSB
   use ModHeidiDrifts
   use ModIonoHeidi
   use ModNumConst, only: cDegToRad
+  use ModIoUnit, ONLY : io_unit_new
 
   IMPLICIT NONE
 
@@ -595,8 +602,8 @@ SUBROUTINE GEOSB
   SAVE KES,TM1,TM2,NM1,NM2,TFM1,TFM2,TCM1,TCM2,TS1,TS2,FS1,FS2,  &
        I2,I6,I7,I9,IG7,NE1,NE2,TEF1,TEF2,TEC1,TEC2
 
-  integer :: iUnitSopa=43
-  integer :: iUnitMpa=44
+  integer :: iUnitSopa!=43
+  integer :: iUnitMpa!=44
   
   integer :: iLatBoundary=-1, iLonBoundary=-1
 
@@ -634,6 +641,7 @@ SUBROUTINE GEOSB
            TS2=TIME-1.		! Prepare SOPA input file
            TS1=TS2
            FS2(1:7)=0.
+           iUnitSopa = io_unit_new()
            OPEN(UNIT=iUnitSopa,FILE=NAME//'_sopa.in',status='old')
            DO I=1,3
               READ(iUnitSopa,*) HEADER
@@ -647,6 +655,7 @@ SUBROUTINE GEOSB
         NE2=0.
         TEC2=0.
         TEF2=0.
+        iUnitMpa = io_unit_new()
         OPEN(UNIT=iUnitMpa,FILE=NAME//'_mpa.in',status='old')
         DO I=1,3			! 3 lines of header material
            READ(iUnitMpa,*) HEADER
@@ -914,6 +923,7 @@ SUBROUTINE FINJ(F)
   use ModHeidiSize
   use ModHeidiIO
   use ModHeidiMain
+  use ModIoUnit, ONLY : io_unit_new
 
   IMPLICIT NONE
 
@@ -924,13 +934,14 @@ SUBROUTINE FINJ(F)
   save T1,T2,BZ1,BZ2,MD1,MD2,U1,U2
   external :: GAMMLN,ERF
 
-  integer :: iUnitSw = 45 
+  integer :: iUnitSw != 45 
 
   TLAG=4.*3600.			! From Borovsky et al, Aug 98
   IF (ISWB.EQ.1) THEN
      IF (T.EQ.TIME) THEN
         T2=TIME-1.
         T1=T2
+        iUnitSw = io_unit_new()
         OPEN(UNIT=iUnitSw,FILE=NAME//'_sw2.in',status='old')
         DO I=1,6                      ! 6 lines of header material
            READ(iUnitSw,*) HEADER

@@ -18,6 +18,7 @@
 	use ModHeidiIO
 	use ModHeidiMain
 	use ModHeidiDrifts
+        use ModIoUnit, ONLY : io_unit_new
 
 	implicit none
 
@@ -31,7 +32,7 @@
 	CHARACTER*1 SUF1
 	SAVE NTC
 
-        integer :: iUnitOut = 46
+        integer :: iUnitOut != 46
 
 !.......Define parts of the output file names
 	IF (T.EQ.0) THEN
@@ -62,6 +63,9 @@
 	IF (S.EQ.3) ST2='he'
 	IF (S.EQ.4) ST2='_o'
 	!OPEN(iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+        
+        iUnitOut = io_unit_new()
+        
         OPEN(iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	WRITE (iUnitOut,*) 'T,KP,A:',T,KP,A
@@ -217,7 +221,7 @@
 	use ModHeidiCurrents
 	use ModHeidiWaves
 	use ModHeidiDGCPM
-        
+        use ModIoUnit, ONLY : io_unit_new
 
 	implicit none
 
@@ -237,7 +241,7 @@
  	CHARACTER*80 filename
 	SAVE NTC
 
-        integer :: iUnitOut = 46
+        integer :: iUnitOut != 46
 
 	DATA IPF/'_lpf.','_mpf.','_hpf.'/
 	DATA IFM/2,7,13,20,28,35,42,47,50,52,54,56,58,60,62,64,66,68,70,   &
@@ -294,6 +298,9 @@
 !	  Next create an output like we have made before
 	  ST3='_pla.'
         !OPEN(UNIT=iUnitOut,file=cOutputDir//ST1//ST3//SUF,STATUS='UNKNOWN')
+          
+          iUnitOut = io_unit_new()
+          
           OPEN(UNIT=iUnitOut,file=ST1//ST3//SUF,STATUS='UNKNOWN')
 	  WRITE (iUnitOut,*) 'Filename: '//ST1//ST3//SUF
 	  WRITE (iUnitOut,*) 'Plasmaspheric thermal densities from the DGCPM'
@@ -353,6 +360,9 @@
 	IF (IRES(1).EQ.1) THEN
 	  ST3='_psd.'
         !OPEN(UNIT=iUnitOut,file=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+          
+          iUnitOut = io_unit_new()
+          
           OPEN(UNIT=iUnitOut,file=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	  WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	  IF (IFAC.EQ.1) THEN
@@ -377,6 +387,9 @@
 !.......Write equatorially trapped distribution (IRES(2), 'etf')
 	IF (IRES(2).EQ.1) THEN
         ST3='_etf.'
+        
+        iUnitOut = io_unit_new()
+        
         OPEN(UNIT=iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	  WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	  WRITE (iUnitOut,*) 'Equatorially trapped distribution function, F'
@@ -401,6 +414,9 @@
 	 IR2=IO/2
 	 ST3='_dep.'
 	 !OPEN(UNIT=iUnitOut,file=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+         
+         iUnitOut = io_unit_new()
+
          OPEN(UNIT=iUnitOut,file=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	 do I=2,IO			! Electron heating
@@ -467,6 +483,9 @@
 	  NEC1=(II-1)*KO/3+1
 	  NEC2=II*KO/3
           !OPEN(UNIT=iUnitOut,file=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+          
+          iUnitOut = io_unit_new()
+
           OPEN(UNIT=iUnitOut,file=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	  WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	  WRITE (iUnitOut,*) 'Total precipitation flux [1/cm2/s]'
@@ -499,6 +518,9 @@
 	IF (IRES(5).EQ.1) THEN	
 	  ST3='_flx.'
           !OPEN(UNIT=iUnitOut,file=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+          
+          iUnitOut = io_unit_new()
+          
           OPEN(UNIT=iUnitOut,file=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	  WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	  WRITE (iUnitOut,*) 'Differential precipitation fluxes'
@@ -533,6 +555,9 @@
 	IF (IRES(6).EQ.1) THEN
 	  ST3='_los.'
 	  !OPEN(UNIT=iUnitOut,file=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+         
+          iUnitOut = io_unit_new() 
+
           OPEN(UNIT=iUnitOut,file=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	  WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	  WRITE (iUnitOut,*) 'Particle and energy losses since last output'
@@ -569,6 +594,9 @@
 	IF (IRES(8).EQ.1) THEN
 	 ST3='_cfl.'
 	 !OPEN (iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+         
+         iUnitOut = io_unit_new()
+         
          OPEN (iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	 WRITE (iUnitOut,*) 'CFL numbers for the advection operators'
@@ -663,6 +691,9 @@
 	IF (IRES(9).EQ.1) THEN
 	 ST3='_drf.'
 	 !OPEN (iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+         
+         iUnitOut = io_unit_new()
+
          OPEN (iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	 WRITE (iUnitOut,*) 'Spatial coordinate drift velocities'
@@ -692,6 +723,9 @@
 	IF (IRES(10).EQ.1) THEN
 	 ST3='_evl.'
 	 !OPEN (iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+         
+         iUnitOut = io_unit_new()
+         
          OPEN (iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	 WRITE (iUnitOut,*) 'Energy-Lshell spectra at MLT=0 and PA=90'
@@ -731,6 +765,9 @@
 	IF (IRES(11).EQ.1) THEN
 	 ST3='_lft.'
 	 !OPEN(UNIT=iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+         
+         iUnitOut = io_unit_new()
+
          OPEN(UNIT=iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	 WRITE (iUnitOut,71) T,KP
@@ -756,6 +793,9 @@
 	IF (IRES(12).EQ.1) THEN
 	 ST3='_prs.'
 	 !OPEN (iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+         
+         iUnitOut = io_unit_new()
+         
          OPEN (iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	 WRITE (iUnitOut,*) 'Pressures, densities, etc. for RC species ',ST2
@@ -845,6 +885,9 @@
 	 ST3='.unff'
 	 !OPEN(UNIT=iUnitOut,FILE=cOutputDir//ST1//ST2//ST3,status='unknown',   &
           ! form='unformatted')
+         
+         iUnitOut = io_unit_new()
+
          OPEN(UNIT=iUnitOut,FILE=ST1//ST2//ST3,status='unknown',   &
            form='unformatted')
 	 DO L=1,NPA
@@ -885,6 +928,9 @@
 	 END DO
 	 ST3='_fbc.'
 	 !OPEN (iUnitOut,FILE=cOutputDir//ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
+    
+         iUnitOut = io_unit_new()
+     
          OPEN (iUnitOut,FILE=ST1//ST2//ST3//SUF,STATUS='UNKNOWN')
 	 WRITE (iUnitOut,*) 'Filename: '//ST1//ST2//ST3//SUF
 	 WRITE (iUnitOut,*) 'Nightside boundary conditions'
