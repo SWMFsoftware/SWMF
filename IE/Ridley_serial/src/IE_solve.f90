@@ -64,7 +64,8 @@ subroutine IE_solve
              conductance_model, f107_flux)
 
         ! This is tricky, JR is passed as PHI to the ionosphere_solver
-        IONO_NORTH_JR = IONO_NORTH_JR - Iono_North_Tgcm_Jr
+        IONO_NORTH_JR = IONO_NORTH_JR - Iono_North_Tgcm_Jr + &
+             iono_north_im_jr
 
         call ionosphere_solver(iBlock, &
              IONO_NORTH_JR,     &
@@ -119,7 +120,8 @@ subroutine IE_solve
         call FACs_to_fluxes(conductance_model, iBlock)
 
         ! This is tricky, JR is passed as PHI to the ionosphere_solver
-        IONO_SOUTH_JR = IONO_SOUTH_JR - Iono_South_Tgcm_Jr
+        IONO_SOUTH_JR = IONO_SOUTH_JR - Iono_South_Tgcm_Jr + &
+             iono_south_im_jr
 
         call ionosphere_conductance(IONO_SOUTH_Sigma0,               &
              IONO_SOUTH_SigmaH, &

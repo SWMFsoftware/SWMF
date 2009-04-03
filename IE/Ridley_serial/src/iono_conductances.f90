@@ -66,6 +66,48 @@ subroutine FACs_to_fluxes(iModel, iBlock)
      PolarCap_EFlux = IONO_Min_EFlux
   endif
 
+  if (iModel.eq.7) then
+
+     write(*,*) "maxval eflux (north) : ",maxval(iono_north_im_eflux)
+
+     iono_north_eflux = iono_north_im_eflux/1000.0
+     iono_north_ave_e = iono_north_im_avee
+
+     where (iono_north_ave_e > 20.0) &
+          iono_north_ave_e = 20.0
+
+     do j = 1, IONO_nPsi
+        i = 1
+        do while (iono_north_eflux(i,j) == 0.0 .and. i < Iono_nTheta)
+           i = i + 1
+        enddo
+        if (i > 2) iono_north_eflux(i-1,j) = iono_north_eflux(i,j)* 0.66 
+        if (i > 3) iono_north_eflux(i-2,j) = iono_north_eflux(i,j)* 0.33
+        if (i > 4) iono_north_eflux(1:i-3,j) = PolarCap_EFlux
+        if (i > 2) iono_north_ave_e(i-1,j) = iono_north_ave_e(i,j)
+        if (i > 3) iono_north_ave_e(i-2,j) = iono_north_ave_e(i,j)
+        if (i > 4) iono_north_ave_e(1:i-3,j) = PolarCap_AveE
+     enddo
+
+     do i = 1, IONO_nTheta
+        iono_south_eflux(i,:) = iono_north_eflux(Iono_nTheta-i+1,:)
+        iono_south_ave_e(i,:) = iono_north_ave_e(Iono_nTheta-i+1,:)
+     enddo
+
+     where (iono_south_ave_e < IONO_Min_Ave_E) &
+          iono_south_ave_e = IONO_Min_Ave_E
+     where (iono_south_eflux < IONO_Min_EFlux) &
+          iono_south_eflux = IONO_Min_EFlux
+
+     where (iono_north_ave_e < IONO_Min_Ave_E) &
+          iono_north_ave_e = IONO_Min_Ave_E
+     where (iono_north_eflux < IONO_Min_EFlux) &
+          iono_north_eflux = IONO_Min_EFlux
+
+     write(*,*) "minval : ",minval(iono_north_eflux), minval(iono_north_ave_e)
+
+  endif
+
   if (iModel.eq.3) then
 
      mult_fac   = 0.25*0.33e7*2.0e-3

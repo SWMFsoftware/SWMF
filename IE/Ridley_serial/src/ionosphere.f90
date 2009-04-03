@@ -136,6 +136,8 @@ subroutine ionosphere_fine_grid
         write(iUnitOut,'(a)') "Realistic oval"
      case(6)
         write(iUnitOut,'(a)') "More Realistic oval"
+     case(7)
+        write(iUnitOut,'(a)') "Get aurora from IM"
      case default
         call CON_stop(NameSub//" IE_ERROR invalid conductance_model")
      end select
@@ -272,6 +274,14 @@ subroutine ionosphere_init
 
   IONO_NORTH_Ave_E = 0.00
   IONO_SOUTH_Ave_E = 0.00
+
+  IONO_NORTH_im_EFlux = 0.00
+  IONO_SOUTH_im_EFlux = 0.00
+  IONO_NORTH_im_jr = 0.00
+  IONO_SOUTH_im_jr = 0.00
+  IONO_NORTH_im_AveE = 0.00
+  IONO_SOUTH_im_AveE = 0.00
+  IsFilledWithIm = .false.
 
 end subroutine ionosphere_init
 
