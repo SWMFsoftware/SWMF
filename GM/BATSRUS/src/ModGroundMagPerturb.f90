@@ -121,9 +121,10 @@ contains
     use ModCurrent,        ONLY: calc_field_aligned_current
     use ModMpi
     use ModUtilities
-    use ModRayTrace,       ONLY: rIonosphere
 
     implicit none
+
+    real, parameter :: rIonosphere = 1.0 ! in planetary radii
 
     real, intent(in),dimension(3,nMagnetometer)  :: Xyz_DI
     real, intent(out),dimension(3,nMagnetometer) :: MagPerturb_DI
