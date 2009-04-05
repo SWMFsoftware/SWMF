@@ -174,7 +174,7 @@ test_multiion:
 	make test_multiion_check
 
 test_multiion_compile:
-	./Config.pl -u=Default -e=MultiIon -g=256,4,4,10,1
+	./Config.pl -u=Default -e=MultiIon -g=64,2,2,10,1
 	make
 	make PIDL
 
@@ -183,13 +183,12 @@ test_multiion_rundir: test_rundir
 
 test_multiion_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULTS
 
 test_multiion_check:
-	cat ${TESTDIR}/GM/IO2/cut_raw_2_t00000002_n0000182_pe*.idl \
-		> ${TESTDIR}/GM/IO2/cut_t2.idl
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
-		Param/MULTIION/TestOutput/cut_t2.idl \
-		${TESTDIR}/GM/IO2/cut_t2.idl > test_multiion.diff
+		Param/MULTIION/TestOutput/cut_t2.out \
+		${TESTDIR}/RESULTS/GM/cut_*t02.*.out > test_multiion.diff
 	ls -l test_multiion.diff
 
 ### MHD WITH MULTIPLE IONS TEST ###
