@@ -1,9 +1,0 @@
-#^CFG COPYRIGHT UM
-#
-#	Specific Rules for Darwin fortran compiler
-#
-
-calc_flux_Roe.o:ModProcMH.o ModMain.o ModGeometry.o \
-		ModPhysics.o ${SHAREDIR}/ModNumConst.o \
-		ModAdvance.o ModParallel.o calc_flux_Roe.f90
-	${COMPILE.f90} ${Cflag0} calc_flux_Roe.f90
