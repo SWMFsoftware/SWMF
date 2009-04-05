@@ -359,7 +359,7 @@ contains
 
     implicit none
 
-
+    integer :: iMag
     logical :: oktest, oktest_me
 
     ! Open the output file 
@@ -376,9 +376,13 @@ contains
     open(iUnitMag, file=filename)
 
     ! Write the header
-    write(iUnitMag, '(i5,a)') nMagnetometer, ' magnetometers'
+    write(iUnitMag, '(i5,a)') nMagnetometer, ' magnetometers:'
+    do iMag=1,nMagnetometer-1 
+       write(iUnitMag, '(1X,a)', ADVANCE='NO') MagName_I(iMag)
+    end do
+    write(iUnitMag, '(1X,a)') MagName_I(nMagnetometer)
     write(iUnitMag, '(a)')  &
-         'year mo dy hr mn sc msc station X Y Z dBn dBe dBd facdBn facdBe facdBn'
+         'nstep year mo dy hr mn sc msc station X Y Z dBn dBe dBd facdBn facdBe facdBn'
 
   end subroutine open_magnetometer_output_file
 
@@ -520,7 +524,7 @@ contains
           
           write(iUnitMag,'(i5)',ADVANCE='NO') n_step
           write(iUnitMag,'(i5,5(1X,i2.2),1X,i3.3)',ADVANCE='NO') iTime_I
-          write(iUnitMag,'(1X,a)', ADVANCE='NO')  MagName_I(iMag)
+          write(iUnitMag,'(1X,i2)', ADVANCE='NO')  iMag
 
           ! Write position of magnetometer in SGM Coords
           write(iUnitMag,'(3es13.5)',ADVANCE='NO') MagSmgXyz_DI(:,iMag)
