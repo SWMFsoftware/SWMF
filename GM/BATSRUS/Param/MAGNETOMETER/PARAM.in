@@ -1,0 +1,179 @@
+#ECHO
+T
+
+#VERBOSE
+100
+
+#PROGRESS
+1			DnShowProgressShort
+100			DnShowProgressLong
+
+#DESCRIPTION
+Run GM in time accurate mode
+
+#PLANET
+EARTH
+
+#SAVERESTART
+F
+
+#TIMEACCURATE
+T			DoTimeAccurate
+
+#STARTTIME
+2000			iYear
+3			iMonth
+21			iDay
+10			iHour
+45			iMinute
+0			iSecond
+0.0			FracSecond
+
+#IDEALAXES
+! align rotation and magnetic axes with z axis
+
+#ROTATION
+F			UseRotation
+
+
+#MAGNETOSPHERE
+T                       UseBody
+2.5                     rBody
+3.5                     rCurrents
+10.0			BodyRhoDim
+25000.0			BodyTDim
+
+#GRID
+1			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-224.			xMin
+  32.			xMax
+-128.			yMin
+ 128.			yMax
+-128.			zMin
+ 128.			zMax
+
+#GRIDRESOLUTION
+2.0                     Resolution
+initial                 NameArea
+
+
+!refine inside 1.5*rcurrents, rcurrents = 3.5
+#GRIDRESOLUTION
+1/8                     Resolution
+sphere0                 NameArea
+ 5.25                   rSphere
+
+!refine inner magnetosphere
+#GRIDRESOLUTION
+1.0                     Resolution
+sphere0                 NameArea
+17.5                    rSphere
+
+!refine the magnetotail
+#GRIDRESOLUTION
+4.0                     Resolution
+box                     NameArea
+-224.0                  xMinBox
+ -64.0                  yMinBox
+ -64.0                  zMinBox
+  32.0                  xMaxBox
+  64.0                  yMaxBox
+  64.0                  zMaxBox
+
+#GRIDRESOLUTION
+2.0                     Resolution
+box                     NameArea
+ -96.0                  xMinBox
+ -32.0                  yMinBox
+ -32.0                  zMinBox
+  32.0                  xMaxBox
+  32.0                  yMaxBox
+  32.0                  zMaxBox
+
+#GRIDRESOLUTION
+1.0                     Resolution
+box                     NameArea
+ -48.0                  xMinBox
+ -16.0                  yMinBox
+ -16.0                  zMinBox
+  32.0                  xMaxBox
+  16.0                  yMaxBox
+  16.0                  zMaxBox
+
+#GRIDRESOLUTION
+1/2                     Resolution
+box                     NameArea
+ -32.0                  xMinBox
+  -8.0                  yMinBox
+  -8.0                  zMinBox
+  32.0                  xMaxBox
+   8.0                  yMaxBox
+   8.0                  zMaxBox
+
+#GRIDRESOLUTION
+1/4                     Resolution
+box                     NameArea
+ -32.0                  xMinBox
+  -8.0                  yMinBox
+  -4.0                  zMinBox
+   8.0                  xMaxBox
+   8.0                  yMaxBox
+   4.0                  zMaxBox
+
+
+#OUTERBOUNDARY
+outflow                 TypeBcEast
+vary                    TypeBcWest
+float                   TypeBcSouth
+float                   TypeBcNorth
+float                   TypeBcBottom
+float                   TypeBcTop
+
+#INNERBOUNDARY
+ionosphere		TypeBcInner
+
+#SAVELOGFILE
+T
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#TIMESTEPPING
+1			nStage
+0.6			CflExpl
+
+#UPSTREAM_INPUT_FILE
+T                                                     UseUpstreamInputFile
+GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat   NameUpstreamFile
+
+#MAGNETOMETER
+GM/Param/MAGNETOMETER/magin.dat				MagInputFile
+-1							DnOutput
+20.0							DtOutput
+
+#SCHEME
+1			nOrder
+Rusanov			TypeFlux
+
+#SAVEPLOT
+3                       nPlotFile
+x=0 FUL idl             StringPlot
+-1                      DnSavePlot
+10.			DtSavePlot
+-1.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
+y=0 FUL idl             StringPlot
+-1                      DnSavePlot
+10.			DtSavePlot
+-1.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
+z=0 FUL idl             StringPlot
+-1                      DnSavePlot
+10.			DtSavePlot
+-1.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
+
+#STOP
+-1			MaxIteration
+60.0			tSimulationMax
+
+#END
