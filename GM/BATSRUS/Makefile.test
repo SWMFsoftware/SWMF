@@ -22,6 +22,7 @@ test:
 	-@(make test_saturn)
 	-@(make test_comet)
 	-@(make test_func)
+	-@(make test_magnetometer)
 	@ls -l *.diff
 
 # All tests are done in this directory:
@@ -58,6 +59,7 @@ test_help:
 	@echo "    test_titan_start           (run first titan test only)"
 	@echo "    test_titan_restart         (run titan restart test only)"
 	@echo "    test_func                  (run functionality tests only)"
+	@echo "    test_magnetometer          (run magnetometer tests only)"
 
 test_rundir:
 	rm -rf ${TESTDIR}
@@ -127,6 +129,37 @@ test_multifluid_check:
 	  Param/MULTIFLUID/TestOutput/cut_25.idl \
 	  ${TESTDIR}/GM/IO2/cut_25.idl > test_multifluid.diff
 	ls -l test_multifluid.diff
+
+### TEST MAGNETOMETER ###
+test_magnetometer:
+	@echo "test_magnetometer_compile..." >> test_magnetometer.diff
+	make test_magnetometer_compile
+	@echo "test_magnetometer_rundir..." >> test_magnetometer.diff
+	make test_magnetometer_rundir
+	@echo "test_magnetometer_run..." >> test_magnetometer.diff
+	make test_magnetometer_run
+	@echo "test_magnetometer_check..." >> test_magnetometer.diff
+	make test_magnetometer_check
+
+test_magnetometer_compile:
+	./Config.pl =u=Default -e=Mhd -g=4,4,4,400,1
+	make
+	make PIDL
+	
+test_magnetometer_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/MAGNETOMETER/PARAM.in PARAM.in
+	cd ${TESTDIR}; cp Param/MAGNETOMETER/magin.dat .
+	
+test_magnetometer_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+
+test_magnetometer_check:
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
+		Param/MAGNETOMETER/TestOutput/mag_n000000.dat \
+		${TESTDIR}/RESULTS/GM/mag_n000000.dat \
+		> test_magnetometer.diff	
+	ls -l test_magnetometer.diff
 
 ### MULTI ION TEST ###
 
