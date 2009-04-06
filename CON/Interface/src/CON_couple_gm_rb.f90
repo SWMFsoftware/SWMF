@@ -213,7 +213,7 @@ contains
           call MPI_send(SatPos_DII,nSize,MPI_REAL,i_proc0(RB_),&
                1,i_comm(),iError)
        endif
-       if(is_proc0(IM_)) then
+       if(is_proc0(RB_)) then
           call MPI_recv(SatPos_DII,nSize,MPI_REAL,i_proc0(GM_),&
                1,i_comm(),iStatus_I,iError)
        endif
