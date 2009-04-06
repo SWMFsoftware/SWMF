@@ -11,10 +11,8 @@ module ModFieldAlignedCurrent
   
   implicit none
   save
-  real, allocatable ::FieldAlignedCurrentLocal_II(:,:), &
-       FieldAlignedCurrent_II(:,:)!, bCurrentLocal_VII(:,:,:), bCurrent_VII(:,:,:)
-
-  real :: LatBoundary
+  real, allocatable :: &
+       FieldAlignedCurrent_II(:,:), bCurrentLocal_VII(:,:,:), bCurrent_VII(:,:,:)
 
 contains
 
@@ -28,7 +26,8 @@ contains
 
     call init_mod_ie_grid(iSize, jSize)
 
-    allocate( FieldAlignedCurrentLocal_II(nThetaIono, nPhiIono), &
+    allocate( bCurrent_VII(0:6, nThetaIono, nPhiIono), &
+         bCurrentLocal_VII(0:6, nThetaIono, nPhiIono), &
          FieldAlignedCurrent_II(nThetaIono, nPhiIono))
 
   end subroutine init_mod_field_aligned_current
@@ -37,7 +36,7 @@ contains
   subroutine clean_mod_field_aligned_current
 
     if(allocated(FieldAlignedCurrent_II)) &
-         deallocate( FieldAlignedCurrentLocal_II, FieldAlignedCurrent_II)
+         deallocate( bCurrent_VII, bCurrentLocal_VII, FieldAlignedCurrent_II)
   end subroutine clean_mod_field_aligned_current
  
 end module ModFieldAlignedCurrent
@@ -49,7 +48,7 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar)
   use ModIeGrid
   use ModCurrent,            ONLY: calc_field_aligned_current
   use ModFieldAlignedCurrent,ONLY: FieldAlignedCurrent_II, &
-       init_mod_field_aligned_current, FieldALignedCurrentLocal_II
+       init_mod_field_aligned_current!, calc_field_aligned_current
   use ModRaytrace, ONLY: DoTraceIE, RayResult_VII, RayIntegral_VII, &
        InvB_, RhoInvB_, pInvB_, xEnd_, CLOSEDRAY
   use ModNumConst, ONLY: cRadToDeg
@@ -63,9 +62,9 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar)
   integer, intent(in) :: iSize, jSize, nVar
   real, intent(out), dimension(iSize, jSize, nVar) :: Buffer_IIV
   integer :: i, j
-  real :: Radius,iError, Phi, Theta
+  real :: Radius,iError, Phi, Theta, LatBoundary
   real, allocatable, dimension(:), save :: IE_lat, IE_lon
-  real, allocatable, dimension(:,:,:)   :: B_DII 
+  real, allocatable, dimension(:,:,:)   :: bSm_DII 
   real :: XyzIono_D(3)
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
@@ -78,36 +77,39 @@ subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar)
   if(.not.allocated(IE_lat)) &
        allocate(IE_lat(iSize), IE_lon(jSize))
 
- if(.not. allocated(B_DII))&
-      allocate(B_DII(3,iSize,jSize))
+ if(.not. allocated(bSm_DII))&
+      allocate(bSm_DII(3,iSize,jSize))
 
   ! initialize all elements to zero on proc 0, others should not use it
   if(iProc == 0) Buffer_IIV = 0.0
 
   ! Put field aligned currents into the first "slice" of the buffer
-  call calc_field_aligned_current(iSize,jSize,rIonosphere,FieldAlignedCurrent_II,B_DII)
+  call calc_field_aligned_current(nThetaIono, nPhiIono, rIonosphere, &
+       FieldAlignedCurrent_II, bSm_DII, LatBoundary, ThetaIono_I, PhiIono_I)
 
-  ! Convert Fac into radial direction
+  ! Take radial component of FAC and put it into the buffer sent to IE
+  ! The resulting FAC_r will be positive for radially outgoing current
+  ! and negative for radially inward going currents.
   if(iProc==0)then
      do j=1, nPhiIono
-         Phi = PhiIono_I(j)
-
+        Phi = PhiIono_I(j)
+        
         do i=1, nThetaIono
            Theta = ThetaIono_I(i)
-           ! the Latboundary point
-           if (j==1 .and. i== nThetaIono/2 .or. j==1 .and. i==nThetaIono/2+1)CYCLE
-
            call sph_to_xyz(rIonosphere, Theta, Phi, XyzIono_D)
-           ! in radial direction
            FieldAlignedCurrent_II(i,j) = FieldAlignedCurrent_II(i,j) &
-                * sum(B_DII(:,i,j)*XyzIono_D) / rIonosphere /sqrt(sum((B_DII(:,i,j))**2))
+                * sum(bSm_DII(:,i,j)*XyzIono_D) &
+                / (sqrt(sum((bSm_DII(:,i,j))**2)) * rIonosphere)
         end do
      end do
+
+     ! Save the latitude boundary information to the equator 
+     Buffer_IIV(:,:,1) = FieldAlignedCurrent_II(:,:)*No2Si_V(UnitJ_)
+     Buffer_IIV(nThetaIono/2:nThetaIono/2+1,1,1) = LatBoundary                          
+
   end if
-
-  if(iProc == 0)Buffer_IIV(:,:,1) = FieldAlignedCurrent_II(:,:)*No2Si_V(UnitJ_)
-
-  deallocate(B_DII)
+  
+  deallocate(bSm_DII)
 
   if(DoTraceIE) then
      ! Load grid and convert to lat-lon in degrees
