@@ -21,6 +21,7 @@ ccccccccccccccccccccccccccccccccccccccccc
 c MCF
 c     subroutine initmain()
       subroutine initmain(thetamin,thetamax)
+      use rbe_cread1
 c MCF end
 
 c Set nthetacells, nphicells array index
@@ -76,8 +77,6 @@ c Input: par
 c Inputs for entry saveplasmasphere
 c Input: filename
       character filename*80
-c MCF added
-      character outname*8
 
 c Internal variables
 
@@ -251,7 +250,7 @@ ccccccccccccccccccccccccc
 
 c MCF
 c     entry initdensity()
-      entry initdensity(outname,itype)
+      entry initdensity(itype)
 c MCF end
 
 c set initial particle distribution
@@ -453,7 +452,7 @@ cccccccccccccccccccccccccccccc
 
 c MCF
 c     entry saveplasmasphere(filename)
-      entry saveplasmasphere(outname,t,tstart,itype)
+      entry saveplasmasphere(t,tstart,itype)
 
 c     call saveit(vthetacells,nthetacells,vphicells,nphicells,
 c    *   mgridden,mgridx,mgridy,mgridoc,filename)

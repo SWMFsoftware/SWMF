@@ -47,6 +47,7 @@ module rbe_cread1
   implicit none
 
   character(len=8):: outname
+  character(len=13):: outnameSep,outnameSepOrig
   logical         :: UseSeparatePlotFiles = .false.
   character(len=2):: st2
 

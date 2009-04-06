@@ -77,7 +77,10 @@ subroutine rbe_init
 
   !\
   ! Set the Time parameters
-  !/ 
+  !/
+   if (dt > dtmax) dt=dtmax
+   t=tstart-trans
+
   iYear = iStartTime_I(1)
 !  iDOY  = get_doy(iStartTime_I(1),iStartTime_I(2),iStartTime_I(3))
 !  IYD=mod(iYear,100)*1000+iDOY
@@ -87,17 +90,19 @@ subroutine rbe_init
   !\  
   !set outname
   !/
+
+  !set outname
   if (UseSeparatePlotFiles) then
      CurrentTime = StartTime+t
      call time_real_to_int(CurrentTime,iCurrentTime_I)
-     write(outname,"(i4,2i2,1x,2i2)") &
-          iCurrentTime_I(1),iCurrentTime_I(2),iCurrentTime_I(3),iCurrentTime_I(4), &
-          iCurrentTime_I(5),iCurrentTime_I(6)
+     write(outnameSep,"(i4.4,i2.2,i2.2,a,i2.2,i2.2)") & 
+          iCurrentTime_I(1),iCurrentTime_I(2),iCurrentTime_I(3),'_',&
+          iCurrentTime_I(4),iCurrentTime_I(5)
+     write(outnameSepOrig,"(i4.4,i2.2,i2.2,a,i2.2,i2.2)") & 
+          iStartTime_I(1),iStartTime_I(2),iStartTime_I(3),'_',&
+          iStartTime_I(4),iStartTime_I(5)
   endif
 
-
-  if (dt > dtmax) dt=dtmax
-  t=tstart-trans
   
   ! latitudes from Meredith as a function of L, MLT and Kp.
   call readChorusIntensity
@@ -115,7 +120,7 @@ subroutine rbe_init
   call timing_stop('rbe_field')
   call timing_start('rbe_initial')
   call initial(itype,ekev,xjac,ro,gride,c,xmass,d4,js,irm,&
-       iba,init,il,ie,outname,st2)
+       iba,init,il,ie)
   call timing_stop('rbe_initial')
   if (js.eq.2) call cepara(dt,ekev,Hdens,v,irm,iw1,iw2)
 
@@ -128,7 +133,7 @@ subroutine rbe_init
   call timing_stop('rbe_vdrift')
   call timing_start('rbe_boundary')
   call boundary(t,tstart,f2,v,xjac,xmass,p,xktd,xnd,&
-     vswb0,xnswb0,outname,st2,itype,ibset,irm,irm0,iba)
+     vswb0,xnswb0,itype,ibset,irm,irm0,iba)
   call timing_stop('rbe_boundary')
 
   ! Setup for the plasmasphere model
@@ -146,7 +151,7 @@ subroutine rbe_init
      call setxygrid(colat,ir,xmltd,ip,xo,yo,gridoc)
      call timing_stop('rbe_set_xy_grid')
      call timing_start('rbe_init_density')
-     call initdensity(outname,itype)  ! saturated plasmasphere when itype=1
+     call initdensity(itype)  ! saturated plasmasphere when itype=1
      call timing_stop('rbe_init_density')
      if (itype.eq.1) then     ! initial warm up of the plasmasphere
         call timing_start('rbe_set_pot')
@@ -192,7 +197,7 @@ subroutine rbe_run
      call fieldpara(t,dt,c,q,rc,re,xlati,&
           xmlt,phi,w,si,xmass,xme,xmp)
      call boundary(t,tstart,f2,v,xjac,xmass,p,xktd,xnd,&
-     vswb0,xnswb0,outname,st2,itype,ibset,irm,irm0,iba)
+     vswb0,xnswb0,itype,ibset,irm,irm0,iba)
      call E_change(f2,d4,ekev,elb,eub,e_l,ecbf,iba,iw1,iw2)
      if (iplsp.eq.1) then
         call setfluxtubevol(colat,ir,xmltd,ip+1,volume)
@@ -206,7 +211,7 @@ subroutine rbe_run
           rc,xnsw0,vsw0,Bx0,By0,Bz0)
      call Vdrift(re,rc,xme,dphi,xlati,ekev,potent,js,irm,iw1,iw2)
      call boundary(t,tstart,f2,v,xjac,xmass,p,xktd,xnd,&
-     vswb0,xnswb0,outname,st2,itype,ibset,irm,irm0,iba)
+     vswb0,xnswb0,itype,ibset,irm,irm0,iba)
   endif
 
   if (t.ge.tstart) then
@@ -234,9 +239,9 @@ subroutine rbe_run
   CurrentTime = StartTime+t
   call time_real_to_int(CurrentTime,iCurrentTime_I)
   if (UseSeparatePlotFiles) then
-     write(outname,"(i4,2i2,1x,2i2)") &
-          iCurrentTime_I(1),iCurrentTime_I(2),iCurrentTime_I(3),iCurrentTime_I(4), &
-          iCurrentTime_I(5),iCurrentTime_I(6)
+     write(outnameSep,"(i4.4,i2.2,i2.2,a,i2.2,i2.2)") & 
+          iCurrentTime_I(1),iCurrentTime_I(2),iCurrentTime_I(3),'_',&
+          iCurrentTime_I(4),iCurrentTime_I(5)  
   endif
 
 
@@ -244,7 +249,7 @@ subroutine rbe_run
      call fieldpara(t,dt,c,q,rc,re,xlati,&
           xmlt,phi,w,si,xmass,xme,xmp)
      call boundary(t,tstart,f2,v,xjac,xmass,p,xktd,xnd,&
-     vswb0,xnswb0,outname,st2,itype,ibset,irm,irm0,iba)
+     vswb0,xnswb0,itype,ibset,irm,irm0,iba)
      call E_change(f2,d4,ekev,elb,eub,e_l,ecbf,iba,iw1,iw2)
      if (iplsp.eq.1) then
         call setfluxtubevol(colat,ir,xmltd,ip+1,volume)
@@ -258,7 +263,7 @@ subroutine rbe_run
   call Vdrift(re,rc,xme,dphi,xlati,ekev,potent,js,irm,iw1,iw2)
 
   call boundary(t,tstart,f2,v,xjac,xmass,p,xktd,xnd,&
-     vswb0,xnswb0,outname,st2,itype,ibset,irm,irm0,iba)
+     vswb0,xnswb0,itype,ibset,irm,irm0,iba)
 
   if (js.eq.2) then
      call charexchange(f2,achar,iba,iw1,iw2)  
@@ -286,9 +291,9 @@ subroutine rbe_run
   CurrentTime = StartTime+t
   call time_real_to_int(CurrentTime,iCurrentTime_I)
   if (UseSeparatePlotFiles) then
-     write(outname,"(i4,2i2,1x,2i2)") &
-          iCurrentTime_I(1),iCurrentTime_I(2),iCurrentTime_I(3),iCurrentTime_I(4), &
-          iCurrentTime_I(5),iCurrentTime_I(6)
+     write(outnameSep,"(i4.4,i2.2,i2.2,a,i2.2,i2.2)") & 
+          iCurrentTime_I(1),iCurrentTime_I(2),iCurrentTime_I(3),'_',&
+          iCurrentTime_I(4),iCurrentTime_I(5)  
   endif
   ! update the plasmasphere density
   if (iplsp.eq.1) then
@@ -326,8 +331,8 @@ subroutine rbe_save_restart
 
   implicit none
 
-  call p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
-       st2,xjac,gride,gridp,gridy,bo,xnsw,vsw,Bx,By,Bz,vswb,&
+  call p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
+       xjac,gride,gridp,gridy,bo,xnsw,vsw,Bx,By,Bz,vswb,&
        xnswb,parmod,ecbf,ecdt,eclc,ecce,density,iprint,ntime,irm,&
        iplsp,iw1,iw2,itype)
 
@@ -1085,6 +1090,7 @@ subroutine fieldpara(t,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
                  gamma(i,j,k,m)=c2m/c2mo
                  p(i,j,k,m)=pijkm  
                  v(i,j,k,m)=pc*c/c2m
+!                 write(*,*)'!!!!tcone1,v(i,j,k,m)',tcone1,v(i,j,k,m)
                  tcone2=tcone1/v(i,j,k,m)      ! Tbounce/2
                  x=dt/tcone2
                  tcone(i,j,k,m)=0. 
@@ -1733,15 +1739,13 @@ end subroutine Vdrift
 ! Initially set up the distribution function (f2) 
 !******************************************************************************
 subroutine initial(itype,ekev,xjac,ro,gride,c,xmass,d4,js,irm,&
-     iba,init,il,ie,outname,st2)
+     iba,init,il,ie)
 
   use rbe_cinitial
   use rbe_io_unit, ONLY: iUnit1, iUnit2
   use ModIoUnit, ONLY: UnitTmp_
   use ModNumConst, ONLY: pi => cPi
-
-  character(len=8), intent(in):: outname
-  character(len=2), intent(in):: st2
+  use rbe_cread1
 
   real:: ekev(ir,ip,iw,ik),xjac(ir,iw),roi(il),ro(ir,ip),xmass(ns),&
        ei_MeV(ie),gride(je),ei(ie),eilog(ie),fi(il,ie),psdi(il,ie),&
@@ -1844,7 +1848,11 @@ subroutine initial(itype,ekev,xjac,ro,gride,c,xmass,d4,js,irm,&
      enddo
   enddo
   if (itype.eq.1) then
-     open(unit=UnitTmp_,file='RB/'//outname//st2//'.ec')
+     if(UseSeparatePlotFiles) then
+        open(unit=UnitTmp_,file='RB/'//outnameSepOrig//st2//'.ec')
+     else
+        open(unit=UnitTmp_,file='RB/'//outname//st2//'.ec')
+     end if
      write(UnitTmp_,*) elb,eub,'      ! elb,eub'
      close(UnitTmp_)
   else
@@ -1864,17 +1872,16 @@ end subroutine initial
 !  nightside side.
 !***************************************************************************
 subroutine boundary(t,tstart,f2,v,xjac,xmass,p,xktd,xnd,&
-     vswb0,xnswb0,outname,st2,itype,ibset,irm,irm0,iba)
+     vswb0,xnswb0,itype,ibset,irm,irm0,iba)
   
   use rbe_cboundary
   use rbe_cread2,  ONLY:js,tsw,xnswa,vswa,nsw,UseGm,tint 
   use ModIoUnit,   ONLY: UnitTmp_
   use ModNumConst, ONLY: pi => cPi
-
+  use rbe_cread1
   real v(ir,ip,iw,ik),xjac(ir,iw),p(ir,ip,iw,ik),&
        xmass(ns),f2(ir,ip,iw,ik)
   integer iba(ip),irm(ip),irm0(ip)
-  character outname*8,st2*2
 
   ibset=4                      ! Kappa distribution on the nightside
 
@@ -1960,7 +1967,11 @@ subroutine boundary(t,tstart,f2,v,xjac,xmass,p,xktd,xnd,&
   if (t.ge.tstart) then
   thour=t/3600.
      if (itype.eq.1.and.t.eq.tstart) then
-        open(unit=UnitTmp_,file='RB/'//outname//st2//'.bc')
+        if(UseSeparatePlotFiles) then
+           open(unit=UnitTmp_,file='RB/'//outnameSepOrig//st2//'.bc')
+        else
+           open(unit=UnitTmp_,file='RB/'//outname//st2//'.bc')
+        end if
         write(UnitTmp_,*)&
              '                   nightside BC           dayside BC'
         write(UnitTmp_,*) &
@@ -1968,7 +1979,13 @@ subroutine boundary(t,tstart,f2,v,xjac,xmass,p,xktd,xnd,&
         write(UnitTmp_,'(f12.2,2(f11.4,f11.3))') thour,xnn_cm3,xktn,xnd,xktd
         close(UnitTmp_)
      elseif (mod(t,tint).eq.0.) then
-        open(unit=UnitTmp_,file='RB/'//outname//st2//'.bc',status='old',position='append')
+        if(UseSeparatePlotFiles) then
+           open(unit=UnitTmp_,file='RB/'//outnameSepOrig//st2//'.bc',&
+                status='old',position='append')
+        else
+           open(unit=UnitTmp_,file='RB/'//outname//st2//'.bc',&
+                status='old',position='append')
+        end if
         write(UnitTmp_,'(f12.2,2(f11.4,f11.3))') thour,xnn_cm3,xktn,xnd,xktd
         close(UnitTmp_)
      endif
@@ -1983,8 +2000,8 @@ end subroutine boundary
 !                           p_result
 !  Routine prints output fluxes and informations needed for continuous run.
 !***************************************************************************
-subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
-     st2,xjac,gride,gridp,gridy,bo,xnsw,vsw,Bx,By,Bz,&
+subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
+     xjac,gride,gridp,gridy,bo,xnsw,vsw,Bx,By,Bz,&
      vswb,xnswb,parmod,ecbf,ecdt,eclc,ecce,density,iprint,&
      ntime,irm,iplsp,iw1,iw2,itype)
 
@@ -1994,13 +2011,13 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
   use ModIoUnit, ONLY: UnitTmp_
   use ModNumConst, ONLY: pi => cPi
   use ModRbSat,    ONLY: write_rb_sat, nRbSats, DoWriteSats
+  use rbe_cread1
   real xlati(ir),ekev(ir,ip,iw,ik),y(ir,ip,0:ik+1),bo(ir,ip),&
        xjac(ir,iw),gride(je),gridp(je),gridy(ig),f2(ir,ip,iw,ik),ro(ir,ip),&
        xmlto(ir,ip),f(ir,ip,iw,ik),xlati1(ir),p(ir,ip,iw,ik),xmlt(ip),&
        flx(ir,ip,je,ig),ecbf(ir),ecdt(ir),eclc(ir),ecce(ir),&
        psd(ir,ip,iw,ik),ebound(je+1),density(ir,ip),parmod(10)
   integer iw1(ik),iw2(ik),irm(ip),iSat
-  character outname*8 ,st2*2
 
   hour=t/3600.
   do i=1,ir
@@ -2018,7 +2035,8 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
   iwh=ifix(0.5*(iw+1))
   ikh=ifix(0.5*(ik+1))
   if (UseSeparatePlotFiles) then
-     open(unit=UnitTmp_,file='RB/plots/'//outname//st2//'.fls',status='new')
+     open(unit=UnitTmp_,file='RB/plots/'//outnameSep//st2//'.fls',&
+          status='unknown')
      write(UnitTmp_,'(f10.5,5i6,"         ! rc(Re),ir,ip,je,ig,ntime")')&
           rc,ir,ip,je,ig,ntime
      write(UnitTmp_,'(6f9.3)') (gride(k),k=1,je)
@@ -2116,7 +2134,11 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
   !     close(13)
 
   ! Write energy changes from various processes
-  open(unit=UnitTmp_,file='RB/'//outname//st2//'.ec',status='old',position='append')
+  if(UseSeparatePlotFiles) then
+     open(unit=UnitTmp_,file='RB/'//outnameSepOrig//st2//'.ec',status='old',position='append')
+  else
+     open(unit=UnitTmp_,file='RB/'//outname//st2//'.ec',status='old',position='append')
+  endif
   write(UnitTmp_,*) hour,'     ! hour'
   write(UnitTmp_,*) '   i  ro(i,1)       ecbf          ecdt          ecce',&
        '          eclc'
@@ -2128,8 +2150,12 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
        sum(ecbf),sum(ecdt),sum(ecce),sum(eclc)
   close(UnitTmp_)
 
-  ! Open files to write all the informatin for continous run        
-  open(unit=UnitTmp_,file='RB/restartOUT/'//outname//st2//'_c.f2',form='unformatted')
+  ! Open files to write all the information for continous run        
+  if(UseSeparatePlotFiles)then
+     open(unit=UnitTmp_,file='RB/restartOUT/'//outnameSep//st2//'_c.f2',form='unformatted')
+  else
+     open(unit=UnitTmp_,file='RB/restartOUT/'//outname//st2//'_c.f2',form='unformatted')
+  end if
   write(UnitTmp_) f2   
   write(UnitTmp_) iw1
   write(UnitTmp_) iw2
@@ -2139,7 +2165,7 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
   write(UnitTmp_) eclc
   write(UnitTmp_) ecce
   close(UnitTmp_)
-  if (iplsp.eq.1) call saveplasmasphere(outname,t,tstart,itype)
+  if (iplsp.eq.1) call saveplasmasphere(t,tstart,itype)
 
   ! Write the restart.H file to be included at restart
   open(unit=UnitTmp_,file='RB/restartOUT/restart.H')
