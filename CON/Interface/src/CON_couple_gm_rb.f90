@@ -176,14 +176,27 @@ contains
     ! Transfer variables from GM to RB
     !/
     if(i_proc0(RB_) /= i_proc0(GM_))then
+
+       
        nSize = iSize*jSize*nIntegral
        if(is_proc0(GM_)) then
+          call MPI_send(nVarLine,1,MPI_INTEGER,i_proc0(RB_),&
+               1,i_comm(),iError)
+          call MPI_send(nPointLine,1,MPI_INTEGER,i_proc0(RB_),&
+               1,i_comm(),iError)
           call MPI_send(Integral_IIV,nSize,MPI_REAL,&
                i_proc0(RB_),1,i_comm(),iError)
           call MPI_send(BufferLine_VI,nVarLine*nPointLine,MPI_REAL,&
                i_proc0(RB_),2,i_comm(),iError)
        end if
        if(is_proc0(RB_))then
+          !setup BufferLine in RB when not sharing proc with GM
+          call MPI_recv(nVarLine,1,MPI_INTEGER,i_proc0(GM_),&
+               1,i_comm(),iStatus_I,iError)
+          call MPI_recv(nPointLine,1,MPI_INTEGER,i_proc0(GM_),&
+               1,i_comm(),iStatus_I,iError)
+          allocate(BufferLine_VI(nVarLine, nPointLine))
+          !recieve variables from GM
           call MPI_recv(Integral_IIV,nSize,MPI_REAL,&
                i_proc0(GM_),1,i_comm(),iStatus_I,iError)
           call MPI_recv(BufferLine_VI,nVarLine*nPointLine,MPI_REAL,&
