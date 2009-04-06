@@ -861,24 +861,27 @@ SUBROUTINE THERMAL
 
   RETURN
 END SUBROUTINE THERMAL
-!
-! End of subroutine THERMAL
-!
+
 
 !*********************** Function G(X) *********************************
 Real Function G(X)
 
   use ModHeidiSize
   use ModHeidiMain
+  use ModConst, ONLY : cPi
 
-  G1=ERF(X,IER)-2.*X/SQRT(PI)*EXP(-X*X)
+  implicit none
+  
+  real    :: x,G1,ERF
+  integer :: IER
+  external :: ERF
+  !-----------------------------
+
+  G1=ERF(X,IER)-2.*X/SQRT(cPi)*EXP(-X*X)
   G=G1/2./X/X
 
   RETURN
-END FUNCTION G
-!
-! End of function G
-!
+End Function G
 
 !*********************** Function T(X) *********************************
 !	function f(y) taken from Ejiri, JGR,1978
@@ -891,7 +894,8 @@ Real Function FUNT(X)		! X is cos of equat pa = MU
   implicit none
 
   real :: Y,X,ALPHA,BETA,A1,A2,A3,A4!,FUNT
-
+  !-----------------------------
+  
   Y=SQRT(1-X*X)
   ALPHA=1.+ALOG(2.+SQRT(3.))/2./SQRT(3.)
   BETA=ALPHA/2.-PI*SQRT(2.)/12.
@@ -903,23 +907,20 @@ Real Function FUNT(X)		! X is cos of equat pa = MU
        A3*Y+A4*Y**(4./3.)
 
   RETURN
-END FUNCTION FUNT
-           !
-           ! End of function FUNT
-           !
+end Function FUNT
 
-           !*********************** Function I(X) *********************************
-           !	function I(y) taken from Ejiri, JGR,1978
+!*********************** Function I(X) *********************************
+!	function I(y) taken from Ejiri, JGR,1978
 
 Real Function FUNI(X)		! X is cos of equat pa = MU
-
+  
   use ModHeidiSize
   use ModHeidiMain
-
+  
   implicit none
 
   real :: Y,X,ALPHA,BETA,A1,A2,A3,A4!,FUNI
-
+  !-----------------------------
   Y=SQRT(1.-X*X)
   ALPHA=1.+ALOG(2.+SQRT(3.))/2./SQRT(3.)
   BETA=ALPHA/2.-PI*SQRT(2.)/12.
@@ -933,18 +934,15 @@ Real Function FUNI(X)		! X is cos of equat pa = MU
 
   RETURN
 END FUNCTION FUNI
-           !	
-           ! End of function FUNI
-           !
-
-           !      ======= new code to adjust the Cray's floating point operations====
-           !	Couldn't we just ROUND() it?
-
-           !****************************
+!============================================================================
+!      ======= new code to adjust the Cray's floating point operations====
+!	Couldn't we just ROUND() it?
+!============================================================================
 Real Function APPX(T)
 
   real :: EPSLN
-
+  !-----------------------------
+  
   EPSLN=0.00000001
   IF (T.LT.0.) THEN
      APPX=T-EPSLN
@@ -956,69 +954,60 @@ Real Function APPX(T)
 
   RETURN
 END FUNCTION APPX
-           !
-           ! End of function APPX
-           !
-           !      ================== end of new code ====adjust floating======
 
-           !        new code for missing functions on cray ========begin====ab==
-
-           !****************************
+! ================== end of new code ====adjust floating=====================
+!        new code for missing functions on cray ========begin====ab==========
+!============================================================================           
 Real Function ACOSD(X)
 
   use ModHeidiSize
   use ModHeidiMain
-
-  ACOSD=180.0/PI*ACOS(X)
+  use ModConst, ONLY : cPi
+  !-----------------------------
+  acosd=180.0/cPi*acos(X)
 
   RETURN
-END FUNCTION ACOSD
-           ! 
-           ! End of function ACOSD
-           !
-
-           !****************************
-FUNCTION ASIND(X)
+end Function ACOSD
+!============================================================================          
+Real FUNCTION ASIND(X)
                    
   use ModHeidiSize
   use ModHeidiMain
+  use ModConst, ONLY : cPi
+  !-----------------------------
            
-  ASIND=180.0/PI*ASIN(X)
+  ASIND=180.0/cPi*ASIN(X)
            
   RETURN
 END FUNCTION ASIND
 
-! End of function ASIND
-!
-
-!****************************
-FUNCTION COSD(X)
+!============================================================================           
+Real FUNCTION COSD(X)
            
   use ModHeidiSize
   use ModHeidiMain
+  use ModConst, ONLY : cPi
+  !-----------------------------
            
-  COSD=COS(PI/180.0*X)
+  COSD=COS(cPi/180.0*X)
            
   RETURN
 END FUNCTION COSD
 
-! End of function COSD
-!
-
-!****************************
-FUNCTION SIND(X)
-           
+!============================================================================           
+Real FUNCTION SIND(X)
+  
   use ModHeidiSize
   use ModHeidiMain
+  use ModConst, ONLY : cPi
+  !-----------------------------
            
-  SIND=SIN(PI/180.0*X)
+  SIND=SIN(cPi/180.0*X)
            
   RETURN
 END FUNCTION SIND
-! 
-! End of function SIND
-!
 
+!============================================================================          
 
 
 
