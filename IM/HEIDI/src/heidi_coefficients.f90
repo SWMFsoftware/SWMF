@@ -135,9 +135,6 @@ SUBROUTINE CEPARA
   
   RETURN
 END SUBROUTINE CEPARA
-!
-! End of subroutine CEPARA
-!
 
 !***********************************************************************
 !				OTHERPARA
@@ -341,9 +338,6 @@ SUBROUTINE OTHERPARA
   
   RETURN
 END SUBROUTINE OTHERPARA
-!
-! End of subroutine OTHERPARA
-!
 
 ! **********************************************************************
 !                             MAGCONV
@@ -439,7 +433,7 @@ SUBROUTINE MAGCONV(I3,NST)
   Jreducer=1.0
   
   !** Find polar cap potential value (if needed)
-  print *, 'Is ABASE 3 or 4?'
+  !print *, 'Is ABASE 3 or 4?'
   IF (ABASE(IA+1).EQ.3 .or. ABASE(IA+1).EQ.4) THEN  
      IF (I3.EQ.NST) THEN
         I4=0
@@ -478,7 +472,7 @@ SUBROUTINE MAGCONV(I3,NST)
   !  Calculate base convection electric field
   
   !CC Shielded Volland-Stern
-  print *, 'Is ABASE 1-4?'
+  !print *, 'Is ABASE 1-4?'
   
   IF (ABASE(IA+1).EQ.1) THEN
      
@@ -582,7 +576,7 @@ SUBROUTINE MAGCONV(I3,NST)
      
      !CC Base field is specified during the self-consistent calculation
   ELSE IF (ABASE(IA+1).GE.5) THEN
-     print *, 'ABASE is 5.'
+     !print *, 'ABASE is 5.'
      
      do J=1,JO   !  Zero out drift values
         do i=1,io
@@ -597,7 +591,7 @@ SUBROUTINE MAGCONV(I3,NST)
      enddo
      
      !CC Read in potentials from a file
-     print *, 'Is ABASE >=10?'
+     !print *, 'Is ABASE >=10?'
   ELSE IF (ABASE(IA+1).EQ.10) THEN
      
      if (T.EQ.TIME) then
@@ -648,7 +642,8 @@ SUBROUTINE MAGCONV(I3,NST)
            If (FPOT12(i,j).lt.Fmin) Fmin=FPOT12(i,j)
         Enddo
      enddo
-     print *, 'FPOT12 Max, Min:',Fmin,Fmax,Fmax-Fmin
+     
+     call write_prefix; write(iUnitStdOut,*) 'FPOT12 Max, Min:',Fmin,Fmax,Fmax-Fmin
      !         transform FPOT to equatorial plane drifts
      do j=1,jo
         SJ=SIN(PHI(J))
@@ -682,8 +677,9 @@ SUBROUTINE MAGCONV(I3,NST)
            If (potdgcpm(i,j).lt.Fmin) Fmin=potdgcpm(i,j)
         Enddo
      enddo
-     print *, 'potdgcpm Max, Min:',Fmin,Fmax,Fmax-Fmin
      
+     call write_prefix; write(iUnitStdOut,*)  'potdgcpm Max, Min:',Fmin,Fmax,Fmax-Fmin
+          
      !CC Calculate potentials using an ionospheric model (AMIE, Weimer, etc.)
   ELSE IF (ABASE(IA+1).GE.11) THEN
      
@@ -758,7 +754,7 @@ SUBROUTINE MAGCONV(I3,NST)
   END IF
   
   !  Calculate Burke-Wygant penetration electric field
-  print *, 'Burke-Wygant pen field?'
+  !print *, 'Burke-Wygant pen field?'
   
   IF (AEPEN(IA+1).EQ.1) THEN
      IF (ABASE(IA+1).EQ.1) THEN
@@ -854,14 +850,14 @@ SUBROUTINE MAGCONV(I3,NST)
 51 format(f6.3,f6.2,1p,10e11.3)
   
   !  Calculate self-consistent penetration electric field
-  print *, 'Self-consistent pen field?'
+  !print *, 'Self-consistent pen field?'
   IF (AEPEN(IA+1).GE.2) THEN
-     print *, '...Calling PRESSURES'
+     call write_prefix; write(iUnitStdOut,*)  '...Calling PRESSURES'
      CALL PRESSURES    ! Updates the bulk ring current parameters
-     print *, '...Calling CURRENTCALC'
+     call write_prefix; write(iUnitStdOut,*) '...Calling CURRENTCALC' 
      CALL CURRENTCALC  ! Finds the perpendicular "ring current"
      !			    ! and the field-aligned closure currents
-     print *, '...More setup'
+     !print *, '...More setup'
      
      Irfac=Ir
      Latfac(1:Ir)=Lats(1:Ir)
@@ -922,8 +918,7 @@ SUBROUTINE MAGCONV(I3,NST)
      endif
      
      if (me_world.eq.0) then
-        
-        print *, 'FACs being sent to potential solver'
+        call write_prefix; write(iUnitStdOut,*) 'FACs being sent to potential solver' 
         !	do j=1,JO 
         !	print 50, MLT(J),(JFAC(i,j),i=1,Ir)
         !	end do
@@ -936,8 +931,8 @@ SUBROUTINE MAGCONV(I3,NST)
            if (tdiff.ge.0. .and. tdiff.le.dt_saw) evsw=2.*evsw
         end do
         !cc End the sawtooth snap block
-        print *, '...Calling EPENCALC'
-        
+        call write_prefix; write(iUnitStdOut,*) '...Calling EPENCALC'
+                
         CALL EPENCALC(t,f107,bc_choice,BYSW,BZSW,evsw) 
         !CC                             ! Aaron Ridley's solver 
         !CC                             ! for the potential
@@ -945,7 +940,7 @@ SUBROUTINE MAGCONV(I3,NST)
         !CC         ! Note: By and Bz in nT, Usw in m/s
         
         
-        print *, 'Potentials returned from the solver'
+        call write_prefix; write(iUnitStdOut,*) 'Potentials returned from the solver'
         !	do j=1,JO 
         !	print 50, MLT(J),(FPOT(i,j),i=1,Ir)
         !	end do
@@ -995,12 +990,11 @@ SUBROUTINE MAGCONV(I3,NST)
      END IF  !! Prohibits inclusion of Epen
      
   END IF
-  print *, 'Done with MAGCONV'
+  
+  call write_prefix; write(iUnitStdOut,*)'Done with MAGCONV'
+ 
   
   RETURN
 END SUBROUTINE MAGCONV
-!
-! End of subroutine MAGCONV
-!
 
 

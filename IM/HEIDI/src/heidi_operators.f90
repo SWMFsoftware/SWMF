@@ -16,235 +16,205 @@
 !				LLIMIT
 !	Sets very small  values to zero to avoid computer zero
 !***********************************************************************
-	SUBROUTINE LLIMIT
+SUBROUTINE LLIMIT
 
-	use ModHeidiSize
-	use ModHeidiMain
+  use ModHeidiSize
+  use ModHeidiMain
+  
+  implicit none
+  
+  integer :: i,j,k,l
+  
+  !	do s=1,ns
+  !	 if (SCALC(S).EQ.1) THEN
+  do L=1,LO
+     do K=1,KO
+        do J=1,JO
+           do I=1,IO
+              if (ABS(F2(I,J,K,L,S)).LE.1.E-29*FFACTOR(I,K,L))   &
+                   F2(I,J,K,L,S)=1.E-30*FFACTOR(I,K,L)
+           end do
+        end do
+     end do
+  end do
+  !	 end if
+  !	end do
 
-	implicit none
-
-	integer :: i,j,k,l
-
-!	do s=1,ns
-!	 if (SCALC(S).EQ.1) THEN
-	  do L=1,LO
-	   do K=1,KO
-	    do J=1,JO
-	     do I=1,IO
-	       if (ABS(F2(I,J,K,L,S)).LE.1.E-29*FFACTOR(I,K,L))   &
-            	  F2(I,J,K,L,S)=1.E-30*FFACTOR(I,K,L)
-	     end do
-	    end do
-	   end do
-	  end do
-!	 end if
-!	end do
-
-	RETURN
-	END
-!
-! End of subroutine LLIMIT
-!
+  RETURN
+END SUBROUTINE LLIMIT
 
 !***********************************************************************
 !			   	FCHECK
 !	Checks the distribution for negative or infinite results
 !***********************************************************************
-	SUBROUTINE FCHECK(MARK)
-
-	use ModHeidiSize
-	use ModHeidiMain
-
-	implicit none
-
-	integer :: mark
-
-	integer :: Ibad,i,j,k,l,i1,j1,k1,l1,Ibadt,m
-
-	Ibadt=0
-	DO m=1,NS
-	IF (SCALC(m).EQ.1) THEN
-
+SUBROUTINE FCHECK(MARK)
+  
+  use ModHeidiSize
+  use ModHeidiMain
+  use ModHeidiIo, ONLY: write_prefix, iUnitStdOut
+  implicit none
+  
+  integer :: mark
+  
+  integer :: Ibad,i,j,k,l,i1,j1,k1,l1,Ibadt,m
+  
+  Ibadt=0
+  DO m=1,NS
+     IF (SCALC(m).EQ.1) THEN
+        
 	Ibad=0
 	do L=1,Lo
-	 do k=2,ko
-	  do j=1,jo
-	   do i=2,io
-	    IF ((F2(I,J,K,L,m).LT.-1.E-12).OR.   &   ! -1E-29
-     		(F2(I,J,K,L,m)-F2(I,J,K,L,m).NE.0.)) THEN
-	     PRINT *
-	     PRINT 99, 'Bad F,T,I,J,K,L,MARK:',F2(I,J,K,L,m),   &
-     	    T,m,I,J,K,L,MARK,Ibad
-	     PRINT 98, 'Radius:',(F2(I1,J,K,L,m),I1=2,IO,IO/10)
-	     PRINT 98, 'Azimuth:',(F2(I,J1,K,L,m),J1=1,JO,JO/10)
-	     PRINT 98, 'Energy:',(F2(I,J,K1,L,m),K1=2,KO,KO/10)
-	     PRINT 98, 'Pitch angle:',(F2(I,J,K,L1,m),L1=1,LO,LO/10)
-	     Ibad=Ibad+1
-	     IF (Ibad.EQ.20) GOTO 151 
-	    END IF
-	   end do
-	  end do
-	 end do
+           do k=2,ko
+              do j=1,jo
+                 do i=2,io
+                    IF ((F2(I,J,K,L,m).LT.-1.E-12).OR.   &   ! -1E-29
+                         (F2(I,J,K,L,m)-F2(I,J,K,L,m).NE.0.)) THEN
+                       call write_prefix; write(iUnitStdOut,*) 'Bad F,T,I,J,K,L,MARK:',F2(I,J,K,L,m),   &
+                            T,m,I,J,K,L,MARK,Ibad
+                       call write_prefix; write(iUnitStdOut,*) 'Radius:',(F2(I1,J,K,L,m),I1=2,IO,IO/10)
+                       call write_prefix; write(iUnitStdOut,*) 'Azimuth:',(F2(I,J1,K,L,m),J1=1,JO,JO/10)
+                       call write_prefix; write(iUnitStdOut,*) 'Energy:',(F2(I,J,K1,L,m),K1=2,KO,KO/10)
+                       call write_prefix; write(iUnitStdOut,*) 'Pitch angle:',(F2(I,J,K,L1,m),L1=1,LO,LO/10)
+                       Ibad=Ibad+1
+                       IF (Ibad.EQ.20) GOTO 151 
+                    END IF
+                 end do
+              end do
+           end do
 	end do
 151 	CONTINUE
 	Ibadt=Ibadt+Ibad
-	end if
-	end do
-
-	IF (Ibadt.GT.0) THEN
-	  PRINT *
-	  PRINT *, 'Ibad=',Ibadt
-	  PRINT *, 'A=',A
-	  PRINT *
-	  CALL ECFL
-	  STOP
-	END IF
-
- 99	FORMAT(A,1PE11.3,0PF8.0,7(2X,I4))
- 98	FORMAT(A,200(1PE11.3))
-	RETURN
-	END
-!
-! End of subroutine FCHECK
-!
+     end if
+  end do
+  
+  IF (Ibadt.GT.0) THEN
+     call write_prefix; write(iUnitStdOut,*) 'Ibad=',Ibadt
+     call write_prefix; write(iUnitStdOut,*) 'A=',A
+     CALL ECFL
+     STOP
+  END IF
+  
+99 FORMAT(A,1PE11.3,0PF8.0,7(2X,I4))
+98 FORMAT(A,200(1PE11.3))
+  RETURN
+END SUBROUTINE FCHECK
 
 !***********************************************************************
 !			     DRIFTR
 !     Routine calculate the change of distribution function due to
 ! 			    radial drift
 !***********************************************************************
-	SUBROUTINE DRIFTR
+SUBROUTINE DRIFTR
 
-	use ModHeidiSize
-	use ModHeidiIO
-	use ModHeidiMain
-	use ModHeidiDrifts
+  use ModHeidiSize
+  use ModHeidiIO
+  use ModHeidiMain
+  use ModHeidiDrifts
 
-	implicit none
+  implicit none
 
-        REAL :: f01(nt,ne,npa,ns),f02(nt,ne,npa,ns)
-        REAL ::F(NR+2),FBND(NR),C(NR),LIMITER
-        INTEGER :: UR,isign
-	integer ::i,j,k,l,n
-	real :: fup,RR,corr,x
-	real :: fbc
-        save f01,f02
+  REAL :: f01(nt,ne,npa,ns),f02(nt,ne,npa,ns)
+  REAL ::F(NR+2),FBND(NR),C(NR),LIMITER
+  INTEGER :: UR,isign
+  integer ::i,j,k,l,n
+  real :: fup,RR,corr,x
+  real :: fbc
+  save f01,f02
 
-!...Set up injection boundary fluxes
-	 IF (AMOD(T,TINJ).LT.2.*DT .OR. T.EQ.TIME) THEN
-	  DO L=1,LO
-	   DO K=1,KO
-	    DO J=1,JO
-	     f01(j,k,l,S)=FGEOS(J,K,L,S)*CONF1
-	     f02(j,k,l,S)=FGEOS(J,K,L,S)*CONF2
-	    end do
-	   end do
-	  end do
-	 END IF				! End BC update
+  !...Set up injection boundary fluxes
+  IF (AMOD(T,TINJ).LT.2.*DT .OR. T.EQ.TIME) THEN
+     DO L=1,LO
+        DO K=1,KO
+           DO J=1,JO
+              f01(j,k,l,S)=FGEOS(J,K,L,S)*CONF1
+              f02(j,k,l,S)=FGEOS(J,K,L,S)*CONF2
+           end do
+        end do
+     end do
+  END IF				! End BC update
 
-        do J=1,JO
-	 do K=2,KO		!	< FBND(I) >
-	  do L=2,LO		!  |____.____|____.____|____.____|
+  do J=1,JO
+     do K=2,KO		!	< FBND(I) >
+        do L=2,LO		!  |____.____|____.____|____.____|
 	   do I=1,IO		!  <   F(I)  >
-	     F(I) = F2(I,J,K,L,S)  ! F - average in cell(i,j,k,l)
+              F(I) = F2(I,J,K,L,S)  ! F - average in cell(i,j,k,l)
 	   end do
 	   IF (VR(IO,J).GE.0.) THEN
-	     FBND(1)=0.	          ! outflow b. c.
-	     FBND(IO)=F(IO)       ! upwind for the side with no b.c.
-	     C(IO)=VR(IO,J)
-	     UR=IO-1
+              FBND(1)=0.	          ! outflow b. c.
+              FBND(IO)=F(IO)       ! upwind for the side with no b.c.
+              C(IO)=VR(IO,J)
+              UR=IO-1
 	   ELSE
-	     FBND(1)=F(2)         ! upwind for the side with no b.c
-	     !write(*,*)'J',J
-             !write(*,*)'VR(1,J)',VR(1,J)
-             !write(*,*) 'C(1)',C(1)
-            
-             C(1)=VR(1,J)
-	     UR=IO
-	     F(IO+1)=f01(j,k,l,s)
-	     F(IO+2)=f02(j,k,l,s)
+              FBND(1)=F(2)         ! upwind for the side with no b.c
+              C(1)=VR(1,J)
+              UR=IO
+              F(IO+1)=f01(j,k,l,s)
+              F(IO+2)=f02(j,k,l,s)
 	   END IF
-!	   C(1)=AMIN1(0.99,AMAX1(-0.99,C(1)))
+           !	   C(1)=AMIN1(0.99,AMAX1(-0.99,C(1)))
 	   do I=2,UR
-	     C(I)=VR(I,J)
-!	     C(I)=AMIN1(0.99,AMAX1(-0.99,C(I)))
-	     X=F(I+1)-F(I)
-	     ISIGN=1
-	     IF(C(I).NE.ABS(C(I))) ISIGN=-1
-	     FUP=0.5*(F(I)+F(I+1)-ISIGN*X) 	! upwind
-	     IF (ABS(X).LE.1.E-27) FBND(I)=FUP
-	     IF (ABS(X).GT.1.E-27) THEN
-	       N=I+1-ISIGN
-	       
-!!$               write(*,*) 'I',I
-!!$               write(*,*)'ISIGN',ISIGN
-!!$               write(*,*)'N',N
-!!$               write(*,*)'F(N)',F(N)
-!!$               write(*,*)'F(N-1)',F(N-1)
-!!$               write(*,*)'X',X
-
-               RR=(F(N)-F(N-1))/X
-	       IF (RR.LE.0) FBND(I)=FUP
-	       IF (RR.GT.0) THEN
-	         LIMITER=AMAX1(AMIN1(2.*RR,1.),AMIN1(RR,2.))
-	         CORR=-0.5*(C(I)-ISIGN)*X
-	         FBND(I)=FUP+LIMITER*CORR	! at boundary of cell
-	       END IF
-	     END IF
-!	 IF (I.EQ.9 .AND. J.EQ.3 .AND. K.EQ.2 .AND. L.EQ.2)    &
-!         PRINT 50,I,J,ISIGN,N,FBND(I),FUP,RR,CORR,LIMITER,X,F(I),F(I+1),F(N),F(N-1)
+              C(I)=VR(I,J)
+              !	     C(I)=AMIN1(0.99,AMAX1(-0.99,C(I)))
+              X=F(I+1)-F(I)
+              ISIGN=1
+              IF(C(I).NE.ABS(C(I))) ISIGN=-1
+              FUP=0.5*(F(I)+F(I+1)-ISIGN*X) 	! upwind
+              IF (ABS(X).LE.1.E-27) FBND(I)=FUP
+              IF (ABS(X).GT.1.E-27) THEN
+                 N=I+1-ISIGN
+                 RR=(F(N)-F(N-1))/X
+                 IF (RR.LE.0) FBND(I)=FUP
+                 IF (RR.GT.0) THEN
+                    LIMITER=AMAX1(AMIN1(2.*RR,1.),AMIN1(RR,2.))
+                    CORR=-0.5*(C(I)-ISIGN)*X
+                    FBND(I)=FUP+LIMITER*CORR	! at boundary of cell
+                 END IF
+              END IF
+              !	 IF (I.EQ.9 .AND. J.EQ.3 .AND. K.EQ.2 .AND. L.EQ.2)    &
+              !         PRINT 50,I,J,ISIGN,N,FBND(I),FUP,RR,CORR,LIMITER,X,F(I),F(I+1),F(N),F(N-1)
 	   end do ! I loop
 
-!........update the solution for next time step
+           !........update the solution for next time step
 	   !C(1) = -1.5951970E-05
            do I=2,ILMP(J)
-!!$              write(*,*)'I=',I,J,K,L,S
-!!$              write(*,*)'F2=', F2(I,J,K,L,S)
-!!$              write(*,*)'C=',C(I)
-!!$              write(*,*)'FBND=',FBND(I)
-!!$              write(*,*)'C=',C(I-1)
-!!$              write(*,*)'FBND(I-1)=',FBND(I-1)
-	    F2(I,J,K,L,S)=F2(I,J,K,L,S)-C(I)*FBND(I)+C(I-1)*FBND(I-1)
+              F2(I,J,K,L,S)=F2(I,J,K,L,S)-C(I)*FBND(I)+C(I-1)*FBND(I-1)
 	   end do ! I loop 
 	   do I=ILMP(J)+1,IO
-	    F2(I,J,K,L,S)=1.E-30*FFACTOR(I,K,L)
+              F2(I,J,K,L,S)=1.E-30*FFACTOR(I,K,L)
 	   end do
-50	FORMAT(4I3,1P,10E10.2)
+50         FORMAT(4I3,1P,10E10.2)
 
-!.......Count sources and losses out the spatial boundaries
+           !.......Count sources and losses out the spatial boundaries
 	   I=ILMP(J)			! Choose I_magnetopause
 	   IF (C(I).LT.0.) THEN	! Gain at outer boundary
-	    RNS=RNS-C(I)*FBND(I)*CONSL(K,S)*WE(K)*WMU(L)*DR*DPHI
-	    RES=RES-C(I)*FBND(I)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
+              RNS=RNS-C(I)*FBND(I)*CONSL(K,S)*WE(K)*WMU(L)*DR*DPHI
+              RES=RES-C(I)*FBND(I)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
 	   ELSE				! Loss at outer boundary
-	    RNL=RNL+C(I)*FBND(I)*CONSL(K,S)*WE(K)*WMU(L)*DR*DPHI
-	    REL=REL+C(I)*FBND(I)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
+              RNL=RNL+C(I)*FBND(I)*CONSL(K,S)*WE(K)*WMU(L)*DR*DPHI
+              REL=REL+C(I)*FBND(I)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
 	   END IF
 	   IF (C(1).GT.0.) THEN		! Gain at inner boundary
-	    RNS=RNS+C(1)*FBND(1)*CONSL(K,S)*WE(K)*WMU(L)*DR*DPHI
-	    RES=RES+C(1)*FBND(1)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
+              RNS=RNS+C(1)*FBND(1)*CONSL(K,S)*WE(K)*WMU(L)*DR*DPHI
+              RES=RES+C(1)*FBND(1)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
 	   ELSE				! Loss at inner boundary
-	    RNL=RNL-C(1)*FBND(1)*CONSL(K,S)*WE(K)*WMU(L)*DR*DPHI
-	    REL=REL-C(1)*FBND(1)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
+              RNL=RNL-C(1)*FBND(1)*CONSL(K,S)*WE(K)*WMU(L)*DR*DPHI
+              REL=REL-C(1)*FBND(1)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
 	   END IF
 
-	  end do	! End L loop
+        end do	! End L loop
 
 ! dayside BC for IBC=1
-	  IF (Ib.EQ.1 .AND. S.EQ.1 .AND. J.GE.J6 .AND. J.LE.J18) THEN
-	    do L=UPA(I),LO
-	     do I=2,IO
-	      F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,K,L),FINI(K)*CHI(I,J))
-	     end do
-	    end do
-	  END IF
-	 end do	! K loop
-	end do	! J loop
-	RETURN
-	END
-!
-! End of subroutine DRIFTR
-!
+        IF (Ib.EQ.1 .AND. S.EQ.1 .AND. J.GE.J6 .AND. J.LE.J18) THEN
+           do L=UPA(I),LO
+              do I=2,IO
+                 F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,K,L),FINI(K)*CHI(I,J))
+              end do
+           end do
+        END IF
+     end do	! K loop
+  end do	! J loop
+  RETURN
+END SUBROUTINE DRIFTR
 
 !***********************************************************************
 !			     DRIFTP

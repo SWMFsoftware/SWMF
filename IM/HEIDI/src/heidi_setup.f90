@@ -32,7 +32,7 @@ SUBROUTINE heidi_read
   use ModHeidiIO
   use ModHeidiMain
   use ModIoUnit, ONLY : UNITTMP_
-
+  
   implicit none
 
   real :: tmax
@@ -54,9 +54,8 @@ SUBROUTINE heidi_read
   READ (UNITTMP_,*) NAME
   CLOSE(UNITTMP_)
 
+  call write_prefix; write(iUnitStdOut,*) ' year,month,day,UT',year,month,day,UT
   
-print*,' year,month,day,UT',year,month,day,UT
-
   TimeArray(1) = year
   TimeArray(2) = month
   TimeArray(3) = day
@@ -65,7 +64,6 @@ print*,' year,month,day,UT',year,month,day,UT
   TimeArray(6) = 0.0
   TimeArray(7) = 0.0
 
-!print*,'TimeArray',TimeArray
   
   ISWB=ISW
   NSTEP=NINT(TMAX/DT/2.)                 ! time splitting
@@ -110,14 +108,11 @@ print*,' year,month,day,UT',year,month,day,UT
      CLOSE(UNITTMP_)
      TPPC(1:IPPC)=TPPC(1:IPPC)*86400. ! Convert to seconds
      PPC(1:IPPC)=PPC(1:IPPC)*1.E3       ! Convert to Volts
-     print *, 'PPC:',IPPC,TPPC(1),TPPC(IPPC),PPC(1),PPC(IPPC)
-  END IF
+     call write_prefix; write(iUnitStdOut,*) 'PPC:',IPPC,TPPC(1),TPPC(IPPC),PPC(1),PPC(IPPC)
+   END IF
 
   RETURN
 END SUBROUTINE heidi_read
-!
-! End of subroutine heidi_read
-!
 
 !***********************************************************************
 !				CONSTANT
@@ -255,10 +250,12 @@ SUBROUTINE ARRAYS
   !        new code for Cray  ===(length 1 line)====ab==
   IDL1=NINT(DL1*1000.)
   IF(DL1.GE.0.25 .AND. MOD(IDL1,250).NE.0) THEN
-     WRITE(6,*) ' Error : 0.25 is not a factor of DL1 '
+      call write_prefix; write(iUnitStdOut,*)  'Error : 0.25 is not a factor of DL1 '
+     !WRITE(6,*) ' Error : 0.25 is not a factor of DL1 '
      STOP
   ELSE IF (DL1.LT.0.25 .AND. MOD(250,IDL1).NE.0) THEN
-     WRITE (6,*) ' Error : DL1 is not a factor of 0.25'
+     call write_prefix; write(iUnitStdOut,*)  'Error : DL1 is not a factor of 0.25'
+     !WRITE (6,*) ' Error : DL1 is not a factor of 0.25'
      STOP
   END IF
 
@@ -273,7 +270,8 @@ SUBROUTINE ARRAYS
 
   DPHI=2.*PI/JO		      ! Grid size for local time [rad]
   IF(MOD(NLT,JO).NE.0) THEN
-     WRITE(6,*) ' Error : JO is not a factor of NLT '
+      call write_prefix; write(iUnitStdOut,*)  'Error : JO is not a factor of NLT '
+     !WRITE(6,*) ' Error : JO is not a factor of NLT '
      STOP
   END IF
 
@@ -440,10 +438,10 @@ SUBROUTINE ARRAYS
   END DO
   
 
-  	print *, 'SUMS:',SUMW,SUMD
-  	print *, 'LO:',MU(LO-1),MU(LO),DMU(LO),WMU(LO),MU(LO-1)+.5*DMU(LO-1)
-  	print *, '1:',MU(1),MU(2),DMU(1),WMU(1),MU(2)-.5*DMU(2)
-  !	stop
+  call write_prefix; write(iUnitStdOut,*) 'SUMS:',SUMW,SUMD
+  call write_prefix; write(iUnitStdOut,*) 'LO:',MU(LO-1),MU(LO),DMU(LO),WMU(LO),MU(LO-1)+.5*DMU(LO-1)
+  
+  !print *, '1:',MU(1),MU(2),DMU(1),WMU(1),MU(2)-.5*DMU(2)
   !**  calculate pitch angles for mlat
   DO I=1,IO
      DO IML=1,ISO
@@ -806,7 +804,8 @@ SUBROUTINE THERMAL
      If (ithermfirst.eq.2) then
         If (itherminit.eq.1) then  ! Read initial plasmasphere from file
            filename=name//'_dgcpm.in'
-           print *, 'Reading in plasmasphere file: ',filename
+           
+           call write_prefix; write(iUnitStdOut,*) 'Reading in plasmasphere file: ',filename
            call loadplasmasphere(filename)
            call getdensity(vthetacells,nthetacells,vphicells,nphicells, &
                 dendgcpm)
@@ -825,7 +824,7 @@ SUBROUTINE THERMAL
      endif    ! ithermfirst
      If (delt.gt.0.) then
         call setpot(vthetacells,nthetacells,vphicells,nphicells,potdgcpm)
-        print *, 'Calling plasmasphere:',potdgcpm(nthetacells,nphicells/4), &
+        call write_prefix; write(iUnitStdOut,*)  'Calling plasmasphere:',potdgcpm(nthetacells,nphicells/4), &
              potdgcpm(nthetacells,3*nphicells/4)
         do n=1,ntimestep
            call plasmasphere(delt,par)

@@ -469,17 +469,17 @@ SUBROUTINE CURRENTCALC
                     Iphi(i,j,s)=Iphi(i,j,s)+2.*.16E-9*delR(i,k)*ds(i,k)*   &
                          (-Jc(1,i,j,k)*sp(j)+Jc(2,i,j,k)*cp(j))
                     IF (Iphi(i,j,s)-Iphi(i,j,s).NE.0.) THEN
-                       print *,'Iphi:',Iphi(i,j,s),s,i,j,k,Kmax(i),Jc(1,i,j,k),   &
-                            Jc(2,i,j,k),Jc(3,i,j,k),Jx1,Jx2,Jy1,Jy2,Jz1,Jz2
-                       print *,'dP#:',dPx,dPy,dPz,dPi1,dPi2,dPj1,dPj2,dPk1,dPk2
-                       print *,'dPi:',i1(i),i2(i),Pf1(i2(i),j),Pf1(i1(i),j),fac2(i,k),fac1(i,k)
-                       print *,'Funcpc:',Funcpc(As1(i,j),BBr(i,k),BBr(i,Kmax(i))),BBr(i,k),   &
-                            BBr(i,Kmax(i)),As1(i,j)
-                       print *,'FuncPi1:',Pf1(i2(i),j),fac2(i,k),Funcpc(As1(i2(i),j),   &
-                            BBr(i2(i),ikk2(i,k)-ik2(i,k)),BBr(i2(i),Kmax(i2(i)))),   &
-                            1.-fac2(i,k),Funcpc(As1(i2(i),j),BBr(i2(i),   &
-                            ikk2(i,k)),BBr(i2(i),Kmax(i2(i)))),Pf1(i,j),   &
-                            Funcpc(As1(i,j),BBr(i,k),BBr(i,Kmax(i)))
+                       !print *,'Iphi:',Iphi(i,j,s),s,i,j,k,Kmax(i),Jc(1,i,j,k),   &
+                       !     Jc(2,i,j,k),Jc(3,i,j,k),Jx1,Jx2,Jy1,Jy2,Jz1,Jz2
+                      ! print *,'dP#:',dPx,dPy,dPz,dPi1,dPi2,dPj1,dPj2,dPk1,dPk2
+                      ! print *,'dPi:',i1(i),i2(i),Pf1(i2(i),j),Pf1(i1(i),j),fac2(i,k),fac1(i,k)
+                       !print *,'Funcpc:',Funcpc(As1(i,j),BBr(i,k),BBr(i,Kmax(i))),BBr(i,k),   &
+                       !     BBr(i,Kmax(i)),As1(i,j)
+                       !print *,'FuncPi1:',Pf1(i2(i),j),fac2(i,k),Funcpc(As1(i2(i),j),   &
+                       !     BBr(i2(i),ikk2(i,k)-ik2(i,k)),BBr(i2(i),Kmax(i2(i)))),   &
+                       !     1.-fac2(i,k),Funcpc(As1(i2(i),j),BBr(i2(i),   &
+                       !     ikk2(i,k)),BBr(i2(i),Kmax(i2(i)))),Pf1(i,j),   &
+                       !     Funcpc(As1(i,j),BBr(i,k),BBr(i,Kmax(i)))
                        stop
                     END IF
                  End If  !! Only save where we have pressures

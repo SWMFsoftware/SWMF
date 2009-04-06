@@ -10,18 +10,16 @@ subroutine heidi_run
  ! real    :: XN(NR,NS),LNC(NR,NS)
   
   CALL GETKPA(i3,nst,i2,nkp)
-  print *, 'I3:',I3,T,KP
-  print*, 'ISW', ISW
   IF (ISW.GT.0) CALL GETSWIND
-  print *, 'Calling MAGCONV'
+  !print *, 'Calling MAGCONV'
   CALL MAGCONV(i3,nst)
-  print *, 'Calling THERMAL'
+  !print *, 'Calling THERMAL'
   CALL THERMAL
-  print *, 'Calling WRESULT'
+  !print *, 'Calling WRESULT'
   IF (I3.EQ.NST) CALL WRESULT(LNC,XN,1)
   DO S=1,NS
      IF (SCALC(S).EQ.1) THEN
-        print *, '   S: ',S
+        !print *, '   S: ',S
         CALL LMPLOSS
         !.......Call routines to calculate the changes of distribution function
         !               considering drifts, charge exchange and Coulomb drag

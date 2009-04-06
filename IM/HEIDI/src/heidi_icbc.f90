@@ -608,8 +608,9 @@ SUBROUTINE GEOSB
   
   integer :: iLatBoundary=-1, iLonBoundary=-1
 
-  print *, 'Resetting the outer boundary condition'
-  !CCC Create a few flags and open a few files
+    call write_prefix; write(iUnitStdOut,*) 'Resetting the outer boundary condition'
+  
+    !CCC Create a few flags and open a few files
   IF (T.EQ.TIME) THEN
      I6=0
      I7=0
@@ -737,8 +738,8 @@ SUBROUTINE GEOSB
 
      if (maxval(IonoGmDensity) > 0.0) then
 
-        write(*,*) "---------------------------------------------------"
-        write(*,*) "Ignoring LANL data, and overwriting with GM Data!!!"
+        !write(*,*) "---------------------------------------------------"
+        !write(*,*) "Ignoring LANL data, and overwriting with GM Data!!!"
 
         ! Find location to take boundary condition from : 67 degrees
         iLonBoundary = IONO_nPsi/2.0
@@ -757,10 +758,10 @@ SUBROUTINE GEOSB
         TCM = IonoGmTemperature(iLatBoundary, iLonBoundary)
         TFM = TCM
 
-        write(*,*) "Density : ", NM, " /cc"
-        write(*,*) "Temperature : ", TCM, " eV"
+        !write(*,*) "Density : ", NM, " /cc"
+        !write(*,*) "Temperature : ", TCM, " eV"
 
-        write(*,*) "---------------------------------------------------"
+        !write(*,*) "---------------------------------------------------"
 
      endif
 
