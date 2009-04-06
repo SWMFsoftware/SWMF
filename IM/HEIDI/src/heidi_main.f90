@@ -57,6 +57,9 @@ contains
        
        call MPI_COMM_RANK(iComm, iProc, iError)
        call MPI_COMM_SIZE(iComm, nProc, iError)   
+       
+       IsFramework = .false.
+       
     case('READ')
        call heidi_read
     case('CHECK')

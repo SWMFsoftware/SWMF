@@ -6,6 +6,8 @@ Module ModHeidiIO
 
 	use ModHeidiSize
 
+        logical :: IsFramework
+        
 ! Define a few time and geophysical index input variables
 ! Formerly: Common block PARAM2
 	integer year,day,nstep,ikp,iwpi,month

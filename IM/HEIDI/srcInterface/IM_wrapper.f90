@@ -8,7 +8,9 @@ subroutine IM_set_param(CompInfo,TypeAction)
   use ModHeidiMain
   use ModReadParam, only: i_session_read
   use ModUtilities, ONLY: fix_dir_name, check_dir, lower_case
-   
+  use ModHeidiIo, ONLY : IsFramework
+
+ 
   implicit none
   character (len=*), parameter :: NameSub='IM_set_param'
 
@@ -31,10 +33,14 @@ subroutine IM_set_param(CompInfo,TypeAction)
 !     call MPI_INIT(iError)
 !     iComm= MPI_COMM_WORLD
 !     call MPI_COMM_RANK(iComm, iProc, iError)
-!     call MPI_COMM_SIZE(iComm, nProc, iError)   
+!     call MPI_COMM_SIZE(iComm, nProc, iError)  
+
      call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc)
      if(nProc>4)call CON_stop(&
           'IM_init_mpi: IM_ERROR this version can run on 4 PE !')
+ 
+     IsFramework = .true.
+
   case('READ')
      call heidi_read
   case('CHECK')
