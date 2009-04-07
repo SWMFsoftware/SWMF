@@ -366,8 +366,3 @@ subroutine read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
   real, intent(inout) :: FaceState_V(nVar)
   call stop_mpi('ERROR: read_pw_buffer is for SWMF')
 end subroutine read_pw_buffer
-!=============================================================================
-subroutine ground_mag_perturb_fac(Xyz_D, MagPerturb_D)
-  real, dimension(3)    :: Xyz_D, MagPerturb_D
-  call stop_mpi('ERROR: ground_mag_perturb_fac is for SWMF')
-end subroutine ground_mag_perturb_fac
