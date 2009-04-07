@@ -343,14 +343,3 @@ subroutine GM_get_sat_for_im(Buffer_III, Buffer_I, nSats)
   
 end subroutine GM_get_sat_for_im
 
-!==============================================================================
-
-subroutine ground_mag_perturb_fac(Xyz_D, MagPerturb_D)
-
-  real, dimension(3)    :: Xyz_D, MagPerturb_D
-
-  character (len=*), parameter :: NameSub='ground_mag_perturb_fac'
-
-  call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
-
-end subroutine ground_mag_perturb_fac
