@@ -35,15 +35,16 @@ module CON_couple_ie_im
   ! 09/15/2003 I.Sokolov - non-uniform ionosphere is added
   !EOP
 
-  type(GridDescriptorType)::IE_Grid           !Source!!
-  type(GridDescriptorType)::IM_Grid           !Target!!
+  type(GridDescriptorType)::IE_Grid           ! Source
+  type(GridDescriptorType)::IM_Grid           ! Target
   type(RouterType),save:: RouterIeIm, RouterImIe
   logical :: IsInitialized = .false.
  
   logical :: DoTest, DoTestMe
 
   ! Name of this interface
-  character (len=*), parameter :: NameSub='couple_ie_im'
+  character (len=*), parameter :: NameMod='CON_couple_ie_im'
+
 contains
 
   !BOP =======================================================================
@@ -81,14 +82,14 @@ contains
     ! Initialize the coupler including communicator for this router
     ! This must be called by ALL processors due to MPI restrictions!
 
-    call init_coupler(                          &
-         iCompSource=IE_,                       &
-         nGhostPointSource=1,                   &      
-         StandardSource_=Nodes_,                & ! from IE nodes
-         iCompTarget=IM_,                       &
-         nIndexTarget=2,                        & ! number of indexes for IM: iColat,iLon 
-         GridDescriptorSource=IE_Grid,          &
-         GridDescriptorTarget=IM_Grid,          &
+    call init_coupler(                 &
+         iCompSource=IE_,              &
+         nGhostPointSource=1,          &      
+         StandardSource_=Nodes_,       & ! from IE nodes
+         iCompTarget=IM_,              &
+         nIndexTarget=2,               & ! IM grid size: iColat,iLon 
+         GridDescriptorSource=IE_Grid, &
+         GridDescriptorTarget=IM_Grid, &
          Router=RouterIeIm)
 
     ! It is time to leave for non-involved PEs
@@ -99,7 +100,7 @@ contains
          IE_Grid,                     &
          IM_Grid,                     &
          RouterIeIm,& ! all blocks (just 1)and all cells on IM 
-         mapping=map_im_to_ie,    & ! mapping between IM and IE coords
+         mapping=map_im_to_ie,             & ! mapping between IM and IE coords
          interpolate=bilinear_interpolation) ! from IE nodes
 
   end subroutine init_ie_im_couple
@@ -124,7 +125,7 @@ contains
          nGhostPointSource=1,                   &      
          StandardSource_=Nodes_,                & ! from IM nodes
          iCompTarget=IE_,                       &
-         nIndexTarget=2,                        & ! number of indexes for IM: iColat,iLon 
+         nIndexTarget=2,                        & ! IE grid size: iColat,iLon 
          GridDescriptorSource=IM_Grid,          &
          GridDescriptorTarget=IE_Grid,          &
          Router=RouterImIe)
@@ -136,8 +137,8 @@ contains
     call set_router(&
          IM_Grid,                     &
          IE_Grid,                     &
-         RouterImIe,& ! all blocks (just 1)and all cells on IM 
-         mapping=map_ie_to_im,    & ! mapping between IM and IE coords
+         RouterImIe,             & ! all blocks (just 1)and all cells on IM 
+         mapping=map_ie_to_im,             & ! mapping between IM and IE coords
          interpolate=bilinear_interpolation) ! from IE nodes
 
   end subroutine init_im_ie_couple
@@ -152,8 +153,8 @@ contains
 
     !DESCRIPTION:
     ! Couple between two components:\\
-    !    Inner Magnetosphere (IM)        Source
-    !    Ionosphere Electrodynamics (IE) Target\\
+    !    Inner Magnetosphere (IM)        Source\\
+    !    Ionosphere Electrodynamics (IE) Target
     !
     ! Send field-align current from IM to IE.
     !EOP
@@ -161,6 +162,7 @@ contains
     external IM_get_for_ie,IE_put_from_im
     integer, parameter :: nVarImIe=3
     real :: tSimulationTmp
+    character(len=*), parameter:: NameSub = NameMod//'::couple_im_ie'
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
     
@@ -195,6 +197,7 @@ contains
     external IE_get_for_im,IM_put_from_ie
     integer, parameter :: nVarIeIm=4
     real :: tSimulationTmp
+    character(len=*), parameter:: NameSub = NameMod//'::couple_ie_im'
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
     
@@ -236,6 +239,8 @@ contains
  
     real :: ColetLon_D(2)
     integer :: iColat, iLon
+
+    character(len=*), parameter:: NameSub = NameMod//'::map_ie_to_im'
     !------------------------------------------------------------------------
     IsInterfacePoint=.true.
 
@@ -248,7 +253,7 @@ contains
             iColat, Grid_C(IE_)% nCoord_D(1)
        write(*,*)'map_ie_to_im: iLon,Grid_C(IE_)% nCoord_D(2)=',&
             iLon,Grid_C(IE_)% nCoord_D(2)
-       call CON_stop('map_ie_to_im (in CON_couple_ie_im) SWMF_ERROR: index out of range!')
+       call CON_stop(NameSub//' SWMF_ERROR: index out of range!')
     end if
     
     !For structured but non-uniform IM grid:
@@ -283,6 +288,7 @@ contains
  
     real :: ColetLon_D(2)
     integer :: iColat, iLon
+    character(len=*), parameter:: NameSub = NameMod//'::map_im_to_ie'
     !------------------------------------------------------------------------
     IsInterfacePoint=.true.
 
@@ -294,7 +300,7 @@ contains
        write(*,*)'map_im_to_ie: IMr1_Xyz_D=',IMr1_Xyz_D
        write(*,*)'map_im_to_ie: iColat,iLon,nCoord_D=',&
             iColat,iLon,Grid_C(IM_) % nCoord_D
-       call CON_stop('map_im_to_ie SWMF_ERROR: index out of range!')
+       call CON_stop(NameSub//' SWMF_ERROR: index out of range!')
     end if
     
     !For structured but non-uniform IM grid:
