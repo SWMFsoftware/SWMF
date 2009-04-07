@@ -115,7 +115,7 @@ ENV_CHECK:
 # be copied.
 #
 # The default is the short name of the current machine
-MACHINE = `hostname | sed -e 's/\..*//'`
+MACHINE = `hostname | sed -e 's/\..*//; s/[0-9]*$$//'`
 
 #
 # install for the 1st time
@@ -351,9 +351,9 @@ rundir: ENV_CHECK
 	cd ${SCDIR}; make rundir                 #^CMP IF SC
 	cd ${SPDIR}; make rundir                 #^CMP IF SP
 	cd ${UADIR}; make rundir                 #^CMP IF UA
-	@touch CON/Scripts/${OS}/TMP_${MACHINE}
-	cp CON/Scripts/${OS}/*${MACHINE}* ${RUNDIR}/
-	@rm -rf ${RUNDIR}/TMP_${MACHINE} CON/Scripts/${OS}/TMP_${MACHINE}
+	@touch share/JobScripts/TMP_${MACHINE}
+	cp share/JobScripts/*${MACHINE}* ${RUNDIR}/
+	@rm -rf ${RUNDIR}/TMP_${MACHINE} share/JobScripts/TMP_${MACHINE}
 	@echo
 	@echo Creation of ${RUNDIR} directory succeeded
 	@echo

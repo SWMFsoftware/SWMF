@@ -120,8 +120,7 @@ EARTH_TRAJ:
 # be copied.
 #
 # The default is the short name of the current machine
-MACHINE = `hostname | sed -e 's/\..*//'`
-
+MACHINE = `hostname | sed -e 's/\..*//;s/[0-9]*$$//'`
 COMPONENT = GM
 
 rundir:
@@ -134,12 +133,12 @@ rundir:
 		cp    ${GMDIR}/Scripts/TEC/pTEC .; \
 		ln -s ${GMDIR}/Param .
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
+		touch ${GMDIR}/share/JobScripts/TMP_${MACHINE}; \
+		cp ${GMDIR}/share/JobScripts/*${MACHINE}* ${RUNDIR}/; \
+		rm -f ${RUNDIR}/TMP_${MACHINE}; \
+		rm -f ${GMDIR}/share/JobScripts/TMP_${MACHINE}; \
 		cp -f Param/PARAM.DEFAULT ${RUNDIR}/PARAM.in; \
 		touch ${RUNDIR}/core; chmod 444 ${RUNDIR}/core; \
-		touch Scripts/Run/${OS}/TMP_${MACHINE}; \
-		cp Scripts/Run/${OS}/*${MACHINE}* ${RUNDIR}/; \
-		rm -f ${RUNDIR}/TMP_${MACHINE}; \
-		rm -f Scripts/Run/${OS}/TMP_${MACHINE}; \
 		cp ${SCRIPTDIR}/PostProc.pl ${RUNDIR}/; \
 		cp ${SCRIPTDIR}/Restart.pl ${RUNDIR}/; \
 		cd ${RUNDIR}; ln -s ${BINDIR}/${DEFAULT_EXE} .; \
