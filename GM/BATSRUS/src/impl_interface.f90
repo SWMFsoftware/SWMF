@@ -89,7 +89,10 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,Var_VGB)
              //TypeSemiImplicit)
      end select
 
-     ImplOld_VCB(:,:,:,:,1:nImplBLK) = Var_VGB(:,1:nI,1:nJ,1:nK,1:nImplBLK)
+     do implBLK=1,nImplBlk
+        iBLK=impl2iBLK(implBLK)
+        ImplOld_VCB(:,:,:,:,iBLK) = Var_VGB(:,1:nI,1:nJ,1:nK,implBLK)
+     end do
   else
      do implBLK=1,nImplBLK
         iBLK = impl2iBLK(implBLK)
@@ -289,7 +292,7 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
 
   ! Message pass to fill in ghost cells 
   call message_pass_dir(iDirMin=1,iDirMax=3,Width=1,SendCorners=.false.,&
-       ProlongOrder=1,nVar=nw,Sol_VGB=StateSemi_VGB)
+       ProlongOrder=1,nVar=nw,Sol_VGB=StateSemi_VGB,restrictface=.true.)
 
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
@@ -304,7 +307,7 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
     
      do k = 1, nK; do j = 1, nJ; do i = 1, nI
         Rhs_VCB(:,i,j,k,iImplBlock) = Rhs_VCB(:,i,j,k,iImplBlock) &
-             / vInv_CB(i,j,k,iImplBlock)
+             / vInv_CB(i,j,k,iBlock)
      end do; end do; end do
 
   end do
@@ -352,7 +355,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
 
   ! Message pass to fill in ghost cells 
   call message_pass_dir(iDirMin=1,iDirMax=3,Width=1,SendCorners=.false.,&
-       ProlongOrder=1,nVar=nw,Sol_VGB=StateSemi_VGB)
+       ProlongOrder=1,nVar=nw,Sol_VGB=StateSemi_VGB,restrictface=.true.)
 
   n=0
   do iImplBlock = 1, nImplBLK
