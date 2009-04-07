@@ -1129,10 +1129,13 @@ conditions for generalized coordinate grids (as shown by the example).
 	<parameter name="PolarUDim" type="real" min="0" default="1"/>
 	<parameter name="PolarLatitude" type="real" min="0" default="75"/>
 #POLARBOUNDARY
-20.0		PolarNDim [amu/cc]
-100000.0	PolarTDim [K]
-1.0		PolarUDim [km/s]
-75.0		PolarLatitude [deg]
+20.0		PolarNDim [amu/cc] for fluid 1
+100000.0	PolarTDim [K]      for fluid 1
+1.0		PolarUDim [km/s]   for fluid 1
+2.0		PolarNDim [amu/cc] for fluid 2
+20000.0		PolarTDim [K]      for fluid 2
+1.5		PolarUDim [km/s]   for fluid 2
+75.0		PolarLatitude [deg] 
 
 This command defines the boundary conditions in the polar region. The number 
 density, temperature and velocity can be given (for all fluids in multifluid
@@ -1140,11 +1143,10 @@ calculations). The density and temperature parameters (converted to pressure)
 are used to fix the open fieldline region in GM-IM coupled runs 
 (see #IMCOUPLING command). 
 
-The following feature is not implemented yet:
-The #POLARWIND command is used to set polar wind like inner boundary
-conditions when GM is not coupled with the PW component. 
-The PolarLatitude determines the extent of the polar boundary where the outflow
-is defined.
+The #POLARWIND command can also be used to set polar wind like inner boundary
+conditions when GM is not coupled with the PW component. In this case
+the PolarLatitude parameter determines the latitudinal extent 
+of the polar boundary where the outflow is defined.
 </command>
 
 </commandgroup>
@@ -4295,21 +4297,30 @@ monoatomic gas or plasma.
 </command>
 
 <command name="PLASMA">
-	<parameter name="AverageIonMass"   type="real" min="0" default="1"/>
+	<parameter name="IonMass"          type="real" min="0" default="1"/>
 	<parameter name="AverageIonCharge" type="real" min="0" default="1"/>
 	<parameter name="ElectronTemperatureRatio" type="real" min="0" 
 								default="0"/>
 #PLASMA
-1.0		AverageIonMass [amu]
+1.0		IonMass [amu]
 1.0		AverageIonCharge [e]
 0.0		ElectronTemperatureRatio
 
-The AverageIonMass determines the average mass of ions (and strongly
-coupled neutrals) in atomic mass units (amu).
+For single fluid, single species MHD the IonMass determines the 
+average mass of ions (and strongly coupled neutrals) in atomic mass units (amu).
 This parameter is only used if there are no species (UseMultiSpecies=.false.
-in ModEquation). The number density is n=rho/AverageIonMass.
-For a pure hydrogene plasma AverageIonMass=1.0, while
-for a mix of 90 per cent hydrogene and 10 per cent helium AverageIonMass=1.4.
+in ModEquation). The number density is n=rho/IonMass.
+For a pure hydrogene plasma IonMass=1.0, while for a mix of 90 per cent 
+hydrogen and 10 per cent helium IonMass=1.4.
+
+For multifluid MHD/HD the command reads the mass of all fluids (ions and neutrals).
+For example for hydrogen and oxygen fluids:
+
+#PLASMA
+1.0             IonMass H [amu]
+16.0            IonMass O [amu]
+1.0             AverageIonCharge (ignored)
+0.2             ElectronTemperatureRatio
 
 The AverageIonCharge determines the average charge of ions (and strongly
 coupled neutrals) in electron charge units.
@@ -4317,22 +4328,28 @@ The electron density is ne=n*AverageIonCharge.
 For a fully ionized hydrogene plasma AverageIonCharge=1.0,
 for a fully ionized helium plasma AverageIonCharge=2.0, while
 for a 10 per cent ionized hydrogene plasma AverageIonCharge=0.1.
+The AverageIonCharge parameter is ignored in multi-ion MHD 
+where single ionization is assumed for all the fluids. 
 
 The ElectronTemperatureRatio determines the ratio of electron
 and ion temperatures. The ion temperature Te = T * ElectronTemperatureRatio
 where T is the ion temperature. The total pressure p = n*k*T + ne*k*Te,
 so T = p/(n*k+ne*k*ElectronTemperatureRatio). If the electrons and ions are
 in temperature equilibrium, ElectronTemperatureRatio=1.0.
+For multi-fluid MHD the ElectronTemperatureRatio is interpreted as
+electron pressure ratio. The electron pressure is taken as 
+pE = ElectronTemperatureRatio*sum(pIon_I). Note that one can also
+solve the electron pressure equation if 'Pe' is present in the 
+equation module.
 
 In a real plasma all these values can vary in space and time,
 but in a single fluid/species MHD description using these constants is
 the best one can do. In multispecies MHD the number density can
 be determined accurately as n = sum(RhoSpecies_V/(ProtonMass*MassSpecies_V)).
 
-The default values are shown above, which corresponds to
-a fully ionized hydrogen plasma where the electron temperature is
-negligible relative to the ion temperature. This default is 
-backwards compatible with previous versions of the code.
+The default values corresponds to a fully ionized hydrogen plasma 
+where the electron temperature is negligible relative to the ion temperature. 
+This default is backwards compatible with previous versions of the code.
 </command>
 
 <command name="LOOKUPTABLE" multiple="T">
@@ -4596,8 +4613,10 @@ in the file GM/BATSRUS/get_solar_wind_point.f90.
 T			UseBody (rest of parameters read if true)
 3.0			rBody (user units)
 4.0			rCurrents (only read for GM component)
-1.0			BodyNDim (/cc) number density for inner boundary
-10000.0			BodyTDim (K) temperature for inner boundary
+1.0			BodyNDim (/cc) for fluid 1
+10000.0			BodyTDim (K)   for fluid 1
+0.01			BodyNDim (/cc) for fluid 2
+300.0			BodyTDim (K)   for fluid 2
 
 If UseBody is true, the inner boundary is a spherical surface
 with radius rBody. The rBody is defined in units of the planet/solar
@@ -4610,7 +4629,8 @@ the GM-IE coupling. This only matters if BATSRUS is running as GM
 and it is coupled to IE.
 
 The BodyNDim and BodyTDim parameters define the number density and temperature
-at the inner boundary. The exact effect of these parameters depends 
+at the inner boundary. For multifluid MHD the number density and temperature
+are given for all the fluids. The exact effect of these parameters depends 
 on the settings in the #INNERBOUNDARY command.
 
 The default values depend on the component: 
