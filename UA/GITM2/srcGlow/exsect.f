@@ -63,8 +63,7 @@ C
 !     >                TS(NEI,NMAJ),   TA(NEI,NMAJ),   TB(NEI,NMAJ),
 !     >                GAMS(NEI,NMAJ), GAMB(NEI,NMAJ)
 C
-
-      DIMENSION SIGI(NBINS),T12(NBINS),ENER(NBINS), DEL(NBINS),
+      DIMENSION SIGI(NBINS), T12(NBINS),ENER(NBINS), DEL(NBINS),
      >          RATIO(NBINS), NNN(NMAJ), NINN(NMAJ), NUM(NMAJ),
      >          EC(31,NMAJ), CC(31,NMAJ), CE(31,NMAJ), CI(31,NMAJ)
 C
@@ -436,16 +435,15 @@ C
 C
       use ModCXPARS 
 
-      DOUBLE PRECISION ABB, ABC, ABD,TT12
+
+      DOUBLE PRECISION ABB, ABC, ABD
       DATA QQ/1.E-16/
       REAL GAMMAS
-
 C
 C
       IF (E .LE. THI(ML,I)) GOTO 30
 C
-      TT12 = DBLE(T12)
-      
+
       AK1=AK(ML,I)
       AJ1=AJ(ML,I)
       TS1=TS(ML,I)
@@ -468,7 +466,7 @@ C
       ABC=(E1-TZ)/GG
       AL2=GG*GG*(ABB*ABB+1.0)
       AL1=GG*GG*(ABC*ABC+1.0)
-      ABD=DATAN(ABB)-DATAN(TT12)
+      ABD=DATAN(ABB)-DATAN(T12)
 
       ABC=TZ+0.5*GG*(ALOG(AL2)-ALOG(AL1))/ABD
       SIGION=A*GG*ABD
