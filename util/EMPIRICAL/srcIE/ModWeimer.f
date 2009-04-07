@@ -108,9 +108,9 @@ c     Jan. 30, 2002
 * If X is out of range ( abs(x)>1 ) then value is returns as if x=1.
        
         implicit real*8 (a-h,o-z)
-	real*8           x,xx,Plm(0:10,0:10),P(0:10,0:10,0:1),fact,sfact
+	real*16           x,xx,Plm(0:10,0:10),P(0:10,0:10,0:1),fact,sfact
 
-	real*8           dPlm(0:10,0:10),dP(0:10,0:10,0:2),anum,term
+	real*16          dPlm(0:10,0:10),dP(0:10,0:10,0:2),anum,term
 
 	LOGICAL DodPlm
 
@@ -695,10 +695,10 @@ c       PRINT *,Copyright
         implicit real*8 (a-h,o-z)
 	REAL*8 gLAT,gMLT
 
-	real*8           Phi,Z,O,x,ct,Phim
+	real*16           Phi,Z,O,x,ct,Phim
 
-	real*8            Plm(0:10,0:10),OPlm(0:10,0:10)
-	real*8           dPlm(0:10,0:10)
+	real*16            Plm(0:10,0:10),OPlm(0:10,0:10)
+	real*16           dPlm(0:10,0:10)
 
 
 	REAL*8 Coef(0:1,0:5,0:5),BoundFit(0:1,0:5),pi
