@@ -84,7 +84,7 @@ contains
        EradMin = cRadiationNo*(TradMinSi*Si2No_V(UnitTemperature_))**4
     end if
 
-    allocate(Erad_G(0:nI+1,0:nJ+1,0:nK+1))
+    allocate(Erad_G(-1:nI+2,-1:nJ+2,-1:nK+2))
 
     if(UseFullImplicit)then
        nDiff = 1
@@ -196,7 +196,7 @@ contains
     use ModSize,     ONLY: nI, nJ, nK
 
     integer, intent(in) :: iBlock
-    real, dimension(0:nI+1,0:nJ+1,0:nK+1), intent(inout) :: Scalar_G
+    real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2), intent(inout) :: Scalar_G
 
     real, parameter :: c0 = 0.5, p0 = 1./6., F1 = 1./3.
 
@@ -209,7 +209,7 @@ contains
     !------------------------------------------------------------------------
     IsNewBlockGrayDiffusion = .false.
 
-    Scalar1_G = Scalar_G
+    Scalar1_G = Scalar_G(0:nI+1,0:nJ+1,0:nK+1)
 
     do kSide = -1,1; do jSide = -1,1; do iSide = -1,1
        if(iSide==0)then
@@ -414,7 +414,7 @@ contains
     InvDz = 1.0/Dz_Blk(iBlock)
 
     if(IsNewBlockGrayDiffusion)then
-       Erad_G = State_VGB(Eradiation_,0:nI+1,0:nJ+1,0:nK+1,iBlock)
+       Erad_G = State_VGB(Eradiation_,:,:,:,iBlock)
        call set_block_scalar(Erad_G, iBlock)
        if(UseCovariant)then
           ! call ...
@@ -672,8 +672,9 @@ contains
     real :: RosselandMeanOpacitySi, RosselandMeanOpacity
     real :: HeatConductionCoefSi, HeatConductionCoef
     real :: Grad2ByErad2, DiffRad, InvDx2, InvDy2, InvDz2
+    real :: InvDx, InvDy
 
-    integer :: iDim, Di, Dj, Dk, iDiff
+    integer :: iDim, Di, Dj, Dk, iDiff, nDimInUse
     real :: Coeff, Dxyz_D(3)
 
     character(len=*), parameter:: NameSub='get_impl_gray_diff_state'
@@ -682,6 +683,8 @@ contains
     do iImplBlock = 1, nImplBLK
 
        iBlock = impl2iBLK(iImplBlock)
+       IsNewBlockGrayDiffusion = .true.
+
        if(TypeSemiImplicit=='radiation' .or. TypeSemiImplicit=='radcond')then
           do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
              StateImpl_VGB(EradImpl_,i,j,k,iImplBlock) = &
@@ -805,45 +808,98 @@ contains
 
     end do
 
+    nDimInUse = 3; if(TypeGeometry == 'rz') nDimInUse = 2
+
     ! Message pass to fill in ghost cells 
-    call message_pass_dir(iDirMin=1,iDirMax=3,Width=1,SendCorners=.false.,&
-         ProlongOrder=1,nVar=nDiff,Sol_VGB=DiffSemiCoef_VGB)
+    call message_pass_dir(iDirMin=1,iDirMax=3,Width=1, &
+         SendCorners=.false.,ProlongOrder=1,nVar=nDiff, &
+         Sol_VGB=DiffSemiCoef_VGB,restrictface=.true.)
 
     do iImplBlock = 1, nImplBLK
        iBlock = impl2iBLK(iImplBlock)
        ! Calculate face averaged values. Include geometric factors.
 
+       call face_equal(1,2,nI,1,nJ,1,nK)
+       if(NeiLev(1,iBlock)==0.or.NeiLev(1,iBlock)==NOBLK)then
+          call face_equal(1,1,1,1,nJ,1,nK)
+       else if(NeiLev(1,iBlock)==-1)then
+          call face_left_coarse2fine(1,1,1,1,nJ,1,nK)
+       else if(NeiLev(1,iBlock)==1)then
+          call face_left_fine2coarse(1,1,1,1,nJ,1,nK)
+       end if
+       if(NeiLev(2,iBlock)==0.or.NeiLev(2,iBlock)==NOBLK)then
+          call face_equal(1,nI+1,nI+1,1,nJ,1,nK)
+       else if(NeiLev(2,iBlock)==-1)then
+          call face_right_coarse2fine(1,nI+1,nI+1,1,nJ,1,nK)
+       else if(NeiLev(2,iBlock)==1)then
+          call face_right_fine2coarse(1,nI+1,nI+1,1,nJ,1,nK)
+       end if
+
+       call face_equal(2,1,nI,2,nJ,1,nK)
+       if(NeiLev(3,iBlock)==0.or.NeiLev(3,iBlock)==NOBLK)then
+          call face_equal(2,1,nI,1,1,1,nK)
+       else if(NeiLev(3,iBlock)==-1)then
+          call face_left_coarse2fine(2,1,nI,1,1,1,nK)
+       else if(NeiLev(3,iBlock)==1)then
+          call face_left_fine2coarse(2,1,nI,1,1,1,nK)
+       end if
+       if(NeiLev(4,iBlock)==0.or.NeiLev(4,iBlock)==NOBLK)then
+          call face_equal(2,1,nI,nJ+1,nJ+1,1,nK)
+       else if(NeiLev(4,iBlock)==-1)then
+          call face_right_coarse2fine(2,1,nI,nJ+1,nJ+1,1,nK)
+       else if(NeiLev(4,iBlock)==1)then
+          call face_right_fine2coarse(2,1,nI,nJ+1,nJ+1,1,nK)
+       end if
+
+       if(nDimInUse==3)then
+          call face_equal(3,1,nI,1,nJ,2,nK)
+          if(NeiLev(5,iBlock)==0.or.NeiLev(5,iBlock)==NOBLK)then
+             call face_equal(3,1,nI,1,nJ,1,1)
+          else if(NeiLev(5,iBlock)==-1)then
+             call face_left_coarse2fine(3,1,nI,1,nJ,1,1)
+          else if(NeiLev(5,iBlock)==1)then
+             call face_left_fine2coarse(3,1,nI,1,nJ,1,1)
+          end if
+          if(NeiLev(6,iBlock)==0.or.NeiLev(6,iBlock)==NOBLK)then
+             call face_equal(3,1,nI,1,nJ,nK+1,nK+1)
+          else if(NeiLev(6,iBlock)==-1)then
+             call face_right_coarse2fine(3,1,nI,1,nJ,nK+1,nK+1)
+          else if(NeiLev(6,iBlock)==1)then
+             call face_right_fine2coarse(3,1,nI,1,nJ,nK+1,nK+1)
+          end if
+       end if
+
        if(.not.UseCovariant)then
           Dxyz_D = (/dx_BLK(iBlock), dy_BLK(iBlock), dz_Blk(iBlock)/)
           do iDim = 1, nDim
              ! FaceYZ/dx = Volume/dx^2
-             Coeff = 0.5 / (Dxyz_D(iDim)**2 * vInv_CB(1,1,1,iBlock))
+             Coeff = 1.0 / (Dxyz_D(iDim)**2 * vInv_CB(1,1,1,iBlock))
              Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
              do k=1,nK+Dk; do j=1,nJ+Dj; do i=1,nI+Di
                 do iDiff = 1, nDiff
-                   DiffCoef_VFDB(iDiff,i,j,k,iDim,iBlock) = Coeff*sum( &
-                        DiffSemiCoef_VGB(iDiff,i-Di:i,j-Dj:j,k-Dk:k,iBlock))
+                   DiffCoef_VFDB(iDiff,i,j,k,iDim,iBlock) = &
+                        Coeff*DiffCoef_VFDB(iDiff,i,j,k,iDim,iBlock)
                 end do
              enddo; enddo; enddo
           end do
 
        elseif(TypeGeometry == 'rz')then
 
-          InvDx2 = 0.5/Dx_Blk(iBlock)
+          InvDx = 1.0/Dx_Blk(iBlock)
           do k=1,nK; do j=1,nJ; do i=1,nI+1
              do iDiff = 1, nDiff
                 DiffCoef_VFDB(iDiff,i,j,k,x_,iBlock) = &
-                     InvDx2*FaceAreaI_DFB(x_,i,j,k,iBlock) &
-                     *sum(DiffSemiCoef_VGB(iDiff,i-1:i,j,k,iBlock))
+                     InvDx*FaceAreaI_DFB(x_,i,j,k,iBlock) &
+                     *DiffCoef_VFDB(iDiff,i,j,k,x_,iBlock)
              end do
           end do; end do; end do
 
-          InvDy2 = 0.5/Dy_Blk(iBlock)
+          InvDy = 1.0/Dy_Blk(iBlock)
           do k=1,nK; do j=1,nJ+1; do i=1,nI
              do iDiff = 1, nDiff
                 DiffCoef_VFDB(iDiff,i,j,k,y_,iBlock) = &
-                     InvDy2*FaceAreaJ_DFB(y_,i,j,k,iBlock) &
-                     *sum(DiffSemiCoef_VGB(iDiff,i,j-1:j,k,iBlock))
+                     InvDy*FaceAreaJ_DFB(y_,i,j,k,iBlock) &
+                     *DiffCoef_VFDB(iDiff,i,j,k,y_,iBlock)
              end do
           end do; end do; end do
        else
@@ -852,6 +908,102 @@ contains
     end do
 
   contains
+
+    subroutine face_equal(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
+
+      integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
+
+      !------------------------------------------------------------------------
+
+      Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
+      do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+         DiffCoef_VFDB(:,i,j,k,iDim,iBlock) = 0.5*( &
+              DiffSemiCoef_VGB(:,i-Di,j-Dj,k-Dk,iBlock) &
+              + DiffSemiCoef_VGB(:,i,j,k,iBlock))
+      enddo; enddo; enddo
+
+    end subroutine face_equal
+
+    !==========================================================================
+
+    subroutine face_left_coarse2fine(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
+
+      integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
+
+      !------------------------------------------------------------------------
+
+      Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
+      do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+         DiffCoef_VFDB(:,i,j,k,iDim,iBlock) =  &
+              (DiffSemiCoef_VGB(:,i,j,k,iBlock) &
+              + 2.0*DiffSemiCoef_VGB(:,i-Di,j-Dj,k-Dk,iBlock))*4.0/9.0
+      enddo; enddo; enddo
+
+    end subroutine face_left_coarse2fine
+
+    !==========================================================================
+
+    subroutine face_right_coarse2fine(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
+
+      integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
+
+      !------------------------------------------------------------------------
+
+      Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
+      do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+         DiffCoef_VFDB(:,i,j,k,iDim,iBlock) =  &
+              (DiffSemiCoef_VGB(:,i-Di,j-Dj,k-Dk,iBlock) &
+              + 2.0*DiffSemiCoef_VGB(:,i,j,k,iBlock))*4.0/9.0
+      enddo; enddo; enddo
+
+    end subroutine face_right_coarse2fine
+
+    !==========================================================================
+
+    subroutine face_left_fine2coarse(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
+
+      integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
+
+      integer :: iShift, jShift, kShift
+      !------------------------------------------------------------------------
+
+      Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
+      iShift = 1-Di; jShift = 1-Dj; kShift = 1-Dk
+      do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
+         do iDiff = 1, nDiff
+            DiffCoef_VFDB(iDiff,i:i+iShift,j:j+jShift,k:k+kShift,iDim,iBlock) &
+                 = (DiffSemiCoef_VGB(iDiff,i-Di,j-Dj,k-Dk,iBlock) &
+                 + 0.5*sum(DiffSemiCoef_VGB( &
+                 iDiff,i:i+iShift,j:j+jShift,k:k+kShift,iBlock)))*2.0/9.0
+         end do
+      enddo; enddo; enddo
+
+    end subroutine face_left_fine2coarse
+
+    !==========================================================================
+
+    subroutine face_right_fine2coarse(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
+
+      integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
+
+      integer :: iShift, jShift, kShift, i1, j1, k1
+      !------------------------------------------------------------------------
+
+      Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
+      iShift = 1-Di; jShift = 1-Dj; kShift = 1-Dk
+      do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
+         i1=i-Di; j1=j-Dj; k1=k-Dk
+         do iDiff = 1, nDiff
+            DiffCoef_VFDB(iDiff,i:i+iShift,j:j+jShift,k:k+kShift,iDim,iBlock) &
+                 = (DiffSemiCoef_VGB(iDiff,i,j,k,iBlock) &
+                 + 0.5*sum(DiffSemiCoef_VGB( &
+                 iDiff,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift,iBlock)))*2.0/9.0
+         end do
+      enddo; enddo; enddo
+
+    end subroutine face_right_fine2coarse
+
+    !==========================================================================
 
     subroutine get_diffusion_coef
 
@@ -862,14 +1014,18 @@ contains
 
          ! Calculate the cell centered diffusion coefficients
          if(UseRadFluxLimiter)then
+
+            if(IsNewBlockGrayDiffusion)then
+               Erad_G = State_VGB(Eradiation_,:,:,:,iBlock)
+               call set_block_scalar(Erad_G, iBlock)
+            end if
+        
             Grad2ByErad2 = &
-                 (((State_VGB(Eradiation_,i+1,j,k,iBlock) &
-                 -  State_VGB(Eradiation_,i-1,j,k,iBlock))*InvDx2)**2 &
-                 +((State_VGB(Eradiation_,i,j+1,k,iBlock) &
-                 -  State_VGB(Eradiation_,i,j-1,k,iBlock))*InvDy2)**2 &
-                 +((State_VGB(Eradiation_,i,j,k+1,iBlock) &
-                 -  State_VGB(Eradiation_,i,j,k-1,iBlock))*InvDz2)**2 &
-                 )/  State_VGB(Eradiation_,i,j,k,iBlock)**2
+                 (((Erad_G(i+1,j,k) - Erad_G(i-1,j,k))*InvDx2)**2 &
+                 +((Erad_G(i,j+1,k) - Erad_G(i,j-1,k))*InvDy2)**2 &
+                 +((Erad_G(i,j,k+1) - Erad_G(i,j,k-1))*InvDz2)**2 &
+                 )/ Erad_G(i,j,k)**2
+
             select case(TypeRadFluxLimiter)
             case("sum")
                DiffRad = Clight/(3*RosselandMeanOpacity + sqrt(Grad2ByErad2))
@@ -1003,6 +1159,16 @@ contains
        end if
     end if
 
+    if(NeiLev(1,iBlock)==1) call correct_left_ghostcell(1,0,0,1,nJ,1,nK)
+    if(NeiLev(2,iBlock)==1) call correct_right_ghostcell(1,nI+1,nI+1,1,nJ,1,nK)
+    if(NeiLev(3,iBlock)==1) call correct_left_ghostcell(2,1,nI,0,0,1,nK)
+    if(NeiLev(4,iBlock)==1) call correct_right_ghostcell(2,1,nI,nJ+1,nJ+1,1,nK)
+    if(TypeGeometry /= 'rz')then
+       if(NeiLev(5,iBlock)==1) call correct_left_ghostcell(3,1,nI,1,nJ,0,0)
+       if(NeiLev(6,iBlock)==1) &
+            call correct_right_ghostcell(3,1,nI,1,nJ,nK+1,nK+1)
+    end if
+
     !!! Rhs_VC = 0.0
 
     if(TypeGeometry == 'rz')then
@@ -1104,9 +1270,65 @@ contains
        end select
     end if
 
+  contains
+
+    subroutine correct_left_ghostcell(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
+
+      use ModImplicit, ONLY: kr
+
+      integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
+
+      integer :: iShift, jShift, kShift, Di, Dj, Dk, i1, j1, k1
+      !------------------------------------------------------------------------
+
+      Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
+      iShift = 1-Di; jShift = 1-Dj; kShift = 1-Dk
+      do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
+         i1=i+Di; j1=j+Dj; k1=k+Dk
+         do iDiff = 1, nDiff
+            iVar = iDiff_I(iDiff)
+            StateImpl_VG(iVar,i:i+iShift,j:j+jShift,k:k+kShift) = &
+                 StateImpl_VG(iVar,i:i+iShift,j:j+jShift,k:k+kShift) &
+                 + StateImpl_VG( &
+                 iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift) &
+                 -0.25*sum(StateImpl_VG( &
+                 iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift))
+         end do
+      enddo; enddo; enddo
+
+    end subroutine correct_left_ghostcell
+
+    !==========================================================================
+
+    subroutine correct_right_ghostcell(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
+
+      use ModImplicit, ONLY: kr
+
+      integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
+
+      integer :: iShift, jShift, kShift, Di, Dj, Dk, i1, j1, k1
+      !------------------------------------------------------------------------
+
+      Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
+      iShift = 1-Di; jShift = 1-Dj; kShift = 1-Dk
+      do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
+         i1=i-Di; j1=j-Dj; k1=k-Dk
+         do iDiff = 1, nDiff
+            iVar = iDiff_I(iDiff)
+            StateImpl_VG(iVar,i:i+iShift,j:j+jShift,k:k+kShift) = &
+                 StateImpl_VG(iVar,i:i+iShift,j:j+jShift,k:k+kShift) &
+                 + StateImpl_VG( &
+                 iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift) &
+                 -0.25*sum(StateImpl_VG( &
+                 iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift))
+         end do
+      enddo; enddo; enddo
+
+    end subroutine correct_right_ghostcell
+
   end subroutine get_gray_diffusion_rhs
 
-  !===========================================================================
+  !============================================================================
 
   subroutine get_gray_diff_jacobian(iBlock, nVar, Jacobian_VVCI)
 
@@ -1232,7 +1454,7 @@ contains
                -  State_VGB(Eradiation_,i,j,k,iBlock)) &
                + (1.0-ImplCoeff)*RelaxSemiCoef_VCB(EradImpl_,i,j,k,iBlock) &
                *(RelaxSemiCoef_VCB(Planck_,i,j,k,iBlock) &
-               - ImplOld_VCB(EradImpl_,i,j,k,iImplBlock))
+               - ImplOld_VCB(EradImpl_,i,j,k,iBlock))
                
           Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
                + State_VGB(EintExtra_,i,j,k,iBlock) &
@@ -1242,7 +1464,7 @@ contains
                + State_VGB(EintExtra_,i,j,k,iBlock) &
                + DconsDsemi_VCB(TeImpl_,i,j,k,iImplBlock) &
                *( StateImpl_VG(TeImpl_,i,j,k) &
-               -  ImplOld_VCB(TeImpl_,i,j,k,iImplBlock) )
+               -  ImplOld_VCB(TeImpl_,i,j,k,iBlock) )
        end if
        EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
 
