@@ -1086,7 +1086,7 @@ contains
     character(len=*), parameter :: NameSub='get_gray_diffusion_rhs'
     !--------------------------------------------------------------------------
 
-    if(NeiLev(1,iBlock) == NOBLK)then 
+    if(NeiLev(1,iBlock) == NOBLK)then
        if(IsLinear .and. TypeBc_I(1) /= 'reflect')then
           StateImpl_VG(:,0,:,:) = 0.0
        elseif(TypeBc_I(1) == 'user')then
@@ -1111,7 +1111,10 @@ contains
        end if
     end if
     if(NeiLev(3,iBlock) == NOBLK)then
-       if(IsLinear .and. TypeBc_I(3) /= 'reflect')then
+       if(TypeBc_I(3) == 'shear')then
+          StateImpl_VG(:,:,0,:) = StateImpl_VG(:,:,1,:)
+          call semi_bc_shear(3)
+       elseif(IsLinear .and. TypeBc_I(3) /= 'reflect')then
           StateImpl_VG(:,:,0,:) = 0.0
        elseif(TypeBc_I(3) == 'user')then
           IsFound = .false.
@@ -1123,7 +1126,10 @@ contains
        end if
     end if
     if(NeiLev(4,iBlock) == NOBLK) then
-       if(IsLinear .and. TypeBc_I(4) /= 'reflect')then
+       if(TypeBc_I(4) == 'shear')then
+          StateImpl_VG(:,:,nJ+1,:) = StateImpl_VG(:,:,nJ,:)
+          call semi_bc_shear(4)
+       elseif(IsLinear .and. TypeBc_I(4) /= 'reflect')then
           StateImpl_VG(:,:,nJ+1,:) = 0.0
        elseif(TypeBc_I(4) == 'user')then
           IsFound = .false.
@@ -1271,6 +1277,59 @@ contains
     end if
 
   contains
+
+    subroutine semi_bc_shear(iSide)
+
+      use ModNumConst, ONLY: cTiny
+      use ModPhysics, ONLY: ShockSlope
+      use ModSize, ONLY: south_, north_
+
+      integer, intent(in) :: iSide
+
+      integer :: Dn
+      !------------------------------------------------------------------------
+
+      ! If the shock is not tilted, there is nothing to do
+      if(abs(ShockSlope)<cTiny) RETURN
+
+      do iDiff = 1, nDiff
+         iVar = iDiff_I(iDiff)
+
+         ! Shear according to ShockSlope
+         if(ShockSlope < -cTiny)then
+            call stop_mpi('ShockSlope must be positive!')
+         elseif(ShockSlope >= 1.0)then
+            Dn = nint(ShockSlope)
+            if(abs(Dn-ShockSlope)>cTiny)&
+                 call stop_mpi('ShockSlope > 1 should be a round number!')
+            select case(iSide)
+               ! Shift parallel to X by Dn
+            case(south_)
+               StateImpl_VG(iVar,Dn:nI+1,0,:) = &
+                    StateImpl_VG(iVar,0:nI+1-Dn,1,:)
+            case(north_)
+               StateImpl_VG(iVar,0:nI+1-Dn,nJ+1,:) = &
+                    StateImpl_VG(iVar,Dn:nI+1,nJ,:)
+            end select
+         else
+            ! ShockSlope < 1
+            Dn = nint(1.0/ShockSlope)
+            if(abs(Dn-1.0/ShockSlope)>cTiny)call stop_mpi( &
+                 'ShockSlope < 1 should be the inverse of a round number!')
+            select case(iSide)
+               ! Shift parallel to X by 1, but copy from distance Dn in Y
+            case(south_)
+               StateImpl_VG(iVar,1:nI+1,0,:) = StateImpl_VG(iVar,0:nI,Dn,:)
+            case(north_)
+               StateImpl_VG(iVar,0:nI,nJ+1,:) = &
+                    StateImpl_VG(iVar,1:nI+1,nJ+1-Dn,:)
+            end select
+         end if
+      end do
+
+    end subroutine semi_bc_shear
+
+    !==========================================================================
 
     subroutine correct_left_ghostcell(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
 
