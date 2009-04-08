@@ -42,6 +42,7 @@ help:
 	@echo '    NOMPI   (NOMPI library for compilation without MPI)'
 	@echo '    PIDL    (PostIDL.exe creates 1 .out file from local .idl files)'
 	@echo '    PSPH    (PostSPH.exe creates spherical tec file from sph*.tec files)'
+	@echo '    SNAPSHOT    (SNAPSHOT.exe extract snapshots from *.outs movies)'
 	@echo '    EARTH_TRAJ (EARTH_TRAJ.exe creates Earth trajectory file for heliosphere)'
 	@echo ' '
 	@echo '    rundir      (create run directory for standalone or SWMF)'
@@ -104,6 +105,13 @@ PSPH:
 	cd srcPostProc; make PSPH
 	@echo ' '
 	@echo Program PostSPH has been brought up to date.
+	@echo ' '
+
+SNAPSHOT:
+	cd ${SHAREDIR}; make LIB
+	cd srcPostProc; make SNAPSHOT
+	@echo ' '
+	@echo Program select_snapshot has been brought up to date.
 	@echo ' '
 
 EARTH_TRAJ:

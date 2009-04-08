@@ -26,6 +26,12 @@ ${BINDIR}/PostSPH.exe:	PostSPH.o
 PSPH:
 	make ${BINDIR}/PostSPH.exe
 
+${BINDIR}/SNAPSHOT.exe: ${LIBSHARE} select_snapshot.o
+	${LINK.f90} -o ${BINDIR}/SNAPSHOT.exe select_snapshot.o -L${LIBDIR} -lSHARE ${Lflag2}
+
+SNAPSHOT:
+	make ${BINDIR}/SNAPSHOT.exe
+
 ${BINDIR}/ConvertRestart.exe:	ConvertRestart.o
 	${LINK.f90} -o ${BINDIR}/ConvertRestart.exe ConvertRestart.o ${Lflag2}
 

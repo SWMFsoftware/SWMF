@@ -68,6 +68,7 @@ help:
 	@#^CMP IF GM BEGIN
 	@echo '    PIDL        (bin/PostIDL.exe post-processes *.idl files)'
 	@echo '    PSPH        (bin/PostSPH.exe post-processes sph*.tec files)'
+	@echo '    SNAPSHOT    (SNAPSHOT.exe extract snapshots from *.outs movies)'
 	@echo '    EARTH_TRAJ  (bin/EARTH_TRAJ.exe generates Earth trajectory)'
 	@echo '    ALL         (make SWMF PIDL PSPH EARTH_TRAJ)'
 	@#^CMP END GM
@@ -196,6 +197,10 @@ PSPH:	ENV_CHECK
 
 PIDL:	ENV_CHECK
 	cd GM/BATSRUS; make PIDL
+	@echo ' '
+
+SNAPSHOT: ENV_CHECK
+	cd GM/BATSRUS; make SNAPSHOT
 	@echo ' '
 
 #
