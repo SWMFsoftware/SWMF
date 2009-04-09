@@ -718,6 +718,9 @@ contains
 
     integer :: i, j, k, iNode1, iNode2, iNode3
     real    :: x, y, z, r, Weight1, Weight2, Weight3
+    real    :: WeightNode_I(3), WeightMaterial_I(0:nMaterial-1), Weight
+
+    integer :: iMaterial, iMaterial_I(1), iMaterialNode_I(3)
 
     character(len=*), parameter :: NameSub='interpolate_hyades2d'
     !-------------------------------------------------------------------------
@@ -769,15 +772,54 @@ contains
                   iNode1, iNode2, iNode3, Weight1, Weight2, Weight3)
           end if
 
+          ! Check if the 3 points consist of the same material or not
+          ! If the materials are different use the points with the
+          ! material that has the largest total weight
+
+          ! Weight and material of the 3 nodes of the triangle
+          WeightNode_I    = (/ Weight1, Weight2, Weight3 /)
+          iMaterialNode_I = DataHyades_VC(iMaterialHyades, &
+               (/iNode1, iNode2, iNode3/) )
+
+          if(maxval(iMaterialNode_I) /= minval(iMaterialNode_I))then
+
+             ! Add up the weights for all materials
+             do iMaterial = 0, nMaterial - 1
+                WeightMaterial_I(iMaterial) = sum(WeightNode_I, &
+                     MASK = (iMaterialNode_I == iMaterial) )
+             end do
+
+             ! Find the dominant material
+             iMaterial_I = maxloc(WeightMaterial_I)
+             iMaterial   = iMaterial_I(1) - 1
+             Weight      = WeightMaterial_I(iMaterial)
+
+             !write(*,*)'!!! iMaterialNode_I = ', iMaterialNode_I
+             !write(*,*)'!!! WeightNode_I    = ', WeightNode_I
+             !write(*,*)'!!! iMaterial       = ', iMaterial
+             !write(*,*)'!!! Weight          = ', Weight
+
+             where(iMaterialNode_I == iMaterial) 
+                ! Reset weights so they add up to 1 for the dominant material
+                WeightNode_I = WeightNode_I / Weight
+             elsewhere
+                ! Other materials get zero weight
+                WeightNode_I = 0.0
+             end where
+
+             !write(*,*)'!!! New WeightNode_I= ', WeightNode_I
+
+          end if
+
           DataHyades_V = &
-               Weight1*DataHyades_VC(:, iNode1) + &
-               Weight2*DataHyades_VC(:, iNode2) + &
-               Weight3*DataHyades_VC(:, iNode3)
+               WeightNode_I(1)*DataHyades_VC(:, iNode1) + &
+               WeightNode_I(2)*DataHyades_VC(:, iNode2) + &
+               WeightNode_I(3)*DataHyades_VC(:, iNode3)
 
           LevelHyades_V = &
-               Weight1*LevelHyades_VC(:, iNode1) + &
-               Weight2*LevelHyades_VC(:, iNode2) + &
-               Weight3*LevelHyades_VC(:, iNode3)
+               WeightNode_I(1)*LevelHyades_VC(:, iNode1) + &
+               WeightNode_I(2)*LevelHyades_VC(:, iNode2) + &
+               WeightNode_I(3)*LevelHyades_VC(:, iNode3)
        end if
 
        ! Interpolate density, momentum and pressure
