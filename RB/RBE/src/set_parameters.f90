@@ -13,7 +13,7 @@ subroutine RB_set_parameters(NameAction)
   character (len=100)           :: NameCommand
   character (len=*), intent(in) :: NameAction
   character (len=*), parameter  :: NameSub = 'RB_set_parameters'
-  logical :: IsRestart, UseFixedB, UsePlasmaSphere, UseSmooth
+  logical :: IsRestart, UseFixedB, UsePlasmaSphere
   logical :: DoDiffusePA, DoDiffuseE
   character (len=100) :: NameSpecies, NameModel
   integer :: iDate

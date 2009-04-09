@@ -195,7 +195,7 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   use ModGmRb
   use rbe_grid,    ONLY: nLat => ir, nLon => ip
   use rbe_constant,ONLY: rEarth => re
-  use rbe_cread2,  ONLY: xnswa,vswa,bxw,byw,bzw,nsw,iyear,iday
+  use rbe_cread2,  ONLY: xnswa,vswa,bxw,byw,bzw,nsw,iyear,iday,UseSmooth
   implicit none
 
   integer, intent(in) :: iSizeIn, jSizeIn, nIntegralIn
@@ -207,6 +207,7 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   real, intent(in) :: tSimulation
 
   real, parameter :: noValue=-99999.
+  real :: SwDensMax, SwVelMax, SwDensMin, SwVelMin
   integer :: n,iLat,iLon
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub='RB_put_from_gm'
@@ -254,9 +255,21 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   StateLine_VI(3,:) = StateLine_VI(3,:) / rEarth ! m --> Earth Radii
 
   !Solar wind values
-  xnswa(1) = Integral_IIV(1,1,4)*1.0e-6                   !m^-3 -->/cc
-  vswa (1) = sqrt(sum(Integral_IIV(2:4,1,4)**2.0))*1.0e-3 !m/s-->km/s
-  
+  if(IsFirstCall .or. (.not. UseSmooth)) then
+     xnswa(1) = Integral_IIV(1,1,4)*1.0e-6                   !m^-3 -->/cc
+     vswa (1) = sqrt(sum(Integral_IIV(2:4,1,4)**2.0))*1.0e-3 !m/s-->km/s
+  else
+     ! Update Solar wind value, but do not let them change more than 5 percent 
+     ! per update
+     SwDensMax = 1.05*xnswa(1)
+     SwDensMin = 0.95*xnswa(1)
+     SwVelMax  = 1.05*vswa(1)
+     SwVelMin  = 0.95*vswa(1)
+     xnswa(1) = min(SwDensMax,Integral_IIV(1,1,4)*1.0e-6)
+     xnswa(1) = max(SwDensMin,xnswa(1))
+     vswa(1)  = min(SwVelMax,sqrt(sum(Integral_IIV(2:4,1,4)**2.0))*1.0e-3)
+     vswa(1)  = max(SwVelMin,vswa(1))
+  endif
   bxw(1) = Integral_IIV(5,1,4)*1.0e9      !T --> nT
   byw(1) = Integral_IIV(6,1,4)*1.0e9      !T --> nT
   bzw(1) = Integral_IIV(7,1,4)*1.0e9      !T --> nT

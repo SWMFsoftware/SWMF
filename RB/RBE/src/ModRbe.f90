@@ -72,7 +72,7 @@ module rbe_cread2
   character (len=8)::  storm
 
   logical :: IsStandAlone=.false.,UseGm=.false.,UseIE=.false., &
-       UseSplitting = .false.,DoSaveIe = .false.
+       UseSplitting = .false.,DoSaveIe = .false.,UseSmooth=.true.
 
   logical :: UseMcLimiter = .false.,UseCentralDiff = .false.
   real    :: BetaLimiter  = 2.0
