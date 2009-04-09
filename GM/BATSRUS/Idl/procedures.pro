@@ -2264,7 +2264,7 @@ function grad,idir,f,x,y
 ; copies of inner neighbors.
 ;===========================================================================
 
-if n_elements(ndir) eq 0 or n_elements(f) eq 0 $
+if n_elements(idir) eq 0 or n_elements(f) eq 0 $
    or n_elements(x) eq 0 or n_elements(y) eq 0 then begin
    print,'Missing arguments in function grad'
    retall
