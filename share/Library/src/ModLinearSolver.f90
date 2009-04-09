@@ -868,9 +868,11 @@ contains
     else
        Maximum = maxval(abs(a_I))
        if(present(iComm))then
-          call MPI_allreduce(Maximum, MaximumAll, 1, MPI_REAL, MPI_MAX, &
-               iComm, iError)
-          Maximum = MaximumAll
+          if(iComm /= MPI_COMM_SELF)then
+             call MPI_allreduce(Maximum, MaximumAll, 1, MPI_REAL, MPI_MAX, &
+                  iComm, iError)
+             Maximum = MaximumAll
+          end if
        endif
        ! we could use the intrinsic function "exponent" here !!!
        Limit = 2.0**nint(alog(Ratio*Maximum)/alog(2.0))
@@ -885,9 +887,11 @@ contains
     end do
 
     if(present(iComm))then
-       call MPI_allreduce(SumPart_I, SumAllPart_I, nPart, MPI_REAL, MPI_SUM, &
-            iComm, iError)
-       SumPart_I = SumAllPart_I
+       if(iComm /= MPI_COMM_SELF)then
+          call MPI_allreduce(SumPart_I, SumAllPart_I, nPart, MPI_REAL, &
+               MPI_SUM, iComm, iError)
+          SumPart_I = SumAllPart_I
+       end if
     endif
 
     accurate_sum = sum(SumPart_I)
@@ -909,9 +913,12 @@ contains
 
     DotProduct = dot_product(a_I, b_I)
 
+    if(iComm == MPI_COMM_SELF) then
+       dot_product_mpi = DotProduct
+       RETURN
+    end if
     call MPI_allreduce(DotProduct, DotProductMpi, 1, MPI_REAL, MPI_SUM, &
          iComm, iError)
-
     dot_product_mpi = DotProductMpi
 
   end function dot_product_mpi
@@ -927,10 +934,13 @@ contains
     !--------------------------------------------------------------------------
 
     MaxvalAbs = maxval(abs(a_I))
-
+    if(iComm == MPI_COMM_SELF)then
+       maxval_abs_mpi = MaxvalAbs
+       RETURN
+    end if
+    
     call MPI_allreduce(MaxvalAbs, MaxvalAbsMpi, 1, MPI_REAL, MPI_MAX, &
          iComm, iError)
-
     maxval_abs_mpi = MaxvalAbsMpi
 
   end function maxval_abs_mpi
