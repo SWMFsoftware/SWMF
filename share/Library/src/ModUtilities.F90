@@ -181,13 +181,14 @@ contains
   !BOP ========================================================================
   !ROUTINE: split_string - split space separated list into string array
   !INTERFACE:
-  subroutine split_string(String,MaxString,String_I,nString)
+  subroutine split_string(String, MaxString, String_I, nString, StringSepIn)
 
     implicit none
 
     !INPUT ARGUMENTS:
     character (len=*), intent(in):: String
     integer, intent(in) :: MaxString
+    character, optional, intent(in):: StringSepIn
     !OUTPUT ARGUMENTS:
     character (len=*), intent(out):: String_I(MaxString)
     integer, intent(out):: nString
@@ -200,28 +201,35 @@ contains
     !\end{verbatim}
     !EOP
 
-    character(len=*), parameter :: NameSub='split_string'
+    character(len=*), parameter :: NameSub = 'split_string'
 
-    character(len=len(String)) :: StringTmp
+    character:: StringSep
+
+    character(len=len(String)+1) :: StringTmp
 
     integer :: i,l
     !--------------------------------------------------------------------------
+    if(present(StringSepIn))then
+       StringSep = StringSepIn
+    else
+       StringSep = ' '
+    endif
     nString   = 0
     StringTmp = String
     l         = len_trim(StringTmp)
-
+    StringTmp = trim(StringTmp) // StringSep
     do
        StringTmp = adjustl(StringTmp)       ! Remove leading spaces
-       i=index(StringTmp,' ')               ! Find end of first word
+       i = index(StringTmp,StringSep)       ! Find end of first part
+       if(i < 1) RETURN                    ! Nothing before the separator
 
-       if(i==1) RETURN                      ! All spaces
+       nString = nString +1                 ! Count parts
 
-       nString = nString +1                 ! Count words
-       String_I(nString) = StringTmp(1:i-1) ! Put word into string array
-       StringTmp=StringTmp(i+1:l)           ! Delete word and space from string
-       if(nString == MaxString) RETURN      ! Check for maximum number of words
+       String_I(nString) = StringTmp(1:i-1) ! Put part into string array
+       StringTmp=StringTmp(i+1:l+1)         ! Delete part+separator from string
+
+       if(nString == MaxString) RETURN      ! Check for maximum number of parts
     end do
-
   end subroutine split_string
 
   !BOP ========================================================================
