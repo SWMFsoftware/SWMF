@@ -15,6 +15,7 @@
 !June30
 !July 20-WORKED! 
 !July 28-4 neutral fluids
+!September 28 - source terms as McNutt
 !==============================================================================
 module ModUser
 
@@ -43,7 +44,7 @@ module ModUser
 
   include 'user_module.h' !list of public methods
 
-  real,              parameter :: VersionUserModule = 2.2
+  real,              parameter :: VersionUserModule = 2.3
   character (len=*), parameter :: &
        NameUserModule = 'Outer Heliosphere with 4 neutrals, Opher & Toth'
 
@@ -94,6 +95,9 @@ module ModUser
        VLISW_Bz=0.0 , VLISW_Bz_dim=0.0 , &
        VLISW_B_factor=0.0
 
+  real :: VLISW_p_dim1=0.0, VLISW_p1=0.0
+  real :: SWH_p1=0.0, PNeutralsISW1=0.0
+ 
   !real, dimension(0:1) :: &
   !     VLISW_rho_t,  &
   !     VLISW_p_t  ,  &
@@ -362,18 +366,9 @@ contains
     !
     ! Pop I is going through the inner BCs    
 
-  !V  VarsGhostFace_V(NeuRho_) = RhoNeutralsISW * RhoNeuFactor
-  !V  VarsGhostFace_V(NeuUx_)  = UxNeutralsISW  * uNeuFactor
-  !V  VarsGhostFace_V(NeuUy_)  = UyNeutralsISW  * uNeuFactor
-  !V  VarsGhostFace_V(NeuUz_)  = UzNeutralsISW  * uNeuFactor
-  !V  VarsGhostFace_V(NeuP_)   = pNeutralsISW   * RhoNeuFactor
-   if( sum(VarsTrueFace_V(NeuUx_:NeuUz_)*FaceCoords_D) > 0.0)then
-       VarsGhostFace_V(NeuRho_)       = VarsGhostFace_V(Rho_)    *RhoNeuFactor
-       VarsGhostFace_V(NeuP_)         = VarsGhostFace_V(p_)      *RhoNeuFactor
-       VarsGhostFace_V(NeuUx_:NeuUz_) = VarsGhostFace_V(Ux_:Uz_) *uNeuFactor
-    else
+   ! soft boundary for Pop I-IV
+
        VarsGhostFace_V(NeuRho_:NeuP_) = VarsTrueFace_V(NeuRho_:NeuP_)
-    end if
 
     ! PopII leaves the domain at a supersonic velocity 
     ! (50km/s while for their temperature 1.E5K their C_s=30km/s)
@@ -390,16 +385,23 @@ contains
     ! Pop III has the velocity and temperature of the ions at inner boundary
     ! the density is taken to be a fraction of the ions
 
-    VarsGhostFace_V(Ne3Rho_)       = VarsGhostFace_V(rho_)    *RhoNe3Factor
-    VarsGhostFace_V(Ne3P_)         = VarsGhostFace_V(p_)      *RhoNe3Factor
-    VarsGhostFace_V(Ne3Ux_:Ne3Uz_) = VarsGhostFace_V(Ux_:Uz_) *uNe3Factor
+   if( sum(VarsTrueFace_V(Ne3Ux_:Ne3Uz_)*FaceCoords_D) > 0.0)then
+       VarsGhostFace_V(Ne3Rho_)       = VarsGhostFace_V(Rho_)    *RhoNe3Factor
+       VarsGhostFace_V(Ne3P_)         = VarsGhostFace_V(p_)      *RhoNe3Factor
+       VarsGhostFace_V(Ne3Ux_:Ne3Uz_) = VarsGhostFace_V(Ux_:Uz_) *uNe3Factor
+   else
+       VarsGhostFace_V(Ne3Rho_:Ne3P_) = VarsTrueFace_V(Ne3Rho_:Ne3P_)
+   end if
 
     ! Pop IV 
-    VarsGhostFace_V(Ne4Rho_) = RhoNeutralsISW * RhoNe4Factor
-    VarsGhostFace_V(Ne4Ux_)  = UxNeutralsISW  * uNe4Factor
-    VarsGhostFace_V(Ne4Uy_)  = UyNeutralsISW  * uNe4Factor
-    VarsGhostFace_V(Ne4Uz_)  = UzNeutralsISW  * uNe4Factor
-    VarsGhostFace_V(Ne4P_)   = pNeutralsISW   * RhoNe4Factor
+
+   if( sum(VarsTrueFace_V(Ne4Ux_:Ne4Uz_)*FaceCoords_D) > 0.0)then
+       VarsGhostFace_V(Ne4Rho_)       = VarsGhostFace_V(Rho_)    *RhoNe4Factor
+       VarsGhostFace_V(Ne4P_)         = VarsGhostFace_V(p_)      *RhoNe4Factor
+       VarsGhostFace_V(Ne4Ux_:Ne4Uz_) = VarsGhostFace_V(Ux_:Uz_) *uNe4Factor
+   else
+       VarsGhostFace_V(Ne4Rho_:Ne4P_) = VarsTrueFace_V(Ne4Rho_:Ne4P_)
+   end if
 
     if(DoTestMe)then
        write(*,*) NameSub,' FaceCoord=', FaceCoords_D
@@ -477,12 +479,14 @@ contains
     ! The separation between Pop IV and Pop I is arbitrary so
     ! we took the separation as Vlad in x=-1500AU
     !
-    !V State_VGB(Ne4Rho_,-1:2,:,:,iBlock)   = 0.361*RhoNeutralsISW    
-    !V State_VGB(Ne4RhoUx_,-1:2,:,:,iBlock) = 0.361*RhoNeutralsISW*UxNeutralsISW    
-    !V State_VGB(Ne4RhoUy_,-1:2,:,:,iBlock) = 0.361*RhoNeutralsISW*UyNeutralsISW   
-    !V State_VGB(Ne4RhoUz_,-1:2,:,:,iBlock) = 0.361*RhoNeutralsISW*UzNeutralsISW    
-    !V State_VGB(Ne4P_,-1:2,:,:,iBlock)     = 0.3202*PNeutralsISW
-     
+    !!State_VGB(Ne4Rho_,-1:2,:,:,iBlock)   = 0.361*RhoNeutralsISW    
+    !!State_VGB(Ne4RhoUx_,-1:2,:,:,iBlock) = 0.361*RhoNeutralsISW*UxNeutralsISW    
+    !!State_VGB(Ne4RhoUy_,-1:2,:,:,iBlock) = 0.361*RhoNeutralsISW*UyNeutralsISW   
+    !!State_VGB(Ne4RhoUz_,-1:2,:,:,iBlock) = 0.361*RhoNeutralsISW*UzNeutralsISW    
+    !hydro run State_VGB(Ne4P_,-1:2,:,:,iBlock)     = 0.3202*PNeutralsISW
+    !!State_VGB(Ne4P_,-1:2,:,:,iBlock)     = 0.361*PNeutralsISW
+ 
+    ! augst26 cond
      State_VGB(Ne4Rho_,-1:2,:,:,iBlock)   = RhoNeutralsISW
      State_VGB(Ne4RhoUx_,-1:2,:,:,iBlock) = RhoNeutralsISW*UxNeutralsISW
      State_VGB(Ne4RhoUy_,-1:2,:,:,iBlock) = RhoNeutralsISW*UyNeutralsISW
@@ -494,26 +498,23 @@ contains
     ! characteristic waves are present. For a neutral fluid this 
     ! is 0 for supersonic outflow, 1 for subsonic outflow, 
     ! 4 for subsonic inflow and 5 for supersonic inflow. 
-  
-    !V State_VGB(NeuRho_,-1:2,:,:,iBlock)   = 0.639*RhoNeutralsISW    
-    !V State_VGB(NeuRhoUx_,-1:2,:,:,iBlock) = 0.639*RhoNeutralsISW*UxNeutralsISW    
-    !V State_VGB(NeuRhoUy_,-1:2,:,:,iBlock) = 0.639*RhoNeutralsISW*UyNeutralsISW   
-    !V State_VGB(NeuRhoUz_,-1:2,:,:,iBlock) = 0.639*RhoNeutralsISW*UzNeutralsISW    
-    !V State_VGB(NeuP_,-1:2,:,:,iBlock)     = 0.6798*PNeutralsISW
-     
-     State_VGB(NeuRho_,-1:2,:,:,iBlock)   = 1.E-4*RhoNeutralsISW
-     State_VGB(NeuRhoUx_,-1:2,:,:,iBlock) = 1.E-4*RhoNeutralsISW*UxNeutralsISW
-     State_VGB(NeuRhoUy_,-1:2,:,:,iBlock) = 1.E-4*RhoNeutralsISW*UyNeutralsISW
-     State_VGB(NeuRhoUz_,-1:2,:,:,iBlock) = 1.E-4*RhoNeutralsISW*UzNeutralsISW
-     State_VGB(NeuP_,-1:2,:,:,iBlock)     = 1.E-4*PNeutralsISW
-
+    
+    !ausg26 cond
+    !!State_VGB(NeuRho_,-1:2,:,:,iBlock)   = 0.639*RhoNeutralsISW    
+    !!State_VGB(NeuRhoUx_,-1:2,:,:,iBlock) = 0.639*RhoNeutralsISW*UxNeutralsISW    
+    !!State_VGB(NeuRhoUy_,-1:2,:,:,iBlock) = 0.639*RhoNeutralsISW*UyNeutralsISW   
+    !!State_VGB(NeuRhoUz_,-1:2,:,:,iBlock) = 0.639*RhoNeutralsISW*UzNeutralsISW    
+    ! hydro run State_VGB(NeuP_,-1:2,:,:,iBlock)     = 0.6798*PNeutralsISW
+    !!State_VGB(NeuP_,-1:2,:,:,iBlock)     = 0.639*PNeutralsISW
+ 
     !
     !\
     ! PopII and III supersonic outflow
     !/
-    do iVar = Ne2Rho_, Ne3P_; do i = -1, 2
-    !!do iVar = NeuRho_, Ne3P_; do i = -1, 2
-      State_VGB(iVar,i,:,:,iBlock) = State_VGB(iVar,3,:,:,iBlock)
+    !!do iVar = Ne2Rho_, Ne3P_; do i = -1, 2
+    !conditions of August 26
+    do iVar = NeuRho_, Ne3P_; do i = -1, 2
+       State_VGB(iVar,i,:,:,iBlock) = State_VGB(iVar,3,:,:,iBlock)
     end do; end do
 
   end subroutine user_set_outerbcs
@@ -796,20 +797,21 @@ contains
     Si2Io_V = 1/Io2Si_V
     No2Io_V = No2Si_V*Si2Io_V
     Io2No_V = 1/No2Io_V
-
+    
     !  normalization of SWH and VLISW and Neutrals
+    
     VLISW_a_dim    = No2Io_V(UnitU_)*(VLISW_T_dim/SWH_T_dim)
-    ! VLISW_p_dim    = No2Io_V(UnitP_)*inv_g &
-    !     *(VLISW_rho_dim/SWH_rho_dim)*(VLISW_T_dim/SWH_T_dim)
+    VLISW_p_dim1    = No2Io_V(UnitP_)*inv_g &
+         *(VLISW_rho_dim/SWH_rho_dim)*(VLISW_T_dim/SWH_T_dim)
     ! 
     ! Pressure of plasma = 2*T_ion*rho_ion
-    VLISW_p_dim    = No2Io_V(UnitP_)*inv_g &
-         *2.*(VLISW_rho_dim/SWH_rho_dim)*(VLISW_T_dim/SWH_T_dim)
+    
     VLISW_B_factor = No2Io_V(UnitB_)*sqrt((VLISW_T_dim/SWH_T_dim) &
          *(VLISW_rho_dim/SWH_rho_dim))
 
     VLISW_rho = VLISW_rho_dim*Io2No_V(UnitRho_)
-    VLISW_p   = VLISW_p_dim*Io2No_V(UnitP_)
+    VLISW_p1   = VLISW_p_dim1*Io2No_V(UnitP_)
+    VLISW_p    = 2.*VLISW_T_dim*Io2No_V(UnitTemperature_)*VLISW_rho
     VLISW_Ux  = VLISW_Ux_dim*Io2No_V(UnitU_)
     VLISW_Uy  = VLISW_Uy_dim*Io2No_V(UnitU_)
     VLISW_Uz  = VLISW_Uz_dim*Io2No_V(UnitU_)
@@ -826,7 +828,8 @@ contains
 
     SWH_rho = SWH_rho_dim*Io2No_V(UnitRho_)
      ! Pressure of plasma = 2*T_ion*rho_ion
-    !SWH_p   = SWH_T_dim*Io2No_V(UnitTemperature_)*SWH_rho
+    
+    SWH_p1   = SWH_T_dim*Io2No_V(UnitTemperature_)*SWH_rho
     SWH_p   = 2.*SWH_T_dim*Io2No_V(UnitTemperature_)*SWH_rho
     SWH_Ux  = SWH_Ux_dim*Io2No_V(UnitU_)
     SWH_Uy  = SWH_Uy_dim*Io2No_V(UnitU_)
@@ -848,12 +851,14 @@ contains
     RhoNeutralsISW = RhoNeutralsISW_dim*Io2No_V(UnitRho_)
     PNeutralsISW_dim = No2Io_V(UnitP_)*inv_g*(RhoNeutralsISW_dim/SWH_rho_dim)*(TNeutralsISW_dim /SWH_T_dim)
 
-    PNeutralsISW = PNeutralsISW_dim*Io2No_V(UnitP_)
+    !PNeutralsISW1 = PNeutralsISW_dim*Io2No_V(UnitP_)
+    PNeutralsISW = TNeutralsISW_dim*Io2No_V(UnitTemperature_)*RhoNeutralsISW 
     UxNeutralsISW  = UxNeutralsISW_dim*Io2No_V(UnitU_)
     UyNeutralsISW  = UyNeutralsISW_dim*Io2No_V(UnitU_)
     UzNeutralsISW  = UzNeutralsISW_dim*Io2No_V(UnitU_)
     mNeutrals    = mNeutralsmp*cProtonMass
 
+    !
     ! set strings for writing Tecplot output
     !/
     NameTecUnit_V(UnitX_)            = 'AU'
@@ -883,6 +888,7 @@ contains
     logical,          intent(out)  :: IsFound
     
     character (len=*), parameter :: Name='user_set_plot_var'
+
     !-------------------------------------------------------------------
 
     UsePlotVarBody = .true.
@@ -900,6 +906,13 @@ contains
        PlotVar_G = &
             sqrt( sum(State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock)**2, DIM=1)      &
             /    (g *State_VGB(p_,:,:,:,iBlock)*State_VGB(Rho_,:,:,:,iBlock)) )
+!merav addition
+    case('machalfven')
+      PlotVar_G = & 
+         sqrt( sum(State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock)**2, DIM=1)      &
+            /   (( sum(State_VGB(Bx_:Bz_,:,:,:,iBlock)**2)  * State_VGB(Rho_,:,:,:,iBlock) )) )                       
+
+!end of merav addition         
     case default
        IsFound = .false.
     end select
@@ -913,7 +926,7 @@ contains
     ! Calculates the charge exchange cross sections for the neutrals
     ! This subroutine calculate the charge exchange between the ionized 
     ! component and the three population of neutrals, Neu, Ne2, Ne3 
-    ! following the notation of Pauls et al. (1995) and Zank et al (1996)
+    ! following the notation of McNutt (1998)
     ! The three population of neutrals are the neutrals created by 
     ! charge exchange in different regions of the outer heliosphere
     !
@@ -944,6 +957,7 @@ contains
     ! January 08, 2008 all source terms for PopI as implicit
     ! January 24, 2008 comments included
     ! January-June BUGS fixed
+    ! September - source terms written as McNutt (1998)
     ! 
     !-------------------------------------------------------------------
     use ModProcMH
@@ -963,8 +977,8 @@ contains
     real, dimension(nFluid) :: &
          Ux_I, Uy_I, Uz_I, U2_I, Temp_I, &
          UThS_I, URelS_I, URelSdim_I, UStar_I, Sigma_I, Rate_I, &
-         Termpx_I, Termxp_I, Termexp_I, Termepx_I, &
-         I0xp_I, I0px_I, I1xp_I, I1px_I, I2xp_I, I2px_I, &
+         UStarM_I, SigmaN_I, RateN_I, &
+         I0xp_I, I0px_I, I2xp_I, I2px_I, &
          JxpUx_I, JxpUy_I, JxpUz_I, JpxUx_I, JpxUy_I, JpxUz_I, &
          Kxp_I, Kpx_I, Qepx_I, QmpxUx_I, QmpxUy_I, QmpxUz_I
 
@@ -1013,7 +1027,7 @@ contains
 
        ! Temperature for the ionized and three population of neutrals (K)
        ! T = p/rho 
-       ! since P_ion=2T_ion*rho_ion; T_ion=0.5p_ion/rho_ion
+       ! since P_plasma=2T_proton*rho_ion; T_proton=0.5P_plasma/rho_ion
      
        Temp_I       = (State_V(iP_I)/State_V(iRho_I))*No2Si_V(UnitTemperature_)
        Temp_I(Ion_) = 0.5*Temp_I(Ion_)
@@ -1023,35 +1037,95 @@ contains
        UThS_I = cth*Temp_I 
 
        ! Relative velocity between neutrals and ionized fluid squared
-       URelS_I = (Ux_I - Ux_I(1))**2 &
-            +    (Uy_I - Uy_I(1))**2 &
-            +    (Uz_I - Uz_I(1))**2 
+       !! URelS_I = (Ux_I - Ux_I(1))**2 &
+       !!     +    (Uy_I - Uy_I(1))**2 &
+       !!     +    (Uz_I - Uz_I(1))**2 
+
+        URelS_I(1) =0.
+
+        URelS_I(Neu_) = (Ux_I(Neu_) - Ux_I(1))**2 &
+            +    (Uy_I(Neu_) - Uy_I(1))**2 &
+            +    (Uz_I(Neu_) - Uz_I(1))**2
+
+        URelS_I(Ne2_) = (Ux_I(Ne2_) - Ux_I(1))**2 &
+            +    (Uy_I(Ne2_) - Uy_I(1))**2 &
+            +    (Uz_I(Ne2_) - Uz_I(1))**2
+
+        URelS_I(Ne3_) = (Ux_I(Ne3_) - Ux_I(1))**2 &
+            +    (Uy_I(Ne3_) - Uy_I(1))**2 &
+            +    (Uz_I(Ne3_) - Uz_I(1))**2
+
+        URelS_I(Ne4_) = (Ux_I(Ne4_) - Ux_I(1))**2 &
+            +    (Uy_I(Ne4_) - Uy_I(1))**2 &
+            +    (Uz_I(Ne4_) - Uz_I(1))**2
 
        ! Calculating Cross Section Sigma_I for the different neutrals
        !
        ! Incorporating units to calculate the charge exchange cross sections
        ! No2Si_V(UnitU_) has units of m/s like cstartT so UReldim and UStar 
        ! has units of m/s
+      
+      !! URelSdim_I  = URelS_I * No2Si_V(UnitU_)**2
+       
+       URelSdim_I(1)=0.
+       URelSdim_I(Neu_)  = URelS_I(Neu_) * No2Si_V(UnitU_)**2
+       URelSdim_I(Ne2_)  = URelS_I(Ne2_) * No2Si_V(UnitU_)**2
+       URelSdim_I(Ne3_)  = URelS_I(Ne3_) * No2Si_V(UnitU_)**2
+       URelSdim_I(Ne4_)  = URelS_I(Ne4_) * No2Si_V(UnitU_)**2
 
-       URelSdim_I  = URelS_I * No2Si_V(UnitU_)**2
+       ! UStar_I has units of m/s
 
-       ! UStar_I was slightly different in Liewer et al.. 
-       ! I am using Zank et al.'96 UStar has units of m/s
+     !!  UStar_I  = sqrt(URelSdim_I + (4./cPi)*(UThS_I +UThS_I(1)))
+     
+      UStar_I(1)=0. 
+      UStar_I(Neu_) =  sqrt(URelSdim_I(Neu_) + (4./cPi)*(UThS_I(Neu_) +UThS_I(1)))
+      UStar_I(Ne2_) =  sqrt(URelSdim_I(Ne2_) + (4./cPi)*(UThS_I(Ne2_) +UThS_I(1)))
+      UStar_I(Ne3_) =  sqrt(URelSdim_I(Ne3_) + (4./cPi)*(UThS_I(Ne3_) +UThS_I(1)))
+      UStar_I(Ne4_) =  sqrt(URelSdim_I(Ne4_) + (4./cPi)*(UThS_I(Ne4_) +UThS_I(1)))
 
-       UStar_I  = sqrt(URelSdim_I + (4./cPi)*(UThS_I +UThS_I(1)))
+       ! UStarM_I has units of m/s
 
+    !!   UStarM_I  = sqrt(URelSdim_I + (64./(9.*cPi))*(UThS_I +UThS_I(1)))
+     
+      UStarM_I(1)=0.
+      UStarM_I(Neu_)  = sqrt(URelSdim_I(Neu_) + (64./(9.*cPi))*(UThS_I(Neu_) +UThS_I(1)))
+      UStarM_I(Ne2_)  = sqrt(URelSdim_I(Ne2_) + (64./(9.*cPi))*(UThS_I(Ne2_) +UThS_I(1)))
+      UStarM_I(Ne3_)  = sqrt(URelSdim_I(Ne3_) + (64./(9.*cPi))*(UThS_I(Ne3_) +UThS_I(1)))
+      UStarM_I(Ne4_)  = sqrt(URelSdim_I(Ne4_) + (64./(9.*cPi))*(UThS_I(Ne4_) +UThS_I(1)))
+
+      
        ! Maher and Tinsley cross section Sigma 
-       ! Linde et al. 1998 has a misprint where there is a + instead of a -
-       ! Baranov et al. 1991 uses URelSdim instead of UStar; 
-       ! Linde's, Thesis uses UStar
-       ! Problem when URelSdim=0         
        ! UStar has to have units of cm/s so the factor 100 is to pass m to cm
        ! Sigma has units of units of m^2
+      !! Sigma_I =((1.64E-7 - (6.95E-9)*log(UStarM_I*100.))**2)*(1.E-4)
+      !! SigmaN_I =((1.64E-7 - (6.95E-9)*log(UStar_I*100.))**2)*(1.E-4)       
 
-       ! Sigma_I =((1.64E-7 - (6.95E-9)*log(UStar_I*100.))**2)*(1.E-4)
-        ! New Cross Section from Lindsay and Stebbings, 2005
-       Sigma_I =((2.2835E-7 - (1.062E-8)*log(UStar_I*100.))**2)*(1.E-4)
+       Sigma_I(1)=0.
+       SigmaN_I(1)=0.
+       
+        Sigma_I(Neu_) =((1.64E-7 - (6.95E-9)*log(UStarM_I(Neu_)*100.))**2)*(1.E-4)
+        SigmaN_I(Neu_) =((1.64E-7 - (6.95E-9)*log(UStar_I(Neu_)*100.))**2)*(1.E-4)
+        Sigma_I(Ne2_) =((1.64E-7 - (6.95E-9)*log(UStarM_I(Ne2_)*100.))**2)*(1.E-4)
+        SigmaN_I(Ne2_) =((1.64E-7 - (6.95E-9)*log(UStar_I(Ne2_)*100.))**2)*(1.E-4)
+        Sigma_I(Ne3_) =((1.64E-7 - (6.95E-9)*log(UStarM_I(Ne3_)*100.))**2)*(1.E-4)
+        SigmaN_I(Ne3_) =((1.64E-7 - (6.95E-9)*log(UStar_I(Ne3_)*100.))**2)*(1.E-4)
+        Sigma_I(Ne4_) =((1.64E-7 - (6.95E-9)*log(UStarM_I(Ne4_)*100.))**2)*(1.E-4)
+        SigmaN_I(Ne4_) =((1.64E-7 - (6.95E-9)*log(UStar_I(Ne4_)*100.))**2)*(1.E-4)
 
+
+       ! New Cross Section from Lindsay and Stebbings, 2005
+       !!Sigma_I =((2.2835E-7 - (1.062E-8)*log(UStarM_I*100.))**2)*(1.E-4)
+
+       !!SigmaN_I =((2.2835E-7 - (1.062E-8)*log(UStar_I*100.))**2)*(1.E-4)
+
+       !!Sigma_I(Neu_) =((2.2835E-7 - (1.062E-8)*log(UStarM_I(Neu_)*100.))**2)*(1.E-4)
+       !!SigmaN_I(Neu_)=((2.2835E-7 - (1.062E-8)*log(UStar_I(Neu_)*100.))**2)*(1.E-4)
+       !!Sigma_I(Ne2_) =((2.2835E-7 - (1.062E-8)*log(UStarM_I(Ne2_)*100.))**2)*(1.E-4)
+       !!SigmaN_I(Ne2_)=((2.2835E-7 - (1.062E-8)*log(UStar_I(Ne2_)*100.))**2)*(1.E-4)
+       !!Sigma_I(Ne3_) =((2.2835E-7 - (1.062E-8)*log(UStarM_I(Ne3_)*100.))**2)*(1.E-4)
+       !!SigmaN_I(Ne3_)=((2.2835E-7 - (1.062E-8)*log(UStar_I(Ne3_)*100.))**2)*(1.E-4)
+       !!Sigma_I(Ne4_) =((2.2835E-7 - (1.062E-8)*log(UStarM_I(Ne4_)*100.))**2)*(1.E-4)
+       !!SigmaN_I(Ne4_)=((2.2835E-7 - (1.062E-8)*log(UStar_I(Ne4_)*100.))**2)*(1.E-4)
 
        ! Calculating Rate  = \nu * nH * mp where nH is the density of neutrals
        ! \nu = Sigma*np*u_star where np is the density of the ionized flow and 
@@ -1059,19 +1133,34 @@ contains
        ! The charge exhange cross section 100 to change ustar to cm/s
        ! Rate has no units (m^2*m/s*s*m-3 )
 
-       Rate_I =Sigma_I*State_V(Rho_)*State_V(iRho_I)*UStar_I  &
-            *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
+      !! Rate_I =Sigma_I*State_V(Rho_)*State_V(iRho_I)*UStarM_I  &
+      !!      *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
+    
        Rate_I(1)=0.
-       ! Calculating some common terms
-       ! Tempx and Termxp have units of (m/s)^-1
 
-       Termpx_I=1.0/sqrt(4.*((4./cPi)*UThS_I(1)+URelSdim_I)+(9.*cPi/4.)*UThS_I)
-       Termxp_I=1.0/sqrt(4.*((4./cPi)*UThS_I+URelSdim_I)+(9.*cPi/4.)*UThS_I(1))
+       Rate_I(Neu_) =Sigma_I(Neu_)*State_V(Rho_)*State_V(iRho_I(Neu_))*UStarM_I(Neu_)  &
+            *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
+       Rate_I(Ne2_) =Sigma_I(Ne2_)*State_V(Rho_)*State_V(iRho_I(Ne2_))*UStarM_I(Ne2_)  &
+            *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
+       Rate_I(Ne3_) =Sigma_I(Ne3_)*State_V(Rho_)*State_V(iRho_I(Ne3_))*UStarM_I(Ne3_)  &
+            *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
+       Rate_I(Ne4_) =Sigma_I(Ne4_)*State_V(Rho_)*State_V(iRho_I(Ne4_))*UStarM_I(Ne4_)  &
+            *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
 
-       ! Termepx has units of m/s
 
-       Termexp_I =sqrt((4./cPi)*UThS_I +(64./(9.*cPi))*UThS_I(1)+URelSdim_I) 
-       Termepx_I =sqrt((4./cPi)*UThS_I(1)+(64./(9.*cPi))*UThS_I +URelSdim_I)
+       !!RateN_I =SigmaN_I*State_V(Rho_)*State_V(iRho_I)*UStar_I  &
+       !!     *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
+       
+       RateN_I(1)=0.      
+
+       RateN_I(Neu_) =SigmaN_I(Neu_)*State_V(Rho_)*State_V(iRho_I(Neu_))*UStar_I(Neu_)  &
+            *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
+       RateN_I(Ne2_) =SigmaN_I(Ne2_)*State_V(Rho_)*State_V(iRho_I(Ne2_))*UStar_I(Ne2_)  &
+            *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
+       RateN_I(Ne3_) =SigmaN_I(Ne3_)*State_V(Rho_)*State_V(iRho_I(Ne3_))*UStar_I(Ne3_)  &
+            *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
+       RateN_I(Ne4_) =SigmaN_I(Ne4_)*State_V(Rho_)*State_V(iRho_I(Ne4_))*UStar_I(Ne4_)  &
+            *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
 
        ! Calculating the terms that enter in the Source terms
        ! The expressions for I0, Jxp, Kxp, Qexp are taken from Zank et al. 1996
@@ -1093,38 +1182,48 @@ contains
        ! I0xpNe2 is the term of creation of Neu by charge exchange p-Ne2
        ! I0xpNe3 is the term of creation of Neu by charge exchange p-Ne3
 
-       I0xp_I =Rate_I 
-       I0px_I =Rate_I 
+       I0xp_I =RateN_I 
+       I0px_I =RateN_I 
 
-       I1xp_I  = Rate_I*(UThS_I(1)/UStar_I)*Termxp_I 
-       I1px_I  = Rate_I*(UThS_I/UStar_I)*Termpx_I  
-
-       I2xp_I  = Rate_I*(UThS_I(1)/UStar_I)*Termexp_I/No2Si_V(UnitU_)**2
-       I2px_I  = Rate_I*(UThS_I/UStar_I)*Termepx_I/No2Si_V(UnitU_)**2
+       I2xp_I  = Rate_I*(UStar_I/UStarM_I)*UThS_I(1)/No2Si_V(UnitU_)**2
+       I2px_I  = Rate_I*(UStar_I/UStarM_I)*UThS_I/No2Si_V(UnitU_)**2
 
        ! units are fine: (Uth2/ustar)*termxp is unitless as it should be
 
-       JxpUx_I  = Ux_I(1)*Rate_I  + (Ux_I -Ux_I(1))*I1xp_I 
-       JxpUy_I  = Uy_I(1)*Rate_I  + (Uy_I -Uy_I(1))*I1xp_I 
-       JxpUz_I  = Uz_I(1)*Rate_I  + (Uz_I -Uz_I(1))*I1xp_I 
+       JxpUx_I  = Ux_I(1)*Rate_I 
+       JxpUy_I  = Uy_I(1)*Rate_I   
+       JxpUz_I  = Uz_I(1)*Rate_I 
 
-       JpxUx_I  = Ux_I*Rate_I  + (Ux_I(1)-Ux_I)*I1px_I 
-       JpxUy_I  = Uy_I*Rate_I  + (Uy_I(1)-Uy_I)*I1px_I 
-       JpxUz_I  = Uz_I*Rate_I  + (Uz_I(1)-Uz_I)*I1px_I 
+       JpxUx_I  = Ux_I*Rate_I  
+       JpxUy_I  = Uy_I*Rate_I   
+       JpxUz_I  = Uz_I*Rate_I  
 
-       QmpxUx_I = JpxUx_I - JxpUx_I
-       QmpxUy_I = JpxUy_I - JxpUy_I
-       QmpxUz_I = JpxUz_I - JxpUz_I
+       !QmpxUx_I = JpxUx_I - JxpUx_I
+       !QmpxUy_I = JpxUy_I - JxpUy_I
+       !QmpxUz_I = JpxUz_I - JxpUz_I
+       
+       QmpxUx_I(1)=0.
+       QmpxUy_I(1)=0.
+       QmpxUz_I(1)=0.
+       
+       QmpxUx_I(Neu_) = (Ux_I(Neu_) - Ux_I(1))*Rate_I(Neu_)
+       QmpxUx_I(Ne2_) = (Ux_I(Ne2_) - Ux_I(1))*Rate_I(Ne2_)
+       QmpxUx_I(Ne3_) = (Ux_I(Ne3_) - Ux_I(1))*Rate_I(Ne3_)
+       QmpxUx_I(Ne4_) = (Ux_I(Ne4_) - Ux_I(1))*Rate_I(Ne4_)
+    
+       QmpxUy_I(Neu_) = (Uy_I(Neu_) - Uy_I(1))*Rate_I(Neu_)
+       QmpxUy_I(Ne2_) = (Uy_I(Ne2_) - Uy_I(1))*Rate_I(Ne2_)
+       QmpxUy_I(Ne3_) = (Uy_I(Ne3_) - Uy_I(1))*Rate_I(Ne3_)
+       QmpxUy_I(Ne4_) = (Uy_I(Ne4_) - Uy_I(1))*Rate_I(Ne4_)
 
-       Kxp_I = 0.5*U2_I(1)*Rate_I  + (3./4.)*I2xp_I   &
-            + (Ux_I(1)*(Ux_I-Ux_I(1)) &
-            +  Uy_I(1)*(Uy_I-Uy_I(1)) &
-            +  Uz_I(1)*(Uz_I-Uz_I(1)))*I1xp_I
+       QmpxUz_I(Neu_) = (Uz_I(Neu_) - Uz_I(1))*Rate_I(Neu_)
+       QmpxUz_I(Ne2_) = (Uz_I(Ne2_) - Uz_I(1))*Rate_I(Ne2_)
+       QmpxUz_I(Ne3_) = (Uz_I(Ne3_) - Uz_I(1))*Rate_I(Ne3_)
+       QmpxUz_I(Ne4_) = (Uz_I(Ne4_) - Uz_I(1))*Rate_I(Ne4_)
 
-       Kpx_I = 0.5*U2_I*Rate_I  + (3./4.)*I2px_I   &
-            + (Ux_I*(Ux_I(1)-Ux_I) &
-            +  Uy_I*(Uy_I(1)-Uy_I) &
-            +  Uz_I*(Uz_I(1)-Uz_I))*I1px_I 
+       Kxp_I = 0.5*U2_I(1)*Rate_I  + I2xp_I   
+           
+       Kpx_I = 0.5*U2_I*Rate_I  + I2px_I   
 
        Qepx_I = Kpx_I - Kxp_I
 
@@ -1147,7 +1246,7 @@ contains
 
       Source_V = 0.0
 
-      do iFluid = NeU_, Ne4_
+      do iFluid = Neu_, Ne4_
          if(.not.UseSource_I(iFluid)) CYCLE
          call select_fluid
          if (iFluid == iFluidProduced_C(i,j,k)) then
@@ -1171,9 +1270,16 @@ contains
       end do
 
       if(UseSource_I(Ion_))then
-         Source_V(RhoUx_) = sum( QmpxUx_I(Neu_:Ne4_) )
-         Source_V(RhoUy_) = sum( QmpxUy_I(Neu_:Ne4_) )
-         Source_V(RhoUz_) = sum( QmpxUz_I(Neu_:Ne4_) )
+         !!Source_V(RhoUx_) = sum( QmpxUx_I(Neu_:Ne4_) )
+         !!Source_V(RhoUy_) = sum( QmpxUy_I(Neu_:Ne4_) )
+         !!Source_V(RhoUz_) = sum( QmpxUz_I(Neu_:Ne4_) )
+         Source_V(RhoUx_) = QmpxUx_I(Neu_) + QmpxUx_I(Ne2_) &
+                            + QmpxUx_I(Ne3_) + QmpxUx_I(Ne4_)
+         Source_V(RhoUy_) = QmpxUy_I(Neu_) + QmpxUy_I(Ne2_) &
+                            + QmpxUy_I(Ne3_) + QmpxUy_I(Ne4_)
+         Source_V(RhoUz_) = QmpxUz_I(Neu_) + QmpxUz_I(Ne2_) &
+                            + QmpxUz_I(Ne3_) + QmpxUz_I(Ne4_)
+
          Source_V(Energy_)= sum( Qepx_I(Neu_:Ne4_) )
 
          Source_V(p_) = (g-1)* ( Source_V(Energy_) &
@@ -1181,13 +1287,7 @@ contains
               - Uy_I(Ion_)*Source_V(RhoUy_) &
               - Uz_I(Ion_)*Source_V(RhoUz_) ) 
       end if
-     
-      !merav 
-      ! if (x_BLK(i,j,k,iBlock) < -900) then
-      !  Source_V(iEnergy) = 0 
-      !  Source_V(Energy_) = 0
-     !  end if
-
+    
       Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Source_V
 
       if(DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest)then
@@ -1200,13 +1300,14 @@ contains
          end do
          write(*,*) ' Temp_I    ', Temp_I
          write(*,*) ' Rate_I    ', Rate_I
+         write(*,*) ' Sigma_I   ', Sigma_I
          write(*,*) ' UStar_I   ', UStar_I
+         write(*,*) ' UStarM_I  ', UStarM_I
+         write(*,*) ' Ux_I      ', Ux_I
          write(*,*) ' U2_I      ', U2_I
          write(*,*) ' UTh_I     ', sqrt(UThS_I)
          write(*,*) ' URelDim_I ', sqrt(URelSdim_I)
          write(*,*) ' uDim_I    ', sqrt(U2_I)*No2Io_V(UnitU_)
-         write(*,*) ' I1xp_I    ', I1xp_I
-         write(*,*) ' I1px_I    ', I1px_I
          write(*,*) ' I2xp_I    ', I2xp_I
          write(*,*) ' I2px_I    ', I2px_I
          write(*,*) ' JxpUx_I   ', JxpUx_I
@@ -1244,7 +1345,8 @@ contains
     integer, intent(in):: iBlock
 
     integer :: i, j, k
-    real    :: InvRho, U2, p, Mach2, TempDim, U2Dim
+    real    :: InvRho, U2, p, Mach2, TempDim, U2Dim, B2, rho, MachAlfven2
+    real    :: MachMagneto2
     !------------------------------------------------------------------------
 
     ! Produce fluid3 at the inner boundary
@@ -1260,17 +1362,26 @@ contains
        p      = State_VGB(p_,i,j,k,iBlock)
        U2     = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)*InvRho**2
        U2Dim  = U2*No2Io_V(UnitU_)**2
-       
+      
+!merav modifications
+       rho = State_VGB(rho_,i,j,k,iBlock)
+       B2 = sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)        
+
+       ! Square of Alfven Mach Number
+       MachAlfven2 = U2*rho/(B2+1.E-30)
+       MachMagneto2 = U2/((1.E-10)+(g*p*InvRho)+(B2*InvRho))
+
+!end of merav modifications
        ! Square of Mach number
        Mach2      = U2/(g*p*InvRho)
 
        ! Temperature in Kelvins
        TempDim = InvRho*p*No2Si_V(UnitTemperature_)
 
-! For intense B=4.735microG; MachPop4Limit=10. so PopIV is destroyed.
-
        ! Apply full source except near the boundaries between regions
-       if (MachPop4Limit**2 < Mach2 .and. uPop1LimitDim**2 > U2Dim) then
+!!!october11       if (MachPop4Limit**2 < Mach2 .and. uPop1LimitDim**2 > U2Dim) then
+          if (MachPop4Limit**2 < MachMagneto2 .and. uPop1LimitDim**2 > U2Dim) then
+!!!       if (MachPop4Limit**2 < MachAlfven2 .and. uPop1LimitDim**2 > U2Dim .and. MachPop3Limit**2 < Mach2) then
          !Outside the bow shock
          iFluidProduced_C(i,j,k) = Ne4_
        elseif( TempPop1LimitDim > TempDim .and. uPop1LimitDim**2 > U2Dim)then
