@@ -32,14 +32,14 @@ module ModMpi
   !EOP
   !BOC
   use ModMpiInterfaces
-  use ModMpiConstants, &
-       MPI_REAL_ORIG => MPI_REAL, MPI_COMPLEX_ORIG => MPI_COMPLEX
-
-  integer, parameter :: MPI_REAL = &
-       iRealPrec*MPI_DOUBLE_PRECISION + (1-iRealPrec)*MPI_REAL_ORIG
-
-  integer, parameter :: MPI_COMPLEX = &
-       iRealPrec*MPI_DOUBLE_PRECISION + (1-iRealPrec)*MPI_COMPLEX_ORIG
+  use ModMpiConstants !, &
+!       MPI_REAL_ORIG => MPI_REAL, MPI_COMPLEX_ORIG => MPI_COMPLEX
+!
+!  integer, parameter :: MPI_REAL = &
+!       iRealPrec*MPI_DOUBLE_PRECISION + (1-iRealPrec)*MPI_REAL_ORIG
+!
+!  integer, parameter :: MPI_COMPLEX = &
+!       iRealPrec*MPI_DOUBLE_COMPLEX + (1-iRealPrec)*MPI_COMPLEX_ORIG
 
   !EOC
 end module ModMpi
