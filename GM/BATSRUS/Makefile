@@ -111,7 +111,7 @@ SNAPSHOT:
 	cd ${SHAREDIR}; make LIB
 	cd srcPostProc; make SNAPSHOT
 	@echo ' '
-	@echo Program select_snapshot has been brought up to date.
+	@echo Program SNAPSHOT has been brought up to date.
 	@echo ' '
 
 EARTH_TRAJ:
