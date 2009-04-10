@@ -79,9 +79,6 @@ hyades2d_1.1ns.out	NameHyadesFile
 
 #USERINPUTEND    ----------------------
 
-#MESSAGEPASS
-opt			TypeMessagePass
-
 #SEMIIMPLICIT
 T                       UseSemiImplicit
 radiation               TypeSemiImplicit
