@@ -221,7 +221,7 @@ contains
     do
        StringTmp = adjustl(StringTmp)       ! Remove leading spaces
        i = index(StringTmp,StringSep)       ! Find end of first part
-       if(i < 1) RETURN                    ! Nothing before the separator
+       if(i <= 1) RETURN                    ! No separator or nothing before it
 
        nString = nString +1                 ! Count parts
 
