@@ -27,6 +27,8 @@
 ;
 ; Functions for
 ;
+; calculating first and second derivative in 1D
+;    diff1,laplace1
 ; calculating derivatives in 2D for Cartesian grids to 2nd,3rd,4th order
 ;    diff2,diff3,diff4
 ; calculate minmod limited slope
@@ -1941,6 +1943,78 @@ info=strtrim(headline,2)
 if ninfo gt 1 then info=info+' (nx='+string(nx,format='(i6,2(i4))')+')'
 xyouts,5+(ix*!d.x_size)/multix,-12+((iy+1)*!d.y_size)/multiy,/DEV,info
 
+end
+;===========================================================================
+function diff1,a,x
+;
+; Take derivative of "a" with respect to "x" (if present)
+; using 2nd order centered differencing
+;
+;===========================================================================
+on_error,2
+
+siz=size(a)
+ndim=siz(0)
+if ndim ne 1 then begin
+   print,'Function diff1 is intended for 1D arrays only'
+   retall
+endif
+
+n  = n_elements(a)
+nx = n_elements(x)
+
+if nx ne 0 and nx ne n then begin
+   print,'Error in diff1, arrays sizes differ: nx, n=', nx, n
+   retall
+endif
+
+dadx = a
+
+if nx eq 0 then dadx(1:n-2) = (a(2:n-1) - a(0:n-3))/2 $
+else            dadx(1:n-2) = (a(2:n-1) - a(0:n-3))/(x(2:n-1) - x(0:n-3))
+
+; fill in boundaries
+dadx(0)   = dadx(1)
+dadx(n-1) = dadx(n-2)
+
+return,dadx
+end
+;===========================================================================
+function laplace1,a,x
+;
+; Take Laplace of "a" with respect to "x" (if present).
+;
+;===========================================================================
+on_error,2
+
+siz=size(a)
+ndim=siz(0)
+if ndim ne 1 then begin
+   print,'Function laplace1 is intended for 1D arrays only'
+   retall
+endif
+
+n  = n_elements(a)
+nx = n_elements(x)
+
+if nx ne 0 and nx ne n then begin
+   print,'Error in diff1, arrays sizes differ: nx, n=', nx, n
+   retall
+endif
+
+d2adx2 = a
+
+if nx eq 0 then d2adx2(1:n-2) = a(2:n-1) - 2*a(1:n-2) + a(0:n-3) $
+else            d2adx2(1:n-2) = $
+  ( (a(2:n-1) - a(1:n-2))/(x(2:n-1) - x(1:n-2)) $
+  - (a(1:n-2) - a(0:n-3))/(x(1:n-2) - x(0:n-3)) ) $
+  / (0.5*(x(2:n-1) - x(0:n-3)))
+
+; fill in boundaries
+d2adx2(0)   = d2adx2(1)
+d2adx2(n-1) = d2adx2(n-2)
+
+return,d2adx2
 end
 ;===========================================================================
 function diff2,direction,a,x
