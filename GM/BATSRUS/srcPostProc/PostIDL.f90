@@ -154,8 +154,8 @@ program PostIDL
 4 continue
   write(*,*)'TypeFile=', TypeFile
 
-  ! Unstructured grid has dx=-1.
-  structured = dxyz(1) > -0.9
+  ! Unstructured grid has negative dx
+  structured = dxyz(1) >= 0.0
 
   ! If dx<=0. use the smallest cell as resolution
   if(dxyz(1)<1.e-6)dxyz=dxyzmin
