@@ -26,6 +26,7 @@ pro set_device, psfile, land=land, port=port, eps=eps, psfont=psfont, $
     xoff = (8.5-xs)/2.0
     yoff = (11.0-ys)/2.0
   endelse
+  land=0
 
   set_plot, 'PS', /copy, /interpolate
 
