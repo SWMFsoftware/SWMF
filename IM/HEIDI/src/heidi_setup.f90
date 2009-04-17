@@ -41,6 +41,7 @@ SUBROUTINE heidi_read
   !real :: tmax
   integer :: k,i
   character*1 header
+
   !--------------------------------------------------------------------------
   
   call read_file('PARAM.in', iComm)
