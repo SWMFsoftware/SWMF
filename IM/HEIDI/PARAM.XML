@@ -1,0 +1,434 @@
+<!-- The syntax is described by share/Scripts/CheckParam.pl and the manual -->
+
+<commandList name="Hot Electron Ion Drift Integrator: IM Component">
+
+<commandgroup name="Testing">
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!! INITIAL TIME AND STEP !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+<command name="STARTTIME" alias="SETREALTIME" 
+				if="$_IsFirstSession and $_IsStandAlone">
+	<parameter name="iYear"   type="integer"                  default="2002" />
+	<parameter name="iMonth"  type="integer" min="1" max="12" default="4"/>
+	<parameter name="iDay"    type="integer" min="1" max="31" default="17"/>
+	<parameter name="iHour"   type="integer" min="0" max="23" default="0"/>
+	<parameter name="iMinute" type="integer" min="0" max="59" default="0"/>
+	<parameter name="iSecond" type="integer" min="0" max="59" default="0"/>
+#STARTTIME
+2002                    iYear
+4                       iMonth
+17                      iDay
+0                       iHour
+0                       iMinute
+0                       iSecond
+
+The #STARTTIME command sets the initial date and time for the
+simulation in Greenwich Mean Time (GMT) or Universal Time (UT)
+in stand alone mode. 
+In the SWMF this command checks start times against the SWMF start time 
+and warns if the difference exceeds 1 millisecond.
+This time is stored in the BATSRUS restart header file.
+
+The default values are shown above. To be used only in standalone mode within the IM domain.
+
+</command>
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+<command name="TIMESIMULATION" if="$_IsFirstSession">
+	<parameter name="tSimulation" type="real" min="0" default="0.0" />
+
+#TIMESIMULATION
+3600.0			tSimulation [sec]
+
+The tSimulation variable contains the simulation time in seconds
+relative to the initial time set by the #STARTTIME command.
+
+In SWMF the command is ignored (SWMF has its own #TIMESIMULATION command).
+In stand alone mode tSimulation is set.
+
+The default value is tSimulation=0.
+</command>
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+<command name="TIMESTEP">
+	<parameter name="TimeStep" type="real" default="20" min="1"/>
+	
+#TIMESTEP
+20.                     TimeStep [sec] 
+
+TimeStep should be multiple of 2, since HEIDI uses Time Splitting scheme.
+The default value of the time step is dt = 20.
+</command>
+
+<command name="GRID" >
+	<parameter name="nRadialGrid"     type="integer" min="1" default="20"/>
+	<parameter name="nPhiGrid"        type="integer" min="1" default="24"/>
+	<parameter name="nEnergyGrid"     type="integer" min="1" default="42"/>
+	<parameter name="nPitchGrid"      type="integer" min="1" default="71"/>
+	<parameter name="nPointFieldLine" type="integer" min="1" default="24"/>
+
+#GRID
+20			nRadialGrid
+24			nPhiGrid
+42			nEnergyGrid
+71  			nPitchGrid
+24			nPointFieldLine
+
+The #GRID command allows to set the grid resolution
+The Resolution parameter refers to the number of grid points within the domain.
+nRadialGrid     = number of radial grid points
+nPhiGrid        = number of azimuthal grid points
+nEnergyGrid     = number of energy grid points
+nPitchGrid      = number of pitch angle grid points
+nPointFieldLine = number of grid points along the magnetic field line
+</command>
+
+<command name="STORM" >
+	<parameter name="TypeStorm" type="string" input="select">
+		<option name="major"    default="T"/>
+		<option name="moderate" default="F"/>
+		<option name="test"     default="F"/>
+	</parameter>
+
+#STORM
+major			TypeStorm
+
+The TypeStorm parameter allows to set the storm: major, moderate, test.
+
+</command>
+
+<command name="INNERBOUNDARY" >
+	<parameter name="Height" type="real" min="0" default="1e6" />
+
+
+#INNERBOUNDARY
+1e6			Height [m]
+
+The Height parameter sets the altitude of the ionosphere-plasmashere boundary.
+
+
+</command>
+
+<command name="ENERGYSETUP" >
+	<parameter name="EnergyLowerBoundary" type="real" />
+	<parameter name="LowestEnergyCellWidth" type="real" />
+	<parameter name="GrowthMultiplier"  type="real" />
+
+#ENERGYSETUP
+0.1			EnergyLowerBoundary[keV]
+0.006			LowestEnergyCellWidth [keV]
+1.26			rw
+
+The #ENERGYSETUP command allows to set the lower energy boundary (EnergyLowerBoundary), the growth multiplier (GrowthMultiplier) of energy cell width ( WE(k+1)=WE(k)*rw), and the width of the lowest energy cell (LowestEnergyCellWidth).
+
+
+</command>
+
+<command name="SPECIES" >
+	<parameter name="UseElectron"            type="logical" default="T"/>
+	<parameter name="UseHPlus"               type="logical" default="T"/>	
+	<parameter name="UseHePlus"              type="logical" default="T"/>	
+	<parameter name="UseOPlus"               type="logical" default="T"/>	
+	<parameter name="UseIon"                 type="logical" default="T" />
+	<parameter name="UsePhotoelElectron"     type="logical" default="F" />
+	<parameter name="UsePlasmaSheetElectron" type="logical" default="F" />
+
+#SPECIES
+T 			UseElectron	
+T			UseHPlus
+T			UseHePlus
+T			UseOPlus
+T			UseIon
+F			UsePhotoelElectron
+F			UsePlasmaSheetElectron
+
+
+The #SPECIES command allows to set which species to be included into the simulation. PhotoelElectron and PlasmaSheetElectron allow extra calculation for photo-electrons and plasma sheet electrons runs. 
+</command>
+
+<command name="INDICES" >
+	<parameter name="WhichKp"         type="integer" />
+	<parameter name="kp"              type="real" />
+	<parameter name="ApIndex"         type="real" />
+	<parameter name="SunspotAverage"  type="real" />
+
+#INDICES
+1 			WhichKp
+0			Kp
+15			ApIndex
+154			SunspotAverage
+
+The #KpINDEX command allows to set the Kp Index. 
+iKp =0 for Kp constant.
+iKP =1 for Kp-DKP.
+iKP =2 for Kp read from a table.
+iKP =3 for A = 0.
+iKP =4 Kp read from a file.
+Or just set Kp to some value.
+ApIndex is the ApIndex index and SunspotAverage indicates the 13 month sunspot average.
+
+</command>
+
+<command name="BOUNDARY" >
+	<parameter name="BCElectron" type="integer"    default="0"/>
+	<parameter name="BCHPlus"    type="integer"    default="0"/>
+	<parameter name="BCHePlus"   type="integer"    default="0"/>
+	<parameter name="BCOPlus"    type="integer"    default="0"/>
+	
+#BOUNDARY
+0			BCElectron
+0			BCHPlus	
+0 			BCHePlus
+0			BCOPlus
+
+The #BOUNDARY command indicates which boundary conditions to use (to match to initial boundary conditions)
+1 = Maxwellian distribution 
+2 = Read FI and NI from file
+3 = Read FI and NI from file
+4 = Quiet ring current, constant with SunspotAverage, phi and pitch angle.
+5 = Read FI from file
+6 = Nightside injection
+7 = Read from .unff file. Use to reastart. No SOPA data.
+9 = Injection everywhere
+
+</command>
+
+<command name="INITIAL" >
+	<parameter name="InitialElectron" type="integer"  default="0" />
+	<parameter name="InitialHPlus"    type="integer"  default="0"/>
+	<parameter name="InitialHePlus"   type="integer"  default="0" />
+	<parameter name="InitialOPlus"    type="integer"  default="0" />
+	<parameter name="MaxwellianScallingFactor" type="real" />
+	<parameter name="CharacteristicEnergy" type="real" />
+	
+#INITIAL
+0			InitialElectron
+0			InitialHPlus
+0 			InitialHePlus
+0			InitialOPlus
+0.0			MaxwellianScallingFactor
+0.03			CharacteristicEnergy
+
+The #INITIAL command indicates which initial conditions to use (to match to initial boundary conditions)for each species. 
+1 = Loss Cone Distribution. Maxwellian distribution 
+2 = Gaussian distribution in azimuth (phi) and SunspotAverage about some location. 
+3 = Read distribution function from input file.
+4 = Quiet ring current, constant with SunspotAverage, phi and pitch angle.
+5 = Read distribution function from file (restart.bcf).
+6 = Nightside plasma sheet injection.
+7 = Read from .unff file. Use to reastart.
+
+MaxwellianScallingFactor is the scalling factor for Maxwellian initial distribution. CharacteristicEnergy is the characteristic energy for Initial*=1 (keV)
+
+
+</command>
+
+<command name="OUTPUT" >
+	<parameter name="DoSaveDistributionFunctionEverywhere" type="logical"  default="T"/>
+	<parameter name="DoSaveEquatorialDistributionFunction" type="logical"  default="F"/>	
+	<parameter name="DoSaveEnergyDeposition"               type="logical"  default="T"/>	
+	<parameter name="DoSaveTotalPrecipitationFlux"         type="logical"  default="F"/>
+	<parameter name="DoSaveDifferentialPrecipitationFlux"  type="logical"  default="F"/>
+	<parameter name="DoSaveParticleEnergyLosses"           type="logical"  default="F"/>
+	<parameter name="DoSaveThermalPlasmaDensity"           type="logical"  default="T"/>
+	<parameter name="DoSaveCflForAdvection"                type="logical"  default="F"/>
+	<parameter name="DoSaveDriftVelocities"                type="logical"  default="T"/>
+	<parameter name="DoSaveEvsLDistributions"              type="logical"  default="F"/>
+	<parameter name="DoSaveParticleLifetimes"              type="logical"  default="F"/>
+	<parameter name="DoSavePressureDensityDst"             type="logical"  default="T"/>
+	<parameter name="DoSaveUnformatted"                    type="logical"  default="T"/>
+	<parameter name="DoSaveContinuousSourcesLosses"        type="logical"  default="T"/>
+	<parameter name="DoSaveNightsideBCDistribution"        type="logical"  default="T"/>
+	<parameter name="DoSaveDifferentialNumberFlux"     type="logical"  default="F"/>
+		
+
+#OUTPUT
+T			DoSaveDistributionFunctionEverywhere	
+F			DoSaveEquatorialDistributionFunction
+T			DoSaveEnergyDeposition
+F			DoSaveTotalPrecipitationFlux
+F			DoSaveDifferentialPrecipitationFlux	
+F			DoSaveParticleEnergyLosses
+T			DoSaveThermalPlasmaDensity
+F			DoSaveCflForAdvection
+T			DoSaveDriftVelocities
+F			DoSaveEvsLDistributions
+F			DoSaveParticleLifetimes
+T			DoSavePressureDensityDst
+T			DoSaveUnformatted
+T			DoSaveContinuousSourcesLosses
+T			DoSaveNightsideBCDistribution
+F			DoSaveDifferentialNumberFlux
+
+
+The #OUTPUT command indicates the output options flag arrays:
+DoSaveDistributionFunctionEverywhere = F throughout magnetosphere
+DoSaveEquatorialDistributionFunction = Equ. trapped F throughout magnetosphere
+DoSaveEnergyDeposition               = Flux tube energy deposition
+DoSaveTotalPrecipitationFlux	       = Total precipitation flux (3 E ranges)
+DoSaveDifferentialPrecipitationFlux  = Differential precipitation flux
+DoSaveParticleEnergyLosses	       = Particle and energy losses
+DoSaveThermalPlasmaDensity	       = Thermal plasma densities
+DoSaveCflForAdvection	               = CFL numbers for advection operators
+DoSaveDriftVelocities	               = Drift velocities for advection
+DoSaveEvsLDistributions	       = E vs. L distributions at given MLT and PA
+DoSaveParticleLifetimes	       = Particle lifetimes
+DoSavePressureDensityDst	       = Pressures, densities, and Dst
+DoSaveUnformatted	               = Unformatted output of all Fs
+DoSaveContinuousSourcesLosses	       = Continuous sources and losses of number/energy
+DoSaveNightsideBCDistribution	       = Nightside boundary condition distribution
+Set DoSaveDifferentialNumberFlux to false to save the distribution function as opposed to the differential number flux.
+
+</command>
+
+<command name="OUTPUTINFO" >
+	<parameter name="NameRun" type="string" length="10" />
+	<parameter name="nFrequency" type="real" />
+		
+#OUTPUTINFO
+99266			NameRun
+1800.			nFrequency [sec]
+
+
+The #OUTPUTFREQUENCY indicates the time interval between printouts. 
+NameRun sets the prefix of the output files.
+oFrequency represents the frequency the output is saved.
+
+</command>
+
+<command name="INJECTIONFREQUENCY" >
+	<parameter name="iFrequency" type="real" />
+		
+#INJECTIONFREQUENCY
+120.			iFrequency [sec]
+
+
+The #INJECTIONFREQUENCY indicates the time interval between injection BC updates (inject if greater than 0)
+
+
+</command>
+
+<command name="CONVECTION" >
+	<parameter name="IsNoConvection"                 type="logical"  default="F"/>
+	<parameter name="IsKpVSMaynardChen"              type="logical"  default="F"/>	
+	<parameter name="IsMBIVS"                        type="logical"  default="F"/>	
+	<parameter name="IsMcIlwain"                     type="logical"  default="F"/>
+	<parameter name="IsMcIlwainPlusCPCP"             type="logical"  default="F"/>
+	<parameter name="IsKpVSPlusBurkeWygant"          type="logical"  default="F"/>
+	<parameter name="IsMcIlwainPlusBurkeWygant"      type="logical"  default="F"/>
+	<parameter name="IsMcIlwainCPCPBurkeWygant"      type="logical"  default="F"/>
+	<parameter name="IsKpVSSelfConsintent"           type="logical"  default="F"/>
+	<parameter name="IsMcIlwainSelfConsistent"       type="logical"  default="F"/>
+	<parameter name="IsMcIlwainCPCPSelfConsistent"   type="logical"  default="F"/>
+	<parameter name="IsUnshieldedVSwithPen"          type="logical"  default="F"/>
+	<parameter name="IsUnshieldedVSnoPen"            type="logical"  default="F"/>
+	<parameter name="IsW96SC"                        type="logical"  default="F"/>
+	<parameter name="IsW96"                          type="logical"  default="T"/>
+	<parameter name="IsAMIESC"                       type="logical"  default="F"/>
+	<parameter name="IsAMIE"                         type="logical"  default="F"/>
+	<parameter name="IsReadFromFile"                 type="logical"  default="F"/>
+	<parameter name="IsAMIEPot"                      type="logical"  default="F"/>
+	<parameter name="IsW96Pot"                       type="logical"  default="F"/>
+	<parameter name="IsFoster"                       type="logical"  default="F"/>
+	
+
+
+#CONVECTION
+F			IsNoConvection
+F			IsKpVSMaynardChen
+F			IsMBIVS    
+F			IsMcIlwain
+F			IsMcIlwainPlusCPCP
+F			IsKpVSPlusBurkeWygant
+F			IsMcIlwainPlusBurkeWygant
+F			IsMcIlwain(CPCP) field plus B-W penetration field
+F			IsKpVSSelfConsintent
+F			IsMcIlwainSelfConsistent
+F			IsMcIlwainCPCPSelfConsistent
+F			IsUnshieldedVSwithPen
+F			IsUnshieldedVSnoPen
+F			IsW96SC
+T			IsW96
+F			IsAMIESC
+F			IsAMIE
+F			IsReadFromFile
+F			IsAMIEPot
+F			IsW96Pot
+F			IsFoster
+
+The #CONVECTION indicates how the magnetospheric convection strength is calculated
+IsNoConvection               = No convection field
+IsKpVSMaynardChen            = Kp driven V-S with Maynard and Chen activity dependence
+IsMBIVS                      = MBI driven V-S, acitivity from force balance at dusk
+IsMcIlwain	           = McIlwain field
+IsMcIlwainPlusCPCP           = McIlwain field, Eo driven by Cross Polar Cap Potential
+IsKpVSPlusBurkeWygant        = Kp V-S field plus Burke-Wygant penetration field
+IsMcIlwainPlusBurkeWygant    = McIlwain field plus Burke-Wygant penetration field
+IsMcIlwainCPCPBurkeWygant    = McIlwain(CPCP) field plus B-W penetration field
+IsKpVSSelfConsintent         = Kp V-S field plus self-consistent penetration field
+IsMcIlwainSelfConsistent	   = McIlwain field plus self-consistent penetration field
+IsMcIlwainCPCPSelfConsistent = McIlwain(CPCP) field plus S-C penetration field
+IsUnshieldedVSwithPen        = Unshielded V-S(CPCP) field plus penetration field
+IsUnshieldedVSnoPen	   = Unshielded VS(CPCP) field (no Epen)
+IsW96SC                      = W96 field plus S-C penetration field
+IsW96			   = W96 field everywhere (done in S-C field block)
+IsAMIESC			   = AMIE field plus S-C penetration field
+IsAMIE			   = AMIE field everywhere (done in S-C field block)
+IsReadFromFile               = Read in electric field from a file
+IsAMIEPot			   = AMIE potentials everywhere
+IsW96Pot			   = Weimer-96 potentials everywhere
+IsFoster			   = Foster potentials everywhere
+
+Note: Only one option can be set true.
+
+</command>
+
+<command name="INITIALTHERMALPLASMA" >
+	<parameter name="DoReadDGCPM" type="logical" default="T"/>	
+
+#INITIALTHERMALPLASMA
+F		 DoReadDGCPM	
+
+If DoReadDGCPM set to false, is the thermal plasma is initialized by using 48hr of low activity. Needs to be set to T for restart runs and the last _dgcpm file moved to _dgcpm.in.
+
+</command>
+
+<command name="SOLARWIND" >
+	<parameter name="DoReadSolarWind" type="logical" default="T"/>	
+
+#SOLARWIND
+T		 DoReadSolarWind
+
+</command>
+
+If set to 'True', read solar wind input file.
+
+<command name="PITCHANGLE" >
+	<parameter name="UseConstantStepPA" type="logical"  default="F"/>
+	
+
+#PITCHANGLE
+F 			UseConstantStepPA	
+
+Only one of the options can be true at the sam time. UseConstantStepPA sets constant steps in pitch angle.Set to false, uses exact loss cone points.
+
+</command>
+
+<command name="INCLUDEWAVES" >
+	<parameter name="UseWaves" type="logical" default="F"/>
+
+
+#INCLUDEWAVES
+F 			UseWaves
+
+Set to true if self-consistent wave-particle interactions are to be included.
+
+</command>
+
+</commandgroup>
+</commandList>
