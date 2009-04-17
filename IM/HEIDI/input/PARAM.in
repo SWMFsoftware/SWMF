@@ -1,101 +1,132 @@
 
-#VERBOSE
-100
-
-#ECHO
-T
-
-#PROGRESS
-1			DnShowProgressShort
-100			DnShowProgressLong
-
-#DESCRIPTION
-Test of IM-HEIDI
-
-#PLANET
-EARTH
-
-#SAVERESTART
-F
-
-#TIMEACCURATE
-T			DoTimeAccurate
-
 #STARTTIME
-2002			iYear
-4			iMonth
-17			iDay
-00			iHour
-00			iMinute
-00			iSecond
-0.0			FracSecond
+2002                    iYear
+4                       iMonth
+17                      iDay
+0                       iHour
+0                       iMinute
+0                       iSecond
 
-#IDEALAXES
-! align rotation and magnetic axes with z axis
 
-#COUPLE2
-IM			NameComp1
-IE			NameComp2
--1                      DnCouple
-40.0                    DtCouple
+#TIMESIMULATION
+120.0			tSimulation [sec]
 
-COUPLE2
-IE			NameComp1
-IM			NameComp2
--1                      DnCouple
-40.0                    DtCouple
+#TIMESTEP
+20.                     TimeStep [sec] 
 
-#COUPLETIME
-IM			NameComp
-F			DoCoupleOnTime
+#GRID
+20			nRadialGrid
+24			nPhiGrid
+42			nEnergyGrid
+71  			nPitchGrid
+24			nPointFieldLine
 
-#COUPLETIME
-IE			NameComp
-F			DoCoupleOnTime
 
-#BEGIN_COMP IM #############################################################
 
-blerg
+#STORM
+test			TypeStorm
 
-#END_COMP IM ###############################################################
 
-#BEGIN_COMP IE ---------------------------------------------------------------
+#INNERBOUNDARY
+1e6			Height [m]
+
+#ENERGYSETUP
+0.01			EnergyLowerBoundary[keV]
+0.006			LowestEnergyCellWidth [keV]
+1.26			rw
+
+#SPECIES
+F			UseElectron	
+T			UseHPlus
+F			UseHePlus
+T			UseOPlus
+T			UseIon
+F			UsePhotoelElectron
+F			UsePlasmaSheetElectron
+
+#INDICES
+4 			WhichKp
+3.0			Kp
+15.0			ApIndex
+154.0			SunspotAverage
+
+	
+#BOUNDARY
+0			BCElectron
+7			BCHPlus	
+0 			BCHePlus
+7			BCOPlus
+
+
+#INITIAL
+0			InitialElectron
+0			InitialHPlus
+0 			InitialHePlus
+0			InitialOPlus
+0.0			MaxwellianScallingFactor
+0.03			CharacteristicEnergy
+
+#OUTPUT
+T			DoSaveDistributionFunctionEverywhere	
+F			DoSaveEquatorialDistributionFunction
+T			DoSaveEnergyDeposition
+F			DoSaveTotalPrecipitationFlux
+F			DoSaveDifferentialPrecipitationFlux	
+F			DoSaveParticleEnergyLosses
+T			DoSaveThermalPlasmaDensity
+F			DoSaveCflForAdvection
+T			DoSaveDriftVelocities
+F			DoSaveEvsLDistributions
+F			DoSaveParticleLifetimes
+T			DoSavePressureDensityDst
+T			DoSaveUnformatted
+T			DoSaveContinuousSourcesLosses
+T			DoSaveNightsideBCDistribution
+F			DoSaveDifferentialNumberFlux
+
+
+#OUTPUTINFO
+test1			NameRun
+60.			nFrequency [sec]
+
+
+		
+#INJECTIONFREQUENCY
+120.			iFrequency [sec]
+
+
+
+#CONVECTION
+F			IsNoConvection
+F			IsKpVSMaynardChen
+F			IsMBIVS    
+F			IsMcIlwain
+F			IsMcIlwainPlusCPCP
+F			IsKpVSPlusBurkeWygant
+F			IsMcIlwainPlusBurkeWygant
+F			IsMcIlwain(CPCP) field plus B-W penetration field
+F			IsKpVSSelfConsintent
+F			IsMcIlwainSelfConsistent
+F			IsMcIlwainCPCPSelfConsistent
+F			IsUnshieldedVSwithPen
+F			IsUnshieldedVSnoPen
+F			IsW96SC
+T			IsW96
+F			IsAMIESC
+F			IsAMIE
+F			IsReadFromFile
+F			IsAMIEPot
+F			IsW96Pot
+F			IsFoster
+
+#INITIALTHERMALPLASMA
+F			DoReadDGCPM	
 
 #SOLARWIND
-0.0
-0.0
--10.0
-400.0
+T		        DoReadSolarWind
 
-#HPI
-20.0
+#PITCHANGLE
+F 			UseConstantStepPA	
 
-#SOLVE
-T
-70.0
-0.0
-F
-
-#IONOSPHERE
-5                       iConductanceModel
-150.0                   F10.7 Flux
-5.0                     StarLightPedConductance
-0.25                    PolarCapPedConductance
-
-#SAVEPLOT
-1			nPlotFile
-aur idl                 StringPlot
-1                       DnSavePlot
--1.0			DtSavePlot
-
-#DEBUG
-10
-0
-
-#END_COMP IE -----------------------------------------------------------------
-
-#STOP
--1			MaxIteration
-1800.0			tSimulationMax
-
-#END
+#INCLUDEWAVES
+F 			UseWaves
