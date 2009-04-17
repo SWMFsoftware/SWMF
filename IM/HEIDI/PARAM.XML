@@ -81,11 +81,13 @@ The default value of the time step is dt = 20.
 
 The #GRID command allows to set the grid resolution
 The Resolution parameter refers to the number of grid points within the domain.
-nRadialGrid     = number of radial grid points
-nPhiGrid        = number of azimuthal grid points
-nEnergyGrid     = number of energy grid points
-nPitchGrid      = number of pitch angle grid points
-nPointFieldLine = number of grid points along the magnetic field line
+\begin{verbatim}
+nRadialGrid     - number of radial grid points
+nPhiGrid        - number of azimuthal grid points
+nEnergyGrid     - number of energy grid points
+nPitchGrid      - number of pitch angle grid points
+nPointFieldLine - number of grid points along the magnetic field line
+\end{verbatim}
 </command>
 
 <command name="STORM" >
@@ -164,64 +166,75 @@ The #SPECIES command allows to set which species to be included into the simulat
 154			SunspotAverage
 
 The #KpINDEX command allows to set the Kp Index. 
-iKp =0 for Kp constant.
-iKP =1 for Kp-DKP.
-iKP =2 for Kp read from a table.
-iKP =3 for A = 0.
-iKP =4 Kp read from a file.
+\begin{verbatim}
+iKp = 0 for Kp constant.
+iKP = 1 for Kp-DKP.
+iKP = 2 for Kp read from a table.
+iKP = 3 for A = 0.
+iKP = 4 Kp read from a file.
+\end{verbatim}
 Or just set Kp to some value.
 ApIndex is the ApIndex index and SunspotAverage indicates the 13 month sunspot average.
 
 </command>
 
 <command name="BOUNDARY" >
-	<parameter name="BCElectron" type="integer"    default="0"/>
-	<parameter name="BCHPlus"    type="integer"    default="0"/>
-	<parameter name="BCHePlus"   type="integer"    default="0"/>
-	<parameter name="BCOPlus"    type="integer"    default="0"/>
+	<parameter name="TypeBoundary" type="string" input="select" case="lower">
+		<option name="none"                          value="0/none"  />		
+		<option name="Maxwellian"                    value="1/Maxwellian"  />
+		<option name="Gaussian"                      value="2/Gaussian"  />
+		<option name="FromInputFile"                 value="3/FromInputFile"  />
+		<option name="QuietRC"                       value="4/QuietRC"  />
+		<option name="FromFile"                      value="5/FromFile"  />
+		<option name="PSInject"                      value="6/PSInject"  />
+		<option name="FromRestart"                   value="7/FromRestart"  />
+	</parameter>	
 	
 #BOUNDARY
-0			BCElectron
-0			BCHPlus	
-0 			BCHePlus
-0			BCOPlus
+0		TypeBoundary
 
 The #BOUNDARY command indicates which boundary conditions to use (to match to initial boundary conditions)
-1 = Maxwellian distribution 
-2 = Read FI and NI from file
-3 = Read FI and NI from file
-4 = Quiet ring current, constant with SunspotAverage, phi and pitch angle.
-5 = Read FI from file
-6 = Nightside injection
-7 = Read from .unff file. Use to reastart. No SOPA data.
-9 = Injection everywhere
-
+\begin{verbatim}
+0 - Initialized to zero everywhere
+1 - Maxwellian distribution 
+2 - Read FI and NI from file
+3 - Read FI and NI from file
+4 - Quiet ring current, constant with SunspotAverage, phi and pitch angle.
+5 - Read FI from file
+6 - Nightside injection
+7 - Read from .unff file. Use to reastart. No SOPA data.
+9 - Injection everywhere
+\end{verbatim}
 </command>
 
 <command name="INITIAL" >
-	<parameter name="InitialElectron" type="integer"  default="0" />
-	<parameter name="InitialHPlus"    type="integer"  default="0"/>
-	<parameter name="InitialHePlus"   type="integer"  default="0" />
-	<parameter name="InitialOPlus"    type="integer"  default="0" />
-	<parameter name="MaxwellianScallingFactor" type="real" />
-	<parameter name="CharacteristicEnergy" type="real" />
+	<parameter name="TypeInitial" type="string" input="select" case="lower">
+		<option name="none"                          value="0/none"  />		
+		<option name="Maxwellian"                    value="1/Maxwellian"  />
+		<option name="Gaussian"                      value="2/Gaussian"  />
+		<option name="FromInputFile"                 value="3/FromInputFile"  />
+		<option name="QuietRC"                       value="4/QuietRC"  />
+		<option name="FromFile"                      value="5/FromFile"  />
+		<option name="PSInject"                      value="6/PSInject"  />
+		<option name="FromRestart"                   value="7/FromRestart"  />
+	</parameter>
 	
 #INITIAL
-0			InitialElectron
-0			InitialHPlus
-0 			InitialHePlus
-0			InitialOPlus
+0			TypeInitial
 0.0			MaxwellianScallingFactor
 0.03			CharacteristicEnergy
 
-The #INITIAL command indicates which initial conditions to use (to match to initial boundary conditions)for each species. 
-1 = Loss Cone Distribution. Maxwellian distribution 
-2 = Gaussian distribution in azimuth (phi) and SunspotAverage about some location. 
-3 = Read distribution function from input file.
-4 = Quiet ring current, constant with SunspotAverage, phi and pitch angle.
-5 = Read distribution function from file (restart.bcf).
-6 = Nightside plasma sheet injection.
-7 = Read from .unff file. Use to reastart.
+The TypeInitial parameter indicates which initial conditions to use (to match to initial boundary conditions)for each species. 
+\begin{verbatim}
+0 - Initialized to zero everywhere
+1 - Loss Cone Distribution. Maxwellian distribution 
+2 - Gaussian distribution in azimuth (phi) and SunspotAverage about some location. 
+3 - Read distribution function from input file.
+4 - Quiet ring current, constant with SunspotAverage, phi and pitch angle.
+5 - Read distribution function from file (restart.bcf).
+6 - Nightside plasma sheet injection.
+7 - Read from .unff file. Use to reastart.
+\end{verbatim}
 
 MaxwellianScallingFactor is the scalling factor for Maxwellian initial distribution. CharacteristicEnergy is the characteristic energy for Initial*=1 (keV)
 
@@ -267,23 +280,25 @@ F			DoSaveDifferentialNumberFlux
 
 
 The #OUTPUT command indicates the output options flag arrays:
-DoSaveDistributionFunctionEverywhere = F throughout magnetosphere
-DoSaveEquatorialDistributionFunction = Equ. trapped F throughout magnetosphere
-DoSaveEnergyDeposition               = Flux tube energy deposition
-DoSaveTotalPrecipitationFlux	       = Total precipitation flux (3 E ranges)
-DoSaveDifferentialPrecipitationFlux  = Differential precipitation flux
-DoSaveParticleEnergyLosses	       = Particle and energy losses
-DoSaveThermalPlasmaDensity	       = Thermal plasma densities
-DoSaveCflForAdvection	               = CFL numbers for advection operators
-DoSaveDriftVelocities	               = Drift velocities for advection
-DoSaveEvsLDistributions	       = E vs. L distributions at given MLT and PA
-DoSaveParticleLifetimes	       = Particle lifetimes
-DoSavePressureDensityDst	       = Pressures, densities, and Dst
-DoSaveUnformatted	               = Unformatted output of all Fs
-DoSaveContinuousSourcesLosses	       = Continuous sources and losses of number/energy
-DoSaveNightsideBCDistribution	       = Nightside boundary condition distribution
-Set DoSaveDifferentialNumberFlux to false to save the distribution function as opposed to the differential number flux.
+\begin{verbatim}
+DoSaveDistributionFunctionEverywhere - F throughout magnetosphere
+DoSaveEquatorialDistributionFunction - Equ. trapped F throughout magnetosphere
+DoSaveEnergyDeposition               - Flux tube energy deposition
+DoSaveTotalPrecipitationFlux	     - Total precipitation flux (3 E ranges)
+DoSaveDifferentialPrecipitationFlux  - Differential precipitation flux
+DoSaveParticleEnergyLosses	     - Particle and energy losses
+DoSaveThermalPlasmaDensity	     - Thermal plasma densities
+DoSaveCflForAdvection	             - CFL numbers for advection operators
+DoSaveDriftVelocities	             - Drift velocities for advection
+DoSaveEvsLDistributions	             - E vs. L distributions at given MLT and PA
+DoSaveParticleLifetimes	             - Particle lifetimes
+DoSavePressureDensityDst	     - Pressures, densities, and Dst
+DoSaveUnformatted	             - Unformatted output of all Fs
+DoSaveContinuousSourcesLosses	     - Continuous sources and losses of number/energy
+DoSaveNightsideBCDistribution	     - Nightside boundary condition distribution
 
+Set DoSaveDifferentialNumberFlux to false to save the distribution function as opposed to the differential number flux.
+\end{verbatim}
 </command>
 
 <command name="OUTPUTINFO" >
@@ -314,77 +329,59 @@ The #INJECTIONFREQUENCY indicates the time interval between injection BC updates
 </command>
 
 <command name="CONVECTION" >
-	<parameter name="IsNoConvection"                 type="logical"  default="F"/>
-	<parameter name="IsKpVSMaynardChen"              type="logical"  default="F"/>	
-	<parameter name="IsMBIVS"                        type="logical"  default="F"/>	
-	<parameter name="IsMcIlwain"                     type="logical"  default="F"/>
-	<parameter name="IsMcIlwainPlusCPCP"             type="logical"  default="F"/>
-	<parameter name="IsKpVSPlusBurkeWygant"          type="logical"  default="F"/>
-	<parameter name="IsMcIlwainPlusBurkeWygant"      type="logical"  default="F"/>
-	<parameter name="IsMcIlwainCPCPBurkeWygant"      type="logical"  default="F"/>
-	<parameter name="IsKpVSSelfConsintent"           type="logical"  default="F"/>
-	<parameter name="IsMcIlwainSelfConsistent"       type="logical"  default="F"/>
-	<parameter name="IsMcIlwainCPCPSelfConsistent"   type="logical"  default="F"/>
-	<parameter name="IsUnshieldedVSwithPen"          type="logical"  default="F"/>
-	<parameter name="IsUnshieldedVSnoPen"            type="logical"  default="F"/>
-	<parameter name="IsW96SC"                        type="logical"  default="F"/>
-	<parameter name="IsW96"                          type="logical"  default="T"/>
-	<parameter name="IsAMIESC"                       type="logical"  default="F"/>
-	<parameter name="IsAMIE"                         type="logical"  default="F"/>
-	<parameter name="IsReadFromFile"                 type="logical"  default="F"/>
-	<parameter name="IsAMIEPot"                      type="logical"  default="F"/>
-	<parameter name="IsW96Pot"                       type="logical"  default="F"/>
-	<parameter name="IsFoster"                       type="logical"  default="F"/>
-	
+	<parameter name="TypeConvection" type="string" input="select" case="lower">
+		<option name="none"                         value="0/none"  />
+		<option name="KpVSMaynardChen"              value="1/kpmay"  />	
+		<option name="MBIVS"                        value="2/MBIVS "  />	
+		<option name="McIlwain"                     value="3/McIlwain "  />
+		<option name="McIlwainPlusCPCP"             value="4/McIlwainPlusCPCP "  />
+		<option name="KpVSPlusBurkeWygant"          value="5/KpVSPlusBurkeWygant "  />
+		<option name="McIlwainPlusBurkeWygant"      value="6/McIlwainPlusBurkeWygant "  />
+		<option name="McIlwainCPCPBurkeWygant"      value="7/McIlwainCPCPBurkeWygant "  />
+		<option name="KpVSSelfConsintent"           value="8/KpVSSelfConsintent "  />
+		<option name="McIlwainSelfConsistent"       value="9/McIlwainSelfConsistent "  />
+		<option name="McIlwainCPCPSelfConsistent"   value="10/McIlwainCPCPSelfConsistent "  />
+		<option name="UnshieldedVSwithPen"          value="11/UnshieldedVSwithPen "  />
+		<option name="UnshieldedVSnoPen"            value="12/UnshieldedVSnoPen "  />
+		<option name="W96SC"                        value="13/W96SC "  />
+		<option name="W96"                          value="14/W96 "  default="T" />
+		<option name="AMIESC"                       value="15/AMIESC "  />
+		<option name="AMIE"                         value="16/AMIE "  />
+		<option name="ReadFromFile"                 value="20/ReadFromFile "  />
+		<option name="AMIEPot"                      value="21/AMIEPot "  />
+		<option name="W96Pot"                       value="22/W96Pot "  />
+		<option name="Foster"                       value="23/ Foster"  />
+	</parameter>
 
 
 #CONVECTION
-F			IsNoConvection
-F			IsKpVSMaynardChen
-F			IsMBIVS    
-F			IsMcIlwain
-F			IsMcIlwainPlusCPCP
-F			IsKpVSPlusBurkeWygant
-F			IsMcIlwainPlusBurkeWygant
-F			IsMcIlwain(CPCP) field plus B-W penetration field
-F			IsKpVSSelfConsintent
-F			IsMcIlwainSelfConsistent
-F			IsMcIlwainCPCPSelfConsistent
-F			IsUnshieldedVSwithPen
-F			IsUnshieldedVSnoPen
-F			IsW96SC
-T			IsW96
-F			IsAMIESC
-F			IsAMIE
-F			IsReadFromFile
-F			IsAMIEPot
-F			IsW96Pot
-F			IsFoster
+w96			TypeConvection
 
-The #CONVECTION indicates how the magnetospheric convection strength is calculated
-IsNoConvection               = No convection field
-IsKpVSMaynardChen            = Kp driven V-S with Maynard and Chen activity dependence
-IsMBIVS                      = MBI driven V-S, acitivity from force balance at dusk
-IsMcIlwain	           = McIlwain field
-IsMcIlwainPlusCPCP           = McIlwain field, Eo driven by Cross Polar Cap Potential
-IsKpVSPlusBurkeWygant        = Kp V-S field plus Burke-Wygant penetration field
-IsMcIlwainPlusBurkeWygant    = McIlwain field plus Burke-Wygant penetration field
-IsMcIlwainCPCPBurkeWygant    = McIlwain(CPCP) field plus B-W penetration field
-IsKpVSSelfConsintent         = Kp V-S field plus self-consistent penetration field
-IsMcIlwainSelfConsistent	   = McIlwain field plus self-consistent penetration field
-IsMcIlwainCPCPSelfConsistent = McIlwain(CPCP) field plus S-C penetration field
-IsUnshieldedVSwithPen        = Unshielded V-S(CPCP) field plus penetration field
-IsUnshieldedVSnoPen	   = Unshielded VS(CPCP) field (no Epen)
-IsW96SC                      = W96 field plus S-C penetration field
-IsW96			   = W96 field everywhere (done in S-C field block)
-IsAMIESC			   = AMIE field plus S-C penetration field
-IsAMIE			   = AMIE field everywhere (done in S-C field block)
-IsReadFromFile               = Read in electric field from a file
-IsAMIEPot			   = AMIE potentials everywhere
-IsW96Pot			   = Weimer-96 potentials everywhere
-IsFoster			   = Foster potentials everywhere
-
-Note: Only one option can be set true.
+The TypeConvection parameter indicates how the magnetospheric convection strength is calculated.
+The default value is shown. Other possibilities are
+\begin{verbatim}
+NoConvection               - No convection field
+KpVSMaynardChen            - Kp driven V-S with Maynard and Chen activity dependence
+MBIVS                      - MBI driven V-S, acitivity from force balance at dusk
+McIlwain	           - McIlwain field
+McIlwainPlusCPCP           - McIlwain field, Eo driven by Cross Polar Cap Potential
+KpVSPlusBurkeWygant        - Kp V-S field plus Burke-Wygant penetration field
+McIlwainPlusBurkeWygant    - McIlwain field plus Burke-Wygant penetration field
+McIlwainCPCPBurkeWygant    - McIlwain(CPCP) field plus B-W penetration field
+KpVSSelfConsintent         - Kp V-S field plus self-consistent penetration field
+McIlwainSelfConsistent	   - McIlwain field plus self-consistent penetration field
+McIlwainCPCPSelfConsistent - McIlwain(CPCP) field plus S-C penetration field
+UnshieldedVSwithPen        - Unshielded V-S(CPCP) field plus penetration field
+UnshieldedVSnoPen	   - Unshielded VS(CPCP) field (no Epen)
+W96SC                      - W96 field plus S-C penetration field
+W96			   - W96 field everywhere (done in S-C field block)
+AMIESC			   - AMIE field plus S-C penetration field
+AMIE			   - AMIE field everywhere (done in S-C field block)
+ReadFromFile               - Read in electric field from a file
+AMIEPot			   - AMIE potentials everywhere
+W96Pot			   - Weimer-96 potentials everywhere
+Foster			   - Foster potentials everywhere
+\end{verbatim}
 
 </command>
 
