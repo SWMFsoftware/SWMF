@@ -48,15 +48,9 @@ module ModHeidiInput
   real :: ApIndex
   real :: SunspotAverage
   ! "#BOUNDARY"
-  integer :: BCElectron = 0
-  integer :: BCHPlus = 0
-  integer :: BCHePlus = 0
-  integer :: BCOPlus = 0
+  character(len=100) :: TypeBoundary
   ! "#INITIAL"
-  integer :: InitialElectron = 0
-  integer :: InitialHPlus = 0
-  integer :: InitialHePlus = 0
-  integer :: InitialOPlus = 0
+  character(len=100) :: TypeInitial
   real :: MaxwellianScallingFactor
   real :: CharacteristicEnergy
   ! "#OUTPUT"
@@ -82,27 +76,7 @@ module ModHeidiInput
   ! "#INJECTIONFREQUENCY"
   real :: iFrequency
   ! "#CONVECTION"
-  logical :: IsNoConvection = .false.
-  logical :: IsKpVSMaynardChen = .false.
-  logical :: IsMBIVS = .false.
-  logical :: IsMcIlwain = .false.
-  logical :: IsMcIlwainPlusCPCP = .false.
-  logical :: IsKpVSPlusBurkeWygant = .false.
-  logical :: IsMcIlwainPlusBurkeWygant = .false.
-  logical :: IsMcIlwainCPCPBurkeWygant = .false.
-  logical :: IsKpVSSelfConsintent = .false.
-  logical :: IsMcIlwainSelfConsistent = .false.
-  logical :: IsMcIlwainCPCPSelfConsistent = .false.
-  logical :: IsUnshieldedVSwithPen = .false.
-  logical :: IsUnshieldedVSnoPen = .false.
-  logical :: IsW96SC = .false.
-  logical :: IsW96 = .true.
-  logical :: IsAMIESC = .false.
-  logical :: IsAMIE = .false.
-  logical :: IsReadFromFile = .false.
-  logical :: IsAMIEPot = .false.
-  logical :: IsW96Pot = .false.
-  logical :: IsFoster = .false.
+  character(len=100) :: TypeConvection
   ! "#INITIALTHERMALPLASMA"
   logical :: DoReadDGCPM = .true.
   ! "#SOLARWIND"
@@ -178,15 +152,9 @@ contains
           call read_var('ApIndex', ApIndex)
           call read_var('SunspotAverage', SunspotAverage)
        case("#BOUNDARY")
-          call read_var('BCElectron', BCElectron)
-          call read_var('BCHPlus', BCHPlus)
-          call read_var('BCHePlus', BCHePlus)
-          call read_var('BCOPlus', BCOPlus)
+          call read_var('TypeBoundary', TypeBoundary)
        case("#INITIAL")
-          call read_var('InitialElectron', InitialElectron)
-          call read_var('InitialHPlus', InitialHPlus)
-          call read_var('InitialHePlus', InitialHePlus)
-          call read_var('InitialOPlus', InitialOPlus)
+          call read_var('TypeInitial', TypeInitial)
           call read_var('MaxwellianScallingFactor', MaxwellianScallingFactor)
           call read_var('CharacteristicEnergy', CharacteristicEnergy)
        case("#OUTPUT")
@@ -212,27 +180,7 @@ contains
        case("#INJECTIONFREQUENCY")
           call read_var('iFrequency', iFrequency)
        case("#CONVECTION")
-          call read_var('IsNoConvection', IsNoConvection)
-          call read_var('IsKpVSMaynardChen', IsKpVSMaynardChen)
-          call read_var('IsMBIVS', IsMBIVS)
-          call read_var('IsMcIlwain', IsMcIlwain)
-          call read_var('IsMcIlwainPlusCPCP', IsMcIlwainPlusCPCP)
-          call read_var('IsKpVSPlusBurkeWygant', IsKpVSPlusBurkeWygant)
-          call read_var('IsMcIlwainPlusBurkeWygant', IsMcIlwainPlusBurkeWygant)
-          call read_var('IsMcIlwainCPCPBurkeWygant', IsMcIlwainCPCPBurkeWygant)
-          call read_var('IsKpVSSelfConsintent', IsKpVSSelfConsintent)
-          call read_var('IsMcIlwainSelfConsistent', IsMcIlwainSelfConsistent)
-          call read_var('IsMcIlwainCPCPSelfConsistent', IsMcIlwainCPCPSelfConsistent)
-          call read_var('IsUnshieldedVSwithPen', IsUnshieldedVSwithPen)
-          call read_var('IsUnshieldedVSnoPen', IsUnshieldedVSnoPen)
-          call read_var('IsW96SC', IsW96SC)
-          call read_var('IsW96', IsW96)
-          call read_var('IsAMIESC', IsAMIESC)
-          call read_var('IsAMIE', IsAMIE)
-          call read_var('IsReadFromFile', IsReadFromFile)
-          call read_var('IsAMIEPot', IsAMIEPot)
-          call read_var('IsW96Pot', IsW96Pot)
-          call read_var('IsFoster', IsFoster)
+          call read_var('TypeConvection', TypeConvection)
        case("#INITIALTHERMALPLASMA")
           call read_var('DoReadDGCPM', DoReadDGCPM)
        case("#SOLARWIND")
@@ -324,28 +272,50 @@ contains
       
 
       !Set Convection 
-      if (IsNoConvection)               IA = 0
-      if (IsKpVSMaynardChen)            IA = 1 
-      if (IsMBIVS)                      IA = 2
-      if (IsMcIlwain)                   IA = 3
-      if (IsMcIlwainPlusCPCP )          IA = 4
-      if (IsKpVSPlusBurkeWygant)        IA = 5
-      if (IsMcIlwainPlusBurkeWygant)    IA = 6
-      if (IsMcIlwainCPCPBurkeWygant)    IA = 7
-      if (IsKpVSSelfConsintent)         IA = 8
-      if (IsMcIlwainSelfConsistent)     IA = 9
-      if (IsMcIlwainCPCPSelfConsistent) IA = 10
-      if (IsUnshieldedVSwithPen)        IA = 11
-      if (IsUnshieldedVSnoPen )         IA = 12
-      if (IsW96SC)                      IA = 13
-      if (IsW96)                        IA = 14
-      if (IsAMIESC)                     IA = 15
-      if (IsAMIE)                       IA = 16
-      if (IsReadFromFile)               IA = 20
-      if (IsAMIEPot)                    IA = 21
-      if (IsW96Pot)                     IA = 22
-      if (IsFoster)                     IA = 23
-      
+      select case(TypeConvection)
+      case('0',  'none')
+         iA = 0
+      case('1',  'KpVSMaynardChen')
+         IA = 1  
+      case ('2', 'MBIVS')
+         IA = 2
+      case ('3', 'McIlwain')
+         IA = 3
+      case ('4', 'McIlwainPlusCPCP')
+         IA = 4
+      case ('5','KpVSPlusBurkeWygant')
+         IA = 5
+      case ('6','McIlwainPlusBurkeWygant')
+         IA = 6
+      case ('7','McIlwainCPCPBurkeWygant')
+         IA = 7
+      case ('8','KpVSSelfConsintent')
+         IA = 8
+      case ('9','McIlwainSelfConsistent')
+         IA = 9
+      case ('10','McIlwainCPCPSelfConsistent')
+         IA = 10
+      case ('11','UnshieldedVSwithPen')
+         IA = 11
+      case ('12','UnshieldedVSnoPen')
+         IA = 12
+      case ('13','W96SC')
+         IA = 13
+      case ('14','W96')
+         IA = 14
+      case ('15','AMIESC')
+         IA = 15 
+      case ('16','AMIE')
+         IA = 16
+      case ('20','ReadFromFile')
+         IA = 20
+      case ('21','AMIEPot')
+         IA = 21
+      case ('22','W96Pot')
+         IA = 22
+      case ('23','Foster')
+         IA = 23
+      end select
       
       if (DoReadSolarWind)         isw  = 1
       if (UseWaves)                iwpi = 1
@@ -362,16 +332,78 @@ contains
       if (UseHePlus)            SCALC(3) = 1
       if (UseOPlus)             SCALC(4) = 1
 
-      ini(1) = InitialElectron 
-      ini(2) = InitialHPlus 
-      ini(3) = InitialHePlus
-      ini(4) = InitialOPlus
-
-      ibc(1) = BCElectron 
-      ibc(2) = BCHPlus
-      ibc(3) = BCHePlus
-      ibc(4) = BCOPlus
-
+      ! Set initial conditions
+      select case(TypeInitial)
+      case('0',  'none')
+         do iSpecies = 1, 4
+            ini(iSpecies) = 0
+         end do
+      case('1',  'Maxwellian')
+         do iSpecies = 1, 4
+            ini(iSpecies) = 1
+         end do
+      case('2',  'Gaussian')
+         do iSpecies = 1, 4
+            ini(iSpecies) = 2
+         end do
+      case('3',  'FromInputFile')
+         do iSpecies = 1, 4
+            ini(iSpecies) = 3
+         end do
+      case('4',  'QuietRC')
+         do iSpecies = 1, 4
+            ini(iSpecies) = 4
+         end do
+      case('5',  'FromFile')
+         do iSpecies = 1, 4
+            ini(iSpecies) = 5
+         end do
+      case('6',  'PSInject')
+         do iSpecies = 1, 4
+            ini(iSpecies) = 6
+         end do
+      case('7',  'FromRestart')
+         do iSpecies = 1, 4
+            ini(iSpecies) = 7
+         end do
+      end select
+  
+        ! Set boundary conditions
+      select case(TypeBoundary)
+      case('0',  'none')
+         do iSpecies = 1, 4
+            ibc(iSpecies) = 0
+         end do
+      case('1',  'Maxwellian')
+         do iSpecies = 1, 4
+            ibc(iSpecies) = 1
+         end do
+      case('2',  'Gaussian')
+         do iSpecies = 1, 4
+            ibc(iSpecies) = 2
+         end do
+      case('3',  'FromInputFile')
+         do iSpecies = 1, 4
+            ibc(iSpecies) = 3
+         end do
+      case('4',  'QuietRC')
+         do iSpecies = 1, 4
+            ibc(iSpecies) = 4
+         end do
+      case('5',  'FromFile')
+         do iSpecies = 1, 4
+            ibc(iSpecies) = 5
+         end do
+      case('6',  'PSInject')
+         do iSpecies = 1, 4
+            ibc(iSpecies) = 6
+         end do
+      case('7',  'FromRestart')
+         do iSpecies = 1, 4
+            ibc(iSpecies) = 7
+         end do
+      end select
+      
 
     end subroutine set_heidi_variables
 
