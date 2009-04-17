@@ -21,8 +21,6 @@
 71  			nPitchGrid
 24			nPointFieldLine
 
-
-
 #STORM
 test			TypeStorm
 
@@ -52,17 +50,11 @@ F			UsePlasmaSheetElectron
 
 	
 #BOUNDARY
-0			BCElectron
-7			BCHPlus	
-0 			BCHePlus
-7			BCOPlus
+7			TypeBoundary
 
 
 #INITIAL
-0			InitialElectron
-0			InitialHPlus
-0 			InitialHePlus
-0			InitialOPlus
+0			TypeInitial
 0.0			MaxwellianScallingFactor
 0.03			CharacteristicEnergy
 
@@ -89,35 +81,12 @@ F			DoSaveDifferentialNumberFlux
 test1			NameRun
 60.			nFrequency [sec]
 
-
-		
 #INJECTIONFREQUENCY
 120.			iFrequency [sec]
 
 
-
 #CONVECTION
-F			IsNoConvection
-F			IsKpVSMaynardChen
-F			IsMBIVS    
-F			IsMcIlwain
-F			IsMcIlwainPlusCPCP
-F			IsKpVSPlusBurkeWygant
-F			IsMcIlwainPlusBurkeWygant
-F			IsMcIlwain(CPCP) field plus B-W penetration field
-F			IsKpVSSelfConsintent
-F			IsMcIlwainSelfConsistent
-F			IsMcIlwainCPCPSelfConsistent
-F			IsUnshieldedVSwithPen
-F			IsUnshieldedVSnoPen
-F			IsW96SC
-T			IsW96
-F			IsAMIESC
-F			IsAMIE
-F			IsReadFromFile
-F			IsAMIEPot
-F			IsW96Pot
-F			IsFoster
+W96			TypeConvection
 
 #INITIALTHERMALPLASMA
 F			DoReadDGCPM	
