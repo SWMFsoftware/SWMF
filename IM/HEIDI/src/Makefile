@@ -26,6 +26,7 @@ OBJECTS = \
 	ModIonoHeidi.o\
 	ModHeidiSatellites.o\
 	ModProcIM.o\
+	ModHeidiInput.o\
 	heidi_setup.o\
 	heidi_icbc.o\
 	heidi_coefficients.o\
@@ -44,6 +45,7 @@ OBJECTS = \
 	write_ring_current.o\
 	epencalc.o\
 	iono_init.o
+
 
 
 EXEOBJECTS = heidi_main.o ${OBJECTS}

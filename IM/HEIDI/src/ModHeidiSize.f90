@@ -41,6 +41,6 @@ Module ModHeidiSize
 ! Define array sizes as they are actually used within HEIDI
 ! Formerly: Common block PARAM1
 	integer s,io,jo,ko,lo,iso,scalc(ns)
-	real dt, DTMAX
+	real dt, DTMAX,tmax
 
 end Module ModHeidiSize

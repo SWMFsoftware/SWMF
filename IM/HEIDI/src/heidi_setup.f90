@@ -32,30 +32,21 @@ SUBROUTINE heidi_read
   use ModHeidiIO
   use ModHeidiMain
   use ModIoUnit, ONLY : UNITTMP_
+  use ModHeidiInput, ONLY: set_parameters
+  use ModReadParam, ONLY: read_file, read_init
+  use ModProcIM, ONLY: iComm
   
   implicit none
 
-  real :: tmax
+  !real :: tmax
   integer :: k,i
   character*1 header
-      
-  OPEN (UNITTMP_,FILE='input.glo',STATUS='OLD')
-  READ (UNITTMP_,*) DTMax,TMAX,TINT,TIME
-  Dt = DtMax
-  READ (UNITTMP_,*) IO,JO,KO,LO,ISO
-  READ (UNITTMP_,*) ELB,SWE,RW,HMIN
-  READ (UNITTMP_,*) ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT
-  READ (UNITTMP_,*) (SCALC(k),k=1,NS)
-  READ (UNITTMP_,*) YEAR,Month,day,UT,R,AP,KP
-  READ (UNITTMP_,*) (INI(k),k=1,NS)
-  READ (UNITTMP_,*) (IBC(k),k=1,NS)
-  READ (UNITTMP_,*) TINJ,Ab,Eob
-  READ (UNITTMP_,*) (IRES(k),k=1,15)
-  READ (UNITTMP_,*) NAME
-  CLOSE(UNITTMP_)
-
-  call write_prefix; write(iUnitStdOut,*) ' year,month,day,UT',year,month,day,UT
+  !--------------------------------------------------------------------------
   
+  call read_file('PARAM.in', iComm)
+  call read_init('  ',iSessionIn=1, iLineIn=0)
+  call set_parameters
+  call write_prefix; write(iUnitStdOut,*) ' year,month,day,UT',year,month,day,UT
   TimeArray(1) = year
   TimeArray(2) = month
   TimeArray(3) = day
@@ -63,10 +54,10 @@ SUBROUTINE heidi_read
   TimeArray(5) = 0.0
   TimeArray(6) = 0.0
   TimeArray(7) = 0.0
-
   
   ISWB=ISW
-  NSTEP=NINT(TMAX/DT/2.)                 ! time splitting
+  
+  NSTEP=NINT(TMAX/DT/2.)        ! time splitting
   Ib=0
   if (IBC(1).EQ.1) then
      Ib=1			! Loss cone BC
