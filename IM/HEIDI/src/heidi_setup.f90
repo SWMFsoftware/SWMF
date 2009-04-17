@@ -46,7 +46,9 @@ SUBROUTINE heidi_read
   call read_file('PARAM.in', iComm)
   call read_init('  ',iSessionIn=1, iLineIn=0)
   call set_parameters
+  Dt = DTmax
   call write_prefix; write(iUnitStdOut,*) ' year,month,day,UT',year,month,day,UT
+  
   TimeArray(1) = year
   TimeArray(2) = month
   TimeArray(3) = day
