@@ -1,11 +1,13 @@
 ;^CFG COPYRIGHT UM
-pro set_device, psfile, land=land, port=port, eps=eps, psfont=psfont, $
-                percent=percent
+pro set_device, psfile, port=port, land=land, eps=eps, $
+                psfont=psfont, percent=percent
 
   ; Parameter defaults and conversions
 
   if not keyword_set(psfile) then psfile = 'idl.ps'
-  if not keyword_set(port) then land=1 else land=0
+  orientation = 'normal'
+  if keyword_set(port) then orientation='port'
+  if keyword_set(land) then orientation='land'
   if not keyword_set(percent) then percent = 1.0		$
   else if percent gt 1.0 then percent = float(percent)/100.0
 
@@ -15,18 +17,29 @@ pro set_device, psfile, land=land, port=port, eps=eps, psfont=psfont, $
   NameFile = psfile
 
   ; Set sizes and offsets
-  if land then begin
-    xs   = 10.0*percent
-    ys   = 7.0 *percent
-    xoff = (8.5-ys)/2.0
-    yoff = 11.0-(11.0-xs)/2.0
-  endif else begin
-    xs = 7.5*percent
-    ys = 9.5*percent
-    xoff = (8.5-xs)/2.0
-    yoff = (11.0-ys)/2.0
-  endelse
-  land=0
+  case (orientation) of
+     'normal': begin
+        xs   = 10.0*percent
+        ys   = 7.0 *percent
+        xoff = 11.0-(11.0-xs)/1.5
+        yoff = (8.5-ys)/2.0
+        land=0
+     end
+     'land': begin
+        xs   = 10.0*percent
+        ys   = 7.0 *percent
+        xoff = (8.5-ys)/2.0
+        yoff = 11.0-(11.0-xs)/1.5
+        land=1
+     end
+     'port': begin
+        xs = 7.5*percent
+        ys = 9.5*percent
+        xoff = (8.5-xs)/2.0
+        yoff = (11.0-ys)/2.0
+        land=0
+     end
+  endcase
 
   set_plot, 'PS', /copy, /interpolate
 
