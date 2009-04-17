@@ -16,6 +16,7 @@ test:
 	-@(make test_corona)
 	-@(make test_coronasph)
 	-@(make test_earthsph)
+	-@(make test_2bodyplot)
 	-@(make test_titan)
 	-@(make test_mars)
 	-@(make test_venus)
@@ -51,6 +52,7 @@ test_help:
 	@echo "    test_corona                (run Solar Corona test only)"
 	@echo "    test_coronasph             (run spherical Solar Corona test)"
 	@echo "    test_earthsph	      (run Spherical Earth test only)"
+	@echo "    test_2bodyplot	      (run 2 Body Plot test only)"
 	@echo "    test_mars                  (run Mars test only)"
 	@echo "    test_venus                 (run Venus test only)"
 	@echo "    test_saturn                (run Saturn test only)"
@@ -776,4 +778,48 @@ test_earthsph_check:
 		Param/EARTH/TestOutput/SPHlog_n000001.log \
 		${TESTDIR}/RESULTS/GM/log_n000001.log > test_earthsph.diff)
 	ls -l test_earthsph.diff
+
+### TESTS FOR CORRECT 2 BODY PLOT FILES ###
+
+test_2bodyplot:
+	-@(make test_2bodyplot_start)
+
+test_2bodyplot_start:
+	@echo "test_2bodyplot_compile..." > test_2bodyplot.diff
+	make test_2bodyplot_compile
+	@echo "test_2bodyplot_rundir..." >> test_2bodyplot.diff
+	make test_2bodyplot_rundir
+	@echo "test_2bodyplot_run..." >> test_2bodyplot.diff
+	make test_2bodyplot_run
+	@echo "test_2bodyplot_check..." >> test_2bodyplot.diff
+	make test_2bodyplot_check
+
+test_2bodyplot_compile:
+	./Config.pl -e=Mhd -u=Default -g=8,8,8,600,300
+	make
+
+test_2bodyplot_rundir: test_rundir
+	cd ${TESTDIR}; \
+		cp Param/2BODYPLOT/PARAM.in PARAM.in
+	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+
+test_2bodyplot_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}/GM; ./pTEC g
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+
+test_2bodyplot_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		Param/2BODYPLOT/TestOutput/REFlog_n000001.log \
+		${TESTDIR}/RESULTS/GM/log_n000001.log > test_2bodyplot.diff)
+	-@(rsync -a Param/2BODYPLOT/TestOutput/REFy=0_ful_1_t00000010_n0000127.dat.gz \
+		${TESTDIR}/RESULTS/GM/.; gunzip ${TESTDIR}/RESULTS/GM/*gz; \
+		cat ${TESTDIR}/RESULTS/GM/y=0_ful_1_t00000010_n0000127.dat | \
+		grep -v SAVEDATE > \
+		${TESTDIR}/RESULTS/GM/NEWy=0_ful_1_t00000010_n0000127.dat)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/RESULTS/GM/REFy=0_ful_1_t00000010_n0000127.dat \
+		${TESTDIR}/RESULTS/GM/NEWy=0_ful_1_t00000010_n0000127.dat >> \
+		test_2bodyplot.diff)
+	ls -l test_2bodyplot.diff
 

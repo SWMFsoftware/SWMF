@@ -526,7 +526,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModGeometry
   use ModParallel, ONLY : BLKneighborCHILD
   use ModPhysics, ONLY : BodyRho_I, BodyP_I, OmegaBody, CellState_VI, &
-       AverageIonCharge, ElectronTemperatureRatio
+       AverageIonCharge, ElectronTemperatureRatio, &
+       RhoBody2, pBody2, xBody2, yBody2, zBody2, rBody2
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK       !^CFG IF CONSTRAINB
   use ModRayTrace, ONLY : ray,rayface                      !^CFG  IF RAYTRACE
   use ModUtilities, ONLY: lower_case
@@ -612,6 +613,17 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case('rho')
         PlotVar(:,:,:,iVar)=State_VGB(iRho,:,:,:,iBLK)
         plotvar_inBody(iVar) = BodyRho_I(iFluid)
+        ! If Body2 is used, then see if it is in block and use other those values
+        if(UseBody2)then
+           if(  (xBody2+rBody2)>x_BLK(   0,   0,   0,iBLK) .and. &
+                (xBody2-rBody2)<x_BLK(nI+1,nJ+1,nK+1,iBLK) .and. &
+                (ybody2+rBody2)>y_BLK(   0,   0,   0,iBLK) .and. &
+                (ybody2-rBody2)<y_BLK(nI+1,nJ+1,nK+1,iBLK) .and. &
+                (zBody2+rBody2)>x_BLK(0   ,   0,   0,iBLK) .and. &
+                (zBody2-rBody2)<z_BLK(nI+1,nJ+1,nK+1,iBLK) )then
+              plotvar_inBody(iVar) = RhoBody2
+           end if
+        end if
      case('rhoux','mx')
         if (UseRotatingFrame) then
            PlotVar(:,:,:,iVar)=State_VGB(iRhoUx,:,:,:,iBLK) &
@@ -664,6 +676,17 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case('p','pth')
         PlotVar(:,:,:,iVar) = State_VGB(iP,:,:,:,iBLK)
         plotvar_inBody(iVar) = BodyP_I(iFluid)
+        ! If Body2 is used, then see if it is in block and use other those values
+        if(UseBody2)then
+           if(  (xBody2+rBody2)>x_BLK(   0,   0,   0,iBLK) .and. &
+                (xBody2-rBody2)<x_BLK(nI+1,nJ+1,nK+1,iBLK) .and. &
+                (ybody2+rBody2)>y_BLK(   0,   0,   0,iBLK) .and. &
+                (ybody2-rBody2)<y_BLK(nI+1,nJ+1,nK+1,iBLK) .and. &
+                (zBody2+rBody2)>x_BLK(0   ,   0,   0,iBLK) .and. &
+                (zBody2-rBody2)<z_BLK(nI+1,nJ+1,nK+1,iBLK) )then
+              plotvar_inBody(iVar) = pBody2
+           end if
+        end if
 
         ! EXTRA MHD variables
      case('eta')
