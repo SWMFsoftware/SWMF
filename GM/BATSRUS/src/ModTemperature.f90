@@ -3,7 +3,6 @@
 module ModTemperature
 
   use ModVarIndexes, ONLY: p_
-  use ModMessagePass, ONLY: message_pass_dir
 
   implicit none
   save
@@ -338,11 +337,9 @@ contains
        ! needs to be correct. We massage pass all temperatures.
 
        ! DoOneLayer, DoFacesOnly, No UseMonoteRestrict
-       !call message_pass_cells8(.true., .true., .false., nTemperature, &
-       !     Temperature_VGB)
-       call message_pass_dir(iDirMin=1, iDirMax=3, Width=1, SendCorners=.false.,&
-            ProlongOrder=1, nVar=nTemperature, Sol_VGB=Temperature_VGB)
-       
+       call message_pass_cells8(.true., .true., .false., nTemperature, &
+            Temperature_VGB)
+              
        call set_gray_outer_bcs(nTemperature, Temperature_VGB,'float')
     end if
 
@@ -409,10 +406,8 @@ contains
     ! message pass one ghost cell layer of heat conduction coefficients.
 
     ! DoOneLayer, DoFacesOnly, No UseMonoteRestrict
-    !call message_pass_cells8(.true., .true., .false., nCond, &
-    !     HeatConductionCoef_IGB)
-    call message_pass_dir(iDirMin=1, iDirMax=3, Width=1, SendCorners=.false.,&
-         ProlongOrder=1, nVar=nCond, Sol_VGB=HeatConductionCoef_IGB)
+    call message_pass_cells8(.true., .true., .false., nCond, &
+         HeatConductionCoef_IGB)
 
     ! The ghost cell filling of the heat conduction coefficients
     ! is not really needed since the temperature boundary conditions are float
@@ -838,9 +833,7 @@ contains
     !--------------------------------------------------------------------------
 
     ! DoOneLayer, DoFacesOnly, No UseMonoteRestrict
-    !call message_pass_cells8(.true., .true., .false., nVar, Temp_VGB)
-    call message_pass_dir(iDirMin=1, iDirMax=3, Width=1, SendCorners=.false.,&
-         ProlongOrder=1, nVar=nVar, Sol_VGB=Temp_VGB)
+    call message_pass_cells8(.true., .true., .false., nVar, Temp_VGB)
 
     if(IsFirstCgIteration)then
        call set_gray_outer_bcs(nVar,Temp_VGB,'float')
