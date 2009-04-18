@@ -1501,7 +1501,7 @@ contains
     subroutine godunov_flux
       use ModAdvance, ONLY: Eradiation_
       use ModExactRS, ONLY: wR, wL, sample, pu_star, RhoL, RhoR, &
-           pL, pR, UnL, UnR, UnStar
+           pL, pR, UnL, UnR, UnStar, pStar
       use ModPhysics, ONLY: inv_gm1,g
       use ModVarIndexes
       use ModImplicit, ONLY: UseFullImplicit   !^CFG IF IMPLICIT
@@ -1540,6 +1540,21 @@ contains
 
       !Take the parameters at the Contact Discontinuity (CD)
       call pu_star
+
+      if((pStar > 2.0 * pL.and. wL < 0.0).or.(pStar > 2.0 * pR.and. wR > 0.0))then
+         !Temparary solution, should be the monotone numerical flux with modified 
+         !StateLeft_V and/or StateRight_V 
+         
+
+         call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
+              StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft)
+
+         call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
+              StateRightCons_V, FluxRight_V, UnRight_I, EnRight, PeRight)
+
+         call artificial_wind
+         return
+      end if
 
       if(UnStar > 0.0)then
          ! The CD is to the right from the face

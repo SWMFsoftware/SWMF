@@ -280,7 +280,7 @@ test_eosgodunov_run:
 	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
 
 test_eosgodunov_check:
-	cat ${TESTDIR}/GM/IO2/cut_hd_1_t00000000_n0001604_pe*.idl \
+	cat ${TESTDIR}/GM/IO2/cut_hd_1_t00000000_n0001618_pe*.idl \
 		> ${TESTDIR}/IO2/cut_500_ns.idl
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=3e-7 \
 	  Param/CRASH/TestOutput/cut_eosgodunov.idl \
