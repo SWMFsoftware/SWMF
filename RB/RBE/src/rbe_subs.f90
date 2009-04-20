@@ -887,7 +887,7 @@ subroutine fieldpara(t,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
         if (xmlt1.gt.xmltlim.and.xmlt1.lt.(24.-xmltlim).and.&
              abs(xmlt1-xmlt(j)).gt.xmltlim) then   ! big warping in mlt
            irm(j)=i-1
-           CYCLE LATITUDE
+           exit LATITUDE
         endif
         
         dss2=dssa(npf1)/2.      ! find the middle point
