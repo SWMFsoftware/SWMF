@@ -3796,28 +3796,67 @@ Diffusive control requires corners, default is 'all'!\\<!--^CFG IF DIVBDIFFUSE--
 Projection uses message_pass_dir for efficiency!\\<!--^CFG IF PROJECTION-->
 </command>
 
-<command name="RESCHANGE" alias="RESOLUTIONCHANGE">
+<command name="RESOLUTIONCHANGE">
+	<parameter name="UseAccurateReschange"  type="logical" default="F" />
+	<parameter name="UseTvdReschange"       type="logical" default="T" />
+	<parameter name="BetaLimiterResChange"  type="real" min="1" max="2"
+						default="2" />
+	<parameter name="nFaceLimiterResChange" type="integer" min="0"
+						default="2" />
+	<rule expr="not($UseAccurateReschange and $UseTvdReschange)">
+		Cannot have both UseAccurateReschange and UseTvdReschange true.
+	</rule>
+#RESOLUTIONCHANGE
+F		UseAccurateResChange
+T		UseTvdResChange
+2.0		BetaLimiterResChange
+2		nFaceLimiterResChange
+
+If UseAccurateResChange is true, then a second order accurate, upwind and 
+oscillation free scheme is used at the resolution changes. 
+It requires message passing edge ghost cells (this is switched on 
+automatically) which may effect the performance slightly.
+
+If UseTvdResChange is true, then an almost second order and partially 
+downwinded TVD limited scheme is used at the resolution changes. 
+This scheme does not require message passing of the edge ghost cells.
+Only one of UseAccurateResChange and UseTvdResChange can be true.
+
+If BetaLimiterResChange is set to a value smaller than the BetaLimiter
+parameter in the #SCHEME command, then the limiter will use this
+BetaLimiterResChange parameter at and near grid resolution changes.
+The smallest value is 1.0 that corresponds to the minmod limiter,
+the maximum value is 2.0 that means that the same limiter is applied
+at the resolution change as anywhere else. Recommended values are 1.0 to 1.2
+combined with BetaLimiter=1.5 in the #SCHEME command.
+
+The nFaceLimiterResChange determines how many faces around the resolution
+change itself are affected. If nFaceLimiterResChange is 0, the limiter using
+BetaLimiterResChange is applied at the face at the resolution change itself.
+If nFaceLimiterResChange is 1 or 2, the limiter is applied at 3 or 5 faces
+altogether. The recommended value is 2. 
+
+Default values are shown, ie. the TVD reschange algorithm is used, and 
+the limiter applied at the resolution changes is the same as everywhere else,
+because BetaLimiterResChange is set to 2.
+</command>
+
+<command name="RESCHANGE">
 	<parameter name="UseAccurateReschange" type="logical" default="F" />
 #RESCHANGE
 T		UseAccurateResChange
 
-For UseAccurateResChange=T a second order accurate, upwind and oscillation 
-free scheme is used at the resolution changes. 
-
-Default value is false, which results in first order 
-prolongation and restriction operators at the resolution changes.
+This command is kept for backwards compatibility.
+See description at the #RESOLUTIONCHANGE command.
 </command>
 
 <command name="TVDRESCHANGE">
-	<parameter name="UseTvdReschange" type="logical" default="F" />
+	<parameter name="UseTvdReschange" type="logical" default="T" />
 #TVDRESCHANGE
 T		UseTvdResChange
 
-For UseTvdResChange=T an almost second order and partially downwinded 
-TVD limited scheme is used at the resolution changes. 
-
-Default value is false, which results in first order 
-prolongation and restriction operators at the resolution changes.
+This command is kept for backwards compatibility.
+See description at the #RESOLUTIONCHANGE command.
 </command>
 
 <command name="LIMITER">
