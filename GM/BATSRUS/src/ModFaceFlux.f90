@@ -1513,8 +1513,6 @@ contains
       real::pRadL=0.0,pRadR=0.0, pRadStar=0.0, pRadSide=0.0
       integer::iVar
       !-----------------------------------------------------------------------
-      !Take scalars
-
       ! Scalar variables
       RhoL = StateLeft_V(Rho_)
       pL   = StateLeft_V(p_)
@@ -1533,27 +1531,25 @@ contains
          pRadR = StateRight_V(ERadiation_)/3.0
          pR    = pR + pRadR
       else
-         !It is easier to add zero insteadf of using if(UseGrayDiffusion)
-         !multiple times
+         !It is easier to add zero than using if(UseGrayDiffusion)
          pRadL = 0.0; pRadR = 0.0
       end if
 
       !Take the parameters at the Contact Discontinuity (CD)
       call pu_star
 
-      if((pStar > 2.0 * pL.and. wL < 0.0).or.(pStar > 2.0 * pR.and. wR > 0.0))then
-         !Temparary solution, should be the monotone numerical flux with modified 
-         !StateLeft_V and/or StateRight_V 
-         
-
+      ! At strong shocks use the artificial wind scheme
+      if((pStar > 2*pL .and. wL < 0.0).or.(pStar > 2*pR .and. wR > 0.0))then
+         ! Temparary solution, should be the monotone numerical flux with 
+         ! modified StateLeft_V and/or StateRight_V
          call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
               StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft)
-
+      
          call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
               StateRightCons_V, FluxRight_V, UnRight_I, EnRight, PeRight)
-
+      
          call artificial_wind
-         return
+         RETURN
       end if
 
       if(UnStar > 0.0)then
@@ -1572,17 +1568,17 @@ contains
          pRadSide    = pRadR
       end if
 
-      !Take the parameters at the face
+      ! Take the parameters at the face
       call sample(0.0, Rho, Un, P)
 
-      !In order the Riemann problem solution to be governed by the
-      !total pressure, the radiation pressure should behave 
-      !adiabatically, with the same polytropic index as thet for the gas
+      ! In order the Riemann problem solution to be governed by the
+      ! total pressure, the radiation pressure should behave 
+      ! adiabatically, with the same polytropic index as thet for the gas
 
       pRadStar             = pRadSide * (Rho/RhoSide)**g
 
-      !Since the total pressure is not less than the adiabatic one
-      !the difference below is definite positive
+      ! Since the total pressure is not less than the adiabatic one
+      ! the difference below is positive
       p                    = p - pRadStar
 
       StateStar_V(Rho_)    = Rho
@@ -1591,38 +1587,35 @@ contains
       do iVar=ScalarFirst_, ScalarLast_
          StateStar_V(iVar) = StateStar_V(iVar)*(Rho/RhoSide)
       end do
-     
 
-      !Calculate flux (1) take conservative variable
-    
+      ! Calculate flux 
+      ! (1) calculate momenta
       StateStar_V(RhoUx_:RhoUz_) = StateStar_V(Ux_:Uz_) * Rho
 
       ! (2) take advective part of the flux
-
       Flux_V(1:nVar) = StateStar_V * Un 
 
-      ! (3) add the pressure tensor
-
+      ! (3) add the pressure gradient
       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + p*Normal_D
 
-      ! (4) energy flux
-      Flux_V(Energy_) = ((1.0 +  inv_gm1) * P &
-           + 0.5 * sum(StateStar_V(RhoUx_:RhoUz_)**2)/Rho)*Un
+      ! (4) energy flux: (e + p)*u
+      Flux_V(Energy_) = ((1.0 +  inv_gm1) * p &
+           + 0.5*sum(StateStar_V(RhoUx_:RhoUz_)**2)/Rho) * Un
 
-      CMax      = max( WR, -WL)
-      CMaxDt    = CMax
-      UNormal_I = Un
+      Cmax      = max(wR, -wL)
+      CmaxDt    = Cmax
+      Unormal_I = Un
 
       if(UseGrayDiffusion)then
          ! Diffusive radiation flux is added later for semi-implicit scheme
-         Flux_V(ERadiation_) = (3.0 * pRadStar  +StateStar_V(ERadiation_))*0.50* Un
+         Flux_V(ERadiation_) = (3*pRadStar + StateStar_V(ERadiation_))*0.5*Un
          if(UseFullImplicit) Flux_V(Eradiation_) = &         !^CFG IF IMPLICIT
               Flux_V(Eradiation_) + sum(EradFlux_D*Normal_D) !^CFG IF IMPLICIT
 
-         ! radiation pressure gradient
-         Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) &
-              + pRadStar*Normal_D
-         ! work by the radiation pressure gradient
+         ! force due to the radiation pressure gradient
+         Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + pRadStar*Normal_D
+
+         ! work done by the radiation pressure gradient
          Flux_V(Energy_) = Flux_V(Energy_) + Un*pRadStar
 
       end if
@@ -2189,6 +2182,13 @@ contains
        if(present(Cmax_I))   Cmax_I   = min( Climit, Cmax_I)
        if(present(Cleft_I))  Cleft_I  = max(-Climit, Cleft_I)
        if(present(Cright_I)) Cright_I = min( Climit, Cright_I)
+
+       if(present(Cmax_I))then
+          ! If Climit has reduced the diffusion, then the block has to be
+          ! advanced with the implicit scheme, so set CmaxDt to a huge number
+          if(Climit < CmaxDt) CmaxDt = 1e30
+       end if
+
     end if
 
   contains
