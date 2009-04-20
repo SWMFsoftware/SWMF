@@ -8,7 +8,7 @@
  EQUATIONS:   radiation HD
  USER MODULE: Hd with Gray-Diffusion 1.00
 
-ModReadParam::read_file: read and broadcast nLine= 167 lines of text
+ModReadParam::read_file: read and broadcast nLine= 168 lines of text
  ----- Starting Session  1  ------
  init_mod_restart_file: setting TypeRestartOutFile = one
  GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 1000
@@ -84,6 +84,7 @@ initial_lowrie3.dat	NameInputFile		NameLowrieFile
 #RADIATION
 T			UseGrayDiffusion
 F			UseRadFluxLimiter
+0.0			TradMinSi
 
 #SHOCKPOSITION
 0.0			ShockPosition
@@ -245,19 +246,19 @@ saved ifile= 4 type=cut_var    at n_step=      0 time=   0:00:00 h:m:s
 SORTED TIMING at step       0    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                   1.28    100.00         1         1
+BATSRUS                   1.22    100.00         1         1
 -------------------------------------------------------------------------------
-setup                     1.28    100.00         1         1
-save_plot                 1.22     94.83         1         2
-save_logfile              0.00      0.29         1         1
-exch_msgs                 0.00      0.29         1         1
+setup                     1.22    100.00         1         1
+save_plot                 1.17     95.74         1         2
+exch_msgs                 0.00      0.26         1         1
+save_logfile              0.00      0.23         1         1
 load_balance              0.00      0.20         1         1
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
-Speed is   2839.1 c/s/p after     14.2 s at N =      10 (2.3000E-04 s)
+Speed is   2955.3 c/s/p after     14.1 s at N =      10 (2.3000E-04 s)
 saved ifile= 3 type=z=0_var    at n_step=     11 time=   0:00:00 h:m:s
 saved ifile= 4 type=cut_var    at n_step=     11 time=   0:00:00 h:m:s
-Speed is   3010.8 c/s/p after     29.8 s at N =      20 (4.6000E-04 s)
+Speed is   2934.7 c/s/p after     29.5 s at N =      20 (4.6000E-04 s)
 
     Finished Numerical Simulation
     -----------------------------
@@ -271,28 +272,28 @@ saved ifile= 4 type=cut_var    at n_step=     20 time=   0:00:00 h:m:s
 SORTED TIMING from step       0 to      20    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                  30.96    100.00         1         1
+BATSRUS                  30.77    100.00         1         1
 -------------------------------------------------------------------------------
-advance                  28.54     92.20        20        20
-krylov solver            23.56     76.10        20        20
-impl_matvec              21.53     69.55        20       606
-get_residual             16.52     53.35        40       646
-matvec_free              16.46     53.18        20       606
-calc_fluxes              11.72     37.87        40      5168
-impl_jacobian             2.58      8.34        20        20
-save_plot                 2.38      7.70         2         4
-exch_msgs                 0.99      3.19        60       686
-calc_facevalues           0.97      3.12        40      5168
-calc_sources              0.76      2.47        40      5168
-calc_fluxes_bfo           0.58      1.89        40      2584
-update_states             0.43      1.38        40      5168
-calc_face_bfo             0.36      1.17        40      2584
-getsource                 0.24      0.76        20      1280
-impl2expl                 0.23      0.75        80      6608
-expl2impl                 0.13      0.43        60       666
-barrier-expl2             0.09      0.29        40       646
-send_cons_flux            0.08      0.26        40       646
-barrier-expl1             0.04      0.11        40       646
+advance                  28.29     91.96        20        20
+krylov solver            23.37     75.96        20        20
+impl_matvec              21.54     70.01        20       583
+get_residual             17.40     56.54        40       623
+matvec_free              16.88     54.86        20       583
+calc_fluxes              12.72     41.35        40      4984
+impl_jacobian             2.46      8.00        20        20
+save_plot                 2.46      8.00         2         4
+exch_msgs                 0.96      3.12        60       663
+calc_facevalues           0.90      2.94        40      4984
+calc_sources              0.73      2.38        40      4984
+calc_fluxes_bfo           0.63      2.06        40      2492
+update_states             0.40      1.31        40      4984
+calc_face_bfo             0.34      1.10        40      2492
+getsource                 0.22      0.72        20      1280
+barrier-expl2             0.18      0.58        40       623
+impl2expl                 0.17      0.57        80      6424
+expl2impl                 0.12      0.38        60       643
+send_cons_flux            0.08      0.24        40       623
+barrier-expl1             0.03      0.11        40       623
 save_logfile              0.01      0.04        20        20
 int_domain                0.00      0.01        20        20
 -------------------------------------------------------------------------------
