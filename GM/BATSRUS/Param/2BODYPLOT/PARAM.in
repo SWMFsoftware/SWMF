@@ -153,7 +153,7 @@ T                       UseBody2   ! Rest of the parameters read if .true.
 #DIPOLEBODY2
 0.0                     BdpDimBody2x [nT]
 0.0                     BdpDimBody2y [nT]
-0.0                     BdpDimBody2z [nT]
+-1200.0                 BdpDimBody2z [nT]
 
 #INNERBOUNDARY
 ionosphere		TypeBcInner
@@ -209,9 +209,13 @@ minmod			TypeLimiter
 0.8			CflExpl
 
 #SAVEPLOT
-1                       nPlotFile
+2                       nPlotFile
 y=0 FUL tec             StringPlot
 -1                      DnSavePlot
 10.			DtSavePlot
+y=0 FUL idl             StringPlot
+-1                      DnSavePlot
+10.                     DtSavePlot
+-1.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
 
 #END_COMP GM ###############################################################
