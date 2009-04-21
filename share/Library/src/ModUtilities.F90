@@ -220,9 +220,8 @@ contains
     StringTmp = trim(StringTmp) // StringSep
     do
        StringTmp = adjustl(StringTmp)       ! Remove leading spaces
-       i = index(StringTmp,StringSep)       ! Find end of first part
-       if(i <= 1) RETURN                    ! No separator or nothing before it
-
+       i = index(StringTmp,StringSep)       ! Find end of first part   
+       if(i <= 1) RETURN                    ! Nothing before the separator
        nString = nString +1                 ! Count parts
 
        String_I(nString) = StringTmp(1:i-1) ! Put part into string array
@@ -318,5 +317,36 @@ contains
          'Could not allocate array '//NameArray)
     !EOC
   end subroutine check_allocate
+
+  !============================================================================
+  subroutine test_mod_utility
+
+  ! Test split_string, read a string containing separators then print substrings
+  ! Do this multiple times with various settings
+
+   
+    integer, parameter :: MaxString = 20
+    integer :: nString
+    character(len=30) :: String_I(MaxString)  
+  
+    integer, parameter :: nTest = 4
+    character :: StringSep_I(nTest) = (/ ' ', ',', ':', ';'/)
+    character(len=*), parameter :: String = &
+            'SC EE;IH:SP,GM IM ;RB ,IE UA '
+    
+    !character(len=*), parameter :: NameSub = 'test_split_string'
+    integer :: iTest, iString
+
+    write(*,*) '[string]', String
+    do iTest = 1, nTest
+       call split_string(String, MaxString, String_I, nString, StringSep_I(iTest))
+       write(*,*) '[test',iTest, ']'
+       write(*,*) 'with separator ', StringSep_I(iTest), &
+       		   ' split to', nString, 'part(s) as'
+       do iString = 1, nString
+       	  write(*,*) String_I(iString)	 
+       end do	  	  
+    end do
+  end subroutine test_mod_utility
 
 end module ModUtilities
