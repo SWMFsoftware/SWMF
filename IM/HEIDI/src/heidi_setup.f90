@@ -33,7 +33,6 @@ SUBROUTINE heidi_read
   use ModHeidiMain
   use ModIoUnit, ONLY : UNITTMP_
   use ModHeidiInput, ONLY: set_parameters
-  use ModReadParam, ONLY: read_file, read_init
   use ModProcIM, ONLY: iComm
   
   implicit none
@@ -43,9 +42,7 @@ SUBROUTINE heidi_read
   character*1 header
 
   !--------------------------------------------------------------------------
-  
-  call read_file('PARAM.in', iComm)
-  call read_init('  ',iSessionIn=1, iLineIn=0)
+
   call set_parameters
   Dt = DTmax
   call write_prefix; write(iUnitStdOut,*) ' year,month,day,UT',year,month,day,UT

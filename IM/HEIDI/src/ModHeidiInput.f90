@@ -1,6 +1,7 @@
 module ModHeidiInput
 
-  use ModReadParam, ONLY: i_session_read, read_line, read_command, read_var
+  use ModReadParam, ONLY: read_file, read_init, i_session_read, &
+       read_line, read_command, read_var
   use ModUtilities, ONLY: split_string
 
   implicit none
@@ -91,14 +92,22 @@ contains
 
   subroutine set_parameters
 
+    use ModProcIM, ONLY: iComm
+    use ModHeidiIO, ONLY: IsFramework
+
     character (len=100) :: NameCommand, StringPart_I(100)
-    integer :: iSession, nStringPart
+    integer :: iSession = -1, nStringPart
     logical :: UseStrict
     ! GIPHT BEGIN INDEXES
 
     ! GIPHT END INDEXES
     character(len=*), parameter:: NameSub = NameMod//'::set_parameters'
     !-------------------------------------------------------------------------
+    if(.not.IsFramework .and. iSession == -1)then
+       call read_file('PARAM.in', iComm)
+       call read_init('  ',iSessionIn=1, iLineIn=0)
+    end if
+
     iSession = i_session_read()
 
     write(*,*) NameSub,' starting for iSession=',iSession
