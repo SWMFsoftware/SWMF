@@ -66,6 +66,7 @@ firstslice=1
 dslice=1
 nslicemax=50
 slicedir=0
+dyslicelabel=0.98
 
 ; Parameters for saving the movie into ps/png/tiff/bmp/jpeg files
 savemovie='n'
