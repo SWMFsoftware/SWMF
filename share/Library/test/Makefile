@@ -50,7 +50,7 @@ test: \
 	test_geopack \
 	test_axes \
 	test_planet_field \
-	test_plot_file
+	test_plot_file 
 
 #######################################################################
 OBJ_TIME_CONVERT = \
@@ -410,11 +410,33 @@ test_lookup_table:
 	@make test_lookup_table_exe
 	@echo
 	@echo '${MPIRUN} test_lookup_table.exe'
-	-@(${MPIRUN} test_lookup_table.exe)
+	-@(${MPIRUN} test_lookup_table.exe) | grep -i -C2 'error' \
+		> test_lookup_table.diff
 	@echo
 	@echo test_lookup_table done
 	@echo -----------------------------------------------------------------
+#######################################################################
 
+OBJ_UTILITIES = \
+	test_utilities.o \
+	../src/ModUtilities.o 
+
+test_utilities_exe:
+	@(cd ../src; make ModUtilities.o)
+	@make test_utilities.o
+	${LINK.f90} -o test_utilities.exe ${OBJ_UTILITIES} ${Lflag2}
+
+test_utilities:
+	@echo -----------------------------------------------------------------
+	@echo test_utilities starting
+	@echo
+	@make test_utilities_exe
+	@echo
+	@echo './test_utilities.exe'
+	-@(./test_utilities.exe)
+	@echo
+	@echo test_utilities done
+	@echo -----------------------------------------------------------------
 
 distclean: clean
 	rm -f *.tmp
