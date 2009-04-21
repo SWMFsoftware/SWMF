@@ -75,7 +75,7 @@ ionosphere		TypeBcInner
 #SAVELOGFILE
 T
 RAW			StringLogfile
-1			DnSaveLogfile
+0			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #TIMESTEPPING
@@ -89,29 +89,38 @@ GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat   NameUpstreamFile
 #MAGNETOMETER
 GM/Param/MAGNETOMETER/magin.dat				MagInputFile
 -1							DnOutput
-20.0							DtOutput
+10.0							DtOutput
 
 #SCHEME
 1			nOrder
 Rusanov			TypeFlux
+
+
+#TIMESTEPPING
+2
+0.8
+
+#FIXEDTIMESTEP
+T                       UseDtFixed
+5.0			DtFixedDim
 
 #SAVEPLOT
 3                       nPlotFile
 x=0 FUL idl             StringPlot
 -1                      DnSavePlot
 10.			DtSavePlot
--1.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
+-1.
 y=0 FUL idl             StringPlot
 -1                      DnSavePlot
 10.			DtSavePlot
--1.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
+-1.
 z=0 FUL idl             StringPlot
 -1                      DnSavePlot
 10.			DtSavePlot
--1.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
+-1.
 
 #STOP
--1			MaxIteration
-60.0			tSimulationMax
+-1
+60.0
 
 #END
