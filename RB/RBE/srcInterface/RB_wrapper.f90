@@ -185,7 +185,7 @@ subroutine RB_save_restart(TimeSimulation)
   character(len=*), parameter :: NameSub='RB_save_restart'
 
   !-------------------------------------------------------------------------
-  call rbe_save_restart
+  call rbe_save_result(.true.)
 
 end subroutine RB_save_restart
 !===========================================================================
