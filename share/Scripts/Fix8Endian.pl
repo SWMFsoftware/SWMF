@@ -26,13 +26,16 @@ while ( $i < length() ){
     # Get length of record
     $len = unpack('L',substr($_,$i,4));
 
-    # Check if length is reasonable
-    die "At position $i record length $len is too large?!\n" 
-	if $i+$len > length();
-
     # Reverse leading 4 byte length marker
     $lenfixed = reverse(substr($_,$i,4));
     substr($_,$i,4)=$lenfixed;
+
+    # Read length from reversed string if it is unreasonably large
+    $len = unpack('L',$lenfixed) if $i+$len > length();
+
+    # Check if length is reasonable
+    die "At position $i record length $len is too large?!\n" 
+	if $i+$len > length();
 
     # Reverse 8 byte reals/integers
     for($j=$i+4; $j<$i+$len; $j+=8){
