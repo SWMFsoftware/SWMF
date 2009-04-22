@@ -121,7 +121,7 @@ contains
           ! >>> Testing <<<
 
        case("#STARTTIME", "#SETREALTIME")
-          if(.not.is_first_session())CYCLE
+          if(.not.is_first_session() .or. IsFramework)CYCLE
           call read_var('iYear', iYear)
           call read_var('iMonth', iMonth)
           call read_var('iDay', iDay)
@@ -129,7 +129,7 @@ contains
           call read_var('iMinute', iMinute)
           call read_var('iSecond', iSecond)
        case("#TIMESIMULATION")
-          if(.not.is_first_session())CYCLE
+          if(.not.is_first_session() .or. IsFramework)CYCLE
           call read_var('tSimulation', tSimulation)
        case("#TIMESTEP")
           call read_var('dtmax', TimeStep)
@@ -161,9 +161,9 @@ contains
           call read_var('ApIndex', ApIndex)
           call read_var('SunspotAverage', SunspotAverage)
        case("#BOUNDARY")
-          call read_var('TypeBoundary', TypeBoundary)
+          call read_var('TypeBoundary', TypeBoundary, IsLowerCase=.true.)
        case("#INITIAL")
-          call read_var('TypeInitial', TypeInitial)
+          call read_var('TypeInitial', TypeInitial, IsLowerCase=.true.)
           call read_var('MaxwellianScallingFactor', MaxwellianScallingFactor)
           call read_var('CharacteristicEnergy', CharacteristicEnergy)
        case("#OUTPUT")
@@ -189,7 +189,7 @@ contains
        case("#INJECTIONFREQUENCY")
           call read_var('iFrequency', iFrequency)
        case("#CONVECTION")
-          call read_var('TypeConvection', TypeConvection)
+          call read_var('TypeConvection', TypeConvection, IsLowerCase=.true.)
        case("#INITIALTHERMALPLASMA")
           call read_var('DoReadDGCPM', DoReadDGCPM)
        case("#SOLARWIND")
