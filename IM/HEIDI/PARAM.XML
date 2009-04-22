@@ -181,13 +181,13 @@ ApIndex is the ApIndex index and SunspotAverage indicates the 13 month sunspot a
 <command name="BOUNDARY" >
 	<parameter name="TypeBoundary" type="string" input="select" case="lower">
 		<option name="none"                          value="0/none"  />		
-		<option name="Maxwellian"                    value="1/Maxwellian"  />
-		<option name="Gaussian"                      value="2/Gaussian"  />
-		<option name="FromInputFile"                 value="3/FromInputFile"  />
-		<option name="QuietRC"                       value="4/QuietRC"  />
-		<option name="FromFile"                      value="5/FromFile"  />
-		<option name="PSInject"                      value="6/PSInject"  />
-		<option name="FromRestart"                   value="7/FromRestart"  />
+		<option name="Maxwellian"                    value="1/maxwellian"  />
+		<option name="Gaussian"                      value="2/gaussian"  />
+		<option name="FromInputFile"                 value="3/frominputfile"  />
+		<option name="QuietRC"                       value="4/quietrc"  />
+		<option name="FromFile"                      value="5/fromfile"  />
+		<option name="PSInject"                      value="6/psinject"  />
+		<option name="FromRestart"                   value="7/fromrestart"  />
 	</parameter>	
 	
 #BOUNDARY
@@ -210,13 +210,13 @@ The #BOUNDARY command indicates which boundary conditions to use (to match to in
 <command name="INITIAL" >
 	<parameter name="TypeInitial" type="string" input="select" case="lower">
 		<option name="none"                          value="0/none"  />		
-		<option name="Maxwellian"                    value="1/Maxwellian"  />
-		<option name="Gaussian"                      value="2/Gaussian"  />
-		<option name="FromInputFile"                 value="3/FromInputFile"  />
-		<option name="QuietRC"                       value="4/QuietRC"  />
-		<option name="FromFile"                      value="5/FromFile"  />
-		<option name="PSInject"                      value="6/PSInject"  />
-		<option name="FromRestart"                   value="7/FromRestart"  />
+		<option name="Maxwellian"                    value="1/maxwellian"  />
+		<option name="Gaussian"                      value="2/gaussian"  />
+		<option name="FromInputFile"                 value="3/frominputfile"  />
+		<option name="QuietRC"                       value="4/quietrc"  />
+		<option name="FromFile"                      value="5/fromfile"  />
+		<option name="PSInject"                      value="6/psinject"  />
+		<option name="FromRestart"                   value="7/fromrestart"  />
 	</parameter>
 	
 #INITIAL
@@ -332,25 +332,25 @@ The #INJECTIONFREQUENCY indicates the time interval between injection BC updates
 	<parameter name="TypeConvection" type="string" input="select" case="lower">
 		<option name="none"                         value="0/none"  />
 		<option name="KpVSMaynardChen"              value="1/kpmay"  />	
-		<option name="MBIVS"                        value="2/MBIVS "  />	
-		<option name="McIlwain"                     value="3/McIlwain "  />
-		<option name="McIlwainPlusCPCP"             value="4/McIlwainPlusCPCP "  />
-		<option name="KpVSPlusBurkeWygant"          value="5/KpVSPlusBurkeWygant "  />
-		<option name="McIlwainPlusBurkeWygant"      value="6/McIlwainPlusBurkeWygant "  />
-		<option name="McIlwainCPCPBurkeWygant"      value="7/McIlwainCPCPBurkeWygant "  />
-		<option name="KpVSSelfConsintent"           value="8/KpVSSelfConsintent "  />
-		<option name="McIlwainSelfConsistent"       value="9/McIlwainSelfConsistent "  />
-		<option name="McIlwainCPCPSelfConsistent"   value="10/McIlwainCPCPSelfConsistent "  />
-		<option name="UnshieldedVSwithPen"          value="11/UnshieldedVSwithPen "  />
-		<option name="UnshieldedVSnoPen"            value="12/UnshieldedVSnoPen "  />
-		<option name="W96SC"                        value="13/W96SC "  />
-		<option name="W96"                          value="14/W96 "  default="T" />
-		<option name="AMIESC"                       value="15/AMIESC "  />
-		<option name="AMIE"                         value="16/AMIE "  />
-		<option name="ReadFromFile"                 value="20/ReadFromFile "  />
-		<option name="AMIEPot"                      value="21/AMIEPot "  />
-		<option name="W96Pot"                       value="22/W96Pot "  />
-		<option name="Foster"                       value="23/ Foster"  />
+		<option name="MBIVS"                        value="2/mbivs "  />	
+		<option name="McIlwain"                     value="3/mcilwain "  />
+		<option name="McIlwainPlusCPCP"             value="4/mcilwainpluscpcp "  />
+		<option name="KpVSPlusBurkeWygant"          value="5/kpvsplusburkewygant "  />
+		<option name="McIlwainPlusBurkeWygant"      value="6/mcilwainplusburkewygant "  />
+		<option name="McIlwainCPCPBurkeWygant"      value="7/mcilwaincpcpburkewygant "  />
+		<option name="KpVSSelfConsintent"           value="8/kpvsselfconsintent "  />
+		<option name="McIlwainSelfConsistent"       value="9/mcilwainselfconsistent "  />
+		<option name="McIlwainCPCPSelfConsistent"   value="10/mcilwaincpcpselfconsistent "  />
+		<option name="UnshieldedVSwithPen"          value="11/unshieldedvswithpen "  />
+		<option name="UnshieldedVSnoPen"            value="12/unshieldedvsnopen "  />
+		<option name="W96SC"                        value="13/w96sc "  />
+		<option name="W96"                          value="14/w96 "  default="T" />
+		<option name="AMIESC"                       value="15/amiesc "  />
+		<option name="AMIE"                         value="16/amie "  />
+		<option name="ReadFromFile"                 value="20/readfromfile "  />
+		<option name="AMIEPot"                      value="21/amiepot "  />
+		<option name="W96Pot"                       value="22/w96pot "  />
+		<option name="Foster"                       value="23/foster"  />
 	</parameter>
 
 
