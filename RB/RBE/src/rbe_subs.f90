@@ -191,7 +191,7 @@ subroutine rbe_run
   use ModTimeConvert, ONLY: time_real_to_int
 
   ! print initial fluxes
-  if (t.eq.tstart .and. itype.eq.1) call rbe_save_restart
+  if (t.eq.tstart .and. itype.eq.1) call rbe_save_result(.false.)
 
   if (t.gt.(tstart-trans).and.ires.eq.1.and.mod(t,tf).eq.0.) then
      call fieldpara(t,dt,c,q,rc,re,xlati,&
@@ -304,7 +304,8 @@ subroutine rbe_run
   endif
 
   !  Print results
-  if (t.gt.tstart.and.mod(t,tint).eq.0.) call rbe_save_restart
+  if (t.gt.tstart.and.mod(t,tint).eq.0.) &
+       call rbe_save_result(.true. .and. IsStandAlone)
 
   open(unit=UnitTmp_,file='RB/rbe_swmf.log')
   write(UnitTmp_,'(a8)') outname
@@ -315,7 +316,7 @@ end subroutine rbe_run
 
 !============================================================================
 
-subroutine rbe_save_restart
+subroutine rbe_save_result(DoSaveRestart)
 
   use rbe_time
   use rbe_cgrid
@@ -328,15 +329,18 @@ subroutine rbe_save_restart
   use rbe_cboundary
   use rbe_plasmasphere
 
-
   implicit none
+
+  logical, intent(in) :: DoSaveRestart ! logical sets whether to just save 
+                                       ! plots or to also save restart
+
 
   call p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
        xjac,gride,gridp,gridy,bo,xnsw,vsw,Bx,By,Bz,vswb,&
        xnswb,parmod,ecbf,ecdt,eclc,ecce,density,iprint,ntime,irm,&
-       iplsp,iw1,iw2,itype)
+       iplsp,iw1,iw2,itype,DoSaveRestart)
 
-end subroutine rbe_save_restart
+end subroutine rbe_save_result
 
 ! ***************************************************************************
 !                             readInputData
@@ -2003,7 +2007,7 @@ end subroutine boundary
 subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
      xjac,gride,gridp,gridy,bo,xnsw,vsw,Bx,By,Bz,&
      vswb,xnswb,parmod,ecbf,ecdt,eclc,ecce,density,iprint,&
-     ntime,irm,iplsp,iw1,iw2,itype)
+     ntime,irm,iplsp,iw1,iw2,itype, DoSaveRestart)
 
   use rbe_grid
   use rbe_cread1,ONLY: UseSeparatePlotFiles
@@ -2018,7 +2022,7 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
        flx(ir,ip,je,ig),ecbf(ir),ecdt(ir),eclc(ir),ecce(ir),&
        psd(ir,ip,iw,ik),ebound(je+1),density(ir,ip),parmod(10)
   integer iw1(ik),iw2(ik),irm(ip),iSat
-
+  logical, intent(in) :: DoSaveRestart
   hour=t/3600.
   do i=1,ir
      xlati1(i)=xlati(i)*180./pi   ! lat. at ionosphere in degree
@@ -2151,37 +2155,38 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
   close(UnitTmp_)
 
   ! Open files to write all the information for continous run        
-  if(UseSeparatePlotFiles)then
-     open(unit=UnitTmp_,file='RB/restartOUT/'//outnameSep//st2//'_c.f2',form='unformatted')
-  else
-     open(unit=UnitTmp_,file='RB/restartOUT/'//outname//st2//'_c.f2',form='unformatted')
-  end if
-  write(UnitTmp_) f2   
-  write(UnitTmp_) iw1
-  write(UnitTmp_) iw2
-  write(UnitTmp_) xnsw,vsw,Bx,By,Bz,vswb,xnswb
-  write(UnitTmp_) ecbf
-  write(UnitTmp_) ecdt
-  write(UnitTmp_) eclc
-  write(UnitTmp_) ecce
-  close(UnitTmp_)
-  if (iplsp.eq.1) call saveplasmasphere(t,tstart,itype)
-
-  ! Write the restart.H file to be included at restart
-  open(unit=UnitTmp_,file='RB/restartOUT/restart.H')
-  
-  write(UnitTmp_,'(a)') '#TIMESIMULATION'
-  write(UnitTmp_,'(es15.8,a25)') t,'tSimulation'
-  write(UnitTmp_,'(a)') '#RESTART'
-  write(UnitTmp_,'(a,a25)') 'T', 'IsRestart'
-  write(UnitTmp_,'(a)') '#INPUTDATA'
-  write(UnitTmp_,'(a,a25)') storm, 'NameStorm'
-  write(UnitTmp_,'(a)') '#SPECIES'
-  if (js == 1 ) write(UnitTmp_,'(a,a32)') 'e','NameSpecies'
-  if (js == 2 ) write(UnitTmp_,'(a,a32)') 'H','NameSpecies'
-  
-  close(UnitTmp_)
-  
+  if (DoSaveRestart) then
+     if(UseSeparatePlotFiles)then
+        open(unit=UnitTmp_,file='RB/restartOUT/'//outnameSep//st2//'_c.f2',form='unformatted')
+     else
+        open(unit=UnitTmp_,file='RB/restartOUT/'//outname//st2//'_c.f2',form='unformatted')
+     end if
+     write(UnitTmp_) f2   
+     write(UnitTmp_) iw1
+     write(UnitTmp_) iw2
+     write(UnitTmp_) xnsw,vsw,Bx,By,Bz,vswb,xnswb
+     write(UnitTmp_) ecbf
+     write(UnitTmp_) ecdt
+     write(UnitTmp_) eclc
+     write(UnitTmp_) ecce
+     close(UnitTmp_)
+     if (iplsp.eq.1) call saveplasmasphere(t,tstart,itype)
+     
+     ! Write the restart.H file to be included at restart
+     open(unit=UnitTmp_,file='RB/restartOUT/restart.H')
+     
+     write(UnitTmp_,'(a)') '#TIMESIMULATION'
+     write(UnitTmp_,'(es15.8,a25)') t,'tSimulation'
+     write(UnitTmp_,'(a)') '#RESTART'
+     write(UnitTmp_,'(a,a25)') 'T', 'IsRestart'
+     write(UnitTmp_,'(a)') '#INPUTDATA'
+     write(UnitTmp_,'(a,a25)') storm, 'NameStorm'
+     write(UnitTmp_,'(a)') '#SPECIES'
+     if (js == 1 ) write(UnitTmp_,'(a,a32)') 'e','NameSpecies'
+     if (js == 2 ) write(UnitTmp_,'(a,a32)') 'H','NameSpecies'
+     
+     close(UnitTmp_)
+  endif
   ! Write to log file
   if (t.eq.tstart) write(*,'(a8)') outname
   write(*,*) 't(hour)   ',t/3600. 
