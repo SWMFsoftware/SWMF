@@ -284,45 +284,45 @@ contains
       select case(TypeConvection)
       case('0',  'none')
          iA = 0
-      case('1',  'KpVSMaynardChen')
+      case('1',  'kpvsmaynardchen')
          IA = 1  
-      case ('2', 'MBIVS')
+      case ('2', 'mbivs')
          IA = 2
-      case ('3', 'McIlwain')
+      case ('3', 'mcilwain')
          IA = 3
-      case ('4', 'McIlwainPlusCPCP')
+      case ('4', 'mcilwainpluscpcp')
          IA = 4
-      case ('5','KpVSPlusBurkeWygant')
+      case ('5','kpvsplusburkewygant')
          IA = 5
-      case ('6','McIlwainPlusBurkeWygant')
+      case ('6','mcilwainplusburkewygant')
          IA = 6
-      case ('7','McIlwainCPCPBurkeWygant')
+      case ('7','mcilwaincpcpburkewygant')
          IA = 7
-      case ('8','KpVSSelfConsintent')
+      case ('8','kpvsselfconsintent')
          IA = 8
-      case ('9','McIlwainSelfConsistent')
+      case ('9','mcilwainselfconsistent')
          IA = 9
-      case ('10','McIlwainCPCPSelfConsistent')
+      case ('10','mcilwaincpcpselfconsistent')
          IA = 10
-      case ('11','UnshieldedVSwithPen')
+      case ('11','unshieldedvswithpen')
          IA = 11
-      case ('12','UnshieldedVSnoPen')
+      case ('12','unshieldedvsnopen')
          IA = 12
-      case ('13','W96SC')
+      case ('13','w96sc')
          IA = 13
-      case ('14','W96')
+      case ('14','w96')
          IA = 14
-      case ('15','AMIESC')
+      case ('15','amiesc')
          IA = 15 
-      case ('16','AMIE')
+      case ('16','amie')
          IA = 16
-      case ('20','ReadFromFile')
+      case ('20','readfromfile')
          IA = 20
-      case ('21','AMIEPot')
+      case ('21','amiepot')
          IA = 21
-      case ('22','W96Pot')
+      case ('22','w96pot')
          IA = 22
-      case ('23','Foster')
+      case ('23','foster')
          IA = 23
       end select
       
@@ -347,31 +347,31 @@ contains
          do iSpecies = 1, 4
             ini(iSpecies) = 0
          end do
-      case('1',  'Maxwellian')
+      case('1',  'maxwellian')
          do iSpecies = 1, 4
             ini(iSpecies) = 1
          end do
-      case('2',  'Gaussian')
+      case('2',  'gaussian')
          do iSpecies = 1, 4
             ini(iSpecies) = 2
          end do
-      case('3',  'FromInputFile')
+      case('3',  'frominputfile')
          do iSpecies = 1, 4
             ini(iSpecies) = 3
          end do
-      case('4',  'QuietRC')
+      case('4',  'quietrc')
          do iSpecies = 1, 4
             ini(iSpecies) = 4
          end do
-      case('5',  'FromFile')
+      case('5',  'fromfile')
          do iSpecies = 1, 4
             ini(iSpecies) = 5
          end do
-      case('6',  'PSInject')
+      case('6',  'psinject')
          do iSpecies = 1, 4
             ini(iSpecies) = 6
          end do
-      case('7',  'FromRestart')
+      case('7',  'fromrestart')
          do iSpecies = 1, 4
             ini(iSpecies) = 7
          end do
@@ -383,31 +383,31 @@ contains
          do iSpecies = 1, 4
             ibc(iSpecies) = 0
          end do
-      case('1',  'Maxwellian')
+      case('1',  'maxwellian')
          do iSpecies = 1, 4
             ibc(iSpecies) = 1
          end do
-      case('2',  'Gaussian')
+      case('2',  'gaussian')
          do iSpecies = 1, 4
             ibc(iSpecies) = 2
          end do
-      case('3',  'FromInputFile')
+      case('3',  'frominputfile')
          do iSpecies = 1, 4
             ibc(iSpecies) = 3
          end do
-      case('4',  'QuietRC')
+      case('4',  'quietrc')
          do iSpecies = 1, 4
             ibc(iSpecies) = 4
          end do
-      case('5',  'FromFile')
+      case('5',  'fromfile')
          do iSpecies = 1, 4
             ibc(iSpecies) = 5
          end do
-      case('6',  'PSInject')
+      case('6',  'psinject')
          do iSpecies = 1, 4
             ibc(iSpecies) = 6
          end do
-      case('7',  'FromRestart')
+      case('7',  'fromrestart')
          do iSpecies = 1, 4
             ibc(iSpecies) = 7
          end do
