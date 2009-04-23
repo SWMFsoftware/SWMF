@@ -8,8 +8,8 @@ subroutine IM_set_param(CompInfo,TypeAction)
   use ModHeidiMain
   use ModReadParam, only: i_session_read
   use ModUtilities, ONLY: fix_dir_name, check_dir, lower_case
-  use ModHeidiIo, ONLY : IsFramework
-
+  use ModHeidiIO, ONLY : IsFramework, StringPrefix
+  use ModIoUnit, only: STDOUT_
  
   implicit none
   character (len=*), parameter :: NameSub='IM_set_param'
@@ -22,7 +22,9 @@ subroutine IM_set_param(CompInfo,TypeAction)
   character (len=100) :: NameCommand, StringPlot
   logical             :: DoEcho=.false.
   logical             :: UseStrict=.true.  
-  
+  integer             :: iUnitOut
+
+
   select case(TypeAction)
   case('VERSION')
      call put(CompInfo,                         &
@@ -42,14 +44,24 @@ subroutine IM_set_param(CompInfo,TypeAction)
      IsFramework = .true.
 
   case('READ')
+     write(*,*)'Calling heidi_read'
      call heidi_read
+      write(*,*)'Done with calling heidi_read'
   case('CHECK')
      !We should check and correct parameters here
      if(iProc==0)write(*,*) NameSub,': CHECK iSession =',i_session_read()
      RETURN
      call heidi_check
   case('STDOUT')
+     iUnitOut = STDOUT_
+     if(nProc==1)then
+        StringPrefix='IM:'
+     else
+        write(StringPrefix,'(a,i3.3,a)')'IM',iProc,':'
+     end if
   case('FILEOUT')
+     call get(CompInfo,iUnitOut=iUnitOut)
+     StringPrefix=''
   case('GRID')
      call IM_set_grid
 
