@@ -815,16 +815,16 @@ test_2bodyplot_check:
 		${TESTDIR}/RESULTS/GM/log_n000001.log > test_2bodyplot.diff)
 	-@(rsync -a Param/2BODYPLOT/TestOutput/REFy*gz ${TESTDIR}/RESULTS/GM/.; \
 		gunzip ${TESTDIR}/RESULTS/GM/*gz; \
-		cat ${TESTDIR}/RESULTS/GM/y=0_ful_1_t00000010_n0000169.dat | \
+		cat ${TESTDIR}/RESULTS/GM/y=0_ful_1_t00000009_n0000145.dat | \
 		grep -v AUXDATA > \
-		${TESTDIR}/RESULTS/GM/NEWy=0_ful_1_t00000010_n0000169.dat)
+		${TESTDIR}/RESULTS/GM/NEWy=0_ful_1_t00000009_n0000145.dat)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6\
-		${TESTDIR}/RESULTS/GM/REFy=0_ful_1_t00000010_n0000169.dat \
-		${TESTDIR}/RESULTS/GM/NEWy=0_ful_1_t00000010_n0000169.dat >> \
+		${TESTDIR}/RESULTS/GM/REFy=0_ful_1_t00000009_n0000145.dat \
+		${TESTDIR}/RESULTS/GM/NEWy=0_ful_1_t00000009_n0000145.dat >> \
 		test_2bodyplot.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6\
-		${TESTDIR}/RESULTS/GM/REFy=0_ful_2_t00000010_n0000169.out \
-		${TESTDIR}/RESULTS/GM/y=0_ful_2_t00000010_n0000169.out >> \
+		${TESTDIR}/RESULTS/GM/REFy=0_ful_2_t00000009_n0000145.out \
+		${TESTDIR}/RESULTS/GM/y=0_ful_2_t00000009_n0000145.out >> \
 		test_2bodyplot.diff)
 	ls -l test_2bodyplot.diff
 

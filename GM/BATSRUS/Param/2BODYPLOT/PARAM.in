@@ -186,9 +186,15 @@ Rusanov			TypeFlux
 
 #RUN ##########################################################################
 
-#STOP
+STOP
 -1			MaxIteration
 10.0			tSimulationMax
+
+!Changing stop command because AMR at 150 iterations differs on some machines
+
+#STOP
+145			MaxIteration
+-1.0			tSimulationMax
 
 #BEGIN_COMP GM ################################################################
 
