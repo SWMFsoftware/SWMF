@@ -545,13 +545,15 @@ contains
     ! Do tests with ascii/real8/real4 files, 
     ! Cartesian/non-Cartesian coordinates
     ! 2D/3D input arrays
-    integer, parameter:: nTest = 12
+    integer, parameter:: nTest = 15
     character(len=5)  :: TypeFileIn_I(nTest) = &
          (/ 'ascii', 'real8', 'real4', 'ascii', 'real8', 'real4', &
-            'ascii', 'real8', 'real4', 'ascii', 'real8', 'real4' /)
+            'ascii', 'real8', 'real4', 'ascii', 'real8', 'real4', &
+            'ascii', 'real8', 'real4' /)
     logical           :: IsCartesianIn_I(nTest) = &
          (/ .true.,   .true., .true.,  .false.,   .false., .false.,&
-            .true.,   .true., .true.,  .false.,   .false., .false. /)
+            .true.,   .true., .true.,  .false.,   .false., .false.,&
+            .true., .false., .false. /)
 
     ! Input and output of tests
     character(len=80)    :: NameFile
@@ -670,7 +672,9 @@ contains
                VarIn_VIII     = VarIn_VIII)
        
        end select
-
+       
+       if(iTest == 13 .or. iTest == 14 .or. iTest == 15)then
+          ! Read header and data separately
           call read_plot_file(NameFile,        &
             TypeFileIn      = TypeFileIn,      &
             StringHeaderOut = StringHeaderOut, &
@@ -681,15 +685,35 @@ contains
             nVarOut         = nVarOut,         &
             ParamOut_I      = ParamOut_I,      &
             NameVarOut      = NameVarOut,      &
-            IsCartesianOut  = IsCartesianOut,  &
+            IsCartesianOut  = IsCartesianOut)
+          call read_plot_file(NameFile,        &
+            TypeFileIn      = TypeFileIn,      &
             CoordOut_DII    = CoordOut_DII,    &
             Coord1Out_I     = Coord1Out_I,     &
             Coord2Out_I     = Coord2Out_I,     &
             CoordMinOut_D   = CoordMinOut_D,   &
             CoordMaxOut_D   = CoordMaxOut_D,   &
             VarOut_VII      = VarOut_VII)
+       else
+          call read_plot_file(NameFile,        &
+               TypeFileIn      = TypeFileIn,      &
+               StringHeaderOut = StringHeaderOut, &
+               nStepOut        = nStepOut,        &
+               TimeOut         = TimeOut,         &
+               nDimOut         = nDimOut,         &
+               nParamOut       = nParamOut,       &
+               nVarOut         = nVarOut,         &
+               ParamOut_I      = ParamOut_I,      &
+               NameVarOut      = NameVarOut,      &
+               IsCartesianOut  = IsCartesianOut,  &
+               CoordOut_DII    = CoordOut_DII,    &
+               Coord1Out_I     = Coord1Out_I,     &
+               Coord2Out_I     = Coord2Out_I,     &
+               CoordMinOut_D   = CoordMinOut_D,   &
+               CoordMaxOut_D   = CoordMaxOut_D,   &
+               VarOut_VII      = VarOut_VII)
 
-
+       end if
 
        if(nStepOut /= nStepIn)then
           write(*,*)'nStepIn=', nStepIn,' nStepOut=', nStepOut
@@ -793,7 +817,7 @@ contains
      end do
 
  ! Test using defaults for 2D input array
-    NameFile = 'test_plot_file13.out'       
+    NameFile = 'test_plot_file16.out'       
     call save_plot_file(NameFile, VarIn_VII=VarIn_VII, CoordIn_DII=CoordIn_DII)
 
     call read_plot_file(NameFile, &
@@ -814,7 +838,7 @@ contains
     end if
 
     ! Test using defaults for 3D input array
-    NameFile = 'test_plot_file14.out'       
+    NameFile = 'test_plot_file17.out'       
     call save_plot_file(NameFile,nDimIn = nDimIn, VarIn_VIII = VarIn_VIII,&
                         CoordIn_DIII = CoordIn_DIII)
 
