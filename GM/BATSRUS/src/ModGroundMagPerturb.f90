@@ -2,9 +2,10 @@
 !==============================================================================
 module ModGroundMagPerturb
 
-  use ModPlanetConst
-  use ModPhysics
+  use ModPlanetConst,    ONLY: rPlanet_I, Earth_
+  use ModPhysics,        ONLY: rCurrents, No2Io_V, Si2No_V, UnitB_, UnitJ_
   use ModCoordTransform, ONLY:sph_to_xyz, rot_xyz_sph, cross_product
+  use ModConst,          ONLY: cHalfPi, cDegToRad
 
   implicit none
   save
@@ -26,22 +27,21 @@ module ModGroundMagPerturb
 
 contains
 
-  !==================================================
-  !\
-  ! This subroutine is used to calculate the ground magnetic perturbations, 
-  ! at given point in GM cells.
-  !/
+  !===========================================================================
   subroutine ground_mag_perturb(Xyz_DI, MagPerturb_DI)
+
+    ! This subroutine is used to calculate the ground magnetic perturbations, 
+    ! at given point in GM cells.
 
     use ModSize,           ONLY: nI, nJ, nK, nBLK, gcn
     use ModGeometry,       ONLY: x_BLK, y_BLK, z_BLK, R_BLK, &
          x1, x2, y1, y2, z1, z2
     use ModAdvance,        ONLY: Tmp1_BLK
-    use ModMain,           ONLY: x_, y_, z_, unusedBLK, nBlock, Time_Simulation, &
-         r_,phi_,theta_
+    use ModMain,           ONLY: x_, y_, z_, r_, phi_, theta_, &
+         unusedBLK, nBlock, Time_Simulation
     use ModNumConst,       ONLY: cPi
-    use Con_axes
-    use ModProcMH
+    use ModCurrent,        ONLY: get_current
+
     implicit none
 
     real, intent(in), dimension(3,nMagnetometer) :: Xyz_DI
@@ -113,30 +113,32 @@ contains
   !=====================================================================
   subroutine ground_mag_perturb_fac(Xyz_DI, MagPerturb_DI)
     
-    use ModProcMH 
+    use ModProcMH,         ONLY: iProc, nProc, iComm
     use ModMain,           ONLY: Time_Simulation
-    use CON_planet_field
+    use CON_planet_field,  ONLY: get_planet_field, map_planet_field
     use ModNumConst,       ONLY: cPi, cTwoPi, cRadToDeg
     use ModConst,          ONLY: cMu
     use ModCurrent,        ONLY: calc_field_aligned_current
     use ModMpi
-    use ModUtilities
 
     implicit none
 
-    real, parameter :: rIonosphere = 1.0 ! in planetary radii
+    real, intent(in)      :: Xyz_DI(3,nMagnetometer)
+    real, intent(out)     :: MagPerturb_DI(3,nMagnetometer)
 
-    real, intent(in),dimension(3,nMagnetometer)  :: Xyz_DI
-    real, intent(out),dimension(3,nMagnetometer) :: MagPerturb_DI
+
+    real, parameter       :: rIonosphere = 1.0 ! in planetary radii
     integer, parameter    :: nTheta =181, nPhi =181,nCuts = 800
-    integer               :: iHem,i,j,k, iHemisphere,iError,iTheta,iPhi,iLine,iMag
+
+    integer               :: i, j, k, iHemisphere, iError
+    integer               :: iTheta,iPhi,iLine,iMag
     real                  :: dR_Trace, Theta, Phi, Jr, r_tmp
     real                  :: dL, dS, dTheta, dPhi ,iLat, SinTheta
     real                  :: b, Fac, bRcurrents,JrRcurrents
-    real, dimension(3)    :: Xyz_D,b_D,bRcurrents_D,XyzRcurrents_D,XyzTmp_D, &
-         j_D,temp_D
-    real, dimension(nTheta,nPhi) :: FacRcurrents_II
-    real, dimension(3,nTheta,nPhi) :: bRcurrents_DII
+    real, dimension(3) :: Xyz_D, b_D, bRcurrents_D, XyzRcurrents_D, XyzTmp_D, &
+         j_D, temp_D
+    real :: FacRcurrents_II(nTheta,nPhi)
+    real :: bRcurrents_DII(3,nTheta,nPhi)
     !------------------------------------------------------------------
 
     MagPerturb_DI= 0.0
@@ -382,20 +384,21 @@ contains
     end do
     write(iUnitMag, '(1X,a)') MagName_I(nMagnetometer)
     write(iUnitMag, '(a)')  &
-         'nstep year mo dy hr mn sc msc station X Y Z dBn dBe dBd facdBn facdBe facdBn'
+         'nstep year mo dy hr mn sc msc station X Y Z '// &
+         'dBn dBe dBd facdBn facdBe facdBn'
 
   end subroutine open_magnetometer_output_file
 
   !=====================================================================
   subroutine write_magnetometers
 
-    use ModProcMH
-    use CON_axes
-    use ModMain
-    use ModIO
-    use ModMpi
-    use ModUtilities
+    use ModProcMH,ONLY: iProc, nProc, iComm
+    use CON_axes, ONLY: transform_matrix
+    use ModMain,  ONLY: x_, y_, z_, r_, theta_, phi_, n_step, time_simulation,&
+         TypeCoordSystem
+    use ModUtilities, ONLY: flush_unit
     use ModNumConst, ONLY: cTwoPi
+    use ModMpi
 
     implicit none
     
@@ -408,8 +411,7 @@ contains
     real, dimension(3,nMagnetometer):: MagPerturb_DI, & 
          MagPerturbGm_DI, MagPerturbFac_DI, &
          MagGsmXyz_DI, MagSmgXyz_DI,MagVarSum_DI
-    real,dimension(3,3):: XyzSph_DD,MagtoGsm_DD(3,3), GsmtoSmg_DD
-    real              :: rPlanet_Mag
+    real:: XyzSph_DD(3,3), MagtoGsm_DD(3,3), GsmtoSmg_DD(3,3)
     !--------------------------------------------------------
 
     ! Matrix between two coordinates
@@ -424,21 +426,16 @@ contains
     
     do iMag=1,nMagnetometer
        ! (360,360) is for the station at the center of the planet
-       if (PosMagnetometer_II(1,iMag) == 360 .and. &
-            PosMagnetometer_II(2,iMag) == 360) then 
-          rPlanet_Mag = 0.0
-          call sph_to_xyz(rPlanet_Mag,                  &
-               (90-PosMagnetometer_II(1,iMag))*cDegToRad, &
-               PosMagnetometer_II(2,iMag)*cDegToRad,      &
-               Xyz_D)
+       if ( nint(PosMagnetometer_II(1,iMag)) == 360 .and. &
+            nint(PosMagnetometer_II(2,iMag)) == 360) then 
+          Xyz_D = 0.0
        else 
-          rPlanet_Mag = rPlanet_I(Earth_) !not in normalized unit
-          call  sph_to_xyz(rPlanet_Mag,                 &
+          call  sph_to_xyz(rPlanet_I(Earth_),             &
                (90-PosMagnetometer_II(1,iMag))*cDegToRad, &
                PosMagnetometer_II(2,iMag)*cDegToRad,      &
                Xyz_D)
+          Xyz_D = matmul(MagtoGsm_DD, Xyz_D)
        end if
-       Xyz_D = matmul(MagtoGsm_DD, Xyz_D)
 
        MagGsmXyz_DI(:,iMag) = Xyz_D
        MagSmgXyz_DI(:,iMag) = matmul(GsmtoSmg_DD,Xyz_D)

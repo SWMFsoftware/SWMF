@@ -8,7 +8,60 @@ module ModCurrent
   implicit none
 
 contains
+  !============================================================================
+
+  subroutine get_current(i,j,k,iBlock,Current_D)
+
+    ! Calculate the current in a cell of a block
+
+    use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
+    use ModGeometry, ONLY: True_Cell, Dx_BLK, Dy_BLK, Dz_BLK
+    use ModCovariant,ONLY: UseCovariant                
+
+    implicit none
+    integer, intent(in) :: i,j,k,iBlock
+    real,    intent(out):: Current_D(3)
+
+    real :: DxInvHalf, DyInvHalf, DzInvHalf
+    !--------------------------------------------------------------------------
+
+    ! Exclude cells next to the body because they produce incorrect currents
+    if(.not.all(True_Cell(i-1:i+1,j-1:j+1,k-1:k+1,iBlock)))then
+       Current_D = 0.0
+       RETURN
+    endif
+
+    if(UseCovariant)then                               
+       call covariant_curlb(i,j,k,iBlock,Current_D,.true.)
+       RETURN
+    end if
+
+    DxInvHalf = 0.5/Dx_BLK(iBlock)
+    DyInvHalf = 0.5/Dy_BLK(iBlock)
+    DzInvHalf = 0.5/Dz_BLK(iBlock)
+
+    Current_D(1) = &
+         (State_VGB(Bz_,i,j+1,k,iBlock) &
+         -State_VGB(Bz_,i,j-1,k,iBlock))*DyInvHalf - &
+         (State_VGB(By_,i,j,k+1,iBlock) &
+         -State_VGB(By_,i,j,k-1,iBlock))*DzInvHalf
+
+    Current_D(2) = &
+         (State_VGB(Bx_,i,j,k+1,iBlock) &
+         -State_VGB(Bx_,i,j,k-1,iBlock))*DzInvHalf- &
+         (State_VGB(Bz_,i+1,j,k,iBlock) &
+         -State_VGB(Bz_,i-1,j,k,iBlock))*DxInvHalf
+
+    Current_D(3) = &
+         (State_VGB(By_,i+1,j,k,iBlock) &
+         -State_VGB(By_,i-1,j,k,iBlock))*DxInvHalf- &
+         (State_VGB(Bx_,i,j+1,k,iBlock) &
+         -State_VGB(Bx_,i,j-1,k,iBlock))*DyInvHalf
+
+  end subroutine get_current
+
   !===========================================================================
+
   subroutine calc_field_aligned_current(nTheta, nPhi, rIn, Fac_II, bSm_DII, &
        LatBoundary, Theta_I, Phi_I)
 
@@ -118,8 +171,8 @@ contains
           ! Convert to GM coordinates
           Xyz_D = matmul(GmSmg_DD, Xyz_D)
 
-         if(present(LatBoundary)) &
-              LatBoundary = min( abs(Theta - cHalfPi), LatBoundary )
+          if(present(LatBoundary)) &
+               LatBoundary = min( abs(Theta - cHalfPi), LatBoundary )
 
           ! Get the B0 field at the mapped position
           call get_planet_field(Time_Simulation, Xyz_D, &
@@ -194,10 +247,10 @@ contains
 
                 ! Convert to GM coordinates
                 XyzIn_D = matmul(GmSmg_DD, XyzIn_D)
-                
+
                 call get_planet_field(Time_Simulation, XyzIn_D, &
                      TypeCoordSystem//' NORM', bIn_D)
-                
+
                 ! Convert to normalized units and get magnitude
                 bIn_D = bIn_D*Si2No_V(UnitB_)
                 bIn   = sqrt(sum(bIn_D**2))

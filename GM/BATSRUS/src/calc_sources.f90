@@ -4,27 +4,27 @@ subroutine calc_sources
   use ModProcMH
   use ModMain
   use ModVarIndexes
-  use ModGeometry, ONLY : dx_BLK, dy_BLK, dz_BLK, R_BLK,&
+  use ModGeometry,      ONLY: dx_BLK, dy_BLK, dz_BLK, R_BLK,&
        body_BLK, Rmin_BLK, vInv_CB, TypeGeometry, y_BLK
-  use ModGeometry, ONLY : R2_BLK                        !^CFG IF SECONDBODY
+  use ModGeometry,      ONLY: R2_BLK                   !^CFG IF SECONDBODY
   use ModAdvance
-  use ModParallel, ONLY : NOBLK, neiLEV, &
+  use ModParallel,      ONLY: NOBLK, neiLEV, &
        neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
   use ModPhysics
   use ModNumConst
-  use ModResistivity,ONLY : UseResistivity, Eta_GB   !^CFG IF DISSFLUX
-  use ModUser,     ONLY : user_calc_sources
+  use ModResistivity,   ONLY: UseResistivity, Eta_GB   !^CFG IF DISSFLUX
+  use ModUser,          ONLY: user_calc_sources
   use ModCoordTransform
-  use ModHallResist, ONLY: &
+  use ModHallResist,    ONLY: &
        UseHallResist, HallHyperFactor, calc_hyper_resistivity 
   use ModGrayDiffusion, ONLY: calc_source_gray_diffusion !^CFG IF IMPLICIT
-  use ModTemperature, ONLY: calc_source_temperature_diff, &
+  use ModTemperature,   ONLY: calc_source_temperature_diff, &
        UseTemperatureDiffusion
   use ModMultiFluid
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
-  use ModMultiIon, ONLY: multi_ion_source_expl, multi_ion_source_impl
-
-  use ModCovariant, ONLY: UseCovariant 
+  use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
+  use ModCovariant,     ONLY: UseCovariant 
+  use ModCurrent,       ONLY: get_current
 
   implicit none
 
@@ -521,54 +521,3 @@ subroutine calc_divb(iBlock)
   endif                                         
 end subroutine calc_divb
 
-!==============================================================================
-
-subroutine get_current(i,j,k,iBlock,Current_D)
-
-  ! Calculate the current in a cell of a block
-
-  use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
-  use ModGeometry, ONLY: True_Cell, Dx_BLK, Dy_BLK, Dz_BLK
-  use ModCovariant,ONLY: UseCovariant                
-
-  implicit none
-  integer, intent(in) :: i,j,k,iBlock
-  real,    intent(out):: Current_D(3)
-
-  real :: DxInvHalf, DyInvHalf, DzInvHalf
-  !----------------------------------------------------------------------------
-
-  ! Exclude cells next to the body because they produce incorrect currents
-  if(.not.all(True_Cell(i-1:i+1,j-1:j+1,k-1:k+1,iBlock)))then
-     Current_D = 0.0
-     RETURN
-  endif
-
-  if(UseCovariant)then                               
-     call covariant_curlb(i,j,k,iBlock,Current_D,.true.)
-     RETURN
-  end if                                             
-
-  DxInvHalf = 0.5/Dx_BLK(iBlock)
-  DyInvHalf = 0.5/Dy_BLK(iBlock)
-  DzInvHalf = 0.5/Dz_BLK(iBlock)
-
-  Current_D(1) = &
-       (State_VGB(Bz_,i,j+1,k,iBlock) &
-       -State_VGB(Bz_,i,j-1,k,iBlock))*DyInvHalf - &
-       (State_VGB(By_,i,j,k+1,iBlock) &
-       -State_VGB(By_,i,j,k-1,iBlock))*DzInvHalf
-
-  Current_D(2) = &
-       (State_VGB(Bx_,i,j,k+1,iBlock) &
-       -State_VGB(Bx_,i,j,k-1,iBlock))*DzInvHalf- &
-       (State_VGB(Bz_,i+1,j,k,iBlock) &
-       -State_VGB(Bz_,i-1,j,k,iBlock))*DxInvHalf
-
-  Current_D(3) = &
-       (State_VGB(By_,i+1,j,k,iBlock) &
-       -State_VGB(By_,i-1,j,k,iBlock))*DxInvHalf- &
-       (State_VGB(Bx_,i,j+1,k,iBlock) &
-       -State_VGB(Bx_,i,j-1,k,iBlock))*DyInvHalf
-
-end subroutine get_current

@@ -105,6 +105,8 @@ contains
 
     ! Compute current dependent anomalous resistivity
 
+    use ModCurrent, ONLY: get_current
+
     integer, intent(in) :: iBlock
     real,    intent(out):: Eta_G(-1:nI+2, -1:nJ+2, -1:nK+2)
 
