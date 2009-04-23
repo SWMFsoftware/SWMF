@@ -57,7 +57,7 @@ test_run:
 
 test_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=0.001 -a=1e-8 \
-		${TESTDIR}/test1_h_prs.002  ${OUTDIR}/test1_h_prs.002 \
+		${TESTDIR}/IM/${OUTDIR}/test1_h_prs.002  ${OUTDIR}/test1_h_prs.002 \
 			> test.diff
 	ls -l test.diff
 
@@ -85,7 +85,7 @@ allclean: install
 rundir:
 	mkdir -p ${RUNDIR}/IM
 	cd ${RUNDIR}/IM; \
-		mkdir restartOUT restartIN plots Output 
+		mkdir restartOUT restartIN plots Output input
 	cd ${RUNDIR}/IM; \
 		mkdir Output/ionosphere
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
