@@ -44,9 +44,24 @@ SUBROUTINE heidi_read
   !--------------------------------------------------------------------------
 
   call set_parameters
+
   Dt = DTmax
   call write_prefix; write(iUnitStdOut,*) ' year,month,day,UT',year,month,day,UT
   
+  write(*,*) 'DT,TMAX,TINT,TIME',DT,TMAX,TINT,TIME
+  write(*,*) 'IO,JO,KO,LO,ISO',IO,JO,KO,LO,ISO
+  write(*,*)' ELB,SWE,RW,HMIN',ELB,SWE,RW,HMIN
+  write(*,*) 'ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT',&
+       ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT
+  write(*,*) '(SCALC(k),k=1,NS)',(SCALC(k),k=1,NS)
+  write(*,*) 'YEAR,month,day,UT,R,AP,KP',YEAR,month,day,UT,R,AP,KP
+  write(*,*) '(INI(k),k=1,NS)',(INI(k),k=1,NS)
+  write(*,*) '(IBC(k),k=1,NS)',(IBC(k),k=1,NS)
+  write(*,*) 'TINJ,Ab,Eob',TINJ,Ab,Eob
+  write(*,*) '(IRES(k),k=1,15)',(IRES(k),k=1,15)
+  write(*,*) 'NAME',NameRun
+  
+
   TimeArray(1) = year
   TimeArray(2) = month
   TimeArray(3) = day
@@ -66,8 +81,7 @@ SUBROUTINE heidi_read
   ithermfirst=1		! So we do the setup routines in THERMAL
 
   IF (IKP.EQ.4 .OR. IA.EQ.2) THEN  ! Read in MBI file
-     
-     OPEN(UNITTMP_,FILE=NAME//'_Le.dat',status='old')
+     OPEN(UNITTMP_,FILE=trim(NameRun)//'_Le.dat',status='old')
      DO I=1,3
         READ (UNITTMP_,*) header
      END DO
@@ -86,7 +100,7 @@ SUBROUTINE heidi_read
 
   IF (IA.EQ.4 .or. IA.EQ.7 .or. IA.GE.10) THEN ! Read in PC Potential File
      
-     OPEN(UNITTMP_,FILE=NAME//'_ppc.dat',status='old')
+     OPEN(UNITTMP_,FILE=trim(NameRun)//'_ppc.dat',status='old')
      DO I=1,3
         READ (UNITTMP_,*) header
      END DO
@@ -124,7 +138,7 @@ SUBROUTINE CONSTANT(NKP)
 
   !.......Read Kp history of the modeled storm
   IF (IKP.GE.3) THEN
-     OPEN(UNITTMP_,FILE=NAME//'_kp.in',STATUS='OLD') 
+     OPEN(UNITTMP_,FILE=trim(NameRun)//'_kp.in',STATUS='OLD') 
      READ(UNITTMP_,10) HEADER
 10   FORMAT(A80)
      DO I=1,NSTEP/NKP+2
@@ -664,8 +678,8 @@ SUBROUTINE GETSWIND
   implicit none
 
   real :: T1,T2,BZ1,BZ2,MD1,MD2,U1,U2,FAC,FLO,LMPO,AMPO,BY1,BY2,BZ,BT
+  integer :: i, j, k, l
   character header*8
-  INTEGER ::I,J,K,L
   SAVE T1,T2,BZ1,BZ2,MD1,MD2,U1,U2,BY1,BY2
 
   real :: bx
@@ -677,7 +691,7 @@ SUBROUTINE GETSWIND
   IF (T.EQ.TIME) THEN
      T2=TIME-1.
      T1=T2
-     OPEN(UNIT=iUnit,FILE=NAME//'_sw1.in',status='old')
+     OPEN(UNIT=iUnit,FILE=trim(NameRun)//'_sw1.in',status='old')
      DO I=1,6			! 6 lines of header material
         READ (iUnit,*) HEADER
      END DO
@@ -794,7 +808,7 @@ SUBROUTINE THERMAL
      delt=2*DT*dtimestep
      If (ithermfirst.eq.2) then
         If (itherminit.eq.1) then  ! Read initial plasmasphere from file
-           filename=name//'_dgcpm.in'
+           filename=trim(NameRun)//'_dgcpm.in'
            
            call write_prefix; write(iUnitStdOut,*) 'Reading in plasmasphere file: ',filename
            call loadplasmasphere(filename)

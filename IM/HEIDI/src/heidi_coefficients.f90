@@ -597,7 +597,7 @@ SUBROUTINE MAGCONV(I3,NST)
      if (T.EQ.TIME) then
         TP2=TIME-1.
         TP1=TP2
-        OPEN(UNIT=iUnit,FILE=name//'_pot.in',status='old')
+        OPEN(UNIT=iUnit,FILE=trim(NameRun)//'_pot.in',status='old')
         do i=1,5                   ! lines of header material
            read (iUnit,*) HEADER
         end do

@@ -426,7 +426,7 @@ SUBROUTINE INITIAL(LNC,XN,J6,J18)
            !  Read in from a unformatted file (INI=7)
         ELSE IF (INI(S).EQ.7) THEN
            iUnit_unff = io_unit_new()
-           OPEN(UNIT=iUnit_unff,FILE=NAME//ST2//'.unff',status='old',   &
+           OPEN(UNIT=iUnit_unff,FILE=NameRestartOutDir//trim(NameRun)//ST2//'.unff',status='old',   &
                 form='unformatted')
            DO L=1,NPA
               !	  DO K=8,NE  ! Changed the Egrid for runs "e" and "f" !1,NE
@@ -644,7 +644,7 @@ SUBROUTINE GEOSB
            TS1=TS2
            FS2(1:7)=0.
            iUnitSopa = io_unit_new()
-           OPEN(UNIT=iUnitSopa,FILE=NAME//'_sopa.in',status='old')
+           OPEN(UNIT=iUnitSopa,FILE=trim(NameRun)//'_sopa.in',status='old')
            DO I=1,3
               READ(iUnitSopa,*) HEADER
            END DO
@@ -658,7 +658,7 @@ SUBROUTINE GEOSB
         TEC2=0.
         TEF2=0.
         iUnitMpa = io_unit_new()
-        OPEN(UNIT=iUnitMpa,FILE=NAME//'_mpa.in',status='old')
+        OPEN(UNIT=iUnitMpa,FILE=trim(NameRun)//'_mpa.in',status='old')
         DO I=1,3			! 3 lines of header material
            READ(iUnitMpa,*) HEADER
         END DO
@@ -944,7 +944,7 @@ SUBROUTINE FINJ(F)
         T2=TIME-1.
         T1=T2
         iUnitSw = io_unit_new()
-        OPEN(UNIT=iUnitSw,FILE=NAME//'_sw2.in',status='old')
+        OPEN(UNIT=iUnitSw,FILE=trim(NameRun)//'_sw2.in',status='old')
         DO I=1,6                      ! 6 lines of header material
            READ(iUnitSw,*) HEADER
         END DO

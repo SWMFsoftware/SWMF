@@ -85,15 +85,15 @@ subroutine IonoHeidiWriteOutput(ifile,time,IO_prefix,IO_suffix)
   ! a data file.
   !/
   use ModIonoHeidi
-  use ModHeidiIO, only: cOutputDir
+  use ModHeidiIO, only: NameOutputDir
   use ModNumConst, only: cPi
   use ModIoUnit, ONLY : io_unit_new
   implicit none
 
   integer, intent(in) :: ifile
   real, intent(in) :: time
-  character (len=5), intent(in) :: IO_prefix
-  character (len=3), intent(in) :: IO_suffix
+  character (len=*), intent(in) :: IO_prefix
+  character (len=*), intent(in) :: IO_suffix
 
   integer, parameter :: tec_type = 1
   integer, parameter :: idl_type = 2
@@ -183,10 +183,10 @@ subroutine IonoHeidiWriteOutput(ifile,time,IO_prefix,IO_suffix)
 
 !!! For use with mram-given output suffix:
 
-  !write(*,*) "file : ",cOutputDir//iono_dir//"it_"//&
+  !write(*,*) "file : ",NameOutputDir//iono_dir//"it_"//&
    !    IO_suffix//IO_ext
 
-  open(unit=Iunit,file=cOutputDir//iono_dir//"it_"//&
+  open(unit=Iunit,file=NameOutputDir//iono_dir//"it_"//&
        IO_suffix//IO_ext, &
        status="unknown")
 

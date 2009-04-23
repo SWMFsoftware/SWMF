@@ -72,7 +72,7 @@ module ModHeidiInput
   logical :: DoSaveNightsideBCDistribution = .true.
   logical :: DoSaveDifferentialNumberFlux = .false.
   ! "#OUTPUTINFO"
-  character(len=10) :: NameRun
+  character(len=20) :: NameRunIn = 'test1'
   real :: nFrequency
   ! "#INJECTIONFREQUENCY"
   real :: iFrequency
@@ -184,7 +184,7 @@ contains
           call read_var('DoSaveNightsideBCDistribution', DoSaveNightsideBCDistribution)
           call read_var('DoSaveDifferentialNumberFlux', DoSaveDifferentialNumberFlux)
        case("#OUTPUTINFO")
-          call read_var('NameRun', NameRun)
+          call read_var('NameRun', NameRunIn)
           call read_var('nFrequency', nFrequency)
        case("#INJECTIONFREQUENCY")
           call read_var('iFrequency', iFrequency)
@@ -249,7 +249,7 @@ contains
 
       tinj                  = iFrequency
       tint                  = nFrequency
-      name                  = NameRun 
+      NameRun               = NameRunIn 
 
       Ab                    = MaxwellianScallingFactor
       Eob                   = CharacteristicEnergy
