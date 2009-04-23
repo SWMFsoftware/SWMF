@@ -1,12 +1,12 @@
 
 #STARTTIME
-2002                    iYear
-4                       iMonth
-17                      iDay
-0                       iHour
-0                       iMinute
-0                       iSecond
-
+2002			iYear
+04			iMonth
+17			iDay
+00			iHour
+00			iMinute
+00			iSecond
+0.0 			FracSecond
 
 #TIMESIMULATION
 120.0			tSimulation [sec]
@@ -86,7 +86,7 @@ test1			NameRun
 
 
 #CONVECTION
-W96			TypeConvection
+14			TypeConvection
 
 #INITIALTHERMALPLASMA
 F			DoReadDGCPM	
@@ -99,3 +99,4 @@ F 			UseConstantStepPA
 
 #INCLUDEWAVES
 F 			UseWaves
+
