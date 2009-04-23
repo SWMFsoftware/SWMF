@@ -213,7 +213,7 @@ minmod			TypeLimiter
 y=0 FUL tec             StringPlot
 -1                      DnSavePlot
 10.			DtSavePlot
-y=0 FUL idl             StringPlot
+y=0 FUL idl_ascii       StringPlot
 -1                      DnSavePlot
 10.                     DtSavePlot
 -1.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
