@@ -85,9 +85,9 @@ allclean: install
 rundir:
 	mkdir -p ${RUNDIR}/IM
 	cd ${RUNDIR}/IM; \
-		mkdir restartOUT restartIN plots Output input
+		mkdir input plots restartIN restartOUT
 	cd ${RUNDIR}/IM; \
-		mkdir Output/ionosphere
+		mkdir plots/ionosphere
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR} ; \
 		ln -s ${BINDIR}/HEIDI.exe .;\
