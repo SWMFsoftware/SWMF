@@ -5,9 +5,10 @@ module ModUser
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
        IMPLEMENTED3 => user_set_ics,                    &
-       IMPLEMENTED4 => user_update_states,              &
-       IMPLEMENTED5 => user_set_plot_var,               &
-       IMPLEMENTED6 => user_material_properties
+       IMPLEMENTED4 => user_set_outerbcs,               &
+       IMPLEMENTED5 => user_update_states,              &
+       IMPLEMENTED6 => user_set_plot_var,               &
+       IMPLEMENTED7 => user_material_properties
 
   include 'user_module.h' !list of public methods
 
@@ -18,22 +19,39 @@ module ModUser
   character(len=20) :: TypeProblem
   real :: HeatConductionCoef, AmplitudeTemperature, T0
 
+  character(len=100) :: NameRefFile
+  integer :: nCellRef
+  integer :: &
+       iRhoRef  = 1, &
+       iTmatRef = 2, &
+       iUrRef   = 3, &
+       nVarRef  = 3
+  real, allocatable :: rRef_C(:), StateRef_VC(:,:)
+
 contains
 
   !============================================================================
 
   subroutine user_init_session
 
-    use ModMain,   ONLY: Time_Simulation
-    use ModProcMH, ONLY: iProc
+    use ModIoUnit,  ONLY: UnitTmp_
+    use ModMain,    ONLY: Time_Simulation
+    use ModProcMH,  ONLY: iProc
+
+    integer :: iCell, iError
+    integer :: nStepRef, nDimRef, nParamRef, nVarRef
+    real :: TimeRef, GammaRef
+    character(len=500) :: StringHeaderRef, NameVarRef
 
     character(len=*), parameter :: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
 
-    if(Time_Simulation <= 0.0)then
-       if(iProc == 0) write(*,*) NameSub// &
-            ' : starting simulation time should be larger than 0'
-       call stop_mpi('reset time with #TIMESIMULATION')
+    if(TypeProblem=='gaussian' .or. TypeProblem=='rz')then
+       if(Time_Simulation <= 0.0)then
+          if(iProc == 0) write(*,*) NameSub// &
+               ' : starting simulation time should be larger than 0'
+          call stop_mpi('reset time with #TIMESIMULATION')
+       end if
     end if
 
     select case(TypeProblem)
@@ -41,10 +59,44 @@ contains
        HeatConductionCoef = 0.1
        AmplitudeTemperature = 10.0
        T0 = 10.0
+
     case('rz')
        HeatConductionCoef = 0.1
        AmplitudeTemperature = 10.0
        T0 = 3.0
+
+    case('rmtv')
+       NameRefFile = 'rmtv_initial.out'
+
+       open(UnitTmp_, FILE=NameRefFile, STATUS="old", IOSTAT=iError)
+
+       if(iError /= 0)call stop_mpi(NameSub // &
+            " could not open reference file="//NameRefFile)
+
+       read(UnitTmp_,'(a)') StringHeaderRef
+       read(UnitTmp_,*) nStepRef, TimeRef, nDimRef, nParamRef, nVarRef
+       read(UnitTmp_,*) nCellRef
+       read(UnitTmp_,*) GammaRef
+       read(UnitTmp_,'(a)') NameVarRef
+
+       allocate( rRef_C(nCellRef), StateRef_VC(nVarRef,nCellRef) )
+
+       do iCell = 1, nCellRef
+          read(UnitTmp_,*) rRef_C(iCell), StateRef_VC(:,iCell)
+       end do
+
+       close(UnitTmp_)
+
+       rRef_C = rRef_C
+       StateRef_VC(iRhoRef,:)  = StateRef_VC(iRhoRef,:)           ! g/cm^3
+       StateRef_VC(iTmatRef,:) = StateRef_VC(iTmatRef,:)*1.0e-3   ! keV
+       StateRef_VC(iUrRef,:)   = StateRef_VC(iUrRef,:)*1.0e-8     ! cm/sh
+
+       do iCell = 1, nCellRef
+          StateRef_VC(iTmatRef,iCell) = &
+               max(StateRef_VC(iTmatRef,iCell),1.0e-12)
+       end do
+
     case default
        call stop_mpi(NameSub//' : undefined problem type='//TypeProblem)
     end select
@@ -118,12 +170,12 @@ contains
     use ModGeometry,   ONLY: x_Blk, y_Blk, Dx_Blk, y2
     use ModMain,       ONLY: GlobalBlk, nI, nJ, nK, x_, Time_Simulation
     use ModNumConst,   ONLY: cPi
-    use ModPhysics,    ONLY: gm1
-    use ModVarIndexes, ONLY: Rho_, RhoUx_, p_
+    use ModPhysics,    ONLY: gm1, No2Io_V, UnitTemperature_
+    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, ExtraEint_, p_
 
-    integer :: iBlock, i, j, k
-    real :: x, Dx, Temperature, Spread
-    real :: r, Lambda
+    integer :: iBlock, i, j, k, iCell
+    real :: x, y, Dx, Temperature, Spread, Pressure
+    real :: r, Lambda, Weight1, Weight2, Rho, Tmat, Ur, p, RhoU_D(2)
 
     character(len=*), parameter :: NameSub = "user_set_ics"
     !--------------------------------------------------------------------------
@@ -141,6 +193,7 @@ contains
              State_VGB(p_,i,j,k,iBlock) = Temperature
           end do; end do
        end do
+
     case('rz')
        Lambda = -(3.831705970/y2)**2
        Spread = 4.0*HeatConductionCoef*Time_Simulation
@@ -156,6 +209,53 @@ contains
              State_VGB(p_,i,j,k,iBlock) = Temperature
           end do
        end do; end do
+
+    case('rmtv')
+       do j=1,nJ; do i=1,nI
+          x = x_Blk(i,j,0,iBlock)
+          y = y_Blk(i,j,0,iBlock)
+          r = sqrt(x**2+y**2)
+
+          do iCell = 1, nCellRef
+             if(rRef_C(iCell) >= r) EXIT
+          end do
+          if(iCell == 1) call stop_mpi(NameSub // &
+               " Reference solution does not cover the left boundary")
+
+          if(iCell > nCellRef)then
+             ! Cell is beyond the last point of Reference input: use last cell
+             iCell   = nCellRef
+             Weight1 = 0.0
+             Weight2 = 1.0
+          else
+             ! Assign weights for linear interpolation between
+             ! iCell-1 and iCell
+             Weight1 = (rRef_C(iCell) - r) &
+                  /    (rRef_C(iCell) - rRef_C(iCell-1))
+             Weight2 = 1.0 - Weight1
+          end if
+
+          Rho  = ( Weight1*StateRef_VC(iRhoRef, iCell-1) &
+               +   Weight2*StateRef_VC(iRhoRef, iCell) )
+          Tmat = ( Weight1*StateRef_VC(iTmatRef, iCell-1) &
+               +   Weight2*StateRef_VC(iTmatRef, iCell) )
+          Ur   = ( Weight1*StateRef_VC(iUrRef, iCell-1) &
+               +   Weight2*StateRef_VC(iUrRef, iCell) )
+
+          p = Rho*Tmat
+
+          RhoU_D(1) = Rho*Ur*x/r
+          RhoU_D(2) = Rho*Ur*y/r
+
+          do k=1,nk
+             State_VGB(Rho_,i,j,k,iBlock) = Rho
+             State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock) = RhoU_D
+             State_VGB(RhoUz_,i,j,k,iBlock) = 0.0
+             State_VGB(ExtraEint_,i,j,k,iBlock) = 0.0
+             State_VGB(p_,i,j,k,iBlock) = p
+          end do
+       end do; end do
+
     case default
        call stop_mpi(NameSub//' : undefined problem type='//TypeProblem)
     end select
@@ -164,14 +264,84 @@ contains
 
   !============================================================================
 
+  subroutine user_set_outerbcs(iBlock,iSide, TypeBc, IsFound)
+
+    use ModAdvance,    ONLY: State_VGB
+    use ModGeometry,   ONLY: x_Blk, y_Blk
+    use ModImplicit,   ONLY: StateSemi_VGB
+    use ModMain,       ONLY: nI, nJ, nK
+    use ModVarIndexes, ONLY: Rho_, RhoUx_, p_
+
+    integer,          intent(in)  :: iBlock, iSide
+    character(len=20),intent(in)  :: TypeBc
+    logical,          intent(out) :: IsFound
+
+    integer :: i, j, k
+    real :: r, Temperature
+
+    character (len=*), parameter :: NameSub = 'user_set_outerbcs'
+    !--------------------------------------------------------------------------
+
+    if(.not. (iSide==2 .or. iSide==4) )then
+       write(*,*) NameSub//' : user boundary not defined at iSide = ', iSide
+       call stop_mpi(NameSub)
+    end if
+
+    select case(TypeBc)
+    case('user')
+       select case(iSide)
+       case(2) ! z-direction in rz-geometry
+          do k = -1, nK+2; do j = -1, nJ+2
+             Temperature = State_VGB(p_,nI,j,k,iBlock) &
+                  /State_VGB(Rho_,nI,j,k,iBlock)
+             do i = nI+1, nI+2
+                r = sqrt(x_Blk(i,j,1,iBlock)**2+y_Blk(i,j,1,iBlock)**2)
+                State_VGB(Rho_,i,j,k,iBlock) = 1.0/r**(19.0/9.0)
+                State_VGB(RhoUx_:p_-1,i,j,k,iBlock) = &
+                     State_VGB(RhoUx_:p_-1,nI,j,k,iBlock)
+                State_VGB(p_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) &
+                     *Temperature
+             end do
+          end do; end do
+       case(4) ! r-direction in rz-geometry
+          do k = -1, nK+2; do i = -1, nI+2
+             Temperature = State_VGB(p_,i,nJ,k,iBlock) &
+                  /State_VGB(Rho_,i,nJ,k,iBlock)
+             do j = nJ+1, nJ+2
+                r = sqrt(x_Blk(i,j,1,iBlock)**2+y_Blk(i,j,1,iBlock)**2)
+                State_VGB(Rho_,i,j,k,iBlock) = 1.0/r**(19.0/9.0)
+                State_VGB(RhoUx_:p_-1,i,j,k,iBlock) = &
+                     State_VGB(RhoUx_:p_-1,i,nJ,k,iBlock)
+                State_VGB(p_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) &
+                     *Temperature
+             end do
+          end do; end do
+       end select
+    case('usersemi')
+       select case(iSide)
+       case(2)
+          StateSemi_VGB(1,nI+1,:,:,iBlock) = StateSemi_VGB(1,nI,:,:,iBlock)
+       case(4)
+          StateSemi_VGB(1,:,nJ+1,:,iBlock) = StateSemi_VGB(1,:,nJ,:,iBlock)
+       end select
+    end select
+
+    IsFound = .true.
+
+  end subroutine user_set_outerbcs
+
+  !============================================================================
+
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModAdvance,    ONLY: State_VGB
+    use ModConst,      ONLY: cKToEv
     use ModGeometry,   ONLY: x_Blk, y_Blk, Dx_Blk, y2
     use ModMain,       ONLY: nI, nJ, nK, Time_Simulation
     use ModNumConst,   ONLY: cPi
+    use ModPhysics,    ONLY: No2Si_V, UnitTemperature_
     use ModVarIndexes, ONLY: p_, Rho_
 
     integer,          intent(in)   :: iBlock
@@ -280,10 +450,18 @@ contains
     if(present(CvSiOut)) CvSiOut = inv_gm1*Rho &
          *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
 
-    if(present(HeatConductionCoefSiOut)) &
-       HeatConductionCoefSiOut = HeatConductionCoef &
-            *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_) &
-            *No2Si_V(UnitU_)*No2Si_V(UnitX_)
+    if(present(HeatConductionCoefSiOut))then
+       select case(TypeProblem)
+       case('rmtv')
+          HeatConductionCoefSiOut = Temperature**6.5/Rho**2 &
+               *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_) &
+               *No2Si_V(UnitU_)*No2Si_V(UnitX_)
+       case default
+          HeatConductionCoefSiOut = HeatConductionCoef &
+               *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_) &
+               *No2Si_V(UnitU_)*No2Si_V(UnitX_)
+       end select
+    end if
 
     if(present(AbsorptionOpacitySiOut)) AbsorptionOpacitySiOut = 0.0
     if(present(RosselandMeanOpacitySiOut)) RosselandMeanOpacitySiOut = 0.0
