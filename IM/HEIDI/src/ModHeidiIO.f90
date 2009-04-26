@@ -15,10 +15,10 @@ Module ModHeidiIO
   ! Define some variables set with the input file
   ! Formerly: Common block PARAM3
   real :: TINJ
-  character(len=20) :: NameRun = 'test1'
-  character(len=10) :: NameOutputDir="IM/plots/"
-  character(len=20) :: NameRestartOutDir = "IM/restartOUT"
-  character(len=20) :: NameRestartInDir = "IM/restartIN"
+  character(len=20) :: NameRun="test1"
+  character(len=9)  :: NameOutputDir="IM/plots/"
+  character(len=14) :: NameRestartOutDir = "IM/restartOUT/"
+  character(len=13) :: NameRestartInDir = "IM/restartIN/"
   
 
   integer :: INI(NS),IRES(15),ISTORM,IST,IBC(NS),IA
