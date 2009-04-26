@@ -31,7 +31,6 @@ LIB:  install
 	@cd srcInterface;	make LIB
 
 TESTDIR = run_test
-UADIR = ${DIR}/UA/GITM/srcData
 
 test:
 	@echo "test_compile..." > test.diff
@@ -48,9 +47,10 @@ test_compile:
 
 test_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR} STANDALONE="YES" PWDIR=`pwd`
+	make rundir RUNDIR=${TESTDIR} STANDALONE="YES"
 	cd input; cp *.in *.dat *.glo *.initial *.unff ../${TESTDIR}
-	mkdir ${TESTDIR}/ionosphere
+	cp ${EMPIRICALIEDIR}/wei96.cofcnts ${TESTDIR}/
+	cp ${EMPIRICALIEDIR}/ED_hpke.noaa ${TESTDIR}/hpke.noaa
 
 test_run: 
 	cd ${TESTDIR}; ${MPIRUN} ./HEIDI.exe
@@ -84,11 +84,7 @@ allclean: install
 rundir:
 	mkdir -p ${RUNDIR}/IM
 	cd ${RUNDIR}/IM; \
-		mkdir input plots restartIN restartOUT 
-	cp ${EMPIRICALIEDIR}/ED_hpke.noaa ${RUNDIR}/IM/hpke.noaa
-	cp ${EMPIRICALIEDIR}/*.cofcnts ${RUNDIR}/IM/
-	cd ${RUNDIR}/IM; \
-		mkdir plots/ionosphere
+		mkdir -p input plots/ionosphere restartIN restartOUT
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR} ; \
 		ln -s ${BINDIR}/HEIDI.exe .;\
