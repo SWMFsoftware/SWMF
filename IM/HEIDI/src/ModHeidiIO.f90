@@ -16,9 +16,9 @@ Module ModHeidiIO
   ! Formerly: Common block PARAM3
   real :: TINJ
   character(len=20) :: NameRun="test1"
-  character(len=9)  :: NameOutputDir="IM/plots/"
-  character(len=14) :: NameRestartOutDir = "IM/restartOUT/"
-  character(len=13) :: NameRestartInDir = "IM/restartIN/"
+  character(len=*),parameter :: NameOutputDir="IM/plots/"
+  character(len=*),parameter :: NameRestartOutDir = "IM/restartOUT/"
+  character(len=*),parameter :: NameRestartInDir = "IM/restartIN/"
   
 
   integer :: INI(NS),IRES(15),ISTORM,IST,IBC(NS),IA
