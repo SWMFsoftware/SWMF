@@ -30,10 +30,9 @@ LIB:  install
 	@cd src;	        make LIB
 	@cd srcInterface;	make LIB
 
-OUTDIR =plots
 TESTDIR = run_test
 UADIR = ${DIR}/UA/GITM/srcData
-CHECKDIR = output
+
 test:
 	@echo "test_compile..." > test.diff
 	make   test_compile
@@ -58,11 +57,10 @@ test_run:
 
 test_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=0.001 -a=1e-8 \
-		${TESTDIR}/IM/${OUTDIR}/test1_h_prs.002  ${CHECKDIR}/test1_h_prs.002 \
+		${TESTDIR}/IM/plots/test1_h_prs.002 \
+		output/test1_h_prs.002 \
 			> test.diff
 	ls -l test.diff
-
-
 
 clean: install
 	@(if [ -r "Makefile.conf" ]; then  \
@@ -85,13 +83,10 @@ allclean: install
 
 rundir:
 	mkdir -p ${RUNDIR}/IM
-	cp ${EMPIRICALIEDIR}/ED_hpke.noaa ${RUNDIR}/hpke.noaa	
-	cp ${EMPIRICALIEDIR}/iz94.f ${RUNDIR}/iz94.f
-	cp ${EMPIRICALIEDIR}/hmr89.f ${RUNDIR}/hmr89.f
-	cp ${EMPIRICALIEDIR}/mh86.f ${RUNDIR}/mh86.f
-	cp ${UADIR}/wei96.cofcnts ${RUNDIR}/wei96.cofcnts
 	cd ${RUNDIR}/IM; \
 		mkdir input plots restartIN restartOUT 
+	cp ${EMPIRICALIEDIR}/ED_hpke.noaa ${RUNDIR}/IM/hpke.noaa
+	cp ${EMPIRICALIEDIR}/*.cofcnts ${RUNDIR}/IM/
 	cd ${RUNDIR}/IM; \
 		mkdir plots/ionosphere
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
