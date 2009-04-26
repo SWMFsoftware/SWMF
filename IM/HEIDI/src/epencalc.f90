@@ -66,7 +66,8 @@ subroutine epencalc(SimulationTime,f107,bc_choice,IMF_By, IMF_Bz, SW_V)
         if (abs(bc_choice) == 1) then
 
            Lines(1) = "#BACKGROUND"
-           Lines(2) = "../../../UA/GITM/srcData/"
+          ! Lines(2) = "../../../UA/GITM/srcData/"
+           Lines(2) = "./"
            Lines(3) = "weimer96"
            Lines(4) = "ihp"
            Lines(5) = "idontknow"
