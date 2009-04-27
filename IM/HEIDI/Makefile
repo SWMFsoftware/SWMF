@@ -30,8 +30,10 @@ LIB:  install
 	@cd src;	        make LIB
 	@cd srcInterface;	make LIB
 
+OUTDIR =plots
 TESTDIR = run_test
-
+UADIR = ${DIR}/UA/GITM/srcData
+CHECKDIR = output
 test:
 	@echo "test_compile..." > test.diff
 	make   test_compile
@@ -47,20 +49,20 @@ test_compile:
 
 test_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR} STANDALONE="YES"
+	make rundir RUNDIR=${TESTDIR} STANDALONE="YES" PWDIR=`pwd`
 	cd input; cp *.in *.dat *.glo *.initial *.unff ../${TESTDIR}
-	cp ${EMPIRICALIEDIR}/wei96.cofcnts ${TESTDIR}/
-	cp ${EMPIRICALIEDIR}/ED_hpke.noaa ${TESTDIR}/hpke.noaa
+	mkdir ${TESTDIR}/ionosphere
 
 test_run: 
 	cd ${TESTDIR}; ${MPIRUN} ./HEIDI.exe
 
 test_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=0.001 -a=1e-8 \
-		${TESTDIR}/IM/plots/test1_h_prs.002 \
-		output/test1_h_prs.002 \
+		${TESTDIR}/IM/${OUTDIR}/hydrogen/test1_h_prs.002  ${CHECKDIR}/test1_h_prs.002 \
 			> test.diff
 	ls -l test.diff
+
+
 
 clean: install
 	@(if [ -r "Makefile.conf" ]; then  \
@@ -83,8 +85,14 @@ allclean: install
 
 rundir:
 	mkdir -p ${RUNDIR}/IM
+	cp ${EMPIRICALIEDIR}/ED_hpke.noaa ${RUNDIR}/hpke.noaa	
+	cp ${UADIR}/wei96.cofcnts ${RUNDIR}/wei96.cofcnts
 	cd ${RUNDIR}/IM; \
-		mkdir -p input plots/ionosphere restartIN restartOUT
+		mkdir input plots restartIN restartOUT 
+	cd ${RUNDIR}/IM; \
+		mkdir plots/ionosphere
+	cd ${RUNDIR}/IM/plots; \
+		mkdir electron hydrogen helium oxygen
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR} ; \
 		ln -s ${BINDIR}/HEIDI.exe .;\
