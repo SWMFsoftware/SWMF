@@ -28,6 +28,7 @@ subroutine ECFL
   character(len=2) :: NameSpecies
   character(len=5) :: NameSuffix
   character(len=3) :: NameStep
+  character(len=30):: NameOutputSpecies
 
   save ntc
   !--------------------------------------------------------------------------
@@ -51,15 +52,24 @@ subroutine ECFL
   do S=1,NS
      if (SCALC(S).eq.1) then
         
-	if (S.eq.1) NameSpecies='_e'
-	if (S.eq.2) NameSpecies='_h'
-	if (S.eq.3) NameSpecies='he'
-	if (S.eq.4) NameSpecies='_o'
+	if (S.eq.1) NameSpecies='_e' 
+	if (S.eq.2) NameSpecies='_h' 
+	if (S.eq.3) NameSpecies='he' 
+	if (S.eq.4) NameSpecies='_o' 
 	
+        if (S.eq.1) NameOutputSpecies='electron/'
+	if (S.eq.2) NameOutputSpecies='hydrogen/'
+	if (S.eq.3) NameOutputSpecies='helium/'
+	if (S.eq.4) NameOutputSpecies='oxygen/'
+
         iUnitOut = io_unit_new()
 
-        open(iUnitOut,FILE=NameOutputDir//trim(NameRun)//NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
-	write (iUnitOut,*) 'Filename: '//NameOutputDir//trim(NameRun)//NameSpecies//NameSuffix//NameStep
+        open(iUnitOut,FILE=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
+             NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
+	
+        write (*,*) 'Filename: '//NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//NameSpecies//NameSuffix//NameStep
+
+        write (iUnitOut,*) 'Filename: '//NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//NameSpecies//NameSuffix//NameStep
 	write (iUnitOut,*) 'T,KP,A:',T,KP,A
 	write (iUnitOut,38) 'L-shell','MLT(hr)','E(keV)','PA(deg)','n(cm-3)',   &
              'ABS CFL'
@@ -232,6 +242,7 @@ subroutine WRESULT(LNC,XN,IFIR)
   character(len=2) :: NameSpecies
   character(len=3) :: NameStep
   character(len=5) :: NameSuffix
+  character(len=20):: NameOutputSpecies
   
   external :: FUNI,FUNT
   save ntc
@@ -285,8 +296,8 @@ subroutine WRESULT(LNC,XN,IFIR)
      !	  Next create an output like we have made before
      NameSuffix='_pla.'
     
-     open(UNITTMP_,file=trim(NameRun)//NameSuffix//NameStep,STATUS='UNKNOWN')
-     write (UNITTMP_,*) 'Filename: '//trim(NameRun)//NameSuffix//NameStep
+     open(UNITTMP_,file=NameOutputDir//trim(NameRun)//NameSuffix//NameStep,STATUS='UNKNOWN')
+     write (UNITTMP_,*) 'Filename: '//NameOutputDir//trim(NameRun)//NameSuffix//NameStep
      write (UNITTMP_,*) 'Plasmaspheric thermal densities from the DGCPM'
      write (UNITTMP_,16) T,KP
      write (UNITTMP_,31) (MLT(J),J=1,JO)
@@ -307,11 +318,18 @@ subroutine WRESULT(LNC,XN,IFIR)
   do S=1,NS
      !	print *, 'WRESULT: ',S,SCALC(S)
      if (SCALC(S).eq.1) then
+                       
+	if (S.eq.1) NameSpecies='_e' 
+	if (S.eq.2) NameSpecies='_h' 
+	if (S.eq.3) NameSpecies='he' 
+	if (S.eq.4) NameSpecies='_o' 
+	
+        if (S.eq.1) NameOutputSpecies='electron/'
+	if (S.eq.2) NameOutputSpecies='hydrogen/'
+	if (S.eq.3) NameOutputSpecies='helium/'
+	if (S.eq.4) NameOutputSpecies='oxygen/'
 
-	if (S.eq.1) NameSpecies='_e'
-	if (S.eq.2) NameSpecies='_h'
-	if (S.eq.3) NameSpecies='he'
-	if (S.eq.4) NameSpecies='_o'
+
 
         !.......Find the energy and particle losses
 	do I=2,IO
@@ -343,8 +361,10 @@ subroutine WRESULT(LNC,XN,IFIR)
 	if (IRES(1).eq.1) then
            NameSuffix='_psd.'
            
-           open(UNIT=UNITTMP_,file=trim(NameRun)//NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
-           write (UNITTMP_,*) 'Filename: '//trim(NameRun)//NameSpecies//NameSuffix//NameStep
+           open(UNIT=UNITTMP_,file=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//NameSpecies//&
+                NameSuffix//NameStep,STATUS='UNKNOWN')
+           write (UNITTMP_,*) 'Filename: '//NameOutputDir//trim(NameRun)//&
+                trim(NameOutputSpecies)//NameSpecies//NameSuffix//NameStep
            if (IFAC.eq.1) then
               write (UNITTMP_,*) 'Phase space flux function, PHI = 2EF/m^2'
            else
@@ -368,8 +388,9 @@ subroutine WRESULT(LNC,XN,IFIR)
 	if (IRES(2).eq.1) then
            NameSuffix='_etf.'
 
-           open(UNIT=UNITTMP_,FILE=NameOutputDir//trim(NameRun)//NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
-           write (UNITTMP_,*) 'Filename: '//NameOutputDir//trim(NameRun)//NameSpecies//NameSuffix//NameStep
+           open(UNIT=UNITTMP_,FILE=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
+                NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
+           write (UNITTMP_,*) 'Filename: '//NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//NameSpecies//NameSuffix//NameStep
            write (UNITTMP_,*) 'Equatorially trapped distribution function, F'
            NIC(1)=2
            NIC(2)=IO/2
@@ -395,8 +416,9 @@ subroutine WRESULT(LNC,XN,IFIR)
 
            iUnitOut = io_unit_new()
 
-           open(UNIT=iUnitOut,file=trim(NameRun)//NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
-           write (iUnitOut,*) 'Filename: '//trim(NameRun)//NameSpecies//NameSuffix//NameStep
+           open(UNIT=iUnitOut,file=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
+                NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
+           write (iUnitOut,*) 'Filename: '//NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//NameSpecies//NameSuffix//NameStep
            do I=2,IO			! Electron heating
               do J=1,JO
                  EDR=0.
@@ -461,8 +483,10 @@ subroutine WRESULT(LNC,XN,IFIR)
               NEC1=(II-1)*KO/3+1
               NEC2=II*KO/3
             
-              open(UNIT=UNITTMP_,file=trim(NameRun)//NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
-              write (UNITTMP_,*) 'Filename: '//trim(NameRun)//NameSpecies//NameSuffix//NameStep
+              open(UNIT=UNITTMP_,file=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
+                   NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
+              write (UNITTMP_,*) 'Filename: '//NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
+                   NameSpecies//NameSuffix//NameStep
               write (UNITTMP_,*) 'Total precipitation flux [1/cm2/s]'
               write (UNITTMP_,*) 'Integrated over the energy range:'
               write (UNITTMP_,*) 'Lower edge (keV): ',EKEV(NEC1)
@@ -493,8 +517,9 @@ subroutine WRESULT(LNC,XN,IFIR)
 	if (IRES(5).eq.1) then	
            NameSuffix='_flx.'
            
-           open(UNIT=UNITTMP_,file=trim(NameRun)//NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
-           write (UNITTMP_,*) 'Filename: '//trim(NameRun)//NameSpecies//NameSuffix//NameStep
+           open(UNIT=UNITTMP_,file=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
+                NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
+           write (UNITTMP_,*) 'Filename: '//NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//NameSpecies//NameSuffix//NameStep
            write (UNITTMP_,*) 'Differential precipitation fluxes'
            do I=4,IO,2
               !	   IF(I.EQ.4.OR.I.EQ.6.OR.I.EQ.10.OR.I.EQ.16) THEN
@@ -529,8 +554,9 @@ subroutine WRESULT(LNC,XN,IFIR)
            
            iUnitOut = io_unit_new() 
 
-           open(UNIT=iUnitOut,file=trim(NameRun)//NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
-           write (iUnitOut,*) 'Filename: '//trim(NameRun)//NameSpecies//NameSuffix//NameStep
+           open(UNIT=iUnitOut,file=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
+                NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
+           write (iUnitOut,*) 'Filename: '//NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//NameSpecies//NameSuffix//NameStep
            write (iUnitOut,*) 'Particle and energy losses since last output'
            write(iUnitOut,71) T,KP
            ESUM=0
@@ -567,8 +593,9 @@ subroutine WRESULT(LNC,XN,IFIR)
            
            iUnitOut = io_unit_new()
            
-           open (iUnitOut,FILE=NameOutputDir//trim(NameRun)//NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
-           write (iUnitOut,*) 'Filename: '//trim(NameRun)//NameSpecies//NameSuffix//NameStep
+           open (iUnitOut,FILE=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
+                NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
+           write (iUnitOut,*) 'Filename: '//trim(NameRun)//trim(NameOutputSpecies)//NameSpecies//NameSuffix//NameStep
            write (iUnitOut,*) 'CFL numbers for the advection operators'
            write (iUnitOut,71) T,KP
            write (iUnitOut,*)
@@ -661,8 +688,9 @@ subroutine WRESULT(LNC,XN,IFIR)
 	if (IRES(9).eq.1) then
            NameSuffix='_drf.'
            
-           open (UNITTMP_,FILE=NameOutputDir//trim(NameRun)//NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
-           write (UNITTMP_,*) 'Filename: '//trim(NameRun)//NameSpecies//NameSuffix//NameStep
+           open (UNITTMP_,FILE=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
+                NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
+           write (UNITTMP_,*) 'Filename: '//trim(NameRun)//trim(NameOutputSpecies)//NameSpecies//NameSuffix//NameStep
            write (UNITTMP_,*) 'Spatial coordinate drift velocities'
            write (UNITTMP_,71) T,KP
            write (UNITTMP_,*)
@@ -690,8 +718,9 @@ subroutine WRESULT(LNC,XN,IFIR)
 	if (IRES(10).eq.1) then
            NameSuffix='_evl.'
            
-           open (UNITTMP_,FILE=NameOutputDir//trim(NameRun)//NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
-           write (UNITTMP_,*) 'Filename: '//trim(NameRun)//NameSpecies//NameSuffix//NameStep
+           open (UNITTMP_,FILE=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
+                NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
+           write (UNITTMP_,*) 'Filename: '//trim(NameRun)//trim(NameOutputSpecies)//NameSpecies//NameSuffix//NameStep
            write (UNITTMP_,*) 'Energy-Lshell spectra at MLT=0 and PA=90'
            write (UNITTMP_,71) T,KP
            write(UNITTMP_,41) '   Ne =',(XNE(I,1),I=2,IO)
@@ -729,8 +758,9 @@ subroutine WRESULT(LNC,XN,IFIR)
 	if (IRES(11).eq.1) then
            NameSuffix='_lft.'
           
-           open(UNIT=UNITTMP_,FILE=NameOutputDir//trim(NameRun)//NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
-           write (UNITTMP_,*) 'Filename: '//trim(NameRun)//NameSpecies//NameSuffix//NameStep
+           open(UNIT=UNITTMP_,FILE=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
+                NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
+           write (UNITTMP_,*) 'Filename: '//trim(NameRun)//trim(NameOutputSpecies)//NameSpecies//NameSuffix//NameStep
            write (UNITTMP_,71) T,KP
            do  I=4,IO,6
               L=UPA(I)-1
@@ -754,8 +784,9 @@ subroutine WRESULT(LNC,XN,IFIR)
 	if (IRES(12).eq.1) then
            NameSuffix='_prs.'
            
-           open (UNITTMP_,FILE=NameOutputDir//trim(NameRun)//NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
-           write (UNITTMP_,*) 'Filename: '//trim(NameRun)//NameSpecies//NameSuffix//NameStep
+           open (UNITTMP_,FILE=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
+                NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
+           write (UNITTMP_,*) 'Filename: '//trim(NameRun)//trim(NameOutputSpecies)//NameSpecies//NameSuffix//NameStep
            write (UNITTMP_,*) 'Pressures, densities, etc. for RC species ',NameSpecies
            write (UNITTMP_,71) T,KP
            write (UNITTMP_,*) 'Total Energy [keV]   Total Particles   Dst [nT]'
@@ -842,10 +873,12 @@ subroutine WRESULT(LNC,XN,IFIR)
 	if (IRES(13).eq.1) then
            NameSuffix='.unff'
            
-           open(UNIT=UNITTMP_,FILE=NameOutputDir//trim(NameRun)//NameSpecies//NameSuffix,status='unknown',   &
+           open(UNIT=UNITTMP_,FILE=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
+                NameSpecies//NameSuffix,status='unknown',   &
                 form='unformatted')
            
-           open(UNIT=UNITTMP_,FILE=NameRestartOutDir//trim(NameRun)//NameSpecies//NameSuffix,status='unknown',   &
+          open(UNIT=UNITTMP_,FILE=NameRestartOutDir//trim(NameRun)//&
+                NameSpecies//NameSuffix,status='unknown',   &
                 form='unformatted')
            
            do L=1,NPA
@@ -863,8 +896,9 @@ subroutine WRESULT(LNC,XN,IFIR)
            
            close (15+S)
            NameSuffix='_sal.'
-           open (15+S,FILE=NameOutputDir//trim(NameRun)//NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
-           write (15+S,*) 'Filename: '//trim(NameRun)//NameSpecies//NameSuffix//NameStep
+           open (15+S,FILE=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
+                NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
+           write (15+S,*) 'Filename: '//trim(NameRun)//trim(NameOutputSpecies)//NameSpecies//NameSuffix//NameStep
            write (15+S,*) 'Sources and losses: continuous output'
            write (15+S,71) T,KP
            write (15+S,74) 'T','LMP6','LMP12','RNS','RNL','RES','REL',   &
@@ -885,8 +919,9 @@ subroutine WRESULT(LNC,XN,IFIR)
            end do
            NameSuffix='_fbc.'
            
-           open (UNITTMP_,FILE=NameOutputDir//trim(NameRun)//NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
-           write (UNITTMP_,*) 'Filename: '//trim(NameRun)//NameSpecies//NameSuffix//NameStep
+           open (UNITTMP_,FILE=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
+                NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
+           write (UNITTMP_,*) 'Filename: '//trim(NameRun)//trim(NameOutputSpecies)//NameSpecies//NameSuffix//NameStep
            write (UNITTMP_,*) 'Nightside boundary conditions'
            write (UNITTMP_,38) 'Ninj','Einj','Kinj','NSWB','USWB'
            write (UNITTMP_,39) Ninj,Einj,Kinj,NSWB,USWB
