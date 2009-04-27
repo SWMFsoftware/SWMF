@@ -57,32 +57,31 @@ subroutine write_runtime_values()
   use ModProcMH
   use ModMain
   use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
-  use ModAdvance,  ONLY : FluxType
-  use ModGeometry, ONLY : x1,x2,y1,y2,z1,z2,minDXvalue,maxDXvalue,dx_BLK
-  use ModParallel, ONLY : proc_dims
+  use ModAdvance,   ONLY: FluxType
+  use ModGeometry,  ONLY: x1,x2,y1,y2,z1,z2,minDXvalue,maxDXvalue,dx_BLK
+  use ModParallel,  ONLY: proc_dims
   use ModPhysics
   use ModMpi
   use CON_planet
-  use ModImplicit, ONLY: &                            !^CFG IF IMPLICIT
+  use ModImplicit,  ONLY: &                           !^CFG IF IMPLICIT
        UseImplicit, UseSemiImplicit, TypeSemiImplicit !^CFG IF IMPLICIT
   use ModUser, ONLY: user_write_progress
-  use ModMultiFluid, ONLY: IonFirst_
+  use ModMultiFluid,ONLY: IonFirst_
+
   implicit none
 
-  character (len=35) :: TextPlanetMod = ''
-  character (len=15) :: PeriodOut=''
-  character (len=100):: StringFormat
-  integer :: iError, iFluid
-  real :: minDX,maxDX    
+  character(len=100):: String, StringFormat
+  integer           :: iError, iFluid
+  real              :: DxMin, DxMax    
   !------------------------------------------------------------------------
 
   ! Find new min and max dx
-  minDX=minval(dx_BLK, MASK=(.not.unusedBLK))
-  maxDX=maxval(dx_BLK, MASK=(.not.unusedBLK))
-  call MPI_allreduce(minDX,minDXvalue,1,MPI_REAL,MPI_MIN,iComm,iError)
-  call MPI_allreduce(maxDX,maxDXvalue,1,MPI_REAL,MPI_MAX,iComm,iError)
+  DxMin = minval(dx_BLK, MASK=(.not.unusedBLK))
+  DxMax = maxval(dx_BLK, MASK=(.not.unusedBLK))
+  call MPI_allreduce(DxMin, minDXvalue, 1, MPI_REAL, MPI_MIN, iComm, iError)
+  call MPI_allreduce(DxMax, maxDXvalue, 1, MPI_REAL, MPI_MAX, iComm, iError)
 
-  if (iProc /= 0 .or. lVerbose<=0) return
+  if (iProc /= 0 .or. lVerbose<=0) RETURN
 
   call write_prefix; write(iUnitOut,*)
   call write_prefix; write(iUnitOut,*)'   Begin Numerical Simulation'
@@ -90,13 +89,14 @@ subroutine write_runtime_values()
   call write_prefix; write(iUnitOut,*)
   call write_prefix; write(iUnitOut,*)
   if ((NamePlanet /= 'NONE') .and. body1) then
-     if (IsPlanetModified .and. (Planet_ /= NewPlanet_)) &
-        TextPlanetMod = '(---!---Defaults Modified---!---)'
      call write_prefix; write(iUnitOut,*)'   Planetary Parameters'
      call write_prefix; write(iUnitOut,*)'   --------------------'
      call write_prefix; write(iUnitOut,*)
+     String = ''
+     if (IsPlanetModified .and. (Planet_ /= NewPlanet_)) &
+          String = '( default values were modified! )'
      call write_prefix; write(iUnitOUT,'(10X,A,A,2x,A)')  &
-          'Name:            ', trim(NamePlanet),TextPlanetMod
+          'Name:            ', trim(NamePlanet), trim(String)
      StringFormat = '(10X,A16,ES13.5)'
      call write_prefix; write(iUnitOUT,StringFormat) &
           'Radius:         ', RadiusPlanet
@@ -104,14 +104,14 @@ subroutine write_runtime_values()
           'Mass:           ', MassPlanet
      call write_prefix; write(iUnitOUT,StringFormat) &
           'Rotation Tilt:  ', TiltRotation
-     PeriodOut = 'Not Rotating'
-     if (OmegaPlanet /= 0.0) write(PeriodOut,'(ES13.5)') cTwoPi/OmegaPlanet
-     call write_prefix; write(iUnitOUT,'(10X,A16,A13)')'Rotation Period:', &
-          trim(PeriodOut)
-     PeriodOut = 'Not Orbiting'
-     if (OmegaOrbit .ne. 0.0) write(PeriodOut,'(ES13.5)') cTwoPi/OmegaOrbit
-     call write_prefix; write(iUnitOUT,'(10X,A16,A)')'Orbit Period:   ', &
-          trim(PeriodOut)
+     String = ' Not Rotating'
+     if (OmegaPlanet /= 0.0) write(String, '(ES13.5)') cTwoPi/OmegaPlanet
+     call write_prefix; write(iUnitOUT,'(10X,A,A)')'Rotation Period:', &
+          trim(String)
+     String = ' Not Orbiting'
+     if (OmegaOrbit /= 0.0) write(String, '(ES13.5)') cTwoPi/OmegaOrbit
+     call write_prefix; write(iUnitOUT,'(10X,A,A)')'Orbit Period:   ', &
+          trim(String)
      call write_prefix; write(iUnitOUT,StringFormat) &
           'Iono Height:    ', IonosphereHeight
      call write_prefix; write(iUnitOut,*)
@@ -123,7 +123,7 @@ subroutine write_runtime_values()
        'I/O Unit type: '//trim(TypeIoUnit)//'            '// &
        'Normalization: '//trim(TypeNormalization)
   call write_prefix; write(iUnitOut,*)
-  call write_prefix; write(iUnitOut,'(10X,a,f12.8)') 'gamma:       ',g
+  call write_prefix; write(iUnitOut,'(10X,a,f12.8)') 'Gamma:       ',g
   call write_prefix; write(iUnitOut,*)
   if(body1)then
      call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
@@ -143,13 +143,13 @@ subroutine write_runtime_values()
              'Gravity is used, gBody=',gBody
      end if
   else
-     call write_prefix; write(iUnitOut,'(10X,''body1: .false.'')')
+     call write_prefix; write(iUnitOut,'(10X,''UseBody1: .false.'')')
   end if
   call write_prefix; write(iUnitOut,*)
   !^CFG IF SECONDBODY BEGIN
   if (UseBody2) then
      call write_prefix
-     write(iUnitOut,'(10X,''body2: .true.'')')
+     write(iUnitOut,'(10X,''UseBody2: .true.'')')
      call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
           'rBody2:      ',RBody2   ,', BdpDimBody2: ',&
           sqrt(sum(BdpDimBody2_D**2))
@@ -164,16 +164,16 @@ subroutine write_runtime_values()
           'RhoDimBody2: ',RhoDimBody2,', TDimBody2:   ',TDimBody2
   else
      call write_prefix
-     write(iUnitOut,'(10X,''body2: .false.'')')
+     write(iUnitOut,'(10X,''UseBody2: .false.'')')
   end if
   !^CFG END SECONDBODY
 
   call write_prefix; write(iUnitOut,*)
   call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))')&
-       'cLIGHTfactor:',boris_cLIGHT_factor,', cLIGHT:    ',cLIGHT
+       'ClightFactor:',boris_clight_factor,', Clight:    ',Clight
   call write_prefix; write(iUnitOut,*)
 
-  if(NameThisComp == 'GM' .and. .not. UseShockTube)then
+  if(NameThisComp == 'GM' .and. SW_n > 0.0)then
      call write_prefix; write(iUnitOut,*)
      StringFormat = '(10X,A17,"]: ",F15.6,A10,F15.6)'
      call write_prefix; write(iUnitOut,StringFormat) &
@@ -206,45 +206,52 @@ subroutine write_runtime_values()
   select case (nORDER)
   case (1)
      call write_prefix
-     write(iUnitOut,'(10X,''1st-Order Scheme'')')
+     write(iUnitOut,'(10X,a)') '1st-order scheme'
   case (2)
      call write_prefix
-     write(iUnitOut,'(10X,''2nd-Order Scheme'')')
-     call write_prefix
-     write(iUnitOut,'(10x,a,a)')'with limiter ',TypeLimiter
+     write(iUnitOut,'(10X,a)') '2nd-order scheme with '//trim(TypeLimiter)// &
+          ' limiter'
      if(TypeLimiter /= 'minmod') then
         call write_prefix;
-        write(iUnitOut,'(10x,a,f5.2)')'beta=',BetaLimiter
+        write(iUnitOut,'(10x,a,f5.2)') '    BetaLimiter =', BetaLimiter
      end if
   end select
   call write_prefix
+  write(iUnitOut,'(10X,a,a)') trim(FluxType),' flux function'
+
+  call write_prefix
   if (time_accurate) then
-     write(iUnitOut,'(10X,''Time accurate calculation'')')
+     write(iUnitOut,'(10X,a)') 'Time accurate calculation'
   else
-     write(iUnitOut,'(10X,''Steady state calculation'')')
+     write(iUnitOut,'(10X,a)') 'Steady state calculation'
   end if
 
   call write_prefix
-  write(iUnitOut,'(10X,a,a)') trim(FluxType),' Flux Function'
-
-  call write_prefix
   if (UseImplicit) then                            !^CFG IF IMPLICIT BEGIN
-     write(iUnitOut,'(10X,''Implicit Time Stepping'')')
+     write(iUnitOut,'(10X,a)') 'Implicit time stepping'
   elseif(UseSemiImplicit)then
-     write(iUnitOut,'(10X,''Semi-Implicit Time Stepping for'')')
-     write(iUnitOut,'(10X,a)') trim(TypeSemiImplicit)
+     write(iUnitOut,'(10X,a)') 'Semi-implicit time stepping for '// &
+          trim(TypeSemiImplicit)
   else                                             !^CFG END IMPLICIT
-     write(iUnitOut,'(10X,''Explicit Time Stepping'')')
+     write(iUnitOut,'(10X,a)') 'Explicit time stepping'
   end if                                           !^CFG IF IMPLICIT
+
+  call write_prefix; write(iUnitOut,'(10x,a,i1)')   '    nStage: ', nStage
+  call write_prefix
+  if(UseDtFixed)then
+     write(iUnitOut,*) '             Dt:    ', Dt
+  else
+     write(iUnitOut,'(10x,a,f4.2)') '    Cfl:    ', Cfl
+  end if
   if(boris_correction)then                         !^CFG IF BORISCORR BEGIN 
      call write_prefix     
-     write(iUnitOut,'(10X,''With Boris Correction, factor ='',f10.4)') &
-          boris_cLIGHT_factor
+     write(iUnitOut,'(10X,a,f10.4)') &
+          "    with Boris correction, factor =", boris_cLIGHT_factor
   end if                                           !^CFG END BORISCORR
   if(UseBorisSimple)then                           !^CFG IF SIMPLEBORIS BEGIN
      call write_prefix
-     write(iUnitOut,'(10X,''With Simple Boris Correction, factor ='',f10.4)') &
-          boris_cLIGHT_factor                         
+     write(iUnitOut,'(10X,a,f10.4)') &
+          "   with simple Boris correction, factor =", boris_cLIGHT_factor
   end if                                           !^CFG END SIMPLEBORIS
 
   call write_prefix; write(iUnitOut,*)
@@ -254,25 +261,25 @@ subroutine write_runtime_values()
   call write_prefix; write(iUnitOut,*)'Available processors: nProc = ',nProc
   call write_prefix; write(iUnitOut,*)
   call write_prefix; write(iUnitOut,*)'After initial grid setup:'
-  call write_prefix; write(iUnitOut,*)'  nBlockMax = ',nBlockMax,' nBLK = ',nBLK
-  call write_prefix; write(iUnitOut,*)'  Total number of blocks used = ',nBlockALL
-  call write_prefix; write(iUnitOut,*)'  Total number of cells = ',nBlockALL*nI*nJ*nK
-  call write_prefix; write(iUnitOut,*)'  Smallest cell dx: ',minDXvalue,'  Largest cell dx: ',maxDXvalue
+  call write_prefix; write(iUnitOut,*)'  nBlockMax = ',nBlockMax, &
+       ' nBLK = ',nBLK
+  call write_prefix; write(iUnitOut,*)'  Total number of blocks used = ', &
+       nBlockALL
+  call write_prefix; write(iUnitOut,*)'  Total number of cells = ', &
+       nBlockALL*nIJK
+  call write_prefix; write(iUnitOut,*)'  Smallest cell dx: ', minDXvalue, &
+       '  Largest cell dx: ', maxDXvalue
   call write_prefix; write(iUnitOut,*)
   call write_prefix
-  write(iUnitOut,'(1x,a,3i8)')    'root blocks: ',proc_dims(1:3)
+  write(iUnitOut,'(1x,a,3i8)')    'root blocks: ', proc_dims(1:3)
   call write_prefix
-  write(iUnitOut,'(1x,a,3i8)')    'nCells:      ',nCells(1:3)
+  write(iUnitOut,'(1x,a,3i8)')    'nCells:      ', nCells(1:3)
   call write_prefix
-  write(iUnitOut,'(1x,a,2f16.8)') 'x:           ',x1,x2
+  write(iUnitOut,'(1x,a,2f16.8)') 'x:           ', x1, x2
   call write_prefix
-  write(iUnitOut,'(1x,a,2f16.8)') 'y:           ',y1,y2
+  write(iUnitOut,'(1x,a,2f16.8)') 'y:           ', y1, y2
   call write_prefix
-  write(iUnitOut,'(1x,a,2f16.8)') 'z:           ',z1,z2
-  call write_prefix
-  write(iUnitOut,'(1x,a,1i8)')    'multistage:  ',nSTAGE
-  call write_prefix
-  write(iUnitOut,'(1x,a,1f16.8)') 'cfl:         ',cfl
+  write(iUnitOut,'(1x,a,2f16.8)') 'z:           ', z1, z2
   call write_prefix; write(iUnitOut,*)
   if(UseUserEchoInput) call user_write_progress
 end subroutine write_runtime_values
