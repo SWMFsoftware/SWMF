@@ -34,7 +34,7 @@ subroutine read_amie(iter)
   if (ierr.ne.0) then 
      write(6,*) "An error occured while trying to read ",filein
      write(6,*) "in subroutine read_amie"
-     stop
+     call CON_stop('ERROR in read_amie.f90')
   endif
 
   read(inunit) nlats, nmlts, ntimes

@@ -35,35 +35,35 @@ program Interface
        stat=iError)
   if (iError /= 0) then
      write(*,*) "Error in allocating array IEr3_HaveLats in Interface"
-     stop
+     call CON_stop('ERROR in Interface.f90')
   endif
 
   allocate(IEr3_HaveMlts(IEi_HavenMlts,IEi_HavenLats,IEi_HavenBLKs), &
        stat=iError)
   if (iError /= 0) then
      write(*,*) "Error in allocating array IEr3_HaveMlts in Interface"
-     stop
+     call CON_stop('ERROR in Interface.f90')
   endif
 
   allocate(IEr3_HavePotential(IEi_HavenMlts,IEi_HavenLats,IEi_HavenBLKs), &
        stat=iError)
   if (iError /= 0) then
      write(*,*) "Error in allocating array IEr3_HavePotential in Interface"
-     stop
+     call CON_stop('ERROR in Interface.f90')
   endif
 
   allocate(IEr3_HaveEFlux(IEi_HavenMlts,IEi_HavenLats,IEi_HavenBLKs), &
        stat=iError)
   if (iError /= 0) then
      write(*,*) "Error in allocating array IEr3_HaveEFlux in Interface"
-     stop
+     call CON_stop('ERROR in Interface.f90')
   endif
 
   allocate(IEr3_HaveAveE(IEi_HavenMlts,IEi_HavenLats,IEi_HavenBLKs), &
        stat=iError)
   if (iError /= 0) then
      write(*,*) "Error in allocating array IEr3_HaveAveE in Interface"
-     stop
+     call CON_stop('ERROR in Interface.f90')
   endif
 
   call AMIE_GetLats(IEi_HavenMlts,IEi_HavenLats,IEi_HavenBLKs,&

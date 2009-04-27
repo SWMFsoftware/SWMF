@@ -85,7 +85,7 @@ C  Comented out the print because we only need the final output
 	PRINT *, T,KP,KPO,KPN,TOL
       CALL WRESULT(T,0.,KP,NECR)
 
-      STOP
+      call CON_stop('ERROR in therm1.f')
       END
 
 **--------------------------------------------------------------------**

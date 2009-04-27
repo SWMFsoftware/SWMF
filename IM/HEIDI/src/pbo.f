@@ -284,7 +284,7 @@ c delt in units of seconds
        print*, 'Maximum azimuthal velocity = ',maxvp,' degrees/sec'
        print*, 'Maximum azimuthal time step = ',deltp,' seconds'
        print*, 'deltmax,deltp,deltr = ',deltmax,deltp,deltr
-       stop
+       call CON_stop('ERROR in pbo.f')
       end if
 
       return
@@ -356,7 +356,7 @@ c delt in units of seconds
         print*, 'Maximum radial time step = ',deltr,' seconds'
         print*, 'Maximum azimuthal velocity = ',maxvp,' degrees/sec'
         print*, 'Maximum azimuthal time step = ',deltp,' seconds'
-        stop
+        call CON_stop('ERROR in pbo.f')
        end if
 
        pari(1) = par(1)
@@ -523,7 +523,7 @@ c Internal: mgridoc1, open(0) or closed(1) table
 
       if (nthetacells1.ne.nthetacells2.or.nphicells1.ne.nphicells2) then
        print*,'File size mismatch in subroutine Loadit'
-       stop
+       call CON_stop('ERROR in pbo.f')
       endif
 
       read(iUnitIn,*) vthetacells1
@@ -781,7 +781,7 @@ c output:     r,teta          s,q
         if (step.eq.0.0) then
          print*,'dipsph failed'
          print*,f,ft,err,g/rad,step/rad
-         stop
+         call CON_stop('ERROR in pbo.f')
         end if
        end do
        theta = g / rad
@@ -1176,7 +1176,7 @@ c particles/m**2/sec
           print*,'vr,dsat',vrcells(i),dsat
           print*,'delt',delt
           print*,'deln',((f*delt)/br)
-          stop
+          call CON_stop('ERROR in pbo.f')
          end if
         else
 c         print*,mgridoc(i,j),i,j
@@ -1905,7 +1905,7 @@ c Output: mgridpot in volts
          mgridpot(i,j) = mgridpot(i,j) + pot
         else
          print*,'par(1) ne 1 or 2'
-         stop
+         call CON_stop('ERROR in pbo.f')
         endif
        enddo
       enddo
@@ -2158,11 +2158,11 @@ c interpolate/extrapolate values from data1 into data2
       do i = 1, ntheta2
        if (theta2(i).lt.0.0) then
         print*,'interpol2dpolar: theta2(',i,') is less than zero'
-        stop
+        call CON_stop('ERROR in pbo.f')
        endif
        if (theta2(i).gt.90.0) then
         print*,'interpol2dpolar: theta2(',i,') is greater than 90'
-        stop
+        call CON_stop('ERROR in pbo.f')
        endif
        call hunt(theta1,ntheta1,theta2(i),ii)
        if (ii.eq.0) ii = 1
@@ -2171,11 +2171,11 @@ c interpolate/extrapolate values from data1 into data2
        do j = 1, nphi2
         if (phi2(j).lt.0.0) then
          print*,'interpol2dpolar: phi2(',j,') is less than zero'
-         stop
+         call CON_stop('ERROR in pbo.f')
         endif
         if (phi2(j).gt.360.0) then
          print*,'interpol2dpolar: phi2(',j,') is greater than 360'
-         stop
+         call CON_stop('ERROR in pbo.f')
         endif
         call hunt(phi1,nphi1,phi2(j),jj)
         if (jj.eq.0) then

@@ -91,7 +91,7 @@ SUBROUTINE FCHECK(MARK)
      call write_prefix; write(iUnitStdOut,*) 'Ibad=',Ibadt
      call write_prefix; write(iUnitStdOut,*) 'A=',A
      CALL ECFL
-     STOP
+     call CON_stop('ERROR in heidi_operators.f90')
   END IF
   
 99 FORMAT(A,1PE11.3,0PF8.0,7(2X,I4))

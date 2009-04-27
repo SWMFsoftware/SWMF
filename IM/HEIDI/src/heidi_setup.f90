@@ -257,11 +257,11 @@ SUBROUTINE ARRAYS
   IF(DL1.GE.0.25 .AND. MOD(IDL1,250).NE.0) THEN
       call write_prefix; write(iUnitStdOut,*)  'Error : 0.25 is not a factor of DL1 '
      !WRITE(6,*) ' Error : 0.25 is not a factor of DL1 '
-     STOP
+     call CON_stop('ERROR in heidi_setup.f90')
   ELSE IF (DL1.LT.0.25 .AND. MOD(250,IDL1).NE.0) THEN
      call write_prefix; write(iUnitStdOut,*)  'Error : DL1 is not a factor of 0.25'
      !WRITE (6,*) ' Error : DL1 is not a factor of 0.25'
-     STOP
+     call CON_stop('ERROR in heidi_setup.f90')
   END IF
 
   DR=DL1*RE               !Grid size for Z=RO
@@ -277,7 +277,7 @@ SUBROUTINE ARRAYS
   IF(MOD(NLT,JO).NE.0) THEN
       call write_prefix; write(iUnitStdOut,*)  'Error : JO is not a factor of NLT '
      !WRITE(6,*) ' Error : JO is not a factor of NLT '
-     STOP
+     call CON_stop('ERROR in heidi_setup.f90')
   END IF
 
   do J=1,JO+1

@@ -2355,6 +2355,6 @@ C
       ENDIF
       GOTO 3293
 3330  CONTINUE
-      STOP
+      call CON_stop('ERROR in iri87.f')
       END
 

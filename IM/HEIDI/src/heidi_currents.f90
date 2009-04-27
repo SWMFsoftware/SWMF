@@ -480,7 +480,7 @@ SUBROUTINE CURRENTCALC
                        !     1.-fac2(i,k),Funcpc(As1(i2(i),j),BBr(i2(i),   &
                        !     ikk2(i,k)),BBr(i2(i),Kmax(i2(i)))),Pf1(i,j),   &
                        !     Funcpc(As1(i,j),BBr(i,k),BBr(i,Kmax(i)))
-                       stop
+                       call CON_stop('ERROR in heidi_currents.f90')
                     END IF
                  End If  !! Only save where we have pressures
               End do  ! k loop
