@@ -11,7 +11,7 @@ include Makefile.DEPEND
 OBJECTS = \
 	IM_wrapper.o
 
-SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src
+SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I${EMPIRICALIEDIR} -I../src
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
