@@ -85,9 +85,19 @@ allclean: install
 
 rundir:
 	mkdir -p ${RUNDIR}/IM
-	cp ${EMPIRICALIEDIR}/ED_hpke.noaa ${RUNDIR}/hpke.noaa	
-	cp ${UADIR}/wei96.cofcnts ${RUNDIR}/wei96.cofcnts
-	cd ${RUNDIR}/IM; \
+		cd ${RUNDIR};
+			@(if [-d EIE]; then cd EIE;\
+			cp ${EMPIRICALIEDIR}/ED_hpke.noaa ${RUNDIR}/EIE/hpke.noaa;\
+			cp ${EMPIRICALIEDIR}/wei96.cofcnts ${RUNDIR}/EIE/wei96.cofcnts;\
+			cp ${EMPIRICALIEDIR}/hmr89.cofcnts ${RUNDIR}/EIE/hmr89.cofcnts;\
+			cp ${EMPIRICALIEDIR}/iz94.cofcnts ${RUNDIR}/EIE/iz94.cofcnts;\
+			else mkdir -p ${RUNDIR}/EIE; cd EIE;\
+			cp ${EMPIRICALIEDIR}/ED_hpke.noaa ${RUNDIR}/EIE/hpke.noaa;\
+			cp ${EMPIRICALIEDIR}/hmr89.cofcnts ${RUNDIR}/EIE/hmr89.cofcnts;\
+			cp ${EMPIRICALIEDIR}/iz94.cofcnts ${RUNDIR}/EIE/iz94.cofcnts;\
+			cp ${EMPIRICALIEDIR}/wei96.cofcnts ${RUNDIR}/EIE/wei96.cofcnts;\
+			fi);\
+		cd ${RUNDIR}/IM; \
 		mkdir input plots restartIN restartOUT 
 	cd ${RUNDIR}/IM; \
 		mkdir plots/ionosphere
