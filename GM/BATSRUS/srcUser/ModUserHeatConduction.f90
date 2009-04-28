@@ -19,7 +19,6 @@ module ModUser
   character(len=20) :: TypeProblem
   real :: HeatConductionCoef, AmplitudeTemperature, T0
 
-  character(len=100) :: NameRefFile
   integer :: nCellRef
   integer :: &
        iRhoRef  = 1, &
@@ -27,6 +26,14 @@ module ModUser
        iUrRef   = 3, &
        nVarRef  = 3
   real, allocatable :: rRef_C(:), StateRef_VC(:,:)
+
+  integer :: nCellFin
+  integer :: &
+       iRhoFin  = 1, &
+       iTmatFin = 2, &
+       iUrFin   = 3, &
+       nVarFin  = 3
+  real, allocatable :: rFin_C(:), StateFin_VC(:,:)
 
 contains
 
@@ -41,7 +48,12 @@ contains
     integer :: iCell, iError
     integer :: nStepRef, nDimRef, nParamRef, nVarRef
     real :: TimeRef, GammaRef
+    character(len=100) :: NameRefFile
     character(len=500) :: StringHeaderRef, NameVarRef
+    integer :: nStepFin, nDimFin, nParamFin, nVarFin
+    real :: TimeFin, GammaFin
+    character(len=100) :: NameFinFile
+    character(len=500) :: StringHeaderFin, NameVarFin
 
     character(len=*), parameter :: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
@@ -87,14 +99,35 @@ contains
 
        close(UnitTmp_)
 
-       rRef_C = rRef_C
-       StateRef_VC(iRhoRef,:)  = StateRef_VC(iRhoRef,:)           ! g/cm^3
-       StateRef_VC(iTmatRef,:) = StateRef_VC(iTmatRef,:)*1.0e-3   ! keV
-       StateRef_VC(iUrRef,:)   = StateRef_VC(iUrRef,:)*1.0e-8     ! cm/sh
-
        do iCell = 1, nCellRef
           StateRef_VC(iTmatRef,iCell) = &
                max(StateRef_VC(iTmatRef,iCell),1.0e-12)
+       end do
+
+       NameFinFile = 'rmtv_final.out'
+
+       open(UnitTmp_, FILE=NameFinFile, STATUS="old", IOSTAT=iError)
+
+       if(iError /= 0)call stop_mpi(NameSub // &
+            " could not open reference file="//NameFinFile)
+
+       read(UnitTmp_,'(a)') StringHeaderFin
+       read(UnitTmp_,*) nStepFin, TimeFin, nDimFin, nParamFin, nVarFin
+       read(UnitTmp_,*) nCellFin
+       read(UnitTmp_,*) GammaFin
+       read(UnitTmp_,'(a)') NameVarFin
+
+       allocate( rFin_C(nCellFin), StateFin_VC(nVarFin,nCellFin) )
+
+       do iCell = 1, nCellFin
+          read(UnitTmp_,*) rFin_C(iCell), StateFin_VC(:,iCell)
+       end do
+
+       close(UnitTmp_)
+
+       do iCell = 1, nCellFin
+          StateFin_VC(iTmatFin,iCell) = &
+               max(StateFin_VC(iTmatFin,iCell),1.0e-12)
        end do
 
     case default
@@ -211,7 +244,7 @@ contains
        end do; end do
 
     case('rmtv')
-       do j=1,nJ; do i=1,nI
+       do j=-1,nJ+2; do i=-1,nI+2
           x = x_Blk(i,j,0,iBlock)
           y = y_Blk(i,j,0,iBlock)
           r = sqrt(x**2+y**2)
@@ -224,30 +257,31 @@ contains
 
           if(iCell > nCellRef)then
              ! Cell is beyond the last point of Reference input: use last cell
-             iCell   = nCellRef
-             Weight1 = 0.0
-             Weight2 = 1.0
+
+             Rho = 1.0/r**(19.0/9.0)
+             Tmat = StateRef_VC(iTmatRef,nCellRef)
+             Ur = StateRef_VC(iUrRef,nCellRef)
           else
              ! Assign weights for linear interpolation between
              ! iCell-1 and iCell
              Weight1 = (rRef_C(iCell) - r) &
                   /    (rRef_C(iCell) - rRef_C(iCell-1))
              Weight2 = 1.0 - Weight1
+
+             Rho  = ( Weight1*StateRef_VC(iRhoRef, iCell-1) &
+                  +   Weight2*StateRef_VC(iRhoRef, iCell) )
+             Tmat = ( Weight1*StateRef_VC(iTmatRef, iCell-1) &
+                  +   Weight2*StateRef_VC(iTmatRef, iCell) )
+             Ur   = ( Weight1*StateRef_VC(iUrRef, iCell-1) &
+                  +   Weight2*StateRef_VC(iUrRef, iCell) )
           end if
-
-          Rho  = ( Weight1*StateRef_VC(iRhoRef, iCell-1) &
-               +   Weight2*StateRef_VC(iRhoRef, iCell) )
-          Tmat = ( Weight1*StateRef_VC(iTmatRef, iCell-1) &
-               +   Weight2*StateRef_VC(iTmatRef, iCell) )
-          Ur   = ( Weight1*StateRef_VC(iUrRef, iCell-1) &
-               +   Weight2*StateRef_VC(iUrRef, iCell) )
-
-          p = Rho*Tmat
 
           RhoU_D(1) = Rho*Ur*x/r
           RhoU_D(2) = Rho*Ur*y/r
 
-          do k=1,nk
+          p = Rho*Tmat
+
+          do k=-1,nK+2
              State_VGB(Rho_,i,j,k,iBlock) = Rho
              State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock) = RhoU_D
              State_VGB(RhoUz_,i,j,k,iBlock) = 0.0
@@ -355,8 +389,9 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    real :: Spread, Lambda, r, Temperature
-    integer :: i, j, k
+    real :: Spread, Lambda, r, Temperature, Weight1, Weight2, x, y
+    real :: Rho, Ur, U_D(2)
+    integer :: i, j, k, iCell
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
@@ -365,14 +400,21 @@ contains
     PlotVarBody    = 0.0
 
     IsFound = .true.
-    select case(NameVar)
-    case('t0','temp0')
-       select case(TypeProblem)
-       case('gaussian')
+
+    select case(TypeProblem)
+    case('gaussian')
+       select case(NameVar)
+       case('t0','temp0')
           Spread = 4.0*HeatConductionCoef*Time_Simulation
           PlotVar_G = T0 + AmplitudeTemperature/(sqrt(cPi*Spread)) &
                *exp(-x_Blk(:,:,:,iBlock)**2/Spread)
-       case('rz')
+       case default
+          IsFound = .false.
+       end select
+
+    case('rz')
+       select case(NameVar)
+       case('t0','temp0')
           Lambda = -(3.831705970/y2)**2
           Spread = 4.0*HeatConductionCoef*Time_Simulation
           do j = -1, nJ+2; do i = -1, nI+2
@@ -385,9 +427,59 @@ contains
                 PlotVar_G(i,j,k) = Temperature
              end do
           end do; end do
+       case default
+          IsFound = .false.
        end select
-    case default
-       IsFound = .false.
+
+    case('rmtv')
+       do j=-1,nJ+2; do i=-1,nI+2
+          x = x_Blk(i,j,0,iBlock)
+          y = y_Blk(i,j,0,iBlock)
+          r = sqrt(x**2+y**2)
+
+          do iCell = 1, nCellFin
+             if(rFin_C(iCell) >= r) EXIT
+          end do
+          if(iCell == 1) call stop_mpi(NameSub // &
+               " Reference solution does not cover the left boundary")
+
+          if(iCell > nCellFin)then
+             ! Cell is beyond the last point of Reference input: use last cell
+
+             Rho = 1.0/r**(19.0/9.0)
+             Temperature = StateFin_VC(iTmatFin,nCellFin)
+             Ur = StateFin_VC(iUrFin,nCellFin)
+          else
+             ! Assign weights for linear interpolation between
+             ! iCell-1 and iCell
+             Weight1 = (rFin_C(iCell) - r) &
+                  /    (rFin_C(iCell) - rFin_C(iCell-1))
+             Weight2 = 1.0 - Weight1
+
+             Rho  = ( Weight1*StateFin_VC(iRhoFin, iCell-1) &
+                  +   Weight2*StateFin_VC(iRhoFin, iCell) )
+             Temperature = ( Weight1*StateFin_VC(iTmatFin, iCell-1) &
+                  +          Weight2*StateFin_VC(iTmatFin, iCell) )
+             Ur   = ( Weight1*StateFin_VC(iUrFin, iCell-1) &
+                  +   Weight2*StateFin_VC(iUrFin, iCell) )
+          end if
+
+          U_D(1) = Ur*x/r
+          U_D(2) = Ur*y/r
+
+          select case(NameVar)
+          case('rho0')
+             PlotVar_G(i,j,-1:nK+2) = Rho
+          case('t0','temp0')
+             PlotVar_G(i,j,-1:nK+2) = Temperature
+          case('ux0')
+             PlotVar_G(i,j,-1:nK+2) = U_D(1)
+          case('uy0')
+             PlotVar_G(i,j,-1:nK+2) = U_D(2)
+          case default
+             IsFound = .false.
+          end select
+       end do; end do
     end select
 
   end subroutine user_set_plot_var
