@@ -237,10 +237,10 @@ contains
 
   end subroutine user_set_resistivity
 
-  !=====================================================================
+  !===========================================================================
 
   subroutine user_material_properties(State_V, EinternalSiIn, &
-       TeSiIn, EinternalSiOut, TeSiOut, PressureSiOut, CvSiOut, &
+       TeSiIn, EinternalSiOut, TeSiOut, PressureSiOut, CvSiOut, GammaOut, &
        AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut, &
        HeatConductionCoefSiOut)
 
@@ -253,14 +253,15 @@ contains
     real, optional, intent(in)  :: TeSiIn                    ! [K]
     real, optional, intent(out) :: EinternalSiOut            ! [J/m^3]
     real, optional, intent(out) :: TeSiOut                   ! [K]
+    real, optional, intent(out) :: PressureSiOut             ! [Pa]
+    real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
+    real, optional, intent(out) :: GammaOut                  ! dimensionless
     real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
     real, optional, intent(out) :: RosselandMeanOpacitySiOut ! [1/m]
-    real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
-    real, optional, intent(out) :: PressureSiOut             ! [Pa]
     real, optional, intent(out) :: HeatConductionCoefSiOut   ! [Jm^2/(Ks)]
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
-    !-------------------------------------------------------------------
+    !------------------------------------------------------------------------
     call stop_mpi(NameSub)
 
   end subroutine user_material_properties
