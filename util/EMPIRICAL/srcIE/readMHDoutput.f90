@@ -3,7 +3,8 @@ subroutine readMHDoutput(iBLK, iError)
   use ModMHD_Interface
   use ModEIEFiles
   use ModTimeConvert, ONLY: time_int_to_real
-
+  use ModIoUnit, ONLY : UNITTMP_
+  
   implicit none
 
   integer, intent(out) :: iError
@@ -75,7 +76,7 @@ subroutine readMHDoutput(iBLK, iError)
 
   FileName = FileNameList(iFirstFile)
 
-  open(LunEField_, file=FileName, status='old',iostat=iError)
+  open(UnitTmp_, file=FileName, status='old',iostat=iError)
   if (iError.ne.0) then
      write(*,*) "Error opening file:", FileName
      stop
@@ -88,7 +89,7 @@ subroutine readMHDoutput(iBLK, iError)
 
   do while (.not.IsDone)
 
-     read(LunEField_,*) cLine
+     read(UnitTmp_,*) cLine
      write(*,*) cLine
 
      if (i > 100) IsDone = .true.
@@ -96,9 +97,9 @@ subroutine readMHDoutput(iBLK, iError)
 
      if (index(cLine,"NUMERICAL") > 0) then
 
-        read(LunEField_,*) nFields
-        read(LunEField_,*) MHD_nLats
-        read(LunEField_,*) MHD_nMlts
+        read(UnitTmp_,*) nFields
+        read(UnitTmp_,*) MHD_nLats
+        read(UnitTmp_,*) MHD_nMlts
 
         write(*,*) nFields, MHD_nLats, MHD_nMlts
 
@@ -177,7 +178,7 @@ subroutine readMHDoutput(iBLK, iError)
         do iMLT = 1, MHD_nMlts
            i = mod(iMLT+(MHD_nMlts-1)/2-1, (MHD_nMlts-1))+1
            do iLat = 1, MHD_nLats
-              read(LunEField_,*) MHD_Lats(iLat), MHD_Mlts(i)
+              read(UnitTmp_,*) MHD_Lats(iLat), MHD_Mlts(i)
            enddo
         enddo
 
@@ -214,9 +215,9 @@ subroutine readMHDoutput(iBLK, iError)
 
   do iField=1,nfields
      if (IsBinary) then
-        read(LunEField_) Fields(iField)
+        read(UnitTmp_) Fields(iField)
      else
-        read(LunEField_,'(a)') Fields(iField)
+        read(UnitTmp_,'(a)') Fields(iField)
      endif
 
      if (MHD_iDebugLevel > 1) write(*,*) Fields(iField)
@@ -245,20 +246,20 @@ subroutine readMHDoutput(iBLK, iError)
 
      if (IsBinary) then
 
-        read(LunEField_) ntemp,iyr,imo,ida,ihr,imi
-        read(LunEField_) swv,bx,by,bz,aei,ae,au,al,dsti,dst,hpi,sjh,pot
+        read(UnitTmp_) ntemp,iyr,imo,ida,ihr,imi
+        read(UnitTmp_) swv,bx,by,bz,aei,ae,au,al,dsti,dst,hpi,sjh,pot
 
         do iField=1,nfields
-           read(LunEField_) ((AllData(j,i,iField),j=1,MHD_nMlts),i=1,MHD_nLats)
+           read(UnitTmp_) ((AllData(j,i,iField),j=1,MHD_nMlts),i=1,MHD_nLats)
         enddo
 
      else
 
-        read(LunEField_,*) ntemp,iyr,imo,ida,ihr,imi
-        read(LunEField_,*) swv,bx,by,bz,aei,ae,au,al,dsti,dst,hpi,sjh,pot
+        read(UnitTmp_,*) ntemp,iyr,imo,ida,ihr,imi
+        read(UnitTmp_,*) swv,bx,by,bz,aei,ae,au,al,dsti,dst,hpi,sjh,pot
 
         do iField=1,nfields
-           read(LunEField_,*) ((AllData(j,i,iField),j=1,MHD_nMlts),i=1,MHD_nLats)
+           read(UnitTmp_,*) ((AllData(j,i,iField),j=1,MHD_nMlts),i=1,MHD_nLats)
         enddo
 
      endif
@@ -302,7 +303,7 @@ subroutine readMHDoutput(iBLK, iError)
 
   MHD_nLats = MHD_nLats + nCellsPad
 
-  close(LunEField_)
+  close(UnitTmp_)
 
   deallocate(AllData, stat=iError)
 

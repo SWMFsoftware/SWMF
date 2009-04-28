@@ -5,7 +5,8 @@ subroutine read_conductance_model(iOutputError)
   use ModEIEFiles
   use ModEIE_Interface
   use ModErrors
-    
+  use ModIoUnit, ONLY : io_unit_new   
+  
   implicit none
 
   !  NOAA HPI model:  LONGMX=30,LATMX=20,NDX=10,STEPLAT=2.
@@ -24,7 +25,7 @@ subroutine read_conductance_model(iOutputError)
 
   scale = 0.001
 
-  iunit = LunConductance_
+  iunit = io_unit_new()
 
   if (index(EIE_NameOfAuroralModel,'ihp') > 0) then
 

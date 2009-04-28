@@ -12,7 +12,4 @@ Module ModEIEFiles
   character (len=100) :: weimer01_file         = 'wei01.cofcnts'
   character (len=100) :: AMIEFileNorth, AMIEFileSouth
 
-  integer :: LunEField_      
-  integer :: LunConductance_ 
-
 end Module ModEIEFiles

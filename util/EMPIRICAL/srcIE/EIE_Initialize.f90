@@ -41,92 +41,89 @@ subroutine EIE_Initialize(iOutputError)
      IsFound_EFieldModel = .true.
   endif
 
-  LunEField_      = UnitTmp_
-  LunConductance_ = UnitTmp_
-
   if (index(EIE_NameOfEFieldModel,'weimer96') > 0) then
      IsFound_EFieldModel = .true.
      call merge_str(EIE_NameOfModelDir, weimer96_file)
-     open(LunEField_,file=weimer96_file,status='old', iostat = iError)
+     open(UnitTmp_,file=weimer96_file,status='old', iostat = iError)
      if (iError /= 0) then
         write(6,*) 'Error opening file :',weimer96_file
         iOutputError = ecFileNotFound_
      endif
-     call ReadCoef96(LunEField_)
-     close(LunEField_)
+     call ReadCoef96(UnitTmp_)
+     close(UnitTmp_)
   endif
 
   if (index(EIE_NameOfEFieldModel,'weimer01') > 0) then
      IsFound_EFieldModel = .true.
      call merge_str(EIE_NameOfModelDir, weimer01_file)
-     open(LunEField_,file=weimer01_file,status='old',&
+     open(UnitTmp_,file=weimer01_file,status='old',&
           form='unformatted', iostat = iError)
      if (iError /= 0) then
         write(6,*) 'Error opening file :',weimer01_file
         iOutputError = ecFileNotFound_
      endif
-     call ReadCoef01(LunEField_)
-     close(LunEField_)
+     call ReadCoef01(UnitTmp_)
+     close(UnitTmp_)
   endif
 
 !  if (index(EIE_NameOfEFieldModel,'samie') > 0) then
 !     IsFound_EFieldModel = .true.
 !     call merge_str(EIE_NameOfModelDir, stat_amie_file)
-!     open(LunEField_,file=stat_amie_file,status='old', iostat = iError)
+!     open(UnitTmp_,file=stat_amie_file,status='old', iostat = iError)
 !     if (iError /= 0) then
 !        write(6,*) 'Error opening file :',stat_amie_file
 !        iOutputError = ecFileNotFound_
 !     endif
-!     call read_amies(LunEField_)
-!     close(LunEField_)
+!     call read_amies(UnitTmp_)
+!     close(UnitTmp_)
 !  endif
 
   if (index(EIE_NameOfEFieldModel,'millstone_hpi') > 0) then
      IsFound_EFieldModel = .true.
      call merge_str(EIE_NameOfModelDir, millstone_hill_i_file)
-     open(LunEField_,file=millstone_hill_i_file,status='old', iostat = iError)
+     open(UnitTmp_,file=millstone_hill_i_file,status='old', iostat = iError)
      if (iError /= 0) then
         write(6,*) 'Error opening file :',millstone_hill_i_file
         iOutputError = ecFileNotFound_
      endif
-     call mhinit(1, LunEField_, 1, iDebugLevel)
-     close(LunEField_)
+     call mhinit(1, UnitTmp_, 1, iDebugLevel)
+     close(UnitTmp_)
   endif
 
   if (index(EIE_NameOfEFieldModel,'millstone_imf') > 0) then
      IsFound_EFieldModel = .true.
      call merge_str(EIE_NameOfModelDir, millstone_hill_s_file)
-     open(LunEField_,file=millstone_hill_s_file,status='old', iostat = iError)
+     open(UnitTmp_,file=millstone_hill_s_file,status='old', iostat = iError)
      if (iError /= 0) then
         write(6,*) 'Error opening file :',millstone_hill_s_file
         iOutputError = ecFileNotFound_
      endif
-     call mhinit(2, LunEField_, 1, iDebugLevel)
-     close(LunEField_)
+     call mhinit(2, UnitTmp_, 1, iDebugLevel)
+     close(UnitTmp_)
   endif
 
   if (index(EIE_NameOfEFieldModel,'hmr89') > 0) then
      IsFound_EFieldModel = .true.
      call merge_str(EIE_NameOfModelDir, hepner_maynard_file)
-     open(LunEField_,file=hepner_maynard_file,status='old', iostat = iError)
+     open(UnitTmp_,file=hepner_maynard_file,status='old', iostat = iError)
      if (iError /= 0) then
         write(6,*) 'Error opening file :',hepner_maynard_file
         iOutputError = ecFileNotFound_
      endif
-     call gethmr(LunEField_)
-     close(LunEField_)
+     call gethmr(UnitTmp_)
+     close(UnitTmp_)
   endif
 
   if (index(EIE_NameOfEFieldModel,'izmem') > 0) then
      IsFound_EFieldModel = .true.
      call merge_str(EIE_NameOfModelDir, izmem_file)
-     open(LunEField_,file=izmem_file,status='old', iostat = iError)
+     open(UnitTmp_,file=izmem_file,status='old', iostat = iError)
      if (iError /= 0) then
         write(6,*) 'Error opening file :',izmem_file
         iOutputError = ecFileNotFound_
      endif
-     call izinit(LunEField_)
-     close(LunEField_)
+     call izinit(UnitTmp_)
+     close(UnitTmp_)
   endif
 
   !\

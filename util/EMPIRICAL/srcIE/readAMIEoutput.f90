@@ -3,7 +3,7 @@ subroutine readAMIEoutput(iBLK, IsMirror, iError)
   use ModAMIE_Interface
   use ModEIEFiles
   use ModTimeConvert, ONLY: time_int_to_real
-
+  use ModIoUnit, ONLY : UNITTMP_
   implicit none
 
   integer, intent(out) :: iError
@@ -28,7 +28,7 @@ subroutine readAMIEoutput(iBLK, IsMirror, iError)
   integer :: nCellsPad, n
 
   iError = 0
-  open(LunEField_, file=AMIE_FileName, status='old',form='UNFORMATTED',iostat=iError)
+  open(UnitTmp_, file=AMIE_FileName, status='old',form='UNFORMATTED',iostat=iError)
   if (iError.ne.0) then
      write(*,*) "Error opening file:", AMIE_FileName
      stop
@@ -36,19 +36,19 @@ subroutine readAMIEoutput(iBLK, IsMirror, iError)
   AMIE_nLats = 0
   IsBinary = .true.
 
-  read(LunEField_,iostat=iError) AMIE_nlats,AMIE_nmlts,AMIE_ntimes
+  read(UnitTmp_,iostat=iError) AMIE_nlats,AMIE_nmlts,AMIE_ntimes
   if ((iError.ne.0).or.(AMIE_nlats.gt.100)) then
      write(*,*) "Error reading variables AMIE_nlats, AMIE_nmlts, AMIE_ntimes"
      IsBinary = .false.
   endif
-  close(LunEField_)
+  close(UnitTmp_)
 
   if (IsBinary) then
-     open(LunEField_, file=AMIE_FileName, status='old',form='UNFORMATTED')
-     read(LunEField_) AMIE_nlats,AMIE_nmlts,AMIE_ntimes
+     open(UnitTmp_, file=AMIE_FileName, status='old',form='UNFORMATTED')
+     read(UnitTmp_) AMIE_nlats,AMIE_nmlts,AMIE_ntimes
   else
-     open(LunEField_, file=AMIE_FileName, status='old')
-     read(LunEField_,*) AMIE_nlats,AMIE_nmlts,AMIE_ntimes
+     open(UnitTmp_, file=AMIE_FileName, status='old')
+     read(UnitTmp_,*) AMIE_nlats,AMIE_nmlts,AMIE_ntimes
   endif
 
   !\
@@ -127,13 +127,13 @@ subroutine readAMIEoutput(iBLK, IsMirror, iError)
   endif
 
   if (IsBinary) then
-     read(LunEField_) (AMIE_Lats(i),i=1,AMIE_nLats)
-     read(LunEField_) (AMIE_Mlts(i),i=1,AMIE_nMlts)
-     read(LunEField_) nFields
+     read(UnitTmp_) (AMIE_Lats(i),i=1,AMIE_nLats)
+     read(UnitTmp_) (AMIE_Mlts(i),i=1,AMIE_nMlts)
+     read(UnitTmp_) nFields
   else
-     read(LunEField_,*) (AMIE_Lats(i),i=1,AMIE_nLats)
-     read(LunEField_,*) (AMIE_Mlts(i),i=1,AMIE_nMlts)
-     read(LunEField_,*) nFields
+     read(UnitTmp_,*) (AMIE_Lats(i),i=1,AMIE_nLats)
+     read(UnitTmp_,*) (AMIE_Mlts(i),i=1,AMIE_nMlts)
+     read(UnitTmp_,*) nFields
   endif
 
   AMIE_Lats = 90.0 - AMIE_Lats
@@ -164,9 +164,9 @@ subroutine readAMIEoutput(iBLK, IsMirror, iError)
 
   do iField=1,nfields
      if (IsBinary) then
-        read(LunEField_) Fields(iField)
+        read(UnitTmp_) Fields(iField)
      else
-        read(LunEField_,'(a)') Fields(iField)
+        read(UnitTmp_,'(a)') Fields(iField)
      endif
 
      if (AMIE_iDebugLevel > 1) write(*,*) Fields(iField)
@@ -196,20 +196,20 @@ subroutine readAMIEoutput(iBLK, IsMirror, iError)
 
      if (IsBinary) then
 
-        read(LunEField_) ntemp,iyr,imo,ida,ihr,imi
-        read(LunEField_) swv,bx,by,bz,aei,ae,au,al,dsti,dst,hpi,sjh,pot
+        read(UnitTmp_) ntemp,iyr,imo,ida,ihr,imi
+        read(UnitTmp_) swv,bx,by,bz,aei,ae,au,al,dsti,dst,hpi,sjh,pot
 
         do iField=1,nfields
-           read(LunEField_) ((AllData(j,i,iField),j=1,AMIE_nMlts),i=1,AMIE_nLats)
+           read(UnitTmp_) ((AllData(j,i,iField),j=1,AMIE_nMlts),i=1,AMIE_nLats)
         enddo
 
      else
 
-        read(LunEField_,*) ntemp,iyr,imo,ida,ihr,imi
-        read(LunEField_,*) swv,bx,by,bz,aei,ae,au,al,dsti,dst,hpi,sjh,pot
+        read(UnitTmp_,*) ntemp,iyr,imo,ida,ihr,imi
+        read(UnitTmp_,*) swv,bx,by,bz,aei,ae,au,al,dsti,dst,hpi,sjh,pot
 
         do iField=1,nfields
-           read(LunEField_,*) ((AllData(j,i,iField),j=1,AMIE_nMlts),i=1,AMIE_nLats)
+           read(UnitTmp_,*) ((AllData(j,i,iField),j=1,AMIE_nMlts),i=1,AMIE_nLats)
         enddo
 
      endif
@@ -321,7 +321,7 @@ subroutine readAMIEoutput(iBLK, IsMirror, iError)
 
   AMIE_nLats = AMIE_nLats + nCellsPad
 
-  close(LunEField_)
+  close(UnitTmp_)
 
   deallocate(AllData, stat=iError)
 
