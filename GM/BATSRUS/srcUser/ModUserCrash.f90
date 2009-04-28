@@ -90,6 +90,12 @@ module ModUser
   integer:: iTablePPerE = -1, iTableEPerP = -1, iTableCvGammaTe = -1
   integer:: iTableOpacity = -1
 
+  ! Variables for some tests
+  logical :: UseWave    = .false.
+  real    :: xStartWave = -100.0
+  real    :: xEndWave   = +100.0
+  real    :: DpWave     =  100.0
+
 contains
 
   !============================================================================
@@ -164,6 +170,13 @@ contains
              call read_var('yRatioNozzle', yRatioNozzle)
              call read_var('zRatioNozzle', zRatioNozzle)
           end if
+       case("#WAVE")
+          call read_var('UseWave',    UseWave)
+          if(UseWave)then
+             call read_var('xStartWave', xStartWave)
+             call read_var('xEndWave',   xEndWave)
+             call read_var('DpWave',     DpWave)
+          end if
        case('#USERINPUTEND')
           EXIT
        case default
@@ -176,23 +189,23 @@ contains
   !============================================================================
   subroutine user_set_ics
 
-    use ModProcMH,    ONLY: iProc
-    use ModMain,      ONLY: GlobalBlk, nI, nJ, nK
-    use ModPhysics,   ONLY: inv_gm1, ShockPosition, ShockSlope, &
+    use ModProcMH,      ONLY: iProc
+    use ModMain,        ONLY: GlobalBlk, nI, nJ, nK
+    use ModPhysics,     ONLY: inv_gm1, ShockPosition, ShockSlope, &
          Io2No_V, No2Si_V, Si2No_V, UnitRho_, UnitP_, UnitEnergyDens_
-    use ModAdvance,   ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, p_, &
+    use ModAdvance,     ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, p_, &
          ExtraEint_, LevelBe_, LevelXe_, LevelPl_, Eradiation_
-    use ModGeometry,  ONLY: x_BLK, y_BLK, z_BLK
-    use ModEos,       ONLY: eos
-    use ModPolyimide, ONLY: cAtomicMass_I, cAPolyimide
+    use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK
+    use ModEos,         ONLY: eos
+    use ModPolyimide,   ONLY: cAtomicMass_I, cAPolyimide
     use ModLookupTable, ONLY: interpolate_lookup_table
+    use ModConst,       ONLY: cPi
 
-    real    :: x, y, z, r, xBe, DxBe, DxyPl, pSi, RhoSi, EinternalSi, TeSi
-    real    :: ePerP_I(0:nMaterial-1)
+    real    :: x, y, z, r, xBe, DxBe, DxyPl, EinternalSi
     real    :: DxyGold = -1.0
     logical :: IsError
 
-    integer :: iBlock, i, j, k, iMaterial, iMaterial_I(1)
+    integer :: iBlock, i, j, k
 
     character(len=*), parameter :: NameSub = "user_set_ics"
     !------------------------------------------------------------------------
@@ -290,6 +303,13 @@ contains
           end if
 
        end if
+
+       ! Create sound wave by making a pressure hump (for testing)
+       if(UseWave .and. x > xStartWave .and. x < xEndWave) &
+            State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) + &
+            Io2No_V(UnitP_)*DpWave &
+            *sin( cPi*(x - xStartWave)/(xEndWave - xStartWave) )**2
+
        if(nDimHyades /= 2)then
 
           if(UseHyadesFile)then
@@ -361,26 +381,12 @@ contains
             State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) &
             *State_VGB(Rho_,i,j,k,iBlock)
 
-       ! Calculate internal energy from pressure and density
-       iMaterial_I = maxloc(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock))
-       iMaterial   = iMaterial_I(1) - 1
+       ! Calculate internal energy
+       call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+            EinternalSiOut=EinternalSi)
 
-       RhoSi = State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_)
-       pSi   = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
-
-       ! Set the internal energy
-       if(iTableEPerP > 0)then
-          call interpolate_lookup_table(iTableEPerP, &
-               RhoSi, pSi/RhoSi, ePerP_I, DoExtrapolate = .false.)
-          EinternalSi = ePerP_I(iMaterial)*pSi
-       else
-          ! The IsError flag avoids stopping for Fermi degenerated state
-          call eos(iMaterial,RhoSi,pTotalIn=pSi, &
-               ETotalOut=EinternalSi, IsError=IsError)
-       end if
-
-       State_VGB(ExtraEInt_,i,j,k,iBlock) = &
-            EInternalSi*Si2No_V(UnitEnergyDens_) &
+       State_VGB(ExtraEint_,i,j,k,iBlock) = &
+            EinternalSi*Si2No_V(UnitEnergyDens_) &
             - inv_gm1*State_VGB(P_,i,j,k,iBlock)
 
     end do; end do; end do
@@ -794,11 +800,6 @@ contains
              iMaterial   = iMaterial_I(1) - 1
              Weight      = WeightMaterial_I(iMaterial)
 
-             !write(*,*)'!!! iMaterialNode_I = ', iMaterialNode_I
-             !write(*,*)'!!! WeightNode_I    = ', WeightNode_I
-             !write(*,*)'!!! iMaterial       = ', iMaterial
-             !write(*,*)'!!! Weight          = ', Weight
-
              where(iMaterialNode_I == iMaterial) 
                 ! Reset weights so they add up to 1 for the dominant material
                 WeightNode_I = WeightNode_I / Weight
@@ -806,8 +807,6 @@ contains
                 ! Other materials get zero weight
                 WeightNode_I = 0.0
              end where
-
-             !write(*,*)'!!! New WeightNode_I= ', WeightNode_I
 
           end if
 
@@ -849,9 +848,13 @@ contains
 
   subroutine user_update_states(iStage,iBlock)
 
-    use ModSize
-    use ModAdvance, ONLY: State_VGB, p_, ExtraEInt_, UseNonConservative
-    use ModPhysics
+    use ModSize,    ONLY: nI, nJ, nK
+    use ModAdvance, ONLY: State_VGB, p_, ExtraEint_, &
+         UseNonConservative, IsConserv_CB, &
+         Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI
+    use ModGeometry, ONLY: vInv_CB
+    use ModPhysics,  ONLY: g, inv_gm1, Si2No_V, No2Si_V, &
+         UnitP_, UnitEnergyDens_
     use ModEnergy,  ONLY: calc_energy_cell
 
     implicit none
@@ -859,31 +862,56 @@ contains
     integer, intent(in):: iStage,iBlock
 
     integer:: i, j, k
-    real   :: PressureSi, EinternalSi
+    real   :: PressureSi, EinternalSi, GammaEos
+    logical:: IsConserv
 
     character(len=*), parameter :: NameSub = 'user_update_states'
     !------------------------------------------------------------------------
+    ! Fix adiabatic compression source for pressure
+    if(UseNonConservative)then
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               GammaOut=GammaEos)
+          Source_VC(p_,i,j,k) = -(GammaEos-g)*State_VGB(p_,i,j,k,iBlock)*&
+                vInv_CB(i,j,k,iBlock)*&
+                (uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
+                +uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
+                +uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1))
+       end do; end do; end do
+    end if
 
     call update_states_MHD(iStage,iBlock)
 
-    !!! temporary solution for the levelset test. 
-    if(UseNonConservative) RETURN
-
-    ! update of pressure and relaxation energy::
-
+    ! update of pressure, ionization and total energies
     do k=1,nK; do j=1,nJ; do i=1,nI
-       ! Total internal energy ExtraEInt + P/(\gamma -1) transformed to SI
- 
-       EInternalSI = No2Si_V(UnitEnergyDens_)*&
-            (inv_gm1*State_VGB(P_,i,j,k,iBlock) + &
-            State_VGB(ExtraEInt_,i,j,k,iBlock))
-       call user_material_properties(State_VGB(:,i,j,k,iBlock),&
-            EInternalSiIn=EInternalSI,PressureSiOut=PressureSI)
+       ! Total internal energy ExtraEint + P/(\gamma -1) transformed to SI
+
+       if(allocated(IsConserv_CB))then
+          IsConserv = IsConserv_CB(i,j,k,iBlock)
+       else
+          IsConserv = .not. UseNonConservative
+       end if
+
+       if(IsConserv)then
+          ! At this point p=(g-1)(e-rhov^2/2) with the ideal gamma g.
+          ! Use this p to get total internal energy density.
+          EinternalSi = No2Si_V(UnitEnergyDens_)*&
+               (inv_gm1*State_VGB(P_,i,j,k,iBlock) + &
+               State_VGB(ExtraEint_,i,j,k,iBlock))
+          call user_material_properties(State_VGB(:,i,j,k,iBlock),&
+               EinternalSiIn=EinternalSi, PressureSiOut=PressureSi)
       
-       ! Set pressure and ExtraEInt = Total internal energy - P/(gamma -1)
-       State_VGB(P_,i,j,k,iBlock) = PressureSI*Si2No_V(UnitP_)
-       State_VGB(ExtraEInt_,i,j,k,iBlock) = Si2No_V(UnitEnergyDens_)*&
-            (EInternalSI - PressureSI*inv_gm1)
+          ! Set true pressure
+          State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
+       else
+          call user_material_properties(State_VGB(:,i,j,k,iBlock),&
+               EinternalSiOut=EinternalSi)
+       end if
+
+       ! Set ExtraEint = Total internal energy - P/(gamma -1)
+       State_VGB(ExtraEint_,i,j,k,iBlock) = &
+            Si2No_V(UnitEnergyDens_)*EinternalSi &
+            - inv_gm1*State_VGB(p_,i,j,k,iBlock)
 
     end do; end do; end do
 
@@ -1151,8 +1179,8 @@ contains
   end subroutine calc_table_value
   !===========================================================================
 
-  subroutine user_material_properties(State_V, EinternalSiIn, &
-       TeSiIn, EinternalSiOut, TeSiOut, PressureSiOut, CvSiOut, &
+  subroutine user_material_properties(State_V, EinternalSiIn,  TeSiIn,  &
+       EinternalSiOut, TeSiOut, PressureSiOut, CvSiOut, GammaOut, &
        AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut, &
        HeatConductionCoefSiOut)
 
@@ -1168,105 +1196,140 @@ contains
     real, optional, intent(in)  :: TeSiIn                    ! [K]
     real, optional, intent(out) :: EinternalSiOut            ! [J/m^3]
     real, optional, intent(out) :: TeSiOut                   ! [K]
+    real, optional, intent(out) :: PressureSiOut             ! [Pa]
+    real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
+    real, optional, intent(out) :: GammaOut                  ! dimensionless
     real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
     real, optional, intent(out) :: RosselandMeanOpacitySiOut ! [1/m]
-    real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
-    real, optional, intent(out) :: PressureSiOut             ! [Pa]
     real, optional, intent(out) :: HeatConductionCoefSiOut   ! [Jm^2/(Ks)]
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
 
-    real    :: pSi, RhoSi, TeSi, pPerE_I(0:nMaterial-1)
-    real    :: Value_V(3*nMaterial), Opacity_V(2*nMaterial)
+    logical :: IsMix, IsError
     integer :: iMaterial, iMaterial_I(1)
-    real   :: RhoToARatioSi_I(0:nMaterial-1)
-    logical :: IsError
+    real    :: pSi, RhoSi, TeSi, LevelSum
+    real    :: Value_V(3*nMaterial), Opacity_V(2*nMaterial)
+    real, dimension(0:nMaterial-1) :: &
+         pPerE_I, EperP_I, RhoToARatioSi_I, NumDensWeight_I
     !-------------------------------------------------------------------------
     ! Density, transformed to SI
-    RhoSI = No2Si_V(UnitRho_)*State_V(Rho_)
+    RhoSi = No2Si_V(UnitRho_)*State_V(Rho_)
 
     ! Find maximum level set value. 
     
     iMaterial_I = maxloc(State_V(LevelXe_:LevelPl_))
     iMaterial = iMaterial_I(1) - 1
 
+    ! The electron temperature may be needed for the opacities
+    ! Initialize to negative value to see if it gets set
     TeSi = -7.70
 
+    ! Shall we use mixed material cells?
+    LevelSum = sum(State_V(LevelXe_:LevelPl_))
+    IsMix = UseMixedCell .and. &
+         maxval(State_V(LevelXe_:LevelPl_)) < MixLimit*LevelSum 
+
+    if(IsMix)then
+       ! Use number densities for eos() or weights in look up tables.
+       RhoToARatioSi_I = State_V(LevelXe_:LevelPl_)*No2Si_V(UnitRho_)
+       NumDensWeight_I = State_V(LevelXe_:LevelPl_)/LevelSum
+    end if
+
+    ! Obtain the pressure from EinternalSiIn or TeSiIn or State_V
+    ! Do this for various cases: mixed cell or not, lookup tables or not
     if(present(EinternalSiIn))then
-       if( UseMixedCell .and. &
-            maxval(State_V(LevelXe_:LevelPl_)) < &
-            MixLimit * sum(State_V(LevelXe_:LevelPl_)) ) then
+       ! Obtain the pressure from EinternalSiIn
+       if( IsMix) then
           ! The cell is mixed if none of the material is dominant
           if(iTablePPerE > 0)then
              call interpolate_lookup_table(iTablePPerE, RhoSi, &
                   EinternalSiIn/RhoSi, pPerE_I, DoExtrapolate = .false.)
              ! Use a number density weighted average
-             pSi = EinternalSiIn* &
-                  sum(State_V(LevelXe_:LevelPl_)*pPerE_I)/ &
-                  sum(State_V(LevelXe_:LevelPl_))
+             pSi = EinternalSiIn*sum(NumDensWeight_I*pPerE_I)
           else
-             ! Use number densities and calculate EOS for the mixture
-             RhoToARatioSI_I = &
-                  State_V(LevelXe_:LevelPl_) * No2Si_V(UnitRho_)
-             call eos(RhoToARatioSI_I, ETotalIn=EInternalSiIn, &
-                  PTotalOut=pSi,TeOut=TeSi, CvTotalOut=CvSiOut) 
+             call eos(RhoToARatioSi_I, eTotalIn=EinternalSiIn, &
+                  pTotalOut=pSi, TeOut=TeSi, &
+                  CvTotalOut=CvSiOut, GammaOut=GammaOut) 
           end if
        else
-          ! Get pressure from EOS
+          ! The cell is assumed to consist of a single material
           if(iTablePPerE > 0)then
              call interpolate_lookup_table(iTablePPerE, RhoSi, &
                   EinternalSiIn/RhoSi, pPerE_I, DoExtrapolate = .false.)
              pSi = pPerE_I(iMaterial)*EinternalSiIn
           else
-             call eos(iMaterial, Rho=RhoSI,ETotalIn=EInternalSiIn, &
-                  pTotalOut=pSi,TeOut=TeSi, CvTotalOut=CvSiOut)
+             call eos(iMaterial, Rho=RhoSi, eTotalIn=EinternalSiIn, &
+                  pTotalOut=pSi, TeOut=TeSi, &
+                  CvTotalOut=CvSiOut, GammaOut=GammaOut)
           end if
        end if
     elseif(present(TeSiIn))then
+       ! Calculate pressure from electron temperature
        TeSi = TeSiIn
-        if( UseMixedCell .and. &
-            maxval(State_V(LevelXe_:LevelPl_)) < &
-            MixLimit * sum(State_V(LevelXe_:LevelPl_)) ) then
-           ! The cell is mixed if none of the material is dominant
-           RhoToARatioSI_I = &
-                State_V(LevelXe_:LevelPl_) * No2Si_V(UnitRho_)
-           call eos(RhoToARatioSI_I, TeIn=TeSiIn, &
-                  PTotalOut=pSi,TeOut=TeSi, CvTotalOut=CvSiOut,&
-                  ETotalOut=EinternalSiOut) 
-        else
-            call eos(iMaterial, Rho=RhoSI, TeIn=TeSiIn, ETotalOut=EInternalSiOut, &
-                  pTotalOut=pSi, CvTotalOut=CvSiOut)
-        end if
-     else
+       if( IsMix ) then
+          call eos(RhoToARatioSi_I, TeIn=TeSiIn, &
+               eTotalOut=EinternalSiOut, pTotalOut=pSi, &
+               CvTotalOut=CvSiOut, GammaOut=GammaOut) 
+       else
+          call eos(iMaterial, Rho=RhoSi, TeIn=TeSiIn, &
+               eTotalOut=EinternalSiOut, pTotalOut=pSi, &
+               CvTotalOut=CvSiOut, GammaOut=GammaOut)
+       end if
+    else
+       ! Pressure is simply part of State_V
        pSi = State_V(p_)*No2Si_V(UnitP_)
+       if(present(EinternalSiOut))then
+          ! Obtain the internal energy from pressure
+          if(IsMix) then
+             if(iTableEPerP > 0)then
+                call interpolate_lookup_table(iTableEPerP, RhoSi, &
+                     pSi/RhoSi, EPerP_I, DoExtrapolate = .false.)
+                ! Use a number density weighted average
+                EinternalSiOut = pSi*sum(NumDensWeight_I*EPerP_I)
+             else
+                ! The IsError flag avoids stopping for Fermi degenerated state
+                call eos(RhoToARatioSi_I, pTotalIn=pSi, &
+                     EtotalOut=EinternalSiOut, TeOut=TeSi, &
+                     CvTotalOut=CvSiOut, GammaOut=GammaOut, IsError=IsError) 
+             end if
+          else
+             ! The cell is assumed to consist of a single material
+             if(iTableEPerp > 0)then
+                call interpolate_lookup_table(iTableEPerP, &
+                     RhoSi, pSi/RhoSi, ePerP_I, DoExtrapolate = .false.)
+                EinternalSiOut = ePerP_I(iMaterial)*pSi
+             else
+                ! The IsError flag avoids stopping for Fermi degenerated state
+                call eos(iMaterial,RhoSi,pTotalIn=pSi, &
+                     EtotalOut=EinternalSiOut, TeOut=TeSi, &
+                     CvTotalOut=CvSiOut, GammaOut=GammaOut, IsError=IsError)
+             end if
+          end if
+       end if
     end if
 
     if(present(PressureSiOut)) PressureSiOut = pSi
 
-    if(present(TeSiOut) .or. present(CvSiOut) .or. iTableOpacity>0 .and. &
-         (present(AbsorptionOpacitySiOut) &
-         .or. present(RosselandMeanOpacitySiOut)) )then
+    if(present(TeSiOut) .or. present(CvSiOut) .or. present(GammaOut) .or. &
+         iTableOpacity>0 .and. (present(AbsorptionOpacitySiOut) &
+         .or.                   present(RosselandMeanOpacitySiOut)) )then
        if(iTableCvGammaTe > 0)then
           call interpolate_lookup_table(iTableCvGammaTe, RhoSi, pSi/RhoSi, &
                Value_V, DoExtrapolate = .false.)
           
+          if(present(CvSiOut))  CvSiOut  = Value_V(3*iMaterial+1)
+          if(present(GammaOut)) GammaOut = Value_V(3*iMaterial+2)
           TeSi = Value_V(3*iMaterial+3)
-          if(present(CvSiOut)) CvSiOut =  Value_V(3*iMaterial+1)
-       else
-          ! The IsError flag avoids stopping for Fermi degenerated state
-          if(TeSi < 0.0) then
-             if( UseMixedCell .and. &
-                  maxval(State_V(LevelXe_:LevelPl_)) < &
-                  MixLimit * sum(State_V(LevelXe_:LevelPl_)) ) then
-                ! The cell is mixed if none of the material is dominant
-                RhoToARatioSI_I = &
-                     State_V(LevelXe_:LevelPl_) * No2Si_V(UnitRho_)
-                call eos(RhoToARatioSI_I, pTotalIn=pSi, &
-                     TeOut=TeSi, CvTotalOut=CvSiOut, ETotalOut = EinternalSiOut)
-             else
-                call eos(iMaterial, RhoSi, pTotalIn=pSi, &
-                     TeOut=TeSi, CvTotalOut=CvSiOut, ETotalOut = EinternalSiOut)
-             end if
+       elseif(TeSi < 0.0) then
+          ! If TeSi is not set yet then we need to calculate things here
+          if(IsMix) then
+             call eos(RhoToARatioSi_I, pTotalIn=pSi, &
+                  TeOut=TeSi, eTotalOut = EinternalSiOut, &
+                  CvTotalOut=CvSiOut, GammaOut=GammaOut)
+          else
+             call eos(iMaterial, RhoSi, pTotalIn=pSi, &
+                  TeOut=TeSi, eTotalOut = EinternalSiOut, &
+                  CvTotalOut=CvSiOut, GammaOut=GammaOut)
           end if
        end if
     end if
