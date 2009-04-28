@@ -18,7 +18,7 @@
 
 # ncpus should be a multiple of 4, mpiprocs=ncpus
 # set the number of CPU-s by changing select: nProc = select*mpiprocs
-#PBS -l select=16:ncpus=8:mpiprocs=4
+#PBS -l select=16:ncpus=8
 #PBS -l walltime=8:00:00
 #PBS -j oe
 #PBS -m e
