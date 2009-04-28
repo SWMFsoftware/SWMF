@@ -87,15 +87,15 @@ rundir:
 	mkdir -p ${RUNDIR}/IM
 		cd ${RUNDIR};
 			@(if [-d EIE]; then cd EIE;\
-			cp ${EMPIRICALIEDIR}/ED_hpke.noaa ${RUNDIR}/EIE/hpke.noaa;\
-			cp ${EMPIRICALIEDIR}/wei96.cofcnts ${RUNDIR}/EIE/wei96.cofcnts;\
-			cp ${EMPIRICALIEDIR}/hmr89.cofcnts ${RUNDIR}/EIE/hmr89.cofcnts;\
-			cp ${EMPIRICALIEDIR}/iz94.cofcnts ${RUNDIR}/EIE/iz94.cofcnts;\
+			ln -s ${EMPIRICALIEDIR}/ED_hpke.noaa ${RUNDIR}/EIE/hpke.noaa;\
+			ln -s ${EMPIRICALIEDIR}/wei96.cofcnts ${RUNDIR}/EIE/wei96.cofcnts;\
+			ln -s ${EMPIRICALIEDIR}/hmr89.cofcnts ${RUNDIR}/EIE/hmr89.cofcnts;\
+			ln -s ${EMPIRICALIEDIR}/iz94.cofcnts ${RUNDIR}/EIE/iz94.cofcnts;\
 			else mkdir -p ${RUNDIR}/EIE; cd EIE;\
-			cp ${EMPIRICALIEDIR}/ED_hpke.noaa ${RUNDIR}/EIE/hpke.noaa;\
-			cp ${EMPIRICALIEDIR}/hmr89.cofcnts ${RUNDIR}/EIE/hmr89.cofcnts;\
-			cp ${EMPIRICALIEDIR}/iz94.cofcnts ${RUNDIR}/EIE/iz94.cofcnts;\
-			cp ${EMPIRICALIEDIR}/wei96.cofcnts ${RUNDIR}/EIE/wei96.cofcnts;\
+			ln -s ${EMPIRICALIEDIR}/ED_hpke.noaa ${RUNDIR}/EIE/hpke.noaa;\
+			ln -s ${EMPIRICALIEDIR}/hmr89.cofcnts ${RUNDIR}/EIE/hmr89.cofcnts;\
+			ln -s ${EMPIRICALIEDIR}/iz94.cofcnts ${RUNDIR}/EIE/iz94.cofcnts;\
+			ln -s ${EMPIRICALIEDIR}/wei96.cofcnts ${RUNDIR}/EIE/wei96.cofcnts;\
 			fi);\
 		cd ${RUNDIR}/IM; \
 		mkdir input plots restartIN restartOUT 
