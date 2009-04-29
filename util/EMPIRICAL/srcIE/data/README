@@ -1,0 +1,11 @@
+See ../ModEIEFiles for the variables that refer to these files.
+
+File              	Used by
+hmr89.cofcnts      	Hepner Maynard E Field
+hpke.noaa		ihp Conductance Model
+isoelec_edep.dat	Energy deposition table
+iz94.cofcnts		izem E Field
+mhi.cofcnts     	Millstone Hill E Field
+mhs.cofcnts 		Millstone Hill E Field
+w2k.dat			Weimer Model E Field
+wei96.cofcnts          	Weimer 96 Model E Field
