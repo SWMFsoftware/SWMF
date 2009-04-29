@@ -872,11 +872,12 @@ contains
        do k=1,nK; do j=1,nJ; do i=1,nI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                GammaOut=GammaEos)
-          Source_VC(p_,i,j,k) = -(GammaEos-g)*State_VGB(p_,i,j,k,iBlock)*&
-                vInv_CB(i,j,k,iBlock)*&
-                (uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
-                +uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
-                +uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1))
+          Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
+               -(GammaEos-g)*State_VGB(p_,i,j,k,iBlock)*&
+               vInv_CB(i,j,k,iBlock)*&
+               ( uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
+               + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
+               + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1) )
        end do; end do; end do
     end if
 
