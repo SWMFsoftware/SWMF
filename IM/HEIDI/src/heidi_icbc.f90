@@ -36,7 +36,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
        LIN(3),EIN(5),NI(3,5),E1(NE),E2(NE),F0(K1,L1),DUMMY,  &
        MU0(L1),E0(K1),MLT0(J1),R0(I1),G0(I1,J1)
   integer ::IFM(38)
-  character(len-80) :: HEADER
+  character(len=80) :: HEADER
   character(len=5)  :: ST1
   character(len=2)  :: ST2
   character(len=3)  :: ST3
