@@ -9,9 +9,6 @@ INSTALLFILES =  src/Makefile.DEPEND \
 install: 
 	touch ${INSTALLFILES}
 
-#
-#       General Housekeeping
-#
 
 HEIDI:  install
 	@cd ${SHAREDIR};  	make LIB
@@ -30,10 +27,11 @@ LIB:  install
 	@cd src;	        make LIB
 	@cd srcInterface;	make LIB
 
-OUTDIR =plots
-TESTDIR = run_test
-UADIR = ${DIR}/UA/GITM/srcData
+OUTDIR   = plots
+TESTDIR  = run_test
+HEIDIDIR = ${DIR}/IM/HEIDI
 CHECKDIR = output
+
 test:
 	@echo "test_compile..." > test.diff
 	make   test_compile
@@ -47,12 +45,11 @@ test:
 test_compile:
 	make HEIDI
 
+
 test_rundir:
 	rm -rf ${TESTDIR}
 	make rundir RUNDIR=${TESTDIR} STANDALONE="YES" PWDIR=`pwd`
-	cd input; cp *.in *.dat *.glo *.initial *.unff ../${TESTDIR}
-	mkdir ${TESTDIR}/ionosphere
-
+	cd input; cp PARAM.in ../${TESTDIR}
 test_run: 
 	cd ${TESTDIR}; ${MPIRUN} ./HEIDI.exe
 
@@ -62,6 +59,21 @@ test_check:
 			> test.diff
 	ls -l test.diff
 
+rundir:
+	mkdir -p ${RUNDIR}/IM
+	@(cd ${RUNDIR}; \
+		if [ ! -e "EIE/README" ]; then \
+			ln -s ${EMPIRICALIEDIR}/data EIE;\
+		fi;)
+	cd ${RUNDIR}/IM; \
+		mkdir input plots restartIN restartOUT
+	cd ${RUNDIR}/IM/plots; \
+		mkdir electron hydrogen helium oxygen ionosphere
+	@(if [ "$(STANDALONE)" != "NO" ]; then \
+		cd ${RUNDIR} ; \
+		ln -s ${BINDIR}/HEIDI.exe .;\
+	fi);
+	ln -s ${HEIDIDIR}/input/* ${RUNDIR}/IM/input;\
 
 
 clean: install
@@ -79,23 +91,4 @@ allclean: install
 		cd ../srcInterface;          make distclean;\
 	fi)
 	rm -f *~
-#
-#       Create run directories
-#
-
-
-rundir:
-	mkdir -p ${RUNDIR}/IM
-	@(cd ${RUNDIR}; \
-		if [ ! -e "EIE/README" ]; then \
-			ln -s ${EMPIRICALIEDIR}/data EIE;\
-		fi;)
-	cd ${RUNDIR}/IM; \
-		mkdir input plots restartIN restartOUT
-	cd ${RUNDIR}/IM/plots; \
-		mkdir electron hydrogen helium oxygen ionosphere
-	@(if [ "$(STANDALONE)" != "NO" ]; then \
-		cd ${RUNDIR} ; \
-		ln -s ${BINDIR}/HEIDI.exe .;\
-	fi);
 
