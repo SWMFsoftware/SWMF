@@ -1,4 +1,4 @@
-! File name: heidi_initial.f90
+! File name: heidi_icbc.f90
 !
 ! Contains: initial and boundary condition definition routines for HEIDI
 !	INITIAL
@@ -21,6 +21,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
   use ModHeidiIO
   use ModHeidiMain
   use ModIoUnit, only : io_unit_new, UNITTMP_
+  use ModHeidiIO, only: NameInputDirectory
 
   implicit none
 
@@ -37,10 +38,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
        MU0(L1),E0(K1),MLT0(J1),R0(I1),G0(I1,J1)
   integer ::IFM(38)
   character(len=80) :: HEADER
-  character(len=5)  :: ST1
-  character(len=2)  :: ST2
-  character(len=3)  :: ST3
-
+  
   ! Common block for tests
   real :: XL1(4),XL2(2),XL3
   common /CLIN2/ XL1,XL2,XL3
@@ -57,7 +55,10 @@ subroutine INITIAL(LNC,XN,J6,J18)
   integer :: iUnit
   integer :: iUnit_tst
   integer :: iUnit_unff
-
+  character(len=30):: NameOutputSpecies
+  character(len=2) :: NameSpecies
+  character(len=5) :: NameStormType
+  character(len=3) :: NamePrefix
   !-----------------------------------------------------------------------
 
   !.......Start the loop over RC species
@@ -78,13 +79,16 @@ subroutine INITIAL(LNC,XN,J6,J18)
      if (SCALC(S).eq.1) then
 
         !.......Define the input file names
-        if (ISTORM.eq.1) ST1='major'
-        if (ISTORM.eq.2) ST1='moder'
-        if (ISTORM.eq.3) ST1='tests'
-        if (S.eq.1) ST2='_e'
-        if (S.eq.2) ST2='_h'
-        if (S.eq.3) ST2='he'
-        if (S.eq.4) ST2='_o'
+        if (ISTORM.eq.1) NameStormType='major'
+        if (ISTORM.eq.2) NameStormType='moder'
+        if (ISTORM.eq.3) NameStormType='tests'
+        
+        if (S.eq.1) NameSpecies='_e' 
+	if (S.eq.2) NameSpecies='_h' 
+	if (S.eq.3) NameSpecies='he' 
+	if (S.eq.4) NameSpecies='_o' 
+        
+        
 
         !.......Loss cone distribution (INI=1)
         if (INI(S).eq.1) then
@@ -101,7 +105,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
               end do	! I loop
            else			! Read in from input file: 'cone.bcf'
 
-              open(UNITTMP_,FILE='cone.bcf',STATUS='OLD')
+              open(UNITTMP_,FILE=NameInputDirectory//'cone.bcf',STATUS='OLD')
               read (UNITTMP_,101) HEADER
               do K=2,KO
                  read (UNITTMP_,*) DUMMY,FINI(K)
@@ -130,8 +134,8 @@ subroutine INITIAL(LNC,XN,J6,J18)
            !.......Distribution from input files (INI=3)
         else if ((INI(S).eq.2).or.(INI(S).eq.3)) then
            !.......Read in FI and NI from files
-           ST3='.in '
-           open(UNITTMP_,file=ST1//ST2//ST3,STATUS='OLD')
+           NamePrefix='.in '
+           open(UNITTMP_,file=NameStormType//NameSpecies//NamePrefix,STATUS='OLD')
            read(UNITTMP_,*) YEAR,DAY,R,AP,KP,ETOTAL,EFRACTN  !Replaces input.glo
            read(UNITTMP_,101) HEADER
            read(UNITTMP_,101) HEADER
@@ -139,9 +143,8 @@ subroutine INITIAL(LNC,XN,J6,J18)
               read(UNITTMP_,*) (FI(Iin,Kin),Iin=1,6)
            end do
            close(UNITTMP_)
-           ST1='testn'
-           !iUnit_tst = io_unit_new()
-           open(UNITTMP_,file=ST1//ST2//ST3,STATUS='OLD')
+           NameStormType='testn'
+           open(UNITTMP_,file=NameStormType//NameSpecies//NamePrefix,STATUS='OLD')
            read(UNITTMP_,101) HEADER
            read(UNITTMP_,101) HEADER
            do KK=1,5	
@@ -428,7 +431,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
            !  Read in from a unformatted file (INI=7)
         else if (INI(S).eq.7) then
            iUnit_unff = io_unit_new()
-           open(UNIT=iUnit_unff,FILE=NameRestartOutDir//trim(NameRun)//ST2//'.unff',status='old',   &
+           open(UNIT=iUnit_unff,FILE=NameRestartOutDir//trim(NameRun)//NameSpecies//'.unff',status='old',   &
                 form='unformatted')
            do L=1,NPA
               !	  DO K=8,NE  ! Changed the Egrid for runs "e" and "f" !1,NE
@@ -492,10 +495,10 @@ subroutine INITIAL(LNC,XN,J6,J18)
         if (IFAC.eq.2) FACTOR(S)=4.3237E13/M1(S)**1.5*DR*DPHI
 
         !.......Calculate the characteristics (mean energy) at T=0
-        ST1='rnsc1'
-        if(T/3600.eq.48) ST1='rnsc3'
-        if(T/3600.eq.96) ST1='wpa10'
-        !	OPEN(1,FILE=ST1//ST2//'.l')
+        NameStormType='rnsc1'
+        if(T/3600.eq.48) NameStormType='rnsc3'
+        if(T/3600.eq.96) NameStormType='wpa10'
+        !	OPEN(1,FILE=NameStormType//NameSpecies//'.l')
         !	WRITE(1,*)' Losses due to some processes'
         !	WRITE(1,15) KP
 15      format(2X,5HT = 0,2X,4HKp =,F6.2,/,6X,1HL,10X,11HENIGHT[keV],2X,   &
@@ -636,7 +639,7 @@ subroutine GEOSB
            TS1=TS2
            FS2(1:7)=0.
            iUnitSopa = io_unit_new()
-           open(UNIT=iUnitSopa,FILE=trim(NameRun)//'_sopa.in',status='old')
+           open(UNIT=iUnitSopa,FILE=NameInputDirectory//trim(NameRun)//'_sopa.in',status='old')
            do I=1,3
               read(iUnitSopa,*) HEADER
            end do
@@ -650,7 +653,7 @@ subroutine GEOSB
         TEC2=0.
         TEF2=0.
         iUnitMpa = io_unit_new()
-        open(UNIT=iUnitMpa,FILE=trim(NameRun)//'_mpa.in',status='old')
+        open(UNIT=iUnitMpa,FILE=NameInputDirectory//trim(NameRun)//'_mpa.in',status='old')
         do I=1,3			! 3 lines of header material
            read(iUnitMpa,*) HEADER
         end do
@@ -928,7 +931,7 @@ subroutine FINJ(F)
         T2=TIME-1.
         T1=T2
         iUnitSw = io_unit_new()
-        open(UNIT=iUnitSw,FILE=trim(NameRun)//'_sw2.in',status='old')
+        open(UNIT=iUnitSw,FILE=NameInputDirectory//trim(NameRun)//'_sw2.in',status='old')
         do I=1,6                      ! 6 lines of header material
            read(iUnitSw,*) HEADER
         end do

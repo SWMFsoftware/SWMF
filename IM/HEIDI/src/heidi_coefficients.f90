@@ -7,38 +7,40 @@
 !
 ! Last Modified: March 2006, Mike Liemohn
 !
-!***********************************************************************
+!======================================================================
 !			       CEPARA
 ! Calculates the cross-section of charge exchange of ring current
 ! ion species with the neutral hydrogen and the charge exchange rate
 ! Also calculates the atmospheric loss rate (out the loss cone)
-!***********************************************************************
-SUBROUTINE CEPARA
+!======================================================================
+subroutine CEPARA
   
   use ModHeidiSize
   use ModHeidiMain
   use ModHeidiDrifts
-  use ModIoUnit, ONLY : io_unit_new,UNITTMP_
-    
+  use ModIoUnit,  only : io_unit_new,UNITTMP_
+  use ModHeidiIO, only: NameInputDirectory
+  
   implicit none
   
-  integer :: I,K,L,I1,LUP,ier
-  real :: x,y		!,taub
-  real :: funt,FACI,fac,cosd,acosd
-  real :: RLAMBDA(71),PA(71),HDNS(NR,NPA),LH(20),HDNSIN(20,71)
-  character*80 TITLE
-  external :: cosd,acosd
+  integer           :: I,K,L,I1,LUP,ier
+  integer           :: iUnit 
+  real              :: x,y		
+  real              :: funt,FACI,fac,cosd,acosd
+  real              :: RLAMBDA(71),PA(71),HDNS(NR,NPA)
+  real              :: LH(20),HDNSIN(20,71)
+  character(len=80) :: TITLE
+  external          :: cosd,acosd
 
-  integer :: iUnit != 48
-  
+  !---------------------------------------------------------------------
   !.......Open a file with the bounce-averaged H dens [m-3] in geocorona
   !	obtained through bounce-averaging the Chamberlain model
   !	(Mei-Ching's fit by a poly of order 4 good for L from 1 to 6.5)
   S=0
-  DO I=2,NS
+  do I=2,NS
      S=S+SCALC(I)   ! S=0, no ions in calc, S>0, ions in calc
-  END DO
-  IF (S.GE.1) THEN	! Only needed for ion charge exchange
+  end do
+  if (S.ge.1) then	! Only needed for ion charge exchange
      ! Read in from file instead
      !	  DO I=1,20
      !	    LH(I)=1.5+.25*REAL(I)
@@ -51,68 +53,68 @@ SUBROUTINE CEPARA
      !cc	    IF(LO.EQ.60) OPEN(UNIT=iUnit,file='hgeo64.in',STATUS='OLD')
      !cc	    IF(LO.EQ.71) OPEN(UNIT=iUnit,file='hgeo71.in',STATUS='OLD')
      
-     iUnit = io_unit_new()
-     OPEN(UNITTMP_,file='hgeo71.in',STATUS='OLD')
+     
+     open(UNITTMP_,file=NameInputDirectory//'hgeo71.in',STATUS='OLD')
      !cc	    IF(LO.EQ.91) OPEN(UNIT=iUnit,file='hgeo91.in',STATUS='OLD')
      LUP=71
      !cc	  ENDIF
      do I=1,20
-        READ(UNITTMP_,3) TITLE,LH(i)
+        read(UNITTMP_,3) TITLE,LH(i)
         do L=1,LUP
-           READ(UNITTMP_,4) PA(L),RLAMBDA(L),HDNSIN(I,L)
+           read(UNITTMP_,4) PA(L),RLAMBDA(L),HDNSIN(I,L)
         end do	! L loop
         !cc	    if (LO.EQ.31) HDNSIN(I,LUP+1)=HDNSIN(I,LUP)
      end do	! I loop
-     CLOSE(UNITTMP_)
+     close(UNITTMP_)
      !cc	  If (LO.EQ.31) LUP=LUP+1
      do L=1,LUP
         PA(L)=COSD(PA(L))
      end do
-     DO I=1,IO
+     do I=1,IO
         do L=1,LO
-           CALL LINTP2(LH,PA,HDNSIN,20,71,LZ(i),MU(L),FAC,IER)
+           call LINTP2(LH,PA,HDNSIN,20,71,LZ(i),MU(L),FAC,IER)
            HDNS(i,l)=FAC
         enddo
-     END DO
+     end do
      
-  END IF
-3 FORMAT(A61,F5.2)
-4 FORMAT(2F7.3,2X,1PE12.5)
+  end if
+3 format(A61,F5.2)
+4 format(2F7.3,2X,1PE12.5)
   
   !.......Calculate charge exchange cross-section of species S with H
   !         and then the charge exchange decay rate ACHAR
   
   !.......H+ charge exchange
-  IF (SCALC(2).EQ.1) THEN
+  if (SCALC(2).eq.1) then
      do K=2,KO
         X=ALOG10(EKEV(K))
-        if (X.LT.-2.) X=-2.
+        if (X.lt.-2.) X=-2.
         Y=-18.767-0.11017*X-3.8173e-2*X**2-0.1232*X**3-5.0488e-2*X**4
         !............10**Y is cross section of H+ in m2
         do L=2,Lo
            achar(2:io,k,l,2)=exp(-(10.**Y*V(K,2)*HDNS(2:io,L)*DT))
         end do	! L loop	
      end do	! K loop
-  END IF
+  end if
   
   !.......He+ charge exchange
-  IF (SCALC(3).EQ.1) THEN
+  if (SCALC(3).eq.1) then
      do K=2,KO
         X=ALOG10(EKEV(K))
-        if (X.LT.-2.) X=-2.
+        if (X.lt.-2.) X=-2.
         Y=-20.789+0.92316*X-0.68017*X**2+0.66153*X**3-0.20998*X**4
         !..........10**Y is cross sect of He+ in m2
         do L=2,Lo
-           ACHAR(2:io,K,L,3)=EXP(-(10.**Y*V(K,3)*HDNS(2:io,L)*DT))
+           achar(2:io,K,L,3)=exp(-(10.**Y*V(K,3)*HDNS(2:io,L)*DT))
         end do	! L loop
      end do	! K loop
-  END IF
+  end if
   
   !.......O+ charge exchange
-  IF (SCALC(4).EQ.1) THEN
+  if (SCALC(4).eq.1) then
      do K=2,KO
         X=ALOG10(EKEV(K))
-        if (X.LT.-2.) X=-2.
+        if (X.lt.-2.) X=-2.
         Y=-18.987-0.10613*X-5.4841E-3*X**2-1.6262E-2*X**3   &
              -7.0554E-3*X**4
         !...........10**Y is cross sect of O+ in m2
@@ -120,27 +122,25 @@ SUBROUTINE CEPARA
            achar(2:io,k,l,4)=exp(-(10.**Y*V(K,4)*HDNS(2:io,L)*DT))
         end do	! L loop
      end do	! K loop
-  END IF
+  end if
   
   !.......Calculate the losses due to the collis with atmosphere
   do s=1,NS
      do I=2,IO
         do K=2,KO
 	   do L=UPA(I),LO
-              ATLOS(I,K,L,S)=EXP(-DT/(29.1347*LZ(I)*FUNT(MU(L))*SQRT(M1(S)/EKEV(K))))
+              ATLOS(I,K,L,S)=exp(-DT/(29.1347*LZ(I)*FUNT(MU(L))*sqrt(M1(S)/EKEV(K))))
 	   end do	! L loop
         end do	! K loop
      end do		! I loop
   end do		! S loop
   
-  RETURN
-END SUBROUTINE CEPARA
-
-!***********************************************************************
+end subroutine CEPARA
+!======================================================================
 !				OTHERPARA
 !	  Calculate parameters used in drifts and Coulomb drags
-!***********************************************************************
-SUBROUTINE OTHERPARA
+!======================================================================
+subroutine OTHERPARA
   
   use ModHeidiSize
   use ModHeidiIO
@@ -150,33 +150,34 @@ SUBROUTINE OTHERPARA
   implicit none
   
   integer :: i,j,k,l,is,iss,ier
-  real :: eps,dln,sqm,qe,gama,cco,ccd,edrco,x,xd,g,cci,cdi,edri,ccde,ccdi
-  real :: bane,badif,c,gpa,cce,cde,edre
-  real :: funi,funt,erf
-  real :: COULDE(NE,NPA),COULDI(NE,NPA),AFIR,ASEC
-  real :: VF(NSTH),RA(NSTH),MUBOUN,MULC,TMAS(NSTH),TM1(NSTH)
+  real    :: eps,dln,sqm,qe,gama,cco,ccd,edrco,x,xd,g,cci,cdi,edri,ccde,ccdi
+  real    :: bane,badif,c,gpa,cce,cde,edre
+  real    :: funi,funt,erf
+  real    :: COULDE(NE,NPA),COULDI(NE,NPA),AFIR,ASEC
+  real    :: VF(NSTH),RA(NSTH),MUBOUN,MULC,TMAS(NSTH),TM1(NSTH)
   external :: funi,funt,erf
   
-  DATA TM1/5.4462E-4,1.0,4.0,16.0/  ! Thermal mass in AMU
-  DATA RA/1.,.77,.2,.03/     ! Thermal proportions in plasmasphere
+  data TM1/5.4462E-4,1.0,4.0,16.0/  ! Thermal mass in AMU
+  data RA/1.,.77,.2,.03/     ! Thermal proportions in plasmasphere
+  !---------------------------------------------------------------------  
   
   !.......Parameters used in calculating drifts at boundaries
   C=1.44E-2*RE**2		! Constant of corotation, [C]=V*m
   ISS=-1			! sign of specie's charge
-  IF (S.GE.2) ISS=1
+  if (S.ge.2) ISS=1
   
   !.......Determine the dayside
   J6=0
   J=0
-  do WHILE (J6.EQ.0)
+  do while (J6.eq.0)
      J=J+1
-     IF (MLT(J).GE.5.99) J6=J
+     if (MLT(J).ge.5.99) J6=J
   end do	! While J6 loop
   J18=0
   J=0
-  do WHILE (J18.EQ.0)
+  do while (J18.eq.0)
      J=J+1
-     IF (MLT(J).GE.17.99) J18=J
+     if (MLT(J).ge.17.99) J18=J
   end do	! While J18 loop
   
   do K=1,KO
@@ -229,18 +230,18 @@ SUBROUTINE OTHERPARA
   !.......We assume Te=Ti=1eV (kT=1eV)
   do I=1,NSTH
      TMAS(I)=TM1(I)*MP
-     VF(I)=SQRT(2.*Q/TMAS(I))	! [m/s]
+     VF(I)=sqrt(2.*Q/TMAS(I))	! [m/s]
   end do	! I loop
   EPS=8.854E-12                ! [F/m]
   DLN=21.5                     ! Coulomb logarithm
   QE=(Q**2/EPS)
-  DO S=1,NS
-     IF (SCALC(S).EQ.1) THEN
-        SQM=SQRT(MAS(S))
+  do S=1,NS
+     if (SCALC(S).eq.1) then
+        SQM=sqrt(MAS(S))
 !!! GAMA and EDRCO divided by an extra 2 to match Khazanov defn of Q
         GAMA=DLN/8./PI*QE*1E6/SQM*QE ! *1E6 to transform ne into m-3
-        CCO=GAMA/Q*SQRT(2.)*DT
-        CCD=GAMA*2*DT/16./SQRT(2.)   ! 2*DT due to double the time step
+        CCO=GAMA/Q*sqrt(2.)*DT
+        CCD=GAMA*2*DT/16./sqrt(2.)   ! 2*DT due to double the time step
         EDRCO=2.*DLN*QE*RE/MAS(S)*QE/MAS(S)*(1.E-10) ! to invert in eV/cm2/s
         ! There was an autoscope directive here, but I removed it
         do K=1,KO
@@ -260,9 +261,9 @@ SUBROUTINE OTHERPARA
               CDI=CDI+RA(IS)*(ERF(XD,IER)-G(XD))
            end do	! IS loop
 !.......Collisions with plasmaspheric e- (minus: dF/dt-d(cF)/dt=0)
-           COULE(1,K,1,S)=-CCE*SQRT(EBND(K)/Q/1000.)/DE(K)*CCO
+           COULE(1,K,1,S)=-CCE*sqrt(EBND(K)/Q/1000.)/DE(K)*CCO
            !.......Collisions with plasmaspheric ions
-           COULI(1,K,1,S)=-CCI*SQRT(EBND(K)/Q/1000.)/DE(K)*CCO
+           COULI(1,K,1,S)=-CCI*sqrt(EBND(K)/Q/1000.)/DE(K)*CCO
            !.......Energy deposition rate [eV/cm2/s]
            CEDR(K,1,S)=EDRCO*EKEV(K)*EDRE
            CIDR(K,1,S)=EDRCO*EKEV(K)*EDRI
@@ -313,8 +314,8 @@ SUBROUTINE OTHERPARA
 	      end do	! 2nd L loop
            end do	! I loop
         end do	! K loop
-     END IF	! SCALC check
-  END DO		! S loop
+     end if	! SCALC check
+  end do		! S loop
   
   !...Set continuous source/loss integrals to zero
   RNS=0.	! Radial drift particle source
@@ -335,11 +336,9 @@ SUBROUTINE OTHERPARA
   ILMP(1:JO)=IO
   LMP(1:JO)=LZ(IO)+DL1
   
-  
-  RETURN
-END SUBROUTINE OTHERPARA
 
-! **********************************************************************
+end subroutine OTHERPARA
+!======================================================================
 !                             MAGCONV
 !	Calculates magnetospheric convection strength and puts it
 !	into the drift terms 
@@ -370,8 +369,9 @@ END SUBROUTINE OTHERPARA
 !  Outputs (both are unitless advection coefficients):
 !	VR => Radial drift
 !	P1 => Activity dependent azimuthal drift
-! **********************************************************************
-SUBROUTINE MAGCONV(I3,NST)
+!======================================================================
+
+subroutine MAGCONV(I3,NST)
   
   use ModHeidiSize
   use ModHeidiMain
@@ -380,12 +380,13 @@ SUBROUTINE MAGCONV(I3,NST)
   use ModHeidiCurrents
   use ModHeidiDGCPM
   use ModProcIM
-  
+  use ModIoUnit,  only : io_unit_new
   implicit none
   
 
   integer :: ABASE(24),AEPEN(24),IER,j,i,ii,I4,I3,NST,jj,bc_choice
-  integer ::L,IOpot,JOpot   !,iproc
+  integer ::L,IOpot,JOpot   
+  
   real :: KR,SPJ,CPJ,PJ,DLMAG,Ppc0,Eom,EOJ,EOJ1,NY(4),FAC,CRo
   real :: KGAM,KS(4),KALP,KBETA,KPHI,KEX,KEY,LP,DLP,PCO,PHIPOFF
   real :: Ro,RR,RoRg,KEPS,KSD,SJ,CJ,PHIP,EPR,EPP,ERF,DP1,FACP
@@ -393,20 +394,20 @@ SUBROUTINE MAGCONV(I3,NST)
   real :: sind,cosd
   real ::jfac_temp(NR+3,NT)
   real ::FPOT1(3*NR,NT),FPOT2(3*NR,NT),FPOT12(3*NR,NT)
-  real ::TP1,TP2,LZpot(3*NR),Data(3*NR),Fmin,Fmax,MLTpot(NT)
+  real ::TP1,TP2,LZpot(3*NR),data(3*NR),Fmin,Fmax,MLTpot(NT)
   real ::t_sawtooth(9),tdiff,dt_saw
-  character*80 header
-  DATA ABASE/1,1,1,2,3,1,2,3,1,2,3,4,4,5,5,6,6,1,1,1,10,11,12,13/
-  DATA AEPEN/0,0,0,0,0,1,1,1,2,2,2,2,0,2,3,2,3,0,0,0, 0, 0, 0, 0/
-  DATA KGAM/8./, KS/9.8,-1.4,-0.9,-0.3/
-  DATA KALP/0.3/, KBETA/0.8/, KPHI/3000./
-  DATA KEX/3.E-5/, KEY/1.2E-4/, PCO/9.17E4/
-  DATA t_sawtooth/9.6e4,9.84e4,1.062e5,1.152e5,1.278e5,   &
+  character(len=80):: header
+  data ABASE/1,1,1,2,3,1,2,3,1,2,3,4,4,5,5,6,6,1,1,1,10,11,12,13/
+  data AEPEN/0,0,0,0,0,1,1,1,2,2,2,2,0,2,3,2,3,0,0,0, 0, 0, 0, 0/
+  data KGAM/8./, KS/9.8,-1.4,-0.9,-0.3/
+  data KALP/0.3/, KBETA/0.8/, KPHI/3000./
+  data KEX/3.E-5/, KEY/1.2E-4/, PCO/9.17E4/
+  data t_sawtooth/9.6e4,9.84e4,1.062e5,1.152e5,1.278e5,   &
        1.374e5,1.458e5,1.554e5,1.626e5/
   !cc Use the next t_sawtooth definition for 4.5 h of 2*Vsw early on 4/18
   !cc	DATA t_sawtooth/8.64e4,8.82e4,9.0e4,9.18e4,9.36e4,
   !cc     &                  9.54e4,9.72e4,9.9e4,1.008e5/
-  DATA dt_saw/600./
+  data dt_saw/600./
   
   external :: ERF,sind,cosd
   
@@ -421,9 +422,8 @@ SUBROUTINE MAGCONV(I3,NST)
   
   integer :: edayplus
   real :: univ_time
-
-  integer :: iUnit = 18
-  
+  integer :: iUnit 
+  !---------------------------------------------------------------------  
   PHIPOFF=0.
   DP1=.4*PI
   DP2=2.*PI/3.
@@ -434,59 +434,59 @@ SUBROUTINE MAGCONV(I3,NST)
   
   !** Find polar cap potential value (if needed)
   !print *, 'Is ABASE 3 or 4?'
-  IF (ABASE(IA+1).EQ.3 .or. ABASE(IA+1).EQ.4) THEN  
-     IF (I3.EQ.NST) THEN
+  if (ABASE(IA+1).eq.3 .or. ABASE(IA+1).eq.4) then  
+     if (I3.eq.NST) then
         I4=0
         ii=2
-        DO WHILE (I4.eq.0)
-           IF (TPPC(ii).GE.T) THEN
+        do while (I4.eq.0)
+           if (TPPC(ii).ge.T) then
               I4=ii-1
-           ELSE IF (ii.EQ.IPPC-1) THEN
+           else if (ii.eq.IPPC-1) then
               I4=IPPC-1
-           ELSE
+           else
               ii=ii+1
-           END IF
-        END DO
-     ELSE IF (T+2.*DT.GE.TPPC(IPPC)) THEN
+           end if
+        end do
+     else if (T+2.*DT.ge.TPPC(IPPC)) then
         I4=IPPC-1
-     ELSE IF (T.GE.TPPC(I4+1)) THEN
+     else if (T.ge.TPPC(I4+1)) then
         I4=I4+1
-     END IF
+     end if
      !	  print *, 'PPC:',I4,IPPC,TPPC(I4),PPC(I4)
-     IF (T.LE.TPPC(1)) THEN
+     if (T.le.TPPC(1)) then
         PPC0=PPC(1)
-     ELSE IF (T.GE.TPPC(IPPC)) THEN
+     else if (T.ge.TPPC(IPPC)) then
         Ppc0=PPC(IPPC)
-     ELSE
+     else
         Ppc0=PPC(I4)+(PPC(I4+1)-PPC(I4))*(T-TPPC(I4))   &
              /AMAX1(.1*DT,TPPC(I4+1)-TPPC(I4))
-     END IF
+     end if
      !	print *, 'Ppc0:',I4,TPPC(I4),TPPC(I4+1),PPC(I4),PPC(I4+1)
-  END IF
+  end if
   
   DLMAG=LMP(7)+LMP(19)  ! Width across magnetosphere at X=0
   Eom=sqrt(KEX**2+KEY**2)  ! Eo factor for McIlwain field
   
-  IF (IA.EQ.0) A=0.     ! No convection field
+  if (IA.eq.0) A=0.     ! No convection field
   
   !  Calculate base convection electric field
   
   !CC Shielded Volland-Stern
   !print *, 'Is ABASE 1-4?'
   
-  IF (ABASE(IA+1).EQ.1) THEN
+  if (ABASE(IA+1).eq.1) then
      
      do J=1,JO   ! Fill in drift values
         do i=1,io
-           VR(I,J)=-A*COS(PHI(J))*(LZ(I)+0.5*DL1)**(LAMGAM+2.)*   &
+           VR(I,J)=-A*cos(PHI(J))*(LZ(I)+0.5*DL1)**(LAMGAM+2.)*   &
                 DT/DL1*(RE*RE/ME)
-           P1(I,J)=A*LAMGAM*LZ(I)**(LAMGAM+1.)*SIN(PHI(J)+0.5*DPHI)*   &
+           P1(I,J)=A*LAMGAM*LZ(I)**(LAMGAM+1.)*sin(PHI(J)+0.5*DPHI)*   &
                 DT/DPHI*(RE*RE/ME)
-           BASEPOT(i+1,j)=A*RE*LZ(i)**(LAMGAM)*SIN(phi(j))
+           BASEPOT(i+1,j)=A*RE*LZ(i)**(LAMGAM)*sin(phi(j))
         end do
-        BASEPOT(1,j)=A*RE*(LZ(i)-DL1)**(LAMGAM)*SIN(phi(j))
-        BASEPOT(i+1,j)=A*RE*(LZ(io)+dl1)**(LAMGAM)*SIN(phi(j))
-        BASEPOT(i+1,j)=A*RE*(LZ(io)+2*dl1)**(LAMGAM)*SIN(phi(j))	  
+        BASEPOT(1,j)=A*RE*(LZ(i)-DL1)**(LAMGAM)*sin(phi(j))
+        BASEPOT(i+1,j)=A*RE*(LZ(io)+dl1)**(LAMGAM)*sin(phi(j))
+        BASEPOT(i+1,j)=A*RE*(LZ(io)+2*dl1)**(LAMGAM)*sin(phi(j))	  
      end do
      do J=1,nphicells   ! Fill in DGCPM potentials
         do I=1,nthetacells
@@ -495,15 +495,15 @@ SUBROUTINE MAGCONV(I3,NST)
      enddo
      
      !CC McIlwain or modified McIlwain field
-  ELSE IF (ABASE(IA+1).EQ.2 .OR. ABASE(IA+1).EQ.3) THEN
+  else if (ABASE(IA+1).eq.2 .or. ABASE(IA+1).eq.3) then
      
      KEPS=1.+KALP*Kr   ! McIlwain E5D potential structure
-     IF (ABASE(IA+1).EQ.3) KEPS=Ppc0/(DLMAG*Re*Eom)
+     if (ABASE(IA+1).eq.3) KEPS=Ppc0/(DLMAG*Re*Eom)
      do J=1,JO    ! Fill in radial drift values
-        SJ=SIN(PHI(J))
-        CJ=COS(PHI(J))
+        SJ=sin(PHI(J))
+        CJ=cos(PHI(J))
         Ro=KBETA*(KS(1)+KS(2)*CJ+Kr*(KS(3)+KS(4)*CJ))
-        If (LAMGAM.EQ.0.) Ro=0.
+        if (LAMGAM.eq.0.) Ro=0.
         EOJ=RE*(KEY*SJ+KEX*CJ)
         EOJ1=RE*(KEY*CJ-KEX*SJ)
         do i=1,io
@@ -515,10 +515,10 @@ SUBROUTINE MAGCONV(I3,NST)
         end do
      end do
      do J=1,JO   ! Fill in azimuthal drift values
-        SJ=SIN(PHI(J)+0.5*DPHI)
-        CJ=COS(PHI(J)+0.5*DPHI)
+        SJ=sin(PHI(J)+0.5*DPHI)
+        CJ=cos(PHI(J)+0.5*DPHI)
         Ro=KBETA*(KS(1)+KS(2)*CJ+Kr*(KS(3)+KS(4)*CJ))
-        If (LAMGAM.EQ.0.) Ro=0.
+        if (LAMGAM.eq.0.) Ro=0.
         EOJ=RE*(KEY*SJ+KEX*CJ)
         do i=1,io
            RR=LZ(i)
@@ -544,7 +544,7 @@ SUBROUTINE MAGCONV(I3,NST)
         CJ=cosd(vphicells(j))
         EOJ=RE*(KEY*sj+KEX*cj)
         Ro=KBETA*(KS(1)+KS(2)*CJ+Kr*(KS(3)+KS(4)*CJ))
-        If (LAMGAM.EQ.0) Ro=0.
+        if (LAMGAM.eq.0) Ro=0.
         do i=1,nthetacells
            RoRg=(Ro/vlzcells(i))**KGAM
            KSD=1.+RoRg
@@ -553,18 +553,18 @@ SUBROUTINE MAGCONV(I3,NST)
      enddo
      
      !CC Unshielded Volland-Stern field
-  ELSE IF (ABASE(IA+1).EQ.4) THEN
+  else if (ABASE(IA+1).eq.4) then
      
      KEPS=Ppc0/DLMAG
      do J=1,JO   !  Fill in drift values
         do i=1,io
-           VR(I,J)=-KEPS*COS(PHI(J))*(LZ(I)+0.5*DL1)**3   &
+           VR(I,J)=-KEPS*cos(PHI(J))*(LZ(I)+0.5*DL1)**3   &
                 *DT/DL1*(RE/ME)
-           P1(I,J)=KEPS*LZ(I)**2*SIN(PHI(J)+0.5*DPHI)*   &
+           P1(I,J)=KEPS*LZ(I)**2*sin(PHI(J)+0.5*DPHI)*   &
                 DT/DPHI*(RE/ME)
         end do
         do i=1,io+3
-           BASEPOT(i,j)=KEPS*Lsh(i)*SIN(phi(j))
+           BASEPOT(i,j)=KEPS*Lsh(i)*sin(phi(j))
         end do
      end do
      do J=1,nphicells   ! Fill in DGCPM potentials
@@ -575,7 +575,7 @@ SUBROUTINE MAGCONV(I3,NST)
      !	print *, 'Conv:',KEPS,VR(IO,1),P1(IO,7)
      
      !CC Base field is specified during the self-consistent calculation
-  ELSE IF (ABASE(IA+1).GE.5) THEN
+  else if (ABASE(IA+1).ge.5) then
      !print *, 'ABASE is 5.'
      
      do J=1,JO   !  Zero out drift values
@@ -592,12 +592,14 @@ SUBROUTINE MAGCONV(I3,NST)
      
      !CC Read in potentials from a file
      !print *, 'Is ABASE >=10?'
-  ELSE IF (ABASE(IA+1).EQ.10) THEN
+  else if (ABASE(IA+1).eq.10) then
      
-     if (T.EQ.TIME) then
+     iUnit = io_unit_new()
+     
+     if (T.eq.TIME) then
         TP2=TIME-1.
         TP1=TP2
-        OPEN(UNIT=iUnit,FILE=trim(NameRun)//'_pot.in',status='old')
+        open(UNIT=iUnit,FILE=NameInputDirectory//trim(NameRun)//'_pot.in',status='old')
         do i=1,5                   ! lines of header material
            read (iUnit,*) HEADER
         end do
@@ -614,22 +616,22 @@ SUBROUTINE MAGCONV(I3,NST)
         enddo
         FPOT2(1:3*NR,1:NT)=0.
      end if
-     if (TP2.LT.T) then			! Read in potentials
-        do while (TP2.LE.T)		! Best if final TP2 > final T
+     if (TP2.lt.T) then			! Read in potentials
+        do while (TP2.le.T)		! Best if final TP2 > final T
            FPOT1(1:IOpot,1:JOpot)=FPOT2(1:IOpot,1:JOpot)
-           READ (iUnit,*,IOSTAT=L) TP2
+           read (iUnit,*,IOSTAT=L) TP2
            do j=1,JOpot
-              READ (iUnit,*,IOSTAT=L) (DATA(I),I=1,IOpot)
-              FPOT2(1:IOpot,J)=DATA(1:IOpot)  ! Potential in Volts
+              read (iUnit,*,IOSTAT=L) (data(I),I=1,IOpot)
+              FPOT2(1:IOpot,J)=data(1:IOpot)  ! Potential in Volts
            end do
            FPOT2(1:IOpot,JOpot+1)=FPOT2(1:IOpot,1)
-           IF (L.LT.0) TP2=TIME+2*DT*(NSTEP+1)
-           IF (T.EQ.TIME) THEN		! In case T2>T already
+           if (L.lt.0) TP2=TIME+2*DT*(NSTEP+1)
+           if (T.eq.TIME) then		! In case T2>T already
               TP1=TIME
               FPOT1(1:IOpot,1:JOpot+1)=FPOT2(1:IOpot,1:JOpot+1)
-           END IF
-        END DO
-     END IF
+           end if
+        end do
+     end if
      close(iUnit)
      FAC=(T-TP1)/(TP2-TP1)			! Linearly interpolate
      Fmax=0.
@@ -637,17 +639,17 @@ SUBROUTINE MAGCONV(I3,NST)
      do j=1,JOpot+1
         FPOT12(1:IOpot,J)=FAC*FPOT2(1:IOpot,J)+(1.-FAC)*FPOT1(1:IOpot,J)
         BASEPOT(1:IO+3,J)=FPOT12(1:IO+3,J)
-        Do i=1,IOpot
-           If (FPOT12(i,j).gt.Fmax) Fmax=FPOT12(i,j)
-           If (FPOT12(i,j).lt.Fmin) Fmin=FPOT12(i,j)
-        Enddo
+        do i=1,IOpot
+           if (FPOT12(i,j).gt.Fmax) Fmax=FPOT12(i,j)
+           if (FPOT12(i,j).lt.Fmin) Fmin=FPOT12(i,j)
+        enddo
      enddo
      
      call write_prefix; write(iUnitStdOut,*) 'FPOT12 Max, Min:',Fmin,Fmax,Fmax-Fmin
      !         transform FPOT to equatorial plane drifts
      do j=1,jo
-        SJ=SIN(PHI(J))
-        CJ=COS(PHI(J))
+        SJ=sin(PHI(J))
+        CJ=cos(PHI(J))
         jj=j+1
         !	    IF (j.eq.jo) jj=1
         do i=1,io   ! Note this is shifted from FPOT12's I grid by 1
@@ -655,8 +657,8 @@ SUBROUTINE MAGCONV(I3,NST)
            EPP=-(FPOT12(i+1,jj)-FPOT12(i+1,j))/RR/DPHI
            VR(i,j)=VR(i,j)+EPP*DT/DL1*RR**3*RE/ME
         end do
-        SJ=SIN(PHI(J)+.5*DPHI)
-        CJ=COS(PHI(J)+.5*DPHI)
+        SJ=sin(PHI(J)+.5*DPHI)
+        CJ=cos(PHI(J)+.5*DPHI)
         do i=1,io
            RR=LZ(I)
            EPR=-(FPOT12(i+2,j)-FPOT12(i+1,j))/DL1
@@ -668,30 +670,30 @@ SUBROUTINE MAGCONV(I3,NST)
      Fmin=0.
      do j=1,nphicells   !   Fill in DGCPM potentials
         do i=1,nthetacells
-           CALL LINTP2(LZpot,MLT,FPOT12,3*NR,NT,   &
+           call LINTP2(LZpot,MLT,FPOT12,3*NR,NT,   &
                 vlzcells(i),vmltcells(J),FAC,IER)
            potdgcpm(i,j)=FAC
         enddo
-        Do i=1,nthetacells
-           If (potdgcpm(i,j).gt.Fmax) Fmax=potdgcpm(i,j)
-           If (potdgcpm(i,j).lt.Fmin) Fmin=potdgcpm(i,j)
-        Enddo
+        do i=1,nthetacells
+           if (potdgcpm(i,j).gt.Fmax) Fmax=potdgcpm(i,j)
+           if (potdgcpm(i,j).lt.Fmin) Fmin=potdgcpm(i,j)
+        enddo
      enddo
      
      call write_prefix; write(iUnitStdOut,*)  'potdgcpm Max, Min:',Fmin,Fmax,Fmax-Fmin
           
      !CC Calculate potentials using an ionospheric model (AMIE, Weimer, etc.)
-  ELSE IF (ABASE(IA+1).GE.11) THEN
+  else if (ABASE(IA+1).ge.11) then
      
      !         Transfer date and time to new variables
      eyear=year
      eday=day
-     edayplus=AINT(t/86400.)
+     edayplus=aint(t/86400.)
      eday=eday+edayplus
      univ_time=t-edayplus*86400.
-     ehour=AINT(univ_time/3600.)
+     ehour=aint(univ_time/3600.)
      univ_time=univ_time-ehour*3600.
-     eminute=AINT(univ_time/60.)
+     eminute=aint(univ_time/60.)
      univ_time=univ_time-eminute*60.
      esecond=univ_time
      
@@ -732,7 +734,7 @@ SUBROUTINE MAGCONV(I3,NST)
      !         Use epots1 to update the advection coefficients:
      do j=1,jo  ! transform pots1 to equatorial plane drifts
         jj=j+1
-        IF (j.eq.jo) jj=1
+        if (j.eq.jo) jj=1
         BASEPOT(1:io+3,j)=epots1(j,1:io+3)
         do i=1,io   ! Note this is shifted from epots1's I grid
            RR=LZ(I)+0.5*DL1
@@ -751,34 +753,34 @@ SUBROUTINE MAGCONV(I3,NST)
      end do
      
      !CC Done with base field calculations
-  END IF
+  end if
   
   !  Calculate Burke-Wygant penetration electric field
   !print *, 'Burke-Wygant pen field?'
   
-  IF (AEPEN(IA+1).EQ.1) THEN
-     IF (ABASE(IA+1).EQ.1) THEN
-        PHIP=SQRT(PCO*RE*A*(1.5*DLMAG)**(LAMGAM-1))
-     ELSE IF (ABASE(IA+1).GE.2) THEN
-        PHIP=SQRT(PCO*RE*Eom*KEPS)
-     END IF
+  if (AEPEN(IA+1).eq.1) then
+     if (ABASE(IA+1).eq.1) then
+        PHIP=sqrt(PCO*RE*A*(1.5*DLMAG)**(LAMGAM-1))
+     else if (ABASE(IA+1).ge.2) then
+        PHIP=sqrt(PCO*RE*Eom*KEPS)
+     end if
      PHIP=AMAX1(0.,1.4*PHIP-3200.)  ! From Burke's analysis, fig12
      !	print *, PHIP,FACP,PCO,RE*Eom,KEPS
      PHIP=-PHIP*FACP    ! To have the Burke value at MLT=18
      do J=1,JO   ! Fill in radial drift values
-        CJ=COS(PHI(J))
-        SJ=SIN(PHI(J))
+        CJ=cos(PHI(J))
+        SJ=sin(PHI(J))
         PJ=PHI(J)-PHIPOFF
-        CPJ=ABS(PJ)
+        CPJ=abs(PJ)
         SPJ=1.
-        IF (exp(-(CPJ/DP1)**3) .lt. exp(-((2.*pi-CPJ)/DP2)**3)) THEN
+        if (exp(-(CPJ/DP1)**3) .lt. exp(-((2.*pi-CPJ)/DP2)**3)) then
            CPJ=2.*PI-CPJ
-           IF (PJ.GT.0.) SPJ=-1.
+           if (PJ.gt.0.) SPJ=-1.
            DPP=DP2
-        ELSE
-           IF (PJ.LT.0.) SPJ=-1.
+        else
+           if (PJ.lt.0.) SPJ=-1.
            DPP=DP1
-        ENDIF
+        endif
         CPJ=CPJ/DPP
         LP=0.5+KBETA*(KS(1)+KS(2)*CJ+Kr*(KS(3)+KS(4)*CJ))
         dLPdphi=-KBETA*SJ*(KS(2)+Kr*KS(4))
@@ -786,9 +788,9 @@ SUBROUTINE MAGCONV(I3,NST)
         do i=1,io
            RR=LZ(I)+0.5*DL1
            DLP=10.
-           IF (RR.LT.LP) DLP=sLP-1.
+           if (RR.lt.LP) DLP=sLP-1.
            CRo=(RR-LP)/DLP
-           RoRg=EXP(-CRo**2-CPJ**3)
+           RoRg=exp(-CRo**2-CPJ**3)
            KSD=3.*SPJ*CPJ**2-2.*CRo*dLPdphi/DLP*(1.+CRo/sLP)
            EPP=PHIP*RoRg/RR*KSD
            FAC=EPP*DT/DL1*RR**3*RE/ME
@@ -798,24 +800,24 @@ SUBROUTINE MAGCONV(I3,NST)
         end do
      end do
      do J=1,JO   ! Fill in azimuthal drift values
-        CJ=COS(PHI(J)+.5*DPHI)
+        CJ=cos(PHI(J)+.5*DPHI)
         PJ=PHI(J)-PHIPOFF+.5*DPHI
-        CPJ=ABS(PJ)
-        IF (exp(-(CPJ/DP1)**3) .lt. exp(-((2.*pi-CPJ)/DP2)**3)) THEN
+        CPJ=abs(PJ)
+        if (exp(-(CPJ/DP1)**3) .lt. exp(-((2.*pi-CPJ)/DP2)**3)) then
            CPJ=2.*PI-CPJ
            DPP=DP2
-        ELSE
+        else
            DPP=DP1
-        ENDIF
+        endif
         CPJ=CPJ/DPP
         LP=0.5+KBETA*(KS(1)+KS(2)*CJ+Kr*(KS(3)+KS(4)*CJ))
         sLP=sqrt(LP)
         do i=1,io
            RR=LZ(I)
            DLP=10.
-           IF (RR.LT.LP) DLP=sLP-1.
+           if (RR.lt.LP) DLP=sLP-1.
            CRo=(RR-LP)/DLP
-           RoRg=EXP(-CRo**2-CPJ**3)
+           RoRg=exp(-CRo**2-CPJ**3)
            KSD=2.*CRo/DLP
            EPR=PHIP*RoRg*KSD
            FAC=-EPR*DT/DPHI*RR**2*RE/ME
@@ -827,35 +829,35 @@ SUBROUTINE MAGCONV(I3,NST)
      do j=1,nphicells   ! Fill in DGCPM potentials
         CJ=cosd(vphicells(j))
         PJ=vphicells(j)*pi/180.+phipoff
-        CPJ=ABS(PJ)
-        IF (exp(-(CPJ/DP1)**3) .lt. exp(-((2.*pi-CPJ)/DP2)**3)) THEN
+        CPJ=abs(PJ)
+        if (exp(-(CPJ/DP1)**3) .lt. exp(-((2.*pi-CPJ)/DP2)**3)) then
            CPJ=2.*PI-CPJ
            DPP=DP2
-        ELSE
+        else
            DPP=DP1
-        ENDIF
+        endif
         CPJ=CPJ/DPP
         LP=0.5+KBETA*(KS(1)+KS(2)*CJ+Kr*(KS(3)+KS(4)*CJ))
         sLP=sqrt(LP)
         do i=1,nthetacells
            RR=vlzcells(i)
            DLP=10.
-           If (RR.LT.LP) DLP=sLP-1.
+           if (RR.lt.LP) DLP=sLP-1.
            CRo=(RR-LP)/DLP
-           RoRg=EXP(-CRo**2-CPJ**3)
+           RoRg=exp(-CRo**2-CPJ**3)
            potdgcpm(i,j)=potdgcpm(i,j)+PHIP*RoRg
         enddo
      enddo
-  END IF
+  end if
 51 format(f6.3,f6.2,1p,10e11.3)
   
   !  Calculate self-consistent penetration electric field
   !print *, 'Self-consistent pen field?'
-  IF (AEPEN(IA+1).GE.2) THEN
+  if (AEPEN(IA+1).ge.2) then
      call write_prefix; write(iUnitStdOut,*)  '...Calling PRESSURES'
-     CALL PRESSURES    ! Updates the bulk ring current parameters
+     call PRESSURES    ! Updates the bulk ring current parameters
      call write_prefix; write(iUnitStdOut,*) '...Calling CURRENTCALC' 
-     CALL CURRENTCALC  ! Finds the perpendicular "ring current"
+     call CURRENTCALC  ! Finds the perpendicular "ring current"
      !			    ! and the field-aligned closure currents
      !print *, '...More setup'
      
@@ -869,7 +871,7 @@ SUBROUTINE MAGCONV(I3,NST)
      bc_choice=0       ! High-lat boundary has pot=0.
      if (ABASE(IA+1).eq.5) bc_choice=1  ! W-96 high-lat BC
      if (ABASE(IA+1).eq.6) bc_choice=2  ! W-96 high-lat BC
-     if (bc_choice.ne.0 .and. AEPEN(IA+1).EQ.3) bc_choice=-bc_choice
+     if (bc_choice.ne.0 .and. AEPEN(IA+1).eq.3) bc_choice=-bc_choice
      !             !! W-96/AMIE everywhere, done in S-C potential call
      
      !CC The Jfac adjustment that's commented out is if you only do 1
@@ -908,12 +910,12 @@ SUBROUTINE MAGCONV(I3,NST)
      else
         !initializa Jion1
         Jion1(:,:,:) = 0. 
-        DO J=1,JO
+        do J=1,JO
            Jfac(1:Ir,J)=0.
-           DO S=1,NS   
-              IF (SCALC(S).EQ.1) JFAC(1:Ir,J)=Jfac(1:Ir,j)+Jreducer*Jion1(1:Ir,j,s)
-           END DO
-        END DO
+           do S=1,NS   
+              if (SCALC(S).eq.1) JFAC(1:Ir,J)=Jfac(1:Ir,j)+Jreducer*Jion1(1:Ir,j,s)
+           end do
+        end do
         
      endif
      
@@ -933,7 +935,7 @@ SUBROUTINE MAGCONV(I3,NST)
         !cc End the sawtooth snap block
         call write_prefix; write(iUnitStdOut,*) '...Calling EPENCALC'
                 
-        CALL EPENCALC(t,f107,bc_choice,BYSW,BZSW,evsw) 
+        call EPENCALC(t,f107,bc_choice,BYSW,BZSW,evsw) 
         !CC                             ! Aaron Ridley's solver 
         !CC                             ! for the potential
         !CC				! from the field-aligned currents
@@ -958,20 +960,20 @@ SUBROUTINE MAGCONV(I3,NST)
      !	 enddo
      !	end do  ! End FPOT zeroing
      
-     If (AEPEN(IA+1).GT.1) THEN  !! >2 Prohibits inclusion of Epen
+     if (AEPEN(IA+1).gt.1) then  !! >2 Prohibits inclusion of Epen
         
         do j=1,jo  ! transform FPOT to equatorial plane drifts
-           SJ=SIN(PHI(J))
-           CJ=COS(PHI(J))
+           SJ=sin(PHI(J))
+           CJ=cos(PHI(J))
            jj=j+1
-           IF (j.eq.jo) jj=1
+           if (j.eq.jo) jj=1
            do i=1,io   ! Note this is shifted from FPOT's I grid
               RR=LZ(I)+0.5*DL1
               EPP=-(FPOT(i+1,jj)-FPOT(i+1,j))/RR/DPHI
               VR(i,j)=VR(i,j)+EPP*DT/DL1*RR**3*RE/ME
            end do
-           SJ=SIN(PHI(J)+.5*DPHI)
-           CJ=COS(PHI(J)+.5*DPHI)
+           SJ=sin(PHI(J)+.5*DPHI)
+           CJ=cos(PHI(J)+.5*DPHI)
            do i=1,io
               RR=LZ(I)
               EPR=-(FPOT(i+2,j)-FPOT(i+1,j))/DL1
@@ -987,14 +989,11 @@ SUBROUTINE MAGCONV(I3,NST)
         !	   enddo
         !	  enddo
         
-     END IF  !! Prohibits inclusion of Epen
+     end if  !! Prohibits inclusion of Epen
      
-  END IF
+  end if
   
   call write_prefix; write(iUnitStdOut,*)'Done with MAGCONV'
- 
-  
-  RETURN
-END SUBROUTINE MAGCONV
+end subroutine MAGCONV
 
 

@@ -81,7 +81,7 @@ subroutine heidi_read
   ithermfirst=1		! So we do the setup routines in THERMAL
 
   if (IKP.eq.4 .or. IA.eq.2) then  ! Read in MBI file
-     open(UNITTMP_,FILE=trim(NameRun)//'_Le.dat',status='old')
+     open(UNITTMP_,FILE=NameInputDirectory//trim(NameRun)//'_Le.dat',status='old')
      do I=1,3
         read (UNITTMP_,*) header
      end do
@@ -100,7 +100,7 @@ subroutine heidi_read
 
   if (IA.eq.4 .or. IA.eq.7 .or. IA.ge.10) then ! Read in PC Potential File
 
-     open(UNITTMP_,FILE=trim(NameRun)//'_ppc.dat',status='old')
+     open(UNITTMP_,FILE=NameInputDirectory//trim(NameRun)//'_ppc.dat',status='old')
      do I=1,3
         read (UNITTMP_,*) header
      end do
@@ -136,7 +136,7 @@ subroutine CONSTANT(NKP)
 !------------------------------------------------------------------------
   !.......Read Kp history of the modeled storm
   if (IKP.ge.3) then
-     open(UNITTMP_,FILE=trim(NameRun)//'_kp.in',STATUS='OLD') 
+     open(UNITTMP_,FILE=NameInputDirectory//trim(NameRun)//'_kp.in',STATUS='OLD') 
      read(UNITTMP_,10) HEADER
 10   format(A80)
      do I=1,NSTEP/NKP+2
@@ -676,7 +676,7 @@ subroutine GETSWIND
   if (T.eq.TIME) then
      T2=TIME-1.
      T1=T2
-     open(UNIT=iUnit,FILE=trim(NameRun)//'_sw1.in',status='old')
+     open(UNIT=iUnit,FILE=NameInputDirectory//trim(NameRun)//'_sw1.in',status='old')
      do I=1,6			! 6 lines of header material
         read (iUnit,*) HEADER
      end do
