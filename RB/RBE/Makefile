@@ -79,11 +79,13 @@ allclean:
 #       Create run directories
 #
 rundir:
-	mkdir -p ${RUNDIR}/EIE
 	mkdir -p ${RUNDIR}/RB
+	@(cd ${RUNDIR}; \
+		if [ ! -e "EIE/README" ]; then \
+			ln -s ${EMPIRICALIEDIR}/data EIE;\
+		fi;)
 	cd ${RUNDIR}/RB; \
 		mkdir restartOUT restartIN plots
-	cp ${EMPIRICALIEDIR}/w2k.dat ${RUNDIR}/EIE/
 	cp ${RBDIR}/input/rbe_e.fin ${RUNDIR}/RB/
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR} ; \
