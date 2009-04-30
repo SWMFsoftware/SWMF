@@ -804,19 +804,23 @@ test_2bodyplot_rundir: test_rundir
 test_2bodyplot_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}/GM; ./pTEC g
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
+
+# Sort the files by numerical values of the first two columns (coordinates)
+SORT = sort -k1 -k2 -k3 -n
 
 test_2bodyplot_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6 \
 		Param/2BODYPLOT/TestOutput/REFlog_n000001.log \
 		${TESTDIR}/RESULTS/GM/log_n000001.log > test_2bodyplot.diff)
-	gunzip -c Param/2BODYPLOT/TestOutput/REFy*.out.gz | sort \
+	gunzip -c Param/2BODYPLOT/TestOutput/REFy*.out.gz | ${SORT} \
 		> ${TESTDIR}/RESULTS/GM/ref_y=0.out
-	gunzip -c Param/2BODYPLOT/TestOutput/REFy*.dat.gz | sort \
+	gunzip -c Param/2BODYPLOT/TestOutput/REFy*.dat.gz | ${SORT} \
 		> ${TESTDIR}/RESULTS/GM/ref_y=0.dat
-	sort ${TESTDIR}/RESULTS/GM/y=0_ful_*9_*.out \
+	${SORT} ${TESTDIR}/RESULTS/GM/y=0_ful_*9_*.out \
 		> ${TESTDIR}/RESULTS/GM/y=0.out
-	sort ${TESTDIR}/RESULTS/GM/y=0_ful_*9_*.dat | grep -v AUXDATA \
+	gunzip -c ${TESTDIR}/RESULTS/GM/y=0_ful_*9_*.dat.gz | ${SORT} \
+		| grep -v AUXDATA \
 		> ${TESTDIR}/RESULTS/GM/y=0.dat
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6\
 		${TESTDIR}/RESULTS/GM/ref_y=0.out \
