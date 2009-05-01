@@ -54,7 +54,7 @@ if($KeepMovieOnly){
 # Name of the plot directories for various components
 my %PlotDir = (
     "GM"     => "GM/IO2",
-    "IE"     => "IE/ionosphere",
+    "IE"     => "IE/ionosphere,IE/Output",
     "IH"     => "IH/IO2",
     "OH"     => "OH/IO2",
     "IM"     => "IM/plots",
