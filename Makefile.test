@@ -17,7 +17,7 @@ test_help:
 	@echo "    test1                      (run GM-IE-PW test only )"
 	@echo "    test2                      (run SC-IH test only )"
 	@echo "    test3                      (run GM-IE-IM test only )"
-
+	@echo "    test4                      (run GM-RIM-HEIDI test only )"
 test:
 	@rm -f *.diff
 	-@(make test_comp)
@@ -27,6 +27,7 @@ test:
 	-@(make test1)
 	-@(make test2)
 	-@(make test3)
+	-@(make test4)
 	-@(make test_check)
 
 test_check:
@@ -62,6 +63,7 @@ test_pw:
 	@echo "test_pw_run..." >> test_pw.diff
 	make test_pw_run
 	@echo "test_pw_check..." >> test_pw.diff
+
 	make test_pw_check
 
 test_pw_compile:
@@ -294,7 +296,7 @@ test3_check:
 		> test3_ie.diff)
 	gunzip -c output/test3/IM_2d__max_t00000010.dat.gz \
 		> ${TESTDIR}/RESULTS/IM/t10.dat
-	# Remove date stamp from tecplot files
+# Remove date stamp from tecplot files
 	cd ${TESTDIR}/RESULTS/IM; \
 		perl -pi -e 's/AUXDATA SAVEDATE=.*//' t10.txt t10.dat
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
@@ -302,6 +304,57 @@ test3_check:
 		${TESTDIR}/RESULTS/IM/t10.dat \
 		> test3_im.diff)
 	ls -l test3*.diff
+
+### Test4: GM+RIM+HEIDI ###############
+
+test4:
+	@echo "test4_compile..." > test4_gm.diff
+	@echo "test4_compile..." > test4_ie.diff
+	@echo "test4_compile..." > test4_im.diff
+	make test4_compile
+	@echo "test4_rundir..." >> test4_gm.diff
+	@echo "test4_rundir..." >> test4_ie.diff
+	@echo "test4_rundir..." >> test4_im.diff
+	make test4_rundir
+	@echo "test4_run..." >> test4_gm.diff
+	@echo "test4_run..." >> test4_ie.diff
+	@echo "test4_run..." >> test4_im.diff
+	make test4_run
+	@echo "test4_check..." >> test4_gm.diff
+	@echo "test4_check..." >> test4_ie.diff
+	@echo "test4_check..." >> test4_im.diff
+	make test4_check
+
+test4_compile:
+	./Config.pl -v=Empty,GM/BATSRUS,IE/RIM,IM/HEIDI
+	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd
+	make SWMF PIDL
+
+test4_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.GMRIMHEIDI ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.GMRIMHEIDI ${TESTDIR}/LAYOUT.in
+
+test4_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+
+test4_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
+		${TESTDIR}/RESULTS/GM/log_n000001.log \
+		output/test4/GM_log_n000001.log \
+		> test4_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
+		${TESTDIR}/RESULTS/IE/logIE.dat \
+		output/test4/IE_logIE.dat \
+		> test4_ie.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
+                ${TESTDIR}/RESULTS/IM/hydrogen/test1_h_prs.002 \
+                output/test4/IM_test1_h_prs.002\
+                > test4_im.diff)
+	ls -l test4*.diff
+
 
 ### ESMF test ###
 #
@@ -327,7 +380,7 @@ test_esmf_rundir:
 	rm -rf ${TESTDIR};
 	make rundir RUNDIR=${TESTDIR}
 	cd ESMF/ESMF_SWMF; make rundir RUNDIR=${TESTDIR}
-	
+
 test_esmf_run: 
 	@cd ${TESTDIR}; rm -f PET*ESMF_LogFile
 	@cd ${TESTDIR}; ${MPIRUN} ESMF_SWMF.exe > runlog
