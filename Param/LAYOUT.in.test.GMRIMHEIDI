@@ -1,0 +1,10 @@
+This is the layout for running GM and IM+IE in concurrent mode on 3 or 4 PE-s
+or serial mode (but different root PE-s) on 2 PE-s.
+
+Name First Last Stride
+======================
+#COMPONENTMAP
+GM       0    1    1   ! GM runs on 2 PE-s
+IE       2    3    1   ! IE runs on 2 PE-s
+IM       3    3    1   ! IM runs on 1 PE
+#END

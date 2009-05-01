@@ -1,0 +1,360 @@
+#ECHO
+T			DoEcho
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#PROGRESS
+1			DnProgressShort
+100			DnProgressLong
+
+#DESCRIPTION
+Test for GM-RIM-HEIDI
+
+#PLANET
+EARTH			NamePlanet
+
+#SAVERESTART
+F			DoSaveRestart
+
+#ROTATION
+F			UseRotation
+
+#STARTTIME
+2002			iYear
+04			iMonth
+17			iDay
+00			iHour
+00			iMinute
+00			iSecond
+00			iFracSec
+#COMPONENT
+IM                      NameComp
+F                       UseComp
+
+#COUPLE2
+GM			NameComp1
+IE			NameComp2
+5                       DnCouple
+-1.0                    DtCouple
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#GRID
+1			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-224.			xMin
+ 32.			xMax
+-128.			yMin
+ 128.			yMax
+-128.			zMin
+ 128.			zMax
+
+! Maximum resolution initially
+#GRIDRESOLUTION
+2.0			Resolution
+initial			NameArea
+
+! Minimum resolution in the computational domain
+#GRIDRESOLUTION
+8.0			Resolution
+all			NameArea
+
+! Far tail for wind satellite and inflow
+#GRIDRESOLUTION
+2.0			Resolution
+box			NameArea
+ -20.0			xMinBox
+ -16.0			yMinBox
+ -16.0			zMinBox
+  20.0			xMaxBox
+  16.0			yMaxBox
+  16.0			xMaxBox
+
+! r currents resolution for the ionosphere
+#GRIDRESOLUTION
+1/4			Resolution
+shell0			NameArea
+2.5			Radius1
+3.5			Radius2
+
+#MAGNETOSPHERE
+T                       UseBody
+2.5                     rBody
+3.0                     rCurrents
+28.0                    Magneto_rho_dim (/ccm) density for fixed BC for rho_BLK
+25000.0                 Magneto_T_dim (K) temperature for fixed BC for P_BLK
+
+#TVDRESCHANGE
+T			UseTvdResChange
+
+#TIMESTEPPING
+1			nStage
+0.80			CflExlp
+
+#OUTERBOUNDARY
+outflow			TypeBCEast
+vary			TypeBCWest
+float			TypeBCSouth
+float			TypeBCNorth
+float			TypeBCBottom
+float			TypeBCTop
+
+#INNERBOUNDARY
+ionosphere		TypeBcInner
+
+#SCHEME
+1			nOrder
+Rusanov			TypeFlux
+
+#SAVELOGFILE
+T                       DoSaveLogFile
+VAR                     StringLog
+1                       DnSaveLogfile
+-1.                     DtSaveLogfile
+dt rho mx my mz p bx by bz pmin pmax cpcpn cpcps dst dstdivb dstflx
+3.0 3.5 5.0             StringRFlux
+
+
+SATELLITE
+5
+MHD
+-1
+60
+Satellites/geotail.dat
+MHD
+-1
+60
+Satellites/goes08.dat
+MHD
+-1
+60
+Satellites/goes10.dat
+MHD
+-1
+60
+Satellites/polar.dat
+MHD
+-1
+60
+Satellites/wind.dat
+
+!- PARAMETERS for Smart Steady State Startup --
+
+#SOLARWINDFILE
+T				                 UseSolarWindFile
+GM/Param/TESTSUITE/Inputfiles/imf20020417.dat     NameSolarWindFile
+
+#IE
+T                       DoTraceIe
+
+#END_COMP GM -----------------------------------------------------------------
+
+#BEGIN_COMP IE ---------------------------------------------------------------
+
+#KRYLOV
+F			UsePreconditioner
+T			UseInitialGuess
+0.1			Tolerance
+5000			MaxIteration
+
+#SOLVE
+T
+90.0
+0.0
+T
+
+#IONOSPHERE
+6                       TypeConductanceModel
+140.1                   F107Flux
+1.0                     StarLightPedConductance
+0.25                    PolarCapPedConductance
+
+#SAVEPLOT
+2			nFile
+min idl                 StringPlot
+2			DnOutput
+-1.0			DtOutput [sec]
+max tec                 StringPlot
+5			DnOutput
+-1.0			DtOutput [sec]
+
+#DEBUG 
+2			iDebugLevel
+0			iDebugProc
+
+#END_COMP IE -----------------------------------------------------------------
+
+#STOP
+10                        MaxIteration
+-1.	       		  tSimulationMax [sec]
+
+#RUN	######################################################################
+
+#TIMEACCURATE
+T			DoTimeAccurate
+
+#COMPONENT
+IM			NameComp
+T			UseComp
+
+#INCLUDE
+Param/CoupleOrderFast
+
+#COUPLE2
+GM			NameComp1
+IE			NameComp2
+-1                      DnCouple
+10.0                    DtCouple
+
+#COUPLE1
+GM			NameComp1
+IM			NameComp2
+-1                      DnCouple
+10.0                    DtCouple
+
+#COUPLE1
+IE			NameComp1
+IM			NameComp2
+-1                      DnCouple
+10.0                    DtCouple
+
+#COUPLETIME
+GM			NameComp
+F			DoCoupleOnTime
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#IMCOUPLING
+20.0			TauCoupleIm
+F			DoImSatTrace
+T			DoCoupleImPressure
+T			DoCoupleImDensity
+T			DoFixPolarRegion
+5.0			rFixPolarRegion
+
+#SAVEPLOT
+3			nPlotFile
+idl x=0 FUL			StringPlot
+-1			DnSavePlot
+10.			DtSavePlot
+-1.0			DxSavePlot
+idl y=0 FUL			StringPlot
+-1			DnSavePlot
+10.0			DtSavePlot
+-1.0			DxSavePlot
+idl z=0 FUL			StringPlot
+-1			DnSavePlot
+10.0			DtSavePlot
+-1.0			DxSavePlot
+
+#END_COMP GM -----------------------------------------------------------------
+
+#BEGIN_COMP IM ---------------------------------------------------------------
+
+#TIMESTEP
+20.                     TimeStep [sec] 
+
+#GRID
+20			nRadialGrid
+24			nPhiGrid
+42			nEnergyGrid
+71  			nPitchGrid
+24			nPointFieldLine
+
+#STORM
+test			TypeStorm
+
+#INNERBOUNDARY
+1e6			Height [m]
+
+#ENERGYSETUP
+0.01			EnergyLowerBoundary[keV]
+0.006			LowestEnergyCellWidth [keV]
+1.26			rw
+
+#SPECIES
+F			UseElectron	
+T			UseHPlus
+F			UseHePlus
+T			UseOPlus
+T			UseIon
+F			UsePhotoelElectron
+F			UsePlasmaSheetElectron
+
+#INDICES
+4 			WhichKp
+3.0			Kp
+15.0			ApIndex
+154.0			SunspotAverage
+
+	
+#BOUNDARY
+none			TypeBoundary
+
+#INITIAL
+none			TypeInitial
+0.0			MaxwellianScallingFactor
+0.03			CharacteristicEnergy
+
+#OUTPUT
+T			DoSaveDistributionFunctionEverywhere	
+F			DoSaveEquatorialDistributionFunction
+T			DoSaveEnergyDeposition
+F			DoSaveTotalPrecipitationFlux
+F			DoSaveDifferentialPrecipitationFlux	
+F			DoSaveParticleEnergyLosses
+T			DoSaveThermalPlasmaDensity
+F			DoSaveCflForAdvection
+T			DoSaveDriftVelocities
+F			DoSaveEvsLDistributions
+F			DoSaveParticleLifetimes
+T			DoSavePressureDensityDst
+T			DoSaveUnformatted
+T			DoSaveContinuousSourcesLosses
+T			DoSaveNightsideBCDistribution
+F			DoSaveDifferentialNumberFlux
+
+#OUTPUTINFO
+test1			NameRun
+60.			nFrequency [sec]
+
+#INJECTIONFREQUENCY
+120.			iFrequency [sec]
+
+#CONVECTION
+w96sc 			TypeConvection
+
+#INITIALTHERMALPLASMA
+F			DoReadDGCPM	
+
+#SOLARWIND
+T		        DoReadSolarWind
+
+#PITCHANGLE
+F 			UseConstantStepPA	
+
+#INCLUDEWAVES
+F 			UseWaves
+
+#END_COMP IM -----------------------------------------------------------------
+
+#BEGIN_COMP IE ---------------------------------------------------------------
+
+#SAVEPLOT
+2			nPlotFile
+min idl                 StringPlot
+-1			DnSavePlot
+5.0			DtSavePlot
+max tec                 StringPlot
+-1			DnSavePlot
+5.0			DtSavePlot
+
+#END_COMP IE -----------------------------------------------------------------
+
+#STOP
+-1			MaxIteration
+30.0    	        tSimulationMax [sec]
+
+#END ############################################################
