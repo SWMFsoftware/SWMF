@@ -7,7 +7,8 @@ module ModUser
        IMPLEMENTED3 => user_normalization,              &
        IMPLEMENTED4 => user_set_ics,                    &
        IMPLEMENTED5 => user_set_plot_var,               &
-       IMPLEMENTED6 => user_material_properties
+       IMPLEMENTED6 => user_material_properties,        &
+       IMPLEMENTED7 => user_update_states
 
   include 'user_module.h' !list of public methods
 
@@ -28,6 +29,8 @@ module ModUser
        nVarLowrie  = 4
   real, allocatable :: xLowrie_C(:), StateLowrie_VC(:,:)
   real :: U0, X0
+
+  real, parameter :: Gamma = 5.0/3.0
 
 contains
 !============================================================================
@@ -80,7 +83,6 @@ contains
   subroutine user_init_session
 
     use ModIoUnit,  ONLY: UnitTmp_
-    use ModPhysics, ONLY: g
 
     integer :: iError, iCell
     real :: Mach, Entropy
@@ -123,8 +125,8 @@ contains
     close(UnitTmp_)
 
     ! The reference solutions use p=rho*T/gamma
-    StateLowrie_VC(iTgasLowrie,:) = StateLowrie_VC(iTgasLowrie,:)/g
-    StateLowrie_VC(iTradLowrie,:) = StateLowrie_VC(iTradLowrie,:)/g
+    StateLowrie_VC(iTgasLowrie,:) = StateLowrie_VC(iTgasLowrie,:)/Gamma
+    StateLowrie_VC(iTradLowrie,:) = StateLowrie_VC(iTradLowrie,:)/Gamma
 
   end subroutine user_init_session
 
@@ -133,7 +135,7 @@ contains
   subroutine user_normalization
 
     use ModConst,   ONLY: cRadiation, cProtonMass, cBoltzmann
-    use ModPhysics, ONLY: g, No2Si_V, UnitRho_, UnitU_
+    use ModPhysics, ONLY: No2Si_V, UnitRho_, UnitU_
     
     character (len=*), parameter :: NameSub = 'user_normalization'
     !------------------------------------------------------------------------
@@ -143,7 +145,7 @@ contains
     ! constant  with value 1.0e-4. The gamma dependence is needed since
     ! the reference solution uses p=rho*T/gamma
     No2Si_V(UnitRho_) = 1.0e+4*cRadiation*(cProtonMass/cBoltzmann)**4 &
-         *No2Si_V(UnitU_)**6/g**4
+         *No2Si_V(UnitU_)**6/Gamma**4
 
   end subroutine user_normalization
 
@@ -156,7 +158,7 @@ contains
     use ModGeometry,   ONLY: x_Blk, y_Blk
     use ModMain,       ONLY: GlobalBlk, nI, nJ, nK, x_, y_
     use ModPhysics,    ONLY: ShockSlope, No2Si_V, Si2No_V, &
-         UnitTemperature_, UnitEnergyDens_
+         UnitTemperature_, UnitEnergyDens_, inv_gm1
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Erad_, &
          ExtraEint_, p_
 
@@ -220,7 +222,8 @@ contains
           State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock) = matmul(Rot_II,RhoU_D(x_:y_))
           State_VGB(RhoUz_,i,j,k,iBlock) = 0.0
           State_VGB(Erad_,i,j,k,iBlock) = Erad
-          State_VGB(ExtraEint_,i,j,k,iBlock) = 0.0
+          State_VGB(ExtraEint_,i,j,k,iBlock) = &
+               (1.0/(Gamma-1.0) - inv_gm1)*p
           State_VGB(p_,i,j,k,iBlock) = p
        end do
 
@@ -229,6 +232,48 @@ contains
   end subroutine user_set_ics
 
   !==========================================================================
+
+  subroutine user_update_states(iStage,iBlock)
+
+    use ModSize,    ONLY: nI, nJ, nK
+    use ModAdvance, ONLY: State_VGB, p_, ExtraEint_
+    use ModPhysics, ONLY: inv_gm1, Si2No_V, No2Si_V, UnitP_, UnitEnergyDens_
+    use ModEnergy,  ONLY: calc_energy_cell
+
+    implicit none
+
+    integer, intent(in) :: iStage, iBlock
+
+    integer:: i, j, k
+    real   :: PressureSi, EinternalSi
+
+    character(len=*), parameter :: NameSub = 'user_update_states'
+    !------------------------------------------------------------------------
+
+    call update_states_MHD(iStage,iBlock)
+
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       EinternalSi = No2Si_V(UnitEnergyDens_) &
+            *(inv_gm1*State_VGB(P_,i,j,k,iBlock) &
+            + State_VGB(ExtraEint_,i,j,k,iBlock))
+       call user_material_properties(State_VGB(:,i,j,k,iBlock),&
+            EinternalSiIn=EinternalSi, PressureSiOut=PressureSi)
+      
+       ! Set true pressure
+       State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
+
+       ! Set ExtraEint = Total internal energy - P/(gamma -1)
+       State_VGB(ExtraEint_,i,j,k,iBlock) = &
+            Si2No_V(UnitEnergyDens_)*EinternalSi &
+            - inv_gm1*State_VGB(p_,i,j,k,iBlock)
+
+    end do; end do; end do
+
+    call calc_energy_cell(iBlock)
+
+  end subroutine user_update_states
+
+  !===========================================================================
 
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
@@ -349,14 +394,14 @@ contains
   !==========================================================================
 
   subroutine user_material_properties(State_V, EinternalSiIn, &
-       TeSiIn, EinternalSiOut, TeSiOut, PressureSiOut, CvSiOut, &
+       TeSiIn, EinternalSiOut, TeSiOut, PressureSiOut, CvSiOut, GammaOut, &
        AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut, &
        HeatConductionCoefSiOut)
 
     ! The State_V vector is in normalized units
 
     use ModConst,      ONLY: cLightSpeed
-    use ModPhysics,    ONLY: g, gm1, inv_gm1, No2Si_V, Si2No_V, &
+    use ModPhysics,    ONLY: No2Si_V, Si2No_V, &
          UnitTemperature_, UnitEnergyDens_, UnitT_, UnitU_, UnitX_
     use ModVarIndexes, ONLY: nVar, Rho_, p_
 
@@ -365,10 +410,11 @@ contains
     real, optional, intent(in)  :: TeSiIn                    ! [K]
     real, optional, intent(out) :: EinternalSiOut            ! [J/m^3]
     real, optional, intent(out) :: TeSiOut                   ! [K]
+    real, optional, intent(out) :: PressureSiOut             ! [Pa]
+    real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
+    real, optional, intent(out) :: GammaOut                  ! dimensionless
     real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
     real, optional, intent(out) :: RosselandMeanOpacitySiOut ! [1/m]
-    real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
-    real, optional, intent(out) :: PressureSiOut             ! [Pa]
     real, optional, intent(out) :: HeatConductionCoefSiOut   ! [Jm^2/(Ks)]
 
     real :: Temperature, AbsorptionOpacity, DiffusionRad
@@ -378,14 +424,14 @@ contains
 
     if(present(EinternalSiIn))then
        Temperature = EinternalSiIn*Si2No_V(UnitEnergyDens_) &
-            *gm1/State_V(Rho_)
+            *(Gamma - 1.0)/State_V(Rho_)
     else
        Temperature = State_V(p_)/State_V(Rho_)
     end if
 
-    if(present(PressureSiOut)) PressureSiOut = EinternalSiIn*(g - 1.0)
+    if(present(PressureSiOut)) PressureSiOut = EinternalSiIn*(Gamma - 1.0)
 
-    if(present(CvSiOut)) CvSiOut = inv_gm1*State_V(Rho_) &
+    if(present(CvSiOut)) CvSiOut = State_V(Rho_)/(Gamma - 1.0) &
          *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
 
     select case(iLowrieTest)
@@ -393,9 +439,11 @@ contains
        DiffusionRad = 1.0
        AbsorptionOpacity = 1.0E6
     case(3)
-       DiffusionRad = 0.00175*(g*Temperature)**3.5/State_V(Rho_)
+       DiffusionRad = 0.00175*(Gamma*Temperature)**3.5/State_V(Rho_)
        AbsorptionOpacity = 1.0E6/DiffusionRad
     end select
+
+    if(present(GammaOut)) GammaOut = Gamma
 
     if(present(TeSiOut)) TeSiOut = Temperature*No2Si_V(UnitTemperature_)
 
