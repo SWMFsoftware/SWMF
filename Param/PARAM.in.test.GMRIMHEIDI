@@ -160,14 +160,14 @@ T			UseInitialGuess
 5000			MaxIteration
 
 #SOLVE
-T
-90.0
-0.0
-T
+T			DoSolve
+90.0			HighLatBoundary
+0.0			LowLatBoundary
+T			DoFold
 
 #IONOSPHERE
-6                       TypeConductanceModel
-140.1                   F107Flux
+6                       iConductanceModel
+140.1                   F10.7Flux
 1.0                     StarLightPedConductance
 0.25                    PolarCapPedConductance
 
