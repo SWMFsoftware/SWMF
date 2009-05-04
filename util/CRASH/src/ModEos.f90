@@ -50,6 +50,11 @@ module ModEos
   !    - Xenon
   !    - Polyimide (C_22 H_10 N_2 O_5)
   !
+  ! Error flag (iError) values:
+  ! 0 - OK
+  ! 1 - deep Fermi degeneration, 
+  ! 2 - relativistic temperature, 
+  ! 3 - pressure ionization (ion levels are crashed)
 
   use ModPolyimide
   use ModStatSum
@@ -75,7 +80,8 @@ module ModEos
 
   ! Local variables
 
-  integer, parameter:: Test_=90 ! test material with the EOS e\sim T^4, p\sim T^4
+  ! test material with the EOS e \propto T^4, p \propto T^4
+  integer, parameter:: Test_ = 90 
   integer, parameter :: nZ_I(Xe_:Au_)=(/54, 4, 6, 79 /)
 
   ! integer, parameter:: C_=3, H_=4, N_=5, O_=6 !Composition elements
@@ -83,28 +89,36 @@ module ModEos
 contains
 
   !============================================================================
+
   subroutine read_eos_parameters
 
-    ! The usage in the user_read_param:
+    ! Usage (with default values shown):
+    !
     ! #EOS
     ! T                     UseFermiGas
-    ! 4.0                   LogGeMinBoltzmann)
+    ! 4.0                   LogGeMinBoltzmann
+    ! 0.001                 ToleranceU
+    ! 0.001                 ToleranceZ
+    ! 7.0                   ToleranceStatSumLog
 
     use ModReadParam, ONLY: read_var
     !-----------------------------------------------------------------------
     ! For now. But it should/could read other things
-    call read_var('UseFermiGas',       UseFermiGas)
-    call read_var('LogGeMinBoltzmann', LogGeMinBoltzmann)
+    call read_var('UseFermiGas',         UseFermiGas)
+    call read_var('LogGeMinBoltzmann',   LogGeMinBoltzmann)
+    call read_var('ToleranceU',          Tolerance)
+    call read_var('ToleranceZ',          ToleranceZ)
+    call read_var('ToleranceStatSumLog', StatSumToleranceLog)
 
   end subroutine read_eos_parameters
+
   !============================================================================
 
   subroutine eos_material(iMaterial,Rho,&
-       TeIn,eTotalIn,pTotalIn,&
-       TeOut,eTotalOut,pTotalOut,GammaOut,CvTotalOut,IsError,iErrorOut)
+       TeIn, eTotalIn, pTotalIn,&
+       TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut, iError)
 
     ! Eos function for single material
-
 
     integer, intent(in):: iMaterial     ! index of material
     real,    intent(in):: Rho           ! mass density [kg/m^3]
@@ -120,19 +134,14 @@ contains
     real,    optional, intent(out) :: eTotalOut  ! internal energy density
     real,    optional, intent(out) :: GammaOut   ! polytropic index
     real,    optional, intent(out) :: CvTotalOut ! specific heat / unit volume
-    logical, optional, intent(out) :: IsError
-    integer, optional, intent(out) :: iErrorOut     ! iError =0 - OK, 1 - deep Fermi degeneration, 
-                                                    ! 2 - relativistic temperature, 
-                                                    ! 3 - pressure ionization (ion states are crashed)
+    integer, optional, intent(out) :: iError     ! error flag
 
     real   :: Natomic
-    integer:: iError
     !-------------------------------------------------------------------------
     if(iMaterial == Test_)then
        call eos_esimt4(TeIn, eTotalIn, pTotalIn, &
             TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut)
-       if(present(iErrorOut))iErrorOut=0
-       if(present(IsError)) IsError = .false.
+       if(present(iError))iError = 0
        RETURN
     elseif(iMaterial == Plastic_)then
        call set_mixture(nPolyimide, nZPolyimide_I, CPolyimide_I)
@@ -146,16 +155,15 @@ contains
        Natomic=Rho/(cAtomicMass*cAtomicMass_I(nZ_I(iMaterial)))
     end if
     call eos_generic(Natomic, TeIn, eTotalIn, pTotalIn, &
-         TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,iError)
-    if(present(iErrorOut))iErrorOut=iError
-    if(present(IsError))IsError = iError/=0
+         TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut, iError)
+
   end subroutine eos_material
 
   !============================================================================
 
   subroutine eos_mixture(RhoToARatio_I,&
        TeIn, eTotalIn, pTotalIn, &
-       TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut, IsError,iErrorOut)
+       TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut, iError)
 
     ! Eos function for mixed material
     real, intent(in) :: RhoToARatio_I(Xe_:Plastic_) ! Mass densities/A
@@ -171,13 +179,9 @@ contains
     real,    optional, intent(out) :: eTotalOut     ! internal energy density 
     real,    optional, intent(out) :: GammaOut      ! polytropic index
     real,    optional, intent(out) :: CvTotalOut    ! specific heat per volume
-    logical, optional, intent(out) :: IsError       ! error flag
-    integer, optional, intent(out) :: iErrorOut     ! iError =0 - OK, 1 - deep Fermi degeneration, 
-                                                    ! 2 - relativistic temperature, 
-                                                    ! 3 - pressure ionization (ion states are crashed)
+    integer, optional, intent(out) :: iError        ! error flag
 
     real :: RhoToATotal, Natomic
-    integer:: iError
 
     integer, parameter :: nAll = 1 + 1 + nPolyimide   
 
@@ -205,9 +209,10 @@ contains
 
     call eos_generic(Natomic, TeIn, eTotalIn, pTotalIn, &
          TeOut, eTotalOut, PtotalOut, GammaOut, CvTotalOut, iError)
-  end subroutine eos_mixture
-  !=============================================================================
 
+  end subroutine eos_mixture
+
+  !============================================================================
 
   subroutine eos_generic(Natomic, TeIn, eTotalIn, pTotalIn,&
        TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut, iError)
@@ -222,9 +227,7 @@ contains
     real,    optional, intent(out) :: eTotalOut  ! internal energy density 
     real,    optional, intent(out) :: GammaOut   ! polytropic index
     real,    optional, intent(out) :: CvTotalOut ! Specific heat per volume
-    integer,           intent(out) :: iError     ! iError =0 - OK, 1 - deep Fermi degeneration, 
-                                                 ! 2 - relativistic temperature, 
-                                                 ! 3 - pressure ionization (ion levels are crashed)
+    integer,           intent(out) :: iError     ! error flag
 
     real :: ePerAtom, pPerAtom,TeInEV  !Both in eV
 
@@ -233,8 +236,7 @@ contains
     if(present(TeIn))then
 
        TeInEV = TeIn * cKToEV
-       call set_ionization_equilibrium(TeInEV, Natomic, iError )
-
+       call set_ionization_equilibrium(TeInEV, Natomic, iError)
 
     elseif(present(eTotalIn))then
 
@@ -245,18 +247,17 @@ contains
 
        call set_temperature(ePerAtom, Natomic, iError)
 
-
     elseif(present(pTotalIn))then
        ! Divide pressure by Na , express in eV
        pPerAtom = pTotalIn / (cEV * Natomic)
 
        !Find temperature from dentity and pressure
        call pressure_to_temperature(pPerAtom, Natomic, iError)
+
     else
        call CON_stop(NameSub// &
-            'None of Te, eTotal, or pTotal is among the input parameters')
+            ': none of Te, eTotal, or pTotal is among the input parameters')
     end if
-
 
     if(present(TeOut))      TeOut     = Te*cEVToK
     if(present(eTotalOut))  eTotalOut = Natomic*cEV*internal_energy()

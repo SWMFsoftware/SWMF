@@ -716,18 +716,9 @@ module ModStatSum
   
   ! Accuracy of internal energy needed [(% deviation)/100]
    
-  real, public :: Tolerance = 0.001
-
-
-  public :: read_eos_tolerance
+  real, public:: Tolerance = 0.001
 
 Contains
-  subroutine read_eos_tolerance
-    use ModReadParam
-    call read_var('ToleranceU',Tolerance)
-    ToleranceZ = 0.2*Tolerance
-    StatSumToleranceLog = - log(0.5 * ToleranceZ)
-  end subroutine read_eos_tolerance
   !==========================================================================
   !Set the element and its Ionization Potentials
   subroutine set_element( nZIn)
