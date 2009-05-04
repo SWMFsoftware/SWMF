@@ -203,7 +203,6 @@ contains
 
     real    :: x, y, z, r, xBe, DxBe, DxyPl, EinternalSi
     real    :: DxyGold = -1.0
-    logical :: IsError
 
     integer :: iBlock, i, j, k
 
@@ -984,7 +983,6 @@ contains
     real    :: p, Rho, pSi, RhoSi, TeSi, AtomMass
     integer :: i, j, k, iMaterial, iMaterial_I(1), iLevel
     real    :: Value_V(9) ! Cv, Gamma, Te for 3 materials
-    logical :: IsError
     !------------------------------------------------------------------------  
     IsFound = .true.
     select case(NameVar)
@@ -1004,14 +1002,12 @@ contains
 
           RhoSi = Rho*No2Si_V(UnitRho_)
           pSi   = p*No2Si_V(UnitP_)
-          ! The IsError flag avoids stopping for Fermi degenerated state
           if(iTableCvGammaTe > 0)then
              call interpolate_lookup_table(iTableCvGammaTe, RhoSi, pSi/RhoSi, &
                   Value_V, DoExtrapolate = .false.)
              TeSi = Value_V(3*iMaterial+3)
           else
-             call eos(iMaterial, RhoSi, pTotalIn=pSi, TeOut=TeSi, &
-                  IsError=IsError)
+             call eos(iMaterial, RhoSi, pTotalIn=pSi, TeOut=TeSi)
           end if
           PlotVar_G(i,j,k) = TeSi * cKToKev
        end do; end do; end do
@@ -1206,7 +1202,7 @@ contains
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
 
-    logical :: IsMix, IsError
+    logical :: IsMix
     integer :: iMaterial, iMaterial_I(1)
     real    :: pSi, RhoSi, TeSi, LevelSum
     real    :: Value_V(3*nMaterial), Opacity_V(2*nMaterial)
@@ -1288,10 +1284,9 @@ contains
                 ! Use a number density weighted average
                 EinternalSiOut = pSi*sum(NumDensWeight_I*EPerP_I)
              else
-                ! The IsError flag avoids stopping for Fermi degenerated state
                 call eos(RhoToARatioSi_I, pTotalIn=pSi, &
                      EtotalOut=EinternalSiOut, TeOut=TeSi, &
-                     CvTotalOut=CvSiOut, GammaOut=GammaOut, IsError=IsError) 
+                     CvTotalOut=CvSiOut, GammaOut=GammaOut) 
              end if
           else
              ! The cell is assumed to consist of a single material
@@ -1300,10 +1295,9 @@ contains
                      RhoSi, pSi/RhoSi, ePerP_I, DoExtrapolate = .false.)
                 EinternalSiOut = ePerP_I(iMaterial)*pSi
              else
-                ! The IsError flag avoids stopping for Fermi degenerated state
                 call eos(iMaterial,RhoSi,pTotalIn=pSi, &
                      EtotalOut=EinternalSiOut, TeOut=TeSi, &
-                     CvTotalOut=CvSiOut, GammaOut=GammaOut, IsError=IsError)
+                     CvTotalOut=CvSiOut, GammaOut=GammaOut)
              end if
           end if
        end if
