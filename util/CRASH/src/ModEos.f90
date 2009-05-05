@@ -227,7 +227,7 @@ contains
     real,    optional, intent(out) :: eTotalOut  ! internal energy density 
     real,    optional, intent(out) :: GammaOut   ! polytropic index
     real,    optional, intent(out) :: CvTotalOut ! Specific heat per volume
-    integer,           intent(out) :: iError     ! error flag
+    integer, optional, intent(out) :: iError     ! error flag
 
     real :: ePerAtom, pPerAtom,TeInEV  !Both in eV
 
