@@ -184,9 +184,9 @@ test1_check:
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		output/test1/GM_log_n000001.log \
 		> test1_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
-		${TESTDIR}/RESULTS/IE/logIE.log \
-		output/test1/IE_logIE.log \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -t -r=1e-6 \
+		${TESTDIR}/RESULTS/IE/IE.log \
+		output/test1/IE.log \
 		> test1_ie.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=1e-8 \
 		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
@@ -291,8 +291,8 @@ test3_check:
 		output/test3/GM_log_n000001.log \
 		> test3_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
-		${TESTDIR}/RESULTS/IE/logIE.log \
-		output/test3/IE_logIE.log \
+		${TESTDIR}/RESULTS/IE/IE.log \
+		output/test3/IE.log \
 		> test3_ie.diff)
 	gunzip -c output/test3/IM_2d__max_t00000010.dat.gz \
 		> ${TESTDIR}/RESULTS/IM/t10.dat
@@ -345,9 +345,9 @@ test4_check:
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		output/test4/GM_log_n000001.log \
 		> test4_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
-		${TESTDIR}/RESULTS/IE/logIE.dat \
-		output/test4/IE_logIE.dat \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -t -r=1e-6 \
+		${TESTDIR}/RESULTS/IE/IE.log \
+		output/test4/IE.log \
 		> test4_ie.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -t -a=1e-8 -r=1e-6 \
                 ${TESTDIR}/RESULTS/IM/hydrogen/test1_h_prs.002 \
