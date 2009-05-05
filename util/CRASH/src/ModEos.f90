@@ -262,7 +262,7 @@ contains
     if(present(TeOut))      TeOut     = Te*cEVToK
     if(present(eTotalOut))  eTotalOut = Natomic*cEV*internal_energy()
     if(present(pTotalOut))  pTotalOut = pressure()
-    if(present(GammaOut))   call get_gamma(GammaOut=GammaOut)
+    if(present(GammaOut))   call get_gamma(GammaSOut=GammaOut)
     if(present(CvTotalOut)) CvTotalOut = (Natomic*cBoltzmann)*heat_capacity()
 
   end subroutine eos_generic
