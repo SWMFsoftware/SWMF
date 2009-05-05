@@ -74,7 +74,7 @@ rundir:
 		ln -s ${BINDIR}/HEIDI.exe .;\
 	fi);
 	ln -s ${HEIDIDIR}/input/* ${RUNDIR}/IM/input;\
-
+	ln -s ${HEIDIDIR}/input/*.unff ${RUNDIR}/IM/restartIN;\
 
 clean: install
 	@(if [ -r "Makefile.conf" ]; then  \
