@@ -177,6 +177,9 @@ foreach my $Dir (sort keys %PlotDir){
 	    die "$ERROR: could not rename $PlotDir $NameOutput/$Dir\n";
 	mkdir $PlotDir, 0777 or
 	    die "$ERROR: could not mkdir $PlotDir\n";
+	foreach my $SubDir (@Files){
+	    mkdir "$PlotDir/$SubDir", 0777 if -d "$NameOutput/$Dir/$SubDir";
+	}
     }else{
 	warn "$WARNING: no files were found in $PlotDir\n";
     }
