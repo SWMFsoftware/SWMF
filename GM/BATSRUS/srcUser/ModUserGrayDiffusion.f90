@@ -236,31 +236,65 @@ contains
   subroutine user_update_states(iStage,iBlock)
 
     use ModSize,    ONLY: nI, nJ, nK
-    use ModAdvance, ONLY: State_VGB, p_, ExtraEint_
-    use ModPhysics, ONLY: inv_gm1, Si2No_V, No2Si_V, UnitP_, UnitEnergyDens_
+    use ModAdvance, ONLY: State_VGB, p_, ExtraEint_, &
+         UseNonConservative, IsConserv_CB, &
+         Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI
+    use ModGeometry, ONLY: vInv_CB
+    use ModPhysics,  ONLY: g, inv_gm1, Si2No_V, No2Si_V, &
+         UnitP_, UnitEnergyDens_
     use ModEnergy,  ONLY: calc_energy_cell
 
     implicit none
 
-    integer, intent(in) :: iStage, iBlock
+    integer, intent(in):: iStage,iBlock
 
     integer:: i, j, k
-    real   :: PressureSi, EinternalSi
+    real   :: PressureSi, EinternalSi, GammaEos
+    logical:: IsConserv
 
     character(len=*), parameter :: NameSub = 'user_update_states'
     !------------------------------------------------------------------------
+    ! Fix adiabatic compression source for pressure
+    if(UseNonConservative)then
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               GammaOut=GammaEos)
+          Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
+               -(GammaEos-g)*State_VGB(p_,i,j,k,iBlock)*&
+               vInv_CB(i,j,k,iBlock)*&
+               ( uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
+               + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
+               + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1) )
+       end do; end do; end do
+    end if
 
     call update_states_MHD(iStage,iBlock)
 
+    ! update of pressure, ionization and total energies
     do k=1,nK; do j=1,nJ; do i=1,nI
-       EinternalSi = No2Si_V(UnitEnergyDens_) &
-            *(inv_gm1*State_VGB(P_,i,j,k,iBlock) &
-            + State_VGB(ExtraEint_,i,j,k,iBlock))
-       call user_material_properties(State_VGB(:,i,j,k,iBlock),&
-            EinternalSiIn=EinternalSi, PressureSiOut=PressureSi)
+       ! Total internal energy ExtraEint + P/(\gamma -1) transformed to SI
+
+       if(allocated(IsConserv_CB))then
+          IsConserv = IsConserv_CB(i,j,k,iBlock)
+       else
+          IsConserv = .not. UseNonConservative
+       end if
+
+       if(IsConserv)then
+          ! At this point p=(g-1)(e-rhov^2/2) with the ideal gamma g.
+          ! Use this p to get total internal energy density.
+          EinternalSi = No2Si_V(UnitEnergyDens_)*&
+               (inv_gm1*State_VGB(P_,i,j,k,iBlock) + &
+               State_VGB(ExtraEint_,i,j,k,iBlock))
+          call user_material_properties(State_VGB(:,i,j,k,iBlock),&
+               EinternalSiIn=EinternalSi, PressureSiOut=PressureSi)
       
-       ! Set true pressure
-       State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
+          ! Set true pressure
+          State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
+       else
+          call user_material_properties(State_VGB(:,i,j,k,iBlock),&
+               EinternalSiOut=EinternalSi)
+       end if
 
        ! Set ExtraEint = Total internal energy - P/(gamma -1)
        State_VGB(ExtraEint_,i,j,k,iBlock) = &
@@ -402,7 +436,7 @@ contains
 
     use ModConst,      ONLY: cLightSpeed
     use ModPhysics,    ONLY: No2Si_V, Si2No_V, &
-         UnitTemperature_, UnitEnergyDens_, UnitT_, UnitU_, UnitX_
+         UnitTemperature_, UnitEnergyDens_, UnitT_, UnitU_, UnitX_, UnitP_
     use ModVarIndexes, ONLY: nVar, Rho_, p_
 
     real, intent(in) :: State_V(nVar)
@@ -429,7 +463,11 @@ contains
        Temperature = State_V(p_)/State_V(Rho_)
     end if
 
-    if(present(PressureSiOut)) PressureSiOut = EinternalSiIn*(Gamma - 1.0)
+    if(present(EinternalSiOut)) EinternalSiOut = &
+         State_V(Rho_)*Temperature/(Gamma - 1.0) *No2Si_V(UnitEnergyDens_)
+
+    if(present(PressureSiOut)) &
+         PressureSiOut = State_V(Rho_)*Temperature*No2Si_V(UnitP_)
 
     if(present(CvSiOut)) CvSiOut = State_V(Rho_)/(Gamma - 1.0) &
          *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
