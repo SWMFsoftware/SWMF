@@ -873,9 +873,9 @@ subroutine WRESULT(LNC,XN,IFIR)
 	if (IRES(13).eq.1) then
            NameSuffix='.unff'
            
-           open(UNIT=UNITTMP_,FILE=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
-                NameSpecies//NameSuffix,status='unknown',   &
-                form='unformatted')
+           !open(UNIT=UNITTMP_,FILE=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
+           !     NameSpecies//NameSuffix,status='unknown',   &
+           !     form='unformatted')
            
           open(UNIT=UNITTMP_,FILE=NameRestartOutDir//trim(NameRun)//&
                 NameSpecies//NameSuffix,status='unknown',   &

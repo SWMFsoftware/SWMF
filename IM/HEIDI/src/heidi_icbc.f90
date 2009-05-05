@@ -431,7 +431,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
            !  Read in from a unformatted file (INI=7)
         else if (INI(S).eq.7) then
            iUnit_unff = io_unit_new()
-           open(UNIT=iUnit_unff,FILE=NameRestartOutDir//trim(NameRun)//NameSpecies//'.unff',status='old',   &
+           open(UNIT=iUnit_unff,FILE=NameRestartInDir//trim(NameRun)//NameSpecies//'.unff',status='old',   &
                 form='unformatted')
            do L=1,NPA
               !	  DO K=8,NE  ! Changed the Egrid for runs "e" and "f" !1,NE
