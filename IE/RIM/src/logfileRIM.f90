@@ -1,45 +1,40 @@
 
 subroutine logfileRIM(dir)
 
-  use ModRIM
-  use ModProcIE
-  use ModUtilities, ONLY: flush_unit
-  use ModNumConst
+  use ModRIM,      ONLY : nSolve,StartTime,CurrentTime,TimeArray,&
+       ThetaTilt,cpcpn,cpcps
+  use ModProcIE,   ONLY : iProc
+  use ModNumConst, ONLY: cRadToDeg
+  use ModIoUnit,   ONLY: UnitTmp_
 
   implicit none
 
   character (len=*), intent(in) :: dir
   logical :: IsFirstTime = .true.
-  integer :: iLogFileUnit_ = 57
+  !----------------------------------------------------------------------------
 
   if (iProc == 0) then
 
      if (IsFirstTime) then
 
-!        call CON_io_unit_new(iLogFileUnit_)
-
         if (nSolve == 0 .and. StartTime == CurrentTime) then
-           open(unit=iLogFileUnit_, &
-                file=trim(dir)//"/logIE.dat",status="replace")
-           write(iLogFileUnit_,'(a)')  &
+           open(unit=UnitTmp_, &
+                file=trim(dir)//"/IE.log",status="replace")
+           write(UnitTmp_,'(a)')  &
                 'Ridley Ionosphere Model, [deg] and [kV]'
-           write(iLogFileUnit_,'(a)') &
-                'nsolve t yy mm dd hh mm ss ms ttilt ptilt cpcpn cpcps'
+           write(UnitTmp_,'(a)') &
+                'nsolve t yy mm dd hh mm ss ms tilt cpcpn cpcps'
         endif
-
         IsFirstTime = .false.
-
      else
-
-        open(unit=iLogFileUnit_, &
-             file=trim(dir)//"/logIE.dat",status="old", position="append")
-
+        open(unit=UnitTmp_, &
+             file=trim(dir)//"/IE.log",status="old", position="append")
      endif
 
-     write(iLogFileUnit_,'(i4,1p,e13.5,i5,5i3,i4,2f7.2,2e13.5)') &
+     write(UnitTmp_,'(i4,es13.5,i5,5i3,i4,f8.2,2es13.5)') &
           nSolve, CurrentTime-StartTime, TimeArray(1:7), &
-          ThetaTilt*cRadToDeg, 0.0, cpcpn, cpcps
-     close(iLogFileUnit_)
+          ThetaTilt*cRadToDeg, cpcpn, cpcps
+     close(UnitTmp_)
 
   endif
 
