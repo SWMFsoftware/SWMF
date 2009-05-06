@@ -16,7 +16,8 @@ subroutine heidi_init
      call IonoHeidiInit(year,day,ut)
   endif
 
-  T=TIME
+
+  if (.not. IsFramework) T=TIME
   call write_prefix; write(iUnitStdOut,*) 'TIME =',TIME
   NST=nint(TIME/DT/2.) + 1
   NKP=nint(10800./DT/2.)
