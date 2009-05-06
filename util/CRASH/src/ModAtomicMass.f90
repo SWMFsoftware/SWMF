@@ -1,4 +1,4 @@
-module ModAtomicMass
+module CRASH_ModAtomicMass
  implicit none
  integer,parameter::nZMax=79
 
@@ -14,4 +14,4 @@ module ModAtomicMass
   121.757   , 127.603  , 126.904473, 131.292  , -1.0      , -1.0   , -1.0     ,  -1.0   , -1.0       , -1.0    , & ! 50-s
   -1.0      , -1.0     , -1.0      , -1.0     , -1.0      , -1.0   , -1.0     ,  -1.0   , -1.0       , -1.0    , & ! 60-s
   -1.0      , -1.0     , -1.0      , -1.0     , -1.0      , -1.0   , -1.0     ,  -1.0   , 196.96656  /) ! 70-s
-end module ModAtomicMass
+end module CRASH_ModAtomicMass

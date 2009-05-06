@@ -1,5 +1,5 @@
 !A part of the package ionmix
-module ModVoigt
+module CRASH_ModOpacityVoigt
   implicit none
   SAVE
   PRIVATE !Except
@@ -115,4 +115,4 @@ contains
     end function dawson
 
   end function voigt
-end module ModVoigt
+end module CRASH_ModOpacityVoigt

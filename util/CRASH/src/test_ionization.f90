@@ -6,9 +6,9 @@
 !              - electron temperature Te[eV]
 !***********************************************************************
 program saha
-  use ModStatSum
-  use ModStatSumMix
-  use ModPolyimide
+  use CRASH_ModStatSum
+  use CRASH_ModStatSumMix
+  use CRASH_ModPolyimide
   implicit NONE
   real :: &
        Nao = 1.00e18,  &  ! cm-3

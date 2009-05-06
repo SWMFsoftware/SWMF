@@ -9,7 +9,7 @@ MY_LIB = ${LIBDIR}/libCRASH.a
 OBJECTS=\
 	ModAtomicMass.o\
 	ModEos.o\
-	ModESimT4.o\
+	ModPowerLawEos.o\
 	ModFermiGas.o\
         ModIonizPotential.o \
 	ModPolyimide.o \

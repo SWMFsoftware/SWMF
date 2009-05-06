@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-module ModEos
+module CRASH_ModEos
 
   ! Equation Of State (EOS) for ionized plasma
   !
@@ -56,10 +56,10 @@ module ModEos
   ! 2 - relativistic temperature, 
   ! 3 - pressure ionization (ion levels are crashed)
 
-  use ModPolyimide
-  use ModStatSum
-  use ModAtomicMass
-  use ModESimT4
+  use CRASH_ModPolyimide
+  use CRASH_ModStatSum
+  use CRASH_ModAtomicMass
+  use CRASH_ModPowerLawEos
   use CRASH_ModFermiGas, ONLY: UseFermiGas, LogGeMinBoltzmann
 
   implicit none
@@ -71,7 +71,9 @@ module ModEos
   integer, public, parameter:: Plastic_=2 ! Polyimide (C_22 H_10 N_2 O_5)
   integer, public, parameter:: Au_=3      ! Gold
 
-  public:: UsePreviousTe ! inherited from ModStatSum
+  public:: cAtomicMass_I, cAPolyimide ! inherited from ModPolyimide
+
+  public:: UsePreviousTe ! inherited from CRASH_ModStatSum
   public:: eos, read_eos_parameters
   interface eos
      module procedure eos_material
@@ -231,7 +233,7 @@ contains
 
     real :: ePerAtom, pPerAtom,TeInEV  !Both in eV
 
-    character (len=*), parameter:: NameSub='ModEos::eos'
+    character (len=*), parameter:: NameSub='CRASH_ModEos::eos'
     !----------------------------------------------------------------------!
     if(present(TeIn))then
 
@@ -267,4 +269,4 @@ contains
 
   end subroutine eos_generic
 
-end module ModEos
+end module CRASH_ModEos

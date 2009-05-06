@@ -1,4 +1,4 @@
-module ModESimT4
+module CRASH_ModPowerLawEos
   use ModConst,ONLY: cRadiation
   implicit none
   !This modelu implements the EOS of the following kind:
@@ -56,4 +56,4 @@ contains
     if(present(GammaOut))   GammaOut  = 4.0/3
     if(present(CVTotalOut)) CVTotalOut = cESimT4*T**3
   end subroutine eos_esimt4
-end module ModESimT4
+end module CRASH_ModPowerLawEos

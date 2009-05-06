@@ -13,8 +13,8 @@
 !        iMaterial=0 - xenon
 !        iMaterial=1 - beryllium  
 program test_Godunov
-  use ModAtomicMass
-  use ModEos
+  use CRASH_ModAtomicMass
+  use CRASH_ModEos
   implicit none
   integer,parameter::nX=1000,nDim=1,nVar=3,iMaterial=0
   real::Cons_VC(nVar,1:nX),Prime_VG(nVar,0:nX+1),Flux_VF(nVar,1:nX+1)

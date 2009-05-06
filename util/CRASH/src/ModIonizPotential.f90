@@ -5,7 +5,7 @@
 
 
 
-module ModIonizPotential
+module CRASH_ModIonization
   implicit none
   PRIVATE !Except
  !/////////////////////////////////////////////////////////////////////////////
@@ -167,7 +167,7 @@ contains
          end select
 
   end subroutine get_ioniz_potential  
-end module ModIonizPotential
+end module CRASH_ModIonization
 
 
   

@@ -1,8 +1,8 @@
 !^CFG COPYRIGHT UM
 
-module ModStatSumMix
-  use ModIonizPotential
-  use ModAtomicMass,ONLY : nZMax
+module CRASH_ModStatSumMix
+  use CRASH_ModIonization
+  use CRASH_ModAtomicMass,ONLY : nZMax
   use ModConst
   implicit none
   SAVE
@@ -133,7 +133,7 @@ module ModStatSumMix
   public:: check_applicability, get_virial_coef
 
   !Tolerance parameters: should be reset if the tolerance in
-  !ModStatSum is reset
+  !CRASH_ModStatSum is reset
   real, public :: ToleranceZ = 0.001!  !Accuracy of Z needed
   real, public :: StatSumToleranceLog = 7.0     
 Contains
@@ -502,7 +502,7 @@ Contains
     !=========================================================================!  
     !For known ion polulations find average Z, E, and bi-linear deviators
     subroutine set_averages_and_deviators(DoZOnly)
-      use ModAtomicMass,ONLY: cAtomicMass_I
+      use CRASH_ModAtomicMass,ONLY: cAtomicMass_I
       logical,intent(in)::DoZOnly
       !---------------------------!
       ! < Ei/Te>_J (Ei - energy levels, Te - electron temperature [eV])
@@ -593,10 +593,10 @@ Contains
   end subroutine set_ionization_equilibrium
   !========================================!
     
-end module ModStatSumMix
+end module CRASH_ModStatSumMix
 !=======================
-module ModTDFunctions
-  use ModStatSumMix
+module CRASH_ModThermoDynFunc
+  use CRASH_ModStatSumMix
   use ModConst
 contains
   !=======================================  
@@ -638,11 +638,11 @@ contains
     !The average of square is the averaged squared plus dispersion squared
     z2_averaged = Z2
   end function z2_averaged
-end module ModTDFunctions
+end module CRASH_ModThermoDynFunc
 !=======================!
-module ModTDDerivatives
-  use ModStatSumMix
-  use ModTDFunctions
+module CRASH_ModThermoDynDeriv
+  use CRASH_ModStatSumMix
+  use CRASH_ModThermoDynFunc
   implicit none
   SAVE
 Contains
@@ -739,11 +739,11 @@ Contains
     if(present(GammaMaxOut))GammaMaxOut = max( GammaS,  Gamma)
 
   end subroutine get_gamma
-end module ModTDDerivatives
+end module CRASH_ModThermoDynDeriv
 !=======================!
-module ModStatSum
-  use ModStatSumMix
-  use ModTDDerivatives
+module CRASH_ModStatSum
+  use CRASH_ModStatSumMix
+  use CRASH_ModThermoDynDeriv
   implicit none
   SAVE
 
@@ -866,4 +866,4 @@ Contains
     call check_applicability(iError)
   end subroutine pressure_to_temperature
   
-end module ModStatSum
+end module CRASH_ModStatSum

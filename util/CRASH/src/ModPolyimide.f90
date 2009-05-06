@@ -1,8 +1,10 @@
 !^CFG COPYRIGHT UM
-!===================Constants for polyimide============================!!!!
+module CRASH_ModPolyimide
 
-Module ModPolyimide
-  use ModAtomicMass
+  ! Constants for polyimide
+
+  use CRASH_ModAtomicMass
+
   implicit none
   save
   
@@ -24,4 +26,5 @@ Module ModPolyimide
          cAtomicMass_I(7) *  2.0 + &
          cAtomicMass_I(8) *  5.0) / &
          (22.0 + 10.0 + 2.0 +5.0)
-end Module ModPolyimide
+
+end module CRASH_ModPolyimide
