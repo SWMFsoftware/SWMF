@@ -102,7 +102,7 @@ contains
   subroutine user_read_inputs
 
     use ModReadParam
-    use ModEos,      ONLY: read_eos_parameters
+    use CRASH_ModEos,      ONLY: read_eos_parameters
     use ModGeometry, ONLY: TypeGeometry, UseCovariant
 
     logical :: IsCylindrical
@@ -196,10 +196,9 @@ contains
     use ModAdvance,     ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, p_, &
          ExtraEint_, LevelBe_, LevelXe_, LevelPl_, Eradiation_
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK
-    use ModEos,         ONLY: eos
-    use ModPolyimide,   ONLY: cAtomicMass_I, cAPolyimide
     use ModLookupTable, ONLY: interpolate_lookup_table
     use ModConst,       ONLY: cPi
+    use CRASH_ModEos,   ONLY: eos, cAtomicMass_I, cAPolyimide
 
     real    :: x, y, z, r, xBe, DxBe, DxyPl, EinternalSi
     real    :: DxyGold = -1.0
@@ -414,7 +413,7 @@ contains
     use ModPhysics,   ONLY: Si2No_V, Io2No_V, UnitX_, UnitRho_, UnitU_, &
          UnitP_, UnitTemperature_
     use ModUtilities, ONLY: split_string
-    use ModEos,       ONLY: Xe_, Be_, Plastic_
+    use CRASH_ModEos, ONLY: Xe_, Be_, Plastic_
     use ModConst,     ONLY: cKevToK
     use ModMain,      ONLY: UseGrayDiffusion
 
@@ -962,10 +961,9 @@ contains
          Eradiation_
     use ModPhysics, ONLY: No2Si_V, No2Io_V, UnitRho_, UnitP_, &
          UnitTemperature_, cRadiationNo
-    use ModEos,     ONLY: eos, Xe_, Be_, Plastic_
-    use ModPolyimide, ONLY: cAtomicMass_I, cAPolyimide
     use ModLookupTable, ONLY: interpolate_lookup_table
     use ModGeometry, ONLY: r_BLK, x_BLK, y_BLK, TypeGeometry
+    use CRASH_ModEos, ONLY: eos, Xe_, Be_, Plastic_, cAtomicMass_I, cAPolyimide
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -1109,7 +1107,7 @@ contains
   !===========================================================================
   subroutine calc_table_value(iTable, Arg1, Arg2, Value_V)
 
-    use ModEos, ONLY: eos
+    use CRASH_ModEos, ONLY: eos
     use ModConst,ONLY: cProtonMass, cBoltzmann
 
     integer, intent(in):: iTable
@@ -1183,7 +1181,7 @@ contains
 
     ! The State_V vector is in normalized units, output is in SI units
 
-    use ModEos,        ONLY: eos
+    use CRASH_ModEos,        ONLY: eos
     use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_
     use ModVarIndexes, ONLY: nVar, Rho_, LevelXe_, LevelPl_, p_
     use ModLookupTable,ONLY: interpolate_lookup_table

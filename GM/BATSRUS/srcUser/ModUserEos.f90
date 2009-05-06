@@ -21,7 +21,7 @@ contains
     use ModMain,    ONLY: nStage
     use ModPhysics
     use ModEnergy,  ONLY: calc_energy_cell
-    use ModEos
+    use CRASH_ModEos
     implicit none
     integer,intent(in):: iStage,iBlock
     integer:: i,j,k
