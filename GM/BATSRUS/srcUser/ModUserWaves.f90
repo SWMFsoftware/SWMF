@@ -27,6 +27,7 @@ module ModUser
   real :: Width, Amplitude, Phase, LambdaX, LambdaY, LambdaZ
   real,dimension(nVar):: Width_V=0.0, Ampl_V=0.0, Phase_V=0.0, &
        KxWave_V=0.0, KyWave_V=0.0,KzWave_V=0.0
+  integer :: iPower_V(nVar)=1
   integer :: iVar             
   logical:: DoInitialize=.true.
   real :: Lx=25.6, Lz=12.8, Lambda0=0.5, Ay=0.1, Tp=0.5 , B0=1.0  
@@ -59,7 +60,7 @@ contains
           call read_var('Amplitude',Ay)
        case('#WAVESPEED')
           call read_var('Velocity',Velocity)
-       case('#WAVE')
+       case('#WAVE','#WAVE2')
           call read_var('iVar',iVar)
           call read_var('Width',Width)
           call read_var('Amplitude',Amplitude)
@@ -67,9 +68,16 @@ contains
           call read_var('LambdaY',LambdaY)
           call read_var('LambdaZ',LambdaZ)
           call read_var('Phase',Phase)
-          Width_V(iVar)=Width
-          Ampl_V(iVar)=Amplitude
-          Phase_V(iVar)=Phase*cDegToRad
+          Width_V(iVar) = Width
+          Ampl_V(iVar)  = Amplitude
+          Phase_V(iVar) = Phase*cDegToRad
+
+          if(NameCommand == '#WAVE2')then
+             iPower_V(iVar) = 2
+          else
+             iPower_V(iVar) = 1
+          end if
+
           !if the wavelength is smaller than 0.0, 
           !then the wave number is set to0
           KxWave_V(iVar) = max(0.0, cTwoPi/LambdaX)          
@@ -146,12 +154,12 @@ contains
        do iVar=1,nVar
           where(abs( x_BLK(:,:,:,iBlock) + ShockSlope*y_BLK(:,:,:,iBlock) ) &
                < Width_V(iVar) )   &
-               State_VGB(iVar,:,:,:,iBlock)=              &
-               State_VGB(iVar,:,:,:,iBlock)               &
-               + Ampl_V(iVar)*cos(Phase_V(iVar)           &
-               + KxWave_V(iVar)*x_BLK(:,:,:,iBlock)       &
-               + KyWave_V(iVar)*y_BLK(:,:,:,iBlock)       &
-               + KzWave_V(iVar)*z_BLK(:,:,:,iBlock))
+               State_VGB(iVar,:,:,:,iBlock) =        &
+               State_VGB(iVar,:,:,:,iBlock)          &
+               + Ampl_V(iVar)*cos(Phase_V(iVar)      &
+               + KxWave_V(iVar)*x_BLK(:,:,:,iBlock)  &
+               + KyWave_V(iVar)*y_BLK(:,:,:,iBlock)  &
+               + KzWave_V(iVar)*z_BLK(:,:,:,iBlock))**iPower_V(iVar)
        end do
 
     case('GEM')
