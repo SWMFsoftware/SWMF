@@ -45,14 +45,16 @@ module ModStatSumMix
   !Input parameters (note though that the temperature may be not
   !directly assigned and should be found from the internal energy 
   !or pressure in this case):
-  real :: Te=1.0        ! the electron temperature [eV] = ([cKToeV] * [Te in K])
-  real :: Na            ! The density of heavy particles in the plasma [#/m^3]
+  real :: Te = 1.0        ! the electron temperature [eV] = ([cKToeV] * [Te in K])
+  real :: Na =-1.0        ! The density of heavy particles in the plasma [#/m^3]
  
 
   !Averages:
  
-  real :: zAv,&  ! The average charge per ion - <Z> (elementary charge units)
-          EAv,&  ! The average ionization energy level of ions
+  real :: zAv,   &  ! The average charge per ion - <Z> (elementary charge units)
+          EAv,   &  ! The average ionization energy level of ions
+          Z2PerA,&  ! The average of Z^2/A
+          Z2,    &  ! The average of Z^2
           IonizPotentialAv
   
 
@@ -74,6 +76,8 @@ module ModStatSumMix
            Na,&             ! The density of heavy particles in the plasma [#/m^3]
            zAv,&            ! The average charge per ion - <Z> (elementary charge units)
            EAv,&            ! The average ionization energy level of ions
+           Z2PerA,&         ! The average of Z^2/A
+           Z2,    &         ! The average of Z^2
            DeltaZ2Av,&      ! The value of <(delta i)^2>=<i^2>-<i>^2
            DeltaETeInv2Av,& ! The value of <(delta E/Te)^2>
            ETeInvDeltaZAv,& ! The value of <Delta E/Te Delta i>
@@ -106,7 +110,14 @@ module ModStatSumMix
   ! energy levels or (2) the shift in the ionization
   ! equilibrium, rather than in the pressure/energy only.
   !/
-  logical :: UseCoulombCorrection = .false. 
+  logical,public :: UseCoulombCorrection = .false.
+
+  real    :: IonizationEnergyLowering_I(0:nZMax) = 0.0
+
+  ! Inverse of the iono-sphere radius,
+  ! measured in Bohr radius
+  
+  real:: rIonoSphereInv  
 
   !Public methods:
 
@@ -120,6 +131,7 @@ module ModStatSumMix
 
   public:: set_zero_ionization
   public:: check_applicability, get_virial_coef
+
   !Tolerance parameters: should be reset if the tolerance in
   !ModStatSum is reset
   real, public :: ToleranceZ = 0.001!  !Accuracy of Z needed
@@ -136,6 +148,7 @@ Contains
 	!-----------------
     LogN_I = (/(log(real(iZ)), iZ = 1,nZMax)/)
     N_I    = (/(real(iZ), iZ = 0,nZMax)/)
+    IonizationEnergyLowering_I(0:nZMax) = (1.80 * cRyToEV)*N_I**2
 
     DeBroglieInv = sqrt(cTwoPi*(cElectronMass/cPlanckH)*(cEV/cPlanckH)) 
     !*sqrt(cBoltzmann/cEV * T) - temperature in eV
@@ -188,18 +201,12 @@ Contains
   end subroutine check_applicability
   !==========================================================================!
   subroutine get_virial_coef
-    !Calculate the ionosphere radius and 
-    !the dependent variables:
-
-    ! Inverse of the iono-sphere radius,
-    ! measured in Bohr radius
-    real:: rIonoSphereInv  
-
+    !Calculate the variables dependent on the iono-sphere radius
+    
     ! Inverse of the Debye radius,
     ! measured in Bohr radius
     real:: rDebyeInv  
     !------------------------------
-    rIonoSphereInv = ( (4.0 * cPi/3.0) * cBohrRadius**3 * Na)**(1.0/3)
 
     eMadelung = 1.80 * (zAv**2 + DeltaZ2Av)* &
          cRyToEv*rIonoSphereInv
@@ -266,6 +273,7 @@ Contains
     if(Te>0.0)LogGe = 99.0  
 
     zAv=0.0; EAv=0.0; DeltaZ2Av=0.0; DeltaETeInv2Av = 0.0; ETeInvDeltaZAv = 0.0
+    Z2 = 0.0 ; Z2PerA = 0.0
 
     RMinus = 1.0; RPlus = 1.0
 
@@ -301,6 +309,8 @@ Contains
     !---------------------------------------------------------
     
     Te = TeIn
+    if(Na/=NaIn) rIonoSphereInv = &
+         ( (4.0 * cPi/3.0) * cBohrRadius**3 * NaIn)**(1.0/3)
     Na = NaIn
 
     if( Te <= 0.02 * minval( IonizPotential_II( 1,1:nMix) ) )then
@@ -403,34 +413,34 @@ Contains
 
       !==============================================
       ! Finding the populations of the ion states
-      subroutine set_populations(GeLogIn)
+    subroutine set_populations(GeLogIn)
 
       real, intent(in) :: GeLogIn ! Natural logarithm of the electron stat weight:
       !  log(1/(Ne*lambda^3)) 
-  
+
       real :: StatSumTermMax,StatSumTermMin
-      
+
       real,dimension(0:nZMax) :: StatSumTermLog_I
-      
+
       integer,dimension(1) :: iZDominant    !Most populated ion state
 
       ! ln(1.0e-3), to truncate terms of the statistical sum, which a factor of 
       ! 1e-3 less than the maximal one:
-      
+
       integer :: iZ, iMix  !Loop variable
       real    :: PITotal   !Normalization constant, to set the populations total to equal 1.
       real    :: GeLog
       !--------------------------------------!
 
       if(UseFermiGas)then
-         
+
          GeLog = max(LogGeMinFermi, GeLogIn)
       else
-      ! The previous version does not stop simulation
-      ! when the Fermi degeneracy occurs (the electron 
-      ! statictical weight is not large), but it sets the
-      ! low bound for the weight to be e^2\approx 8
-      
+         ! The previous version does not stop simulation
+         ! when the Fermi degeneracy occurs (the electron 
+         ! statictical weight is not large), but it sets the
+         ! low bound for the weight to be e^2\approx 8
+
          GeLog = max(LogGeMinBoltzmann, GeLogIn )
       end if
 
@@ -442,53 +452,63 @@ Contains
          do iZ = 1, nZ_I(iMix)       !Fill up the sequence using the following equation:
 
             StatSumTermLog_I(iZ)  =  StatSumTermLog_I(iZ-1)                          &
-                                   - IonizPotential_II(iZ,iMix)*TeInv + GeLog
+                 - IonizPotential_II(iZ,iMix)*TeInv + GeLog
          end do
+
+         !Account for the ionization potential lowering resulting from the
+         !electrostatic interaction:
+
+         if(UseCoulombCorrection)StatSumTermLog_I(0:nZ_I(iMix)) = &
+              StatSumTermLog_I(0:nZ_I(iMix)) + TeInv * rIonoSphereInv * &
+              IonizationEnergyLowering_I(0:nZ_I(iMix))
 
          ! Find the location of that maximum value
          iZDominant = maxloc(StatSumTermLog_I(0:nZ_I(iMix)))-1 
-      
+
          StatSumTermMax = StatSumTermLog_I(iZDominant(1))
-      
+
          StatSumTermMin = StatSumTermMax - StatSumToleranceLog 
-      
-      
+
+
          ! Find the lower boundary of the array 
          ! below which the values of Pi can be neglected
-         
+
          iZMin_I(iMix) = count( StatSumTermLog_I(0:iZDominant(1)) < StatSumTermMin ) 
-      
-      
+
+
          !Find the similar upper boundary
          iZMax_I(iMix) = max(nZ_I(iMix) - &
               count(StatSumTermLog_I( iZDominant(1):nZ_I(iMix) ) < StatSumTermMin),1)
-      
+
          !Initialize the population array to zeros
          Population_II(0:nZ_I(iMix), iMix) = 0.0
-      
-      
+
+
          !Convert the array into the Pi values from ln(Pi)
          Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) = &
               exp(StatSumTermLog_I(iZMin_I(iMix):iZMax_I(iMix)) - StatSumTermMax)
-      
+
          !Normalize the Pi-s so that their sum =1
 
          !Add up all the values of Pi found so far         
          PITotal = sum(Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix))
-	
+
          Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix) = &
               Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix)/PITotal
- 
+
       end do mixture
     end subroutine set_populations
     !-----------------------------
     !=========================================================================!  
     !For known ion polulations find average Z, E, and bi-linear deviators
     subroutine set_averages_and_deviators(DoZOnly)
+      use ModAtomicMass,ONLY: cAtomicMass_I
       logical,intent(in)::DoZOnly
-      real::  ETeInvAvJ,&         ! < Ei/Te>_J (Ei - energy levels, Te - electron temperature [eV])
-           ZJ                  ! Z_J, averaged Z for J component
-
+      !---------------------------!
+      ! < Ei/Te>_J (Ei - energy levels, Te - electron temperature [eV])
+      real::  ETeInvAvJ,&         
+              ZJ,&      ! Z_J, averaged Z for J component
+              DeltaZ2J  ! < (Z-<Z>)^2 >, averaged <(\delta Z)^2>, for J component
       ! Array of ionization energy levels of ions divided by the temperature in eV
       real,dimension(0:nZMax) :: ETeInv_I
       integer :: iMix
@@ -496,6 +516,8 @@ Contains
 
       zAv = 0.0
       EAv = 0.0
+      Z2  = 0.0
+      Z2PerA = 0.0
       DeltaZ2Av        = 0.0   
       DeltaETeInv2Av   = 0.0
       ETeInvDeltaZAv   = 0.0
@@ -508,17 +530,31 @@ Contains
               N_I(iZMin_I(iMix):iZMax_I(iMix)))
          zAv     = zAv + Concentration_I(iMix) * ZJ
 
+         !Calculate <\delta i>^2>
+         DeltaZ2J = sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *  &
+              (N_I(iZMin_I(iMix):iZMax_I(iMix))-ZJ)**2 )
+         
          !Calculate a << (\delta i)^2 >>
          DeltaZ2Av = DeltaZ2Av + Concentration_I(iMix) * &
-              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *  &
-              (N_I(iZMin_I(iMix):iZMax_I(iMix))-ZJ)**2 ) 
-
+                DeltaZ2J
 
          if(DoZOnly) CYCLE
+
+         !Calculate <Z^2>
+         Z2 = Z2 +  Concentration_I(iMix) * &
+                (DeltaZ2J+ZJ*ZJ)
+         
+         !Calculate <Z^2/A>
+         Z2PerA = Z2PerA +  Concentration_I(iMix) * &
+                (DeltaZ2J+ZJ*ZJ)/cAtomicMass_I( nZ_I(iMix) )
 
 
          ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) = &
               IonizEnergyNeutral_II( iZMin_I(iMix):iZMax_I(iMix),iMix )*TeInv
+
+         if(UseCoulombCorrection)ETeInv_I( iZMin_I(iMix):iZMax_I(iMix) ) = &
+              ETeInv_I( iZMin_I(iMix):iZMax_I(iMix) ) - TeInv * rIonoSphereInv * &
+              IonizationEnergyLowering_I( iZMin_I(iMix):iZMax_I(iMix) )
 
          !Calculate average vaues of E, for this component:
 
@@ -536,6 +572,9 @@ Contains
               sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
               ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) * &
               (N_I(iZMin_I(iMix):iZMax_I(iMix))-ZJ) )
+
+
+
          IonizPotentialAv =  IonizPotentialAv + Concentration_I(iMix)*&
               sum( &
               Population_II(&
@@ -571,6 +610,8 @@ contains
     use CRASH_ModFermiGas,ONLY:RPlus
     
     pressure = (1.0 + zAv*RPlus) * Na * Te * cEV
+    if(UseCoulombCorrection) pressure = &
+         pressure - Na * eMadelung * cEV/3
 
   end function pressure
 
@@ -595,7 +636,7 @@ contains
   ! Calculating the Z^2 average values from populations
   real function z2_averaged()
     !The average of square is the averaged squared plus dispersion squared
-    z2_averaged = DeltaZ2Av + zAv*zAv 
+    z2_averaged = Z2
   end function z2_averaged
 end module ModTDFunctions
 !=======================!

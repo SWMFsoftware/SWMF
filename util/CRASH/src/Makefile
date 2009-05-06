@@ -13,7 +13,8 @@ OBJECTS=\
 	ModFermiGas.o\
         ModIonizPotential.o \
 	ModPolyimide.o \
-	ModStatSum.o
+	ModStatSum.o \
+	ModTransport.o
 
 
 OBJECTS_EXE= test_ionization.o test_godunov.o
