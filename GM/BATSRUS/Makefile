@@ -141,10 +141,10 @@ rundir:
 		cp    ${GMDIR}/Scripts/TEC/pTEC .; \
 		ln -s ${GMDIR}/Param .
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
-		touch ${GMDIR}/share/JobScripts/TMP_${MACHINE}; \
-		cp ${GMDIR}/share/JobScripts/*${MACHINE}* ${RUNDIR}/; \
+		touch ${DIR}/share/JobScripts/TMP_${MACHINE}; \
+		cp ${DIR}/share/JobScripts/*${MACHINE}* ${RUNDIR}/; \
 		rm -f ${RUNDIR}/TMP_${MACHINE}; \
-		rm -f ${GMDIR}/share/JobScripts/TMP_${MACHINE}; \
+		rm -f ${DIR}/share/JobScripts/TMP_${MACHINE}; \
 		cp -f Param/PARAM.DEFAULT ${RUNDIR}/PARAM.in; \
 		touch ${RUNDIR}/core; chmod 444 ${RUNDIR}/core; \
 		cp ${SCRIPTDIR}/PostProc.pl ${RUNDIR}/; \
