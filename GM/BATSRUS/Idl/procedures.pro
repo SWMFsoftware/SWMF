@@ -19,7 +19,7 @@
 ; calculating cell corners and cell volumes for general 2D grids
 ;    gengrid
 ; comparing two w,x or wlog arrays for relative differences
-;    compare, rms_logfiles
+;    compare, rms_logfiles, rel_error
 ; checking index ranges for functions quadruplet and triplet
 ;    checkdim
 ; procedure "quit" as an alias for "exit"
@@ -2822,6 +2822,80 @@ for iw=0,nw-1 do begin
 
 endfor
 end
+
+;=============================================================================
+function rel_error, w1, w2, iws
+
+; Calculate relative errors of w1 with respect to w2.
+; The 1 to ndim (=1,2, or 3) indexes are the spatial indexes. 
+; The last index is assumed to be the variable index.
+; If w1 has more elements than w2, it is regarded as the "reference"
+; solution, otherwise w2 is regarded as reference solution.
+; The difference between w1 and w2 is normalized by the reference solution.
+; The function returns the relative errors averaged over all variables.
+; If iws is present then the error is calculated for the variable
+; indexes listed in iws. 
+
+  if n_elements(w1) le n_elements(w2) then begin
+     w     = w1
+     wref  = w2
+  endif else begin
+     w     = w2
+     wref  = w1
+  endelse
+
+  s     = size(w)
+  sref  = size(wref)
+  ndim  = s(0) - 1
+  nw    = s(ndim+1)
+
+  if nw ne sref(ndim+1) then begin
+     print,'ERROR in rel_error: w1 and w2 have different number of variables'
+     help,w1,w2
+     retall
+  endif
+
+  if n_elements(iws) gt 0 then begin
+                                ; keep variable indexes iws only in w, wref
+     nw = n_elements(iws)
+     case ndim of
+        1: begin
+           w    = w(*,iws)
+           wref = wref(*,iws)
+        end
+        2: begin
+           w    = w(*,*,iws)
+           wref = wre(*,*,iws)
+        end
+        3: begin
+           w    = w(*,*,*,iws)
+           wref = wref(*,*,*,iws)
+        end
+     endcase
+  endif
+
+  ; Coarsen wref if necessary (only in the spatial indexes)
+  nx    = s(1:ndim)
+  nxref = sref(1:ndim)
+  if max(nxref gt nx) then wref = coarsen(wref, [nxref/nx, 1])
+
+  error = 0.0
+  for iw = 0, nw-1 do begin
+     case ndim of
+        1: error = error + (total(abs(w(*,iw)     - wref(*,iw)))) $
+                   /        total(abs(wref(*,iw)))
+        2: error = error + (total(abs(w(*,*,iw)   - wref(*,*,iw)))) $
+                   /        total(abs(wref(*,*,iw)))
+        3: error = error + (total(abs(w(*,*,*,iw) - wref(*,*,*,iw)))) $
+                   /        total(abs(wref(*,*,*,iw)))
+     endcase
+  endfor
+
+  return, error/nw
+
+end
+
+
 
 ;=============================================================================
 pro get_log, source, wlog, wlognames, logtime, timeunit, verbose=verbose
