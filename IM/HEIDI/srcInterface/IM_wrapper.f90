@@ -23,8 +23,7 @@ subroutine IM_set_param(CompInfo,TypeAction)
   logical             :: DoEcho=.false.
   logical             :: UseStrict=.true.  
   integer             :: iUnitOut
-
-
+  !---------------------------------------------------------------------------
   select case(TypeAction)
   case('VERSION')
      call put(CompInfo,                         &
@@ -32,25 +31,16 @@ subroutine IM_set_param(CompInfo,TypeAction)
           NameVersion='HEIDI (Liemohn)', &
           Version=1.1)
   case('MPI')
-!     call MPI_INIT(iError)
-!     iComm= MPI_COMM_WORLD
-!     call MPI_COMM_RANK(iComm, iProc, iError)
-!     call MPI_COMM_SIZE(iComm, nProc, iError)  
-
      call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc)
-     if(nProc>4)call CON_stop(&
-          'IM_init_mpi: IM_ERROR this version can run on 4 PE !')
+     if(nProc>4)call CON_stop( NameSub // &
+          ' IM_ERROR this version can run on 4 PE !')
  
      IsFramework = .true.
-
   case('READ')
-     write(*,*)'Calling heidi_read'
      call heidi_read
-      write(*,*)'Done with calling heidi_read'
   case('CHECK')
      !We should check and correct parameters here
      if(iProc==0)write(*,*) NameSub,': CHECK iSession =',i_session_read()
-     RETURN
      call heidi_check
   case('STDOUT')
      iUnitOut = STDOUT_
@@ -64,15 +54,16 @@ subroutine IM_set_param(CompInfo,TypeAction)
      StringPrefix=''
   case('GRID')
      call IM_set_grid
-
   case default
      call CON_stop(NameSub//' IM_ERROR: invalid TypeAction='//TypeAction)
-
   end select
+
 end subroutine IM_set_param
 
 !============================================================================
+
 subroutine IM_set_grid
+
   use ModIonoHeidi
   use ModHeidiSize
   use ModHeidiMain
@@ -84,13 +75,13 @@ subroutine IM_set_grid
   character (len=*), parameter :: NameSub='IM_set_grid'
   real :: Radius_I(1)
   real :: Colat_I(2*IONO_nTheta-1)
-  logical :: IsInitialized=.false.
+  logical :: IsInitialized = .false.
   logical :: DoTest, DoTestMe
   !-------------------------------------------------------------------------
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
   if(DoTest)write(*,*)'IM_set_grid_descriptor called, IsInitialized=',&
        IsInitialized
-  if(IsInitialized) return
+  if(IsInitialized) RETURN
   IsInitialized=.true.
 
   Radius_I(1) = IONO_Radius ! radial size of the ionosphere in meters
@@ -315,6 +306,8 @@ end subroutine IM_put_from_ie_complete
 
 subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
 
+  ! This should be similar to RBE coupling
+
   use ModIonoHeidi
   use ModConst
 
@@ -399,6 +392,7 @@ subroutine IM_put_sat_from_gm(nSats, Buffer_I, Buffer_III)
 end subroutine IM_put_sat_from_gm
 
 !==============================================================================
+
 subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   use CON_time, ONLY : get_time
@@ -543,20 +537,28 @@ end subroutine IM_get_for_gm
 !==============================================================================
 
 subroutine IM_init_session(iSession, TimeSimulation)
+  use ModHeidiIO, ONLY: time
   implicit none
   !INPUT PARAMETERS:
   integer,  intent(in) :: iSession       ! session number (starting from 1)
   real,     intent(in) :: TimeSimulation   ! seconds from start time
   logical :: IsUninitialized = .true.
+  !--------------------------------------------------------------------------
+
+  TimeSimulation = TIME
+  ! SIMULATION TIME SHOULD BE SET HERE !!!
+
   if(IsUninitialized)then
      call heidi_init
 
      IsUninitialized = .false.
   end if
+
 end subroutine IM_init_session
 
 !==============================================================================
 subroutine IM_finalize(TimeSimulation)
+
   use ModProcIM
   use ModInit,ONLY:nS
 
@@ -565,47 +567,46 @@ subroutine IM_finalize(TimeSimulation)
   !INPUT PARAMETERS:
   real,     intent(in) :: TimeSimulation   ! seconds from start time
   integer:: iSpecies
-  !!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  do iSpecies=1,NS
-     CLOSE(15+iSpecies)          ! Closes continuous output file
-  end do
+  !--------------------------------------------------------------------------
 
-  CLOSE(13)	            ! Closes sw1 input file
-  CLOSE(15)		    ! Closes sw2 input file
-  CLOSE(14)               ! Closes MPA input file
-  CLOSE(16)               ! Closes SOPA input file
-  CLOSE(18)               ! Closes FPOT input file
+  !!! CLOSE ACTUAL UNITS OBTAINED FROM IO_UNIT_NEW()
+
+!  do iSpecies=1,NS
+!     CLOSE(15+iSpecies)          ! Closes continuous output file
+!  end do
+!
+!  CLOSE(13)	            ! Closes sw1 input file
+!  CLOSE(15)		    ! Closes sw2 input file
+!  CLOSE(14)               ! Closes MPA input file
+!  CLOSE(16)               ! Closes SOPA input file
+!  CLOSE(18)               ! Closes FPOT input file
   !!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 !  call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------  
 !  call MPI_finalize(iError)
+
 end subroutine IM_finalize
 
-! =============================================================================
-subroutine IM_run(SWMFTime,SWMFTimeLimit)
+!=============================================================================
+
+subroutine IM_run(SimTime, SimTimeLimit)
 
   use ModHeidiSize, only: dt, dtMax
 
   implicit none
 
   !INPUT/OUTPUT ARGUMENTS:
-  real, intent(inout) :: SWMFTime   ! current time of component
+  real, intent(inout) :: SimTime   ! current time of component
 
   !INPUT ARGUMENTS:
-  real, intent(in) :: SWMFTimeLimit ! simulation time not to be exceeded
+  real, intent(in) :: SimTimeLimit ! simulation time not to be exceeded
 
-  real :: dtSWMF
-
-  dtSWMF = SWMFTimeLimit - SWMFTime
-  if (dtSWMF < dtMax*2) then
-     dt = dtSWMF/2.0
-  else
-     dt = dtMax
-  endif
+  !--------------------------------------------------------------------------
+  Dt = min(DtMax, (SimTimeLimit - SimTime)/2 )
 
   call heidi_run 
 
-  SWMFTime = SWMFTime + dt*2
+  SimTime = SimTime + dt*2
 
 end subroutine IM_run
 
@@ -618,9 +619,10 @@ subroutine IM_save_restart(TimeSimulation)
   real,     intent(in) :: TimeSimulation   ! seconds from start time
 
   character(len=*), parameter :: NameSub='IM_save_restart'
+  !-------------------------------------------------------------------------
+  !!! call heidi_save_restart
 
 end subroutine IM_save_restart
-
 
 !===========================================================================
 
