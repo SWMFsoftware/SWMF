@@ -545,8 +545,7 @@ subroutine IM_init_session(iSession, TimeSimulation)
   logical :: IsUninitialized = .true.
   !--------------------------------------------------------------------------
 
-  TimeSimulation = TIME
-  ! SIMULATION TIME SHOULD BE SET HERE !!!
+  Time = TimeSimulation 
 
   if(IsUninitialized)then
      call heidi_init
