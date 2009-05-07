@@ -62,8 +62,6 @@ contains
 
        case("#EMPIRICALSW")
           call read_var('NameModel',NameModel)
-       !case("#WAVESPECTRUM")
-       !   call read_var('NameModelS',NameModelSpectrum)
 
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -120,14 +118,7 @@ contains
        call set_empirical_model(trim(NameModel),BodyTDim_I(1))
     end if
 
-    !if(i_line_command("#WAVESPECTRUM", iSessionIn = 1) < 0)then
-    !   write(*,*) 'A wave energy spectrum has to be set via #WAVESPECTRUM'
-    !   call stop_mpi('ERROR: Correct PARAM.in!')
-    !end if
-    !if(i_line_command("#WAVESPECTRUM") > 0)then
-    !   call set_wave_spectrum
-    !end if
-
+ 
     call EEE_initialize(BodyNDim_I(1),BodyTDim_I(1),g)
 
     if(iProc == 0)then
@@ -309,14 +300,13 @@ contains
     logical :: oktest,oktest_me
 
     !--------------------------------------------------------------------------
-     if (iteration_number<1) then
-
+ 
         call set_oktest('user_initial_perturbation',oktest,oktest_me)
 
         call set_wave_spectrum
            
         write(*,*) 'SC: Finished initializing wave spectrum'
-     end if
+ 
      
    end subroutine user_initial_perturbation
   !============================================================================
@@ -434,15 +424,7 @@ contains
     ! End update of pressure and relaxation energy::
     !/
 
-    !\
-    ! Set wave spectrum at iteration 1
-    !/
-    !if (iteration_number<2) then
-
-     !  call set_wave_spectrum(iBlock)
-
-    !end if
-  end subroutine user_update_states
+   end subroutine user_update_states
 
 !=======================================================================
  subroutine set_wave_spectrum
@@ -595,9 +577,7 @@ contains
    ! ----------------------------------------------------------
 
    Max_Ctot=maxval(Ctot)
-   write(*,*) 'Max value of Ctot is:'
-   write(*,*) Max_Ctot
-   do iBLK=1,nBLK
+    do iBLK=1,nBLK
       do i=1,nI; do j=1,nJ; do k=1,nK
          if (R_BLK(i,j,k,iBLK)>1.0) then
 
@@ -616,11 +596,7 @@ contains
       end do; end do ; end do
    end do
 
-   Bmean_BLK=Bmean_BLK/(nI*nJ*nK)
-   !Imean_BLK=Imean_BLK/(nI*nJ*nK)
-   !write(*,*) 'SC: set_wave_spectrum: max Iw' 
-   write(*,*) Bmean_BLK
- end subroutine set_wave_spectrum
+  end subroutine set_wave_spectrum
 !========================================================================
 
   subroutine user_get_log_var(VarValue,TypeVar,Radius)
