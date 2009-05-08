@@ -327,6 +327,8 @@ test_hyades2d:
 	make test_hyades2d_rundir DEFAULT_EXE=CRASH.exe
 	@echo "test_hyades2d_run..." >> test_hyades2d.diff
 	make test_hyades2d_run
+	@echo "test_hyades2d_restart..." >> test_hyades2d.diff
+	make test_hyades2d_restart
 	@echo "test_hyades2d_check..." >> test_hyades2d.diff
 	make test_hyades2d_check
 
@@ -344,7 +346,12 @@ test_hyades2d_rundir: test_rundir
 
 test_hyades2d_run:
 	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; ./Restart.pl
+
+test_hyades2d_restart:
+	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.hyades2d.restart PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog_restart
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; mv runlog_restart RESULTS/
 
 test_hyades2d_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-4 -a=1e-8 \

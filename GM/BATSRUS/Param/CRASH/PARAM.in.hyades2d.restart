@@ -4,37 +4,8 @@ T			DoEcho
 #TEST
 krylov			StringTest
 
-#PLANET
-NONE			NamePlanet
-
-#IOUNITS
-SI			TypeIoUnit
-
-#NORMALIZATION
-READ
-1.0e-6			No2SiUnitX Micron
-1.0e+3			No2SiUnitU km/s
-1000.0			No2SiUnitRho g/cm^3
-
-#CHECKGRIDSIZE
-10			nI
-10			nJ
-2			nK
-100			MinBlockALL
-
-#GRID
-30			nRootBlockX
-3			nRootBlockY
-1			nRootBlockZ
--50.0			xMin
-4000.0			xMax
-   0.0			yMin
- 450.0			yMax
- -12.5			zMin
-  12.5			zMax
-
-#GRIDGEOMETRY
-rz			TypeGeometry
+#INCLUDE
+restartIN/restart.H
 
 #OUTERBOUNDARY
 float			TypeBcXmin
@@ -50,10 +21,6 @@ MIXEDCELL
 T			UseMixedCell
 0.97			MixLimit
 
-#HYADES
-T			UseHyadesFile
-hyades2d_1.1ns.out	NameHyadesFile
-
 #USERINPUTEND    ----------------------
 
 #TIMEACCURATE
@@ -64,10 +31,10 @@ T                       UseSemiImplicit
 radiation               TypeSemiImplicit
 
 #KRYLOV
-cg			TypeKrylov
-nul			TypeInitKrylov
-1.0e-8			ErrorMaxKrylov
-900			MaxMatvecKrylov
+cg                      TypeKrylov
+nul                     TypeInitKrylov
+1.0e-8                  ErrorMaxKrylov
+900                     MaxMatvecKrylov
 
 #PRECONDITIONER
 left			TypePrecondSide
@@ -79,48 +46,23 @@ T                       UseRadFluxLimiter
 larsen                  TypeRadFluxLimiter
 300.0			TradMinSi
 
-Save double precision lookup table for a more accurate restart
 #LOOKUPTABLE
 pPerE(rho,e/rho)        NameTable
-save                    NameCommand
+load                    NameCommand
 table_pPerE.out         NameFile
 real8                   TypeFile
-pPerE(rho,e/rho) for Xe, Be, Plastic
-logrho logE/Rho pPerEXe pPerEBe pPerEPl
-200                     nIndex1
-0.01                    Index1Min
-1e6                     Index1Max
-200                     nIndex2
-1e5                     Index2Min
-1e14                    Index2Max
 
 #LOOKUPTABLE
 ePerP(rho,p/rho)        NameTable
-save                    NameCommand
+load                    NameCommand
 table_ePerP.out         NameFile
 real8                   TypeFile
-ePerP(rho,p/rho) for Xe, Be, Plastic
-logrho logpPerRho ePerPXe ePerPBe ePerPPl
-200                     nIndex1
-0.01                    Index1Min
-1e6                     Index1Max
-200                     nIndex2
-1e5                     Index2Min
-1e13                    Index2Max
 
 #LOOKUPTABLE
 CvGammaTe(rho,p/rho)    NameTable
-save                    NameCommand
+load                    NameCommand
 table_CvGammaTe.out     NameFile
 real8                   TypeFile
-CvGammaTe(rho,p/rho) for Xe, Be, Plastic
-logrho logpPerRho CvXe GammaXe TeXe CvBe GammaBe TeBe CvPl GammaPl TePl
-200                     nIndex1
-0.01                    Index1Min
-1e6                     Index1Max
-200                     nIndex2
-1e5                     Index2Min
-1e13                    Index2Max
 
 #LOOKUPTABLE
 Opacity(rho,T)          NameTable
@@ -152,9 +94,6 @@ RAW			StringLogfile
 1			DnSaveLogfile
 -1.0			DtSaveLogfile
 
-#SAVEINITIAL
-T			DoSaveInitial
-
 #PLOTFILENAME
 nanosecond		NameMaxTimeUnit
 
@@ -166,14 +105,6 @@ z=0 VAR idl		PlotString
 0.0			DxSavePlot
 rho ux uy uz Eint p Xe Be Pl level tekev trkev planck ross
 gamma
-
-#STOP
--1			MaxIteration
-1.0e-9                  tSimulationMax
-
-#END
-
-#RUN ##########################################################################
 
 #STOP
 -1			MaxIteration
