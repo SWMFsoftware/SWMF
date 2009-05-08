@@ -288,7 +288,7 @@ contains
     write(unit_tmp,*)
     if(UseCovariant)then                        
        write(unit_tmp,'(a)')'#GRIDGEOMETRY'
-       write(unit_tmp,'(a)')trim(TypeGeometry)
+       write(unit_tmp,'(a20,a20)')TypeGeometry,'TypeGeometry'
        write(unit_tmp,*)
        write(unit_tmp,'(a)')'#VERTEXBASEDGRID'
        write(unit_tmp,'(l1,a39)') UseVertexBasedGrid,'UseVertexBasedGrid'
