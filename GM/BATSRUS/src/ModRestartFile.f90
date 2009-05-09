@@ -415,7 +415,7 @@ contains
          ' read_restart_file could not open: '//trim(NameFile))
 
     ! Fill in ghost cells
-    do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
+    do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
        State_VGB(1:nVar, i, j, k, iBlock) = DefaultState_V(1:nVar)
     end do;end do;end do
 
@@ -640,7 +640,7 @@ contains
             iBlock, global_block_number(iBlock), iRec
 
        ! Fill in ghost cells
-       do k=1-gcn,nK+gcn; do j=1-gcn,nK+gcn; do i=1-gcn,nK+gcn
+       do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
           State_VGB(1:nVar, i, j, k, iBlock) = DefaultState_V(1:nVar)
        end do; end do; end do
 
