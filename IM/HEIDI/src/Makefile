@@ -27,6 +27,7 @@ OBJECTS = \
 	ModHeidiSatellites.o\
 	ModProcIM.o\
 	ModHeidiInput.o\
+	ModHeidiBField.o\
 	heidi_setup.o\
 	heidi_icbc.o\
 	heidi_coefficients.o\
