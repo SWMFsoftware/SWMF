@@ -427,5 +427,20 @@ Set to true if self-consistent wave-particle interactions are to be included.
 
 </command>
 
+
+<command name="BFIELD" >
+	<parameter name="TypeBFiles" type="string" input="select" case="lower">
+		<option name="analyticdipole"                     value="0/analytic"  />
+		<option name="numericaldipole"                    value="1/numeric"  />
+	</parameter>
+
+
+#BFIELD
+analytic		TypeBField
+
+The TypeConvection parameter indicates how the magnetospheric convection strength is calculated.
+The TypeBField parameter sets up teh magnetic field. If analytic, all numerical integrals are solved using analytical approximations. If numerical, numerical integrals are performed.
+
+</command>
 </commandgroup>
 </commandList>
