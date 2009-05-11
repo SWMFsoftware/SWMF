@@ -875,21 +875,54 @@ real function FUNT(X)		! X is cos of equat pa = MU
 
   use ModHeidiSize
   use ModHeidiMain
-
+  use ModConst, ONLY : cPi
+  use ModHeidiBField
+  use ModHeidiInput, ONLY: TypeBField
+   
   implicit none
 
-  real :: Y,X,ALPHA,BETA,A1,A2,A3,A4
+  real :: y,x,alpha,beta,a1,a2,a3,a4
+ 
+  real                 :: L = 15.0
+  integer, parameter   :: nStep = 101
+  integer, parameter   :: nPitch = 1
+  real                 :: PitchAngle_I(nPitch) 
+  real                 :: bField_I(nstep) 
+  real                 :: Length_I(nStep) 
+  real                 :: RadialDistance_I(nStep) 
+  real                 :: Ds_I(nStep-1)
+  real                 :: HalfPathLength
+  real                 :: bMirror_I(nPitch),bMirror
+  integer              :: iMirror_II(2,nPitch)
+  real                 :: Percent, sums, difer
   !------------------------------------------------------------------------ 
+  if (TypeBField == 'analytic') then
+     y=sqrt(1-x*x)
+     alpha=1.+alog(2.+sqrt(3.))/2./sqrt(3.)
+     beta=alpha/2.-cPi*sqrt(2.)/12.
+     a1=0.055
+     a2=-0.037
+     a3=-0.074
+     a4=0.056
+     funt=alpha-beta*(y+sqrt(y))+a1*y**(1./3.)+a2*y**(2./3.)+  &
+          a3*y+a4*y**(4./3.)
+  endif
 
-  Y=sqrt(1-X*X)
-  ALPHA=1.+ALOG(2.+sqrt(3.))/2./sqrt(3.)
-  BETA=ALPHA/2.-PI*sqrt(2.)/12.
-  A1=0.055
-  A2=-0.037
-  A3=-0.074
-  A4=0.056
-  FUNT=ALPHA-BETA*(Y+sqrt(Y))+A1*Y**(1./3.)+A2*Y**(2./3.)+  &
-       A3*Y+A4*Y**(4./3.)
+  if (TypeBField == 'numeric') then
+     
+     call initialize_b_field(L, nStep, bField_I, RadialDistance_I, Length_I, Ds_I)
+     if (x==1.0) then 
+        PitchAngle_I(1)= acos(0.999998)
+     else
+        PitchAngle_I(1) = acos(x)
+     endif
+     
+     call find_mirror_points (nStep, nPitch, PitchAngle_I, bField_I, bMirror_I,iMirror_II)
+     bMirror = bMirror_I(1)
+     call half_bounce_path_length(nStep, iMirror_II(:,1), bMirror, bField_I, Ds_I,L, HalfPathLength)
+     funt = HalfPathLength
+     if (funt ==0.0) funt =0.00000001
+  endif
 
 end function FUNT
 !======================================================================
@@ -898,23 +931,51 @@ end function FUNT
 !======================================================================
 real function FUNI(X)		! X is cos of equat pa = MU
 
+   
   use ModHeidiSize
-  use ModHeidiMain
-
+  use ModHeidiInput, ONLY: TypeBField
+  use ModHeidiBField
+  use ModConst, ONLY : cPi
   implicit none
 
-  real :: Y,X,ALPHA,BETA,A1,A2,A3,A4
+  real    :: y,x,alpha,beta,a1,a2,a3,a4
+  
+  real                 :: L = 15.0
+  integer, parameter   :: nStep = 101
+  integer, parameter   :: nPitch = 1
+  real                 :: PitchAngle_I(nPitch) 
+  real                 :: bField_I(nstep) 
+  real                 :: Length_I(nStep) 
+  real                 :: RadialDistance_I(nStep) 
+  real                 :: Ds_I(nStep-1)
+  real                 :: SecondAdiabInv
+  real                 :: bMirror_I(nPitch),bMirror
+  integer              :: iMirror_II(2,nPitch)
+  real                 :: Percent, sums, difer
+  
   !------------------------------------------------------------------------
-  Y=sqrt(1.-X*X)
-  ALPHA=1.+ALOG(2.+sqrt(3.))/2./sqrt(3.)
-  BETA=ALPHA/2.-PI*sqrt(2.)/12.
-  A1=0.055
-  A2=-0.037
-  A3=-0.074
-  A4=0.056
-  FUNI=2.*ALPHA*(1.-Y)+2.*BETA*Y*ALOG(Y)+4.*BETA*(Y-sqrt(Y))+  &
-       3.*A1*(Y**(1./3.)-Y)+6.*A2*(Y**(2./3.)-Y)+6.*A4*(Y-Y**(4./3.))  &
-       -2.*A3*Y*ALOG(Y)
+  if (TypeBField == 'analytic') then
+     
+     y=sqrt(1.-x*x)
+     alpha=1.+alog(2.+sqrt(3.))/2./sqrt(3.)
+     beta=alpha/2.-cPi*sqrt(2.)/12.
+     a1=0.055
+     a2=-0.037
+     a3=-0.074
+     a4=0.056
+     funi=2.*alpha*(1.-y)+2.*beta*y*alog(y)+4.*beta*(y-sqrt(y))+  &
+          3.*a1*(y**(1./3.)-y)+6.*a2*(y**(2./3.)-y)+6.*a4*(y-y**(4./3.))  &
+          -2.*a3*y*alog(y)
+  endif
+
+  if (TypeBField == 'numeric') then
+     call initialize_b_field(L, nStep, bField_I, RadialDistance_I, Length_I, Ds_I)
+     PitchAngle_I(1) = acos(x)
+     call find_mirror_points (nStep, nPitch, PitchAngle_I, bField_I, bMirror_I,iMirror_II)
+     bMirror = bMirror_I(1)
+     call second_adiabatic_invariant(nStep, iMirror_II(:,1), bMirror, bField_I, Ds_I,L, SecondAdiabInv)
+     funi = SecondAdiabInv
+  endif
 
 end function FUNI
 !============================================================================
