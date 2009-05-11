@@ -86,6 +86,8 @@ module ModHeidiInput
   logical :: UseConstantStepPA = .false.
   ! "#INCLUDEWAVES"
   logical :: UseWaves = .false.
+  ! "#BFIELD"
+  character(len=100) :: TypeBField
   ! GIPHT END DECLARATIONS
 
 contains
@@ -190,6 +192,8 @@ contains
           call read_var('iFrequency', iFrequency)
        case("#CONVECTION")
           call read_var('TypeConvection', TypeConvection, IsLowerCase=.true.)
+       case("#BFIELD")
+          call read_var('TypeBField', TypeBField, IsLowerCase=.true.)   
        case("#INITIALTHERMALPLASMA")
           call read_var('DoReadDGCPM', DoReadDGCPM)
        case("#SOLARWIND")
