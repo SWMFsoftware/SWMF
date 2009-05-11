@@ -86,7 +86,7 @@ test1			NameRun
 
 
 #CONVECTION
-14			TypeConvection
+w96			TypeConvection
 
 #INITIALTHERMALPLASMA
 F			DoReadDGCPM	
@@ -100,3 +100,5 @@ F 			UseConstantStepPA
 #INCLUDEWAVES
 F 			UseWaves
 
+#BFIELD
+analytic     		TypeBField
