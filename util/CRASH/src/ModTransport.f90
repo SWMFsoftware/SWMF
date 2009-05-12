@@ -9,7 +9,7 @@ module CRASH_ModTransport
   implicit none
 contains
   !=================================================================
-  real function NuEI()
+  real function nu_ei()
     !The conventional auxiliary characterstic of the
     !electron-ion collisions
     use ModConst,ONLY: cSigmaThomson, cElectronMass, &
@@ -35,12 +35,12 @@ contains
     
     TePerMeC2 = Te/MeC2InEV !Dimensionless
 
-    NuEI = cSigmaThomson * cLightSpeed * Na * CoulombLog / &
+    nu_ei = cSigmaThomson * cLightSpeed * Na * CoulombLog / &
          ( TePerMeC2 * sqrt(2.0 * cPi * TePerMeC2 ) ) ! s^{-1}
     
-  end function NuEI
+  end function nu_ei
   !================
-  real function TeTiRelaxation()
+  real function te_ti_relaxation()
     use ModConst,ONLY: cElectronMass, cAtomicMass 
     
     !The Landau formula, may be written only for T_i in our case:
@@ -51,7 +51,7 @@ contains
 
     real,parameter :: cMassRatio = 3.0 * cElectronMass/ cAtomicMass
     !-
-    TeTiRelaxation =  cMassRatio * ZAv * Z2PerA *  NuEI() !s^{-1}
+    te_ti_relaxation =  cMassRatio * ZAv * Z2PerA *  nu_ei() !s^{-1}
 
     !The practical application:
     !The ralaxation per the unit of volume:
@@ -69,6 +69,16 @@ contains
     !Only in a fully ionized plasma of a very high temperature the 
     !latter is equal to TeTiRelaxation*(T_i-T_e)*2/(3Z), which is the
     !expression used by Landau.
-  end function TeTiRelaxation
+  end function te_ti_relaxation
+  !===========================
+  real function electron_heat_conductivity()
+    use ModConst, ONLY: cBoltzmann, cEV, cElectronMass
+    !----------------------------------
+    !The dependence on Z as well as the numerical coefficient
+    !are to be modified:
+    
+    electron_heat_conductivity = cBoltzmann * (Te * cEV/cElectronMass) * &
+         (Na * ZAv) /(Z2 * nu_ei())  ![J/(M*s*K)]
+  end function electron_heat_conductivity
 
 end module CRASH_ModTransport
