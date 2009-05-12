@@ -2,7 +2,7 @@
 !=============================================================================
 
 subroutine IM_set_param(CompInfo,TypeAction)
-  
+
   use CON_comp_info
   use ModProcIM
   use ModHeidiMain
@@ -10,14 +10,14 @@ subroutine IM_set_param(CompInfo,TypeAction)
   use ModUtilities, ONLY: fix_dir_name, check_dir, lower_case
   use ModHeidiIO, ONLY : IsFramework, StringPrefix
   use ModIoUnit, only: STDOUT_
- 
+
   implicit none
   character (len=*), parameter :: NameSub='IM_set_param'
 
   ! Arguments
   type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp.
   character (len=*), intent(in)     :: TypeAction ! What to do
-  
+
   !LOCAL VARIABLES:
   character (len=100) :: NameCommand, StringPlot
   logical             :: DoEcho=.false.
@@ -34,7 +34,7 @@ subroutine IM_set_param(CompInfo,TypeAction)
      call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc)
      if(nProc>4)call CON_stop( NameSub // &
           ' IM_ERROR this version can run on 4 PE !')
- 
+
      IsFramework = .true.
   case('READ')
      call heidi_read
@@ -344,18 +344,18 @@ subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
        IonoGmTemperature = IonoGmPressure/(IonoGmDensity*1.0e6*cBoltzmann)/&
        11604.0 ! k -> eV
 
-!  write(*,*) 'This is not working'
+  !  write(*,*) 'This is not working'
 
 end subroutine IM_put_from_gm
 
 !==============================================================================
 subroutine IM_put_sat_from_gm(nSats, Buffer_I, Buffer_III)
   ! Puts satellite locations and names from GM into IM variables.
-  !!!DTW 2007
+!!!DTW 2007
 
   use ModHeidiSatellites
   use ModNumConst,   ONLY: cDegToRad
-  
+
   implicit none
   character (len=*),parameter :: NameSub='IM_put_sat_from_gm'
 
@@ -529,8 +529,8 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   ! species = e, H, he, o
 
-  !!! RNHT(colat,mlt,species) = density in #/cc
-  !!! EDEN("                ) = equatorial pressure (keV/cc) (*0.1602 = nPa)
+!!! RNHT(colat,mlt,species) = density in #/cc
+!!! EDEN("                ) = equatorial pressure (keV/cc) (*0.1602 = nPa)
 
 end subroutine IM_get_for_gm
 
@@ -539,7 +539,7 @@ end subroutine IM_get_for_gm
 subroutine IM_init_session(iSession, TimeSimulation)
   use ModHeidiIO, ONLY: time
   implicit none
-  !INPUT PARAMETERS:
+  
   integer,  intent(in) :: iSession       ! session number (starting from 1)
   real,     intent(in) :: TimeSimulation   ! seconds from start time
   logical :: IsUninitialized = .true.
@@ -559,30 +559,21 @@ end subroutine IM_init_session
 subroutine IM_finalize(TimeSimulation)
 
   use ModProcIM
-  use ModInit,ONLY:nS
-
+  use ModInit, ONLY:nS
+  use ModHeidiIO, ONLY :iUnitSw1,iUnitSw2,&
+       iUnitMpa,iUnitSopa,iUnitPot,iUnitSal
+  
   implicit none
-
-  !INPUT PARAMETERS:
+  
   real,     intent(in) :: TimeSimulation   ! seconds from start time
-  integer:: iSpecies
   !--------------------------------------------------------------------------
 
-  !!! CLOSE ACTUAL UNITS OBTAINED FROM IO_UNIT_NEW()
-
-!  do iSpecies=1,NS
-!     CLOSE(15+iSpecies)          ! Closes continuous output file
-!  end do
-!
-!  CLOSE(13)	            ! Closes sw1 input file
-!  CLOSE(15)		    ! Closes sw2 input file
-!  CLOSE(14)               ! Closes MPA input file
-!  CLOSE(16)               ! Closes SOPA input file
-!  CLOSE(18)               ! Closes FPOT input file
-  !!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-!  call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------  
-!  call MPI_finalize(iError)
+  close(iUnitSal)           ! Closes continuous output file
+  close(iUnitSw1)           ! Closes sw1 input file
+  close(iUnitSw2)           ! Closes sw2 input file
+  close(iUnitMpa)           ! Closes MPA input file
+  close(iUnitSopa)          ! Closes SOPA input file
+  close(iUnitPot)           ! Closes FPOT input file
 
 end subroutine IM_finalize
 
@@ -594,11 +585,8 @@ subroutine IM_run(SimTime, SimTimeLimit)
 
   implicit none
 
-  !INPUT/OUTPUT ARGUMENTS:
   real, intent(inout) :: SimTime   ! current time of component
-
-  !INPUT ARGUMENTS:
-  real, intent(in) :: SimTimeLimit ! simulation time not to be exceeded
+  real, intent(in)    :: SimTimeLimit ! simulation time not to be exceeded
 
   !--------------------------------------------------------------------------
   Dt = min(DtMax, (SimTimeLimit - SimTime)/2 )
@@ -614,12 +602,10 @@ end subroutine IM_run
 subroutine IM_save_restart(TimeSimulation)
   implicit none
 
-  !INPUT PARAMETERS:
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
-
+  real,     intent(in)        :: TimeSimulation   ! seconds from start time
   character(len=*), parameter :: NameSub='IM_save_restart'
   !-------------------------------------------------------------------------
-  !!! call heidi_save_restart
+!!! call heidi_save_restart
 
 end subroutine IM_save_restart
 
