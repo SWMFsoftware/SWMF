@@ -61,6 +61,18 @@ Module ModConst
   real,parameter :: cBohrRadius = &
        (4.0*cPi*cEps/cElectronMass)* (cPlanckHBar/cElectronCharge)**2
 
+  !Thomson cross-section, which characterizes
+  !the thomson scattering of a low-energy photon by
+  !a free electron. Is of interest both itself (it determines the
+  !absolute brightness of the coronagraph image and as a
+  !convenient combination of the fundamental constants,
+  !in CGS system, coming to the transport coefficients in 
+  !plasmas:
+  !\Sigma_{Thomson}=\frac{8\pi}{3}\left(\frac{e^2}{m_e c^2}\right)^2 [CGS]\approx
+  !\approx 6.65E-25 cm^2
+
+  real,parameter :: cSigmaThomson = 6.65E-29  ![m^2]
+
   ! Number of particles per mole
   real, parameter :: cAvogadro = 6.022045E+23
 
