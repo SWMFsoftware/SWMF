@@ -47,7 +47,7 @@ module CRASH_ModStatSumMix
   !or pressure in this case):
   real :: Te = 1.0        ! the electron temperature [eV] = ([cKToeV] * [Te in K])
   real :: Na =-1.0        ! The density of heavy particles in the plasma [#/m^3]
- 
+  
 
   !Averages:
  
@@ -111,6 +111,12 @@ module CRASH_ModStatSumMix
   ! equilibrium, rather than in the pressure/energy only.
   !/
   logical,public :: UseCoulombCorrection = .false.
+
+  !The "Coulomb logariphm". May be defined quantitatively
+  !only in a conjunction with the choice for the model
+  !of Coulomb interactions (DH or iono-sphere or 
+  !"average atom")
+  real, public :: CoulombLog = 2.0
 
   real    :: IonizationEnergyLowering_I(0:nZMax) = 0.0
 
