@@ -897,15 +897,15 @@ subroutine WRESULT(LNC,XN,IFIR)
         !.......Open file for source/loss continual output (IRES(14), 'sal')
         if (IRES(14).eq.1) then
            
-           if (S.eq.1) iUnitSal = iUnitSal1
-           if (S.eq.2) iUnitSal = iUnitSal2
-           if (S.eq.3) iUnitSal = iUnitSal3
-           if (S.eq.4) iUnitSal = iUnitSal4
-           
            iUnitSal1 = io_unit_new()
            iUnitSal2 = io_unit_new()
            iUnitSal3 = io_unit_new()
            iUnitSal4 = io_unit_new()
+
+           if (S.eq.1) iUnitSal = iUnitSal1
+           if (S.eq.2) iUnitSal = iUnitSal2
+           if (S.eq.3) iUnitSal = iUnitSal3
+           if (S.eq.4) iUnitSal = iUnitSal4
            
            close (iUnitSal)
            NameSuffix='_sal.'
