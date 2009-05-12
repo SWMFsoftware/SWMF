@@ -21,6 +21,7 @@
 !.......NR=no. grids in radial direction, NT=no. grids in azimuth,
 !	NE=no. of energy grids, NS=no. of species (e-, H+, He+, O+),
 !	NPA=no. of grids in equatorial pitch angle
+!***********************************************************************
 
 program heidi_main
 
@@ -28,6 +29,7 @@ program heidi_main
   use ModInit
   use ModProcIM
   use ModHeidiMain
+
   implicit none 
 
   !****************************************************************************
@@ -51,9 +53,9 @@ program heidi_main
   call heidi_check
   call IM_init_session(1, 0.0)
 
-  do I3=NST,NSTEP
+  do i3 = nst, nstep
      call heidi_run
-  end do			! End time loop
+  end do			! end time loop
 
   call IM_finalize(0.0)
 
@@ -62,9 +64,9 @@ contains
   subroutine IM_init_session(iSession, TimeSimulation)
 
     implicit none
-    integer,  intent(in) :: iSession       ! session number (starting from 1)
+    integer,  intent(in) :: iSession         ! session number (starting from 1)
     real,     intent(in) :: TimeSimulation   ! seconds from start time
-    logical :: IsUninitialized = .true.
+    logical              :: IsUninitialized = .true.
     !-----------------------------------------------------------------------
 
     if(IsUninitialized)then
@@ -79,20 +81,19 @@ contains
 
     use ModProcIM
     use ModInit, ONLY: nS
+    use ModHeidiIO, ONLY :iUnitSw1,iUnitSw2,&
+         iUnitMpa,iUnitSopa,iUnitPot,iUnitSal
 
     implicit none
-    real,     intent(in) :: TimeSimulation   ! seconds from start time
-    integer:: iSpecies
+    real, intent(in) :: TimeSimulation   ! seconds from start time
     !-----------------------------------------------------------------------
-    do iSpecies=1,NS
-       CLOSE(15+iSpecies)          ! Closes continuous output file
-    end do
 
-    CLOSE(13)	            ! Closes sw1 input file
-    CLOSE(15)		    ! Closes sw2 input file
-    CLOSE(14)               ! Closes MPA input file
-    CLOSE(16)               ! Closes SOPA input file
-    CLOSE(18)               ! Closes FPOT input file
+    close(iUnitSal)           ! Closes continuous output file
+    close(iUnitSw1)           ! Closes sw1 input file
+    close(iUnitSw2)           ! Closes sw2 input file
+    close(iUnitMpa)           ! Closes MPA input file
+    close(iUnitSopa)          ! Closes SOPA input file
+    close(iUnitPot)           ! Closes FPOT input file
 
     call MPI_BARRIER(iComm,iError) 
     call MPI_finalize(iError)
@@ -104,7 +105,7 @@ contains
 
     implicit none
     real, intent(inout) :: TimeSimulation   ! current time of component
-    real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
+    real, intent(in)    :: TimeSimulationLimit ! simulation time not to be exceeded
     !-----------------------------------------------------------------------
 
     call heidi_run 
@@ -115,15 +116,15 @@ contains
 end program heidi_main
 
 subroutine CON_stop(StringError)
-  
+
   use ModProcIM, ONLY: iProc, iComm
   use ModMpi
-  
+
   implicit none
   character (len=*), intent(in) :: StringError
-  integer :: iError,nError
+  integer                       :: iError,nError
   !-----------------------------------------------------------------------
-  
+
   write(*,*)'Stopping execution! iProc=',iProc,' with msg:'
   write(*,*)StringError
   call MPI_abort(iComm, nError, iError)
@@ -134,20 +135,20 @@ end subroutine CON_stop
 !==========================================================================
 
 subroutine CON_set_do_test(String,DoTest,DoTestMe)
-  
+
   implicit none
   character (len=*), intent(in)  :: String
   logical          , intent(out) :: DoTest, DoTestMe
   !-----------------------------------------------------------------------
- 
+
   DoTest = .false.; DoTestMe = .false.
-  
+
 end subroutine CON_set_do_test
 !==========================================================================
 subroutine CON_io_unit_new(iUnit)
 
   use ModIoUnit, ONLY: io_unit_new
-  
+
   implicit none
   integer, intent(out) :: iUnit
   !-----------------------------------------------------------------------

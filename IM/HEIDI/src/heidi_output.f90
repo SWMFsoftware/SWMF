@@ -243,7 +243,10 @@ subroutine WRESULT(LNC,XN,IFIR)
   character(len=3) :: NameStep
   character(len=5) :: NameSuffix
   character(len=20):: NameOutputSpecies
-  
+  integer          :: iUnitSal1,iUnitSal2,iUnitSal3,iUnitSal4
+
+
+
   external :: FUNI,FUNT
   save ntc
   
@@ -894,14 +897,24 @@ subroutine WRESULT(LNC,XN,IFIR)
         !.......Open file for source/loss continual output (IRES(14), 'sal')
         if (IRES(14).eq.1) then
            
-           close (15+S)
+           if (S.eq.1) iUnitSal = iUnitSal1
+           if (S.eq.2) iUnitSal = iUnitSal2
+           if (S.eq.3) iUnitSal = iUnitSal3
+           if (S.eq.4) iUnitSal = iUnitSal4
+           
+           iUnitSal1 = io_unit_new()
+           iUnitSal2 = io_unit_new()
+           iUnitSal3 = io_unit_new()
+           iUnitSal4 = io_unit_new()
+           
+           close (iUnitSal)
            NameSuffix='_sal.'
-           open (15+S,FILE=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
+           open (iUnitSal,FILE=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
                 NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
-           write (15+S,*) 'Filename: '//trim(NameRun)//trim(NameOutputSpecies)//NameSpecies//NameSuffix//NameStep
-           write (15+S,*) 'Sources and losses: continuous output'
-           write (15+S,71) T,KP
-           write (15+S,74) 'T','LMP6','LMP12','RNS','RNL','RES','REL',   &
+           write (iUnitSal,*) 'Filename: '//trim(NameRun)//trim(NameOutputSpecies)//NameSpecies//NameSuffix//NameStep
+           write (iUnitSal,*) 'Sources and losses: continuous output'
+           write (iUnitSal,71) T,KP
+           write (iUnitSal,74) 'T','LMP6','LMP12','RNS','RNL','RES','REL',   &
                 'ESN','ELN','ESE','ELE','ECN','ECE','ALN','ALE','CEN',   &
                 'CEE','DNT','DET'
 	end if
@@ -1003,7 +1016,7 @@ subroutine PSRCLOSS(T)
 
   DN=RNS-RNL+ESN-ELN+ECN-ALN-CEN
   DE=RES-REL+ESE-ELE+ECE-ALE-CEE
-  write (15+S,50) T,LMP(7),LMP(13),RNS,RNL,RES,REL,ESN,ELN,ESE,   &
+  write (iUnitSal,50) T,LMP(7),LMP(13),RNS,RNL,RES,REL,ESN,ELN,ESE,   &
        ELE,ECN,ECE,ALN,ALE,CEN,CEE,DN,DE
   RNS=0.	! Radial drift particle source
   RNL=0.	! Radial drift particle loss

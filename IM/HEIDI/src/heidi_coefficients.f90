@@ -14,15 +14,15 @@
 ! Also calculates the atmospheric loss rate (out the loss cone)
 !======================================================================
 subroutine CEPARA
-  
+
   use ModHeidiSize
   use ModHeidiMain
   use ModHeidiDrifts
   use ModIoUnit,  only : io_unit_new,UNITTMP_
   use ModHeidiIO, only: NameInputDirectory
-  
+
   implicit none
-  
+
   integer           :: I,K,L,I1,LUP,ier
   integer           :: iUnit 
   real              :: x,y		
@@ -52,8 +52,8 @@ subroutine CEPARA
      !cc	    IF(LO.EQ.50) OPEN(UNIT=iUnit,FILE='hgeo50.in',STATUS='OLD')
      !cc	    IF(LO.EQ.60) OPEN(UNIT=iUnit,file='hgeo64.in',STATUS='OLD')
      !cc	    IF(LO.EQ.71) OPEN(UNIT=iUnit,file='hgeo71.in',STATUS='OLD')
-     
-     
+
+
      open(UNITTMP_,file=NameInputDirectory//'hgeo71.in',STATUS='OLD')
      !cc	    IF(LO.EQ.91) OPEN(UNIT=iUnit,file='hgeo91.in',STATUS='OLD')
      LUP=71
@@ -76,14 +76,14 @@ subroutine CEPARA
            HDNS(i,l)=FAC
         enddo
      end do
-     
+
   end if
 3 format(A61,F5.2)
 4 format(2F7.3,2X,1PE12.5)
-  
+
   !.......Calculate charge exchange cross-section of species S with H
   !         and then the charge exchange decay rate ACHAR
-  
+
   !.......H+ charge exchange
   if (SCALC(2).eq.1) then
      do K=2,KO
@@ -96,7 +96,7 @@ subroutine CEPARA
         end do	! L loop	
      end do	! K loop
   end if
-  
+
   !.......He+ charge exchange
   if (SCALC(3).eq.1) then
      do K=2,KO
@@ -109,7 +109,7 @@ subroutine CEPARA
         end do	! L loop
      end do	! K loop
   end if
-  
+
   !.......O+ charge exchange
   if (SCALC(4).eq.1) then
      do K=2,KO
@@ -123,7 +123,7 @@ subroutine CEPARA
         end do	! L loop
      end do	! K loop
   end if
-  
+
   !.......Calculate the losses due to the collis with atmosphere
   do s=1,NS
      do I=2,IO
@@ -134,7 +134,7 @@ subroutine CEPARA
         end do	! K loop
      end do		! I loop
   end do		! S loop
-  
+
 end subroutine CEPARA
 !======================================================================
 !				OTHERPARA
@@ -421,8 +421,7 @@ subroutine MAGCONV(I3,NST)
   save I4,TP1,TP2,FPOT1,FPOT2,IOpot,LZpot,JOpot,MLTpot
   
   integer :: edayplus
-  real :: univ_time
-  integer :: iUnit 
+  real    :: univ_time
   !---------------------------------------------------------------------  
   PHIPOFF=0.
   DP1=.4*PI
@@ -594,20 +593,20 @@ subroutine MAGCONV(I3,NST)
      !print *, 'Is ABASE >=10?'
   else if (ABASE(IA+1).eq.10) then
      
-     iUnit = io_unit_new()
+     iUnitPot = io_unit_new()
      
      if (T.eq.TIME) then
         TP2=TIME-1.
         TP1=TP2
-        open(UNIT=iUnit,FILE=NameInputDirectory//trim(NameRun)//'_pot.in',status='old')
+        open(UNIT=iUnitPot,FILE=NameInputDirectory//trim(NameRun)//'_pot.in',status='old')
         do i=1,5                   ! lines of header material
-           read (iUnit,*) HEADER
+           read (iUnitPot,*) HEADER
         end do
-        read (iUnit,*) JOpot
-        read (iUnit,*) (MLTpot(j),j=1,JOpot)
-        read (iUnit,*) header
-        read (iUnit,*) IOpot
-        read (iUnit,*) (LZpot(I),i=1,IOpot)
+        read (iUnitPot,*) JOpot
+        read (iUnitPot,*) (MLTpot(j),j=1,JOpot)
+        read (iUnitPot,*) header
+        read (iUnitPot,*) IOpot
+        read (iUnitPot,*) (LZpot(I),i=1,IOpot)
         do j=JOpot+1,NT
            MLTpot(j)=MLTpot(j-1)+(MLTpot(JOpot)-MLTpot(JOpot-1))
         enddo
@@ -619,9 +618,9 @@ subroutine MAGCONV(I3,NST)
      if (TP2.lt.T) then			! Read in potentials
         do while (TP2.le.T)		! Best if final TP2 > final T
            FPOT1(1:IOpot,1:JOpot)=FPOT2(1:IOpot,1:JOpot)
-           read (iUnit,*,IOSTAT=L) TP2
+           read (iUnitPot,*,IOSTAT=L) TP2
            do j=1,JOpot
-              read (iUnit,*,IOSTAT=L) (data(I),I=1,IOpot)
+              read (iUnitPot,*,IOSTAT=L) (data(I),I=1,IOpot)
               FPOT2(1:IOpot,J)=data(1:IOpot)  ! Potential in Volts
            end do
            FPOT2(1:IOpot,JOpot+1)=FPOT2(1:IOpot,1)
@@ -632,7 +631,8 @@ subroutine MAGCONV(I3,NST)
            end if
         end do
      end if
-     close(iUnit)
+     close(iUnitPot)
+     
      FAC=(T-TP1)/(TP2-TP1)			! Linearly interpolate
      Fmax=0.
      Fmin=0.

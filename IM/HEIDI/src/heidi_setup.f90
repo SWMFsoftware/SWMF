@@ -133,7 +133,7 @@ subroutine CONSTANT(NKP)
   real              :: kpt,DUT
   integer           :: I,NKP
   character(len=80) :: header
-!------------------------------------------------------------------------
+  !------------------------------------------------------------------------
   !.......Read Kp history of the modeled storm
   if (IKP.ge.3) then
      open(UNITTMP_,FILE=NameInputDirectory//trim(NameRun)//'_kp.in',STATUS='OLD') 
@@ -230,7 +230,7 @@ subroutine ARRAYS
   data amla0/0.0,0.2,0.4,0.6,0.8,1.0,1.5,2.0,2.5,3.0,3.5, &
        4.0,4.5,5.0,5.5,6.0,6.5,7.0,7.5,8.0,8.5,9.0,9.5,10.0/
   !------------------------------------------------------------------------
-  
+
   M1(1) = 5.4462E-4
   M1(2) = 1.0
   M1(3) = 4.0
@@ -583,7 +583,7 @@ subroutine GETKPA(i3,nst,i2,nkp)
 
   !  IKP=0, keep Kp constant, otherwise...
   !------------------------------------------------------------------------
-  
+
   if (IKP.eq.1) then	! IKP=1, Degrades until Kp<=1
      if(KP.gt.1.) KP=KP+DKP
   else if (IKP.eq.2) then	! IKP=2, read from table
@@ -658,7 +658,6 @@ subroutine GETSWIND
   use ModHeidiMain
   use ModIoUnit, only : io_unit_new 
 
-
   implicit none
 
   real             :: T1,T2,BZ1,BZ2,MD1,MD2
@@ -669,16 +668,17 @@ subroutine GETSWIND
   save T1,T2,BZ1,BZ2,MD1,MD2,U1,U2,BY1,BY2
 
   real :: bx
-  integer :: iUnit
   !------------------------------------------------------------------------
-  iUnit = io_unit_new()
+  iUnitSw1 = io_unit_new()
+
   ILold(1:JO)=ILMP(1:JO)
   if (T.eq.TIME) then
      T2=TIME-1.
      T1=T2
-     open(UNIT=iUnit,FILE=NameInputDirectory//trim(NameRun)//'_sw1.in',status='old')
+
+     open(UNIT=iUnitSw1,FILE=NameInputDirectory//trim(NameRun)//'_sw1.in',status='old')
      do I=1,6			! 6 lines of header material
-        read (iUnit,*) HEADER
+        read (iUnitSw1,*) HEADER
      end do
   end if
   if (T2.lt.T) then
@@ -688,7 +688,7 @@ subroutine GETSWIND
         BZ1=BZ2
         MD1=MD2
         U1=U2
-        read (iUnit,*,IOSTAT=I) T2,BT,BX,BY2,BZ2,MD2,U2
+        read (iUnitSw1,*,IOSTAT=I) T2,BT,BX,BY2,BZ2,MD2,U2
         if (I.lt.0) T2=TIME+2*DT*(NSTEP+1)
         if (T.eq.TIME) then			! In case T2>T already
            T1=TIME
@@ -858,10 +858,10 @@ real function G(X)
 
   implicit none
 
-  real    :: x,G1,ERF
-  integer :: IER
+  real     :: x,G1,ERF
+  integer  :: IER
   external :: ERF
- !------------------------------------------------------------------------ 
+  !------------------------------------------------------------------------ 
 
   G1=ERF(X,IER)-2.*X/sqrt(cPi)*exp(-X*X)
   G=G1/2./X/X
@@ -878,11 +878,11 @@ real function FUNT(X)		! X is cos of equat pa = MU
   use ModConst, ONLY : cPi
   use ModHeidiBField
   use ModHeidiInput, ONLY: TypeBField
-   
+
   implicit none
 
   real :: y,x,alpha,beta,a1,a2,a3,a4
- 
+
   real                 :: L = 15.0
   integer, parameter   :: nStep = 101
   integer, parameter   :: nPitch = 1
@@ -909,14 +909,14 @@ real function FUNT(X)		! X is cos of equat pa = MU
   endif
 
   if (TypeBField == 'numeric') then
-     
+
      call initialize_b_field(L, nStep, bField_I, RadialDistance_I, Length_I, Ds_I)
      if (x==1.0) then 
         PitchAngle_I(1)= acos(0.999998)
      else
         PitchAngle_I(1) = acos(x)
      endif
-     
+
      call find_mirror_points (nStep, nPitch, PitchAngle_I, bField_I, bMirror_I,iMirror_II)
      bMirror = bMirror_I(1)
      call half_bounce_path_length(nStep, iMirror_II(:,1), bMirror, bField_I, Ds_I,L, HalfPathLength)
@@ -931,7 +931,7 @@ end function FUNT
 !======================================================================
 real function FUNI(X)		! X is cos of equat pa = MU
 
-   
+
   use ModHeidiSize
   use ModHeidiInput, ONLY: TypeBField
   use ModHeidiBField
@@ -939,7 +939,7 @@ real function FUNI(X)		! X is cos of equat pa = MU
   implicit none
 
   real    :: y,x,alpha,beta,a1,a2,a3,a4
-  
+
   real                 :: L = 15.0
   integer, parameter   :: nStep = 101
   integer, parameter   :: nPitch = 1
@@ -952,10 +952,10 @@ real function FUNI(X)		! X is cos of equat pa = MU
   real                 :: bMirror_I(nPitch),bMirror
   integer              :: iMirror_II(2,nPitch)
   real                 :: Percent, sums, difer
-  
+
   !------------------------------------------------------------------------
   if (TypeBField == 'analytic') then
-     
+
      y=sqrt(1.-x*x)
      alpha=1.+alog(2.+sqrt(3.))/2./sqrt(3.)
      beta=alpha/2.-cPi*sqrt(2.)/12.
@@ -987,7 +987,7 @@ real function APPX(T)
   implicit none
   real :: EPSLN, T
   !------------------------------------------------------------------------
-  
+
   EPSLN=0.00000001
   if (T.lt.0.) then
      APPX=T-EPSLN
@@ -1008,11 +1008,11 @@ real function ACOSD(X)
   use ModHeidiSize
   use ModHeidiMain
   use ModConst, only : cPi
-  
+
   implicit none
   real :: x
   !------------------------------------------------------------------------
-  
+
   acosd=180.0/cPi*acos(X)
 
 end function ACOSD
@@ -1022,7 +1022,7 @@ real function ASIND(X)
   use ModHeidiSize
   use ModHeidiMain
   use ModConst, only : cPi
-  
+
   implicit none
   real :: x
   !------------------------------------------------------------------------
@@ -1037,11 +1037,11 @@ real function COSD(X)
   use ModHeidiSize
   use ModHeidiMain
   use ModConst, only : cPi
-  
+
   implicit none
   real :: x
   !------------------------------------------------------------------------
-  
+
   COSD=cos(cPi/180.0*X)
 
 end function COSD
@@ -1052,7 +1052,7 @@ real function SIND(X)
   use ModHeidiSize
   use ModHeidiMain
   use ModConst, only : cPi
-  
+
   implicit none
   real :: x
   !------------------------------------------------------------------------

@@ -64,7 +64,7 @@ Module ModHeidiIO
   logical :: IsFramework
   integer :: iUnitStdOut =  6
   character (len=7) :: StringPrefix = ''
-
+  integer :: iUnitSw1,iUnitSw2,iUnitSopa,iUnitMpa,iUnitPot,iUnitSal
   
 contains
   ! ===========================================================================

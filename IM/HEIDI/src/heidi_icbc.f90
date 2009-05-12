@@ -38,7 +38,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
        MU0(L1),E0(K1),MLT0(J1),R0(I1),G0(I1,J1)
   integer ::IFM(38)
   character(len=80) :: HEADER
-  
+
   ! Common block for tests
   real :: XL1(4),XL2(2),XL3
   common /CLIN2/ XL1,XL2,XL3
@@ -82,13 +82,13 @@ subroutine INITIAL(LNC,XN,J6,J18)
         if (ISTORM.eq.1) NameStormType='major'
         if (ISTORM.eq.2) NameStormType='moder'
         if (ISTORM.eq.3) NameStormType='tests'
-        
+
         if (S.eq.1) NameSpecies='_e' 
 	if (S.eq.2) NameSpecies='_h' 
 	if (S.eq.3) NameSpecies='he' 
 	if (S.eq.4) NameSpecies='_o' 
-        
-        
+
+
 
         !.......Loss cone distribution (INI=1)
         if (INI(S).eq.1) then
@@ -598,8 +598,6 @@ subroutine GEOSB
   save KES,TM1,TM2,NM1,NM2,TFM1,TFM2,TCM1,TCM2,TS1,TS2,FS1,FS2,  &
        I2,I6,I7,I9,IG7,NE1,NE2,TEF1,TEF2,TEC1,TEC2
 
-  integer :: iUnitSopa
-  integer :: iUnitMpa
   integer :: iLatBoundary=-1, iLonBoundary=-1
   !---------------------------------------------------------------------
 
@@ -922,7 +920,6 @@ subroutine FINJ(F)
   save T1,T2,BZ1,BZ2,MD1,MD2,U1,U2
   external :: GAMMLN,ERF
 
-  integer :: iUnitSw 
   !-----------------------------------------------------------------------
 
   TLAG=4.*3600.			! From Borovsky et al, Aug 98
@@ -930,10 +927,10 @@ subroutine FINJ(F)
      if (T.eq.TIME) then
         T2=TIME-1.
         T1=T2
-        iUnitSw = io_unit_new()
-        open(UNIT=iUnitSw,FILE=NameInputDirectory//trim(NameRun)//'_sw2.in',status='old')
+        iUnitSw2 = io_unit_new()
+        open(UNIT=iUnitSw2,FILE=NameInputDirectory//trim(NameRun)//'_sw2.in',status='old')
         do I=1,6                      ! 6 lines of header material
-           read(iUnitSw,*) HEADER
+           read(iUnitSw2,*) HEADER
         end do
      end if
      if (T2.lt.T) then
@@ -942,7 +939,7 @@ subroutine FINJ(F)
            BZ1=BZ2
            MD1=MD2
            U1=U2
-           read (iUnitSw,*,IOSTAT=I) T2,BZ2,MD2,U2
+           read (iUnitSw2,*,IOSTAT=I) T2,BZ2,MD2,U2
            T2=T2+TLAG
            if (I.lt.0) T2=TIME+2*DT*(NSTEP+1)+TLAG
            if (T.eq.TIME) then                 ! In case T2>T already
