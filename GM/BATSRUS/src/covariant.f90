@@ -1453,12 +1453,12 @@ subroutine covariant_gradient(iBlock, Var_G,&
         FaceArea_DS(:,South_:North_)=FaceAreaJ_DFB(:,i,j:j+1,k,iBlock)
         FaceArea_DS(:,Bot_  :Top_  )=FaceAreaK_DFB(:,i,j,k:k+1,iBlock)
 
-        Difference_S(East_) = -Var_G(i-1,j,k)
-        Difference_S(West_) = +Var_G(i+1,j,k)
-        Difference_S(South_)= -Var_G(i,j-1,k)
-        Difference_S(North_)= +Var_G(i,j+1,k)
-        Difference_S(Bot_)  = -Var_G(i,j,k-1)
-        Difference_S(Top_)  = +Var_G(i,j,k+1)
+        Difference_S(East_) = -(Var_G(i-1,j,k)+Var_G(i,j,k))
+        Difference_S(West_) = +(Var_G(i+1,j,k)+Var_G(i,j,k))
+        Difference_S(South_)= -(Var_G(i,j-1,k)+Var_G(i,j,k))
+        Difference_S(North_)= +(Var_G(i,j+1,k)+Var_G(i,j,k))
+        Difference_S(Bot_)  = -(Var_G(i,j,k-1)+Var_G(i,j,k))
+        Difference_S(Top_)  = +(Var_G(i,j,k+1)+Var_G(i,j,k))
 
         GradientX_G(i,j,k) = &
              dot_product(FaceArea_DS(x_,:),Difference_S)*VInvHalf
