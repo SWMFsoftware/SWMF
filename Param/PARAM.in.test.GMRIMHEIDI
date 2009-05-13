@@ -338,6 +338,9 @@ F 			UseConstantStepPA
 #INCLUDEWAVES
 F 			UseWaves
 
+#BFIELD
+analytic		TypeBField
+
 #END_COMP IM -----------------------------------------------------------------
 
 #BEGIN_COMP IE ---------------------------------------------------------------
