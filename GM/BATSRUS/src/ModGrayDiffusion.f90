@@ -34,13 +34,22 @@ module ModGrayDiffusion
   real, allocatable         :: RelaxationCoef_CB(:,:,:,:)
   real, allocatable         :: RelaxSemiCoef_VCB(:,:,:,:,:)
   real, allocatable         :: DiffSemiCoef_VGB(:,:,:,:,:)
+  real, allocatable         :: PointSemiCoef_VCB(:,:,:,:,:)
 
   ! Index which vars involve diffusion
   integer, allocatable :: iDiff_I(:)
   integer :: nDiff
 
   ! Number of relaxation coefficients
+  integer, allocatable :: iRelax_I(:)
   integer :: nRelax
+
+  ! Number of point implicit coefficients
+  integer :: nPoint
+  ! Index which variable involve point implicit calculation
+  integer :: iPoint
+  ! Named indices for point implicit coefficients
+  integer, parameter :: Relax_ = 1, Planck_ = 2
 
   ! radiation energy used for calculating radiative energy flux
   real, allocatable :: Erad_G(:,:,:)
@@ -52,7 +61,6 @@ module ModGrayDiffusion
 
   ! Named indices for semi-implicit variables
   integer :: TeImpl_, EradImpl_
-  integer, parameter :: Planck_ = 2
 
   real :: EradMin
 
@@ -99,24 +107,35 @@ contains
           nDiff = 1
           allocate(iDiff_I(nDiff))
           iDiff_I(1) = EradImpl_
-          nRelax = 2
+          nRelax = 0
+          nPoint = 2
+          iPoint = EradImpl_
        case('radcond')
           TeImpl_ = 1; EradImpl_ = 2
           nDiff = 2
           allocate(iDiff_I(nDiff))
           iDiff_I = (/ TeImpl_, EradImpl_ /)
           nRelax = 1
+          allocate(iRelax_I(nRelax))
+          iRelax_I(1) = EradImpl_
+          nPoint = 0
        case('cond')
           TeImpl_ = 1
           nDiff = 1
           allocate(iDiff_I(nDiff))
           iDiff_I(1) = TeImpl_
           nRelax = 0
+          nPoint = 0
        end select
 
        if(nRelax>0)then
           allocate(RelaxSemiCoef_VCB(nRelax,nI,nJ,nK,MaxBlock))
           RelaxSemiCoef_VCB = 0.0
+       end if
+
+       if(nPoint>0)then
+          allocate(PointSemiCoef_VCB(nPoint,nI,nJ,nK,MaxBlock))
+          PointSemiCoef_VCB = 0.0
        end if
 
        allocate(DiffSemiCoef_VGB(nDiff,-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock))
@@ -726,12 +745,12 @@ contains
           select case(TypeSemiImplicit)
           case('radiation')
              ! This coefficient is cR'' = cR/(1+dt*cR*dPlanck/dEint)
-             RelaxSemiCoef_VCB(1,i,j,k,iBlock) = Clight*PlanckOpacity  &
+             PointSemiCoef_VCB(Relax_,i,j,k,iBlock) = Clight*PlanckOpacity  &
                   /(1 + ImplCoeff*Dt*Clight*PlanckOpacity &
                   *4.0*cRadiationNo*Te**3 / Cv)
 
              ! This is just the Planck function at time level * saved
-             RelaxSemiCoef_VCB(Planck_,i,j,k,iBlock) = cRadiationNo*Te**4
+             PointSemiCoef_VCB(Planck_,i,j,k,iBlock) = cRadiationNo*Te**4
           case('radcond')
              RelaxSemiCoef_VCB(1,i,j,k,iBlock) = Clight*PlanckOpacity
 
@@ -1079,8 +1098,8 @@ contains
     real, intent(out)   :: Rhs_VC(nw,nI,nJ,nK)
     logical, intent(in) :: IsLinear
 
-    real :: Te, AbsorptionEmission
-    integer :: i, j, k, iDiff, iVar
+    real :: Te, EnergyExchange, AbsorptionEmission
+    integer :: i, j, k, iDiff, iRelax, iVar
     logical :: IsFound
     character(len=20), parameter :: TypeUserBc='usersemi'
     character(len=*), parameter :: NameSub='get_gray_diffusion_rhs'
@@ -1227,6 +1246,24 @@ contains
 
     end if
 
+    ! Source terms due to energy exchange
+    if(nRelax>0)then
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          do iRelax = 1, nRelax
+             iVar = iRelax_I(iRelax)
+
+             EnergyExchange = RelaxSemiCoef_VCB(iRelax,i,j,k,iBlock) &
+                  *(StateImpl_VG(TeImpl_,i,j,k) - StateImpl_VG(iVar,i,j,k))
+
+             ! dEvar/dt = + EnergyExchange
+             Rhs_VC(iVar,i,j,k)    = Rhs_VC(iVar,i,j,k)    + EnergyExchange
+
+             ! dEe/dt   = - EnergyExchange
+             Rhs_VC(TeImpl_,i,j,k) = Rhs_VC(TeImpl_,i,j,k) - EnergyExchange
+          end do
+       end do; end do; end do
+    end if
+       
     ! Source term due to absorption and emission
     ! Sigma_a*(cRadiation*Te**4-Erad)
     if(IsLinear)then
@@ -1234,44 +1271,20 @@ contains
        case('radiation')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Rhs_VC(EradImpl_,i,j,k) = Rhs_VC(EradImpl_,i,j,k) &
-                  - RelaxSemiCoef_VCB(EradImpl_,i,j,k,iBlock) &
+                  - PointSemiCoef_VCB(Relax_,i,j,k,iBlock) &
                   *StateImpl_VG(EradImpl_,i,j,k)
-          end do; end do; end do
-       case('radcond')
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             AbsorptionEmission = RelaxSemiCoef_VCB(1,i,j,k,iBlock) &
-                  *(StateImpl_VG(TeImpl_,i,j,k) &
-                  - StateImpl_VG(EradImpl_,i,j,k))
-             Rhs_VC(TeImpl_,i,j,k) = Rhs_VC(TeImpl_,i,j,k) &
-                  - AbsorptionEmission
-             Rhs_VC(EradImpl_,i,j,k) = Rhs_VC(EradImpl_,i,j,k) &
-                  + AbsorptionEmission
           end do; end do; end do
        end select
     else
        select case(TypeSemiImplicit)
        case('radiation')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             AbsorptionEmission = RelaxSemiCoef_VCB(EradImpl_,i,j,k,iBlock) &
-                  * (RelaxSemiCoef_VCB(Planck_,i,j,k,iBlock) &
+             AbsorptionEmission = PointSemiCoef_VCB(Relax_,i,j,k,iBlock) &
+                  * (PointSemiCoef_VCB(Planck_,i,j,k,iBlock) &
                   -  StateImpl_VG(EradImpl_,i,j,k))
 
              Rhs_VC(EradImpl_,i,j,k) = Rhs_VC(EradImpl_,i,j,k) &
                   + AbsorptionEmission
-          end do; end do; end do
-       case('radcond')
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             AbsorptionEmission = RelaxSemiCoef_VCB(1,i,j,k,iBlock) &
-                  *(StateImpl_VG(TeImpl_,i,j,k) &
-                  - StateImpl_VG(EradImpl_,i,j,k))
-
-             ! dErad/dt = + AbsorptionEmission
-             Rhs_VC(EradImpl_,i,j,k) = Rhs_VC(EradImpl_,i,j,k) &
-                  + AbsorptionEmission
-
-             ! dE/dt    = - AbsorptionEmission
-             Rhs_VC(TeImpl_,i,j,k) = Rhs_VC(TeImpl_,i,j,k) &
-                  - AbsorptionEmission
           end do; end do; end do
        end select
     end if
@@ -1298,31 +1311,20 @@ contains
          ! Shear according to ShockSlope
          if(ShockSlope < -cTiny)then
             call stop_mpi('ShockSlope must be positive!')
-         elseif(ShockSlope >= 1.0)then
-            Dn = nint(ShockSlope)
-            if(abs(Dn-ShockSlope)>cTiny)&
-                 call stop_mpi('ShockSlope > 1 should be a round number!')
-            select case(iSide)
-               ! Shift parallel to X by Dn
-            case(south_)
-               StateImpl_VG(iVar,Dn:nI+1,0,:) = &
-                    StateImpl_VG(iVar,0:nI+1-Dn,1,:)
-            case(north_)
-               StateImpl_VG(iVar,0:nI+1-Dn,nJ+1,:) = &
-                    StateImpl_VG(iVar,Dn:nI+1,nJ,:)
-            end select
+         elseif(ShockSlope > 1.0)then
+            call stop_mpi('ShockSlope > 1 not allowed!')
          else
-            ! ShockSlope < 1
+            ! ShockSlope <= 1
             Dn = nint(1.0/ShockSlope)
             if(abs(Dn-1.0/ShockSlope)>cTiny)call stop_mpi( &
-                 'ShockSlope < 1 should be the inverse of a round number!')
+                 'ShockSlope <= 1 should be the inverse of a round number!')
             select case(iSide)
                ! Shift parallel to X by 1, but copy from distance Dn in Y
             case(south_)
-               StateImpl_VG(iVar,1:nI+1,0,:) = StateImpl_VG(iVar,0:nI,Dn,:)
+               StateImpl_VG(iVar,1:nI,0,:) = StateImpl_VG(iVar,0:nI-1,Dn,:)
             case(north_)
-               StateImpl_VG(iVar,0:nI,nJ+1,:) = &
-                    StateImpl_VG(iVar,1:nI+1,nJ+1-Dn,:)
+               StateImpl_VG(iVar,1:nI,nJ+1,:) = &
+                    StateImpl_VG(iVar,2:nI+1,nJ+1-Dn,:)
             end select
          end if
       end do
@@ -1400,46 +1402,43 @@ contains
     integer, intent(in) :: iBlock, nVar
     real, intent(out) :: Jacobian_VVCI(nVar,nVar,nI,nJ,nK,nStencil)
 
-    integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iDiff
+    integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iDiff, iRelax
     real :: DiffLeft, DiffRight
-    real :: dSdErad, RelaxCoef
+    real :: RelaxCoef
     !--------------------------------------------------------------------------
 
     ! All elements have to be set
     Jacobian_VVCI(:,:,:,:,:,:) = 0.0
 
-    select case(TypeSemiImplicit)
-    case('radiation')
+    if(nPoint>0)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-
-          ! energy exchange
-          dSdErad = RelaxSemiCoef_VCB(EradImpl_,i,j,k,iBlock)
-
-          ! dSrad/dErad (diagonal)
-          Jacobian_VVCI(EradImpl_,EradImpl_,i,j,k,1) = -dSdErad
-
+          ! dSvar/dVar (diagonal)
+          Jacobian_VVCI(iPoint,iPoint,i,j,k,1) = &
+               -PointSemiCoef_VCB(Relax_,i,j,k,iBlock)
        end do; end do; end do
+    end if
 
-    case('radcond')
+    if(nRelax>0)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          do iRelax = 1, nRelax
+             iVar = iRelax_I(iRelax)
 
-          ! energy exchange
-          RelaxCoef = RelaxSemiCoef_VCB(1,i,j,k,iBlock)
+             RelaxCoef = RelaxSemiCoef_VCB(iRelax,i,j,k,iBlock)
 
-          ! dSrad/dErad (diagonal)
-          Jacobian_VVCI(EradImpl_,EradImpl_,i,j,k,1) = -RelaxCoef
+             ! dSvar/dVar (diagonal)
+             Jacobian_VVCI(iVar,iVar,i,j,k,1) = -RelaxCoef
 
-          ! dSe/dErad (off diagonal)
-          Jacobian_VVCI(TeImpl_,EradImpl_,i,j,k,1) = +RelaxCoef
+             ! dSe/dVar (off diagonal)
+             Jacobian_VVCI(TeImpl_,iVar,i,j,k,1) = +RelaxCoef
 
-          ! dSe/daTe^4 (diagonal)
-          Jacobian_VVCI(TeImpl_,TeImpl_,i,j,k,1) = -RelaxCoef
+             ! dSe/daTe^4 (diagonal)
+             Jacobian_VVCI(TeImpl_,TeImpl_,i,j,k,1) = -RelaxCoef
 
-          ! dSrad/daTe^4 (off diagonal)
-          Jacobian_VVCI(EradImpl_,TeImpl_,i,j,k,1) = +RelaxCoef
-
+             ! dSvar/daTe^4 (off diagonal)
+             Jacobian_VVCI(iVar,TeImpl_,i,j,k,1) = +RelaxCoef
+          end do
        end do; end do; end do
-    end select
+    end if
 
     do iDim = 1, nDim
        Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
@@ -1508,11 +1507,11 @@ contains
     do k = 1,nK; do j = 1,nJ; do i = 1,nI
        if(TypeSemiImplicit=='radiation')then
           AbsorptionEmission = ImplCoeff &
-               *RelaxSemiCoef_VCB(EradImpl_,i,j,k,iBlock) &
-               * (RelaxSemiCoef_VCB(Planck_,i,j,k,iBlock) &
+               *PointSemiCoef_VCB(Relax_,i,j,k,iBlock) &
+               * (PointSemiCoef_VCB(Planck_,i,j,k,iBlock) &
                -  State_VGB(Eradiation_,i,j,k,iBlock)) &
-               + (1.0-ImplCoeff)*RelaxSemiCoef_VCB(EradImpl_,i,j,k,iBlock) &
-               *(RelaxSemiCoef_VCB(Planck_,i,j,k,iBlock) &
+               + (1.0-ImplCoeff)*PointSemiCoef_VCB(Relax_,i,j,k,iBlock) &
+               *(PointSemiCoef_VCB(Planck_,i,j,k,iBlock) &
                - ImplOld_VCB(EradImpl_,i,j,k,iBlock))
                
           Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
