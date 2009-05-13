@@ -60,6 +60,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModFaceFlux, ONLY: face_flux_set_parameters, UseClimit, UsePoleDiffusion
   use ModLookupTable, ONLY: read_lookup_table_param
   use ModIonoVelocity,ONLY: read_iono_velocity_param
+  use ModTimeStepControl, ONLY: read_time_step_control_param
 
   implicit none
 
@@ -1127,6 +1128,10 @@ subroutine MH_set_parameters(TypeAction)
               end if
            end do
         end if
+
+     case("#CONTROLTIMESTEP", "#CONTROLDECREASE", "#CONTROLINCREASE", &
+          "#CONTROLFACTOR", "#CONTROLVAR")
+        call read_time_step_control_param(NameCommand)
 
      case("#UPDATECHECK")
         call read_var("UseUpdateCheck",UseUpdateCheck)          

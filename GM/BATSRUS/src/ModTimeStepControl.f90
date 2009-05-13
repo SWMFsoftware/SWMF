@@ -6,7 +6,7 @@ module ModTimeStepControl
 
   public:: read_time_step_control_param
   public:: control_time_step
-  logical, public:: UseControlTimeStep = .false.
+  logical, public:: UseTimeStepControl = .false.
 
   ! Local variables
   integer             :: nVarControl
@@ -41,15 +41,8 @@ contains
     character(len=*), parameter:: NameSub='read_time_step_control_param'
     !------------------------------------------------------------------------
     select case(NameCommand)
-    case("#IMPLCHECK", "#IMPLICITCHECK")
-       call read_var('RejectStepLevel1',   RejectStepLevel1)
-       call read_var('RejectStepFactor',   RejectStepFactor)
-       call read_var('ReduceStepLevel1',   ReduceStepLevel1)
-       call read_var('ReduceStepFactor',   ReduceStepFactor)
-       call read_var('IncreaseStepLevel1', IncreaseStepLevel1)
-       call read_var('IncreaseStepFactor', IncreaseStepFactor)
     case("#CONTROLTIMESTEP")
-       call read_var('UseControlTimeStep', UseControlTimeStep)
+       call read_var('UseTimeStepControl', UseTimeStepControl)
     case("#CONTROLDECREASE")
        call read_var('RejectStepLevel1' ,  RejectStepLevel1)
        call read_var('ReduceStepLevel1' ,  ReduceStepLevel1)
@@ -175,8 +168,12 @@ contains
        Cfl     = min(CflOrig, Cfl*Factor)
     end if
 
-    if(DoTestMe) write(*,*) NameSub,': RelativeChangeMin,Dt,DtFixed,Cfl=',&
-         RelativeChangeMin,Dt*No2Si_V(UnitT_), DtFixed*No2Si_V(UnitT_), Cfl
+    if(DoTestMe)then
+       write(*,*) NameSub,': RelativeChangeMin,Max,Factor=', &
+            RelativeChangeMin, RelativeChangeMax, Factor
+       write(*,*) NameSub,': Dt, DtFixed, Cfl=',&
+            Dt*No2Si_V(UnitT_), DtFixed*No2Si_V(UnitT_), Cfl
+    end if
 
   end subroutine control_time_step
 

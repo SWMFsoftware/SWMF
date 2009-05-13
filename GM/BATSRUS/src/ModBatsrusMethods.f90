@@ -314,6 +314,7 @@ subroutine BATS_advance(TimeSimulationLimit)
        UseSemiImplicit                                     !^CFG IF IMPLICIT
   use ModTemperature,  ONLY: advance_temperature, UseTemperatureDiffusion
   use ModIonoVelocity, ONLY: apply_iono_velocity
+  use ModTimeStepControl, ONLY: UseTimeStepControl, control_time_step
 
   implicit none
 
@@ -384,6 +385,8 @@ subroutine BATS_advance(TimeSimulationLimit)
   call exchange_messages
 
   if(UseSemiImplicit .and. Dt>0) call advance_impl   !^CFG IF IMPLICIT
+
+  if(UseTimeStepControl) call control_time_step
   
   if(UsePartSteady) then
      ! Select steady and unsteady blocks
@@ -921,5 +924,4 @@ contains
   end subroutine save_files_final
 
 end subroutine BATS_save_files
-
 
