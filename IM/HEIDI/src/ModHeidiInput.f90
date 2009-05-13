@@ -87,7 +87,7 @@ module ModHeidiInput
   ! "#INCLUDEWAVES"
   logical :: UseWaves = .false.
   ! "#BFIELD"
-  character(len=100) :: TypeBField
+  character(len=20) :: TypeBField = 'analytic'
   ! GIPHT END DECLARATIONS
 
 contains
