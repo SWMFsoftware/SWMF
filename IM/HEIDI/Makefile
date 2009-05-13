@@ -54,7 +54,7 @@ test_run:
 	cd ${TESTDIR}; ${MPIRUN} ./HEIDI.exe
 
 test_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=0.001 -a=1e-8 \
+	${SCRIPTDIR}/DiffNum.pl -t -r=0.001 -a=1e-30 \
 		${TESTDIR}/IM/${OUTDIR}/hydrogen/test1_h_prs.002  ${CHECKDIR}/test1_h_prs.002 \
 			> test.diff
 	ls -l test.diff
