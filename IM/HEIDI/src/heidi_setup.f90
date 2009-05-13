@@ -590,12 +590,12 @@ subroutine GETKPA(i3,nst,i2,nkp)
      JKP=min(48,int(T/10800.)+1)
      KP=KPtab(JKP) 
   else if (IKP.ge.3) then	! IKP=3 Read from file
+     KPP=RKPH(MAX0(1,I2-1))
+     KPO=RKPH(I2)
+     KPN=RKPH(MIN0(NSTEP/NKP+2,I2+1))
+     XKP=.125*(10.*KPO-KPP-KPN)
+     TOL=T
      if (mod(I3-1,NKP).eq.0 .or. I3.eq.NST) then
-        KPP=RKPH(MAX0(1,I2-1))
-        KPO=RKPH(I2)
-        KPN=RKPH(MIN0(NSTEP/NKP+2,I2+1))
-        XKP=.125*(10.*KPO-KPP-KPN)
-        TOL=T
         DAY=DAYR(I2)
         AP=APR(I2)
         F107=F107R(I2)
@@ -603,11 +603,6 @@ subroutine GETKPA(i3,nst,i2,nkp)
         I2=I2+1
         KPN=RKPH(I2)	
      end if
-     write(*,*)'T=',T
-     write(*,*)'Tol=',Tol
-     write(*,*)'XKP=',XKP
-     write(*,*)'KPP=',KPP
-     write(*,*)'KPO=',KPO
      if (T-TOL.lt.3600.) then
         KP=.5*(KPP+KPO)+(XKP-.5*(KPP+KPO))*(T-TOL)/3600.
      else if (T-TOL.lt.7200.) then
