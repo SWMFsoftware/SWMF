@@ -535,7 +535,7 @@ contains
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_, B0_DGB
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, far_field_BCs_BLK
     use ModNumConst, ONLY: cTiny
-    use ModMain,     ONLY: x_, y_, z_
+    use ModMain,     ONLY: x_, y_, z_,time_loop
 
     integer, intent(in) :: iBlock, iArea
     logical,intent(out) :: DoRefine
@@ -544,8 +544,7 @@ contains
     integer :: i,j,k
     character (len=*), parameter :: NameSub = 'user_specify_refinement'
     !-------------------------------------------------------------------
-
-    if(far_field_BCs_BLK(iBlock))then
+    if(.not.time_loop.or.far_field_BCs_BLK(iBlock))then
        DoRefine = .false.
        RETURN
     end if
