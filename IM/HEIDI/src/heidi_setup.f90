@@ -562,7 +562,7 @@ subroutine GETKPA(i3,nst,i2,nkp)
   implicit none
 
   integer  :: i3,nst,i4,i2,nkp,JKP,ii
-  real     :: KPN,KPO,lambdae,KPtab(48),tol,RSUN,KPP,XKP
+  real     :: KPN,KPO,lambdae,KPtab(48),tol=0.0,RSUN,KPP,XKP
   real     :: cosd
   external :: cosd
   save tol,i4,XKP,KPP,KPN,KPO
@@ -603,6 +603,11 @@ subroutine GETKPA(i3,nst,i2,nkp)
         I2=I2+1
         KPN=RKPH(I2)	
      end if
+     write(*,*)'T=',T
+     write(*,*)'Tol=',Tol
+     write(*,*)'XKP=',XKP
+     write(*,*)'KPP=',KPP
+     write(*,*)'KPO=',KPO
      if (T-TOL.lt.3600.) then
         KP=.5*(KPP+KPO)+(XKP-.5*(KPP+KPO))*(T-TOL)/3600.
      else if (T-TOL.lt.7200.) then
