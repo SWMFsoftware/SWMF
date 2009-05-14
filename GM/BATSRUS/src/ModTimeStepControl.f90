@@ -31,12 +31,13 @@ contains
 
     use ModReadParam
     use ModVarIndexes, ONLY: nVar, NameVar_V
-    use ModUtilities,  ONLY: lower_case
+    use ModUtilities,  ONLY: lower_case, split_string
 
     character(len=*), intent(in):: NameCommand
 
     integer :: iControl, iVar
     character(len=100):: NameVar, NameVarControl
+    character(len=20) :: NameVarControl_I(nVar)
 
     character(len=*), parameter:: NameSub='read_time_step_control_param'
     !------------------------------------------------------------------------
@@ -56,15 +57,16 @@ contains
        call read_var('ReduceStepFactor',   ReduceStepFactor)
        call read_var('IncreaseStepFactor', IncreaseStepFactor)
     case("#CONTROLVAR")
-       call read_var('nVarControl', nVarControl)
+       call read_var('NameVarControl', NameVarControl, IsLowerCase=.true.)
+       ! Split list of variables and match with NameVar_V
+       call split_string(NameVarControl, nVar, NameVarControl_I, nVarControl)
        if(allocated(iVarControl_I)) deallocate(iVarControl_I, VarRatio_I)
        allocate( iVarControl_I(nVarControl), VarRatio_I(nVarControl) )
        do iControl=1, nVarControl
-          call read_var('NameVarControl', NameVarControl, IsLowerCase=.true.)
           do iVar = 1, nVar
              NameVar = NameVar_V(iVar)
              call lower_case(NameVar)
-             if(NameVar == NameVarControl) EXIT
+             if( NameVar == NameVarControl_I(iControl) ) EXIT
           end do
           if(iVar > nVar)call stop_mpi(NameSub//' invalid NameVarControl='//&
                NameVarControl)
@@ -81,7 +83,7 @@ contains
   subroutine control_time_step
 
     use ModMain,    ONLY: nBlock, nI, nJ, nK, UnusedBlk, Dt, Cfl, &
-         DtFixed, DtFixedOrig, UseDtFixed
+         DtFixed, DtFixedOrig, UseDtFixed, Time_Simulation
     use ModAdvance, ONLY: Rho_, p_, &
          State_VGB, StateOld_VCB, Energy_GBI, EnergyOld_CBI, time_BLK
     use ModPhysics, ONLY: No2Si_V, UnitT_
@@ -134,7 +136,8 @@ contains
     ! Figure out time step reduction factor
     if(       RelativeChangeMin < RejectStepLevel1  &
          .or. RelativeChangeMax > RejectStepLevel2 )then
-       ! Redo step if change is below RejectStepLevel1, above RejectStepLevel2
+       ! Redo step if change is outside [RejectStepLevel1, RejectStepLevel2]
+       Time_Simulation = Time_Simulation - Dt*No2Si_V(UnitT_)
        Dt = 0.0
        ! Do not use previous step in BDF2 scheme
        !!! n_prev = -1
