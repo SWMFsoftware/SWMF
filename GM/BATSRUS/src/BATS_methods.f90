@@ -386,7 +386,7 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   if(UseSemiImplicit .and. Dt>0) call advance_impl   !^CFG IF IMPLICIT
 
-  if(UseTimeStepControl) call control_time_step
+  if(UseTimeStepControl .and. time_accurate .and. Dt>0) call control_time_step
   
   if(UsePartSteady) then
      ! Select steady and unsteady blocks
