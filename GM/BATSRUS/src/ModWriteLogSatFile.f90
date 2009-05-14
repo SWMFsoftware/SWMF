@@ -247,7 +247,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   use ModProcMH
   use ModNumConst
   use ModMPI
-  use ModMain, ONLY: n_step,dt,unusedBLK,nI,nJ,nK,nBlock,UseUserLogFiles,&
+  use ModMain, ONLY: n_step,Dt,Cfl,unusedBLK,nI,nJ,nK,nBlock,UseUserLogFiles,&
        iTest,jTest,kTest,ProcTest,BlkTest,optimize_message_pass,x_,y_,&
        UseRotatingFrame,UseB0
   use ModPhysics,    ONLY: rCurrents, inv_gm1, OMEGABody
@@ -828,6 +828,9 @@ contains
        ! OTHER VALUES
     case('dt')
        if(iProc == 0)LogVar_I(iVarTot) = dt
+
+    case('cfl')
+       if(iProc == 0)LogVar_I(iVarTot) = Cfl
 
     case default
        ! Check if the variable name is one of the state variables
