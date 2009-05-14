@@ -1129,7 +1129,8 @@ subroutine MH_set_parameters(TypeAction)
            end do
         end if
 
-     case("#CONTROLTIMESTEP", "#CONTROLDECREASE", "#CONTROLINCREASE", &
+     case("#TIMESTEPCONTROL", "#CONTROLTIMESTEP", &
+          "#CONTROLDECREASE", "#CONTROLINCREASE", &
           "#CONTROLFACTOR", "#CONTROLVAR")
         call read_time_step_control_param(NameCommand)
 
