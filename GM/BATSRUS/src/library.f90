@@ -1287,45 +1287,6 @@ subroutine join_str(n, String_I, String)
 
 end subroutine join_str
 !==============================================================================
-subroutine split_str(str,nmax,strarr,n)
-
-  implicit none
-
-  character (len=*), intent(in):: str
-  integer, intent(in) :: nmax
-  character (len=10), intent(out):: strarr(nmax)
-  integer, intent(out):: n
-
-  character (len=500) :: s
-  integer :: i,l
-
-  !--------------------------------------------------------------------------
-
-  n=0
-  l=len_trim(str)
-  s=str(1:l)
-
-  do
-     ! Check leading spaces
-     i=1
-     do while(s(i:i)==' ' .and. i<=l)
-        i=i+1
-     end do
-
-     if(i>l) EXIT       ! All spaces
-
-     if(i>1)s=s(i:l)   ! Delete leading spaces
-
-     i=index(s,' ')     ! Find end of first word
-
-     n=n+1              ! Put word into strarr
-     strarr(n)=s(1:i-1)
-     s=s(i+1:l)         ! Delete word and 1 space from string
-     if(n==nmax)exit
-  end do
-
-end subroutine split_str
-!==============================================================================
 subroutine find_test_cell
 
   ! Find cell indices corresponding to Xtest, Ytest, Ztest coordinates

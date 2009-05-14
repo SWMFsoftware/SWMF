@@ -23,7 +23,7 @@ subroutine MH_set_parameters(TypeAction)
   use CON_planet,       ONLY: read_planet_var, check_planet_var, NamePlanet
   use ModPlanetConst
   use CON_axes,         ONLY: init_axes
-  use ModUtilities,     ONLY: check_dir, fix_dir_name, DoFlush
+  use ModUtilities,     ONLY: check_dir, fix_dir_name, DoFlush, split_string
 
   use CON_planet,       ONLY: get_planet
   use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
@@ -1310,7 +1310,7 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#SHOCKTUBE")
         UseShockTube = .true.
-        call split_str(NamePrimitiveVar,nVar,NamePrimitive_V,nVarRead)
+        call split_string(NamePrimitiveVar,nVar,NamePrimitive_V,nVarRead)
         do i=1,nVar
            call read_var(NamePrimitive_V(i)//' left',ShockLeftState_V(i))
         end do

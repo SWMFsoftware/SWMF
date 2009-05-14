@@ -74,7 +74,7 @@ contains
     use CON_geopack, ONLY: CON_recalc, HgiGse_DD, GsmGse_DD
     use ModIO, ONLY: iUnitOut, write_prefix
     use ModTimeConvert, ONLY: time_int_to_real
-    use ModUtilities, ONLY: upper_case, lower_case
+    use ModUtilities, ONLY: upper_case, lower_case, split_string
 
     implicit none
 
@@ -164,7 +164,7 @@ contains
 
        if(index(line,'#VAR')>0)then
           read(UNITTMP_,'(a)', iostat = iError) StringInputVar
-          call split_str(StringInputVar, nVar, NameInputVar_I, nVarInput)
+          call split_string(StringInputVar, nVar, NameInputVar_I, nVarInput)
           UseNumberDensity = .false.
           UseTemperature   = .false.
           iVarInput_V = 0

@@ -55,7 +55,7 @@ subroutine write_plot_los(iFile)
   use ModMpi
   use CON_axes, ONLY : transform_matrix
   use ModCoordTransform, ONLY : rot_matrix_z, cross_product
-  use ModUtilities, ONLY: lower_case
+  use ModUtilities, ONLY: lower_case, split_string
   use ModPlotFile, ONLY: save_plot_file
   implicit none
 
@@ -205,8 +205,8 @@ subroutine write_plot_los(iFile)
        ' form = ',plot_form(ifile)
 
   call lower_case(plot_vars1)
-  call split_str(plot_vars1,nPlotvarLosMax,plotvarnames,nplotvar)
-  call split_str(plot_pars1,neqparmax,eqparnames,neqpar)
+  call split_string(plot_vars1,nPlotvarLosMax,plotvarnames,nplotvar)
+  call split_string(plot_pars1,neqparmax,eqparnames,neqpar)
   call set_eqpar(ifile-plot_,neqpar,eqparnames,eqpar)
 
   allnames='x y '//trim(plot_vars1)//' '//plot_pars1

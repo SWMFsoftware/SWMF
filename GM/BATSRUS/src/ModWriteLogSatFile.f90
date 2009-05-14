@@ -9,7 +9,7 @@ subroutine write_logfile(iSatIn,iFile)
   use ModPhysics, ONLY  : Si2Io_V, Si2No_V, UnitT_
   use ModIO
   use ModIoUnit, ONLY   : io_unit_new
-  use ModUtilities, ONLY: flush_unit
+  use ModUtilities, ONLY: flush_unit, split_string
   use ModSatelliteFile, ONLY: Satellite_Name, Satellite_First_Write, &
        iUnitSat_I, Sat_Time, Satellite_Vars, DoTrackSatellite_I, xSatellite
   use ModMpi
@@ -75,14 +75,14 @@ subroutine write_logfile(iSatIn,iFile)
   nLogR    = 0
   LogR_I   = 0.0
   if (iSatIn == 0) then
-     call split_str(log_vars,MaxLogVar,NameLogVar_I,nLogVar)
+     call split_string(log_vars,MaxLogVar,NameLogVar_I,nLogVar)
      do i=1,nLogVar
         if(index(NameLogVar_I(i),'flx')>0) nFluxVar = nFluxVar + 1
         if(index(NameLogVar_I(i),'pnt')>0 .or.  &
              index(NameLogVar_I(i),'test')>0)  DoWritePosition = .true.
      end do
      if (nFluxVar >0) then
-        call split_str(log_R_str, MaxLogR, NameLogR_I,nLogR)
+        call split_string(log_R_str, MaxLogR, NameLogR_I,nLogR)
         do i=1,nLogR
            read(NameLogR_I(i),*) LogR_I(i)
         end do
@@ -91,7 +91,7 @@ subroutine write_logfile(iSatIn,iFile)
   elseif (iSatIn>=1) then
      iSat = iSatIn
      if (.not. DoTrackSatellite_I(iSat)) return
-     call split_str(satellite_vars(satellite_+iSat),MaxLogVar, &
+     call split_string(satellite_vars(satellite_+iSat),MaxLogVar, &
           NameLogVar_I,nLogVar)
      StringTime = sat_time(satellite_+iSat)
      DoWritePosition = .true.
