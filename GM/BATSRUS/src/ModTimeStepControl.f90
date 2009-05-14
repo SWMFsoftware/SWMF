@@ -41,7 +41,7 @@ contains
     character(len=*), parameter:: NameSub='read_time_step_control_param'
     !------------------------------------------------------------------------
     select case(NameCommand)
-    case("#CONTROLTIMESTEP")
+    case("#CONTROLTIMESTEP", "#TIMESTEPCONTROL")
        call read_var('UseTimeStepControl', UseTimeStepControl)
     case("#CONTROLDECREASE")
        call read_var('RejectStepLevel1' ,  RejectStepLevel1)
@@ -60,7 +60,7 @@ contains
        if(allocated(iVarControl_I)) deallocate(iVarControl_I, VarRatio_I)
        allocate( iVarControl_I(nVarControl), VarRatio_I(nVarControl) )
        do iControl=1, nVarControl
-          call read_var('NameVarControl', NameVarControl)
+          call read_var('NameVarControl', NameVarControl, IsLowerCase=.true.)
           do iVar = 1, nVar
              NameVar = NameVar_V(iVar)
              call lower_case(NameVar)
