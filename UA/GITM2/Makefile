@@ -73,10 +73,11 @@ allclean:
 #
 rundir:
 	mkdir -p ${RUNDIR}/UA
-	mkdir -p ${RUNDIR}/EIE
-	cd ${RUNDIR} ; ln -s ${BINDIR}/PostProcess.exe ./PostGITM.exe
-	cp ${EIEDIR}/ED_isoelec_edep.dat ${RUNDIR}/EIE/isoelec_edep.dat
-	cp ${EIEDIR}/ED_hpke.noaa ${RUNDIR}/EIE/hpke.noaa
+	@(cd ${RUNDIR}; \
+		if [ ! -e "EIE/README" ]; then \
+			ln -s ${EMPIRICALIEDIR}/data EIE;\
+		fi;)
+	cd ${RUNDIR}; ln -s ${BINDIR}/PostProcess.exe ./PostGITM.exe
 	cd ${RUNDIR}/UA; \
 		mkdir restartOUT data; \
 		ln -s restartOUT restartIN; \
