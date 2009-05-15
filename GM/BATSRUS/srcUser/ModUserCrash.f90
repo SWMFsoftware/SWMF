@@ -7,6 +7,7 @@ module ModUser
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_update_states,              &
        IMPLEMENTED2 => user_calc_sources,               &
+       IMPLEMENTED3 => user_set_outerbcs,               &
        IMPLEMENTED4 => user_read_inputs,                &
        IMPLEMENTED5 => user_set_plot_var,               &
        IMPLEMENTED6 => user_init_session,               &
@@ -185,6 +186,30 @@ contains
     end do
 
   end subroutine user_read_inputs
+  !============================================================================
+  subroutine user_set_outerbcs(iBlock, iSide, TypeBc, IsFound)
+
+    use ModSize, ONLY: nI, nJ, nK
+    use ModAdvance, ONLY: State_VGB, Eradiation_
+
+    integer,          intent(in)  :: iBlock, iSide
+    character(len=20),intent(in)  :: TypeBc
+    logical,          intent(out) :: IsFound
+
+    character (len=*), parameter :: NameSub = 'user_set_outerbcs'
+
+    real :: EradOrig = -1.0
+
+    !-------------------------------------------------------------------
+    IsFound = iSide == 2
+    if(.not.IsFound) RETURN
+    State_VGB(:,nI+1,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
+    State_VGB(:,nI+2,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
+
+    if(EradOrig < 0) EradOrig = State_VGB(Eradiation_,nI,1,1,iBlock)
+    State_VGB(Eradiation_,nI+1:nI+2,:,:,iBlock) = EradOrig
+
+  end subroutine user_set_outerbcs
 
   !============================================================================
   subroutine user_set_ics
