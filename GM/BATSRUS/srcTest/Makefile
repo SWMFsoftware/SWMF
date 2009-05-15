@@ -46,7 +46,9 @@ test_octree:
 	@make test_octree.exe
 	@echo
 	@echo './test_octree.exe'
-	@./test_octree.exe
+	@./test_octree.exe > test_octree.log
+	@diff test_octree.log test_octree.ref > test_octree.diff
+	ls -l test_octree.diff
 	@echo
 	@echo test_octree done
 	@echo -----------------------------------------------------------------
