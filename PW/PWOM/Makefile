@@ -133,7 +133,7 @@ test_restart_read:
 
 rundir:
 	mkdir -p ${RUNDIR}/PW
-		@(cd ${RUNDIR}; \
+	@(cd ${RUNDIR}; \
 		if [ ! -e "EIE/README" ]; then \
 			ln -s ${EMPIRICALIEDIR}/data EIE;\
 		fi;)
