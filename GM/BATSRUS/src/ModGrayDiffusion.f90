@@ -21,6 +21,7 @@ module ModGrayDiffusion
   public :: get_radiation_energy_flux
   public :: calc_source_gray_diffusion
   public :: get_impl_gray_diff_state
+  public :: get_gray_diffusion_bc
   public :: get_gray_diffusion_rhs
   public :: get_gray_diff_jacobian
   public :: update_impl_gray_diff
@@ -1083,104 +1084,98 @@ contains
 
   !============================================================================
 
-  subroutine get_gray_diffusion_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
+  subroutine get_gray_diffusion_bc(iBlock, IsLinear)
 
-    use ModAdvance,  ONLY: State_VGB
-    use ModGeometry, ONLY: TypeGeometry, vInv_CB
-    use ModImplicit, ONLY: nw, TypeSemiImplicit
+    use ModGeometry, ONLY: TypeGeometry
+    use ModImplicit, ONLY: StateSemi_VGB
     use ModMain,     ONLY: nI, nJ, nK, TypeBc_I
     use ModParallel, ONLY: NOBLK, NeiLev
-    use ModPhysics,  ONLY: cRadiationNo
     use ModUser,     ONLY: user_set_outerbcs
 
     integer, intent(in) :: iBlock
-    real, intent(inout) :: StateImpl_VG(nw,-1:nI+2,-1:nJ+2,-1:nK+2)
-    real, intent(out)   :: Rhs_VC(nw,nI,nJ,nK)
     logical, intent(in) :: IsLinear
 
-    real :: Te, EnergyExchange, AbsorptionEmission
-    integer :: i, j, k, iDiff, iRelax, iVar
     logical :: IsFound
     character(len=20), parameter :: TypeUserBc='usersemi'
-    character(len=*), parameter :: NameSub='get_gray_diffusion_rhs'
+    character(len=*), parameter :: NameSub='get_gray_diffusion_bc'
     !--------------------------------------------------------------------------
 
     if(NeiLev(1,iBlock) == NOBLK)then
        if(IsLinear .and. TypeBc_I(1) /= 'reflect')then
-          StateImpl_VG(:,0,:,:) = 0.0
+          StateSemi_VGB(:,0,:,:,iBlock) = 0.0
        elseif(TypeBc_I(1) == 'user')then
           IsFound = .false.
           call user_set_outerbcs(iBlock,1,TypeUserBc,IsFound)
           if(.not. IsFound) call stop_mpi( &
                NameSub//': unknown TypeBc_I='//TypeBc_I(1))
        else
-          StateImpl_VG(:,0,:,:) = StateImpl_VG(:,1,:,:)
+          StateSemi_VGB(:,0,:,:,iBlock) = StateSemi_VGB(:,1,:,:,iBlock)
        end if
     end if
     if(NeiLev(2,iBlock) == NOBLK)then
        if(IsLinear .and. TypeBc_I(2) /= 'reflect')then
-          StateImpl_VG(:,nI+1,:,:) = 0.0
+          StateSemi_VGB(:,nI+1,:,:,iBlock) = 0.0
        elseif(TypeBc_I(2) == 'user')then
           IsFound = .false.
           call user_set_outerbcs(iBlock,2,TypeUserBc,IsFound)
           if(.not. IsFound) call stop_mpi( &
                NameSub//': unknown TypeBc_I='//TypeBc_I(2))
        else
-          StateImpl_VG(:,nI+1,:,:) = StateImpl_VG(:,nI,:,:)
+          StateSemi_VGB(:,nI+1,:,:,iBlock) = StateSemi_VGB(:,nI,:,:,iBlock)
        end if
     end if
     if(NeiLev(3,iBlock) == NOBLK)then
        if(TypeBc_I(3) == 'shear')then
-          StateImpl_VG(:,:,0,:) = StateImpl_VG(:,:,1,:)
+          StateSemi_VGB(:,:,0,:,iBlock) = StateSemi_VGB(:,:,1,:,iBlock)
           call semi_bc_shear(3)
        elseif(IsLinear .and. TypeBc_I(3) /= 'reflect')then
-          StateImpl_VG(:,:,0,:) = 0.0
+          StateSemi_VGB(:,:,0,:,iBlock) = 0.0
        elseif(TypeBc_I(3) == 'user')then
           IsFound = .false.
           call user_set_outerbcs(iBlock,3,TypeUserBc,IsFound)
           if(.not. IsFound) call stop_mpi( &
                NameSub//': unknown TypeBc_I='//TypeBc_I(3))
        else
-          StateImpl_VG(:,:,0,:) = StateImpl_VG(:,:,1,:)
+          StateSemi_VGB(:,:,0,:,iBlock) = StateSemi_VGB(:,:,1,:,iBlock)
        end if
     end if
     if(NeiLev(4,iBlock) == NOBLK) then
        if(TypeBc_I(4) == 'shear')then
-          StateImpl_VG(:,:,nJ+1,:) = StateImpl_VG(:,:,nJ,:)
+          StateSemi_VGB(:,:,nJ+1,:,iBlock) = StateSemi_VGB(:,:,nJ,:,iBlock)
           call semi_bc_shear(4)
        elseif(IsLinear .and. TypeBc_I(4) /= 'reflect')then
-          StateImpl_VG(:,:,nJ+1,:) = 0.0
+          StateSemi_VGB(:,:,nJ+1,:,iBlock) = 0.0
        elseif(TypeBc_I(4) == 'user')then
           IsFound = .false.
           call user_set_outerbcs(iBlock,4,TypeUserBc,IsFound)
           if(.not. IsFound) call stop_mpi( &
                NameSub//': unknown TypeBc_I='//TypeBc_I(4))
        else
-          StateImpl_VG(:,:,nJ+1,:) = StateImpl_VG(:,:,nJ,:)
+          StateSemi_VGB(:,:,nJ+1,:,iBlock) = StateSemi_VGB(:,:,nJ,:,iBlock)
        end if
     end if
     if(NeiLev(5,iBlock) == NOBLK) then
        if(IsLinear .and. TypeBc_I(5) /= 'reflect')then
-          StateImpl_VG(:,:,:,0) = 0.0
+          StateSemi_VGB(:,:,:,0,iBlock) = 0.0
        elseif(TypeBc_I(5) == 'user')then
           IsFound = .false.
           call user_set_outerbcs(iBlock,5,TypeUserBc,IsFound)
           if(.not. IsFound) call stop_mpi( &
                NameSub//': unknown TypeBc_I='//TypeBc_I(5))
        else
-          StateImpl_VG(:,:,:,0) = StateImpl_VG(:,:,:,1)
+          StateSemi_VGB(:,:,:,0,iBlock) = StateSemi_VGB(:,:,:,1,iBlock)
        end if
     end if
     if(NeiLev(6,iBlock) == NOBLK)then
        if(IsLinear .and. TypeBc_I(6) /= 'reflect')then
-          StateImpl_VG(:,:,:,nK+1) = 0.0
+          StateSemi_VGB(:,:,:,nK+1,iBlock) = 0.0
        elseif(TypeBc_I(6) == 'user')then
           IsFound = .false.
           call user_set_outerbcs(iBlock,6,TypeUserBc,IsFound)
           if(.not. IsFound) call stop_mpi( &
                NameSub//': unknown TypeBc_I='//TypeBc_I(6))
        else
-          StateImpl_VG(:,:,:,nK+1) = StateImpl_VG(:,:,:,nK)
+          StateSemi_VGB(:,:,:,nK+1,iBlock) = StateSemi_VGB(:,:,:,nK,iBlock)
        end if
     end if
 
@@ -1193,6 +1188,127 @@ contains
        if(NeiLev(6,iBlock)==1) &
             call correct_right_ghostcell(3,1,nI,1,nJ,nK+1,nK+1)
     end if
+
+  contains
+
+    subroutine semi_bc_shear(iSide)
+
+      use ModNumConst, ONLY: cTiny
+      use ModPhysics, ONLY: ShockSlope
+      use ModSize, ONLY: south_, north_
+
+      integer, intent(in) :: iSide
+
+      integer :: Dn, iDiff, iVar
+      !------------------------------------------------------------------------
+
+      ! If the shock is not tilted, there is nothing to do
+      if(abs(ShockSlope)<cTiny) RETURN
+
+      do iDiff = 1, nDiff
+         iVar = iDiff_I(iDiff)
+
+         ! Shear according to ShockSlope
+         if(ShockSlope < -cTiny)then
+            call stop_mpi('ShockSlope must be positive!')
+         elseif(ShockSlope > 1.0)then
+            call stop_mpi('ShockSlope > 1 not allowed!')
+         else
+            ! ShockSlope <= 1
+            Dn = nint(1.0/ShockSlope)
+            if(abs(Dn-1.0/ShockSlope)>cTiny)call stop_mpi( &
+                 'ShockSlope <= 1 should be the inverse of a round number!')
+            select case(iSide)
+               ! Shift parallel to X by 1, but copy from distance Dn in Y
+            case(south_)
+               StateSemi_VGB(iVar,1:nI,0,:,iBlock) = &
+                    StateSemi_VGB(iVar,0:nI-1,Dn,:,iBlock)
+            case(north_)
+               StateSemi_VGB(iVar,1:nI,nJ+1,:,iBlock) = &
+                    StateSemi_VGB(iVar,2:nI+1,nJ+1-Dn,:,iBlock)
+            end select
+         end if
+      end do
+
+    end subroutine semi_bc_shear
+
+    !==========================================================================
+
+    subroutine correct_left_ghostcell(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
+
+      use ModImplicit, ONLY: kr
+
+      integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
+
+      integer :: i, j, k, iShift, jShift, kShift, Di, Dj, Dk, i1, j1, k1
+      integer :: iDiff, iVar
+      !------------------------------------------------------------------------
+
+      Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
+      iShift = 1-Di; jShift = 1-Dj; kShift = 1-Dk
+      do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
+         i1=i+Di; j1=j+Dj; k1=k+Dk
+         do iDiff = 1, nDiff
+            iVar = iDiff_I(iDiff)
+            StateSemi_VGB(iVar,i:i+iShift,j:j+jShift,k:k+kShift,iBlock) = &
+                 StateSemi_VGB(iVar,i:i+iShift,j:j+jShift,k:k+kShift,iBlock) &
+                 + StateSemi_VGB( &
+                 iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift,iBlock) &
+                 -0.25*sum(StateSemi_VGB( &
+                 iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift,iBlock))
+         end do
+      enddo; enddo; enddo
+
+    end subroutine correct_left_ghostcell
+
+    !==========================================================================
+
+    subroutine correct_right_ghostcell(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
+
+      use ModImplicit, ONLY: kr
+
+      integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
+
+      integer :: i, j, k, iShift, jShift, kShift, Di, Dj, Dk, i1, j1, k1
+      integer :: iDiff, iVar
+      !------------------------------------------------------------------------
+
+      Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
+      iShift = 1-Di; jShift = 1-Dj; kShift = 1-Dk
+      do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
+         i1=i-Di; j1=j-Dj; k1=k-Dk
+         do iDiff = 1, nDiff
+            iVar = iDiff_I(iDiff)
+            StateSemi_VGB(iVar,i:i+iShift,j:j+jShift,k:k+kShift,iBlock) = &
+                 StateSemi_VGB(iVar,i:i+iShift,j:j+jShift,k:k+kShift,iBlock) &
+                 + StateSemi_VGB( &
+                 iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift,iBlock) &
+                 -0.25*sum(StateSemi_VGB( &
+                 iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift,iBlock))
+         end do
+      enddo; enddo; enddo
+
+    end subroutine correct_right_ghostcell
+
+  end subroutine get_gray_diffusion_bc
+
+  !============================================================================
+
+  subroutine get_gray_diffusion_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
+
+    use ModGeometry, ONLY: TypeGeometry, vInv_CB
+    use ModImplicit, ONLY: nw
+    use ModMain,     ONLY: nI, nJ, nK
+
+    integer, intent(in) :: iBlock
+    real, intent(inout) :: StateImpl_VG(nw,-1:nI+2,-1:nJ+2,-1:nK+2)
+    real, intent(out)   :: Rhs_VC(nw,nI,nJ,nK)
+    logical, intent(in) :: IsLinear
+
+    real :: Te, EnergyExchange
+    integer :: i, j, k, iDiff, iRelax, iVar
+    character(len=*), parameter :: NameSub='get_gray_diffusion_rhs'
+    !--------------------------------------------------------------------------
 
     !!! Rhs_VC = 0.0
 
@@ -1264,128 +1380,24 @@ contains
        end do; end do; end do
     end if
        
-    ! Source term due to absorption and emission
-    ! Sigma_a*(cRadiation*Te**4-Erad)
-    if(IsLinear)then
-       select case(TypeSemiImplicit)
-       case('radiation')
+    ! Point implicit source terms due to energy exchange
+    if(nPoint>0)then
+       if(IsLinear)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             Rhs_VC(EradImpl_,i,j,k) = Rhs_VC(EradImpl_,i,j,k) &
+             Rhs_VC(iPoint,i,j,k) = Rhs_VC(iPoint,i,j,k) &
                   - PointSemiCoef_VCB(Relax_,i,j,k,iBlock) &
-                  *StateImpl_VG(EradImpl_,i,j,k)
+                  *StateImpl_VG(iPoint,i,j,k)
           end do; end do; end do
-       end select
-    else
-       select case(TypeSemiImplicit)
-       case('radiation')
+       else
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             AbsorptionEmission = PointSemiCoef_VCB(Relax_,i,j,k,iBlock) &
+             EnergyExchange = PointSemiCoef_VCB(Relax_,i,j,k,iBlock) &
                   * (PointSemiCoef_VCB(Planck_,i,j,k,iBlock) &
-                  -  StateImpl_VG(EradImpl_,i,j,k))
+                  -  StateImpl_VG(iPoint,i,j,k))
 
-             Rhs_VC(EradImpl_,i,j,k) = Rhs_VC(EradImpl_,i,j,k) &
-                  + AbsorptionEmission
+             Rhs_VC(iPoint,i,j,k) = Rhs_VC(iPoint,i,j,k) + EnergyExchange
           end do; end do; end do
-       end select
+       end if
     end if
-
-  contains
-
-    subroutine semi_bc_shear(iSide)
-
-      use ModNumConst, ONLY: cTiny
-      use ModPhysics, ONLY: ShockSlope
-      use ModSize, ONLY: south_, north_
-
-      integer, intent(in) :: iSide
-
-      integer :: Dn
-      !------------------------------------------------------------------------
-
-      ! If the shock is not tilted, there is nothing to do
-      if(abs(ShockSlope)<cTiny) RETURN
-
-      do iDiff = 1, nDiff
-         iVar = iDiff_I(iDiff)
-
-         ! Shear according to ShockSlope
-         if(ShockSlope < -cTiny)then
-            call stop_mpi('ShockSlope must be positive!')
-         elseif(ShockSlope > 1.0)then
-            call stop_mpi('ShockSlope > 1 not allowed!')
-         else
-            ! ShockSlope <= 1
-            Dn = nint(1.0/ShockSlope)
-            if(abs(Dn-1.0/ShockSlope)>cTiny)call stop_mpi( &
-                 'ShockSlope <= 1 should be the inverse of a round number!')
-            select case(iSide)
-               ! Shift parallel to X by 1, but copy from distance Dn in Y
-            case(south_)
-               StateImpl_VG(iVar,1:nI,0,:) = StateImpl_VG(iVar,0:nI-1,Dn,:)
-            case(north_)
-               StateImpl_VG(iVar,1:nI,nJ+1,:) = &
-                    StateImpl_VG(iVar,2:nI+1,nJ+1-Dn,:)
-            end select
-         end if
-      end do
-
-    end subroutine semi_bc_shear
-
-    !==========================================================================
-
-    subroutine correct_left_ghostcell(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
-
-      use ModImplicit, ONLY: kr
-
-      integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
-
-      integer :: iShift, jShift, kShift, Di, Dj, Dk, i1, j1, k1
-      !------------------------------------------------------------------------
-
-      Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
-      iShift = 1-Di; jShift = 1-Dj; kShift = 1-Dk
-      do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
-         i1=i+Di; j1=j+Dj; k1=k+Dk
-         do iDiff = 1, nDiff
-            iVar = iDiff_I(iDiff)
-            StateImpl_VG(iVar,i:i+iShift,j:j+jShift,k:k+kShift) = &
-                 StateImpl_VG(iVar,i:i+iShift,j:j+jShift,k:k+kShift) &
-                 + StateImpl_VG( &
-                 iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift) &
-                 -0.25*sum(StateImpl_VG( &
-                 iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift))
-         end do
-      enddo; enddo; enddo
-
-    end subroutine correct_left_ghostcell
-
-    !==========================================================================
-
-    subroutine correct_right_ghostcell(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
-
-      use ModImplicit, ONLY: kr
-
-      integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
-
-      integer :: iShift, jShift, kShift, Di, Dj, Dk, i1, j1, k1
-      !------------------------------------------------------------------------
-
-      Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
-      iShift = 1-Di; jShift = 1-Dj; kShift = 1-Dk
-      do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
-         i1=i-Di; j1=j-Dj; k1=k-Dk
-         do iDiff = 1, nDiff
-            iVar = iDiff_I(iDiff)
-            StateImpl_VG(iVar,i:i+iShift,j:j+jShift,k:k+kShift) = &
-                 StateImpl_VG(iVar,i:i+iShift,j:j+jShift,k:k+kShift) &
-                 + StateImpl_VG( &
-                 iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift) &
-                 -0.25*sum(StateImpl_VG( &
-                 iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift))
-         end do
-      enddo; enddo; enddo
-
-    end subroutine correct_right_ghostcell
 
   end subroutine get_gray_diffusion_rhs
 

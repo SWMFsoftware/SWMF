@@ -269,7 +269,7 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
        TypeSemiImplicit
   use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
-  use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs
+  use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs, get_gray_diffusion_bc
   use ModMessagePass, ONLY: message_pass_dir
   use ModGeometry, ONLY: vInv_CB
 
@@ -298,6 +298,7 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
      iBlock = impl2iBLK(iImplBlock)
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
+        call get_gray_diffusion_bc(iBlock, IsLinear=.false.)
         call get_gray_diffusion_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
              Rhs_VCB(:,:,:,:,iImplBlock), IsLinear=.false.)
      case default
@@ -322,7 +323,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
        TypeSemiImplicit, ImplCoeff, DconsDsemi_VCB !!!, wnrm
   use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
-  use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs
+  use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs, get_gray_diffusion_bc
   use ModMessagePass, ONLY: message_pass_dir
   use ModGeometry, ONLY: vInv_CB
 
@@ -363,6 +364,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
 
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
+        call get_gray_diffusion_bc(iBlock, IsLinear = .true.)
         call get_gray_diffusion_rhs(iBlock, &
              StateSemi_VGB(:,:,:,:,iBlock), Rhs_VC, IsLinear = .true.)
      case default
