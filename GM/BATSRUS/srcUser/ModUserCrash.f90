@@ -200,6 +200,7 @@ contains
 
     use ModSize, ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Eradiation_
+    use ModImplicit, ONLY: StateSemi_VGB
     use ModGeometry, ONLY: dx_BLK
 
     integer,          intent(in)  :: iBlock, iSide
@@ -213,29 +214,52 @@ contains
     IsFound = iSide < 3
     if(.not.IsFound) RETURN
 
-    ! Float for all variables
-    State_VGB(:,nI+1,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
-    State_VGB(:,nI+2,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
-
-
     ! Mixed boundary condition for Erad: 
     ! assume a linear profile to a fixed value at some distance
     Dx = dx_BLK(iBlock)
 
     if(iSide == 1)then
-       State_VGB(Eradiation_,0,:,:,iBlock) = &
-            ( (DistBc1 - 0.5*Dx)*State_VGB(Eradiation_,1,:,:,iBlock) &
-            + Dx*EradBc1 ) / (DistBc1 + 0.5*Dx)
-       State_VGB(Eradiation_,-1,:,:,iBlock) = &
-            2*State_VGB(Eradiation_,0,:,:,iBlock) &
-            - State_VGB(Eradiation_,1,:,:,iBlock)
+       if(TypeBc /= 'usersemi')then
+
+          ! Float for all variables
+
+          State_VGB(:, 0,:,:,iBlock) = State_VGB(:,1,:,:,iBlock)
+          State_VGB(:,-1,:,:,iBlock) = State_VGB(:,1,:,:,iBlock)
+       
+          State_VGB(Eradiation_,0,:,:,iBlock) = &
+               ( (DistBc1 - 0.5*Dx)*State_VGB(Eradiation_,1,:,:,iBlock) &
+               + Dx*EradBc1 ) / (DistBc1 + 0.5*Dx)
+          State_VGB(Eradiation_,-1,:,:,iBlock) = &
+               2*State_VGB(Eradiation_,0,:,:,iBlock) &
+               - State_VGB(Eradiation_,1,:,:,iBlock)
+       else
+          StateSemi_VGB(1,0,:,:,iBlock) = &
+               ( (DistBc1 - 0.5*Dx)*StateSemi_VGB(1,1,:,:,iBlock) &
+               + Dx*EradBc1 ) / (DistBc1 + 0.5*Dx)
+          StateSemi_VGB(1,-1,:,:,iBlock) = &
+               2*StateSemi_VGB(1,0,:,:,iBlock) &
+               - StateSemi_VGB(1,1,:,:,iBlock)
+       end if
     else
-       State_VGB(Eradiation_,nI+1,:,:,iBlock) = &
-            ( (DistBc2 - 0.5*Dx)*State_VGB(Eradiation_,nI,:,:,iBlock) &
-            + Dx*EradBc2 ) / (DistBc2 + 0.5*Dx)
-       State_VGB(Eradiation_,nI+2,:,:,iBlock) = &
-            2*State_VGB(Eradiation_,nI+1,:,:,iBlock) &
-            - State_VGB(Eradiation_,nI  ,:,:,iBlock)
+       if(TypeBc /= 'usersemi')then
+          ! Float for all variables
+          State_VGB(:,nI+1,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
+          State_VGB(:,nI+2,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
+
+          State_VGB(Eradiation_,nI+1,:,:,iBlock) = &
+               ( (DistBc2 - 0.5*Dx)*State_VGB(Eradiation_,nI,:,:,iBlock) &
+               + Dx*EradBc2 ) / (DistBc2 + 0.5*Dx)
+          State_VGB(Eradiation_,nI+2,:,:,iBlock) = &
+               2*State_VGB(Eradiation_,nI+1,:,:,iBlock) &
+               - State_VGB(Eradiation_,nI  ,:,:,iBlock)
+       else
+          StateSemi_VGB(1,nI+1,:,:,iBlock) = &
+               ( (DistBc2 - 0.5*Dx)*StateSemi_VGB(1,nI,:,:,iBlock) &
+               + Dx*EradBc2 ) / (DistBc2 + 0.5*Dx)
+          StateSemi_VGB(1,nI+2,:,:,iBlock) = &
+               2*StateSemi_VGB(1,nI+1,:,:,iBlock) &
+               - StateSemi_VGB(1,nI  ,:,:,iBlock)
+       end if
     end if
 
   end subroutine user_set_outerbcs
@@ -1144,6 +1168,8 @@ contains
 
     EradBc1 = cRadiationNo*(TrkevBc1*cKeVtoK*Si2No_V(UnitTemperature_))**4
     EradBc2 = cRadiationNo*(TrkevBc2*cKeVtoK*Si2No_V(UnitTemperature_))**4
+
+    if(iProc==0) write(*,*) NameSub, 'EradBc1,EradBc2=', EradBc1, EradBc2
 
     iTablePPerE      = i_lookup_table('pPerE(rho,e/rho)')
     iTableEPerP      = i_lookup_table('ePerP(rho,p/rho)')
