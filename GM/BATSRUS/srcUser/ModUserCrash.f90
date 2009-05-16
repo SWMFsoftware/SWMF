@@ -91,6 +91,10 @@ module ModUser
   integer:: iTablePPerE = -1, iTableEPerP = -1, iTableCvGammaTe = -1
   integer:: iTableOpacity = -1
 
+  ! Variables for the left and right boundary conditions
+  real :: DistBc1 = 200.0, TrkevBc1=0.0, EradBc1 = 0.0
+  real :: DistBc2 = 200.0, TrkevBc2=0.0, EradBc2 = 0.0
+
   ! Variables for some tests
   logical :: UseWave    = .false.
   real    :: xStartWave = -100.0
@@ -178,6 +182,11 @@ contains
              call read_var('xEndWave',   xEndWave)
              call read_var('DpWave',     DpWave)
           end if
+       case("#RADBOUNDARY")
+          call read_var('DistBc1', DistBc1)
+          call read_var('TrkevBc1', TrkevBc1)
+          call read_var('DistBc2', DistBc2)
+          call read_var('TrkevBc2', TrkevBc2)
        case('#USERINPUTEND')
           EXIT
        case default
@@ -191,6 +200,7 @@ contains
 
     use ModSize, ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Eradiation_
+    use ModGeometry, ONLY: dx_BLK
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=20),intent(in)  :: TypeBc
@@ -198,16 +208,35 @@ contains
 
     character (len=*), parameter :: NameSub = 'user_set_outerbcs'
 
-    real :: EradOrig = -1.0
-
+    real :: Dx
     !-------------------------------------------------------------------
-    IsFound = iSide == 2
+    IsFound = iSide < 3
     if(.not.IsFound) RETURN
+
+    ! Float for all variables
     State_VGB(:,nI+1,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
     State_VGB(:,nI+2,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
 
-    if(EradOrig < 0) EradOrig = State_VGB(Eradiation_,nI,1,1,iBlock)
-    State_VGB(Eradiation_,nI+1:nI+2,:,:,iBlock) = EradOrig
+
+    ! Mixed boundary condition for Erad: 
+    ! assume a linear profile to a fixed value at some distance
+    Dx = dx_BLK(iBlock)
+
+    if(iSide == 1)then
+       State_VGB(Eradiation_,0,:,:,iBlock) = &
+            ( (DistBc1 - 0.5*Dx)*State_VGB(Eradiation_,1,:,:,iBlock) &
+            + Dx*EradBc1 ) / (DistBc1 + 0.5*Dx)
+       State_VGB(Eradiation_,-1,:,:,iBlock) = &
+            2*State_VGB(Eradiation_,0,:,:,iBlock) &
+            - State_VGB(Eradiation_,1,:,:,iBlock)
+    else
+       State_VGB(Eradiation_,nI+1,:,:,iBlock) = &
+            ( (DistBc2 - 0.5*Dx)*State_VGB(Eradiation_,nI,:,:,iBlock) &
+            + Dx*EradBc2 ) / (DistBc2 + 0.5*Dx)
+       State_VGB(Eradiation_,nI+2,:,:,iBlock) = &
+            2*State_VGB(Eradiation_,nI+1,:,:,iBlock) &
+            - State_VGB(Eradiation_,nI  ,:,:,iBlock)
+    end if
 
   end subroutine user_set_outerbcs
 
@@ -1099,6 +1128,8 @@ contains
     use ModProcMH,      ONLY: iProc, iComm
     use ModVarIndexes,  ONLY: LevelXe_, LevelPl_, Rho_, UnitUser_V
     use ModLookupTable, ONLY: i_lookup_table, make_lookup_table
+    use ModPhysics,     ONLY: cRadiationNo, Si2No_V, UnitTemperature_
+    use ModConst,       ONLY: cKevToK
 
     character (len=*), parameter :: NameSub = 'user_init_session'
     !-------------------------------------------------------------------
@@ -1110,6 +1141,9 @@ contains
     else
        UnitUser_V(LevelXe_:LevelPl_) = UnitUser_V(Rho_)*1.e-6
     end if
+
+    EradBc1 = cRadiationNo*(TrkevBc1*cKeVtoK*Si2No_V(UnitTemperature_))**4
+    EradBc2 = cRadiationNo*(TrkevBc2*cKeVtoK*Si2No_V(UnitTemperature_))**4
 
     iTablePPerE      = i_lookup_table('pPerE(rho,e/rho)')
     iTableEPerP      = i_lookup_table('ePerP(rho,p/rho)')
