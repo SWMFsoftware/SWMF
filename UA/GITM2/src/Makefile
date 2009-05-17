@@ -162,4 +162,6 @@ distclean:
 		init_iri.f90 \
 		init_msis.f90 \
 		output.f90 \
-		planet.f90
+		planet.f90 \
+		set_vertical_bcs.f90
+
