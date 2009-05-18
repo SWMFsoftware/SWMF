@@ -139,7 +139,7 @@ contains
 
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: Dx_Blk
-    use ModImplicit, ONLY: StateSemi_VGB, TypeSemiImplicit
+    use ModImplicit, ONLY: StateSemi_VGB, TypeSemiImplicit, iEradImpl
     use ModMain,     ONLY: nJ, nK
     use ModPhysics,  ONLY: cRadiationNo
 
@@ -147,7 +147,7 @@ contains
     character(len=20),intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
-    integer :: j, k, iEradImpl
+    integer :: j, k
     real :: Coef
 
     character (len=*), parameter :: NameSub = 'user_set_outerbcs'
@@ -168,14 +168,6 @@ contains
     case('usersemi')
 
        ! Marshak boundary conditions
-
-       select case(TypeSemiImplicit)
-       case('radiation')
-          iEradImpl = 1
-       case('radcond')
-          iEradImpl = 2
-       end select
-
        Coef = 2.0/(3.0*SpecificOpacity*Density*Dx_Blk(iBlock))
        do k = 1, nK; do j = 1, nJ
           StateSemi_VGB(iEradImpl,0,j,k,iBlock) = &
