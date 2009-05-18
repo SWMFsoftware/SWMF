@@ -39,6 +39,9 @@ module ModImplicit
   logical :: UseSemiImplicit = .false.
   character(len=40) :: TypeSemiImplicit = 'radiation'
 
+  ! Named indices for semi-implicit variables
+  integer :: iTeImpl, iEradImpl
+
   !\
   ! Parameters for selecting implicit blocks
   !/
