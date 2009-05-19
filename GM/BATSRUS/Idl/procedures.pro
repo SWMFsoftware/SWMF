@@ -2164,14 +2164,87 @@ c = s*max([0,min([abs(a),s*b])])
 
 return,c
 end
+;==========================================================================
+function symmdiff,direction,a,x,y,report=report,anti=anti
+;
+;find the symmetric for irregular grid
+;
+;=========================================================================
+
+if n_elements(x) eq 0 then return, symmdiffreg(direction,a)
+
+if not keyword_set(report) then report = 0
+
+diff=a*0
+
+e = exp(1.0d0)
+sorting = x + e*y
+sortsym = x - e*y
+n = n_elements(x)
+
+if direction eq 1 then begin
+   signx = -1.0 & signy = +1.0
+endif else begin
+   signx = +1.0 & signy = -1.0
+endelse
+
+for i=0,n-1 do begin
+    if diff(i) eq 0 then begin
+        xi = x(i)
+        yi = y(i)   
+        sortsymi = sortsym(i)
+        j  = n/2
+        dj = j
+        ;print,'i,x,y,sortsymi=',i,xi,yi,sortsymi
+        ;print,'n,j,dj=',n,j,dj
+        last = 0
+        fail = 0
+        while abs(x(j)-signx*xi) gt 1e-6 or abs(y(j)-signy*yi) gt 1e-6 do begin
+            if last then begin
+                fail = 1
+                break
+            endif
+            
+             ;print,'j,dj,sorting=',j,dj,sorting(j)
+
+            if dj eq 1 then last = 1 else dj = (dj+1)/2
+
+            if sortsymi le sorting(j) then j = j - dj else j = j + dj
+
+            if j lt 0 then j = 0
+            if j ge n then j = n - 1
+
+        endwhile 
+
+        ;print,'solution j,x,y,sort=',j,x(j),y(j),sorting(j)
+
+        if fail then begin
+            print,'error in symdiff: incorrect number of mirror points'
+            print,'i,j,dj,last=',i,j,dj,last
+            print,'xi,yi=',xi,yi
+            if j ge 0 and j lt n then print,'xj,yj=',x(j),y(j)
+            diff(i)=1e30
+            retall
+        endif else begin
+            if keyword_set(anti) then diff(i)= a(i)+a(j) else diff(i)= a(i)-a(j)
+            diff(j)=-diff(i)
+            if report and abs(diff(i)) gt report then print,"i,x,y,diff=",i,xi,yi,diff(i)
+        endelse
+    endif
+endfor
+return,diff
+
+end
 ;===========================================================================
-function symmdiff,direction,a
+function symmdiffreg,direction,a
 ;
 ; Take symmetric difference of "a" with respect to a mirror plane in direction
 ; "direction"
 ;
 ;===========================================================================
 on_error,2
+
+if not keyword_set(report) then report = 0
 
 siz=size(a)
 dim=siz(0)
@@ -2181,6 +2254,10 @@ diff=a
 
 case dim of
 1: for i=0,nx-1 do diff(i)=a(i)-a(nx-1-i)
+
+;if keyword_set(anti) then diff(i)= a(i)+a(nx-1-i) 
+;if report and abs(diff(i)) gt report then print,"i,x,y,diff=",i,xi,yi,diff(i)
+
 2: begin
      ny=siz(2)
      case direction of
