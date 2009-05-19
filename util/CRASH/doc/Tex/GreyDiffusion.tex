@@ -77,7 +77,7 @@ energy is now given by the total gas and radiation energy
 &=& \frac{p+\prad}{\gamma - 1} + \Delta (\rho e) + \frac{3}{2}\prad, 
 \end{eqnarray} 
 where we have fixed $\gamma=5/3$. This indicates that we have to solve yet 
-another advection equation for $3\prad/2=\Erad/2$. This is however 
+nother advection equation for $3\prad/2=\Erad/2$. This is however 
 already accomplished by the left hand side of the radiation energy equation 
 (\ref{eq:grey}).  The solution of our radiation hydrodynamics equations with 
 grey diffusion approximation is obtained as follows: 
@@ -301,5 +301,42 @@ or do a conservative update for the internal energy
   \Eint^{n+1} = \Eint^n + \beta \Delta t K''\left[\Erad^{n+1} - B^*\right]
                         + (1-\beta) \Delta t K''\left[\Erad^* - B^*\right]
 \end{equation}
+
+\section{Boundary conditions}
+
+The radiation energy is strongly diffusive therefore the boundary conditions determine 
+the solution more than the initial conditions. We apply the zero incoming flux condition
+satisfying
+\begin{equation}
+   E_r + \frac{2 D}{c}\mathbf{n} \cdot \nabla E_r = 0
+\end{equation}
+where $E_r$ is the radiation energy density, $c$ the speed of light, 
+$D=c/(3\kappa_R)$ is the diffusion coefficient based on the Rosseland mean
+opacity $\kappa_R$, and $\mathbf{n}$ is the outward pointing normal unit vector. 
+For the left boundary this can be disretized as
+\begin{equation}
+   \frac{E_0 + E_1}{2} - \frac{2 D}{c}\frac{E_1 - E_0}{\Delta x} = 0
+\end{equation}
+where we dropped the subscript $r$ and replaced it with the cell index. 
+Index 1 corresponds to the last physical cell and 0 to the ghost cell. 
+This equation can be solved for the ghost cell value
+\begin{equation}
+  E_1 = \frac{ 2D/(c\Delta x) - 1/2}{ 2D/(c\Delta x) + 1/2} E_0 
+\end{equation}
+For very small opacity $D$ becomes very large, so the ratio will approach one, 
+i.e. we get a zero gradient condition. If we take into account the flux limiter,
+the maximum value for $D$ is 
+\begin{equation}
+  D = c E_r / |\nabla E_r|
+\end{equation}
+If we substitute this into the first equation of this section, we get
+\begin{equation}
+   E_r - 2 E_r = 0
+\end{equation}
+assuming that $\mathbf{n} \cdot \nabla E_r$ is negative, i.e. the radiation
+energy is decreasing outside the boundaries. The factor 2 is probably not
+correct in this limit. In any case this does not provide a useful boundary
+condition. This means that in the free streaming limit other assumptions are
+required.
 
 \end{document}  
