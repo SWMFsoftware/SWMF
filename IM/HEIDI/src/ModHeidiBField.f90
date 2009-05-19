@@ -18,15 +18,18 @@ contains
     real                :: LatMax                  ! Maximum Latitude 
     real                :: Lat                     ! Latitude
     real                :: SinLat2, CosLat2
+    real                :: LatMin2, LatMax2, LatMinMax
+    real                :: Beta,dLatNew,beta1,beta2
+    real, parameter     :: Epsilon = 1.e-10
     integer             :: i
     !----------------------------------------------------------------------------------
 
     LatMax = acos(sqrt(1./L))
     LatMin = -LatMax
     dLat   = (LatMax-LatMin)/(nStep-1)
-
+    !uniform grid along the field line
     Lat = LatMin
-
+    
     do i =1, nStep
        SinLat2 = sin(Lat)**2
        CosLat2 = 1.0 - SinLat2
@@ -36,10 +39,33 @@ contains
        Lat = Lat + dLat
     end do
 
+    !non-uniform grid along the field line
+!!$    LatMin2 = LatMin**2
+!!$    LatMax2 = LatMax**2
+!!$    LatMinMax = LatMin*LatMax
+!!$  
+!!$    beta1 = 6.0*(-nStep+Epsilon*nStep+1.0)*(nStep-1.0) 
+!!$    beta2 = nStep*(2.0*LatMax2*nStep + 2.0*LatMinMax*nStep + 2.0*LatMin2*nStep &
+!!$         - 4.0*LatMinMax - LatMin2 - LatMax2)
+!!$    Beta = - beta1/beta2  
+!!$
+!!$    do i =1, nStep
+!!$       Lat = LatMin+(i-1)*dLat
+!!$       SinLat2 = sin(Lat)**2
+!!$       CosLat2 = 1.0 - SinLat2
+!!$       bField_I(i) = DipoleStrength*sqrt(1.0+3.0*SinLat2)/(L*CosLat2)**3
+!!$       RadialDistance_I(i) = L*CosLat2
+!!$       Length_I(i) = dipole_length(L,LatMin,Lat) 
+!!$       dLatNew =(Beta*(LatMin+(i-1)*dLat)**2+Epsilon)*dLat
+!!$       Lat = Lat+dLatNew
+!!$    end do
+
+
     do i = 1, nStep-1
        dLength_I(i) = Length_I(i+1) - Length_I(i)
     end do
 
+        
   end subroutine initialize_b_field
   !==================================================================================
 
@@ -84,7 +110,7 @@ contains
 
   !==================================================================================
 
-  subroutine second_adiabatic_invariant(nStep, iMirror_I, bMirror, bField_I, dLength_I,L, SecondAdiabInv)!, i_I)
+  subroutine second_adiabatic_invariant(nStep, iMirror_I, bMirror, bField_I, dLength_I,L, SecondAdiabInv)
 
     ! Calculate integral of sqrt((B-Bm)/Bm) between the mirror points using the
     ! trapezoidal rule
@@ -259,8 +285,8 @@ contains
 
   subroutine test_general_b
 
-    real                 :: L = 2.0
-    integer, parameter   :: nStep = 1001
+    real                 :: L = 10.0
+    integer, parameter   :: nStep = 10001
     integer, parameter   :: nPitch = 1
     real                 :: PitchAngle_I(nPitch) 
     real                 :: bField_I(nstep) 
@@ -275,21 +301,40 @@ contains
     real                 :: Percent1, Percent2
     integer              :: iStep
     !----------------------------------------------------------------------------------
-    open (unit = 2, file = "Convergence.dat")
+    open (unit = 2, file = "Convergence_nonuniform.dat")
     write (2,*)'Numerical values for the second adiabatic invariant integration btw a mirror point and eq'
     write (2,*)'nStep  IntegralBAnalytic   2nd_orderB  IntegralHAnalytic  2nd_orderH Percent1, Percent2'
 
     do iStep = 101, nStep,100
        call initialize_b_field(L, iStep, bField_I, RadialDistance_I, Length_I, Ds_I)
-       PitchAngle_I(1) = Pi/2.
+       PitchAngle_I(1) = Pi/10.
        IntegralBAnalytic = second_adiab_invariant(cos(PitchAngle_I(1)))
        IntegralHAnalytic = analytic_h(cos(PitchAngle_I(1)))
 
        call find_mirror_points (iStep, nPitch, PitchAngle_I, bField_I, bMirror_I,iMirror_II)
 
        bMirror = bMirror_I(1)
+!!$       
+!!$       write(*,*) 'iStep', iStep
+!!$       write(*,*) '============================================='
+!!$       write(*,*) 'bMirror', bMirror
+!!$       write(*,*) '============================================='
+!!$       write(*,*) 'iMirror_II(:,1)',iMirror_II(:,1)
+!!$       write(*,*) '============================================='
+!!$       write(*,*) 'bField_I',bField_I
+!!$       write(*,*) '============================================='
+!!$       write(*,*) 'Ds_I',Ds_I
+!!$       write(*,*) '============================================='
+!!$       write(*,*) 'L',L
+!!$       write(*,*) '============================================='
+              
        call second_adiabatic_invariant(iStep, iMirror_II(:,1), bMirror, bField_I, Ds_I,L, SecondAdiabInv)
-
+!!$       
+!!$       write(*,*) '============================================='
+!!$       write(*,*) 'SecondAdiabInv',SecondAdiabInv
+!!$       write(*,*) '============================================='      
+!!$       write(*,*) 'GOT HERE'
+       
        Percent1 = 100*abs(IntegralBAnalytic - SecondAdiabInv)/IntegralBAnalytic
 
        call half_bounce_path_length(iStep, iMirror_II(:,1), bMirror, bField_I, Ds_I,L, HalfPathLength)
@@ -300,8 +345,8 @@ contains
        write (2,*) iStep, IntegralBAnalytic, SecondAdiabInv,IntegralHAnalytic,&
             HalfPathLength ,Percent1, Percent2
 
-       write (*,*) iStep, IntegralBAnalytic, SecondAdiabInv,IntegralHAnalytic,&
-            HalfPathLength ,Percent1, Percent2
+!       write (*,*) iStep, IntegralBAnalytic, SecondAdiabInv,IntegralHAnalytic,&
+!            HalfPathLength !,Percent1, Percent2
 
     end do
 
