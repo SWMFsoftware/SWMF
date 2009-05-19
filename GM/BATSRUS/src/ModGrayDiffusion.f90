@@ -1094,43 +1094,52 @@ contains
     logical, intent(in) :: IsLinear
 
     logical :: IsFound
-    integer :: i,j,k
+    integer :: i,j,k, iDiff
+    real :: Coef
     character(len=20), parameter :: TypeUserBc='usersemi'
     character(len=*), parameter :: NameSub='get_gray_diffusion_bc'
     !--------------------------------------------------------------------------
 
     if(NeiLev(1,iBlock) == NOBLK)then
-       if(IsLinear .and. TypeBc_I(1) /= 'reflect')then
+       if(TypeBc_I(1) == 'outflow')then
+          do k = 1, nK; do j = 1, nJ
+             do iDiff = 1, nDiff
+                Coef = 2.0*DiffCoef_VFDB(iDiff,1,j,k,1,iBlock) &
+                     *vInv_CB(1,j,k,iBlock)/Clight
+                StateSemi_VGB(iDiff,0,j,k,iBlock) = &
+                     StateSemi_VGB(iDiff,1,j,k,iBlock) &
+                     *(Coef - 0.5)/(Coef + 0.5)
+             end do
+          end do; end do
+       elseif(IsLinear .and. TypeBc_I(1) /= 'reflect')then
           StateSemi_VGB(:,0,:,:,iBlock) = 0.0
        elseif(TypeBc_I(1) == 'user')then
           IsFound = .false.
           call user_set_outerbcs(iBlock,1,TypeUserBc,IsFound)
           if(.not. IsFound) call stop_mpi( &
                NameSub//': unknown TypeBc_I='//TypeBc_I(1))
-       elseif(TypeBc_I(1) == 'outflow')then
-          do k=1, nK; do j=1, nJ
-             StateSemi_VGB(iDiff_I,0,j,k,iBlock) = &
-                  StateSemi_VGB(iDiff_I,1,j,k,iBlock) *(1 - 0.5*Clight &
-                  / (vInv_CB(1,j,k,iBlock)*DiffCoef_VFDB(:,1,j,k,1,iBlock)))
-          end do; end do
        else
           StateSemi_VGB(:,0,:,:,iBlock) = StateSemi_VGB(:,1,:,:,iBlock)
        end if
     end if
     if(NeiLev(2,iBlock) == NOBLK)then
-       if(IsLinear .and. TypeBc_I(2) /= 'reflect')then
+       if(TypeBc_I(2) == 'outflow')then
+          do k = 1, nK; do j = 1, nJ
+             do iDiff = 1, nDiff
+                Coef = 2.0*DiffCoef_VFDB(iDiff,nI+1,j,k,1,iBlock) &
+                     *vInv_CB(nI,j,k,iBlock)/Clight
+                StateSemi_VGB(iDiff,nI+1,j,k,iBlock) = &
+                     StateSemi_VGB(iDiff,nI,j,k,iBlock) &
+                     *(Coef - 0.5)/(Coef + 0.5)
+             end do
+          end do; end do
+       elseif(IsLinear .and. TypeBc_I(2) /= 'reflect')then
           StateSemi_VGB(:,nI+1,:,:,iBlock) = 0.0
        elseif(TypeBc_I(2) == 'user')then
           IsFound = .false.
           call user_set_outerbcs(iBlock,2,TypeUserBc,IsFound)
           if(.not. IsFound) call stop_mpi( &
                NameSub//': unknown TypeBc_I='//TypeBc_I(2))
-       elseif(TypeBc_I(2) == 'outflow')then
-          do k=1, nK; do j=1, nJ
-             StateSemi_VGB(iDiff_I,nI+1,j,k,iBlock) = &
-                  StateSemi_VGB(iDiff_I,nI,j,k,iBlock)*(1 - 0.5*Clight &
-                  /(vInv_CB(nI,j,k,iBlock)*DiffCoef_VFDB(:,nI+1,j,k,1,iBlock)))
-          end do; end do
        else
           StateSemi_VGB(:,nI+1,:,:,iBlock) = StateSemi_VGB(:,nI,:,:,iBlock)
        end if
