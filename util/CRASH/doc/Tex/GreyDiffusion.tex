@@ -321,7 +321,7 @@ where we dropped the subscript $r$ and replaced it with the cell index.
 Index 1 corresponds to the last physical cell and 0 to the ghost cell. 
 This equation can be solved for the ghost cell value
 \begin{equation}
-  E_1 = \frac{ 2D/(c\Delta x) - 1/2}{ 2D/(c\Delta x) + 1/2} E_0 
+  E_0 = \frac{ 2D/(c\Delta x) - 1/2}{ 2D/(c\Delta x) + 1/2} E_1 
 \end{equation}
 For very small opacity $D$ becomes very large, so the ratio will approach one, 
 i.e. we get a zero gradient condition. If we take into account the flux limiter,
