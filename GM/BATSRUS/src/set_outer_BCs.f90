@@ -15,7 +15,7 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
   use ModUser, ONLY: user_set_outerBCs
   use ModMultiFluid, ONLY: iFluid, nFluid, iRhoUx_I, iRhoUy_I, iRhoUz_I
   use ModEnergy, ONLY: calc_energy
-  use ModGrayDiffusion, ONLY: set_gray_outflow_bc
+  use ModGrayDiffusion, ONLY: set_gray_outflow_bc !^CFG IF IMPLICIT
   implicit none
 
   integer, intent(in) :: iBlock
@@ -123,8 +123,9 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
         call BC_cont(1,nVar)
      case('outflow')       
         call BC_cont(1,nVar)
-        if(UseGrayDiffusion) call set_gray_outflow_bc(iSide, iBlock, &
-             Eradiation_, nVar, State_VGB(:,:,:,:,iBlock))
+        if(UseGrayDiffusion) &                              !^CFG IF IMPLICIT
+             call set_gray_outflow_bc(iSide, iBlock, &      !^CFG IF IMPLICIT
+             Eradiation_, nVar, State_VGB(:,:,:,:,iBlock))  !^CFG IF IMPLICIT
      case('raeder')
         call BC_cont(1,nVar)
         if(iSide==north_.or.iSide==south_)then
