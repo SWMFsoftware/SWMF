@@ -20,6 +20,7 @@ module ModGrayDiffusion
   public :: init_gray_diffusion
   public :: get_radiation_energy_flux
   public :: calc_source_gray_diffusion
+  public :: set_gray_outflow_bc
   public :: get_impl_gray_diff_state
   public :: get_gray_diffusion_bc
   public :: get_gray_diffusion_rhs
@@ -1081,10 +1082,145 @@ contains
 
   !============================================================================
 
+  subroutine set_gray_outflow_bc(iSide, iBlock, iVar, nVar, State_VG)
+
+    use ModImplicit, ONLY: nw
+    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB
+    use ModMain,     ONLY: nI, nJ, nK
+    use ModPhysics,  ONLY: Clight, Si2No_V, UnitX_
+    use ModUser,     ONLY: user_material_properties
+
+    integer, intent(in) :: iSide, iBlock, iVar, nVar
+    real, intent(inout) :: State_VG(nVar,-1:nI+2,-1:nJ+2,-1:nK+2)
+
+    integer :: i, j, k, iDiff
+    real :: Coef, OpacitySi
+    logical :: IsFullState
+    character(len=*), parameter :: NameSub='set_gray_outflow_bc'
+    !--------------------------------------------------------------------------
+    IsFullState = nVar > nw
+    
+    iDiff = 1
+
+    select case(iSide)
+    case(1)
+       do k = 1, nK; do j = 1, nJ
+          if(IsFullState)then
+             call user_material_properties(State_VG(:,1,j,k), &
+                  RosselandMeanOpacitySiOut=OpacitySi)
+             Coef = 2/sqrt( &
+                  (3 * OpacitySi/Si2No_V(UnitX_) * dx_BLK(iBlock))**2 &
+                  + ((State_VG(iVar,2,j,k) - State_VG(iVar,1,j,k)) &
+                  /  State_VG(iVar,1,j,k))**2)
+          else
+             Coef = 2/Clight* &
+                  DiffSemiCoef_VGB(iDiff,1,j,k,iBlock)/dx_BLK(iBlock)
+          end if
+          State_VG(iVar,0,j,k) = State_VG(iVar,1,j,k)*(Coef - 0.5)/(Coef + 0.5)
+          if(IsFullState) State_VG(iVar,-1,j,k) &
+               = 2*State_VG(iVar,0,j,k) - State_VG(iVar,1,j,k)
+       end do; end do
+    case(2)
+       do k = 1, nK; do j = 1, nJ
+          if(IsFullState)then
+             call user_material_properties(State_VG(:,nI,j,k), &
+                  RosselandMeanOpacitySiOut=OpacitySi)
+             Coef = 2/sqrt( &
+                  (3 * OpacitySi/Si2No_V(UnitX_) * dx_BLK(iBlock))**2 &
+                  + ((State_VG(iVar,nI,j,k)-State_VG(iVar,nI-1,j,k)) &
+                  /   State_VG(iVar,nI,j,k))**2)
+          else
+             Coef = 2/Clight* &
+                  DiffSemiCoef_VGB(iDiff,nI,j,k,iBlock)/dx_BLK(iBlock)
+          end if
+
+          State_VG(iVar,nI+1,j,k) = State_VG(iVar,nI,j,k) &
+               *(Coef - 0.5)/(Coef + 0.5)
+          if(IsFullState) State_VG(iVar,nI+2,j,k) &
+               = 2*State_VG(iVar,nI+1,j,k) - State_VG(iVar,nI,j,k)
+       end do; end do
+    case(3)
+       do k = 1, nK; do i = 1, nI
+          if(IsFullState)then
+             call user_material_properties(State_VG(:,i,1,k), &
+                  RosselandMeanOpacitySiOut=OpacitySi)
+             Coef = 2/sqrt( &
+                  (3 * OpacitySi/Si2No_V(UnitX_) * dy_BLK(iBlock))**2 &
+                  + ((State_VG(iVar,i,2,k) - State_VG(iVar,i,1,k)) &
+                  /  State_VG(iVar,i,1,k))**2)
+          else
+             Coef = 2/Clight* &
+                  DiffSemiCoef_VGB(iDiff,i,1,k,iBlock)/dy_BLK(iBlock)
+          end if
+          State_VG(iVar,i,0,k) = State_VG(iVar,i,1,k)*(Coef - 0.5)/(Coef + 0.5)
+          if(IsFullState) State_VG(iVar,i,-1,k) &
+               = 2*State_VG(iVar,i,0,k) - State_VG(iVar,i,1,k)
+       end do; end do
+    case(4)
+       do k = 1, nK; do i = 1, nI
+          if(IsFullState)then
+             call user_material_properties(State_VG(:,i,nJ,k), &
+                  RosselandMeanOpacitySiOut=OpacitySi)
+             Coef = 2/sqrt( &
+                  (3 * OpacitySi/Si2No_V(UnitX_) * dy_BLK(iBlock))**2 &
+                  + ((State_VG(iVar,i,nJ,k)-State_VG(iVar,i,nJ-1,k)) &
+                  /   State_VG(iVar,i,nJ,k))**2)
+          else
+             Coef = 2/Clight* &
+                  DiffSemiCoef_VGB(iDiff,i,nJ,k,iBlock)/dy_BLK(iBlock)
+          end if
+
+          State_VG(iVar,i,nJ+1,k) = State_VG(iVar,i,nJ,k) &
+               *(Coef - 0.5)/(Coef + 0.5)
+          if(IsFullState) State_VG(iVar,i,nJ+2,k) &
+               = 2*State_VG(iVar,i,nJ+1,k) - State_VG(iVar,i,nJ,k)
+       end do; end do
+    case(5)
+       do j = 1, nJ; do i = 1, nI
+          if(IsFullState)then
+             call user_material_properties(State_VG(:,i,j,1), &
+                  RosselandMeanOpacitySiOut=OpacitySi)
+             Coef = 2/sqrt( &
+                  (3 * OpacitySi/Si2No_V(UnitX_) * dz_BLK(iBlock))**2 &
+                  + ((State_VG(iVar,i,j,2) - State_VG(iVar,i,j,1)) &
+                  /  State_VG(iVar,i,j,1))**2)
+          else
+             Coef = 2/Clight* &
+                  DiffSemiCoef_VGB(iDiff,i,j,1,iBlock)/dz_BLK(iBlock)
+          end if
+          State_VG(iVar,i,j,0) = State_VG(iVar,i,j,1)*(Coef - 0.5)/(Coef + 0.5)
+          if(IsFullState) State_VG(iVar,i,j,-1) &
+               = 2*State_VG(iVar,i,j,0) - State_VG(iVar,i,j,1)
+       end do; end do
+    case(6)
+       do k = j, nJ; do i = 1, nI
+          if(IsFullState)then
+             call user_material_properties(State_VG(:,i,j,nK), &
+                  RosselandMeanOpacitySiOut=OpacitySi)
+             Coef = 2/sqrt( &
+                  (3 * OpacitySi/Si2No_V(UnitX_) * dz_BLK(iBlock))**2 &
+                  + ((State_VG(iVar,i,j,nK)-State_VG(iVar,i,j,nK-1)) &
+                  /   State_VG(iVar,i,j,nK))**2)
+          else
+             Coef = 2/Clight* &
+                  DiffSemiCoef_VGB(iDiff,i,j,nK,iBlock)/dz_BLK(iBlock)
+          end if
+
+          State_VG(iVar,i,j,nK+1) = State_VG(iVar,i,j,nK) &
+               *(Coef - 0.5)/(Coef + 0.5)
+          if(IsFullState) State_VG(iVar,i,j,nK+2) &
+               = 2*State_VG(iVar,i,j,nK+1) - State_VG(iVar,i,j,nK)
+       end do; end do
+    end select
+
+  end subroutine set_gray_outflow_bc
+
+  !============================================================================
+
   subroutine get_gray_diffusion_bc(iBlock, IsLinear)
 
-    use ModGeometry, ONLY: TypeGeometry, vInv_CB
-    use ModImplicit, ONLY: StateSemi_VGB
+    use ModGeometry, ONLY: TypeGeometry
+    use ModImplicit, ONLY: StateSemi_VGB, iEradImpl, nw
     use ModMain,     ONLY: nI, nJ, nK, TypeBc_I
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModUser,     ONLY: user_set_outerbcs
@@ -1102,15 +1238,8 @@ contains
 
     if(NeiLev(1,iBlock) == NOBLK)then
        if(TypeBc_I(1) == 'outflow')then
-          do k = 1, nK; do j = 1, nJ
-             do iDiff = 1, nDiff
-                Coef = 2.0*DiffCoef_VFDB(iDiff,1,j,k,1,iBlock) &
-                     *vInv_CB(1,j,k,iBlock)/Clight
-                StateSemi_VGB(iDiff,0,j,k,iBlock) = &
-                     StateSemi_VGB(iDiff,1,j,k,iBlock) &
-                     *(Coef - 0.5)/(Coef + 0.5)
-             end do
-          end do; end do
+          call set_gray_outflow_bc(1, iBlock, iEradImpl, nw, &
+               StateSemi_VGB(:,:,:,:,iBlock))
        elseif(IsLinear .and. TypeBc_I(1) /= 'reflect')then
           StateSemi_VGB(:,0,:,:,iBlock) = 0.0
        elseif(TypeBc_I(1) == 'user')then
@@ -1124,15 +1253,8 @@ contains
     end if
     if(NeiLev(2,iBlock) == NOBLK)then
        if(TypeBc_I(2) == 'outflow')then
-          do k = 1, nK; do j = 1, nJ
-             do iDiff = 1, nDiff
-                Coef = 2.0*DiffCoef_VFDB(iDiff,nI+1,j,k,1,iBlock) &
-                     *vInv_CB(nI,j,k,iBlock)/Clight
-                StateSemi_VGB(iDiff,nI+1,j,k,iBlock) = &
-                     StateSemi_VGB(iDiff,nI,j,k,iBlock) &
-                     *(Coef - 0.5)/(Coef + 0.5)
-             end do
-          end do; end do
+          call set_gray_outflow_bc(2, iBlock, iEradImpl, nw, &
+               StateSemi_VGB(:,:,:,:,iBlock))
        elseif(IsLinear .and. TypeBc_I(2) /= 'reflect')then
           StateSemi_VGB(:,nI+1,:,:,iBlock) = 0.0
        elseif(TypeBc_I(2) == 'user')then
@@ -1145,7 +1267,10 @@ contains
        end if
     end if
     if(NeiLev(3,iBlock) == NOBLK)then
-       if(TypeBc_I(3) == 'shear')then
+       if(TypeBc_I(3) == 'outflow')then
+          call set_gray_outflow_bc(3, iBlock, iEradImpl, nw, &
+               StateSemi_VGB(:,:,:,:,iBlock))
+       elseif(TypeBc_I(3) == 'shear')then
           StateSemi_VGB(:,:,0,:,iBlock) = StateSemi_VGB(:,:,1,:,iBlock)
           call semi_bc_shear(3)
        elseif(IsLinear .and. TypeBc_I(3) /= 'reflect')then
@@ -1155,18 +1280,15 @@ contains
           call user_set_outerbcs(iBlock,3,TypeUserBc,IsFound)
           if(.not. IsFound) call stop_mpi( &
                NameSub//': unknown TypeBc_I='//TypeBc_I(3))
-       elseif(TypeBc_I(3) == 'outflow')then
-          do k=1,nK; do i=1,nI
-             StateSemi_VGB(iDiff_I,i,0,k,iBlock) = &
-                  StateSemi_VGB(iDiff_I,i,1,k,iBlock)*(1 - 0.5*Clight &
-                  /(vInv_CB(i,1,k,iBlock)*DiffCoef_VFDB(:,i,1,k,2,iBlock)))
-          end do; end do
        else
           StateSemi_VGB(:,:,0,:,iBlock) = StateSemi_VGB(:,:,1,:,iBlock)
        end if
     end if
     if(NeiLev(4,iBlock) == NOBLK) then
-       if(TypeBc_I(4) == 'shear')then
+       if(TypeBc_I(4) == 'outflow')then
+          call set_gray_outflow_bc(4, iBlock, iEradImpl, nw, &
+               StateSemi_VGB(:,:,:,:,iBlock))
+       elseif(TypeBc_I(4) == 'shear')then
           StateSemi_VGB(:,:,nJ+1,:,iBlock) = StateSemi_VGB(:,:,nJ,:,iBlock)
           call semi_bc_shear(4)
        elseif(IsLinear .and. TypeBc_I(4) /= 'reflect')then
@@ -1176,48 +1298,36 @@ contains
           call user_set_outerbcs(iBlock,4,TypeUserBc,IsFound)
           if(.not. IsFound) call stop_mpi( &
                NameSub//': unknown TypeBc_I='//TypeBc_I(4))
-       elseif(TypeBc_I(4) == 'outflow')then
-          do k=1,nK; do i=1,nI
-             StateSemi_VGB(iDiff_I,i,nJ+1,k,iBlock) = &
-                  StateSemi_VGB(iDiff_I,i,nJ,k,iBlock)*(1 - 0.5*Clight &
-                  /(vInv_CB(i,nJ,k,iBlock)*DiffCoef_VFDB(:,i,nJ+1,k,2,iBlock)))
-          end do; end do
        else
           StateSemi_VGB(:,:,nJ+1,:,iBlock) = StateSemi_VGB(:,:,nJ,:,iBlock)
        end if
     end if
     if(NeiLev(5,iBlock) == NOBLK) then
-       if(IsLinear .and. TypeBc_I(5) /= 'reflect')then
+       if(TypeBc_I(5) == 'outflow')then
+          call set_gray_outflow_bc(5, iBlock, iEradImpl, nw, &
+               StateSemi_VGB(:,:,:,:,iBlock))
+       elseif(IsLinear .and. TypeBc_I(5) /= 'reflect')then
           StateSemi_VGB(:,:,:,0,iBlock) = 0.0
        elseif(TypeBc_I(5) == 'user')then
           IsFound = .false.
           call user_set_outerbcs(iBlock,5,TypeUserBc,IsFound)
           if(.not. IsFound) call stop_mpi( &
                NameSub//': unknown TypeBc_I='//TypeBc_I(5))
-       elseif(TypeBc_I(5) == 'outflow')then
-          do j=1,nJ; do i=1,nI
-             StateSemi_VGB(iDiff_I,i,j,0,iBlock) = &
-                  StateSemi_VGB(iDiff_I,i,j,1,iBlock)*(1 - 0.5*Clight &
-                  /(vInv_CB(i,j,1,iBlock)*DiffCoef_VFDB(:,i,j,1,3,iBlock)))
-          end do; end do
        else
           StateSemi_VGB(:,:,:,0,iBlock) = StateSemi_VGB(:,:,:,1,iBlock)
        end if
     end if
-    if(NeiLev(6,iBlock) == NOBLK)then
-       if(IsLinear .and. TypeBc_I(6) /= 'reflect')then
+    if(NeiLev(6,iBlock) == NOBLK)then 
+       if(TypeBc_I(6) == 'outflow')then
+          call set_gray_outflow_bc(6, iBlock, iEradImpl, nw, &
+               StateSemi_VGB(:,:,:,:,iBlock))
+       elseif(IsLinear .and. TypeBc_I(6) /= 'reflect')then
           StateSemi_VGB(:,:,:,nK+1,iBlock) = 0.0
        elseif(TypeBc_I(6) == 'user')then
           IsFound = .false.
           call user_set_outerbcs(iBlock,6,TypeUserBc,IsFound)
           if(.not. IsFound) call stop_mpi( &
                NameSub//': unknown TypeBc_I='//TypeBc_I(6))
-       elseif(TypeBc_I(6) == 'outflow')then
-          do j=1,nJ; do i=1,nI
-             StateSemi_VGB(iDiff_I,i,j,nK+1,iBlock) = &
-                  StateSemi_VGB(iDiff_I,i,j,nK,iBlock)*(1 - 0.5*Clight &
-                  /(vInv_CB(i,j,nK,iBlock)*DiffCoef_VFDB(:,i,j,nK+1,3,iBlock)))
-          end do; end do
        else
           StateSemi_VGB(:,:,:,nK+1,iBlock) = StateSemi_VGB(:,:,:,nK,iBlock)
        end if

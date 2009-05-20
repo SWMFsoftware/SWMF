@@ -8,13 +8,14 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
   use ModProcMH
   use ModMain
   use ModVarIndexes
-  use ModAdvance, ONLY: State_VGB
+  use ModAdvance, ONLY: State_VGB, Eradiation_
   use ModParallel, ONLY: NOBLK, NeiLev
   use ModGeometry, ONLY: far_field_BCs_BLK, MaxBoundary, TypeGeometry, XyzMin_D
   use ModPhysics
   use ModUser, ONLY: user_set_outerBCs
   use ModMultiFluid, ONLY: iFluid, nFluid, iRhoUx_I, iRhoUy_I, iRhoUz_I
   use ModEnergy, ONLY: calc_energy
+  use ModGrayDiffusion, ONLY: set_gray_outflow_bc
   implicit none
 
   integer, intent(in) :: iBlock
@@ -91,7 +92,7 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
      jmin1p=-1; jmax1p=nJ+2; jmin2p=-1; jmax2p=nJ+2
      kmin1p=-1; kmax1p=nK+2; kmin2p=-1; kmax2p=nK+2
 
-     select case(iside)
+     select case(iSide)
      case(east_)
         imin1g=0; imax1g=0; imin2g=-1; imax2g=-1
         imin1p=1; imax1p=1; imin2p= 2; imax2p= 2
@@ -112,14 +113,18 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
         kmin1p=nK  ; kmax1p=nK  ; kmin2p=nK-1; kmax2p=nK-1
      end select
 
-     select case(TypeBc_I(iside))
+     select case(TypeBc_I(iSide))
      case('coupled')
         ! For SC-IH coupling the extra wave energy variable needs a BC
         if(NameThisComp == 'SC') call BC_cont(ScalarFirst_, ScalarLast_)
      case('periodic')
         call stop_mpi('The neighbors are not deifned at the periodic boundary')
-     case('float','outflow')       
+     case('float')
         call BC_cont(1,nVar)
+     case('outflow')       
+        call BC_cont(1,nVar)
+        if(UseGrayDiffusion) call set_gray_outflow_bc(iSide, iBlock, &
+             Eradiation_, nVar, State_VGB(:,:,:,:,iBlock))
      case('raeder')
         call BC_cont(1,nVar)
         if(iSide==north_.or.iSide==south_)then
@@ -171,10 +176,10 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
      case default
         IsFound=.false.
         if(UseUserOuterBcs .or. TypeBc_I(iSide) == 'user')&
-           call user_set_outerBCs(iBLK,iside,TypeBc_I(iside),IsFound)
+           call user_set_outerBCs(iBLK,iSide,TypeBc_I(iSide),IsFound)
 
         if(.not. IsFound) call stop_mpi( &
-             NameSub // ': unknown TypeBc_I=' //TypeBc_I(iside))
+             NameSub // ': unknown TypeBc_I=' //TypeBc_I(iSide))
      end select
 
      if(DoSetEnergy)then
@@ -240,7 +245,7 @@ subroutine BC_shear(iVarStart, iVarLast ,iSide)
         Dn = nint(ShockSlope)
         if(abs(Dn-ShockSlope)>cTiny)&
              call stop_mpi('ShockSlope > 1 should be a round number!')
-        select case(iside)
+        select case(iSide)
            ! Shift parallel to Y by 1 but copy from distance Dn in X
         case(east_)
            State_VGB(iVar,     imin1g,    jmin1g+1:jmax1g,   kmin1g:kmax1g,iBLK)=&
@@ -272,7 +277,7 @@ subroutine BC_shear(iVarStart, iVarLast ,iSide)
         Dn = nint(cOne/ShockSlope)
         if(abs(Dn-cOne/ShockSlope)>cTiny)call stop_mpi( &
              'ShockSlope < 1 should be the inverse of a round number!')
-        select case(iside)
+        select case(iSide)
            ! Shift parallel to Y by Dn
         case(east_)
            State_VGB(iVar,     imin1g, jmin1g+Dn:jmax1g,   kmin1g:kmax1g,iBLK)=&
