@@ -4,6 +4,7 @@ T
 #POINTIMPLICIT
 T			UsePointImplicit
 0.5			BetaPointImplicit
+T			IsAsymmetric
 
 #PLANET
 NONE

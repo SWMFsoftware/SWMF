@@ -38,8 +38,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModUser,          ONLY: user_read_inputs, user_init_session, &
        NameUserModule, VersionUserModule
   use ModBoundaryCells, ONLY: SaveBoundaryCells,allocate_boundary_cells
-  use ModPointImplicit, ONLY: UsePointImplicit,&
-       UsePointImplicit_B, BetaPointImpl
+  use ModPointImplicit, ONLY: read_point_implicit_param, UsePointImplicit
   use ModRestartFile,   ONLY: read_restart_parameters, init_mod_restart_file
   use ModHallResist,    ONLY: &
        UseHallResist, HallFactor, HallCmaxFactor, HallHyperFactor, &
@@ -400,13 +399,7 @@ subroutine MH_set_parameters(TypeAction)
         end do
 
      case("#POINTIMPLICIT")
-        call read_var('UsePointImplicit', UsePointImplicit)
-
-        !the array allows the user to specify the blocks to 
-        !use the point implicit scheme individually
-        UsePointImplicit_B = UsePointImplicit
-        if(UsePointImplicit) &
-             call read_var('BetaPointImplicit',BetaPointImpl)
+        call read_point_implicit_param
 
      case("#IMPLICIT", &                                !^CFG IF IMPLICIT BEGIN
           "#IMPLCRITERIA", "#IMPLICITCRITERIA", "#STEPPINGCRITERIA", &

@@ -1,3 +1,4 @@
+
 module ModPointImplicit
 
   !DESCRIPTION:
@@ -61,9 +62,6 @@ module ModPointImplicit
   logical, public :: IsPointImplSource=.false.   ! Ask for implicit source
   logical, public :: IsPointImplMatrixSet=.false.! Is dS/dU matrix analytic?
   logical, public :: IsPointImplPerturbed=.false.! Is the state perturbed?
-  real, public    :: BetaPointImpl = 1.0         ! Coeff. of implicit part: 
-                                                 ! beta=0.5 second order
-                                                 ! beta=1.0 first order
 
   real, public, allocatable :: &
        DsDu_VVC(:,:,:,:,:), &     ! dS/dU derivative matrix
@@ -71,12 +69,34 @@ module ModPointImplicit
   real, public    :: EpsPointImpl ! relative perturbation
 
   public update_point_implicit    ! do update with point implicit scheme
-  
-  ! Local variable
-  integer :: nVarPointImpl = 0    ! Number of point impl. vars
+  public read_point_implicit_param
+
+  ! Local variables
+  ! Number of point implicit variables
+  integer :: nVarPointImpl = 0    
+
+  ! Coeff. of implicit part: beta=0.5 second order, beta=1.0 first order
+  real:: BetaPointImpl = 1.0  
+
+  ! Use asymmetric derivative in numerical Jacobian calculation
+  logical:: IsAsymmetric = .true. 
 
 contains
+ !============================================================================
+  subroutine read_point_implicit_param
+    use ModReadParam,     ONLY: read_var
+    character(len=*), parameter:: NameSub = 'read_implicit_param'
+    !--------------------------------------------------------------------------
+    call read_var('UsePointImplicit', UsePointImplicit)
+    !the array allows the user to specify the blocks to 
+    !use the point implicit scheme individually
+    UsePointImplicit_B = UsePointImplicit
+    if(UsePointImplicit) then
+       call read_var('BetaPointImplicit', BetaPointImpl)
+       call read_var('IsAsymmetric',      IsAsymmetric)
+    end if
 
+  end subroutine read_point_implicit_param
   !===========================================================================
   subroutine update_point_implicit(iStage, iBlock, &
        calc_point_impl_source, init_point_implicit)
@@ -84,11 +104,12 @@ contains
     use ModProcMH,  ONLY: iProc
     use ModKind,    ONLY: nByteReal
     use ModMain,    ONLY: nI, nJ, nK, nIJK, Cfl, nStage, &
-         iTest, jTest, kTest, ProcTest, BlkTest, Test_String
+         iTest, jTest, kTest, ProcTest, BlkTest, Test_String,VarTest
     use ModAdvance, ONLY: nVar, State_VGB, StateOld_VCB, Source_VC, Time_Blk, &
          DoReplaceDensity
     use ModGeometry,ONLY: True_Blk, True_Cell
-    use ModVarIndexes, ONLY: UseMultiSpecies, SpeciesFirst_, SpeciesLast_, Rho_
+    use ModVarIndexes, ONLY: UseMultiSpecies, SpeciesFirst_, SpeciesLast_, &
+         Rho_, DefaultState_V
     use ModEnergy, ONLY: calc_energy_cell
 
     integer, intent(in) :: iStage, iBlock
@@ -103,13 +124,13 @@ contains
     integer :: i, j, k, iVar, jVar, iIVar, iJVar
     real :: DtFactor, DtStage, BetaStage, Norm, Epsilon
     real :: StateExpl_VC(nVar,1:nI,1:nJ,1:nK)
-    real :: Source0_VC(nVar,1:nI,1:nJ,1:nK)
+    real :: Source0_VC(nVar,1:nI,1:nJ,1:nK), Source1_VC(nVar,1:nI,1:nJ,1:nK)
     real :: State0_C(1:nI,1:nJ,1:nK)
 
     real, allocatable, save :: Matrix_II(:,:), Rhs_I(:)
 
     character(len=*), parameter:: NameSub='update_point_implicit'
-    logical :: DoTest, DoTestMe
+    logical :: DoTest, DoTestMe,DoTestCell
     !-------------------------------------------------------------------------
 
     call timing_start(NameSub)
@@ -129,7 +150,11 @@ contains
        ! Set default perturbation parameters
        allocate(EpsPointImpl_V(nVar))
        if(nByteReal == 8)then
-          EpsPointImpl   = 1.e-6
+          if(IsAsymmetric)then
+             EpsPointImpl   = 1.e-6
+          else 
+             EpsPointImpl   = 1.e-9
+          end if
           EpsPointImpl_V = 1.e-12
        else
           EpsPointImpl   = 1.e-3
@@ -187,6 +212,7 @@ contains
     ! Multi-ion may set its elements while the user uses numerical Jacobean.
     Source_VC = 0.0
     DsDu_VVC  = 0.0
+
     call calc_point_impl_source
 
     ! Calculate (part of) Jacobean numerically if necessary
@@ -213,6 +239,9 @@ contains
 
           Epsilon = EpsPointImpl*Norm + EpsPointImpl_V(iVar)
 
+          if(DefaultState_V(iVar) > 0.5 .and. .not. IsAsymmetric) &
+               Epsilon = min(Epsilon, max(1e-30, 0.5*maxval(State0_C)))
+
           ! Perturb the state
           State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock) = State0_C + Epsilon
 
@@ -220,31 +249,45 @@ contains
           Source_VC = 0.0
           call calc_point_impl_source
 
-          !if(DoTestMe)then
-          !   write(*,*) NameSub,': iIVar, iVar  =',iIVar, iVar
-          !   write(*,*) NameSub,': Norm, Epsilon=',Norm, Epsilon
-          !   write(*,*) NameSub,': State_VGB    =',&
-          !        State_VGB(:,iTest,jTest,kTest,iBlock)
-          !   write(*,*) NameSub,': Source_VC    =',&
-          !        Source_VC(:,iTest,jTest,kTest)
-          !   write(*,*) NameSub,': Source0_VC   =',&
-          !        Source0_VC(:,iTest,jTest,kTest)
-          !end if
+          if(IsAsymmetric)then
 
-          ! Restore unperturbed state
+             ! Calculate dS/dU matrix elements
+             do iJVar = 1,nVarPointImpl; jVar = iVarPointImpl_I(iJVar)
+                DsDu_VVC(jVar,iVar,:,:,:) = DsDu_VVC(jVar,iVar,:,:,:) + &
+                     (Source_VC(jVar,:,:,:) - Source0_VC(jVar,:,:,:))/Epsilon
+             end do
+
+          else
+             ! Store perturbed source corresponding to +Epsilon perturbation
+             Source1_VC = Source_VC(1:nVar,:,:,:)
+
+             ! Perturb the state in opposite direction
+             State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock) = State0_C - Epsilon
+
+             ! Calculate perturbed source
+             Source_VC = 0.0
+             call calc_point_impl_source
+
+             ! Calculate dS/dU matrix elements with symmetric differencing
+             do iJVar = 1,nVarPointImpl; jVar = iVarPointImpl_I(iJVar)
+                DsDu_VVC(jVar,iVar,:,:,:) = DsDu_VVC(jVar,iVar,:,:,:) + &
+                     0.5*(Source1_VC(jVar,:,:,:) - Source_VC(jVar,:,:,:)) &
+                     /Epsilon
+             end do
+
+          end if
+
+          !Restore unperturbed state
           State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock) = State0_C
 
-          ! Calculate dS/dU matrix elements
-          do iJVar = 1,nVarPointImpl; jVar = iVarPointImpl_I(iJVar)
-             DsDu_VVC(jVar,iVar,:,:,:) = DsDu_VVC(jVar,iVar,:,:,:) + &
-                  (Source_VC(jVar,:,:,:) - Source0_VC(jVar,:,:,:))/Epsilon
-          end do
        end do
 
        ! Restore unperturbed source
        Source_VC(1:nVar,:,:,:) = Source0_VC
 
+    
        IsPointImplPerturbed = .false.
+       
     end if
 
     if(DoTestMe)then
@@ -255,8 +298,11 @@ contains
        end do
     end if
 
+
     ! Do the implicit update
     do k=1,nK; do j=1,nJ; do i=1,nI
+
+       DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest
 
        ! Do not update body cells
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -269,6 +315,7 @@ contains
                - StateOld_VCB(iVar,i,j,k,iBlock) &
                + DtStage * Source_VC(iVar,i,j,k)
        end do
+
        ! The matrix to be solved for is A = (I - beta*Dt*dS/dU)
        do iIVar = 1, nVarPointImpl; iVar = iVarPointImpl_I(iIVar)
           do iJVar = 1, nVarPointImpl; jVar = iVarPointImpl_I(iJVar)
@@ -277,6 +324,7 @@ contains
           end do
           ! Add unit matrix
           Matrix_II(iIVar,iIVar) = Matrix_II(iIVar,iIVar) + 1.0
+
        end do
 
        ! Solve the A.dU = RHS equation
@@ -284,7 +332,7 @@ contains
 
        ! Update: U^n+1 = U^n + dU
        do iIVar = 1, nVarPointImpl; iVar = iVarPointImpl_I(iIVar)
-          State_VGB(iVar,i,j,k,iBlock) =  &
+          State_VGB(iVar,i,j,k,iBlock) =&
                StateOld_VCB(iVar,i,j,k,iBlock) + Rhs_I(iIVar)
        end do
 
@@ -292,7 +340,7 @@ contains
           ! Fix negative species densities
           State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock) = &
                max(0.0, State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock))
-          
+
           ! Add up species densities to total density
           if(DoReplaceDensity)State_VGB(Rho_,i,j,k,iBlock) = &
                sum(State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock))
@@ -430,6 +478,7 @@ contains
        Rhs_V(IL)=TOTALSUM/Matrix_VV(IL,IL)
     END DO
 
+    
   end subroutine linear_equation_solver
 
 end module ModPointImplicit

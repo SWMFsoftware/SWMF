@@ -19,8 +19,9 @@ update_point_implicit
 2
 
 #POINTIMPLICIT
-T
-1.0
+T			UsePointImplicit
+1.0			BetaPointImplicit
+T			IsAsymmetric
 
 PLASMA
 1.0		MassH+

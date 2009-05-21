@@ -101,7 +101,8 @@ T                       UseUserUpdateStates
 
 #POINTIMPLICIT
 T                UsePointImplicit
-.5              BetaPointImpl
+0.5              BetaPointImpl
+T		 IsAssymetric
 
 #STARTTIME
 2001                    StartTime_i(1)=year
