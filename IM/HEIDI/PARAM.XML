@@ -440,6 +440,26 @@ analytic		TypeBField
 
 The TypeConvection parameter indicates how the magnetospheric convection strength is calculated.
 The TypeBField parameter sets up teh magnetic field. If analytic, all numerical integrals are solved using analytical approximations. If numerical, numerical integrals are performed.
+</command>
+
+<command name="SAVERESTART">
+	<parameter name="DoSaveRestart" type="logical" default="T" />
+	<if expr="$DoSaveRestart">
+		<parameter name="DtSaveRestart" type="real"    min="-1" 
+							default="40." />
+	</if>
+
+
+
+
+#SAVERESTART
+T			DoSaveRestart
+40.0			DtSaveRestart
+
+Default is DoSaveRestart=.true. with DtSaveRestart=-1. This results in the restart file being saved only at the end.  An ascii restart file is produced for every DtSaveRestart. Needs to be multiple of the time step.
+The restart files are overwritten every time a new restart is done. The default directory name is 'restartOUT'.
+
+
 
 </command>
 </commandgroup>
