@@ -1572,19 +1572,28 @@ relative error 0.001 and absolute error 0.0001.
 	<parameter name="UsePointImplicit" type="logical" default="F"/>
 	<parameter name="BetaPointImplicit" type="real" min="0.5" max="1"
 				default="0.5" if="$UsePointImplicit"/>
+	<parameter name="IsAsymmetric" type="logical" default="T"
+						if="$UsePointImplicit"/>
 #POINTIMPLICIT
 T		UsePointImplicit
 0.5		BetaPointImplicit (read if UsePointImplicit is true)
+T		IsAsymmetric
 
 Switches on or off the point implicit scheme. The BetaPointImplicit
 parameter (in the 0.5 to 1.0 range) determines the order of accuracy 
 for a 2-stage scheme. If BetaPointImplicit=0.5 the point implicit scheme 
 is second order accurate in time when used in a 2-stage scheme. 
 Larger values may be more robust, but only first order accurate in time.
-For a 1-stage scheme (and in the 1st stage of a 2-stage scheme) the
-BetaPointImplicit parameter is ignored, and the coefficient is set to 1.
+For a 1-stage scheme or for local timestepping the BetaPointImplicit 
+parameter is ignored and the coefficient is set to 1.
 
-The default values are UsePointImplicit=false and BetaPointImplicit=0.5.
+If the IsAsymmetric parameter is true, the numerical Jacobian is calculated
+with a one-sided (asymmetric) difference formula. Otherwise a two-sided
+symmetric difference is used. The latter is slower somewhat but more accurate.
+
+For single-ion MHD the default is UsePointImplicit=.false.
+For multi-ion MHD the default values are 
+UsePointImplicit=.true., BetaPointImplicit=1.0 and IsAsymmetric=.true.
 </command>
 
 <!-- ^CFG IF IMPLICIT BEGIN -->
