@@ -102,3 +102,7 @@ F 			UseWaves
 
 #BFIELD
 analytic     		TypeBField
+
+#SAVERESTART
+T			DoSaveRestart
+40.0			DtSaveRestart
