@@ -88,6 +88,12 @@ module ModHeidiInput
   logical :: UseWaves = .false.
   ! "#BFIELD"
   character(len=20) :: TypeBField = 'analytic'
+  ! "#SAVERESTART"
+  logical :: DoSaveRestart = .true.
+  real    :: DtSaveRestart = 40.0
+ 
+
+
   ! GIPHT END DECLARATIONS
 
 contains
@@ -202,13 +208,16 @@ contains
           call read_var('UseConstantStepPA', UseConstantStepPA)
        case("#INCLUDEWAVES")
           call read_var('UseWaves', UseWaves)
+       case("#SAVERESTART")
+          call read_var('DoSaveRestart',DoSaveRestart)
+          call read_var('DtSaveRestart',DtSaveRestart)
 
 
           ! GIPHT END COMMANDS
        case default
           !if(iProc==0) then
           write(*,*) NameSub // ' WARNING: unknown command ' // &
-               trim(NameCommand),' !'
+               trim(NameCommand),' !',DtSaveRestart
           if(UseStrict)call CON_stop('Correct PARAM.in!')
           !end if
        end select
