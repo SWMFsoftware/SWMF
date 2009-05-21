@@ -98,12 +98,12 @@ contains
 
   end subroutine read_point_implicit_param
   !===========================================================================
-  subroutine update_point_implicit(iStage, iBlock, &
+  subroutine update_point_implicit(iBlock, &
        calc_point_impl_source, init_point_implicit)
 
     use ModProcMH,  ONLY: iProc
     use ModKind,    ONLY: nByteReal
-    use ModMain,    ONLY: nI, nJ, nK, nIJK, Cfl, nStage, &
+    use ModMain,    ONLY: nI, nJ, nK, nIJK, Cfl, nStage, time_accurate, &
          iTest, jTest, kTest, ProcTest, BlkTest, Test_String,VarTest
     use ModAdvance, ONLY: nVar, State_VGB, StateOld_VCB, Source_VC, Time_Blk, &
          DoReplaceDensity
@@ -112,7 +112,7 @@ contains
          Rho_, DefaultState_V
     use ModEnergy, ONLY: calc_energy_cell
 
-    integer, intent(in) :: iStage, iBlock
+    integer, intent(in) :: iBlock
     interface
        subroutine calc_point_impl_source
        end subroutine calc_point_impl_source
@@ -122,7 +122,7 @@ contains
     end interface
 
     integer :: i, j, k, iVar, jVar, iIVar, iJVar
-    real :: DtFactor, DtStage, BetaStage, Norm, Epsilon
+    real :: DtCell, BetaStage, Norm, Epsilon
     real :: StateExpl_VC(nVar,1:nI,1:nJ,1:nK)
     real :: Source0_VC(nVar,1:nI,1:nJ,1:nK), Source1_VC(nVar,1:nI,1:nJ,1:nK)
     real :: State0_C(1:nI,1:nJ,1:nK)
@@ -188,11 +188,8 @@ contains
        end if
     end if
 
-    ! The time step factor is Cfl/2 in stage 1 and Cfl in stage 2 for 2-stage
-    DtFactor = iStage*(Cfl/nStage)
-
     ! The beta parameter is always one in the first stage
-    if(iStage == 1)then
+    if(nStage == 1 .or. .not. time_accurate)then
        BetaStage = 1.0
     else
        BetaStage = BetaPointImpl
@@ -307,19 +304,19 @@ contains
        ! Do not update body cells
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-       DtStage = DtFactor*time_BLK(i,j,k,iBlock)
+       DtCell = Cfl*time_BLK(i,j,k,iBlock)
 
        ! The right hand side is Uexpl - Uold + Sold
        do iIVar = 1, nVarPointImpl; iVar = iVarPointImpl_I(iIVar)
           Rhs_I(iIVar) = StateExpl_VC(iVar,i,j,k) &
                - StateOld_VCB(iVar,i,j,k,iBlock) &
-               + DtStage * Source_VC(iVar,i,j,k)
+               + DtCell * Source_VC(iVar,i,j,k)
        end do
 
        ! The matrix to be solved for is A = (I - beta*Dt*dS/dU)
        do iIVar = 1, nVarPointImpl; iVar = iVarPointImpl_I(iIVar)
           do iJVar = 1, nVarPointImpl; jVar = iVarPointImpl_I(iJVar)
-             Matrix_II(iIVar, iJVar) = - BetaStage*DtStage* &
+             Matrix_II(iIVar, iJVar) = - BetaStage*DtCell* &
                   DsDu_VVC( iVar, jVar, i, j, k)
           end do
           ! Add unit matrix
