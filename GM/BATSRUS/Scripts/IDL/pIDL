@@ -7,6 +7,7 @@ my $MakeMovie     = ($m or $M or $movie or $MOVIE);
 my $KeepMovieOnly = ($M or $MOVIE);
 my $Verbose       = ($v or $V or $verbose or $VERBOSE);
 my $Quiet         = ($q or $quiet or $Q or $QUIET);
+my $Ccmc          = ($CCMC or $ccmc);
 use strict;
 
 my $ERROR = "ERROR in pIDL";
@@ -57,17 +58,19 @@ my $HeaderFile;
 foreach $HeaderFile (@HeaderFiles){
     my $BaseFile = $HeaderFile; $BaseFile =~ s/\.h$//;
     print "PostIDL.exe < $HeaderFile\n" unless $Quiet;
-    my $Output= `$PostIdl < $HeaderFile 2>&1`;
+    my $OutFile = "$BaseFile.out";
+    my $Output= `$PostIdl < $HeaderFile 2>&1` unless -s $OutFile and $Ccmc;
     my $Error = ($Output =~ /error/i or $?);
     my $Warning = join("\n",grep /warning/i, split("\n",$Output));
     print "$Warning\n" if $Warning and not ($Quiet or $Error);
     print $Output if $Verbose or $Error;
-    die "$ERROR: error found in the output of $PostIdl\n" if $Error;
-    my $OutFile = "$BaseFile.out"; 
+    die "$ERROR: error found in the output of $PostIdl\n" if $Error; 
     die "$ERROR: no out file $OutFile was produced\n" unless -s $OutFile;
     unless($Keep){
 	if($BaseFile =~ /3d_/){
-	    rename $HeaderFile, $BaseFile.".info";
+	    unless($Ccmc){
+		rename $HeaderFile, $BaseFile.".info";
+	    }
 	}else{
 	    unlink $HeaderFile;
 	}
