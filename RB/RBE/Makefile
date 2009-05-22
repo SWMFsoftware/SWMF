@@ -87,14 +87,14 @@ rundir:
 	cd ${RUNDIR}/RB; \
 		mkdir restartOUT restartIN plots
 	cp ${RBDIR}/input/rbe_e.fin ${RUNDIR}/RB/
+	cp ${RBDIR}/input/B_wave_eq.dat ${RUNDIR}/RB/
+	cp ${RBDIR}/input/Horne_chorus.tgz ${RUNDIR}/RB/
+	cd ${RUNDIR}/RB/ ; \
+	tar xfz Horne_chorus.tgz
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR} ; \
 		ln -s ${BINDIR}/rbe.exe .   ; \
 		cp ../input/2002_296.* RB/  ; \
 		cp ../input/PARAM.in . ; \
-		cp ../input/B_wave_eq.dat RB/   ; \
-		cp ../input/Horne_chorus.tgz RB/ ; \
 		touch core ; chmod 444 core;\
-		cd RB ; \
-			tar xfz Horne_chorus.tgz ; \
 	fi);

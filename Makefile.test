@@ -110,10 +110,7 @@ test_rb_rundir:
 	make rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.RB ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.RB ${TESTDIR}/LAYOUT.in
-	cd ${TESTDIR}/RB/; ln -s ${RBDIR}/input/2002_296* . ; \
-	ln -s ${RBDIR}/input/B_wave_eq.dat . ; \
-	cp ${RBDIR}/input/Horne_chorus.tgz . ; \
-	tar xvfz Horne_chorus.tgz
+	cd ${TESTDIR}/RB/; ln -s ${RBDIR}/input/2002_296* .
 test_rb_run:
 	cd ${TESTDIR}/RB; rm -f 2002f296_e.fls
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
