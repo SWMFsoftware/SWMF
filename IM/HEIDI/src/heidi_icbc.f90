@@ -22,6 +22,8 @@ subroutine INITIAL(LNC,XN,J6,J18)
   use ModHeidiMain
   use ModIoUnit, only : io_unit_new, UNITTMP_
   use ModHeidiIO, only: NameInputDirectory
+  use ModPlotFile, only: read_plot_file
+  use ModHeidiInput, only:TypeFile
 
   implicit none
 
@@ -54,13 +56,27 @@ subroutine INITIAL(LNC,XN,J6,J18)
 
   integer :: iUnit
   integer :: iUnit_tst
-  integer :: iUnit_unff
-  character(len=30):: NameOutputSpecies
-  character(len=2) :: NameSpecies
-  character(len=5) :: NameStormType
-  character(len=3) :: NamePrefix
-  !-----------------------------------------------------------------------
+  character(len=30) :: NameOutputSpecies
+  character(len=2)  :: NameSpecies
+  character(len=5)  :: NameStormType
+  character(len=3)  :: NamePrefix
+  character(LEN=500):: StringVarName, StringHeader, NameFile
+  real              :: acosd
+  integer           :: ntc, IFIR
 
+  real, allocatable :: Coord_DII(:,:,:), Var_IIV(:,:,:) 
+  integer           :: nDim, nParam,nVar       
+
+
+
+  save ntc
+  !-----------------------------------------------------------------------
+  if (IFIR.eq.1) then
+     ntc=int(nint(TIME/TINT))
+  else
+     ntc=ntc+1
+  end if
+  
   !.......Start the loop over RC species
   do S=1,NS
 
@@ -430,26 +446,63 @@ subroutine INITIAL(LNC,XN,J6,J18)
 
            !  Read in from a unformatted file (INI=7)
         else if (INI(S).eq.7) then
-           iUnit_unff = io_unit_new()
-           open(UNIT=iUnit_unff,FILE=NameRestartInDir//trim(NameRun)//NameSpecies//'.unff',status='old',   &
-                form='unformatted')
+           open(UNIT=UnitTmp_,FILE=NameRestartInDir//trim(NameRun)//NameSpecies//'.unff',status='old',   &
+               form='unformatted')
            do L=1,NPA
-              !	  DO K=8,NE  ! Changed the Egrid for runs "e" and "f" !1,NE
               do K=1,NE  ! Change back to this for restarts
                  do J=1,NT 
-                    read(iUnit_unff) (f2(I,J,K,L,S),I=1,NR)
-                    !	    f2(1:NR,J,K,L,S)=0.5*f2(1:NR,J,K,L,S)  ! Special restart line
+                    read(UnitTmp_) (f2(I,J,K,L,S),I=1,NR)
                  end do
               end do
-              !	  DO K=8,1,-1   ! New loop to fill in low-E grid
-              !	   DO J=1,NT    ! Comment out for restarts 
-              !	    F2(1:NR,J,K,L,S)=F2(1:NR,J,K+1,L,S)
-              !	   END DO
-              !	  END DO        ! to here
            end do
-           close(iUnit_unff)
+           close(UnitTmp_)
 
         end if
+       
+!**************************************************
+!!$           !  Read in from a a restart ascii file (INI=7) 
+!!$        else if (INI(S).eq.7) then
+!!$           NameFile       = trim(NameRestartOutDir)//'Restart.out'
+!!$           StringHeader   = &
+!!$                'Phase space distribution function for all pitch angles, energies and locations.'
+!!$           
+!!$           StringVarName ='R   MLT   F   E   PA'
+!!$           iUnit =io_unit_new()
+!!$           
+!!$          
+!!$           
+!!$           allocate(Coord_DII(2,NR,NT),Var_IIV(4,NR,NT))
+!!$                      
+!!$           !do L=1,NPA  
+!!$           !   do K=1,NE 
+!!$                 
+!!$                 call read_plot_file(NameFile,      &
+!!$                      iUnitIn          = iUnit,&          
+!!$                      TypeFileIn       = TypeFile,     &
+!!$                      StringHeaderOut  = StringHeader, &
+!!$                      nStepOut         = ntc,          &
+!!$                      TimeOut          = T,         &
+!!$                      nDimOut          = nDim, &
+!!$                      nParamOut        = nParam, &
+!!$                      nVarOut          = nVar, &
+!!$                      n1Out            = NR,&
+!!$                      n2Out            = NT,&
+!!$                      nOut_D           = (/real(NR),real(NT)/),&
+!!$                      ParamOut_I       = (/real(NE), real(NPA)/),&
+!!$                      CoordMinOut_D    = (/1.75, 0.0/),&
+!!$                      CoordMaxOut_D    = (/6.5, 24.0/),&
+!!$                      CoordIn_DII      = Coord_DII,&
+!!$                      VarOut_IIV       = f2(:,:,K,L,S:S))
+!!$                 
+!!$                                 
+!!$            !  end do
+!!$           !end do
+!!$           
+!!$        end if
+
+!**************************************************
+
+
         !.......Done with initial particle distribution set up
 
         if (IBC(S).eq.1) then	! This is to redo INI=1 above

@@ -17,8 +17,8 @@ module ModHeidiInput
   integer :: iHour = 0
   integer :: iMinute = 0
   integer :: iSecond = 0
-  ! "#TIMESIMULATION"
-  real :: tSimulation = 0.0
+  ! "#STOP"
+  real :: tSimulationMax = 0.0
   ! "#TIMESTEP"
   real :: TimeStep = 20.0
   ! "#GRID"
@@ -89,8 +89,9 @@ module ModHeidiInput
   ! "#BFIELD"
   character(len=20) :: TypeBField = 'analytic'
   ! "#SAVERESTART"
-  logical :: DoSaveRestart = .true.
-  real    :: DtSaveRestart = 40.0
+  logical           :: DoSaveRestart = .true.
+  real              :: DtSaveRestart = 40.0
+  character(len=20) :: TypeFile = 'ascii'
  
 
 
@@ -136,9 +137,9 @@ contains
           call read_var('iHour', iHour)
           call read_var('iMinute', iMinute)
           call read_var('iSecond', iSecond)
-       case("#TIMESIMULATION")
+       case("#STOP")
           if(.not.is_first_session() .or. IsFramework)CYCLE
-          call read_var('tSimulation', tSimulation)
+          call read_var('tSimulationMax', tSimulationMax)
        case("#TIMESTEP")
           call read_var('dtmax', TimeStep)
        case("#GRID")
@@ -211,6 +212,7 @@ contains
        case("#SAVERESTART")
           call read_var('DoSaveRestart',DoSaveRestart)
           call read_var('DtSaveRestart',DtSaveRestart)
+          call read_var('TypeFile',TypeFile)
 
 
           ! GIPHT END COMMANDS
@@ -242,7 +244,7 @@ contains
       iMinute               = 0.0
       iSecond               = 0.0
 
-      tmax                  = tSimulation
+      tmax                  = tSimulationMax
       dtmax                 = TimeStep 
       io                    = nRadialGrid 
       jo                    = nPhiGrid

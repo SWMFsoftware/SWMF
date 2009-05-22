@@ -67,7 +67,7 @@ subroutine ECFL
         open(iUnitOut,FILE=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
              NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
 
-        write (*,*) 'Filename: '//NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//NameSpecies//NameSuffix//NameStep
+        !write (*,*) 'Filename: '//NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//NameSpecies//NameSuffix//NameStep
 
         write (iUnitOut,*) 'Filename: '//NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//NameSpecies//NameSuffix//NameStep
 	write (iUnitOut,*) 'T,KP,A:',T,KP,A
@@ -222,7 +222,7 @@ subroutine WRESULT(LNC,XN,IFIR)
   use ModHeidiDGCPM
   use ModIoUnit, only : io_unit_new,UnitTmp_
   use ModPlotFile, only: save_plot_file
-  use ModHeidiInput, only: DtSaveRestart
+  use ModHeidiInput, only: DtSaveRestart,TypeFile
 
   implicit none
 
@@ -247,7 +247,7 @@ subroutine WRESULT(LNC,XN,IFIR)
   character(len=20) :: NameOutputSpecies
   integer           :: iUnitSal1,iUnitSal2,iUnitSal3,iUnitSal4
   character(LEN=500):: StringVarName, StringHeader, NameFile
-  character(len=20) :: TypeFile='ascii', TypePosition
+  character(len=20) :: TypePosition
 
 
   external :: FUNI,FUNT
@@ -877,40 +877,12 @@ subroutine WRESULT(LNC,XN,IFIR)
 
 
 	if (IRES(13).eq.1) then
-!!$           NameSuffix='.unff'
-!!$           
-!!$           open(UNIT=UnitTmp_,FILE=NameRestartOutDir//trim(NameRun)//&
-!!$                NameSpecies//NameSuffix,status='unknown',   &
-!!$                form='unformatted')
-!!$           
-!!$           NameSuffix='.out'
-!!$
-!!$           open(UNIT=UnitTmp_,FILE=NameRestartOutDir//trim(NameRun)//&
-!!$                NameSpecies//NameSuffix)
-!!$           write(UnitTmp_,*) 'Phase space distribution function for all pitch angles, energies and locations.'
-!!$             write(UnitTmp_,*) 'TimeStep =' ,trim(NameStep)
-!!$             
-!!$             do L=1,NPA
-!!$                do K=1,NE
-!!$                   write(UnitTmp_,*)'PitchAngle(deg)=', acosd(mu(L)),' Energy =',  EKEV(K)
-!!$                VarIn_IV = f2(:,:,1,1,S))    write(UnitTmp_,*) 'RadialDistance     LocalTime       DistributionFunction'
-!!$                   do J=1,NT
-!!$                      do I = 1, NR
-!!$                         write(UnitTmp_,81) LZ(I), MLT(J), f2(I,J,K,L,S)
-!!$                      end do
-!!$                   end do
-!!$
-!!$                end do
-!!$             end do
-!!$             close(UnitTmp_)
-!!$          end if
-
 
            !Save the restart file as an ascii file
            if(mod(T,DtSaveRestart)< 2*dt) then
 
 
-              NameFile       = trim(NameRestartOutDir)//'Restart.out'
+              NameFile       = trim(NameRestartOutDir)//'restart'//NameSpecies//'.out'
               StringHeader   = &
                    'Phase space distribution function for all pitch angles, energies and locations.'
 
@@ -926,12 +898,12 @@ subroutine WRESULT(LNC,XN,IFIR)
                             StringHeaderIn = StringHeader, &
                             nStepIn = ntc, &
                             TimeIn = T, &
-                            ParamIn_I = (/EKEV(K), acosd(mu(L))/), &
+                            ParamIn_I = (/EKEV(K), acosd(mu(L)),real(NE), real(NPA)/), &
                             NameVarIn = StringVarName, &
                             nDimIn = 2, &
                             CoordMinIn_D = (/1.75, 0.0/),&
                             CoordMaxIn_D = (/6.5, 24.0/),&
-                            VarIn_IIV = f2(:,:,K,L,:))
+                            VarIn_IIV = f2(:,:,K,L,S:S))
                             TypePosition = 'append'
                             !EXIT !!!  
                        end do
