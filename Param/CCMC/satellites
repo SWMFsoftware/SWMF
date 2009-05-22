@@ -1,0 +1,6 @@
+#SATELLITE
+1       # nsatellite
+MHD file time date
+-1 # dn_output(isat_+0)
+30  #dt_output(isat_+0)
+Param_ccmc/goes12.dat

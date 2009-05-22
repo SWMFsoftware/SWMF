@@ -1,0 +1,6 @@
+#COMPONENTMAP
+GM  4    999    1  GM runs on all PEs starting with 3
+RB  3    3    1   ! RB runs on 3 PE-s
+IE  1    2      1      IE runs on PE 1 and 2
+IM  0    0      1   IM runs on 0 PE
+#END

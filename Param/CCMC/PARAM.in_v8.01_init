@@ -1,0 +1,202 @@
+
+#ECHO
+T
+
+#DESCRIPTION
+Set up SWMF with GM and IE
+
+
+#TIMING
+T			UseTiming
+-1			DnTiming
+-1			nDepthTiming
+cumm			TypeTimingReport
+
+RESTARTFILE
+RESTART.scaling_IN
+
+#TIMEACCURATE
+F
+
+#STARTTIME
+2008                  year
+09                 month
+03                   day
+00                  hour
+00                minute
+0                second
+0.0                          FracSec
+
+#COUPLE2
+GM			NameComp1
+IE			NameComp2
+50			DnCouple
+-1.			DtCouple
+
+#UPDATEB0
+15			Dt_UpdateB0
+
+
+
+#BEGIN_COMP GM ------------------------------------------------------------
+
+! Configuration to SIMPLE implies the following
+
+HYPERBOLICDIVB
+T                       UseHyperbolicDivb
+100.0                   SpeedHypDim
+0.1                     HypDecay
+
+
+#RESTARTOUTFILE
+block
+
+#GRID
+3                       proc_dims(1)
+1                       proc_dims(2)
+1                       proc_dims(3)
+-255.                   x1
+ 33.                    x2
+-48.                    y1
+ 48.                    y2
+-48.                    z1
+ 48.                    z2
+
+
+#STRICT
+F			UseStrict
+
+#AMRINIT
+ror6_long                      InitialRefineType
+3
+
+
+#AMRRESOLUTION
+0.25			minCellDx
+8.0			maxCellDx
+T			FixBodyLevel
+
+#AMR
+250			dnRefine (frequency in terms of total steps n_step)
+F			DoAutoRefine 
+10.			percentCoarsen
+20.			percentRefine
+3000			maxTotalBlocks
+
+#BODY
+T			UseBody
+2.5			rBody
+3.5			rCurrents
+28.0			RhoBody
+25000.0			tBody
+
+#SAVEBINARY
+F          DoSaveBinary
+
+#SAVEPLOT
+1                    nplotfiles
+3d FUL idl              plot_string
+2000                   dn_output(plot_+0)
+-1                     dt_output(plot_+0)
+-1			dx_saveplot
+
+#SOLARWIND
+5.79                         SW_rho_dim [n/cc]
+44058.48                     SW_T_dim [K]
+-310.75                       SW_Ux_dim [km/s]
+-6.94                       SW_Uy_dim [km/s]
+-14.11                       SW_Uz_dim [km/s]
+0.00                       SW_Bx_dim [nT]
+-0.09                       SW_By_dim [nT]
+-1.15                       SW_Bz_dim [nT]
+
+#OUTERBOUNDARY
+outflow			east
+vary			west
+fixed			south
+fixed			north
+fixed			bot
+fixed			top
+
+! End of commands implied by SIMPLE configuration
+
+UPSTREAM_INPUT_FILE
+T			UseUpstreamInputFile
+IMF.dat                 UpstreamFileName
+0.0                     Satellite_Y_Pos
+0.0                     Satellite_Z_Pos
+
+#RESTARTOUTDIR
+GM/restartOUT
+
+#SAVELOGFILE
+F
+RAW
+10
+-1.
+
+#TIMESTEPPING
+1			nStage
+0.60			Cfl
+
+#SCHEME
+1			nOrder
+Rusanov			TypeFlux
+
+#BORIS
+F			boris_correction
+
+
+#END_COMP GM ------------------------------------------------------------------
+#BEGIN_COMP IE ---------------------------------------------------------------
+
+#IONOSPHERE
+5     	conductance_model
+F			UseFullCurrent
+F			UseFakeRegion2
+67.3			F10.7 Flux
+1.0 			StarLightPedConductance
+0.25			PolarCapPedConductance
+
+#SAVEPLOT
+1			nPlotFile
+max tec             plot_string
+2000                      dn_output(plot_+0)
+-1                  dt_output(plot_+0)
+
+#END_COMP IE -----------------------------------------------------------------
+
+#STOP
+501			MaxIteration
+-1.			TimeMax
+
+#RUN #########################################################################
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#TIMESTEPPING
+2			nSTAGE
+0.80			cfl
+
+#SCHEME
+2                       nORDER
+Rusanov			TypeFlux
+minmod		TypeLimiter
+1.0            LimiterBeta
+
+#AMR
+1001
+F
+
+#SAVERESTART
+T        DoSaveRestart
+2000     DnSaveRestart
+-1       DtSaveRestart
+
+#END_COMP GM -----------------------------------------------------------------
+
+#STOP
+2000			MaxIter
+-1.0			TimeMax
+
+#END

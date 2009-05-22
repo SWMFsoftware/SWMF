@@ -1,0 +1,221 @@
+
+#ECHO
+T
+
+#DESCRIPTION
+Restart GM-IM-IE in time accurate mode.
+
+#TIMING
+T			UseTiming
+-1			DnTiming
+-1			nDepthTiming
+cumu			TypeTimingReport
+
+#INCLUDE
+RESTART.in
+
+#SAVERESTART
+T			DoSaveRestart
+-1                      DnSaveRestart
+60                    DtSaveRestart
+
+#TIMEACCURATE
+T			DoTimeAccurate
+
+#STOP
+-1                     MaxIteration
+300.               tSimulationMax
+
+#CHECKSTOP
+T       DoCheckStop
+-1       DnCheckStop
+10.0   DtCheckStop
+
+#CHECKSTOPFILE
+T        DoCheckStopFile
+
+#UPDATEB0
+15			Dt_UpdateB0
+
+#COUPLE2
+GM			NameSource
+IE			NameTarget
+-1			DnCouple
+ 5.			DtCouple
+
+#COUPLE1
+GM                      NameSource
+RB                      NameTarget
+-1                      DnCouple
+10.                     DtCouple
+
+#COUPLE1
+IE                      NameSource
+RB                      NameTarget
+-1                      DnCouple
+10.                     DtCouple
+
+! For implicit this improves performance
+COUPLETIME
+GM			NameComp
+F			DoCoupleOnTime
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+HYPERBOLICDIVB
+T                       UseHyperbolicDivb
+100.0                   SpeedHypDim
+0.1                     HypDecay
+
+
+#RESTARTOUTFILE
+block
+
+
+#INCLUDE
+GM/restartIN/restart.H
+
+
+#SOLARWINDFILE
+T
+Param_ccmc/IMF.dat
+
+#INCLUDE
+Param_ccmc/satellites
+
+#OUTERBOUNDARY
+outflow			TypeBcEast
+vary			TypeBcWest
+float			TypeBcSouth
+float			TypeBcNorth
+float			TypeBcBottom
+float			TypeBcTop
+
+#SAVELOGFILE
+T
+date VAR
+-1
+10.
+dt rho mx my mz p bx by bz pmin pmax cpcpn cpcps rhoflx pvecflx dst
+5.0 6.7 10.0            R_log
+
+#SAVEBINARY
+F          DoSaveBinary
+
+#SAVEPLOT
+1			nPlotFiles
+3d FUL idl             StringPlot
+-1                      DnSavePlot
+60.			DtSavePlot
+-1.			Dx
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SCHEME
+2                       nOrder
+Rusanov                 TypeFlux
+minmod                     TypeLimiter
+1.
+
+#MESSAGEPASS
+opt                     TypeMessagePass
+
+!Switch this on for additional refinement in the middle of the run
+AMRINIT
+ror6_long                      InitialRefineType
+4
+
+!Switch this on for refinement
+AMR
+22615                    dn_refine (frequency in terms of total steps n_step)
+F                  automatic_refinement
+0.                      percentCoarsen
+10.                     percentRefine
+130000                  maxTotalBlocks
+
+
+! Use 0.02 for implicit
+#BORIS
+T
+0.02
+
+! Switch this on for other scheme and limiter than Rusanov and minmod
+NONCONSERVATIVE
+T                       UseNonConservative
+
+! Switch this on for other scheme and limiter than Rusanov and minmod
+CONSERVATIVECRITERIA
+1                       nConservCrit
+parabola                TypeConservCrit
+6.0                     xParabolaConserv
+36.0                    yParabolaConserv
+
+! Swith this on for implicit
+FIXEDTIMESTEP
+T			DoFixTimeStep
+2.0			DtFixedDim
+
+! Swith this on for implicit
+IMPLICIT
+F			UsePointImplicit
+T			UsePartImplicit
+F			UseFullImplicit
+100.0			CflImpla
+
+#END_COMP GM -------------------------------------------------------------
+
+#BEGIN_COMP IE ---------------------------------------------------------------
+
+#IONOSPHERE
+5     	conductance_model
+F			UseFullCurrent
+F			UseFakeRegion2
+67.3			F10.7 Flux
+1.0 			StarLightPedConductance
+0.25			PolarCapPedConductance
+
+#SAVEPLOT
+1			nFile
+max tec			plot_string
+-1			dn_output
+60.			dt_output
+
+#END_COMP IE -----------------------------------------------------------------
+
+#BEGIN_COMP RB ----------------------------------------
+
+#INCLUDE
+RB/restartIN/restart.H
+
+SAVEPLOT
+600.          DtSavePlot
+2000Y225        OutName
+
+#SAVEPLOT
+60.          DtSavePlot
+T               UseSeparatePlotFiles
+
+#TIMESTEP
+1.0             Dt
+
+LIMITER
+T		UseMcLimmiter
+1.0		BetaLimiter
+
+#STARTUPTIME
+0.0             trans
+
+#BMODEL
+MHD             NameModel
+F               UseFixedB
+
+#IEMODEL
+2               iConvect
+
+#PLASMASPHERE
+F               UsePlasmaSphere
+
+#END_COMP RB   ----------------------------------------
+
