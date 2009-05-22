@@ -38,19 +38,16 @@ The default values are shown above. To be used only in standalone mode within th
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-<command name="TIMESIMULATION" if="$_IsFirstSession">
-	<parameter name="tSimulation" type="real" min="0" default="0.0" />
+<command name="STOP" if="$_IsFirstSession">
+	<parameter name="tSimulationMax" type="real" min="0" default="0.0" />
 
-#TIMESIMULATION
-3600.0			tSimulation [sec]
+#STOP
+3600.0			tSimulationMax [sec]
 
-The tSimulation variable contains the simulation time in seconds
+The tSimulationMax variable contains the simulation time in seconds
 relative to the initial time set by the #STARTTIME command.
 
-In SWMF the command is ignored (SWMF has its own #TIMESIMULATION command).
-In stand alone mode tSimulation is set.
-
-The default value is tSimulation=0.
+The default value is tSimulationMax=0.
 </command>
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -412,7 +409,7 @@ If set to 'True', read solar wind input file.
 #PITCHANGLE
 F 			UseConstantStepPA	
 
-Only one of the options can be true at the sam time. UseConstantStepPA sets constant steps in pitch angle.Set to false, uses exact loss cone points.
+Only one of the options can be true at the same time. UseConstantStepPA sets constant steps in pitch angle.Set to false, uses exact loss cone points.
 
 </command>
 
@@ -429,7 +426,7 @@ Set to true if self-consistent wave-particle interactions are to be included.
 
 
 <command name="BFIELD" >
-	<parameter name="TypeBFiles" type="string" input="select" case="lower">
+	<parameter name="TypeBField" type="string" input="select" case="lower">
 		<option name="analyticdipole"                     value="0/analytic"  />
 		<option name="numericaldipole"                    value="1/numeric"  />
 	</parameter>
@@ -443,6 +440,10 @@ The TypeBField parameter sets up teh magnetic field. If analytic, all numerical 
 </command>
 
 <command name="SAVERESTART">
+	parameter name="TypeFile" type="string" input="select" case="lower">
+		<option name="ascii"                     default="ascii"  />
+		<option name="real4" />	
+		<option name="real8" />	
 	<parameter name="DoSaveRestart" type="logical" default="T" />
 	<if expr="$DoSaveRestart">
 		<parameter name="DtSaveRestart" type="real"    min="-1" 
@@ -455,6 +456,7 @@ The TypeBField parameter sets up teh magnetic field. If analytic, all numerical 
 #SAVERESTART
 T			DoSaveRestart
 40.0			DtSaveRestart
+ascii			TypeFile
 
 Default is DoSaveRestart=.true. with DtSaveRestart=-1. This results in the restart file being saved only at the end.  An ascii restart file is produced for every DtSaveRestart. Needs to be multiple of the time step.
 The restart files are overwritten every time a new restart is done. The default directory name is 'restartOUT'.
