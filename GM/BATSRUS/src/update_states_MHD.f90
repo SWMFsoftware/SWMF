@@ -89,10 +89,10 @@ subroutine update_states_MHD(iStage,iBLK)
   ! Add point implicit user or multi-ion source terms
   if (UsePointImplicit .and. UsePointImplicit_B(iBLK))then
      if(UseMultiIon)then
-        call update_point_implicit(iStage, iBLK, multi_ion_source_impl, &
+        call update_point_implicit(iBLK, multi_ion_source_impl, &
              multi_ion_init_point_impl)
      elseif(UseUserSource) then
-        call update_point_implicit(iStage, iBLK, user_calc_sources, &
+        call update_point_implicit(iBLK, user_calc_sources, &
              user_init_point_implicit)
      end if
 
