@@ -397,3 +397,45 @@ test_esmf_check:
 		${TESTDIR}/it000321_104510_000.idl.ref \
 		>> test_esmf.diff
 	ls -l test_esmf.diff
+
+# CCMC instalation, compiling, and  PostIDL.exe	 generation at ccmc1@lanai1
+#Use "Config.pl -install" before use of "make ccmc_compile" or "make test_ccmc"
+#1.Public version. Specific job scripts are substuted for generic mpirun
+#2. To be completed with the script replace_amrinit.pl
+
+ccmc_compile: 
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
+	./Config.pl -g=GM:6,6,6,2600,400 -double
+	cd GM/BATSRUS; Config.pl -u=CCMC
+	make
+	cd GM/BATSRUS/make PIDL
+	
+
+test_ccmc_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR}
+	cp -r Param/CCMC ${TESTDIR}/Param_ccmc
+	cd ${TESTDIR}; \
+	cp -f Param_ccmc/LAYOUT.in_v8.01_init ${TESTDIR}/LAYOUT.in; \
+	cp -f Param_ccmc/PARAM.in_v8.01_init ${TESTDIR}/PARAM.in; \
+	${SCRIPTDIT}/./replace_amrinit.pl
+	cp ${TESTDIR}/SWMF.exe ${TESTDIR}/SWMF_run_test.exe
+	rm -f ${TESTDIR}/SWMF.exe
+
+test_ccmc_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_`date +%y%m%d%H%M`; cd GM; pIDL -ccmc; cd ../IE; pION
+
+test_ccmc_restart_rundir:
+	rm -f ${TESTDIR}/LAYOUT.in ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; \
+	cp Param_ccmc/LAYOUT.in_v8.01_RBE_restart ${TESTDIR}/LAYOUT.in; \
+	cp Param_ccmc/PARAM.in_v8.01_RBE_restart ${TESTDIR}/PARAM.in; \
+	${SCRIPTDIT}/./replace_amrinit.pl \
+	./Restart.pl 
+
+test_ccmc_check:
+	${SCRIPTDIR}/DiffNum.pl -b -r=1.0e-5 ${TESTDIR}/GM/IO2/log_n002000.log \
+	Param/CCMC/test_GM.log >  test_ccmc.diff
+	ls -l test_ccmc.diff
+	
+
