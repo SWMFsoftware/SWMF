@@ -8,8 +8,8 @@
 00			iSecond
 0.0 			FracSecond
 
-#TIMESIMULATION
-120.0			tSimulation [sec]
+#STOP
+120.0			tSimulationMax [sec]
 
 #TIMESTEP
 20.                     TimeStep [sec] 
@@ -106,3 +106,4 @@ analytic     		TypeBField
 #SAVERESTART
 T			DoSaveRestart
 40.0			DtSaveRestart
+ascii			TypeFile
