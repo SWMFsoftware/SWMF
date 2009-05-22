@@ -26,11 +26,11 @@ module ModUser
 
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
-       IMPLEMENTED2 => user_specify_refinement
+       IMPLEMENTED2 => user_specify_initial_refinement
 
   include 'user_module.h' !list of public methods
 
-  real, parameter :: VersionUserModule = 1.0
+  real, parameter :: VersionUserModule = 0.9
   character (len=*), parameter :: &
        NameUserModule = 'CCMC grids, Kuznetsova and Toth'
 
@@ -63,20 +63,32 @@ contains
 
   !===========================================================================
 
-  subroutine user_specify_refinement(iBlk, iArea, DoRefine)
+!!! Above this everything is the same as in ModUserCCMC.f90 of 10/26/2008
+!!! except name of subroutine user_specify_refinement(iBlk, iArea, DoRefine)
+
+  subroutine user_specify_initial_refinement(iBLK, DoRefine, lev, &
+       Dx0,xxx0,yyy0,zzz0,RR0,minx0,miny0,minz0,minRblk0, &
+       maxx0,maxy0,maxz0,maxRblk0, &
+       IsFound)
 
     use ModSize,     ONLY: nI, nJ, nK
     use ModMain,     ONLY: body1, UseRotatingBc
     use ModGeometry, ONLY: XyzMin_D, XyzMax_D, XyzStart_BLK, &
          dy_BLK, dz_BLK, TypeGeometry, x1, x2, x_BLK, y_BLK, z_BLK, dx_BLK
     use ModPhysics,  ONLY: rBody, rCurrents
-    use ModAMR,      ONLY: nRefineLevel
+    use ModAMR,      ONLY: nRefineLevel, InitialRefineType !!!
     use ModNumConst, ONLY: cPi, cTiny
 
-    integer, intent(in) :: iBlk, iArea
-    logical,intent(out) :: DoRefine
+!!!    integer, intent(in) :: iBlk, iArea
 
-    integer :: lev
+    integer, intent(in) :: iBLK, lev                                   !!!
+    logical, intent(out):: DoRefine, IsFound                           !!!
+
+    ! These are ignored all
+    real,    intent(in) :: Dx0,xxx0,yyy0,zzz0,RR0, &                   !!!
+         minx0, miny0, minz0, minRblk0, maxx0, maxy0, maxz0, maxRblk0  !!!
+
+!!!    integer :: lev
     real :: xxx,yyy,zzz,RR, xxPoint,yyPoint,zzPoint
     real :: RRR, RRR1, RRR2, RRR3, RRR4,RRR5
     real :: minRblk,maxRblk,xx1,xx2,yy1,yy2,zz1,zz2, tmpminRblk,tmpmaxRblk
@@ -95,7 +107,12 @@ contains
     !--------------------------------------------------------------------------
     call set_oktest('initial_refinement',oktest,oktest_me)
 
-    lev = nRefineLevel
+!!!    lev = nRefineLevel
+    IsFound = .true.                     !!!
+    NameGrid = InitialRefineType         !!!
+
+!!! Below this everything is the same as in ModUserCCMC.f90 of 10/26/2008
+
     DoRefine = .false.
 
 
@@ -250,6 +267,226 @@ contains
           RR = sqrt( (xxx-xxPoint)**2 + (yyy-yyPoint)**2 + (zzz-zzPoint)**2 )
           if (RR < 2.*real(nI)*dx_BLK(iBLK)) DoRefine = .true.
        end if
+
+                  case ('ds1')
+           ! 6 x 6 x 6 block for High resolution Runs On Request
+           ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
+           if (maxRblk > Rbody) then
+
+              if (dx_BLK(iBLK) > 8.) then
+                 ! Refine all blocks with dx greater than 8
+                DoRefine = .true.
+              else
+
+                 if (dx_BLK(iBLK) > 4. .and. xxx > -159.0) DoRefine = .true.
+
+                 if (dx_BLK(iBLK) > 2. .and. xxx > -39.0) DoRefine = .true.
+
+                 if (dx_BLK(iBLK) > 2. .and. xxx > -135.0 .and. &
+                   abs(yyy)<48..and. abs(zzz)<24.) DoRefine = .true.
+!    1 Re
+                 if (dx_BLK(iBLK)>1. .and. xxx > -27. .and. xxx < 33.0 .and. &
+                    abs(yyy)<48..and. abs(zzz)<36.)DoRefine = .true.
+
+               if (dx_BLK(iBLK)>1. .and. xxx > -51. .and. xxx < -27 .and. &
+                    abs(yyy)<48..and. abs(zzz)<24.)DoRefine = .true.
+
+                 if (dx_BLK(iBLK)>1. .and. xxx < -51. .and. xxx > -75. .and. &
+                    abs(yyy)<24..and. abs(zzz)<12.)DoRefine = .true.
+!    0.5 Re
+                  if (dx_BLK(iBLK)>0.5 .and. xxx < 21.0 .and. xxx > -27. .and. &
+                    abs(yyy)<30. .and. abs(zzz)<21.)DoRefine = .true.
+
+                  if (dx_BLK(iBLK)>0.5 .and. xxx < -27.0 .and. xxx > - 45. .and. &
+                    abs(yyy)<30. .and. abs(zzz)<15.)DoRefine = .true.
+
+                  if (dx_BLK(iBLK)>0.5 .and. xxx < - 45. .and. xxx> - 63.0 .and. &
+                    abs(yyy)<12..and. abs(zzz)<6.)DoRefine = .true.
+!    0.25 Re
+                 if (dx_BLK(iBLK)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
+                    abs(yyy)<9. .and. abs(zzz)<9.)DoRefine = .true.
+
+                  if (dx_BLK(iBLK)>0.25 .and. xxx < 15. .and. xxx> 9.0 .and. &
+                    abs(yyy)<15. .and. abs(zzz)<12.)DoRefine = .true.
+
+                   if (dx_BLK(iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+                    abs(yyy)<21. .and. abs(zzz)<15.)DoRefine = .true.
+
+                   if (dx_BLK(iBLK)>0.25 .and. xxx < 9. .and. xxx> -36.0 .and. &
+                    abs(yyy)<21. .and. abs(zzz)<12.)DoRefine = .true.
+
+!!!
+
+                  if (dx_BLK(iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+                    abs(yyy)<6..and. abs(zzz)<6.)DoRefine = .true.
+!  0.125 Re
+!  0.125 Re
+
+!!!                   if (dx_BLK(iBLK)>0.125 .and.  xxx > -24. .and.  xxx < -7.5 .and. &
+!!!                  abs(yyy) < 19.5 .and. abs(yyy) > 13.5  .and. &
+!!!                   abs(zzz)< 6.)DoRefine = .true.
+!!!
+!!!                   if (dx_BLK(iBLK)>0.125 .and.  xxx > -7.5 .and.  xxx < -2.5 .and. &
+!!!                  abs(yyy) < 19.5 .and. abs(yyy) > 12.  .and. &
+!!!                   abs(zzz)< 6)DoRefine = .true.
+
+
+                   if (dx_BLK(iBLK)>0.125 .and.  xxx > 4.5 .and.  xxx < 12 .and. &
+                  abs(yyy) < 6.  .and.  zzz < 4. .and. &
+                   zzz > -10.)DoRefine = .true.
+
+
+                  RRR=sqrt((xxx+3.)**2+1.3*zzz**2+(5.+0.77*abs(yyy))**2-25.)
+
+                  if (dx_BLK(iBLK)>0.125 .and.  xxx > -3. .and.  xxx < 14. .and. &
+                  RRR >10. .and.  RRR < 17. .and.  zzz < 6. .and. zzz > -12. &
+                   )DoRefine = .true.
+!
+!
+!!!! corrections on 04/14/07
+
+                  if (dx_BLK(iBLK)>0.125 .and.  xxx > 1. .and.  xxx < 14. .and. &
+                  RRR >10. .and.  RRR < 20. .and. zzz < 6. .and. zzz > -12. &
+                   )DoRefine = .true.
+!!!!!         end corrections 04/14/07
+! 0.0625
+
+!!old                  if (dx_BLK(iBLK)>0.0625 .and.  xxx > -18. .and.  xxx < -7.5 .and. &
+!!old                  abs(yyy) < 18. .and. abs(yyy) > 15.  .and. &
+!!old                   abs(zzz)< 3.)DoRefine = .true.
+
+!!                   if (dx_BLK(iBLK)>0.0625 .and.  xxx > -7.5 .and.  xxx < -0.75 .and. &
+!!                  abs(yyy) < 18. .and. abs(yyy) > 13.5  .and. &
+!!                   abs(zzz)< 3.)DoRefine = .true.
+
+               if (dx_BLK(iBLK)>0.0625 .and.  xxx > 6. .and.  xxx < 12. .and. &
+                  abs(yyy) < 6.  .and.  zzz < 3.5 .and. &
+                   zzz > -8.5)DoRefine = .true.
+
+
+               if (dx_BLK(iBLK)>0.0625 .and.  xxx > 0 .and.  xxx < 12. .and. &
+                 RRR > 11. .and. RRR < 15.5 .and.  zzz < 3.5 .and. &
+                  zzz > -8.5)DoRefine = .true.
+!!! corrections 04/14/07
+               if (dx_BLK(iBLK)>0.0625 .and.  xxx > 1. .and.  xxx < 14. .and. &
+                 RRR > 11. .and. RRR < 18.5 .and.  zzz < 3.5 .and. &
+                  zzz > -8.5)DoRefine = .true.
+
+!!! end 04/14/07
+!!!
+!!!
+!!! corrections 04/15/07
+               if (dx_BLK(iBLK)>0.0625 .and.  xxx > 6. .and.  xxx < 12. .and. &
+                 abs(yyy) < 7.5 .and.  zzz < 3.5 .and. &
+                  zzz > -8.5)DoRefine = .true.
+!!! end 04/15/07
+              end if
+           end if
+
+
+
+
+
+         case ('tn1')
+           ! 6 x 6 x 6 block for High resolution Runs On Request
+           ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
+           if (maxRblk > Rbody) then
+
+              if (dx_BLK(iBLK) > 8.) then
+                 ! Refine all blocks with dx greater than 8
+                DoRefine = .true.
+              else
+
+                 if (dx_BLK(iBLK) > 4. .and. xxx > -159.0) DoRefine = .true.
+
+                 if (dx_BLK(iBLK) > 2. .and. xxx > -39.0) DoRefine = .true.
+
+                 if (dx_BLK(iBLK) > 2. .and. xxx > -135.0 .and. &
+                   abs(yyy)<48..and. abs(zzz)<24.) DoRefine = .true.
+!    1 Re
+                 if (dx_BLK(iBLK)>1. .and. xxx > -27. .and. xxx < 33.0 .and. &
+                    abs(yyy)<48..and. abs(zzz)<36.)DoRefine = .true.
+
+               if (dx_BLK(iBLK)>1. .and. xxx > -51. .and. xxx < -27 .and. &
+                    abs(yyy)<48..and. abs(zzz)<24.)DoRefine = .true.
+
+                 if (dx_BLK(iBLK)>1. .and. xxx < -51. .and. xxx > -75. .and. &
+                    abs(yyy)<24..and. abs(zzz)<12.)DoRefine = .true.
+!    0.5 Re
+                  if (dx_BLK(iBLK)>0.5 .and. xxx < 21.0 .and. xxx > -27. .and. &
+                    abs(yyy)<30. .and. abs(zzz)<21.)DoRefine = .true.
+
+                  if (dx_BLK(iBLK)>0.5 .and. xxx < -27.0 .and. xxx > - 45. .and. &
+                    abs(yyy)<30. .and. abs(zzz)<15.)DoRefine = .true.
+
+                  if (dx_BLK(iBLK)>0.5 .and. xxx < - 45. .and. xxx> - 63.0 .and. &
+                    abs(yyy)<12..and. abs(zzz)<6.)DoRefine = .true.
+!    0.25 Re
+                 if (dx_BLK(iBLK)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
+                    abs(yyy)<9. .and. abs(zzz)<9.)DoRefine = .true.
+
+                  if (dx_BLK(iBLK)>0.25 .and. xxx < 15. .and. xxx> 9.0 .and. &
+                    abs(yyy)<15. .and. abs(zzz)<12.)DoRefine = .true.
+
+                   if (dx_BLK(iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+                    abs(yyy)<21. .and. abs(zzz)<15.)DoRefine = .true.
+
+                   if (dx_BLK(iBLK)>0.25 .and. xxx < 9. .and. xxx> -36.0 .and. &
+                    abs(yyy)<21. .and. abs(zzz)<12.)DoRefine = .true.
+
+!!!
+
+                  if (dx_BLK(iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+                    abs(yyy)<6..and. abs(zzz)<6.)DoRefine = .true.
+!  0.125 Re
+                  if (dx_BLK(iBLK)>0.125 .and.  xxx > 4.5 .and.  xxx < 12 .and. &
+                  abs(yyy) < 6.  .and.  abs(zzz) < 9.)DoRefine = .true.
+
+
+                  RRR=sqrt((xxx+3.)**2+1.3*zzz**2+(5.+0.77*abs(yyy))**2-25.)
+
+                  if (dx_BLK(iBLK)>0.125 .and.  xxx > -3. .and.  xxx < 14. .and. &
+                  RRR >10. .and.  RRR < 17. .and.  abs(zzz) < 9. )DoRefine = .true.
+!
+!
+!!!! corrections on 04/14/07
+
+                  if (dx_BLK(iBLK)>0.125 .and.  xxx > 1. .and.  xxx < 14. .and. &
+                  RRR >10. .and.  RRR < 20. .and. abs(zzz) < 9. )DoRefine = .true.
+!!!!!         end corrections 04/14/07
+! 0.0625
+
+!!old                  if (dx_BLK(iBLK)>0.0625 .and.  xxx > -18. .and.  xxx < -7.5 .and. &
+!!old                  abs(yyy) < 18. .and. abs(yyy) > 15.  .and. &
+!!old                   abs(zzz)< 3.)DoRefine = .true.
+
+!!                   if (dx_BLK(iBLK)>0.0625 .and.  xxx > -7.5 .and.  xxx < -0.75 .and. &
+!!                  abs(yyy) < 18. .and. abs(yyy) > 13.5  .and. &
+!!                   abs(zzz)< 3.)DoRefine = .true.
+
+               if (dx_BLK(iBLK)>0.0625 .and.  xxx > 6. .and.  xxx < 12. .and. &
+                  abs(yyy) < 6.  .and.  abs(zzz) < 4.5)DoRefine = .true.
+
+
+               if (dx_BLK(iBLK)>0.0625 .and.  xxx > 0 .and.  xxx < 12. .and. &
+                 RRR > 11. .and. RRR < 15.5 .and. abs(zzz) < 4.5)DoRefine = .true.
+!!! corrections 04/14/07
+               if (dx_BLK(iBLK)>0.0625 .and.  xxx > 1. .and.  xxx < 14. .and. &
+                 RRR > 11. .and. RRR < 18.5 .and.  abs(zzz) < 4.5)DoRefine = .true.
+
+!!! end 04/14/07
+!!!
+!!!
+!!! corrections 04/15/07
+               if (dx_BLK(iBLK)>0.0625 .and.  xxx > 6. .and.  xxx < 12. .and. &
+                 abs(yyy) < 7.5 .and.  abs(zzz) < 4.5 )DoRefine = .true.
+!!! end 04/15/07
+              end if
+           end if
+
+
+
+
 
     case ('ror6_short')
        ! 6 x 6 x 6 block for pressure pulse high resolution stady
@@ -611,6 +848,184 @@ contains
           end if
        end if
 
+    case ('mn1')
+       ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
+       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
+       if (maxRblk > Rbody) then
+
+          if (dx_BLK(iBLK) > 8.) then
+             ! Refine all blocks with dx greater than 8
+             DoRefine = .true.
+          else
+
+             if (dx_BLK(iBLK) > 4. .and. xxx > -168.0)  DoRefine = .true.
+
+             if (dx_BLK(iBLK) > 2. .and. xxx > -72.0)  DoRefine = .true.
+
+
+             if (dx_BLK(iBLK)>1. .and. xxx > -60. .and. xxx < 36.0 .and. &
+                  abs(yyy)<60. .and. abs(zzz)<48.) DoRefine = .true.
+
+
+             if (dx_BLK(iBLK)>0.5 .and. xxx < 30. .and. xxx> -54. .and. &
+                  abs(yyy)<48..and. abs(zzz)<36.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
+
+!             if (dx_BLK(iBLK)>0.25 .and. abs(xxx) < 24. .and. yyy > -24. .and. &
+!                  yyy<30. .and. abs(zzz)<5.) DoRefine = .true.
+!
+!             if (dx_BLK(iBLK)>0.25 .and. abs(xxx) < 24. .and. yyy > -24. .and. &
+!                  yyy<30. .and. abs(zzz)<5.) DoRefine = .true.
+
+
+
+          end if
+       end if
+
+    case ('mn2')
+       ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
+       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
+       if (maxRblk > Rbody) then
+
+          if (dx_BLK(iBLK) > 8.) then
+             ! Refine all blocks with dx greater than 8
+             DoRefine = .true.
+          else
+
+             if (dx_BLK(iBLK) > 4. .and. xxx > -168.0)  DoRefine = .true.
+
+             if (dx_BLK(iBLK) > 2. .and. xxx > -72.0)  DoRefine = .true.
+
+
+             if (dx_BLK(iBLK)>1. .and. xxx > 0. .and. xxx < 36.0 .and. &
+                  yyy> -60. .and. yyy < 36.   .and. abs(zzz)<36.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>1. .and. xxx > -12. .and. xxx < 0 .and. &
+                 yyy> -72. .and. yyy < 36.  .and. abs(zzz)<36.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>1. .and. xxx > -60. .and. xxx < -12 .and. &
+                 yyy> -168. .and. yyy < 36.   .and. abs(zzz)<36.) DoRefine = .true.
+  
+
+             if (dx_BLK(iBLK)>0.5 .and. xxx < 30. .and. xxx> 0. .and. &
+                  yyy> -48. .and. yyy < 24. .and. abs(zzz)<30.) DoRefine = .true.
+
+            if (dx_BLK(iBLK)>0.5 .and. xxx < 0. .and. xxx> -12. .and. &
+                 yyy> -60. .and. yyy < 30.  .and. abs(zzz)<30.) DoRefine = .true.
+
+            if (dx_BLK(iBLK)>0.5 .and. xxx < -10. .and. xxx> -54. .and. &
+                 yyy> -156. .and. yyy < 30.  .and. abs(zzz)<30.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
+
+!             if (dx_BLK(iBLK)>0.25 .and. abs(xxx) < 24. .and. yyy > -24. .and. &
+!                  yyy<30. .and. abs(zzz)<5.) DoRefine = .true.
+!
+!             if (dx_BLK(iBLK)>0.25 .and. abs(xxx) < 24. .and. yyy > -24. .and. &
+!                  yyy<30. .and. abs(zzz)<5.) DoRefine = .true.
+
+
+
+          end if
+       end if
+
+
+    case ('mn2_old')
+       ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
+       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
+       if (maxRblk > Rbody) then
+
+          if (dx_BLK(iBLK) > 8.) then
+             ! Refine all blocks with dx greater than 8
+             DoRefine = .true.
+          else
+
+             if (dx_BLK(iBLK) > 4. .and. xxx > -168.0)  DoRefine = .true.
+
+             if (dx_BLK(iBLK) > 2. .and. xxx > -72.0)  DoRefine = .true.
+
+
+             if (dx_BLK(iBLK)>1. .and. xxx > 0. .and. xxx < 36.0 .and. &
+                  yyy> -60. .and. yyy < 36.   .and. abs(zzz)<36.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>1. .and. xxx > -10. .and. xxx < 0 .and. &
+                 yyy> -72. .and. yyy < 36.  .and. abs(zzz)<36.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>1. .and. xxx > -60. .and. xxx < -10 .and. &
+                 yyy> -96. .and. yyy < 36.   .and. abs(zzz)<36.) DoRefine = .true.
+
+
+
+             if (dx_BLK(iBLK)>0.5 .and. xxx < 30. .and. xxx> 0. .and. &
+                  yyy> -48. .and. yyy < 24. .and. abs(zzz)<30.) DoRefine = .true.
+
+            if (dx_BLK(iBLK)>0.5 .and. xxx < 0. .and. xxx> -10. .and. &
+                 yyy> -60. .and. yyy < 30.  .and. abs(zzz)<30.) DoRefine = .true.
+
+            if (dx_BLK(iBLK)>0.5 .and. xxx < -10. .and. xxx> -54. .and. &
+                 yyy> -96. .and. yyy < 30.  .and. abs(zzz)<30.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
+
+!             if (dx_BLK(iBLK)>0.25 .and. abs(xxx) < 24. .and. yyy > -24. .and. &
+!                  yyy<30. .and. abs(zzz)<5.) DoRefine = .true.
+!
+!             if (dx_BLK(iBLK)>0.25 .and. abs(xxx) < 24. .and. yyy > -24. .and. &
+!                  yyy<30. .and. abs(zzz)<5.) DoRefine = .true.
+
+
+
+          end if
+       end if
+ case ('ror6_RB_lr')
+       ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
+       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
+       if (maxRblk > Rbody) then
+
+          if (dx_BLK(iBLK) > 8.) then
+             ! Refine all blocks with dx greater than 8
+             DoRefine = .true.
+          else
+
+             if (dx_BLK(iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+
+             if (dx_BLK(iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+
+             if (dx_BLK(iBLK) > 2. .and. xxx > -135.0 .and. &
+                  abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
+
+             if (dx_BLK(iBLK)>1. .and. xxx > -27. .and. xxx < 21.0 .and. &
+                  abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>1. .and. xxx < 0. .and. xxx > -87. .and. &
+                  abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.5 .and. xxx < 9.0 .and. xxx > -3. .and. &
+                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.5 .and. xxx < 15. .and. xxx > -15. .and. &
+                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.5 .and. xxx < 0. .and. xxx> -51. .and. &
+                  abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.25 .and. abs(xxx) < 12. .and. &
+                  abs(yyy)<12. .and. abs(zzz)<12. ) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.125 .and. abs(xxx) < 5. .and. &
+                  abs(yyy)<5..and. abs(zzz)<5.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.06125 .and. abs(xxx) < 4.5 .and. &
+                  abs(yyy)<4.5.and. abs(zzz)<4.5) DoRefine = .true.
+
+          end if
+       end if
+
+
 
     case ('ror6_long2')
        ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
@@ -746,6 +1161,118 @@ contains
              ! 0.25Re: |Z|<6, |Y|<6, |X|<6,
           endif
        endif
+
+    case ('ror6_hr_3')
+       ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
+       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
+       if (maxRblk > Rbody) then
+
+          if (dx_BLK(iBLK) > 8.) then
+             ! Refine all blocks with dx greater than 8
+             DoRefine = .true.
+          else
+ 
+RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
+
+             if (dx_BLK(iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+                   
+             if (dx_BLK(iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+
+             if (dx_BLK(iBLK) > 2. .and. xxx > -135.0 .and. &
+                  abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
+
+             if (dx_BLK(iBLK)>1. .and. xxx > -15. .and. xxx < 21.0 .and. &
+                  abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+                  abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.5 .and. xxx < 9.0 .and. xxx > -3. .and. &
+                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
+                   
+             if (dx_BLK(iBLK)>0.5 .and. xxx < 15. .and. xxx > -9. .and. &
+                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.5 .and. xxx < 0. .and. xxx> -99. .and. &
+                  abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.5 .and. RRR < 18. ) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.25 .and. RRR < 12. ) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.125 .and. RRR< 7.5) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.06125 .and. RRR< 5.25) DoRefine = .true.
+
+
+          end if
+       end if
+
+    case ('ror6_hr_4')
+       ! 6 x 6 x 6 block for High resolution Runs On Request
+       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
+       if (maxRblk > Rbody) then
+
+          if (dx_BLK(iBLK) > 8.) then
+             ! Refine all blocks with dx greater than 8
+             DoRefine = .true.
+          else
+
+             if (dx_BLK(iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+
+             if (dx_BLK(iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+
+             if (dx_BLK(iBLK) > 2. .and. xxx > -135.0 .and. &
+                  abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
+
+             if (dx_BLK(iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+                  abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+                  abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
+                  abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
+                  abs(yyy)<18..and. abs(zzz)<6.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.25 .and. xxx < 0. .and. &
+                  xxx > - 51.0 .and. &
+                  abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.25 .and. xxx < 0. .and. &
+                  xxx > - 24.0 .and. &
+                  abs(yyy)<15..and. abs(zzz)<3.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
+                  abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+                  abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+                  abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
+
+              RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
+
+             if (dx_BLK(iBLK)>0.5 .and. RRR < 18. ) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.25 .and. RRR < 12. ) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.125 .and. RRR< 7.5) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.06125 .and. RRR< 5.25) DoRefine = .true.
+
+          end if
+       end if
+
 
 
     case ('mag6_rt')
@@ -1691,6 +2218,110 @@ contains
           end if
        end if
 
+    case ('ror6_nykyri')
+       ! 6 x 6 x 6 block for High resolution Runs On Request
+       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
+       if (maxRblk > Rbody) then
+
+          if (dx_BLK(iBLK) > 8.) then
+             ! Refine all blocks with dx greater than 8
+             DoRefine = .true.
+          else
+
+             if (dx_BLK(iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+
+             if (dx_BLK(iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+
+             if (dx_BLK(iBLK) > 2. .and. xxx > -135.0 .and. &
+                  abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
+
+             if (dx_BLK(iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+                  abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+                  abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
+                  abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
+                  abs(yyy)<18..and. abs(zzz)<6.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.25 .and. xxx < 0. .and. &
+                  xxx > - 51.0 .and. &
+                  abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.25 .and. xxx < 0. .and. &
+                  xxx > - 24.0 .and. &
+                  abs(yyy)<15..and. abs(zzz)<3.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
+                  abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
+             if (dx_BLK(iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+                  abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+                  abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
+             if (dx_BLK(iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
+
+! Katarina Nykyri
+
+           if (dx_BLK(iBLK)>1. .and. xxx > -27. .and. xxx < 33.0 .and. &
+                  abs(yyy)<30. .and. abs(zzz)<30.) DoRefine = .true.
+
+          
+           if (dx_BLK(iBLK)>0.5  .and. xxx > -21. .and. xxx < 12.0 .and. &
+                  abs(yyy)<24. .and. abs(zzz)<24.) DoRefine = .true.
+
+           if (dx_BLK(iBLK)>0.25 .and. xxx > -18. .and. xxx < 9.0 .and. &
+                  yyy > -6. .and. yyy<15. .and.  zzz>3. .and. zzz < 18.) DoRefine = .true.
+
+          if (dx_BLK(iBLK)>0.125 .and. xxx > -14. .and. xxx < 5.0 .and. &
+                  yyy > -1. .and. yyy<10. .and.  zzz>7. .and. zzz < 16.) DoRefine = .true.
+
+
+             !                  if (dx_BLK(iBLK)>0.125 .and.  abs(xxx) < 4.5 .and. &
+             !                    abs(yyy) < 4.5 .and. abs(zzz)< 4.5) DoRefine = .true.
+
+             if (dx_BLK(iBLK)>0.125 .and.  abs(xxx) < 6. .and. &
+                  abs(yyy) < 6. .and. abs(zzz)< 6.) DoRefine = .true.
+
+
+             !                if (dx_BLK(iBLK)>0.0625 .and.  abs(xxx) < 6. .and. &
+             !                    abs(yyy) < 6. .and. abs(zzz)< 6.) DoRefine = .true.
+
+             ! This will make it:
+             !
+             ! Tail
+             ! 4 Re:  X>-159
+             ! 2 Re:  X>-135
+             ! 1 Re:  |Z|<12, |Y|<24, -111<X<0
+             ! 0.5Re: |Z|<6, |Y|<12, -99<X<0
+             ! 0.25   |Z|<3, |Y|<9, -51<X<0
+
+             ! Magnetopause/Shock
+             ! 1 Re:   |Z|<24, |Y|<24, -15 <X< 33
+             ! 0.5Re:  |Z|<18, |Y|<18, -3<X<15
+             ! 0.5Re:  |Z|<12, |Y|<12, -9<X<21
+             ! 0.25Re: |Z|<9, |Y|<9, -6<X<15
+             ! 0.25Re: |Z|<12, |Y|<12, 0<X<12
+             ! 0.25Re: |Z|<15, |Y|<15, -3<X<9
+
+             ! Near Earth
+             ! 0.25Re: |Z|<6, |Y|<6, |X|<6
+             ! 0.125Re: |Z|<4.5, |Y|< 4.56, |X|< 4.5
+
+          end if
+       end if
+
+
 
     case ('ror6_hr_1')
        ! 6 x 6 x 6 block for High resolution Runs On Request
@@ -2465,6 +3096,137 @@ contains
           end if
        end if
 
+             case ('ror6_small_new6')
+           ! 6 x 6 x 6 block for High resolution Runs On Request
+           ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
+           if (maxRblk > Rbody) then
+
+              if (dx_BLK(iBLK) > 8.) then
+                 ! Refine all blocks with dx greater than 8
+                 DoRefine  = .true.
+              else
+
+                 if (dx_BLK(iBLK) > 4. .and. xxx > -159.0 .and. &
+                 abs(yyy)<96..and. abs(zzz)<96.)  DoRefine  = .true.
+
+                 if (dx_BLK(iBLK) > 2. .and. xxx > -39.0 .and. &
+              abs(yyy)<96..and. abs(zzz)<96.)  DoRefine  = .true.
+
+                 if (dx_BLK(iBLK) > 2. .and. xxx > -135.0 .and. &
+                   abs(yyy)<48..and. abs(zzz)<48.)  DoRefine  = .true.
+
+                 if (dx_BLK(iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+                    abs(yyy)<24..and. abs(zzz)<24.) DoRefine  = .true.
+
+                 if (dx_BLK(iBLK)>1. .and. xxx < 0. .and. xxx > -123. .and. &
+                    abs(yyy)<36..and. abs(zzz)<24.) DoRefine  = .true.
+
+                  if (dx_BLK(iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+                    abs(yyy)<18..and. abs(zzz)<18.) DoRefine  = .true.
+
+                  if (dx_BLK(iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+                    abs(yyy)<12..and. abs(zzz)<12.) DoRefine  = .true.
+
+                  if (dx_BLK(iBLK)>0.5 .and. xxx < 18. .and. xxx> -111.0 .and. &
+                    abs(yyy)<30..and. abs(zzz)<18.) DoRefine  = .true.
+
+                  if (dx_BLK(iBLK)>0.25 .and. xxx < 6. .and. xxx> -6. .and. &
+                    abs(yyy)<8. .and. abs(zzz)<8.) DoRefine  = .true.
+
+              end if
+           end if
+
+  case ('ror6_tail_new6')
+           ! 6 x 6 x 6 block for High resolution Runs On Request
+           ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
+           if (maxRblk > Rbody) then
+
+              if (dx_BLK(iBLK) > 8.) then
+                 ! Refine all blocks with dx greater than 8
+                 DoRefine  = .true.
+              else
+
+                 if (dx_BLK(iBLK) > 4. .and. xxx > -159.0 .and. &
+                 abs(yyy)<96..and. abs(zzz)<96.)  DoRefine  = .true.
+
+                 if (dx_BLK(iBLK) > 2. .and. xxx > -39.0 .and. &
+              abs(yyy)<96..and. abs(zzz)<96.)  DoRefine  = .true.
+
+                 if (dx_BLK(iBLK) > 2. .and. xxx > -135.0 .and. &
+                   abs(yyy)<48..and. abs(zzz)<48.)  DoRefine  = .true.
+
+                 if (dx_BLK(iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+                    abs(yyy)<24..and. abs(zzz)<24.) DoRefine  = .true.
+
+                 if (dx_BLK(iBLK)>1. .and. xxx < 0. .and. xxx > -123. .and. &
+                    abs(yyy)<36..and. abs(zzz)<24.) DoRefine  = .true.
+
+                  if (dx_BLK(iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+                    abs(yyy)<18..and. abs(zzz)<18.) DoRefine  = .true.
+
+                  if (dx_BLK(iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+                    abs(yyy)<12..and. abs(zzz)<12.) DoRefine  = .true.
+
+                  if (dx_BLK(iBLK)>0.5 .and. xxx < 18. .and. xxx> -111.0 .and. &
+                    abs(yyy)<30..and. abs(zzz)<18.) DoRefine  = .true.
+
+                  if (dx_BLK(iBLK)>0.25 .and. xxx < 0. .and. xxx> -87. .and. &
+                    abs(yyy)<27. .and. abs(zzz)<6.) DoRefine  = .true.
+
+                  if (dx_BLK(iBLK)>0.25 .and. xxx < 12. .and. xxx> -3.0 .and. &
+                    abs(yyy)<15. .and. abs(zzz)<15.) DoRefine  = .true.
+
+                 if (dx_BLK(iBLK)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
+                    abs(yyy)<12. .and. abs(zzz)<9.) DoRefine  = .true.
+
+                    if (dx_BLK(iBLK)>0.25 .and. xxx < 0. .and. xxx> -26.0 .and. &
+                    abs(yyy)<21. .and. abs(zzz)<9.) DoRefine  = .true.
+
+!!                  if (dx_BLK(iBLK)>0.25 .and. abs(xxx) < 10.0 .and. &
+!!                    abs(yyy)<12..and. abs(zzz)<12.) DoRefine  = .true.
+
+                  if (dx_BLK(iBLK)>0.125 .and.  abs(xxx) < 12. .and. &
+                    abs(yyy) < 8. .and. abs(zzz)< 6. ) DoRefine  = .true.
+
+
+                    if (dx_BLK(iBLK)>0.125 .and. xxx < 0. .and. &
+                     xxx > - 24.0 .and. &
+                    abs(yyy)< 18. .and. abs(zzz)<6.) DoRefine  = .true.
+
+                    if (dx_BLK(iBLK)>0.125 .and. xxx < 8. .and. &
+                     xxx > - 6.0 .and. &
+                    abs(yyy)< 12. .and. abs(zzz)<6.) DoRefine  = .true.
+
+!!
+                    if (dx_BLK(iBLK)>0.125 .and. xxx < -6. .and. &
+                     xxx > - 48.0 .and. &
+                    abs(yyy)< 21. .and. abs(zzz)<3.) DoRefine  = .true.
+
+                    if (dx_BLK(iBLK)>0.125 .and. xxx < -40. .and. &
+                     xxx > - 60.0 .and. &
+                    abs(yyy)< 18. .and. abs(zzz)<3.) DoRefine  = .true.
+
+!!                    if (dx_BLK(iBLK)>0.125 .and. xxx < -70. .and. &
+!!                     xxx > - 87.0 .and. &
+!!                    abs(yyy)< 15. .and. abs(zzz)<3.) DoRefine  = .true.
+
+
+!!                  if (dx_BLK(iBLK)>0.0625 .and. xxx < -8. .and. &
+!!                     xxx > - 20.0 .and. &
+!!                    abs(yyy)<12. .and. abs(zzz)<3.) DoRefine  = .true.
+!!
+!!                      if (dx_BLK(iBLK)>0.0625 .and. xxx < -8. .and. &
+!!                     xxx > - 50.0 .and. &
+!!                    abs(yyy)<9. .and. abs(zzz)<1.5) DoRefine  = .true.
+!!
+!!
+!!                  if (dx_BLK(iBLK)>0.03125 .and. xxx < -10. .and. &
+!!                     xxx > - 16.0 .and. &
+!!                    abs(yyy)<9. .and. abs(zzz)<0.75) DoRefine  = .true.
+              end if
+           end if
+
+
 
 
 
@@ -2955,27 +3717,28 @@ contains
 
              !!   0.125
 
-             if (dx_BLK(iBLK)>0.125 .and.  abs(xxx) < 10. .and. &
-                  abs(yyy) < 8. .and. abs(zzz)< 6. ) DoRefine = .true.
+!!!!             if (dx_BLK(iBLK)>0.125 .and.  abs(xxx) < 10. .and. &
+!!!!                  abs(yyy) < 8. .and. abs(zzz)< 6. ) DoRefine = .true.
 
 
-             if (dx_BLK(iBLK)>0.125 .and. xxx < 8. .and. &
-                  xxx > - 6.0 .and. &
-                  abs(yyy)< 12. .and. abs(zzz)<6.) DoRefine = .true.
+!!!!             if (dx_BLK(iBLK)>0.125 .and. xxx < 8. .and. &
+!!!!                  xxx > - 6.0 .and. &
+!!!!                  abs(yyy)< 12. .and. abs(zzz)<6.) DoRefine = .true.
 
              !!
-
-             if (dx_BLK(iBLK)>0.125 .and. xxx < 0. .and. &
-                  xxx > - 33.0 .and. &
-                  abs(yyy)< 18. .and. zzz < 3. .and. zzz > - 9.) DoRefine = .true.
+!!!!
+!!!!             if (dx_BLK(iBLK)>0.125 .and. xxx < 0. .and. &
+!!!!                  xxx > - 33.0 .and. &
+!!!                  abs(yyy)< 18. .and. zzz < 3. .and. zzz > - 9.) DoRefine = .true.
 
              if (dx_BLK(iBLK)>0.125 .and. xxx < -6. .and. &
                   xxx > - 45.0 .and. &
-                  abs(yyy)< 21. .and.  zzz < 3. .and. zzz > - 9.) DoRefine = .true.
+                   abs(yyy)< 18. .and.  zzz < 3. .and. zzz > - 9.) DoRefine = .true.
+!!!!                  abs(yyy)< 21. .and.  zzz < 3. .and. zzz > - 9.) DoRefine = .true.
 
-             if (dx_BLK(iBLK)>0.125 .and. xxx < -40. .and. &
-                  xxx > - 57.0 .and. &
-                  abs(yyy)< 18. .and.  zzz < 3. .and. zzz > -9.) DoRefine = .true.
+!!!!             if (dx_BLK(iBLK)>0.125 .and. xxx < -40. .and. &
+!!!!                  xxx > - 57.0 .and. &
+!!!!                  abs(yyy)< 18. .and.  zzz < 3. .and. zzz > -9.) DoRefine = .true.
 
 
 
@@ -4145,7 +4908,7 @@ contains
       minmod = max(0.0,min(abs(x),sign(1.0,x)*y))
     end function minmod
 
-  end subroutine user_specify_refinement
+  end subroutine user_specify_initial_refinement
   !======================================================================
 
 end module ModUser
