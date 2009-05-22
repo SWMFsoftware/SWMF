@@ -27,11 +27,13 @@
 ;
 ; Functions for
 ;
-; calculating first and second derivative in 1D
-;    diff1,laplace1
+; calculating first derivative in 1D
+;    diff1
 ; calculating derivatives in 2D for Cartesian grids to 2nd,3rd,4th order
 ;    diff2,diff3,diff4
-; calculate minmod limited slope
+; calculating the laplace on 1D or 2D Cartesian grids
+;    laplace
+; calculating minmod limited slope
 ;    minmod
 ; calculating symmetric differences with respect to some mirror plane
 ;    symmdiff
@@ -832,6 +834,9 @@ end
 ;===========================================================================
 pro getvectors,physics,nvector,vectors
 
+   nvector = 0
+   if physics eq '' then return
+
    physic=strtrim(physics)
    phys=strmid(physic,0,strlen(physic)-2)
    ndir=0
@@ -1384,8 +1389,11 @@ pro unpolargrid2,nvector,vectors,x,w,xreg,wreg
   xreg=x
   phi=x(*,*,1)
 
-  ; If phi is in degrees, change it to radians
-  if max(abs(phi)) gt 20. then phi=phi*!pi/180
+  phimax = max(abs(phi))
+
+  ; If phi is in local time or degrees, change it to radians
+  if      abs(phimax - 24.0) lt 0.1 then phi=phi*!pi/12 $
+  else if phimax gt 20.0            then phi=phi*!pi/180
 
   xreg(*,*,0)=x(*,*,0)*cos(phi)
   xreg(*,*,1)=x(*,*,0)*sin(phi)
@@ -1894,14 +1902,9 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
 
 end
 ;===========================================================================
-pro putbottom,multix,multiy,ix,iy,ninfo,nx,it,time
+pro putbottom,multix,multiy,ix,iy,info,nx,it,time
 
 on_error,2
-
-if ninfo lt 1 then return
-info=''
-if ninfo gt 2 then info='nx='+string(nx,format='(i6,2(",",i4))')+' '
-if ninfo gt 1 then info=info+'it='+string(it,format='(i8)')+', '
 
 t    = round(time)
 sec  = t mod 60
@@ -1912,15 +1915,35 @@ hour = t mod 24
 t    = t/24
 day  = t mod 365
 year = t/365
+
 if year gt 0 then $
-  info=info+'time='+string(year,day,hour,format='(i3,"y",i3.3,"d",i2.2,"h")') $
+  stime = 'time='+string(year,day,hour,format='(i3,"y",i3.3,"d",i2.2,"h")') $
 else if day gt 0 then $
-  info=info+'time='+string(day,hour,min,format='(i4,"d",i2.2,"h",i2.2,"m")') $
+  stime = 'time='+string(day,hour,min,format='(i4,"d",i2.2,"h",i2.2,"m")') $
 else if hour gt 0 then $
-  info=info+'time='+string(hour,min,sec,format='(i4,"h",i2.2,"m",i2.2,"s")') $
+  stime = 'time='+string(hour,min,sec,format='(i4,"h",i2.2,"m",i2.2,"s")') $
 else $
-  info=info+'time='+string(time,format='(g12.5)')
-xyouts,5+(ix*!d.x_size)/multix,8+(iy*!d.y_size)/multiy,/DEV,info
+  stime = 'time='+string(time, format='(g12.5)')
+
+snx = string(nx, format='(i6,2(",",i4))')
+sit = string(it, format='(i8)')
+
+siz = size(info)
+
+if siz(1) eq 7 then begin
+  if not execute("s = "+info) then begin
+      print,'Error in putbottom: cannot evaluate info=',info
+      return
+  endif
+endif else begin
+    if info lt 1 then return
+    s = ''
+    if info gt 2 then s = 'nx=' + snx + ' '
+    if info gt 1 then s = s + 'it=' + sit + ', '
+    s = s + stime
+endelse
+
+xyouts, 5+(ix*!d.x_size)/multix, 8+(iy*!d.y_size)/multiy, /DEV, s
 
 ;;xyouts,5,3000,/DEV,info
 
@@ -1980,17 +2003,18 @@ dadx(n-1) = dadx(n-2)
 return,dadx
 end
 ;===========================================================================
-function laplace1,a,x
+function laplace,a,x,y
 ;
-; Take Laplace of "a" with respect to "x" (if present).
+; Take Laplace of "a" in 1 or 2D with respect to "x" (and "y") if present.
 ;
 ;===========================================================================
 on_error,2
 
 siz=size(a)
 ndim=siz(0)
+if ndim eq 2 then return,laplace2(a,x,y)
 if ndim ne 1 then begin
-   print,'Function laplace1 is intended for 1D arrays only'
+   print,'Function laplace is intended for 1D and 2D arrays only'
    retall
 endif
 
@@ -2013,6 +2037,53 @@ else            d2adx2(1:n-2) = $
 ; fill in boundaries
 d2adx2(0)   = d2adx2(1)
 d2adx2(n-1) = d2adx2(n-2)
+
+return,d2adx2
+end
+;===========================================================================
+function laplace2,a,x,y
+;
+; Take Laplace of "a" in 2D with respect to "x" and "y" (if present).
+;
+;===========================================================================
+on_error,2
+
+siz=size(a)
+ndim=siz(0)
+
+n1 = siz(1)
+n2 = siz(2)
+n  = n1*n2
+nx = n_elements(x)
+ny = n_elements(y)
+
+if (nx ne 0 or ny ne 0) and (nx ne n or ny ne n) then begin
+   print,'Error in diff1, arrays sizes differ: n, nx, ny=', n, nx, ny
+   retall
+endif
+
+d2adx2 = a
+
+if nx eq 0 then d2adx2(1:n1-2,1:n2-2) = $
+  a(2:n1-1,1:n2-2) - 2*a(1:n1-2,1:n2-2) + a(0:n1-3,1:n2-2) + $
+  a(1:n1-2,2:n2-1) - 2*a(1:n1-2,1:n2-2) + a(1:n1-2,0:n2-3)   $
+else            d2adx2(1:n1-2,1:n2-2) = $
+  ( (a(2:n1-1,1:n2-2) - a(1:n1-2,1:n2-2))/ $
+    (x(2:n1-1,1:n2-2) - x(1:n1-2,1:n2-2))- $
+    (a(1:n1-2,1:n2-2) - a(0:n1-3,1:n2-2))/ $
+    (x(1:n1-2,1:n2-2) - x(0:n1-3,1:n2-2)) $
+  ) / (0.5*(x(2:n1-1,1:n2-2) - x(0:n1-3,1:n2-2))) + $
+  ( (a(1:n1-2,2:n2-1) - a(1:n1-2,1:n2-1))/ $
+    (y(1:n1-2,2:n2-1) - y(1:n1-2,1:n2-1))- $
+    (a(1:n1-2,1:n2-2) - a(1:n1-2,0:n2-3))/ $
+    (y(1:n1-2,1:n2-2) - y(1:n1-2,0:n2-3)) $
+  ) / (0.5*(y(1:n1-2,2:n2-1) - y(1:n1-2,0:n2-3)))
+
+; fill in boundaries
+d2adx2(0   ,1:n2-1) = d2adx2(1   ,1:n2-1)
+d2adx2(n1-1,1:n2-1) = d2adx2(n1-2,1:n2-1)
+d2adx2(*,0)         = d2adx2(*,1)
+d2adx2(*,n2-1)      = d2adx2(*,n2-2)
 
 return,d2adx2
 end
@@ -2171,6 +2242,7 @@ function symmdiff,direction,a,x,y,report=report,anti=anti
 ;
 ;=========================================================================
 
+; If x is not present, the grid is taken to be Cartesian
 if n_elements(x) eq 0 then return, symmdiffreg(direction,a)
 
 if not keyword_set(report) then report = 0
