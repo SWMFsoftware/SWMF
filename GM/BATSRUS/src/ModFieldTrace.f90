@@ -1070,7 +1070,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
      write(*,'(a,4i4)')&
           'Finished follow_ray_block at me,iBlock,nSegment,iFace=',&
           iProc,iBlock,nSegment,iFace
-     write(*,'(a,i4,6es12.4)')&
+     write(*,'(a,i4,9es12.4)')&
           'Finished follow_ray_block at me,IjkCur_D,XyzCur_D,XyzInOut_D=',&
           iProc,IjkCur_D,XyzCur_D,XyzInOut_D
   end if
