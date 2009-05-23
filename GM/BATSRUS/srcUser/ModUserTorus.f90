@@ -23,8 +23,8 @@ module ModUser
        'Magnetic fusion device with a planar magnetic axis, I.V. Sokolov'
   real::GradShafranovAZ,GradShafranovAR
   real::PoloidalField=0.5,ToroidalField=4.0 !T
-  real::WallDensity=cHundred*cE12           !cm^{-3}
-  real::WallTemperature=cOne                !eV
+  real::WallDensity=100.0*1.0E12           !cm^{-3}
+  real::WallTemperature=1.                !eV
   real::FullPoloidalFlux
 
 contains
@@ -58,7 +58,7 @@ contains
 
     !To ensure purely round magnetic field line near the magnetic axis
 
-    GradShafranovAR=GradShafranovAZ/(cFour*rTorusLarge**2)
+    GradShafranovAR=GradShafranovAZ/(4.0*rTorusLarge**2)
 
     !Poloidal flux through the last magnetic surface
 
@@ -96,9 +96,9 @@ contains
          PoloidalAngle=iPoint*dAngle
          CosAngle=cos(PoloidalAngle)
          SinAngle=sin(PoloidalAngle)
-         R1=rTorusSmall*cHalf
+         R1=rTorusSmall*0.5
          F1=poloidal_flux(R1*CosAngle+rTorusLarge,R1*SinAngle)-FullPoloidalFlux
-         R2=rTorusSmall*cTwo
+         R2=rTorusSmall*2.0
          F2=poloidal_flux(R2*CosAngle+rTorusLarge,R2*SinAngle)-FullPoloidalFlux
          rOld=R1
          TorusSurface_I(iPoint)=R2
@@ -202,14 +202,14 @@ contains
     Z=X_D(z_)
     PoloidalFlux=poloidal_flux(R,Z)
     !Poloidal field:
-    B_D(z_)=cTwo*GradShafranovAR*(R**2-rTorusLarge**2)/cPi
+    B_D(z_)=2.0*GradShafranovAR*(R**2-rTorusLarge**2)/cPi
     B_D(x_:y_)=-(/CosPhi,SinPhi/)*GradShafranovAZ*Z/(cPi*R)+&
                 (/-SinPhi,CosPhi/)*&                 !ToroidalField
                 (sign(cOne,ToroidalField)*sqrt(&
                 (ToroidalField*rTorusLarge/R)**2+&
                 (FullPoloidalFlux-PoloidalFlux)*GradShafranovAZ/&
                 (cPi*R)**2)-ToroidalField*rTorusLarge/R)
-    P=cOne+cTwo*GradShafranovAR*(FullPoloidalFlux-PoloidalFlux)/cPi**2
+    P=cOne+2.0*GradShafranovAR*(FullPoloidalFlux-PoloidalFlux)/cPi**2
   end subroutine get_grad_shafranov
 
   !==========================================================================
@@ -270,7 +270,7 @@ contains
     end select
     do k=kStart,kFinal;do j=jStart,jFinal;do i=iStart,iFinal
        State_VGB(rho_,i,j,k,iBLK)=cOne
-       State_VGB(rhoUx_:rhoUz_,i,j,k,iBLK)=cZero
+       State_VGB(rhoUx_:rhoUz_,i,j,k,iBLK)=0.0
        call get_grad_shafranov(&
             (/x_BLK(i,j,k,iBLK),&
               y_BLK(i,j,k,iBLK),&
