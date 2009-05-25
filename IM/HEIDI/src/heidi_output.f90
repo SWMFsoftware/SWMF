@@ -206,7 +206,7 @@ end subroutine ECFL
 !	IRES(10) 'evl'	E vs. L distributions at given MLT and PA
 !	IRES(11) 'lft'	Particle lifetimes
 !	IRES(12) 'prs'	Pressures, densities, and Dst
-!	IRES(13) 'fun'  Unformatted output of all F2
+!	IRES(13) 'fun'  Restart output of all F2
 !	IRES(14) 'sal'	Continuous sources and losses of number/energy
 !	IRES(15) 'fbc'	Nightside boundary condition distribution
 !=========================================================================
@@ -886,7 +886,7 @@ subroutine WRESULT(LNC,XN,IFIR)
               StringHeader   = &
                    'Phase space distribution function for all pitch angles, energies and locations.'
 
-              StringVarName ='R   MLT   F_e   F_h   F_he   F_o   E   PA'
+              StringVarName ='R   MLT   F  E   PA'
 
               TypePosition = 'rewind'
 

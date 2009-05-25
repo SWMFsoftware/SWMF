@@ -64,11 +64,13 @@ subroutine INITIAL(LNC,XN,J6,J18)
   real              :: acosd
   integer           :: ntc, IFIR
 
-  real, allocatable :: Coord_DII(:,:,:), Var_IIV(:,:,:) 
+  real, allocatable :: Coord_DII(:,:,:), Var_VII(:,:,:) 
   integer           :: nDim, nParam,nVar       
-
-
-
+  integer           :: n_D(0:1), n1, n2
+  character(len=500):: NameVar
+  real              :: Param_I(2)
+  real              :: reshape
+  character(len=20) :: TypePosition
   save ntc
   !-----------------------------------------------------------------------
   if (IFIR.eq.1) then
@@ -445,60 +447,89 @@ subroutine INITIAL(LNC,XN,J6,J18)
 5          format (1P,5E12.4)
 
            !  Read in from a unformatted file (INI=7)
-        else if (INI(S).eq.7) then
-           open(UNIT=UnitTmp_,FILE=NameRestartInDir//trim(NameRun)//NameSpecies//'.unff',status='old',   &
-               form='unformatted')
-           do L=1,NPA
-              do K=1,NE  ! Change back to this for restarts
-                 do J=1,NT 
-                    read(UnitTmp_) (f2(I,J,K,L,S),I=1,NR)
-                 end do
-              end do
-           end do
-           close(UnitTmp_)
-
-        end if
-       
-!**************************************************
-!!$           !  Read in from a a restart ascii file (INI=7) 
 !!$        else if (INI(S).eq.7) then
-!!$           NameFile       = trim(NameRestartOutDir)//'Restart.out'
-!!$           StringHeader   = &
-!!$                'Phase space distribution function for all pitch angles, energies and locations.'
-!!$           
-!!$           StringVarName ='R   MLT   F   E   PA'
-!!$           iUnit =io_unit_new()
-!!$           
-!!$          
-!!$           
-!!$           allocate(Coord_DII(2,NR,NT),Var_IIV(4,NR,NT))
-!!$                      
-!!$           !do L=1,NPA  
-!!$           !   do K=1,NE 
-!!$                 
-!!$                 call read_plot_file(NameFile,      &
-!!$                      iUnitIn          = iUnit,&          
-!!$                      TypeFileIn       = TypeFile,     &
-!!$                      StringHeaderOut  = StringHeader, &
-!!$                      nStepOut         = ntc,          &
-!!$                      TimeOut          = T,         &
-!!$                      nDimOut          = nDim, &
-!!$                      nParamOut        = nParam, &
-!!$                      nVarOut          = nVar, &
-!!$                      n1Out            = NR,&
-!!$                      n2Out            = NT,&
-!!$                      nOut_D           = (/real(NR),real(NT)/),&
-!!$                      ParamOut_I       = (/real(NE), real(NPA)/),&
-!!$                      CoordMinOut_D    = (/1.75, 0.0/),&
-!!$                      CoordMaxOut_D    = (/6.5, 24.0/),&
-!!$                      CoordIn_DII      = Coord_DII,&
-!!$                      VarOut_IIV       = f2(:,:,K,L,S:S))
-!!$                 
-!!$                                 
-!!$            !  end do
-!!$           !end do
-!!$           
+!!$           open(UNIT=UnitTmp_,FILE=NameRestartInDir//trim(NameRun)//NameSpecies//'.unff',status='old',   &
+!!$               form='unformatted')
+!!$           do L=1,NPA
+!!$              do K=1,NE  ! Change back to this for restarts
+!!$                 do J=1,NT 
+!!$                    read(UnitTmp_) (f2(I,J,K,L,S),I=1,NR)
+!!$                 end do
+!!$              end do
+!!$           end do
+!!$           close(UnitTmp_)
+!!$
 !!$        end if
+!**************************************************
+           !  Read in from a a restart ascii file (INI=7) 
+        else if (INI(S).eq.7) then
+           NameFile       = trim(NameRestartOutDir)//'restart'//NameSpecies//'.out'
+           StringHeader   = &
+                'Phase space distribution function for all pitch angles, energies and locations.'
+           
+           StringVarName ='R   MLT   F   E   PA'
+           iUnit = io_unit_new()
+          
+           TypePosition ='rewind'
+           do L=1,NPA 
+              do K=1,NE
+                 ! Read header info 
+                 call read_plot_file(NameFile,&
+                      iUnitIn           = iUnit,&
+                      TypeFileIn        = TypeFile, &
+                      StringHeaderOut   = StringHeader,&
+                      nStepOut          = ntc, &
+                      TimeOut           = T,&
+                      nDimOut           = nDim, &
+                      nParamOut         = nParam, &
+                      nVarOut           = nVar,&
+                      n1Out             = n1,&
+                      n2Out             = n2, &
+                      nOut_D            = n_D,&
+                      ParamOut_I        = Param_I, &
+                      NameVarOut        = NameVar)
+                 
+                 ! Determine the shape of arrays from the header
+                 allocate(Coord_DII(2,NR,NT),Var_VII(1,NR,NT))
+                 
+                 ! Read the coord and var arrays
+                 call read_plot_file(NameFile,&
+                      iUnitIn       = iUnit,&
+                      TypeFileIn    = TypeFile, &
+                      CoordOut_DII  = Coord_DII,&
+                      VarOut_VII    = Var_VII)
+                 TypePosition = 'append'
+                 f2(:,:,K,L,S:S) = reshape(Var_VII,(/NR,NT,1/))
+
+!!$           write (*,*) '==============================='
+!!$           write(*,*) 'ntc,T,nDim',ntc,T,nDim
+!!$           write (*,*) '==============================='
+!!$           write(*,*) 'nVar',nVar
+!!$           write (*,*) '==============================='
+!!$           write(*,*) 'n1',n1
+!!$           write (*,*) '==============================='
+!!$           write(*,*) 'n2',n2
+!!$           write (*,*) '==============================='
+!!$           write(*,*) 'n_D',n_D
+!!$           write (*,*) '==============================='
+!!$           write(*,*) 'NameVar',NameVar
+!!$           write (*,*) '==============================='
+!!$           write(*,*) 'Param_I',Param_I
+!!$           write (*,*) '==============================='
+!!$           write(*,*) 'Coord_DII(1)',Coord_DII(1,:,:)
+!!$           write (*,*) '==============================='
+!!$           write(*,*) 'Coord_DII(2)',Coord_DII(2,:,:)
+!!$           write (*,*) '==============================='
+!!$           write(*,*) 'Var_VII',Var_VII
+!!$           write (*,*) '==============================='
+!!$           write(*,*) ' f2(:,:,K,L,S:S)', f2(:,:,K,L,S:S)
+!!$              
+           deallocate(Coord_DII, Var_VII)  
+        end do
+     end do
+
+
+end if
 
 !**************************************************
 
