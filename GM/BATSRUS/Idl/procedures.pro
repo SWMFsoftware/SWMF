@@ -835,9 +835,8 @@ end
 pro getvectors,physics,nvector,vectors
 
    nvector = 0
-   if physics eq '' then return
-
    physic=strtrim(physics)
+   if strlen(physics) lt 3 then return
    phys=strmid(physic,0,strlen(physic)-2)
    ndir=0
    reads,strmid(physic,strlen(physic)-1,1),ndir
