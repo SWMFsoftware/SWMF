@@ -26,11 +26,11 @@ module ModUser
 
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
-       IMPLEMENTED2 => user_specify_initial_refinement
+       IMPLEMENTED2 => user_specify_refinement
 
   include 'user_module.h' !list of public methods
 
-  real, parameter :: VersionUserModule = 0.9
+  real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: &
        NameUserModule = 'CCMC grids, Kuznetsova and Toth'
 
@@ -63,32 +63,20 @@ contains
 
   !===========================================================================
 
-!!! Above this everything is the same as in ModUserCCMC.f90 of 10/26/2008
-!!! except name of subroutine user_specify_refinement(iBlk, iArea, DoRefine)
-
-  subroutine user_specify_initial_refinement(iBLK, DoRefine, lev, &
-       Dx0,xxx0,yyy0,zzz0,RR0,minx0,miny0,minz0,minRblk0, &
-       maxx0,maxy0,maxz0,maxRblk0, &
-       IsFound)
-
+  subroutine user_specify_refinement(iBlk, iArea, DoRefine)
     use ModSize,     ONLY: nI, nJ, nK
     use ModMain,     ONLY: body1, UseRotatingBc
     use ModGeometry, ONLY: XyzMin_D, XyzMax_D, XyzStart_BLK, &
          dy_BLK, dz_BLK, TypeGeometry, x1, x2, x_BLK, y_BLK, z_BLK, dx_BLK
     use ModPhysics,  ONLY: rBody, rCurrents
-    use ModAMR,      ONLY: nRefineLevel, InitialRefineType !!!
+    use ModAMR,      ONLY: nRefineLevel
     use ModNumConst, ONLY: cPi, cTiny
 
-!!!    integer, intent(in) :: iBlk, iArea
+    integer, intent(in) :: iBlk, iArea
+    logical,intent(out) :: DoRefine
 
-    integer, intent(in) :: iBLK, lev                                   !!!
-    logical, intent(out):: DoRefine, IsFound                           !!!
 
-    ! These are ignored all
-    real,    intent(in) :: Dx0,xxx0,yyy0,zzz0,RR0, &                   !!!
-         minx0, miny0, minz0, minRblk0, maxx0, maxy0, maxz0, maxRblk0  !!!
-
-!!!    integer :: lev
+    integer :: lev
     real :: xxx,yyy,zzz,RR, xxPoint,yyPoint,zzPoint
     real :: RRR, RRR1, RRR2, RRR3, RRR4,RRR5
     real :: minRblk,maxRblk,xx1,xx2,yy1,yy2,zz1,zz2, tmpminRblk,tmpmaxRblk
@@ -107,12 +95,7 @@ contains
     !--------------------------------------------------------------------------
     call set_oktest('initial_refinement',oktest,oktest_me)
 
-!!!    lev = nRefineLevel
-    IsFound = .true.                     !!!
-    NameGrid = InitialRefineType         !!!
-
-!!! Below this everything is the same as in ModUserCCMC.f90 of 10/26/2008
-
+    lev = nRefineLevel
     DoRefine = .false.
 
 
@@ -4908,7 +4891,7 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
       minmod = max(0.0,min(abs(x),sign(1.0,x)*y))
     end function minmod
 
-  end subroutine user_specify_initial_refinement
+  end subroutine user_specify_refinement
   !======================================================================
 
 end module ModUser

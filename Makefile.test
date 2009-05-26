@@ -403,14 +403,28 @@ test_esmf_check:
 #1.Public version. Specific job scripts are substuted for generic mpirun
 #2. To be completed with the script replace_amrinit.pl
 
+test_ccmc:
+	@echo "test_ccmc_compile..." > test_ccmc.diff
+	make ccmc_compile
+	@echo "test_ccmc_rundir..." >> test_ccmc.diff
+	make test_ccmc_rundir
+	@echo "test_ccmc_run..." >> test_ccmc.diff
+	make test_ccmc_run
+	@echo "test_ccmc_restart_rundir..." >> test_ccmc.diff
+	make test_ccmcf_restart_rundir
+	@echo "test_ccmc_run..." >> test_ccmc.diff
+	make test_ccmc_run
+	@echo "test_ccmc_check..." >> test_ccmc.diff
+	make test_ccmc_check
+
+
 ccmc_compile: 
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
 	./Config.pl -g=GM:6,6,6,2600,400 -double
 	cd GM/BATSRUS; Config.pl -u=CCMC
 	make
-	cd GM/BATSRUS/make PIDL
+	cd GM/BATSRUS; make PIDL
 	
-
 test_ccmc_rundir:
 	rm -rf ${TESTDIR}
 	make rundir RUNDIR=${TESTDIR}
@@ -421,9 +435,9 @@ test_ccmc_rundir:
 	${SCRIPTDIR}/./replace_amrinit.pl
 	cp ${TESTDIR}/SWMF.exe ${TESTDIR}/SWMF_run_test.exe
 	rm -f ${TESTDIR}/SWMF.exe
-
+	
 test_ccmc_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_`date +%y%m%d%H%M`; cd GM; pIDL -ccmc; cd ../IE; pION
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF_run_test.exe > runlog_`date +%y%m%d%H%M`; cd GM; pIDL -ccmc; cd ../IE; pION
 
 test_ccmc_restart_rundir:
 	rm -f ${TESTDIR}/LAYOUT.in ${TESTDIR}/PARAM.in

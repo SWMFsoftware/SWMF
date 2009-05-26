@@ -43,8 +43,7 @@ open (PARAMFILE,"<PARAM.in");
 close(PARAMFILE);
 @PARAMFILE=@logmes;
 
-chomp($grid_name = `echo "$PARAMFILE[$line_with_grid_name]" | awk  
-'{print \$1}'`);
+chomp($grid_name = `echo "$PARAMFILE[$line_with_grid_name]" | awk '{print \$1}'`);
 chomp($grid_name = $grid_name);
 chomp($grid_level = $PARAMFILE[$line_with_grid_level]);
 
