@@ -418,7 +418,7 @@ test_ccmc_rundir:
 	cd ${TESTDIR}; \
 	cp -f Param_ccmc/LAYOUT.in_v8.01_init ${TESTDIR}/LAYOUT.in; \
 	cp -f Param_ccmc/PARAM.in_v8.01_init ${TESTDIR}/PARAM.in; \
-	${SCRIPTDIT}/./replace_amrinit.pl
+	${SCRIPTDIR}/./replace_amrinit.pl
 	cp ${TESTDIR}/SWMF.exe ${TESTDIR}/SWMF_run_test.exe
 	rm -f ${TESTDIR}/SWMF.exe
 
