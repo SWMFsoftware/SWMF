@@ -420,7 +420,7 @@ test_ccmc:
 
 ccmc_compile: 
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
-	./Config.pl -g=GM:6,6,6,2600,400 -double
+	./Config.pl -g=GM:6,6,6,3800,1
 	cd GM/BATSRUS; Config.pl -u=CCMC
 	make
 	cd GM/BATSRUS; make PIDL
