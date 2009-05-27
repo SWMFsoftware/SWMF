@@ -1,29 +1,31 @@
 subroutine heidi_init
 
-  use ModHeidiSize
-  use ModHeidiMain
-  use ModHeidiDrifts
-  use ModHeidiWaves
+  use ModHeidiMain, only: T, f107R
+  use ModHeidiDrifts, only: j18,j6
+  use ModProcIM, only: iProc
   use ModHeidiIO
-  use ModProcIM
   use ModInit
 
   implicit none
 
   !--------------------------------------------------------------------------
 
-  if (me_world.eq.0) then
+  if (iProc.eq.0) then
      call IonoHeidiInit(year,day,ut)
   endif
 
-
-  if (.not. IsFramework) T=TIME
-  call write_prefix; write(iUnitStdOut,*) 'TIME =',TIME
+  if (.not. IsFramework) T = TIME
+  if (iProc == 0) then
+     call write_prefix; write(iUnitStdOut,*) 'TIME =',TIME
+  end if
   NST=nint(TIME/DT/2.) + 1
   NKP=nint(10800./DT/2.)
   NIBC=nint(TINJ/DT/2.)
 
-  call write_prefix; write(iUnitStdOut,*)'nSteps, nSteps in KP, nSteps IBC:',NST,NKP,NIBC
+  if (iProc==0) then
+     call write_prefix; write(iUnitStdOut,*)'nSteps, nSteps in KP, nSteps IBC:',NST,NKP,NIBC
+  end if
+
   call CONSTANT(NKP)
   I2=(NST-1)/NKP + 1
   if (IKP.ge.3) F107=F107R(I2)
@@ -41,8 +43,11 @@ subroutine heidi_init
   !	IF (ISW.GT.0) CALL GETSWIND  ! Do it inside loop
   !.......Start the calculation
   NPR=nint(TINT/DT/2.)
-  if(NSTEP.lt.45) call write_prefix; write(iUnitStdOut,*) 'NSTEP',NSTEP
-
-  call write_prefix; write(iUnitStdOut,*) 'Times:',NST,NSTEP,NPR,NKP,NIBC,I2,DT,NSTEP*2.*DT
+  if (NSTEP.lt.45) then
+     if (iProc==0) then
+        call write_prefix; write(iUnitStdOut,*) 'NSTEP',NSTEP
+        call write_prefix; write(iUnitStdOut,*) 'Times:',NST,NSTEP,NPR,NKP,NIBC,I2,DT,NSTEP*2.*DT
+     end if
+  end if
 
 end subroutine heidi_init

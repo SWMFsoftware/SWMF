@@ -223,6 +223,7 @@ subroutine WRESULT(LNC,XN,IFIR)
   use ModIoUnit, only : io_unit_new,UnitTmp_
   use ModPlotFile, only: save_plot_file
   use ModHeidiInput, only: DtSaveRestart,TypeFile
+  use ModProcIM, only: iProc
 
   implicit none
 
@@ -290,7 +291,7 @@ subroutine WRESULT(LNC,XN,IFIR)
   if (IPA.eq.0) IFN=19
 
   !.......Write the plasmaspheric thermal densities (IRES(7), 'pla' & 'dgcpm')
-  if (IRES(7).eq.1 .and. me_world.eq.0) then
+  if (IRES(7).eq.1 .and. iProc.eq.0) then
      call write_prefix; write(iUnitStdOut,*)  'Printing plasmasphere'
      !	  First create Dan's output file for his plotting software
      filename = NameOutputDir//trim(NameRun)//'_dgcpm_'//NameStep//'.dat'
@@ -317,7 +318,7 @@ subroutine WRESULT(LNC,XN,IFIR)
   !CC Didn't work...we need Aaron to diagnose the problem
   !	print *, 'Saving Aaron''s ionosphere model output'
   if ((IA.ge.8 .and. IA.le.11) .or. IA.ge.13) then
-     if (me_world.eq.0) call IonoHeidiWriteOutput(1,t,NameRun,NameStep)
+     if (iProc.eq.0) call IonoHeidiWriteOutput(1,t,NameRun,NameStep)
   end if
 
   !CC Start the main loop over species we're calculating

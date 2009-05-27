@@ -1,60 +1,54 @@
 subroutine heidi_run
+  
   use ModInit
-  use ModHeidiSize
-  use ModHeidiIO
-  use ModHeidiMain
+  use ModHeidiIO,   ONLY: isw, nStep,iwpi,ires
+  use ModHeidiMain, ONLY: s,t,dt,scalc
 
   implicit none 
-
-  !integer :: nst,npr,i3,nkp,NIBC,i2
- ! real    :: XN(NR,NS),LNC(NR,NS)
+!------------------------------------------------------------------------------
   
-  CALL GETKPA(i3,nst,i2,nkp)
-  IF (ISW.GT.0) CALL GETSWIND
-  !print *, 'Calling MAGCONV'
-  CALL MAGCONV(i3,nst)
-  !print *, 'Calling THERMAL'
-  CALL THERMAL
-  !print *, 'Calling WRESULT'
-  IF (I3.EQ.NST) CALL WRESULT(LNC,XN,1)
-  DO S=1,NS
-     IF (SCALC(S).EQ.1) THEN
-        !print *, '   S: ',S
-        CALL LMPLOSS
+  call GETKPA(i3,nst,i2,nkp)
+  if (ISW.gt.0) call GETSWIND
+  call MAGCONV(i3,nst)
+  call THERMAL
+  if (I3.eq.NST) call WRESULT(LNC,XN,1)
+  do S = 1,NS
+     if (SCALC(S).eq.1) then
+        call LMPLOSS
         !.......Call routines to calculate the changes of distribution function
         !               considering drifts, charge exchange and Coulomb drag
         !	CALL FCHECK(1)
-        CALL DRIFTR
-        CALL DRIFTP
-        CALL DRECOUL
-        CALL DRIFTMU
-        CALL CHAREXCHANGE
-        CALL COULMU
+        call DRIFTR
+        call DRIFTP
+        call DRECOUL
+        call DRIFTMU
+        call CHAREXCHANGE
+        call COULMU
         !	CALL FCHECK(2)
-        CALL CHAREXCHANGE
-        CALL DRIFTMU
-        CALL DRECOUL
-        CALL DRIFTP
-        CALL DRIFTR
-        CALL LLIMIT	  ! Truncates results below 1E-30
+        call CHAREXCHANGE
+        call DRIFTMU
+        call DRECOUL
+        call DRIFTP
+        call DRIFTR
+        call LLIMIT	  ! Truncates results below 1E-30
         !	CALL FCHECK(3)
         !.......Print sources and losses (continuous output stream)
-        IF (IRES(14).EQ.1) CALL PSRCLOSS(T)
-     END IF  ! SCALC check
-  END DO  ! S loop
+        if (IRES(14).eq.1) call PSRCLOSS(T)
+     end if  ! SCALC check
+  end do  ! S loop
+  
   !.......Increment time
-  T=T+2.*DT
+  T = T + 2.*DT
+  
   !.......Print desired result files at every TINT sec 
-  CALL FCHECK(11)
-  IF (MOD(I3,NPR).EQ.0 .OR. I3.EQ.NSTEP) THEN
-     CALL FCHECK(10)	! Checks for negative results
-     CALL WRESULT(LNC,XN,0)
-     IF (iwpi.GT.0) CALL ANISCH
-  END IF
+  call FCHECK(11)
+  if (mod(I3,NPR).eq.0 .or. I3.eq.NSTEP) then
+     call FCHECK(10)	! Checks for negative results
+     call WRESULT(LNC,XN,0)
+     if (iwpi.gt.0) call ANISCH
+  end if
+  
   !	Update boundary condition
-  IF (MOD(I3,NIBC).EQ.0) CALL GEOSB
-
- 
- ! iStep = iStep + 1
+  if (mod(I3,NIBC).eq.0) call GEOSB
  
 end subroutine heidi_run
