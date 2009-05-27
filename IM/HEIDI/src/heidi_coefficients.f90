@@ -475,6 +475,7 @@ subroutine MAGCONV(I3,NST)
 
   if (ABASE(IA+1).eq.1) then
 
+     
      do J=1,JO   ! Fill in drift values
         do i=1,io
            VR(I,J)=-A*cos(PHI(J))*(LZ(I)+0.5*DL1)**(LAMGAM+2.)*   &
@@ -483,9 +484,13 @@ subroutine MAGCONV(I3,NST)
                 DT/DPHI*(RE*RE/ME)
            BASEPOT(i+1,j)=A*RE*LZ(i)**(LAMGAM)*sin(phi(j))
         end do
-        BASEPOT(1,j)=A*RE*(LZ(i)-DL1)**(LAMGAM)*sin(phi(j))
-        BASEPOT(i+1,j)=A*RE*(LZ(io)+dl1)**(LAMGAM)*sin(phi(j))
-        BASEPOT(i+1,j)=A*RE*(LZ(io)+2*dl1)**(LAMGAM)*sin(phi(j))	  
+        
+        !Compute the V-S potential outside the edges of the radial grid. 
+        !Needed for the current calculation.
+        BASEPOT(1,j)    = A*RE*(LZ(1)-DL1)**(LAMGAM)*sin(phi(j))
+        BASEPOT(io+1,j) = A*RE*(LZ(io)+dl1)**(LAMGAM)*sin(phi(j))
+        BASEPOT(io+2,j) = A*RE*(LZ(io)+2*dl1)**(LAMGAM)*sin(phi(j))
+             
      end do
      do J=1,nphicells   ! Fill in DGCPM potentials
         do I=1,nthetacells
@@ -890,16 +895,16 @@ subroutine MAGCONV(I3,NST)
 
      if (nProc.gt.1) then
 
-        write(*,*) 'nProc, iProc', nProc,iProc   
+        !write(*,*) 'nProc, iProc', nProc,iProc   
 
         call MPI_BARRIER(iComm,iError)
 
         Jfac = 0.0
-        jfac_temp(:,:)=(0.0,0.0)
+        !jfac_temp(:,:)=(0.0,0.0)
         do i=1,nProc
            if (i-1.eq.iProc) then
               jfac_temp(:,:) = Jion1(:,:,ParallelSpecies(i))
-              write(*,*) 'jfac_temp(:,:)',jfac_temp(:,:)
+              !write(*,*) 'jfac_temp(:,:)',jfac_temp(:,:)
            endif
 
 
