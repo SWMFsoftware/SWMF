@@ -37,8 +37,8 @@ Module ModHeidiMain
 
 ! Define parallel computing variables
 ! Formerly: Common block PAR
-	integer parallel_species(NS)
-	integer ira, erno, me_world, numprocs, total_species, ispecies
+	integer ::ParallelSpecies(NS)
+        integer ::TotalSpecies, iSpecies
 
 
 
