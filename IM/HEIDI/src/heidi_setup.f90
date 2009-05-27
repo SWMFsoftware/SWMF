@@ -34,7 +34,7 @@ subroutine heidi_read
   use ModHeidiMain
   use ModIoUnit, only : UNITTMP_
   use ModHeidiInput, only: set_parameters
-  use ModProcIM, only: iComm
+  use ModProcIM, only:iProc
 
   implicit none
 
@@ -46,22 +46,25 @@ subroutine heidi_read
   call set_parameters
 
   Dt = DTmax
-  call write_prefix; write(iUnitStdOut,*) ' year,month,day,UT',year,month,day,UT
 
-  write(*,*) 'DT,TMAX,TINT,TIME',DT,TMAX,TINT,TIME
-  write(*,*) 'IO,JO,KO,LO,ISO',IO,JO,KO,LO,ISO
-  write(*,*)' ELB,SWE,RW,HMIN',ELB,SWE,RW,HMIN
-  write(*,*) 'ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT',&
-       ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT
-  write(*,*) '(SCALC(k),k=1,NS)',(SCALC(k),k=1,NS)
-  write(*,*) 'YEAR,month,day,UT,R,AP,KP',YEAR,month,day,UT,R,AP,KP
-  write(*,*) '(INI(k),k=1,NS)',(INI(k),k=1,NS)
-  write(*,*) '(IBC(k),k=1,NS)',(IBC(k),k=1,NS)
-  write(*,*) 'TINJ,Ab,Eob',TINJ,Ab,Eob
-  write(*,*) '(IRES(k),k=1,15)',(IRES(k),k=1,15)
-  write(*,*) 'NAME',NameRun
+  if (iProc==0) then
+     call write_prefix; write(iUnitStdOut,*) ' year,month,day,UT',year,month,day,UT
 
+     call write_prefix; write(iUnitStdOut,*)  'DT,TMAX,TINT,TIME',DT,TMAX,TINT,TIME
+     call write_prefix; write(iUnitStdOut,*)  'IO,JO,KO,LO,ISO',IO,JO,KO,LO,ISO
+     call write_prefix; write(iUnitStdOut,*) ' ELB,SWE,RW,HMIN',ELB,SWE,RW,HMIN
+     call write_prefix; write(iUnitStdOut,*)  'ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT',&
+          ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT
+     call write_prefix; write(iUnitStdOut,*)  '(SCALC(k),k=1,NS)',(SCALC(k),k=1,NS)
+     call write_prefix; write(iUnitStdOut,*)  'YEAR,month,day,UT,R,AP,KP',YEAR,month,day,UT,R,AP,KP
+     call write_prefix; write(iUnitStdOut,*)  '(INI(k),k=1,NS)',(INI(k),k=1,NS)
+     call write_prefix; write(iUnitStdOut,*)  '(IBC(k),k=1,NS)',(IBC(k),k=1,NS)
+     call write_prefix; write(iUnitStdOut,*)  'TINJ,Ab,Eob',TINJ,Ab,Eob
+     call write_prefix; write(iUnitStdOut,*)  '(IRES(k),k=1,15)',(IRES(k),k=1,15)
+     call write_prefix; write(iUnitStdOut,*)  'NAME',NameRun
 
+  endif
+ 
   TimeArray(1) = year
   TimeArray(2) = month
   TimeArray(3) = day
@@ -113,7 +116,11 @@ subroutine heidi_read
      close(UNITTMP_)
      TPPC(1:IPPC)=TPPC(1:IPPC)*86400. ! Convert to seconds
      PPC(1:IPPC)=PPC(1:IPPC)*1.E3       ! Convert to Volts
-     call write_prefix; write(iUnitStdOut,*) 'PPC:',IPPC,TPPC(1),TPPC(IPPC),PPC(1),PPC(IPPC)
+     
+     if (iProc==0) then
+        call write_prefix; write(iUnitStdOut,*) 'PPC:',IPPC,TPPC(1),TPPC(IPPC),PPC(1),PPC(IPPC)
+     end if
+     
   end if
 
 end subroutine heidi_read
@@ -127,7 +134,8 @@ subroutine CONSTANT(NKP)
   use ModHeidiIO
   use ModHeidiMain
   use ModIoUnit, only : UNITTMP_
-
+  use ModProcIM, only:iProc
+  
   implicit none
 
   real              :: kpt,DUT
@@ -175,7 +183,8 @@ subroutine BFIELD_SETUP(cone)
   use ModHeidiMain
   use ModHeidiWaves
   use ModHeidiIO
-
+  use ModProcIM, only:iProc
+  
   implicit none
 
   real     :: CONE(NR+4),degrad,camlra,asind
@@ -214,7 +223,8 @@ subroutine ARRAYS
   use ModHeidiIO
   use ModHeidiMain
   use ModHeidiWaves
-
+  use ModProcIM, only:iProc
+  
   implicit none
 
   integer :: I,J,K,L,IDL1,IC,IML,LL
@@ -246,11 +256,15 @@ subroutine ARRAYS
   !        new code for Cray  ===(length 1 line)====ab==
   IDL1=nint(DL1*1000.)
   if(DL1.ge.0.25 .and. mod(IDL1,250).ne.0) then
-     call write_prefix; write(iUnitStdOut,*)  'Error : 0.25 is not a factor of DL1 '
+     if (iProc==0) then
+        call write_prefix; write(iUnitStdOut,*)  'Error : 0.25 is not a factor of DL1 '
+     end if
      !WRITE(6,*) ' Error : 0.25 is not a factor of DL1 '
      call CON_stop('ERROR in heidi_setup.f90')
   else if (DL1.lt.0.25 .and. mod(250,IDL1).ne.0) then
-     call write_prefix; write(iUnitStdOut,*)  'Error : DL1 is not a factor of 0.25'
+     if (iProc==0) then
+        call write_prefix; write(iUnitStdOut,*)  'Error : DL1 is not a factor of 0.25'
+     end if
      !WRITE (6,*) ' Error : DL1 is not a factor of 0.25'
      call CON_stop('ERROR in heidi_setup.f90')
   end if
@@ -266,7 +280,10 @@ subroutine ARRAYS
 
   DPHI=2.*PI/JO		      ! Grid size for local time [rad]
   if(mod(NLT,JO).ne.0) then
-     call write_prefix; write(iUnitStdOut,*)  'Error : JO is not a factor of NLT '
+     
+     if (iProc==0) then
+        call write_prefix; write(iUnitStdOut,*)  'Error : JO is not a factor of NLT '
+     end if
      !WRITE(6,*) ' Error : JO is not a factor of NLT '
      call CON_stop('ERROR in heidi_setup.f90')
   end if
@@ -433,10 +450,11 @@ subroutine ARRAYS
      SUMD=SUMD+DMU(L)
   end do
 
-
-  call write_prefix; write(iUnitStdOut,*) 'SUMS:',SUMW,SUMD
-  call write_prefix; write(iUnitStdOut,*) 'LO:',MU(LO-1),MU(LO),DMU(LO),WMU(LO),MU(LO-1)+.5*DMU(LO-1)
-
+  if (iProc==0) then
+     call write_prefix; write(iUnitStdOut,*) 'SUMS:',SUMW,SUMD
+     call write_prefix; write(iUnitStdOut,*) 'LO:',MU(LO-1),MU(LO),DMU(LO),WMU(LO),MU(LO-1)+.5*DMU(LO-1)
+  end if
+  
   !print *, '1:',MU(1),MU(2),DMU(1),WMU(1),MU(2)-.5*DMU(2)
   !**  calculate pitch angles for mlat
   do I=1,IO
@@ -558,6 +576,7 @@ subroutine GETKPA(i3,nst,i2,nkp)
   use ModHeidiSize
   use ModHeidiIO
   use ModHeidiMain
+  use ModProcIM, only:iProc
 
   implicit none
 
@@ -657,6 +676,7 @@ subroutine GETSWIND
   use ModHeidiIO
   use ModHeidiMain
   use ModIoUnit, only : io_unit_new 
+  use ModProcIM, only:iProc
 
   implicit none
 
@@ -759,7 +779,7 @@ subroutine THERMAL
 
   !  If ITHERMFIRST=1, then do initial setup for the plasmasphere code and return
   if (ithermfirst.eq.1) then
-     if (me_world.eq.0) then
+     if (iProc.eq.0) then
         call initmain()
         call getgrid(vthetacells,nthetacells,vphicells,nphicells)
         call getxydipole(nthetacells,nphicells,vthetacells,vphicells, &
@@ -786,13 +806,16 @@ subroutine THERMAL
   end if
 
   !  Call the plasmasphere code and interpolate onto our spatial grid
-  if (me_world.eq.0) then
+  if (iProc.eq.0) then
      delt=2*DT*dtimestep
      if (ithermfirst.eq.2) then
         if (itherminit.eq.1) then  ! Read initial plasmasphere from file
            filename=trim(NameRun)//'_dgcpm.in'
-
-           call write_prefix; write(iUnitStdOut,*) 'Reading in plasmasphere file: ',filename
+           
+           if (iProc==0) then
+              call write_prefix; write(iUnitStdOut,*) 'Reading in plasmasphere file: ',filename
+           end if
+           
            call loadplasmasphere(filename)
            call getdensity(vthetacells,nthetacells,vphicells,nphicells, &
                 dendgcpm)
@@ -811,8 +834,11 @@ subroutine THERMAL
      endif    ! ithermfirst
      if (delt.gt.0.) then
         call setpot(vthetacells,nthetacells,vphicells,nphicells,potdgcpm)
-        call write_prefix; write(iUnitStdOut,*)  'Calling plasmasphere:',potdgcpm(nthetacells,nphicells/4), &
-             potdgcpm(nthetacells,3*nphicells/4)
+        if (iProc==0) then
+           call write_prefix; write(iUnitStdOut,*)  &
+                'Calling plasmasphere:',potdgcpm(nthetacells,nphicells/4), &
+                potdgcpm(nthetacells,3*nphicells/4)
+        end if
         do n=1,ntimestep
            call plasmasphere(delt,par)
         end do
@@ -825,7 +851,7 @@ subroutine THERMAL
            XNE(I,J)=1.E-6*XNE(i,J)
         end do	! I loop
      end do	! J loop
-  endif		! me_world=0
+  endif		! iProc=0
 
   call MPI_BARRIER(iComm,iError)
   call MPI_Bcast(XNE,NR*NT,MPI_Real,0,iComm,iError)
