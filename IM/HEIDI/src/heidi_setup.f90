@@ -134,7 +134,7 @@ subroutine CONSTANT(NKP)
   use ModHeidiIO
   use ModHeidiMain
   use ModIoUnit, only : UNITTMP_
-  use ModProcIM, only:iProc
+  use ModProcIM, only : iProc
   
   implicit none
 
@@ -223,7 +223,7 @@ subroutine ARRAYS
   use ModHeidiIO
   use ModHeidiMain
   use ModHeidiWaves
-  use ModProcIM, only:iProc
+  use ModProcIM, only: iProc
   
   implicit none
 
@@ -676,7 +676,7 @@ subroutine GETSWIND
   use ModHeidiIO
   use ModHeidiMain
   use ModIoUnit, only : io_unit_new 
-  use ModProcIM, only:iProc
+  use ModProcIM, only: iProc
 
   implicit none
 
@@ -690,17 +690,19 @@ subroutine GETSWIND
   real :: bx
   !------------------------------------------------------------------------
   iUnitSw1 = io_unit_new()
-
+  
+  T2 = TIME-1.
+    
+  open(UNIT=iUnitSw1,FILE=NameInputDirectory//trim(NameRun)//'_sw1.in',status='old')
+ 
   ILold(1:JO)=ILMP(1:JO)
   if (T.eq.TIME) then
-     T2=TIME-1.
      T1=T2
-
-     open(UNIT=iUnitSw1,FILE=NameInputDirectory//trim(NameRun)//'_sw1.in',status='old')
      do I=1,6			! 6 lines of header material
         read (iUnitSw1,*) HEADER
      end do
   end if
+  
   if (T2.lt.T) then
      do while (T2.le.T)	! Best if final T2 > final T
         T1=T2
