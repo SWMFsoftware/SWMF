@@ -411,7 +411,7 @@ test_ccmc:
 	@echo "test_ccmc_run..." >> test_ccmc.diff
 	make test_ccmc_run
 	@echo "test_ccmc_restart_rundir..." >> test_ccmc.diff
-	make test_ccmcf_restart_rundir
+	make test_ccmc_restart_rundir
 	@echo "test_ccmc_run..." >> test_ccmc.diff
 	make test_ccmc_run
 	@echo "test_ccmc_check..." >> test_ccmc.diff
