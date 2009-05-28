@@ -41,6 +41,7 @@ MODULES = \
 	ModGeometry.o\
 	ModGroundMagPerturb.o\
 	ModHallResist.o\
+	ModHeatConduction.o\
 	ModIO.o\
 	ModMain.o\
 	ModMessagePass.o\

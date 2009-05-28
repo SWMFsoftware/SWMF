@@ -47,6 +47,7 @@ subroutine MH_set_parameters(TypeAction)
        xSizeBoxHall, DxSizeBoxHall, &
        ySizeBoxHall, DySizeBoxHall, &
        zSizeBoxHall, DzSizeBoxHall
+  use ModHeatConduction, ONLY: read_heatconduction_param
   use ModTemperature, ONLY: UseTemperatureDiffusion, read_temperature_param
   use ModResistivity                              !^CFG IF DISSFLUX
   use ModMultiFluid, ONLY: MassIon_I, DoConserveNeutrals,iFluid
@@ -497,6 +498,9 @@ subroutine MH_set_parameters(TypeAction)
           "#HEATCONDUCTION", &
           "#IMPLICITTEMPERATURE")
         call read_temperature_param(NameCommand)
+
+     case("#PARALLELCONDUCTION")
+        call read_heatconduction_param(NameCommand)
 
      case("#SAVELOGFILE")
         call read_var('DoSaveLogfile',save_logfile)

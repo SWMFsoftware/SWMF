@@ -35,6 +35,8 @@ module ModFaceFlux
 
   use ModGrayDiffusion, ONLY: IsNewBlockGrayDiffusion, & !^CFG IF IMPLICIT
        get_radiation_energy_flux                         !^CFG IF IMPLICIT
+  use ModHeatConduction, ONLY: IsNewBlockHeatConduction, &
+       get_heat_flux, UseParallelConduction
   use ModTemperature, ONLY: UseTemperatureDiffusion
 
   use ModResistivity, ONLY: UseResistivity, Eta_GB  !^CFG IF DISSFLUX
@@ -101,6 +103,9 @@ module ModFaceFlux
 
   ! Variables for Gray-Diffusion
   real :: EradFlux_D(3)
+
+  ! Variables for heat conduction
+  real :: HeatFlux_D(3)
 
   ! These are variables for pure MHD solvers (Roe and HLLD)
   ! Number of MHD fluxes including the pressure and energy fluxes
@@ -354,6 +359,7 @@ contains
     IsNewBlockHall = .true.
     ! same for Gray-Diffusion            !^CFG IF IMPLICIT
     IsNewBlockGrayDiffusion = .true.     !^CFG IF IMPLICIT
+    IsNewBlockHeatConduction = .true.
 
     if(UseResistivity) call set_resistivity(iBlock)      !^CFG IF DISSFLUX
 
@@ -1767,6 +1773,12 @@ contains
             + State_V(Eradiation_)/3.0*Normal_D
        ! work by the radiation pressure gradient
        Flux_V(Energy_) = Flux_V(Energy_) + Un*State_V(Eradiation_)/3.0
+    end if
+
+    if(UseParallelConduction)then
+       call get_heat_flux(iDimFace, iFace, jFace, kFace, iBlockFace, &
+            State_V, HeatFlux_D)
+       Flux_V(Energy_) = Flux_V(Energy_) + sum(HeatFlux_D*Normal_D)
     end if
 
     if(UseHyperbolicDivb)then

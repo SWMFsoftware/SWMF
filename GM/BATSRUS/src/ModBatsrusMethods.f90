@@ -241,6 +241,7 @@ subroutine BATS_init_session
   use ModImplicit, ONLY: UseSemiImplicit, &                !^CFG IF IMPLICIT
        TypeSemiImplicit, UseFullImplicit                   !^CFG IF IMPLICIT
   use ModGrayDiffusion, ONLY: init_gray_diffusion          !^CFG IF IMPLICIT
+  use ModHeatConduction, ONLY: init_heat_conduction, UseParallelConduction
   use ModTemperature, ONLY: UseTemperatureDiffusion, init_temperature_diffusion
   use ModUser, ONLY: user_initial_perturbation
   implicit none
@@ -277,6 +278,7 @@ subroutine BATS_init_session
   !call test_face_current
 
   if(UseTemperatureDiffusion) call init_temperature_diffusion
+  if(UseParallelConduction) call init_heat_conduction
   if(UseSemiImplicit)then                      !^CFG IF  IMPLICIT BEGIN
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
