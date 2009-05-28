@@ -17,7 +17,8 @@ module ModUser
        NameUserModule = 'heat conduction'
 
   character(len=20) :: TypeProblem
-  real :: HeatConductionCoef, AmplitudeTemperature, T0
+  real :: HeatConductionCoef, AmplitudeTemperature, Tmin
+  real :: Bx, By, Time0
 
   integer :: nCellRef
   integer :: &
@@ -58,7 +59,8 @@ contains
     character(len=*), parameter :: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
 
-    if(TypeProblem=='gaussian' .or. TypeProblem=='rz')then
+    if(TypeProblem=='gaussian' .or. TypeProblem=='rz' &
+         .or. TypeProblem=='parcond')then
        if(Time_Simulation <= 0.0)then
           if(iProc == 0) write(*,*) NameSub// &
                ' : starting simulation time should be larger than 0'
@@ -70,14 +72,16 @@ contains
     case('gaussian')
        HeatConductionCoef = 0.1
        AmplitudeTemperature = 10.0
-       T0 = 10.0
+       Tmin = 10.0
 
     case('rz')
        HeatConductionCoef = 0.1
        AmplitudeTemperature = 10.0
-       T0 = 3.0
+       Tmin = 3.0
 
     case('rmtv')
+       Tmin = 1.0e-12   ! minimum temperature at far field
+
        NameRefFile = 'rmtv_initial.out'
 
        open(UnitTmp_, FILE=NameRefFile, STATUS="old", IOSTAT=iError)
@@ -101,7 +105,7 @@ contains
 
        do iCell = 1, nCellRef
           StateRef_VC(iTmatRef,iCell) = &
-               max(StateRef_VC(iTmatRef,iCell),1.0e-12)
+               max(StateRef_VC(iTmatRef,iCell),Tmin)
        end do
 
        NameFinFile = 'rmtv_final.out'
@@ -127,8 +131,14 @@ contains
 
        do iCell = 1, nCellFin
           StateFin_VC(iTmatFin,iCell) = &
-               max(StateFin_VC(iTmatFin,iCell),1.0e-12)
+               max(StateFin_VC(iTmatFin,iCell),Tmin)
        end do
+    case('parcond')
+       AmplitudeTemperature = 9.0
+       Tmin = 1.0
+       Bx = 1.7
+       By = 1.0
+       Time0 = Time_Simulation
 
     case default
        call stop_mpi(NameSub//' : undefined problem type='//TypeProblem)
@@ -140,6 +150,8 @@ contains
 
   subroutine user_update_states(iStage, iBlock)
 
+    use ModAdvance, ONLY: nVar, Flux_VX, Flux_VY, Flux_VZ, Source_VC
+
     integer, intent(in) :: iStage, iBlock
 
     character(len=*), parameter :: NameSub = 'user_update_states'
@@ -147,6 +159,15 @@ contains
 
     ! No call to update_states_MHD to nullify the effect of the hydro solver
     ! call update_states_MHD(iStage,iBlock)
+
+    if(TypeProblem == 'parcond')then
+       Flux_VX(1:nVar,:,:,:) = 0.0
+       Flux_VY(1:nVar,:,:,:) = 0.0
+       Flux_VZ(1:nVar,:,:,:) = 0.0
+       Source_VC(1:nVar,:,:,:) = 0.0
+
+       call update_states_MHD(iStage,iBlock)
+    end if
 
   end subroutine user_update_states
 
@@ -204,7 +225,9 @@ contains
     use ModMain,       ONLY: GlobalBlk, nI, nJ, nK, x_, Time_Simulation
     use ModNumConst,   ONLY: cPi
     use ModPhysics,    ONLY: gm1, No2Io_V, UnitTemperature_
-    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, ExtraEint_, p_
+    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, p_
+
+    integer, parameter :: EintExtra_ = p_ - 1
 
     integer :: iBlock, i, j, k, iCell
     real :: x, y, Dx, Temperature, Spread, Pressure
@@ -218,7 +241,7 @@ contains
     case('gaussian')
        do i = -1, nI+2
           Spread = 4.0*HeatConductionCoef*Time_Simulation
-          Temperature = T0 + AmplitudeTemperature/(sqrt(cPi*Spread)) &
+          Temperature = Tmin + AmplitudeTemperature/(sqrt(cPi*Spread)) &
                *exp(-x_Blk(i,1,1,iBlock)**2/Spread)
           do k = -1, nK+2; do j = -1, nJ+2
              State_VGB(Rho_,i,j,k,iBlock) = 1.0
@@ -232,7 +255,7 @@ contains
        Spread = 4.0*HeatConductionCoef*Time_Simulation
        do j = -1, nJ+2; do i = -1, nI+2
           r = abs(y_BLK(i,j,1,iBlock))
-          Temperature = T0 + AmplitudeTemperature &
+          Temperature = Tmin + AmplitudeTemperature &
                *exp(Lambda*HeatConductionCoef*Time_Simulation) &
                *bessj0(sqrt(-Lambda)*r) &
                /(sqrt(cPi*Spread))*exp(-x_Blk(i,j,1,iBlock)**2/Spread)
@@ -285,9 +308,14 @@ contains
              State_VGB(Rho_,i,j,k,iBlock) = Rho
              State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock) = RhoU_D
              State_VGB(RhoUz_,i,j,k,iBlock) = 0.0
-             State_VGB(ExtraEint_,i,j,k,iBlock) = 0.0
+             State_VGB(EintExtra_,i,j,k,iBlock) = 0.0
              State_VGB(p_,i,j,k,iBlock) = p
           end do
+       end do; end do
+
+    case('parcond')
+       do j=-1,nJ+2; do i=-1,nI+2
+          call get_state_parcond(i, j, iBlock)
        end do; end do
 
     case default
@@ -303,66 +331,127 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModGeometry,   ONLY: x_Blk, y_Blk
     use ModImplicit,   ONLY: StateSemi_VGB
-    use ModMain,       ONLY: nI, nJ, nK
+    use ModMain,       ONLY: nI, nJ
     use ModVarIndexes, ONLY: Rho_, RhoUx_, p_
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=20),intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
-    integer :: i, j, k
-    real :: r, Temperature
+    integer :: i, j
+    real :: r
 
     character (len=*), parameter :: NameSub = 'user_set_outerbcs'
     !--------------------------------------------------------------------------
 
-    if(.not. (iSide==2 .or. iSide==4) )then
-       write(*,*) NameSub//' : user boundary not defined at iSide = ', iSide
-       call stop_mpi(NameSub)
-    end if
+    select case(TypeProblem)
+    case('rmtv')
+       if(.not. (iSide==2 .or. iSide==4) )then
+          write(*,*) NameSub//' : user boundary not defined at iSide = ', iSide
+          call stop_mpi(NameSub)
+       end if
 
-    select case(TypeBc)
-    case('user')
-       select case(iSide)
-       case(2) ! z-direction in rz-geometry
-          do k = -1, nK+2; do j = -1, nJ+2
-             Temperature = State_VGB(p_,nI,j,k,iBlock) &
-                  /State_VGB(Rho_,nI,j,k,iBlock)
-             do i = nI+1, nI+2
+       select case(TypeBc)
+       case('user')
+          select case(iSide)
+          case(2) ! z-direction in rz-geometry
+             do j = -1, nJ+2; do i = nI+1, nI+2
                 r = sqrt(x_Blk(i,j,1,iBlock)**2+y_Blk(i,j,1,iBlock)**2)
-                State_VGB(Rho_,i,j,k,iBlock) = 1.0/r**(19.0/9.0)
-                State_VGB(RhoUx_:p_-1,i,j,k,iBlock) = &
-                     State_VGB(RhoUx_:p_-1,nI,j,k,iBlock)
-                State_VGB(p_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) &
-                     *Temperature
-             end do
-          end do; end do
-       case(4) ! r-direction in rz-geometry
-          do k = -1, nK+2; do i = -1, nI+2
-             Temperature = State_VGB(p_,i,nJ,k,iBlock) &
-                  /State_VGB(Rho_,i,nJ,k,iBlock)
-             do j = nJ+1, nJ+2
+                State_VGB(Rho_,i,j,:,iBlock) = 1.0/r**(19.0/9.0)
+                State_VGB(RhoUx_:p_-1,i,j,:,iBlock) = &
+                     State_VGB(RhoUx_:p_-1,nI,j,:,iBlock)
+                State_VGB(p_,i,j,:,iBlock) = State_VGB(Rho_,i,j,:,iBlock)*Tmin
+             end do; end do
+          case(4) ! r-direction in rz-geometry
+             do j = nJ+1, nJ+2; do i = -1, nI+2
                 r = sqrt(x_Blk(i,j,1,iBlock)**2+y_Blk(i,j,1,iBlock)**2)
-                State_VGB(Rho_,i,j,k,iBlock) = 1.0/r**(19.0/9.0)
-                State_VGB(RhoUx_:p_-1,i,j,k,iBlock) = &
-                     State_VGB(RhoUx_:p_-1,i,nJ,k,iBlock)
-                State_VGB(p_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) &
-                     *Temperature
-             end do
-          end do; end do
+                State_VGB(Rho_,i,j,:,iBlock) = 1.0/r**(19.0/9.0)
+                State_VGB(RhoUx_:p_-1,i,j,:,iBlock) = &
+                     State_VGB(RhoUx_:p_-1,i,nJ,:,iBlock)
+                State_VGB(p_,i,j,:,iBlock) = State_VGB(Rho_,i,j,:,iBlock)*Tmin
+             end do; end do
+          end select
+       case('usersemi')
+          select case(iSide)
+          case(2)
+             StateSemi_VGB(1,nI+1,:,:,iBlock) = Tmin
+          case(4)
+             StateSemi_VGB(1,:,nJ+1,:,iBlock) = Tmin
+          end select
        end select
-    case('usersemi')
+    case('parcond')
        select case(iSide)
+       case(1)
+          do j = -1, nJ+2; do i = -1, 0
+             call get_state_parcond(i, j, iBlock)
+          end do; end do
        case(2)
-          StateSemi_VGB(1,nI+1,:,:,iBlock) = StateSemi_VGB(1,nI,:,:,iBlock)
+          do j = -1, nJ+2; do i = nI+1, nI+2
+             call get_state_parcond(i, j, iBlock)
+          end do; end do
+       case(3)
+          do j = -1, 0; do i = -1, nI+2
+             call get_state_parcond(i, j, iBlock)
+          end do; end do
        case(4)
-          StateSemi_VGB(1,:,nJ+1,:,iBlock) = StateSemi_VGB(1,:,nJ,:,iBlock)
+          do j = nJ+1, nJ+2; do i = -1, nI+2
+             call get_state_parcond(i, j, iBlock)
+          end do; end do
        end select
+    case default
+       call stop_mpi(NameSub//' : undefined problem type='//TypeProblem)
     end select
 
     IsFound = .true.
 
   end subroutine user_set_outerbcs
+
+  !============================================================================
+
+  subroutine get_state_parcond(i, j, iBlock)
+
+    use ModAdvance,    ONLY: State_VGB
+    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, By_, Bz_, p_
+
+    integer, intent(in) :: i, j, iBlock
+
+    real :: Temperature
+    !------------------------------------------------------------------------
+    call get_temperature_parcond(i, j, iBlock, Temperature)
+    State_VGB(Rho_,i,j,:,iBlock) = 1.0
+    State_VGB(RhoUx_:RhoUz_,i,j,:,iBlock) = 0.0
+    State_VGB(Bx_,i,j,:,iBlock) = Bx
+    State_VGB(By_,i,j,:,iBlock) = By
+    State_VGB(Bz_,i,j,:,iBlock) = 0.0
+    State_VGB(p_,i,j,:,iBlock) = Temperature
+
+    end subroutine get_state_parcond
+
+  !============================================================================
+
+  subroutine get_temperature_parcond(i, j, iBlock, Temperature)
+
+    use ModGeometry, ONLY: x_Blk, y_Blk
+    use ModMain,     ONLY: Time_Simulation
+    use ModNumConst, ONLY: cPi
+
+    integer, intent(in) :: i, j, iBlock
+    real,    intent(out):: Temperature
+
+    real :: x, y, xx, yy, Spread, Spread0
+    !--------------------------------------------------------------------------
+
+    x = x_Blk(i,j,0,iBlock)
+    y = y_Blk(i,j,0,iBlock)
+    xx = (Bx*x+By*y)/sqrt(Bx**2+By**2)
+    yy = (Bx*y-By*x)/sqrt(Bx**2+By**2)
+
+    Spread = 4.0*Time_Simulation
+    Spread0 = 4.0*Time0
+    Temperature = Tmin + AmplitudeTemperature/(sqrt(cPi*Spread)) &
+         *exp(-xx**2/Spread-yy**2/Spread0)
+
+  end subroutine get_temperature_parcond
 
   !============================================================================
 
@@ -390,7 +479,7 @@ contains
     logical,          intent(out)  :: IsFound
 
     real :: Spread, Lambda, r, Temperature, Weight1, Weight2, x, y
-    real :: Rho, Ur, U_D(2)
+    real :: Rho, Ur, U_D(2), xx, yy, Spread0
     integer :: i, j, k, iCell
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
@@ -406,7 +495,7 @@ contains
        select case(NameVar)
        case('t0','temp0')
           Spread = 4.0*HeatConductionCoef*Time_Simulation
-          PlotVar_G = T0 + AmplitudeTemperature/(sqrt(cPi*Spread)) &
+          PlotVar_G = Tmin + AmplitudeTemperature/(sqrt(cPi*Spread)) &
                *exp(-x_Blk(:,:,:,iBlock)**2/Spread)
        case default
           IsFound = .false.
@@ -419,7 +508,7 @@ contains
           Spread = 4.0*HeatConductionCoef*Time_Simulation
           do j = -1, nJ+2; do i = -1, nI+2
              r = abs(y_BLK(i,j,1,iBlock))
-             Temperature = T0 + AmplitudeTemperature &
+             Temperature = Tmin + AmplitudeTemperature &
                   *exp(Lambda*HeatConductionCoef*Time_Simulation) &
                   *bessj0(sqrt(-Lambda)*r) &
                   /(sqrt(cPi*Spread))*exp(-x_Blk(i,j,1,iBlock)**2/Spread)
@@ -480,6 +569,18 @@ contains
              IsFound = .false.
           end select
        end do; end do
+
+    case('parcond')
+       select case(NameVar)
+       case('t0','temp0')
+          do j=-1,nJ+2; do i=-1,nI+2
+             call get_temperature_parcond(i, j, iBlock, Temperature)
+             PlotVar_G(i,j,:) = Temperature
+          end do; end do
+       case default
+          IsFound = .false.
+       end select
+
     end select
 
   end subroutine user_set_plot_var
