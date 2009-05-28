@@ -444,7 +444,7 @@ test_ccmc_restart_rundir:
 	cd ${TESTDIR}; \
 	cp Param_ccmc/LAYOUT.in_v8.01_RBE_restart ${TESTDIR}/LAYOUT.in; \
 	cp Param_ccmc/PARAM.in_v8.01_RBE_restart ${TESTDIR}/PARAM.in; \
-	${SCRIPTDIT}/./replace_amrinit.pl \
+	${SCRIPTDIR}/./replace_amrinit.pl; \
 	./Restart.pl 
 
 test_ccmc_check:
