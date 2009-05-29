@@ -5,6 +5,7 @@
 test: 
 	@rm -f *.diff
 	-@(make test_shocktube)
+	-@(make test_hallmhd)
 	-@(make test_multifluid)
 	-@(make test_multiion)
 	-@(make test_mhdions)
@@ -41,6 +42,7 @@ test_help:
 	@echo "    test MPIRUN='mpirun -np 3' (run test with mpirun -np 3)"
 	@echo "    test MPIRUN='mprun -np 2'  (run test with mprun -np 2)"
 	@echo "    test_shocktube             (run shocktube test only)"
+	@echo "    test_hallmhd               (run Hall MHD test only)"
 	@echo "    test_multifluid            (run multi-fluid test only)"
 	@echo "    test_multiion              (run multi-ion test only)"
 	@echo "    test_mhdions               (run MHD with ions test only)"
@@ -97,6 +99,36 @@ test_shocktube_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-13 \
 	  Param/SHOCKTUBE/TestOutput/cut_25.idl \
 	  ${TESTDIR}/GM/IO2/cut_25.idl > test_shocktube.diff
+	ls -l test_shocktube.diff
+
+### HALL MHD TEST ###
+
+test_hallmhd:
+	@echo "test_hallmhd_compile..." > test_hallmhd.diff
+	make test_hallmhd_compile
+	@echo "test_hallmhd_rundir..." >> test_hallmhd.diff
+	make test_hallmhd_rundir
+	@echo "test_hallmhd_run..." >> test_hallmhd.diff
+	make test_hallmhd_run
+	@echo "test_hallmhd_check..." >> test_hallmhd.diff
+	make test_hallmhd_check
+
+test_hallmhd_compile:
+	./Config.pl -u=Waves -e=Mhd -g=64,2,2,10,10
+	make
+	make PIDL
+
+test_hallmhd_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.HallTest PARAM.in
+
+test_hallmhd_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULT
+
+test_hallmhd_check:
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-13 \
+	  Param/SHOCKTUBE/TestOutput/hall_ref.out \
+	  ${TESTDIR}/RESULT/GM/cut_*0119.out > test_hallmhd.diff
 	ls -l test_shocktube.diff
 
 ### MULTI FLUID TEST ###
