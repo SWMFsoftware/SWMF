@@ -20,6 +20,7 @@ module ModGrayDiffusion
   public :: init_gray_diffusion
   public :: get_radiation_energy_flux
   public :: calc_source_gray_diffusion
+  public :: impl_jac_gray_diffusion
   public :: set_gray_outflow_bc
   public :: get_impl_gray_diff_state
   public :: get_gray_diffusion_bc
@@ -32,11 +33,10 @@ module ModGrayDiffusion
   logical, public :: IsNewTimestepGrayDiffusion = .true.
 
   ! Coefficients for two-temperature electron-radiation model
-  real, allocatable, public :: DiffCoef_VFDB(:,:,:,:,:,:)
-  real, allocatable         :: RelaxationCoef_CB(:,:,:,:)
-  real, allocatable         :: RelaxSemiCoef_VCB(:,:,:,:,:)
-  real, allocatable         :: DiffSemiCoef_VGB(:,:,:,:,:)
-  real, allocatable         :: PointSemiCoef_VCB(:,:,:,:,:)
+  real, allocatable :: DiffCoef_VFDB(:,:,:,:,:,:)
+  real, allocatable :: RelaxCoef_VCB(:,:,:,:,:)
+  real, allocatable :: DiffSemiCoef_VGB(:,:,:,:,:)
+  real, allocatable :: PointSemiCoef_VCB(:,:,:,:,:)
 
   ! Index which vars involve diffusion
   integer, allocatable :: iDiff_I(:)
@@ -95,7 +95,9 @@ contains
 
     if(UseFullImplicit)then
        nDiff = 1
-       allocate(RelaxationCoef_CB(1:nI,1:nJ,1:nK,MaxBlock))
+       allocate(iDiff_I(nDiff))
+       iDiff_I(1) = Eradiation_
+       nRelax = 1
     end if
        
     if(UseSemiImplicit)then
@@ -127,11 +129,6 @@ contains
           nPoint = 0
        end select
 
-       if(nRelax>0)then
-          allocate(RelaxSemiCoef_VCB(nRelax,nI,nJ,nK,MaxBlock))
-          RelaxSemiCoef_VCB = 0.0
-       end if
-
        if(nPoint>0)then
           allocate(PointSemiCoef_VCB(nPoint,nI,nJ,nK,MaxBlock))
           PointSemiCoef_VCB = 0.0
@@ -139,6 +136,11 @@ contains
 
        allocate(DiffSemiCoef_VGB(nDiff,-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock))
        DiffSemiCoef_VGB = 0.0
+    end if
+
+    if(nRelax>0)then
+       allocate(RelaxCoef_VCB(nRelax,nI,nJ,nK,MaxBlock))
+       RelaxCoef_VCB = 0.0
     end if
 
     allocate(DiffCoef_VFDB(nDiff,1:nI+1,1:nJ+1,1:nK+1,nDim,MaxBlock))
@@ -626,7 +628,7 @@ contains
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                AbsorptionOpacitySiOut = PlanckOpacitySi)
 
-          RelaxationCoef_CB(i,j,k,iBlock) = &
+          RelaxCoef_VCB(1,i,j,k,iBlock) = &
                PlanckOpacitySi*cLightSpeed/Si2No_V(UnitT_)
        end if
 
@@ -637,7 +639,7 @@ contains
 
        ! Source term due to absorption and emission
        ! Sigma_a*(cRadiation*Te**4-Erad)
-       AbsorptionEmission =  RelaxationCoef_CB(i,j,k,iBlock) &
+       AbsorptionEmission =  RelaxCoef_VCB(1,i,j,k,iBlock) &
             *(cRadiationNo*Te**4 - State_VGB(Eradiation_,i,j,k,iBlock))
 
        ! dErad/dt = + AbsorptionEmission
@@ -662,6 +664,50 @@ contains
     end if
 
   end subroutine calc_source_gray_diffusion
+
+  !============================================================================
+
+  subroutine impl_jac_gray_diffusion(iBlock, nVar, Jacobian_VVCI)
+
+    ! Add partial derivatives of the gray diffusion term to the Jacobian that
+    ! are not calculated by the general algorithm (these are for the diffusion
+    ! operators the same as the semi-implicit jacobian)
+
+    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK
+    use ModImplicit, ONLY: kr, ImplCoeff, nStencil
+    use ModMain,     ONLY: nI, nJ, nK, nDim
+
+    integer, intent(in) :: iBlock, nVar
+    real, intent(inout) :: Jacobian_VVCI(nVar,nVar,nI,nJ,nK,nStencil)
+
+    integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iDiff
+    real :: Coeff, DiffLeft, DiffRight, Dxyz_D(3)
+    !--------------------------------------------------------------------------
+
+    Dxyz_D = (/dx_BLK(iBlock), dy_BLK(iBlock), dz_Blk(iBlock)/)
+    do iDim = 1, nDim
+       Coeff = -ImplCoeff/Dxyz_D(iDim)**2
+       Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          do iDiff = 1, nDiff
+             iVar = iDiff_I(iDiff)
+             DiffLeft = Coeff*DiffCoef_VFDB(iDiff,i,j,k,iDim,iBlock)
+             DiffRight = Coeff*DiffCoef_VFDB(iDiff,i+Di,j+Dj,k+Dk,iDim,iBlock)
+             Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
+                  Jacobian_VVCI(iVar,iVar,i,j,k,1) - (DiffLeft + DiffRight)
+
+             if(iDim==1.and.i==1 .or. iDim==2.and.j==1 .or. iDim==3.and.k==1)&
+                  DiffLeft = 0.0
+             if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ &
+                  .or. iDim==3.and.k==nK) DiffRight = 0.0
+
+             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim)   = DiffLeft
+             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) = DiffRight
+          end do
+       end do; end do; end do
+    end do
+
+  end subroutine impl_jac_gray_diffusion
 
   !============================================================================
   ! Semi-implicit interface for Erad and Eint
@@ -751,7 +797,7 @@ contains
              ! This is just the Planck function at time level * saved
              PointSemiCoef_VCB(Planck_,i,j,k,iBlock) = cRadiationNo*Te**4
           case('radcond')
-             RelaxSemiCoef_VCB(1,i,j,k,iBlock) = Clight*PlanckOpacity
+             RelaxCoef_VCB(1,i,j,k,iBlock) = Clight*PlanckOpacity
 
              DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
                   Cv/(4.0*cRadiationNo*Te**3)
@@ -1522,7 +1568,7 @@ contains
           do iRelax = 1, nRelax
              iVar = iRelax_I(iRelax)
 
-             EnergyExchange = RelaxSemiCoef_VCB(iRelax,i,j,k,iBlock) &
+             EnergyExchange = RelaxCoef_VCB(iRelax,i,j,k,iBlock) &
                   *(StateImpl_VG(iTeImpl,i,j,k) - StateImpl_VG(iVar,i,j,k))
 
              ! dEvar/dt = + EnergyExchange
@@ -1589,7 +1635,7 @@ contains
           do iRelax = 1, nRelax
              iVar = iRelax_I(iRelax)
 
-             RelaxCoef = RelaxSemiCoef_VCB(iRelax,i,j,k,iBlock)
+             RelaxCoef = RelaxCoef_VCB(iRelax,i,j,k,iBlock)
 
              ! dSvar/dVar (diagonal)
              Jacobian_VVCI(iVar,iVar,i,j,k,1) = -RelaxCoef

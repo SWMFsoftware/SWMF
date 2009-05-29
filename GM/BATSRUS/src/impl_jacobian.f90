@@ -61,6 +61,7 @@ subroutine impl_jacobian(implBLK,JAC)
        FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
   use ModImplicit
   use ModHallResist, ONLY: UseHallResist, hall_factor
+  use ModGrayDiffusion, ONLY: impl_jac_gray_diffusion
   use ModHeatConduction, ONLY: UseParallelConduction, impl_jac_heat_conduction
   use ModGeometry, ONLY: vInv_CB, UseCovariant
   implicit none
@@ -341,7 +342,7 @@ subroutine impl_jacobian(implBLK,JAC)
   if(UseHallResist .and. .not. UseCovariant)call impl_hall_resist
   if(UseHallResist .and.       UseCovariant)call impl_hall_resist_general
 
-  if(UseGrayDiffusion) call impl_gray_diffusion
+  if(UseGrayDiffusion) call impl_jac_gray_diffusion(iBLK, nw, JAC)
   if(UseParallelConduction) call impl_jac_heat_conduction(iBLK, nw, JAC)
 
   ! Multiply JAC by the implicit timestep dt
@@ -852,41 +853,5 @@ contains
     end do; end do
 
   end subroutine impl_hall_resist_general
-  !===========================================================================
-  subroutine impl_gray_diffusion
-
-    ! Add partial derivatives of the gray diffusion term to the Jacobian that 
-    ! are not calculated by the general algorithm
-
-    use ModAdvance,       ONLY: Eradiation_
-    use ModGrayDiffusion, ONLY: DiffCoef_VFDB
-
-    integer :: iVar, i, j, k, iDim, Di, Dj, Dk
-    real :: Coeff, DiffLeft, DiffRight
-    !-----------------------------------------------------------------------
-    iVar = Eradiation_
-
-    do iDim = 1, nDim
-       Coeff = -ImplCoeff/Dxyz(iDim)**2
-       Di = kr(iDim,1)
-       Dj = kr(iDim,2)
-       Dk = kr(iDim,3)
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          DiffLeft  = DiffCoef_VFDB(1,i,j,k,iDim,iBlk)
-          DiffRight = DiffCoef_VFDB(1,i+Di,j+Dj,k+Dk,iDim,iBlk)
-          if(iDim==1.and.i==1 .or. iDim==2.and.j==1 .or. iDim==3.and.k==1)&
-               DiffLeft = 0.0
-          if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ .or. iDim==3.and.k==nK)&
-               DiffRight = 0.0
-          JAC(iVar,iVar,i,j,k,1) = JAC(iVar,iVar,i,j,k,1) &
-               - Coeff*(DiffLeft + DiffRight)
-          JAC(iVar,iVar,i,j,k,2*iDim)   = JAC(iVar,iVar,i,j,k,2*iDim) &
-               + Coeff*DiffLeft
-          JAC(iVar,iVar,i,j,k,2*iDim+1) = JAC(iVar,iVar,i,j,k,2*iDim+1) &
-               + Coeff*DiffRight
-       end do; end do; end do
-    end do
-
-  end subroutine impl_gray_diffusion
 
 end subroutine impl_jacobian
