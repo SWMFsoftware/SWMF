@@ -101,7 +101,7 @@ T                       UseUserUpdateStates
 
 #POINTIMPLICIT
 T                UsePointImplicit
-0.5              BetaPointImpl
+1.0              BetaPointImpl
 T		 IsAssymetric
 
 #STARTTIME
