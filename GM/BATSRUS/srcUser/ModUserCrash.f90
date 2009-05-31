@@ -17,6 +17,8 @@ module ModUser
   use ModMain, ONLY: iTest, jTest, kTest, BlkTest, ProcTest, VarTest, &
        UseUserInitSession, UseUserIcs, UseUserSource, UseUserUpdateStates
 
+  use CRASH_ModEos, ONLY: cAtomicMass_I, cAPolyimide
+
   include 'user_module.h' !list of public methods
 
   real,              parameter :: VersionUserModule = 1.2
@@ -25,6 +27,10 @@ module ModUser
 
   ! There are 3 materials: Xe, Be and Plastic
   integer, parameter :: nMaterial = 3
+
+  ! Average atomic mass of the materials (initialized in user_init_session)
+  real, parameter:: MassMaterial_I(0:nMaterial-1) = &
+       (/ cAtomicMass_I(54), cAtomicMass_I(4), cAPolyimide /)
 
   ! Fully 3D simulation?
   logical :: IsThreeDim = .false.
@@ -84,8 +90,8 @@ module ModUser
 
   ! Variables related to radiation
   character(len=20) :: TypeOpacity="constant"
-  real :: RosselandOpacity(0:2) = 1.0
-  real :: PlanckOpacity(0:2) = 10.0
+  real :: RosselandOpacity(0:nMaterial-1) = 1.0
+  real :: PlanckOpacity(0:nMaterial-1) = 10.0
 
   ! Indexes for lookup tables
   integer:: iTablePPerE = -1, iTableEPerP = -1, iTableCvGammaTe = -1
@@ -276,7 +282,7 @@ contains
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK
     use ModLookupTable, ONLY: interpolate_lookup_table
     use ModConst,       ONLY: cPi
-    use CRASH_ModEos,   ONLY: eos, cAtomicMass_I, cAPolyimide
+    use CRASH_ModEos,   ONLY: eos
 
     real    :: x, y, z, r, xBe, DxBe, DxyPl, EinternalSi
     real    :: DxyGold = -1.0
@@ -431,21 +437,13 @@ contains
           ! Use atomic concentrations instead of smooth level set functions
 
           if(maxval( State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) ) <= 0.0)then
-             State_VGB(LevelXe_,i,j,k,iBlock) = 1.0 / (3*cAtomicMass_I(54))
-             State_VGB(LevelBe_,i,j,k,iBlock) = 1.0 / (3*cAtomicMass_I(4))
-             State_VGB(LevelPl_,i,j,k,iBlock) = 1.0 / (3*cAPolyimide)
+             State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) = 1.0/(3*MassMaterial_I)
           else
              State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) = &
                   max(0.0, State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock))
 
-             if( State_VGB(LevelXe_,i,j,k,iBlock) > 0.0) &
-                  State_VGB(LevelXe_,i,j,k,iBlock) = 1.0 / cAtomicMass_I(54)
-
-             if( State_VGB(LevelBe_,i,j,k,iBlock) > 0.0) &
-                  State_VGB(LevelBe_,i,j,k,iBlock) = 1.0 / cAtomicMass_I(4)
-
-             if( State_VGB(LevelPl_,i,j,k,iBlock) > 0.0) &
-                  State_VGB(LevelPl_,i,j,k,iBlock) = 1.0 / cAPolyimide
+             where( State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) > 0.0) &
+                  State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) = 1./MassMaterial_I
           end if
 
        end if
@@ -1041,7 +1039,7 @@ contains
          UnitTemperature_, cRadiationNo
     use ModLookupTable, ONLY: interpolate_lookup_table
     use ModGeometry, ONLY: r_BLK, x_BLK, y_BLK, TypeGeometry
-    use CRASH_ModEos, ONLY: eos, Xe_, Be_, Plastic_, cAtomicMass_I, cAPolyimide
+    use CRASH_ModEos, ONLY: eos, Xe_, Be_, Plastic_
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -1056,7 +1054,7 @@ contains
 
     character (len=*), parameter :: Name='user_set_plot_var'
 
-    real    :: p, Rho, pSi, RhoSi, TeSi, AtomMass
+    real    :: p, Rho, pSi, RhoSi, TeSi
     integer :: i, j, k, iMaterial, iMaterial_I(1), iLevel
     real    :: Value_V(9) ! Cv, Gamma, Te for 3 materials
     !------------------------------------------------------------------------  
@@ -1117,14 +1115,14 @@ contains
     case('rhoxe', 'rhobe', 'rhopl')
        select case(NameVar)
        case('rhoxe')
-          iLevel = LevelXe_; iMaterial = Xe_; AtomMass = cAtomicMass_I(54)
+          iLevel = LevelXe_; iMaterial = Xe_
        case('rhobe')
-          iLevel = LevelBe_; iMaterial = Be_; AtomMass = cAtomicMass_I(4)
+          iLevel = LevelBe_; iMaterial = Be_
        case('rhopl')
-          iLevel = LevelPl_; iMaterial = Plastic_; AtomMass = cAPolyimide
+          iLevel = LevelPl_; iMaterial = Plastic_
        end select
        if(UseMixedCell)then
-          PlotVar_G = State_VGB(iLevel,:,:,:,iBlock)*AtomMass
+          PlotVar_G = State_VGB(iLevel,:,:,:,iBlock)*MassMaterial_I(iMaterial)
        else
           do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
              iMaterial_I = maxloc(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock))
@@ -1290,19 +1288,18 @@ contains
     real    :: pSi, RhoSi, TeSi, LevelSum
     real    :: Value_V(3*nMaterial), Opacity_V(2*nMaterial)
     real, dimension(0:nMaterial-1) :: &
-         pPerE_I, EperP_I, RhoToARatioSi_I, NumDensWeight_I
+         pPerE_I, EperP_I, RhoToARatioSi_I, NumDensWeight_I !, RhoSi_I
     !-------------------------------------------------------------------------
     ! Density, transformed to SI
     RhoSi = No2Si_V(UnitRho_)*State_V(Rho_)
 
-    ! Find maximum level set value. 
-    
-    iMaterial_I = maxloc(State_V(LevelXe_:LevelPl_))
-    iMaterial = iMaterial_I(1) - 1
-
     ! The electron temperature may be needed for the opacities
     ! Initialize to negative value to see if it gets set
     TeSi = -7.70
+
+    ! Find maximum level set value. 
+    iMaterial_I = maxloc(State_V(LevelXe_:LevelPl_))
+    iMaterial = iMaterial_I(1) - 1
 
     ! Shall we use mixed material cells?
     LevelSum = sum(State_V(LevelXe_:LevelPl_))
@@ -1313,30 +1310,31 @@ contains
        ! Use number densities for eos() or weights in look up tables.
        RhoToARatioSi_I = State_V(LevelXe_:LevelPl_)*No2Si_V(UnitRho_)
        NumDensWeight_I = State_V(LevelXe_:LevelPl_)/LevelSum
+       !RhoSi_I         = State_V(LevelXe_:LevelPl_)*MassMaterial_I &
+       !     *No2Si_V(UnitRho_)
+    else
+       NumDensWeight_I = 0.0
+       NumDensWeight_I(iMaterial) = 1.0
+       !RhoSi_I         = 0.0
+       !RhoSi_I(iMaterial) = RhoSi
     end if
 
     ! Obtain the pressure from EinternalSiIn or TeSiIn or State_V
     ! Do this for various cases: mixed cell or not, lookup tables or not
     if(present(EinternalSiIn))then
        ! Obtain the pressure from EinternalSiIn
-       if( IsMix) then
-          ! The cell is mixed if none of the material is dominant
-          if(iTablePPerE > 0)then
-             call interpolate_lookup_table(iTablePPerE, RhoSi, &
-                  EinternalSiIn/RhoSi, pPerE_I, DoExtrapolate = .false.)
-             ! Use a number density weighted average
-             pSi = EinternalSiIn*sum(NumDensWeight_I*pPerE_I)
-          else
+       if(iTablePPerE > 0)then
+          ! Use lookup table
+          call interpolate_lookup_table(iTablePPerE, RhoSi, &
+               EinternalSiIn/RhoSi, pPerE_I, DoExtrapolate = .false.)
+          ! Use a number density weighted average
+          pSi = EinternalSiIn*sum(NumDensWeight_I*pPerE_I)
+       else
+          ! Use EOS function
+          if(IsMix)then
              call eos(RhoToARatioSi_I, eTotalIn=EinternalSiIn, &
                   pTotalOut=pSi, TeOut=TeSi, &
                   CvTotalOut=CvSiOut, GammaOut=GammaOut) 
-          end if
-       else
-          ! The cell is assumed to consist of a single material
-          if(iTablePPerE > 0)then
-             call interpolate_lookup_table(iTablePPerE, RhoSi, &
-                  EinternalSiIn/RhoSi, pPerE_I, DoExtrapolate = .false.)
-             pSi = pPerE_I(iMaterial)*EinternalSiIn
           else
              call eos(iMaterial, Rho=RhoSi, eTotalIn=EinternalSiIn, &
                   pTotalOut=pSi, TeOut=TeSi, &
@@ -1360,23 +1358,16 @@ contains
        pSi = State_V(p_)*No2Si_V(UnitP_)
        if(present(EinternalSiOut))then
           ! Obtain the internal energy from pressure
-          if(IsMix) then
-             if(iTableEPerP > 0)then
-                call interpolate_lookup_table(iTableEPerP, RhoSi, &
-                     pSi/RhoSi, EPerP_I, DoExtrapolate = .false.)
-                ! Use a number density weighted average
-                EinternalSiOut = pSi*sum(NumDensWeight_I*EPerP_I)
-             else
+          if(iTableEPerP > 0)then
+             call interpolate_lookup_table(iTableEPerP, RhoSi, &
+                  pSi/RhoSi, EPerP_I, DoExtrapolate = .false.)
+             ! Use a number density weighted average
+             EinternalSiOut = pSi*sum(NumDensWeight_I*EPerP_I)
+          else
+             if(IsMix)then
                 call eos(RhoToARatioSi_I, pTotalIn=pSi, &
                      EtotalOut=EinternalSiOut, TeOut=TeSi, &
                      CvTotalOut=CvSiOut, GammaOut=GammaOut) 
-             end if
-          else
-             ! The cell is assumed to consist of a single material
-             if(iTableEPerp > 0)then
-                call interpolate_lookup_table(iTableEPerP, &
-                     RhoSi, pSi/RhoSi, ePerP_I, DoExtrapolate = .false.)
-                EinternalSiOut = ePerP_I(iMaterial)*pSi
              else
                 call eos(iMaterial,RhoSi,pTotalIn=pSi, &
                      EtotalOut=EinternalSiOut, TeOut=TeSi, &
@@ -1394,10 +1385,18 @@ contains
        if(iTableCvGammaTe > 0)then
           call interpolate_lookup_table(iTableCvGammaTe, RhoSi, pSi/RhoSi, &
                Value_V, DoExtrapolate = .false.)
-          
+
+          ! Value_V: elements 1,4,7 are Cv, 2,5,8 are Gamma, 3,6,9 are Te
+          !if(present(CvSiOut))  CvSiOut  &
+          !     = sum(NumDensWeight_I*Value_V(1:3*nMaterial:3))
+          !if(present(GammaOut)) GammaOut &
+          !     = sum(NumDensWeight_I*Value_V(2:3*nMaterial:3))
+          !TeSi = sum(NumDensWeight_I*Value_V(3:3*nMaterial:3))
+
           if(present(CvSiOut))  CvSiOut  = Value_V(3*iMaterial+1)
           if(present(GammaOut)) GammaOut = Value_V(3*iMaterial+2)
           TeSi = Value_V(3*iMaterial+3)
+
        elseif(TeSi < 0.0) then
           ! If TeSi is not set yet then we need to calculate things here
           if(IsMix) then
@@ -1419,10 +1418,13 @@ contains
        if(iTableOpacity > 0)then
           call interpolate_lookup_table(iTableOpacity, RhoSi, TeSi, &
                Opacity_V, DoExtrapolate = .false.)
-          if(present(AbsorptionOpacitySiOut)) &
-               AbsorptionOpacitySiOut = Opacity_V(2*iMaterial + 1) * RhoSi
-          if(present(RosselandMeanOpacitySiOut)) &
-               RosselandMeanOpacitySiOut = Opacity_V(2*iMaterial + 2) * RhoSi
+
+          if(present(AbsorptionOpacitySiOut)) AbsorptionOpacitySiOut &
+               = Opacity_V(2*iMaterial + 1) * RhoSi
+          !    = sum(RhoSi_I*Opacity_V(1:2*nMaterial:2))
+          if(present(RosselandMeanOpacitySiOut)) RosselandMeanOpacitySiOut &
+               = Opacity_V(2*iMaterial + 2) * RhoSi
+          !    = sum(RhoSi_I*Opacity_V(2:2*nMaterial:2))
        else
           if(present(AbsorptionOpacitySiOut)) &
                AbsorptionOpacitySiOut = PlanckOpacity(iMaterial)*RhoSi
