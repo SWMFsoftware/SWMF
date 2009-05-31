@@ -61,8 +61,9 @@ subroutine impl_jacobian(implBLK,JAC)
        FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
   use ModImplicit
   use ModHallResist, ONLY: UseHallResist, hall_factor
-  use ModGrayDiffusion, ONLY: impl_jac_gray_diffusion
-  use ModHeatConduction, ONLY: UseParallelConduction, impl_jac_heat_conduction
+  use ModGrayDiffusion, ONLY: add_jacobian_gray_diffusion
+  use ModHeatConduction, ONLY: UseParallelConduction, &
+       add_jacobian_heat_conduction
   use ModGeometry, ONLY: vInv_CB, UseCovariant
   implicit none
 
@@ -140,7 +141,7 @@ subroutine impl_jacobian(implBLK,JAC)
           i2,j2,k2,idim,iBlk,Cmax_DF(idim,1:i2,1:j2,1:k2))
 
      ! cmax always occurs as -ImplCoeff*0.5/dx*cmax
-     coeff = -ImplCoeff*0.5 
+     coeff = -0.5 
      Cmax_DF(idim,1:i2,1:j2,1:k2)=coeff*Cmax_DF(idim,1:i2,1:j2,1:k2)
   enddo
 
@@ -192,7 +193,7 @@ subroutine impl_jacobian(implBLK,JAC)
 
            ! dfdw = F_iw(W + eps*W_jw) - F_iw(W)] / eps is multiplied by 
            ! -ImplCoeff/2/dx*wnrm(jw)/wnrm(iw) in all formulae
-           coeff=-ImplCoeff*0.5/qeps/wnrm(iw) 
+           coeff=-0.5/qeps/wnrm(iw) 
 
            dfdwLface(i1:i2,j1:j2,k1:k2)=coeff*&
                 (FluxEpsLeft_VF(iw,i1:i2,j1:j2,k1:k2) &
@@ -255,7 +256,7 @@ subroutine impl_jacobian(implBLK,JAC)
                 ) )then
               if(UseCovariant .and. jw>=Bx_ .and. jw<=Bz_)then
                  ! The source terms are always multiplied by coeff
-                 coeff=-ImplCoeff*0.5*wnrm(jw)/wnrm(iw)
+                 coeff=-0.5*wnrm(jw)/wnrm(iw)
                  ! Get the corresponding face area
                  select case(iDim)
                  case(x_)
@@ -282,7 +283,7 @@ subroutine impl_jacobian(implBLK,JAC)
 
               elseif(jw==B_+idim)then
                  ! The source terms are always multiplied by coeff
-                 coeff=-ImplCoeff*0.5/dxyz(idim)*wnrm(jw)/wnrm(iw)
+                 coeff=-0.5/dxyz(idim)*wnrm(jw)/wnrm(iw)
 
                  ! Relative to the right face flux Q is shifted to the left
                  dfdwLface(i1:nI,j1:nJ,k1:nK)=dfdwLface(i1:nI,j1:nJ,k1:nK)+ &
@@ -314,7 +315,7 @@ subroutine impl_jacobian(implBLK,JAC)
         call getsource(iBLK,ImplEps_VC,sEps_VC)
         do iw=1,nw
            ! JAC(..1) += dS/dW_jw
-           coeff=-ImplCoeff/qeps/wnrm(iw)
+           coeff=-1.0/qeps/wnrm(iw)
            JAC(iw,jw,:,:,:,1)=JAC(iw,jw,:,:,:,1)&
                 +coeff*(sEps_VC(iw,:,:,:)-s_VC(iw,:,:,:))
         enddo
@@ -342,14 +343,14 @@ subroutine impl_jacobian(implBLK,JAC)
   if(UseHallResist .and. .not. UseCovariant)call impl_hall_resist
   if(UseHallResist .and.       UseCovariant)call impl_hall_resist_general
 
-  if(UseGrayDiffusion) call impl_jac_gray_diffusion(iBLK, nw, JAC)
-  if(UseParallelConduction) call impl_jac_heat_conduction(iBLK, nw, JAC)
+  if(UseGrayDiffusion) call add_jacobian_gray_diffusion(iBLK, nw, JAC)
+  if(UseParallelConduction) call add_jacobian_heat_conduction(iBLK, nw, JAC)
 
-  ! Multiply JAC by the implicit timestep dt
+  ! Multiply JAC by the implicit timestep dt and ImplCoeff
   if(time_accurate)then
      do k=1,nK; do j=1,nJ; do i=1,nI
         if(true_cell(i,j,k,iBLK))then
-           JAC(:,:,i,j,k,:) = JAC(:,:,i,j,k,:)*dt
+           JAC(:,:,i,j,k,:) = JAC(:,:,i,j,k,:)*dt*ImplCoeff
         else
            ! Set JAC = 0.0 inside body
            JAC(:,:,i,j,k,:) = 0.0
@@ -359,7 +360,7 @@ subroutine impl_jacobian(implBLK,JAC)
      ! Local time stepping has time_BLK=0.0 inside the body
      do istencil=1,nstencil; do jw=1,nw; do iw=1,nw
         JAC(iw,jw,:,:,:,istencil)=JAC(iw,jw,:,:,:,istencil) &
-             *time_BLK(1:nI,1:nJ,1:nK,iBLK)*implCFL
+             *time_BLK(1:nI,1:nJ,1:nK,iBLK)*implCFL*ImplCoeff
      end do; end do; end do
   endif
 
@@ -447,36 +448,36 @@ contains
     ! dQ(rhoU)/dB = -divB
     do k=1,nK; do j=1,nJ; do i=1,nI
        JAC(rhoUx_,Bx_,i,j,k,1)=JAC(rhoUx_,Bx_,i,j,k,1)&
-            +ImplCoeff*wnrm(Bx_)/wnrm(rhoUx_)*divb(i,j,k) 
+            +wnrm(Bx_)/wnrm(rhoUx_)*divb(i,j,k) 
        JAC(rhoUy_,By_,i,j,k,1)=JAC(rhoUy_,By_,i,j,k,1)&
-            +ImplCoeff*wnrm(By_)/wnrm(rhoUy_)*divb(i,j,k) 
+            +wnrm(By_)/wnrm(rhoUy_)*divb(i,j,k) 
        JAC(rhoUz_,Bz_,i,j,k,1)=JAC(rhoUz_,Bz_,i,j,k,1)&
-            +ImplCoeff*wnrm(Bz_)/wnrm(rhoUz_)*divb(i,j,k) 
+            +wnrm(Bz_)/wnrm(rhoUz_)*divb(i,j,k) 
 
        ! Q(B)= -divB*rhoU/rho
        ! dQ(B)/drho = +divB*rhoU/rho**2
        JAC(Bx_,rho_,i,j,k,1)=JAC(Bx_,rho_,i,j,k,1) &
-            -ImplCoeff*wnrm(rho_)/wnrm(Bx_)*divb(i,j,k) &
+            -wnrm(rho_)/wnrm(Bx_)*divb(i,j,k) &
             *Impl_VC(rhoUx_,i,j,k)/Impl_VC(rho_,i,j,k)**2
        JAC(By_,rho_,i,j,k,1)=JAC(By_,rho_,i,j,k,1) &
-            -ImplCoeff*wnrm(rho_)/wnrm(By_)*divb(i,j,k) &
+            -wnrm(rho_)/wnrm(By_)*divb(i,j,k) &
             *Impl_VC(rhoUy_,i,j,k)/Impl_VC(rho_,i,j,k)**2
        JAC(Bz_,rho_,i,j,k,1)=JAC(Bz_,rho_,i,j,k,1) &
-            -ImplCoeff*wnrm(rho_)/wnrm(Bz_)*divb(i,j,k) &
+            -wnrm(rho_)/wnrm(Bz_)*divb(i,j,k) &
             *Impl_VC(rhoUz_,i,j,k)/Impl_VC(rho_,i,j,k)**2
 
        ! dQ(B)/drhoU= -divB/rho
        JAC(Bx_,rhoUx_,i,j,k,1)=JAC(Bx_,rhoUx_,i,j,k,1)&
-            +ImplCoeff*wnrm(rhoUx_)/wnrm(Bx_)*divb(i,j,k)/Impl_VC(rho_,i,j,k) 
+            +wnrm(rhoUx_)/wnrm(Bx_)*divb(i,j,k)/Impl_VC(rho_,i,j,k) 
        JAC(By_,rhoUy_,i,j,k,1)=JAC(By_,rhoUy_,i,j,k,1)&
-            +ImplCoeff*wnrm(rhoUy_)/wnrm(By_)*divb(i,j,k)/Impl_VC(rho_,i,j,k) 
+            +wnrm(rhoUy_)/wnrm(By_)*divb(i,j,k)/Impl_VC(rho_,i,j,k) 
        JAC(Bz_,rhoUz_,i,j,k,1)=JAC(Bz_,rhoUz_,i,j,k,1)&
-            +ImplCoeff*wnrm(rhoUz_)/wnrm(Bz_)*divb(i,j,k)/Impl_VC(rho_,i,j,k) 
+            +wnrm(rhoUz_)/wnrm(Bz_)*divb(i,j,k)/Impl_VC(rho_,i,j,k) 
 
        ! Q(E)= -divB*rhoU.B/rho
        ! dQ(E)/drho = +divB*rhoU.B/rho**2
        JAC(E_,rho_,i,j,k,1)=JAC(E_,rho_,i,j,k,1)&
-            -ImplCoeff*wnrm(rho_)/wnrm(E_)*divb(i,j,k)*&
+            -wnrm(rho_)/wnrm(E_)*divb(i,j,k)*&
             (Impl_VC(rhoUx_,i,j,k)*Impl_VC(Bx_,i,j,k)&
             +Impl_VC(rhoUy_,i,j,k)*Impl_VC(By_,i,j,k)&
             +Impl_VC(rhoUz_,i,j,k)*Impl_VC(Bz_,i,j,k))&
@@ -484,24 +485,24 @@ contains
 
        ! dQ(E)/drhoU = -divB*B/rho
        JAC(E_,rhoUx_,i,j,k,1)=JAC(E_,rhoUx_,i,j,k,1) &
-            +ImplCoeff*wnrm(rhoUx_)/wnrm(E_)*divb(i,j,k) &
+            +wnrm(rhoUx_)/wnrm(E_)*divb(i,j,k) &
             *Impl_VC(Bx_,i,j,k)/Impl_VC(rho_,i,j,k) 
        JAC(E_,rhoUy_,i,j,k,1)=JAC(E_,rhoUy_,i,j,k,1) &
-            +ImplCoeff*wnrm(rhoUy_)/wnrm(E_)*divb(i,j,k) &
+            +wnrm(rhoUy_)/wnrm(E_)*divb(i,j,k) &
             *Impl_VC(By_,i,j,k)/Impl_VC(rho_,i,j,k) 
        JAC(E_,rhoUz_,i,j,k,1)=JAC(E_,rhoUz_,i,j,k,1) &
-            +ImplCoeff*wnrm(rhoUz_)/wnrm(E_)*divb(i,j,k) &
+            +wnrm(rhoUz_)/wnrm(E_)*divb(i,j,k) &
             *Impl_VC(Bz_,i,j,k)/Impl_VC(rho_,i,j,k) 
 
        ! dQ(E)/dB = -divB*rhoU/rho
        JAC(E_,Bx_,i,j,k,1)=JAC(E_,Bx_,i,j,k,1) &
-            +ImplCoeff*wnrm(Bx_)/wnrm(E_)*divb(i,j,k) &
+            +wnrm(Bx_)/wnrm(E_)*divb(i,j,k) &
             *Impl_VC(rhoUx_,i,j,k)/Impl_VC(rho_,i,j,k) 
        JAC(E_,By_,i,j,k,1)=JAC(E_,By_,i,j,k,1) &
-            +ImplCoeff*wnrm(By_)/wnrm(E_)*divb(i,j,k) &
+            +wnrm(By_)/wnrm(E_)*divb(i,j,k) &
             *Impl_VC(rhoUy_,i,j,k)/Impl_VC(rho_,i,j,k) 
        JAC(E_,Bz_,i,j,k,1)=JAC(E_,Bz_,i,j,k,1) &
-            +ImplCoeff*wnrm(Bz_)/wnrm(E_)*divb(i,j,k) &
+            +wnrm(Bz_)/wnrm(E_)*divb(i,j,k) &
             *Impl_VC(rhoUz_,i,j,k)/Impl_VC(rho_,i,j,k) 
     end do; end do; end do
 
@@ -629,7 +630,7 @@ contains
     ! dR(Bx)/dBx, dR(By)/dBy, dR(Bz)/dBz 
     
     !do iDim = 1, nDim
-    !   Coeff= - ImplCoeff*ResistDiag/Dxyz(iDim)**2
+    !   Coeff= -ResistDiag/Dxyz(iDim)**2
     !   do k=1,nK; do j=1,nJ; do i=1,nI
     !      do iVar=Bx_, Bz_
     !         JAC(iVar,iVar,i,j,k,1)= &
@@ -643,7 +644,7 @@ contains
     !end do
 
     ! dR(Bx)/dBy
-    Coeff = ImplCoeff*wnrm(By_)/wnrm(Bx_)/Dxyz(z_)**2
+    Coeff = wnrm(By_)/wnrm(Bx_)/Dxyz(z_)**2
     ! Main diagonal
     do k=1,nK; do j=1,nJ; do i=1,nI
        JAC(Bx_,By_,i,j,k,1)= JAC(Bx_,By_,i,j,k,1) &
@@ -659,7 +660,7 @@ contains
     end do; end do; end do
 
     ! dR(Bx)/dBz
-    Coeff = ImplCoeff*wnrm(Bz_)/wnrm(Bx_)/Dxyz(y_)**2
+    Coeff = wnrm(Bz_)/wnrm(Bx_)/Dxyz(y_)**2
     ! Main diagonal
     do k=1,nK; do j=1,nJ; do i=1,nI
        JAC(Bx_,Bz_,i,j,k,1)= JAC(Bx_,Bz_,i,j,k,1) &
@@ -675,7 +676,7 @@ contains
     end do; end do; end do
 
     ! dR(By)/dBz
-    Coeff = ImplCoeff*wnrm(Bz_)/wnrm(By_)/Dxyz(x_)**2
+    Coeff = wnrm(Bz_)/wnrm(By_)/Dxyz(x_)**2
     ! Main diagonal
     do k=1,nK; do j=1,nJ; do i=1,nI
        JAC(By_,Bz_,i,j,k,1)= JAC(By_,Bz_,i,j,k,1) &
@@ -691,7 +692,7 @@ contains
     end do; end do; end do
 
     ! dR(By)/dBx
-    Coeff = ImplCoeff*wnrm(Bx_)/wnrm(By_)/Dxyz(z_)**2
+    Coeff = wnrm(Bx_)/wnrm(By_)/Dxyz(z_)**2
     ! Main diagonal
     do k=1,nK; do j=1,nJ; do i=1,nI
        JAC(By_,Bx_,i,j,k,1)= JAC(By_,Bx_,i,j,k,1) &
@@ -707,7 +708,7 @@ contains
     end do; end do; end do
 
     ! dR(Bz)/dBx
-    Coeff = ImplCoeff*wnrm(Bx_)/wnrm(Bz_)/Dxyz(y_)**2
+    Coeff = wnrm(Bx_)/wnrm(Bz_)/Dxyz(y_)**2
     ! Main diagonal
     do k=1,nK; do j=1,nJ; do i=1,nI
        JAC(Bz_,Bx_,i,j,k,1)= JAC(Bz_,Bx_,i,j,k,1) &
@@ -723,7 +724,7 @@ contains
     end do; end do; end do
 
     ! dR(Bz)/dBy
-    Coeff = ImplCoeff*wnrm(By_)/wnrm(Bz_)/Dxyz(x_)**2
+    Coeff = wnrm(By_)/wnrm(Bz_)/Dxyz(x_)**2
     ! Main diagonal
     do k=1,nK; do j=1,nJ; do i=1,nI
        JAC(Bz_,By_,i,j,k,1)= JAC(Bz_,By_,i,j,k,1) &
@@ -779,7 +780,7 @@ contains
           ! Normalization for dR(B_j)/dB_l
           jB = B_ + jDim; 
           lB = B_ + lDim; 
-          Coeff = ImplCoeff*wnrm(lB)/wnrm(jB)
+          Coeff = wnrm(lB)/wnrm(jB)
 
           jklEpsilon = iLeviCivita_III(jDim, kDim, lDim)
 

@@ -11,7 +11,7 @@ module ModHeatConduction
   public :: read_heatconduction_param
   public :: init_heat_conduction
   public :: get_heat_flux
-  public :: impl_jac_heat_conduction
+  public :: add_jacobian_heat_conduction
 
   ! Logical for adding parallel heat conduction
   Logical, public :: UseParallelConduction = .false.
@@ -476,9 +476,9 @@ contains
 
   end subroutine calc_face_gradient
 
-    !==========================================================================
+  !============================================================================
 
-  subroutine impl_jac_heat_conduction(iBlock, nVar, Jacobian_VVCI)
+  subroutine add_jacobian_heat_conduction(iBlock, nVar, Jacobian_VVCI)
 
     use ModMain, ONLY: nI, nJ, nK, nDim
 
@@ -489,6 +489,6 @@ contains
     !--------------------------------------------------------------------------
 
 
-  end subroutine impl_jac_heat_conduction
+  end subroutine add_jacobian_heat_conduction
 
 end module ModHeatConduction

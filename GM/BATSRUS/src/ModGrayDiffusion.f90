@@ -20,7 +20,7 @@ module ModGrayDiffusion
   public :: init_gray_diffusion
   public :: get_radiation_energy_flux
   public :: calc_source_gray_diffusion
-  public :: impl_jac_gray_diffusion
+  public :: add_jacobian_gray_diffusion
   public :: set_gray_outflow_bc
   public :: get_impl_gray_diff_state
   public :: get_gray_diffusion_bc
@@ -667,14 +667,14 @@ contains
 
   !============================================================================
 
-  subroutine impl_jac_gray_diffusion(iBlock, nVar, Jacobian_VVCI)
+  subroutine add_jacobian_gray_diffusion(iBlock, nVar, Jacobian_VVCI)
 
     ! Add partial derivatives of the gray diffusion term to the Jacobian that
     ! are not calculated by the general algorithm (these are for the diffusion
     ! operators the same as the semi-implicit jacobian)
 
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK
-    use ModImplicit, ONLY: kr, ImplCoeff, nStencil
+    use ModImplicit, ONLY: kr, nStencil
     use ModMain,     ONLY: nI, nJ, nK, nDim
 
     integer, intent(in) :: iBlock, nVar
@@ -686,7 +686,7 @@ contains
 
     Dxyz_D = (/dx_BLK(iBlock), dy_BLK(iBlock), dz_Blk(iBlock)/)
     do iDim = 1, nDim
-       Coeff = -ImplCoeff/Dxyz_D(iDim)**2
+       Coeff = -1.0/Dxyz_D(iDim)**2
        Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
        do k=1,nK; do j=1,nJ; do i=1,nI
           do iDiff = 1, nDiff
@@ -701,16 +701,18 @@ contains
              if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ &
                   .or. iDim==3.and.k==nK) DiffRight = 0.0
 
-             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim)   = DiffLeft
-             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) = DiffRight
+             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) = &
+                  Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) + DiffLeft
+             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) = &
+                  Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) + DiffRight
           end do
        end do; end do; end do
     end do
 
-  end subroutine impl_jac_gray_diffusion
+  end subroutine add_jacobian_gray_diffusion
 
   !============================================================================
-  ! Semi-implicit interface for Erad and Eint
+  ! Semi-implicit interface
   !============================================================================
 
   subroutine get_impl_gray_diff_state(StateImpl_VGB,DconsDsemi_VCB)
