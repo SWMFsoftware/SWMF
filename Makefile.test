@@ -398,10 +398,14 @@ test_esmf_check:
 		>> test_esmf.diff
 	ls -l test_esmf.diff
 
-# CCMC instalation, compiling, and  PostIDL.exe	 generation at ccmc1@lanai1
+# CCMC instalation, compiling, and  PostIDL.exe	 generation
 #Use "Config.pl -install" before use of "make ccmc_compile" or "make test_ccmc"
-#1.Public version. Specific job scripts are substuted for generic mpirun
-#2. To be completed with the script replace_amrinit.pl
+#Public version. Specific job scripts are to be substituted for generic mpirun
+
+####FOR CCMC ONLY######################
+#THIS VERSION OF THE TEST WORKS ONLY WITH THE SWMF VERSIONS OF MAY,2009 and LATER
+#Use Config.pl -install -compiler=pgf90
+# Modify the line in test_ccmc_run (see below) 
 
 test_ccmc:
 	@echo "test_ccmc_compile..." > test_ccmc.diff
@@ -437,7 +441,15 @@ test_ccmc_rundir:
 	rm -f ${TESTDIR}/SWMF.exe
 	
 test_ccmc_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF_run_test.exe > runlog_`date +%y%m%d%H%M`; cd GM; pIDL -ccmc; cd ../IE; pION
+	cd ${TESTDIR}; \
+	${MPIRUN} ./SWMF_run_test.exe > runlog_`date +%y%m%d%H%M`; \
+	cd GM; pIDL -ccmc; cd ../IE; pION
+
+## FOR CCMC instead of the line with ${MPIRUN} should be the
+## name of the job script, for a given machine. Say, for the machine
+## named funai1 the second line should be: "tab" funai1.bat;"space"\"Enter":
+##      funai1.bat; \
+## The job script funai1.bat should be added to share/JobScripts 
 
 test_ccmc_restart_rundir:
 	rm -f ${TESTDIR}/LAYOUT.in ${TESTDIR}/PARAM.in
