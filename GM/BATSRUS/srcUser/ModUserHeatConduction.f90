@@ -221,17 +221,15 @@ contains
   subroutine user_set_ics
 
     use ModAdvance,    ONLY: State_VGB
-    use ModGeometry,   ONLY: x_Blk, y_Blk, Dx_Blk, y2
-    use ModMain,       ONLY: GlobalBlk, nI, nJ, nK, x_, Time_Simulation
-    use ModNumConst,   ONLY: cPi
-    use ModPhysics,    ONLY: gm1, No2Io_V, UnitTemperature_
+    use ModGeometry,   ONLY: x_Blk, y_Blk
+    use ModMain,       ONLY: GlobalBlk, nI, nJ, nK, Time_Simulation
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, p_
 
     integer, parameter :: EintExtra_ = p_ - 1
 
     integer :: iBlock, i, j, k, iCell
-    real :: x, y, Dx, Temperature, Spread, Pressure
-    real :: r, Lambda, Weight1, Weight2, Rho, Tmat, Ur, p, RhoU_D(2)
+    real :: x, y
+    real :: r, Weight1, Weight2, Rho, Tmat, Ur, p, RhoU_D(2)
 
     character(len=*), parameter :: NameSub = "user_set_ics"
     !--------------------------------------------------------------------------
@@ -240,30 +238,12 @@ contains
     select case(TypeProblem)
     case('gaussian')
        do i = -1, nI+2
-          Spread = 4.0*HeatConductionCoef*Time_Simulation
-          Temperature = Tmin + AmplitudeTemperature/(sqrt(cPi*Spread)) &
-               *exp(-x_Blk(i,1,1,iBlock)**2/Spread)
-          do k = -1, nK+2; do j = -1, nJ+2
-             State_VGB(Rho_,i,j,k,iBlock) = 1.0
-             State_VGB(RhoUx_:p_-1,i,j,k,iBlock) = 0.0
-             State_VGB(p_,i,j,k,iBlock) = Temperature
-          end do; end do
+          call get_state_gaussian(i, iBlock)
        end do
 
     case('rz')
-       Lambda = -(3.831705970/y2)**2
-       Spread = 4.0*HeatConductionCoef*Time_Simulation
-       do j = -1, nJ+2; do i = -1, nI+2
-          r = abs(y_BLK(i,j,1,iBlock))
-          Temperature = Tmin + AmplitudeTemperature &
-               *exp(Lambda*HeatConductionCoef*Time_Simulation) &
-               *bessj0(sqrt(-Lambda)*r) &
-               /(sqrt(cPi*Spread))*exp(-x_Blk(i,j,1,iBlock)**2/Spread)
-          do k = -1, nK+2
-             State_VGB(Rho_,i,j,k,iBlock) = 1.0
-             State_VGB(RhoUx_:p_-1,i,j,k,iBlock) = 0.0
-             State_VGB(p_,i,j,k,iBlock) = Temperature
-          end do
+       do j=-1,nJ+2; do i=-1,nI+2
+          call get_state_rz(i, j, iBlock)
        end do; end do
 
     case('rmtv')
@@ -339,12 +319,64 @@ contains
     logical,          intent(out) :: IsFound
 
     integer :: i, j
-    real :: r
+    real :: r, Temperature
 
     character (len=*), parameter :: NameSub = 'user_set_outerbcs'
     !--------------------------------------------------------------------------
 
     select case(TypeProblem)
+    case('gaussian')
+       select case(TypeBc)
+       case('user')
+          select case(iSide)
+          case(1)
+             do i = -1, 0
+                call get_state_gaussian(i, iBlock)
+             end do
+          case(2)
+             do i = nI+1, nI+2
+                call get_state_gaussian(i, iBlock)
+             end do
+          end select
+       case('usersemi')
+          select case(iSide)
+          case(1)
+             call get_temperature_gaussian(0, iBlock, Temperature)
+             StateSemi_VGB(1,0,:,:,iBlock) = Temperature
+          case(2)
+             call get_temperature_gaussian(nI+1, iBlock, Temperature)
+             StateSemi_VGB(1,nI+1,:,:,iBlock) = Temperature
+          end select
+       end select
+
+    case('rz')
+       select case(TypeBc)
+       case('user')
+          select case(iSide)
+          case(1)
+             do j = -1, nJ+2; do i = -1, 0
+                call get_state_rz(i, j, iBlock)
+             end do; end do
+          case(2)
+             do j = -1, nJ+2; do i = nI+1, nI+2
+                call get_state_rz(i, j, iBlock)
+             end do; end do
+          end select
+       case('usersemi')
+          select case(iSide)
+          case(1)
+             do j = 1, nJ
+                call get_temperature_rz(0, j, iBlock, Temperature)
+                StateSemi_VGB(1,0,j,:,iBlock) = Temperature
+             end do
+          case(2)
+             do j = 1, nJ
+                call get_temperature_rz(nI+1, j, iBlock, Temperature)
+                StateSemi_VGB(1,nI+1,j,:,iBlock) = Temperature
+             end do
+          end select
+       end select
+
     case('rmtv')
        if(.not. (iSide==2 .or. iSide==4) )then
           write(*,*) NameSub//' : user boundary not defined at iSide = ', iSide
@@ -408,6 +440,86 @@ contains
 
   !============================================================================
 
+  subroutine get_state_gaussian(i, iBlock)
+
+    use ModAdvance,    ONLY: State_VGB
+    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, p_
+
+    integer, intent(in) :: i, iBlock
+
+    real :: Temperature
+    !--------------------------------------------------------------------------
+    call get_temperature_gaussian(i, iBlock, Temperature)
+    State_VGB(Rho_,i,:,:,iBlock) = 1.0
+    State_VGB(RhoUx_:RhoUz_,i,:,:,iBlock) = 0.0
+    State_VGB(p_,i,:,:,iBlock) = Temperature
+
+  end subroutine get_state_gaussian
+
+  !============================================================================
+
+  subroutine get_temperature_gaussian(i, iBlock, Temperature)
+
+    use ModGeometry, ONLY: x_Blk
+    use ModMain,     ONLY: Time_Simulation
+    use ModNumConst, ONLY: cPi
+
+    integer, intent(in) :: i, iBlock
+    real,    intent(out):: Temperature
+
+    real :: Spread
+    !--------------------------------------------------------------------------
+
+    Spread = 4.0*HeatConductionCoef*Time_Simulation
+    Temperature = Tmin + AmplitudeTemperature/(sqrt(cPi*Spread)) &
+         *exp(-x_Blk(i,1,1,iBlock)**2/Spread)
+
+  end subroutine get_temperature_gaussian
+
+  !============================================================================
+
+  subroutine get_state_rz(i, j, iBlock)
+
+    use ModAdvance,    ONLY: State_VGB
+    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, p_
+
+    integer, intent(in) :: i, j, iBlock
+
+    real :: Temperature
+    !--------------------------------------------------------------------------
+    call get_temperature_rz(i, j, iBlock, Temperature)
+    State_VGB(Rho_,i,j,:,iBlock) = 1.0
+    State_VGB(RhoUx_:RhoUz_,i,j,:,iBlock) = 0.0
+    State_VGB(p_,i,j,:,iBlock) = Temperature
+
+  end subroutine get_state_rz
+
+  !============================================================================
+
+  subroutine get_temperature_rz(i, j, iBlock, Temperature)
+
+    use ModGeometry, ONLY: x_Blk, y_Blk, y2
+    use ModMain,     ONLY: Time_Simulation
+    use ModNumConst, ONLY: cPi
+
+    integer, intent(in) :: i, j, iBlock
+    real,    intent(out):: Temperature
+
+    real :: r, Lambda, Spread
+    !--------------------------------------------------------------------------
+
+    Lambda = -(3.831705970/y2)**2
+    Spread = 4.0*HeatConductionCoef*Time_Simulation
+    r = abs(y_BLK(i,j,1,iBlock))
+    Temperature = Tmin + AmplitudeTemperature &
+         *exp(Lambda*HeatConductionCoef*Time_Simulation) &
+         *bessj0(sqrt(-Lambda)*r) &
+         /(sqrt(cPi*Spread))*exp(-x_Blk(i,j,1,iBlock)**2/Spread)
+
+  end subroutine get_temperature_rz
+
+  !============================================================================
+
   subroutine get_state_parcond(i, j, iBlock)
 
     use ModAdvance,    ONLY: State_VGB
@@ -416,7 +528,7 @@ contains
     integer, intent(in) :: i, j, iBlock
 
     real :: Temperature
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call get_temperature_parcond(i, j, iBlock, Temperature)
     State_VGB(Rho_,i,j,:,iBlock) = 1.0
     State_VGB(RhoUx_:RhoUz_,i,j,:,iBlock) = 0.0
@@ -425,7 +537,7 @@ contains
     State_VGB(Bz_,i,j,:,iBlock) = 0.0
     State_VGB(p_,i,j,:,iBlock) = Temperature
 
-    end subroutine get_state_parcond
+  end subroutine get_state_parcond
 
   !============================================================================
 
@@ -460,11 +572,8 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModAdvance,    ONLY: State_VGB
-    use ModConst,      ONLY: cKToEv
-    use ModGeometry,   ONLY: x_Blk, y_Blk, Dx_Blk, y2
+    use ModGeometry,   ONLY: x_Blk, y_Blk
     use ModMain,       ONLY: nI, nJ, nK, Time_Simulation
-    use ModNumConst,   ONLY: cPi
-    use ModPhysics,    ONLY: No2Si_V, UnitTemperature_
     use ModVarIndexes, ONLY: p_, Rho_
 
     integer,          intent(in)   :: iBlock
@@ -478,9 +587,9 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    real :: Spread, Lambda, r, Temperature, Weight1, Weight2, x, y
-    real :: Rho, Ur, U_D(2), xx, yy, Spread0
-    integer :: i, j, k, iCell
+    real :: r, Temperature, Weight1, Weight2, x, y
+    real :: Rho, Ur, U_D(2)
+    integer :: i, j, iCell
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
@@ -494,9 +603,10 @@ contains
     case('gaussian')
        select case(NameVar)
        case('t0','temp0')
-          Spread = 4.0*HeatConductionCoef*Time_Simulation
-          PlotVar_G = Tmin + AmplitudeTemperature/(sqrt(cPi*Spread)) &
-               *exp(-x_Blk(:,:,:,iBlock)**2/Spread)
+          do i=-1,nI+2
+             call get_temperature_gaussian(i, iBlock, Temperature)
+             PlotVar_G(i,:,:) = Temperature
+          end do
        case default
           IsFound = .false.
        end select
@@ -504,17 +614,9 @@ contains
     case('rz')
        select case(NameVar)
        case('t0','temp0')
-          Lambda = -(3.831705970/y2)**2
-          Spread = 4.0*HeatConductionCoef*Time_Simulation
-          do j = -1, nJ+2; do i = -1, nI+2
-             r = abs(y_BLK(i,j,1,iBlock))
-             Temperature = Tmin + AmplitudeTemperature &
-                  *exp(Lambda*HeatConductionCoef*Time_Simulation) &
-                  *bessj0(sqrt(-Lambda)*r) &
-                  /(sqrt(cPi*Spread))*exp(-x_Blk(i,j,1,iBlock)**2/Spread)
-             do k = -1, nK+2
-                PlotVar_G(i,j,k) = Temperature
-             end do
+          do j=-1,nJ+2; do i=-1,nI+2
+             call get_temperature_rz(i, j, iBlock, Temperature)
+             PlotVar_G(i,j,:) = Temperature
           end do; end do
        case default
           IsFound = .false.

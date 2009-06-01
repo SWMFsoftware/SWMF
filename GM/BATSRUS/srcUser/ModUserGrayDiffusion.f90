@@ -8,7 +8,8 @@ module ModUser
        IMPLEMENTED4 => user_set_ics,                    &
        IMPLEMENTED5 => user_set_plot_var,               &
        IMPLEMENTED6 => user_material_properties,        &
-       IMPLEMENTED7 => user_update_states
+       IMPLEMENTED7 => user_update_states,              &
+       IMPLEMENTED8 => user_set_outerbcs
 
   include 'user_module.h' !list of public methods
 
@@ -29,7 +30,8 @@ module ModUser
        nVarLowrie  = 4
   real, allocatable :: xLowrie_C(:), StateLowrie_VC(:,:)
   real :: U0, X0
-
+  real :: EradBc1, EradBc2
+  
   real, parameter :: Gamma = 5.0/3.0
 
 contains
@@ -83,6 +85,7 @@ contains
   subroutine user_init_session
 
     use ModIoUnit,  ONLY: UnitTmp_
+    use ModPhysics, ONLY: cRadiationNo
 
     integer :: iError, iCell
     real :: Mach, Entropy
@@ -128,6 +131,9 @@ contains
     StateLowrie_VC(iTgasLowrie,:) = StateLowrie_VC(iTgasLowrie,:)/Gamma
     StateLowrie_VC(iTradLowrie,:) = StateLowrie_VC(iTradLowrie,:)/Gamma
 
+    EradBc1 = cRadiationNo*StateLowrie_VC(iTradLowrie,1)**4
+    EradBc2 = cRadiationNo*StateLowrie_VC(iTradLowrie,nCellLowrie)**4
+
   end subroutine user_init_session
 
   !==========================================================================
@@ -154,11 +160,10 @@ contains
   subroutine user_set_ics
 
     use ModAdvance,    ONLY: State_VGB
-    use ModConst,      ONLY: cRadiation
     use ModGeometry,   ONLY: x_Blk, y_Blk
     use ModMain,       ONLY: GlobalBlk, nI, nJ, nK, x_, y_
     use ModPhysics,    ONLY: ShockSlope, No2Si_V, Si2No_V, &
-         UnitTemperature_, UnitEnergyDens_, inv_gm1
+         UnitTemperature_, UnitEnergyDens_, inv_gm1, cRadiationNo
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Erad_, &
          ExtraEint_, p_
 
@@ -211,8 +216,7 @@ contains
             +   Weight2*StateLowrie_VC(iTradLowrie, iCell) )
 
        p = Rho*Tgas
-       Erad = cRadiation*(Trad*No2Si_V(UnitTemperature_))**4 &
-            *Si2No_V(UnitEnergyDens_)
+       Erad = cRadiationNo*Trad**4
        RhoU_D(1) = Rho*(Ux+U0)
        RhoU_D(2) = 0.0
        RhoU_D(3) = 0.0
@@ -231,7 +235,53 @@ contains
 
   end subroutine user_set_ics
 
-  !==========================================================================
+  !===========================================================================
+
+  subroutine user_set_outerbcs(iBlock,iSide, TypeBc, IsFound)
+
+    use ModAdvance,    ONLY: State_VGB
+    use ModImplicit,   ONLY: StateSemi_VGB, iEradImpl
+    use ModMain,       ONLY: nI
+    use ModVarIndexes, ONLY: nVar, Erad_
+
+    integer,          intent(in)  :: iBlock, iSide
+    character(len=20),intent(in)  :: TypeBc
+    logical,          intent(out) :: IsFound
+
+    integer :: j, k
+
+    character (len=*), parameter :: NameSub = 'user_set_outerbcs'
+    !-------------------------------------------------------------------------
+
+    if(.not. (iSide==1 .or. iSide==2) )then
+       write(*,*) NameSub//' : user boundary not defined at iSide = ', iSide
+       call stop_mpi(NameSub)
+    end if
+
+    select case(TypeBc)
+    case('user')
+       select case(iSide)
+       case(1)
+          call BC_cont(1,nVar)
+          State_VGB(Erad_,-1:0,:,:,iBlock) = EradBc1
+       case(2)
+          call BC_cont(1,nVar)
+          State_VGB(Erad_,nI+1:nI+2,:,:,iBlock) = EradBc2
+       end select
+    case('usersemi')
+       select case(iSide)
+       case(1)
+          StateSemi_VGB(iEradImpl,0,:,:,iBlock) = EradBc1
+       case(2)
+          StateSemi_VGB(iEradImpl,nI+1,:,:,iBlock) = EradBc2
+       end select
+    end select
+
+    IsFound = .true.
+
+  end subroutine user_set_outerbcs
+
+  !===========================================================================
 
   subroutine user_update_states(iStage,iBlock)
 
@@ -314,11 +364,10 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModAdvance,    ONLY: State_VGB
-    use ModConst,      ONLY: cRadiation
     use ModGeometry,   ONLY: x_Blk, y_Blk
     use ModMain,       ONLY: Time_Simulation
     use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitT_, &
-         UnitTemperature_, UnitEnergyDens_, ShockSlope
+         UnitTemperature_, UnitEnergyDens_, ShockSlope, cRadiationNo
     use ModSize,       ONLY: nI, nJ, nK
     use ModVarIndexes, ONLY: p_, Rho_, Erad_
 
@@ -350,8 +399,7 @@ contains
        PlotVar_G = State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock)
 
     case('trad')
-       PlotVar_G = (State_VGB(Erad_,:,:,:,iBlock)*No2Si_V(UnitEnergyDens_) &
-            /cRadiation)**0.25 *Si2No_V(UnitTemperature_)
+       PlotVar_G = (State_VGB(Erad_,:,:,:,iBlock)/cRadiationNo)**0.25
 
     case('rho0','ux0','uy0','tgas0','trad0')
 
