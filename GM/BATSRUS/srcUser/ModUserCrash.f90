@@ -457,7 +457,7 @@ contains
 
        ! Calculate internal energy
        call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-            EinternalSiOut=EinternalSi)
+            i, j, k, iBlock, EinternalSiOut=EinternalSi)
 
        State_VGB(ExtraEint_,i,j,k,iBlock) = &
             EinternalSi*Si2No_V(UnitEnergyDens_) &
@@ -945,7 +945,7 @@ contains
     if(UseNonConservative)then
        do k=1,nK; do j=1,nJ; do i=1,nI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               GammaOut=GammaEos)
+               i, j, k, iBlock, GammaOut=GammaEos)
           Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
                -(GammaEos-g)*State_VGB(p_,i,j,k,iBlock)*&
                vInv_CB(i,j,k,iBlock)*&
@@ -973,14 +973,15 @@ contains
           EinternalSi = No2Si_V(UnitEnergyDens_)*&
                (inv_gm1*State_VGB(P_,i,j,k,iBlock) + &
                State_VGB(ExtraEint_,i,j,k,iBlock))
-          call user_material_properties(State_VGB(:,i,j,k,iBlock),&
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, &
                EinternalSiIn=EinternalSi, PressureSiOut=PressureSi)
       
           ! Set true pressure
           State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
        else
-          call user_material_properties(State_VGB(:,i,j,k,iBlock),&
-               EinternalSiOut=EinternalSi)
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, EinternalSiOut=EinternalSi)
        end if
 
        ! Set ExtraEint = Total internal energy - P/(gamma -1)
@@ -1094,12 +1095,12 @@ contains
     case('planck')
        do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               AbsorptionOpacitySiOut = PlotVar_G(i,j,k))
+               i, j, k, iBlock, AbsorptionOpacitySiOut = PlotVar_G(i,j,k))
        end do; end do; end do
     case('ross')
        do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               RosselandMeanOpacitySiOut = PlotVar_G(i,j,k))
+               i, j, k, iBlock, RosselandMeanOpacitySiOut = PlotVar_G(i,j,k))
        end do; end do; end do
     case('usersphere')
        ! Test function for LOS images: sphere with "density" 
@@ -1257,7 +1258,8 @@ contains
   end subroutine calc_table_value
   !===========================================================================
 
-  subroutine user_material_properties(State_V, EinternalSiIn,  TeSiIn,  &
+  subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
+       EinternalSiIn,  TeSiIn,  &
        EinternalSiOut, TeSiOut, PressureSiOut, CvSiOut, GammaOut, &
        AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut, &
        HeatConductionCoefSiOut)
@@ -1270,6 +1272,7 @@ contains
     use ModLookupTable,ONLY: interpolate_lookup_table
 
     real, intent(in) :: State_V(nVar)
+    integer, optional, intent(in):: i, j, k, iBlock, iDir    ! cell/face index
     real, optional, intent(in)  :: EinternalSiIn             ! [J/m^3]
     real, optional, intent(in)  :: TeSiIn                    ! [K]
     real, optional, intent(out) :: EinternalSiOut            ! [J/m^3]
@@ -1296,6 +1299,8 @@ contains
     ! The electron temperature may be needed for the opacities
     ! Initialize to negative value to see if it gets set
     TeSi = -7.70
+
+    ! if(UseVolumeFraction)then
 
     ! Find maximum level set value. 
     iMaterial_I = maxloc(State_V(LevelXe_:LevelPl_))

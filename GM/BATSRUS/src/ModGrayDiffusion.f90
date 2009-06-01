@@ -175,7 +175,7 @@ contains
 
     if(IsNewTimestepGrayDiffusion)then
 
-       call user_material_properties(State_V, &
+       call user_material_properties(State_V, i, j, k, iBlock, iDir, &
             RosselandMeanOpacitySiOut = RosselandMeanOpacitySi)
 
        RosselandMeanOpacity = RosselandMeanOpacitySi/Si2No_V(UnitX_)
@@ -626,14 +626,14 @@ contains
 
        if(IsNewTimestepGrayDiffusion)then
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               AbsorptionOpacitySiOut = PlanckOpacitySi)
+               i, j, k, iBlock, AbsorptionOpacitySiOut = PlanckOpacitySi)
 
           RelaxCoef_VCB(1,i,j,k,iBlock) = &
                PlanckOpacitySi*cLightSpeed/Si2No_V(UnitT_)
        end if
 
        call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-            TeSiOut = TeSi)
+            i, j, k, iBlock, TeSiOut = TeSi)
 
        Te = TeSi*Si2No_V(UnitTemperature_)
 
@@ -760,14 +760,14 @@ contains
        if(TypeSemiImplicit=='radcond')then
           do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-                  TeSiOut = TeSi)
+                  i, j, k, iBlock, TeSiOut = TeSi)
              Te = TeSi*Si2No_V(UnitTemperature_)
              StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = cRadiationNo*Te**4
           end do; end do; end do
        elseif(TypeSemiImplicit=='cond')then
           do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-                  TeSiOut = TeSi)
+                  i, j, k, iBlock, TeSiOut = TeSi)
              StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = &
                   TeSi*Si2No_V(UnitTemperature_)
           end do; end do; end do
@@ -780,6 +780,7 @@ contains
        ! calculate coefficients for linearized energy exchange and diffusion
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, &
                AbsorptionOpacitySiOut = PlanckOpacitySi, &
                RosselandMeanOpacitySiOut = RosselandMeanOpacitySi, &
                CvSiOut = CvSi, TeSiOut = TeSi, &
@@ -815,6 +816,7 @@ contains
           i = 0
           do k = 1, nK; do j = 1, nJ
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  i, j, k, iBlock, &
                   RosselandMeanOpacitySiOut = RosselandMeanOpacitySi, &
                   HeatConductionCoefSiOut = HeatConductionCoefSi, &
                   TeSiOut = TeSi)
@@ -825,6 +827,7 @@ contains
           i = nI + 1
           do k = 1, nK; do j = 1, nJ
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  i, j, k, iBlock, &
                   RosselandMeanOpacitySiOut = RosselandMeanOpacitySi, &
                   HeatConductionCoefSiOut = HeatConductionCoefSi, &
                   TeSiOut = TeSi)
@@ -835,6 +838,7 @@ contains
           j = 0
           do k = 1, nK; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  i, j, k, iBlock, &
                   RosselandMeanOpacitySiOut = RosselandMeanOpacitySi, &
                   HeatConductionCoefSiOut = HeatConductionCoefSi, &
                   TeSiOut = TeSi)
@@ -845,6 +849,7 @@ contains
           j = nJ + 1
           do k = 1, nK; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  i, j, k, iBlock, &
                   RosselandMeanOpacitySiOut = RosselandMeanOpacitySi, &
                   HeatConductionCoefSiOut = HeatConductionCoefSi, &
                   TeSiOut = TeSi)
@@ -855,6 +860,7 @@ contains
           k = 0
           do j = 1, nJ; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  i, j, k, iBlock, &
                   RosselandMeanOpacitySiOut = RosselandMeanOpacitySi, &
                   HeatConductionCoefSiOut = HeatConductionCoefSi, &
                   TeSiOut = TeSi)
@@ -865,6 +871,7 @@ contains
           k = nK + 1
           do j = 1, nJ; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  i, j, k, iBlock, &
                   RosselandMeanOpacitySiOut = RosselandMeanOpacitySi, &
                   HeatConductionCoefSiOut = HeatConductionCoefSi, &
                   TeSiOut = TeSi)
@@ -1155,7 +1162,7 @@ contains
        do k = 1, nK; do j = 1, nJ
           if(IsFullState)then
              call user_material_properties(State_VG(:,1,j,k), &
-                  RosselandMeanOpacitySiOut=OpacitySi)
+                  1, j, k, iBlock, RosselandMeanOpacitySiOut=OpacitySi)
              Coef = 2/sqrt( &
                   (3 * OpacitySi/Si2No_V(UnitX_) * dx_BLK(iBlock))**2 &
                   + ((State_VG(iVar,2,j,k) - State_VG(iVar,1,j,k)) &
@@ -1172,7 +1179,7 @@ contains
        do k = 1, nK; do j = 1, nJ
           if(IsFullState)then
              call user_material_properties(State_VG(:,nI,j,k), &
-                  RosselandMeanOpacitySiOut=OpacitySi)
+                  nI, j, k, iBlock, RosselandMeanOpacitySiOut=OpacitySi)
              Coef = 2/sqrt( &
                   (3 * OpacitySi/Si2No_V(UnitX_) * dx_BLK(iBlock))**2 &
                   + ((State_VG(iVar,nI,j,k)-State_VG(iVar,nI-1,j,k)) &
@@ -1191,7 +1198,7 @@ contains
        do k = 1, nK; do i = 1, nI
           if(IsFullState)then
              call user_material_properties(State_VG(:,i,1,k), &
-                  RosselandMeanOpacitySiOut=OpacitySi)
+                  i, 1, k, iBlock, RosselandMeanOpacitySiOut=OpacitySi)
              Coef = 2/sqrt( &
                   (3 * OpacitySi/Si2No_V(UnitX_) * dy_BLK(iBlock))**2 &
                   + ((State_VG(iVar,i,2,k) - State_VG(iVar,i,1,k)) &
@@ -1208,7 +1215,7 @@ contains
        do k = 1, nK; do i = 1, nI
           if(IsFullState)then
              call user_material_properties(State_VG(:,i,nJ,k), &
-                  RosselandMeanOpacitySiOut=OpacitySi)
+                  i, nJ, k, iBlock, RosselandMeanOpacitySiOut=OpacitySi)
              Coef = 2/sqrt( &
                   (3 * OpacitySi/Si2No_V(UnitX_) * dy_BLK(iBlock))**2 &
                   + ((State_VG(iVar,i,nJ,k)-State_VG(iVar,i,nJ-1,k)) &
@@ -1227,7 +1234,7 @@ contains
        do j = 1, nJ; do i = 1, nI
           if(IsFullState)then
              call user_material_properties(State_VG(:,i,j,1), &
-                  RosselandMeanOpacitySiOut=OpacitySi)
+                  i, j, 1, iBlock, RosselandMeanOpacitySiOut=OpacitySi)
              Coef = 2/sqrt( &
                   (3 * OpacitySi/Si2No_V(UnitX_) * dz_BLK(iBlock))**2 &
                   + ((State_VG(iVar,i,j,2) - State_VG(iVar,i,j,1)) &
@@ -1244,7 +1251,7 @@ contains
        do k = j, nJ; do i = 1, nI
           if(IsFullState)then
              call user_material_properties(State_VG(:,i,j,nK), &
-                  RosselandMeanOpacitySiOut=OpacitySi)
+                  i, j, nK, iBlock, RosselandMeanOpacitySiOut=OpacitySi)
              Coef = 2/sqrt( &
                   (3 * OpacitySi/Si2No_V(UnitX_) * dz_BLK(iBlock))**2 &
                   + ((State_VG(iVar,i,j,nK)-State_VG(iVar,i,j,nK-1)) &
@@ -1753,6 +1760,7 @@ contains
        end if
 
        call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+            i, j, k, iBlock, &
             EinternalSiIn = EinternalSi, PressureSiOut = PressureSi)
 
        State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
