@@ -475,8 +475,9 @@ contains
 
   !==========================================================================
 
-  subroutine user_material_properties(State_V, EinternalSiIn, &
-       TeSiIn, EinternalSiOut, TeSiOut, PressureSiOut, CvSiOut, GammaOut, &
+  subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
+       EinternalSiIn, TeSiIn, &
+       EinternalSiOut, TeSiOut, PressureSiOut, CvSiOut, GammaOut, &
        AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut, &
        HeatConductionCoefSiOut)
 
@@ -487,7 +488,8 @@ contains
          UnitTemperature_, UnitEnergyDens_, UnitT_, UnitU_, UnitX_, UnitP_
     use ModVarIndexes, ONLY: nVar, Rho_, p_
 
-    real, intent(in) :: State_V(nVar)
+    real, intent(in) :: State_V(nVar
+    integer, optional, intent(in):: i, j, k, iBlock, iDir    ! cell/face index
     real, optional, intent(in)  :: EinternalSiIn             ! [J/m^3]
     real, optional, intent(in)  :: TeSiIn                    ! [K]
     real, optional, intent(out) :: EinternalSiOut            ! [J/m^3]
