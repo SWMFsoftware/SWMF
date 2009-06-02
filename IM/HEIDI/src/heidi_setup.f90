@@ -29,9 +29,8 @@
 
 subroutine heidi_read
 
-  use ModHeidiSize
   use ModHeidiIO
-  use ModHeidiMain
+  use ModHeidiMain, ONLY: ithermfirst
   use ModIoUnit, only : UNITTMP_
   use ModHeidiInput, only: set_parameters
   use ModProcIM, only:iProc
@@ -42,7 +41,12 @@ subroutine heidi_read
   character(len=1) :: header
 
   !------------------------------------------------------------------------
-
+  !Initialize scalc
+  scalc = 0
+  if (iProc==0) then 
+     write(*,*) 'SCALC initial', scalc
+  end if
+     
   call set_parameters
 
   Dt = DTmax
@@ -52,16 +56,17 @@ subroutine heidi_read
 
      call write_prefix; write(iUnitStdOut,*)  'DT,TMAX,TINT,TIME',DT,TMAX,TINT,TIME
      call write_prefix; write(iUnitStdOut,*)  'IO,JO,KO,LO,ISO',IO,JO,KO,LO,ISO
-     call write_prefix; write(iUnitStdOut,*) ' ELB,SWE,RW,HMIN',ELB,SWE,RW,HMIN
-     call write_prefix; write(iUnitStdOut,*)  'ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT',&
-          ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT
+     !call write_prefix; write(iUnitStdOut,*) ' ELB,SWE,RW,HMIN',ELB,SWE,RW,HMIN
+     !call write_prefix; write(iUnitStdOut,*)  'ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT',&
+     !     ISTORM,IKP,IPA,IFAC,IST,IWPI,ISW,IA,ITHERMINIT
      call write_prefix; write(iUnitStdOut,*)  '(SCALC(k),k=1,NS)',(SCALC(k),k=1,NS)
-     call write_prefix; write(iUnitStdOut,*)  'YEAR,month,day,UT,R,AP,KP',YEAR,month,day,UT,R,AP,KP
+     call write_prefix; write(iUnitStdOut,*)  'YEAR,month,day,UT',YEAR,month,day,UT
+     call write_prefix; write(iUnitStdOut,*)  'R,AP,KP',R,AP,KP
      call write_prefix; write(iUnitStdOut,*)  '(INI(k),k=1,NS)',(INI(k),k=1,NS)
      call write_prefix; write(iUnitStdOut,*)  '(IBC(k),k=1,NS)',(IBC(k),k=1,NS)
-     call write_prefix; write(iUnitStdOut,*)  'TINJ,Ab,Eob',TINJ,Ab,Eob
-     call write_prefix; write(iUnitStdOut,*)  '(IRES(k),k=1,15)',(IRES(k),k=1,15)
-     call write_prefix; write(iUnitStdOut,*)  'NAME',NameRun
+     !call write_prefix; write(iUnitStdOut,*)  'TINJ,Ab,Eob',TINJ,Ab,Eob
+     !call write_prefix; write(iUnitStdOut,*)  '(IRES(k),k=1,15)',(IRES(k),k=1,15)
+     call write_prefix; write(iUnitStdOut,*)  'NAME=', NameRun
 
   endif
  
@@ -117,9 +122,9 @@ subroutine heidi_read
      TPPC(1:IPPC)=TPPC(1:IPPC)*86400. ! Convert to seconds
      PPC(1:IPPC)=PPC(1:IPPC)*1.E3       ! Convert to Volts
      
-     if (iProc==0) then
-        call write_prefix; write(iUnitStdOut,*) 'PPC:',IPPC,TPPC(1),TPPC(IPPC),PPC(1),PPC(IPPC)
-     end if
+!!$     if (iProc==0) then
+!!$        call write_prefix; write(iUnitStdOut,*) 'PPC:',IPPC,TPPC(1),TPPC(IPPC),PPC(1),PPC(IPPC)
+!!$     end if
      
   end if
 
@@ -746,6 +751,7 @@ subroutine GETSWIND
      end if
   end do
 
+  close(iUnitSw1)
 end subroutine GETSWIND
 
 !======================================================================

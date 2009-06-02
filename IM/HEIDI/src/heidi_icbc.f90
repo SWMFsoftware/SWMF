@@ -463,7 +463,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
 !**************************************************
            !  Read in from a a restart ascii file (INI=7) 
         else if (INI(S).eq.7) then
-           NameFile       = trim(NameRestartOutDir)//'restart'//NameSpecies//'.out'
+           NameFile       = trim(NameRestartInDir)//'restart'//NameSpecies//'.out'
            StringHeader   = &
                 'Phase space distribution function for all pitch angles, energies and locations.'
            

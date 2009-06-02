@@ -54,7 +54,7 @@ subroutine ECFL
 
 	if (S.eq.1) NameSpecies='_e' 
 	if (S.eq.2) NameSpecies='_h' 
-	if (S.eq.3) NameSpecies='he' 
+	if (S.eq.3) NameSpecies='_he' 
 	if (S.eq.4) NameSpecies='_o' 
 
         if (S.eq.1) NameOutputSpecies='electron/'
@@ -66,8 +66,6 @@ subroutine ECFL
 
         open(iUnitOut,FILE=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
              NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
-
-        !write (*,*) 'Filename: '//NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//NameSpecies//NameSuffix//NameStep
 
         write (iUnitOut,*) 'Filename: '//NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//NameSpecies//NameSuffix//NameStep
 	write (iUnitOut,*) 'T,KP,A:',T,KP,A
@@ -284,7 +282,8 @@ subroutine WRESULT(LNC,XN,IFIR)
   call write_prefix; write(iUnitStdOut,*) 'Calling CURRENTCALC'
   !	IF (IA.GE.8) CALL CURRENTCALC
   call CURRENTCALC  ! Do it all the time
-  !	print *, 'WRESULT DST VALUES: ',(DST(S),S=1,NS)
+   
+!	print *, 'WRESULT DST VALUES: ',(DST(S),S=1,NS)
 
   !.......L counter offset in PAD outputs
   IFN=0
@@ -855,13 +854,16 @@ subroutine WRESULT(LNC,XN,IFIR)
 	   do J=1,JO
               write (UnitTmp_,29) MLT(J),(Irad(I,J,S),I=1,Ir)
 	   end do
-	   write (UnitTmp_,*) 'Field-aligned current density into one ',   &
+	   
+           write (UnitTmp_,*) 'Field-aligned current density into one ',   &
                 'hemisphere [A m-2]'
 	   write (UnitTmp_,31) (Lsh(I),I=1,Ir)
-	   do J=1,JO
+	   
+           do J=1,JO
               write (UnitTmp_,29) MLT(J),(Jion1(I,J,S),I=1,Ir)
-	   end do
-	   write (UnitTmp_,*) 'Potentials from RC FACs [kV]'
+           end do
+	   
+           write (UnitTmp_,*) 'Potentials from RC FACs [kV]'
 	   write (UnitTmp_,31) (Lsh(I),I=1,Ir)
 	   do J=1,JO
               write (UnitTmp_,29) MLT(J),(FPOT(I,J)*1.E-3,I=1,Ir)
@@ -869,7 +871,8 @@ subroutine WRESULT(LNC,XN,IFIR)
 	   write (UnitTmp_,*) 'FAC density from all species into one ',   &
                 'hemisphere [A m-2]'
 	   write (UnitTmp_,31) (Lsh(I),I=1,Ir)
-	   do J=1,JO
+	   
+           do J=1,JO
               write (UnitTmp_,29) MLT(J),(Jfac(I,J),I=1,Ir)
 	   end do
            !	 END IF

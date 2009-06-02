@@ -45,7 +45,7 @@ subroutine heidi_init
   NPR=nint(TINT/DT/2.)
   if (NSTEP.lt.45) then
      if (iProc==0) then
-        call write_prefix; write(iUnitStdOut,*) 'NSTEP',NSTEP
+        !call write_prefix; write(iUnitStdOut,*) 'NSTEP',NSTEP
         call write_prefix; write(iUnitStdOut,*) 'Times:',NST,NSTEP,NPR,NKP,NIBC,I2,DT,NSTEP*2.*DT
      end if
   end if

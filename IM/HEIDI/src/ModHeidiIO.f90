@@ -6,10 +6,12 @@ Module ModHeidiIO
   
   use ModHeidiSize
   
+  implicit none
+
   ! Define a few time and geophysical index input variables
   ! Formerly: Common block PARAM2
-  integer year,day,nstep,ikp,iwpi,month
-  real ut,r,ap,kp,f107,tint,time
+  integer:: year,day,nstep,ikp,iwpi,month
+  real   ::ut,r,ap,kp,f107,tint,time
   integer, dimension(1:7)::TimeArray
   
   ! Define some variables set with the input file
@@ -26,22 +28,22 @@ Module ModHeidiIO
   ! Define solar wind input variables
   ! Formerly: Common block CSWIND
   integer :: ISW
-  real :: BYSW,BZSW,MDSW,USW,DPSW
+  real    :: BYSW,BZSW,MDSW,USW,DPSW
   
   ! Define SW-dependent nightside plasma input variables
   ! Formerly: Common block CSWBND
   integer :: ISWB
-  real :: NSWB,USWB,Ninj,Einj,Kinj
+  real    :: NSWB,USWB,Ninj,Einj,Kinj
   
   ! Define input parameters for independent variable definition
   ! Formerly: Common block PARAM4
   integer :: ipa,ifac
-  real :: elb,swe,rw,hmin
+  real    :: elb,swe,rw,hmin
   
   ! Define variables for continuous output stream (source-loss numbers)
   ! Formerly: Common block CDNDE
-  REAL :: RNS,RNL,RES,REL,ESN,ELN,ESE,ELE,ECN,ECE,ALN,ALE,CEN,CEE
-  REAL  :: CONSL(NE,NS),LMP(NT)
+  REAL    :: RNS,RNL,RES,REL,ESN,ELN,ESE,ELE,ECN,ECE,ALN,ALE,CEN,CEE
+  REAL    :: CONSL(NE,NS),LMP(NT)
   INTEGER :: ILMP(NT),Ilold(NT)
   
   ! Define input variables for initial condition setup
@@ -51,12 +53,13 @@ Module ModHeidiIO
   ! Define input variables for source cone boundary condition
   ! Formerly: Common block PARAMA
   integer :: Ib
-  real :: Ab, Eob
+  real    :: Ab, Eob
   
   ! Define convection input parameters
   ! Formerly: Common block PARAM5
-  integer :: ilame,ilambe,ippcm,ippc
-  parameter (ilame=450, ippcm=5000)
+  integer :: ilambe,ippc
+  integer ,parameter :: ilame=450 
+  integer, parameter :: ippcm=5000
   real :: lamgam,lambe(ilame),tlame(ilame),ppc(ippcm),tppc(ippcm)
 
 

@@ -1,46 +1,27 @@
 Module ModHeidiSize
+  implicit none
+  
+  ! Converted for HEIDI: Mike Liemohn, March 2006
+  ! *** NOTE: This has to be used before any other ModHeidi# program ***
+  ! Define the maximum array sizes for HEIDI
+  ! These parameters specify array sizes in HEIDI:
+  
+  integer, parameter :: NR = 20            !grid in the radial direction
+  integer, parameter :: NT = 25            !grid in local time
+  integer, parameter :: NE = 43            !grid in energy
+  integer, parameter :: NPA = 72           !grid in equatorial pitch angle
+  integer, parameter :: NS = 4             !number of species (e-, H+, He+, O+)
+  integer, parameter :: NL = 35            !grid in L-shell for plane.f (Craig's thermal densities)
+  integer, parameter :: NLT = 48           !grid in local time for plane.f
+  integer, parameter :: ENG = 70           !grid in energy for wave coefficient variables
+  integer, parameter :: Slen = 24          !grid in field-line distance
+  integer, parameter :: NIJ = 300          !grid in energy for LANL boundary condition variables
+  integer, parameter :: NSTH = 4           !number of thermal plasma species
+  integer, parameter :: nthetacells = 60   !DGCPM output grid number in latitude
+  integer, parameter :: nphicells = 120    !DGCPM output grid number in local time
 
-! Converted for HEIDI: Mike Liemohn, March 2006
-
-! *** NOTE: This has to be used before any other ModHeidi# program ***
-
-! Define the maximum array sizes for HEIDI
-! Formerly: numv.h from the RAM version
-
-!**  These parameters specify array sizes in HEIDI:
-!**  NR		grid in the radial direction
-!**  NT		grid in local time
-!**  NE		grid in energy
-!**  NS		number of species (e-, H+, He+, O+)
-!**  NPA	grid in equatorial pitch angle
-!**  NL		grid in L-shell for plane.f (Craig's thermal densities)
-!**  NLT	grid in local time for plane.f
-!**  ENG	grid in energy for wave coefficient variables
-!**  Slen	grid in field-line distance
-!**  NIJ	grid in energy for LANL boundary condition variables
-!**  NSTH	number of thermal plasma species
-!**  nthetacells  DGCPM output grid number in latitude
-!**  nphicells	DGCPM output grid number in local time
-
-      INTEGER NR,NT,NE,NS,NPA,NL,NLT,ENG,Slen,NIJ,NSTH
-      INTEGER nthetacells,nphicells
-      PARAMETER (NR=20)  ! =40 for "d0691" runs
-      PARAMETER (NT=25)
-      PARAMETER (NE=43)  ! =35 for old runs
-      PARAMETER (NPA=72)
-      PARAMETER (NS=4)
-      PARAMETER (NL=35)
-      PARAMETER (NLT=48)
-      PARAMETER (ENG=70)
-      PARAMETER (Slen=24)
-      PARAMETER (NIJ=300)
-      PARAMETER (NSTH=4)
-      PARAMETER (nthetacells=60)
-      PARAMETER (nphicells=120)
-
-! Define array sizes as they are actually used within HEIDI
-! Formerly: Common block PARAM1
-	integer s,io,jo,ko,lo,iso,scalc(ns)
-	real dt, DTMAX,tmax
+  ! Define array sizes as they are actually used within HEIDI
+  integer :: s,io,jo,ko,lo,iso,scalc(ns)
+  real    :: dt, DTMAX,tmax
 
 end Module ModHeidiSize

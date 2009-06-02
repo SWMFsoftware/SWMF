@@ -360,9 +360,13 @@ subroutine CURRENTCALC
   !  Initialize a few numbers
   Pzero=1.E-8
   Nzero=1.E-8
-  Irad(1:IO,1:JO,1:NS)=0.  ! Radially outward current totals (A)
-  Iphi(1:IO,1:JO,1:NS)=0.  ! Eastward current totals (A)
-  Jion1(1:IO,1:JO,1:NS)=0.  ! Current into ionosphere (A/m2)
+  !Irad(1:IO,1:JO,1:NS)=0.   ! Radially outward current totals (A)
+  !Iphi(1:IO,1:JO,1:NS)=0.   ! Eastward current totals (A)
+  !Jion1(1:IO,1:JO,1:NS)=0.  ! Current into ionosphere (A/m2)
+
+  Irad=0.   ! Radially outward current totals (A)
+  Iphi=0.   ! Eastward current totals (A)
+  Jion1=0.  ! Current into ionosphere (A/m2)
 
 
   !  Start main species loop

@@ -487,9 +487,11 @@ subroutine MAGCONV(I3,NST)
         
         !Compute the V-S potential outside the edges of the radial grid. 
         !Needed for the current calculation.
+        
         BASEPOT(1,j)    = A*RE*(LZ(1)-DL1)**(LAMGAM)*sin(phi(j))
-        BASEPOT(io+1,j) = A*RE*(LZ(io)+dl1)**(LAMGAM)*sin(phi(j))
-        BASEPOT(io+2,j) = A*RE*(LZ(io)+2*dl1)**(LAMGAM)*sin(phi(j))
+        !BASEPOT(io+1,j) = A*RE*(LZ(io)+dl1)**(LAMGAM)*sin(phi(j))
+        !BASEPOT(io+2,j) = A*RE*(LZ(io)+2*dl1)**(LAMGAM)*sin(phi(j))
+        BASEPOT(io+2,j) = A*RE*(LZ(io)+dl1)**(LAMGAM)*sin(phi(j))
              
      end do
      do J=1,nphicells   ! Fill in DGCPM potentials
@@ -864,8 +866,8 @@ subroutine MAGCONV(I3,NST)
      call write_prefix; write(iUnitStdOut,*) '...Calling CURRENTCALC' 
      call CURRENTCALC  ! Finds the perpendicular "ring current"
      !			    ! and the field-aligned closure currents
-     !print *, '...More setup'
-
+     
+     
      Irfac=Ir
      Latfac(1:Ir)=Lats(1:Ir)
 
@@ -891,41 +893,27 @@ subroutine MAGCONV(I3,NST)
      !	  end do
      !CC Here the Jfac from the various species are summed together
 
-
-
+     
      if (nProc.gt.1) then
-
-        !write(*,*) 'nProc, iProc', nProc,iProc   
-
         call MPI_BARRIER(iComm,iError)
-
+        
         Jfac = 0.0
-        !jfac_temp(:,:)=(0.0,0.0)
-        do i=1,nProc
+        do i = 1, nProc
            if (i-1.eq.iProc) then
-              jfac_temp(:,:) = Jion1(:,:,ParallelSpecies(i))
-              !write(*,*) 'jfac_temp(:,:)',jfac_temp(:,:)
+              jfac_temp(:,:) = Jion1(:,:,nParallelSpecies(i))
            endif
-
+           
 
            call MPI_Bcast(jfac_temp,(NR+3)*NT,MPI_Real,   &
                 i-1,iComm,iError)
 
-           Jion1(:,:,ParallelSpecies(i)) = jfac_temp(:,:)
-
-           write(*,*)'Jion1', Jion1(:,:,ParallelSpecies(i)) 
-
-           JFAC(:,:)=Jfac(:,:)+Jreducer*Jion1(:,:,ParallelSpecies(i))
-
-           write(*,*) 'JFAC',JFAC(:,:)
-
+           Jion1(:,:,nParallelSpecies(i)) = jfac_temp(:,:)
+           JFAC(:,:)=Jfac(:,:)+Jreducer*Jion1(:,:,nParallelSpecies(i))
         enddo
 
 
 
      else
-        !initializa Jion1
-        Jion1(:,:,:) = 0. 
         do J=1,JO
            Jfac(1:Ir,J)=0.
            do S=1,NS   
@@ -938,6 +926,7 @@ subroutine MAGCONV(I3,NST)
 
      if (iProc.eq.0) then
         call write_prefix; write(iUnitStdOut,*) 'FACs being sent to potential solver' 
+     end if
         !	do j=1,JO 
         !	print 50, MLT(J),(JFAC(i,j),i=1,Ir)
         !	end do
@@ -950,8 +939,9 @@ subroutine MAGCONV(I3,NST)
            if (tdiff.ge.0. .and. tdiff.le.dt_saw) evsw=2.*evsw
         end do
         !cc End the sawtooth snap block
-        call write_prefix; write(iUnitStdOut,*) '...Calling EPENCALC'
-
+        if (iProc==0) then
+           call write_prefix; write(iUnitStdOut,*) '...Calling EPENCALC'
+        end if
         call EPENCALC(t,f107,bc_choice,BYSW,BZSW,evsw) 
         !CC                             ! Aaron Ridley's solver 
         !CC                             ! for the potential
@@ -959,12 +949,15 @@ subroutine MAGCONV(I3,NST)
         !CC         ! Note: By and Bz in nT, Usw in m/s
 
 
-        call write_prefix; write(iUnitStdOut,*) 'Potentials returned from the solver'
+        if (iProc==0) then 
+           call write_prefix; write(iUnitStdOut,*) &
+             'Potentials returned from the solver'
+        end if
         !	do j=1,JO 
         !	print 50, MLT(J),(FPOT(i,j),i=1,Ir)
         !	end do
 
-     endif
+     
 
      call MPI_BARRIER(iComm,iError)
 

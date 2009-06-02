@@ -1,7 +1,7 @@
 subroutine heidi_check
 
   use ModHeidiSize, ONLY: ns, s, scalc
-  use ModHeidiMain, ONLY: TotalSpecies, ParallelSpecies
+  use ModHeidiMain, ONLY: nSpecies, nParallelSpecies
   use ModProcIM
 
   !---------------------------------------------------------------------------
@@ -11,18 +11,19 @@ subroutine heidi_check
 
   if (nProc.gt.1) then
 
-     TotalSpecies = 0
+     nSpecies = 0
 
      do s = 1, ns
-        if (scalc(s).eq.1) TotalSpecies = TotalSpecies + 1
+        if (scalc(s).eq.1) nSpecies = nSpecies + 1
      enddo
 
-     if (nProc.ne.TotalSpecies) then
+     !if (nProc > sum(scalc)) then
+     if (nProc.ne.nSpecies) then
 
         if (iProc.eq.0) then
-           write(*,*) "In this version, nProc must = TotalSpecies"
+           write(*,*) "In this version, nProc must = nSpecies"
            write(*,*) "nProc         : ", nProc
-           write(*,*) "TotalSpecies  : ", TotalSpecies
+           write(*,*) "nSpecies      : ", nSpecies
            write(*,*) "scalc         : ", scalc
         endif
 
@@ -34,16 +35,16 @@ subroutine heidi_check
         ! Modify scalc so each processor knows which species to do
         !/
 
-        TotalSpecies = 0
+        nSpecies = 0
         do s = 1, ns
            if (scalc(s).eq.1) then
-              if (TotalSpecies.ne.iProc) then
+              if (nSpecies.ne.iProc) then
                  scalc(s) = 0
               else
                  iSpecies = s
               endif
-              ParallelSpecies(TotalSpecies+1) = s
-              TotalSpecies = TotalSpecies + 1
+              nParallelSpecies(nSpecies+1) = s
+              nSpecies = nSpecies + 1
            endif
         enddo
 
@@ -51,11 +52,11 @@ subroutine heidi_check
 
   else
 
-     TotalSpecies = 0
+     nSpecies = 0
      do s=1,ns
         if (scalc(s).eq.1) then
-           ParallelSpecies(TotalSpecies+1) = s
-           TotalSpecies = TotalSpecies + 1
+           nParallelSpecies(nSpecies+1) = s
+           nSpecies = nSpecies + 1
         endif
      enddo
 
@@ -63,7 +64,7 @@ subroutine heidi_check
 
   write(*,*) "iProc : ", iProc
   write(*,*) "scalc (which species): ", scalc
-  write(*,*) "total species : ", TotalSpecies
-  write(*,*) "parallel species : ", ParallelSpecies
+  write(*,*) "total species : ", nSpecies
+  write(*,*) "parallel species : ", nParallelSpecies
 
 end subroutine heidi_check

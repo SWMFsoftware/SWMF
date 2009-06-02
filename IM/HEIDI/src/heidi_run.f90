@@ -1,8 +1,10 @@
 subroutine heidi_run
   
   use ModInit
-  use ModHeidiIO,   ONLY: isw, nStep,iwpi,ires
+  use ModHeidiIO,   ONLY: isw, nStep,iwpi,ires,&
+       write_prefix,iUnitStdOut
   use ModHeidiMain, ONLY: s,t,dt,scalc
+  use ModProcIM, ONLY: iProc
 
   implicit none 
 !------------------------------------------------------------------------------
@@ -39,7 +41,11 @@ subroutine heidi_run
   
   !.......Increment time
   T = T + 2.*DT
-  
+  if (iProc==0) then
+     call write_prefix; write(iUnitStdOut,*)&
+          'SimulationTime=', T
+  end if
+
   !.......Print desired result files at every TINT sec 
   call FCHECK(11)
   if (mod(I3,NPR).eq.0 .or. I3.eq.NSTEP) then
