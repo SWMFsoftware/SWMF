@@ -129,7 +129,7 @@ test_hallmhd_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-13 \
 	  Param/SHOCKTUBE/TestOutput/hall_ref.out \
 	  ${TESTDIR}/RESULT/GM/cut_*0119.out > test_hallmhd.diff
-	ls -l test_shocktube.diff
+	ls -l test_hallmhd.diff
 
 ### MULTI FLUID TEST ###
 
