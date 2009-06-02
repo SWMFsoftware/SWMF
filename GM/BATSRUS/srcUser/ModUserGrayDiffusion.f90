@@ -242,7 +242,7 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModImplicit,   ONLY: StateSemi_VGB, iEradImpl
     use ModMain,       ONLY: nI
-    use ModVarIndexes, ONLY: nVar, Erad_
+    use ModVarIndexes, ONLY: Erad_
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=20),intent(in)  :: TypeBc
@@ -260,12 +260,21 @@ contains
 
     select case(TypeBc)
     case('user')
+       ! For shocktube slope < 1, float and shear bc's have the same effect
+       ! on the boundaries in the x-direction. For convenience, float is used
+       ! instead of shear.
        select case(iSide)
        case(1)
-          call BC_cont(1,nVar)
+          ! float for all variables except radiation
+          State_VGB(:, 0,:,:,iBlock) = State_VGB(:,1,:,:,iBlock)
+          State_VGB(:,-1,:,:,iBlock) = State_VGB(:,1,:,:,iBlock)
+
           State_VGB(Erad_,-1:0,:,:,iBlock) = EradBc1
        case(2)
-          call BC_cont(1,nVar)
+          ! float for all variables except radiation
+          State_VGB(:,nI+1,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
+          State_VGB(:,nI+2,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
+
           State_VGB(Erad_,nI+1:nI+2,:,:,iBlock) = EradBc2
        end select
     case('usersemi')

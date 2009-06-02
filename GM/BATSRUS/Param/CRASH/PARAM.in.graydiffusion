@@ -80,12 +80,12 @@ F			UseRadFluxLimiter
 0.5			ShockSlope
 
 #OUTERBOUNDARY
-shear			TypeBcEast
-shear			TypeBcWest
+user			TypeBcEast
+user			TypeBcWest
 shear			TypeBcSouth
 shear			TypeBcNorth
-float			TypeBcBottom
-float			TypeBcTop
+reflect			TypeBcBottom
+reflect			TypeBcTop
 
 #TIMESTEPPING
 2			nStage
@@ -100,7 +100,7 @@ mc			TypeLimiter
 #MESSAGEPASS
 all			TypeMessagePass
 
-RESCHANGE
+#RESCHANGE
 T			UseAccurateResChange
 
 #FIXEDTIMESTEP
@@ -135,9 +135,6 @@ raw			StringLogfile
 
 #SAVERESTART
 F			DoSaveRestart
-
-#SAVEBINARY
-F			DoSaveBinary
 
 #SAVEINITIAL
 T			DoSaveInitial
