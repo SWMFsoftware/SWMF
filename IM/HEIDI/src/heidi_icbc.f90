@@ -64,11 +64,11 @@ subroutine INITIAL(LNC,XN,J6,J18)
   real              :: acosd
   integer           :: ntc, IFIR
 
-  real, allocatable :: Coord_DII(:,:,:), Var_VII(:,:,:) 
+  real, allocatable :: Var_IIV(:,:,:) 
   integer           :: nDim, nParam,nVar       
-  integer           :: n_D(0:1), n1, n2
+  integer           :: n1, n2
   character(len=500):: NameVar
-  real              :: Param_I(2)
+  real              :: Param_I(4)
   real              :: reshape
   character(len=20) :: TypePosition
   save ntc
@@ -103,7 +103,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
 
         if (S.eq.1) NameSpecies='_e' 
 	if (S.eq.2) NameSpecies='_h' 
-	if (S.eq.3) NameSpecies='he' 
+	if (S.eq.3) NameSpecies='_he' 
 	if (S.eq.4) NameSpecies='_o' 
 
 
@@ -460,8 +460,8 @@ subroutine INITIAL(LNC,XN,J6,J18)
 !!$           close(UnitTmp_)
 !!$
 !!$        end if
-!**************************************************
-           !  Read in from a a restart ascii file (INI=7) 
+
+           !  Read in from a restart file (INI=7) 
         else if (INI(S).eq.7) then
            NameFile       = trim(NameRestartInDir)//'restart'//NameSpecies//'.out'
            StringHeader   = &
@@ -469,8 +469,9 @@ subroutine INITIAL(LNC,XN,J6,J18)
            
            StringVarName ='R   MLT   F   E   PA'
            iUnit = io_unit_new()
-          
-           TypePosition ='rewind'
+           n1 = NR
+           n2 = NT
+
            do L=1,NPA 
               do K=1,NE
                  ! Read header info 
@@ -485,55 +486,26 @@ subroutine INITIAL(LNC,XN,J6,J18)
                       nVarOut           = nVar,&
                       n1Out             = n1,&
                       n2Out             = n2, &
-                      nOut_D            = n_D,&
-                      ParamOut_I        = Param_I, &
-                      NameVarOut        = NameVar)
-                 
+                      ParamOut_I        = Param_I)
+                                
                  ! Determine the shape of arrays from the header
-                 allocate(Coord_DII(2,NR,NT),Var_VII(1,NR,NT))
+                 !allocate(Coord_DII(2,NR,NT),Var_IIV(NR,NT,1))
                  
+                 allocate(Var_IIV(NR,NT,1))
                  ! Read the coord and var arrays
                  call read_plot_file(NameFile,&
                       iUnitIn       = iUnit,&
                       TypeFileIn    = TypeFile, &
-                      CoordOut_DII  = Coord_DII,&
-                      VarOut_VII    = Var_VII)
-                 TypePosition = 'append'
-                 f2(:,:,K,L,S:S) = reshape(Var_VII,(/NR,NT,1/))
+                      !CoordOut_DII  = Coord_DII,&
+                      VarOut_IIV    = Var_IIV)
+                 f2(:,:,K,L,S:S) = Var_IIV
 
-!!$           write (*,*) '==============================='
-!!$           write(*,*) 'ntc,T,nDim',ntc,T,nDim
-!!$           write (*,*) '==============================='
-!!$           write(*,*) 'nVar',nVar
-!!$           write (*,*) '==============================='
-!!$           write(*,*) 'n1',n1
-!!$           write (*,*) '==============================='
-!!$           write(*,*) 'n2',n2
-!!$           write (*,*) '==============================='
-!!$           write(*,*) 'n_D',n_D
-!!$           write (*,*) '==============================='
-!!$           write(*,*) 'NameVar',NameVar
-!!$           write (*,*) '==============================='
-!!$           write(*,*) 'Param_I',Param_I
-!!$           write (*,*) '==============================='
-!!$           write(*,*) 'Coord_DII(1)',Coord_DII(1,:,:)
-!!$           write (*,*) '==============================='
-!!$           write(*,*) 'Coord_DII(2)',Coord_DII(2,:,:)
-!!$           write (*,*) '==============================='
-!!$           write(*,*) 'Var_VII',Var_VII
-!!$           write (*,*) '==============================='
-!!$           write(*,*) ' f2(:,:,K,L,S:S)', f2(:,:,K,L,S:S)
-!!$              
-           deallocate(Coord_DII, Var_VII)  
+           deallocate(Var_IIV)  
         end do
      end do
 
 
 end if
-
-!**************************************************
-
-
         !.......Done with initial particle distribution set up
 
         if (IBC(S).eq.1) then	! This is to redo INI=1 above

@@ -327,7 +327,7 @@ subroutine WRESULT(LNC,XN,IFIR)
 
 	if (S.eq.1) NameSpecies='_e' 
 	if (S.eq.2) NameSpecies='_h' 
-	if (S.eq.3) NameSpecies='he' 
+	if (S.eq.3) NameSpecies='_he' 
 	if (S.eq.4) NameSpecies='_o' 
 
         if (S.eq.1) NameOutputSpecies='electron/'
@@ -894,7 +894,9 @@ subroutine WRESULT(LNC,XN,IFIR)
 
               TypePosition = 'rewind'
 
-                 do L=1,NPA  
+              f2(:,NT,:,:,:)=f2(:,1,:,:,:)
+              
+              do L=1,NPA  
                     do K=1,NE
                        call save_plot_file(NameFile, &
                             TypePositionIn = TypePosition,&
@@ -953,33 +955,35 @@ subroutine WRESULT(LNC,XN,IFIR)
                  end do
                  NameSuffix='_fbc.'
 
-                 open (UnitTmp_,FILE=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
+                 iUnitOut = io_unit_new()
+                 
+                 open (Unit=iUnitOut,FILE=NameOutputDir//trim(NameOutputSpecies)//trim(NameRun)//&
                       NameSpecies//NameSuffix//NameStep,STATUS='UNKNOWN')
-                 write (UnitTmp_,*) 'Filename: '//trim(NameRun)//trim(NameOutputSpecies)//NameSpecies//NameSuffix//NameStep
-                 write (UnitTmp_,*) 'Nightside boundary conditions'
-                 write (UnitTmp_,38) 'Ninj','Einj','Kinj','NSWB','USWB'
-                 write (UnitTmp_,39) Ninj,Einj,Kinj,NSWB,USWB
-                 write (UnitTmp_,*) 'Boundary densities'
-                 write (UnitTmp_,38) 'MLT','N,cm-3'
+                 write (iUnitOut,*) 'Filename: '//trim(NameRun)//trim(NameOutputSpecies)//NameSpecies//NameSuffix//NameStep
+                 write (iUnitOut,*) 'Nightside boundary conditions'
+                 write (iUnitOut,38) 'Ninj','Einj','Kinj','NSWB','USWB'
+                 write (iUnitOut,39) Ninj,Einj,Kinj,NSWB,USWB
+                 write (iUnitOut,*) 'Boundary densities'
+                 write (iUnitOut,38) 'MLT','N,cm-3'
                  do J=1,JO
-                    write (UnitTmp_,30) MLT(J),NBC(J)
+                    write (iUnitOut,30) MLT(J),NBC(J)
                  end do
                  if (IFAC.eq.1) then
-                    write (UnitTmp_,*) 'Phase space flux function, PHI = 2EF/m^2'
+                    write (iUnitOut,*) 'Phase space flux function, PHI = 2EF/m^2'
                  else
-                    write (UnitTmp_,*) 'Phase space distribution function, F'
+                    write (iUnitOut,*) 'Phase space distribution function, F'
                  end if
                  do J=-3,5,2
                     II=J
                     if (II.lt.0) II=II+JO
-                    write(UnitTmp_,45) T,LZ(IO)+DL1,MLT(II),KP,0.
-                    write(UnitTmp_,44) (ACOSD(MU(IFM(L))),L=1+IFN,19+IFN)
+                    write(iUnitOut,45) T,LZ(IO)+DL1,MLT(II),KP,0.
+                    write(iUnitOut,44) (ACOSD(MU(IFM(L))),L=1+IFN,19+IFN)
                     do K=2,KO,NEC
-                       write(UnitTmp_,43) EKEV(K),(FGEOS(II,K,IFM(L),S)/   &
+                       write(iUnitOut,43) EKEV(K),(FGEOS(II,K,IFM(L),S)/   &
                             FFACTOR(IO,K,IFM(L)),L=1+IFN,19+IFN)
                     end do	! K loop
                  end do		! J loop
-                 close (UnitTmp_)
+                 close (iUnitOut)
               end if
 
            end if		! SCALC check
