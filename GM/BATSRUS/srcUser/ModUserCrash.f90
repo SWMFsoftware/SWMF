@@ -60,6 +60,9 @@ module ModUser
   real :: WidthGold  = 50.0      ! width   [micron]
   real :: RhoDimGold = 20000.0   ! density [kg/m3]
 
+  ! Use volume fraction method at the material interface
+  logical :: UseVolumeFraction = .false.
+
   ! Treat cells near material interface as a mixture
   logical :: UseMixedCell = .false.
   
@@ -146,6 +149,8 @@ contains
           call read_var('UseGold',    UseGold)
           call read_var('WidthGold',  WidthGold)
           call read_var('RhoDimGold', RhoDimGold)
+       case("#VOLUMEFRACTION")
+          call read_var('UseVolumeFraction', UseVolumeFraction)
        case("#MIXEDCELL")
           call read_var('UseMixedCell', UseMixedCell)
           if(UseMixedCell)call read_var('MixLimit', MixLimit)
@@ -1266,11 +1271,13 @@ contains
 
     ! The State_V vector is in normalized units, output is in SI units
 
-    use CRASH_ModEos,        ONLY: eos
+    use CRASH_ModEos,  ONLY: eos, Xe_, Be_, Plastic_
+    use ModMain,       ONLY: nI, nJ, nK
+    use ModAdvance,    ONLY: State_VGB
     use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_
     use ModVarIndexes, ONLY: nVar, Rho_, LevelXe_, LevelPl_, p_
     use ModLookupTable,ONLY: interpolate_lookup_table
-
+    
     real, intent(in) :: State_V(nVar)
     integer, optional, intent(in):: i, j, k, iBlock, iDir    ! cell/face index
     real, optional, intent(in)  :: EinternalSiIn             ! [J/m^3]
@@ -1291,7 +1298,9 @@ contains
     real    :: pSi, RhoSi, TeSi, LevelSum
     real    :: Value_V(3*nMaterial), Opacity_V(2*nMaterial)
     real, dimension(0:nMaterial-1) :: &
-         pPerE_I, EperP_I, RhoToARatioSi_I, NumDensWeight_I !, RhoSi_I
+         pPerE_I, EperP_I, RhoToARatioSi_I, Weight_I
+
+    real :: Level_I(3), LevelLeft, LevelRight
     !-------------------------------------------------------------------------
     ! Density, transformed to SI
     RhoSi = No2Si_V(UnitRho_)*State_V(Rho_)
@@ -1300,28 +1309,46 @@ contains
     ! Initialize to negative value to see if it gets set
     TeSi = -7.70
 
-    ! if(UseVolumeFraction)then
-
     ! Find maximum level set value. 
     iMaterial_I = maxloc(State_V(LevelXe_:LevelPl_))
-    iMaterial = iMaterial_I(1) - 1
+    iMaterial   = iMaterial_I(1) - 1
 
-    ! Shall we use mixed material cells?
-    LevelSum = sum(State_V(LevelXe_:LevelPl_))
-    IsMix = UseMixedCell .and. &
-         maxval(State_V(LevelXe_:LevelPl_)) < MixLimit*LevelSum 
+    ! By default use weight 1 for the material with maximum level
+    IsMix               = .false.
+    Weight_I            = 0.0
+    Weight_I(iMaterial) = 1.0
 
-    if(IsMix)then
-       ! Use number densities for eos() or weights in look up tables.
-       RhoToARatioSi_I = State_V(LevelXe_:LevelPl_)*No2Si_V(UnitRho_)
-       NumDensWeight_I = State_V(LevelXe_:LevelPl_)/LevelSum
-       !RhoSi_I         = State_V(LevelXe_:LevelPl_)*MassMaterial_I &
-       !     *No2Si_V(UnitRho_)
-    else
-       NumDensWeight_I = 0.0
-       NumDensWeight_I(iMaterial) = 1.0
-       !RhoSi_I         = 0.0
-       !RhoSi_I(iMaterial) = RhoSi
+    if(UseVolumeFraction)then
+       if(present(i) .and. .not. present(iDir))then
+          ! This implementation is for 1D only !!!
+          if(i>=0.and.i<=nI+1)then
+             ! Divide by density to get actual levelset function
+             Level_I = State_VGB(LevelXe_,i-1:i+1,j,k,iBlock) &
+                  /    State_VGB(Rho_    ,i-1:i+1,j,k,iBlock)
+             ! Calculate face values for the level set function
+             LevelLeft  = 0.5*(Level_I(1)+Level_I(2))
+             LevelRight = 0.5*(Level_I(2)+Level_I(3))
+             ! Cell is mixed if face values change signs
+             IsMix = LevelLeft*LevelRight < 0
+             if(IsMix)then
+                ! Make weight proportional to the cell volume fraction
+                Weight_I(Xe_)      = max(LevelLeft,  LevelRight) &
+                     /               abs(LevelLeft - LevelRight)
+                Weight_I(Be_)      = 1 - Weight_I(Xe_)
+                Weight_I(Plastic_) = 0.0
+             end if
+          end if
+       end if
+    elseif(UseMixedCell)then
+       ! Shall we use mixed material cells?
+       LevelSum = sum(State_V(LevelXe_:LevelPl_))
+       IsMix = maxval(State_V(LevelXe_:LevelPl_)) < MixLimit*LevelSum 
+
+       if(IsMix)then
+          ! Use number densities for eos() or weights in look up tables.
+          RhoToARatioSi_I = State_V(LevelXe_:LevelPl_)*No2Si_V(UnitRho_)
+          Weight_I = State_V(LevelXe_:LevelPl_)/LevelSum
+       end if
     end if
 
     ! Obtain the pressure from EinternalSiIn or TeSiIn or State_V
@@ -1333,7 +1360,7 @@ contains
           call interpolate_lookup_table(iTablePPerE, RhoSi, &
                EinternalSiIn/RhoSi, pPerE_I, DoExtrapolate = .false.)
           ! Use a number density weighted average
-          pSi = EinternalSiIn*sum(NumDensWeight_I*pPerE_I)
+          pSi = EinternalSiIn*sum(Weight_I*pPerE_I)
        else
           ! Use EOS function
           if(IsMix)then
@@ -1367,7 +1394,7 @@ contains
              call interpolate_lookup_table(iTableEPerP, RhoSi, &
                   pSi/RhoSi, EPerP_I, DoExtrapolate = .false.)
              ! Use a number density weighted average
-             EinternalSiOut = pSi*sum(NumDensWeight_I*EPerP_I)
+             EinternalSiOut = pSi*sum(Weight_I*EPerP_I)
           else
              if(IsMix)then
                 call eos(RhoToARatioSi_I, pTotalIn=pSi, &
@@ -1392,16 +1419,17 @@ contains
                Value_V, DoExtrapolate = .false.)
 
           ! Value_V: elements 1,4,7 are Cv, 2,5,8 are Gamma, 3,6,9 are Te
-          !if(present(CvSiOut))  CvSiOut  &
-          !     = sum(NumDensWeight_I*Value_V(1:3*nMaterial:3))
-          !if(present(GammaOut)) GammaOut &
-          !     = sum(NumDensWeight_I*Value_V(2:3*nMaterial:3))
-          !TeSi = sum(NumDensWeight_I*Value_V(3:3*nMaterial:3))
-
-          if(present(CvSiOut))  CvSiOut  = Value_V(3*iMaterial+1)
-          if(present(GammaOut)) GammaOut = Value_V(3*iMaterial+2)
-          TeSi = Value_V(3*iMaterial+3)
-
+          if(UseVolumeFraction)then
+             if(present(CvSiOut))  CvSiOut  &
+                  = sum(Weight_I*Value_V(1:3*nMaterial:3))
+             if(present(GammaOut)) GammaOut &
+                  = sum(Weight_I*Value_V(2:3*nMaterial:3))
+             TeSi = sum(Weight_I*Value_V(3:3*nMaterial:3))
+          else
+             if(present(CvSiOut))  CvSiOut  = Value_V(3*iMaterial+1)
+             if(present(GammaOut)) GammaOut = Value_V(3*iMaterial+2)
+             TeSi = Value_V(3*iMaterial+3)
+          end if
        elseif(TeSi < 0.0) then
           ! If TeSi is not set yet then we need to calculate things here
           if(IsMix) then
@@ -1423,13 +1451,17 @@ contains
        if(iTableOpacity > 0)then
           call interpolate_lookup_table(iTableOpacity, RhoSi, TeSi, &
                Opacity_V, DoExtrapolate = .false.)
-
-          if(present(AbsorptionOpacitySiOut)) AbsorptionOpacitySiOut &
-               = Opacity_V(2*iMaterial + 1) * RhoSi
-          !    = sum(RhoSi_I*Opacity_V(1:2*nMaterial:2))
-          if(present(RosselandMeanOpacitySiOut)) RosselandMeanOpacitySiOut &
-               = Opacity_V(2*iMaterial + 2) * RhoSi
-          !    = sum(RhoSi_I*Opacity_V(2:2*nMaterial:2))
+          if(UseVolumeFraction)then
+             if(present(AbsorptionOpacitySiOut)) AbsorptionOpacitySiOut &
+                  = sum(Weight_I*Opacity_V(1:2*nMaterial:2)) * RhoSi
+             if(present(RosselandMeanOpacitySiOut)) RosselandMeanOpacitySiOut &
+                  = sum(Weight_I*Opacity_V(2:2*nMaterial:2)) * RhoSi
+          else
+             if(present(AbsorptionOpacitySiOut)) AbsorptionOpacitySiOut &
+                  = Opacity_V(2*iMaterial + 1) * RhoSi
+             if(present(RosselandMeanOpacitySiOut)) RosselandMeanOpacitySiOut &
+                  = Opacity_V(2*iMaterial + 2) * RhoSi
+          end if
        else
           if(present(AbsorptionOpacitySiOut)) &
                AbsorptionOpacitySiOut = PlanckOpacity(iMaterial)*RhoSi
