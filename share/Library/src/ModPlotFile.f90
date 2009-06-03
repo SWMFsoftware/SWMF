@@ -60,7 +60,7 @@ contains
        nDimIn,&
        CoordMinIn_D, CoordMaxIn_D, &
        Coord1In_I, Coord2In_I, Coord3In_I, &
-       CoordIn_I, CoordIn_DII, CoordIn_DIII, &
+       CoordIn_I, CoordIn_DII, CoordIn_DIII,&
        VarIn_VI, VarIn_VII, VarIn_VIII, &
        VarIn_IV, VarIn_IIV, VarIn_IIIV)
 
@@ -323,7 +323,8 @@ contains
        CoordMinOut_D, CoordMaxOut_D, &
        Coord1Out_I, Coord2Out_I, Coord3Out_I, &
        CoordOut_I, CoordOut_DII, CoordOut_DIII, &
-       VarOut_VI, VarOut_VII, VarOut_VIII)
+       VarOut_VI, VarOut_VII, VarOut_VIII,&
+       VarOut_IV, VarOut_IIV, VarOut_IIIV)
 
     character(len=*),           intent(in) :: NameFile
     integer,          optional, intent(in) :: iUnitIn
@@ -347,9 +348,12 @@ contains
     real,             optional, intent(out):: Coord3Out_I(:)
     real,             optional, intent(out):: CoordOut_DII(:,:,:)
     real,             optional, intent(out):: CoordOut_DIII(:,:,:,:)
-    real,             optional, intent(out):: VarOut_VI(:,:)
-    real,             optional, intent(out):: VarOut_VII(:,:,:)
-    real,             optional, intent(out):: VarOut_VIII(:,:,:,:)
+    real,             optional, intent(out):: VarOut_VI(:,:) ! variables in 1D
+    real,             optional, intent(out):: VarOut_VII(:,:,:)    !        2D
+    real,             optional, intent(out):: VarOut_VIII(:,:,:,:) !        3D
+    real,             optional, intent(out):: VarOut_IV(:,:)    !        1D
+    real,             optional, intent(out):: VarOut_IIV(:,:,:)   !        2D
+    real,             optional, intent(out):: VarOut_IIIV(:,:,:,:)  !        3D
 
     integer            :: iUnit
     character(len=20)  :: TypeFile
@@ -381,7 +385,8 @@ contains
 
     ! No data is read. Leave file open !
     if(.not. (present(VarOut_VI) .or. present(VarOut_VII) &
-         .or. present(VarOut_VIII))) RETURN
+         .or. present(VarOut_VIII).or. present(VarOut_IV)&
+         .or. present(VarOut_IIV).or. present(VarOut_IIIV))) RETURN
     
     ! If data is read, next header needs to be read
     DoReadHeader = .true.
@@ -444,6 +449,11 @@ contains
           if(present(VarOut_VI))   VarOut_VI(iVar, i)      = Var_IV(n, iVar)
           if(present(VarOut_VII))  VarOut_VII(iVar,i,j)    = Var_IV(n, iVar)
           if(present(VarOut_VIII)) VarOut_VIII(iVar,i,j,k) = Var_IV(n, iVar)
+          if(present(VarOut_IV))   VarOut_IV(i,iVar)       = Var_IV(n, iVar)
+          if(present(VarOut_IIV))  VarOut_IIV(i,j,iVar)    = Var_IV(n, iVar)
+          if(present(VarOut_IIIV)) VarOut_IIIV(i,j,k,iVar) = Var_IV(n, iVar)
+
+      
        end do; end do; end do
     end do
 
