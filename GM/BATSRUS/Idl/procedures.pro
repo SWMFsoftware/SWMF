@@ -1766,6 +1766,16 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
          levels=(findgen(contourlevel+2)-1)/(contourlevel-1) $
                 *(f_max-f_min)+f_min
 
+      ; figure out the units of angle in the second coordinate
+      if plotmod eq 'polar' then begin
+          if max(yy)-min(yy) gt 300 then $
+            angleunit = !pi/180 $   ; degrees
+          else if max(yy)-min(yy) gt 20 then $
+            angleunit = !pi/12 $    ; local time
+          else $
+            angleunit = 1.0         ; radians
+      endif
+
       if plotmod eq 'tv' then begin
          ; Calculate plotting position and size
 
@@ -1824,7 +1834,7 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
                        contour,f>f_min,xx,yy,$
                           FOLLOW=label, FILL=fill, $
                           LEVELS=levels,XSTYLE=1,YSTYLE=1,/NOERASE
-	 'polar'    :polar_contour,f>f_min,yy*!pi/180,xx,$
+	 'polar'    :polar_contour,f>f_min,yy*angleunit,xx,$
                           FOLLOW=label, FILL=fill, $
                           LEVELS=levels,XSTYLE=1,YSTYLE=1,/NOERASE
          'plot'     :plot,xx,f,YRANGE=[f_min,f_max],XSTYLE=18,YSTYLE=18,$
@@ -1876,7 +1886,7 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
       if showgrid and plotdim eq 2 and plotmod ne 'surface'    $
                                    and plotmod ne 'shade' then begin
           if(plotmod eq 'polar')then                                       $
-            plotgrid,xx,yy*!pi/180,lines=showmesh,xstyle=1,ystyle=1,/polar $
+            plotgrid,xx,yy*angleunit,lines=showmesh,xstyle=1,ystyle=1,/polar $
           else if keyword_set(cut) then                                    $
             plotgrid,xx,yy,lines=showmesh,xstyle=1,ystyle=1                $
           else begin
