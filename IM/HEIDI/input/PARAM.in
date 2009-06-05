@@ -9,7 +9,7 @@
 0.0 			FracSecond
 
 #STOP
-120.0			tSimulationMax [sec]
+160.0			tSimulationMax [sec]
 
 #TIMESTEP
 20.                     TimeStep [sec] 
@@ -34,9 +34,9 @@ test			TypeStorm
 1.26			rw
 
 #SPECIES
-F			UseElectron	
+T			UseElectron	
 T			UseHPlus
-F			UseHePlus
+T			UseHePlus
 T			UseOPlus
 T			UseIon
 F			UsePhotoelElectron
@@ -54,7 +54,7 @@ F			UsePlasmaSheetElectron
 
 
 #INITIAL
-0			TypeInitial
+7			TypeInitial
 0.0			MaxwellianScallingFactor
 0.03			CharacteristicEnergy
 
@@ -79,7 +79,7 @@ F			DoSaveDifferentialNumberFlux
 
 #OUTPUTINFO
 test1			NameRun
-60.			nFrequency [sec]
+40.			nFrequency [sec]
 
 #INJECTIONFREQUENCY
 120.			iFrequency [sec]
