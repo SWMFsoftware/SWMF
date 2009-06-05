@@ -57,7 +57,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
   integer :: iUnit
   integer :: iUnit_tst
   character(len=30) :: NameOutputSpecies
-  character(len=2)  :: NameSpecies
+  character(len=5)  :: NameSpecies
   character(len=5)  :: NameStormType
   character(len=3)  :: NamePrefix
   character(LEN=500):: StringVarName, StringHeader, NameFile
@@ -153,7 +153,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
         else if ((INI(S).eq.2).or.(INI(S).eq.3)) then
            !.......Read in FI and NI from files
            NamePrefix='.in '
-           open(UNITTMP_,file=NameStormType//NameSpecies//NamePrefix,STATUS='OLD')
+           open(UNITTMP_,file=NameStormType//trim(NameSpecies)//NamePrefix,STATUS='OLD')
            read(UNITTMP_,*) YEAR,DAY,R,AP,KP,ETOTAL,EFRACTN  !Replaces input.glo
            read(UNITTMP_,101) HEADER
            read(UNITTMP_,101) HEADER
@@ -162,7 +162,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
            end do
            close(UNITTMP_)
            NameStormType='testn'
-           open(UNITTMP_,file=NameStormType//NameSpecies//NamePrefix,STATUS='OLD')
+           open(UNITTMP_,file=NameStormType//trim(NameSpecies)//NamePrefix,STATUS='OLD')
            read(UNITTMP_,101) HEADER
            read(UNITTMP_,101) HEADER
            do KK=1,5	
@@ -448,7 +448,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
 
            !  Read in from a unformatted file (INI=7)
 !!$        else if (INI(S).eq.7) then
-!!$           open(UNIT=UnitTmp_,FILE=NameRestartInDir//trim(NameRun)//NameSpecies//'.unff',status='old',   &
+!!$           open(UNIT=UnitTmp_,FILE=NameRestartInDir//trim(NameRun)//trim(NameSpecies)//'.unff',status='old',   &
 !!$               form='unformatted')
 !!$           do L=1,NPA
 !!$              do K=1,NE  ! Change back to this for restarts
@@ -463,7 +463,7 @@ subroutine INITIAL(LNC,XN,J6,J18)
 
            !  Read in from a restart file (INI=7) 
         else if (INI(S).eq.7) then
-           NameFile       = trim(NameRestartInDir)//'restart'//NameSpecies//'.out'
+           NameFile       = trim(NameRestartInDir)//'restart'//trim(NameSpecies)//'.out'
            StringHeader   = &
                 'Phase space distribution function for all pitch angles, energies and locations.'
            
