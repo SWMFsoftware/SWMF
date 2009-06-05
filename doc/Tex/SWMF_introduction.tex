@@ -443,6 +443,21 @@ Simply add the following into the .cshrc file in the home directory
 \end{verbatim}
 The if statement avoids loading the module repeatedly.
 
+\subsection{Opteron machine Pleiades at NASA Ames}
+
+On pleiades you should load the following modules
+\begin{verbatim}
+module load comp/intel/10.1.013_64
+module load mpi/mpt.1.23.pre
+\end{verbatim}
+
+Also make sure the SWMF is installed with the following options
+\begin{verbatim}
+Config.pl -install -compiler=ifort -mpi=Altix
+\end{verbatim}
+
+A sample job script can be found in {\tt share/JobScripts/job.p4fe}.
+
 \subsection{Linux cluster nyx at the University of Michigan}
 
 On nyx at you can either use the pgf90 compiler with the OpenMPI library
