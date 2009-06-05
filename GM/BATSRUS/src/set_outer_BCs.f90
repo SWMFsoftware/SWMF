@@ -119,9 +119,7 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
         if(NameThisComp == 'SC') call BC_cont(ScalarFirst_, ScalarLast_)
      case('periodic')
         call stop_mpi('The neighbors are not deifned at the periodic boundary')
-     case('float')
-        call BC_cont(1,nVar)
-     case('outflow')       
+     case('float','outflow')
         call BC_cont(1,nVar)
         if(UseGrayDiffusion) &                              !^CFG IF IMPLICIT
              call set_gray_outflow_bc(iSide, iBlock, &      !^CFG IF IMPLICIT

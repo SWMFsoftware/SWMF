@@ -1292,7 +1292,7 @@ contains
     !--------------------------------------------------------------------------
 
     if(NeiLev(1,iBlock) == NOBLK)then
-       if(TypeBc_I(1) == 'outflow')then
+       if(TypeBc_I(1) == 'outflow' .or. TypeBc_I(1) == 'float')then
           call set_gray_outflow_bc(1, iBlock, iEradImpl, nw, &
                StateSemi_VGB(:,:,:,:,iBlock))
        elseif(IsLinear .and. TypeBc_I(1) /= 'reflect')then
@@ -1307,7 +1307,7 @@ contains
        end if
     end if
     if(NeiLev(2,iBlock) == NOBLK)then
-       if(TypeBc_I(2) == 'outflow')then
+       if(TypeBc_I(2) == 'outflow' .or. TypeBc_I(2) == 'float')then
           call set_gray_outflow_bc(2, iBlock, iEradImpl, nw, &
                StateSemi_VGB(:,:,:,:,iBlock))
        elseif(IsLinear .and. TypeBc_I(2) /= 'reflect')then
@@ -1322,7 +1322,7 @@ contains
        end if
     end if
     if(NeiLev(3,iBlock) == NOBLK)then
-       if(TypeBc_I(3) == 'outflow')then
+       if(TypeBc_I(3) == 'outflow' .or. TypeBc_I(3) == 'float')then
           call set_gray_outflow_bc(3, iBlock, iEradImpl, nw, &
                StateSemi_VGB(:,:,:,:,iBlock))
        elseif(TypeBc_I(3) == 'shear')then
@@ -1340,7 +1340,7 @@ contains
        end if
     end if
     if(NeiLev(4,iBlock) == NOBLK) then
-       if(TypeBc_I(4) == 'outflow')then
+       if(TypeBc_I(4) == 'outflow' .or. TypeBc_I(4) == 'float')then
           call set_gray_outflow_bc(4, iBlock, iEradImpl, nw, &
                StateSemi_VGB(:,:,:,:,iBlock))
        elseif(TypeBc_I(4) == 'shear')then
@@ -1358,7 +1358,7 @@ contains
        end if
     end if
     if(NeiLev(5,iBlock) == NOBLK) then
-       if(TypeBc_I(5) == 'outflow')then
+       if(TypeBc_I(5) == 'outflow' .or. TypeBc_I(5) == 'float')then
           call set_gray_outflow_bc(5, iBlock, iEradImpl, nw, &
                StateSemi_VGB(:,:,:,:,iBlock))
        elseif(IsLinear .and. TypeBc_I(5) /= 'reflect')then
@@ -1373,7 +1373,7 @@ contains
        end if
     end if
     if(NeiLev(6,iBlock) == NOBLK)then 
-       if(TypeBc_I(6) == 'outflow')then
+       if(TypeBc_I(6) == 'outflow' .or. TypeBc_I(6) == 'float')then
           call set_gray_outflow_bc(6, iBlock, iEradImpl, nw, &
                StateSemi_VGB(:,:,:,:,iBlock))
        elseif(IsLinear .and. TypeBc_I(6) /= 'reflect')then
