@@ -55,7 +55,7 @@ test_run:
 
 test_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=0.001 -a=1e-30 \
-		${TESTDIR}/IM/${OUTDIR}/hydrogen/test1_h_prs.002  ${CHECKDIR}/test1_h_prs.002 \
+		${TESTDIR}/IM/${OUTDIR}/hydrogen/test1_h_prs.004  ${CHECKDIR}/test1_h_prs.004 \
 			> test.diff
 	ls -l test.diff
 
@@ -74,7 +74,10 @@ rundir:
 		ln -s ${BINDIR}/HEIDI.exe .;\
 	fi);
 	ln -s ${HEIDIDIR}/input/* ${RUNDIR}/IM/input;\
-	ln -s ${HEIDIDIR}/input/*.unff ${RUNDIR}/IM/restartIN;\
+	cp ${HEIDIDIR}/input/*.gz ${RUNDIR}/IM/restartIN;\
+	cd  ${RUNDIR}/IM/restartIN;\
+	gzip -d *.gz
+
 
 clean: install
 	@(if [ -r "Makefile.conf" ]; then  \
