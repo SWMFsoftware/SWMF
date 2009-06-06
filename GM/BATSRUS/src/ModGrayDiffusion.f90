@@ -1287,104 +1287,133 @@ contains
     logical :: IsFound
     integer :: i,j,k, iDiff
     real :: Coef
-    character(len=20), parameter :: TypeUserBc='usersemi'
-    character(len=*), parameter :: NameSub='get_gray_diffusion_bc'
+    character(len=20), parameter :: TypeUserBc = 'usersemi'
+    character(len=20), parameter :: TypeUserBcLinear = 'usersemilinear'
+    character(len=*),  parameter :: NameSub = 'get_gray_diffusion_bc'
     !--------------------------------------------------------------------------
 
     if(NeiLev(1,iBlock) == NOBLK)then
        if(TypeBc_I(1) == 'outflow' .or. TypeBc_I(1) == 'float')then
           call set_gray_outflow_bc(1, iBlock, iEradImpl, nw, &
                StateSemi_VGB(:,:,:,:,iBlock))
-       elseif(IsLinear .and. TypeBc_I(1) /= 'reflect')then
-          StateSemi_VGB(:,0,:,:,iBlock) = 0.0
        elseif(TypeBc_I(1) == 'user')then
-          IsFound = .false.
-          call user_set_outerbcs(iBlock,1,TypeUserBc,IsFound)
-          if(.not. IsFound) call stop_mpi( &
-               NameSub//': unknown TypeBc_I='//TypeBc_I(1))
-       else
+          if(IsLinear)then
+             StateSemi_VGB(:,0,:,:,iBlock) = 0.0
+             call user_set_outerbcs(iBlock,1,TypeUserBcLinear,IsFound)
+          else
+             IsFound = .false.
+             call user_set_outerbcs(iBlock,1,TypeUserBc,IsFound)
+             if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
+                  //TypeUserBc//' on iSide=1 in user_set_outerbcs')
+          end if
+       elseif(TypeBc_I(1) == 'reflect')then
           StateSemi_VGB(:,0,:,:,iBlock) = StateSemi_VGB(:,1,:,:,iBlock)
+       else
+          call stop_mpi(NameSub//': unknown TypeBc_I(1)='//TypeBc_I(1))
        end if
     end if
     if(NeiLev(2,iBlock) == NOBLK)then
        if(TypeBc_I(2) == 'outflow' .or. TypeBc_I(2) == 'float')then
           call set_gray_outflow_bc(2, iBlock, iEradImpl, nw, &
                StateSemi_VGB(:,:,:,:,iBlock))
-       elseif(IsLinear .and. TypeBc_I(2) /= 'reflect')then
-          StateSemi_VGB(:,nI+1,:,:,iBlock) = 0.0
        elseif(TypeBc_I(2) == 'user')then
-          IsFound = .false.
-          call user_set_outerbcs(iBlock,2,TypeUserBc,IsFound)
-          if(.not. IsFound) call stop_mpi( &
-               NameSub//': unknown TypeBc_I='//TypeBc_I(2))
-       else
+          if(IsLinear)then
+             StateSemi_VGB(:,nI+1,:,:,iBlock) = 0.0
+             call user_set_outerbcs(iBlock,2,TypeUserBcLinear,IsFound)
+          else
+             IsFound = .false.
+             call user_set_outerbcs(iBlock,2,TypeUserBc,IsFound)
+             if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
+                  //TypeUserBc//' on iSide=2 in user_set_outerbcs')
+          end if
+       elseif(TypeBc_I(2) == 'reflect')then
           StateSemi_VGB(:,nI+1,:,:,iBlock) = StateSemi_VGB(:,nI,:,:,iBlock)
+       else
+          call stop_mpi(NameSub//': unknown TypeBc_I(2)='//TypeBc_I(2))
        end if
     end if
     if(NeiLev(3,iBlock) == NOBLK)then
        if(TypeBc_I(3) == 'outflow' .or. TypeBc_I(3) == 'float')then
           call set_gray_outflow_bc(3, iBlock, iEradImpl, nw, &
                StateSemi_VGB(:,:,:,:,iBlock))
-       elseif(TypeBc_I(3) == 'shear')then
-          StateSemi_VGB(:,:,0,:,iBlock) = StateSemi_VGB(:,:,1,:,iBlock)
-          call semi_bc_shear(3)
-       elseif(IsLinear .and. TypeBc_I(3) /= 'reflect')then
-          StateSemi_VGB(:,:,0,:,iBlock) = 0.0
        elseif(TypeBc_I(3) == 'user')then
-          IsFound = .false.
-          call user_set_outerbcs(iBlock,3,TypeUserBc,IsFound)
-          if(.not. IsFound) call stop_mpi( &
-               NameSub//': unknown TypeBc_I='//TypeBc_I(3))
-       else
+          if(IsLinear)then
+             StateSemi_VGB(:,:,0,:,iBlock) =  0.0
+             call user_set_outerbcs(iBlock,3,TypeUserBcLinear,IsFound)
+          else
+             IsFound = .false.
+             call user_set_outerbcs(iBlock,3,TypeUserBc,IsFound)
+             if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
+                  //TypeUserBc//' on iSide=3 in user_set_outerbcs')
+          end if
+       elseif(TypeBc_I(3) == 'reflect')then
           StateSemi_VGB(:,:,0,:,iBlock) = StateSemi_VGB(:,:,1,:,iBlock)
+       elseif(TypeBc_I(3) == 'shear')then
+          call semi_bc_shear(3)
+       else
+          call stop_mpi(NameSub//': unknown TypeBc_I(3)='//TypeBc_I(3))
        end if
     end if
     if(NeiLev(4,iBlock) == NOBLK) then
        if(TypeBc_I(4) == 'outflow' .or. TypeBc_I(4) == 'float')then
           call set_gray_outflow_bc(4, iBlock, iEradImpl, nw, &
                StateSemi_VGB(:,:,:,:,iBlock))
-       elseif(TypeBc_I(4) == 'shear')then
-          StateSemi_VGB(:,:,nJ+1,:,iBlock) = StateSemi_VGB(:,:,nJ,:,iBlock)
-          call semi_bc_shear(4)
-       elseif(IsLinear .and. TypeBc_I(4) /= 'reflect')then
-          StateSemi_VGB(:,:,nJ+1,:,iBlock) = 0.0
        elseif(TypeBc_I(4) == 'user')then
-          IsFound = .false.
-          call user_set_outerbcs(iBlock,4,TypeUserBc,IsFound)
-          if(.not. IsFound) call stop_mpi( &
-               NameSub//': unknown TypeBc_I='//TypeBc_I(4))
-       else
+          if(IsLinear)then
+             StateSemi_VGB(:,:,nJ+1,:,iBlock) = 0.0
+             call user_set_outerbcs(iBlock,4,TypeUserBcLinear,IsFound)
+          else
+             IsFound = .false.
+             call user_set_outerbcs(iBlock,4,TypeUserBc,IsFound)
+             if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
+                  //TypeUserBc//' on iSide=4 in user_set_outerbcs')
+          end if
+       elseif(TypeBc_I(4) == 'reflect')then
           StateSemi_VGB(:,:,nJ+1,:,iBlock) = StateSemi_VGB(:,:,nJ,:,iBlock)
+       elseif(TypeBc_I(4) == 'shear')then
+          call semi_bc_shear(4)
+       else
+          call stop_mpi(NameSub//': unknown TypeBc_I(4)='//TypeBc_I(4))
        end if
     end if
     if(NeiLev(5,iBlock) == NOBLK) then
        if(TypeBc_I(5) == 'outflow' .or. TypeBc_I(5) == 'float')then
           call set_gray_outflow_bc(5, iBlock, iEradImpl, nw, &
                StateSemi_VGB(:,:,:,:,iBlock))
-       elseif(IsLinear .and. TypeBc_I(5) /= 'reflect')then
-          StateSemi_VGB(:,:,:,0,iBlock) = 0.0
        elseif(TypeBc_I(5) == 'user')then
-          IsFound = .false.
-          call user_set_outerbcs(iBlock,5,TypeUserBc,IsFound)
-          if(.not. IsFound) call stop_mpi( &
-               NameSub//': unknown TypeBc_I='//TypeBc_I(5))
-       else
+          if(IsLinear)then
+             StateSemi_VGB(:,:,:,0,iBlock) = 0.0
+             call user_set_outerbcs(iBlock,5,TypeUserBcLinear,IsFound)
+          else
+             IsFound = .false.
+             call user_set_outerbcs(iBlock,5,TypeUserBc,IsFound)
+             if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
+                  //TypeUserBc//' on iSide=5 in user_set_outerbcs')
+          end if
+       elseif(TypeBc_I(5) == 'reflect')then
           StateSemi_VGB(:,:,:,0,iBlock) = StateSemi_VGB(:,:,:,1,iBlock)
+       else
+          call stop_mpi(NameSub//': unknown TypeBc_I(5)='//TypeBc_I(5))
        end if
     end if
     if(NeiLev(6,iBlock) == NOBLK)then 
        if(TypeBc_I(6) == 'outflow' .or. TypeBc_I(6) == 'float')then
           call set_gray_outflow_bc(6, iBlock, iEradImpl, nw, &
                StateSemi_VGB(:,:,:,:,iBlock))
-       elseif(IsLinear .and. TypeBc_I(6) /= 'reflect')then
-          StateSemi_VGB(:,:,:,nK+1,iBlock) = 0.0
        elseif(TypeBc_I(6) == 'user')then
-          IsFound = .false.
-          call user_set_outerbcs(iBlock,6,TypeUserBc,IsFound)
-          if(.not. IsFound) call stop_mpi( &
-               NameSub//': unknown TypeBc_I='//TypeBc_I(6))
-       else
+          if(IsLinear)then
+             StateSemi_VGB(:,:,:,nK+1,iBlock) = 0.0
+             call user_set_outerbcs(iBlock,6,TypeUserBcLinear,IsFound)
+          else
+             IsFound = .false.
+             call user_set_outerbcs(iBlock,6,TypeUserBc,IsFound)
+             if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
+                  //TypeUserBc//' on iSide=6 in user_set_outerbcs')
+          end if
+       elseif(TypeBc_I(6) == 'reflect')then
           StateSemi_VGB(:,:,:,nK+1,iBlock) = StateSemi_VGB(:,:,:,nK,iBlock)
+       else
+          call stop_mpi(NameSub//': unknown TypeBc_I(6)='//TypeBc_I(6))
        end if
     end if
 
