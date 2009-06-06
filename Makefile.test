@@ -346,7 +346,7 @@ test4_check:
 		${TESTDIR}/RESULTS/IE/IE.log \
 		output/test4/IE.log \
 		> test4_ie.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -t -a=1e-8 -r=1e-6 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -t -a=1e-8 -r=1e-30 \
                 ${TESTDIR}/RESULTS/IM/hydrogen/test1_h_prs.002 \
                 output/test4/IM_test1_h_prs.002\
                 > test4_im.diff)
