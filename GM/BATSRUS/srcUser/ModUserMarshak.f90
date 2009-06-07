@@ -140,41 +140,54 @@ contains
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: Dx_Blk
     use ModImplicit, ONLY: StateSemi_VGB, TypeSemiImplicit, iEradImpl
-    use ModMain,     ONLY: nJ, nK
+    use ModMain,     ONLY: nI, nJ, nK
     use ModPhysics,  ONLY: cRadiationNo
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=20),intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
-    integer :: j, k
     real :: Coef
 
     character (len=*), parameter :: NameSub = 'user_set_outerbcs'
     !--------------------------------------------------------------------------
-    if(iSide /= 1)then
+
+    select case(iSide)
+    case(1)
+       select case(TypeBc)
+       case('user')
+          ! float, just for the sake of having filled in ghost cells
+          State_VGB(:,0,:,:,iBlock)  = State_VGB(:,1,:,:,iBlock)
+          State_VGB(:,-1,:,:,iBlock) = State_VGB(:,1,:,:,iBlock)
+       case('usersemi')
+          ! Marshak boundary conditions
+          Coef = 2.0/(3.0*SpecificOpacity*Density*Dx_Blk(iBlock))
+          StateSemi_VGB(iEradImpl,0,:,:,iBlock) = &
+               (cRadiationNo*TradBc**4 + StateSemi_VGB(iEradImpl,1,:,:,iBlock)&
+               *(Coef - 0.5) )/(Coef + 0.5)
+       case('usersemilinear')
+          Coef = 2.0/(3.0*SpecificOpacity*Density*Dx_Blk(iBlock))
+          StateSemi_VGB(iEradImpl,0,:,:,iBlock) = &
+               StateSemi_VGB(iEradImpl,1,:,:,iBlock)*(Coef - 0.5)/(Coef + 0.5)
+       end select
+    case(2)
+       select case(TypeBc)
+       case('user')
+          ! float, just for the sake of having filled in ghost cells
+          State_VGB(:,nI+1,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
+          State_VGB(:,nI+2,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
+       case('usersemi','usersemilinear')
+          ! zero radiation influx boundary conditions
+          Coef = 2.0/(3.0*SpecificOpacity*Density*Dx_Blk(iBlock))
+          StateSemi_VGB(iEradImpl,nI+1,:,:,iBlock) = &
+               StateSemi_VGB(iEradImpl,nI,:,:,iBlock)*(Coef - 0.5)/(Coef + 0.5)
+       end select
+    case default
        write(*,*) NameSub//' : user boundary not defined at iSide = ', iSide
        call stop_mpi(NameSub)
-    end if
+    end select
 
     IsFound = .true.
-
-    select case(TypeBc)
-    case('user')
-
-       State_VGB(:,0,:,:,iBlock) = State_VGB(:,1,:,:,iBlock)
-       State_VGB(:,-1,:,:,iBlock) = State_VGB(:,1,:,:,iBlock)
-
-    case('usersemi')
-
-       ! Marshak boundary conditions
-       Coef = 2.0/(3.0*SpecificOpacity*Density*Dx_Blk(iBlock))
-       do k = 1, nK; do j = 1, nJ
-          StateSemi_VGB(iEradImpl,0,j,k,iBlock) = &
-               (cRadiationNo*TradBc**4 - StateSemi_VGB(iEradImpl,1,j,k,iBlock)&
-               *(0.5 - Coef) )/(0.5 + Coef)
-       end do; end do
-    end select
 
   end subroutine user_set_outerbcs
 
