@@ -5,6 +5,11 @@ TESTDIR = ${DIR}/run_test
 
 MPIRUN = mpirun -np 2
 
+TESTMACHINE = `hostname | sed -e 's/\..*//; s/[0-9]*$$//'`
+#To be used at machines, like those in CCMC,
+#which employ more complicated job scripts
+#Typical usage: ${TESTMACHINE}.bat instead of ${MPIRUN} SWMF.exe
+
 test_help:
 	@echo "    test                       (run all tests with ${MPIRUN})"
 	@echo "    test MPIRUN=               (run all tests serially)"
@@ -446,10 +451,11 @@ test_ccmc_run:
 	cd GM; pIDL -ccmc; cd ../IE; pION
 
 ## FOR CCMC instead of the line with ${MPIRUN} should be the
-## name of the job script, for a given machine. Say, for the machine
-## named funai1 the second line should be: "tab" funai1.bat;"space"\"Enter":
-##      funai1.bat; \
-## The job script funai1.bat should be added to share/JobScripts 
+## "tab" ${TESTMACHINE}.bat;"space"\"Enter":
+## The job scripts shortened(hostname}.bat should be added to share/JobScripts,
+## for all machines to be used.
+## Here shortened(hostname) is the hostname with deleted number figures (no 0-9)
+## For example: for lanai1 this would be lanai.bat
 
 test_ccmc_restart_rundir:
 	rm -f ${TESTDIR}/LAYOUT.in ${TESTDIR}/PARAM.in
