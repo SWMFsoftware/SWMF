@@ -37,6 +37,7 @@ MODULES = \
 	ModCurrent.o\
 	ModExpansionFactors.o \
 	ModFaceFlux.o\
+	ModFaceGradient.o\
 	ModFaceValue.o\
 	ModGeometry.o\
 	ModGroundMagPerturb.o\
