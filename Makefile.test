@@ -9,6 +9,9 @@ TESTMACHINE = `hostname | sed -e 's/\..*//; s/[0-9]*$$//'`
 #To be used at machines, like those in CCMC,
 #which employ more complicated job scripts
 #Typical usage: ${TESTMACHINE}.bat instead of ${MPIRUN} SWMF.exe
+#Commands for renaming the ${MPIRUN}
+#perl -i -pe 's/\$\{MPIRUN\} .\/SWMF.exe > runlog/\$\{TESTMACHINE\}.bat/' Makefile.test
+#perl -i -pe 's/\$\{MPIRUN\} .\/SWMF_run_test.exe > runlog_`date \+%y%m%d%H%M`/\$\{TESTMACHINE\}.bat/' Makefile.test
 
 test_help:
 	@echo "    test                       (run all tests with ${MPIRUN})"
