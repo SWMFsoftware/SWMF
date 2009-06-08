@@ -129,7 +129,9 @@ foreach (@Arguments){
     if(/^-O[0-4]$/i)          {$NewOptimize=$_;                 next};  
     if(/^-g(rid)?$/)          {$ShowGridSize=1;                 next};
     if(/^-g(rid)?=([\d,]+)$/) {$NewGridSize=$+;                 next};
-    if(/^-g(rid)?=(.*)$/)     {die "$ERROR: incorrect grid size -g=$+\n"};
+
+    if(/^-g(rid)?=(.*)$/ and $IsComponent){
+	die "$ERROR: incorrect grid size -g=$+\n"};
 
     $Remaining{$_}=1;
 }
