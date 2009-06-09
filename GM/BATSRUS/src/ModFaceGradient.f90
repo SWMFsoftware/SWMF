@@ -2,6 +2,8 @@
 !==============================================================================
 module ModFaceGradient
 
+  use ModSize, ONLY: nDim, nI, nJ, nK
+
   implicit none
   save
 
@@ -10,6 +12,9 @@ module ModFaceGradient
   ! Public methods
   public :: set_block_scalar
   public :: calc_face_gradient
+
+  ! Jacobian matrix for covariant grid: Dcovariant/Dcartesian
+  real :: DcoordDxyz_DDFD(nDim,nDim,1:nI+1,1:nJ+1,1:nK+1,nDim)
 
 contains
 
@@ -218,6 +223,124 @@ contains
 
   !============================================================================
 
+  subroutine set_block_jacobian_face(iBlock)
+
+    use ModMain, ONLY: x_, y_, z_
+    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, Dx_Blk, Dy_Blk, Dz_Blk
+    use ModCoordTransform, ONLY: inverse_matrix
+
+    integer, intent(in):: iBlock
+
+    ! Dxyz/Dcoord matrix for one cell
+    real:: DxyzDcoord_DD(nDim,nDim)
+
+    ! Transverse gradients
+    real:: TransGrad_DDG(nDim,nDim,-1:nI+2,-1:nJ+2,-1:nK+2)
+
+    ! Cell center coordinates for this block
+    real:: Xyz_DG(nDim,-1:nI+2,-1:nJ+2,-1:nK+2)
+
+    ! Inverse of cell size
+    real :: InvDx, InvDy, InvDz
+
+    ! Indexes
+    integer:: i, j, k
+
+    !coeff of Ui+2 and Ui+1 to get normal derivative
+    real, parameter:: fp2 = -1./24.0, fp1 = 9.0/8.0 
+    !coeff of Ui+2 and Ui+1 for transverse derivatives
+    real, parameter:: dp2 = -1./12.0, dp1 = 2.0/3.0 
+    !coeff to average transverse derivatives
+    real, parameter:: ap2 = -1./16.0, ap1 = 9.0/16. 
+
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub='set_block_jacobian_face'
+    !--------------------------------------------------------------------------
+
+    call set_oktest(NameSub, DoTest, DoTestMe)
+
+    ! Calculate the dCovariant/dCartesian matrix
+
+    InvDx = 1.0/Dx_Blk(iBlock)
+    InvDy = 1.0/Dy_Blk(iBlock)
+    InvDz = 1.0/Dz_Blk(iBlock)
+
+    Xyz_DG(x_,:,:,:) = x_BLK(:,:,:,iBlock)
+    Xyz_DG(y_,:,:,:) = y_BLK(:,:,:,iBlock)
+    Xyz_DG(z_,:,:,:) = z_BLK(:,:,:,iBlock)
+
+    do k=-1,nK+2; do j=-1,nJ+2; do i=1,nI
+       TransGrad_DDG(:,1,i,j,k)=  &
+            ( dp1* (Xyz_DG(:,i+1,j,k) - Xyz_DG(:,i-1,j,k)) &
+            + dp2* (Xyz_DG(:,i+2,j,k) - Xyz_DG(:,i-2,j,k)))
+    end do; end do; end do
+
+    do k=-1,nK+2; do j=1,nJ; do i=-1,nI+2
+       TransGrad_DDG(:,2,i,j,k)=  &
+            ( dp1* (Xyz_DG(:,i,j+1,k) - Xyz_DG(:,i,j-1,k)) &
+            + dp2* (Xyz_DG(:,i,j+2,k) - Xyz_DG(:,i,j-2,k)))
+    end do; end do; end do
+
+    do k=1,nK; do j=-1,nJ+2; do i=-1,nI+2
+       TransGrad_DDG(:,3,i,j,k)=  &
+            ( dp1* (Xyz_DG(:,i,j,k+1) - Xyz_DG(:,i,j,k-1)) &
+            + dp2* (Xyz_DG(:,i,j,k+2) - Xyz_DG(:,i,j,k-2)))
+    end do; end do; end do
+
+    ! coord1 face
+    do k=1,nK; do j=1,nJ; do i=1,nI+1
+       ! DxyzDcoord along coord1 face
+       DxyzDcoord_DD(:,1) = InvDx* &
+            (  fp1*(Xyz_DG(:,i  ,j,k) - Xyz_DG(:,i-1,j,k)) &
+            +  fp2*(Xyz_DG(:,i+1,j,k) - Xyz_DG(:,i-2,j,k)))
+       DxyzDcoord_DD(:,2) = InvDy* &
+            ( ap1*( TransGrad_DDG(:,2,i  ,j,k) + TransGrad_DDG(:,2,i-1,j,k)) &
+            + ap2*( TransGrad_DDG(:,2,i+1,j,k) + TransGrad_DDG(:,2,i-2,j,k)))
+       DxyzDcoord_DD(:,3) = InvDz* &
+            ( ap1*( TransGrad_DDG(:,3,i  ,j,k) + TransGrad_DDG(:,3,i-1,j,k)) &
+            + ap2*( TransGrad_DDG(:,3,i+1,j,k) + TransGrad_DDG(:,3,i-2,j,k)))
+       DcoordDxyz_DDFD(:,:,i,j,k,1) = &
+            inverse_matrix(DxyzDcoord_DD, DoIgnoreSingular=.true.)
+    end do; end do; end do
+
+    ! coord2 face
+    do k=1,nK; do j=1,nJ+1; do i=1,nI
+       ! DxyzDcoord along coord2 face
+       DxyzDcoord_DD(:,1) = InvDx* &
+            ( ap1*( TransGrad_DDG(:,1,i,j  ,k) + TransGrad_DDG(:,1,i,j-1,k)) &
+            + ap2*( TransGrad_DDG(:,1,i,j+1,k) + TransGrad_DDG(:,1,i,j-2,k)))
+       DxyzDcoord_DD(:,2) = InvDy* &
+            (  fp1*(Xyz_DG(:,i,j  ,k) - Xyz_DG(:,i,j-1,k)) &
+            +  fp2*(Xyz_DG(:,i,j+1,k) - Xyz_DG(:,i,j-2,k)))
+       DxyzDcoord_DD(:,3) = InvDz* &
+            ( ap1*( TransGrad_DDG(:,3,i,j  ,k) + TransGrad_DDG(:,3,i,j-1,k)) &
+            + ap2*( TransGrad_DDG(:,3,i,j+1,k) + TransGrad_DDG(:,3,i,j-2,k)))
+
+       DcoordDxyz_DDFD(:,:,i,j,k,2) = &
+            inverse_matrix(DxyzDcoord_DD, DoIgnoreSingular=.true.)
+    end do; end do; end do
+
+    ! coord3 face
+    do k=1,nK+1; do j=1,nJ; do i=1,nI
+       ! DxyzDcoord along coord1 face
+       DxyzDcoord_DD(:,1) = InvDx* &
+            ( ap1*( TransGrad_DDG(:,1,i,j,k  ) + TransGrad_DDG(:,1,i,j,k-1)) &
+            + ap2*( TransGrad_DDG(:,1,i,j,k+1) + TransGrad_DDG(:,1,i,j,k-2)))
+       DxyzDcoord_DD(:,2) = InvDy* &
+            ( ap1*( TransGrad_DDG(:,2,i,j,k  ) + TransGrad_DDG(:,2,i,j,k-1)) &
+            + ap2*( TransGrad_DDG(:,2,i,j,k+1) + TransGrad_DDG(:,2,i,j,k-2)))
+       DxyzDcoord_DD(:,3) = InvDz* &
+            (  fp1*(Xyz_DG(:,i,j,k  ) - Xyz_DG(:,i,j,k-1)) &
+            +  fp2*(Xyz_DG(:,i,j,k+1) - Xyz_DG(:,i,j,k-2)))
+
+       DcoordDxyz_DDFD(:,:,i,j,k,3) = &
+            inverse_matrix(DxyzDcoord_DD, DoIgnoreSingular=.true.)
+    end do; end do; end do
+
+  end subroutine set_block_jacobian_face
+
+  !============================================================================
+
   subroutine calc_face_gradient(iDir, i, j, k, iBlock, Scalar_G, IsNewBlock, &
        FaceGrad_D) 
 
@@ -248,9 +371,7 @@ contains
 
     if(IsNewBlock)then
        call set_block_scalar(Scalar_G, iBlock)
-       if(UseCovariant)then
-          ! call ...
-       end if
+       if(UseCovariant) call set_block_jacobian_face(iBlock)
 
        IsNewBlock = .false.
     end if
@@ -338,48 +459,50 @@ contains
 
     ! Use central difference to get gradient at face
     if(UseCovariant)then
-       call calc_covariant_gradient
+       call calc_covariant_gradient(FaceGrad_D)
     else
-       call calc_cartesian_gradient
+       call calc_cartesian_gradient(FaceGrad_D)
     end if
 
   contains
 
     !==========================================================================
 
-    subroutine calc_cartesian_gradient
+    subroutine calc_cartesian_gradient(Grad_D)
 
+      real, intent(out) :: Grad_D(3)
+      !------------------------------------------------------------------------
       select case(iDir)
       case(x_)
-         FaceGrad_D(x_) = InvDx*(Scalar_G(i,j,k) - Scalar_G(i-1,j,k))
-         FaceGrad_D(y_) = &
+         Grad_D(x_) = InvDx*(Scalar_G(i,j,k) - Scalar_G(i-1,j,k))
+         Grad_D(y_) = &
               + Ay*(Scalar_G(i-1,jL,k) + Scalar_G(i,jL,k)) &
               + By*(Scalar_G(i-1,j ,k) + Scalar_G(i,j ,k)) &
               + Cy*(Scalar_G(i-1,jR,k) + Scalar_G(i,jR,k))
-         FaceGrad_D(z_) = &
+         Grad_D(z_) = &
               + Az*(Scalar_G(i-1,j,kL) + Scalar_G(i,j,kL)) &
               + Bz*(Scalar_G(i-1,j,k ) + Scalar_G(i,j,k )) &
               + Cz*(Scalar_G(i-1,j,kR) + Scalar_G(i,j,kR))
       case(y_)
-         FaceGrad_D(x_) = &
+         Grad_D(x_) = &
               + Ax*(Scalar_G(iL,j-1,k) + Scalar_G(iL,j,k)) &
               + Bx*(Scalar_G(i ,j-1,k) + Scalar_G(i ,j,k)) &
               + Cx*(Scalar_G(iR,j-1,k) + Scalar_G(iR,j,k))
-         FaceGrad_D(y_) = InvDy*(Scalar_G(i,j,k) - Scalar_G(i,j-1,k))
-         FaceGrad_D(z_) = &
+         Grad_D(y_) = InvDy*(Scalar_G(i,j,k) - Scalar_G(i,j-1,k))
+         Grad_D(z_) = &
               + Az*(Scalar_G(i,j-1,kL) + Scalar_G(i,j,kL)) &
               + Bz*(Scalar_G(i,j-1,k ) + Scalar_G(i,j,k )) &
               + Cz*(Scalar_G(i,j-1,kR) + Scalar_G(i,j,kR))
       case(z_)
-         FaceGrad_D(x_) = &
+         Grad_D(x_) = &
               + Ax*(Scalar_G(iL,j,k-1) + Scalar_G(iL,j,k)) &
               + Bx*(Scalar_G(i ,j,k-1) + Scalar_G(i ,j,k)) &
               + Cx*(Scalar_G(iR,j,k-1) + Scalar_G(iR,j,k))
-         FaceGrad_D(y_) = &
+         Grad_D(y_) = &
               + Ay*(Scalar_G(i,jL,k-1) + Scalar_G(i,jL,k))  &
               + By*(Scalar_G(i,j ,k-1) + Scalar_G(i,j ,k))  &
               + Cy*(Scalar_G(i,jR,k-1) + Scalar_G(i,jR,k))
-         FaceGrad_D(z_) = InvDz*(Scalar_G(i,j,k) - Scalar_G(i,j,k-1))
+         Grad_D(z_) = InvDz*(Scalar_G(i,j,k) - Scalar_G(i,j,k-1))
       case default
          write(*,*)'Error in calc_cartesian_gradient: iDir=',iDir
          call stop_mpi('DEBUG')
@@ -389,9 +512,22 @@ contains
 
     !==========================================================================
 
-    subroutine calc_covariant_gradient
+    subroutine calc_covariant_gradient(Grad_D)
 
-      call stop_mpi('calc_covariant_gradient not yet implemented')
+      real, intent(out) :: Grad_D(3)
+
+      integer :: iDim
+      real :: DscalarDcoord_D(3)
+      !------------------------------------------------------------------------
+
+      ! Calculate the partial derivatives dScalar/dCovariant
+      call calc_cartesian_gradient(DscalarDcoord_D)
+
+      ! multiply by the coordinate transformation matrix
+      do iDim = 1, nDim
+         Grad_D(iDim) = &
+              sum(DscalarDcoord_D*DcoordDxyz_DDFD(:,iDim,i,j,k,iDir))
+      end do
 
     end subroutine calc_covariant_gradient
 
