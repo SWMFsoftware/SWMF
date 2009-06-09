@@ -434,8 +434,10 @@ ccmc_compile:
 test_ccmc_rundir:
 	rm -rf ${TESTDIR}
 	make rundir RUNDIR=${TESTDIR}
-	cp -f Param/CCMC/LAYOUT.in_v8.01_init ${TESTDIR}/LAYOUT.in
-	cp -f Param/CCMC/PARAM.in_v8.01_init ${TESTDIR}/PARAM.in
+	cp -r Param/CCMC ${TESTDIR}/Param_ccmc
+	cd ${TESTDIR}; \
+	cp -f Param_ccmc/LAYOUT.in_v8.01_init ${TESTDIR}/LAYOUT.in; \
+	cp -f Param_ccmc/PARAM.in_v8.01_init ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${SCRIPTDIR}/replace_amrinit.pl
 	cp ${TESTDIR}/SWMF.exe ${TESTDIR}/SWMF_run_test.exe
 	rm -f ${TESTDIR}/SWMF.exe
@@ -454,8 +456,9 @@ test_ccmc_run:
 
 test_ccmc_restart_rundir:
 	rm -f ${TESTDIR}/LAYOUT.in ${TESTDIR}/PARAM.in
-	cp Param/CCMC/LAYOUT.in_v8.01_RBE_restart ${TESTDIR}/LAYOUT.in
-	cp Param/CCMC/PARAM.in_v8.01_RBE_restart ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; \
+	cp Param_ccmc/LAYOUT.in_v8.01_RBE_restart ${TESTDIR}/LAYOUT.in; \
+	cp Param_ccmc/PARAM.in_v8.01_RBE_restart ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${SCRIPTDIR}/replace_amrinit.pl; ./Restart.pl 
 
 test_ccmc_check:
