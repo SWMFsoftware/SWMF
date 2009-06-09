@@ -26,14 +26,9 @@ module CRASH_ModFermiGas
   
   real :: FermiFunctionTable_II(0:nStep, NuEqMinus12_ : NuEq32_)
   
-  !The values of the Gamma-function of semi-integer argument
-  real :: Gamma_I(1:50)
-  !where Gamma_I(1)=\Gamma(0.5), Gamma_I(50)=\Gamma(49.5)
-
   public:: init_fermi_function, iterate_ge 
   
   ! public :: test_fermi_function !Uncomment for testing
-  
 
 contains
   !=====================================

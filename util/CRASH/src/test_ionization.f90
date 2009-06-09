@@ -330,56 +330,6 @@ program saha
 
   close(24)
 
-  UseCoulombCorrection = .true.
-  open(24,file='../doc/Table7.tex')
-  write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
-  write(24,'(a)')'\hline'
-  write(24,'(a)')'Te[eV]\textbackslash \textbackslash Na[$1/cm^3$] & $10^{18}$'//&
-       ' & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
-  write(24,'(a)')'\hline' 
-  write(24,'(a)')'\hline'
-
-
-  do iT  = 1,nT
-     if (((iT-1)/25)*25==(iT-1).and.iT>25) then
-
-        write(24,'(a)')'\end{tabular}', char(10)
-        !--------------
-        write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
-        write(24,'(a)')'\hline'
-        write(24,'(a)')'Te[eV]\textbackslash \textbackslash Na[$1/cm^3$] & $10^{18}$ & $10^{19}$'//&
-             ' & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
-        write(24,'(a)')'\hline' 
-        write(24,'(a)')'\hline'
-     end if
-     vTe = dTe * iT
-
-     do iN = 0,nN
-        NaTrial = Nao*exp(iN*dLogN)
-        call set_ionization_equilibrium(vTe,NaTrial*1000000.0,iError)
-        Z_I(iN) = z_averaged() 
-        Z2_I(iN)= z2_averaged()/Z_I(iN)
-        Uav_I(iN)=internal_energy()
-        Cv_I(iN)=heat_capacity()
-        if(iError/=0)then
-           Z_I(iN) = -  Z_I(iN)
-           Z2_I(iN)= - Z2_I(iN)
-           Uav_I(iN)= -Uav_I(iN)
-           Cv_I(iN)= - Cv_I(iN)
-           write(*,*)'Error=',iError,vTe,NaTrial*1000000.0
-        end if
-     end do
-     write(24,'(f5.0,6(a,f7.1),a)') vTe,&
-          (' & ', Z_I(iN), iN=0,nN ),'\tabularnewline'
-     write(24,'(a)')'\hline'
-
-
-  end do
-
-  write(24,'(a)')'\end{tabular}'
-
-  close(24)
-  !________
 
 
 end program saha
