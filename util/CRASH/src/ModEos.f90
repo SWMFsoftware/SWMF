@@ -118,7 +118,7 @@ contains
 
   subroutine eos_material(iMaterial,Rho,&
        TeIn, eTotalIn, pTotalIn,&
-       TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut, iError)
+       TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut, HeatCond, iError)
 
     ! Eos function for single material
 
@@ -136,6 +136,7 @@ contains
     real,    optional, intent(out) :: eTotalOut  ! internal energy density
     real,    optional, intent(out) :: GammaOut   ! polytropic index
     real,    optional, intent(out) :: CvTotalOut ! specific heat / unit volume
+    real,    optional, intent(out) :: HeatCond   ! electron heat conductivity (SI)
     integer, optional, intent(out) :: iError     ! error flag
 
     real   :: Natomic
@@ -157,7 +158,7 @@ contains
        Natomic=Rho/(cAtomicMass*cAtomicMass_I(nZ_I(iMaterial)))
     end if
     call eos_generic(Natomic, TeIn, eTotalIn, pTotalIn, &
-         TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut, iError)
+         TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut, HeatCond, iError)
 
   end subroutine eos_material
 
@@ -165,7 +166,7 @@ contains
 
   subroutine eos_mixture(RhoToARatio_I,&
        TeIn, eTotalIn, pTotalIn, &
-       TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut, iError)
+       TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut, HeatCond, iError)
 
     ! Eos function for mixed material
     real, intent(in) :: RhoToARatio_I(Xe_:Plastic_) ! Mass densities/A
@@ -181,6 +182,7 @@ contains
     real,    optional, intent(out) :: eTotalOut     ! internal energy density 
     real,    optional, intent(out) :: GammaOut      ! polytropic index
     real,    optional, intent(out) :: CvTotalOut    ! specific heat per volume
+    real,    optional, intent(out) :: HeatCond   ! electron heat conductivity (SI)
     integer, optional, intent(out) :: iError        ! error flag
 
     real :: RhoToATotal, Natomic
@@ -210,14 +212,15 @@ contains
     Natomic = RhoToATotal / cAtomicMass 
 
     call eos_generic(Natomic, TeIn, eTotalIn, pTotalIn, &
-         TeOut, eTotalOut, PtotalOut, GammaOut, CvTotalOut, iError)
+         TeOut, eTotalOut, PtotalOut, GammaOut, CvTotalOut, HeatCond, iError)
 
   end subroutine eos_mixture
 
   !============================================================================
 
   subroutine eos_generic(Natomic, TeIn, eTotalIn, pTotalIn,&
-       TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut, iError)
+       TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut, HeatCond, iError)
+    use CRASH_ModTransport, ONLY: electron_heat_conductivity
 
     real,              intent(in)  :: Natomic    ! Atomic concentration
     real,    optional, intent(in)  :: TeIn       ! temperature
@@ -229,6 +232,7 @@ contains
     real,    optional, intent(out) :: eTotalOut  ! internal energy density 
     real,    optional, intent(out) :: GammaOut   ! polytropic index
     real,    optional, intent(out) :: CvTotalOut ! Specific heat per volume
+    real,    optional, intent(out) :: HeatCond   ! electron heat conductivity (SI)
     integer, optional, intent(out) :: iError     ! error flag
 
     real :: ePerAtom, pPerAtom,TeInEV  !Both in eV
@@ -265,7 +269,9 @@ contains
     if(present(eTotalOut))  eTotalOut = Natomic*cEV*internal_energy()
     if(present(pTotalOut))  pTotalOut = pressure()
     if(present(GammaOut))   call get_gamma(GammaSOut=GammaOut)
+    if(present(HeatCond))   HeatCond = electron_heat_conductivity()
     if(present(CvTotalOut)) CvTotalOut = (Natomic*cBoltzmann)*heat_capacity()
+    
 
   end subroutine eos_generic
 

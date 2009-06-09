@@ -33,6 +33,10 @@ contains
     !The last term equals c\sqrt{T_e[eV]/{2\pi* m_ec^2[eV]}
     !With this account:
     
+    if(Te.le.0.0 .or. Z2.le.0.0) then
+       nu_ei = 0.0
+       return
+    end if
     TePerMeC2 = Te/MeC2InEV !Dimensionless
 
     nu_ei = cSigmaThomson * cLightSpeed * Na * CoulombLog / &
@@ -76,7 +80,12 @@ contains
     !----------------------------------
     !The dependence on Z as well as the numerical coefficient
     !are to be modified:
-    
+
+    if(nu_ei()==0.0)then
+       electron_heat_conductivity = 0.0
+       return
+    end if
+
     electron_heat_conductivity = cBoltzmann * (Te * cEV/cElectronMass) * &
          (Na * ZAv) /(Z2 * nu_ei())  ![J/(M*s*K)]
   end function electron_heat_conductivity
