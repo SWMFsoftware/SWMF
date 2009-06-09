@@ -5,6 +5,8 @@ TESTDIR = ${DIR}/run_test
 
 MPIRUN = mpirun -np 2
 
+TESTMACHINE = `hostname | sed -e 's/\..*//; s/[0-9]*$$//'`
+
 test_help:
 	@echo "    test                       (run all tests with ${MPIRUN})"
 	@echo "    test MPIRUN=               (run all tests serially)"
