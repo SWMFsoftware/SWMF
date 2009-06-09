@@ -16,6 +16,7 @@ test_help:
 	@echo "    test_pw                    (run PW/PWOM test only)"
 	@echo "    test_rb                    (run RB/RBE test only)"
 	@echo "    test_esmf                  (run ESMF_SWMF test only)"
+	@echo "    test_ccmc                  (run CCMC test only)"
 	@echo "    test1                      (run GM-IE-PW test only )"
 	@echo "    test2                      (run SC-IH test only )"
 	@echo "    test3                      (run GM-IE-IM test only )"
@@ -400,13 +401,13 @@ test_esmf_check:
 		>> test_esmf.diff
 	ls -l test_esmf.diff
 
+#### FOR CCMC ONLY #######################
 # CCMC instalation, compiling, and  PostIDL.exe	 generation
-#Use "Config.pl -install" before use of "make ccmc_compile" or "make test_ccmc"
-#Public version. Specific job scripts are to be substituted for generic mpirun
-
-####FOR CCMC ONLY######################
-#THIS VERSION OF THE TEST WORKS ONLY WITH THE SWMF VERSIONS OF MAY,2009 and LATER
-#Use Config.pl -install -compiler=pgf90
+# Use "Config.pl -install" before "make ccmc_compile" or "make test_ccmc"
+# Public version. Specific job scripts are to be substituted for generic mpirun
+#
+# This version of the test works only with the SWMF versions after May 2009 
+# Use Config.pl -install -compiler=pgf90
 # Modify the line in test_ccmc_run (see below) 
 
 test_ccmc:
@@ -423,43 +424,41 @@ test_ccmc:
 	@echo "test_ccmc_check..." >> test_ccmc.diff
 	make test_ccmc_check
 
-
 ccmc_compile: 
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
 	./Config.pl -g=GM:6,6,6,3800,1
 	cd GM/BATSRUS; Config.pl -u=CCMC
-	make
-	cd GM/BATSRUS; make PIDL
+	make SWMF PIDL
 	
 test_ccmc_rundir:
 	rm -rf ${TESTDIR}
 	make rundir RUNDIR=${TESTDIR}
 	cp -r Param/CCMC ${TESTDIR}/Param_ccmc
 	cd ${TESTDIR}; \
-	cp -f Param_ccmc/LAYOUT.in_v8.01_init ${TESTDIR}/LAYOUT.in; \
-	cp -f Param_ccmc/PARAM.in_v8.01_init ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${SCRIPTDIR}/replace_amrinit.pl
-	cp ${TESTDIR}/SWMF.exe ${TESTDIR}/SWMF_run_test.exe
-	rm -f ${TESTDIR}/SWMF.exe
+		cp -f Param_ccmc/LAYOUT.in_v8.01_init LAYOUT.in; \
+		cp -f Param_ccmc/PARAM.in_v8.01_init PARAM.in; \
+		${SCRIPTDIR}/replace_amrinit.pl; \
+		cp SWMF.exe SWMF_run_test.exe; \
+		rm -f SWMF.exe
 
 test_ccmc_run:
 	cd ${TESTDIR}; \
-	${MPIRUN} ./SWMF_run_test.exe > runlog_`date +%y%m%d%H%M`
+		${MPIRUN} ./SWMF_run_test.exe > runlog_`date +%y%m%d%H%M`
 	cd ${TESTDIR}/GM; pIDL -ccmc; cd ../IE; pION
 
-## FOR CCMC instead of the line with ${MPIRUN} should be the
-## "tab" ${TESTMACHINE}.bat;"space"\"Enter":
-## The job scripts shortened(hostname}.bat should be added to share/JobScripts,
-## for all machines to be used.
-## Here shortened(hostname) is the hostname with deleted number figures (no 0-9)
-## For example: for lanai1 this would be lanai.bat
+# FOR CCMC instead of the line with ${MPIRUN} should be the
+# "tab" ${TESTMACHINE}.bat;"space"\"Enter":
+# The job scripts shortened(hostname}.bat should be added to share/JobScripts,
+# for all machines to be used.
+# Here shortened(hostname) is the hostname with deleted number figures (no 0-9)
+# For example: for lanai1 this would be lanai.bat
 
 test_ccmc_restart_rundir:
-	rm -f ${TESTDIR}/LAYOUT.in ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; \
-	cp Param_ccmc/LAYOUT.in_v8.01_RBE_restart ${TESTDIR}/LAYOUT.in; \
-	cp Param_ccmc/PARAM.in_v8.01_RBE_restart ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ${SCRIPTDIR}/replace_amrinit.pl; ./Restart.pl 
+		cp -f Param_ccmc/LAYOUT.in_v8.01_RBE_restart LAYOUT.in; \
+		cp -f Param_ccmc/PARAM.in_v8.01_RBE_restart PARAM.in; \
+		${SCRIPTDIR}/replace_amrinit.pl; \
+		./Restart.pl 
 
 test_ccmc_check:
 	${SCRIPTDIR}/DiffNum.pl -b -r=1.0e-5 \
