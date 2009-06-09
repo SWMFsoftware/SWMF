@@ -616,6 +616,8 @@ contains
     endif
 
     iBLK = iBLKSatellite(iSatIn)
+    if (iBLK == 0) RETURN
+
     Dxyz_D(1) = dx_BLK(iBLK)
     Dxyz_D(2) = dy_BLK(iBLK)
     Dxyz_D(3) = dz_BLK(iBLK)
