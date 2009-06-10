@@ -130,6 +130,21 @@ end subroutine IM_put_from_ie_complete
 
 !==============================================================================
 
+subroutine IM_put_from_gm_line(BufferLine_VI, nVarLineIn, nPointLineIn, NameVar)
+
+  implicit none
+  character (len=*),parameter :: NameSub='IM_put_from_gm_line'
+
+  integer, intent(in) :: nVarLineIn, nPointLineIn
+  real,    intent(in) :: BufferLine_VI(nVarLineIn,nPointLineIn)
+  character(len=*), intent(in) :: NameVar
+
+  call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
+
+end subroutine IM_put_from_gm_line
+
+!==============================================================================
+
 subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
 
   implicit none

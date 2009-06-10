@@ -104,6 +104,39 @@ subroutine GM_get_for_im(Buffer_IIV,iSize,jSize,nVar,NameVar)
 end subroutine GM_get_for_im
 
 !==============================================================================
+subroutine GM_get_for_im_trace(nRadius, nLon, NameVar, nVarLine, nPointLine)
+
+  ! Ray tracing for RAM type codes 
+  ! Provides total number of points along rays
+  ! and the number of variables to pass to IM
+
+  implicit none
+  integer, intent(in)           :: nRadius, nLon
+  character (len=*), intent(in) :: NameVar
+  integer, intent(out)          :: nVarLine, nPointLine
+
+  character(len=*), parameter :: NameSub = 'GM_get_for_im_trace'
+  !---------------------------------------------------------------------
+  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+
+end subroutine GM_get_for_im_trace
+!==============================================================================
+
+subroutine GM_get_for_im_line(BufferLine_VI, nVarLine, nPointLine, NameVar)
+
+  implicit none
+
+  integer, intent(in) :: nPointLine, nVarLine
+  real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
+  character (len=*), intent(in):: NameVar
+
+  character (len=*), parameter :: NameSub = 'GM_get_for_im_line'
+  !---------------------------------------------------------------------
+  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+
+end subroutine GM_get_for_im_line
+
+!=============================================================================
 
 subroutine GM_get_for_rb_trace(iSize,jSize,NameVar,nVarLine,nPointLine)
   implicit none

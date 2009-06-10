@@ -349,6 +349,22 @@ subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
 end subroutine IM_put_from_gm
 
 !==============================================================================
+
+subroutine IM_put_from_gm_line(BufferLine_VI, nVarLineIn, nPointLineIn, NameVar)
+
+  implicit none
+  character (len=*),parameter :: NameSub='IM_put_from_gm_line'
+
+  integer, intent(in) :: nVarLineIn, nPointLineIn
+  real,    intent(in) :: BufferLine_VI(nVarLineIn,nPointLineIn)
+  character(len=*), intent(in) :: NameVar
+
+  ! This should be used eventually
+
+end subroutine IM_put_from_gm_line
+
+!==============================================================================
+
 subroutine IM_put_sat_from_gm(nSats, Buffer_I, Buffer_III)
   ! Puts satellite locations and names from GM into IM variables.
 !!!DTW 2007

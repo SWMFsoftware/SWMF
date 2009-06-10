@@ -2,8 +2,123 @@
 !^CMP FILE IM
 
 !==========================================================================
+subroutine GM_get_for_im_trace(nRadius, nLon, NameVar, nVarLine, nPointLine)
+
+  ! Do ray tracing for IM/RAM_SCB. 
+  ! Provide total number of points along rays 
+  ! and the number of variables to pass to IM
+
+  use CON_line_extract, ONLY: line_get
+  use CON_coupler, ONLY: Grid_C, IM_
+
+  implicit none
+  integer, intent(in)           :: nRadius, nLon
+  character (len=*), intent(in) :: NameVar
+  integer, intent(out)          :: nVarLine, nPointLine
+
+  real, allocatable, save :: RadiusIm_I(:), LongitudeIm_I(:)
+
+  character(len=*), parameter :: NameSub='GM_get_for_im_trace'
+  !---------------------------------------------------------------------
+
+  if(NameVar /= 'l:x:y:z:rho:ux:uy:uz:bx:by:bz:p') &
+       call CON_stop(NameSub//' invalid NameVar='//NameVar)
+
+  if(.not.allocated(RadiusIm_I))then
+     if(   nRadius /= Grid_C(IM_) % nCoord_D(1) .or. &
+           nLon    /= Grid_C(IM_) % nCoord_D(2) )then
+        write(*,*)NameSub//' grid sizes do not agree nRadius,nLon,nCells=',&
+             nRadius, nLon, Grid_C(IM_) % nCoord_D(1:2)
+        call CON_stop(NameSub//' ERROR')
+     end if
+     allocate(RadiusIm_I(nRadius), LongitudeIm_I(nLon))
+     RadiusIm_I    = Grid_C(IM_) % Coord1_I
+     LongitudeIm_I = Grid_C(IM_) % Coord2_I
+  end if
+
+  call trace_ray_equator(nRadius, nLon, RadiusIm_I, LongitudeIm_I, .true.)
+
+  call line_get(nVarLine, nPointLine)
+
+  ! We only pass index, length, 3 coordinates and 8 MHD variables
+  nVarLine = 13 
+
+end subroutine GM_get_for_im_trace
+
 !==========================================================================
+
+subroutine GM_get_for_im_line(BufferLine_VI, nVarLine, nPointLine, NameVar)
+
+  !call stop_mpi('RAYTRACE is OFF') !^CFG UNCOMMENT IF NOT RAYTRACE
+  !^CFG IF RAYTRACE BEGIN
+
+  use ModProcMH,  ONLY: iProc
+
+  use ModPhysics, ONLY: rBody
+  use ModVarIndexes, ONLY: Rho_, Ux_, Uz_, Bx_, Bz_, p_
+
+  use CON_line_extract, ONLY: line_get, line_clean
+
+  implicit none
+
+  character (len=*), parameter :: NameSub='GM_get_for_im_line'
+
+  integer, intent(in) :: nPointLine, nVarLine
+  real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
+  character (len=*), intent(in):: NameVar
+
+  integer :: nVarExtract, nPoint, iPoint, iLine
+  real, allocatable :: Buffer_VI(:,:)
+
+  logical :: DoTest, DoTestMe
+  !--------------------------------------------------------------------------
+
+  if(NameVar /= 'l:x:y:z:rho:ux:uy:uz:bx:by:bz:p') &
+       call CON_stop(NameSub//' invalid NameVar='//NameVar)
+
+  if(iProc /= 0)then
+     ! Clean and return
+     call line_clean
+     RETURN
+  end if
+
+  call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+  ! Put the extracted data into BufferLine_VI
+
+  call line_get(nVarExtract, nPoint)
+  if(nPoint /= nPointLine)call stop_mpi(NameSub//': nPointLine error')
+  if(nVarExtract+1 < nVarLine)then
+     write(*,*)NameSub, ' nVarExtract, nVarLine=',nVarExtract, nVarLine
+     call stop_mpi(NameSub//': nVarLine error')
+  end if
+  allocate(Buffer_VI(0:nVarExtract, nPoint))
+  call line_get(nVarExtract, nPoint, Buffer_VI, DoSort=.true.)
+
+  do iPoint = 1, nPoint
+
+     iLine = Buffer_VI(0,iPoint)     ! line index
+
+     ! exclude open field lines by setting impossible line index
+     ! open field lines end somewhere far from the inner boundary at rBody
+     if(maxval(abs(Buffer_VI(2:4,iPoint))) > 1.5*rBody) iLine = -1
+
+     BufferLine_VI(1,iPoint)    = iLine
+     BufferLine_VI(2:5,iPoint)  = Buffer_VI(1:4        ,iPoint) ! Length,X,Y,Z
+     BufferLine_VI(6,iPoint)    = Buffer_VI(Rho_+4     ,iPoint) ! density
+     BufferLine_VI(7:9,iPoint)  = Buffer_VI(Ux_+4:Uz_+4,iPoint) ! velocity
+     BufferLine_VI(10:12,iPoint)= Buffer_VI(Bx_+4:Bz_+4,iPoint) ! magnetic field
+     BufferLine_VI(13,iPoint)   = Buffer_VI(p_         ,iPoint) ! pressure
+  end do
+  
+  deallocate(Buffer_VI)
+  call line_clean
+
+  !^CFG END RAYTRACE
+end subroutine GM_get_for_im_line
+
 !==========================================================================
+
 subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   !call stop_mpi('RCM is OFF') !^CFG UNCOMMENT IF NOT RCM
@@ -99,7 +214,6 @@ subroutine GM_satinit_for_im(nSats)
   !Module variables to use:
   use ModMain,   ONLY: DoImSatTrace
   use ModSatelliteFile, ONLY: nSatellite
-  use ModProcMH, ONLY: iProc
 
   implicit none
 

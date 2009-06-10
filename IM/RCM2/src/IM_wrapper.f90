@@ -1,4 +1,4 @@
-! Wrapper for Internal Magnetosphere (IM) component
+ Wrapper for Internal Magnetosphere (IM) component
 !=============================================================================
 subroutine IM_set_param(CompInfo, TypeAction)
 
@@ -357,6 +357,12 @@ subroutine IM_put_from_ie_complete
   call wrap_around_ghostcells(sigmaP_mhd,isize,jsize,n_gc)
 
 end subroutine IM_put_from_ie_complete
+!==============================================================================
+subroutine IM_put_from_gm_line
+
+  call CON_stop('IM_put_from_gm_line should not be called for IM/RCM2')
+
+end subroutine IM_put_from_gm_line
 !==============================================================================
 subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
 
