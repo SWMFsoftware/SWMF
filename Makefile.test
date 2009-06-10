@@ -465,3 +465,44 @@ test_ccmc_check:
 		${TESTDIR}/GM/IO2/log_n002000.log \
 		Param/CCMC/test_GM.log > test_ccmc.diff
 	ls -l test_ccmc.diff
+
+### RAM_SCB model test  ###
+test_ramscb:
+	@echo "starting..." > test_ramscb.diff
+	@echo "test_ramscb_compile..." >> test_ramscb.diff
+	make test_ramscb_compile
+	@echo "test_ramscb_rundir..." >> test_ramscb.diff
+	make test_ramscb_rundir
+	@echo "test_ramscb_run..." >> test_ramscb.diff
+	make test_ramscb_run
+	@echo "test_ramscb_check..." >> test_ramscb.diff
+	make test_ramscb_check
+
+test_ramscb_compile:
+	./Config.pl -v=IM/RAM_SCB
+	make SWMF
+
+test_ramscb_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR}
+	cp ${IMDIR}/input/PARAM.in.test.ramscb ${TESTDIR}/PARAM.in
+	cp ${IMDIR}/input/LAYOUT.in.test.ramscb ${TESTDIR}/LAYOUT.in
+
+test_ramscb_run:
+	cd ${TESTDIR}; ./SWMF.exe > runlog
+
+test_ramscb_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-3 -a=1e-15 			\
+		${TESTDIR}/IM/output_ram/Dsbnd/dssep_05_0000_h.dat	\
+		${IMDIR}/output/dssep_05_0000_h.dat.ref 		\
+		> test_ramscb.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5		\
+		${TESTDIR}/IM/output_ram/ram000_h.l  	\
+		${IMDIR}/output/ram000_h.l.ref  	\
+		>> test_ramscb.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-3		\
+		${TESTDIR}/IM/output_ram/ram000_h.t 	\
+		${IMDIR}/output/ram000_h.t.ref 		\
+		>> test_ramscb.diff)
+	ls -l test_ramscb.diff
+
