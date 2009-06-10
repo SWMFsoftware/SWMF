@@ -166,9 +166,9 @@ contains
        call GM_get_for_rb(Integral_IIV, iSize, jSize, nIntegral, &
             BufferLine_VI, nVarLine, nPointLine, NameVar)
     end if
-    !\                                                                                                                                
-    ! If RB sat tracing is enabled, get sat locations from GM                                                                         
-    !/                                                                                                                                
+    !\
+    ! If RB sat tracing is enabled, get sat locations from GM
+    !/
     if(is_proc(GM_).AND.(nShareSats > 0)) &
          call GM_get_sat_for_rb(SatPos_DII, NameSat_I, nShareSats)
 
