@@ -5,6 +5,7 @@ module ModHeidiBField
 contains
 
   subroutine initialize_b_field (L, nStep, bField_I, RadialDistance_I, Length_I, dLength_I)
+    use ModHeidiInput, ONLY: TypeBfieldGrid
 
     integer, intent(in) :: nStep                   ! Number of points along the field line
     real, intent(in)    :: L                       ! L shell value
@@ -27,39 +28,44 @@ contains
     LatMax = acos(sqrt(1./L))
     LatMin = -LatMax
     dLat   = (LatMax-LatMin)/(nStep-1)
-    !uniform grid along the field line
-    Lat = LatMin
     
-    do i =1, nStep
-       SinLat2 = sin(Lat)**2
-       CosLat2 = 1.0 - SinLat2
-       bField_I(i) = DipoleStrength*sqrt(1.0+3.0*SinLat2)/(L*CosLat2)**3
-       RadialDistance_I(i) = L*CosLat2
-       Length_I(i) = dipole_length(L,LatMin,Lat) 
-       Lat = Lat + dLat
-    end do
+    if (TypeBFieldGrid == 'uniform') then 
+       !uniform grid along the field line
+       Lat = LatMin
+    
+       do i =1, nStep
+          SinLat2 = sin(Lat)**2
+          CosLat2 = 1.0 - SinLat2
+          bField_I(i) = DipoleStrength*sqrt(1.0+3.0*SinLat2)/(L*CosLat2)**3
+          RadialDistance_I(i) = L*CosLat2
+          Length_I(i) = dipole_length(L,LatMin,Lat) 
+          Lat = Lat + dLat
+       end do
+    end if
 
-    !non-uniform grid along the field line
-!!$    LatMin2 = LatMin**2
-!!$    LatMax2 = LatMax**2
-!!$    LatMinMax = LatMin*LatMax
-!!$  
-!!$    beta1 = 6.0*(-nStep+Epsilon*nStep+1.0)*(nStep-1.0) 
-!!$    beta2 = nStep*(2.0*LatMax2*nStep + 2.0*LatMinMax*nStep + 2.0*LatMin2*nStep &
-!!$         - 4.0*LatMinMax - LatMin2 - LatMax2)
-!!$    Beta = - beta1/beta2  
-!!$
-!!$    do i =1, nStep
-!!$       Lat = LatMin+(i-1)*dLat
-!!$       SinLat2 = sin(Lat)**2
-!!$       CosLat2 = 1.0 - SinLat2
-!!$       bField_I(i) = DipoleStrength*sqrt(1.0+3.0*SinLat2)/(L*CosLat2)**3
-!!$       RadialDistance_I(i) = L*CosLat2
-!!$       Length_I(i) = dipole_length(L,LatMin,Lat) 
-!!$       dLatNew =(Beta*(LatMin+(i-1)*dLat)**2+Epsilon)*dLat
-!!$       Lat = Lat+dLatNew
-!!$    end do
-
+     if (TypeBFieldGrid == 'nonuniform') then
+    
+        !non-uniform grid along the field line
+        LatMin2 = LatMin**2
+        LatMax2 = LatMax**2
+        LatMinMax = LatMin*LatMax
+        
+        beta1 = 6.0*(-nStep+Epsilon*nStep+1.0)*(nStep-1.0) 
+        beta2 = nStep*(2.0*LatMax2*nStep + 2.0*LatMinMax*nStep + 2.0*LatMin2*nStep &
+             - 4.0*LatMinMax - LatMin2 - LatMax2)
+        Beta = - beta1/beta2  
+        
+        do i =1, nStep
+           Lat = LatMin+(i-1)*dLat
+           SinLat2 = sin(Lat)**2
+           CosLat2 = 1.0 - SinLat2
+           bField_I(i) = DipoleStrength*sqrt(1.0+3.0*SinLat2)/(L*CosLat2)**3
+           RadialDistance_I(i) = L*CosLat2
+           Length_I(i) = dipole_length(L,LatMin,Lat) 
+           dLatNew =(Beta*(LatMin+(i-1)*dLat)**2+Epsilon)*dLat
+           Lat = Lat+dLatNew
+        end do
+     end if
 
     do i = 1, nStep-1
        dLength_I(i) = Length_I(i+1) - Length_I(i)

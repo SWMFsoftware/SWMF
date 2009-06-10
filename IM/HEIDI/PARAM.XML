@@ -429,14 +429,20 @@ Set to true if self-consistent wave-particle interactions are to be included.
 	<parameter name="TypeBField" type="string" input="select" case="lower">
 		<option name="analyticdipole"                     value="0/analytic"  />
 		<option name="numericaldipole"                    value="1/numeric"  />
+	<parameter name="TypeBFieldGrid" type="string" input="select" case="lower">	
+		<option name="uniformgrid"                     value="0/uniform"  />
+		<option name="nonuniformgrid"                  value="1/nonuniform"  />	
+
 	</parameter>
 
 
 #BFIELD
 analytic		TypeBField
+uniform			TypeBFieldGrid
 
-The TypeConvection parameter indicates how the magnetospheric convection strength is calculated.
-The TypeBField parameter sets up teh magnetic field. If analytic, all numerical integrals are solved using analytical approximations. If numerical, numerical integrals are performed.
+The TypeBField parameter sets up the magnetic field. If analytic, all numerical integrals are solved using analytical approximations. If numerical, numerical integrals are performed. 
+The TypeBFieldGrid parameter sets up the kind of field line grid. For uniform grid, all point are evenly ditributed along the field line. For non-uniform grid, the grid is more refined in the equatorial region.
+
 </command>
 
 <command name="SAVERESTART">

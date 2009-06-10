@@ -6,7 +6,7 @@ contains
 
   subroutine get_rairden_density(nStep, nRadialPoint,L, HDensity)
     
-    use ModHeidiBField!, ONLY: initialize_b_field
+    !use ModHeidiBField, ONLY: initialize_b_field,find_mirror_points
     !use ModIoUnit,      ONLY : io_unit_new 
    
     character (len=100) :: header
@@ -129,6 +129,7 @@ contains
   
   subroutine test_density
     
+    use ModHeidiBField, ONLY: initialize_b_field,find_mirror_points
     
     integer, parameter   :: nStep = 11,nRadialPoint=20
     real                 :: L(nRadialPoint)
@@ -146,7 +147,7 @@ contains
     !----------------------------------------------------------------------------------
     do iRadialPoint = 1, nRadialPoint
        
-       call initialize_b_field(L, nStep, bField_I(iRadialPoint,:), RadialDistance_I(iRadialPoint,:),&
+       call initialize_b_field(L(iRadialPoint), nStep, bField_I(iRadialPoint,:), RadialDistance_I(iRadialPoint,:),&
             Length_I(iRadialPoint,:), dLength_I)
        
        PitchAngle_I(1) = Pi/10.
