@@ -48,7 +48,7 @@ module CON_couple_ie_im
 contains
 
   !BOP =======================================================================
-  !IROUTINE: couple_ie_im_init - initialize IE-UA coupling
+  !IROUTINE: couple_ie_im_init - initialize IE-IM coupling
   !INTERFACE:
   subroutine couple_ie_im_init
 
@@ -57,13 +57,24 @@ contains
     ! a union group can be formed. Since both IE and IM grids are
     ! static, the router is formed here for the whole run.
     !EOP
+
+    use CON_world, ONLY: get_comp_info
+    use CON_comp_param, ONLY: lNameVersion
+
+    character(len=lNameVersion):: NameVersionIm
     !------------------------------------------------------------------------
 
     if(IsInitialized) RETURN
     IsInitialized = .true.
+
+    ! This coupler does not work for RAM, because RAM grid is not on the
+    ! ionosphere. 
+    call get_comp_info(IM_,NameVersion=NameVersionIm)
+    if(NameVersionIm(1:3) == 'RAM') RETURN
     
     call init_im_ie_couple
     call init_ie_im_couple
+
 
   end subroutine couple_ie_im_init
 
@@ -106,7 +117,7 @@ contains
   end subroutine init_ie_im_couple
 
   !BOP =======================================================================
-  !IROUTINE: init_ie_im_couple - initialize IM-IE coupling
+  !IROUTINE: init_im_ie_couple - initialize IM-IE coupling
   !INTERFACE:
   subroutine init_im_ie_couple
 
@@ -305,9 +316,9 @@ contains
     
     !For structured but non-uniform IM grid:
     call gen_to_stretched(IMr1_Xyz_D, &!in:generalized IM coords(indexes) 
-                          ColetLon_D, &!out:stretched coords (radians) 
-                          2,          &!IM_grid dimension
-                          IM_)         !IM_grid ID
+         ColetLon_D, &!out:stretched coords (radians) 
+         2,          &!IM_grid dimension
+         IM_)         !IM_grid ID
 
     !For structured but non-uniform ionosphere grid
                      
