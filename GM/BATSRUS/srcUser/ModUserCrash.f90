@@ -1107,6 +1107,11 @@ contains
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, RosselandMeanOpacitySiOut = PlotVar_G(i,j,k))
        end do; end do; end do
+    case('cond')
+       do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, HeatConductionCoefSiOut = PlotVar_G(i,j,k))
+       end do; end do; end do
     case('usersphere')
        ! Test function for LOS images: sphere with "density" 
        !    100 - r^2 inside r=10, and 0 outside.
@@ -1295,7 +1300,7 @@ contains
 
     logical :: IsMix
     integer :: iMaterial, iMaterial_I(1)
-    real    :: pSi, RhoSi, TeSi, LevelSum
+    real    :: pSi, RhoSi, TeSi, LevelSum, HeatCondSi
     real    :: Value_V(3*nMaterial), Opacity_V(2*nMaterial)
     real, dimension(0:nMaterial-1) :: &
          pPerE_I, EperP_I, RhoToARatioSi_I, Weight_I
@@ -1366,11 +1371,11 @@ contains
           if(IsMix)then
              call eos(RhoToARatioSi_I, eTotalIn=EinternalSiIn, &
                   pTotalOut=pSi, TeOut=TeSi, &
-                  CvTotalOut=CvSiOut, GammaOut=GammaOut) 
+                  CvTotalOut=CvSiOut, GammaOut=GammaOut, HeatCond=HeatCondSi) 
           else
              call eos(iMaterial, Rho=RhoSi, eTotalIn=EinternalSiIn, &
                   pTotalOut=pSi, TeOut=TeSi, &
-                  CvTotalOut=CvSiOut, GammaOut=GammaOut)
+                  CvTotalOut=CvSiOut, GammaOut=GammaOut, HeatCond=HeatCondSi)
           end if
        end if
     elseif(present(TeSiIn))then
@@ -1379,11 +1384,11 @@ contains
        if( IsMix ) then
           call eos(RhoToARatioSi_I, TeIn=TeSiIn, &
                eTotalOut=EinternalSiOut, pTotalOut=pSi, &
-               CvTotalOut=CvSiOut, GammaOut=GammaOut) 
+               CvTotalOut=CvSiOut, GammaOut=GammaOut, HeatCond=HeatCondSi) 
        else
           call eos(iMaterial, Rho=RhoSi, TeIn=TeSiIn, &
                eTotalOut=EinternalSiOut, pTotalOut=pSi, &
-               CvTotalOut=CvSiOut, GammaOut=GammaOut)
+               CvTotalOut=CvSiOut, GammaOut=GammaOut, HeatCond=HeatCondSi)
        end if
     else
        ! Pressure is simply part of State_V
@@ -1399,11 +1404,11 @@ contains
              if(IsMix)then
                 call eos(RhoToARatioSi_I, pTotalIn=pSi, &
                      EtotalOut=EinternalSiOut, TeOut=TeSi, &
-                     CvTotalOut=CvSiOut, GammaOut=GammaOut) 
+                     CvTotalOut=CvSiOut, GammaOut=GammaOut,HeatCond=HeatCondSi)
              else
                 call eos(iMaterial,RhoSi,pTotalIn=pSi, &
                      EtotalOut=EinternalSiOut, TeOut=TeSi, &
-                     CvTotalOut=CvSiOut, GammaOut=GammaOut)
+                     CvTotalOut=CvSiOut, GammaOut=GammaOut,HeatCond=HeatCondSi)
              end if
           end if
        end if
@@ -1435,11 +1440,11 @@ contains
           if(IsMix) then
              call eos(RhoToARatioSi_I, pTotalIn=pSi, &
                   TeOut=TeSi, eTotalOut = EinternalSiOut, &
-                  CvTotalOut=CvSiOut, GammaOut=GammaOut)
+                  CvTotalOut=CvSiOut, GammaOut=GammaOut, HeatCond=HeatCondSi)
           else
              call eos(iMaterial, RhoSi, pTotalIn=pSi, &
                   TeOut=TeSi, eTotalOut = EinternalSiOut, &
-                  CvTotalOut=CvSiOut, GammaOut=GammaOut)
+                  CvTotalOut=CvSiOut, GammaOut=GammaOut, HeatCond=HeatCondSi)
           end if
        end if
     end if
@@ -1471,7 +1476,7 @@ contains
        end if
     end if
 
-    if(present(HeatConductionCoefSiOut)) HeatConductionCoefSiOut = 0.0
+    if(present(HeatConductionCoefSiOut)) HeatConductionCoefSiOut = HeatCondSi
 
   end subroutine user_material_properties
 
