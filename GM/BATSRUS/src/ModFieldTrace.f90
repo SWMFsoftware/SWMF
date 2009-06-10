@@ -1597,25 +1597,17 @@ end subroutine integrate_ray_accurate
 
 !============================================================================
 
-subroutine equatorial_ray(iFile)
+subroutine plot_ray_equator(iFile)
 
-  use ModMain, ONLY: x_, y_, z_, n_step, time_accurate
+  use ModMain, ONLY: n_step, time_accurate, Time_Simulation, TypeCoordSystem
   use ModIo,   ONLY: StringDateOrTime, NamePlotDir, plot_range
-  use CON_ray_trace, ONLY: ray_init
-  use CON_axes, ONLY: transform_matrix
-  use ModRaytrace, ONLY: oktest_ray, R_raytrace, R2_raytrace, RayLengthMax, &
-       DoIntegrateRay, DoExtractRay, DoTraceRay, &
-       DoExtractState, DoExtractUnitSi, &
-       NameVectorField, Bxyz_DGB, nRay_D, CpuTimeStartRay, GmSm_DD
-  use ModMain,    ONLY: nBlock, Time_Simulation, TypeCoordSystem, UseB0
-  use ModPhysics, ONLY: rBody
-  use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_, B0_DGB
-  use ModProcMH,  ONLY: iProc, iComm
-  use ModMpi
-  use ModNumConst,       ONLY: cDegToRad, cTwoPi
-  use ModGeometry,       ONLY: x1, x2, y1, y2, z1, z2
+  use ModAdvance, ONLY: nVar, Ux_, Uz_, Bx_, Bz_
+  use ModProcMH,  ONLY: iProc
+  use ModNumConst,       ONLY: cTwoPi
   use ModIoUnit,         ONLY: UnitTmp_
-  use CON_line_extract,  ONLY: line_init, line_collect, line_get, line_clean
+  use CON_line_extract,  ONLY: line_get, line_clean
+  use CON_axes,          ONLY: transform_matrix
+
   implicit none
 
   !INPUT ARGUMENTS:
@@ -1632,17 +1624,15 @@ subroutine equatorial_ray(iFile)
   integer :: nRadius, nLon
   real    :: rMin, rMax
   integer :: iR, iLon
-  integer :: iProcFound, iBlockFound, i, j, k
   integer :: iPoint, nPoint, nVarOut
-  real    :: r, Phi, XyzSm_D(3), Xyz_D(3)
-  real, allocatable :: PlotVar_VI(:,:)
+  real, allocatable :: Radius_I(:), Longitude_I(:), PlotVar_VI(:,:)
+  real    :: SmGm_DD(3,3)
+  real    :: PlotVar_V(0:4+nVar)
+
   character(len=100) :: NameFile
 
-  integer :: nStateVar
-
-  integer :: iError
   logical :: DoTest, DoTestMe
-  character(len=*), parameter :: NameSub = 'equatorial_ray'
+  character(len=*), parameter :: NameSub = 'plot_ray_equator'
   !-------------------------------------------------------------------------
 
   call set_oktest(NameSub, DoTest, DoTestMe)
@@ -1653,10 +1643,111 @@ subroutine equatorial_ray(iFile)
   rMin    = plot_range(3, iFile)
   rMax    = plot_range(4, iFile)
 
+  allocate(Radius_I(nRadius), Longitude_I(nLon))
+  do iR = 1, nRadius
+     Radius_I(iR) = rMin + (iR-1)*(rMax - rMin)/(nRadius - 1)
+  end do
+  do iLon = 1, nLon
+     Longitude_I(iLon) = ((iLon - 1)*cTwoPi) / nLon
+  end do
+
+  call trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, .false.)
+
+  deallocate(Radius_I, Longitude_I)
+
+  if(iProc==0)then
+     ! Transformation matrix between the SM and GM coordinates
+     SmGm_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
+
+     ! Set the file name
+
+     call line_get(nVarOut, nPoint)
+     if(nVarOut /= 4+nVar)call stop_mpi(NameSub//': nVarOut error')
+     allocate(PlotVar_VI(0:nVarOut, nPoint))
+     call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
+
+     NameFile = trim(NamePlotDir)//"eqr"
+     if(time_accurate) NameFile = trim(NameFile)// "_t"//StringDateOrTime
+     write(NameFile,'(a,i7.7,a)') trim(NameFile) // '_n',n_step, '.out'
+
+     open(UnitTmp_, FILE=NameFile, STATUS="replace")
+     write(UnitTmp_, *) 'nRadius, nLon, nPoint=',nRadius, nLon, nPoint
+     write(UnitTmp_, *) 'iLine l x y z rho ux uy uz bx by bz p'
+
+     do iPoint = 1, nPoint
+        ! Convert vectors to SM coordinates
+        PlotVar_V = PlotVar_VI(:, iPoint)
+        PlotVar_V(2:4) = matmul(SmGm_DD,PlotVar_V(2:4))
+        PlotVar_V(4+Ux_:4+Uz_) = matmul(SmGm_DD,PlotVar_V(4+Ux_:4+Uz_))
+        PlotVar_V(4+Bx_:4+Bz_) = matmul(SmGm_DD,PlotVar_V(4+Bx_:4+Bz_))
+        ! Save into file
+        write(UnitTmp_, *) PlotVar_V
+     end do
+     close(UnitTmp_)
+     deallocate(PlotVar_VI)
+  end if
+
+  call line_clean
+
+end subroutine plot_ray_equator
+
+!============================================================================
+
+subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
+     DoMessagePass)
+
+  use ModMain, ONLY: x_, y_, z_
+  use CON_ray_trace, ONLY: ray_init
+  use CON_axes, ONLY: transform_matrix
+  use ModRaytrace, ONLY: oktest_ray, R_raytrace, R2_raytrace, RayLengthMax, &
+       DoIntegrateRay, DoExtractRay, DoTraceRay, &
+       DoExtractState, DoExtractUnitSi, &
+       NameVectorField, Bxyz_DGB, nRay_D, CpuTimeStartRay, GmSm_DD
+  use ModMain,    ONLY: nBlock, Time_Simulation, TypeCoordSystem, UseB0
+  use ModPhysics, ONLY: rBody
+  use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_, B0_DGB
+  use ModProcMH,  ONLY: iProc, iComm
+  use ModMpi
+  use ModGeometry,       ONLY: x1, x2, y1, y2, z1, z2
+  use CON_line_extract,  ONLY: line_init, line_collect
+  use ModMessagePass,    ONLY: message_pass_dir
+  implicit none
+
+  !INPUT ARGUMENTS:
+  integer, intent(in):: nRadius, nLon
+  real,    intent(in):: Radius_I(nRadius), Longitude_I(nLon)
+  logical, intent(in):: DoMessagePass
+
+  !DESCRIPTION:
+  ! Follow field lines starting from a 2D polar grid on the 
+  ! magnetic equatorial plane in the SM(G) coordinate system.
+  ! The grid parameters are given by the arguments.
+  ! The subroutine extracts coordinates and state variables
+  ! along the field lines going in both directions 
+  ! starting from the 2D equatorial grid.
+  ! Fill in ghost cells if DoMessagePass is true.
+
+  integer :: iR, iLon
+  integer :: iProcFound, iBlockFound, i, j, k
+  real    :: r, Phi, XyzSm_D(3), Xyz_D(3)
+
+  integer :: nStateVar
+
+  logical :: DoTest, DoTestMe
+  character(len=*), parameter :: NameSub = 'trace_ray_equator'
+  !-------------------------------------------------------------------------
+
+  call set_oktest(NameSub, DoTest, DoTestMe)
+
+  ! Extract grid info from plot_range (see MH_set_parameters for plot_type eqr)
   if(DoTest)write(*,*)NameSub,' starting on iProc=',iProc,&
        ' with nRadius, nLon=', nRadius, nLon
 
   call timing_start(NameSub)
+
+  ! Fill in all ghost cells
+  if(DoMessagePass)  call message_pass_dir(iDirMin=1, iDirMax=3, Width=2, &
+       SendCorners=.true., ProlongOrder=2, nVar=nVar, Sol_VGB=State_VGB)
 
   oktest_ray = .false.
 
@@ -1669,7 +1760,7 @@ subroutine equatorial_ray(iFile)
   DoExtractRay   = .true.
   DoTraceRay     = .false.
 
-  nRay_D  = (/ nRadius, nLon, 2, 0 /)
+  nRay_D  = (/ 2, nRadius, nLon, 0 /)
   DoExtractState = .true.
   DoExtractUnitSi= .true.
   nStateVar = 4 + nVar
@@ -1695,12 +1786,13 @@ subroutine equatorial_ray(iFile)
   CpuTimeStartRay = MPI_WTIME()
   do iR = 1, nRadius
 
-     r = rMin + (iR-1)*(rMax - rMin)/(nRadius - 1)
+     r = Radius_I(iR)
+
+     if(r < rBody) CYCLE
 
      do iLon = 1, nLon
 
-        ! Go from zero (noon) anti-clockwise around
-        Phi = ((iLon - 1)*cTwoPi) / nLon
+        Phi = Longitude_I(iLon)
 
         ! Convert polar coordinates to Cartesian coordinates in SM
         XyzSm_D(x_) = r*cos(Phi)
@@ -1717,8 +1809,8 @@ subroutine equatorial_ray(iFile)
         ! If location is on this PE, follow and integrate ray
         if(iProc == iProcFound)then
 
-           call follow_ray(1, (/iR, iLon, 1, iBlockFound/), Xyz_D)
-           call follow_ray(2, (/iR, iLon, 2, iBlockFound/), Xyz_D)
+           call follow_ray(1, (/1, iR, iLon, iBlockFound/), Xyz_D)
+           call follow_ray(2, (/2, iR, iLon, iBlockFound/), Xyz_D)
 
         end if
      end do
@@ -1729,35 +1821,11 @@ subroutine equatorial_ray(iFile)
 
   if(DoExtractRay) call line_collect(iComm,0)
 
-  if(iProc==0)then
-     ! Set the file name
-
-     call line_get(nVarOut, nPoint)
-     if(nVarOut /= nStateVar)call stop_mpi(NameSub//': nVarOut error')
-     allocate(PlotVar_VI(0:nVarOut, nPoint))
-     call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
-
-     NameFile = trim(NamePlotDir)//"eqr"
-     if(time_accurate) NameFile = trim(NameFile)// "_t"//StringDateOrTime
-     write(NameFile,'(a,i7.7,a)') trim(NameFile) // '_n',n_step, '.out'
-
-     open(UnitTmp_, FILE=NameFile, STATUS="replace")
-     write(UnitTmp_, *) 'nRadius, nLon, nPoint=',nRadius, nLon, nPoint
-     write(UnitTmp_, *) 'iLine l x y z rho ux uy uz bx by bz p'
-     do iPoint = 1, nPoint
-        write(UnitTmp_, *) PlotVar_VI(:, iPoint)
-     end do
-     close(UnitTmp_)
-     deallocate(PlotVar_VI)
-  end if
-
-  call line_clean
-
-!!!  call exchange_messages
+  if(DoMessagePass)call exchange_messages
 
   call timing_stop(NameSub)
 
-end subroutine equatorial_ray
+end subroutine trace_ray_equator
 
 !============================================================================
 
@@ -2183,12 +2251,12 @@ subroutine write_plot_line(iFile)
 
 end subroutine write_plot_line
 
-!-------------------------------------------------------------!
+!============================================================================
 
 subroutine xyz_to_ijk(XyzIn_D,IjkOut_D,iBlock,XyzRef_D,GenRef_D,dGen_D)
   use ModNumConst,  ONLY: cPi, cHalfPi, cTwoPi
   use ModCovariant, ONLY: TypeGeometry
-  use ModMain,      ONLY: R_,Phi_,Theta_,x_,y_,z_, nJ
+  use ModMain,      ONLY: Phi_,Theta_,x_,y_,z_, nJ
   implicit none
 
   integer          ,intent(in)  :: iBlock
@@ -2205,7 +2273,8 @@ subroutine xyz_to_ijk(XyzIn_D,IjkOut_D,iBlock,XyzRef_D,GenRef_D,dGen_D)
 
      ! Did I cross the pole?
      if( (XyzIn_D(x_)*XyzRef_D(x_) + XyzIn_D(y_)*XyzRef_D(y_)) < 0.)then
-        Gen_D(Phi_)=Gen_D(Phi_) + GenRef_D(Phi_) - modulo((cPi+GenRef_D(Phi_)),cTwoPi)
+        Gen_D(Phi_)=Gen_D(Phi_) + GenRef_D(Phi_) &
+             - modulo((cPi+GenRef_D(Phi_)),cTwoPi)
         if(XyzIn_D(z_)>0.)then
            Gen_D(Theta_)=Gen_D(Theta_)+2.*(+cHalfPi-Gen_D(Theta_))
         else

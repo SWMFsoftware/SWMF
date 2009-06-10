@@ -813,7 +813,7 @@ contains
 
        if(index(plot_type(iFile),'eqr')>0) then
           IsFound = .true.
-          call equatorial_ray(iFile)
+          call plot_ray_equator(iFile)
        end if
 
        !^CFG END RAYTRACE
