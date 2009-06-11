@@ -2,27 +2,25 @@
 !^CMP FILE IM
 
 !==========================================================================
-subroutine GM_get_for_im_trace(nRadius, nLon, NameVar, nVarLine, nPointLine)
+subroutine GM_get_for_im_trace(nRadius, nLon, nVarLine, nPointLine, NameVar)
 
   ! Do ray tracing for IM/RAM_SCB. 
   ! Provide total number of points along rays 
   ! and the number of variables to pass to IM
 
+  use ModVarIndexes, ONLY: NamePrimitiveVar
   use CON_line_extract, ONLY: line_get
   use CON_coupler, ONLY: Grid_C, IM_
 
   implicit none
   integer, intent(in)           :: nRadius, nLon
-  character (len=*), intent(in) :: NameVar
+  character (len=*), intent(out):: NameVar
   integer, intent(out)          :: nVarLine, nPointLine
 
   real, allocatable, save :: RadiusIm_I(:), LongitudeIm_I(:)
 
   character(len=*), parameter :: NameSub='GM_get_for_im_trace'
   !---------------------------------------------------------------------
-
-  if(NameVar /= 'l:x:y:z:rho:ux:uy:uz:bx:by:bz:p') &
-       call CON_stop(NameSub//' invalid NameVar='//NameVar)
 
   if(.not.allocated(RadiusIm_I))then
      if(   nRadius /= Grid_C(IM_) % nCoord_D(1) .or. &
@@ -40,24 +38,26 @@ subroutine GM_get_for_im_trace(nRadius, nLon, NameVar, nVarLine, nPointLine)
 
   call line_get(nVarLine, nPointLine)
 
-  ! We only pass index, length, 3 coordinates and 8 MHD variables
-  nVarLine = 13 
+  NameVar = 'iLine Length x y z '//NamePrimitiveVar
+
+  ! The +1 is the line index that is also passed to IM
+  nVarLine = nVarLine + 1
 
 end subroutine GM_get_for_im_trace
 
 !==========================================================================
 
-subroutine GM_get_for_im_line(BufferLine_VI, nVarLine, nPointLine, NameVar)
+subroutine GM_get_for_im_line(BufferLine_VI, nVarLine, nPointLine)
 
   !call stop_mpi('RAYTRACE is OFF') !^CFG UNCOMMENT IF NOT RAYTRACE
   !^CFG IF RAYTRACE BEGIN
 
   use ModProcMH,  ONLY: iProc
-
+  use ModMain, ONLY: Time_Simulation, TypeCoordSystem
   use ModPhysics, ONLY: rBody
   use ModVarIndexes, ONLY: Rho_, Ux_, Uz_, Bx_, Bz_, p_
-
   use CON_line_extract, ONLY: line_get, line_clean
+  use CON_axes,         ONLY: transform_matrix
 
   implicit none
 
@@ -65,22 +65,16 @@ subroutine GM_get_for_im_line(BufferLine_VI, nVarLine, nPointLine, NameVar)
 
   integer, intent(in) :: nPointLine, nVarLine
   real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
-  character (len=*), intent(in):: NameVar
 
   integer :: nVarExtract, nPoint, iPoint, iLine
   real, allocatable :: Buffer_VI(:,:)
 
+  real    :: SmGm_DD(3,3)
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
 
-  if(NameVar /= 'l:x:y:z:rho:ux:uy:uz:bx:by:bz:p') &
-       call CON_stop(NameSub//' invalid NameVar='//NameVar)
-
-  if(iProc /= 0)then
-     ! Clean and return
-     call line_clean
-     RETURN
-  end if
+  ! This routine should be called from processor 0 only
+  if(iProc /= 0) RETURN
 
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -92,25 +86,34 @@ subroutine GM_get_for_im_line(BufferLine_VI, nVarLine, nPointLine, NameVar)
      write(*,*)NameSub, ' nVarExtract, nVarLine=',nVarExtract, nVarLine
      call stop_mpi(NameSub//': nVarLine error')
   end if
-  allocate(Buffer_VI(0:nVarExtract, nPoint))
+  ! The +1 is for the line index
+  allocate(Buffer_VI(nVarExtract+1, nPoint))
   call line_get(nVarExtract, nPoint, Buffer_VI, DoSort=.true.)
 
+
+  ! Transformation matrix between the SM and GM coordinates
+  SmGm_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
   do iPoint = 1, nPoint
 
-     iLine = Buffer_VI(0,iPoint)     ! line index
+     iLine = Buffer_VI(1,iPoint)     ! line index
 
      ! exclude open field lines by setting impossible line index
      ! open field lines end somewhere far from the inner boundary at rBody
-     if(maxval(abs(Buffer_VI(2:4,iPoint))) > 1.5*rBody) iLine = -1
+     !!!if(maxval(abs(Buffer_VI(2:4,iPoint))) > 1.5*rBody) iLine = -1
 
+     ! Copy ray trace data into BufferLine. Convert vectors to SM system.
      BufferLine_VI(1,iPoint)    = iLine
-     BufferLine_VI(2:5,iPoint)  = Buffer_VI(1:4        ,iPoint) ! Length,X,Y,Z
-     BufferLine_VI(6,iPoint)    = Buffer_VI(Rho_+4     ,iPoint) ! density
-     BufferLine_VI(7:9,iPoint)  = Buffer_VI(Ux_+4:Uz_+4,iPoint) ! velocity
-     BufferLine_VI(10:12,iPoint)= Buffer_VI(Bx_+4:Bz_+4,iPoint) ! magnetic field
-     BufferLine_VI(13,iPoint)   = Buffer_VI(p_         ,iPoint) ! pressure
+     BufferLine_VI(2,iPoint)    = Buffer_VI(2          ,iPoint)  ! Length
+     BufferLine_VI(3:5,iPoint)  = &
+          matmul(SmGm_DD,         Buffer_VI(3:5        ,iPoint)) ! X,Y,Z
+     BufferLine_VI(6,iPoint)    = Buffer_VI(Rho_+5     ,iPoint)  ! density
+     BufferLine_VI(7:9,iPoint)  = &
+          matmul(SmGm_DD,         Buffer_VI(Ux_+5:Uz_+5,iPoint)) ! velocity
+     BufferLine_VI(10:12,iPoint)= &
+          matmul(SmGm_DD,         Buffer_VI(Bx_+5:Bz_+5,iPoint)) ! mag field
+     BufferLine_VI(13,iPoint)   = Buffer_VI(p_+5       ,iPoint)  ! pressure
   end do
-  
+
   deallocate(Buffer_VI)
   call line_clean
 

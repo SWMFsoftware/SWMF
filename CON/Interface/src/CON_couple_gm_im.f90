@@ -33,7 +33,8 @@ module CON_couple_gm_im
   !EOP
 
   ! Communicator and logicals to simplify message passing and execution
-  integer, save :: iCommGmIm
+  integer, save :: iProc0Im, iProc0Gm, iCommWorld
+
   logical :: IsInitialized = .false., UseMe=.true.
 
   ! Size of the 2D spherical structured (possibly non-uniform) IM grid
@@ -65,6 +66,11 @@ contains
     UseMe = is_proc(IM_) .or. is_proc(GM_)
     if(.not.UseMe) RETURN
 
+    ! Store these for root-to-root communication
+    iProc0Im   = i_proc0(IM_)
+    iProc0Gm   = i_proc0(GM_)
+    iCommWorld = i_comm()
+
     ! This works for a regular IM grid only
     nCells_D = ncells_decomposition_d(IM_)
     iSize = nCells_D(1); jSize = nCells_D(2)
@@ -72,13 +78,13 @@ contains
     ! Set number of satellites shared between GM and IM for tracing.
     call GM_satinit_for_im(nShareSats)
 
-    if(i_proc0(IM_) /= i_proc0(GM_))then
+    if(iProc0Im /= iProc0Gm)then
        if(is_proc0(GM_)) &
-            call MPI_send(nShareSats,1,MPI_INTEGER,i_proc0(IM_),&
-            1,i_comm(),iError)
+            call MPI_send(nShareSats,1,MPI_INTEGER,iProc0Im,&
+            1,iCommWorld,iError)
        if(is_proc0(IM_)) &
-            call MPI_recv(nShareSats,1,MPI_INTEGER,i_proc0(GM_),&
-            1,i_comm(),iStatus_I,iError)
+            call MPI_recv(nShareSats,1,MPI_INTEGER,iProc0Gm,&
+            1,iCommWorld,iStatus_I,iError)
     end if
 
   end subroutine couple_gm_im_init
@@ -151,9 +157,6 @@ contains
       ! Buffer for satellite names
       character (len=100), dimension(:), allocatable:: NameSat_I
 
-      ! MPI related variables
-      integer :: iProc0Im, iComm
-
       ! MPI status variable
       integer :: iStatus_I(MPI_STATUS_SIZE)
 
@@ -169,8 +172,8 @@ contains
       if(.not.UseMe) RETURN
 
       if(DoTest)write(*,*)NameSubSub,' starting, iProc=',iProcWorld
-      if(DoTest)write(*,*)NameSubSub,', iProc, GMi_iProc0, i_proc0(IM_)=', &
-           iProcWorld,i_proc0(GM_),i_proc0(IM_)
+      if(DoTest)write(*,*)NameSubSub,', iProc, GMi_iProc0, iProc0Im=', &
+           iProcWorld,iProc0Gm,iProc0Im
 
       !\
       ! Allocate buffers both in GM and IM
@@ -188,10 +191,6 @@ contains
       if(DoTest)write(*,*)NameSubSub,', variables allocated',&
            ', iProc:',iProcWorld
 
-
-      iProc0Im = i_proc0(IM_)
-      iComm = i_comm()
-
       !\
       ! Get field line integrals from GM
       !/
@@ -208,15 +207,15 @@ contains
       !\
       ! Transfer physical variables from GM to IM
       !/
-      if(i_proc0(IM_) /= i_proc0(GM_))then
+      if(iProc0Im /= iProc0Gm)then
          nSize = iSize*jSize*nVarGmIm
          if(is_proc0(GM_)) then 
-            call MPI_send(Buffer_IIV,nSize,MPI_REAL,i_proc0(IM_),&
-                 1,i_comm(),iError)
+            call MPI_send(Buffer_IIV,nSize,MPI_REAL,iProc0Im,&
+                 1,iCommWorld,iError)
          endif
          if(is_proc0(IM_)) then
-            call MPI_recv(Buffer_IIV,nSize,MPI_REAL,i_proc0(GM_),&
-                 1,i_comm(),iStatus_I,iError)
+            call MPI_recv(Buffer_IIV,nSize,MPI_REAL,iProc0Gm,&
+                 1,iCommWorld,iStatus_I,iError)
          endif
       end if
 
@@ -224,15 +223,15 @@ contains
       ! Transfer satellite names from GM to IM
       !/   
 
-      if(nShareSats > 0 .and. i_proc0(IM_) /= i_proc0(GM_))then
+      if(nShareSats > 0 .and. iProc0Im /= iProc0Gm)then
          nSize = nShareSats*100
          if(is_proc0(GM_)) then
             call MPI_send(NameSat_I,nSize,MPI_BYTE,iProc0Im,&
-                 1,iComm,iError)
+                 1,iCommWorld,iError)
          endif
          if(is_proc0(IM_)) then
-            call MPI_recv(NameSat_I,nSize,MPI_BYTE,i_proc0(GM_),&
-                 1,iComm,iStatus_I,iError)
+            call MPI_recv(NameSat_I,nSize,MPI_BYTE,iProc0Gm,&
+                 1,iCommWorld,iStatus_I,iError)
          endif
 
          ! Transfer satellite locations from GM to IM
@@ -240,11 +239,11 @@ contains
          nSize = 3*2*nShareSats
          if(is_proc0(GM_)) then
             call MPI_send(SatPos_DII,nSize,MPI_REAL,iProc0Im,&
-                 1,iComm,iError)
+                 1,iCommWorld,iError)
          endif
          if(is_proc0(IM_)) then
-            call MPI_recv(SatPos_DII,nSize,MPI_REAL,i_proc0(GM_),&
-                 1,iComm,iStatus_I,iError)
+            call MPI_recv(SatPos_DII,nSize,MPI_REAL,iProc0Gm,&
+                 1,iCommWorld,iStatus_I,iError)
          endif
       end if
 
@@ -290,10 +289,7 @@ contains
 
       ! Buffer for the line data
       real, allocatable :: BufferLine_VI(:,:)
-
-      ! MPI related variables
-      integer :: iProc0Im, iProc0Gm, iComm
-
+ 
       ! MPI status variable
       integer :: iStatus_I(MPI_STATUS_SIZE)
 
@@ -304,52 +300,58 @@ contains
       integer :: nSize
 
       ! List of variables
-      character (len=*), parameter :: NameVar='l:x:y:z:rho:ux:uy:uz:bx:by:bz:p'
+      integer, parameter :: lNameVar=100
+      character (len=lNameVar) :: NameVar
       !------------------------------------------------------------------------
 
       ! After everything is initialized exclude PEs which are not involved
       if(.not.UseMe) RETURN
 
       if(DoTest)write(*,*)NameSubSub,' starting, iProc=',iProcWorld
-      if(DoTest)write(*,*)NameSubSub,', iProc, GMi_iProc0, i_proc0(IM_)=', &
-           iProcWorld,i_proc0(GM_),i_proc0(IM_)
+      if(DoTest)write(*,*)NameSubSub,', iProc, GMi_iProc0, iProc0Im=', &
+           iProcWorld,iProc0Gm,iProc0Im
 
       !\
       ! Get field line info from GM
       !/
       if(is_proc(GM_)) then
-         call GM_get_for_im_trace(iSize, jSize, NameVar, nVarLine, nPointLine)
-         allocate(BufferLine_VI(nVarLine, nPointLine))
-         call GM_get_for_im_line(BufferLine_VI, nVarLine, nPointLine, NameVar)
+         call GM_get_for_im_trace(iSize, jSize, nVarLine, nPointLine, NameVar)
+         if(is_proc0(GM_))then
+            allocate(BufferLine_VI(nVarLine, nPointLine))
+            call GM_get_for_im_line(BufferLine_VI, nVarLine, nPointLine)
+         end if
       end if
-
-      iProc0Im = i_proc0(IM_)
-      iProc0Gm = i_proc0(GM_)
 
       !\
       ! Transfer variables from GM to IM
       !/
-      if(i_proc0(IM_) /= i_proc0(GM_))then
+      if(iProc0Im /= iProc0Gm)then
 
          if(is_proc0(GM_)) then
+            call MPI_send(NameVar,100,MPI_CHARACTER,iProc0Im,&
+                 1,iCommWorld,iError)
             call MPI_send(nVarLine,1,MPI_INTEGER,iProc0Im,&
-                 1,i_comm(),iError)
+                 2,iCommWorld,iError)
             call MPI_send(nPointLine,1,MPI_INTEGER,iProc0Im,&
-                 1,i_comm(),iError)
-            call MPI_send(BufferLine_VI,nVarLine*nPointLine,MPI_REAL,&
-                 iProc0Im,2,i_comm(),iError)
+                 3,iCommWorld,iError)
+            call MPI_send(BufferLine_VI,nVarLine*nPointLine,MPI_REAL,iProc0Im,&
+                 4,iCommWorld,iError)
          end if
          if(is_proc0(IM_))then
-            !setup BufferLine in IM when not sharing proc with GM
-            call MPI_recv(nVarLine,1,MPI_INTEGER,i_proc0(GM_),&
-                 1,i_comm(),iStatus_I,iError)
-            call MPI_recv(nPointLine,1,MPI_INTEGER,i_proc0(GM_),&
-                 1,i_comm(),iStatus_I,iError)
+            ! setup BufferLine in IM when not sharing proc with GM
+            call MPI_recv(NameVar,100,MPI_CHARACTER,iProc0Gm,&
+                 1,iCommWorld,iStatus_I,iError)
+            call MPI_recv(nVarLine,1,MPI_INTEGER,iProc0Gm,&
+                 2,iCommWorld,iStatus_I,iError)
+            call MPI_recv(nPointLine,1,MPI_INTEGER,iProc0Gm,&
+                 3,iCommWorld,iStatus_I,iError)
+
+            ! Allocate buffer on the IM root processor
             allocate(BufferLine_VI(nVarLine, nPointLine))
 
-            !recieve variables from GM
-            call MPI_recv(BufferLine_VI,nVarLine*nPointLine,MPI_REAL,&
-                 i_proc0(GM_),2,i_comm(),iStatus_I,iError)
+            ! recieve variables from GM
+            call MPI_recv(BufferLine_VI,nVarLine*nPointLine,MPI_REAL,iProc0Gm,&
+                 4,iCommWorld,iStatus_I,iError)
          end if
       end if
 
@@ -358,16 +360,14 @@ contains
       !/
       if(is_proc0(IM_))then
          call IM_put_from_gm_line( &
-              BufferLine_VI,nVarLine,nPointLine,NameVar)
+              BufferLine_VI, nVarLine, nPointLine, NameVar)
          if(DoTest) &
               write(*,*)'IM got from GM: IM iProc, Buffer(1,1)=', &
               iProcWorld,BufferLine_VI(:,1)
       end if
 
-      !\
-      ! Deallocate buffer to save memory
-      !/
-      deallocate(BufferLine_VI)
+      ! Deallocate buffer on root processors of GM and IM
+      if(allocated(BufferLine_VI)) deallocate(BufferLine_VI)
 
       if(DoTest)write(*,*)NameSubSub,', variables deallocated',&
            ', iProc:',iProcWorld
@@ -441,7 +441,6 @@ contains
       integer :: nSize
 
       ! Communicator and logicals to simplify message passing and execution
-      integer, save :: iCommGmIm
       logical :: IsUninitialized = .true., UseMe=.true.
       !-----------------------------------------------------------------------
 
@@ -450,7 +449,7 @@ contains
 
       if(DoTest)write(*,*)NameSubSub,' starting, iProc=',iProcWorld
       if(DoTest)write(*,*)NameSubSub,', iProc, GMi_iProc0, IMi_iProc0=', &
-           iProcWorld,i_proc0(GM_),i_proc0(IM_)
+           iProcWorld,iProc0Gm,iProc0Im
 
       !\
       ! Allocate buffers both in GM and IM
@@ -471,13 +470,13 @@ contains
       ! Transfer variables from IM to GM
       !/ 
       nSize = iSize*jSize*nVarImGm
-      if(i_proc0(IM_) /= i_proc0(GM_))then
+      if(iProc0Im /= iProc0Gm)then
          if(is_proc0(IM_)) &
-              call MPI_send(Buffer_IIV,nSize,MPI_REAL,i_Proc0(GM_),&
-              1,i_comm(),iError)
+              call MPI_send(Buffer_IIV,nSize,MPI_REAL,iProc0Gm,&
+              1,iCommWorld,iError)
          if(is_proc0(GM_)) &
-              call MPI_recv(Buffer_IIV,nSize,MPI_REAL,i_proc0(IM_),&
-              1,i_comm(),iStatus_I,iError)
+              call MPI_recv(Buffer_IIV,nSize,MPI_REAL,iProc0Im,&
+              1,iCommWorld,iStatus_I,iError)
       end if
 
       ! Broadcast variables inside GM

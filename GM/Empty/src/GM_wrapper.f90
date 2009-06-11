@@ -104,7 +104,7 @@ subroutine GM_get_for_im(Buffer_IIV,iSize,jSize,nVar,NameVar)
 end subroutine GM_get_for_im
 
 !==============================================================================
-subroutine GM_get_for_im_trace(nRadius, nLon, NameVar, nVarLine, nPointLine)
+subroutine GM_get_for_im_trace(nRadius, nLon, nVarLine, nPointLine, NameVar)
 
   ! Ray tracing for RAM type codes 
   ! Provides total number of points along rays
@@ -112,8 +112,8 @@ subroutine GM_get_for_im_trace(nRadius, nLon, NameVar, nVarLine, nPointLine)
 
   implicit none
   integer, intent(in)           :: nRadius, nLon
-  character (len=*), intent(in) :: NameVar
   integer, intent(out)          :: nVarLine, nPointLine
+  character (len=*), intent(in) :: NameVar
 
   character(len=*), parameter :: NameSub = 'GM_get_for_im_trace'
   !---------------------------------------------------------------------
@@ -122,13 +122,12 @@ subroutine GM_get_for_im_trace(nRadius, nLon, NameVar, nVarLine, nPointLine)
 end subroutine GM_get_for_im_trace
 !==============================================================================
 
-subroutine GM_get_for_im_line(BufferLine_VI, nVarLine, nPointLine, NameVar)
+subroutine GM_get_for_im_line(BufferLine_VI, nVarLine, nPointLine)
 
   implicit none
 
   integer, intent(in) :: nPointLine, nVarLine
   real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
-  character (len=*), intent(in):: NameVar
 
   character (len=*), parameter :: NameSub = 'GM_get_for_im_line'
   !---------------------------------------------------------------------

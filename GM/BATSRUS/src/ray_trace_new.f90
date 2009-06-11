@@ -1655,38 +1655,37 @@ subroutine plot_ray_equator(iFile)
 
   deallocate(Radius_I, Longitude_I)
 
-  if(iProc==0)then
-     ! Transformation matrix between the SM and GM coordinates
-     SmGm_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
+  if(iProc/=0) RETURN
 
-     ! Set the file name
+  ! Transformation matrix between the SM and GM coordinates
+  SmGm_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
 
-     call line_get(nVarOut, nPoint)
-     if(nVarOut /= 4+nVar)call stop_mpi(NameSub//': nVarOut error')
-     allocate(PlotVar_VI(0:nVarOut, nPoint))
-     call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
+  ! Set the file name
 
-     NameFile = trim(NamePlotDir)//"eqr"
-     if(time_accurate) NameFile = trim(NameFile)// "_t"//StringDateOrTime
-     write(NameFile,'(a,i7.7,a)') trim(NameFile) // '_n',n_step, '.out'
+  call line_get(nVarOut, nPoint)
+  if(nVarOut /= 4+nVar)call stop_mpi(NameSub//': nVarOut error')
+  allocate(PlotVar_VI(0:nVarOut, nPoint))
+  call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
 
-     open(UnitTmp_, FILE=NameFile, STATUS="replace")
-     write(UnitTmp_, *) 'nRadius, nLon, nPoint=',nRadius, nLon, nPoint
-     write(UnitTmp_, *) 'iLine l x y z rho ux uy uz bx by bz p'
+  NameFile = trim(NamePlotDir)//"eqr"
+  if(time_accurate) NameFile = trim(NameFile)// "_t"//StringDateOrTime
+  write(NameFile,'(a,i7.7,a)') trim(NameFile) // '_n',n_step, '.out'
 
-     do iPoint = 1, nPoint
-        ! Convert vectors to SM coordinates
-        PlotVar_V = PlotVar_VI(:, iPoint)
-        PlotVar_V(2:4) = matmul(SmGm_DD,PlotVar_V(2:4))
-        PlotVar_V(4+Ux_:4+Uz_) = matmul(SmGm_DD,PlotVar_V(4+Ux_:4+Uz_))
-        PlotVar_V(4+Bx_:4+Bz_) = matmul(SmGm_DD,PlotVar_V(4+Bx_:4+Bz_))
-        ! Save into file
-        write(UnitTmp_, *) PlotVar_V
-     end do
-     close(UnitTmp_)
-     deallocate(PlotVar_VI)
-  end if
+  open(UnitTmp_, FILE=NameFile, STATUS="replace")
+  write(UnitTmp_, *) 'nRadius, nLon, nPoint=',nRadius, nLon, nPoint
+  write(UnitTmp_, *) 'iLine l x y z rho ux uy uz bx by bz p'
 
+  do iPoint = 1, nPoint
+     ! Convert vectors to SM coordinates
+     PlotVar_V = PlotVar_VI(:, iPoint)
+     PlotVar_V(2:4) = matmul(SmGm_DD,PlotVar_V(2:4))
+     PlotVar_V(4+Ux_:4+Uz_) = matmul(SmGm_DD,PlotVar_V(4+Ux_:4+Uz_))
+     PlotVar_V(4+Bx_:4+Bz_) = matmul(SmGm_DD,PlotVar_V(4+Bx_:4+Bz_))
+     ! Save into file
+     write(UnitTmp_, *) PlotVar_V
+  end do
+  close(UnitTmp_)
+  deallocate(PlotVar_VI)
   call line_clean
 
 end subroutine plot_ray_equator
@@ -1709,7 +1708,7 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   use ModProcMH,  ONLY: iProc, iComm
   use ModMpi
   use ModGeometry,       ONLY: x1, x2, y1, y2, z1, z2
-  use CON_line_extract,  ONLY: line_init, line_collect
+  use CON_line_extract,  ONLY: line_init, line_collect, line_clean
   use ModMessagePass,    ONLY: message_pass_dir
   implicit none
 
@@ -1740,8 +1739,12 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   call set_oktest(NameSub, DoTest, DoTestMe)
 
   ! Extract grid info from plot_range (see MH_set_parameters for plot_type eqr)
-  if(DoTest)write(*,*)NameSub,' starting on iProc=',iProc,&
-       ' with nRadius, nLon=', nRadius, nLon
+  if(DoTest)then
+     write(*,*)NameSub,' starting on iProc=',iProc,&
+          ' with nRadius, nLon=', nRadius, nLon
+     write(*,*)NameSub,' Radius_I   =',Radius_I
+     write(*,*)NameSub,' Longitude_I=',Longitude_I
+  end if
 
   call timing_start(NameSub)
 
@@ -1788,7 +1791,7 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
 
      r = Radius_I(iR)
 
-     if(r < rBody) CYCLE
+     if(r < rBody*1.0001) CYCLE
 
      do iLon = 1, nLon
 
@@ -1819,7 +1822,11 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   ! Do remaining rays obtained from other PE-s
   call finish_ray
 
-  if(DoExtractRay) call line_collect(iComm,0)
+  ! Collect all rays onto processor 0
+  call line_collect(iComm,0)
+
+  ! Clean data except on processor 0
+  if(iProc /= 0)call line_clean
 
   if(DoMessagePass)call exchange_messages
 
