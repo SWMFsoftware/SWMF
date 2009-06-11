@@ -262,7 +262,7 @@ contains
     real, optional, intent(out) :: RosselandMeanOpacitySiOut ! [1/m]
     real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
     real, optional, intent(out) :: PressureSiOut             ! [Pa]
-    real, optional, intent(out) :: HeatConductionCoefSiOut   ! [Jm^2/(Ks)]
+    real, optional, intent(out) :: HeatConductionCoefSiOut   ! [J/(m*K*s)]
 
     real :: Rho, Pressure, Temperature
     real :: RhoSi, pSi, TemperatureSi

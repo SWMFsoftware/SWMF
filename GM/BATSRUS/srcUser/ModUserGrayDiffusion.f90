@@ -508,7 +508,7 @@ contains
     real, optional, intent(out) :: GammaOut                  ! dimensionless
     real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
     real, optional, intent(out) :: RosselandMeanOpacitySiOut ! [1/m]
-    real, optional, intent(out) :: HeatConductionCoefSiOut   ! [Jm^2/(Ks)]
+    real, optional, intent(out) :: HeatConductionCoefSiOut   ! [J/(m*K*s)]
 
     real :: Temperature, AbsorptionOpacity, DiffusionRad
 
