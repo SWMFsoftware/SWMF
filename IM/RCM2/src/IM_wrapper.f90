@@ -1,4 +1,4 @@
- Wrapper for Internal Magnetosphere (IM) component
+! Wrapper for Internal Magnetosphere (IM) component
 !=============================================================================
 subroutine IM_set_param(CompInfo, TypeAction)
 
