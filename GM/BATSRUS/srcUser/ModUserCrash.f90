@@ -1417,6 +1417,7 @@ contains
     if(present(PressureSiOut)) PressureSiOut = pSi
 
     if(present(TeSiOut) .or. present(CvSiOut) .or. present(GammaOut) .or. &
+         present(HeatConductionCoefSiOut) .or. &
          iTableOpacity>0 .and. (present(AbsorptionOpacitySiOut) &
          .or.                   present(RosselandMeanOpacitySiOut)) )then
        if(iTableCvGammaTe > 0)then
