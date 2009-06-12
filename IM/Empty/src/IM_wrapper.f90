@@ -90,18 +90,19 @@ subroutine IM_run(TimeSimulation,TimeSimulationLimit)
 
 end subroutine IM_run
 
-!==============================================================================
-
-subroutine IM_print_variables(NameSource)
+!============================================================================
+subroutine IM_put_from_ie_mpi(nTheta, nPhi, Potential_II)
 
   implicit none
-  character(len=*), parameter :: NameSub='IM_print_variables'
+  integer, intent(in):: nTheta, nPhi
+  real,    intent(in):: Potential_II(nTheta, nPhi)
 
-  character(len=*),intent(in) :: NameSource
+  character(len=*), parameter   :: NameSub='IM_put_from_ie_mpi'
 
   call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
 
-end subroutine IM_print_variables
+end subroutine IM_put_from_ie_mpi
+
 
 !==============================================================================
 
