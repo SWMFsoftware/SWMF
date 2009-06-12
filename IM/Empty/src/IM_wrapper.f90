@@ -130,11 +130,14 @@ end subroutine IM_put_from_ie_complete
 
 !==============================================================================
 
-subroutine IM_put_from_gm_line(BufferLine_VI, nVarLineIn, nPointLineIn, NameVar)
+subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
+     nVarLineIn, nPointLineIn, BufferLine_VI, NameVar)
 
   implicit none
   character (len=*),parameter :: NameSub='IM_put_from_gm_line'
 
+  integer, intent(in) :: nRadiusIn, nLonIn
+  real,    intent(in) :: Map_DSII(3,2,nRadiusIn,nLonIn)
   integer, intent(in) :: nVarLineIn, nPointLineIn
   real,    intent(in) :: BufferLine_VI(nVarLineIn,nPointLineIn)
   character(len=*), intent(in) :: NameVar

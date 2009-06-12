@@ -288,7 +288,7 @@ contains
       integer :: nVarLine, nPointLine
 
       ! Buffer for the line data
-      real, allocatable :: BufferLine_VI(:,:)
+      real, allocatable :: BufferLine_VI(:,:), Map_DSII(:,:,:,:)
  
       ! MPI status variable
       integer :: iStatus_I(MPI_STATUS_SIZE)
@@ -317,8 +317,10 @@ contains
       if(is_proc(GM_)) then
          call GM_get_for_im_trace(iSize, jSize, nVarLine, nPointLine, NameVar)
          if(is_proc0(GM_))then
-            allocate(BufferLine_VI(nVarLine, nPointLine))
-            call GM_get_for_im_line(BufferLine_VI, nVarLine, nPointLine)
+            allocate(Map_DSII(3,2,iSize,jSize), &
+                 BufferLine_VI(nVarLine, nPointLine))
+            call GM_get_for_im_line(iSize, jSize, Map_DSII, &
+                 nVarLine, nPointLine, BufferLine_VI)
          end if
       end if
 
@@ -334,8 +336,10 @@ contains
                  2,iCommWorld,iError)
             call MPI_send(nPointLine,1,MPI_INTEGER,iProc0Im,&
                  3,iCommWorld,iError)
-            call MPI_send(BufferLine_VI,nVarLine*nPointLine,MPI_REAL,iProc0Im,&
+            call MPI_send(Map_DSII,size(Map_DSII),MPI_REAL,iProc0Im,&
                  4,iCommWorld,iError)
+            call MPI_send(BufferLine_VI,size(BufferLine_VI),MPI_REAL,iProc0Im,&
+                 5,iCommWorld,iError)
          end if
          if(is_proc0(IM_))then
             ! setup BufferLine in IM when not sharing proc with GM
@@ -347,11 +351,14 @@ contains
                  3,iCommWorld,iStatus_I,iError)
 
             ! Allocate buffer on the IM root processor
-            allocate(BufferLine_VI(nVarLine, nPointLine))
+            allocate(Map_DSII(3,2,iSize,jSize), &
+                 BufferLine_VI(nVarLine, nPointLine))
 
             ! recieve variables from GM
-            call MPI_recv(BufferLine_VI,nVarLine*nPointLine,MPI_REAL,iProc0Gm,&
+            call MPI_recv(Map_DSII,size(Map_DSII),MPI_REAL,iProc0Gm,&
                  4,iCommWorld,iStatus_I,iError)
+            call MPI_recv(BufferLine_VI,size(BufferLine_VI),MPI_REAL,iProc0Gm,&
+                 5,iCommWorld,iStatus_I,iError)
          end if
       end if
 
@@ -360,7 +367,8 @@ contains
       !/
       if(is_proc0(IM_))then
          call IM_put_from_gm_line( &
-              BufferLine_VI, nVarLine, nPointLine, NameVar)
+              iSize, jSize, Map_DSII, &
+              nVarLine, nPointLine, BufferLine_VI, NameVar)
          if(DoTest) &
               write(*,*)'IM got from GM: IM iProc, Buffer(1,1)=', &
               iProcWorld,BufferLine_VI(:,1)
@@ -368,6 +376,7 @@ contains
 
       ! Deallocate buffer on root processors of GM and IM
       if(allocated(BufferLine_VI)) deallocate(BufferLine_VI)
+      if(allocated(Map_DSII)) deallocate(Map_DSII)
 
       if(DoTest)write(*,*)NameSubSub,', variables deallocated',&
            ', iProc:',iProcWorld

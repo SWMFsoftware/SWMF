@@ -122,10 +122,13 @@ subroutine GM_get_for_im_trace(nRadius, nLon, nVarLine, nPointLine, NameVar)
 end subroutine GM_get_for_im_trace
 !==============================================================================
 
-subroutine GM_get_for_im_line(BufferLine_VI, nVarLine, nPointLine)
+subroutine GM_get_for_im_line(nRadius, nLon, MapOut_DSII, &
+     nVarLine, nPointLine, BufferLine_VI)
 
   implicit none
 
+  integer, intent(in) :: nRadius, nLon
+  real,    intent(out):: MapOut_DSII(3,2,nRadius,nLon)
   integer, intent(in) :: nPointLine, nVarLine
   real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
 
