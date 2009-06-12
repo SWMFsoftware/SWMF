@@ -31,7 +31,7 @@ subroutine logfileRIM(dir)
              file=trim(dir)//"/IE.log",status="old", position="append")
      endif
 
-     write(UnitTmp_,'(i4,es13.5,i5,5i3,i4,f8.2,2es13.5)') &
+     write(UnitTmp_,'(i8,es13.5,i5,5i3,i4,f8.2,2es13.5)') &
           nSolve, CurrentTime-StartTime, TimeArray(1:7), &
           ThetaTilt*cRadToDeg, cpcpn, cpcps
      close(UnitTmp_)
