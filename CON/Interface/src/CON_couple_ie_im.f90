@@ -35,12 +35,20 @@ module CON_couple_ie_im
   ! 09/15/2003 I.Sokolov - non-uniform ionosphere is added
   !EOP
 
+  character(len=lNameVersion):: NameVersionIm
+  logical :: IsInitialized = .false.
+
+  ! Variables for coupler with coupling toolkit
   type(GridDescriptorType)::IE_Grid           ! Source
   type(GridDescriptorType)::IM_Grid           ! Target
   type(RouterType),save:: RouterIeIm, RouterImIe
-  logical :: IsInitialized = .false.
  
   logical :: DoTest, DoTestMe
+
+  ! Variables for the simple coupler
+  logical, save :: UseMe
+  integer, save :: nTheta, nPhi
+  integer, save :: iProc0Ie, iProc0Im, iCommWorld
 
   ! Name of this interface
   character (len=*), parameter :: NameMod='CON_couple_ie_im'
@@ -59,9 +67,6 @@ contains
     !EOP
 
     use CON_world, ONLY: get_comp_info
-    use CON_comp_param, ONLY: lNameVersion
-
-    character(len=lNameVersion):: NameVersionIm
     !------------------------------------------------------------------------
 
     if(IsInitialized) RETURN
@@ -70,90 +75,56 @@ contains
     ! This coupler does not work for RAM, because RAM grid is not on the
     ! ionosphere. 
     call get_comp_info(IM_,NameVersion=NameVersionIm)
-    if(NameVersionIm(1:3) == 'RAM') RETURN
-    
-    call init_im_ie_couple
-    call init_ie_im_couple
+    if(NameVersionIm(1:3) == 'RAM')then
+       ! IE-IM/RAM coupling uses MPI
+       UseMe = is_proc(IE_) .or. is_proc(IM_)
 
+       nTheta = size(Grid_C(IE_) % Coord1_I)
+       nPhi   = size(Grid_C(IE_) % Coord2_I)
+
+       iProc0Im   = i_proc0(IM_)
+       iProc0Ie   = i_proc0(IE_)
+       iCommWorld = i_comm()
+    else
+       ! IE-IM/RCM coupling uses the coupling toolkit
+       call init_coupler(                 &
+            iCompSource=IE_,              &
+            nGhostPointSource=1,          &      
+            StandardSource_=Nodes_,       & ! from IE nodes
+            iCompTarget=IM_,              &
+            nIndexTarget=2,               & ! IM grid size: iColat,iLon 
+            GridDescriptorSource=IE_Grid, &
+            GridDescriptorTarget=IM_Grid, &
+            Router=RouterIeIm)
+
+       ! It is time to leave for non-involved PEs
+       if(RouterIeIm%IsProc) call set_router( &
+            IE_Grid,                &
+            IM_Grid,                &
+            RouterIeIm,             & 
+            mapping=map_im_to_ie,   & 
+            interpolate=bilinear_interpolation) 
+    
+       call init_coupler(                 &
+            iCompSource=IM_,              &
+            nGhostPointSource=1,          &      
+            StandardSource_=Nodes_,       & ! from IM nodes
+            iCompTarget=IE_,              &
+            nIndexTarget=2,               & ! IE grid size: iColat,iLon 
+            GridDescriptorSource=IM_Grid, &
+            GridDescriptorTarget=IE_Grid, &
+            Router=RouterImIe)
+
+       ! Both grids are static, it is sufficient to set the router once
+       if(RouterImIe%IsProc) call set_router(  &
+            IM_Grid,                &
+            IE_Grid,                &
+            RouterImIe,             &
+            mapping=map_ie_to_im,   &
+            interpolate=bilinear_interpolation) 
+    end if
 
   end subroutine couple_ie_im_init
-
-  !BOP =======================================================================
-  !IROUTINE: init_ie_im_couple - initialize IE-IM coupling
-  !INTERFACE:
-  subroutine init_ie_im_couple
-
-    !DESCRIPTION:
-    ! This subroutine should be called from all PE-s so that
-    ! a union group can be formed. Since both IE and IM grids are
-    ! static, the router is formed here for the whole run.
-    !EOP
-    !------------------------------------------------------------------------
-
-    ! Initialize the coupler including communicator for this router
-    ! This must be called by ALL processors due to MPI restrictions!
-
-    call init_coupler(                 &
-         iCompSource=IE_,              &
-         nGhostPointSource=1,          &      
-         StandardSource_=Nodes_,       & ! from IE nodes
-         iCompTarget=IM_,              &
-         nIndexTarget=2,               & ! IM grid size: iColat,iLon 
-         GridDescriptorSource=IE_Grid, &
-         GridDescriptorTarget=IM_Grid, &
-         Router=RouterIeIm)
-
-    ! It is time to leave for non-involved PEs
-    if(.not.RouterIeIm%IsProc) RETURN
-    
-    ! Both grids are static, it is sufficient to set the router once
-    call set_router(&
-         IE_Grid,                     &
-         IM_Grid,                     &
-         RouterIeIm,& ! all blocks (just 1)and all cells on IM 
-         mapping=map_im_to_ie,             & ! mapping between IM and IE coords
-         interpolate=bilinear_interpolation) ! from IE nodes
-
-  end subroutine init_ie_im_couple
-
-  !BOP =======================================================================
-  !IROUTINE: init_im_ie_couple - initialize IM-IE coupling
-  !INTERFACE:
-  subroutine init_im_ie_couple
-
-    !DESCRIPTION:
-    ! This subroutine should be called from all PE-s so that
-    ! a union group can be formed. Since both IE and IM grids are
-    ! static, the router is formed here for the whole run.
-    !EOP
-    !------------------------------------------------------------------------
-
-    ! Initialize the coupler including communicator for this router
-    ! This must be called by ALL processors due to MPI restrictions!
-
-    call init_coupler(                          &
-         iCompSource=IM_,                       &
-         nGhostPointSource=1,                   &      
-         StandardSource_=Nodes_,                & ! from IM nodes
-         iCompTarget=IE_,                       &
-         nIndexTarget=2,                        & ! IE grid size: iColat,iLon 
-         GridDescriptorSource=IM_Grid,          &
-         GridDescriptorTarget=IE_Grid,          &
-         Router=RouterImIe)
-
-    ! It is time to leave for non-involved PEs
-    if(.not.RouterImIe%IsProc) RETURN
-    
-    ! Both grids are static, it is sufficient to set the router once
-    call set_router(&
-         IM_Grid,                     &
-         IE_Grid,                     &
-         RouterImIe,             & ! all blocks (just 1)and all cells on IM 
-         mapping=map_ie_to_im,             & ! mapping between IM and IE coords
-         interpolate=bilinear_interpolation) ! from IE nodes
-
-  end subroutine init_im_ie_couple
-
   !BOP =======================================================================
   !IROUTINE: couple_im_ie - couple IM to IE component
   !INTERFACE:
@@ -179,7 +150,7 @@ contains
     
     ! After everything is initialized exclude PEs which are not involved
     if(.not.RouterImIe%IsProc) RETURN
-
+    
     call couple_comp(& 
          RouterImIe, nVarImIe,&
          fill_buffer =IM_get_for_ie,&
@@ -211,25 +182,79 @@ contains
     character(len=*), parameter:: NameSub = NameMod//'::couple_ie_im'
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
-    
-    ! After everything is initialized exclude PEs which are not involved
-    if(.not.RouterIeIm%IsProc) RETURN
 
-    ! Make sure that IE provides the most recent results
-    if(is_proc(IE_)) then
-       ! Use temporary variable for the intent(inout) argument of IE_run.
-       tSimulationTmp = tSimulation
-       call IE_run(tSimulationTmp, tSimulation)
-    endif
+    if(NameVersionIm(1:3) == 'RAM')then
+       if(.not.UseMe) RETURN
+       call couple_mpi
+    else
+       ! After everything is initialized exclude PEs which are not involved
+       if(.not.RouterIeIm%IsProc) RETURN
 
-    call couple_comp(& 
-         RouterIeIm, nVarIeIm,&
-         fill_buffer =IE_get_for_im,&
-         apply_buffer=IM_put_from_ie)
+       ! Make sure that IE provides the most recent results
+       if(is_proc(IE_)) then
+          ! Use temporary variable for the intent(inout) argument of IE_run.
+          tSimulationTmp = tSimulation
+          call IE_run(tSimulationTmp, tSimulation)
+       endif
 
-    if(is_proc(IM_)) call IM_put_from_ie_complete
+       call couple_comp(& 
+            RouterIeIm, nVarIeIm,&
+            fill_buffer =IE_get_for_im,&
+            apply_buffer=IM_put_from_ie)
 
-    if(DoTest.and.is_proc0(IM_)) call IM_print_variables('IE')
+       if(is_proc(IM_)) call IM_put_from_ie_complete
+    end if
+
+  contains
+
+    !==========================================================================
+    subroutine couple_mpi
+
+      character (len=*), parameter :: NameSubSub=NameSub//'.couple_mpi'
+
+      ! Variable to pass is potential on the 2D IE grid
+      real, dimension(:,:), allocatable :: Potential_II
+
+      ! MPI status variable
+      integer :: iStatus_I(MPI_STATUS_SIZE)
+
+      ! General error code
+      integer :: iError
+      !------------------------------------------------------------------------
+
+      ! After everything is initialized exclude PEs which are not involved
+      if(.not.UseMe) RETURN
+
+      if(DoTest)write(*,*)NameSubSub,', iProc, iProc0Ie, iProc0Im=', &
+           i_Proc(), iProc0Ie, iProc0Im
+
+      ! Allocate buffers both on IM and IE root processors
+      allocate(Potential_II(nTheta,nPhi), stat=iError)
+
+      if(is_proc0(IE_))  &
+           call IE_get_for_gm(Potential_II, nTheta, nPhi, tSimulation)
+
+      ! Transfer variables from IE to IM
+      if(iProc0Ie /= iProc0Im)then
+         if(is_proc0(IE_)) &
+              call MPI_send(Potential_II,size(Potential_II),MPI_REAL,iProc0Im,&
+              1,iCommWorld,iError)
+         if(is_proc0(IM_)) &
+              call MPI_recv(Potential_II,size(Potential_II),MPI_REAL,iProc0Ie,&
+              1,iCommWorld,iStatus_I,iError)
+      end if
+
+      if(DoTest)write(*,*)NameSubSub,', variables transferred iProc:',i_proc()
+
+      ! Put variables into IM
+      if(is_proc0(IM_))call IM_put_from_ie_mpi(nTheta, nPhi, Potential_II)
+
+      ! Deallocate buffer to save memory
+      deallocate(Potential_II)
+
+      if(DoTest)write(*,*)NameSubSub,' finished, iProc=',i_proc()
+
+    end subroutine couple_mpi
 
   end subroutine couple_ie_im
 
@@ -248,7 +273,7 @@ contains
     real, intent(out)   :: IMr1_Xyz_D(IMi_nDim)
     logical,intent(out) :: IsInterfacePoint
  
-    real :: ColetLon_D(2)
+    real :: ColatLon_D(2)
     integer :: iColat, iLon
 
     character(len=*), parameter:: NameSub = NameMod//'::map_ie_to_im'
@@ -269,13 +294,13 @@ contains
     
     !For structured but non-uniform IM grid:
     call gen_to_stretched(IEr1_Xyz_D, &!in:generalized IE coords(indexes) 
-                          ColetLon_D, &!out:stretched coords (radians) 
+                          ColatLon_D, &!out:stretched coords (radians) 
                           2,          &!IE_grid dimension
                           IE_)         !IE_grid ID
 
     !For structured but non-uniform ionosphere grid
                      
-    call stretched_to_gen(ColetLon_D,&!in:stretched coords (radians)
+    call stretched_to_gen(ColatLon_D,&!in:stretched coords (radians)
                           IMr1_Xyz_D,&!out:generalized IM cords(indexes)
                           2,         &!IM_grid dimension
                           IM_)        !IM_grid ID
@@ -297,7 +322,7 @@ contains
     real, intent(out)   :: IEr1_Xyz_D(IEi_nDim)
     logical,intent(out) :: IsInterfacePoint
  
-    real :: ColetLon_D(2)
+    real :: ColatLon_D(2)
     integer :: iColat, iLon
     character(len=*), parameter:: NameSub = NameMod//'::map_im_to_ie'
     !------------------------------------------------------------------------
@@ -316,13 +341,13 @@ contains
     
     !For structured but non-uniform IM grid:
     call gen_to_stretched(IMr1_Xyz_D, &!in:generalized IM coords(indexes) 
-         ColetLon_D, &!out:stretched coords (radians) 
+         ColatLon_D, &!out:stretched coords (radians) 
          2,          &!IM_grid dimension
          IM_)         !IM_grid ID
 
     !For structured but non-uniform ionosphere grid
                      
-    call stretched_to_gen(ColetLon_D,&!in:stretched coords (radians)
+    call stretched_to_gen(ColatLon_D,&!in:stretched coords (radians)
                           IEr1_Xyz_D,&!out:generalized IE cords(indexes)
                           2,         &!IE_grid dimension
                           IE_)        !IE_grid ID
