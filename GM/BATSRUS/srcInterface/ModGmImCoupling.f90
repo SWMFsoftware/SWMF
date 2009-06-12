@@ -48,6 +48,9 @@ module ModGmImCoupling
 
   logical :: DoTestTec, DoTestIdl
 
+  ! This is for the GM-IM/RAM coupling
+  real, allocatable :: StateLine_VI(:,:)
+
 contains
 
   subroutine allocate_gm_im(iSizeIn,jSizeIn)
