@@ -134,8 +134,6 @@ contains
 
     if(DoTest)write(*,*)NameSub,': finished iProc=',iProcWorld
 
-    if(DoTest.and.is_proc0(IM_)) call IM_print_variables('GM')
-
   contains
 
     !==========================================================================
