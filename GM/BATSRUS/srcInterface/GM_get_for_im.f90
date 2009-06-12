@@ -8,16 +8,26 @@ subroutine GM_get_for_im_trace(nRadius, nLon, nVarLine, nPointLine, NameVar)
   ! Provide total number of points along rays 
   ! and the number of variables to pass to IM
 
-  use ModVarIndexes, ONLY: NamePrimitiveVar
-  use CON_line_extract, ONLY: line_get
+  use ModProcMH, ONLY: iProc
+  use ModPhysics, ONLY: rBody
+  use ModMain, ONLY: Time_Simulation, TypeCoordSystem
+  use ModVarIndexes, ONLY: NamePrimitiveVar, Rho_, Ux_, Uz_, Bx_, Bz_, p_
+  use CON_line_extract, ONLY: line_get, line_clean
   use CON_coupler, ONLY: Grid_C, IM_
+  use CON_axes,         ONLY: transform_matrix
+  use ModGmImCoupling, ONLY: StateLine_VI
+  use ModMultiFluid, ONLY: iFluid, nFluid, iUx_I, iUz_I
 
   implicit none
+
   integer, intent(in)           :: nRadius, nLon
-  character (len=*), intent(out):: NameVar
   integer, intent(out)          :: nVarLine, nPointLine
+  character (len=*), intent(out):: NameVar
 
   real, allocatable, save :: RadiusIm_I(:), LongitudeIm_I(:)
+
+  integer :: nVarExtract, iPoint, iUx5, iUz5
+  real    :: SmGm_DD(3,3)
 
   character(len=*), parameter :: NameSub='GM_get_for_im_trace'
   !---------------------------------------------------------------------
@@ -34,42 +44,61 @@ subroutine GM_get_for_im_trace(nRadius, nLon, nVarLine, nPointLine, NameVar)
      LongitudeIm_I = Grid_C(IM_) % Coord2_I
   end if
 
-  call trace_ray_equator(nRadius, nLon, RadiusIm_I, LongitudeIm_I, .true.)
-
-  call line_get(nVarLine, nPointLine)
-
+  ! The variables to be passed: line index, length along line, 
+  ! coordinatess and primitive variables. Total is 5 + nVar.
   NameVar = 'iLine Length x y z '//NamePrimitiveVar
 
-  ! The +1 is the line index that is also passed to IM
-  nVarLine = nVarLine + 1
+  ! Trace field lines starting from IM equatorial grid (do message pass)
+  call trace_ray_equator(nRadius, nLon, RadiusIm_I, LongitudeIm_I, .true.)
+
+  if(iProc /= 0) RETURN
+
+  ! Put the extracted data into BufferLine_VI
+  call line_get(nVarExtract, nPointLine)
+  ! The +1 is for the line index
+  nVarLine = nVarExtract + 1
+  allocate(StateLine_VI(nVarLine, nPointLine))
+  ! Get all the line data and clean up
+  call line_get(nVarExtract, nPointLine, StateLine_VI, DoSort=.true.)
+  call line_clean
+
+  ! Transformation matrix between the SM and GM coordinates
+  SmGm_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
+  do iPoint = 1, nPointLine
+     StateLine_VI(3:5,iPoint)  = &
+          matmul(SmGm_DD,         StateLine_VI(3:5        ,iPoint)) ! X,Y,Z
+     do iFluid = 1, nFluid
+        iUx5 = iUx_I(iFluid)+5; iUz5 = iUz_I(iFluid)+5
+        StateLine_VI(iUx5:iUz5,iPoint)  = &
+             matmul(SmGm_DD,       StateLine_VI(iUx5:iUz5,iPoint)) ! velocity
+     end do
+     StateLine_VI(Bx_+5:Bz_+5,iPoint)= &
+          matmul(SmGm_DD,         StateLine_VI(Bx_+5:Bz_+5,iPoint)) ! mag field
+  end do
 
 end subroutine GM_get_for_im_trace
 
 !==========================================================================
 
-subroutine GM_get_for_im_line(BufferLine_VI, nVarLine, nPointLine)
+subroutine GM_get_for_im_line(nRadius, nLon, MapOut_DSII, &
+     nVarLine, nPointLine, BufferLine_VI)
 
   !call stop_mpi('RAYTRACE is OFF') !^CFG UNCOMMENT IF NOT RAYTRACE
   !^CFG IF RAYTRACE BEGIN
 
   use ModProcMH,  ONLY: iProc
-  use ModMain, ONLY: Time_Simulation, TypeCoordSystem
-  use ModPhysics, ONLY: rBody
-  use ModVarIndexes, ONLY: Rho_, Ux_, Uz_, Bx_, Bz_, p_
-  use CON_line_extract, ONLY: line_get, line_clean
-  use CON_axes,         ONLY: transform_matrix
+  use ModGmImCoupling, ONLY: StateLine_VI
+  use ModRayTrace, ONLY: RayMap_DSII
 
   implicit none
 
   character (len=*), parameter :: NameSub='GM_get_for_im_line'
 
+  integer, intent(in) :: nRadius, nLon
+  real,    intent(out):: MapOut_DSII(3,2,nRadius,nLon)
   integer, intent(in) :: nPointLine, nVarLine
   real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
 
-  integer :: nVarExtract, nPoint, iPoint, iLine
-  real, allocatable :: Buffer_VI(:,:)
-
-  real    :: SmGm_DD(3,3)
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
 
@@ -78,44 +107,13 @@ subroutine GM_get_for_im_line(BufferLine_VI, nVarLine, nPointLine)
 
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-  ! Put the extracted data into BufferLine_VI
+  ! Transfer extracted rays
+  BufferLine_VI = StateLine_VI
 
-  call line_get(nVarExtract, nPoint)
-  if(nPoint /= nPointLine)call stop_mpi(NameSub//': nPointLine error')
-  if(nVarExtract+1 < nVarLine)then
-     write(*,*)NameSub, ' nVarExtract, nVarLine=',nVarExtract, nVarLine
-     call stop_mpi(NameSub//': nVarLine error')
-  end if
-  ! The +1 is for the line index
-  allocate(Buffer_VI(nVarExtract+1, nPoint))
-  call line_get(nVarExtract, nPoint, Buffer_VI, DoSort=.true.)
+  ! Transfer mapping info
+  MapOut_DSII = RayMap_DSII
 
-
-  ! Transformation matrix between the SM and GM coordinates
-  SmGm_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
-  do iPoint = 1, nPoint
-
-     iLine = Buffer_VI(1,iPoint)     ! line index
-
-     ! exclude open field lines by setting impossible line index
-     ! open field lines end somewhere far from the inner boundary at rBody
-     !!!if(maxval(abs(Buffer_VI(2:4,iPoint))) > 1.5*rBody) iLine = -1
-
-     ! Copy ray trace data into BufferLine. Convert vectors to SM system.
-     BufferLine_VI(1,iPoint)    = iLine
-     BufferLine_VI(2,iPoint)    = Buffer_VI(2          ,iPoint)  ! Length
-     BufferLine_VI(3:5,iPoint)  = &
-          matmul(SmGm_DD,         Buffer_VI(3:5        ,iPoint)) ! X,Y,Z
-     BufferLine_VI(6,iPoint)    = Buffer_VI(Rho_+5     ,iPoint)  ! density
-     BufferLine_VI(7:9,iPoint)  = &
-          matmul(SmGm_DD,         Buffer_VI(Ux_+5:Uz_+5,iPoint)) ! velocity
-     BufferLine_VI(10:12,iPoint)= &
-          matmul(SmGm_DD,         Buffer_VI(Bx_+5:Bz_+5,iPoint)) ! mag field
-     BufferLine_VI(13,iPoint)   = Buffer_VI(p_+5       ,iPoint)  ! pressure
-  end do
-
-  deallocate(Buffer_VI)
-  call line_clean
+  deallocate(RayMap_DSII, StateLine_VI)
 
   !^CFG END RAYTRACE
 end subroutine GM_get_for_im_line
