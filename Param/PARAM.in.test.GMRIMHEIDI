@@ -341,6 +341,7 @@ F 			UseWaves
 
 #BFIELD
 analytic		TypeBField
+uniform                 TypeBFieldGrid
 
 #SAVERESTART
 T			DoSaveRestart
