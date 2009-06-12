@@ -916,7 +916,7 @@ contains
     logical, intent(in) :: IsLinear
 
     logical :: IsFound
-    integer :: i,j,k, iDiff
+    integer :: i,j,k, iDiff, iVar
     real :: Coef
     character(len=20), parameter :: TypeUserBc = 'usersemi'
     character(len=20), parameter :: TypeUserBcLinear = 'usersemilinear'
@@ -925,8 +925,20 @@ contains
 
     if(NeiLev(1,iBlock) == NOBLK)then
        if(TypeBc_I(1) == 'outflow' .or. TypeBc_I(1) == 'float')then
-          call set_gray_outflow_bc(1, iBlock, iEradImpl, nw, &
-               StateSemi_VGB(:,:,:,:,iBlock))
+          do iDiff = 1, nDiff
+             iVar = iDiff_I(iDiff)
+             if(iVar==iEradImpl)then
+                call set_gray_outflow_bc(1, iBlock, iEradImpl, nw, &
+                     StateSemi_VGB(:,:,:,:,iBlock))
+             else
+                if(IsLinear)then
+                   StateSemi_VGB(iVar,0,:,:,iBlock) = 0.0
+                else
+                   StateSemi_VGB(iVar,0,:,:,iBlock) = &
+                        StateSemi_VGB(iVar,1,:,:,iBlock)
+                end if
+             end if
+          end do
        elseif(TypeBc_I(1) == 'user')then
           if(IsLinear)then
              StateSemi_VGB(:,0,:,:,iBlock) = 0.0
@@ -945,8 +957,20 @@ contains
     end if
     if(NeiLev(2,iBlock) == NOBLK)then
        if(TypeBc_I(2) == 'outflow' .or. TypeBc_I(2) == 'float')then
-          call set_gray_outflow_bc(2, iBlock, iEradImpl, nw, &
-               StateSemi_VGB(:,:,:,:,iBlock))
+          do iDiff = 1, nDiff
+             iVar = iDiff_I(iDiff)
+             if(iVar==iEradImpl)then
+                call set_gray_outflow_bc(2, iBlock, iEradImpl, nw, &
+                     StateSemi_VGB(:,:,:,:,iBlock))
+             else
+                if(IsLinear)then
+                   StateSemi_VGB(iVar,nI+1,:,:,iBlock) = 0.0
+                else
+                   StateSemi_VGB(iVar,nI+1,:,:,iBlock) = &
+                        StateSemi_VGB(iVar,nI,:,:,iBlock)
+                end if
+             end if
+          end do
        elseif(TypeBc_I(2) == 'user')then
           if(IsLinear)then
              StateSemi_VGB(:,nI+1,:,:,iBlock) = 0.0
@@ -965,8 +989,20 @@ contains
     end if
     if(NeiLev(3,iBlock) == NOBLK)then
        if(TypeBc_I(3) == 'outflow' .or. TypeBc_I(3) == 'float')then
-          call set_gray_outflow_bc(3, iBlock, iEradImpl, nw, &
-               StateSemi_VGB(:,:,:,:,iBlock))
+          do iDiff = 1, nDiff
+             iVar = iDiff_I(iDiff)
+             if(iVar==iEradImpl)then
+                call set_gray_outflow_bc(3, iBlock, iEradImpl, nw, &
+                     StateSemi_VGB(:,:,:,:,iBlock))
+             else
+                if(IsLinear)then
+                   StateSemi_VGB(iVar,:,0,:,iBlock) = 0.0
+                else
+                   StateSemi_VGB(iVar,:,0,:,iBlock) = &
+                        StateSemi_VGB(iVar,:,1,:,iBlock)
+                end if
+             end if
+          end do
        elseif(TypeBc_I(3) == 'user')then
           if(IsLinear)then
              StateSemi_VGB(:,:,0,:,iBlock) =  0.0
@@ -987,8 +1023,20 @@ contains
     end if
     if(NeiLev(4,iBlock) == NOBLK) then
        if(TypeBc_I(4) == 'outflow' .or. TypeBc_I(4) == 'float')then
-          call set_gray_outflow_bc(4, iBlock, iEradImpl, nw, &
-               StateSemi_VGB(:,:,:,:,iBlock))
+          do iDiff = 1, nDiff
+             iVar = iDiff_I(iDiff)
+             if(iVar==iEradImpl)then
+                call set_gray_outflow_bc(4, iBlock, iEradImpl, nw, &
+                     StateSemi_VGB(:,:,:,:,iBlock))
+             else
+                if(IsLinear)then
+                   StateSemi_VGB(iVar,:,nJ+1,:,iBlock) = 0.0
+                else
+                   StateSemi_VGB(iVar,:,nJ+1,:,iBlock) = &
+                        StateSemi_VGB(iVar,:,nJ,:,iBlock)
+                end if
+             end if
+          end do
        elseif(TypeBc_I(4) == 'user')then
           if(IsLinear)then
              StateSemi_VGB(:,:,nJ+1,:,iBlock) = 0.0
@@ -1009,8 +1057,20 @@ contains
     end if
     if(NeiLev(5,iBlock) == NOBLK) then
        if(TypeBc_I(5) == 'outflow' .or. TypeBc_I(5) == 'float')then
-          call set_gray_outflow_bc(5, iBlock, iEradImpl, nw, &
-               StateSemi_VGB(:,:,:,:,iBlock))
+          do iDiff = 1, nDiff
+             iVar = iDiff_I(iDiff)
+             if(iVar==iEradImpl)then
+                call set_gray_outflow_bc(5, iBlock, iEradImpl, nw, &
+                     StateSemi_VGB(:,:,:,:,iBlock))
+             else
+                if(IsLinear)then
+                   StateSemi_VGB(iVar,:,:,0,iBlock) = 0.0
+                else
+                   StateSemi_VGB(iVar,:,:,0,iBlock) = &
+                        StateSemi_VGB(iVar,:,:,1,iBlock)
+                end if
+             end if
+          end do
        elseif(TypeBc_I(5) == 'user')then
           if(IsLinear)then
              StateSemi_VGB(:,:,:,0,iBlock) = 0.0
@@ -1029,8 +1089,20 @@ contains
     end if
     if(NeiLev(6,iBlock) == NOBLK)then 
        if(TypeBc_I(6) == 'outflow' .or. TypeBc_I(6) == 'float')then
-          call set_gray_outflow_bc(6, iBlock, iEradImpl, nw, &
-               StateSemi_VGB(:,:,:,:,iBlock))
+          do iDiff = 1, nDiff
+             iVar = iDiff_I(iDiff)
+             if(iVar==iEradImpl)then
+                call set_gray_outflow_bc(6, iBlock, iEradImpl, nw, &
+                     StateSemi_VGB(:,:,:,:,iBlock))
+             else
+                if(IsLinear)then
+                   StateSemi_VGB(iVar,:,:,nK+1,iBlock) = 0.0
+                else
+                   StateSemi_VGB(iVar,:,:,nK+1,iBlock) = &
+                        StateSemi_VGB(iVar,:,:,nK,iBlock)
+                end if
+             end if
+          end do
        elseif(TypeBc_I(6) == 'user')then
           if(IsLinear)then
              StateSemi_VGB(:,:,:,nK+1,iBlock) = 0.0
