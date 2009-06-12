@@ -913,7 +913,7 @@ subroutine IE_save_logfile
   else
     open(unit=iUnit,file=NameFile,status="old",position="append")
   end if
-  write(iUnit,fmt="(i4,es13.5,i5,5i3,i4,f8.2,2es13.5)") &
+  write(iUnit,fmt="(i8,es13.5,i5,5i3,i4,f8.2,2es13.5)") &
        nSolve, Time_Simulation, Time_Array(1:7), &
        ThetaTilt*cRadToDeg, cpcp_north, cpcp_south
   close(iUnit)
