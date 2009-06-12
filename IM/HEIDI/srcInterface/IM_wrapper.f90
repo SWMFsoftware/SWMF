@@ -127,67 +127,6 @@ subroutine IM_set_grid
 
 end subroutine IM_set_grid
 !==============================================================================
-subroutine IM_print_variables(NameSource)
-
-  implicit none
-
-  character(len=*),intent(in) :: NameSource
-
-
-  select case(NameSource)
-  case('IE')
-     write(*,*) 'im_print_variables called from IE'
-  case('GM')
-     write(*,*) 'im_print_variables called from GM'
-  case default
-     write(*,*) 'im_print_variables: incorrect NameSource=',NameSource
-     RETURN
-  end select
-
-  write(*,*) "this routine doesn't do anything!"
-
-end subroutine IM_print_variables
-
-!!!  integer            :: nFile=0
-!!!  character(len=100) :: NameFile
-!!!  character(len=100) :: NameVar
-!!!  integer            :: i,j
-!!!  real               :: Lat,Lon
-!!!  !--------------------------------------------------------------------------
-!!!  select case(NameSource)
-!!!  case('IE')
-!!!     NameVar='j i lon lat jr pot sigmaH sigmaP'
-!!!  case('GM')
-!!!     NameVar='j i lon lat density pressure vm xmin ymin bmin temperature'
-!!!  case default
-!!!     write(*,*)NameSub,': incorrect NameSource=',NameSource
-!!!     RETURN
-!!!  end select
-!!!
-!!!  nFile=nFile+1
-!!!  write(NameFile,'(a,i1,a)')'IM_from_'//NameSource//'_',nFile,'.dat'
-!!!  open(UNITTMP_,file=NameFile)
-!!!  write(UNITTMP_,'(a)')trim(NameVar)
-!!!
-!!!  do i=1,iSize
-!!!     do j=1,jSize
-!!!        Lon = (        aloct(i,j))*(180./cPi)
-!!!        Lat = (cHalfPi-colat(i,j))*(180./cPi)
-!!!        select case(NameSource)
-!!!        case('IE')
-!!!           write(UNITTMP_,'(2i4,6G14.6)')j,i,Lon,Lat,v(i,j),birk_mhd(i,j),&
-!!!                sigmaH_mhd(i,j),sigmaP_mhd(i,j)
-!!!        case('GM')
-!!!           write(UNITTMP_,'(2i4,9G14.6)')j,i,Lon,Lat,density(i,j),pressure(i,j),&
-!!!                vm(i,j),xmin(i,j),ymin(i,j),bmin(i,j),temperature(i,j)
-!!!        end select
-!!!     end do
-!!!  end do
-!!!  close(UNITTMP_)
-!!!
-!!!end subroutine IM_print_variables
-
-!==============================================================================
 subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
 
   ! Provide current for IE
@@ -241,6 +180,18 @@ subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
   end do
 
 end subroutine IM_get_for_ie
+
+!============================================================================
+subroutine IM_put_from_ie_mpi(nTheta, nPhi, Potential_II)
+
+  use ModPlotFile, ONLY: save_plot_file
+  implicit none
+  integer, intent(in):: nTheta, nPhi
+  real,    intent(in):: Potential_II(nTheta, nPhi)
+
+  !call save_plot_file(...)
+
+end subroutine IM_put_from_ie_mpi
 
 !==============================================================================
 subroutine IM_put_from_ie(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
