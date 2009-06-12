@@ -40,6 +40,7 @@ subroutine ray_trace_accurate
   end if
 
   DoTraceRay     = .true.
+  DoMapRay       = .false.
   DoIntegrateRay = .false.
   DoExtractRay   = .false.
   nRay_D         = (/ nI, nJ, nK, nBlock /)
@@ -168,20 +169,25 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
   ! arrays defined in ModRayTrace or into files based on the logicals 
   ! in ModRaytrace (more than one of these can be true):
   !
-  ! If DoTraceRay, follow the ray, and save the final position into
+  ! If DoTraceRay, follow the ray from cell centers of the 3D AMR grid, 
+  !    and save the final position into
   !    ModRayTrace::ray(:,iRayIn,i_D(1),i_D(2),i_D(3),i_D(4)) on the 
   !    processor that started the ray trace.
   !
-  ! If DoIntegrateRay, do integration along the ray and
+  ! If DoMapRay, map the rays down to the ionosphere, save spherical
+  !    coordinates (in SMG) into
+  !    ModRayTrace::RayMap_DSII(4,i_D(1),i_D(2),i_D(3))
+  !
+  ! If DoIntegrateRay, do integration along the rays and
   !    save the integrals into ModRayTrace::RayIntegral_VII(i_D(1),i_D(2))
   !
-  ! If DoExtractRay, extract data along the ray, collect and sort it
+  ! If DoExtractRay, extract data along the rays, collect and sort it
   !    In this case the rays are indexed with i_D(1).
   !
   !EOP
 
   use ModRayTrace
-  use CON_ray_trace
+  use CON_ray_trace, ONLY: ray_exchange, ray_get, ray_put
 
   use ModMain,     ONLY: iTest, jTest, kTest, BlkTest, ProcTest
   use ModGeometry, ONLY: XyzStart_BLK, Dx_BLK
@@ -231,7 +237,6 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
   character(len=*), parameter :: NameSub='follow_ray'
 
   logical :: DoTest = .false., DoTestMe = .false.
-
   !-----------------------------------------------------------------------
 
   ! call set_oktest(NameSub, DoTest, DoTestMe)
@@ -440,6 +445,16 @@ contains
 
        ! Store integrals and the final position
        if(DoIntegrateRay)call store_integral(.true.)
+
+       if(DoMapRay)then
+          if(.not.allocated(RayMapLocal_DSII))then
+             if(allocated(RayMap_DSII)) deallocate(RayMap_DSII)
+             allocate(RayMap_DSII(3,nRay_D(1),nRay_D(2),nRay_D(3)))
+             allocate(RayMapLocal_DSII(3,nRay_D(1),nRay_D(2),nRay_D(3)))
+             RayMapLocal_DSII = 0.0
+          end if
+          RayMapLocal_DSII(:,iStart_D(1),iStart_D(2),iStart_D(3)) = XyzRay_D
+       end if
 
        ! Nothing more to do if not tracing
        if(.not.DoTraceRay) EXIT BLOCK
@@ -1469,6 +1484,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   DoIntegrateRay = index(NameVar, 'InvB') > 0 .or. index(NameVar, 'Z0') > 0
   DoExtractRay   = index(NameVar, '_I') > 0
   DoTraceRay     = .false.
+  DoMapRay       = .false.
 
   if(DoTestMe)write(*,*)NameSub,' DoIntegrateRay,DoExtractRay,DoTraceRay=',&
        DoIntegrateRay,DoExtractRay,DoTraceRay
@@ -1605,6 +1621,8 @@ subroutine plot_ray_equator(iFile)
   use ModProcMH,  ONLY: iProc
   use ModNumConst,       ONLY: cTwoPi
   use ModIoUnit,         ONLY: UnitTmp_
+  use ModPlotFile,       ONLY: save_plot_file
+  use ModRayTrace,       ONLY: RayMap_DSII
   use CON_line_extract,  ONLY: line_get, line_clean
   use CON_axes,          ONLY: transform_matrix
 
@@ -1629,7 +1647,7 @@ subroutine plot_ray_equator(iFile)
   real    :: SmGm_DD(3,3)
   real    :: PlotVar_V(0:4+nVar)
 
-  character(len=100) :: NameFile
+  character(len=100) :: NameFile, NameFileEnd
 
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'plot_ray_equator'
@@ -1648,7 +1666,7 @@ subroutine plot_ray_equator(iFile)
      Radius_I(iR) = rMin + (iR-1)*(rMax - rMin)/(nRadius - 1)
   end do
   do iLon = 1, nLon
-     Longitude_I(iLon) = ((iLon - 1)*cTwoPi) / nLon
+     Longitude_I(iLon) = (iLon-1)*cTwoPi / (nLon - 1)
   end do
 
   call trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, .false.)
@@ -1656,6 +1674,9 @@ subroutine plot_ray_equator(iFile)
   deallocate(Radius_I, Longitude_I)
 
   if(iProc/=0) RETURN
+
+  if(time_accurate) NameFileEnd = "_t"//StringDateOrTime
+  write(NameFileEnd,'(a,i7.7,a)') trim(NameFileEnd) // '_n',n_step, '.out'
 
   ! Transformation matrix between the SM and GM coordinates
   SmGm_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
@@ -1667,9 +1688,7 @@ subroutine plot_ray_equator(iFile)
   allocate(PlotVar_VI(0:nVarOut, nPoint))
   call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
 
-  NameFile = trim(NamePlotDir)//"eqr"
-  if(time_accurate) NameFile = trim(NameFile)// "_t"//StringDateOrTime
-  write(NameFile,'(a,i7.7,a)') trim(NameFile) // '_n',n_step, '.out'
+  NameFile = trim(NamePlotDir)//"eqr"//NameFileEnd
 
   open(UnitTmp_, FILE=NameFile, STATUS="replace")
   write(UnitTmp_, *) 'nRadius, nLon, nPoint=',nRadius, nLon, nPoint
@@ -1688,6 +1707,31 @@ subroutine plot_ray_equator(iFile)
   deallocate(PlotVar_VI)
   call line_clean
 
+  ! Now save the mapping files
+  NameFile = trim(NamePlotDir)//"map_north_"//NameFileEnd
+  call save_plot_file( &
+       NameFile, &
+       StringHeaderIn = 'Mapping to northern ionosphere', &
+       TimeIn       = time_simulation, &
+       nStepIn      = n_step, &
+       NameVarIn    = 'r Lon rIono ThetaIono PhiIono', &
+       CoordMinIn_D = (/rMin,   0.0/), &
+       CoordMaxIn_D = (/rMax, 360.0/), &
+       VarIn_VII  = RayMap_DSII(:,1,:,:))
+
+  NameFile = trim(NamePlotDir)//"map_south_"//NameFileEnd
+  call save_plot_file( &
+       NameFile, &
+       StringHeaderIn = 'Mapping to southern ionosphere', &
+       TimeIn       = time_simulation, &
+       nStepIn      = n_step, &
+       NameVarIn    = 'r Lon rIono ThetaIono PhiIono', &
+       CoordMinIn_D = (/rMin,   0.0/), &
+       CoordMaxIn_D = (/rMax, 360.0/), &
+       VarIn_VII  = RayMap_DSII(:,2,:,:))
+
+  deallocate(RayMap_DSII)
+
 end subroutine plot_ray_equator
 
 !============================================================================
@@ -1699,9 +1743,9 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   use CON_ray_trace, ONLY: ray_init
   use CON_axes, ONLY: transform_matrix
   use ModRaytrace, ONLY: oktest_ray, R_raytrace, R2_raytrace, RayLengthMax, &
-       DoIntegrateRay, DoExtractRay, DoTraceRay, &
-       DoExtractState, DoExtractUnitSi, &
-       NameVectorField, Bxyz_DGB, nRay_D, CpuTimeStartRay, GmSm_DD
+       DoIntegrateRay, DoExtractRay, DoTraceRay, DoMapRay, &
+       DoExtractState, DoExtractUnitSi, RayMap_DSII, RayMapLocal_DSII, &
+       NameVectorField, Bxyz_DGB, nRay_D, CpuTimeStartRay, GmSm_DD, CLOSEDRAY
   use ModMain,    ONLY: nBlock, Time_Simulation, TypeCoordSystem, UseB0
   use ModPhysics, ONLY: rBody
   use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_, B0_DGB
@@ -1710,6 +1754,8 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   use ModGeometry,       ONLY: x1, x2, y1, y2, z1, z2
   use CON_line_extract,  ONLY: line_init, line_collect, line_clean
   use ModMessagePass,    ONLY: message_pass_dir
+  use ModCoordTransform, ONLY: xyz_to_sph
+
   implicit none
 
   !INPUT ARGUMENTS:
@@ -1726,8 +1772,8 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   ! starting from the 2D equatorial grid.
   ! Fill in ghost cells if DoMessagePass is true.
 
-  integer :: iR, iLon
-  integer :: iProcFound, iBlockFound, i, j, k
+  integer :: iR, iLon, iSide
+  integer :: iProcFound, iBlockFound, i, j, k, iError
   real    :: r, Phi, XyzSm_D(3), Xyz_D(3)
 
   integer :: nStateVar
@@ -1762,6 +1808,7 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   DoIntegrateRay = .false.
   DoExtractRay   = .true.
   DoTraceRay     = .false.
+  DoMapRay       = .true.
 
   nRay_D  = (/ 2, nRadius, nLon, 0 /)
   DoExtractState = .true.
@@ -1827,6 +1874,22 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
 
   ! Clean data except on processor 0
   if(iProc /= 0)call line_clean
+
+  ! Collect the ray mapping info to processor 0
+  call MPI_reduce(RayMapLocal_DSII, RayMap_DSII, size(RayMap_DSII), MPI_REAL, &
+       MPI_SUM, 0, iComm, iError)
+  deallocate(RayMapLocal_DSII)
+
+  if(iProc == 0)then
+     do iLon = 1, nLon; do iR = 1, nRadius; do iSide = 1, 2
+        if(RayMap_DSII(1,iSide,iR,iLon) < CLOSEDRAY) CYCLE
+        Xyz_D   = RayMap_DSII(:,iSide,iR,iLon)
+        XyzSm_D = matmul(Xyz_D,GmSm_DD)
+        call xyz_to_sph(XyzSm_D, RayMap_DSII(:,iSide,iR,iLon))
+     end do; end do; end do
+  else
+     deallocate(RayMap_DSII)
+  end if
 
   if(DoMessagePass)call exchange_messages
 
@@ -1923,8 +1986,8 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
   ! The results are stored by CON_line_extract.
 
   use ModProcMH,   ONLY: iProc, iComm
-  use ModRayTrace, ONLY: &
-       CpuTimeStartRay, oktest_ray, DoTraceRay, DoIntegrateRay, DoExtractRay, &
+  use ModRayTrace, ONLY: DoTraceRay, DoMapRay, DoIntegrateRay, DoExtractRay, &
+       CpuTimeStartRay, oktest_ray, &
        nRay_D, NameVectorField, R_Raytrace, R2_Raytrace, RayLengthMax, Bxyz_DGB
   use CON_ray_trace, ONLY: ray_init
   use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, B0_DGB
@@ -1958,6 +2021,7 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
   RayLengthMax = 2*sum(XyzMax_D - XyzMin_D)
 
   DoTraceRay     = .false.
+  DoMapRay       = .false.
   DoIntegrateRay = .false.
   DoExtractRay   = .true.
   nRay_D = (/ nLine, 0, 0, 0 /)
