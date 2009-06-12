@@ -18,9 +18,10 @@ module ModRaytrace
   logical :: UseAccurateIntegral = .true.
 
   ! Possible tasks
-  logical :: DoTraceRay     = .true.
-  logical :: DoExtractRay   = .false.
-  logical :: DoIntegrateRay = .false.
+  logical :: DoTraceRay     = .true.  ! trace rays from all cell centers
+  logical :: DoMapRay       = .false. ! map rays down to the ionosphere
+  logical :: DoExtractRay   = .false. ! extract info along the rays into arrays
+  logical :: DoIntegrateRay = .false. ! integrate some functions along the rays
 
   ! Use old IJK based logic for Cartesian tracing
   logical :: UseOldMethodOfRayTrace = .true.
@@ -102,6 +103,9 @@ module ModRaytrace
 
   ! Logical for raytracing in IE coupling
   logical :: DoTraceIE = .false.
+
+  ! ----------- Variables for mapping rays to the ionosphere ------------
+  real, allocatable:: RayMapLocal_DSII(:,:,:,:), RayMap_DSII(:,:,:,:)
 
   ! ----------- Variables for extracting variables along the ray --------
   logical :: DoExtractState = .false., DoExtractUnitSi = .false.
