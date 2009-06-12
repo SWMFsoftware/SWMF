@@ -105,7 +105,7 @@ module ModFaceFlux
   real :: EradFlux_D(3)
 
   ! Variables for heat conduction
-  real :: HeatFlux_D(3)
+  real :: HeatFlux_D(3), DiffCoef, HeatCondCoefNormal
 
   ! These are variables for pure MHD solvers (Roe and HLLD)
   ! Number of MHD fluxes including the pressure and energy fluxes
@@ -803,7 +803,7 @@ contains
        NormalX = Normal_D(x_); NormalY = Normal_D(y_); NormalZ = Normal_D(z_)
        AreaX = Area*NormalX; AreaY = Area*NormalY; AreaZ = Area*NormalZ
 
-       if(HallCoeff > 0.0 .or. Eta > 0.0) &
+       if(HallCoeff > 0.0 .or. Eta > 0.0 .or. UseParallelConduction) &
             InvDxyz = 1.0/sqrt(  &
             ( x_BLK(iRight,jRight,kRight, iBlockFace)          &
             - x_BLK(iLeft, jLeft  ,kLeft, iBlockFace))**2 +    &
@@ -812,6 +812,9 @@ contains
             ( z_BLK(iRight,jRight,kRight, iBlockFace)          &
             - z_BLK(iLeft, jLeft  ,kLeft, iBlockFace))**2 )
     end if
+
+    ! Initialize diffusion coefficient for time step restriction
+    DiffCoef = 0.0
 
     if(UseClimit)then
        r = 0.5*(r_BLK(iLeft,  jLeft,  kLeft,  iBlockFace) &
@@ -1013,6 +1016,9 @@ contains
 
     ! Increase maximum speed with resistive diffusion speed if necessary
     if(Eta > 0.0) CmaxDt = CmaxDt + 2*Eta*InvDxyz !^CFG IF DISSFLUX
+
+    ! Increase maximum speed with heat conduction speed if necessary
+    if(UseParallelConduction) CmaxDt = CmaxDt + 2.0*DiffCoef*InvDxyz
 
     ! Further limit timestep due to the hyperbolic cleaning equation
     if(UseHyperbolicDivb) CmaxDt = max(SpeedHyp, CmaxDt)
@@ -1777,7 +1783,8 @@ contains
 
     if(UseParallelConduction)then
        call get_heat_flux(iDimFace, iFace, jFace, kFace, iBlockFace, &
-            State_V, HeatFlux_D)
+            State_V, Normal_D, HeatCondCoefNormal, HeatFlux_D)
+       DiffCoef = DiffCoef + 0.5*HeatCondCoefNormal
        Flux_V(Energy_) = Flux_V(Energy_) + sum(HeatFlux_D*Normal_D)
     end if
 

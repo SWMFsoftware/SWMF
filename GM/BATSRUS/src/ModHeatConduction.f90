@@ -2,9 +2,6 @@
 !==============================================================================
 module ModHeatConduction
 
-  ! Current heat conduction implementation does not have a time step
-  ! restriction for explicit update
-
   implicit none
   save
 
@@ -102,20 +99,22 @@ contains
 
   !============================================================================
 
-  subroutine get_heat_flux(iDir, i, j, k, iBlock, State_V, HeatFlux_D)
+  subroutine get_heat_flux(iDir, i, j, k, iBlock, State_V, Normal_D, &
+       HeatCondCoefNormal, HeatFlux_D)
 
     use ModAdvance,      ONLY: State_VGB
     use ModB0,           ONLY: B0_DX, B0_DY, B0_DZ
     use ModFaceGradient, ONLY: calc_face_gradient
     use ModMain,         ONLY: UseB0
     use ModNumConst,     ONLY: cTolerance
+    use ModPhysics,      ONLY: inv_gm1
     use ModVarIndexes,   ONLY: nVar, Bx_, Bz_, Rho_, p_
 
     integer, intent(in) :: iDir, i, j, k, iBlock
-    real,    intent(in) :: State_V(nVar)
-    real,    intent(out):: HeatFlux_D(3)
+    real,    intent(in) :: State_V(nVar), Normal_D(3)
+    real,    intent(out):: HeatCondCoefNormal, HeatFlux_D(3)
 
-    real :: B_D(3), Bunit_D(3), Bnorm
+    real :: B_D(3), Bunit_D(3), Bnorm, Cv
     real :: FaceGrad_D(3), HeatCoef, Temperature, FractionSpitzer
 
     character(len=*), parameter :: NameSub = 'get_heat_flux'
@@ -165,6 +164,11 @@ contains
     end if
 
     HeatFlux_D = -HeatCoef*Bunit_D*dot_product(Bunit_D,FaceGrad_D)
+
+    ! get the heat conduction coefficient normal to the face for
+    ! time step restriction
+    Cv = State_V(Rho_)*inv_gm1
+    HeatCondCoefNormal = HeatCoef*dot_product(Bunit_D,Normal_D)**2/Cv
 
   end subroutine get_heat_flux
 
