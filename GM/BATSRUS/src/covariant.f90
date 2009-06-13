@@ -145,6 +145,12 @@ subroutine xyz_to_gen(XyzIn_D,GenOut_D)
      GenOut_D(Theta_)=cHalfPi-GenOut_D(Theta_)
      if(TypeGeometry=='spherical_lnr')&
           GenOut_D(R_)=log(max(GenOut_D(R_),cTiny))
+
+  case('cylindrical')
+     GenOut_D(R_)   = sqrt(sum(XyzIn_D(x_:y_)**2))
+     GenOut_D(Phi_) = modulo(atan2(XyzIn_D(y_), XyzIn_D(x_)), cTwoPi)
+     GenOut_D(z_)   = XyzIn_D(z_)
+
   case('axial_torus')
      if(all(XyzIn_D(x_:y_)==cZero))&
           call stop_mpi(&
