@@ -10,7 +10,7 @@ module ModFaceGradient
   private ! except
 
   ! Public methods
-  public :: set_block_scalar
+  public :: set_block_field
   public :: calc_face_gradient
 
   ! Jacobian matrix for covariant grid: Dcovariant/Dcartesian
@@ -20,16 +20,16 @@ contains
 
   !============================================================================
 
-  subroutine set_block_scalar(Scalar_G, iBlock)
+  subroutine set_block_field(iBlock, nVar, Field1_VG, Field_VG)
 
-    ! correct the ghostcells of the given scalar field on iBlock
+    ! correct the ghostcells of the given scalar/vector field on iBlock
 
     use ModParallel, ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot, BlkNeighborLev, NOBLK
-    use ModSize,     ONLY: nI, nJ, nK
 
-    integer, intent(in) :: iBlock
-    real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2), intent(inout) :: Scalar_G
+    integer, intent(in) :: iBlock, nVar
+    real, intent(inout) :: Field1_VG(nVar,0:nI+1,0:nJ+1,0:nK+1)
+    real, intent(inout) :: Field_VG(nVar,-1:nI+2,-1:nJ+2,-1:nK+2)
 
     real, parameter :: c0 = 0.5, p0 = 1./6., F1 = 1./3.
 
@@ -37,11 +37,10 @@ contains
     integer :: iL, iR, jL, jR, kL, kR
     integer :: ip, jp, kp
 
-    real    :: Scalar1_G(0:nI+1,0:nJ+1,0:nK+1) ! temporary array
     logical :: IsEqualLevel_G(0:nI+1,0:nJ+1,0:nK+1)
     !--------------------------------------------------------------------------
 
-    Scalar1_G = Scalar_G(0:nI+1,0:nJ+1,0:nK+1)
+    Field1_VG = Field_VG(:,0:nI+1,0:nJ+1,0:nK+1)
 
     do kSide = -1,1; do jSide = -1,1; do iSide = -1,1
        if(iSide==0)then
@@ -78,11 +77,11 @@ contains
           jp = 3*j2 - 2*j1 -1
           kp = 3*k2 - 2*k1 -1
           if(IsEqualLevel_G(0,jp,kp))then
-             Scalar_G(0,j2,k2) = c0*Scalar1_G(0,j2,k2) &
-                  + 0.25*Scalar1_G(0,jp,kp) + 0.25*Scalar_G(1,j2,k2)
+             Field_VG(:,0,j2,k2) = c0*Field1_VG(:,0,j2,k2) &
+                  + 0.25*Field1_VG(:,0,jp,kp) + 0.25*Field_VG(:,1,j2,k2)
           else
-             Scalar_G(0,j2,k2) = c0*Scalar1_G(0,j2,k2) &
-                  + p0*Scalar1_G(0,jp,kp) + F1*Scalar_G(1,j2,k2)
+             Field_VG(:,0,j2,k2) = c0*Field1_VG(:,0,j2,k2) &
+                  + p0*Field1_VG(:,0,jp,kp) + F1*Field_VG(:,1,j2,k2)
           end if
        end do; end do; end do; end do
     end if
@@ -92,11 +91,11 @@ contains
           jp = 3*j2 - 2*j1 -1
           kp = 3*k2 - 2*k1 -1
           if(IsEqualLevel_G(nI+1,jp,kp))then
-             Scalar_G(nI+1,j2,k2) = c0*Scalar1_G(nI+1,j2,k2) &
-                  + 0.25*Scalar1_G(nI+1,jp,kp) + 0.25*Scalar_G(nI,j2,k2)
+             Field_VG(:,nI+1,j2,k2) = c0*Field1_VG(:,nI+1,j2,k2) &
+                  + 0.25*Field1_VG(:,nI+1,jp,kp) + 0.25*Field_VG(:,nI,j2,k2)
           else
-             Scalar_G(nI+1,j2,k2) = c0*Scalar1_G(nI+1,j2,k2) &
-                  + p0*Scalar1_G(nI+1,jp,kp) + F1*Scalar_G(nI,j2,k2)
+             Field_VG(:,nI+1,j2,k2) = c0*Field1_VG(:,nI+1,j2,k2) &
+                  + p0*Field1_VG(:,nI+1,jp,kp) + F1*Field_VG(:,nI,j2,k2)
           end if
        end do; end do; end do; end do
     end if
@@ -106,11 +105,11 @@ contains
           ip = 3*i2 - 2*i1 -1
           kp = 3*k2 - 2*k1 -1
           if(IsEqualLevel_G(ip,0,kp))then
-             Scalar_G(i2,0,k2) = c0*Scalar1_G(i2,0,k2) &
-                  + 0.25*Scalar1_G(ip,0,kp) + 0.25*Scalar_G(i2,1,k2)
+             Field_VG(:,i2,0,k2) = c0*Field1_VG(:,i2,0,k2) &
+                  + 0.25*Field1_VG(:,ip,0,kp) + 0.25*Field_VG(:,i2,1,k2)
           else
-             Scalar_G(i2,0,k2) = c0*Scalar1_G(i2,0,k2) &
-                  + p0*Scalar1_G(ip,0,kp) + F1*Scalar_G(i2,1,k2)
+             Field_VG(:,i2,0,k2) = c0*Field1_VG(:,i2,0,k2) &
+                  + p0*Field1_VG(:,ip,0,kp) + F1*Field_VG(:,i2,1,k2)
           end if
        end do; end do; end do; end do
     end if
@@ -120,11 +119,11 @@ contains
           ip = 3*i2 - 2*i1 -1
           kp = 3*k2 - 2*k1 -1
           if(IsEqualLevel_G(ip,nJ+1,kp))then
-             Scalar_G(i2,nJ+1,k2) = c0*Scalar1_G(i2,nJ+1,k2) &
-                  + 0.25*Scalar1_G(ip,nJ+1,kp) + 0.25*Scalar_G(i2,nJ,k2)
+             Field_VG(:,i2,nJ+1,k2) = c0*Field1_VG(:,i2,nJ+1,k2) &
+                  + 0.25*Field1_VG(:,ip,nJ+1,kp) + 0.25*Field_VG(:,i2,nJ,k2)
           else
-             Scalar_G(i2,nJ+1,k2) = c0*Scalar1_G(i2,nJ+1,k2) &
-                  + p0*Scalar1_G(ip,nJ+1,kp) + F1*Scalar_G(i2,nJ,k2)
+             Field_VG(:,i2,nJ+1,k2) = c0*Field1_VG(:,i2,nJ+1,k2) &
+                  + p0*Field1_VG(:,ip,nJ+1,kp) + F1*Field_VG(:,i2,nJ,k2)
           end if
        end do; end do; end do; end do
     end if
@@ -134,11 +133,11 @@ contains
           ip = 3*i2 - 2*i1 -1
           jp = 3*j2 - 2*j1 -1
           if(IsEqualLevel_G(ip,jp,0))then
-             Scalar_G(i2,j2,0) = c0*Scalar1_G(i2,j2,0) &
-                  + 0.25*Scalar1_G(ip,jp,0) + 0.25*Scalar_G(i2,j2,1)
+             Field_VG(:,i2,j2,0) = c0*Field1_VG(:,i2,j2,0) &
+                  + 0.25*Field1_VG(:,ip,jp,0) + 0.25*Field_VG(:,i2,j2,1)
           else
-             Scalar_G(i2,j2,0) = c0*Scalar1_G(i2,j2,0) &
-                  + p0*Scalar1_G(ip,jp,0) + F1*Scalar_G(i2,j2,1)
+             Field_VG(:,i2,j2,0) = c0*Field1_VG(:,i2,j2,0) &
+                  + p0*Field1_VG(:,ip,jp,0) + F1*Field_VG(:,i2,j2,1)
           end if
        end do; end do; end do; end do
     end if
@@ -148,11 +147,11 @@ contains
           ip = 3*i2 - 2*i1 -1
           jp = 3*j2 - 2*j1 -1
           if(IsEqualLevel_G(ip,jp,nK+1))then
-             Scalar_G(i2,j2,nK+1) = c0*Scalar1_G(i2,j2,nK+1) &
-                  + 0.25*Scalar1_G(ip,jp,nK+1) + 0.25*Scalar_G(i2,j2,nK)
+             Field_VG(:,i2,j2,nK+1) = c0*Field1_VG(:,i2,j2,nK+1) &
+                  + 0.25*Field1_VG(:,ip,jp,nK+1) + 0.25*Field_VG(:,i2,j2,nK)
           else
-             Scalar_G(i2,j2,nK+1) = c0*Scalar1_G(i2,j2,nK+1) &
-                  + p0*Scalar1_G(ip,jp,nK+1) + F1*Scalar_G(i2,j2,nK)
+             Field_VG(:,i2,j2,nK+1) = c0*Field1_VG(:,i2,j2,nK+1) &
+                  + p0*Field1_VG(:,ip,jp,nK+1) + F1*Field_VG(:,i2,j2,nK)
           end if
        end do; end do; end do; end do
     end if
@@ -170,11 +169,11 @@ contains
        do i1 = 1,nI,2; do i2 = i1, i1+1
           ip = 3*i2 - 2*i1 -1
           if(IsEqualLevel_G(ip,jC,kC))then
-             Scalar_G(i2,jC,kC) = c0*Scalar1_G(i2,jC,kC) &
-                  + 0.25*Scalar1_G(ip,jC,kC) + 0.25*Scalar_G(i2,j1,k1)
+             Field_VG(:,i2,jC,kC) = c0*Field1_VG(:,i2,jC,kC) &
+                  + 0.25*Field1_VG(:,ip,jC,kC) + 0.25*Field_VG(:,i2,j1,k1)
           else
-             Scalar_G(i2,jC,kC) = c0*Scalar1_G(i2,jC,kC) &
-                  + p0*Scalar1_G(ip,jC,kC) + F1*Scalar_G(i2,j1,k1)
+             Field_VG(:,i2,jC,kC) = c0*Field1_VG(:,i2,jC,kC) &
+                  + p0*Field1_VG(:,ip,jC,kC) + F1*Field_VG(:,i2,j1,k1)
           end if
        end do; end do
     end do; end do
@@ -190,11 +189,11 @@ contains
        do j1 = 1, nJ, 2; do j2 = j1, j1+1
           jp = 3*j2 - 2*j1 -1
           if(IsEqualLevel_G(iC,jp,kC))then
-             Scalar_G(iC,j2,kC) = c0*Scalar1_G(iC,j2,kC) &
-                  + 0.25*Scalar1_G(iC,jp,kC) + 0.25*Scalar_G(i1,j2,k1)
+             Field_VG(:,iC,j2,kC) = c0*Field1_VG(:,iC,j2,kC) &
+                  + 0.25*Field1_VG(:,iC,jp,kC) + 0.25*Field_VG(:,i1,j2,k1)
           else
-             Scalar_G(iC,j2,kC) = c0*Scalar1_G(iC,j2,kC) &
-                  + p0*Scalar1_G(iC,jp,kC) + F1*Scalar_G(i1,j2,k1)
+             Field_VG(:,iC,j2,kC) = c0*Field1_VG(:,iC,j2,kC) &
+                  + p0*Field1_VG(:,iC,jp,kC) + F1*Field_VG(:,i1,j2,k1)
           end if
        end do; end do
     end do; end do
@@ -210,16 +209,16 @@ contains
        do k1 = 1, nK, 2 ; do k2 = k1, k1 + 1
           kp = 3*k2 - 2*k1 -1
           if(IsEqualLevel_G(iC,jC,kp))then
-             Scalar_G(iC,jC,k2) = c0*Scalar1_G(iC,jC,k2) &
-                  + 0.25*Scalar1_G(iC,jC,kp) + 0.25*Scalar_G(i1,j1,k2)
+             Field_VG(:,iC,jC,k2) = c0*Field1_VG(:,iC,jC,k2) &
+                  + 0.25*Field1_VG(:,iC,jC,kp) + 0.25*Field_VG(:,i1,j1,k2)
           else
-             Scalar_G(iC,jC,k2) = c0*Scalar1_G(iC,jC,k2) &
-                  + p0*Scalar1_G(iC,jC,kp) + F1*Scalar_G(i1,j1,k2)
+             Field_VG(:,iC,jC,k2) = c0*Field1_VG(:,iC,jC,k2) &
+                  + p0*Field1_VG(:,iC,jC,kp) + F1*Field_VG(:,i1,j1,k2)
           end if
        end do; end do         
     end do; end do
 
-  end subroutine set_block_scalar
+  end subroutine set_block_field
 
   !============================================================================
 
@@ -352,8 +351,6 @@ contains
     use ModMain,       ONLY: x_, y_, z_
     use ModParallel,   ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot, BlkNeighborLev
-    use ModSize,       ONLY: nI, nJ, nK
-    use ModVarIndexes, ONLY: p_, Rho_
 
     integer, intent(in) :: iDir, i, j, k, iBlock
     real, intent(inout) :: Scalar_G(-1:nI+2,-1:nJ+2,-1:nK+2)
@@ -362,15 +359,15 @@ contains
 
     integer :: iL, iR, jL, jR, kL, kR
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
-
     Real :: InvDx, InvDy, InvDz
+    real :: Scalar1_G(0:nI+1,0:nJ+1,0:nK+1)
     !--------------------------------------------------------------------------
     InvDx = 1.0/Dx_Blk(iBlock)
     InvDy = 1.0/Dy_Blk(iBlock)
     InvDz = 1.0/Dz_Blk(iBlock)
 
     if(IsNewBlock)then
-       call set_block_scalar(Scalar_G, iBlock)
+       call set_block_field(iBlock, 1, Scalar1_G, Scalar_G)
        if(UseCovariant) call set_block_jacobian_face(iBlock)
 
        IsNewBlock = .false.

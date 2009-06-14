@@ -55,6 +55,8 @@ module ModGrayDiffusion
 
   ! radiation energy used for calculating radiative energy flux
   real, allocatable :: Erad_G(:,:,:)
+  ! temporary radiation energy array needed by set_block_field
+  real, allocatable :: Erad1_G(:,:,:)
 
   real, parameter :: GammaRel = 4.0/3.0
 
@@ -92,6 +94,7 @@ contains
     end if
 
     allocate(Erad_G(-1:nI+2,-1:nJ+2,-1:nK+2))
+    if(UseSemiImplicit) allocate(Erad1_G(0:nI+1,0:nJ+1,0:nK+1))
 
     if(UseFullImplicit)then
        nDiff = 1
@@ -707,7 +710,7 @@ contains
 
     subroutine get_diffusion_coef
 
-      use ModFaceGradient, ONLY: set_block_scalar
+      use ModFaceGradient, ONLY: set_block_field
 
       !------------------------------------------------------------------------
 
@@ -719,7 +722,7 @@ contains
 
             if(IsNewBlockGrayDiffusion)then
                Erad_G = State_VGB(Eradiation_,:,:,:,iBlock)
-               call set_block_scalar(Erad_G, iBlock)
+               call set_block_field(iBlock, 1, Erad1_G, Erad_G)
 
                IsNewBlockGrayDiffusion = .false.
             end if
