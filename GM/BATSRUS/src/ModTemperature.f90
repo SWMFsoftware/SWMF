@@ -324,8 +324,8 @@ contains
     use ModUser,     ONLY: user_material_properties
 
     integer :: i, j, k, iBlock
-    real :: PlanckOpacitySi, RosselandMeanOpacitySi, HeatConductionCoefSi
-    real :: PlanckOpacity, RosselandMeanOpacity, HeatConductionCoef
+    real :: PlanckOpacitySi, DiffusionOpacitySi, HeatCondSi
+    real :: PlanckOpacity, DiffusionOpacity, HeatConductionCoef
     real :: CvSi, Cv, TeSi, Te, Trad, DiffRad
 
     character(len=*), parameter:: NameSub = 'set_frozen_coefficients'
@@ -353,13 +353,12 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                AbsorptionOpacitySiOut = PlanckOpacitySi, &
-               RosselandMeanOpacitySiOut = RosselandMeanOpacitySi, &
-               CvSiOut = CvSi, TeSiOut = TeSi, &
-               HeatConductionCoefSiOut = HeatConductionCoefSi)
+               DiffusionOpacitySiOut = DiffusionOpacitySi, &
+               CvSiOut = CvSi, TeSiOut = TeSi, HeatCondSiOut = HeatCondSi)
 
-          RosselandMeanOpacity = RosselandMeanOpacitySi/Si2No_V(UnitX_)
+          DiffusionOpacity = DiffusionOpacitySi/Si2No_V(UnitX_)
           PlanckOpacity = PlanckOpacitySi/Si2No_V(UnitX_)
-          HeatConductionCoef = HeatConductionCoefSi &
+          HeatConductionCoef = HeatCondSi &
                *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
                *Si2No_V(UnitU_)*Si2No_V(UnitX_)
           Cv = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
@@ -432,14 +431,14 @@ contains
 
          select case(TypeRadFluxLimiter)
          case("sum")
-            DiffRad = Clight/(3.0*RosselandMeanOpacity + sqrt(Grad2ByErad2))
+            DiffRad = Clight/(3.0*DiffusionOpacity + sqrt(Grad2ByErad2))
          case("max")
-            DiffRad = Clight/max(3.0*RosselandMeanOpacity,sqrt(Grad2ByErad2))
+            DiffRad = Clight/max(3.0*DiffusionOpacity,sqrt(Grad2ByErad2))
          case("larsen")
-            DiffRad = Clight/sqrt((3.0*RosselandMeanOpacity)**2 + Grad2ByErad2)
+            DiffRad = Clight/sqrt((3.0*DiffusionOpacity)**2 + Grad2ByErad2)
          end select
       else
-         DiffRad = Clight/(3.0*RosselandMeanOpacity)
+         DiffRad = Clight/(3.0*DiffusionOpacity)
       end if
 
     end subroutine get_radiation_diffusion_coef
