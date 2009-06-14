@@ -97,7 +97,9 @@ module ModUser
   real :: PlanckOpacity(0:nMaterial-1) = 10.0
 
   ! Indexes for lookup tables
-  integer:: iTablePPerE = -1, iTableEPerP = -1, iTableCvGammaTe = -1
+  integer:: iTablePPerE = -1, iTableEPerP = -1, iTableThermo = -1
+  integer, parameter:: Cv_=1, Gamma_=2, Cond_=3, Te_=4, nThermo=4
+
   integer:: iTableOpacity = -1
 
   ! Variables for the left and right boundary conditions
@@ -1062,7 +1064,7 @@ contains
 
     real    :: p, Rho, pSi, RhoSi, TeSi
     integer :: i, j, k, iMaterial, iMaterial_I(1), iLevel
-    real    :: Value_V(9) ! Cv, Gamma, Te for 3 materials
+    real    :: Value_V(nMaterial*nThermo) ! Cv,Gamma,Kappa,Te for 3 materials
     !------------------------------------------------------------------------  
     IsFound = .true.
     select case(NameVar)
@@ -1082,10 +1084,10 @@ contains
 
           RhoSi = Rho*No2Si_V(UnitRho_)
           pSi   = p*No2Si_V(UnitP_)
-          if(iTableCvGammaTe > 0)then
-             call interpolate_lookup_table(iTableCvGammaTe, RhoSi, pSi/RhoSi, &
-                  Value_V, DoExtrapolate = .false.)
-             TeSi = Value_V(3*iMaterial+3)
+          if(iTableThermo > 0)then
+             call interpolate_lookup_table(iTableThermo, &
+                  RhoSi, pSi/RhoSi, Value_V, DoExtrapolate = .false.)
+             TeSi = Value_V(Te_+iMaterial*nThermo)
           else
              call eos(iMaterial, RhoSi, pTotalIn=pSi, TeOut=TeSi)
           end if
@@ -1105,12 +1107,12 @@ contains
     case('ross')
        do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, RosselandMeanOpacitySiOut = PlotVar_G(i,j,k))
+               i, j, k, iBlock, DiffusionOpacitySiOut = PlotVar_G(i,j,k))
        end do; end do; end do
     case('cond')
        do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, HeatConductionCoefSiOut = PlotVar_G(i,j,k))
+               i, j, k, iBlock, HeatCondSiOut = PlotVar_G(i,j,k))
        end do; end do; end do
     case('usersphere')
        ! Test function for LOS images: sphere with "density" 
@@ -1180,21 +1182,21 @@ contains
 
     if(iProc==0) write(*,*) NameSub, 'EradBc1,EradBc2=', EradBc1, EradBc2
 
-    iTablePPerE      = i_lookup_table('pPerE(rho,e/rho)')
-    iTableEPerP      = i_lookup_table('ePerP(rho,p/rho)')
-    iTableCvGammaTe  = i_lookup_table('CvGammaTe(rho,p/rho)')
-    iTableOpacity    = i_lookup_table('Opacity(rho,T)')
+    iTablePPerE   = i_lookup_table('pPerE(rho,e/rho)')
+    iTableEPerP   = i_lookup_table('ePerP(rho,p/rho)')
+    iTableThermo  = i_lookup_table('CvGammaKappaTe(rho,p/rho)')
+    iTableOpacity = i_lookup_table('Opacity(rho,T)')
 
     if(iProc==0) write(*,*) NameSub, &
-         ' iTablePPerE, EPerP, CvGammaTe, Opacity = ', &
-         iTablePPerE, iTableEPerP, iTableCvGammaTe, iTableOpacity
+         ' iTablePPerE, EPerP, CvGammaKappaTe, Opacity = ', &
+         iTablePPerE, iTableEPerP, iTableThermo, iTableOpacity
 
     if(iTablePPerE > 0) &
          call make_lookup_table(iTablePPerE, calc_table_value, iComm)
     if(iTableEPerP > 0) &
          call make_lookup_table(iTableEPerP, calc_table_value, iComm)
-    if(iTableCvGammaTe > 0) &
-         call make_lookup_table(iTableCvGammaTe, calc_table_value, iComm)
+    if(iTableThermo > 0) &
+         call make_lookup_table(iTableThermo, calc_table_value, iComm)
 
   end subroutine user_init_session
 
@@ -1208,7 +1210,7 @@ contains
     real, intent(in)   :: Arg1, Arg2
     real, intent(out)  :: Value_V(:)
 
-    real:: Rho, p, e, Cv, Gamma, Te
+    real:: Rho, p, e, Cv, Gamma, Kappa, Te
     integer:: iMaterial
     character(len=*), parameter:: NameSub = 'ModUser::calc_table_value'
     !-----------------------------------------------------------------------
@@ -1240,24 +1242,27 @@ contains
              Value_V(iMaterial+1) = 1.5
           end if
        end do
-    elseif(iTable == iTableCvGammaTe)then
-       ! Calculate Te, gamma, cV for Xe_, Be_ and Plastic_ 
+    elseif(iTable == iTableThermo)then
+       ! Calculate cV, gamma, kappa and Te for Xe_, Be_ and Plastic_ 
        ! for given Rho and p/Rho
        Rho = Arg1
        p   = Arg2*Rho
        do iMaterial = 0, nMaterial-1
           call eos(iMaterial, Rho, PtotalIn=p, &
-               CVTotalOut=Cv, GammaOut=Gamma, TeOut=Te)
+               CvTotalOut=Cv, GammaOut=Gamma, HeatCond=Kappa, TeOut=Te)
 
-          ! Material index starts from 0 :-( hence the +1
+          ! Note that material index starts from 0
           if(Te > 0.0)then
-             Value_V(3*iMaterial+1) = Cv
-             Value_V(3*iMaterial+2) = Gamma
-             Value_V(3*iMaterial+3) = Te
+             Value_V(Cv_   +iMaterial*nThermo) = Cv
+             Value_V(Gamma_+iMaterial*nThermo) = Gamma
+             Value_V(Cond_ +iMaterial*nThermo) = Kappa
+             Value_V(Te_   +iMaterial*nThermo) = Te
           else
-             Value_V(3*iMaterial+1) = 1.5*Rho
-             Value_V(3*iMaterial+2) = 5./3.
-             Value_V(3*iMaterial+3) = p/Rho*cProtonMass/cBoltzmann
+             ! The eos() function returned impossible values, take ideal gas
+             Value_V(Cv_   +iMaterial*nThermo) = 1.5*Rho
+             Value_V(Gamma_+iMaterial*nThermo) = 5./3.
+             Value_V(Cond_ +iMaterial*nThermo) = 0.0
+             Value_V(Te_   +iMaterial*nThermo) = p/Rho*cProtonMass/cBoltzmann
           end if
        end do
     else
@@ -1270,9 +1275,10 @@ contains
 
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
        EinternalSiIn,  TeSiIn,  &
-       EinternalSiOut, TeSiOut, PressureSiOut, CvSiOut, GammaOut, &
-       AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut, &
-       HeatConductionCoefSiOut)
+       EinternalSiOut, TeSiOut, &
+       PressureSiOut, CvSiOut, GammaOut, HeatCondSiOut, &
+       AbsorptionOpacitySiOut, DiffusionOpacitySiOut)
+       
 
     ! The State_V vector is in normalized units, output is in SI units
 
@@ -1292,16 +1298,16 @@ contains
     real, optional, intent(out) :: PressureSiOut             ! [Pa]
     real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
     real, optional, intent(out) :: GammaOut                  ! dimensionless
+    real, optional, intent(out) :: HeatCondSiOut             ! [J/(m*K*s)]
     real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
-    real, optional, intent(out) :: RosselandMeanOpacitySiOut ! [1/m]
-    real, optional, intent(out) :: HeatConductionCoefSiOut   ! [J/(m*K*s)]
+    real, optional, intent(out) :: DiffusionOpacitySiOut     ! [1/m]
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
 
     logical :: IsMix
     integer :: iMaterial, iMaterial_I(1)
-    real    :: pSi, RhoSi, TeSi, LevelSum, HeatCondSi
-    real    :: Value_V(3*nMaterial), Opacity_V(2*nMaterial)
+    real    :: pSi, RhoSi, TeSi, LevelSum
+    real    :: Value_V(nMaterial*nThermo), Opacity_V(2*nMaterial)
     real, dimension(0:nMaterial-1) :: &
          pPerE_I, EperP_I, RhoToARatioSi_I, Weight_I
 
@@ -1323,6 +1329,7 @@ contains
     Weight_I            = 0.0
     Weight_I(iMaterial) = 1.0
 
+    ! Calculate the weights
     if(UseVolumeFraction)then
        if(present(i) .and. .not. present(iDir))then
           ! This implementation is for 1D only !!!
@@ -1371,11 +1378,11 @@ contains
           if(IsMix)then
              call eos(RhoToARatioSi_I, eTotalIn=EinternalSiIn, &
                   pTotalOut=pSi, TeOut=TeSi, &
-                  CvTotalOut=CvSiOut, GammaOut=GammaOut, HeatCond=HeatCondSi) 
+                  CvTotalOut=CvSiOut, GammaOut=GammaOut, HeatCond=HeatCondSiOut)
           else
              call eos(iMaterial, Rho=RhoSi, eTotalIn=EinternalSiIn, &
                   pTotalOut=pSi, TeOut=TeSi, &
-                  CvTotalOut=CvSiOut, GammaOut=GammaOut, HeatCond=HeatCondSi)
+                  CvTotalOut=CvSiOut, GammaOut=GammaOut, HeatCond=HeatCondSiOut)
           end if
        end if
     elseif(present(TeSiIn))then
@@ -1384,11 +1391,11 @@ contains
        if( IsMix ) then
           call eos(RhoToARatioSi_I, TeIn=TeSiIn, &
                eTotalOut=EinternalSiOut, pTotalOut=pSi, &
-               CvTotalOut=CvSiOut, GammaOut=GammaOut, HeatCond=HeatCondSi) 
+               CvTotalOut=CvSiOut, GammaOut=GammaOut, HeatCond=HeatCondSiOut) 
        else
           call eos(iMaterial, Rho=RhoSi, TeIn=TeSiIn, &
                eTotalOut=EinternalSiOut, pTotalOut=pSi, &
-               CvTotalOut=CvSiOut, GammaOut=GammaOut, HeatCond=HeatCondSi)
+               CvTotalOut=CvSiOut, GammaOut=GammaOut, HeatCond=HeatCondSiOut)
        end if
     else
        ! Pressure is simply part of State_V
@@ -1404,11 +1411,13 @@ contains
              if(IsMix)then
                 call eos(RhoToARatioSi_I, pTotalIn=pSi, &
                      EtotalOut=EinternalSiOut, TeOut=TeSi, &
-                     CvTotalOut=CvSiOut, GammaOut=GammaOut,HeatCond=HeatCondSi)
+                     CvTotalOut=CvSiOut, GammaOut=GammaOut, &
+                     HeatCond=HeatCondSiOut)
              else
                 call eos(iMaterial,RhoSi,pTotalIn=pSi, &
                      EtotalOut=EinternalSiOut, TeOut=TeSi, &
-                     CvTotalOut=CvSiOut, GammaOut=GammaOut,HeatCond=HeatCondSi)
+                     CvTotalOut=CvSiOut, GammaOut=GammaOut, &
+                     HeatCond=HeatCondSiOut)
              end if
           end if
        end if
@@ -1417,35 +1426,41 @@ contains
     if(present(PressureSiOut)) PressureSiOut = pSi
 
     if(present(TeSiOut) .or. present(CvSiOut) .or. present(GammaOut) .or. &
-         present(HeatConductionCoefSiOut) .or. &
+         present(HeatCondSiOut) .or. &
          iTableOpacity>0 .and. (present(AbsorptionOpacitySiOut) &
-         .or.                   present(RosselandMeanOpacitySiOut)) )then
-       if(iTableCvGammaTe > 0)then
-          call interpolate_lookup_table(iTableCvGammaTe, RhoSi, pSi/RhoSi, &
+         .or.                   present(DiffusionOpacitySiOut)) )then
+       if(iTableThermo > 0)then
+          call interpolate_lookup_table(iTableThermo, RhoSi, pSi/RhoSi, &
                Value_V, DoExtrapolate = .false.)
 
           ! Value_V: elements 1,4,7 are Cv, 2,5,8 are Gamma, 3,6,9 are Te
           if(UseVolumeFraction)then
              if(present(CvSiOut))  CvSiOut  &
-                  = sum(Weight_I*Value_V(1:3*nMaterial:3))
+                  = sum(Weight_I*Value_V(Cv_   :nMaterial*nThermo:nThermo))
              if(present(GammaOut)) GammaOut &
-                  = sum(Weight_I*Value_V(2:3*nMaterial:3))
-             TeSi = sum(Weight_I*Value_V(3:3*nMaterial:3))
+                  = sum(Weight_I*Value_V(Gamma_:nMaterial*nThermo:nThermo))
+             if(present(HeatCondSiOut)) HeatCondSiOut &
+                  = sum(Weight_I*Value_V(Cond_:nMaterial*nThermo:nThermo))
+             TeSi = sum(Weight_I*Value_V(Te_  :nMaterial*nThermo:nThermo))
           else
-             if(present(CvSiOut))  CvSiOut  = Value_V(3*iMaterial+1)
-             if(present(GammaOut)) GammaOut = Value_V(3*iMaterial+2)
-             TeSi = Value_V(3*iMaterial+3)
+             if(present(CvSiOut))  CvSiOut  = Value_V(Cv_   +iMaterial*nThermo)
+             if(present(GammaOut)) GammaOut = Value_V(Gamma_+iMaterial*nThermo)
+             if(present(HeatCondSiOut)) &
+                  HeatCondSiOut             = Value_V(Cond_+iMaterial*nThermo)
+             TeSi                           = Value_V(Te_  +iMaterial*nThermo)
           end if
        elseif(TeSi < 0.0) then
           ! If TeSi is not set yet then we need to calculate things here
           if(IsMix) then
              call eos(RhoToARatioSi_I, pTotalIn=pSi, &
                   TeOut=TeSi, eTotalOut = EinternalSiOut, &
-                  CvTotalOut=CvSiOut, GammaOut=GammaOut, HeatCond=HeatCondSi)
+                  CvTotalOut=CvSiOut, GammaOut=GammaOut, &
+                  HeatCond=HeatCondSiOut)
           else
              call eos(iMaterial, RhoSi, pTotalIn=pSi, &
                   TeOut=TeSi, eTotalOut = EinternalSiOut, &
-                  CvTotalOut=CvSiOut, GammaOut=GammaOut, HeatCond=HeatCondSi)
+                  CvTotalOut=CvSiOut, GammaOut=GammaOut, &
+                  HeatCond=HeatCondSiOut)
           end if
        end if
     end if
@@ -1453,31 +1468,29 @@ contains
     if(present(TeSiOut)) TeSiOut = TeSi
 
     if(present(AbsorptionOpacitySiOut) &
-         .or. present(RosselandMeanOpacitySiOut))then
+         .or. present(DiffusionOpacitySiOut))then
        if(iTableOpacity > 0)then
           call interpolate_lookup_table(iTableOpacity, RhoSi, TeSi, &
                Opacity_V, DoExtrapolate = .false.)
           if(UseVolumeFraction)then
              if(present(AbsorptionOpacitySiOut)) AbsorptionOpacitySiOut &
                   = sum(Weight_I*Opacity_V(1:2*nMaterial:2)) * RhoSi
-             if(present(RosselandMeanOpacitySiOut)) RosselandMeanOpacitySiOut &
+             if(present(DiffusionOpacitySiOut)) DiffusionOpacitySiOut &
                   = sum(Weight_I*Opacity_V(2:2*nMaterial:2)) * RhoSi
           else
              if(present(AbsorptionOpacitySiOut)) AbsorptionOpacitySiOut &
                   = Opacity_V(2*iMaterial + 1) * RhoSi
-             if(present(RosselandMeanOpacitySiOut)) RosselandMeanOpacitySiOut &
+             if(present(DiffusionOpacitySiOut)) DiffusionOpacitySiOut &
                   = Opacity_V(2*iMaterial + 2) * RhoSi
           end if
        else
           if(present(AbsorptionOpacitySiOut)) &
                AbsorptionOpacitySiOut = PlanckOpacity(iMaterial)*RhoSi
 
-          if(present(RosselandMeanOpacitySiOut)) &
-               RosselandMeanOpacitySiOut = RosselandOpacity(iMaterial)*RhoSi
+          if(present(DiffusionOpacitySiOut)) &
+               DiffusionOpacitySiOut = RosselandOpacity(iMaterial)*RhoSi
        end if
     end if
-
-    if(present(HeatConductionCoefSiOut)) HeatConductionCoefSiOut = HeatCondSi
 
   end subroutine user_material_properties
 
