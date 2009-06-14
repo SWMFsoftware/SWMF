@@ -241,9 +241,9 @@ contains
 
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
        EinternalSiIn, TeSiIn, &
-       EinternalSiOut, TeSiOut, PressureSiOut, CvSiOut, &
-       AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut, &
-       HeatConductionCoefSiOut)
+       EinternalSiOut, TeSiOut, PressureSiOut, &
+       CvSiOut, GammaOut, HeatCondSiOut, &
+       AbsorptionOpacitySiOut, DiffusionOpacitySiOut)
 
     ! The State_V vector is in normalized units
 
@@ -258,11 +258,12 @@ contains
     real, optional, intent(in)  :: TeSiIn                    ! [K]
     real, optional, intent(out) :: EinternalSiOut            ! [J/m^3]
     real, optional, intent(out) :: TeSiOut                   ! [K]
-    real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
-    real, optional, intent(out) :: RosselandMeanOpacitySiOut ! [1/m]
-    real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
     real, optional, intent(out) :: PressureSiOut             ! [Pa]
-    real, optional, intent(out) :: HeatConductionCoefSiOut   ! [J/(m*K*s)]
+    real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
+    real, optional, intent(out) :: GammaOut                  ! dimensionless
+    real, optional, intent(out) :: HeatCondSiOut             ! [J/(m*K*s)]
+    real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
+    real, optional, intent(out) :: DiffusionOpacitySiOut     ! [1/m]
 
     real :: Rho, Pressure, Temperature
     real :: RhoSi, pSi, TemperatureSi
@@ -302,10 +303,10 @@ contains
 
     if(present(AbsorptionOpacitySiOut)) &
          AbsorptionOpacitySiOut = SpecificOpacity*Rho/No2Si_V(UnitX_)
-    if(present(RosselandMeanOpacitySiOut)) &
-         RosselandMeanOpacitySiOut = SpecificOpacity*Rho/No2Si_V(UnitX_)
+    if(present(DiffusionOpacitySiOut)) &
+         DiffusionOpacitySiOut = SpecificOpacity*Rho/No2Si_V(UnitX_)
 
-    if(present(HeatConductionCoefSiOut)) HeatConductionCoefSiOut = 0.0
+    if(present(HeatCondSiOut)) HeatCondSiOut = 0.0
 
   end subroutine user_material_properties
 

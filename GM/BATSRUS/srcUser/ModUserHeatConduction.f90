@@ -692,8 +692,8 @@ contains
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
        EinternalSiIn, TeSiIn, &
        EinternalSiOut, TeSiOut, PressureSiOut, CvSiOut, &
-       AbsorptionOpacitySiOut, RosselandMeanOpacitySiOut, &
-       HeatConductionCoefSiOut)
+       AbsorptionOpacitySiOut, DiffusionOpacitySiOut, &
+       HeatCondSiOut)
 
     ! The State_V vector is in normalized units
 
@@ -709,10 +709,10 @@ contains
     real, optional, intent(out) :: EinternalSiOut            ! [J/m^3]
     real, optional, intent(out) :: TeSiOut                   ! [K]
     real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
-    real, optional, intent(out) :: RosselandMeanOpacitySiOut ! [1/m]
+    real, optional, intent(out) :: DiffusionOpacitySiOut     ! [1/m]
     real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
     real, optional, intent(out) :: PressureSiOut             ! [Pa]
-    real, optional, intent(out) :: HeatConductionCoefSiOut   ! [J/(m*K*s)]
+    real, optional, intent(out) :: HeatCondSiOut             ! [J/(m*K*s)]
 
     real :: Rho, Pressure, Temperature
     real :: RhoSi, pSi, TemperatureSi
@@ -747,21 +747,21 @@ contains
     if(present(CvSiOut)) CvSiOut = inv_gm1*Rho &
          *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
 
-    if(present(HeatConductionCoefSiOut))then
+    if(present(HeatCondSiOut))then
        select case(TypeProblem)
        case('rmtv')
-          HeatConductionCoefSiOut = Temperature**6.5/Rho**2 &
+          HeatCondSiOut = Temperature**6.5/Rho**2 &
                *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_) &
                *No2Si_V(UnitU_)*No2Si_V(UnitX_)
        case default
-          HeatConductionCoefSiOut = HeatConductionCoef &
+          HeatCondSiOut = HeatConductionCoef &
                *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_) &
                *No2Si_V(UnitU_)*No2Si_V(UnitX_)
        end select
     end if
 
     if(present(AbsorptionOpacitySiOut)) AbsorptionOpacitySiOut = 0.0
-    if(present(RosselandMeanOpacitySiOut)) RosselandMeanOpacitySiOut = 0.0
+    if(present(DiffusionOpacitySiOut)) DiffusionOpacitySiOut = 0.0
 
   end subroutine user_material_properties
 
