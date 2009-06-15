@@ -80,7 +80,7 @@ subroutine logfile(dir)
 
      write(iLogFileUnit_,'(a)') "GITM2 log file"
      write(iLogFileUnit_,'(a)') &
-          "   iStep yyyy mm dd hh mm ss  ms      dt"// &
+          "   iStep yyyy mm dd hh mm ss  ms      dt "// &
           "min(T) max(T) mean(T) min(VV) max(VV) mean(VV)"
 
   endif
