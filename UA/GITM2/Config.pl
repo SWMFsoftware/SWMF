@@ -166,8 +166,8 @@ sub set_planet{
     &shell_command("cd srcData ; cp UAM.in.$Planet UAM.in");
 
     if($Planet eq 'Earth'){
-          $nLon = 2;
-          $nLat = 2;
+          $nLon = 9;
+          $nLat = 9;
           $nAlt = 50;
           $MaxBlock = 4;
     }elsif($Planet eq 'Mars'){
