@@ -38,7 +38,6 @@ table_thermo.out	NameFile
 real4			TypeFile
 Thermo(rho,p/rho) for Xe, Be, Plastic
 logrho logpPerRho CvXe GammaXe CondXe TeXe CvBe GammaBe CondBe TeBe CvPl GammaPl CondPl TePl
-logrho logpPerRho CvXe GammaXe TeXe CvBe GammaBe TeBe CvPl GammaPl TePl
 200			nIndex1
 0.01			Index1Min
 1e6			Index1Max
