@@ -12,6 +12,7 @@ module ModFaceGradient
   ! Public methods
   public :: set_block_field
   public :: calc_face_gradient
+  public :: calc_face_curl
 
   ! Jacobian matrix for covariant grid: Dcovariant/Dcartesian
   real :: DcoordDxyz_DDFD(nDim,nDim,1:nI+1,1:nJ+1,1:nK+1,nDim)
@@ -500,7 +501,7 @@ contains
 
   !============================================================================
 
-  subroutine get_face_curl(iDir, i, j, k, iBlock, Vector_DG, IsNewBlock, &
+  subroutine calc_face_curl(iDir, i, j, k, iBlock, Vector_DG, IsNewBlock, &
        FaceCurl_D)
 
     use ModMain,      ONLY: x_, y_, z_
@@ -759,6 +760,6 @@ contains
 
     end subroutine calc_covariant_curl
 
-  end subroutine get_face_curl
+  end subroutine calc_face_curl
 
 end module ModFaceGradient
