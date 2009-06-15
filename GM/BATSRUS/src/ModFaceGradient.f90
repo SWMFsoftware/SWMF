@@ -498,4 +498,267 @@ contains
 
   end subroutine calc_face_gradient
 
+  !============================================================================
+
+  subroutine get_face_curl(iDir, i, j, k, iBlock, Vector_DG, IsNewBlock, &
+       FaceCurl_D)
+
+    use ModMain,      ONLY: x_, y_, z_
+    use ModGeometry,  ONLY: Dx_BLK, Dy_BLK, Dz_BLK
+    use ModCovariant, ONLY: UseCovariant                
+    use ModParallel,  ONLY: neiLeast, neiLwest, neiLsouth, &
+         neiLnorth, neiLtop, neiLbot, BlkNeighborLev
+
+    integer, intent(in) :: iDir, i, j, k, iBlock
+    real, intent(inout) :: Vector_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2)
+    logical, intent(inout) :: IsNewBlock
+    real, intent(out)  :: FaceCurl_D(3)
+
+    integer :: iL, iR, jL, jR, kL, kR
+    real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
+    Real :: InvDx, InvDy, InvDz
+    real :: Vector1_DG(3,0:nI+1,0:nJ+1,0:nK+1)
+    !--------------------------------------------------------------------------
+
+    InvDx = 1.0/dx_Blk(iBlock)
+    InvDy = 1.0/dy_Blk(iBlock)
+    InvDz = 1.0/dz_Blk(iBlock)
+
+    if(IsNewBlock)then
+       call set_block_field(iBlock, 3, Vector1_DG, Vector_DG)
+       if(UseCovariant) call set_block_jacobian_face(iBlock)
+
+       IsNewBlock = .false.
+    end if
+
+    ! Central difference with averaging in orthogonal direction
+    iR = i+1; iL = i-1; 
+    jR = j+1; jL = j-1; 
+    kR = k+1; kL = k-1; 
+
+    Ax = -0.25*InvDx; Bx = 0.0; Cx = +0.25*InvDx
+    Ay = -0.25*InvDy; By = 0.0; Cy = +0.25*InvDy
+    Az = -0.25*InvDz; Bz = 0.0; Cz = +0.25*InvDz
+
+    if(i==1)then
+       if(NeiLeast(iBlock)==-1 &
+            .or. (iDir==y_ .and. &
+            (j==1    .and. BlkNeighborLev(-1,-1, 0,iBlock)==-1) .or. &
+            (j==nJ+1 .and. BlkNeighborLev(-1, 1, 0,iBlock)==-1)) &
+            .or. (iDir==z_ .and. &
+            (k==1    .and. BlkNeighborLev(-1, 0,-1,iBlock)==-1) .or. &
+            (k==nK+1 .and. BlkNeighborLev(-1, 0, 1,iBlock)==-1)) &
+            )then
+          iL = i+1; iR = i+2; Ax=InvDx; Bx=-0.75*InvDx; Cx=-0.25*InvDx
+       end if
+    elseif(i==nI)then
+       if(NeiLwest(iBlock)==-1 &
+            .or. (iDir==y_ .and. &
+            (j==1    .and. BlkNeighborLev( 1,-1, 0,iBlock)==-1) .or. &
+            (j==nJ+1 .and. BlkNeighborLev( 1, 1, 0,iBlock)==-1)) &
+            .or. (iDir==z_ .and. &
+            (k==1    .and. BlkNeighborLev( 1, 0,-1,iBlock)==-1) .or. &
+            (k==nK+1 .and. BlkNeighborLev( 1, 0, 1,iBlock)==-1)) &
+            )then
+          iL = i-1; iR = i-2; Ax=-InvDx; Bx=0.75*InvDx; Cx=0.25*InvDx
+       end if
+    end if
+
+    if(j==1)then
+       if(NeiLsouth(iBlock)==-1 &
+            .or. (iDir==x_ .and. &
+            (i==1    .and. BlkNeighborLev(-1,-1, 0,iBlock)==-1) .or. &
+            (i==nI+1 .and. BlkNeighborLev( 1,-1, 0,iBlock)==-1)) &
+            .or. (iDir==z_ .and. &
+            (k==1    .and. BlkNeighborLev( 0,-1,-1,iBlock)==-1) .or. &
+            (k==nK+1 .and. BlkNeighborLev( 0,-1, 1,iBlock)==-1)) &
+            )then
+          jL = j+1; jR = j+2; Ay=InvDy; By=-0.75*InvDy; Cy=-0.25*InvDy
+       end if
+    elseif(j==nJ)then
+       if(NeiLnorth(iBlock)==-1 &
+            .or. (iDir==x_ .and. &
+            (i==1    .and. BlkNeighborLev(-1, 1, 0,iBlock)==-1) .or. &
+            (i==nI+1 .and. BlkNeighborLev( 1, 1, 0,iBlock)==-1)) &
+            .or. (iDir==z_ .and. &
+            (k==1    .and. BlkNeighborLev( 0, 1,-1,iBlock)==-1) .or. &
+            (k==nK+1 .and. BlkNeighborLev( 0, 1, 1,iBlock)==-1)) &
+            )then
+          jL = j-1; jR = j-2; Ay=-InvDy; By=0.75*InvDy; Cy=0.25*InvDy
+       end if
+    end if
+
+    if(k==1)then
+       if(NeiLbot(iBlock)==-1 &
+            .or. (iDir==x_ .and. &
+            (i==1    .and. BlkNeighborLev(-1, 0,-1,iBlock)==-1) .or. &
+            (i==nI+1 .and. BlkNeighborLev( 1, 0,-1,iBlock)==-1)) &
+            .or. (iDir==y_ .and. &
+            (j==1    .and. BlkNeighborLev( 0,-1,-1,iBlock)==-1) .or. &
+            (j==nJ+1 .and. BlkNeighborLev( 0, 1,-1,iBlock)==-1)) &
+            )then
+          kL = k+1; kR = k+2; Az=InvDz; Bz=-0.75*InvDz; Cz=-0.25*InvDz
+       end if
+    elseif(k==nK)then
+       if(NeiLtop(iBlock)==-1 &
+            .or. (iDir==x_ .and. &
+            (i==1    .and. BlkNeighborLev(-1, 0, 1,iBlock)==-1) .or. &
+            (i==nI+1 .and. BlkNeighborLev( 1, 0, 1,iBlock)==-1)) &
+            .or. (iDir==y_ .and. &
+            (j==1    .and. BlkNeighborLev( 0,-1, 1,iBlock)==-1) .or. &
+            (j==nJ+1 .and. BlkNeighborLev( 0, 1, 1,iBlock)==-1)) &
+            )then
+          kL = k-1; kR = k-2; Az=-InvDz; Bz=0.75*InvDz; Cz=0.25*InvDz
+       end if
+    end if
+
+    if(UseCovariant)then               
+       call calc_covariant_curl
+    else
+       call calc_cartesian_curl
+    end if                             
+
+  contains
+
+    !==========================================================================
+
+    subroutine calc_cartesian_curl
+
+      !------------------------------------------------------------------------
+      select case(iDir)
+      case(x_)
+         FaceCurl_D(y_) = &
+              -InvDx*(Vector_DG(z_,i,j,k) - Vector_DG(z_,i-1,j,k)) &
+              + Az*(Vector_DG(x_,i-1,j,kL) + Vector_DG(x_,i,j,kL)) &
+              + Bz*(Vector_DG(x_,i-1,j,k ) + Vector_DG(x_,i,j,k )) &
+              + Cz*(Vector_DG(x_,i-1,j,kR) + Vector_DG(x_,i,j,kR))
+
+         FaceCurl_D(z_) = &
+              +InvDx*(Vector_DG(y_,i,j,k) - Vector_DG(y_,i-1,j,k)) &
+              - Ay*(Vector_DG(x_,i-1,jL,k) + Vector_DG(x_,i,jL,k)) &
+              - By*(Vector_DG(x_,i-1,j ,k) + Vector_DG(x_,i,j ,k)) &
+              - Cy*(Vector_DG(x_,i-1,jR,k) + Vector_DG(x_,i,jR,k)) 
+
+         FaceCurl_D(x_) = &
+              + Ay*(Vector_DG(z_,i-1,jL,k) + Vector_DG(z_,i,jL,k )) &
+              + By*(Vector_DG(z_,i-1,j ,k) + Vector_DG(z_,i,j ,k )) &
+              + Cy*(Vector_DG(z_,i-1,jR,k) + Vector_DG(z_,i,jR,k )) &
+              - Az*(Vector_DG(y_,i-1,j,kL) + Vector_DG(y_,i,j ,kL)) &
+              - Bz*(Vector_DG(y_,i-1,j,k ) + Vector_DG(y_,i,j ,k )) &
+              - Cz*(Vector_DG(y_,i-1,j,kR) + Vector_DG(y_,i,j ,kR))
+
+      case(y_)
+         FaceCurl_D(x_) = &
+              +InvDy*(Vector_DG(z_,i,j,k) - Vector_DG(z_,i,j-1,k)) &
+              - Az*(Vector_DG(y_,i,j-1,kL) + Vector_DG(y_,i,j,kL)) &
+              - Bz*(Vector_DG(y_,i,j-1,k ) + Vector_DG(y_,i,j,k )) &
+              - Cz*(Vector_DG(y_,i,j-1,kR) + Vector_DG(y_,i,j,kR))
+
+         FaceCurl_D(z_) = &
+              -InvDy*(Vector_DG(x_,i,j,k) - Vector_DG(x_,i,j-1,k)) &
+              + Ax*(Vector_DG(y_,iL,j-1,k) + Vector_DG(y_,iL,j,k)) &
+              + Bx*(Vector_DG(y_,i ,j-1,k) + Vector_DG(y_,i ,j,k)) &
+              + Cx*(Vector_DG(y_,iR,j-1,k) + Vector_DG(y_,iR,j,k))
+
+         FaceCurl_D(y_) = &
+              + Az*(Vector_DG(x_,i,j-1,kL) + Vector_DG(x_,i,j,kL)) &
+              + Bz*(Vector_DG(x_,i,j-1,k ) + Vector_DG(x_,i,j,k )) &
+              + Cz*(Vector_DG(x_,i,j-1,kR) + Vector_DG(x_,i,j,kR)) &
+              - Ax*(Vector_DG(z_,iL,j-1,k) + Vector_DG(z_,iL,j,k)) &
+              - Bx*(Vector_DG(z_,i ,j-1,k) + Vector_DG(z_,i ,j,k)) &
+              - Cx*(Vector_DG(z_,iR,j-1,k) + Vector_DG(z_,iR,j,k))
+
+      case(z_)
+         FaceCurl_D(x_) = &
+              -InvDz*(Vector_DG(y_,i,j,k) - Vector_DG(y_,i,j,k-1)) & 
+              + Ay*(Vector_DG(z_,i,jL,k-1) + Vector_DG(z_,i,jL,k)) &
+              + By*(Vector_DG(z_,i,j ,k-1) + Vector_DG(z_,i,j ,k)) &
+              + Cy*(Vector_DG(z_,i,jR,k-1) + Vector_DG(z_,i,jR,k))
+
+         FaceCurl_D(y_) = &
+              +InvDz*(Vector_DG(x_,i,j,k) - Vector_DG(x_,i,j,k-1)) &
+              - Ax*(Vector_DG(z_,iL,j,k-1) + Vector_DG(z_,iL,j,k)) &
+              - Bx*(Vector_DG(z_,i ,j,k-1) + Vector_DG(z_,i ,j,k)) &
+              - Cx*(Vector_DG(z_,iR,j,k-1) + Vector_DG(z_,iR,j,k))
+
+         FaceCurl_D(z_) = &
+              + Ax*(Vector_DG(y_,iL,j,k-1) + Vector_DG(y_,iL,j,k)) &
+              + Bx*(Vector_DG(y_,i ,j,k-1) + Vector_DG(y_,i ,j,k)) &
+              + Cx*(Vector_DG(y_,iR,j,k-1) + Vector_DG(y_,iR,j,k)) &
+              - Ay*(Vector_DG(x_,i,jL,k-1) + Vector_DG(x_,i,jL,k)) &
+              - By*(Vector_DG(x_,i,j ,k-1) + Vector_DG(x_,i,j ,k)) &
+              - Cy*(Vector_DG(x_,i,jR,k-1) + Vector_DG(x_,i,jR,k))
+
+      case default
+         write(*,*)'Error in calc_cartesian_curl: iDir=',iDir
+         call stop_mpi('DEBUG')
+      end select
+
+    end subroutine calc_cartesian_curl
+
+    !==========================================================================
+
+    subroutine calc_covariant_curl
+
+      real :: DvectorDcoord_DD(nDim,nDim)
+      !------------------------------------------------------------------------
+
+      ! Calculate the partial derivatives dVector/dCovariant
+      select case(iDir)
+      case(x_)
+         DvectorDcoord_DD(:,1) = &
+              InvDx*(Vector_DG(:,i,j,k) - Vector_DG(:,i-1,j,k))
+         DvectorDcoord_DD(:,2) = &
+              + Ay*(Vector_DG(:,i-1,jL,k) + Vector_DG(:,i,jL,k)) &
+              + By*(Vector_DG(:,i-1,j ,k) + Vector_DG(:,i,j ,k)) &
+              + Cy*(Vector_DG(:,i-1,jR,k) + Vector_DG(:,i,jR,k))
+         DvectorDcoord_DD(:,3) = &
+              + Az*(Vector_DG(:,i-1,j,kL) + Vector_DG(:,i,j,kL)) &
+              + Bz*(Vector_DG(:,i-1,j,k ) + Vector_DG(:,i,j,k )) &
+              + Cz*(Vector_DG(:,i-1,j,kR) + Vector_DG(:,i,j,kR))
+         
+      case(y_)
+         DvectorDcoord_DD(:,1) = &
+              + Ax*(Vector_DG(:,iL,j-1,k) + Vector_DG(:,iL,j,k)) &
+              + Bx*(Vector_DG(:,i ,j-1,k) + Vector_DG(:,i ,j,k)) &
+              + Cx*(Vector_DG(:,iR,j-1,k) + Vector_DG(:,iR,j,k))
+         DvectorDcoord_DD(:,2) = &
+              InvDy*(Vector_DG(:,i,j,k) - Vector_DG(:,i,j-1,k))
+         DvectorDcoord_DD(:,3) = &
+              + Az*(Vector_DG(:,i,j-1,kL) + Vector_DG(:,i,j,kL)) &
+              + Bz*(Vector_DG(:,i,j-1,k ) + Vector_DG(:,i,j,k )) &
+              + Cz*(Vector_DG(:,i,j-1,kR) + Vector_DG(:,i,j,kR))
+
+      case(z_)
+         DvectorDcoord_DD(:,1) = &
+              + Ax*(Vector_DG(:,iL,j,k-1) + Vector_DG(:,iL,j,k)) &
+              + Bx*(Vector_DG(:,i ,j,k-1) + Vector_DG(:,i ,j,k)) &
+              + Cx*(Vector_DG(:,iR,j,k-1) + Vector_DG(:,iR,j,k))
+         DvectorDcoord_DD(:,2) = &
+              + Ay*(Vector_DG(:,i,jL,k-1) + Vector_DG(:,i,jL,k)) &
+              + By*(Vector_DG(:,i,j ,k-1) + Vector_DG(:,i,j ,k)) &
+              + Cy*(Vector_DG(:,i,jR,k-1) + Vector_DG(:,i,jR,k))
+         DvectorDcoord_DD(:,3) = &
+              InvDz*(Vector_DG(:,i,j,k) - Vector_DG(:,i,j,k-1))
+      end select
+
+      ! Curl_x = Dvector_z/Dy - Dvector_y/Dz
+      FaceCurl_D(x_) = &
+           + sum(DvectorDcoord_DD(z_,:)*DcoordDxyz_DDFD(:,y_,i,j,k,iDir)) &
+           - sum(DvectorDcoord_DD(y_,:)*DcoordDxyz_DDFD(:,z_,i,j,k,iDir))
+
+      ! Curl_y = Dvector_x/Dz - Dvector_z/Dx
+      FaceCurl_D(y_) = &
+           + sum(DvectorDcoord_DD(x_,:)*DcoordDxyz_DDFD(:,z_,i,j,k,iDir)) &
+           - sum(DvectorDcoord_DD(z_,:)*DcoordDxyz_DDFD(:,x_,i,j,k,iDir))
+
+      ! Curl_z = Dvector_y/Dx - Dvector_x/Dy
+      FaceCurl_D(z_) = &
+           + sum(DvectorDcoord_DD(y_,:)*DcoordDxyz_DDFD(:,x_,i,j,k,iDir)) &
+           - sum(DvectorDcoord_DD(x_,:)*DcoordDxyz_DDFD(:,y_,i,j,k,iDir))
+
+    end subroutine calc_covariant_curl
+
+  end subroutine get_face_curl
+
 end module ModFaceGradient
