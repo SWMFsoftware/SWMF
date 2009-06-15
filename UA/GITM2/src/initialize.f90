@@ -180,6 +180,12 @@ subroutine initialize_gitm(TimeIn)
                    0.5*(RadialDistance_GB(iLon,   iLat, iAlt, iBlock) &
                    +    RadialDistance_GB(iLon-1, iLat, iAlt, iBlock)) &
                    *max(abs(CosLatitude(iLat,iBlock)),0.01)
+
+              CellVolume(iLon,iLat,iAlt,iBlock) = &
+                   dLonDist_GB(iLon, iLat, iAlt, iBlock) * &
+                   dLatDist_GB(iLon, iLat, iAlt, iBlock) * &
+                   dAlt_GB(iLon,iLat,iAlt,iBlock) 
+
            enddo
 
            ! Fill in longitude ghost cells
