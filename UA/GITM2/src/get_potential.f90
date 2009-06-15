@@ -44,7 +44,7 @@ subroutine get_potential(iBlock)
      if (index(cAMIEFileNorth,"none") > 0) then
 
         Lines(1) = "#BACKGROUND"
-        Lines(2) = "UA/DataIn/"
+        Lines(2) = "EIE/"
 
         UseHPI = .true.
         call get_IMF_Bz(CurrentTime, temp, iError)
