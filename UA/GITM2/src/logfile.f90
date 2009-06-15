@@ -10,7 +10,7 @@ subroutine get_log_info(GlobalMinTemp, GlobalMaxTemp, &
   real, intent(out) :: AverageTemp, AverageVertVel
   real, intent(out) :: TotalVolume
 
-  integer :: iBlock
+  integer :: iBlock, iSpecies
   !--------------------------------------------------------------------------
 
   GlobalMaxTemp    = 0.0
@@ -33,14 +33,18 @@ subroutine get_log_info(GlobalMinTemp, GlobalMaxTemp, &
           TempUnit(1:nLons,1:nLats,1:nAlts)))
      AverageTemp = AverageTemp + &
           sum(Temperature(1:nLons,1:nLats,1:nAlts,iBlock) &
-          *   TempUnit(1:nLons,1:nLats,1:nAlts))
+          *   TempUnit(1:nLons,1:nLats,1:nAlts) &
+          *   CellVolume(1:nLons,1:nLats,1:nAlts,iBlock))
 
      GlobalMaxVertVel = max(GlobalMaxVertVel, &
           maxval(VerticalVelocity(1:nLons,1:nLats,1:nAlts,:,iBlock)))
      GlobalMinVertVel = min(GlobalMinVertVel, &
           minval(VerticalVelocity(1:nLons,1:nLats,1:nAlts,:,iBlock)))
-     AverageVertVel = AverageVertVel + &
-          sum(VerticalVelocity(1:nLons,1:nLats,1:nAlts,:,iBlock))
+     do iSpecies = 1, nSpecies
+        AverageVertVel = AverageVertVel + &
+             sum(VerticalVelocity(1:nLons,1:nLats,1:nAlts,iSpecies,iBlock) &
+             *   CellVolume(1:nLons,1:nLats,1:nAlts,iBlock))
+     enddo
 
      TotalVolume = TotalVolume + &
           sum(CellVolume(1:nLons,1:nLats,1:nAlts,iBlock))
