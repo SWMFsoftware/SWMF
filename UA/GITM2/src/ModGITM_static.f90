@@ -16,7 +16,7 @@ module ModGITM
        dLatDist_GB, InvDLatDist_GB, &
        dLatDist_FB, InvDLatDist_FB, &
        Altitude_GB, dAlt_GB, RadialDistance_GB, InvRadialDistance_GB, &
-       Gravity_GB
+       Gravity_GB, CellVolume
 
   ! Topography
   real, dimension(nLons,nLats,nAlts,nBlocksMax) :: dAltDLon_CB, dAltDLat_CB

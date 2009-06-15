@@ -1,15 +1,16 @@
 
 subroutine get_log_info(GlobalMinTemp, GlobalMaxTemp, &
-     GlobalMinVertVel, GlobalMaxVertVel, AverageTemp, AverageVertVel)
+     GlobalMinVertVel, GlobalMaxVertVel, AverageTemp, AverageVertVel, &
+     TotalVolume)
 
   use ModGITM
 
   real, intent(out) :: GlobalMinTemp, GlobalMaxTemp
   real, intent(out) :: GlobalMinVertVel, GlobalMaxVertVel
   real, intent(out) :: AverageTemp, AverageVertVel
+  real, intent(out) :: TotalVolume
 
   integer :: iBlock
-  real    :: CellNumber
   !--------------------------------------------------------------------------
 
   GlobalMaxTemp    = 0.0
@@ -18,6 +19,7 @@ subroutine get_log_info(GlobalMinTemp, GlobalMaxTemp, &
   GlobalMinVertVel = 1.0e32
   AverageTemp      = 0.0
   AverageVertVel   = 0.0
+  TotalVolume    = 0.0
 
   do iBlock = 1, nBlocks
 
@@ -40,12 +42,13 @@ subroutine get_log_info(GlobalMinTemp, GlobalMaxTemp, &
      AverageVertVel = AverageVertVel + &
           sum(VerticalVelocity(1:nLons,1:nLats,1:nAlts,:,iBlock))
 
+     TotalVolume = TotalVolume + &
+          sum(CellVolume(1:nLons,1:nLats,1:nAlts,iBlock))
+
   enddo
 
-  CellNumber = real(nLons*nLats)*real(nAlts*nBlocks)
-
-  AverageTemp    = AverageTemp    / CellNumber
-  AverageVertVel = AverageVertVel / (CellNumber * nSpecies)
+  AverageTemp    = AverageTemp
+  AverageVertVel = AverageVertVel / nSpecies
 
 end subroutine get_log_info
 
@@ -65,7 +68,7 @@ subroutine logfile(dir)
   character (len=8) :: cIter
 
   real    :: minTemp, maxTemp, localVar, minVertVel, maxVertVel
-  real    :: AverageTemp, AverageVertVel
+  real    :: AverageTemp, AverageVertVel, TotalVolume
   integer :: iError
 
   if (.not. IsOpenLogFile .and. iProc == 0) then
@@ -86,7 +89,11 @@ subroutine logfile(dir)
   endif
 
   call get_log_info(MinTemp, MaxTemp, MinVertVel, MaxVertVel, &
-       AverageTemp, AverageVertVel)
+       AverageTemp, AverageVertVel, TotalVolume)
+
+  localVar = TotalVolume
+  call MPI_REDUCE(localVar, TotalVolume, 1, MPI_REAL, MPI_SUM, &
+       0, iCommGITM, iError)
 
   localVar = MinTemp
   call MPI_REDUCE(localVar, minTemp, 1, MPI_REAL, MPI_MIN, &
@@ -114,8 +121,8 @@ subroutine logfile(dir)
 
   if (iProc == 0) then
 
-     AverageTemp = AverageTemp / nProcs
-     AverageVertVel = AverageVertVel / nProcs
+     AverageTemp = AverageTemp / TotalVolume
+     AverageVertVel = AverageVertVel / TotalVolume
 
      write(iLogFileUnit_,"(i8,i5,5i3,i4,f8.4,6f13.5)") &
           iStep, iTimeArray, dt, minTemp, maxTemp, AverageTemp, &
