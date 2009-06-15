@@ -59,9 +59,9 @@ table_ePerP.out         NameFile
 real8                   TypeFile
 
 #LOOKUPTABLE
-CvGammaTe(rho,p/rho)    NameTable
+Thermo(rho,p/rho)    NameTable
 load                    NameCommand
-table_CvGammaTe.out     NameFile
+table_thermo.out     NameFile
 real8                   TypeFile
 
 #LOOKUPTABLE
