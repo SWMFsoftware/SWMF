@@ -11,7 +11,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
        LogNS1     => LogNS, &
        Heating, &
        Vel_GD,  &
-       Temp, &
+       Temp, iLon1D, iLat1D, iBlock1D, &
        Centrifugal, Coriolis, &
        LogINS, &
        IVel, Lat, Lon, &
@@ -29,6 +29,10 @@ subroutine advance_vertical(iLon,iLat,iBlock)
 
   integer :: iIon, iSpecies, iAlt, iDim
   real    :: KappaTemp1(0:nAlts+1)
+
+  iLon1D   = iLon
+  iLat1D   = iLat
+  iBlock1D = iBlock
 
   KappaTemp1 = KappaTemp(iLon,iLat,:,iBlock)
 

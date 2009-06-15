@@ -366,6 +366,11 @@ subroutine initialize_gitm(TimeIn)
 
   endif
 
+  if (UseGSWMTides) then
+     call read_tides
+     call update_tides
+  endif
+
   call init_b0
 
   if (IsEarth) call init_energy_deposition

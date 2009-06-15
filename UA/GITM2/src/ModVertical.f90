@@ -29,6 +29,8 @@ module ModVertical
 
   real, dimension(0:nAlts+1) :: cMax
 
+  integer :: iLon1D, iLat1D, iBlock1D
+
   real :: Heating(nAlts)
 !  real :: Kappa1D(1:nAlts+1)
 !  real :: Kappa0(nAlts), KappaNS(nSpecies,nSpecies)

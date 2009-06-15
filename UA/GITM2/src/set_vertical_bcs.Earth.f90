@@ -14,8 +14,10 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   use ModInputs
   use ModConstants
   use ModTime, only: UTime, iJulianDay,currenttime
-  use ModVertical, only: Lat, Lon, Gravity_G, Altitude_G, dAlt_F
+  use ModVertical, only: &
+       Lat, Lon, Gravity_G, Altitude_G, dAlt_F, iLon1D, iLat1D, iBlock1D
   use ModIndicesInterfaces, only: get_HPI
+  use ModTides, only: TidesNorth, TidesEast, TidesTemp
 
   use EUA_ModMsis90, ONLY: meter6
 
@@ -63,18 +65,20 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
              LogRho(iAlt))
 
      enddo
-  else
-
-     ! do nothing - which means don't change the initial condition.
-
   endif
 
-  ! Let the winds blow !!!!
+  ! Don't Let the winds blow
   Vel_GD(-1:0,iEast_)  = 0.0
   Vel_GD(-1:0,iNorth_) = 0.0
-
   Vel_GD(-1:0,iUp_)    = 0.0
   VertVel(-1:0,:)      = 0.0
+
+  if (UseGSWMTides) then
+     Vel_GD(-1:0,iEast_)  = TidesEast(iLon1D,iLat1D,1:2,iBlock1D)
+     Vel_GD(-1:0,iNorth_) = TidesNorth(iLon1D,iLat1D,1:2,iBlock1D)
+     Temp(-1:0)           = TidesTemp(iLon1D,iLat1D,1:2,iBlock1D) + Temp(-1:0)
+  endif
+
   IVel(-1:0,iUp_)      = 0.0
 
   do iSpecies=1,nIonsAdvect

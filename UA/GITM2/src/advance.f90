@@ -18,6 +18,8 @@ subroutine advance
   call report("advance",1)
   call start_timing("advance")
 
+  if (UseGSWMTides) call update_tides
+
   if (.not. UseStatisticalModelsOnly) then
 
      call advance_vertical_all

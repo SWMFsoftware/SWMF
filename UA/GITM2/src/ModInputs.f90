@@ -94,8 +94,12 @@ module ModInputs
   logical :: UseApex = .true.
   logical :: UseMSIS = .true.
   logical :: UseIRI  = .true.
+  logical :: UseMSISTides = .true.
+  logical :: UseGSWMTides = .false.
   logical :: UseStatisticalModelsOnly = .false.
   real    :: DtStatisticalModels = 3600.0
+
+  logical :: UseGswmComp(4) = .true.
 
   !\
   ! These are things for the ion precipitation for the April 2002 storm:

@@ -60,7 +60,7 @@ subroutine init_msis
   use ModPlanet
   use ModTime
 
-  use EUA_ModMsis90, ONLY: meter6, gtd6
+  use EUA_ModMsis90, ONLY: meter6, gtd6, tselec
 
   implicit none
 
@@ -69,7 +69,7 @@ subroutine init_msis
   real, dimension(1:2) :: msis_temp
   real, dimension(1:8) :: msis_dens
 
-  integer, dimension(25) :: sw
+  real, dimension(25) :: sw
 
   integer :: iBlock, iAlt, iLat, iLon, iSpecies
   real :: geo_lat, geo_lon, geo_alt, geo_lst,m,k
@@ -104,9 +104,15 @@ subroutine init_msis
 
   call meter6(.true.)
 
-  sw = 1
+  if (UseMsisTides) then
+     sw = 1
+  else
+     sw = 0
+     sw(1) = 1
+     sw(9) = 1
+  endif
 
-  !  call tselec(sw)
+  call tselec(sw)
 
   !           The following is for test and special purposes:
   !            TO TURN ON AND OFF PARTICULAR VARIATIONS CALL TSELEC(SW)

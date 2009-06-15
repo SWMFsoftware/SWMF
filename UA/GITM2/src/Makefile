@@ -25,6 +25,7 @@ MODULES = \
 	ModElectrodynamics.o\
 	ModSatellites.o\
 	ModLimiter.o\
+	ModTides.o\
 	ModUser.o
 
 OBJECTS = \
@@ -81,6 +82,7 @@ OBJECTS = \
 	apex.o\
 	write_output.o\
 	gradient.o\
+	tides.o\
 	user.o
 
 OBJECTS_EXE = main.o ${OBJECTS} ${MODULES}

@@ -233,6 +233,34 @@ subroutine set_inputs
               enddo
            endif
 
+
+        case ("#TIDES")
+           call read_in_logical(UseMSISTides, iError)
+           call read_in_logical(UseGSWMTides, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #TIDES:'
+              write(*,*) '#TIDES'
+              write(*,*) 'UseMSISTides        (logical)'
+              write(*,*) 'UseGSWMTides        (logical)'
+              if (UseGSWMTides .and. UseMSISTides) then
+                 write(*,*) "Can only use one of GSWM and MSIS tides!"
+                 iError = 1
+              endif
+           endif
+
+        CASE ("#GSWMCOMP")
+           DO i=1,4
+              CALL read_in_logical(UseGswmComp(i), iError)
+           enddo
+           IF (iError /= 0) then
+              write(*,*) 'Incorrect format for #GSWMCOMP:'
+              write(*,*) '#GSWMCOMP'
+              write(*,*) 'GSWMdiurnal(1)        (logical)'
+              write(*,*) 'GSWMdiurnal(2)        (logical)'
+              write(*,*) 'GSWMsemidiurnal(1)    (logical)'
+              write(*,*) 'GSWMsemidiurnal(2)    (logical)'
+           ENDIF
+
         case ("#HPI")
 
            call read_in_real(HemisphericPower, iError)
