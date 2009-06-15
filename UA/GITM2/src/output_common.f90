@@ -8,7 +8,7 @@ integer function bad_outputtype()
   logical :: IsFound
 
   do iOutputType = 1, nOutputTypes
-     write(*,*) OutputType(iOutputType)
+
      IsFound = .false.
 
      if (OutputType(iOutputType) == '3DALL')     IsFound = .true.
