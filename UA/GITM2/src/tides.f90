@@ -30,6 +30,10 @@ subroutine read_tides
 
   iError = 0
 
+  u_gswm(:,:,:,:)    = 0.
+  v_gswm(:,:,:,:)    = 0.
+  t_gswm(:,:,:,:) = 0. 
+        
   do iComp = 1,4
 
      if (UseGswmComp(iComp)) then
@@ -61,10 +65,6 @@ subroutine read_tides
              allocate(lon_gswm(nLonsGswm))
         if(.not.allocated(lat_gswm)) &
              allocate(lat_gswm(nLatsGswm))
-        
-        u_gswm(:,:,:,:)    = 0.
-        v_gswm(:,:,:,:)    = 0.
-        t_gswm(:,:,:,:) = 0. 
         
         do ihour = 1, 24
            do ivar = 1, nvars 
