@@ -1076,22 +1076,9 @@ contains
     case('tekev', 'TeKev')
        NameIdlUnit = 'KeV'
        do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
-          Rho = State_VGB(Rho_,i,j,k,iBlock)
-          p   = State_VGB(p_,i,j,k,iBlock)
-          PlotVar_G(i,j,k) = p/Rho*No2Si_V(UnitTemperature_) * cKToKev
-          iMaterial_I = maxloc(State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock))
-          iMaterial   = iMaterial_I(1) - 1
-
-          RhoSi = Rho*No2Si_V(UnitRho_)
-          pSi   = p*No2Si_V(UnitP_)
-          if(iTableThermo > 0)then
-             call interpolate_lookup_table(iTableThermo, &
-                  RhoSi, pSi/RhoSi, Value_V, DoExtrapolate = .false.)
-             TeSi = Value_V(Te_+iMaterial*nThermo)
-          else
-             call eos(iMaterial, RhoSi, pTotalIn=pSi, TeOut=TeSi)
-          end if
-          PlotVar_G(i,j,k) = TeSi * cKToKev
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, TeSiOut = PlotVar_G(i,j,k))
+          PlotVar_G(i,j,k) = PlotVar_G(i,j,k) * cKToKev
        end do; end do; end do
     case('tradkev','trkev')
        ! multiply by sign of Erad for debugging purpose
@@ -1184,11 +1171,11 @@ contains
 
     iTablePPerE   = i_lookup_table('pPerE(rho,e/rho)')
     iTableEPerP   = i_lookup_table('ePerP(rho,p/rho)')
-    iTableThermo  = i_lookup_table('CvGammaKappaTe(rho,p/rho)')
+    iTableThermo  = i_lookup_table('Thermo(rho,p/rho)')
     iTableOpacity = i_lookup_table('Opacity(rho,T)')
 
     if(iProc==0) write(*,*) NameSub, &
-         ' iTablePPerE, EPerP, CvGammaKappaTe, Opacity = ', &
+         ' iTablePPerE, EPerP, Thermo, Opacity = ', &
          iTablePPerE, iTableEPerP, iTableThermo, iTableOpacity
 
     if(iTablePPerE > 0) &
@@ -1210,7 +1197,7 @@ contains
     real, intent(in)   :: Arg1, Arg2
     real, intent(out)  :: Value_V(:)
 
-    real:: Rho, p, e, Cv, Gamma, Kappa, Te
+    real:: Rho, p, e, Cv, Gamma, HeatCond, Te
     integer:: iMaterial
     character(len=*), parameter:: NameSub = 'ModUser::calc_table_value'
     !-----------------------------------------------------------------------
@@ -1243,19 +1230,19 @@ contains
           end if
        end do
     elseif(iTable == iTableThermo)then
-       ! Calculate cV, gamma, kappa and Te for Xe_, Be_ and Plastic_ 
+       ! Calculate cV, gamma, HeatCond and Te for Xe_, Be_ and Plastic_ 
        ! for given Rho and p/Rho
        Rho = Arg1
        p   = Arg2*Rho
        do iMaterial = 0, nMaterial-1
           call eos(iMaterial, Rho, PtotalIn=p, &
-               CvTotalOut=Cv, GammaOut=Gamma, HeatCond=Kappa, TeOut=Te)
+               CvTotalOut=Cv, GammaOut=Gamma, HeatCond=HeatCond, TeOut=Te)
 
           ! Note that material index starts from 0
           if(Te > 0.0)then
              Value_V(Cv_   +iMaterial*nThermo) = Cv
              Value_V(Gamma_+iMaterial*nThermo) = Gamma
-             Value_V(Cond_ +iMaterial*nThermo) = Kappa
+             Value_V(Cond_ +iMaterial*nThermo) = HeatCond
              Value_V(Te_   +iMaterial*nThermo) = Te
           else
              ! The eos() function returned impossible values, take ideal gas
