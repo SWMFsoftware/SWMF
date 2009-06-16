@@ -1,6 +1,13 @@
 
 Module ModTides
 
+  !============================================================================
+  ! GSWM variables that are necessary for interpolation on the GITM grid. 
+  ! T, u, and v are neutral temperature, zonal and meridional winds. 
+  ! 
+  ! EYigit: 16June09
+  !============================================================================
+
   use ModSizeGITM, only: nLons, nLats, nBlocksMax
 
   implicit none
@@ -13,8 +20,8 @@ Module ModTides
 
   integer :: nLatsGSWM, nLonsGSWM, nAltsGswm
 
-  character(len=40), dimension(4) :: GSWM_name           ! EY: 18May09
-  character(len=40), dimension(4) :: GSWM_file_name      ! EY: 18May09
+  character(len=40), dimension(4) :: GSWM_name           ! EYigit: 18May09
+  character(len=40), dimension(4) :: GSWM_file_name      ! EYigit: 18May09
 
   real, dimension(-1:nLons+2, -1:nLats+2, 2, nBlocksMax) :: &
        TidesNorth, TidesEast, TidesTemp
