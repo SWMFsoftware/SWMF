@@ -235,11 +235,13 @@ subroutine set_inputs
 
 
         case ("#TIDES")
+           call read_in_logical(UseMSISOnly, iError)
            call read_in_logical(UseMSISTides, iError)
            call read_in_logical(UseGSWMTides, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #TIDES:'
               write(*,*) '#TIDES'
+              write(*,*) 'UseMSISOnly        (logical)'
               write(*,*) 'UseMSISTides        (logical)'
               write(*,*) 'UseGSWMTides        (logical)'
               if (UseGSWMTides .and. UseMSISTides) then
