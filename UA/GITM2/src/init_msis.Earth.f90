@@ -106,7 +106,14 @@ subroutine init_msis
 
   if (UseMsisTides) then
      sw = 1
-  else
+  ELSE IF (UseMSISOnly) THEN
+     ! Diurnal, semidiurnal, and terdiurnal variations are excluded, EYigit:16June09
+     CALL report("...Using MSIS without tidal variations...",0)
+     sw = 1
+     sw(7) = 0
+     sw(8) = 0
+     sw(14) = 0
+  ELSE
      sw = 0
      sw(1) = 1
      sw(9) = 1
