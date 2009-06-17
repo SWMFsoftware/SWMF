@@ -56,10 +56,10 @@ n1=siz(1)
 if ndim gt 1 then n2=siz(2)
 if ndim gt 2 then n3=siz(3)
 
-; For 1 variable: w(n1),   w(n1,n2),   w(n1,n2,n3)
+; For 1 variable: w(n1), w(n1*n2), w(n1,n2),  w(n1,n2,n3)
 ; for more      : w(n1,nw),w(n1,n2,nw),w(n1,n2,n3,nw)
 siz=size(w)
-if siz(0) eq ndim then nw=1 else nw=siz(ndim+1)
+if siz(0) le ndim then nw=1 else nw=siz(ndim+1)
 
 ; Number of equation parameters
 nEqpar = n_elements(eqpar)
