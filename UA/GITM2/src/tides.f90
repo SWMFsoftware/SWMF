@@ -30,10 +30,6 @@ subroutine read_tides
 
   iError = 0
 
-  u_gswm(:,:,:,:)    = 0.
-  v_gswm(:,:,:,:)    = 0.
-  t_gswm(:,:,:,:) = 0. 
-        
   do iComp = 1,4
 
      if (UseGswmComp(iComp)) then
@@ -55,16 +51,23 @@ subroutine read_tides
 
         if(.not.allocated(param)) &
              allocate(param(nLonsGswm, nLatsGswm, nAltsGswm, nvars, 24))
-        if(.not.allocated(u_gswm)) &
-             allocate(u_gswm(nLonsGswm, nLatsGswm, nAltsGswm, 24))
-        if(.not.allocated(v_gswm)) &
-             allocate(v_gswm(nLonsGswm, nLatsGswm, nAltsGswm, 24))
-        if(.not.allocated(t_gswm)) &
-             allocate(t_gswm(nLonsGswm, nLatsGswm, nAltsGswm, 24))
-        if(.not.allocated(lon_gswm)) &
-             allocate(lon_gswm(nLonsGswm))
-        if(.not.allocated(lat_gswm)) &
-             allocate(lat_gswm(nLatsGswm))
+        if(.not.allocated(u_gswm)) then
+           allocate(u_gswm(nLonsGswm, nLatsGswm, nAltsGswm, 24))
+           u_gswm(:,:,:,:) = 0.
+        endif
+        
+        if(.not.allocated(v_gswm)) then
+           allocate(v_gswm(nLonsGswm, nLatsGswm, nAltsGswm, 24))
+           v_gswm(:,:,:,:) = 0.
+        endif
+
+        if(.not.allocated(t_gswm)) then
+           allocate(t_gswm(nLonsGswm, nLatsGswm, nAltsGswm, 24))
+           t_gswm(:,:,:,:) = 0. 
+        endif
+
+        if(.not.allocated(lon_gswm)) allocate(lon_gswm(nLonsGswm))
+        if(.not.allocated(lat_gswm)) allocate(lat_gswm(nLatsGswm))
         
         do ihour = 1, 24
            do ivar = 1, nvars 
@@ -111,8 +114,8 @@ subroutine update_tides
 
   rfac = float(iTimeArray(5))/60.0 + float(iTimeArray(6))/3600.0
 
-  iFac1 = mod(iTimeArray(4)+1,24)
-  iFac2 = mod(iTimeArray(4)+2,24)
+  iFac1 = iTimeArray(4)+1            ! this will go from 1-24
+  iFac2 = mod(iTimeArray(4)+1,24)+1  ! this will go from 2-25 -> 2-24 back to 1
 
   do iBlock = 1, nBlocks
      do iAlt = 1,2
