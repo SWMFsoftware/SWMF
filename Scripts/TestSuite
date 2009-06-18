@@ -1,2 +1,0 @@
-#!/bin/sh
-GM/BATSRUS/TestSuite.pl -x=SWMF.exe $*
