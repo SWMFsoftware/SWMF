@@ -225,7 +225,7 @@ dist:
 	tar -rf tmp.tar  CVS* .cvsignore	#^CFG IF CONFIGURE
 	tar -rf tmp.tar  Configure.options	#^CFG IF CONFIGURE
 	tar -rf tmp.tar  Configure.pl		#^CFG IF CONFIGURE
-	tar -rf tmp.tar  Test*.pl TestCovariant	#^CFG IF TESTING
+	tar -rf tmp.tar  Test*.pl		#^CFG IF TESTING
 	tar -rf tmp.tar  Doc			#^CFG IF DOC
 	tar -rf tmp.tar  PARAM.XML
 	tar -rf tmp.tar  Config.pl
