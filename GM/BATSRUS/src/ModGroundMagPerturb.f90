@@ -4,7 +4,7 @@ module ModGroundMagPerturb
 
   use ModPlanetConst,    ONLY: rPlanet_I, Earth_
   use ModPhysics,        ONLY: rCurrents, No2Io_V, Si2No_V, UnitB_, UnitJ_
-  use ModCoordTransform, ONLY:sph_to_xyz, rot_xyz_sph, cross_product
+  use ModCoordTransform, ONLY: sph_to_xyz, rot_xyz_sph, cross_product,xyz_to_sph
   use ModConst,          ONLY: cHalfPi, cDegToRad
 
   implicit none
@@ -17,7 +17,7 @@ module ModGroundMagPerturb
 
   logical, public    :: save_magnetometer_data = .false.
 
-  integer, parameter :: Max_MagnetometerNumber = 50
+  integer, parameter :: Max_MagnetometerNumber = 100
   integer            :: iUnitMag = -1
   integer            :: nMagnetometer = 1
   real, dimension(2,Max_MagnetometerNumber) :: &
@@ -293,7 +293,10 @@ contains
                      ' MAG(geomagnetic coordinates) for Magnetometer InputFile!!'
                 EXIT READFILE
              end if
-          end if
+          else
+             write(*,*) NameSub, &
+                  'WARNING: Specify the #COORD in the magnetometer files'
+          endif
 
           if(index(Line,'#START')>0)then
              READPOINTS: do
@@ -412,6 +415,7 @@ contains
          MagPerturbGm_DI, MagPerturbFac_DI, &
          MagGsmXyz_DI, MagSmgXyz_DI,MagVarSum_DI
     real:: XyzSph_DD(3,3), MagtoGsm_DD(3,3), GsmtoSmg_DD(3,3)
+    real:: rplanet_tmp, phi_smg,theta_smg
     !--------------------------------------------------------
 
     ! Matrix between two coordinates
@@ -447,7 +451,7 @@ contains
     !------------------------------------------------------------------
 
     call ground_mag_perturb(MagGsmXyz_DI, MagPerturb_DI) 
-
+    
     do iMag=1,nMagnetometer 
        MagPerturbGm_DI(:,iMag) = matmul(GsmtoSmg_DD, MagPerturb_DI(:,iMag))
     end do
@@ -493,6 +497,7 @@ contains
              MagPerturbGmSph_D  = MagPerturbGm_DI(:,iMag)
              MagPerturbFacSph_D = MagPerturbFac_DI(:,iMag)
           else
+
              ! Transform to spherical coordinates (r,theta,phi) components
              XyzSph_DD = rot_xyz_sph(MagSmgXyz_DI(:,iMag))
 
@@ -518,7 +523,8 @@ contains
           !normalize the variable to I/O unit...
           MagVarGm_D  = MagPerturbGMSph_D * No2Io_V(UnitB_)
           MagVarFac_D = MagPerturbFacSph_D * No2Io_V(UnitB_)
-          
+
+
           write(iUnitMag,'(i5)',ADVANCE='NO') n_step
           write(iUnitMag,'(i5,5(1X,i2.2),1X,i3.3)',ADVANCE='NO') iTime_I
           write(iUnitMag,'(1X,i2)', ADVANCE='NO')  iMag
