@@ -53,7 +53,7 @@ cd Tmp
 rm -rf SWMF
 
 # Checkout and install the latest code
-cvs co SWMF >& /dev/null
+cvs co "19:00EDT" SWMF >& /dev/null
 cd SWMF
 ./Config.pl -install >& test_swmf.log
 
