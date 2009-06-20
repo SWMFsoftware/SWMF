@@ -1,0 +1,85 @@
+<center>
+<h1>Nightly SWMF Tests based on the CVS at 19:00EDT</h1>
+
+<A HREF=manual.log>Logfile</A> of creating the
+<A HREF=SWMF/doc/index.html>SWMF manuals</A>,
+<A HREF=SWMF/GM/BATSRUS/Doc/index.html>BATSRUS manuals</A>,
+<A HREF=SWMF/PW/PWOM/doc/PWOM.pdf>PWOM manual</A>, and
+<A HREF=SWMF/util/CRASH/doc/index.html>CRASH manuals</A>.
+
+<hr>
+<h2>Platforms, Fortran compilers and MPI libraries</h2>
+
+<table border=1>
+  <tr>
+      <td> name </td>
+      <td> platform</td>
+      <td>compiler</td>
+      <td>MPI library</td>
+      <td>MPI run</td></tr>
+  <tr>
+      <td><b>columbia/ifort</b></td>
+      <td>SGI Altix system with Itanium CPUs</td>
+      <td>ifort 10.0.026 (20070809)</td>
+      <td>Intel MPI</td>
+      <td>mpirun -np 4</td>
+  </tr>
+  <tr>
+      <td><b>grendel/nag</b></td>
+      <td>Linux cluster with dual-core AMD Athlon CPUs</td>
+      <td>NAG F95 v5.1(365)</td>
+      <td>mpich-1.2.7</td>
+      <td>serial run</td>
+  </tr>
+  <tr>
+      <td><b>grendel/OpenMPI</b></td>
+      <td>Linux cluster with dual-core AMD Athlon CPUs</td>
+      <td>NAG F95 v5.1(282)</td>
+      <td>OpenMPI-1.2.3</td>
+      <td>mpirun -np 2</td>
+  </tr>
+  <tr>
+      <td><b>grid/nag</b>
+      </td><td>Linux PC with 2 AMD Athlon CPUs</td>
+      <td>NAG F95 v5.0(322) -O0 -C -nan</td>
+      <td>mpich-1.2.5</td>
+      <td>mpirun -np 2</td>
+  </tr>
+  <tr>
+      <td><b>mesh/nag</b></td>
+      <td>Mac with 2 dual-core Intel CPUs</td>
+      <td>NAG F95 v5.1(389)</td>
+      <td>mpich-1.2.7</td>
+      <td>mpirun -np 4</td>
+  </tr>
+  <tr>
+      <td><b>nyx/nag</b></td>
+      <td>Linux cluster with quad-core CPUs</td>
+      <td>NAG F95 v5.0(414)</td>
+      <td>mpich-1.2.7</td>
+      <td>serial run</td>
+  </tr>
+  <tr>
+      <td><b>nyx/pgf90</b></td>
+      <td>Linux cluster with quad-core CPUs</td>
+      <td>pgf90 v7.2-1</td>
+      <td>OpenMPI-1.2.8-pgi</td>
+      <td>mpirun -np 2</td>
+  </tr>
+  <tr>
+      <td><b>xena/nag</b></td>
+      <td>Mac OSX cluster with G5 CPUs</td>
+      <td>NAG F95 v5.1(282)</td>
+      <td>mpich-1.2.6</td>
+      <td>mpirun -np 2</td>
+  </tr>
+</table>
+<hr>
+<h2>Test Results</h2>
+</center>
+<ul>
+<li><FONT COLOR=red>Red text</FONT> shows what failed in a test.<br>
+<li><FONT COLOR=green>Green text</FONT> indicates that a test passed.<br>
+<li>CAPITALIZED text shows results that have changed.<br>
+<li>Click on the machine name, the failed tests, or the log files for more info.
+</ul>
