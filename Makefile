@@ -127,26 +127,30 @@ install: ENV_CHECK mkdir
 	cd CON;			make install
 	cd ESMF/ESMF_SWMF;	make install
 
-	if([ -d "SC/BATSRUS" ]); \
-		then cp GM/BATSRUS/Config.pl SC/BATSRUS; \
-		     perl -i -pe 's/GM/SC/' SC/BATSRUS/Config.pl; \
-	fi
-	if([ -d "OH/BATSRUS" ]); \
-		then cp GM/BATSRUS/Config.pl OH/BATSRUS; \
-		     perl -i -pe 's/GM/OH/' OH/BATSRUS/Config.pl; \
-	fi
-	if([ -d "IH/BATSRUS" ]); \
-		then cp GM/BATSRUS/Config.pl IH/BATSRUS; \
-		     perl -i -pe 's/GM/IH/' IH/BATSRUS/Config.pl; \
-	fi
-	if([ -d "IH/BATSRUS_share" ]); \
-		then cp GM/BATSRUS/Config.pl IH/BATSRUS_share; \
-		     perl -i -pe "s/GM/IH/; s#'src#'../../GM/BATSRUS/src#" \
+	if([ -d "GM/BATSRUS" ]); then \
+		if([ -d "SC/BATSRUS" ]); \
+			then cp GM/BATSRUS/Config.pl SC/BATSRUS; \
+			     perl -i -pe 's/GM/SC/' SC/BATSRUS/Config.pl; \
+		fi; \
+		if([ -d "OH/BATSRUS" ]); \
+			then cp GM/BATSRUS/Config.pl OH/BATSRUS; \
+			     perl -i -pe 's/GM/OH/' OH/BATSRUS/Config.pl; \
+		fi; \
+		if([ -d "IH/BATSRUS" ]); \
+			then cp GM/BATSRUS/Config.pl IH/BATSRUS; \
+			     perl -i -pe 's/GM/IH/' IH/BATSRUS/Config.pl; \
+		fi; \
+		if([ -d "IH/BATSRUS_share" ]); \
+		    then cp GM/BATSRUS/Config.pl IH/BATSRUS_share; \
+			perl -i -pe "s/GM/IH/; s#'src#'../../GM/BATSRUS/src#" \
 			IH/BATSRUS_share/Config.pl; \
+		fi; \
 	fi
-
 	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v /Empty/`; \
-		do (echo Installing $$i; cd $$i; ./Config.pl -install=c); done
+		do (if([ -f "$$i/Config.pl" ]); then \
+			echo Installing $$i; cd $$i; ./Config.pl -install=c; \
+		    fi); \
+		done
 	@echo
 	@echo Installation succeeded
 	@echo
