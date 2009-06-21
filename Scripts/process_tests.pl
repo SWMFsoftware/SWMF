@@ -31,7 +31,7 @@ my %WeightTest = (
     "CWMM:PW/PWOM/test_Earth"             => "0.5",
     "CWMM:RB/RBE/test"                    => "0.5",
 
-    "CRASH:GM/BATSRUS/test_eosgodunov"    => "0.5",
+    "CRASH:GM/BATSRUS/test_eosgodunov"    => "1.0",
     "CRASH:GM/BATSRUS/test_graydiffusion" => "1.0", 
     "CRASH:GM/BATSRUS/test_hyades2d"      => "1.0",
     "CRASH:GM/BATSRUS/test_levelset"      => "1.0",
@@ -152,11 +152,15 @@ foreach $day (@days){
     next unless -d $day;
 
     my $dayname = $day;
-    $dayname =~ s/(\d)days/$1 days ago/;
+    $dayname =~ 
+	s/SWMF_TEST_RESULTS\/\d\d\d\d\//Test results and scores for 7pm /;
+
+    my %MaxScores;
+    my %Scores;
 
     # Start table with first row containing the machine names
     $Table .=	
-	"<h3>$dayname<br>Scores - <FONT COLOR=GREEN>_SCORE_</FONT></h3>\n".
+	"<h3>$dayname<br><FONT COLOR=GREEN>_SCORE_</FONT></h3>\n".
 	"<p>\n".
 	"<table border=3>\n".
 	"  <tr>".
@@ -170,6 +174,7 @@ foreach $day (@days){
 		"</A></br>\n";
 	}else{
 	    $Table .= "    <font color=red>no results</font></br>\n";
+	    $WeightMachine{$machine} = 0.0;
 	};
 	# Make a row for the log files
     	$file = "$day/$machine/$logfile";
@@ -186,8 +191,6 @@ foreach $day (@days){
     #foreach $machine (@machines){
     #}
 
-    my %MaxScores;
-    my %Scores;
     
     # Print a row for each test
     my $test;
@@ -198,26 +201,32 @@ foreach $day (@days){
 	    foreach $machine (@machines){
 		my $result = $result{$day}{$test}{$machine};
 
-		# Assign numeric value to the result
-		my $score;
-		if($result =~ /passed/i){
-		    $score = 1.0;
-		}elsif($result =~ /result/i){
-		    $score = 0.5;
-		}elsif($result =~ /run/i){
-		    $score = 0.1;
-		}elsif($result =~ /(\d+) tests/i){
-		    $score = (36-$1)/36.0;
-		}
+		if($result){
 
-		# Add up results multiplied by various weights
-		my $WeightMachine = $WeightMachine{$machine};
-	        $MaxScores{"ALL"} += $WeightMachine;
-	        $Scores{"ALL"}    += $WeightMachine*$score;
-		foreach my $type (@ScoreTypes){
-		    my $MaxScore = $WeightMachine*$WeightTest{"$type:$test"};
-		    $MaxScores{$type} += $MaxScore;
-		    $Scores{$type}    += $MaxScore*$score;
+		    # Assign numeric value to the result
+		    my $score; 
+		    my $MaxScore;
+		    if($result =~ /passed/i){
+			$score = 1.0;
+		    }elsif($result =~ /result/i){
+			$score = 0.5;
+		    }elsif($result =~ /run/i){
+			$score = 0.1;
+		    }elsif($result =~ /(\d+) tests/i){
+			$score = (36-$1)/36.0;
+		    }else{
+			$score = 0;
+		    }
+
+		    # Add up results multiplied by various weights
+		    my $WeightMachine = $WeightMachine{$machine};
+		    $MaxScores{"ALL"} += $WeightMachine;
+		    $Scores{"ALL"}    += $WeightMachine*$score;
+		    foreach my $type (@ScoreTypes){
+			$MaxScore = $WeightMachine*$WeightTest{"$type:$test"};
+			$MaxScores{$type} += $MaxScore;
+			$Scores{$type}    += $MaxScore*$score;
+		    }
 		}
 
 		if($day eq $days[0] or $day eq $days[1]){
