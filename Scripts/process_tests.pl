@@ -174,7 +174,6 @@ foreach $day (@days){
 		"</A></br>\n";
 	}else{
 	    $Table .= "    <font color=red>no results</font></br>\n";
-	    $WeightMachine{$machine} = 0.0;
 	};
 	# Make a row for the log files
     	$file = "$day/$machine/$logfile";
