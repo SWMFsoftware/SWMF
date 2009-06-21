@@ -1,9 +1,47 @@
 #!/usr/bin/perl
 use strict;
 
+my %WeightMachine = (
+    "columbia"     => "1.0",
+    "grendel"      => "0.5",
+    "grendel_ompi" => "0.5",
+    "grid"         => "1.0",
+    "mesh"         => "1.0",
+    "nyx"          => "0.2",
+    "nyx_pgf90"    => "1.0",
+    "xena"         => "0.1",
+    );
+
+my @ScoreTypes = ("ALL", "CCHM", "CWMM", "CRASH");
+my %WeightTest = (
+
+    "CCHM:test2_sc"                       => "1.0",
+    "CCHM:test2_ih"                       => "1.0",
+    "CCHM:GM/BATSRUS/test_corona"         => "1.0",
+
+    "CWMM:test1_gm"                       => "1.0",
+    "CWMM:test1_ie"                       => "1.0",
+    "CWMM:test1_pw"                       => "0.5",
+    "CWMM:test3_gm"                       => "1.0",
+    "CWMM:test3_ie"                       => "1.0",
+    "CWMM:test3_im"                       => "1.0",
+    "CWMM:test_pw"                        => "0.5",
+    "CWMM:test_rb"                        => "0.5",
+    "CWMM:GM/BATSRUS/test_magnetometer"   => "0.1",
+    "CWMM:PW/PWOM/test_Earth"             => "0.5",
+    "CWMM:RB/RBE/test"                    => "0.5",
+
+    "CRASH:GM/BATSRUS/test_eosgodunov"    => "0.5",
+    "CRASH:GM/BATSRUS/test_graydiffusion" => "1.0", 
+    "CRASH:GM/BATSRUS/test_hyades2d"      => "1.0",
+    "CRASH:GM/BATSRUS/test_levelset"      => "1.0",
+
+    );
+
 my $ERROR = "ERROR in process_tests.pl";
 my @machines;
 
+my $templatefile = "process_tests.html";
 
 my $resfile = "test_swmf.res";
 my $htmlfile = "test_swmf.html";
@@ -20,10 +58,11 @@ my %result;
 my $day;
 my $machine;
 
-my @days = 
-    ('Today','Yesterday','2days','3days','4days','5days','6days','7days');
+# Take last seven days.
+my $days = `ls -r -d SWMF_TEST_RESULTS/*/*/* | head -7`;
+my @days = split "\n", $days;
 
-# Extract results for both days and convert logfile into an HTML file
+# Extract results for all days and convert logfile into an HTML file
 foreach $day (@days){
 
     next unless -d $day;
@@ -102,10 +141,8 @@ foreach $day (@days){
 	close RESULTS;
 	close HTML;
     }
-    chdir "..";
+    chdir "../../../..";
 }
-
-`cat process_tests.html > $indexfile`;
 
 my $Table = "<hr>\n<center>\n";
 
@@ -119,7 +156,7 @@ foreach $day (@days){
 
     # Start table with first row containing the machine names
     $Table .=	
-	"<h3>$dayname _SCORE_</h3>\n".
+	"<h3>$dayname<br>Scores - <FONT COLOR=GREEN>_SCORE_</FONT></h3>\n".
 	"<p>\n".
 	"<table border=3>\n".
 	"  <tr>".
@@ -149,8 +186,8 @@ foreach $day (@days){
     #foreach $machine (@machines){
     #}
 
-    my $MaxScore = 0;
-    my $score = 0;
+    my %MaxScores;
+    my %Scores;
     
     # Print a row for each test
     my $test;
@@ -161,25 +198,44 @@ foreach $day (@days){
 	    foreach $machine (@machines){
 		my $result = $result{$day}{$test}{$machine};
 
-		$MaxScore += 1;
-		if($result =~ /passed/){
-		    $score += 1
+		# Assign numeric value to the result
+		my $score;
+		if($result =~ /passed/i){
+		    $score = 1.0;
+		}elsif($result =~ /result/i){
+		    $score = 0.5;
+		}elsif($result =~ /run/i){
+		    $score = 0.1;
+		}elsif($result =~ /(\d+) tests/i){
+		    $score = (36-$1)/36.0;
 		}
 
-		if($day =~ /Today|Yesterday/){
-		    my $resultnew = $result{"Today"}{$test}{$machine};
-		    my $resultold = $result{"Yesterday"}{$test}{$machine};
+		# Add up results multiplied by various weights
+		my $WeightMachine = $WeightMachine{$machine};
+	        $MaxScores{"ALL"} += $WeightMachine;
+	        $Scores{"ALL"}    += $WeightMachine*$score;
+		foreach my $type (@ScoreTypes){
+		    my $MaxScore = $WeightMachine*$WeightTest{"$type:$test"};
+		    $MaxScores{$type} += $MaxScore;
+		    $Scores{$type}    += $MaxScore*$score;
+		}
+
+		if($day eq $days[0] or $day eq $days[1]){
+		    my $resultnew = $result{$days[0]}{$test}{$machine};
+		    my $resultold = $result{$days[1]}{$test}{$machine};
 
 		    # remove HTML (font colors)
 		    $resultnew =~ s/<[^>]*>//g; 
 		    $resultold =~ s/<[^>]*>//g;
 
-		    $resultnew .= " failed" unless $resultnew =~ /passed|failed/;
-		    $resultold .= " failed" unless $resultold =~ /passed|failed/;
+		    $resultnew .= " failed" 
+			unless $resultnew =~ /passed|failed/;
+		    $resultold .= " failed" 
+			unless $resultold =~ /passed|failed/;
 
 		    if($resultnew ne $resultold){
-			$change{"$test on $machine     today: $resultnew\n".
-				    "$test on $machine yesterday: $resultold\n\n"}++;
+			$change{"$test on $machine     today: $resultnew\n"
+				    ."$test on $machine yesterday: $resultold\n\n"}++;
 			$result = uc($result);
 		    }
 		}
@@ -197,8 +253,20 @@ foreach $day (@days){
 	$Table .= "  </tr>\n";
     }
 
-    my $skill = int(100*$score/$MaxScore);
-    $Table =~ s/_SCORE_/passed\/total=$score\/$MaxScore=$skill\%/;
+    # Calculate score per centages and save them into file and table
+    my $score; 
+    foreach my $type (@ScoreTypes){
+	$score .= "$type: " 
+	    . sprintf("%.1f", 100*$Scores{$type}/$MaxScores{$type})
+	    . '%, ';
+    }
+    chop($score); chop($score);
+    $Table =~ s/_SCORE_/$score/;
+
+    open SCORE, ">$day/all_scores.txt";
+    $score =~ s/, /\n/g;
+    print SCORE "$score\n";
+    close SCORE;
 
     $Table .= "  </tr>\n</table>\n";
 }
@@ -208,7 +276,13 @@ open FILE, ">$changefile" or die "$ERROR: could not open $changefile\n";
 print FILE sort keys %change;
 close FILE;
 
-open FILE, ">>$indexfile" or die "$ERROR: could not open $indexfile\n";
+open FILE, ">$indexfile" or die "$ERROR: could not open $indexfile\n";
+
+open TEMPLATEFILE, $templatefile;
+while(<TEMPLATEFILE>){
+    last  if /_TABLES_/;
+    print FILE $_;
+}
 
 if(-s $manerrorfile){
     print FILE "
@@ -231,11 +305,47 @@ Source code changed: diff -r SWMF SWMF_yesterday
 if(-s $changefile){
     print FILE "
 <h3><A HREF=test.diff TARGET=swmf_test_summary>
-Summary of test differences between Today and Yesterday
+Summary of test differences between $days[0] and $days[1]
 </A></h3>
 ";
 }
 
 print FILE $Table;
+
+while(<TEMPLATEFILE>){
+    print FILE $_;
+}
+close TEMPLATEFILE;
+
+print FILE "<h3>Weighting scheme</h3>\n";
+
+print FILE "
+<b><pre>
+Weight - machine
+------------------------------------------
+";
+
+foreach my $machine (sort keys %WeightMachine){
+    print FILE "   $WeightMachine{$machine} - $machine\n";
+}
+
+
+my $oldtype;
+foreach my $typetest (sort keys %WeightTest){
+    my $test = $typetest;
+    $test =~ s/(\w+)://;
+    my $type = $1;
+    if($type ne $oldtype){
+	print FILE "
+PROJECT $type:
+   weight - test
+   ---------------------------------------
+";
+	$oldtype = $type;
+    }
+    print FILE "      $WeightTest{$typetest} - $test\n";
+}
+print FILE "</pre></b>\n";
 close FILE;
 
+exit 0;
