@@ -1569,7 +1569,7 @@ subroutine MH_set_parameters(TypeAction)
              call read_var('DoFixOuterBoundary',DoFixOuterBoundary) 
 
      case("#SOLARWIND")
-        if(.not.is_first_session())CYCLE READPARAM
+        !if(.not.is_first_session())CYCLE READPARAM
         call read_var('SwNDim',  SW_n_dim)
         call read_var('SwTDim'  ,SW_T_dim)
         call read_var('SwUxDim' ,SW_Ux_dim)
