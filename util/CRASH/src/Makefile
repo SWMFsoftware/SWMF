@@ -17,7 +17,7 @@ OBJECTS=\
 	ModTransport.o
 
 
-OBJECTS_EXE= test_ionization.o test_godunov.o
+OBJECTS_EXE= test_ionization.o test_godunov.o test_Fermi.o
 
 
 
@@ -97,4 +97,24 @@ distclean: clean
 
 
 
+test_Fermi.o : ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
+
+test_Fermi: DEPEND
+	 make test_Fermi.exe
+
+test_Fermi.exe: test_Fermi.o
+	@(if [ ${OS} = "Darwin" ];         then make test_Fermi_for_Darwin; \
+	else                                    make test_Fermi_general; fi)
+
+test_Fermi_general:
+	${LINK.f90} -o test_Fermi.exe test_Fermi.o \
+		-L${LIBDIR} -lCRASH  -lSHARE -lTIMING \
+		${Lflag1}
+
+test_Fermi_for_Darwin:
+	rm -rf Tmp_; mkdir Tmp_ ;
+	cd Tmp_; ar -x ${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE};
+	${LINK.f90} -o test_Fermi.exe test_Fermi.o Tmp_/*.o \
+		${Lflag1}    ; 
+	rm -rf Tmp_ 
 

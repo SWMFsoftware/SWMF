@@ -1,6 +1,7 @@
 !^CFG COPYRIGHT UM
 
 module CRASH_ModFermiGas
+  use ModConst,ONLY : cPi
 
   implicit none
   SAVE
@@ -10,25 +11,70 @@ module CRASH_ModFermiGas
   logical,public :: UseFermiGas = .true.
   
   ! At LogGe >= LogGeMinBoltzmann the electrons are treated as a Boltzmann gas
-  real, public:: LogGeMinBoltzmann = 4.0
+  real, public :: LogGeMinBoltzmann = 4.0
 
   ! At LogGe >= LogGeMinFermi the effects of Fermi statistics are accounted for
-  real, public, parameter:: LogGeMinFermi = 0.0
+  ! Fermi function is not implemented for log(g_e) < -3.0, because the Taylor series
+  ! converges when  |log(g_e)| < \pi
+  real, public :: LogGeMinFermi = 0.0
+
+  ! At LogGeMinFermi <= LogGe <= 0.0 we use Taylor series to calculate Fermi Functions.
+  !
+  !
+  !  At LogGe >= max(0.0,LogGeMinFermi) we use the series 
+  !  \sum_{n=1}^\infty{\frac{(-1)^{n+1}}{n^{\nu+1 (g_e)^{n}}}}
+  !
 
   ! Logarithm of the electron statistical weight = exp(-\mu/T)
-  real, public:: LogGe 
+  real, public :: LogGe
 
   !Correcting coefficients in thermodynamic functions  
-  real,public :: rMinus = 1.0, rPlus = 1.0  
+  real, public :: rMinus = 1.0, rPlus = 1.0
 
-  integer,parameter :: nStep = 20
-  integer,parameter :: NuEqMinus12_ = 1, NuEq12_ = 2, NuEq32_ = 3
+  ! Named indices.
+  integer, parameter :: NuEqMinus12_ = 1, NuEq12_ = 2, NuEq32_ = 3
+  real, parameter :: NuPlus1_I(3) = (/ 0.5, 1.50, 2.50 /)
+
+
+
+  !nStepSeries is a number of values between
+  !LogGeMinSeries and LogGeMinBoltzmann, for which
+  !FermiFunctionTableSeries_II is to be calculated.
+  integer, parameter :: nStepSeries = 20
+  real :: FermiFunctionTableSeries_II(0:nStepSeries, NuEqMinus12_ : NuEq32_) = 1.0
+
+  integer, parameter :: nStepTaylorMax = 15
+  integer :: nStepTaylor = nStepTaylorMax
+
+  !The table for positive indices are only used in the test
+  real :: FermiFunctionTableTaylor_II(&
+       -nStepTaylorMax:nStepTaylorMax, NuEqMinus12_ : NuEq32_) = 1.0
+
+  !Taylor coefficients = \frac{(1-2^{i-\nu}) \zeta(\nu+1-i)}{i!}
+  !TaylorSeriesCoeff_II are Taylor coefficients multiplied by \pi^i
+  !to maintain these numbers around 1
+  integer, parameter :: nTaylor = 100
+  real, dimension(0:nTaylor, NuEqMinus12_ : NuEq32_) :: TaylorSeriesCoeff_II = 1.0
+
+
+
+  !The things related to the calculation using Tailor series.
+  !The series over Semi-Integer arguments (....S_I arrays)
+  !For i=1,2,3, etc in all arrays below the variable s passes 1/2,3/2,5/2 etc
+
+  !2^{1-s)
+  real, dimension(nTaylor+1):: TwoPoweredOneMinusS_I = 1.0
+
+  !\sum_{i=1}^\infty{\frac{(-1)^{i+1}}{i^s}}
+  real, dimension(nTaylor+1):: ZetaSeriesS_I = 1.0
+
+  !Zeta function = ZetaSeries/(1-TwoPoweredOneMinusS_I)
+  real, dimension(nTaylor+1):: ZetaFunctionS_I = 1.0
+
+
+  public :: init_fermi_function, iterate_ge
   
-  real :: FermiFunctionTable_II(0:nStep, NuEqMinus12_ : NuEq32_)
-  
-  public:: init_fermi_function, iterate_ge 
-  
-  ! public :: test_fermi_function !Uncomment for testing
+  public :: test_fermi_function 
 
 contains
   !=====================================
@@ -40,30 +86,178 @@ contains
   !==============================
   !Initialaze the calculation of Fermi functions for \nu+1=1/2, 3/2, 5/2
   subroutine init_fermi_function
-    integer:: iStep,iNu
-    real :: Ge, GeN, SumTerm, RealN
-    real, parameter :: MuPlus1_I(3) = (/ 0.5, 1.50, 2.50 /)
-    !------------------------------------------------------
-    !Fill in the lookup table
-    do iStep=0,nStep-1
-       Ge = -exp(&
-           -(LogGeMinFermi*(nStep-iStep)+iStep*LogGeMinBoltzmann)/nStep  )
-       do iNu = NuEqMinus12_ ,  NuEq32_
-          GeN = 1.0; SumTerm = 1.0 ; RealN = 1.0
-          FermiFunctionTable_II(iStep, iNu) = 1.0 
-          do while(abs(SumTerm) > 3.0e-4)
-             RealN = RealN + 1.0
-             GeN = GeN * Ge
-             SumTerm = GeN/RealN** MuPlus1_I(iNu)
-             FermiFunctionTable_II(iStep, iNu) = &
-                  FermiFunctionTable_II(iStep, iNu) + SumTerm
-          end do
-       end do
-    end do 
-   
-    !To achieve a continuity at G_e_Min_Boltzmann, put the functions  to be 1 
-    FermiFunctionTable_II(nStep, :) = 1.0
 
+    call fill_lookup_table_series
+    if(LogGeMinFermi < 0.0)then
+       call init_taylor_series
+       call fill_lookup_table_taylor
+       FermiFunctionTableSeries_II(0,:) =  FermiFunctionTableTaylor_II(0,:)
+    end if
+
+  contains
+    !========================================================
+    subroutine init_taylor_series
+      integer :: iNu, iTaylor
+      
+      integer :: i, n
+      real,dimension(1000,nTaylor+1)::InvIPoweredS_II
+      real :: SignOfTerm
+      real :: CoreMultiplier
+      real :: TwoPoweredIMinusNu
+      !-----------------------------------
+      
+      !Calculate TwoPoweredOneMinusS_I
+      TwoPoweredOneMinusS_I(1)=sqrt(2.0)
+      
+      do i=2,nTaylor+1
+         TwoPoweredOneMinusS_I(i) = TwoPoweredOneMinusS_I(i-1) * 0.5
+      end do
+      !\
+      !Calculate series need for implement in Riemann's Zeta function
+      
+      InvIPoweredS_II(1,:) = 1.0
+      SignOfTerm = 1.0
+      do i=2,1000
+         SignOfTerm = -SignOfTerm
+         InvIPoweredS_II(i,1) = SignOfTerm/sqrt(real(i))
+      end do
+      
+      do n = 2,nTaylor+1
+         internal:do i = 2,1000
+            InvIPoweredS_II(i,n) = InvIPoweredS_II(i,n-1)/real(i)
+            if(abs(InvIPoweredS_II(i,n)) < 3.0e-8)exit internal
+         end do internal
+      end do
+      do n=2,nTaylor+1
+         ZetaSeriesS_I(n) = sum(InvIPoweredS_II(:,n))
+      end do
+      
+      !Use explicit value for zeta(1/2) as the series converges too slowly
+      ZetaSeriesS_I(1) = (-1.46035) * (1.0 - 2.0*sqrt(0.5))
+      ZetaSeriesS_I(2) = (2.61237535) * (1.0 - sqrt(0.5))
+      
+      !Calculate Riemann's Zeta function
+      ZetaFunctionS_I = ZetaSeriesS_I/(1.0 - TwoPoweredOneMinusS_I)
+      !End of zeta function calculations
+      !/
+      
+      !\
+      !Calculate Taylor series coefficients
+      do iNu = NuEqMinus12_ , NuEq32_
+         TwoPoweredIMinusNu = 2 ** (1 - NuPlus1_I(iNu))
+         
+         !Add up sum terms with zeta function of a positive argument
+         CoreMultiplier = 1.0
+         !(iNu - 1) is the index of the last Taylor coefficient that doesn't
+         !use zeta function of a negative argument
+         do iTaylor = 0, min(nTaylor, iNu - 1)
+            if (iTaylor /= 0)& 
+                 CoreMultiplier = CoreMultiplier / iTaylor * cPi
+            
+            TaylorSeriesCoeff_II(iTaylor, iNu) = &
+                 CoreMultiplier * (1 - TwoPoweredIMinusNu) * &
+                 ZetaFunctionS_I(iNu - iTaylor)
+            
+            TwoPoweredIMinusNu = TwoPoweredIMinusNu * 2.0
+         end do
+         
+         !Add up sum terms with zeta function of a negative argument using
+         !this reflection formula:
+         ! \zeta(x) = 2^x \pi^{x-1} \sin(\pi x / 2) \Gamma(1-x) \zeta(1-x)
+         CoreMultiplier = cPi ** (iNu - 1) / 4.0
+         do i = 2, iNu            !divide by (nPositiveZeta + 1)!
+            CoreMultiplier = CoreMultiplier / i
+         end do
+         
+         do iTaylor = iNu, nTaylor
+            
+            TaylorSeriesCoeff_II(iTaylor, iNu) = &
+                 CoreMultiplier * (1 - TwoPoweredIMinusNu) * &
+                 ZetaFunctionS_I(iTaylor - iNu + 2)
+
+            if (mod(iTaylor - iNu, 4) < 2) then
+               !set sign of \sin \frac{\pi (\nu + 1 - i)}{2}
+               TaylorSeriesCoeff_II(iTaylor, iNu) = &
+                    -TaylorSeriesCoeff_II(iTaylor, iNu)  
+            end if
+
+            CoreMultiplier = CoreMultiplier * (iTaylor - NuPlus1_I(iNu) + 1) / &
+                 (2.0 * (iTaylor + 1))
+            TwoPoweredIMinusNu = TwoPoweredIMinusNu * 2.0
+         end do
+      end do
+    end subroutine init_taylor_series
+  !========================================================
+    subroutine fill_lookup_table_series
+      integer :: iStep, iNu, iTaylor
+      real :: GeInv, GeInvN, SumTerm, RealN
+      
+      real :: CoreMultiplier
+      real :: X
+      !-------------------------------------------
+      
+      !Fill in the lookup table
+      do iStep=0,nStepSeries-1
+         !We calculate \sum_{n=1}^\infty (-1/Ge)**(n-1) / n**(\mu+1)
+         !THE RESULTING FERMI FUNCTIONS ARE ALL MULTIPLED BY Ge!!
+         GeInv = (-1.0)*exp(-(max(LogGeMinFermi, 0.0)*(nStepSeries-iStep)&
+              +iStep*LogGeMinBoltzmann)/nStepSeries)
+         do iNu = NuEqMinus12_ ,  NuEq32_
+            GeInvN = 1.0; SumTerm = 1.0 ; RealN = 1.0
+            FermiFunctionTableSeries_II(iStep, iNu) = 1.0
+            do while(abs(SumTerm) > 3.0e-4)
+               RealN = RealN + 1.0
+               GeInvN = GeInvN * GeInv
+               SumTerm = GeInvN/RealN** NuPlus1_I(iNu)
+               FermiFunctionTableSeries_II(iStep, iNu) = &
+                    FermiFunctionTableSeries_II(iStep, iNu) + SumTerm
+            end do
+         end do
+      end do
+      
+      !To achieve a continuity at G_e_Min_Boltzmann, put the functions  to be 1
+      FermiFunctionTableSeries_II(nStepSeries, :) = 1.0
+    end subroutine fill_lookup_table_series
+    !========================================================
+    subroutine fill_lookup_table_taylor
+      real :: LogGeMin
+      real :: LogGeMax
+      
+      integer :: iStep, iNu, iTaylor
+      real :: GeInv, GeInvN, SumTerm, RealN
+      
+      real :: CoreMultiplier
+      real :: X
+      !-------------------------------------------
+      LogGeMin = LogGeMinFermi
+      LogGeMax = - LogGeMin
+      !Fill in the lookup table
+      do iStep = -nStepTaylor, nStepTaylor
+         X = -(LogGeMin*(nStepTaylor-iStep)+&
+              (iStep+nStepTaylor)*LogGeMax)/(2*nStepTaylor)
+         
+         !Calculate Taylor series
+         do iNu = NuEqMinus12_, NuEq32_
+            SumTerm = 100
+            FermiFunctionTableTaylor_II(iStep,iNu) = 0.0
+            CoreMultiplier = 1.0
+            
+            do iTaylor = 0, nTaylor
+               if (abs(SumTerm) < 3.0e-8) exit
+               
+               SumTerm = TaylorSeriesCoeff_II(iTaylor,iNu) * CoreMultiplier
+               FermiFunctionTableTaylor_II(iStep,iNu) = &
+                    FermiFunctionTableTaylor_II(iStep,iNu) + SumTerm
+
+               CoreMultiplier = CoreMultiplier / cPi * X  !CoreMultiplier = (x/\pi)^i
+            end do
+            
+            !THE RESULTING FERMI FUNCTIONS ARE ALL MULTIPLED BY Ge!!
+            FermiFunctionTableTaylor_II(iStep, iNu) = &
+                 FermiFunctionTableTaylor_II(iStep, iNu) * exp(-X)
+         end do
+      end do
+    end subroutine fill_lookup_table_taylor
   end subroutine init_fermi_function
   !========================================================
   subroutine iterate_ge(zAvr,Delta2I,LogGe1,Diff)
@@ -79,16 +273,29 @@ contains
     !------------------------
 
 
-    Residual = (LogGe - LogGeMinFermi)/&
-         (LogGeMinBoltzmann - LogGeMinFermi)*nStep
+    if (LogGe <= 0.0  .and. LogGeMinFermi < 0.0) then
+       Residual = (LogGe - LogGeMinFermi)/&
+            ( - LogGeMinFermi)*nStepTaylor
 
-    Residual = min(max(Residual,0.0),real(nStep))
-    iStep    = int(Residual)
-    iStep1   = min(iStep+1,nStep)
+       Residual = max(Residual, 0.0)
+       iStep    = int(Residual) - nStepTaylor
+       iStep1   = min(iStep+1,0)
+
+       Residual = Residual - real(iStep) - nStepTaylor
+       FermiFunction_I = FermiFunctionTableTaylor_II(iStep,:)*(1.0-Residual)+&
+            FermiFunctionTableTaylor_II(iStep1,:)*Residual
+    else 
+       Residual = (LogGe - max(LogGeMinFermi, 0.0))/&
+            (LogGeMinBoltzmann - max(LogGeMinFermi, 0.0))*nStepSeries
+
+       Residual = min(max(Residual,0.0),real(nStepSeries))
+       iStep    = int(Residual)
+       iStep1   = min(iStep+1,nStepSeries)
    
-    Residual = Residual - real(iStep)
-    FermiFunction_I = FermiFunctionTable_II(iStep,:)*(1.0-Residual)+&
-         FermiFunctionTable_II(iStep1,:)*Residual
+       Residual = Residual - real(iStep)
+       FermiFunction_I = FermiFunctionTableSeries_II(iStep,:)*(1.0-Residual)+&
+            FermiFunctionTableSeries_II(iStep1,:)*Residual
+    end if
     
 
 
@@ -106,22 +313,65 @@ contains
   subroutine test_fermi_function
     integer :: iStep
     !---------------
-    LogGeMinBoltzmann = 2.0*log(10.)
 
+    write(*,*)'zeta-function(1/2) zeta-function(3/2) zeta-function(5/2):'
+    write(*,*)'reference data: -1.46035 2.612 1.341'
+    nStepTaylor = 13
+    LogGeMinFermi = -1.3*log(10.)
+    LogGeMinBoltzmann = 2.0*log(10.)
+    call init_fermi_function
+
+    write(*,*)'calculated values: ', ZetaFunctionS_I(1:3)
     write(*,*)'zeta-function multiplied by (1-2*0.5^\nu) = ',&
          -1.46035*(1.0 -2.0*sqrt(0.5)),&
          2.612*(1.0-sqrt(0.5)),1.341*(1.0-0.5*sqrt(0.5))
-    call init_fermi_function
+    write(*,*)'Calculated ZetaSeriesS_I: ',ZetaSeriesS_I(1:3)
+    write(*,*)'Calculated TaylorSeriesCoeff_II for \nu = 1/2:', TaylorSeriesCoeff_II(0:2, 2)
     write(*,*)'The computed values at g_e=1 are:', &
-         FermiFunctionTable_II(0 , :)
+         FermiFunctionTableSeries_II(0 , :)
+
+
+    write(*,*)'Standard Fermi function table:'
+    
 
     write(*,*)'log10g_e  g_e*Fe1/2   rMinus rPlus'
-    do iStep = 0, nStep
-       write(*,*) (LogGeMinFermi*(nStep-iStep)+iStep*LogGeMinBoltzmann)/nStep/&
-            log(10.0), FermiFunctionTable_II(iStep,2),&
-            FermiFunctionTable_II(iStep,1)/FermiFunctionTable_II(iStep,2),&
-            FermiFunctionTable_II(iStep,3)/FermiFunctionTable_II(iStep,2)
+
+    do iStep = -nStepTaylor,0
+       write(*,*) (LogGeMinFermi*(nStepTaylor-iStep)-&
+            (iStep+nStepTaylor)*LogGeMinFermi)/(2*nStepTaylor)/&
+            log(10.0), FermiFunctionTableTaylor_II(iStep,2),&
+            FermiFunctionTableTaylor_II(iStep,1)/FermiFunctionTableTaylor_II(iStep,2),&
+            FermiFunctionTableTaylor_II(iStep,3)/FermiFunctionTableTaylor_II(iStep,2)
     end do
+   
+
+    LogGeMinFermi = 0.0
+    LogGeMinBoltzmann = 2.0*log(10.)
+    call init_fermi_function
+
+    write(*,*) 'Series: for LogGeMinFermi<0 the next line will be overwritten'
+    do iStep = 0, nStepSeries
+       write(*,*) (0.0 * (nStepSeries-iStep)+iStep*LogGeMinBoltzmann)/nStepSeries/&
+            log(10.0), FermiFunctionTableSeries_II(iStep,2),&
+            FermiFunctionTableSeries_II(iStep,1)/FermiFunctionTableSeries_II(iStep,2),&
+            FermiFunctionTableSeries_II(iStep,3)/FermiFunctionTableSeries_II(iStep,2)
+       if(iStep==13)write(*,*)'--------------------------------------------'
+    end do
+
+    LogGeMinFermi = -1.3*log(10.)
+    call init_fermi_function
+
+    !Test Taylor series for 0.0 <= \log(g_e) <= 3.0
+   
+    write(*,*)'Fermi function table for \log(g_e) >= 0 calculated via Taylor series:'
+      
+      do iStep = 0, nStepTaylor
+         write(*,*) (0.0*(nStepTaylor-iStep)+iStep*abs(LogGeMinFermi))/nStepTaylor/&
+              log(10.0), FermiFunctionTableTaylor_II(iStep,2),&
+              FermiFunctionTableTaylor_II(iStep,1)/FermiFunctionTableTaylor_II(iStep,2),&
+              FermiFunctionTableTaylor_II(iStep,3)/FermiFunctionTableTaylor_II(iStep,2)
+      end do
+ 
+
   end subroutine test_fermi_function
-  
 end module CRASH_ModFermiGas
