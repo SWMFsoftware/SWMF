@@ -107,7 +107,8 @@ contains
     use ModFaceGradient, ONLY: calc_face_gradient
     use ModMain,         ONLY: UseB0
     use ModNumConst,     ONLY: cTolerance
-    use ModPhysics,      ONLY: inv_gm1, Si2No_V, UnitTemperature_
+    use ModPhysics,      ONLY: inv_gm1, Si2No_V, UnitTemperature_, &
+         UnitEnergyDens_
     use ModUser,         ONLY: user_material_properties
     use ModVarIndexes,   ONLY: nVar, Bx_, Bz_, Rho_, p_
 
@@ -115,7 +116,7 @@ contains
     real,    intent(in) :: State_V(nVar), Normal_D(3)
     real,    intent(out):: HeatCondCoefNormal, HeatFlux_D(3)
 
-    real :: B_D(3), Bunit_D(3), Bnorm, Cv
+    real :: B_D(3), Bunit_D(3), Bnorm, Cv, CvSi
     real :: FaceGrad_D(3), HeatCoef, TemperatureSi, Temperature, &
          FractionSpitzer
 
@@ -142,18 +143,28 @@ contains
 
 
     if(IsNewBlockHeatConduction) &
+         !!!do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+         !!!   call user_material_properties( &
+         !!!      State_VGB(:,i,j,k,iBlock), TeSiOut=TemperatureSi)
+         !!!   Te_G(i,j,k) = TemperatureSi*Si2No_V(UnitTemperature_)
+         !!!end do; end do; end do
+
          Te_G = State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock)
 
     call calc_face_gradient(iDir, i, j, k, iBlock, &
          Te_G, IsNewBlockHeatConduction, FaceGrad_D)
 
+
+    !!! ! Note we assume that the heat conduction formulas for the
+    !!! ! ideal state is still applicable for the mixed state
+    !!! call user_material_properties( &
+    !!!    State_V, TeSiOut=TemperatureSi, CvSiOut = CvSi)
+    !!! Temperature = TemperatureSi*Si2No_V(UnitTemperature_)
+    Temperature = State_V(p_)/State_V(Rho_)
+
     if(DoTestHeatConduction)then
        HeatCoef = 1.0
     else
-
-       !!! call user_material_properties(State_V, TeSiOut=TemperatureSi)
-       !!! Temperature = TemperatureSi*Si2No_V(UnitTemperature_)
-       Temperature = State_V(p_)/State_V(Rho_)
 
        if(DoModifyHeatConduction)then
           ! Artificial modified heat conduction for a smoother transition
@@ -171,6 +182,7 @@ contains
 
     ! get the heat conduction coefficient normal to the face for
     ! time step restriction
+    !!!Cv = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
     Cv = State_V(Rho_)*inv_gm1
     HeatCondCoefNormal = HeatCoef*dot_product(Bunit_D,Normal_D)**2/Cv
 
