@@ -20,8 +20,10 @@ module ModHeatConduction
   ! Variables for setting the parallel heat conduction coefficient
   character(len=20), public :: TypeHeatConduction = 'test'
   logical :: DoModifyHeatConduction, DoTestHeatConduction
-  real :: HeatConductionParSi = 1.23e-11
-  real :: TmodifySi = 2.5e5, DeltaTmodifySi = 2.0e4
+  logical :: UseIdealState = .true.
+  
+  real :: HeatConductionParSi = 1.23e-11  ! taken from calc_heat_flux
+  real :: TmodifySi = 2.5e5, DeltaTmodifySi = 2.0e4 ! taken from Linker et al.
   real :: HeatConductionPar, Tmodify, DeltaTmodify
 
   ! electron temperature used for calculating field parallel heat flux
@@ -46,6 +48,7 @@ contains
        if(UseParallelConduction)then
           call read_var('TypeHeatConduction', TypeHeatConduction)
           call read_var('HeatConductionParSi', HeatConductionParSi)
+          call read_var('UseIdealState', UseIdealState)
 
           select case(TypeHeatConduction)
           case('test','spitzer')
@@ -105,7 +108,7 @@ contains
     use ModAdvance,      ONLY: State_VGB
     use ModB0,           ONLY: B0_DX, B0_DY, B0_DZ
     use ModFaceGradient, ONLY: calc_face_gradient
-    use ModMain,         ONLY: UseB0
+    use ModMain,         ONLY: nI, nJ, nK, UseB0
     use ModNumConst,     ONLY: cTolerance
     use ModPhysics,      ONLY: inv_gm1, Si2No_V, UnitTemperature_, &
          UnitEnergyDens_
@@ -116,6 +119,7 @@ contains
     real,    intent(in) :: State_V(nVar), Normal_D(3)
     real,    intent(out):: HeatCondCoefNormal, HeatFlux_D(3)
 
+    integer :: ii, jj, kk
     real :: B_D(3), Bunit_D(3), Bnorm, Cv, CvSi
     real :: FaceGrad_D(3), HeatCoef, TemperatureSi, Temperature, &
          FractionSpitzer
@@ -142,25 +146,32 @@ contains
     Bunit_D = B_D/Bnorm
 
 
-    if(IsNewBlockHeatConduction) &
-         !!!do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
-         !!!   call user_material_properties( &
-         !!!      State_VGB(:,i,j,k,iBlock), TeSiOut=TemperatureSi)
-         !!!   Te_G(i,j,k) = TemperatureSi*Si2No_V(UnitTemperature_)
-         !!!end do; end do; end do
-
-         Te_G = State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock)
+    if(IsNewBlockHeatConduction)then
+       if(UseIdealState)then
+          Te_G = State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock)
+       else
+          do kk = -1, nK+2; do jj = -1, nJ+2; do ii = -1, nI+2
+             call user_material_properties( &
+                  State_VGB(:,ii,jj,kk,iBlock), TeSiOut=TemperatureSi)
+             Te_G(ii,jj,kk) = TemperatureSi*Si2No_V(UnitTemperature_)
+          end do; end do; end do
+       end if
+    end if
 
     call calc_face_gradient(iDir, i, j, k, iBlock, &
          Te_G, IsNewBlockHeatConduction, FaceGrad_D)
 
-
-    !!! ! Note we assume that the heat conduction formulas for the
-    !!! ! ideal state is still applicable for the mixed state
-    !!! call user_material_properties( &
-    !!!    State_V, TeSiOut=TemperatureSi, CvSiOut = CvSi)
-    !!! Temperature = TemperatureSi*Si2No_V(UnitTemperature_)
-    Temperature = State_V(p_)/State_V(Rho_)
+    if(UseIdealState)then
+       Temperature = State_V(p_)/State_V(Rho_)
+       Cv = State_V(Rho_)*inv_gm1
+    else
+       ! Note we assume that the heat conduction formula for the
+       ! ideal state is still applicable for the non-ideal state
+       call user_material_properties( &
+            State_V, TeSiOut=TemperatureSi, CvSiOut = CvSi)
+       Temperature = TemperatureSi*Si2No_V(UnitTemperature_)
+       Cv = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
+    end if
 
     if(DoTestHeatConduction)then
        HeatCoef = 1.0
@@ -182,8 +193,6 @@ contains
 
     ! get the heat conduction coefficient normal to the face for
     ! time step restriction
-    !!!Cv = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
-    Cv = State_V(Rho_)*inv_gm1
     HeatCondCoefNormal = HeatCoef*dot_product(Bunit_D,Normal_D)**2/Cv
 
   end subroutine get_heat_flux
