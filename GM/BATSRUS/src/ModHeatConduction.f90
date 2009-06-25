@@ -20,7 +20,7 @@ module ModHeatConduction
   ! Variables for setting the parallel heat conduction coefficient
   character(len=20), public :: TypeHeatConduction = 'test'
   logical :: DoModifyHeatConduction, DoTestHeatConduction
-  real :: HeatConductionParSi = 1.0
+  real :: HeatConductionParSi = 1.23e-11
   real :: TmodifySi = 2.5e5, DeltaTmodifySi = 2.0e4
   real :: HeatConductionPar, Tmodify, DeltaTmodify
 
