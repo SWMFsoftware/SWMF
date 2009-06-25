@@ -107,7 +107,8 @@ contains
     use ModFaceGradient, ONLY: calc_face_gradient
     use ModMain,         ONLY: UseB0
     use ModNumConst,     ONLY: cTolerance
-    use ModPhysics,      ONLY: inv_gm1
+    use ModPhysics,      ONLY: inv_gm1, Si2No_V, UnitTemperature_
+    use ModUser,         ONLY: user_material_properties
     use ModVarIndexes,   ONLY: nVar, Bx_, Bz_, Rho_, p_
 
     integer, intent(in) :: iDir, i, j, k, iBlock
@@ -115,7 +116,8 @@ contains
     real,    intent(out):: HeatCondCoefNormal, HeatFlux_D(3)
 
     real :: B_D(3), Bunit_D(3), Bnorm, Cv
-    real :: FaceGrad_D(3), HeatCoef, Temperature, FractionSpitzer
+    real :: FaceGrad_D(3), HeatCoef, TemperatureSi, Temperature, &
+         FractionSpitzer
 
     character(len=*), parameter :: NameSub = 'get_heat_flux'
     !--------------------------------------------------------------------------
@@ -149,6 +151,8 @@ contains
        HeatCoef = 1.0
     else
 
+       !!! call user_material_properties(State_V, TeSiOut=TemperatureSi)
+       !!! Temperature = TemperatureSi*Si2No_V(UnitTemperature_)
        Temperature = State_V(p_)/State_V(Rho_)
 
        if(DoModifyHeatConduction)then
