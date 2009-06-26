@@ -34,7 +34,7 @@ program saha
   call set_element( 54 )
 
 
-  open(24,file='../doc/Table1.tex')
+  open(24,file='../doc/Table1.tex',status='replace')
   write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
   write(24,'(a)')'\hline'
   write(24,'(a)')'Te[eV]\textbackslash \textbackslash Na[$1/cm^3$] & $10^{18}$'//&
@@ -82,8 +82,9 @@ program saha
   write(24,'(a)')'\end{tabular}'
 
   close(24)
-  !_______________________________________________
-  open(24,file='../doc/Table2.tex')
+
+!_______________________________________________
+  open(24,file='../doc/Table2.tex',status='replace')
   write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
   write(24,'(a)')'\hline'
   write(24,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
@@ -137,8 +138,7 @@ program saha
   close(24)
 
   !_____________________________________
-
-  open(25,file='../doc/Table3.tex')
+  open(25,file='../doc/Table3.tex',status='replace')
   write(25,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
   write(25,'(a)')'\hline'
   write(25,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
@@ -147,7 +147,6 @@ program saha
        ' Te (Iterations) &  Te (Iterations) &  Te (Iterations) \tabularnewline'
   write(25,'(a)')'\hline' 
   write(25,'(a)')'\hline'
-
   do iU  = 1,nU
      if (((iU-1)/50)*50==(iU-1).and.iU>50) then
         write(25,'(a)')'\end{tabular}', char(10)
@@ -182,10 +181,9 @@ program saha
 
   write(25,'(a)')'\end{tabular}'
   close(25)
-
   !_____________________________________
 
-  open(25,file='../doc/Table4.tex')
+  open(25,file='../doc/Table4.tex',status='replace')
   write(25,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
   write(25,'(a)')'\hline'
   write(25,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
@@ -227,8 +225,9 @@ program saha
 
   write(25,'(a)')'\end{tabular}'
   close(25)
+
   !_______________________________________________
-  open(24,file='../doc/Table5.tex')
+  open(24,file='../doc/Table5.tex',status='replace')
   write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
   write(24,'(a)')'\hline'
   write(24,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
@@ -277,7 +276,7 @@ program saha
 
   close(24)
 
-  open(24,file='../doc/Table6.tex')
+  open(24,file='../doc/Table6.tex',status='replace')
   write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
   write(24,'(a)')'\hline'
   write(24,'(a)')'Na[$1/cm^3$] & $10^{18}$ & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
@@ -330,6 +329,56 @@ program saha
 
   close(24)
 
+  UseCoulombCorrection = .true.
+  open(24,file='../doc/Table7.tex')
+  write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
+  write(24,'(a)')'\hline'
+  write(24,'(a)')'Te[eV]\textbackslash \textbackslash Na[$1/cm^3$] & $10^{18}$'//&
+       ' & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
+  write(24,'(a)')'\hline' 
+  write(24,'(a)')'\hline'
+
+
+  do iT  = 1,nT
+     if (((iT-1)/25)*25==(iT-1).and.iT>25) then
+
+        write(24,'(a)')'\end{tabular}', char(10)
+        !--------------
+        write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
+        write(24,'(a)')'\hline'
+        write(24,'(a)')'Te[eV]\textbackslash \textbackslash Na[$1/cm^3$] & $10^{18}$ & $10^{19}$'//&
+             ' & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
+        write(24,'(a)')'\hline' 
+        write(24,'(a)')'\hline'
+     end if
+     vTe = dTe * iT
+
+     do iN = 0,nN
+        NaTrial = Nao*exp(iN*dLogN)
+        call set_ionization_equilibrium(vTe,NaTrial*1000000.0,iError)
+        Z_I(iN) = z_averaged() 
+        Z2_I(iN)= z2_averaged()/Z_I(iN)
+        Uav_I(iN)=internal_energy()
+        Cv_I(iN)=heat_capacity()
+        if(iError/=0)then
+           Z_I(iN) = -  Z_I(iN)
+           Z2_I(iN)= - Z2_I(iN)
+           Uav_I(iN)= -Uav_I(iN)
+           Cv_I(iN)= - Cv_I(iN)
+           write(*,*)'Error=',iError,vTe,NaTrial*1000000.0
+        end if
+     end do
+     write(24,'(f5.0,6(a,f7.1),a)') vTe,&
+          (' & ', Z_I(iN), iN=0,nN ),'\tabularnewline'
+     write(24,'(a)')'\hline'
+
+
+  end do
+
+  write(24,'(a)')'\end{tabular}'
+
+  close(24)
+  !________
 
 
 end program saha

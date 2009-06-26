@@ -83,12 +83,13 @@ GODUNOV_for_Darwin:
 	rm -rf Tmp_ 
 
 test_eos: IONIZ.exe
-	  IONIZ.exe;
-	  rm -f *.diff test_re*;
-	  cat ../doc/Table*.tex >test_result;
-	  cat ../doc/Tex/ionization_table*.tex>test_ref;
-	  diff test_result test_ref > test_eos.diff;
-	  ls -l *.diff; rm -f test_re*
+	  IONIZ.exe
+	  rm -f *.diff test_re*
+	  cat ../doc/Table*.tex >test_result
+	  cat ../doc/Tex/ionization_table*.tex>test_ref
+	  ${SCRIPTDIR}/DiffNum.pl test_result test_ref > test_eos.diff
+	  ls -l *.diff
+	  rm -f test_re*
 
 distclean: clean 
 	rm -f Makefile.DEPEND; \
