@@ -14,9 +14,16 @@ module CRASH_ModFermiGas
   real, public :: LogGeMinBoltzmann = 4.0
 
   ! At LogGe >= LogGeMinFermi the effects of Fermi statistics are accounted for
-  ! Fermi function is not implemented for log(g_e) < -3.0, because the Taylor series
-  ! converges when  |log(g_e)| < \pi
   real, public :: LogGeMinFermi = 0.0
+
+  ! If LogGeMinFermi < -3.0,
+  ! init_fermi_function automatically resets it to -3.0 and
+  ! sets UseAsymptLarge to .true., so that:
+  !    At LogGe < -3.0 we use the first 3 sum terms of the asymptotic series
+  !    At -3.0 <= LogGe <= 0.0 we use Taylor series
+  !
+  ! The value of -3.0 has been chosen because the Taylor series converges at |log(g_e)| < \pi
+  logical :: UseAsymptLargeNeg = .false.
 
   ! At LogGeMinFermi <= LogGe <= 0.0 we use Taylor series to calculate Fermi Functions.
   !
@@ -86,9 +93,13 @@ contains
   !==============================
   !Initialaze the calculation of Fermi functions for \nu+1=1/2, 3/2, 5/2
   subroutine init_fermi_function
+    if (LogGeMinFermi < -3.0) then
+       UseAsymptLargeNeg = .true.
+       LogGeMinFermi = -3.0
+    end if
 
     call fill_lookup_table_series
-    if(LogGeMinFermi < 0.0)then
+    if (LogGeMinFermi < 0.0) then
        call init_taylor_series
        call fill_lookup_table_taylor
        FermiFunctionTableSeries_II(0,:) =  FermiFunctionTableTaylor_II(0,:)
@@ -269,11 +280,12 @@ contains
 
     integer :: iStep, iStep1
     real :: Residual
-    real::FermiFunction_I(NuEqMinus12_:NuEq32_)
+    real :: FermiFunction_I(NuEqMinus12_:NuEq32_)
     !------------------------
 
-
-    if (LogGe <= 0.0  .and. LogGeMinFermi < 0.0) then
+    if (UseAsymptLargeNeg .and. LogGe < LogGeMinFermi) then
+       FermiFunction_I = large_negative()
+    else if (LogGe <= 0.0 .and. LogGeMinFermi < 0.0) then
        Residual = (LogGe - LogGeMinFermi)/&
             ( - LogGeMinFermi)*nStepTaylor
 
@@ -312,6 +324,7 @@ contains
   !========================================================
   subroutine test_fermi_function
     integer :: iStep
+    real :: FermiFunction_I(NuEqMinus12_:NuEq32_)
     !---------------
 
     write(*,*)'zeta-function(1/2) zeta-function(3/2) zeta-function(5/2):'
@@ -326,16 +339,28 @@ contains
          -1.46035*(1.0 -2.0*sqrt(0.5)),&
          2.612*(1.0-sqrt(0.5)),1.341*(1.0-0.5*sqrt(0.5))
     write(*,*)'Calculated ZetaSeriesS_I: ',ZetaSeriesS_I(1:3)
-    write(*,*)'Calculated TaylorSeriesCoeff_II for \nu = 1/2:', TaylorSeriesCoeff_II(0:2, 2)
+    write(*,*)'Calculated TaylorSeriesCoeff_II for \nu = 1/2:', &
+         TaylorSeriesCoeff_II(0:2, 2)
     write(*,*)'The computed values at g_e=1 are:', &
          FermiFunctionTableSeries_II(0 , :)
 
 
-    write(*,*)'Standard Fermi function table:'
-    
+    write(*,*)'Standard Fermi function table'
+    write(*,*)'At the boudary points the values are calculated twice,' 
+    write(*,*)'using the different asymptotics.'    
 
     write(*,*)'log10g_e  g_e*Fe1/2   rMinus rPlus'
 
+    do iStep = -20, -13
+       LogGe = 0.1*iStep*log(10.0)
+       FermiFunction_I = large_negative()
+       write(*,*) LogGe/log(10.0), &
+            FermiFunction_I(2), &
+            FermiFunction_I(1)/FermiFunction_I(2), &
+            FermiFunction_I(3)/FermiFunction_I(2)
+    end do
+    write(*,*) &
+         'In the code the above line would be calculated via the Taylor series'
     do iStep = -nStepTaylor,0
        write(*,*) (LogGeMinFermi*(nStepTaylor-iStep)-&
             (iStep+nStepTaylor)*LogGeMinFermi)/(2*nStepTaylor)/&
@@ -365,13 +390,41 @@ contains
    
     write(*,*)'Fermi function table for \log(g_e) >= 0 calculated via Taylor series:'
       
-      do iStep = 0, nStepTaylor
-         write(*,*) (0.0*(nStepTaylor-iStep)+iStep*abs(LogGeMinFermi))/nStepTaylor/&
-              log(10.0), FermiFunctionTableTaylor_II(iStep,2),&
-              FermiFunctionTableTaylor_II(iStep,1)/FermiFunctionTableTaylor_II(iStep,2),&
-              FermiFunctionTableTaylor_II(iStep,3)/FermiFunctionTableTaylor_II(iStep,2)
-      end do
+    do iStep = 0, nStepTaylor
+       write(*,*) (0.0*(nStepTaylor-iStep)+iStep*abs(LogGeMinFermi))/nStepTaylor/&
+            log(10.0), FermiFunctionTableTaylor_II(iStep,2),&
+            FermiFunctionTableTaylor_II(iStep,1)/FermiFunctionTableTaylor_II(iStep,2),&
+            FermiFunctionTableTaylor_II(iStep,3)/FermiFunctionTableTaylor_II(iStep,2)
+    end do
  
 
   end subroutine test_fermi_function
+  !========================================================
+  function large_negative()
+    real :: large_negative(NuEqMinus12_ : NuEq32_)
+    integer :: iNu
+    real :: X, X2Inv
+    real, parameter :: ZetaFunction2 = 1.6449
+    real, parameter :: TwoZetaFunctionSeries4 = 1.8941  ! 2*(1-2^{1-4})*\zeta(4)
+    !-----------------
+    X = -LogGe
+    !Fe_{-1/2}(-log(Ge)\sim \sqrt{-Log(Ge)}/\Gamma(3/2)
+    large_negative(NuEqMinus12_) = exp(LogGe) * sqrt(X/cPi) * 2.0
+
+    !We calculate  \frac{x^{\nu+1}}{\Gamma(k+2)} (1+
+    !     \sum_{i=1}^{2}{\zeta_series(2 i) \cdot
+    !\frac{2 \Gamma(\nu+2)}{Gamma(\nu+2-2 i)} x^{-2 i}})
+    do iNu = NuEqMinus12_ + 1, NuEq32_
+       large_negative(iNu) = large_negative(iNu-1) * X / NuPlus1_I(iNu)
+    end do
+    X2Inv = 1.0/(X*X)
+
+    do iNu = NuEqMinus12_ , NuEq32_
+       large_negative(iNu) = large_negative(iNu)*(1.0 +&      ! 1st term
+            NuPlus1_I(iNu) * (NuPlus1_I(iNu) - 1.0)*X2Inv*(&
+            ZetaFunction2 +&                                  ! 2nd term
+            (NuPlus1_I(iNu)-2.0)*(NuPlus1_I(iNu)-3.0)*&       ! 3rd term
+            TwoZetaFunctionSeries4*X2Inv))
+    end do
+  end function large_negative
 end module CRASH_ModFermiGas
