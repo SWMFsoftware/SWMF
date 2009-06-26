@@ -885,11 +885,11 @@ subroutine  calc_lowatmosrad(iblock,iLat,iLon,L_LAYERS,L_LEVELS,&
 
       do L=2,l_nlayrad
          L1=L-1
-!!$         IF(P(L_NLAYRAD-L1).GT.PLONG*0.01) THEN
-!!$            COOLCORRECTION(L1) = 1.0
-!!$         ELSE
-!!$            COOLCORRECTION(L1) = 0.0
-!!$         ENDIF
+         IF(P(L_NLAYRAD-L1).GT.PLONG*0.01) THEN
+            COOLCORRECTION(L1) = 1.0
+         ELSE
+            COOLCORRECTION(L1) = 0.0
+         ENDIF
          IF(P(L_NLAYRAD-L1).GT.XLTEPRESSURE(1)) THEN
             XLTECORRECTION(L1) = 1.0
           ELSE
@@ -915,12 +915,12 @@ subroutine  calc_lowatmosrad(iblock,iLat,iLon,L_LAYERS,L_LEVELS,&
          GREENHOUSE(L1) = fluxid(L-1)*(-gravity_GB(iLon,iLat,L_NLAYRAD-L1,iBlock))/&
               (HeatCapacityCO2*100.0*(PLEV(2*L+1)-PLEV(2*L-1)))
          TOTAL(L1)=(HEATING(L1)/XLTECORRECTION(L1))+&
-              GREENHOUSE(L1)!*COOLCORRECTION(L1)
+              GREENHOUSE(L1)*COOLCORRECTION(L1)
 
 !Buffer region, Lopez-Valverde found a buffer needed for appropriate cooling rates
 !near the top of the atmosphere
-         TOTAL(1) = 0.0
-         TOTAL(2) = 0.0
+!         TOTAL(1) = 0.0
+!         TOTAL(2) = 0.0
 
       lowatmosradrate(iLon,iLat,L_NLAYRAD-L1,iBlock)=TOTAL(L1)
 
@@ -931,7 +931,7 @@ subroutine  calc_lowatmosrad(iblock,iLat,iLon,L_LAYERS,L_LEVELS,&
       Tbot(iLon,iLat,iBlock) = T(1)
       TopL(iLon,iLat,iBlock) = L_NLAYRAD
       Psurf(iLon,iLat,iBlock)= PLEV(L_LEVELS)
-      P125(iLon,iLat,iBlock) = P(25)
+      P125(iLon,iLat,iBlock) = P(50)
 
       end subroutine calc_lowatmosrad
 ! ----------------------------------------------------------------------
