@@ -5,7 +5,7 @@
 # This file must be customized and run from the run directory! For example
 #
 #   cd run
-#   qsub job.p4fe
+#   qsub job.pfe
 #
 # To avoid having too many output files run
 #
@@ -55,4 +55,4 @@ if(! -f SWMF.SUCCESS) exit
 # if(-f PARAM.in.restart) cp PARAM.in.restart PARAM.in
 
 # Check final time/iteration and resubmit if not done (modify as needed!)
-if(! -d RESTART_t008.00h) qsub job.cfe2
+if(! -d RESTART_t008.00h) qsub job.pfe
