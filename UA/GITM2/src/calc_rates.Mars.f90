@@ -18,6 +18,7 @@ subroutine calc_rates(iBlock)
   use ModPlanet
   use ModInputs
   use ModEUV, only : SunOrbitEccentricity
+  use ModSources, only : KappaEddyDiffusion
 
   implicit none
 
@@ -305,7 +306,7 @@ trouble = .false.
         do iLon = 1, nLons
               KappaTemp(iLon,iLat,iAlt,iBlock) = &
                    KappaTemp(iLon,iLat,iAlt,iBlock) + &
-                   EddyDiffusionCoef * cp(iLon,iLat,iAlt,iBlock) * &
+                   KappaEddyDiffusion(iLon,iLat,iAlt,iBlock) * cp(iLon,iLat,iAlt,iBlock) * &
                    Rho(iLon,iLat,iAlt,iBlock)/10.
         enddo
      enddo
@@ -321,6 +322,8 @@ trouble = .false.
 !   * No scaling of molecular vciscosity
      ViscCoef(:,:,iAlt) =  kmmix(1:nLons,1:nLats,iAlt)
 
+     ViscCoef(:,:,iAlt) =  ViscCoef(:,:,iAlt) + 500.0*&
+                           Rho(1:nLons,1:nLats,iAlt,iBlock)*KappaEddyDiffusion(1:nLons,1:nLats,iAlt,iBlock)
 !     Visc_3D(:,:,iAlt,iBlock) =  kmmix(1:nLons,1:nLats,iAlt)
 
 
@@ -341,6 +344,7 @@ subroutine calc_collisions(iBlock)
   use ModConstants
   use ModPlanet
   use ModInputs
+  use ModSources, only : KappaEddyDiffusion
 
   implicit none
 
