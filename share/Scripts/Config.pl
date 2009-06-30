@@ -10,6 +10,7 @@ my %Compiler = (
 		"AIX"       => "xlf90",
 		"palm"      => "ifort",
 		"cfe"       => "ifort",
+		"pfe"       => "ifort",
 		"sysx"      => "xlf90",
 		"hera"      => "mpiifort",
 		);
@@ -23,6 +24,7 @@ my %MpiVersion = (
 		  "IRIX64"    => "SGI",
 		  "palm"      => "Altix",
 		  "cfe"       => "Altix",
+		  "pfe"       => "Altix",
 		  "grendel"   => "openmpi",
 		  "hera"      => "mvapich",
 		  );
