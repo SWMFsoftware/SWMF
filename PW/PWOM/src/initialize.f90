@@ -22,6 +22,10 @@ subroutine PW_initialize
   !***************************************************************************
   !  Set the number of fieldlines that each processor solves for
   !***************************************************************************
+  if (nTotalLine < nProc) &
+       call con_stop(&
+       "PW ERROR:nTotalLine<nProc. Reduce number of procs for PW in LAYOUT.in")
+
   if (iProc < mod(nTotalLine,nProc)) then
      nLine= (nTotalLine+nProc-1)/nProc
   else
