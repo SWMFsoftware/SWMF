@@ -90,8 +90,9 @@ contains
        DoModifyHeatConduction = .true.
     end if
 
+    ! unit HeatConductionParSi is W/(m*K^(7/2))
     HeatConductionPar = HeatConductionParSi &
-         *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
+         *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)**3.5 &
          *Si2No_V(UnitU_)*Si2No_V(UnitX_)
     if(DoModifyHeatConduction)then
        Tmodify = TmodifySi*Si2No_V(UnitTemperature_)
