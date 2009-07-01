@@ -34,7 +34,8 @@ program PostIDL
   real(Real8_), allocatable :: State8_V(:)
 
   ! Coordinates, sizes, indices
-  real, dimension(3) :: Xyz_D, xyzmin, xyzmax, dxyz, dxyzmin, dxyzcell
+  real, dimension(3) :: Xyz_D, xyzmin, xyzmax
+  real, dimension(3) :: CellSizePlot_D, dxyz, dxyzmin, dxyzcell
   real, dimension(3) :: XyzGen_D
   real ::    x, y, z, xmin, ymin, zmin
   real ::    dx, dy, dz, dyperdx, dzperdx, dxcell, dycell, dzcell
@@ -96,8 +97,8 @@ program PostIDL
   read(*,*)(xyzmin(i),xyzmax(i),i=1,3)
   write(*,*)'xyzmin=',xyzmin
   write(*,*)'xyzmax=',xyzmax
-  read(*,*)dxyz,dxyzmin,ncell
-  write(*,*)'dxyz,dxyzmin,ncell=',dxyz,dxyzmin,ncell
+  read(*,*) CellSizePlot_D, dxyzmin, ncell
+  write(*,*)'dxyz,dxyzmin,ncell=', CellSizePlot_D, dxyzmin,ncell
   read(*,*)nw
   read(*,*)neqpar
   allocate(eqpar(neqpar))
@@ -154,14 +155,17 @@ program PostIDL
 4 continue
   write(*,*)'TypeFile=', TypeFile
 
+  ! Save input CellSizePlot_D into dxyz that may get overwritten
+  dxyz = CellSizePlot_D
+
   ! Unstructured grid has negative dx
   structured = dxyz(1) >= 0.0
 
   ! If dx<=0. use the smallest cell as resolution
-  if(dxyz(1)<1.e-6)dxyz=dxyzmin
+  if(dxyz(1)<1.e-6) dxyz = dxyzmin
 
   ! Calculate structured grid size
-  nxyz=max(1,nint((xyzmax-xyzmin)/dxyz))
+  nxyz = max(1, nint((xyzmax - xyzmin)/dxyz))
 
   write(*,*)'plot area size=', nxyz
 
@@ -209,6 +213,9 @@ program PostIDL
      if(.not.structured)then
         if(real(nx1)*real(nx2) > 1e8)then
            write(*,*)'PostIDL WARNING: very fine grid, no averaging is done!'
+        elseif(any(CellSizePlot_D(1:2) > 0.0))then
+           write(*,*)'PostIDL WARNING: not AMR in all dimensions, ', &
+                'no averaging is done!'
         else
            allocate(lookup(nx1,nx2),stat=iError)
 
@@ -394,7 +401,7 @@ program PostIDL
      end if
   else
      if(UseLookup)then
-         volume=(xmax1-xmin1)*(xmax2-xmin2)
+        volume = (xmax1-xmin1)*(xmax2-xmin2)
         ! For axysimmetric cut planes with phi being the negligible coordinate
         ! we plot both phi=cut and phi=cut+pi, so the volume is doubled
         if(UseDoubleCut) volume = 2*volume
