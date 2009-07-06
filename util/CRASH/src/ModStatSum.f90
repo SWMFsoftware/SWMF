@@ -604,6 +604,8 @@ end module CRASH_ModStatSumMix
 module CRASH_ModThermoDynFunc
   use CRASH_ModStatSumMix
   use ModConst
+  implicit none
+  save
 contains
   !=======================================  
   !Find a temperature from the internal energy per atom:
