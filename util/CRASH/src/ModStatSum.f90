@@ -202,7 +202,7 @@ Contains
     real:: rDebyeInv  
     !------------------------------
 
-    eMadelung = 1.80 * (zAv**2 + DeltaZ2Av)* &
+    eMadelung = 1.80 * Z2* &
          cRyToEv*rIonoSphereInv
     
     eUpshiftByCompression = eUpshiftByCompression *&
