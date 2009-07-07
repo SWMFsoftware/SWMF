@@ -167,27 +167,14 @@ Contains
   
   end subroutine mod_init
   !=========================================================================!
-  subroutine check_applicability(iError)
+  subroutine check_applicability(iErrorOut)
     use CRASH_ModFermiGas,ONLY: UseFermiGas, LogGe, &
          LogGeMinBoltzmann,LogGeMinFermi
-    integer,optional,intent(out) :: iError
+    integer,optional,intent(out) :: iErrorOut
+    integer::iError
     !-------------------------------------
-    if(.not. present(iError))return
     iError = 0
     !Check a strong Fermi-degeneration
-    if(UseFermiGas)then
-       if(LogGe < LogGeMinFermi-0.7)then
-          Te=StrangeTemperature
-          call set_zero_ionization
-       end if
-       if(LogGe < LogGeMinFermi)iError = 1
-    else
-       if(LogGe < LogGeMinBoltzmann - 1.7)then
-          Te=StrangeTemperature
-          call set_zero_ionization
-       end if
-       if(LogGe < LogGeMinBoltzmann )iError = 1
-    end if
     !Check relativistic temperature
     if( Te>5.0e4 )iError = 2
     if( Te>1.0e5 )then
@@ -204,6 +191,7 @@ Contains
     call get_virial_coef
 
     if(eUpshiftByCompression > IonizPotentialAv)iError = 3
+    if(present(iErrorOut))iErrorOut = iError
   end subroutine check_applicability
   !==========================================================================!
   subroutine get_virial_coef

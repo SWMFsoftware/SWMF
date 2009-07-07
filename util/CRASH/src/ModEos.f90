@@ -60,7 +60,7 @@ module CRASH_ModEos
   use CRASH_ModStatSum
   use CRASH_ModAtomicMass
   use CRASH_ModPowerLawEos
-  use CRASH_ModFermiGas, ONLY: UseFermiGas, LogGeMinBoltzmann
+  use CRASH_ModFermiGas, ONLY: UseFermiGas, LogGeMinBoltzmann, LogGeMinFermi
 
   implicit none
 
@@ -99,18 +99,16 @@ contains
     ! #EOS
     ! T                     UseFermiGas
     ! 4.0                   LogGeMinBoltzmann
-    ! 0.001                 ToleranceU
-    ! 0.001                 ToleranceZ
-    ! 7.0                   ToleranceStatSumLog
+    ! 0.0                   LogGeMinFermi
+    ! 
+    ! Recommended value for the last parameter: -4.0
 
     use ModReadParam, ONLY: read_var
     !-----------------------------------------------------------------------
     ! For now. But it should/could read other things
-    call read_var('UseFermiGas',         UseFermiGas)
+    call read_var('UseFermiGas',         UseFermiGas      )
     call read_var('LogGeMinBoltzmann',   LogGeMinBoltzmann)
-    call read_var('ToleranceU',          Tolerance)
-    call read_var('ToleranceZ',          ToleranceZ)
-    call read_var('ToleranceStatSumLog', StatSumToleranceLog)
+    call read_var('LogGeMinFermi',       LogGeMinFermi    )
 
   end subroutine read_eos_parameters
 
