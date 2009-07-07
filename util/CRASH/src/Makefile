@@ -102,6 +102,7 @@ test_Fermi.o : ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
 
 test_Fermi: DEPEND
 	 make test_Fermi.exe
+	 test_Fermi.exe
 
 test_Fermi.exe: test_Fermi.o
 	@(if [ ${OS} = "Darwin" ];         then make test_Fermi_for_Darwin; \
