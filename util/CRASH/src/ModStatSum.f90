@@ -62,6 +62,8 @@ module CRASH_ModStatSumMix
   real :: DeltaZ2Av      ! The value of <(delta i)^2>=<i^2>-<i>^2
   real :: DeltaETeInv2Av ! The value of <(delta E/Te)^2> 
   real :: ETeInvDeltaZAv ! The value of <Delta E/Te Delta i> 
+  real :: ETeInvDeltaZ2Av! The value of <Delta E/Te Delta (i^2)>
+  real :: DeltaZDeltaZ2Av! The value of <Delta i Delta i^2>
 
 
   integer :: iIter   !To provide the output for the convergence efficiency, if needed
@@ -81,6 +83,8 @@ module CRASH_ModStatSumMix
            DeltaZ2Av,&      ! The value of <(delta i)^2>=<i^2>-<i>^2
            DeltaETeInv2Av,& ! The value of <(delta E/Te)^2>
            ETeInvDeltaZAv,& ! The value of <Delta E/Te Delta i>
+           ETeInvDeltaZ2Av,&! The value of <Delta E/Te Delta (i^2)>
+           DeltaZDeltaZ2Av,&! The value of <Delta i Delta i^2>
            iIter,&          ! To provide the output for the convergence efficiency, if needed
            nMix, IonizPotential_II
   real,parameter::StrangeTemperature = -777.0
@@ -123,7 +127,7 @@ module CRASH_ModStatSumMix
   ! Inverse of the iono-sphere radius,
   ! measured in Bohr radius
   
-  real:: rIonoSphereInv  
+  real, public :: rIonoSphereInv
 
   !Public methods:
 
@@ -267,6 +271,8 @@ Contains
     if(Te>0.0)LogGe = 99.0  
 
     zAv=0.0; EAv=0.0; DeltaZ2Av=0.0; DeltaETeInv2Av = 0.0; ETeInvDeltaZAv = 0.0
+    ETeInvDeltaZ2Av = 0.0
+    DeltaZDeltaZ2Av = 0.0
     Z2 = 0.0 ; Z2PerA = 0.0
 
     RMinus = 1.0; RPlus = 1.0
@@ -515,6 +521,8 @@ Contains
       DeltaZ2Av        = 0.0   
       DeltaETeInv2Av   = 0.0
       ETeInvDeltaZAv   = 0.0
+      ETeInvDeltaZ2Av  = 0.0
+      DeltaZDeltaZ2Av  = 0.0
       IonizPotentialAv = 0.0
       eUpshiftByCompression = 0.0
 
@@ -567,6 +575,15 @@ Contains
               ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) * &
               (N_I(iZMin_I(iMix):iZMax_I(iMix))-ZJ) )
 
+         ETeInvDeltaZ2Av  = ETeInvDeltaZ2Av + Concentration_I(iMix)*&
+              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
+              (ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) - ETeInvAvJ) *&
+              (N_I(iZMin_I(iMix):iZMax_I(iMix))**2 - DeltaZ2J - ZJ*ZJ) )
+
+         DeltaZDeltaZ2Av  = DeltaZDeltaZ2Av + Concentration_I(iMix)*&
+              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
+              (N_I(iZMin_I(iMix):iZMax_I(iMix))-ZJ)*&
+              (N_I(iZMin_I(iMix):iZMax_I(iMix))**2 - DeltaZ2J - ZJ*ZJ) )
 
 
          IonizPotentialAv =  IonizPotentialAv + Concentration_I(iMix)*&
@@ -670,6 +687,10 @@ Contains
   ! i.e the temperuture derivative of the specific pressure (P/Na) 
   real function d_pressure_over_d_te()
     use CRASH_ModFermiGas,ONLY:RPlus,RMinus
+
+    real :: DGeOvDTe  ! \frac{\partial g_e}{\partial T} \frac{T}{g_e} =
+                      ! \frac{\frac{3}{2} Z - \frac{\langle \delta E_i^* \delta i \rangle}{T}}
+                      ! {\langle \delta^2 i \rangle + Z R^-(g_e)}
     !----------------------------------------------------------
     if(zAv==0)then
        d_pressure_over_d_te = 0.0
@@ -679,9 +700,14 @@ Contains
     !Calculate derivatives at const Na:
     !/
    
-    !For specific pressure: 
-    d_pressure_over_d_te = 1.0 + zAv*(2.5*RPlus - &
-         ( 1.5 * zAv - ETeInvDeltaZAv )/ (zAv*RMinus + DeltaZ2Av))
+    !For specific pressure:
+    DGeOvDTe = ( 1.5 * zAv - ETeInvDeltaZAv ) / (zAv*RMinus + DeltaZ2Av)
+    d_pressure_over_d_te = 1.0 + zAv*(2.5*RPlus - DGeOvDTe)
+
+    if (UseCoulombCorrection) d_pressure_over_d_te = &
+         d_pressure_over_d_te - 0.6 * cRyToEv * rIonoSphereInv * &
+         (ETeInvDeltaZ2Av + DGeOvDTe * DeltaZDeltaZ2Av) / Te
+
   end function d_pressure_over_d_te
 
   !========================================================================!
