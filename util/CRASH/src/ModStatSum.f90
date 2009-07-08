@@ -54,8 +54,8 @@ module CRASH_ModStatSumMix
   real :: zAv,   &  ! The average charge per ion - <Z> (elementary charge units)
           EAv,   &  ! The average ionization energy level of ions
           Z2PerA,&  ! The average of Z^2/A
-          Z2,    &  ! The average of Z^2
-          IonizPotentialAv
+          Z2!,    &  ! The average of Z^2
+          !IonizPotentialAv
   
 
   !Deviators <(\delta i)^2>, <delta i delta E> and <(delta e)^2:
@@ -64,6 +64,7 @@ module CRASH_ModStatSumMix
   real :: ETeInvDeltaZAv ! The value of <Delta E/Te Delta i> 
   real :: ETeInvDeltaZ2Av! The value of <Delta E/Te Delta (i^2)>
   real :: DeltaZDeltaZ2Av! The value of <Delta i Delta i^2>
+  real :: Delta2Z2Av     ! The value of <Delta^2 (i^2)>
 
 
   integer :: iIter   !To provide the output for the convergence efficiency, if needed
@@ -85,6 +86,7 @@ module CRASH_ModStatSumMix
            ETeInvDeltaZAv,& ! The value of <Delta E/Te Delta i>
            ETeInvDeltaZ2Av,&! The value of <Delta E/Te Delta (i^2)>
            DeltaZDeltaZ2Av,&! The value of <Delta i Delta i^2>
+           Delta2Z2Av,&     ! The value of <Delta^2 (i^2)>
            iIter,&          ! To provide the output for the convergence efficiency, if needed
            nMix, IonizPotential_II
   real,parameter::StrangeTemperature = -777.0
@@ -92,9 +94,9 @@ module CRASH_ModStatSumMix
   ! Virial coefficients:
   !\
   ! The Madelung energy: the electrostatic energy of Z electrons
-  ! uniformly filling in the iono-sphere 
+  ! uniformly filling in the iono-sphere diveded by Te
   
-  real,public :: eMadelung     !In eV, per atomic cell
+  real,public :: eMadelungPerTe  
 
   ! Correlation energy in the Debye-Huekel thoery of 
   ! correlations in weakly non-ideal plasma 
@@ -105,7 +107,7 @@ module CRASH_ModStatSumMix
   ! If it exceeds the ionization potential of the average
   ! ion, the pressure ionization dominates over the
   ! thermal one.
-  real, public :: eUpshiftByCompression
+  !real, public :: eUpshiftByCompression
 
   !\
   ! The logical to handle the Coulomb corrections
@@ -158,7 +160,7 @@ Contains
 	!-----------------
     LogN_I = (/(log(real(iZ)), iZ = 1,nZMax)/)
     N_I    = (/(real(iZ), iZ = 0,nZMax)/)
-    IonizationEnergyLowering_I(0:nZMax) = (1.80 * cRyToEV)*N_I**2
+    IonizationEnergyLowering_I(0:nZMax) = 1.80 * cRyToEV  * N_I**2
 
     DeBroglieInv = sqrt(cTwoPi*(cElectronMass/cPlanckH)*(cEV/cPlanckH)) 
     !*sqrt(cBoltzmann/cEV * T) - temperature in eV
@@ -172,8 +174,6 @@ Contains
   end subroutine mod_init
   !=========================================================================!
   subroutine check_applicability(iErrorOut)
-    use CRASH_ModFermiGas,ONLY: UseFermiGas, LogGe, &
-         LogGeMinBoltzmann,LogGeMinFermi
     integer,optional,intent(out) :: iErrorOut
     integer::iError
     !-------------------------------------
@@ -185,16 +185,16 @@ Contains
        Te = StrangeTemperature
        call set_zero_ionization
     end if
-    if(Te<0.0)then
-       eMadelung = 0.0
+    if(Te <= 0.0)then
+       eMadelungPerTe = 0.0
        eDebyeHuekel = 0.0
-       eUpshiftByCompression = 0.0
+     !  eUpshiftByCompression = 0.0
        return
     end if
 
     call get_virial_coef
 
-    if(eUpshiftByCompression > IonizPotentialAv)iError = 3
+    !if(eUpshiftByCompression > IonizPotentialAv)iError = 3
     if(present(iErrorOut))iErrorOut = iError
   end subroutine check_applicability
   !==========================================================================!
@@ -206,11 +206,11 @@ Contains
     real:: rDebyeInv  
     !------------------------------
 
-    eMadelung = 1.80 * Z2* &
-         cRyToEv*rIonoSphereInv
+    eMadelungPerTe = 0.60 * &
+         cRyToEv * rIonoSphereInv / Te
     
-    eUpshiftByCompression = eUpshiftByCompression *&
-         rIonoSphereInv**2
+    !eUpshiftByCompression = eUpshiftByCompression *&
+    !     rIonoSphereInv**2
 
     rDebyeInv = sqrt(6.0*(zAv**2 + DeltaZ2Av)*cRyToEv/Te*rIonoSphereInv**3)
 
@@ -273,13 +273,14 @@ Contains
     zAv=0.0; EAv=0.0; DeltaZ2Av=0.0; DeltaETeInv2Av = 0.0; ETeInvDeltaZAv = 0.0
     ETeInvDeltaZ2Av = 0.0
     DeltaZDeltaZ2Av = 0.0
+    Delta2Z2Av = 0.0
     Z2 = 0.0 ; Z2PerA = 0.0
 
     RMinus = 1.0; RPlus = 1.0
 
-    IonizPotentialAv = sum(IonizPotential_II(1,1:nMix)*Concentration_I( 1:nMix))
+    !IonizPotentialAv = sum(IonizPotential_II(1,1:nMix)*Concentration_I( 1:nMix))
 
-    eUpshiftByCompression = 1.0 
+    !eUpshiftByCompression = 1.0 
   
   end subroutine set_zero_ionization
 
@@ -433,8 +434,8 @@ Contains
       !--------------------------------------!
 
       if(UseFermiGas)then
-
-         GeLog = max(LogGeMinFermi, GeLogIn)
+         GeLog = GeLogIn
+         if(LogGeMinFermi>-3.0)GeLog = max(LogGeMinFermi, GeLogIn)
       else
          ! The previous version does not stop simulation
          ! when the Fermi degeneracy occurs (the electron 
@@ -459,7 +460,7 @@ Contains
          !electrostatic interaction:
 
          if(UseCoulombCorrection)StatSumTermLog_I(0:nZ_I(iMix)) = &
-              StatSumTermLog_I(0:nZ_I(iMix)) + TeInv * rIonoSphereInv * &
+              StatSumTermLog_I(0:nZ_I(iMix)) + TeInv * rIonoSphereInv *&
               IonizationEnergyLowering_I(0:nZ_I(iMix))
 
          ! Find the location of that maximum value
@@ -523,8 +524,9 @@ Contains
       ETeInvDeltaZAv   = 0.0
       ETeInvDeltaZ2Av  = 0.0
       DeltaZDeltaZ2Av  = 0.0
-      IonizPotentialAv = 0.0
-      eUpshiftByCompression = 0.0
+      Delta2Z2Av       = 0.0
+      ! IonizPotentialAv = 0.0
+      ! eUpshiftByCompression = 0.0
 
       do iMix = 1, nMix
          !Calculate average vaues of Z, for this component:
@@ -585,16 +587,22 @@ Contains
               (N_I(iZMin_I(iMix):iZMax_I(iMix))-ZJ)*&
               (N_I(iZMin_I(iMix):iZMax_I(iMix))**2 - DeltaZ2J - ZJ*ZJ) )
 
+         Delta2Z2Av = Delta2Z2Av + Concentration_I(iMix)*&
+              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
+              N_I(iZMin_I(iMix):iZMax_I(iMix))**2 * &
+              (N_I(iZMin_I(iMix):iZMax_I(iMix))**2 - DeltaZ2J - ZJ*ZJ) )
 
-         IonizPotentialAv =  IonizPotentialAv + Concentration_I(iMix)*&
-              sum( &
-              Population_II(&
-              iZMin_I(iMix) : min(iZMax_I(iMix), nZ_I(iMix)-1), iMix)*&
-              IonizPotential_II(&
-              iZMin_I(iMix)+1 : min(iZMax_I(iMix)+1, nZ_I(iMix)), iMix))
-         eUpshiftByCompression =  eUpshiftByCompression +Concentration_I(iMix)*&
-              sum(Population_II(&
-              iZMin_I(iMix) : min(iZMax_I(iMix), nZ_I(iMix)-1), iMix))
+
+         !IonizPotentialAv =  IonizPotentialAv + Concentration_I(iMix)*&
+         !     sum( &
+         !     Population_II(&
+         !     iZMin_I(iMix) : min(iZMax_I(iMix), nZ_I(iMix)-1), iMix)*&
+         !     IonizPotential_II(&
+         !     iZMin_I(iMix)+1 : min(iZMax_I(iMix)+1, nZ_I(iMix)), iMix))
+
+         !eUpshiftByCompression =  eUpshiftByCompression +Concentration_I(iMix)*&
+         !     sum(Population_II(&
+         !     iZMin_I(iMix) : min(iZMax_I(iMix), nZ_I(iMix)-1), iMix))
          
       end do
       EAv = EAv * Te
@@ -624,7 +632,7 @@ contains
     
     pressure = (1.0 + zAv*RPlus) * Na * Te * cEV
     if(UseCoulombCorrection) pressure = &
-         pressure - Na * eMadelung * cEV/3
+         pressure - Na * eMadelungPerTe * Z2 * Te * cEV
 
   end function pressure
 
@@ -635,7 +643,7 @@ contains
   real function internal_energy()
     use CRASH_ModFermiGas,ONLY:RPlus
     
-    internal_energy = 1.50 * Te *( 1.0 + zAv*RPlus) + EAv
+    internal_energy = 1.50 * Te *( 1.0 + zAv * RPlus) + EAv
  
   end function internal_energy
 
@@ -705,8 +713,8 @@ Contains
     d_pressure_over_d_te = 1.0 + zAv*(2.5*RPlus - DGeOvDTe)
 
     if (UseCoulombCorrection) d_pressure_over_d_te = &
-         d_pressure_over_d_te - 0.6 * cRyToEv * rIonoSphereInv * &
-         (ETeInvDeltaZ2Av + DGeOvDTe * DeltaZDeltaZ2Av) / Te
+         d_pressure_over_d_te - eMadelungPerTe *  &
+         (ETeInvDeltaZ2Av + DGeOvDTe * DeltaZDeltaZ2Av)
 
   end function d_pressure_over_d_te
 
@@ -715,6 +723,8 @@ Contains
   !i.e the compressibility at constant temperature
   real function compressibility_at_const_te()
     use CRASH_ModFermiGas,ONLY:RPlus, RMinus
+
+  
     !-------------------
     if(zAv==0)then
        compressibility_at_const_te = 1.0
@@ -726,8 +736,19 @@ Contains
    
     !For specific pressure:
     !(Na /P) \left(\partial P / \partial Na \right)_{T=const}
-    compressibility_at_const_te  =&
-         (1.0 +zAv**2 / (zAv*RMinus + DeltaZ2Av))/(1.0 + Zav*RPlus) 
+
+    if (UseCoulombCorrection) then
+      
+       compressibility_at_const_te = &
+            (1.0 + (zAv + eMadelungPerTe * DeltaZDeltaZ2Av)**2 / &
+            (zAv * RMinus + DeltaZ2Av) - &
+            eMadelungPerTe * (Z2 * 4.0/3 + eMadelungPerTe * Delta2Z2Av) ) / &
+            (1.0 + zAv * RPlus - eMadelungPerTe * Z2)
+    else
+       compressibility_at_const_te  =&
+            (1.0 +zAv**2 / (zAv*RMinus + DeltaZ2Av)  )/(1.0 + Zav*RPlus)
+
+    end if
   end function compressibility_at_const_te
   !===================================================================
   subroutine get_gamma(GammaOut,GammaSOut,GammaMaxOut)

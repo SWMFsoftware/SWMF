@@ -9,6 +9,7 @@ program saha
   use CRASH_ModStatSum
   use CRASH_ModStatSumMix
   use CRASH_ModPolyimide
+  use CRASH_ModFermiGas
   implicit NONE
   real :: &
        Nao = 1.00e18,  &  ! cm-3
@@ -309,7 +310,7 @@ program saha
         NaTrial = Nao*exp(iN*dLogN)
         call set_ionization_equilibrium(vTe,NaTrial*1000000.0,iError)
         Uav_I(iN)= eDebyeHuekel 
-        Cv_I(iN) = eMadelung
+        Cv_I(iN) = eMadelungPerTe * 3.0 * Te * Z2
         if(iError/=0)then
            Z_I(iN) = -  Z_I(iN)
            Z2_I(iN)= - Z2_I(iN)
@@ -330,6 +331,8 @@ program saha
   close(24)
 
   UseCoulombCorrection = .true.
+  LogGeMinFermi = -4.0
+  call init_fermi_function
   open(24,file='../doc/Table7.tex')
   write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
   write(24,'(a)')'\hline'
