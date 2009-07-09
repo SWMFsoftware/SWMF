@@ -177,22 +177,19 @@ Contains
     integer,optional,intent(out) :: iErrorOut
     integer::iError
     !-------------------------------------
+    !if(.not.present(iErrorOut))return
     iError = 0
-    !Check a strong Fermi-degeneration
     !Check relativistic temperature
-    if( Te>5.0e4 )iError = 2
-    if( Te>1.0e5 )then
-       Te = StrangeTemperature
-       call set_zero_ionization
-    end if
+    if( Te>50000.0 )iError = 2
     if(Te <= 0.0)then
        eMadelungPerTe = 0.0
        eDebyeHuekel = 0.0
-     !  eUpshiftByCompression = 0.0
-       return
+       !  eUpshiftByCompression = 0.0
+       if(iError/=2)iError=1
+    else
+       call get_virial_coef
     end if
 
-    call get_virial_coef
 
     !if(eUpshiftByCompression > IonizPotentialAv)iError = 3
     if(present(iErrorOut))iErrorOut = iError
@@ -212,9 +209,9 @@ Contains
     !eUpshiftByCompression = eUpshiftByCompression *&
     !     rIonoSphereInv**2
 
-    rDebyeInv = sqrt(6.0*(zAv**2 + DeltaZ2Av)*cRyToEv/Te*rIonoSphereInv**3)
+    rDebyeInv = sqrt(6.0* Z2 * cRyToEv/Te*rIonoSphereInv**3)
 
-    eDebyeHuekel = (zAv**2 + DeltaZ2Av)* &
+    eDebyeHuekel = Z2 * &
          cRyToEv * rDebyeInv
     
   end subroutine get_virial_coef
@@ -820,6 +817,8 @@ Contains
     real :: UDeviation,& ! The difference between the given internal energy and the calculated one
             ToleranceUeV ! The required accuracy of U in eV
     !-------------------------
+    if(Na/=NaIn) rIonoSphereInv = &
+         ( (4.0 * cPi/3.0) * cBohrRadius**3 * NaIn)**(1.0/3)
     Na = NaIn
 
     if( .not.UsePreviousTe ) then
@@ -874,6 +873,8 @@ Contains
     real :: NaInvDPOvDTAtCNa  
     !------------------------------------
 
+    if(Na/=NaIn) rIonoSphereInv = &
+         ( (4.0 * cPi/3.0) * cBohrRadius**3 * NaIn)**(1.0/3)
     Na = NaIn
 
     !It is difficult to make an initial guess about temperature
