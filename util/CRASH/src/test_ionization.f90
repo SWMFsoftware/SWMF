@@ -27,6 +27,7 @@ program saha
 
 
   !-------------------------------------------
+  LogGeMinFermi = -4.0
 
   dTe = 5.0; dLogN=log(10.0); dU=100.0
 
@@ -331,8 +332,6 @@ program saha
   close(24)
 
   UseCoulombCorrection = .true.
-  LogGeMinFermi = -4.0
-  call init_fermi_function
   open(24,file='../doc/Table7.tex')
   write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
   write(24,'(a)')'\hline'
