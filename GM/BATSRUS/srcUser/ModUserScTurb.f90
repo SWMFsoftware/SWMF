@@ -396,10 +396,13 @@ contains
     use ModGeometry,ONLY: R_BLK
     use ModEnergy,  ONLY: calc_energy_cell
     use ModExpansionFactors, ONLY: gammaSS
+
     implicit none
-    integer,intent(in):: iStage,iBlock
-    integer:: i,j,k
-    real:: DensCell,PresCell,GammaCell,Beta
+
+    integer,intent(in)                  :: iStage,iBlock
+    integer                             :: i,j,k
+    real                                :: DensCell,PresCell,GammaCell,Beta
+    !--------------------------------------------
     call update_states_MHD(iStage,iBlock)
     !\
     ! Begin update of pressure and relaxation energy::
@@ -423,9 +426,37 @@ contains
     !\
     ! End update of pressure and relaxation energy::
     !/
+    
+  end subroutine user_update_states
 
-   end subroutine user_update_states
+!=======================================================================
+   subroutine calc_cutoff_freq(FreqCutOff_C,iBLK)
 
+     ! This subroutine calculates the cut-off frequency for Alfven waves, which is the ion cyclotron frequency, 
+     ! \omega_{c.o.}=zeB/m. For ions z=1. 
+     
+     use ModMain,              ONLY: nI,nJ,nK
+     use ModVarIndexes
+     use ModAdvance,           ONLY: State_VGB
+     use ModConst,             ONLY: cElectronCharge, cProtonMass
+     use ModSize
+
+     implicit none
+     
+     integer                                       :: i,j,k
+     real, dimension(nI,nJ,nK,nBLK)                :: Btot_CB
+     real, intent(out), dimension(nI,nj,nK)        :: FreqCutOff_C
+     integer, intent(in)                           :: iBLK
+     ! -----------------------------------------------------------------
+     
+     do i=1,nI; do j=1,nJ ; do k=1,nK
+        Btot_CB(i,j,k,iBLK)=(State_VGB(Bx_,i,j,k,iBLK)**2+  &
+             State_VGB(By_,i,j,k,iBLK)**2+State_VGB(Bz_,i,j,k,iBLK)**2)**0.5
+        FreqCutOff_C(i,j,k)=cElectronCharge*Btot_CB(i,j,k,iBLK)/cProtonMass
+     end do; end do ; end do
+    
+
+   end subroutine calc_cutoff_freq
 !=======================================================================
  subroutine set_wave_spectrum
 
@@ -452,142 +483,115 @@ contains
    implicit none
 
    ! Spatial grid variables
-   !=======================
-   integer :: i,j,k,iBLK
-   real :: x,y,z,R,ROne,Rmax
+   integer                      :: i,j,k,iBLK
+   real                         :: x,y,z,R
    
    ! 1D Frequency grid variables
-   ! =========================
-   real :: w_Min, w_Max, dLogw
-   real, dimension(I50_-I01_+1) :: I_Spectrum, w_LogSpectrum
-   integer :: w_Index
+   real                         :: FreqMin, FreqMax, dLogFreq
+   real, dimension(I50_-I01_+1) :: WaveEnergy_I, WaveLogFreq_I
+   integer                      :: iFreq
+   real,dimension(nI,nJ,nK)     :: FreqCutOff_C
 
    ! Initial spectrum model parameters
-   !==================================
-   !the intensity of the back travelling wave in the initial condition
-   real,parameter::Alpha=1.0/10.0
-   real,parameter::Lambda0=4.0/10.0  ![AU]
-   real,parameter::w_Power=5.0/3.0
-   real,parameter :: cI_coeff=(1-Alpha)*54/(4*cPi*Lambda0)
-   !cI_coeff is a constant coeffiecient of initial spectrum
-
-   ! Initial spectrum model variables
-   !=================================
-   real :: bI_coeff ,rI_coeff ! B and r dependence of initial spectrum
-   real :: VA_cell, B_cell,rho_cell,  Ctot_normalized, Max_Ctot=0.0
-   real, dimension(nI,nJ,nK,nBLK) :: Ctot
-   real, dimension(3):: B0_D, B_D
+   !the intensity of outward travelling waves (initial condition)
+   real,parameter               :: Alpha=1.0/10.0
+   real,parameter               :: Lambda0=4.0/10.0  ![AU]
+   real,parameter               :: KolmogPower=-5.0/3.0
+   real,parameter               :: ConstCoeff=(1-Alpha)*54/(4*cPi*Lambda0)
+   !ConstCoeff is a constant coeffiecient appearing in the initial spectrum
+   real                         :: bCoeff ,rCoeff ! B and r dependence of initial spectrum
+   real,dimension(nI,nJ,nK,nBLK):: EnergyCoeff_CB ! product of 3 previous coefficients
+   real                         :: EnergyCoeffMax, VAlfvenCell, B0Cell,RhoCell
+   real, dimension(3)           :: B0_D, B_D
    
-   ! Additional variables for testing only
-   !======================================
-   real :: Imean_BLK=0.0, Bmean_BLK=0.0
+   ! ------------------------------------------------------------------
 
-   ! -----------------------------
-   ! Set spectrum frequency groups
-   ! -----------------------------
+   ! \
+   ! Set frequency grid
+   ! /
    
-   w_Min=6e-6 ! minimal frequency of Alfven waves spectrum
+   FreqMin = 6e-6  ! minimal frequency of Alfven waves spectrum
    !This is the frequancy of the variable I01_
-   w_Max=0.001 ! maximal frequency of Alfven waves spectrum
+   FreqMax = 0.001 ! maximal frequency of Alfven waves spectrum
    !This is the frequency of the variable I50_
    
-   ! frequency interval on a natural logarithmic scale 
-   dLogw=(log(w_Max)-log(w_Min))/(I50_-I01_) 
+   ! calculate frequency interval on a natural logarithmic scale 
+   dLogFreq = (log(FreqMax)-log(FreqMin))/(I50_-I01_) 
   
    ! Divide the spectrum into frequncy groups on a log scale
-   do w_Index=1,I50_-I01_+1
+   do iFreq = 1,I50_-I01_+1
 
-      w_LogSpectrum(w_Index)=log(w_Min)+(w_Index-1)*dLogw
+      WaveLogFreq_I(iFreq)=log(FreqMin)+(iFreq-1)*dLogFreq
 
    end do
     
-   ! --------------------------------
-   ! Start filling spatial grid cells 
-   ! --------------------------------
+   ! \
+   ! Calculate wave energy  coefficients in all cells 
+   ! /
    do iBLK=1,nBLK
 
       do k=1,nK; do j=1,nJ; do i=1,nI
       
-         !-----------------------------------------------------------
-         ! Calculate initial spectrum outside the sun only. Otherwise 
-         ! set Iw to cTiny for all frequencies
-         !-----------------------------------------------------------
-         select case(TypeGeometry)
-         case('cartesian')
-            Rmax = max(2.1E+01,sqrt(x2**2+y2**2+z2**2))
-         case('spherical_lnr')
-            Rmax = max(2.1E+01,exp(XyzMax_D(1)))
-         end select
+         if (R_BLK(i,j,k,iBLK) .ge. 1.0) then
 
-         R = max(R_BLK(i,j,k,iBLK),cTolerance)
-         ROne = max(1.0,R)
-
-         if (R_BLK(i,j,k,iBLK) > 1.0) then
-
-            !---------------------------
-            !Get B0 for initial spectrum
-            !---------------------------
-            x = x_BLK(i,j,k,iBLK)
-            y = y_BLK(i,j,k,iBLK)
-            z = z_BLK(i,j,k,iBLK)
-     
+            x=x_BLK(i,j,k,iBLK)
+            y=y_BLK(i,j,k,iBLK)
+            z=z_BLK(i,j,k,iBLK)
+            
+            !Get B0, the initial potential field
             call get_magnetogram_field(x,y,z,B0_D)
             B0_D(1) = B0_D(1)*Si2No_V(UnitB_)
             B0_D(2)= B0_D(2)*Si2No_V(UnitB_)
             B0_D(3)= B0_D(3)*Si2No_V(UnitB_)
 
-            B_D(1) = B0_DGB(x_,i,j,k,iBLK)*Si2No_V(UnitB_)
-            B_D(2)= B0_DGB(y_,i,j,k,iBLK)*Si2No_V(UnitB_)
-            B_D(3)= B0_DGB(z_,i,j,k,iBLK)*Si2No_V(UnitB_)
-            B_cell=((B0_D(1))**2+(B0_D(2))**2 + &
-                 (B0_D(3))**2)**0.5
-            !write(*,*) B0_D(1), B0_D(2), B0_D(3)
-            Bmean_BLK=Bmean_BLK+B_cell ! for cecking only
-         
-            ! -------------------------------------------------
-            ! Calculate Kolomogorov spectrum r and B dependence
-            ! -------------------------------------------------
-            ! Assign spectrum values to I_Spectrum array. The array will be used
-            ! to initialize the state varaibles I01_ to I50_ defined in
-            ! ModEquationMhdTurb.f90
-            ! The wave energy spectrum is described by the power law:
-            ! I_{+}= cI_{coeff}*bI_{coeff}*rI_{coeff}(w/Va)^{-5/3}
-            ! where Va is the Alfven speed Va=B^2/sqrt{\mu_0\rho}
-            ! cI_coeff=54/4\pi\lambda0
-            ! bI_coeff=B^2(eBc/1GeV)^{-1/3}
-            ! rI_coeff=(r/1AU)^{-1}   
+            !B_D(1) = B0_DGB(x_,i,j,k,iBLK)*Si2No_V(UnitB_)
+            !B_D(2)= B0_DGB(y_,i,j,k,iBLK)*Si2No_V(UnitB_)
+            !B_D(3)= B0_DGB(z_,i,j,k,iBLK)*Si2No_V(UnitB_)
             
-            bI_coeff=B_cell**2*(cElectronCharge*B_cell*cLightSpeed/cGEV)&
+            B0Cell=((B0_D(1))**2+(B0_D(2))**2 + &
+                 (B0_D(3))**2)**0.5
+                  
+  
+            ! The wave energy spectrum is described by the power law:
+            ! I_{+}= Coeff*bCoeff*rCoeff*(w/Va)^{-5/3}
+            ! where Va is the Alfven speed Va=B^2/sqrt{\mu_0\rho}
+            ! ConstCoeff=54/4\pi\lambda0
+            ! bCoeff=B^2(eBc/1GeV)^{-1/3}
+            ! rCoeff=(r/1AU)^{-1}   
+            
+            bCoeff=B0Cell**2*(cElectronCharge*B0Cell*cLightSpeed/cGEV)&
                  **(-(1.0/3.0))
          
-            rI_coeff=cAU/R_BLK(i,j,k,iBLK)
+            rCoeff=cAU/R_BLK(i,j,k,iBLK)
          
-            rho_cell=State_VGB(rho_,i,j,k,iBLK)
-            VA_cell=B_cell/(rho_cell*cMu)**0.5
+            RhoCell=State_VGB(rho_,i,j,k,iBLK)
+            VAlfvenCell=B0Cell/(RhoCell*cMu)**0.5
          
-            Ctot(i,j,k,iBLK)=cI_coeff*bI_coeff*rI_coeff*(VA_cell)**(w_Power)
+            EnergyCoeff_CB(i,j,k,iBLK)=ConstCoeff*bCoeff*rCoeff*(VAlfvenCell)**(-KolmogPower)
           
          end if
 
       end do; end do; end do
    end do
    
-   ! ----------------------------------------------------------
-   ! Normalize I's according to maximum value in spatial domain
-   ! ----------------------------------------------------------
+   !\
+   ! Initialize spectrum in all frequency groups
+   !/
 
-   Max_Ctot=maxval(Ctot)
-    do iBLK=1,nBLK
+   EnergyCoeffMax=maxval(EnergyCoeff_CB)
+   do iBLK=1,nBLK
       do i=1,nI; do j=1,nJ; do k=1,nK
          if (R_BLK(i,j,k,iBLK)>1.0) then
-
-            Ctot_normalized=Ctot(i,j,k,iBLK)/Max_Ctot
-            ! Start filling cells
-
-            do w_Index=1,I50_-I01_+1
+            
+            ! Normalize EnergyCoeff_CB according to maximum value in the spatial domain
+            EnergyCoeff_CB(i,j,k,iBLK)=EnergyCoeff_CB(i,j,k,iBLK)/EnergyCoeffMax
+            
+            ! Start filling frequency groups
+            do iFreq=1,I50_-I01_+1
    
-               I_Spectrum(w_Index)=Ctot_normalized*exp(w_LogSpectrum(w_Index))**(-w_Power)
-               State_VGB(w_Index-1+I01_,i,j,k,iBLK)=I_Spectrum(w_Index)
+               WaveEnergy_I(iFreq)=EnergyCoeff_CB(i,j,k,iBLK)*exp(WaveLogFreq_I(iFreq))**(KolmogPower)
+               State_VGB(iFreq-1+I01_,i,j,k,iBLK)=WaveEnergy_I(iFreq)
+               
             end do
          else
             State_VGB(I01_:I50_,i,j,k,iBLK)=cTiny
@@ -596,6 +600,13 @@ contains
       end do; end do ; end do
    end do
 
+   !\
+   ! Calculate cut-off frequancy for all cells
+   !/
+   do iBLK=1,nBLK
+      call calc_cutoff_freq(FreqCutOff_C,iBLK)
+      write(*,*) 'Maximum cut-off = ',maxval(FreqCutOff_C)
+   end do
   end subroutine set_wave_spectrum
 !========================================================================
 
@@ -709,16 +720,8 @@ contains
     ! IntIwCell is the integral of the wave energy over frequency
     select case(NameVar)
     case('IntIw')
-       do i=1,nI; do j=1,nJ; do k=1,nK
-          IntIwCell=0.5*(State_VGB(I01_,i,j,k,iBlock)*(exp(1.0)-1.0)+&
-               State_VGB(I50_,i,j,k,iBlock)*(exp(50.0)-exp(49.0)))
-          do I_Index=2,48
-             IntIwCell= IntIwCell + (exp((I_Index+1)*1.0)-exp(I_Index*1.0))&
-                  *State_VGB(I_Index,i,j,k,iBlock)
-          end do
-          PlotVar_G(i,j,k)=IntIwCell
-       end do; end do; end do
-    case default
+       PlotVar_G(i,j,k)=IntIwCell
+        case default
        IsFound= .false.
     end select
   end subroutine user_set_plot_var
