@@ -499,7 +499,8 @@ subroutine MH_set_parameters(TypeAction)
           "#IMPLICITTEMPERATURE")
         call read_temperature_param(NameCommand)
 
-     case("#PARALLELCONDUCTION")
+     case("#PARALLELCONDUCTION", &
+          "#WEAKFIELDCONDUCTION")
         call read_heatconduction_param(NameCommand)
 
      case("#SAVELOGFILE")

@@ -13,20 +13,24 @@ module ModHeatConduction
   public :: get_heat_flux
   public :: add_jacobian_heat_conduction
 
-  ! Logical for adding parallel heat conduction
+  ! Logical for adding field-aligned heat conduction
   Logical, public :: UseParallelConduction = .false.
   logical, public :: IsNewBlockHeatConduction = .true.
 
-  ! Variables for setting the parallel heat conduction coefficient
+  ! Variables for setting the field-aligned heat conduction coefficient
   character(len=20), public :: TypeHeatConduction = 'test'
   logical :: DoModifyHeatConduction, DoTestHeatConduction
   logical :: UseIdealState = .true.
   
   real :: HeatConductionParSi = 1.23e-11  ! taken from calc_heat_flux
-  real :: TmodifySi = 2.5e5, DeltaTmodifySi = 2.0e4 ! taken from Linker et al.
+  real :: TmodifySi = 3.0e5, DeltaTmodifySi = 2.0e4
   real :: HeatConductionPar, Tmodify, DeltaTmodify
 
-  ! electron temperature used for calculating field parallel heat flux
+  logical :: DoWeakFieldConduction = .false.
+  real :: BmodifySi = 1.0e-7, DeltaBmodifySi = 1.0e-8 ! modify about 1 mG
+  real :: Bmodify, DeltaBmodify
+
+  ! electron temperature used for calculating heat flux
   real, allocatable :: Te_G(:,:,:)
 
 contains
@@ -60,6 +64,14 @@ contains
                   //TypeHeatConduction)
           end select
        end if
+
+    case("#WEAKFIELDCONDUCTION")
+       call read_var('DoWeakFieldConduction', DoWeakFieldConduction)
+       if(DoWeakFieldConduction)then
+          call read_var('BmodifySi', BmodifySi)
+          call read_var('DeltaBmodifySi', DeltaBmodifySi)
+       end if
+
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
     end select
@@ -71,7 +83,7 @@ contains
   subroutine init_heat_conduction
 
     use ModPhysics, ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
-         UnitU_, UnitX_
+         UnitU_, UnitX_, UnitB_
     use ModSize, ONLY: nI, nJ, nK
 
     character(len=*), parameter :: NameSub = 'init_heat_conduction'
@@ -94,9 +106,15 @@ contains
     HeatConductionPar = HeatConductionParSi &
          *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)**3.5 &
          *Si2No_V(UnitU_)*Si2No_V(UnitX_)
+
     if(DoModifyHeatConduction)then
        Tmodify = TmodifySi*Si2No_V(UnitTemperature_)
        DeltaTmodify = DeltaTmodifySi*Si2No_V(UnitTemperature_)
+    end if
+
+    if(DoWeakFieldConduction)then
+       Bmodify = BmodifySi*Si2No_V(UnitB_)
+       DeltaBmodify = DeltaBmodifySi*Si2No_V(UnitB_)
     end if
 
   end subroutine init_heat_conduction
@@ -123,7 +141,7 @@ contains
     integer :: ii, jj, kk
     real :: B_D(3), Bunit_D(3), Bnorm, Cv, CvSi
     real :: FaceGrad_D(3), HeatCoef, TemperatureSi, Temperature, &
-         FractionSpitzer
+         FractionSpitzer, FractionFieldAligned
 
     character(len=*), parameter :: NameSub = 'get_heat_flux'
     !--------------------------------------------------------------------------
@@ -143,8 +161,8 @@ contains
 
     ! The magnetic field should nowhere be zero. The following fix will
     ! turn the magnitude of the field direction to zero.
-    Bnorm = max(sqrt(sum(B_D**2)),cTolerance)
-    Bunit_D = B_D/Bnorm
+    Bnorm = sqrt(sum(B_D**2))
+    Bunit_D = B_D/max(Bnorm,cTolerance)
 
 
     if(IsNewBlockHeatConduction)then
@@ -190,11 +208,25 @@ contains
        end if
     end if
 
-    HeatFlux_D = -HeatCoef*Bunit_D*dot_product(Bunit_D,FaceGrad_D)
+    if(DoWeakFieldConduction)then
+       FractionFieldAligned = 0.5*(1.0+tanh((Bnorm-Bmodify)/DeltaBmodify))
 
-    ! get the heat conduction coefficient normal to the face for
-    ! time step restriction
-    HeatCondCoefNormal = HeatCoef*dot_product(Bunit_D,Normal_D)**2/Cv
+       HeatFlux_D = -HeatCoef*( &
+            FractionFieldAligned*Bunit_D*dot_product(Bunit_D,FaceGrad_D) &
+            + (1.0 - FractionFieldAligned)*FaceGrad_D )
+
+       ! get the heat conduction coefficient normal to the face for
+       ! time step restriction
+       HeatCondCoefNormal = HeatCoef*( &
+            FractionFieldAligned*dot_product(Bunit_D,Normal_D)**2 &
+            + (1.0 - FractionFieldAligned) )/Cv
+    else
+       HeatFlux_D = -HeatCoef*Bunit_D*dot_product(Bunit_D,FaceGrad_D)
+
+       ! get the heat conduction coefficient normal to the face for
+       ! time step restriction
+       HeatCondCoefNormal = HeatCoef*dot_product(Bunit_D,Normal_D)**2/Cv
+    end if
 
   end subroutine get_heat_flux
 
