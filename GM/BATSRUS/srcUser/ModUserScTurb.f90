@@ -489,7 +489,7 @@ contains
     real                         :: vAlfvenSi, RhoSi
     ! 1D Frequency grid variables
     real                         :: LogFreqMin, LogFreqMax, dLogFreq
-    real, dimension(I50_-I01_+1) :: WaveEnergy_I, LogFreq_I
+    real, dimension(I50_-I01_+1) :: LogFreq_I, WaveEnergy_I !=w'I(logw')
     integer                      :: iFreq
     real,dimension(nI,nJ,nK,nBLK):: FreqCutOff_CB
     ! Initial spectrum model parameters
@@ -503,6 +503,7 @@ contains
     real                         :: EnergyCoeffMax, MinI01,MaxI01, MinI50, MaxI50 ! for testing
     character(len=*),parameter   :: NameSub= 'init_wave_spectrum'
     ! ------------------------------------------------------------------
+    write(*,*) NameSub,' started'
     ! \
     ! Calculate wave spectrum energy  coefficients in all cells 
     ! /
@@ -553,21 +554,17 @@ contains
   
     ! Divide the spectrum into frequncy groups on a log scale
     do iFreq = 1,I50_-I01_+1
-
        LogFreq_I(iFreq)=LogFreqMin+(iFreq-1)*dLogFreq
-
     end do
-
+    write(*,*) 'Frequancy grid:',LogFreq_I
     !\
     ! Calculate cut-off frequancy for all cells
     !/
     do iBLK=1,nBLK
        if (unusedBLK(iBLK)) CYCLE
-
        call calc_cutoff_freq(iBLK , FreqCutOff_CB(:,:,:,iBLK) )
-    
     end do
-   
+    
     !\
     ! Initialize spectrum in all frequency groups and all cells
     !/
@@ -580,12 +577,16 @@ contains
           else
              ! Start filling frequency groups
              do iFreq=1,I50_-I01_+1
-                if(LogFreq_I(iFreq) .ge. freqCutOff_CB(i,j,k,iBLK)) then
+                if(LogFreq_I(iFreq) .ge. FreqCutOff_CB(i,j,k,iBLK)) then
                    WaveEnergy_I(iFreq) = 0
                 else
                    WaveEnergy_I(iFreq)=EnergyCoeff_CB(i,j,k,iBLK)*exp(LogFreq_I(iFreq))**(FreqPower)
                 end if
-                State_VGB(iFreq-1+I01_,i,j,k,iBLK)=exp(LogFreq_I(iFreq))*WaveEnergy_I(iFreq)*dLogFreq*Si2No_V(UnitP_)
+                ! Store wave energy state variables Ixx_
+                ! Ixx_, represent w'I(logw')dlogw' and is in normalized units,
+                ! while WaveEnergy_I represents w'I(logw') and is in SI units.
+                State_VGB(iFreq-1+I01_,i,j,k,iBLK)=WaveEnergy_I(iFreq)*dLogFreq
+                State_VGB(iFreq-1+I01_,i,j,k,iBLK)=State_VGB(iFreq-1+I01_,i,j,k,iBLK)/No2Si_V(UnitP_)
                
              end do
     
