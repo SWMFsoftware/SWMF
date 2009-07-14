@@ -476,38 +476,37 @@ contains
     use ModAdvance,     ONLY: State_VGB
     use ModGeometry,    ONLY: R_BLK
     use ModSize,        ONLY: nI,nJ,nK
-    use ModConst,       ONLY: cMu, cEps, cElectronCharge, cGEV, cAU
-    use ModNumConst,    ONLY: cPi,cTiny
-    use ModPhysics,     ONLY: No2Si_V,UnitB_,UnitRho_,UnitX_
+    use ModConst,       ONLY: cLightSpeed, cElectronCharge, cGEV, cAU,cMu
+    use ModNumConst,    ONLY: cTiny,cPi
+    use ModPhysics,     ONLY: No2Si_V,Si2No_V,UnitB_,UnitRho_,UnitX_,UnitP_
     
     implicit none
 
     ! Spatial grid variables
     integer                      :: i,j,k,iBLK
-    real                         :: rSi
+    real                         :: InvRSi ! inverse of distance in SI units
     real                         :: BxNo, ByNo, BzNo, BtotSi ! No=normalized units, Si=SI units 
     real                         :: vAlfvenSi, RhoSi
     ! 1D Frequency grid variables
-    real                         :: FreqMin, FreqMax, dLogFreq
-    real, dimension(I50_-I01_+1) :: WaveEnergy_I, WaveLogFreq_I
+    real                         :: LogFreqMin, LogFreqMax, dLogFreq
+    real, dimension(I50_-I01_+1) :: WaveEnergy_I, LogFreq_I
     integer                      :: iFreq
     real,dimension(nI,nJ,nK,nBLK):: FreqCutOff_CB
     ! Initial spectrum model parameters
     !the intensity of outward travelling waves (initial condition)
     real,parameter               :: Alpha=1.0/10.0
     real,parameter               :: Lambda0=4.0/10.0  ![AU]
-    real,parameter               :: KolomogPower=-5.0/3.0
+    real,parameter               :: FreqPower=-2.0/3.0 ! spectral index
     real                         :: ConstCoeff
-    !ConstCoeff is a constant coeffiecient appearing in the initial spectrum
-    real                         :: bCoeff ,rCoeff ! B and r dependence of initial spectrum
-    real,dimension(nI,nJ,nK,nBLK):: EnergyCoeff_CB ! product of 3 previous coefficients
-    real                         :: EnergyCoeffMax ! for testing
+    ! Constant coefficient appearing in initial spectrum
+    real,dimension(nI,nJ,nK,nBLK):: EnergyCoeff_CB ! product of (B^(5/3)/r) and previous coefficient
+    real                         :: EnergyCoeffMax, MinI01,MaxI01, MinI50, MaxI50 ! for testing
     character(len=*),parameter   :: NameSub= 'init_wave_spectrum'
     ! ------------------------------------------------------------------
-    
     ! \
-    ! Calculate wave energy  coefficients in all cells 
+    ! Calculate wave spectrum energy  coefficients in all cells 
     ! /
+    ConstCoeff=(216/(70*cMu*Lambda0))*((10.0E5*cElectronCharge*cLightSpeed)/cGEV)**(-1.0/3.0)
     do iBLK=1,nBLK
        if (unusedBLK(iBLK)) CYCLE
        
@@ -516,7 +515,7 @@ contains
           if (R_BLK(i,j,k,iBLK) .ge. 1.0) then
 
              ! convert to SI units
-             rSi=No2Si_V(UnitX_)*R_BLK(i,j,k,iBLK)
+             InvRSi=1/(No2Si_V(UnitX_)*R_BLK(i,j,k,iBLK))
              RhoSi=No2Si_V(UnitRho_)*State_VGB(rho_,i,j,k,iBLK)
              
              !Get magnetic field
@@ -531,42 +530,31 @@ contains
              vAlfvenSi=BtotSi/((RhoSi*cMu)**0.5)
             
              ! The wave energy spectrum is described by the power law:
-             ! I_{+}= Coeff*bCoeff*rCoeff*(w/vAlfven)^{-5/3}
-             ! where:
-             ! ConstCoeff=\frac{216e5}{7\lambda_0 \mu_0}
-             ! bCoeff=B^2(\frac{10e5*eB}{1GeV*(\eps_0 \mu_0)**0.5}^{-1/3}
-             ! rCoeff=(r/1AU)^{-1}   
-            
-             ConstCoeff=(216.0E5)/(7.0*cMu*Lambda0)
-
-             bCoeff=BtotSi**2*((10.0E5*cElectronCharge*BtotSi)/(cGEV*(cMu*cEps)**0.5))&
-                  **(-1.0/3.0)
-         
-             rCoeff=cAU/rSi
-         
-             EnergyCoeff_CB(i,j,k,iBLK)=ConstCoeff*bCoeff*rCoeff*(vAlfvenSi)**(-KolomogPower)
+             ! I= ConstCoeff*(B^{5/3}/r)*(w/vAlfven)^{-2/3}dLogFreq
+             EnergyCoeff_CB(i,j,k,iBLK)=ConstCoeff*(BtotSi**(5.0/3.0))*InvRSi*(vAlfvenSi)**(-FreqPower)
      
           end if
           
        end do; end do; end do
     end do
-
+    EnergyCoeffMax=maxval(EnergyCoeff_CB)
+    write(*,*) NameSub,': Maximum Energy coefficient: ', EnergyCoeffMax
     ! \
     ! Set frequency grid
     ! /
     
-    FreqMin = 6e-6  ! minimal frequency of Alfven waves spectrum
+    LogFreqMin = log(2*cPi*6e-6)  ! minimal frequency of Alfven waves spectrum
     !This is the frequancy of the state variable I01_
-    FreqMax = 0.001 ! maximal frequency of Alfven waves spectrum
+    LogFreqMax = log(2*cPi) ! maximal frequency of Alfven waves spectrum
     !This is the frequency of the state variable I50_
    
     ! calculate frequency interval on a natural logarithmic scale 
-    dLogFreq = (log(FreqMax)-log(FreqMin))/(I50_-I01_) 
+    dLogFreq = (LogFreqMax-LogFreqMin)/(I50_-I01_) 
   
     ! Divide the spectrum into frequncy groups on a log scale
     do iFreq = 1,I50_-I01_+1
 
-       WaveLogFreq_I(iFreq)=log(FreqMin)+(iFreq-1)*dLogFreq
+       LogFreq_I(iFreq)=LogFreqMin+(iFreq-1)*dLogFreq
 
     end do
 
@@ -581,36 +569,38 @@ contains
     end do
    
     !\
-    ! Initialize spectrum in all frequency groups
+    ! Initialize spectrum in all frequency groups and all cells
     !/
-
-    EnergyCoeffMax=maxval(EnergyCoeff_CB)
     do iBLK=1,nBLK
        if (unusedBLK(iBLK)) CYCLE
        do k=1,nK ; do j=1,nJ; do i=1,nI
 
-          if (R_BLK(i,j,k,iBLK)>1.0) then
-            
-             ! Normalize EnergyCoeff_CB according to maximum value in the spatial domain
-             EnergyCoeff_CB(i,j,k,iBLK)=EnergyCoeff_CB(i,j,k,iBLK)/EnergyCoeffMax
-            
+          if (R_BLK(i,j,k,iBLK)<1.0) then
+             State_VGB(I01_:I50_,i,j,k,iBLK)=0
+          else
              ! Start filling frequency groups
              do iFreq=1,I50_-I01_+1
-                if(WaveLogFreq_I(iFreq) .ge. freqCutOff_CB(i,j,k,iBLK)) then
+                if(LogFreq_I(iFreq) .ge. freqCutOff_CB(i,j,k,iBLK)) then
                    WaveEnergy_I(iFreq) = 0
                 else
-                   WaveEnergy_I(iFreq)=EnergyCoeff_CB(i,j,k,iBLK)*exp(WaveLogFreq_I(iFreq))**(KolomogPower)
+                   WaveEnergy_I(iFreq)=EnergyCoeff_CB(i,j,k,iBLK)*exp(LogFreq_I(iFreq))**(FreqPower)
                 end if
-                State_VGB(iFreq-1+I01_,i,j,k,iBLK)=WaveEnergy_I(iFreq)
+                State_VGB(iFreq-1+I01_,i,j,k,iBLK)=exp(LogFreq_I(iFreq))*WaveEnergy_I(iFreq)*dLogFreq*Si2No_V(UnitP_)
                
              end do
-          else
-             State_VGB(I01_:I50_,i,j,k,iBLK)=cTiny
+    
           end if
           
        end do; end do ; end do
+    
     end do
-
+    MaxI50=maxval(State_VGB(I50_,:,:,:,:))
+    MinI50=minval(State_VGB(I50_,:,:,:,:),mask=State_VGB(I50_,:,:,:,:)>0)
+    MaxI01=maxval(State_VGB(I01_,:,:,:,:))
+    MinI01=minval(State_VGB(I01_,:,:,:,:),mask=State_VGB(I01_,:,:,:,:)>0)
+    write(*,*) ' ==================================================================='
+    write(*,*) 'Minimal I01: ',MinI01,',  Max I01: ', MaxI01
+    write(*,*) 'Minimal I50: ',MinI50,',  Max I50: ', MaxI50
     write(*,*) NameSub, 'Finished'
   end subroutine init_wave_spectrum
   !========================================================================
