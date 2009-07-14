@@ -28,6 +28,7 @@ OBJECTS = \
 	ModProcIM.o\
 	ModHeidiInput.o\
 	ModHeidiBField.o\
+	ModHeidiNeutralH.o\
 	heidi_setup.o\
 	heidi_icbc.o\
 	heidi_coefficients.o\

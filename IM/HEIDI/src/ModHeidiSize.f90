@@ -24,4 +24,8 @@ Module ModHeidiSize
   integer :: s,io,jo,ko,lo,iso,scalc(ns)
   real    :: dt, DTMAX,tmax
 
+  !Define the minimum and maximum distance in the equatorial plane
+  real, parameter :: RadiusMin = 1.5
+  real, parameter :: RadiusMax = 7.0
+
 end Module ModHeidiSize
