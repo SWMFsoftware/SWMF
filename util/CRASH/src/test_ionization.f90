@@ -19,7 +19,8 @@ program saha
   real    :: dTe, dLogN, dU
   integer :: iT, nT1=1000000, iN, iU, iLoop
 
-  real    :: z_I(0:nN),z2_I(0:nN),Uav_I(0:nN),Cv_I(0:nN), Te_I(0:nN) 
+  real    :: Z_I(0:nN),Z2_I(0:nN),Uav_I(0:nN),Cv_I(0:nN), Te_I(0:nN)
+  real    :: ZNoCoulomb_II(1:nT, 0:nN)
   integer :: iIter_I(0:nN)
   !character(LEN=*),parameter,dimension(0:nN) :: Separator_I='|'
   !character(LEN=*),parameter,dimension(0:nN) :: Separator1_I='/'
@@ -78,7 +79,7 @@ program saha
           (' & ', Z_I(iN), iN=0,nN ),'\tabularnewline'
      write(24,'(a)')'\hline'
 
-
+     ZNoCoulomb_II(iT,:) = Z_I
   end do
 
   write(24,'(a)')'\end{tabular}'
@@ -333,10 +334,15 @@ program saha
 
   UseCoulombCorrection = .true.
   open(24,file='../doc/Table7.tex')
-  write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
+  write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|c|c|c|c|c|c|}'
   write(24,'(a)')'\hline'
-  write(24,'(a)')'Te[eV]\textbackslash \textbackslash Na[$1/cm^3$] & $10^{18}$'//&
-       ' & $10^{19}$ & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
+  write(24,'(a)')'Na[$1/cm^3$] & '//&
+       '\multicolumn{2}{|c|}{$10^{18}$} & \multicolumn{2}{|c|}{$10^{19}$} & '//&
+       '\multicolumn{2}{|c|}{$10^{20}$} & \multicolumn{2}{|c|}{$10^{21}$} & '//&
+       '\multicolumn{2}{|c|}{$10^{22}$} & \multicolumn{2}{|c|}{$10^{23}$}\tabularnewline'
+  write(24,'(a)')'\hline'
+  write(24,'(a)')'Te[eV] &'//&
+       ' no & Mad & no & Mad & no & Mad & no & Mad & no & Mad & no & Mad\tabularnewline'
   write(24,'(a)')'\hline' 
   write(24,'(a)')'\hline'
 
@@ -346,10 +352,15 @@ program saha
 
         write(24,'(a)')'\end{tabular}', char(10)
         !--------------
-        write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|}'
+        write(24,'(a)')'\begin{tabular}{|c||c|c|c|c|c|c|c|c|c|c|c|c|}'
         write(24,'(a)')'\hline'
-        write(24,'(a)')'Te[eV]\textbackslash \textbackslash Na[$1/cm^3$] & $10^{18}$ & $10^{19}$'//&
-             ' & $10^{20}$ & $10^{21}$ & $10^{22}$ & $10^{23}$\tabularnewline'
+        write(24,'(a)')'Na[$1/cm^3$] & '//&
+             '\multicolumn{2}{|c|}{$10^{18}$} & \multicolumn{2}{|c|}{$10^{19}$} & '//&
+             '\multicolumn{2}{|c|}{$10^{20}$} & \multicolumn{2}{|c|}{$10^{21}$} & '//&
+             '\multicolumn{2}{|c|}{$10^{22}$} & \multicolumn{2}{|c|}{$10^{23}$}\tabularnewline'
+        write(24,'(a)')'\hline'
+        write(24,'(a)')'Te[eV] &'//&
+             ' no & Mad & no & Mad & no & Mad & no & Mad & no & Mad & no & Mad\tabularnewline'
         write(24,'(a)')'\hline' 
         write(24,'(a)')'\hline'
      end if
@@ -370,8 +381,8 @@ program saha
            write(*,*)'Error=',iError,vTe,NaTrial*1000000.0
         end if
      end do
-     write(24,'(f5.0,6(a,f7.1),a)') vTe,&
-          (' & ', Z_I(iN), iN=0,nN ),'\tabularnewline'
+     write(24,'(f5.0,6(a,f7.1,a,f7.1),a)') vTe,&
+          (' & ', ZNoCoulomb_II(iT,iN),' & ', Z_I(iN), iN=0,nN ),'\tabularnewline'
      write(24,'(a)')'\hline'
 
 

@@ -61,49 +61,87 @@ F = -TN_a\log\left[\frac{eV}{N_a}\left(\frac{MT}{2\pi \hbar^2}\right)^{3/2}\righ
 \end{equation}
 where, again, $\Omega_e = F_e - \mu_e N_a \sum i p_i = F_e - \mu_e N_a \langle i \rangle $.
 
-{\bf Differentials along the curve of the ionization equilibrium}
+{\bf Differentials along the curve of the ionization equilibrium} obey the equation as follows:
 \begin{equation}
 \frac{dg_e}{g_e} (\langle \delta^2 i \rangle + ZR^-(g_e)) + \frac{dT}{T^2} \langle \delta i \delta E_i^* \rangle =
 \left(\frac32 \frac{dT}T + \frac{dV}V\right) Z + \langle \delta(i^2) \delta i \rangle \frac{3}{10} \frac{q_e^2}{Tr_{iono}}
 \frac{dV}{V}.
 \end{equation}
+Again, we express the result in terms of covariances,
+$\langle \delta a \delta b \rangle = \langle (a - \langle a \rangle) (b - \langle b \rangle) \rangle$,
+and mean values which are now being calculated
+using the modified partition functions.
+Differentiation of mean values which is necessary for derivation of the above equation on
+differentials is not a complicated problem with the following formula:
+\begin{equation}
+d \langle f_i \rangle = \left\langle \delta f_i \delta\left( \frac{dp_i}{p_i} \right) \right\rangle,
+\end{equation}
+where $f_i$ is a function of the only argument $i$, for example, $iE_i$ or $i^2+i$.
+
 {\bf Plasma thermodynamics and Equation-Of-State.} 
 While differentiating Eq.(\ref{ffullm}) with respect to $T$ and $V$, again, we see that the derivatives
 by $g_e$ from the second and third terms cancel 
-each other: $g_e(\partial \log S/\partial g_e)=\langle i\rangle=Z$ and $-g_eg_{e1}{\rm Fe}^\prime_{3/2}(g_e)=g_{e1}{\rm Fe}_{1/2}=Z$. That is why for the internal energy density, 
-${\cal E}$, and for the pressure we find:
+each other: $g_e(\partial \log S/\partial g_e)=\langle i\rangle=Z$,
+that is evident from $d \log S = \langle d (\log p_i) \rangle$,
+and $-g_eg_{e1}{\rm Fe}^\prime_{3/2}(g_e)=g_{e1}{\rm Fe}_{1/2}=Z$. That is why for the internal energy density, 
+${\cal E}$, and for the pressure, $P$, we find:
 \begin{equation}
 {\cal E} = -\frac{T^2}V\left(\frac{\partial}{\partial T}\left(\frac F T\right)\right)=
-{\cal E}_i+{\cal E}_e,\qquad{\cal E}_i=\frac32Tn_a,
-\qquad{\cal E}_e=n_a\left[\frac32TZR^+(g_e)+\langle E_i\rangle\right],
+{\cal E}_i+{\cal E}_e,\qquad{\cal E}_i=\frac32Tn_a,\qquad
+{\cal E}_e = n_a\left[ \frac32 T Z R^+ + \langle E^*_i\rangle \right],
 \end{equation}
 \begin{equation}
-P = -\frac{\partial F}{\partial V}=P_i+P_e,\qquad
-P_i = n_aT,\qquad
-P_e = n_aTZR^+(g_e).
+P = -\frac{\partial F}{\partial V}=P_i+P_e,\quad
+P_i = n_aT,\quad
+P_e = n_aT ( 1 + ZR^+ - L \langle i^2 \rangle ),\quad
+L = \frac{3}{10} \frac{q_e^2}{Tr_{iono}}.
 \end{equation}
+In the above equations we add the Madelung corrections into the energy of the electron gas, ${\cal E}_e$, and
+into the pressure of electrons, $P_e$, because those corrections are controlled by the electron temperature.
 
-However, while calculating the second order thermodynamic derivatives, like the specific heat, the derivatives of $g_e$ essentially sophisticate the 
-calculations. The result may be expressed in terms of covariances: $\langle\delta^2i\rangle=\langle(i-Z)^2\rangle$, $\langle\delta^2E\rangle=\langle(E_i-\langle E_i\rangle)^2 \rangle$ and 
-$\langle\delta i\delta E\rangle=\langle(E_i-\langle E_i\rangle)(i-Z)\rangle$. In such a way one can find the specific heat in isochoric process, per the unit of volume:
+However, while calculating the second order thermodynamic derivatives,
+such as specific heat, the derivatives of $g_e$ essentially sophisticate the 
+calculations. 
+
+In such a way one can find the specific heat in isochoric process, per unit of volume:
 \begin{equation}
-C_{Ve}=\frac{\partial {\cal E}_e}{\partial T}=n_a\left[\frac{\langle\delta^2E\rangle}{T^2}+\frac{15}4ZR^+
--\frac{\left(\frac32Z-\frac{\langle\delta E\delta i\rangle}T\right)^2}{\langle\delta^2i\rangle+ZR^-}\right],
+C_{Ve}=\frac{\partial {\cal E}_e}{\partial T}=n_a\left[\frac{\langle\delta^2E^*_i\rangle}{T^2}+\frac{15}4ZR^+
+-\frac{\left(\frac32Z-\frac{\langle\delta E^*_i\delta i\rangle}T\right)^2}{\langle\delta^2i\rangle+ZR^-}\right],
 \end{equation}
 the temperature derivative of pressure:
 \begin{equation}
-\frac {\partial P_e}{\partial T}=n_aZ\left[\frac52 R^+ -\frac{\frac32Z-\frac{\langle\delta E\delta i\rangle}T}{\langle\delta^2i\rangle+ZR^-}\right],
+\frac {\partial P_e}{\partial T}=
+n_a\left[
+	\frac52 Z R^+ -
+	(Z+L \langle \delta(i^2) \delta i \rangle)
+		\frac{\frac32Z-\frac{\langle\delta E^*_i\delta i\rangle}T}{\langle\delta^2i\rangle+ZR^-} -
+	L \frac{\langle \delta E^*_i \delta(i^2) \rangle}T
+\right],
 \end{equation}
 as well as the isothermal compressibility:
 \begin{equation}
-V\frac{\partial P_e}{\partial V}=-\frac{Z^2n_aT_e}{\langle\delta^2i\rangle+ZR^-},
+V\frac{\partial P_e}{\partial V}=
+n_a T \left[ -\frac{(Z + L \langle \delta(i^2) \delta i \rangle)^2}{\langle \delta^2 i \rangle + ZR^-} +
+L \left( \frac43 \langle i^2 \rangle + L \langle \delta^2(i^2) \rangle \right) \right].
 \end{equation}
-for simplicity in the above equations the contributions due to ion translational motions are omitted, which are:
+For simplicity in the above equations the contributions due to ion translational motions are omitted, which are:
 \begin{equation}
 C_{Vi}=\frac32n_a, \qquad
 \frac{\partial P_i}{\partial T}=n_a, \qquad
 V\frac{\partial P_i}{\partial V}=-n_aT.
 \end{equation}
+
+Following is the table showing the values of $Z$ calculated for Xenon
+at various electron temperatures
+(given in electron-volts -- the value of $k_{B}T_{e}$, where $k_{B}$
+is in eV/K) and heavy particle concentrations (given in number of
+particles per $cm^{3}$). "no" columns contain the same values
+calculated without Coulomb interation taken into account.
+
+\begin{center}
+\input{ionization_table7.tex}
+\par\end{center}
+
 
 %\include{FermiFunction}
 %\include{CoulombInteraction}
