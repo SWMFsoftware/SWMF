@@ -100,7 +100,7 @@ contains
     use ModMain,     ONLY: globalBLK
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
     use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, &
-         Bx_, By_, Bz_, rho_, p_
+         Bx_, By_, Bz_, rho_, p_, Pe_, UseElectronPressure
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: ShockSlope, ShockLeftState_V
     use ModNumconst, ONLY: cOne,cPi, cTwoPi
@@ -165,8 +165,14 @@ contains
     case('GEM')
        ! write(*,*)'GEM problem set up'
        State_VGB(Bx_,:,:,:,iBlock) = B0*tanh(z_BLK(:,:,:,iBlock)/Lambda0)
-       State_VGB(p_,:,:,:,iBlock)= State_VGB(p_,:,:,:,iBlock) &
-            +0.5*(B0**2-State_VGB(Bx_,:,:,:,iBlock)**2)
+       State_VGB(p_,:,:,:,iBlock)  = State_VGB(p_,:,:,:,iBlock) &
+            + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2)
+
+       ! Scale electron pressure proportionally as defined in #SHOCKTUBE
+       if(UseElectronPressure) &
+            State_VGB(Pe_,:,:,:,iBlock) = State_VGB(p_,:,:,:,iBlock)* &
+            ShockLeftState_V(Pe_)/ShockLeftState_V(p_)
+
        State_VGB(rho_,:,:,:,iBlock)= State_VGB(p_,:,:,:,iBlock)/Tp
        !!!set intial perturbation
        State_VGB(Bx_,:,:,:,iBlock) = State_VGB(Bx_,:,:,:,iBlock) &
