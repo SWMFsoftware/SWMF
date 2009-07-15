@@ -456,7 +456,7 @@ contains
        ByNo = State_VGB(By_,i,j,k,iBLK)
        BzNo = State_VGB(Bz_,i,j,k,iBLK)
 
-       BtotSi = No2Si_V(UnitB_)*(BxNo**2 + ByNo**2 + BzNo**2)**0.5
+       BtotSi = No2Si_V(UnitB_)*sqrt(BxNo**2 + ByNo**2 + BzNo**2)
        FreqCutOff_C(i,j,k)=(cElectronCharge*BtotSi)/cProtonMass
 
     end do; end do ; end do    
@@ -485,8 +485,8 @@ contains
     ! Spatial grid variables
     integer                      :: i,j,k,iBLK
     real                         :: InvRSi ! inverse of distance in SI units
-    real                         :: BxNo, ByNo, BzNo, BtotSi ! No=normalized units, Si=SI units 
-    real                         :: vAlfvenSi, RhoSi
+    real                         :: BxNo, ByNo, BzNo, BtotSi,RhoSi ! No=normalized units, Si=SI units 
+    real,dimension(nI,nJ,nK,nBLK):: vAlfvenSi_CB
     ! 1D Frequency grid variables
     real                         :: LogFreqMin, LogFreqMax, dLogFreq
     real, dimension(I50_-I01_+1) :: LogFreq_I, WaveEnergy_I !=w'I(logw')
@@ -507,7 +507,7 @@ contains
     ! \
     ! Calculate wave spectrum energy  coefficients in all cells 
     ! /
-    ConstCoeff=(216/(70*cMu*Lambda0))*((10.0E5*cElectronCharge*cLightSpeed)/cGEV)**(-1.0/3.0)
+    ConstCoeff=(216/(7*cMu*Lambda0))*((cElectronCharge*cLightSpeed)/cGEV)**(-1.0/3.0)
     do iBLK=1,nBLK
        if (unusedBLK(iBLK)) CYCLE
        
@@ -525,14 +525,14 @@ contains
              BzNo = State_VGB(Bz_,i,j,k,iBLK)
 
              ! Calaculate total field magnitude in SI units
-             BtotSi = No2Si_V(UnitB_)*(BxNo**2 + ByNo**2 + BzNo**2)**0.5
+             BtotSi = No2Si_V(UnitB_)*sqrt(BxNo**2 + ByNo**2 + BzNo**2)
 
              ! Calculte Alfven speed
-             vAlfvenSi=BtotSi/((RhoSi*cMu)**0.5)
+             vAlfvenSi_CB(i,j,k,iBLK)=BtotSi/sqrt(RhoSi*cMu)
             
              ! The wave energy spectrum is described by the power law:
              ! I= ConstCoeff*(B^{5/3}/r)*(w/vAlfven)^{-2/3}dLogFreq
-             EnergyCoeff_CB(i,j,k,iBLK)=ConstCoeff*(BtotSi**(5.0/3.0))*InvRSi*(vAlfvenSi)**(-FreqPower)
+             EnergyCoeff_CB(i,j,k,iBLK)=ConstCoeff*(BtotSi**(5.0/3.0))*InvRSi*(vAlfvenSi_CB(i,j,k,iBLK))**(-FreqPower)
      
           end if
           
@@ -540,6 +540,7 @@ contains
     end do
     EnergyCoeffMax=maxval(EnergyCoeff_CB)
     write(*,*) NameSub,': Maximum Energy coefficient: ', EnergyCoeffMax
+    write(*,*) 'Max Va= ',maxval(vAlfvenSi_CB),', Min Va=', minval(vAlfvenSi_CB,mask=vAlfvenSi_CB>0)
     ! \
     ! Set frequency grid
     ! /
@@ -556,7 +557,7 @@ contains
     do iFreq = 1,I50_-I01_+1
        LogFreq_I(iFreq)=LogFreqMin+(iFreq-1)*dLogFreq
     end do
-    write(*,*) 'Frequancy grid:',LogFreq_I
+   
     !\
     ! Calculate cut-off frequancy for all cells
     !/
