@@ -482,7 +482,7 @@ subroutine get_face_flux(StateCons_VC,B0_DC,nI,nJ,nK,iDim,iBlock,Flux_VC)
        ProcTest, BlkTest,iTest,jTest,kTest
   use ModFaceFlux, ONLY: nFlux, iFace, jFace, kFace, Area, &
        set_block_values, set_cell_values, get_physical_flux, &
-       HallJx, HallJy, HallJz, DoTestCell
+       HallJx, HallJy, HallJz, UseHallGradPe, DoTestCell
   use ModHallResist, ONLY: UseHallResist, HallJ_CD
   use ModMultiFluid, ONLY: iFluid, nFluid, iP_I, iP
 
@@ -533,13 +533,17 @@ subroutine get_face_flux(StateCons_VC,B0_DC,nI,nJ,nK,iDim,iBlock,Flux_VC)
      end if
 
      call set_cell_values
+
+     ! Ignore gradient of electron pressure in the preconditioner
+     UseHallGradPe = .false.
+
      call get_physical_flux(Primitive_V, &
           B0_DC(x_, i, j, k), &
           B0_DC(y_, i, j, k), &
           B0_DC(z_, i, j, k), &
           Conservative_V, Flux_V, Un_I, En, Pe)
 
-     Flux_VC( 1:nVar,i, j, k)= Flux_V(1:nVar)*Area
+     Flux_VC(1:nVar,i,j,k)= Flux_V(1:nVar)*Area
 
      ! Replace pressure flux with energy flux
      Flux_VC(iP_I,i,j,k) = Flux_V(Energy_:Energy_+nFluid-1)*Area

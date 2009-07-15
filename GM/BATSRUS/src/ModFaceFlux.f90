@@ -24,8 +24,10 @@ module ModFaceFlux
        EDotFA_X, EDotFA_Y, EDotFA_Z,     & ! output: E.Area !^CFG IF BORISCORR
        uDotArea_XI, uDotArea_YI, uDotArea_ZI,& ! output: U.Area for P source
        bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,& ! output: B x Area for J
-       UseRS7, UseTotalSpeed, &
-       eFluid_                          ! index for electron fluid (nFluid+1)
+       UseRS7, UseTotalSpeed, UseElectronPressure, &
+       eFluid_, Pe_               ! indexes for electron fluid (nFluid+1)
+
+  use ModPhysics, ONLY: AverageIonCharge, ElectronTemperatureRatio
 
   use ModMultiIon, ONLY: &
        Pe_X, Pe_Y, Pe_Z ! output: Pe for grad Pe in multi-ion MHD
@@ -100,6 +102,8 @@ module ModFaceFlux
 
   ! Variables needed for Hall resistivity
   real :: InvDxyz, HallCoeff, HallJx, HallJy, HallJz
+  logical :: UseHallGradPe = .false., IsNewBlockGradPe = .true.
+  real :: GradXPeNe, GradYPeNe, GradZPeNe
 
   ! Variables for Gray-Diffusion
   real :: EradFlux_D(3)
@@ -356,7 +360,8 @@ contains
           ).and.UseB
     ! Make sure that Hall MHD recalculates the magnetic field 
     ! in the current block that will be used for the Hall term
-    IsNewBlockHall = .true.
+    IsNewBlockHall   = .true.
+    IsNewBlockGradPe = .true.
     ! same for Gray-Diffusion            !^CFG IF IMPLICIT
     IsNewBlockGrayDiffusion = .true.     !^CFG IF IMPLICIT
     IsNewBlockHeatConduction = .true.
@@ -794,6 +799,10 @@ contains
          ( IonMassPerCharge_G(iLeft, jLeft  ,kLeft)            &
          + IonMassPerCharge_G(iRight,jRight,kRight) )
 
+    ! Calculate -grad(pe)/(n_e * e) term for Hall MHD if needed
+    UseHallGradPe = HallCoeff > 0.0 .and. &
+         (UseElectronPressure .or. ElectronTemperatureRatio > 0.0)
+
     Eta       = -1.0                                !^CFG IF DISSFLUX BEGIN
     if(UseResistivity) Eta = 0.5* &
          ( Eta_GB(iLeft, jLeft  ,kLeft,iBlockFace) &
@@ -842,6 +851,7 @@ contains
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp
     use ModImplicit, ONLY: UseFullImplicit, UseSemiImplicit  !^CFG IF IMPLICIT
+    use ModFaceGradient, ONLY: calc_face_gradient
 
     real,    intent(out):: Flux_V(nFlux)
 
@@ -852,6 +862,10 @@ contains
     real :: EnLeft, EnRight, PeLeft, PeRight, Jx, Jy, Jz
     real :: uLeft_D(3), uRight_D(3) !,cDivBWave
     real :: dB0_D(3)
+
+    real, save :: Pe_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+    real       :: GradPe_D(3)
+    real       :: InvNumDens, Coef
     !-----------------------------------------------------------------------
 
     if(UseMultiSpecies .and. DoReplaceDensity)then
@@ -873,6 +887,40 @@ contains
        HallJx = HallCoeff*Jx
        HallJy = HallCoeff*Jy
        HallJz = HallCoeff*Jz
+    end if
+
+    if(UseHallGradPe)then
+
+       if(IsNewBlockGradPe)then
+          ! Obtain electron pressure
+          if(UseElectronPressure)then
+             Pe_G = State_VGB(Pe_,:,:,:,iBlockFace)
+          elseif(IsMhd)then
+             Coef = AverageIonCharge*ElectronTemperatureRatio
+             Pe_G = State_VGB(p_,:,:,:,iBlockFace)*Coef/(1 + Coef)
+          else
+             Pe_G = sum(State_VGB(iPIon_I,:,:,:,iBlockFace),DIM=1) &
+                  *ElectronTemperatureRatio
+          end if
+       end if
+
+       ! Calculate face centered grad(Pe)
+       call calc_face_gradient(iDimFace, iFace, jFace, kFace, iBlockFace, &
+            Pe_G, IsNewBlockGradPe, GradPe_D)
+
+       ! Calculate 1/(n_e * e)
+       if(UseMultiIon)then
+          InvNumDens = HallCoeff/(0.5* &
+               sum((StateLeft_V(iRhoIon_I)+StateRight_V(iRhoIon_I))/MassIon_I))
+       else
+          InvNumDens = HallCoeff/(0.5*(StateLeft_V(Rho_) + StateRight_V(Rho_)))
+       end if
+
+       ! Calculate grad(Pe)/(n_e * e)
+       GradXPeNe = GradPe_D(x_)*InvNumDens
+       GradYPeNe = GradPe_D(y_)*InvNumDens
+       GradZPeNe = GradPe_D(z_)*InvNumDens
+
     end if
 
     if(DoRoe)then
@@ -1676,9 +1724,8 @@ contains
 
     use ModMultiFluid
     use ModMain,    ONLY: UseHyperbolicDivb, SpeedHyp2
-    use ModAdvance, ONLY: Hyp_, Eradiation_, Pe_, UseElectronPressure
+    use ModAdvance, ONLY: Hyp_, Eradiation_
     use ModImplicit, ONLY: UseFullImplicit     !^CFG IF IMPLICIT
-    use ModPhysics, ONLY: AverageIonCharge, ElectronTemperatureRatio
 
     real,    intent(in) :: State_V(nVar)       ! input primitive state
     real,    intent(in) :: B0x, B0y, B0z       ! B0
@@ -1768,6 +1815,21 @@ contains
        if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) &
             + Bx*FluxBx + By*FluxBy + Bz*FluxBz
     end if                                     !^CFG END DISSFLUX
+
+    if(UseHallGradPe)then
+       ! Add curl (-grad Pe/n e) to induction equation
+       FluxBx = - (NormalY*GradZPeNe - NormalZ*GradYPeNe)
+       FluxBy = - (NormalZ*GradXPeNe - NormalX*GradZPeNe)
+       FluxBz = - (NormalX*GradYPeNe - NormalY*GradXPeNe)
+
+       Flux_V(Bx_) = Flux_V(Bx_) + FluxBx
+       Flux_V(By_) = Flux_V(By_) + FluxBy
+       Flux_V(Bz_) = Flux_V(Bz_) + FluxBz
+
+       ! add B.dB/dt term to energy equation
+       if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) &
+            + Bx*FluxBx + By*FluxBy + Bz*FluxBz
+    end if
 
     if(UseGrayDiffusion)then
        ! Diffusive radiation flux is added later for semi-implicit scheme
@@ -2069,8 +2131,6 @@ contains
          write(*,*)'B0x,y,z   =',B0x,B0y,B0z
          write(*,*)'Flux(Bxyz)=',Flux_V(Bx_:Bz_)
       end if
-
-!!! add gradient of electron pressure here !!!
 
     end subroutine get_magnetic_flux
 
