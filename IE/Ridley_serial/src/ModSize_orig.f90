@@ -7,6 +7,6 @@ module IE_ModSize
   ! Ionosphere array parameters
   !/
   integer, parameter :: IONO_nTheta =  91
-  integer, parameter :: IONO_nPsi   =  91
+  integer, parameter :: IONO_nPsi   = 181
 
 end module IE_ModSize
