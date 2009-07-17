@@ -53,6 +53,10 @@ module IE_ModMain
   ! Possible values are 'north', 'south', 'average', 'cpcpmin'
   !/
   character (len=7) :: TypeImCouple = 'north   '
+  !\
+  ! Fraction of IM current to consider
+  !/
+  real :: FractionImJr = 1.0
 
   !\
   ! Parameter for coupling the UA current and 

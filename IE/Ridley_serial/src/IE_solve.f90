@@ -44,6 +44,9 @@ subroutine IE_solve
                 sum(abs(IONO_NORTH_JR))
         end if
 
+        ! Add the IM currents before the conductances are calculated
+        IONO_NORTH_JR = IONO_NORTH_JR + FractionImJr*iono_north_im_jr
+
         call FACs_to_fluxes(conductance_model, iBlock)
 
         call ionosphere_conductance(IONO_NORTH_Sigma0,               &
@@ -63,9 +66,9 @@ subroutine IE_solve
              dTheta_North, dPsi_North,                &
              conductance_model, f107_flux)
 
-        ! This is tricky, JR is passed as PHI to the ionosphere_solver
-        IONO_NORTH_JR = IONO_NORTH_JR - Iono_North_Tgcm_Jr + &
-             iono_north_im_jr
+        ! Add in ionospheric currents after the conductances
+        ! are calculated
+        IONO_NORTH_JR = IONO_NORTH_JR - Iono_North_Tgcm_Jr
 
         call ionosphere_solver(iBlock, &
              IONO_NORTH_JR,     &
@@ -117,11 +120,10 @@ subroutine IE_solve
                 sum(abs(IONO_SOUTH_JR))
         end if
 
-        call FACs_to_fluxes(conductance_model, iBlock)
+        ! Add the IM currents before the conductances are calculated
+        IONO_SOUTH_JR = IONO_SOUTH_JR + FractionImJr*iono_south_im_jr
 
-        ! This is tricky, JR is passed as PHI to the ionosphere_solver
-        IONO_SOUTH_JR = IONO_SOUTH_JR - Iono_South_Tgcm_Jr + &
-             iono_south_im_jr
+        call FACs_to_fluxes(conductance_model, iBlock)
 
         call ionosphere_conductance(IONO_SOUTH_Sigma0,               &
              IONO_SOUTH_SigmaH, &
@@ -140,6 +142,10 @@ subroutine IE_solve
              IONO_nTheta, IONO_nPsi,                  &
              dTheta_South, dPsi_South,                &
              conductance_model, f107_flux)
+
+        ! Add in ionospheric currents after the conductances
+        ! are calculated
+        IONO_SOUTH_JR = IONO_SOUTH_JR - Iono_South_Tgcm_Jr
 
         call ionosphere_solver(iBlock, &
              IONO_SOUTH_JR, &

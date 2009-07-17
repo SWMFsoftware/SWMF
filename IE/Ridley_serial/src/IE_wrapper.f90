@@ -153,8 +153,9 @@ contains
        case("#IM")
           call read_var('TypeImCouple',TypeImCouple)
           call lower_case(TypeImCouple)
-       case("#BOUNDARY")
-          call read_var('LatBoundary',LatBoundary)
+          call read_var('FractionImJr',FractionImJr)
+       case("#BOUNDARY") 
+         call read_var('LatBoundary',LatBoundary)
           LatBoundary = LatBoundary * cDegToRad
        case("#UA")
           call read_var('DoCoupleUaCurrent',DoCoupleUaCurrent)

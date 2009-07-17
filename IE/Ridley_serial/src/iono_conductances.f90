@@ -104,8 +104,6 @@ subroutine FACs_to_fluxes(iModel, iBlock)
      where (iono_north_eflux < IONO_Min_EFlux) &
           iono_north_eflux = IONO_Min_EFlux
 
-     write(*,*) "minval : ",minval(iono_north_eflux), minval(iono_north_ave_e)
-
   endif
 
   if (iModel.eq.3) then
