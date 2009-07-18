@@ -93,7 +93,8 @@ subroutine calc_sources
   if(UseElectronPressure)then
      ! Adiabatic heating for electron pressure: -(g-1)*Pe*Div(U)
      do k=1,nK; do j=1,nJ; do i=1,nI
-        Source_VC(Pe_,i,j,k) = -(g-1)*State_VGB(Pe_,i,j,k,iBlock)*&
+        Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
+             - (g-1)*State_VGB(Pe_,i,j,k,iBlock)*&
              vInv_CB(i,j,k,iBlock)*&
              (uDotArea_XI(i+1,j,k,eFluid_) - uDotArea_XI(i,j,k,eFluid_) &
              +uDotArea_YI(i,j+1,k,eFluid_) - uDotArea_YI(i,j,k,eFluid_) &
