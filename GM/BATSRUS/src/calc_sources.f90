@@ -42,7 +42,7 @@ subroutine calc_sources
   real :: E_D(3), DivE
 
   ! Variables needed for Joule heating
-  real :: Current_D(3)
+  real :: Current_D(3), JouleHeating
 
   integer:: iBlock
 
@@ -79,8 +79,10 @@ subroutine calc_sources
      if(UseResistFlux .or. UseResistivity)then  !^CFG IF DISSFLUX BEGIN
         do k=1,nK; do j=1,nJ; do i=1,nI           
            call get_current(i,j,k,iBlock,Current_D)
-           Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) + &
-                (g-1) * Eta_GB(i,j,k,iBlock) * sum(Current_D**2)
+           JouleHeating = (g-1) * Eta_GB(i,j,k,iBlock) * sum(Current_D**2)
+           Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) + JouleHeating
+           if(UseElectronPressure) &
+                Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) + JouleHeating
         end do; end do; end do
 
         if(DoTestMe.and.VarTest==P_)call write_source('After eta j')
