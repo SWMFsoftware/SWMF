@@ -63,9 +63,12 @@ where, again, $\Omega_e = F_e - \mu_e N_a \sum i p_i = F_e - \mu_e N_a \langle i
 
 {\bf Differentials along the curve of the ionization equilibrium} obey the equation as follows:
 \begin{equation}
-\frac{dg_e}{g_e} (\langle \delta^2 i \rangle + ZR^-(g_e)) + \frac{dT}{T^2} \langle \delta i \delta E_i^* \rangle =
-\left(\frac32 \frac{dT}T + \frac{dV}V\right) Z + \langle \delta(i^2) \delta i \rangle \frac{3}{10} \frac{q_e^2}{Tr_{iono}}
-\frac{dV}{V}.
+A_{g_e} \frac{dg_e}{g_e} = A_V \frac{dV}{V} + A_T \frac{dT}{T}
+\end{equation}
+\begin{equation}
+A_{g_e} = \langle \delta^2 i \rangle + ZR^-(g_e), \qquad
+A_T     = \frac32 Z - \frac{\langle \delta i \delta E^*_i \rangle}{T}, \qquad
+A_V     = Z + \frac{3}{10} \frac{q_e^2}{T r_{iono}} \langle \delta(i^2) \delta i \rangle
 \end{equation}
 Again, we express the result in terms of covariances,
 $\langle \delta a \delta b \rangle = \langle (a - \langle a \rangle) (b - \langle b \rangle) \rangle$,
@@ -157,7 +160,70 @@ calculated without Coulomb interation taken into account.
 
 \begin{thebibliography}{99}
 \bibitem{drake}
-R.P.Drake, High Energy Density Physics
+R.P.Drake. High Energy Density Physics. Springer, Berlin-Heidelberg-NY, 2006.
+\bibitem{AA2}
+J.Stein, D.Shalitin, and Akiva Ron. Average-atom models of line broadening in hot dense plasmas.
+Physical Review A, Volume 31, Number 1, 1985.
+\bibitem{CollisionRadiative}
+D.Wunderlich, S.Dietrich, U.Fantz.
+Application of a collisional radiative model to atomic hydrogen for diagnosic purposes.
+JQS\&RT 110 (2009) 62-71.
+\bibitem{CollRad}
+J.Yuan, G.A.Moses. YAC: A code using the detailed term accounting model for all-Z elements.
+JQS\&RT 99 (2006) 697-711.
+\bibitem{EOSTA}
+A.Bar-Shalom, J.Oreg, M.Klapisch.
+EOSTA -- an improved EOS quantum mechanical model in the STA opacity code.
+JQS\&RT 99 (2006) 35-54.
+\bibitem{InfernoLike}
+B.Wilson, V.Sonnad, P.Sterne, W.Isaacs. PURGATORIO -- a new implementation of the INFERNO algorithm.
+JQS\&RT 99 (2006) 658-679.
+\bibitem{LineBroadening}
+E.Stambulchik, Y.Maron.
+A study of ion-dynamics and correlation effects for spectral line broadening in plasma: K-shell lines.
+JQS\&RT 99 (2006) 730-749.
+\bibitem{LineByZLine}
+M.Lino da Silva.
+An adaptive line-by-line -- statistical model for fast and accurate spectral simulations in low-pressure plasmas.
+JQS\&RT 108 (2007) 106-125.
+\bibitem{NonLTEXeSpectrum}
+J.Bauche, C.Bauche-Arnoult, O.Peyrusse, A.Bachelier, K.B.Fournier, C.Chenais-Popovics, J.-C.Gauthier
+Analysis of a non-LTE xenon spectrum by means of the model of superconfiguration temperatures.
+JQS\&RT 81 (2003) 47-55.
+\bibitem{Rodriguez0}
+R.Rodriguez, J.M.Gil, J.G.Rubiano, R.Florido, P.Martel, E.Minguez.
+Relativistic quantum mechanic calculation of photoionization cross-section of hydrogenic and
+non-hydrogenic states using analytical potentials.
+JQS\&RT 91 (2005) 393-413.
+\bibitem{RodriguezPhotoIon}
+R.Rodriguez, J.M.Gil, R.Florido.
+Photoionization cross section of non-hydrogenic levels for weakly coupled plasmas.
+JQS\&RT 108 (2007) 239-255.
+\bibitem{STA}
+A.Bar-Shalom, J.Oreg, W.H.Goldstein, D.Shvarts, A.Zigler.
+Super-transition-arrays: A model for the spectral analysis of hot, dense plasma.
+Physical Review A, Volume 40, Number 6, 1989.
+\bibitem{StewartPyatt}
+J.C.Stewart, K.D.Jr.Pyatt.
+Lowering of ionization potentials in plasmas.
+Astrophysical Journal, Volume 144, Number 3, p.1203, 1966.
+\bibitem{SuperConfiguration}
+Jean-Christophe Pain, Thomas Blenski.
+Self-consistent approach for the thermodynamics of ions in dense plasmas
+in the super configuration approximation.
+JQS\&RT 81 (2003) 355-369.
+\bibitem{Voight}
+Mofreh R.Zaghloul.
+Comment on "a fast method of modeling spectral line".
+JQS\&RT 109 (2008) 2895-2897.
+\bibitem{WireArray}
+M.F.Yilmaz, A.S.Safronova, V.L.Kantsyrev, A.A.Esaulov, K.M.Williamson, G.C.Osborne, I.Sherestha, N.D.Ouart.
+Spectroscopic features of implisions of Mo single- and double-planar wire arrays produced on the 1 MA Z-pinch generator.
+JQS\&RT 109 (2008) 2877-2890.
+\bibitem{Xe11}
+H.-P.Garnir, S.Enzonga Yoca, P.Quinet, E.Biemont.
+Lifetime and transition probability determination in Xe IX.
+JQS\&RT 110 (2009) 284-292.
 \end{thebibliography}
 
 \end{document}
@@ -167,42 +233,6 @@ R.P.Drake, High Energy Density Physics
 
 
 
-
-where
-and the equation for the electron statistical weigh now reads:
-\begin{equation}
-Z=\langle i\rangle_{DH}=g_{e1}{\rm Fe}_{1/2}(g_e).
-\end{equation} 
-Here the subscript $DH$ is to emphasize that both averages and the statistical sum should be calculated with the partition functions as in
-Eq.(\ref{pfDH}), which depend not only on $T,g_e$, but also on $R_D$. Again, it is easy to check that the partial derivatives of  
-Eq.(\ref{FDH}) over $g_e$ and over $1/R_D$ both vanish.
-
-The way to account for the electrostatic interaction by means of lowering the ionization potentials is the most general and well-known. 
-However, it results in more cumbersome calculations, because the partition functions depend on $R_D$ which in turn depends on the partition 
-functions. Ar the same time the accuracy of the Debye-Huekel approach is not so high, so that to account for this effect via the 'exact' 
-partition functions is in fact not exact at all. Even more applicable are these consideration to the Madelung approximation as we describe below.
-
-That is why we develop all the formulae in series over the electrostatic interaction parameter, $q_e^2/(TR_D)$, keeping only zero and first 
-order terms. Specifically, the statictical sum in this approximation, becomes $\log S_{DH}=\log S +\langle i^2+i\rangle q^2_e/(2R_DT)$, averages of any
-function of index $i$, $f_i$ are related as follows: $\langle f_i\rangle_{DH}=\langle f_i\rangle+(\langle f_i(i^2+i)\rangle-\langle f_i\rangle\langle 
-i^2+i\rangle)q^2_e/(2R_DT)$, and in the expansion for
-$1/R_D^2$ we simply change $\langle i^2+i\rangle_{DH}$ for $\langle i^2+i\rangle$. With this simplifications we obtain:
-\begin{equation}\label{FDHApprox}
-F = -TN_a\log\left[\frac{eV}{N_a}\left(\frac{MT}{2\pi \hbar^2}\right)^{3/2}\right]-TN_a\log S +\Omega_e -\frac{VT}{12\pi R_D^3}, 
-\end{equation}
-\begin{equation}\label{ZDHApprox}
-Z=\langle i\rangle + \left(\langle i(i^2+i)\rangle-\langle i\rangle\langle i^2+i\rangle\right)\frac{q^2_e}{2R_DT} =g_{e1}{\rm Fe}_{1/2}(g_e),
-\end{equation}
-\begin{equation}
-\frac1{R_D^2}  = \frac{4\pi q_e^2N_a\langle i+i^2\rangle}{VT}.
-\end{equation}
-By differentiating the free energy over temperature we find the internal energy and by differentiating over the volume we find the pressure:
-\begin{equation}\label{EDHApprox}
-\frac{\cal E}{ n_a}=\frac{3T}2\left(1+ZR^+(g_e)\right)+\langle E_i\rangle+\left(\langle E_i(i^2+i)\rangle-(\langle E_i\rangle+T)\langle i^2+i\rangle\right)\frac{q^2_e}{2R_DT},
-\end{equation}
-\begin{equation}\label{PDHApprox}
- \frac{P}{n_a}=T\left[1+ZR^+(g_e)\right]-\langle i^2+i\rangle\frac{q^2_e}{6R_D},
-\end{equation}
 
 {\bf In the limit of strong plasma non-ideality,} specifically, if the 'ionosphere radius', $a=(3/4\pi n_a)^{1/3}$, is not small as compared with the Debye radius: 
 $a\ge R_D$, the  Debye-Huekel theory is not applicable. While treating this limiting case, however, it should be mentioned, that if the condition $a\gg R_D$, or, the same,
