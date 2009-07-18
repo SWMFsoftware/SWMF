@@ -10,10 +10,11 @@ module ModResistivity
   
   logical            :: UseResistivity=.false.
   character (len=30) :: TypeResistivity='none'
-  real               :: Eta0Si, Eta0
-  real               :: EtaPerpSpitzerSi
+  real               :: Eta0Si=0.0, Eta0
+  real               :: EtaPerpSpitzerSi = 0.0
   real               :: CoulombLogarithm = 20.0
-  real               :: Eta0AnomSi, Eta0Anom, EtaMaxAnomSi, EtaMaxAnom
+  real               :: Eta0AnomSi=0.0, Eta0Anom
+  real               :: EtaMaxAnomSi=0.0, EtaMaxAnom
   real               :: jCritAnomSi=1.0, jCritInv
   real               :: Si2NoEta
 
