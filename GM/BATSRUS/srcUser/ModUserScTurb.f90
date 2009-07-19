@@ -22,7 +22,7 @@ module ModUser
        NameUserModule = 'Empirical Solar Wind and MHD Turbulence'
 
   character(len=lStringLine) :: NameModel
-  character(len=lStringLine) :: NameModelSpectrum
+  logical                    :: IsInitWave = .false.
 
 contains
   !============================================================================
@@ -83,9 +83,7 @@ contains
     end do
 
   end subroutine user_read_inputs
-
   !============================================================================
-
   subroutine user_init_session
     use EEE_ModMain,    ONLY: EEE_initialize
     use ModIO,          ONLY: write_prefix, iUnitOut
@@ -128,13 +126,12 @@ contains
     end if
 
   end subroutine user_init_session
-
   !============================================================================
   subroutine user_face_bcs(VarsGhostFace_V)
     use EEE_ModMain,   ONLY: EEE_get_state_BC
     use ModSize,       ONLY: East_,West_,South_,North_,Bot_,Top_,nDim
     use ModMain,       ONLY: time_accurate,x_,y_,z_, UseRotatingFrame, n_step, Iteration_Number
-    use ModVarIndexes !ONLY: nVar,Ew_,rho_,Ux_,Uy_,Uz_,Bx_,By_,Bz_,P_
+    use ModVarIndexes 
     use ModAdvance,    ONLY: State_VGB
     use ModPhysics,    ONLY: inv_gm1,OmegaBody,Si2No_V, &
          UnitB_,UnitU_,UnitRho_,UnitP_
@@ -195,7 +192,7 @@ contains
     VarsGhostFace_V(Ux_:Uz_) = VarsGhostFace_V(Ux_:Uz_) + 2.0*UCMEt_D
 
     !\
-    ! Update BCs for the mass density, EnergyRL,
+    ! Update BCs for the mass density, EnergyRL, wave spectrum
     ! and pressure::
     !/
     iCell = iFace; jCell = jFace; kCell = kFace
@@ -230,6 +227,12 @@ contains
          VarsGhostFace_V(Rho_)*TBase &
          *(1.0/(GammaCell-1.0)-inv_gm1)
 
+    if(IsInitWave) then
+       VarsGhostFace_V(I01_:I50_)=State_VGB(I01_:I50_, iCell,jCell,kCell,iBlockBc)
+       IsInitWave=.false. !prevent further change in BCs
+       write(*,*) 'faceBC set'
+    end if
+
     !\
     ! Apply corotation
     !/
@@ -239,13 +242,12 @@ contains
        VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) &
             + 2*OmegaBody*FaceCoords_D(x_)
     end if
+
   end subroutine user_face_bcs
-
   !============================================================================
-
   subroutine get_plasma_parameters_cell(iCell,jCell,kCell,iBlock,&
        DensCell,PresCell,GammaCell)
-
+     
     ! This subroutine computes the cell values for density and pressure 
     ! assuming an isothermal atmosphere
     
@@ -284,9 +286,7 @@ contains
     PresCell = DensCell*Temperature
 
   end subroutine get_plasma_parameters_cell
-
   !============================================================================
-
   subroutine user_initial_perturbation
     use ModMain, ONLY: nBLK,unusedBLK,x_,y_,z_,n_step,iteration_number
     use ModVarIndexes
@@ -310,7 +310,6 @@ contains
      
    end subroutine user_initial_perturbation
   !============================================================================
-
   subroutine user_set_ics
     use ModMain,      ONLY: globalBLK,nI,nJ,nK
     use ModVarIndexes
@@ -360,7 +359,6 @@ contains
     end do; end do; end do
 
   end subroutine user_set_ics
-
   !============================================================================
   subroutine user_get_b0(xInput,yInput,zInput,B0_D)
     use EEE_ModMain,    ONLY: EEE_get_B0
@@ -383,9 +381,7 @@ contains
     B0_D = B0_D + B_D*Si2No_V(UnitB_)
 
   end subroutine user_get_b0
-
   !============================================================================
-
   subroutine user_update_states(iStage,iBlock)
     use ModMain,    ONLY: iteration_number
     use ModVarIndexes
@@ -428,8 +424,7 @@ contains
     !/
     
   end subroutine user_update_states
-
-!=======================================================================
+  !=======================================================================
   subroutine calc_cutoff_freq(iBLK , FreqCutOff_C)
 
     ! This subroutine calculates the cut-off frequency for Alfven waves, which is the ion cyclotron frequency, 
@@ -462,8 +457,65 @@ contains
     end do; end do ; end do    
 
   end subroutine calc_cutoff_freq
-!=======================================================================
-  subroutine init_wave_spectrum
+  !=======================================================================
+  subroutine calc_poynt_flux(i,j,k,iBLK, UseUr, PoyntFluxSi)
+
+    use ModMain,       ONLY: nBLK
+    use ModSize,       ONLY: nI,nJ,nK
+    use ModAdvance,    ONLY: State_VGB
+    use ModVarIndexes
+    use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK
+    use ModPhysics,    ONLY: No2Si_V, UnitB_, UnitRho_,UnitU_,UnitP_
+    use ModConst,      ONLY: cMu
+    implicit none
+    
+    integer,intent(in)       :: i,j,k,iBLK
+    logical,intent(in)       :: UseUr
+    real,intent(out)         :: PoyntFluxSi
+    real,dimension(3)        :: r_D,B_D,U_D
+    real                     :: x,y,z,Bx,By,Bz,Br
+    real                     :: Ux, Uy, Uz, Ur, Rho  
+    real                     :: vAlfvenRadial ! in radial direction
+    ! -----------------------------------------
+    !! Poynting flux is calculated in SI UNITS
+    !  This subroutine is used for finding flux leaving a spherical surface
+    ! (radius depends on calling routine), thus only the radial component is calculated.
+    
+    ! get radial unit vector
+    x = x_BLK(i,j,k,iBLK)
+    y = y_BLK(i,j,k,iBLK)
+    z = z_BLK(i,j,k,iBLK)
+    r_D = (/x,y,z/)
+    r_D = r_D/sqrt(sum(r_D**2)) ! unit vector in radial direction
+
+    ! get B, Br vectors in SI units
+    Bx = No2Si_V(UnitB_)*State_VGB(Bx_,i,j,k,iBLK)
+    By = No2Si_V(UnitB_)*State_VGB(By_,i,j,k,iBLK)
+    Bz = No2Si_V(UnitB_)*State_VGB(Bz_,i,j,k,iBLK)
+    B_D =(/Bx,By,Bz/)
+    Br = dot_product(r_D,B_D)
+    
+    ! get density in SI units
+    Rho = No2Si_V(UnitRho_)*State_VGB(rho_,i,j,k,iBLK)
+    ! calculate radial component of Alfven speed
+    vAlfvenRadial = abs(Br/sqrt(Rho*cMu)) ! for outgoing waves
+    
+    ! correct vAlfven if bulk velocity is not neglected
+    if(UseUr) then
+       Ux = No2Si_V(UnitU_)*State_VGB(Ux_,i,j,k,iBLK)
+       Uy = No2Si_V(UnitU_)*State_VGB(Uy_,i,j,k,iBLK)
+       Uz = No2Si_V(UnitU_)*State_VGB(Uz_,i,j,k,iBLK)
+       U_D = (/Ux, Uy, Uz/)
+       Ur = dot_product(r_D,U_D)
+        
+       vAlfvenRadial= Ur+vAlfvenRadial
+    end if
+     
+    PoyntFluxSi=vAlfvenRadial*No2Si_V(UnitP_)*sum(State_VGB(I01_:I50_,i,j,k,iBLK))
+
+  end subroutine calc_poynt_flux
+  !====================================================================
+   subroutine init_wave_spectrum
 
     ! This subroutine initializes the Alfven wave energy spectrum in each cell over a frequency grid.
     ! The frequancy range of the spectrum is determined by Alfven waves frequencie observed at the chromosphere 
@@ -478,7 +530,7 @@ contains
     use ModSize,        ONLY: nI,nJ,nK
     use ModConst,       ONLY: cLightSpeed, cElectronCharge, cGEV, cAU,cMu
     use ModNumConst,    ONLY: cTiny,cPi
-    use ModPhysics,     ONLY: No2Si_V,Si2No_V,UnitB_,UnitRho_,UnitX_,UnitP_
+    use ModPhysics,     ONLY: No2Si_V,Si2No_V,UnitB_,UnitRho_,UnitX_,UnitP_,UnitU_
     
     implicit none
 
@@ -486,7 +538,7 @@ contains
     integer                      :: i,j,k,iBLK
     real                         :: InvRSi ! inverse of distance in SI units
     real                         :: BxNo, ByNo, BzNo, BtotSi,RhoSi ! No=normalized units, Si=SI units 
-    real,dimension(nI,nJ,nK,nBLK):: vAlfvenSi_CB
+    real,dimension(nI,nJ,nK,nBLK):: vAlfvenSi_CB, PointingFluxNo_CB
     ! 1D Frequency grid variables
     real                         :: LogFreqMin, LogFreqMax, dLogFreq
     real, dimension(I50_-I01_+1) :: LogFreq_I, WaveEnergy_I !=w'I(logw')
@@ -503,7 +555,8 @@ contains
     real                         :: EnergyCoeffMax, MinI01,MaxI01, MinI50, MaxI50 ! for testing
     character(len=*),parameter   :: NameSub= 'init_wave_spectrum'
     ! ------------------------------------------------------------------
-    write(*,*) NameSub,' started'
+   
+    IsInitWave=.true.
     ! \
     ! Calculate wave spectrum energy  coefficients in all cells 
     ! /
@@ -532,15 +585,15 @@ contains
             
              ! The wave energy spectrum is described by the power law:
              ! I= ConstCoeff*(B^{5/3}/r)*(w/vAlfven)^{-2/3}dLogFreq
-             EnergyCoeff_CB(i,j,k,iBLK)=ConstCoeff*(BtotSi**(5.0/3.0))*InvRSi*(vAlfvenSi_CB(i,j,k,iBLK))**(-FreqPower)
+             EnergyCoeff_CB(i,j,k,iBLK)=ConstCoeff*(BtotSi**(5.0/3.0))*InvRSi*&
+                  (vAlfvenSi_CB(i,j,k,iBLK))**(-FreqPower)
      
           end if
           
        end do; end do; end do
     end do
-    EnergyCoeffMax=maxval(EnergyCoeff_CB)
-    write(*,*) NameSub,': Maximum Energy coefficient: ', EnergyCoeffMax
-    write(*,*) 'Max Va= ',maxval(vAlfvenSi_CB),', Min Va=', minval(vAlfvenSi_CB,mask=vAlfvenSi_CB>0)
+    EnergyCoeffMax=maxval(EnergyCoeff_CB) ! for testing
+    
     ! \
     ! Set frequency grid
     ! /
@@ -569,6 +622,7 @@ contains
     !\
     ! Initialize spectrum in all frequency groups and all cells
     !/
+    State_VGB(I01_:I50_,:,:,:,:)=0
     do iBLK=1,nBLK
        if (unusedBLK(iBLK)) CYCLE
        do k=1,nK ; do j=1,nJ; do i=1,nI
@@ -588,27 +642,23 @@ contains
                 ! while WaveEnergy_I represents w'I(logw') and is in SI units.
                 State_VGB(iFreq-1+I01_,i,j,k,iBLK)=WaveEnergy_I(iFreq)*dLogFreq
                 State_VGB(iFreq-1+I01_,i,j,k,iBLK)=State_VGB(iFreq-1+I01_,i,j,k,iBLK)/No2Si_V(UnitP_)
-               
              end do
-    
           end if
-          
        end do; end do ; end do
-    
     end do
-    MaxI50=maxval(State_VGB(I50_,:,:,:,:))
-    MinI50=minval(State_VGB(I50_,:,:,:,:),mask=State_VGB(I50_,:,:,:,:)>0)
-    MaxI01=maxval(State_VGB(I01_,:,:,:,:))
-    MinI01=minval(State_VGB(I01_,:,:,:,:),mask=State_VGB(I01_,:,:,:,:)>0)
-    write(*,*) ' ==================================================================='
-    write(*,*) 'Minimal I01: ',MinI01,',  Max I01: ', MaxI01
-    write(*,*) 'Minimal I50: ',MinI50,',  Max I50: ', MaxI50
-    write(*,*) NameSub, 'Finished'
+     
+    !MaxI50=maxval(State_VGB(I50_,:,:,:,:))
+    !MinI50=minval(State_VGB(I50_,:,:,:,:),mask=State_VGB(I50_,:,:,:,:)>0)
+    !MaxI01=maxval(State_VGB(I01_,:,:,:,:))
+    !MinI01=minval(State_VGB(I01_,:,:,:,:),mask=State_VGB(I01_,:,:,:,:)>0)
+    !write(*,*) ' ==================================================================='
+    !write(*,*) 'Minimal I01: ',MinI01,',  Max I01: ', MaxI01
+    !write(*,*) 'Minimal I50: ',MinI50,',  Max I50: ', MaxI50
+   
   end subroutine init_wave_spectrum
   !========================================================================
-
   subroutine user_get_log_var(VarValue,TypeVar,Radius)
-
+    
     use ModIO,         ONLY: write_myname
     use ModMain,       ONLY: unusedBLK,nBLK,x_,y_,z_
     use ModVarIndexes !ONLY: Ew_,Bx_,By_,Bz_,rho_,rhoUx_,rhoUy_,rhoUz_,P_ 
@@ -687,7 +737,7 @@ contains
     use ModSize,    ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB
     use ModVarIndexes
-    use ModPhysics, ONLY: No2Si_V,UnitEnergydens_,UnitX_
+    use ModPhysics, ONLY: NameTecUnit_V, NameIdlUnit_V, UnitPoynting_
 
     implicit none
 
@@ -703,27 +753,41 @@ contains
     logical,          intent(out)  :: IsFound
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
-    real                         :: unit_energy, IntIwCell,dw
+    real                         :: PoyntFlux
     integer                      :: i,j,k, I_Index
     logical                      :: IsError
     !-------------------------------------------------------------------    
     !UsePlotVarBody = .true. 
     !PlotVarBody = 0.0 
     IsFound=.true. 
-
     !\                                                                              
     ! Define plot variable to be saved::
     !/ 
-    ! IntIwCell is the integral of the wave energy over frequency
+    !
     select case(NameVar)
-    case('IntIw')
-       PlotVar_G(i,j,k)=IntIwCell
+    case('poynt')
+       ! neglect radial bulk velociy
+       do i=1,nI ; do j=1,nJ; do k=1,nK
+          call calc_poynt_flux(i,j,k,iBlock,.false.,PoyntFlux)
+          PlotVar_G(i,j,k)=PoyntFlux
+       end do; end do ; end do
+       NameTecVar = 'S_r(u=0)'
+       NameTecUnit = NameTecUnit_V(UnitPoynting_)
+       NameIdlUnit = NameIdlUnit_V(UnitPoynting_)
+    case('poyntur')
+       ! include radial bulk velocity
+       do i=1,nI; do j=1,nJ; do k=1,nK
+          call calc_poynt_flux(i,j,k,iBlock,.true.,PoyntFlux)
+          PlotVar_G(i,j,k)=PoyntFlux
+       end do; end do ; end do
+       NameTecVar = 'S_r(total)'
+       NameTecUnit = NameTecUnit_V(UnitPoynting_)
+       NameIdlUnit = NameIdlUnit_V(UnitPoynting_)
     case default
        IsFound= .false.
     end select
   end subroutine user_set_plot_var
-
-!=========================================================================== 
+  !=========================================================================== 
   subroutine user_specify_refinement(iBlock, iArea, DoRefine)
 
     use ModSize,     ONLY: nI, nJ, nK
