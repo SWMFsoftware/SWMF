@@ -149,6 +149,7 @@ contains
 
     real :: RhoCME,UCME_D(nDim),BCME_D(nDim),pCME
     real :: BCMEn,BCMEn_D(nDim),UCMEn,UCMEn_D(nDim),UCMEt_D(nDim)
+  
     !--------------------------------------------------------------------------
 
     RFace_D  = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
@@ -288,12 +289,8 @@ contains
   end subroutine get_plasma_parameters_cell
   !============================================================================
   subroutine user_initial_perturbation
-    use ModMain, ONLY: nBLK,unusedBLK,x_,y_,z_,n_step,iteration_number
-    use ModVarIndexes
-    use ModAdvance,   ONLY: State_VGB 
-    use ModPhysics,   ONLY: Si2No_V,UnitB_
+    use ModMain, ONLY: nBLK,unusedBLK,x_,y_,z_,n_step
     use ModGeometry
-    use ModMagnetogram, ONLY: get_magnetogram_field
    
     implicit none
 
@@ -422,9 +419,191 @@ contains
     !\
     ! End update of pressure and relaxation energy::
     !/
-    
+    if(any(State_VGB(I01_:I50_,:,:,:,iBlock) > 0.0)) then
+       call update_states_spectrum(iBlock)
+    end if
+
   end subroutine user_update_states
   !=======================================================================
+  subroutine update_states_spectrum(iBlock)
+    ! called by user_update_states, takes care of Ixx state variables.
+
+    use ModVarIndexes
+    use ModAdvance,  ONLY: State_VGB
+    use ModSize,     ONLY: nI, nJ, nK
+    use ModNumConst,  ONLY: cHalf
+    implicit none
+
+    integer,intent(in)          :: iBlock
+    integer                     :: i,j,k, iFreq
+    real,dimension(nI,nJ,nK)    :: FreqCutOff_C
+    real,dimension(I50_-I01_+1) :: LogFreq_I ! frequency grid
+    real                        :: dLogFreq  ! frequency grid spacing
+    real,dimension(nI,nJ,nK)   :: Dissip_C  ! dissipated wave energy
+    
+    !-------------------------------------------------------------------
+    !\
+    ! Advect solution in space ( done by update_states_MHD)
+    !/
+    ! we will need to fix the time step for operator splitting 
+    ! and the advection velocity <<<<<<<<< TBC
+    !\
+    !  set frequency axis and calculate cut-off frequency
+    !/
+    call set_freq_grid(LogFreq_I,dLogFreq)
+    call calc_cutoff_freq(iBlock, FreqCutOff_C)
+    Dissip_C=0.0
+
+    do k=1,nK; do j=1,nJ ; do i=1,nI
+
+       !\
+       ! Dissipate wave energy part 1 
+       !/
+       !new cut-off frequency (MHD state was changed)
+       do iFreq = 1,I50_-I01_+1
+          if(LogFreq_I(iFreq) .ge. FreqCutOff_C(i,j,k)) then
+             ! Dissip_C should be used to calculate sources for BATSRUS <<< TBC
+             Dissip_C(i,j,k)=Dissip_C(i,j,k)+cHalf*State_VGB(I01_+iFreq-1,i,j,k,iBlock)
+             State_VGB(I01_+iFreq-1,i,j,k,iBlock)=0.0
+          end if
+       end do ! finished wave dissipation part 1
+   
+       !\
+       ! update solution according to advection in frequency space
+       !/
+       call advect_log_freq(i,j,k,iBlock)
+       
+       !\
+       ! Dissipate wave energy part 2
+       !/
+       ! Some energy may have advected above cut-off frequency
+        do iFreq = 1,I50_-I01_+1
+           if(LogFreq_I(iFreq) .ge. FreqCutOff_C(i,j,k)) then
+              write(*,*) 'Somthing was advected!'
+             ! Dissip_C should be used to calculate sources for BATSRUS <<< TBC
+             Dissip_C(i,j,k)=Dissip_C(i,j,k)+cHalf*State_VGB(I01_+iFreq-1,i,j,k,iBlock)
+             State_VGB(I01_+iFreq-1,i,j,k,iBlock)=0.0
+          end if
+       end do ! finished wave dissipation part 2
+       
+    end do ; end do ; end do
+   
+  end subroutine update_states_spectrum
+  !======================================================================
+  subroutine advect_log_freq(i,j,k,iBlock)
+    ! called by update_states_spectrum, part of update_states prodedure for Ixx_
+
+    use ModMain,     ONLY: dt_BLK,Cfl
+    use ModVarIndexes
+    use ModAdvance,  ONLY: State_VGB, gradX_Ux, gradY_Uy, gradZ_Uz
+    use ModNumConst, ONLY: cHalf
+    use ModGeometry, ONLY: dx_BLK,dy_BLK,dz_BLK
+    implicit none
+
+    integer,intent(in)          :: i,j,k,iBlock
+    integer                     :: iFreq, nFreq
+    real,dimension(I50_-I01_+1) :: LogFreq_I ! frequency grid
+    real                        :: Limiter_I(0:I50_-I01_+2)
+    real                        :: wEnergy_G(-1:I50_-I01_+3)! with GC
+    real                        :: FluxL_I(1:I50_-I01_+2)
+    real                        :: FluxR_I(0:I50_-I01_+1)
+    real                        :: dLogFreq  ! frequency grid spacing
+    real                        :: MyCFL, DivU, SlopeL, SlopeR
+    !-------------------------------------------------------------------
+    ! Advance alfven waves spectrum according to :
+    ! df/dt-(1/2)divU*df/dlog(w)
+    ! where f=Ixx/w
+    ! one stage second order upwind scheme
+    ! f(i)^(n+1)=f(i)^n-cfl[f(i-1/2)-f(i+1/2)]^2
+    ! where:
+    ! f(i+1/2), f(1-1/2) are slope-limited numerical fluxes 
+    ! Here , f = wEnergy_G, f(i+/- 0.5) are FluxR, FluxL
+
+    call set_freq_grid(LogFreq_I, dLogFreq)
+    nFreq=I50_-I01_+1
+    !\
+    !Divide each Ixx_ state variables by its frequency
+    !/
+    do iFreq = 1,nFreq
+       wEnergy_G(iFreq)=State_VGB(I01_+iFreq-1,i,j,k,iBlock)/ &
+            exp(LogFreq_I(iFreq))
+    end do
+    !\
+    ! Calculate CFL for this scheme (depends on BATSRUS cfl)
+    !/
+    !dUx=(State_VGB(Ux_,i+1,j,k,iBlock)-State_VGB(Ux_,i-1,j,k,iBlock))/ &
+    !     (2*dx_BLK(iBlock))
+    !dUy=(State_VGB(Uy_,i+1,j,k,iBlock)-State_VGB(Uy_,i-1,j,k,iBlock))/ &
+    !     (2*dy_BLK(iBlock))
+    !dUz=(State_VGB(Uz_,i+1,j,k,iBlock)-State_VGB(Uz_,i-1,j,k,iBlock))/ &
+    !     (2*dz_BLK(iBlock))
+    DivU = gradX_Ux(i,j,k)+gradY_Uy(i,j,k)+gradZ_Uz(i,j,k)
+    MyCfl = (-cHalf*DivU*dt_BLK(iBlock)*Cfl)/dLogFreq
+    if(abs(MyCfl)>1.0) then
+       write(*,*) 'Warning! CFL too large!'
+       write(*,*) MyCfl
+    end if
+    !\
+    ! Set BC's
+    !/
+    wEnergy_G(-1:0) = wEnergy_G(1)
+    wEnergy_G(nFreq+1:nFreq+2) = wEnergy_G(nFreq)
+   
+    !\
+    ! Calculate MC slope limiter
+    !/
+    do iFreq=0,nFreq+1
+       SlopeR = wEnergy_G(iFreq+1)-wEnergy_G(iFreq)
+       SlopeL = wEnergy_G(iFreq)-wEnergy_G(iFreq-1)
+       
+       Limiter_I(iFreq) = sign(0.50,SlopeR)+sign(0.50,SlopeL)
+       ! Result:
+       ! Limiter =1 if both slopes are positive
+       !         =-1 if both negative
+       !         =0  if slopes of different sign
+       SlopeR = abs(SlopeR)
+       SlopeL = abs(SlopeL)
+       
+       Limiter_I(iFreq)= Limiter_I(iFreq)*min(max(SlopeL,SlopeR),2.0*SlopeL,2.0*SlopeR)
+       ! Final Result:
+       ! Limiter = 0 of slopes of different signs
+       !         = min(LargeSlope, 2*SmallerSlope) if both positive
+       !         = -min(LargerSlope,2*SmalerSlope) if both negative
+    end do
+
+    !\
+    ! Advance the solution over one time step
+    !/
+    if (MyCfl > 0.0) then ! use left BC (0 ghost cell)     
+      do iFreq=0,nFreq
+         ! calculate numerical flux through right (downwind) edges
+         FluxR_I(iFreq) = wEnergy_G(iFreq)+cHalf*(1-MyCfl)*Limiter_I(iFreq)
+      end do
+      ! calculate numerical flux through left (upwind) edges
+      FluxL_I(1:nFreq+1)=FluxR_I(0:nFreq)
+
+   else ! MyCfl <0, use right BC (n+1 ghost cell)
+      do iFreq=1, nFreq+1
+         ! calculate numerical flux through right (downwind) edges
+         FluxL_I(iFreq) = wEnergy_G(iFreq-1)-cHalf*(1+MyCfl)*Limiter_I(iFreq-1)
+      end do
+      ! calculate numerical flux through left (upwind) edges
+      FluxR_I(0:nFreq)=FluxL_I(1:nFreq+1)
+   end if
+
+   ! advance solution
+   wEnergy_G(1:nFreq)=wEnergy_G(1:nFreq)+MyCfl*(FluxL_I(1:nFreq)-FluxR_I(1:nFreq))
+   !\
+   ! Update state variables
+   !/
+   !Multiply wEnergy by frequency
+   do iFreq = 1,nFreq
+      State_VGB(I01_+iFreq-1,i,j,k,iBlock)=wEnergy_G(iFreq)* &
+           exp(LogFreq_I(iFreq))
+    end do
+
+  end subroutine advect_log_freq
+  !======================================================================
   subroutine calc_cutoff_freq(iBLK , FreqCutOff_C)
 
     ! This subroutine calculates the cut-off frequency for Alfven waves, which is the ion cyclotron frequency, 
@@ -515,7 +694,37 @@ contains
 
   end subroutine calc_poynt_flux
   !====================================================================
-   subroutine init_wave_spectrum
+  subroutine set_freq_grid(LogFreq_I,dLogFreq)
+
+    use ModVarIndexes
+    use ModNumConst, ONLY: cPi
+
+    implicit none
+    integer                                 :: nFreq
+    real,intent(out),dimension(I50_-I01_+1) :: LogFreq_I
+    real,intent(out)                        :: dLogFreq
+    real                                    :: LogFreqMin, LogFreqMax
+    integer                                 :: iFreq
+    !-----------------------------------------------------------------
+
+    ! Minimal frequency of Alfven waves spectrum
+    ! Accosiated with the state variable I01_
+    LogFreqMin = log(2*cPi*6e-6) 
+    ! Maximal frequency of Alfven waves spectrum
+    ! Accosiated with the state variable I50_
+     LogFreqMax = log(2*cPi) 
+
+     nFreq=I50_-I01_+1
+    ! calculate frequency interval on a natural logarithmic scale 
+    dLogFreq = (LogFreqMax-LogFreqMin)/(nFreq-1) 
+  
+    ! Divide the spectrum into frequncy groups on a log scale
+    do iFreq = 1,nFreq
+       LogFreq_I(iFreq)=LogFreqMin+(iFreq-1)*dLogFreq
+    end do
+  end subroutine set_freq_grid
+  !===================================================================
+  subroutine init_wave_spectrum
 
     ! This subroutine initializes the Alfven wave energy spectrum in each cell over a frequency grid.
     ! The frequancy range of the spectrum is determined by Alfven waves frequencie observed at the chromosphere 
@@ -540,9 +749,10 @@ contains
     real                         :: BxNo, ByNo, BzNo, BtotSi,RhoSi ! No=normalized units, Si=SI units 
     real,dimension(nI,nJ,nK,nBLK):: vAlfvenSi_CB, PointingFluxNo_CB
     ! 1D Frequency grid variables
-    real                         :: LogFreqMin, LogFreqMax, dLogFreq
-    real, dimension(I50_-I01_+1) :: LogFreq_I, WaveEnergy_I !=w'I(logw')
+    real                         :: dLogFreq
     integer                      :: iFreq
+    integer,parameter            :: nFreq = I50_-I01_+1
+     real, dimension(nFreq)      :: LogFreq_I, WaveEnergy_I !=w'I(logw')
     real,dimension(nI,nJ,nK,nBLK):: FreqCutOff_CB
     ! Initial spectrum model parameters
     !the intensity of outward travelling waves (initial condition)
@@ -597,19 +807,7 @@ contains
     ! \
     ! Set frequency grid
     ! /
-    
-    LogFreqMin = log(2*cPi*6e-6)  ! minimal frequency of Alfven waves spectrum
-    !This is the frequancy of the state variable I01_
-    LogFreqMax = log(2*cPi) ! maximal frequency of Alfven waves spectrum
-    !This is the frequency of the state variable I50_
-   
-    ! calculate frequency interval on a natural logarithmic scale 
-    dLogFreq = (LogFreqMax-LogFreqMin)/(I50_-I01_) 
-  
-    ! Divide the spectrum into frequncy groups on a log scale
-    do iFreq = 1,I50_-I01_+1
-       LogFreq_I(iFreq)=LogFreqMin+(iFreq-1)*dLogFreq
-    end do
+    call set_freq_grid(LogFreq_I,dLogFreq)
    
     !\
     ! Calculate cut-off frequancy for all cells
@@ -631,7 +829,7 @@ contains
              State_VGB(I01_:I50_,i,j,k,iBLK)=0
           else
              ! Start filling frequency groups
-             do iFreq=1,I50_-I01_+1
+             do iFreq=1,nFreq
                 if(LogFreq_I(iFreq) .ge. FreqCutOff_CB(i,j,k,iBLK)) then
                    WaveEnergy_I(iFreq) = 0
                 else
