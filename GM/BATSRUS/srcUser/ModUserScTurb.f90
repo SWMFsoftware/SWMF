@@ -461,7 +461,7 @@ contains
        !/
        !new cut-off frequency (MHD state was changed)
        do iFreq = 1,I50_-I01_+1
-          if(LogFreq_I(iFreq) .ge. FreqCutOff_C(i,j,k)) then
+          if(LogFreq_I(iFreq) .ge. log(FreqCutOff_C(i,j,k))) then
              ! Dissip_C should be used to calculate sources for BATSRUS <<< TBC
              Dissip_C(i,j,k)=Dissip_C(i,j,k)+cHalf*State_VGB(I01_+iFreq-1,i,j,k,iBlock)
              State_VGB(I01_+iFreq-1,i,j,k,iBlock)=0.0
@@ -478,12 +478,13 @@ contains
        !/
        ! Some energy may have advected above cut-off frequency
         do iFreq = 1,I50_-I01_+1
-           if(LogFreq_I(iFreq) .ge. FreqCutOff_C(i,j,k)) then
-              write(*,*) 'Somthing was advected!'
-             ! Dissip_C should be used to calculate sources for BATSRUS <<< TBC
-             Dissip_C(i,j,k)=Dissip_C(i,j,k)+cHalf*State_VGB(I01_+iFreq-1,i,j,k,iBlock)
-             State_VGB(I01_+iFreq-1,i,j,k,iBlock)=0.0
-          end if
+           if((LogFreq_I(iFreq) .ge. log(FreqCutOff_C(i,j,k))) .and. &
+                (State_VGB(I01_+iFreq-1,i,j,k,iBlock) > 0.0) )then
+              write(*,*) 'Something was advected!'
+              ! Dissip_C should be used to calculate sources for BATSRUS <<< TBC
+              Dissip_C(i,j,k)=Dissip_C(i,j,k)+cHalf*State_VGB(I01_+iFreq-1,i,j,k,iBlock)
+              State_VGB(I01_+iFreq-1,i,j,k,iBlock)=0.0
+           end if
        end do ! finished wave dissipation part 2
        
     end do ; end do ; end do
@@ -830,7 +831,7 @@ contains
           else
              ! Start filling frequency groups
              do iFreq=1,nFreq
-                if(LogFreq_I(iFreq) .ge. FreqCutOff_CB(i,j,k,iBLK)) then
+                if(LogFreq_I(iFreq) .ge. log(FreqCutOff_CB(i,j,k,iBLK))) then
                    WaveEnergy_I(iFreq) = 0
                 else
                    WaveEnergy_I(iFreq)=EnergyCoeff_CB(i,j,k,iBLK)*exp(LogFreq_I(iFreq))**(FreqPower)
