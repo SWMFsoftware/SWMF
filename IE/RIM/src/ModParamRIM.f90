@@ -18,6 +18,7 @@ module ModParamRIM
   character (len=100) :: NameEFieldModel="weimer96"
   character (len=100) :: NameAuroralModel="ihp"
   character (len=100) :: NameSolarModel="mb"
+  logical :: UseAmie = .false.
 
   logical :: UseTests = .false.
   character (len=100) :: TestName="none"

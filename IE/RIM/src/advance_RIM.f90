@@ -26,8 +26,10 @@ subroutine advance_RIM
      return
   endif
 
-  if (maxval(Latitude) > HighLatBoundary) &
-       call IO_GetPotential(EmpiricalPotential, iError)
+  if (maxval(Latitude) > HighLatBoundary) then
+     if (UseAmie) call get_AMIE_values(CurrentTime)
+     call IO_GetPotential(EmpiricalPotential, iError)
+  endif
 
   if (iError /= 0) then
      write(*,*) "Error : ", iError

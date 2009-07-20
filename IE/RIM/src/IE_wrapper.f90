@@ -67,7 +67,7 @@ contains
     ! Plot file parameters
     integer :: iFile, i, iError, iDebugProc
     character (len=50) :: plot_string
-
+    character (len=100) :: imffilename
     character (len=100), dimension(100) :: cTempLines
 
     !--------------------------------------------------------------------------
@@ -157,22 +157,19 @@ contains
 
        case ("#MHD_INDICES")
           cTempLines(1) = NameCommand
-          if(read_line()) then
-             cTempLines(2) = NameCommand
-              cTempLines(3) = " "
-              cTempLines(4) = "#END"
-              call IO_set_inputs(cTempLines)
-              call read_MHDIMF_Indices(iError)
-           else 
-              iError = 1
-           endif
+          call read_var('imffilename', imffilename)
+          cTempLines(2) = imffilename
+          cTempLines(3) = " "
+          cTempLines(4) = "#END"
+          call IO_set_inputs(cTempLines)
+          call read_MHDIMF_Indices(iError)
 
-           if (iError /= 0) then 
-              write(*,*) "read indices was NOT successful"
-              EXIT
-           else
-              UseStaticIMF = .false.
-           endif
+          if (iError /= 0) then 
+             write(*,*) "read indices was NOT successful"
+             EXIT
+          else
+             UseStaticIMF = .false.
+          endif
 
        case("#SOLVE")
           call read_var('DoSolve', DoSolve)
@@ -210,6 +207,21 @@ contains
           call read_var('NameAmieFileNorth',AMIEFileNorth)
           call read_var('NameAmieFileSouth',AMIEFileSouth)
           NameEFieldModel = "amie"
+          UseAmie = .true.
+
+          cTempLines(1) = "#AMIEFILES"
+          cTempLines(2) = AMIEFileNorth
+          cTempLines(3) = AMIEFileSouth
+          cTempLines(4) = ""
+          cTempLines(5) = ""
+          cTempLines(6) = ""
+          cTempLines(7) = "#DEBUG"
+          cTempLines(8) = "0"
+          cTempLines(9) = "0"
+          cTempLines(10) = ""
+          cTempLines(11) = "#END"
+
+          call EIE_set_inputs(cTempLines)
 
        case("#BACKGROUND")
           call read_var('NameEFieldModel',NameEFieldModel)
@@ -250,6 +262,20 @@ contains
 
           if (index(NameEFieldModel,'SAMIE') > 0) &
                NameEFieldModel = 'samie'
+
+          cTempLines(1) = "#BACKGROUND"
+          cTempLines(2) = "EIE/"
+          cTempLines(3) = NameEFieldModel
+          cTempLines(4) = NameAuroralModel
+          cTempLines(5) = "idontknow"
+          cTempLines(6) = ""
+          cTempLines(7) = "#DEBUG"
+          cTempLines(8) = "0"
+          cTempLines(9) = "0"
+          cTempLines(10) = ""
+          cTempLines(11) = "#END"
+
+          call EIE_set_inputs(cTempLines)
 
        case("#SAVELOGFILE")
           call read_var('DoSaveLogfile',DoSaveLogfile)

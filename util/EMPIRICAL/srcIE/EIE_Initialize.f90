@@ -145,6 +145,7 @@ subroutine EIE_Initialize(iOutputError)
   if (index(EIE_NameOfEFieldModel,'amie') > 0) then
 
      IsFound_EFieldModel = .true.
+     UseGridBasedEIE = .true.
 
      call AMIE_SetFileName(AMIEFileNorth)
      call readAMIEOutput(North_, .false., iError)
