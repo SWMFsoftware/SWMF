@@ -1149,7 +1149,7 @@ the PolarLatitude parameter determines the latitudinal extent
 of the polar boundary where the outflow is defined.
 </command>
 
-<command name="IMCOUPLINGSMOOTH")
+<command name="IMCOUPLINGSMOOTH">
 	<parameter name="dLatSmoothIm" type="real" min="-1" default="-1"/>
 
 #IMCOUPLINGSMOOTH
