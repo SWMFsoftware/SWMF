@@ -187,6 +187,24 @@ Activate charge exchange in RCM and specify solar conditions.
 Default values are shown.
 </command>
 
+<command name="OUTERBOUNDARY">
+	<parameter name="TypeOuterBoundary" input="select">
+		<option name="ellipse" default="T"/>
+		<option name="max"/>
+	</parameter>
+	<parameter name="xMaxNight" type="real" default="10" min="6"
+				if="$TypeOuterBoundary eq 'ellipse'"/>
+
+#OUTERBOUNDARY
+ellipse			TypeBoundary
+10.0			xMaxNight
+
+Define the outer boundary for RCM. Options are "max" that defines the whole
+closed field line region and "ellipse" that is fitted inside the closed field
+line region. For "ellipse" xMaxNight defines the furthest distance
+in the magnetotail of the ellipse. Default values are shown.
+</command>
+
 <command name="IONOSPHERE">
 	<parameter name="TypeIonosphere" type="string" input="select">
 		<option name="IE" default="T"/>
