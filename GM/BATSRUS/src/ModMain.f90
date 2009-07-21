@@ -68,7 +68,8 @@ Module ModMain
   logical :: DoImSatTrace       = .false.    
   logical :: DoRbSatTrace       = .false.    
   real    :: rFixPolarRegion    = 5.0
-  real    :: TauCoupleIM = 20.0
+  real    :: dLatSmoothIm       = -1.0
+  real    :: TauCoupleIm        = 20.0
 
   logical :: UseRaytrace = .false.
 

@@ -1365,7 +1365,11 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('DoCoupleImDensity',  DoCoupleImDensity)
            call read_var('DoFixPolarRegion',   DoFixPolarRegion)
            call read_var('rFixPolarRegion',    rFixPolarRegion)
-        end if                                        !^CFG END RCM
+        end if                                        
+     case("#IMCOUPLINGSMOOTH")
+        call read_var('dLatSmoothIm', dLatSmoothIm)
+
+        !^CFG END RCM
         
      case("#RBSATCOUPLING")
         call read_var('DoRbSatTrace',DoRbSatTrace)

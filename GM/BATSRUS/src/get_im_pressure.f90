@@ -38,10 +38,10 @@ end module ModImPressure
 
 !==========================================================================
 
-subroutine get_im_pressure(iBlock, pIm_C, dIm_C)
+subroutine get_im_pressure(iBlock, pIm_C, dIm_C, TauCoeffIm_C)
 
   use ModImPressure
-  use ModMain,     ONLY : nI, nJ, nK, DoFixPolarRegion, rFixPolarRegion
+  use ModMain,     ONLY : nI, nJ, nK, DoFixPolarRegion, rFixPolarRegion, dLatSmoothIm
   use ModRaytrace, ONLY : ray
   use ModPhysics,  ONLY : Si2No_V, UnitP_, UnitRho_, PolarRho_I, PolarP_I
   use ModGeometry, ONLY : R_BLK, z_BLK
@@ -51,6 +51,7 @@ subroutine get_im_pressure(iBlock, pIm_C, dIm_C)
   integer, intent(in)  :: iBlock
   real,    intent(out) :: pIm_C(1:nI, 1:nJ, 1:nK)
   real,    intent(out) :: dIm_C(1:nI, 1:nJ, 1:nK)
+  real,    intent(out) :: TauCoeffIm_C(1:nI, 1:nJ, 1:nK)
 
   integer :: i,j,k, n, i1,i2
 
@@ -59,6 +60,8 @@ subroutine get_im_pressure(iBlock, pIm_C, dIm_C)
   !\
   ! Check to see if cell centers are on closed fieldline
   !/
+  TauCoeffIm_C = 1.0
+
   do k=1,nK; do j=1,nJ; do i=1,nI
 
      ! Default is negative, which means that do not nudge GM values
@@ -79,12 +82,25 @@ subroutine get_im_pressure(iBlock, pIm_C, dIm_C)
            if(rLat < 0.5*(RCM_lat(n-1)+RCM_lat(n))) i1 = n
         end do
 
-        ! NOTE: RCM_lon in accending order
+        ! NOTE: RCM_lon in ascending order
         i2=1
         do n=2,jsize
            if(rLon > 0.5*(RCM_lon(n-1)+RCM_lon(n))) i2 = n
         end do
         if(rLon > 0.5*(RCM_lon(jsize)+RCM_lon(1)+360.)) i2=1
+
+        if(dLatSmoothIm > 0.0)then
+           ! Go up from low lat to high lat and look for first open/unset field line
+           do n=iSize,1,-1
+              if(RCM_p(n,i2) < 0.0) EXIT
+           enddo
+           ! Make sure n does not go below 1
+           n = max(1, n)
+           ! Set TauCoeff as a function of lat distance from open/unset field lines
+           ! No adjustment at the open/unset field line, full adjustment if latitude
+           ! difference exceeds dLatSmoothIm
+           TauCoeffIm_C(i,j,k) = min( abs(RCM_lat(n) - RCM_lat(i1))/dLatSmoothIm, 1.0 )
+        end if
 
         !!! This is first order accurate only !!!
         pIm_C(i,j,k) = RCM_p(i1,i2)*Si2No_V(UnitP_)
@@ -95,8 +111,8 @@ subroutine get_im_pressure(iBlock, pIm_C, dIm_C)
      ! and the cell is within radius rFixPolarRegion and flow points outward
      ! then nudge the pressure (and density) towards the "polarregion" values
      if(pIM_C(i,j,k) < 0.0 .and. DoFixPolarRegion .and. &
-	R_BLK(i,j,k,iBlock) < rFixPolarRegion &
-        .and. z_BLK(i,j,k,iBlock)*State_VGB(RhoUz_,i,j,k,iBlock) > 0.0)then
+          R_BLK(i,j,k,iBlock) < rFixPolarRegion &
+          .and. z_BLK(i,j,k,iBlock)*State_VGB(RhoUz_,i,j,k,iBlock) > 0.0)then
         pIm_C(i,j,k) = PolarP_I(1)
         dIm_C(i,j,k) = PolarRho_I(1)
      end if
@@ -121,6 +137,7 @@ subroutine apply_im_pressure
   real :: Factor
   real :: pIm_C(1:nI, 1:nJ, 1:nK)
   real :: dIm_C(1:nI, 1:nJ, 1:nK)
+  real :: TauCoeffIm_C(1:nI, 1:nJ, 1:nK)
 
   integer :: iLastPIm = -1, iLastGrid = -1
 
@@ -169,7 +186,7 @@ subroutine apply_im_pressure
   do iBlock = 1, nBlock
      if(unusedBLK(iBlock)) CYCLE
 
-     call get_im_pressure(iBlock, pIm_C, dIm_C)
+     call get_im_pressure(iBlock, pIm_C, dIm_C, TauCoeffIm_C)
 
      if(all(pIm_C < 0.0)) CYCLE  ! Nothing to do
 
@@ -193,14 +210,14 @@ subroutine apply_im_pressure
            where(pIm_C > 0.0) &
                 State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) = &
                 State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)   &
-                + min(1.0, Factor * Dt) &
+                + min(1.0, Factor * Dt) * TauCoeffIm_C &
                 * (pIm_C - State_VGB(P_,1:nI,1:nJ,1:nK,iBlock))
         end if
         if(DoCoupleImDensity)then
            where(dIm_C > 0.0) &
                 State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock) = &
                 State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock)   &
-                + min(1.0, Factor * Dt) &
+                + min(1.0, Factor * Dt) * TauCoeffIm_C &
                 * (dIm_C - State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock))
         end if
      else
