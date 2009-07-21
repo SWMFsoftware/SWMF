@@ -31,11 +31,12 @@ module ModParamRIM
   real    :: PolarCapPedConductance=0.25
 
   real    :: MinAuroralWidth = 2.5*cDegToRad
-  real    :: MaxAuroralLat   = 77.5*cDegToRad
+  real    :: MaxAuroralLat   = 75.0*cDegToRad
   real    :: OCFLBSmoothLon  = 10.0*cDegToRad
   real    :: PolarRainAveE   =  0.5
   real    :: PolarRainEFlux  =  1.0
   real    :: MinPressure     = 10.0e-9
+  real    :: MaxRho          = 3.0e-20
 
   character (len=7) :: TypeImCouple = 'north'
 
