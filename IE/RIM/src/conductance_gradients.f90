@@ -56,7 +56,7 @@ subroutine conductance_gradients
                    Latitude(iLon,iLat) < OCFLB_NS-OCFLBBuffer) then
                  r = 1.0/2.0
               else
-                 r = (1.0-(OCFLB_NS-abs(Latitude(iLon,iLat)))/OCFLBBuffer)/2
+                 r = (OCFLB_NS-abs(Latitude(iLon,iLat)))/OCFLBBuffer/2
               endif
 
               ! iLh = latitude of other hemisphere
@@ -71,7 +71,6 @@ subroutine conductance_gradients
               sppoint = (1-r)*SigmaP(iLon,iLat) + r*SigmaP(iLon,iLh)
               shpoint = (1-r)*SigmaH(iLon,iLat) + r*SigmaH(iLon,iLh)
               cpoint  = (1-r)*C(iLon,iLat) + r*C(iLon,iLh)
-
            endif
 
            SigmaThTh(iLon,iLat) = &

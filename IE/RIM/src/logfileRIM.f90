@@ -16,7 +16,6 @@ subroutine logfileRIM(dir)
   if (iProc == 0) then
 
      if (IsFirstTime) then
-
         if (nSolve == 0 .and. StartTime == CurrentTime) then
            open(unit=UnitTmp_, &
                 file=trim(dir)//"/IE.log",status="replace")
@@ -24,6 +23,9 @@ subroutine logfileRIM(dir)
                 'Ridley Ionosphere Model, [deg] and [kV]'
            write(UnitTmp_,'(a)') &
                 'nsolve t yy mm dd hh mm ss ms tilt cpcpn cpcps'
+        else
+           open(unit=UnitTmp_, &
+                file=trim(dir)//"/IE.log",status="old", position="append")
         endif
         IsFirstTime = .false.
      else
