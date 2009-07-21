@@ -1149,6 +1149,16 @@ the PolarLatitude parameter determines the latitudinal extent
 of the polar boundary where the outflow is defined.
 </command>
 
+<command name="IMCOUPLINGSMOOTH")
+	<parameter name="dLatSmoothIm" type="real" min="-1" default="-1"/>
+
+#IMCOUPLINGSMOOTH
+10.0			dLatSmoothIm [deg]
+
+Smooth out the pressure nudging at the edge of the RCM boundary. 
+Default is -1.0, which means no smoothing.
+</command>
+
 </commandgroup>
 
 <commandgroup name="GRID GEOMETRY">
