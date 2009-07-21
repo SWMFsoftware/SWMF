@@ -187,6 +187,40 @@ Activate charge exchange in RCM and specify solar conditions.
 Default values are shown.
 </command>
 
+<command name="IONOSPHERE">
+	<parameter name="TypeIonosphere" type="string" input="select">
+		<option name="IE" default="T"/>
+		<option name="RCM" />
+	</parameter>
+
+#IONOSPHERE
+IE			TypeIonosphere
+
+Define which ionosphere solver to use. Options are "IE" (SWMF solver) or "RCM" 
+(internal solver). Default is "IE". 
+</command>
+
+<command name="PRECIPITATION">
+	<parameter name="LossFactorH" type="real" default="0" min="0" max="1"/>
+	<parameter name="LossFactorO" type="real" default="0" min="0" max="1"/>
+
+#PRECIPITATION
+0.1		LossFactorH
+0.1		LossFactorO
+
+Loss of ions through the loss cone. Default values are 0, ie. no loss.
+</command>
+
+<command name="TEMPERATURE">
+	<parameter name="TemperatureFactor" type="real" default="1" min="0"/>
+
+#TEMPERATURE
+3.0		TemperatureFactor
+
+Artificially increase the temperature obtained from the magnetosphere model. 
+Default value is 1, i.e. no change.
+</command>
+
 </commandgroup>
 
 <rule expr="-d 'IM/restartOUT' or not $_IsFirstSession">
