@@ -184,9 +184,11 @@ The default values are shown by the example above.
 		<option name="cpcpmin"             />
 		<option name="average"             />
 	</parameter>
+	<parameter name="FractionImJr" type="real" min="0" max="1" default="1"/>
 
 #IM
-average				TypeImCouple
+average			TypeImCouple
+0.5			FractionImJr
 
 The TypeImCouple parameter determines which hemisphere the IM component 
 is coupled to. If the value is 'north' or 'south', the potential and radial
@@ -195,8 +197,13 @@ the hemisphere with the lower cross polar cap potential is selected.
 For TypeImCouple='average' the potential and radial current are averaged
 for the north and south hemispheres.
 
-The default value is 'north', which is backward compatible,
-and it requires no communication between the IE processors.
+The FractionImJr parameter multiplies the field aligned currents received from IM
+(when the IM to IE coupling is swithed on) 
+so they do not shield completely the weaker GM field aligned currents.
+
+The default values are 'north' and 1.0 (full strength IM currents), 
+which is backward compatible, and it requires no communication 
+between the IE processors.
 </command>
 
 <command name="UA">
@@ -267,6 +274,16 @@ This command cannot be used in the SWMF.
 
 Modifies the conductance by adjusting the oval width/strength.
 Only works for conductance model 4!
+</command>
+
+<command name="BOUNDARY">
+	<parameter name="LatBoundary" type="real" min="0" max="90" default="50"/>
+
+#BOUNDARY
+10.0			LatBoundary
+
+Define the low latitude boundary for the potential solver. The default is set 
+dynamically by the boundary of the closed field line region.
 </command>
 
 </commandgroup>
