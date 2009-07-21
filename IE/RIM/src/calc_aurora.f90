@@ -4,6 +4,7 @@ subroutine calc_aurora
   use ModRIM
   use ModNumConst, only: cPi
   use ModProcIE
+  use ModParamRIM, only: iConductanceModel
 
   implicit none
 
@@ -12,7 +13,7 @@ subroutine calc_aurora
   real, dimension(0:nLons+1,nLats/2) :: JrH, eFluxH, AveEH
   real, allocatable :: rhoH(:,:), pH(:,:), TH(:,:), InvBH(:,:), LatH(:,:)
   real, allocatable :: OCFLBH(:)
-  integer :: iLon, iLat, iLR, iLonTo, iLonFrom
+  integer :: iLon, iLat, iLR, iLonTo, iLonFrom, iLatGood
 
   allocate( &
        rhoH(0:nLonsAll+1,nLats/2), &
@@ -55,11 +56,20 @@ subroutine calc_aurora
   ! Move results back into main variables
 
   do iLat = 1, nLats/2
+     OuterMagRhoAllR(:,iLat) = RhoH(:,iLat)
      AveE(:,iLat)  = AveEH(:,iLat)
-     eFlux(:,iLat) = eFluxH(:,iLat)
-     if (maxval(InnerMagAveE) > 0.0) then
-        EFlux(:,iLat) = InnerMagEFlux(:,iLat)
-        AveE(:,iLat)  = InnerMagAveE(:,iLat)
+     eFlux(:,iLat) = eFluxH(:,iLat) 
+     if (maxval(InnerMagAveE) > 0.0 .and. iConductanceModel == 7) then
+
+        AveE(:,iLat) = &
+          (EFluxH(:,iLat) + InnerMagEFlux(:,iLat)) / ( &
+          EFluxH(:,iLat)/AveE(:,iLat) + &
+          InnerMagEFlux(:,iLat)/InnerMagAveE(:,iLat)) 
+
+        EFlux(:,iLat) = ( &
+          EFluxH(:,iLat)/AveEH(:,iLat) + &
+          InnerMagEFlux(:,iLat)/InnerMagAveE(:,iLat)) * AveE(:,iLat)
+
      endif
   enddo
 
@@ -81,11 +91,24 @@ subroutine calc_aurora
   do iLat = 1, nLats/2
      ! iLR = iLat Reversed (from North pole to equator)
      iLR = nLats-iLat+1
+
+     OuterMagRhoAllR(:,iLR) = RhoH(:,iLat)
+
      AveE(:,iLR)  = AveEH(:,iLat)
      eFlux(:,iLR) = eFluxH(:,iLat)
-     if (maxval(InnerMagAveE) > 0.0) then
-        EFlux(:,iLR) = InnerMagEFlux(:,iLR)
-        AveE(:,iLR)  = InnerMagAveE(:,iLR) 
+     if (maxval(InnerMagAveE) > 0.0 .and. iConductanceModel == 7) then
+
+        AveE(:,iLR) = &
+          (EFluxH(:,iLat) + InnerMagEFlux(:,iLR)) / ( &
+          EFluxH(:,iLat)/AveEH(:,iLat) + &
+          InnerMagEFlux(:,iLR)/InnerMagAveE(:,iLR)) 
+
+        EFlux(:,iLR) = ( &
+          EFluxH(:,iLat)/AveEH(:,iLat) + &
+          InnerMagEFlux(:,iLR)/InnerMagAveE(:,iLR)) * AveE(:,iLR)
+
+!        EFlux(:,iLR) = InnerMagEFlux(:,iLR)
+!        AveE(:,iLR)  = InnerMagAveE(:,iLR) 
         where(AveE < 0.25) AveE = 0.25
         where(EFlux < 0.1) EFlux = 0.1
      endif
@@ -325,57 +348,57 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
 
   enddo
 
-  do iLon = 0, nLonsAll+1
-     iLat = 1
-     do while (rhoH(iLon,iLat) == 0.0)
-        iLat = iLat + 1
-     enddo
-     rhoH(iLon,1:iLat-1) = rhoH(iLon,iLat)
-     tH(iLon,1:iLat-1) = tH(iLon,iLat)
-     pNorm(iLon,1:iLat-1) = pNorm(iLon,iLat)
-  enddo
-
-  do iLon = 0, nLonsAll+1
-     do iLat = 1, nLats/2
-        if (latH(iLon,iLat) > center(iLon)) then
-           rhoH(iLon,iLat) = rhoH(iLon,iLat)* &
-                exp(-(abs(latH(iLon,iLat))-center(iLon))/(Width(iLon)*2))
-        endif
-     enddo
-  enddo
-
-  do iLat = 1, nLats/2
-     do iLon = 0, nLonsAll+1
-        smooth(iLon) = 0.0
-        do iSubLon = iLon-nSmooth, iLon+nSmooth
-           smooth(iLon) = smooth(iLon) + &
-                rhoH(mod(iSubLon+nLonsAll,nLonsAll),iLat)
-        enddo
-     enddo
-     rhoH(:,iLat) = smooth/(2*nSmooth+1)
-  enddo
-
-  do iLat = 1, nLats/2
-     do iLon = 0, nLonsAll+1
-        smooth(iLon) = 0.0
-        do iSubLon = iLon-nSmooth, iLon+nSmooth
-           smooth(iLon) = smooth(iLon) + &
-                pNorm(mod(iSubLon+nLonsAll,nLonsAll),iLat)
-        enddo
-     enddo
-     pNorm(:,iLat) = smooth/(2*nSmooth+1)
-  enddo
-
-  do iLat = 1, nLats/2
-     do iLon = 0, nLonsAll+1
-        smooth(iLon) = 0.0
-        do iSubLon = iLon-nSmooth, iLon+nSmooth
-           smooth(iLon) = smooth(iLon) + &
-                tH(mod(iSubLon+nLonsAll,nLonsAll),iLat)
-        enddo
-     enddo
-     tH(:,iLat) = smooth/(2*nSmooth+1)
-  enddo
+!  do iLon = 0, nLonsAll+1
+!     iLat = 1
+!     do while (rhoH(iLon,iLat) == 0.0)
+!        iLat = iLat + 1
+!     enddo
+!     rhoH(iLon,1:iLat-1) = rhoH(iLon,iLat)
+!     tH(iLon,1:iLat-1) = tH(iLon,iLat)
+!     pNorm(iLon,1:iLat-1) = pNorm(iLon,iLat)
+!  enddo
+!
+!  do iLon = 0, nLonsAll+1
+!     do iLat = 1, nLats/2
+!        if (latH(iLon,iLat) > center(iLon)) then
+!           rhoH(iLon,iLat) = rhoH(iLon,iLat)* &
+!                exp(-(abs(latH(iLon,iLat))-center(iLon))/(Width(iLon)*2))
+!        endif
+!     enddo
+!  enddo
+!
+!  do iLat = 1, nLats/2
+!     do iLon = 0, nLonsAll+1
+!        smooth(iLon) = 0.0
+!        do iSubLon = iLon-nSmooth, iLon+nSmooth
+!           smooth(iLon) = smooth(iLon) + &
+!                rhoH(mod(iSubLon+nLonsAll,nLonsAll),iLat)
+!        enddo
+!     enddo
+!     rhoH(:,iLat) = smooth/(2*nSmooth+1)
+!  enddo
+!
+!  do iLat = 1, nLats/2
+!     do iLon = 0, nLonsAll+1
+!        smooth(iLon) = 0.0
+!        do iSubLon = iLon-nSmooth, iLon+nSmooth
+!           smooth(iLon) = smooth(iLon) + &
+!                pNorm(mod(iSubLon+nLonsAll,nLonsAll),iLat)
+!        enddo
+!     enddo
+!     pNorm(:,iLat) = smooth/(2*nSmooth+1)
+!  enddo
+!
+!  do iLat = 1, nLats/2
+!     do iLon = 0, nLonsAll+1
+!        smooth(iLon) = 0.0
+!        do iSubLon = iLon-nSmooth, iLon+nSmooth
+!           smooth(iLon) = smooth(iLon) + &
+!                tH(mod(iSubLon+nLonsAll,nLonsAll),iLat)
+!        enddo
+!     enddo
+!     tH(:,iLat) = smooth/(2*nSmooth+1)
+!  enddo
 
   ! ---------------------------
   ! Discrete Aurora
@@ -393,10 +416,18 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
         rhoh(iLonG,iLat) = rhoH(iLonG,iLat) * ( &
              (cos(longitude(iLon,iLat)+LonOffset)+1.0)/2.0*0.5 + 0.5 - &
              ((cos(longitude(iLon,iLat)+LonOffset+cPi/2)+1.0)/2.0)**3*0.5)
+
+        if (abs(LatH(iLonG,iLat)) > OCFLBH(iLonG)) &
+             rhoh(iLonG,iLat) = rhoH(iLonG,iLat) * &
+             exp((OCFLBH(iLonG)-abs(LatH(iLonG,iLat)))/OCFLBH(iLonG)*3.0)
+
+        if (rhoh(iLonG,iLat) > maxRho) rhoh(iLonG,iLat) = maxRho
+
         if (pNorm(iLonG,iLat) > 0) &
              Discrete_K(iLon,iLat) = &
              (rhoH(iLonG,iLat)**1.5) / pNorm(iLonG,iLat)
-        if (JrH(iLon,iLat) > 7.5e-8) &
+!        if (JrH(iLon,iLat) > 7.5e-8) &
+        if (JrH(iLon,iLat) > 2.5e-7) &
              Discrete_EFlux(iLon,iLat) = &
              (JrH(iLon,iLat)*1e6)*Discrete_K(iLon,iLat)
      enddo
@@ -416,7 +447,7 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
      smoothlat = 0.0
      do iLat = 1,nLats/2
         iCount = 0
-        do i = iLat-3,iLat+3
+        do i = iLat-4,iLat+4
            if (i >= 1 .and. i <= nLats/2) then
               smoothlat(iLat) = &
                    smoothlat(iLat) + &
@@ -430,7 +461,7 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
      smoothlat = 0.0
      do iLat = 1,nLats/2
         iCount = 0
-        do i = iLat-3,iLat+3
+        do i = iLat-4,iLat+4
            if (i >= 1 .and. i <= nLats/2) then
               smoothlat(iLat) = &
                    smoothlat(iLat) + &
@@ -458,21 +489,35 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
           maxval(PolarRain_AveE), maxval(PolarRain_EFlux)
   endif
 
-  AveEH = Discrete_AveE
-  EFluxH = Discrete_EFlux
+  if (iConductanceModel == 7) then
+     ! We want the diffuse aurora from RCM, and not from MHD
 
-  ! Let's weight the average energy by the number flux, which is ef/av
-  AveEH = &
-       (Diffuse_EFlux + Discrete_EFlux + PolarRain_EFlux) / ( &
-       Diffuse_EFlux/Diffuse_AveE + &
-       Discrete_EFlux/Discrete_AveE + &
-       PolarRain_EFlux/PolarRain_AveE) 
+     ! Let's weight the average energy by the number flux, which is ef/av
+     AveEH = &
+          (Diffuse_EFlux + Discrete_EFlux + PolarRain_EFlux) / ( &
+          Diffuse_EFlux/Diffuse_AveE + &
+          Discrete_EFlux/Discrete_AveE + &
+          PolarRain_EFlux/PolarRain_AveE) 
 
-  EFluxH = ( &
-       Diffuse_EFlux/Diffuse_AveE + &
-       Discrete_EFlux/Discrete_AveE + &
-       PolarRain_EFlux/PolarRain_AveE) * AveEH
-       
+     EFluxH = ( &
+          Diffuse_EFlux/Diffuse_AveE + &
+          Discrete_EFlux/Discrete_AveE + &
+          PolarRain_EFlux/PolarRain_AveE) * AveEH
+
+  else
+
+     ! Let's weight the average energy by the number flux, which is ef/av
+     AveEH = &
+          (Discrete_EFlux + PolarRain_EFlux) / ( &
+          Discrete_EFlux/Discrete_AveE + &
+          PolarRain_EFlux/PolarRain_AveE) 
+
+     EFluxH = ( &
+          Discrete_EFlux/Discrete_AveE + &
+          PolarRain_EFlux/PolarRain_AveE) * AveEH
+
+  endif
+
   deallocate(pNorm, Width, Smooth, Center)
 
 end subroutine solve_for_aurora
