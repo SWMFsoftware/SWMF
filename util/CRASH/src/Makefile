@@ -83,7 +83,8 @@ GODUNOV_for_Darwin:
 		${Lflag1}    ; 
 	rm -rf Tmp_ 
 
-test_eos: IONIZ.exe
+test_eos: 
+	  make IONIZ
 	  IONIZ.exe
 	  rm -f *.diff test_re*
 	  cat ../doc/Table*.tex >test_result
