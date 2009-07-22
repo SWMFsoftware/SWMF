@@ -238,7 +238,7 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
   CHARACTER(LEN=8) :: real_date
   CHARACTER (LEN=8) :: time_char
   CHARACTER(LEN=10) ::real_time
-  CHARACTER(LEN=80) :: ST='', PS='', HD=''
+  CHARACTER(LEN=80) :: ST='', PS='', HD='', emptystring=''
   LOGICAL :: FD
   !                                                                       
   ! INTEGER (iprec) :: idt
@@ -297,7 +297,7 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
      READ (LUN,*) idt2  !  3.  t-step for writing formatted output
      READ (LUN,*) idt3  !  4.  t-step for invoking ADD & ZAP
      READ (LUN,*) imin  !  5.  i-value of poleward bndy
-     READ (LUN,*) ipot  !  6.  which potential solver to use
+     READ (LUN,*) emptystring ! ipot  !  6.  which potential solver to use, moved to PARAM.XML/PARAM.in
      READ (LUN,*) iwind !  9.  0 is no neutral winds
      READ (LUN,*) ivoptn! 10.  1-euler time derivs in vcalc, 2-runge-kutta
      READ (LUN,*) ibnd_type  ! 14.  type of bndy (1-eq.p, 2-iono)

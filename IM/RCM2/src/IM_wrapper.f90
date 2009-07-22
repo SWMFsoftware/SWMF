@@ -7,7 +7,8 @@ subroutine IM_set_param(CompInfo, TypeAction)
   use RCM_variables, ONLY: NameRcmDir, iUnitOut, StringPrefix, STDOUT_, &
        DoRestart, iDtRcm, iDtPlot, asci_flag, nFilesPlot, iDnPlot, &
        plot_area, plot_var, plot_format, &
-       x_h, x_o, L_dktime, sunspot_number, f107, doy
+       x_h, x_o, L_dktime, sunspot_number, f107, doy, &
+       ipot
   use ModReadParam
   use ModUtilities, ONLY: fix_dir_name, check_dir, lower_case
 
@@ -21,6 +22,7 @@ subroutine IM_set_param(CompInfo, TypeAction)
 
   !LOCAL VARIABLES:
   character (len=100) :: NameCommand, StringPlot
+  character (len=20)  :: StringTypeIonosphere=''
   logical             :: DoEcho=.false.
   logical             :: UseStrict=.true.
   integer :: iFile
@@ -118,6 +120,17 @@ subroutine IM_set_param(CompInfo, TypeAction)
               f107          = F107MonthlyMean
               doy           = DayOfYear
            end if
+        case ("#IONOSPHERE")
+              call read_var('TypeIonosphere',StringTypeIonosphere)
+              select case (StringTypeIonosphere)
+              case ('IE','Ie','ie','iE')
+                 ipot = 6
+              case ('RCM','rcm','Rcm')
+                 ipot = 4
+              case default
+                 call CON_stop('ERROR in IM/RCM2/src/IM_wrapper.f90: '// &
+                      '#IONOSPHERE parameter has an illegal value')
+              end select
         case default
            if(iProc==0) then
               write(*,'(a,i4,a)')NameSub//' IM_ERROR at line ',i_line_read(),&
