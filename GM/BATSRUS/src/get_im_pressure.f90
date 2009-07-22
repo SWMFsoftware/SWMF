@@ -53,15 +53,16 @@ subroutine get_im_pressure(iBlock, pIm_C, dIm_C, TauCoeffIm_C)
   real,    intent(out) :: dIm_C(1:nI, 1:nJ, 1:nK)
   real,    intent(out) :: TauCoeffIm_C(1:nI, 1:nJ, 1:nK)
 
-  integer :: i,j,k, n, i1,i2
+  integer :: i,j,k, n, iLat1,iLat2, iLon1,iLon2
 
-  real :: rLat,rLon
+  real :: rLat,rLon, LatWeight1,LatWeight2, LonWeight1,LonWeight2
   !--------------------------------------------------------------------------
+
+  TauCoeffIm_C = 1.0
+
   !\
   ! Check to see if cell centers are on closed fieldline
   !/
-  TauCoeffIm_C = 1.0
-
   do k=1,nK; do j=1,nJ; do i=1,nI
 
      ! Default is negative, which means that do not nudge GM values
@@ -77,34 +78,60 @@ subroutine get_im_pressure(iBlock, pIm_C, dIm_C, TauCoeffIm_C)
         rLon = ray(2,1,i,j,k,iBlock)
 
         ! NOTE: RCM_lat in decending order
-        i1=1
-        do n=2,isize
-           if(rLat < 0.5*(RCM_lat(n-1)+RCM_lat(n))) i1 = n
+        do iLat1=2,isize
+           if(rLat > RCM_lat(iLat1)) EXIT
         end do
+        iLat2=iLat1-1
+        LatWeight1=(rLat-RCM_lat(iLat2))/(RCM_lat(iLat1)-RCM_lat(iLat2))
+        LatWeight2=1.-LatWeight1
 
-        ! NOTE: RCM_lon in ascending order
-        i2=1
-        do n=2,jsize
-           if(rLon > 0.5*(RCM_lon(n-1)+RCM_lon(n))) i2 = n
-        end do
-        if(rLon > 0.5*(RCM_lon(jsize)+RCM_lon(1)+360.)) i2=1
+        ! NOTE: RCM_lon in accending order
+        if(rLon < RCM_lon(1)) then
+           ! periodic before 1
+           iLon1=1
+           iLon2=jsize
+           LonWeight1=(rLon-(RCM_lon(iLon2)-360.))/(RCM_lon(iLon1)-(RCM_lon(iLon2)-360.))
+        elseif(rlon > RCM_lon(jsize)) then
+           ! periodic after jsize
+           iLon1=jsize
+           ilon2=1
+           LonWeight1=(rLon-RCM_lon(iLon2))/((RCM_lon(iLon1)+360.)-RCM_lon(iLon2))
+        else
+           ! normal
+           do iLon1=2,jsize
+              if(rLon < RCM_lon(iLon1)) EXIT
+           end do
+           iLon2=iLon1-1
+           LonWeight1=(rLon-RCM_lon(iLon2))/(RCM_lon(iLon1)-RCM_lon(iLon2))
+        end if
+        LonWeight2=1.-LonWeight1
+
+        pIm_C(i,j,k) = Si2No_V(UnitP_)*( &
+             LonWeight1 * ( LatWeight1*RCM_p(iLat1,iLon1) &
+             +              LatWeight2*RCM_p(iLat2,iLon1) ) + &
+             LonWeight2 * ( LatWeight1*RCM_p(iLat1,iLon2) &
+             +              LatWeight2*RCM_p(iLat2,iLon2) ) )
+
+        dIm_C(i,j,k) = Si2No_V(UnitRho_)*( &
+             LonWeight1 * ( LatWeight1*RCM_dens(iLat1,iLon1) &
+             +              LatWeight2*RCM_dens(iLat2,iLon1) ) + &
+             LonWeight2 * ( LatWeight1*RCM_dens(iLat1,iLon2) &
+             +              LatWeight2*RCM_dens(iLat2,iLon2) ) )
 
         if(dLatSmoothIm > 0.0)then
            ! Go up from low lat to high lat and look for first open/unset field line
            do n=iSize,1,-1
-              if(RCM_p(n,i2) < 0.0) EXIT
+              if(RCM_p(n,iLon1) < 0.0) EXIT
            enddo
            ! Make sure n does not go below 1
            n = max(1, n)
            ! Set TauCoeff as a function of lat distance from open/unset field lines
            ! No adjustment at the open/unset field line, full adjustment if latitude
            ! difference exceeds dLatSmoothIm
-           TauCoeffIm_C(i,j,k) = min( abs(RCM_lat(n) - RCM_lat(i1))/dLatSmoothIm, 1.0 )
+           TauCoeffIm_C(i,j,k) = &
+                min( abs(RCM_lat(n) - RCM_lat(iLat1))/dLatSmoothIm, 1.0 )
         end if
 
-        !!! This is first order accurate only !!!
-        pIm_C(i,j,k) = RCM_p(i1,i2)*Si2No_V(UnitP_)
-        dIm_C(i,j,k) = RCM_dens(i1,i2)*Si2No_V(UnitRho_)
      end if
 
      ! If the pressure is not set by RCM, and DoFixPolarRegion is true
