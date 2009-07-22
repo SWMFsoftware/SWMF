@@ -195,7 +195,7 @@ MODULE Rcm_variables
                     birk, pvgamma (1-n_gc:isize+n_gc,1-n_gc:jsize+n_gc,iesize), &
                     pressrcm, &
                     v_avg, birk_avg, birk_mhd, sigmaH_mhd,sigmaP_mhd
-    INTEGER (iprec) :: ipcp_type, ipot=6
+    INTEGER (iprec) :: ipcp_type=11, ipot=6
 !
 !
 !   Input PCP drop and its current value:
