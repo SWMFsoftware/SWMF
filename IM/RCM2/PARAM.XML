@@ -188,7 +188,7 @@ Default values are shown.
 </command>
 
 <command name="OUTERBOUNDARY">
-	<parameter name="TypeOuterBoundary" input="select">
+	<parameter name="TypeOuterBoundary" type="string" input="select">
 		<option name="ellipse" default="T"/>
 		<option name="max"/>
 	</parameter>
@@ -217,6 +217,7 @@ IE			TypeIonosphere
 Define which ionosphere solver to use. Options are "IE" (SWMF solver) or "RCM" 
 (internal solver). Default is "IE". 
 </command>
+
 
 <command name="PRECIPITATION">
 	<parameter name="LossFactorH" type="real" default="0" min="0" max="1"/>
