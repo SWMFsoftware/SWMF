@@ -44,6 +44,7 @@ RCMOBJECTS = \
   rcm_routines.o \
   rcm_comput.o \
   gmresm.o \
+  rcm_efield.o\
   impl_bicgstab.o \
   gamma.o\
   IM_wrapper.o

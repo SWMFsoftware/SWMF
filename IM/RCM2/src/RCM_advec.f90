@@ -217,17 +217,8 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
   INTEGER :: irdr, irdw
   integer :: iCurrentTime=0
   !
-  integer :: i,j, info_bicgstab
+  integer :: i,j
   !
-  INTERFACE
-     SUBROUTINE Gmresm_Matvec (x, y, n)
-       USE rcm_variables, ONLY : iprec, rprec
-       IMPLICIT NONE
-       INTEGER (iprec), INTENT (IN) :: n
-       REAL (rprec), INTENT (IN) :: x(n)
-       REAL (rprec), INTENT (OUT) :: y(n)
-     END SUBROUTINE Gmresm_Matvec
-  END INTERFACE
 
   !\\\
   ! type (RCM_ITER) :: r_iter
@@ -297,10 +288,10 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
      READ (LUN,*) idt2  !  3.  t-step for writing formatted output
      READ (LUN,*) idt3  !  4.  t-step for invoking ADD & ZAP
      READ (LUN,*) imin  !  5.  i-value of poleward bndy
-     READ (LUN,*) emptystring ! ipot  !  6.  which potential solver to use, moved to PARAM.XML/PARAM.in
+     READ (LUN,*) emptystring ! ipot  !  6.  which potential solver to use, moved to PARAM.in
      READ (LUN,*) iwind !  9.  0 is no neutral winds
      READ (LUN,*) ivoptn! 10.  1-euler time derivs in vcalc, 2-runge-kutta
-     READ (LUN,*) ibnd_type  ! 14.  type of bndy (1-eq.p, 2-iono)
+     READ (LUN,*) emptystring ! ibnd_type  ! 14.  type of bndy, moved to PARAM.in
      READ (LUN,*) ipcp_type  ! 14.  type of bndy (1-eq.p, 2-iono)
      READ (LUN,*) nsmthi! 15.  How much to smooth cond in I
      READ (LUN,*) nsmthj! 16.  How much to smooth cond in J
@@ -427,50 +418,10 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
         time0=MPI_Wtime()
         !
         CALL Comput (i_time, dt)
-        !
-        IF (ipot == 3) THEN        ! Old calling sequence for C:
-           call CON_stop('IM_ERROR: ipot=3')
-           !
-        ELSE IF(ipot == 4) then    ! GMRES
-           ! 
-           !
-           !        Note: new_cfive thinks c5w is the old c5w without d
-           !        denominator. Before activating winds, check this.  5/29/99
-           !
-           CALL Comput_c5_wind
-           CALL New_cfive    
-           CALL New_coeff   
-           CALL Comput_lowlat_boundary
-           CALL Define_pde_matrix ()
-           CALL Gmresm (Gmresm_Matvec, nij_pde, x0_pde, b_mtrx_pde, &
-                tol_gmres, iter_max_gmres)
-           CALL Gmresm_unwrap_pde_solution ()
-           !
-        ELSE IF(ipot == 5) then    ! BICGSTAB
-           !
-           CALL Comput_c5_wind
-           CALL New_cfive    
-           CALL New_coeff   
-           CALL Comput_lowlat_boundary
-           CALL Define_pde_matrix ()
-           iter_bicgstab = iter_max_bicgstab
-           tol_bicgstab = 3.0E-4
-           CALL Impl_bicgstab (Gmresm_Matvec, b_mtrx_pde, x0_pde, SIZE(x0_pde), &
-                tol_bicgstab, 'rel', iter_bicgstab, info_bicgstab) 
-           CALL Gmresm_unwrap_pde_solution ()
-           if (info_bicgstab /= 0 ) then
-              print*,info_bicgstab
-              call CON_stop('IM_ERROR: bicgstab failed')
-           end if
-           !
-        ELSE IF (ipot == 6) THEN
-           !     get somewhere else
-        ELSE
-           call CON_STOP('IM_ERROR: invalid value for ipot')
-           !
-        END IF
-        !
-        !
+
+        CALL RCM_Compute_ionospheric_potential
+
+        
         IF (i_time == itcln) THEN
 !sys       CALL Clean_up_edges ()
            itcln = itcln + idt3

@@ -43,57 +43,6 @@
          call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
              'COMPUT: ILLEGAL icond')
       END SELECT
-!
-!
-      SELECT CASE (ibnd_type)  ! set VBND
-      CASE (1)
-         IF (ipcp_type < 11) call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
-             'IPCP NOT RIGHT')
-         CALL Get_potential_on_bndy ()
-         DO j = 1, jsize
-            v (1:imin_j(j)-1, j) = vbnd (j)
-         END DO
-      CASE (5)
-       IF (ipcp_type < 11) call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
-           'IPCP NOT RIGHT')
-       IF (ipot == 6) THEN ! DO NOT SET BNDY CONDITION ON V !!!
-!        DO j = 1, jsize
-!           v (1:imin_j(j)-1, j) = vbnd (j)
-!        END DO
-       ELSE IF (ipcp_type == 19) THEN
-            DO j = 1, jsize
-               vbnd(j) = v(imin_j(j),j)
-            END DO
-       ELSE
-         CALL Get_potential_on_bndy ()
-         DO j = 1, jsize
-            v (1:imin_j(j)-1, j) = vbnd (j)
-         END DO
-       END IF
-      CASE (2)
-        IF (ipcp_type > 0 .AND. ipcp_type < 8) call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
-            'IPCP_TYPE IS ONLY FOR HMR')
-         deqdt = 0.0_rprec
-         a (2) = boundary(2)%aa
-         b (2) = boundary(2)%bb
-         dx(2) = boundary(2)%xx
-         dy(2) = boundary(2)%yy
-         CALL Efield (ipcp_type, vdrop*1000, deqdt, a, b, dx, dy, colat,&
-                     aloct, 0_iprec, -2_iprec, 1_iprec, v, vbnd)
-      CASE (3)
-         IF (ipcp_type < 11) call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
-             'IPCP NOT RIGHT')
-         CALL Get_potential_on_bndy ()
-         DO j = 1, jsize
-            v (1:imin_j(j)-1, j) = vbnd (j)
-         END DO
-      CASE (4)
-!        DO NOTHING, VBND IS ALREADY SET
-      CASE DEFAULT
-         call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
-             'COMPUT: ibnd_type not implemented')
-      END SELECT
-
 
       RETURN 
       END SUBROUTINE Comput                         
@@ -376,14 +325,6 @@ END IF
 !
 !   IBND_TYPE is an RCM control parameter, read from input file. It specifies
 !             how to set the RCM high-latitude boundary.
-!   IBND_TYPE = 1 is set boundary to ellipse in equatorial plane
-!                following RAW document "Setup of First Maynard
-!                Run" dated 3/5/97.
-!            = 2 is set to ellipse in ionosphere for use with
-!                Heppner-Maynard scaled model (EFIELD)
-!            = 3 boundary at L=6.6 in the magn. equat. plane (10/24/200)
-!            = 4 is to read directly from file (for friction code,
-!                02/23/2001). No BOUNDARY is used.
 !
 !   Note that subroutine returns the parameters of ellipse,
 !   but for different IMODE they have different meaning, namely:
@@ -403,254 +344,237 @@ END IF
 !                                                noon, dusk,    midnight
 !
                        fdist (3) = (/0.95_rprec, 1.45_rprec, 1.9_rprec/)
-!
-    IF (ibnd_type /= 1 .AND. ibnd_type /= 2 .AND. &
-        ibnd_type /= 3 .AND. ibnd_type /=4 .AND. ibnd_type /= 5) &
-         call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
-             'ILLEGAL VALUE FOR IBND_TYPE')
-!
-!
-!   I. Setting boundary in equatorial plane (also needed for IMODE=2).
-!
-!   1. Set ellipse in equatorial plane:
-!
-    IF (ibnd_type == 1) THEN
-!
-!      This (below) gives ellipse extending to 0.95*fstoff at noon,
-!      2*fstoff at midnight, and 1.5*fstoff at dawn and dusk:
-!
-       boundary(1)%aa =  1.475_rprec * fstoff
-       boundary(1)%bb =  1.500_rprec * fstoff
-       boundary(1)%xx = -0.525_rprec * fstoff
-       boundary(1)%yy =  0.0_rprec
-!
-    ELSE IF (ibnd_type == 5) THEN
-!
-       ! The maximum distance for the tip of the ellipse towards the midnight meridian (-X)
-!!$       R_24 = 8.0
-       R_24 = 10.0
 
-       ! The maximum distance for the tip of the ellipse towards the noon meridian (+X)
-       R_12 = maxval(xmin(1:iSize,1:jSize),MASK=vm(1:iSize,1:jSize)>0.0)
 
-       IF (R_12 < 1.0) THEN
-          write(*,*)'R_24=',R_24,' R_12=',R_12
-          write(*,*)'vm(:,1)=',vm(:,1)
-          write(*,*)'xmin(:,1)=',xmin(:,1)
-          call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:WRONG R_12')
-       END IF
-!
-       boundary(1)%aa =  (R_12+R_24)/2.0
-       boundary(1)%bb =  1.0 * min(R_12,R_24)
-       boundary(1)%xx =  (R_12 - R_24) / 2.0
-       boundary(1)%yy =  0.0_rprec
+    bndloc = -1.0
+    imin_j = -1
 
-       ! Check if ellipse will fit in grid, shrink if neccessary
-       lpMax=100
-       ChkLoop: do lp=1,lpMax
-          do j=1,jsize
-             do i=isize,1,-1
-                if(vm(i,j)>0.0 .AND. vm(i-1,j)<0.0) then
-                   IF ( (xmin(i,j)-boundary(1)%xx)**2 / boundary(1)%aa**2 + &
-                        (ymin(i,j)-boundary(1)%yy)**2 / boundary(1)%bb**2 &
-                        <= 1.0_rprec) then
-                      if(lp==lpMax)then
-                         write(*,*)'Error in grid, shrinking ellipse:','   i,j=',i,j
-                         write(*,*)' Point=',xmin(i,j),ymin(i,j),vm(i,j)
-                         write(*,*)' Ellipse:', &
-                              boundary(1)%xx,boundary(1)%yy,boundary(1)%aa,boundary(1)%bb
-                         call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90')
-                      end if
-                      if(xmin(i,j)>0.)then
-                         r_12=0.95*r_12
-                      else
-                         r_24=0.95*r_24
-                      end if
-                      boundary(1)%aa =  (R_12+R_24)/2.0
-                      boundary(1)%bb =  1.0 * min(R_12,R_24)
-                      boundary(1)%xx =  (R_12 - R_24) / 2.0
-                      boundary(1)%yy =  0.0_rprec
-                      CYCLE ChkLoop
-                   end IF
-                   EXIT
-                end if
-             end do
-          end do
-          call IM_write_prefix
-          write(iUnitOut,*)' Ellipse size adjusted ',lp,' times. size=',R_12,R_24
-          EXIT ChkLoop
-       end do ChkLoop
-!
-    ELSE IF (ibnd_type == 3) THEN
-!
-       boundary(1)%aa =  6.6_rprec
-       boundary(1)%bb =  6.6_rprec
-       boundary(1)%xx =  0.0_rprec
-       boundary(1)%yy =  0.0_rprec
-!
-    ELSE IF (ibnd_type == 4) THEN
-       OPEN (LUN, FILE=trim(NameRcmDir)//'vext.dat', STATUS='OLD', IOSTAT=ierr)
-          IF (ierr /= 0) call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
-              'ERROR READING BNDY IN RCM')
-          READ (LUN,*) ierr
-          IF (ierr /= jsize) call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
-              'jsize in vext.dat wrong')
-          DO j = 1-n_gc, jsize+n_gc
-             READ (LUN,*) n, bndloc(j), vbnd(j)
-          END DO
-       CLOSE (LUN)
-       imin_j = CEILING (bndloc) 
-       RETURN  
-    ELSE
-       call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+    SELECT CASE (ibnd_type)
+
+       CASE (1)
+
+         !  This gives ellipse extending to 0.95*fstoff at noon,
+         !  2*fstoff at midnight, and 1.5*fstoff at dawn and dusk:
+
+         boundary(1)%aa =  1.475_rprec * fstoff
+         boundary(1)%bb =  1.500_rprec * fstoff
+         boundary(1)%xx = -0.525_rprec * fstoff
+         boundary(1)%yy =  0.0_rprec
+
+
+         DO j = 1-n_gc, jsize+n_gc ! place ellipse on the grid:
+
+            a = 1.0_rprec
+            b = REAL (isize, rprec)
+            DO lp=1,20
+               c   = 0.5 * (a+b)
+!              IF ( ABS ( Fequat_of_x (c, REAL(j,rprec)) ) < 100*EPSILON(1.0_rprec)) EXIT
+!              IF (       Fequat_of_x (c, REAL(j,rprec)) < 0.0_rprec) THEN
+               IF (       Fequat_of_x (c, REAL(j)) < 0.0_rprec) THEN
+                   b = c
+               ELSE
+                   a = c
+               END IF
+            END DO
+
+            bndloc(j) = c
+
+         END DO
+
+         imin_j = CEILING (bndloc) ! first grid point inside modeling region.
+
+
+       CASE (4)
+      
+         ! weird ellipse for SWMF
+
+         ! The maximum distance for the tip of the ellipse towards the midnight meridian (-X)
+         R_24 = 10.0
+  
+         ! The maximum distance for the tip of the ellipse towards the noon meridian (+X)
+         R_12 = maxval(xmin(1:iSize,1:jSize),MASK=vm(1:iSize,1:jSize)>0.0)
+
+         IF (R_12 < 1.0) THEN
+            write(*,*)'R_24=',R_24,' R_12=',R_12
+            write(*,*)'vm(:,1)=',vm(:,1)
+            write(*,*)'xmin(:,1)=',xmin(:,1)
+            call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:WRONG R_12')
+         END IF
+
+         boundary(1)%aa =  (R_12+R_24)/2.0
+         boundary(1)%bb =  1.0 * min(R_12,R_24)
+         boundary(1)%xx =  (R_12 - R_24) / 2.0
+         boundary(1)%yy =  0.0_rprec
+
+         ! Check if ellipse will fit in grid, shrink if neccessary
+         lpMax=100
+         ChkLoop: do lp=1,lpMax
+            do j=1-n_gc, jsize+n_gc
+               do i=isize,1,-1
+                  if(vm(i,j)>0.0 .AND. vm(i-1,j)<0.0) then
+                     IF ( (xmin(i,j)-boundary(1)%xx)**2 / boundary(1)%aa**2 + &
+                          (ymin(i,j)-boundary(1)%yy)**2 / boundary(1)%bb**2 &
+                          <= 1.0_rprec) then
+                        if(lp==lpMax)then
+                           write(*,*)'Error in grid, shrinking ellipse:','   i,j=',i,j
+                           write(*,*)' Point=',xmin(i,j),ymin(i,j),vm(i,j)
+                           write(*,*)' Ellipse:', &
+                                boundary(1)%xx,boundary(1)%yy,boundary(1)%aa,boundary(1)%bb
+                           call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90')
+                        end if
+                        if(xmin(i,j)>0.)then
+                           r_12=0.95*r_12
+                        else
+                           r_24=0.95*r_24
+                        end if
+                        boundary(1)%aa =  (R_12+R_24)/2.0
+                        boundary(1)%bb =  1.0 * min(R_12,R_24)
+                        boundary(1)%xx =  (R_12 - R_24) / 2.0
+                        boundary(1)%yy =  0.0_rprec
+                        CYCLE ChkLoop
+                     end IF
+                     EXIT
+                  end if
+               end do
+            end do
+            call IM_write_prefix
+            write(iUnitOut,*)' Ellipse size adjusted ',lp,' times. size=',R_12,R_24
+            EXIT ChkLoop
+         end do ChkLoop
+
+         imin_j = CEILING (bndloc) ! first grid point inside modeling region.
+
+       CASE (3)
+
+         !  boundary at L=6.6 in the magn. equat. plane (10/24/200)
+
+         boundary(1)%aa =  6.6_rprec
+         boundary(1)%bb =  6.6_rprec
+         boundary(1)%xx =  0.0_rprec
+         boundary(1)%yy =  0.0_rprec
+
+
+         DO j = 1-n_gc, jsize+n_gc ! place ellipse on the grid:
+
+            a = 1.0_rprec
+            b = REAL (isize, rprec)
+            DO lp=1,20
+               c   = 0.5 * (a+b)
+!              IF ( ABS ( Fequat_of_x (c, REAL(j,rprec)) ) < 100*EPSILON(1.0_rprec)) EXIT
+!              IF (       Fequat_of_x (c, REAL(j,rprec)) < 0.0_rprec) THEN
+               IF (       Fequat_of_x (c, REAL(j)) < 0.0_rprec) THEN
+                   b = c
+               ELSE
+                   a = c
+               END IF
+            END DO
+            
+            bndloc(j) = c
+
+         END DO
+
+         imin_j = CEILING (bndloc) ! first grid point inside modeling region.
+
+       CASE (2)
+
+         !  Set up boundary in the ionosphere to an ellipse such that
+         !  it maps out to the equatorial plane to given locations at
+         !  noon, midnight and dusk.
+
+         ! First, find colatitudes of 3 specified points in eq. plane:
+
+         DO n = 1, 3 ! Since the ellipse will be in the ionosphere, map the three points:
+
+            jind (n) = -1
+            DO j = 1, jsize
+              IF ( ABS(aloct(1,j)-phi(n)) < EPSILON(1.0_rprec)) THEN
+                 jind (n) = j
+              END IF
+            END DO
+
+            IF (jind(n) == -1) call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+              'UNABLE TO LOCATE ONE OF PNTS IN GETBND')
+
+
+            a = REAL (isize,rprec)
+            b = REAL (1.0_rprec, rprec)
+            DO
+              c = 0.5 * (a+b)
+              f_c = Gntrp_2d (rmin, isize, jsize, c, REAL(jind(n),rprec)) -fstoff*fdist(n)
+              IF (ABS (f_c) < 10.0*EPSILON(1.0_rprec)) EXIT
+              IF (f_c < 0.0_rprec) THEN
+                 a = c
+              ELSE
+                 b = c
+              END IF
+            END DO
+            theta (n) = Gntrp_2d (colat, isize, jsize, c, REAL(j,rprec))
+         END DO
+
+         !  Compute parameters of ellipse:
+
+         boundary(2)%bb = theta(2)
+         boundary(2)%xx = 0.5 * (theta(1) - theta(3))
+         boundary(2)%aa = theta(1) - boundary(2)%xx
+         boundary(2)%yy = 0.0_rprec
+
+
+         !  From colatitudes of boundary points, estimate their I-values:
+
+         DO j = 1-n_gc, jsize+n_gc
+           colat_bnd = Thet (boundary(2)%aa, boundary(2)%bb, &
+                             boundary(2)%xx, boundary(2)%yy, aloct(1,j) )
+           a = 1.0_rprec
+           b = REAL (isize,rprec)
+           DO
+             c = 0.5 * (a+b)
+             f_c = Gntrp_2d (colat, isize, jsize, c, REAL(j,rprec)) - colat_bnd
+             IF (ABS (f_c) < 10.8*EPSILON(1.0_rprec)) EXIT
+             IF (f_c < 0.0_rprec) THEN
+               a = c
+             ELSE
+               b = c
+             END IF
+           END DO
+           bndloc(j) = c
+         END DO
+
+         imin_j = CEILING (bndloc) ! first grid point inside modeling region.
+
+         boundary(2)%aa = boundary(2)%aa * RTD
+         boundary(2)%bb = boundary(2)%bb * RTD
+         boundary(2)%xx = boundary(2)%xx * RTD
+         boundary(2)%yy = boundary(2)%yy * RTD
+
+       CASE (5)
+
+         ! set boundary close to open/closed field line boundary:
+  
+         DO j = 1 - n_gc, jsize + n_gc
+            do_i_loop: DO i = isize - 1, 1
+               if (vm(i,j) > 0.0 .AND. vm(i-1,j) < 0.0) THEN
+                  imin_j(j) = i-1
+                  bndloc(j) = i-1 
+                  EXIT do_i_loop
+               end if 
+            END DO do_i_loop
+
+            if (imin_j(j) < 1) &
+              call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:&
+                            &boundary failed to set')
+         END DO
+
+         imin_j = CEILING (bndloc) ! first grid point inside modeling region.
+
+       CASE DEFAULT
+
+          call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
            'ILLEGAL VALUE OF IBND_TYPE') 
-    END IF
-!
-!
-    DO j = 1-n_gc, jsize+n_gc
-!
-!   2. Check if boundary is within the grid limits:
-!
-!!$       IF (  (xmin(1,j)-boundary(1)%xx)**2 / boundary(1)%aa**2 + &
-!!$             (ymin(1,j)-boundary(1)%yy)**2 / boundary(1)%bb**2 &
-!!$             <= 1.0_rprec .OR. &
-!!$             (xmin(isize,j)-boundary(1)%xx)**2 / boundary(1)%aa**2 + &
-!!$             (ymin(isize,j)-boundary(1)%yy)**2 / boundary(1)%bb**2 &
-!!$              >= 1.0_rprec) THEN
-!!$          WRITE (*,'(A30,I3)') 'COULD NOT PLACE BOUNDARY AT J=',j
-!!$ write(*,*)'xmin(1,j)   =',xmin(1,j), &
-!!$      ' boundary(1)%xx=',boundary(1)%xx, &
-!!$      ' boundary(1)%aa=',boundary(1)%aa
-!!$ write(*,*)'ymin(1,j)   =',ymin(1,j), &
-!!$      ' boundary(1)%yy=',boundary(1)%yy, &
-!!$      ' boundary(1)%bb=',boundary(1)%bb
-!!$ write(*,*)' one=',1.0_rprec
-!!$ write(*,*)'xmin(isize,j)=',xmin(isize,j), &
-!!$      ' boundary(1)%xx=',boundary(1)%xx, &
-!!$      ' boundary(1)%aa=',boundary(1)%aa
-!!$ write(*,*)'ymin(isize,j)=',ymin(isize,j), &
-!!$      ' boundary(1)%yy=',boundary(1)%yy, &
-!!$      ' boundary(1)%bb=',boundary(1)%bb
-!!$          STOP 'ABNORMAL STOP IN GETBND'
-!!$       END IF
-!
-!    3. Pinpoint the exact location of bndy by bisection:
-!
-       a = 1.0_rprec
-       b = REAL (isize, rprec)
-       DO lp=1,20
-          c   = 0.5 * (a+b)
-!          IF ( ABS ( Fequat_of_x (c, REAL(j,rprec)) ) < 100*EPSILON(1.0_rprec)) EXIT
-!         IF (       Fequat_of_x (c, REAL(j,rprec)) < 0.0_rprec) THEN
-          IF (       Fequat_of_x (c, REAL(j)) < 0.0_rprec) THEN
-              b = c
-          ELSE
-              a = c
-          END IF
-       END DO
 
-       bndloc(j) = c
-!
-    END DO
-!
-    imin_j = CEILING (bndloc) ! first grid point inside modeling region.
+    END SELECT
 
-!
-    IF (ibnd_type == 1 .OR. ibnd_type == 3 .OR. ibnd_type == 5) RETURN
-!
-!
-!
-!  II. Set up boundary in the ionosphere to an ellipse such that
-!      it maps out to the equatorial plane to given locations at
-!      noon, midnight and dusk.
-!
-!   1. Specify the locations in the equatorial plane in units of R_stoff:
-!
-!
-!   2. Since the ellipse will be in the ionosphere, map the three points:
-!
-    DO n = 1, 3
-       jind (n) = -1
-       DO j = 1, jsize
-          IF ( ABS(aloct(1,j)-phi(n)) < EPSILON(1.0_rprec)) THEN
-              jind (n) = j
-          END IF
-       END DO
-       IF (jind(n) == -1) call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
-           'UNABLE TO LOCATE ONE OF PNTS IN GETBND')
-!
-       a = REAL (isize,rprec)
-       b = REAL (1.0_rprec, rprec)
-       DO
-         c = 0.5 * (a+b)
-         f_c = Gntrp_2d (rmin, isize, jsize, c, REAL(jind(n),rprec))&
-	                  -fstoff*fdist(n)
-         IF (ABS (f_c) < 10.0*EPSILON(1.0_rprec)) EXIT
-         IF (f_c < 0.0_rprec) THEN
-            a = c
-         ELSE
-            b = c
-         END IF
-       END DO
-       theta (n) = Gntrp_2d (colat, isize, jsize, c, REAL(j,rprec))
-    END DO
-!
-!   3. Compute parameters of ellipse:
-!
-    boundary(2)%bb = theta(2)
-    boundary(2)%xx = 0.5 * (theta(1) - theta(3))
-    boundary(2)%aa = theta(1) - boundary(2)%xx
-    boundary(2)%yy = 0.0_rprec
-!
-!
-!   4. From colatitudes of boundary points, estimate their I-values:
-!
-    DO j = 1, jsize
-       colat_bnd = Thet (boundary(2)%aa, boundary(2)%bb, &
-                         boundary(2)%xx, boundary(2)%yy, aloct(1,j) )
-       a = 1.0_rprec
-       b = REAL (isize,rprec)
-       DO
-         c = 0.5 * (a+b)
-         f_c = Gntrp_2d (colat, isize, jsize, c, REAL(j,rprec)) - colat_bnd
-         IF (ABS (f_c) < 10.8*EPSILON(1.0_rprec)) EXIT
-         IF (f_c < 0.0_rprec) THEN
-           a = c
-         ELSE
-           b = c
-         END IF
-       END DO
-       bndloc_tmp = c
-!
-!     5. Adjust boundary if it is too close to a grid line:
-!
-       IF (ABS(FLOOR(bndloc_tmp) - CEILING(bndloc_tmp)) < 10.0*EPSILON(1.0_rprec)) THEN
-          bndloc(j) = bndloc_tmp
-          WRITE (*,*) 'BNDY ON INTEGER GRID LINE'
-       ELSE IF ( bndloc_tmp - FLOOR (bndloc_tmp) < 10.0*EPSILON(1.0_rprec)) THEN
-          bndloc(j) = FLOOR (bndloc_tmp)
-          WRITE (*,*) 'adjusting bndy in GETBND, FLOOR'
-       ELSE IF ( CEILING(bndloc_tmp) - bndloc_tmp < 10.0*EPSILON(1.0_rprec)) THEN
-          bndloc(j) = CEILING (bndloc_tmp)
-          WRITE (*,*) 'adjusting bndy in GETBND, CEILING'
-       ELSE
-          bndloc(j) = bndloc_tmp
-       END IF
-    END DO
-    imin_j (0) = imin_j(jsize)
-    imin_j (-1) = imin_j(jsize-1)
-    imin_j( jsize+1) = imin_j(1)
-    imin_j( jsize+2) = imin_j(2)
-    imin_j = CEILING (bndloc) ! first grid point inside modeling region.
-!
-!
-    boundary(2)%aa = boundary(2)%aa * RTD
-    boundary(2)%bb = boundary(2)%bb * RTD
-    boundary(2)%xx = boundary(2)%xx * RTD
-    boundary(2)%yy = boundary(2)%yy * RTD
-!
     RETURN
-!
+
     CONTAINS
 !
       FUNCTION Fequat_of_x (bi, bj)
@@ -1358,56 +1282,6 @@ END IF
 !
        
       END SUBROUTINE Get_active_cond
-!
-!
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!
-!
-      SUBROUTINE Get_potential_on_bndy 
-      USE Rcm_variables
-      IMPLICIT NONE
-!
-!
-      INTEGER (iprec) :: j
-      REAL    (rprec) :: r_eq, p_eq, Gntrp_2d, Gntrp_2d_ang
-!   
-      IF (ipcp_type == 11) THEN
-          DO j = 1, jsize
-             vbnd (j) = -vdrop * SIN(aloct(1,j)-vdrop_phase*HTR ) / &
-                         2.0_rprec * 1.0E+3_rprec
-          END DO
-!
-      ELSE IF (ipcp_type == 13) THEN
-!
-!       Maynard and Chen [JGR, 1975]:
-!
-        DO j = 1, jsize
-           r_eq = Gntrp_2d (rmin, isize, jsize, bndloc(j), REAL(j,rprec))
-           p_eq = Gntrp_2d_ang (pmin, isize, jsize, bndloc(j), REAL(j,rprec))
-           vbnd (j) = (92.4_rprec / r_eq - &
-              A_coeff_MC(Kp)*r_eq**2*SIN(p_eq)) * 1000.0_rprec
-        END DO
-!
-      ELSE
-         call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
-             'VBOUND: IPCP_TYPE NOT IMPLEMENTED')
-      END IF
-      vbnd (0) = vbnd (jsize)
-      vbnd (-1) = vbnd (jsize-1)
-      vbnd (jsize+1) = vbnd (1)
-      vbnd (jsize+2) = vbnd (2)
-      RETURN
-!
-      CONTAINS
-      FUNCTION A_coeff_MC (Kp)
-      IMPLICIT NONE
-      REAL (rprec), INTENT (IN) :: Kp
-      REAL (rprec) :: A_coeff_MC
-      A_coeff_MC = 0.045_rprec / (1.0_rprec-0.159_rprec*Kp+0.0093_rprec*Kp**2)**3
-      RETURN
-      END FUNCTION A_coeff_MC
-!
-      END SUBROUTINE Get_potential_on_bndy
 !
 !
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
