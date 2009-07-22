@@ -103,7 +103,7 @@ MODULE Rcm_variables
                     vcorot(1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &
                     fac   (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc)
     INTEGER (iprec) :: i1, i2, iint, j1, j2, jint, imin, &
-           imin_j(1-n_gc:jsize+n_gc)=isize, ibnd_type
+           imin_j(1-n_gc:jsize+n_gc)=isize, ibnd_type=5
     TYPE (ellipse_def), DIMENSION (2) :: boundary
 !
 !
