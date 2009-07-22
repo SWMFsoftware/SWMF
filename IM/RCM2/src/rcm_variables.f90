@@ -6,6 +6,8 @@ MODULE Rcm_variables
     IMPLICIT NONE
     SAVE
 !
+    LOGICAL :: IsPartofFramework = .true.
+!
     INTEGER, PARAMETER :: iprec = SELECTED_INT_KIND (9)
     INTEGER, PARAMETER :: rprec = SELECTED_REAL_KIND (6,37)
 !
