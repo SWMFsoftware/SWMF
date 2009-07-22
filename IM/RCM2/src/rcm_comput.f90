@@ -93,31 +93,8 @@
          call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
              'COMPUT: ibnd_type not implemented')
       END SELECT
-!
-!
-!!    IF (ipot == 3) THEN        ! Old calling sequence for C:
-!
-!!       CALL Comput_coeff   
-!!       CALL Comput_c5_wind
-!!       CALL Comput_c5_total 
-!!       CALL Comput_lowlat_boundary
-!!       CALL Comput_highlat_boundary
-!!       CALL Comput_v_Potnt3 (isize, jsize, ncoeff, imin_j, c_pde, v)
-!
-!!    ELSE           !  Now new calling sequence :
-! 
-!
-!        Note: new_cfive thinks c5w is the old c5w without d
-!        denominator. Before activating winds, check this.  5/29/99
-!
-!!       CALL Comput_c5_wind
-!!       CALL New_cfive    
-!!       CALL New_coeff   
-!!       CALL Comput_lowlat_boundary
-!!       CALL Gmresm (isize, jsize, ncoeff, j1, j2, imin_j, c_pde, v, tol_gmres)
-!
-!!    END IF
-!
+
+
       RETURN 
       END SUBROUTINE Comput                         
 !
