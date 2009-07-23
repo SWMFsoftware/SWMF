@@ -483,7 +483,8 @@ Contains
               nZ_I(iMix), IonizPotential_II(:,iMix), TeInv)
 
 
-         StatSumTermLog_I(0:nZ_I(iMix)) = StatSumTermLog_I(0:nZ_I(iMix)) + LogGi_II((0:nZ_I(iMix)),iMix)
+         StatSumTermLog_I(0:nZ_I(iMix)) = &
+              StatSumTermLog_I(0:nZ_I(iMix)) + LogGi_II(0:nZ_I(iMix),iMix)
 
          !Initialize the population array to zeros
          Population_II(0:nZ_I(iMix), iMix) = 0.0
