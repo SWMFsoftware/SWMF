@@ -572,17 +572,18 @@ END IF
          ! set boundary close to open/closed field line boundary:
   
          DO j = 1 - n_gc, jsize + n_gc
-            do_i_loop: DO i = isize - 1, 1
+            do_i_loop: DO i = isize - 1, 1, -1
                if (vm(i,j) > 0.0 .AND. vm(i-1,j) < 0.0) THEN
-                  imin_j(j) = i-1
-                  bndloc(j) = i-1 
+                  imin_j(j) = i
+                  bndloc(j) = i
                   EXIT do_i_loop
                end if 
             END DO do_i_loop
 
-            if (imin_j(j) < 1) &
+            if (imin_j(j) < 1) then
               call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:&
                             &boundary failed to set')
+            end if
          END DO
 
          imin_j = CEILING (bndloc) ! first grid point inside modeling region.
