@@ -53,6 +53,8 @@ subroutine get_im_pressure(iBlock, pIm_C, dIm_C, TauCoeffIm_C)
   real,    intent(out) :: dIm_C(1:nI, 1:nJ, 1:nK)
   real,    intent(out) :: TauCoeffIm_C(1:nI, 1:nJ, 1:nK)
 
+  logical :: UseOldMethod = .false.
+
   integer :: i,j,k, n, iLat1,iLat2, iLon1,iLon2
 
   real :: rLat,rLon, LatWeight1,LatWeight2, LonWeight1,LonWeight2
@@ -77,49 +79,71 @@ subroutine get_im_pressure(iBlock, pIm_C, dIm_C, TauCoeffIm_C)
         rLat = ray(1,1,i,j,k,iBlock)
         rLon = ray(2,1,i,j,k,iBlock)
 
-        ! RCM_lat is in descending order
-        do iLat1 = 2, iSize
-           if(rLat > RCM_lat(iLat1)) EXIT
-        end do
-        iLat2 = iLat1-1
-        LatWeight1 = (rLat - RCM_lat(iLat2))/(RCM_lat(iLat1) - RCM_lat(iLat2))
-        LatWeight2 = 1 - LatWeight1
-
-        ! Note: RCM_lon is in ascending order
-        if(rLon < RCM_lon(1)) then
-           ! periodic before 1
-           iLon1 = 1
-           iLon2 = jSize
-           LonWeight1 =     (rLon           + 360 - RCM_lon(iLon2)) &
-                /           (RCM_lon(iLon1) + 360 - RCM_lon(iLon2))
-        elseif(rlon > RCM_lon(jSize)) then
-           ! periodic after jSize
-           iLon1 = 1
-           iLon2 = jSize
-           LonWeight1 = (rLon                 - RCM_lon(iLon2)) &
-                /       (RCM_lon(iLon1) + 360 - RCM_lon(iLon2))
-        else
-           do iLon1 = 2, jSize
-              if(rLon < RCM_lon(iLon1)) EXIT
+        if(UseOldMethod)then
+           ! RCM_lat: 1->iSize varies approximately from 89->10
+           iLat1=1
+           do n=2,iSize
+              if(rLat < 0.5*(RCM_lat(n-1)+RCM_lat(n))) iLat1 = n
            end do
-           iLon2 = iLon1-1
-           LonWeight1 = (rLon           - RCM_lon(iLon2)) &
-                /       (RCM_lon(iLon1) - RCM_lon(iLon2))
+           iLat2=iLat1
+
+           ! RCM_lon: 1->jSize varies approximately from 0->353
+           iLon1=1
+           do n=2,jSize
+              if(rLon > 0.5*(RCM_lon(n-1)+RCM_lon(n))) iLon1 = n
+           end do
+           if(rLon > 0.5*(RCM_lon(jsize)+RCM_lon(1)+360.)) iLon1=1
+           iLon2=iLon1
+        else
+           ! RCM_lat is in descending order
+           do iLat1 = 2, iSize
+              if(rLat > RCM_lat(iLat1)) EXIT
+           end do
+           iLat2 = iLat1-1
+           LatWeight1 = (rLat - RCM_lat(iLat2))/(RCM_lat(iLat1) - RCM_lat(iLat2))
+           LatWeight2 = 1 - LatWeight1
+
+           ! Note: RCM_lon is in ascending order
+           if(rLon < RCM_lon(1)) then
+              ! periodic before 1
+              iLon1 = 1
+              iLon2 = jSize
+              LonWeight1 =     (rLon           + 360 - RCM_lon(iLon2)) &
+                   /           (RCM_lon(iLon1) + 360 - RCM_lon(iLon2))
+           elseif(rlon > RCM_lon(jSize)) then
+              ! periodic after jSize
+              iLon1 = 1
+              iLon2 = jSize
+              LonWeight1 = (rLon                 - RCM_lon(iLon2)) &
+                   /       (RCM_lon(iLon1) + 360 - RCM_lon(iLon2))
+           else
+              do iLon1 = 2, jSize
+                 if(rLon < RCM_lon(iLon1)) EXIT
+              end do
+              iLon2 = iLon1-1
+              LonWeight1 = (rLon           - RCM_lon(iLon2)) &
+                   /       (RCM_lon(iLon1) - RCM_lon(iLon2))
+           end if
+           LonWeight2 = 1 - LonWeight1
         end if
-        LonWeight2 = 1 - LonWeight1
 
         if(all( RCM_p( (/iLat1,iLat2/), (/iLon1, iLon2/) ) > 0.0 ))then
-           pIm_C(i,j,k) = Si2No_V(UnitP_)*( &
-                LonWeight1 * ( LatWeight1*RCM_p(iLat1,iLon1) &
-                +              LatWeight2*RCM_p(iLat2,iLon1) ) + &
-                LonWeight2 * ( LatWeight1*RCM_p(iLat1,iLon2) &
-                +              LatWeight2*RCM_p(iLat2,iLon2) ) )
-
-           dIm_C(i,j,k) = Si2No_V(UnitRho_)*( &
-                LonWeight1 * ( LatWeight1*RCM_dens(iLat1,iLon1) &
-                +              LatWeight2*RCM_dens(iLat2,iLon1) ) + &
-                LonWeight2 * ( LatWeight1*RCM_dens(iLat1,iLon2) &
-                +              LatWeight2*RCM_dens(iLat2,iLon2) ) )
+           if(UseOldMethod)then
+              ! This is first order accurate only !!!
+              pIm_C(i,j,k) = RCM_p(iLat1,iLon1)*Si2No_V(UnitP_)
+              dIm_C(i,j,k) = RCM_dens(iLat1,iLon1)*Si2No_V(UnitRho_)
+           else
+              pIm_C(i,j,k) = Si2No_V(UnitP_)*( &
+                   LonWeight1 * ( LatWeight1*RCM_p(iLat1,iLon1) &
+                   +              LatWeight2*RCM_p(iLat2,iLon1) ) + &
+                   LonWeight2 * ( LatWeight1*RCM_p(iLat1,iLon2) &
+                   +              LatWeight2*RCM_p(iLat2,iLon2) ) )
+              dIm_C(i,j,k) = Si2No_V(UnitRho_)*( &
+                   LonWeight1 * ( LatWeight1*RCM_dens(iLat1,iLon1) &
+                   +              LatWeight2*RCM_dens(iLat2,iLon1) ) + &
+                   LonWeight2 * ( LatWeight1*RCM_dens(iLat1,iLon2) &
+                   +              LatWeight2*RCM_dens(iLat2,iLon2) ) )
+           end if
 
            if(dLatSmoothIm > 0.0)then
               ! Go from low to high lat and look for first unset field line
