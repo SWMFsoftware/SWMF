@@ -25,23 +25,30 @@ subroutine IM_set_param(CompInfo,TypeAction)
   integer             :: iUnitOut
   !---------------------------------------------------------------------------
   select case(TypeAction)
+  
   case('VERSION')
      call put(CompInfo,                         &
           Use=.true.,                           &
-          NameVersion='HEIDI (Liemohn)', &
+          NameVersion='RAM_HEIDI (Liemohn)',    &
           Version=1.1)
+  
   case('MPI')
      call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc)
      if(nProc>4)call CON_stop( NameSub // &
           ' IM_ERROR this version can run on 4 PE !')
-
      IsFramework = .true.
-  case('READ')
-     call heidi_read
+  
   case('CHECK')
      !We should check and correct parameters here
      if(iProc==0)write(*,*) NameSub,': CHECK iSession =',i_session_read()
      call heidi_check
+
+  case('GRID')
+     call IM_set_grid  
+     
+  case('READ')
+     call heidi_read
+  
   case('STDOUT')
      iUnitOut = STDOUT_
      if(nProc==1)then
@@ -49,81 +56,60 @@ subroutine IM_set_param(CompInfo,TypeAction)
      else
         write(StringPrefix,'(a,i3.3,a)')'IM',iProc,':'
      end if
+  
   case('FILEOUT')
      call get(CompInfo,iUnitOut=iUnitOut)
      StringPrefix=''
-  case('GRID')
-     call IM_set_grid
+ 
   case default
      call CON_stop(NameSub//' IM_ERROR: invalid TypeAction='//TypeAction)
+  
   end select
-
+  
 end subroutine IM_set_param
 
 !============================================================================
 
 subroutine IM_set_grid
-
-  use ModIonoHeidi
-  use ModHeidiSize
-  use ModHeidiMain
-  use ModProcIM
-  use ModNumConst
-  use CON_coupler, ONLY: set_grid_descriptor, is_proc, IM_
-
+  
+  use ModNumConst,  ONLY: cTwoPi
+  use CON_coupler,  ONLY: set_grid_descriptor, is_proc, IM_
+  use ModHeidiSize, ONLY: RadiusMin, RadiusMax,NT,NR
+  use ModHeidiMain, ONLY: LZ, DL1, DPHI,PHI
+  
   implicit none
+
   character (len=*), parameter :: NameSub='IM_set_grid'
-  real :: Radius_I(1)
-  real :: Colat_I(2*IONO_nTheta-1)
-  logical :: IsInitialized = .false.
+  logical :: IsInitialized=.false.
   logical :: DoTest, DoTestMe
+  integer :: i, j  
   !-------------------------------------------------------------------------
+  
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
-  if(DoTest)write(*,*)'IM_set_grid_descriptor called, IsInitialized=',&
+  if(DoTest)write(*,*)'IM_set_grid called, IsInitialized=', &
        IsInitialized
-  if(IsInitialized) RETURN
-  IsInitialized=.true.
+  if(IsInitialized) return
+  
+  IsInitialized = .true.
+  
+  ! IM grid: the equatorial grid is described by Coord1_I and Coord2_I
+  ! Occasional +0.0 is used to convert from single to double precision
+  
+  call set_grid_descriptor( IM_,           & ! component index
+       nDim     = 2,                       & ! dimensionality
+       nRootBlock_D = (/1,1/),             & ! number of blocks
+       nCell_D =(/nR, nT-1/),              & ! size of equatorial grid
+       XyzMin_D=(/RadiusMin+0.0,0.0/),     & ! min coordinates
+       XyzMax_D=(/RadiusMax+0.0,cTwoPi/),  & ! max coordinates
+       Coord1_I = LZ(1:nR)+0.0,            & ! radial coordinates
+       Coord2_I = Phi(1:nT-1)+0.0,         & ! longitudinal coordinates
+       TypeCoord= 'SMG' )                    ! solar magnetic coord
+  
+  if(DoTest)then
+     write(*,*)NameSub,' NR = ', NR
+     write(*,*)NameSub,' NT = ', NT
+  end if
 
-  Radius_I(1) = IONO_Radius ! radial size of the ionosphere in meters
-
-  ! Total hack, because I don't actually know the real grid we will use in the 
-  ! actual code.
-
-  ! The colatitudes for both hemispheres
-  Colat_I(            1:  IONO_nTheta) = IONO_NORTH_Theta(:,1)
-  Colat_I(IONO_nTheta:2*IONO_nTheta-1) = IONO_SOUTH_Theta(:,1)
-
-  call set_grid_descriptor(                        &
-       IM_,                          &! component index
-       nDim=2,                       &! dimensionality
-       nRootBlock_D=(/1,1/),         &! north+south hemispheres
-       nCell_D =(/2*IONO_nTheta-1,IONO_nPsi/), &! size of node based grid
-       XyzMin_D=(/cOne, cOne/),      &! min colat and longitude indexes
-       XyzMax_D=(/real(2*IONO_nTheta-1),&
-       real(IONO_nPsi)/),            &! max colat and longitude indexes
-       TypeCoord='SMG',                            &! solar magnetic coord.
-       Coord1_I=Colat_I,             &! colatitudes
-       Coord2_I=IONO_NORTH_Psi(1,:),               &! longitudes
-       Coord3_I=(/Radius_I/),                          &! radial size in meters
-       IsPeriodic_D=(/.false.,.true./))
-
-!!!  ! IM grid size in generalized coordinates
-!!!  call set_grid_descriptor( IM_,                         & ! component index
-!!!       nDim=4,                                           & ! dimensionality
-!!!       nRootBlock_D=(/1,1/),                             & ! single block
-!!!       nCell_D=(/nT,nR/),                          & ! size of cell based grid
-!!!       XyzMin_D=(/cHalf, cHalf/),                        & ! min gen.coords for cells
-!!!       XyzMax_D=(/nT+cHalf,nR+cHalf/),             & ! max gen.coords for cells
-!!!       TypeCoord='SMG',                                   & ! solar magnetic coord
-!!!       Coord1_I=phi,  & ! magnetic local times
-!!!       Coord2_I=z,    & ! l-shell?
-!!!!       Coord1_I=real(colat(1:NT,1)),                     & ! colatitudes
-!!!!       Coord2_I=real(aloct(1,1:NR)),                     & ! longitudes
-!!!!       Coord3_I=Radius_I,                                & ! radial size in meters
-!!!!       Coord4_I=NPA(0:90)                                & ! Grid in pitch angle
-!!!!       COORD5_I=NE                                       & ! Grid in energy
-!!!       IsPeriodic_D=(/.true.,.false./))    ! periodic in longitude
-!!!!       IsPeriodic_D=(/.true.,.false.,.false.,.false./))    ! periodic in longitude
 
 end subroutine IM_set_grid
 !==============================================================================
@@ -184,12 +170,26 @@ end subroutine IM_get_for_ie
 !============================================================================
 subroutine IM_put_from_ie_mpi(nTheta, nPhi, Potential_II)
 
+  use ModHeidiIO,  ONLY: time
   use ModPlotFile, ONLY: save_plot_file
+  
   implicit none
+  
   integer, intent(in):: nTheta, nPhi
-  real,    intent(in):: Potential_II(nTheta, nPhi)
+  real,    intent(in):: Potential_II(nTheta, nPhi, 1)
 
-  !call save_plot_file(...)
+  character(len=100):: NameFile
+  !-------------------------------------------------------------------------
+  write(NameFile,'(a,i5.5,a)') &
+       "IM/output_heidi/potential_t",nint(Time),".out"
+
+  call save_plot_file(NameFile, &
+       StringHeaderIn = 'Ionospheric potential', &
+       TimeIn         = time+0.0, &
+       NameVarIn      = 'Theta Phi Pot', &
+       CoordMinIn_D   = (/0.0, 0.0/), &
+       CoordMaxIn_D   = (/180.0,360.0/), &
+       VarIn_IIV = Potential_II)
 
 end subroutine IM_put_from_ie_mpi
 
@@ -248,6 +248,10 @@ end subroutine IM_put_from_ie
 !==============================================================================
 subroutine IM_put_from_ie_complete
 
+  implicit none
+  
+  !--------------------------------------------------------------------------
+  
   write(*,*) "Don't know what this is really supposed to do.  I think that it is"
   write(*,*) "Supposed to be applying periodic boundaries...?"
 
@@ -301,16 +305,110 @@ end subroutine IM_put_from_gm
 
 !==============================================================================
 
-subroutine IM_put_from_gm_line(BufferLine_VI, nVarLineIn, nPointLineIn, NameVar)
+subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
+     nVarLineIn, nPointLineIn, BufferLine_VI, NameVar)
+
+  use ModHeidiMain, ONLY: nR, nT
+  use ModHeidiIO,   ONLY: Time
+  use ModHeidiSize, ONLY: RadiusMin, RadiusMax
+  use ModIoUnit,    ONLY: UnitTmp_
+  use ModPlotFile,  ONLY: save_plot_file
 
   implicit none
-  character (len=*),parameter :: NameSub='IM_put_from_gm_line'
 
+  integer, intent(in) :: nRadiusIn, nLonIn
+  real,    intent(in) :: Map_DSII(3,2,nRadiusIn,nLonIn)
   integer, intent(in) :: nVarLineIn, nPointLineIn
   real,    intent(in) :: BufferLine_VI(nVarLineIn,nPointLineIn)
   character(len=*), intent(in) :: NameVar
 
-  ! This should be used eventually
+  integer :: iR, iT, iDir, n
+
+  logical :: IsFirstCall = .true.
+
+  ! These variables should either be in a module, OR
+  ! there is no need for them, and BufferLine_VI should be put 
+  ! into HEIDI variables right here. 
+  ! Note that this routine is only called on the root processor !!!
+  integer :: nVarLine   = 0          ! number of vars per line point
+  integer :: nPointLine = 0          ! number of points in all lines
+  real, save, allocatable:: StateLine_VI(:,:)   ! state along all lines
+  integer, save :: iLine_III(2,nR,nT)           ! line index 
+
+  logical :: DoTest, DoTestMe
+  character(len=*), parameter :: NameSub='IM_put_from_gm_line'
+
+  ! Variables for testing
+  integer :: iPoint
+  character(len=100):: NameFile
+  !---------------------------------------------------------------------------
+  call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+  ! Save total number of points along all field lines
+  nPointLine = nPointLineIn
+  nVarLine   = nVarLineIn
+
+  ! Alloocate buffer
+  if (allocated(StateLine_VI)) deallocate(StateLine_VI)
+  if (.not.allocated(StateLine_VI)) allocate(StateLine_VI(nVarLine,nPointLine))
+
+  ! Copy into local variables
+  StateLine_VI = BufferLine_VI
+
+  if(DoTest)then
+     write(*,*)NameSub,' nVarLine,nPointLine=',nVarLine,nPointLine
+
+     ! Set the file name
+     write(NameFile,'(a,i5.5,a)') &
+          "IM/output_heidi/ray_data_t",nint(Time),".out"
+     open(UnitTmp_, FILE=NameFile, STATUS="replace")
+     ! Same format as in GM/BATSRUS/src/ray_trace_new.f90
+     write(UnitTmp_, *) 'nRadius, nLon, nPoint=',nR, nT, nPointLine
+     write(UnitTmp_, *) 'iLine l x y z rho ux uy uz bx by bz p'
+     do iPoint = 1, nPointLine
+        write(UnitTmp_, *) StateLine_VI(:, iPoint)
+     end do
+     close(UnitTmp_)
+
+     ! Now save the mapping files (+0.0 for real precision)
+     write(NameFile,'(a,i5.5,a)') &
+          "IM/output_heidi/map_north_t",nint(Time),".out"
+
+     call save_plot_file( &
+          NameFile, &
+          StringHeaderIn = 'Mapping to northern ionosphere', &
+          TimeIn       = Time+0.0, &
+          NameVarIn    = 'r Lon rIono ThetaIono PhiIono', &
+          CoordMinIn_D = (/RadiusMin+0.0,   0.0/), &
+          CoordMaxIn_D = (/RadiusMax+0.0, 360.0/), &
+          VarIn_VII    = Map_DSII(:,1,:,:))
+
+     write(NameFile,'(a,i5.5,a)') &
+          "IM/output_heidi/map_south_t",nint(Time),".out"
+     call save_plot_file( &
+          NameFile, &
+          StringHeaderIn = 'Mapping to southern ionosphere', &
+          TimeIn       = Time+0.0, &
+          NameVarIn    = 'r Lon rIono ThetaIono PhiIono', &
+          CoordMinIn_D = (/RadiusMin+0.0,   0.0/), &
+          CoordMaxIn_D = (/RadiusMax+0.0, 360.0/), &
+          VarIn_VII    = Map_DSII(:,2,:,:))
+  end if
+  
+  ! Convert Units here. Input is in SI !!!
+
+  ! Check Map_DSII for open-closed field lines, also use it for mapping
+  ! to the ionosphere for electric potential.
+
+  ! create index array that converts radial and local time index to line index
+  if (IsFirstCall) then
+     n = 0
+     do iR = 1, nR; do iT = 1, nT; do iDir = 1, 2
+        n = n+1
+        iLine_III(iDir,iR,iT) = n
+     end do; end do; end do
+     IsFirstCall = .false.
+  endif
 
 end subroutine IM_put_from_gm_line
 
