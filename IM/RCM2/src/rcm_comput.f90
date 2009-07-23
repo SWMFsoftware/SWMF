@@ -386,6 +386,7 @@ END IF
 
        CASE (4)
       
+
          ! weird ellipse for SWMF
 
          ! The maximum distance for the tip of the ellipse towards the midnight meridian (-X)
@@ -441,6 +442,26 @@ END IF
             write(iUnitOut,*)' Ellipse size adjusted ',lp,' times. size=',R_12,R_24
             EXIT ChkLoop
          end do ChkLoop
+
+
+         DO j = 1-n_gc, jsize+n_gc ! place ellipse on the grid:
+
+            a = 1.0_rprec
+            b = REAL (isize, rprec)
+            DO lp=1,20
+               c   = 0.5 * (a+b)
+!              IF ( ABS ( Fequat_of_x (c, REAL(j,rprec)) ) < 100*EPSILON(1.0_rprec)) EXIT
+!              IF (       Fequat_of_x (c, REAL(j,rprec)) < 0.0_rprec) THEN
+               IF (       Fequat_of_x (c, REAL(j)) < 0.0_rprec) THEN
+                   b = c
+               ELSE
+                   a = c
+               END IF
+            END DO
+
+            bndloc(j) = c
+
+         END DO
 
          imin_j = CEILING (bndloc) ! first grid point inside modeling region.
 
