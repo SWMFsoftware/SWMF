@@ -2319,3 +2319,23 @@ WRITE (*,*) 'anorm',n,anorm
           END FUNCTION epst
 !
       END SUBROUTINE Elemod
+
+
+
+      SUBROUTINE Set_precipitation_rates 
+         USE rcm_variables
+         implicit none
+
+         integer (iprec) :: k
+
+
+         fudgec(1) = 0.0  ! special case of plasmasphere
+
+         DO k = 2, kcsize
+            fudgec(k) = precipitation_tau(ikflavc(k))
+         END DO
+
+         fudge = fudgec
+
+         RETURN
+      END SUBROUTINE Set_precipitation_rates

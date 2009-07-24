@@ -122,6 +122,7 @@ MODULE Rcm_variables
     REAL (rprec) :: alamc (kcsize)=0.0, etac (kcsize), fudgec (kcsize), &
                     eeta (1-n_gc:isize+n_gc,1-n_gc:jsize+n_gc,kcsize)=0.0, &
                     eeta_cutoff, cmax, &
+                    precipitation_tau(iesize)=(/0.3,0.0,0.0/), &
                     eeta_avg (1-n_gc:isize+n_gc,1-n_gc:jsize+n_gc,kcsize),&
                     density     (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &
                     pressure    (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &

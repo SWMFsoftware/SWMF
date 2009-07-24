@@ -222,12 +222,27 @@ Define which ionosphere solver to use. Options are "IE" (SWMF solver) or "RCM"
 <command name="PRECIPITATION">
 	<parameter name="LossFactorH" type="real" default="0" min="0" max="1"/>
 	<parameter name="LossFactorO" type="real" default="0" min="0" max="1"/>
+	<parameter name="LossFactore" type="real" default="0" min="0" max="1"/>
 
 #PRECIPITATION
-0.1		LossFactorH
-0.1		LossFactorO
+0.3		LossFactore
+0.0		LossFactorH
+0.0		LossFactorO
 
-Loss of ions through the loss cone. Default values are 0, ie. no loss.
+Parameter that controls, in a somewhat crude manner,
+the rate of particle precipitation into the
+atmosphere (one for each species, total of 3). RCM code calculates 
+the rate of precipitation in the limit of strong pitch-angle scattering,
+and the factors here reduce
+this maximum possible rate. In other words, if the max. rate of precipitation
+for electrons is R_ele, then in the code the rate will be set to
+R_ele*LossFactore. If LossFactor=0, then there is no loss through precipitaton;
+if LossFactor=1, the precipitation is maximum possible. This parameter is
+used in two places in the RCM: one is a loss process for hot magnetospheric
+population (right-hand side of the advection equation), the other one is
+to evaluate conductance enhancements in the auroral oval (in the module 
+that computes conductances).
+
 </command>
 
 <command name="TEMPERATURE">

@@ -333,6 +333,7 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
      CALL Read_winds ()
      CALL Read_dktime (L_dktime)
      CALL Read_trf ()
+     CALL Set_precipitation_rates ()
      !
      !                                                                       
      IF (iProc == 0) THEN

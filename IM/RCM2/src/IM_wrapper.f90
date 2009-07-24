@@ -8,7 +8,8 @@ subroutine IM_set_param(CompInfo, TypeAction)
        DoRestart, iDtRcm, iDtPlot, asci_flag, nFilesPlot, iDnPlot, &
        plot_area, plot_var, plot_format, &
        x_h, x_o, L_dktime, sunspot_number, f107, doy, &
-       ipot, ibnd_type
+       ipot, ibnd_type, &
+       precipitation_tau
   use ModReadParam
   use ModUtilities, ONLY: fix_dir_name, check_dir, lower_case
 
@@ -22,11 +23,12 @@ subroutine IM_set_param(CompInfo, TypeAction)
 
   !LOCAL VARIABLES:
   character (len=100) :: NameCommand, StringPlot
-  character (len=20)  :: StringTypeIonosphere='', StringTypeOuterboundary=''
+  character (len=20)  :: StringTypeIonosphere='', StringTypeOuterboundary='',&
+                         LossFactorString=''
   logical             :: DoEcho=.false.
   logical             :: UseStrict=.true.
   integer :: iFile
-  real :: FractionH,FractionO, SunspotNumber,F107MonthlyMean,DayOfYear
+  real :: FractionH,FractionO, SunspotNumber,F107MonthlyMean,DayOfYear,tau_in=0.0
   !-------------------------------------------------------------------------
 
   select case(TypeAction)
@@ -142,6 +144,22 @@ subroutine IM_set_param(CompInfo, TypeAction)
                     call CON_stop('ERROR in IM/RCM2/src/IM_wrapper.f90: '// &
                       '#OUTERBOUNDARY has an illegal value')
               end select
+        case ("#PRECIPITATION")
+              call read_var ('LossFactore',tau_in)
+                   precipitation_tau(1) = tau_in
+              call read_var ('LossFactorH',tau_in)
+                   precipitation_tau(2) = tau_in
+              call read_var ('LossFactorO',tau_in)
+                   precipitation_tau(3) = tau_in
+              if (precipitation_tau(1) < 0 .or. precipitation_tau(1) > 1.0)&
+                 call CON_stop('ERROR in IM/RCM2/src/IM_wrapper.f90: '// &
+                      '#LossFactore has an illegal value')
+              if (precipitation_tau(2) < 0 .or. precipitation_tau(2) > 1.0)&
+                 call CON_stop('ERROR in IM/RCM2/src/IM_wrapper.f90: '// &
+                      '#LossFactorH has an illegal value')
+              if (precipitation_tau(3) < 0 .or. precipitation_tau(3) > 1.0)&
+                 call CON_stop('ERROR in IM/RCM2/src/IM_wrapper.f90: '// &
+                      '#LossFactorO has an illegal value')
         case default
            if(iProc==0) then
               write(*,'(a,i4,a)')NameSub//' IM_ERROR at line ',i_line_read(),&

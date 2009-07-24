@@ -1458,7 +1458,7 @@ CONTAINS
               'Incorrect ksize in IM/inputrcmlas1')
          READ (LUN,'(A80)') form_string
          DO k = 1, n
-            READ (LUN, form_string) alam(k), eta(k), ikflav(k), fudge(k)
+            READ (LUN, form_string) alam(k), eta(k), ikflav(k)
          END DO
 !
          READ (LUN,'(TR2,I10.10)') n
@@ -1466,7 +1466,7 @@ CONTAINS
               'Incorrect kcsize in IM/inputrcmlas1')
          READ (LUN,'(A80)') form_string
          DO k = 1, n
-            READ (LUN, form_string) alamc(k), etac(k), ikflavc(k), fudgec(k)
+            READ (LUN, form_string) alamc(k), etac(k), ikflavc(k)
          END DO
 !
       CLOSE (UNIT = LUN)
@@ -1485,18 +1485,18 @@ CONTAINS
       OPEN (LUN, FORM = 'FORMATTED', STATUS='REPLACE', &
            FILE = trim(NameRcmDir)//'input/rcmlas1')
 !
-        form_string = '(2(TR2,ES15.7), TR2,I3, TR2,ES15.7)'
+        form_string = '(2(TR2,ES15.7), TR2,I3)'
         WRITE (LUN, '(I10.10)') SIZE(alam)
         WRITE (LUN, '(A80)') form_string
         DO k = 1, SIZE (alam)
-           WRITE (LUN, form_string) alam(k), eta(k), ikflav(k), fudge(k)
+           WRITE (LUN, form_string) alam(k), eta(k), ikflav(k)
         END DO
 !
-        form_string = '(2(TR2,ES15.7), TR2,I3, TR2,ES15.7)'
+        form_string = '(2(TR2,ES15.7), TR2,I3)'
         WRITE (LUN, '(I5.5)') SIZE (alamc)
         WRITE (LUN, '(A80)') form_string
         DO k = 1, SIZE (alamc)
-           WRITE (LUN, form_string) alamc(k), etac(k), ikflavc(k),fudgec(k)
+           WRITE (LUN, form_string) alamc(k), etac(k), ikflavc(k)
         END DO
 !
       CLOSE (LUN)

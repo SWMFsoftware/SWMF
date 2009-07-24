@@ -82,8 +82,7 @@
       OPEN (UNIT=LUN, FILE=trim(NameRcmDir)//'alam_values.dat', &
            STATUS='OLD', ACTION='READ')
       DO k = 1, kcsize
-         READ (LUN,*) k_in, alamc(k), ikflavc(k), fudgec(k)
-print*,k_in, alamc(k), ikflavc(k), fudgec(k)
+         READ (LUN,*) k_in, alamc(k), ikflavc(k)
          IF (k_in /= k) STOP 'mismatch in k'
          IF (ikflavc(k) == 1 .AND. alamc(k) > 0.0) STOP 'ALAM>0 FOR ELECTRONS'
       END DO
@@ -91,7 +90,6 @@ print*,k_in, alamc(k), ikflavc(k), fudgec(k)
 !
       alam   = alamc
       ikflav = ikflavc
-      fudge  = fudgec
 !
 !
 !
