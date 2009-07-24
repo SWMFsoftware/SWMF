@@ -1,6 +1,9 @@
 #ECHO
 T			DoEcho
 
+#TEST
+IM_put_from_gm_line
+
 #TIMEACCURATE
 F			DoTimeAccurate
 
