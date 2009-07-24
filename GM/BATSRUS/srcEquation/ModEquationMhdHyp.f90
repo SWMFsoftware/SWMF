@@ -1,6 +1,6 @@
 module ModVarIndexes
 
-  use ModSingleFluid
+  use ModSingleFluid, Redefine => Hyp_
 
   implicit none
 
@@ -33,7 +33,8 @@ module ModVarIndexes
        RhoUz_ = 4,    &
        Bx_    = 5,    &
        By_    = 6,    &
-       Bz_    = 7,    & ! Hyp_ = Bz_+1 is defined in ModAdvance
+       Bz_    = 7,    &
+       Hyp_   = 8,    &
        p_     = nVar, &
        Energy_= nVar+1
 

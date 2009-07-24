@@ -68,6 +68,9 @@ module ModVarIndexes
         Ne3Energy_ = nVar+4, &
         Ne4Energy_ = nVar+5 
 
+   ! These variables are not used, but have to be defined to 1
+   integer, parameter :: Pe_ = 1, Ppar_ = 1, Hyp_ = 1, Erad_ = 1
+
    ! This allows to calculate RhoUx_ as RhoU_+x_ and so on.
    integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1, B_ = Bx_-1
 

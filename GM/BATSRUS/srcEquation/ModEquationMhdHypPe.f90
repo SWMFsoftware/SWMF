@@ -1,6 +1,6 @@
 module ModVarIndexes
 
-  use ModSingleFluid
+  use ModSingleFluid, Redefine1 => Pe_, Redefine2 => Hyp_
 
   implicit none
 
@@ -35,10 +35,12 @@ module ModVarIndexes
        RhoUz_ = 4,    &
        Bx_    = 5,    &
        By_    = 6,    &
-       Bz_    = 7,    & ! Hyp_ = Bz_+1 = 8 is defined in ModAdvance
-       p_     = nVar, & ! Pe_  = p_ -1 = 9 is defined in ModAdvance
+       Bz_    = 7,    &
+       Hyp_   = 8,    &
+       Pe_    = 9,    &
+       p_     = nVar, &
        Energy_= nVar+1
-
+ 
   ! This allows to calculate rhoUx_ as rhoU_+x_ and so on.
   integer, parameter :: RhoU_ = RhoUx_-1, B_ = Bx_-1
 

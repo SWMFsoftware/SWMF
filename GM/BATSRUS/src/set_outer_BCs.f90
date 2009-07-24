@@ -8,7 +8,7 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
   use ModProcMH
   use ModMain
   use ModVarIndexes
-  use ModAdvance, ONLY: State_VGB, Eradiation_
+  use ModAdvance, ONLY: State_VGB, Erad_
   use ModParallel, ONLY: NOBLK, NeiLev
   use ModGeometry, ONLY: far_field_BCs_BLK, MaxBoundary, TypeGeometry, XyzMin_D
   use ModPhysics
@@ -123,7 +123,7 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
         call BC_cont(1,nVar)
         if(UseGrayDiffusion) &                              !^CFG IF IMPLICIT
              call set_gray_outflow_bc(iSide, iBlock, &      !^CFG IF IMPLICIT
-             Eradiation_, nVar, State_VGB(:,:,:,:,iBlock))  !^CFG IF IMPLICIT
+             Erad_, nVar, State_VGB(:,:,:,:,iBlock))  !^CFG IF IMPLICIT
      case('raeder')
         call BC_cont(1,nVar)
         if(iSide==north_.or.iSide==south_)then

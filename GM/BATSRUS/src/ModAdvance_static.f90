@@ -15,15 +15,12 @@ Module ModAdvance
   ! Numerical flux type
   character (len=10) :: FluxType
 
-  ! Named index for hyperbolic scalar field for div B cleaning
-  integer, parameter:: Hyp_ = Bz_ + 1
-
   ! Named index for electron pressure and velocity
-  integer, parameter:: Pe_ = p_ - 1, eFluid_ = nFluid + 1
-  logical, parameter:: UseElectronPressure = NameVar_V(Pe_) == 'Pe'
-
-  ! Named index for radiation energy
-  integer, parameter, public :: Eradiation_ = p_ - 2
+  integer, parameter:: eFluid_ = nFluid + 1
+  logical, parameter:: UseElectronPressure = Pe_ > 1
+  logical, parameter:: UseParallelPressure = Ppar_ > 1
+  
+  ! Named index for radiation energy -- Define Erad_ in ModSingleFuild initially 
 
   !\ One of the two possible ways to treat the MHD-like systems
   !  (oartially symmetrizable, following the Godunov definition).

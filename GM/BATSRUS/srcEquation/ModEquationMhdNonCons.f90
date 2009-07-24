@@ -1,6 +1,6 @@
 module ModVarIndexes
 
-  use ModSingleFluid, IGNORE => IsMhd
+  use ModSingleFluid, Redefine => IsMhd
 
   implicit none
 

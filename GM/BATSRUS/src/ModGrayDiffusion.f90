@@ -71,7 +71,7 @@ contains
 
   subroutine init_gray_diffusion
 
-    use ModAdvance,     ONLY: Eradiation_
+    use ModAdvance,     ONLY: Erad_
     use ModMain,        ONLY: UseGrayDiffusion
     use ModSize,        ONLY: nI, nJ, nK, MaxBlock, nDim
     use ModVarIndexes,  ONLY: NameVar_V
@@ -85,9 +85,9 @@ contains
 
     if(allocated(Erad_G)) RETURN
 
-    ! Make sure that Eradiation_ is correct
+    ! Make sure that Erad_ is correct
     if(UseGrayDiffusion)then
-       if(NameVar_V(Eradiation_) /= "Erad") call stop_mpi(NameSub// &
+       if(NameVar_V(Erad_) /= "Erad") call stop_mpi(NameSub// &
             ": incorrect index for Erad variable in ModEquation")
 
        EradMin = cRadiationNo*(TradMinSi*Si2No_V(UnitTemperature_))**4
@@ -99,7 +99,7 @@ contains
     if(UseFullImplicit)then
        nDiff = 1
        allocate(iDiff_I(nDiff))
-       iDiff_I(1) = Eradiation_
+       iDiff_I(1) = Erad_
        nRelax = 1
     end if
        
@@ -159,7 +159,7 @@ contains
     !\
     ! Calculate the diffusion part of the radiation energy flux.
     !/
-    use ModAdvance,      ONLY: State_VGB, Eradiation_
+    use ModAdvance,      ONLY: State_VGB, Erad_
     use ModFaceGradient, ONLY: calc_face_gradient
     use ModPhysics,      ONLY: Si2No_V, UnitX_, Clight
     use ModTemperature,  ONLY: UseRadFluxLimiter, TypeRadFluxLimiter
@@ -175,7 +175,7 @@ contains
     real :: FaceGrad_D(3), Grad2ByErad2
     !--------------------------------------------------------------------------
 
-    if(IsNewBlockGrayDiffusion) Erad_G = State_VGB(Eradiation_,:,:,:,iBlock)
+    if(IsNewBlockGrayDiffusion) Erad_G = State_VGB(Erad_,:,:,:,iBlock)
 
     call calc_face_gradient(iDir, i, j, k, iBlock, &
          Erad_G, IsNewBlockGrayDiffusion, FaceGrad_D)
@@ -188,7 +188,7 @@ contains
        DiffusionOpacity = DiffusionOpacitySi/Si2No_V(UnitX_)
 
        if(UseRadFluxLimiter)then
-          Grad2ByErad2 = sum(FaceGrad_D**2)/State_V(Eradiation_)**2
+          Grad2ByErad2 = sum(FaceGrad_D**2)/State_V(Erad_)**2
 
           select case(TypeRadFluxLimiter)
           case("sum")
@@ -217,7 +217,7 @@ contains
   subroutine calc_source_gray_diffusion(iBlock)
 
     use ModAdvance,    ONLY: State_VGB, Source_VC, &
-         uDotArea_XI, uDotArea_YI, uDotArea_ZI, Eradiation_
+         uDotArea_XI, uDotArea_YI, uDotArea_ZI, Erad_
     use ModConst,      ONLY: cLightSpeed
     use ModGeometry,   ONLY: vInv_CB, y_BLK, TypeGeometry
     use ModImplicit,   ONLY: UseFullImplicit
@@ -243,10 +243,10 @@ contains
 
        ! Adiabatic compression of radiation energy by fluid velocity (fluid 1)
        ! (GammaRel-1)*Erad*Div(U)
-       RadCompression = (GammaRel-1.0)*State_VGB(Eradiation_,i,j,k,iBlock)*DivU
+       RadCompression = (GammaRel-1.0)*State_VGB(Erad_,i,j,k,iBlock)*DivU
 
        ! dErad/dt = - adiabatic compression
-       Source_VC(Eradiation_,i,j,k) = Source_VC(Eradiation_,i,j,k) &
+       Source_VC(Erad_,i,j,k) = Source_VC(Erad_,i,j,k) &
             - RadCompression
 
        ! dE/dt    = + adiabatic compression
@@ -270,10 +270,10 @@ contains
        ! Source term due to absorption and emission
        ! Sigma_a*(cRadiation*Te**4-Erad)
        AbsorptionEmission =  RelaxCoef_VCB(1,i,j,k,iBlock) &
-            *(cRadiationNo*Te**4 - State_VGB(Eradiation_,i,j,k,iBlock))
+            *(cRadiationNo*Te**4 - State_VGB(Erad_,i,j,k,iBlock))
 
        ! dErad/dt = + AbsorptionEmission
-       Source_VC(Eradiation_,i,j,k) = Source_VC(Eradiation_,i,j,k) &
+       Source_VC(Erad_,i,j,k) = Source_VC(Erad_,i,j,k) &
             + AbsorptionEmission
 
        ! dE/dt    = - AbsorptionEmission
@@ -288,7 +288,7 @@ contains
        ! NOTE: here we have to use signed radial distance!
        do k=1,nK; do j=1, nJ; do i=1, nI
           Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
-               + (1./3.)*State_VGB(Eradiation_,i,j,k,iBlock) &
+               + (1./3.)*State_VGB(Erad_,i,j,k,iBlock) &
                / y_BLK(i,j,k,iBlock)
        end do; end do; end do
     end if
@@ -347,7 +347,7 @@ contains
 
   subroutine get_impl_gray_diff_state(StateImpl_VGB,DconsDsemi_VCB)
 
-    use ModAdvance,  ONLY: Eradiation_, State_VGB
+    use ModAdvance,  ONLY: Erad_, State_VGB
     use ModImplicit, ONLY: nw, nImplBlk, impl2iBlk, kr, TypeSemiImplicit, &
          iEradImpl, iTeImpl, ImplCoeff
     use ModMain,     ONLY: nDim, x_, y_, nI, nJ, nK, MaxImplBlk, Dt
@@ -384,7 +384,7 @@ contains
        if(TypeSemiImplicit=='radiation' .or. TypeSemiImplicit=='radcond')then
           do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
              StateImpl_VGB(iEradImpl,i,j,k,iImplBlock) = &
-                  State_VGB(Eradiation_,i,j,k,iBlock)
+                  State_VGB(Erad_,i,j,k,iBlock)
           end do; end do; end do
        end if
        if(TypeSemiImplicit=='radcond')then
@@ -721,7 +721,7 @@ contains
          if(UseRadFluxLimiter)then
 
             if(IsNewBlockGrayDiffusion)then
-               Erad_G = State_VGB(Eradiation_,:,:,:,iBlock)
+               Erad_G = State_VGB(Erad_,:,:,:,iBlock)
                call set_block_field(iBlock, 1, Erad1_G, Erad_G)
 
                IsNewBlockGrayDiffusion = .false.
@@ -1425,7 +1425,7 @@ contains
 
   subroutine update_impl_gray_diff(iBlock, iImplBlock, StateImpl_VG)
 
-    use ModAdvance,  ONLY: State_VGB, Rho_, p_, Eradiation_
+    use ModAdvance,  ONLY: State_VGB, Rho_, p_, Erad_
     use ModEnergy,   ONLY: calc_energy_cell
     use ModImplicit, ONLY: nw, TypeSemiImplicit, iEradImpl, iTeImpl, &
          DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
@@ -1445,15 +1445,15 @@ contains
 
     if(TypeSemiImplicit=='radiation' .or. TypeSemiImplicit=='radcond')then
        do k = 1,nK; do j = 1,nJ; do i = 1,nI
-          State_VGB(Eradiation_,i,j,k,iBlock) = &
+          State_VGB(Erad_,i,j,k,iBlock) = &
                max(EradMin, StateImpl_VG(iEradImpl,i,j,k))
 
-          if(State_VGB(Eradiation_,i,j,k,iBlock) < 0.0)then
+          if(State_VGB(Erad_,i,j,k,iBlock) < 0.0)then
              write(*,*)NameSub,': ERROR EradMin, EradOrig=', &
                   EradMin, StateImpl_VG(iEradImpl,i,j,k)
 
              write(*,*)NameSub,': ERROR negative Erad =', &
-                  State_VGB(Eradiation_,i,j,k,iBlock)
+                  State_VGB(Erad_,i,j,k,iBlock)
              write(*,*)NameSub,': ERROR at i,j,k,iBlock=', i, j, k, iBlock
              call stop_mpi(NameSub//' negative Erad')
           end if
@@ -1465,7 +1465,7 @@ contains
           AbsorptionEmission = ImplCoeff &
                *PointSemiCoef_VCB(Relax_,i,j,k,iBlock) &
                * (PointSemiCoef_VCB(Planck_,i,j,k,iBlock) &
-               -  State_VGB(Eradiation_,i,j,k,iBlock)) &
+               -  State_VGB(Erad_,i,j,k,iBlock)) &
                + (1.0-ImplCoeff)*PointSemiCoef_VCB(Relax_,i,j,k,iBlock) &
                *(PointSemiCoef_VCB(Planck_,i,j,k,iBlock) &
                - ImplOld_VCB(iEradImpl,i,j,k,iBlock))

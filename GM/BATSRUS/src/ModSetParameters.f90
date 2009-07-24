@@ -1871,7 +1871,7 @@ contains
     UseConstrainB   = .false.         !^CFG IF CONSTRAINB
 
     UseB0Source     = UseB0
-    UseHyperbolicDivB = NameVar_V(Hyp_) == 'Hyp'
+    UseHyperbolicDivB = Hyp_ > 1
 
     UseUpdateCheck  = .true.
     ! The use of (/../) is correct F90, but it is replaced

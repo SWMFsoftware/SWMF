@@ -8,6 +8,9 @@ module ModVarIndexes
   character (len=*), parameter :: NameEquation = &
        'MHD with 2 ions and electron pressure'
 
+  ! These variables are not used, but have to be defined to 1
+  integer, parameter :: Ppar_ = 1, Hyp_ = 1, Erad_ = 1
+
   integer, parameter :: nVar = 19
 
   integer, parameter :: nFluid    = 3
@@ -30,7 +33,8 @@ module ModVarIndexes
        Bx_        =  5, &
        By_        =  6, &
        Bz_        =  7, &
-       p_         =  9, & ! Pe_  = p_-1 = 9 is defined in ModAdvance
+       Pe_        =  8, &
+       p_         =  9, & 
        HpRho_     = 10, &
        HpRhoUx_   = 11, &
        HpRhoUy_   = 12, &

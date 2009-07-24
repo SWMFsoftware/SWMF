@@ -1,5 +1,5 @@
 module ModVarIndexes
-  use ModSingleFluid, Redefined=>IsMhd
+  use ModSingleFluid, Redefine => IsMhd
   implicit none
 
   save

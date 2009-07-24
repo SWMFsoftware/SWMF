@@ -212,7 +212,7 @@ contains
   subroutine user_set_outerbcs(iBlock, iSide, TypeBc, IsFound)
 
     use ModSize, ONLY: nI, nJ, nK
-    use ModAdvance, ONLY: State_VGB, Eradiation_
+    use ModAdvance, ONLY: State_VGB, Erad_
     use ModImplicit, ONLY: StateSemi_VGB
     use ModGeometry, ONLY: dx_BLK
 
@@ -239,12 +239,12 @@ contains
           State_VGB(:, 0,:,:,iBlock) = State_VGB(:,1,:,:,iBlock)
           State_VGB(:,-1,:,:,iBlock) = State_VGB(:,1,:,:,iBlock)
        
-          State_VGB(Eradiation_,0,:,:,iBlock) = &
-               ( (DistBc1 - 0.5*Dx)*State_VGB(Eradiation_,1,:,:,iBlock) &
+          State_VGB(Erad_,0,:,:,iBlock) = &
+               ( (DistBc1 - 0.5*Dx)*State_VGB(Erad_,1,:,:,iBlock) &
                + Dx*EradBc1 ) / (DistBc1 + 0.5*Dx)
-          State_VGB(Eradiation_,-1,:,:,iBlock) = &
-               2*State_VGB(Eradiation_,0,:,:,iBlock) &
-               - State_VGB(Eradiation_,1,:,:,iBlock)
+          State_VGB(Erad_,-1,:,:,iBlock) = &
+               2*State_VGB(Erad_,0,:,:,iBlock) &
+               - State_VGB(Erad_,1,:,:,iBlock)
        else
           StateSemi_VGB(1,0,:,:,iBlock) = &
                ( (DistBc1 - 0.5*Dx)*StateSemi_VGB(1,1,:,:,iBlock) &
@@ -259,12 +259,12 @@ contains
           State_VGB(:,nI+1,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
           State_VGB(:,nI+2,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
 
-          State_VGB(Eradiation_,nI+1,:,:,iBlock) = &
-               ( (DistBc2 - 0.5*Dx)*State_VGB(Eradiation_,nI,:,:,iBlock) &
+          State_VGB(Erad_,nI+1,:,:,iBlock) = &
+               ( (DistBc2 - 0.5*Dx)*State_VGB(Erad_,nI,:,:,iBlock) &
                + Dx*EradBc2 ) / (DistBc2 + 0.5*Dx)
-          State_VGB(Eradiation_,nI+2,:,:,iBlock) = &
-               2*State_VGB(Eradiation_,nI+1,:,:,iBlock) &
-               - State_VGB(Eradiation_,nI  ,:,:,iBlock)
+          State_VGB(Erad_,nI+2,:,:,iBlock) = &
+               2*State_VGB(Erad_,nI+1,:,:,iBlock) &
+               - State_VGB(Erad_,nI  ,:,:,iBlock)
        else
           StateSemi_VGB(1,nI+1,:,:,iBlock) = &
                ( (DistBc2 - 0.5*Dx)*StateSemi_VGB(1,nI,:,:,iBlock) &
@@ -285,7 +285,7 @@ contains
     use ModPhysics,     ONLY: inv_gm1, ShockPosition, ShockSlope, &
          Io2No_V, No2Si_V, Si2No_V, UnitRho_, UnitP_, UnitEnergyDens_
     use ModAdvance,     ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, p_, &
-         ExtraEint_, LevelBe_, LevelXe_, LevelPl_, Eradiation_
+         ExtraEint_, LevelBe_, LevelXe_, LevelPl_, Erad_
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK
     use ModLookupTable, ONLY: interpolate_lookup_table
     use ModConst,       ONLY: cPi
@@ -477,11 +477,11 @@ contains
 
       use ModMain,ONLY: UseGrayDiffusion
       use ModPhysics,ONLY: cRadiationNo, Si2No_V, UnitTemperature_
-      use ModAdvance,ONLY: ERadiation_
+      use ModAdvance,ONLY: Erad_
       !----------------------------------------------------------------------
       if(.not.UseGrayDiffusion)RETURN
 
-      State_VGB(ERadiation_,i,j,k,iBlock) = cRadiationNo * &
+      State_VGB(Erad_,i,j,k,iBlock) = cRadiationNo * &
            (500.0 * Si2No_V(UnitTemperature_))**4
 
     end subroutine set_small_radiation_energy
@@ -715,7 +715,7 @@ contains
 
     use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
-         Eradiation_
+         Erad_
     use ModGeometry, ONLY: x_BLK
     use ModPhysics,  ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
          cRadiationNo
@@ -774,7 +774,7 @@ contains
              Tr = ( Weight1*DataHyades_VC(iTrHyades, iCell-1) &
                   + Weight2*DataHyades_VC(iTrHyades, iCell) )
 
-             State_VGB(Eradiation_,i,j,k,iBlock) = cRadiationNo*Tr**4
+             State_VGB(Erad_,i,j,k,iBlock) = cRadiationNo*Tr**4
           end if
 
        end do; end do
@@ -790,7 +790,7 @@ contains
 
     use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
-         LevelXe_, LevelPl_, Eradiation_
+         LevelXe_, LevelPl_, Erad_
     use ModGeometry,    ONLY: x_BLK, y_BLK, z_BLK, y2
     use ModTriangulate, ONLY: calc_triangulation, find_triangle
     use ModMain,        ONLY: UseGrayDiffusion
@@ -918,7 +918,7 @@ contains
        State_VGB(LevelXe_:LevelPl_,i,j,k,iBlock) = LevelHyades_V
 
        ! Radiation energy = cRadiation*Trad**4
-       if(UseGrayDiffusion) State_VGB(Eradiation_,i,j,k,iBlock) = &
+       if(UseGrayDiffusion) State_VGB(Erad_,i,j,k,iBlock) = &
             cRadiationNo * DataHyades_V(iTrHyades)**4
 
     end do; end do; end do
@@ -1042,7 +1042,7 @@ contains
     use ModConst,   ONLY: cKtoKev
     use ModSize,    ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Rho_, p_, LevelXe_, LevelBe_, LevelPl_, &
-         Eradiation_
+         Erad_
     use ModPhysics, ONLY: No2Si_V, No2Io_V, UnitRho_, UnitP_, &
          UnitTemperature_, cRadiationNo
     use ModLookupTable, ONLY: interpolate_lookup_table
@@ -1083,8 +1083,8 @@ contains
     case('tradkev','trkev')
        ! multiply by sign of Erad for debugging purpose
        NameIdlUnit = 'KeV'
-       PlotVar_G = sign(1.0,State_VGB(Eradiation_,:,:,:,iBlock)) &
-            *sqrt(sqrt(abs(State_VGB(Eradiation_,:,:,:,iBlock))/cRadiationNo))&
+       PlotVar_G = sign(1.0,State_VGB(Erad_,:,:,:,iBlock)) &
+            *sqrt(sqrt(abs(State_VGB(Erad_,:,:,:,iBlock))/cRadiationNo))&
             * No2Si_V(UnitTemperature_) * cKToKev
     case('planck')
        do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2

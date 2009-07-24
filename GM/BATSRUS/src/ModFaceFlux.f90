@@ -1559,7 +1559,7 @@ contains
     !==========================================================================
 
     subroutine godunov_flux
-      use ModAdvance, ONLY: Eradiation_
+      use ModAdvance, ONLY: Erad_
       use ModExactRS, ONLY: wR, wL, sample, pu_star, RhoL, RhoR, &
            pL, pR, UnL, UnR, UnStar, pStar
       use ModPhysics, ONLY: inv_gm1,g
@@ -1586,9 +1586,9 @@ contains
          ! Increase maximum speed due to isotropic radiation pressure
          ! To achieve this the pressure is increased by the value of the
          ! radiation pressure
-         pRadL = StateLeft_V(ERadiation_)/3.0
+         pRadL = StateLeft_V(Erad_)/3.0
          pL    = pL + pRadL
-         pRadR = StateRight_V(ERadiation_)/3.0
+         pRadR = StateRight_V(Erad_)/3.0
          pR    = pR + pRadR
       else
          !It is easier to add zero than using if(UseGrayDiffusion)
@@ -1668,9 +1668,9 @@ contains
 
       if(UseGrayDiffusion)then
          ! Diffusive radiation flux is added later for semi-implicit scheme
-         Flux_V(ERadiation_) = (3*pRadStar + StateStar_V(ERadiation_))*0.5*Un
-         if(UseFullImplicit) Flux_V(Eradiation_) = &         !^CFG IF IMPLICIT
-              Flux_V(Eradiation_) + sum(EradFlux_D*Normal_D) !^CFG IF IMPLICIT
+         Flux_V(Erad_) = (3*pRadStar + StateStar_V(Erad_))*0.5*Un
+         if(UseFullImplicit) Flux_V(Erad_) = &         !^CFG IF IMPLICIT
+              Flux_V(Erad_) + sum(EradFlux_D*Normal_D) !^CFG IF IMPLICIT
 
          ! force due to the radiation pressure gradient
          Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + pRadStar*Normal_D
@@ -1724,7 +1724,7 @@ contains
 
     use ModMultiFluid
     use ModMain,    ONLY: UseHyperbolicDivb, SpeedHyp2
-    use ModAdvance, ONLY: Hyp_, Eradiation_
+    use ModAdvance, ONLY: Hyp_, Erad_
     use ModImplicit, ONLY: UseFullImplicit     !^CFG IF IMPLICIT
 
     real,    intent(in) :: State_V(nVar)       ! input primitive state
@@ -1833,14 +1833,14 @@ contains
 
     if(UseGrayDiffusion)then
        ! Diffusive radiation flux is added later for semi-implicit scheme
-       if(UseFullImplicit) Flux_V(Eradiation_) = &         !^CFG IF IMPLICIT
-            Flux_V(Eradiation_) + sum(EradFlux_D*Normal_D) !^CFG IF IMPLICIT
+       if(UseFullImplicit) Flux_V(Erad_) = &         !^CFG IF IMPLICIT
+            Flux_V(Erad_) + sum(EradFlux_D*Normal_D) !^CFG IF IMPLICIT
 
        ! radiation pressure gradient
        Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) &
-            + State_V(Eradiation_)/3.0*Normal_D
+            + State_V(Erad_)/3.0*Normal_D
        ! work by the radiation pressure gradient
-       Flux_V(Energy_) = Flux_V(Energy_) + Un*State_V(Eradiation_)/3.0
+       Flux_V(Energy_) = Flux_V(Energy_) + Un*State_V(Erad_)/3.0
     end if
 
     if(UseParallelConduction)then
@@ -2503,7 +2503,7 @@ contains
     !========================================================================
     subroutine get_hd_speed
 
-      use ModAdvance, ONLY: Eradiation_
+      use ModAdvance, ONLY: Erad_
       use ModVarIndexes
       use ModPhysics, ONLY: g
 
@@ -2531,7 +2531,7 @@ contains
       end if
 
       if(UseGrayDiffusion)then
-         Sound = sqrt(Sound2 + (4.0/9.0)*State_V(Eradiation_)*InvRho)
+         Sound = sqrt(Sound2 + (4.0/9.0)*State_V(Erad_)*InvRho)
       else
          Sound  = sqrt(Sound2)
       end if
