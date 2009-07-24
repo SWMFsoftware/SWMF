@@ -1230,7 +1230,7 @@ contains
     use ModMain, ONLY: UseB0
     real, intent(in) :: x_D(3),Xyz_D(3)
 
-    real    :: State_V(nVar), B0_D(3), PlotVar_V(50)
+    real    :: State_V(nVar), B0_D(3), PlotVar_V(4+nVar)
     integer :: n, iLine
     !----------------------------------------------------------------------
 
