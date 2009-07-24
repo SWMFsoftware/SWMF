@@ -225,6 +225,6 @@ MODULE Rcm_variables
                   sini_blk, bir_blk, &
                   qtpedlam_blk, qtped_blk, qthall_blk, pedlam_blk, pedpsi_blk, hall_blk, &
                   c5w_blk 
-    REAL (rprec) :: eeta_blk (1-n_gc:isize+n_gc,1-n_gc,jsize+n_gc,kcsize)
+    REAL (rprec) :: eeta_blk (1-n_gc:isize+n_gc,1-n_gc:jsize+n_gc,kcsize)
 !
 END MODULE Rcm_variables
