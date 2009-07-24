@@ -6,10 +6,10 @@ subroutine IM_set_param(CompInfo,TypeAction)
   use CON_comp_info
   use ModProcIM
   use ModHeidiMain
-  use ModReadParam, only: i_session_read
+  use ModReadParam, ONLY: i_session_read
   use ModUtilities, ONLY: fix_dir_name, check_dir, lower_case
-  use ModHeidiIO, ONLY : IsFramework, StringPrefix
-  use ModIoUnit, only: STDOUT_
+  use ModHeidiIO,   ONLY: IsFramework, StringPrefix
+  use ModIoUnit,    ONLY: STDOUT_
 
   implicit none
   character (len=*), parameter :: NameSub='IM_set_param'
@@ -181,7 +181,7 @@ subroutine IM_put_from_ie_mpi(nTheta, nPhi, Potential_II)
   character(len=100):: NameFile
   !-------------------------------------------------------------------------
   write(NameFile,'(a,i5.5,a)') &
-       "IM/output_heidi/potential_t",nint(Time),".out"
+       "IM/plots/potential_t",nint(Time),".out"
 
   call save_plot_file(NameFile, &
        StringHeaderIn = 'Ionospheric potential', &
@@ -360,7 +360,7 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
 
      ! Set the file name
      write(NameFile,'(a,i5.5,a)') &
-          "IM/output_heidi/ray_data_t",nint(Time),".out"
+          "IM/plots/ray_data_t",nint(Time),".out"
      open(UnitTmp_, FILE=NameFile, STATUS="replace")
      ! Same format as in GM/BATSRUS/src/ray_trace_new.f90
      write(UnitTmp_, *) 'nRadius, nLon, nPoint=',nR, nT, nPointLine
@@ -372,7 +372,7 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
 
      ! Now save the mapping files (+0.0 for real precision)
      write(NameFile,'(a,i5.5,a)') &
-          "IM/output_heidi/map_north_t",nint(Time),".out"
+          "IM/plots/map_north_t",nint(Time),".out"
 
      call save_plot_file( &
           NameFile, &
@@ -384,7 +384,7 @@ subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
           VarIn_VII    = Map_DSII(:,1,:,:))
 
      write(NameFile,'(a,i5.5,a)') &
-          "IM/output_heidi/map_south_t",nint(Time),".out"
+          "IM/plots/map_south_t",nint(Time),".out"
      call save_plot_file( &
           NameFile, &
           StringHeaderIn = 'Mapping to southern ionosphere', &
