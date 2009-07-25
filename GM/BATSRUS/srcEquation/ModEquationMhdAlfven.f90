@@ -1,6 +1,6 @@
 module ModVarIndexes
 
-  use ModSingleFluid
+  use ModSingleFluid, Redefine1 => Palfp_, Redefine2 => Palfm_
 
   implicit none
 
@@ -32,8 +32,10 @@ module ModVarIndexes
        RhoUz_ = 4,    &
        Bx_    = 5,    &
        By_    = 6,    &
-       Bz_    = 7,    & ! Palfp_ = Bz_+1=8 is defined in ModAdvance
-       p_     = nVar, & ! Palfm_ = Bz_+2=9 is defined in ModAdvance
+       Bz_    = 7,    &
+       Palfp_ = 8,    &
+       Palfm_ = 9,    &
+       p_     = nVar, &
        Energy_= nVar+1
 
   ! This allows to calculate RhoUx_ as rhoU_+x_ and so on.
