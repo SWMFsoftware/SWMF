@@ -538,8 +538,8 @@ subroutine init_mhd_variables
   use ModVarIndexes
   use ModPhysics
   use ModMultiFluid
-  use ModAdvance, ONLY: Hyp_, Pe_, UseElectronPressure
-  use ModMain,ONLY:UseB
+  use ModAdvance, ONLY: UseElectronPressure
+  use ModMain,    ONLY: UseB
   implicit none
 
   integer :: iVar

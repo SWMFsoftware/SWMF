@@ -845,8 +845,8 @@ contains
   subroutine get_numerical_flux(Flux_V)
 
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, Rho_, Ux_, Uz_, RhoUx_, RhoUz_, &
-         UseMultiSpecies, SpeciesFirst_, SpeciesLast_
-    use ModAdvance, ONLY: DoReplaceDensity,State_VGB,Hyp_
+         Hyp_, UseMultiSpecies, SpeciesFirst_, SpeciesLast_
+    use ModAdvance, ONLY: DoReplaceDensity,State_VGB
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp
