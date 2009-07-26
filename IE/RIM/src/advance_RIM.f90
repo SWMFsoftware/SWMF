@@ -20,14 +20,15 @@ subroutine advance_RIM
 
   call distribute
 
-  if (nSolve == 0 .and. maxval(Jr) == 0.0) then
+  if (nSolve == 0 .and. maxval(Jr) == 0.0 .and. DoSolve) then
      potential = 0.0
      call gather
      return
   endif
 
-  if (maxval(Latitude) > HighLatBoundary) then
+  if (maxval(Latitude) > HighLatBoundary .or. .not. DoSolve) then
      if (UseAmie) call get_AMIE_values(CurrentTime)
+     write(*,*) "Going into getpotential"
      call IO_GetPotential(EmpiricalPotential, iError)
   endif
 
