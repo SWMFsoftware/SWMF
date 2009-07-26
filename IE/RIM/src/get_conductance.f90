@@ -86,7 +86,7 @@ subroutine get_conductance
         do iLon=0,nLons+1 
            nEmpiricalLats = 1
            do iLat=1,nLats
-              if (abs(Latitude(iLon,iLat)) > HighLatBoundary) then
+              if (abs(Latitude(iLon,iLat)) > HighLatBoundary .or. .not. DoSolve) then
                  AveE(iLon,iLat)      = EmpiricalAveE(iLon,nEmpiricalLats)
                  EFlux(iLon,iLat)     = EmpiricalEFlux(iLon,nEmpiricalLats)
                  nEmpiricalLats = nEmpiricalLats + 1
