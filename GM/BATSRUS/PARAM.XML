@@ -4768,15 +4768,12 @@ is radially inward toward the second body.
 		<parameter name="HallFactor" type="real" min="0" default="1"/>
 		<parameter name="HallCmaxFactor" type="real" min="0" max="1" 
 			default="1"/>
-		<parameter name="HallHyperFactor" type="real" min="0" max="1"
-			default="0"/>
 	</if>
 
 #HALLRESISTIVITY
 T		UseHallResist (rest of parameters read only if true)
 1.0		HallFactor
 0.5		HallCmaxFactor
-0.2		HallHyperFactor
 
 If UseHallResist is true the Hall resistivity is used.
 The off-diagonal Hall elements of the resistivity tensor
@@ -4791,10 +4788,6 @@ of the explicit scheme (unless the whistler speed is very small
 and/or the diagonal part of the resistivity tensor is dominant).
 For the implicit scheme it is better to have HallCmaxFactor=dtexpl/dt,
 otherwise there is a significant phase error.
-
-If HallHyperFactor is larger than zero, a 2nd order hyper resistivity
-is added: proportional to Delta $x^2 d^4 B/\Delta x^4$. The 0.1 to 0.2
-is a good range to suppress the island formation in the GEM challenge.
 
 Default is UseHallResist false.
 </command>
