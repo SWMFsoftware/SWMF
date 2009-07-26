@@ -16,7 +16,7 @@ subroutine calc_sources
   use ModUser,          ONLY: user_calc_sources
   use ModCoordTransform
   use ModHallResist,    ONLY: &
-       UseHallResist, HallHyperFactor, calc_hyper_resistivity 
+       UseHallResist, IonMassPerCharge
   use ModGrayDiffusion, ONLY: calc_source_gray_diffusion !^CFG IF IMPLICIT
   use ModTemperature,   ONLY: calc_source_temperature_diff, &
        UseTemperatureDiffusion
@@ -42,7 +42,7 @@ subroutine calc_sources
   real :: E_D(3), DivE
 
   ! Variables needed for Joule heating
-  real :: Current_D(3), JouleHeating
+  real :: Current_D(3), JouleHeating, HeatExchange
 
   integer:: iBlock
 
@@ -76,13 +76,22 @@ subroutine calc_sources
      end do
 
      ! Joule heating: dP/dt += (gamma-1)*eta*j**2
-     if(UseResistFlux .or. UseResistivity)then  !^CFG IF DISSFLUX BEGIN
+     if(UseResistivity)then  !^CFG IF DISSFLUX BEGIN
+
         do k=1,nK; do j=1,nJ; do i=1,nI           
            call get_current(i,j,k,iBlock,Current_D)
            JouleHeating = (g-1) * Eta_GB(i,j,k,iBlock) * sum(Current_D**2)
            Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) + JouleHeating
-           if(UseElectronPressure) &
-                Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) + JouleHeating
+           if(UseElectronPressure) then
+              ! For single ion fluid the ion-electron collision results in a 
+              ! heat exchange term for the electron pressure 
+              ! See eq. 4.124c in Schumk and Nagy.
+              HeatExchange = (g-1) * Eta_GB(i,j,k,iBlock) * &
+                   3*State_VGB(Rho_,i,j,k,iBlock)*(1./IonMassPerCharge**2)* &
+                   (State_VGB(P_,i,j,k,iBlock) - 2*State_VGB(Pe_,i,j,k,iBlock))
+              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) + JouleHeating &
+                   + HeatExchange
+           end if
         end do; end do; end do
 
         if(DoTestMe.and.VarTest==P_)call write_source('After eta j')
@@ -273,11 +282,6 @@ subroutine calc_sources
      if(DoTestMe) call write_source('After JxB term')
   end if
 
-
-  if(UseHallResist .and. HallHyperFactor > 0.0) then
-     call calc_hyper_resistivity(iBlock)
-     if(DoTestMe) call write_source('After HyperResist')
-  end if
 
   if(UseTemperatureDiffusion) &
        call calc_source_temperature_diff(iBlock)
