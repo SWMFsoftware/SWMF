@@ -202,7 +202,6 @@ F			UseSourceImpl
 T			UseHallResistFlux
 3.76991e+06		HallFactor
 0.0			HallCmaxFactor
-0.0			HallHyperFactor
 
 #SAVERESTART
 F			DoSaveRestart
