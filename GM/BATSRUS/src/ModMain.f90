@@ -186,10 +186,6 @@ Module ModMain
   logical:: UseHeatFlux=.false.
   logical:: UseSpitzerForm=.false.
 
-  ! Logical for adding resistivity
-  logical:: UseResistFlux=.false.
-  logical:: UseAnomResist=.false.
-
   ! Logicals for adding Gray Diffusion and isotropic heat conduction
   logical :: UseGrayDiffusion = .false.
   logical :: UseHeatConduction = .false.
