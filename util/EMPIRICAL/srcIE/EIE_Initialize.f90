@@ -137,6 +137,8 @@ subroutine EIE_Initialize(iOutputError)
 
   if (index(EIE_NameOfAuroralModel,'ihp') > 0)  &
        call read_conductance_model(iError)
+  if (index(EIE_NameOfAuroralModel,'hpi') > 0)  &
+       call read_conductance_model(iError)
   if (index(EIE_NameOfAuroralModel,'pem') > 0)  &
        call read_conductance_model(iError)
 

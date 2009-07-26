@@ -27,7 +27,8 @@ subroutine read_conductance_model(iOutputError)
 
   iunit = io_unit_new()
 
-  if (index(EIE_NameOfAuroralModel,'ihp') > 0) then
+  if ( index(EIE_NameOfAuroralModel,'ihp') > 0 .or. &
+       index(EIE_NameOfAuroralModel,'hpi') > 0) then
 
      if (iDebugLevel > 2) &
           write(*,*) '===> Reading IHP background conductance model'
