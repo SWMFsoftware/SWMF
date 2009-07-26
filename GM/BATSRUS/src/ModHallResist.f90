@@ -14,7 +14,7 @@ module ModHallResist
   real, public:: HallCmaxFactor = 1.0
 
   ! Non-diagonal part (Hall) resistivity with an arbitrary factor
-  real, public:: IonMassPerCharge, HallFactor,HallHyperFactor=0.
+  real, public:: IonMassPerCharge, HallFactor
 
   ! Ion mass per charge may depend on space and time for multispecies
   real, public, allocatable:: IonMassPerCharge_G(:,:,:)
@@ -48,7 +48,7 @@ module ModHallResist
 
   ! Public methods
   public :: init_hall_resist, get_face_current, hall_factor, test_face_current
-  public :: calc_hyper_resistivity, set_ion_mass_per_charge
+  public :: set_ion_mass_per_charge
   public :: set_block_jacobian_cell           
 
   ! Local variables
@@ -97,7 +97,6 @@ contains
        write(*,*)
        write(*,*) 'HallFactor       = ',HallFactor
        write(*,*) 'HallCmaxFactor   = ',HallCmaxFactor
-       write(*,*) 'HallHyperFactor  = ',HallHyperFactor
        write(*,*) 'IonMassPerCharge = ',IonMassPerCharge
        ! Omega_Bi=B0/IonMassPerCharge'
        write(*,*)
@@ -1148,58 +1147,8 @@ contains
 
   end subroutine test_face_current
   
-  !===========================================================================
-  subroutine calc_hyper_resistivity(iBlock)
-    use ModMain, ONLY: x_, y_, z_,UseB0
-    use ModAdvance, ONLY: State_VGB, B0_DGB, &
-         Rho_, Bx_, Bz_, Energy_, Source_VC
-    use ModGeometry,  ONLY: Dx_BLK, Dy_BLK, Dz_BLK
-
-    integer, intent(in) :: iBlock
-
-    real :: InvDx4, InvDy4, InvDz4
-    real :: Coeff0, Coeff
-    real :: FullB_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2), HyperSource_D(3)
-    integer :: i, j, k
-    !----------------------------------------------------------------------
-
-    if(HallHyperFactor <= 0.0) RETURN
-
-    InvDx = 1.0/dx_Blk(iBlock)
-    InvDy = 1.0/dy_Blk(iBlock)
-    InvDz = 1.0/dz_Blk(iBlock)
-
-    Coeff0 = HallHyperFactor / (InvDx**2 + InvDy**2 + InvDz**2)
-
-    InvDx4 = InvDx**4
-    InvDy4 = InvDy**4
-    InvDz4 = InvDz**4
-
-    FullB_DG = b_DG
-    if(UseB0)FullB_DG = FullB_DG + B0_DGB(:,:,:,:,iBlock)
-
-    do k=1,nK; do j=1,nJ; do i=1,nI
-
-       Coeff = -Coeff0* IonMassPerCharge_G(i,j,k) * &
-            sqrt(sum(FullB_DG(:,i,j,k)**2)) / State_VGB(Rho_,i,j,k,iBlock)
-
-       HyperSource_D =Coeff*  &
-            ( InvDx4*( FullB_DG(:,i+2,j,k) - 4*FullB_DG(:,i+1,j,k)   &
-            +          6*FullB_DG(:,i,j,k)                           &
-            +          FullB_DG(:,i-2,j,k) - 4*FullB_DG(:,i-1,j,k) ) &
-            + InvDy4*( FullB_DG(:,i,j+2,k) - 4*FullB_DG(:,i,j+1,k)   &
-            +          6*FullB_DG(:,i,j,k)                           &
-            +          FullB_DG(:,i,j-2,k) - 4*FullB_DG(:,i,j-1,k) ) &
-            + InvDz4*( FullB_DG(:,i,j,k+2) - 4*FullB_DG(:,i,j,k+1)   &
-            +          6*FullB_DG(:,i,j,k)                           &
-            +          FullB_DG(:,i,j,k-2) - 4*FullB_DG(:,i,j,k-1) ) )
-       Source_VC(Bx_:Bz_,i,j,k)= Source_VC(Bx_:Bz_,i,j,k) + HyperSource_D
-       Source_VC(Energy_,i,j,k)= Source_VC(Energy_,i,j,k)+ &
-            sum(b_DG(:,i,j,k)*HyperSource_D)
-    end do; end do; end do
-
-  end subroutine calc_hyper_resistivity
   !=========================================================================
+
   real function hall_factor(iDir, iFace, jFace, kFace , iBlock)
 
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
