@@ -1,7 +1,8 @@
 module ModFaceFlux
 
   use ModProcMH,     ONLY: iProc
-  use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK, UseB, UseB0, cLimit
+  use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK, UseB, UseB0, cLimit, &
+       iTest, jTest, kTest, ProcTest, BlkTest, DimTest
   use ModMain,       ONLY: UseGrayDiffusion
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
@@ -327,7 +328,6 @@ contains
          jMinFaceX, jMaxFaceX, kMinFaceX, kMaxFaceX, &
          iMinFaceY, iMaxFaceY, kMinFaceY,kMaxFaceY, &
          iMinFaceZ,iMaxFaceZ, jMinFaceZ, jMaxFaceZ, &
-         iTest, jTest, kTest, ProcTest, BlkTest, DimTest, &
          UseHyperbolicDivb
 
     logical, intent(in) :: DoResChangeOnly
