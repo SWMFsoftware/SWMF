@@ -609,9 +609,9 @@ end subroutine get_gamma_emp
 subroutine get_total_wave_energy_dens(X,Y,Z,&
      VAlfvenSI,WaveEnergyDensSI)
 
-  ! Subroutine get_gamma_emp
-  ! Provides the distribution of the polytropic index, complying with
-  ! the WSA or Fisk semi-empirical models
+  ! Subroutine get_total_wave_energy_density
+  ! Provides the distribution of the total Alfven wave energy density
+  ! at the coronal base complying with the WSA semi-empirical model
 
   use ModExpansionFactors
   use ModConst
