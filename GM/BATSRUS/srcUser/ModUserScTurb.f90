@@ -136,8 +136,9 @@ contains
     use ModMain,       ONLY: time_accurate,x_,y_,z_, UseRotatingFrame, n_step, Iteration_Number
     use ModVarIndexes 
     use ModAdvance,    ONLY: State_VGB
-    use ModPhysics,    ONLY: inv_gm1,OmegaBody,Si2No_V, &
+    use ModPhysics,    ONLY: inv_gm1,OmegaBody,No2Si_V,Si2No_V, &
          UnitB_,UnitU_,UnitRho_,UnitP_
+    use ModConst,      ONLY: cMu
     use ModNumConst,   ONLY: cTolerance,cTiny
     use ModFaceBc, ONLY: FaceCoords_D, VarsTrueFace_V, TimeBc, &
          iFace, jFace, kFace, iSide, iBlockBc
@@ -145,14 +146,17 @@ contains
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
-    integer:: iCell,jCell,kCell
+    integer:: iCell,jCell,kCell, iFreq
 
     real:: DensCell,PresCell,GammaCell,TBase,B1dotR  
     real, dimension(3):: RFace_D,B1_D,U_D,B1t_D,B1n_D
 
     real :: RhoCME,UCME_D(nDim),BCME_D(nDim),pCME
     real :: BCMEn,BCMEn_D(nDim),UCMEn,UCMEn_D(nDim),UCMEt_D(nDim)
-  
+    real :: BxFaceSi, ByFaceSi,BzFaceSi,RhoFaceSi
+    real :: vAlfvenSi, OmegaRef,PoyntFluxSi, dLogFreq
+    real,dimension(I50_-I01_+1) :: LogFreq_I ! frequency grid
+
     !--------------------------------------------------------------------------
 
     RFace_D  = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
@@ -235,7 +239,19 @@ contains
     ! Update BCs for wave spectrum
     !/
     if(IsInitWave) then
-       VarsGhostFace_V(I01_:I50_)=State_VGB(I01_:I50_,iCell,jCell,kCell,iBlockBc)
+       PoyntFluxSi=400 !W/m2
+       OmegaRef=exp((maxval(LogFreq_I)-minval(LogFreq_I))/2)
+       call set_freq_grid(LogFreq_I,dLogFreq)
+       BxFaceSi=No2Si_V(UnitB_)*VarsGhostFace_V(Bx_)
+       ByFaceSi=No2Si_V(UnitB_)*VarsGhostFace_V(By_)
+       BzFaceSi=No2Si_V(UnitB_)*VarsGhostFace_V(Bz_)
+       RhoFaceSi=No2Si_V(UnitRho_)*VarsGhostFace_V(Rho_)
+       vAlfvenSi= sqrt((BxFaceSi**2+ByFaceSi**2+BzFaceSi**2)/(cMu*RhoFaceSi))
+       do iFreq=I01_,I50_
+          VarsGhostFace_V(iFreq)=(PoyntFluxSi/vAlfvenSi)* &
+               (exp(LogFreq_I(iFreq-I01_+1))/OmegaRef)**(-2.0/3.0)
+          VarsGhostFace_V(iFreq)=VarsGhostFace_V(iFreq)*Si2No_V(UnitP_)
+       end do
        IsInitWave = .false. ! prevent further changes
        write(*,*) 'faceBC set'
     end if
@@ -251,7 +267,7 @@ contains
     end if
 
   end subroutine user_face_bcs
-  !============================================================================
+  !===========================================================================
   subroutine get_plasma_parameters_cell(iCell,jCell,kCell,iBlock,&
        DensCell,PresCell,GammaCell)
      
@@ -474,23 +490,23 @@ contains
     !\
     ! Update spectrum and pressure if initialized
     !/
-    if(any(State_VGB(I01_:I50_,:,:,:,iBlock) > 0.0)) then
-       call update_states_spectrum(iBlock)
+    !if(any(State_VGB(I01_:I50_,:,:,:,iBlock) > 0.0)) then
+     !  call update_states_spectrum(iBlock)
        ! Add wave pressure to pressure state variables
        ! This means we have to add -0.5*divU*sum(I) as source to the energy equation
        ! done in user_calc_sources
-        do k=1,nK ; do j=1,nJ ; do i=1,nI
-           WavePres_CB(i,j,k,iBlock)=0.5*sum(State_VGB(I01_:I50_,i,j,k,iBlock))
+     !   do k=1,nK ; do j=1,nJ ; do i=1,nI
+      !     WavePres_CB(i,j,k,iBlock)=0.5*sum(State_VGB(I01_:I50_,i,j,k,iBlock))
            !State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
            !     +WavePres_CB(i,j,k,iBlock)
-          if(WavePres_CB(i,j,k,iBlock)<0.0) then
-             write(*,*) '=============================================='
-             write(*,*) 'Total wave pressure negative at: ',i,j,k,iBlock
-             write(*,*) 'Wave = ',WavePres_CB(i,j,k,iBlock),' MHD= ',State_VGB(p_,i,j,k,iBlock)
-             write(*,*) '=============================================='
-          end if
-       end do; end do; end do
-    end if
+       !   if(WavePres_CB(i,j,k,iBlock)<0.0) then
+       !      write(*,*) '=============================================='
+       !      write(*,*) 'Total wave pressure negative at: ',i,j,k,iBlock
+       !      write(*,*) 'Wave = ',WavePres_CB(i,j,k,iBlock),' MHD= ',State_VGB(p_,i,j,k,iBlock)
+       !      write(*,*) '=============================================='
+       !   end if
+      ! end do; end do; end do
+    !end if
   end subroutine user_update_states
   !=======================================================================
   subroutine update_states_spectrum(iBlock)
@@ -840,7 +856,7 @@ contains
   !=======================================================================
   subroutine calc_poynt_flux(i,j,k,iBLK, UseUr, PoyntFluxSi)
 
-    use ModMain,       ONLY: nBLK
+    Use ModMain,       ONLY: nBLK
     use ModSize,       ONLY: nI,nJ,nK
     use ModAdvance,    ONLY: State_VGB
     use ModVarIndexes
@@ -914,10 +930,10 @@ contains
 
     ! Minimal frequency of Alfven waves spectrum
     ! Accosiated with the state variable I01_
-    LogFreqMin = log(2*cPi*6e-6) 
+    LogFreqMin = log(2*cPi*1e-4) 
     ! Maximal frequency of Alfven waves spectrum
     ! Accosiated with the state variable I50_
-     LogFreqMax = log(2*cPi) 
+     LogFreqMax = log(2*cPi*100) 
 
      nFreq=I50_-I01_+1
     ! calculate frequency interval on a natural logarithmic scale 
