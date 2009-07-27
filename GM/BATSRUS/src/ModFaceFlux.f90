@@ -1958,6 +1958,7 @@ contains
       use ModPhysics, ONLY: inv_gm1, inv_c2LIGHT
       use ModVarIndexes
       use ModAdvance, ONLY: Pe_, UseElectronPressure
+      use ModWaves
 
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, p, e
@@ -1992,6 +1993,13 @@ contains
       B0B1    = B0x*Bx + B0y*By + B0z*Bz
       pTotal  = p + 0.5*B2 + B0B1
 
+      if(UseWavePressure)then
+         WaveEnergy = 0.0
+         do iVar = WavePressureFirst_,WavePressureLast_
+            WaveEnergy = WaveEnergy + State_V(iVar)
+         end do
+         pTotal = pTotal + (GammaWave-1.0) * WaveEnergy
+      end if
       ! Normal direction
       Un     = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
 
@@ -2075,6 +2083,21 @@ contains
       do iVar = ScalarFirst_, ScalarLast_
          Flux_V(iVar) = Un*State_V(iVar)
       end do
+
+      if(UseAlfvenSpeed)then
+         AlfvenSpeed = sqrt((FullBx**2 + FullBy**2 + FullBz**2)/Rho)
+
+         do iVar =AlfvenSpeedPlusFirst_,AlfvenSpeedPlusLast_
+            Flux_V(iVar) = &
+                 Flux_V(iVar) + AlfvenSpeed *  State_V(iVar) !!PLUS
+         end do
+
+         do iVar = AlfvenSpeedMinusFirst_,AlfvenSpeedMinusLast_
+            Flux_V(iVar) = &
+                 Flux_V(iVar) - AlfvenSpeed *  State_V(iVar) !!MINUS
+         end do
+      end if
+      
 
       !^CFG IF SIMPLEBORIS BEGIN
       if(UseBorisSimple)then
@@ -2199,6 +2222,8 @@ contains
 
     use ModMultiFluid, ONLY: select_fluid, iFluid, iRho, iUx, iUy, iUz, iP
     use ModMain, ONLY: Climit
+    use ModWaves, ONLY: UseWavePressure, GammaWave, WaveEnergy, &
+                        WavePressureFirst_, WavePressureLast_
 
     real,    intent(in) :: State_V(nVar)
     real,    intent(in) :: B0x, B0y, B0z
@@ -2381,6 +2406,13 @@ contains
          Sound2 = (g*p+(g-1)*DiffBb)*InvRho
       else
          Sound2 = g*p*InvRho
+      end if
+      if(UseWavePressure)then
+         WaveEnergy = 0.0
+         do iVar = WavePressureFirst_,WavePressureLast_
+            WaveEnergy = WaveEnergy + State_V(iVar)
+         end do
+         Sound2 = Sound2 + GammaWave * InvRho * (GammaWave-1.0) * WaveEnergy
       end if
       Un     = InvRho*sum( RhoU_D*Normal_D )
 

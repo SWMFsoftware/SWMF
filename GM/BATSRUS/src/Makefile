@@ -62,6 +62,7 @@ MODULES = \
 	ModTimeStepControl.o \
 	ModUserEmpty.o \
 	ModUser.o \
+	ModWaves.o \
 	${MOD1}	${MOD2}	${MOD3} ${MOD4} 
 
 # OBJECT FILES FOR MAIN EXECUTABLE

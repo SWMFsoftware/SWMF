@@ -25,10 +25,12 @@ subroutine calc_sources
   use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
   use ModCovariant,     ONLY: UseCovariant 
   use ModCurrent,       ONLY: get_current
+  use ModWaves,         ONLY: UseWavePressure, GammaWave, WaveEnergy, &
+       WavePressureFirst_, WavePressureLast_, DivU
 
   implicit none
 
-  integer :: i, j, k, iDim
+  integer :: i, j, k, iDim, iVar
 
   real :: Coef
 
@@ -99,6 +101,23 @@ subroutine calc_sources
      end if                 !^CFG END DISSFLUX
   end if
 
+  if(UseWavePressure)then
+     do k=1,nK; do j=1,nJ; do i=1,nI
+        DivU = vInv_CB(i,j,k,iBlock)*&
+             (uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
+             +uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
+             +uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1))
+        WaveEnergy = 0.0
+        do iVar = WavePressureFirst_,WavePressureLast_
+           Source_VC(iVar,i,j,k) = Source_VC(iVar,i,j,k) - &
+                DivU * (GammaWave - 1.0) * State_VGB(iVar,i,j,k,iBlock)
+           WaveEnergy = WaveEnergy + State_VGB(iVar,i,j,k,iBlock)
+        end do
+        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
+             DivU * (GammaWave - 1.0) * WaveEnergy
+     end do; end do; end do
+  end if
+
   if(UseElectronPressure)then
      ! Adiabatic heating for electron pressure: -(g-1)*Pe*Div(U)
      do k=1,nK; do j=1,nJ; do i=1,nI
@@ -116,7 +135,7 @@ subroutine calc_sources
 
   if(TypeGeometry == 'rz')then
      if(UseB)call stop_mpi('RZ geometry is not implemented for MHD')
-        
+
      ! Add "geometrical source term" p/r to the radial momentum equation.
      ! The azimuthal component of the velocity is assumed to be zero.
      ! The axis is along X, the "radial" direction is along the Y axis
@@ -133,7 +152,7 @@ subroutine calc_sources
         call calc_divb_source_covar
      else                   
         call calc_divb_source
-     end if                 
+     end if
 
      if(DoTestMe)write(*,*)'divb=',DivB1_GB(iTest,jTest,kTest,BlkTest)
      if(DoTestMe.and.VarTest>=RhoUx_.and.VarTest<=RhoUz_)&
@@ -198,8 +217,8 @@ subroutine calc_sources
      if(UseB0)FullB_DC = FullB_DC + B0_DGB(:,1:nI,1:nJ,1:nK,iBlock) 
      do k=1,nK; do j=1,nJ; do i=1,nI
         E_D = cross_product(FullB_DC(:,i,j,k),&
-               State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock))/&
-               State_VGB(rho_,i,j,k,iBlock)
+             State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock))/&
+             State_VGB(rho_,i,j,k,iBlock)
         ! Calculate divergence of electric field 
         DivE = vInv_CB(i,j,k,iBlock)*&
              (EDotFA_X(i+1,j,k)-EDotFA_X(i,j,k)+&
@@ -467,7 +486,7 @@ contains
     end do; end do; end do
   end subroutine calc_divb_source_covar
   !===========================================================================
- 
+
   subroutine write_source(String)
     character(len=*), intent(in) :: String
     write(*,'(a,es13.5)') NameSub//": "//String//" S(VarTest)=",&
