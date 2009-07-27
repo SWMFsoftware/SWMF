@@ -40,7 +40,7 @@ C
  250  format('  F107  ','  F107p ','  F107a ','  HLyBr ',
      >       ' FeXVIr ','   HLYa ','  HeIew ',' XUVfac ')
       write(lun,300) f107,f107p,f107a,hlybr,fexvir,hlya,heiew,xuvfac
- 300  format (5f8.2,1pe10.2,0p2f8.2)
+ 300  format (5f8.2,1p,e10.2,0p,2f8.2)
       write(lun,350)
  350  format(' Eflux  ',' Ezero  ',' Itail  ',
      >       ' FracO  ',' FracO2  ',' FracN2  ')
