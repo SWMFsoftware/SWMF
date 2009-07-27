@@ -2085,7 +2085,7 @@ contains
       end do
 
       if(UseAlfvenSpeed)then
-         AlfvenSpeed = sqrt((FullBx**2 + FullBy**2 + FullBz**2)/Rho)
+         AlfvenSpeed = FullBn/sqrt(Rho)
 
          do iVar =AlfvenSpeedPlusFirst_,AlfvenSpeedPlusLast_
             Flux_V(iVar) = &
