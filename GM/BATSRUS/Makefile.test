@@ -176,7 +176,7 @@ test_magnetometer:
 	make test_magnetometer_check
 
 test_magnetometer_compile:
-	./Config.pl =u=Default -e=Mhd -g=4,4,4,400,1
+	./Config.pl -u=Default -e=Mhd -g=4,4,4,400,1
 	make
 	make PIDL
 	

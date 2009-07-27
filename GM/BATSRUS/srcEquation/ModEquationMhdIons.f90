@@ -1,14 +1,13 @@
 module ModVarIndexes
 
+  use ModExtraVariables
+
   implicit none
 
   save
 
   ! This equation module contains the standard MHD equations.
   character (len=*), parameter :: NameEquation='MHD with 2 ions'
-
-  ! These variables are not used, but have to be defined to 1
-  integer, parameter :: Pe_ = 1,  Ppar_ = 1, Hyp_ = 1, Erad_ = 1
 
   integer, parameter :: nVar = 18
 

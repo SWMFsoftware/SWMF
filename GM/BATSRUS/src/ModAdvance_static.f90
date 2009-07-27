@@ -22,7 +22,7 @@ Module ModAdvance
   ! corresponding extra variables in the equation modules.
   logical, parameter:: UseElectronPressure = Pe_ > 1
   logical, parameter:: UseParallelPressure = Ppar_ > 1
-!!!  logical, parameter:: UseAlfvenWavePressure = Palfp_ > 1
+  logical, parameter:: UseAlfvenWavePressure = Palfp_ > 1
 
   ! Named index for radiation energy -- Define Erad_ in ModSingleFuild initially 
 
