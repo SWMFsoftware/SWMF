@@ -608,9 +608,9 @@ contains
     ! Calculate CFL for this scheme (depends on BATSRUS cfl)
     !/
     DivU = vInv_CB(i,j,k,iBlock)* &
-         (uDotArea_XI(i+1,j,k,1)-uDotArea_XI(i-1,j,k,1) &
-         +uDotArea_YI(i,j+1,k,1)-uDotArea_YI(i,j-1,k,1) &
-         +uDotArea_ZI(i,j,k+1,1)-uDotArea_ZI(i,j,k-1,1) )
+         (uDotArea_XI(i+1,j,k,1)-uDotArea_XI(i,j,k,1) &
+         +uDotArea_YI(i,j+1,k,1)-uDotArea_YI(i,j,k,1) &
+         +uDotArea_ZI(i,j,k+1,1)-uDotArea_ZI(i,j,k,1) )
     
     MyCfl = (-cHalf*DivU*dt_BLK(iBlock)*Cfl)/dLogFreq
     if(abs(MyCfl)>1.0) then
@@ -620,7 +620,7 @@ contains
     !\
     ! Set BC's
     !/
-    wEnergy_G(-1:0) = 0.0
+    wEnergy_G(-1:0) = wEnergy_G(1)
     wEnergy_G(nFreq+1:nFreq+2) = wEnergy_G(nFreq)
    
     !\
@@ -716,7 +716,7 @@ contains
     !\
     ! count cells in cut x=0, z=0
     !/
-    nCell=0.0
+    nCell=0
     do iBLK=1,nBLK
        if(unusedBLK(iBLK)) CYCLE
        do k=1,nK ; do j=1,nJ ; do i=1,nI
@@ -753,7 +753,7 @@ contains
                 do iFreq=1,nFreq
                    IwSi=No2Si_V(UnitP_)*State_VGB(I01_+iFreq-1,i,j,k,iBLK)
                    Cut_III(iRow,1)=y
-                   Cut_III(iRow,2)=LogFreq_I(iFreq)
+                   Cut_III(iRow,2)=exp(LogFreq_I(iFreq))
                    Cut_III(iRow,3)= IwSi
                    iRow=iRow+1
                 end do
@@ -769,15 +769,14 @@ contains
     write(NameProc,'(a,i4.4)') "_pe",iProc
     write(NameProcN,'(a,i4.4,a)')" ", nProc," nProc"
     if (iProc==0) then
-       HeaderName='SC/IO2/Spectrum_n_'//trim(NameStage)//'.T'
+       HeaderName='SC/IO2/Spectrum_n_'//trim(NameStage)//'.Spec'
        write(*,*) 'SC:  writing file ', HeaderName
        iUnit=io_unit_new()
        open(unit=iUnit, file=HeaderName, form='formatted', access='sequential',&
          status='replace',iostat=iError)
        write(iUnit, '(a)') HeaderName
        write(iUnit, '(a)') trim(NameProcN)
-       NameStage=trim(NameStage)//'n_step'
-       write(iUnit, '(a)') NameStage
+       write(iUnit, '(a)') trim(NameStage)//' n_step'
        close(iUnit)
     end if
     !\
@@ -790,8 +789,7 @@ contains
     ! write header if iProc==0
     !if (iProc==0) then
        write(iUnit,'(a)') 'Title: BATSRUS SC Spectrogram'
-       nCell=32
-       write(iUnit,'(a)') 'Variables = "Y[R]", "Log(w)","I[Jm-3]" '
+       write(iUnit,'(a)') 'Variables = "Y[R]", "w","I[Jm-3]" '
        write(HeaderText,'(a,i2.2,a,i6.6,a)') 'Zone I= ',nFreq,', J= ',nCell,',F=point'
        write(iUnit,'(a)') trim(HeaderText)
     !end if
