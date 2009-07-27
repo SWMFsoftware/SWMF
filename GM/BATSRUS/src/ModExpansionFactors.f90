@@ -447,8 +447,90 @@ contains
            &**2, mask=ExpansionFactorInv_N(0,:,:)<0.001))
 
     end function theta_b
-
   end subroutine set_expansion_factors
+  subroutine get_interpolated(Array_N,xInput,yInput,zInput,Output)
+    real,intent(in)   :: Array_N(-nRExt:nR,0:nPhi,0:nTheta)
+    real, intent(in)  :: xInput,yInput,zInput
+    real, intent(out) :: Output
+    real :: Rin_PFSSM,Theta_PFSSM,Phi_PFSSM
+    
+    integer :: Node_D(nDim)
+    real :: Res_D(nDim)
+    
+    real :: Weight_III(0:1,0:1,0:1)
+    real :: R_PFSSM
+    
+    !------------------------------------------------------------------
+    !\
+    ! Calculate cell-centered spherical coordinates::
+    !/
+    Rin_PFSSM   = sqrt(xInput**2+yInput**2+zInput**2)
+    !\
+    ! Avoid calculating inside a critical radius = 0.5*Rsun
+    !/
+    if (Rin_PFSSM <max(Ro_PFSSM-dR*nRExt,0.90*Ro_PFSSM)) then
+       Output= cZero
+       RETURN
+    end if
+    Theta_PFSSM = acos(zInput/Rin_PFSSM)
+    Phi_PFSSM   = atan2(yInput,xInput)
+    
+    !\
+    ! Set the source surface radius::
+    ! The inner boundary in the simulations starts at a height
+    ! H_PFSSM above that of the magnetic field measurements!
+    !/
+    
+    R_PFSSM =min(Rin_PFSSM+H_PFSSM, Rs_PFSSM)
+    
+    
+    !\
+    ! Transform Phi_PFSSM from the component's frame to the
+    ! magnetogram's frame.
+    !/
+    
+    Phi_PFSSM = Phi_PFSSM - Phi_Shift*cDegToRad
+    
+    !\
+    ! Take a residual for the bi-linear interpolation
+    !/
+    Res_D=(/R_PFSSM,Phi_PFSSM,Theta_PFSSM/)
+    
+    !Limit a value of R:
+    Res_D(R_)=max(min(Res_D(R_),Rs_PFSSM-cTiny),Ro_PFSSM-nRExt*dR+cTiny)
+    
+    Res_D(R_)=Res_D(R_)-Ro_PFSSM
+    
+    call correct_angles(Res_D)
+    Res_D(Theta_)=cos(Res_D(Theta_)) &!This is sin(latitude)
+         -sin_latitude(0)     !the same for the iTheta=0 node
+    ! of the grid
+    Res_D=Res_D*dInv_D
+    Node_D=floor(Res_D)
+    if(Node_D(R_)==nR)Node_D(R_)=Node_D(R_)-1
+    Res_D=Res_D-real(Node_D)
+    if(Node_D(Phi_)==nPhi)Node_D(Phi_)=0
+    
+    if(Node_D(Theta_)>=nTheta)then
+       Node_D(Theta_)=nTheta-1
+       Res_D(Theta_)=cOne
+    elseif(Node_D(Theta_)<=-1)then
+       Node_D(Theta_)=0
+       Res_D(Theta_)=cZero
+    end if
+    
+    Weight_III(0,:,:)=cOne-Res_D(R_)
+    Weight_III(1,:,:)=Res_D(R_)
+    Weight_III(:,0,:)=Weight_III(:,0,:)*(cOne-Res_D(Phi_))
+    Weight_III(:,1,:)=Weight_III(:,1,:)*Res_D(Phi_)
+    Weight_III(:,:,0)=Weight_III(:,:,0)*(cOne-Res_D(Theta_))
+    Weight_III(:,:,1)=Weight_III(:,:,1)*Res_D(Theta_)
+    
+    Output= sum(Weight_III*Array_N( Node_D(R_):Node_D(R_)+1,&
+         & Node_D(Phi_):Node_D(Phi_)+1,&
+         & Node_D(Theta_):Node_D(Theta_)+1))
+
+  end subroutine get_interpolated
 end module ModExpansionFactors
 !=================================set_empirical_model=============
 subroutine set_empirical_model(TypeRead,BodyT0)
@@ -470,84 +552,7 @@ subroutine get_bernoulli_integral(xInput,yInput,zInput,Output)
   implicit none
   real, intent(in)  :: xInput,yInput,zInput
   real, intent(out) :: Output
-  real :: Rin_PFSSM,Theta_PFSSM,Phi_PFSSM
-
-  integer :: Node_D(nDim)
-  real :: Res_D(nDim)
-
-  real :: Weight_III(0:1,0:1,0:1)
-  real :: R_PFSSM
-
-  !------------------------------------------------------------------
-  !\
-  ! Calculate cell-centered spherical coordinates::
-  !/
-  Rin_PFSSM   = sqrt(xInput**2+yInput**2+zInput**2)
-  !\
-  ! Avoid calculating inside a critical radius = 0.5*Rsun
-  !/
-  if (Rin_PFSSM <max(Ro_PFSSM-dR*nRExt,0.90*Ro_PFSSM)) then
-     Output= cZero
-     RETURN
-  end if
-  Theta_PFSSM = acos(zInput/Rin_PFSSM)
-  Phi_PFSSM   = atan2(yInput,xInput)
-
-  !\
-  ! Set the source surface radius::
-  ! The inner boundary in the simulations starts at a height
-  ! H_PFSSM above that of the magnetic field measurements!
-  !/
-
-  R_PFSSM =min(Rin_PFSSM+H_PFSSM, Rs_PFSSM)
-
-
-  !\
-  ! Transform Phi_PFSSM from the component's frame to the
-  ! magnetogram's frame.
-  !/
-
-  Phi_PFSSM = Phi_PFSSM - Phi_Shift*cDegToRad
-
-  !\
-  ! Take a residual for the bi-linear interpolation
-  !/
-  Res_D=(/R_PFSSM,Phi_PFSSM,Theta_PFSSM/)
-
-  !Limit a value of R:
-  Res_D(R_)=max(min(Res_D(R_),Rs_PFSSM-cTiny),Ro_PFSSM-nRExt*dR+cTiny)
-
-  Res_D(R_)=Res_D(R_)-Ro_PFSSM
-
-  call correct_angles(Res_D)
-  Res_D(Theta_)=cos(Res_D(Theta_)) &!This is sin(latitude)
-       -sin_latitude(0)     !the same for the iTheta=0 node
-  ! of the grid
-  Res_D=Res_D*dInv_D
-  Node_D=floor(Res_D)
-  if(Node_D(R_)==nR)Node_D(R_)=Node_D(R_)-1
-  Res_D=Res_D-real(Node_D)
-  if(Node_D(Phi_)==nPhi)Node_D(Phi_)=0
-
-  if(Node_D(Theta_)>=nTheta)then
-     Node_D(Theta_)=nTheta-1
-     Res_D(Theta_)=cOne
-  elseif(Node_D(Theta_)<=-1)then
-     Node_D(Theta_)=0
-     Res_D(Theta_)=cZero
-  end if
-
-  Weight_III(0,:,:)=cOne-Res_D(R_)
-  Weight_III(1,:,:)=Res_D(R_)
-  Weight_III(:,0,:)=Weight_III(:,0,:)*(cOne-Res_D(Phi_))
-  Weight_III(:,1,:)=Weight_III(:,1,:)*Res_D(Phi_)
-  Weight_III(:,:,0)=Weight_III(:,:,0)*(cOne-Res_D(Theta_))
-  Weight_III(:,:,1)=Weight_III(:,:,1)*Res_D(Theta_)
-
-  Output= sum(Weight_III*WSAspeed_N( Node_D(R_):Node_D(R_)+1,&
-       & Node_D(Phi_):Node_D(Phi_)+1,&
-       & Node_D(Theta_):Node_D(Theta_)+1))
-
+  call get_interpolated(WSASpeed_N,xInput,yInput,zInput,Output)
 end subroutine get_bernoulli_integral
 
 !==========================================================================
@@ -599,6 +604,53 @@ subroutine get_gamma_emp(xx,yy,zz,gammaOut)
   end if
 
 end subroutine get_gamma_emp
+!==========================================================================
+
+subroutine get_total_wave_energy_dens(X,Y,Z,&
+     VAlfvenSI,WaveEnergyDensSI)
+
+  ! Subroutine get_gamma_emp
+  ! Provides the distribution of the polytropic index, complying with
+  ! the WSA or Fisk semi-empirical models
+
+  use ModExpansionFactors
+  use ModConst
+  use ModPhysics,ONLY: g
+  implicit none
+
+  real, intent(in) :: X,Y,Z,VAlfvenSI !VAlfven should be in m/s
+  real, intent(out)   :: WaveEnergyDensSI
+  real :: RR,Uf,ExpansionFactorInv
+  real, parameter :: RhoVAt1AU = 5.40e-15 !kg/(m2*s)
+  real, parameter :: AreaRatio = (cAU/rSun)**2
+  real, parameter :: RhoV =  AreaRatio * RhoVAt1AU
+  real, parameter :: VAlfvenMin = 1.0e5   !100 km/s
+  !------------------------------------------------------------------
+  !--
+  !\
+  ! Calculate cell-centered spherical coordinates::
+  RR   = sqrt(X**2+Y**2+Z**2)
+  !\
+  ! Avoid calculating inside a critical radius = 0.5*Rsun
+  !/
+  if (RR <max(Ro_PFSSM-dR*nRExt,0.90*Ro_PFSSM)) then 
+     WaveEnergyDensSI = 0.0
+     RETURN
+  end if
+
+  !v_\infty from WSA model:
+  call get_bernoulli_integral(X,Y,Z,Uf)
+
+  !An expansion factor
+  call get_interpolated(ExpansionFactorInv_N,X,Y,Z,ExpansionFactorInv)
+
+  WaveEnergyDensSi = (cHalf * Uf**2 + cSunGravitySI - g/(g - 1.0)*&
+          cBoltzmann/cProtonMass*&
+          T0/min(Uf/UMin, 2.0) )& !This is a modulated Tc
+          * RhoV/&
+          max(abs(VAlfvenSI) * ExpansionFactorInv, VAlfvenMin)
+
+end subroutine get_total_wave_energy_dens
 !====================================================================
 ! Subroutine write_expansion_tec generates a 2D tecplot output file,
 ! which displays the ModExpansionFactors parameters. All variables 
