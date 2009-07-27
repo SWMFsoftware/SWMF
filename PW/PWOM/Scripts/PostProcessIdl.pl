@@ -134,6 +134,15 @@ SNAPSHOT:{
 	    $linesplit[2]=$x;
 	    $linesplit[1]=$y;
 	    $linesplit[3]=$z;
+
+	    # remove extra "-" in front of zeros
+	    my $iLineElement;
+	    for $iLineElement (1..$nLineElements-2){
+		if($linesplit[$iLineElement] == 0){
+		    $linesplit[$iLineElement]=~ s/-//;
+		}
+	    }
+
 	    if ($linesplit[1]>=0){
 		$line="  ";
 	    }else{
