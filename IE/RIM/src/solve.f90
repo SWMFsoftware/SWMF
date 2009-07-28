@@ -42,7 +42,7 @@ subroutine solve
 
      ! We are doing two distinctly different regions (like old solver)
 
-     do iLat = nLats/2, nLats
+     do iLat = iMinLat, nLats
         if ( Latitude(1,iLat) >= LowLatBoundary .and. &
              Latitude(1,iLat) <= HighLatBoundary) nLatsSolve = nLatsSolve + 1
      enddo
@@ -82,8 +82,6 @@ subroutine solve
 
      else
 
-        ! Hmmm....  I am not sure how to define OCFLB yet...
-
         SolveType = SolveWithFold_
 
         if (HighLatBoundary < Latitude(1,nLats)+dLatitude(1,nLats) .and. &
@@ -94,7 +92,8 @@ subroutine solve
            DoTouchSouthPole = .true.
 
            do iLat = 1, nLats
-              if (Latitude(1,iLat)<=-minval(OCFLB) .or. Latitude(1,iLat)>=0) &
+              if ( Latitude(1,iLat)<=-minval(OCFLB)+OCFLBBuffer .or. &
+                   Latitude(1,iLat)>=0) &
                    nLatsSolve = nLatsSolve + 1
            enddo
 
@@ -105,7 +104,7 @@ subroutine solve
            ! relatively easy to do. Maybe.
            ! Only need to count northern hemishere, since we are doing a
            ! fold over.
-           do iLat = nLats/2, nLats
+           do iLat = iMinLat, nLats
               if ( Latitude(1,iLat) <= HighLatBoundary) &
                    nLatsSolve = nLatsSolve + 1
               if ( Latitude(1,iLat) >= HighLatBoundary .and. &
@@ -124,12 +123,12 @@ subroutine solve
 
   endif
 
-  if (DoFold) then
-
-     if (iDebugLevel > 1) write(*,*) "RIM==> Using Ridley Solver"
-     call ridley_solve
-
-  else
+!!!  if (DoFold) then
+!!!
+!!!     if (iDebugLevel > 1) write(*,*) "RIM==> Using Ridley Solver"
+!!!     call ridley_solve
+!!!
+!!!  else
 
      if (iDebugLevel > 1) write(*,*) "RIM==> Using Linear GMRES Solver"
 
@@ -172,7 +171,7 @@ subroutine solve
 
           ! Southern Hemisphere
           IsLowLat = .true.
-          do iLat = 1, nLats/2
+          do iLat = 1, iMinLat
              if ( Latitude(1,iLat) >= -HighLatBoundary .and. &
                   Latitude(1,iLat) <= -LowLatBoundary) then
                 IsHighLat = .false.
@@ -188,7 +187,7 @@ subroutine solve
 
           ! Northern Hemisphere
           IsLowLat = .true.
-          do iLat = nLats/2, nLats
+          do iLat = iMinLat, nLats
              if ( Latitude(1,iLat) >= LowLatBoundary .and. &
                   Latitude(1,iLat) <= HighLatBoundary) then
                 IsHighLat = .false.
@@ -212,7 +211,7 @@ subroutine solve
           ! LowLatBoundary is equator, so we can remove the conditional
           if (.not.DoTouchNorthPole) then
              IsLowLat = .true.
-             do iLat = nLats/2, nLats
+             do iLat = iMinLat, nLats
                 if (Latitude(1,iLat) <= HighLatBoundary) then
                    IsHighLat = .false.
                    if (iLat == nLats) then
@@ -233,7 +232,7 @@ subroutine solve
              do iLat = 1, nLats
                 IsHighLat = .false.
                 if (iLat == nLats) IsHighLat = .true.
-                if ( Latitude(1,iLat)<=-minval(OCFLB) .or. &
+                if ( Latitude(1,iLat)<=-minval(OCFLB)+OCFLBBuffer .or. &
                      Latitude(1,iLat)>=0) then
                    do iLon = 1, nLons
                       call fill
@@ -332,7 +331,7 @@ subroutine solve
 
           if (.not. DoTouchNorthPole) then
              ! North with mirrored south
-             do iLat = nLats/2, nLats
+             do iLat = iMinLat, nLats
                 if (Latitude(1,iLat) <= HighLatBoundary) then
                    do iLon = 1, nLons
                       iI = iI + 1
@@ -343,22 +342,23 @@ subroutine solve
              enddo
           else
              do iLat = 1, nLats
-                if ( Latitude(1,iLat)<=-minval(OCFLB) .or. &
+                if ( Latitude(1,iLat)<=-minval(OCFLB)+OCFLBBuffer .or. &
                      Latitude(1,iLat)>=0) then
                    do iLon = 1, nLons
                       iI = iI + 1
                       Potential(iLon, iLat) = x(iI)
                       if ( Latitude(1,iLat) > 0 .and. &
-                           Latitude(1,iLat) <= minval(OCFLB)) &
+                           Latitude(1,iLat) <= minval(OCFLB)-OCFLBBuffer) &
                            Potential(iLon, nLats-iLat+1) = x(iI)
                    enddo
                 endif
              enddo
+             if (iProc == 0) Potential(iLonBC,iMinLat) = 0.0
           endif
         
      end select
 
-  endif
+!  endif
 
   ! If we include poles, then the pole solution is the average of all
   ! the cells around the pole:
@@ -410,6 +410,12 @@ subroutine solve
      Potential(nLons+1,:) = Potential(    1,:)
   endif
 
+!  if (iDebugLevel > 5) then
+!     do iLat = 1, nLats
+!        write(*,*) "Potential(10,iLat): ",iLat, Potential(10,iLat), Latitude(10,iLat)
+!     enddo
+!  endif
+
   if(allocated(b)) deallocate(x, y, b, rhs, d_I, e_I, f_I, e1_I, f1_I)
 
   OldPotential = Potential
@@ -438,9 +444,15 @@ contains
        if (iLat < nLats) b(iI)=b(iI)-SolverC(iLon,iLat)*Potential(iLon,iLat+1)
     endif
 
-    if (iLat == nLats/2 .and. iProc == 0) then
-       b(iI)=b(iI)-SolverB(iLon,iLat)*Potential(iLon,iLat-1)
-    endif
+!    if (DoFold .and. DoTouchNorthPole .and. DoTouchSouthPole) then
+!       if (iLat == iMinLat .and. iProc == 0) then
+!          if (iLon == 1) b(iI)=b(iI)-SolverD(iLon,iLat)*Potential(iLon+1,iLat)
+!          if (iLon == 3) b(iI)=b(iI)-SolverE(iLon,iLat)*Potential(iLon-1,iLat)
+!       endif
+!       if (iLat == iMinLat+1 .and. iProc == 0) then
+!          if (iLon == 2) b(iI)=b(iI)-SolverB(iLon,iLat)*Potential(iLon,iLat-1)
+!       endif
+!    endif
 
   end subroutine fill
 
@@ -542,7 +554,7 @@ contains
           enddo
        enddo
 
-       do iLat = 1, nLats/2
+       do iLat = 1, iMinLat
           do iLon = 1, nLons
              OCFLB_NS = (abs(OCFLB(1,iLon))+OCFLB(2,iLon))/2.0
              if (abs(Latitude(iLon,iLat)) < OCFLB_NS-OCFLBBuffer) then
@@ -717,7 +729,7 @@ subroutine matvec_RIM(x_I, y_I, n)
 
         ! North
         if (.not. DoTouchNorthPole) then
-           do iLat = nLats/2, nLats
+           do iLat = iMinLat, nLats
               if ( Latitude(1,iLat) <= HighLatBoundary) then
                  do iLon = 1, nLons
                     iI = iI + 1
@@ -727,18 +739,29 @@ subroutine matvec_RIM(x_I, y_I, n)
            enddo
         else
            do iLat = 1, nLats
-              if ( Latitude(1,iLat)<=-minval(OCFLB) .or. &
+              if ( Latitude(1,iLat)<=-minval(OCFLB)+OCFLBBuffer .or. &
                    Latitude(1,iLat)>=0) then
                  do iLon = 1, nLons
                     iI = iI + 1
                     x_G(iLon, iLat) = x_I(iI)
                  enddo
               endif
-              if (iProc == 0 .and. iLat == nLats/2 + 1) x_G(iLon, iLat) = 0.0
            enddo
+
+           ! This is our single point BC:
+           if (iProc == 0) then
+              x_G(iLonBC  , iMinLat) = 0.0
+              do iLon = iLonBC-3, iLonBC+3
+                 x_G(iLon, iMinLat) = &
+                      (x_G(iLon-1, iMinLat) + &
+                       x_G(iLon  , iMinLat) + &
+                       x_G(iLon+1, iMinLat))/3.0
+              enddo
+           endif
+
            ! Fill in missing southern hemisphere stuff
-           do iLat = 1, nLats/2
-              if ( Latitude(1,iLat) > -minval(OCFLB)) then
+           do iLat = 1, iMinLat-1
+              if ( Latitude(1,iLat) > -minval(OCFLB)+OCFLBBuffer) then
                  do iLon = 1, nLons
                     x_G(iLon, iLat) = x_G(iLon, nLats-iLat+1)
                  enddo
@@ -823,7 +846,7 @@ subroutine matvec_RIM(x_I, y_I, n)
 
         ! Southern Hemisphere
         IsLowLat = .true.
-        do iLat = 1, nLats/2
+        do iLat = 1, iMinLat
            if ( Latitude(1,iLat) >= -HighLatBoundary .and. &
                 Latitude(1,iLat) <= -LowLatBoundary) then
               IsHighLat = .false.
@@ -832,10 +855,10 @@ subroutine matvec_RIM(x_I, y_I, n)
               endif
               do iLon = 1, nLons
                  call fill
-                 if (abs(Latitude(iLon,iLat)-LowLatBoundary) <= OCFLBBuffer) then
-                    y_i(iI) = y_i(iI) * &
-                         (abs(Latitude(iLon,iLat)-LowLatBoundary)/OCFLBBuffer)**2
-                 endif
+!                 if (abs(Latitude(iLon,iLat)-LowLatBoundary) <= OCFLBBuffer) then
+!                    y_i(iI) = y_i(iI) * &
+!                         (abs(Latitude(iLon,iLat)-LowLatBoundary)/OCFLBBuffer)**2
+!                 endif
               enddo
               IsLowLat = .false.
            endif
@@ -843,7 +866,7 @@ subroutine matvec_RIM(x_I, y_I, n)
 
         ! Northern Hemisphere
         IsLowLat = .true.
-        do iLat = nLats/2, nLats
+        do iLat = iMinLat, nLats
            if ( Latitude(1,iLat) >= LowLatBoundary .and. &
                 Latitude(1,iLat) <= HighLatBoundary) then
               IsHighLat = .false.
@@ -866,7 +889,7 @@ subroutine matvec_RIM(x_I, y_I, n)
         if (.not. DoTouchNorthPole) then
            ! Northern Hemisphere
            IsLowLat = .true.
-           do iLat = nLats/2, nLats
+           do iLat = iMinLat, nLats
               if (Latitude(1,iLat) <= HighLatBoundary) then
                  IsHighLat = .false.
                  if (iLat == nLats) then
@@ -884,12 +907,13 @@ subroutine matvec_RIM(x_I, y_I, n)
            enddo
         else
 
+           ! This is the southern polar cap & the whole northern hemisphere :
            IsLowLat = .true.
            IsHighLat = .false.
            do iLat = 1, nLats
               if (iLat == nLats) IsHighLat = .true.
-              if ( Latitude(1,iLat)<=-minval(OCFLB) .or. &
-                   Latitude(1,iLat)>=0) then
+              if ( Latitude(1,iLat)<=-minval(OCFLB)+OCFLBBuffer .or. &   ! southern
+                   Latitude(1,iLat)>=0) then                 ! northern
                  do iLon = 1, nLons
                     call fill
                  enddo
@@ -901,9 +925,10 @@ subroutine matvec_RIM(x_I, y_I, n)
 
            ! Need to know updated North and South potentials, so lets
            ! move the solution back into a 2D array.
+
            iI = 0
            do iLat = 1, nLats
-              if ( Latitude(1,iLat)<=-minval(OCFLB) .or. &
+              if ( Latitude(1,iLat)<=-minval(OCFLB)+OCFLBBuffer .or. &
                    Latitude(1,iLat)>=0) then
                  do iLon = 1, nLons
                     iI = iI + 1
@@ -913,35 +938,34 @@ subroutine matvec_RIM(x_I, y_I, n)
            enddo
 
            ! For the Southern Hemisphere, make sure to fill in values
-           do iLat = 1, nLats/2
-              if (Latitude(1,iLat) >= -minval(OCFLB)) then
+           do iLat = 1, iMinLat-1
+              if (Latitude(1,iLat) > -minval(OCFLB)+OCFLBBuffer) then
                  do iLon = 1, nLons
                     x_G(iLon,iLat) = x_G(iLon, nLats-iLat+1)
                  enddo
               endif
            enddo
 
-           iI = 0
-           do iLat = 1, nLats
-              do iLon = 1, nLons
-                 if ( Latitude(1,iLat)<=-minval(OCFLB) .or. &
-                      Latitude(1,iLat)>=0) then
-                    iI = iI + 1
-                    ! We only care about the region within the band 
-                    ! between the OCFLB and the OCFLB Buffer.
-                    if (abs(Latitude(iLon,iLat)) < &
-                         minval(OCFLB)+OCFLBBuffer .and. &
-                         abs(Latitude(iLon,iLat)) >= minval(OCFLB)) then
-                       r =  ( 1.0 - &
-                            (abs(Latitude(iLon,iLat))-minval(OCFLB)) &
-                            /OCFLBBuffer) / 2.0
-                       ! iLh = latitude of other hemisphere
-                       iLh = nLats - iLat + 1
-                       y_I(iI) = (1-r) * x_G(iLon,iLat) + r * x_G(iLon,iLh)
-                    endif
-                 endif
-              enddo
-           enddo
+            iI = 0
+            do iLat = 1, nLats
+               if ( Latitude(1,iLat)<=-minval(OCFLB)+OCFLBBuffer .or. &
+                    Latitude(1,iLat)>=0) then
+                  do iLon = 1, nLons
+                     iI = iI + 1
+                     ! We only care about the region within the band 
+                     ! between the OCFLB and the OCFLB Buffer.
+                     if ( abs(Latitude(iLon,iLat)) < minval(OCFLB) .and. &
+                          abs(Latitude(iLon,iLat)) >= &
+                          minval(OCFLB)-OCFLBBuffer) then
+                        r =  (minval(OCFLB) - abs(Latitude(iLon,iLat))) &
+                             /OCFLBBuffer / 2.0
+                        ! iLh = latitude of other hemisphere
+                        iLh = nLats - iLat + 1
+                        y_I(iI) = (1-r) * x_G(iLon,iLat) + r * x_G(iLon,iLh)
+                     endif
+                  enddo
+               endif
+            enddo
         endif
 
   end select
@@ -960,7 +984,7 @@ contains
     iI = iI + 1
     
     if (iLat /= 1 .and. iLat /= nLats) then
-       if (iLat == nLats/2+1 .and. DoFold) then
+       if (iLat == iMinLat .and. DoFold) then
           ! The boundary condition for the fold is that the potential
           ! just below the equator is the same as the potential just
           ! above the equator.
@@ -970,37 +994,14 @@ contains
                SolverC(iLon, iLat)*x_G(iLon,  iLat+1) + &
                SolverD(iLon, iLat)*x_G(iLon-1,iLat  ) + &
                SolverE(iLon, iLat)*x_G(iLon+1,iLat  )
+
        else
-!          y_I(iI) = &
-!               SolverA(iLon, iLat)*x_G(iLon,  iLat  ) + &
-!               SolverB(iLon, iLat)*x_G(iLon,  iLat-1) + &
-!               SolverC(iLon, iLat)*x_G(iLon,  iLat+1) + &
-!               SolverD(iLon, iLat)*x_G(iLon-1,iLat  ) + &
-!               SolverE(iLon, iLat)*x_G(iLon+1,iLat  )
-
-          if (abs(Latitude(iLon,iLat))-LowLatBoundary <= OCFLBBuffer) then
-
-             factor1 = sin(((abs(Latitude(iLon,iLat+1))-LowLatBoundary)/OCFLBBuffer)*3.141592/2)
-             factor2 = sin(((abs(Latitude(iLon,iLat-1))-LowLatBoundary)/OCFLBBuffer)*3.141592/2)
-
-             y_I(iI) = &
-                  SolverA(iLon, iLat)*x_G(iLon,  iLat  ) + &
-                  factor2*SolverB(iLon, iLat)*x_G(iLon,  iLat-1) + &
-                  factor1*SolverC(iLon, iLat)*x_G(iLon,  iLat+1) + &
-                  SolverD(iLon, iLat)*x_G(iLon-1,iLat  ) + &
-                  SolverE(iLon, iLat)*x_G(iLon+1,iLat  )
-
-          else
-
              y_I(iI) = &
                   SolverA(iLon, iLat)*x_G(iLon,  iLat  ) + &
                   SolverB(iLon, iLat)*x_G(iLon,  iLat-1) + &
                   SolverC(iLon, iLat)*x_G(iLon,  iLat+1) + &
                   SolverD(iLon, iLat)*x_G(iLon-1,iLat  ) + &
                   SolverE(iLon, iLat)*x_G(iLon+1,iLat  )
-
-          endif
-
        endif
     else
        if (iLat == 1) then
@@ -1027,12 +1028,25 @@ contains
     if (IsLowLat .and. iLat > 1 .and. .not. DoFold) &
          y_I(iI) = y_I(iI) - SolverB(iLon, iLat)*x_G(iLon,  iLat-1)
 
-    ! Enforce 0 potential at the equator at midnight
-!    if (iLat == nLats/2+1 .and. iLon == 1 .and. iProc == 0) then
-    if (iLat == nLats/2+1 .and. iProc == 0) then
-!       y_I(iI) = 0.0
-         y_I(iI) = y_I(iI) - SolverB(iLon, iLat)*x_G(iLon,  iLat-1)
-!       y_I(iI) = y_I(iI) - SolverA(iLon, iLat)*x_G(iLon,  iLat)
+    if ( DoFold .and. &
+         DoTouchNorthPole .and. &
+         DoTouchSouthPole .and. &
+         iProc == 0) then
+
+       ! Want to force the potential at (iLonBC,iMinLat) = 0
+
+       if (iLat == iMinLat .and. iLon == iLonBC-1) &
+            y_I(iI) = y_I(iI) - SolverE(iLon, iLat)*x_G(iLon+1,iLat  )
+
+       if (iLat == iMinLat .and. iLon == iLonBC+1) &
+            y_I(iI) = y_I(iI) - SolverD(iLon, iLat)*x_G(iLon-1,iLat  )
+
+       if (iLat == iMinLat+1 .and. iLon == iLonBC) &
+            y_I(iI) = y_I(iI) - SolverB(iLon, iLat)*x_G(iLon,  iLat-1)
+
+       if (iLat == iMinLat .and. iLon == iLonBC) &
+            y_I(iI) = y_I(iI) - SolverA(iLon, iLat)*x_G(iLon,  iLat)
+
     endif
 
   end subroutine fill
