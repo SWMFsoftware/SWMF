@@ -12,6 +12,8 @@ module ModRIM
 
   real, dimension(2,0:nLons+1) :: OCFLB = 60.0 * cDegToRad
   real :: OCFLBBuffer = 10.0 * cDegToRad
+  real :: MinLat = 0.0
+  integer :: iMinLat = 0
 
   real, dimension(0:nLons+1,nLats) :: &
        Latitude, Longitude, Potential, AveE, Eflux, SigmaH, SigmaP, &

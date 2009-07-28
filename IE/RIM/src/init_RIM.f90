@@ -201,6 +201,9 @@ subroutine init_RIM()
 
   iSize = (nLats+2) * (nProc*nLons+1)
 
+  MinLat = minval(LatitudeAll)
+  iMinLat = int(float(nLats)/2+0.5)
+
   localVar = LatitudeAll
   call MPI_REDUCE(localVar, LatitudeAll, iSize, MPI_REAL, MPI_MAX, &
        0, iComm, iError)
