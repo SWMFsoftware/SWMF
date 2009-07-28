@@ -20,7 +20,10 @@ subroutine advance_RIM
 
   call distribute
 
-  if (nSolve == 0 .and. maxval(Jr) == 0.0 .and. DoSolve) then
+  if ( nSolve == 0       .and. &
+       maxval(Jr) == 0.0 .and. &
+       DoSolve           .and. &
+       .not. UseTests) then
      potential = 0.0
      call gather
      return
