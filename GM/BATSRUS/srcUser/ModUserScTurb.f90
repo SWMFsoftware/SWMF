@@ -31,7 +31,7 @@ module ModUser
   logical                       :: IsInitWave = .false.
   integer                       :: nFreq
   real,dimension(I50_-I01_+1)   :: LogFreq_I ! frequency grid
-  real                          :: dLogFreq ! frequency grid spacing (uniform)
+  real                          :: LogFreqInertial, dLogFreq ! frequency grid spacing (uniform)
   real,dimension(nI,nJ,nK,nBLK) :: WavePres_CB=0.0 ,WaveDissip_CB=0.0 ! for plotting only
 
 contains
@@ -165,11 +165,11 @@ contains
     use ModVarIndexes 
     use ModAdvance,    ONLY: State_VGB
     use ModPhysics,    ONLY: inv_gm1,OmegaBody,No2Si_V,Si2No_V, &
-         UnitB_,UnitU_,UnitRho_,UnitP_
+                             UnitB_,UnitU_,UnitRho_,UnitP_,UnitX_
     use ModConst,      ONLY: cMu
     use ModNumConst,   ONLY: cTolerance,cTiny
-    use ModFaceBc, ONLY: FaceCoords_D, VarsTrueFace_V, TimeBc, &
-         iFace, jFace, kFace, iSide, iBlockBc
+    use ModFaceBc,     ONLY: FaceCoords_D, VarsTrueFace_V, TimeBc, &
+                             iFace, jFace, kFace, iSide, iBlockBc
     implicit none
 
     real, intent(out):: VarsGhostFace_V(nVar)
@@ -182,7 +182,8 @@ contains
     real :: RhoCME,UCME_D(nDim),BCME_D(nDim),pCME
     real :: BCMEn,BCMEn_D(nDim),UCMEn,UCMEn_D(nDim),UCMEt_D(nDim)
     real :: BxFaceSi, ByFaceSi,BzFaceSi,RhoFaceSi
-    real :: vAlfvenSi, OmegaRef,PoyntFluxSi
+    real :: xFaceSi,yFaceSi,zFaceSi
+    real :: vAlfvenSi, OmegaRef, wEnergyDensSi
   
     !--------------------------------------------------------------------------
 
@@ -266,21 +267,31 @@ contains
     ! Update BCs for wave spectrum
     !/
     if(IsInitWave) then
-       PoyntFluxSi=400 !W/m2
-       OmegaRef=exp((maxval(LogFreq_I)-minval(LogFreq_I))/2)
-   
+       
+       OmegaRef=exp(LogFreqInertial)
+       !Transform to SI
+       xFaceSi=No2Si_V(UnitX_)*VarsGhostFace_V(x_)
+       yFaceSi=No2Si_V(UnitX_)*VarsGhostFace_V(y_)
+       zFaceSi=No2Si_V(UnitX_)*VarsGhostFace_V(z_)
+
        BxFaceSi=No2Si_V(UnitB_)*VarsGhostFace_V(Bx_)
        ByFaceSi=No2Si_V(UnitB_)*VarsGhostFace_V(By_)
        BzFaceSi=No2Si_V(UnitB_)*VarsGhostFace_V(Bz_)
        RhoFaceSi=No2Si_V(UnitRho_)*VarsGhostFace_V(Rho_)
        vAlfvenSi= sqrt((BxFaceSi**2+ByFaceSi**2+BzFaceSi**2)/(cMu*RhoFaceSi))
+       call get_total_wave_energy_dens(xFaceSi,yFaceSi,zFaceSi,vAlfvenSi,wEnergyDensSi)
+
        do iFreq=I01_,I50_
-          VarsGhostFace_V(iFreq)=(PoyntFluxSi/vAlfvenSi)* &
-               (exp(LogFreq_I(iFreq-I01_+1))/OmegaRef)**(-2.0/3.0)
-          VarsGhostFace_V(iFreq)=VarsGhostFace_V(iFreq)*Si2No_V(UnitP_)
+          if(LogFreq_I(iFreq-I01_+1) .le. LogFreqInertial) then
+             VarsGhostFace_V(iFreq)=0.0
+          else
+             VarsGhostFace_V(iFreq)=(2.0/3.0)*wEnergyDensSi* &
+                  (exp(LogFreq_I(iFreq-I01_+1))/OmegaRef)**(-2.0/3.0)
+             VarsGhostFace_V(iFreq)=VarsGhostFace_V(iFreq)*Si2No_V(UnitP_)
+          end if
        end do
        IsInitWave = .false. ! prevent further changes
-       write(*,*) 'faceBC set'
+       write(*,*) 'spectrum faceBC set'
     end if
 
     !\
@@ -991,7 +1002,6 @@ contains
     ! 1D Frequency grid variables
     integer                       :: iFreq
     integer                       :: nFreqPlus, nFreqMinus
-    real                          :: LogFreqInertial
     real, dimension(I50_-I01_+1)  :: WaveEnergy_I !=w'I(logw')
     real,dimension(nI,nJ,nK,nBLK) :: FreqCutOff_CB
 
