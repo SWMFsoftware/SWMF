@@ -128,9 +128,10 @@ contains
     use ModB0,           ONLY: B0_DX, B0_DY, B0_DZ
     use ModFaceGradient, ONLY: calc_face_gradient
     use ModMain,         ONLY: nI, nJ, nK, UseB0
+    use ModMultiFluid,   ONLY: MassIon_I
     use ModNumConst,     ONLY: cTolerance
     use ModPhysics,      ONLY: inv_gm1, Si2No_V, UnitTemperature_, &
-         UnitEnergyDens_
+         UnitEnergyDens_, ElectronTemperatureRatio, AverageIonCharge
     use ModUser,         ONLY: user_material_properties
     use ModVarIndexes,   ONLY: nVar, Bx_, Bz_, Rho_, p_
 
@@ -167,7 +168,9 @@ contains
 
     if(IsNewBlockHeatConduction)then
        if(UseIdealState)then
-          Te_G = State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock)
+          Te_G = State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock) &
+               *MassIon_I(1)*ElectronTemperatureRatio &
+               /(1 + AverageIonCharge*ElectronTemperatureRatio)
        else
           do kk = -1, nK+2; do jj = -1, nJ+2; do ii = -1, nI+2
              call user_material_properties( &
@@ -181,7 +184,9 @@ contains
          Te_G, IsNewBlockHeatConduction, FaceGrad_D)
 
     if(UseIdealState)then
-       Temperature = State_V(p_)/State_V(Rho_)
+       Temperature = State_V(p_)/State_V(Rho_) &
+            *MassIon_I(1)*ElectronTemperatureRatio &
+            /(1 + AverageIonCharge*ElectronTemperatureRatio)
        Cv = State_V(Rho_)*inv_gm1
     else
        ! Note we assume that the heat conduction formula for the
