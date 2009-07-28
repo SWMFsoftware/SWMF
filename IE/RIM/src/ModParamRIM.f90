@@ -25,6 +25,8 @@ module ModParamRIM
 
   logical :: UseStaticIMF=.true.
 
+  integer, parameter :: iLonBC = 36
+
   integer :: iConductanceModel=5
   real    :: f107flux=150.
   real    :: StarlightPedConductance=1.
