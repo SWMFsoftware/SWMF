@@ -546,6 +546,7 @@ contains
     use ModGeometry, ONLY: x_Blk, y_Blk
     use ModMain,     ONLY: Time_Simulation
     use ModNumConst, ONLY: cPi
+    use ModPhysics,  ONLY: ElectronTemperatureRatio
 
     integer, intent(in) :: i, j, iBlock
     real,    intent(out):: Temperature
@@ -562,6 +563,7 @@ contains
     Spread0 = 4.0*Time0
     Temperature = Tmin + AmplitudeTemperature/(sqrt(cPi*Spread)) &
          *exp(-xx**2/Spread-yy**2/Spread0)
+    Temperature = Temperature*(1 + ElectronTemperatureRatio)
 
   end subroutine get_temperature_parcond
 
@@ -574,6 +576,7 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModGeometry,   ONLY: x_Blk, y_Blk
     use ModMain,       ONLY: nI, nJ, nK, Time_Simulation
+    use ModPhysics,    ONLY: ElectronTemperatureRatio
     use ModVarIndexes, ONLY: p_, Rho_
 
     integer,          intent(in)   :: iBlock
@@ -677,7 +680,8 @@ contains
        case('t0','temp0')
           do j=-1,nJ+2; do i=-1,nI+2
              call get_temperature_parcond(i, j, iBlock, Temperature)
-             PlotVar_G(i,j,:) = Temperature
+             PlotVar_G(i,j,:) = Temperature*ElectronTemperatureRatio &
+                  /(1 +ElectronTemperatureRatio)
           end do; end do
        case default
           IsFound = .false.

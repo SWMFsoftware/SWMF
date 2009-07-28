@@ -141,7 +141,7 @@ contains
 
     integer :: ii, jj, kk
     real :: B_D(3), Bunit_D(3), Bnorm, Cv, CvSi
-    real :: FaceGrad_D(3), HeatCoef, TemperatureSi, Temperature, &
+    real :: FaceGrad_D(3), HeatCoef, TeSi, Te, &
          FractionSpitzer, FractionFieldAligned
 
     character(len=*), parameter :: NameSub = 'get_heat_flux'
@@ -174,8 +174,8 @@ contains
        else
           do kk = -1, nK+2; do jj = -1, nJ+2; do ii = -1, nI+2
              call user_material_properties( &
-                  State_VGB(:,ii,jj,kk,iBlock), TeSiOut=TemperatureSi)
-             Te_G(ii,jj,kk) = TemperatureSi*Si2No_V(UnitTemperature_)
+                  State_VGB(:,ii,jj,kk,iBlock), TeSiOut=TeSi)
+             Te_G(ii,jj,kk) = TeSi*Si2No_V(UnitTemperature_)
           end do; end do; end do
        end if
     end if
@@ -184,16 +184,15 @@ contains
          Te_G, IsNewBlockHeatConduction, FaceGrad_D)
 
     if(UseIdealState)then
-       Temperature = State_V(p_)/State_V(Rho_) &
+       Te = State_V(p_)/State_V(Rho_) &
             *MassIon_I(1)*ElectronTemperatureRatio &
             /(1 + AverageIonCharge*ElectronTemperatureRatio)
        Cv = State_V(Rho_)*inv_gm1
     else
        ! Note we assume that the heat conduction formula for the
        ! ideal state is still applicable for the non-ideal state
-       call user_material_properties( &
-            State_V, TeSiOut=TemperatureSi, CvSiOut = CvSi)
-       Temperature = TemperatureSi*Si2No_V(UnitTemperature_)
+       call user_material_properties(State_V, TeSiOut=TeSi, CvSiOut = CvSi)
+       Te = TeSi*Si2No_V(UnitTemperature_)
        Cv = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
     end if
 
@@ -204,12 +203,12 @@ contains
        if(DoModifyHeatConduction)then
           ! Artificial modified heat conduction for a smoother transition
           ! region, Linker et al. (2001)
-          FractionSpitzer = 0.5*(1.0+tanh((Temperature-Tmodify)/DeltaTmodify))
-          HeatCoef = HeatConductionPar*(FractionSpitzer*Temperature**2.5 &
+          FractionSpitzer = 0.5*(1.0+tanh((Te-Tmodify)/DeltaTmodify))
+          HeatCoef = HeatConductionPar*(FractionSpitzer*Te**2.5 &
                + (1.0 - FractionSpitzer)*Tmodify**2.5)
        else
           ! Spitzer form for collisional regime
-          HeatCoef = HeatConductionPar*Temperature**2.5
+          HeatCoef = HeatConductionPar*Te**2.5
        end if
     end if
 
