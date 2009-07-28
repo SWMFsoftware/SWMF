@@ -4,6 +4,7 @@ module ModUser
   use ModMain, ONLY: nBLK
   use ModSize, ONLY: nI,nJ,nK
   use ModReadParam, ONLY: lStringLine
+  use ModVarIndexes
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -21,12 +22,18 @@ module ModUser
   include 'user_module.h' !list of public methods
 
   real, parameter :: VersionUserModule = 1.0
-  character (len=*), parameter :: &
+  character (len=*), parameter  :: &
        NameUserModule = 'Empirical Solar Wind and MHD Turbulence'
 
-  character(len=lStringLine) :: NameModel
-  logical                    :: IsInitWave = .false.
+  character(len=lStringLine)    :: NameModel
+
+  !Global variables - frequency grid
+  logical                       :: IsInitWave = .false.
+  integer                       :: nFreq
+  real,dimension(I50_-I01_+1)   :: LogFreq_I ! frequency grid
+  real                          :: dLogFreq ! frequency grid spacing (uniform)
   real,dimension(nI,nJ,nK,nBLK) :: WavePres_CB=0.0 ,WaveDissip_CB=0.0 ! for plotting only
+
 contains
   !============================================================================
   subroutine user_read_inputs
@@ -72,7 +79,6 @@ contains
              write(iUnitOut,*)'User read_input TURBULENCE CORONA ends'
           endif
           EXIT
-
        case default
           if(iProc == 0) then
              call write_myname; write(*,*) &
@@ -121,6 +127,8 @@ contains
 
  
     call EEE_initialize(BodyNDim_I(1),BodyTDim_I(1),g)
+    
+    call turb_init
 
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -129,6 +137,26 @@ contains
     end if
 
   end subroutine user_init_session
+  !============================================================================
+  subroutine turb_init
+
+    use ModWaves
+    use ModVarIndexes
+    use ModAdvance,    ONLY: State_VGB
+
+    implicit none
+    !--------------------------------------------------------------------------
+    UseAlfvenSpeed = .true.
+    UseWavePressure = .false.
+    
+    AlfvenSpeedPlusFirst_ = I01_
+    AlfvenSpeedPlusLast_  = I25_
+
+    AlfvenSpeedMinusFirst_ = I26_
+    AlfvenSpeedMinusLast_  = I50_
+    write(*,*) 'SC:  Frequency groups were defined'
+
+  end subroutine turb_init
   !============================================================================
   subroutine user_face_bcs(VarsGhostFace_V)
     use EEE_ModMain,   ONLY: EEE_get_state_BC
@@ -154,9 +182,8 @@ contains
     real :: RhoCME,UCME_D(nDim),BCME_D(nDim),pCME
     real :: BCMEn,BCMEn_D(nDim),UCMEn,UCMEn_D(nDim),UCMEt_D(nDim)
     real :: BxFaceSi, ByFaceSi,BzFaceSi,RhoFaceSi
-    real :: vAlfvenSi, OmegaRef,PoyntFluxSi, dLogFreq
-    real,dimension(I50_-I01_+1) :: LogFreq_I ! frequency grid
-
+    real :: vAlfvenSi, OmegaRef,PoyntFluxSi
+  
     !--------------------------------------------------------------------------
 
     RFace_D  = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
@@ -241,7 +268,7 @@ contains
     if(IsInitWave) then
        PoyntFluxSi=400 !W/m2
        OmegaRef=exp((maxval(LogFreq_I)-minval(LogFreq_I))/2)
-       call set_freq_grid(LogFreq_I,dLogFreq)
+   
        BxFaceSi=No2Si_V(UnitB_)*VarsGhostFace_V(Bx_)
        ByFaceSi=No2Si_V(UnitB_)*VarsGhostFace_V(By_)
        BzFaceSi=No2Si_V(UnitB_)*VarsGhostFace_V(Bz_)
@@ -419,7 +446,7 @@ contains
 
     implicit none
     
-    integer                      :: i,j,k,iBlock, iFreq, nFreq
+    integer                      :: i,j,k,iBlock, iFreq 
     real                         :: DivU
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
@@ -521,9 +548,7 @@ contains
     integer,intent(in)          :: iBlock
     integer                     :: i,j,k, iFreq
     real,dimension(nI,nJ,nK)    :: FreqCutOff_C
-    real,dimension(I50_-I01_+1) :: LogFreq_I ! frequency grid
-    real                        :: dLogFreq  ! frequency grid spacing
-    character(len=*),parameter  :: NameSub='update_states_spectrum'
+     character(len=*),parameter  :: NameSub='update_states_spectrum'
     !-------------------------------------------------------------------
     !\
     ! Advect solution in space ( done by update_states_MHD)
@@ -533,10 +558,9 @@ contains
     !\
     !  set frequency axis and calculate cut-off frequency
     !/
-    call set_freq_grid(LogFreq_I,dLogFreq)
-    call calc_cutoff_freq(iBlock, FreqCutOff_C)
+     call calc_cutoff_freq(iBlock, FreqCutOff_C)
 
-    do k=1,nK; do j=1,nJ ; do i=1,nI
+     do k=1,nK; do j=1,nJ ; do i=1,nI
 
        !\
        ! Dissipate wave energy before advection 
@@ -591,9 +615,7 @@ contains
     implicit none
 
     integer,intent(in)          :: i,j,k,iBlock
-    integer                     :: iFreq, nFreq
-    real,dimension(I50_-I01_+1) :: LogFreq_I ! frequency grid
-    real                        :: dLogFreq ! frequency grid spacing
+    integer                     :: iFreq
     real                        :: wEnergy_G(-1:I50_-I01_+3)! with GC
     real                        :: Limiter_I(0:I50_-I01_+2)
     real                        :: FluxL_I(1:I50_-I01_+2)
@@ -610,9 +632,7 @@ contains
     ! where:
     ! f(i+1/2), f(1-1/2) are slope-limited numerical fluxes 
     ! Here , f = wEnergy_G, f(i+/- 0.5) are FluxR, FluxL
-
-    call set_freq_grid(LogFreq_I, dLogFreq)
-    nFreq=I50_-I01_+1
+   
     !\
     !Divide each Ixx_ state variables by its frequency
     !/
@@ -717,18 +737,15 @@ contains
     
     real, allocatable,dimension(:,:) :: Cut_III ! Array to store log variables
     integer                          :: nCell,nRow,iRow 
-    real,dimension(I50_-I01_+1)      :: LogFreq_I
-    real                             :: dLogFreq,dx, dz, x,y,z, IwSi
-    integer                          :: iFreq,i,j,k,iBLK,nFreq
+    real                             :: dx, dz, x,y,z, IwSi
+    integer                          :: iFreq,i,j,k,iBLK
     integer                          :: iUnit,iError,aError
     character(len=40)                :: FileName,HeaderName 
-    character(len=11)                 :: NameStage
+    character(len=11)                :: NameStage
     character(len=7)                 :: NameProc
     character(len=30)                :: HeaderText,NameProcN
     character(len=*),parameter       :: NameSub='write_spectrogram'
     !-------------------------------------------------------------------
-    call set_freq_grid(LogFreq_I,dLogFreq)
-    nFreq=I50_-I01_+1
     !\
     ! count cells in cut x=0, z=0
     !/
@@ -872,7 +889,6 @@ contains
     real                       :: x,y,z,Bx,By,Bz,Br
     real                       :: Ux, Uy, Uz, Ur, Rho  
     real                       :: vAlfvenRadial ! in radial direction
-
     character(len=*),parameter :: NameSub='calc_poynt_flux'
     ! -----------------------------------------------------------------
     !! Poynting flux is calculated in SI UNITS
@@ -909,39 +925,41 @@ contains
        vAlfvenRadial= Ur+vAlfvenRadial
     end if
      
-    PoyntFluxSi=vAlfvenRadial*No2Si_V(UnitP_)*sum(State_VGB(I01_:I50_,i,j,k,iBLK))
+    PoyntFluxSi=vAlfvenRadial*No2Si_V(UnitP_)* & 
+         sum(State_VGB(I01_:I50_,i,j,k,iBLK))
 
   end subroutine calc_poynt_flux
   !====================================================================
-  subroutine set_freq_grid(LogFreq_I,dLogFreq)
+  subroutine set_freq_grid(nFreqPlus,nFreqMinus)
 
     use ModVarIndexes
     use ModNumConst, ONLY: cPi
 
     implicit none
-    integer                                 :: nFreq
-    real,intent(out),dimension(I50_-I01_+1) :: LogFreq_I
-    real,intent(out)                        :: dLogFreq
-    real                                    :: LogFreqMin, LogFreqMax
-    integer                                 :: iFreq
+    
+    integer,intent(in)                     :: nFreqPlus, nFreqMinus
+    integer                                :: iFreq
+    real                                   :: LogFreqMin, LogFreqMax
 
-    character(len=*),parameter              :: NameSub='set_freq_grid'
+    character(len=*),parameter             :: NameSub='set_freq_grid'
     !-----------------------------------------------------------------
-
-    ! Minimal frequency of Alfven waves spectrum
-    ! Accosiated with the state variable I01_
+    ! Minimal frequency in frequency grid
     LogFreqMin = log(2*cPi*1e-4) 
-    ! Maximal frequency of Alfven waves spectrum
-    ! Accosiated with the state variable I50_
-     LogFreqMax = log(2*cPi*100) 
 
-     nFreq=I50_-I01_+1
+    ! Maximal frequency in frequency grid
+    LogFreqMax = log(2*cPi*100) 
+
     ! calculate frequency interval on a natural logarithmic scale 
     dLogFreq = (LogFreqMax-LogFreqMin)/(nFreq-1) 
   
     ! Divide the spectrum into frequncy groups on a log scale
-    do iFreq = 1,nFreq
+    ! Plus waves (+Va)
+    do iFreq = 1,nFreqPlus
        LogFreq_I(iFreq)=LogFreqMin+(iFreq-1)*dLogFreq
+    end do
+    ! Minus waves (-Va)
+    do iFreq = 1, nFreqMinus
+       LogFreq_I(nFreqPlus+iFreq)=LogFreqMin+(iFreq-1)*dLogFreq
     end do
   end subroutine set_freq_grid
   !===================================================================
@@ -961,6 +979,7 @@ contains
     use ModConst,       ONLY: cLightSpeed, cElectronCharge, cGEV, cAU,cMu
     use ModNumConst,    ONLY: cTiny,cPi
     use ModPhysics,     ONLY: No2Si_V,Si2No_V,UnitB_,UnitRho_,UnitX_,UnitP_,UnitU_
+    use ModWaves
     
     implicit none
 
@@ -970,23 +989,22 @@ contains
     real                         :: BxNo, ByNo, BzNo, BtotSi,RhoSi ! No=normalized units, Si=SI units 
     real,dimension(nI,nJ,nK,nBLK):: vAlfvenSi_CB, PointingFluxNo_CB
     ! 1D Frequency grid variables
-    real                         :: dLogFreq
-    integer                      :: iFreq
-    integer,parameter            :: nFreq = I50_-I01_+1
-     real, dimension(nFreq)      :: LogFreq_I, WaveEnergy_I !=w'I(logw')
-    real,dimension(nI,nJ,nK,nBLK):: FreqCutOff_CB
+    integer                       :: iFreq
+    integer                       :: nFreqPlus, nFreqMinus
+    real                          :: LogFreqInertial
+    real, dimension(I50_-I01_+1)  :: WaveEnergy_I !=w'I(logw')
+    real,dimension(nI,nJ,nK,nBLK) :: FreqCutOff_CB
+
     ! Initial spectrum model parameters
     !the intensity of outward travelling waves (initial condition)
-    real,parameter               :: Alpha=1.0/10.0
-    real,parameter               :: Lambda0=4.0/10.0  ![AU]
-    real,parameter               :: FreqPower=-2.0/3.0 ! spectral index
-    real                         :: ConstCoeff
-    ! Constant coefficient appearing in initial spectrum
-    real,dimension(nI,nJ,nK,nBLK):: EnergyCoeff_CB ! product of (B^(5/3)/r) and previous coefficient
-    real                         :: MinI01,MaxI01, MinI50, MaxI50 ! for testing
-    character(len=*),parameter   :: NameSub= 'init_wave_spectrum'
+    real,parameter                :: Alpha=1.0/10.0
+    real,parameter                :: Lambda0=4.0/10.0  ![AU]
+    real,parameter                :: FreqPower=-2.0/3.0 ! spectral index
+    real                          :: ConstCoeff
+    real,dimension(nI,nJ,nK,nBLK) :: EnergyCoeff_CB ! product of (B^(5/3)/r) and previous coefficient
+    real                          :: MinI01,MaxI01, MinI50, MaxI50 ! for testing
+    character(len=*),parameter    :: NameSub= 'init_wave_spectrum'
     ! ------------------------------------------------------------------
-   
     IsInitWave=.true.
     ! \
     ! Calculate wave spectrum energy  coefficients in all cells 
@@ -1027,16 +1045,22 @@ contains
     ! \
     ! Set frequency grid
     ! /
-    call set_freq_grid(LogFreq_I,dLogFreq)
+
+    ! Get number of freq. groups for Plus(+Va) and Minus(-Va) Alfven waves
+    ! Uses ModWaves indexes which are set in user_init_session
+    nFreqPlus=AlfvenSpeedPlusLast_-AlfvenSpeedPlusFirst_+1
+    nFreqMinus=AlfvenSpeedMinusLast_ - AlfvenSpeedMinusFirst_+1
+    nFreq=nFreqPlus+nFreqMinus
+    call set_freq_grid(nFreqPlus, nFreqMinus)
    
     !\
-    ! Calculate cut-off frequancy for all cells
+    ! Calculate cut-off frequancy for all cells ,set min frequency of inertial range
     !/
     do iBLK=1,nBLK
        if (unusedBLK(iBLK)) CYCLE
        call calc_cutoff_freq(iBLK , FreqCutOff_CB(:,:,:,iBLK) )
     end do
-    
+    LogFreqInertial=log(2*cPi/300)
     !\
     ! Initialize spectrum in all frequency groups and all cells
     !/
@@ -1050,7 +1074,8 @@ contains
           else
              ! Start filling frequency groups
              do iFreq=1,nFreq
-                if(LogFreq_I(iFreq) .ge. log(FreqCutOff_CB(i,j,k,iBLK))) then
+                if ((LogFreq_I(iFreq) .ge. log(FreqCutOff_CB(i,j,k,iBLK))) .or. &
+                (LogFreq_I(iFreq) .le. LogFreqInertial)) then
                    WaveEnergy_I(iFreq) = 0
                 else
                    WaveEnergy_I(iFreq)=EnergyCoeff_CB(i,j,k,iBLK) &
