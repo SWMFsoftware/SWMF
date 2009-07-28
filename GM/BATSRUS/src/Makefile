@@ -27,6 +27,7 @@ MODULES = \
 	ModConserveFlux.o\
 	ModCube.o\
 	ModIonoVelocity.o\
+	ModExtraVariables.o\
 	ModSingleFluid.o\
 	ModMultiFluid.o\
 	ModMultiIon.o\
