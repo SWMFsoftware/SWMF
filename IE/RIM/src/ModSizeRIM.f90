@@ -2,7 +2,7 @@
 module ModSizeRIM
   implicit none
 
-  integer, parameter :: nLats = 90
+  integer, parameter :: nLats = 91
   integer, parameter :: nLons = 72
   integer :: nLonsAll = 0
 
