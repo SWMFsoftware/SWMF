@@ -1,4 +1,4 @@
-^CFG COPYRIGHT UM
+!^CFG COPYRIGHT UM
 !==============================================================================
 module ModUser
   use ModMain, ONLY: nBLK
@@ -18,9 +18,7 @@ module ModUser
        IMPLEMENTED10=> user_set_boundary_cells,         &
        IMPLEMENTED11=> user_set_plot_var,               &
        IMPLEMENTED12=> user_calc_sources
-
   include 'user_module.h' !list of public methods
-
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter  :: &
        NameUserModule = 'Empirical Solar Wind and MHD Turbulence'
@@ -43,6 +41,7 @@ contains
     use ModReadParam,   ONLY: read_line, read_command, read_var
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut
     use ModMagnetogram, ONLY: set_parameters_magnetogram
+    use ModWaves,       ONLY: read_alfven_speed
     implicit none
 
     character (len=100) :: NameCommand
@@ -66,6 +65,8 @@ contains
              call read_var('dt_UpdateB0',dt_UpdateB0)
              DoUpdateB0 = dt_updateb0 > 0.0
           end if
+       case("#ALFVENSPEED")
+          call read_alfven_speed
 
        case("#ARCH","#TD99FLUXROPE","#GL98FLUXROPE")
           call EEE_set_parameters(NameCommand)
@@ -128,7 +129,7 @@ contains
  
     call EEE_initialize(BodyNDim_I(1),BodyTDim_I(1),g)
     
-    call turb_init
+!    call turb_init
 
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -138,38 +139,42 @@ contains
 
   end subroutine user_init_session
   !============================================================================
-  subroutine turb_init
+ ! subroutine turb_init
+!
+!    use ModWaves
+!    use ModVarIndexes
+!    use ModAdvance,    ONLY: State_VGB
 
-    use ModWaves
-    use ModVarIndexes
-    use ModAdvance,    ONLY: State_VGB
-
-    implicit none
+!    implicit none
     !--------------------------------------------------------------------------
-    UseAlfvenSpeed = .true.
-    UseWavePressure = .false.
-    
-    AlfvenSpeedPlusFirst_ = I01_
-    AlfvenSpeedPlusLast_  = I25_
-
-    AlfvenSpeedMinusFirst_ = I26_
-    AlfvenSpeedMinusLast_  = I50_
-    write(*,*) 'SC:  Frequency groups were defined'
-
-  end subroutine turb_init
+!    UseAlfvenSpeed = .true.
+!    UseWavePressure = .false.
+!    
+!    AlfvenSpeedPlusFirst_ = I01_
+!    AlfvenSpeedPlusLast_  = I25_
+!
+!    AlfvenSpeedMinusFirst_ = I26_
+!    AlfvenSpeedMinusLast_  = I50_
+!    write(*,*) 'SC:  Frequency groups were defined'
+!
+!  end subroutine turb_init
   !============================================================================
   subroutine user_face_bcs(VarsGhostFace_V)
     use EEE_ModMain,   ONLY: EEE_get_state_BC
     use ModSize,       ONLY: East_,West_,South_,North_,Bot_,Top_,nDim
     use ModMain,       ONLY: time_accurate,x_,y_,z_, UseRotatingFrame, n_step, Iteration_Number
     use ModVarIndexes 
-    use ModAdvance,    ONLY: State_VGB
+    use ModAdvance,    ONLY: State_VGB, B0_DGB
     use ModPhysics,    ONLY: inv_gm1,OmegaBody,No2Si_V,Si2No_V, &
                              UnitB_,UnitU_,UnitRho_,UnitP_,UnitX_
     use ModConst,      ONLY: cMu
     use ModNumConst,   ONLY: cTolerance,cTiny
     use ModFaceBc,     ONLY: FaceCoords_D, VarsTrueFace_V, TimeBc, &
                              iFace, jFace, kFace, iSide, iBlockBc
+    use ModWaves,      ONLY: AlfvenSpeedPlusFirst_,  &
+                             AlfvenSpeedPlusLast_,   &
+                             AlfvenSpeedMinusFirst_, &
+                             AlfvenSpeedMinusLast_   
     implicit none
 
     real, intent(out):: VarsGhostFace_V(nVar)
@@ -181,9 +186,7 @@ contains
 
     real :: RhoCME,UCME_D(nDim),BCME_D(nDim),pCME
     real :: BCMEn,BCMEn_D(nDim),UCMEn,UCMEn_D(nDim),UCMEt_D(nDim)
-    real :: BxFaceSi, ByFaceSi,BzFaceSi,RhoFaceSi
-    real :: xFaceSi,yFaceSi,zFaceSi
-    real :: vAlfvenSi, OmegaRef, wEnergyDensSi
+    real :: BRCell, vAlfvenSi, wEnergyDensSi, wEnergyDens
   
     !--------------------------------------------------------------------------
 
@@ -267,31 +270,40 @@ contains
     ! Update BCs for wave spectrum
     !/
     if(IsInitWave) then
-       
-       OmegaRef=exp(LogFreqInertial)
-       !Transform to SI
-       xFaceSi=No2Si_V(UnitX_)*VarsGhostFace_V(x_)
-       yFaceSi=No2Si_V(UnitX_)*VarsGhostFace_V(y_)
-       zFaceSi=No2Si_V(UnitX_)*VarsGhostFace_V(z_)
-
-       BxFaceSi=No2Si_V(UnitB_)*VarsGhostFace_V(Bx_)
-       ByFaceSi=No2Si_V(UnitB_)*VarsGhostFace_V(By_)
-       BzFaceSi=No2Si_V(UnitB_)*VarsGhostFace_V(Bz_)
-       RhoFaceSi=No2Si_V(UnitRho_)*VarsGhostFace_V(Rho_)
-       vAlfvenSi= sqrt((BxFaceSi**2+ByFaceSi**2+BzFaceSi**2)/(cMu*RhoFaceSi))
-       call get_total_wave_energy_dens(xFaceSi,yFaceSi,zFaceSi,vAlfvenSi,wEnergyDensSi)
+       BRCell = sum(RFace_D * &
+            (State_VGB(Bx_:Bz_,iCell,jCell,kCell,iBlockBc) + &
+            B0_DGB(:,iCell,jCell,kCell,iBlockBc)) )
+       vAlfvenSi = (BRCell/sqrt(VarsTrueFace_V(Rho_))) * No2Si_V(UnitU_)
+      
+       call get_total_wave_energy_dens(&
+            FaceCoords_D(x_),&
+            FaceCoords_D(y_),&
+            FaceCoords_D(z_),&
+            vAlfvenSi, wEnergyDensSi)
+      
+       wEnergyDens = wEnergyDensSI * Si2No_V(UnitP_)
 
        do iFreq=I01_,I50_
           if(LogFreq_I(iFreq-I01_+1) .le. LogFreqInertial) then
              VarsGhostFace_V(iFreq)=0.0
+          elseif( (&
+                   (AlfvenSpeedPlusFirst_.le.iFreq).and.  &
+                   (iFreq.le.AlfvenSpeedPlusLast_ ).and.  &
+                   (vAlfvenSi > 0.0) &
+                  ).or.&
+                  (&
+                   (AlfvenSpeedMinusFirst_.le.iFreq).and.  &
+                   (iFreq.le.AlfvenSpeedMinusLast_ ).and.  &
+                   (vAlfvenSi < 0.0) &
+                  ) &
+                  )then
+                  
+             VarsGhostFace_V(iFreq) = (2.0/3.0) * dLogFreq * wEnergyDens* &
+                  exp((LogFreq_I(iFreq-I01_+1)-LogFreqInertial)*(-2.0/3.0))
           else
-             VarsGhostFace_V(iFreq)=(2.0/3.0)*wEnergyDensSi* &
-                  (exp(LogFreq_I(iFreq-I01_+1))/OmegaRef)**(-2.0/3.0)
-             VarsGhostFace_V(iFreq)=VarsGhostFace_V(iFreq)*Si2No_V(UnitP_)
+             VarsGhostFace_V(iFreq)=0.0
           end if
        end do
-       IsInitWave = .false. ! prevent further changes
-       write(*,*) 'spectrum faceBC set'
     end if
 
     !\

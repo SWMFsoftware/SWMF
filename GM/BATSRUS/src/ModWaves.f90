@@ -38,4 +38,16 @@ module ModWaves
 
   real :: WaveEnergy = 0.0 !Auxiliary variable
   real :: DivU = 0.0       !Auxiliary variable
+contains
+  subroutine read_alfven_speed
+    use ModReadParam,ONLY: read_var
+    !--------------------------------------------------------------------------
+    call read_var('UseAlfvenSpeed',UseAlfvenSpeed)
+    if(UseAlfvenSpeed)then
+       call read_var(' AlfvenSpeedPlusFirst' , AlfvenSpeedPlusFirst_ )
+       call read_var(' AlfvenSpeedPlusLast'  , AlfvenSpeedPlusLast_  )
+       call read_var(' AlfvenSpeedMinusFirst', AlfvenSpeedMinusFirst_)
+       call read_var(' AlfvenSpeedMinusLast' , AlfvenSpeedMinusLast_ )
+    end if
+  end subroutine read_alfven_speed
 end module ModWaves
