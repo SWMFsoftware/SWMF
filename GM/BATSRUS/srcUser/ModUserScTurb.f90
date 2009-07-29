@@ -16,8 +16,7 @@ module ModUser
        IMPLEMENTED8 => user_update_states,              &
        IMPLEMENTED9 => user_specify_refinement,         &
        IMPLEMENTED10=> user_set_boundary_cells,         &
-       IMPLEMENTED11=> user_set_plot_var,               &
-       IMPLEMENTED12=> user_calc_sources
+       IMPLEMENTED11=> user_set_plot_var
   include 'user_module.h' !list of public methods
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter  :: &
@@ -129,7 +128,6 @@ contains
  
     call EEE_initialize(BodyNDim_I(1),BodyTDim_I(1),g)
     
-!    call turb_init
 
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -138,26 +136,6 @@ contains
     end if
 
   end subroutine user_init_session
-  !============================================================================
- ! subroutine turb_init
-!
-!    use ModWaves
-!    use ModVarIndexes
-!    use ModAdvance,    ONLY: State_VGB
-
-!    implicit none
-    !--------------------------------------------------------------------------
-!    UseAlfvenSpeed = .true.
-!    UseWavePressure = .false.
-!    
-!    AlfvenSpeedPlusFirst_ = I01_
-!    AlfvenSpeedPlusLast_  = I25_
-!
-!    AlfvenSpeedMinusFirst_ = I26_
-!    AlfvenSpeedMinusLast_  = I50_
-!    write(*,*) 'SC:  Frequency groups were defined'
-!
-!  end subroutine turb_init
   !============================================================================
   subroutine user_face_bcs(VarsGhostFace_V)
     use EEE_ModMain,   ONLY: EEE_get_state_BC
@@ -282,26 +260,21 @@ contains
             vAlfvenSi, wEnergyDensSi)
       
        wEnergyDens = wEnergyDensSI * Si2No_V(UnitP_)
-
-       do iFreq=I01_,I50_
-          if(LogFreq_I(iFreq-I01_+1) .le. LogFreqInertial) then
+       do iFreq=AlfvenSpeedPlusFirst_,AlfvenSpeedPlusLast_
+          if(LogFreq_I(iFreq-I01_+1) .le. LogFreqInertial.or.vAlfvenSi.le.0.0) then
              VarsGhostFace_V(iFreq)=0.0
-          elseif( (&
-                   (AlfvenSpeedPlusFirst_.le.iFreq).and.  &
-                   (iFreq.le.AlfvenSpeedPlusLast_ ).and.  &
-                   (vAlfvenSi > 0.0) &
-                  ).or.&
-                  (&
-                   (AlfvenSpeedMinusFirst_.le.iFreq).and.  &
-                   (iFreq.le.AlfvenSpeedMinusLast_ ).and.  &
-                   (vAlfvenSi < 0.0) &
-                  ) &
-                  )then
-                  
+          else    
              VarsGhostFace_V(iFreq) = (2.0/3.0) * dLogFreq * wEnergyDens* &
                   exp((LogFreq_I(iFreq-I01_+1)-LogFreqInertial)*(-2.0/3.0))
-          else
+          end if
+       end do
+
+       do iFreq=AlfvenSpeedMinusFirst_,AlfvenSpeedMinusLast_
+          if(LogFreq_I(iFreq-I01_+1) .le. LogFreqInertial.or.vAlfvenSi.ge.0.0) then
              VarsGhostFace_V(iFreq)=0.0
+          else    
+             VarsGhostFace_V(iFreq) = (2.0/3.0) * dLogFreq * wEnergyDens* &
+                  exp((LogFreq_I(iFreq-I01_+1)-LogFreqInertial)*(-2.0/3.0))
           end if
        end do
     end if
@@ -450,52 +423,7 @@ contains
     B0_D = B0_D + B_D*Si2No_V(UnitB_)
 
   end subroutine user_get_b0
-  !============================================================================
-  subroutine user_calc_sources
-    ! energy sources are:
-    ! -Alfven waves damping (implemented in  user_update_spectrum)
-    ! - Work done by wave stress tensor 0.5*U*div sum(I)
-    ! - Since we added wave pressure to the MHD pressure (user_update_states):
-    !  p -> p +0.5*div sum(I) 
-    ! a term equal to 0.5*sum(I) divU needs to be subtracted from the energy source
-    ! before the next time step update
-
-    use ModMain,       ONLY: nI, nJ, nK, GlobalBlk
-    use ModAdvance,    ONLY: State_VGB, Source_VC, &
-         uDotArea_XI, uDotArea_YI, uDotArea_ZI
-    use ModvarIndexes
-    use ModNumConst,   ONLY: cHalf
-    use ModGeometry,   ONLY: vInv_CB
-
-    implicit none
-    
-    integer                      :: i,j,k,iBlock, iFreq 
-    real                         :: DivU
-    character (len=*), parameter :: NameSub = 'user_calc_sources'
-    !--------------------------------------------------------------------------
-
-    iBlock = GlobalBlk
-    write(*,*) NameSub, ' Started'
-    do k=1,nK; do j=i,nJ; do i=1,nI
-     
-       !\
-       ! Calculate DivU
-       !/
-       DivU=vInv_CB(i,j,k,iBlock)* &
-            (uDotArea_XI(i+1,j,k,1)-uDotArea_XI(i-1,j,k,1) &
-            +uDotArea_YI(i,j+1,k,1)-uDotArea_YI(i,j-1,k,1) &
-            +uDotArea_ZI(i,j,k+1,1)-uDotArea_ZI(i,j,k-1,1) )
-       !\
-       ! Update energy source (wave pressure work only!)
-       !/
-                 
-       Source_VC(Energy_,i,j,k)= Source_VC(Energy_,i,j,k) &
-            - cHalf*DivU*sum(State_VGB(I01_:I50_,i,j,k,iBlock))
-                            
-    end do ; end do; end do
-    write(*,*) NameSub, ' Finished'
-  end subroutine user_calc_sources
-  !============================================================================
+  !===============================================
   subroutine user_update_states(iStage,iBlock)
     use ModMain,    ONLY: iteration_number
     use ModVarIndexes
@@ -506,7 +434,7 @@ contains
     use ModGeometry,ONLY: R_BLK
     use ModEnergy,  ONLY: calc_energy_cell
     use ModExpansionFactors, ONLY: gammaSS
-
+    use ModWaves,   ONLY: UseWavePressure
     implicit none
 
     integer,intent(in)           :: iStage,iBlock
@@ -518,54 +446,55 @@ contains
     !\
     ! Begin update of pressure and relaxation energy::
     !/
-    !  if (iStage/=nStage) return
-    do k=1,nK; do j=1,nJ; do i=1,nI
-       call get_plasma_parameters_cell(i,j,k,iBlock,&
-            DensCell,PresCell,GammaCell)
-       if(R_BLK(i,j,k,iBlock)>2.5)&
-            GammaCell=GammaCell-(GammaCell-gammaSS)*max(0.0, &
-            -1.0 + 2*State_VGB(P_,i,j,k,iBlock)/&
-            (State_VGB(P_   ,i,j,k,iBlock)+sum(&
-            (State_VGB(Bx_:Bz_ ,i,j,k,iBlock)+B0_DGB(:,i,j,k,iBlock))**2)&
-            *0.25*(R_BLK(i,j,k,iBlock)/2.5)**1.50))
-       State_VGB(P_   ,i,j,k,iBlock)=(GammaCell-1.0)*      &
-            (inv_gm1*State_VGB(P_,i,j,k,iBlock) + State_VGB(Ew_,i,j,k,iBlock))
-       State_VGB(Ew_,i,j,k,iBlock)= State_VGB(P_,i,j,k,iBlock) &
-            *(1.0/(GammaCell-1.0)-inv_gm1)
-    end do; end do; end do
-    call calc_energy_cell(iBlock)
+    !  
+    if(.not.UseWavePressure)then
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          call get_plasma_parameters_cell(i,j,k,iBlock,&
+               DensCell,PresCell,GammaCell)
+          if(R_BLK(i,j,k,iBlock)>2.5)&
+               GammaCell=GammaCell-(GammaCell-gammaSS)*max(0.0, &
+               -1.0 + 2*State_VGB(P_,i,j,k,iBlock)/&
+               (State_VGB(P_   ,i,j,k,iBlock)+sum(&
+               (State_VGB(Bx_:Bz_ ,i,j,k,iBlock)+B0_DGB(:,i,j,k,iBlock))**2)&
+               *0.25*(R_BLK(i,j,k,iBlock)/2.5)**1.50))
+          State_VGB(P_   ,i,j,k,iBlock)=(GammaCell-1.0)*      &
+               (inv_gm1*State_VGB(P_,i,j,k,iBlock) + State_VGB(Ew_,i,j,k,iBlock))
+          State_VGB(Ew_,i,j,k,iBlock)= State_VGB(P_,i,j,k,iBlock) &
+               *(1.0/(GammaCell-1.0)-inv_gm1)
+       end do; end do; end do
+    end if
     !\
     ! End update of pressure and relaxation energy::
     !/
+
     !\
     ! Update spectrum and pressure if initialized
     !/
-    !if(any(State_VGB(I01_:I50_,:,:,:,iBlock) > 0.0)) then
-     !  call update_states_spectrum(iBlock)
-       ! Add wave pressure to pressure state variables
-       ! This means we have to add -0.5*divU*sum(I) as source to the energy equation
-       ! done in user_calc_sources
-     !   do k=1,nK ; do j=1,nJ ; do i=1,nI
-      !     WavePres_CB(i,j,k,iBlock)=0.5*sum(State_VGB(I01_:I50_,i,j,k,iBlock))
-           !State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
-           !     +WavePres_CB(i,j,k,iBlock)
-       !   if(WavePres_CB(i,j,k,iBlock)<0.0) then
-       !      write(*,*) '=============================================='
-       !      write(*,*) 'Total wave pressure negative at: ',i,j,k,iBlock
-       !      write(*,*) 'Wave = ',WavePres_CB(i,j,k,iBlock),' MHD= ',State_VGB(p_,i,j,k,iBlock)
-       !      write(*,*) '=============================================='
-       !   end if
-      ! end do; end do; end do
-    !end if
+    if(any(State_VGB(I01_:I50_,1:nI,1:nJ,1:nK,iBlock) > 0.0)) then
+       !  call update_states_spectrum(iBlock)
+ 
+       do k=1,nK ; do j=1,nJ ; do i=1,nI
+          WavePres_CB(i,j,k,iBlock)=0.5*sum(State_VGB(I01_:I50_,i,j,k,iBlock))
+        
+          if(WavePres_CB(i,j,k,iBlock)<0.0) then
+             write(*,*) '=============================================='
+             write(*,*) 'Total wave pressure negative at: ',i,j,k,iBlock
+             write(*,*) 'Wave = ',WavePres_CB(i,j,k,iBlock),' MHD= ',State_VGB(p_,i,j,k,iBlock)
+             write(*,*) '=============================================='
+          end if
+       end do; end do; end do
+    end if
+    call calc_energy_cell(iBlock)
   end subroutine user_update_states
   !=======================================================================
   subroutine update_states_spectrum(iBlock)
     ! called by user_update_states, takes care of Ixx state variables.
 
     use ModVarIndexes
-    use ModAdvance,  ONLY: State_VGB, Source_VC
+    use ModAdvance,  ONLY: State_VGB
     use ModSize,     ONLY: nI, nJ, nK
-    use ModNumConst,  ONLY: cHalf
+    use ModPhysics, ONLY: g
+
     implicit none
 
     integer,intent(in)          :: iBlock
@@ -616,8 +545,8 @@ contains
               ! Pass dissipated energy to MHD energy source term
               WaveDissip_CB(i,j,k,iBlock)=WaveDissip_CB(i,j,k,iBlock)+&
                    State_VGB(I01_+iFreq-1,i,j,k,iBlock)
-              !Source_VC(Energy_,i,j,k)=Source_VC(Energy_,i,j,k) &
-              !     +State_VGB(I01_+iFreq-1,i,j,k,iBlock)
+              State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
+                   + (g-1.0)*State_VGB(I01_+iFreq-1,i,j,k,iBlock)
               ! Remove this energy from the spectrum
               State_VGB(I01_+iFreq-1,i,j,k,iBlock)=0.0
            end if
@@ -973,7 +902,7 @@ contains
     LogFreqMax = log(2*cPi*100) 
 
     ! calculate frequency interval on a natural logarithmic scale 
-    dLogFreq = (LogFreqMax-LogFreqMin)/(nFreq-1) 
+    dLogFreq = (LogFreqMax-LogFreqMin)/(nFreqPlus-1) 
   
     ! Divide the spectrum into frequncy groups on a log scale
     ! Plus waves (+Va)
@@ -1009,13 +938,13 @@ contains
     ! Spatial grid variables
     integer                      :: i,j,k,iBLK
     real                         :: InvRSi ! inverse of distance in SI units
-    real                         :: BxNo, ByNo, BzNo, BtotSi,RhoSi ! No=normalized units, Si=SI units 
-    real,dimension(nI,nJ,nK,nBLK):: vAlfvenSi_CB, PointingFluxNo_CB
+    real                         :: BtotSi,RhoSi ! No=normalized units, Si=SI units 
+    real                         :: vAlfvenSi, PointingFluxNo
     ! 1D Frequency grid variables
     integer                       :: iFreq
     integer                       :: nFreqPlus, nFreqMinus
     real, dimension(I50_-I01_+1)  :: WaveEnergy_I !=w'I(logw')
-    real,dimension(nI,nJ,nK,nBLK) :: FreqCutOff_CB
+    real,dimension(nI,nJ,nK)      :: FreqCutOff_C
 
     ! Initial spectrum model parameters
     !the intensity of outward travelling waves (initial condition)
@@ -1023,105 +952,83 @@ contains
     real,parameter                :: Lambda0=4.0/10.0  ![AU]
     real,parameter                :: FreqPower=-2.0/3.0 ! spectral index
     real                          :: ConstCoeff
-    real,dimension(nI,nJ,nK,nBLK) :: EnergyCoeff_CB ! product of (B^(5/3)/r) and previous coefficient
+    real                          :: EnergyCoeff ! product of (B^(5/3)/r) and previous coefficient
     real                          :: MinI01,MaxI01, MinI50, MaxI50 ! for testing
     character(len=*),parameter    :: NameSub= 'init_wave_spectrum'
     ! ------------------------------------------------------------------
     IsInitWave=.true.
-    ! \
-    ! Calculate wave spectrum energy  coefficients in all cells 
-    ! /
-    ConstCoeff=(216/(7*cMu*Lambda0))*((cElectronCharge*cLightSpeed)/cGEV)**(-1.0/3.0)
-    do iBLK=1,nBLK
-       if (unusedBLK(iBLK)) CYCLE
-       
-       do k=1,nK; do j=1,nJ; do i=1,nI
-      
-          if (R_BLK(i,j,k,iBLK) .ge. 1.0) then
-
-             ! convert to SI units
-             InvRSi=1/(No2Si_V(UnitX_)*R_BLK(i,j,k,iBLK))
-             RhoSi=No2Si_V(UnitRho_)*State_VGB(rho_,i,j,k,iBLK)
-             
-             !Get magnetic field
-             BxNo = State_VGB(Bx_,i,j,k,iBLK)
-             ByNo = State_VGB(By_,i,j,k,iBLK)
-             BzNo = State_VGB(Bz_,i,j,k,iBLK)
-
-             ! Calaculate total field magnitude in SI units
-             BtotSi = No2Si_V(UnitB_)*sqrt(BxNo**2 + ByNo**2 + BzNo**2)
-
-             ! Calculte Alfven speed
-             vAlfvenSi_CB(i,j,k,iBLK)=BtotSi/sqrt(RhoSi*cMu)
-            
-             ! The wave energy spectrum is described by the power law:
-             ! I= ConstCoeff*(B^{5/3}/r)*(w/vAlfven)^{-2/3}dLogFreq
-             EnergyCoeff_CB(i,j,k,iBLK)=ConstCoeff*(BtotSi**(5.0/3.0))*InvRSi*&
-                  (vAlfvenSi_CB(i,j,k,iBLK))**(-FreqPower)
-     
-          end if
-          
-       end do; end do; end do
-    end do
-    
+   
     ! \
     ! Set frequency grid
     ! /
 
     ! Get number of freq. groups for Plus(+Va) and Minus(-Va) Alfven waves
     ! Uses ModWaves indexes which are set in user_init_session
+
     nFreqPlus=AlfvenSpeedPlusLast_-AlfvenSpeedPlusFirst_+1
     nFreqMinus=AlfvenSpeedMinusLast_ - AlfvenSpeedMinusFirst_+1
     nFreq=nFreqPlus+nFreqMinus
+
     call set_freq_grid(nFreqPlus, nFreqMinus)
-   
-    !\
-    ! Calculate cut-off frequancy for all cells ,set min frequency of inertial range
-    !/
-    do iBLK=1,nBLK
-       if (unusedBLK(iBLK)) CYCLE
-       call calc_cutoff_freq(iBLK , FreqCutOff_CB(:,:,:,iBLK) )
-    end do
+
+    ! \
+    ! Calculate wave spectrum energy  coefficients in all cells 
+    ! /
+    ConstCoeff=(216/(7*cMu*Lambda0))*((cElectronCharge*cLightSpeed)/cGEV)**(-1.0/3.0)
+
     LogFreqInertial=log(2*cPi/300)
+
     !\
     ! Initialize spectrum in all frequency groups and all cells
     !/
-    State_VGB(I01_:I50_,:,:,:,:)=0
+    State_VGB(I01_:I50_,:,:,:,:) = 0.0
+
     do iBLK=1,nBLK
        if (unusedBLK(iBLK)) CYCLE
-       do k=1,nK ; do j=1,nJ; do i=1,nI
+       !\
+       ! Calculate cut-off frequancy for all cells ,set min frequency of inertial range
+       !/
+    
+       call calc_cutoff_freq(iBLK , FreqCutOff_C(:,:,:) )    
+       do k=1,nK; do j=1,nJ; do i=1,nI
+      
+          if (R_BLK(i,j,k,iBLK) .lt. 1.0) CYCLE
 
-          if (R_BLK(i,j,k,iBLK)<1.0) then
-             State_VGB(I01_:I50_,i,j,k,iBLK)=0
-          else
-             ! Start filling frequency groups
-             do iFreq=1,nFreq
-                if ((LogFreq_I(iFreq) .ge. log(FreqCutOff_CB(i,j,k,iBLK))) .or. &
-                (LogFreq_I(iFreq) .le. LogFreqInertial)) then
-                   WaveEnergy_I(iFreq) = 0
-                else
-                   WaveEnergy_I(iFreq)=EnergyCoeff_CB(i,j,k,iBLK) &
-                        *exp(LogFreq_I(iFreq))**(FreqPower)
-                end if
-                ! Store wave energy state variables Ixx_
-                ! Ixx_, represent w'I(logw')dlogw' and is in normalized units,
-                ! while WaveEnergy_I represents w'I(logw') and is in SI units.
-                State_VGB(iFreq-1+I01_,i,j,k,iBLK)=WaveEnergy_I(iFreq)*dLogFreq
-                State_VGB(iFreq-1+I01_,i,j,k,iBLK)= &
-                     State_VGB(iFreq-1+I01_,i,j,k,iBLK)/No2Si_V(UnitP_)
-             end do
-          end if
+          ! convert to SI units
+          InvRSi=1/(No2Si_V(UnitX_)*R_BLK(i,j,k,iBLK))
+          RhoSi=No2Si_V(UnitRho_)*State_VGB(rho_,i,j,k,iBLK)
+
+          ! Calaculate total field magnitude in SI units
+          BtotSi = No2Si_V(UnitB_)*sqrt(sum(State_VGB(Bx_:Bz_,i,j,k,iBLK)**2))
+          
+          ! Calculte Alfven speed
+          vAlfvenSi = BtotSi/sqrt(RhoSi*cMu)
+          
+          ! The wave energy spectrum is described by the power law:
+          ! I= ConstCoeff*(B^{5/3}/r)*(w/vAlfven)^{-2/3}dLogFreq
+          EnergyCoeff = ConstCoeff * (BtotSi**(5.0/3.0)) * InvRSi *&
+               (vAlfvenSi)**(-FreqPower)
+     
+          
+ 
+          ! Start filling frequency groups
+          do iFreq=1,nFreq
+             if ((LogFreq_I(iFreq) .ge. log(FreqCutOff_C(i,j,k))) .or. &
+                  (LogFreq_I(iFreq) .le. LogFreqInertial)) then
+                WaveEnergy_I(iFreq) = 0.0
+             else
+                WaveEnergy_I(iFreq)=EnergyCoeff &
+                     *exp(LogFreq_I(iFreq) * FreqPower)
+             end if
+             ! Store wave energy state variables Ixx_
+             ! Ixx_, represent w'I(logw')dlogw' and is in normalized units,
+             ! while WaveEnergy_I represents w'I(logw') and is in SI units.
+             State_VGB(iFreq-1+I01_,i,j,k,iBLK) = WaveEnergy_I(iFreq)*dLogFreq *&
+                                                  Si2No_V(UnitP_)
+          end do
        end do; end do ; end do
     end do
-     
-    !MaxI50=maxval(State_VGB(I50_,:,:,:,:))
-    !MinI50=minval(State_VGB(I50_,:,:,:,:),mask=State_VGB(I50_,:,:,:,:)>0)
-    !MaxI01=maxval(State_VGB(I01_,:,:,:,:))
-    !MinI01=minval(State_VGB(I01_,:,:,:,:),mask=State_VGB(I01_,:,:,:,:)>0)
-    !write(*,*) ' ========================================================='
-    !write(*,*) 'Minimal I01: ',MinI01,',  Max I01: ', MaxI01
-    !write(*,*) 'Minimal I50: ',MinI50,',  Max I50: ', MaxI50
-   
+        
   end subroutine init_wave_spectrum
   !========================================================================
   subroutine user_get_log_var(VarValue,TypeVar,Radius)
