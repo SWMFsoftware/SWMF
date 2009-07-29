@@ -166,7 +166,7 @@ From Eq.(\ref{feboltzmann}) one can
 see that for large $g_e$ (Boltzmann gas) the equation, $G(g_e)=0$, reduces to $\langle i\rangle-g_{e1}/g_e=\delta_{\rm Fe}$,
 where $\delta_{\rm Fe}$ is a small negative correction to the Fermi function at $g_e \to \infty$:
 \begin{equation}\label{feboltzmann}
-Fe_\nu(g_e)=\frac{1}{\Gamma(\nu+1)} \int \frac{x^\nu dx}{g_e e^x + 1} =
+{\rm Fe}_\nu(g_e)=\frac{1}{\Gamma(\nu+1)} \int \frac{x^\nu dx}{g_e e^x + 1} =
 \frac{1}{\Gamma(\nu+1)} \int \frac{x^\nu dx}{g_e e^x} + \delta_{\rm Fe} = \frac{1}{g_e} + \delta_{\rm Fe}.
 \end{equation}
 %Considering $\delta_{\rm Fe}$ negligible, one can find $g_e=g_{e1}/Z$ from Eq.(\ref{zfe})
@@ -229,10 +229,23 @@ as well as the isothermal compressibility:
 \begin{equation}
 V\frac{\partial P_e}{\partial V}=-\frac{Z^2n_aT_e}{\langle\delta^2i\rangle+ZR^-}.
 \end{equation}
-For simplicity in the above equations, the contributions due to ion translational motions, 
+For simplicity in the above equations, the contributions due to ion translational motions,
 \begin{equation}
 C_{Vi}=\frac32n_a, \qquad
 \frac{\partial P_i}{\partial T}=n_a, \qquad
 V\frac{\partial P_i}{\partial V}=-n_aT,
+\end{equation}
+are omitted.
+
+To obtain the adiabatic index, $\gamma$, one can take Eq.(3.72) from \cite{Drake} and apply
+the thermodynamic identity as follows:
+\begin{equation}
+\left( \frac{\partial {\cal E}}{\partial \rho} \right)_{T} - \frac{P}{\rho^2} =
+-\frac{T}{\rho^2} \left( \frac{\partial P}{\partial T} \right)_{\rho},
+\end{equation}
+giving
+\begin{equation}
+\gamma = \frac{\rho}{P} \left( \frac{\partial P}{\partial \rho} \right)_T +
+\left( \frac{\partial P}{\partial T} \right)^2 \frac{T}{C_V^{per V} P}.
 \end{equation}
 are omitted.
