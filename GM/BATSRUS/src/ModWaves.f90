@@ -41,7 +41,6 @@ module ModWaves
 contains
   subroutine read_alfven_speed
     use ModReadParam,  ONLY: read_var
-    integer, parameter:: I01_=9
     !--------------------------------------------------------------------------
     call read_var('UseAlfvenSpeed',UseAlfvenSpeed)
     if(UseAlfvenSpeed)then
@@ -49,10 +48,6 @@ contains
        call read_var(' AlfvenSpeedPlusLast'  , AlfvenSpeedPlusLast_  )
        call read_var(' AlfvenSpeedMinusFirst', AlfvenSpeedMinusFirst_)
        call read_var(' AlfvenSpeedMinusLast' , AlfvenSpeedMinusLast_ )
-       AlfvenSpeedPlusFirst_  = AlfvenSpeedPlusFirst_ +I01_-1
-       AlfvenSpeedPlusLast_   = AlfvenSpeedPlusLast_  +I01_-1
-       AlfvenSpeedMinusFirst_ = AlfvenSpeedMinusFirst_+I01_-1
-       AlfvenSpeedMinusLast_  = AlfvenSpeedMinusLast_ +I01_-1
     end if
   end subroutine read_alfven_speed
 end module ModWaves
