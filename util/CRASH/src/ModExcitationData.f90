@@ -2,9 +2,9 @@ module CRASH_ModExcitationData
   use CRASH_ModIonization,ONLY : get_ioniz_potential
   implicit none
   PRIVATE !except
-  
+
   !public methods
-  public:: n_ground  !Principal quantum number as the function of the charge state and the element number
+  public:: n_ground  !Principal quantum number as a function of the charge state and the element number
   public:: get_excitation_energy
   public:: get_virial_coeff4_energy
   public:: get_degeneracy
@@ -14,14 +14,15 @@ contains
     integer,intent(in)::iZ,nZ
     !The principal quantum number of the outermost electron in bounded with an ion
     !with I electrons
-    integer,parameter :: nGround_I(100) = (/ 1, 1, &                                                       !  2
-         2, 2, 2, 2, 2, 2, 2, 2, &                                                                         !  8
-         3, 3, 3, 3, 3, 3, 3, 3, &                                                                         !  8
-         4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, &                                           ! 18
-         5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, &                                           ! 18
-         6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, & ! 32
-         7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 /)                                                       !
-    !------------------------------------------------------------------------------------------------------!
+    integer,parameter :: nGround_I(100) = (/ 1, 1, &                                !  2
+         2, 2, 2, 2, 2, 2, 2, 2, &                                                  !  8
+         3, 3, 3, 3, 3, 3, 3, 3, &                                                  !  8
+         4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, &                    ! 18
+         5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, &                    ! 18
+         6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, &                          !
+         6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, &                          ! 32
+         7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 /)                                !
+    !-------------------------------------------------------------------------------!
     n_ground = nGround_I(nZ - iZ)
   end function n_ground
   !======================================================================================
@@ -44,7 +45,8 @@ contains
        nGround = n_ground(iZ, nZ)
 
        do iN = nGround+1, nExcitation
-          ExcitationEnergy_III(0:iN-1,iN,iZ) = IonizPotential_I(iZ+1) * (1.0 - (real(nGround) / iN)**2.0)
+          ExcitationEnergy_III(0:iN-1,iN,iZ) = IonizPotential_I(iZ+1) * &
+               (1.0 - (real(nGround) / iN)**2.0)
        end do
     end do
   end subroutine get_excitation_energy
@@ -66,7 +68,8 @@ contains
 
        do iN = nGround, nExcitation
           do iL = 0, iN-1
-             VirialCoeff4Energy_III(iL,iN,iZ) = IonizPotential_I(iZ+1) * real(nGround)**2 * real(iN - iL)**2 / real(iZ+1)**2
+             VirialCoeff4Energy_III(iL,iN,iZ) = IonizPotential_I(iZ+1) * &
+                  real(nGround)**2 * real(iN - iL)**2 / real(iZ+1)**2
           end do
        end do
     end do
