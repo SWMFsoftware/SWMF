@@ -65,8 +65,12 @@ A_V     = Z + L \langle \delta(i^2) \delta i \rangle,
 where $L$ can be expressed either in CGS units or as it appears in the code:
 \begin{equation}
 L_{CGS}   = \frac{3}{10} \frac{q_e^2}{T r_{iono}}, \qquad
-L = \frac35 \frac{Ry}{T[eV] r_{iono}[a]}.
+L = \frac35 \frac{Ry[eV]}{T[eV] r_{iono}[a]},
 \end{equation}
+where $Ry[eV]$ denotes the Rydberg constant expressed in electron-volts, and
+$r_{iono}[a]$ stands for the ionosphere radius expressed in the units
+of Bohr radius.
+
 Again, we express the result in terms of covariances,
 $\langle \delta a \delta b \rangle = \langle (a - \langle a \rangle) (b - \langle b \rangle) \rangle$,
 and mean values which are now being calculated
@@ -144,30 +148,27 @@ E = E^*_i, \qquad
 \end{equation}
 and substitute them into the general formulas for the thermodynamic variables
 and the thermodynamic derivatives:
-\begin{equation}\label{madE}
-{\cal E}_e = n_a\left[ \frac32 T Z R^+ + \langle E^*_i \rangle \right],
-\end{equation}
-\begin{equation}\label{madP}
-P_e = n_aT ( ZR^+ - L \langle i^2 \rangle ),
-\end{equation}
-\begin{equation}\label{madCv}
-C_{Ve}=\frac{\partial {\cal E}_e}{\partial T}=n_a\left[\frac{\langle\delta^2E^*_i\rangle}{T^2}+\frac{15}4ZR^+
--\frac{\left(\frac32Z-\frac{\langle\delta E^*_i\delta i\rangle}T\right)^2}{\langle\delta^2i\rangle+ZR^-}\right],
-\end{equation}
-\begin{equation}\label{madPT}
-\frac {\partial P_e}{\partial T}=
+\begin{eqnarray}
+\label{madE}
+{\cal E}_e &=& n_a\left[ \frac32 T Z R^+ + \langle E^*_i \rangle \right], \\
+\label{madP}
+P_e &=& n_aT ( ZR^+ - L \langle i^2 \rangle ), \\
+\label{madCv}
+C_{Ve} = \frac{\partial {\cal E}_e}{\partial T} &=& n_a\left[\frac{\langle\delta^2E^*_i\rangle}{T^2}+\frac{15}4ZR^+
+-\frac{\left(\frac32Z-\frac{\langle\delta E^*_i\delta i\rangle}T\right)^2}{\langle\delta^2i\rangle+ZR^-}\right], \\
+\label{madPT}
+\frac {\partial P_e}{\partial T} &=&
 n_a\left[
 	\frac52 Z R^+ -
 	(Z+L \langle \delta(i^2) \delta i \rangle)
 		\frac{\frac32Z-\frac{\langle\delta E^*_i\delta i\rangle}T}{\langle\delta^2i\rangle+ZR^-} -
 	L \frac{\langle \delta E^*_i \delta(i^2) \rangle}T
-\right],
-\end{equation}
-\begin{equation}\label{madCompr}
-V\frac{\partial P_e}{\partial V}=
+\right], \\
+\label{madCompr}
+V\frac{\partial P_e}{\partial V} &=&
 n_a T \left[ -\frac{(Z + L \langle \delta(i^2) \delta i \rangle)^2}{\langle \delta^2 i \rangle + ZR^-} +
 L \left( \frac43 \langle i^2 \rangle + L \langle \delta^2(i^2) \rangle \right) \right].
-\end{equation}
+\end{eqnarray}
 
 Following is the table showing the values of $Z$ calculated for Xenon
 at various electron temperatures
