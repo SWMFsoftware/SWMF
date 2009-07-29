@@ -42,15 +42,17 @@ contains
     real,intent(in)    :: rIonoSphereInv
     !--------------------------------
     integer :: nGround
-    
-  
 
-    nGround = n_ground(iZ, nZ)
-    if (iN == nGround) then
+
+
+
+    if (.not.UsePressureIonization) then
        is_dead_orbit = .false.
        return
     end if
-    
+
+    nGround = n_ground(iZ, nZ)
+
     is_dead_orbit = (ExcitationEnergy_IIII(iL,iN,iZ,iMix) + &
          VirialCoeff4Energy_IIII(iL,iN,iZ,iMix) * PowerOfRIono >= &
          IonizPotential_II(iZ+1,iMix) - 1.8 * (2.0*iZ + 1) * &
