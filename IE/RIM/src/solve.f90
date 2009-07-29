@@ -353,7 +353,7 @@ subroutine solve
                    enddo
                 endif
              enddo
-             if (iProc == 0) Potential(iLonBC,iMinLat) = 0.0
+!             if (iProc == 0) Potential(iLonBC,iMinLat) = 0.0
           endif
         
      end select
@@ -673,7 +673,9 @@ subroutine matvec_RIM(x_I, y_I, n)
   real, intent(out):: y_I(n)        ! y = A.x
 
   real :: x_G(0:nLons+1, nLats), SouthPolePotential, NorthPolePotential
-  real :: BufferIn(nLats), BufferOut(nLats), r
+  real :: BufferIn(nLats), BufferOut(nLats), r, LinePotential(nLats)
+
+  real :: GlobalPotential, LocalVar1
 
   integer :: iI, iLon, iLat, iLh
 
@@ -685,7 +687,45 @@ subroutine matvec_RIM(x_I, y_I, n)
 
   iI = 0
 
-  x_G = Potential
+  if (SolveType == SolveWithFold_ .and. DoTouchNorthPole) then
+     
+     do iLon = 1, nLons
+
+        LinePotential = Potential(iLon,:)
+        do iLat = 1, nLats
+           ! iLh = latitude of other hemisphere
+           iLh = nLats - iLat + 1
+           if (abs(Latitude(iLon,iLat)) < minval(OCFLB)-OCFLBBuffer) then
+              LinePotential(iLat) = &
+                   (Potential(iLon,iLat) + Potential(iLon,iLh))/2
+           endif
+           if (abs(Latitude(iLon,iLat)) >= minval(OCFLB)-OCFLBBuffer .and. &
+               abs(Latitude(iLon,iLat)) <  minval(OCFLB)) then
+              r =  (minval(OCFLB) - abs(Latitude(iLon,iLat))) &
+                   /OCFLBBuffer / 2.0
+              LinePotential(iLat) = &
+                   (1-r) * Potential(iLon,iLat) + r * Potential(iLon,iLh)
+           endif
+        enddo
+
+        Potential(iLon,:) = LinePotential
+
+     enddo
+
+     ! to ground the potential, we want to make sure that the average
+     ! potential over the whole globe is zero.
+
+     LocalVar1 = sum(Potential(1:nLons,:)*Area(1:nLons,:)) / &
+          sum(Area(1:nLons,:))
+     GlobalPotential = 0.0
+     call MPI_REDUCE(LocalVar1, GlobalPotential, 1, MPI_REAL, &
+          MPI_SUM, 0, iComm, iError)
+     GlobalPotential = GlobalPotential/nProc
+     call MPI_Bcast(GlobalPotential,1,MPI_Real,0,iComm,iError)
+
+     x_G = Potential - GlobalPotential
+
+  endif
 
   select case(SolveType)
 
@@ -748,16 +788,16 @@ subroutine matvec_RIM(x_I, y_I, n)
               endif
            enddo
 
-           ! This is our single point BC:
-           if (iProc == 0) then
-              x_G(iLonBC  , iMinLat) = 0.0
-              do iLon = iLonBC-3, iLonBC+3
-                 x_G(iLon, iMinLat) = &
-                      (x_G(iLon-1, iMinLat) + &
-                       x_G(iLon  , iMinLat) + &
-                       x_G(iLon+1, iMinLat))/3.0
-              enddo
-           endif
+!           ! This is our single point BC:
+!           if (iProc == 0) then
+!              x_G(iLonBC  , iMinLat) = 0.0
+!              do iLon = iLonBC-3, iLonBC+3
+!                 x_G(iLon, iMinLat) = &
+!                      (x_G(iLon-1, iMinLat) + &
+!                       x_G(iLon  , iMinLat) + &
+!                       x_G(iLon+1, iMinLat))/3.0
+!              enddo
+!           endif
 
            ! Fill in missing southern hemisphere stuff
            do iLat = 1, iMinLat-1
@@ -772,8 +812,23 @@ subroutine matvec_RIM(x_I, y_I, n)
 
   ! This is not really correct, since it only works on a single processor...
 
-  if (DoTouchNorthPole) NorthPolePotential = sum(x_G(1:nLons,nLats-1))/nLons
-  if (DoTouchSouthPole) SouthPolePotential = sum(x_G(1:nLons,2))/nLons
+  if (DoTouchNorthPole) then
+     LocalVar1 = sum(x_G(1:nLons,nLats))/nLons
+     NorthPolePotential = 0.0
+     call MPI_REDUCE(LocalVar1, NorthPolePotential, 1, MPI_REAL, &
+          MPI_SUM, 0, iComm, iError)
+     NorthPolePotential = NorthPolePotential/nProc
+     call MPI_Bcast(NorthPolePotential,1,MPI_Real,0,iComm,iError)
+  endif
+       
+  if (DoTouchSouthPole) then
+     LocalVar1 = sum(x_G(1:nLons,1))/nLons
+     SouthPolePotential = 0.0
+     call MPI_REDUCE(LocalVar1, SouthPolePotential, 1, MPI_REAL, &
+          MPI_SUM, 0, iComm, iError)
+     SouthPolePotential = SouthPolePotential/nProc
+     call MPI_Bcast(SouthPolePotential,1,MPI_Real,0,iComm,iError)
+  endif
 
   ! Periodic Boundary Conditions:
 
@@ -921,51 +976,52 @@ subroutine matvec_RIM(x_I, y_I, n)
               IsLowLat = .false.
            enddo
 
-           ! Now, mirror the north to the south
+!           ! Now, mirror the north to the south
+!
+!           ! Need to know updated North and South potentials, so lets
+!           ! move the solution back into a 2D array.
+!
+!           iI = 0
+!           do iLat = 1, nLats
+!              if ( Latitude(1,iLat)<=-minval(OCFLB)+OCFLBBuffer .or. &
+!                   Latitude(1,iLat)>=0) then
+!                 do iLon = 1, nLons
+!                    iI = iI + 1
+!                    x_G(iLon,iLat) = y_I(iI)
+!                 enddo
+!              endif
+!           enddo
+!
+!           ! For the Southern Hemisphere, make sure to fill in values
+!           do iLat = 1, iMinLat-1
+!              if (Latitude(1,iLat) > -minval(OCFLB)+OCFLBBuffer) then
+!                 do iLon = 1, nLons
+!                    x_G(iLon,iLat) = x_G(iLon, nLats-iLat+1)
+!                 enddo
+!              endif
+!           enddo
+!
+!            iI = 0
+!            do iLat = 1, nLats
+!               if ( Latitude(1,iLat)<=-minval(OCFLB)+OCFLBBuffer .or. &
+!                    Latitude(1,iLat)>=0) then
+!                  do iLon = 1, nLons
+!                     iI = iI + 1
+!                     ! We only care about the region within the band 
+!                     ! between the OCFLB and the OCFLB Buffer.
+!                     if ( abs(Latitude(iLon,iLat)) < minval(OCFLB) .and. &
+!                          abs(Latitude(iLon,iLat)) >= &
+!                          minval(OCFLB)-OCFLBBuffer) then
+!                        r =  (minval(OCFLB) - abs(Latitude(iLon,iLat))) &
+!                             /OCFLBBuffer / 2.0
+!                        ! iLh = latitude of other hemisphere
+!                        iLh = nLats - iLat + 1
+!                        y_I(iI) = (1-r) * x_G(iLon,iLat) + r * x_G(iLon,iLh)
+!                     endif
+!                  enddo
+!               endif
+!            enddo
 
-           ! Need to know updated North and South potentials, so lets
-           ! move the solution back into a 2D array.
-
-           iI = 0
-           do iLat = 1, nLats
-              if ( Latitude(1,iLat)<=-minval(OCFLB)+OCFLBBuffer .or. &
-                   Latitude(1,iLat)>=0) then
-                 do iLon = 1, nLons
-                    iI = iI + 1
-                    x_G(iLon,iLat) = y_I(iI)
-                 enddo
-              endif
-           enddo
-
-           ! For the Southern Hemisphere, make sure to fill in values
-           do iLat = 1, iMinLat-1
-              if (Latitude(1,iLat) > -minval(OCFLB)+OCFLBBuffer) then
-                 do iLon = 1, nLons
-                    x_G(iLon,iLat) = x_G(iLon, nLats-iLat+1)
-                 enddo
-              endif
-           enddo
-
-            iI = 0
-            do iLat = 1, nLats
-               if ( Latitude(1,iLat)<=-minval(OCFLB)+OCFLBBuffer .or. &
-                    Latitude(1,iLat)>=0) then
-                  do iLon = 1, nLons
-                     iI = iI + 1
-                     ! We only care about the region within the band 
-                     ! between the OCFLB and the OCFLB Buffer.
-                     if ( abs(Latitude(iLon,iLat)) < minval(OCFLB) .and. &
-                          abs(Latitude(iLon,iLat)) >= &
-                          minval(OCFLB)-OCFLBBuffer) then
-                        r =  (minval(OCFLB) - abs(Latitude(iLon,iLat))) &
-                             /OCFLBBuffer / 2.0
-                        ! iLh = latitude of other hemisphere
-                        iLh = nLats - iLat + 1
-                        y_I(iI) = (1-r) * x_G(iLon,iLat) + r * x_G(iLon,iLh)
-                     endif
-                  enddo
-               endif
-            enddo
         endif
 
   end select
@@ -1028,26 +1084,26 @@ contains
     if (IsLowLat .and. iLat > 1 .and. .not. DoFold) &
          y_I(iI) = y_I(iI) - SolverB(iLon, iLat)*x_G(iLon,  iLat-1)
 
-    if ( DoFold .and. &
-         DoTouchNorthPole .and. &
-         DoTouchSouthPole .and. &
-         iProc == 0) then
-
-       ! Want to force the potential at (iLonBC,iMinLat) = 0
-
-       if (iLat == iMinLat .and. iLon == iLonBC-1) &
-            y_I(iI) = y_I(iI) - SolverE(iLon, iLat)*x_G(iLon+1,iLat  )
-
-       if (iLat == iMinLat .and. iLon == iLonBC+1) &
-            y_I(iI) = y_I(iI) - SolverD(iLon, iLat)*x_G(iLon-1,iLat  )
-
-       if (iLat == iMinLat+1 .and. iLon == iLonBC) &
-            y_I(iI) = y_I(iI) - SolverB(iLon, iLat)*x_G(iLon,  iLat-1)
-
-       if (iLat == iMinLat .and. iLon == iLonBC) &
-            y_I(iI) = y_I(iI) - SolverA(iLon, iLat)*x_G(iLon,  iLat)
-
-    endif
+!    if ( DoFold .and. &
+!         DoTouchNorthPole .and. &
+!         DoTouchSouthPole .and. &
+!         iProc == 0) then
+!
+!       ! Want to force the potential at (iLonBC,iMinLat) = 0
+!
+!       if (iLat == iMinLat .and. iLon == iLonBC-1) &
+!            y_I(iI) = y_I(iI) - SolverE(iLon, iLat)*x_G(iLon+1,iLat  )
+!
+!       if (iLat == iMinLat .and. iLon == iLonBC+1) &
+!            y_I(iI) = y_I(iI) - SolverD(iLon, iLat)*x_G(iLon-1,iLat  )
+!
+!       if (iLat == iMinLat+1 .and. iLon == iLonBC) &
+!            y_I(iI) = y_I(iI) - SolverB(iLon, iLat)*x_G(iLon,  iLat-1)
+!
+!       if (iLat == iMinLat .and. iLon == iLonBC) &
+!            y_I(iI) = y_I(iI) - SolverA(iLon, iLat)*x_G(iLon,  iLat)
+!
+!    endif
 
   end subroutine fill
 
