@@ -15,7 +15,9 @@ OBJECTS=\
 	ModPolyimide.o \
 	ModStatSum.o \
 	ModTransport.o \
-	ModExcitation.o
+	ModExcitation.o \
+	ModAtomicDataMix.o \
+	ModExcitationData.o
 
 
 OBJECTS_EXE= test_ionization.o test_godunov.o test_Fermi.o

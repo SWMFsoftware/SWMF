@@ -3,7 +3,7 @@
 module CRASH_ModStatSumMix
   use CRASH_ModIonization
   use CRASH_ModAtomicMass,ONLY : nZMax
-  use CRASH_ModExcitation,ONLY : get_excitation_levels, nMixMax, ExcitationEnergyAv_II, LogGi_II
+  use CRASH_ModExcitation,ONLY : get_excitation_levels, nMixMax, ExtraEnergyAv_II, LogGi_II
   use ModConst
   implicit none
   SAVE
@@ -480,7 +480,7 @@ Contains
 
 
          call get_excitation_levels(iMix, iZMin_I(iMix), min(iZMax_I(iMix), nZ_I(iMix)-1), &
-              nZ_I(iMix), IonizPotential_II(:,iMix), TeInv)
+              nZ_I(iMix), TeInv, rIonoSphereInv)
 
 
          StatSumTermLog_I(0:nZ_I(iMix)) = &
@@ -560,7 +560,7 @@ Contains
 
          ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) = &
               (IonizEnergyNeutral_II( iZMin_I(iMix):iZMax_I(iMix),iMix ) + &
-              ExcitationEnergyAv_II( iZMin_I(iMix):iZMax_I(iMix),iMix )) * TeInv
+              ExtraEnergyAv_II( iZMin_I(iMix):iZMax_I(iMix),iMix )) * TeInv
 
          if(UseCoulombCorrection)ETeInv_I( iZMin_I(iMix):iZMax_I(iMix) ) = &
               ETeInv_I( iZMin_I(iMix):iZMax_I(iMix) ) - TeInv * rIonoSphereInv * &

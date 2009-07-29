@@ -2,13 +2,22 @@ module CRASH_ModAtomicDataMix
   use CRASH_ModIonization
   use CRASH_ModAtomicMass,ONLY : nZMax
   implicit none
+  SAVE
   !Interface to databases
 
-  integer, parameter, public :: nMixMax = 6
+  !\
+  ! The logical to handle whether excitation levels should
+  ! be accounted for
+  !/
+  logical,public :: UseExcitation = .false.
+
+  logical,public :: UsePressureIonization = .false. ! UseExcitation should be also .true.
+
+  integer, parameter :: nMixMax = 6
 
   integer :: nMix = -1    !Number of components in the mixture
 
-  integer,public,dimension(nMixMax) :: nZ_I = -1  !Atomic numbers of elements in the mixture 
+  integer,dimension(nMixMax) :: nZ_I = -1  !Atomic numbers of elements in the mixture 
 
 
   ! relative concentrations of the elements in the mixture (part of whole comprised by the element)
@@ -67,13 +76,20 @@ contains
     do iMix=1,nMix
        call get_ioniz_potential(nZ_I(iMix),IonizPotential_II(1:nZ_I(iMix),iMix))
 
-       call get_excitation_energy(nExcitation,nZ_I(iMix),&
-            ExcitationEnergy_IIII(:,:,0:nZ_I(iMix)-1,iMix))
 
-       call get_virial_coeff4_energy(nExcitation,nZ_I(iMix),&
-            VirialCoeff4Energy_IIII(:,:,0:nZ_I(iMix)-1,iMix))
+       if (UseExcitation) then
+          call get_excitation_energy(nExcitation,nZ_I(iMix),&
+               ExcitationEnergy_IIII(:,:,0:nZ_I(iMix)-1,iMix))
 
-       call get_degeneracy(nExcitation,nZ_I(iMix),Degeneracy_IIII(:,:,0:nZ_I(iMix)-1,iMix))
+          call get_degeneracy(nExcitation,nZ_I(iMix),&
+               Degeneracy_IIII(:,:,0:nZ_I(iMix)-1,iMix))
+
+          if (UsePressureIonization)&
+               call get_virial_coeff4_energy(nExcitation,nZ_I(iMix),&
+               VirialCoeff4Energy_IIII(:,:,0:nZ_I(iMix)-1,iMix))
+
+       end if
     end do
+   
   end subroutine set_data_for_mixture
 end module CRASH_ModAtomicDataMix
