@@ -1,21 +1,31 @@
-{\bf To account for excitation of atoms and ions} we need to distinguish atoms and ions
-not only by their ionization states, $i$, but also by their excitation levels.
-For simplicity multiple excitation and autoionization are neglected,
-and we only account for exitation that raises the principal quantum number of the
-outermost electron, which becomes equal to $n$, so that the excitation state
-can be expressed by a single integer number $n$.
+\section{Excited states of atoms and ions}
+{\bf To account for excitation of atoms and ions} we need to involve the
+distribution not only over theionization states, $i$, but also to quantify the
+ion distribution over the ground and 
+excitated levels. 
 
-The population of ions of state $i$, $p_i$, is now split into smaller populations, $p_{i,n}$,
-with a particular excitation level, $n$, defined.
+For simplicity,  multiple excitation and autoionization are neglected. We
+count as the separate excited levels only those ones for which the principal 
+quantum number, 
+$n$, of the outermost electron, exceeds that for the atom or ion in its ground state, 
+$n_{gr}$, at least by one. The excited states, therefore, can be enumerated using two indexes,
+namely, the ion charge, $i=0,1,2...$, and the principal quantum number 
+$n(i)=n_{gr}(i),n_{gr}(i)+1,...$. 
+
+The partition function, $p_i$, describing the ion distribution over the charge state $i$ 
+(recall that $\sum_i{p_i}=1$), 
+is now split into smaller populations, $p_{i,n}$, with each of them relating to a particular 
+excitation level, $n$. Note that:
+\begin{equation}
+\sum_n{p_{i,n}}=p_i,\qquad \sum{\frac{p_{i,n}}{p_i}}=1.
+\end{equation}
 That is why the statistical weights, $w_{i,n}$, and, hence, the statistical sum and the partition functions
 become more complex:
 \begin{equation}
 w_{i,n} = 2 n^2 \cdot g_e^i \exp \left( -\frac{E^*_i + E^{exc}_{i,n}}{T} \right),\qquad
 S = \sum_{i=0}^{i_{max}} \sum_{n=n_{gr}}^{\infty} w_{i,n},\qquad
-p_{i,n} = \frac{w_{i,n}}{S},
+p_{i,n} = \frac{w_{i,n}}{S}.
 \end{equation}
-where $n_{gr}$ is the principal quantum number of the outermost electron
-of the atom or the ion of interest (having ionization state $i$) in the ground state.
 The excitation energy, $E^{exc}_{i,n}$, we calculate within a Bohr-like model, which is expressed in
 Eq.(2.9) from \cite{ionmix}:
 \begin{equation}
