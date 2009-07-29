@@ -41,7 +41,7 @@ module ModWaves
 contains
   subroutine read_alfven_speed
     use ModReadParam,  ONLY: read_var
-    use ModVarIndexes, ONLY: I01_
+    integer, parameter:: I01_=9
     !--------------------------------------------------------------------------
     call read_var('UseAlfvenSpeed',UseAlfvenSpeed)
     if(UseAlfvenSpeed)then
