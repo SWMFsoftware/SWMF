@@ -1,61 +1,5 @@
-% LyX 1.5.5 created this file.  For more info, see http://www.lyx.org/.
-% Do not edit unless you really know what you are doing.
-\documentclass[english,12pt]{revtex4}
-\usepackage[T1]{fontenc}
-\usepackage[latin9]{inputenc}
-\usepackage{nicefrac}
-\usepackage{graphicx}
 
-\makeatletter
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
-%% Because html converters don't know tabularnewline
-\providecommand{\tabularnewline}{\\}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
-%% LyX 1.5.5 created this file.  For more info, see http://www.lyx.org/.
-%% Do not edit unless you really know what you are doing.
-
-
-
-\usepackage{nicefrac}
-
-
-\makeatletter
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
-%% Because html converters don't know tabularnewline
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
-%% LyX 1.5.5 created this file.  For more info, see http://www.lyx.org/.
-%% Do not edit unless you really know what you are doing.
-
-
-
-\usepackage{nicefrac}
-
-
-
-\makeatletter
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
-%% Because html converters don't know tabularnewline
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
-%% LyX 1.5.5 created this file.  For more info, see http://www.lyx.org/.
-%% Do not edit unless you really know what you are doing.
-
-
-
-\usepackage{nicefrac}
-
-\begin{document}
-\title{{\Large Effect of the Fermi statistics on Thermal Ionization}}
-
-
-\maketitle
+\section{Effect of the Fermi statistics on Thermal Ionization}
 
 While simulating the ionization equilibrium in partially ionized electron-ion plasmas using Saha 
 equations, the electrons are usually assumed to be an ideal Boltzmann gas.  However, the electron is a Fermion with the spin of 1/2. In practical calculations the conditions for
@@ -292,31 +236,3 @@ C_{Vi}=\frac32n_a, \qquad
 V\frac{\partial P_i}{\partial V}=-n_aT,
 \end{equation}
 are omitted.
-\include{FermiFunction}
-%\include{CoulombInteraction}
-
-
-%{\bf Conclusion.} Again, mention that in the partially ionized plasma the exchamge interaction
-%effect on the plasma pressure is not exhausted by the multiplier  $R^+\ge 1$, there is also the reduction in $Z$ proportional to negative 
-%$\delta_{\rm Fe}$. This thermodynamical property of the partial ionized gas should be also taken into account while 
-%generalizing the result for the case of small but finite Coulomb interactions, which may be  done by developing the
-%chemical potential of the electron gas into a series of the average Coulomb potential of electrons.   
-
-\begin{thebibliography}{99}
-\bibitem{ll}
-L.D.Landau and E.M.Lifshitz, Theoretical Physics. Vol.5. Statistical Physics, Part 1. 3rd Edition. Pergamon Press, NY, 1980.
-%\bibitem{PD}
-%R.P.Drake, High-Energy-Density Physics,
-%\bibitem{DS}
-%D.Saltman, Atomic Physics in Hot Plasmas, Oxford University Press US, 1998
-\bibitem{gradshtein}
-I.S.Gradshteyn and I.M.Ryzhik, Table of Integrals, Series and Products. Academic Press, NY, 1965.
-\bibitem{mcleod}
-A.J.MacLeod, Algorithm 779: Fermi-Dirac Functions of Order -1/2, 1/2, 3/2, 5/2. ACM Transactions on Mathematical Software, Vol. 24, No. 1, March 1998.
-\end{thebibliography}
-\end{document}
-Ignore the formula below, we will need it later:
-\begin{equation}
-F=T \log \left[\sum_{i=0}^Zg^i\exp\left(-\frac{\sum_{j=0}^iI_j}T\right)\right],\,\,\,\,\,\,g\sim\frac{T^{3/2}}{N_e}.
-\end{equation}
-
