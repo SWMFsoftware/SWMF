@@ -968,12 +968,12 @@ contains
 
     ! Get number of freq. groups for Plus(+Va) and Minus(-Va) Alfven waves
     ! Uses ModWaves indexes which are set in user_init_session
-    AlfvenSpeedPlusLast_  = AlfvenSoeedPlusLast_  + I01_-1
-    AlfvenSpeedPlusFirst_ = AlfvenSpeedPlusFirst_ + I01-1
-    AlfvenSpeedMinusFirst_= AlfvenSpeedMinusFirst_+ I01-1
+    AlfvenSpeedPlusLast_  = AlfvenSpeedPlusLast_  + I01_-1
+    AlfvenSpeedPlusFirst_ = AlfvenSpeedPlusFirst_ + I01_-1
+    AlfvenSpeedMinusFirst_= AlfvenSpeedMinusFirst_+ I01_-1
     AlfvenSpeedMinusLast_ = AlfvenSpeedMinusLast_ + I01_-1
-    nFreqPlus=AlfvenSpeedPlusLast_-AlfvenSpeedPlusFirst_+1
-    nFreqMinus=AlfvenSpeedMinusLast_ - AlfvenSpeedMinusFirst_+1
+    nFreqPlus  = AlfvenSpeedPlusLast_  - AlfvenSpeedPlusFirst_+1
+    nFreqMinus = AlfvenSpeedMinusLast_ - AlfvenSpeedMinusFirst_+1
     nFreq=nFreqPlus+nFreqMinus
 
     call set_freq_grid(nFreqPlus, nFreqMinus)
