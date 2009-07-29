@@ -1,8 +1,7 @@
 !^CFG COPYRIGHT UM
 
 module CRASH_ModStatSumMix
-  use CRASH_ModIonization
-  use CRASH_ModAtomicMass,ONLY : nZMax
+  use CRASH_ModAtomicDataMix
   use CRASH_ModExcitation,ONLY : get_excitation_levels, nMixMax, ExtraEnergyAv_II, LogGi_II
   use ModConst
   implicit none
@@ -10,9 +9,7 @@ module CRASH_ModStatSumMix
   PRIVATE !Except
   logical :: DoInit = .true.             !Set to false after the initialization
 
-  integer :: nMix = -1
-
-  integer,private,dimension(nMixMax) :: nZ_I = -1  !Atomic numbers of elements in the mizture 
+ 
 
   !\
   !For each component in the mixture:
@@ -21,11 +18,6 @@ module CRASH_ModStatSumMix
   integer,dimension(nMixMax) :: iZMin_I  ! Numbers of the ionization states, such that the population
   integer,dimension(nMixMax) :: iZMax_I  ! of ion states with iZ<iZMin or iZ>iZMax is negligible.
 
-  ! relative concentrations of the elements in the mixture (part of whole comprised by the element)
-  real,dimension(nMixMax) :: Concentration_I=0.0 
-
-  ! Array of ionization potentials - energy needed to create i-level ion from (i-1)-level ion
-  real,dimension(1:nZMax,nMixMax) :: IonizPotential_II
 
   ! Array of energies needed to create i-level ion from a neutral atom
   real,dimension(0:nZMax,nMixMax) :: IonizEnergyNeutral_II 
@@ -162,7 +154,7 @@ Contains
     N_I    = (/(real(iZ), iZ = 0,nZMax)/)
     IonizationEnergyLowering_I(0:nZMax) = 1.80 * cRyToEV  * N_I**2
 
-    DeBroglieInv = sqrt(cTwoPi*(cElectronMass/cPlanckH)*(cEV/cPlanckH)) 
+    DeBroglieInv = sqrt(cTwoPi * (cElectronMass/cPlanckH) * (cEV/cPlanckH)) 
     !*sqrt(cBoltzmann/cEV * T) - temperature in eV
 
     eWight1eV1m3 = 2*DeBroglieInv**3 ! 2/(Lambda^3)
@@ -227,23 +219,7 @@ Contains
     !--------------------------!
 
     if(DoInit)call mod_init
-    Concentration_I( 1:nMixIn ) =  ConcentrationIn_I( 1:nMixIn )
-    if(abs (sum(Concentration_I( 1:nMixIn ) ) - 1.0 ) > cTiny)then
-       write(*,*)&
-            'Wrong input - the total of relative concentrations differs from 1.0: ',&
-            Concentration_I( 1:nMixIn ) 
-       call CON_stop('Stop')
-    end if
-
-    if(nMixIn==nMix)then
-       if( all( nZIn_I( 1:nMix ) == nZ_I( 1:nMix ) ) )return
-    end if
-
-    nMix = nMixIn
-    nZ_I( 1:nMix ) = nZIn_I( 1:nMix )
-    do iMix=1,nMix
-       call get_ioniz_potential(nZ_I(iMix),IonizPotential_II(1:nZ_I(iMix),iMix))
-    end do
+    call  set_data_for_mixture(nMixIn, nZIn_I, ConcentrationIn_I)
 
     IonizEnergyNeutral_II(0,1:nMix) = 0.0
     do iMix=1,nMix
@@ -294,7 +270,7 @@ Contains
     ! Concentration of heavy particles (atoms+ions) in the plasma 
     ! (# of particles per m^3):
     real, intent(in)             ::  NaIn,& ![1/m^3]
-         TeIn !electron temperature [eV]
+                                     TeIn   !electron temperature [eV]
     integer,optional,intent(out) :: iError
 
 
@@ -513,8 +489,8 @@ Contains
       !---------------------------!
       ! < Ei/Te>_J (Ei - energy levels, Te - electron temperature [eV])
       real::  ETeInvAvJ,&         
-           ZJ,&      ! Z_J, averaged Z for J component
-           DeltaZ2J  ! < (Z-<Z>)^2 >, averaged <(\delta Z)^2>, for J component
+              ZJ,&      ! Z_J, averaged Z for J component
+              DeltaZ2J  ! < (Z-<Z>)^2 >, averaged <(\delta Z)^2>, for J component
       ! Array of ionization energy levels of ions divided by the temperature in eV
       real,dimension(0:nZMax) :: ETeInv_I
       integer :: iMix
@@ -820,11 +796,11 @@ Contains
   subroutine set_temperature(Uin, NaIn, iError)
 
     real,intent(in) :: Uin,& !Average internal energy per atomic unit [eV]
-         NaIn !Density of heavy particles [# of particles/m^3]
+                       NaIn  !Density of heavy particles [# of particles/m^3]
     integer,intent(out),optional::iError
 
     real :: UDeviation,& ! The difference between the given internal energy and the calculated one
-         ToleranceUeV ! The required accuracy of U in eV
+            ToleranceUeV ! The required accuracy of U in eV
     !-------------------------
     if(Na/=NaIn) rIonoSphereInv = &
          ( (4.0 * cPi/3.0) * cBohrRadius**3 * NaIn)**(1.0/3)
