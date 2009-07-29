@@ -17,11 +17,12 @@ module ModUser
        IMPLEMENTED9 => user_specify_refinement,         &
        IMPLEMENTED10=> user_set_boundary_cells,         &
        IMPLEMENTED11=> user_set_plot_var
+  
   include 'user_module.h' !list of public methods
-  real, parameter :: VersionUserModule = 1.0
+  
+  real, parameter               :: VersionUserModule = 1.0
   character (len=*), parameter  :: &
        NameUserModule = 'Empirical Solar Wind and MHD Turbulence'
-
   character(len=lStringLine)    :: NameModel
 
   !Global variables - frequency grid
@@ -523,8 +524,8 @@ contains
              ! Pass dissipated energy to MHD energy source term
              WaveDissip_CB(i,j,k,iBlock)=WaveDissip_CB(i,j,k,iBlock)+ &
                   State_VGB(I01_+iFreq-1,i,j,k,iBlock)
-             !Source_VC(Energy_,i,j,k)=Source_VC(Energy_,i,j,k) &
-              !   + State_VGB(I01_+iFreq-1,i,j,k,iBlock)
+              State_VGB(p_,i,j,k,iBlock)=State_VGB(p_,i,j,k,iBlock) &
+                 + (g-1.0)*State_VGB(I01_+iFreq-1,i,j,k,iBlock)
              ! remove this energy from the spectrum
              State_VGB(I01_+iFreq-1,i,j,k,iBlock)=0.0
           end if
@@ -589,8 +590,8 @@ contains
     !Divide each Ixx_ state variables by its frequency
     !/
     do iFreq = 1,nFreq
-       wEnergy_G(iFreq)=State_VGB(I01_+iFreq-1,i,j,k,iBlock)/ &
-            exp(LogFreq_I(iFreq))
+       wEnergy_G(iFreq)=State_VGB(I01_+iFreq-1,i,j,k,iBlock)* &
+            exp(-LogFreq_I(iFreq))
     end do
     !\
     ! Calculate CFL for this scheme (depends on BATSRUS cfl)
@@ -608,7 +609,7 @@ contains
     !\
     ! Set BC's
     !/
-    wEnergy_G(-1:0) = wEnergy_G(1)
+    wEnergy_G(-1:0) = 0.0
     wEnergy_G(nFreq+1:nFreq+2) = wEnergy_G(nFreq)
    
     !\
@@ -629,8 +630,8 @@ contains
        Limiter_I(iFreq)= Limiter_I(iFreq)*min(max(SlopeL,SlopeR),2.0*SlopeL,2.0*SlopeR)
        ! Final Result:
        ! Limiter = 0 of slopes of different signs
-       !         = min(LargeSlope, 2*SmallerSlope) if both positive
-       !         = -min(LargerSlope,2*SmalerSlope) if both negative
+       !         = min(SteeperSlope, 2*ModarateSlope) if both positive
+       !         = -min(SteeperSlope,2*ModarateSlope) if both negative
     end do
 
     !\
@@ -684,12 +685,13 @@ contains
     use ModVarIndexes
     use ModAdvance, ONLY: State_VGB
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitP_
-    
+    use ModWaves
+
     implicit none
     
-    real, allocatable,dimension(:,:) :: Cut_III ! Array to store log variables
+    real, allocatable,dimension(:,:) :: Cut_II ! Array to store log variables
     integer                          :: nCell,nRow,iRow 
-    real                             :: dx, dz, x,y,z, IwSi
+    real                             :: dx, dz, x,y,z, IwPlusSi,IwMinusSi
     integer                          :: iFreq,i,j,k,iBLK
     integer                          :: iUnit,iError,aError
     character(len=40)                :: FileName,HeaderName 
@@ -714,11 +716,11 @@ contains
           end if
        end do; end do ; end do
     end do
-    nRow=nCell*nFreq
+    nRow=nCell*nFreq/2
     !\
     ! Allocate plot arrays
     !/
-    ALLOCATE(Cut_III(nRow,3),STAT=aError)
+    ALLOCATE(Cut_II(nRow,4),STAT=aError)
     !\
     ! Fill plot array
     !/
@@ -735,11 +737,13 @@ contains
              dx=dx_BLK(iBLK)
              dz=dz_BLK(iBLK)
              if((z< dz) .and. (z >=0.0) .and. (x<dx) .and. (x>=0.0)) then
-                do iFreq=1,nFreq
-                   IwSi=No2Si_V(UnitP_)*State_VGB(I01_+iFreq-1,i,j,k,iBLK)
-                   Cut_III(iRow,1)=y
-                   Cut_III(iRow,2)=exp(LogFreq_I(iFreq))
-                   Cut_III(iRow,3)= IwSi
+                do iFreq=1,nFreq/2
+                   IwPlusSi  = No2Si_V(UnitP_)*State_VGB(AlfvenSpeedPlusFirst_+iFreq-1,i,j,k,iBLK)
+                   IwMinusSi = No2Si_V(UnitP_)*State_VGB(AlfvenSpeedMinusFirst_+iFreq-1,i,j,k,iBLK)
+                   Cut_II(iRow,1) = y
+                   Cut_II(iRow,2) = LogFreq_I(iFreq)
+                   Cut_II(iRow,3) = IwPlusSi
+                   Cut_II(iRow,4) = IwMinusSi
                    iRow=iRow+1
                 end do
              end if
@@ -754,7 +758,7 @@ contains
     write(NameProc,'(a,i4.4)') "_pe",iProc
     write(NameProcN,'(a,i4.4,a)')" ", nProc," nProc"
     if (iProc==0) then
-       HeaderName='SC/IO2/Spectrum_n_'//trim(NameStage)//'.Spec'
+       HeaderName='SC/IO2/Spectrum_n_'//trim(NameStage)//'.T'
        write(*,*) 'SC:  writing file ', HeaderName
        iUnit=io_unit_new()
        open(unit=iUnit, file=HeaderName, form='formatted', access='sequential',&
@@ -774,16 +778,16 @@ contains
     ! write header if iProc==0
     !if (iProc==0) then
        write(iUnit,'(a)') 'Title: BATSRUS SC Spectrogram'
-       write(iUnit,'(a)') 'Variables = "Y[R]", "w","I[Jm-3]" '
-       write(HeaderText,'(a,i2.2,a,i6.6,a)') 'Zone I= ',nFreq,', J= ',nCell,',F=point'
+       write(iUnit,'(a)') 'Variables = "Y[R]", "w","I+[Jm-3]", "I-[Jm-3]" '
+       write(HeaderText,'(a,i2.2,a,i6.6,a)') 'Zone I= ',nFreq/2,', J= ',nCell,',F=point'
        write(iUnit,'(a)') trim(HeaderText)
     !end if
     do iRow=1,nRow
           write(iUnit, fmt="(30(e14.6))") &
-               Cut_III(iRow,:)
+               Cut_II(iRow,:)
     end do
     close(iUnit)
-    if(allocated(Cut_III)) deallocate(Cut_III,STAT=aError)
+    if(allocated(Cut_II)) deallocate(Cut_II,STAT=aError)
     if(aError .ne. 0) then
        write(*,*) NameSub, 'Deallocation of spectrogram array failed'
        call stop_mpi(NameSub)
@@ -964,7 +968,10 @@ contains
 
     ! Get number of freq. groups for Plus(+Va) and Minus(-Va) Alfven waves
     ! Uses ModWaves indexes which are set in user_init_session
-
+    AlfvenSpeedPlusLast_  = AlfvenSoeedPlusLast_  + I01_-1
+    AlfvenSpeedPlusFirst_ = AlfvenSpeedPlusFirst_ + I01-1
+    AlfvenSpeedMinusFirst_= AlfvenSpeedMinusFirst_+ I01-1
+    AlfvenSpeedMinusLast_ = AlfvenSpeedMinusLast_ + I01_-1
     nFreqPlus=AlfvenSpeedPlusLast_-AlfvenSpeedPlusFirst_+1
     nFreqMinus=AlfvenSpeedMinusLast_ - AlfvenSpeedMinusFirst_+1
     nFreq=nFreqPlus+nFreqMinus
@@ -989,7 +996,8 @@ contains
        ! Calculate cut-off frequancy for all cells ,set min frequency of inertial range
        !/
     
-       call calc_cutoff_freq(iBLK , FreqCutOff_C(:,:,:) )    
+       call calc_cutoff_freq(iBLK , FreqCutOff_C(:,:,:) )
+  
        do k=1,nK; do j=1,nJ; do i=1,nI
       
           if (R_BLK(i,j,k,iBLK) .lt. 1.0) CYCLE
@@ -1008,8 +1016,6 @@ contains
           ! I= ConstCoeff*(B^{5/3}/r)*(w/vAlfven)^{-2/3}dLogFreq
           EnergyCoeff = ConstCoeff * (BtotSi**(5.0/3.0)) * InvRSi *&
                (vAlfvenSi)**(-FreqPower)
-     
-          
  
           ! Start filling frequency groups
           do iFreq=1,nFreq
@@ -1020,11 +1026,14 @@ contains
                 WaveEnergy_I(iFreq)=EnergyCoeff &
                      *exp(LogFreq_I(iFreq) * FreqPower)
              end if
+             !write(*,*) '================================================'
+             !write(*,*) 'WaveEnergy: ',WaveEnergy_I(iFreq)
              ! Store wave energy state variables Ixx_
              ! Ixx_, represent w'I(logw')dlogw' and is in normalized units,
              ! while WaveEnergy_I represents w'I(logw') and is in SI units.
              State_VGB(iFreq-1+I01_,i,j,k,iBLK) = WaveEnergy_I(iFreq)*dLogFreq *&
                                                   Si2No_V(UnitP_)
+             !write(*,*) 'StateVGB: ',State_VGB(I01_+iFreq-1,i,j,k,iBLK)
           end do
        end do; end do ; end do
     end do
