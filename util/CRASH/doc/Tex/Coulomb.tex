@@ -1,5 +1,4 @@
-\section{Coulomb correction to the thermodynamic parameters of dense plasmas}
-
+\section{Madelung approximation of electrostatic energy}
 {\bf Coulomb interactions} we account within the Madelung approximation. The extra term in the free energy which accounts for the
 electrostatic energy of each of the ions in the charge state $i$ coupled with i electrons, the latter being uniformly
 distributed over the "iono-sphere"
@@ -55,13 +54,18 @@ F = -TN_a\log\left[\frac{eV}{N_a}\left(\frac{MT}{2\pi \hbar^2}\right)^{3/2}\righ
 where, again, $\Omega_e = F_e - \mu_e N_a \sum i p_i = F_e - \mu_e N_a \langle i \rangle $.
 
 {\bf Differentials along the curve of the ionization equilibrium} obey the equation as follows:
-\begin{equation}
-A_{g_e} \frac{dg_e}{g_e} = A_V \frac{dV}{V} + A_T \frac{dT}{T}
+\begin{equation}\label{diffstruct}
+A_{g_e} \frac{dg_e}{g_e} = A_V \frac{dV}{V} + A_T \frac{dT}{T},
 \end{equation}
 \begin{equation}
 A_{g_e} = \langle \delta^2 i \rangle + ZR^-(g_e), \qquad
 A_T     = \frac32 Z - \frac{\langle \delta i \delta E^*_i \rangle}{T}, \qquad
-A_V     = Z + \frac{3}{10} \frac{q_e^2}{T r_{iono}} \langle \delta(i^2) \delta i \rangle
+A_V     = Z + L \langle \delta(i^2) \delta i \rangle,
+\end{equation}
+where $L$ can be expressed either in CGS units or as it appears in the code:
+\begin{equation}
+L_{CGS}   = \frac{3}{10} \frac{q_e^2}{T r_{iono}}, \qquad
+L = \frac35 \frac{Ry}{T[eV] r_{iono}[a]}.
 \end{equation}
 Again, we express the result in terms of covariances,
 $\langle \delta a \delta b \rangle = \langle (a - \langle a \rangle) (b - \langle b \rangle) \rangle$,
@@ -79,33 +83,78 @@ While differentiating Eq.(\ref{ffullm}) with respect to $T$ and $V$, again, we s
 by $g_e$ from the second and third terms cancel 
 each other: $g_e(\partial \log S/\partial g_e)=\langle i\rangle=Z$,
 that is evident from $d \log S = \langle d (\log p_i) \rangle$,
-and $-g_eg_{e1}{\rm Fe}^\prime_{3/2}(g_e)=g_{e1}{\rm Fe}_{1/2}=Z$. That is why for the internal energy density, 
-${\cal E}$, and for the pressure, $P$, we find:
-\begin{equation}
+and $-g_eg_{e1}{\rm Fe}^\prime_{3/2}(g_e)=g_{e1}{\rm Fe}_{1/2}=Z$.
+That is why for the internal energy density,
+${\cal E}$, and for the pressure, $P$, we find the general expressions
+as follows:
+\begin{equation}\label{generalE}
 {\cal E} = -\frac{T^2}V\left(\frac{\partial}{\partial T}\left(\frac F T\right)\right)=
 {\cal E}_i+{\cal E}_e,\qquad{\cal E}_i=\frac32Tn_a,\qquad
-{\cal E}_e = n_a\left[ \frac32 T Z R^+ + \langle E^*_i\rangle \right],
+{\cal E}_e = n_a\left[ \frac32 T Z R^+ + \langle E \rangle \right],
 \end{equation}
-\begin{equation}
+\begin{equation}\label{generalP}
 P = -\frac{\partial F}{\partial V}=P_i+P_e,\quad
 P_i = n_aT,\quad
-P_e = n_aT ( 1 + ZR^+ - L \langle i^2 \rangle ),\quad
-L = \frac{3}{10} \frac{q_e^2}{Tr_{iono}}.
+P_e = n_a \left[ T ZR^+ - V \langle \frac{\partial E}{\partial V} \rangle \right],
 \end{equation}
+where we assume $E=E(V)$.
+
 In the above equations we add the Madelung corrections into the energy of the electron gas, ${\cal E}_e$, and
 into the pressure of electrons, $P_e$, because those corrections are controlled by the electron temperature.
 
-However, while calculating the second order thermodynamic derivatives,
-such as specific heat, the derivatives of $g_e$ essentially sophisticate the 
-calculations. 
-
-In such a way one can find the specific heat in isochoric process, per unit of volume:
+The thermodynamic derivatives can also be expressed in a general form for $E=E(V)$.
+In such a way one can find the specific heat in isochoric process, per the unit of volume:
+\begin{equation}\label{generalCv}
+C_{Ve}=\frac{\partial {\cal E}_e}{\partial T}=n_a\left[\frac{\langle\delta^2 E \rangle}{T^2}+\frac{15}4ZR^+
+-\frac{\left(\frac32Z-\frac{\langle\delta E \delta i\rangle}T\right)^2}{\langle\delta^2i\rangle+ZR^-}\right],
+\end{equation}
+the temperature derivative of pressure:
+\begin{equation}\label{generalPT}
+\frac {\partial P_e}{\partial T}=
+n_a\left[
+	\frac52 Z R^+ -
+	\left( Z+\frac{V}{T} \langle \delta \frac{\partial E}{\partial V} \delta i \rangle \right)
+		\frac{\frac32Z-\frac{\langle\delta E \delta i\rangle}T}{\langle\delta^2i\rangle+ZR^-} -
+	\frac{V}{T^2} \langle \delta \frac{\partial E}{\partial V} \delta E \rangle
+\right],
+\end{equation}
+as well as the isothermal compressibility:
+\begin{equation}\label{generalCompr}
+V\frac{\partial P_e}{\partial V}=
+n_a T \left[ -\frac{\left(Z + \frac{V}{T} \langle \delta i \delta \frac{\partial E}{\partial V} \rangle \right)^2}
+{\langle \delta^2 i \rangle + ZR^-} +
+\frac{V^2}{T^2} \langle \delta^2 \frac{\partial E}{\partial V} \rangle -
+\frac{V^2}{T} \langle \frac{\partial^2 E}{\partial V^2} \rangle
+\right].
+\end{equation}
+Again, for simplicity in the above equations the contributions due to ion translational motions,
 \begin{equation}
+C_{Vi}=\frac32n_a, \qquad
+\frac{\partial P_i}{\partial T}=n_a, \qquad
+V\frac{\partial P_i}{\partial V}=-n_aT,
+\end{equation}
+are omitted.
+
+To apply the Madelung theory we calculate the first and the second partial derivatives
+of the energy levels over volume:
+\begin{equation}
+E = E^*_i, \qquad
+\frac{V}{T} \frac{\partial E}{\partial V} = L i^2, \qquad
+\frac{V^2}{T} \frac{\partial^2 E}{\partial V^2} = -\frac43 L i^2,
+\end{equation}
+and substitute them into the general formulas for the thermodynamic variables
+and the thermodynamic derivatives:
+\begin{equation}\label{madE}
+{\cal E}_e = n_a\left[ \frac32 T Z R^+ + \langle E^*_i \rangle \right],
+\end{equation}
+\begin{equation}\label{madP}
+P_e = n_aT ( ZR^+ - L \langle i^2 \rangle ),
+\end{equation}
+\begin{equation}\label{madCv}
 C_{Ve}=\frac{\partial {\cal E}_e}{\partial T}=n_a\left[\frac{\langle\delta^2E^*_i\rangle}{T^2}+\frac{15}4ZR^+
 -\frac{\left(\frac32Z-\frac{\langle\delta E^*_i\delta i\rangle}T\right)^2}{\langle\delta^2i\rangle+ZR^-}\right],
 \end{equation}
-the temperature derivative of pressure:
-\begin{equation}
+\begin{equation}\label{madPT}
 \frac {\partial P_e}{\partial T}=
 n_a\left[
 	\frac52 Z R^+ -
@@ -114,17 +163,10 @@ n_a\left[
 	L \frac{\langle \delta E^*_i \delta(i^2) \rangle}T
 \right],
 \end{equation}
-as well as the isothermal compressibility:
-\begin{equation}
+\begin{equation}\label{madCompr}
 V\frac{\partial P_e}{\partial V}=
 n_a T \left[ -\frac{(Z + L \langle \delta(i^2) \delta i \rangle)^2}{\langle \delta^2 i \rangle + ZR^-} +
 L \left( \frac43 \langle i^2 \rangle + L \langle \delta^2(i^2) \rangle \right) \right].
-\end{equation}
-For simplicity in the above equations the contributions due to ion translational motions are omitted, which are:
-\begin{equation}
-C_{Vi}=\frac32n_a, \qquad
-\frac{\partial P_i}{\partial T}=n_a, \qquad
-V\frac{\partial P_i}{\partial V}=-n_aT.
 \end{equation}
 
 Following is the table showing the values of $Z$ calculated for Xenon
@@ -137,16 +179,4 @@ calculated without Coulomb interation taken into account.
 \begin{center}
 \input{ionization_table7.tex}
 \par\end{center}
-
-
-%\include{FermiFunction}
-%\include{CoulombInteraction}
-
-
-%{\bf Conclusion.} Again, mention that in the partially ionized plasma the exchamge interaction
-%effect on the plasma pressure is not exhausted by the multiplier  $R^+\ge 1$, there is also the reduction in $Z$ proportional to negative 
-%$\delta_{\rm Fe}$. This thermodynamical property of the partial ionized gas should be also taken into account while 
-%generalizing the result for the case of small but finite Coulomb interactions, which may be  done by developing the
-%chemical potential of the electron gas into a series of the average Coulomb potential of electrons.   
-
 
