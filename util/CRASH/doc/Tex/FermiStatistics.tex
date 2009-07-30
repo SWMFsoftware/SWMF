@@ -126,8 +126,9 @@ g_e\frac{d{\rm Fe}_\nu(g_e)}{dg_e}=-{\rm Fe}_{\nu-1}(g_e),
 \end{equation}
 and for any set of values in the charge states, $f_i$:
 \begin{equation}
-g_e\frac{\partial\langle f_i\rangle}{\partial g_e}=\langle if_i\rangle-\langle f_i\rangle\langle i\rangle.
+g_e\frac{\partial\langle f_i\rangle}{\partial g_e}=\langle if_i\rangle-\langle f_i\rangle\langle i\rangle,
 \end{equation}
+which is a particular case of Eq.(\ref{differmean}).
 
 We see that to solve iterations in Eq.(\ref{iter}) for Fermi gas of electrons is not a
 more computationally intense problem compared to the same procedure by assuming electrons 
@@ -162,30 +163,6 @@ Accordingly, the differential of $Z$ is:
 dZ=\left(\frac32\frac{dT}{T}+\frac{dV}V-\frac{R^-(g_e)dg_e}{g_e}\right)Z.
 \end{equation}
 
-{\bf Estimate the effect of the Fermi statistics on the ionization degree.}
-Eqs.(\ref{diffge},\ref{diffz}) allow us to evaluate the effect of electron Fermi statistics on ionization.
-From Eq.(\ref{feboltzmann}) one can
-see that for large $g_e$ (Boltzmann gas) the equation, $G(g_e)=0$, reduces to $\langle i\rangle-g_{e1}/g_e=\delta_{\rm Fe}$,
-where $\delta_{\rm Fe}$ is a small negative correction to the Fermi function at $g_e \to \infty$:
-\begin{equation}\label{feboltzmann}
-{\rm Fe}_\nu(g_e)=\frac{1}{\Gamma(\nu+1)} \int \frac{x^\nu dx}{g_e e^x + 1} =
-\frac{1}{\Gamma(\nu+1)} \int \frac{x^\nu dx}{g_e e^x} + \delta_{\rm Fe} = \frac{1}{g_e} + \delta_{\rm Fe}.
-\end{equation}
-%Considering $\delta_{\rm Fe}$ negligible, one can find $g_e=g_{e1}/Z$ from Eq.(\ref{zfe})
-
-Assuming $\delta_{\rm Fe}$ to be a small increment in the right hand side of Eqs.(\ref{diffge},\ref{diffz}), and by
-finding $dg_e/\delta_{\rm Fe}$ from Eq.(\ref{diffge}) at $dV=dT=0$ and then finding $dZ/\delta_{\rm Fe}$ from Eq.(\ref{diffz}) gives:
-\begin{equation}
-\delta Z=Z\delta_{\rm Fe}\frac{\langle i^2\rangle-Z^2}{\langle i^2\rangle-Z^2+Z}. 
-\end{equation}
-The correction is negative as long as $\delta_{\rm Fe}$ is negative. Thus, due to the Fermi gas effects for detached electrons, the ionization degree is
-always lower than that predicted by the Saha equilibrium equations under the assumption of a Boltzmann electron gas.
-
-This effect should be accounted for while
-treating the effect of the Fermi statistics for electrons in the equation of state. Specifically, {\it at constant electron density} the exchange interactions 
-between the electrons increases the electron pressure, but in the partially ionized plasma the magnitude (if not the sign!) of this effect can be  
-compromised by the pressure reduction due to the decrease in the electron density. 
-
 {\bf Plasma thermodynamics and Equation-Of-State.} Now we substitute the ion partition function into Eq.(\ref{freeenergy}). After some algebra we obtain:
 \begin{equation}\label{equile}
 F = -TN_a\log\left[\frac{eV}{N_a}\left(\frac{MT}{2\pi \hbar^2}\right)^{3/2}\right]-TN_a\log S +\Omega_e,
@@ -217,15 +194,19 @@ P_e = n_aTZR^+(g_e).
 \end{equation}
 
 However, while calculating the second order thermodynamic derivatives, like the specific heat, the derivatives of $g_e$ essentially sophisticate the 
-calculations. The result may be expressed in terms of covariances: $\langle\delta^2i\rangle=\langle(i-Z)^2\rangle$, $\langle\delta^2E\rangle=\langle(E_i-\langle E_i\rangle)^2 \rangle$ and 
-$\langle\delta i\delta E\rangle=\langle(E_i-\langle E_i\rangle)(i-Z)\rangle$. In a similar way one can find the specific heat in an isochoric process, per the unit of volume:
+calculations. The result may be expressed in terms of covariances:
+$\langle\delta^2 i   \rangle=\langle(i-Z)^2\rangle$,
+$\langle\delta^2 E_i \rangle=\langle(E_i-\langle E_i\rangle)^2 \rangle$ and 
+$\langle\delta i\delta E_i \rangle=\langle(E_i-\langle E_i\rangle)(i-Z)\rangle$.
+In a similar way one can find the specific heat in an isochoric process, per the unit of volume:
 \begin{equation}
-C_{Ve}=\frac{\partial {\cal E}_e}{\partial T}=n_a\left[\frac{\langle\delta^2E\rangle}{T^2}+\frac{15}4ZR^+
--\frac{\left(\frac32Z-\frac{\langle\delta E\delta i\rangle}T\right)^2}{\langle\delta^2i\rangle+ZR^-}\right],
+C_{Ve}=\frac{\partial {\cal E}_e}{\partial T}=n_a\left[\frac{\langle\delta^2 E_i \rangle}{T^2}+\frac{15}4ZR^+
+-\frac{\left(\frac32Z-\frac{\langle\delta E_i \delta i\rangle}T\right)^2}{\langle\delta^2i\rangle+ZR^-}\right],
 \end{equation}
 the temperature derivative of pressure:
 \begin{equation}
-\frac {\partial P_e}{\partial T}=n_aZ\left[\frac52 R^+ -\frac{\frac32Z-\frac{\langle\delta E\delta i\rangle}T}{\langle\delta^2i\rangle+ZR^-}\right],
+\frac {\partial P_e}{\partial T} = n_aZ\left[\frac52 R^+ -
+\frac{\frac32Z-\frac{\langle\delta E_i \delta i\rangle}T}{\langle\delta^2i\rangle+ZR^-}\right],
 \end{equation}
 as well as the isothermal compressibility:
 \begin{equation}
@@ -240,7 +221,7 @@ V\frac{\partial P_i}{\partial V}=-n_aT,
 are omitted.
 
 The speed of sound, $C_s$ is defined in terms of the adiabatic comressibility (at constant entropy), $C_s^2=\left(\frac{\partial P}{\partial \rho}\right)_{\rm ad}$, which
-may be parametrized in terms of 'effective polytropic index', $\gamma$, such that 
+may be parametrized in terms of effective adiabatic index, $\gamma$, such that 
 $\gamma\frac{P}\rho=\left(\frac{\partial P}{\partial \rho}\right)_{\rm ad}$, herewith $\rho$ is the mass density. To calculate this, one can take Eq.(3.72) from 
 \cite{drake}, 
 $$
@@ -261,3 +242,29 @@ which gives
 \end{equation}
 Note that in the last three equations we denote the derivative at constant $V$ as that at constant $\rho$ and used the derivatives over $\rho$ instead of those over $V$:
  $V\frac\partial{\partial V}=-\rho\frac\partial{\partial \rho}$.
+
+{\bf Discussion.} Estimate the effect of the Fermi statistics on the ionization degree.
+Eqs.(\ref{diffge},\ref{diffz}) allow us to evaluate the effect of electron Fermi statistics on ionization.
+From Eq.(\ref{feboltzmann}) one can
+see that for large $g_e$ (Boltzmann gas) the equation, $G(g_e)=0$, reduces to $\langle i\rangle-g_{e1}/g_e=\delta_{\rm Fe}$,
+where $\delta_{\rm Fe}$ is a small negative correction to the Fermi function at $g_e \to \infty$:
+\begin{equation}\label{feboltzmann}
+{\rm Fe}_\nu(g_e)=\frac{1}{\Gamma(\nu+1)} \int \frac{x^\nu dx}{g_e e^x + 1} =
+\frac{1}{\Gamma(\nu+1)} \int \frac{x^\nu dx}{g_e e^x} + \delta_{\rm Fe} = \frac{1}{g_e} + \delta_{\rm Fe}.
+\end{equation}
+%Considering $\delta_{\rm Fe}$ negligible, one can find $g_e=g_{e1}/Z$ from Eq.(\ref{zfe})
+
+Assuming $\delta_{\rm Fe}$ to be a small increment in the right hand side of Eqs.(\ref{diffge},\ref{diffz}), and by
+finding $dg_e/\delta_{\rm Fe}$ from Eq.(\ref{diffge}) at $dV=dT=0$ and then finding $dZ/\delta_{\rm Fe}$ from Eq.(\ref{diffz}) gives:
+\begin{equation}
+\delta Z=Z\delta_{\rm Fe}\frac{\langle i^2\rangle-Z^2}{\langle i^2\rangle-Z^2+Z}. 
+\end{equation}
+The correction is negative as long as $\delta_{\rm Fe}$ is negative. Thus, due to the Fermi gas effects for detached electrons, the ionization degree is
+always lower than that predicted by the Saha equilibrium equations under the assumption of a Boltzmann electron gas.
+
+This effect should be accounted for while
+treating the effect of the Fermi statistics for electrons in the equation of state. Specifically, {\it at constant electron density} the exchange interactions 
+between the electrons increases the electron pressure, but in the partially ionized plasma the magnitude (if not the sign!) of this effect can be  
+compromised by the pressure reduction due to the decrease in the electron density. 
+
+
