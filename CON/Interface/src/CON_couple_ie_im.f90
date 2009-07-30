@@ -330,6 +330,7 @@ contains
 
     iColat = nint(IMr1_Xyz_D(1))
     iLon   = nint(IMr1_Xyz_D(2))
+    if (iLon == 0) iLon = Grid_C(IM_)% nCoord_D(2)
     
     if(  iColat<1 .or. iColat>Grid_C(IM_)% nCoord_D(1) .or. &
          iLon<1 .or. iLon>Grid_C(IM_)% nCoord_D(2)       )then
