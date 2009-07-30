@@ -52,7 +52,7 @@ contains
     end if
   end subroutine read_alfven_speed
   !============================================================================
-  subroutine read_wave_preesure
+  subroutine read_wave_pressure
     use ModReadParam,  ONLY: read_var
     !--------------------------------------------------------------------------
     call read_var('UseWavePressure',UseWavePressure)
@@ -60,5 +60,5 @@ contains
        call read_var(' WavePressureFirst' , WavePressureFirst_)
        call read_var(' WavePressureLast'  , WavePressureLast_ )
     end if
-  end subroutine read_wave_preesure
+  end subroutine read_wave_pressure
 end module ModWaves

@@ -41,7 +41,7 @@ contains
     use ModReadParam,   ONLY: read_line, read_command, read_var
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut
     use ModMagnetogram, ONLY: set_parameters_magnetogram
-    use ModWaves,       ONLY: read_alfven_speed
+    use ModWaves,       ONLY: read_alfven_speed,read_wave_pressure
     implicit none
 
     character (len=100) :: NameCommand
@@ -67,6 +67,9 @@ contains
           end if
        case("#ALFVENSPEED")
           call read_alfven_speed
+
+       case("#WAVEPRESSURE")
+          call read_wave_pressure
 
        case("#ARCH","#TD99FLUXROPE","#GL98FLUXROPE")
           call EEE_set_parameters(NameCommand)
@@ -972,6 +975,10 @@ contains
     AlfvenSpeedPlusFirst_ = AlfvenSpeedPlusFirst_ + I01_-1
     AlfvenSpeedMinusFirst_= AlfvenSpeedMinusFirst_+ I01_-1
     AlfvenSpeedMinusLast_ = AlfvenSpeedMinusLast_ + I01_-1
+
+    WavePressureFirst_    = WavePressureFirst_    + I01_-1
+    WavePressureLast_     = WavePressureLast_     + I01_-1
+
     nFreqPlus  = AlfvenSpeedPlusLast_  - AlfvenSpeedPlusFirst_+1
     nFreqMinus = AlfvenSpeedMinusLast_ - AlfvenSpeedMinusFirst_+1
     nFreq=nFreqPlus+nFreqMinus
