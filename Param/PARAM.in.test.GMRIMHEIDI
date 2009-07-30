@@ -158,10 +158,10 @@ T                       DoTraceIe
 #BEGIN_COMP IE ---------------------------------------------------------------
 
 #KRYLOV
-F			UsePreconditioner
+T			UsePreconditioner
 T			UseInitialGuess
-0.1			Tolerance
-5000			MaxIteration
+3.0			Tolerance
+200			MaxIteration
 
 #SOLVE
 T			DoSolve
