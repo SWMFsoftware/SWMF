@@ -152,7 +152,7 @@ TEST: foreach $test (sort @test){
 	}
 	my $error = <ERR>;
 	close(ERR);
-	if(length($error)>0 and $error !~ /underflow/i){
+	if(length($error)>0 and $error !~ /underflow|floating invalid/i){
 	    &report("$test: $errorfile=",$error);
 	    $anyerror=1;
 	}
