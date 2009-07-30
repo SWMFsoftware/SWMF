@@ -133,6 +133,22 @@ subroutine calc_sources
 
   end if
 
+  if(UseAlfvenWavePressure)then
+     do k = 1, nK; do j = 1, nJ; do i = 1, nI
+        DivU = vInv_CB(i,j,k,iBlock) &
+             *(uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
+             + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
+             + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1) )
+        Source_VC(pAlfven1_,i,j,k) = &
+             -0.5*State_VGB(pAlfven1_,i,j,k,iBlock)*DivU
+        Source_VC(pAlfven2_,i,j,k) = &
+             -0.5*State_VGB(pAlfven2_,i,j,k,iBlock)*DivU
+        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+             + (State_VGB(pAlfven1_,i,j,k,iBlock) &
+             +  State_VGB(pAlfven2_,i,j,k,iBlock) )*DivU
+     end do; end do; end do
+  end if
+
   if(TypeGeometry == 'rz')then
      if(UseB)call stop_mpi('RZ geometry is not implemented for MHD')
 

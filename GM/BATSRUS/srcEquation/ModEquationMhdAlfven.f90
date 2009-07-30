@@ -1,6 +1,6 @@
 module ModVarIndexes
 
-  use ModSingleFluid, Redefine1 => Palfp_, Redefine2 => Palfm_
+  use ModSingleFluid, Redefine1 => pAlfven1_, Redefine2 => pAlfven2_
 
   implicit none
 
@@ -26,17 +26,17 @@ module ModVarIndexes
   ! The energy is handled as an extra variable, so that we can use
   ! both conservative and non-conservative scheme and switch between them.
   integer, parameter :: &
-       Rho_   = 1,    &
-       RhoUx_ = 2,    &
-       RhoUy_ = 3,    &
-       RhoUz_ = 4,    &
-       Bx_    = 5,    &
-       By_    = 6,    &
-       Bz_    = 7,    &
-       Palfp_ = 8,    &
-       Palfm_ = 9,    &
-       p_     = nVar, &
-       Energy_= nVar+1
+       Rho_      = 1,    &
+       RhoUx_    = 2,    &
+       RhoUy_    = 3,    &
+       RhoUz_    = 4,    &
+       Bx_       = 5,    &
+       By_       = 6,    &
+       Bz_       = 7,    &
+       pAlfven1_ = 8,    &
+       pAlfven2_ = 9,    &
+       p_        = nVar, &
+       Energy_   = nVar+1
 
   ! This allows to calculate RhoUx_ as rhoU_+x_ and so on.
   integer, parameter :: RhoU_ = RhoUx_-1, B_ = Bx_-1
@@ -59,8 +59,8 @@ module ModVarIndexes
        0.0, & ! Bx_
        0.0, & ! By_
        0.0, & ! Bz_
-       0.0, & ! Palfp_
-       0.0, & ! Palfm_
+       0.0, & ! pAlfven1_
+       0.0, & ! pAlfven2_
        1.0, & ! p_
        1.0 /) ! Energy_
 
@@ -73,8 +73,8 @@ module ModVarIndexes
        'Bx ', & ! Bx_
        'By ', & ! By_
        'Bz ', & ! Bz_
-       'Pap', & ! Palfp_
-       'Pam', & ! Palfm_
+       'Pap', & ! pAlfven1_
+       'Pam', & ! pAlfven2_
        'p  ', & ! p_
        'e  ' /) ! Energy_
 

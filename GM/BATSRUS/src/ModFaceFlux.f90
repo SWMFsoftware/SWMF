@@ -1957,12 +1957,14 @@ contains
 
       use ModPhysics, ONLY: inv_gm1, inv_c2LIGHT
       use ModVarIndexes
-      use ModAdvance, ONLY: Pe_, UseElectronPressure
+      use ModAdvance, ONLY: Pe_, UseElectronPressure, &
+           UseAlfvenWavePressure, pAlfven1_, pAlfven2_
       use ModWaves
 
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, p, e
       real :: HallUx, HallUy, HallUz, InvRho
+      real :: pAlfven
       real :: B2, B0B1, pTotal
       real :: Gamma2                           !^CFG IF SIMPLEBORIS
       integer :: iVar
@@ -2097,7 +2099,17 @@ contains
                  Flux_V(iVar) - AlfvenSpeed *  State_V(iVar) !!MINUS
          end do
       end if
-      
+
+      if(UseAlfvenWavePressure)then
+         Flux_V(pAlfven1_) = (Un + FullBn/sqrt(Rho))*State_V(pAlfven1_)
+         Flux_V(pAlfven2_) = (Un - FullBn/sqrt(Rho))*State_V(pAlfven2_)
+
+         pAlfven = State_V(pAlfven1_) + State_V(pAlfven2_)
+         Flux_V(RhoUx_) = Flux_V(RhoUx_) + pAlfven*NormalX
+         Flux_V(RhoUy_) = Flux_V(RhoUy_) + pAlfven*NormalY
+         Flux_V(RhoUz_) = Flux_V(RhoUz_) + pAlfven*NormalZ
+         Flux_V(Energy_) = Flux_V(Energy_) + Un*pAlfven
+      end if
 
       !^CFG IF SIMPLEBORIS BEGIN
       if(UseBorisSimple)then
@@ -2369,7 +2381,8 @@ contains
       use ModVarIndexes
       use ModPhysics, ONLY: g, Inv_C2Light, ElectronTemperatureRatio
       use ModNumConst, ONLY: cPi
-      use ModAdvance, ONLY: State_VGB, eFluid_, UseElectronPressure, Pe_
+      use ModAdvance, ONLY: State_VGB, eFluid_, UseElectronPressure, Pe_, &
+           UseAlfvenWavePressure, pAlfven1_, pAlfven2_
 
       real :: RhoU_D(3)
       real :: Rho, p, InvRho, Sound2, FullBx, FullBy, FullBz, FullBn
@@ -2406,6 +2419,9 @@ contains
          Sound2 = (g*p+(g-1)*DiffBb)*InvRho
       else
          Sound2 = g*p*InvRho
+      end if
+      if(UseAlfvenWavePressure)then
+         Sound2 = Sound2 + 1.5*InvRho*(State_V(pAlfven2_) + State_V(pAlfven2_))
       end if
       if(UseWavePressure)then
          WaveEnergy = 0.0
