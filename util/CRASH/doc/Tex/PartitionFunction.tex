@@ -40,14 +40,15 @@ d \langle f_i \rangle = \langle \delta f_i \delta \left( \frac{d p_i}{p_i} \righ
 \end{equation}
 which is useful to calculate partial derivatives of $\langle f_i \rangle$,
 for example, $\frac{\partial \langle f_i \rangle}{\partial g_e}$.
+
 Proof:
 \begin{eqnarray}
-d \langle f_i \rangle =
+\nonumber d \langle f_i \rangle &=&
 d \left( \frac{\sum w_i f_i}{\sum w_i} \right) =
-\frac{d(\sum w_i f_i)}{\sum w_i} - \frac{d(\sum w_i) \sum w_i f_i}{\sum w_i} =
-\frac{\sum (w_i df_i + f_i dw_i)}{\sum w_i} - \frac{\sum dw_i}{\sum w_i} \langle f_i \rangle = \\
-= \langle df_i \rangle + \langle f_i \frac{dw_i}{w_i} \rangle - \langle \frac{dw_i}{w_i} \rangle \langle f_i \rangle =
+\frac{d(\sum w_i f_i)}{\sum w_i} - \frac{d(\sum w_i) \sum w_i f_i}{\sum w_i} = \\
+\nonumber &=& \frac{\sum (w_i df_i + f_i dw_i)}{\sum w_i} - \frac{\sum dw_i}{\sum w_i} \langle f_i \rangle = \\
+&=& \langle df_i \rangle + \langle f_i \frac{dw_i}{w_i} \rangle - \langle \frac{dw_i}{w_i} \rangle \langle f_i \rangle =
 \langle \delta f_i \delta \left( \frac{dw_i}{w_i} \right) \rangle + \langle df_i \rangle,
 \end{eqnarray}
-where $w_i = p_i S$ are non-normalized partition function.
+where $w_i = p_i S$ are non-normalized partition functions.
 

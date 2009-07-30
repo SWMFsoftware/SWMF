@@ -17,19 +17,22 @@ The partition function, $p_i$, describing the ion distribution over the charge s
 is now split into smaller populations, $p_{i,n}$, with each of them relating to a particular 
 excitation level, $n$. Note that:
 \begin{equation}
-\sum_n{p_{i,n}}=p_i,\qquad \sum{\frac{p_{i,n}}{p_i}}=1.
+\sum_n{p_{i,n}}=p_i,\qquad \sum{\frac{p_{i,n}}{p_i}}=1.	
 \end{equation}
 That is why the statistical weights, $w_{i,n}$, and, hence, the statistical sum and the partition functions
 become more complex:
 \begin{equation}
-w_{i,n} = 2 n^2 \cdot g_e^i \exp \left( -\frac{E^*_i + E^{exc}_{i,n}}{T} \right),\qquad
+w_{i,n} = g_{i,n} \cdot g_e^i \exp \left( -\frac{E^*_i + E^{exc}_{i,n}}{T} \right),\qquad
 S = \sum_{i=0}^{i_{max}} \sum_{n=n_{gr}}^{\infty} w_{i,n},\qquad
-p_{i,n} = \frac{w_{i,n}}{S}.
+p_{i,n} = \frac{w_{i,n}}{S},
 \end{equation}
+where $g_{i,n}$ stands for the excitation level degeneracy.
+
 The excitation energy, $E^{exc}_{i,n}$, we calculate within a Bohr-like model, which is expressed in
 Eq.(2.9) from \cite{ionmix}:
 \begin{equation}
-E^{exc}_{i,n} = I_i \cdot n_{gr}^2 \left( \frac1{n_{gr}^2} - \frac1{n^2} \right).
+E^{exc}_{i,n} = I_i \cdot n_{gr}^2 \left( \frac1{n_{gr}^2} - \frac1{n^2} \right), \qquad
+g_{i,n} = 2 n^2.
 \end{equation}
 
 Up to this point mean values and covariances were being calculated over $i_{max}+1$ possible
