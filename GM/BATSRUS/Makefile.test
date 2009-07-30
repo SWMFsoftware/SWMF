@@ -23,8 +23,8 @@ test:
 	-@(make test_venus)
 	-@(make test_saturn)
 	-@(make test_comet)
-	-@(make test_func)
 	-@(make test_magnetometer)
+	-@(make test_func)
 	@ls -l *.diff
 
 # All tests are done in this directory:
