@@ -1974,7 +1974,7 @@ contains
 
   !=========================================================================
   subroutine correct_parameters
-
+    use ModWaves, ONLY: UseAlfvenSpeed,UseWavePressure
     ! option and module parameters
     character (len=40) :: Name
     real               :: Version
@@ -2030,6 +2030,13 @@ contains
     case('ROE','Roe')                                !^CFG IF ROEFLUX BEGIN
        FluxType='Roe'
        UseRS7 = .true.
+       if(UseAlfvenSpeed .or. UseWavePressure)then
+          if(iProc==0) write(*,'(a)')NameSub // &
+               'Wave transport and wave pressure do not work with ' // trim(FluxType)
+          if(UseStrict)&                             !^CFG IF AWFLUX
+               call stop_mpi('Correct PARAM.in')    
+          FluxType='Sokolov'                         !^CFG IF AWFLUX
+       end if
     case('ROEOLD','RoeOld')             
        FluxType='RoeOld'                             !^CFG END ROEFLUX
     case('RUSANOV','TVDLF','Rusanov')                !^CFG IF RUSANOVFLUX

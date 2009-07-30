@@ -39,6 +39,7 @@ module ModWaves
   real :: WaveEnergy = 0.0 !Auxiliary variable
   real :: DivU = 0.0       !Auxiliary variable
 contains
+  !============================================================================
   subroutine read_alfven_speed
     use ModReadParam,  ONLY: read_var
     !--------------------------------------------------------------------------
@@ -50,4 +51,14 @@ contains
        call read_var(' AlfvenSpeedMinusLast' , AlfvenSpeedMinusLast_ )
     end if
   end subroutine read_alfven_speed
+  !============================================================================
+  subroutine read_wave_preesure
+    use ModReadParam,  ONLY: read_var
+    !--------------------------------------------------------------------------
+    call read_var('UseWavePressure',UseWavePressure)
+    if(UseWavePressure)then
+       call read_var(' WavePressureFirst' , WavePressureFirst_)
+       call read_var(' WavePressureLast'  , WavePressureLast_ )
+    end if
+  end subroutine read_wave_preesure
 end module ModWaves
