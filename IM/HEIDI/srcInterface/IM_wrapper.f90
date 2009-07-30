@@ -29,7 +29,7 @@ subroutine IM_set_param(CompInfo,TypeAction)
   case('VERSION')
      call put(CompInfo,                         &
           Use=.true.,                           &
-          NameVersion='RAM_HEIDI (Liemohn)',    &
+          NameVersion='HEIDI (Liemohn)',    &
           Version=1.1)
   
   case('MPI')
