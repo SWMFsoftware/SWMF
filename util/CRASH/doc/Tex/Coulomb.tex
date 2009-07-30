@@ -4,9 +4,16 @@ electrostatic energy of each of the ions in the charge state $i$ coupled with i 
 distributed over the "iono-sphere"
 (see Eq.(3.50) in \cite{drake}):
 \begin{equation}\label{fterm}
-F_M=-\frac{9}{10} \frac{q_e^2}{r_{iono}} \sum_{i=0}^{i_{max}} i^2 N_i,\qquad
+F_M=-E_M \sum_{i=0}^{i_{max}} i^2 N_i,\qquad E_M=\frac{9}{10} \frac{q_e^2}{r_{iono}},\qquad
 r_{iono} = \left( \frac{4 \pi}{3} n_a \right)^{-\frac13}.
 \end{equation}
+Here the Madelung energy,
+\begin{equation}
+E_M=\frac9{10}\frac{q_e^2}{r_{iono}}=\frac{1.8Ry}{(r_{iono}/a)},
+\end{equation}
+characterizes the electrostatic energy related per an atomic cell. It is conveniently expressed in terms of the Rydberg constant,  $Ry=\frac{q_e^2}{2a}\approx 13.60$ eV, as long as
+the iono-sphere radius, $r_{iono}$, is related to the Bohr radius, $a=m_e\hbar^2/q_e^2\approx0.5\cdot10^{-10}$ m.
+
 Accordingly, in the requirement of the ionization equilibrium, $\partial F/\partial N_i - \partial F/\partial N_{i+1} - \partial F/\partial N_e = 0$ (with respect to the reaction $(i)\leftrightarrow(i+1)+e$),
 the term $\partial F_{M}/\partial N_i -\partial F_{M}/\partial N_{i+1}$ will 
 give the contribution of $\frac{9}{10} \frac{(2i+1)q_e^2}{r_{iono}}$ into the left hand side:
@@ -62,14 +69,12 @@ A_{g_e} = \langle \delta^2 i \rangle + ZR^-(g_e), \qquad
 A_T     = \frac32 Z - \frac{\langle \delta i \delta E^*_i \rangle}{T}, \qquad
 A_V     = Z + L \langle \delta(i^2) \delta i \rangle,
 \end{equation}
-where $L$ can be expressed either in CGS units or as it appears in the code:
+where 
 \begin{equation}
-L_{CGS}   = \frac{3}{10} \frac{q_e^2}{T r_{iono}}, \qquad
-L = \frac35 \frac{Ry[eV]}{T[eV] r_{iono}[a]},
+L   = \frac{3}{10} \frac{E_M}{3T}, \qquad
+L = \frac35 \frac{Ry[eV]}{T[eV] r_{iono}[a]}.
 \end{equation}
-where $Ry[eV]$ denotes the Rydberg constant expressed in electron-volts, and
-$r_{iono}[a]$ stands for the ionosphere radius expressed in the units
-of Bohr radius.
+
 
 Again, we express the result in terms of covariances,
 $\langle \delta a \delta b \rangle = \langle (a - \langle a \rangle) (b - \langle b \rangle) \rangle$,
