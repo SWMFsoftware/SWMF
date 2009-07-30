@@ -559,7 +559,7 @@ subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
 
   do iPoint = iPointStart, iPointStart + nPoint - 1
 
-     iLat   = Index % iCB_II(1,iPoint)
+     iLat   = min(Index % iCB_II(1,iPoint),nLats+2)
      iLon   = Index % iCB_II(2,iPoint)
      iBlock = Index % iCB_II(3,iPoint)
      w      = Weight % Weight_I(iPoint)
@@ -575,6 +575,7 @@ subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
 
      if(iLat<1 .or. iLat>nLats+2 .or. iLon<1 .or. iLon>nLonsAll+1)then
         iLon = mod(iLon,nLonsAll+1)
+        write(*,*) iLat, iLon, nLats+2, nLonsAll+1
         if(iLat<1 .or. iLat>nLats+2 .or. iLon<1 .or. iLon>nLonsAll+1)then
            call CON_stop(NameSub//' SWMF_ERROR index out of range')
         endif

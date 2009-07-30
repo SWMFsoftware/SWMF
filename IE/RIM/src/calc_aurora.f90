@@ -423,7 +423,7 @@ subroutine solve_for_aurora(RhoH, PH, TH, JrH, InvBH, LatH, &
 
         if (rhoh(iLonG,iLat) > maxRho) rhoh(iLonG,iLat) = maxRho
 
-        if (pNorm(iLonG,iLat) > 0) &
+        if (pNorm(iLonG,iLat) > 0 .and. rhoH(iLonG,iLat) > 0) &
              Discrete_K(iLon,iLat) = &
              (rhoH(iLonG,iLat)**1.5) / pNorm(iLonG,iLat)
 !        if (JrH(iLon,iLat) > 7.5e-8) &
