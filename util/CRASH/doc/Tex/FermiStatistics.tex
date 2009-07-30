@@ -6,10 +6,10 @@ equations, the electrons are usually assumed to be an ideal Boltzmann gas.  Howe
 applicability of the Boltzmann gas model for electrons are often not satisfied, resulting in
 very low accuracy. Therefore, it is worth while checking whether or not one needs to assume Boltzmann statistics for the electrons when solving the ionization equlibrium.
 
-It appears that 
-for realistic quantitative simulations this assumption is completly unnecessary, as solving the 
-ionization equilibrium with the correct Fermi statistics for electrons is not a more difficult problem
-than that under the incorrect assumption of Boltzmann statistics.
+It appears that for realistic quantitative simulations this assumption is completly 
+unnecessary, as solving the ionization equilibrium under the incorrect assumption of 
+Boltzmann statistics is not any easier than that with the correct Fermi statistics for 
+electrons.
 
 In a partially ionized plasma the free electron density, corrected by the effects of the Fermi statistics 
 ('the exchange interaction'), should be used in solving the Equation-Of-State (EOS), which is also 
@@ -29,7 +29,9 @@ N_i\log\left[g_i
              \frac{eV}{N_i}\left(\frac{MT}{2\pi \hbar^2}\right)^{3/2}\exp \left(-\sum_{j=0}^{i-1}\frac{I_j}T \right)\right]}+F_e,
 \end{equation}  
 where $N_i=n_iV$ is the total number of ions in the charge state $i$ in the volume V and
-$I_j$ ($j = 0, 1, 2, \dots$) is the energy needed to ionize an atom or ion from the charge state $j$ to the charge state $j+1$ (the ionization potential).
+$I_j$ ($j = 0, 1, 2, \dots$) is the energy needed to ionize an atom or ion from the charge state $j$ to the charge state $j+1$ (the ionization potential), and $g_i$ is a 
+statistical weight of an ion (atom) in a given charge state 
+(see Section IV for more detail).
 
 {\bf Ionization equilibrium: formulation of the problem.} Now we formulate the requirement for the
 ionization equilibrium with respect to the reaction $(i)\leftrightarrow(i+1)+e$ for each ion charge state, $i$.
@@ -100,7 +102,7 @@ is a value such that in the {\it Boltzmann} electron gas $g_e = g_{e1}/Z$ would 
 \begin{equation}
 {\rm Fe}_\nu(g_e)=\frac1{\Gamma(\nu+1)}\int{\frac{x^\nu dx}{g_ee^x+1}},
 \end{equation}
-where $\Gamma$-function is introduced as usuall: $\Gamma(\nu+1)=\nu \Gamma(\nu),\,\Gamma(1/2)=\pi^{1/2}$.
+where $\Gamma$-function is introduced as usually: $\Gamma(\nu+1)=\nu \Gamma(\nu),\,\Gamma(1/2)=\pi^{1/2}$.
 Below we use the following auxiliary functions:
 \begin{equation}
 R^-(g_e)=\frac{{\rm Fe}_{-1/2}(g_e)}{{\rm Fe}_{1/2}(g_e)}, \qquad
