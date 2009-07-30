@@ -4,8 +4,14 @@ module ModIonoHeidi
   !\
   ! Ionosphere array parameters
   !/
-  integer, parameter :: IONO_nTheta = 65
-  integer, parameter :: IONO_nPsi   =  4*(IONO_nTheta-1)+1
+  
+  !integer, parameter :: IONO_nTheta = 65
+  !integer, parameter :: IONO_nPsi   =  4*(IONO_nTheta-1)+1
+
+  integer, parameter :: IONO_nTheta = 91
+  integer, parameter :: IONO_nPsi   = 181
+
+
 
   !\
   ! Ionosphere solution array definitions
@@ -31,9 +37,5 @@ module ModIonoHeidi
        IonoGmDensity=-1.0, &
        IonoGmPressure=-1.0, &
        IonoGmTemperature=-1.0
-
-
-
-
 
 end module ModIonoHeidi
