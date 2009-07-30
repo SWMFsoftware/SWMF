@@ -957,11 +957,6 @@ The results of the thermodynamic calculations for polyimide $C_{22}H_{10}N_2O_5$
 \input{ionization_table5.tex} 
 \par\end{center}
 
-Below we also added the calculation of the 
-Debye-Huekel correlation energy as well as the Madelung energy) as well as the 
-\begin{center}
-\input{ionization_table6.tex} 
-\par\end{center}
 
 \section {Conclusion}
 
@@ -971,8 +966,10 @@ of various level ions ($P_i$) from a given average internal energy per atomic un
 that plasma. This method was also somewhat optimized for faster performance in a 
 computer program, since such calculation may need to be performed millions of times 
 within a cell-based plasma modeling program, which this calculation was meant for. 
-However, the calculation still requires a two-layer iterative approach (iterations 
-within each iteration), with around 3-6 iterations for each step, which still requires 
-a relatively significant computing time.
+
+This file is closed in June, 2009, because the approach of the Boltzmann electron gas
+does not meet the practical requirements. The CRASH code moved towards an account of the 
+Fermi statistics for electrons, the Coulomb interactions as well as the detailed analysis
+of the excited level populations. The further progress is described in HEDP.pdf document.
 
 \end{document}
