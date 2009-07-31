@@ -266,6 +266,7 @@ Contains
 
     use CRASH_ModFermiGas,ONLY: UseFermiGas, LogGe, &
          LogGeMinBoltzmann,LogGeMinFermi
+    use CRASH_ModExcitation,ONLY:IonizationPotentialLowering_I
 
     ! Concentration of heavy particles (atoms+ions) in the plasma 
     ! (# of particles per m^3):
@@ -293,6 +294,8 @@ Contains
        return
     end if
 
+    if(UseCoulombCorrection)IonizationPotentialLowering_I = 1.80 * rIonoSphereInv *&
+         cRyToEv * (2.0 * N_I + 1.0)
 
     TeInv = cOne / TeIn        ! 1/kT; units: [1/eV]
     lnC1  = log( eWight1eV1m3  * sqrt(TeIn)*TeIn / Na)
@@ -316,7 +319,6 @@ Contains
       ! First approximate the value of Z by finding for which i=Z 
       ! the derivative of the populations sequence~0 (population is maximum):
       initial: do iMix = 1,nMix
-
          iZ = minloc( abs(lnC1 - LogN_I(1:nZ_I(iMix)) - &
               IonizPotential_II(1:nZ_I(iMix),iMix)*TeInv) )
 
