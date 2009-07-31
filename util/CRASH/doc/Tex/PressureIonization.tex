@@ -1,0 +1,63 @@
+\section{Pressure ionization}
+We account for pressure ionization via energy levels correction as follows:
+\begin{equation}
+\Delta E_{i,n,l} = f(i,n,l) (r_{iono}[a])^{-\theta}, \qquad
+E_{i,n,l} = E^*_i + E^{exc}_{i,n} + \Delta E_{i,n,l},
+\end{equation}
+where the function $f$ and the constant value $\theta$ must be adjusted
+according to the particular model being used. Now we distingish quantum states also by
+the azimuthal quantum number, $l$, because the effect of pressure ionization
+depends on the orbital type.
+
+Besides the continuum lowering due to Coulomb interactions, the effect of
+pressure ionization raises the excitation levels. When the excitation energy
+exceeds the ionization energy, the corresponding excitation level vanishes.
+Application of the Madelung theory results in the condition for
+energy level elimination as follows:
+\begin{equation}
+E^{exc}_{i,n} + \Delta E_{i,n,l} > I_i - 3 (2i+1) TL.
+\end{equation}
+
+We can still use the
+Eqs.(\ref{generalE}), (\ref{generalP}), (\ref{generalCv}),
+(\ref{generalPT}), (\ref{generalCompr}), where mean values and
+covariance should now be calculated over all possible triplets $(i, n, l)$.
+Substitution of the partial devivatives of $E$ with respect to $V$ as follows:
+\begin{eqnarray}
+-V \frac{\partial (\Delta E_{i,n,l})}{\partial V} =&
+\frac{\theta}{3} f(i,n,l) (r_{iono}[a])^{-\theta} &=
+\frac{\theta}{3} \Delta E_{i,n,l}, \\
+V^2 \frac{\partial^2 (\Delta E)}{\partial V^2} =&
+\frac{\theta (\theta + 3)}{9} f(i,n,l) (r_{iono}[a])^{-\theta} &=
+\frac{\theta (\theta + 3)}{9} \Delta E_{i,n,l},
+\end{eqnarray}
+gives us the following formulas for thermodynamic derivatives:
+\begin{equation}
+P = n_a \left[ T(1 + ZR^+ - L \langle i^2 \rangle) +
+\frac{\theta}{3} \langle \Delta E \rangle \right],
+\end{equation}
+\begin{equation}
+{\cal E} = n_a \left[ \frac32 T (1 + ZR^+) + \langle E \rangle \right],
+\end{equation}
+\begin{equation}
+C_V = n_a \left[ \frac32 + \frac{\langle \delta^2 E \rangle}{T^2} +
+\frac{15}{4} ZR^+ - \frac{(\frac32 Z - \frac{\langle \delta i \delta E \rangle}{T})^2}
+{\langle \delta^2 i \rangle + ZR^-} \right],
+\end{equation}
+\begin{eqnarray}
+\nonumber \frac{\partial P}{\partial T} &=& n_a \Biggl[ 1 + \frac52 ZR^+ -
+ \left( Z + L \langle \delta i \delta (i^2) \rangle
+- \frac{\theta}{3} \frac{1}{T} \langle \delta i \delta \Delta E \rangle \right)
+\frac{\frac32 Z - \frac{\langle \delta i \delta E \rangle}{T}}
+{\langle \delta^2 i \rangle + ZR^-} - \\
+&-& L \frac{\langle \delta E \delta (i^2)}{T} +
+\frac{\theta}{3} \frac{\langle \delta E \delta \Delta E \rangle}{T^2} \Biggr],
+\end{eqnarray}
+\begin{eqnarray}
+\nonumber V \frac{\partial P}{\partial V} &=& n_a T \Biggl[ -1 -
+\frac{(Z + \langle Li^2 - \frac{\theta}{3} \frac{\Delta E}{T} \rangle)^2}
+{\langle \delta^2 i \rangle + ZR^-} +
+\frac43 L \langle i^2 \rangle -
+\frac{\theta (\theta+3)}{9} \frac{\langle \Delta E \rangle}{T} + \\
+&+& \left\langle \delta^2 \left( Li^2 - \frac{\theta}{3} \frac{\Delta E}{T} \right) \right\rangle \Biggr].
+\end{eqnarray}
