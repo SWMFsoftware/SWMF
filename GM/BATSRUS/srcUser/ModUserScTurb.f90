@@ -1182,7 +1182,7 @@ contains
     !   NameTecVar = 'wDissip'
     case('poynt')
        ! neglect radial bulk velociy
-       do i=1,nI ; do j=1,nJ; do k=1,nK
+       do i=-1,nI+2 ; do j=-1,nJ+2; do k=-1,nK+2
           call calc_poynt_flux(i,j,k,iBlock,.false.,PoyntFlux)
           PlotVar_G(i,j,k)=PoyntFlux
        end do; end do ; end do
@@ -1191,7 +1191,7 @@ contains
        NameIdlUnit = NameIdlUnit_V(UnitPoynting_)
     case('poyntur')
        ! include radial bulk velocity
-       do i=1,nI; do j=1,nJ; do k=1,nK
+       do i=-1,nI+2; do j=-1,nJ+2; do k=-1,nK+2
           call calc_poynt_flux(i,j,k,iBlock,.true.,PoyntFlux)
           PlotVar_G(i,j,k)=PoyntFlux
        end do; end do ; end do
