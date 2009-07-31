@@ -30,7 +30,7 @@ module ModUser
   integer                       :: nFreq
   real,dimension(I50_-I01_+1)   :: LogFreq_I ! frequency grid
   real                          :: LogFreqInertial, dLogFreq ! frequency grid spacing (uniform)
-  real,dimension(nI,nJ,nK,nBLK) :: WavePres_CB=0.0 ,WaveDissip_CB=0.0 ! for plotting only
+  !WaveDissip_CB=0.0 ! for plotting only
 
 contains
   !============================================================================
@@ -340,7 +340,8 @@ contains
   subroutine user_initial_perturbation
     use ModMain, ONLY: nBLK,unusedBLK,x_,y_,z_,n_step
     use ModGeometry
-   
+    use ModProcMH
+
     implicit none
 
     logical :: oktest,oktest_me
@@ -350,9 +351,11 @@ contains
         call set_oktest('user_initial_perturbation',oktest,oktest_me)
 
         call init_wave_spectrum
+
+        if (iProc==0) then
            
-        write(*,*) 'SC: Finished initializing wave spectrum'
- 
+           write(*,*) 'SC: Finished initializing wave spectrum'
+        end if
      
    end subroutine user_initial_perturbation
   !============================================================================
@@ -443,7 +446,7 @@ contains
 
     integer,intent(in)           :: iStage,iBlock
     integer                      :: i,j,k
-    real                         :: DensCell,PresCell,GammaCell,Beta
+    real                         :: DensCell,PresCell,GammaCell,Beta,WavePres
     character(len=*),parameter   :: NameSub='user_update_states'
     !--------------------------------------------
     call update_states_MHD(iStage,iBlock)
@@ -478,12 +481,12 @@ contains
        !  call update_states_spectrum(iBlock)
  
        do k=1,nK ; do j=1,nJ ; do i=1,nI
-          WavePres_CB(i,j,k,iBlock)=0.5*sum(State_VGB(I01_:I50_,i,j,k,iBlock))
+          WavePres=0.5*sum(State_VGB(I01_:I50_,i,j,k,iBlock))
         
-          if(WavePres_CB(i,j,k,iBlock)<0.0) then
+          if(WavePres<0.0) then
              write(*,*) '=============================================='
              write(*,*) 'Total wave pressure negative at: ',i,j,k,iBlock
-             write(*,*) 'Wave = ',WavePres_CB(i,j,k,iBlock),' MHD= ',State_VGB(p_,i,j,k,iBlock)
+             write(*,*) 'Wave = ',WavePres,' MHD= ',State_VGB(p_,i,j,k,iBlock)
              write(*,*) '=============================================='
           end if
        end do; end do; end do
@@ -525,8 +528,8 @@ contains
        do iFreq = 1,I50_-I01_+1
           if(LogFreq_I(iFreq) .ge. log(FreqCutOff_C(i,j,k))) then
              ! Pass dissipated energy to MHD energy source term
-             WaveDissip_CB(i,j,k,iBlock)=WaveDissip_CB(i,j,k,iBlock)+ &
-                  State_VGB(I01_+iFreq-1,i,j,k,iBlock)
+             !WaveDissip_CB(i,j,k,iBlock)=WaveDissip_CB(i,j,k,iBlock)+ &
+             !     State_VGB(I01_+iFreq-1,i,j,k,iBlock)
               State_VGB(p_,i,j,k,iBlock)=State_VGB(p_,i,j,k,iBlock) &
                  + (g-1.0)*State_VGB(I01_+iFreq-1,i,j,k,iBlock)
              ! remove this energy from the spectrum
@@ -547,8 +550,8 @@ contains
            if((LogFreq_I(iFreq) .ge. log(FreqCutOff_C(i,j,k))) .and. &
                 (State_VGB(I01_+iFreq-1,i,j,k,iBlock) > 0.0) )then
               ! Pass dissipated energy to MHD energy source term
-              WaveDissip_CB(i,j,k,iBlock)=WaveDissip_CB(i,j,k,iBlock)+&
-                   State_VGB(I01_+iFreq-1,i,j,k,iBlock)
+              !WaveDissip_CB(i,j,k,iBlock)=WaveDissip_CB(i,j,k,iBlock)+&
+              !     State_VGB(I01_+iFreq-1,i,j,k,iBlock)
               State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
                    + (g-1.0)*State_VGB(I01_+iFreq-1,i,j,k,iBlock)
               ! Remove this energy from the spectrum
@@ -1044,6 +1047,8 @@ contains
           end do
        end do; end do ; end do
     end do
+
+    call write_spectrogram
         
   end subroutine init_wave_spectrum
   !========================================================================
@@ -1162,19 +1167,19 @@ contains
     select case(NameVar)
        !Allways use lower case !!
     case('wpres')
-       do k=1,nK ; do j=1,nJ ; do i=1,nI
-          PlotVar_G(i,j,k)=WavePres_CB(i,j,k,iBlock)
+       do k=-1,nK+2 ; do j=-1,nJ+2 ; do i=-1,nI+2
+          PlotVar_G(i,j,k) = 0.5*sum(State_VGB(I01_:I50_,i,j,k,iBlock))
        end do ; end do ; end do
        PlotVar_G=No2Si_V(UnitP_)*PlotVar_G
        NameTecVar = 'wPres'
        NameTecUnit = NameTecUnit_V(UnitP_)
        NameIdlUnit = NameIdlUnit_V(UnitP_)
-    case('wdiss')
-       do k=1,nK ; do j=1,nJ ; do  i=1,nI
-          PlotVar_G(i,j,k)=WaveDissip_CB(i,j,k,iBlock)
-       end do ; end do ; end do
-       PlotVar_G=UnitEnergy*PlotVar_G
-       NameTecVar = 'wDissip'
+    !case('wdiss')
+    !   do k=1,nK ; do j=1,nJ ; do  i=1,nI
+    !      PlotVar_G(i,j,k)=WaveDissip_CB(i,j,k,iBlock)
+    !   end do ; end do ; end do
+    !   PlotVar_G=UnitEnergy*PlotVar_G
+    !   NameTecVar = 'wDissip'
     case('poynt')
        ! neglect radial bulk velociy
        do i=1,nI ; do j=1,nJ; do k=1,nK
