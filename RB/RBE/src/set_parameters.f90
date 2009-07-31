@@ -8,6 +8,7 @@ subroutine RB_set_parameters(NameAction)
   use rbe_cread2
   use rbe_io_unit
   use ModRbTime
+  use ModWriteTec, ONLY: DoWriteTec
   implicit none
 
   character (len=100)           :: NameCommand
@@ -54,7 +55,8 @@ subroutine RB_set_parameters(NameAction)
            call read_var('OutName',OutName)
         endif
         
-        
+     case('#TECPLOT')
+        call read_var('DoWriteTec',DoWriteTec)
 
      case('#PLOTELECTRODYNAMICS')
         call read_var('DoSaveIe',DoSaveIe)

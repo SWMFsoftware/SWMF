@@ -2016,6 +2016,7 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
   use ModNumConst, ONLY: pi => cPi
   use ModRbSat,    ONLY: write_rb_sat, nRbSats, DoWriteSats
   use rbe_cread1
+  use ModWriteTec, ONLY: write_tec, DoWriteTec
   real xlati(ir),ekev(ir,ip,iw,ik),y(ir,ip,0:ik+1),bo(ir,ip),&
        xjac(ir,iw),gride(je),gridp(je),gridy(ig),f2(ir,ip,iw,ik),ro(ir,ip),&
        xmlto(ir,ip),f(ir,ip,iw,ik),xlati1(ir),p(ir,ip,iw,ik),xmlt(ip),&
@@ -2128,13 +2129,16 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
         !           enddo
      enddo
   enddo
+  close(UnitTmp_)
+  if (DoWriteTec) then
+     call write_tec(t,flx,ebound)
+  endif
   !Write out any sats that are being tracked
   if(DoWriteSats) then
      do iSat=1,nRbSats
         call write_rb_sat(iSat,ir,ip,je,ig,flx)
      enddo
   endif
-  close(UnitTmp_)
   !     close(13)
 
   ! Write energy changes from various processes
