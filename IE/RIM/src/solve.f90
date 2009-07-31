@@ -1,4 +1,4 @@
-subroutine solve
+subroutine solve_RIM
 
   use ModRIM
   use ModParamRIM
@@ -495,7 +495,7 @@ contains
 
   end subroutine fill
 
-end subroutine solve
+end subroutine solve_RIM
 
 !-----------------------------------------------------------------------
 ! matvec routine
