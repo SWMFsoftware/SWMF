@@ -9,6 +9,7 @@ include Makefile.RULES
 OBJECTS = \
 	ModRbe.o\
 	ModRbSat.o\
+	ModWriteTec.o\
 	rbe_subs.o\
 	plot_potential.o\
 	trace_line.o\
