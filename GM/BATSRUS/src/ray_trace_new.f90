@@ -979,8 +979,8 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
               EXIT FOLLOW
            end if
 
-           ! Try mapping down to rIonosphere if we haven't tried yet
-           if(nIono<1)then
+           ! Try mapping down to rIonosphere if we haven't tried yet (a lot)
+           if(nIono<5)then
               if(.not.follow_ray_iono())then
                  ! We did not hit the surface of the ionosphere
                  ! continue the integration
