@@ -52,7 +52,7 @@ subroutine advance_RIM
 
   call get_conductance
   call conductance_gradients
-  call solve
+  call solve_RIM
   call gather
 
   do iFile=1,nFile
