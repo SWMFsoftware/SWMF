@@ -220,12 +220,10 @@ contains
 
   subroutine user_set_ics
 
-    use ModAdvance,    ONLY: State_VGB
+    use ModAdvance,    ONLY: State_VGB, ExtraEint_
     use ModGeometry,   ONLY: x_Blk, y_Blk
     use ModMain,       ONLY: GlobalBlk, nI, nJ, nK, Time_Simulation
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, p_
-
-    integer, parameter :: EintExtra_ = p_ - 1
 
     integer :: iBlock, i, j, k, iCell
     real :: x, y
@@ -288,7 +286,7 @@ contains
              State_VGB(Rho_,i,j,k,iBlock) = Rho
              State_VGB(RhoUx_:RhoUy_,i,j,k,iBlock) = RhoU_D
              State_VGB(RhoUz_,i,j,k,iBlock) = 0.0
-             State_VGB(EintExtra_,i,j,k,iBlock) = 0.0
+             State_VGB(ExtraEint_,i,j,k,iBlock) = 0.0
              State_VGB(p_,i,j,k,iBlock) = p
           end do
        end do; end do

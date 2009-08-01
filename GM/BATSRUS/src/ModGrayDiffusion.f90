@@ -60,9 +60,6 @@ module ModGrayDiffusion
 
   real, parameter :: GammaRel = 4.0/3.0
 
-  ! local index for extra internal energy to keep the compiler happy
-  integer, parameter :: EintExtra_ = p_ - 1
-
   real :: EradMin
 
 contains
@@ -1425,7 +1422,7 @@ contains
 
   subroutine update_impl_gray_diff(iBlock, iImplBlock, StateImpl_VG)
 
-    use ModAdvance,  ONLY: State_VGB, Rho_, p_, Erad_
+    use ModAdvance,  ONLY: State_VGB, Rho_, p_, Erad_, ExtraEint_
     use ModEnergy,   ONLY: calc_energy_cell
     use ModImplicit, ONLY: nw, TypeSemiImplicit, iEradImpl, iTeImpl, &
          DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
@@ -1471,11 +1468,11 @@ contains
                - ImplOld_VCB(iEradImpl,i,j,k,iBlock))
                
           Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
-               + State_VGB(EintExtra_,i,j,k,iBlock) &
+               + State_VGB(ExtraEint_,i,j,k,iBlock) &
                - dt*AbsorptionEmission
        else
           Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
-               + State_VGB(EintExtra_,i,j,k,iBlock) &
+               + State_VGB(ExtraEint_,i,j,k,iBlock) &
                + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
                *( StateImpl_VG(iTeImpl,i,j,k) &
                -  ImplOld_VCB(iTeImpl,i,j,k,iBlock) )
@@ -1500,7 +1497,7 @@ contains
 
        State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
 
-       State_VGB(EintExtra_,i,j,k,iBlock) = &
+       State_VGB(ExtraEint_,i,j,k,iBlock) = &
             Einternal - inv_gm1*State_VGB(p_,i,j,k,iBlock)
 
     end do; end do; end do

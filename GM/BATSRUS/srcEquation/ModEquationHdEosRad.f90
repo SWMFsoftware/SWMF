@@ -1,5 +1,6 @@
 module ModVarIndexes
-  use ModSingleFluid, Redefine1 => IsMhd, Redefine2 => Erad_
+  use ModSingleFluid, Redefine1 => IsMhd, Redefine2 => Erad_, &
+       Redefine3 => ExtraEint_
   implicit none
 
   save
@@ -22,7 +23,7 @@ module ModVarIndexes
        RhoUy_     = 3, Uy_ = 3, &
        RhoUz_     = 4, Uz_ = 4, &
        Erad_      = 5,          & 
-       ExtraEInt_ = 6,          &
+       ExtraEint_ = 6,          &
        p_         = nVar,       &
        Energy_    = nVar+1
 
@@ -45,7 +46,7 @@ module ModVarIndexes
        0.0, & ! RhoUy_
        0.0, & ! RhoUz_
        0.0, & ! Erad_
-       0.0, & ! ExtraEInt_
+       0.0, & ! ExtraEint_
        1.0, & ! p_
        1.0 /) ! Energy_
 
@@ -56,7 +57,7 @@ module ModVarIndexes
        'My   ', & ! RhoUy_
        'Mz   ', & ! RhoUz_
        'Erad ', & ! Erad_
-       'EInt ', & ! ExtraEInt_
+       'EInt ', & ! ExtraEint_
        'P    ', & ! p_
        'E    '/)  ! Energy_
 
@@ -84,7 +85,7 @@ module ModVarIndexes
   integer, parameter :: Bx_ = Ux_, By_ = Uy_, Bz_ = Uz_, B_ = U_
 
   ! The only scalar to be advected is the radiation energy density
-  integer, parameter :: ScalarFirst_ = Erad_, ScalarLast_ = ExtraEInt_
+  integer, parameter :: ScalarFirst_ = Erad_, ScalarLast_ = ExtraEint_
 
   ! There are no multi-species
   logical, parameter :: UseMultiSpecies = .false.
@@ -103,9 +104,9 @@ contains
     UnitUser_V(Erad_)        = UnitUser_V(Energy_)
     NameUnitUserTec_V(Erad_) = NameUnitUserTec_V(Energy_)
     NameUnitUserIdl_V(Erad_) = NameUnitUserIdl_V(Energy_)
-    UnitUser_V(ExtraEInt_)        = UnitUser_V(Energy_)
-    NameUnitUserTec_V(ExtraEInt_) = NameUnitUserTec_V(Energy_)
-    NameUnitUserIdl_V(ExtraEInt_) = NameUnitUserIdl_V(Energy_)
+    UnitUser_V(ExtraEint_)        = UnitUser_V(Energy_)
+    NameUnitUserTec_V(ExtraEint_) = NameUnitUserTec_V(Energy_)
+    NameUnitUserIdl_V(ExtraEint_) = NameUnitUserIdl_V(Energy_)
 
   end subroutine init_mod_equation
 

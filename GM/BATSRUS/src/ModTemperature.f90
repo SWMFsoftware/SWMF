@@ -48,9 +48,6 @@ module ModTemperature
 
   real, parameter :: GammaRel = 4.0/3.0
 
-  ! local index for extra internal energy to keep the compiler happy
-  integer, parameter :: EintExtra_ = p_ - 1
-
   ! the solution vector containing the independent temperature variables
   real, allocatable :: Temperature_VGB(:,:,:,:,:), &
        TemperatureOld_VCB(:,:,:,:,:)
@@ -649,7 +646,7 @@ contains
 
   subroutine update_conservative_energy(iBlock)
 
-    use ModAdvance,  ONLY: State_VGB, p_
+    use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_
     use ModEnergy,   ONLY: calc_energy_cell
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
     use ModPhysics,  ONLY: inv_gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
@@ -710,7 +707,7 @@ contains
 
        ! update material internal energy
        Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
-            + State_VGB(EintExtra_,i,j,k,iBlock) &
+            + State_VGB(ExtraEint_,i,j,k,iBlock) &
             + SpecificHeat_VCB(Te_,i,j,k,iBlock) &
             *(Temperature_VGB(Te_,i,j,k,iBlock) &
             - TemperatureOld_VCB(Te_,i,j,k,iBlock))
@@ -730,7 +727,7 @@ contains
        end if
        State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
 
-       State_VGB(EintExtra_,i,j,k,iBlock) = &
+       State_VGB(ExtraEint_,i,j,k,iBlock) = &
             Einternal - inv_gm1*State_VGB(p_,i,j,k,iBlock)
 
     end do; end do; end do

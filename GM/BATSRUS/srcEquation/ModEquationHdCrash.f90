@@ -1,5 +1,5 @@
 module ModVarIndexes
-  use ModSingleFluid, Redefine => IsMhd
+  use ModSingleFluid, Redefine1 => IsMhd, Redine2 => ExtraEint_
   implicit none
 
   save
@@ -23,7 +23,7 @@ module ModVarIndexes
        LevelXe_   =  5,          &       ! Xenon
        LevelBe_   =  6,          &       ! Berillium
        LevelPl_   =  7,          &       ! Plastic 
-       ExtraEInt_ =  8,          &
+       ExtraEint_ =  8,          &
        p_         =  nVar,       &
        Energy_    = nVar+1
 
@@ -45,7 +45,7 @@ module ModVarIndexes
        0.0, & ! LevelXe_
        0.0, & ! LevelBe_
        0.0, & ! LevelPl_
-       0.0, & ! ExtraEInt_
+       0.0, & ! ExtraEint_
        1.0, & ! p_
        1.0 /) ! Energy_
 
@@ -58,7 +58,7 @@ module ModVarIndexes
        'Xe  ', & ! LevelXe_ 
        'Be  ', & ! LevelBe_
        'Pl  ', & ! LevelPl_ 
-       'EInt', & ! ExtraEInt_
+       'EInt', & ! ExtraEint_
        'P   ', & ! p_
        'E   '/)  ! Energy_
 
@@ -82,7 +82,7 @@ module ModVarIndexes
   real :: UnitUser_V(nVar+nFluid) = 1.0
 
   ! Advected are the three level sets and the extra internal energy
-  integer, parameter :: ScalarFirst_ = LevelXe_, ScalarLast_ = ExtraEInt_
+  integer, parameter :: ScalarFirst_ = LevelXe_, ScalarLast_ = ExtraEint_
 
   ! There are no multi-species
   logical, parameter :: UseMultiSpecies = .false.
@@ -103,9 +103,9 @@ contains
     call init_mhd_variables
 
     ! Set the unit and unit name for the wave energy variable
-    UnitUser_V(ExtraEInt_)        = UnitUser_V(Energy_)
-    NameUnitUserTec_V(ExtraEInt_) = NameUnitUserTec_V(Energy_)
-    NameUnitUserIdl_V(ExtraEInt_) = NameUnitUserIdl_V(Energy_)
+    UnitUser_V(ExtraEint_)        = UnitUser_V(Energy_)
+    NameUnitUserTec_V(ExtraEint_) = NameUnitUserTec_V(Energy_)
+    NameUnitUserIdl_V(ExtraEint_) = NameUnitUserIdl_V(Energy_)
 
     UnitUser_V(LevelXe_:LevelPl_) = 1e-6 ! = No2Io_V(UnitX_) = micron
 

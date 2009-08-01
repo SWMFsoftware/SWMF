@@ -38,7 +38,7 @@ contains
        ! transformed to SI
        EInternalSI = No2Si_V(UnitEnergyDens_)*&
             (inv_gm1*State_VGB(P_,i,j,k,iBlock) + &
-            State_VGB(ExtraEInt_,i,j,k,iBlock))
+            State_VGB(ExtraEint_,i,j,k,iBlock))
        !Density, transformed to SI
   
        RhoSI = No2Si_V(UnitRho_)*State_VGB(Rho_,i,j,k,iBlock)
@@ -53,7 +53,7 @@ contains
   
        !Put pressure and ExtraEInt = Total internal energy - P/(\gamma -1)
        State_VGB(P_,i,j,k,iBlock) = PressureSI*Si2No_V(UnitP_)
-       State_VGB(ExtraEInt_,i,j,k,iBlock) = Si2No_V(UnitEnergyDens_)*&
+       State_VGB(ExtraEint_,i,j,k,iBlock) = Si2No_V(UnitEnergyDens_)*&
             (EInternalSI - PressureSI*inv_gm1)
     end do; end do; end do
     call calc_energy_cell(iBlock)

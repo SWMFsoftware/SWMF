@@ -23,6 +23,7 @@ Module ModAdvance
   logical, parameter:: UseElectronPressure = Pe_ > 1
   logical, parameter:: UseParallelPressure = Ppar_ > 1
   logical, parameter:: UseAlfvenWavePressure = pAlfven1_ > 1
+  logical, parameter:: UseIdealState = ExtraEint_ == 1
 
   ! Named index for radiation energy -- Define Erad_ in ModSingleFuild initially 
 

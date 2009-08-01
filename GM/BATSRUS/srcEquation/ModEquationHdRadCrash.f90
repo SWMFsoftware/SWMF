@@ -1,5 +1,6 @@
 module ModVarIndexes
-  use ModSingleFluid, Redefine1 => IsMhd, Redefine2 => Erad_
+  use ModSingleFluid, Redefine1 => IsMhd, Redefine2 => Erad_, &
+       Redefine3 => ExtraEint_
   implicit none
 
   save
@@ -24,7 +25,7 @@ module ModVarIndexes
        LevelBe_   =  6,          &       ! Berillium
        LevelPl_   =  7,          &       ! Plastic 
        Erad_      =  8,          &
-       ExtraEInt_ =  9,          &
+       ExtraEint_ =  9,          &
        p_         =  nVar,       &
        Energy_    = nVar+1
 
@@ -47,7 +48,7 @@ module ModVarIndexes
        0.0, & ! LevelBe_
        0.0, & ! LevelPl_
        0.0, & ! Erad_
-       0.0, & ! ExtraEInt_
+       0.0, & ! ExtraEint_
        1.0, & ! p_
        1.0 /) ! Energy_
 
@@ -61,7 +62,7 @@ module ModVarIndexes
        'Be  ', & ! LevelBe_
        'Pl  ', & ! LevelPl_
        'Erad', & ! Erad_
-       'EInt', & ! ExtraEInt_
+       'EInt', & ! ExtraEint_
        'P   ', & ! p_
        'E   '/)  ! Energy_
 
@@ -85,7 +86,7 @@ module ModVarIndexes
   real :: UnitUser_V(nVar+nFluid) = 1.0
 
   ! Advected are the three level sets and the extra internal energy
-  integer, parameter :: ScalarFirst_ = LevelXe_, ScalarLast_ = ExtraEInt_
+  integer, parameter :: ScalarFirst_ = LevelXe_, ScalarLast_ = ExtraEint_
 
   ! There are no multi-species
   logical, parameter :: UseMultiSpecies = .false.
@@ -109,9 +110,9 @@ contains
     UnitUser_V(Erad_)        = UnitUser_V(Energy_)
     NameUnitUserTec_V(Erad_) = NameUnitUserTec_V(Energy_)
     NameUnitUserIdl_V(Erad_) = NameUnitUserIdl_V(Energy_)
-    UnitUser_V(ExtraEInt_)        = UnitUser_V(Energy_)
-    NameUnitUserTec_V(ExtraEInt_) = NameUnitUserTec_V(Energy_)
-    NameUnitUserIdl_V(ExtraEInt_) = NameUnitUserIdl_V(Energy_)
+    UnitUser_V(ExtraEint_)        = UnitUser_V(Energy_)
+    NameUnitUserTec_V(ExtraEint_) = NameUnitUserTec_V(Energy_)
+    NameUnitUserIdl_V(ExtraEint_) = NameUnitUserIdl_V(Energy_)
 
     UnitUser_V(LevelXe_:LevelPl_) = 1e-6 ! = No2Io_V(UnitX_) = micron
 

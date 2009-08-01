@@ -1,5 +1,5 @@
 module ModVarIndexes
-  use ModSingleFluid, Redefine => IsMhd
+  use ModSingleFluid, Redefine1 => IsMhd, Redefine2 => ExtraEint_
   implicit none
 
   save
@@ -20,7 +20,7 @@ module ModVarIndexes
        RhoUx_     =  2, Ux_ = 2, &
        RhoUy_     =  3, Uy_ = 3, &
        RhoUz_     =  4, Uz_ = 4, &
-       ExtraEInt_ =  5,          &
+       ExtraEint_ =  5,          &
        p_         =  nVar,       &
        Energy_    = nVar+1
 
@@ -36,7 +36,7 @@ module ModVarIndexes
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
        0.0, & ! RhoUz_
-       0.0, & ! ExtraEInt_
+       0.0, & ! ExtraEint_
        1.0, & ! p_
        1.0 /) ! Energy_
 
@@ -74,7 +74,7 @@ module ModVarIndexes
   integer, parameter :: Bx_ = Ux_, By_ = Uy_, Bz_ = Uz_, B_ = U_
 
   ! Advected is the ExtraEnergy
-  integer, parameter :: ScalarFirst_ = ExtraEInt_, ScalarLast_ = ExtraEInt_
+  integer, parameter :: ScalarFirst_ = ExtraEint_, ScalarLast_ = ExtraEint_
 
   ! There are no multi-species
   logical, parameter :: UseMultiSpecies = .false.
@@ -94,9 +94,9 @@ contains
 
     call init_mhd_variables
     ! Set the unit and unit name for the wave energy variable
-    UnitUser_V(ExtraEInt_)        = UnitUser_V(Energy_)
-    NameUnitUserTec_V(ExtraEInt_) = NameUnitUserTec_V(Energy_)
-    NameUnitUserIdl_V(ExtraEInt_) = NameUnitUserIdl_V(Energy_)
+    UnitUser_V(ExtraEint_)        = UnitUser_V(Energy_)
+    NameUnitUserTec_V(ExtraEint_) = NameUnitUserTec_V(Energy_)
+    NameUnitUserIdl_V(ExtraEint_) = NameUnitUserIdl_V(Energy_)
 
   end subroutine init_mod_equation
 
