@@ -11,8 +11,8 @@ module ModFaceGradient
 
   ! Public methods
   public :: set_block_field
-  public :: calc_face_gradient
-  public :: calc_face_curl
+  public :: get_face_gradient
+  public :: get_face_curl
 
   ! Jacobian matrix for covariant grid: Dcovariant/Dcartesian
   real :: DcoordDxyz_DDFD(nDim,nDim,1:nI+1,1:nJ+1,1:nK+1,nDim)
@@ -341,7 +341,7 @@ contains
 
   !============================================================================
 
-  subroutine calc_face_gradient(iDir, i, j, k, iBlock, Scalar_G, IsNewBlock, &
+  subroutine get_face_gradient(iDir, i, j, k, iBlock, IsNewBlock, Scalar_G, &
        FaceGrad_D) 
 
     ! calculate the cell face gradient of Scalar_G
@@ -354,8 +354,8 @@ contains
          neiLnorth, neiLtop, neiLbot, BlkNeighborLev
 
     integer, intent(in) :: iDir, i, j, k, iBlock
-    real, intent(inout) :: Scalar_G(-1:nI+2,-1:nJ+2,-1:nK+2)
     logical, intent(inout) :: IsNewBlock
+    real, intent(inout) :: Scalar_G(-1:nI+2,-1:nJ+2,-1:nK+2)
     real, intent(out) :: FaceGrad_D(3)
 
     integer :: iL, iR, jL, jR, kL, kR
@@ -488,7 +488,7 @@ contains
             + Cy*(Scalar_G(i,jR,k-1) + Scalar_G(i,jR,k))
        FaceGrad_D(z_) = InvDz*(Scalar_G(i,j,k) - Scalar_G(i,j,k-1))
     case default
-       write(*,*)'Error in calc_face_gradient: iDir=',iDir
+       write(*,*)'Error in get_face_gradient: iDir=',iDir
        call stop_mpi('DEBUG')
     end select
 
@@ -497,11 +497,11 @@ contains
     if(UseCovariant) &
          FaceGrad_D = matmul(FaceGrad_D,DcoordDxyz_DDFD(:,:,i,j,k,iDir))
 
-  end subroutine calc_face_gradient
+  end subroutine get_face_gradient
 
   !============================================================================
 
-  subroutine calc_face_curl(iDir, i, j, k, iBlock, Vector_DG, IsNewBlock, &
+  subroutine get_face_curl(iDir, i, j, k, iBlock, IsNewBlock, Vector_DG, &
        FaceCurl_D)
 
     use ModMain,      ONLY: x_, y_, z_
@@ -511,8 +511,8 @@ contains
          neiLnorth, neiLtop, neiLbot, BlkNeighborLev
 
     integer, intent(in) :: iDir, i, j, k, iBlock
-    real, intent(inout) :: Vector_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2)
     logical, intent(inout) :: IsNewBlock
+    real, intent(inout) :: Vector_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2)
     real, intent(out)  :: FaceCurl_D(3)
 
     integer :: iL, iR, jL, jR, kL, kR
@@ -760,6 +760,6 @@ contains
 
     end subroutine calc_covariant_curl
 
-  end subroutine calc_face_curl
+  end subroutine get_face_curl
 
 end module ModFaceGradient

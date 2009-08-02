@@ -3,7 +3,7 @@ module ModFaceFlux
   use ModProcMH,     ONLY: iProc
   use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK, UseB, UseB0, cLimit, &
        iTest, jTest, kTest, ProcTest, BlkTest, DimTest
-  use ModMain,       ONLY: UseGrayDiffusion
+  use ModMain,       ONLY: UseGrayDiffusion, UseParallelConduction
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
   use ModVarIndexes, ONLY: nVar, NameVar_V, UseMultiSpecies, nFluid
@@ -36,10 +36,10 @@ module ModFaceFlux
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        IsNewBlockHall, hall_factor, get_face_current, set_ion_mass_per_charge
 
-  use ModGrayDiffusion, ONLY: IsNewBlockGrayDiffusion, & !^CFG IF IMPLICIT
-       get_radiation_energy_flux                         !^CFG IF IMPLICIT
-  use ModHeatConduction, ONLY: IsNewBlockHeatConduction, &
-       get_heat_flux, UseParallelConduction
+  use ModGrayDiffusion, ONLY: IsNewBlockGrayDiffusion, &   !^CFG IF IMPLICIT
+       get_radiation_energy_flux                           !^CFG IF IMPLICIT
+  use ModHeatConduction, ONLY: IsNewBlockHeatConduction, & !^CFG IF IMPLICIT
+       get_heat_flux                                       !^CFG IF IMPLICIT
   use ModTemperature, ONLY: UseTemperatureDiffusion
 
   use ModResistivity, ONLY: UseResistivity, Eta_GB  !^CFG IF DISSFLUX
@@ -110,7 +110,7 @@ module ModFaceFlux
   real :: EradFlux_D(3)
 
   ! Variables for heat conduction
-  real :: HeatFlux_D(3), DiffCoef, HeatCondCoefNormal
+  real :: HeatFlux, DiffCoef, HeatCondCoefNormal
 
   ! These are variables for pure MHD solvers (Roe and HLLD)
   ! Number of MHD fluxes including the pressure and energy fluxes
@@ -362,9 +362,8 @@ contains
     ! in the current block that will be used for the Hall term
     IsNewBlockHall   = .true.
     IsNewBlockGradPe = .true.
-    ! same for Gray-Diffusion            !^CFG IF IMPLICIT
     IsNewBlockGrayDiffusion = .true.     !^CFG IF IMPLICIT
-    IsNewBlockHeatConduction = .true.
+    IsNewBlockHeatConduction = .true.    !^CFG IF IMPLICIT
 
     if(UseResistivity) call set_resistivity(iBlock)      !^CFG IF DISSFLUX
 
@@ -851,7 +850,7 @@ contains
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp
     use ModImplicit, ONLY: UseFullImplicit, UseSemiImplicit  !^CFG IF IMPLICIT
-    use ModFaceGradient, ONLY: calc_face_gradient
+    use ModFaceGradient, ONLY: get_face_gradient
 
     real,    intent(out):: Flux_V(nFlux)
 
@@ -905,8 +904,8 @@ contains
        end if
 
        ! Calculate face centered grad(Pe)
-       call calc_face_gradient(iDimFace, iFace, jFace, kFace, iBlockFace, &
-            Pe_G, IsNewBlockGradPe, GradPe_D)
+       call get_face_gradient(iDimFace, iFace, jFace, kFace, iBlockFace, &
+            IsNewBlockGradPe, Pe_G, GradPe_D)
 
        ! Calculate 1/(n_e * e)
        if(UseMultiIon)then
@@ -1725,7 +1724,7 @@ contains
     use ModMultiFluid
     use ModMain,    ONLY: UseHyperbolicDivb, SpeedHyp2
     use ModAdvance, ONLY: Hyp_, Erad_
-    use ModImplicit, ONLY: UseFullImplicit     !^CFG IF IMPLICIT
+    use ModImplicit, ONLY: UseFullImplicit, UseSemiImplicit  !^CFG IF IMPLICIT
 
     real,    intent(in) :: State_V(nVar)       ! input primitive state
     real,    intent(in) :: B0x, B0y, B0z       ! B0
@@ -1843,12 +1842,14 @@ contains
        Flux_V(Energy_) = Flux_V(Energy_) + Un*State_V(Erad_)/3.0
     end if
 
-    if(UseParallelConduction)then
+    !^CFG IF  IMPLICIT BEGIN
+    if(UseParallelConduction .and. .not.UseSemiImplicit)then
        call get_heat_flux(iDimFace, iFace, jFace, kFace, iBlockFace, &
-            State_V, Normal_D, HeatCondCoefNormal, HeatFlux_D)
+            State_V, Normal_D, HeatCondCoefNormal, HeatFlux)
        DiffCoef = DiffCoef + 0.5*HeatCondCoefNormal
-       Flux_V(Energy_) = Flux_V(Energy_) + sum(HeatFlux_D*Normal_D)
+       Flux_V(Energy_) = Flux_V(Energy_) + HeatFlux
     end if
+    !^CFG END IMPLICIT
 
     if(UseHyperbolicDivb)then
        Hyp  = State_V(Hyp_)

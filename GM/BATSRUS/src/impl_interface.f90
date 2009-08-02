@@ -60,6 +60,7 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,Var_VGB)
   use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
   use ModImplicit
   use ModGrayDiffusion, ONLY: get_impl_gray_diff_state
+  use ModHeatConduction, ONLY: get_impl_heat_cond_state
   implicit none
 
   integer,intent(in) :: imin,imax,jmin,jmax,kmin,kmax
@@ -84,6 +85,8 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,Var_VGB)
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
         call get_impl_gray_diff_state(Var_VGB, DconsDsemi_VCB)
+     case('parcond')
+        call get_impl_heat_cond_state(Var_VGB, DconsDsemi_VCB)
      case default
         call stop_mpi(NameSub//': no get_impl_state implemented for' &
              //TypeSemiImplicit)
@@ -152,6 +155,7 @@ subroutine implicit2explicit(Var_VCB)
   use ModImplicit, ONLY: nw, nImplBLK, impl2iBLK, &
        UseSemiImplicit, TypeSemiImplicit
   use ModGrayDiffusion, ONLY: update_impl_gray_diff
+  use ModHeatConduction, ONLY: update_impl_heat_cond
   implicit none
 
   real :: Var_VCB(nw,nI,nJ,nK,MaxImplBLK)
@@ -166,6 +170,8 @@ subroutine implicit2explicit(Var_VCB)
         select case(TypeSemiImplicit)
         case('radiation', 'radcond', 'cond')
            call update_impl_gray_diff(iBLK, implBLK, Var_VCB(:,:,:,:,implBLK))
+        case('parcond')
+           call update_impl_heat_cond(iBLK, implBLK, Var_VCB(:,:,:,:,implBLK))
         case default
            call stop_mpi(NameSub//': no update_impl implemented for' &
                 //TypeSemiImplicit)
@@ -270,6 +276,7 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
   use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
   use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs, get_gray_diffusion_bc
+  use ModHeatConduction, ONLY: get_heat_conduction_rhs, get_heat_conduction_bc
   use ModMessagePass, ONLY: message_pass_dir
   use ModGeometry, ONLY: vInv_CB
 
@@ -291,8 +298,17 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
   end do
 
   ! Message pass to fill in ghost cells 
-  call message_pass_dir(iDirMin=1,iDirMax=3,Width=1,SendCorners=.false.,&
-       ProlongOrder=1,nVar=nw,Sol_VGB=StateSemi_VGB,restrictface=.true.)
+  select case(TypeSemiImplicit)
+  case('radiation', 'radcond', 'cond')
+     call message_pass_dir(iDirMin=1,iDirMax=3,Width=1,SendCorners=.false.,&
+          ProlongOrder=1,nVar=nw,Sol_VGB=StateSemi_VGB,restrictface=.true.)
+  case('parcond')
+     ! DoOneLayer, DoFacesOnly, UseMonotoneRestrict, nVar, State_VGB
+     call message_pass_cells8(.true., .false., .true., nw, StateSemi_VGB)
+  case default
+     call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
+          //TypeSemiImplicit)
+  end select
 
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
@@ -300,6 +316,10 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
      case('radiation', 'radcond', 'cond')
         call get_gray_diffusion_bc(iBlock, IsLinear=.false.)
         call get_gray_diffusion_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
+             Rhs_VCB(:,:,:,:,iImplBlock), IsLinear=.false.)
+     case('parcond')
+        call get_heat_conduction_bc(iBlock, IsLinear=.false.)
+        call get_heat_conduction_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
              Rhs_VCB(:,:,:,:,iImplBlock), IsLinear=.false.)
      case default
         call stop_mpi(NameSub//': no get_rhs implemented for' &
@@ -324,6 +344,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
   use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs, get_gray_diffusion_bc
+  use ModHeatConduction, ONLY: get_heat_conduction_rhs, get_heat_conduction_bc
   use ModMessagePass, ONLY: message_pass_dir
   use ModGeometry, ONLY: vInv_CB
 
@@ -355,8 +376,17 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   end do
 
   ! Message pass to fill in ghost cells 
-  call message_pass_dir(iDirMin=1,iDirMax=3,Width=1,SendCorners=.false.,&
-       ProlongOrder=1,nVar=nw,Sol_VGB=StateSemi_VGB,restrictface=.true.)
+  select case(TypeSemiImplicit)
+  case('radiation', 'radcond', 'cond')
+     call message_pass_dir(iDirMin=1,iDirMax=3,Width=1,SendCorners=.false.,&
+          ProlongOrder=1,nVar=nw,Sol_VGB=StateSemi_VGB,restrictface=.true.)
+  case('parcond')
+     ! DoOneLayer, DoFacesOnly, UseMonotoneRestrict, nVar, State_VGB
+     call message_pass_cells8(.true., .false., .true., nw, StateSemi_VGB)
+  case default
+     call stop_mpi(NameSub//': no get_rhs message_pass implemented for' &
+          //TypeSemiImplicit)
+  end select
 
   n=0
   do iImplBlock = 1, nImplBLK
@@ -366,6 +396,10 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
      case('radiation', 'radcond', 'cond')
         call get_gray_diffusion_bc(iBlock, IsLinear = .true.)
         call get_gray_diffusion_rhs(iBlock, &
+             StateSemi_VGB(:,:,:,:,iBlock), Rhs_VC, IsLinear = .true.)
+     case('parcond')
+        call get_heat_conduction_bc(iBlock, IsLinear = .true.)
+        call get_heat_conduction_rhs(iBlock, &
              StateSemi_VGB(:,:,:,:,iBlock), Rhs_VC, IsLinear = .true.)
      case default
         call stop_mpi(NameSub//': no get_rhs implemented for' &
@@ -390,6 +424,7 @@ subroutine get_semi_impl_jacobian
   use ModImplicit, ONLY: nw, nImplBlk, impl2iblk, TypeSemiImplicit, &
        nStencil, MAT, ImplCoeff, DconsDsemi_VCB !!!, wnrm
   use ModGrayDiffusion, ONLY: get_gray_diff_jacobian
+  use ModHeatConduction, ONLY: get_heat_cond_jacobian
   use ModMain, ONLY: nI, nJ, nK, nDim, Dt
   use ModGeometry, ONLY: vInv_CB
 
@@ -407,6 +442,8 @@ subroutine get_semi_impl_jacobian
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
         call get_gray_diff_jacobian(iBlock, nw, MAT(:,:,:,:,:,:,iImplBlock))
+     case('parcond')
+        call get_heat_cond_jacobian(iBlock, nw, MAT(:,:,:,:,:,:,iImplBlock))
      case default
         call stop_mpi(NameSub//': no get_rhs implemented for' &
              //TypeSemiImplicit)

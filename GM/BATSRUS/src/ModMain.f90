@@ -186,9 +186,10 @@ Module ModMain
   logical:: UseHeatFlux=.false.
   logical:: UseSpitzerForm=.false.
 
-  ! Logicals for adding Gray Diffusion and isotropic heat conduction
+  ! Logicals for adding Gray Diffusion and heat conduction
   logical :: UseGrayDiffusion = .false.
   logical :: UseHeatConduction = .false.
+  logical :: UseParallelConduction = .false.
 
   ! Logical and type for gravity
   logical :: UseGravity

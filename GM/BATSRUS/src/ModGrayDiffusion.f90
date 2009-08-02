@@ -157,7 +157,7 @@ contains
     ! Calculate the diffusion part of the radiation energy flux.
     !/
     use ModAdvance,      ONLY: State_VGB, Erad_
-    use ModFaceGradient, ONLY: calc_face_gradient
+    use ModFaceGradient, ONLY: get_face_gradient
     use ModPhysics,      ONLY: Si2No_V, UnitX_, Clight
     use ModTemperature,  ONLY: UseRadFluxLimiter, TypeRadFluxLimiter
     use ModUser,         ONLY: user_material_properties
@@ -174,8 +174,8 @@ contains
 
     if(IsNewBlockGrayDiffusion) Erad_G = State_VGB(Erad_,:,:,:,iBlock)
 
-    call calc_face_gradient(iDir, i, j, k, iBlock, &
-         Erad_G, IsNewBlockGrayDiffusion, FaceGrad_D)
+    call get_face_gradient(iDir, i, j, k, iBlock, &
+         IsNewBlockGrayDiffusion, Erad_G, FaceGrad_D)
 
     if(IsNewTimestepGrayDiffusion)then
 

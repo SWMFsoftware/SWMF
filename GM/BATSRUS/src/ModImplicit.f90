@@ -290,7 +290,7 @@ contains
 
     if(UseSemiImplicit)then
        select case(TypeSemiImplicit)
-       case('radiation', 'cond')
+       case('radiation', 'cond', 'parcond')
           nw = 1
        case('radcond')
           nw = 2

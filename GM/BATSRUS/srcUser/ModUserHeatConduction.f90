@@ -150,7 +150,8 @@ contains
 
   subroutine user_update_states(iStage, iBlock)
 
-    use ModAdvance, ONLY: nVar, Flux_VX, Flux_VY, Flux_VZ, Source_VC
+    use ModAdvance,  ONLY: nVar, Flux_VX, Flux_VY, Flux_VZ, Source_VC
+    use ModImplicit, ONLY: UseSemiImplicit
 
     integer, intent(in) :: iStage, iBlock
 
@@ -160,7 +161,7 @@ contains
     ! No call to update_states_MHD to nullify the effect of the hydro solver
     ! call update_states_MHD(iStage,iBlock)
 
-    if(TypeProblem == 'parcond')then
+    if(TypeProblem == 'parcond' .and. .not.UseSemiImplicit)then
        Flux_VX(1:nVar,:,:,:) = 0.0
        Flux_VY(1:nVar,:,:,:) = 0.0
        Flux_VZ(1:nVar,:,:,:) = 0.0
@@ -410,23 +411,49 @@ contains
           end select
        end select
     case('parcond')
-       select case(iSide)
-       case(1)
-          do j = -1, nJ+2; do i = -1, 0
-             call get_state_parcond(i, j, iBlock)
-          end do; end do
-       case(2)
-          do j = -1, nJ+2; do i = nI+1, nI+2
-             call get_state_parcond(i, j, iBlock)
-          end do; end do
-       case(3)
-          do j = -1, 0; do i = -1, nI+2
-             call get_state_parcond(i, j, iBlock)
-          end do; end do
-       case(4)
-          do j = nJ+1, nJ+2; do i = -1, nI+2
-             call get_state_parcond(i, j, iBlock)
-          end do; end do
+       select case(TypeBc)
+       case('user')
+          select case(iSide)
+          case(1)
+             do j = -1, nJ+2; do i = -1, 0
+                call get_state_parcond(i, j, iBlock)
+             end do; end do
+          case(2)
+             do j = -1, nJ+2; do i = nI+1, nI+2
+                call get_state_parcond(i, j, iBlock)
+             end do; end do
+          case(3)
+             do j = -1, 0; do i = -1, nI+2
+                call get_state_parcond(i, j, iBlock)
+             end do; end do
+          case(4)
+             do j = nJ+1, nJ+2; do i = -1, nI+2
+                call get_state_parcond(i, j, iBlock)
+             end do; end do
+          end select
+       case('usersemi')
+          select case(iSide)
+          case(1)
+             do j = 0, nJ+1
+                call get_temperature_parcond(0, j, iBlock, Temperature)
+                StateSemi_VGB(1,0,j,:,iBlock) = Temperature
+             end do
+          case(2)
+             do j = 0, nJ+1
+                call get_temperature_parcond(nI+1, j, iBlock, Temperature)
+                StateSemi_VGB(1,nI+1,j,:,iBlock) = Temperature
+             end do
+          case(3)
+             do i = 0, nI+1
+                call get_temperature_parcond(i, 0, iBlock, Temperature)
+                StateSemi_VGB(1,i,0,:,iBlock) = Temperature
+             end do
+          case(4)
+             do i = 0, nI+1
+                call get_temperature_parcond(i, nJ+1, iBlock, Temperature)
+                StateSemi_VGB(1,i,nI+1,:,iBlock) = Temperature
+             end do
+          end select
        end select
     case default
        call stop_mpi(NameSub//' : undefined problem type='//TypeProblem)
@@ -521,6 +548,7 @@ contains
   subroutine get_state_parcond(i, j, iBlock)
 
     use ModAdvance,    ONLY: State_VGB
+    use ModPhysics,  ONLY: ElectronTemperatureRatio
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, By_, Bz_, p_
 
     integer, intent(in) :: i, j, iBlock
@@ -533,7 +561,7 @@ contains
     State_VGB(Bx_,i,j,:,iBlock) = Bx
     State_VGB(By_,i,j,:,iBlock) = By
     State_VGB(Bz_,i,j,:,iBlock) = 0.0
-    State_VGB(p_,i,j,:,iBlock) = Temperature
+    State_VGB(p_,i,j,:,iBlock) = Temperature*(1 + ElectronTemperatureRatio)
 
   end subroutine get_state_parcond
 
@@ -544,7 +572,6 @@ contains
     use ModGeometry, ONLY: x_Blk, y_Blk
     use ModMain,     ONLY: Time_Simulation
     use ModNumConst, ONLY: cPi
-    use ModPhysics,  ONLY: ElectronTemperatureRatio
 
     integer, intent(in) :: i, j, iBlock
     real,    intent(out):: Temperature
@@ -561,7 +588,6 @@ contains
     Spread0 = 4.0*Time0
     Temperature = Tmin + AmplitudeTemperature/(sqrt(cPi*Spread)) &
          *exp(-xx**2/Spread-yy**2/Spread0)
-    Temperature = Temperature*(1 + ElectronTemperatureRatio)
 
   end subroutine get_temperature_parcond
 
@@ -574,7 +600,6 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModGeometry,   ONLY: x_Blk, y_Blk
     use ModMain,       ONLY: nI, nJ, nK, Time_Simulation
-    use ModPhysics,    ONLY: ElectronTemperatureRatio
     use ModVarIndexes, ONLY: p_, Rho_
 
     integer,          intent(in)   :: iBlock
@@ -678,8 +703,7 @@ contains
        case('t0','temp0')
           do j=-1,nJ+2; do i=-1,nI+2
              call get_temperature_parcond(i, j, iBlock, Temperature)
-             PlotVar_G(i,j,:) = Temperature*ElectronTemperatureRatio &
-                  /(1 +ElectronTemperatureRatio)
+             PlotVar_G(i,j,:) = Temperature
           end do; end do
        case default
           IsFound = .false.
