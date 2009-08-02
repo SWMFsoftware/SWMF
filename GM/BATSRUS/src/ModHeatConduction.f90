@@ -150,7 +150,7 @@ contains
   subroutine get_heat_flux(iDir, i, j, k, iBlock, State_V, Normal_D, &
        HeatCondCoefNormal, HeatFlux)
 
-    use ModAdvance,      ONLY: State_VGB, UseIdealState
+    use ModAdvance,      ONLY: State_VGB, UseIdealEos
     use ModFaceGradient, ONLY: get_face_gradient
     use ModMain,         ONLY: nI, nJ, nK
     use ModMultiFluid,   ONLY: MassIon_I
@@ -171,7 +171,7 @@ contains
     !--------------------------------------------------------------------------
 
     if(IsNewBlockHeatConduction)then
-       if(UseIdealState)then
+       if(UseIdealEos)then
           TeFraction = MassIon_I(1)*ElectronTemperatureRatio &
                /(1 + AverageIonCharge*ElectronTemperatureRatio)
           Te_G = State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock) &
@@ -195,7 +195,7 @@ contains
 
     ! get the heat conduction coefficient normal to the face for
     ! time step restriction
-    if(UseIdealState)then
+    if(UseIdealEos)then
        Cv = inv_gm1*State_V(Rho_)/TeFraction
     else
        call user_material_properties(State_V, CvSiOut = CvSi)
@@ -210,7 +210,7 @@ contains
   subroutine get_heat_conduction_coef(iDim, i, j, k, iBlock, State_V, &
        Normal_D, HeatCond_D)
 
-    use ModAdvance,      ONLY: State_VGB, UseIdealState
+    use ModAdvance,      ONLY: State_VGB, UseIdealEos
     use ModB0,           ONLY: B0_DX, B0_DY, B0_DZ
     use ModMain,         ONLY: UseB0
     use ModMultiFluid,   ONLY: MassIon_I
@@ -246,7 +246,7 @@ contains
     Bnorm = sqrt(sum(B_D**2))
     Bunit_D = B_D/max(Bnorm,cTolerance)
 
-    if(UseIdealState)then
+    if(UseIdealEos)then
        TeFraction = MassIon_I(1)*ElectronTemperatureRatio &
             /(1 + AverageIonCharge*ElectronTemperatureRatio)
        Te = TeFraction*State_V(p_)/State_V(Rho_)
@@ -291,7 +291,7 @@ contains
 
   subroutine get_impl_heat_cond_state(StateImpl_VGB, DconsDsemi_VCB)
 
-    use ModAdvance,    ONLY: State_VGB, UseIdealState, &
+    use ModAdvance,    ONLY: State_VGB, UseIdealEos, &
        LeftState_VX,  LeftState_VY,  LeftState_VZ,  &
        RightState_VX, RightState_VY, RightState_VZ
     use ModFaceValue,  ONLY: calc_face_value
@@ -315,7 +315,7 @@ contains
     do iImplBlock = 1, nImplBLK
        iBlock = impl2iBLK(iImplBlock)
 
-       if(UseIdealState)then
+       if(UseIdealEos)then
           TeFraction = MassIon_I(1)*ElectronTemperatureRatio &
                /(1 + AverageIonCharge*ElectronTemperatureRatio)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -597,7 +597,7 @@ contains
 
   subroutine update_impl_heat_cond(iBlock, iImplBlock, StateImpl_VG)
 
-    use ModAdvance,  ONLY: State_VGB, Energy_GBI, UseIdealState, p_, &
+    use ModAdvance,  ONLY: State_VGB, Energy_GBI, UseIdealEos, p_, &
          ExtraEint_
     use ModEnergy,   ONLY: calc_energy_cell, calc_pressure_cell
     use ModImplicit, ONLY: nw, iTeImpl, DconsDsemi_VCB, ImplOld_VCB
@@ -613,7 +613,7 @@ contains
     real :: Einternal, EinternalSi, PressureSi
     !--------------------------------------------------------------------------
 
-    if(UseIdealState)then
+    if(UseIdealEos)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) &
                + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &

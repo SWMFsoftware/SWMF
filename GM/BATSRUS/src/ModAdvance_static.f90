@@ -18,14 +18,14 @@ Module ModAdvance
   ! Named index for electron pressure and velocity
   integer, parameter:: eFluid_ = nFluid + 1
 
-  ! Additional equations are activated by the definitions of the
+  ! Additional equations are activated by the named indices of the
   ! corresponding extra variables in the equation modules.
+  ! The default values of these named indices are in ModExtraVariables.
   logical, parameter:: UseElectronPressure = Pe_ > 1
   logical, parameter:: UseParallelPressure = Ppar_ > 1
   logical, parameter:: UseAlfvenWavePressure = pAlfven1_ > 1
-  logical, parameter:: UseIdealState = ExtraEint_ == 1
+  logical, parameter:: UseIdealEos = ExtraEint_ == 1
 
-  ! Named index for radiation energy -- Define Erad_ in ModSingleFuild initially 
 
   !\ One of the two possible ways to treat the MHD-like systems
   !  (oartially symmetrizable, following the Godunov definition).
