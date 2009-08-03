@@ -2,7 +2,10 @@
 
 module CRASH_ModStatSumMix
   use CRASH_ModAtomicDataMix
-  use CRASH_ModExcitation,ONLY : get_excitation_levels, nMixMax, ExtraEnergyAv_II, LogGi_II
+  use CRASH_ModExcitation,ONLY : get_excitation_levels,&
+       nMixMax, LogGi_II,&
+       ExtraEnergyAv_II, VirialCoeffAv_II, Cov2ExtraEnergy_II,&
+       CovExtraEnergyVirial_II, Cov2VirialCoeff_II, VirialCoeff2Av_II
   use ModConst
   implicit none
   SAVE
@@ -58,6 +61,12 @@ module CRASH_ModStatSumMix
   real :: DeltaZDeltaZ2Av! The value of <Delta i Delta i^2>
   real :: Delta2Z2Av     ! The value of <Delta^2 (i^2)>
 
+  real :: VirialCoeffAv  ! The value of <-\frac{V}{T} \frac{\partial E}{\partial V}>
+  real :: CovEnergyVirial! The value of -\frac{V}{T^2} < \delta \frac{\partial E}{\partial V} \delta E >
+  real :: Cov2Virial     ! The value of \frac{V^2}{T^2} < \delta^2 \frac{\partial E}{\partial V} >
+  real :: CovVirialZ     ! The value of \frac{V}{T} < \delta \frac{\partial E}{\partial V} \delta i >
+  real :: Virial2Av      ! The value of \frac{V^2}{T} < \frac{\partial^2 E}{\partial V^2} >
+
 
   integer :: iIter   !To provide the output for the convergence efficiency, if needed
 
@@ -79,6 +88,11 @@ module CRASH_ModStatSumMix
            ETeInvDeltaZ2Av,&! The value of <Delta E/Te Delta (i^2)>
            DeltaZDeltaZ2Av,&! The value of <Delta i Delta i^2>
            Delta2Z2Av,&     ! The value of <Delta^2 (i^2)>
+           VirialCoeffAv,&  ! The value of <-\frac{V}{T} \frac{\partial E}{\partial V}>
+           CovEnergyVirial,&! The value of -\frac{V}{T^2} < \delta \frac{\partial E}{\partial V} \delta E >
+           Cov2Virial,&     ! The value of \frac{V^2}{T^2} < \delta^2 \frac{\partial E}{\partial V} >
+           CovVirialZ,&     ! The value of \frac{V}{T} < \delta \frac{\partial E}{\partial V} \delta i >
+           Virial2Av,&      ! The value of \frac{V^2}{T} < \frac{\partial^2 E}{\partial V^2} >
            iIter,&          ! To provide the output for the convergence efficiency, if needed
            nMix, IonizPotential_II
   real,parameter::StrangeTemperature = -777.0
@@ -474,7 +488,7 @@ Contains
 
          !Normalize the Pi-s so that their sum =1
 
-         !Add up all the values of Pi found so far         
+         !Add up all the values of Pi found so far
          PITotal = sum(Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix))
 
          Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix) = &
@@ -491,10 +505,13 @@ Contains
       !---------------------------!
       ! < Ei/Te>_J (Ei - energy levels, Te - electron temperature [eV])
       real::  ETeInvAvJ,&         
-              ZJ,&      ! Z_J, averaged Z for J component
-              DeltaZ2J  ! < (Z-<Z>)^2 >, averaged <(\delta Z)^2>, for J component
+              ZJ,&              ! Z_J, averaged Z for J component
+              DeltaZ2J,&        ! < (Z-<Z>)^2 >, averaged <(\delta Z)^2>, for J component
+              VirialCoeffAvJ,&  ! VirialCoeffAv_II, averaged over the charge states, i
+              VirialCoeffFullAvJ! Mean value of \frac{V}{T} \frac{\partial E}{\partial V}
       ! Array of ionization energy levels of ions divided by the temperature in eV
       real,dimension(0:nZMax) :: ETeInv_I
+      real,dimension(0:nZMax) :: VirialCoeffFullAv_I
       integer :: iMix
 
 
@@ -510,6 +527,13 @@ Contains
       Delta2Z2Av       = 0.0
       ! IonizPotentialAv = 0.0
       ! eUpshiftByCompression = 0.0
+
+      Cov2Virial      = 0.0
+      VirialCoeffAv   = 0.0
+      CovEnergyVirial = 0.0
+      CovVirialZ      = 0.0
+      Virial2Av       = 0.0
+
 
       do iMix = 1, nMix
          !Calculate average vaues of Z, for this component:
@@ -544,7 +568,7 @@ Contains
               ETeInv_I( iZMin_I(iMix):iZMax_I(iMix) ) - TeInv * rIonoSphereInv * &
               IonizationEnergyLowering_I( iZMin_I(iMix):iZMax_I(iMix) )
 
-         !Calculate average vaues of E, for this component:
+         !Calculate average values of E, for this component:
 
          ETeInvAvJ   = sum(Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix )* &
               ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)))
@@ -554,8 +578,9 @@ Contains
          !Calculate contributions to bi-linear deviators
          DeltaETeInv2Av   = DeltaETeInv2Av + Concentration_I(iMix)*&
               sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) * &
-              (ETeInv_I(iZMin_I(iMix):iZMax_I(iMix))-ETeInvAvJ)**2 )
-
+              ((ETeInv_I(iZMin_I(iMix):iZMax_I(iMix))-ETeInvAvJ)**2 + &
+              Cov2ExtraEnergy_II(iZMin_I(iMix):iZMax_I(iMix),iMix) * TeInv * TeInv)) !correction to account for
+                                                                                     !energy levels divergence
          ETeInvDeltaZAv   = ETeInvDeltaZAv + Concentration_I(iMix)*&
               sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
               ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) * &
@@ -577,6 +602,42 @@ Contains
               (N_I(iZMin_I(iMix):iZMax_I(iMix))**2 - DeltaZ2J - ZJ*ZJ) )
 
 
+         VirialCoeffAvJ = &
+              sum( Population_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) *&
+              VirialCoeffAv_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix))
+         VirialCoeffAv = VirialCoeffAv + Concentration_I(iMix)*VirialCoeffAvJ * TeInv
+
+         CovEnergyVirial = CovEnergyVirial + TeInv * TeInv * Concentration_I(iMix)*&
+              sum( Population_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) *&
+              (CovExtraEnergyVirial_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) + &
+              (VirialCoeffAv_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) - VirialCoeffAvJ) * &
+              ETeInv_I(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1)) / TeInv))
+
+         VirialCoeffFullAv_I(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1)) = &
+              -VirialCoeffAv_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) * TeInv
+         if (UseCoulombCorrection) VirialCoeffFullAv_I(iZMin_I(iMix):iZMax_I(iMix)) = &
+              VirialCoeffFullAv_I(iZMin_I(iMix):iZMax_I(iMix)) + &
+              eMadelungPerTe * N_I(iZMin_I(iMix):iZMax_I(iMix))**2
+
+         VirialCoeffFullAvJ = &
+              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
+              VirialCoeffFullAv_I(iZMin_I(iMix):iZMax_I(iMix)))
+
+         Cov2Virial = Cov2Virial + Concentration_I(iMix) *&
+              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
+              (TeInv*TeInv * Cov2VirialCoeff_II(iZMin_I(iMix):iZMax_I(iMix), iMix) + &
+              (VirialCoeffFullAv_I(iZMin_I(iMix):iZMax_I(iMix)) - VirialCoeffFullAvJ)**2))
+
+         CovVirialZ = CovVirialZ + Concentration_I(iMix) *&
+              sum( Population_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) *&
+              (-TeInv) *&
+              (N_I(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1))-ZJ)*&
+              VirialCoeffAv_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix))
+
+         Virial2Av = Virial2Av + Concentration_I(iMix) *&
+              sum( Population_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) *&
+              TeInv * VirialCoeff2Av_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix))
+
          !IonizPotentialAv =  IonizPotentialAv + Concentration_I(iMix)*&
          !     sum( &
          !     Population_II(&
@@ -591,6 +652,12 @@ Contains
       end do
       EAv = EAv * Te
 
+      if (UseCoulombCorrection) then
+         VirialCoeffAv   = VirialCoeffAv   - eMadelungPerTe * Z2 * cEV
+         CovEnergyVirial = CovEnergyVirial - eMadelungPerTe * ETeInvDeltaZ2Av
+         CovVirialZ      = CovVirialZ      + eMadelungPerTe * DeltaZDeltaZ2Av
+         Virial2Av       = Virial2Av       - (4.0/3.0) * eMadelungPerTe * Z2
+      end if
 
     end subroutine set_averages_and_deviators
   end subroutine set_ionization_equilibrium
@@ -614,9 +681,7 @@ contains
   real function pressure()
     use CRASH_ModFermiGas,ONLY:RPlus
 
-    pressure = (1.0 + zAv*RPlus) * Na * Te * cEV
-    if(UseCoulombCorrection) pressure = &
-         pressure - Na * eMadelungPerTe * Z2 * Te * cEV
+    pressure = Na * cEV * Te * (1.0 + zAv*RPlus + VirialCoeffAv)
 
   end function pressure
 
@@ -679,10 +744,6 @@ Contains
   ! i.e the temperuture derivative of the specific pressure (P/Na) 
   real function d_pressure_over_d_te()
     use CRASH_ModFermiGas,ONLY:RPlus,RMinus
-
-    real :: DGeOvDTe  ! \frac{\partial g_e}{\partial T} \frac{T}{g_e} =
-                      ! \frac{\frac{3}{2} Z - \frac{\langle \delta E_i^* \delta i \rangle}{T}}
-                      ! {\langle \delta^2 i \rangle + Z R^-(g_e)}
     !----------------------------------------------------------
     if(zAv==0)then
        d_pressure_over_d_te = 0.0
@@ -693,12 +754,9 @@ Contains
     !/
 
     !For specific pressure:
-    DGeOvDTe = ( 1.5 * zAv - ETeInvDeltaZAv ) / (zAv*RMinus + DeltaZ2Av)
-    d_pressure_over_d_te = 1.0 + zAv*(2.5*RPlus - DGeOvDTe)
-
-    if (UseCoulombCorrection) d_pressure_over_d_te = &
-         d_pressure_over_d_te - eMadelungPerTe *  &
-         (ETeInvDeltaZ2Av + DGeOvDTe * DeltaZDeltaZ2Av)
+    d_pressure_over_d_te = 1.0 + 2.5*zAv*RPlus - &
+         (zAv + CovVirialZ) * ( 1.5 * zAv - ETeInvDeltaZAv ) / (zAv*RMinus + DeltaZ2Av) + &
+         CovEnergyVirial
 
   end function d_pressure_over_d_te
 
@@ -721,18 +779,10 @@ Contains
     !For specific pressure:
     !(Na /P) \left(\partial P / \partial Na \right)_{T=const}
 
-    if (UseCoulombCorrection) then
+    compressibility_at_const_te = &
+         (1.0 + (zAv + CovVirialZ)**2 / (zAv*RMinus + DeltaZ2Av) - Cov2Virial + Virial2Av) /&
+         (1.0 + zAv*RPlus + VirialCoeffAv)
 
-       compressibility_at_const_te = &
-            (1.0 + (zAv + eMadelungPerTe * DeltaZDeltaZ2Av)**2 / &
-            (zAv * RMinus + DeltaZ2Av) - &
-            eMadelungPerTe * (Z2 * 4.0/3 + eMadelungPerTe * Delta2Z2Av) ) / &
-            (1.0 + zAv * RPlus - eMadelungPerTe * Z2)
-    else
-       compressibility_at_const_te  =&
-            (1.0 +zAv**2 / (zAv*RMinus + DeltaZ2Av)  )/(1.0 + Zav*RPlus)
-
-    end if
   end function compressibility_at_const_te
   !===================================================================
   subroutine get_gamma(GammaOut,GammaSOut,GammaMaxOut)
