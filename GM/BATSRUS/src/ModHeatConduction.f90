@@ -36,6 +36,9 @@ module ModHeatConduction
   ! electron temperature used for calculating heat flux
   real, allocatable :: Te_G(:,:,:)
 
+  ! ratio of Te Te+T used for ideal EOS
+  real :: TeFraction
+
   ! Heat flux for operator split scheme
   real, allocatable :: FluxImpl_X(:,:,:), FluxImpl_Y(:,:,:), FluxImpl_Z(:,:,:)
 
@@ -92,10 +95,11 @@ contains
 
   subroutine init_heat_conduction
 
-    use ModImplicit, ONLY: UseSemiImplicit, iTeImpl
-    use ModMain,     ONLY: nI, nJ, nK, MaxBlock
-    use ModPhysics,  ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
-         UnitU_, UnitX_, UnitB_
+    use ModImplicit,   ONLY: UseSemiImplicit, iTeImpl
+    use ModMain,       ONLY: nI, nJ, nK, MaxBlock
+    use ModMultiFluid, ONLY: MassIon_I
+    use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
+         UnitU_, UnitX_, UnitB_, ElectronTemperatureRatio, AverageIonCharge
 
     character(len=*), parameter :: NameSub = 'init_heat_conduction'
     !--------------------------------------------------------------------------
@@ -106,6 +110,10 @@ contains
     if(allocated(Te_G)) RETURN
 
     allocate(Te_G(-1:nI+2,-1:nJ+2,-1:nK+2))
+
+    ! Get TeFraction=Te/(Te+T) from P = n*k*T + ne*k*Te for ideal EOS
+    TeFraction = MassIon_I(1)*ElectronTemperatureRatio &
+         /(1 + AverageIonCharge*ElectronTemperatureRatio)
 
     DoTestHeatConduction = .false.
     DoModifyHeatConduction = .false.
@@ -153,9 +161,8 @@ contains
     use ModAdvance,      ONLY: State_VGB, UseIdealEos
     use ModFaceGradient, ONLY: get_face_gradient
     use ModMain,         ONLY: nI, nJ, nK
-    use ModMultiFluid,   ONLY: MassIon_I
     use ModPhysics,      ONLY: inv_gm1, Si2No_V, UnitTemperature_, &
-         UnitEnergyDens_, ElectronTemperatureRatio, AverageIonCharge
+         UnitEnergyDens_
     use ModUser,         ONLY: user_material_properties
     use ModVarIndexes,   ONLY: nVar, Rho_, p_
 
@@ -165,15 +172,12 @@ contains
 
     integer :: ii, jj, kk
     real :: FaceGrad_D(3), HeatCond_D(3), TeSi, Cv, CvSi
-    real, save :: TeFraction
 
     character(len=*), parameter :: NameSub = 'get_heat_flux'
     !--------------------------------------------------------------------------
 
     if(IsNewBlockHeatConduction)then
        if(UseIdealEos)then
-          TeFraction = MassIon_I(1)*ElectronTemperatureRatio &
-               /(1 + AverageIonCharge*ElectronTemperatureRatio)
           Te_G = State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock) &
                *TeFraction
        else
@@ -213,10 +217,8 @@ contains
     use ModAdvance,      ONLY: State_VGB, UseIdealEos
     use ModB0,           ONLY: B0_DX, B0_DY, B0_DZ
     use ModMain,         ONLY: UseB0
-    use ModMultiFluid,   ONLY: MassIon_I
     use ModNumConst,     ONLY: cTolerance
-    use ModPhysics,      ONLY: Si2No_V, UnitTemperature_, &
-         ElectronTemperatureRatio, AverageIonCharge
+    use ModPhysics,      ONLY: Si2No_V, UnitTemperature_
     use ModUser,         ONLY: user_material_properties
     use ModVarIndexes,   ONLY: nVar, Bx_, Bz_, Rho_, p_
 
@@ -224,7 +226,7 @@ contains
     real, intent(in) :: State_V(nVar), Normal_D(3)
     real, intent(out):: HeatCond_D(3)
 
-    real :: B_D(3), Bnorm, Bunit_D(3), TeSi, Te, TeFraction
+    real :: B_D(3), Bnorm, Bunit_D(3), TeSi, Te
     real :: HeatCoef, FractionSpitzer, FractionFieldAligned
     !--------------------------------------------------------------------------
 
@@ -247,8 +249,6 @@ contains
     Bunit_D = B_D/max(Bnorm,cTolerance)
 
     if(UseIdealEos)then
-       TeFraction = MassIon_I(1)*ElectronTemperatureRatio &
-            /(1 + AverageIonCharge*ElectronTemperatureRatio)
        Te = TeFraction*State_V(p_)/State_V(Rho_)
     else
        ! Note we assume that the heat conduction formula for the
@@ -298,9 +298,7 @@ contains
     use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK
     use ModImplicit,   ONLY: nw, nImplBLK, impl2iBlk, iTeImpl
     use ModMain,       ONLY: nI, nJ, nK, MaxImplBlk, x_, y_, z_
-    use ModMultiFluid, ONLY: MassIon_I
-    use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_, &
-         AverageIonCharge, ElectronTemperatureRatio, inv_gm1
+    use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_,inv_gm1
     use ModUser,       ONLY: user_material_properties
     use ModVarIndexes, ONLY: Rho_, p_
 
@@ -308,7 +306,7 @@ contains
     real, intent(inout) :: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
 
     integer :: i, j, k, iBlock, iImplBlock
-    real :: TeSi, CvSi, TeFraction
+    real :: TeSi, CvSi
     real :: Normal_D(3), HeatCondL_D(3), HeatCondR_D(3)
     !--------------------------------------------------------------------------
 
@@ -316,8 +314,6 @@ contains
        iBlock = impl2iBLK(iImplBlock)
 
        if(UseIdealEos)then
-          TeFraction = MassIon_I(1)*ElectronTemperatureRatio &
-               /(1 + AverageIonCharge*ElectronTemperatureRatio)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = &
                   TeFraction*State_VGB(p_,i,j,k,iBlock) &
