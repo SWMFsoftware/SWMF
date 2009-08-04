@@ -1,6 +1,9 @@
 \section{Debye-Huekel approximation of electrostatic energy}
 {\bf Debye-Huekel approximation} may also be used to account for Coulomb interactions.
-The extra term in the free energy which accounts for the
+This model considers the coupled free electrons to be distributed according to
+the Boltzmann distribution with respect to the electrostatic field of the corresponding ion.
+
+{\bf Helmholtz free energy.} The extra term in the free energy which accounts for the
 potential of the Coulomb field created in the point of the given particle location
 by all the particles except for the given one is as follows (see Eq.(78.11) in \cite{ll}):
 \begin{equation}\label{DH}
@@ -16,47 +19,10 @@ by $(i+1)q_e^2/R_D$. The total reduction in the energy of the ion of sort $i$ is
 stand for ion and electrons electrostatic energy correspondingly. This effect shifts the ionization equilibrium towards higher ionization decrees, for a given 
 temperature and atomic density. 
 
-With these ion partition functions and with added correction as in Eq.(\ref{DH}) added
-one can rewrite Eq.(\ref{equile}) in the following form:
-\begin{equation}\label{FDH}
-F = -TN_a\log\left[\frac{eV}{N_a}\left(\frac{MT}{2\pi \hbar^2}\right)^{3/2}\right]-TN_a\log S +\Omega_e +\frac{VT}{24\pi R_D^3}, 
-\end{equation}
-where
-\begin{equation}\label{RDdef}
-\frac1{R_D^2} = \frac{4\pi q_e^2N_a\langle i+i^2\rangle}{VT},
-\end{equation}
-and the equation for the electron statistical weigh now reads:
+{\bf The partition function} can be derived the same way as it was done in the case the Madelung approximation of the electrostatic energy
+(see Eqs.(\ref{MadS}) and (\ref{ni})), where $E^*_i$ should be modified according to the Debye-Huekel theory:
 \begin{equation}
-Z=\langle i\rangle=g_{e1}{\rm Fe}_{1/2}(g_e).
-\end{equation}
-Here the subscript $DH$ is to emphasize that both averages and the statistical sum
-should be calculated with the partition functions as in
-Eq.(\ref{pfDH}), which depend not only on $T,g_e$, but also on $R_D$.
-Again, it is easy to check that the partial derivatives of
-Eq.(\ref{FDH}) over $g_e$ and over $1/R_D$ both vanish.
-
-To simplify further formulas derivation and to make them independent of system of units,
-we introduce a dimensionless variable $L$:
-\begin{equation}
-L_{CGS} = \frac{q_e^2}{6 R_D T},\qquad
-L = \frac{Ry[eV]}{3 T[eV] R_D[a]},
-\end{equation}
-where $R_D[a]$ stands for the Debye radius expressed in the units of Bohr radius,
-so that we obtain a simpler formula for $R_D$:
-\begin{equation}
-\frac{1}{R_D^3} = 24 \pi n_a \langle i^2+i \rangle L.
-\end{equation}
-
-By differentiating the free energy over temperature we find the internal energy and by differentiating over the volume we find the pressure:
-\begin{equation}\label{EDH}
-{\cal E}={\cal E}_i + {\cal E}_e, \qquad
-{\cal E}_i = \frac32 Tn_a, \qquad
-{\cal E}_e = n_a \left[ \frac32 TZR^+ + \langle E^*_i\rangle \right],
-\end{equation}
-\begin{equation}\label{PDH}
-P = P_i+P_e, \qquad
-P_i = n_a T, \qquad
-P_e = n_a T (1 + ZR^+ - L \langle i^2+i \rangle),
+E^*_i = \sum_{j=0}^{i-1}{I_j} - \frac{i^2+i}{2 R_D}.
 \end{equation}
 
 {\bf Taking exact partition functions} leads us to the following equations on differentials of $g_e$, $T$, $V$ and $1/R_D$:
@@ -86,8 +52,53 @@ A_T = \frac32 Z - \frac{\langle \delta E^*_i \delta i \rangle}{T} +
 {\frac{2}{3L} \langle i^2+i \rangle - \langle \delta^2(i^2+i) \rangle}.
 \end{equation}
 
-Below we also added the calculation of the 
-Debye-Huekel correlation energy as well as the Madelung energy).
+{\bf Helmholtz free energy.}
+With the new ion partition functions and with the correction as in Eq.(\ref{DH}) added,
+one can rewrite Eq.(\ref{equile}) in the following form:
+\begin{equation}\label{FDH}
+F = -TN_a\log\left[\frac{eV}{N_a}\left(\frac{MT}{2\pi \hbar^2}\right)^{3/2}\right]-TN_a\log S +\Omega_e +\frac{VT}{24\pi R_D^3}, 
+\end{equation}
+where
+\begin{equation}\label{RDdef}
+\frac1{R_D^2} = \frac{4\pi q_e^2N_a\langle i+i^2\rangle}{VT},
+\end{equation}
+and the equation for the electron statistical weigh now reads:
+\begin{equation}
+Z=\langle i\rangle=g_{e1}{\rm Fe}_{1/2}(g_e).
+\end{equation}
+Both averages and the statistical sum
+should be calculated with the partition functions as in
+Eq.(\ref{pfDH}), which depend not only on $T,g_e$, but also on $R_D$.
+Again, it is easy to check that the partial derivatives of
+Eq.(\ref{FDH}) over $g_e$ and over $1/R_D$ both vanish.
+
+To simplify further formulas derivation and to make them independent of system of units,
+we introduce a dimensionless variable $L$:
+\begin{equation}
+L_{CGS} = \frac{q_e^2}{6 R_D T},\qquad
+L = \frac{Ry[eV]}{3 T[eV] R_D[a]},
+\end{equation}
+where $R_D[a]$ stands for the Debye radius expressed in the units of Bohr radius,
+so that we obtain a simpler formula for $R_D$:
+\begin{equation}
+\frac{1}{R_D^3} = 24 \pi n_a \langle i^2+i \rangle L.
+\end{equation}
+
+{\bf Thermodynamic functions.}
+By differentiating the free energy over temperature we find the internal energy and by differentiating over the volume we find the pressure:
+\begin{equation}\label{EDH}
+{\cal E}={\cal E}_i + {\cal E}_e, \qquad
+{\cal E}_i = \frac32 Tn_a, \qquad
+{\cal E}_e = n_a \left[ \frac32 TZR^+ + \langle E^*_i\rangle \right],
+\end{equation}
+\begin{equation}\label{PDH}
+P = P_i+P_e, \qquad
+P_i = n_a T, \qquad
+P_e = n_a T (1 + ZR^+ - L \langle i^2+i \rangle),
+\end{equation}
+
+{\bf Results.}
+Below we add the calculation of the Debye-Huekel correlation energy as well as the Madelung energy.
 \begin{center}
 \input{ionization_table6.tex} 
 \par\end{center}

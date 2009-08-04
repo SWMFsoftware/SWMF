@@ -19,6 +19,7 @@ internal energy density. On the other hand, in partially ionized plasmas this ef
 be partially or even fully balanced by the electron density decrease due to the exchange interaction 
 effect on the ionization equilibrium.  
 
+% Helmholtz free energy via N_i
 {\bf Helmholtz free energy.} Consider an ionized monatomic gas with positive non-complex ions. The Helmholtz free energy,
 $F=F_{ion}+F_e$, is assumed to be the total of contributions from each of the ion charge states,
 $i=0$ to $i_{\max}$ (we apply Eq.(42.3) from \cite{ll} to account for these contributions), as well as the contribution from electrons:
@@ -55,7 +56,7 @@ N_{i+1}/g_{i+1}=(N_i/g_i)e^{(-\mu_e-I_i)/T},
 \end{equation}
 or, applying this recursively:
 \begin{equation}\label{saharecursive}
-N_{i}/g_{i}=(N_0/g_0)e^{(-i\mu_e-\sum_{j=0}^{i-1}I_j)/T}=N_0g_0(g_e)^ie^{-\sum_{j=0}^{i-1}I_j/T},\,\,\,g_e=e^{-\mu_e/T},
+N_{i}/g_{i}=(N_0/g_0)e^{(-i\mu_e-\sum_{j=0}^{i-1}I_j)/T}=(N_0/g_0)(g_e)^ie^{-\sum_{j=0}^{i-1}I_j/T},\,\,\,g_e=e^{-\mu_e/T},
 \end{equation}
 where $g_e$ is the effective "statistical weight" of a free electron.
 Indeed, the effective statistical weight of i electrons combined with an ion in the charge state, i, is the
@@ -88,8 +89,8 @@ obtain the expression for the electron density:
 \begin{equation}\label{zavr}
 Z=N_e/N_a=\langle i\rangle.
 \end{equation}
-On the other hand, for given $T$ and $n_A=N_a/V$ the electron concentration may be found as a function of $g_e(=e^{-\mu_e/T})$.
-Now we assume that the electron form an ideal Fermi gas.
+On the other hand, for given $T$ and $n_a=N_a/V$ the electron concentration may be found as a function of $g_e(=e^{-\mu_e/T})$.
+Now we assume electrons form an ideal Fermi gas.
 This assumption immediately gives us another relationship between the electron density and $g_e$ (see Eq.(56.5) from \cite{ll}):
 \begin{equation}\label{zfe}
 Z=g_{e1}{\rm Fe}_{1/2}(g_e).
@@ -108,7 +109,24 @@ Below we use the following auxiliary functions:
 R^-(g_e)=\frac{{\rm Fe}_{-1/2}(g_e)}{{\rm Fe}_{1/2}(g_e)}, \qquad
 R^+(g_e)=\frac{{\rm Fe}_{3/2}(g_e)}{{\rm Fe}_{1/2}(g_e)}.
 \end{equation}
-Detailed discussion on the Fermi functions is delegated to the Appendix.
+Detailed discussion on the Fermi functions is delegated to the Appendix A.
+
+{\bf Derivatives along the ionization curve.}
+Taking differential of the equation of ionization equilibrium, $G=0$, one gets the equation relating the differentials
+of different variables along the curve of ionization equilibrium:
+\begin{equation}\label{diffge}
+\frac{dg_e}
+{g_e}
+\left(
+\langle i^2\rangle-Z^2+ZR^-(g_e)
+\right)+\frac{dT}{T^2}
+\left(\langle iE_i\rangle-\langle E_i\rangle Z)\right)=\left(\frac32\frac{dT}{T}+\frac{dV}V\right)Z,
+\end{equation}
+here we substitute wherever possible $Z$ for $\langle i\rangle$ and $g_{e1}{\rm Fe}_{1/2}(g_e)$.
+Accordingly, the differential of $Z$ is:
+\begin{equation}\label{diffz}
+dZ=\left(\frac32\frac{dT}{T}+\frac{dV}V-\frac{R^-(g_e)dg_e}{g_e}\right)Z.
+\end{equation}
 
 {\bf To solve the ionization equilibrium} for the given $T$ and $n_a=N_a/V$, one needs to solve $g_e$ from equation $G(g_e)=0$, 
 $G(g_e)=\langle i\rangle-g_{e1}{\rm Fe}_{1/2}(g_e)$, which is obtained by means of excluding $Z$ from Eqs.(\ref{zavr},\ref{zfe}). 
@@ -145,23 +163,6 @@ does not matter at all.
 Therefore, we 
 do not see any reason for applying the assumption of a Boltzmann electron gas in modelling the ionization equilibrium
 in real dense plasmas.
-
-{\bf Derivatives along the ionization curve.}
-Taking differential of the equation of ionization equilibrium, $G=0$, one gets the equation relating the differentials
-of different variables along the curve of ionization equilibrium:
-\begin{equation}\label{diffge}
-\frac{dg_e}
-{g_e}
-\left(
-\langle i^2\rangle-Z^2+ZR^-(g_e)
-\right)+\frac{dT}{T^2}
-\left(\langle iE_i\rangle-\langle E_i\rangle Z)\right)=\left(\frac32\frac{dT}{T}+\frac{dV}V\right)Z,
-\end{equation}
-here we substitute wherever possible $Z$ for $\langle i\rangle$ and $g_{e1}{\rm Fe}_{1/2}(g_e)$.
-Accordingly, the differential of $Z$ is:
-\begin{equation}\label{diffz}
-dZ=\left(\frac32\frac{dT}{T}+\frac{dV}V-\frac{R^-(g_e)dg_e}{g_e}\right)Z.
-\end{equation}
 
 {\bf Plasma thermodynamics and Equation-Of-State.} Now we substitute the ion partition function into Eq.(\ref{freeenergy}). After some algebra we obtain:
 \begin{equation}\label{equile}
@@ -220,7 +221,7 @@ V\frac{\partial P_i}{\partial V}=-n_aT,
 \end{equation}
 are omitted.
 
-The speed of sound, $C_s$ is defined in terms of the adiabatic comressibility (at constant entropy), $C_s^2=\left(\frac{\partial P}{\partial \rho}\right)_{\rm ad}$, which
+The speed of sound, $C_s$, is defined in terms of the adiabatic comressibility (at constant entropy), $C_s^2=\left(\frac{\partial P}{\partial \rho}\right)_{\rm ad}$, which
 may be parametrized in terms of effective adiabatic index, $\gamma$, such that 
 $\gamma\frac{P}\rho=\left(\frac{\partial P}{\partial \rho}\right)_{\rm ad}$, herewith $\rho$ is the mass density. To calculate this, one can take Eq.(3.72) from 
 \cite{drake}, 

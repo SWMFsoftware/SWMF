@@ -1,8 +1,28 @@
 \section{Madelung approximation of electrostatic energy}
-{\bf Coulomb interactions} we account within the Madelung approximation. The extra term in the free energy which accounts for the
-electrostatic energy of each of the ions in the charge state $i$ coupled with i electrons, the latter being uniformly
-distributed over the "iono-sphere"
-(see Eq.(3.50) in \cite{drake}):
+{\bf Coulomb interactions} we account within the Madelung approximation.
+According to this model we assume that the charge of an ion with all of the
+electrons bound to it is concentrated in one point. For an ion in the charge state $i$,
+$i$ free electrons are considered coupled with it, being uniformly distributed over its {\it ion sphere}.
+The ion sphere is a sphere of volume $1/n_a$, the ion being its center.
+While calculating the electrostatic energy we neglect the Coulomb interactions between
+charges related to different ion spheres. Then we only need to calculate the electrostatic energy
+of an ion with free electrons coupled to it, which is equal to the energy of
+electron-electron interactions and the energy which is required to put the ion
+to the center of the ion sphere:
+\begin{equation}
+E_{E} = \frac12 \int_{r=0}^{r_{iono}}{q_e n_e \varphi_e(r) dV} - q_e i \varphi_e(0) =
+\frac35 \frac{q_e^2 i^2}{r_{iono}} - \frac32 \frac{q_e^2 i^2}{r_{iono}} =
+-\frac{9}{10} \frac{q_e^2 i^2}{r_{iono}},
+\end{equation}
+where $r_{iono}$ stands for the radius of the ion sphere, and the potential of
+the electrostatic field of electrons is as follows:
+\begin{equation}
+\varphi_e(r) = ei \left( -\frac32 \frac{1}{r_{iono}} + \frac12 \frac{r^2}{r_{iono}^3} \right).
+\end{equation}
+
+{\bf Helmholtz free energy.}
+The extra term in the free energy which accounts for the
+electrostatic energy is as follows (see also Eq.(3.50) in \cite{drake}):
 \begin{equation}\label{fterm}
 F_M=-E_M \sum_{i=0}^{i_{max}} i^2 N_i,\qquad E_M=\frac{9}{10} \frac{q_e^2}{r_{iono}},\qquad
 r_{iono} = \left( \frac{4 \pi}{3} n_a \right)^{-\frac13}.
@@ -12,9 +32,9 @@ Here the Madelung energy,
 E_M=\frac9{10}\frac{q_e^2}{r_{iono}}=\frac{1.8Ry}{(r_{iono}/a)},
 \end{equation}
 characterizes the electrostatic energy related per an atomic cell. It is conveniently expressed in terms of the Rydberg constant,  $Ry=\frac{q_e^2}{2a}\approx 13.60$ eV, as long as
-the iono-sphere radius, $r_{iono}$, is related to the Bohr radius, $a=\hbar^2/m_e q_e^2\approx0.5\cdot10^{-10}$ m.
+the ion sphere radius, $r_{iono}$, is related to the Bohr radius, $a=\hbar^2/m_e q_e^2\approx0.5\cdot10^{-10}$ m.
 
-Accordingly, in the requirement of the ionization equilibrium, $\partial F/\partial N_i - \partial F/\partial N_{i+1} - \partial F/\partial N_e = 0$ (with respect to the reaction $(i)\leftrightarrow(i+1)+e$),
+{\bf Ionization equilibrium.} Accordingly, in the requirement of the ionization equilibrium, $\partial F/\partial N_i - \partial F/\partial N_{i+1} - \partial F/\partial N_e = 0$ (with respect to the reaction $(i)\leftrightarrow(i+1)+e$),
 the term $\partial F_{M}/\partial N_i -\partial F_{M}/\partial N_{i+1}$ will 
 give the contribution of $(2i+1) E_M$ into the left hand side:
 \begin{equation}
@@ -35,30 +55,15 @@ each of the potentials, $I_i$, is reduced by $(2i+1)E_M$.
 Energy of the ion of the charge state $i$ is $E_i^* = \sum_{j=0}^{i-1}I_j - i^2 E_M$.
 This effect shifts the ionization equilibrium towards higher ionization degrees, for a given temperature and atomic density.
 
-The common multiplier, $\frac{N_0}{g_0}$, in each of Eqs.(\ref{pfM}) may be also represented as $\frac{N_a}{S}$.
+{\bf Partition function.} The common multiplier, $\frac{N_0}{g_0}$, in each of Eqs.(\ref{pfM}) may be also represented as $\frac{N_a}{S}$.
 From the normalization condition, $\sum N_i = N_a$, we find that $S$ is a statistical sum:
-\begin{equation}
+\begin{equation}\label{MadS}
 S=\sum_{i=0}^{i_{max}} g_i (g_e)^i \exp\left(-\frac{E_i^*}T\right),
 \end{equation}
 so that:
 \begin{equation}\label{ni}
 p_i = \frac{N_i}{N_a} = \frac{1}S g_i (g_e)^i \exp \left( -\frac{E_i^*}T \right).
 \end{equation}
-
-The full Helmholtz free energy now includes the contribution of the electrostatic field energy as in Eq.(\ref{fterm}):
-\begin{equation}\label{fe1}
-F=-T
-\sum_{i=0}^{i_{max}}{
-N_i\log\left[g_i
-  \frac{eV}{N_i}\left(\frac{MT}{2\pi \hbar^2}\right)^{3/2}\exp \left(-\sum_{j=0}^{i-1}\frac{I_j}T \right)\right]}+F_e
-  -\frac{9}{10} \sum_{i=0}^{i_{max}} N_i \frac{i^2 q_e^2}{r_{iono}}.
-\end{equation}  
-
-With the ion partition functions as in Eq.(\ref{ni}) one can rewrite Eq.(\ref{fe1}) in the following form:
-\begin{equation}\label{ffullm}
-F = -TN_a\log\left[\frac{eV}{N_a}\left(\frac{MT}{2\pi \hbar^2}\right)^{3/2}\right]-TN_a\log S + \Omega_e, 
-\end{equation}
-where, again, $\Omega_e = F_e - \mu_e N_a \sum i p_i = F_e - \mu_e N_a \langle i \rangle $.
 
 {\bf Differentials along the curve of the ionization equilibrium} obey the equation as follows:
 \begin{equation}\label{diffstruct}
@@ -74,7 +79,6 @@ where
 L   = \frac{E_M}{3T} = \frac35 \frac{Ry[eV]}{T[eV] r_{iono}[a]}.
 \end{equation}
 
-
 Again, we express the result in terms of covariances,
 $\langle \delta a \delta b \rangle = \langle (a - \langle a \rangle) (b - \langle b \rangle) \rangle$,
 and mean values which are now being calculated
@@ -85,6 +89,24 @@ differentials is not a complicated problem with the following formula:
 d \langle f_i \rangle = \left\langle \delta f_i \delta\left( \frac{dp_i}{p_i} \right) \right\rangle,
 \end{equation}
 where $f_i$ is a function of the only argument $i$, for example, $iE_i$ or $i^2+i$.
+
+{\bf The ionization equilibrium} can be solved using the old technique, i.e. the Newton-Rapson
+iterations defined in Eq.(\ref{iter}).
+
+{\bf The full Helmholtz free energy} now includes the contribution of the electrostatic field energy as in Eq.(\ref{fterm}):
+\begin{equation}\label{fe1}
+F=-T
+\sum_{i=0}^{i_{max}}{
+N_i\log\left[g_i
+  \frac{eV}{N_i}\left(\frac{MT}{2\pi \hbar^2}\right)^{3/2}\exp \left(-\sum_{j=0}^{i-1}\frac{I_j}T \right)\right]}+F_e
+  -\frac{9}{10} \sum_{i=0}^{i_{max}} N_i \frac{i^2 q_e^2}{r_{iono}}.
+\end{equation}  
+
+With the ion partition functions as in Eq.(\ref{ni}) one can rewrite Eq.(\ref{fe1}) in the following form:
+\begin{equation}\label{ffullm}
+F = -TN_a\log\left[\frac{eV}{N_a}\left(\frac{MT}{2\pi \hbar^2}\right)^{3/2}\right]-TN_a\log S + \Omega_e, 
+\end{equation}
+where, again, $\Omega_e = F_e - \mu_e N_a \sum i p_i = F_e - \mu_e N_a \langle i \rangle $.
 
 {\bf Plasma thermodynamics and Equation-Of-State.} 
 While differentiating Eq.(\ref{ffullm}) with respect to $T$ and $V$, again, we see that the derivatives
