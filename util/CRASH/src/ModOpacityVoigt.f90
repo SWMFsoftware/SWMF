@@ -44,7 +44,7 @@ contains
 
 
     real,parameter:: cSqrtPi = 1.7725                                                                                                
-    real::v,alog, fa, fv, g1, g2
+    real :: v,LogA, fa, fv, g1, g2
     integer:: iA, iV
     !---------------------------
 
@@ -64,10 +64,10 @@ contains
     else                                                              
 
        ! ...    use a table lookup                                   
-       alog = log10( a )                                              
-       ia = int(alog/0.2 + 6)                                              
+       LogA = log10( a )                                              
+       ia = int(LogA/0.2 + 6)                                              
        iv = int(v/0.5 + 1)                                                 
-       fa = alog/0.2 - (ia-6)                                         
+       fa = LogA/0.2 - (ia-6)                                         
        fv = v/0.5 - (iv-1)                                            
        g1 = (1.-fa)*hTable_II(ia,iv) + fa*hTable_II(ia+1,iv)                
        g2 = (1.-fa)*hTable_II(ia,iv+1) + fa*hTable_II(ia+1,iv+1)            

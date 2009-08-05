@@ -1601,7 +1601,7 @@ c ... format statements                                                 ABJT1591
                                                                         ABJT1598
       end                                                               ABJT1599
 c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT1600
-                                                                        ABJT1601
+c MOVED TO ModVoigt                                                     ABJT1601
       function dawson ( v )                                             ABJT1602
                                                                         ABJT1603
 c ... computes dawson's integral (which is sometimes used to compute    ABJT1604
@@ -1640,9 +1640,10 @@ c ********************************************************************  ABJT1623
       endif                                                             ABJT1637
                                                                         ABJT1638
       return                                                            ABJT1639
-      end                                                               ABJT1640
+      end
+c END OF MOVED DAWSON                                                   ABJT1640
 c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT1641
-                                                                        ABJT1642
+c NOT NEEDED                                                            ABJT1642
       subroutine debug ( name,                                          ABJT1643
      &                          lbug )                                  ABJT1644
                                                                         ABJT1645
@@ -1709,8 +1710,9 @@ c ...          do not allow over 50 debug prints per subroutine         ABJT1694
                                                                         ABJT1706
       end                                                               ABJT1707
 c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT1708
-                                                                        ABJT1709
+c END NOT NEEDED                                                        ABJT1709
       function dielrc ( q,n,nprin0,nbound,izgas,tempel,edens0,potiz )   ABJT1710
+c NON-LTE PART 
                                                                         ABJT1711
 c ... dielectronic recombination rate function.  calculates the         ABJT1712
 c     rate (per ion per free electron => cm**3/sec) at which            ABJT1713
@@ -1819,12 +1821,13 @@ c ... format statements                                                 ABJT1811
   905 format (t4,'bq',t18,'summ',t32,'dielrc',t46,'enn',t60,            ABJT1816
      2  'summ1'/t4,1p5e12.3)                                            ABJT1817
                                                                         ABJT1818
-      end                                                               ABJT1819
+      end
+c END OF NON-LTE PART                                                   ABJT1819
 c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT1820
                                                                         ABJT1821
       subroutine energy ( tp,densnn,                                    ABJT1822
      &                                enrgy,densne )                    ABJT1823
-                                                                        ABJT1824
+c  NON-LTE PART                                                         ABJT1824
 c ... this subroutine computes the ionization states of gases as a      ABJT1825
 c     function of density and temperature using either the saha         ABJT1826
 c     or coronal ionization models                                      ABJT1827
@@ -2216,8 +2219,9 @@ c ... format statements                                                 ABJT2211
   901 format (' debug output from -eos-:'/)                             ABJT2213
                                                                         ABJT2214
       end                                                               ABJT2215
+c NON-LTE PART
 c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ABJT2216
-                                                                        ABJT2217
+c MOVED INTO ModMultiGroup                                              ABJT2217
       function gint ( igint,xmin,xmax )                                 ABJT2218
                                                                         ABJT2219
 c ... this function returns the integral <from xmin to xmax> of         ABJT2220
