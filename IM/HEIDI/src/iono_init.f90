@@ -28,12 +28,12 @@ subroutine IonoHeidiInit(year, day, ut)
   real :: dTheta_l, dPsi_l
         
   dTheta_l = 0.50*cPi/real(IONO_nTheta-1)
-  dPsi_l = dTheta_l
-
+  dPsi_l = 2.0*cPi/real(IONO_nPsi-1)
+  
   do j = 1, IONO_nPsi
      IONO_NORTH_Theta(1,j) = 0.001
      IONO_NORTH_Psi(1,j) = real(j-1)*dPsi_l
-
+     
      do i = 1, IONO_nTheta
         IONO_NORTH_Theta(i,j) = cPi*(0.5*real(i-1)/real(IONO_nTheta))
         IONO_NORTH_Psi(i,j) = IONO_NORTH_Psi(1,j)
