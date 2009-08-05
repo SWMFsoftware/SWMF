@@ -54,12 +54,11 @@ module CRASH_ModStatSumMix
 
 
   !Deviators <(\delta i)^2>, <delta i delta E> and <(delta e)^2:
-  real :: DeltaZ2Av      ! The value of <(delta i)^2>=<i^2>-<i>^2
+  real :: DeltaZ2Av      ! The value of <delta^2 i>=<i^2>-<i>^2
   real :: DeltaETeInv2Av ! The value of <(delta E/Te)^2> 
-  real :: ETeInvDeltaZAv ! The value of <Delta E/Te Delta i> 
-  real :: ETeInvDeltaZ2Av! The value of <Delta E/Te Delta (i^2)>
-  real :: DeltaZDeltaZ2Av! The value of <Delta i Delta i^2>
-  real :: Delta2Z2Av     ! The value of <Delta^2 (i^2)>
+  real :: ETeInvDeltaZAv ! The value of <delta E/Te delta i> 
+  real :: ETeInvDeltaZ2Av! The value of <delta E/Te delta (i^2)>
+  real :: DeltaZDeltaZ2Av! The value of <delta i delta i^2>
 
   real :: VirialCoeffAv  ! The value of <-\frac{V}{T} \frac{\partial E}{\partial V}>
   real :: CovEnergyVirial! The value of -\frac{V}{T^2} < \delta \frac{\partial E}{\partial V} \delta E >
@@ -87,7 +86,6 @@ module CRASH_ModStatSumMix
            ETeInvDeltaZAv,& ! The value of <Delta E/Te Delta i>
            ETeInvDeltaZ2Av,&! The value of <Delta E/Te Delta (i^2)>
            DeltaZDeltaZ2Av,&! The value of <Delta i Delta i^2>
-           Delta2Z2Av,&     ! The value of <Delta^2 (i^2)>
            VirialCoeffAv,&  ! The value of <-\frac{V}{T} \frac{\partial E}{\partial V}>
            CovEnergyVirial,&! The value of -\frac{V}{T^2} < \delta \frac{\partial E}{\partial V} \delta E >
            Cov2Virial,&     ! The value of \frac{V^2}{T^2} < \delta^2 \frac{\partial E}{\partial V} >
@@ -186,20 +184,29 @@ Contains
     !if(.not.present(iErrorOut))return
     iError = 0
     !Check relativistic temperature
-    if( Te>50000.0 )iError = 2
-    if(Te <= 0.0)then
-       eMadelungPerTe = 0.0
-       eDebyeHuekel = 0.0
-       !  eUpshiftByCompression = 0.0
-       if(iError/=2)iError=1
-    else
-       call get_virial_coef
+    if (Te > 50000.0) then
+       iError = 2
+    else if (Te <= 0.0) then
+       iError = 1
     end if
 
+    call set_virial_coeff
 
     !if(eUpshiftByCompression > IonizPotentialAv)iError = 3
     if(present(iErrorOut))iErrorOut = iError
   end subroutine check_applicability
+  !==========================================================================!
+  subroutine set_virial_coeff
+
+    if (Te <= 0.0) then
+       eMadelungPerTe = 0.0
+       eDebyeHuekel = 0.0
+       !  eUpshiftByCompression = 0.0
+    else
+       call get_virial_coef
+    end if
+
+  end subroutine set_virial_coeff
   !==========================================================================!
   subroutine get_virial_coef
     !Calculate the variables dependent on the iono-sphere radius
@@ -260,7 +267,6 @@ Contains
     zAv=0.0; EAv=0.0; DeltaZ2Av=0.0; DeltaETeInv2Av = 0.0; ETeInvDeltaZAv = 0.0
     ETeInvDeltaZ2Av = 0.0
     DeltaZDeltaZ2Av = 0.0
-    Delta2Z2Av = 0.0
     Z2 = 0.0 ; Z2PerA = 0.0
 
     RMinus = 1.0; RPlus = 1.0
@@ -504,14 +510,11 @@ Contains
       logical,intent(in)::DoZOnly
       !---------------------------!
       ! < Ei/Te>_J (Ei - energy levels, Te - electron temperature [eV])
-      real::  ETeInvAvJ,&         
-              ZJ,&              ! Z_J, averaged Z for J component
-              DeltaZ2J,&        ! < (Z-<Z>)^2 >, averaged <(\delta Z)^2>, for J component
-              VirialCoeffAvJ,&  ! VirialCoeffAv_II, averaged over the charge states, i
-              VirialCoeffFullAvJ! Mean value of \frac{V}{T} \frac{\partial E}{\partial V}
+      real :: Z2AvJ,&           ! averaged i^2 for current iMix
+              VirialCoeffFullAv ! Mean value of \frac{V}{T} \frac{\partial E}{\partial V}
       ! Array of ionization energy levels of ions divided by the temperature in eV
-      real,dimension(0:nZMax) :: ETeInv_I
-      real,dimension(0:nZMax) :: VirialCoeffFullAv_I
+      real,dimension(0:nZMax,nMixMax) :: ETeInv_II
+      real,dimension(0:nZMax,nMixMax) :: VirialCoeffFullAv_II
       integer :: iMix
 
 
@@ -524,7 +527,6 @@ Contains
       ETeInvDeltaZAv   = 0.0
       ETeInvDeltaZ2Av  = 0.0
       DeltaZDeltaZ2Av  = 0.0
-      Delta2Z2Av       = 0.0
       ! IonizPotentialAv = 0.0
       ! eUpshiftByCompression = 0.0
 
@@ -536,103 +538,62 @@ Contains
 
 
       do iMix = 1, nMix
-         !Calculate average vaues of Z, for this component:
-         ZJ      = sum(Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix )* &
+
+         !Calculate <i>
+         zAv = zAv + Concentration_I(iMix) * &
+              sum(Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix )* &
               N_I(iZMin_I(iMix):iZMax_I(iMix)))
-         zAv     = zAv + Concentration_I(iMix) * ZJ
 
-         !Calculate <\delta i>^2>
-         DeltaZ2J = sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *  &
-              (N_I(iZMin_I(iMix):iZMax_I(iMix))-ZJ)**2 )
 
-         !Calculate a << (\delta i)^2 >>
-         DeltaZ2Av = DeltaZ2Av + Concentration_I(iMix) * &
-              DeltaZ2J
+         !Calculate <i^2>
+         Z2AvJ = sum( Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix) * &
+              N_I(iZMin_I(iMix):iZMax_I(iMix))**2 )
+         Z2 = Z2 + Concentration_I(iMix) * Z2AvJ
 
-         if(DoZOnly) CYCLE
-
-         !Calculate <Z^2>
-         Z2 = Z2 +  Concentration_I(iMix) * &
-              (DeltaZ2J+ZJ*ZJ)
-
-         !Calculate <Z^2/A>
+         !Calculate <i^2/A>
          Z2PerA = Z2PerA +  Concentration_I(iMix) * &
-              (DeltaZ2J+ZJ*ZJ)/cAtomicMass_I( nZ_I(iMix) )
+              Z2AvJ/cAtomicMass_I( nZ_I(iMix) )
+
+      end do
+
+      DeltaZ2Av = Z2 - zAv*zAv
+
+      call set_virial_coeff
+
+      if(DoZOnly) return
 
 
-         ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) = &
+      do iMix = 1, nMix
+
+         ETeInv_II(iZMin_I(iMix):iZMax_I(iMix),iMix) = &
               (IonizEnergyNeutral_II( iZMin_I(iMix):iZMax_I(iMix),iMix ) + &
               ExtraEnergyAv_II( iZMin_I(iMix):iZMax_I(iMix),iMix )) * TeInv
 
-         if(UseCoulombCorrection)ETeInv_I( iZMin_I(iMix):iZMax_I(iMix) ) = &
-              ETeInv_I( iZMin_I(iMix):iZMax_I(iMix) ) - TeInv * rIonoSphereInv * &
+         if(UseCoulombCorrection)ETeInv_II( iZMin_I(iMix):iZMax_I(iMix),iMix ) = &
+              ETeInv_II( iZMin_I(iMix):iZMax_I(iMix),iMix ) - TeInv * rIonoSphereInv * &
               IonizationEnergyLowering_I( iZMin_I(iMix):iZMax_I(iMix) )
 
-         !Calculate average values of E, for this component:
-
-         ETeInvAvJ   = sum(Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix )* &
-              ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)))
-
-         EAv = EAv + Concentration_I(iMix) * ETeInvAvJ
-
-         !Calculate contributions to bi-linear deviators
-         DeltaETeInv2Av   = DeltaETeInv2Av + Concentration_I(iMix)*&
-              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) * &
-              ((ETeInv_I(iZMin_I(iMix):iZMax_I(iMix))-ETeInvAvJ)**2 + &
-              Cov2ExtraEnergy_II(iZMin_I(iMix):iZMax_I(iMix),iMix) * TeInv * TeInv)) !correction to account for
-                                                                                     !energy levels divergence
-         ETeInvDeltaZAv   = ETeInvDeltaZAv + Concentration_I(iMix)*&
-              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
-              ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) * &
-              (N_I(iZMin_I(iMix):iZMax_I(iMix))-ZJ) )
-
-         ETeInvDeltaZ2Av  = ETeInvDeltaZ2Av + Concentration_I(iMix)*&
-              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
-              (ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) - ETeInvAvJ) *&
-              (N_I(iZMin_I(iMix):iZMax_I(iMix))**2 - DeltaZ2J - ZJ*ZJ) )
-
-         DeltaZDeltaZ2Av  = DeltaZDeltaZ2Av + Concentration_I(iMix)*&
-              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
-              (N_I(iZMin_I(iMix):iZMax_I(iMix))-ZJ)*&
-              (N_I(iZMin_I(iMix):iZMax_I(iMix))**2 - DeltaZ2J - ZJ*ZJ) )
-
-         Delta2Z2Av = Delta2Z2Av + Concentration_I(iMix)*&
-              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
-              N_I(iZMin_I(iMix):iZMax_I(iMix))**2 * &
-              (N_I(iZMin_I(iMix):iZMax_I(iMix))**2 - DeltaZ2J - ZJ*ZJ) )
+         !Calculate average value of E
+         EAv = EAv + Concentration_I(iMix) * &
+              sum(Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix )* &
+              ETeInv_II(iZMin_I(iMix):iZMax_I(iMix),iMix))
 
 
-         VirialCoeffAvJ = &
+         VirialCoeffAv = VirialCoeffAv + Concentration_I(iMix) *&
               sum( Population_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) *&
-              VirialCoeffAv_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix))
-         VirialCoeffAv = VirialCoeffAv + Concentration_I(iMix)*VirialCoeffAvJ * TeInv
+              VirialCoeffAv_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix)) * TeInv
 
-         CovEnergyVirial = CovEnergyVirial + TeInv * TeInv * Concentration_I(iMix)*&
-              sum( Population_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) *&
-              (CovExtraEnergyVirial_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) + &
-              (VirialCoeffAv_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) - VirialCoeffAvJ) * &
-              ETeInv_I(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1)) / TeInv))
 
-         VirialCoeffFullAv_I(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1)) = &
+         VirialCoeffFullAv_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1),iMix) = &
               -VirialCoeffAv_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) * TeInv
-         if (UseCoulombCorrection) VirialCoeffFullAv_I(iZMin_I(iMix):iZMax_I(iMix)) = &
-              VirialCoeffFullAv_I(iZMin_I(iMix):iZMax_I(iMix)) + &
+         if (UseCoulombCorrection) VirialCoeffFullAv_II(iZMin_I(iMix):iZMax_I(iMix),iMix) = &
+              VirialCoeffFullAv_II(iZMin_I(iMix):iZMax_I(iMix),iMix) + &
               eMadelungPerTe * N_I(iZMin_I(iMix):iZMax_I(iMix))**2
 
-         VirialCoeffFullAvJ = &
+         VirialCoeffFullAv = VirialCoeffFullAv + Concentration_I(iMix) * &
               sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
-              VirialCoeffFullAv_I(iZMin_I(iMix):iZMax_I(iMix)))
+              VirialCoeffFullAv_II(iZMin_I(iMix):iZMax_I(iMix),iMix))
 
-         Cov2Virial = Cov2Virial + Concentration_I(iMix) *&
-              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
-              (TeInv*TeInv * Cov2VirialCoeff_II(iZMin_I(iMix):iZMax_I(iMix), iMix) + &
-              (VirialCoeffFullAv_I(iZMin_I(iMix):iZMax_I(iMix)) - VirialCoeffFullAvJ)**2))
-
-         CovVirialZ = CovVirialZ + Concentration_I(iMix) *&
-              sum( Population_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) *&
-              (-TeInv) *&
-              (N_I(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1))-ZJ)*&
-              VirialCoeffAv_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix))
 
          Virial2Av = Virial2Av + Concentration_I(iMix) *&
               sum( Population_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) *&
@@ -650,10 +611,54 @@ Contains
          !     iZMin_I(iMix) : min(iZMax_I(iMix), nZ_I(iMix)-1), iMix))
 
       end do
+
+      do iMix = 1, nMix
+
+         !Calculate contributions to bi-linear deviators
+         DeltaETeInv2Av   = DeltaETeInv2Av + Concentration_I(iMix)*&
+              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) * &
+              ((ETeInv_II(iZMin_I(iMix):iZMax_I(iMix),iMix) - EAv)**2 + &
+              Cov2ExtraEnergy_II(iZMin_I(iMix):iZMax_I(iMix),iMix) * TeInv * TeInv)) !correction to account for
+                                                                                     !energy levels divergence
+         ETeInvDeltaZAv   = ETeInvDeltaZAv + Concentration_I(iMix)*&
+              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
+              ETeInv_II(iZMin_I(iMix):iZMax_I(iMix),iMix) * &
+              (N_I(iZMin_I(iMix):iZMax_I(iMix)) - zAv) )
+
+         ETeInvDeltaZ2Av  = ETeInvDeltaZ2Av + Concentration_I(iMix)*&
+              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
+              (ETeInv_II(iZMin_I(iMix):iZMax_I(iMix),iMix) - EAv) *&
+              N_I(iZMin_I(iMix):iZMax_I(iMix))**2 )
+
+         DeltaZDeltaZ2Av  = DeltaZDeltaZ2Av + Concentration_I(iMix)*&
+              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
+              (N_I(iZMin_I(iMix):iZMax_I(iMix)) - zAv)*&
+              N_I(iZMin_I(iMix):iZMax_I(iMix))**2 )
+
+
+         CovEnergyVirial = CovEnergyVirial + TeInv * TeInv * Concentration_I(iMix)*&
+              sum( Population_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) *&
+              (CovExtraEnergyVirial_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) + &
+              (VirialCoeffAv_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) - VirialCoeffAv/TeInv) * &
+              ETeInv_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1),iMix) / TeInv))
+
+         Cov2Virial = Cov2Virial + Concentration_I(iMix) *&
+              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
+              (TeInv*TeInv * Cov2VirialCoeff_II(iZMin_I(iMix):iZMax_I(iMix), iMix) + &
+              (VirialCoeffFullAv_II(iZMin_I(iMix):iZMax_I(iMix),iMix) - VirialCoeffFullAv)**2))
+
+         CovVirialZ = CovVirialZ + Concentration_I(iMix) *&
+              sum( Population_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) *&
+              (-TeInv) *&
+              (N_I(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1)) - zAv)*&
+              VirialCoeffAv_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix))
+
+      end do
+
       EAv = EAv * Te
 
       if (UseCoulombCorrection) then
-         VirialCoeffAv   = VirialCoeffAv   - eMadelungPerTe * Z2 * cEV
+         VirialCoeffAv   = VirialCoeffAv   - eMadelungPerTe * Z2
          CovEnergyVirial = CovEnergyVirial - eMadelungPerTe * ETeInvDeltaZ2Av
          CovVirialZ      = CovVirialZ      + eMadelungPerTe * DeltaZDeltaZ2Av
          Virial2Av       = Virial2Av       - (4.0/3.0) * eMadelungPerTe * Z2
