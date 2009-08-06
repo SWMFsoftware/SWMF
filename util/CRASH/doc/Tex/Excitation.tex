@@ -22,15 +22,20 @@ excitation level, $n$. Note that:
 That is why the statistical weights, $w_{i,n}$, and, hence, the statistical sum and the partition functions
 become more complex:
 \begin{equation}
-w_{i,n} = g_{i,n} \cdot g_e^i \exp \left( -\frac{E^*_i + E^{exc}_{i,n}}{T} \right),\qquad
+w_{i,n} = g_{i,n} \cdot g_e^i \exp \left( -\frac{E^*_{i,n}}{T} \right),\qquad
 S = \sum_{i=0}^{i_{max}} \sum_{n=n_{gr}}^{\infty} w_{i,n},\qquad
 p_{i,n} = \frac{w_{i,n}}{S},
 \end{equation}
-where $g_{i,n}$ stands for the excitation level degeneracy.
+where $g_{i,n}$ stands for the excitation level degeneracy, and the energy of the excited state,
+\begin{equation}
+E^*_{i,n}=E^*_i + E^{exc}_{i,n},
+\end{equation} 
+now includes the contribution from the ionization energy, the excitation energy and, generally 
+speaking, the contribution from the electrostatic energy.
 
 The excitation energy, $E^{exc}_{i,n}$, we calculate within a Bohr-like model, which is expressed in
 Eq.(2.9) from \cite{ionmix}:
-\begin{equation}
+\begin{equation}\label{estarin}
 E^{exc}_{i,n} = I_i \cdot n_{gr}^2 \left( \frac1{n_{gr}^2} - \frac1{n^2} \right), \qquad
 g_{i,n} = 2 n^2.
 \end{equation}
@@ -43,10 +48,5 @@ This only increases the number of terms in the statistical sum, but does not cha
 anything in principle. To obtain the thermodynamic variables and the thermodynamic functions
 we can just replace the mean values over $i$ with mean values over $i$ and $n$ in the
 Eqs.(\ref{generalE}), (\ref{generalP}), (\ref{generalCv}),
-(\ref{generalPT}), (\ref{generalCompr}) and substitute the new expression for energy levels.
-
-The excitation energy, $E^{exc}_{i,n}$, does not contribute to $\partial E / \partial V$,
-therefore substitution of the new energy levels, $E_{i,n}$, into
-Eqs.(\ref{madE}), (\ref{madP}), (\ref{madCv}), (\ref{madPT}), (\ref{madCompr})
-gives the correct formulas for the model of excitation levels.
-
+(\ref{generalPT}), (\ref{generalCompr}) and substitute the new expression, as in Eq.(\ref{estarin}), 
+for energy levels.

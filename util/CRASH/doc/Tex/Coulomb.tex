@@ -52,7 +52,10 @@ or, applying this recursively and reducing the sum $\sum_{j=0}^{i-1} (2j+1) = i^
 \end{equation}
 This may be interpreted as the ionization potential lowering which results from the Coulomb interaction:
 each of the potentials, $I_i$, is reduced by $(2i+1)E_M$.
-Energy of the ion of the charge state $i$ is $E_i^* = \sum_{j=0}^{i-1}I_j - i^2 E_M$.
+Energy of the ion of the charge state $i$ is:
+\begin{equation}\label{estar}
+E_i^* = \sum_{j=0}^{i-1}I_j - i^2 E_M.
+\end{equation}
 This effect shifts the ionization equilibrium towards higher ionization degrees, for a given temperature and atomic density.
 
 {\bf Partition function.} The common multiplier, $\frac{N_0}{g_0}$, in each of Eqs.(\ref{pfM}) may be also represented as $\frac{N_a}{S}$.
@@ -99,7 +102,7 @@ F=-T
 \sum_{i=0}^{i_{max}}{
 N_i\log\left[g_i
   \frac{eV}{N_i}\left(\frac{MT}{2\pi \hbar^2}\right)^{3/2}\exp \left(-\sum_{j=0}^{i-1}\frac{I_j}T \right)\right]}+F_e
-  -\frac{9}{10} \sum_{i=0}^{i_{max}} N_i \frac{i^2 q_e^2}{r_{iono}}.
+  - \sum_{i=0}^{i_{max}} {N_ii^2 E_M}.
 \end{equation}  
 
 With the ion partition functions as in Eq.(\ref{ni}) one can rewrite Eq.(\ref{fe1}) in the following form:
@@ -120,14 +123,14 @@ as follows:
 \begin{equation}\label{generalE}
 {\cal E} = -\frac{T^2}V\left(\frac{\partial}{\partial T}\left(\frac F T\right)\right)=
 {\cal E}_i+{\cal E}_e,\qquad{\cal E}_i=\frac32Tn_a,\qquad
-{\cal E}_e = n_a\left[ \frac32 T Z R^+ + \langle E \rangle \right],
+{\cal E}_e = n_a\left[ \frac32 T Z R^+ + \langle E^*_i \rangle \right],
 \end{equation}
 \begin{equation}\label{generalP}
 P = -\frac{\partial F}{\partial V}=P_i+P_e,\quad
 P_i = n_aT,\quad
-P_e = n_a \left[ T ZR^+ - V \langle \frac{\partial E}{\partial V} \rangle \right],
+P_e = n_a \left[ T ZR^+ - V \langle \frac{\partial E^*_i}{\partial V} \rangle \right],
 \end{equation}
-where we assume $E=E(V)$.
+where we assume a general dependence $E^*_i=E^*_i(V)$, for example, such as that in Eq.(\ref{estar})
 
 In the above equations we add the Madelung corrections into the energy of the electron gas, ${\cal E}_e$, and
 into the pressure of electrons, $P_e$, because those corrections are controlled by the electron temperature.
@@ -166,34 +169,14 @@ V\frac{\partial P_i}{\partial V}=-n_aT,
 are omitted.
 
 To apply the Madelung theory we calculate the first and the second partial derivatives
-of the energy levels over volume:
-\begin{equation}
+of the energy levels over volume using Eq.(\ref{estar}):
+\begin{equation}\label{estarprime}
 \frac{V}{T} \frac{\partial E^*_i}{\partial V} = L i^2, \qquad
-\frac{V^2}{T} \frac{\partial^2 E^*_i}{\partial V^2} = -\frac43 L i^2,
+\frac{V^2}{T} \frac{\partial^2 E^*_i}{\partial V^2} = -\frac43 L i^2.
 \end{equation}
-and substitute them into the general formulas for the thermodynamic variables
-and the thermodynamic derivatives:
-\begin{eqnarray}
-\label{madE}
-{\cal E}_e &=& n_a\left[ \frac32 T Z R^+ + \langle E^*_i \rangle \right], \\
-\label{madP}
-P_e &=& n_aT ( ZR^+ - L \langle i^2 \rangle ), \\
-\label{madCv}
-C_{Ve} = \frac{\partial {\cal E}_e}{\partial T} &=& n_a\left[\frac{\langle\delta^2E^*_i\rangle}{T^2}+\frac{15}4ZR^+
--\frac{\left(\frac32Z-\frac{\langle\delta E^*_i\delta i\rangle}T\right)^2}{\langle\delta^2i\rangle+ZR^-}\right], \\
-\label{madPT}
-\frac {\partial P_e}{\partial T} &=&
-n_a\left[
-	\frac52 Z R^+ -
-	(Z+L \langle \delta(i^2) \delta i \rangle)
-		\frac{\frac32Z-\frac{\langle\delta E^*_i\delta i\rangle}T}{\langle\delta^2i\rangle+ZR^-} -
-	L \frac{\langle \delta E^*_i \delta(i^2) \rangle}T
-\right], \\
-\label{madCompr}
-V\frac{\partial P_e}{\partial V} &=&
-n_a T \left[ -\frac{(Z + L \langle \delta(i^2) \delta i \rangle)^2}{\langle \delta^2 i \rangle + ZR^-} +
-L \left( \frac43 \langle i^2 \rangle + L \langle \delta^2(i^2) \rangle \right) \right].
-\end{eqnarray}
+
+Eqs.(\ref{estar},\ref{estarprime}) allows to specify all averages and covariances in the 
+expressions for thermodynamical variables and derivatives.
 
 {\bf Simulation results.}
 Following is the table showing the values of $Z$ calculated for Xenon
