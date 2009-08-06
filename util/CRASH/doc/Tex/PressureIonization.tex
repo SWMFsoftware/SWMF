@@ -2,7 +2,8 @@
 We account for pressure ionization via energy levels correction as follows:
 \begin{equation}
 \Delta E_{i,n,l} = f(i,n,l) (r_{iono}[a])^{-3 \theta}, \qquad
-E_{i,n,l} = E^*_i + E^{exc}_{i,n} + \Delta E_{i,n,l},
+E_{i,n,l} = E^*_i + E_x, \qquad
+E_x = E^{exc}_{i,n} + \Delta E_{i,n,l},
 \end{equation}
 where the function $f$ and the constant value $\theta$ must be adjusted
 according to the particular model being used. Now we distingish quantum states also by
@@ -61,3 +62,45 @@ C_V = n_a \left[ \frac32 + \frac{\langle \delta^2 E \rangle}{T^2} +
 \theta (\theta+1) \frac{\langle \Delta E \rangle}{T} + \\
 &+& \left\langle \delta^2 \left( Li^2 - \theta \frac{\Delta E}{T} \right) \right\rangle \Biggr].
 \end{eqnarray}
+
+To calculate the covariances over $i$, $n$ and $l$ we use Eq.(\ref{sepcov}), giving:
+%\begin{equation}
+%\langle E \rangle = \langle E^*_i + \langle E_x \rangle_{n,l} \rangle_i,
+%\end{equation}
+%\begin{equation}
+%\langle \frac{\partial E}{\partial V} \rangle =
+%\langle \frac{\partial E^*_i}{\partial V} +
+%\langle \frac{\partial E_x}{\partial V} \rangle_{n,l} \rangle_i,
+%\end{equation}
+\begin{equation}
+\langle \delta^2 E \rangle =
+\langle \langle \delta^2 E_x \rangle_{n,l} \rangle_i +
+\langle \delta^2 \langle E \rangle_{n,l} \rangle_i,
+\end{equation}
+\begin{equation}
+\langle \delta E \delta i \rangle = \langle i \langle E \rangle_{n,l} \rangle_i -
+\langle i \rangle_i \langle E \rangle,
+\end{equation}
+\begin{equation}
+\frac{V}{T} \langle \delta i \delta \frac{\partial E}{\partial V} \rangle =
+\frac{V}{T} \langle \delta i \delta \frac{\partial E^*_i}{\partial V} \rangle_i +
+\langle \delta i \delta(\frac{V}{T} \langle \frac{\partial E_x}{\partial V} \rangle_{n,l}) \rangle_i,
+\end{equation}
+%\begin{equation}
+%\frac{V^2}{T} \langle \frac{\partial^2 E}{\partial V^2} \rangle =
+%\frac{V^2}{T} \langle \frac{\partial^2 E^*_i}{\partial V^2} \rangle_i +
+%\langle \frac{1}{T} V^2 \langle \frac{\partial^2 E_x}{\partial V^2} \rangle_{n,l} \rangle,
+%\end{equation}
+\begin{equation}
+\frac{V^2}{T^2} \langle \delta^2 \frac{\partial E}{\partial V} \rangle =
+\langle \frac{1}{T^2} V^2 \langle \delta^2 \frac{\partial E_x}{\partial V} \rangle_{n,l} \rangle_i +
+\langle \delta^2 (\frac{V}{T} \frac{\partial E^*_i}{\partial V} +
+\frac{V}{T} \langle \frac{\partial E_x}{\partial V} \rangle_{n,l}) \rangle_i,
+\end{equation}
+\begin{equation}
+-\frac{V}{T^2} \langle \delta \frac{\partial E}{\partial V} \delta E \rangle =
+-\frac{V}{T^2} \langle \delta \frac{\partial E^*_i}{\partial V} \delta \langle E \rangle_{n,l} \rangle_i -
+\frac{V}{T^2} \langle \langle \delta E_x \delta \frac{\partial E_x}{\partial V} \rangle_{n,l} \rangle_i -
+\frac{V}{T^2} \langle \delta \langle \frac{\partial E_x}{\partial V} \rangle_{n,l} \delta \langle E \rangle_{n,l} \rangle_i.
+\end{equation}
+
