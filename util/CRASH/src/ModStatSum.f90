@@ -120,7 +120,7 @@ module CRASH_ModStatSumMix
   ! energy levels or (2) the shift in the ionization
   ! equilibrium, rather than in the pressure/energy only.
   !/
-  logical,public :: UseCoulombCorrection = .true.
+  logical,public :: UseCoulombCorrection = .false.
 
   !The "Coulomb logariphm". May be defined quantitatively
   !only in a conjunction with the choice for the model
