@@ -31,11 +31,20 @@ module CRASH_ModOpacityVoigt
        5.51E-02,4.51E-02 /),(/11,11/))
 
   public :: voigt 
+  public :: linwid
   ! ... this subroutine computes the Voigt function "h" as a function     
   !     of "a" and "v".  See Mihalas, "Stellar Atmospheres", 1978, for    
   !     definitions and details.                                          
 
 contains
+  !===================PROXY for LINWID=================
+  subroutine linwid( tp,densnn,ennp,AtomicWeight, &      
+                           gamma,avoigt,dnudop )
+    real,intent(in) :: tp,densnn,ennp
+    real,intent(in):: AtomicWeight
+    real,intent(out):: gamma,avoigt,dnudop 
+  end subroutine linwid
+  !====================================================
   real function voigt ( a,vv )                                           
     real,intent(in)::a,vv       
     ! ... this subroutine computes the Voigt function "h" as a function 

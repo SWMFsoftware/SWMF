@@ -6,6 +6,13 @@ include Makefile.DEPEND
 
 MY_LIB = ${LIBDIR}/libCRASH.a
 
+
+IOMIX=\
+	ModIonMix.o \
+	ModOpacityVoigt.o \
+	ModMultiGroup.o	
+
+
 OBJECTS=\
 	ModAtomicMass.o\
 	ModEos.o\
@@ -18,8 +25,7 @@ OBJECTS=\
 	ModExcitation.o \
 	ModAtomicDataMix.o \
 	ModExcitationData.o \
-	ModOpacityVoigt.o \
-	ModMultiGroup.o
+	${IOMIX}
 
 
 OBJECTS_EXE= test_ionization.o test_godunov.o test_Fermi.o

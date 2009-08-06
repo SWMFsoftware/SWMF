@@ -2132,7 +2132,7 @@ c ... format statements                                                 ABJT2111
                                                                         ABJT2126
       end                                                               ABJT2127
 c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT2128
-                                                                        ABJT2129
+c NOT NEEDED: NON-LTE                                                   ABJT2129
       subroutine eos ( tp,densnn,                                       ABJT2130
      &                             enrgy,heatcp,dzdt,densne,dedden )    ABJT2131
 c                                                                       ABJT2132
@@ -3290,7 +3290,7 @@ c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT3282
                                                                         ABJT3283
       subroutine meshhv ( tp,densnn,densne,engrup,ngrups,nptspg,        ABJT3284
      &                                                  photen,nphot )  ABJT3285
-c                                                                       ABJT3286
+c  MOVED TO ModMultiGroup.f90                                           ABJT3286
 c ... set a mesh of photon energies at which we would like to evaluate  ABJT3287
 c     absorption coefficients                                           ABJT3288
 c                                                                       ABJT3289
@@ -3488,7 +3488,7 @@ c ... format statements                                                 ABJT3478
      2  'ngrups',t32,'tp',t46,'densnn',t60,'densne'/t4,i4,t18,          ABJT3481
      3  i4,t32,1p3e11.3)                                                ABJT3482
   902 format ('  nphot =',i5,4x,'photen:'/50(1p10e11.3/))               ABJT3483
-                                                                        ABJT3484
+c END OF THE MOVED FRAGMENT                                             ABJT3484
       end                                                               ABJT3485
 c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT3486
                                                                         ABJT3487
@@ -4106,7 +4106,7 @@ c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT4097
       subroutine owt1 ( tp,densnn,densne,enrgy,heatcp,dzdt,dedden,      ABJT4099
      &                  oppat,oppet,oprt,ngrups,                        ABJT4100
      &                  engrup,oppma,oppme,oprm,culrat )                ABJT4101
-                                                                        ABJT4102
+c NOT NEEDED                                                            ABJT4102
 c ... subroutine to write out various results                           ABJT4103
 c                                                                       ABJT4104
 c ... input variables                                                   ABJT4105
@@ -4425,12 +4425,12 @@ c ... format statements                                                 ABJT4414
   980 format (a80)                                                      ABJT4418
   981 format (4e12.6,i12)                                               ABJT4419
   991 format (4e12.6)                                                   ABJT4420
-                                                                        ABJT4421
+c END OF NON-NEEDED FRAGMENT                                            ABJT4421
       end                                                               ABJT4422
 c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT4423
                                                                         ABJT4424
       function radrec ( q,n,nprin0,tempel,potiz )                       ABJT4425
-                                                                        ABJT4426
+c NON-LTE, NOT NEEDED                                                   ABJT4426
 c ... radiative recombination rate function.  calculates the            ABJT4427
 c     rate (per ion per free electron => cm**3/sec) at which            ABJT4428
 c     electrons enter the "n"th level of an ion with charge state       ABJT4429
@@ -4888,13 +4888,13 @@ c ... format statements                                                 ABJT4869
   912 format (t2,'check :'/8(t4,1p7e11.3/))                             ABJT4881
   991 format (///' loop did not converge in -saha-:'//t4,'iter',        ABJT4882
      2 t18,'eldnew',t32,'eldold'/t4,i4,t18,1p2e14.3)                    ABJT4883
-                                                                        ABJT4884
+c END OF NON-NEEDED FRAGMENT                                            ABJT4884
       end                                                               ABJT4885
 c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT4886
                                                                         ABJT4887
       subroutine sort ( npts,                                           ABJT4888
      &                            xin )                                 ABJT4889
-                                                                        ABJT4890
+c MOVED TO ModMultiGroup                                                ABJT4890
 c ... puts the elements of "xin" into ascending order                   ABJT4891
                                                                         ABJT4892
       dimension xin(npts)                                               ABJT4893
@@ -4953,7 +4953,7 @@ c ... format statements                                                 ABJT4940
 c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT4946
                                                                         ABJT4947
       function voigt ( a,vv )                                           ABJT4948
-                                                                        ABJT4949
+c MOVED TO ModOpacityVoigt                                              ABJT4949
 c ... this subroutine computes the Voigt function "h" as a function     ABJT4950
 c     of "a" and "v".  See Mihalas, "Stellar Atmospheres", 1978, for    ABJT4951
 c     definitions and details.                                          ABJT4952
