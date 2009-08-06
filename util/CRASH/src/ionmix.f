@@ -1176,7 +1176,7 @@ c ... format statements                                                 ABJT1167
                                                                         ABJT1173
       end                                                               ABJT1174
 c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT1175
-                                                                        ABJT1176
+c MOVED TO ModMultiGroup.f90                                            ABJT1176
       subroutine bbneq0 ( tp,izgas,nbound,                              ABJT1177
      &                                      enn,fnn,gnn )               ABJT1178
                                                                         ABJT1179
@@ -1262,7 +1262,7 @@ c ... format statements                                                 ABJT1257
   901 format (t2,'debug output from -bbneq0-'/t4,'izgas',t12,           ABJT1259
      2  'iq',t20,'nbound',t32,'enn',t46,'fnn',t60,'gnn'/                ABJT1260
      3  t4,i4,t12,i4,t20,i4,t32,1p3e14.4)                               ABJT1261
-                                                                        ABJT1262
+c END OF THE MOVED FRAGMENT                                             ABJT1262
       end                                                               ABJT1263
 c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT1264
                                                                         ABJT1265
