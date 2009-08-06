@@ -5,7 +5,7 @@ module CRASH_ModStatSumMix
   use CRASH_ModExcitation,ONLY : get_excitation_levels,&
        nMixMax, LogGi_II,&
        ExtraEnergyAv_II, VirialCoeffAv_II, Cov2ExtraEnergy_II,&
-       CovExtraEnergyVirial_II, Cov2VirialCoeff_II, VirialCoeff2Av_II
+       CovExtraEnergyVirial_II, Cov2VirialCoeff_II, SecondVirialCoeffAv_II
   use ModConst
   implicit none
   SAVE
@@ -64,7 +64,7 @@ module CRASH_ModStatSumMix
   real :: CovEnergyVirial! The value of -\frac{V}{T^2} < \delta \frac{\partial E}{\partial V} \delta E >
   real :: Cov2Virial     ! The value of \frac{V^2}{T^2} < \delta^2 \frac{\partial E}{\partial V} >
   real :: CovVirialZ     ! The value of \frac{V}{T} < \delta \frac{\partial E}{\partial V} \delta i >
-  real :: Virial2Av      ! The value of \frac{V^2}{T} < \frac{\partial^2 E}{\partial V^2} >
+  real :: SecondVirialAv      ! The value of \frac{V^2}{T} < \frac{\partial^2 E}{\partial V^2} >
 
 
   integer :: iIter   !To provide the output for the convergence efficiency, if needed
@@ -90,8 +90,9 @@ module CRASH_ModStatSumMix
            CovEnergyVirial,&! The value of -\frac{V}{T^2} < \delta \frac{\partial E}{\partial V} \delta E >
            Cov2Virial,&     ! The value of \frac{V^2}{T^2} < \delta^2 \frac{\partial E}{\partial V} >
            CovVirialZ,&     ! The value of \frac{V}{T} < \delta \frac{\partial E}{\partial V} \delta i >
-           Virial2Av,&      ! The value of \frac{V^2}{T} < \frac{\partial^2 E}{\partial V^2} >
+           SecondVirialAv,&      ! The value of \frac{V^2}{T} < \frac{\partial^2 E}{\partial V^2} >
            iIter,&          ! To provide the output for the convergence efficiency, if needed
+           Population_II,&  ! To calculate the spectroscopic data
            nMix, IonizPotential_II
   real,parameter::StrangeTemperature = -777.0
 
@@ -107,12 +108,7 @@ module CRASH_ModStatSumMix
 
   real,public :: eDebyeHuekel  !In eV, per atomic cell
 
-  ! The 'localization' enerrgy \hbar^2/(2m_e r_{ion}^2)
-  ! If it exceeds the ionization potential of the average
-  ! ion, the pressure ionization dominates over the
-  ! thermal one.
-  !real, public :: eUpshiftByCompression
-
+  
   !\
   ! The logical to handle the Coulomb corrections
   ! should be declared in this module, because
@@ -196,8 +192,6 @@ Contains
        call get_virial_coef
     end if
 
-
-    !if(eUpshiftByCompression > IonizPotentialAv)iError = 3
     if(present(iErrorOut))iErrorOut = iError
   end subroutine check_applicability
   !==========================================================================!
@@ -211,9 +205,6 @@ Contains
 
     eMadelungPerTe = 0.60 * &
          cRyToEv * rIonoSphereInv / Te
-
-    !eUpshiftByCompression = eUpshiftByCompression *&
-    !     rIonoSphereInv**2
 
     rDebyeInv = sqrt(6.0* Z2 * cRyToEv/Te*rIonoSphereInv**3)
 
@@ -264,7 +255,7 @@ Contains
     Z2PerA = 0.0
     DeltaZ2Av        = 0.0
     VirialCoeffAv    = 0.0
-    Virial2Av        = 0.0
+    SecondVirialAv        = 0.0
 
     DeltaETeInv2Av   = 0.0
     ETeInvDeltaZAv   = 0.0
@@ -278,9 +269,6 @@ Contains
 
     RMinus = 1.0; RPlus = 1.0
 
-    !IonizPotentialAv = sum(IonizPotential_II(1,1:nMix)*Concentration_I( 1:nMix))
-
-    !eUpshiftByCompression = 1.0 
 
   end subroutine set_zero_ionization
 
@@ -531,7 +519,7 @@ Contains
       Z2PerA = 0.0
       DeltaZ2Av        = 0.0
       VirialCoeffAv    = 0.0
-      Virial2Av        = 0.0
+      SecondVirialAv        = 0.0
 
       DeltaETeInv2Av   = 0.0
       ETeInvDeltaZAv   = 0.0
@@ -542,8 +530,6 @@ Contains
       Cov2Virial       = 0.0
       CovVirialZ       = 0.0
 
-      ! IonizPotentialAv = 0.0
-      ! eUpshiftByCompression = 0.0
 
 
       !Initialize eMadelungPerTe. eDebyeHuekel needs Z2.
@@ -609,21 +595,9 @@ Contains
 
 
          !Calculate \frac{V^2}{T} < \frac{\partial^2 E}{\partial V^2} >
-         Virial2Av = Virial2Av + Concentration_I(iMix) *&
+         SecondVirialAv = SecondVirialAv + Concentration_I(iMix) *&
               sum( Population_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) *&
-              TeInv * VirialCoeff2Av_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix))
-
-
-         !IonizPotentialAv =  IonizPotentialAv + Concentration_I(iMix)*&
-         !     sum( &
-         !     Population_II(&
-         !     iZMin_I(iMix) : min(iZMax_I(iMix), nZ_I(iMix)-1), iMix)*&
-         !     IonizPotential_II(&
-         !     iZMin_I(iMix)+1 : min(iZMax_I(iMix)+1, nZ_I(iMix)), iMix))
-
-         !eUpshiftByCompression =  eUpshiftByCompression +Concentration_I(iMix)*&
-         !     sum(Population_II(&
-         !     iZMin_I(iMix) : min(iZMax_I(iMix), nZ_I(iMix)-1), iMix))
+              TeInv * SecondVirialCoeffAv_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix))
 
       end do
 
@@ -696,7 +670,7 @@ Contains
          VirialCoeffAv   = VirialCoeffAv   - eMadelungPerTe * Z2
          CovEnergyVirial = CovEnergyVirial - eMadelungPerTe * ETeInvDeltaZ2Av
          CovVirialZ      = CovVirialZ      + eMadelungPerTe * DeltaZDeltaZ2Av
-         Virial2Av       = Virial2Av       - (4.0/3.0) * eMadelungPerTe * Z2
+         SecondVirialAv       = SecondVirialAv       - (4.0/3.0) * eMadelungPerTe * Z2
       end if
 
     end subroutine set_averages_and_deviators
@@ -820,7 +794,7 @@ Contains
     !(Na /P) \left(\partial P / \partial Na \right)_{T=const}
 
     compressibility_at_const_te = &
-         (1.0 + (zAv + CovVirialZ)**2 / (zAv*RMinus + DeltaZ2Av) - Cov2Virial + Virial2Av) /&
+         (1.0 + (zAv + CovVirialZ)**2 / (zAv*RMinus + DeltaZ2Av) - Cov2Virial + SecondVirialAv) /&
          (1.0 + zAv*RPlus + VirialCoeffAv)
 
   end function compressibility_at_const_te

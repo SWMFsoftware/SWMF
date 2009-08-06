@@ -14,7 +14,8 @@ contains
     integer,intent(in)::iZ,nZ
     !The principal quantum number of the outermost electron in bounded with an ion
     !with I electrons
-    integer,parameter :: nGround_I(100) = (/ 1, 1, &                                !  2
+    integer,parameter :: nGround0_I(100) = (/ &
+         1, 1, &                                                                    !  2
          2, 2, 2, 2, 2, 2, 2, 2, &                                                  !  8
          3, 3, 3, 3, 3, 3, 3, 3, &                                                  !  8
          4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, &                    ! 18
@@ -22,8 +23,21 @@ contains
          6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, &                          !
          6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, &                          ! 32
          7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 /)                                !
+    integer,parameter :: nGround_I(100) = (/ &
+         1, 1, &                                                                    !  2
+         2, 2, 2, 2, 2, 2, 2, 2, &                                                  !  8
+         3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, &                    ! 18
+         4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,       &                    ! 
+         4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,       &                    ! 32
+         5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,       &                    !
+         5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,       &                    !
+         5, 5, 5, 5, 5, 5, 5, 5    /)                                               ! 40
     !-------------------------------------------------------------------------------!
-    n_ground = nGround_I(nZ - iZ)
+    if(iZ==0)then 
+       n_ground = nGround0_I(nZ)
+    else
+       n_ground = nGround_I(nZ - iZ)
+    end if
   end function n_ground
   !======================================================================================
   !Fill in the array ExcitationEnergy_III with tabulated or calculted excitation energies

@@ -17,7 +17,7 @@ module CRASH_ModExcitation
 
   !The average value of V^2\frac{\partial^2 \Delta E}{\partial V^2}
   !for given i and iMix [eV]
-  real,dimension(0:nZMax,nMixMax),public :: VirialCoeff2Av_II = 0.0
+  real,dimension(0:nZMax,nMixMax),public :: SecondVirialCoeffAv_II = 0.0
 
   !The variance of the extra energy, E_x, for given i and iMix [eV^2]
   real,dimension(0:nZMax,nMixMax),public :: Cov2ExtraEnergy_II = 0.0
@@ -90,7 +90,7 @@ contains
     DeltaEnergyAv_II(       :,iMix) = 0.0
     ExtraEnergyAv_II(       :,iMix) = 0.0
     VirialCoeffAv_II(       :,iMix) = 0.0
-    VirialCoeff2Av_II(      :,iMix) = 0.0
+    SecondVirialCoeffAv_II(      :,iMix) = 0.0
     Cov2ExtraEnergy_II(     :,iMix) = 0.0
     CovExtraEnergyVirial_II(:,iMix) = 0.0
     Cov2VirialCoeff_II(     :,iMix) = 0.0
@@ -155,7 +155,7 @@ contains
        end do
 
        VirialCoeffAv_II (iZ,iMix) = IndexPerThree    * DeltaEnergyAv_II(iZ,iMix)
-       VirialCoeff2Av_II(iZ,iMix) = IndexSecondDeriv * DeltaEnergyAv_II(iZ,iMix)
+       SecondVirialCoeffAv_II(iZ,iMix) = IndexSecondDeriv * DeltaEnergyAv_II(iZ,iMix)
 
 
 
