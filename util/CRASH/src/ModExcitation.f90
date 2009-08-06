@@ -41,6 +41,10 @@ module CRASH_ModExcitation
   !/
   real,dimension(0:nExcitation-1,nExcitation,0:nZMax,nMixMax) :: Partition_IIII = 0.0
 
+  !Averages over l:
+  real,dimension(nExcitation,0:nZMax  ,nMixMax),public :: Partition_III = 0.0
+  real,dimension(nExcitation,0:nZMax-1,nMixMax),public :: ExcitationEnergy_III = 0.0
+
 
   public :: get_excitation_levels
   public :: nMixMax
@@ -82,14 +86,17 @@ contains
     if (.not.UseExcitation) return
 
 
-    Partition_IIII     (:,:,:,iMix) = 0.0
-    DeltaEnergyAv_II       (:,iMix) = 0.0
-    ExtraEnergyAv_II       (:,iMix) = 0.0
-    VirialCoeffAv_II       (:,iMix) = 0.0
-    VirialCoeff2Av_II      (:,iMix) = 0.0
-    Cov2ExtraEnergy_II     (:,iMix) = 0.0
+    Partition_IIII(     :,:,:,iMix) = 0.0
+    DeltaEnergyAv_II(       :,iMix) = 0.0
+    ExtraEnergyAv_II(       :,iMix) = 0.0
+    VirialCoeffAv_II(       :,iMix) = 0.0
+    VirialCoeff2Av_II(      :,iMix) = 0.0
+    Cov2ExtraEnergy_II(     :,iMix) = 0.0
     CovExtraEnergyVirial_II(:,iMix) = 0.0
-    Cov2VirialCoeff_II     (:,iMix) = 0.0
+    Cov2VirialCoeff_II(     :,iMix) = 0.0
+    Partition_III(        :,:,iMix) = 0.0
+    ExcitationEnergy_III( :,:,iMix) = 0.0
+
 
     PowerOfRIono = rIonoSphereInv**iPressureEffectIndex
 
@@ -139,6 +146,13 @@ contains
        Partition_IIII(:,nGround:nExcitation,iZ,iMix) = Partition_IIII(:,nGround:nExcitation,iZ,iMix) * GiInv
        ExtraEnergyAv_II(iZ,iMix) = ExtraEnergyAv_II(iZ,iMix) * GiInv
        DeltaEnergyAv_II(iZ,iMix) = DeltaEnergyAv_II(iZ,iMix) * GiInv
+       !Take averages over l
+       
+       do iN = nGround, nExcitation
+          Partition_III(iN,iZ,iMix) = sum( Partition_IIII(:,iN,iZ,iMix)) 
+          ExcitationEnergy_III( iN,iZ,iMix) = sum(&
+               Partition_IIII(:,iN,iZ,iMix) * ExtraEnergy_IIII(:,iN,iZ,iMix))
+       end do
 
        VirialCoeffAv_II (iZ,iMix) = IndexPerThree    * DeltaEnergyAv_II(iZ,iMix)
        VirialCoeff2Av_II(iZ,iMix) = IndexSecondDeriv * DeltaEnergyAv_II(iZ,iMix)
