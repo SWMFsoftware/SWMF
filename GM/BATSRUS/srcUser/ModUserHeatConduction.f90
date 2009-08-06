@@ -60,7 +60,7 @@ contains
     !--------------------------------------------------------------------------
 
     if(TypeProblem=='gaussian' .or. TypeProblem=='rz' &
-         .or. TypeProblem=='parcond')then
+         .or. TypeProblem=='parcond' .or. TypeProblem=='parcondsemi')then
        if(Time_Simulation <= 0.0)then
           if(iProc == 0) write(*,*) NameSub// &
                ' : starting simulation time should be larger than 0'
@@ -133,9 +133,17 @@ contains
           StateFin_VC(iTmatFin,iCell) = &
                max(StateFin_VC(iTmatFin,iCell),Tmin)
        end do
+
     case('parcond')
        AmplitudeTemperature = 9.0
        Tmin = 1.0
+       Bx = 1.7
+       By = 1.0
+       Time0 = Time_Simulation
+
+    case('parcondsemi')
+       AmplitudeTemperature = 100.0
+       Tmin = 0.01
        Bx = 1.7
        By = 1.0
        Time0 = Time_Simulation
@@ -292,7 +300,7 @@ contains
           end do
        end do; end do
 
-    case('parcond')
+    case('parcond', 'parcondsemi')
        do j=-1,nJ+2; do i=-1,nI+2
           call get_state_parcond(i, j, iBlock)
        end do; end do
@@ -410,7 +418,7 @@ contains
              StateSemi_VGB(1,:,nJ+1,:,iBlock) = Tmin
           end select
        end select
-    case('parcond')
+    case('parcond', 'parcondsemi')
        select case(TypeBc)
        case('user')
           select case(iSide)
@@ -548,20 +556,27 @@ contains
   subroutine get_state_parcond(i, j, iBlock)
 
     use ModAdvance,    ONLY: State_VGB
-    use ModPhysics,  ONLY: ElectronTemperatureRatio
-    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, By_, Bz_, p_
+    use ModPhysics,    ONLY: ElectronTemperatureRatio, inv_gm1
+    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, By_, Bz_, p_, &
+         ExtraEint_
 
     integer, intent(in) :: i, j, iBlock
 
-    real :: Temperature
+    real :: Temperature, Te
     !--------------------------------------------------------------------------
-    call get_temperature_parcond(i, j, iBlock, Temperature)
+    call get_temperature_parcond(i, j, iBlock, Te)
     State_VGB(Rho_,i,j,:,iBlock) = 1.0
     State_VGB(RhoUx_:RhoUz_,i,j,:,iBlock) = 0.0
     State_VGB(Bx_,i,j,:,iBlock) = Bx
     State_VGB(By_,i,j,:,iBlock) = By
     State_VGB(Bz_,i,j,:,iBlock) = 0.0
-    State_VGB(p_,i,j,:,iBlock) = Temperature*(1 + ElectronTemperatureRatio)
+    if(TypeProblem=='parcondsemi')then
+       State_VGB(ExtraEint_,i,j,:,iBlock) = (1.0/3.5)*Te**3.5 - inv_gm1*Te
+       State_VGB(p_,i,j,:,iBlock) = Te
+    else
+       Temperature = Te*(1 + ElectronTemperatureRatio)
+       State_VGB(p_,i,j,:,iBlock) = Temperature
+    end if
 
   end subroutine get_state_parcond
 
@@ -584,10 +599,13 @@ contains
     xx = (Bx*x+By*y)/sqrt(Bx**2+By**2)
     yy = (Bx*y-By*x)/sqrt(Bx**2+By**2)
 
-    Spread = 4.0*Time_Simulation
     Spread0 = 4.0*Time0
+    Spread = 4.0*Time_Simulation
+
     Temperature = Tmin + AmplitudeTemperature/(sqrt(cPi*Spread)) &
          *exp(-xx**2/Spread-yy**2/Spread0)
+
+    if(TypeProblem == 'parcondsemi') Temperature = Temperature**(1.0/3.5)
 
   end subroutine get_temperature_parcond
 
@@ -600,6 +618,7 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModGeometry,   ONLY: x_Blk, y_Blk
     use ModMain,       ONLY: nI, nJ, nK, Time_Simulation
+    use ModPhysics,    ONLY: Si2No_V, UnitTemperature_
     use ModVarIndexes, ONLY: p_, Rho_
 
     integer,          intent(in)   :: iBlock
@@ -615,7 +634,7 @@ contains
 
     real :: r, Temperature, Weight1, Weight2, x, y
     real :: Rho, Ur, U_D(2)
-    integer :: i, j, iCell
+    integer :: i, j, k, iCell
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
@@ -698,13 +717,19 @@ contains
           end select
        end do; end do
 
-    case('parcond')
+    case('parcond', 'parcondsemi')
        select case(NameVar)
-       case('t0','temp0')
+       case('t0','temp0','te0')
           do j=-1,nJ+2; do i=-1,nI+2
              call get_temperature_parcond(i, j, iBlock, Temperature)
              PlotVar_G(i,j,:) = Temperature
           end do; end do
+       case('te')
+          do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  TeSiOut = PlotVar_G(i,j,k))
+             PlotVar_G(i,j,:) = PlotVar_G(i,j,k)*Si2No_V(UnitTemperature_)
+          end do; end do; end do
        case default
           IsFound = .false.
        end select
@@ -740,8 +765,9 @@ contains
     real, optional, intent(out) :: PressureSiOut             ! [Pa]
     real, optional, intent(out) :: HeatCondSiOut             ! [J/(m*K*s)]
 
-    real :: Rho, Pressure, Temperature
-    real :: RhoSi, pSi, TemperatureSi
+    real :: Rho, Pressure, Te
+    real :: RhoSi, pSi, TeSi
+    real :: Cv, HeatCond
 
     character(len=*), parameter :: NameSub = 'user_material_properties'
     !--------------------------------------------------------------------------
@@ -750,40 +776,59 @@ contains
     RhoSi = Rho*No2Si_V(Rho_)
 
     if(present(EinternalSiIn))then
-       pSi = EinternalSiIn*gm1
-       Pressure = pSi*Si2No_V(UnitP_)
-       Temperature = Pressure/Rho
-       TemperatureSi = Temperature*No2Si_V(UnitTemperature_)
+       if(TypeProblem=='parcondsemi')then
+          Te = (3.5*EinternalSiIn*Si2No_V(UnitEnergyDens_))**(1.0/3.5)
+          Pressure = Rho*Te
+          pSi = Pressure*No2Si_V(UnitP_)
+       else
+          pSi = EinternalSiIn*gm1
+          Pressure = pSi*Si2No_V(UnitP_)
+          Te = Pressure/Rho
+       end if
+       TeSi = Te*No2Si_V(UnitTemperature_)
     elseif(present(TeSiIn))then
-       TemperatureSi = TeSiIn
-       Temperature = TemperatureSi*Si2No_V(UnitTemperature_)
-       Pressure = Rho*Temperature
+       TeSi = TeSiIn
+       Te = TeSi*Si2No_V(UnitTemperature_)
+       Pressure = Rho*Te
        pSi = Pressure*No2Si_V(UnitP_)
     else
        Pressure = State_V(p_)
        pSi = Pressure*No2Si_V(UnitP_)
-       Temperature = Pressure/Rho
-       TemperatureSi = Temperature*No2Si_V(UnitTemperature_)
+       Te = Pressure/Rho
+       TeSi = Te*No2Si_V(UnitTemperature_)
     end if
 
-    if(present(EinternalSiOut)) EinternalSiOut = pSi*inv_gm1
-    if(present(TeSiOut)) TeSiOut = TemperatureSi
+    if(present(EinternalSiOut))then
+       if(TypeProblem=='parcondsemi')then
+          EinternalSiOut = Te**3.5*No2Si_V(UnitEnergyDens_)/3.5
+       else
+          EinternalSiOut = pSi*inv_gm1
+       end if
+    end if
+
+    if(present(TeSiOut)) TeSiOut = TeSi
     if(present(PressureSiOut)) PressureSiOut = pSi
 
-    if(present(CvSiOut)) CvSiOut = inv_gm1*Rho &
-         *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
+
+    if(present(CvSiOut))then
+       if(TypeProblem == 'parcondsemi')then
+          Cv = Te**2.5
+       else
+          Cv = inv_gm1*Rho
+       end if
+       CvSiOut = Cv*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
+    end if
 
     if(present(HeatCondSiOut))then
        select case(TypeProblem)
        case('rmtv')
-          HeatCondSiOut = Temperature**6.5/Rho**2 &
-               *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_) &
-               *No2Si_V(UnitU_)*No2Si_V(UnitX_)
+          HeatCond = Te**6.5/Rho**2
        case default
-          HeatCondSiOut = HeatConductionCoef &
-               *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_) &
-               *No2Si_V(UnitU_)*No2Si_V(UnitX_)
+          HeatCond = HeatConductionCoef
        end select
+        HeatCondSiOut = HeatCond &
+             *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_) &
+             *No2Si_V(UnitU_)*No2Si_V(UnitX_)
     end if
 
     if(present(AbsorptionOpacitySiOut)) AbsorptionOpacitySiOut = 0.0
