@@ -184,29 +184,22 @@ Contains
     !if(.not.present(iErrorOut))return
     iError = 0
     !Check relativistic temperature
-    if (Te > 50000.0) then
-       iError = 2
-    else if (Te <= 0.0) then
-       iError = 1
-    end if
-
-    call set_virial_coeff
-
-    !if(eUpshiftByCompression > IonizPotentialAv)iError = 3
-    if(present(iErrorOut))iErrorOut = iError
-  end subroutine check_applicability
-  !==========================================================================!
-  subroutine set_virial_coeff
+    if (Te > 50000.0) iError = 2
 
     if (Te <= 0.0) then
        eMadelungPerTe = 0.0
        eDebyeHuekel = 0.0
        !  eUpshiftByCompression = 0.0
+
+       if (iError /= 2) iError = 1
     else
        call get_virial_coef
     end if
 
-  end subroutine set_virial_coeff
+
+    !if(eUpshiftByCompression > IonizPotentialAv)iError = 3
+    if(present(iErrorOut))iErrorOut = iError
+  end subroutine check_applicability
   !==========================================================================!
   subroutine get_virial_coef
     !Calculate the variables dependent on the iono-sphere radius
@@ -553,6 +546,10 @@ Contains
       ! eUpshiftByCompression = 0.0
 
 
+      !Initialize eMadelungPerTe. eDebyeHuekel needs Z2.
+      call check_applicability()
+
+
       do iMix = 1, nMix
 
          !Calculate <i>
@@ -570,18 +567,9 @@ Contains
          Z2PerA = Z2PerA +  Concentration_I(iMix) * &
               Z2AvJ/cAtomicMass_I( nZ_I(iMix) )
 
-      end do
 
-      ! <\delta^2 i> = <i^2> - <i>^2
-      DeltaZ2Av = Z2 - zAv*zAv
+         if (DoZOnly) CYCLE
 
-      !Initialize eMadelungPerTe and eDebyeHuekel. eDebyeHuekel needs Z2.
-      call set_virial_coeff
-
-      if(DoZOnly) return
-
-
-      do iMix = 1, nMix
 
          !Fill in the array of average energies (per Te)
          !for all iMix and i taken into account
@@ -639,9 +627,15 @@ Contains
 
       end do
 
+      ! <\delta^2 i> = <i^2> - <i>^2
+      DeltaZ2Av = Z2 - zAv*zAv
+
+
 
       !Calculate contributions to covariances
       do iMix = 1, nMix
+         if (DoZOnly) exit
+
 
          !Calculate <(delta E/Te)^2>
          DeltaETeInv2Av   = DeltaETeInv2Av + Concentration_I(iMix)*&
@@ -691,6 +685,9 @@ Contains
       end do
 
       EAv = EAv * Te
+
+      if (DoZOnly) return
+
 
       if (UseCoulombCorrection) then
 
