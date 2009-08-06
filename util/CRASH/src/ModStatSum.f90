@@ -262,12 +262,26 @@ Contains
     !Do not overwrite LogGe if calculated but initialize it 
     !otherwise (at low Te)
 
-    if(Te>0.0)LogGe = 99.0  
+    if(Te>0.0)LogGe = 99.0
 
-    zAv=0.0; EAv=0.0; DeltaZ2Av=0.0; DeltaETeInv2Av = 0.0; ETeInvDeltaZAv = 0.0
-    ETeInvDeltaZ2Av = 0.0
-    DeltaZDeltaZ2Av = 0.0
-    Z2 = 0.0 ; Z2PerA = 0.0
+
+    zAv = 0.0
+    EAv = 0.0
+    Z2  = 0.0
+    Z2PerA = 0.0
+    DeltaZ2Av        = 0.0
+    VirialCoeffAv    = 0.0
+    Virial2Av        = 0.0
+
+    DeltaETeInv2Av   = 0.0
+    ETeInvDeltaZAv   = 0.0
+    ETeInvDeltaZ2Av  = 0.0
+    DeltaZDeltaZ2Av  = 0.0
+
+    CovEnergyVirial  = 0.0
+    Cov2Virial       = 0.0
+    CovVirialZ       = 0.0
+
 
     RMinus = 1.0; RPlus = 1.0
 
@@ -522,19 +536,21 @@ Contains
       EAv = 0.0
       Z2  = 0.0
       Z2PerA = 0.0
-      DeltaZ2Av        = 0.0   
+      DeltaZ2Av        = 0.0
+      VirialCoeffAv    = 0.0
+      Virial2Av        = 0.0
+
       DeltaETeInv2Av   = 0.0
       ETeInvDeltaZAv   = 0.0
       ETeInvDeltaZ2Av  = 0.0
       DeltaZDeltaZ2Av  = 0.0
+
+      CovEnergyVirial  = 0.0
+      Cov2Virial       = 0.0
+      CovVirialZ       = 0.0
+
       ! IonizPotentialAv = 0.0
       ! eUpshiftByCompression = 0.0
-
-      Cov2Virial      = 0.0
-      VirialCoeffAv   = 0.0
-      CovEnergyVirial = 0.0
-      CovVirialZ      = 0.0
-      Virial2Av       = 0.0
 
 
       do iMix = 1, nMix
