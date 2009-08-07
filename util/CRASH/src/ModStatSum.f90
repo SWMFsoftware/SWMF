@@ -233,12 +233,21 @@ Contains
   subroutine set_zero_ionization
     use CRASH_ModFermiGas,ONLY: RMinus, RPlus, LogGe
 
+    integer :: iMix
+    !--------------
+
     Population_II=0.0; Population_II(0,1:nMix) = 1.0
 
     !Do not overwrite LogGe if calculated but initialize it 
     !otherwise (at low Te)
 
     if(Te>0.0)LogGe = 99.0
+
+
+    do iMix = 1, nMix
+       call get_excitation_levels(iMix, 0, nZ_I(iMix)-1, &
+            nZ_I(iMix), 0.0, 0.0, ZeroIonization = .true.)
+    end do
 
 
     zAv = 0.0
@@ -462,7 +471,7 @@ Contains
 
 
          call get_excitation_levels(iMix, iZMin_I(iMix), min(iZMax_I(iMix), nZ_I(iMix)-1), &
-              nZ_I(iMix), TeInv, rIonoSphereInv)
+              nZ_I(iMix), TeInv, rIonoSphereInv, ZeroIonization = .false.)
 
 
          StatSumTermLog_I(0:nZ_I(iMix)) = &

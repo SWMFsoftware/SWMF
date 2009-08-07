@@ -54,12 +54,13 @@ module CRASH_ModExcitation
 contains
 
   !Fill in arrays ExtraEnergyAv_II and LogGi_II
-  subroutine get_excitation_levels(iMix, iZMin, iZMax, nZ, TeInv, rIonoSphereInv)
+  subroutine get_excitation_levels(iMix, iZMin, iZMax, nZ, TeInv, rIonoSphereInv, ZeroIonization)
     integer,intent(in) :: iMix
     integer,intent(in) :: iZMin, iZMax
     integer,intent(in) :: nZ
     real,intent(in) :: TeInv
     real,intent(in) :: rIonoSphereInv
+    logical,intent(in) :: ZeroIonization
 
     integer :: iZ, iN, iL  !Loop variables
 
@@ -96,6 +97,19 @@ contains
     Cov2VirialCoeff_II(     :,iMix) = 0.0
     Partition_III(        :,:,iMix) = 0.0
     ExcitationEnergy_III( :,:,iMix) = 0.0
+
+
+    if (ZeroIonization) then
+
+       do iZ = iZMin, iZMax
+
+          nGround = n_ground(iZ, nZ)
+
+          Partition_IIII(0,nGround,iZ,iMix) = 1.0
+          Partition_III(nGround,iZ,iMix) = 1.0
+
+       end do
+    end if
 
 
     PowerOfRIono = rIonoSphereInv**iPressureEffectIndex
