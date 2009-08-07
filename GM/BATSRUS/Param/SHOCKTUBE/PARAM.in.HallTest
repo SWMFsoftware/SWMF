@@ -31,7 +31,7 @@ NONE			TypeNormalization
 
 #SHOCKTUBE
 1.0			rho (left state)
-0.001			Ux
+1.0			Ux
 0.0			Uy
 0.0			Uz
 100.0			Bx
@@ -39,7 +39,7 @@ NONE			TypeNormalization
 0.0			Bz
 1.0			P
 1.0			rho (right state)
-0.001			Ux
+1.0			Ux
 0.0			Uy
 0.0			Uz
 100.0			Bx
@@ -188,7 +188,7 @@ T		UseFullImplicit
 #KRYLOV
 gmres		TypeKrylov  (gmres, bicgstab)
 nul             TypeInitKrylov (nul, old, explicit, scaled)
-1e-5            ErrorMaxKrylov
+1e-7            ErrorMaxKrylov
 100             MaxMatvecKrylov
 
 ! Trapeziodal scheme
@@ -229,7 +229,7 @@ Fast whistler wave period
 
 #STOP
 -1			MaxIteration
-1.18103			tSimulationMax
+1.174097		tSimulationMax
 
 1.99998			! Alfven wave + advection
 2.11333  		! slow Whistler wave (By,Bz same sign)
