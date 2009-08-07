@@ -49,22 +49,18 @@ module CRASH_ModStatSumMix
   real :: zAv,   &  ! The average charge per ion - <Z> (elementary charge units)
           EAv,   &  ! The average ionization energy level of ions
           Z2PerA,&  ! The average of Z^2/A
-          Z2!,    &  ! The average of Z^2
-          !IonizPotentialAv
+          Z2,    &  ! The average of Z^2
+          VirialCoeffAv, &  ! The value of <-\frac{V}{T} \frac{\partial E}{\partial V}>
+          SecondVirialAv    ! The value of \frac{V^2}{T} < \frac{\partial^2 E}{\partial V^2} >
 
-
-  !Deviators <(\delta i)^2>, <delta i delta E> and <(delta e)^2:
+  !Covariances between \delta i), delta E and \delta (Virial coeff):
   real :: DeltaZ2Av      ! The value of <delta^2 i>=<i^2>-<i>^2
   real :: DeltaETeInv2Av ! The value of <(delta E/Te)^2>
   real :: ETeInvDeltaZAv ! The value of <delta E/Te delta i>
-  real :: ETeInvDeltaZ2Av! The value of <delta E/Te delta (i^2)>
-  real :: DeltaZDeltaZ2Av! The value of <delta i delta i^2>
-
-  real :: VirialCoeffAv  ! The value of <-\frac{V}{T} \frac{\partial E}{\partial V}>
   real :: CovEnergyVirial! The value of -\frac{V}{T^2} < \delta \frac{\partial E}{\partial V} \delta E >
   real :: Cov2Virial     ! The value of \frac{V^2}{T^2} < \delta^2 \frac{\partial E}{\partial V} >
   real :: CovVirialZ     ! The value of \frac{V}{T} < \delta \frac{\partial E}{\partial V} \delta i >
-  real :: SecondVirialAv      ! The value of \frac{V^2}{T} < \frac{\partial^2 E}{\partial V^2} >
+
 
 
   integer :: iIter   !To provide the output for the convergence efficiency, if needed
@@ -81,16 +77,14 @@ module CRASH_ModStatSumMix
            EAv,&            ! The average ionization energy level of ions
            Z2PerA,&         ! The average of Z^2/A
            Z2,    &         ! The average of Z^2
+           VirialCoeffAv,&  ! The value of <-\frac{V}{T} \frac{\partial E}{\partial V}>
+           SecondVirialAv,& ! The value of \frac{V^2}{T} < \frac{\partial^2 E}{\partial V^2} >          
            DeltaZ2Av,&      ! The value of <(delta i)^2>=<i^2>-<i>^2
            DeltaETeInv2Av,& ! The value of <(delta E/Te)^2>
            ETeInvDeltaZAv,& ! The value of <Delta E/Te Delta i>
-           ETeInvDeltaZ2Av,&! The value of <Delta E/Te Delta (i^2)>
-           DeltaZDeltaZ2Av,&! The value of <Delta i Delta i^2>
-           VirialCoeffAv,&  ! The value of <-\frac{V}{T} \frac{\partial E}{\partial V}>
            CovEnergyVirial,&! The value of -\frac{V}{T^2} < \delta \frac{\partial E}{\partial V} \delta E >
            Cov2Virial,&     ! The value of \frac{V^2}{T^2} < \delta^2 \frac{\partial E}{\partial V} >
            CovVirialZ,&     ! The value of \frac{V}{T} < \delta \frac{\partial E}{\partial V} \delta i >
-           SecondVirialAv,&      ! The value of \frac{V^2}{T} < \frac{\partial^2 E}{\partial V^2} >
            iIter,&          ! To provide the output for the convergence efficiency, if needed
            Population_II,&  ! To calculate the spectroscopic data
            nMix, IonizPotential_II
@@ -185,8 +179,6 @@ Contains
     if (Te <= 0.0) then
        eMadelungPerTe = 0.0
        eDebyeHuekel = 0.0
-       !  eUpshiftByCompression = 0.0
-
        if (iError /= 2) iError = 1
     else
        call get_virial_coef
@@ -253,15 +245,12 @@ Contains
     EAv = 0.0
     Z2  = 0.0
     Z2PerA = 0.0
-    DeltaZ2Av        = 0.0
     VirialCoeffAv    = 0.0
-    SecondVirialAv        = 0.0
+    SecondVirialAv   = 0.0
 
+    DeltaZ2Av        = 0.0
     DeltaETeInv2Av   = 0.0
     ETeInvDeltaZAv   = 0.0
-    ETeInvDeltaZ2Av  = 0.0
-    DeltaZDeltaZ2Av  = 0.0
-
     CovEnergyVirial  = 0.0
     Cov2Virial       = 0.0
     CovVirialZ       = 0.0
@@ -503,175 +492,183 @@ Contains
     subroutine set_averages_and_deviators(DoZOnly)
       use CRASH_ModAtomicMass,ONLY: cAtomicMass_I
       logical,intent(in)::DoZOnly
-      !---------------------------!
+      
       ! < Ei/Te>_J (Ei - energy levels, Te - electron temperature [eV])
-      real :: Z2AvJ,&           ! averaged i^2 for current iMix
-              VirialCoeffFullAv ! The value of < \frac{V}{T} \frac{\partial E}{\partial V} >
-      ! Array of ionization energy levels of ions divided by the temperature in eV
-      real,dimension(0:nZMax,nMixMax) :: ETeInv_II
-      real,dimension(0:nZMax,nMixMax) :: VirialCoeffFullAv_II
-      integer :: iMix
+      real :: ETeInvAv_I(nMixMax)   ,& ! averaged i^2 for current iMix
+              Z_I(nMixMax)          ,& ! averaged Z for current iMix                 
+              VirialCoeff_I(nMixMax),& ! The value of  -\frac{V}{T} \frac{\partial E}{\partial V}
+              Z2I, DeltaZ2I         ,& ! Z2 and \delta^2 iaveraged for current iMix 
+              InvTR                    ! 1/(Te*R_{iono})
 
+      ! Array of ionization energy levels of ions divided by the temperature in eV
+      real,dimension(0:nZMax) :: ETeInv_I
+      real,dimension(0:nZMax) :: VirialCoeffFull_I, SecondVirialCoeff_I
+      integer :: iMix
+      real,parameter:: cThird = 1.0/3.0, cFourNineth = 4.0/9.0
+      !-----------------
 
       zAv = 0.0
       EAv = 0.0
       Z2  = 0.0
       Z2PerA = 0.0
-      DeltaZ2Av        = 0.0
       VirialCoeffAv    = 0.0
-      SecondVirialAv        = 0.0
+      SecondVirialAv   = 0.0
 
+      DeltaZ2Av        = 0.0
       DeltaETeInv2Av   = 0.0
       ETeInvDeltaZAv   = 0.0
-      ETeInvDeltaZ2Av  = 0.0
-      DeltaZDeltaZ2Av  = 0.0
-
       CovEnergyVirial  = 0.0
       Cov2Virial       = 0.0
       CovVirialZ       = 0.0
 
+      VirialCoeffFull_I=0.0
+      SecondVirialCoeff_I =0.0
 
-
-      !Initialize eMadelungPerTe. eDebyeHuekel needs Z2.
-      call check_applicability()
-
+      InvTR            = TeInv * rIonoSphereInv
 
       do iMix = 1, nMix
 
-         !Calculate <i>
-         zAv = zAv + Concentration_I(iMix) * &
-              sum(Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix )* &
+
+         !Calculate average vaues of Z, for this component:
+         Z_I(iMix) = sum(Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix )* &
               N_I(iZMin_I(iMix):iZMax_I(iMix)))
+         zAv       = zAv + Concentration_I(iMix) * Z_I(iMix)
 
+         !Calculate <\delta i>^2>
+         DeltaZ2I = sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *  &
+              (N_I(iZMin_I(iMix):iZMax_I(iMix))-Z_I(iMix))**2 )
 
-         !Calculate <i^2>
-         Z2AvJ = sum( Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix) * &
-              N_I(iZMin_I(iMix):iZMax_I(iMix))**2 )
-         Z2 = Z2 + Concentration_I(iMix) * Z2AvJ
+         !Calculate a << (\delta i)^2 >>
+         DeltaZ2Av = DeltaZ2Av + Concentration_I(iMix) * &
+              DeltaZ2I
+        
+         if(DoZOnly) CYCLE
 
-         !Calculate <i^2/A>
+         !Calculate <Z^2>
+         Z2I = DeltaZ2I + Z_I(iMix)**2
+         Z2 = Z2 +  Concentration_I(iMix) * Z2I
+              
+
+         !Calculate <Z^2/A>
          Z2PerA = Z2PerA +  Concentration_I(iMix) * &
-              Z2AvJ/cAtomicMass_I( nZ_I(iMix) )
-
-
-         if (DoZOnly) CYCLE
-
+              Z2I/cAtomicMass_I( nZ_I(iMix) )
 
          !Fill in the array of average energies (per Te)
          !for all iMix and i taken into account
-         ETeInv_II(iZMin_I(iMix):iZMax_I(iMix),iMix) = &
+         ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) = &
               (IonizEnergyNeutral_II( iZMin_I(iMix):iZMax_I(iMix),iMix ) + &
               ExtraEnergyAv_II( iZMin_I(iMix):iZMax_I(iMix),iMix )) * TeInv
 
-         if(UseCoulombCorrection)ETeInv_II( iZMin_I(iMix):iZMax_I(iMix),iMix ) = &
-              ETeInv_II( iZMin_I(iMix):iZMax_I(iMix),iMix ) - TeInv * rIonoSphereInv * &
-              IonizationEnergyLowering_I( iZMin_I(iMix):iZMax_I(iMix) )
-
-
-         !Calculate average value of E
-         EAv = EAv + Concentration_I(iMix) * &
-              sum(Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix )* &
-              ETeInv_II(iZMin_I(iMix):iZMax_I(iMix),iMix))
-
-
-         !Calculate <-\frac{V}{T} \frac{\partial E}{\partial V}>
-         VirialCoeffAv = VirialCoeffAv + Concentration_I(iMix) *&
-              sum( Population_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) *&
-              VirialCoeffAv_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix)) * TeInv
-
-
-         !Fill in the array with values of < \frac{V}{T} \frac{\partial E}{\partial V} >
+         !Fill in the array with values of - \frac{V}{T} \frac{\partial E}{\partial V} 
          !for all iMix and i taken into account, where the mean value is taken over n and l.
-         VirialCoeffFullAv_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1),iMix) = &
-              -VirialCoeffAv_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) * TeInv
-         if (UseCoulombCorrection) VirialCoeffFullAv_II(iZMin_I(iMix):iZMax_I(iMix),iMix) = &
-              VirialCoeffFullAv_II(iZMin_I(iMix):iZMax_I(iMix),iMix) + &
-              eMadelungPerTe * N_I(iZMin_I(iMix):iZMax_I(iMix))**2
+         VirialCoeffFull_I(iZMin_I(iMix):iZMax_I(iMix) ) = &
+              VirialCoeffAv_II(iZMin_I(iMix):iZMax_I(iMix), iMix) * TeInv
 
-         !Calculate < \frac{V}{T} \frac{\partial E}{\partial V} >
-         VirialCoeffFullAv = VirialCoeffFullAv + Concentration_I(iMix) * &
-              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
-              VirialCoeffFullAv_II(iZMin_I(iMix):iZMax_I(iMix),iMix))
+         !The same for the second virial coeff
+         SecondVirialCoeff_I(iZMin_I(iMix):iZMax_I(iMix) ) = &
+              TeInv * SecondVirialCoeffAv_II(iZMin_I(iMix):iZMax_I(iMix), iMix)
+
+ 
+
+         if(UseCoulombCorrection)then
+            ETeInv_I( iZMin_I(iMix):iZMax_I(iMix) ) = &
+                 ETeInv_I( iZMin_I(iMix):iZMax_I(iMix) ) -InvTR  * &
+                 IonizationEnergyLowering_I( iZMin_I(iMix):iZMax_I(iMix) )
+
+
+            VirialCoeffFull_I(iZMin_I(iMix):iZMax_I(iMix)) = &
+                 VirialCoeffFull_I(iZMin_I(iMix):iZMax_I(iMix)) - &
+                 cThird * InvTR  * &
+                 IonizationEnergyLowering_I( iZMin_I(iMix):iZMax_I(iMix) )
+            SecondVirialCoeff_I(iZMin_I(iMix):iZMax_I(iMix)) = &
+                 SecondVirialCoeff_I(iZMin_I(iMix):iZMax_I(iMix)) - &
+                 cFourNineth * InvTR  * &
+                 IonizationEnergyLowering_I( iZMin_I(iMix):iZMax_I(iMix) )
+         end if
+         
+      
+         !Calculate average value of E
+        
+         ETeInvAv_I(iMix) = sum(Population_II(iZMin_I(iMix):iZMax_I(iMix),iMix )* &
+              ETeInv_I(iZMin_I(iMix):iZMax_I(iMix))) 
+
+         EAv = EAv + Concentration_I(iMix) * ETeInvAv_I(iMix)               
+  
+         !Calculate <-\frac{V}{T} \frac{\partial E}{\partial V}>
+         VirialCoeff_I(iMix) = sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
+              VirialCoeffFull_I(iZMin_I(iMix):iZMax_I(iMix)))
+
+         VirialCoeffAv = VirialCoeffAv + Concentration_I(iMix) *&
+              VirialCoeff_I(iMix)
 
 
          !Calculate \frac{V^2}{T} < \frac{\partial^2 E}{\partial V^2} >
          SecondVirialAv = SecondVirialAv + Concentration_I(iMix) *&
-              sum( Population_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) *&
-              TeInv * SecondVirialCoeffAv_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix))
+              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
+              SecondVirialCoeff_I(iZMin_I(iMix):iZMax_I(iMix)) )
 
-      end do
-
-      ! <\delta^2 i> = <i^2> - <i>^2
-      DeltaZ2Av = Z2 - zAv*zAv
-
-
-
-      !Calculate contributions to covariances
-      do iMix = 1, nMix
-         if (DoZOnly) exit
-
+         !Covariances
 
          !Calculate <(delta E/Te)^2>
          DeltaETeInv2Av   = DeltaETeInv2Av + Concentration_I(iMix)*&
               sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) * &
-              ((ETeInv_II(iZMin_I(iMix):iZMax_I(iMix),iMix) - EAv)**2 + &
+              ((ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) -ETeInvAv_I(iMix))**2 + &
               Cov2ExtraEnergy_II(iZMin_I(iMix):iZMax_I(iMix),iMix) * TeInv * TeInv)) !correction to account for
                                                                                      !energy levels divergence
          !Calculate <delta E/Te delta i>
          ETeInvDeltaZAv   = ETeInvDeltaZAv + Concentration_I(iMix)*&
               sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
-              ETeInv_II(iZMin_I(iMix):iZMax_I(iMix),iMix) * &
-              (N_I(iZMin_I(iMix):iZMax_I(iMix)) - zAv) )
-
-         !Calculate <delta E/Te delta (i^2)>
-         ETeInvDeltaZ2Av  = ETeInvDeltaZ2Av + Concentration_I(iMix)*&
-              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
-              (ETeInv_II(iZMin_I(iMix):iZMax_I(iMix),iMix) - EAv) *&
-              N_I(iZMin_I(iMix):iZMax_I(iMix))**2 )
-
-         !Calculate <delta i delta i^2>
-         DeltaZDeltaZ2Av  = DeltaZDeltaZ2Av + Concentration_I(iMix)*&
-              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
-              (N_I(iZMin_I(iMix):iZMax_I(iMix)) - zAv)*&
-              N_I(iZMin_I(iMix):iZMax_I(iMix))**2 )
+              ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) * &
+              (N_I(iZMin_I(iMix):iZMax_I(iMix)) - Z_I(iMix)) )
 
 
          !Calculate -\frac{V}{T^2} < \delta \frac{\partial E}{\partial V} \delta E >
-         CovEnergyVirial = CovEnergyVirial + TeInv * TeInv * Concentration_I(iMix)*&
-              sum( Population_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) *&
-              (CovExtraEnergyVirial_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) + &
-              (VirialCoeffAv_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) - VirialCoeffAv/TeInv) * &
-              ETeInv_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1),iMix) / TeInv))
+         CovEnergyVirial = CovEnergyVirial + Concentration_I(iMix)*&
+              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
+              ( TeInv * TeInv * CovExtraEnergyVirial_II(iZMin_I(iMix):iZMax_I(iMix), iMix) + &
+              (VirialCoeffFull_I(iZMin_I(iMix):iZMax_I(iMix)) - VirialCoeff_I(iMix)) * &
+              ETeInv_I(iZMin_I(iMix):iZMax_I(iMix)) ) )
 
          !Calculate \frac{V^2}{T^2} < \delta^2 \frac{\partial E}{\partial V} >
          Cov2Virial = Cov2Virial + Concentration_I(iMix) *&
               sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
               (TeInv*TeInv * Cov2VirialCoeff_II(iZMin_I(iMix):iZMax_I(iMix), iMix) + &
-              (VirialCoeffFullAv_II(iZMin_I(iMix):iZMax_I(iMix),iMix) - VirialCoeffFullAv)**2))
+              (VirialCoeffFull_I(iZMin_I(iMix):iZMax_I(iMix)) - VirialCoeff_I(iMix))**2) )
 
          !Calculate \frac{V}{T} < \delta \frac{\partial E}{\partial V} \delta i >
-         CovVirialZ = CovVirialZ + Concentration_I(iMix) *&
-              sum( Population_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix) *&
-              (-TeInv) *&
-              (N_I(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1)) - zAv)*&
-              VirialCoeffAv_II(iZMin_I(iMix):min(iZMax_I(iMix), nZ_I(iMix)-1), iMix))
+         CovVirialZ = CovVirialZ - Concentration_I(iMix) *&
+              sum( Population_II(iZMin_I(iMix):iZMax_I(iMix), iMix) *&
+              (N_I(iZMin_I(iMix):iZMax_I(iMix)) - Z_I(iMix)) * &
+              VirialCoeffFull_I(iZMin_I(iMix):iZMax_I(iMix)))
+   
 
       end do
+      
+      if(nMix > 1 &
+           .and..false.& !Temporarily disabled
+           )then
+         do iMix=1,nMix
+            DeltaZ2Av = DeltaZ2Av + Concentration_I(iMix)*&
+                 (Z_I(iMix) - zAv) **2
+
+            DeltaETeInv2Av   = DeltaETeInv2Av + Concentration_I(iMix)*&
+                 (ETeInvAv_I(iMix) - EAv)**2
+
+            ETeInvDeltaZAv   = ETeInvDeltaZAv + Concentration_I(iMix)*&
+                 (ETeInvAv_I(iMix) - EAv) * (Z_I(iMix) - zAv)
+
+            CovEnergyVirial = CovEnergyVirial + Concentration_I(iMix)*&
+                 (ETeInvAv_I(iMix) - EAv) * (VirialCoeff_I(iMix) - VirialCoeffAv)
+            
+            Cov2Virial = Cov2Virial + Concentration_I(iMix)*&
+                 (VirialCoeff_I(iMix) - VirialCoeffAv)**2
+            
+            CovVirialZ = CovVirialZ - Concentration_I(iMix)*&
+                 (Z_I(iMix) - zAv) * (VirialCoeff_I(iMix) - VirialCoeffAv)
+         end do
+      end if
 
       EAv = EAv * Te
-
-      if (DoZOnly) return
-
-
-      if (UseCoulombCorrection) then
-
-         !Add terms which are necessary to account for Coulomb interactions,
-         !but also are independent of the terms due to pressure ionization
-         VirialCoeffAv   = VirialCoeffAv   - eMadelungPerTe * Z2
-         CovEnergyVirial = CovEnergyVirial - eMadelungPerTe * ETeInvDeltaZ2Av
-         CovVirialZ      = CovVirialZ      + eMadelungPerTe * DeltaZDeltaZ2Av
-         SecondVirialAv       = SecondVirialAv       - (4.0/3.0) * eMadelungPerTe * Z2
-      end if
 
     end subroutine set_averages_and_deviators
   end subroutine set_ionization_equilibrium
