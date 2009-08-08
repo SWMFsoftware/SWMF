@@ -654,7 +654,7 @@ Contains
       end do
       
       if(nMix > 1 &
-           .and..false.& !Temporarily disabled
+!           .and..false.& !Temporarily disabled
            )then
          do iMix=1,nMix
             DeltaZ2Av = DeltaZ2Av + Concentration_I(iMix)*&

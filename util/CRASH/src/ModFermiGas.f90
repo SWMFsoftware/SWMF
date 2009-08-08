@@ -14,7 +14,7 @@ module CRASH_ModFermiGas
   real, public :: LogGeMinBoltzmann = 4.0
 
   ! At LogGe >= LogGeMinFermi the effects of Fermi statistics are accounted for
-  real, public :: LogGeMinFermi = 0.0
+  real, public :: LogGeMinFermi = -4.0
 
   ! If LogGeMinFermi < -3.0,
   ! init_fermi_function automatically resets it to -3.0 and
