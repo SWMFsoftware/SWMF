@@ -126,7 +126,7 @@ test_hallmhd_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULT
 
 test_hallmhd_check:
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-7 \
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=2e-7 \
 	  Param/SHOCKTUBE/TestOutput/hall_ref.out \
 	  ${TESTDIR}/RESULT/GM/cut_*0118.out > test_hallmhd.diff
 	ls -l test_hallmhd.diff
