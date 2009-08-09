@@ -401,17 +401,21 @@ contains
 
       integer, intent(in) :: iDim, i, j, k, iBlock
 
+      integer :: iLeft, jLeft, kLeft
       real :: Area_D(3), Area2, Area2Min
       !------------------------------------------------------------------------
 
       select case(iDim)
       case(x_)
+         iLeft = i-1; jLeft = j; kLeft = k
          Area_D = FaceAreaI_DFB(:,i,j,k,iBlock)
          Area2Min = FaceArea2MinI_B(iBlock)
       case(y_)
+         iLeft = i; jLeft = j-1; kLeft = k
          Area_D = FaceAreaJ_DFB(:,i,j,k,iBlock)
          Area2Min = FaceArea2MinJ_B(iBlock)
       case(z_)
+         iLeft = i; jLeft = j; kLeft = k-1
          Area_D = FaceAreaK_DFB(:,i,j,k,iBlock)
          Area2Min = FaceArea2MinK_B(iBlock)
       end select
@@ -420,9 +424,9 @@ contains
 
       if(Area2 < 0.5*Area2Min)then
          ! The face is at the pole
-         Normal_D(x_) = x_BLK(i,j,k,iBlock) - x_BLK(i-1,j,k,iBlock)
-         Normal_D(y_) = y_BLK(i,j,k,iBlock) - y_BLK(i,j-1,k,iBlock)
-         Normal_D(z_) = z_BLK(i,j,k,iBlock) - z_BLK(i,j,k-1,iBlock)
+         Normal_D(x_) = x_BLK(i,j,k,iBlock) - x_BLK(iLeft,jLeft,kLeft,iBlock)
+         Normal_D(y_) = y_BLK(i,j,k,iBlock) - y_BLK(iLeft,jLeft,kLeft,iBlock)
+         Normal_D(z_) = z_BLK(i,j,k,iBlock) - z_BLK(iLeft,jLeft,kLeft,iBlock)
          Normal_D = Normal_D/sqrt(sum(Normal_D**2))
          Area = 0.0
       else
