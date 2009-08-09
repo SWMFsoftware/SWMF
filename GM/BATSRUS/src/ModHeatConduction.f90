@@ -43,8 +43,7 @@ module ModHeatConduction
   real, allocatable :: FluxImpl_X(:,:,:), FluxImpl_Y(:,:,:), FluxImpl_Z(:,:,:)
 
   ! Heat conduction dyad pre-multiplied by the face area
-  real, allocatable :: HeatCond_DXB(:,:,:,:,:), HeatCond_DYB(:,:,:,:,:), &
-       HeatCond_DZB(:,:,:,:,:)
+  real, allocatable :: HeatCond_DFDB(:,:,:,:,:,:)
 
 contains
 
@@ -96,7 +95,7 @@ contains
   subroutine init_heat_conduction
 
     use ModImplicit,   ONLY: UseSemiImplicit, iTeImpl
-    use ModMain,       ONLY: nI, nJ, nK, MaxBlock
+    use ModMain,       ONLY: nI, nJ, nK, MaxBlock, nDim
     use ModMultiFluid, ONLY: MassIon_I
     use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
          UnitU_, UnitX_, UnitB_, ElectronTemperatureRatio, AverageIonCharge
@@ -144,9 +143,7 @@ contains
             FluxImpl_X(nI+1,nJ,nK), &
             FluxImpl_Y(nI,nJ+1,nK), &
             FluxImpl_Z(nI,nJ,nK+1), &
-            HeatCond_DXB(3,nI+1,nJ,nK,MaxBlock), &
-            HeatCond_DYB(3,nI,nJ+1,nK,MaxBlock), &
-            HeatCond_DZB(3,nI,nJ,nK+1,MaxBlock) )
+            HeatCond_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock) )
 
        iTeImpl = 1
     end if
@@ -340,7 +337,7 @@ contains
                LeftState_VX(:,i,j,k), Normal_D, HeatCondL_D)
           call get_heat_conduction_coef(x_, i, j, k, iBlock, &
                RightState_VX(:,i,j,k), Normal_D, HeatCondR_D)
-          HeatCond_DXB(:,i,j,k,iBlock) = 0.5*(HeatCondL_D + HeatCondR_D) &
+          HeatCond_DFDB(:,i,j,k,1,iBlock) = 0.5*(HeatCondL_D + HeatCondR_D) &
                *fAx_BLK(iBlock)
        end do; end do; end do
        Normal_D = (/ 0.0, 1.0, 0.0 /)
@@ -349,7 +346,7 @@ contains
                LeftState_VY(:,i,j,k), Normal_D, HeatCondL_D)
           call get_heat_conduction_coef(y_, i, j, k, iBlock, &
                RightState_VY(:,i,j,k), Normal_D, HeatCondR_D)
-          HeatCond_DYB(:,i,j,k,iBlock) = 0.5*(HeatCondL_D + HeatCondR_D) &
+          HeatCond_DFDB(:,i,j,k,2,iBlock) = 0.5*(HeatCondL_D + HeatCondR_D) &
                *fAy_BLK(iBlock)
        end do; end do; end do
        Normal_D = (/ 0.0, 0.0, 1.0 /)
@@ -358,7 +355,7 @@ contains
                LeftState_VZ(:,i,j,k), Normal_D, HeatCondL_D)
           call get_heat_conduction_coef(z_, i, j, k, iBlock, &
                RightState_VZ(:,i,j,k), Normal_D, HeatCondR_D)
-          HeatCond_DZB(:,i,j,k,iBlock) = 0.5*(HeatCondL_D + HeatCondR_D) &
+          HeatCond_DFDB(:,i,j,k,3,iBlock) = 0.5*(HeatCondL_D + HeatCondR_D) &
                *fAz_BLK(iBlock)
        end do; end do; end do
 
@@ -549,17 +546,17 @@ contains
     do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
        call get_face_gradient(x_, i, j, k, iBlock, &
             IsNewBlockHeatConduction, StateImpl_VG, FaceGrad_D)
-       FluxImpl_X(i,j,k) = -sum(HeatCond_DXB(:,i,j,k,iBlock)*FaceGrad_D)
+       FluxImpl_X(i,j,k) = -sum(HeatCond_DFDB(:,i,j,k,1,iBlock)*FaceGrad_D)
     end do; end do; end do
     do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
        call get_face_gradient(y_, i, j, k, iBlock, &
             IsNewBlockHeatConduction, StateImpl_VG, FaceGrad_D)
-       FluxImpl_Y(i,j,k) = -sum(HeatCond_DYB(:,i,j,k,iBlock)*FaceGrad_D)
+       FluxImpl_Y(i,j,k) = -sum(HeatCond_DFDB(:,i,j,k,2,iBlock)*FaceGrad_D)
     end do; end do; end do
     do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
        call get_face_gradient(z_, i, j, k, iBlock, &
             IsNewBlockHeatConduction, StateImpl_VG, FaceGrad_D)
-       FluxImpl_Z(i,j,k) = -sum(HeatCond_DZB(:,i,j,k,iBlock)*FaceGrad_D)
+       FluxImpl_Z(i,j,k) = -sum(HeatCond_DFDB(:,i,j,k,3,iBlock)*FaceGrad_D)
     end do; end do; end do
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -575,17 +572,45 @@ contains
 
   subroutine get_heat_cond_jacobian(iBlock, nVar, Jacobian_VVCI)
 
+    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB
     use ModImplicit, ONLY: iTeImpl
     use ModMain,     ONLY: nI, nJ, nK, nDim
+    use ModNumConst, ONLY: i_DD
 
     integer, parameter:: nStencil = 2*nDim + 1
 
     integer, intent(in) :: iBlock, nVar
     real, intent(out) :: Jacobian_VVCI(nVar,nVar,nI,nJ,nK,nStencil)
+
+    integer :: i, j, k, iDim, Di, Dj, Dk
+    real :: DiffLeft, DiffRight, Dxyz_D(nDim)
     !--------------------------------------------------------------------------
 
     ! All elements have to be set
     Jacobian_VVCI(:,:,:,:,:,:) = 0.0
+
+    Dxyz_D = (/dx_BLK(iBlock), dy_BLK(iBlock), dz_Blk(iBlock)/)
+
+    do iDim = 1, nDim
+       Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          DiffLeft = vInv_CB(i,j,k,iBlock) &
+               *HeatCond_DFDB(iDim,i,j,k,iDim,iBlock)/Dxyz_D(iDim)
+          DiffRight = vInv_CB(i,j,k,iBlock) &
+               *HeatCond_DFDB(iDim,i+Di,j+Dj,k+Dk,iDim,iBlock)/Dxyz_D(iDim)
+
+          Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) = &
+               Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) - (DiffLeft + DiffRight)
+
+          if(iDim==1.and.i==1 .or. iDim==2.and.j==1 .or. iDim==3.and.k==1) &
+               DiffLeft = 0.0
+          if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ .or. iDim==3.and.k==nK) &
+               DiffRight = 0.0
+
+          Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim)   = DiffLeft
+          Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim+1) = DiffRight
+       end do; end do; end do
+    end do
 
   end subroutine get_heat_cond_jacobian
 
@@ -598,8 +623,7 @@ contains
     use ModEnergy,   ONLY: calc_energy_cell, calc_pressure_cell
     use ModImplicit, ONLY: nw, iTeImpl, DconsDsemi_VCB, ImplOld_VCB
     use ModMain,     ONLY: nI, nJ, nK
-    use ModPhysics,  ONLY: inv_gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
-         UnitP_
+    use ModPhysics,  ONLY: inv_gm1, No2Si_V, Si2No_V, UnitEnergyDens_, UnitP_
     use ModUser,     ONLY: user_material_properties
 
     integer, intent(in) :: iBlock, iImplBlock
