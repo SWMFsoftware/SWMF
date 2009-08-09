@@ -292,7 +292,7 @@ contains
        LeftState_VX,  LeftState_VY,  LeftState_VZ,  &
        RightState_VX, RightState_VY, RightState_VZ
     use ModFaceValue,  ONLY: calc_face_value
-    use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK
+    use ModGeometry,   ONLY: UseCovariant
     use ModImplicit,   ONLY: nw, nImplBLK, impl2iBlk, iTeImpl
     use ModMain,       ONLY: nI, nJ, nK, MaxImplBlk, x_, y_, z_
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, UnitEnergyDens_,inv_gm1
@@ -304,7 +304,8 @@ contains
 
     integer :: i, j, k, iBlock, iImplBlock
     real :: TeSi, CvSi
-    real :: Normal_D(3), HeatCondL_D(3), HeatCondR_D(3)
+    real :: Normal_D(3), Area
+    real :: HeatCondL_D(3), HeatCondR_D(3)
     !--------------------------------------------------------------------------
 
     do iImplBlock = 1, nImplBLK
@@ -331,35 +332,105 @@ contains
 
        call calc_face_value(.false.,iBlock)
 
-       Normal_D = (/ 1.0, 0.0, 0.0 /)
+       if(.not.UseCovariant) call set_cartesian_block_face(x_, iBlock)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+          if(UseCovariant) call set_covariant_cell_face(x_, i, j, k, iBlock)
+
           call get_heat_conduction_coef(x_, i, j, k, iBlock, &
                LeftState_VX(:,i,j,k), Normal_D, HeatCondL_D)
           call get_heat_conduction_coef(x_, i, j, k, iBlock, &
                RightState_VX(:,i,j,k), Normal_D, HeatCondR_D)
-          HeatCond_DFDB(:,i,j,k,1,iBlock) = 0.5*(HeatCondL_D + HeatCondR_D) &
-               *fAx_BLK(iBlock)
+
+          HeatCond_DFDB(:,i,j,k,1,iBlock) = 0.5*(HeatCondL_D+HeatCondR_D)*Area
        end do; end do; end do
-       Normal_D = (/ 0.0, 1.0, 0.0 /)
+
+       if(.not.UseCovariant) call set_cartesian_block_face(y_, iBlock)
        do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
+          if(UseCovariant) call set_covariant_cell_face(y_, i, j, k, iBlock)
+
           call get_heat_conduction_coef(y_, i, j, k, iBlock, &
                LeftState_VY(:,i,j,k), Normal_D, HeatCondL_D)
           call get_heat_conduction_coef(y_, i, j, k, iBlock, &
                RightState_VY(:,i,j,k), Normal_D, HeatCondR_D)
-          HeatCond_DFDB(:,i,j,k,2,iBlock) = 0.5*(HeatCondL_D + HeatCondR_D) &
-               *fAy_BLK(iBlock)
+
+          HeatCond_DFDB(:,i,j,k,2,iBlock) = 0.5*(HeatCondL_D+HeatCondR_D)*Area
        end do; end do; end do
-       Normal_D = (/ 0.0, 0.0, 1.0 /)
+
+       if(.not.UseCovariant) call set_cartesian_block_face(z_, iBlock)
        do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
+          if(UseCovariant) call set_covariant_cell_face(z_, i, j, k, iBlock)
+
           call get_heat_conduction_coef(z_, i, j, k, iBlock, &
                LeftState_VZ(:,i,j,k), Normal_D, HeatCondL_D)
           call get_heat_conduction_coef(z_, i, j, k, iBlock, &
                RightState_VZ(:,i,j,k), Normal_D, HeatCondR_D)
-          HeatCond_DFDB(:,i,j,k,3,iBlock) = 0.5*(HeatCondL_D + HeatCondR_D) &
-               *fAz_BLK(iBlock)
+
+          HeatCond_DFDB(:,i,j,k,3,iBlock) = 0.5*(HeatCondL_D+HeatCondR_D)*Area
        end do; end do; end do
 
     end do
+
+  contains
+
+    subroutine set_cartesian_block_face(iDim, iBlock)
+
+      use ModGeometry, ONLY: fAx_BLK, fAy_BLK, fAz_BLK
+
+      integer, intent(in) :: iDim, iBlock
+      !------------------------------------------------------------------------
+
+      Normal_D = 0.0; Normal_D(iDim) = 1.0
+      select case(iDim)
+      case(x_)
+         Area = fAx_BLK(iBlock)
+      case(y_)
+         Area = fAy_BLK(iBlock)
+      case(z_)
+         Area = fAz_BLK(iBlock)
+      end select
+
+    end subroutine set_cartesian_block_face
+
+    !==========================================================================
+
+    subroutine set_covariant_cell_face(iDim, i, j, k, iBlock)
+
+      use ModGeometry, ONLY: FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB, &
+           FaceArea2MinI_B, FaceArea2MinJ_B, FaceArea2MinK_B, &
+           x_BLK, y_BLK, z_BLK
+
+      integer, intent(in) :: iDim, i, j, k, iBlock
+
+      real :: Area_D(3), Area2, Area2Min
+      !------------------------------------------------------------------------
+
+      select case(iDim)
+      case(x_)
+         Area_D = FaceAreaI_DFB(:,i,j,k,iBlock)
+         Area2Min = FaceArea2MinI_B(iBlock)
+      case(y_)
+         Area_D = FaceAreaJ_DFB(:,i,j,k,iBlock)
+         Area2Min = FaceArea2MinJ_B(iBlock)
+      case(z_)
+         Area_D = FaceAreaK_DFB(:,i,j,k,iBlock)
+         Area2Min = FaceArea2MinK_B(iBlock)
+      end select
+
+      Area2 = sum(Area_D**2)
+
+      if(Area2 < 0.5*Area2Min)then
+         ! The face is at the pole
+         Normal_D(x_) = x_BLK(i,j,k,iBlock) - x_BLK(i-1,j,k,iBlock)
+         Normal_D(y_) = y_BLK(i,j,k,iBlock) - y_BLK(i,j-1,k,iBlock)
+         Normal_D(z_) = z_BLK(i,j,k,iBlock) - z_BLK(i,j,k-1,iBlock)
+         Normal_D = Normal_D/sqrt(sum(Normal_D**2))
+         Area = 0.0
+      else
+         Area = sqrt(Area2)
+         Normal_D = Area_D/Area
+      end if
+
+    end subroutine set_covariant_cell_face
 
   end subroutine get_impl_heat_cond_state
 
