@@ -13,9 +13,10 @@ module ModFaceGradient
   public :: set_block_field
   public :: get_face_gradient
   public :: get_face_curl
+  public :: set_block_jacobian_face
 
   ! Jacobian matrix for covariant grid: Dcovariant/Dcartesian
-  real :: DcoordDxyz_DDFD(nDim,nDim,1:nI+1,1:nJ+1,1:nK+1,nDim)
+  real, public :: DcoordDxyz_DDFD(nDim,nDim,1:nI+1,1:nJ+1,1:nK+1,nDim)
 
 contains
 

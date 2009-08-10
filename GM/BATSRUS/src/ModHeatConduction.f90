@@ -332,7 +332,7 @@ contains
 
        call calc_face_value(.false.,iBlock)
 
-       if(.not.UseCovariant) call set_cartesian_block_face(x_, iBlock)
+       if(.not.UseCovariant) call set_cartesian_cell_face(x_, iBlock)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
           if(UseCovariant) call set_covariant_cell_face(x_, i, j, k, iBlock)
 
@@ -344,7 +344,7 @@ contains
           HeatCond_DFDB(:,i,j,k,1,iBlock) = 0.5*(HeatCondL_D+HeatCondR_D)*Area
        end do; end do; end do
 
-       if(.not.UseCovariant) call set_cartesian_block_face(y_, iBlock)
+       if(.not.UseCovariant) call set_cartesian_cell_face(y_, iBlock)
        do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
           if(UseCovariant) call set_covariant_cell_face(y_, i, j, k, iBlock)
 
@@ -356,7 +356,7 @@ contains
           HeatCond_DFDB(:,i,j,k,2,iBlock) = 0.5*(HeatCondL_D+HeatCondR_D)*Area
        end do; end do; end do
 
-       if(.not.UseCovariant) call set_cartesian_block_face(z_, iBlock)
+       if(.not.UseCovariant) call set_cartesian_cell_face(z_, iBlock)
        do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
           if(UseCovariant) call set_covariant_cell_face(z_, i, j, k, iBlock)
 
@@ -372,7 +372,7 @@ contains
 
   contains
 
-    subroutine set_cartesian_block_face(iDim, iBlock)
+    subroutine set_cartesian_cell_face(iDim, iBlock)
 
       use ModGeometry, ONLY: fAx_BLK, fAy_BLK, fAz_BLK
 
@@ -389,7 +389,7 @@ contains
          Area = fAz_BLK(iBlock)
       end select
 
-    end subroutine set_cartesian_block_face
+    end subroutine set_cartesian_cell_face
 
     !==========================================================================
 
@@ -664,31 +664,77 @@ contains
     ! All elements have to be set
     Jacobian_VVCI(:,:,:,:,:,:) = 0.0
 
-    if(UseCovariant) RETURN
-
     Dxyz_D = (/dx_BLK(iBlock), dy_BLK(iBlock), dz_Blk(iBlock)/)
 
-    do iDim = 1, nDim
-       Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          DiffLeft = vInv_CB(i,j,k,iBlock) &
-               *HeatCond_DFDB(iDim,i,j,k,iDim,iBlock)/Dxyz_D(iDim)
-          DiffRight = vInv_CB(i,j,k,iBlock) &
-               *HeatCond_DFDB(iDim,i+Di,j+Dj,k+Dk,iDim,iBlock)/Dxyz_D(iDim)
+    ! the transverse diffusion is ignored in the Jacobian
 
-          Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) = &
-               Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) - (DiffLeft + DiffRight)
+    if(UseCovariant)then
+       call get_jacobian_covariant
+    else
 
-          if(iDim==1.and.i==1 .or. iDim==2.and.j==1 .or. iDim==3.and.k==1) &
-               DiffLeft = 0.0
-          if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ .or. iDim==3.and.k==nK) &
-               DiffRight = 0.0
+       do iDim = 1, nDim
+          Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             DiffLeft = vInv_CB(i,j,k,iBlock) &
+                  *HeatCond_DFDB(iDim,i,j,k,iDim,iBlock)/Dxyz_D(iDim)
+             DiffRight = vInv_CB(i,j,k,iBlock) &
+                  *HeatCond_DFDB(iDim,i+Di,j+Dj,k+Dk,iDim,iBlock)/Dxyz_D(iDim)
 
-          Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim)   = DiffLeft
-          Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim+1) = DiffRight
-       end do; end do; end do
-    end do
+             Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) = &
+                  Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) &
+                  - (DiffLeft + DiffRight)
 
+             if(iDim==1.and.i==1 .or. iDim==2.and.j==1 .or. iDim==3.and.k==1) &
+                  DiffLeft = 0.0
+             if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ &
+                  .or. iDim==3.and.k==nK) &
+                  DiffRight = 0.0
+
+             Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim)   = DiffLeft
+             Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim+1) = DiffRight
+          end do; end do; end do
+       end do
+    end if
+
+  contains
+
+    subroutine get_jacobian_covariant
+
+      use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
+
+      real :: InvDxyz_D(nDim)
+      !------------------------------------------------------------------------
+
+      call set_block_jacobian_face(iBlock)
+
+      do iDim = 1, nDim
+         Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI
+            InvDxyz_D = DcoordDxyz_DDFD(iDim,:,i,j,k,iDim)/Dxyz_D(iDim)
+            DiffLeft = vInv_CB(i,j,k,iBlock) &
+                 *sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*InvDxyz_D)
+
+            InvDxyz_D = &
+                 DcoordDxyz_DDFD(iDim,:,i+Di,j+Dj,k+Dk,iDim)/Dxyz_D(iDim)
+            DiffRight = vInv_CB(i,j,k,iBlock) &
+                 *sum(HeatCond_DFDB(:,i+Di,j+Dj,k+Dk,iDim,iBlock)*InvDxyz_D)
+
+            Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) = &
+                 Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) &
+                 - (DiffLeft + DiffRight)
+
+            if(iDim==1.and.i==1 .or. iDim==2.and.j==1 .or. iDim==3.and.k==1) &
+                 DiffLeft = 0.0
+            if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ &
+                 .or. iDim==3.and.k==nK) DiffRight = 0.0
+
+            Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim)   = DiffLeft
+            Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim+1) = DiffRight
+         end do; end do; end do
+      end do
+
+    end subroutine get_jacobian_covariant
+    
   end subroutine get_heat_cond_jacobian
 
   !============================================================================
