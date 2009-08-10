@@ -647,7 +647,7 @@ contains
 
   subroutine get_heat_cond_jacobian(iBlock, nVar, Jacobian_VVCI)
 
-    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB
+    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB, UseCovariant
     use ModImplicit, ONLY: iTeImpl
     use ModMain,     ONLY: nI, nJ, nK, nDim
     use ModNumConst, ONLY: i_DD
@@ -663,6 +663,8 @@ contains
 
     ! All elements have to be set
     Jacobian_VVCI(:,:,:,:,:,:) = 0.0
+
+    if(UseCovariant) RETURN
 
     Dxyz_D = (/dx_BLK(iBlock), dy_BLK(iBlock), dz_Blk(iBlock)/)
 
