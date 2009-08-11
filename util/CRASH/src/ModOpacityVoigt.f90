@@ -43,6 +43,36 @@ contains
     real,intent(in) :: tp,densnn,ennp
     real,intent(in):: AtomicWeight
     real,intent(out):: gamma,avoigt,dnudop 
+    ! ... compute the total line width of a bound-bound transition.  this   
+    !     sums the contributions from natural, Doppler, and collisional     
+    !     broadening.                                                       
+    !                                                                       
+    ! ... input variables:                                                  
+    !       tp      -  plasma temperature (eV)                              
+    !       densnn  -  number density of all nuclei (cm^{-3})                
+    !       ennp    -  energy of the transition from "n" to "np" (eV)       
+    !       AtomicWeight  -  atomic weight of the ion (amu)                       
+    !                                                                       
+    ! ... output variables:                                                 
+    !       gamma   -  total line width (sec**-1)                           
+    !       avoigt  -  "a" used to compute the Voigt profile                
+    !       dnudop  -  doppler width (sec**-1)                              
+    !                                                                       
+    !Local variables:
+    real :: Vel,    &!Mean squared velocity
+            WidNat, &!Natural width
+            WidDop, &!Doppler width
+            WidCol   !Collisional width
+    
+    vel = sqrt( tp / AtomicWeight )                                         
+    
+    widnat = 2.29e6 * ennp**2                                         
+    widdop = 1.41e11 * ennp * vel                                     
+    widcol = 4.58e6 * densnn**0.3333 * vel                           
+                                                                        
+    gamma = widnat + widdop + widcol                                  
+    avoigt = ( widnat + widcol ) / widdop                             
+    dnudop = widdop / 12.566  
   end subroutine linwid
   !====================================================
   real function voigt ( a,vv )                                           

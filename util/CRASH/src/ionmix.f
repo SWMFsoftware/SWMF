@@ -3237,7 +3237,7 @@ c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT3229
                                                                         ABJT3230
       subroutine linwid ( tp,densnn,ennp,atomwt,                        ABJT3231
      &                                         gamma,avoigt,dnudop )    ABJT3232
-c                                                                       ABJT3233
+c    MOVED TO ModOpacityVoigt                                           ABJT3233
 c ... compute the total line width of a bound-bound transition.  this   ABJT3234
 c     sums the contributions from natural, Doppler, and collisional     ABJT3235
 c     broadening.                                                       ABJT3236
