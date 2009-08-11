@@ -54,6 +54,7 @@ subroutine impl_jacobian(implBLK,JAC)
 
   use ModProcMH
   use ModMain
+  use ModNumConst, ONLY: i_DD
   use ModvarIndexes
   use ModAdvance, ONLY : B0_DX, B0_DY,B0_DZ,set_b0_face,&
        time_BLK
@@ -119,8 +120,8 @@ subroutine impl_jacobian(implBLK,JAC)
   ! Initialize reference flux and the cmax array
   do idim=1,ndim
 
-     i1 = 1+kr(1,idim); j1= 1+kr(2,idim); k1= 1+kr(3,idim)
-     i2 =nI+kr(1,idim); j2=nJ+kr(2,idim); k2=nK+kr(3,idim);
+     i1 = 1+i_DD(1,idim); j1= 1+i_DD(2,idim); k1= 1+i_DD(3,idim)
+     i2 =nI+i_DD(1,idim); j2=nJ+i_DD(2,idim); k2=nK+i_DD(3,idim);
 
      call get_face_flux(Impl_VC,B0_DFD(:,i1:i2,j1:j2,k1:k2,idim),&
           nI,nJ,nK,iDim,iBLK,FluxLeft_VFD(:,i1:i2,j1:j2,k1:k2,iDim))
@@ -129,7 +130,7 @@ subroutine impl_jacobian(implBLK,JAC)
           nI,nJ,nK,iDim,iBLK,FluxRight_VFD(:,:,:,:,iDim))
 
      ! Average w for each cell interface into ImplEps_VC
-     i1 = 1-kr(1,idim); j1= 1-kr(2,idim); k1= 1-kr(3,idim)
+     i1 = 1-i_DD(1,idim); j1= 1-i_DD(2,idim); k1= 1-i_DD(3,idim)
 
      ! Calculate orthogonal cmax for each interface in advance
      call get_cmax_face(                            &
@@ -169,9 +170,9 @@ subroutine impl_jacobian(implBLK,JAC)
 
      do idim=1,ndim
         ! Index limits for faces and shifted centers
-        i1 = 1+kr(1,idim); j1= 1+kr(2,idim); k1= 1+kr(3,idim)
-        i2 =nI+kr(1,idim); j2=nJ+kr(2,idim); k2=nK+kr(3,idim);
-        i3 =nI-kr(1,idim); j3=nJ-kr(2,idim); k3=nK-kr(3,idim);
+        i1 = 1+i_DD(1,idim); j1= 1+i_DD(2,idim); k1= 1+i_DD(3,idim)
+        i2 =nI+i_DD(1,idim); j2=nJ+i_DD(2,idim); k2=nK+i_DD(3,idim);
+        i3 =nI-i_DD(1,idim); j3=nJ-i_DD(2,idim); k3=nK-i_DD(3,idim);
 
         call get_face_flux(ImplEps_VC,B0_DFD(:,i1:i2,j1:j2,k1:k2,idim),&
              nI,nJ,nK,iDim,iBLK,FluxEpsLeft_VF(:,i1:i2,j1:j2,k1:k2))
@@ -795,9 +796,9 @@ contains
                 do k=1,nK; do j=1,nJ; do i=1,nI
 
                    ! Index for the 'right' face of the cell
-                   i2 = i + kr(1,iFace)
-                   j2 = j + kr(2,iFace)
-                   k2 = k + kr(3,iFace)
+                   i2 = i + i_DD(1,iFace)
+                   j2 = j + i_DD(2,iFace)
+                   k2 = k + i_DD(3,iFace)
 
                    ! Area(iFace)/V*T_ks*(Bi/n*jklEpsilon - Bj/n*iklEpsilon)
 

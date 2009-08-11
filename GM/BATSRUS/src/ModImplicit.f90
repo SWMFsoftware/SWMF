@@ -61,9 +61,6 @@ module ModImplicit
 
   !-- Common variables:
 
-  !Kronecker delta
-  integer, parameter :: kr(3,3) = reshape( (/1,0,0,0,1,0,0,0,1/), (/3,3/) )
-
   ! Actual number of implicitly treated blocks for a processor
   integer :: nImplBLK=0
 
