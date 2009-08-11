@@ -275,8 +275,8 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
        TypeSemiImplicit
   use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
-  use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs, get_gray_diffusion_bc
-  use ModHeatConduction, ONLY: get_heat_conduction_rhs, get_heat_conduction_bc
+  use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs
+  use ModHeatConduction, ONLY: get_heat_conduction_rhs
   use ModMessagePass, ONLY: message_pass_dir
   use ModGeometry, ONLY: vInv_CB
 
@@ -312,13 +312,14 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
 
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
+
+     call get_semi_implicit_bc(iBlock, .false.)
+
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
-        call get_gray_diffusion_bc(iBlock, IsLinear=.false.)
         call get_gray_diffusion_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
              Rhs_VCB(:,:,:,:,iImplBlock), IsLinear=.false.)
      case('parcond')
-        call get_heat_conduction_bc(iBlock, IsLinear=.false.)
         call get_heat_conduction_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
              Rhs_VCB(:,:,:,:,iImplBlock), IsLinear=.false.)
      case default
@@ -343,8 +344,8 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
        TypeSemiImplicit, ImplCoeff, DconsDsemi_VCB !!!, wnrm
   use ModMain, ONLY: dt
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
-  use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs, get_gray_diffusion_bc
-  use ModHeatConduction, ONLY: get_heat_conduction_rhs, get_heat_conduction_bc
+  use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs
+  use ModHeatConduction, ONLY: get_heat_conduction_rhs
   use ModMessagePass, ONLY: message_pass_dir
   use ModGeometry, ONLY: vInv_CB
 
@@ -392,13 +393,13 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
 
+     call get_semi_implicit_bc(iBlock, .true.)
+
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
-        call get_gray_diffusion_bc(iBlock, IsLinear = .true.)
         call get_gray_diffusion_rhs(iBlock, &
              StateSemi_VGB(:,:,:,:,iBlock), Rhs_VC, IsLinear = .true.)
      case('parcond')
-        call get_heat_conduction_bc(iBlock, IsLinear = .true.)
         call get_heat_conduction_rhs(iBlock, &
              StateSemi_VGB(:,:,:,:,iBlock), Rhs_VC, IsLinear = .true.)
      case default
@@ -466,7 +467,264 @@ subroutine get_semi_impl_jacobian
   end do
 
 end subroutine get_semi_impl_jacobian
+
 !==============================================================================
+
+subroutine get_semi_implicit_bc(iBlock, IsLinear)
+
+  use ModGrayDiffusion, ONLY: set_gray_outflow_bc
+  use ModImplicit, ONLY: StateSemi_VGB, iEradImpl, nw
+  use ModMain,     ONLY: nI, nJ, nK, TypeBc_I
+  use ModParallel, ONLY: NOBLK, NeiLev
+  use ModUser,     ONLY: user_set_outerbcs
+
+  integer, intent(in) :: iBlock
+  logical, intent(in) :: IsLinear
+
+  logical :: IsFound
+  integer :: i, j, k, iVar
+  character(len=20), parameter :: TypeUserBc = 'usersemi'
+  character(len=20), parameter :: TypeUserBcLinear = 'usersemilinear'
+  character(len=*),  parameter :: NameSub = 'get_semi_implicit_bc'
+  !----------------------------------------------------------------------------
+
+  if(NeiLev(1,iBlock) == NOBLK)then
+     if(TypeBc_I(1) == 'outflow' .or. TypeBc_I(1) == 'float')then
+        do iVar = 1, nw
+           if(iVar == iEradImpl)then
+              call set_gray_outflow_bc(1, iBlock, iEradImpl, nw, &
+                   StateSemi_VGB(:,:,:,:,iBlock))
+           else
+              if(IsLinear)then
+                 StateSemi_VGB(iVar,0,:,:,iBlock) = 0.0
+              else
+                 StateSemi_VGB(iVar,0,:,:,iBlock) = &
+                      StateSemi_VGB(iVar,1,:,:,iBlock)
+              end if
+           end if
+        end do
+     elseif(TypeBc_I(1) == 'user')then
+        if(IsLinear)then
+           StateSemi_VGB(:,0,:,:,iBlock) = 0.0
+           call user_set_outerbcs(iBlock, 1, TypeUserBcLinear, IsFound)
+        else
+           IsFound = .false.
+           call user_set_outerbcs(iBlock, 1, TypeUserBc, IsFound)
+           if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
+                //TypeUserBc//' on iSide=1 in user_set_outerbcs')
+        end if
+     elseif(TypeBc_I(1) == 'reflect')then
+        StateSemi_VGB(:,0,:,:,iBlock) = StateSemi_VGB(:,1,:,:,iBlock)
+     else
+        call stop_mpi(NameSub//': unknown TypeBc_I(1)='//TypeBc_I(1))
+     end if
+  end if
+  if(NeiLev(2,iBlock) == NOBLK)then
+     if(TypeBc_I(2) == 'outflow' .or. TypeBc_I(2) == 'float')then
+        do iVar = 1, nw
+           if(iVar == iEradImpl)then
+              call set_gray_outflow_bc(2, iBlock, iEradImpl, nw, &
+                   StateSemi_VGB(:,:,:,:,iBlock))
+           else
+              if(IsLinear)then
+                 StateSemi_VGB(iVar,nI+1,:,:,iBlock) = 0.0
+              else
+                 StateSemi_VGB(iVar,nI+1,:,:,iBlock) = &
+                      StateSemi_VGB(iVar,nI,:,:,iBlock)
+              end if
+           end if
+        end do
+     elseif(TypeBc_I(2) == 'user')then
+        if(IsLinear)then
+           StateSemi_VGB(:,nI+1,:,:,iBlock) = 0.0
+           call user_set_outerbcs(iBlock, 2, TypeUserBcLinear, IsFound)
+        else
+           IsFound = .false.
+           call user_set_outerbcs(iBlock, 2, TypeUserBc, IsFound)
+           if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
+                //TypeUserBc//' on iSide=2 in user_set_outerbcs')
+        end if
+     elseif(TypeBc_I(2) == 'reflect')then
+        StateSemi_VGB(:,nI+1,:,:,iBlock) = StateSemi_VGB(:,nI,:,:,iBlock)
+     else
+        call stop_mpi(NameSub//': unknown TypeBc_I(2)='//TypeBc_I(2))
+     end if
+  end if
+  if(NeiLev(3,iBlock) == NOBLK)then
+     if(TypeBc_I(3) == 'outflow' .or. TypeBc_I(3) == 'float')then
+        do iVar = 1, nw
+           if(iVar == iEradImpl)then
+              call set_gray_outflow_bc(3, iBlock, iEradImpl, nw, &
+                   StateSemi_VGB(:,:,:,:,iBlock))
+           else
+              if(IsLinear)then
+                 StateSemi_VGB(iVar,:,0,:,iBlock) = 0.0
+              else
+                 StateSemi_VGB(iVar,:,0,:,iBlock) = &
+                      StateSemi_VGB(iVar,:,1,:,iBlock)
+              end if
+           end if
+        end do
+     elseif(TypeBc_I(3) == 'user')then
+        if(IsLinear)then
+           StateSemi_VGB(:,:,0,:,iBlock) =  0.0
+           call user_set_outerbcs(iBlock, 3, TypeUserBcLinear, IsFound)
+        else
+           IsFound = .false.
+           call user_set_outerbcs(iBlock, 3, TypeUserBc, IsFound)
+           if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
+                //TypeUserBc//' on iSide=3 in user_set_outerbcs')
+        end if
+     elseif(TypeBc_I(3) == 'reflect')then
+        StateSemi_VGB(:,:,0,:,iBlock) = StateSemi_VGB(:,:,1,:,iBlock)
+     elseif(TypeBc_I(3) == 'shear')then
+        call semi_bc_shear(3)
+     else
+        call stop_mpi(NameSub//': unknown TypeBc_I(3)='//TypeBc_I(3))
+     end if
+  end if
+  if(NeiLev(4,iBlock) == NOBLK) then
+     if(TypeBc_I(4) == 'outflow' .or. TypeBc_I(4) == 'float')then
+        do iVar = 1, nw
+           if(iVar == iEradImpl)then
+              call set_gray_outflow_bc(4, iBlock, iEradImpl, nw, &
+                   StateSemi_VGB(:,:,:,:,iBlock))
+           else
+              if(IsLinear)then
+                 StateSemi_VGB(iVar,:,nJ+1,:,iBlock) = 0.0
+              else
+                 StateSemi_VGB(iVar,:,nJ+1,:,iBlock) = &
+                      StateSemi_VGB(iVar,:,nJ,:,iBlock)
+              end if
+           end if
+        end do
+     elseif(TypeBc_I(4) == 'user')then
+        if(IsLinear)then
+           StateSemi_VGB(:,:,nJ+1,:,iBlock) = 0.0
+           call user_set_outerbcs(iBlock, 4, TypeUserBcLinear, IsFound)
+        else
+           IsFound = .false.
+           call user_set_outerbcs(iBlock, 4, TypeUserBc, IsFound)
+           if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
+                //TypeUserBc//' on iSide=4 in user_set_outerbcs')
+        end if
+     elseif(TypeBc_I(4) == 'reflect')then
+        StateSemi_VGB(:,:,nJ+1,:,iBlock) = StateSemi_VGB(:,:,nJ,:,iBlock)
+     elseif(TypeBc_I(4) == 'shear')then
+        call semi_bc_shear(4)
+     else
+        call stop_mpi(NameSub//': unknown TypeBc_I(4)='//TypeBc_I(4))
+     end if
+  end if
+  if(NeiLev(5,iBlock) == NOBLK) then
+     if(TypeBc_I(5) == 'outflow' .or. TypeBc_I(5) == 'float')then
+        do iVar = 1, nw
+           if(iVar == iEradImpl)then
+              call set_gray_outflow_bc(5, iBlock, iEradImpl, nw, &
+                   StateSemi_VGB(:,:,:,:,iBlock))
+           else
+              if(IsLinear)then
+                 StateSemi_VGB(iVar,:,:,0,iBlock) = 0.0
+              else
+                 StateSemi_VGB(iVar,:,:,0,iBlock) = &
+                      StateSemi_VGB(iVar,:,:,1,iBlock)
+              end if
+           end if
+        end do
+     elseif(TypeBc_I(5) == 'user')then
+        if(IsLinear)then
+           StateSemi_VGB(:,:,:,0,iBlock) = 0.0
+           call user_set_outerbcs(iBlock, 5, TypeUserBcLinear, IsFound)
+        else
+           IsFound = .false.
+           call user_set_outerbcs(iBlock, 5, TypeUserBc, IsFound)
+           if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
+                //TypeUserBc//' on iSide=5 in user_set_outerbcs')
+        end if
+     elseif(TypeBc_I(5) == 'reflect')then
+        StateSemi_VGB(:,:,:,0,iBlock) = StateSemi_VGB(:,:,:,1,iBlock)
+     else
+        call stop_mpi(NameSub//': unknown TypeBc_I(5)='//TypeBc_I(5))
+     end if
+  end if
+  if(NeiLev(6,iBlock) == NOBLK)then 
+     if(TypeBc_I(6) == 'outflow' .or. TypeBc_I(6) == 'float')then
+        do iVar = 1, nw
+           if(iVar == iEradImpl)then
+              call set_gray_outflow_bc(6, iBlock, iEradImpl, nw, &
+                   StateSemi_VGB(:,:,:,:,iBlock))
+           else
+              if(IsLinear)then
+                 StateSemi_VGB(iVar,:,:,nK+1,iBlock) = 0.0
+              else
+                 StateSemi_VGB(iVar,:,:,nK+1,iBlock) = &
+                      StateSemi_VGB(iVar,:,:,nK,iBlock)
+              end if
+           end if
+        end do
+     elseif(TypeBc_I(6) == 'user')then
+        if(IsLinear)then
+           StateSemi_VGB(:,:,:,nK+1,iBlock) = 0.0
+           call user_set_outerbcs(iBlock, 6, TypeUserBcLinear, IsFound)
+        else
+           IsFound = .false.
+           call user_set_outerbcs(iBlock, 6, TypeUserBc, IsFound)
+           if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
+                //TypeUserBc//' on iSide=6 in user_set_outerbcs')
+        end if
+     elseif(TypeBc_I(6) == 'reflect')then
+        StateSemi_VGB(:,:,:,nK+1,iBlock) = StateSemi_VGB(:,:,:,nK,iBlock)
+     else
+        call stop_mpi(NameSub//': unknown TypeBc_I(6)='//TypeBc_I(6))
+     end if
+  end if
+
+contains
+
+  subroutine semi_bc_shear(iSide)
+
+    use ModNumConst, ONLY: cTiny
+    use ModPhysics, ONLY: ShockSlope
+    use ModSize, ONLY: south_, north_
+
+    integer, intent(in) :: iSide
+
+    integer :: Dn, iVar
+    !--------------------------------------------------------------------------
+
+    ! If the shock is not tilted, there is nothing to do
+    if(abs(ShockSlope)<cTiny) RETURN
+
+    do iVar = 1, nw
+
+       ! Shear according to ShockSlope
+       if(ShockSlope < -cTiny)then
+          call stop_mpi('ShockSlope must be positive!')
+       elseif(ShockSlope > 1.0)then
+          call stop_mpi('ShockSlope > 1 not allowed!')
+       else
+          ! ShockSlope <= 1
+          Dn = nint(1.0/ShockSlope)
+          if(abs(Dn-1.0/ShockSlope)>cTiny)call stop_mpi( &
+               'ShockSlope <= 1 should be the inverse of a round number!')
+          select case(iSide)
+             ! Shift parallel to X by 1, but copy from distance Dn in Y
+          case(south_)
+             StateSemi_VGB(iVar,1:nI,0,:,iBlock) = &
+                  StateSemi_VGB(iVar,0:nI-1,Dn,:,iBlock)
+          case(north_)
+             StateSemi_VGB(iVar,1:nI,nJ+1,:,iBlock) = &
+                  StateSemi_VGB(iVar,2:nI+1,nJ+1-Dn,:,iBlock)
+          end select
+       end if
+    end do
+
+  end subroutine semi_bc_shear
+
+end subroutine get_semi_implicit_bc
+
+!==============================================================================
+
 subroutine getsource(iBLK,Var_VCB,SourceImpl_VC)
 
   ! Get sources for block iBLK using implicit data Var_VCB
@@ -738,4 +996,3 @@ subroutine getdt_courant(qdt)
   if(DoTestMe)write(*,*)'getdt_courant final dt=',qdt
 
 end subroutine getdt_courant
-

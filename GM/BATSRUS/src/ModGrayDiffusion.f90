@@ -23,7 +23,6 @@ module ModGrayDiffusion
   public :: add_jacobian_gray_diffusion
   public :: set_gray_outflow_bc
   public :: get_impl_gray_diff_state
-  public :: get_gray_diffusion_bc
   public :: get_gray_diffusion_rhs
   public :: get_gray_diff_jacobian
   public :: update_impl_gray_diff
@@ -204,8 +203,7 @@ contains
        DiffRad = DiffCoef_VFDB(1,i,j,k,iDir,iBlock)
     end if
 
-    EradFlux_D = 0.0
-    EradFlux_D(iDir) = -DiffRad*FaceGrad_D(iDir)
+    EradFlux_D = -DiffRad*FaceGrad_D
 
   end subroutine get_radiation_energy_flux
 
@@ -301,8 +299,9 @@ contains
     ! operators the same as the semi-implicit jacobian)
 
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK
-    use ModImplicit, ONLY: kr, nStencil
+    use ModImplicit, ONLY: nStencil
     use ModMain,     ONLY: nI, nJ, nK, nDim
+    use ModNumConst, ONLY: i_DD
 
     integer, intent(in) :: iBlock, nVar
     real, intent(inout) :: Jacobian_VVCI(nVar,nVar,nI,nJ,nK,nStencil)
@@ -314,7 +313,7 @@ contains
     Dxyz_D = (/dx_BLK(iBlock), dy_BLK(iBlock), dz_Blk(iBlock)/)
     do iDim = 1, nDim
        Coeff = -1.0/Dxyz_D(iDim)**2
-       Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
+       Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
        do k=1,nK; do j=1,nJ; do i=1,nI
           do iDiff = 1, nDiff
              iVar = iDiff_I(iDiff)
@@ -345,9 +344,10 @@ contains
   subroutine get_impl_gray_diff_state(StateImpl_VGB,DconsDsemi_VCB)
 
     use ModAdvance,  ONLY: Erad_, State_VGB
-    use ModImplicit, ONLY: nw, nImplBlk, impl2iBlk, kr, TypeSemiImplicit, &
+    use ModImplicit, ONLY: nw, nImplBlk, impl2iBlk, TypeSemiImplicit, &
          iEradImpl, iTeImpl, ImplCoeff
     use ModMain,     ONLY: nDim, x_, y_, nI, nJ, nK, MaxImplBlk, Dt
+    use ModNumConst, ONLY: i_DD
     use ModPhysics,  ONLY: inv_gm1, Clight, cRadiationNo, &
          Si2No_V, UnitTemperature_, UnitEnergyDens_, UnitX_, UnitU_
     use ModUser,     ONLY: user_material_properties
@@ -574,7 +574,7 @@ contains
           do iDim = 1, nDim
              ! FaceYZ/dx = Volume/dx^2
              Coeff = 1.0 / (Dxyz_D(iDim)**2 * vInv_CB(1,1,1,iBlock))
-             Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
+             Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
              do k=1,nK+Dk; do j=1,nJ+Dj; do i=1,nI+Di
                 do iDiff = 1, nDiff
                    DiffCoef_VFDB(iDiff,i,j,k,iDim,iBlock) = &
@@ -615,7 +615,7 @@ contains
 
       !------------------------------------------------------------------------
 
-      Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
+      Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          DiffCoef_VFDB(:,i,j,k,iDim,iBlock) = 0.5*( &
               DiffSemiCoef_VGB(:,i-Di,j-Dj,k-Dk,iBlock) &
@@ -632,7 +632,7 @@ contains
 
       !------------------------------------------------------------------------
 
-      Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
+      Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          DiffCoef_VFDB(:,i,j,k,iDim,iBlock) =  &
               (DiffSemiCoef_VGB(:,i,j,k,iBlock) &
@@ -649,7 +649,7 @@ contains
 
       !------------------------------------------------------------------------
 
-      Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
+      Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          DiffCoef_VFDB(:,i,j,k,iDim,iBlock) =  &
               (DiffSemiCoef_VGB(:,i-Di,j-Dj,k-Dk,iBlock) &
@@ -667,7 +667,7 @@ contains
       integer :: iShift, jShift, kShift
       !------------------------------------------------------------------------
 
-      Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
+      Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
       iShift = 1-Di; jShift = 1-Dj; kShift = 1-Dk
       do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
          do iDiff = 1, nDiff
@@ -689,7 +689,7 @@ contains
       integer :: iShift, jShift, kShift, i1, j1, k1
       !------------------------------------------------------------------------
 
-      Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
+      Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
       iShift = 1-Di; jShift = 1-Dj; kShift = 1-Dk
       do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
          i1=i-Di; j1=j-Dj; k1=k-Dk
@@ -903,343 +903,12 @@ contains
 
   !============================================================================
 
-  subroutine get_gray_diffusion_bc(iBlock, IsLinear)
-
-    use ModGeometry, ONLY: TypeGeometry
-    use ModImplicit, ONLY: StateSemi_VGB, iEradImpl, nw
-    use ModMain,     ONLY: nI, nJ, nK, TypeBc_I
-    use ModParallel, ONLY: NOBLK, NeiLev
-    use ModUser,     ONLY: user_set_outerbcs
-    use ModPhysics,  ONLY: Clight
-
-    integer, intent(in) :: iBlock
-    logical, intent(in) :: IsLinear
-
-    logical :: IsFound
-    integer :: i,j,k, iDiff, iVar
-    real :: Coef
-    character(len=20), parameter :: TypeUserBc = 'usersemi'
-    character(len=20), parameter :: TypeUserBcLinear = 'usersemilinear'
-    character(len=*),  parameter :: NameSub = 'get_gray_diffusion_bc'
-    !--------------------------------------------------------------------------
-
-    if(NeiLev(1,iBlock) == NOBLK)then
-       if(TypeBc_I(1) == 'outflow' .or. TypeBc_I(1) == 'float')then
-          do iDiff = 1, nDiff
-             iVar = iDiff_I(iDiff)
-             if(iVar==iEradImpl)then
-                call set_gray_outflow_bc(1, iBlock, iEradImpl, nw, &
-                     StateSemi_VGB(:,:,:,:,iBlock))
-             else
-                if(IsLinear)then
-                   StateSemi_VGB(iVar,0,:,:,iBlock) = 0.0
-                else
-                   StateSemi_VGB(iVar,0,:,:,iBlock) = &
-                        StateSemi_VGB(iVar,1,:,:,iBlock)
-                end if
-             end if
-          end do
-       elseif(TypeBc_I(1) == 'user')then
-          if(IsLinear)then
-             StateSemi_VGB(:,0,:,:,iBlock) = 0.0
-             call user_set_outerbcs(iBlock,1,TypeUserBcLinear,IsFound)
-          else
-             IsFound = .false.
-             call user_set_outerbcs(iBlock,1,TypeUserBc,IsFound)
-             if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
-                  //TypeUserBc//' on iSide=1 in user_set_outerbcs')
-          end if
-       elseif(TypeBc_I(1) == 'reflect')then
-          StateSemi_VGB(:,0,:,:,iBlock) = StateSemi_VGB(:,1,:,:,iBlock)
-       else
-          call stop_mpi(NameSub//': unknown TypeBc_I(1)='//TypeBc_I(1))
-       end if
-    end if
-    if(NeiLev(2,iBlock) == NOBLK)then
-       if(TypeBc_I(2) == 'outflow' .or. TypeBc_I(2) == 'float')then
-          do iDiff = 1, nDiff
-             iVar = iDiff_I(iDiff)
-             if(iVar==iEradImpl)then
-                call set_gray_outflow_bc(2, iBlock, iEradImpl, nw, &
-                     StateSemi_VGB(:,:,:,:,iBlock))
-             else
-                if(IsLinear)then
-                   StateSemi_VGB(iVar,nI+1,:,:,iBlock) = 0.0
-                else
-                   StateSemi_VGB(iVar,nI+1,:,:,iBlock) = &
-                        StateSemi_VGB(iVar,nI,:,:,iBlock)
-                end if
-             end if
-          end do
-       elseif(TypeBc_I(2) == 'user')then
-          if(IsLinear)then
-             StateSemi_VGB(:,nI+1,:,:,iBlock) = 0.0
-             call user_set_outerbcs(iBlock,2,TypeUserBcLinear,IsFound)
-          else
-             IsFound = .false.
-             call user_set_outerbcs(iBlock,2,TypeUserBc,IsFound)
-             if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
-                  //TypeUserBc//' on iSide=2 in user_set_outerbcs')
-          end if
-       elseif(TypeBc_I(2) == 'reflect')then
-          StateSemi_VGB(:,nI+1,:,:,iBlock) = StateSemi_VGB(:,nI,:,:,iBlock)
-       else
-          call stop_mpi(NameSub//': unknown TypeBc_I(2)='//TypeBc_I(2))
-       end if
-    end if
-    if(NeiLev(3,iBlock) == NOBLK)then
-       if(TypeBc_I(3) == 'outflow' .or. TypeBc_I(3) == 'float')then
-          do iDiff = 1, nDiff
-             iVar = iDiff_I(iDiff)
-             if(iVar==iEradImpl)then
-                call set_gray_outflow_bc(3, iBlock, iEradImpl, nw, &
-                     StateSemi_VGB(:,:,:,:,iBlock))
-             else
-                if(IsLinear)then
-                   StateSemi_VGB(iVar,:,0,:,iBlock) = 0.0
-                else
-                   StateSemi_VGB(iVar,:,0,:,iBlock) = &
-                        StateSemi_VGB(iVar,:,1,:,iBlock)
-                end if
-             end if
-          end do
-       elseif(TypeBc_I(3) == 'user')then
-          if(IsLinear)then
-             StateSemi_VGB(:,:,0,:,iBlock) =  0.0
-             call user_set_outerbcs(iBlock,3,TypeUserBcLinear,IsFound)
-          else
-             IsFound = .false.
-             call user_set_outerbcs(iBlock,3,TypeUserBc,IsFound)
-             if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
-                  //TypeUserBc//' on iSide=3 in user_set_outerbcs')
-          end if
-       elseif(TypeBc_I(3) == 'reflect')then
-          StateSemi_VGB(:,:,0,:,iBlock) = StateSemi_VGB(:,:,1,:,iBlock)
-       elseif(TypeBc_I(3) == 'shear')then
-          call semi_bc_shear(3)
-       else
-          call stop_mpi(NameSub//': unknown TypeBc_I(3)='//TypeBc_I(3))
-       end if
-    end if
-    if(NeiLev(4,iBlock) == NOBLK) then
-       if(TypeBc_I(4) == 'outflow' .or. TypeBc_I(4) == 'float')then
-          do iDiff = 1, nDiff
-             iVar = iDiff_I(iDiff)
-             if(iVar==iEradImpl)then
-                call set_gray_outflow_bc(4, iBlock, iEradImpl, nw, &
-                     StateSemi_VGB(:,:,:,:,iBlock))
-             else
-                if(IsLinear)then
-                   StateSemi_VGB(iVar,:,nJ+1,:,iBlock) = 0.0
-                else
-                   StateSemi_VGB(iVar,:,nJ+1,:,iBlock) = &
-                        StateSemi_VGB(iVar,:,nJ,:,iBlock)
-                end if
-             end if
-          end do
-       elseif(TypeBc_I(4) == 'user')then
-          if(IsLinear)then
-             StateSemi_VGB(:,:,nJ+1,:,iBlock) = 0.0
-             call user_set_outerbcs(iBlock,4,TypeUserBcLinear,IsFound)
-          else
-             IsFound = .false.
-             call user_set_outerbcs(iBlock,4,TypeUserBc,IsFound)
-             if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
-                  //TypeUserBc//' on iSide=4 in user_set_outerbcs')
-          end if
-       elseif(TypeBc_I(4) == 'reflect')then
-          StateSemi_VGB(:,:,nJ+1,:,iBlock) = StateSemi_VGB(:,:,nJ,:,iBlock)
-       elseif(TypeBc_I(4) == 'shear')then
-          call semi_bc_shear(4)
-       else
-          call stop_mpi(NameSub//': unknown TypeBc_I(4)='//TypeBc_I(4))
-       end if
-    end if
-    if(NeiLev(5,iBlock) == NOBLK) then
-       if(TypeBc_I(5) == 'outflow' .or. TypeBc_I(5) == 'float')then
-          do iDiff = 1, nDiff
-             iVar = iDiff_I(iDiff)
-             if(iVar==iEradImpl)then
-                call set_gray_outflow_bc(5, iBlock, iEradImpl, nw, &
-                     StateSemi_VGB(:,:,:,:,iBlock))
-             else
-                if(IsLinear)then
-                   StateSemi_VGB(iVar,:,:,0,iBlock) = 0.0
-                else
-                   StateSemi_VGB(iVar,:,:,0,iBlock) = &
-                        StateSemi_VGB(iVar,:,:,1,iBlock)
-                end if
-             end if
-          end do
-       elseif(TypeBc_I(5) == 'user')then
-          if(IsLinear)then
-             StateSemi_VGB(:,:,:,0,iBlock) = 0.0
-             call user_set_outerbcs(iBlock,5,TypeUserBcLinear,IsFound)
-          else
-             IsFound = .false.
-             call user_set_outerbcs(iBlock,5,TypeUserBc,IsFound)
-             if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
-                  //TypeUserBc//' on iSide=5 in user_set_outerbcs')
-          end if
-       elseif(TypeBc_I(5) == 'reflect')then
-          StateSemi_VGB(:,:,:,0,iBlock) = StateSemi_VGB(:,:,:,1,iBlock)
-       else
-          call stop_mpi(NameSub//': unknown TypeBc_I(5)='//TypeBc_I(5))
-       end if
-    end if
-    if(NeiLev(6,iBlock) == NOBLK)then 
-       if(TypeBc_I(6) == 'outflow' .or. TypeBc_I(6) == 'float')then
-          do iDiff = 1, nDiff
-             iVar = iDiff_I(iDiff)
-             if(iVar==iEradImpl)then
-                call set_gray_outflow_bc(6, iBlock, iEradImpl, nw, &
-                     StateSemi_VGB(:,:,:,:,iBlock))
-             else
-                if(IsLinear)then
-                   StateSemi_VGB(iVar,:,:,nK+1,iBlock) = 0.0
-                else
-                   StateSemi_VGB(iVar,:,:,nK+1,iBlock) = &
-                        StateSemi_VGB(iVar,:,:,nK,iBlock)
-                end if
-             end if
-          end do
-       elseif(TypeBc_I(6) == 'user')then
-          if(IsLinear)then
-             StateSemi_VGB(:,:,:,nK+1,iBlock) = 0.0
-             call user_set_outerbcs(iBlock,6,TypeUserBcLinear,IsFound)
-          else
-             IsFound = .false.
-             call user_set_outerbcs(iBlock,6,TypeUserBc,IsFound)
-             if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc=' &
-                  //TypeUserBc//' on iSide=6 in user_set_outerbcs')
-          end if
-       elseif(TypeBc_I(6) == 'reflect')then
-          StateSemi_VGB(:,:,:,nK+1,iBlock) = StateSemi_VGB(:,:,:,nK,iBlock)
-       else
-          call stop_mpi(NameSub//': unknown TypeBc_I(6)='//TypeBc_I(6))
-       end if
-    end if
-
-    if(NeiLev(1,iBlock)==1) call correct_left_ghostcell(1,0,0,1,nJ,1,nK)
-    if(NeiLev(2,iBlock)==1) call correct_right_ghostcell(1,nI+1,nI+1,1,nJ,1,nK)
-    if(NeiLev(3,iBlock)==1) call correct_left_ghostcell(2,1,nI,0,0,1,nK)
-    if(NeiLev(4,iBlock)==1) call correct_right_ghostcell(2,1,nI,nJ+1,nJ+1,1,nK)
-    if(TypeGeometry /= 'rz')then
-       if(NeiLev(5,iBlock)==1) call correct_left_ghostcell(3,1,nI,1,nJ,0,0)
-       if(NeiLev(6,iBlock)==1) &
-            call correct_right_ghostcell(3,1,nI,1,nJ,nK+1,nK+1)
-    end if
-
-  contains
-
-    subroutine semi_bc_shear(iSide)
-
-      use ModNumConst, ONLY: cTiny
-      use ModPhysics, ONLY: ShockSlope
-      use ModSize, ONLY: south_, north_
-
-      integer, intent(in) :: iSide
-
-      integer :: Dn, iDiff, iVar
-      !------------------------------------------------------------------------
-
-      ! If the shock is not tilted, there is nothing to do
-      if(abs(ShockSlope)<cTiny) RETURN
-
-      do iDiff = 1, nDiff
-         iVar = iDiff_I(iDiff)
-
-         ! Shear according to ShockSlope
-         if(ShockSlope < -cTiny)then
-            call stop_mpi('ShockSlope must be positive!')
-         elseif(ShockSlope > 1.0)then
-            call stop_mpi('ShockSlope > 1 not allowed!')
-         else
-            ! ShockSlope <= 1
-            Dn = nint(1.0/ShockSlope)
-            if(abs(Dn-1.0/ShockSlope)>cTiny)call stop_mpi( &
-                 'ShockSlope <= 1 should be the inverse of a round number!')
-            select case(iSide)
-               ! Shift parallel to X by 1, but copy from distance Dn in Y
-            case(south_)
-               StateSemi_VGB(iVar,1:nI,0,:,iBlock) = &
-                    StateSemi_VGB(iVar,0:nI-1,Dn,:,iBlock)
-            case(north_)
-               StateSemi_VGB(iVar,1:nI,nJ+1,:,iBlock) = &
-                    StateSemi_VGB(iVar,2:nI+1,nJ+1-Dn,:,iBlock)
-            end select
-         end if
-      end do
-
-    end subroutine semi_bc_shear
-
-    !==========================================================================
-
-    subroutine correct_left_ghostcell(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
-
-      use ModImplicit, ONLY: kr
-
-      integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
-
-      integer :: i, j, k, iShift, jShift, kShift, Di, Dj, Dk, i1, j1, k1
-      integer :: iDiff, iVar
-      !------------------------------------------------------------------------
-
-      Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
-      iShift = 1-Di; jShift = 1-Dj; kShift = 1-Dk
-      do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
-         i1=i+Di; j1=j+Dj; k1=k+Dk
-         do iDiff = 1, nDiff
-            iVar = iDiff_I(iDiff)
-            StateSemi_VGB(iVar,i:i+iShift,j:j+jShift,k:k+kShift,iBlock) = &
-                 StateSemi_VGB(iVar,i:i+iShift,j:j+jShift,k:k+kShift,iBlock) &
-                 + StateSemi_VGB( &
-                 iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift,iBlock) &
-                 -0.25*sum(StateSemi_VGB( &
-                 iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift,iBlock))
-         end do
-      enddo; enddo; enddo
-
-    end subroutine correct_left_ghostcell
-
-    !==========================================================================
-
-    subroutine correct_right_ghostcell(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
-
-      use ModImplicit, ONLY: kr
-
-      integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
-
-      integer :: i, j, k, iShift, jShift, kShift, Di, Dj, Dk, i1, j1, k1
-      integer :: iDiff, iVar
-      !------------------------------------------------------------------------
-
-      Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
-      iShift = 1-Di; jShift = 1-Dj; kShift = 1-Dk
-      do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
-         i1=i-Di; j1=j-Dj; k1=k-Dk
-         do iDiff = 1, nDiff
-            iVar = iDiff_I(iDiff)
-            StateSemi_VGB(iVar,i:i+iShift,j:j+jShift,k:k+kShift,iBlock) = &
-                 StateSemi_VGB(iVar,i:i+iShift,j:j+jShift,k:k+kShift,iBlock) &
-                 + StateSemi_VGB( &
-                 iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift,iBlock) &
-                 -0.25*sum(StateSemi_VGB( &
-                 iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift,iBlock))
-         end do
-      enddo; enddo; enddo
-
-    end subroutine correct_right_ghostcell
-
-  end subroutine get_gray_diffusion_bc
-
-  !============================================================================
-
   subroutine get_gray_diffusion_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
 
     use ModGeometry, ONLY: TypeGeometry, vInv_CB
     use ModImplicit, ONLY: nw, iTeImpl
     use ModMain,     ONLY: nI, nJ, nK
+    use ModParallel, ONLY: NeiLev
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: StateImpl_VG(nw,-1:nI+2,-1:nJ+2,-1:nK+2)
@@ -1250,6 +919,16 @@ contains
     integer :: i, j, k, iDiff, iRelax, iVar
     character(len=*), parameter :: NameSub='get_gray_diffusion_rhs'
     !--------------------------------------------------------------------------
+
+    if(NeiLev(1,iBlock)==1) call correct_left_ghostcell(1,0,0,1,nJ,1,nK)
+    if(NeiLev(2,iBlock)==1) call correct_right_ghostcell(1,nI+1,nI+1,1,nJ,1,nK)
+    if(NeiLev(3,iBlock)==1) call correct_left_ghostcell(2,1,nI,0,0,1,nK)
+    if(NeiLev(4,iBlock)==1) call correct_right_ghostcell(2,1,nI,nJ+1,nJ+1,1,nK)
+    if(TypeGeometry /= 'rz')then
+       if(NeiLev(5,iBlock)==1) call correct_left_ghostcell(3,1,nI,1,nJ,0,0)
+       if(NeiLev(6,iBlock)==1) &
+            call correct_right_ghostcell(3,1,nI,1,nJ,nK+1,nK+1)
+    end if
 
     !!! Rhs_VC = 0.0
 
@@ -1340,6 +1019,62 @@ contains
        end if
     end if
 
+  contains
+
+    subroutine correct_left_ghostcell(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
+
+      use ModNumConst, ONLY: i_DD
+
+      integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
+
+      integer :: i, j, k, iShift, jShift, kShift, Di, Dj, Dk, i1, j1, k1
+      integer :: iDiff, iVar
+      !------------------------------------------------------------------------
+
+      Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
+      iShift = 1-Di; jShift = 1-Dj; kShift = 1-Dk
+      do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
+         i1=i+Di; j1=j+Dj; k1=k+Dk
+         do iDiff = 1, nDiff
+            iVar = iDiff_I(iDiff)
+            StateImpl_VG(iVar,i:i+iShift,j:j+jShift,k:k+kShift) = &
+                 StateImpl_VG(iVar,i:i+iShift,j:j+jShift,k:k+kShift) &
+                 + StateImpl_VG(iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift) &
+                 -0.25*sum(StateImpl_VG( &
+                 iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift))
+         end do
+      enddo; enddo; enddo
+
+    end subroutine correct_left_ghostcell
+
+    !==========================================================================
+
+    subroutine correct_right_ghostcell(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
+
+      use ModNumConst, ONLY: i_DD
+
+      integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
+
+      integer :: i, j, k, iShift, jShift, kShift, Di, Dj, Dk, i1, j1, k1
+      integer :: iDiff, iVar
+      !------------------------------------------------------------------------
+
+      Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
+      iShift = 1-Di; jShift = 1-Dj; kShift = 1-Dk
+      do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
+         i1=i-Di; j1=j-Dj; k1=k-Dk
+         do iDiff = 1, nDiff
+            iVar = iDiff_I(iDiff)
+            StateImpl_VG(iVar,i:i+iShift,j:j+jShift,k:k+kShift) = &
+                 StateImpl_VG(iVar,i:i+iShift,j:j+jShift,k:k+kShift) &
+                 + StateImpl_VG(iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift) &
+                 -0.25*sum(StateImpl_VG( &
+                 iVar,i1:i1+iShift,j1:j1+jShift,k1:k1+kShift))
+         end do
+      enddo; enddo; enddo
+
+    end subroutine correct_right_ghostcell
+
   end subroutine get_gray_diffusion_rhs
 
   !============================================================================
@@ -1347,8 +1082,9 @@ contains
   subroutine get_gray_diff_jacobian(iBlock, nVar, Jacobian_VVCI)
 
     use ModGeometry, ONLY: vInv_CB
-    use ModImplicit, ONLY: kr, TypeSemiImplicit, iTeImpl
+    use ModImplicit, ONLY: TypeSemiImplicit, iTeImpl
     use ModMain,     ONLY: nI, nJ, nK, nDim
+    use ModNumConst, ONLY: i_DD
 
     integer, parameter:: nStencil = 2*nDim + 1
 
@@ -1394,7 +1130,7 @@ contains
     end if
 
     do iDim = 1, nDim
-       Di = kr(iDim,1); Dj = kr(iDim,2); Dk = kr(iDim,3)
+       Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
        do k=1,nK; do j=1,nJ; do i=1,nI
           do iDiff = 1, nDiff
              iVar = iDiff_I(iDiff)
