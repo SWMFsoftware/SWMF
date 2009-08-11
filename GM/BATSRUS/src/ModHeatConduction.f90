@@ -14,7 +14,7 @@ module ModHeatConduction
   public :: get_heat_flux
   public :: get_impl_heat_cond_state
   public :: get_heat_conduction_rhs
-  public :: get_heat_cond_jacobian
+  public :: add_jacobian_heat_cond
   public :: update_impl_heat_cond
 
   ! Logical for adding field-aligned heat conduction
@@ -485,7 +485,7 @@ contains
 
   !============================================================================
 
-  subroutine get_heat_cond_jacobian(iBlock, nVar, Jacobian_VVCI)
+  subroutine add_jacobian_heat_cond(iBlock, nVar, Jacobian_VVCI)
 
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB, UseCovariant
     use ModImplicit, ONLY: iTeImpl
@@ -501,15 +501,12 @@ contains
     real :: DiffLeft, DiffRight, Dxyz_D(nDim)
     !--------------------------------------------------------------------------
 
-    ! All elements have to be set
-    Jacobian_VVCI(:,:,:,:,:,:) = 0.0
-
     Dxyz_D = (/dx_BLK(iBlock), dy_BLK(iBlock), dz_Blk(iBlock)/)
 
     ! the transverse diffusion is ignored in the Jacobian
 
     if(UseCovariant)then
-       call get_jacobian_covariant
+       call add_jacobian_covariant
     else
 
        do iDim = 1, nDim
@@ -530,15 +527,17 @@ contains
                   .or. iDim==3.and.k==nK) &
                   DiffRight = 0.0
 
-             Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim)   = DiffLeft
-             Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim+1) = DiffRight
+             Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim)   = &
+                  Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim) + DiffLeft
+             Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim+1) = &
+                  Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim+1) + DiffRight
           end do; end do; end do
        end do
     end if
 
   contains
 
-    subroutine get_jacobian_covariant
+    subroutine add_jacobian_covariant
 
       use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
 
@@ -568,14 +567,16 @@ contains
             if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ &
                  .or. iDim==3.and.k==nK) DiffRight = 0.0
 
-            Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim)   = DiffLeft
-            Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim+1) = DiffRight
+            Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim) = &
+                 Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim) + DiffLeft
+            Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim+1) = &
+                 Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,2*iDim+1) + DiffRight
          end do; end do; end do
       end do
 
-    end subroutine get_jacobian_covariant
+    end subroutine add_jacobian_covariant
     
-  end subroutine get_heat_cond_jacobian
+  end subroutine add_jacobian_heat_cond
 
   !============================================================================
 

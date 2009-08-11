@@ -424,8 +424,8 @@ subroutine get_semi_impl_jacobian
 
   use ModImplicit, ONLY: nw, nImplBlk, impl2iblk, TypeSemiImplicit, &
        nStencil, MAT, ImplCoeff, DconsDsemi_VCB !!!, wnrm
-  use ModGrayDiffusion, ONLY: get_gray_diff_jacobian
-  use ModHeatConduction, ONLY: get_heat_cond_jacobian
+  use ModGrayDiffusion, ONLY: add_jacobian_gray_diff
+  use ModHeatConduction, ONLY: add_jacobian_heat_cond
   use ModMain, ONLY: nI, nJ, nK, nDim, Dt
   use ModGeometry, ONLY: vInv_CB
 
@@ -439,12 +439,15 @@ subroutine get_semi_impl_jacobian
   do iImplBlock = 1, nImplBLK
      iBlock = impl2iBLK(iImplBlock)
 
+     ! All elements have to be set
+     MAT(:,:,:,:,:,:,iImplBlock) = 0.0
+
      ! Get dR/dU
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
-        call get_gray_diff_jacobian(iBlock, nw, MAT(:,:,:,:,:,:,iImplBlock))
+        call add_jacobian_gray_diff(iBlock, nw, MAT(:,:,:,:,:,:,iImplBlock))
      case('parcond')
-        call get_heat_cond_jacobian(iBlock, nw, MAT(:,:,:,:,:,:,iImplBlock))
+        call add_jacobian_heat_cond(iBlock, nw, MAT(:,:,:,:,:,:,iImplBlock))
      case default
         call stop_mpi(NameSub//': no get_rhs implemented for' &
              //TypeSemiImplicit)

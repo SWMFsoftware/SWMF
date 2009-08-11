@@ -20,11 +20,10 @@ module ModGrayDiffusion
   public :: init_gray_diffusion
   public :: get_radiation_energy_flux
   public :: calc_source_gray_diffusion
-  public :: add_jacobian_gray_diffusion
   public :: set_gray_outflow_bc
   public :: get_impl_gray_diff_state
   public :: get_gray_diffusion_rhs
-  public :: get_gray_diff_jacobian
+  public :: add_jacobian_gray_diff
   public :: update_impl_gray_diff
 
   ! Logical for adding Gray Diffusion
@@ -289,53 +288,6 @@ contains
     end if
 
   end subroutine calc_source_gray_diffusion
-
-  !============================================================================
-
-  subroutine add_jacobian_gray_diffusion(iBlock, nVar, Jacobian_VVCI)
-
-    ! Add partial derivatives of the gray diffusion term to the Jacobian that
-    ! are not calculated by the general algorithm (these are for the diffusion
-    ! operators the same as the semi-implicit jacobian)
-
-    use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK
-    use ModImplicit, ONLY: nStencil
-    use ModMain,     ONLY: nI, nJ, nK, nDim
-    use ModNumConst, ONLY: i_DD
-
-    integer, intent(in) :: iBlock, nVar
-    real, intent(inout) :: Jacobian_VVCI(nVar,nVar,nI,nJ,nK,nStencil)
-
-    integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iDiff
-    real :: Coeff, DiffLeft, DiffRight, Dxyz_D(3)
-    !--------------------------------------------------------------------------
-
-    Dxyz_D = (/dx_BLK(iBlock), dy_BLK(iBlock), dz_Blk(iBlock)/)
-    do iDim = 1, nDim
-       Coeff = -1.0/Dxyz_D(iDim)**2
-       Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          do iDiff = 1, nDiff
-             iVar = iDiff_I(iDiff)
-             DiffLeft = Coeff*DiffCoef_VFDB(iDiff,i,j,k,iDim,iBlock)
-             DiffRight = Coeff*DiffCoef_VFDB(iDiff,i+Di,j+Dj,k+Dk,iDim,iBlock)
-             Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
-                  Jacobian_VVCI(iVar,iVar,i,j,k,1) - (DiffLeft + DiffRight)
-
-             if(iDim==1.and.i==1 .or. iDim==2.and.j==1 .or. iDim==3.and.k==1)&
-                  DiffLeft = 0.0
-             if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ &
-                  .or. iDim==3.and.k==nK) DiffRight = 0.0
-
-             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) = &
-                  Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) + DiffLeft
-             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) = &
-                  Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) + DiffRight
-          end do
-       end do; end do; end do
-    end do
-
-  end subroutine add_jacobian_gray_diffusion
 
   !============================================================================
   ! Semi-implicit interface
@@ -1079,10 +1031,12 @@ contains
 
   !============================================================================
 
-  subroutine get_gray_diff_jacobian(iBlock, nVar, Jacobian_VVCI)
+  subroutine add_jacobian_gray_diff(iBlock, nVar, Jacobian_VVCI)
 
-    use ModGeometry, ONLY: vInv_CB
-    use ModImplicit, ONLY: TypeSemiImplicit, iTeImpl
+    use ModGeometry, ONLY: vInv_CB, dx_BLK, dy_BLK, dz_BLK, &
+         fAx_BLK, fAy_BLK, fAz_BLK
+    use ModImplicit, ONLY: TypeSemiImplicit, iTeImpl, UseFullImplicit, &
+         UseSemiImplicit
     use ModMain,     ONLY: nI, nJ, nK, nDim
     use ModNumConst, ONLY: i_DD
 
@@ -1092,14 +1046,11 @@ contains
     real, intent(out) :: Jacobian_VVCI(nVar,nVar,nI,nJ,nK,nStencil)
 
     integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iDiff, iRelax
-    real :: DiffLeft, DiffRight
-    real :: RelaxCoef
+    real :: DiffLeft, DiffRight, RelaxCoef
+    real :: Dxyz_D(nDim), Area_D(nDim), Coeff
     !--------------------------------------------------------------------------
 
-    ! All elements have to be set
-    Jacobian_VVCI(:,:,:,:,:,:) = 0.0
-
-    if(nPoint>0)then
+    if(nPoint>0.and.UseSemiImplicit)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           ! dSvar/dVar (diagonal)
           Jacobian_VVCI(iPoint,iPoint,i,j,k,1) = &
@@ -1107,7 +1058,7 @@ contains
        end do; end do; end do
     end if
 
-    if(nRelax>0)then
+    if(nRelax>0.and.UseSemiImplicit)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           do iRelax = 1, nRelax
              iVar = iRelax_I(iRelax)
@@ -1129,14 +1080,23 @@ contains
        end do; end do; end do
     end if
 
+    ! For the fully implicit scheme:
+    ! add partial derivatives of the gray diffusion term to the Jacobian that
+    ! are not calculated by the general algorithm, these are for the diffusion
+    ! operators the same as the semi-implicit jacobian.
+
+    Dxyz_D = (/dx_BLK(iBlock), dy_BLK(iBlock), dz_Blk(iBlock)/)
+    Area_D = (/fAx_BLK(iBlock), fAy_BLK(iBlock), fAz_BLK(iBlock)/)
     do iDim = 1, nDim
+       if(UseFullImplicit) Coeff = -Area_D(iDim)/Dxyz_D(iDim)
+       if(UseSemiImplicit) Coeff = 1.0
        Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
        do k=1,nK; do j=1,nJ; do i=1,nI
           do iDiff = 1, nDiff
              iVar = iDiff_I(iDiff)
-             DiffLeft = vInv_CB(i,j,k,iBlock) &
+             DiffLeft = Coeff*vInv_CB(i,j,k,iBlock) &
                   *DiffCoef_VFDB(iDiff,i,j,k,iDim,iBlock)
-             DiffRight = vInv_CB(i,j,k,iBlock) &
+             DiffRight = Coeff*vInv_CB(i,j,k,iBlock) &
                   *DiffCoef_VFDB(iDiff,i+Di,j+Dj,k+Dk,iDim,iBlock)
              Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
                   Jacobian_VVCI(iVar,iVar,i,j,k,1) - (DiffLeft + DiffRight)
@@ -1146,13 +1106,15 @@ contains
              if(iDim==1.and.i==nI .or. iDim==2.and.j==nJ &
                   .or. iDim==3.and.k==nK) DiffRight = 0.0
 
-             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim)   = DiffLeft
-             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) = DiffRight
+             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) = &
+                  Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim) + DiffLeft
+             Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) = &
+                  Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) + DiffRight
           end do
        end do; end do; end do
     end do
 
-  end subroutine get_gray_diff_jacobian
+  end subroutine add_jacobian_gray_diff
 
   !============================================================================
 
