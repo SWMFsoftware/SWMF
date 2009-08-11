@@ -2,7 +2,9 @@
 
 module CRASH_ModStatSumMix
   use CRASH_ModAtomicDataMix
-  use CRASH_ModExcitation,ONLY : get_excitation_levels,&
+  use CRASH_ModExcitation,ONLY : &
+       get_excitation_levels,&
+       get_excitation_levels_zero,&
        nMixMax, LogGi_II,&
        ExtraEnergyAv_II, VirialCoeffAv_II, Cov2ExtraEnergy_II,&
        CovExtraEnergyVirial_II, Cov2VirialCoeff_II, SecondVirialCoeffAv_II
@@ -133,6 +135,7 @@ module CRASH_ModStatSumMix
   ! Find the final values of zAv and the ion populations 
   ! from temperature and heavy particle density.
 
+  public:: init_madelung
   public:: set_ionization_equilibrium
 
   public:: set_zero_ionization
@@ -244,10 +247,7 @@ Contains
     if(Te>0.0)LogGe = 99.0
 
 
-    do iMix = 1, nMix
-       call get_excitation_levels(iMix, 0, nZ_I(iMix)-1, &
-            nZ_I(iMix), 0.0, 0.0, ZeroIonization = .true.)
-    end do
+    call get_excitation_levels_zero(rIonoSphereInv)
 
 
     zAv = 0.0
@@ -270,6 +270,22 @@ Contains
 
   end subroutine set_zero_ionization
 
+  !========================================================================!
+  ! Initialize data required for calculation of Coulomb correction
+  ! according to the Madelung approximation
+  subroutine init_madelung(NaIn)
+    use CRASH_ModExcitation,ONLY:IonizationPotentialLowering_I
+
+    real,intent(in) :: NaIn
+    !----------------------
+    if(Na/=NaIn) rIonoSphereInv = &
+         ( (4.0 * cPi/3.0) * cBohrRadius**3 * NaIn)**(1.0/3)
+    Na = NaIn
+
+    if(UseCoulombCorrection)IonizationPotentialLowering_I = 1.80 * rIonoSphereInv *&
+         cRyToEv * (2.0 * N_I + 1.0)
+
+  end subroutine init_madelung
 
   !========================================================================!  
   ! Find the final values of zAv and the ion populations from temperature and 
@@ -279,7 +295,6 @@ Contains
 
     use CRASH_ModFermiGas,ONLY: UseFermiGas, LogGe, &
          LogGeMinBoltzmann,LogGeMinFermi
-    use CRASH_ModExcitation,ONLY:IonizationPotentialLowering_I
 
     ! Concentration of heavy particles (atoms+ions) in the plasma 
     ! (# of particles per m^3):
@@ -297,18 +312,13 @@ Contains
     !---------------------------------------------------------
 
     Te = TeIn
-    if(Na/=NaIn) rIonoSphereInv = &
-         ( (4.0 * cPi/3.0) * cBohrRadius**3 * NaIn)**(1.0/3)
-    Na = NaIn
+    call init_madelung(NaIn)
 
     if( Te <= 0.02 * minval( IonizPotential_II( 1,1:nMix) ) )then
        call set_zero_ionization
        call check_applicability(iError)
        return
     end if
-
-    if(UseCoulombCorrection)IonizationPotentialLowering_I = 1.80 * rIonoSphereInv *&
-         cRyToEv * (2.0 * N_I + 1.0)
 
     TeInv = cOne / TeIn        ! 1/kT; units: [1/eV]
     lnC1  = log( eWight1eV1m3  * sqrt(TeIn)*TeIn / Na)
@@ -471,7 +481,7 @@ Contains
 
 
          call get_excitation_levels(iMix, iZMin_I(iMix), min(iZMax_I(iMix), nZ_I(iMix)-1), &
-              nZ_I(iMix), TeInv, rIonoSphereInv, ZeroIonization = .false.)
+              nZ_I(iMix), TeInv, rIonoSphereInv)
 
 
          StatSumTermLog_I(0:nZ_I(iMix)) = &
@@ -874,9 +884,7 @@ Contains
     real :: UDeviation,& ! The difference between the given internal energy and the calculated one
             ToleranceUeV ! The required accuracy of U in eV
     !-------------------------
-    if(Na/=NaIn) rIonoSphereInv = &
-         ( (4.0 * cPi/3.0) * cBohrRadius**3 * NaIn)**(1.0/3)
-    Na = NaIn
+    call init_madelung(NaIn)
 
     if( .not.UsePreviousTe ) then
        if(nMix>1) then 
@@ -930,9 +938,7 @@ Contains
     real :: NaInvDPOvDTAtCNa  
     !------------------------------------
 
-    if(Na/=NaIn) rIonoSphereInv = &
-         ( (4.0 * cPi/3.0) * cBohrRadius**3 * NaIn)**(1.0/3)
-    Na = NaIn
+    call init_madelung(NaIn)
 
     !It is difficult to make an initial guess about temperature
     !The suggested estimate optimizes the number of idle iterations:

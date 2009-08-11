@@ -7,6 +7,10 @@ module CRASH_ModExcitation
   PRIVATE !Except
 
 
+  !The logical to handle whether energy states above continuum may be eliminated
+  logical,public :: DoStateElimination = .false.
+
+
   !Excitation energy of ion of ionization state i, averaged by possible
   !excitation levels [eV]
   real,dimension(0:nZMax,nMixMax),public :: ExtraEnergyAv_II = 0.0
@@ -46,28 +50,86 @@ module CRASH_ModExcitation
   real,dimension(nExcitation,0:nZMax-1,nMixMax),public :: ExcitationEnergy_III = 0.0
 
 
-  public :: get_excitation_levels
+  public :: get_excitation_levels,&
+            get_excitation_levels_zero
   public :: nMixMax
   real :: PowerOfRIono
 
   real,public :: IonizationPotentialLowering_I(0:nZMax) = 0.0
 contains
 
+  subroutine get_excitation_levels_zero(rIonoSphereInv)
+    real,intent(in) :: rIonoSphereInv
+
+    integer :: iMix, iZ, iN, iL
+    integer :: nGround
+    real :: Gin
+    real,dimension(0:nExcitation-1,nExcitation,0:nZMax,nMixMax) :: ExtraEnergy_IIII = 0.0
+    !------------
+
+    Partition_IIII(     :,:,:,:) = 0.0
+    ExtraEnergyAv_II(       :,:) = 0.0
+    VirialCoeffAv_II(       :,:) = 0.0
+    SecondVirialCoeffAv_II( :,:) = 0.0
+    Cov2ExtraEnergy_II(     :,:) = 0.0
+    CovExtraEnergyVirial_II(:,:) = 0.0
+    Cov2VirialCoeff_II(     :,:) = 0.0
+    Partition_III(        :,:,:) = 0.0
+    ExcitationEnergy_III( :,:,:) = 0.0
+
+
+    PowerOfRIono = rIonoSphereInv**iPressureEffectIndex
+
+    do iMix = 1, nMix
+
+       do iZ = 0, nZ_I(iMix)-1
+
+          nGround = n_ground(iZ, nZ_I(iMix))
+
+          Partition_IIII(0,nGround,iZ,iMix) = 1.0
+          Partition_III(nGround,iZ,iMix) = 1.0
+
+          do iN = nGround, nExcitation
+             Gin = 0.0
+
+             do iL = 0, iN-1
+
+                if(DoStateElimination.and.(ExcitationEnergy_IIII(iL,iN,iZ,iMix) + &
+                     VirialCoeff4Energy_IIII(iL,iN,iZ,iMix) * PowerOfRIono >= &
+                     IonizPotential_II(iZ+1,iMix) - IonizationPotentialLowering_I(iZ)))CYCLE
+
+                ExtraEnergy_IIII(iL,iN,iZ,iMix) = ExcitationEnergy_IIII(iL,iN,iZ,iMix) + &
+                     VirialCoeff4Energy_IIII(iL,iN,iZ,iMix) * PowerOfRIono
+
+                ExcitationEnergy_III(iN,iZ,iMix) = ExcitationEnergy_III(iN,iZ,iMix) + &
+                     Degeneracy_IIII(iL,iN,iZ,iMix) * ExtraEnergy_IIII(iL,iN,iZ,iMix)
+
+                Gin = Gin + Degeneracy_IIII(iL,iN,iZ,iMix)
+
+             end do
+
+             if (Gin /= 0) ExcitationEnergy_III(iN,iZ,iMix) = &
+                  ExcitationEnergy_III(iN,iZ,iMix) / Gin
+          end do
+       end do
+    end do
+
+  end subroutine get_excitation_levels_zero
+
   !Fill in arrays ExtraEnergyAv_II and LogGi_II
-  subroutine get_excitation_levels(iMix, iZMin, iZMax, nZ, TeInv, rIonoSphereInv, ZeroIonization)
+  subroutine get_excitation_levels(iMix, iZMin, iZMax, nZ, TeInv, rIonoSphereInv)
     integer,intent(in) :: iMix
     integer,intent(in) :: iZMin, iZMax
     integer,intent(in) :: nZ
     real,intent(in) :: TeInv
     real,intent(in) :: rIonoSphereInv
-    logical,intent(in) :: ZeroIonization
 
     integer :: iZ, iN, iL  !Loop variables
 
     real    :: DeltaEnergy
     real    :: Gi, GiInv
     integer :: nGround
-  
+
     real,parameter :: IndexPerThree    = iPressureEffectIndex/3.0
     real,parameter :: IndexSecondDeriv = IndexPerThree * (1.0 + IndexPerThree)
 
@@ -99,19 +161,6 @@ contains
     ExcitationEnergy_III( :,:,iMix) = 0.0
 
 
-    if (ZeroIonization) then
-
-       do iZ = iZMin, iZMax
-
-          nGround = n_ground(iZ, nZ)
-
-          Partition_IIII(0,nGround,iZ,iMix) = 1.0
-          Partition_III(nGround,iZ,iMix) = 1.0
-
-       end do
-    end if
-
-
     PowerOfRIono = rIonoSphereInv**iPressureEffectIndex
 
     do iZ = iZMin, iZMax
@@ -122,7 +171,7 @@ contains
        do iN = nGround, nExcitation
           do iL = 0, iN-1
 
-             if(UsePressureIonization.and.(ExcitationEnergy_IIII(iL,iN,iZ,iMix) + &
+             if(DoStateElimination.and.(ExcitationEnergy_IIII(iL,iN,iZ,iMix) + &
                   VirialCoeff4Energy_IIII(iL,iN,iZ,iMix) * PowerOfRIono >= &
                   IonizPotential_II(iZ+1,iMix) - IonizationPotentialLowering_I(iZ)))CYCLE
 
@@ -166,6 +215,9 @@ contains
           Partition_III(iN,iZ,iMix) = sum( Partition_IIII(:,iN,iZ,iMix)) 
           ExcitationEnergy_III( iN,iZ,iMix) = sum(&
                Partition_IIII(:,iN,iZ,iMix) * ExtraEnergy_IIII(:,iN,iZ,iMix))
+
+          if (Partition_III(iN,iZ,iMix) /= 0.0) ExcitationEnergy_III(iN,iZ,iMix) = &
+               ExcitationEnergy_III(iN,iZ,iMix) / Partition_III(iN,iZ,iMix)
        end do
 
        VirialCoeffAv_II (iZ,iMix) = IndexPerThree    * DeltaEnergyAv_II(iZ,iMix)
