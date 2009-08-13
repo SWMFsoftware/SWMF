@@ -1,7 +1,7 @@
 !^CFG COPYRIGHT UM
 !^CFG FILE IMPLICIT
 !============================================================================
-module ModGrayDiffusion
+module ModMultiGroupDiffusion
 
   use ModVarIndexes, ONLY: p_
   use ModProcMH, ONLY: iProc
@@ -11,24 +11,24 @@ module ModGrayDiffusion
   implicit none
   save
 
-  ! This module is needed for the order(u/c) gray diffusion approximation for
+  ! This module is needed for the multigroup diffusion approximation for
   ! radiation-hydrodynamics.
 
   private !except
 
   ! Public methods
-  public :: init_gray_diffusion
-  public :: get_radiation_energy_flux
-  public :: calc_source_gray_diffusion
-  public :: set_gray_outflow_bc
-  public :: get_impl_gray_diff_state
-  public :: get_gray_diffusion_rhs
-  public :: add_jacobian_gray_diff
-  public :: update_impl_gray_diff
+  public :: init_rad_diffusion
+  public :: get_rad_energy_flux
+  public :: calc_source_rad_diffusion
+  public :: set_rad_outflow_bc
+  public :: get_impl_rad_diff_state
+  public :: get_rad_diffusion_rhs
+  public :: add_jacobian_rad_diff
+  public :: update_impl_rad_diff
 
-  ! Logical for adding Gray Diffusion
-  logical, public :: IsNewBlockGrayDiffusion = .true.
-  logical, public :: IsNewTimestepGrayDiffusion = .true.
+  ! Logical for adding multigroup diffusion
+  logical, public :: IsNewBlockRadDiffusion = .true.
+  logical, public :: IsNewTimestepRadDiffusion = .true.
 
   ! Coefficients for two-temperature electron-radiation model
   real, allocatable :: DiffCoef_VFDB(:,:,:,:,:,:)
@@ -64,10 +64,10 @@ contains
 
   !============================================================================
 
-  subroutine init_gray_diffusion
+  subroutine init_rad_diffusion
 
     use ModAdvance,     ONLY: Erad_
-    use ModMain,        ONLY: UseGrayDiffusion
+    use ModMain,        ONLY: UseRadDiffusion
     use ModSize,        ONLY: nI, nJ, nK, MaxBlock, nDim
     use ModVarIndexes,  ONLY: NameVar_V
     use ModImplicit,    ONLY: UseSemiImplicit, UseFullImplicit, &
@@ -75,13 +75,13 @@ contains
     use ModPhysics,     ONLY: Si2No_V, UnitTemperature_, cRadiationNo
     use ModTemperature, ONLY: TradMinSi
 
-    character(len=*), parameter :: NameSub = "init_gray_diffusion"
+    character(len=*), parameter :: NameSub = "init_rad_diffusion"
     !------------------------------------------------------------------------
 
     if(allocated(Erad_G)) RETURN
 
     ! Make sure that Erad_ is correct
-    if(UseGrayDiffusion)then
+    if(UseRadDiffusion)then
        if(NameVar_V(Erad_) /= "Erad") call stop_mpi(NameSub// &
             ": incorrect index for Erad variable in ModEquation")
 
@@ -144,11 +144,11 @@ contains
     allocate(DiffCoef_VFDB(nDiff,1:nI+1,1:nJ+1,1:nK+1,nDim,MaxBlock))
     DiffCoef_VFDB = 0.0 ! make sure all elements are initialized
 
-  end subroutine init_gray_diffusion
+  end subroutine init_rad_diffusion
 
   !============================================================================
 
-  subroutine get_radiation_energy_flux( &
+  subroutine get_rad_energy_flux( &
        iDir, i, j, k, iBlock, State_V, EradFlux_D)
 
     !\
@@ -170,12 +170,12 @@ contains
     real :: FaceGrad_D(3), Grad2ByErad2
     !--------------------------------------------------------------------------
 
-    if(IsNewBlockGrayDiffusion) Erad_G = State_VGB(Erad_,:,:,:,iBlock)
+    if(IsNewBlockRadDiffusion) Erad_G = State_VGB(Erad_,:,:,:,iBlock)
 
     call get_face_gradient(iDir, i, j, k, iBlock, &
-         IsNewBlockGrayDiffusion, Erad_G, FaceGrad_D)
+         IsNewBlockRadDiffusion, Erad_G, FaceGrad_D)
 
-    if(IsNewTimestepGrayDiffusion)then
+    if(IsNewTimestepRadDiffusion)then
 
        call user_material_properties(State_V, i, j, k, iBlock, iDir, &
             DiffusionOpacitySiOut = DiffusionOpacitySi)
@@ -204,11 +204,11 @@ contains
 
     EradFlux_D = -DiffRad*FaceGrad_D
 
-  end subroutine get_radiation_energy_flux
+  end subroutine get_rad_energy_flux
 
   !============================================================================
 
-  subroutine calc_source_gray_diffusion(iBlock)
+  subroutine calc_source_rad_diffusion(iBlock)
 
     use ModAdvance,    ONLY: State_VGB, Source_VC, &
          uDotArea_XI, uDotArea_YI, uDotArea_ZI, Erad_
@@ -216,7 +216,7 @@ contains
     use ModGeometry,   ONLY: vInv_CB, y_BLK, TypeGeometry
     use ModImplicit,   ONLY: UseFullImplicit
     use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_, UnitT_
-    use ModMain,       ONLY: nI, nJ, nK, UseGrayDiffusion
+    use ModMain,       ONLY: nI, nJ, nK, UseRadDiffusion
     use ModUser,       ONLY: user_material_properties
     use ModVarIndexes, ONLY: Energy_, RhoUy_
 
@@ -225,7 +225,7 @@ contains
     integer :: i, j, k
     real :: TeSi, Te, DivU
     real :: RadCompression, AbsorptionEmission, PlanckOpacitySi
-    character(len=*), parameter:: NameSub = "calc_source_gray_diffusion"
+    character(len=*), parameter:: NameSub = "calc_source_rad_diffusion"
     !------------------------------------------------------------------------
 
     do k=1,nK; do j=1,nJ; do i=1,nI
@@ -248,7 +248,7 @@ contains
 
        if(.not.UseFullImplicit) CYCLE
 
-       if(IsNewTimestepGrayDiffusion)then
+       if(IsNewTimestepRadDiffusion)then
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, AbsorptionOpacitySiOut = PlanckOpacitySi)
 
@@ -276,7 +276,7 @@ contains
 
     end do; end do; end do
 
-    if(TypeGeometry=='rz' .and. UseGrayDiffusion)then
+    if(TypeGeometry=='rz' .and. UseRadDiffusion)then
        ! Add "geometrical source term" p/r to the radial momentum equation
        ! The "radial" direction is along the Y axis
        ! NOTE: here we have to use signed radial distance!
@@ -287,13 +287,13 @@ contains
        end do; end do; end do
     end if
 
-  end subroutine calc_source_gray_diffusion
+  end subroutine calc_source_rad_diffusion
 
   !============================================================================
   ! Semi-implicit interface
   !============================================================================
 
-  subroutine get_impl_gray_diff_state(StateImpl_VGB,DconsDsemi_VCB)
+  subroutine get_impl_rad_diff_state(StateImpl_VGB,DconsDsemi_VCB)
 
     use ModAdvance,  ONLY: Erad_, State_VGB
     use ModImplicit, ONLY: nw, nImplBlk, impl2iBlk, TypeSemiImplicit, &
@@ -322,13 +322,13 @@ contains
     integer :: iDim, Di, Dj, Dk, iDiff, nDimInUse
     real :: Coeff, Dxyz_D(3)
 
-    character(len=*), parameter:: NameSub='get_impl_gray_diff_state'
+    character(len=*), parameter:: NameSub='get_impl_rad_diff_state'
     !--------------------------------------------------------------------------
 
     do iImplBlock = 1, nImplBLK
 
        iBlock = impl2iBLK(iImplBlock)
-       IsNewBlockGrayDiffusion = .true.
+       IsNewBlockRadDiffusion = .true.
 
        if(TypeSemiImplicit=='radiation' .or. TypeSemiImplicit=='radcond')then
           do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1
@@ -669,11 +669,11 @@ contains
          ! Calculate the cell centered diffusion coefficients
          if(UseRadFluxLimiter)then
 
-            if(IsNewBlockGrayDiffusion)then
+            if(IsNewBlockRadDiffusion)then
                Erad_G = State_VGB(Erad_,:,:,:,iBlock)
                call set_block_field(iBlock, 1, Erad1_G, Erad_G)
 
-               IsNewBlockGrayDiffusion = .false.
+               IsNewBlockRadDiffusion = .false.
             end if
         
             Grad2ByErad2 = &
@@ -716,11 +716,11 @@ contains
 
     end subroutine get_diffusion_coef
 
-  end subroutine get_impl_gray_diff_state
+  end subroutine get_impl_rad_diff_state
 
   !============================================================================
 
-  subroutine set_gray_outflow_bc(iSide, iBlock, iVar, nVar, State_VG)
+  subroutine set_rad_outflow_bc(iSide, iBlock, iVar, nVar, State_VG)
 
     use ModImplicit, ONLY: nw
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB
@@ -734,7 +734,7 @@ contains
     integer :: i, j, k, iDiff
     real :: Coef, OpacitySi
     logical :: IsFullState
-    character(len=*), parameter :: NameSub='set_gray_outflow_bc'
+    character(len=*), parameter :: NameSub='set_rad_outflow_bc'
     !--------------------------------------------------------------------------
     IsFullState = nVar > nw
     
@@ -851,11 +851,11 @@ contains
        end do; end do
     end select
 
-  end subroutine set_gray_outflow_bc
+  end subroutine set_rad_outflow_bc
 
   !============================================================================
 
-  subroutine get_gray_diffusion_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
+  subroutine get_rad_diffusion_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
 
     use ModGeometry, ONLY: TypeGeometry, vInv_CB
     use ModImplicit, ONLY: nw, iTeImpl
@@ -869,7 +869,7 @@ contains
 
     real :: Te, EnergyExchange
     integer :: i, j, k, iDiff, iRelax, iVar
-    character(len=*), parameter :: NameSub='get_gray_diffusion_rhs'
+    character(len=*), parameter :: NameSub='get_rad_diffusion_rhs'
     !--------------------------------------------------------------------------
 
     if(NeiLev(1,iBlock)==1) call correct_left_ghostcell(1,0,0,1,nJ,1,nK)
@@ -1027,11 +1027,11 @@ contains
 
     end subroutine correct_right_ghostcell
 
-  end subroutine get_gray_diffusion_rhs
+  end subroutine get_rad_diffusion_rhs
 
   !============================================================================
 
-  subroutine add_jacobian_gray_diff(iBlock, nVar, Jacobian_VVCI)
+  subroutine add_jacobian_rad_diff(iBlock, nVar, Jacobian_VVCI)
 
     use ModGeometry, ONLY: vInv_CB, dx_BLK, dy_BLK, dz_BLK, &
          fAx_BLK, fAy_BLK, fAz_BLK
@@ -1114,11 +1114,11 @@ contains
        end do; end do; end do
     end do
 
-  end subroutine add_jacobian_gray_diff
+  end subroutine add_jacobian_rad_diff
 
   !============================================================================
 
-  subroutine update_impl_gray_diff(iBlock, iImplBlock, StateImpl_VG)
+  subroutine update_impl_rad_diff(iBlock, iImplBlock, StateImpl_VG)
 
     use ModAdvance,  ONLY: State_VGB, Rho_, p_, Erad_, ExtraEint_
     use ModEnergy,   ONLY: calc_energy_cell
@@ -1135,7 +1135,7 @@ contains
     integer :: i, j, k
     real :: Einternal, EinternalSi, PressureSi, AbsorptionEmission
 
-    character(len=*), parameter :: NameSub = 'update_impl_gray_diff'
+    character(len=*), parameter :: NameSub = 'update_impl_rad_diff'
     !--------------------------------------------------------------------------
 
     if(TypeSemiImplicit=='radiation' .or. TypeSemiImplicit=='radcond')then
@@ -1202,6 +1202,6 @@ contains
 
     call calc_energy_cell(iBlock)
 
-  end subroutine update_impl_gray_diff
+  end subroutine update_impl_rad_diff
 
-end module ModGrayDiffusion
+end module ModMultiGroupDiffusion
