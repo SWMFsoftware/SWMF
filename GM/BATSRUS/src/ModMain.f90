@@ -186,8 +186,10 @@ Module ModMain
   logical:: UseHeatFlux=.false.
   logical:: UseSpitzerForm=.false.
 
-  ! Logicals for adding Gray Diffusion and heat conduction
+  ! Logicals for adding gray diffusion, multigroup radiation diffusion,
+  ! and heat conduction
   logical :: UseGrayDiffusion = .false.
+  logical :: UseRadDiffusion = .false.
   logical :: UseHeatConduction = .false.
   logical :: UseParallelConduction = .false.
 
