@@ -69,7 +69,6 @@ contains
     use ModAdvance,     ONLY: Erad_
     use ModMain,        ONLY: UseGrayDiffusion
     use ModSize,        ONLY: nI, nJ, nK, MaxBlock, nDim
-    use ModVarIndexes,  ONLY: NameVar_V
     use ModImplicit,    ONLY: UseSemiImplicit, UseFullImplicit, &
          TypeSemiImplicit, iEradImpl, iTeImpl
     use ModPhysics,     ONLY: Si2No_V, UnitTemperature_, cRadiationNo
@@ -82,7 +81,7 @@ contains
 
     ! Make sure that Erad_ is correct
     if(UseGrayDiffusion)then
-       if(NameVar_V(Erad_) /= "Erad") call stop_mpi(NameSub// &
+       if(Erad_ == 1) call stop_mpi(NameSub// &
             ": incorrect index for Erad variable in ModEquation")
 
        EradMin = cRadiationNo*(TradMinSi*Si2No_V(UnitTemperature_))**4
@@ -1085,11 +1084,11 @@ contains
     ! are not calculated by the general algorithm, these are for the diffusion
     ! operators the same as the semi-implicit jacobian.
 
+    Coeff = 1.0
     Dxyz_D = (/dx_BLK(iBlock), dy_BLK(iBlock), dz_Blk(iBlock)/)
     Area_D = (/fAx_BLK(iBlock), fAy_BLK(iBlock), fAz_BLK(iBlock)/)
     do iDim = 1, nDim
        if(UseFullImplicit) Coeff = -Area_D(iDim)/Dxyz_D(iDim)
-       if(UseSemiImplicit) Coeff = 1.0
        Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
        do k=1,nK; do j=1,nJ; do i=1,nI
           do iDiff = 1, nDiff

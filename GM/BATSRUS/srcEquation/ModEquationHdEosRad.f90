@@ -1,31 +1,41 @@
 module ModVarIndexes
   use ModSingleFluid, Redefine1 => IsMhd, Redefine2 => Erad_, &
-       Redefine3 => ExtraEint_
+       Redefine3 => WaveFirst_, Redefine4 => WaveLast_, &
+       Redefine5 => ExtraEint_
   implicit none
 
   save
 
   ! This equation module contains the standard HD equations with
-  ! an additional radiation energy variable.
+  ! additional single-/multi-group radiation energy.
   character (len=*), parameter :: NameEquation='radiation HD'
 
   logical, parameter :: IsMhd     = .false.
 
-  integer, parameter :: nVar = 7
+  ! loop variable for implied do-loop over spectrum
+  integer :: iWave
+
+  ! Number of frequency bins in spectrum
+  integer, parameter :: nWave = 1
+  integer, parameter :: nVar = 6 + nWave
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+1.
   ! The energy is handled as an extra variable, so that we can use
   ! both conservative and non-conservative scheme and switch between them.
   integer, parameter :: &
-       Rho_       = 1,          &
-       RhoUx_     = 2, Ux_ = 2, &
-       RhoUy_     = 3, Uy_ = 3, &
-       RhoUz_     = 4, Uz_ = 4, &
-       Erad_      = 5,          & 
-       ExtraEint_ = 6,          &
-       p_         = nVar,       &
+       Rho_       = 1,                  &
+       RhoUx_     = 2, Ux_ = 2,         &
+       RhoUy_     = 3, Uy_ = 3,         &
+       RhoUz_     = 4, Uz_ = 4,         &
+       WaveFirst_ = 5,                  &
+       WaveLast_  = WaveFirst_+nWave-1, & 
+       ExtraEint_ = WaveLast_+1,        &
+       p_         = nVar,               &
        Energy_    = nVar+1
+
+  ! This is for backward compatibility with single group radiation
+  integer, parameter :: Erad_ = WaveFirst_
 
   ! This allows to calculate RhoUx_ as RhoU_+x_ and so on.
   integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1
@@ -45,7 +55,7 @@ module ModVarIndexes
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
        0.0, & ! RhoUz_
-       0.0, & ! Erad_
+       (0.0, iWave=WaveFirst_,WaveLast_), &
        0.0, & ! ExtraEint_
        1.0, & ! p_
        1.0 /) ! Energy_
@@ -56,22 +66,22 @@ module ModVarIndexes
        'Mx   ', & ! RhoUx_
        'My   ', & ! RhoUy_
        'Mz   ', & ! RhoUz_
-       'Erad ', & ! Erad_
+       ('Ew   ', iWave=WaveFirst_,WaveLast_), &
        'EInt ', & ! ExtraEint_
        'P    ', & ! p_
        'E    '/)  ! Energy_
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
-       'Rho Mx My Mz Erad EInt E'
+       'Rho Mx My Mz Ew EInt E'
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
-       'Rho Ux Uy Uz Erad EInt P'
+       'Rho Ux Uy Uz Ew EInt P'
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"`r", "U_x", "U_y", "U_z", "Erad", "EInt", "p"'
+       '"`r", "U_x", "U_y", "U_z", "Ew", "EInt", "p"'
 
   ! Names of the user units for IDL and TECPlot output
   character(len=20) :: &
@@ -85,7 +95,7 @@ module ModVarIndexes
   integer, parameter :: Bx_ = Ux_, By_ = Uy_, Bz_ = Uz_, B_ = U_
 
   ! The only scalar to be advected is the radiation energy density
-  integer, parameter :: ScalarFirst_ = Erad_, ScalarLast_ = ExtraEint_
+  integer, parameter :: ScalarFirst_ = WaveFirst_, ScalarLast_ = ExtraEint_
 
   ! There are no multi-species
   logical, parameter :: UseMultiSpecies = .false.
@@ -101,9 +111,9 @@ contains
     call init_mhd_variables
 
     ! Set the unit and unit name for the wave energy variable
-    UnitUser_V(Erad_)        = UnitUser_V(Energy_)
-    NameUnitUserTec_V(Erad_) = NameUnitUserTec_V(Energy_)
-    NameUnitUserIdl_V(Erad_) = NameUnitUserIdl_V(Energy_)
+    UnitUser_V(WaveFirst_:WaveLast_)        = UnitUser_V(Energy_)
+    NameUnitUserTec_V(WaveFirst_:WaveLast_) = NameUnitUserTec_V(Energy_)
+    NameUnitUserIdl_V(WaveFirst_:WaveLast_) = NameUnitUserIdl_V(Energy_)
     UnitUser_V(ExtraEint_)        = UnitUser_V(Energy_)
     NameUnitUserTec_V(ExtraEint_) = NameUnitUserTec_V(Energy_)
     NameUnitUserIdl_V(ExtraEint_) = NameUnitUserIdl_V(Energy_)

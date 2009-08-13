@@ -35,12 +35,16 @@ my $EquationMod = "$Src/ModEquation.f90";
 my $EquationModSafe = "$Src/ModEquation.f90.safe";
 my $Equation;
 my $UserModule;
+my $Setvar;
 
 # Grid size variables
 my $NameGridFile = "$Src/ModSize.f90";
 my $GridSize;
 my ($nI, $nJ, $nK, $MaxBlock);
 my $MaxImplBlock;
+
+# additional variable information
+my $nWave;
 
 # For SC/BATSRUS and IH/BATSRUS src/ is created during configuration of SWMF
 if(not -d $Src){exit 0};
@@ -54,8 +58,9 @@ foreach (@Arguments){
     if(/^-e=(.*)$/)           {$Equation=$1;                   next};
     if(/^-u=(.*)$/)           {$UserModule=$1;                 next};
     if(/^-s$/)                {$Show=1;                        next};
-    if(/^-dynamic$/)          {`cd $Src; make DYNAMIC`;         next};
-    if(/^-static$/)           {`cd $Src; make STATIC`;          next};
+    if(/^-dynamic$/)          {`cd $Src; make DYNAMIC`;        next};
+    if(/^-static$/)           {`cd $Src; make STATIC`;         next};
+    if(/^-setvar=(.*)$/)      {$Setvar=$1;                     next};
 
     warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
@@ -69,6 +74,9 @@ print "Config.pl -g=$nI,$nJ,$nK,$MaxBlock",
 
 # Set or list the equations
 &set_equation if $Equation;
+
+# Set additional variable information
+&set_var if $Setvar;
 
 # Set or list the user modules
 &set_user_module if $UserModule;
@@ -109,6 +117,15 @@ sub get_settings{
 
     $GridSize = "$nI,$nJ,$nK,$MaxBlock";
     $GridSize .= ",$MaxImplBlock";                            #^CFG IF IMPLICIT
+
+    # Read number of wave bins from $EquationMod
+    open(MODEQUATION,$EquationMod)
+	or die "$ERROR could not open $EquationMod\n";
+    while(<MODEQUATION>){
+	next if /^\s*!/; # skip commented out lines
+        $nWave=$1        if /\bnWave\s*=\s*(\d+)/i;
+    }
+    close MODEQUATION;
 }
 
 #############################################################################
@@ -187,6 +204,42 @@ sub set_equation{
     `cp $EquationMod $EquationModSafe` if -f $EquationMod; # save previous eq.
     print "cp $File $EquationMod\n" if $Verbose;
     `cp $File $EquationMod`;
+}
+
+##############################################################################
+
+sub set_var{
+
+    # Create a %Setvars hash from the Setvar string
+    my %Setvars;
+    my @Setvars = split( /,/, $Setvar);
+
+    my $i;
+    for ($i=0; $i<=$#Setvars; ++$i){
+	my %OneSetvar;
+	my @OneSetvar = split( /=/, $Setvars[$i]);
+
+        my $Var = $OneSetvar[0];
+        my $Value = $OneSetvar[1];
+
+	if($Var eq "nWave"){
+	    $nWave = $Value;
+            # Check the number of wave bins (to be set)
+	    die "$ERROR nWave=$nWave must be 1 or more\n" if $nWave < 1;
+	}else{
+	    die "$ERROR unkown variable $Var in setvar\n";
+	}
+
+	print "Writing new $Var = $Value into $EquationMod...\n";
+
+	@ARGV = ($EquationMod);
+
+	while(<>){
+	    if(/^\s*!/){print; next} # Skip commented out lines
+	    s/\b($Var\s*=[^0-9]*)(\d+)/$1$Value/i;
+	    print;
+	}
+    }
 }
 
 #############################################################################
