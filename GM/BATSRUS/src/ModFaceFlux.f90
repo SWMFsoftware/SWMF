@@ -3,7 +3,8 @@ module ModFaceFlux
   use ModProcMH,     ONLY: iProc
   use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK, UseB, UseB0, cLimit, &
        iTest, jTest, kTest, ProcTest, BlkTest, DimTest
-  use ModMain,       ONLY: UseGrayDiffusion, UseParallelConduction
+  use ModMain,       ONLY: UseGrayDiffusion, UseRadDiffusion, &
+       UseParallelConduction
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
   use ModVarIndexes, ONLY: nVar, NameVar_V, UseMultiSpecies, nFluid
@@ -38,6 +39,7 @@ module ModFaceFlux
 
   use ModGrayDiffusion, ONLY: IsNewBlockGrayDiffusion, &   !^CFG IF IMPLICIT
        get_radiation_energy_flux                           !^CFG IF IMPLICIT
+  use ModMultiGroupDiffusion, ONLY: IsNewBlockRadDiffusion, get_rad_energy_flux                           !^CFG IF IMPLICIT
   use ModHeatConduction, ONLY: IsNewBlockHeatConduction, & !^CFG IF IMPLICIT
        get_heat_flux                                       !^CFG IF IMPLICIT
   use ModTemperature, ONLY: UseTemperatureDiffusion
@@ -363,6 +365,7 @@ contains
     IsNewBlockHall   = .true.
     IsNewBlockGradPe = .true.
     IsNewBlockGrayDiffusion = .true.     !^CFG IF IMPLICIT
+    IsNewBlockRadDiffusion = .true.      !^CFG IF IMPLICIT
     IsNewBlockHeatConduction = .true.    !^CFG IF IMPLICIT
 
     if(UseResistivity) call set_resistivity(iBlock)      !^CFG IF DISSFLUX
