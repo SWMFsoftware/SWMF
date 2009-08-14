@@ -338,21 +338,39 @@ contains
          6 ,     9 ,    4 ,    9 ,    6 ,    1 ,    2 ,    1 ,    2 ,    1     ,&  ! 9 - F
          1 ,     6 ,    9 ,    4 ,    9 ,    6 ,    1 ,    2 ,    1 ,    2   /),&  !10 - Ne
                                                                                   (/10,10/))
+
+    ! Degeneracies of ground states for positive ions of aluminium
+    integer, parameter, dimension(13) :: cDegeneracyAl_I = (/ &
+         6, 1, 2, 1, 6, 9, 4, 9, 6, 1, 2, 1, 2 /)
+
+    ! Degeneracies of ground states for positive ions of xenon
+    ! Electron configurations used are confirmed in E.B.Saloman,
+    ! Energy Levels and Observed Spectral Lines of Xenon, Xe I through Xe LIV
+    integer, parameter, dimension(54) :: cDegeneracyXe_I = (/ &
+         1, 6, 9, 4, 9, 6, 1, 2, 1, 10, 21, 28, 25, 6, 25, 28, 21, 10, 1, 6, &
+         9, 4, 9, 6, 1, 2, 1, 10, 21, 28, 25, 6, 25, 28, 21, 10, 1, 6, 9, 4, &
+         9, 6, 1, 2, 1, 6, 9, 4, 9, 6, 1, 2, 1, 2 /)
     !--------------
     Degeneracy_III = 0
 
     do iZ = 0, nZ-1
        nGround = n_ground(iZ, nZ)
 
-       do iN = nGround, nExcitation
-          do iL = 0, iN-1
-             if (iN == nGround .and. nZ <= 10) then
-                if (iL == 0)&
-                     Degeneracy_III(iZ,iN,iL) = cDegeneracy10_II(iZ+1,nZ)
-             else
-                Degeneracy_III(iZ,iN,iL) = 2 * (2*iL + 1)
+       select case (nZ)
+          case (1:10)
+             Degeneracy_III(iZ,nGround,0) = cDegeneracy10_II(iZ+1,nZ)
+          case (13)
+             Degeneracy_III(iZ,nGround,0) = cDegeneracyAl_I(iZ+1)
+          case (54)
+             Degeneracy_III(iZ,nGround,0) = cDegeneracyXe_I(iZ+1)
+          case default
+             write(*,*) "No such element found in the database"//&
+                  " of ground state degeneracies"
+       end select
 
-             end if
+       do iN = nGround+1, nExcitation
+          do iL = 0, iN-1
+             Degeneracy_III(iZ,iN,iL) = 2 * (2*iL + 1)
           end do
        end do
     end do
