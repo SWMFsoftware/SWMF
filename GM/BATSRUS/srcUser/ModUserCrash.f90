@@ -96,6 +96,10 @@ module ModUser
   real :: RosselandOpacity(0:nMaterial-1) = 1.0
   real :: PlanckOpacity(0:nMaterial-1) = 10.0
 
+  ! Opacity multiplier for sensitivity studies on opacities
+  real :: RosselandMultiplier_I(0:nMaterial-1) = 1.0
+  real :: PlanckMultiplier_I(0:nMaterial-1) = 1.0
+
   ! Indexes for lookup tables
   integer:: iTablePPerE = -1, iTableEPerP = -1, iTableThermo = -1
   integer, parameter:: Cv_=1, Gamma_=2, Cond_=3, Te_=4, nThermo=4
@@ -178,6 +182,13 @@ contains
           case default
              call stop_mpi(NameSub//"Wrong TypeOpacity ="//trim(TypeOpacity))
           end select
+       case("#OPACITYMULTIPLIER")
+          call read_var('PlanckMultiplierXe', PlanckMultiplier_I(0))
+          call read_var('PlanckMultiplierBe', PlanckMultiplier_I(1))
+          call read_var('PlanckMultiplierPl', PlanckMultiplier_I(2))
+          call read_var('RosselandMultiplierXe', RosselandMultiplier_I(0))
+          call read_var('RosselandMultiplierBe', RosselandMultiplier_I(1))
+          call read_var('RosselandMultiplierPl', RosselandMultiplier_I(2))
        case("#THREEDIM")
           call read_var('IsThreeDim', IsThreeDim)
        case("#NOZZLE")
@@ -1459,6 +1470,10 @@ contains
        if(iTableOpacity > 0)then
           call interpolate_lookup_table(iTableOpacity, RhoSi, TeSi, &
                Opacity_V, DoExtrapolate = .false.)
+          Opacity_V(1:2*nMaterial:2) = Opacity_V(1:2*nMaterial:2) &
+               *PlanckMultiplier_I
+          Opacity_V(2:2*nMaterial:2) = Opacity_V(2:2*nMaterial:2) &
+               *RosselandMultiplier_I
           if(UseVolumeFraction)then
              if(present(AbsorptionOpacitySiOut)) AbsorptionOpacitySiOut &
                   = sum(Weight_I*Opacity_V(1:2*nMaterial:2)) * RhoSi
