@@ -109,6 +109,7 @@ contains
 
   subroutine user_init_session
 
+    use ModAdvance,     ONLY: WaveFirst_, WaveLast_
     use ModIO,          ONLY: write_prefix, iUnitOut
     use ModMagnetogram, ONLY: read_magnetogram_file
     use ModMultiFluid,  ONLY: MassIon_I
@@ -116,6 +117,7 @@ contains
          ElectronTemperatureRatio, AverageIonCharge
     use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: i_line_command
+    use ModWaves
 
     !--------------------------------------------------------------------------
     if(iProc == 0)then
@@ -143,6 +145,16 @@ contains
     end if
     BcAlfvenWavePressure = BcAlfvenWavePressureCgs*0.1*Si2No_V(UnitP_)
 
+    UseAlfvenSpeed = .true.
+    AlfvenSpeedPlusFirst_ = WaveFirst_
+    AlfvenSpeedPlusLast_  = WaveFirst_
+    AlfvenSpeedMinusFirst_ = WaveLast_
+    AlfvenSpeedMinusLast_  = WaveLast_
+
+    UseWavePressure = .true.
+    WavePressureFirst_ = WaveFirst_
+    WavePressureLast_  = WaveLast_
+
     TeFraction = MassIon_I(1)*ElectronTemperatureRatio &
          /(1 + AverageIonCharge*ElectronTemperatureRatio)
 
@@ -158,7 +170,7 @@ contains
 
   subroutine user_face_bcs(VarsGhostFace_V)
 
-    use ModAdvance,     ONLY: State_VGB, pAlfven1_, pAlfven2_
+    use ModAdvance,     ONLY: State_VGB, WaveFirst_, WaveLast_
     use ModFaceBc,      ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D
     use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame
     use ModNumConst,    ONLY: cTolerance
@@ -187,11 +199,11 @@ contains
     FullBr = dot_product(Runit_D, FullB_D)
 
     if(FullBr > 0.0)then
-       VarsGhostFace_V(pAlfven1_) = BcAlfvenWavePressure
-       VarsGhostFace_V(pAlfven2_) = VarsTrueFace_V(pAlfven2_)
+       VarsGhostFace_V(WaveFirst_) = 2.0*BcAlfvenWavePressure
+       VarsGhostFace_V(WaveLast_) = VarsTrueFace_V(WaveLast_)
     else
-       VarsGhostFace_V(pAlfven1_) = VarsTrueFace_V(pAlfven1_)
-       VarsGhostFace_V(pAlfven2_) = BcAlfvenWavePressure
+       VarsGhostFace_V(WaveFirst_) = VarsTrueFace_V(WaveFirst_)
+       VarsGhostFace_V(WaveLast_) = 2.0*BcAlfvenWavePressure
     end if
 
     Density = BodyRho_I(1)
@@ -219,7 +231,7 @@ contains
 
   subroutine user_set_ics
 
-    use ModAdvance,    ONLY: State_VGB, pAlfven1_, pAlfven2_
+    use ModAdvance,    ONLY: State_VGB, WaveFirst_, WaveLast_
     use ModGeometry,   ONLY: x_Blk, y_Blk, z_Blk, r_Blk, true_cell
     use ModMain,       ONLY: nI, nJ, nK, globalBLK
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
@@ -308,7 +320,7 @@ contains
        State_VGB(RhoUy_,i,j,k,iBlock) = Rho*Ur*y/r *Usound
        State_VGB(RhoUz_,i,j,k,iBlock) = Rho*Ur*z/r *Usound
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
-       State_VGB(pAlfven1_:pAlfven2_,i,j,k,iBlock) = 0.0
+       State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = 0.0
        if(true_cell(i,j,k,iBlock))then
           State_VGB(p_,i,j,k,iBlock) = Rho*T0
        else
