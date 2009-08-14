@@ -178,7 +178,7 @@ module CRASH_ModExcitationData
 
   !Ionization potential = 5.98577, nGround = 3
   !          S     |      P     |      D     |      F     |      G     |
-  real, parameter, dimension(20) :: cExcitationAl0_II = (/&
+  real, parameter, dimension(20) :: cExcitationAl0_I = (/&
                0.0,         0.0,         0.0,         0.0,         0.0,&  !n = 2
                0.0,     3.59807,     4.02148,         0.0,         0.0,&  !n = 3
            3.14272,     4.08525,     4.82663,     5.12295,         0.0,&  !n = 4
@@ -186,7 +186,7 @@ module CRASH_ModExcitationData
        /)
 
   !Ionization potential = 18.82856, nGround = 3
-  real, parameter, dimension(20) :: cExcitationAl1_II = (/&
+  real, parameter, dimension(20) :: cExcitationAl1_I = (/&
                0.0,         0.0,         0.0,         0.0,         0.0,&  !n = 2
                0.0,     4.63614,    11.84662,         0.0,         0.0,&  !n = 3
           11.31659,    13.07135,    15.06203,    15.30194,         0.0,&  !n = 4
@@ -194,7 +194,7 @@ module CRASH_ModExcitationData
        /)
 
   !Ionization potential = 28.448, nGround = 3
-  real, parameter, dimension(20) :: cExcitationAl2_II = (/&
+  real, parameter, dimension(20) :: cExcitationAl2_I = (/&
                0.0,         0.0,         0.0,         0.0,         0.0,&  !n = 2
          71.757087,    6.552254,   14.149199,         0.0,         0.0,&  !n = 3
          15.64235 ,   17.80827 ,   20.55488 ,   20.78133 ,         0.0,&  !n = 4
@@ -202,7 +202,7 @@ module CRASH_ModExcitationData
        /)
 
   !Ionization potential = 119.99, nGround = 2
-  real, parameter, dimension(20) :: cExcitationAl3_II = (/&
+  real, parameter, dimension(20) :: cExcitationAl3_I = (/&
                0.0,         0.0,         0.0,         0.0,         0.0,&  !n = 2
          75.475869,   83.27181 ,   92.820265,         0.0,         0.0,&  !n = 3
          99.42072 ,  101.84171 ,  105.60007 ,  106.30523 ,         0.0,&  !n = 4
@@ -210,7 +210,7 @@ module CRASH_ModExcitationData
        /)
 
   !Ionization potential = 153.83, nGround = 2
-  real, parameter, dimension(20) :: cExcitationAl4_II = (/&
+  real, parameter, dimension(20) :: cExcitationAl4_I = (/&
                0.0,    0.422492,         0.0,         0.0,         0.0,&  !n = 2
          91.969981,  100.240842,  111.727853,         0.0,         0.0,&  !n = 3
         124.119328,         0.0,  131.734437,  132.418830,         0.0,&  !n = 4
@@ -218,7 +218,7 @@ module CRASH_ModExcitationData
        /)
 
   !Ionization potential = 190.49, nGround = 2
-  real, parameter, dimension(20) :: cExcitationAl5_II = (/&
+  real, parameter, dimension(20) :: cExcitationAl5_I = (/&
                0.0,    0.319992,         0.0,         0.0,         0.0,&  !n = 2
         109.492418,  118.861779,  130.740084,         0.0,         0.0,&  !n = 3
         151.048694,         0.0,  159.066751,         0.0,         0.0,&  !n = 4
@@ -226,7 +226,7 @@ module CRASH_ModExcitationData
        /)
 
   !Ionization potential = 241.76, nGround = 2
-  real, parameter, dimension(20) :: cExcitationAl6_II = (/&
+  real, parameter, dimension(20) :: cExcitationAl6_I = (/&
                0.0,   34.74037 ,         0.0,         0.0,         0.0,&  !n = 2
         142.23466 ,         0.0,  163.31445 ,         0.0,         0.0,&  !n = 3
                0.0,         0.0,         0.0,         0.0,         0.0,&  !n = 4
@@ -234,7 +234,7 @@ module CRASH_ModExcitationData
        /)
 
   !Ionization potential = 284.66, nGround = 2
-  real, parameter, dimension(20) :: cExcitationAl7_II = (/&
+  real, parameter, dimension(20) :: cExcitationAl7_I = (/&
                0.0,   16.55313 ,         0.0,         0.0,         0.0,&  !n = 2
         163.57730 ,  173.84567 ,  182.09557 ,         0.0,         0.0,&  !n = 3
                0.0,         0.0,         0.0,         0.0,         0.0,&  !n = 4
@@ -242,7 +242,7 @@ module CRASH_ModExcitationData
        /)
 
   !Ionization potential = 330.1, nGround = 2
-  real, parameter, dimension(20) :: cExcitationAl8_II = (/&
+  real, parameter, dimension(20) :: cExcitationAl8_I = (/&
                0.0,    0.606283,         0.0,         0.0,         0.0,&  !n = 2
         186.102742,  194.920498,  203.599391,         0.0,         0.0,&  !n = 3
         253.411277,  256.195962,  259.625365,         0.0,         0.0,&  !n = 4
@@ -250,7 +250,7 @@ module CRASH_ModExcitationData
        /)
 
   !Ionization potential = 398.8, nGround = 2
-  real, parameter, dimension(20) :: cExcitationAl9_II = (/&
+  real, parameter, dimension(20) :: cExcitationAl9_I = (/&
                0.0,   19.239742,         0.0,         0.0,         0.0,&  !n = 2
         230.011742,  238.659639,  243.827300,         0.0,         0.0,&  !n = 3
         306.910453,  310.267945,  312.126468,  313.49897 ,         0.0,&  !n = 4
@@ -258,7 +258,7 @@ module CRASH_ModExcitationData
        /)
 
   !Ionization potential = 442.0, nGround = 2
-  real, parameter, dimension(20) :: cExcitationAl10_II = (/&
+  real, parameter, dimension(20) :: cExcitationAl10_I = (/&
                0.0,   21.821713,         0.0,         0.0,         0.0,&  !n = 2
         250.516246,  256.504683,  258.898817,         0.0,         0.0,&  !n = 3
         335.508646,  338.025525,  339.022357,  339.095508,         0.0,&  !n = 4
@@ -266,7 +266,7 @@ module CRASH_ModExcitationData
        /)
 
   !Ionization potential = 2086., nGround = 1
-  real, parameter, dimension(20) :: cExcitationAl11_II = (/&
+  real, parameter, dimension(20) :: cExcitationAl11_I = (/&
        1575.033103, 1588.175427,         0.0,         0.0,         0.0,&  !n = 2
        1862.304461, 1865.813214, 1868.044929,         0.0,         0.0,&  !n = 3
        1961.045467, 1962.458887, 1963.401166, 1964.393040,         0.0,&  !n = 4
@@ -274,7 +274,7 @@ module CRASH_ModExcitationData
        /)
 
   !Ionization potential = 2304., nGround = 1
-  real, parameter, dimension(20) :: cExcitationAl12_II = (/&
+  real, parameter, dimension(20) :: cExcitationAl12_I = (/&
        1727.735746, 1727.684912,         0.0,         0.0,         0.0,&  !n = 2
        2048.097243, 2048.082365, 2048.467956,         0.0,         0.0,&  !n = 3
        2160.175228, 2160.167789, 2160.331448, 2160.384761,         0.0,&  !n = 4
@@ -282,11 +282,11 @@ module CRASH_ModExcitationData
        /)
 
   real, parameter, dimension(0:4, 2:5, 0:12) :: cExcitationAl_III = reshape((/&
-       cExcitationAl0_II, cExcitationAl1_II,  cExcitationAl2_II,&
-       cExcitationAl3_II, cExcitationAl4_II,  cExcitationAl5_II,&
-       cExcitationAl6_II, cExcitationAl7_II,  cExcitationAl8_II,&
-       cExcitationAl9_II, cExcitationAl10_II, cExcitationAl11_II,&
-       cExcitationAl12_II &
+       cExcitationAl0_I,  cExcitationAl1_I,  cExcitationAl2_I,&
+       cExcitationAl3_I,  cExcitationAl4_I,  cExcitationAl5_I,&
+       cExcitationAl6_I,  cExcitationAl7_I,  cExcitationAl8_I,&
+       cExcitationAl9_I, cExcitationAl10_I, cExcitationAl11_I,&
+       cExcitationAl12_I &
        /), (/5, 4, 13/))
 
   ! Xe, nZ = 54
