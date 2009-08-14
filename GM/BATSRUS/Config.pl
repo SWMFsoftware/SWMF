@@ -118,14 +118,6 @@ sub get_settings{
     $GridSize = "$nI,$nJ,$nK,$MaxBlock";
     $GridSize .= ",$MaxImplBlock";                            #^CFG IF IMPLICIT
 
-    # Read number of wave bins from $EquationMod
-    open(MODEQUATION,$EquationMod)
-	or die "$ERROR could not open $EquationMod\n";
-    while(<MODEQUATION>){
-	next if /^\s*!/; # skip commented out lines
-        $nWave=$1        if /\bnWave\s*=\s*(\d+)/i;
-    }
-    close MODEQUATION;
 }
 
 #############################################################################
