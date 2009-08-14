@@ -366,7 +366,7 @@ contains
   !for quantum states defined by n, l of atoms or ions of a particular element defined
   !by their charge state
   subroutine get_excitation_energy(nExcitation, nZ, ExcitationEnergy_III)
-
+    use ModConst, ONLY: cRyToEV
     integer :: nExcitation
     integer :: nZ
     real,dimension(0:nExcitation-1,nExcitation,0:nZ-1),intent(out) :: ExcitationEnergy_III
@@ -382,8 +382,8 @@ contains
        nGround = n_ground(iZ, nZ)
 
        do iN = nGround+1, nExcitation
-          ExcitationEnergy_III(0:iN-1,iN,iZ) = IonizPotential_I(iZ+1) * &
-               (1.0 - (real(nGround) / iN)**2.0)
+          ExcitationEnergy_III(0:iN-1,iN,iZ) = IonizPotential_I(iZ+1) - &
+               cRyToEV * (real(iZ+1)/iN)**2
        end do
 
     end do
