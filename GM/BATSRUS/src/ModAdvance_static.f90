@@ -23,7 +23,6 @@ Module ModAdvance
   ! The default values of these named indices are in ModExtraVariables.
   logical, parameter:: UseElectronPressure = Pe_ > 1
   logical, parameter:: UseParallelPressure = Ppar_ > 1
-  logical, parameter:: UseAlfvenWavePressure = pAlfven1_ > 1
   logical, parameter:: UseIdealEos = ExtraEint_ == 1
   logical, parameter:: UseElectronEnergy = Ee_ > 1
 

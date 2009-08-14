@@ -1961,8 +1961,7 @@ contains
 
       use ModPhysics, ONLY: inv_gm1, inv_c2LIGHT
       use ModVarIndexes
-      use ModAdvance, ONLY: Pe_, UseElectronPressure, &
-           UseAlfvenWavePressure, pAlfven1_, pAlfven2_
+      use ModAdvance, ONLY: Pe_, UseElectronPressure
       use ModWaves
 
       ! Variables for conservative state and flux calculation
@@ -2006,6 +2005,7 @@ contains
          end do
          pTotal = pTotal + (GammaWave-1.0) * WaveEnergy
       end if
+
       ! Normal direction
       Un     = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
 
@@ -2093,26 +2093,13 @@ contains
       if(UseAlfvenSpeed)then
          AlfvenSpeed = FullBn/sqrt(Rho)
 
-         do iVar =AlfvenSpeedPlusFirst_,AlfvenSpeedPlusLast_
-            Flux_V(iVar) = &
-                 Flux_V(iVar) + AlfvenSpeed *  State_V(iVar) !!PLUS
+         do iVar = AlfvenSpeedPlusFirst_, AlfvenSpeedPlusLast_
+            Flux_V(iVar) = Flux_V(iVar) + AlfvenSpeed*State_V(iVar) !!PLUS
          end do
 
-         do iVar = AlfvenSpeedMinusFirst_,AlfvenSpeedMinusLast_
-            Flux_V(iVar) = &
-                 Flux_V(iVar) - AlfvenSpeed *  State_V(iVar) !!MINUS
+         do iVar = AlfvenSpeedMinusFirst_, AlfvenSpeedMinusLast_
+            Flux_V(iVar) = Flux_V(iVar) - AlfvenSpeed*State_V(iVar) !!MINUS
          end do
-      end if
-
-      if(UseAlfvenWavePressure)then
-         Flux_V(pAlfven1_) = (Un + FullBn/sqrt(Rho))*State_V(pAlfven1_)
-         Flux_V(pAlfven2_) = (Un - FullBn/sqrt(Rho))*State_V(pAlfven2_)
-
-         pAlfven = State_V(pAlfven1_) + State_V(pAlfven2_)
-         Flux_V(RhoUx_) = Flux_V(RhoUx_) + pAlfven*NormalX
-         Flux_V(RhoUy_) = Flux_V(RhoUy_) + pAlfven*NormalY
-         Flux_V(RhoUz_) = Flux_V(RhoUz_) + pAlfven*NormalZ
-         Flux_V(Energy_) = Flux_V(Energy_) + Un*pAlfven
       end if
 
       !^CFG IF SIMPLEBORIS BEGIN
@@ -2385,8 +2372,7 @@ contains
       use ModVarIndexes
       use ModPhysics, ONLY: g, Inv_C2Light, ElectronTemperatureRatio
       use ModNumConst, ONLY: cPi
-      use ModAdvance, ONLY: State_VGB, eFluid_, UseElectronPressure, Pe_, &
-           UseAlfvenWavePressure, pAlfven1_, pAlfven2_
+      use ModAdvance, ONLY: State_VGB, eFluid_, UseElectronPressure, Pe_
 
       real :: RhoU_D(3)
       real :: Rho, p, InvRho, Sound2, FullBx, FullBy, FullBz, FullBn
@@ -2423,9 +2409,6 @@ contains
          Sound2 = (g*p+(g-1)*DiffBb)*InvRho
       else
          Sound2 = g*p*InvRho
-      end if
-      if(UseAlfvenWavePressure)then
-         Sound2 = Sound2 + 1.5*InvRho*(State_V(pAlfven2_) + State_V(pAlfven2_))
       end if
       if(UseWavePressure)then
          WaveEnergy = 0.0
