@@ -495,7 +495,7 @@ contains
     integer, parameter:: nStencil = 2*nDim + 1
 
     integer, intent(in) :: iBlock, nVar
-    real, intent(out) :: Jacobian_VVCI(nVar,nVar,nI,nJ,nK,nStencil)
+    real, intent(inout) :: Jacobian_VVCI(nVar,nVar,nI,nJ,nK,nStencil)
 
     integer :: i, j, k, iDim, Di, Dj, Dk
     real :: DiffLeft, DiffRight, Dxyz_D(nDim)
