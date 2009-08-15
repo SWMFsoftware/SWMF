@@ -116,7 +116,7 @@ contains
       real :: CoreMultiplier
       real :: TwoPoweredIMinusNu
       !-----------------------------------
-      
+      InvIPoweredS_II = 0.0
       !Calculate TwoPoweredOneMinusS_I
       TwoPoweredOneMinusS_I(1)=sqrt(2.0)
       

@@ -228,8 +228,8 @@ Contains
                IonizEnergyNeutral_II(iZ-1,iMix) + IonizPotential_II(iZ,iMix)
        end do
     end do
-
-    call set_zero_ionization
+    
+    !call set_zero_ionization
   end subroutine set_mixture
 
   !=========================================================================!
@@ -669,7 +669,7 @@ Contains
          do iMix=1,nMix
             DeltaZ2Av = DeltaZ2Av + Concentration_I(iMix)*&
                  (Z_I(iMix) - zAv) **2
-
+            if(DoZOnly)CYCLE
             DeltaETeInv2Av   = DeltaETeInv2Av + Concentration_I(iMix)*&
                  (ETeInvAv_I(iMix) - EAv)**2
 
