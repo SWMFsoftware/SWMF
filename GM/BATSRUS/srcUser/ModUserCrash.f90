@@ -1053,7 +1053,7 @@ contains
     use ModConst,   ONLY: cKtoKev
     use ModSize,    ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Rho_, p_, LevelXe_, LevelBe_, LevelPl_, &
-         Erad_
+         WaveFirst_, WaveLast_
     use ModPhysics, ONLY: No2Si_V, No2Io_V, UnitRho_, UnitP_, &
          UnitTemperature_, cRadiationNo
     use ModLookupTable, ONLY: interpolate_lookup_table
@@ -1073,8 +1073,8 @@ contains
 
     character (len=*), parameter :: Name='user_set_plot_var'
 
-    real    :: p, Rho, pSi, RhoSi, TeSi
-    integer :: i, j, k, iMaterial, iMaterial_I(1), iLevel
+    real    :: p, Rho, pSi, RhoSi, TeSi, WaveEnergy
+    integer :: i, j, k, iMaterial, iMaterial_I(1), iLevel, iWave
     real    :: Value_V(nMaterial*nThermo) ! Cv,Gamma,Kappa,Te for 3 materials
     !------------------------------------------------------------------------  
     IsFound = .true.
@@ -1094,9 +1094,15 @@ contains
     case('tradkev','trkev')
        ! multiply by sign of Erad for debugging purpose
        NameIdlUnit = 'KeV'
-       PlotVar_G = sign(1.0,State_VGB(Erad_,:,:,:,iBlock)) &
-            *sqrt(sqrt(abs(State_VGB(Erad_,:,:,:,iBlock))/cRadiationNo))&
+       do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+          WaveEnergy = 0.0
+          do iWave = WaveFirst_, WaveLast_
+             WaveEnergy = WaveEnergy + State_VGB(iWave,i,j,k,iBlock)
+          end do
+          PlotVar_G(i,j,k) = sign(1.0,WaveEnergy) &
+            *sqrt(sqrt(abs(WaveEnergy)/cRadiationNo))&
             * No2Si_V(UnitTemperature_) * cKToKev
+       end do; end do; end do
     case('planck')
        do k=-1, nK+1; do j=-1, nJ+1; do i=-1,nI+2
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &

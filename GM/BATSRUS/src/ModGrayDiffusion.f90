@@ -66,13 +66,15 @@ contains
 
   subroutine init_gray_diffusion
 
-    use ModAdvance,     ONLY: Erad_
+    use ModAdvance,     ONLY: Erad_, WaveFirst_, WaveLast_
     use ModMain,        ONLY: UseGrayDiffusion
     use ModSize,        ONLY: nI, nJ, nK, MaxBlock, nDim
     use ModImplicit,    ONLY: UseSemiImplicit, UseFullImplicit, &
          TypeSemiImplicit, iEradImpl, iTeImpl
     use ModPhysics,     ONLY: Si2No_V, UnitTemperature_, cRadiationNo
     use ModTemperature, ONLY: TradMinSi
+    use ModWaves,       ONLY: UseWavePressure, WavePressureFirst_, &
+         WavePressureLast_, GammaWave
 
     character(len=*), parameter :: NameSub = "init_gray_diffusion"
     !------------------------------------------------------------------------
@@ -143,6 +145,12 @@ contains
     allocate(DiffCoef_VFDB(nDiff,1:nI+1,1:nJ+1,1:nK+1,nDim,MaxBlock))
     DiffCoef_VFDB = 0.0 ! make sure all elements are initialized
 
+    ! Setup for wave infrastructure
+    UseWavePressure = .true.
+    WavePressureFirst_ = WaveFirst_
+    WavePressureLast_  = WaveLast_
+    GammaWave = GammaRel
+
   end subroutine init_gray_diffusion
 
   !============================================================================
@@ -209,43 +217,22 @@ contains
 
   subroutine calc_source_gray_diffusion(iBlock)
 
-    use ModAdvance,    ONLY: State_VGB, Source_VC, &
-         uDotArea_XI, uDotArea_YI, uDotArea_ZI, Erad_
+    use ModAdvance,    ONLY: State_VGB, Source_VC, Erad_
     use ModConst,      ONLY: cLightSpeed
-    use ModGeometry,   ONLY: vInv_CB, y_BLK, TypeGeometry
-    use ModImplicit,   ONLY: UseFullImplicit
     use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_, UnitT_
-    use ModMain,       ONLY: nI, nJ, nK, UseGrayDiffusion
+    use ModMain,       ONLY: nI, nJ, nK
     use ModUser,       ONLY: user_material_properties
-    use ModVarIndexes, ONLY: Energy_, RhoUy_
+    use ModVarIndexes, ONLY: Energy_
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    real :: TeSi, Te, DivU
-    real :: RadCompression, AbsorptionEmission, PlanckOpacitySi
+    real :: TeSi, Te
+    real :: AbsorptionEmission, PlanckOpacitySi
     character(len=*), parameter:: NameSub = "calc_source_gray_diffusion"
     !------------------------------------------------------------------------
 
     do k=1,nK; do j=1,nJ; do i=1,nI
-
-       DivU = vInv_CB(i,j,k,iBlock)* &
-            ( uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
-            + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
-            + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1) )
-
-       ! Adiabatic compression of radiation energy by fluid velocity (fluid 1)
-       ! (GammaRel-1)*Erad*Div(U)
-       RadCompression = (GammaRel-1.0)*State_VGB(Erad_,i,j,k,iBlock)*DivU
-
-       ! dErad/dt = - adiabatic compression
-       Source_VC(Erad_,i,j,k) = Source_VC(Erad_,i,j,k) &
-            - RadCompression
-
-       ! dE/dt    = + adiabatic compression
-       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + RadCompression
-
-       if(.not.UseFullImplicit) CYCLE
 
        if(IsNewTimestepGrayDiffusion)then
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
@@ -274,17 +261,6 @@ contains
             - AbsorptionEmission
 
     end do; end do; end do
-
-    if(TypeGeometry=='rz' .and. UseGrayDiffusion)then
-       ! Add "geometrical source term" p/r to the radial momentum equation
-       ! The "radial" direction is along the Y axis
-       ! NOTE: here we have to use signed radial distance!
-       do k=1,nK; do j=1, nJ; do i=1, nI
-          Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
-               + (1./3.)*State_VGB(Erad_,i,j,k,iBlock) &
-               / y_BLK(i,j,k,iBlock)
-       end do; end do; end do
-    end if
 
   end subroutine calc_source_gray_diffusion
 

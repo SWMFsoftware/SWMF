@@ -17,6 +17,7 @@ subroutine calc_sources
   use ModCoordTransform
   use ModHallResist,    ONLY: &
        UseHallResist, IonMassPerCharge
+  use ModImplicit,      ONLY: UseFullImplicit            !^CFG IF IMPLICIT
   use ModGrayDiffusion, ONLY: calc_source_gray_diffusion !^CFG IF IMPLICIT
   use ModTemperature,   ONLY: calc_source_temperature_diff, &
        UseTemperatureDiffusion
@@ -31,7 +32,7 @@ subroutine calc_sources
   implicit none
 
   integer :: i, j, k, iDim, iVar
-
+  logical :: UseRzGeometry
   real :: Coef
 
   ! Variable for div B diffusion
@@ -58,6 +59,8 @@ subroutine calc_sources
   else
      DoTest=.false.; DoTestMe=.false.
   end if
+
+  UseRzGeometry = TypeGeometry == 'rz'
 
   Source_VC   = 0.0
 
@@ -115,6 +118,12 @@ subroutine calc_sources
         end do
         Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
              DivU * (GammaWave - 1.0) * WaveEnergy
+
+        ! Add "geometrical source term" p/r to the radial momentum equation
+        ! The "radial" direction is along the Y axis
+        ! NOTE: here we have to use signed radial distance!
+        if(UseRzGeometry) Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
+             + (GammaWave - 1)*WaveEnergy/y_BLK(i,j,k,iBlock)
      end do; end do; end do
   end if
 
@@ -304,9 +313,10 @@ subroutine calc_sources
 
   if(UseTemperatureDiffusion) &
        call calc_source_temperature_diff(iBlock)
-  if(UseGrayDiffusion.and..not.UseTemperatureDiffusion) & !^CFG IF IMPLICIT
-       call calc_source_gray_diffusion(iBlock)            !^CFG IF IMPLICIT
-
+  !^CFG IF  IMPLICIT BEGIN
+  if(UseGrayDiffusion .and. UseFullImplicit.and..not.UseTemperatureDiffusion) &
+       call calc_source_gray_diffusion(iBlock)
+  !^CFG END IMPLICIT
 
   if(UseUserSource)then
      call user_calc_sources

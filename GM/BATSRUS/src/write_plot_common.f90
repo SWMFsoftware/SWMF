@@ -556,7 +556,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
 
   integer :: iVar, itmp, jtmp, jVar, iIon
   integer :: i,j,k,l, ip1,im1,jp1,jm1,kp1,km1
-  real :: xfactor,yfactor,zfactor
+  real :: xfactor,yfactor,zfactor, WaveEnergy
 
   integer:: iDir, Di, Dj, Dk
   real :: Jx, Jy, Jz
@@ -1221,6 +1221,16 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         else
            PlotVar(:,:,:,iVar) = 0.0
         end if
+
+     case('erad')
+        do k = -1, nK+2; do j = -1, nJ+2; do i = -1, nI+2
+           WaveEnergy = 0.0
+           do jVar = WaveFirst_, WaveLast_
+              WaveEnergy = WaveEnergy + State_VGB(jVar,i,j,k,iBLK)
+           end do
+           PlotVar(i,j,k,iVar) = WaveEnergy
+       end do; end do; end do
+
      case default
         ! Check if the name is one of the state variable names
         do jVar = 1, nVar
@@ -1305,7 +1315,7 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
           ,'bxl','bxr','byl','byr','bzl','bzr' &         !^CFG IF CONSTRAINB
           )
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitB_)
-     case('e','e1')
+     case('e','e1','erad')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitEnergyDens_)
      case('p','pth')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitP_)
@@ -1585,6 +1595,9 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
         NameTecVar = 'blkall'
      case('child')
         NameTecVar = 'Child #'
+     case('erad')
+        NameTecVar = 'Erad'
+        NameUnit   = NameTecUnit_V(UnitEnergydens_)
      case default
         ! Set the default or user defined values
         NameTecVar = NameVarUserTec_I(iPlotVar)
@@ -1664,7 +1677,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
         NameUnit = NameIdlUnit_V(UnitRhoU_)
      case('bx','by','bz','b1x','b1y','b1z','br','b1r')
         NameUnit = NameIdlUnit_V(UnitB_)
-     case('e')
+     case('e','erad')
         NameUnit = NameIdlUnit_V(UnitEnergydens_)
      case('p','pth')
         NameUnit = NameIdlUnit_V(UnitP_)

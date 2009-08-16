@@ -1837,12 +1837,6 @@ contains
        ! Diffusive radiation flux is added later for semi-implicit scheme
        if(UseFullImplicit) Flux_V(Erad_) = &         !^CFG IF IMPLICIT
             Flux_V(Erad_) + sum(EradFlux_D*Normal_D) !^CFG IF IMPLICIT
-
-       ! radiation pressure gradient
-       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) &
-            + State_V(Erad_)/3.0*Normal_D
-       ! work by the radiation pressure gradient
-       Flux_V(Energy_) = Flux_V(Energy_) + Un*State_V(Erad_)/3.0
     end if
 
     !^CFG IF  IMPLICIT BEGIN
@@ -2165,10 +2159,12 @@ contains
 
       use ModPhysics, ONLY: inv_gm1
       use ModVarIndexes
+      use ModWaves
+
       real, optional::Gamma,EPerRhoExtra
 
       ! Variables for conservative state and flux calculation
-      real :: Rho, Ux, Uy, Uz, p, e, RhoUn, GM1Inv
+      real :: Rho, Ux, Uy, Uz, p, e, RhoUn, GM1Inv, pTotal
       integer :: iVar
       !-----------------------------------------------------------------------
       if(present(Gamma))then
@@ -2193,6 +2189,16 @@ contains
       StateCons_V(iRhoUz)  = Rho*Uz
       StateCons_V(iEnergy) = e
 
+      pTotal = p
+
+      if(UseWavePressure)then
+         WaveEnergy = 0.0
+         do iVar = WavePressureFirst_, WavePressureLast_
+            WaveEnergy = WaveEnergy + State_V(iVar)
+         end do
+         pTotal = pTotal + (GammaWave - 1)*WaveEnergy
+      end if
+
       ! Normal velocity
       Un     = Ux*NormalX  + Uy*NormalY  + Uz*NormalZ
       RhoUn  = Rho*Un
@@ -2201,14 +2207,14 @@ contains
       Flux_V(iRho)   = RhoUn
 
       ! f_i[m_k]=u_i*rho*u_k + n_i*[ptotal]
-      Flux_V(iRhoUx) = RhoUn*Ux + p*NormalX
-      Flux_V(iRhoUy) = RhoUn*Uy + p*NormalY
-      Flux_V(iRhoUz) = RhoUn*Uz + p*NormalZ
+      Flux_V(iRhoUx) = RhoUn*Ux + pTotal*NormalX
+      Flux_V(iRhoUy) = RhoUn*Uy + pTotal*NormalY
+      Flux_V(iRhoUz) = RhoUn*Uz + pTotal*NormalZ
 
       ! f_i[p]=u_i*p
       Flux_V(iP)  = Un*p
 
-      Flux_V(iEnergy) = Un*(p + e)
+      Flux_V(iEnergy) = Un*(pTotal + e)
 
       ! f_i[scalar] = Un*scalar
       do iVar = ScalarFirst_, ScalarLast_
@@ -2565,12 +2571,16 @@ contains
          call stop_mpi(NameSub//' negative soundspeed squared')
       end if
 
-      if(UseGrayDiffusion)then
-         Sound = sqrt(Sound2 + (4.0/9.0)*State_V(Erad_)*InvRho)
-      else
-         Sound  = sqrt(Sound2)
+      if(UseWavePressure)then
+         WaveEnergy = 0.0
+         do iVar = WavePressureFirst_, WavePressureLast_
+            WaveEnergy = WaveEnergy + State_V(iVar)
+         end do
+         Sound2 = Sound2 + GammaWave*(GammaWave - 1)*WaveEnergy*InvRho
       end if
-      Un     = sum(State_V(iUx:iUz)*Normal_D)
+
+      Sound = sqrt(Sound2)
+      Un    = sum(State_V(iUx:iUz)*Normal_D)
 
 
       if(DoAw)then                                   !^CFG IF AWFLUX BEGIN

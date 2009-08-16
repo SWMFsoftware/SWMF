@@ -6,13 +6,13 @@ module ModVarIndexes
 
   save
 
-  ! This equation module contains the standard MHD equations.
-  character (len=*), parameter :: NameEquation='MHD with WKB Alfven waves'
+  ! This equation module contains the standard MHD equations with wave energy
+  character (len=*), parameter :: NameEquation='MHD+waves'
 
   ! loop variable for implied do-loop over spectrum
   integer :: iWave
 
-  ! Number of frequency bins in spectrum
+  ! Number of wave bins in spectrum
   integer, parameter :: nWave = 2
   integer, parameter :: nVar = 8 + nWave
 
@@ -32,6 +32,9 @@ module ModVarIndexes
        WaveLast_  = WaveFirst_+nWave-1, &
        p_         = nVar,               &
        Energy_    = nVar+1
+
+  ! This is for backward compatibility with single group radiation
+  integer, parameter :: Erad_ = WaveFirst_
 
   ! This allows to calculate RhoUx_ as rhoU_+x_ and so on.
   integer, parameter :: RhoU_ = RhoUx_-1, B_ = Bx_-1
@@ -67,22 +70,21 @@ module ModVarIndexes
        'Bx  ', & ! Bx_
        'By  ', & ! By_
        'Bz  ', & ! Bz_
-       'Ew01', & ! WaveFirst_
-       'Ew02', & ! WaveLast_
+       ('Ew  ', iWave=WaveFirst_,WaveLast_), &
        'p   ', & ! p_
        'e   ' /) ! Energy_
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
-       'rho mx my mz bx by bz Ew01 Ew02 e'
+       'rho mx my mz bx by bz Ew1 Ew2 e'
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
-       'rho ux uy uz bx by bz Ew01 Ew02 p'
+       'rho ux uy uz bx by bz Ew1 Ew2 p'
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "Ew01", "Ew02", "p"'
+       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "Ew1", "Ew2", "p"'
 
   ! Names of the user units for IDL and TECPlot output
   character(len=20) :: &
