@@ -7,11 +7,11 @@ program abs
   implicit NONE
   real:: vTe = 10.0 !eV
   real::NaTrial = 1.0e22
-  integer:: iPlot
+  integer:: iPlot,iError
   !---------------
   call set_mixture(nPolyimide, nZPolyimide_I, CPolyimide_I)
   UsePreviousTe = .false.
-
+  call set_ionization_equilibrium(vTe,NaTrial*1000000.0,iError)
   call set_default_multigroup
   call meshhv
   call abscon
