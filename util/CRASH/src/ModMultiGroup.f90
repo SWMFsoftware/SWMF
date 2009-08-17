@@ -632,7 +632,7 @@ contains
     do iMix=1,nMix                                              
        if ( Concentration_I(iMix) .lt. con(2) ) CYCLE                     
 
-       do  iZ=iZMin_I(iMix),iZMax_I(iMix)                                           
+       do  iZ=iZMin_I(iMix), min(iZMax_I(iMix), nZ_I(iMix) - 1)                                           
           if ( Concentration_I(iMix)*Population_II(iZ,iMix) .lt. con(3) )CYCLE
 
           ! ...       find the principal quantum number 
