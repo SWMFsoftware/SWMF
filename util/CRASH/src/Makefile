@@ -28,7 +28,7 @@ OBJECTS=\
 	${IOMIX}
 
 
-OBJECTS_EXE= test_ionization.o test_godunov.o test_Fermi.o
+OBJECTS_EXE= test_ionization.o test_godunov.o test_Fermi.o test_absorption.o
 
 
 
@@ -131,7 +131,7 @@ test_abs:
 	  rm -f *.diff test_re*
 	  cp ../doc/Polymide_Abs.dat test_result
 	  cp ../doc/Tex/Polymide_Abs.dat test_ref
-	  ${SCRIPTDIR}/DiffNum.pl test_result test_ref > test_abs.diff
+	  ${SCRIPTDIR}/DiffNum.pl -t -r=1.0e-8 -a=1.0e-13 test_result test_ref > test_abs.diff
 	  ls -l *.diff
 	  rm -f test_re*
 
