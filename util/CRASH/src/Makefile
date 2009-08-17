@@ -129,9 +129,9 @@ test_abs:
 	  make ABS
 	  ABS.exe
 	  rm -f *.diff test_re*
-	  cat ../doc/Table*.tex >test_result
-	  cat ../doc/Tex/ionization_table*.tex>test_ref
-	  ${SCRIPTDIR}/DiffNum.pl test_result test_ref > test_eos.diff
+	  cp ../doc/Polymide_Abs.dat test_result
+	  cp ../doc/Tex/Polymide_Abs.dat test_ref
+	  ${SCRIPTDIR}/DiffNum.pl test_result test_ref > test_abss.diff
 	  ls -l *.diff
 	  rm -f test_re*
 
