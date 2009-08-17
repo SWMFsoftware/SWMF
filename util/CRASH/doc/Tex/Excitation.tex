@@ -26,21 +26,23 @@ w_{i,n} = g_{i,n} \cdot g_e^i \exp \left( -\frac{E^*_{i,n}}{T} \right),\qquad
 S = \sum_{i=0}^{i_{max}} \sum_{n=n_{gr}}^{\infty} w_{i,n},\qquad
 p_{i,n} = \frac{w_{i,n}}{S},
 \end{equation}
-where $g_{i,n}$ stands for the excitation level degeneracy, and the energy of the excited state,
+where $g_{i,n}$ stands for the excited level degeneracy, and the energy of the excited state,
 \begin{equation}
 E^*_{i,n}=E^*_i + E^{exc}_{i,n},
 \end{equation} 
 now includes the contribution from the ionization energy, the excitation energy and, generally 
 speaking, the contribution from the electrostatic energy.
 
-The excitation energy, $E^{exc}_{i,n}$, we calculate within a Bohr-like model, which is expressed in
-Eq.(2.9) from \cite{ionmix}:
+We take the values of the excitation energy, $E^{exc}_{i,n}$, from several sources:
+\cite{spectrw3}, \cite{nistdb}, \cite{RefAlMartin}, \cite{RefXeSaloman}.
+When some values are missing in those sources, we calculate them using the formula as follows:
 \begin{equation}\label{estarin}
-E^{exc}_{i,n} = I_i \cdot n_{gr}^2 \left( \frac1{n_{gr}^2} - \frac1{n^2} \right), \qquad
-g_{i,n} = 2 n^2.
+E^{exc}_{i,n} = I_i - Ry \frac{(i+1)^2}{n^2}.
 \end{equation}
-However, $2 n^2$ is not a correct value for the ground level degeneracy, that is why we
-use tabulated degeneracies whenever possible (see \cite{allenAQ}).
+
+For excited levels degeneracies we assume $g_{i,n} = 2 n^2$. To calculate the
+ground level degeneracy we use the electron configurations from \cite{Carlson}.
+Some of the values of degeneracies have been modified to match the data from \cite{allenAQ}.
 
 Up to this point mean values and covariances were being calculated over $i_{max}+1$ possible
 values of $i$. But now $i$ is not the only variable the energy levels depend on.
@@ -54,3 +56,11 @@ Eqs.(\ref{generalE}), (\ref{generalP}), (\ref{generalCv}),
 for energy levels.
 
 To calculate the covariances over $i$ and $n$ we use Eq.(\ref{sepcov}).
+
+The following table is intended to compare the reference data with
+the values of excitation energies obtained using Eq.(\ref{estarin}). Here for each
+charge state of nitrogen ion, $i$, and the principal quantum number of the excited
+electron, $n$, we have the value given by that formula, that does not depend on the
+orbital momentum of the excited electron, $l$, and the reference data.
+
+\input{ref_spectrum1.tex}
