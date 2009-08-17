@@ -19,7 +19,7 @@ module CRASH_ModMultiGroup
 
   !Public members
   public :: meshhv !Creates the grid of photon energies
-  public :: lines  !Calculates the absorbtion and emission in lines
+  public :: lines  !Calculates the absorption and emission in lines
   public :: abscon !Calculates the absorption, emission, and scattering 
   
   !For test:
@@ -31,7 +31,7 @@ module CRASH_ModMultiGroup
   !       nfrqbb  - number of photon energy points near a line center   
   !       at which absorption coefficients will be computed  
 
-  integer,parameter:: nPhotonMax = 5000, nGroupMax = 100, nfrqbb = 9
+  integer,parameter:: nPhotonMax = 10000, nGroupMax = 100, nfrqbb = 9
 
   !Radiation frequency groups:
   integer :: nGroup = nGroupMax 
@@ -39,11 +39,11 @@ module CRASH_ModMultiGroup
 
   integer,parameter::nptspg = 30
 
-  ! Meshs to evaluate the absorbtion coefficients
+  ! Meshs to evaluate the absorption coefficients
   integer::nPhoton
   real ::PhotonEnergy_I(nPhotonMax)
 
-  ! The absorbtion coefficients
+  ! The absorption coefficients
   !       abscfs  -  array of absorption coefficients (cm**-1)            
   !       emscfs  -  array of emission coefficients (cm**-1)         
   !       sctcfs  -  array of scattering coefficients (cm**-1) 
@@ -71,9 +71,9 @@ module CRASH_ModMultiGroup
   !it is added somewhere else
   logical,public :: DoNotAddLineCore = .true.
   
-  logical :: UseBremsstrahlung = .true.
-  logical :: UsePhotoionization = .true.
-  logical :: UseScattering      = .false.
+  logical,public :: UseBremsstrahlung = .true.
+  logical,public :: UsePhotoionization = .true.
+  logical,public :: UseScattering      = .false.
 contains
   !======================================================================
   subroutine set_default_multigroup
@@ -175,11 +175,10 @@ contains
     real:: denlqn !The same, for the ion in the lower state, for a given transition
     real:: dnlqnp !The same, for the ion in the upper state.
 
-    !The controbutions to the total absorbtion and the total emission,
+    !The controbutions to the total absorption and the total emission,
     !calculated by the 'abslin' subroutine
     real:: abscof, emscof 
     !-------------------
-
 
 
     iSav = 0                                                          
@@ -220,9 +219,8 @@ contains
              !         loop over final quantum states                           
              do iNUpper=iN,nExcitation                                 
 
-                dnlqnp = denlq * Partition_III(iN,iZ,iMix)                 
+                dnlqnp = denlq * Partition_III(iNUpper,iZ,iMix)                 
                 call abslin   
-
                 if ( abscof .ne. 0. ) then                            
                    abstot = abstot + abscof                           
                    emstot = emstot + emscof                           
@@ -273,7 +271,7 @@ contains
       real:: gamma,avoigt,dnudop,vvoigt  !Line width parameters
 
       !Difference between the line center and the photon energy, 
-      !for which to calculate the absorbtion
+      !for which to calculate the absorption
 
       real:: DeltaNu 
       
@@ -286,7 +284,7 @@ contains
       !The line height at a given frequency (the line shape)
       real:: Shape
 
-      !The absorbtion coefficient, to be corrected for stimulated emission
+      !The absorption coefficient, to be corrected for stimulated emission
       real:: Alpha
 
       !\
@@ -309,7 +307,11 @@ contains
          call bbneq0 (iZ,nbound, &                                
               ennp,fnn,gnn )                 
          ! ...    some transitions are not allowed                               
-         if ( ennp.le.0) return                     
+         if ( ennp.le.0) then
+            abscof = 0.0
+            emscof = 0.0
+            return
+         end if
       else                                                              
          ennp = ExcitationEnergy_III(iNUpper,iZ,iMix) - ExcitationEnergy_III(iN,iZ,iMix)                  
       endif
@@ -355,7 +357,7 @@ contains
       !non-LTE: ex2 = exp( - ennp/Te )                                         
 
       if ( iN==iNUpper) then                                            
-
+         call CON_stop('Inappropriate')
          alpha = 2.65e-2 * fnn * shape * denlqn * ( 1.-ex1 )         
 
          ! ...       correct for the "effective" stimulated emission to          
@@ -595,7 +597,7 @@ contains
 
     DensNN = Na * 1.0e-6
     DensNe = DensNN * zAv
-
+    
 
     ! ... set up initial grid within each photon energy group
     do iGroup = 0,nGroup-1                                                
@@ -641,13 +643,13 @@ contains
           nbound = nZ_I(iMix) - iZ                               
           nGround = n_ground(iZ,nZ_I(iMix))                                     
           
-          do iN = nGround, nExcitation-1                                
+          do iN = nGround, nExcitation-1     
+
              if (Concentration_I(iMix) * &
                   Population_II(iZ,iMix) * &
                   Partition_III(iN, iZ, iMix)& 
                   < con(4) )CYCLE
              if(.not.DoNotAddLineCore)then        
-
                 do  iNUpper = iN, nExcitation                              
                    ! ... calculate the energy of the transition             
                    if ( iN == iNUpper ) then                               
@@ -1077,17 +1079,17 @@ contains
             abscfs(iphot) = abscfs(iphot)+sum(fotiza(1:nMix)) 
             emscfs(iphot) = emscfs(iphot)+sum(fotize(1:nMix)) 
         end if
-                                                      
-                                                                        
-           ! ...    line contributions                                             
-           !        ------------------                                             
-
-           ! ...    add in the contribution from bound-bound transitions           
-                   
-            call lines ( PhotonEnergy_I(iphot), abslns,emslns )      
-                                                        
-            abscfs(iphot) = abscfs(iphot) + abslns              
-            emscfs(iphot) = emscfs(iphot) + emslns                                                             
+        
+        
+        ! ...    line contributions                                             
+        !        ------------------                                             
+        
+        ! ...    add in the contribution from bound-bound transitions           
+        
+        call lines ( PhotonEnergy_I(iphot), abslns,emslns )      
+        
+        abscfs(iphot) = abscfs(iphot) + abslns              
+        emscfs(iphot) = emscfs(iphot) + emslns                                                             
                                                          
                                                                         
   end do  !over iphot                                                         

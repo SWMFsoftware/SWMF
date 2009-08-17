@@ -72,24 +72,24 @@ IONIZ_for_Darwin:
 		${Lflag1}    ; 
 	rm -rf Tmp_ 
 
-test_absorbtion.o : ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
+test_absorption.o : ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
 
 ABS:  DEPEND 
 	make ABS.exe
 
-ABS.exe: test_absorbtion.o
+ABS.exe: test_absorption.o
 	@(if [ ${OS} = "Darwin" ];         then make ABS_for_Darwin; \
 	else                                    make ABS_general; fi)
 
 ABS_general:
-	${LINK.f90} -o ABS.exe test_absorbtion.o \
+	${LINK.f90} -o ABS.exe test_absorption.o \
 		-L${LIBDIR} -lCRASH  -lSHARE -lTIMING \
 		${Lflag1}
 
 ABS_for_Darwin:
 	rm -rf Tmp_; mkdir Tmp_ ;
 	cd Tmp_; ar -x ${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE};
-	${LINK.f90} -o ABS.exe test_absorbtion.o Tmp_/*.o \
+	${LINK.f90} -o ABS.exe test_absorption.o Tmp_/*.o \
 		${Lflag1}    ; 
 	rm -rf Tmp_ 
 
