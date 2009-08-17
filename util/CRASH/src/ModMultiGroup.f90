@@ -20,6 +20,10 @@ module CRASH_ModMultiGroup
   !Public members
   public :: meshhv !Creates the grid of photon energies
   public :: lines  !Calculates the absorbtion and emission in lines
+  public :: abscon !Calculates the absorption, emission, and scattering 
+  
+  !For test:
+  public :: PhotonEnergy_I, abscfs, nPhoton, set_default_multigroup
 
 
   !       nPhotonMax  - photon energy mesh points                                    
@@ -30,8 +34,8 @@ module CRASH_ModMultiGroup
   integer,parameter:: nPhotonMax = 5000, nGroupMax = 100, nfrqbb = 9
 
   !Radiation frequency groups:
-  integer :: nGrups = nGroupMax 
-  real :: EnGrup(0:nGroupMax)
+  integer :: nGroup = nGroupMax 
+  real :: EnergyGroup_I(0:nGroupMax)
 
   integer,parameter::nptspg = 30
 
@@ -71,6 +75,24 @@ module CRASH_ModMultiGroup
   logical :: UsePhotoionization = .true.
   logical :: UseScattering      = .false.
 contains
+  !======================================================================
+  subroutine set_default_multigroup
+    real:: elnmin,elnmax,delog,elog
+    integer:: iGroup
+    !-----------------------
+    EnergyGroup_I(0) = 0.010 * Te                       
+    EnergyGroup_I(nGroup) = 100.0 * Te                
+    if ( nGroup <=1 ) return                              
+    elnmin = log( EnergyGroup_I(0) )                            
+    elnmax = log( EnergyGroup_I(nGroup) )                    
+    delog = ( elnmax-elnmin ) / nGroup                   
+    elog = elnmin                                        
+    do iGroup=1,nGroup-1                                  
+       elog = elog + delog                               
+       EnergyGroup_I(iGroup) = exp( elog )                         
+    end do
+             
+  end subroutine set_default_multigroup
   !======================================================================
   real function oscillator_strength(nI,nF)
     integer,intent(in):: nI,nF
@@ -506,8 +528,8 @@ contains
     !       Te      -  plasma temperature (eV)                              
     !       densnn  -  number density of all nuclei (cm**-3)                
     !       densne  -  electron density (cm**-3)                            
-    !       engrup  -  photon energy group boundaries (ngrups+1) (eV)       
-    !       ngrups  -  number of photon energy groups                       
+    !       EnergyGroup_I  -  photon energy group boundaries (nGroup+1) (eV)       
+    !       nGroup  -  number of photon energy groups                       
     !       nptspg  -  minimum number of mesh points per energy group       
     !
 
@@ -576,13 +598,13 @@ contains
 
 
     ! ... set up initial grid within each photon energy group
-    do iGroup = 1,ngrups                                                
+    do iGroup = 1,nGroup                                                
 
-       hvmin = engrup(iGroup)                                             
-       hvmax = engrup(iGroup+1)                                           
+       hvmin = EnergyGroup_I(iGroup)                                             
+       hvmax = EnergyGroup_I(iGroup+1)                                           
        dloghv = log( hvmax/hvmin ) / nptspg                           
        LogHv = log( hvmin ) - dloghv                                  
-       if ( iGroup.lt.ngrups ) then                                       
+       if ( iGroup.lt.nGroup ) then                                       
           nmax = nptspg                                               
        else                                                           
           nmax = nptspg + 1                                           
@@ -599,7 +621,7 @@ contains
     ! ... add 2 points near the plasma cutoff frequency                     
 
     hvcut = sqrt( densne / 7.25e20 )                                  
-    if ( hvcut.gt.engrup(0) .and. hvcut.lt.engrup(ngrups) ) then    
+    if ( hvcut.gt.EnergyGroup_I(0) .and. hvcut.lt.EnergyGroup_I(nGroup) ) then    
        PhotonEnergy_I(nPhoton+1) = hvcut * dminus                               
        PhotonEnergy_I(nPhoton+2) = hvcut * dplus                                
        nPhoton = nPhoton + 2                                              
@@ -636,8 +658,8 @@ contains
                       ennp = ExcitationEnergy_III(iNUpper, iZ,iMix)- &
                            ExcitationEnergy_III(iN, iZ,iMix)
                    endif
-                   if ( ennp .gt. engrup(0) .and. &                     
-                        ennp .lt. engrup(ngrups) ) then              
+                   if ( ennp .gt. EnergyGroup_I(0) .and. &                     
+                        ennp .lt. EnergyGroup_I(nGroup) ) then              
                       
                       call line_width ( Te,densnn,ennp,cAtomicMass_I(nZ_I(iMix)), &      
                            gamma,avoigt,dnudop ) 
@@ -665,7 +687,7 @@ contains
              ! ... add 2 points near the ionization edge                    
              edge = IonizPotential_II(iZ+1,iMix) - ExcitationEnergy_III(iN,iZ,iMix)   
              
-             if ( edge.gt.engrup(0) .and. edge.lt.engrup(ngrups) )&  
+             if ( edge.gt.EnergyGroup_I(0) .and. edge.lt.EnergyGroup_I(nGroup) )&  
                   then                                                  
                 PhotonEnergy_I(nPhoton+1) = edge * dminus                       
                 PhotonEnergy_I(nPhoton+2) = edge * dplus                        
@@ -680,8 +702,8 @@ contains
        if(.not.UseCoreElectron)CYCLE
        do ncore=1,nZ_I(iMix)-1                                   
           edge = IonizPotential_II(nZ_I(iMix)+1-ncore,iMix)                        
-          if ( edge.gt.engrup(0) .and. &                              
-               edge.lt.engrup(ngrups) ) then                        
+          if ( edge.gt.EnergyGroup_I(0) .and. &                              
+               edge.lt.EnergyGroup_I(nGroup) ) then                        
              PhotonEnergy_I(nPhoton+1) = edge * dminus                          
              PhotonEnergy_I(nPhoton+2) = edge * dplus                           
              nPhoton = nPhoton + 2                                        

@@ -72,6 +72,28 @@ IONIZ_for_Darwin:
 		${Lflag1}    ; 
 	rm -rf Tmp_ 
 
+test_absorbtion.o : ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
+
+ABS:  DEPEND 
+	make ABS.exe
+
+ABS.exe: test_absorbtion.o
+	@(if [ ${OS} = "Darwin" ];         then make ABS_for_Darwin; \
+	else                                    make ABS_general; fi)
+
+ABS_general:
+	${LINK.f90} -o ABS.exe test_absorbtion.o \
+		-L${LIBDIR} -lCRASH  -lSHARE -lTIMING \
+		${Lflag1}
+
+ABS_for_Darwin:
+	rm -rf Tmp_; mkdir Tmp_ ;
+	cd Tmp_; ar -x ${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE};
+	${LINK.f90} -o ABS.exe test_absorbtion.o Tmp_/*.o \
+		${Lflag1}    ; 
+	rm -rf Tmp_ 
+
+
 test_godunov.o : ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
 
 GODUNOV: DEPEND 
@@ -96,6 +118,16 @@ GODUNOV_for_Darwin:
 test_eos: 
 	  make IONIZ
 	  IONIZ.exe
+	  rm -f *.diff test_re*
+	  cat ../doc/Table*.tex >test_result
+	  cat ../doc/Tex/ionization_table*.tex>test_ref
+	  ${SCRIPTDIR}/DiffNum.pl test_result test_ref > test_eos.diff
+	  ls -l *.diff
+	  rm -f test_re*
+
+test_abs: 
+	  make ABS
+	  ABS.exe
 	  rm -f *.diff test_re*
 	  cat ../doc/Table*.tex >test_result
 	  cat ../doc/Tex/ionization_table*.tex>test_ref
