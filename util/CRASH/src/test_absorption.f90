@@ -6,12 +6,55 @@ program abs
   use CRASH_ModMultiGroup
   use CRASH_ModExcitation
   use CRASH_ModAtomicDataMix
+  use CRASH_ModExcitationData,ONLY : n_ground, cExcitationN_III
   implicit NONE
+
+  integer, parameter :: unit = 24
+
   real:: vTe = 10.0 !eV
   real::NaTrial = 1.0e22
   integer:: iPlot,iError
-  integer::iMix,iZ
+  integer :: iL, iN, iZ, iMix
+  integer :: nGround
+
+  real,dimension(1:nZMax) :: IonizPotential_I
   !---------------
+
+  open(unit,file='../doc/Tex/excited_levels_N.tex',status='replace')
+  write(unit,'(a)')'\begin{tabular}{|c|c||c||c|c|c|c|c|}'
+  write(unit,'(a)')'\hline'
+  write(unit,'(a)')'i & n & formula & '//&
+       '\multicolumn{5}{c|}{database, for different values of $l$} \tabularnewline'
+  write(unit,'(a)')' & & & s & p & d & f & g \tabularnewline'
+  write(unit,'(a)')'\hline'
+  write(unit,'(a)')'\hline'
+
+  call get_ioniz_potential(7, IonizPotential_I(1:7))
+
+  do iZ = 0, 6
+     write(unit,'(a,i3,a)') '\multirow{4}{*}{', iZ, '} '
+
+     do iN = 2, 5
+
+        nGround = n_ground(iZ, 7)
+
+        write(unit,'(a,i3,a,f6.1,5(a,f6.1),a)') ' & ', iN, ' & ', &
+             max(IonizPotential_I(iZ+1) - &
+             cRyToEV * (real(iZ+1)/iN)**2, 0.0), &
+             (' & ', cExcitationN_III(iL, iN, iZ), iL = 0, 4), &
+             ' \tabularnewline'
+
+     end do
+
+     write(unit,'(a)')'\hline'
+
+  end do
+
+  write(unit,'(a)')'\end{tabular}'
+  close(unit)
+
+
+
   UseExcitation = .true.
   call set_mixture(nPolyimide, nZPolyimide_I, CPolyimide_I)
   UsePreviousTe = .false.
@@ -22,28 +65,28 @@ program abs
  
   UseCoulombCorrection = .true.
   call set_ionization_equilibrium(vTe,NaTrial*1000000.0,iError)
-  open(24,file='report.txt')
+  open(unit,file='report.txt')
   do iMix = 1,nMix
-     write(24,*)'iMix,nZ_I(iMix),iZMin_I(iMix), iZMax_I(iMix)',iMix,nZ_I(iMix),iZMin_I(iMix), iZMax_I(iMix)
+     write(unit,*)'iMix,nZ_I(iMix),iZMin_I(iMix), iZMax_I(iMix)',iMix,nZ_I(iMix),iZMin_I(iMix), iZMax_I(iMix)
      do iZ = 0, nZ_I(iMix)
-        write(24,*)' iZ = ', iZ
-        write(24,*)Partition_III(:,iZ,iMix)
+        write(unit,*)' iZ = ', iZ
+        write(unit,*)Partition_III(:,iZ,iMix)
      end do
   end do
-  close(24)
+  close(unit)
   call set_default_multigroup
   call meshhv
   call abscon
   
-  open(24,file='../doc/Polymide_Abs.dat')
-  write(24,'(a,i6,a)') &
+  open(unit,file='../doc/Polymide_Abs.dat')
+  write(unit,'(a,i6,a)') &
        'Photon energy [eV]  Absorbtion Coeff cm-1, in ',nPhoton,' points' 
   do iPlot = 1, nPhoton
      if(PhotonEnergy_I(iPlot)< 0.01*Te.or.PhotonEnergy_I(iPlot)>100.0*Te)&
           CYCLE
-     write(24,*)log10(PhotonEnergy_I(iPlot)),log10(abscfs(iPlot))
+     write(unit,*)log10(PhotonEnergy_I(iPlot)),log10(abscfs(iPlot))
   end do
-  close(24)
+  close(unit)
 end program abs
 !============================================================================
 ! The following subroutines are here so that we can use SWMF library routines
