@@ -1267,7 +1267,7 @@ c END OF THE MOVED FRAGMENT                                             ABJT1262
 c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT1264
                                                                         ABJT1265
       function colliz ( q,n,nprin0,tempel,atomnm,potiz )                ABJT1266
-                                                                        ABJT1267
+c NON-LTE PART NOT NEEDED                                               ABJT1267
 c ... collisional ionization rate function.  calculates the             ABJT1268
 c     rate (per ion per free electron => cm**3/sec) at which            ABJT1269
 c     electrons leave the "n"th level of an ion with charge state       ABJT1270
@@ -1341,7 +1341,7 @@ c ... format statements                                                 ABJT1330
 c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT1338
                                                                         ABJT1339
       function collrc ( q,n,nprin0,tempel,atomnm,potiz,edens0,pfrat )   ABJT1340
-                                                                        ABJT1341
+c NON-LTE PART -NOT NEEDED                                              ABJT1341
 c ... collisional recombination rate function.  calculates the          ABJT1342
 c     rate (per ion per free electron => cm**3/sec) at which            ABJT1343
 c     electrons enter the "n"th level of an ion with charge state       ABJT1344
@@ -1420,7 +1420,7 @@ c <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  ABJT1415
       subroutine corona ( tp,densnn,ngases,izgas,pot,numocc,fracsp,     ABJT1417
      &                    edens0,                                       ABJT1418
      &                                                 densne,fraciz )  ABJT1419
-                                                                        ABJT1420
+c NON-LTE  PART - NOT NEEDED                                            ABJT1420
 c ... calculate the ionization populations according to the             ABJT1421
 c     coronal model                                                     ABJT1422
 c                                                                       ABJT1423

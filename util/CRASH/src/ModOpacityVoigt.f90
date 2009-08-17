@@ -30,15 +30,30 @@ module CRASH_ModOpacityVoigt
        6.03E-03,9.52E-03,1.49E-02,2.30E-02,3.42E-02,4.69E-02,5.59E-02, &
        5.51E-02,4.51E-02 /),(/11,11/))
 
-  public :: voigt 
-  public :: linwid
+  !PUBLIC MEMBERS:
+
+  !Locigal to determine, if we use the Voigt profile.
+  !Otherwise, only the Lorenz broadenning is accounted for
+  !with the Gaussin profile for the line.
+
+  logical,public:: UseVoigt = .true.
+
+ 
+  
   ! ... this subroutine computes the Voigt function "h" as a function     
   !     of "a" and "v".  See Mihalas, "Stellar Atmospheres", 1978, for    
-  !     definitions and details.                                          
+  !     definitions and details.
+                                          
+  public :: voigt_profile 
+
+  ! ... compute the total line width of a bound-bound transition.  this   
+  !     sums the contributions from natural, Doppler, and collisional     
+  !     broadening.   
+  public :: line_width
 
 contains
-  !===================PROXY for LINWID=================
-  subroutine linwid( tp,densnn,ennp,AtomicWeight, &      
+  !================================================
+  subroutine line_width( tp,densnn,ennp,AtomicWeight, &      
                            gamma,avoigt,dnudop )
     real,intent(in) :: tp,densnn,ennp
     real,intent(in):: AtomicWeight
@@ -73,9 +88,9 @@ contains
     gamma = widnat + widdop + widcol                                  
     avoigt = ( widnat + widcol ) / widdop                             
     dnudop = widdop / 12.566  
-  end subroutine linwid
+  end subroutine line_width
   !====================================================
-  real function voigt ( a,vv )                                           
+  real function voigt_profile ( a,vv )                                           
     real,intent(in)::a,vv       
     ! ... this subroutine computes the Voigt function "h" as a function 
     !     of "a" and "v".  See Mihalas, "Stellar Atmospheres", 1978, for
@@ -92,12 +107,12 @@ contains
     if ( v.gt.5. .or. a.ge.10. ) then                                 
 
        ! ...    Lorentzian profile in limit of large a,v                       
-       voigt = a / cSqrtPi / ( a*a + v*v )                             
+       voigt_profile = a / cSqrtPi / ( a*a + v*v )                             
 
     else if ( a.le.0.1 ) then                                         
 
        ! ...    use Dawson's integral (see Mihalas) for small a     
-       voigt = exp( -min(v*v,50.0) ) + 2.0*a/cSqrtPi * &                 
+       voigt_profile = exp( -min(v*v,50.0) ) + 2.0*a/cSqrtPi * &                 
             ( 2.0*v*dawson(v) - 1.0 )                                
 
     else                                                              
@@ -110,7 +125,7 @@ contains
        fv = v/0.5 - (iv-1)                                            
        g1 = (1.-fa)*hTable_II(ia,iv) + fa*hTable_II(ia+1,iv)                
        g2 = (1.-fa)*hTable_II(ia,iv+1) + fa*hTable_II(ia+1,iv+1)            
-       voigt = (1.-fv)*g1 + fv*g2                                     
+       voigt_profile = (1.-fv)*g1 + fv*g2                                     
 
     endif
   contains
@@ -152,5 +167,5 @@ contains
                                                                                                                           
     end function dawson
 
-  end function voigt
+  end function voigt_profile
 end module CRASH_ModOpacityVoigt

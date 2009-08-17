@@ -1,4 +1,4 @@
-module CRASH_ModIomix
+module CRASH_ModIonMix
   !This is an interface to some methods of the code iomix.f
   ! IONMIX, A CODE FOR COMPUTING THE EQUATION OF STATE AND   
   ! RADIATIVE PROPERTIES OF LTE AND NON-LTE PLASMAS.  J.J. MACFARLANE.  
@@ -273,4 +273,4 @@ contains
       end if
     end function gint6
   end function gint
-end module CRASH_ModIomix
+end module CRASH_ModIonMix

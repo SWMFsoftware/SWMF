@@ -19,7 +19,7 @@ program saha
   real    :: dTe, dLogN, dU
   integer :: iT, nT1=1000000, iN, iU, iLoop
 
-  real    :: Z_I(0:nN),Z2_I(0:nN),Uav_I(0:nN),Cv_I(0:nN), Te_I(0:nN)
+  real    :: Z_I(0:nN),Z2Out_I(0:nN),Uav_I(0:nN),Cv_I(0:nN), Te_I(0:nN)
   real    :: ZNoCoulomb_II(1:nT, 0:nN)
   integer :: iIter_I(0:nN)
   !character(LEN=*),parameter,dimension(0:nN) :: Separator_I='|'
@@ -64,12 +64,12 @@ program saha
         NaTrial = Nao*exp(iN*dLogN)
         call set_ionization_equilibrium(vTe,NaTrial*1000000.0,iError)
         Z_I(iN) = z_averaged() 
-        Z2_I(iN)= z2_averaged()/Z_I(iN)
+        Z2Out_I(iN)= z2_averaged()/Z_I(iN)
         Uav_I(iN)=internal_energy()
         Cv_I(iN)=heat_capacity()
         if(iError/=0)then
            Z_I(iN) = -  Z_I(iN)
-           Z2_I(iN)= - Z2_I(iN)
+           Z2Out_I(iN)= - Z2Out_I(iN)
            Uav_I(iN)= -Uav_I(iN)
            Cv_I(iN)= - Cv_I(iN)
            write(*,*)'Error=',iError,vTe,NaTrial*1000000.0
@@ -118,12 +118,12 @@ program saha
         NaTrial = Nao*exp(iN*dLogN)
         call set_ionization_equilibrium(vTe,NaTrial*1000000.0,iError)
         Z_I(iN) = z_averaged() 
-        Z2_I(iN)= z2_averaged()/Z_I(iN)
+        Z2Out_I(iN)= z2_averaged()/Z_I(iN)
         Uav_I(iN)=internal_energy()
         Cv_I(iN)=heat_capacity()
         if(iError/=0)then
            Z_I(iN) = -  Z_I(iN)
-           Z2_I(iN)= - Z2_I(iN)
+           Z2Out_I(iN)= - Z2Out_I(iN)
            Uav_I(iN)= -Uav_I(iN)
            Cv_I(iN)= - Cv_I(iN)
            write(*,*)'Error=',iError,vTe,NaTrial*1000000.0
@@ -265,7 +265,7 @@ program saha
         Cv_I(iN) = heat_capacity()
         if(iError/=0)then
            Z_I(iN) = -  Z_I(iN)
-           Z2_I(iN)= - Z2_I(iN)
+           Z2Out_I(iN)= - Z2Out_I(iN)
            Uav_I(iN)= -Uav_I(iN)
            Cv_I(iN)= - Cv_I(iN)
            write(*,*)'Error=',iError,vTe,NaTrial*1000000.0
@@ -315,7 +315,7 @@ program saha
         Cv_I(iN) = eMadelungPerTe * 3.0 * Te * Z2
         if(iError/=0)then
            Z_I(iN) = -  Z_I(iN)
-           Z2_I(iN)= - Z2_I(iN)
+           Z2Out_I(iN)= - Z2Out_I(iN)
            Uav_I(iN)= -Uav_I(iN)
            Cv_I(iN)= - Cv_I(iN)
            write(*,*)'Error=',iError,vTe,NaTrial*1000000.0
@@ -370,12 +370,12 @@ program saha
         NaTrial = Nao*exp(iN*dLogN)
         call set_ionization_equilibrium(vTe,NaTrial*1000000.0,iError)
         Z_I(iN) = z_averaged() 
-        Z2_I(iN)= z2_averaged()/Z_I(iN)
+        Z2Out_I(iN)= z2_averaged()/Z_I(iN)
         Uav_I(iN)=internal_energy()
         Cv_I(iN)=heat_capacity()
         if(iError/=0)then
            Z_I(iN) = -  Z_I(iN)
-           Z2_I(iN)= - Z2_I(iN)
+           Z2Out_I(iN)= - Z2Out_I(iN)
            Uav_I(iN)= -Uav_I(iN)
            Cv_I(iN)= - Cv_I(iN)
            write(*,*)'Error=',iError,vTe,NaTrial*1000000.0

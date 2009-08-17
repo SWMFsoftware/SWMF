@@ -22,7 +22,7 @@ module CRASH_ModStatSumMix
 
   integer,dimension(nMixMax) :: iZMin_I  ! Numbers of the ionization states, such that the population
   integer,dimension(nMixMax) :: iZMax_I  ! of ion states with iZ<iZMin or iZ>iZMax is negligible.
-
+  public:: iZMin_I,iZMax_I   !Open an access to these data, to optimize the spectroscopic calculations
 
   ! Array of energies needed to create i-level ion from a neutral atom
   real,dimension(0:nZMax,nMixMax) :: IonizEnergyNeutral_II 
@@ -52,6 +52,7 @@ module CRASH_ModStatSumMix
           EAv,   &  ! The average ionization energy level of ions
           Z2PerA,&  ! The average of Z^2/A
           Z2,    &  ! The average of Z^2
+          Z2_I(nMixMax), &  ! The average of Z^2 for each component      
           VirialCoeffAv, &  ! The value of <-\frac{V}{T} \frac{\partial E}{\partial V}>
           SecondVirialAv    ! The value of \frac{V^2}{T} < \frac{\partial^2 E}{\partial V^2} >
 
@@ -79,6 +80,7 @@ module CRASH_ModStatSumMix
            EAv,&            ! The average ionization energy level of ions
            Z2PerA,&         ! The average of Z^2/A
            Z2,    &         ! The average of Z^2
+           Z2_I, &          ! The average of Z^2 for each component
            VirialCoeffAv,&  ! The value of <-\frac{V}{T} \frac{\partial E}{\partial V}>
            SecondVirialAv,& ! The value of \frac{V^2}{T} < \frac{\partial^2 E}{\partial V^2} >          
            DeltaZ2Av,&      ! The value of <(delta i)^2>=<i^2>-<i>^2
@@ -254,6 +256,7 @@ Contains
     EAv = 0.0
     Z2  = 0.0
     Z2PerA = 0.0
+    Z2_I   = 0.0
     VirialCoeffAv    = 0.0
     SecondVirialAv   = 0.0
 
@@ -516,7 +519,7 @@ Contains
       real :: ETeInvAv_I(nMixMax)   ,& ! averaged i^2 for current iMix
               Z_I(nMixMax)          ,& ! averaged Z for current iMix                 
               VirialCoeff_I(nMixMax),& ! The value of  -\frac{V}{T} \frac{\partial E}{\partial V}
-              Z2I, DeltaZ2I         ,& ! Z2 and \delta^2 iaveraged for current iMix 
+              DeltaZ2I              ,& ! \delta^2 iaveraged for current iMix 
               InvTR                    ! 1/(Te*R_{iono})
 
       ! Array of ionization energy levels of ions divided by the temperature in eV
@@ -529,6 +532,7 @@ Contains
       zAv = 0.0
       EAv = 0.0
       Z2  = 0.0
+      Z2_I= 0.0
       Z2PerA = 0.0
       VirialCoeffAv    = 0.0
       SecondVirialAv   = 0.0
@@ -564,13 +568,13 @@ Contains
          if(DoZOnly) CYCLE
 
          !Calculate <Z^2>
-         Z2I = DeltaZ2I + Z_I(iMix)**2
-         Z2 = Z2 +  Concentration_I(iMix) * Z2I
+         Z2_I(iMix) = DeltaZ2I + Z_I(iMix)**2
+         Z2 = Z2 +  Concentration_I(iMix) * Z2_I(iMix)
               
 
          !Calculate <Z^2/A>
          Z2PerA = Z2PerA +  Concentration_I(iMix) * &
-              Z2I/cAtomicMass_I( nZ_I(iMix) )
+              Z2_I(iMix)/cAtomicMass_I( nZ_I(iMix) )
 
          !Fill in the array of average energies (per Te)
          !for all iMix and i taken into account

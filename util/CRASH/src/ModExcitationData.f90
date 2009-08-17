@@ -323,7 +323,12 @@ module CRASH_ModExcitationData
 
 
   !public methods
-  public:: n_ground  !Principal quantum number as a function of the charge state and the element number
+  !Principal quantum number as a function of the charge state and the element number
+  public:: n_ground  
+
+  !The number of electrons at inner shells
+  public:: n_screened
+
   public:: get_excitation_energy
   public:: get_virial_coeff4_energy
   public:: get_degeneracy
@@ -361,6 +366,22 @@ contains
        n_ground = nGround_I(nZ - iZ)
     end if
   end function n_ground
+  !======================================================================================
+  integer function n_screened(iZ,nZ)
+    !The number of electrons at inner shells
+    integer,intent(in) :: iZ, nZ
+    
+    integer :: nGround
+    integer,parameter :: nScreenedShell_I(6) = (/ 0,2,10,28,60,110 /)
+    integer,parameter :: nScreenedShell0_I(6)= (/ 0,2,10,18,36,54 /)
+    !---------------------
+    nGround = n_ground(iZ, nZ)
+    if(iZ==nZ)then
+       n_screened = nScreenedShell0_I(nGround)
+    else
+       n_screened = nScreenedShell_I(nGround)
+    end if
+  end function n_screened
   !======================================================================================
   !Fill in the array ExcitationEnergy_III with tabulated or calculted excitation energies
   !for quantum states defined by n, l of atoms or ions of a particular element defined
