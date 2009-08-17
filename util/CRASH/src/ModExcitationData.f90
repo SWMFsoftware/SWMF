@@ -519,11 +519,11 @@ contains
 
        select case (nZ)
           case (1:10)
-             Degeneracy_III(iZ,nGround,0) = cDegeneracy10_II(iZ+1,nZ)
+             Degeneracy_III(0,nGround,iZ) = cDegeneracy10_II(iZ+1,nZ)
           case (13)
-             Degeneracy_III(iZ,nGround,0) = cDegeneracyAl_I(iZ+1)
+             Degeneracy_III(0,nGround,iZ) = cDegeneracyAl_I(iZ+1)
           case (54)
-             Degeneracy_III(iZ,nGround,0) = cDegeneracyXe_I(iZ+1)
+             Degeneracy_III(0,nGround,iZ) = cDegeneracyXe_I(iZ+1)
           case default
              write(*,*) "No such element found in the database"//&
                   " of ground state degeneracies"
@@ -531,7 +531,7 @@ contains
 
        do iN = nGround+1, nExcitation
           do iL = 0, iN-1
-             Degeneracy_III(iZ,iN,iL) = 2 * (2*iL + 1)
+             Degeneracy_III(iL,iN,iZ) = 2 * (2*iL + 1)
           end do
        end do
     end do
