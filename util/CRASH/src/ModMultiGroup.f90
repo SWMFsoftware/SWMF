@@ -193,7 +193,8 @@ contains
        if (Concentration_I(iMix) .lt. con(2) ) CYCLE IMIXLOOP
 
        ! ...    loop over ionization states                         
-       IZLOOP: do  iZ=iZMin_I(iMix), min(iZMax_I(iMix), nZ_I(iMix) - 1)                                                                            
+       IZLOOP: do  iZ=iZMin_I(iMix), min(iZMax_I(iMix), nZ_I(iMix) - 1)
+                                    
           if ( Concentration_I(iMix)*Population_II(iZ,iMix) .lt. con(3))&
                CYCLE IZLOOP
 
@@ -206,7 +207,6 @@ contains
 
           ! ...  loop over initial quantum states                            
           INLOOP: do iN=nGround,nExcitation-1                              
-
              if ( Concentration_I(iMix) * &
                   Population_II(iZ,iMix)* &
                   Partition_III(iN,iZ,iMix)  &
@@ -760,7 +760,7 @@ contains
 
   subroutine abscon  
     use CRASH_ModStatSumMix, ONLY: Z2_I
-                                                                        
+
     ! ... this routine calculates the absorption, emission, and scattering 
     !     coefficients for an array of photon energies                      
     !                                                                      
@@ -777,12 +777,12 @@ contains
     !       emscfs  -  array of emission coefficients (cm**-1)         
     !       sctcfs  -  array of scattering coefficients (cm**-1)          
     !                                                                      
-                                                                       
+
     real:: DensNN, DensNe    ![cm -3]
 
     real,dimension(nMixMax) :: brems = 0.0, fotiza = 0.0, fotize = 0.0
-    
-    
+
+
     !\
     ! Loop variables
     !/
@@ -791,7 +791,7 @@ contains
          iN,   & ! runs over the quntum principal number for the lower level
          nBound, &!Number of bound electrons
          nGround  !For a given iZ, the principal number of the ground state.
- 
+
     integer::iPhot
 
     real :: eTransition, ennpot
@@ -840,92 +840,92 @@ contains
     !---------------------------------------------------
 
     !Initialization
-    
+
     abscfs  = 0.0  !-  array of absorption coefficients (cm**-1)            
     emscfs  = 0.0  !-  array of emission coefficients (cm**-1)         
     sctcfs  = 0.0  !-  array of scattering coefficients (cm**-1)     
-    
+
     DensNN = Na * 1.0e-6
     DensNe = DensNN * zAv
-    
+
     ! ... loop over photon energies
     do iphot=1,nPhoton                                              
-                                                                        
+
        exhvot = exp( -PhotonEnergy_I(iphot) / Te )                            
        photn3 = PhotonEnergy_I(iphot)**3                                   
-                                                                        
+
        ! ...    loop over gas species                                          
-                                                                        
+
        IMIXLOOP: do iMix = 1,nMix                                           
-                                                                        
+
           brems(iMix) = 0.0                                            
           fotiza(iMix) = 0.0                                           
           fotize(iMix) = 0.0                                           
-          
+
           ! ...       Bremsstrahlung                                              
           !           --------------                                              
-          
-          
-                                                                        
+
+
+
           densi2 = Z2_I(iMix) * Concentration_I(iMix) * densnn * 1.e-16               
-          
+
           ! ...       the free-free gaunt factor is a simple fit to the results   
           !           of Karzas and Latter (Ap. J. Suppl., 6, 167 (1961))         
 
           gam2lg = log10( 13.6 * Z2_I(iMix) / Te )                           
           gBrem  = 1. + 0.44 * exp( -0.25*(gam2lg+0.25)**2 )          
-                                                                        
+
           brems(iMix) = 2.4e-21 * densi2 * gbrem * densne * &          
                (1.-exhvot) / ( sqrt( Te ) * photn3 )                   
-                                                                        
+
 
           ! ...       photoionization                                             
           !           ----------------                                            
-                                                                        
+
           ! ...       sum over ionization levels for the transition from          
           !           "iZ" to "iZ+1"                                      
-          
+
           sum1a = 0.0                                                  
           sum1e = 0.0                                                  
           conpi = 1.66e-22 * densne / Te**1.5                         
-                                                                        
+
           IZLOOP: do iZ = iZMin_I(iMix), min( iZMax_I(iMix), nZ_I(iMix) - 1)                               
-                                                                       
-                                                                        
+
+
              ! ...          find the principal quantum number of the valence electron
              !              in the ground state for the ion before ("nprin0");       
              !              "nbound" is the number of electrons bound to the ion     
              !              after another is captured (or, before ionization).       
-             
+
              nBound = nZ_I(iMix) - iZ                            
              nGround = n_ground( iZ, nZ_I(iMix) )                                  
-               
+
              ! ...          first, consider the contibution from valence shell       
              !              electrons                                                
-               
+
              sum2a = 0.0                                               
              sum2e = 0.0
-                                               
+
              if ( Concentration_I(iMix) * Population_II(iZ,iMix)< con(3) ) &
                   CYCLE IZLOOP     
-                                                                        
+
              ! ...            sum over quantum states                                
              do  iN = nGround, nExcitation                       
-                                                                        
+
                 !  calculate the energy to excite the electron into     
                 !  the continuum 
-                                       
+
                 eTransition = IonizPotential_II(iZ+1, iMix) - &
                      ExcitationEnergy_III(iN, iZ, iMix)         
-                                                                        
+
                 ! ...  the photon energy must exceed the binding energy     
-               
+
                 if ( PhotonEnergy_I(iphot) <  eTransition ) CYCLE            
-                                                                        
+
                 ! ... find the number of "screening" electrons "nscren"    
                 !     and the number of electrons in the outermost shell   
                 !     "nvalen"                                             
-                
+
                 if ( iN == nGround ) then                          
                    ! ...ground state ion                                   
                    nScreened = n_screened(iZ, nZ_I(iMix))                           
@@ -935,14 +935,14 @@ contains
                    nScreened = nbound - 1                                
                    nValence = 1                                         
                 endif
-                                                                        
+
                 ennpot = eTransition / Te                                   
-                                                      
-                                                                        
+
+
                 ! ... use an "effective charge" seen by the electron,      
                 !     corrected for screening                              
                 iZEff = nZ_I(iMix) - nScreened                        
-                                                                        
+
                 deni = Population_II(iZ,iMix) * Partition_III(iN, iZ, iMix)     
                 if ( ennpot .lt. 50. ) then                          
                    eqdeni = iN**2 * conpi * exp( ennpot ) *  &     
@@ -950,11 +950,11 @@ contains
                 else                                                 
                    eqdeni = 0.0                                       
                 endif
-                                                                        
+
                 ! ...  the degeneracy level of the fully stripped ion       
                 !      is 1, while a value of 2 is used for other ions.     
                 if ( iZ +1== nZ_I(iMix) ) eqdeni = eqdeni * 2.    
-                                                                        
+
                 ! ... correction for stimulated emission; do not allow     
                 !       this to be < 0 for the abs. coef.
                 !
@@ -963,41 +963,41 @@ contains
                 ! Below lines for non_LTE are commented out  
                 !/                  
                 !non-LTE:if ( isw(6) .ne. 1 ) then                            
-                   ! ...                 non-LTE correction                                
+                ! ...                 non-LTE correction                                
                 !non-LTE:   dumden = deni                                     
                 !non-LTE: else                                                 
-                   ! ... LTE correction                                    
-                   dumden = eqdeni                                   
+                ! ... LTE correction                                    
+                dumden = eqdeni                                   
                 !non-LTE: endif
 
                 stcorr = max ( 0., dumden - eqdeni * exhvot )        
-                                                                        
+
                 xsec = nValence * iZEff**4 /iN**5                        
                 sum2a = sum2a + stcorr * xsec                        
                 sum2e = sum2e + eqdeni*(1.-exhvot) * xsec            
-                
+
              end do
-                                                                                                                            
-                                                                        
+
+
              ! ...          now, add core electron photoionization cross-sections    
              !              to the absorption term                                   
-             
+
              ! ...          loop over inner shells (K,L,M,...); each inner shell     
              !              is assume to be full                                     
-             
+
              !sum1ac = 0.0                                              
              ! nshels = nGround - 1                    
              if ( & !nshels > 0 .and. 
                   UseCoreElectron ) then
                 call CON_stop('UseCoreElectron should be set to .false.')
                 !  do ishell=1,nshels                                 
-                
+
                 ! ... determine the photoionization cutoff energy (eV); use
                 !     the ionization potential of the outermost bound      
                 !     electron; "nocc" is the number of electrons occupying
                 !     shell "ishell", "nscren" is the number of electrons  
                 !     screening shell "ishell"                             
-                
+
                 !    nocc = 2*ishell*ishell                               
                 !    nscren = nscrsh( ishell )                            
                 !    izeff = izgas(iMix) - nscren                         
@@ -1005,95 +1005,96 @@ contains
                 !    if ( PhotonEnergy_I(iphot) .ge. enpi ) then                  
                 !       sum1ac = sum1ac + nocc * izeff**4 / ishell**5      
                 !    endif
-                
+
                 ! end do
-                
+
                 ! sum1a = sum1a + sum1ac * Population_II(iZ,iMix)             
-                
+
              endif
-             
+
              sum1a = sum1a + sum2a                                    
              sum1e = sum1e + sum2e                                    
-             
+
           end do IZLOOP
-          
+
           const = (1.99e-14*densnn) * Concentration_I(iMix) / photn3           
-          fotiza(iMix) = const * sum1a                                
+          fotiza(iMix) = const * sum1a
           fotize(iMix) = const * sum1e                                
        end do IMIXLOOP   !Over iMix                                                                    
 
-                                                                        
-! ...    Scattering contributions                                       
-!        ------------------------                                       
-                                                                        
-! ...    Thomson scattering contribution                                
-!        first, find the "effective" electron density for scattering;   
-!        i.e., if the photon energy is greater than the binding energy  
-!        of bound electrons, include bound electrons to the density.    
-         scatne = 0.0                                                  
-         do  iMix=1,nMix                                           
-            iq = 0                                                      
-            do  iZ = 0,nZ_I(iMix) -1                              
-                                                      
-               if ( PhotonEnergy_I(iphot) > IonizPotential_II(iZ+1,iMix)) then            
-                  iq = iq + 1                                           
-                  scatne = scatne + Concentration_I(iMix)
-               else
-                  EXIT
-               endif                                                    
-            end do
-            !iQ is the last state at which the ionization potential 
-            !is less than the photon energy
-            !All the other state give only the free electron contribution to
-            !
-                                                                        
-            do iZ= max(iZMin_I(iMix),iQ+1), iZMax_I(iMix)
-               scatne = scatne + (iZ-iq) * Population_II(iZ,iMix)*&                    
-                         Concentration_I(iMix) 
-            end do
-         end do
-         scatne = scatne * densnn                                       
-         tscatt = 6.66e-25 * scatne !Thomson cros-section                                     
-                                                                        
-         ! ...    contribution from plasma oscillations                          
-         hnucut = sqrt( densne / 7.25e20 )      
-                        
-         if ( PhotonEnergy_I(iphot) .lt. hnucut ) then                          
-            pscatt = 5.05e4 * sqrt( hnucut**2 - PhotonEnergy_I(iphot)**2 )      
-         else                                                           
-            pscatt = 0.                                                 
-         endif                                                          
-                                                                       
-         if ( UseScattering) sctcfs(iphot) = tscatt + pscatt            
-                                                                        
-         !\
-         !Sum up al the contributions                                                               
-         abscfs(iphot) = 0.0                                            
-         emscfs(iphot) = 0.0                                             
-         if(UseBremsstrahlung)then                                         
-            abscfs(iphot) = abscfs(iphot)+sum(brems(1:nMix)) 
-            emscfs(iphot) = emscfs(iphot)+sum(brems(1:nMix))
-         end if
-         if(UsePhotoionization)then
-            
-            abscfs(iphot) = abscfs(iphot)+sum(fotiza(1:nMix)) 
-            emscfs(iphot) = emscfs(iphot)+sum(fotize(1:nMix)) 
-        end if
-        
-        
-        ! ...    line contributions                                             
-        !        ------------------                                             
-        
-        ! ...    add in the contribution from bound-bound transitions           
-        
-        call lines ( PhotonEnergy_I(iphot), abslns,emslns )      
-        
-        abscfs(iphot) = abscfs(iphot) + abslns              
-        emscfs(iphot) = emscfs(iphot) + emslns                                                             
-                                                         
-                                                                        
-  end do  !over iphot                                                         
-end subroutine abscon
+
+       ! ...    Scattering contributions                                       
+       !        ------------------------                                       
+
+       ! ...    Thomson scattering contribution                                
+       !        first, find the "effective" electron density for scattering;   
+       !        i.e., if the photon energy is greater than the binding energy  
+       !        of bound electrons, include bound electrons to the density.    
+       scatne = 0.0                                                  
+       do  iMix=1,nMix                                           
+          iq = 0                                                      
+          do  iZ = 0,nZ_I(iMix) -1                              
+
+             if ( PhotonEnergy_I(iphot) > IonizPotential_II(iZ+1,iMix)) then            
+                iq = iq + 1                                           
+                scatne = scatne + Concentration_I(iMix)
+             else
+                EXIT
+             endif
+          end do
+          !iQ is the last state at which the ionization potential 
+          !is less than the photon energy
+          !All the other state give only the free electron contribution to
+          !
+
+          do iZ= max(iZMin_I(iMix),iQ+1), iZMax_I(iMix)
+             scatne = scatne + (iZ-iq) * Population_II(iZ,iMix)*&                    
+                  Concentration_I(iMix) 
+          end do
+       end do
+       scatne = scatne * densnn                                       
+       tscatt = 6.66e-25 * scatne !Thomson cros-section                                     
+
+       ! ...    contribution from plasma oscillations                          
+       hnucut = sqrt( densne / 7.25e20 )      
+
+       if ( PhotonEnergy_I(iphot) .lt. hnucut ) then                          
+          pscatt = 5.05e4 * sqrt( hnucut**2 - PhotonEnergy_I(iphot)**2 )      
+       else                                                           
+          pscatt = 0.                                                 
+       endif
+
+       if ( UseScattering) sctcfs(iphot) = tscatt + pscatt            
+
+       !\
+       !Sum up al the contributions                                                               
+       abscfs(iphot) = 0.0                                            
+       emscfs(iphot) = 0.0                                             
+       if(UseBremsstrahlung)then                                         
+          abscfs(iphot) = abscfs(iphot)+sum(brems(1:nMix)) 
+          emscfs(iphot) = emscfs(iphot)+sum(brems(1:nMix))
+       end if
+       if(UsePhotoionization)then
+
+          abscfs(iphot) = abscfs(iphot)+sum(fotiza(1:nMix)) 
+          emscfs(iphot) = emscfs(iphot)+sum(fotize(1:nMix)) 
+       end if
+
+
+
+       ! ...    line contributions                                             
+       !        ------------------                                             
+
+       ! ...    add in the contribution from bound-bound transitions           
+
+       call lines ( PhotonEnergy_I(iphot), abslns,emslns )      
+
+       abscfs(iphot) = abscfs(iphot) + abslns              
+       emscfs(iphot) = emscfs(iphot) + emslns                                                             
+
+
+    end do  !over iphot                                                         
+  end subroutine abscon
 
   !====================
 end module CRASH_ModMultiGroup
