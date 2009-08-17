@@ -212,9 +212,9 @@ contains
        !Take averages over l
        
        do iN = nGround, nExcitation
-          Partition_III(iN,iZ,iMix) = sum( Partition_IIII(:,iN,iZ,iMix)) 
+          Partition_III(iN,iZ,iMix) = sum( Partition_IIII(0:iN-1,iN,iZ,iMix)) 
           ExcitationEnergy_III( iN,iZ,iMix) = sum(&
-               Partition_IIII(:,iN,iZ,iMix) * ExtraEnergy_IIII(:,iN,iZ,iMix))
+               Partition_IIII(0:iN-1,iN,iZ,iMix) * ExtraEnergy_IIII(0:iN-1,iN,iZ,iMix))
 
           if (Partition_III(iN,iZ,iMix) /= 0.0) ExcitationEnergy_III(iN,iZ,iMix) = &
                ExcitationEnergy_III(iN,iZ,iMix) / Partition_III(iN,iZ,iMix)

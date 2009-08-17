@@ -131,7 +131,7 @@ test_abs:
 	  rm -f *.diff test_re*
 	  cp ../doc/Polymide_Abs.dat test_result
 	  cp ../doc/Tex/Polymide_Abs.dat test_ref
-	  ${SCRIPTDIR}/DiffNum.pl test_result test_ref > test_abss.diff
+	  ${SCRIPTDIR}/DiffNum.pl test_result test_ref > test_abs.diff
 	  ls -l *.diff
 	  rm -f test_re*
 
