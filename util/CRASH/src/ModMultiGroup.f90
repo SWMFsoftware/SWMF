@@ -598,13 +598,13 @@ contains
 
 
     ! ... set up initial grid within each photon energy group
-    do iGroup = 1,nGroup                                                
+    do iGroup = 0,nGroup-1                                                
 
        hvmin = EnergyGroup_I(iGroup)                                             
        hvmax = EnergyGroup_I(iGroup+1)                                           
        dloghv = log( hvmax/hvmin ) / nptspg                           
        LogHv = log( hvmin ) - dloghv                                  
-       if ( iGroup.lt.nGroup ) then                                       
+       if ( iGroup.lt.nGroup - 1 ) then                                       
           nmax = nptspg                                               
        else                                                           
           nmax = nptspg + 1                                           
