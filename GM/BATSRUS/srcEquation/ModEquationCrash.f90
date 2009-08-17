@@ -1,7 +1,7 @@
 module ModVarIndexes
   use ModSingleFluid, Redefine1 => IsMhd, Redefine2 => Erad_, &
        Redefine3 => WaveFirst_, Redefine4 => WaveLast_, &
-       Redefine5 => ExtraEint_
+       Redefine5 => ExtraEint_, Redefine6 => Ee_
   implicit none
 
   save
