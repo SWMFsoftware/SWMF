@@ -102,14 +102,6 @@ subroutine IE_solve
              IONO_NORTH_X, IONO_NORTH_Y, IONO_NORTH_Z, &
              IONO_NORTH_Theta, IONO_NORTH_Psi, &
              dTheta_North, dPsi_North)
-        ! Add Joule Heating for North (JouleHeating= SigmaP * E^2)
-        ! Yiqun -Sep 2008
-
-        call ionosphere_jouleheating_ionflux(iBlock, &
-             IONO_NORTH_ETh, IONO_NORTH_EPs, &
-             IONO_NORTH_SigmaP, &
-             IONO_NORTH_Joule,  &
-             IONO_NORTH_IonNumFlux)
 
      case(2) ! Southern hemisphere
 
@@ -188,15 +180,6 @@ subroutine IE_solve
              IONO_SOUTH_X, IONO_SOUTH_Y, IONO_SOUTH_Z, &
              IONO_SOUTH_Theta, IONO_SOUTH_Psi, &
              dTheta_South, dPsi_South)
-
-        ! Add Joule Heating for South (JouleHeating = SigmaP * E^2)
-        ! Yiqun -Sep 2008
-        
-        call ionosphere_jouleheating_ionflux(iBlock, &
-             IONO_SOUTH_ETh, IONO_SOUTH_EPs, &
-             IONO_SOUTH_SigmaP, &
-             IONO_SOUTH_Joule,  &
-             IONO_SOUTH_IonNumFlux)
 
      end select
 
