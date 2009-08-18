@@ -51,7 +51,8 @@ module ModIonosphere
   ! Ionosphere Solution on the whole grid
   !/
   real, dimension(2*IONO_nTheta-1, IONO_nPsi) :: &
-       IONO_Phi = 0.0
+       IONO_Phi = 0.0, IONO_IonNumFlux = 0.0, &
+       IONO_Joule = 0.0
 
   !\
   ! Ionosphere solution array definitions
@@ -93,7 +94,11 @@ module ModIonosphere
        IONO_SOUTH_dSigmaThPs_dPsi,                  &
        IONO_SOUTH_dSigmaPsPs_dPsi,                  &
        SAVE_NORTH_SigmaH,SAVE_NORTH_SigmaP,         &
-       SAVE_SOUTH_SigmaH,SAVE_SOUTH_SigmaP
+       SAVE_SOUTH_SigmaH,SAVE_SOUTH_SigmaP,         &
+       IONO_NORTH_Joule, IONO_SOUTH_Joule
+  
+  real, dimension(1:IONO_nTheta, 1:IONO_nPsi) ::    &
+       IONO_NORTH_IonNumFlux, IONO_SOUTH_IonNumFlux
 
   real, dimension(1:IONO_nTheta,1:IONO_nPsi) ::     &
        IONO_NORTH_JR,                               & !Ionospheric current
