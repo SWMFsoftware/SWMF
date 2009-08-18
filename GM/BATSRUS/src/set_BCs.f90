@@ -289,26 +289,36 @@ subroutine set_face_BCs(IsBodyCell_G, IsTrueCell_G)
  
 contains
 
-  subroutine set_face_bc
+ subroutine set_face_bc
 
-    use ModPhysics, ONLY : xBody2,yBody2,zBody2 !^CFG IF SECONDBODY
-    use ModPhysics, ONLY : FaceState_VI
+    use ModPhysics, ONLY : rBody, xBody2,yBody2,zBody2 !^CFG IF SECONDBODY
+    use ModPhysics, ONLY : FaceState_VI,Si2No_V,No2Si_V,UnitX_,UnitN_,UnitU_, &
+         UnitTemperature_, UnitJ_, UnitPoynting_
     use ModUser, ONLY: user_face_bcs
-    use ModMultiFluid, ONLY: iUx_I, iUy_I, iUz_I
+    use ModMain
+    use ModMultiFluid
+    use CON_planet_field, ONLY: get_planet_field, map_planet_field
+    use ModConst,   ONLY: cElectronCharge, cBoltzmann,cProtonMass
+    use ModPlanetConst, ONLY: Earth_, rPlanet_I
+    use ModUtilities
     
     implicit none
 
     real, parameter:: PressureJumpLimit=0.0, DensityJumpLimit=0.1
+    real, parameter:: LatitudeCap = 55.0
 
     real:: uRot_D(nDim), uIono_D(nDim)
-    real:: FaceState_V(nVar)
+    real:: FaceState_V(nVar), State_V(Bx_:nVar+3)
     real:: bDotR, Brefl_D(nDim), Borig_D(nDim)
     real:: bDotU, rInv
     real:: CosTheta, SinTheta, CosPhi, SinPhi
     real:: UrTrue, UtTrue, BpTrue, BrGhost, BtGhost, BpGhost
-
-    real:: bUnit_D(3)
+    real:: Ub_V(2), b, b1,b4,bFace_D(3), JouleHeating, FluxIono, FluxPw
+    real:: bUnit_D(3), GseToGeo_D(3), XyzMap_D(3), SmgFaceCoords_D(3), GeoFaceCoords_D(3)
     logical:: IsPolarFace
+    real:: SinLatitudeCap, zCap, eCap, ePar, &
+         TheTmp,DtTmp,DaTmp, Cosx, Jlocal_D(3), Jpar
+    integer:: iHemisphere
     !------------------------------------------------------------------------
 
     ! User defined boundary conditions
@@ -416,7 +426,7 @@ contains
        ! Reflect B1 or full B
        VarsGhostFace_V(Bx_:Bz_) =  VarsTrueFace_V(Bx_:Bz_) - BRefl_D
 
-    case('ionosphere', 'polarwind')
+    case('ionosphere', 'polarwind','ionosphereoutflow')
 
        if(TypeBc == 'polarwind')then
           CoordSm_D = matmul(GmToSmg_DD, FaceCoords_D)
@@ -476,6 +486,196 @@ contains
           VarsGhostFace_V(iUx_I) = -VarsTrueFace_V(iUx_I)
           VarsGhostFace_V(iUy_I) = -VarsTrueFace_V(iUy_I)
           VarsGhostFace_V(iUz_I) = -VarsTrueFace_V(iUz_I)
+
+          !---------------------------------------------------
+          ! Ionosphere outflow in multifluids  --- Yiqun 2008
+          !---------------------------------------------------
+          if(TypeBc == 'ionosphereoutflow')then      
+             
+             if (TypeCoordSystem /= 'SMG') then 
+                SmgFaceCoords_D = matmul(transform_matrix(TimeBc, &
+                     TypeCoordSystem, 'SMG'), FaceCoords_D)
+             else 
+                SmgFaceCoords_D = FaceCoords_D
+             endif
+             
+             SinLatitudeCap = sin(LatitudeCap * cDegToRad)
+             zCap = sqrt(sum(SmgFaceCoords_D**2))*SinLatitudeCap
+
+             if(abs(SmgFaceCoords_D(z_)) > zCap)then
+                ! for the polar region
+                if(UseIe .and. UseMultiIon) then 
+
+                   if (TypeCoordSystem /= 'GEO') then 
+                      GeoFaceCoords_D = matmul(transform_matrix(TimeBc, &
+                           TypeCoordSystem, 'GEO'), FaceCoords_D)
+                   else 
+                      GeoFaceCoords_D = FaceCoords_D
+                   endif
+                   GseToGeo_D = matmul(transform_matrix(TimeBc, 'GSE', 'GEO'),&
+                        (/0,0,1/))
+                   
+                   ! For the cap region (refer to Tom Moore 2003?)
+                   ! Get the Op flux from IE calculation
+                   ! Get the Hp flux from fluxpw, 
+                   ! which is constant for certain solar zenith angle
+                   ! Fix the velocities(V), thermal energies
+                   ! Get the densities(rho), thermal pressure(P)
+                   
+                   ! get the magnetic field
+                   call get_planet_field(TimeBc, FaceCoords_D,&
+                        TypeCoordSystem//'NORM', bFace_D)
+                   b =  sqrt(sum(bFace_D**2))
+                   bUnit_D = bFace_D / B
+
+
+                   ! get the magnetic field at 4000km 
+                   call map_planet_field(TimeBc, FaceCoords_D, &
+                        TypeCoordSystem//'NORM', &
+                        (4000.0+rPlanet_I(Earth_))/rPlanet_I(Earth_), &
+                        XyzMap_D, iHemisphere)
+                   call get_planet_field(TimeBc, XyzMap_D, &
+                        TypeCoordSystem//'NORM', bFace_D)
+
+                   b4 =  sqrt(sum(bFace_D**2))
+
+                   ! get the joule heating mapped from the ionosphere 
+                   ! (already in nomalized unit)
+                   call map_inner_bc_jouleheating(TimeBc, FaceCoords_D, &
+                        JouleHeating)
+
+                   ! get the O+ flux based on Strangeway's formula, 
+                   ! and scale it
+                   FluxIono = 2.142e7*(JouleHeating * No2Si_V(UnitPoynting_)&
+                        * 1.0e3)**1.265 * 1.0e4 &
+                        * Si2No_V(UnitU_) * Si2No_V(UnitN_) * (b4/b)**0.265
+                   
+                   ! thermal energy = 0.1 + 1.6 * S^1.26 
+                   ! (S is joule heating in mW/m^2 at inner boundary)
+                   ! to specify the O+ temperature
+                   eCap = 0.1 + 9.2 * &
+                        ((b4/b)* JouleHeating*No2Si_V(UnitPoynting_) &
+                        * 1.0e3)**0.35    !eV
+                   
+                   ! Get the field aligned current at this location, 
+                   ! so comes the parallel energy
+                   call get_point_data(1.0, FaceCoords_D, 1, nBlock, Bx_, &
+                        nVar+3, State_V)
+ 
+                   Jlocal_D = State_V(nVar+1:nVar+3)
+                   Jpar = sum(bUnit_D * Jlocal_D)  !in normalized unit
+  
+                   ! parallel energy 
+                   ! (ePar = eV=e*(1500[V/mmA/m^2] * (J//-0.33)^2 [mmA/m^2]))
+                   if(abs(Jpar*No2Si_V(UnitJ_))*1.0e6 > 0.33)then 
+                      ePar = 1500 * (abs(Jpar*No2Si_V(UnitJ_))*1.0e6 &
+                           - 0.33)**2 !eV
+                   else
+                      ePar = 0.
+                   end if
+                   
+                   ! Get the velocity along B, 
+                   ! superpose the parallel velocity and the thermal velocity
+                   Ub_V(1) = (sqrt(2 * (ePar + eCap) * cElectronCharge / &
+                        (MassFluid_I(IonFirst_)*cProtonMass))) &
+                        * Si2No_V(UnitU_)
+                     
+                   Ub_V(2) = (sqrt(2 * (ePar + eCap) * cElectronCharge / &
+                        (MassFluid_I(IonLast_)*cProtonMass))) &
+                        * Si2No_V(UnitU_)
+                   
+                   ! .OR. Pick the constant velocities and thermal energy
+                   ! Ub_V(2) = 10*Io2No_V(UnitU_)  !20km/s
+                   ! Ub_V(1) = 20*Io2No_V(UnitU_) 
+                    
+                   ! SZA x is determind by 
+                   ! cosx = sin(the)sin(da)+cos(the)cos(da)cos(dt)
+                   ! where, the is the latitude, da is solar declination( 
+                   ! angle between solar ray and equatorial plane), 
+                   ! dt is local time angle
+                   TheTmp = asin(GeoFaceCoords_D(z_)/ &
+                        sqrt(sum(GeoFaceCoords_D**2)))      !latitutde
+                   DaTmp = acos(GseToGeo_D(z_))               !declination
+                   DtTmp = acos(SmgFaceCoords_D(x_)/ &
+                        sqrt(SmgFaceCoords_D(x_)**2 + &
+                        SmgFaceCoords_D(y_)**2))        !local time angle
+
+                   if(SmgFaceCoords_D(y_)<0.0) DtTmp =  cTwoPi - DtTmp
+                   Cosx = sin(TheTmp)*sin(DaTmp) + &
+                        cos(TheTmp)*cos(DaTmp)*cos(DtTmp)
+                     
+                   ! get the magnetic field at 1000km
+                   call map_planet_field(TimeBc, FaceCoords_D, &
+                        TypeCoordSystem//'NORM', &
+                        (1000.0+rPlanet_I(Earth_))/rPlanet_I(Earth_), &
+                        XyzMap_d, iHemisphere)
+                   call get_planet_field(TimeBc, XyzMap_D, &
+                        TypeCoordSystem//'NORM', bFace_D)
+                   b1 =  sqrt(sum(bFace_D**2))
+                     
+                   ! get the Hp flux by mapping the flux at 1000km 
+                   ! into the inner boudnary
+                   if (acos(Cosx)*cRadToDeg < 90 .and. &
+                        acos(Cosx)*cRadToDeg > 0.) then
+                      FluxPw = 2.0e8 * 1.0e4 * (b/b1) &
+                           * Si2No_V(UnitU_) * Si2No_V(UnitN_)
+                   elseif(acos(Cosx)*cRadToDeg < 110) then
+                      FluxPw = 2.0*10.**(8-(acos(Cosx)*cRadToDeg &
+                           - 90.)/20.*2.5) * 1.0e4 * (b/b1) * &
+                           Si2No_V(UnitU_) * Si2No_V(UnitN_)
+                   else
+                      FluxPw = 2.0*10.**5.5 * 1.0e4 * (b/b1) * &
+                           Si2No_V(UnitU_) * Si2No_V(UnitN_)
+                   endif
+                   
+                   ! get the densities
+                   VarsGhostFace_V(HpRho_) = FluxPw/Ub_V(1) *   &
+                        MassFluid_I(IonFirst_)
+                   VarsGhostFace_V(OpRho_) = FluxIono/Ub_V(2) * &
+                        MassFluid_I(IonLast_)     
+                     
+                   ! Make sure it points outward
+                   if(sum(bUnit_D*FaceCoords_D) < 0.0) bUnit_D = -bUnit_D
+                     
+                   VarsGhostFace_V(iUx_I(IonFirst_:IonLast_)) = Ub_V * bUnit_D(x_)
+                   VarsGhostFace_V(iUy_I(IonFirst_:IonLast_)) = Ub_V * bUnit_D(y_)
+                   VarsGhostFace_V(iUz_I(IonFirst_:IonLast_)) = Ub_V * bUnit_D(z_)
+                     
+                   ! get the pressure
+                   VarsGhostFace_V(OpP_)   =  2./3. * eCap * &
+                        cElectronCharge / cBoltzmann &
+                        * Si2No_V(UnitTemperature_)  &
+                        * VarsGhostFace_V(OpRho_)/MassFluid_I(IonLast_)
+                   VarsGhostFace_V(HpP_)   =  2./3. * eCap * &
+                        cElectronCharge / cBoltzmann & 
+                        * Si2No_V(UnitTemperature_)  &
+                        * VarsGhostFace_V(HpRho_)/MassFluid_I(IonFirst_)
+                     
+                   ! for the 'all' fluid
+                   VarsGhostFace_V(Rho_) = sum(VarsGhostFace_V( &
+                        iRho_I(IonFirst_:IonLast_)))
+                   VarsGhostFace_V(iUx_I(1))  = sum(VarsGhostFace_V( &
+                        iRho_I(IonFirst_:IonLast_)) &
+                        * VarsGhostFace_V(iUx_I(IonFirst_:IonLast_)))&
+                        /sum(VarsGhostFace_V(iRho_I(IonFirst_:IonLast_))) 
+                   VarsGhostFace_V(iUy_I(1))  = sum(VarsGhostFace_V( &
+                        iRho_I(IonFirst_:IonLast_)) &
+                        * VarsGhostFace_V(iUy_I(IonFirst_:IonLast_)))&
+                        /sum(VarsGhostFace_V(iRho_I(IonFirst_:IonLast_)))
+                   VarsGhostFace_V(iUz_I(1))  = sum(VarsGhostFace_V( &
+                        iRho_I(IonFirst_:IonLast_)) &
+                        * VarsGhostFace_V(iUz_I(IonFirst_:IonLast_)))&
+                        /sum(VarsGhostFace_V(iRho_I(IonFirst_:IonLast_)))
+                   VarsGhostFace_V(P_)        = sum(VarsGhostFace_V( &
+                        iP_I(IonFirst_:IonLast_)))
+                     
+                else
+                   call stop_mpi( &
+                        'ionosphereoutflow should have IE coupled and multifluids')
+                end if
+             end if ! polar cap region
+          end if ! ionosphereoutflow type of innerboundary
+
        end if
 
     case('coronatoih')    !Only for nVar=8
@@ -500,7 +700,7 @@ contains
             - FaceCoords_D * sum(FaceCoords_D * uIono_D) / sum(FaceCoords_D**2)
 
        select case(TypeBc)
-       case('reflect','linetied','polarwind','ionosphere','ionospherefloat')
+       case('reflect','linetied','polarwind','ionosphere','ionospherefloat', 'ionosphereoutflow')
           VarsGhostFace_V(iUx_I) = 2*uIono_D(x_) + VarsGhostFace_V(iUx_I)
           VarsGhostFace_V(iUy_I) = 2*uIono_D(y_) + VarsGhostFace_V(iUy_I)
           VarsGhostFace_V(iUz_I) = 2*uIono_D(z_) + VarsGhostFace_V(iUz_I)
@@ -522,7 +722,7 @@ contains
 
        select case(TypeBc)
        case('reflect','linetied', &
-            'ionosphere','ionospherefloat','polarwind')
+            'ionosphere','ionospherefloat','polarwind','ionosphereoutflow')
           VarsGhostFace_V(iUx_I) = 2*uRot_D(x_) + VarsGhostFace_V(iUx_I)
           VarsGhostFace_V(iUy_I) = 2*uRot_D(y_) + VarsGhostFace_V(iUy_I)
           VarsGhostFace_V(iUz_I) = 2*uRot_D(z_) + VarsGhostFace_V(iUz_I)
