@@ -117,7 +117,7 @@ Contains
     use CRASH_ModFermiGas,ONLY:RPlus,RMinus
     !----------------------------------------------------------
     if(zAv==0)then
-       d_pressure_over_d_te = 0.0
+       d_pressure_over_d_te = 1.0
        return
     end if
     !\
@@ -130,6 +130,24 @@ Contains
          CovEnergyVirial
 
   end function d_pressure_over_d_te
+
+  ! Calculate (1/Na)*(\partial P/\partial T)_{\rho=const}
+  ! i.e the temperuture derivative of the specific pressure (P/Na)
+  real function d_pressure_over_d_te_e()
+    use CRASH_ModFermiGas,ONLY:RPlus,RMinus
+    !----------------------------------------------------------
+    if(zAv==0)then
+       d_pressure_over_d_te_e = 0.0
+       return
+    end if
+    !\
+    !Calculate derivatives at const Na:
+    !/
+
+    !For specific pressure:
+    d_pressure_over_d_te_e = d_pressure_over_d_te() - 1.0
+
+  end function d_pressure_over_d_te_e
 
   !========================================================================!
   !Calculate !(\rho/P)*(\partial P/\Partial \rho)_{T=const},
@@ -155,6 +173,31 @@ Contains
          (1.0 + zAv*RPlus + VirialCoeffAv)
 
   end function compressibility_at_const_te
+
+  !========================================================================!
+  !Calculate !(\rho/P)*(\partial P/\Partial \rho)_{T=const},
+  !i.e the compressibility at constant temperature
+  real function compressibility_at_const_te_e()
+    use CRASH_ModFermiGas,ONLY:RPlus, RMinus
+
+
+    !-------------------
+    if(zAv==0)then
+       compressibility_at_const_te_e = 0.0
+       return
+    end if
+    !\
+    !Derivatives at constant T:
+    !/
+
+    !For specific pressure:
+    !(Na /P) \left(\partial P / \partial Na \right)_{T=const}
+
+    compressibility_at_const_te_e = compressibility_at_const_te() - &
+         1.0 / (1.0 + zAv*RPlus + VirialCoeffAv)
+
+  end function compressibility_at_const_te_e
+
   !===================================================================
   subroutine get_gamma(GammaOut,GammaSOut,GammaMaxOut)
     real,optional,intent(out)::GammaOut    !1+P/UInternal
@@ -187,6 +230,39 @@ Contains
     if(present(GammaMaxOut))GammaMaxOut = max( GammaS,  Gamma)
 
   end subroutine get_gamma
+  !===================================================================
+  subroutine get_gamma_e(GammaOut,GammaSOut,GammaMaxOut)
+    real,optional,intent(out)::GammaOut    !1+P/UInternal
+    real,optional,intent(out)::GammaSOut   !The speed of sound squared*Rho/P
+    real,optional,intent(out)::GammaMaxOut !max(Gamma,GammaS)
+    real::Gamma,GammaS
+
+    real,parameter::Gamma0=5.0/3.0
+    !--------------------------------------!
+
+    if(zAv==0.0)then
+       if(present(GammaOut))   GammaOut=Gamma0
+       if(present(GammaSOut))  GammaSOut=Gamma0
+       if(present(GammaMaxOut))GammaMaxOut=Gamma0
+       return
+    end if
+    Gamma = 1.0 + pressure_e()/( Na * cEv * internal_energy_e())
+
+    if(present(GammaOut))GammaOut = Gamma
+
+    !Define GammaS in terms the speed of sound: GammaS*P/\rho=(\partial P/\partial \rho)_{s=const}
+    !Use a formula 3.72 from R.P.Drake,{\it High-Energy Density Physics}, Springer, Berlin-Heidelberg-NY, 2006
+    ! and apply the thermodinamic identity:
+    !(\partial \epsilon/\partial \rho)_{T=const}-P/\rho^2)=-T(\partial P/\partial T)_{\rho=const)/\rho^2
+
+    GammaS = compressibility_at_const_te_e() + &
+         d_pressure_over_d_te_e()**2 * (Na * Te * cEV) /(heat_capacity_e() * pressure_e())
+
+    if(present(GammaSOut))GammaSOut = GammaS
+
+    if(present(GammaMaxOut))GammaMaxOut = max( GammaS,  Gamma)
+
+  end subroutine get_gamma_e
 end module CRASH_ModThermoDynDeriv
 !=======================!
 module CRASH_ModStatSum
@@ -265,6 +341,55 @@ Contains
     call check_applicability(iError)
   end subroutine set_temperature
   !==========================================================================
+  subroutine set_temperature_e(Uin, NaIn, iError)
+
+    real,intent(in) :: Uin,& !Average internal energy per atomic unit [eV]
+                       NaIn  !Density of heavy particles [# of particles/m^3]
+    integer,intent(out),optional::iError
+
+    real :: UDeviation,& ! The difference between the given internal energy and the calculated one
+            ToleranceUeV ! The required accuracy of U in eV
+    !-------------------------
+    call init_madelung(NaIn)
+
+    if( .not.UsePreviousTe ) then
+       if(nMix>1) then
+          !To keep the backward compatibility, because the choice for mixture was different
+          Te = UIn / 1.5
+       else
+          Te = max(UIn,IonizPotential_II(1,1)) * 0.1
+       end if
+    end if
+    if( UIn <= 0.03 * minval(IonizPotential_II(1,1:nMix))) then
+
+       Te=UIn/1.50 ;  call set_zero_ionization
+       call check_applicability(iError)
+       return
+    end if
+
+    ToleranceUeV = Tolerance * Uin
+    iIterTe = 0
+
+    !Use Newton-Rapson iterations to get a better approximation of Te:
+    UDeviation = 2.*ToleranceUeV
+    iterations: do while(abs(UDeviation) >ToleranceUeV .and. iIterTe<=20)
+
+       !Find the populations for the trial Te
+
+       call set_ionization_equilibrium(Te, Na)
+       UDeviation = internal_energy_e() - Uin
+
+       !Calculate the improved value of Te, limiting the iterations so
+       !they can't jump too far out
+
+       Te = min(2.0 * Te, max(0.5 * Te, Te - UDeviation/heat_capacity_e()))
+
+       iIterTe = iIterTe+1
+    end do iterations
+
+    call check_applicability(iError)
+  end subroutine set_temperature_e
+  !==========================================================================
   subroutine pressure_to_temperature(PToNaRatio, NaIn, iError)
     real,intent(in) :: PToNaRatio,& !Presure divided by Na [eV]
          NaIn !Density of heavy particles [# of particles/m^3]
@@ -313,5 +438,54 @@ Contains
     end do iterations
     call check_applicability(iError)
   end subroutine pressure_to_temperature
+  !==========================================================================
+  subroutine pressure_to_temperature_e(PToNaRatio, NaIn, iError)
+    real,intent(in) :: PToNaRatio,& !Pressure divided by Na [eV]
+         NaIn !Density of heavy particles [# of particles/m^3]
+    integer,intent(out),optional::iError
+
+    ! The difference between the given pressure and the calculated one
+    real :: PDeviation,&
+         TolerancePeV ! The required accuracy of P in eV*Na
+
+    !Thermodinamical derivative (\partial P/\partial T)
+    !at constant Na, divided by Na
+    real :: NaInvDPOvDTAtCNa
+    !------------------------------------
+
+    call init_madelung(NaIn)
+
+    !It is difficult to make an initial guess about temperature
+    !The suggested estimate optimizes the number of idle iterations:
+    if(.not.UsePreviousTe) &
+         Te = max(1.50* PToNaRatio, IonizPotential_II(1,1) ) * 0.1
+
+    if(PToNaRatio<=0.03*IonizPotential_II(1,1))then
+       Te = PToNaRatio; call set_zero_ionization
+       call check_applicability(iError)
+       return
+    end if
+
+    TolerancePeV = Tolerance * PToNaRatio
+    iIterTe = 0
+    PDeviation = 2.*TolerancePeV
+
+    !Use Newton-Rapson iterations to get a better approximation of Te:
+
+    iterations: do while(abs(PDeviation) >TolerancePeV .and. iIterTe<=20)
+
+       !Find the populations for the trial Te
+       call set_ionization_equilibrium(Te, Na)
+       PDeviation = pressure_e()/(Na*cEV) - PToNaRatio
+
+       !Calculate the improved value of Te, limiting the iterations so
+       !they can't jump too far out, if the initial guess for Te is bad.
+       Te = min(2.0*Te, max(0.5*Te, Te - PDeviation/d_pressure_over_d_te_e() ) )
+
+       iIterTe = iIterTe+1  !Global variable, which is accessible from outside
+
+    end do iterations
+    call check_applicability(iError)
+  end subroutine pressure_to_temperature_e
 
 end module CRASH_ModStatSum
