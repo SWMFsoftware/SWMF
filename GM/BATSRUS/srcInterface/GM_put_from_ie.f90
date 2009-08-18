@@ -4,11 +4,18 @@
 module ModIonoPotential
 
   use ModIeGrid
+  use CON_planet_field
+  use ModCoordTransform, ONLY: sph_to_xyz
+  use ModMain,    ONLY: Time_Simulation
+  use ModPhysics, ONLY: rBody
+  use ModPhysics,       ONLY: Si2No_V, No2Si_V, UnitN_, UnitU_
+  use ModProcMH
   implicit none
   save
 
   real, allocatable :: IonoPotential_II(:,:)
   real, allocatable :: dIonoPotential_DII(:,:,:)
+  real, allocatable :: IonoJouleHeating_II(:,:)
 
 contains
 
@@ -77,19 +84,70 @@ contains
 
   end subroutine calc_grad_iono_potential
 
+!=============================================================================
+  
+  subroutine init_mod_iono_jouleheating(iSize, jSize)
+    
+    integer, intent(in) :: iSize, jSize
+    character(len=*), parameter :: NameSub='init_mod_iono_jouleheating'
+    !-------------------------------------------------------------------------
+   
+    if(allocated(IonoJouleHeating_II)) RETURN
+   
+    call init_mod_ie_grid(iSize, jSize)
+   
+    allocate( IonoJouleHeating_II(nThetaIono, nPhiIono))
+   
+  end subroutine init_mod_iono_jouleheating
+ !=============================================================================
+ 
+  subroutine map_jouleheating_to_inner_bc
+ 
+    integer :: i, j, iHemisphere
+    real, dimension(3) :: XyzIono_D, bIono_D, B_D, Xyz_tmp
+    real    :: bIono, b
+   !-------------------------------------------------------------------------
+    do i = 1, nThetaIono; do j =1, nPhiIono
+       call sph_to_xyz(rIonosphere, ThetaIono_I(i), PhiIono_I(j), XyzIono_D)
+       call get_planet_field(Time_Simulation,XyzIono_D, 'SMG NORM', bIono_D)
+       bIono = sqrt(sum(bIono_D**2))
+      
+       ! map out to GM (caution!, not like map down to the ionosphere, there is always
+       ! a corresponding position.)
+       call map_planet_field(Time_Simulation, XyzIono_D, 'SMG NORM', &
+            rBody, Xyz_tmp, iHemisphere)
+
+       if (iHemisphere == 0) then 
+          ! not a mapping in the dipole, but to the equator
+          ! assume not outflow to GM inner boundary
+          IonoJouleHeating_II(i,j) = 0
+       else
+          call get_planet_field(Time_Simulation, Xyz_tmp, 'SMG NORM', B_D)
+          b = sqrt(sum(B_D**2))
+          
+          ! scale the jouleheating
+          IonoJouleHeating_II(i,j) = IonoJouleHeating_II(i,j) * b/bIono
+ 
+      endif
+    end do; end do
+
+  end subroutine map_jouleheating_to_inner_bc
 end module ModIonoPotential
 
 !=============================================================================
-subroutine GM_put_from_ie(Buffer_II,iSize,jSize)
+subroutine GM_put_from_ie(Buffer_IIV,iSize,jSize)
 
-  use ModIonoPotential, ONLY: IonoPotential_II, &
-       init_mod_iono_potential, calc_grad_iono_potential
-  use ModPhysics,       ONLY: Si2No_V, UnitX_, UnitElectric_
+  use ModIonoPotential, ONLY: IonoPotential_II,IonoJouleHeating_II, map_jouleheating_to_inner_bc,&
+       init_mod_iono_potential, calc_grad_iono_potential, init_mod_iono_jouleheating
+  use ModPhysics,       ONLY: Si2No_V, UnitX_, UnitElectric_, UnitPoynting_
+  use ModProcMH
+
   implicit none
   character(len=*), parameter :: NameSub='GM_put_from_ie'
 
   integer, intent(in) :: iSize,jSize
-  real, intent(in) :: Buffer_II(iSize,jSize)
+  integer, parameter  :: nVar = 2
+  real, intent(in) :: Buffer_IIV(iSize,jSize,nVar)
 !  character(len=*), intent(in) :: NameVar
 
   logical :: DoTest, DoTestMe
@@ -100,8 +158,15 @@ subroutine GM_put_from_ie(Buffer_II,iSize,jSize)
   if(.not. allocated(IonoPotential_II)) &
        call init_mod_iono_potential(iSize,jSize)
 
-  IonoPotential_II = Buffer_II * Si2No_V(UnitElectric_)*Si2No_V(UnitX_)
+  IonoPotential_II = Buffer_IIV(:,:,1) * Si2No_V(UnitElectric_)*Si2No_V(UnitX_)
   call calc_grad_iono_potential
+
+  if (.not. allocated(IonoJouleHeating_II)) &
+       call init_mod_iono_jouleheating(iSize,jSize)
+
+  ! Add the iono. jouleheating - Yiqun Sep 2008
+  IonoJouleHeating_II = Buffer_IIV(:,:,2) * Si2No_V(UnitPoynting_)
+  call map_jouleheating_to_inner_bc
 
   if(DoTest)write(*,*)NameSub,': done'
 
@@ -355,8 +420,55 @@ subroutine calc_inner_bc_velocity1(tSimulation,Xyz_D,B1_D,B0_D,u_D)
   end if
 
 end subroutine calc_inner_bc_velocity1
+!=============================================================================
 
-!================================================================
+subroutine map_inner_bc_jouleheating(tSimulation, Xyz_D, JouleHeating)
+  
+  use ModIonoPotential
+  use ModCoordTransform, ONLY: xyz_to_dir
+  use ModMain,           ONLY: TypeCoordSystem,nDim
+  use CON_axes,          ONLY: transform_matrix
+ 
+  implicit none
+
+ !INPUT ARGUMENTS:
+  real, intent(in)    :: tSimulation    ! Simulation time
+  real, intent(in)    :: Xyz_D(nDim)    ! Position vector
+  real, intent(out)   :: JouleHeating
+  real :: Theta, Phi           ! Mapped point colatitude, longitude
+  real :: ThetaNorm, PhiNorm   ! Normalized colatitude, longitude
+  integer :: iTheta, iPhi
+  character(len=*), parameter :: NameSub = 'map_inner_bc_jouleheating'
+  logical :: DoTest, DoTestMe
+  real :: Xyz_D_tmp(3)
+! -----------------------------------------------------
+ 
+ call set_oktest(NameSub, DoTest, DoTestMe)
+
+  ! Convert Xyz_D into SMG coordinates
+  Xyz_D_tmp = matmul(transform_matrix(tSimulation, TypeCoordSystem, 'SMG'), Xyz_D)
+  
+  ! Calculate angular coordinates
+  call xyz_to_dir(Xyz_D_tmp, Theta, Phi)
+  
+  ! Interpolate the spherical jouleheating
+  call get_ie_grid_index(Theta, Phi, ThetaNorm, PhiNorm)
+  iTheta    = floor(ThetaNorm) + 1
+  iPhi      = floor(PhiNorm)   + 1
+  if(iTheta<1 .or. iTheta > nThetaIono .or. &
+      iPhi < 1 .or. iPhi > nPhiIono)then
+     write(*,*)NameSub,' PhiNorm, ThetaNorm=',PhiNorm,ThetaNorm
+     write(*,*)NameSub,' Phi, Theta=',Phi,Theta
+     write(*,*)NameSub,' nPhi, nTheta=',nPhiIono,nThetaIono
+     write(*,*)NameSub,' iPhi, iTheta=',iPhi,iTheta
+     call stop_mpi(NameSub//' index out of bounds')
+  end if
+ 
+  JouleHeating = IonoJouleHeating_II(iTheta, iPhi)
+
+end subroutine map_inner_bc_jouleheating
+
+!=============================================================================
 
 real function logvar_ionosphere(NameLogvar)
   use ModProcMH,  ONLY: iProc
