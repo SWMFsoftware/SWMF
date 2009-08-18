@@ -112,7 +112,15 @@ module ModIonosphere
        IONO_NORTH_AMIE_JR,                          & !AMIE current
        IONO_SOUTH_AMIE_JR,                          & !
        IONO_NORTH_Fake_JR,                          & !Region 2 current
-       IONO_SOUTH_Fake_JR
+       IONO_SOUTH_Fake_JR,                          &
+       iono_north_im_jr, &
+       iono_south_im_jr, &
+       iono_north_im_avee, &
+       iono_south_im_avee, &
+       iono_north_im_eflux, &
+       iono_south_im_eflux
+
+  logical :: IsFilledWithIM(1:IONO_nTheta,1:IONO_nPsi)
 
   real, dimension(1:IONO_nTheta,1:IONO_nPsi) ::     &
        IONO_NORTH_invB,IONO_SOUTH_invB,             & !Ray tracing 1/B integral
