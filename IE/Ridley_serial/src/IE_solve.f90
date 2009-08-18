@@ -83,7 +83,7 @@ subroutine IE_solve
              IONO_NORTH_Theta, IONO_NORTH_Psi, &
              dTheta_North, dPsi_North, &
              IONO_NORTH_PHI)
-
+        
         if(DoTest)then
            call write_prefix; 
            write(*,*) "Northern Cross Polar Cap Potential=",cpcp_north," kV"
@@ -102,6 +102,14 @@ subroutine IE_solve
              IONO_NORTH_X, IONO_NORTH_Y, IONO_NORTH_Z, &
              IONO_NORTH_Theta, IONO_NORTH_Psi, &
              dTheta_North, dPsi_North)
+
+        !add joule heating for north (JouleHeating = sigmaP * E^2)
+        ! Yiqun
+        call ionosphere_jouleheating_ionflux(iBlock, &
+             IONO_NORTH_ETh, IONO_NORTH_EPs, &
+             IONO_NORTH_SigmaP, &
+             IONO_NORTH_Joule,  &
+             IONO_NORTH_IonNumFlux)
 
      case(2) ! Southern hemisphere
 
@@ -162,6 +170,7 @@ subroutine IE_solve
              dTheta_South, dPsi_South, &
              IONO_SOUTH_PHI)
 
+
         if(DoTest)then
            call write_prefix; 
            write(*,*) "Southern Cross Polar Cap Potential=",cpcp_south," kV"
@@ -180,6 +189,14 @@ subroutine IE_solve
              IONO_SOUTH_X, IONO_SOUTH_Y, IONO_SOUTH_Z, &
              IONO_SOUTH_Theta, IONO_SOUTH_Psi, &
              dTheta_South, dPsi_South)
+
+        !add joule heating for north (JouleHeating = sigmaP * E^2)
+        ! Yiqun
+        call ionosphere_jouleheating_ionflux(iBlock, &
+             IONO_SOUTH_ETh, IONO_SOUTH_EPs, &
+             IONO_SOUTH_SigmaP, &
+             IONO_SOUTH_Joule,  &
+             IONO_SOUTH_IonNumFlux)
 
      end select
 
