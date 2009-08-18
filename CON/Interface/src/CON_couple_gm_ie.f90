@@ -96,7 +96,9 @@ contains
          NameVar_B=(/'PotNorth','PotSouth'/)
 
     ! Buffer for the potential on the 2D IE grid
-    real, dimension(:,:), allocatable :: Buffer_II
+    real, dimension(:,:,:), allocatable :: Buffer_IIV
+    ! Number of variables to pass (potential,jouleheating)
+    integer, parameter :: nv=2
 
     ! MPI related variables
 
@@ -124,28 +126,28 @@ contains
     !\
     ! Allocate buffers both in GM and IE
     !/
-    allocate(Buffer_II(iSize,jSize), stat=iError)
-    call check_allocate(iError,NameSub//": Buffer_II")
+    allocate(Buffer_IIV(iSize,jSize,nv), stat=iError)
+    call check_allocate(iError,NameSub//": Buffer_IIV")
 
     if(DoTest)write(*,*)NameSub,', variables allocated',&
          ', iProc:',iProcWorld
 
     if(is_proc(IE_)) &
-         call IE_get_for_gm(Buffer_II,iSize,jSize,tSimulation)
+         call IE_get_for_gm(Buffer_IIV,iSize,jSize,tSimulation)
 
-    nSize = iSize*jSize
+    nSize = iSize*jSize*nv
     if(i_proc0(IE_) /= i_proc0(GM_))then
        if(is_proc0(IE_)) &
-            call MPI_send(Buffer_II,nSize,MPI_REAL,i_Proc0(GM_),&
+            call MPI_send(Buffer_IIV,nSize,MPI_REAL,i_Proc0(GM_),&
             1,i_comm(),iError)
        if(is_proc0(GM_)) &
-            call MPI_recv(Buffer_II,nSize,MPI_REAL,i_Proc0(IE_),&
+            call MPI_recv(Buffer_IIV,nSize,MPI_REAL,i_Proc0(IE_),&
             1,i_comm(),iStatus_I,iError)
     end if
 
     ! Broadcast variables inside GM
     if(n_proc(GM_)>1 .and. is_proc(GM_)) &
-         call MPI_bcast(Buffer_II,nSize,MPI_REAL,0,i_comm(GM_),iError)
+         call MPI_bcast(Buffer_IIV,nSize,MPI_REAL,0,i_comm(GM_),iError)
 
     if(DoTest)write(*,*)NameSub,', variables transferred',&
          ', iProc:',iProcWorld
@@ -154,16 +156,16 @@ contains
     ! Put variables into GM
     !/
     if(is_proc(GM_))then
-       call GM_put_from_ie(Buffer_II,iSize,jSize)
+       call GM_put_from_ie(Buffer_IIV,iSize,jSize)
        if(DoTest) &
             write(*,*)NameSub//' iProc, Buffer(1,1)=',&
-            iProcWorld,Buffer_II(1,1)
+            iProcWorld,Buffer_IIV(1,1,1:2)
     end if
 
     !\
     ! Deallocate buffer to save memory
     !/
-    deallocate(Buffer_II)
+    deallocate(Buffer_IIV)
 
     if(DoTest)write(*,*)NameSub,', variables deallocated',&
          ', iProc:',iProcWorld
