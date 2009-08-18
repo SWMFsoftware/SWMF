@@ -45,6 +45,7 @@ OBJECTS = \
 	IE_gather.o\
         iono_conductances.o\
 	iono_currents.o\
+	iono_joule.o\
         iono_solver.o\
 	Create_Region2_Currents.o\
         ionosphere.o
