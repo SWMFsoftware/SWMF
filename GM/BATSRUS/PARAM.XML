@@ -1001,6 +1001,7 @@ user          - user defined
 		<option name="ionospherefloat"			/>
 		<option name="coronatoih"			/>
 		<option name="polarwind"			/>
+		<option name="ionosphereoutflow"		/>
 		<option name="user"				/>
 	</parameter>
 <!-- ^CFG IF SECONDBODY BEGIN -->
@@ -1046,6 +1047,7 @@ Possible values for TypeBcInner are:
                     float B, float rho, float P
 'coronatoih'      - IH component obtains inner boundary from the SC component
 'polarwind'       - GM component obtains the inner boundary from PW component
+'ionosphereoutflow' - empirical inner boundary setup in (Hp,Op,All) multifluid
 'user'            - user defined
 \end{verbatim}
 For 'ionosphere' and 'ionospherefloat' types and a coupled GM-IE run,
