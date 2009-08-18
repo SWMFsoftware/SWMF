@@ -332,7 +332,7 @@ end subroutine IE_set_grid
 
 !==============================================================================
 
-subroutine IE_get_for_gm(Buffer_II,iSize,jSize,tSimulation)
+subroutine IE_get_for_gm(Buffer_IIV,iSize,jSize,tSimulation)
 
   use ModProcIE
   use ModIonosphere
@@ -341,7 +341,7 @@ subroutine IE_get_for_gm(Buffer_II,iSize,jSize,tSimulation)
   character (len=*),parameter :: NameSub='IE_get_for_gm'
 
   integer, intent(in)           :: iSize,jSize
-  real, intent(out)             :: Buffer_II(iSize,jSize)
+  real, intent(out)             :: Buffer_IIV(iSize,jSize,2)
   real,             intent(in)  :: tSimulation
 
   integer :: i,j,k
@@ -357,7 +357,8 @@ subroutine IE_get_for_gm(Buffer_II,iSize,jSize,tSimulation)
   tSimulationTmp = tSimulation
   call IE_run(tSimulationTmp,tSimulation)
 
-  Buffer_II = IONO_Phi
+  Buffer_IIV(:,:,1) = IONO_Phi
+  Buffer_IIV(:,:,2) = IONO_Joule
 
 end subroutine IE_get_for_gm
 !==============================================================================
