@@ -1,6 +1,6 @@
 !^CFG COPYRIGHT UM
 module CRASH_ModTransport
-  use CRASH_ModStatSumMix,ONLY: &
+  use CRASH_ModPartition,ONLY: &
        Z2PerA, Z2, ZAv, CoulombLog, Na, Te
   !Calculation of the transport coefficients 
   !in dense plasmas: electron heat conduction,

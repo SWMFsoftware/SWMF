@@ -7,7 +7,7 @@
 !***********************************************************************
 program saha
   use CRASH_ModStatSum
-  use CRASH_ModStatSumMix
+  use CRASH_ModPartition
   use CRASH_ModPolyimide
   use CRASH_ModFermiGas
   implicit NONE

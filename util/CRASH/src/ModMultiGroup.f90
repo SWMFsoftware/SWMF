@@ -5,14 +5,14 @@ module CRASH_ModMultiGroup
   use CRASH_ModAtomicDataMix,ONLY : Concentration_I !(1:nMixMax)
   use CRASH_ModAtomicDataMix,ONLY : IonizPotential_II !(1:nZMax,1:nMixMax)
   use CRASH_ModAtomicMass,   ONLY : cAtomicMass_I !(1:nZMax)
-  use CRASH_ModStatSumMix,   ONLY : Population_II !(0:nZMax,1:nMixMax)
+  use CRASH_ModPartition,   ONLY : Population_II !(0:nZMax,1:nMixMax)
   use CRASH_ModExcitationData, ONLY:n_ground !(iZ,nZ)
   use CRASH_ModExcitationData, ONLY:n_screened !(iZ,nZ)
   use CRASH_ModExcitation,   ONLY : Partition_III !(nExcitation,0:nZMax  ,nMixMax)
   use CRASH_ModExcitation,   ONLY : ExcitationEnergy_III !nExcitation,0:nZMax-1,nMixMax)
-  use CRASH_ModStatSumMix,   ONLY : Na, Te, zAv
-  use CRASH_ModStatSumMix,   ONLY : iZMin_I !(1:nMixMax)
-  use CRASH_ModStatSumMix,   ONLY : iZMax_I !(1:nMixMax)
+  use CRASH_ModPartition,   ONLY : Na, Te, zAv
+  use CRASH_ModPartition,   ONLY : iZMin_I !(1:nMixMax)
+  use CRASH_ModPartition,   ONLY : iZMax_I !(1:nMixMax)
   implicit none
   SAVE
   PRIVATE !Except
@@ -759,7 +759,7 @@ contains
   !====================
 
   subroutine abscon  
-    use CRASH_ModStatSumMix, ONLY: Z2_I
+    use CRASH_ModPartition, ONLY: Z2_I
 
     ! ... this routine calculates the absorption, emission, and scattering 
     !     coefficients for an array of photon energies                      

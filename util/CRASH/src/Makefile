@@ -14,17 +14,18 @@ IOMIX=\
 
 
 OBJECTS=\
-	ModAtomicMass.o\
+	ModAtomicMass.o \
+	ModAtomicDataMix.o \
 	ModEos.o\
+	ModExcitation.o \
+	ModExcitationData.o \
 	ModPowerLawEos.o\
 	ModFermiGas.o\
         ModIonizPotential.o \
+	ModPartition.o \
 	ModPolyimide.o \
 	ModStatSum.o \
 	ModTransport.o \
-	ModExcitation.o \
-	ModAtomicDataMix.o \
-	ModExcitationData.o \
 	${IOMIX}
 
 
