@@ -136,8 +136,6 @@ subroutine ionosphere_fine_grid
         write(iUnitOut,'(a)') "Realistic oval"
      case(6)
         write(iUnitOut,'(a)') "More Realistic oval"
-     case(7)
-        write(iUnitOut,'(a)') "Get aurora from IM"
      case default
         call CON_stop(NameSub//" IE_ERROR invalid conductance_model")
      end select
@@ -274,14 +272,6 @@ subroutine ionosphere_init
 
   IONO_NORTH_Ave_E = 0.00
   IONO_SOUTH_Ave_E = 0.00
-
-  IONO_NORTH_im_EFlux = 0.00
-  IONO_SOUTH_im_EFlux = 0.00
-  IONO_NORTH_im_jr = 0.00
-  IONO_SOUTH_im_jr = 0.00
-  IONO_NORTH_im_AveE = 0.00
-  IONO_SOUTH_im_AveE = 0.00
-  IsFilledWithIm = .false.
 
 end subroutine ionosphere_init
 
@@ -601,11 +591,11 @@ subroutine ionosphere_write_output(iFile, iBlock)
         case(min_vars)
            write(iUnit, '(I5,a)')  6, ' nvars'
         case(all_vars)
-           write(iUnit, '(I5,a)') 20, ' nvars'
+           write(iUnit, '(I5,a)') 22, ' nvars'
         case(uam_vars)                             !^CFG  IF TIEGCM
            write(iUnit, '(I5,a)')  9, ' nvars'     !^CFG  IF TIEGCM
         case(aur_vars)
-           write(iUnit, '(I5,a)') 11, ' nvars'
+           write(iUnit, '(I5,a)') 13, ' nvars'
         end select
         write(iUnit, '(I5,a)') IONO_nTheta, ' nTheta'
         write(iUnit, '(I5,a)')   IONO_nPsi, ' nPhi'
@@ -644,6 +634,9 @@ subroutine ionosphere_write_output(iFile, iBlock)
            write(iUnit, '(I5,a)') 18, ' Ux [km/s]'
            write(iUnit, '(I5,a)') 19, ' Uy [km/s]'
            write(iUnit, '(I5,a)') 20, ' Uz [km/s]'
+! add joule heating output --Yiqun Sep 2008
+           write(iUnit, '(I5,a)') 21, ' JouleHeat [mW/m2]'
+           write(iUnit, '(I5,a)') 22, ' IonNumFlux [/cm2/s]'
 
         case(uam_vars)                                  !^CFG  IF TIEGCM BEGIN
            write(iUnit, '(I5,a)')  1, ' Theta [deg]'
@@ -668,6 +661,9 @@ subroutine ionosphere_write_output(iFile, iBlock)
            write(iUnit, '(I5,a)')  9, ' RT 1/B [1/T]'
            write(iUnit, '(I5,a)') 10, ' RT Rho [amu/cm^3]'
            write(iUnit, '(I5,a)') 11, ' RT P [Pa]'
+! add joule heating output --Yiqun Sep 2008
+           write(iUnit, '(I5,a)') 12, ' JouleHeat [mW/m2]'
+           write(iUnit, '(I5,a)') 13, ' IonNumFlux [/cm2/s]'
 
         end select
 
@@ -718,6 +714,9 @@ subroutine ionosphere_write_output(iFile, iBlock)
            write(iUnit, *)  ' "Ex [mV/m]","Ey [mV/m]","Ez [mV/m]"'
            write(iUnit, *)  ' "Jx [`mA/m^2]","Jy [`mA/m^2]","Jz [`mA/m^2]"'
            write(iUnit, *)  ' "Ux [km/s]","Uy [km/s]","Uz [km/s]"'
+! add joule heating output --Yiqun Sep 2008
+           write(iUnit, *)  ' "JouleHeat [mW/m2]"'
+           write(iUnit, *)  ' "IonNumFlux [/cm2/s]"'
 
         elseif (variables == uam_vars) then             !^CFG  IF TIEGCM BEGIN
            write(iUnit, *)  'VARIABLES= "Theta [deg]","Psi [deg]"'
@@ -732,6 +731,9 @@ subroutine ionosphere_write_output(iFile, iBlock)
            write(iUnit, *)  ' "E-Flux [W/m2]"'
            write(iUnit, *)  ' "Ave-E [eV]"'
            write(iUnit, *)  ' "RT 1/B [1/T]","RT Rho [amu/cm^3]","RT P [Pa]"'
+! add joule heating output --Yiqun Sep 2008
+           write(iUnit, *)  ' "JouleHeat [mW/m2]"'
+           write(iUnit, *)  ' "IonNumFlux [/cm2/s]"'
 
         endif
 
@@ -755,7 +757,7 @@ subroutine ionosphere_write_output(iFile, iBlock)
      elseif (variables == all_vars) then
         do j = 1, IONO_nPsi
            do i = 1, IONO_nTheta
-              write(iUnit,fmt="(18(E13.5))")  &
+              write(iUnit,fmt="(22(E13.5))")  &
                    IONO_NORTH_X(i,j),IONO_NORTH_Y(i,j),IONO_NORTH_Z(i,j), &
                    cRadToDeg*IONO_NORTH_Theta(i,j), &
                    cRadToDeg*IONO_NORTH_Psi(i,j), &
@@ -768,7 +770,10 @@ subroutine ionosphere_write_output(iFile, iBlock)
                    1.0e06*IONO_NORTH_Jx(i,j),1.0e06*IONO_NORTH_Jy(i,j), &
                    1.0e06*IONO_NORTH_Jz(i,j), &
                    1.0e-03*IONO_NORTH_Ux(i,j),1.0e-03*IONO_NORTH_Uy(i,j), &
-                   1.0e-03*IONO_NORTH_Uz(i,j)
+                   1.0e-03*IONO_NORTH_Uz(i,j), &
+! add joule heating Yiqun Sep 2008
+                   1.0e03*IONO_NORTH_Joule(i,j), &
+                   1.0e-04*IONO_NORTH_IonNumFlux(i,j)
            end do
         end do
 
@@ -790,7 +795,7 @@ subroutine ionosphere_write_output(iFile, iBlock)
      elseif (variables == aur_vars) then
         do j = 1, IONO_nPsi
            do i = 1, IONO_nTheta
-              write(iUnit,fmt="(11(E13.5))")  &
+              write(iUnit,fmt="(13(E13.5))")  &
                    cRadToDeg*IONO_NORTH_Theta(i,j), &
                    cRadToDeg*IONO_NORTH_Psi(i,j), &
                    IONO_NORTH_SigmaH(i,j),IONO_NORTH_SigmaP(i,j), &
@@ -798,7 +803,10 @@ subroutine ionosphere_write_output(iFile, iBlock)
                    1.0e-03*IONO_NORTH_PHI(i,j), &
                    IONO_NORTH_EFlux(i,j), &
                    IONO_NORTH_Ave_E(i,j), &
-                   IONO_NORTH_invB(i,j),IONO_NORTH_rho(i,j),IONO_NORTH_p(i,j)
+                   IONO_NORTH_invB(i,j),IONO_NORTH_rho(i,j),IONO_NORTH_p(i,j), &
+! add joule heating Yiqun Sep 2008
+                   1.0e03*IONO_NORTH_Joule(i,j), &
+                   1.0e-04*IONO_NORTH_IonNumFlux(i,j)
            end do
         end do
      endif
@@ -829,7 +837,7 @@ subroutine ionosphere_write_output(iFile, iBlock)
      elseif (variables == all_vars) then
         do j = 1, IONO_nPsi
            do i = 1, IONO_nTheta
-              write(iUnit,fmt="(18(E13.5))")  &
+              write(iUnit,fmt="(22(E13.5))")  &
                    IONO_SOUTH_X(i,j),IONO_SOUTH_Y(i,j),IONO_SOUTH_Z(i,j), &
                    cRadToDeg*IONO_SOUTH_Theta(i,j), &
                    cRadToDeg*IONO_SOUTH_Psi(i,j), &
@@ -842,7 +850,10 @@ subroutine ionosphere_write_output(iFile, iBlock)
                    1.0e06*IONO_SOUTH_Jx(i,j),1.0e06*IONO_SOUTH_Jy(i,j), &
                    1.0e06*IONO_SOUTH_Jz(i,j), &
                    1.0e-03*IONO_SOUTH_Ux(i,j),1.0e-03*IONO_SOUTH_Uy(i,j), &
-                   1.0e-03*IONO_SOUTH_Uz(i,j)
+                   1.0e-03*IONO_SOUTH_Uz(i,j), &
+! add joule heating Yiqun Sep 2008
+                   1.0e03*IONO_SOUTH_Joule(i,j), &
+                   1.0e-04*IONO_SOUTH_IonNumFlux(i,j)
            end do
         end do
 
@@ -864,7 +875,7 @@ subroutine ionosphere_write_output(iFile, iBlock)
      elseif (variables == aur_vars) then
         do j = 1, IONO_nPsi
            do i = 1, IONO_nTheta
-              write(iUnit,fmt="(11(E13.5))")  &
+              write(iUnit,fmt="(13(E13.5))")  &
                    cRadToDeg*IONO_SOUTH_Theta(i,j), &
                    cRadToDeg*IONO_SOUTH_Psi(i,j), &
                    IONO_SOUTH_SigmaH(i,j),IONO_SOUTH_SigmaP(i,j), &
@@ -872,7 +883,10 @@ subroutine ionosphere_write_output(iFile, iBlock)
                    1.0e-03*IONO_SOUTH_PHI(i,j), &
                    IONO_SOUTH_EFlux(i,j), &
                    IONO_SOUTH_Ave_E(i,j), &
-                   IONO_SOUTH_invB(i,j),IONO_SOUTH_rho(i,j),IONO_SOUTH_p(i,j)
+                   IONO_SOUTH_invB(i,j),IONO_SOUTH_rho(i,j),IONO_SOUTH_p(i,j), &
+! add joule heating Yiqun Sep 2008
+                   1.0e03*IONO_SOUTH_Joule(i,j), &
+                   1.0e-04*IONO_SOUTH_IonNumFlux(i,j)
            end do
         end do
      endif
@@ -903,19 +917,19 @@ subroutine IE_save_logfile
 
   if(iProc/=0) return
 
-  write(NameFile,'(a)') trim(NameIonoDir)//"IE.log"
+  write(NameFile,'(a)') trim(NameIonoDir)//"logIE.log"
   if(IsFirstTime) then
     IsFirstTime = .false.
     open(unit=iUnit,file=NameFile,status="replace")
     write(iUnit,fmt="(a)")  'Ridley Ionosphere Model, [deg] and [kV]'
     write(iUnit,fmt="(a)") &
-         'nsolve t yy mm dd hh mm ss ms tilt cpcpn cpcps'
+         'nsolve t yy mm dd hh mm ss ms ttilt ptilt cpcpn cpcps'
   else
     open(unit=iUnit,file=NameFile,status="old",position="append")
   end if
   write(iUnit,fmt="(i8,es13.5,i5,5i3,i4,f8.2,2es13.5)") &
        nSolve, Time_Simulation, Time_Array(1:7), &
-       ThetaTilt*cRadToDeg, cpcp_north, cpcp_south
+       ThetaTilt*cRadToDeg, 0.0, cpcp_north, cpcp_south
   close(iUnit)
 
 end subroutine IE_save_logfile
