@@ -334,6 +334,12 @@ Additional options for BATSRUS/Config.pl:
 
 -static         Use static allocation for large arrays.
 
+-setvar=nWave=NWAVE
+                Set additional variables for the selected EQUATION module.
+                NWAVE is the number of wave bins used for radiation or wave
+                turbulence. Resetting the EQUATION module will remove the
+                stored NWAVE.
+
 Examples for BATSRUS/Config.pl:
 
 List available options for equations and user modules:
