@@ -21,10 +21,14 @@ program abs
   !---------------
 
   open(unit,file='../doc/Tex/excited_levels_N.tex',status='replace')
-  write(unit,'(a)')'\begin{tabular}{|c|c||c||c|c|c|c|c|}'
+  write(unit,'(a)')'\newcolumntype{x}[1]{>{\centering\hspace{0pt}}p{#1}}'
+  write(unit,'(a)')'\begin{tabular}'//&
+       '{|x{1cm}|x{1cm}||x{2cm}||x{2cm}|x{2cm}|x{2cm}|x{2cm}|x{2cm}|}'
   write(unit,'(a)')'\hline'
-  write(unit,'(a)')'i & n & formula & '//&
+  write(unit,'(a)')'\multirow{2}{*}{i} & \multirow{2}{*}{n} & '//&
+       '\multirow{2}{*}{formula} & '//&
        '\multicolumn{5}{c|}{database, for different values of $l$} \tabularnewline'
+  write(unit,'(a)')'\cline{4-8}'
   write(unit,'(a)')' & & & s & p & d & f & g \tabularnewline'
   write(unit,'(a)')'\hline'
   write(unit,'(a)')'\hline'
