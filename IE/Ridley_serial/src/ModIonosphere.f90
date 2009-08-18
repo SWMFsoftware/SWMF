@@ -51,8 +51,8 @@ module ModIonosphere
   ! Ionosphere Solution on the whole grid
   !/
   real, dimension(2*IONO_nTheta-1, IONO_nPsi) :: &
-       IONO_Phi = 0.0,IONO_IonNumFlux = 0.0,     &
-       IONO_Joule = 0.0  
+       IONO_Phi = 0.0
+
   !\
   ! Ionosphere solution array definitions
   !/
@@ -93,12 +93,7 @@ module ModIonosphere
        IONO_SOUTH_dSigmaThPs_dPsi,                  &
        IONO_SOUTH_dSigmaPsPs_dPsi,                  &
        SAVE_NORTH_SigmaH,SAVE_NORTH_SigmaP,         &
-       SAVE_SOUTH_SigmaH,SAVE_SOUTH_SigmaP,         &
-       IONO_NORTH_Joule, IONO_SOUTH_Joule
-
-  real, dimension(1:IONO_nTheta,1:IONO_nPsi) ::     &
-       IONO_NORTH_IonNumFlux, IONO_SOUTH_IonNumFlux
-  
+       SAVE_SOUTH_SigmaH,SAVE_SOUTH_SigmaP
 
   real, dimension(1:IONO_nTheta,1:IONO_nPsi) ::     &
        IONO_NORTH_JR,                               & !Ionospheric current
@@ -112,6 +107,7 @@ module ModIonosphere
        IONO_NORTH_AMIE_JR,                          & !AMIE current
        IONO_SOUTH_AMIE_JR,                          & !
        IONO_NORTH_Fake_JR,                          & !Region 2 current
+<<<<<<< ModIonosphere.f90
        IONO_SOUTH_Fake_JR,                          &
        iono_north_im_jr, &
        iono_south_im_jr, &
@@ -121,6 +117,17 @@ module ModIonosphere
        iono_south_im_eflux
 
   logical :: IsFilledWithIM(1:IONO_nTheta,1:IONO_nPsi)
+=======
+       IONO_SOUTH_Fake_JR,                          &
+       iono_north_im_jr, &
+       iono_south_im_jr, &
+       iono_north_im_avee, &
+       iono_south_im_avee, &
+       iono_north_im_eflux, &
+       iono_south_im_eflux
+
+  logical :: IsFilledWithIm(1:IONO_nTheta,1:IONO_nPsi)
+>>>>>>> 1.13
 
   real, dimension(1:IONO_nTheta,1:IONO_nPsi) ::     &
        IONO_NORTH_invB,IONO_SOUTH_invB,             & !Ray tracing 1/B integral

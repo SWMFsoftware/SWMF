@@ -328,14 +328,11 @@ subroutine IE_set_grid
        Coord3_I=(/IONO_Radius + IONO_Height/),     &! radial size in meters
        iProc_A = iProc_A)                           ! processor assigment
 
-  ! In the model Ridley_serial the grid is not exactly uniform and not
-  ! exactly periodic.
-
 end subroutine IE_set_grid
 
 !==============================================================================
 
-subroutine IE_get_for_gm(Buffer_IIV,iSize,jSize,tSimulation)
+subroutine IE_get_for_gm(Buffer_II,iSize,jSize,tSimulation)
 
   use ModProcIE
   use ModIonosphere
@@ -344,7 +341,7 @@ subroutine IE_get_for_gm(Buffer_IIV,iSize,jSize,tSimulation)
   character (len=*),parameter :: NameSub='IE_get_for_gm'
 
   integer, intent(in)           :: iSize,jSize
-  real, intent(out)             :: Buffer_IIV(iSize,jSize,2)
+  real, intent(out)             :: Buffer_II(iSize,jSize)
   real,             intent(in)  :: tSimulation
 
   integer :: i,j,k
@@ -360,8 +357,7 @@ subroutine IE_get_for_gm(Buffer_IIV,iSize,jSize,tSimulation)
   tSimulationTmp = tSimulation
   call IE_run(tSimulationTmp,tSimulation)
 
-  Buffer_IIV(:,:,1) = IONO_Phi
-  Buffer_IIV(:,:,2) = IONO_Joule
+  Buffer_II = IONO_Phi
 
 end subroutine IE_get_for_gm
 !==============================================================================
@@ -905,6 +901,10 @@ end subroutine IE_put_from_ua
 
 subroutine IE_put_from_im(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
 
+  use IE_ModMain, only:IsNewInput
+  use ModIonosphere
+  use ModProcIE
+
   use CON_router,   ONLY: IndexPtrType, WeightPtrType
 
   implicit none
@@ -927,24 +927,20 @@ subroutine IE_put_from_im(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
      write(*,*)NameSub,': WARNING DoAdd is true'
   end if
 
-!  iLat = Index % iCB_II(1,iPointStart)
-!  iLon = Index % iCB_II(2,iPointStart)
-!
-!!  if(iLat<1.or.iLat>nLats+2.or.iLon<0.or.iLon>nLonsAll+1)then
-!!     write(*,*)'iLat,iLon,DoAdd=',iLat,nLats,iLon,nLonsAll+1,DoAdd
-!!     call CON_stop('IE_put_from_im: index out of range')
-!!  end if
-!
-!  if ( iLat >= 1 .and. iLat <= nLats+2 .and. &
-!       iLon >= 0 .and. iLon <=nLonsAll+1) then
-!     if(DoAdd)then
-!        InnerMagJrAll(iLat,iLon) = InnerMagJrAll(iLat,iLon) + Buff_V(1)
-!     else
-!        InnerMagJrAll(iLat,iLon) = Buff_V(1)
-!     end if
-!  endif
-!
-!  IsNewInput = .true.
+  iLat = Index % iCB_II(1,iPointStart)
+  iLon = Index % iCB_II(2,iPointStart)
+
+  if ( iLat >= 1 .and. iLat <= iono_nTheta .and. &
+       iLon >= 1 .and. iLon <= iono_nPsi) then
+     if (.not.IsFilledWithIm(iLat,iLon)) then
+        iono_north_im_jr(iLat,iLon)    = buff_v(1)
+        iono_north_im_eflux(iLat,iLon) = buff_v(2)
+        iono_north_im_avee(iLat,iLon)  = buff_v(3)
+        IsFilledWithIm(iLat,iLon) = .true.
+     endif
+  endif
+
+  IsNewInput = .true.
 
 end subroutine IE_put_from_im
 
@@ -1054,9 +1050,33 @@ end subroutine IE_get_for_im
 
 subroutine IE_put_from_im_complete
 
-  write(*,*)"Don't know what IE_put_from_im_complete is really supposed to do."
-  write(*,*)"I think that it is"
-  write(*,*)"Supposed to be applying periodic boundaries...?"
+  use ModProcIE
+  use ModIonosphere
+  use ModMpi
+
+  implicit none
+
+  integer iError, i 
+
+  iono_north_im_eflux(:,iono_npsi) = iono_north_im_eflux(:,1)
+  iono_north_im_avee(:,iono_npsi)  = iono_north_im_avee(:,1)
+  iono_north_im_jr(:,iono_npsi)  = iono_north_im_jr(:,1)
+
+  if (nProc > 1) then
+     iError = 0
+     call MPI_Bcast(iono_north_im_eflux, iono_nTheta*iono_nPsi, &
+          MPI_Real, 0, iComm, iError)
+     call MPI_Bcast(iono_north_im_avee, iono_nTheta*iono_nPsi, &
+          MPI_Real, 0, iComm, iError)
+     call MPI_Bcast(iono_north_im_jr, iono_nTheta*iono_nPsi, &
+          MPI_Real, 0, iComm, iError)
+  endif
+
+  do i = 1, IONO_nTheta
+     iono_south_im_jr(i,:) = iono_north_im_jr(Iono_nTheta-i+1,:)
+  enddo
+
+  IsFilledWithIm = .false.
 
 end subroutine IE_put_from_im_complete
 
