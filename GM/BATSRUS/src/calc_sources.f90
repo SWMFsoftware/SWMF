@@ -19,6 +19,7 @@ subroutine calc_sources
        UseHallResist, IonMassPerCharge
   use ModImplicit,      ONLY: UseFullImplicit            !^CFG IF IMPLICIT
   use ModGrayDiffusion, ONLY: calc_source_gray_diffusion !^CFG IF IMPLICIT
+  use ModMultiGroupDiffusion, ONLY: calc_source_rad_diffusion !^CFG IF IMPLICIT
   use ModTemperature,   ONLY: calc_source_temperature_diff, &
        UseTemperatureDiffusion
   use ModMultiFluid
