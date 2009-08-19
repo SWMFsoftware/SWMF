@@ -11,8 +11,8 @@ module ModMultiGroupDiffusion
   implicit none
   save
 
-  ! This module is needed for the multigroup diffusion approximation for
-  ! radiation-hydrodynamics.
+  ! This module is needed for the order(u/c) multigroup radiation diffusion 
+  ! approximation for radiation-hydrodynamics.
 
   private !except
 
@@ -26,7 +26,7 @@ module ModMultiGroupDiffusion
   public :: add_jacobian_rad_diff
   public :: update_impl_rad_diff
 
-  ! Logical for adding multigroup diffusion
+  ! Logical for adding multigroup radiation diffusion
   logical, public :: IsNewBlockRadDiffusion = .true.
   logical, public :: IsNewTimestepRadDiffusion = .true.
 
@@ -66,14 +66,15 @@ contains
 
   subroutine init_rad_diffusion
 
-    use ModAdvance,     ONLY: Erad_
+    use ModAdvance,     ONLY: Erad_, WaveFirst_, WaveLast_
     use ModMain,        ONLY: UseRadDiffusion
     use ModSize,        ONLY: nI, nJ, nK, MaxBlock, nDim
-    use ModVarIndexes,  ONLY: NameVar_V
     use ModImplicit,    ONLY: UseSemiImplicit, UseFullImplicit, &
          TypeSemiImplicit, iEradImpl, iTeImpl
     use ModPhysics,     ONLY: Si2No_V, UnitTemperature_, cRadiationNo
     use ModTemperature, ONLY: TradMinSi
+    use ModWaves,       ONLY: UseWavePressure, WavePressureFirst_, &
+         WavePressureLast_, GammaWave
 
     character(len=*), parameter :: NameSub = "init_rad_diffusion"
     !------------------------------------------------------------------------
@@ -82,7 +83,7 @@ contains
 
     ! Make sure that Erad_ is correct
     if(UseRadDiffusion)then
-       if(NameVar_V(Erad_) /= "Erad") call stop_mpi(NameSub// &
+       if(Erad_ == 1) call stop_mpi(NameSub// &
             ": incorrect index for Erad variable in ModEquation")
 
        EradMin = cRadiationNo*(TradMinSi*Si2No_V(UnitTemperature_))**4
@@ -143,6 +144,12 @@ contains
 
     allocate(DiffCoef_VFDB(nDiff,1:nI+1,1:nJ+1,1:nK+1,nDim,MaxBlock))
     DiffCoef_VFDB = 0.0 ! make sure all elements are initialized
+
+    ! Setup for wave infrastructure
+    UseWavePressure = .true.
+    WavePressureFirst_ = WaveFirst_
+    WavePressureLast_  = WaveLast_
+    GammaWave = GammaRel
 
   end subroutine init_rad_diffusion
 
@@ -210,43 +217,22 @@ contains
 
   subroutine calc_source_rad_diffusion(iBlock)
 
-    use ModAdvance,    ONLY: State_VGB, Source_VC, &
-         uDotArea_XI, uDotArea_YI, uDotArea_ZI, Erad_
+    use ModAdvance,    ONLY: State_VGB, Source_VC, Erad_
     use ModConst,      ONLY: cLightSpeed
-    use ModGeometry,   ONLY: vInv_CB, y_BLK, TypeGeometry
-    use ModImplicit,   ONLY: UseFullImplicit
     use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_, UnitT_
-    use ModMain,       ONLY: nI, nJ, nK, UseRadDiffusion
+    use ModMain,       ONLY: nI, nJ, nK
     use ModUser,       ONLY: user_material_properties
-    use ModVarIndexes, ONLY: Energy_, RhoUy_
+    use ModVarIndexes, ONLY: Energy_
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    real :: TeSi, Te, DivU
-    real :: RadCompression, AbsorptionEmission, PlanckOpacitySi
+    real :: TeSi, Te
+    real :: AbsorptionEmission, PlanckOpacitySi
     character(len=*), parameter:: NameSub = "calc_source_rad_diffusion"
     !------------------------------------------------------------------------
 
     do k=1,nK; do j=1,nJ; do i=1,nI
-
-       DivU = vInv_CB(i,j,k,iBlock)* &
-            ( uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1) &
-            + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
-            + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1) )
-
-       ! Adiabatic compression of radiation energy by fluid velocity (fluid 1)
-       ! (GammaRel-1)*Erad*Div(U)
-       RadCompression = (GammaRel-1.0)*State_VGB(Erad_,i,j,k,iBlock)*DivU
-
-       ! dErad/dt = - adiabatic compression
-       Source_VC(Erad_,i,j,k) = Source_VC(Erad_,i,j,k) &
-            - RadCompression
-
-       ! dE/dt    = + adiabatic compression
-       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + RadCompression
-
-       if(.not.UseFullImplicit) CYCLE
 
        if(IsNewTimestepRadDiffusion)then
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
@@ -275,17 +261,6 @@ contains
             - AbsorptionEmission
 
     end do; end do; end do
-
-    if(TypeGeometry=='rz' .and. UseRadDiffusion)then
-       ! Add "geometrical source term" p/r to the radial momentum equation
-       ! The "radial" direction is along the Y axis
-       ! NOTE: here we have to use signed radial distance!
-       do k=1,nK; do j=1, nJ; do i=1, nI
-          Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
-               + (1./3.)*State_VGB(Erad_,i,j,k,iBlock) &
-               / y_BLK(i,j,k,iBlock)
-       end do; end do; end do
-    end if
 
   end subroutine calc_source_rad_diffusion
 
@@ -1043,7 +1018,7 @@ contains
     integer, parameter:: nStencil = 2*nDim + 1
 
     integer, intent(in) :: iBlock, nVar
-    real, intent(out) :: Jacobian_VVCI(nVar,nVar,nI,nJ,nK,nStencil)
+    real, intent(inout) :: Jacobian_VVCI(nVar,nVar,nI,nJ,nK,nStencil)
 
     integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iDiff, iRelax
     real :: DiffLeft, DiffRight, RelaxCoef
@@ -1085,11 +1060,11 @@ contains
     ! are not calculated by the general algorithm, these are for the diffusion
     ! operators the same as the semi-implicit jacobian.
 
+    Coeff = 1.0
     Dxyz_D = (/dx_BLK(iBlock), dy_BLK(iBlock), dz_Blk(iBlock)/)
     Area_D = (/fAx_BLK(iBlock), fAy_BLK(iBlock), fAz_BLK(iBlock)/)
     do iDim = 1, nDim
        if(UseFullImplicit) Coeff = -Area_D(iDim)/Dxyz_D(iDim)
-       if(UseSemiImplicit) Coeff = 1.0
        Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
        do k=1,nK; do j=1,nJ; do i=1,nI
           do iDiff = 1, nDiff
