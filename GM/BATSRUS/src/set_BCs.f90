@@ -581,7 +581,7 @@ contains
                         * Si2No_V(UnitU_)
                      
                    Ub_V(2) = (sqrt(2 * (ePar + eCap) * cElectronCharge / &
-                        (MassFluid_I(IonLast_)*cProtonMass))) &
+                        (MassFluid_I(IonFirst_+1)*cProtonMass))) &
                         * Si2No_V(UnitU_)
                    
                    ! .OR. Pick the constant velocities and thermal energy
@@ -631,8 +631,8 @@ contains
                    ! get the densities
                    VarsGhostFace_V(iRho_I(IonFirst_)) = FluxPw/Ub_V(1) *   &
                         MassFluid_I(IonFirst_)
-                   VarsGhostFace_V(iRho_I(IonLast_)) = FluxIono/Ub_V(2) * &
-                        MassFluid_I(IonLast_)     
+                   VarsGhostFace_V(iRho_I(IonFirst_+1)) = FluxIono/Ub_V(2) * &
+                        MassFluid_I(IonFirst_+1)     
                      
                    ! Make sure it points outward
                    if(sum(bUnit_D*FaceCoords_D) < 0.0) bUnit_D = -bUnit_D
@@ -641,15 +641,15 @@ contains
                    VarsGhostFace_V(iUy_I(IonFirst_)) = Ub_V(1) * bUnit_D(y_)
                    VarsGhostFace_V(iUz_I(IonFirst_)) = Ub_V(1) * bUnit_D(z_)
 
-                   VarsGhostFace_V(iUx_I(IonLast_)) = Ub_V(2) * bUnit_D(x_)
-                   VarsGhostFace_V(iUy_I(IonLast_)) = Ub_V(2) * bUnit_D(y_)
-                   VarsGhostFace_V(iUz_I(IonLast_)) = Ub_V(2) * bUnit_D(z_)
+                   VarsGhostFace_V(iUx_I(IonFirst_+1)) = Ub_V(2) * bUnit_D(x_)
+                   VarsGhostFace_V(iUy_I(IonFirst_+1)) = Ub_V(2) * bUnit_D(y_)
+                   VarsGhostFace_V(iUz_I(IonFirst_+1)) = Ub_V(2) * bUnit_D(z_)
                      
                    ! get the pressure
-                   VarsGhostFace_V(iP_I(IonLast_))   =  2./3. * eCap * &
+                   VarsGhostFace_V(iP_I(IonFirst_+1))   =  2./3. * eCap * &
                         cElectronCharge / cBoltzmann &
                         * Si2No_V(UnitTemperature_)  &
-                        * VarsGhostFace_V(iRho_I(IonLast_))/MassFluid_I(IonLast_)
+                        * VarsGhostFace_V(iRho_I(IonFirst_+1))/MassFluid_I(IonFirst_+1)
                    VarsGhostFace_V(iP_I(IonFirst_))   =  2./3. * eCap * &
                         cElectronCharge / cBoltzmann & 
                         * Si2No_V(UnitTemperature_)  &
@@ -657,21 +657,21 @@ contains
                      
                    ! for the 'all' fluid
                    VarsGhostFace_V(Rho_) = sum(VarsGhostFace_V( &
-                        iRho_I(IonFirst_:IonLast_)))
+                        iRho_I(IonFirst_:IonFirst_+1)))
                    VarsGhostFace_V(iUx_I(1))  = sum(VarsGhostFace_V( &
-                        iRho_I(IonFirst_:IonLast_)) &
-                        * VarsGhostFace_V(iUx_I(IonFirst_:IonLast_)))&
-                        /sum(VarsGhostFace_V(iRho_I(IonFirst_:IonLast_))) 
+                        iRho_I(IonFirst_:IonFirst_+1)) &
+                        * VarsGhostFace_V(iUx_I(IonFirst_:IonFirst_+1)))&
+                        /sum(VarsGhostFace_V(iRho_I(IonFirst_:IonFirst_+1))) 
                    VarsGhostFace_V(iUy_I(1))  = sum(VarsGhostFace_V( &
-                        iRho_I(IonFirst_:IonLast_)) &
-                        * VarsGhostFace_V(iUy_I(IonFirst_:IonLast_)))&
-                        /sum(VarsGhostFace_V(iRho_I(IonFirst_:IonLast_)))
+                        iRho_I(IonFirst_:IonFirst_+1)) &
+                        * VarsGhostFace_V(iUy_I(IonFirst_:IonFirst_+1)))&
+                        /sum(VarsGhostFace_V(iRho_I(IonFirst_:IonFirst_+1)))
                    VarsGhostFace_V(iUz_I(1))  = sum(VarsGhostFace_V( &
-                        iRho_I(IonFirst_:IonLast_)) &
-                        * VarsGhostFace_V(iUz_I(IonFirst_:IonLast_)))&
-                        /sum(VarsGhostFace_V(iRho_I(IonFirst_:IonLast_)))
+                        iRho_I(IonFirst_:IonFirst_+1)) &
+                        * VarsGhostFace_V(iUz_I(IonFirst_:IonFirst_+1)))&
+                        /sum(VarsGhostFace_V(iRho_I(IonFirst_:IonFirst_+1)))
                    VarsGhostFace_V(P_)        = sum(VarsGhostFace_V( &
-                        iP_I(IonFirst_:IonLast_)))
+                        iP_I(IonFirst_:IonFirst_+1)))
                      
                 else
                    call stop_mpi( &
