@@ -1,9 +1,9 @@
 \section{Madelung approximation of electrostatic energy}
-{\bf Coulomb interactions} we account within the Madelung approximation.
-According to this model we assume that the charge of an ion with all of the
+{\bf Coulomb interactions} may be accounted for within the Madelung approximation.
+According to this model, we assume that the charge of an ion with all of the
 electrons bound to it is concentrated in one point. For an ion in the charge state $i$,
-$i$ free electrons are considered coupled with it, being uniformly distributed over its {\it ion sphere}.
-The ion sphere is a sphere of volume $1/n_a$, the ion being its center.
+$i$ free electrons are considered to be coupled with it, being uniformly distributed over its {\it ion sphere}.
+The ion sphere is a sphere of volume $1/n_a$, with the ion being its center.
 While calculating the electrostatic energy we neglect the Coulomb interactions between
 charges related to different ion spheres. Then we only need to calculate the electrostatic energy
 of an ion with free electrons coupled to it, which is equal to the energy of
@@ -50,13 +50,13 @@ or, applying this recursively and reducing the sum $\sum_{j=0}^{i-1} (2j+1) = i^
 \begin{equation}\label{pfM}
 \frac{N_i}{g_i}=\frac{N_0}{g_0}(g_e)^i \exp \left( i^2 \frac{E_M}{T} -\frac{\sum_{j=0}^{i-1}I_j}T \right) .
 \end{equation}
-This may be interpreted as the ionization potential lowering which results from the Coulomb interaction:
-each of the potentials, $I_i$, is reduced by $(2i+1)E_M$.
+This may be interpreted as the ionization potential lowering which results from the Coulomb interaction.
+Each of the potentials, $I_i$, is reduced by $(2i+1)E_M$.
 Energy of the ion of the charge state $i$ is:
 \begin{equation}\label{estar}
 E_i^* = \sum_{j=0}^{i-1}I_j - i^2 E_M.
 \end{equation}
-This effect shifts the ionization equilibrium towards higher ionization degrees, for a given temperature and atomic density.
+This effect shifts the ionization equilibrium towards higher ionization degrees for a given temperature and atomic density.
 
 {\bf Partition function.} The common multiplier, $\frac{N_0}{g_0}$, in each of Eqs.(\ref{pfM}) may be also represented as $\frac{N_a}{S}$.
 From the normalization condition, $\sum N_i = N_a$, we find that $S$ is a statistical sum:
@@ -68,7 +68,7 @@ so that:
 p_i = \frac{N_i}{N_a} = \frac{1}S g_i (g_e)^i \exp \left( -\frac{E_i^*}T \right).
 \end{equation}
 
-{\bf Differentials along the curve of the ionization equilibrium} obey the equation as follows:
+{\bf Differentials along the curve of the ionization equilibrium} obey the following equations:
 \begin{equation}\label{diffstruct}
 A_{g_e} \frac{dg_e}{g_e} = A_V \frac{dV}{V} + A_T \frac{dT}{T},
 \end{equation}
@@ -86,15 +86,15 @@ Again, we express the result in terms of covariances,
 $\langle \delta a \delta b \rangle = \langle (a - \langle a \rangle) (b - \langle b \rangle) \rangle$,
 and mean values which are now being calculated
 using the modified partition functions.
-Differentiation of mean values which is necessary for derivation of the above equation on
-differentials is not a complicated problem with the following formula:
+Differentiation of mean values, which is necessary for derivation of the above equation on
+differentials, is not a complicated problem with the following formula:
 \begin{equation}
 d \langle f_i \rangle = \left\langle \delta f_i \delta\left( \frac{dp_i}{p_i} \right) \right\rangle,
 \end{equation}
 where $f_i$ is a function of the only argument $i$, for example, $iE_i$ or $i^2+i$.
 
 {\bf The ionization equilibrium} can be solved using the old technique, i.e. the Newton-Rapson
-iterations defined in Eq.(\ref{iter}).
+iterations, defined in Eq.(\ref{iter}).
 
 {\bf The full Helmholtz free energy} now includes the contribution of the electrostatic field energy as in Eq.(\ref{fterm}):
 \begin{equation}\label{fe1}
@@ -112,10 +112,10 @@ F = -TN_a\log\left[\frac{eV}{N_a}\left(\frac{MT}{2\pi \hbar^2}\right)^{3/2}\righ
 where, again, $\Omega_e = F_e - \mu_e N_a \sum i p_i = F_e - \mu_e N_a \langle i \rangle $.
 
 {\bf Plasma thermodynamics and Equation-Of-State.} 
-While differentiating Eq.(\ref{ffullm}) with respect to $T$ and $V$, again, we see that the derivatives
+While differentiating Eq.(\ref{ffullm}) with respect to $T$ and $V$, again we see that the derivatives
 by $g_e$ from the second and third terms cancel 
 each other: $g_e(\partial \log S/\partial g_e)=\langle i\rangle=Z$,
-that is evident from $d \log S = \langle d (\log p_i) \rangle$,
+which is evident from $d \log S = \langle d (\log p_i) \rangle$,
 and $-g_eg_{e1}{\rm Fe}^\prime_{3/2}(g_e)=g_{e1}{\rm Fe}_{1/2}=Z$.
 That is why for the internal energy density,
 ${\cal E}$, and for the pressure, $P$, we find the general expressions
@@ -179,11 +179,11 @@ Eqs.(\ref{estar},\ref{estarprime}) allows to specify all averages and covariance
 expressions for thermodynamical variables and derivatives.
 
 {\bf Simulation results.}
-Following is the table showing the values of $Z$ calculated for Xenon
+The following table showing the values of $Z$ calculated for Xenon
 at various electron temperatures
 (given in electron-volts -- the value of $k_{B}T_{e}$, where $k_{B}$
-is in eV/K) and heavy particle concentrations (given in number of
-particles per $cm^{3}$). "no" columns contain the same values
+is in eV/K) and heavy particle concentrations, given in number of
+particles per $cm^{3}$. The "no" columns contain the same values
 calculated without Coulomb interation taken into account.
 
 \begin{center}
