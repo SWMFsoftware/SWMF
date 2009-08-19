@@ -629,27 +629,31 @@ contains
                    endif
                    
                    ! get the densities
-                   VarsGhostFace_V(HpRho_) = FluxPw/Ub_V(1) *   &
+                   VarsGhostFace_V(iRho_I(IonFirst_)) = FluxPw/Ub_V(1) *   &
                         MassFluid_I(IonFirst_)
-                   VarsGhostFace_V(OpRho_) = FluxIono/Ub_V(2) * &
+                   VarsGhostFace_V(iRho_I(IonLast_)) = FluxIono/Ub_V(2) * &
                         MassFluid_I(IonLast_)     
                      
                    ! Make sure it points outward
                    if(sum(bUnit_D*FaceCoords_D) < 0.0) bUnit_D = -bUnit_D
                      
-                   VarsGhostFace_V(iUx_I(IonFirst_:IonLast_)) = Ub_V * bUnit_D(x_)
-                   VarsGhostFace_V(iUy_I(IonFirst_:IonLast_)) = Ub_V * bUnit_D(y_)
-                   VarsGhostFace_V(iUz_I(IonFirst_:IonLast_)) = Ub_V * bUnit_D(z_)
+                   VarsGhostFace_V(iUx_I(IonFirst_)) = Ub_V(1) * bUnit_D(x_)
+                   VarsGhostFace_V(iUy_I(IonFirst_)) = Ub_V(1) * bUnit_D(y_)
+                   VarsGhostFace_V(iUz_I(IonFirst_)) = Ub_V(1) * bUnit_D(z_)
+
+                   VarsGhostFace_V(iUx_I(IonLast_)) = Ub_V(2) * bUnit_D(x_)
+                   VarsGhostFace_V(iUy_I(IonLast_)) = Ub_V(2) * bUnit_D(y_)
+                   VarsGhostFace_V(iUz_I(IonLast_)) = Ub_V(2) * bUnit_D(z_)
                      
                    ! get the pressure
-                   VarsGhostFace_V(OpP_)   =  2./3. * eCap * &
+                   VarsGhostFace_V(iP_I(IonLast_))   =  2./3. * eCap * &
                         cElectronCharge / cBoltzmann &
                         * Si2No_V(UnitTemperature_)  &
-                        * VarsGhostFace_V(OpRho_)/MassFluid_I(IonLast_)
-                   VarsGhostFace_V(HpP_)   =  2./3. * eCap * &
+                        * VarsGhostFace_V(iRho_I(IonLast_))/MassFluid_I(IonLast_)
+                   VarsGhostFace_V(iP_I(IonFirst_))   =  2./3. * eCap * &
                         cElectronCharge / cBoltzmann & 
                         * Si2No_V(UnitTemperature_)  &
-                        * VarsGhostFace_V(HpRho_)/MassFluid_I(IonFirst_)
+                        * VarsGhostFace_V(iRho_I(IonFirst_))/MassFluid_I(IonFirst_)
                      
                    ! for the 'all' fluid
                    VarsGhostFace_V(Rho_) = sum(VarsGhostFace_V( &
