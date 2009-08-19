@@ -405,7 +405,7 @@ Contains
     call check_applicability(iError)
   end subroutine pressure_to_temperature
   !==========================================================================
-  subroutine pressure_to_temperature_e(PeToNaRatio, NaIn, iError)
+  subroutine pressure_e_to_temperature(PeToNaRatio, NaIn, iError)
     real,intent(in) :: PeToNaRatio,& !Pressure divided by Na [eV]
          NaIn !Density of heavy particles [# of particles/m^3]
     integer,intent(out),optional::iError
@@ -448,6 +448,6 @@ Contains
 
     end do iterations
     call check_applicability(iError)
-  end subroutine pressure_to_temperature_e
+  end subroutine pressure_e_to_temperature
 
 end module CRASH_ModStatSum
