@@ -108,11 +108,8 @@ module ModFaceFlux
   logical :: UseHallGradPe = .false., IsNewBlockGradPe = .true.
   real :: GradXPeNe, GradYPeNe, GradZPeNe
 
-  ! Variables for Gray-Diffusion
-  real :: EradFlux_D(3)
-
-  ! Variables for heat conduction
-  real :: HeatFlux, DiffCoef, HeatCondCoefNormal
+  ! Variables for diffusion solvers (gray radiation, heat conduction)
+  real :: DiffCoef, EradFlux, RadDiffCoef, HeatFlux, HeatCondCoefNormal
 
   ! These are variables for pure MHD solvers (Roe and HLLD)
   ! Number of MHD fluxes including the pressure and energy fluxes
@@ -824,9 +821,6 @@ contains
             - z_BLK(iLeft, jLeft  ,kLeft, iBlockFace))**2 )
     end if
 
-    ! Initialize diffusion coefficient for time step restriction
-    DiffCoef = 0.0
-
     if(UseClimit)then
        r = 0.5*(r_BLK(iLeft,  jLeft,  kLeft,  iBlockFace) &
             +   r_BLK(iRight, jRight, kRight, iBlockFace))
@@ -852,8 +846,8 @@ contains
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp
-    use ModImplicit, ONLY: UseFullImplicit, UseSemiImplicit  !^CFG IF IMPLICIT
     use ModFaceGradient, ONLY: get_face_gradient
+    use ModImplicit, ONLY: UseSemiImplicit  !^CFG IF IMPLICIT
 
     real,    intent(out):: Flux_V(nFlux)
 
@@ -925,6 +919,27 @@ contains
 
     end if
 
+    !^CFG IF IMPLICIT BEGIN
+    if(.not.UseSemiImplicit)then
+       ! Initialize diffusion coefficient for time step restriction
+       DiffCoef = 0.0
+
+       if(UseGrayDiffusion)then
+          call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
+               iBlockFace, StateLeft_V, StateRight_V, Normal_D, &
+               RadDiffCoef, EradFlux)
+          DiffCoef = DiffCoef + RadDiffCoef
+       end if
+
+       if(UseParallelConduction)then
+          call get_heat_flux(iDimFace, iFace, jFace, kFace, iBlockFace, &
+               StateLeft_V, StateRight_V, Normal_D, &
+               HeatCondCoefNormal, HeatFlux)
+          DiffCoef = DiffCoef + HeatCondCoefNormal
+       end if
+    end if
+    !^CFG END IMPLICIT
+
     if(DoRoe)then
        if(UseB)then
           if(IsBoundary)then
@@ -980,13 +995,6 @@ contains
 
     ! Calculate average state (used by most solvers and also by bCrossArea_D)
     State_V = 0.5*(StateLeft_V + StateRight_V)
-
-    !^CFG IF IMPLICIT BEGIN
-    if(UseFullImplicit .and. UseGrayDiffusion)then
-       call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
-            iBlockFace, State_V, EradFlux_D)
-    end if
-    !^CFG END IMPLICIT
 
     if(.not.DoGodunov &
          .and. .not.DoHlld &                                !^CFG IF HLLDFLUX
@@ -1067,8 +1075,13 @@ contains
     ! Increase maximum speed with resistive diffusion speed if necessary
     if(Eta > 0.0) CmaxDt = CmaxDt + 2*Eta*InvDxyz !^CFG IF DISSFLUX
 
-    ! Increase maximum speed with heat conduction speed if necessary
-    if(UseParallelConduction) CmaxDt = CmaxDt + 2.0*DiffCoef*InvDxyz
+    ! Increase maximum speed with diffusion speed if necessary
+    !^CFG IF IMPLICIT BEGIN
+    if(.not. UseSemiImplicit)then
+       if(UseParallelConduction .or. UseGrayDiffusion) &
+            CmaxDt = CmaxDt + 2.0*DiffCoef*InvDxyz
+    end if
+    !^CFG END IMPLICIT
 
     ! Further limit timestep due to the hyperbolic cleaning equation
     if(UseHyperbolicDivb) CmaxDt = max(SpeedHyp, CmaxDt)
@@ -1561,12 +1574,12 @@ contains
     !==========================================================================
 
     subroutine godunov_flux
-      use ModAdvance, ONLY: Erad_
-      use ModExactRS, ONLY: wR, wL, sample, pu_star, RhoL, RhoR, &
+      use ModAdvance,  ONLY: Erad_
+      use ModExactRS,  ONLY: wR, wL, sample, pu_star, RhoL, RhoR, &
            pL, pR, UnL, UnR, UnStar, pStar
-      use ModPhysics, ONLY: inv_gm1,g
+      use ModImplicit, ONLY: UseSemiImplicit  !^CFG IF IMPLICIT
+      use ModPhysics,  ONLY: inv_gm1,g
       use ModVarIndexes
-      use ModImplicit, ONLY: UseFullImplicit   !^CFG IF IMPLICIT
       use ModWaves,    ONLY: WavePressureFirst_, WavePressureLast_, &
            UseWavePressure
 
@@ -1684,11 +1697,11 @@ contains
          end do
       end if
 
-      if(UseGrayDiffusion)then
-         ! Diffusive radiation flux is added later for semi-implicit scheme
-         if(UseFullImplicit) Flux_V(Erad_) = &         !^CFG IF IMPLICIT
-              Flux_V(Erad_) + sum(EradFlux_D*Normal_D) !^CFG IF IMPLICIT
+      !^CFG IF IMPLICIT BEGIN
+      if(.not.UseSemiImplicit)then
+         if(UseGrayDiffusion) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
       end if
+      !^CFG END IMPLICIT
 
     end subroutine godunov_flux
 
@@ -1733,9 +1746,9 @@ contains
        StateCons_V, Flux_V, Un_I, En, Pe)
 
     use ModMultiFluid
-    use ModMain,    ONLY: UseHyperbolicDivb, SpeedHyp2
-    use ModAdvance, ONLY: Hyp_, Erad_
-    use ModImplicit, ONLY: UseFullImplicit, UseSemiImplicit  !^CFG IF IMPLICIT
+    use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp2
+    use ModAdvance,  ONLY: Hyp_, Erad_
+    use ModImplicit, ONLY: UseSemiImplicit  !^CFG IF IMPLICIT
 
     real,    intent(in) :: State_V(nVar)       ! input primitive state
     real,    intent(in) :: B0x, B0y, B0z       ! B0
@@ -1841,18 +1854,10 @@ contains
             + Bx*FluxBx + By*FluxBy + Bz*FluxBz
     end if
 
-    if(UseGrayDiffusion)then
-       ! Diffusive radiation flux is added later for semi-implicit scheme
-       if(UseFullImplicit) Flux_V(Erad_) = &         !^CFG IF IMPLICIT
-            Flux_V(Erad_) + sum(EradFlux_D*Normal_D) !^CFG IF IMPLICIT
-    end if
-
     !^CFG IF  IMPLICIT BEGIN
-    if(UseParallelConduction .and. .not.UseSemiImplicit)then
-       call get_heat_flux(iDimFace, iFace, jFace, kFace, iBlockFace, &
-            State_V, Normal_D, HeatCondCoefNormal, HeatFlux)
-       DiffCoef = DiffCoef + 0.5*HeatCondCoefNormal
-       Flux_V(Energy_) = Flux_V(Energy_) + HeatFlux
+    if(.not.UseSemiImplicit)then
+       if(UseGrayDiffusion) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
+       if(UseParallelConduction) Flux_V(Energy_) = Flux_V(Energy_) + HeatFlux
     end if
     !^CFG END IMPLICIT
 
@@ -2552,7 +2557,6 @@ contains
     !========================================================================
     subroutine get_hd_speed
 
-      use ModAdvance, ONLY: Erad_
       use ModVarIndexes
       use ModPhysics, ONLY: g
 

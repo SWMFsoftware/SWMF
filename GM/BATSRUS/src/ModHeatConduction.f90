@@ -151,8 +151,8 @@ contains
 
   !============================================================================
 
-  subroutine get_heat_flux(iDir, i, j, k, iBlock, State_V, Normal_D, &
-       HeatCondCoefNormal, HeatFlux)
+  subroutine get_heat_flux(iDir, i, j, k, iBlock, &
+       StateLeft_V, StateRight_V, Normal_D, HeatCondCoefNormal, HeatFlux)
 
     use ModAdvance,      ONLY: State_VGB, UseIdealEos
     use ModFaceGradient, ONLY: get_face_gradient
@@ -163,11 +163,12 @@ contains
     use ModVarIndexes,   ONLY: nVar, Rho_, p_
 
     integer, intent(in) :: iDir, i, j, k, iBlock
-    real,    intent(in) :: State_V(nVar), Normal_D(3)
+    real,    intent(in) :: StateLeft_V(nVar), StateRight_V(nVar), Normal_D(3)
     real,    intent(out):: HeatCondCoefNormal, HeatFlux
 
     integer :: ii, jj, kk
-    real :: FaceGrad_D(3), HeatCond_D(3), TeSi, Cv, CvSi
+    real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3)
+    real :: FaceGrad_D(3), TeSi, CvL, CvR, CvSi
 
     character(len=*), parameter :: NameSub = 'get_heat_flux'
     !--------------------------------------------------------------------------
@@ -188,20 +189,28 @@ contains
     call get_face_gradient(iDir, i, j, k, iBlock, &
          IsNewBlockHeatConduction, Te_G, FaceGrad_D)
 
-    call get_heat_conduction_coef(iDir, i, j, k, iBlock, State_V, &
-         Normal_D, HeatCond_D)
+    call get_heat_conduction_coef(iDir, i, j, k, iBlock, StateLeft_V, &
+         Normal_D, HeatCondL_D)
+    call get_heat_conduction_coef(iDir, i, j, k, iBlock, StateRight_V, &
+         Normal_D, HeatCondR_D)
 
+    HeatCond_D = 0.5*(HeatCondL_D + HeatCondR_D)
+    HeatCond_DFDB(:,i,j,k,2,iBlock) = HeatCond_D
+    
     HeatFlux = -sum(HeatCond_D*FaceGrad_D)
 
     ! get the heat conduction coefficient normal to the face for
     ! time step restriction
     if(UseIdealEos)then
-       Cv = inv_gm1*State_V(Rho_)/TeFraction
+       CvL = inv_gm1*StateLeft_V(Rho_)/TeFraction
+       CvR = inv_gm1*StateRight_V(Rho_)/TeFraction
     else
-       call user_material_properties(State_V, CvSiOut = CvSi)
-       Cv = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
+       call user_material_properties(StateLeft_V, CvSiOut = CvSi)
+       CvL = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
+       call user_material_properties(StateRight_V, CvSiOut = CvSi)
+       CvR = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
     end if
-    HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/Cv
+    HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/min(CvL,CvR)
 
   end subroutine get_heat_flux
 

@@ -155,26 +155,18 @@ contains
 
   !============================================================================
 
-  subroutine get_radiation_energy_flux( &
-       iDir, i, j, k, iBlock, State_V, EradFlux_D)
+  subroutine get_radiation_energy_flux(iDir, i, j, k, iBlock, &
+       StateLeft_V, StateRight_V, Normal_D, RadDiffCoef, EradFlux)
 
-    !\
-    ! Calculate the diffusion part of the radiation energy flux.
-    !/
     use ModAdvance,      ONLY: State_VGB, Erad_
     use ModFaceGradient, ONLY: get_face_gradient
-    use ModPhysics,      ONLY: Si2No_V, UnitX_, Clight
-    use ModTemperature,  ONLY: UseRadFluxLimiter, TypeRadFluxLimiter
-    use ModUser,         ONLY: user_material_properties
     use ModVarIndexes,   ONLY: nVar
 
     integer, intent(in) :: iDir, i, j, k, iBlock
-    real,    intent(in) :: State_V(nVar)
-    real,    intent(out):: EradFlux_D(3)
+    real,    intent(in) :: StateLeft_V(nVar), StateRight_V(nVar), Normal_D(3)
+    real,    intent(out):: RadDiffCoef, EradFlux
 
-    real :: DiffusionOpacitySi, DiffRad
-    real :: DiffusionOpacity
-    real :: FaceGrad_D(3), Grad2ByErad2
+    real :: FaceGrad_D(3), DiffCoefL, DiffCoefR
     !--------------------------------------------------------------------------
 
     if(IsNewBlockGrayDiffusion) Erad_G = State_VGB(Erad_,:,:,:,iBlock)
@@ -183,33 +175,52 @@ contains
          IsNewBlockGrayDiffusion, Erad_G, FaceGrad_D)
 
     if(IsNewTimestepGrayDiffusion)then
+       call get_diffusion_coef(StateLeft_V, DiffCoefL)
+       call get_diffusion_coef(StateRight_V, DiffCoefR)
 
-       call user_material_properties(State_V, i, j, k, iBlock, iDir, &
-            DiffusionOpacitySiOut = DiffusionOpacitySi)
-
-       DiffusionOpacity = DiffusionOpacitySi/Si2No_V(UnitX_)
-
-       if(UseRadFluxLimiter)then
-          Grad2ByErad2 = sum(FaceGrad_D**2)/State_V(Erad_)**2
-
-          select case(TypeRadFluxLimiter)
-          case("sum")
-             DiffRad = Clight/(3*DiffusionOpacity + sqrt(Grad2ByErad2))
-          case("max")
-             DiffRad = Clight/max(3*DiffusionOpacity,sqrt(Grad2ByErad2))
-          case("larsen")
-             DiffRad = Clight/sqrt(9*DiffusionOpacity**2 + Grad2ByErad2)
-          end select
-       else
-          DiffRad = Clight/(3*DiffusionOpacity)
-       end if
-
-       DiffCoef_VFDB(1,i,j,k,iDir,iBlock) = DiffRad
+       RadDiffCoef = 0.5*(DiffCoefL + DiffCoefR)
+       DiffCoef_VFDB(1,i,j,k,iDir,iBlock) = RadDiffCoef
     else
-       DiffRad = DiffCoef_VFDB(1,i,j,k,iDir,iBlock)
+       RadDiffCoef = DiffCoef_VFDB(1,i,j,k,iDir,iBlock)
     end if
 
-    EradFlux_D = -DiffRad*FaceGrad_D
+    EradFlux = -RadDiffCoef*sum(Normal_D*FaceGrad_D)
+
+  contains
+
+    subroutine get_diffusion_coef(State_V, DiffCoef)
+
+      use ModPhysics,     ONLY: Si2No_V, UnitX_, Clight
+      use ModTemperature, ONLY: UseRadFluxLimiter, TypeRadFluxLimiter
+      use ModUser,        ONLY: user_material_properties
+
+      real, intent(in) :: State_V(nVar)
+      real, intent(out):: DiffCoef
+
+      real :: DiffusionOpacitySi, DiffusionOpacity, Grad2ByErad2
+      !------------------------------------------------------------------------
+
+      call user_material_properties(State_V, i, j, k, iBlock, iDir, &
+           DiffusionOpacitySiOut = DiffusionOpacitySi)
+
+      DiffusionOpacity = DiffusionOpacitySi/Si2No_V(UnitX_)
+
+      if(UseRadFluxLimiter)then
+         Grad2ByErad2 = sum(FaceGrad_D**2)/State_V(Erad_)**2
+
+         select case(TypeRadFluxLimiter)
+         case("sum")
+            DiffCoef = Clight/(3*DiffusionOpacity + sqrt(Grad2ByErad2))
+         case("max")
+            DiffCoef = Clight/max(3*DiffusionOpacity,sqrt(Grad2ByErad2))
+         case("larsen")
+            DiffCoef = Clight/sqrt(9*DiffusionOpacity**2 + Grad2ByErad2)
+         end select
+      else
+         DiffCoef = Clight/(3*DiffusionOpacity)
+      end if
+
+    end subroutine get_diffusion_coef
 
   end subroutine get_radiation_energy_flux
 
