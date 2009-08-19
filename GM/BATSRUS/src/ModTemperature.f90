@@ -110,7 +110,8 @@ contains
 
   subroutine read_temperature_param(NameCommand)
 
-    use ModMain,      ONLY: UseGrayDiffusion, UseHeatConduction
+    use ModMain,      ONLY: UseGrayDiffusion, UseRadDiffusion, & 
+         UseHeatConduction
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in) :: NameCommand
@@ -140,7 +141,9 @@ contains
 
     case("#RADIATION")
        call read_var('UseGrayDiffusion', UseGrayDiffusion)
-       if(UseGrayDiffusion)then
+       call read_var('UseRadDiffusion', UseRadDiffusion)
+
+       if(UseGrayDiffusion .or. UseRadDiffusion)then
           call read_var('UseRadFluxLimiter', UseRadFluxLimiter)
           if(UseRadFluxLimiter)then
              call read_var('TypeRadFluxLimiter', TypeRadFluxLimiter, &
@@ -165,7 +168,8 @@ contains
 
   subroutine init_temperature_diffusion
 
-    use ModMain,       ONLY: UseHeatConduction, UseGrayDiffusion
+    use ModMain,       ONLY: UseHeatConduction, UseGrayDiffusion, &
+         useRadDiffusion
     use ModProcMH,     ONLY: iProc
     use ModSize,       ONLY: nI, nJ, nK, nBlk, nDim
     use ModVarIndexes, ONLY: NameVar_V, nVar
@@ -314,7 +318,7 @@ contains
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
     use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBlk, &
-         UseHeatConduction, UseGrayDiffusion
+         UseHeatConduction, UseGrayDiffusion, UseRadDiffusion
     use ModPhysics,  ONLY: Si2No_V, UnitX_, UnitEnergyDens_, &
          UnitTemperature_, cRadiationNo, Clight, UnitU_
     use ModProcMH,   ONLY: iProc
@@ -480,7 +484,7 @@ contains
     use ModAdvance,    ONLY: State_VGB, Source_VC, &
          uDotArea_XI, uDotArea_YI, uDotArea_ZI
     use ModGeometry,   ONLY: vInv_CB, TypeGeometry, y_BLK
-    use ModMain,       ONLY: nI, nJ, nK, UseGrayDiffusion
+    use ModMain,       ONLY: nI, nJ, nK, UseGrayDiffusion, UseRadDiffusion
     use ModVarIndexes, ONLY: Energy_, RhoUy_
 
     integer, intent(in) :: iBlock
