@@ -341,30 +341,33 @@ contains
     integer,intent(in)::iZ,nZ
     !The principal quantum number of the outermost electron in bounded with an ion
     !with I electrons
-    integer,parameter :: nGround0_I(100) = (/ &
-         1, 1, &                                                                    !  2
-         2, 2, 2, 2, 2, 2, 2, 2, &                                                  !  8
-         3, 3, 3, 3, 3, 3, 3, 3, &                                                  !  8
-         4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, &                    ! 18
-         5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, &                    ! 18
-         6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, &                          !
-         6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, &                          ! 32
-         7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 /)                                !
-    integer,parameter :: nGround_I(100) = (/ &
-         1, 1, &                                                                    !  2
-         2, 2, 2, 2, 2, 2, 2, 2, &                                                  !  8
-         3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, &                    ! 18
-         4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,       &                    ! 
-         4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,       &                    ! 32
-         5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,       &                    !
-         5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,       &                    !
-         5, 5, 5, 5, 5, 5, 5, 5    /)                                               ! 40
-    !-------------------------------------------------------------------------------!
-    if(iZ==0)then 
-       n_ground = nGround0_I(nZ)
-    else
-       n_ground = nGround_I(nZ - iZ)
-    end if
+
+    ! Works for H through Ar, Xe and Au (to work with gold uncomment the line with if)
+    integer,parameter :: nGround_I(79) = (/ &
+         1, 1, &                                                              !  2
+         2, 2, 2, 2, 2, 2, 2, 2, &                                            !  8
+         3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, &              ! 18
+         4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, &              ! 18
+                                                               5, &           !\
+                                                               5, &           ! \
+                                                               5, &           !  \
+                                                               5, &           !   \
+                                                               5, &           !in Au:
+                                                               5, &           !14*(4f) -electrons 
+                                                               5, &           !
+                                                               5, &           !However in Xe
+                                                               4, &           !the first 8 of them are
+                                                               4, &           !2*(5s) and 6*(5p) electrons
+                                                               4, &           !   /
+                                                               4, &           !  /
+                                                               4, &           ! /
+                                                               4, &           !/
+         5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, &              ! 18
+         6 /)                                                                 ! 1
+    !1-6-s--- !---2-5--p-------!----3-5------d----------------!--------4f-----!
+    !------------------------------------------------------
+    n_ground = nGround_I(nZ - iZ)
+    ! if(nZ==79.and.iZ<=54.and.iZ>=47)n_ground=4
   end function n_ground
   !======================================================================================
   integer function n_screened(iZ,nZ)
@@ -372,15 +375,13 @@ contains
     integer,intent(in) :: iZ, nZ
     
     integer :: nGround
-    integer,parameter :: nScreenedShell_I(6) = (/ 0,2,10,28,60,110 /)
-    integer,parameter :: nScreenedShell0_I(6)= (/ 0,2,10,18,36,54 /)
+    integer,parameter :: nScreenedShell_I(6)  = (/ 0,2,10,28,46,78 /)
     !---------------------
+
     nGround = n_ground(iZ, nZ)
-    if(iZ==nZ)then
-       n_screened = nScreenedShell0_I(nGround)
-    else
-       n_screened = nScreenedShell_I(nGround)
-    end if
+    n_screened = nScreenedShell_I(nGround)
+    !if(nZ==79.and.nGround==5)n_screened=60
+
   end function n_screened
   !======================================================================================
   !Fill in the array ExcitationEnergy_III with tabulated or calculted excitation energies
@@ -508,9 +509,13 @@ contains
     ! Electron configurations used are confirmed in E.B.Saloman,
     ! Energy Levels and Observed Spectral Lines of Xenon, Xe I through Xe LIV
     integer, parameter, dimension(54) :: cDegeneracyXe_I = (/ &
-         1, 6, 9, 4, 9, 6, 1, 2, 1, 10, 21, 28, 25, 6, 25, 28, 21, 10, 1, 6, &
-         9, 4, 9, 6, 1, 2, 1, 10, 21, 28, 25, 6, 25, 28, 21, 10, 1, 6, 9, 4, &
-         9, 6, 1, 2, 1, 6, 9, 4, 9, 6, 1, 2, 1, 2 /)
+         1, 6,   9,  4, 9, 6, 1, 2, &
+         1, 10, 21, 28, 25, 6, 25, 28, 21, 10, &
+         1, 6,   9,  4, 9, 6, 1, 2,&
+         1, 10, 21, 28, 25, 6, 25, 28, 21, 10, &
+         1, 6, 9, 4, 9, 6, 1, 2, &
+         1, 6, 9, 4, 9, 6, 1, 2,&
+         1, 2 /)
     !--------------
     Degeneracy_III = 0
 
