@@ -119,7 +119,7 @@ GODUNOV_for_Darwin:
 test_eos: 
 	  make IONIZ
 	  IONIZ.exe
-	  rm -f *.diff test_re*
+	  rm -f test_eos.diff test_re*
 	  cat ../doc/Table*.tex >test_result
 	  cat ../doc/Tex/ionization_table*.tex>test_ref
 	  ${SCRIPTDIR}/DiffNum.pl test_result test_ref > test_eos.diff
@@ -129,9 +129,9 @@ test_eos:
 test_abs: 
 	  make ABS
 	  ABS.exe
-	  rm -f *.diff test_re*
-	  cp ../doc/Polymide_Abs.dat test_result
-	  cp ../doc/Tex/Polymide_Abs.dat test_ref
+	  rm -f test_abs.diff test_re*
+	  cat ../doc/polyimide_absorption.dat ../doc/excited_levels.tex>test_result
+	   cat ../doc/Tex/polyimide_absorption.dat ../doc/Tex/excited_levels.tex>test_ref
 	  ${SCRIPTDIR}/DiffNum.pl -t -r=1.0e-8 -a=1.0e-13 test_result test_ref > test_abs.diff
 	  ls -l *.diff
 	  rm -f test_re*

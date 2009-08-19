@@ -20,7 +20,7 @@ program abs
   real,dimension(1:nZMax) :: IonizPotential_I
   !---------------
 
-  open(unit,file='../doc/Tex/excited_levels_N.tex',status='replace')
+  open(unit,file='../doc/excited_levels.tex',status='replace')
   write(unit,'(a)')'\newcolumntype{x}[1]{>{\centering\hspace{0pt}}p{#1}}'
   write(unit,'(a)')'\begin{tabular}'//&
        '{|x{1cm}|x{1cm}||x{2cm}||x{2cm}|x{2cm}|x{2cm}|x{2cm}|x{2cm}|}'
@@ -82,7 +82,7 @@ program abs
   call meshhv
   call abscon
   
-  open(unit,file='../doc/Polymide_Abs.dat')
+  open(unit,file='../doc/polyimide_absorption.dat')
   write(unit,'(a,i6,a)') &
        'Photon energy [eV]  Absorbtion Coeff cm-1, in ',nPhoton,' points' 
   do iPlot = 1, nPhoton
