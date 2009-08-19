@@ -63,6 +63,7 @@ subroutine impl_jacobian(implBLK,JAC)
   use ModImplicit
   use ModHallResist, ONLY: UseHallResist, hall_factor
   use ModGrayDiffusion, ONLY: add_jacobian_gray_diff
+  use ModMultiGroupDiffusion, ONLY: add_jacobian_rad_diff
   use ModGeometry, ONLY: vInv_CB, UseCovariant
   implicit none
 
@@ -343,6 +344,7 @@ subroutine impl_jacobian(implBLK,JAC)
   if(UseHallResist .and.       UseCovariant)call impl_hall_resist_general
 
   if(UseGrayDiffusion) call add_jacobian_gray_diff(iBLK, nw, JAC)
+  if(UseRadDiffusion) call add_jacobian_rad_diff(iBLK, nw, JAC)
 
   ! Multiply JAC by the implicit timestep dt and ImplCoeff
   if(time_accurate)then
