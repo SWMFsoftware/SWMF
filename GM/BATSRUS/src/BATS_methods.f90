@@ -234,7 +234,7 @@ end subroutine BATS_setup
 subroutine BATS_init_session
 
   use ModMain, ONLY: DoTransformToHgi, UseUserPerturbation, &
-       UseGrayDiffusion, UseParallelConduction
+       UseGrayDiffusion, UseRadDiffusion, UseParallelConduction
   use ModMain, ONLY: UseProjection                 !^CFG IF PROJECTION
   use ModMain, ONLY: UseConstrainB                 !^CFG IF CONSTRAINB
   use ModCT,   ONLY: DoInitConstrainB              !^CFG IF CONSTRAINB
@@ -242,6 +242,7 @@ subroutine BATS_init_session
   use ModImplicit, ONLY: UseSemiImplicit, &                !^CFG IF IMPLICIT
        TypeSemiImplicit, UseFullImplicit                   !^CFG IF IMPLICIT
   use ModGrayDiffusion, ONLY: init_gray_diffusion          !^CFG IF IMPLICIT
+  use ModMultiGroupDiffusion, ONLY: init_rad_diffusion     !^CFG IF IMPLICIT
   use ModHeatConduction, ONLY: init_heat_conduction        !^CFG IF IMPLICIT
   use ModTemperature, ONLY: UseTemperatureDiffusion, init_temperature_diffusion
   use ModUser, ONLY: user_initial_perturbation
@@ -283,7 +284,8 @@ subroutine BATS_init_session
   if(UseSemiImplicit)then
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
-        call init_gray_diffusion
+        if(UseGrayDiffusion) call init_gray_diffusion
+        if(UseRadDiffusion)  call init_rad_diffusion
      end select
   elseif(UseFullImplicit.and.UseGrayDiffusion)then
      call init_gray_diffusion
