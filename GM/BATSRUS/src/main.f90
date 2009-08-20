@@ -313,8 +313,16 @@ end subroutine CON_set_do_test
 
 subroutine calc_inner_bc_velocity
   call stop_mpi( &
-       'ERROR: calc_inner_bc_velocity should be called in SWMF only');
+       'ERROR: calc_inner_bc_velocity should be called in SWMF only')
 end subroutine calc_inner_bc_velocity
+
+!=============================================================================
+
+subroutine map_inner_bc_jouleheating
+  call stop_mpi( &
+       'ERROR: map_inner_bc_jouleheating should be called in SWMF only')
+end subroutine map_inner_bc_jouleheating
+
 !============================================================================
 real function logvar_ionosphere(NameLogvar)
 

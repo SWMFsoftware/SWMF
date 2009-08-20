@@ -491,9 +491,10 @@ contains
           !---------------------------------------------------
           ! Ionosphere outflow in multifluids  --- Yiqun 2008
           !---------------------------------------------------
-          iIonSecond = min(IonFirst_ + 1, IonLast_)
 
           if(TypeBc == 'ionosphereoutflow')then      
+
+             iIonSecond = min(IonFirst_ + 1, IonLast_)
              
              if (TypeCoordSystem /= 'SMG') then 
                 SmgFaceCoords_D = matmul(transform_matrix(TimeBc, &
