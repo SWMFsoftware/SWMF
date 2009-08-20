@@ -141,9 +141,8 @@ contains
 
     case("#RADIATION")
        call read_var('UseGrayDiffusion', UseGrayDiffusion)
-       call read_var('UseRadDiffusion', UseRadDiffusion)
 
-       if(UseGrayDiffusion .or. UseRadDiffusion)then
+       if(UseGrayDiffusion)then
           call read_var('UseRadFluxLimiter', UseRadFluxLimiter)
           if(UseRadFluxLimiter)then
              call read_var('TypeRadFluxLimiter', TypeRadFluxLimiter, &
@@ -158,6 +157,26 @@ contains
           end if
           call read_var('TradMinSi', TradMinSi)
        end if
+
+    case("#MULTIGROUPRADIATION")
+       call read_var('UseRadDiffusion', UseRadDiffusion)
+
+       if(UseRadDiffusion)then
+          call read_var('UseRadFluxLimiter', UseRadFluxLimiter)
+          if(UseRadFluxLimiter)then
+             call read_var('TypeRadFluxLimiter', TypeRadFluxLimiter, &
+                  IsLowerCase=.true.)
+
+             select case(TypeRadFluxLimiter)
+             case("larsen","sum","max")
+             case default
+                call stop_mpi(NameSub//': unknown TypeRadFluxLimiter='&
+                     //TypeRadFluxLimiter)
+             end select
+          end if
+          call read_var('TradMinSi', TradMinSi)
+       end if
+
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
     end select

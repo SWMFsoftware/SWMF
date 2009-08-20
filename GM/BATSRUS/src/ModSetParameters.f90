@@ -494,6 +494,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var("DrInnerHall", DrInnerHall)
 
      case("#RADIATION", &
+          "#MULTIGROUPRADIATION", &
           "#HEATCONDUCTION", &
           "#IMPLICITTEMPERATURE")
         call read_temperature_param(NameCommand)
