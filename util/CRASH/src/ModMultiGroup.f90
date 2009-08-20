@@ -816,10 +816,10 @@ contains
     real :: exhvot,  photn3
 
     !Misc: Density times Z2
-    real :: densi2
+    real :: DensityZ2
 
     !Misc: coefficients used in free-free gaunt factor
-    real :: gam2lg, gBrem
+    real :: Log10OfGamma2, GauntFactorBrems
 
     !Number of screened and valence electrons, as well as iZEff
     integer :: nScreened, nValence, iZEff, iQ
@@ -867,15 +867,16 @@ contains
 
 
 
-          densi2 = Z2_I(iMix) * Concentration_I(iMix) * densnn * 1.e-16               
+          DensityZ2 = Z2_I(iMix) * Concentration_I(iMix) * densnn * 1.e-16               
 
           ! ...       the free-free gaunt factor is a simple fit to the results   
           !           of Karzas and Latter (Ap. J. Suppl., 6, 167 (1961))         
 
-          gam2lg = log10( 13.6 * Z2_I(iMix) / Te )                           
-          gBrem  = 1. + 0.44 * exp( -0.25*(gam2lg+0.25)**2 )          
+          !
+          Log10OfGamma2 = log10( 13.6 * Z2_I(iMix) / Te )                           
+          GauntFactorBrems  = 1. + 0.44 * exp( -0.25*(Log10OfGamma2+0.25)**2 )          
 
-          brems(iMix) = 2.4e-21 * densi2 * gbrem * densne * &          
+          brems(iMix) = 2.4e-21 * DensityZ2 * GauntFactorBrems * densne * &          
                (1.-exhvot) / ( sqrt( Te ) * photn3 )                   
 
 
