@@ -278,7 +278,6 @@ contains
   !============================================================================
   subroutine init_mod_implicit
 
-    use ModVarIndexes, ONLY: nWave
     use ModUtilities,  ONLY: check_allocate
 
     integer :: iError
@@ -290,11 +289,11 @@ contains
     if(UseSemiImplicit)then
        select case(TypeSemiImplicit)
        case('radiation')
-          nw = nWave
+          nw = 1 !nWave
        case('cond', 'parcond')
           nw = 1
        case('radcond')
-          nw = nWave + 1
+          nw = 2 !nWave + 1
        case default
           call stop_mpi(NameSub//': nw unknown for'//TypeSemiImplicit)
        end select
