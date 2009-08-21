@@ -478,7 +478,8 @@ contains
     integer :: iMix
 
     integer :: iZ, iN, iL, nGround
-
+    integer :: InnerDegeneracy
+    !-------------------------
 
     !Degeneracies of ground states for positive ions of the first 10 elements.
     !The data for the first 3 columns are taken from the book 
@@ -522,13 +523,17 @@ contains
     do iZ = 0, nZ-1
        nGround = n_ground(iZ, nZ)
 
+       InnerDegeneracy = 1
        select case (nZ)
           case (1:10)
-             Degeneracy_III(0,nGround,iZ) = cDegeneracy10_II(iZ+1,nZ)
+             Degeneracy_III(0,nGround,iZ)   = cDegeneracy10_II(iZ+1,nZ)
+             if (iZ < nZ-1) InnerDegeneracy = cDegeneracy10_II(iZ+2,nZ)
           case (13)
-             Degeneracy_III(0,nGround,iZ) = cDegeneracyAl_I(iZ+1)
+             Degeneracy_III(0,nGround,iZ)   = cDegeneracyAl_I(iZ+1)
+             if (iZ < nZ-1) InnerDegeneracy = cDegeneracyAl_I(iZ+2)
           case (54)
-             Degeneracy_III(0,nGround,iZ) = cDegeneracyXe_I(iZ+1)
+             Degeneracy_III(0,nGround,iZ)   = cDegeneracyXe_I(iZ+1)
+             if (iZ < nZ-1) InnerDegeneracy = cDegeneracyXe_I(iZ+2)
           case default
              write(*,*) "No such element found in the database"//&
                   " of ground state degeneracies"
@@ -536,7 +541,7 @@ contains
 
        do iN = nGround+1, nExcitation
           do iL = 0, iN-1
-             Degeneracy_III(iL,iN,iZ) = 2 * (2*iL + 1)
+             Degeneracy_III(iL,iN,iZ) = InnerDegeneracy * 2*(2*iL + 1)
           end do
        end do
     end do
