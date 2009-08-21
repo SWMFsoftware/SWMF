@@ -242,7 +242,7 @@ contains
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
        EinternalSiIn, TeSiIn, &
        EinternalSiOut, TeSiOut, PeSiOut, EeSiOut, PressureSiOut, &
-       CvSiOut, CveSiOut, GammaOut, HeatCondSiOut, &
+       CvSiOut, CveSiOut, GammaOut, HeatCondSiOut, TeTiRelaxSiOut, &
        AbsorptionOpacitySiOut, DiffusionOpacitySiOut)
 
     ! The State_V vector is in normalized units
@@ -262,8 +262,9 @@ contains
     real, optional, intent(out) :: CveSiOut                  ! [J/(K*m^3)]
     real, optional, intent(out) :: GammaOut                  ! dimensionless
     real, optional, intent(out) :: HeatCondSiOut             ! [J/(m*K*s)]
+    real, optional, intent(out) :: TeTiRelaxSiOut            ! [1/s]
     real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
-    real, optional, intent(out) :: DiffusionOpacitySiOut ! [1/m]
+    real, optional, intent(out) :: DiffusionOpacitySiOut     ! [1/m]
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
     !------------------------------------------------------------------------

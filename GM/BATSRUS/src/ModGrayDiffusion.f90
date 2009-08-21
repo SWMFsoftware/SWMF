@@ -66,7 +66,7 @@ contains
 
   subroutine init_gray_diffusion
 
-    use ModAdvance,     ONLY: Erad_, WaveFirst_, WaveLast_
+    use ModAdvance,     ONLY: Erad_, WaveFirst_, WaveLast_, UseElectronEnergy
     use ModMain,        ONLY: UseGrayDiffusion
     use ModSize,        ONLY: nI, nJ, nK, MaxBlock, nDim
     use ModImplicit,    ONLY: UseSemiImplicit, UseFullImplicit, &
@@ -118,14 +118,24 @@ contains
           nRelax = 1
           allocate(iRelax_I(nRelax))
           iRelax_I(1) = iEradImpl
-          nPoint = 0
+          if(UseElectronEnergy)then
+             nPoint = 2
+             iPoint = iTeImpl
+          else
+             nPoint = 0
+          end if
        case('cond')
           iTeImpl = 1
           nDiff = 1
           allocate(iDiff_I(nDiff))
           iDiff_I(1) = iTeImpl
           nRelax = 0
-          nPoint = 0
+          if(UseElectronEnergy)then
+             nPoint = 2
+             iPoint = iTeImpl
+          else
+             nPoint = 0
+          end if
        end select
 
        if(nPoint>0)then
@@ -281,13 +291,13 @@ contains
 
   subroutine get_impl_gray_diff_state(StateImpl_VGB,DconsDsemi_VCB)
 
-    use ModAdvance,  ONLY: Erad_, State_VGB
+    use ModAdvance,  ONLY: Erad_, State_VGB, UseElectronEnergy
     use ModImplicit, ONLY: nw, nImplBlk, impl2iBlk, TypeSemiImplicit, &
          iEradImpl, iTeImpl, ImplCoeff
     use ModMain,     ONLY: nDim, x_, y_, nI, nJ, nK, MaxImplBlk, Dt
     use ModNumConst, ONLY: i_DD
     use ModPhysics,  ONLY: inv_gm1, Clight, cRadiationNo, &
-         Si2No_V, UnitTemperature_, UnitEnergyDens_, UnitX_, UnitU_
+         Si2No_V, UnitTemperature_, UnitEnergyDens_, UnitX_, UnitU_, UnitT_
     use ModUser,     ONLY: user_material_properties
     use ModTemperature, ONLY: UseRadFluxLimiter, TypeRadFluxLimiter
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB, &
@@ -299,9 +309,9 @@ contains
     real, intent(inout) :: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
 
     integer :: iImplBlock, iBlock, i, j, k
-    real :: PlanckOpacitySi, PlanckOpacity, CvSi, Cv, TeSi, Te
+    real :: PlanckOpacitySi, PlanckOpacity, CvSi, Cv, TeSi, Te, CveSi, Cve
     real :: DiffusionOpacitySi, DiffusionOpacity
-    real :: HeatCondSi, HeatCond
+    real :: HeatCondSi, HeatCond, TeTiRelaxSi, TeTiRelax
     real :: Grad2ByErad2, DiffRad, InvDx2, InvDy2, InvDz2
     real :: InvDx, InvDy
 
@@ -348,12 +358,14 @@ contains
                i, j, k, iBlock, &
                AbsorptionOpacitySiOut = PlanckOpacitySi, &
                DiffusionOpacitySiOut = DiffusionOpacitySi, &
-               CvSiOut = CvSi, TeSiOut = TeSi, &
-               HeatCondSiOut = HeatCondSi)
+               CvSiOut = CvSi, CveSiOut=CveSi, TeSiOut = TeSi, &
+               HeatCondSiOut = HeatCondSi, TeTiRelaxSiOut = TeTiRelaxSi)
 
           PlanckOpacity = PlanckOpacitySi/Si2No_V(UnitX_)
           Cv = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
+          Cve = CveSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
           Te = TeSi*Si2No_V(UnitTemperature_)
+          TeTiRelax = TeTiRelaxSi/Si2No_V(UnitT_)
 
           select case(TypeSemiImplicit)
           case('radiation')
@@ -367,10 +379,25 @@ contains
           case('radcond')
              RelaxCoef_VCB(1,i,j,k,iBlock) = Clight*PlanckOpacity
 
-             DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
-                  Cv/(4.0*cRadiationNo*Te**3)
+             if(UseElectronEnergy)then
+                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
+                     Cve/(4.0*cRadiationNo*Te**3)
+
+                PointSemiCoef_VCB(Relax_,i,j,k,iBlock) = 0.0
+                PointSemiCoef_VCB(Planck_,i,j,k,iBlock) = 0.0
+             else
+                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
+                     Cv/(4.0*cRadiationNo*Te**3)
+             end if
           case('cond')
-             DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cv
+             if(UseElectronEnergy)then
+                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cve
+
+                PointSemiCoef_VCB(Relax_,i,j,k,iBlock) = 0.0
+                PointSemiCoef_VCB(Planck_,i,j,k,iBlock) = 0.0
+             else
+                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cv
+             end if
           end select
 
           call get_diffusion_coef
@@ -1106,7 +1133,8 @@ contains
 
   subroutine update_impl_gray_diff(iBlock, iImplBlock, StateImpl_VG)
 
-    use ModAdvance,  ONLY: State_VGB, Rho_, p_, Erad_, ExtraEint_
+    use ModAdvance,  ONLY: State_VGB, Rho_, p_, Erad_, ExtraEint_, &
+         UseElectronEnergy, Ee_
     use ModEnergy,   ONLY: calc_energy_cell
     use ModImplicit, ONLY: nw, TypeSemiImplicit, iEradImpl, iTeImpl, &
          DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
@@ -1120,6 +1148,7 @@ contains
 
     integer :: i, j, k
     real :: Einternal, EinternalSi, PressureSi, AbsorptionEmission
+    real :: HeatCond, TeTiRelaxation
 
     character(len=*), parameter :: NameSub = 'update_impl_gray_diff'
     !--------------------------------------------------------------------------
@@ -1143,23 +1172,40 @@ contains
     
     do k = 1,nK; do j = 1,nJ; do i = 1,nI
        if(TypeSemiImplicit=='radiation')then
-          AbsorptionEmission = ImplCoeff &
-               *PointSemiCoef_VCB(Relax_,i,j,k,iBlock) &
-               * (PointSemiCoef_VCB(Planck_,i,j,k,iBlock) &
-               -  State_VGB(Erad_,i,j,k,iBlock)) &
-               + (1.0-ImplCoeff)*PointSemiCoef_VCB(Relax_,i,j,k,iBlock) &
-               *(PointSemiCoef_VCB(Planck_,i,j,k,iBlock) &
-               - ImplOld_VCB(iEradImpl,i,j,k,iBlock))
-               
+          AbsorptionEmission = PointSemiCoef_VCB(Relax_,i,j,k,iBlock)*( &
+               + ImplCoeff*(PointSemiCoef_VCB(Planck_,i,j,k,iBlock) &
+               -            State_VGB(Erad_,i,j,k,iBlock)) &
+               + (1.0 - ImplCoeff)*(PointSemiCoef_VCB(Planck_,i,j,k,iBlock) &
+               -                    ImplOld_VCB(iEradImpl,i,j,k,iBlock)) )
+
           Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
                + State_VGB(ExtraEint_,i,j,k,iBlock) &
-               - dt*AbsorptionEmission
+               - Dt*AbsorptionEmission
        else
-          Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
-               + State_VGB(ExtraEint_,i,j,k,iBlock) &
-               + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
-               *( StateImpl_VG(iTeImpl,i,j,k) &
-               -  ImplOld_VCB(iTeImpl,i,j,k,iBlock) )
+
+          HeatCond = DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
+               *(StateImpl_VG(iTeImpl,i,j,k) &
+               - ImplOld_VCB(iTeImpl,i,j,k,iBlock))
+
+          if(UseElectronEnergy)then
+             State_VGB(Ee_,i,j,k,iBlock) = State_VGB(Ee_,i,j,k,iBlock) &
+                  + HeatCond
+
+             TeTiRelaxation = PointSemiCoef_VCB(Relax_,i,j,k,iBlock)*( &
+                  + ImplCoeff*(StateImpl_VG(iTeImpl,i,j,k) &
+                  -            PointSemiCoef_VCB(Planck_,i,j,k,iBlock)) &
+                  + (1.0 - ImplCoeff)*(ImplOld_VCB(iTeImpl,i,j,k,iBlock) &
+                  -            PointSemiCoef_VCB(Planck_,i,j,k,iBlock)) )
+
+             Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
+                  + State_VGB(ExtraEint_,i,j,k,iBlock) &
+                  + HeatCond + Dt*TeTiRelaxation
+          else
+             Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
+                  + State_VGB(ExtraEint_,i,j,k,iBlock) &
+                  + HeatCond
+          end if
+
        end if
        EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
 

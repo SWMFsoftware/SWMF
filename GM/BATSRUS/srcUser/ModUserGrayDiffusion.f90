@@ -486,9 +486,9 @@ contains
 
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
        EinternalSiIn, TeSiIn, &
-       EinternalSiOut, TeSiOut, PressureSiOut, CvSiOut, GammaOut, &
-       AbsorptionOpacitySiOut, DiffusionOpacitySiOut, &
-       HeatCondSiOut)
+       EinternalSiOut, TeSiOut, PeSiOut, EeSiOut, PressureSiOut, &
+       CvSiOut, CveSiOut, GammaOut, HeatCondSiOut, TeTiRelaxSiOut, &
+       AbsorptionOpacitySiOut, DiffusionOpacitySiOut)
 
     ! The State_V vector is in normalized units
 
@@ -503,10 +503,14 @@ contains
     real, optional, intent(in)  :: TeSiIn                    ! [K]
     real, optional, intent(out) :: EinternalSiOut            ! [J/m^3]
     real, optional, intent(out) :: TeSiOut                   ! [K]
+    real, optional, intent(out) :: PeSiOut                   ! [Pa]
+    real, optional, intent(out) :: EeSiOut                   ! [J/m^3]
     real, optional, intent(out) :: PressureSiOut             ! [Pa]
     real, optional, intent(out) :: CvSiOut                   ! [J/(K*m^3)]
+    real, optional, intent(out) :: CveSiOut                  ! [J/(K*m^3)]
     real, optional, intent(out) :: GammaOut                  ! dimensionless
     real, optional, intent(out) :: HeatCondSiOut             ! [J/(m*K*s)]
+    real, optional, intent(out) :: TeTiRelaxSiOut            ! [1/s]
     real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
     real, optional, intent(out) :: DiffusionOpacitySiOut     ! [1/m]
 
@@ -551,6 +555,8 @@ contains
          cLightSpeed/(3.0*DiffusionRad*No2Si_V(UnitU_)*No2Si_V(UnitX_))
 
     if(present(HeatCondSiOut)) HeatCondSiOut = 0.0
+    if(present(CveSiOut)) CveSiOut = 0.0
+    if(present(TeTiRelaxSiOut)) TeTiRelaxSiOut = 0.0
 
   end subroutine user_material_properties
 

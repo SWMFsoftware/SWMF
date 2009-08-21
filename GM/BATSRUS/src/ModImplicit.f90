@@ -278,7 +278,9 @@ contains
   !============================================================================
   subroutine init_mod_implicit
 
-    use ModUtilities, ONLY: check_allocate
+    use ModVarIndexes, ONLY: nWave
+    use ModUtilities,  ONLY: check_allocate
+
     integer :: iError
 
     character(len=*), parameter:: NameSub = 'init_mod_implicit'
@@ -287,10 +289,12 @@ contains
 
     if(UseSemiImplicit)then
        select case(TypeSemiImplicit)
-       case('radiation', 'cond', 'parcond')
+       case('radiation')
+          nw = nWave
+       case('cond', 'parcond')
           nw = 1
        case('radcond')
-          nw = 2
+          nw = nWave + 1
        case default
           call stop_mpi(NameSub//': nw unknown for'//TypeSemiImplicit)
        end select
