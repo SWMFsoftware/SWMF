@@ -243,6 +243,13 @@ end subroutine calc_inner_bc_velocity
 
 !==============================================================================
 
+subroutine map_inner_bc_jouleheating
+  call CON_stop('map_inner_bc_jouleheating: '// &
+       'GM_ERROR: empty version cannot be used!')
+end subroutine map_inner_bc_jouleheating
+
+!==============================================================================
+
 subroutine GM_print_variables(NameSource)
 
   implicit none
