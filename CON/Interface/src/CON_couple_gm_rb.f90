@@ -195,7 +195,8 @@ contains
                1,i_comm(),iStatus_I,iError)
           call MPI_recv(nPointLine,1,MPI_INTEGER,i_proc0(GM_),&
                1,i_comm(),iStatus_I,iError)
-          allocate(BufferLine_VI(nVarLine, nPointLine))
+          if (.not. allocated(BufferLine_VI)) &
+               allocate(BufferLine_VI(nVarLine, nPointLine))
           !recieve variables from GM
           call MPI_recv(Integral_IIV,nSize,MPI_REAL,&
                i_proc0(GM_),1,i_comm(),iStatus_I,iError)
