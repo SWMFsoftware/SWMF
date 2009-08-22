@@ -1,14 +1,14 @@
 module ModVarIndexes
 
   use ModSingleFluid
-   
+  use ModWaves, ONLY: NameNumber_I
   implicit none
 
   save
 
   ! This equation module contains the standard MHD equations plus one
   ! extra wave energy of a single frequency w, Iw that carries the extra energy.
-  character (len=*), parameter :: NameEquation='MHD Extra Waves'
+  character (len=*), parameter :: NameEquation='MHD Waves'
 
 
 
@@ -46,8 +46,8 @@ module ModVarIndexes
        By_    = 6,    &
        Bz_    = 7,    &
        Ew_    = 8,    &
-       WaveFirst_ = 9, &
-       WaveLast_  = WaveFirst_+nWave-1, &
+       FreqFirst_ = 9, &
+       FreqLast_  = FreqFirst_+nWave-1, &
        p_     = nVar, &
        Energy_= nVar+1  
 
@@ -73,7 +73,7 @@ module ModVarIndexes
        0.0, & ! By_
        0.0, & ! Bz_
        0.0, & ! Ew_ 
-       (0.0, iWave=WaveFirst_,WaveLast_), & 
+       (0.0, iWave=FreqFirst_,FreqLast_), & 
        1.0, & ! p_
        1.0 /) ! Energy_ 
  
@@ -87,7 +87,7 @@ module ModVarIndexes
        'By ', & ! By_
        'Bz ', & ! Bz_
        'Ew ', & ! Ew_  
-       ('I'//NameNumber_I(iWave-1), iWave=1,nWave), & ! Waves
+       ('I'//NameNumber_I(iWave), iWave=1,nWave), & ! Waves
        'p  ', & ! p_
        'e  '/) ! Energy_        
   
@@ -118,7 +118,7 @@ module ModVarIndexes
        ' "p"'
 
   character(len=7*nWave+len(NamePrimitiveVarTecPref) + &
-       len(NamePrimitiveVarTecSuff)), parameter :: NamePrimitiveVarTec = &
+       len(NamePrimitiveVarTecSuff))     :: NamePrimitiveVarTec = &
        trim(NamePrimitiveVarTecPref)
 
        
@@ -133,7 +133,7 @@ module ModVarIndexes
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! Specify scalar to be advected
-  integer, parameter :: ScalarFirst_ = Ew_, ScalarLast_ = WaveLast_
+  integer, parameter :: ScalarFirst_ = Ew_, ScalarLast_ = FreqLast_
 
   ! There are no multi-species
   logical, parameter :: UseMultiSpecies = .false.
@@ -152,24 +152,24 @@ contains
     
     do iWave=1,nWave
        write(NameWaveVar_I(iWave),'(a,i2.2)') 'I',iWave
-       NameConservativeVar=trim(NameConservativeVar)//' '//trim(NameWaveVar_I(iWave))
-       NamePrimitiveVar=trim(NamePrimitiveVar)//' '//trim(NameWaveVar_I(iWave))
+       NameConservativeVar=trim(NameConservativeVar)//&
+            ' '//trim(NameWaveVar_I(iWave))
+       NamePrimitiveVar=trim(NamePrimitiveVar)//&
+            ' '//trim(NameWaveVar_I(iWave))
+       NamePrimitiveVarTec=trim(NamePrimitiveVarTec)//' "'//trim(NameWaveVar_I(iWave))//'",'
     end do
     NameConservativeVar=trim(NameConservativeVar)//trim(NameConservativeVarSuff)
     NamePrimitiveVar=trim(NamePrimitiveVar)//trim(NamePrimitiveVarSuff)
+    NamePrimitiveVarTec=trim(NamePrimitiveVarTec)//trim(NamePrimitiveVarSuff)
 
-    write(*,*) 'Conservative: ',NameConservativeVar
-    write(*,*) 'Primitive: ', NamePrimitiveVar
-    write(*,*) 'tec: ', NamePrimitiveVarTec
- 
-   ! Set the unit and unit name for the wave energy variable
+    ! Set the unit and unit name for the wave energy variable
     UnitUser_V(Ew_)        = UnitUser_V(Energy_)
     NameUnitUserTec_V(Ew_) = NameUnitUserTec_V(Energy_)
     NameUnitUserIdl_V(Ew_) = NameUnitUserIdl_V(Energy_)
    
-    UnitUser_V(WaveFirst_:WaveLast_)        = UnitUser_V(Energy_)
-    NameUnitUserTec_V(WaveFirst_:WaveLast_) = NameUnitUserTec_V(Energy_)
-    NameUnitUserIdl_V(WaveFirst_:WaveLast_) = NameUnitUserIdl_V(Energy_)
+    UnitUser_V(FreqFirst_:FreqLast_)        = UnitUser_V(Energy_)
+    NameUnitUserTec_V(FreqFirst_:FreqLast_) = NameUnitUserTec_V(Energy_)
+    NameUnitUserIdl_V(FreqFirst_:FreqLast_) = NameUnitUserIdl_V(Energy_)
     
    end subroutine init_mod_equation
 
