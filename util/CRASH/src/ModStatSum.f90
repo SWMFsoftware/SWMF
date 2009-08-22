@@ -226,11 +226,14 @@ Contains
 
     GammaS =  compressibility_at_const_te  () + &
          d_pressure_over_d_te  ()**2 * (Na * Te * cEV) /(heat_capacity  () * pressure  ())
-    GammaSe = compressibility_at_const_te_e() + &
-         d_pressure_e_over_d_te()**2 * (Na * Te * cEV) /(heat_capacity_e() * pressure_e())
 
     if(present(GammaSOut ))GammaSOut  = GammaS
-    if(present(GammaSeOut))GammaSeOut = GammaSe
+    if(present(GammaSeOut))then
+       ! Note heat_capacity_e() is zero if zAv <= cTiny
+       GammaSe = compressibility_at_const_te_e() + &
+            d_pressure_e_over_d_te()**2 * (Na * Te * cEV) /(heat_capacity_e() * pressure_e())
+       GammaSeOut = GammaSe
+    end if
 
     if(present(GammaMaxOut))GammaMaxOut = max( GammaS,  Gamma)
 
