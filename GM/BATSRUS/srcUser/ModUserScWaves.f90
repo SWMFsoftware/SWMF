@@ -22,7 +22,7 @@ module ModUser
   
   real, parameter               :: VersionUserModule = 1.0
   character (len=*), parameter  :: &
-       NameUserModule = 'Empirical Solar Wind and MHD Turbulence'
+       NameUserModule = 'Solar Wind and Waves'
   character(len=lStringLine)    :: NameModel
 
   !Global variables - frequency grid
@@ -265,20 +265,20 @@ contains
       
        wEnergyDens = wEnergyDensSI * Si2No_V(UnitP_)
        do iFreq=AlfvenSpeedPlusFirst_,AlfvenSpeedPlusLast_
-          if(LogFreq_I(iFreq-WaveFirst_+1) .le. LogFreqInertial.or.vAlfvenSi.le.0.0) then
+          if(LogFreq_I(iFreq-FreqFirst_+1) .le. LogFreqInertial.or.vAlfvenSi.le.0.0) then
              VarsGhostFace_V(iFreq)=0.0
           else    
              VarsGhostFace_V(iFreq) = (2.0/3.0) * dLogFreq * wEnergyDens* &
-                  exp((LogFreq_I(iFreq-WaveFirst_+1)-LogFreqInertial)*(-2.0/3.0))
+                  exp((LogFreq_I(iFreq-FreqFirst_+1)-LogFreqInertial)*(-2.0/3.0))
           end if
        end do
 
        do iFreq=AlfvenSpeedMinusFirst_,AlfvenSpeedMinusLast_
-          if(LogFreq_I(iFreq-Wave_First_+1) .le. LogFreqInertial.or.vAlfvenSi.ge.0.0) then
+          if(LogFreq_I(iFreq-FreqFirst_+1) .le. LogFreqInertial.or.vAlfvenSi.ge.0.0) then
              VarsGhostFace_V(iFreq)=0.0
           else    
              VarsGhostFace_V(iFreq) = (2.0/3.0) * dLogFreq * wEnergyDens* &
-                  exp((LogFreq_I(iFreq-WaveFirst_+1)-LogFreqInertial)*(-2.0/3.0))
+                  exp((LogFreq_I(iFreq-FreqFirst_+1)-LogFreqInertial)*(-2.0/3.0))
           end if
        end do
     end if
@@ -477,11 +477,11 @@ contains
     !\
     ! Update spectrum and pressure if initialized
     !/
-    if(any(State_VGB(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK,iBlock) > 0.0)) then
-       call update_states_spectrum(iBlock)
+    if(any(State_VGB(FreqFirst_:FreqLast_,1:nI,1:nJ,1:nK,iBlock) > 0.0)) then
+       !call update_states_spectrum(iBlock)
  
        do k=1,nK ; do j=1,nJ ; do i=1,nI
-          WavePres=0.5*sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+          WavePres=0.5*sum(State_VGB(FreqFirst_:FreqLast_,i,j,k,iBlock))
         
           if(WavePres<0.0) then
              write(*,*) '=============================================='
@@ -529,11 +529,11 @@ contains
           if(LogFreq_I(iFreq) .ge. log(FreqCutOff_C(i,j,k))) then
              ! Pass dissipated energy to MHD energy source term
              !WaveDissip_CB(i,j,k,iBlock)=WaveDissip_CB(i,j,k,iBlock)+ &
-             !     State_VGB(WaveFirst_+iFreq-1,i,j,k,iBlock)
+             !     State_VGB(FreqFirst_+iFreq-1,i,j,k,iBlock)
               State_VGB(p_,i,j,k,iBlock)=State_VGB(p_,i,j,k,iBlock) &
-                 + (g-1.0)*State_VGB(WaveFirst_+iFreq-1,i,j,k,iBlock)
+                 + (g-1.0)*State_VGB(FreqFirst_+iFreq-1,i,j,k,iBlock)
              ! remove this energy from the spectrum
-             State_VGB(WaveFirst_+iFreq-1,i,j,k,iBlock)=0.0
+             State_VGB(FreqFirst_+iFreq-1,i,j,k,iBlock)=0.0
           end if
        end do ! finished wave dissipation before advection
    
@@ -548,14 +548,14 @@ contains
        ! Some energy may have advected above cut-off frequency
         do iFreq = 1,nWave
            if((LogFreq_I(iFreq) .ge. log(FreqCutOff_C(i,j,k))) .and. &
-                (State_VGB(WaveFirst_+iFreq-1,i,j,k,iBlock) > 0.0) )then
+                (State_VGB(FreqFirst_+iFreq-1,i,j,k,iBlock) > 0.0) )then
               ! Pass dissipated energy to MHD energy source term
               !WaveDissip_CB(i,j,k,iBlock)=WaveDissip_CB(i,j,k,iBlock)+&
-              !     State_VGB(WaveFirst_+iFreq-1,i,j,k,iBlock)
+              !     State_VGB(FreqFirst_+iFreq-1,i,j,k,iBlock)
               State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
-                   + (g-1.0)*State_VGB(WaveFirst_+iFreq-1,i,j,k,iBlock)
+                   + (g-1.0)*State_VGB(FreqFirst_+iFreq-1,i,j,k,iBlock)
               ! Remove this energy from the spectrum
-              State_VGB(WaveFirst_+iFreq-1,i,j,k,iBlock)=0.0
+              State_VGB(FreqFirst_+iFreq-1,i,j,k,iBlock)=0.0
            end if
        end do ! finished wave dissipation after advection
        
@@ -596,7 +596,7 @@ contains
     !Divide each Ixx_ state variables by its frequency
     !/
     do iFreq = 1,nFreq
-       wEnergy_G(iFreq)=State_VGB(WaveFirst_+iFreq-1,i,j,k,iBlock)* &
+       wEnergy_G(iFreq)=State_VGB(FreqFirst_+iFreq-1,i,j,k,iBlock)* &
             exp(-LogFreq_I(iFreq))
     end do
     !\
@@ -667,9 +667,9 @@ contains
    !/
    !Multiply wEnergy by frequency
    do iFreq = 1,nFreq
-      State_VGB(WaveFirst_+iFreq-1,i,j,k,iBlock)=wEnergy_G(iFreq)* &
+      State_VGB(FreqFirst_+iFreq-1,i,j,k,iBlock)=wEnergy_G(iFreq)* &
            exp(LogFreq_I(iFreq))
-      if(State_VGB(WaveFirst_+iFreq-1,i,j,k,iBlock)<0.0) then
+      if(State_VGB(FreqFirst_+iFreq-1,i,j,k,iBlock)<0.0) then
          write(*,*) '=========================================================='
          write(*,*) 'Negative energy at frequency point ', iFreq
          write(*,*) 'At: ', i,j,k,iBlock, ' iteration: ',iteration_number
@@ -888,7 +888,7 @@ contains
     end if
      
     PoyntFluxSi=vAlfvenRadial*No2Si_V(UnitP_)* & 
-         sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBLK))
+         sum(State_VGB(FreqFirst_:FreqLast_,i,j,k,iBLK))
 
   end subroutine calc_poynt_flux
   !====================================================================
@@ -974,20 +974,20 @@ contains
 
     ! Get number of freq. groups for Plus(+Va) and Minus(-Va) Alfven waves
     ! Uses ModWaves indexes which are set in user_init_session
-    AlfvenSpeedPlusLast_  = AlfvenSpeedPlusLast_  + WaveFirst_-1
-    AlfvenSpeedPlusFirst_ = AlfvenSpeedPlusFirst_ + WaveFirst_-1
-    AlfvenSpeedMinusFirst_= AlfvenSpeedMinusFirst_+ WaveFirst_-1
-    AlfvenSpeedMinusLast_ = AlfvenSpeedMinusLast_ + WaveFirst_-1
+    AlfvenSpeedPlusLast_  = AlfvenSpeedPlusLast_  + FreqFirst_-1
+    AlfvenSpeedPlusFirst_ = AlfvenSpeedPlusFirst_ + FreqFirst_-1
+    AlfvenSpeedMinusFirst_= AlfvenSpeedMinusFirst_+ FreqFirst_-1
+    AlfvenSpeedMinusLast_ = AlfvenSpeedMinusLast_ + FreqFirst_-1
 
-    WavePressureFirst_    = WavePressureFirst_    + WaveFirst_-1
-    WavePressureLast_     = WavePressureLast_     + WaveFirst_-1
+    WavePressureFirst_    = WavePressureFirst_    + FreqFirst_-1
+    WavePressureLast_     = WavePressureLast_     + FreqFirst_-1
 
     nFreqPlus  = AlfvenSpeedPlusLast_  - AlfvenSpeedPlusFirst_+1
     nFreqMinus = AlfvenSpeedMinusLast_ - AlfvenSpeedMinusFirst_+1
     nFreq=nFreqPlus+nFreqMinus
 
     call set_freq_grid(nFreqPlus, nFreqMinus)
-
+  
     ! \
     ! Calculate wave spectrum energy  coefficients in all cells 
     ! /
@@ -998,8 +998,9 @@ contains
     !\
     ! Initialize spectrum in all frequency groups and all cells
     !/
-    State_VGB(WaveFirst_:WaveLast_,:,:,:,:) = 0.0
+    State_VGB(FreqFirst_:FreqLast_,:,:,:,:) = 0.0
 
+   
     do iBLK=1,nBLK
        if (unusedBLK(iBLK)) CYCLE
        !\
@@ -1036,19 +1037,16 @@ contains
                 WaveEnergy_I(iFreq)=EnergyCoeff &
                      *exp(LogFreq_I(iFreq) * FreqPower)
              end if
-             !write(*,*) '================================================'
-             !write(*,*) 'WaveEnergy: ',WaveEnergy_I(iFreq)
              ! Store wave energy state variables Ixx_
              ! Ixx_, represent w'I(logw')dlogw' and is in normalized units,
              ! while WaveEnergy_I represents w'I(logw') and is in SI units.
-             State_VGB(iFreq-1+WaveFirst_,i,j,k,iBLK) = WaveEnergy_I(iFreq)*dLogFreq *&
+             State_VGB(iFreq-1+FreqFirst_,i,j,k,iBLK) = WaveEnergy_I(iFreq)*dLogFreq *&
                                                   Si2No_V(UnitP_)
-             !write(*,*) 'StateVGB: ',State_VGB(WaveFirst_+iFreq-1,i,j,k,iBLK)
           end do
        end do; end do ; end do
     end do
 
-    call write_spectrogram
+    !call write_spectrogram
         
   end subroutine init_wave_spectrum
   !========================================================================
@@ -1168,7 +1166,7 @@ contains
        !Allways use lower case !!
     case('wpres')
        do k=-1,nK+2 ; do j=-1,nJ+2 ; do i=-1,nI+2
-          PlotVar_G(i,j,k) = 0.5*sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+          PlotVar_G(i,j,k) = 0.5*sum(State_VGB(FreqFirst_:FreqLast_,i,j,k,iBlock))
        end do ; end do ; end do
        PlotVar_G=No2Si_V(UnitP_)*PlotVar_G
        NameTecVar = 'wPres'
