@@ -85,10 +85,11 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,Var_VGB)
 
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
-        if (UseGrayDiffusion) &
-             call get_impl_gray_diff_state(Var_VGB, DconsDsemi_VCB)
-        if (UseRadDiffusion) &
-             call get_impl_rad_diff_state(Var_VGB, DconsDsemi_VCB)
+        if(UseRadDiffusion)then
+           call get_impl_rad_diff_state(Var_VGB, DconsDsemi_VCB)
+        else
+           call get_impl_gray_diff_state(Var_VGB, DconsDsemi_VCB)
+          end if
      case('parcond')
         call get_impl_heat_cond_state(Var_VGB, DconsDsemi_VCB)
      case default
@@ -155,7 +156,7 @@ end subroutine impl2expl
 
 subroutine implicit2explicit(Var_VCB)
 
-  use ModMain, ONLY: nI,nJ,nK,MaxImplBLK,UseGrayDiffusion,UseRadDiffusion
+  use ModMain, ONLY: nI,nJ,nK,MaxImplBLK, UseRadDiffusion
   use ModImplicit, ONLY: nw, nImplBLK, impl2iBLK, &
        UseSemiImplicit, TypeSemiImplicit
   use ModGrayDiffusion, ONLY: update_impl_gray_diff
@@ -174,12 +175,13 @@ subroutine implicit2explicit(Var_VCB)
      if(UseSemiImplicit)then
         select case(TypeSemiImplicit)
         case('radiation', 'radcond', 'cond')
-           if(UseGrayDiffusion) &
-              call update_impl_gray_diff(iBLK, implBLK, &
-                                         Var_VCB(:,:,:,:,implBLK))
-           if(UseRadDiffusion) &
+           if(UseRadDiffusion)then
               call update_impl_rad_diff(iBLK, implBLK, &
-                                        Var_VCB(:,:,:,:,implBLK))
+                   Var_VCB(:,:,:,:,implBLK))
+           else
+              call update_impl_gray_diff(iBLK, implBLK, &
+                   Var_VCB(:,:,:,:,implBLK))
+           end if
         case('parcond')
            call update_impl_heat_cond(iBLK, implBLK, Var_VCB(:,:,:,:,implBLK))
         case default
@@ -283,7 +285,7 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
   use ModProcMH, ONLY: iProc
   use ModImplicit, ONLY: StateSemi_VGB, nw, nImplBlk, impl2iblk, &
        TypeSemiImplicit
-  use ModMain, ONLY: dt, UseGrayDiffusion, UseRadDiffusion
+  use ModMain, ONLY: dt, UseRadDiffusion
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
   use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs
   use ModMultiGroupDiffusion, ONLY: get_rad_diffusion_rhs
@@ -328,12 +330,13 @@ subroutine get_semi_impl_rhs(StateImpl_VGB, Rhs_VCB)
 
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
-        if(UseGrayDiffusion) &
-           call get_gray_diffusion_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
-              Rhs_VCB(:,:,:,:,iImplBlock), IsLinear=.false.)
-        if(UseRadDiffusion) &
+        if(UseRadDiffusion)then
            call get_rad_diffusion_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
               Rhs_VCB(:,:,:,:,iImplBlock), IsLinear=.false.)
+        else
+           call get_gray_diffusion_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
+                Rhs_VCB(:,:,:,:,iImplBlock), IsLinear=.false.)
+        end if
      case('parcond')
         call get_heat_conduction_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
              Rhs_VCB(:,:,:,:,iImplBlock), IsLinear=.false.)
@@ -357,7 +360,7 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
 
   use ModImplicit, ONLY: StateSemi_VGB, nw, nImplBlk, impl2iblk, &
        TypeSemiImplicit, ImplCoeff, DconsDsemi_VCB !!!, wnrm
-  use ModMain, ONLY: dt, UseGrayDiffusion, UseRadDiffusion
+  use ModMain, ONLY: dt, UseRadDiffusion
   use ModSize, ONLY: nI, nJ, nK, MaxImplBlk
   use ModGrayDiffusion, ONLY: get_gray_diffusion_rhs
   use ModMultiGroupDiffusion, ONLY: get_rad_diffusion_rhs
@@ -413,12 +416,13 @@ subroutine get_semi_impl_matvec(x_I, y_I, MaxN)
 
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
-        if(UseGrayDiffusion) &
-           call get_gray_diffusion_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
-              Rhs_VC, IsLinear = .true.)
-        if(UseRadDiffusion) &
+        if(UseRadDiffusion)then
            call get_rad_diffusion_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
-              Rhs_VC, IsLinear = .true.)
+                Rhs_VC, IsLinear = .true.)
+        else
+           call get_gray_diffusion_rhs(iBlock, StateSemi_VGB(:,:,:,:,iBlock), &
+                Rhs_VC, IsLinear = .true.)
+        end if
      case('parcond')
         call get_heat_conduction_rhs(iBlock, &
              StateSemi_VGB(:,:,:,:,iBlock), Rhs_VC, IsLinear = .true.)
@@ -447,7 +451,7 @@ subroutine get_semi_impl_jacobian
   use ModGrayDiffusion, ONLY: add_jacobian_gray_diff
   use ModMultiGroupDiffusion, ONLY: add_jacobian_rad_diff
   use ModHeatConduction, ONLY: add_jacobian_heat_cond
-  use ModMain, ONLY: nI, nJ, nK, nDim, Dt, UseGrayDiffusion, UseRadDiffusion
+  use ModMain, ONLY: nI, nJ, nK, nDim, Dt, UseRadDiffusion
   use ModGeometry, ONLY: vInv_CB
 
   implicit none
@@ -466,10 +470,11 @@ subroutine get_semi_impl_jacobian
      ! Get dR/dU
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
-        if(UseGrayDiffusion) &
-           call add_jacobian_gray_diff(iBlock, nw, MAT(:,:,:,:,:,:,iImplBlock))
-        if(UseRadDiffusion) &
+        if(UseRadDiffusion)then
            call add_jacobian_rad_diff(iBlock, nw, MAT(:,:,:,:,:,:,iImplBlock))
+        else
+           call add_jacobian_gray_diff(iBlock, nw, MAT(:,:,:,:,:,:,iImplBlock))
+        end if
      case('parcond')
         call add_jacobian_heat_cond(iBlock, nw, MAT(:,:,:,:,:,:,iImplBlock))
      case default

@@ -284,8 +284,11 @@ subroutine BATS_init_session
   if(UseSemiImplicit)then
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
-        if(UseGrayDiffusion) call init_gray_diffusion
-        if(UseRadDiffusion)  call init_rad_diffusion
+        if(UseRadDiffusion)then
+           call init_rad_diffusion
+        else
+           call init_gray_diffusion
+        end if
      end select
   elseif(UseFullImplicit.and.UseGrayDiffusion)then
      call init_gray_diffusion

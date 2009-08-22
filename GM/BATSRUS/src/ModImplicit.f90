@@ -279,21 +279,24 @@ contains
   subroutine init_mod_implicit
 
     use ModUtilities,  ONLY: check_allocate
+    use ModVarIndexes, ONLY: WaveFirst_, WaveLast_
 
-    integer :: iError
+    integer :: iError, nWave
 
     character(len=*), parameter:: NameSub = 'init_mod_implicit'
     !----------------------------------------------------------------------
     if(allocated(Impl_VGB)) return
 
     if(UseSemiImplicit)then
+       nWave = WaveLast_ - WaveFirst_ + 1
+
        select case(TypeSemiImplicit)
        case('radiation')
-          nw = 1 !nWave
+          nw = nWave
        case('cond', 'parcond')
           nw = 1
        case('radcond')
-          nw = 2 !nWave + 1
+          nw = nWave + 1
        case default
           call stop_mpi(NameSub//': nw unknown for'//TypeSemiImplicit)
        end select
