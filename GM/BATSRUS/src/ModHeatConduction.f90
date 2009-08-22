@@ -195,7 +195,6 @@ contains
          Normal_D, HeatCondR_D)
 
     HeatCond_D = 0.5*(HeatCondL_D + HeatCondR_D)
-    HeatCond_DFDB(:,i,j,k,2,iBlock) = HeatCond_D
     
     HeatFlux = -sum(HeatCond_D*FaceGrad_D)
 
