@@ -27,7 +27,8 @@ CR=strtrim(CR,2)
 FileFits  = 'fitsfile.fits'
 FileHeader='fitsfile.H'
 FileDat='fitsfile.dat'
-FileTec='fitsfile_tec.dat' 
+FileTec='fitsfile_tec.dat'
+FileIdl='fitsfile_idl.out' 
 DataName='Br [G]'  
 
 Data = readfits(FileFits, ImHeader, silent=silent)
@@ -91,6 +92,30 @@ for i=0L,Ny-1 do for j=0L,Nx-1 do $
   printf,lun, format = '(1e14.6)',Data(j,i)
 
 free_lun, lun
+
+if not keyword_set(silent) then begin
+    print,''
+    print,'Writing IDL file',FileIdl
+    print,''
+endif
+
+openw,lun,FileIdl,/get_lun
+printf,lun,' Longitude [Deg], Latitude [Deg],',DataName
+printf,lun,0 ,0.0 ,  2, 1, 1
+printf,lun, Nx,' ',Ny
+printf,lun, '0.0'
+printf,lun,'x1 x2 v01 p01'
+
+for i=0L,Ny-1 do begin
+    for j=0L,Nx-1 do begin
+        printf,lun,format ='(3e14.6)',j,i,Data(j,i)
+    endfor
+endfor
+
+
+free_lun,lun
+    
+
 
 if not keyword_set(silent) then print,'Conversion done'
 
