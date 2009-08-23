@@ -7,12 +7,8 @@ module ModGrayDiffusion
   use ModProcMH, ONLY: iProc
   !use ModMain, ONLY: iTest, jTest, kTest, BlkTest
 
-
   implicit none
   save
-
-  ! This module is needed for the order(u/c) gray diffusion approximation for
-  ! radiation-hydrodynamics.
 
   private !except
 
@@ -36,18 +32,19 @@ module ModGrayDiffusion
   real, allocatable :: DiffSemiCoef_VGB(:,:,:,:,:)
   real, allocatable :: PointSemiCoef_VCB(:,:,:,:,:)
 
-  ! Index which vars involve diffusion
+  ! Index indicating which implicit variables involve diffusion
   integer, allocatable :: iDiff_I(:)
   integer :: nDiff
 
-  ! Number of relaxation coefficients
+  ! Index indicating which implicit variables involve energy exchange
+  ! with the electrons
   integer, allocatable :: iRelax_I(:)
   integer :: nRelax
 
   ! Number of point implicit coefficients
   integer :: nPoint
   ! Index which variable involve point implicit calculation
-  integer :: iPoint
+  integer :: iVarPoint
   ! Named indices for point implicit coefficients
   integer, parameter :: Relax_ = 1, Planck_ = 2
 
@@ -56,9 +53,21 @@ module ModGrayDiffusion
   ! temporary radiation energy array needed by set_block_field
   real, allocatable :: Erad1_G(:,:,:)
 
+  ! radiation has gamma of 4/3
   real, parameter :: GammaRel = 4.0/3.0
 
-  real :: EradMin
+  ! Indices indicating which semi-implicit vars are mapped to which
+  ! State_VGB variables. The total gas pressure and energy are excluded
+  ! from this list, since they taken care of separately.
+  integer :: nImplToState
+  integer, allocatable :: iFromImpl_I(:), iToState_I(:)
+
+  ! If we solve for the temperature, then ImplStateMin indicates the minimum
+  ! allowed temperature that is used in the update from the implicit state
+  ! variables to State_VGB.
+  ! If the implicit solver uses energies (cRadiation*T**4),
+  ! then ImplStateMin is the minimum allowed energy value
+  real :: ImplStateMin
 
 contains
 
@@ -66,7 +75,8 @@ contains
 
   subroutine init_gray_diffusion
 
-    use ModAdvance,     ONLY: Erad_, WaveFirst_, WaveLast_, UseElectronEnergy
+    use ModAdvance,     ONLY: Erad_, WaveFirst_, WaveLast_, Ee_, &
+         UseElectronEnergy
     use ModMain,        ONLY: UseGrayDiffusion
     use ModSize,        ONLY: nI, nJ, nK, MaxBlock, nDim
     use ModImplicit,    ONLY: UseSemiImplicit, UseFullImplicit, &
@@ -75,6 +85,8 @@ contains
     use ModTemperature, ONLY: TradMinSi
     use ModWaves,       ONLY: UseWavePressure, WavePressureFirst_, &
          WavePressureLast_, GammaWave
+
+    real :: EradMin
 
     character(len=*), parameter :: NameSub = "init_gray_diffusion"
     !------------------------------------------------------------------------
@@ -101,6 +113,9 @@ contains
        
     if(UseSemiImplicit)then
 
+       ! Default to zero, unless reset
+       iTeImpl = 0
+
        select case(TypeSemiImplicit)
        case('radiation')
           iEradImpl = 1
@@ -109,7 +124,13 @@ contains
           iDiff_I(1) = iEradImpl
           nRelax = 0
           nPoint = 2
-          iPoint = iEradImpl
+          iVarPoint = iEradImpl
+          nImplToState = 1
+          allocate(iFromImpl_I(nImplToState), iToState_I(nImplToState))
+          iFromImpl_I = iEradImpl
+          iToState_I  = Erad_
+          ImplStateMin = EradMin
+
        case('radcond')
           iTeImpl = 1; iEradImpl = 2
           nDiff = 2
@@ -120,10 +141,20 @@ contains
           iRelax_I(1) = iEradImpl
           if(UseElectronEnergy)then
              nPoint = 2
-             iPoint = iTeImpl
+             iVarPoint = iTeImpl
+             nImplToState = 2
+             allocate(iFromImpl_I(nImplToState), iToState_I(nImplToState))
+             iFromImpl_I = (/ iTeImpl, iEradImpl /)
+             iToState_I  = (/ Ee_, Erad_ /)
           else
              nPoint = 0
+             nImplToState = 1
+             allocate(iFromImpl_I(nImplToState), iToState_I(nImplToState))
+             iFromImpl_I = iEradImpl
+             iToState_I  = Erad_
           end if
+          ImplStateMin = EradMin
+
        case('cond')
           iTeImpl = 1
           nDiff = 1
@@ -132,9 +163,14 @@ contains
           nRelax = 0
           if(UseElectronEnergy)then
              nPoint = 2
-             iPoint = iTeImpl
+             iVarPoint = iTeImpl
+             nImplToState = 1
+             allocate(iFromImpl_I(nImplToState), iToState_I(nImplToState))
+             iFromImpl_I = iTeImpl
+             iToState_I  = Ee_
           else
              nPoint = 0
+             nImplToState = 0
           end if
        end select
 
@@ -274,12 +310,10 @@ contains
             *(cRadiationNo*Te**4 - State_VGB(Erad_,i,j,k,iBlock))
 
        ! dErad/dt = + AbsorptionEmission
-       Source_VC(Erad_,i,j,k) = Source_VC(Erad_,i,j,k) &
-            + AbsorptionEmission
+       Source_VC(Erad_,i,j,k) = Source_VC(Erad_,i,j,k) + AbsorptionEmission
 
        ! dE/dt    = - AbsorptionEmission
-       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-            - AbsorptionEmission
+       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) - AbsorptionEmission
 
     end do; end do; end do
 
@@ -969,17 +1003,17 @@ contains
     if(nPoint>0)then
        if(IsLinear)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             Rhs_VC(iPoint,i,j,k) = Rhs_VC(iPoint,i,j,k) &
+             Rhs_VC(iVarPoint,i,j,k) = Rhs_VC(iVarPoint,i,j,k) &
                   - PointSemiCoef_VCB(Relax_,i,j,k,iBlock) &
-                  *StateImpl_VG(iPoint,i,j,k)
+                  *StateImpl_VG(iVarPoint,i,j,k)
           end do; end do; end do
        else
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              EnergyExchange = PointSemiCoef_VCB(Relax_,i,j,k,iBlock) &
                   * (PointSemiCoef_VCB(Planck_,i,j,k,iBlock) &
-                  -  StateImpl_VG(iPoint,i,j,k))
+                  -  StateImpl_VG(iVarPoint,i,j,k))
 
-             Rhs_VC(iPoint,i,j,k) = Rhs_VC(iPoint,i,j,k) + EnergyExchange
+             Rhs_VC(iVarPoint,i,j,k) = Rhs_VC(iVarPoint,i,j,k) + EnergyExchange
           end do; end do; end do
        end if
     end if
@@ -1063,34 +1097,36 @@ contains
     real :: Dxyz_D(nDim), Area_D(nDim), Coeff
     !--------------------------------------------------------------------------
 
-    if(nPoint>0.and.UseSemiImplicit)then
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          ! dSvar/dVar (diagonal)
-          Jacobian_VVCI(iPoint,iPoint,i,j,k,1) = &
-               -PointSemiCoef_VCB(Relax_,i,j,k,iBlock)
-       end do; end do; end do
-    end if
-
-    if(nRelax>0.and.UseSemiImplicit)then
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          do iRelax = 1, nRelax
-             iVar = iRelax_I(iRelax)
-
-             RelaxCoef = RelaxCoef_VCB(iRelax,i,j,k,iBlock)
-
+    if(UseSemiImplicit)then
+       if(nPoint>0)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
              ! dSvar/dVar (diagonal)
-             Jacobian_VVCI(iVar,iVar,i,j,k,1) = -RelaxCoef
+             Jacobian_VVCI(iVarPoint,iVarPoint,i,j,k,1) = &
+                  -PointSemiCoef_VCB(Relax_,i,j,k,iBlock)
+          end do; end do; end do
+       end if
 
-             ! dSe/dVar (off diagonal)
-             Jacobian_VVCI(iTeImpl,iVar,i,j,k,1) = +RelaxCoef
+       if(nRelax>0)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             do iRelax = 1, nRelax
+                iVar = iRelax_I(iRelax)
 
-             ! dSe/daTe^4 (diagonal)
-             Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) = -RelaxCoef
+                RelaxCoef = RelaxCoef_VCB(iRelax,i,j,k,iBlock)
 
-             ! dSvar/daTe^4 (off diagonal)
-             Jacobian_VVCI(iVar,iTeImpl,i,j,k,1) = +RelaxCoef
-          end do
-       end do; end do; end do
+                ! dSvar/dVar (diagonal)
+                Jacobian_VVCI(iVar,iVar,i,j,k,1) = -RelaxCoef
+
+                ! dSe/dVar (off diagonal)
+                Jacobian_VVCI(iTeImpl,iVar,i,j,k,1) = +RelaxCoef
+
+                ! dSe/daTe^4 (diagonal)
+                Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) = -RelaxCoef
+
+                ! dSvar/daTe^4 (off diagonal)
+                Jacobian_VVCI(iVar,iTeImpl,i,j,k,1) = +RelaxCoef
+             end do
+          end do; end do; end do
+       end if
     end if
 
     ! For the fully implicit scheme:
@@ -1133,81 +1169,57 @@ contains
 
   subroutine update_impl_gray_diff(iBlock, iImplBlock, StateImpl_VG)
 
-    use ModAdvance,  ONLY: State_VGB, Rho_, p_, Erad_, ExtraEint_, &
-         UseElectronEnergy, Ee_
+    use ModAdvance,  ONLY: State_VGB, Rho_, p_, ExtraEint_
     use ModEnergy,   ONLY: calc_energy_cell
-    use ModImplicit, ONLY: nw, TypeSemiImplicit, iEradImpl, iTeImpl, &
-         DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
-    use ModMain,     ONLY: nI, nJ, nK, dt
+    use ModImplicit, ONLY: nw, iTeImpl, DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
+    use ModMain,     ONLY: nI, nJ, nK, Dt
     use ModPhysics,  ONLY: inv_gm1, No2Si_V, Si2No_V, UnitEnergyDens_, UnitP_,&
          UnitRho_, UnitTemperature_
     use ModUser,     ONLY: user_material_properties
 
     integer, intent(in) :: iBlock, iImplBlock
-    real, intent(in) :: StateImpl_VG(nw,nI,nJ,nK)
+    real, intent(inout) :: StateImpl_VG(nw,nI,nJ,nK)
 
-    integer :: i, j, k
-    real :: Einternal, EinternalSi, PressureSi, AbsorptionEmission
-    real :: HeatCond, TeTiRelaxation
+    integer :: i, j, k, iImplToState, iVarImpl, iVar
+    real :: Einternal, EinternalSi, PressureSi
+    real :: DelEnergy, Relaxation
 
     character(len=*), parameter :: NameSub = 'update_impl_gray_diff'
     !--------------------------------------------------------------------------
 
-    if(TypeSemiImplicit=='radiation' .or. TypeSemiImplicit=='radcond')then
-       do k = 1,nK; do j = 1,nJ; do i = 1,nI
-          State_VGB(Erad_,i,j,k,iBlock) = &
-               max(EradMin, StateImpl_VG(iEradImpl,i,j,k))
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       do iImplToState = 1, nImplToState
+          iVarImpl = iFromImpl_I(iImplToState)
+          iVar     = iToState_I(iImplToState)
 
-          if(State_VGB(Erad_,i,j,k,iBlock) < 0.0)then
-             write(*,*)NameSub,': ERROR EradMin, EradOrig=', &
-                  EradMin, StateImpl_VG(iEradImpl,i,j,k)
+          StateImpl_VG(iVarImpl,i,j,k) = &
+               max(ImplStateMin, StateImpl_VG(iVarImpl,i,j,k))
 
-             write(*,*)NameSub,': ERROR negative Erad =', &
-                  State_VGB(Erad_,i,j,k,iBlock)
-             write(*,*)NameSub,': ERROR at i,j,k,iBlock=', i, j, k, iBlock
-             call stop_mpi(NameSub//' negative Erad')
-          end if
-       end do; end do; end do
-    end if
-    
-    do k = 1,nK; do j = 1,nJ; do i = 1,nI
-       if(TypeSemiImplicit=='radiation')then
-          AbsorptionEmission = PointSemiCoef_VCB(Relax_,i,j,k,iBlock)*( &
-               + ImplCoeff*(PointSemiCoef_VCB(Planck_,i,j,k,iBlock) &
-               -            State_VGB(Erad_,i,j,k,iBlock)) &
-               + (1.0 - ImplCoeff)*(PointSemiCoef_VCB(Planck_,i,j,k,iBlock) &
-               -                    ImplOld_VCB(iEradImpl,i,j,k,iBlock)) )
+          DelEnergy = DconsDsemi_VCB(iVarImpl,i,j,k,iImplBlock) &
+               *(StateImpl_VG(iVarImpl,i,j,k) &
+               - ImplOld_VCB(iVarImpl,i,j,k,iBlock))
 
-          Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
-               + State_VGB(ExtraEint_,i,j,k,iBlock) &
-               - Dt*AbsorptionEmission
-       else
+          State_VGB(iVar,i,j,k,iBlock) = &
+               State_VGB(iVar,i,j,k,iBlock) + DelEnergy
+       end do
 
-          HeatCond = DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
-               *(StateImpl_VG(iTeImpl,i,j,k) &
-               - ImplOld_VCB(iTeImpl,i,j,k,iBlock))
+       Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
+            + State_VGB(ExtraEint_,i,j,k,iBlock)
 
-          if(UseElectronEnergy)then
-             State_VGB(Ee_,i,j,k,iBlock) = State_VGB(Ee_,i,j,k,iBlock) &
-                  + HeatCond
-
-             TeTiRelaxation = PointSemiCoef_VCB(Relax_,i,j,k,iBlock)*( &
-                  + ImplCoeff*(StateImpl_VG(iTeImpl,i,j,k) &
-                  -            PointSemiCoef_VCB(Planck_,i,j,k,iBlock)) &
-                  + (1.0 - ImplCoeff)*(ImplOld_VCB(iTeImpl,i,j,k,iBlock) &
-                  -            PointSemiCoef_VCB(Planck_,i,j,k,iBlock)) )
-
-             Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
-                  + State_VGB(ExtraEint_,i,j,k,iBlock) &
-                  + HeatCond + Dt*TeTiRelaxation
-          else
-             Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
-                  + State_VGB(ExtraEint_,i,j,k,iBlock) &
-                  + HeatCond
-          end if
-
+       if(iTeImpl>0)then
+          Einternal = Einternal + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
+               *(StateImpl_VG(iTeImpl,i,j,k)-ImplOld_VCB(iTeImpl,i,j,k,iBlock))
        end if
-       EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
+
+       if(nPoint>0)then
+          Relaxation = PointSemiCoef_VCB(Relax_,i,j,k,iBlock)*( &
+               + ImplCoeff*(StateImpl_VG(iVarPoint,i,j,k) &
+               -            PointSemiCoef_VCB(Planck_,i,j,k,iBlock)) &
+               + (1.0 - ImplCoeff)*(ImplOld_VCB(iVarPoint,i,j,k,iBlock) &
+               -            PointSemiCoef_VCB(Planck_,i,j,k,iBlock)) )
+
+          Einternal = Einternal + Dt*Relaxation
+       end if
 
        if(Einternal < 0.0)then
           write(*,*)NameSub,': ERROR Rho, p, TOrigSi=', &
@@ -1220,6 +1232,8 @@ contains
           write(*,*)NameSub,': ERROR at i,j,k,iBlock=', i, j, k, iBlock
           call stop_mpi(NameSub//' negative Eint')
        end if
+
+       EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
 
        call user_material_properties(State_VGB(:,i,j,k,iBlock), &
             i, j, k, iBlock, &
