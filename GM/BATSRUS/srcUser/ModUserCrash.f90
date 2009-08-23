@@ -1486,7 +1486,8 @@ contains
     if(present(PressureSiOut)) PressureSiOut = pSi
 
     if(present(TeSiOut) .or. present(CvSiOut) .or. present(GammaOut) .or. &
-         present(HeatCondSiOut) .or. &
+         present(HeatCondSiOut) .or. present(PeSiOut) .or. &
+         present(EeSiOut) .or. present(CveSiOut) .or. &
          iTableOpacity>0 .and. (present(AbsorptionOpacitySiOut) &
          .or.                   present(DiffusionOpacitySiOut)) )then
        if(iTableThermo > 0)then
@@ -1511,30 +1512,27 @@ contains
           end if
 
           if(UseElectronEnergy)then
-             if(present(PeSiOut) .or. present(EeSiOut) .or. &
-                  present(CveSiOut))then
-                if(iTableElectron > 0)then
-                   call interpolate_lookup_table(iTableElectron, RhoSi, &
-                        pSi/RhoSi, Electron_V, DoExtrapolate = .false.)
+             if(iTableElectron > 0)then
+                call interpolate_lookup_table(iTableElectron, RhoSi, &
+                     pSi/RhoSi, Electron_V, DoExtrapolate = .false.)
 
-                   if(UseVolumeFraction)then
-                      if(present(PeSiOut))  PeSiOut  = sum(Weight_I &
-                           *Electron_V(PeEos_:nMaterial*nElectron:nElectron))
-                      if(present(EeSiOut))  EeSiOut  = sum(Weight_I &
-                           *Electron_V(EeEos_:nMaterial*nElectron:nElectron))
-                      if(present(CveSiOut)) CveSiOut = sum(Weight_I &
-                           *Electron_V(Cve_  :nMaterial*nElectron:nElectron))
-                   else
-                      if(present(PeSiOut))  PeSiOut  = &
-                           Electron_V(PeEos_+iMaterial*nElectron)
-                      if(present(EeSiOut))  EeSiOut  = &
-                           Electron_V(EeEos_+iMaterial*nElectron)
-                      if(present(CveSiOut)) CveSiOut = &
-                           Electron_V(Cve_  +iMaterial*nElectron)
-                   end if
+                if(UseVolumeFraction)then
+                   if(present(PeSiOut))  PeSiOut  = sum(Weight_I &
+                        *Electron_V(PeEos_:nMaterial*nElectron:nElectron))
+                   if(present(EeSiOut))  EeSiOut  = sum(Weight_I &
+                        *Electron_V(EeEos_:nMaterial*nElectron:nElectron))
+                   if(present(CveSiOut)) CveSiOut = sum(Weight_I &
+                        *Electron_V(Cve_  :nMaterial*nElectron:nElectron))
                 else
-                   call stop_mpi(NameSub//" electron gas table is missing")
+                   if(present(PeSiOut))  PeSiOut  = &
+                        Electron_V(PeEos_+iMaterial*nElectron)
+                   if(present(EeSiOut))  EeSiOut  = &
+                        Electron_V(EeEos_+iMaterial*nElectron)
+                   if(present(CveSiOut)) CveSiOut = &
+                        Electron_V(Cve_  +iMaterial*nElectron)
                 end if
+             else
+                call stop_mpi(NameSub//" electron gas table is missing")
              end if
           else
              if(present(PeSiOut))  PeSiOut  = 0.0
