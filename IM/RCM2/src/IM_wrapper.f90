@@ -243,7 +243,12 @@ subroutine IM_print_variables(NameSource)
   case('IE')
      NameVar='j i lon lat jr pot sigmaH sigmaP'
   case('GM')
-     NameVar='j i lon lat density pressure vm xmin ymin bmin temperature'
+     if(.not.DoMultiFluidGMCoupling)then
+        NameVar='j i lon lat density pressure vm xmin ymin bmin temperature'
+     else
+        NameVar='j i lon lat Hpdensity Opdensity Hpressure Opressure vm xmin,&
+             &ymin bmin Hptemperature Optemperature'
+     end if
   case default
      write(*,*)NameSub,': incorrect NameSource=',NameSource
      RETURN
@@ -263,8 +268,14 @@ subroutine IM_print_variables(NameSource)
            write(UNITTMP_,'(2i4,6G14.6)')j,i,Lon,Lat,v(i,j),birk_mhd(i,j),&
                 sigmaH_mhd(i,j),sigmaP_mhd(i,j)
         case('GM')
-           write(UNITTMP_,'(2i4,9G14.6)')j,i,Lon,Lat,density(i,j),pressure(i,j),&
-                vm(i,j),xmin(i,j),ymin(i,j),bmin(i,j),temperature(i,j)
+           if(.not.DoMultiFluidGMCoupling)then
+              write(UNITTMP_,'(2i4,9G14.6)')j,i,Lon,Lat,density(i,j),pressure(i,j),&
+                   vm(i,j),xmin(i,j),ymin(i,j),bmin(i,j),temperature(i,j)
+           else
+              write(UNITTMP_,'(2i4,12G14.6)')j,i,Lon,Lat,densityHp(i,j),densityOp(i,j),&
+                   pressureHp(i,j),pressureOp(i,j),vm(i,j),xmin(i,j),ymin(i,j), &
+                   bmin(i,j),temperatureHp(i,j),temperatureOp(i,j)
+           end if
         end select
      end do
   end do
@@ -422,24 +433,36 @@ subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
   real, dimension(iSizeIn,jSizeIn,nVarIn), intent(in) :: Buffer_IIV
   character (len=*),intent(in)       :: NameVar
 
-  integer, parameter :: vol_=1, z0x_=2, z0y_=3, bmin_=4, rho_=5, p_=6
+  integer, parameter :: vol_=1, z0x_=2, z0y_=3, bmin_=4, rho_=5, p_=6, &
+       HpRho_=7, OpRho_=8,HpP_=9,OpP_=10
   logical :: DoTest, DoTestMe
   !---------------------------------------------------------------------------
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
+  if(nVarIn > 6)DoMultiFluidGMCoupling = .true.
   if(DoTest)write(*,*)NameSub,' starting with NameVar=',NameVar
   if(DoTest) call write_data
 
-  if(NameVar /= 'vol:z0x:z0y:bmin:rho:p') &
-       call CON_stop(NameSub//' invalid NameVar='//NameVar)
-
-  DoneGmCoupling = .true.
-
-  if(iSizeIn /= iSize .or. jSizeIn /= jSize .or. nVarIn /= p_)then
-     write(*,*)NameSub//' incorrect buffer size=',iSizeIn,jSizeIn,nVarIn
-     call CON_stop(NameSub//' SWMF_ERROR')
+  if(.not. DoMultiFluidGMCoupling)then
+     if(NameVar /= 'vol:z0x:z0y:bmin:rho:p') &
+          call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  else
+     if(NameVar /= 'vol:z0x:z0y:bmin:rho:p:Hprho:Oprho:Hpp:Opp') &
+          call CON_stop(NameSub//' invalid NameVar='//NameVar)
   end if
-
+ 
+  DoneGmCoupling = .true.
+  if(.not. DoMultiFluidGMCoupling)then
+     if(iSizeIn /= iSize .or. jSizeIn /= jSize .or. nVarIn /= p_)then
+        write(*,*)NameSub//' incorrect buffer size=',iSizeIn,jSizeIn,nVarIn
+        call CON_stop(NameSub//' SWMF_ERROR')
+     end if
+  else
+     if(iSizeIn /= iSize .or. jSizeIn /= jSize .or. nVarIn /= OpP_)then
+        write(*,*)NameSub//' incorrect buffer size=',iSizeIn,jSizeIn,nVarIn
+        call CON_stop(NameSub//' SWMF_ERROR')
+     end if
+  end if
   vm(1:isize,1:jsize)   = Buffer_IIV(:,:,vol_)
   ! Convert GM volume into IM volume variable. Change units (m -> km) first
   vm(1:isize,1:jsize) = vm(1:isize,1:jsize) / 1.0e+9
@@ -464,6 +487,34 @@ subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
   call wrap_around_ghostcells(density, isize, jsize, n_gc)
   call wrap_around_ghostcells(temperature, isize, jsize, n_gc)
 
+  if(DoMultiFluidGMCoupling)then
+     ! MultiFluid                                                                       
+     densityHp(1:isize,1:jsize) = Buffer_IIV(:,:,HpRho_)/xmass(2)/1.0E+6 ! in cm-3       
+     densityOp(1:isize,1:jsize) = Buffer_IIV(:,:,OpRho_)/xmass(3)/1.0E+6 ! in cm-3       
+     pressureHp(1:isize,1:jsize)= Buffer_IIV(:,:,HpP_)
+     pressureOp(1:isize,1:jsize)= Buffer_IIV(:,:,OpP_)
+
+     where(Buffer_IIV(:,:,Hprho_) /= 0.0)
+        temperatureHp (1:iSize,1:jSize) = &
+             Buffer_IIV(:,:,Hpp_)/(Buffer_IIV(:,:,Hprho_)/xmass(2))/1.6E-19
+        !in eV,assuming p=nkT, [p/n]=J,J/e-->eV                                       
+     elsewhere
+        temperatureHp (1:iSize,1:jSize) =5000.0
+     end where
+     where(Buffer_IIV(:,:,Oprho_) /= 0.0)
+        temperatureOp (1:iSize,1:jSize) = &
+             Buffer_IIV(:,:,Opp_)/(Buffer_IIV(:,:,Oprho_)/xmass(3))/1.6E-19 ! in ev     
+     elsewhere
+        temperatureOp (1:iSize,1:jSize) =5000.0
+     end where
+
+     call wrap_around_ghostcells(densityHp, isize, jsize, n_gc)
+     call wrap_around_ghostcells(densityOp, isize, jsize, n_gc)
+     call wrap_around_ghostcells(temperatureHp, isize, jsize, n_gc)
+     call wrap_around_ghostcells(temperatureOp, isize, jsize, n_gc)
+
+  endif
+
 contains
 
   !============================================================================
@@ -479,14 +530,28 @@ contains
     write(filename,'(a,i5.5,a)')"gm2im_debug_",nCall,".dat"
     OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown')
     write(UNITTMP_,'(a)') 'TITLE="gm2im debug values"'
-    write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "vol", "z0x", "z0y", "bmin", "rho", "p"'
+    if(.not. DoMultiFluidGMCoupling)then
+       write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "vol", "z0x", "z0y", "bmin", "rho", "p"'
+    else
+       write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "vol", "z0x", "z0y", "bmin",&           
+            &"rho","p","Hprho","Oprho","Hpp","Opp"'
+    end if
     write(UNITTMP_,'(a,i4,a,i4,a)') &
          'ZONE T="SAVE", I=',jsize,', J=',isize,', K=1, F=POINT'
     do i=1,iSizeIn; do j=1,jSizeIn
-       write(UNITTMP_,'(2i4,6G14.6)') j,i, &
-            Buffer_IIV(i,j,vol_),Buffer_IIV(i,j,z0x_),Buffer_IIV(i,j,z0y_), &
-            Buffer_IIV(i,j,bmin_),Buffer_IIV(i,j,rho_),Buffer_IIV(i,j,p_)
-    end do; end do
+       if(.not. DoMultiFluidGMCoupling)then
+          write(UNITTMP_,'(2i4,6G14.6)') j,i, &
+               Buffer_IIV(i,j,vol_),Buffer_IIV(i,j,z0x_),Buffer_IIV(i,j,z0y_), &
+               Buffer_IIV(i,j,bmin_),Buffer_IIV(i,j,rho_),Buffer_IIV(i,j,p_)
+       else
+          !multi-fluid                                                                
+          write(UNITTMP_,'(2i4,8G14.6)') j,i, &
+               Buffer_IIV(i,j,vol_),Buffer_IIV(i,j,z0x_),Buffer_IIV(i,j,z0y_), &
+               Buffer_IIV(i,j,bmin_),Buffer_IIV(i,j,rho_),Buffer_IIV(i,j,p_), &
+               Buffer_IIV(i,j,Hprho_),Buffer_IIV(i,j,Oprho_), &
+               Buffer_IIV(i,j,Hpp_),Buffer_IIV(i,j,Opp_)
+       end if
+       end do; end do
     CLOSE(UNITTMP_)
   end subroutine write_data
 
@@ -553,18 +618,25 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   !LOCAL VARIABLES:
   real :: tSimulation
   integer :: iTimeStart
-  integer, parameter :: pres_=1, dens_=2
+  integer, parameter :: pres_=1, dens_=2, Hpres_=3,Opres_=4,Hdens_=5,Odens_=6
 
   integer :: i,j,k
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
+  if(nVar > 2)DoMultiFluidGMCoupling = .true.
+
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
   if (DoTestMe) &
        write(*,*)NameSub,' starting with iSizeIn,jSizeIn,nVar,NameVar=',&
        iSizeIn,jSizeIn,nVar,NameVar
 
-  if(NameVar /= 'p:rho') &
-       call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  if(DoMultiFluidGMCoupling)then
+     if(NameVar /= 'p:rho:Hpp:Opp:Hprho:Oprho') &
+          call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  else
+     if(NameVar /= 'p:rho') &
+          call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  endif
 
   if(IsUninitialized)then
      if(DoTestMe)write(*,*) NameSub,' call RCM_advec(1...)'
@@ -572,6 +644,7 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
           ' SWMF_ERROR: IM/RCM has not been coupled with GM')
      call get_time(tSimulationOut = tSimulation)
      iTimeStart=nint(tSimulation)
+
      call RCM_advec (1, iTimeStart, 99999, 0)
      IsUninitialized = .false.
      if(DoTestMe)write(*,*) NameSub,' done RCM_advec(1...)'
@@ -597,6 +670,29 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
                 eeta(i,j,k)*vm(i,j)**1.5 * xmass(ikflavc(k))
         end do
      end if
+     if(DoMultiFluidGMCoupling)then
+        !  Multifluid case                                                         
+        if( i<imin_j(j) .or. vm(i,j) <= 0.0 ) then
+           Buffer_IIV(i,j,Hpres_) = -1.
+           Buffer_IIV(i,j,Opres_) = -1.
+           Buffer_IIV(i,j,Hdens_) = -1.
+           Buffer_IIV(i,j,Odens_) = -1.
+        else
+           do k=kmin(2),kmax(2)
+              Buffer_IIV(i,j,Hpres_) = Buffer_IIV(i,j,Hpres_) + &
+                   vm(i,j)**2.5*eeta(i,j,k)*ABS(alamc(k))
+              Buffer_IIV(i,j,Hdens_) = Buffer_IIV(i,j,Hdens_) + &
+                   eeta(i,j,k)*vm(i,j)**1.5 * xmass(ikflavc(k))
+           end do
+           do k=kmin(3),kmax(3)
+              Buffer_IIV(i,j,Opres_) = Buffer_IIV(i,j,Opres_) + &
+                   vm(i,j)**2.5*eeta(i,j,k)*ABS(alamc(k))
+              Buffer_IIV(i,j,Odens_) = Buffer_IIV(i,j,Odens_) + &
+                   eeta(i,j,k)*vm(i,j)**1.5 * xmass(ikflavc(k))
+           end do
+        end if
+     end if
+
      ! Only a not-a-number can be less than zero and larger than one
      if(  .not. Buffer_IIV(i,j,pres_) > 0 .and. &
           .not. Buffer_IIV(i,j,pres_) < 1) then
@@ -623,15 +719,81 @@ subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
         write(*,*)NameSub,': xmass(ikflavc(k))=',xmass(ikflavc(k))
         call CON_stop(NameSub // ' ERROR: Not a number found in IM density !')
      end if
+
+     !multi-fluid
+     if(DoMultiFluidGMCoupling)then
+        if(  .not. Buffer_IIV(i,j,Hpres_) > 0 .and. &
+             .not. Buffer_IIV(i,j,Hpres_) < 1) then
+           write(*,*)NameSub,': ERROR IN PRESSURE'
+           write(*,*)NameSub,': i,j,Buffer =',i,j,Buffer_IIV(i,j,Hpres_)
+           write(*,*)NameSub,': Lon,Lat[dg]=', &
+                aloct(i,j)*cRadToDeg,90.0-colat(i,j)*cRadToDeg
+           write(*,*)NameSub,': imin_j(j)  =',imin_j(j)
+           write(*,*)NameSub,': vm(i,j)    =',vm(i,j)
+           write(*,*)NameSub,': eeta(i,j,:)=',eeta(i,j,:)
+           write(*,*)NameSub,': alamc      =',alamc
+           call CON_stop(NameSub // ' ERROR: Not a number found in IM Hp pressure !')
+        end if
+        if(  .not. Buffer_IIV(i,j,Hdens_) > 0 .and. &
+             .not. Buffer_IIV(i,j,Hdens_) < 1) then
+           write(*,*)NameSub,': ERROR IN DENSITY'
+           write(*,*)NameSub,': i,j,Buffer =',i,j,Buffer_IIV(i,j,Hdens_)
+           write(*,*)NameSub,': Lon,Lat[dg]=', &
+                aloct(i,j)*cRadToDeg,90.0-colat(i,j)*cRadToDeg
+           write(*,*)NameSub,': imin_j(j)  =',imin_j(j)
+           write(*,*)NameSub,': vm(i,j)    =',vm(i,j)
+           write(*,*)NameSub,': eeta(i,j,:)=',eeta(i,j,:)
+           write(*,*)NameSub,': ikflavc(k) =',ikflavc(k)
+           write(*,*)NameSub,': xmass(ikflavc(k))=',xmass(ikflavc(k))
+           call CON_stop(NameSub // ' ERROR: Not a number found in IM Hp density !')
+        end if
+        if(  .not. Buffer_IIV(i,j,Opres_) > 0 .and. &
+             .not. Buffer_IIV(i,j,Opres_) < 1) then
+           write(*,*)NameSub,': ERROR IN PRESSURE'
+           write(*,*)NameSub,': i,j,Buffer =',i,j,Buffer_IIV(i,j,Opres_)
+           write(*,*)NameSub,': Lon,Lat[dg]=', &
+                aloct(i,j)*cRadToDeg,90.0-colat(i,j)*cRadToDeg
+           write(*,*)NameSub,': imin_j(j)  =',imin_j(j)
+           write(*,*)NameSub,': vm(i,j)    =',vm(i,j)
+           write(*,*)NameSub,': eeta(i,j,:)=',eeta(i,j,:)
+           write(*,*)NameSub,': alamc      =',alamc
+           call CON_stop(NameSub // ' ERROR: Not a number found in IM Op pressure !')
+        end if
+        if(  .not. Buffer_IIV(i,j,Odens_) > 0 .and. &
+             .not. Buffer_IIV(i,j,Odens_) < 1) then
+           write(*,*)NameSub,': ERROR IN DENSITY'
+           write(*,*)NameSub,': i,j,Buffer =',i,j,Buffer_IIV(i,j,Odens_)
+           write(*,*)NameSub,': Lon,Lat[dg]=', &
+                aloct(i,j)*cRadToDeg,90.0-colat(i,j)*cRadToDeg
+           write(*,*)NameSub,': imin_j(j)  =',imin_j(j)
+           write(*,*)NameSub,': vm(i,j)    =',vm(i,j)
+           write(*,*)NameSub,': eeta(i,j,:)=',eeta(i,j,:)
+           write(*,*)NameSub,': ikflavc(k) =',ikflavc(k)
+           write(*,*)NameSub,': xmass(ikflavc(k))=',xmass(ikflavc(k))
+           call CON_stop(NameSub // ' ERROR: Not a number found in IM Op density !')
+        end if
+     end if
   end do; end do
 
-  !
   where(Buffer_IIV(:,:,pres_) > 0.0) &
        Buffer_IIV(:,:,pres_) = Buffer_IIV(:,:,pres_) * 1.67E-35
 
   ! Units of rcm_mass_density are kg/m3
   where(Buffer_IIV(:,:,dens_) > 0.0) &
        Buffer_IIV(:,:,dens_) = Buffer_IIV(:,:,dens_) / 6.37E+15
+
+  if(DoMultiFluidGMCoupling)then
+     ! MultiFluid                                                                  
+     where(Buffer_IIV(:,:,Hpres_) > 0.0) &
+          Buffer_IIV(:,:,Hpres_) = Buffer_IIV(:,:,Hpres_) * 1.67E-35
+     where(Buffer_IIV(:,:,Opres_) > 0.0) &
+          Buffer_IIV(:,:,Opres_) = Buffer_IIV(:,:,Opres_) * 1.67E-35
+     ! Units of rcm_mass_density are kg/m3                                                
+     where(Buffer_IIV(:,:,Hdens_) > 0.0) &
+          Buffer_IIV(:,:,Hdens_) = Buffer_IIV(:,:,Hdens_) / 6.37E+15
+     where(Buffer_IIV(:,:,Odens_) > 0.0) &
+          Buffer_IIV(:,:,Odens_) = Buffer_IIV(:,:,Odens_) / 6.37E+15
+  endif
 
   if(DoTestMe)write(*,*) NameSub,' finished'
 
