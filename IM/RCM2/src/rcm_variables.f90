@@ -32,6 +32,8 @@ MODULE Rcm_variables
 
     ! SWMF: added logical to check for initialized grid
     logical :: IsUninitialized = .true., DoneGmCoupling = .false.
+    ! GM-IM coupling is multifluid passing
+     logical :: DoMultiFluidGMCoupling = .false.
 
     ! SWMF: added values to control satellite tracing.
     logical :: DoWriteSats  = .false.  !!!DTW 2007
@@ -126,7 +128,13 @@ MODULE Rcm_variables
                     eeta_avg (1-n_gc:isize+n_gc,1-n_gc:jsize+n_gc,kcsize),&
                     density     (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &
                     pressure    (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &
-                    temperature (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc)
+                    temperature (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &
+                    densityHp   (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &
+                    densityOp   (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &
+                    pressureHp  (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &
+                    pressureOp  (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &
+                    temperatureHp(1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &
+                    temperatureOp(1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc)
     INTEGER (iprec) :: ikflavc (kcsize), i_advect, i_eta_bc
     INTEGER (iprec), PARAMETER :: irdk=18, inrgdk=13, isodk=2, iondk=2
     REAL (rprec) :: dktime (irdk, inrgdk, isodk, iondk)
