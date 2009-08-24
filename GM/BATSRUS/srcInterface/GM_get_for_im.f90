@@ -125,17 +125,18 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   !call stop_mpi('RCM is OFF') !^CFG UNCOMMENT IF NOT RCM
   !^CFG IF RCM BEGIN
   use ModProcMH, ONLY: iProc
-
+  use ModMain, ONLY: DoMultiFluidIMCoupling
   use ModGmImCoupling, ONLY: &
        allocate_gm_im, &
        process_integrated_data, DoTestTec, DoTestIdl, &
        write_integrated_data_tec, write_integrated_data_idl, &
        RCM_lat, RCM_lon, &
        MHD_SUM_vol, MHD_Xeq, MHD_Yeq, MHD_Beq, MHD_SUM_rho, MHD_SUM_p, &
-       NoValue
+       NoValue, MHD_HpRho, MHD_OpRho, MHD_Hpp, MHD_Opp
 
   use ModRaytrace, ONLY: RayResult_VII, RayIntegral_VII, &
-       InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_, xEnd_, CLOSEDRAY
+       InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_,  &
+       HpRhoInvB_, OpRhoInvB_, HpPInvB_, OpPInvB_, xEnd_, CLOSEDRAY
 
   implicit none
 
@@ -149,9 +150,14 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
-  if(NameVar /= 'vol:z0x:z0y:bmin:rho:p') &
-       call CON_stop(NameSub//' invalid NameVar='//NameVar)
 
+  if(DoMultiFluidIMCoupling)then
+     if(NameVar /= 'vol:z0x:z0y:bmin:rho:p:Hprho:Oprho:Hpp:Opp') &
+          call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  else
+     if(NameVar /= 'vol:z0x:z0y:bmin:rho:p') &
+          call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  end if
   call CON_set_do_test(NameSub//'_tec', DoTestTec, DoTestMe)
   call CON_set_do_test(NameSub//'_idl', DoTestIdl, DoTestMe)
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
@@ -161,8 +167,14 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   ! The RCM ionosphere radius in normalized units
   Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
-  call integrate_ray_accurate(iSizeIn, jSizeIn, RCM_lat, RCM_lon, Radius, &
-       'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b')
+  if(.not. DoMultiFluidIMCoupling)then
+     call integrate_ray_accurate(iSizeIn, jSizeIn, RCM_lat, RCM_lon, Radius, &
+          'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b')
+  else
+     call integrate_ray_accurate(iSizeIn, jSizeIn, RCM_lat, RCM_lon, Radius, &
+          'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b,HpRhoInvB,OpRhoInvB,HppInvB,OppInvB')
+     ! but not pass Rhoinvb, Pinvb to IM                                        
+  end if
 
   if(iProc==0)then
      ! Copy RayResult into small arrays
@@ -170,18 +182,43 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
      MHD_Xeq     = RayResult_VII(Z0x_    ,:,:)
      MHD_Yeq     = RayResult_VII(Z0y_    ,:,:)
      MHD_Beq     = RayResult_VII(Z0b_    ,:,:)
-     MHD_SUM_rho = RayResult_VII(RhoInvB_,:,:)
-     MHD_SUM_p   = RayResult_VII(pInvB_  ,:,:)
+     if(.not.DoMultiFluidIMCoupling)then
+        MHD_SUM_rho = RayResult_VII(RhoInvB_,:,:)
+        MHD_SUM_p   = RayResult_VII(pInvB_  ,:,:)
+     else
+        MHD_SUM_rho = RayResult_VII(RhoInvB_,:,:)
+        MHD_SUM_p   = RayResult_VII(pInvB_  ,:,:)
+        MHD_HpRho= RayResult_VII(HpRhoInvB_,:,:)
+        MHD_OpRho= RayResult_VII(OpRhoInvB_,:,:)
+        MHD_HpP= RayResult_VII(HpPInvB_,:,:)
+        MHD_OpP= RayResult_VII(OpPInvB_,:,:)
 
+     end if
      ! Put impossible values if the ray is not closed
-     where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
-        MHD_Xeq     = NoValue
-        MHD_Yeq     = NoValue
-        MHD_SUM_vol = 0.0
-        MHD_SUM_rho = 0.0
-        MHD_SUM_p   = 0.0
-        MHD_Beq     = NoValue
-     end where
+     if(.not.DoMultiFluidIMCoupling)then
+        where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
+           MHD_Xeq     = NoValue
+           MHD_Yeq     = NoValue
+           MHD_SUM_vol = 0.0
+           MHD_SUM_rho = 0.0
+           MHD_SUM_p   = 0.0
+           MHD_Beq     = NoValue
+        end where
+     else
+        where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
+           MHD_Xeq     = NoValue
+           MHD_Yeq     = NoValue
+           MHD_SUM_vol = 0.0
+           MHD_SUM_rho = 0.0
+           MHD_SUM_p   = 0.0
+           MHD_Hprho = 0.0
+           MHD_Oprho = 0.0
+           MHD_HpP   = 0.0
+           MHD_OpP   = 0.0
+           MHD_Beq     = NoValue
+        end where
+     end if
+
   end if
 
   deallocate(RayIntegral_VII, RayResult_VII)
@@ -190,7 +227,10 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
      ! Output before processing
      if(DoTestTec)call write_integrated_data_tec
      if(DoTestIdl)call write_integrated_data_idl
+
+     ! Convert the units of the MHD_variables to SI units!!                 
      call process_integrated_data
+     
      ! Output after processing
      if(DoTestTec)call write_integrated_data_tec
      if(DoTestIdl)call write_integrated_data_idl
@@ -200,8 +240,20 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
      Buffer_IIV(:,:,Z0x_)     = MHD_Xeq
      Buffer_IIV(:,:,Z0y_)     = MHD_Yeq
      Buffer_IIV(:,:,Z0b_)     = MHD_Beq
-     Buffer_IIV(:,:,RhoInvB_) = MHD_SUM_rho
-     Buffer_IIV(:,:,pInvB_)   = MHD_SUM_p
+     
+     if(.not.DoMultiFluidIMCoupling)then
+        Buffer_IIV(:,:,RhoInvB_) = MHD_SUM_rho
+        Buffer_IIV(:,:,pInvB_)   = MHD_SUM_p
+     else
+        ! the index is not continuous as in ModRayTrace                
+        Buffer_IIV(:,:,RhoInvB_) = MHD_SUM_rho
+        Buffer_IIV(:,:,pInvB_)   = MHD_SUM_p
+        Buffer_IIV(:,:,HpRhoInvB_) = MHD_HpRho
+        Buffer_IIV(:,:,OpRhoInvB_) = MHD_Oprho
+        Buffer_IIV(:,:,HpPInvB_)   = MHD_HpP
+        Buffer_IIV(:,:,OpPInvB_)   = MHD_OpP
+     end if
+
   end if
 
 end subroutine GM_get_for_im
@@ -283,3 +335,25 @@ subroutine GM_get_sat_for_im(Buffer_III, Buffer_I, nSats)
 end subroutine GM_get_sat_for_im
 
 !==========================================================================
+
+subroutine GM_get_multi_for_im(DoMultiFluidIM)
+
+  !This subroutine return the logical value of DoMultiFluidIMCoupling        
+  
+  use ModMain,   ONLY: DoMultiFluidIMCoupling
+  implicit none
+
+  !Subroutine Arguments:                                                      
+  logical,           intent(out) :: DoMultiFluidIM
+!--------------------------------------------------------------------------  
+
+  if (DoMultiFluidIMCoupling) then
+     DoMultiFluidIM = .true.
+  else
+     DoMultiFluidIM = .false.
+  endif
+
+end subroutine GM_get_multi_for_im
+
+!==========================================================================    
+
