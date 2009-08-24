@@ -8,7 +8,7 @@ subroutine GM_put_from_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   use CON_coupler
   use ModImPressure                              ! Storage for IM pressure
   use ModNumConst
-  use ModMain, ONLY : n_step,time_simulation
+  use ModMain, ONLY : n_step,time_simulation, DoMultiFluidIMCoupling
   use ModIoUnit, ONLY: UNITTMP_
   implicit none
   CHARACTER (LEN=80) :: filename
@@ -18,14 +18,19 @@ subroutine GM_put_from_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   real, intent(in) :: Buffer_IIV(iSizeIn,jSizeIn,nVar)
   character(len=*), intent(in) :: NameVar
   integer :: nCells_D(2), iError, i,j
-  integer, parameter :: pres_=1, dens_=2
+  integer, parameter :: pres_=1, dens_=2, Hpres_=3,Opres_=4,Hdens_=5,Odens_=6
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
 
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-  if(NameVar /= 'p:rho') &
-       call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  if(DoMultiFluidIMCoupling)then
+     if(NameVar /= 'p:rho:Hpp:Opp:Hprho:Oprho') &
+          call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  else
+     if(NameVar /= 'p:rho') &
+          call CON_stop(NameSub//' invalid NameVar='//NameVar)
+  end if
 
   nCells_D=ncells_decomposition_d(IM_)
   if( iSizeIn /= nCells_D(1) .or. jSizeIn /= nCells_D(2) ) then
@@ -48,6 +53,15 @@ subroutine GM_put_from_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   RCM_dens = Buffer_IIV(:,:,dens_)
   iNewPIm  = iNewPIm + 1
 
+
+  ! for multifluid                                               
+  if(DoMultiFluidIMCoupling)then
+     RCM_Hpp = Buffer_IIV(:,:,Hpres_)
+     RCM_Opp = Buffer_IIV(:,:,Opres_)
+     RCM_Hpdens = Buffer_IIV(:,:,Hdens_)
+     RCM_Opdens = Buffer_IIV(:,:,Odens_)
+  endif
+
   if(DoTest)call write_IMvars_tec  ! TecPlot output
   if(DoTest)call write_IMvars_idl  ! IDL     output
 
@@ -63,16 +77,29 @@ contains
     write(filename,'(a,i6.6,a)')"IMp_n=",n_step,".dat"
     OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown')
     write(UNITTMP_,'(a)') 'TITLE="Raytrace Values"'
-    write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat",&
-         &"RCM pressure", "RCM density"'
+    if(DoMultiFluidIMCoupling)then
+       write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat",&                
+            &"RCM pressure", "RCM density", &                                   
+            &"RCM Hp pressure", "RCM Hp density", &                             
+            &"RCM Op pressure", "RCM Op density"'
+    else
+       write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat",&                
+            &"RCM pressure", "RCM density"'
+    end if
     write(UNITTMP_,'(a,i4,a,i4,a)') &
          'ZONE T="IM Pressure", I=',jSizeIn+1,', J=',iSizeIn,', K=1, F=POINT'
     do i=1,iSizeIn
        do j2=1,jSizeIn+1
           j=j2; if(j2==jSizeIn+1) j=1
           lonShift=0.; if(j2==jSizeIn+1) lonShift=360.
-          write(UNITTMP_,'(2i4,3G14.6)') j2,i,RCM_lon(j)+lonShift,RCM_lat(i), &
-               RCM_p(i,j),RCM_dens(i,j)
+          if(DoMultiFluidIMCoupling)then
+             write(UNITTMP_,'(2i4,3G14.6)') j2,i,RCM_lon(j)+lonShift,RCM_lat(i), &
+                  RCM_p(i,j),RCM_dens(i,j), &
+                  RCM_Hpp(i,j),RCM_Hpdens(i,j),RCM_Opp(i,j), RCM_Opdens(i,j)
+          else
+             write(UNITTMP_,'(2i4,3G14.6)') j2,i,RCM_lon(j)+lonShift,RCM_lat(i), &
+                  RCM_p(i,j),RCM_dens(i,j)
+          endif
        end do
     end do
     CLOSE(UNITTMP_)
@@ -93,11 +120,21 @@ contains
     write(UNITTMP_,'(i7,1pe13.5,3i3)') n_step,time_simulation,2,1,2
     write(UNITTMP_,'(3i4)')            jSizeIn,iSizeIn
     write(UNITTMP_,'(100(1pe13.5))')   0.0
-    write(UNITTMP_,'(a79)')            'Lon Lat p rho nothing'
-    do i=iSizeIn,1,-1
+    if(DoMultiFluidIMCoupling)then
+       write(UNITTMP_,'(a79)')'Lon Lat p rho Hpp Hprho Opp Oprho nothing'
+    else
+       write(UNITTMP_,'(a79)')'Lon Lat p rho nothing'
+    endif
+     do i=iSizeIn,1,-1
        do j=1,jSizeIn
-          write(UNITTMP_,'(100(1pe18.10))') &
-               RCM_lon(j),RCM_lat(i),RCM_p(i,j),RCM_dens(i,j)
+          if(DoMultiFluidIMCoupling)then
+             write(UNITTMP_,'(100(1pe18.10))') &
+                  RCM_lon(j),RCM_lat(i),RCM_p(i,j),RCM_dens(i,j), &
+                  RCM_Hpp(i,j), RCM_Hpdens(i,j), RCM_Opp(i,j), RCM_Opdens(i,j)
+          else
+             write(UNITTMP_,'(100(1pe18.10))') &
+                  RCM_lon(j),RCM_lat(i),RCM_p(i,j),RCM_dens(i,j)
+          endif
        end do
     end do
     CLOSE(UNITTMP_)
