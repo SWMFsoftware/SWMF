@@ -43,6 +43,8 @@ module CON_couple_gm_im
   ! Number of satellites in GM that will also be traced in IM
   integer, save :: nShareSats
 
+  logical, save :: DoMultiFluidIMCoupling
+
 contains
 
   !BOP =======================================================================
@@ -86,6 +88,9 @@ contains
             call MPI_recv(nShareSats,1,MPI_INTEGER,iProc0Gm,&
             1,iCommWorld,iStatus_I,iError)
     end if
+
+    ! Get the logical variable between GM and IM coupling: if multifluid coupling
+    call GM_get_multi_for_im(DoMultiFluidIMCoupling)
 
   end subroutine couple_gm_im_init
 
@@ -142,9 +147,9 @@ contains
       character (len=*), parameter :: NameSubSub=NameSub//'.couple_rcm'
 
       ! Number of variables to pass
-      integer, parameter :: nVarGmIm=6
-
-      character (len=*), parameter :: NameVar='vol:z0x:z0y:bmin:rho:p'
+      integer :: nVarGmIm
+ 
+      character (len=100) :: NameVar
 
       ! Buffer for the variables on the 2D IM grid
       real, dimension(:,:,:), allocatable :: Buffer_IIV
@@ -173,6 +178,14 @@ contains
       if(DoTest)write(*,*)NameSubSub,', iProc, GMi_iProc0, iProc0Im=', &
            iProcWorld,iProc0Gm,iProc0Im
 
+       if(DoMultiFluidIMCoupling) then
+          NameVar='vol:z0x:z0y:bmin:rho:p:Hprho:Oprho:Hpp:Opp'
+          nVarGmIm = 10
+       else
+          NameVar='vol:z0x:z0y:bmin:rho:p'
+          nVarGmIm = 6
+       endif
+
       !\
       ! Allocate buffers both in GM and IM
       !/
@@ -192,7 +205,7 @@ contains
       !\
       ! Get field line integrals from GM
       !/
-      if(is_proc(GM_)) &
+      if(is_proc(GM_)) &           
            call GM_get_for_im(Buffer_IIV,iSize,jSize,nVarGmIm,NameVar)
 
       !\
@@ -200,7 +213,6 @@ contains
       !/
       if(is_proc(GM_).AND.(nShareSats > 0)) &
            call GM_get_sat_for_im(SatPos_DII, NameSat_I, nShareSats)
-
 
       !\
       ! Transfer physical variables from GM to IM
@@ -428,10 +440,11 @@ contains
       character (len=*), parameter :: NameSubSub=NameSub//'.couple_mpi'
 
       ! Number of variables to pass
-      integer, parameter :: nVarImGm=2
+      integer :: nVarImGm
+     ! Number of variables for Multi-Fluid to pass                                              
 
       ! Variable to pass is pressure
-      character (len=*), parameter :: NameVar='p:rho'
+      character (len=100) :: NameVar
 
       ! Buffer for the variables on the 2D IM grid
       real, dimension(:,:,:), allocatable :: Buffer_IIV
@@ -458,6 +471,14 @@ contains
       if(DoTest)write(*,*)NameSubSub,', iProc, GMi_iProc0, IMi_iProc0=', &
            iProcWorld,iProc0Gm,iProc0Im
 
+     if(DoMultiFluidIMCoupling)then
+        NameVar='p:rho:Hpp:Opp:Hprho:Oprho'
+        nVarImGm=6
+     else
+        NameVar='p:rho'
+        nVarImGm=2
+     end if
+
       !\
       ! Allocate buffers both in GM and IM
       !/
@@ -472,7 +493,6 @@ contains
       !/
       if(is_proc(IM_)) &
            call IM_get_for_gm(Buffer_IIV,iSize,jSize,nVarImGm,NameVar)
-
       !\
       ! Transfer variables from IM to GM
       !/ 
