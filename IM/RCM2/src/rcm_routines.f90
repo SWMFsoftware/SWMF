@@ -3333,7 +3333,7 @@ END SUBROUTINE Move_plasma_grid_NEW
                                 vm, Re, pi, imin_j, density, temperature,&
                                 kmin, kmax, &
                                 iprec, rprec, &
-                                x_h, x_o
+                                x_h, x_o,DoMultiFluidGMCoupling
       IMPLICIT NONE
       INTEGER(iprec), INTENT (IN) :: iflag, i_where
 !
@@ -3387,18 +3387,28 @@ END SUBROUTINE Move_plasma_grid_NEW
          CALL Rcm_plasma_bc_get_i_range (i_where, j, i_start, i_stop)
 
          DO i = i_start, i_stop
-
-            n_species (i,j,2) = density(i,j) * &
-                                xmass(2) * x_h / (xmass(2)*x_h+xmass(3)*x_o)
-            n_species (i,j,3) = density(i,j) * &
-                                xmass(2) * x_o / (xmass(2)*x_h+xmass(3)*x_o)
-            n_species (i,j,1) = n_species(i,j,2) + n_species(i,j,3)
-
-            temp_species (i,j,2) = temperature (i,j) * &
-                                   (xmass(2)*x_h+xmass(3)*x_o) / xmass(2) / & 
-                                   (1.0+1.0/7.8)
-            temp_species (i,j,3) = temp_species (i,j,2)
-            temp_species (i,j,1) = temp_species (i,j,2) / 7.8
+            if(.not. DoMultiFluidGMCoupling)then
+               n_species (i,j,2) = density(i,j) * &
+                    xmass(2) * x_h / (xmass(2)*x_h+xmass(3)*x_o)
+               n_species (i,j,3) = density(i,j) * &
+                    xmass(2) * x_o / (xmass(2)*x_h+xmass(3)*x_o)
+               n_species (i,j,1) = n_species(i,j,2) + n_species(i,j,3)
+               
+               temp_species (i,j,2) = temperature (i,j) * &
+                    (xmass(2)*x_h+xmass(3)*x_o) / xmass(2) / &
+                    (1.0+1.0/7.8)
+               temp_species (i,j,3) = temp_species (i,j,2)
+               temp_species (i,j,1) = temp_species (i,j,2) / 7.8
+            else
+               n_species(i,j,2) = densityHp(i,j)
+               n_species(i,j,3) = densityOp(i,j)
+               n_species (i,j,1) = n_species(i,j,2) + n_species(i,j,3)
+               
+               temp_species (i,j,2) = temperatureHp (i,j)
+               temp_species (i,j,3) = temperatureOp (i,j)
+               temp_species (i,j,1) = temp_species (i,j,2)/ 7.8
+               
+        end if
 
          END DO
       END DO
@@ -3591,11 +3601,16 @@ END SUBROUTINE Move_plasma_grid_NEW
            ! density that RCM got is zero. If this is the case, temperature
            ! is irrelevant and there should be nothing to correct, so skip 
            ! the rest of the loop:
-
-           IF (density(i,j) == 0.) THEN
-              CYCLE Loop_check_species
-           END IF
-
+           if(.not. DoMultiFluidGMCoupling)then
+              IF (density(i,j) == 0.) THEN
+                 CYCLE Loop_check_species
+              END IF
+           else
+              if(densityOp(i,j) == 0. .or. densityHp(i,j) == 0.)then
+                 CYCLE Loop_check_species
+              end if
+           end if
+           
            ! Here start iterative process. We would like to apply the correction
            ! procedure to all energy channels. However, because the correction 
            ! factor is linear in energy, it is possible for it to become negative at high energies.
@@ -3640,7 +3655,14 @@ END SUBROUTINE Move_plasma_grid_NEW
                WRITE (UNIT_DEBUG,*) 'a_factor=', a_factor
                WRITE (UNIT_DEBUG,*) 'B_FACTOR=', b_factor
                WRITE(UNIT_DEBUG,*)' '
-               WRITE(UNIT_DEBUG,*)'MHD PASSED TO RCM: ','N=',density(i,j), ' T=',temperature(i,j)
+               if(.not. DoMultiFluidGMCoupling)then
+                  WRITE(UNIT_DEBUG,*)'MHD PASSED TO RCM: ','N=',density(i,j), ' T=',temperature(i,j)
+               else
+                  WRITE(UNIT_DEBUG,*)&
+                       'MHD PASSED TO RCM: ',&
+                       'N_Hp=',densityHp(i,j), ' T_Hp=',temperatureHp(i,j),&
+                       'N_Op=',densityOp(i,j), ' T_Op=',temperatureOp(i,j)
+               end if
                WRITE(UNIT_DEBUG,*)'MHD ADAPTED FOR THIS SPECIES: ', 'N=',n_species(i,j,ie), ' T=',temp_species(i,j,ie)
                write(unit_debug,*)'all species: n=',n_species(i,j,:)
                WRITE(UNIT_DEBUG,*)''
@@ -3675,7 +3697,14 @@ END SUBROUTINE Move_plasma_grid_NEW
                WRITE (UNIT_DEBUG,*) 'THIS HAPPENED AT I=',i,' J=',j,'IE=',ie
                WRITE(UNIT_DEBUG,*)'FOR THIS SPECIES, ENERGY RANGES ARE:',alamc(k_beg)*vm(i,j), alamc(kmax(ie))*vm(i,j),' eV'
                WRITE(UNIT_DEBUG,*)' '
-               WRITE(UNIT_DEBUG,*)'MHD PASSED TO RCM: ','N=',density(i,j), ' T=',temperature(i,j)
+               if(.not. DoMultiFluidGMCoupling)then
+                  WRITE(UNIT_DEBUG,*)'MHD PASSED TO RCM: ','N=',density(i,j), ' T=',temperature(i,j)
+               else
+                  WRITE(UNIT_DEBUG,*)&
+                       'MHD PASSED TO RCM: ',&
+                       'N_Hp=',densityHp(i,j), ' T_Hp=',temperatureHp(i,j),&
+                      'N_Op=',densityOp(i,j), ' T_Op=',temperatureOp(i,j)
+               end if
                WRITE(UNIT_DEBUG,*)'MHD ADAPTED FOR THIS SPECIES: ', 'N=',n_species(i,j,ie), ' T=',temp_species(i,j,ie)
                write(unit_debug,*)'all species: n=',n_species(i,j,:)
                WRITE(UNIT_DEBUG,*)''
@@ -3727,7 +3756,12 @@ END SUBROUTINE Move_plasma_grid_NEW
                  WRITE(UNIT_DEBUG,*)'PARTICLE DETAILS: ','K=',K, ' IKFLAV=', Ie,' ALAM=',alamc(k)
                  WRITE(UNIT_DEBUG,*)'FOR THIS SPECIES, ENERGY RANGES ARE:',alamc(k_beg)*vm(i,j), alamc(k_end)*vm(i,j),' eV'
                  WRITE(UNIT_DEBUG,*)' '
-                 WRITE(UNIT_DEBUG,*)'MHD PASSED TO RCM: ','N=',density(i,j), ' T=',temperature(i,j)
+                 if(.not. DoMultiFluidGMCoupling)then
+                    WRITE(UNIT_DEBUG,*)'MHD PASSED TO RCM: ','N=',density(i,j), ' T=',temperature(i,j)
+                 else
+                    WRITE(UNIT_DEBUG,*)'MHD PASSED TO RCM: ','N_Hp=',densityHp(i,j), ' T_Hp=',temperatureHp(i,j),&
+                         'N_Op=',densityOp(i,j), ' T_Op=',temperatureOp(i,j)
+                 end if
                  WRITE(UNIT_DEBUG,*)'MHD ADAPTED FOR THIS SPECIES: ', 'N=',n_species(i,j,ie), ' T=',temp_species(i,j,ie)
                  write(unit_debug,*)'all species: n=',n_species(i,j,:)
                  WRITE(UNIT_DEBUG,*)'EETA VALUE DERIVED INITIALLY:', eeta(i,j,k)/(a_factor+b_factor*ABS(alamc(k)))
@@ -3772,6 +3806,7 @@ END SUBROUTINE Move_plasma_grid_NEW
 
             IF (ANY (.NOT.Flag_correct_ok (i,j,:))) CYCLE
 
+            if(.not. DoMultiFluidGMCoupling)then
             density_rcm = 0.0
             pressure_rcm = 0.0
 
@@ -3813,6 +3848,91 @@ END SUBROUTINE Move_plasma_grid_NEW
                  CALL CON_STOP ('RCM DEBUG: STOPPING')
                 END IF
             END IF
+         else
+            !MultiFluid                                                                                                                         
+            densityHp_rcm = 0.0
+            pressureHp_rcm = 0.
+            densityOp_rcm = 0.0
+            pressureOp_rcm = 0.0
+            
+            do k=kmin(2),kmax(2)
+               densityHp_rcm = densityHp_rcm + (xmass(ikflavc(k))/xmass(2)) * (eeta(i,j,k)/6.37E+21) * vm(i,j)**1.5
+               pressureHp_rcm= pressureHp_rcm+ ((ABS(alamc(k))*eeta(i,j,k))*1.67E-20) * ((vm(i,j)**2.5)*1.0E-6) ! nPa                           
+            end do
+            do k=kmin(3),kmax(3)
+               densityOp_rcm = densityOp_rcm + (xmass(ikflavc(k))/xmass(3)) * (eeta(i,j,k)/6.37E+21) * vm(i,j)**1.5
+               pressureOp_rcm= pressureOp_rcm+ ((ABS(alamc(k))*eeta(i,j,k))*1.67E-20) * ((vm(i,j)**2.5)*1.0E-6) ! nPa                           
+            end do
+            IF (densityHp(i,j) /= 0.0 ) THEN
+               IF (ABS(densityHp_rcm-densityHp(i,j))/densityHp(i,j) > 0.01) THEN
+                  OPEN (unit=UNIT_DEBUG,FILE='RCM_DEBUG1')
+                  WRITE (UNIT_DEBUG,'(/////)')
+                  WRITE (UNIT_DEBUG,*) 'RCM: IN RCM_PLASMA_BC THERE IS A MISMATCH IN MASS DENSITY MOMENTS:'
+                  WRITE (UNIT_DEBUG,*) 'MHD SENT: ',' N_Hp=',densityHp(i,j),' T_Hp=', temperatureHp(i,j)
+                  WRITE (UNIT_DEBUG,*) 'RCM  HAS: ',' N_Hp=',densityHp_rcm, ' T_Hp=', pressureHp_rcm/densityHp_rcm/1.6E-4
+                  WRITE (UNIT_DEBUG,*) 'LOCATION: ','I=',i,' J=',j, ' IMIN_J(J)=',imin_j(J)
+                  WRITE (UNIT_DEBUG,*) ' '
+                  DO k = kmin(2),kmax(2)
+                     WRITE (UNIT_DEBUG,*) k,eeta(i,j,k)
+                  END DO
+                  CLOSE (UNIT_DEBUG)
+                  CALL CON_STOP ('RCM DEBUG densityHp: STOPPING')
+
+               END IF
+            END IF
+
+            IF (densityOp(i,j) /= 0.0 ) THEN
+               IF (ABS(densityOp_rcm-densityOp(i,j))/densityOp(i,j) > 0.01) THEN
+                  OPEN (unit=UNIT_DEBUG,FILE='RCM_DEBUG2')
+                  WRITE (UNIT_DEBUG,'(/////)')
+                  WRITE (UNIT_DEBUG,*) 'RCM: IN RCM_PLASMA_BC THERE IS A MISMATCH IN MASS DENSITY MOMENTS:'
+                  WRITE (UNIT_DEBUG,*) 'MHD SENT: ',' N_Op=',densityOp(i,j),' T_Op=', temperatureOp(i,j)
+                  WRITE (UNIT_DEBUG,*) 'RCM  HAS: ',' N_Op=',densityOp_rcm, ' T_Op=', pressureHp_rcm/densityOp_rcm/1.6E-4
+                  WRITE (UNIT_DEBUG,*) 'LOCATION: ','I=',i,' J=',j, ' IMIN_J(J)=',imin_j(J)
+                  WRITE (UNIT_DEBUG,*) ' '
+                  DO k = kmin(3),kmax(3)
+                     WRITE (UNIT_DEBUG,*) k,eeta(i,j,k)
+                  END DO
+                  CLOSE (UNIT_DEBUG)
+                  CALL CON_STOP ('RCM DEBUG densityOp: STOPPING')
+               END IF
+            END IF
+
+            IF (temperatureHp(i,j) /= 0.0 .and. densityHp(i,j) /= 0.0) THEN
+               IF (ABS((temperatureHp(i,j)-pressureHp_rcm/densityHp_rcm/1.6E-4)/temperatureHp(i,j)) > 0.01) THEN
+                  OPEN (unit=UNIT_DEBUG,FILE='RCM_DEBUG3')
+                  WRITE (UNIT_DEBUG,'(/////)')
+                  WRITE (UNIT_DEBUG,*) 'RCM: IN RCM_PLASMA_BC THERE IS A MISMATCH IN ENERGY DENSITY MOMENTS:'
+                  WRITE (UNIT_DEBUG,*) 'MHD SENT: ',' N_Hp=',densityHp(i,j),' T_Hp=',temperatureHp(i,j)
+                  WRITE (UNIT_DEBUG,*) 'RCM  HAS: ',' N_Hp=',densityHp_rcm ,' T_Hp=',pressureHp_rcm/densityHp_rcm/1.6E-4
+                  WRITE (UNIT_DEBUG,*) 'P_Hp RCM vs MHD: ',  pressureHp_rcm, temperatureHp(i,j)*1.6E-4*densityHp(i,j)
+                  WRITE (UNIT_DEBUG,*) 'LOCATION: ','I=',i,' J=',j
+                  DO k = kmin(2), kmax(2)
+                     WRITE (UNIT_DEBUG,*) k, alamc(k), ikflavc(k), eeta(i,j,k)
+                  END DO
+                  CLOSE (UNIT_DEBUG)
+                  CALL CON_STOP ('RCM DEBUG THp : STOPPING')
+               END IF
+            END IF
+            
+            IF (temperatureOp(i,j) /= 0.0 .and. densityOp(i,j) /= 0.0) THEN
+               IF (ABS((temperatureOp(i,j)-pressureOp_rcm/densityOp_rcm/1.6E-4)/temperatureOp(i,j)) > 0.01) THEN
+                  OPEN (unit=UNIT_DEBUG,FILE='RCM_DEBUG4')
+                  WRITE (UNIT_DEBUG,'(/////)')
+                  WRITE (UNIT_DEBUG,*) 'RCM: IN RCM_PLASMA_BC THERE IS A MISMATCH IN ENERGY DENSITY MOMENTS:'
+                  WRITE (UNIT_DEBUG,*) 'MHD SENT: ',' N_Op=',densityOp(i,j),' T_Op=',temperatureOp(i,j)
+                  WRITE (UNIT_DEBUG,*) 'RCM  HAS: ',' N_Op=',densityOp_rcm ,' T_Op=',pressureOp_rcm/densityOp_rcm/1.6E-4
+                  WRITE (UNIT_DEBUG,*) 'P_Op RCM vs MHD: ',  pressureOp_rcm, temperatureOp(i,j)*1.6E-4*densityOp(i,j)
+                  WRITE (UNIT_DEBUG,*) 'LOCATION: ','I=',i,' J=',j
+                  DO k = kmin(2), kmax(2)
+                     WRITE (UNIT_DEBUG,*) k, alamc(k), ikflavc(k), eeta(i,j,k)
+                  END DO
+                  CLOSE (UNIT_DEBUG)
+                  CALL CON_STOP ('RCM DEBUG TOp: STOPPING')
+               END IF
+            END IF
+
+         end if
 
          END DO
 
