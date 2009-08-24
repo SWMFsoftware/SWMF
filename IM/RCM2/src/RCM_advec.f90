@@ -324,7 +324,6 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
      !
      !
      !  Read in other inputs, both constant and run-specific:
-     !
      CALL Read_vdrop  ()
      CALL Read_kp     ()
      CALL Read_bfield ()
@@ -334,12 +333,10 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
      CALL Read_dktime (L_dktime)
      CALL Read_trf ()
      CALL Set_precipitation_rates ()
-     !
      !                                                                       
      IF (iProc == 0) THEN
         CALL Initial_printout () ! initialize formatted printout
      END IF
-     !
      !
      !
      !-->  Read initial locations of inner edges 
@@ -367,7 +364,6 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
         CALL Get_boundary (boundary, bndloc)
         CALL Rcm_plasma_bc (2, 2)
      END IF
-     !
      !
      itrack (nptmax) = nptmax     !   3/96 frt
      IF (MAXVAL (ABS(itrack)) > nptmax) THEN
@@ -434,7 +430,6 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
            do ifile=1,nFilesPlot
               IF (iProc == 0) CALL Disk_write_arrays ( ifile )
            end do
-           !
         END IF
         !
         CALL Move_plasma ( dt )
@@ -657,9 +652,11 @@ CONTAINS
     character(len=79) :: StringLine ! for IDL output
     !
     REAL (rprec), DIMENSION (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc) :: &
-         RCM_p, RCM_n, RCM_T, RCM_PVgamma, MHD_p, veff
-    !---------------------------------------------------------------------
+         RCM_p, RCM_n, RCM_T, RCM_PVgamma, MHD_p, veff, RCM_Hpp, RCM_Opp, &
+         RCM_Hpn, RCM_HpT, RCM_Opn, RCM_OpT, RCM_HpPVgamma,RCM_OpPVgamma, &
+         MHD_Hpp, MHD_Opp
 
+    !---------------------------------------------------------------------
     !Computed iteration number
     iIT = -2
     if(idt>0) iIT=int(iCurrentTime/idt)
@@ -717,16 +714,40 @@ CONTAINS
           WRITE (LUN,'(A)')'TITLE="RCM-BATSRUS: T='//time_string//'"'
           select case(plot_var(iFN))
           case('min')
-             WRITE (LUN,'(A)')'VARIABLES="X [R]","Y [R]",&
-                  &"N(RCM) [cm-3]","T(RCM) [eV]","P(RCM) [nPa]",&
-                  &"N(MHD) [cm-3]","T(MHD) [eV]","P(MHD) [nPa]"'
+             if(.not. DoMultiFluidGMCoupling)then
+                WRITE (LUN,'(A)')'VARIABLES="X [R]","Y [R]",&
+                     &"N(RCM) [cm-3]","T(RCM) [eV]","P(RCM) [nPa]",&
+                     &"N(MHD) [cm-3]","T(MHD) [eV]","P(MHD) [nPa]"'
+             else
+                ! Multifluid-output
+                WRITE (LUN,'(A)')'VARIABLES="X [R]","Y [R]",&
+                     &"N_H(RCM) [cm-3]","T_H(RCM) [eV]","P_H(RCM) [nPa]",&
+                     &"N_O(RCM) [cm-3]","T_O(RCM) [eV]","P_O(RCM) [nPa]",&
+                     &"N_H(MHD) [cm-3]","T_H(MHD) [eV]","P_H(MHD) [nPa]",&
+                     &"N_O(MHD) [cm-3]","T_O(MHD) [eV]","P_O(MHD) [nPa]"'
+                write(*,*)'writing multifluid header'
+             end if
           case('max')
-             WRITE (LUN,'(A)')'VARIABLES="X [R]","Y [R]","I","J",&
-                  &"COLAT","ALOCT","MLT","BNDLOC","VM","|B| [nT]","V",&
-                  &"BIRK(NH)","PEDLAM [S]","PEDPSI [S]","HALL [S]","EFLUX",&
-                  &"EAVG","N(RCM) [cm-3]","T(RCM) [eV]","P(RCM) [nPa]",&
-                  &"PV_gamma","Birk_mhd(NH)","N(MHD) [cm-3]","T(MHD) [eV]",&
-                  &"P(MHD) [nPa]","sigmaH(MHD)","sigmaP(MHD)"'
+             if(.not. DoMultiFluidGMCoupling)then
+                WRITE (LUN,'(A)')'VARIABLES="X [R]","Y [R]","I","J",&
+                     &"COLAT","ALOCT","MLT","BNDLOC","VM","|B| [nT]","V",&
+                     &"BIRK(NH)","PEDLAM [S]","PEDPSI [S]","HALL [S]","EFLUX",&
+                     &"EAVG","N(RCM) [cm-3]","T(RCM) [eV]","P(RCM) [nPa]",&
+                     &"PV_gamma","Birk_mhd(NH)","N(MHD) [cm-3]","T(MHD) [eV]",&
+                     &"P(MHD) [nPa]","sigmaH(MHD)","sigmaP(MHD)"'
+             else
+                write(*,*)'writing multifluid header'
+                WRITE (LUN,'(A)')'VARIABLES="X [R]","Y [R]","I","J",&
+                     &"COLAT","ALOCT","MLT","BNDLOC","VM","|B| [nT]","V",&
+                     &"BIRK(NH)","PEDLAM [S]","PEDPSI [S]","HALL [S]","EFLUX",&
+                     &"EAVG",&
+                     &"N_H(RCM) [cm-3]","T_H(RCM) [eV]","P_H(RCM) [nPa]","PV_Hpgamma",&
+                     &"N_O(RCM) [cm-3]","T_O(RCM) [eV]","P_O(RCM) [nPa]","PV_Opgamma",&
+                     &"Birk_mhd(NH)",&
+                     &"N_H(MHD) [cm-3]","T_H(MHD) [eV]","P_H(MHD) [nPa]",&
+                     &"N_O(MHD) [cm-3]","T_O(MHD) [eV]","P_O(MHD) [nPa]",&
+                     &"sigmaH(MHD)","sigmaP(MHD)"'
+             endif
           end select
           WRITE (LUN,'(A,I4,A,I4,A)') &
                'ZONE T="RCM-2D-'//time_string//'" I=', isize, &
@@ -750,8 +771,14 @@ CONTAINS
              ! Equation parameter (unused now)
              write(LUN) 0.0
              ! Name of coordinates, variables and equation parameters
-             StringLine = 'lon lat x y rho T p rho_mhd T_mhd p_mhd'
-             write(LUN) StringLine
+             if(.not. DoMultiFluidGMCoupling)then   
+                StringLine = 'lon lat x y rho T p rho_mhd T_mhd p_mhd'
+                write(LUN) StringLine
+             else
+                StringLine = 'lon lat x y '// &
+                     'rho_Hp T_Hp p_Hp rho_Op T_Op p_Op '// &
+                     'rho_Hp_mhd T_Hp_mhd p_Hp_mhd rho_Op_mhd T_Op_mhd p_Op_mhd'
+             end if
           case('max')
              ! Header string containing units for coordinates and variables
              StringLine='deg deg R R hr - - nT - - S S S - - - - - -_var22'
@@ -770,58 +797,184 @@ CONTAINS
        end select
 
        !Compute some variables
-       RCM_p = 0.
-       do i=1,isize; do j=1,jsize
-          if( i<imin_j(j) ) then
-             RCM_p(i,j) = -1.
-          else    
-             do k=1,kcsize
-                RCM_p(i,j) = RCM_p(i,j) + &
-                     vm(i,j)**2.5*eeta(i,j,k)*ABS(alamc(k))
-             end do
-          end if
-       end do; end do
-       RCM_p = RCM_p * 1.67E-35/ 1.0E-9
+       if(.not.DoMultiFluidGMCoupling)then
+          RCM_p = 0.
+          do i=1,isize; do j=1,jsize
+             if( i<imin_j(j) ) then
+                RCM_p(i,j) = -1.
+             else    
+                do k=1,kcsize
+                   RCM_p(i,j) = RCM_p(i,j) + &
+                        vm(i,j)**2.5*eeta(i,j,k)*ABS(alamc(k))
+                end do
+             end if
+          end do; end do
+          RCM_p = RCM_p * 1.67E-35/ 1.0E-9
 
-       RCM_pvgamma = 0.
-       do i=1,isize; do j=1,jsize
-          if( i<imin_j(j) ) then
-             RCM_pvgamma(i,j) = -1.
-          else    
-             do k=1,kcsize
-                RCM_pvgamma(i,j) = RCM_pvgamma(i,j) + eeta(i,j,k)*ABS(alamc(k))
-             end do
-          end if
-       end do; end do
-       RCM_pvgamma = RCM_pvgamma * 2.0/3.0
+          RCM_pvgamma = 0.
+          do i=1,isize; do j=1,jsize
+             if( i<imin_j(j) ) then
+                RCM_pvgamma(i,j) = -1.
+             else    
+                do k=1,kcsize
+                   RCM_pvgamma(i,j) = RCM_pvgamma(i,j) + eeta(i,j,k)*ABS(alamc(k))
+                end do
+             end if
+          end do; end do
+          RCM_pvgamma = RCM_pvgamma * 2.0/3.0
 
-       RCM_n = 0.
-       RCM_T = 0.
-       do i=1,isize; do j=1,jsize
-          if( i<imin_j(j) ) then
-             RCM_T(i,j) = -1.
-             RCM_n(i,j) = -1.
-          else if (rcm_pvgamma(i,j) == 0.0) THEN
-             RCM_n(i,j) = 0.0
-             RCM_t(i,j) = 0.0
-          else    
-             !compute number density and temperature, for positive ions only
-             do k=1,kcsize
-                if (alamc(k) <= 0) cycle
-                RCM_n(i,j) = RCM_n(i,j) + eeta(i,j,k)*vm(i,j)**1.5/6.37E+21
-                RCM_T(i,j)=RCM_T(i,j) + eeta(i,j,k)
-             end do
-             RCM_T(i,j) = vm(i,j)*RCM_pvgamma(i,j)/SUM(eeta(i,j,:))
-          end if
-          MHD_P(i,j) = density(i,j)*1.0E+6*temperature(i,j)*1.6E-19 &
-               / 1.0E-9 ![nPa]
-       end do; end do
+          RCM_n = 0.
+          RCM_T = 0.
+          do i=1,isize; do j=1,jsize
+             if( i<imin_j(j) ) then
+                RCM_T(i,j) = -1.
+                RCM_n(i,j) = -1.
+             else if (rcm_pvgamma(i,j) == 0.0) THEN
+                RCM_n(i,j) = 0.0
+                RCM_t(i,j) = 0.0
+             else    
+                !compute number density and temperature, for positive ions only
+                do k=1,kcsize
+                   if (alamc(k) <= 0) cycle
+                   RCM_n(i,j) = RCM_n(i,j) + eeta(i,j,k)*vm(i,j)**1.5/6.37E+21
+                   RCM_T(i,j)=RCM_T(i,j) + eeta(i,j,k)
+                end do
+                RCM_T(i,j) = vm(i,j)*RCM_pvgamma(i,j)/SUM(eeta(i,j,:))
+             end if
+             MHD_P(i,j) = density(i,j)*1.0E+6*temperature(i,j)*1.6E-19 &
+                  / 1.0E-9 ![nPa]
+          end do; end do
+       else
+          ! MultiFluids
+          !Compute some variables
+          RCM_p   = 0.
+          RCM_Hpp = 0.
+          RCM_Opp = 0.
+          do i=1,isize; do j=1,jsize
+             if( i<imin_j(j) ) then
+                RCM_p(i,j) = -1.
+                RCM_Hpp(i,j) = -1.
+                RCM_Opp(i,j) = -1.
+             else    
+                do k=kmin(2),kmax(2)
+                   RCM_Hpp(i,j) = RCM_Hpp(i,j) + &
+                        vm(i,j)**2.5*eeta(i,j,k)*ABS(alamc(k))
+                end do
+                do k=kmin(3),kmax(3)
+                   RCM_Opp(i,j) = RCM_Opp(i,j) + &
+                        vm(i,j)**2.5*eeta(i,j,k)*ABS(alamc(k))
+                end do
+                do k=1,kcsize
+                   RCM_p(i,j) = RCM_p(i,j) + &
+                        vm(i,j)**2.5*eeta(i,j,k)*ABS(alamc(k))
+                end do
+             end if
+          end do; end do
+          RCM_p = RCM_p * 1.67E-35/ 1.0E-9
+          RCM_Hpp = RCM_Hpp * 1.67E-35/1.0E-9
+          RCM_Opp = RCM_Opp * 1.67E-35/1.0E-9
 
-       CALL Wrap_around_ghostcells (RCM_n, isize,jsize,n_gc)
-       CALL Wrap_around_ghostcells (RCM_T, isize,jsize,n_gc)
-       CALL Wrap_around_ghostcells (RCM_p, isize,jsize,n_gc)
-       CALL Wrap_around_ghostcells (RCM_pvgamma,isize,jsize,n_gc)
-       CALL Wrap_around_ghostcells (MHD_p,isize,jsize,n_gc)
+
+          RCM_pvgamma = 0.
+          RCM_Hppvgamma = 0.
+          RCM_Oppvgamma = 0.
+          do i=1,isize; do j=1,jsize
+             if( i<imin_j(j) ) then
+                RCM_pvgamma(i,j) = -1.
+                RCM_Hppvgamma(i,j) = -1.
+                RCM_Oppvgamma(i,j) = -1.
+             else    
+                do k=kmin(2),kmax(2)
+                   RCM_Hppvgamma(i,j) = RCM_Hppvgamma(i,j) + eeta(i,j,k)*ABS(alamc(k))
+                end do
+                do k=kmin(3),kmax(3)
+                   RCM_Oppvgamma(i,j) = RCM_Oppvgamma(i,j) + eeta(i,j,k)*ABS(alamc(k))
+                end do
+                do k=1,kcsize
+                   RCM_pvgamma(i,j) = RCM_pvgamma(i,j) + eeta(i,j,k)*ABS(alamc(k))
+                end do
+             end if
+          end do; end do
+          RCM_pvgamma = RCM_pvgamma * 2.0/3.0
+          RCM_Hppvgamma = RCM_Hppvgamma * 2.0/3.0
+          RCM_Oppvgamma = RCM_Oppvgamma * 2.0/3.0
+
+
+          RCM_n = 0.
+          RCM_T = 0.
+          RCM_Hpn = 0.
+          RCM_HpT = 0.
+          RCM_Opn = 0.
+          RCM_OpT = 0.
+          do i=1,isize; do j=1,jsize
+             if( i<imin_j(j) ) then
+                RCM_T(i,j) = -1.
+                RCM_n(i,j) = -1.
+                RCM_Hpn(i,j) = -1.
+                RCM_HpT(i,j) = -1.
+                RCM_Opn(i,j)= -1.
+                RCM_OpT(i,j) = -1.
+             else if (rcm_pvgamma(i,j) == 0.0) THEN
+                RCM_n(i,j) = 0.0
+                RCM_t(i,j) = 0.0
+             else if (rcm_Hppvgamma(i,j) == 0.0) then
+                RCM_Hpn(i,j) = 0.0
+                RCM_Hpt(i,j) = 0.0
+             else if (rcm_Oppvgamma(i,j) == 0.0) then
+                RCM_Opn(i,j) = 0.0
+                RCM_Opt(i,j) = 0.0
+             else    
+                !compute number density and temperature, for positive ions only
+                do k=kmin(2),kmax(2)
+                   if(alamc(k) <=0)cycle
+                   RCM_Hpn(i,j) = RCM_Hpn(i,j) + eeta(i,j,k)*vm(i,j)**1.5/6.37E+21
+                   RCM_HpT(i,j) = RCM_HpT(i,j) + eeta(i,j,k)
+                end do
+                do k=kmin(3),kmax(3)
+                   RCM_Opn(i,j) = RCM_Opn(i,j) + eeta(i,j,k)*vm(i,j)**1.5/6.37E+21
+                   RCM_OpT(i,j) = RCM_OpT(i,j) + eeta(i,j,k)
+                end do
+                RCM_HpT(i,j) = vm(i,j)*RCM_Hppvgamma(i,j)/SUM(eeta(i,j,:))
+                RCM_OpT(i,j) = vm(i,j)*RCM_Oppvgamma(i,j)/SUM(eeta(i,j,:))           
+                MHD_HpP(i,j) = densityHp(i,j)*1.0E+6*temperatureHp(i,j)*1.6E-19 &
+                     / 1.0E-9 ![nPa]
+                MHD_OpP(i,j) = densityOp(i,j)*1.0E+6*temperatureOp(i,j)*1.6E-19 &
+                     / 1.0E-9 ![nPa]            
+                do k=1,kcsize
+                   if (alamc(k) <= 0) cycle
+                   RCM_n(i,j) = RCM_n(i,j) + eeta(i,j,k)*vm(i,j)**1.5/6.37E+21
+                   RCM_T(i,j) = RCM_T(i,j) + eeta(i,j,k)
+                end do
+                RCM_T(i,j) = vm(i,j)*RCM_pvgamma(i,j)/SUM(eeta(i,j,:))
+                MHD_P(i,j) = density(i,j)*1.0E+6*temperature(i,j)*1.6E-19 &
+                     / 1.0E-9 ![nPa]          
+             end if
+          end do; end do
+       end if
+
+       if(.not.DoMultiFluidGMCoupling)then
+          CALL Wrap_around_ghostcells (RCM_n, isize,jsize,n_gc)
+          CALL Wrap_around_ghostcells (RCM_T, isize,jsize,n_gc)
+          CALL Wrap_around_ghostcells (RCM_p, isize,jsize,n_gc)
+          CALL Wrap_around_ghostcells (RCM_pvgamma,isize,jsize,n_gc)
+          CALL Wrap_around_ghostcells (MHD_p,isize,jsize,n_gc)
+       else
+          CALL Wrap_around_ghostcells (RCM_n, isize,jsize,n_gc)
+          CALL Wrap_around_ghostcells (RCM_T, isize,jsize,n_gc)
+          CALL Wrap_around_ghostcells (RCM_p, isize,jsize,n_gc)
+          CALL Wrap_around_ghostcells (RCM_pvgamma,isize,jsize,n_gc)
+          CALL Wrap_around_ghostcells (MHD_p, isize,jsize,n_gc)
+          CALL Wrap_around_ghostcells (RCM_Hpn, isize,jsize,n_gc)
+          CALL Wrap_around_ghostcells (RCM_HpT, isize,jsize,n_gc)
+          CALL Wrap_around_ghostcells (RCM_Hpp, isize,jsize,n_gc)
+          CALL Wrap_around_ghostcells (RCM_Hppvgamma,isize,jsize,n_gc)
+          CALL Wrap_around_ghostcells (MHD_Hpp,isize,jsize,n_gc)
+          CALL Wrap_around_ghostcells (RCM_Opn, isize,jsize,n_gc)
+          CALL Wrap_around_ghostcells (RCM_OpT, isize,jsize,n_gc)
+          CALL Wrap_around_ghostcells (RCM_Opp, isize,jsize,n_gc)
+          CALL Wrap_around_ghostcells (RCM_Oppvgamma,isize,jsize,n_gc)
+          CALL Wrap_around_ghostcells (MHD_Opp,isize,jsize,n_gc)
+       end if
 
        !Write data
        select case(plot_format(iFN))
@@ -829,22 +982,46 @@ CONTAINS
           select case(plot_var(iFN))
           case('min')
              do j=1,jsize+1; do i=1,isize
-                write(LUN,'(8ES12.3)') &
-                     xmin(i,j), ymin(i,j), &
-                     RCM_n(i,j), RCM_T(i,j), RCM_P(i,j), &
-                     density(i,j), temperature(i,j), MHD_p(i,j)
+                if(.not. DoMultiFluidGMCoupling)then
+                   write(LUN,'(8ES12.3)') &
+                        xmin(i,j), ymin(i,j), &
+                        RCM_n(i,j), RCM_T(i,j), RCM_P(i,j), &
+                        density(i,j), temperature(i,j), MHD_p(i,j)
+                else
+                   write(LUN,'(14ES12.3)') &
+                        xmin(i,j), ymin(i,j), &
+                        RCM_Hpn(i,j),RCM_HpT(i,j),RCM_HpP(i,j),&
+                        RCM_Opn(i,j),RCM_OpT(i,j),RCM_OpP(i,j),&
+                        densityHp(i,j), temperatureHp(i,j), MHD_Hpp(i,j),&
+                        densityOp(i,j), temperatureOp(i,j), MHD_Opp(i,j)
+                end if
              end do; end do
           case('max')
              do j=1,jsize+1; do i=1,isize
-                write(LUN,'(2ES12.3,2I4,23ES12.3)') &
-                     xmin(i,j), ymin(i,j), i, j, colat(i,j)*rtd, aloct(i,j), &
-                     MODULO(aloct(i,j)*rth+12.0,24.01), bndloc(j), vm(i,j), &
-                     bmin(i,j), &
-                     v(i,j), 0.5*birk(i,j), pedlam(i,j), pedpsi(i,j),&
-                     hall(i,j), eflux(i,j,1), eavg(i,j,1), &
-                     RCM_n(i,j), RCM_T(i,j), RCM_P(i,j), RCM_pvgamma(i,j),&
-                     -birk_mhd(i,j)/1.0E-6, density(i,j), temperature(i,j), &
-                     MHD_p(i,j), sigmaH_mhd(i,j),sigmaP_mhd(i,j)
+                if(.not. DoMultiFluidGMCoupling)then
+                   write(LUN,'(2ES12.3,2I4,23ES12.3)') &
+                        xmin(i,j), ymin(i,j), i, j, colat(i,j)*rtd, aloct(i,j), &
+                        MODULO(aloct(i,j)*rth+12.0,24.01), bndloc(j), vm(i,j), &
+                        bmin(i,j), &
+                        v(i,j), 0.5*birk(i,j), pedlam(i,j), pedpsi(i,j),&
+                        hall(i,j), eflux(i,j,1), eavg(i,j,1), &
+                        RCM_n(i,j), RCM_T(i,j), RCM_P(i,j), RCM_pvgamma(i,j),&
+                        -birk_mhd(i,j)/1.0E-6, density(i,j), temperature(i,j), &
+                        MHD_p(i,j), sigmaH_mhd(i,j),sigmaP_mhd(i,j)
+                else
+                   write(LUN,'(2ES12.3,2I4,30ES12.3)') &
+                        xmin(i,j), ymin(i,j), i, j, colat(i,j)*rtd, aloct(i,j), &
+                        MODULO(aloct(i,j)*rth+12.0,24.01), bndloc(j), vm(i,j), &
+                        bmin(i,j), &
+                        v(i,j), 0.5*birk(i,j), pedlam(i,j), pedpsi(i,j),&
+                        hall(i,j), eflux(i,j,1), eavg(i,j,1), &
+                        RCM_Hpn(i,j), RCM_HpT(i,j), RCM_HpP(i,j), RCM_Hppvgamma(i,j),&
+                        RCM_Opn(i,j), RCM_OpT(i,j), RCM_OpP(i,j), RCM_Oppvgamma(i,j),&
+                        -birk_mhd(i,j)/1.0E-6,&
+                        densityHp(i,j), temperatureHp(i,j), MHD_Hpp(i,j), &
+                        densityOp(i,j), temperatureOp(i,j), MHD_Opp(i,j), &
+                        sigmaH_mhd(i,j),sigmaP_mhd(i,j)
+                end if
              end do; end do
           end select
        case('idl')
@@ -862,12 +1039,27 @@ CONTAINS
           ! Save remaining variables
           select case(plot_var(iFN))
           case('min')
-             write(LUN) ((RCM_n(i,j),       j=1,jsize+1), i=isize,1,-1)
-             write(LUN) ((RCM_T(i,j),       j=1,jsize+1), i=isize,1,-1)
-             write(LUN) ((RCM_P(i,j),       j=1,jsize+1), i=isize,1,-1)
-             write(LUN) ((density(i,j),     j=1,jsize+1), i=isize,1,-1)
-             write(LUN) ((temperature(i,j), j=1,jsize+1), i=isize,1,-1)
-             write(LUN) ((MHD_P(i,j),       j=1,jsize+1), i=isize,1,-1)
+             if(.not. DoMultiFluidGMCoupling)then
+                write(LUN) ((RCM_n(i,j),       j=1,jsize+1), i=isize,1,-1)
+                write(LUN) ((RCM_T(i,j),       j=1,jsize+1), i=isize,1,-1)
+                write(LUN) ((RCM_P(i,j),       j=1,jsize+1), i=isize,1,-1)
+                write(LUN) ((density(i,j),     j=1,jsize+1), i=isize,1,-1)
+                write(LUN) ((temperature(i,j), j=1,jsize+1), i=isize,1,-1)
+                write(LUN) ((MHD_P(i,j),       j=1,jsize+1), i=isize,1,-1)
+             else
+                write(LUN) ((RCM_Hpn(i,j),       j=1,jsize+1), i=isize,1,-1)
+                write(LUN) ((RCM_HpT(i,j),       j=1,jsize+1), i=isize,1,-1)
+                write(LUN) ((RCM_HpP(i,j),       j=1,jsize+1), i=isize,1,-1)
+                write(LUN) ((RCM_Opn(i,j),       j=1,jsize+1), i=isize,1,-1)
+                write(LUN) ((RCM_OpT(i,j),       j=1,jsize+1), i=isize,1,-1)
+                write(LUN) ((RCM_OpP(i,j),       j=1,jsize+1), i=isize,1,-1)
+                write(LUN) ((densityHp(i,j),     j=1,jsize+1), i=isize,1,-1)
+                write(LUN) ((temperatureHp(i,j), j=1,jsize+1), i=isize,1,-1)
+                write(LUN) ((MHD_HpP(i,j),       j=1,jsize+1), i=isize,1,-1)
+                write(LUN) ((densityOp(i,j),     j=1,jsize+1), i=isize,1,-1)
+                write(LUN) ((temperatureOp(i,j), j=1,jsize+1), i=isize,1,-1)
+                write(LUN) ((MHD_OpP(i,j),       j=1,jsize+1), i=isize,1,-1)
+             end if
 
           case('max')
              write(LUN) ((MODULO(aloct(i,j)*rth+12.0,24.01) &
