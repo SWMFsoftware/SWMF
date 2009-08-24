@@ -877,7 +877,9 @@ contains
           GauntFactorBrems  = 1. + 0.44 * exp( -0.25*(Log10OfGamma2+0.25)**2 )          
 
           brems(iMix) = 2.4e-21 * DensityZ2 * GauntFactorBrems * densne * &          
-               (1.-exhvot) / ( sqrt( Te ) * photn3 )                   
+               (1.-exhvot) / ( sqrt( Te ) * photn3 )
+          !!NOTE: there is a more accurate calculation of the Gaunt factor in 
+          !ggff.f file from HYADES
 
 
           ! ...       photoionization                                             
