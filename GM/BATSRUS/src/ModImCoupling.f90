@@ -4,6 +4,7 @@
 module ModImPressure
 
   use ModUtilities, ONLY: check_allocate
+  use ModMain, ONLY: DoMultiFluidIMCoupling
 
   save
 
@@ -14,7 +15,8 @@ module ModImPressure
   integer :: iSize, jSize
 
   real, dimension(:), allocatable   :: RCM_lat, RCM_lon
-  real, dimension(:,:), allocatable :: RCM_p, RCM_dens
+  real, dimension(:,:), allocatable :: RCM_p, RCM_dens, &
+       RCM_Hpp, RCM_Opp, RCM_Hpdens, RCM_Opdens
 
 contains
 
@@ -32,13 +34,23 @@ contains
 
     call check_allocate(iError, 'GM_im_pressure_init: RCM arrays')
 
+    if(DoMultiFluidIMCoupling)then
+        allocate(&
+             RCM_Hpp(iSize,jSize), &
+             RCM_Opp(iSize,jSize), &
+             RCM_Hpdens(iSize,jSize), &
+             RCM_Opdens(iSize,jSize), &
+             stat = ierror)
+        call check_allocate(ierror, 'GM_im_pressure_init: RCM arrays')
+     end if
+
   end subroutine im_pressure_init
 
 end module ModImPressure
 
 !==========================================================================
 
-subroutine get_im_pressure(iBlock, pIm_C, dIm_C, TauCoeffIm_C)
+subroutine get_im_pressure(iBlock, pIm_CD, dIm_CD,TauCoeffIm_C)
 
   use ModImPressure
   use ModMain,     ONLY : nI, nJ, nK, DoFixPolarRegion, rFixPolarRegion, dLatSmoothIm
@@ -46,11 +58,13 @@ subroutine get_im_pressure(iBlock, pIm_C, dIm_C, TauCoeffIm_C)
   use ModPhysics,  ONLY : Si2No_V, UnitP_, UnitRho_, PolarRho_I, PolarP_I
   use ModGeometry, ONLY : R_BLK, z_BLK
   use ModAdvance,  ONLY : State_VGB, RhoUz_
+  use ModMultiFluid, ONLY : IonFirst_, IonLast_
   implicit none
 
   integer, intent(in)  :: iBlock
-  real,    intent(out) :: pIm_C(1:nI, 1:nJ, 1:nK)
-  real,    intent(out) :: dIm_C(1:nI, 1:nJ, 1:nK)
+  
+  real,    intent(out) :: pIm_CD(3,1:nI, 1:nJ, 1:nK)
+  real,    intent(out) :: dIm_CD(3,1:nI, 1:nJ, 1:nK)
   real,    intent(out) :: TauCoeffIm_C(1:nI, 1:nJ, 1:nK)
 
   logical :: UseOldMethod = .false.
@@ -58,7 +72,10 @@ subroutine get_im_pressure(iBlock, pIm_C, dIm_C, TauCoeffIm_C)
   integer :: i,j,k, n, iLat1,iLat2, iLon1,iLon2
 
   real :: rLat,rLon, LatWeight1,LatWeight2, LonWeight1,LonWeight2
+
+  integer :: iIonSecond
   !--------------------------------------------------------------------------
+  iIonSecond = min(IonFirst_+1, IonLast_)
 
   TauCoeffIm_C = 1.0
 
@@ -68,8 +85,8 @@ subroutine get_im_pressure(iBlock, pIm_C, dIm_C, TauCoeffIm_C)
   do k=1,nK; do j=1,nJ; do i=1,nI
 
      ! Default is negative, which means that do not nudge GM values
-     pIm_C(i,j,k) = -1.0
-     dIm_C(i,j,k) = -1.0
+     pIm_CD(:,i,j,k) = -1.0
+     dIm_CD(:,i,j,k) = -1.0
 
      ! For closed field lines nudge towards RCM pressure/density
      if(nint(ray(3,1,i,j,k,iBlock)) == 3) then
@@ -130,19 +147,47 @@ subroutine get_im_pressure(iBlock, pIm_C, dIm_C, TauCoeffIm_C)
         if(all( RCM_p( (/iLat1,iLat2/), (/iLon1, iLon2/) ) > 0.0 ))then
            if(UseOldMethod)then
               ! This is first order accurate only !!!
-              pIm_C(i,j,k) = RCM_p(iLat1,iLon1)*Si2No_V(UnitP_)
-              dIm_C(i,j,k) = RCM_dens(iLat1,iLon1)*Si2No_V(UnitRho_)
+              pIm_CD(1,i,j,k) = RCM_p(iLat1,iLon1)*Si2No_V(UnitP_)
+              dIm_CD(1,i,j,k) = RCM_dens(iLat1,iLon1)*Si2No_V(UnitRho_)
+              if(DoMultiFluidIMCoupling)then
+                 pIm_CD(2,i,j,k) = RCM_Hpp(iLat1,iLon1)*Si2No_V(UnitP_)
+                 pIm_CD(3,i,j,k) = RCM_Opp(iLat1,iLon1)*Si2No_V(UnitP_)
+                 dIm_CD(2,i,j,k) = RCM_Hpdens(iLat1,iLon1)*Si2No_V(UnitRho_)
+                 dIm_CD(3,i,j,k) = RCM_Opdens(iLat1,iLon1)*Si2No_V(UnitRho_)
+              end if
            else
-              pIm_C(i,j,k) = Si2No_V(UnitP_)*( &
+              pIm_CD(1,i,j,k) = Si2No_V(UnitP_)*( &
                    LonWeight1 * ( LatWeight1*RCM_p(iLat1,iLon1) &
                    +              LatWeight2*RCM_p(iLat2,iLon1) ) + &
                    LonWeight2 * ( LatWeight1*RCM_p(iLat1,iLon2) &
                    +              LatWeight2*RCM_p(iLat2,iLon2) ) )
-              dIm_C(i,j,k) = Si2No_V(UnitRho_)*( &
+              dIm_CD(1,i,j,k) = Si2No_V(UnitRho_)*( &
                    LonWeight1 * ( LatWeight1*RCM_dens(iLat1,iLon1) &
                    +              LatWeight2*RCM_dens(iLat2,iLon1) ) + &
                    LonWeight2 * ( LatWeight1*RCM_dens(iLat1,iLon2) &
                    +              LatWeight2*RCM_dens(iLat2,iLon2) ) )
+              if(DoMultiFluidIMCoupling)then
+                 pIm_CD(2,i,j,k) = Si2No_V(UnitP_)*( &
+                      LonWeight1 * ( LatWeight1*RCM_Hpp(iLat1,iLon1) &
+                      +              LatWeight2*RCM_Hpp(iLat2,iLon1) ) + &
+                      LonWeight2 * ( LatWeight1*RCM_Hpp(iLat1,iLon2) &
+                      +              LatWeight2*RCM_Hpp(iLat2,iLon2) ) )
+                 dIm_CD(2,i,j,k) = Si2No_V(UnitRho_)*( &
+                      LonWeight1 * ( LatWeight1*RCM_Hpdens(iLat1,iLon1) &
+                      +              LatWeight2*RCM_Hpdens(iLat2,iLon1) ) + &
+                      LonWeight2 * ( LatWeight1*RCM_Hpdens(iLat1,iLon2) &
+                      +              LatWeight2*RCM_Hpdens(iLat2,iLon2) ) )
+                 pIm_CD(3,i,j,k) = Si2No_V(UnitP_)*( &
+                      LonWeight1 * ( LatWeight1*RCM_Opp(iLat1,iLon1) &
+                      +              LatWeight2*RCM_Opp(iLat2,iLon1) ) + &
+                      LonWeight2 * ( LatWeight1*RCM_Opp(iLat1,iLon2) &
+                      +              LatWeight2*RCM_Opp(iLat2,iLon2) ) )
+                 dIm_CD(3,i,j,k) = Si2No_V(UnitRho_)*( &
+                      LonWeight1 * ( LatWeight1*RCM_Opdens(iLat1,iLon1) &
+                      +              LatWeight2*RCM_Opdens(iLat2,iLon1) ) + &
+                      LonWeight2 * ( LatWeight1*RCM_Opdens(iLat1,iLon2) &
+                      +              LatWeight2*RCM_Opdens(iLat2,iLon2) ) )
+              end if
            end if
 
            if(dLatSmoothIm > 0.0)then
@@ -164,11 +209,17 @@ subroutine get_im_pressure(iBlock, pIm_C, dIm_C, TauCoeffIm_C)
      ! If the pressure is not set by RCM, and DoFixPolarRegion is true
      ! and the cell is within radius rFixPolarRegion and flow points outward
      ! then nudge the pressure (and density) towards the "polarregion" values
-     if(pIM_C(i,j,k) < 0.0 .and. DoFixPolarRegion .and. &
+     if(pIM_CD(1,i,j,k) < 0.0 .and. DoFixPolarRegion .and. &
           R_BLK(i,j,k,iBlock) < rFixPolarRegion &
           .and. z_BLK(i,j,k,iBlock)*State_VGB(RhoUz_,i,j,k,iBlock) > 0.0)then
-        pIm_C(i,j,k) = PolarP_I(1)
-        dIm_C(i,j,k) = PolarRho_I(1)
+        pIm_CD(1,i,j,k) = PolarP_I(1)
+        dIm_CD(1,i,j,k) = PolarRho_I(1)
+        if(DoMultiFluidIMCoupling)then
+           pIm_CD(2,i,j,k) = PolarP_I(IonFirst_)
+           pIm_CD(3,i,j,k) = PolarP_I(iIonSecond)
+           dIm_CD(2,i,j,k) = PolarRho_I(IonFirst_)
+           dIm_CD(3,i,j,k) = PolarRho_I(iIonSecond)
+        end if
      end if
 
   end do; end do; end do
@@ -185,12 +236,15 @@ subroutine apply_im_pressure
        Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_
   use ModPhysics, ONLY: Si2No_V, UnitT_, inv_gm1
   use ModImPressure
+  use ModMultiFluid, ONLY : IonFirst_, IonLast_, iRho_I, iP_I, &
+       iRhoUx_I, iRhoUy_I, iRhoUz_I
 
   implicit none
 
   real :: Factor
-  real :: pIm_C(1:nI, 1:nJ, 1:nK)
-  real :: dIm_C(1:nI, 1:nJ, 1:nK)
+
+  real :: dIm_CD(3,1:nI, 1:nJ, 1:nK)
+  real :: pIm_CD(3,1:nI, 1:nJ, 1:nK)
   real :: TauCoeffIm_C(1:nI, 1:nJ, 1:nK)
 
   integer :: iLastPIm = -1, iLastGrid = -1
@@ -198,9 +252,12 @@ subroutine apply_im_pressure
   integer :: iBlock
   character (len=*), parameter :: NameSub='apply_im_pressure'
   logical :: DoTest, DoTestMe
+  integer :: iIonSecond
   !----------------------------------------------------------------------------
   if(iNewPIm < 1) RETURN ! No IM pressure has been obtained yet
   if(.not.DoCoupleImPressure .and. .not.DoCoupleImDensity) RETURN  ! Nothing to do
+
+  iIonSecond = min(IonFirst_+1, IonLast_)
 
   call set_oktest(NameSub, DoTest, DoTestMe)
 
@@ -240,13 +297,12 @@ subroutine apply_im_pressure
   do iBlock = 1, nBlock
      if(unusedBLK(iBlock)) CYCLE
 
-     call get_im_pressure(iBlock, pIm_C, dIm_C, TauCoeffIm_C)
-
-     if(all(pIm_C < 0.0)) CYCLE  ! Nothing to do
-
+     call get_im_pressure(iBlock, pIm_CD, dIm_CD, TauCoeffIm_C)
+     if(all(pIm_CD < 0.0)) CYCLE  ! Nothing to do
+     
      !Put velocity into momentum temporarily when density is changed
      if(DoCoupleImDensity)then
-        where(dIm_C > 0.0)
+        where(dIm_CD(1,:,:,:) > 0.0)
            State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock)= &
                 State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock)/ &
                 State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
@@ -257,39 +313,110 @@ subroutine apply_im_pressure
                 State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock)/ &
                 State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
         end where
+        if (DoMultiFluidIMCoupling)then
+           where(dIm_CD(2,:,:,:) > 0.0)
+              State_VGB(iRhoUx_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(iRhoUx_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)/ &
+                   State_VGB(iRho_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(iRhoUy_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(iRhoUy_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)/ &
+                   State_VGB(iRhoUy_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(iRhoUz_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(iRhoUz_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)/ &
+                   State_VGB(iRhoUz_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)
+           end where
+           where(dIm_CD(3,:,:,:) > 0.0)
+              State_VGB(iRhoUx_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(iRhoUx_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)/ &
+                   State_VGB(iRho_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(iRhoUy_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(iRhoUy_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)/ &
+                   State_VGB(iRho_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(iRhoUz_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(iRhoUz_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)/ &
+                   State_VGB(iRho_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)
+           end where
+        end if
      end if
-
+     
      if(time_accurate)then
         if(DoCoupleImPressure)then
-           where(pIm_C > 0.0) &
+           where(pIm_CD(1,:,:,:) > 0.0) &
                 State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) = &
                 State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)   &
                 + min(1.0, Factor * Dt) * TauCoeffIm_C &
-                * (pIm_C - State_VGB(P_,1:nI,1:nJ,1:nK,iBlock))
+                * (pIm_CD(1,:,:,:) - State_VGB(P_,1:nI,1:nJ,1:nK,iBlock))
+           if(DoMultiFluidIMCoupling)then
+              where(pIm_CD(2,:,:,:) > 0.0) &
+                   State_VGB(iP_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock) = &
+                   State_VGB(iP_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)  & 
+                   + min(1.0, Factor * Dt) * TauCoeffIm_C &
+                   * (pIm_CD(2,:,:,:) - &
+                   State_VGB(iP_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock))
+              where(pIm_CD(3,:,:,:) > 0.0) &
+                   State_VGB(iP_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock) = &
+                   State_VGB(iP_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)   &
+                   + min(1.0, Factor * Dt)  * TauCoeffIm_C &
+                   * (pIm_CD(3,:,:,:) - &
+                   State_VGB(iP_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock))
+           end if
         end if
         if(DoCoupleImDensity)then
-           where(dIm_C > 0.0) &
+           where(dIm_CD(1,:,:,:) > 0.0) &
                 State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock) = &
                 State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock)   &
                 + min(1.0, Factor * Dt) * TauCoeffIm_C &
-                * (dIm_C - State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock))
+                * (dIm_CD(1,:,:,:) - State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock))
+           if(DoMultiFluidIMCoupling)then
+              where(dIm_CD(2,:,:,:) > 0.0) &
+                   State_VGB(iRho_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock) = &
+                   State_VGB(iRho_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)   &
+                   + min(1.0, Factor * Dt) * TauCoeffIm_C &
+                   * (dIm_CD(2,:,:,:) - &
+                   State_VGB(iRho_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock))
+              where(dIm_CD(3,:,:,:) > 0.0) &
+                   State_VGB(iRho_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock) = &
+                   State_VGB(iRho_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)   &
+                   + min(1.0, Factor * Dt)  * TauCoeffIm_C &
+                   * (dIm_CD(3,:,:,:) - &
+                   State_VGB(iRho_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock))
+           end if
         end if
      else
         if(DoCoupleImPressure)then
-           where(pIm_C > 0.0) &
+           where(pIm_CD(1,:,:,:) > 0.0) &
                 State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) = Factor* &
-                (TauCoupleIM*State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) + pIm_C)
+                (TauCoupleIM*State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) + pIm_CD(1,:,:,:))
+           if(DoMultiFluidIMCoupling)then
+              where(pIm_CD(2,:,:,:) > 0.0) &
+                   State_VGB(iP_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock) = Factor* &
+                   (TauCoupleIM*State_VGB(iP_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock) &
+                   + pIm_CD(2,:,:,:))
+              where(pIm_CD(3,:,:,:) > 0.0) &
+                   State_VGB(iP_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock) = Factor* &
+                   (TauCoupleIM*State_VGB(iP_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock) &
+                   + pIm_CD(3,:,:,:))
+           end if
         end if
         if(DoCoupleImDensity)then
-           where(dIm_C > 0.0) &
+           where(dIm_CD(1,:,:,:) > 0.0) &
                 State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock) = Factor* &
-                (TauCoupleIM*State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock) + dIm_C)
+                (TauCoupleIM*State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock) + dIm_CD(1,:,:,:))
+           if(DoMultiFluidIMCoupling)then
+              where(dIm_CD(2,:,:,:) > 0.0)&
+                   State_VGB(iRho_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock) = Factor* &
+                   (TauCoupleIM*State_VGB(iRho_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock) &
+                   + dIm_CD(2,:,:,:))
+              where(dIm_CD(3,:,:,:) > 0.0)&
+                   State_VGB(iRho_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock) = Factor* &
+                   (TauCoupleIM*State_VGB(iRho_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock) &
+                   + dIm_CD(3,:,:,:))
+           end if
         end if
      end if
-
      !Convert back to momentum
      if(DoCoupleImDensity)then
-        where(dIm_C > 0.0)
+        where(dIm_CD(1,:,:,:) > 0.0)
            State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock)= &
                 State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock)* &
                 State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
@@ -300,6 +427,30 @@ subroutine apply_im_pressure
                 State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock)* &
                 State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
         end where
+        if(DoMultiFluidIMCoupling)then
+           where(dIm_CD(2,:,:,:) > 0.0)
+              State_VGB(iRhoUx_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(iRhoUx_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)* &
+                   State_VGB(iRho_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(iRhoUy_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(iRhoUy_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)* &
+                   State_VGB(iRho_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(iRhoUz_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(iRhoUz_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)* &
+                   State_VGB(iRhoUz_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)
+           end where
+           where(dIm_CD(3,:,:,:) > 0.0)
+              State_VGB(iRhoUx_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(iRhoUx_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)* &
+                   State_VGB(iRho_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(iRhoUy_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(iRhoUy_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)* &
+                   State_VGB(iRho_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(iRhoUz_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(iRhoUz_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)* &
+                   State_VGB(iRhoUz_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)
+           end where
+        end if
      end if
 
      ! Now get the energy that corresponds to these new values
