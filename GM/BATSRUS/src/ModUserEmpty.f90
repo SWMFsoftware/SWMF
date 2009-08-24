@@ -243,10 +243,11 @@ contains
        EinternalSiIn, TeSiIn, &
        EinternalSiOut, TeSiOut, PeSiOut, EeSiOut, PressureSiOut, &
        CvSiOut, CveSiOut, GammaOut, HeatCondSiOut, TeTiRelaxSiOut, &
-       AbsorptionOpacitySiOut, DiffusionOpacitySiOut)
+       AbsorptionOpacitySiOut_I, DiffusionOpacitySiOut_I)
 
     ! The State_V vector is in normalized units
 
+    use ModAdvance,    ONLY: nOpacity
     use ModVarIndexes, ONLY: nVar
 
     real, intent(in) :: State_V(nVar)
@@ -263,8 +264,10 @@ contains
     real, optional, intent(out) :: GammaOut                  ! dimensionless
     real, optional, intent(out) :: HeatCondSiOut             ! [J/(m*K*s)]
     real, optional, intent(out) :: TeTiRelaxSiOut            ! [1/s]
-    real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
-    real, optional, intent(out) :: DiffusionOpacitySiOut     ! [1/m]
+    real, optional, intent(out) :: &
+         AbsorptionOpacitySiOut_I(nOpacity)                  ! [1/m]
+    real, optional, intent(out) :: &
+         DiffusionOpacitySiOut_I(nOpacity)                   ! [1/m]
 
     character (len=*), parameter :: NameSub = 'user_material_properties'
     !------------------------------------------------------------------------

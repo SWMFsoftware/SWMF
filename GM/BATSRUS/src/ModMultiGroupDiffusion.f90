@@ -7,12 +7,8 @@ module ModMultiGroupDiffusion
   use ModProcMH, ONLY: iProc
   !use ModMain, ONLY: iTest, jTest, kTest, BlkTest
 
-
   implicit none
   save
-
-  ! This module is needed for the order(u/c) multigroup radiation diffusion 
-  ! approximation for radiation-hydrodynamics.
 
   private !except
 
@@ -26,7 +22,7 @@ module ModMultiGroupDiffusion
   public :: add_jacobian_rad_diff
   public :: update_impl_rad_diff
 
-  ! Logical for adding multigroup radiation diffusion
+  ! Logical for adding Rad Diffusion
   logical, public :: IsNewBlockRadDiffusion = .true.
   logical, public :: IsNewTimestepRadDiffusion = .true.
 
@@ -36,18 +32,19 @@ module ModMultiGroupDiffusion
   real, allocatable :: DiffSemiCoef_VGB(:,:,:,:,:)
   real, allocatable :: PointSemiCoef_VCB(:,:,:,:,:)
 
-  ! Index which vars involve diffusion
+  ! Index indicating which implicit variables involve diffusion
   integer, allocatable :: iDiff_I(:)
   integer :: nDiff
 
-  ! Number of relaxation coefficients
+  ! Index indicating which implicit variables involve energy exchange
+  ! with the electrons
   integer, allocatable :: iRelax_I(:)
   integer :: nRelax
 
   ! Number of point implicit coefficients
   integer :: nPoint
   ! Index which variable involve point implicit calculation
-  integer :: iPoint
+  integer :: iVarPoint
   ! Named indices for point implicit coefficients
   integer, parameter :: Relax_ = 1, Planck_ = 2
 
@@ -56,9 +53,21 @@ module ModMultiGroupDiffusion
   ! temporary radiation energy array needed by set_block_field
   real, allocatable :: Erad1_G(:,:,:)
 
+  ! radiation has gamma of 4/3
   real, parameter :: GammaRel = 4.0/3.0
 
-  real :: EradMin
+  ! Indices indicating which semi-implicit vars are mapped to which
+  ! State_VGB variables. The total gas pressure and energy are excluded
+  ! from this list, since they taken care of separately.
+  integer :: nImplToState
+  integer, allocatable :: iFromImpl_I(:), iToState_I(:)
+
+  ! If we solve for the temperature, then ImplStateMin indicates the minimum
+  ! allowed temperature that is used in the update from the implicit state
+  ! variables to State_VGB.
+  ! If the implicit solver uses energies (cRadiation*T**4),
+  ! then ImplStateMin is the minimum allowed energy value
+  real :: ImplStateMin
 
 contains
 
@@ -66,7 +75,8 @@ contains
 
   subroutine init_rad_diffusion
 
-    use ModAdvance,     ONLY: Erad_, WaveFirst_, WaveLast_
+    use ModAdvance,     ONLY: Erad_, WaveFirst_, WaveLast_, Ee_, &
+         UseElectronEnergy
     use ModMain,        ONLY: UseRadDiffusion
     use ModSize,        ONLY: nI, nJ, nK, MaxBlock, nDim
     use ModImplicit,    ONLY: UseSemiImplicit, UseFullImplicit, &
@@ -75,6 +85,8 @@ contains
     use ModTemperature, ONLY: TradMinSi
     use ModWaves,       ONLY: UseWavePressure, WavePressureFirst_, &
          WavePressureLast_, GammaWave
+
+    real :: EradMin
 
     character(len=*), parameter :: NameSub = "init_rad_diffusion"
     !------------------------------------------------------------------------
@@ -101,6 +113,9 @@ contains
        
     if(UseSemiImplicit)then
 
+       ! Default to zero, unless reset
+       iTeImpl = 0
+
        select case(TypeSemiImplicit)
        case('radiation')
           iEradImpl = 1
@@ -109,7 +124,13 @@ contains
           iDiff_I(1) = iEradImpl
           nRelax = 0
           nPoint = 2
-          iPoint = iEradImpl
+          iVarPoint = iEradImpl
+          nImplToState = 1
+          allocate(iFromImpl_I(nImplToState), iToState_I(nImplToState))
+          iFromImpl_I = iEradImpl
+          iToState_I  = Erad_
+          ImplStateMin = EradMin
+
        case('radcond')
           iTeImpl = 1; iEradImpl = 2
           nDiff = 2
@@ -118,14 +139,39 @@ contains
           nRelax = 1
           allocate(iRelax_I(nRelax))
           iRelax_I(1) = iEradImpl
-          nPoint = 0
+          if(UseElectronEnergy)then
+             nPoint = 2
+             iVarPoint = iTeImpl
+             nImplToState = 2
+             allocate(iFromImpl_I(nImplToState), iToState_I(nImplToState))
+             iFromImpl_I = (/ iTeImpl, iEradImpl /)
+             iToState_I  = (/ Ee_, Erad_ /)
+          else
+             nPoint = 0
+             nImplToState = 1
+             allocate(iFromImpl_I(nImplToState), iToState_I(nImplToState))
+             iFromImpl_I = iEradImpl
+             iToState_I  = Erad_
+          end if
+          ImplStateMin = EradMin
+
        case('cond')
           iTeImpl = 1
           nDiff = 1
           allocate(iDiff_I(nDiff))
           iDiff_I(1) = iTeImpl
           nRelax = 0
-          nPoint = 0
+          if(UseElectronEnergy)then
+             nPoint = 2
+             iVarPoint = iTeImpl
+             nImplToState = 1
+             allocate(iFromImpl_I(nImplToState), iToState_I(nImplToState))
+             iFromImpl_I = iTeImpl
+             iToState_I  = Ee_
+          else
+             nPoint = 0
+             nImplToState = 0
+          end if
        end select
 
        if(nPoint>0)then
@@ -155,26 +201,18 @@ contains
 
   !============================================================================
 
-  subroutine get_rad_energy_flux( &
-       iDir, i, j, k, iBlock, State_V, EradFlux_D)
+  subroutine get_rad_energy_flux(iDir, i, j, k, iBlock, &
+       StateLeft_V, StateRight_V, Normal_D, RadDiffCoef, EradFlux)
 
-    !\
-    ! Calculate the diffusion part of the radiation energy flux.
-    !/
     use ModAdvance,      ONLY: State_VGB, Erad_
     use ModFaceGradient, ONLY: get_face_gradient
-    use ModPhysics,      ONLY: Si2No_V, UnitX_, Clight
-    use ModTemperature,  ONLY: UseRadFluxLimiter, TypeRadFluxLimiter
-    use ModUser,         ONLY: user_material_properties
     use ModVarIndexes,   ONLY: nVar
 
     integer, intent(in) :: iDir, i, j, k, iBlock
-    real,    intent(in) :: State_V(nVar)
-    real,    intent(out):: EradFlux_D(3)
+    real,    intent(in) :: StateLeft_V(nVar), StateRight_V(nVar), Normal_D(3)
+    real,    intent(out):: RadDiffCoef, EradFlux
 
-    real :: DiffusionOpacitySi, DiffRad
-    real :: DiffusionOpacity
-    real :: FaceGrad_D(3), Grad2ByErad2
+    real :: FaceGrad_D(3), DiffCoefL, DiffCoefR
     !--------------------------------------------------------------------------
 
     if(IsNewBlockRadDiffusion) Erad_G = State_VGB(Erad_,:,:,:,iBlock)
@@ -183,33 +221,53 @@ contains
          IsNewBlockRadDiffusion, Erad_G, FaceGrad_D)
 
     if(IsNewTimestepRadDiffusion)then
+       call get_diffusion_coef(StateLeft_V, DiffCoefL)
+       call get_diffusion_coef(StateRight_V, DiffCoefR)
 
-       call user_material_properties(State_V, i, j, k, iBlock, iDir, &
-            DiffusionOpacitySiOut = DiffusionOpacitySi)
-
-       DiffusionOpacity = DiffusionOpacitySi/Si2No_V(UnitX_)
-
-       if(UseRadFluxLimiter)then
-          Grad2ByErad2 = sum(FaceGrad_D**2)/State_V(Erad_)**2
-
-          select case(TypeRadFluxLimiter)
-          case("sum")
-             DiffRad = Clight/(3*DiffusionOpacity + sqrt(Grad2ByErad2))
-          case("max")
-             DiffRad = Clight/max(3*DiffusionOpacity,sqrt(Grad2ByErad2))
-          case("larsen")
-             DiffRad = Clight/sqrt(9*DiffusionOpacity**2 + Grad2ByErad2)
-          end select
-       else
-          DiffRad = Clight/(3*DiffusionOpacity)
-       end if
-
-       DiffCoef_VFDB(1,i,j,k,iDir,iBlock) = DiffRad
+       RadDiffCoef = 0.5*(DiffCoefL + DiffCoefR)
+       DiffCoef_VFDB(1,i,j,k,iDir,iBlock) = RadDiffCoef
     else
-       DiffRad = DiffCoef_VFDB(1,i,j,k,iDir,iBlock)
+       RadDiffCoef = DiffCoef_VFDB(1,i,j,k,iDir,iBlock)
     end if
 
-    EradFlux_D = -DiffRad*FaceGrad_D
+    EradFlux = -RadDiffCoef*sum(Normal_D*FaceGrad_D)
+
+  contains
+
+    subroutine get_diffusion_coef(State_V, DiffCoef)
+
+      use ModAdvance,     ONLY: nOpacity
+      use ModPhysics,     ONLY: Si2No_V, UnitX_, Clight
+      use ModTemperature, ONLY: UseRadFluxLimiter, TypeRadFluxLimiter
+      use ModUser,        ONLY: user_material_properties
+
+      real, intent(in) :: State_V(nVar)
+      real, intent(out):: DiffCoef
+
+      real :: DiffusionOpacitySi_I(nOpacity), DiffusionOpacity, Grad2ByErad2
+      !------------------------------------------------------------------------
+
+      call user_material_properties(State_V, i, j, k, iBlock, iDir, &
+           DiffusionOpacitySiOut_I = DiffusionOpacitySi_I)
+
+      DiffusionOpacity = DiffusionOpacitySi_I(1)/Si2No_V(UnitX_)
+
+      if(UseRadFluxLimiter)then
+         Grad2ByErad2 = sum(FaceGrad_D**2)/State_V(Erad_)**2
+
+         select case(TypeRadFluxLimiter)
+         case("sum")
+            DiffCoef = Clight/(3*DiffusionOpacity + sqrt(Grad2ByErad2))
+         case("max")
+            DiffCoef = Clight/max(3*DiffusionOpacity,sqrt(Grad2ByErad2))
+         case("larsen")
+            DiffCoef = Clight/sqrt(9*DiffusionOpacity**2 + Grad2ByErad2)
+         end select
+      else
+         DiffCoef = Clight/(3*DiffusionOpacity)
+      end if
+
+    end subroutine get_diffusion_coef
 
   end subroutine get_rad_energy_flux
 
@@ -217,7 +275,7 @@ contains
 
   subroutine calc_source_rad_diffusion(iBlock)
 
-    use ModAdvance,    ONLY: State_VGB, Source_VC, Erad_
+    use ModAdvance,    ONLY: State_VGB, Source_VC, Erad_, nOpacity
     use ModConst,      ONLY: cLightSpeed
     use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_, UnitT_
     use ModMain,       ONLY: nI, nJ, nK
@@ -228,7 +286,7 @@ contains
 
     integer :: i, j, k
     real :: TeSi, Te
-    real :: AbsorptionEmission, PlanckOpacitySi
+    real :: AbsorptionEmission, PlanckOpacitySi_I(nOpacity)
     character(len=*), parameter:: NameSub = "calc_source_rad_diffusion"
     !------------------------------------------------------------------------
 
@@ -236,10 +294,10 @@ contains
 
        if(IsNewTimestepRadDiffusion)then
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-               i, j, k, iBlock, AbsorptionOpacitySiOut = PlanckOpacitySi)
+               i, j, k, iBlock, AbsorptionOpacitySiOut_I = PlanckOpacitySi_I)
 
           RelaxCoef_VCB(1,i,j,k,iBlock) = &
-               PlanckOpacitySi*cLightSpeed/Si2No_V(UnitT_)
+               PlanckOpacitySi_I(1)*cLightSpeed/Si2No_V(UnitT_)
        end if
 
        call user_material_properties(State_VGB(:,i,j,k,iBlock), &
@@ -253,12 +311,10 @@ contains
             *(cRadiationNo*Te**4 - State_VGB(Erad_,i,j,k,iBlock))
 
        ! dErad/dt = + AbsorptionEmission
-       Source_VC(Erad_,i,j,k) = Source_VC(Erad_,i,j,k) &
-            + AbsorptionEmission
+       Source_VC(Erad_,i,j,k) = Source_VC(Erad_,i,j,k) + AbsorptionEmission
 
        ! dE/dt    = - AbsorptionEmission
-       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-            - AbsorptionEmission
+       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) - AbsorptionEmission
 
     end do; end do; end do
 
@@ -270,13 +326,13 @@ contains
 
   subroutine get_impl_rad_diff_state(StateImpl_VGB,DconsDsemi_VCB)
 
-    use ModAdvance,  ONLY: Erad_, State_VGB
+    use ModAdvance,  ONLY: Erad_, State_VGB, UseElectronEnergy, nOpacity
     use ModImplicit, ONLY: nw, nImplBlk, impl2iBlk, TypeSemiImplicit, &
          iEradImpl, iTeImpl, ImplCoeff
     use ModMain,     ONLY: nDim, x_, y_, nI, nJ, nK, MaxImplBlk, Dt
     use ModNumConst, ONLY: i_DD
     use ModPhysics,  ONLY: inv_gm1, Clight, cRadiationNo, &
-         Si2No_V, UnitTemperature_, UnitEnergyDens_, UnitX_, UnitU_
+         Si2No_V, UnitTemperature_, UnitEnergyDens_, UnitX_, UnitU_, UnitT_
     use ModUser,     ONLY: user_material_properties
     use ModTemperature, ONLY: UseRadFluxLimiter, TypeRadFluxLimiter
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB, &
@@ -288,9 +344,9 @@ contains
     real, intent(inout) :: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
 
     integer :: iImplBlock, iBlock, i, j, k
-    real :: PlanckOpacitySi, PlanckOpacity, CvSi, Cv, TeSi, Te
-    real :: DiffusionOpacitySi, DiffusionOpacity
-    real :: HeatCondSi, HeatCond
+    real :: PlanckOpacitySi_I(nOpacity), DiffusionOpacitySi_I(nOpacity)
+    real :: DiffusionOpacity, PlanckOpacity, CvSi, Cv, TeSi, Te, CveSi, Cve
+    real :: HeatCondSi, HeatCond, TeTiRelaxSi, TeTiRelax
     real :: Grad2ByErad2, DiffRad, InvDx2, InvDy2, InvDz2
     real :: InvDx, InvDy
 
@@ -335,14 +391,16 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, &
-               AbsorptionOpacitySiOut = PlanckOpacitySi, &
-               DiffusionOpacitySiOut = DiffusionOpacitySi, &
-               CvSiOut = CvSi, TeSiOut = TeSi, &
-               HeatCondSiOut = HeatCondSi)
+               AbsorptionOpacitySiOut_I = PlanckOpacitySi_I, &
+               DiffusionOpacitySiOut_I = DiffusionOpacitySi_I, &
+               CvSiOut = CvSi, CveSiOut=CveSi, TeSiOut = TeSi, &
+               HeatCondSiOut = HeatCondSi, TeTiRelaxSiOut = TeTiRelaxSi)
 
-          PlanckOpacity = PlanckOpacitySi/Si2No_V(UnitX_)
+          PlanckOpacity = PlanckOpacitySi_I(1)/Si2No_V(UnitX_)
           Cv = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
+          Cve = CveSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
           Te = TeSi*Si2No_V(UnitTemperature_)
+          TeTiRelax = TeTiRelaxSi/Si2No_V(UnitT_)
 
           select case(TypeSemiImplicit)
           case('radiation')
@@ -356,10 +414,25 @@ contains
           case('radcond')
              RelaxCoef_VCB(1,i,j,k,iBlock) = Clight*PlanckOpacity
 
-             DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
-                  Cv/(4.0*cRadiationNo*Te**3)
+             if(UseElectronEnergy)then
+                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
+                     Cve/(4.0*cRadiationNo*Te**3)
+
+                PointSemiCoef_VCB(Relax_,i,j,k,iBlock) = 0.0
+                PointSemiCoef_VCB(Planck_,i,j,k,iBlock) = 0.0
+             else
+                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
+                     Cv/(4.0*cRadiationNo*Te**3)
+             end if
           case('cond')
-             DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cv
+             if(UseElectronEnergy)then
+                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cve
+
+                PointSemiCoef_VCB(Relax_,i,j,k,iBlock) = 0.0
+                PointSemiCoef_VCB(Planck_,i,j,k,iBlock) = 0.0
+             else
+                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cv
+             end if
           end select
 
           call get_diffusion_coef
@@ -371,7 +444,7 @@ contains
           do k = 1, nK; do j = 1, nJ
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, &
-                  DiffusionOpacitySiOut = DiffusionOpacitySi, &
+                  DiffusionOpacitySiOut_I = DiffusionOpacitySi_I, &
                   HeatCondSiOut = HeatCondSi, &
                   TeSiOut = TeSi)
              call get_diffusion_coef
@@ -382,7 +455,7 @@ contains
           do k = 1, nK; do j = 1, nJ
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, &
-                  DiffusionOpacitySiOut = DiffusionOpacitySi, &
+                  DiffusionOpacitySiOut_I = DiffusionOpacitySi_I, &
                   HeatCondSiOut = HeatCondSi, &
                   TeSiOut = TeSi)
              call get_diffusion_coef
@@ -393,7 +466,7 @@ contains
           do k = 1, nK; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, &
-                  DiffusionOpacitySiOut = DiffusionOpacitySi, &
+                  DiffusionOpacitySiOut_I = DiffusionOpacitySi_I, &
                   HeatCondSiOut = HeatCondSi, &
                   TeSiOut = TeSi)
              call get_diffusion_coef
@@ -404,7 +477,7 @@ contains
           do k = 1, nK; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, &
-                  DiffusionOpacitySiOut = DiffusionOpacitySi, &
+                  DiffusionOpacitySiOut_I = DiffusionOpacitySi_I, &
                   HeatCondSiOut = HeatCondSi, &
                   TeSiOut = TeSi)
              call get_diffusion_coef
@@ -415,7 +488,7 @@ contains
           do j = 1, nJ; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, &
-                  DiffusionOpacitySiOut = DiffusionOpacitySi, &
+                  DiffusionOpacitySiOut_I = DiffusionOpacitySi_I, &
                   HeatCondSiOut = HeatCondSi, &
                   TeSiOut = TeSi)
              call get_diffusion_coef
@@ -426,7 +499,7 @@ contains
           do j = 1, nJ; do i = 1, nI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, &
-                  DiffusionOpacitySiOut = DiffusionOpacitySi, &
+                  DiffusionOpacitySiOut_I = DiffusionOpacitySi_I, &
                   HeatCondSiOut = HeatCondSi, &
                   TeSiOut = TeSi)
              call get_diffusion_coef
@@ -639,7 +712,7 @@ contains
       !------------------------------------------------------------------------
 
       if(TypeSemiImplicit=='radiation' .or. TypeSemiImplicit=='radcond')then
-         DiffusionOpacity = DiffusionOpacitySi/Si2No_V(UnitX_)
+         DiffusionOpacity = DiffusionOpacitySi_I(1)/Si2No_V(UnitX_)
 
          ! Calculate the cell centered diffusion coefficients
          if(UseRadFluxLimiter)then
@@ -697,6 +770,7 @@ contains
 
   subroutine set_rad_outflow_bc(iSide, iBlock, iVar, nVar, State_VG)
 
+    use ModAdvance,  ONLY: nOpacity
     use ModImplicit, ONLY: nw
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB
     use ModMain,     ONLY: nI, nJ, nK
@@ -707,7 +781,7 @@ contains
     real, intent(inout) :: State_VG(nVar,-1:nI+2,-1:nJ+2,-1:nK+2)
 
     integer :: i, j, k, iDiff
-    real :: Coef, OpacitySi
+    real :: Coef, OpacitySi_I(nOpacity)
     logical :: IsFullState
     character(len=*), parameter :: NameSub='set_rad_outflow_bc'
     !--------------------------------------------------------------------------
@@ -720,9 +794,9 @@ contains
        do k = 1, nK; do j = 1, nJ
           if(IsFullState)then
              call user_material_properties(State_VG(:,1,j,k), &
-                  1, j, k, iBlock, DiffusionOpacitySiOut=OpacitySi)
+                  1, j, k, iBlock, DiffusionOpacitySiOut_I=OpacitySi_I)
              Coef = 2/sqrt( &
-                  (3 * OpacitySi/Si2No_V(UnitX_) * dx_BLK(iBlock))**2 &
+                  (3 * OpacitySi_I(1)/Si2No_V(UnitX_) * dx_BLK(iBlock))**2 &
                   + ((State_VG(iVar,2,j,k) - State_VG(iVar,1,j,k)) &
                   /  State_VG(iVar,1,j,k))**2)
           else
@@ -737,9 +811,9 @@ contains
        do k = 1, nK; do j = 1, nJ
           if(IsFullState)then
              call user_material_properties(State_VG(:,nI,j,k), &
-                  nI, j, k, iBlock, DiffusionOpacitySiOut=OpacitySi)
+                  nI, j, k, iBlock, DiffusionOpacitySiOut_I=OpacitySi_I)
              Coef = 2/sqrt( &
-                  (3 * OpacitySi/Si2No_V(UnitX_) * dx_BLK(iBlock))**2 &
+                  (3 * OpacitySi_I(1)/Si2No_V(UnitX_) * dx_BLK(iBlock))**2 &
                   + ((State_VG(iVar,nI,j,k)-State_VG(iVar,nI-1,j,k)) &
                   /   State_VG(iVar,nI,j,k))**2)
           else
@@ -756,9 +830,9 @@ contains
        do k = 1, nK; do i = 1, nI
           if(IsFullState)then
              call user_material_properties(State_VG(:,i,1,k), &
-                  i, 1, k, iBlock, DiffusionOpacitySiOut=OpacitySi)
+                  i, 1, k, iBlock, DiffusionOpacitySiOut_I=OpacitySi_I)
              Coef = 2/sqrt( &
-                  (3 * OpacitySi/Si2No_V(UnitX_) * dy_BLK(iBlock))**2 &
+                  (3 * OpacitySi_I(1)/Si2No_V(UnitX_) * dy_BLK(iBlock))**2 &
                   + ((State_VG(iVar,i,2,k) - State_VG(iVar,i,1,k)) &
                   /  State_VG(iVar,i,1,k))**2)
           else
@@ -773,9 +847,9 @@ contains
        do k = 1, nK; do i = 1, nI
           if(IsFullState)then
              call user_material_properties(State_VG(:,i,nJ,k), &
-                  i, nJ, k, iBlock, DiffusionOpacitySiOut=OpacitySi)
+                  i, nJ, k, iBlock, DiffusionOpacitySiOut_I=OpacitySi_I)
              Coef = 2/sqrt( &
-                  (3 * OpacitySi/Si2No_V(UnitX_) * dy_BLK(iBlock))**2 &
+                  (3 * OpacitySi_I(1)/Si2No_V(UnitX_) * dy_BLK(iBlock))**2 &
                   + ((State_VG(iVar,i,nJ,k)-State_VG(iVar,i,nJ-1,k)) &
                   /   State_VG(iVar,i,nJ,k))**2)
           else
@@ -792,9 +866,9 @@ contains
        do j = 1, nJ; do i = 1, nI
           if(IsFullState)then
              call user_material_properties(State_VG(:,i,j,1), &
-                  i, j, 1, iBlock, DiffusionOpacitySiOut=OpacitySi)
+                  i, j, 1, iBlock, DiffusionOpacitySiOut_I=OpacitySi_I)
              Coef = 2/sqrt( &
-                  (3 * OpacitySi/Si2No_V(UnitX_) * dz_BLK(iBlock))**2 &
+                  (3 * OpacitySi_I(1)/Si2No_V(UnitX_) * dz_BLK(iBlock))**2 &
                   + ((State_VG(iVar,i,j,2) - State_VG(iVar,i,j,1)) &
                   /  State_VG(iVar,i,j,1))**2)
           else
@@ -809,9 +883,9 @@ contains
        do k = j, nJ; do i = 1, nI
           if(IsFullState)then
              call user_material_properties(State_VG(:,i,j,nK), &
-                  i, j, nK, iBlock, DiffusionOpacitySiOut=OpacitySi)
+                  i, j, nK, iBlock, DiffusionOpacitySiOut_I=OpacitySi_I)
              Coef = 2/sqrt( &
-                  (3 * OpacitySi/Si2No_V(UnitX_) * dz_BLK(iBlock))**2 &
+                  (3 * OpacitySi_I(1)/Si2No_V(UnitX_) * dz_BLK(iBlock))**2 &
                   + ((State_VG(iVar,i,j,nK)-State_VG(iVar,i,j,nK-1)) &
                   /   State_VG(iVar,i,j,nK))**2)
           else
@@ -931,17 +1005,17 @@ contains
     if(nPoint>0)then
        if(IsLinear)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             Rhs_VC(iPoint,i,j,k) = Rhs_VC(iPoint,i,j,k) &
+             Rhs_VC(iVarPoint,i,j,k) = Rhs_VC(iVarPoint,i,j,k) &
                   - PointSemiCoef_VCB(Relax_,i,j,k,iBlock) &
-                  *StateImpl_VG(iPoint,i,j,k)
+                  *StateImpl_VG(iVarPoint,i,j,k)
           end do; end do; end do
        else
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              EnergyExchange = PointSemiCoef_VCB(Relax_,i,j,k,iBlock) &
                   * (PointSemiCoef_VCB(Planck_,i,j,k,iBlock) &
-                  -  StateImpl_VG(iPoint,i,j,k))
+                  -  StateImpl_VG(iVarPoint,i,j,k))
 
-             Rhs_VC(iPoint,i,j,k) = Rhs_VC(iPoint,i,j,k) + EnergyExchange
+             Rhs_VC(iVarPoint,i,j,k) = Rhs_VC(iVarPoint,i,j,k) + EnergyExchange
           end do; end do; end do
        end if
     end if
@@ -1025,38 +1099,40 @@ contains
     real :: Dxyz_D(nDim), Area_D(nDim), Coeff
     !--------------------------------------------------------------------------
 
-    if(nPoint>0.and.UseSemiImplicit)then
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          ! dSvar/dVar (diagonal)
-          Jacobian_VVCI(iPoint,iPoint,i,j,k,1) = &
-               -PointSemiCoef_VCB(Relax_,i,j,k,iBlock)
-       end do; end do; end do
-    end if
-
-    if(nRelax>0.and.UseSemiImplicit)then
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          do iRelax = 1, nRelax
-             iVar = iRelax_I(iRelax)
-
-             RelaxCoef = RelaxCoef_VCB(iRelax,i,j,k,iBlock)
-
+    if(UseSemiImplicit)then
+       if(nPoint>0)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
              ! dSvar/dVar (diagonal)
-             Jacobian_VVCI(iVar,iVar,i,j,k,1) = -RelaxCoef
+             Jacobian_VVCI(iVarPoint,iVarPoint,i,j,k,1) = &
+                  -PointSemiCoef_VCB(Relax_,i,j,k,iBlock)
+          end do; end do; end do
+       end if
 
-             ! dSe/dVar (off diagonal)
-             Jacobian_VVCI(iTeImpl,iVar,i,j,k,1) = +RelaxCoef
+       if(nRelax>0)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             do iRelax = 1, nRelax
+                iVar = iRelax_I(iRelax)
 
-             ! dSe/daTe^4 (diagonal)
-             Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) = -RelaxCoef
+                RelaxCoef = RelaxCoef_VCB(iRelax,i,j,k,iBlock)
 
-             ! dSvar/daTe^4 (off diagonal)
-             Jacobian_VVCI(iVar,iTeImpl,i,j,k,1) = +RelaxCoef
-          end do
-       end do; end do; end do
+                ! dSvar/dVar (diagonal)
+                Jacobian_VVCI(iVar,iVar,i,j,k,1) = -RelaxCoef
+
+                ! dSe/dVar (off diagonal)
+                Jacobian_VVCI(iTeImpl,iVar,i,j,k,1) = +RelaxCoef
+
+                ! dSe/daTe^4 (diagonal)
+                Jacobian_VVCI(iTeImpl,iTeImpl,i,j,k,1) = -RelaxCoef
+
+                ! dSvar/daTe^4 (off diagonal)
+                Jacobian_VVCI(iVar,iTeImpl,i,j,k,1) = +RelaxCoef
+             end do
+          end do; end do; end do
+       end if
     end if
 
     ! For the fully implicit scheme:
-    ! add partial derivatives of the gray diffusion term to the Jacobian that
+    ! add partial derivatives of the rad diffusion term to the Jacobian that
     ! are not calculated by the general algorithm, these are for the diffusion
     ! operators the same as the semi-implicit jacobian.
 
@@ -1095,62 +1171,57 @@ contains
 
   subroutine update_impl_rad_diff(iBlock, iImplBlock, StateImpl_VG)
 
-    use ModAdvance,  ONLY: State_VGB, Rho_, p_, Erad_, ExtraEint_
+    use ModAdvance,  ONLY: State_VGB, Rho_, p_, ExtraEint_
     use ModEnergy,   ONLY: calc_energy_cell
-    use ModImplicit, ONLY: nw, TypeSemiImplicit, iEradImpl, iTeImpl, &
-         DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
-    use ModMain,     ONLY: nI, nJ, nK, dt
+    use ModImplicit, ONLY: nw, iTeImpl, DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
+    use ModMain,     ONLY: nI, nJ, nK, Dt
     use ModPhysics,  ONLY: inv_gm1, No2Si_V, Si2No_V, UnitEnergyDens_, UnitP_,&
          UnitRho_, UnitTemperature_
     use ModUser,     ONLY: user_material_properties
 
     integer, intent(in) :: iBlock, iImplBlock
-    real, intent(in) :: StateImpl_VG(nw,nI,nJ,nK)
+    real, intent(inout) :: StateImpl_VG(nw,nI,nJ,nK)
 
-    integer :: i, j, k
-    real :: Einternal, EinternalSi, PressureSi, AbsorptionEmission
+    integer :: i, j, k, iImplToState, iVarImpl, iVar
+    real :: Einternal, EinternalSi, PressureSi
+    real :: DelEnergy, Relaxation
 
     character(len=*), parameter :: NameSub = 'update_impl_rad_diff'
     !--------------------------------------------------------------------------
 
-    if(TypeSemiImplicit=='radiation' .or. TypeSemiImplicit=='radcond')then
-       do k = 1,nK; do j = 1,nJ; do i = 1,nI
-          State_VGB(Erad_,i,j,k,iBlock) = &
-               max(EradMin, StateImpl_VG(iEradImpl,i,j,k))
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       do iImplToState = 1, nImplToState
+          iVarImpl = iFromImpl_I(iImplToState)
+          iVar     = iToState_I(iImplToState)
 
-          if(State_VGB(Erad_,i,j,k,iBlock) < 0.0)then
-             write(*,*)NameSub,': ERROR EradMin, EradOrig=', &
-                  EradMin, StateImpl_VG(iEradImpl,i,j,k)
+          StateImpl_VG(iVarImpl,i,j,k) = &
+               max(ImplStateMin, StateImpl_VG(iVarImpl,i,j,k))
 
-             write(*,*)NameSub,': ERROR negative Erad =', &
-                  State_VGB(Erad_,i,j,k,iBlock)
-             write(*,*)NameSub,': ERROR at i,j,k,iBlock=', i, j, k, iBlock
-             call stop_mpi(NameSub//' negative Erad')
-          end if
-       end do; end do; end do
-    end if
-    
-    do k = 1,nK; do j = 1,nJ; do i = 1,nI
-       if(TypeSemiImplicit=='radiation')then
-          AbsorptionEmission = ImplCoeff &
-               *PointSemiCoef_VCB(Relax_,i,j,k,iBlock) &
-               * (PointSemiCoef_VCB(Planck_,i,j,k,iBlock) &
-               -  State_VGB(Erad_,i,j,k,iBlock)) &
-               + (1.0-ImplCoeff)*PointSemiCoef_VCB(Relax_,i,j,k,iBlock) &
-               *(PointSemiCoef_VCB(Planck_,i,j,k,iBlock) &
-               - ImplOld_VCB(iEradImpl,i,j,k,iBlock))
-               
-          Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
-               + State_VGB(ExtraEint_,i,j,k,iBlock) &
-               - dt*AbsorptionEmission
-       else
-          Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
-               + State_VGB(ExtraEint_,i,j,k,iBlock) &
-               + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
-               *( StateImpl_VG(iTeImpl,i,j,k) &
-               -  ImplOld_VCB(iTeImpl,i,j,k,iBlock) )
+          DelEnergy = DconsDsemi_VCB(iVarImpl,i,j,k,iImplBlock) &
+               *(StateImpl_VG(iVarImpl,i,j,k) &
+               - ImplOld_VCB(iVarImpl,i,j,k,iBlock))
+
+          State_VGB(iVar,i,j,k,iBlock) = &
+               State_VGB(iVar,i,j,k,iBlock) + DelEnergy
+       end do
+
+       Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
+            + State_VGB(ExtraEint_,i,j,k,iBlock)
+
+       if(iTeImpl>0)then
+          Einternal = Einternal + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
+               *(StateImpl_VG(iTeImpl,i,j,k)-ImplOld_VCB(iTeImpl,i,j,k,iBlock))
        end if
-       EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
+
+       if(nPoint>0)then
+          Relaxation = PointSemiCoef_VCB(Relax_,i,j,k,iBlock)*( &
+               + ImplCoeff*(StateImpl_VG(iVarPoint,i,j,k) &
+               -            PointSemiCoef_VCB(Planck_,i,j,k,iBlock)) &
+               + (1.0 - ImplCoeff)*(ImplOld_VCB(iVarPoint,i,j,k,iBlock) &
+               -            PointSemiCoef_VCB(Planck_,i,j,k,iBlock)) )
+
+          Einternal = Einternal + Dt*Relaxation
+       end if
 
        if(Einternal < 0.0)then
           write(*,*)NameSub,': ERROR Rho, p, TOrigSi=', &
@@ -1163,6 +1234,8 @@ contains
           write(*,*)NameSub,': ERROR at i,j,k,iBlock=', i, j, k, iBlock
           call stop_mpi(NameSub//' negative Eint')
        end if
+
+       EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
 
        call user_material_properties(State_VGB(:,i,j,k,iBlock), &
             i, j, k, iBlock, &

@@ -744,10 +744,11 @@ contains
        EinternalSiIn, TeSiIn, &
        EinternalSiOut, TeSiOut, PeSiOut, EeSiOut, PressureSiOut, &
        CvSiOut, CveSiOut, GammaOut, HeatCondSiOut, TeTiRelaxSiOut, &
-       AbsorptionOpacitySiOut, DiffusionOpacitySiOut)
+       AbsorptionOpacitySiOut_I, DiffusionOpacitySiOut_I)
 
     ! The State_V vector is in normalized units
 
+    use ModAdvance,    ONLY: nOpacity
     use ModPhysics,    ONLY: gm1, inv_gm1, No2Si_V, Si2No_V, &
          UnitRho_, UnitP_, UnitEnergyDens_, UnitTemperature_, &
          UnitX_, UnitT_, UnitU_
@@ -767,8 +768,10 @@ contains
     real, optional, intent(out) :: GammaOut                  ! dimensionless
     real, optional, intent(out) :: HeatCondSiOut             ! [J/(m*K*s)]
     real, optional, intent(out) :: TeTiRelaxSiOut            ! [1/s]
-    real, optional, intent(out) :: AbsorptionOpacitySiOut    ! [1/m]
-    real, optional, intent(out) :: DiffusionOpacitySiOut     ! [1/m]
+    real, optional, intent(out) :: &
+         AbsorptionOpacitySiOut_I(nOpacity)                  ! [1/m]
+    real, optional, intent(out) :: &
+         DiffusionOpacitySiOut_I(nOpacity)                   ! [1/m]
 
     real :: Rho, Pressure, Te
     real :: RhoSi, pSi, TeSi
@@ -836,8 +839,8 @@ contains
              *No2Si_V(UnitU_)*No2Si_V(UnitX_)
     end if
 
-    if(present(AbsorptionOpacitySiOut)) AbsorptionOpacitySiOut = 0.0
-    if(present(DiffusionOpacitySiOut)) DiffusionOpacitySiOut = 0.0
+    if(present(AbsorptionOpacitySiOut_I)) AbsorptionOpacitySiOut_I = 0.0
+    if(present(DiffusionOpacitySiOut_I)) DiffusionOpacitySiOut_I = 0.0
 
     if(present(CveSiOut)) CveSiOut = 0.0
     if(present(TeTiRelaxSiOut)) TeTiRelaxSiOut = 0.0
