@@ -114,16 +114,18 @@ module ModRaytrace
   ! Named indexes
   integer, parameter :: &
        InvB_=1, Z0x_=2, Z0y_=3, Z0b_=4, RhoInvB_=5, pInvB_=6, &
-       xEnd_=7, yEnd_=8, zEnd_=9, Length_=10
+       HpRhoInvB_ = 7, OpRhoInvB_ = 8, HppInvB_ =9, OppInvB_=10, &
+       xEnd_=11, yEnd_=12, zEnd_=13, Length_=14
 
   ! Number of integrals
-  integer, parameter :: nRayIntegral = 10
+  integer, parameter :: nRayIntegral = 14
 
   ! Flow variables to be integrated (rho and P) other than the magnetic field
   real, dimension(2,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK) :: Extra_VGB
+  real, dimension(4,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK) :: ExtraMulti_VGB
 
   ! Integrals for a local ray segment
-  real :: RayIntegral_V(InvB_:pInvB_)
+  real :: RayIntegral_V(InvB_:OppInvB_)
 
   ! Integrals added up for all the local ray segments
   ! The fist index corresponds to the variables (index 0 shows closed vs. open)
