@@ -189,7 +189,7 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
   use ModRayTrace
   use CON_ray_trace, ONLY: ray_exchange, ray_get, ray_put
 
-  use ModMain,     ONLY: iTest, jTest, kTest, BlkTest, ProcTest
+  use ModMain,     ONLY: iTest, jTest, kTest, BlkTest, ProcTest,DoMultiFluidIMCoupling
   use ModGeometry, ONLY: XyzStart_BLK, Dx_BLK
   use ModProcMH
   use ModKind
@@ -502,14 +502,19 @@ contains
     iLat = iStart_D(1)
     iLon = iStart_D(2)
 
-    RayIntegral_VII(1:pInvB_,iLat,iLon) = &
-         RayIntegral_VII(1:pInvB_,iLat,iLon) + RayIntegral_V
+    RayIntegral_VII(InvB_:pInvB_,iLat,iLon) = &
+         RayIntegral_VII(InvB_:pInvB_,iLat,iLon) + RayIntegral_V(InvB_:pInvB_)
+
+    if(DoMultiFluidIMCoupling)then
+       RayIntegral_VII(HpRhoInvB_:OppInvB_,iLat,iLon) = &
+            RayIntegral_VII(HpRhoInvB_:OppInvB_,iLat,iLon) + &
+            RayIntegral_V(HpRhoInvB_:OppInvB_)
+    endif
 
     if(DoneRay)then
        RayIntegral_VII(xEnd_:zEnd_,iLat,iLon) = XyzRay_D
        RayIntegral_VII(Length_,iLat,iLon)     = RayLength
     end if
-
   end subroutine store_integral
 
   subroutine set_oktest_ray
@@ -555,7 +560,8 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
   use ModGeometry, ONLY: XyzStart_BLK, XyzMax_D, XyzMin_D,  UseCovariant, &
        Dx_BLK, Dy_BLK, Dz_BLK, rMin_BLK, x_BLK,y_BLK,z_BLK, x1,x2,y1,y2,z1,z2
   use CON_planet, ONLY: DipoleStrength
-
+  use ModMain,    ONLY: DoMultiFluidIMCoupling
+  use ModMultiFLuid
   implicit none
 
   ! Arguments
@@ -623,13 +629,17 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
   real :: dx1, dy1, dz1, dx2, dy2, dz2
 
   ! dl/B in physical units
-  real :: InvBDl, RhoP_V(2)
+  real :: InvBDl, RhoP_V(2), RhoPMulti_V(4)
 
   ! Debugging
   logical :: okdebug=.false.
 
   logical :: IsWall
+
+  integer :: iIonSecond
   !--------------------------------------------------------------------------
+
+  iIonSecond = min(IonFirst_+1, IonLast_)
 
   if(oktest_ray)write(*,'(a,3i4,3es12.4)')&
        'Starting follow_ray_block: me,iBlock,iRay,XyzInOut_D=',&
@@ -900,6 +910,22 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
         RayIntegral_V(RhoInvB_:pInvB_) = RayIntegral_V(RhoInvB_:pInvB_) + &
              InvBDl * RhoP_V
 
+        ! Integrate density and pressure for multifluid
+        if(DoMultiFluidIMCoupling) then
+           RhoPMulti_V = dx1*(   dy1*(   dz1*ExtraMulti_VGB(:,i2,j2,k2,iBlock)   &
+                +                         dz2*ExtraMulti_VGB(:,i2,j2,k1,iBlock))  &
+                +                 dy2*(   dz1*ExtraMulti_VGB(:,i2,j1,k2,iBlock)   &
+                +                         dz2*ExtraMulti_VGB(:,i2,j1,k1,iBlock))) &
+                +         dx2*(   dy1*(   dz1*ExtraMulti_VGB(:,i1,j2,k2,iBlock)   &
+                +                         dz2*ExtraMulti_VGB(:,i1,j2,k1,iBlock))  &
+                +                 dy2*(   dz1*ExtraMulti_VGB(:,i1,j1,k2,iBlock)   &
+                +                         dz2*ExtraMulti_VGB(:,i1,j1,k1,iBlock)))
+           
+            RayIntegral_V(HpRhoInvB_:OppInvB_) = &
+                 RayIntegral_V(HpRhoInvB_:OppInvB_) + InvBDl * RhoPMulti_V
+ 
+       endif
+
         ! Check if we crossed the Z=0 plane in the SM coord system
         ! Convert GM position into SM frame using the transposed GmSm_DD
         XyzSMIni_D = matmul(XyzIni_D, GmSm_DD)
@@ -1019,6 +1045,11 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
                     ! Reduce density and pressure integrals
                     RayIntegral_V(RhoInvB_:pInvB_) = &
                          RayIntegral_V(RhoInvB_:pInvB_) - InvBDl * RhoP_V
+                    ! If Multifluid
+                    if(DoMultiFluidIMCoupling)then
+                       RayIntegral_V(HpRhoInvB_:OppInvB_) = &
+                            RayIntegral_V(HpRhoInvB_:OppInvB_) - InvBDl * RhoPMulti_V
+                    endif
 
                     if(oktest_ray)then
                        write(*,'(a,4es12.4)')&
@@ -1264,6 +1295,17 @@ contains
 
        ! Convert momentum to velocity
        State_V(Ux_:Uz_) = State_V(RhoUx_:RhoUz_)/State_V(Rho_)
+       if(DoMultiFluidIMCoupling)then
+          State_V(iUx_I(IonFirst_:iIonSecond)) = &
+               State_V(iRhoUx_I(IonFirst_:iIonSecond))/ &
+               State_V(iRho_I(IonFirst_:iIonSecond))
+          State_V(iUy_I(IonFirst_:iIonSecond)) = &
+               State_V(iRhoUy_I(IonFirst_:iIonSecond))/ &
+               State_V(iRho_I(IonFirst_:iIonSecond))
+          State_V(iUz_I(IonFirst_:iIonSecond)) = &
+               State_V(iRhoUz_I(IonFirst_:iIonSecond))/ &
+               State_V(iRho_I(IonFirst_:iIonSecond))
+       end if
 
        ! Add B0 to the magnetic field
        if(UseB0)then
@@ -1277,6 +1319,18 @@ contains
           State_V(Ux_:Uz_) = State_V(Ux_:Uz_) * No2Si_V(UnitU_)
           State_V(Bx_:Bz_) = State_V(Bx_:Bz_) * No2Si_V(UnitB_)
           State_V(p_)      = State_V(p_)      * No2Si_V(UnitP_)
+          if( DoMultiFluidIMCoupling)then
+             State_V(iRho_I(IonFirst_:iIonSecond)) = &
+                  State_V(iRho_I(IonFirst_:iIonSecond)) * No2Si_V(UnitRho_)
+             State_V(iUx_I(IonFirst_:iIonSecond)) = &
+                  State_V(iUx_I(IonFirst_:iIonSecond)) * No2Si_V(UnitU_)
+             State_V(iUy_I(IonFirst_:iIonSecond)) = &
+                  State_V(iUy_I(IonFirst_:iIonSecond)) * No2Si_V(UnitU_)
+             State_V(iUz_I(IonFirst_:iIonSecond)) = &
+                  State_V(iUz_I(IonFirst_:iIonSecond)) * No2Si_V(UnitU_)
+             State_V(iP_I(IonFirst_:iIonSecond))      =  &
+                  State_V(iP_I(IonFirst_:iIonSecond))      * No2Si_V(UnitP_)
+          end if
        end if
 
        PlotVar_V(5:4+nVar) = State_V
@@ -1420,7 +1474,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   use CON_planet_field, ONLY: map_planet_field
   use CON_axes, ONLY: transform_matrix
   use ModRaytrace
-  use ModMain,    ONLY: nBlock, Time_Simulation, TypeCoordSystem, UseB0
+  use ModMain,    ONLY: nBlock, Time_Simulation, TypeCoordSystem, UseB0, DoMultiFluidIMCoupling
   use ModPhysics, ONLY: rBody
   use ModAdvance, ONLY: nVar, State_VGB, Rho_, p_, Bx_, Bz_, B0_DGB
   use ModProcMH
@@ -1433,6 +1487,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
        UseCovariant
   use CON_line_extract,  ONLY: line_init, line_collect
   use CON_planet,        ONLY: DipoleStrength
+  use ModMultiFluid
   implicit none
 
   !INPUT ARGUMENTS:
@@ -1453,13 +1508,13 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   real    :: Theta, Phi, Lat, Lon, XyzIono_D(3), Xyz_D(3)
   integer :: iLat, iLon, iHemisphere, iRay
   integer :: iProcFound, iBlockFound, i, j, k
-
-  integer :: nStateVar
-
+  integer :: nStateVar, iIonSecond
   integer :: iError
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'integrate_ray_accurate'
   !-------------------------------------------------------------------------
+
+  iIonSecond = min(IonFirst_+1, IonLast_)
 
   call set_oktest(NameSub, DoTest, DoTestMe)
 
@@ -1522,13 +1577,24 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
      call message_pass_dir(iDirMin=1, iDirMax=3, Width=2, SendCorners=.true., &
           ProlongOrder=2, nVar=2, Sol_VGB=Extra_VGB)
 
-     ! Initialize storage for the integrals
      allocate(&
           RayIntegral_VII(nRayIntegral,nLat,nLon), &
           RayResult_VII(nRayIntegral,nLat,nLon), STAT=iError)
      call check_allocate(iError,NameSub//' RayIntegral_VII,RayResult_VII')
      RayIntegral_VII = 0.0
      RayResult_VII   = 0.0
+
+     if(DoMultiFluidIMCoupling) then 
+        ! Copy density and pressure into Extra_VGB
+        ExtraMulti_VGB(1:2,:,:,:,1:nBlock) = &
+             State_VGB(iRho_I(IonFirst_:iIonSecond),:,:,:,1:nBlock)
+        ExtraMulti_VGB(3:4,:,:,:,1:nBlock) = &
+             State_VGB(iP_I(IonFirst_:iIonSecond),:,:,:,1:nBlock)
+        
+        ! Fill in all ghost cells (faces+edges+co5Brners) without monotone restrict
+        call message_pass_dir(iDirMin=1, iDirMax=3, Width=2, SendCorners=.true., &
+          ProlongOrder=2, nVar=4, Sol_VGB=ExtraMulti_VGB)
+     endif
   end if
 
   ! Transformation matrix between the SM and GM coordinates
@@ -1601,7 +1667,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
        write(*,*)NameSub,' iProc, RayIntegral_VII=',&
        iProc, RayIntegral_VII(:,iLatTest,iLonTest)
 
-  if(DoIntegrateRay)call MPI_reduce( &
+  if(DoIntegrateRay) call MPI_reduce( &
        RayIntegral_VII, RayResult_VII, nLat*nLon*nRayIntegral, &
        MPI_REAL, MPI_SUM, 0, iComm, iError)
 
@@ -1906,6 +1972,7 @@ subroutine test_ray_integral
   use ModProcMH,   ONLY: iProc
   use ModIoUnit,   ONLY: UNITTMP_
   use ModNumConst, ONLY: cTiny
+  use ModMain,     ONLY: DoMultiFluidIMCoupling
   implicit none
 
   integer, parameter :: nLat=50, nLon=50
@@ -1951,8 +2018,13 @@ subroutine test_ray_integral
            call xyz_to_latlon(RayResult_VII(xEnd_:zEnd_,iLat,iLon))
 
            if(iLat == iLatTest .and. iLon == iLonTest)then
-              write(*,'(a,a)')'iLon iLat Lon Lat ',&
-                   'Bvol Z0x Z0y Z0b Rho P LatEnd LonEnd Zend Length'
+              if(.not. DoMultiFluidIMCoupling)then
+                 write(*,'(a,a)')'iLon iLat Lon Lat ',&
+                      'Bvol Z0x Z0y Z0b Rho P LatEnd LonEnd Zend Length'
+              else
+                 write(*,'(a,a)')'iLon iLat Lon Lat ',&
+                      'Bvol Z0x Z0y Z0b Rho P LatEnd LonEnd Zend Length HpRho OpRho HpP OpP'
+              endif
               write(*,'(2i4,100(1es12.4))') iLon, iLat, Lon, Lat, &
                    RayResult_VII(:,iLat,iLon)
            end if
