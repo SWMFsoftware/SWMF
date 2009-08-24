@@ -72,6 +72,7 @@ Module ModMain
   real    :: TauCoupleIm        = 20.0
 
   logical :: UseRaytrace = .false.
+  logical :: DoMultiFluidIMCoupling = .false.
 
   !\
   ! Parameters for the B0 field
