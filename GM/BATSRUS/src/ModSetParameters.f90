@@ -1369,6 +1369,10 @@ subroutine MH_set_parameters(TypeAction)
      case("#IMCOUPLINGSMOOTH")
         call read_var('dLatSmoothIm', dLatSmoothIm)
 
+     case("#MULTIFLUIDIM")
+        ! couple GM and IM in multi-fluid (all, Hp, Op) mode                
+        call read_var('DoMultiFluidIMCoupling', DoMultiFluidIMCoupling)
+
         !^CFG END RCM
         
      case("#RBSATCOUPLING")
