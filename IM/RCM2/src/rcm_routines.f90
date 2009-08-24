@@ -3331,6 +3331,7 @@ END SUBROUTINE Move_plasma_grid_NEW
       USE Rcm_variables, ONLY : n_gc, isize, jsize, kcsize, iesize, &
                                 alamc, etac, ikflavc, eeta, xmass, &
                                 vm, Re, pi, imin_j, density, temperature,&
+                                densityHp, densityOp, temperatureHp, temperatureOp, &
                                 kmin, kmax, &
                                 iprec, rprec, &
                                 x_h, x_o,DoMultiFluidGMCoupling
@@ -3368,7 +3369,8 @@ END SUBROUTINE Move_plasma_grid_NEW
       REAL (rprec) :: n_species (isize,jsize,iesize), temp_species (isize,jsize,iesize)
 !
       REAL (rprec), PARAMETER :: a_conv = 6.371E+6/1.0E-9/1.0E-6
-      REAL (rprec) :: a_factor, b_factor, s1, s2, s3, denom, pressure_rcm, density_rcm
+      REAL (rprec) :: a_factor, b_factor, s1, s2, s3, denom, pressure_rcm, density_rcm, &
+           densityHp_rcm,pressureHp_rcm,densityOp_rcm,pressureOp_rcm
       INTEGER (iprec) :: unit_debug=59
       LOGICAL :: Flag_found_kuse, Flag_correct_ok (isize,jsize,iesize)=.TRUE.
 !
