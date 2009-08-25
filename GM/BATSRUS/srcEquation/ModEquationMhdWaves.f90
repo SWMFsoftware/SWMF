@@ -1,6 +1,7 @@
 module ModVarIndexes
 
-  use ModSingleFluid
+  use ModSingleFluid, &
+       Redefine1 => WaveFirst_, Redefine2 => WaveLast_
   use ModWaves, ONLY: NameNumber_I
   implicit none
 
@@ -46,8 +47,8 @@ module ModVarIndexes
        By_    = 6,    &
        Bz_    = 7,    &
        Ew_    = 8,    &
-       FreqFirst_ = 9, &
-       FreqLast_  = FreqFirst_+nWave-1, &
+       WaveFirst_ = 9, &
+       WaveLast_  = WaveFirst_+nWave-1, &
        p_     = nVar, &
        Energy_= nVar+1  
 
@@ -73,7 +74,7 @@ module ModVarIndexes
        0.0, & ! By_
        0.0, & ! Bz_
        0.0, & ! Ew_ 
-       (0.0, iWave=FreqFirst_,FreqLast_), & 
+       (0.0, iWave=WaveFirst_,WaveLast_), & 
        1.0, & ! p_
        1.0 /) ! Energy_ 
  
@@ -133,7 +134,7 @@ module ModVarIndexes
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! Specify scalar to be advected
-  integer, parameter :: ScalarFirst_ = Ew_, ScalarLast_ = FreqLast_
+  integer, parameter :: ScalarFirst_ = Ew_, ScalarLast_ = WaveLast_
 
   ! There are no multi-species
   logical, parameter :: UseMultiSpecies = .false.
@@ -167,9 +168,9 @@ contains
     NameUnitUserTec_V(Ew_) = NameUnitUserTec_V(Energy_)
     NameUnitUserIdl_V(Ew_) = NameUnitUserIdl_V(Energy_)
    
-    UnitUser_V(FreqFirst_:FreqLast_)        = UnitUser_V(Energy_)
-    NameUnitUserTec_V(FreqFirst_:FreqLast_) = NameUnitUserTec_V(Energy_)
-    NameUnitUserIdl_V(FreqFirst_:FreqLast_) = NameUnitUserIdl_V(Energy_)
+    UnitUser_V(WaveFirst_:WaveLast_)        = UnitUser_V(Energy_)
+    NameUnitUserTec_V(WaveFirst_:WaveLast_) = NameUnitUserTec_V(Energy_)
+    NameUnitUserIdl_V(WaveFirst_:WaveLast_) = NameUnitUserIdl_V(Energy_)
     
    end subroutine init_mod_equation
 
