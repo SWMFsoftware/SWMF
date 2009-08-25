@@ -91,10 +91,7 @@ module ModUser
   integer           :: iTrHyades       = -1      ! index of rad. temperature
   integer           :: iMaterialHyades = -1      ! index of material type
 
-  ! Variables related to radiation
-  character(len=20) :: TypeOpacity="constant"
-  real :: RosselandOpacity(0:nMaterial-1) = 1.0
-  real :: PlanckOpacity(0:nMaterial-1) = 10.0
+ 
 
   ! Opacity scale factor for sensitivity studies on opacities
   real :: RosselandScaleFactor_I(0:nMaterial-1) = 1.0
@@ -171,19 +168,6 @@ contains
           end if
        case("#EOS")
           call read_eos_parameters
-       case("#OPACITY")
-          call read_var('TypeOpacity', TypeOpacity)
-          select case(TypeOpacity)
-          case("constant")
-             call read_var('PlanckOpacityXe', PlanckOpacity(0))
-             call read_var('PlanckOpacityBe', PlanckOpacity(1))
-             call read_var('PlanckOpacityPl', PlanckOpacity(2))
-             call read_var('RosselandOpacityXe', RosselandOpacity(0))
-             call read_var('RosselandOpacityBe', RosselandOpacity(1))
-             call read_var('RosselandOpacityPl', RosselandOpacity(2))
-          case default
-             call stop_mpi(NameSub//"Wrong TypeOpacity ="//trim(TypeOpacity))
-          end select
        case("#OPACITYSCALEFACTOR")
           call read_var('PlanckScaleFactorXe', PlanckScaleFactor_I(0))
           call read_var('PlanckScaleFactorBe', PlanckScaleFactor_I(1))
@@ -1588,11 +1572,7 @@ contains
                   = Opacity_V(2*iMaterial + 2) * RhoSi
           end if
        else
-          if(present(AbsorptionOpacitySiOut_I)) &
-               AbsorptionOpacitySiOut_I = PlanckOpacity(iMaterial)*RhoSi
-
-          if(present(DiffusionOpacitySiOut_I)) &
-               DiffusionOpacitySiOut_I = RosselandOpacity(iMaterial)*RhoSi
+         
        end if
     end if
 
