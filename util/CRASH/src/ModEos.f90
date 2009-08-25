@@ -53,6 +53,13 @@ module CRASH_ModEos
   ! Error flag (iError) values:
   ! 0 - OK 
   ! 2 - relativistic temperature
+  !\
+  !!   WARNING !!!
+  !You cannot use total pressure and total energy density as input or output
+  !parameters, if the electron temperature is not equal to ion temperature.
+  !In this case ONLY electron energy density and electron pressure may be 
+  !used.
+  !/
 
   use CRASH_ModPolyimide
   use CRASH_ModStatSum
@@ -125,6 +132,13 @@ contains
 
     integer, intent(in):: iMaterial     ! index of material
     real,    intent(in):: Rho           ! mass density [kg/m^3]
+    !\
+    !!   WARNING !!!
+    !You cannot use total pressure and total energy density as input or output
+    !parameters, if the electron temperature is not equal to ion temperature.
+    !In this case ONLY electron energy density and electron pressure may be 
+    !used.
+    !/
 
     ! One of the following five energetic input parameters must be present
     real,    optional, intent(in)  :: TeIn         ! temperature SI[K]
@@ -181,6 +195,13 @@ contains
        TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
        eElectronOut, pElectronOut, GammaEOut, CvElectronOut,& 
        HeatCond, iError)
+    !\
+    !!   WARNING !!!
+    !You cannot use total pressure and total energy density as input or output
+    !parameters, if the electron temperature is not equal to ion temperature.
+    !In this case ONLY electron energy density and electron pressure may be 
+    !used.
+    !/
 
     ! Eos function for mixed material
     real, intent(in) :: RhoToARatio_I(Xe_:Plastic_) ! Mass densities/A
@@ -250,6 +271,14 @@ contains
        eElectronOut, pElectronOut, GammaEOut, CvElectronOut,& 
        HeatCond, iError)
     use CRASH_ModTransport, ONLY: electron_heat_conductivity
+
+    !\
+    !!   WARNING !!!
+    !You cannot use total pressure and total energy density as input or output
+    !parameters, if the electron temperature is not equal to ion temperature.
+    !In this case ONLY electron energy density and electron pressure may be 
+    !used.
+    !/
 
     real,              intent(in)  :: Natomic      ! Atomic concentration
     real,    optional, intent(in)  :: TeIn         ! temperature
