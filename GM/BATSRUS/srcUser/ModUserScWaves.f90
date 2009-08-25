@@ -979,9 +979,6 @@ contains
     AlfvenSpeedMinusFirst_= AlfvenSpeedMinusFirst_+ WaveFirst_-1
     AlfvenSpeedMinusLast_ = AlfvenSpeedMinusLast_ + WaveFirst_-1
 
-    WavePressureFirst_    = WavePressureFirst_    + WaveFirst_-1
-    WavePressureLast_     = WavePressureLast_     + WaveFirst_-1
-
     nFreqPlus  = AlfvenSpeedPlusLast_  - AlfvenSpeedPlusFirst_+1
     nFreqMinus = AlfvenSpeedMinusLast_ - AlfvenSpeedMinusFirst_+1
     nFreq=nFreqPlus+nFreqMinus

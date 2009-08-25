@@ -152,8 +152,6 @@ contains
     AlfvenSpeedMinusLast_  = WaveLast_
 
     UseWavePressure = .true.
-    WavePressureFirst_ = WaveFirst_
-    WavePressureLast_  = WaveLast_
 
     TeFraction = MassIon_I(1)*ElectronTemperatureRatio &
          /(1 + AverageIonCharge*ElectronTemperatureRatio)

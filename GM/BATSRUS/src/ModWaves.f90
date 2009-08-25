@@ -33,9 +33,7 @@ module ModWaves
 
   real :: GammaWave = 1.50
  
-  integer :: WavePressureFirst_ = 2
-  integer :: WavePressureLast_  = 1
-
+ 
   real :: WaveEnergy = 0.0 !Auxiliary variable
   real :: DivU = 0.0       !Auxiliary variable
 
@@ -69,9 +67,5 @@ contains
     use ModReadParam,  ONLY: read_var
     !--------------------------------------------------------------------------
     call read_var('UseWavePressure',UseWavePressure)
-    if(UseWavePressure)then
-       call read_var(' WavePressureFirst' , WavePressureFirst_)
-       call read_var(' WavePressureLast'  , WavePressureLast_ )
-    end if
   end subroutine read_wave_pressure
 end module ModWaves

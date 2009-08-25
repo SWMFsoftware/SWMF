@@ -1574,14 +1574,13 @@ contains
     !==========================================================================
 
     subroutine godunov_flux
-      use ModAdvance,  ONLY: Erad_
+      use ModAdvance,  ONLY: Erad_,WaveFirst_,WaveLast_
       use ModExactRS,  ONLY: wR, wL, sample, pu_star, RhoL, RhoR, &
            pL, pR, UnL, UnR, UnStar, pStar
       use ModImplicit, ONLY: UseSemiImplicit  !^CFG IF IMPLICIT
       use ModPhysics,  ONLY: inv_gm1,g
       use ModVarIndexes
-      use ModWaves,    ONLY: WavePressureFirst_, WavePressureLast_, &
-           UseWavePressure
+      use ModWaves,    ONLY: UseWavePressure
 
       real::Rho, Un, p, pTotal, e, StateStar_V(nVar)
       real::RhoSide,UnSide
@@ -1605,7 +1604,7 @@ contains
          ! To achieve this the pressure is increased by the value of the
          ! radiation pressure
          eRadL = 0.0; eRadR = 0.0
-         do iVar = WavePressureFirst_, WavePressureLast_
+         do iVar = WaveFirst_, WaveLast_
             eRadL = eRadL + StateLeft_V(iVar)
             eRadR = eRadR + StateRight_V(iVar)
          end do
@@ -1692,7 +1691,7 @@ contains
 
       if(UseWavePressure)then
          Factor = 0.5*(1.0 + (Rho/RhoSide)**(g - 1))
-         do iVar = WavePressureFirst_, WavePressureLast_
+         do iVar = WaveFirst_, WaveLast_
             Flux_V(iVar) = Factor*StateStar_V(iVar)*Un
          end do
       end if
@@ -2007,7 +2006,7 @@ contains
 
       if(UseWavePressure)then
          WaveEnergy = 0.0
-         do iVar = WavePressureFirst_,WavePressureLast_
+         do iVar = WaveFirst_,WaveLast_
             WaveEnergy = WaveEnergy + State_V(iVar)
          end do
          pTotal = pTotal + (GammaWave-1.0) * WaveEnergy
@@ -2206,7 +2205,7 @@ contains
 
       if(UseWavePressure)then
          WaveEnergy = 0.0
-         do iVar = WavePressureFirst_, WavePressureLast_
+         do iVar = WaveFirst_, WaveLast_
             WaveEnergy = WaveEnergy + State_V(iVar)
          end do
          pTotal = pTotal + (GammaWave - 1)*WaveEnergy
@@ -2244,8 +2243,8 @@ contains
 
     use ModMultiFluid, ONLY: select_fluid, iFluid, iRho, iUx, iUy, iUz, iP
     use ModMain, ONLY: Climit
-    use ModWaves, ONLY: UseWavePressure, GammaWave, WaveEnergy, &
-                        WavePressureFirst_, WavePressureLast_
+    use ModWaves, ONLY: UseWavePressure, GammaWave, WaveEnergy
+    use ModAdvance,ONLY: WaveFirst_, WaveLast_
 
     real,    intent(in) :: State_V(nVar)
     real,    intent(in) :: B0x, B0y, B0z
@@ -2431,7 +2430,7 @@ contains
       end if
       if(UseWavePressure)then
          WaveEnergy = 0.0
-         do iVar = WavePressureFirst_,WavePressureLast_
+         do iVar = WaveFirst_,WaveLast_
             WaveEnergy = WaveEnergy + State_V(iVar)
          end do
          Sound2 = Sound2 + GammaWave * InvRho * (GammaWave-1.0) * WaveEnergy
@@ -2585,7 +2584,7 @@ contains
 
       if(UseWavePressure)then
          WaveEnergy = 0.0
-         do iVar = WavePressureFirst_, WavePressureLast_
+         do iVar = WaveFirst_, WaveLast_
             WaveEnergy = WaveEnergy + State_V(iVar)
          end do
          Sound2 = Sound2 + GammaWave*(GammaWave - 1)*WaveEnergy*InvRho

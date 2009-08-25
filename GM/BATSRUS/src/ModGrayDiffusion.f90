@@ -75,16 +75,14 @@ contains
 
   subroutine init_gray_diffusion
 
-    use ModAdvance,     ONLY: Erad_, WaveFirst_, WaveLast_, Ee_, &
-         UseElectronEnergy
+    use ModAdvance,     ONLY: Erad_, Ee_, UseElectronEnergy
     use ModMain,        ONLY: UseGrayDiffusion
     use ModSize,        ONLY: nI, nJ, nK, MaxBlock, nDim
     use ModImplicit,    ONLY: UseSemiImplicit, UseFullImplicit, &
          TypeSemiImplicit, iEradImpl, iTeImpl
     use ModPhysics,     ONLY: Si2No_V, UnitTemperature_, cRadiationNo
     use ModTemperature, ONLY: TradMinSi
-    use ModWaves,       ONLY: UseWavePressure, WavePressureFirst_, &
-         WavePressureLast_, GammaWave
+    use ModWaves,       ONLY: UseWavePressure, GammaWave
 
     real :: EradMin
 
@@ -195,8 +193,6 @@ contains
 
     ! Setup for wave infrastructure
     UseWavePressure = .true.
-    WavePressureFirst_ = WaveFirst_
-    WavePressureLast_  = WaveLast_
     GammaWave = GammaRel
 
   end subroutine init_gray_diffusion

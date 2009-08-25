@@ -27,8 +27,7 @@ subroutine calc_sources
   use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
   use ModCovariant,     ONLY: UseCovariant 
   use ModCurrent,       ONLY: get_current
-  use ModWaves,         ONLY: UseWavePressure, GammaWave, WaveEnergy, &
-       WavePressureFirst_, WavePressureLast_, DivU
+  use ModWaves,         ONLY: UseWavePressure, GammaWave, WaveEnergy, DivU
 
   implicit none
 
@@ -112,7 +111,7 @@ subroutine calc_sources
              +uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1) &
              +uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1))
         WaveEnergy = 0.0
-        do iVar = WavePressureFirst_,WavePressureLast_
+        do iVar = WaveFirst_,WaveLast_
            Source_VC(iVar,i,j,k) = Source_VC(iVar,i,j,k) - &
                 DivU * (GammaWave - 1.0) * State_VGB(iVar,i,j,k,iBlock)
            WaveEnergy = WaveEnergy + State_VGB(iVar,i,j,k,iBlock)
