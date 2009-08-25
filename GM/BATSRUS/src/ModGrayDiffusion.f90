@@ -172,6 +172,8 @@ contains
              nPoint = 0
              nImplToState = 0
           end if
+          ImplStateMin = 0.0
+
        end select
 
        if(nPoint>0)then
@@ -1190,12 +1192,15 @@ contains
     !--------------------------------------------------------------------------
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       ! minimum allowed temperature for all implicit variables
+       do iVarImpl = 1, nw
+          StateImpl_VG(iVarImpl,i,j,k) = &
+               max(ImplStateMin, StateImpl_VG(iVarImpl,i,j,k))
+       end do
+
        do iImplToState = 1, nImplToState
           iVarImpl = iFromImpl_I(iImplToState)
           iVar     = iToState_I(iImplToState)
-
-          StateImpl_VG(iVarImpl,i,j,k) = &
-               max(ImplStateMin, StateImpl_VG(iVarImpl,i,j,k))
 
           DelEnergy = DconsDsemi_VCB(iVarImpl,i,j,k,iImplBlock) &
                *(StateImpl_VG(iVarImpl,i,j,k) &
