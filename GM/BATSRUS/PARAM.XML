@@ -4269,6 +4269,22 @@ The default value is TauCoupleIm=20.0, which corresponds to typical nudging
 and DoImSatTrace false.
 </command>
 
+<command name="MULTIFLUIDIM">
+	<parameter name ="DoMultiFluidIMCoupling" type="logical" default="F"/>
+
+#MULTIFLUIDIM
+F			DoMultiFluidIMCoupling
+
+If DoMultiFluidIMCoupling is true, the information exchanged between GM and IM 
+is in multi-fluid mode: GM gives IM four more variables (density_Hp, 
+density_Op, pressure_Hp, pressure_Op) in addition to one-fluid MHD paramters,
+and IM passes GM the same four more variables.
+
+The default value is DoMultiFluidIMCoupling = false, MHD variables are 
+exchanged between GM and IM.
+</command>
+
+
 <command name="IMCOUPLING">
 	<parameter name="TauCoupleIm" type="real" min="1"/>
 	<parameter name="DoImSatTrace" type="logical" default="F" />
