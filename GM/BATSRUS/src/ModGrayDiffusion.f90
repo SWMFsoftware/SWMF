@@ -770,135 +770,88 @@ contains
 
   !============================================================================
 
-  subroutine set_gray_outflow_bc(iSide, iBlock, iVar, nVar, State_VG)
+  subroutine set_gray_outflow_bc(iSide, iBlock, State_VG)
 
     use ModAdvance,  ONLY: nOpacity
-    use ModImplicit, ONLY: nw
+    use ModImplicit, ONLY: nw, iTeImpl
     use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, vInv_CB
     use ModMain,     ONLY: nI, nJ, nK
     use ModPhysics,  ONLY: Clight, Si2No_V, UnitX_
     use ModUser,     ONLY: user_material_properties
 
-    integer, intent(in) :: iSide, iBlock, iVar, nVar
-    real, intent(inout) :: State_VG(nVar,-1:nI+2,-1:nJ+2,-1:nK+2)
+    integer, intent(in) :: iSide, iBlock
+    real, intent(inout) :: State_VG(nw,-1:nI+2,-1:nJ+2,-1:nK+2)
 
-    integer :: i, j, k, iDiff
+    integer :: iVar, i, j, k, iDiff
     real :: Coef, OpacitySi_I(nOpacity)
-    logical :: IsFullState
     character(len=*), parameter :: NameSub='set_gray_outflow_bc'
     !--------------------------------------------------------------------------
-    IsFullState = nVar > nw
-    
-    iDiff = 1
-
     select case(iSide)
     case(1)
        do k = 1, nK; do j = 1, nJ
-          if(IsFullState)then
-             call user_material_properties(State_VG(:,1,j,k), &
-                  1, j, k, iBlock, DiffusionOpacitySiOut_I=OpacitySi_I)
-             Coef = 2/sqrt( &
-                  (3 * OpacitySi_I(1)/Si2No_V(UnitX_) * dx_BLK(iBlock))**2 &
-                  + ((State_VG(iVar,2,j,k) - State_VG(iVar,1,j,k)) &
-                  /  State_VG(iVar,1,j,k))**2)
-          else
-             Coef = 2/Clight* &
-                  DiffSemiCoef_VGB(iDiff,1,j,k,iBlock)/dx_BLK(iBlock)
-          end if
-          State_VG(iVar,0,j,k) = State_VG(iVar,1,j,k)*(Coef - 0.5)/(Coef + 0.5)
-          if(IsFullState) State_VG(iVar,-1,j,k) &
-               = 2*State_VG(iVar,0,j,k) - State_VG(iVar,1,j,k)
+          do iDiff = 1, nDiff
+             iVar = iDiff_I(iDiff)          
+             if(iVar == iTeImpl) CYCLE
+             Coef = 2/Clight &
+                  *DiffSemiCoef_VGB(iDiff,1,j,k,iBlock)/dx_BLK(iBlock)
+             State_VG(iVar,0,j,k) = State_VG(iVar,1,j,k) &
+                  *(Coef - 0.5)/(Coef + 0.5)
+          end do
        end do; end do
     case(2)
        do k = 1, nK; do j = 1, nJ
-          if(IsFullState)then
-             call user_material_properties(State_VG(:,nI,j,k), &
-                  nI, j, k, iBlock, DiffusionOpacitySiOut_I=OpacitySi_I)
-             Coef = 2/sqrt( &
-                  (3 * OpacitySi_I(1)/Si2No_V(UnitX_) * dx_BLK(iBlock))**2 &
-                  + ((State_VG(iVar,nI,j,k)-State_VG(iVar,nI-1,j,k)) &
-                  /   State_VG(iVar,nI,j,k))**2)
-          else
-             Coef = 2/Clight* &
-                  DiffSemiCoef_VGB(iDiff,nI,j,k,iBlock)/dx_BLK(iBlock)
-          end if
-
-          State_VG(iVar,nI+1,j,k) = State_VG(iVar,nI,j,k) &
-               *(Coef - 0.5)/(Coef + 0.5)
-          if(IsFullState) State_VG(iVar,nI+2,j,k) &
-               = 2*State_VG(iVar,nI+1,j,k) - State_VG(iVar,nI,j,k)
+          do iDiff = 1, nDiff
+             iVar = iDiff_I(iDiff)
+             if(iVar == iTeImpl) CYCLE
+             Coef = 2/Clight &
+                  *DiffSemiCoef_VGB(iDiff,nI,j,k,iBlock)/dx_BLK(iBlock)
+             State_VG(iVar,nI+1,j,k) = State_VG(iVar,nI,j,k) &
+                  *(Coef - 0.5)/(Coef + 0.5)
+          end do
        end do; end do
     case(3)
        do k = 1, nK; do i = 1, nI
-          if(IsFullState)then
-             call user_material_properties(State_VG(:,i,1,k), &
-                  i, 1, k, iBlock, DiffusionOpacitySiOut_I=OpacitySi_I)
-             Coef = 2/sqrt( &
-                  (3 * OpacitySi_I(1)/Si2No_V(UnitX_) * dy_BLK(iBlock))**2 &
-                  + ((State_VG(iVar,i,2,k) - State_VG(iVar,i,1,k)) &
-                  /  State_VG(iVar,i,1,k))**2)
-          else
-             Coef = 2/Clight* &
-                  DiffSemiCoef_VGB(iDiff,i,1,k,iBlock)/dy_BLK(iBlock)
-          end if
-          State_VG(iVar,i,0,k) = State_VG(iVar,i,1,k)*(Coef - 0.5)/(Coef + 0.5)
-          if(IsFullState) State_VG(iVar,i,-1,k) &
-               = 2*State_VG(iVar,i,0,k) - State_VG(iVar,i,1,k)
+          do iDiff = 1, nDiff
+             iVar = iDiff_I(iDiff)
+             if(iVar == iTeImpl) CYCLE
+             Coef = 2/Clight &
+                  *DiffSemiCoef_VGB(iDiff,i,1,k,iBlock)/dy_BLK(iBlock)
+             State_VG(iVar,i,0,k) = State_VG(iVar,i,1,k) &
+                  *(Coef - 0.5)/(Coef + 0.5)
+          end do
        end do; end do
     case(4)
        do k = 1, nK; do i = 1, nI
-          if(IsFullState)then
-             call user_material_properties(State_VG(:,i,nJ,k), &
-                  i, nJ, k, iBlock, DiffusionOpacitySiOut_I=OpacitySi_I)
-             Coef = 2/sqrt( &
-                  (3 * OpacitySi_I(1)/Si2No_V(UnitX_) * dy_BLK(iBlock))**2 &
-                  + ((State_VG(iVar,i,nJ,k)-State_VG(iVar,i,nJ-1,k)) &
-                  /   State_VG(iVar,i,nJ,k))**2)
-          else
-             Coef = 2/Clight* &
-                  DiffSemiCoef_VGB(iDiff,i,nJ,k,iBlock)/dy_BLK(iBlock)
-          end if
-
-          State_VG(iVar,i,nJ+1,k) = State_VG(iVar,i,nJ,k) &
-               *(Coef - 0.5)/(Coef + 0.5)
-          if(IsFullState) State_VG(iVar,i,nJ+2,k) &
-               = 2*State_VG(iVar,i,nJ+1,k) - State_VG(iVar,i,nJ,k)
+          do iDiff = 1, nDiff
+             iVar = iDiff_I(iDiff)
+             if(iVar == iTeImpl) CYCLE
+             Coef = 2/Clight &
+                  *DiffSemiCoef_VGB(iDiff,i,nJ,k,iBlock)/dy_BLK(iBlock)
+             State_VG(iVar,i,nJ+1,k) = State_VG(iVar,i,nJ,k) &
+                  *(Coef - 0.5)/(Coef + 0.5)
+          end do
        end do; end do
     case(5)
        do j = 1, nJ; do i = 1, nI
-          if(IsFullState)then
-             call user_material_properties(State_VG(:,i,j,1), &
-                  i, j, 1, iBlock, DiffusionOpacitySiOut_I=OpacitySi_I)
-             Coef = 2/sqrt( &
-                  (3 * OpacitySi_I(1)/Si2No_V(UnitX_) * dz_BLK(iBlock))**2 &
-                  + ((State_VG(iVar,i,j,2) - State_VG(iVar,i,j,1)) &
-                  /  State_VG(iVar,i,j,1))**2)
-          else
-             Coef = 2/Clight* &
-                  DiffSemiCoef_VGB(iDiff,i,j,1,iBlock)/dz_BLK(iBlock)
-          end if
-          State_VG(iVar,i,j,0) = State_VG(iVar,i,j,1)*(Coef - 0.5)/(Coef + 0.5)
-          if(IsFullState) State_VG(iVar,i,j,-1) &
-               = 2*State_VG(iVar,i,j,0) - State_VG(iVar,i,j,1)
+          do iDiff = 1, nDiff
+             iVar = iDiff_I(iDiff)
+             if(iVar == iTeImpl) CYCLE
+             Coef = 2/Clight &
+                  *DiffSemiCoef_VGB(iDiff,i,j,1,iBlock)/dz_BLK(iBlock)
+             State_VG(iVar,i,j,0) = State_VG(iVar,i,j,1) &
+                  *(Coef - 0.5)/(Coef + 0.5)
+          end do
        end do; end do
     case(6)
        do k = j, nJ; do i = 1, nI
-          if(IsFullState)then
-             call user_material_properties(State_VG(:,i,j,nK), &
-                  i, j, nK, iBlock, DiffusionOpacitySiOut_I=OpacitySi_I)
-             Coef = 2/sqrt( &
-                  (3 * OpacitySi_I(1)/Si2No_V(UnitX_) * dz_BLK(iBlock))**2 &
-                  + ((State_VG(iVar,i,j,nK)-State_VG(iVar,i,j,nK-1)) &
-                  /   State_VG(iVar,i,j,nK))**2)
-          else
-             Coef = 2/Clight* &
-                  DiffSemiCoef_VGB(iDiff,i,j,nK,iBlock)/dz_BLK(iBlock)
-          end if
-
-          State_VG(iVar,i,j,nK+1) = State_VG(iVar,i,j,nK) &
-               *(Coef - 0.5)/(Coef + 0.5)
-          if(IsFullState) State_VG(iVar,i,j,nK+2) &
-               = 2*State_VG(iVar,i,j,nK+1) - State_VG(iVar,i,j,nK)
+          do iDiff = 1, nDiff
+             iVar = iDiff_I(iDiff)
+             if(iVar == iTeImpl) CYCLE
+             Coef = 2/Clight &
+                  *DiffSemiCoef_VGB(iDiff,i,j,nK,iBlock)/dz_BLK(iBlock)
+             State_VG(iVar,i,j,nK+1) = State_VG(iVar,i,j,nK) &
+                  *(Coef - 0.5)/(Coef + 0.5)
+          end do
        end do; end do
     end select
 

@@ -526,8 +526,7 @@ subroutine get_semi_implicit_bc(iBlock, IsLinear)
      if(TypeBc_I(1) == 'outflow' .or. TypeBc_I(1) == 'float')then
         do iVar = 1, nw
            if((iVar == iEradImpl).and.(UseGrayDiffusion))then
-              call set_gray_outflow_bc(1, iBlock, iEradImpl, nw, &
-                   StateSemi_VGB(:,:,:,:,iBlock))
+              call set_gray_outflow_bc(1,iBlock, StateSemi_VGB(:,:,:,:,iBlock))
            elseif((iVar == iEradImpl).and.(UseRadDiffusion))then
               call set_rad_outflow_bc(1, iBlock, iEradImpl, nw, &
                    StateSemi_VGB(:,:,:,:,iBlock))
@@ -560,8 +559,7 @@ subroutine get_semi_implicit_bc(iBlock, IsLinear)
      if(TypeBc_I(2) == 'outflow' .or. TypeBc_I(2) == 'float')then
         do iVar = 1, nw
            if((iVar == iEradImpl).and.(UseGrayDiffusion))then
-              call set_gray_outflow_bc(2, iBlock, iEradImpl, nw, &
-                   StateSemi_VGB(:,:,:,:,iBlock))
+              call set_gray_outflow_bc(2,iBlock, StateSemi_VGB(:,:,:,:,iBlock))
            elseif((iVar == iEradImpl).and.(UseRadDiffusion))then
               call set_rad_outflow_bc(2, iBlock, iEradImpl, nw, &
                    StateSemi_VGB(:,:,:,:,iBlock))
@@ -594,8 +592,7 @@ subroutine get_semi_implicit_bc(iBlock, IsLinear)
      if(TypeBc_I(3) == 'outflow' .or. TypeBc_I(3) == 'float')then
         do iVar = 1, nw
            if((iVar == iEradImpl).and.(UseGrayDiffusion))then
-              call set_gray_outflow_bc(3, iBlock, iEradImpl, nw, &
-                   StateSemi_VGB(:,:,:,:,iBlock))
+              call set_gray_outflow_bc(3,iBlock, StateSemi_VGB(:,:,:,:,iBlock))
            elseif((iVar == iEradImpl).and.(UseRadDiffusion))then
               call set_rad_outflow_bc(3, iBlock, iEradImpl, nw, &
                    StateSemi_VGB(:,:,:,:,iBlock))
@@ -630,8 +627,7 @@ subroutine get_semi_implicit_bc(iBlock, IsLinear)
      if(TypeBc_I(4) == 'outflow' .or. TypeBc_I(4) == 'float')then
         do iVar = 1, nw
            if((iVar == iEradImpl).and.(UseGrayDiffusion))then
-              call set_gray_outflow_bc(4, iBlock, iEradImpl, nw, &
-                   StateSemi_VGB(:,:,:,:,iBlock))
+              call set_gray_outflow_bc(4,iBlock, StateSemi_VGB(:,:,:,:,iBlock))
            elseif((iVar == iEradImpl).and.(UseRadDiffusion))then
               call set_rad_outflow_bc(4, iBlock, iEradImpl, nw, &
                    StateSemi_VGB(:,:,:,:,iBlock))
@@ -666,8 +662,7 @@ subroutine get_semi_implicit_bc(iBlock, IsLinear)
      if(TypeBc_I(5) == 'outflow' .or. TypeBc_I(5) == 'float')then
         do iVar = 1, nw
            if((iVar == iEradImpl).and.(UseGrayDiffusion))then
-              call set_gray_outflow_bc(5, iBlock, iEradImpl, nw, &
-                   StateSemi_VGB(:,:,:,:,iBlock))
+              call set_gray_outflow_bc(5,iBlock, StateSemi_VGB(:,:,:,:,iBlock))
            elseif((iVar == iEradImpl).and.(UseRadDiffusion))then
               call set_rad_outflow_bc(5, iBlock, iEradImpl, nw, &
                    StateSemi_VGB(:,:,:,:,iBlock))
@@ -700,8 +695,7 @@ subroutine get_semi_implicit_bc(iBlock, IsLinear)
      if(TypeBc_I(6) == 'outflow' .or. TypeBc_I(6) == 'float')then
         do iVar = 1, nw
            if((iVar == iEradImpl).and.(UseGrayDiffusion))then
-              call set_gray_outflow_bc(6, iBlock, iEradImpl, nw, &
-                   StateSemi_VGB(:,:,:,:,iBlock))
+              call set_gray_outflow_bc(6,iBlock, StateSemi_VGB(:,:,:,:,iBlock))
            elseif((iVar == iEradImpl).and.(UseRadDiffusion))then
               call set_rad_outflow_bc(6, iBlock, iEradImpl, nw, &
                    StateSemi_VGB(:,:,:,:,iBlock))

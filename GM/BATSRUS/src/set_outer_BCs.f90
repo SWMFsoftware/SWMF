@@ -15,8 +15,6 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
   use ModUser, ONLY: user_set_outerBCs
   use ModMultiFluid, ONLY: iFluid, nFluid, iRhoUx_I, iRhoUy_I, iRhoUz_I
   use ModEnergy, ONLY: calc_energy
-  use ModGrayDiffusion, ONLY: set_gray_outflow_bc !^CFG IF IMPLICIT
-  use ModMultiGroupDiffusion, ONLY: set_rad_outflow_bc !^CFG IF IMPLICIT
   implicit none
 
   integer, intent(in) :: iBlock
