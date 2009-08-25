@@ -1,6 +1,6 @@
 module ModVarIndexes
 
-  use ModSingleFluid, &
+  use ModSingleFluid, Redefine => ExtraEInt_,&
        Redefine1 => WaveFirst_, Redefine2 => WaveLast_
   use ModWaves, ONLY: NameNumber_I
   implicit none
@@ -46,7 +46,7 @@ module ModVarIndexes
        Bx_    = 5,    &
        By_    = 6,    &
        Bz_    = 7,    &
-       Ew_    = 8,    &
+       ExtraEInt_    = 8,    &
        WaveFirst_ = 9, &
        WaveLast_  = WaveFirst_+nWave-1, &
        p_     = nVar, &
@@ -73,7 +73,7 @@ module ModVarIndexes
        0.0, & ! Bx_
        0.0, & ! By_
        0.0, & ! Bz_
-       0.0, & ! Ew_ 
+       0.0, & ! ExtraEInt_ 
        (0.0, iWave=WaveFirst_,WaveLast_), & 
        1.0, & ! p_
        1.0 /) ! Energy_ 
@@ -87,7 +87,7 @@ module ModVarIndexes
        'Bx ', & ! Bx_
        'By ', & ! By_
        'Bz ', & ! Bz_
-       'Ew ', & ! Ew_  
+       'Ew ', & ! ExtraEInt_  
        ('I'//NameNumber_I(iWave), iWave=1,nWave), & ! Waves
        'p  ', & ! p_
        'e  '/) ! Energy_        
@@ -134,7 +134,7 @@ module ModVarIndexes
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! Specify scalar to be advected
-  integer, parameter :: ScalarFirst_ = Ew_, ScalarLast_ = WaveLast_
+  integer, parameter :: ScalarFirst_ = ExtraEInt_, ScalarLast_ = WaveLast_
 
   ! There are no multi-species
   logical, parameter :: UseMultiSpecies = .false.
@@ -164,9 +164,9 @@ contains
     NamePrimitiveVarTec=trim(NamePrimitiveVarTec)//trim(NamePrimitiveVarSuff)
 
     ! Set the unit and unit name for the wave energy variable
-    UnitUser_V(Ew_)        = UnitUser_V(Energy_)
-    NameUnitUserTec_V(Ew_) = NameUnitUserTec_V(Energy_)
-    NameUnitUserIdl_V(Ew_) = NameUnitUserIdl_V(Energy_)
+    UnitUser_V(ExtraEInt_)        = UnitUser_V(Energy_)
+    NameUnitUserTec_V(ExtraEInt_) = NameUnitUserTec_V(Energy_)
+    NameUnitUserIdl_V(ExtraEInt_) = NameUnitUserIdl_V(Energy_)
    
     UnitUser_V(WaveFirst_:WaveLast_)        = UnitUser_V(Energy_)
     NameUnitUserTec_V(WaveFirst_:WaveLast_) = NameUnitUserTec_V(Energy_)

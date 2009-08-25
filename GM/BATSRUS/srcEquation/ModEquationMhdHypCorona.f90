@@ -1,6 +1,6 @@
 module ModVarIndexes
 
-  use ModSingleFluid, Redefine => Hyp_
+  use ModSingleFluid, Redefine => Hyp_,Redefine1 => ExtraEInt_
 
   implicit none
 
@@ -35,7 +35,7 @@ module ModVarIndexes
        By_    = 6,    &
        Bz_    = 7,    & 
        Hyp_   = 8,    &
-       Ew_    = 9,    &
+       ExtraEInt_    = 9,    &
        p_     = nVar, &
        Energy_= nVar+1
 
@@ -61,7 +61,7 @@ module ModVarIndexes
        0.0, & ! By_
        0.0, & ! Bz_
        0.0, & ! Hyp_
-       0.0, & ! Ew_
+       0.0, & ! ExtraEInt_
        1.0, & ! p_
        1.0 /) ! Energy_
 
@@ -75,7 +75,7 @@ module ModVarIndexes
        'By ', & ! By_
        'Bz ', & ! Bz_
        'Hyp', & ! Hyp_
-       'Ew ', & ! Ew_
+       'Ew ', & ! ExtraEInt_
        'p  ', & ! p_
        'e  ' /) ! Energy_
 
@@ -102,7 +102,7 @@ module ModVarIndexes
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! The only scalar to be advected is the wave energy
-  integer, parameter :: ScalarFirst_ = Ew_, ScalarLast_ = Ew_
+  integer, parameter :: ScalarFirst_ = ExtraEInt_, ScalarLast_ = ExtraEInt_
 
   ! There are no multi-species
   logical, parameter :: UseMultiSpecies = .false.
@@ -119,9 +119,9 @@ contains
     call init_mhd_variables
 
     ! Set the unit and unit name for the wave energy variable
-    UnitUser_V(Ew_)        = UnitUser_V(Energy_)
-    NameUnitUserTec_V(Ew_) = NameUnitUserTec_V(Energy_)
-    NameUnitUserIdl_V(Ew_) = NameUnitUserIdl_V(Energy_)
+    UnitUser_V(ExtraEInt_)        = UnitUser_V(Energy_)
+    NameUnitUserTec_V(ExtraEInt_) = NameUnitUserTec_V(Energy_)
+    NameUnitUserIdl_V(ExtraEInt_) = NameUnitUserIdl_V(Energy_)
     
   end subroutine init_mod_equation
 
