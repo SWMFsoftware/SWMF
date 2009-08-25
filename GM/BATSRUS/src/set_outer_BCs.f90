@@ -122,12 +122,10 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
         call stop_mpi('The neighbors are not deifned at the periodic boundary')
      case('float','outflow')
         call BC_cont(1,nVar)
-        if(UseGrayDiffusion) &                              !^CFG IF IMPLICIT
-             call set_gray_outflow_bc(iSide, iBlock, &      !^CFG IF IMPLICIT
-             Erad_, nVar, State_VGB(:,:,:,:,iBlock))  !^CFG IF IMPLICIT
-        if(UseRadDiffusion) &                              !^CFG IF IMPLICIT
-             call set_rad_outflow_bc(iSide, iBlock, &      !^CFG IF IMPLICIT
-             Erad_, nVar, State_VGB(:,:,:,:,iBlock))  !^CFG IF IMPLICIT
+        !^CFG IF IMPLICIT BEGIN
+        if(UseGrayDiffusion.or.UseRadDiffusion) &
+             call set_radiation_outflow_bc(WaveFirst_, WaveLast_, iSide)
+        !^CFG END IMPLICIT
      case('raeder')
         call BC_cont(1,nVar)
         if(iSide==north_.or.iSide==south_)then
@@ -463,6 +461,86 @@ subroutine BC_solar_wind_buffer
   end do
 
 end subroutine BC_solar_wind_buffer
-!==========================================================================
+!==============================================================================
 
+subroutine set_radiation_outflow_bc(iVarFirst, iVarLast, iSide)
+
+  use ModSetOuterBC
+  use ModVarIndexes
+  use ModAdvance,  ONLY: State_VGB, nI, nJ, nK, nOpacity
+  use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK
+  use ModPhysics,  ONLY: Si2No_V, UnitX_
+  use ModUser,     ONLY: user_material_properties
+  implicit none
+
+  integer, intent(in) :: iVarFirst, iVarLast, iSide
+
+  integer :: iVar, i, j, k, iOpacity
+  real :: OpacitySi_I(nOpacity), Coef
+  !----------------------------------------------------------------------------
+
+  select case(iSide)
+  case(1,2)
+     do k = 1, nK; do j = 1, nJ
+        call user_material_properties(State_VGB(:,imin1p,j,k,iBLK), &
+             imin1p, j, k, iBLK, DiffusionOpacitySiOut_I=OpacitySi_I)
+
+        do iVar = iVarFirst, iVarLast
+           iOpacity = iVar - iVarFirst + 1
+           Coef = 2/sqrt( &
+                (3*OpacitySi_I(iOpacity)/Si2No_V(UnitX_) * dx_BLK(iBLK))**2 &
+                + ((State_VGB(iVar,imin2p,j,k,iBLK) &
+                -   State_VGB(iVar,imin1p,j,k,iBLK)) &
+                /  State_VGB(iVar,imin1p,j,k,iBLK))**2)
+           State_VGB(iVar,imin1g,j,k,iBLK)=State_VGB(iVar,imin1p,j,k,iBLK) &
+                *(Coef - 0.5)/(Coef + 0.5)
+           State_VGB(iVar,imin2g,j,k,iBLK) &
+                = 2*State_VGB(iVar,imin1g,j,k,iBLK) &
+                -   State_VGB(iVar,imin1p,j,k,iBLK)
+        end do
+     end do; end do
+
+  case(3,4)
+     do k = 1, nK; do i = 1, nI
+        call user_material_properties(State_VGB(:,i,jmin1p,k,iBLK), &
+             i, jmin1p, k, iBLK, DiffusionOpacitySiOut_I=OpacitySi_I)
+
+        do iVar = iVarFirst, iVarLast
+           iOpacity = iVar - iVarFirst + 1
+           Coef = 2/sqrt( &
+                (3*OpacitySi_I(iOpacity)/Si2No_V(UnitX_) * dy_BLK(iBLK))**2 &
+                + ((State_VGB(iVar,i,jmin2p,k,iBLK) &
+                -   State_VGB(iVar,i,jmin1p,k,iBLK)) &
+                /  State_VGB(iVar,i,jmin1p,k,iBLK))**2)
+           State_VGB(iVar,i,jmin1g,k,iBLK)=State_VGB(iVar,i,jmin1p,k,iBLK) &
+                *(Coef - 0.5)/(Coef + 0.5)
+           State_VGB(iVar,i,jmin2g,k,iBLK) &
+                = 2*State_VGB(iVar,i,jmin1g,k,iBLK) &
+                -   State_VGB(iVar,i,jmin1p,k,iBLK)
+        end do
+     end do; end do
+
+  case(5,6)
+     do j = 1, nJ; do i = 1, nI
+        call user_material_properties(State_VGB(:,i,j,kmin1p,iBLK), &
+             i, j, kmin1p, iBLK, DiffusionOpacitySiOut_I=OpacitySi_I)
+
+        do iVar = iVarFirst, iVarLast
+           iOpacity = iVar - iVarFirst + 1
+           Coef = 2/sqrt( &
+                (3*OpacitySi_I(iOpacity)/Si2No_V(UnitX_) * dz_BLK(iBLK))**2 &
+                + ((State_VGB(iVar,i,j,kmin2p,iBLK) &
+                -   State_VGB(iVar,i,j,kmin1p,iBLK)) &
+                /  State_VGB(iVar,i,j,kmin1p,iBLK))**2)
+           State_VGB(iVar,i,j,kmin1g,iBLK)=State_VGB(iVar,i,j,kmin1p,iBLK) &
+                *(Coef - 0.5)/(Coef + 0.5)
+           State_VGB(iVar,i,j,kmin2g,iBLK) &
+                = 2*State_VGB(iVar,i,j,kmin1g,iBLK) &
+                -   State_VGB(iVar,i,j,kmin1p,iBLK)
+        end do
+     end do; end do
+  end select
+
+end subroutine set_radiation_outflow_bc
+!==============================================================================
 
