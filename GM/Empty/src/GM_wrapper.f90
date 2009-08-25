@@ -385,3 +385,10 @@ subroutine GM_get_sat_for_im(Buffer_III, Buffer_I, nSats)
   
 end subroutine GM_get_sat_for_im
 
+!==============================================================================
+subroutine GM_get_multi_for_im(DoMultiFluidIM)
+  implicit none
+
+  logical, intent(out) :: DoMultiFluidIM
+
+end subroutine GM_get_multi_for_im
