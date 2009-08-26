@@ -77,8 +77,8 @@ contains
        case("#EMPIRICALSW")
           call read_var('NameModel',NameModel)
 
-       case("#FREQ_GRID")
-          call read_freq_grid
+       case("#FREQUENCY")
+          call read_frequency
 
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
