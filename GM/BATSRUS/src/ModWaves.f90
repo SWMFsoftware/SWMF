@@ -73,7 +73,7 @@ contains
     call read_var('UseWavePressure',UseWavePressure)
   end subroutine read_wave_pressure
   !============================================================================
-  subroutine read_freq_grid
+  subroutine read_frequency
     use ModReadParam, ONLY: read_var
     !--------------------------------------------------------------------------
     call read_var('FreqMin',FreqMin)
