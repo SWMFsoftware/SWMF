@@ -289,7 +289,7 @@ subroutine apply_im_pressure
      ! Ramp up is based on number of iterations: p' = (ntau*p + pIm)/(1+ntau)
      ! A typical value might be 20, to get close to the RCM pressure 
      ! in 20 iterations
-     
+
      Factor = 1.0/(1.0+TauCoupleIM)
 
   end if
@@ -299,7 +299,7 @@ subroutine apply_im_pressure
 
      call get_im_pressure(iBlock, pIm_CD, dIm_CD, TauCoeffIm_C)
      if(all(pIm_CD < 0.0)) CYCLE  ! Nothing to do
-     
+
      !Put velocity into momentum temporarily when density is changed
      if(DoCoupleImDensity)then
         where(dIm_CD(1,:,:,:) > 0.0)
@@ -338,7 +338,7 @@ subroutine apply_im_pressure
            end where
         end if
      end if
-     
+
      if(time_accurate)then
         if(DoCoupleImPressure)then
            where(pIm_CD(1,:,:,:) > 0.0) &
@@ -437,7 +437,7 @@ subroutine apply_im_pressure
                    State_VGB(iRho_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)
               State_VGB(iRhoUz_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)= &
                    State_VGB(iRhoUz_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)* &
-                   State_VGB(iRhoUz_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)
+                   State_VGB(iRho_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)
            end where
            where(dIm_CD(3,:,:,:) > 0.0)
               State_VGB(iRhoUx_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)= &
@@ -448,7 +448,7 @@ subroutine apply_im_pressure
                    State_VGB(iRho_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)
               State_VGB(iRhoUz_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)= &
                    State_VGB(iRhoUz_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)* &
-                   State_VGB(iRhoUz_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)
+                   State_VGB(iRho_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)
            end where
         end if
      end if
