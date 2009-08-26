@@ -915,9 +915,7 @@ contains
 
     ! calculate frequency interval on a natural logarithmic scale 
     dLogFreq = (LogFreqMax-LogFreqMin)/(nFreqPlus-1) 
-    write(*,*) 'Frequency grid:'
-    write(*,*) 'Min: ',LogFreqMin,' Max: ',LogFreqMax
-
+ 
     ! Divide the spectrum into frequncy groups on a log scale
     ! Plus waves (+Va)
     do iFreq = 1,nFreqPlus
@@ -991,7 +989,7 @@ contains
     ! minimal frequency of non-zero energy (inertial range lower bound)
     ! FreqInertialRange is set in input command #FREQ_GRID
     LogFreqInertial = log(2*cPi*FreqInertialRange)
-    write(*,*) 'Bottom freq. of inertial range: ',LogFreqInertial,' units: log(freq. in rad) '
+   
     ! \
     ! Calculate wave spectrum energy  coefficients in all cells 
     ! /
