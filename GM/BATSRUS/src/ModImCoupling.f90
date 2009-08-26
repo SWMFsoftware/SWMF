@@ -320,10 +320,10 @@ subroutine apply_im_pressure
                    State_VGB(iRho_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)
               State_VGB(iRhoUy_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)= &
                    State_VGB(iRhoUy_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)/ &
-                   State_VGB(iRhoUy_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)
+                   State_VGB(iRho_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)
               State_VGB(iRhoUz_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)= &
                    State_VGB(iRhoUz_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)/ &
-                   State_VGB(iRhoUz_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)
+                   State_VGB(iRho_I(IonFirst_),1:nI,1:nJ,1:nK,iBlock)
            end where
            where(dIm_CD(3,:,:,:) > 0.0)
               State_VGB(iRhoUx_I(iIonSecond),1:nI,1:nJ,1:nK,iBlock)= &
