@@ -41,7 +41,7 @@ contains
     use ModReadParam,   ONLY: read_line, read_command, read_var
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut
     use ModMagnetogram, ONLY: set_parameters_magnetogram
-    use ModWaves,       ONLY: read_alfven_speed,read_wave_pressure
+    use ModWaves,       ONLY: read_alfven_speed,read_wave_pressure,read_freq_grid
     implicit none
 
     character (len=100) :: NameCommand
@@ -76,6 +76,9 @@ contains
 
        case("#EMPIRICALSW")
           call read_var('NameModel',NameModel)
+
+       case("#FREQ_GRID")
+          call read_freq_grid
 
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -896,24 +899,25 @@ contains
 
     use ModVarIndexes
     use ModNumConst, ONLY: cPi
-
+    use ModWaves,    ONLY: FreqMin,FreqMax
     implicit none
     
-    integer,intent(in)                     :: nFreqPlus, nFreqMinus
-    integer                                :: iFreq
-    real                                   :: LogFreqMin, LogFreqMax
-
-    character(len=*),parameter             :: NameSub='set_freq_grid'
+    integer,intent(in)         :: nFreqPlus, nFreqMinus
+    integer                    :: iFreq
+    real                       :: LogFreqMin, LogFreqMax
+    character(len=*),parameter :: NameSub='set_freq_grid'
     !-----------------------------------------------------------------
     ! Minimal frequency in frequency grid
-    LogFreqMin = log(2*cPi*1e-4) 
+    LogFreqMin = log(2*cPi*FreqMin) 
 
     ! Maximal frequency in frequency grid
-    LogFreqMax = log(2*cPi*100) 
+    LogFreqMax = log(2*cPi*FreqMax) 
 
     ! calculate frequency interval on a natural logarithmic scale 
     dLogFreq = (LogFreqMax-LogFreqMin)/(nFreqPlus-1) 
-  
+    write(*,*) 'Frequency grid:'
+    write(*,*) 'Min: ',LogFreqMin,' Max: ',LogFreqMax
+
     ! Divide the spectrum into frequncy groups on a log scale
     ! Plus waves (+Va)
     do iFreq = 1,nFreqPlus
@@ -984,13 +988,14 @@ contains
     nFreq=nFreqPlus+nFreqMinus
 
     call set_freq_grid(nFreqPlus, nFreqMinus)
-  
+    ! minimal frequency of non-zero energy (inertial range lower bound)
+    ! FreqInertialRange is set in input command #FREQ_GRID
+    LogFreqInertial = log(2*cPi*FreqInertialRange)
+    write(*,*) 'Bottom freq. of inertial range: ',LogFreqInertial,' units: log(freq. in rad) '
     ! \
     ! Calculate wave spectrum energy  coefficients in all cells 
     ! /
     ConstCoeff=(216/(7*cMu*Lambda0))*((cElectronCharge*cLightSpeed)/cGEV)**(-1.0/3.0)
-
-    LogFreqInertial=log(2*cPi/300)
 
     !\
     ! Initialize spectrum in all frequency groups and all cells
