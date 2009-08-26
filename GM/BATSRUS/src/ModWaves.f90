@@ -79,5 +79,5 @@ contains
     call read_var('FreqMin',FreqMin)
     call read_var('FreqMax',FreqMax)
     call read_var('FreqInertialRange',FreqInertialRange)
-  end subroutine read_freq_grid
+  end subroutine read_frequency
 end module ModWaves
