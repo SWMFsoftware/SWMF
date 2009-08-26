@@ -44,6 +44,12 @@ module CRASH_ModEos
   !    ionization. The model of eqs. 3.74 through 3.76 in the mentioned book 
   !    is acceptable. Alternatively, a more complex model using actual 
   !    ionization energies would be acceptable.
+  !!WARNING!!!
+  !Correction in this item. Since the ionization partition function is controlled
+  !by the electron temperature, the ionization energy as well as not mentioned
+  !excitation energy are both included to the ELECTRON ENERGY DENSITY. See detail
+  !in HEDP.pdf. To make this document go to util/CRASH/doc/Tex directory and
+  !make PDF
   !
   ! 8. The materials that matter are
   !    - Beryllium
